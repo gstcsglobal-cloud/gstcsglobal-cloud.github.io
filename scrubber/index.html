@@ -7,213 +7,371 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
-  :root{
-    --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --line:#334155;
-    --txt:#e2e8f0; --mut:#94a3b8; --accent:#38bdf8; --accent2:#2dd4bf;
-    --c1:#38bdf8;--c2:#2dd4bf;--c3:#a78bfa;--c4:#fbbf24;--c5:#f472b6;--c6:#34d399;--c7:#fb7185;--c8:#60a5fa;
-    --ok:#34d399; --warn:#fbbf24; --bad:#fb7185;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);color:var(--txt);padding:24px;}
-  h1{font-size:22px;font-weight:700;}
-  .sub{color:var(--mut);font-size:13px;margin-top:4px;}
-  header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:16px;}
-  .header-right{display:flex;align-items:center;gap:10px;}
-  .status{font-size:12px;color:var(--mut);}
-  .btn-back{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:var(--txt);
-    padding:8px 18px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;}
-  .btn-back:hover{background:rgba(255,255,255,0.12);}
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px;}
-  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;}
-  .kpi .v{font-size:30px;font-weight:700;color:var(--accent);}
-  .kpi .l{font-size:12px;color:var(--mut);margin-top:4px;text-transform:uppercase;letter-spacing:.5px;}
-  .kpi.ok .v{color:var(--ok);} .kpi.bad .v{color:var(--bad);}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:20px;}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;}
-  .card h3{font-size:14px;font-weight:600;margin-bottom:14px;color:var(--txt);}
-  .chart-wrap{position:relative;height:240px;}
-  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
-  .filters input,.filters select{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
-    padding:9px 12px;border-radius:8px;font-size:13px;outline:none;}
-  .filters input{flex:1;min-width:200px;}
-  .filters input:focus,.filters select:focus{border-color:var(--accent);}
-  .tbl-wrap{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:10px;}
-  table{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap;}
-  thead th{position:sticky;top:0;background:var(--panel2);padding:10px 12px;text-align:left;font-weight:600;
-    border-bottom:1px solid var(--line);cursor:pointer;user-select:none;}
-  thead th:hover{color:var(--accent);}
-  tbody td{padding:9px 12px;border-bottom:1px solid var(--line);}
-  tbody tr:hover{background:var(--panel2);}
-  .pill{padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;}
-  .pill.ok{background:rgba(52,211,153,.15);color:var(--ok);}
-  .pill.bad{background:rgba(251,113,133,.15);color:var(--bad);}
-  .loading{text-align:center;padding:60px;color:var(--mut);}
-  .err{background:rgba(251,113,133,.1);border:1px solid var(--bad);color:#fecaca;padding:16px;border-radius:10px;}
-  .full{grid-column:1/-1;}
-  footer{margin-top:24px;color:var(--mut);font-size:11px;text-align:center;}
+* { margin:0; padding:0; box-sizing:border-box; }
+:root{
+  --bg1:#0a0f1e; --bg2:#0d1f3c; --bg3:#0f2a4a;
+  --accent:#38bdf8; --accent2:#2dd4bf; --accent3:#a78bfa; --accent4:#fbbf24;
+  --glass:rgba(255,255,255,0.06); --glassb:rgba(255,255,255,0.12);
+  --txt:#e2e8f0; --muted:#94a3b8;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+}
+body{
+  font-family:'Segoe UI','Malgun Gothic',sans-serif; color:var(--txt);
+  background:linear-gradient(-45deg,var(--bg1),var(--bg2),var(--bg3),#0c1628);
+  background-size:400% 400%; animation:grad 20s ease infinite; min-height:100vh; padding:28px 32px;
+}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:32px;font-weight:800;
+  background:linear-gradient(90deg,#38bdf8,#2dd4bf,#a78bfa);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.header .sub{color:var(--muted);font-size:13px;margin-top:4px}
+.header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.badge{background:var(--glass);border:1px solid var(--glassb);border-radius:30px;padding:8px 18px;font-size:13px;backdrop-filter:blur(10px)}
+.btn{background:linear-gradient(90deg,var(--accent),var(--accent2));border:none;border-radius:30px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;padding:9px 20px;transition:opacity .2s;text-decoration:none;display:inline-block;}
+.btn:hover{opacity:.85}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-back{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);}
+.status{font-size:12px;color:var(--muted);margin-bottom:16px;text-align:right;}
+.status.ok{color:var(--accent2)}.status.err{color:var(--bad)}
+
+/* SLICERS */
+.slicers{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px}
+.slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:18px;padding:14px 18px;backdrop-filter:blur(12px)}
+.slicer .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px;font-weight:700}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{cursor:pointer;border:1px solid var(--glassb);background:rgba(255,255,255,0.04);color:var(--txt);
+  padding:7px 15px;border-radius:30px;font-size:13px;font-weight:600;transition:all .25s;user-select:none}
+.chip:hover{transform:translateY(-2px);border-color:var(--accent2)}
+.chip.active{background:linear-gradient(90deg,var(--accent),var(--accent2));border-color:transparent;
+  box-shadow:0 6px 20px rgba(56,189,248,.4)}
+.search-box{margin-left:auto}
+.search-box input{background:rgba(255,255,255,0.06);border:1px solid var(--glassb);border-radius:30px;
+  padding:10px 18px;color:var(--txt);font-size:13px;width:220px;outline:none}
+.search-box input::placeholder{color:var(--muted)}
+.search-box input:focus{border-color:var(--accent)}
+
+/* KPIS */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px}
+.kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px);
+  position:relative;overflow:hidden;transition:transform .3s}
+.kpi:hover{transform:translateY(-5px)}
+.kpi::before{content:'';position:absolute;top:-40px;right:-40px;width:110px;height:110px;border-radius:50%;opacity:.3}
+.kpi.k1::before{background:var(--accent)}.kpi.k2::before{background:var(--accent2)}
+.kpi.k3::before{background:var(--accent3)}.kpi.k4::before{background:var(--ok)}.kpi.k5::before{background:var(--bad)}
+.kpi .ic{font-size:20px;margin-bottom:8px}
+.kpi .val{font-size:34px;font-weight:800;line-height:1}
+.kpi.k4 .val{color:var(--ok)}.kpi.k5 .val{color:var(--bad)}
+.kpi .cap{color:var(--muted);font-size:12px;margin-top:8px;font-weight:600}
+
+/* CHARTS */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px}
+.card{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px)}
+.card h3{font-size:14px;font-weight:700;margin-bottom:14px;color:#dfe6ff}
+.card .cw{position:relative;height:220px}
+.card.wide{grid-column:span 2}
+
+/* TABLE */
+.tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px);margin-bottom:20px}
+.tablecard h3{font-size:14px;font-weight:700;margin-bottom:14px}
+.tbl-wrap{max-height:400px;overflow:auto;border-radius:12px}
+.tbl-wrap::-webkit-scrollbar{width:6px;height:6px}.tbl-wrap::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
+th{text-align:left;padding:10px 12px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;
+  border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(10,15,30,.95);cursor:pointer;user-select:none}
+th:hover{color:var(--accent)}
+td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:hover td{background:rgba(255,255,255,.04)}
+.pill{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.pill.ok{background:rgba(52,211,153,.18);color:var(--ok)}
+.pill.bad{background:rgba(251,113,133,.18);color:var(--bad)}
+.empty{text-align:center;padding:40px;color:var(--muted)}
+.loading{text-align:center;padding:60px;color:var(--muted);font-size:15px}
+
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid,.grid2{grid-template-columns:1fr}.card.wide{grid-column:span 1}}
 </style>
 </head>
 <body>
-<header>
+
+<div class="header">
   <div>
     <h1>🌐 글로벌 스크러버 설치 현황</h1>
     <div class="sub">고객사 설치 스크러버 통합 모니터링 대시보드</div>
   </div>
   <div class="header-right">
-    <a href="https://gstcsglobal-cloud.github.io/" class="btn-back">← 메인으로</a>
-    <div class="status" id="status">데이터 로딩 중…</div>
+    <a href="https://gstcsglobal-cloud.github.io" class="btn btn-back">← 메인으로</a>
+    <div class="badge">총 <b id="totRec">0</b>대 · 실시간 필터</div>
+    <button class="btn" id="refreshBtn" onclick="loadData()">🔄 새로고침</button>
   </div>
-</header>
+</div>
+<div class="status" id="status">데이터 불러오는 중...</div>
 
-<div id="app"><div class="loading">⏳ 구글시트에서 데이터를 불러오는 중입니다…</div></div>
+<!-- 슬라이서 -->
+<div class="slicers">
+  <div class="slicer"><div class="lbl">🌍 국가</div><div class="chips" id="sl-country"></div></div>
+  <div class="slicer"><div class="lbl">🏢 고객사</div><div class="chips" id="sl-customer"></div></div>
+  <div class="slicer"><div class="lbl">⚙️ 모델</div><div class="chips" id="sl-model"></div></div>
+  <div class="slicer"><div class="lbl">🛡️ 워런티</div><div class="chips" id="sl-warr"></div></div>
+  <div class="slicer search-box"><div class="lbl">🔍 검색</div><input id="search" placeholder="S/N, Location, Tool..."></div>
+</div>
 
-<footer>데이터 출처: Google Sheets · 자동 동기화 · 마지막 갱신 <span id="ts"></span></footer>
+<!-- KPI -->
+<div class="kpis">
+  <div class="kpi k1"><div class="ic">🖥️</div><div class="val" id="kp1">0</div><div class="cap">선택 설치 대수</div></div>
+  <div class="kpi k2"><div class="ic">🌍</div><div class="val" id="kp2">0</div><div class="cap">설치 국가</div></div>
+  <div class="kpi k3"><div class="ic">🏢</div><div class="val" id="kp3">0</div><div class="cap">고객사</div></div>
+  <div class="kpi k4"><div class="ic">✅</div><div class="val" id="kp4">0</div><div class="cap">워런티 유효</div></div>
+  <div class="kpi k5"><div class="ic">⚠️</div><div class="val" id="kp5">0</div><div class="cap">워런티 만료</div></div>
+</div>
+
+<!-- 차트 1행 -->
+<div class="grid">
+  <div class="card"><h3>🌍 국가별 설치 현황</h3><div class="cw"><canvas id="cCountry"></canvas></div></div>
+  <div class="card"><h3>🏢 고객사별 설치 현황</h3><div class="cw"><canvas id="cCustomer"></canvas></div></div>
+  <div class="card"><h3>🛡️ 워런티 상태</h3><div class="cw"><canvas id="cWarr"></canvas></div></div>
+</div>
+
+<!-- 차트 2행 -->
+<div class="grid">
+  <div class="card"><h3>⚙️ 스크러버 모델</h3><div class="cw"><canvas id="cModel"></canvas></div></div>
+  <div class="card"><h3>🧪 공정 그룹</h3><div class="cw"><canvas id="cGroup"></canvas></div></div>
+  <div class="card"><h3>📅 연도별 가동(Turn On)</h3><div class="cw"><canvas id="cYear"></canvas></div></div>
+</div>
+
+<!-- 테이블 -->
+<div class="tablecard">
+  <h3>📋 설치 상세 목록 (<span id="tblCnt">0</span>대)</h3>
+  <div class="tbl-wrap">
+    <table id="tbl">
+      <thead><tr>
+        <th data-k="code">Code</th>
+        <th data-k="sn">S/N</th>
+        <th data-k="country">국가</th>
+        <th data-k="customer">고객사</th>
+        <th data-k="location">Location</th>
+        <th data-k="fab">FAB</th>
+        <th data-k="model">모델</th>
+        <th data-k="group1">공정</th>
+        <th data-k="detail1">Detail</th>
+        <th data-k="toolMaker">Tool Maker</th>
+        <th data-k="toolModel">Tool Model</th>
+        <th data-k="turnOn">Turn On</th>
+        <th data-k="warranty">워런티</th>
+      </tr></thead>
+      <tbody id="tbody"><tr><td colspan="13" class="loading">⏳ 데이터 불러오는 중...</td></tr></tbody>
+    </table>
+  </div>
+</div>
 
 <script>
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
 
-const COL = {
-  country:2, customer:3, location:4, code:5, sn:6, model:7, burner:8,
-  fab:9, floor:10, bay:11, group1:12, group2:13, detail1:14, detail2:15,
-  toolMaker:18, toolModel:19, pumpMaker:20, pumpModel:21,
-  fabIn:38, start:39, turnOn:40, release:41, warranty:42, warrIO:43
+// 컬럼 인덱스 (0-based)
+const CI = {
+  country:2, customer:3, location:4, code:5, sn:6, model:7,
+  fab:9, group1:12, detail1:14,
+  toolMaker:18, toolModel:19,
+  turnOn:40, warranty:42
 };
 
-const PALETTE=['#38bdf8','#2dd4bf','#a78bfa','#fbbf24','#f472b6','#34d399','#fb7185','#60a5fa','#c084fc','#4ade80'];
-const charts={};
+const PAL = ['#38bdf8','#2dd4bf','#a78bfa','#fbbf24','#f472b6','#34d399','#fb7185','#60a5fa','#c084fc','#4ade80'];
+let RAW = [], charts = {};
+const F = { country:'전체', customer:'전체', model:'전체', warr:'전체', q:'' };
 
-function toDate(v){
-  if(v===null||v===undefined||v==="")return null;
-  const n=Number(v);
-  if(!isNaN(n)&&n>20000&&n<80000){ return new Date(Date.UTC(1899,11,30)+n*86400000); }
-  const d=new Date(v);
-  return isNaN(d)?null:d;
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.font.family = "'Segoe UI','Malgun Gothic',sans-serif";
+
+function toDate(v) {
+  if (!v || v === '') return null;
+  const n = Number(v);
+  if (!isNaN(n) && n > 20000 && n < 80000) return new Date(Date.UTC(1899,11,30) + n*86400000);
+  const d = new Date(v);
+  return isNaN(d) ? null : d;
 }
-function fmtDate(d){ return d? d.toISOString().slice(0,10):"—"; }
+function fmtDate(d) { return d ? d.toISOString().slice(0,10) : '—'; }
+function cell(r, k) { const v = r[CI[k]]; return (v !== undefined && v !== '') ? v : '—'; }
 
-async function load(){
-  try{
+async function loadData() {
+  const btn = document.getElementById('refreshBtn');
+  const status = document.getElementById('status');
+  btn.disabled = true; btn.textContent = '⏳ 불러오는 중...';
+  status.className = 'status'; status.textContent = '구글 시트에서 데이터 불러오는 중...';
+  try {
     const res = await fetch(SHEET_URL + '&t=' + Date.now());
     const text = await res.text();
-    const parsed = Papa.parse(text, {skipEmptyLines:true});
-    let rows = parsed.data.slice(1);
-    rows = rows.filter(r=>r[COL.code]&&String(r[COL.code]).trim()!=="");
-    render(rows);
-  }catch(e){
-    document.getElementById('app').innerHTML='<div class="err">❌ 데이터를 불러오지 못했습니다: '+e.message+'</div>';
+    const parsed = Papa.parse(text, { skipEmptyLines: true });
+    RAW = parsed.data.slice(1).filter(r => r[CI.code] && String(r[CI.code]).trim() !== '');
+    const now = new Date().toLocaleString('ko-KR');
+    status.className = 'status ok';
+    status.textContent = '✅ 마지막 업데이트: ' + now + ' · 총 ' + RAW.length + '대';
+    document.getElementById('totRec').textContent = RAW.length;
+    rebuildFilters();
+    render();
+  } catch(e) {
+    status.className = 'status err';
+    status.textContent = '❌ 데이터를 불러오지 못했습니다.';
   }
+  btn.disabled = false; btn.textContent = '🔄 새로고침';
 }
 
-function countBy(rows,idx){
-  const m={};
-  rows.forEach(r=>{const k=(r[idx]||"미지정").toString().trim()||"미지정"; m[k]=(m[k]||0)+1;});
-  return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+function uniqCol(idx) {
+  return ['전체', ...Array.from(new Set(RAW.map(r => (r[idx]||'').trim()).filter(Boolean))).sort()];
 }
 
-function render(rows){
-  const now=new Date();
-  const countries=new Set(rows.map(r=>r[COL.country]).filter(Boolean));
-  const customers=new Set(rows.map(r=>r[COL.customer]).filter(Boolean));
-  let active=0,expired=0;
-  rows.forEach(r=>{const w=toDate(r[COL.warranty]); if(w){ w>=now?active++:expired++; }});
+function buildChips(id, key, idx) {
+  const box = document.getElementById(id); box.innerHTML = '';
+  uniqCol(idx).forEach(v => {
+    const c = document.createElement('div');
+    c.className = 'chip' + (v === '전체' ? ' active' : '');
+    c.textContent = v;
+    c.onclick = () => { F[key] = v; [...box.children].forEach(x => x.classList.remove('active')); c.classList.add('active'); render(); };
+    box.appendChild(c);
+  });
+}
 
-  document.getElementById('status').textContent=`총 ${rows.length}대 · ${countries.size}개국 · ${customers.size}개 고객사`;
-  document.getElementById('ts').textContent=new Date().toLocaleString('ko-KR');
+function buildWarrChips() {
+  const box = document.getElementById('sl-warr'); box.innerHTML = '';
+  ['전체','유효','만료'].forEach(v => {
+    const c = document.createElement('div');
+    c.className = 'chip' + (v === '전체' ? ' active' : '');
+    c.textContent = v;
+    c.onclick = () => { F.warr = v; [...box.children].forEach(x => x.classList.remove('active')); c.classList.add('active'); render(); };
+    box.appendChild(c);
+  });
+}
 
-  document.getElementById('app').innerHTML=`
-    <div class="kpis">
-      <div class="kpi"><div class="v">${rows.length}</div><div class="l">총 설치 대수</div></div>
-      <div class="kpi"><div class="v">${countries.size}</div><div class="l">설치 국가</div></div>
-      <div class="kpi"><div class="v">${customers.size}</div><div class="l">고객사</div></div>
-      <div class="kpi ok"><div class="v">${active}</div><div class="l">워런티 유효</div></div>
-      <div class="kpi bad"><div class="v">${expired}</div><div class="l">워런티 만료</div></div>
-    </div>
-    <div class="grid">
-      <div class="card"><h3>🌍 국가별 설치 현황</h3><div class="chart-wrap"><canvas id="cCountry"></canvas></div></div>
-      <div class="card"><h3>🏢 고객사별 설치 현황</h3><div class="chart-wrap"><canvas id="cCustomer"></canvas></div></div>
-      <div class="card"><h3>⚙️ 스크러버 모델</h3><div class="chart-wrap"><canvas id="cModel"></canvas></div></div>
-      <div class="card"><h3>🧪 공정 그룹</h3><div class="chart-wrap"><canvas id="cGroup"></canvas></div></div>
-      <div class="card"><h3>📅 연도별 가동(Turn On)</h3><div class="chart-wrap"><canvas id="cYear"></canvas></div></div>
-      <div class="card"><h3>🛡️ 워런티 상태</h3><div class="chart-wrap"><canvas id="cWarr"></canvas></div></div>
-    </div>
-    <div class="card full">
-      <h3>📋 설치 상세 목록</h3>
-      <div class="filters">
-        <input id="q" placeholder="🔍 검색 (S/N, Location, Tool 등)…">
-        <select id="fCountry"><option value="">전체 국가</option></select>
-        <select id="fCustomer"><option value="">전체 고객사</option></select>
-        <select id="fModel"><option value="">전체 모델</option></select>
-        <select id="fGroup"><option value="">전체 공정</option></select>
-      </div>
-      <div class="tbl-wrap"><table id="tbl">
-        <thead><tr>
-          <th data-k="${COL.code}">Code</th><th data-k="${COL.sn}">S/N</th>
-          <th data-k="${COL.country}">국가</th><th data-k="${COL.customer}">고객사</th>
-          <th data-k="${COL.location}">Location</th><th data-k="${COL.fab}">FAB</th>
-          <th data-k="${COL.model}">모델</th><th data-k="${COL.group1}">공정</th>
-          <th data-k="${COL.detail1}">Detail</th><th data-k="${COL.toolMaker}">Tool Maker</th>
-          <th data-k="${COL.toolModel}">Tool Model</th><th data-k="${COL.turnOn}">Turn On</th>
-          <th data-k="${COL.warranty}">워런티</th>
-        </tr></thead>
-        <tbody id="tbody"></tbody>
-      </table></div>
-    </div>`;
+function rebuildFilters() {
+  F.country = '전체'; F.customer = '전체'; F.model = '전체'; F.warr = '전체'; F.q = '';
+  document.getElementById('search').value = '';
+  buildChips('sl-country', 'country', CI.country);
+  buildChips('sl-customer', 'customer', CI.customer);
+  buildChips('sl-model', 'model', CI.model);
+  buildWarrChips();
+}
 
-  const mk=(id,type,data,opts)=>{charts[id]=new Chart(document.getElementById(id),{type,data,options:opts});};
-  const barOpt={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-    scales:{x:{ticks:{color:'#94a3b8'},grid:{display:false}},y:{ticks:{color:'#94a3b8'},grid:{color:'#334155'}}}};
-  const dnOpt={responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#cbd5e1',font:{size:11}}}}};
+document.getElementById('search').addEventListener('input', e => { F.q = e.target.value.toLowerCase(); render(); });
 
-  const ctry=countBy(rows,COL.country);
-  mk('cCountry','bar',{labels:ctry.map(x=>x[0]),datasets:[{data:ctry.map(x=>x[1]),backgroundColor:'#38bdf8',borderRadius:5}]},barOpt);
-  const cust=countBy(rows,COL.customer);
-  mk('cCustomer','bar',{labels:cust.map(x=>x[0]),datasets:[{data:cust.map(x=>x[1]),backgroundColor:'#2dd4bf',borderRadius:5}]},barOpt);
-  const mdl=countBy(rows,COL.model);
-  mk('cModel','doughnut',{labels:mdl.map(x=>x[0]),datasets:[{data:mdl.map(x=>x[1]),backgroundColor:PALETTE}]},dnOpt);
-  const grp=countBy(rows,COL.group1);
-  mk('cGroup','doughnut',{labels:grp.map(x=>x[0]),datasets:[{data:grp.map(x=>x[1]),backgroundColor:PALETTE}]},dnOpt);
-  const yrs={};
-  rows.forEach(r=>{const d=toDate(r[COL.turnOn]); if(d){const y=d.getUTCFullYear(); yrs[y]=(yrs[y]||0)+1;}});
-  const yk=Object.keys(yrs).sort();
-  mk('cYear','bar',{labels:yk,datasets:[{data:yk.map(y=>yrs[y]),backgroundColor:'#a78bfa',borderRadius:5}]},barOpt);
-  mk('cWarr','doughnut',{labels:['유효','만료'],datasets:[{data:[active,expired],backgroundColor:['#34d399','#fb7185']}]},dnOpt);
+function filt() {
+  const now = new Date();
+  return RAW.filter(r => {
+    if (F.country !== '전체' && (r[CI.country]||'').trim() !== F.country) return false;
+    if (F.customer !== '전체' && (r[CI.customer]||'').trim() !== F.customer) return false;
+    if (F.model !== '전체' && (r[CI.model]||'').trim() !== F.model) return false;
+    if (F.warr !== '전체') {
+      const w = toDate(r[CI.warranty]);
+      if (F.warr === '유효' && !(w && w >= now)) return false;
+      if (F.warr === '만료' && !(w && w < now)) return false;
+    }
+    if (F.q && !r.join(' ').toLowerCase().includes(F.q)) return false;
+    return true;
+  });
+}
 
-  const fill=(id,idx)=>{const s=document.getElementById(id);countBy(rows,idx).forEach(([k])=>{const o=document.createElement('option');o.value=k;o.textContent=k;s.appendChild(o);});};
-  fill('fCountry',COL.country);fill('fCustomer',COL.customer);fill('fModel',COL.model);fill('fGroup',COL.group1);
+function countBy(rows, idx) {
+  const m = {};
+  rows.forEach(r => { const k = (r[idx]||'미지정').toString().trim() || '미지정'; m[k] = (m[k]||0)+1; });
+  return Object.entries(m).sort((a,b) => b[1]-a[1]);
+}
 
-  let sortK=null,sortAsc=true;
-  function draw(){
-    const q=document.getElementById('q').value.toLowerCase();
-    const fc=document.getElementById('fCountry').value, fcu=document.getElementById('fCustomer').value,
-          fm=document.getElementById('fModel').value, fg=document.getElementById('fGroup').value;
-    let d=rows.filter(r=>{
-      if(fc&&r[COL.country]!==fc)return false;
-      if(fcu&&r[COL.customer]!==fcu)return false;
-      if(fm&&r[COL.model]!==fm)return false;
-      if(fg&&r[COL.group1]!==fg)return false;
-      if(q&&!r.join(' ').toLowerCase().includes(q))return false;
-      return true;
+function mkBar(id, labels, data, color) {
+  const ctx = document.getElementById(id);
+  const cfg = {
+    type:'bar', data:{labels, datasets:[{data, backgroundColor:color, borderRadius:6}]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#94a3b8', maxRotation:30}, grid:{display:false}},
+              y:{ticks:{color:'#94a3b8', precision:0}, grid:{color:'rgba(255,255,255,.05)'}}}}
+  };
+  if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets[0].data=data; charts[id].update(); return; }
+  charts[id] = new Chart(ctx, cfg);
+}
+
+function mkDonut(id, labels, data, colors) {
+  const ctx = document.getElementById(id);
+  const cfg = {
+    type:'doughnut', data:{labels, datasets:[{data, backgroundColor:colors||PAL, borderColor:'rgba(0,0,0,.2)', borderWidth:2, hoverOffset:8}]},
+    options:{responsive:true, maintainAspectRatio:false, cutout:'60%',
+      plugins:{legend:{position:'right', labels:{color:'#cbd5e1', font:{size:11}, padding:10, usePointStyle:true}}},
+      animation:{animateScale:true}}
+  };
+  if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets[0].data=data; charts[id].update(); return; }
+  charts[id] = new Chart(ctx, cfg);
+}
+
+function animVal(el, target) {
+  const start = parseFloat(el.dataset.v || 0); const t0 = performance.now();
+  function step(t) {
+    const p = Math.min((t-t0)/500, 1); const cur = start + (target-start)*(1-Math.pow(1-p,3));
+    el.textContent = Math.round(cur);
+    if (p < 1) requestAnimationFrame(step); else el.dataset.v = target;
+  }
+  requestAnimationFrame(step);
+}
+
+let sortK = null, sortAsc = true;
+
+function render() {
+  const f = filt(); const now = new Date();
+  let active = 0, expired = 0;
+  f.forEach(r => { const w = toDate(r[CI.warranty]); if(w){ w>=now?active++:expired++; }});
+
+  animVal(document.getElementById('kp1'), f.length);
+  animVal(document.getElementById('kp2'), new Set(f.map(r=>(r[CI.country]||'').trim()).filter(Boolean)).size);
+  animVal(document.getElementById('kp3'), new Set(f.map(r=>(r[CI.customer]||'').trim()).filter(Boolean)).size);
+  animVal(document.getElementById('kp4'), active);
+  animVal(document.getElementById('kp5'), expired);
+
+  const ctry = countBy(f, CI.country);
+  mkBar('cCountry', ctry.map(x=>x[0]), ctry.map(x=>x[1]), '#38bdf8');
+  const cust = countBy(f, CI.customer);
+  mkBar('cCustomer', cust.map(x=>x[0]), cust.map(x=>x[1]), '#2dd4bf');
+  mkDonut('cWarr', ['유효','만료'], [active, expired], ['#34d399','#fb7185']);
+  const mdl = countBy(f, CI.model);
+  mkDonut('cModel', mdl.map(x=>x[0]), mdl.map(x=>x[1]));
+  const grp = countBy(f, CI.group1);
+  mkDonut('cGroup', grp.map(x=>x[0]), grp.map(x=>x[1]));
+  const yrs = {};
+  f.forEach(r => { const d = toDate(r[CI.turnOn]); if(d){ const y = d.getUTCFullYear(); yrs[y]=(yrs[y]||0)+1; }});
+  const yk = Object.keys(yrs).sort();
+  mkBar('cYear', yk, yk.map(y=>yrs[y]), '#a78bfa');
+
+  // 테이블
+  document.getElementById('tblCnt').textContent = f.length;
+  let d = [...f];
+  if (sortK) {
+    d.sort((a,b) => {
+      const x=(a[CI[sortK]]||'')+'', y=(b[CI[sortK]]||'')+'';
+      return sortAsc ? x.localeCompare(y,'ko',{numeric:true}) : y.localeCompare(x,'ko',{numeric:true});
     });
-    if(sortK!==null){d.sort((a,b)=>{const x=(a[sortK]||'')+'',y=(b[sortK]||'')+'';return sortAsc?x.localeCompare(y,'ko',{numeric:true}):y.localeCompare(x,'ko',{numeric:true});});}
-    const now=new Date();
-    document.getElementById('tbody').innerHTML=d.map(r=>{
-      const w=toDate(r[COL.warranty]); const ok=w&&w>=now;
-      const wp=w?`<span class="pill ${ok?'ok':'bad'}">${fmtDate(w)}</span>`:'—';
-      const cell=i=>r[i]!=null&&r[i]!==''?r[i]:'—';
-      return `<tr><td>${cell(COL.code)}</td><td>${cell(COL.sn)}</td><td>${cell(COL.country)}</td>
-        <td>${cell(COL.customer)}</td><td>${cell(COL.location)}</td><td>${cell(COL.fab)}</td>
-        <td>${cell(COL.model)}</td><td>${cell(COL.group1)}</td><td>${cell(COL.detail1)}</td>
-        <td>${cell(COL.toolMaker)}</td><td>${cell(COL.toolModel)}</td><td>${fmtDate(toDate(r[COL.turnOn]))}</td>
-        <td>${wp}</td></tr>`;
-    }).join('')||'<tr><td colspan="13" style="text-align:center;color:#94a3b8;padding:30px">검색 결과 없음</td></tr>';
   }
-  ['q','fCountry','fCustomer','fModel','fGroup'].forEach(id=>document.getElementById(id).addEventListener('input',draw));
-  document.querySelectorAll('#tbl thead th').forEach(th=>th.addEventListener('click',()=>{
-    const k=+th.dataset.k; if(sortK===k)sortAsc=!sortAsc;else{sortK=k;sortAsc=true;} draw();
-  }));
-  draw();
+  const tbody = document.getElementById('tbody');
+  if (!d.length) { tbody.innerHTML='<tr><td colspan="13" class="empty">조건에 맞는 데이터가 없습니다</td></tr>'; return; }
+  tbody.innerHTML = d.map(r => {
+    const w = toDate(r[CI.warranty]); const ok = w && w >= now;
+    const wp = w ? `<span class="pill ${ok?'ok':'bad'}">${fmtDate(w)}</span>` : '—';
+    return `<tr>
+      <td>${cell(r,'code')}</td><td>${cell(r,'sn')}</td><td>${cell(r,'country')}</td>
+      <td>${cell(r,'customer')}</td><td>${cell(r,'location')}</td><td>${cell(r,'fab')}</td>
+      <td>${cell(r,'model')}</td><td>${cell(r,'group1')}</td><td>${cell(r,'detail1')}</td>
+      <td>${cell(r,'toolMaker')}</td><td>${cell(r,'toolModel')}</td>
+      <td>${fmtDate(toDate(r[CI.turnOn]))}</td><td>${wp}</td>
+    </tr>`;
+  }).join('');
 }
-load();
+
+// 테이블 정렬
+document.addEventListener('click', e => {
+  const th = e.target.closest('th[data-k]');
+  if (!th) return;
+  const k = th.dataset.k;
+  if (sortK === k) sortAsc = !sortAsc; else { sortK = k; sortAsc = true; }
+  render();
+});
+
+loadData();
 </script>
 </body>
 </html>
