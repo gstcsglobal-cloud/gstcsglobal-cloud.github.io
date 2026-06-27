@@ -3,165 +3,229 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>글로벌 스크러버 설치 현황 대시보드</title>
+<title>Global Scrubber Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
+*{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg1:#0a0f1e; --bg2:#0d1f3c; --bg3:#0f2a4a;
-  --accent:#38bdf8; --accent2:#2dd4bf; --accent3:#a78bfa; --accent4:#fbbf24;
-  --glass:rgba(255,255,255,0.06); --glassb:rgba(255,255,255,0.12);
-  --txt:#e2e8f0; --muted:#94a3b8;
-  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --bg1:#060d1f;--bg2:#0b1a35;--bg3:#0f2348;
+  --a1:#38bdf8;--a2:#2dd4bf;--a3:#a78bfa;--a4:#fbbf24;--a5:#f472b6;
+  --glass:rgba(255,255,255,0.06);--glassb:rgba(255,255,255,0.13);
+  --txt:#e2e8f0;--mut:#94a3b8;
+  --ok:#34d399;--bad:#fb7185;--warn:#fbbf24;
 }
-body{
-  font-family:'Segoe UI','Malgun Gothic',sans-serif; color:var(--txt);
-  background:linear-gradient(-45deg,var(--bg1),var(--bg2),var(--bg3),#0c1628);
-  background-size:400% 400%; animation:grad 20s ease infinite; min-height:100vh; padding:28px 32px;
-}
+body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
+  background:linear-gradient(-45deg,var(--bg1),var(--bg2),var(--bg3),#091528);
+  background-size:400% 400%;animation:grad 22s ease infinite;min-height:100vh;padding:24px 28px}
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
 /* HEADER */
-.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
-.header h1{font-size:32px;font-weight:800;
-  background:linear-gradient(90deg,#38bdf8,#2dd4bf,#a78bfa);
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:28px;font-weight:800;
+  background:linear-gradient(90deg,#38bdf8,#2dd4bf,#a78bfa,#f472b6);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
-.header .sub{color:var(--muted);font-size:13px;margin-top:4px}
-.header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.badge{background:var(--glass);border:1px solid var(--glassb);border-radius:30px;padding:8px 18px;font-size:13px;backdrop-filter:blur(10px)}
-.btn{background:linear-gradient(90deg,var(--accent),var(--accent2));border:none;border-radius:30px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;padding:9px 20px;transition:opacity .2s;text-decoration:none;display:inline-block;}
-.btn:hover{opacity:.85}.btn:disabled{opacity:.5;cursor:not-allowed}
-.btn-back{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);}
-.status{font-size:12px;color:var(--muted);margin-bottom:16px;text-align:right;}
-.status.ok{color:var(--accent2)}.status.err{color:var(--bad)}
+.header .sub{color:var(--muted,#94a3b8);font-size:13px;margin-top:4px}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:9px 18px;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-grad{background:linear-gradient(90deg,var(--a1),var(--a2));color:#fff}
+.btn-grad:hover{opacity:.85;transform:translateY(-1px)}
+.btn-glass{background:var(--glass);border:1px solid var(--glassb);color:var(--txt)}
+.btn-glass:hover{background:rgba(255,255,255,.1)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* LANG */
+.lang-wrap{position:relative}
+.lang-btn{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);
+  padding:8px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
+.lang-btn:hover{background:rgba(255,255,255,.1)}
+.lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;
+  background:#1a2744;border:1px solid var(--glassb);border-radius:14px;
+  padding:6px;z-index:100;min-width:130px;display:none;backdrop-filter:blur(20px)}
+.lang-dropdown.open{display:block}
+.lang-item{padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.lang-item:hover{background:rgba(255,255,255,.08)}
+.lang-item.active{background:rgba(56,189,248,.15);color:var(--a1)}
+
+/* STATUS */
+.status{font-size:12px;color:var(--mut);margin-bottom:16px;text-align:right}
+.status.ok{color:var(--a2)}.status.err{color:var(--bad)}
+
+/* PERIOD */
+.period-bar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.period-bar .lbl{font-size:12px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.period-chips{display:flex;gap:6px;flex-wrap:wrap}
+.pchip{cursor:pointer;border:1px solid var(--glassb);background:var(--glass);color:var(--txt);
+  padding:6px 16px;border-radius:30px;font-size:12px;font-weight:700;transition:all .2s;user-select:none}
+.pchip:hover{border-color:var(--a4)}
+.pchip.active{background:linear-gradient(90deg,var(--a4),var(--a5));border-color:transparent;
+  box-shadow:0 4px 16px rgba(251,191,36,.35)}
 
 /* SLICERS */
-.slicers{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px}
-.slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:18px;padding:14px 18px;backdrop-filter:blur(12px)}
-.slicer .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px;font-weight:700}
-.chips{display:flex;gap:8px;flex-wrap:wrap}
-.chip{cursor:pointer;border:1px solid var(--glassb);background:rgba(255,255,255,0.04);color:var(--txt);
-  padding:7px 15px;border-radius:30px;font-size:13px;font-weight:600;transition:all .25s;user-select:none}
-.chip:hover{transform:translateY(-2px);border-color:var(--accent2)}
-.chip.active{background:linear-gradient(90deg,var(--accent),var(--accent2));border-color:transparent;
-  box-shadow:0 6px 20px rgba(56,189,248,.4)}
-.search-box{margin-left:auto}
-.search-box input{background:rgba(255,255,255,0.06);border:1px solid var(--glassb);border-radius:30px;
-  padding:10px 18px;color:var(--txt);font-size:13px;width:220px;outline:none}
-.search-box input::placeholder{color:var(--muted)}
-.search-box input:focus{border-color:var(--accent)}
+.slicers{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:16px;padding:12px 16px;backdrop-filter:blur(12px)}
+.slicer .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--mut);margin-bottom:8px;font-weight:700}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{cursor:pointer;border:1px solid var(--glassb);background:rgba(255,255,255,.04);color:var(--txt);
+  padding:6px 14px;border-radius:30px;font-size:12px;font-weight:600;transition:all .2s;user-select:none}
+.chip:hover{transform:translateY(-2px);border-color:var(--a2)}
+.chip.active{background:linear-gradient(90deg,var(--a1),var(--a2));border-color:transparent;
+  box-shadow:0 4px 16px rgba(56,189,248,.35)}
+.search-sl{margin-left:auto}
+.search-sl input{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:30px;
+  padding:8px 16px;color:var(--txt);font-size:13px;width:210px;outline:none}
+.search-sl input:focus{border-color:var(--a1)}
+.search-sl input::placeholder{color:var(--mut)}
 
 /* KPIS */
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px}
-.kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px);
-  position:relative;overflow:hidden;transition:transform .3s}
-.kpi:hover{transform:translateY(-5px)}
-.kpi::before{content:'';position:absolute;top:-40px;right:-40px;width:110px;height:110px;border-radius:50%;opacity:.3}
-.kpi.k1::before{background:var(--accent)}.kpi.k2::before{background:var(--accent2)}
-.kpi.k3::before{background:var(--accent3)}.kpi.k4::before{background:var(--ok)}.kpi.k5::before{background:var(--bad)}
-.kpi .ic{font-size:20px;margin-bottom:8px}
-.kpi .val{font-size:34px;font-weight:800;line-height:1}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;
+  backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s}
+.kpi:hover{transform:translateY(-4px)}
+.kpi::before{content:'';position:absolute;top:-35px;right:-35px;width:100px;height:100px;border-radius:50%;opacity:.28}
+.kpi.k1::before{background:var(--a1)}.kpi.k2::before{background:var(--a2)}
+.kpi.k3::before{background:var(--a3)}.kpi.k4::before{background:var(--ok)}.kpi.k5::before{background:var(--bad)}
+.kpi .ic{font-size:20px;margin-bottom:6px}
+.kpi .val{font-size:32px;font-weight:800;line-height:1}
 .kpi.k4 .val{color:var(--ok)}.kpi.k5 .val{color:var(--bad)}
-.kpi .cap{color:var(--muted);font-size:12px;margin-top:8px;font-weight:600}
+.kpi .cap{color:var(--mut);font-size:11px;margin-top:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+
+/* TREND SECTION */
+.trend-card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;
+  backdrop-filter:blur(14px);margin-bottom:20px}
+.trend-card h3{font-size:14px;font-weight:700;margin-bottom:14px;color:#dfe6ff}
+.trend-wrap{position:relative;height:200px}
 
 /* CHARTS */
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
-.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px}
-.card{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px)}
-.card h3{font-size:14px;font-weight:700;margin-bottom:14px;color:#dfe6ff}
-.card .cw{position:relative;height:220px}
-.card.wide{grid-column:span 2}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:16px}
+.card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px)}
+.card h3{font-size:14px;font-weight:700;margin-bottom:12px;color:#dfe6ff}
+.card .cw{position:relative;height:200px}
 
 /* TABLE */
-.tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px);margin-bottom:20px}
-.tablecard h3{font-size:14px;font-weight:700;margin-bottom:14px}
-.tbl-wrap{max-height:400px;overflow:auto;border-radius:12px}
-.tbl-wrap::-webkit-scrollbar{width:6px;height:6px}.tbl-wrap::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
-table{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
-th{text-align:left;padding:10px 12px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;
-  border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(10,15,30,.95);cursor:pointer;user-select:none}
-th:hover{color:var(--accent)}
-td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+.tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px)}
+.tablecard h3{font-size:14px;font-weight:700;margin-bottom:12px}
+.tbl-wrap{max-height:380px;overflow:auto;border-radius:10px}
+.tbl-wrap::-webkit-scrollbar{width:5px;height:5px}.tbl-wrap::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+th{text-align:left;padding:10px 11px;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:1px;
+  border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(6,13,31,.96);cursor:pointer;user-select:none}
+th:hover{color:var(--a1)}
+td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.04)}
 tr:hover td{background:rgba(255,255,255,.04)}
-.pill{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.pill{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
 .pill.ok{background:rgba(52,211,153,.18);color:var(--ok)}
 .pill.bad{background:rgba(251,113,133,.18);color:var(--bad)}
-.empty{text-align:center;padding:40px;color:var(--muted)}
-.loading{text-align:center;padding:60px;color:var(--muted);font-size:15px}
+.empty{text-align:center;padding:40px;color:var(--mut)}
+.loading{text-align:center;padding:60px;color:var(--mut);font-size:15px}
 
-@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
-@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid,.grid2{grid-template-columns:1fr}.card.wide{grid-column:span 1}}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3,.grid2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
 <div class="header">
   <div>
-    <h1>🌐 글로벌 스크러버 설치 현황</h1>
-    <div class="sub">고객사 설치 스크러버 통합 모니터링 대시보드</div>
+    <h1 data-i="title">🌐 Global Scrubber Installation Status</h1>
+    <div class="sub" data-i="sub">Integrated monitoring dashboard for installed scrubbers by customer</div>
   </div>
   <div class="header-right">
-    <a href="https://gstcsglobal-cloud.github.io" class="btn btn-back">← 메인으로</a>
-    <div class="badge">총 <b id="totRec">0</b>대 · 실시간 필터</div>
-    <button class="btn" id="refreshBtn" onclick="loadData()">🔄 새로고침</button>
+    <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← Main</a>
+    <div class="btn btn-glass" style="pointer-events:none">
+      <span data-i="total_badge">Total</span> <b id="totRec">0</b> <span data-i="units">units</span>
+    </div>
+    <button class="btn btn-grad" id="refreshBtn" onclick="loadData()">🔄 <span data-i="refresh">Refresh</span></button>
+    <!-- 언어 선택 -->
+    <div class="lang-wrap">
+      <button class="lang-btn" onclick="toggleLang()">🌐 <span id="langLabel">KO</span> ▾</button>
+      <div class="lang-dropdown" id="langMenu">
+        <div class="lang-item" onclick="setLang('ko')">🇰🇷 한국어</div>
+        <div class="lang-item" onclick="setLang('en')">🇺🇸 English</div>
+        <div class="lang-item" onclick="setLang('zh')">🇨🇳 中文</div>
+        <div class="lang-item" onclick="setLang('ja')">🇯🇵 日本語</div>
+      </div>
+    </div>
   </div>
 </div>
-<div class="status" id="status">데이터 불러오는 중...</div>
+<div class="status" id="status" data-i="loading">Loading data...</div>
+
+<!-- 기간 선택 -->
+<div class="period-bar">
+  <span class="lbl" data-i="period_lbl">Period</span>
+  <div class="period-chips">
+    <div class="pchip" data-p="week" onclick="setPeriod('week')" data-i="week">Week</div>
+    <div class="pchip active" data-p="month" onclick="setPeriod('month')" data-i="month">Month</div>
+    <div class="pchip" data-p="quarter" onclick="setPeriod('quarter')" data-i="quarter">Quarter</div>
+    <div class="pchip" data-p="half" onclick="setPeriod('half')" data-i="half">Half-Year</div>
+    <div class="pchip" data-p="year" onclick="setPeriod('year')" data-i="year">Year</div>
+    <div class="pchip" data-p="all" onclick="setPeriod('all')" data-i="all">All</div>
+  </div>
+</div>
 
 <!-- 슬라이서 -->
 <div class="slicers">
-  <div class="slicer"><div class="lbl">🌍 국가</div><div class="chips" id="sl-country"></div></div>
-  <div class="slicer"><div class="lbl">🏢 고객사</div><div class="chips" id="sl-customer"></div></div>
-  <div class="slicer"><div class="lbl">⚙️ 모델</div><div class="chips" id="sl-model"></div></div>
-  <div class="slicer"><div class="lbl">🛡️ 워런티</div><div class="chips" id="sl-warr"></div></div>
-  <div class="slicer search-box"><div class="lbl">🔍 검색</div><input id="search" placeholder="S/N, Location, Tool..."></div>
+  <div class="slicer"><div class="lbl">Country</div><div class="chips" id="sl-country"></div></div>
+  <div class="slicer"><div class="lbl">Customer</div><div class="chips" id="sl-customer"></div></div>
+  <div class="slicer"><div class="lbl">Model</div><div class="chips" id="sl-model"></div></div>
+  <div class="slicer"><div class="lbl">Warranty</div><div class="chips" id="sl-warr"></div></div>
+  <div class="slicer search-sl">
+    <div class="lbl" data-i="search_lbl">Search</div>
+    <input id="search" data-i-placeholder="search_ph">
+  </div>
 </div>
 
 <!-- KPI -->
 <div class="kpis">
-  <div class="kpi k1"><div class="ic">🖥️</div><div class="val" id="kp1">0</div><div class="cap">선택 설치 대수</div></div>
-  <div class="kpi k2"><div class="ic">🌍</div><div class="val" id="kp2">0</div><div class="cap">설치 국가</div></div>
-  <div class="kpi k3"><div class="ic">🏢</div><div class="val" id="kp3">0</div><div class="cap">고객사</div></div>
-  <div class="kpi k4"><div class="ic">✅</div><div class="val" id="kp4">0</div><div class="cap">워런티 유효</div></div>
-  <div class="kpi k5"><div class="ic">⚠️</div><div class="val" id="kp5">0</div><div class="cap">워런티 만료</div></div>
+  <div class="kpi k1"><div class="ic">🖥️</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">Filtered Units</div></div>
+  <div class="kpi k2"><div class="ic">🌍</div><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">Countries</div></div>
+  <div class="kpi k3"><div class="ic">🏢</div><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">Customers</div></div>
+  <div class="kpi k4"><div class="ic">✅</div><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Warranty Active</div></div>
+  <div class="kpi k5"><div class="ic">⚠️</div><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">Warranty Expired</div></div>
+</div>
+
+<!-- 추이 차트 -->
+<div class="trend-card">
+  <h3 data-i="trend_title">📈 Installation Trend (Turn On by Period)</h3>
+  <div class="trend-wrap"><canvas id="cTrend"></canvas></div>
 </div>
 
 <!-- 차트 1행 -->
-<div class="grid">
-  <div class="card"><h3>🌍 국가별 설치 현황</h3><div class="cw"><canvas id="cCountry"></canvas></div></div>
-  <div class="card"><h3>🏢 고객사별 설치 현황</h3><div class="cw"><canvas id="cCustomer"></canvas></div></div>
-  <div class="card"><h3>🛡️ 워런티 상태</h3><div class="cw"><canvas id="cWarr"></canvas></div></div>
+<div class="grid3">
+  <div class="card"><h3>Country</h3><div class="cw"><canvas id="cCountry"></canvas></div></div>
+  <div class="card"><h3>Customer</h3><div class="cw"><canvas id="cCustomer"></canvas></div></div>
+  <div class="card"><h3>Warranty</h3><div class="cw"><canvas id="cWarr"></canvas></div></div>
 </div>
 
 <!-- 차트 2행 -->
-<div class="grid">
-  <div class="card"><h3>⚙️ 스크러버 모델</h3><div class="cw"><canvas id="cModel"></canvas></div></div>
-  <div class="card"><h3>🧪 공정 그룹</h3><div class="cw"><canvas id="cGroup"></canvas></div></div>
-  <div class="card"><h3>📅 연도별 가동(Turn On)</h3><div class="cw"><canvas id="cYear"></canvas></div></div>
+<div class="grid3">
+  <div class="card"><h3>Model</h3><div class="cw"><canvas id="cModel"></canvas></div></div>
+  <div class="card"><h3>Group</h3><div class="cw"><canvas id="cGroup"></canvas></div></div>
+  <div class="card"><h3>Turn On (Year)</h3><div class="cw"><canvas id="cYear"></canvas></div></div>
 </div>
 
 <!-- 테이블 -->
 <div class="tablecard">
-  <h3>📋 설치 상세 목록 (<span id="tblCnt">0</span>대)</h3>
+  <h3>📋 <span data-i="tbl_title">Detail List</span> (<span id="tblCnt">0</span> <span data-i="units">units</span>)</h3>
   <div class="tbl-wrap">
-    <table id="tbl">
+    <table>
       <thead><tr>
         <th data-k="code">Code</th>
         <th data-k="sn">S/N</th>
-        <th data-k="country">국가</th>
-        <th data-k="customer">고객사</th>
+        <th data-k="country">Country</th>
+        <th data-k="customer">Customer</th>
         <th data-k="location">Location</th>
         <th data-k="fab">FAB</th>
-        <th data-k="model">모델</th>
-        <th data-k="group1">공정</th>
+        <th data-k="model">Model</th>
+        <th data-k="group1">Group</th>
         <th data-k="detail1">Detail</th>
         <th data-k="toolMaker">Tool Maker</th>
         <th data-k="toolModel">Tool Model</th>
         <th data-k="turnOn">Turn On</th>
-        <th data-k="warranty">워런티</th>
+        <th data-k="warranty">Warranty</th>
       </tr></thead>
-      <tbody id="tbody"><tr><td colspan="13" class="loading">⏳ 데이터 불러오는 중...</td></tr></tbody>
+      <tbody id="tbody"><tr><td colspan="13" class="loading">⏳ Loading...</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -169,7 +233,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
 <script>
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
 
-// 컬럼 인덱스 (0-based)
 const CI = {
   country:2, customer:3, location:4, code:5, sn:6, model:7,
   fab:9, group1:12, detail1:14,
@@ -177,181 +240,287 @@ const CI = {
   turnOn:40, warranty:42
 };
 
-const PAL = ['#38bdf8','#2dd4bf','#a78bfa','#fbbf24','#f472b6','#34d399','#fb7185','#60a5fa','#c084fc','#4ade80'];
-let RAW = [], charts = {};
-const F = { country:'전체', customer:'전체', model:'전체', warr:'전체', q:'' };
+const PAL = ['#38bdf8','#2dd4bf','#a78bfa','#fbbf24','#f472b6','#34d399','#fb7185','#60a5fa','#c084fc','#4ade80','#f97316','#e879f9'];
+
+// 번역
+const T = {
+  ko:{
+    title:'🌐 글로벌 스크러버 설치 현황', sub:'고객사 설치 스크러버 통합 모니터링 대시보드',
+    back:'← 메인으로', total_badge:'총', units:'대', refresh:'새로고침',
+    period_lbl:'기간', week:'주', month:'월', quarter:'분기', half:'반기', year:'연', all:'전체',
+    search_lbl:'검색', search_ph:'S/N, Location, Tool Maker...',
+    kp1:'필터 설치 대수', kp2:'설치 국가', kp3:'고객사', kp4:'Warranty 유효', kp5:'Warranty 만료',
+    trend_title:'📈 설치 추이 (Turn On 기준)',
+    tbl_title:'상세 목록',
+    loading:'데이터 불러오는 중...',
+    warr_all:'전체', warr_ok:'유효', warr_exp:'만료',
+    no_data:'조건에 맞는 데이터가 없습니다',
+  },
+  en:{
+    title:'🌐 Global Scrubber Installation Status', sub:'Integrated monitoring dashboard for installed scrubbers',
+    back:'← Main', total_badge:'Total', units:'units', refresh:'Refresh',
+    period_lbl:'Period', week:'Week', month:'Month', quarter:'Quarter', half:'Half-Year', year:'Year', all:'All',
+    search_lbl:'Search', search_ph:'S/N, Location, Tool Maker...',
+    kp1:'Filtered Units', kp2:'Countries', kp3:'Customers', kp4:'Warranty Active', kp5:'Warranty Expired',
+    trend_title:'📈 Installation Trend (by Turn On date)',
+    tbl_title:'Detail List',
+    loading:'Loading data...',
+    warr_all:'All', warr_ok:'Active', warr_exp:'Expired',
+    no_data:'No data found',
+  },
+  zh:{
+    title:'🌐 全球洗涤器安装状况', sub:'客户安装洗涤器综合监控仪表板',
+    back:'← 主页', total_badge:'共', units:'台', refresh:'刷新',
+    period_lbl:'周期', week:'周', month:'月', quarter:'季度', half:'半年', year:'年', all:'全部',
+    search_lbl:'搜索', search_ph:'S/N, 位置, 工具制造商...',
+    kp1:'过滤安装台数', kp2:'安装国家', kp3:'客户', kp4:'保修有效', kp5:'保修到期',
+    trend_title:'📈 安装趋势（开机日期）',
+    tbl_title:'详细列表',
+    loading:'正在加载数据...',
+    warr_all:'全部', warr_ok:'有效', warr_exp:'到期',
+    no_data:'未找到数据',
+  },
+  ja:{
+    title:'🌐 グローバルスクラバー設置状況', sub:'顧客設置スクラバー統合モニタリングダッシュボード',
+    back:'← メイン', total_badge:'合計', units:'台', refresh:'更新',
+    period_lbl:'期間', week:'週', month:'月', quarter:'四半期', half:'半期', year:'年', all:'全体',
+    search_lbl:'検索', search_ph:'S/N, 場所, ツールメーカー...',
+    kp1:'フィルター台数', kp2:'設置国', kp3:'顧客', kp4:'保証有効', kp5:'保証切れ',
+    trend_title:'📈 設置推移（Turn On基準）',
+    tbl_title:'詳細リスト',
+    loading:'データ読み込み中...',
+    warr_all:'全体', warr_ok:'有効', warr_exp:'期限切れ',
+    no_data:'データが見つかりません',
+  }
+};
+
+let LANG = 'ko', PERIOD = 'month', RAW = [], CHARTS = {}, sortK = null, sortAsc = true;
+const F = { country:'ALL', customer:'ALL', model:'ALL', warr:'ALL', q:'' };
 
 Chart.defaults.color = '#94a3b8';
 Chart.defaults.font.family = "'Segoe UI','Malgun Gothic',sans-serif";
 
-function toDate(v) {
-  if (!v || v === '') return null;
-  const n = Number(v);
-  if (!isNaN(n) && n > 20000 && n < 80000) return new Date(Date.UTC(1899,11,30) + n*86400000);
-  const d = new Date(v);
-  return isNaN(d) ? null : d;
+// 언어
+function t(k){ return (T[LANG]||T.ko)[k] || k; }
+function applyLang(){
+  document.querySelectorAll('[data-i]').forEach(el => {
+    const k = el.getAttribute('data-i');
+    if(el.tagName==='INPUT') el.placeholder = t(k);
+    else el.textContent = t(k);
+  });
+  document.querySelectorAll('[data-i-placeholder]').forEach(el => {
+    el.placeholder = t(el.getAttribute('data-i-placeholder'));
+  });
+  document.getElementById('langLabel').textContent = LANG.toUpperCase();
+  // 워런티 슬라이서 재생성
+  if(RAW.length) buildWarrChips();
 }
-function fmtDate(d) { return d ? d.toISOString().slice(0,10) : '—'; }
-function cell(r, k) { const v = r[CI[k]]; return (v !== undefined && v !== '') ? v : '—'; }
+function setLang(l){ LANG=l; applyLang(); document.getElementById('langMenu').classList.remove('open'); }
+function toggleLang(){ document.getElementById('langMenu').classList.toggle('open'); }
+document.addEventListener('click', e=>{ if(!e.target.closest('.lang-wrap')) document.getElementById('langMenu').classList.remove('open'); });
 
-async function loadData() {
-  const btn = document.getElementById('refreshBtn');
-  const status = document.getElementById('status');
-  btn.disabled = true; btn.textContent = '⏳ 불러오는 중...';
-  status.className = 'status'; status.textContent = '구글 시트에서 데이터 불러오는 중...';
-  try {
-    const res = await fetch(SHEET_URL + '&t=' + Date.now());
-    const text = await res.text();
-    const parsed = Papa.parse(text, { skipEmptyLines: true });
-    RAW = parsed.data.slice(1).filter(r => r[CI.code] && String(r[CI.code]).trim() !== '');
-    const now = new Date().toLocaleString('ko-KR');
-    status.className = 'status ok';
-    status.textContent = '✅ 마지막 업데이트: ' + now + ' · 총 ' + RAW.length + '대';
-    document.getElementById('totRec').textContent = RAW.length;
-    rebuildFilters();
-    render();
-  } catch(e) {
-    status.className = 'status err';
-    status.textContent = '❌ 데이터를 불러오지 못했습니다.';
+// 기간
+function setPeriod(p){
+  PERIOD=p;
+  document.querySelectorAll('.pchip').forEach(c=>c.classList.toggle('active', c.dataset.p===p));
+  if(RAW.length) render();
+}
+
+function toDate(v){
+  if(!v||v==='')return null;
+  const n=Number(v);
+  if(!isNaN(n)&&n>20000&&n<80000) return new Date(Date.UTC(1899,11,30)+n*86400000);
+  const d=new Date(v); return isNaN(d)?null:d;
+}
+function fmtDate(d){ return d?d.toISOString().slice(0,10):'—'; }
+function cell(r,k){ const v=r[CI[k]]; return (v!==undefined&&v!=='')?v:'—'; }
+
+async function loadData(){
+  const btn=document.getElementById('refreshBtn');
+  const status=document.getElementById('status');
+  btn.disabled=true;
+  status.className='status'; status.textContent=t('loading');
+  try{
+    const res=await fetch(SHEET_URL+'&t='+Date.now());
+    const text=await res.text();
+    const parsed=Papa.parse(text,{skipEmptyLines:true});
+    RAW=parsed.data.slice(1).filter(r=>r[CI.code]&&String(r[CI.code]).trim()!=='');
+    document.getElementById('totRec').textContent=RAW.length;
+    const now=new Date().toLocaleString('ko-KR');
+    status.className='status ok'; status.textContent='✅ '+now+' · '+RAW.length+(LANG==='ko'?'대 로드 완료':' units loaded');
+    rebuildFilters(); render();
+  }catch(e){
+    status.className='status err'; status.textContent='❌ '+e.message;
   }
-  btn.disabled = false; btn.textContent = '🔄 새로고침';
+  btn.disabled=false;
 }
 
-function uniqCol(idx) {
-  return ['전체', ...Array.from(new Set(RAW.map(r => (r[idx]||'').trim()).filter(Boolean))).sort()];
+function uniqCol(idx){
+  return Array.from(new Set(RAW.map(r=>(r[idx]||'').trim()).filter(Boolean))).sort();
 }
 
-function buildChips(id, key, idx) {
-  const box = document.getElementById(id); box.innerHTML = '';
-  uniqCol(idx).forEach(v => {
-    const c = document.createElement('div');
-    c.className = 'chip' + (v === '전체' ? ' active' : '');
-    c.textContent = v;
-    c.onclick = () => { F[key] = v; [...box.children].forEach(x => x.classList.remove('active')); c.classList.add('active'); render(); };
+function buildChips(id, key, idx, allLabel){
+  const box=document.getElementById(id); box.innerHTML='';
+  ['ALL',...uniqCol(idx)].forEach(v=>{
+    const c=document.createElement('div');
+    c.className='chip'+(F[key]===v?' active':'');
+    c.textContent=v==='ALL'?(allLabel||'ALL'):v;
+    c.onclick=()=>{ F[key]=v; [...box.children].forEach(x=>x.classList.remove('active')); c.classList.add('active'); render(); };
     box.appendChild(c);
   });
 }
 
-function buildWarrChips() {
-  const box = document.getElementById('sl-warr'); box.innerHTML = '';
-  ['전체','유효','만료'].forEach(v => {
-    const c = document.createElement('div');
-    c.className = 'chip' + (v === '전체' ? ' active' : '');
-    c.textContent = v;
-    c.onclick = () => { F.warr = v; [...box.children].forEach(x => x.classList.remove('active')); c.classList.add('active'); render(); };
+function buildWarrChips(){
+  const box=document.getElementById('sl-warr'); box.innerHTML='';
+  [{v:'ALL',l:t('warr_all')},{v:'active',l:t('warr_ok')},{v:'expired',l:t('warr_exp')}].forEach(({v,l})=>{
+    const c=document.createElement('div');
+    c.className='chip'+(F.warr===v?' active':''); c.textContent=l;
+    c.onclick=()=>{ F.warr=v; [...box.children].forEach(x=>x.classList.remove('active')); c.classList.add('active'); render(); };
     box.appendChild(c);
   });
 }
 
-function rebuildFilters() {
-  F.country = '전체'; F.customer = '전체'; F.model = '전체'; F.warr = '전체'; F.q = '';
-  document.getElementById('search').value = '';
-  buildChips('sl-country', 'country', CI.country);
-  buildChips('sl-customer', 'customer', CI.customer);
-  buildChips('sl-model', 'model', CI.model);
+function rebuildFilters(){
+  F.country='ALL'; F.customer='ALL'; F.model='ALL'; F.warr='ALL'; F.q='';
+  document.getElementById('search').value='';
+  buildChips('sl-country','country',CI.country);
+  buildChips('sl-customer','customer',CI.customer);
+  buildChips('sl-model','model',CI.model);
   buildWarrChips();
 }
 
-document.getElementById('search').addEventListener('input', e => { F.q = e.target.value.toLowerCase(); render(); });
+document.getElementById('search').addEventListener('input',e=>{ F.q=e.target.value.toLowerCase(); render(); });
 
-function filt() {
-  const now = new Date();
-  return RAW.filter(r => {
-    if (F.country !== '전체' && (r[CI.country]||'').trim() !== F.country) return false;
-    if (F.customer !== '전체' && (r[CI.customer]||'').trim() !== F.customer) return false;
-    if (F.model !== '전체' && (r[CI.model]||'').trim() !== F.model) return false;
-    if (F.warr !== '전체') {
-      const w = toDate(r[CI.warranty]);
-      if (F.warr === '유효' && !(w && w >= now)) return false;
-      if (F.warr === '만료' && !(w && w < now)) return false;
+function filt(){
+  const now=new Date();
+  // 기간 필터
+  let periodStart=null;
+  if(PERIOD!=='all'){
+    periodStart=new Date();
+    if(PERIOD==='week') periodStart.setDate(periodStart.getDate()-7);
+    else if(PERIOD==='month') periodStart.setMonth(periodStart.getMonth()-1);
+    else if(PERIOD==='quarter') periodStart.setMonth(periodStart.getMonth()-3);
+    else if(PERIOD==='half') periodStart.setMonth(periodStart.getMonth()-6);
+    else if(PERIOD==='year') periodStart.setFullYear(periodStart.getFullYear()-1);
+  }
+  return RAW.filter(r=>{
+    if(F.country!=='ALL'&&(r[CI.country]||'').trim()!==F.country) return false;
+    if(F.customer!=='ALL'&&(r[CI.customer]||'').trim()!==F.customer) return false;
+    if(F.model!=='ALL'&&(r[CI.model]||'').trim()!==F.model) return false;
+    if(F.warr!=='ALL'){
+      const w=toDate(r[CI.warranty]);
+      if(F.warr==='active'&&!(w&&w>=now)) return false;
+      if(F.warr==='expired'&&!(w&&w<now)) return false;
     }
-    if (F.q && !r.join(' ').toLowerCase().includes(F.q)) return false;
+    if(F.q&&!r.join(' ').toLowerCase().includes(F.q)) return false;
+    if(periodStart){ const d=toDate(r[CI.turnOn]); if(!d||d<periodStart) return false; }
     return true;
   });
 }
 
-function countBy(rows, idx) {
-  const m = {};
-  rows.forEach(r => { const k = (r[idx]||'미지정').toString().trim() || '미지정'; m[k] = (m[k]||0)+1; });
-  return Object.entries(m).sort((a,b) => b[1]-a[1]);
+function countBy(rows,idx){
+  const m={};
+  rows.forEach(r=>{ const k=(r[idx]||'N/A').toString().trim()||'N/A'; m[k]=(m[k]||0)+1; });
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]);
 }
 
-function mkBar(id, labels, data, color) {
-  const ctx = document.getElementById(id);
-  const cfg = {
-    type:'bar', data:{labels, datasets:[{data, backgroundColor:color, borderRadius:6}]},
-    options:{responsive:true, maintainAspectRatio:false,
+function mkBar(id,labels,data,color,label2){
+  const ctx=document.getElementById(id);
+  const cfg={type:'bar',data:{labels,datasets:[{label:label2||'',data,backgroundColor:color,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false}},
-      scales:{x:{ticks:{color:'#94a3b8', maxRotation:30}, grid:{display:false}},
-              y:{ticks:{color:'#94a3b8', precision:0}, grid:{color:'rgba(255,255,255,.05)'}}}}
-  };
-  if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets[0].data=data; charts[id].update(); return; }
-  charts[id] = new Chart(ctx, cfg);
+      scales:{x:{ticks:{color:'#94a3b8',maxRotation:35,font:{size:10}},grid:{display:false}},
+              y:{ticks:{color:'#94a3b8',precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}};
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;CHARTS[id].data.datasets[0].backgroundColor=color;CHARTS[id].update();return;}
+  CHARTS[id]=new Chart(ctx,cfg);
 }
 
-function mkDonut(id, labels, data, colors) {
-  const ctx = document.getElementById(id);
-  const cfg = {
-    type:'doughnut', data:{labels, datasets:[{data, backgroundColor:colors||PAL, borderColor:'rgba(0,0,0,.2)', borderWidth:2, hoverOffset:8}]},
-    options:{responsive:true, maintainAspectRatio:false, cutout:'60%',
-      plugins:{legend:{position:'right', labels:{color:'#cbd5e1', font:{size:11}, padding:10, usePointStyle:true}}},
-      animation:{animateScale:true}}
-  };
-  if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets[0].data=data; charts[id].update(); return; }
-  charts[id] = new Chart(ctx, cfg);
+function mkDonut(id,labels,data,colors){
+  const ctx=document.getElementById(id);
+  const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors||PAL,borderColor:'rgba(0,0,0,.15)',borderWidth:2,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+      plugins:{legend:{position:'right',labels:{color:'#cbd5e1',font:{size:10},padding:8,usePointStyle:true,pointStyle:'circle'}}},
+      animation:{animateScale:true}}};
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;CHARTS[id].data.datasets[0].backgroundColor=colors||PAL;CHARTS[id].update();return;}
+  CHARTS[id]=new Chart(ctx,cfg);
 }
 
-function animVal(el, target) {
-  const start = parseFloat(el.dataset.v || 0); const t0 = performance.now();
-  function step(t) {
-    const p = Math.min((t-t0)/500, 1); const cur = start + (target-start)*(1-Math.pow(1-p,3));
-    el.textContent = Math.round(cur);
-    if (p < 1) requestAnimationFrame(step); else el.dataset.v = target;
-  }
+function mkLine(id,labels,data){
+  const ctx=document.getElementById(id);
+  const cfg={type:'line',data:{labels,datasets:[{
+    label:'Turn On',data,
+    borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.15)',
+    fill:true,tension:.4,pointRadius:4,pointBackgroundColor:'#38bdf8',pointBorderColor:'#fff',pointBorderWidth:2
+  }]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}},
+            y:{ticks:{color:'#94a3b8',precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}};
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;CHARTS[id].update();return;}
+  CHARTS[id]=new Chart(ctx,cfg);
+}
+
+function getTrendData(rows){
+  const now=new Date(); const m={};
+  let fmt, count=12;
+  if(PERIOD==='week'||PERIOD==='month'){ fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; count=PERIOD==='week'?7:30; }
+  else if(PERIOD==='quarter'){ fmt=d=>`${d.getFullYear()}-W${String(Math.ceil(d.getDate()/7)).padStart(2,'0')}`; count=13; }
+  else if(PERIOD==='half'){ fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; count=6; }
+  else{ fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+
+  rows.forEach(r=>{ const d=toDate(r[CI.turnOn]); if(d){ const k=fmt(d); m[k]=(m[k]||0)+1; }});
+  const keys=Object.keys(m).sort();
+  return {labels:keys, data:keys.map(k=>m[k])};
+}
+
+function animVal(el,target){
+  const start=parseFloat(el.dataset.v||0); const t0=performance.now();
+  function step(t){ const p=Math.min((t-t0)/500,1); const cur=start+(target-start)*(1-Math.pow(1-p,3));
+    el.textContent=Math.round(cur); if(p<1)requestAnimationFrame(step); else el.dataset.v=target; }
   requestAnimationFrame(step);
 }
 
-let sortK = null, sortAsc = true;
+function render(){
+  const f=filt(); const now=new Date();
+  let active=0,expired=0;
+  f.forEach(r=>{ const w=toDate(r[CI.warranty]); if(w){w>=now?active++:expired++;} });
 
-function render() {
-  const f = filt(); const now = new Date();
-  let active = 0, expired = 0;
-  f.forEach(r => { const w = toDate(r[CI.warranty]); if(w){ w>=now?active++:expired++; }});
+  animVal(document.getElementById('kp1'),f.length);
+  animVal(document.getElementById('kp2'),new Set(f.map(r=>(r[CI.country]||'').trim()).filter(Boolean)).size);
+  animVal(document.getElementById('kp3'),new Set(f.map(r=>(r[CI.customer]||'').trim()).filter(Boolean)).size);
+  animVal(document.getElementById('kp4'),active);
+  animVal(document.getElementById('kp5'),expired);
 
-  animVal(document.getElementById('kp1'), f.length);
-  animVal(document.getElementById('kp2'), new Set(f.map(r=>(r[CI.country]||'').trim()).filter(Boolean)).size);
-  animVal(document.getElementById('kp3'), new Set(f.map(r=>(r[CI.customer]||'').trim()).filter(Boolean)).size);
-  animVal(document.getElementById('kp4'), active);
-  animVal(document.getElementById('kp5'), expired);
+  // 추이
+  const trend=getTrendData(f);
+  mkLine('cTrend',trend.labels,trend.data);
 
-  const ctry = countBy(f, CI.country);
-  mkBar('cCountry', ctry.map(x=>x[0]), ctry.map(x=>x[1]), '#38bdf8');
-  const cust = countBy(f, CI.customer);
-  mkBar('cCustomer', cust.map(x=>x[0]), cust.map(x=>x[1]), '#2dd4bf');
-  mkDonut('cWarr', ['유효','만료'], [active, expired], ['#34d399','#fb7185']);
-  const mdl = countBy(f, CI.model);
-  mkDonut('cModel', mdl.map(x=>x[0]), mdl.map(x=>x[1]));
-  const grp = countBy(f, CI.group1);
-  mkDonut('cGroup', grp.map(x=>x[0]), grp.map(x=>x[1]));
-  const yrs = {};
-  f.forEach(r => { const d = toDate(r[CI.turnOn]); if(d){ const y = d.getUTCFullYear(); yrs[y]=(yrs[y]||0)+1; }});
-  const yk = Object.keys(yrs).sort();
-  mkBar('cYear', yk, yk.map(y=>yrs[y]), '#a78bfa');
+  // 차트
+  const ctry=countBy(f,CI.country).slice(0,10);
+  mkBar('cCountry',ctry.map(x=>x[0]),ctry.map(x=>x[1]),'#38bdf8');
+  const cust=countBy(f,CI.customer).slice(0,10);
+  mkBar('cCustomer',cust.map(x=>x[0]),cust.map(x=>x[1]),'#2dd4bf');
+  mkDonut('cWarr',[t('warr_ok'),t('warr_exp')],[active,expired],['#34d399','#fb7185']);
+  const mdl=countBy(f,CI.model).slice(0,8);
+  mkDonut('cModel',mdl.map(x=>x[0]),mdl.map(x=>x[1]));
+  const grp=countBy(f,CI.group1).slice(0,8);
+  mkDonut('cGroup',grp.map(x=>x[0]),grp.map(x=>x[1]));
+  const yrs={};
+  f.forEach(r=>{ const d=toDate(r[CI.turnOn]); if(d){const y=d.getUTCFullYear(); yrs[y]=(yrs[y]||0)+1;} });
+  const yk=Object.keys(yrs).sort();
+  mkBar('cYear',yk,yk.map(y=>yrs[y]),'#a78bfa');
 
   // 테이블
-  document.getElementById('tblCnt').textContent = f.length;
-  let d = [...f];
-  if (sortK) {
-    d.sort((a,b) => {
-      const x=(a[CI[sortK]]||'')+'', y=(b[CI[sortK]]||'')+'';
-      return sortAsc ? x.localeCompare(y,'ko',{numeric:true}) : y.localeCompare(x,'ko',{numeric:true});
-    });
-  }
-  const tbody = document.getElementById('tbody');
-  if (!d.length) { tbody.innerHTML='<tr><td colspan="13" class="empty">조건에 맞는 데이터가 없습니다</td></tr>'; return; }
-  tbody.innerHTML = d.map(r => {
-    const w = toDate(r[CI.warranty]); const ok = w && w >= now;
-    const wp = w ? `<span class="pill ${ok?'ok':'bad'}">${fmtDate(w)}</span>` : '—';
+  document.getElementById('tblCnt').textContent=f.length;
+  let d=[...f];
+  if(sortK) d.sort((a,b)=>{
+    const x=(a[CI[sortK]]||'')+'', y=(b[CI[sortK]]||'')+'';
+    return sortAsc?x.localeCompare(y,'ko',{numeric:true}):y.localeCompare(x,'ko',{numeric:true});
+  });
+  const tbody=document.getElementById('tbody');
+  if(!d.length){tbody.innerHTML=`<tr><td colspan="13" class="empty">${t('no_data')}</td></tr>`;return;}
+  tbody.innerHTML=d.map(r=>{
+    const w=toDate(r[CI.warranty]); const ok=w&&w>=now;
+    const wp=w?`<span class="pill ${ok?'ok':'bad'}">${fmtDate(w)}</span>`:'—';
     return `<tr>
       <td>${cell(r,'code')}</td><td>${cell(r,'sn')}</td><td>${cell(r,'country')}</td>
       <td>${cell(r,'customer')}</td><td>${cell(r,'location')}</td><td>${cell(r,'fab')}</td>
@@ -362,15 +531,14 @@ function render() {
   }).join('');
 }
 
-// 테이블 정렬
-document.addEventListener('click', e => {
-  const th = e.target.closest('th[data-k]');
-  if (!th) return;
-  const k = th.dataset.k;
-  if (sortK === k) sortAsc = !sortAsc; else { sortK = k; sortAsc = true; }
+document.addEventListener('click',e=>{
+  const th=e.target.closest('th[data-k]'); if(!th)return;
+  const k=th.dataset.k;
+  if(sortK===k)sortAsc=!sortAsc; else{sortK=k;sortAsc=true;}
   render();
 });
 
+applyLang();
 loadData();
 </script>
 </body>
