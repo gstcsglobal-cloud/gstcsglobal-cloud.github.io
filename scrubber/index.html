@@ -116,6 +116,22 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .trend-meta{font-size:11px;color:var(--mut);background:rgba(255,255,255,.05);padding:4px 12px;border-radius:20px}
 .trend-wrap{position:relative;height:230px}
 
+/* CROSS ANALYSIS */
+.cross-card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px);margin-bottom:16px}
+.cross-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:12px}
+.cross-header h3{font-size:14px;font-weight:700;color:#dfe6ff}
+.cross-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cross-sel{display:flex;align-items:center;gap:6px}
+.cross-sel label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--mut);font-weight:700}
+.cross-sel select{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:10px;
+  padding:7px 12px;color:var(--txt);font-size:12px;font-weight:600;outline:none;cursor:pointer;color-scheme:dark}
+.cross-sel select:focus{border-color:var(--a1)}
+.cross-x-mark{color:var(--a4);font-size:16px;font-weight:800}
+.cross-swap{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:10px;
+  width:34px;height:34px;color:var(--txt);font-size:16px;cursor:pointer;transition:all .2s}
+.cross-swap:hover{background:rgba(56,189,248,.15);border-color:var(--a1)}
+.cross-wrap{position:relative;height:300px}
+
 /* CHARTS */
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
 .card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px)}
@@ -251,16 +267,48 @@ tr:hover td{background:rgba(255,255,255,.04)}
   </div>
 </div>
 
+<!-- 교차분석 차트 -->
+<div class="cross-card">
+  <div class="cross-header">
+    <h3 data-i="cross_title">🔀 Cross Analysis</h3>
+    <div class="cross-controls">
+      <div class="cross-sel">
+        <label data-i="cross_x">X-Axis</label>
+        <select id="crossX">
+          <option value="country">Country</option>
+          <option value="customer">Customer</option>
+          <option value="model">Model</option>
+          <option value="group1">Group</option>
+          <option value="fab">FAB</option>
+        </select>
+      </div>
+      <span class="cross-x-mark">×</span>
+      <div class="cross-sel">
+        <label data-i="cross_color">Stack By</label>
+        <select id="crossColor">
+          <option value="model">Model</option>
+          <option value="group1">Group</option>
+          <option value="country">Country</option>
+          <option value="customer">Customer</option>
+          <option value="fab">FAB</option>
+        </select>
+      </div>
+      <button class="cross-swap" onclick="swapCross()" title="swap">⇄</button>
+    </div>
+  </div>
+  <div class="cross-wrap"><canvas id="cCross"></canvas></div>
+</div>
+
 <!-- 차트 1행 -->
 <div class="grid3">
   <div class="card">
     <h3>Country</h3>
-    <div class="card-note" data-i="note_rate">Bar: count · Line: share rate (%)</div>
+    <div class="card-note" data-i="note_drill">Bar: count · Line: rate(%) · 🖱️ click to filter</div>
     <div class="cw"><canvas id="cCountry"></canvas></div>
   </div>
   <div class="card">
     <h3>Customer</h3>
-    <div class="card-note" data-i="note_rate">Bar: count · Line: share rate (%)</div>
+    <div class="card-note" data-i="note_drill">Bar: count · Line: rate(%) · 🖱️ click to filter</div>
     <div class="cw"><canvas id="cCustomer"></canvas></div>
   </div>
   <div class="card">
@@ -274,12 +322,12 @@ tr:hover td{background:rgba(255,255,255,.04)}
 <div class="grid3">
   <div class="card">
     <h3>Model</h3>
-    <div class="card-note" data-i="note_model">Distribution by model</div>
+    <div class="card-note" data-i="note_drill2">Distribution · 🖱️ click to filter</div>
     <div class="cw"><canvas id="cModel"></canvas></div>
   </div>
   <div class="card">
     <h3>Group</h3>
-    <div class="card-note" data-i="note_group">Distribution by process group</div>
+    <div class="card-note" data-i="note_drill2">Distribution · 🖱️ click to filter</div>
     <div class="cw"><canvas id="cGroup"></canvas></div>
   </div>
   <div class="card">
@@ -325,7 +373,7 @@ const T={
     kp1:'필터 설치 대수',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty 유효',kp5:'Warranty 만료',
     trend_fabin:'📦 누적 FAB In 추이 (반입 기준)',trend_turnon:'⚡ 누적 Turn On 추이 (가동 기준)',
     note_rate:'Bar: 대수 · Line: 비중(%)',note_warr:'유효/만료 비율',
-    note_model:'모델별 분포',note_group:'공정 그룹별 분포',note_yoy:'Bar: 대수 · Line: 전년비(%)',
+    note_model:'모델별 분포',note_group:'공정 그룹별 분포',note_yoy:'Bar: 대수 · Line: 전년비(%)',note_drill:'Bar: 대수 · Line: 비중(%) · 🖱️ 클릭 시 필터',note_drill2:'분포 · 🖱️ 클릭 시 필터',cross_title:'🔀 교차 분석',cross_x:'가로축',cross_color:'쌓기 기준',
     tbl_title:'상세 목록',loading:'데이터 불러오는 중...',
     warr_all:'전체',warr_ok:'유효',warr_exp:'만료',no_data:'조건에 맞는 데이터가 없습니다',
     legend_cum:'누적',legend_new:'신규',range_all:'전체 기간',
@@ -341,7 +389,7 @@ const T={
     kp1:'Filtered Units',kp2:'Countries',kp3:'Customers',kp4:'Warranty Active',kp5:'Warranty Expired',
     trend_fabin:'📦 Cumulative FAB In Trend',trend_turnon:'⚡ Cumulative Turn On Trend',
     note_rate:'Bar: count · Line: rate(%)',note_warr:'Active vs Expired ratio',
-    note_model:'By model',note_group:'By process group',note_yoy:'Bar: count · Line: YoY(%)',
+    note_model:'By model',note_group:'By process group',note_yoy:'Bar: count · Line: YoY(%)',note_drill:'Bar: count · Line: rate(%) · 🖱️ click to filter',note_drill2:'Distribution · 🖱️ click to filter',cross_title:'🔀 Cross Analysis',cross_x:'X-Axis',cross_color:'Stack By',
     tbl_title:'Detail List',loading:'Loading...',
     warr_all:'All',warr_ok:'Active',warr_exp:'Expired',no_data:'No data found',
     legend_cum:'Cumulative',legend_new:'New',range_all:'All time',
@@ -357,7 +405,7 @@ const T={
     kp1:'过滤台数',kp2:'国家',kp3:'客户',kp4:'保修有效',kp5:'保修到期',
     trend_fabin:'📦 累计FAB In趋势（搬入）',trend_turnon:'⚡ 累计Turn On趋势（运行）',
     note_rate:'柱:台数·线:占比%',note_warr:'有效/到期比率',
-    note_model:'按型号',note_group:'按工艺组',note_yoy:'柱:台数·线:同比%',
+    note_model:'按型号',note_group:'按工艺组',note_yoy:'柱:台数·线:同比%',note_drill:'柱:台数·线:占比% · 🖱️点击筛选',note_drill2:'分布 · 🖱️点击筛选',cross_title:'🔀 交叉分析',cross_x:'横轴',cross_color:'堆叠依据',
     tbl_title:'详细列表',loading:'加载中...',
     warr_all:'全部',warr_ok:'有效',warr_exp:'到期',no_data:'无数据',
     legend_cum:'累计',legend_new:'新增',range_all:'全部时间',
@@ -373,7 +421,7 @@ const T={
     kp1:'フィルター台数',kp2:'設置国',kp3:'顧客',kp4:'保証有効',kp5:'保証切れ',
     trend_fabin:'📦 累積FAB In推移（搬入）',trend_turnon:'⚡ 累積Turn On推移（稼働）',
     note_rate:'棒:台数·線:構成比%',note_warr:'有効/切れ比率',
-    note_model:'モデル別',note_group:'工程グループ別',note_yoy:'棒:台数·線:前年比%',
+    note_model:'モデル別',note_group:'工程グループ別',note_yoy:'棒:台数·線:前年比%',note_drill:'棒:台数·線:構成比% · 🖱️クリックで絞込',note_drill2:'分布 · 🖱️クリックで絞込',cross_title:'🔀 クロス分析',cross_x:'横軸',cross_color:'積み上げ基準',
     tbl_title:'詳細リスト',loading:'読込中...',
     warr_all:'全体',warr_ok:'有効',warr_exp:'期限切れ',no_data:'データなし',
     legend_cum:'累積',legend_new:'新規',range_all:'全期間',
@@ -660,19 +708,25 @@ function mkTrend(id,labels,cumData,newData,lineColor,lineFill){
   CHARTS[id]=new Chart(ctx,cfg);
 }
 
-function mkCombo(id,labels,counts,total){
+function mkCombo(id,labels,counts,total,drillKey){
   const rates=counts.map(c=>total?Math.round(c/total*1000)/10:0);
   const ctx=document.getElementById(id);
+  const onClick=(evt,els)=>{
+    if(!drillKey||!els.length)return;
+    const label=labels[els[0].index];
+    if(F[drillKey]===label) F[drillKey]='ALL'; else F[drillKey]=label;
+    syncSlicerUI(drillKey); render();
+  };
   const cfg={type:'bar',data:{labels,datasets:[
     {type:'bar',label:'Count',data:counts,backgroundColor:'rgba(56,189,248,0.7)',borderRadius:5,yAxisID:'y'},
     {type:'line',label:'Rate(%)',data:rates,borderColor:'#fbbf24',backgroundColor:'transparent',
      fill:false,tension:.4,pointRadius:4,pointBackgroundColor:'#fbbf24',pointBorderColor:'#fff',pointBorderWidth:2,yAxisID:'y2'}
-  ]},options:{responsive:true,maintainAspectRatio:false,
+  ]},options:{responsive:true,maintainAspectRatio:false,onClick,
     plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:10},usePointStyle:true,pointStyle:'circle',padding:8}}},
     scales:{x:{ticks:{color:'#94a3b8',font:{size:10},maxRotation:35},grid:{display:false}},
       y:{position:'left',ticks:{color:'#94a3b8',precision:0},grid:{color:'rgba(255,255,255,.05)'}},
       y2:{position:'right',ticks:{color:'#fbbf24',callback:v=>v+'%'},grid:{display:false}}}}};
-  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=counts;CHARTS[id].data.datasets[1].data=rates;CHARTS[id].update();return;}
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=counts;CHARTS[id].data.datasets[1].data=rates;CHARTS[id].options.onClick=onClick;CHARTS[id].update();return;}
   CHARTS[id]=new Chart(ctx,cfg);
 }
 
@@ -692,15 +746,79 @@ function mkYoY(id,labels,data){
   CHARTS[id]=new Chart(ctx,cfg);
 }
 
-function mkDonut(id,labels,data,colors){
+function mkDonut(id,labels,data,colors,drillKey){
   const ctx=document.getElementById(id);
+  const onClick=(evt,els)=>{
+    if(!drillKey||!els.length)return;
+    const label=labels[els[0].index];
+    if(F[drillKey]===label) F[drillKey]='ALL'; else F[drillKey]=label;
+    syncSlicerUI(drillKey); render();
+  };
   const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors||PAL,borderColor:'rgba(0,0,0,.15)',borderWidth:2,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',onClick,
       plugins:{legend:{position:'right',labels:{color:'#cbd5e1',font:{size:10},padding:8,usePointStyle:true,pointStyle:'circle'}}},
       animation:{animateScale:true}}};
-  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;if(colors)CHARTS[id].data.datasets[0].backgroundColor=colors;CHARTS[id].update();return;}
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;if(colors)CHARTS[id].data.datasets[0].backgroundColor=colors;CHARTS[id].options.onClick=onClick;CHARTS[id].update();return;}
   CHARTS[id]=new Chart(ctx,cfg);
 }
+
+// 슬라이서 UI 동기화 (차트 클릭 시 칩 active 갱신)
+function syncSlicerUI(key){
+  const map={country:'sl-country',customer:'sl-customer',model:'sl-model'};
+  const id=map[key];
+  if(!id)return; // group1, fab은 슬라이서 없음 - 필터만 적용
+  const box=document.getElementById(id);
+  [...box.children].forEach(c=>{
+    const v=c.textContent==='ALL'?'ALL':c.textContent;
+    c.classList.toggle('active',v===F[key]);
+  });
+}
+
+// 교차 분석 stacked 차트
+const crossF={country:CI.country,customer:CI.customer,model:CI.model,group1:CI.group1,fab:CI.fab};
+function mkCross(rows){
+  const xKey=document.getElementById('crossX').value;
+  const cKey=document.getElementById('crossColor').value;
+  const xIdx=crossF[xKey], cIdx=crossF[cKey];
+
+  // X축 카테고리 (상위 10)
+  const xCats=countBy(rows,xIdx).slice(0,10).map(x=>x[0]);
+  // 색상축 카테고리 (상위 8)
+  const cCats=countBy(rows,cIdx).slice(0,8).map(x=>x[0]);
+
+  // X × Color 매트릭스
+  const matrix={};
+  xCats.forEach(x=>{matrix[x]={};cCats.forEach(c=>matrix[x][c]=0);});
+  rows.forEach(r=>{
+    const xv=(r[xIdx]||'N/A').toString().trim()||'N/A';
+    const cv=(r[cIdx]||'N/A').toString().trim()||'N/A';
+    if(matrix[xv]&&cCats.includes(cv)) matrix[xv][cv]++;
+  });
+
+  const datasets=cCats.map((c,i)=>({
+    label:c, data:xCats.map(x=>matrix[x][c]),
+    backgroundColor:PAL[i%PAL.length], borderRadius:3, stack:'s'
+  }));
+
+  const ctx=document.getElementById('cCross');
+  const cfg={type:'bar',data:{labels:xCats,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:10},usePointStyle:true,pointStyle:'circle',padding:8}},
+        tooltip:{mode:'index',intersect:false}},
+      scales:{x:{stacked:true,ticks:{color:'#94a3b8',font:{size:10},maxRotation:35},grid:{display:false}},
+        y:{stacked:true,ticks:{color:'#94a3b8',precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}};
+  if(CHARTS['cCross']){CHARTS['cCross'].data.labels=xCats;CHARTS['cCross'].data.datasets=datasets;CHARTS['cCross'].update();return;}
+  CHARTS['cCross']=new Chart(ctx,cfg);
+}
+
+// 교차분석 축 변경/교환
+function swapCross(){
+  const x=document.getElementById('crossX'), c=document.getElementById('crossColor');
+  const tmp=x.value; x.value=c.value; c.value=tmp;
+  if(RAW.length)render();
+}
+document.getElementById('crossX').addEventListener('change',()=>{if(RAW.length)render();});
+document.getElementById('crossColor').addEventListener('change',()=>{if(RAW.length)render();});
 
 function animVal(el,target){
   const start=parseFloat(el.dataset.v||0);const t0=performance.now();
@@ -726,15 +844,18 @@ function render(){
   const trendTon=getCumulativeTrend(f, CI.turnOn, 'trendMetaTon');
   mkTrend('cTrendTon',trendTon.labels,trendTon.cumData,trendTon.newData,'#38bdf8','rgba(56,189,248,.12)');
 
+  // 교차 분석
+  mkCross(f);
+
   const ctry=countBy(f,CI.country).slice(0,10);
-  mkCombo('cCountry',ctry.map(x=>x[0]),ctry.map(x=>x[1]),f.length);
+  mkCombo('cCountry',ctry.map(x=>x[0]),ctry.map(x=>x[1]),f.length,'country');
   const cust=countBy(f,CI.customer).slice(0,10);
-  mkCombo('cCustomer',cust.map(x=>x[0]),cust.map(x=>x[1]),f.length);
+  mkCombo('cCustomer',cust.map(x=>x[0]),cust.map(x=>x[1]),f.length,'customer');
   mkDonut('cWarr',[t('warr_ok'),t('warr_exp')],[active,expired],['#34d399','#fb7185']);
   const mdl=countBy(f,CI.model).slice(0,8);
-  mkDonut('cModel',mdl.map(x=>x[0]),mdl.map(x=>x[1]));
+  mkDonut('cModel',mdl.map(x=>x[0]),mdl.map(x=>x[1]),null,'model');
   const grp=countBy(f,CI.group1).slice(0,8);
-  mkDonut('cGroup',grp.map(x=>x[0]),grp.map(x=>x[1]));
+  mkDonut('cGroup',grp.map(x=>x[0]),grp.map(x=>x[1]),null,'group1');
   const yrs={};
   f.forEach(r=>{const d=toDate(r[CI.turnOn]);if(d){const y=d.getUTCFullYear();yrs[y]=(yrs[y]||0)+1;}});
   const yk=Object.keys(yrs).sort();
