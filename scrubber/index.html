@@ -108,6 +108,9 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 
 /* TREND */
 .trend-card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px);margin-bottom:20px}
+.grid2-trend{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid2-trend .trend-card{margin-bottom:20px}
+@media(max-width:900px){.grid2-trend{grid-template-columns:1fr}}
 .trend-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
 .trend-header h3{font-size:14px;font-weight:700;color:#dfe6ff}
 .trend-meta{font-size:11px;color:var(--mut);background:rgba(255,255,255,.05);padding:4px 12px;border-radius:20px}
@@ -230,13 +233,22 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="kpi k5"><div class="ic">⚠️</div><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">Warranty Expired</div></div>
 </div>
 
-<!-- 누적 추이 -->
-<div class="trend-card">
-  <div class="trend-header">
-    <h3 data-i="trend_title">📈 Cumulative Installation Trend (Turn On)</h3>
-    <div class="trend-meta" id="trendMeta"></div>
+<!-- 누적 추이 (FAB In / Turn On 2개) -->
+<div class="grid2-trend">
+  <div class="trend-card">
+    <div class="trend-header">
+      <h3 data-i="trend_fabin">📦 Cumulative FAB In Trend</h3>
+      <div class="trend-meta" id="trendMetaFab"></div>
+    </div>
+    <div class="trend-wrap"><canvas id="cTrendFab"></canvas></div>
   </div>
-  <div class="trend-wrap"><canvas id="cTrend"></canvas></div>
+  <div class="trend-card">
+    <div class="trend-header">
+      <h3 data-i="trend_turnon">⚡ Cumulative Turn On Trend</h3>
+      <div class="trend-meta" id="trendMetaTon"></div>
+    </div>
+    <div class="trend-wrap"><canvas id="cTrendTon"></canvas></div>
+  </div>
 </div>
 
 <!-- 차트 1행 -->
@@ -298,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <script>
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
-const CI={country:2,customer:3,location:4,code:5,sn:6,model:7,fab:9,group1:12,detail1:14,toolMaker:18,toolModel:19,turnOn:40,warranty:42};
+const CI={country:2,customer:3,location:4,code:5,sn:6,model:7,fab:9,group1:12,detail1:14,toolMaker:18,toolModel:19,fabIn:38,turnOn:40,warranty:42};
 const PAL=['#38bdf8','#2dd4bf','#a78bfa','#fbbf24','#f472b6','#34d399','#fb7185','#60a5fa','#c084fc','#4ade80','#f97316','#e879f9'];
 
 const T={
@@ -311,7 +323,7 @@ const T={
     g_week:'주 단위',g_month:'월 단위',g_quarter:'분기 단위',g_half:'반기 단위',g_year:'연 단위',
     search_lbl:'검색',
     kp1:'필터 설치 대수',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty 유효',kp5:'Warranty 만료',
-    trend_title:'📈 누적 설치 추이 (Turn On 기준)',
+    trend_fabin:'📦 누적 FAB In 추이 (반입 기준)',trend_turnon:'⚡ 누적 Turn On 추이 (가동 기준)',
     note_rate:'Bar: 대수 · Line: 비중(%)',note_warr:'유효/만료 비율',
     note_model:'모델별 분포',note_group:'공정 그룹별 분포',note_yoy:'Bar: 대수 · Line: 전년비(%)',
     tbl_title:'상세 목록',loading:'데이터 불러오는 중...',
@@ -327,7 +339,7 @@ const T={
     g_week:'Week',g_month:'Month',g_quarter:'Quarter',g_half:'Half-Year',g_year:'Year',
     search_lbl:'Search',
     kp1:'Filtered Units',kp2:'Countries',kp3:'Customers',kp4:'Warranty Active',kp5:'Warranty Expired',
-    trend_title:'📈 Cumulative Installation Trend (Turn On)',
+    trend_fabin:'📦 Cumulative FAB In Trend',trend_turnon:'⚡ Cumulative Turn On Trend',
     note_rate:'Bar: count · Line: rate(%)',note_warr:'Active vs Expired ratio',
     note_model:'By model',note_group:'By process group',note_yoy:'Bar: count · Line: YoY(%)',
     tbl_title:'Detail List',loading:'Loading...',
@@ -343,7 +355,7 @@ const T={
     g_week:'按周',g_month:'按月',g_quarter:'按季度',g_half:'按半年',g_year:'按年',
     search_lbl:'搜索',
     kp1:'过滤台数',kp2:'国家',kp3:'客户',kp4:'保修有效',kp5:'保修到期',
-    trend_title:'📈 累计安装趋势',
+    trend_fabin:'📦 累计FAB In趋势（搬入）',trend_turnon:'⚡ 累计Turn On趋势（运行）',
     note_rate:'柱:台数·线:占比%',note_warr:'有效/到期比率',
     note_model:'按型号',note_group:'按工艺组',note_yoy:'柱:台数·线:同比%',
     tbl_title:'详细列表',loading:'加载中...',
@@ -359,7 +371,7 @@ const T={
     g_week:'週単位',g_month:'月単位',g_quarter:'四半期',g_half:'半期',g_year:'年単位',
     search_lbl:'検索',
     kp1:'フィルター台数',kp2:'設置国',kp3:'顧客',kp4:'保証有効',kp5:'保証切れ',
-    trend_title:'📈 累積設置推移',
+    trend_fabin:'📦 累積FAB In推移（搬入）',trend_turnon:'⚡ 累積Turn On推移（稼働）',
     note_rate:'棒:台数·線:構成比%',note_warr:'有効/切れ比率',
     note_model:'モデル別',note_group:'工程グループ別',note_yoy:'棒:台数·線:前年比%',
     tbl_title:'詳細リスト',loading:'読込中...',
@@ -593,10 +605,14 @@ function granKey(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 
-// 누적 추이 (전체 RAW 기준 누적 + 필터된 신규)
-function getCumulativeTrend(filtered){
-  const allDated=RAW.map(r=>toDate(r[CI.turnOn])).filter(Boolean).sort((a,b)=>a-b);
-  if(!allDated.length)return{labels:[],cumData:[],newData:[]};
+// 누적 추이 (전체 RAW 기준 누적 + 필터된 신규) - 날짜 컬럼 지정
+function getCumulativeTrend(filtered, dateCol, metaId){
+  const allDated=RAW.map(r=>toDate(r[dateCol])).filter(Boolean).sort((a,b)=>a-b);
+  if(!allDated.length){
+    const meta=document.getElementById(metaId);
+    if(meta)meta.textContent='—';
+    return{labels:[],cumData:[],newData:[]};
+  }
 
   // 전체 기간 라벨
   const labelSet=new Set();
@@ -611,37 +627,37 @@ function getCumulativeTrend(filtered){
   let cum=0;
   const cumData=labels.map(l=>{cum+=(allMap[l]||0);return cum;});
 
-  // 필터된 신규
+  // 필터된 신규 (해당 날짜값이 있는 것만)
   const filtMap={};
-  filtered.forEach(r=>{const d=toDate(r[CI.turnOn]);if(d){const k=granKey(d);filtMap[k]=(filtMap[k]||0)+1;}});
+  filtered.forEach(r=>{const d=toDate(r[dateCol]);if(d){const k=granKey(d);filtMap[k]=(filtMap[k]||0)+1;}});
   const newData=labels.map(l=>filtMap[l]||0);
 
   // 추이 메타 정보
-  const meta=document.getElementById('trendMeta');
+  const meta=document.getElementById(metaId);
   const granNames={week:t('g_week'),month:t('g_month'),quarter:t('g_quarter'),half:t('g_half'),year:t('g_year')};
-  meta.textContent=`${granNames[GRAN]} | ${labels[0]||''} ~ ${labels[labels.length-1]||''}`;
+  if(meta)meta.textContent=`${granNames[GRAN]} | ${labels[0]||''} ~ ${labels[labels.length-1]||''}`;
 
   return{labels,cumData,newData};
 }
 
 // 차트 함수들
-function mkTrend(labels,cumData,newData){
-  const ctx=document.getElementById('cTrend');
+function mkTrend(id,labels,cumData,newData,lineColor,lineFill){
+  const ctx=document.getElementById(id);
   const cfg={type:'bar',data:{labels,datasets:[
-    {type:'line',label:t('legend_cum'),data:cumData,borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.12)',
-     fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#38bdf8',pointBorderColor:'#fff',pointBorderWidth:1.5,yAxisID:'y'},
+    {type:'line',label:t('legend_cum'),data:cumData,borderColor:lineColor,backgroundColor:lineFill,
+     fill:true,tension:.4,pointRadius:3,pointBackgroundColor:lineColor,pointBorderColor:'#fff',pointBorderWidth:1.5,yAxisID:'y'},
     {type:'bar',label:t('legend_new'),data:newData,backgroundColor:'rgba(251,191,36,0.6)',borderRadius:4,yAxisID:'y'}
   ]},options:{responsive:true,maintainAspectRatio:false,
     plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:11},usePointStyle:true,pointStyle:'circle',padding:14}}},
     scales:{x:{ticks:{color:'#94a3b8',font:{size:10},maxTicksLimit:20,maxRotation:30},grid:{display:false}},
             y:{ticks:{color:'#94a3b8',precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}};
-  if(CHARTS['cTrend']){
-    CHARTS['cTrend'].data.labels=labels;
-    CHARTS['cTrend'].data.datasets[0].data=cumData;CHARTS['cTrend'].data.datasets[0].label=t('legend_cum');
-    CHARTS['cTrend'].data.datasets[1].data=newData;CHARTS['cTrend'].data.datasets[1].label=t('legend_new');
-    CHARTS['cTrend'].update();return;
+  if(CHARTS[id]){
+    CHARTS[id].data.labels=labels;
+    CHARTS[id].data.datasets[0].data=cumData;CHARTS[id].data.datasets[0].label=t('legend_cum');
+    CHARTS[id].data.datasets[1].data=newData;CHARTS[id].data.datasets[1].label=t('legend_new');
+    CHARTS[id].update();return;
   }
-  CHARTS['cTrend']=new Chart(ctx,cfg);
+  CHARTS[id]=new Chart(ctx,cfg);
 }
 
 function mkCombo(id,labels,counts,total){
@@ -705,8 +721,10 @@ function render(){
   animVal(document.getElementById('kp4'),active);
   animVal(document.getElementById('kp5'),expired);
 
-  const trend=getCumulativeTrend(f);
-  mkTrend(trend.labels,trend.cumData,trend.newData);
+  const trendFab=getCumulativeTrend(f, CI.fabIn, 'trendMetaFab');
+  mkTrend('cTrendFab',trendFab.labels,trendFab.cumData,trendFab.newData,'#2dd4bf','rgba(45,212,191,.12)');
+  const trendTon=getCumulativeTrend(f, CI.turnOn, 'trendMetaTon');
+  mkTrend('cTrendTon',trendTon.labels,trendTon.cumData,trendTon.newData,'#38bdf8','rgba(56,189,248,.12)');
 
   const ctry=countBy(f,CI.country).slice(0,10);
   mkCombo('cCountry',ctry.map(x=>x[0]),ctry.map(x=>x[1]),f.length);
