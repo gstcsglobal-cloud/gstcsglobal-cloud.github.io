@@ -89,14 +89,15 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .cal-legend{display:flex;gap:14px;font-size:11px;color:var(--mut);flex-wrap:wrap}
 .cal-legend span{display:flex;align-items:center;gap:5px}
 .cal-legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:120px;gap:6px;align-items:stretch}
+.cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
+.cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--mut);padding:6px 0;text-transform:uppercase;letter-spacing:1px;align-self:center}
 .cal-hint{font-size:12px;color:#c4b5fd;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);
   border-radius:10px;padding:8px 14px;margin-bottom:12px}
-.cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--mut);padding:6px 0;text-transform:uppercase;letter-spacing:1px}
 .cal-dow.sun{color:#fb7185}.cal-dow.sat{color:#60a5fa}
 .cal-cell{background:rgba(255,255,255,.03);border:1px solid var(--glassb);border-radius:10px;
-  min-height:92px;max-height:140px;padding:6px;display:flex;flex-direction:column;gap:3px;overflow:hidden;transition:background .2s;cursor:pointer}
-.cal-cell.empty{background:transparent;border-color:transparent;cursor:default}
+  height:120px;padding:6px;display:flex;flex-direction:column;gap:3px;overflow:hidden;transition:background .2s;cursor:pointer}
+.cal-cell.empty{background:transparent;border-color:transparent;cursor:default;height:auto}
 .cal-cell.today{border-color:var(--a4);box-shadow:0 0 0 1px var(--a4)}
 .cal-cell:hover:not(.empty){background:rgba(255,255,255,.06)}
 .cal-date{font-size:12px;font-weight:700;color:var(--txt);margin-bottom:2px;flex-shrink:0}
@@ -109,11 +110,16 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .cal-evt.soon{background:rgba(251,191,36,.22);color:#fde68a;border-left:2px solid #fbbf24}
 .cal-evt.ok{background:rgba(52,211,153,.18);color:#6ee7b7;border-left:2px solid #34d399}
 .cal-evt.adjusted{border:1px dashed #a78bfa;background:rgba(167,139,250,.18);color:#c4b5fd}
+.cal-evt.done{background:rgba(100,116,139,.18);color:#cbd5e1;border-left:2px solid #64748b;opacity:.85}
+.cal-mode{display:flex;gap:4px;background:rgba(255,255,255,.05);border-radius:10px;padding:3px}
+.mode-btn{background:transparent;border:none;border-radius:8px;padding:6px 12px;color:var(--mut);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
+.mode-btn:hover{color:var(--txt)}
+.mode-btn.active{background:rgba(56,189,248,.2);color:#7dd3fc}
 .cal-evt[draggable=true]{cursor:grab}
 .cal-evt[draggable=true]:active{cursor:grabbing}
 .cal-cell.drag-over{background:rgba(167,139,250,.18);border-color:#a78bfa;box-shadow:0 0 0 1px #a78bfa}
 .cal-count{font-size:9px;color:var(--a4);text-align:center;padding:2px;font-weight:700;flex-shrink:0}
-@media(max-width:768px){.cal-cell{min-height:70px;max-height:120px}.cal-evt{font-size:8px}}
+@media(max-width:768px){.cal-cell{height:100px}.cal-evt{font-size:8px}}
 
 /* 날짜 상세 팝업 */
 #dayModal{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.6);
@@ -252,14 +258,21 @@ tr:hover td{background:rgba(255,255,255,.04)}
       <button class="cal-btn" onclick="calNext()">▶</button>
       <button class="cal-today-btn" onclick="calToday()" data-i="cal_today">Today</button>
     </div>
-    <div class="cal-legend">
-      <span><i class="dot" style="background:#fb7185"></i> <span data-i="st_overdue">Overdue</span></span>
-      <span><i class="dot" style="background:#fbbf24"></i> <span data-i="st_soon">Due Soon</span></span>
-      <span><i class="dot" style="background:#34d399"></i> <span data-i="st_ok">Normal</span></span>
-      <span><i class="dot" style="background:#a78bfa"></i> <span data-i="lg_adjusted">Adjusted</span></span>
+    <div class="cal-mode">
+      <button class="mode-btn" data-m="plan" onclick="setCalMode('plan')" data-i="mode_plan">예정만</button>
+      <button class="mode-btn" data-m="done" onclick="setCalMode('done')" data-i="mode_done">완료만</button>
+      <button class="mode-btn active" data-m="both" onclick="setCalMode('both')" data-i="mode_both">예정+완료</button>
     </div>
   </div>
+  <div class="cal-legend">
+    <span><i class="dot" style="background:#fb7185"></i> <span data-i="st_overdue">Overdue</span></span>
+    <span><i class="dot" style="background:#fbbf24"></i> <span data-i="st_soon">Due Soon</span></span>
+    <span><i class="dot" style="background:#34d399"></i> <span data-i="st_ok">Normal</span></span>
+    <span><i class="dot" style="background:#a78bfa"></i> <span data-i="lg_adjusted">Adjusted</span></span>
+    <span><i class="dot" style="background:#64748b"></i> ✓ <span data-i="lg_done">Completed</span></span>
+  </div>
   <div class="cal-hint" data-i="drag_hint">💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ 표시 = 조정됨)</div>
+  <div class="cal-dow-row" id="calDowRow"></div>
   <div class="cal-grid" id="calGrid"></div>
 </div>
 
@@ -335,7 +348,7 @@ const T={
     th_last:'최근 점검일',th_cycle:'주기(일)',th_next:'다음 예정일',th_dl:'잔여일',th_st:'상태',th_cnt:'이력수',
     st_overdue:'지연',st_soon:'임박',st_ok:'정상',st_na:'주기없음',
     no_data:'결과 없음',search_ph:'S/N, 모델, Line 검색...',
-    f_site:'전체 SITE',f_line:'전체 LINE',f_model:'전체 모델',f_stat:'전체 상태',cal_today:'오늘',dow:['일','월','화','수','목','금','토'],months:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],cal_more:'외 N건',dm_copy:'복사',dm_copied:'복사됨',adj_loaded:'조정 N건',adj_saving:'저장 중...',adj_saved:'A → B 로 조정 저장됨',adj_failed:'저장 실패 (새로고침 후 재시도)',lg_adjusted:'조정됨',drag_hint:'💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ = 조정됨)',wk_title:'📋 주차별 점검 현황 (오늘 기준 ±2개월)',wk_week:'주차',wk_plan:'예정',wk_done:'완료',wk_rate:'완료율',wk_thisweek:'이번주',wk_total:'전체',wk_inrange:'표시',wk_outrange:'범위밖 N건'},
+    f_site:'전체 SITE',f_line:'전체 LINE',f_model:'전체 모델',f_stat:'전체 상태',cal_today:'오늘',dow:['일','월','화','수','목','금','토'],months:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],cal_more:'외 N건',dm_copy:'복사',dm_copied:'복사됨',adj_loaded:'조정 N건',adj_saving:'저장 중...',adj_saved:'A → B 로 조정 저장됨',adj_failed:'저장 실패 (새로고침 후 재시도)',lg_adjusted:'조정됨',drag_hint:'💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ = 조정됨)',wk_title:'📋 주차별 점검 현황 (오늘 기준 ±2개월)',wk_week:'주차',wk_plan:'예정',wk_done:'완료',wk_rate:'완료율',wk_thisweek:'이번주',wk_total:'전체',wk_inrange:'표시',wk_outrange:'범위밖 N건',mode_plan:'예정만',mode_done:'완료만',mode_both:'예정+완료',lg_done:'완료됨'},
   en:{title:'🔧 Scrubber PM Schedule',sub:'Preventive Maintenance schedule based on TBM history',
     back:'← Main',refresh:'Refresh',loading:'Loading...',
     kp1:'Total Targets',kp2:'Overdue',kp3:'Due Soon',kp4:'Normal',kp5:'No Cycle',
@@ -344,7 +357,7 @@ const T={
     th_last:'Last PM',th_cycle:'Cycle(d)',th_next:'Next Due',th_dl:'D-day',th_st:'Status',th_cnt:'History',
     st_overdue:'Overdue',st_soon:'Due Soon',st_ok:'Normal',st_na:'No Cycle',
     no_data:'No results',search_ph:'Search S/N, Model, Line...',
-    f_site:'All SITE',f_line:'All LINE',f_model:'All Model',f_stat:'All Status',cal_today:'Today',dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],cal_more:'+N more',dm_copy:'Copy',dm_copied:'Copied',adj_loaded:'N adjusted',adj_saving:'Saving...',adj_saved:'Moved A → B',adj_failed:'Save failed (retry after refresh)',lg_adjusted:'Adjusted',drag_hint:'💡 Drag an item to another date to reschedule. Changes are shared with the whole team (✎ = adjusted)',wk_title:'📋 Weekly PM Status (±2 months from today)',wk_week:'Week',wk_plan:'Planned',wk_done:'Done',wk_rate:'Rate',wk_thisweek:'This week',wk_total:'Total',wk_inrange:'Shown',wk_outrange:'N out of range'},
+    f_site:'All SITE',f_line:'All LINE',f_model:'All Model',f_stat:'All Status',cal_today:'Today',dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],cal_more:'+N more',dm_copy:'Copy',dm_copied:'Copied',adj_loaded:'N adjusted',adj_saving:'Saving...',adj_saved:'Moved A → B',adj_failed:'Save failed (retry after refresh)',lg_adjusted:'Adjusted',drag_hint:'💡 Drag an item to another date to reschedule. Changes are shared with the whole team (✎ = adjusted)',wk_title:'📋 Weekly PM Status (±2 months from today)',wk_week:'Week',wk_plan:'Planned',wk_done:'Done',wk_rate:'Rate',wk_thisweek:'This week',wk_total:'Total',wk_inrange:'Shown',wk_outrange:'N out of range',mode_plan:'Planned',mode_done:'Completed',mode_both:'Both',lg_done:'Completed'},
   zh:{title:'🔧 洗涤器PM点检计划',sub:'基于定期点检(TBM)履历的预防性维护计划',
     back:'← 主页',refresh:'刷新',loading:'加载中...',
     kp1:'总点检对象',kp2:'点检延迟',kp3:'点检临近',kp4:'正常',kp5:'无周期',
@@ -353,7 +366,7 @@ const T={
     th_last:'最近点检日',th_cycle:'周期(天)',th_next:'下次预定日',th_dl:'剩余天',th_st:'状态',th_cnt:'履历数',
     st_overdue:'延迟',st_soon:'临近',st_ok:'正常',st_na:'无周期',
     no_data:'无结果',search_ph:'搜索S/N, 型号, Line...',
-    f_site:'全部SITE',f_line:'全部LINE',f_model:'全部型号',f_stat:'全部状态',cal_today:'今天',dow:['日','一','二','三','四','五','六'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'其他N项',dm_copy:'复制',dm_copied:'已复制',adj_loaded:'调整N项',adj_saving:'保存中...',adj_saved:'已调整 A → B',adj_failed:'保存失败(刷新后重试)',lg_adjusted:'已调整',drag_hint:'💡 将点检项拖到其他日期即可调整日程并与全队共享 (✎ = 已调整)',wk_title:'📋 周点检状况 (今天±2个月)',wk_week:'周次',wk_plan:'计划',wk_done:'完成',wk_rate:'完成率',wk_thisweek:'本周',wk_total:'全部',wk_inrange:'显示',wk_outrange:'范围外N项'},
+    f_site:'全部SITE',f_line:'全部LINE',f_model:'全部型号',f_stat:'全部状态',cal_today:'今天',dow:['日','一','二','三','四','五','六'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'其他N项',dm_copy:'复制',dm_copied:'已复制',adj_loaded:'调整N项',adj_saving:'保存中...',adj_saved:'已调整 A → B',adj_failed:'保存失败(刷新后重试)',lg_adjusted:'已调整',drag_hint:'💡 将点检项拖到其他日期即可调整日程并与全队共享 (✎ = 已调整)',wk_title:'📋 周点检状况 (今天±2个月)',wk_week:'周次',wk_plan:'计划',wk_done:'完成',wk_rate:'完成率',wk_thisweek:'本周',wk_total:'全部',wk_inrange:'显示',wk_outrange:'范围外N项',mode_plan:'仅计划',mode_done:'仅完成',mode_both:'计划+完成',lg_done:'已完成'},
   ja:{title:'🔧 スクラバーPM点検スケジュール',sub:'定期点検(TBM)履歴に基づく予防保全スケジュール',
     back:'← メイン',refresh:'更新',loading:'読み込み中...',
     kp1:'総点検対象',kp2:'点検遅延',kp3:'点検間近',kp4:'正常',kp5:'周期なし',
@@ -362,11 +375,13 @@ const T={
     th_last:'最近点検日',th_cycle:'周期(日)',th_next:'次回予定日',th_dl:'残日',th_st:'状態',th_cnt:'履歴数',
     st_overdue:'遅延',st_soon:'間近',st_ok:'正常',st_na:'周期なし',
     no_data:'結果なし',search_ph:'S/N, モデル, Line検索...',
-    f_site:'全SITE',f_line:'全LINE',f_model:'全モデル',f_stat:'全ステータス',cal_today:'今日',dow:['日','月','火','水','木','金','土'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'他N件',dm_copy:'コピー',dm_copied:'コピー済',adj_loaded:'調整N件',adj_saving:'保存中...',adj_saved:'A → B に調整',adj_failed:'保存失敗(更新後再試行)',lg_adjusted:'調整済',drag_hint:'💡 点検項目を他の日付にドラッグすると日程が調整されチーム全体に共有されます (✎ = 調整済)',wk_title:'📋 週別点検状況 (本日±2ヶ月)',wk_week:'週',wk_plan:'予定',wk_done:'完了',wk_rate:'完了率',wk_thisweek:'今週',wk_total:'全体',wk_inrange:'表示',wk_outrange:'範囲外N件'}
+    f_site:'全SITE',f_line:'全LINE',f_model:'全モデル',f_stat:'全ステータス',cal_today:'今日',dow:['日','月','火','水','木','金','土'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'他N件',dm_copy:'コピー',dm_copied:'コピー済',adj_loaded:'調整N件',adj_saving:'保存中...',adj_saved:'A → B に調整',adj_failed:'保存失敗(更新後再試行)',lg_adjusted:'調整済',drag_hint:'💡 点検項目を他の日付にドラッグすると日程が調整されチーム全体に共有されます (✎ = 調整済)',wk_title:'📋 週別点検状況 (本日±2ヶ月)',wk_week:'週',wk_plan:'予定',wk_done:'完了',wk_rate:'完了率',wk_thisweek:'今週',wk_total:'全体',wk_inrange:'表示',wk_outrange:'範囲外N件',mode_plan:'予定のみ',mode_done:'完了のみ',mode_both:'予定+完了',lg_done:'完了'}
 };
 
 let LANG='ko', RAW=[], SCHED=[], CHARTS={}, activeStatus='', sortK='dl', sortAsc=true;
 let CAL_Y=new Date().getFullYear(), CAL_M=new Date().getMonth();
+let CAL_MODE='both'; // 'plan'(예정만) / 'done'(완료만) / 'both'(둘다)
+let DONE_HIST=[]; // 완료 이력 [{date, sn, ch, line, model, site, group}]
 try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
 
 Chart.defaults.color='#94a3b8';
@@ -429,6 +444,7 @@ async function loadData(){
 function buildSchedule(rows){
   // TBM 행을 S/N+Chamber로 그룹핑 → 최근 점검일
   const g={};
+  DONE_HIST=[]; // 완료 이력 초기화
   rows.forEach(r=>{
     if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;
     const sn=(r[C.sn]||'').toString().trim(); if(!sn)return;
@@ -437,6 +453,10 @@ function buildSchedule(rows){
     const k=sn+'||'+ch;
     if(!g[k])g[k]={sn,ch,rows:0,last:null,meta:r};
     g[k].rows++; if(!g[k].last||wd>g[k].last){g[k].last=wd;g[k].meta=r;}
+    // 완료 이력 기록 (모든 TBM 점검이력)
+    DONE_HIST.push({date:wd,sn,ch,
+      site:(r[C.site]||'—'),line:(r[C.line]||'—'),
+      model:(r[C.model]||'—'),group:(r[C.group1]||'—')});
   });
   const today=new Date(); today.setUTCHours(0,0,0,0);
   return Object.values(g).map(o=>{
@@ -683,24 +703,42 @@ function renderCalendar(){
   document.getElementById('calYear').value=CAL_Y;
   document.getElementById('calMonth').value=CAL_M;
 
-  // 해당 월의 점검 예정 매핑 (다음 예정일 기준)
+  // 해당 월의 점검 매핑 (모드에 따라 예정/완료)
   const byDay={};
-  SCHED.forEach(x=>{
-    if(!x.next)return;
-    if(x.next.getUTCFullYear()===CAL_Y && x.next.getUTCMonth()===CAL_M){
-      const day=x.next.getUTCDate();
-      if(!byDay[day])byDay[day]=[];
-      byDay[day].push(x);
-    }
-  });
+  function pushDay(day, item){
+    if(!byDay[day])byDay[day]=[];
+    byDay[day].push(item);
+  }
+  // 예정 (다음 예정일 기준)
+  if(CAL_MODE==='plan'||CAL_MODE==='both'){
+    SCHED.forEach(x=>{
+      if(!x.next)return;
+      if(x.next.getUTCFullYear()===CAL_Y && x.next.getUTCMonth()===CAL_M){
+        pushDay(x.next.getUTCDate(), {...x, _type:'plan'});
+      }
+    });
+  }
+  // 완료 (실제 점검이력 Work Date 기준)
+  if(CAL_MODE==='done'||CAL_MODE==='both'){
+    DONE_HIST.forEach(h=>{
+      if(h.date.getUTCFullYear()===CAL_Y && h.date.getUTCMonth()===CAL_M){
+        pushDay(h.date.getUTCDate(), {
+          sn:h.sn,ch:h.ch,site:h.site,line:h.line,model:h.model,group:h.group,
+          st:'done',_type:'done',key:h.sn+'||'+h.ch,next:h.date
+        });
+      }
+    });
+  }
 
   const grid=document.getElementById('calGrid');
   grid.innerHTML='';
-  // 요일 헤더
+  // 요일 헤더 (별도 행)
+  const dowRow=document.getElementById('calDowRow');
+  dowRow.innerHTML='';
   t('dow').forEach((d,i)=>{
     const el=document.createElement('div');
     el.className='cal-dow'+(i===0?' sun':i===6?' sat':'');
-    el.textContent=d; grid.appendChild(el);
+    el.textContent=d; dowRow.appendChild(el);
   });
 
   const firstDay=new Date(Date.UTC(CAL_Y,CAL_M,1)).getUTCDay();
@@ -724,36 +762,47 @@ function renderCalendar(){
     cell.appendChild(dateEl);
 
     const evts=byDay[day]||[];
-    // 긴급순 정렬 (지연>임박>정상)
-    const order={overdue:0,soon:1,ok:2,na:3};
+    // 정렬: 예정(긴급순) 먼저, 완료는 뒤로
+    const order={overdue:0,soon:1,ok:2,na:3,done:9};
     evts.sort((a,b)=>order[a.st]-order[b.st]);
 
     if(evts.length){
       // 개수 표시
       const cnt=document.createElement('div');
       cnt.className='cal-count';
-      cnt.textContent='● '+evts.length;
+      const planN=evts.filter(e=>e._type!=='done').length;
+      const doneN=evts.filter(e=>e._type==='done').length;
+      let cntTxt='';
+      if(planN&&doneN) cntTxt=`● ${planN} ✓${doneN}`;
+      else if(doneN) cntTxt=`✓ ${doneN}`;
+      else cntTxt=`● ${planN}`;
+      cnt.textContent=cntTxt;
       cell.appendChild(cnt);
       // 스크롤 컨테이너에 전체 이벤트
       const evBox=document.createElement('div');
       evBox.className='cal-events';
       evts.forEach(x=>{
         const ev=document.createElement('div');
-        ev.className='cal-evt '+x.st+(x.adjusted?' adjusted':'');
+        const isDone=x._type==='done';
+        ev.className='cal-evt '+(isDone?'done':x.st)+(x.adjusted?' adjusted':'');
         const chTxt=(x.ch&&x.ch!=='-')?` (${x.ch})`:'';
-        ev.textContent=(x.adjusted?'✎ ':'')+x.sn+chTxt;
+        const prefix=isDone?'✓ ':(x.adjusted?'✎ ':'');
+        ev.textContent=prefix+x.sn+chTxt;
         let tip=`${x.sn}${chTxt} · ${x.line} · ${x.model}`;
+        if(isDone) tip=`[${t('lg_done')}] `+tip;
         if(x.adjusted&&x.origNext) tip+=`\n원래: ${fmtDate(x.origNext)} → 조정: ${fmtDate(x.next)}`;
         ev.title=tip;
-        // 드래그 가능
-        ev.draggable=true;
-        ev.dataset.key=x.key;
-        ev.addEventListener('dragstart',e=>{
-          e.stopPropagation();
-          DRAG_KEY=x.key;
-          ev.style.opacity='0.4';
-        });
-        ev.addEventListener('dragend',e=>{ ev.style.opacity='1'; DRAG_KEY=null; });
+        // 완료가 아닌 예정 건만 드래그 가능
+        if(!isDone){
+          ev.draggable=true;
+          ev.dataset.key=x.key;
+          ev.addEventListener('dragstart',e=>{
+            e.stopPropagation();
+            DRAG_KEY=x.key;
+            ev.style.opacity='0.4';
+          });
+          ev.addEventListener('dragend',e=>{ ev.style.opacity='1'; DRAG_KEY=null; });
+        }
         // 이벤트 클릭은 팝업 막기(드래그 우선)
         ev.addEventListener('click',e=>e.stopPropagation());
         evBox.appendChild(ev);
@@ -866,6 +915,11 @@ function calPrev(){ CAL_M--; if(CAL_M<0){CAL_M=11;CAL_Y--;} renderCalendar(); }
 function calNext(){ CAL_M++; if(CAL_M>11){CAL_M=0;CAL_Y++;} renderCalendar(); }
 function calJump(){ CAL_Y=+document.getElementById('calYear').value; CAL_M=+document.getElementById('calMonth').value; renderCalendar(); }
 function calToday(){ const n=new Date(); CAL_Y=n.getFullYear(); CAL_M=n.getMonth(); renderCalendar(); }
+function setCalMode(m){
+  CAL_MODE=m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.m===m));
+  renderCalendar();
+}
 
 // 차트 함수
 function mkDonut(id,labels,data,colors){
