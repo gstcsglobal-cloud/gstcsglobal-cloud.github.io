@@ -53,14 +53,11 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .kpi.k2 .val{color:var(--bad)}.kpi.k3 .val{color:var(--warn)}.kpi.k4 .val{color:var(--ok)}.kpi.k6 .val{color:#c084fc}
 .kpi .cap{color:var(--mut);font-size:11px;margin-top:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
-
-/* CALENDAR */
 .cal-card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px);margin-bottom:16px}
 .wk-card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px);margin-bottom:16px}
 .wk-card h3{font-size:14px;font-weight:700;margin-bottom:6px;color:#dfe6ff}
 .wk-range-note{font-size:11px;color:#94a3b8;margin-bottom:12px}
 .wk-wrap{overflow-x:auto}
-.wk-wrap::-webkit-scrollbar{height:6px}.wk-wrap::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
 .wk-table{border-collapse:collapse;width:100%;min-width:760px;font-size:12px}
 .wk-table th,.wk-table td{border:1px solid var(--glassb);padding:8px 6px;text-align:center;white-space:nowrap}
 .wk-table thead th{background:rgba(255,255,255,.05);color:var(--mut);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;position:sticky;top:0}
@@ -75,14 +72,10 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .wk-week-sub{font-size:9px;color:var(--mut);font-weight:400;display:block;margin-top:2px}
 .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px}
 .cal-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.cal-btn{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:10px;
-  width:36px;height:36px;color:var(--txt);font-size:16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.cal-btn{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:10px;width:36px;height:36px;color:var(--txt);font-size:16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
 .cal-btn:hover{background:rgba(251,113,133,.15);border-color:var(--a1)}
-.cal-sel{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:10px;
-  padding:8px 12px;color:var(--txt);font-size:13px;font-weight:600;outline:none;cursor:pointer;color-scheme:dark}
-.cal-sel:focus{border-color:var(--a1)}
-.cal-today-btn{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:10px;
-  padding:8px 14px;color:var(--txt);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.cal-sel{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:10px;padding:8px 12px;color:var(--txt);font-size:13px;font-weight:600;outline:none;cursor:pointer;color-scheme:dark}
+.cal-today-btn{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:10px;padding:8px 14px;color:var(--txt);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
 .cal-today-btn:hover{background:rgba(56,189,248,.15);border-color:var(--a4)}
 .cal-legend{display:flex;gap:14px;font-size:11px;color:var(--mut);flex-wrap:wrap}
 .cal-legend span{display:flex;align-items:center;gap:5px}
@@ -90,11 +83,9 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:120px;gap:6px;align-items:stretch}
 .cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
 .cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--mut);padding:6px 0;text-transform:uppercase;letter-spacing:1px;align-self:center}
-.cal-hint{font-size:12px;color:#c4b5fd;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);
-  border-radius:10px;padding:8px 14px;margin-bottom:12px}
+.cal-hint{font-size:12px;color:#c4b5fd;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);border-radius:10px;padding:8px 14px;margin-bottom:12px}
 .cal-dow.sun{color:#fb7185}.cal-dow.sat{color:#60a5fa}
-.cal-cell{background:rgba(255,255,255,.03);border:1px solid var(--glassb);border-radius:10px;
-  height:120px;padding:6px;display:flex;flex-direction:column;gap:3px;overflow:hidden;transition:background .2s;cursor:pointer}
+.cal-cell{background:rgba(255,255,255,.03);border:1px solid var(--glassb);border-radius:10px;height:120px;padding:6px;display:flex;flex-direction:column;gap:3px;overflow:hidden;transition:background .2s;cursor:pointer}
 .cal-cell.empty{background:transparent;border-color:transparent;cursor:default;height:auto}
 .cal-cell.today{border-color:var(--a4);box-shadow:0 0 0 1px var(--a4)}
 .cal-cell:hover:not(.empty){background:rgba(255,255,255,.06)}
@@ -103,7 +94,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .cal-events{display:flex;flex-direction:column;gap:3px;overflow-y:auto;flex:1;min-height:0}
 .cal-events::-webkit-scrollbar{width:4px}
 .cal-events::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
-.cal-evt{font-size:9.5px;font-weight:600;padding:2px 5px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;flex-shrink:0}
+.cal-evt{font-size:9.5px;font-weight:600;padding:2px 5px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;flex-shrink:0}
 .cal-evt.overdue{background:rgba(251,113,133,.22);color:#fda4af;border-left:2px solid #fb7185}
 .cal-evt.soon{background:rgba(251,191,36,.22);color:#fde68a;border-left:2px solid #fbbf24}
 .cal-evt.ok{background:rgba(52,211,153,.18);color:#6ee7b7;border-left:2px solid #34d399}
@@ -113,48 +104,34 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .mode-btn{background:transparent;border:none;border-radius:8px;padding:6px 12px;color:var(--mut);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
 .mode-btn:hover{color:var(--txt)}
 .mode-btn.active{background:rgba(56,189,248,.2);color:#7dd3fc}
-.cal-evt[draggable=true]{cursor:grab}
-.cal-evt[draggable=true]:active{cursor:grabbing}
-.cal-cell.drag-over{background:rgba(167,139,250,.18);border-color:#a78bfa;box-shadow:0 0 0 1px #a78bfa}
 .cal-count{font-size:9px;color:var(--a4);text-align:center;padding:2px;font-weight:700;flex-shrink:0}
-@media(max-width:768px){.cal-cell{height:100px}.cal-evt{font-size:8px}}
-
-#dayModal{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.6);
-  display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+#dayModal{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 #dayModal.open{display:flex}
-.dm-box{background:#1a1228;border:1px solid var(--glassb);border-radius:20px;
-  width:min(560px,92vw);max-height:82vh;display:flex;flex-direction:column;overflow:hidden}
+.dm-box{background:#1a1228;border:1px solid var(--glassb);border-radius:20px;width:min(560px,92vw);max-height:82vh;display:flex;flex-direction:column;overflow:hidden}
 .dm-head{padding:18px 22px;border-bottom:1px solid var(--glassb);display:flex;align-items:center;justify-content:space-between;gap:12px}
 .dm-title{font-size:16px;font-weight:800;color:#fff}
 .dm-sub{font-size:12px;color:var(--mut);margin-top:2px}
 .dm-actions{display:flex;gap:8px}
-.dm-btn{background:rgba(255,255,255,.08);border:1px solid var(--glassb);border-radius:10px;
-  padding:8px 14px;color:var(--txt);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
+.dm-btn{background:rgba(255,255,255,.08);border:1px solid var(--glassb);border-radius:10px;padding:8px 14px;color:var(--txt);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
 .dm-btn:hover{background:rgba(56,189,248,.15);border-color:var(--a4)}
 .dm-btn.copied{background:rgba(52,211,153,.2);border-color:var(--ok);color:var(--ok)}
-.dm-close{background:rgba(255,255,255,.08);border:1px solid var(--glassb);border-radius:10px;
-  width:34px;height:34px;color:var(--txt);font-size:16px;cursor:pointer}
+.dm-close{background:rgba(255,255,255,.08);border:1px solid var(--glassb);border-radius:10px;width:34px;height:34px;color:var(--txt);font-size:16px;cursor:pointer}
 .dm-close:hover{background:rgba(251,113,133,.15);border-color:var(--bad)}
 .dm-body{padding:16px 22px;overflow-y:auto}
-.dm-body::-webkit-scrollbar{width:6px}.dm-body::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
-.dm-text{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--glassb);border-radius:12px;
-  padding:14px;color:var(--txt);font-size:13px;font-family:'Consolas','Malgun Gothic',monospace;
-  line-height:1.7;white-space:pre;overflow-x:auto;user-select:text;resize:vertical;min-height:120px}
+.dm-text{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--glassb);border-radius:12px;padding:14px;color:var(--txt);font-size:13px;font-family:'Consolas','Malgun Gothic',monospace;line-height:1.7;white-space:pre;overflow-x:auto;user-select:text;resize:vertical;min-height:120px}
 .card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px)}
 .card h3{font-size:13px;font-weight:700;margin-bottom:12px;color:#dfe6ff}
 .card .cw{position:relative;height:220px}
 .tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px)}
 .tablecard h3{font-size:14px;font-weight:700;margin-bottom:12px}
 .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-.filters input,.filters select{background:rgba(255,255,255,.07);border:1px solid var(--glassb);color:var(--txt);
-  padding:9px 12px;border-radius:10px;font-size:13px;outline:none;color-scheme:dark}
+.filters input,.filters select{background:rgba(255,255,255,.07);border:1px solid var(--glassb);color:var(--txt);padding:9px 12px;border-radius:10px;font-size:13px;outline:none;color-scheme:dark}
 .filters input{flex:1;min-width:200px}
 .filters input:focus,.filters select:focus{border-color:var(--a1)}
 .tbl-wrap{max-height:520px;overflow:auto;border-radius:10px}
 .tbl-wrap::-webkit-scrollbar{width:5px;height:5px}.tbl-wrap::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
 table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
-th{text-align:left;padding:10px 11px;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:1px;
-  border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(26,10,15,.96);cursor:pointer;user-select:none}
+th{text-align:left;padding:10px 11px;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(26,10,15,.96);cursor:pointer;user-select:none}
 th:hover{color:var(--a1)}
 td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.04)}
 tr:hover td{background:rgba(255,255,255,.04)}
@@ -166,52 +143,40 @@ tr:hover td{background:rgba(255,255,255,.04)}
 .dl{font-weight:700}.dl.bad{color:var(--bad)}.dl.warn{color:var(--warn)}.dl.ok{color:var(--ok)}
 .empty{text-align:center;padding:40px;color:var(--mut)}
 .loading{text-align:center;padding:60px;color:var(--mut);font-size:15px}
+.drag-over{outline:2px dashed #a78bfa;outline-offset:-3px}
 @media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
-
-#loginOverlay{position:fixed;inset:0;z-index:99999;
-  background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#1a1a2e);
-  background-size:400% 400%;animation:grad 18s ease infinite;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-family:'Segoe UI','Malgun Gothic',sans-serif}
+#loginOverlay{position:fixed;inset:0;z-index:99999;background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#1a1a2e);background-size:400% 400%;animation:grad 18s ease infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-family:'Segoe UI','Malgun Gothic',sans-serif}
 #loginOverlay.hidden{display:none}
-.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
-.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;
-  padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
+.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
+.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
 .login-box .lock{font-size:40px;margin-bottom:14px}
 .login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px;color:#f5f6fa}
-.login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);
-  border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
-.login-box input:focus{border-color:#6c5ce7}
-.login-box input::placeholder{color:#a0a0c0}
-.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);
-  border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
-.login-box button:hover{opacity:.88}
+.login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
+.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
 .login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
-@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 </style>
 </head>
 <body>
-
 <div id="loginOverlay">
   <div class="login-logo">GST Dashboard</div>
   <div class="login-box">
     <div class="lock">🔒</div>
-    <div class="ltitle" id="lgTitle">비밀번호를 입력하세요 / Enter password</div>
+    <div class="ltitle">비밀번호를 입력하세요 / Enter password</div>
     <input type="password" id="pwInput" placeholder="비밀번호 / Password" autocomplete="off">
-    <button onclick="checkPw()" id="lgBtn">로그인 / Login</button>
+    <button onclick="checkPw()">로그인 / Login</button>
     <div class="login-err" id="pwErr"></div>
   </div>
 </div>
 
 <div class="header">
   <div>
-    <h1 data-i="title">🔧 Scrubber PM Schedule</h1>
-    <div class="sub" data-i="sub">Preventive Maintenance schedule based on TBM history</div>
+    <h1>🔧 Scrubber PM Schedule</h1>
+    <div class="sub">Preventive Maintenance schedule based on TBM history</div>
   </div>
   <div class="header-right">
-    <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← Main</a>
-    <button class="btn btn-grad" id="refreshBtn" onclick="loadData()">🔄 <span data-i="refresh">Refresh</span></button>
+    <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass">← Main</a>
+    <button class="btn btn-grad" id="refreshBtn" onclick="loadData()">🔄 Refresh</button>
     <div class="lang-wrap">
       <button class="lang-btn" onclick="toggleLang()">🌐 <span id="langLabel">KO</span> ▾</button>
       <div class="lang-dropdown" id="langMenu">
@@ -227,20 +192,18 @@ tr:hover td{background:rgba(255,255,255,.04)}
 <div class="status" id="status">Loading...</div>
 
 <div class="kpis">
-  <div class="kpi k1 sel" data-s=""><div class="ic">🖥️</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">Total Targets</div></div>
-  <div class="kpi k2" data-s="overdue"><div class="ic">⛔</div><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">Overdue</div></div>
-  <div class="kpi k3" data-s="soon"><div class="ic">⚠️</div><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">Due Soon</div></div>
-  <div class="kpi k4" data-s="ok"><div class="ic">✅</div><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Normal</div></div>
-  <div class="kpi k5" data-s="na"><div class="ic">❓</div><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">No Cycle</div></div>
+  <div class="kpi k1 sel" data-s=""><div class="ic">🖥️</div><div class="val" id="kp1">0</div><div class="cap">Total Targets</div></div>
+  <div class="kpi k2" data-s="overdue"><div class="ic">⛔</div><div class="val" id="kp2">0</div><div class="cap">Overdue</div></div>
+  <div class="kpi k3" data-s="soon"><div class="ic">⚠️</div><div class="val" id="kp3">0</div><div class="cap">Due Soon</div></div>
+  <div class="kpi k4" data-s="ok"><div class="ic">✅</div><div class="val" id="kp4">0</div><div class="cap">Normal</div></div>
+  <div class="kpi k5" data-s="na"><div class="ic">❓</div><div class="val" id="kp5">0</div><div class="cap">No Cycle</div></div>
   <div class="kpi k6" data-s="done"><div class="ic">🏁</div><div class="val" id="kp6">0</div><div class="cap">Completed</div></div>
 </div>
 
 <div class="wk-card">
-  <h3 data-i="wk_title">📋 주차별 점검 현황 (오늘 기준 ±2개월)</h3>
+  <h3>📋 주차별 점검 현황 (오늘 기준 ±2개월)</h3>
   <div class="wk-range-note" id="wkRangeNote"></div>
-  <div class="wk-wrap">
-    <table class="wk-table" id="wkTable"></table>
-  </div>
+  <div class="wk-wrap"><table class="wk-table" id="wkTable"></table></div>
 </div>
 
 <div class="cal-card">
@@ -250,22 +213,22 @@ tr:hover td{background:rgba(255,255,255,.04)}
       <select class="cal-sel" id="calYear" onchange="calJump()"></select>
       <select class="cal-sel" id="calMonth" onchange="calJump()"></select>
       <button class="cal-btn" onclick="calNext()">▶</button>
-      <button class="cal-today-btn" onclick="calToday()" data-i="cal_today">Today</button>
+      <button class="cal-today-btn" onclick="calToday()">Today</button>
     </div>
     <div class="cal-mode">
-      <button class="mode-btn" data-m="plan" onclick="setCalMode('plan')" data-i="mode_plan">예정만</button>
-      <button class="mode-btn" data-m="done" onclick="setCalMode('done')" data-i="mode_done">완료만</button>
-      <button class="mode-btn active" data-m="both" onclick="setCalMode('both')" data-i="mode_both">예정+완료</button>
+      <button class="mode-btn" data-m="plan" onclick="setCalMode('plan')">예정만</button>
+      <button class="mode-btn" data-m="done" onclick="setCalMode('done')">완료만</button>
+      <button class="mode-btn active" data-m="both" onclick="setCalMode('both')">예정+완료</button>
     </div>
   </div>
   <div class="cal-legend">
-    <span><i class="dot" style="background:#fb7185"></i> <span data-i="st_overdue">Overdue</span></span>
-    <span><i class="dot" style="background:#fbbf24"></i> <span data-i="st_soon">Due Soon</span></span>
-    <span><i class="dot" style="background:#34d399"></i> <span data-i="st_ok">Normal</span></span>
-    <span><i class="dot" style="background:#a78bfa"></i> <span data-i="lg_adjusted">Adjusted</span></span>
-    <span><i class="dot" style="background:#64748b"></i> ✓ <span data-i="lg_done">Completed</span></span>
+    <span><i class="dot" style="background:#fb7185"></i> Overdue</span>
+    <span><i class="dot" style="background:#fbbf24"></i> Due Soon</span>
+    <span><i class="dot" style="background:#34d399"></i> Normal</span>
+    <span><i class="dot" style="background:#a78bfa"></i> Adjusted</span>
+    <span><i class="dot" style="background:#64748b"></i> ✓ Completed</span>
   </div>
-  <div class="cal-hint" data-i="drag_hint">💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ 표시 = 조정됨)</div>
+  <div class="cal-hint">💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ 표시 = 조정됨)</div>
   <div class="cal-dow-row" id="calDowRow"></div>
   <div class="cal-grid" id="calGrid"></div>
 </div>
@@ -278,24 +241,22 @@ tr:hover td{background:rgba(255,255,255,.04)}
         <div class="dm-sub" id="dmSub"></div>
       </div>
       <div class="dm-actions">
-        <button class="dm-btn" id="dmCopy" onclick="copyDayText()" data-i="dm_copy">📋 복사</button>
+        <button class="dm-btn" id="dmCopy" onclick="copyDayText()">📋 복사</button>
         <button class="dm-close" onclick="closeDayModal()">✕</button>
       </div>
     </div>
-    <div class="dm-body">
-      <textarea class="dm-text" id="dmText" readonly></textarea>
-    </div>
+    <div class="dm-body"><textarea class="dm-text" id="dmText" readonly></textarea></div>
   </div>
 </div>
 
 <div class="grid3">
-  <div class="card"><h3 data-i="ch_stat">📊 Status Distribution</h3><div class="cw"><canvas id="cStat"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_line">🏭 Overdue/Soon by LINE</h3><div class="cw"><canvas id="cLine"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_week">📅 Next 60 Days (weekly)</h3><div class="cw"><canvas id="cWeek"></canvas></div></div>
+  <div class="card"><h3>📊 Status Distribution</h3><div class="cw"><canvas id="cStat"></canvas></div></div>
+  <div class="card"><h3>🏭 Overdue/Soon by LINE</h3><div class="cw"><canvas id="cLine"></canvas></div></div>
+  <div class="card"><h3>📅 Next 60 Days (weekly)</h3><div class="cw"><canvas id="cWeek"></canvas></div></div>
 </div>
 
 <div class="tablecard">
-  <h3 data-i="tbl_title">🗓️ PM Schedule (by urgency)</h3>
+  <h3>🗓️ PM Schedule (by urgency)</h3>
   <div class="filters">
     <input id="q" placeholder="Search S/N, Model, Line...">
     <select id="fSite"><option value="">SITE</option></select>
@@ -314,9 +275,8 @@ tr:hover td{background:rgba(255,255,255,.04)}
       <thead><tr>
         <th data-k="sn">S/N</th><th data-k="ch">Chamber</th><th data-k="site">SITE</th>
         <th data-k="line">LINE</th><th data-k="model">Model</th><th data-k="group">Group</th>
-        <th data-k="last" data-i-th="th_last">Last PM</th><th data-k="cycle" data-i-th="th_cycle">Cycle(d)</th>
-        <th data-k="next" data-i-th="th_next">Next Due</th><th data-k="dl" data-i-th="th_dl">D-day</th>
-        <th data-k="st" data-i-th="th_st">Status</th><th data-k="cnt" data-i-th="th_cnt">History</th>
+        <th data-k="last">Last PM</th><th data-k="cycle">Cycle(d)</th><th data-k="next">Next Due</th>
+        <th data-k="dl">D-day</th><th data-k="st">Status</th><th data-k="cnt">History</th>
       </tr></thead>
       <tbody id="tbody"><tr><td colspan="12" class="loading">⏳ Loading...</td></tr></tbody>
     </table>
@@ -325,81 +285,22 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <script>
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
-const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbzJ6N-h9DXyqTwEoNOnksBzMDsySqnkQ7OSiuR9kBFGuRY3oJ29QI9pnIfyEqvtpDf3/exec';
-let ADJUST={};
+const ADJUST_KEY='pmAdjustmentsV1';
 const C={site:1,line:2,group1:3,tbmCycle:15,model:17,work:23,sn:24,maint:25,chamber:33};
-const WARN_RATIO=0.20;
-const T={
-  ko:{title:'🔧 스크러버 PM 점검 스케줄',sub:'정기점검(TBM) 이력 기반 예방정비 스케줄',
-    back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',kp1:'총 점검대상',kp2:'점검 지연',kp3:'점검 임박',kp4:'정상',kp5:'주기없음',
-    ch_stat:'📊 점검 상태 분포',ch_line:'🏭 LINE별 지연·임박',ch_week:'📅 향후 60일 예정(주차별)',
-    tbl_title:'🗓️ PM 점검 스케줄 (긴급순)',th_last:'최근 점검일',th_cycle:'주기(일)',th_next:'다음 예정일',th_dl:'잔여일',th_st:'상태',th_cnt:'이력수',
-    st_overdue:'지연',st_soon:'임박',st_ok:'정상',st_na:'주기없음',no_data:'결과 없음',search_ph:'S/N, 모델, Line 검색...',
-    f_site:'전체 SITE',f_line:'전체 LINE',f_model:'전체 모델',f_stat:'전체 상태',cal_today:'오늘',dow:['일','월','화','수','목','금','토'],
-    months:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],cal_more:'외 N건',dm_copy:'복사',dm_copied:'복사됨',
-    adj_loaded:'조정 N건',adj_saving:'저장 중...',adj_saved:'A → B 로 조정 저장됨',adj_failed:'저장 실패 (새로고침 후 재시도)',lg_adjusted:'조정됨',
-    drag_hint:'💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ = 조정됨)',
-    wk_title:'📋 주차별 점검 현황 (오늘 기준 ±2개월)',wk_week:'주차',wk_plan:'예정',wk_done:'완료',wk_rate:'완료율',wk_thisweek:'이번주',wk_total:'전체',wk_inrange:'표시',wk_outrange:'범위밖 N건',
-    mode_plan:'예정만',mode_done:'완료만',mode_both:'예정+완료',lg_done:'완료됨'},
-  en:{title:'🔧 Scrubber PM Schedule',sub:'Preventive Maintenance schedule based on TBM history',
-    back:'← Main',refresh:'Refresh',loading:'Loading...',kp1:'Total Targets',kp2:'Overdue',kp3:'Due Soon',kp4:'Normal',kp5:'No Cycle',
-    ch_stat:'📊 Status Distribution',ch_line:'🏭 Overdue/Soon by LINE',ch_week:'📅 Next 60 Days (weekly)',
-    tbl_title:'🗓️ PM Schedule (by urgency)',th_last:'Last PM',th_cycle:'Cycle(d)',th_next:'Next Due',th_dl:'D-day',th_st:'Status',th_cnt:'History',
-    st_overdue:'Overdue',st_soon:'Due Soon',st_ok:'Normal',st_na:'No Cycle',no_data:'No results',search_ph:'Search S/N, Model, Line...',
-    f_site:'All SITE',f_line:'All LINE',f_model:'All Model',f_stat:'All Status',cal_today:'Today',dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
-    months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],cal_more:'+N more',dm_copy:'Copy',dm_copied:'Copied',
-    adj_loaded:'N adjusted',adj_saving:'Saving...',adj_saved:'Moved A → B',adj_failed:'Save failed (retry after refresh)',lg_adjusted:'Adjusted',
-    drag_hint:'💡 Drag an item to another date to reschedule. Changes are shared with the whole team (✎ = adjusted)',
-    wk_title:'📋 Weekly PM Status (±2 months from today)',wk_week:'Week',wk_plan:'Planned',wk_done:'Done',wk_rate:'Rate',wk_thisweek:'This week',wk_total:'Total',wk_inrange:'Shown',wk_outrange:'N out of range',
-    mode_plan:'Planned',mode_done:'Completed',mode_both:'Both',lg_done:'Completed'},
-  zh:{title:'🔧 洗涤器PM点检计划',sub:'基于定期点检(TBM)履历的预防性维护计划',
-    back:'← 主页',refresh:'刷新',loading:'加载中...',kp1:'总点检对象',kp2:'点检延迟',kp3:'点检临近',kp4:'正常',kp5:'无周期',
-    ch_stat:'📊 点检状态分布',ch_line:'🏭 各LINE延迟·临近',ch_week:'📅 未来60天计划(按周)',
-    tbl_title:'🗓️ PM点检计划(紧急顺序)',th_last:'最近点检日',th_cycle:'周期(天)',th_next:'下次预定日',th_dl:'剩余天',th_st:'状态',th_cnt:'履历数',
-    st_overdue:'延迟',st_soon:'临近',st_ok:'正常',st_na:'无周期',no_data:'无结果',search_ph:'搜索S/N, 型号, Line...',
-    f_site:'全部SITE',f_line:'全部LINE',f_model:'全部型号',f_stat:'全部状态',cal_today:'今天',dow:['日','一','二','三','四','五','六'],
-    months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'其他N项',dm_copy:'复制',dm_copied:'已复制',
-    adj_loaded:'调整N项',adj_saving:'保存中...',adj_saved:'已调整 A → B',adj_failed:'保存失败(刷新后重试)',lg_adjusted:'已调整',
-    drag_hint:'💡 将点检项拖到其他日期即可调整日程并与全队共享 (✎ = 已调整)',
-    wk_title:'📋 周点检状况 (今天±2个月)',wk_week:'周次',wk_plan:'计划',wk_done:'完成',wk_rate:'完成率',wk_thisweek:'本周',wk_total:'全部',wk_inrange:'显示',wk_outrange:'范围外N项',
-    mode_plan:'仅计划',mode_done:'仅完成',mode_both:'计划+完成',lg_done:'已完成'},
-  ja:{title:'🔧 スクラバーPM点検スケジュール',sub:'定期点検(TBM)履歴に基づく予防保全スケジュール',
-    back:'← メイン',refresh:'更新',loading:'読み込み中...',kp1:'総点検対象',kp2:'点検遅延',kp3:'点検間近',kp4:'正常',kp5:'周期なし',
-    ch_stat:'📊 点検状態分布',ch_line:'🏭 LINE別 遅延·間近',ch_week:'📅 今後60日予定(週別)',
-    tbl_title:'🗓️ PM点検スケジュール(緊急順)',th_last:'最近点検日',th_cycle:'周期(日)',th_next:'次回予定日',th_dl:'残日',th_st:'状態',th_cnt:'履歴数',
-    st_overdue:'遅延',st_soon:'間近',st_ok:'正常',st_na:'周期なし',no_data:'結果なし',search_ph:'S/N, モデル, Line検索...',
-    f_site:'全SITE',f_line:'全LINE',f_model:'全モデル',f_stat:'全ステータス',cal_today:'今日',dow:['日','月','火','水','木','金','土'],
-    months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'他N件',dm_copy:'コピー',dm_copied:'コピー済',
-    adj_loaded:'調整N件',adj_saving:'保存中...',adj_saved:'A → B に調整',adj_failed:'保存失敗(更新後再試行)',lg_adjusted:'調整済',
-    drag_hint:'💡 点検項目を他の日付にドラッグすると日程が調整されチーム全体に共有されます (✎ = 調整済)',
-    wk_title:'📋 週別点検状況 (本日±2ヶ月)',wk_week:'週',wk_plan:'予定',wk_done:'完了',wk_rate:'完了率',wk_thisweek:'今週',wk_total:'全体',wk_inrange:'表示',wk_outrange:'範囲外N件',
-    mode_plan:'予定のみ',mode_done:'完了のみ',mode_both:'予定+完了',lg_done:'完了'}
-};
-
+const WARN_RATIO=0.2;
 let LANG='ko', RAW=[], SCHED=[], CHARTS={}, activeStatus='', sortK='dl', sortAsc=true;
 let CAL_Y=new Date().getFullYear(), CAL_M=new Date().getMonth(), CAL_MODE='both';
-let DONE_HIST=[];
+let DONE_HIST=[], ADJUST={};
 
-try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
-
-Chart.defaults.color='#94a3b8';
-Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
-
+const T={ko:{title:'🔧 스크러버 PM 점검 스케줄',sub:'정기점검(TBM) 이력 기반 예방정비 스케줄',refresh:'새로고침',loading:'데이터 불러오는 중...',kp1:'총 점검대상',kp2:'점검 지연',kp3:'점검 임박',kp4:'정상',kp5:'주기없음',lg_adjusted:'조정됨',dm_copy:'복사',dm_copied:'복사됨',search_ph:'S/N, 모델, Line 검색...'},en:{title:'🔧 Scrubber PM Schedule',sub:'Preventive Maintenance schedule based on TBM history',refresh:'Refresh',loading:'Loading...',kp1:'Total Targets',kp2:'Overdue',kp3:'Due Soon',kp4:'Normal',kp5:'No Cycle',lg_adjusted:'Adjusted',dm_copy:'Copy',dm_copied:'Copied',search_ph:'Search S/N, Model, Line...'},zh:{title:'🔧 洗涤器PM点检计划',sub:'基于定期点检(TBM)履历的预防性维护计划',refresh:'刷新',loading:'加载中...',kp1:'总点检对象',kp2:'点检延迟',kp3:'点检临近',kp4:'正常',kp5:'无周期',lg_adjusted:'已调整',dm_copy:'复制',dm_copied:'已复制',search_ph:'搜索S/N, 型号, Line...'},ja:{title:'🔧 スクラバーPM点検スケジュール',sub:'定期点検(TBM)履歴に基づく予防保全スケジュール',refresh:'更新',loading:'読み込み中...',kp1:'総点検対象',kp2:'点検遅延',kp3:'点検間近',kp4:'正常',kp5:'周期なし',lg_adjusted:'調整済',dm_copy:'コピー',dm_copied:'コピー済',search_ph:'S/N, モデル, Line検索...'}};
 function t(k){return (T[LANG]||T.ko)[k]||k;}
-function applyLang(){
-  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
-  document.querySelectorAll('[data-i-th]').forEach(el=>{el.textContent=t(el.getAttribute('data-i-th'));});
-  document.getElementById('langLabel').textContent=LANG.toUpperCase();
-  document.getElementById('q').placeholder=t('search_ph');
-  const setOpt0=(id,k)=>{const s=document.getElementById(id);if(s&&s.options[0])s.options[0].textContent=t(k);};
-  setOpt0('fSite','f_site');setOpt0('fLine','f_line');setOpt0('fModel','f_model');
-  const fst=document.getElementById('fStat');
-  if(fst){fst.options[0].textContent=t('f_stat');fst.options[1].textContent=t('st_overdue');
-    fst.options[2].textContent=t('st_soon');fst.options[3].textContent=t('st_ok');fst.options[4].textContent=t('st_na');}
-}
+function applyLang(){document.getElementById('langLabel').textContent=LANG.toUpperCase();document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});document.getElementById('q').placeholder=t('search_ph');}
 function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(SCHED.length)render();document.getElementById('langMenu').classList.remove('open');}
 function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
 document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');});
+
+function loadAdjustments(){ try{ ADJUST=JSON.parse(localStorage.getItem(ADJUST_KEY)||'{}')||{}; }catch(e){ ADJUST={}; } }
+function saveAdjustments(){ localStorage.setItem(ADJUST_KEY, JSON.stringify(ADJUST||{})); }
 
 function toDate(v){
   if(v===null||v===undefined||v==='')return null;
@@ -407,42 +308,25 @@ function toDate(v){
   if(!isNaN(n)&&n>20000&&n<80000)return new Date(Date.UTC(1899,11,30)+n*86400000);
   const s=String(v).trim();
   const m=s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
-  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
-  const d=new Date(s);return isNaN(d)?null:d;
+  if(m)return new Date(+m[1],+m[2]-1,+m[3]);
+  const d=new Date(s); return isNaN(d)?null:d;
 }
 function fmtDate(d){return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:'—';}
 
-function countDoneByYM(year, month){
-  return RAW.filter(r=>{
-    if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return false;
-    const d=toDate(r[C.work]); if(!d)return false;
-    return d.getFullYear()===year && d.getMonth()===month;
-  }).length;
-}
-function getMonthlySched(){
-  return SCHED.filter(x=>x.next && x.next.getFullYear()===CAL_Y && x.next.getMonth()===CAL_M);
-}
+function countDoneByYM(y,m){return RAW.filter(r=>((r[C.maint]||'').toString().trim().toUpperCase()==='TBM')&&(() => {const d=toDate(r[C.work]);return d&&d.getFullYear()===y&&d.getMonth()===m;})()).length;}
+function getMonthlySched(){return SCHED.filter(x=>x.next&&x.next.getFullYear()===CAL_Y&&x.next.getMonth()===CAL_M);}
 
 async function loadData(){
-  const btn=document.getElementById('refreshBtn');
-  const status=document.getElementById('status');
-  btn.disabled=true; status.className='status'; status.textContent=t('loading');
+  const btn=document.getElementById('refreshBtn'), st=document.getElementById('status');
+  btn.disabled=true; st.className='status'; st.textContent=t('loading');
   try{
-    const [csvRes, adjRes]=await Promise.allSettled([
-      fetch(SHEET_URL+'&t='+Date.now()).then(r=>r.text()),
-      fetch(APPS_SCRIPT_URL+'?t='+Date.now()).then(r=>r.json())
-    ]);
-    if(csvRes.status==='fulfilled') RAW=Papa.parse(csvRes.value,{skipEmptyLines:true}).data.slice(1);
-    ADJUST = (adjRes.status==='fulfilled' && adjRes.value) ? adjRes.value : {};
+    const txt=await fetch(SHEET_URL+'&t='+Date.now()).then(r=>r.text());
+    RAW=Papa.parse(txt,{skipEmptyLines:true}).data.slice(1);
+    loadAdjustments();
     SCHED=buildSchedule(RAW);
-    status.className='status ok';
-    const adjCnt=Object.keys(ADJUST).length;
-    status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+SCHED.length+(adjCnt?' · '+t('adj_loaded').replace('N',adjCnt):'');
-    buildYearMonthSelectors();
-    render();
-  }catch(e){
-    status.className='status err'; status.textContent='❌ '+e.message;
-  }
+    st.className='status ok'; st.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+SCHED.length+(Object.keys(ADJUST).length?` · ${Object.keys(ADJUST).length} adjusted`:'');
+    buildYearMonthSelectors(); render();
+  }catch(e){ st.className='status err'; st.textContent='❌ '+e.message; }
   btn.disabled=false;
 }
 
@@ -461,198 +345,125 @@ function buildSchedule(rows){
   const today=new Date(); today.setHours(0,0,0,0);
   return Object.values(g).map(o=>{
     const cycle=Number(o.meta[C.tbmCycle])||null;
-    let next=null,dl=null,st='na';
+    let next=null, dl=null, st='na';
     if(cycle&&o.last) next=new Date(o.last.getTime()+cycle*86400000);
     const key=o.sn+'||'+o.ch;
-    let adjusted=false, memo='';
-    if(ADJUST[key] && ADJUST[key].newDate){
-      const ad=toDate(ADJUST[key].newDate);
-      if(ad){ next=ad; adjusted=true; memo=ADJUST[key].memo||''; }
-    }
-    if(next){
-      dl=Math.round((next-today)/86400000);
-      st = cycle ? (dl<0?'overdue':(dl<=cycle*WARN_RATIO?'soon':'ok')) : (dl<0?'overdue':'ok');
-    }
-    return {sn:o.sn,ch:o.ch,site:o.meta[C.site]||'—',line:o.meta[C.line]||'—',model:o.meta[C.model]||'—',group:o.meta[C.group1]||'—',last:o.last,cycle,next,dl,st,cnt:o.rows,key,adjusted,memo};
+    let adjusted=false;
+    if(ADJUST[key]&&ADJUST[key].newDate){ const ad=toDate(ADJUST[key].newDate); if(ad){next=ad; adjusted=true;} }
+    if(next){ dl=Math.round((next-today)/86400000); st=cycle?(dl<0?'overdue':(dl<=cycle*WARN_RATIO?'soon':'ok')):(dl<0?'overdue':'ok'); }
+    return {sn:o.sn,ch:o.ch,site:o.meta[C.site]||'—',line:o.meta[C.line]||'—',model:o.meta[C.model]||'—',group:o.meta[C.group1]||'—',last:o.last,cycle,next,dl,st,cnt:o.rows,key,adjusted};
   });
 }
-
 function countBy(arr,f){const m={};arr.forEach(x=>{const k=f(x)||'N/A';m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);}
 function animVal(el,target){const start=parseFloat(el.dataset.v||0),t0=performance.now();function step(t){const p=Math.min((t-t0)/500,1);const cur=start+(target-start)*(1-Math.pow(1-p,3));el.textContent=Math.round(cur);if(p<1)requestAnimationFrame(step);else el.dataset.v=target;}requestAnimationFrame(step);}
 
 function render(){
-  const monthlySched=getMonthlySched();
-  const doneCnt=countDoneByYM(CAL_Y,CAL_M);
-  const over=monthlySched.filter(x=>x.st==='overdue').length;
-  const soon=monthlySched.filter(x=>x.st==='soon').length;
-  const ok=monthlySched.filter(x=>x.st==='ok').length;
-  const na=monthlySched.filter(x=>x.st==='na').length;
-  animVal(document.getElementById('kp1'),monthlySched.length);
-  animVal(document.getElementById('kp2'),over);
-  animVal(document.getElementById('kp3'),soon);
-  animVal(document.getElementById('kp4'),ok);
-  animVal(document.getElementById('kp5'),na);
-  animVal(document.getElementById('kp6'),doneCnt);
-  mkDonut('cStat',[t('st_overdue'),t('st_soon'),t('st_ok'),t('st_na')],[over,soon,ok,na],['#fb7185','#fbbf24','#34d399','#64748b']);
-  renderWeeklyTable();
-  renderCalendar();
+  const monthlySched=getMonthlySched(), doneCnt=countDoneByYM(CAL_Y,CAL_M);
+  const over=monthlySched.filter(x=>x.st==='overdue').length, soon=monthlySched.filter(x=>x.st==='soon').length, ok=monthlySched.filter(x=>x.st==='ok').length, na=monthlySched.filter(x=>x.st==='na').length;
+  animVal(document.getElementById('kp1'),monthlySched.length);animVal(document.getElementById('kp2'),over);animVal(document.getElementById('kp3'),soon);animVal(document.getElementById('kp4'),ok);animVal(document.getElementById('kp5'),na);animVal(document.getElementById('kp6'),doneCnt);
+  mkDonut('cStat',['Overdue','Due Soon','Normal','No Cycle'],[over,soon,ok,na],['#fb7185','#fbbf24','#34d399','#64748b']);
+  renderWeeklyTable(); renderCalendar();
   const lines=[...new Set(monthlySched.map(x=>x.line))].filter(l=>l&&l!=='—').slice(0,12);
-  mkStackBar('cLine',lines,[
-    {label:t('st_overdue'),data:lines.map(l=>monthlySched.filter(x=>x.line===l&&x.st==='overdue').length),backgroundColor:'#fb7185'},
-    {label:t('st_soon'),data:lines.map(l=>monthlySched.filter(x=>x.line===l&&x.st==='soon').length),backgroundColor:'#fbbf24'}
-  ]);
-  const weeks={};
-  monthlySched.forEach(x=>{if(x.dl!=null&&x.dl>=0&&x.dl<=60){const wk='+'+Math.floor(x.dl/7)+'w';weeks[wk]=(weeks[wk]||0)+1;}});
-  const wk=Object.keys(weeks).sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
-  mkBar('cWeek',wk,wk.map(k=>weeks[k]),'#38bdf8');
-  fillSelect('fSite',x=>x.site); fillSelect('fLine',x=>x.line); fillSelect('fModel',x=>x.model);
-  document.querySelectorAll('.kpi').forEach(k=>{k.onclick=()=>{activeStatus=k.dataset.s;document.getElementById('fStat').value=activeStatus;document.querySelectorAll('.kpi').forEach(x=>x.classList.remove('sel'));k.classList.add('sel');draw();};});
-  draw();
+  mkStackBar('cLine',lines,[{label:'Overdue',data:lines.map(l=>monthlySched.filter(x=>x.line===l&&x.st==='overdue').length),backgroundColor:'#fb7185'},{label:'Due Soon',data:lines.map(l=>monthlySched.filter(x=>x.line===l&&x.st==='soon').length),backgroundColor:'#fbbf24'}]);
+  const weeks={}; monthlySched.forEach(x=>{if(x.dl!=null&&x.dl>=0&&x.dl<=60){const wk='+'+Math.floor(x.dl/7)+'w';weeks[wk]=(weeks[wk]||0)+1;}}); const wk=Object.keys(weeks).sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1))); mkBar('cWeek',wk,wk.map(k=>weeks[k]),'#38bdf8');
+  fillSelect('fSite',x=>x.site); fillSelect('fLine',x=>x.line); fillSelect('fModel',x=>x.model); document.querySelectorAll('.kpi').forEach(k=>{k.onclick=()=>{activeStatus=k.dataset.s;document.getElementById('fStat').value=activeStatus;document.querySelectorAll('.kpi').forEach(x=>x.classList.remove('sel'));k.classList.add('sel');draw();};}); draw();
 }
-
-function fillSelect(id,f){
-  const s=document.getElementById(id);
-  while(s.options.length>1)s.remove(1);
-  countBy(SCHED,f).forEach(([k])=>{if(k&&k!=='—'){const o=document.createElement('option');o.value=k;o.textContent=k;s.appendChild(o);}});
-}
-
+function fillSelect(id,f){const s=document.getElementById(id);while(s.options.length>1)s.remove(1);countBy(SCHED,f).forEach(([k])=>{if(k&&k!=='—'){const o=document.createElement('option');o.value=k;o.textContent=k;s.appendChild(o);}});}
 function draw(){
-  const q=document.getElementById('q').value.toLowerCase();
-  const fs=document.getElementById('fSite').value,fl=document.getElementById('fLine').value,fm=document.getElementById('fModel').value,fst=document.getElementById('fStat').value;
-  let d=SCHED.filter(x=>{
-    if(fs&&x.site!==fs)return false; if(fl&&x.line!==fl)return false; if(fm&&x.model!==fm)return false; if(fst&&x.st!==fst)return false;
-    if(q&&!`${x.sn} ${x.model} ${x.line} ${x.site} ${x.ch} ${x.group}`.toLowerCase().includes(q))return false;
-    return true;
-  });
-  d.sort((a,b)=>{
-    let x=a[sortK],y=b[sortK];
-    if(sortK==='dl'){x=x==null?1e9:x;y=y==null?1e9:y;return sortAsc?x-y:y-x;}
-    if(sortK==='last'||sortK==='next'){x=x?x.getTime():0;y=y?y.getTime():0;return sortAsc?x-y:y-x;}
-    if(sortK==='cycle'||sortK==='cnt'){return sortAsc?(x||0)-(y||0):(y||0)-(x||0);}
-    return sortAsc?(''+x).localeCompare(''+y,'ko',{numeric:true}):(''+y).localeCompare(''+x,'ko',{numeric:true});
-  });
-  const pill={overdue:`<span class="pill bad">${t('st_overdue')}</span>`,soon:`<span class="pill warn">${t('st_soon')}</span>`,ok:`<span class="pill ok">${t('st_ok')}</span>`,na:`<span class="pill na">${t('st_na')}</span>`};
-  const tbody=document.getElementById('tbody');
-  if(!d.length){tbody.innerHTML=`<tr><td colspan="12" class="empty">${t('no_data')}</td></tr>`;return;}
-  tbody.innerHTML=d.map(x=>{
-    const dlc=x.st==='overdue'?'bad':x.st==='soon'?'warn':x.st==='ok'?'ok':'';
-    const dlt=x.dl==null?'—':(x.dl<0?`D+${-x.dl}`:`D-${x.dl}`);
-    return `<tr><td>${x.sn}</td><td>${x.ch}</td><td>${x.site}</td><td>${x.line}</td><td>${x.model}</td><td>${x.group}</td><td>${fmtDate(x.last)}</td><td>${x.cycle??'—'}</td><td>${fmtDate(x.next)}</td><td class="dl ${dlc}">${dlt}</td><td>${pill[x.st]}</td><td>${x.cnt}</td></tr>`;
-  }).join('');
+  const q=document.getElementById('q').value.toLowerCase(), fs=document.getElementById('fSite').value, fl=document.getElementById('fLine').value, fm=document.getElementById('fModel').value, fst=document.getElementById('fStat').value;
+  let d=SCHED.filter(x=>{ if(fs&&x.site!==fs)return false; if(fl&&x.line!==fl)return false; if(fm&&x.model!==fm)return false; if(fst&&x.st!==fst)return false; if(q&&!`${x.sn} ${x.model} ${x.line} ${x.site} ${x.ch} ${x.group}`.toLowerCase().includes(q))return false; return true; });
+  d.sort((a,b)=>{ let x=a[sortK],y=b[sortK]; if(sortK==='dl'){x=x==null?1e9:x;y=y==null?1e9:y;return sortAsc?x-y:y-x;} if(sortK==='last'||sortK==='next'){x=x?x.getTime():0;y=y?y.getTime():0;return sortAsc?x-y:y-x;} if(sortK==='cycle'||sortK==='cnt')return sortAsc?(x||0)-(y||0):(y||0)-(x||0); return sortAsc?(''+x).localeCompare(''+y,'ko',{numeric:true}):(''+y).localeCompare(''+x,'ko',{numeric:true}); });
+  const pill={overdue:`<span class="pill bad">Overdue</span>`,soon:`<span class="pill warn">Due Soon</span>`,ok:`<span class="pill ok">Normal</span>`,na:`<span class="pill na">No Cycle</span>`};
+  const tbody=document.getElementById('tbody'); if(!d.length){tbody.innerHTML=`<tr><td colspan="12" class="empty">No results</td></tr>`;return;}
+  tbody.innerHTML=d.map(x=>`<tr><td>${x.sn}</td><td>${x.ch}</td><td>${x.site}</td><td>${x.line}</td><td>${x.model}</td><td>${x.group}</td><td>${fmtDate(x.last)}</td><td>${x.cycle??'—'}</td><td>${fmtDate(x.next)}</td><td class="dl ${x.st==='overdue'?'bad':x.st==='soon'?'warn':x.st==='ok'?'ok':''}">${x.dl==null?'—':(x.dl<0?`D+${-x.dl}`:`D-${x.dl}`)}</td><td>${pill[x.st]}</td><td>${x.cnt}</td></tr>`).join('');
 }
-
-['q','fSite','fLine','fModel','fStat'].forEach(id=>{document.addEventListener('input',e=>{if(e.target.id===id)draw();});});
+['q','fSite','fLine','fModel','fStat'].forEach(id=>document.addEventListener('input',e=>{if(e.target.id===id)draw();}));
 document.addEventListener('click',e=>{const th=e.target.closest('#tbl thead th');if(!th)return;const k=th.dataset.k;if(sortK===k)sortAsc=!sortAsc;else{sortK=k;sortAsc=(k==='dl');}draw();});
 
-// ===== 캘린더 =====
 function buildYearMonthSelectors(){
   const ySel=document.getElementById('calYear'), mSel=document.getElementById('calMonth');
-  const years=SCHED.map(x=>x.next).filter(Boolean).map(d=>d.getFullYear());
-  const nowY=new Date().getFullYear();
-  let minY=years.length?Math.min(...years):nowY, maxY=years.length?Math.max(...years):nowY;
-  minY=Math.min(minY,nowY); maxY=Math.max(maxY,nowY+1);
-  ySel.innerHTML=''; for(let y=minY;y<=maxY;y++){const o=document.createElement('option');o.value=y;o.textContent=y;ySel.appendChild(o);}
-  ySel.value=CAL_Y;
-  mSel.innerHTML=''; t('months').forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=m;mSel.appendChild(o);});
-  mSel.value=CAL_M;
+  const years=SCHED.map(x=>x.next).filter(Boolean).map(d=>d.getFullYear()), nowY=new Date().getFullYear();
+  let minY=years.length?Math.min(...years):nowY, maxY=years.length?Math.max(...years):nowY+1; minY=Math.min(minY,nowY); maxY=Math.max(maxY,nowY+1);
+  ySel.innerHTML=''; for(let y=minY;y<=maxY;y++){const o=document.createElement('option');o.value=y;o.textContent=y;ySel.appendChild(o);} ySel.value=CAL_Y;
+  mSel.innerHTML=''; ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=mSel.dataset.lang==='ko'?[`1월`,`2월`,`3월`,`4월`,`5월`,`6월`,`7월`,`8월`,`9월`,`10월`,`11월`,`12월`][i]:m;mSel.appendChild(o);}); mSel.value=CAL_M;
 }
-function mondayOf(d){
-  const dt=new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const dow=dt.getDay();
-  const diff=(dow===0?-6:1-dow);
-  dt.setDate(dt.getDate()+diff);
-  dt.setHours(0,0,0,0);
-  return dt;
-}
-function weekKey(d){ return fmtDate(mondayOf(d)); }
-
+function mondayOf(d){const dt=new Date(d.getFullYear(),d.getMonth(),d.getDate());const dow=dt.getDay();const diff=(dow===0?-6:1-dow);dt.setDate(dt.getDate()+diff);dt.setHours(0,0,0,0);return dt;}
+function weekKey(d){return fmtDate(mondayOf(d));}
 function renderWeeklyTable(){
-  const today=new Date(), todayMon=mondayOf(today), WEEKS_BACK=8, WEEKS_FWD=8, weeks=[];
-  for(let i=-WEEKS_BACK;i<=WEEKS_FWD;i++){
-    const wm=new Date(todayMon.getFullYear(), todayMon.getMonth(), todayMon.getDate()+i*7);
-    weeks.push({mon:mondayOf(wm), key:fmtDate(mondayOf(wm)), isNow:i===0});
-  }
-  const planMap={}; let planTotal=0, planInRange=0; const firstKey=weeks[0].key, lastKey=weeks[weeks.length-1].key;
-  SCHED.forEach(x=>{ if(x.next){ const k=weekKey(x.next); planMap[k]=(planMap[k]||0)+1; planTotal++; if(k>=firstKey&&k<=lastKey)planInRange++; } });
-  const doneMap={};
-  RAW.forEach(r=>{ if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return; const wd=toDate(r[C.work]); if(!wd)return; const k=weekKey(wd); doneMap[k]=(doneMap[k]||0)+1; });
-  function weekLabel(wm){ const we=new Date(wm.getFullYear(), wm.getMonth(), wm.getDate()+6); const f=d=>`${d.getMonth()+1}/${d.getDate()}`; return `${f(wm)}~${f(we)}`; }
-  const tbl=document.getElementById('wkTable'), rangeNote=document.getElementById('wkRangeNote');
-  if(rangeNote){ const outRange=planTotal-planInRange; rangeNote.textContent=`${t('wk_plan')}: ${t('wk_total')} ${planTotal} · ${t('wk_inrange')} ${planInRange}`+(outRange>0?` · ${t('wk_outrange').replace('N',outRange)}`:''); }
-  let html='<thead><tr><th class="row-label">'+t('wk_week')+'</th>';
-  weeks.forEach(w=>{ const nowCls=w.isNow?' wk-col-now':''; html+=`<th class="${nowCls}">${weekLabel(w.mon)}<span class="wk-week-sub">${w.isNow?t('wk_thisweek'):''}</span></th>`; });
-  html+='</tr></thead><tbody>';
-  html+='<tr><td class="row-label">📅 '+t('wk_plan')+'</td>'; weeks.forEach(w=>{ const v=planMap[w.key]||0; const nowCls=w.isNow?' wk-col-now':''; html+=`<td class="${nowCls}"><span class="${v?'wk-cell-plan':'wk-zero'}">${v}</span></td>`; }); html+='</tr>';
-  html+='<tr><td class="row-label">✅ '+t('wk_done')+'</td>'; weeks.forEach(w=>{ const v=doneMap[w.key]||0; const nowCls=w.isNow?' wk-col-now':''; html+=`<td class="${nowCls}"><span class="${v?'wk-cell-done':'wk-zero'}">${v}</span></td>`; }); html+='</tr>';
-  html+='<tr><td class="row-label">📊 '+t('wk_rate')+'</td>'; weeks.forEach(w=>{ const p=planMap[w.key]||0,d=doneMap[w.key]||0,rate=p?Math.round(d/p*100):null; const cls=rate==null?'wk-zero':rate>=80?'wk-cell-rate high':rate>=50?'wk-cell-rate mid':'wk-cell-rate low'; const nowCls=w.isNow?' wk-col-now':''; html+=`<td class="${nowCls}"><span class="${cls}">${rate==null?'—':rate+'%'}</span></td>`; }); html+='</tr></tbody>';
+  const today=new Date(), todayMon=mondayOf(today), weeks=[], B=8,F=8;
+  for(let i=-B;i<=F;i++){const wm=new Date(todayMon.getFullYear(),todayMon.getMonth(),todayMon.getDate()+i*7);weeks.push({mon:mondayOf(wm),key:fmtDate(mondayOf(wm)),isNow:i===0});}
+  const planMap={}, doneMap={}; let planTotal=0, planInRange=0; const firstKey=weeks[0].key,lastKey=weeks[weeks.length-1].key;
+  SCHED.forEach(x=>{if(x.next){const k=weekKey(x.next);planMap[k]=(planMap[k]||0)+1;planTotal++;if(k>=firstKey&&k<=lastKey)planInRange++;}});
+  RAW.forEach(r=>{if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;const wd=toDate(r[C.work]);if(!wd)return;const k=weekKey(wd);doneMap[k]=(doneMap[k]||0)+1;});
+  const lbl=d=>`${d.getMonth()+1}/${d.getDate()}`, tbl=document.getElementById('wkTable'), note=document.getElementById('wkRangeNote');
+  if(note){const out=planTotal-planInRange;note.textContent=`Planned total ${planTotal} · Shown ${planInRange}`+(out>0?` · Out of range ${out}`:'');}
+  let html='<thead><tr><th class="row-label">Week</th>'; weeks.forEach(w=>html+=`<th class="${w.isNow?'wk-col-now':''}">${lbl(w.mon)}~${lbl(new Date(w.mon.getFullYear(),w.mon.getMonth(),w.mon.getDate()+6))}<span class="wk-week-sub">${w.isNow?'This week':''}</span></th>`); html+='</tr></thead><tbody>';
+  html+='<tr><td class="row-label">📅 Planned</td>'; weeks.forEach(w=>html+=`<td class="${w.isNow?'wk-col-now':''}"><span class="${(planMap[w.key]||0)?'wk-cell-plan':'wk-zero'}">${planMap[w.key]||0}</span></td>`); html+='</tr>';
+  html+='<tr><td class="row-label">✅ Done</td>'; weeks.forEach(w=>html+=`<td class="${w.isNow?'wk-col-now':''}"><span class="${(doneMap[w.key]||0)?'wk-cell-done':'wk-zero'}">${doneMap[w.key]||0}</span></td>`); html+='</tr>';
+  html+='<tr><td class="row-label">📊 Rate</td>'; weeks.forEach(w=>{const p=planMap[w.key]||0,d=doneMap[w.key]||0,rate=p?Math.round(d/p*100):null;const cls=rate==null?'wk-zero':rate>=80?'wk-cell-rate high':rate>=50?'wk-cell-rate mid':'wk-cell-rate low';html+=`<td class="${w.isNow?'wk-col-now':''}"><span class="${cls}">${rate==null?'—':rate+'%'}</span></td>`;}); html+='</tr></tbody>';
   tbl.innerHTML=html;
 }
 
 function renderCalendar(){
-  const grid=document.getElementById('calGrid');
-  const dow=document.getElementById('calDowRow');
-  dow.innerHTML=t('dow').map((d,i)=>`<div class="cal-dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
-  const first=new Date(CAL_Y, CAL_M, 1);
-  const startDow=first.getDay();
-  const pad=(startDow===0?6:startDow-1);
-  const start=new Date(CAL_Y, CAL_M, 1-pad);
+  const grid=document.getElementById('calGrid'), dow=document.getElementById('calDowRow');
+  dow.innerHTML=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d,i)=>`<div class="cal-dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
+  const first=new Date(CAL_Y,CAL_M,1), startDow=first.getDay(), pad=(startDow===0?6:startDow-1), start=new Date(CAL_Y,CAL_M,1-pad);
   let html='';
   for(let i=0;i<42;i++){
-    const d=new Date(start.getFullYear(), start.getMonth(), start.getDate()+i);
-    const empty=d.getMonth()!==CAL_M;
-    const today=fmtDate(d)===fmtDate(new Date());
-    const dayKey=fmtDate(d);
-    const dayItems=[];
+    const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i), empty=d.getMonth()!==CAL_M, today=fmtDate(d)===fmtDate(new Date()), dayKey=fmtDate(d), dayItems=[];
     if(!empty){
-      const monthItems=SCHED.filter(x=>x.next && x.next.getFullYear()===CAL_Y && x.next.getMonth()===CAL_M && x.next.getDate()===d.getDate());
-      const doneItems=DONE_HIST.filter(x=>x.date.getFullYear()===CAL_Y && x.date.getMonth()===CAL_M && x.date.getDate()===d.getDate());
-      if(CAL_MODE==='done'){
-        doneItems.forEach(x=>dayItems.push({txt:`${x.sn} ${x.ch} ✓`,cls:'done'}));
-      }else if(CAL_MODE==='plan'){
-        monthItems.forEach(x=>dayItems.push({txt:`${x.sn} ${x.ch}`,cls:x.adjusted?'adjusted':x.st}));
-      }else{
-        monthItems.forEach(x=>dayItems.push({txt:`${x.sn} ${x.ch}`,cls:x.adjusted?'adjusted':x.st}));
-        doneItems.forEach(x=>dayItems.push({txt:`${x.sn} ${x.ch} ✓`,cls:'done'}));
-      }
+      const plans=SCHED.filter(x=>x.next&&x.next.getFullYear()===CAL_Y&&x.next.getMonth()===CAL_M&&x.next.getDate()===d.getDate()&&fmtDate(x.next)===dayKey);
+      const dones=DONE_HIST.filter(x=>x.date.getFullYear()===CAL_Y&&x.date.getMonth()===CAL_M&&x.date.getDate()===d.getDate());
+      if(CAL_MODE==='done') dones.forEach(x=>dayItems.push({txt:`${x.sn} ${x.ch} ✓`,cls:'done',key:x.sn+'||'+x.ch}));
+      else if(CAL_MODE==='plan') plans.forEach(x=>dayItems.push({txt:`${x.sn} ${x.ch}`,cls:x.adjusted?'adjusted':x.st,key:x.key}));
+      else { plans.forEach(x=>dayItems.push({txt:`${x.sn} ${x.ch}`,cls:x.adjusted?'adjusted':x.st,key:x.key})); dones.forEach(x=>dayItems.push({txt:`${x.sn} ${x.ch} ✓`,cls:'done',key:x.sn+'||'+x.ch})); }
     }
     html+=`<div class="cal-cell ${empty?'empty':''} ${today?'today':''}" ${empty?'':'onclick="openDayModal(\\''+dayKey+'\\')"'}>
       <div class="cal-date ${d.getDay()===0?'sun':d.getDay()===6?'sat':''}">${empty?'':d.getDate()}</div>
       <div class="cal-events">
-        ${dayItems.slice(0,4).map(it=>`<div class="cal-evt ${it.cls}">${it.txt}</div>`).join('')}
+        ${dayItems.slice(0,4).map((it,idx)=>`<div class="cal-evt ${it.cls}" ${it.cls!=='done'&&!empty?'draggable="true" ondragstart="dragStart(event, \''+it.key+'\', \''+dayKey+'\')"':''} onclick="event.stopPropagation(); ${it.cls!=='done'?'openDayModal(\\''+dayKey+'\\')':''}">${it.txt}</div>`).join('')}
         ${dayItems.length>4?`<div class="cal-count">+${dayItems.length-4}</div>`:''}
       </div>
     </div>`;
   }
   grid.innerHTML=html;
+  setupDropZones();
 }
-
+let DRAG_STATE=null;
+function dragStart(ev,key,fromDate){ DRAG_STATE={key,fromDate}; ev.dataTransfer.effectAllowed='move'; ev.dataTransfer.setData('text/plain',key); }
+function setupDropZones(){
+  document.querySelectorAll('.cal-cell:not(.empty)').forEach(cell=>{
+    cell.ondragover=e=>{e.preventDefault(); cell.classList.add('drag-over');};
+    cell.ondragleave=()=>cell.classList.remove('drag-over');
+    cell.ondrop=e=>{
+      e.preventDefault(); cell.classList.remove('drag-over');
+      if(!DRAG_STATE) return;
+      const newDate=cell.querySelector('.cal-date')?.textContent;
+      const targetDate=cell.getAttribute('onclick')?.match(/openDayModal\\('([^']+)'\\)/)?.[1];
+      const finalDate=targetDate||fmtDate(new Date(CAL_Y,CAL_M,parseInt(newDate,10)));
+      const item=SCHED.find(x=>x.key===DRAG_STATE.key);
+      if(!item) return;
+      ADJUST[DRAG_STATE.key]={newDate:finalDate,memo:`${DRAG_STATE.fromDate} -> ${finalDate}`,updatedAt:new Date().toISOString()};
+      saveAdjustments();
+      SCHED=buildSchedule(RAW);
+      render();
+      DRAG_STATE=null;
+    };
+  });
+}
 function openDayModal(dateStr){
   const d=toDate(dateStr); if(!d)return;
-  const plans=SCHED.filter(x=>x.next && x.next.getFullYear()===d.getFullYear() && x.next.getMonth()===d.getMonth() && x.next.getDate()===d.getDate());
-  const dones=DONE_HIST.filter(x=>x.date && x.date.getFullYear()===d.getFullYear() && x.date.getMonth()===d.getMonth() && x.date.getDate()===d.getDate());
-  document.getElementById('dmTitle').textContent=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const plans=SCHED.filter(x=>x.next&&fmtDate(x.next)===dateStr);
+  const dones=DONE_HIST.filter(x=>x.date.getFullYear()===d.getFullYear()&&x.date.getMonth()===d.getMonth()&&x.date.getDate()===d.getDate());
+  document.getElementById('dmTitle').textContent=dateStr;
   document.getElementById('dmSub').textContent=`Plan ${plans.length} / Done ${dones.length}`;
   let txt='';
-  if(plans.length){
-    txt+='== Planned ==\n';
-    plans.forEach(x=>{ txt+=`${x.sn} | ${x.ch} | ${x.line} | ${x.model} | ${x.st}${x.adjusted?' | adjusted':''}\n`; });
-  }
-  if(dones.length){
-    if(txt) txt+='\n';
-    txt+='== Completed ==\n';
-    dones.forEach(x=>{ txt+=`${x.sn} | ${x.ch} | ${x.line} | ${x.model}\n`; });
-  }
+  if(plans.length){txt+='== Planned ==\n';plans.forEach(x=>{txt+=`${x.sn} | ${x.ch} | ${x.line} | ${x.model} | ${x.st}${x.adjusted?' | adjusted':''}\n`;});}
+  if(dones.length){if(txt)txt+='\n';txt+='== Completed ==\n';dones.forEach(x=>{txt+=`${x.sn} | ${x.ch} | ${x.line} | ${x.model}\n`;});}
   document.getElementById('dmText').value=txt||'No events';
   document.getElementById('dayModal').classList.add('open');
 }
-function copyDayText(){
-  const ta=document.getElementById('dmText');
-  ta.select(); document.execCommand('copy');
-  const btn=document.getElementById('dmCopy');
-  const old=btn.textContent;
-  btn.textContent=t('dm_copied'); btn.classList.add('copied');
-  setTimeout(()=>{btn.textContent=old; btn.classList.remove('copied');},1200);
-}
+function copyDayText(){ const ta=document.getElementById('dmText'); ta.select(); document.execCommand('copy'); const btn=document.getElementById('dmCopy'); const old=btn.textContent; btn.textContent=t('dm_copied'); btn.classList.add('copied'); setTimeout(()=>{btn.textContent=old; btn.classList.remove('copied');},1200); }
 function closeDayModal(){ document.getElementById('dayModal').classList.remove('open'); }
 
 function calPrev(){if(CAL_M===0){CAL_M=11;CAL_Y--}else CAL_M--;document.getElementById('calYear').value=CAL_Y;document.getElementById('calMonth').value=CAL_M;render();}
@@ -666,7 +477,7 @@ function mkStackBar(id,labels,datasets){const ctx=document.getElementById(id);if
 function mkBar(id,labels,data,color){const ctx=document.getElementById(id);if(CHARTS[id])CHARTS[id].destroy();CHARTS[id]=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data,backgroundColor:color}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});}
 
 function checkPw(){document.getElementById('loginOverlay').classList.add('hidden');}
-buildYearMonthSelectors();loadData();
+document.addEventListener('DOMContentLoaded',()=>{buildYearMonthSelectors();loadData();});
 </script>
 </body>
 </html>
