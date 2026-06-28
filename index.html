@@ -53,6 +53,8 @@ body {
 .card.c1:hover { box-shadow:0 20px 60px rgba(108,92,231,.3); }
 .card.c2 { border-color:rgba(0,206,201,.4); }
 .card.c2:hover { box-shadow:0 20px 60px rgba(0,206,201,.3); }
+.card.c3 { border-color:rgba(251,113,133,.4); }
+.card.c3:hover { box-shadow:0 20px 60px rgba(251,113,133,.3); }
 </style>
 </head>
 <body>
@@ -79,14 +81,19 @@ body {
       <div class="title" data-i="sc_title">설치 현황</div>
       <div class="desc" data-i="sc_desc">글로벌 스크러버 설치<br>통합 모니터링</div>
     </a>
+    <a href="./pm/" class="card c3">
+      <div class="icon">🔧</div>
+      <div class="title" data-i="pm_title">점검 스케줄</div>
+      <div class="desc" data-i="pm_desc">스크러버 PM 점검<br>예방정비 관리</div>
+    </a>
   </div>
 
 <script>
 const T={
-  ko:{sub:'원하는 대시보드를 선택하세요',hr_title:'인원 현황',hr_desc:'엔지니어 교육 · 직급 · 직무<br>인터랙티브 분석',sc_title:'설치 현황',sc_desc:'글로벌 스크러버 설치<br>통합 모니터링'},
-  en:{sub:'Select a dashboard',hr_title:'Workforce Status',hr_desc:'Engineer training · position · role<br>interactive analysis',sc_title:'Installation Status',sc_desc:'Global scrubber installation<br>integrated monitoring'},
-  zh:{sub:'请选择仪表板',hr_title:'人员状况',hr_desc:'工程师培训 · 职级 · 职务<br>交互式分析',sc_title:'安装状况',sc_desc:'全球洗涤器安装<br>综合监控'},
-  ja:{sub:'ダッシュボードを選択',hr_title:'人員状況',hr_desc:'エンジニア教育 · 職級 · 職務<br>インタラクティブ分析',sc_title:'設置状況',sc_desc:'グローバルスクラバー設置<br>統合モニタリング'}
+  ko:{sub:'원하는 대시보드를 선택하세요',hr_title:'인원 현황',hr_desc:'엔지니어 교육 · 직급 · 직무<br>인터랙티브 분석',sc_title:'설치 현황',sc_desc:'글로벌 스크러버 설치<br>통합 모니터링',pm_title:'점검 스케줄',pm_desc:'스크러버 PM 점검<br>예방정비 관리'},
+  en:{sub:'Select a dashboard',hr_title:'Workforce Status',hr_desc:'Engineer training · position · role<br>interactive analysis',sc_title:'Installation Status',sc_desc:'Global scrubber installation<br>integrated monitoring',pm_title:'PM Schedule',pm_desc:'Scrubber PM inspection<br>preventive maintenance'},
+  zh:{sub:'请选择仪表板',hr_title:'人员状况',hr_desc:'工程师培训 · 职级 · 职务<br>交互式分析',sc_title:'安装状况',sc_desc:'全球洗涤器安装<br>综合监控',pm_title:'点检计划',pm_desc:'洗涤器PM点检<br>预防性维护管理'},
+  ja:{sub:'ダッシュボードを選択',hr_title:'人員状況',hr_desc:'エンジニア教育 · 職級 · 職務<br>インタラクティブ分析',sc_title:'設置状況',sc_desc:'グローバルスクラバー設置<br>統合モニタリング',pm_title:'点検スケジュール',pm_desc:'スクラバーPM点検<br>予防保全管理'}
 };
 let LANG='ko';
 try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
