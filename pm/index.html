@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scrubber PM Schedule Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg1:#1a0a0f;--bg2:#2d1320;--bg3:#1f1235;
+  --a1:#fb7185;--a2:#fbbf24;--a3:#a78bfa;--a4:#38bdf8;--a5:#34d399;
+  --glass:rgba(255,255,255,0.06);--glassb:rgba(255,255,255,0.13);
+  --txt:#e2e8f0;--mut:#94a3b8;--ok:#34d399;--warn:#fbbf24;--bad:#fb7185;
+}
+body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
+  background:linear-gradient(-45deg,var(--bg1),var(--bg2),var(--bg3),#150c25);
+  background-size:400% 400%;animation:grad 22s ease infinite;min-height:100vh;padding:24px 28px}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:28px;font-weight:800;
+  background:linear-gradient(90deg,#fb7185,#fbbf24,#a78bfa);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.header .sub{color:var(--mut);font-size:13px;margin-top:4px}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:9px 18px;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-grad{background:linear-gradient(90deg,var(--a1),var(--a2));color:#fff}
+.btn-grad:hover{opacity:.85;transform:translateY(-1px)}
+.btn-glass{background:var(--glass);border:1px solid var(--glassb);color:var(--txt)}
+.btn-glass:hover{background:rgba(255,255,255,.1)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.lang-wrap{position:relative}
+.lang-btn{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);padding:9px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
+.lang-btn:hover{background:rgba(255,255,255,.1)}
+.lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:#2a1a30;border:1px solid var(--glassb);border-radius:14px;padding:6px;z-index:100;min-width:130px;display:none;backdrop-filter:blur(20px)}
+.lang-dropdown.open{display:block}
+.lang-item{padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600}
+.lang-item:hover{background:rgba(255,255,255,.08)}
+.status{font-size:12px;color:var(--mut);margin-bottom:16px;text-align:right}
+.status.ok{color:var(--a5)}.status.err{color:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;
+  backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s;cursor:pointer}
+.kpi:hover{transform:translateY(-4px)}
+.kpi.sel{border-color:var(--a1);box-shadow:0 0 0 1px var(--a1)}
+.kpi::before{content:'';position:absolute;top:-35px;right:-35px;width:100px;height:100px;border-radius:50%;opacity:.28}
+.kpi.k1::before{background:var(--a4)}.kpi.k2::before{background:var(--bad)}
+.kpi.k3::before{background:var(--warn)}.kpi.k4::before{background:var(--ok)}.kpi.k5::before{background:#64748b}
+.kpi .ic{font-size:20px;margin-bottom:6px}
+.kpi .val{font-size:32px;font-weight:800;line-height:1}
+.kpi.k2 .val{color:var(--bad)}.kpi.k3 .val{color:var(--warn)}.kpi.k4 .val{color:var(--ok)}
+.kpi .cap{color:var(--mut);font-size:11px;margin-top:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+
+/* CALENDAR */
+.cal-card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px);margin-bottom:16px}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+.cal-title{font-size:18px;font-weight:800;color:#fff;min-width:160px;text-align:center}
+.cal-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cal-btn{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:10px;
+  width:36px;height:36px;color:var(--txt);font-size:16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.cal-btn:hover{background:rgba(251,113,133,.15);border-color:var(--a1)}
+.cal-sel{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:10px;
+  padding:8px 12px;color:var(--txt);font-size:13px;font-weight:600;outline:none;cursor:pointer;color-scheme:dark}
+.cal-sel:focus{border-color:var(--a1)}
+.cal-today-btn{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:10px;
+  padding:8px 14px;color:var(--txt);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.cal-today-btn:hover{background:rgba(56,189,248,.15);border-color:var(--a4)}
+.cal-legend{display:flex;gap:14px;font-size:11px;color:var(--mut);flex-wrap:wrap}
+.cal-legend span{display:flex;align-items:center;gap:5px}
+.cal-legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-dow{text-align:center;font-size:11px;font-weight:700;color:var(--mut);padding:6px 0;text-transform:uppercase;letter-spacing:1px}
+.cal-dow.sun{color:#fb7185}.cal-dow.sat{color:#60a5fa}
+.cal-cell{background:rgba(255,255,255,.03);border:1px solid var(--glassb);border-radius:10px;
+  min-height:92px;padding:6px;display:flex;flex-direction:column;gap:3px;overflow:hidden;transition:background .2s}
+.cal-cell.empty{background:transparent;border-color:transparent}
+.cal-cell.today{border-color:var(--a4);box-shadow:0 0 0 1px var(--a4)}
+.cal-cell:hover:not(.empty){background:rgba(255,255,255,.06)}
+.cal-date{font-size:12px;font-weight:700;color:var(--txt);margin-bottom:2px}
+.cal-date.sun{color:#fb7185}.cal-date.sat{color:#60a5fa}
+.cal-evt{font-size:9.5px;font-weight:600;padding:2px 5px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
+.cal-evt.overdue{background:rgba(251,113,133,.22);color:#fda4af;border-left:2px solid #fb7185}
+.cal-evt.soon{background:rgba(251,191,36,.22);color:#fde68a;border-left:2px solid #fbbf24}
+.cal-evt.ok{background:rgba(52,211,153,.18);color:#6ee7b7;border-left:2px solid #34d399}
+.cal-more{font-size:9px;color:var(--mut);text-align:center;padding:1px}
+@media(max-width:768px){.cal-cell{min-height:70px}.cal-evt{font-size:8px}}
+.card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px)}
+.card h3{font-size:13px;font-weight:700;margin-bottom:12px;color:#dfe6ff}
+.card .cw{position:relative;height:220px}
+.tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px)}
+.tablecard h3{font-size:14px;font-weight:700;margin-bottom:12px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.filters input,.filters select{background:rgba(255,255,255,.07);border:1px solid var(--glassb);color:var(--txt);
+  padding:9px 12px;border-radius:10px;font-size:13px;outline:none;color-scheme:dark}
+.filters input{flex:1;min-width:200px}
+.filters input:focus,.filters select:focus{border-color:var(--a1)}
+.tbl-wrap{max-height:520px;overflow:auto;border-radius:10px}
+.tbl-wrap::-webkit-scrollbar{width:5px;height:5px}.tbl-wrap::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+th{text-align:left;padding:10px 11px;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:1px;
+  border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(26,10,15,.96);cursor:pointer;user-select:none}
+th:hover{color:var(--a1)}
+td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:hover td{background:rgba(255,255,255,.04)}
+.pill{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.pill.ok{background:rgba(52,211,153,.18);color:var(--ok)}
+.pill.warn{background:rgba(251,191,36,.18);color:var(--warn)}
+.pill.bad{background:rgba(251,113,133,.18);color:var(--bad)}
+.pill.na{background:rgba(148,163,184,.18);color:var(--mut)}
+.dl{font-weight:700}.dl.bad{color:var(--bad)}.dl.warn{color:var(--warn)}.dl.ok{color:var(--ok)}
+.empty{text-align:center;padding:40px;color:var(--mut)}
+.loading{text-align:center;padding:60px;color:var(--mut);font-size:15px}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1 data-i="title">🔧 Scrubber PM Schedule</h1>
+    <div class="sub" data-i="sub">Preventive Maintenance schedule based on TBM history</div>
+  </div>
+  <div class="header-right">
+    <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← Main</a>
+    <button class="btn btn-grad" id="refreshBtn" onclick="loadData()">🔄 <span data-i="refresh">Refresh</span></button>
+    <div class="lang-wrap">
+      <button class="lang-btn" onclick="toggleLang()">🌐 <span id="langLabel">KO</span> ▾</button>
+      <div class="lang-dropdown" id="langMenu">
+        <div class="lang-item" onclick="setLang('ko')">🇰🇷 한국어</div>
+        <div class="lang-item" onclick="setLang('en')">🇺🇸 English</div>
+        <div class="lang-item" onclick="setLang('zh')">🇨🇳 中文</div>
+        <div class="lang-item" onclick="setLang('ja')">🇯🇵 日本語</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="status" id="status">Loading...</div>
+
+<div class="kpis">
+  <div class="kpi k1 sel" data-s=""><div class="ic">🖥️</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">Total Targets</div></div>
+  <div class="kpi k2" data-s="overdue"><div class="ic">⛔</div><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">Overdue</div></div>
+  <div class="kpi k3" data-s="soon"><div class="ic">⚠️</div><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">Due Soon</div></div>
+  <div class="kpi k4" data-s="ok"><div class="ic">✅</div><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Normal</div></div>
+  <div class="kpi k5" data-s="na"><div class="ic">❓</div><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">No Cycle</div></div>
+</div>
+
+<!-- 캘린더 -->
+<div class="cal-card">
+  <div class="cal-header">
+    <div class="cal-nav">
+      <button class="cal-btn" onclick="calPrev()">◀</button>
+      <select class="cal-sel" id="calYear" onchange="calJump()"></select>
+      <select class="cal-sel" id="calMonth" onchange="calJump()"></select>
+      <button class="cal-btn" onclick="calNext()">▶</button>
+      <button class="cal-today-btn" onclick="calToday()" data-i="cal_today">Today</button>
+    </div>
+    <div class="cal-legend">
+      <span><i class="dot" style="background:#fb7185"></i> <span data-i="st_overdue">Overdue</span></span>
+      <span><i class="dot" style="background:#fbbf24"></i> <span data-i="st_soon">Due Soon</span></span>
+      <span><i class="dot" style="background:#34d399"></i> <span data-i="st_ok">Normal</span></span>
+    </div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+</div>
+
+<div class="grid3">
+  <div class="card"><h3 data-i="ch_stat">📊 Status Distribution</h3><div class="cw"><canvas id="cStat"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_line">🏭 Overdue/Soon by LINE</h3><div class="cw"><canvas id="cLine"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_week">📅 Next 60 Days (weekly)</h3><div class="cw"><canvas id="cWeek"></canvas></div></div>
+</div>
+
+<div class="tablecard">
+  <h3 data-i="tbl_title">🗓️ PM Schedule (by urgency)</h3>
+  <div class="filters">
+    <input id="q" placeholder="Search S/N, Model, Line...">
+    <select id="fSite"><option value="">SITE</option></select>
+    <select id="fLine"><option value="">LINE</option></select>
+    <select id="fModel"><option value="">Model</option></select>
+    <select id="fStat">
+      <option value="">All Status</option>
+      <option value="overdue">Overdue</option>
+      <option value="soon">Due Soon</option>
+      <option value="ok">Normal</option>
+      <option value="na">No Cycle</option>
+    </select>
+  </div>
+  <div class="tbl-wrap">
+    <table id="tbl">
+      <thead><tr>
+        <th data-k="sn">S/N</th><th data-k="ch">Chamber</th><th data-k="site">SITE</th>
+        <th data-k="line">LINE</th><th data-k="model">Model</th><th data-k="group">Group</th>
+        <th data-k="last" data-i-th="th_last">Last PM</th><th data-k="cycle" data-i-th="th_cycle">Cycle(d)</th>
+        <th data-k="next" data-i-th="th_next">Next Due</th><th data-k="dl" data-i-th="th_dl">D-day</th>
+        <th data-k="st" data-i-th="th_st">Status</th><th data-k="cnt" data-i-th="th_cnt">History</th>
+      </tr></thead>
+      <tbody id="tbody"><tr><td colspan="12" class="loading">⏳ Loading...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
+
+// 컬럼 인덱스 (0-based) — 시트3 점검이력
+const C={site:1,line:2,group1:3,tbmCycle:15,model:17,work:23,sn:24,maint:25,chamber:33};
+const WARN_RATIO=0.20;
+
+const T={
+  ko:{title:'🔧 스크러버 PM 점검 스케줄',sub:'정기점검(TBM) 이력 기반 예방정비 스케줄',
+    back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
+    kp1:'총 점검대상',kp2:'점검 지연',kp3:'점검 임박',kp4:'정상',kp5:'주기없음',
+    ch_stat:'📊 점검 상태 분포',ch_line:'🏭 LINE별 지연·임박',ch_week:'📅 향후 60일 예정(주차별)',
+    tbl_title:'🗓️ PM 점검 스케줄 (긴급순)',
+    th_last:'최근 점검일',th_cycle:'주기(일)',th_next:'다음 예정일',th_dl:'잔여일',th_st:'상태',th_cnt:'이력수',
+    st_overdue:'지연',st_soon:'임박',st_ok:'정상',st_na:'주기없음',
+    no_data:'결과 없음',search_ph:'S/N, 모델, Line 검색...',
+    f_site:'전체 SITE',f_line:'전체 LINE',f_model:'전체 모델',f_stat:'전체 상태',cal_today:'오늘',dow:['일','월','화','수','목','금','토'],months:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],cal_more:'외 N건'},
+  en:{title:'🔧 Scrubber PM Schedule',sub:'Preventive Maintenance schedule based on TBM history',
+    back:'← Main',refresh:'Refresh',loading:'Loading...',
+    kp1:'Total Targets',kp2:'Overdue',kp3:'Due Soon',kp4:'Normal',kp5:'No Cycle',
+    ch_stat:'📊 Status Distribution',ch_line:'🏭 Overdue/Soon by LINE',ch_week:'📅 Next 60 Days (weekly)',
+    tbl_title:'🗓️ PM Schedule (by urgency)',
+    th_last:'Last PM',th_cycle:'Cycle(d)',th_next:'Next Due',th_dl:'D-day',th_st:'Status',th_cnt:'History',
+    st_overdue:'Overdue',st_soon:'Due Soon',st_ok:'Normal',st_na:'No Cycle',
+    no_data:'No results',search_ph:'Search S/N, Model, Line...',
+    f_site:'All SITE',f_line:'All LINE',f_model:'All Model',f_stat:'All Status',cal_today:'Today',dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],cal_more:'+N more'},
+  zh:{title:'🔧 洗涤器PM点检计划',sub:'基于定期点检(TBM)履历的预防性维护计划',
+    back:'← 主页',refresh:'刷新',loading:'加载中...',
+    kp1:'总点检对象',kp2:'点检延迟',kp3:'点检临近',kp4:'正常',kp5:'无周期',
+    ch_stat:'📊 点检状态分布',ch_line:'🏭 各LINE延迟·临近',ch_week:'📅 未来60天计划(按周)',
+    tbl_title:'🗓️ PM点检计划(紧急顺序)',
+    th_last:'最近点检日',th_cycle:'周期(天)',th_next:'下次预定日',th_dl:'剩余天',th_st:'状态',th_cnt:'履历数',
+    st_overdue:'延迟',st_soon:'临近',st_ok:'正常',st_na:'无周期',
+    no_data:'无结果',search_ph:'搜索S/N, 型号, Line...',
+    f_site:'全部SITE',f_line:'全部LINE',f_model:'全部型号',f_stat:'全部状态',cal_today:'今天',dow:['日','一','二','三','四','五','六'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'其他N项'},
+  ja:{title:'🔧 スクラバーPM点検スケジュール',sub:'定期点検(TBM)履歴に基づく予防保全スケジュール',
+    back:'← メイン',refresh:'更新',loading:'読み込み中...',
+    kp1:'総点検対象',kp2:'点検遅延',kp3:'点検間近',kp4:'正常',kp5:'周期なし',
+    ch_stat:'📊 点検状態分布',ch_line:'🏭 LINE別 遅延·間近',ch_week:'📅 今後60日予定(週別)',
+    tbl_title:'🗓️ PM点検スケジュール(緊急順)',
+    th_last:'最近点検日',th_cycle:'周期(日)',th_next:'次回予定日',th_dl:'残日',th_st:'状態',th_cnt:'履歴数',
+    st_overdue:'遅延',st_soon:'間近',st_ok:'正常',st_na:'周期なし',
+    no_data:'結果なし',search_ph:'S/N, モデル, Line検索...',
+    f_site:'全SITE',f_line:'全LINE',f_model:'全モデル',f_stat:'全ステータス',cal_today:'今日',dow:['日','月','火','水','木','金','土'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'他N件'}
+};
+
+let LANG='ko', RAW=[], SCHED=[], CHARTS={}, activeStatus='', sortK='dl', sortAsc=true;
+let CAL_Y=new Date().getFullYear(), CAL_M=new Date().getMonth();
+try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
+
+Chart.defaults.color='#94a3b8';
+Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+
+function t(k){return (T[LANG]||T.ko)[k]||k;}
+function applyLang(){
+  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
+  document.querySelectorAll('[data-i-th]').forEach(el=>{el.textContent=t(el.getAttribute('data-i-th'));});
+  document.getElementById('langLabel').textContent=LANG.toUpperCase();
+  document.getElementById('q').placeholder=t('search_ph');
+  // 필터 첫 옵션
+  const setOpt0=(id,k)=>{const s=document.getElementById(id);if(s&&s.options[0])s.options[0].textContent=t(k);};
+  setOpt0('fSite','f_site');setOpt0('fLine','f_line');setOpt0('fModel','f_model');
+  const fst=document.getElementById('fStat');
+  if(fst){fst.options[0].textContent=t('f_stat');fst.options[1].textContent=t('st_overdue');
+    fst.options[2].textContent=t('st_soon');fst.options[3].textContent=t('st_ok');fst.options[4].textContent=t('st_na');}
+}
+function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(SCHED.length)render();document.getElementById('langMenu').classList.remove('open');}
+function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');});
+
+function toDate(v){
+  if(v===null||v===undefined||v==='')return null;
+  const n=Number(v);
+  if(!isNaN(n)&&n>20000&&n<80000)return new Date(Date.UTC(1899,11,30)+n*86400000);
+  const d=new Date(v);return isNaN(d)?null:d;
+}
+function fmtDate(d){return d?d.toISOString().slice(0,10):'—';}
+
+async function loadData(){
+  const btn=document.getElementById('refreshBtn');
+  const status=document.getElementById('status');
+  btn.disabled=true; status.className='status'; status.textContent=t('loading');
+  try{
+    const res=await fetch(SHEET_URL+'&t='+Date.now());
+    const text=await res.text();
+    RAW=Papa.parse(text,{skipEmptyLines:true}).data.slice(1);
+    SCHED=buildSchedule(RAW);
+    status.className='status ok';
+    status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+SCHED.length;
+    render();
+  }catch(e){
+    status.className='status err'; status.textContent='❌ '+e.message;
+  }
+  btn.disabled=false;
+}
+
+function buildSchedule(rows){
+  // TBM 행을 S/N+Chamber로 그룹핑 → 최근 점검일
+  const g={};
+  rows.forEach(r=>{
+    if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;
+    const sn=(r[C.sn]||'').toString().trim(); if(!sn)return;
+    const ch=((r[C.chamber]||'').toString().trim())||'-';
+    const wd=toDate(r[C.work]); if(!wd)return;
+    const k=sn+'||'+ch;
+    if(!g[k])g[k]={sn,ch,rows:0,last:null,meta:r};
+    g[k].rows++; if(!g[k].last||wd>g[k].last){g[k].last=wd;g[k].meta=r;}
+  });
+  const today=new Date(); today.setUTCHours(0,0,0,0);
+  return Object.values(g).map(o=>{
+    const cycle=Number(o.meta[C.tbmCycle])||null;
+    let next=null,dl=null,st='na';
+    if(cycle&&o.last){
+      next=new Date(o.last.getTime()+cycle*86400000);
+      dl=Math.round((next-today)/86400000);
+      st = dl<0?'overdue' : (dl<=cycle*WARN_RATIO?'soon':'ok');
+    }
+    return {sn:o.sn,ch:o.ch,site:o.meta[C.site]||'—',line:o.meta[C.line]||'—',
+      model:o.meta[C.model]||'—',group:o.meta[C.group1]||'—',
+      last:o.last,cycle,next,dl,st,cnt:o.rows};
+  });
+}
+
+function countBy(arr,f){const m={};arr.forEach(x=>{const k=f(x)||'N/A';m[k]=(m[k]||0)+1;});
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]);}
+
+function animVal(el,target){
+  const start=parseFloat(el.dataset.v||0);const t0=performance.now();
+  function step(t){const p=Math.min((t-t0)/500,1);const cur=start+(target-start)*(1-Math.pow(1-p,3));
+    el.textContent=Math.round(cur);if(p<1)requestAnimationFrame(step);else el.dataset.v=target;}
+  requestAnimationFrame(step);
+}
+
+function render(){
+  const over=SCHED.filter(x=>x.st==='overdue').length;
+  const soon=SCHED.filter(x=>x.st==='soon').length;
+  const ok=SCHED.filter(x=>x.st==='ok').length;
+  const na=SCHED.filter(x=>x.st==='na').length;
+  animVal(document.getElementById('kp1'),SCHED.length);
+  animVal(document.getElementById('kp2'),over);
+  animVal(document.getElementById('kp3'),soon);
+  animVal(document.getElementById('kp4'),ok);
+  animVal(document.getElementById('kp5'),na);
+
+  // 도넛: 상태 분포
+  mkDonut('cStat',[t('st_overdue'),t('st_soon'),t('st_ok'),t('st_na')],[over,soon,ok,na],['#fb7185','#fbbf24','#34d399','#64748b']);
+
+  // 캘린더
+  renderCalendar();
+
+  // LINE별 지연/임박 (스택)
+  const lines=[...new Set(SCHED.map(x=>x.line))].filter(l=>l&&l!=='—').slice(0,12);
+  mkStackBar('cLine',lines,[
+    {label:t('st_overdue'),data:lines.map(l=>SCHED.filter(x=>x.line===l&&x.st==='overdue').length),backgroundColor:'#fb7185'},
+    {label:t('st_soon'),data:lines.map(l=>SCHED.filter(x=>x.line===l&&x.st==='soon').length),backgroundColor:'#fbbf24'}
+  ]);
+
+  // 향후 60일 주차별
+  const weeks={};
+  SCHED.forEach(x=>{if(x.dl!=null&&x.dl>=0&&x.dl<=60){const wk='+'+Math.floor(x.dl/7)+'w';weeks[wk]=(weeks[wk]||0)+1;}});
+  const wk=Object.keys(weeks).sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
+  mkBar('cWeek',wk,wk.map(k=>weeks[k]),'#38bdf8');
+
+  // 필터 옵션 채우기
+  fillSelect('fSite',x=>x.site);
+  fillSelect('fLine',x=>x.line);
+  fillSelect('fModel',x=>x.model);
+
+  // KPI 클릭
+  document.querySelectorAll('.kpi').forEach(k=>{
+    k.onclick=()=>{
+      activeStatus=k.dataset.s; document.getElementById('fStat').value=activeStatus;
+      document.querySelectorAll('.kpi').forEach(x=>x.classList.remove('sel')); k.classList.add('sel');
+      draw();
+    };
+  });
+  draw();
+}
+
+let selectsFilled=false;
+function fillSelect(id,f){
+  const s=document.getElementById(id);
+  // 첫 옵션 빼고 비우고 다시 채움
+  while(s.options.length>1)s.remove(1);
+  countBy(SCHED,f).forEach(([k])=>{if(k&&k!=='—'){const o=document.createElement('option');o.value=k;o.textContent=k;s.appendChild(o);}});
+}
+
+function draw(){
+  const q=document.getElementById('q').value.toLowerCase();
+  const fs=document.getElementById('fSite').value,fl=document.getElementById('fLine').value,
+        fm=document.getElementById('fModel').value,fst=document.getElementById('fStat').value;
+  let d=SCHED.filter(x=>{
+    if(fs&&x.site!==fs)return false; if(fl&&x.line!==fl)return false;
+    if(fm&&x.model!==fm)return false; if(fst&&x.st!==fst)return false;
+    if(q&&!`${x.sn} ${x.model} ${x.line} ${x.site} ${x.ch} ${x.group}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  d.sort((a,b)=>{
+    let x=a[sortK],y=b[sortK];
+    if(sortK==='dl'){x=x==null?1e9:x;y=y==null?1e9:y;return sortAsc?x-y:y-x;}
+    if(sortK==='last'||sortK==='next'){x=x?x.getTime():0;y=y?y.getTime():0;return sortAsc?x-y:y-x;}
+    if(sortK==='cycle'||sortK==='cnt'){return sortAsc?(x||0)-(y||0):(y||0)-(x||0);}
+    return sortAsc?(''+x).localeCompare(''+y,'ko',{numeric:true}):(''+y).localeCompare(''+x,'ko',{numeric:true});
+  });
+  const pill={overdue:`<span class="pill bad">${t('st_overdue')}</span>`,soon:`<span class="pill warn">${t('st_soon')}</span>`,
+    ok:`<span class="pill ok">${t('st_ok')}</span>`,na:`<span class="pill na">${t('st_na')}</span>`};
+  const tbody=document.getElementById('tbody');
+  if(!d.length){tbody.innerHTML=`<tr><td colspan="12" class="empty">${t('no_data')}</td></tr>`;return;}
+  tbody.innerHTML=d.map(x=>{
+    const dlc=x.st==='overdue'?'bad':x.st==='soon'?'warn':x.st==='ok'?'ok':'';
+    const dlt=x.dl==null?'—':(x.dl<0?`D+${-x.dl}`:`D-${x.dl}`);
+    return `<tr><td>${x.sn}</td><td>${x.ch}</td><td>${x.site}</td><td>${x.line}</td>
+      <td>${x.model}</td><td>${x.group}</td><td>${fmtDate(x.last)}</td><td>${x.cycle??'—'}</td>
+      <td>${fmtDate(x.next)}</td><td class="dl ${dlc}">${dlt}</td><td>${pill[x.st]}</td><td>${x.cnt}</td></tr>`;
+  }).join('');
+}
+
+['q','fSite','fLine','fModel','fStat'].forEach(id=>{
+  document.addEventListener('input',e=>{if(e.target.id===id)draw();});
+});
+document.addEventListener('click',e=>{
+  const th=e.target.closest('#tbl thead th');if(!th)return;
+  const k=th.dataset.k;if(sortK===k)sortAsc=!sortAsc;else{sortK=k;sortAsc=(k==='dl');}
+  draw();
+});
+
+// ===== 캘린더 =====
+function buildYearMonthSelectors(){
+  const ySel=document.getElementById('calYear'), mSel=document.getElementById('calMonth');
+  // 데이터 범위로 연도 옵션 생성 (다음 예정일 기준 + 여유)
+  const years=SCHED.map(x=>x.next).filter(Boolean).map(d=>d.getUTCFullYear());
+  const nowY=new Date().getFullYear();
+  let minY=years.length?Math.min(...years):nowY, maxY=years.length?Math.max(...years):nowY;
+  minY=Math.min(minY,nowY); maxY=Math.max(maxY,nowY+1);
+  ySel.innerHTML='';
+  for(let y=minY;y<=maxY;y++){const o=document.createElement('option');o.value=y;o.textContent=y;ySel.appendChild(o);}
+  ySel.value=CAL_Y;
+  mSel.innerHTML='';
+  t('months').forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=m;mSel.appendChild(o);});
+  mSel.value=CAL_M;
+}
+
+function renderCalendar(){
+  buildYearMonthSelectors();
+  document.getElementById('calYear').value=CAL_Y;
+  document.getElementById('calMonth').value=CAL_M;
+
+  // 해당 월의 점검 예정 매핑 (다음 예정일 기준)
+  const byDay={};
+  SCHED.forEach(x=>{
+    if(!x.next)return;
+    if(x.next.getUTCFullYear()===CAL_Y && x.next.getUTCMonth()===CAL_M){
+      const day=x.next.getUTCDate();
+      if(!byDay[day])byDay[day]=[];
+      byDay[day].push(x);
+    }
+  });
+
+  const grid=document.getElementById('calGrid');
+  grid.innerHTML='';
+  // 요일 헤더
+  t('dow').forEach((d,i)=>{
+    const el=document.createElement('div');
+    el.className='cal-dow'+(i===0?' sun':i===6?' sat':'');
+    el.textContent=d; grid.appendChild(el);
+  });
+
+  const firstDay=new Date(Date.UTC(CAL_Y,CAL_M,1)).getUTCDay();
+  const daysInMonth=new Date(Date.UTC(CAL_Y,CAL_M+1,0)).getUTCDate();
+  const today=new Date();
+
+  // 빈 칸
+  for(let i=0;i<firstDay;i++){
+    const e=document.createElement('div'); e.className='cal-cell empty'; grid.appendChild(e);
+  }
+  // 날짜 칸
+  for(let day=1;day<=daysInMonth;day++){
+    const dow=new Date(Date.UTC(CAL_Y,CAL_M,day)).getUTCDay();
+    const cell=document.createElement('div');
+    const isToday=(today.getFullYear()===CAL_Y&&today.getMonth()===CAL_M&&today.getDate()===day);
+    cell.className='cal-cell'+(isToday?' today':'');
+    const dateEl=document.createElement('div');
+    dateEl.className='cal-date'+(dow===0?' sun':dow===6?' sat':'');
+    dateEl.textContent=day;
+    cell.appendChild(dateEl);
+
+    const evts=byDay[day]||[];
+    // 긴급순 정렬 (지연>임박>정상)
+    const order={overdue:0,soon:1,ok:2,na:3};
+    evts.sort((a,b)=>order[a.st]-order[b.st]);
+    const showN=3;
+    evts.slice(0,showN).forEach(x=>{
+      const ev=document.createElement('div');
+      ev.className='cal-evt '+x.st;
+      const chTxt=(x.ch&&x.ch!=='-')?` (${x.ch})`:'';
+      ev.textContent=x.sn+chTxt;
+      ev.title=`${x.sn}${chTxt} · ${x.line} · ${x.model}`;
+      cell.appendChild(ev);
+    });
+    if(evts.length>showN){
+      const more=document.createElement('div');
+      more.className='cal-more';
+      more.textContent=t('cal_more').replace('N',evts.length-showN);
+      cell.appendChild(more);
+    }
+    grid.appendChild(cell);
+  }
+}
+
+function calPrev(){ CAL_M--; if(CAL_M<0){CAL_M=11;CAL_Y--;} renderCalendar(); }
+function calNext(){ CAL_M++; if(CAL_M>11){CAL_M=0;CAL_Y++;} renderCalendar(); }
+function calJump(){ CAL_Y=+document.getElementById('calYear').value; CAL_M=+document.getElementById('calMonth').value; renderCalendar(); }
+function calToday(){ const n=new Date(); CAL_Y=n.getFullYear(); CAL_M=n.getMonth(); renderCalendar(); }
+
+// 차트 함수
+function mkDonut(id,labels,data,colors){
+  const ctx=document.getElementById(id);
+  const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderColor:'rgba(0,0,0,.15)',borderWidth:2,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+      plugins:{legend:{position:'right',labels:{color:'#cbd5e1',font:{size:11},padding:8,usePointStyle:true,pointStyle:'circle'}}},
+      animation:{animateScale:true}}};
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;CHARTS[id].update();return;}
+  CHARTS[id]=new Chart(ctx,cfg);
+}
+function mkBar(id,labels,data,color){
+  const ctx=document.getElementById(id);
+  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{display:false}},
+              y:{ticks:{color:'#94a3b8',precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}};
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;CHARTS[id].update();return;}
+  CHARTS[id]=new Chart(ctx,cfg);
+}
+function mkStackBar(id,labels,datasets){
+  const ctx=document.getElementById(id);
+  const cfg={type:'bar',data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:10},usePointStyle:true,pointStyle:'circle',padding:8}}},
+      scales:{x:{stacked:true,ticks:{color:'#94a3b8',font:{size:10},maxRotation:35},grid:{display:false}},
+              y:{stacked:true,ticks:{color:'#94a3b8',precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}};
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets=datasets;CHARTS[id].update();return;}
+  CHARTS[id]=new Chart(ctx,cfg);
+}
+
+applyLang();
+loadData();
+</script>
+</body>
+</html>
