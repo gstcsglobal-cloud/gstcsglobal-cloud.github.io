@@ -917,10 +917,10 @@ function markCopied(){
 // ESC로 팝업 닫기
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDayModal();});
 
-function calPrev(){ CAL_M--; if(CAL_M<0){CAL_M=11;CAL_Y--;} renderCalendar(); }
-function calNext(){ CAL_M++; if(CAL_M>11){CAL_M=0;CAL_Y++;} renderCalendar(); }
-function calJump(){ CAL_Y=+document.getElementById('calYear').value; CAL_M=+document.getElementById('calMonth').value; renderCalendar(); }
-function calToday(){ const n=new Date(); CAL_Y=n.getFullYear(); CAL_M=n.getMonth(); renderCalendar(); }
+function calPrev(){ CAL_M--; if(CAL_M<0){CAL_M=11;CAL_Y--;} render(); }
+function calNext(){ CAL_M++; if(CAL_M>11){CAL_M=0;CAL_Y++;} render(); }
+function calJump(){ CAL_Y=+document.getElementById('calYear').value; CAL_M=+document.getElementById('calMonth').value; render(); }
+function calToday(){ const n=new Date(); CAL_Y=n.getFullYear(); CAL_M=n.getMonth(); render(); }
 function setCalMode(m){
   CAL_MODE=m;
   document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.m===m));
