@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alarm 현황</title>
 <link rel="stylesheet" href="../style.css">
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="logo">🚨 Alarm 현황</div>
@@ -15,19 +17,63 @@
       <div class="icon">⚠️</div>
       <div class="title">최근 알람</div>
       <div class="desc">마지막 24시간 발생 알람</div>
+      <!-- 최근 알람 리스트 -->
+      <ul style="margin-top:15px; text-align:left; font-size:13px; color:#f5f6fa;">
+        <li>2026-06-29 22:10 - Scrubber #3 압력 이상</li>
+        <li>2026-06-29 18:45 - HR 서버 응답 지연</li>
+        <li>2026-06-29 09:20 - Scrubber #1 온도 초과</li>
+      </ul>
     </div>
-    <div class="card c2">
+
+    <div class="card c2" style="min-width:400px;">
       <div class="icon">📊</div>
       <div class="title">알람 통계</div>
       <div class="desc">알람 유형별 발생 빈도</div>
+      <!-- 차트 영역 -->
+      <canvas id="alarmChart" style="margin-top:20px;"></canvas>
     </div>
+
     <div class="card c3">
       <div class="icon">⏱️</div>
       <div class="title">실시간 모니터링</div>
       <div class="desc">현재 진행 중인 알람 상태</div>
+      <p style="margin-top:15px; font-size:13px; color:#f5f6fa;">
+        ✅ 모든 시스템 정상 작동 중
+      </p>
     </div>
   </div>
 
-  <script src="../script.js"></script>
+<script src="../script.js"></script>
+<script>
+// Chart.js 예시 데이터
+const ctx = document.getElementById('alarmChart');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: ['압력 이상', '온도 초과', '네트워크 오류', '전원 장애'],
+    datasets: [{
+      label: '알람 발생 횟수',
+      data: [5, 3, 2, 1],
+      backgroundColor: [
+        'rgba(255, 99, 132, 0.6)',
+        'rgba(255, 159, 64, 0.6)',
+        'rgba(54, 162, 235, 0.6)',
+        'rgba(75, 192, 192, 0.6)'
+      ],
+      borderRadius: 8
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      title: { display: true, text: '알람 유형별 발생 빈도' }
+    },
+    scales: {
+      y: { beginAtZero: true }
+    }
+  }
+});
+</script>
 </body>
 </html>
