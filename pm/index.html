@@ -39,7 +39,8 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .lang-item:hover{background:rgba(255,255,255,.08)}
 .status{font-size:12px;color:var(--mut);margin-bottom:16px;text-align:right}
 .status.ok{color:var(--a5)}.status.err{color:var(--bad)}
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
+.kpi-month-note{font-size:12px;color:#7dd3fc;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);border-radius:10px;padding:6px 14px;margin-bottom:12px;display:inline-block}
 .kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;
   backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s;cursor:pointer}
 .kpi:hover{transform:translateY(-4px)}
@@ -232,6 +233,8 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 <div class="status" id="status">Loading...</div>
 
+<div class="kpi-month-note" id="kpiMonthNote"></div>
+
 <div class="kpis">
   <div class="kpi k1 sel" data-s=""><div class="ic">🖥️</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">Total Targets</div></div>
   <div class="kpi k2" data-s="overdue"><div class="ic">⛔</div><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">Overdue</div></div>
@@ -344,7 +347,7 @@ const WARN_RATIO=0.20;
 const T={
   ko:{title:'🔧 스크러버 PM 점검 스케줄',sub:'정기점검(TBM) 이력 기반 예방정비 스케줄',
     back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
-    kp1:'총 점검대상',kp2:'점검 지연',kp3:'점검 임박',kp4:'정상',kp5:'주기없음',kp6:'완료'
+    kp1:'총 점검대상',kp2:'점검 지연',kp3:'점검 임박',kp4:'정상',kp5:'주기없음',kp6:'당월 완료',year_unit:'년',kpi_basis:'기준 현황',
     ch_stat:'📊 점검 상태 분포',ch_line:'🏭 LINE별 지연·임박',ch_week:'📅 향후 60일 예정(주차별)',
     tbl_title:'🗓️ PM 점검 스케줄 (긴급순)',
     th_last:'최근 점검일',th_cycle:'주기(일)',th_next:'다음 예정일',th_dl:'잔여일',th_st:'상태',th_cnt:'이력수',
@@ -353,7 +356,7 @@ const T={
     f_site:'전체 SITE',f_line:'전체 LINE',f_model:'전체 모델',f_stat:'전체 상태',cal_today:'오늘',dow:['일','월','화','수','목','금','토'],months:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],cal_more:'외 N건',dm_copy:'복사',dm_copied:'복사됨',adj_loaded:'조정 N건',adj_saving:'저장 중...',adj_saved:'A → B 로 조정 저장됨',adj_failed:'저장 실패 (새로고침 후 재시도)',lg_adjusted:'조정됨',drag_hint:'💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ = 조정됨)',wk_title:'📋 주차별 점검 현황 (오늘 기준 ±2개월)',wk_week:'주차',wk_plan:'예정',wk_done:'완료',wk_rate:'완료율',wk_thisweek:'이번주',wk_total:'전체',wk_inrange:'표시',wk_outrange:'범위밖 N건',mode_plan:'예정만',mode_done:'완료만',mode_both:'예정+완료',lg_done:'완료됨'},
   en:{title:'🔧 Scrubber PM Schedule',sub:'Preventive Maintenance schedule based on TBM history',
     back:'← Main',refresh:'Refresh',loading:'Loading...',
-    kp1:'Total Targets',kp2:'Overdue',kp3:'Due Soon',kp4:'Normal',kp5:'No Cycle',kp6:'Completed'
+    kp1:'Total Targets',kp2:'Overdue',kp3:'Due Soon',kp4:'Normal',kp5:'No Cycle',kp6:'Completed',year_unit:'',kpi_basis:'status',
     ch_stat:'📊 Status Distribution',ch_line:'🏭 Overdue/Soon by LINE',ch_week:'📅 Next 60 Days (weekly)',
     tbl_title:'🗓️ PM Schedule (by urgency)',
     th_last:'Last PM',th_cycle:'Cycle(d)',th_next:'Next Due',th_dl:'D-day',th_st:'Status',th_cnt:'History',
@@ -362,7 +365,7 @@ const T={
     f_site:'All SITE',f_line:'All LINE',f_model:'All Model',f_stat:'All Status',cal_today:'Today',dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],cal_more:'+N more',dm_copy:'Copy',dm_copied:'Copied',adj_loaded:'N adjusted',adj_saving:'Saving...',adj_saved:'Moved A → B',adj_failed:'Save failed (retry after refresh)',lg_adjusted:'Adjusted',drag_hint:'💡 Drag an item to another date to reschedule. Changes are shared with the whole team (✎ = adjusted)',wk_title:'📋 Weekly PM Status (±2 months from today)',wk_week:'Week',wk_plan:'Planned',wk_done:'Done',wk_rate:'Rate',wk_thisweek:'This week',wk_total:'Total',wk_inrange:'Shown',wk_outrange:'N out of range',mode_plan:'Planned',mode_done:'Completed',mode_both:'Both',lg_done:'Completed'},
   zh:{title:'🔧 洗涤器PM点检计划',sub:'基于定期点检(TBM)履历的预防性维护计划',
     back:'← 主页',refresh:'刷新',loading:'加载中...',
-    kp1:'总点检对象',kp2:'点检延迟',kp3:'点检临近',kp4:'正常',kp5:'无周期',kp6:'已完成'
+    kp1:'总点检对象',kp2:'点检延迟',kp3:'点检临近',kp4:'正常',kp5:'无周期',kp6:'本月完成',year_unit:'年',kpi_basis:'状况',
     ch_stat:'📊 点检状态分布',ch_line:'🏭 各LINE延迟·临近',ch_week:'📅 未来60天计划(按周)',
     tbl_title:'🗓️ PM点检计划(紧急顺序)',
     th_last:'最近点检日',th_cycle:'周期(天)',th_next:'下次预定日',th_dl:'剩余天',th_st:'状态',th_cnt:'履历数',
@@ -371,7 +374,7 @@ const T={
     f_site:'全部SITE',f_line:'全部LINE',f_model:'全部型号',f_stat:'全部状态',cal_today:'今天',dow:['日','一','二','三','四','五','六'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'其他N项',dm_copy:'复制',dm_copied:'已复制',adj_loaded:'调整N项',adj_saving:'保存中...',adj_saved:'已调整 A → B',adj_failed:'保存失败(刷新后重试)',lg_adjusted:'已调整',drag_hint:'💡 将点检项拖到其他日期即可调整日程并与全队共享 (✎ = 已调整)',wk_title:'📋 周点检状况 (今天±2个月)',wk_week:'周次',wk_plan:'计划',wk_done:'完成',wk_rate:'完成率',wk_thisweek:'本周',wk_total:'全部',wk_inrange:'显示',wk_outrange:'范围外N项',mode_plan:'仅计划',mode_done:'仅完成',mode_both:'计划+完成',lg_done:'已完成'},
   ja:{title:'🔧 スクラバーPM点検スケジュール',sub:'定期点検(TBM)履歴に基づく予防保全スケジュール',
     back:'← メイン',refresh:'更新',loading:'読み込み中...',
-    kp1:'総点検対象',kp2:'点検遅延',kp3:'点検間近',kp4:'正常',kp5:'周期なし',kp6:'完了'
+    kp1:'総点検対象',kp2:'点検遅延',kp3:'点検間近',kp4:'正常',kp5:'周期なし',kp6:'当月完了',year_unit:'年',kpi_basis:'基準',
     ch_stat:'📊 点検状態分布',ch_line:'🏭 LINE別 遅延·間近',ch_week:'📅 今後60日予定(週別)',
     tbl_title:'🗓️ PM点検スケジュール(緊急順)',
     th_last:'最近点検日',th_cycle:'周期(日)',th_next:'次回予定日',th_dl:'残日',th_st:'状態',th_cnt:'履歴数',
@@ -500,14 +503,22 @@ function render(){
   const monthPlan = SCHED.filter(inMonth);
   const monthDone = DONE_HIST.filter(h => h.date.getUTCFullYear()===CAL_Y && h.date.getUTCMonth()===CAL_M);
 
-  const over = monthPlan.filter(x=>x.st==='overdue').length;
-  const soon = monthPlan.filter(x=>x.st==='soon').length;
-  const ok = monthPlan.filter(x=>x.st==='ok').length;
-  const na = monthPlan.filter(x=>x.st==='na').length;
-  animVal(document.getElementById('kp1'), monthPlan.length + monthDone.length);
-  animVal(document.getElementById('kp6'), monthDone.length);
+  const over=monthPlan.filter(x=>x.st==='overdue').length;
+  const soon=monthPlan.filter(x=>x.st==='soon').length;
+  const ok=monthPlan.filter(x=>x.st==='ok').length;
+  const na=monthPlan.filter(x=>x.st==='na').length;
+  animVal(document.getElementById('kp1'),monthPlan.length+monthDone.length);
+  animVal(document.getElementById('kp2'),over);
+  animVal(document.getElementById('kp3'),soon);
+  animVal(document.getElementById('kp4'),ok);
+  animVal(document.getElementById('kp5'),na);
+  animVal(document.getElementById('kp6'),monthDone.length);
 
-  // 도넛: 상태 분포
+  // KPI 월 안내
+  const mn=document.getElementById('kpiMonthNote');
+  if(mn){ mn.textContent='📌 '+CAL_Y+t('year_unit')+' '+t('months')[CAL_M]+' '+t('kpi_basis'); }
+
+  // 도넛: 상태 분포 (선택 월 기준)
   mkDonut('cStat',[t('st_overdue'),t('st_soon'),t('st_ok'),t('st_na')],[over,soon,ok,na],['#fb7185','#fbbf24','#34d399','#64748b']);
 
   // 주차별 현황 표
