@@ -237,6 +237,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="kpi k3" data-s="soon"><div class="ic">⚠️</div><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">Due Soon</div></div>
   <div class="kpi k4" data-s="ok"><div class="ic">✅</div><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Normal</div></div>
   <div class="kpi k5" data-s="na"><div class="ic">❓</div><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">No Cycle</div></div>
+  <div class="kpi k6"><div class="ic">✅</div><div class="val" id="kp6">0</div><div class="cap" data-i="kp6">Completed</div></div>
 </div>
 
 <!-- 주차별 점검 현황 표 -->
@@ -503,6 +504,7 @@ function render(){
   const ok = monthPlan.filter(x=>x.st==='ok').length;
   const na = monthPlan.filter(x=>x.st==='na').length;
   animVal(document.getElementById('kp1'), monthPlan.length + monthDone.length);
+  animVal(document.getElementById('kp6'), monthDone.length);
 
   // 도넛: 상태 분포
   mkDonut('cStat',[t('st_overdue'),t('st_soon'),t('st_ok'),t('st_na')],[over,soon,ok,na],['#fb7185','#fbbf24','#34d399','#64748b']);
