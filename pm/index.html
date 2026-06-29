@@ -493,10 +493,16 @@ function animVal(el,target){
 }
 
 function render(){
-  const over=SCHED.filter(x=>x.st==='overdue').length;
-  const soon=SCHED.filter(x=>x.st==='soon').length;
-  const ok=SCHED.filter(x=>x.st==='ok').length;
-  const na=SCHED.filter(x=>x.st==='na').length;
+  // 선택한 월(CAL_Y, CAL_M) 기준 필터
+  const inMonth = x => x.next && x.next.getUTCFullYear()===CAL_Y && x.next.getUTCMonth()===CAL_M;
+  const monthPlan = SCHED.filter(inMonth);
+  const monthDone = DONE_HIST.filter(h => h.date.getUTCFullYear()===CAL_Y && h.date.getUTCMonth()===CAL_M);
+
+  const over = monthPlan.filter(x=>x.st==='overdue').length;
+  const soon = monthPlan.filter(x=>x.st==='soon').length;
+  const ok = monthPlan.filter(x=>x.st==='ok').length;
+  const na = monthPlan.filter(x=>x.st==='na').length;
+  animVal(document.getElementById('kp1'), monthPlan.length + monthDone.length);st==='na').length;
   animVal(document.getElementById('kp1'),SCHED.length);
   animVal(document.getElementById('kp2'),over);
   animVal(document.getElementById('kp3'),soon);
