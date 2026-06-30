@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fault Analysis Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg1:#1f0a0a;--bg2:#2d1320;--bg3:#1a1235;
+  --a1:#fb7185;--a2:#fbbf24;--a3:#a78bfa;--a4:#38bdf8;--a5:#34d399;
+  --glass:rgba(255,255,255,0.06);--glassb:rgba(255,255,255,0.13);
+  --txt:#e2e8f0;--mut:#94a3b8;--ok:#34d399;--bad:#fb7185;--warn:#fbbf24;
+}
+body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
+  background:linear-gradient(-45deg,var(--bg1),var(--bg2),var(--bg3),#150c25);
+  background-size:400% 400%;animation:grad 22s ease infinite;min-height:100vh;padding:24px 28px}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:28px;font-weight:800;background:linear-gradient(90deg,#fb7185,#fbbf24,#a78bfa);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.header .sub{color:var(--mut);font-size:13px;margin-top:4px}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:9px 18px;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-grad{background:linear-gradient(90deg,var(--a1),var(--a2));color:#fff}
+.btn-grad:hover{opacity:.85;transform:translateY(-1px)}
+.btn-glass{background:var(--glass);border:1px solid var(--glassb);color:var(--txt)}
+.btn-glass:hover{background:rgba(255,255,255,.1)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.lang-wrap{position:relative}
+.lang-btn{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);padding:9px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
+.lang-btn:hover{background:rgba(255,255,255,.1)}
+.lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:#2a1a30;border:1px solid var(--glassb);border-radius:14px;padding:6px;z-index:100;min-width:130px;display:none;backdrop-filter:blur(20px)}
+.lang-dropdown.open{display:block}
+.lang-item{padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600}
+.lang-item:hover{background:rgba(255,255,255,.08)}
+.status{font-size:12px;color:var(--mut);margin-bottom:16px;text-align:right}
+.status.ok{color:var(--a5)}.status.err{color:var(--bad)}
+.slicers{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:16px;padding:12px 16px;backdrop-filter:blur(12px)}
+.slicer .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--mut);margin-bottom:8px;font-weight:700}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{cursor:pointer;border:1px solid var(--glassb);background:rgba(255,255,255,.04);color:var(--txt);
+  padding:6px 14px;border-radius:30px;font-size:12px;font-weight:600;transition:all .2s;user-select:none}
+.chip:hover{transform:translateY(-2px);border-color:var(--a2)}
+.chip.active{background:linear-gradient(90deg,var(--a1),var(--a2));border-color:transparent;box-shadow:0 4px 16px rgba(251,113,133,.35)}
+.search-sl{margin-left:auto}
+.search-sl input{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:30px;padding:8px 16px;color:var(--txt);font-size:13px;width:210px;outline:none}
+.search-sl input:focus{border-color:var(--a1)}
+.search-sl input::placeholder{color:var(--mut)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s;cursor:pointer}
+.kpi:hover{transform:translateY(-4px)}
+.kpi.sel{border-color:var(--a1);box-shadow:0 0 0 1px var(--a1)}
+.kpi::before{content:'';position:absolute;top:-35px;right:-35px;width:100px;height:100px;border-radius:50%;opacity:.28}
+.kpi.k1::before{background:var(--a1)}.kpi.k2::before{background:var(--bad)}
+.kpi.k3::before{background:var(--a3)}.kpi.k4::before{background:var(--warn)}.kpi.k5::before{background:var(--a4)}
+.kpi .ic{font-size:20px;margin-bottom:6px}
+.kpi .val{font-size:32px;font-weight:800;line-height:1}
+.kpi .cap{color:var(--mut);font-size:11px;margin-top:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px)}
+.card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
+.card-note{font-size:10px;color:var(--mut);margin-bottom:10px;font-style:italic}
+.card .cw{position:relative;height:220px}
+.tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px)}
+.tablecard h3{font-size:14px;font-weight:700;margin-bottom:12px}
+.tbl-wrap{max-height:480px;overflow:auto;border-radius:10px}
+.tbl-wrap::-webkit-scrollbar{width:5px;height:5px}.tbl-wrap::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+th{text-align:left;padding:10px 11px;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:1px;
+  border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(31,10,10,.96);cursor:pointer;user-select:none}
+th:hover{color:var(--a1)}
+td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:hover td{background:rgba(255,255,255,.04)}
+.pill{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.pill.bm{background:rgba(251,113,133,.18);color:#fda4af}
+.pill.cbm{background:rgba(167,139,250,.18);color:#c4b5fd}
+.pill.alarm{background:rgba(251,113,133,.18);color:#fda4af}
+.pill.warning{background:rgba(251,191,36,.18);color:#fde68a}
+.empty{text-align:center;padding:40px;color:var(--mut)}
+.loading{text-align:center;padding:60px;color:var(--mut);font-size:15px}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
+
+/* 로그인 */
+#loginOverlay{position:fixed;inset:0;z-index:99999;background:linear-gradient(-45deg,#1f0a0a,#2d1320,#1a1235,#150c25);
+  background-size:400% 400%;animation:grad 18s ease infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+#loginOverlay.hidden{display:none}
+.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#fb7185,#fbbf24,#a78bfa);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
+.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
+.login-box .lock{font-size:40px;margin-bottom:14px}
+.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px;color:#f5f6fa}
+.login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
+.login-box input:focus{border-color:#fb7185}
+.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#fb7185,#fbbf24);border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.login-err{color:#fda4af;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
+</style>
+</head>
+<body>
+
+<div id="loginOverlay">
+  <div class="login-logo">GST Dashboard</div>
+  <div class="login-box">
+    <div class="lock">🔒</div>
+    <div class="ltitle">비밀번호를 입력하세요 / Enter password</div>
+    <input type="password" id="pwInput" placeholder="비밀번호 / Password" autocomplete="off">
+    <button onclick="checkPw()">로그인 / Login</button>
+    <div class="login-err" id="pwErr"></div>
+  </div>
+</div>
+
+<div class="header">
+  <div>
+    <h1 data-i="title">🛠️ Fault Analysis Dashboard</h1>
+    <div class="sub" data-i="sub">BM/CBM breakdown & alarm analysis</div>
+  </div>
+  <div class="header-right">
+    <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← Main</a>
+    <button class="btn btn-grad" id="refreshBtn" onclick="loadData()">🔄 <span data-i="refresh">Refresh</span></button>
+    <div class="lang-wrap">
+      <button class="lang-btn" onclick="toggleLang()">🌐 <span id="langLabel">KO</span> ▾</button>
+      <div class="lang-dropdown" id="langMenu">
+        <div class="lang-item" onclick="setLang('ko')">🇰🇷 한국어</div>
+        <div class="lang-item" onclick="setLang('en')">🇺🇸 English</div>
+        <div class="lang-item" onclick="setLang('zh')">🇨🇳 中文</div>
+        <div class="lang-item" onclick="setLang('ja')">🇯🇵 日本語</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="status" id="status">Loading...</div>
+
+<div class="slicers">
+  <div class="slicer"><div class="lbl">LINE</div><div class="chips" id="sl-line"></div></div>
+  <div class="slicer"><div class="lbl">Group</div><div class="chips" id="sl-group"></div></div>
+  <div class="slicer"><div class="lbl" data-i="sl_type">Type</div><div class="chips" id="sl-type"></div></div>
+  <div class="slicer search-sl"><div class="lbl" data-i="sl_search">Search</div><input id="search" placeholder="S/N, Code, Message..."></div>
+</div>
+
+<div class="kpis">
+  <div class="kpi k1 sel" data-f=""><div class="ic">🛠️</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">Total Faults</div></div>
+  <div class="kpi k2" data-f="BM"><div class="ic">⛔</div><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">BM (Breakdown)</div></div>
+  <div class="kpi k3" data-f="CBM"><div class="ic">🔧</div><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">CBM (Condition)</div></div>
+  <div class="kpi k4" data-aw="Alarm"><div class="ic">🚨</div><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Alarm</div></div>
+  <div class="kpi k5" data-aw="Warning"><div class="ic">⚠️</div><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">Warning</div></div>
+</div>
+
+<div class="grid3">
+  <div class="card"><h3 data-i="ch_code">🔥 Fault Code TOP</h3><div class="card-note" data-i="note_code">Most frequent fault codes</div><div class="cw"><canvas id="cCode"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_sn">🖥️ Fault by Equipment</h3><div class="card-note" data-i="note_sn">Equipment with most faults</div><div class="cw"><canvas id="cSn"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_type">📊 BM vs CBM</h3><div class="card-note" data-i="note_type">Maintenance type ratio</div><div class="cw"><canvas id="cType"></canvas></div></div>
+</div>
+
+<div class="grid3">
+  <div class="card"><h3 data-i="ch_line">🏭 Fault by LINE</h3><div class="card-note" data-i="note_line">Faults per production line</div><div class="cw"><canvas id="cLine"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_trend">📅 Monthly Trend</h3><div class="card-note" data-i="note_trend">Faults over time</div><div class="cw"><canvas id="cTrend"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_action">🔩 Action Type</h3><div class="card-note" data-i="note_action">Parts / Inspection / Design</div><div class="cw"><canvas id="cAction"></canvas></div></div>
+</div>
+
+<div class="tablecard">
+  <h3>🛠️ <span data-i="tbl_title">Fault Detail List</span> (<span id="tblCnt">0</span>)</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th data-k="work">Work Date</th><th data-k="sn">S/N</th>
+        <th data-k="line">LINE</th><th data-k="group">Group</th>
+        <th data-k="model">Model</th><th data-k="maint">Type</th>
+        <th data-k="aw">Alarm/Warn</th><th data-k="msg" data-i-th="th_msg">Message</th>
+        <th data-k="failCode">Fail Code</th><th data-k="failType" data-i-th="th_ftype">Fail Type</th>
+        <th data-k="action" data-i-th="th_action">Action</th><th data-k="chamber">Chamber</th>
+      </tr></thead>
+      <tbody id="tbody"><tr><td colspan="12" class="loading">⏳ Loading...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function(){
+  const PASSWORD='gst1234!';
+  function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
+  window.checkPw=function(){
+    const v=document.getElementById('pwInput').value;
+    if(v===PASSWORD){try{sessionStorage.setItem('gst_auth','1');}catch(e){}document.getElementById('loginOverlay').classList.add('hidden');}
+    else{document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';document.getElementById('pwInput').value='';}
+  };
+  function init(){const ov=document.getElementById('loginOverlay');if(!ov)return;
+    if(isAuthed()){ov.classList.add('hidden');return;}
+    const inp=document.getElementById('pwInput');inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();});setTimeout(()=>inp.focus(),100);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+
+const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
+const C={line:2,group1:3,detail1:5,model:17,code:18,work:23,sn:24,maint:25,aw:26,resp:27,msg:28,failCode:29,failType:31,action:32,chamber:33};
+const PAL=['#fb7185','#fbbf24','#a78bfa','#38bdf8','#34d399','#f472b6','#60a5fa','#c084fc','#4ade80','#f97316'];
+
+const T={
+  ko:{title:'🛠️ 고장 분석 대시보드',sub:'BM/CBM 고장 및 알람 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
+    sl_type:'유형',sl_search:'검색',
+    kp1:'총 고장건수',kp2:'BM (고장정비)',kp3:'CBM (상태기반)',kp4:'Alarm',kp5:'Warning',
+    ch_code:'🔥 고장코드 TOP',note_code:'가장 빈번한 고장코드',
+    ch_sn:'🖥️ 설비별 고장',note_sn:'고장 많은 설비',
+    ch_type:'📊 BM vs CBM',note_type:'정비 유형 비율',
+    ch_line:'🏭 LINE별 고장',note_line:'라인별 고장건수',
+    ch_trend:'📅 월별 추이',note_trend:'시간별 고장 추이',
+    ch_action:'🔩 조치 유형',note_action:'부품/점검/설계',
+    tbl_title:'고장 상세 내역',th_msg:'메시지',th_ftype:'고장유형',th_action:'조치',
+    no_data:'데이터 없음',search_ph:'S/N, 코드, 메시지 검색...'},
+  en:{title:'🛠️ Fault Analysis Dashboard',sub:'BM/CBM breakdown & alarm analysis',back:'← Main',refresh:'Refresh',loading:'Loading...',
+    sl_type:'Type',sl_search:'Search',
+    kp1:'Total Faults',kp2:'BM (Breakdown)',kp3:'CBM (Condition)',kp4:'Alarm',kp5:'Warning',
+    ch_code:'🔥 Fault Code TOP',note_code:'Most frequent codes',
+    ch_sn:'🖥️ Fault by Equipment',note_sn:'Equipment with most faults',
+    ch_type:'📊 BM vs CBM',note_type:'Maintenance type ratio',
+    ch_line:'🏭 Fault by LINE',note_line:'Faults per line',
+    ch_trend:'📅 Monthly Trend',note_trend:'Faults over time',
+    ch_action:'🔩 Action Type',note_action:'Parts/Inspection/Design',
+    tbl_title:'Fault Detail List',th_msg:'Message',th_ftype:'Fail Type',th_action:'Action',
+    no_data:'No data',search_ph:'Search S/N, Code, Message...'},
+  zh:{title:'🛠️ 故障分析仪表板',sub:'BM/CBM故障及报警分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
+    sl_type:'类型',sl_search:'搜索',
+    kp1:'总故障数',kp2:'BM(故障维修)',kp3:'CBM(状态维修)',kp4:'报警',kp5:'警告',
+    ch_code:'🔥 故障代码TOP',note_code:'最频繁故障代码',
+    ch_sn:'🖥️ 各设备故障',note_sn:'故障最多设备',
+    ch_type:'📊 BM vs CBM',note_type:'维修类型比例',
+    ch_line:'🏭 各LINE故障',note_line:'各线故障数',
+    ch_trend:'📅 月度趋势',note_trend:'故障时间趋势',
+    ch_action:'🔩 处理类型',note_action:'部件/检查/设计',
+    tbl_title:'故障明细',th_msg:'消息',th_ftype:'故障类型',th_action:'处理',
+    no_data:'无数据',search_ph:'搜索S/N,代码,消息...'},
+  ja:{title:'🛠️ 故障分析ダッシュボード',sub:'BM/CBM故障・アラーム分析',back:'← メイン',refresh:'更新',loading:'読み込み中...',
+    sl_type:'種類',sl_search:'検索',
+    kp1:'総故障件数',kp2:'BM(故障整備)',kp3:'CBM(状態基準)',kp4:'Alarm',kp5:'Warning',
+    ch_code:'🔥 故障コードTOP',note_code:'最頻出コード',
+    ch_sn:'🖥️ 設備別故障',note_sn:'故障の多い設備',
+    ch_type:'📊 BM vs CBM',note_type:'整備種類比率',
+    ch_line:'🏭 LINE別故障',note_line:'ライン別件数',
+    ch_trend:'📅 月別推移',note_trend:'時系列故障推移',
+    ch_action:'🔩 処置種類',note_action:'部品/点検/設計',
+    tbl_title:'故障詳細',th_msg:'メッセージ',th_ftype:'故障種類',th_action:'処置',
+    no_data:'データなし',search_ph:'S/N,コード,メッセージ検索...'}
+};
+
+let LANG='ko', RAW=[], FAULTS=[], CHARTS={}, sortK='work', sortAsc=false;
+const F={line:'ALL',group:'ALL',type:'ALL',aw:'',q:''};
+try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
+
+Chart.defaults.color='#94a3b8';
+Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+
+function t(k){return (T[LANG]||T.ko)[k]||k;}
+function applyLang(){
+  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
+  document.querySelectorAll('[data-i-th]').forEach(el=>{el.textContent=t(el.getAttribute('data-i-th'));});
+  document.getElementById('langLabel').textContent=LANG.toUpperCase();
+  document.getElementById('search').placeholder=t('search_ph');
+}
+function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(FAULTS.length)render();document.getElementById('langMenu').classList.remove('open');}
+function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');});
+
+function toDate(v){
+  if(!v||v==='')return null;
+  const n=Number(v);
+  if(!isNaN(n)&&n>20000&&n<80000)return new Date(Date.UTC(1899,11,30)+n*86400000);
+  const s=String(v).trim();const m=s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if(m)return new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));
+  const d=new Date(s);return isNaN(d)?null:d;
+}
+function fmtDate(d){return d?d.toISOString().slice(0,10):'—';}
+function cv(r,k){const v=r[C[k]];return(v!==undefined&&v!=='')?String(v).trim():'';}
+
+async function loadData(){
+  const btn=document.getElementById('refreshBtn');const status=document.getElementById('status');
+  btn.disabled=true;status.className='status';status.textContent=t('loading');
+  try{
+    const res=await fetch(SHEET_URL+'&t='+Date.now());
+    const text=await res.text();
+    RAW=Papa.parse(text,{skipEmptyLines:true}).data.slice(1);
+    // BM, CBM만 (TBM 제외)
+    FAULTS=RAW.filter(r=>{
+      const m=cv(r,'maint').toUpperCase();
+      return m==='BM'||m==='CBM';
+    }).map(r=>({
+      work:toDate(r[C.work]),sn:cv(r,'sn'),line:cv(r,'line'),group:cv(r,'group1'),
+      model:cv(r,'model'),maint:cv(r,'maint').toUpperCase(),aw:cv(r,'aw'),
+      msg:cv(r,'msg'),failCode:cv(r,'failCode'),failType:cv(r,'failType'),
+      action:cv(r,'action'),chamber:cv(r,'chamber')||'-'
+    }));
+    status.className='status ok';
+    status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+FAULTS.length;
+    rebuildFilters();render();
+  }catch(e){status.className='status err';status.textContent='❌ '+e.message;}
+  btn.disabled=false;
+}
+
+function uniq(key){return Array.from(new Set(FAULTS.map(x=>x[key]).filter(Boolean))).sort();}
+function buildChips(id,fkey,vals){
+  const box=document.getElementById(id);box.innerHTML='';
+  ['ALL',...vals].forEach(v=>{
+    const c=document.createElement('div');c.className='chip'+(F[fkey]===v?' active':'');
+    c.textContent=v==='ALL'?'ALL':v;
+    c.onclick=()=>{F[fkey]=v;[...box.children].forEach(x=>x.classList.remove('active'));c.classList.add('active');render();};
+    box.appendChild(c);
+  });
+}
+function rebuildFilters(){
+  F.line='ALL';F.group='ALL';F.type='ALL';F.aw='';F.q='';
+  document.getElementById('search').value='';
+  buildChips('sl-line','line',uniq('line'));
+  buildChips('sl-group','group',uniq('group'));
+  buildChips('sl-type','type',['BM','CBM']);
+}
+document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
+
+function filt(){
+  return FAULTS.filter(x=>{
+    if(F.line!=='ALL'&&x.line!==F.line)return false;
+    if(F.group!=='ALL'&&x.group!==F.group)return false;
+    if(F.type!=='ALL'&&x.maint!==F.type)return false;
+    if(F.aw&&x.aw!==F.aw)return false;
+    if(F.q){const s=`${x.sn} ${x.failCode} ${x.msg} ${x.line} ${x.model} ${x.action}`.toLowerCase();if(!s.includes(F.q))return false;}
+    return true;
+  });
+}
+function countBy(arr,key){const m={};arr.forEach(x=>{const k=x[key]||'N/A';if(k&&k!=='N/A')m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);}
+
+function animVal(el,target){const start=parseFloat(el.dataset.v||0);const t0=performance.now();
+  function step(t){const p=Math.min((t-t0)/500,1);const cur=start+(target-start)*(1-Math.pow(1-p,3));el.textContent=Math.round(cur);if(p<1)requestAnimationFrame(step);else el.dataset.v=target;}
+  requestAnimationFrame(step);}
+
+function mkBar(id,labels,data,color,horizontal){
+  const ctx=document.getElementById(id);
+  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:5}]},
+    options:{indexAxis:horizontal?'y':'x',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#94a3b8',font:{size:10},precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}};
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;CHARTS[id].update();return;}
+  CHARTS[id]=new Chart(ctx,cfg);
+}
+function mkDonut(id,labels,data,colors){
+  const ctx=document.getElementById(id);
+  const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors||PAL,borderColor:'rgba(0,0,0,.15)',borderWidth:2,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'right',labels:{color:'#cbd5e1',font:{size:10},padding:8,usePointStyle:true,pointStyle:'circle'}}},animation:{animateScale:true}}};
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;if(colors)CHARTS[id].data.datasets[0].backgroundColor=colors;CHARTS[id].update();return;}
+  CHARTS[id]=new Chart(ctx,cfg);
+}
+
+function render(){
+  const f=filt();
+  const bm=f.filter(x=>x.maint==='BM').length;
+  const cbm=f.filter(x=>x.maint==='CBM').length;
+  const alarm=f.filter(x=>x.aw==='Alarm').length;
+  const warning=f.filter(x=>x.aw==='Warning').length;
+  animVal(document.getElementById('kp1'),f.length);
+  animVal(document.getElementById('kp2'),bm);
+  animVal(document.getElementById('kp3'),cbm);
+  animVal(document.getElementById('kp4'),alarm);
+  animVal(document.getElementById('kp5'),warning);
+
+  // 고장코드 TOP (가로 막대)
+  const codes=countBy(f,'failCode').slice(0,10);
+  mkBar('cCode',codes.map(x=>x[0]),codes.map(x=>x[1]),'#fb7185',true);
+  // 설비별 (가로 막대)
+  const sns=countBy(f,'sn').slice(0,10);
+  mkBar('cSn',sns.map(x=>x[0]),sns.map(x=>x[1]),'#fbbf24',true);
+  // BM vs CBM
+  mkDonut('cType',['BM','CBM'],[bm,cbm],['#fb7185','#a78bfa']);
+  // LINE별
+  const lines=countBy(f,'line').slice(0,10);
+  mkBar('cLine',lines.map(x=>x[0]),lines.map(x=>x[1]),'#38bdf8',false);
+  // 월별 추이
+  const months={};
+  f.forEach(x=>{if(x.work){const k=`${x.work.getUTCFullYear()}-${String(x.work.getUTCMonth()+1).padStart(2,'0')}`;months[k]=(months[k]||0)+1;}});
+  const mk=Object.keys(months).sort();
+  mkBar('cTrend',mk,mk.map(k=>months[k]),'#34d399',false);
+  // 조치 유형
+  const actions=countBy(f,'failType').slice(0,8);
+  mkDonut('cAction',actions.map(x=>x[0]),actions.map(x=>x[1]));
+
+  // KPI 클릭 필터
+  document.querySelectorAll('.kpi').forEach(k=>{
+    k.onclick=()=>{
+      if(k.hasAttribute('data-f')){
+        F.type=k.dataset.f||'ALL'; F.aw='';
+        const box=document.getElementById('sl-type');
+        if(box)[...box.children].forEach(c=>c.classList.toggle('active',(c.textContent==='ALL'?'ALL':c.textContent)===F.type));
+      }else if(k.hasAttribute('data-aw')){
+        F.aw=(F.aw===k.dataset.aw)?'':k.dataset.aw; F.type='ALL';
+      }
+      document.querySelectorAll('.kpi').forEach(x=>x.classList.remove('sel'));k.classList.add('sel');
+      render();
+    };
+  });
+
+  // 테이블
+  document.getElementById('tblCnt').textContent=f.length;
+  let d=[...f];
+  d.sort((a,b)=>{
+    let x=a[sortK],y=b[sortK];
+    if(sortK==='work'){x=x?x.getTime():0;y=y?y.getTime():0;return sortAsc?x-y:y-x;}
+    return sortAsc?(''+x).localeCompare(''+y,'ko',{numeric:true}):(''+y).localeCompare(''+x,'ko',{numeric:true});
+  });
+  const tbody=document.getElementById('tbody');
+  if(!d.length){tbody.innerHTML=`<tr><td colspan="12" class="empty">${t('no_data')}</td></tr>`;return;}
+  const awCls=v=>v==='Alarm'?'alarm':v==='Warning'?'warning':'';
+  tbody.innerHTML=d.map(x=>`<tr>
+    <td>${fmtDate(x.work)}</td><td>${x.sn||'—'}</td><td>${x.line||'—'}</td><td>${x.group||'—'}</td>
+    <td>${x.model||'—'}</td><td><span class="pill ${x.maint==='BM'?'bm':'cbm'}">${x.maint}</span></td>
+    <td>${x.aw?`<span class="pill ${awCls(x.aw)}">${x.aw}</span>`:'—'}</td>
+    <td>${x.msg||'—'}</td><td><b>${x.failCode||'—'}</b></td><td>${x.failType||'—'}</td>
+    <td>${x.action||'—'}</td><td>${x.chamber||'—'}</td></tr>`).join('');
+}
+
+document.addEventListener('click',e=>{
+  const th=e.target.closest('th[data-k]');if(!th)return;
+  const k=th.dataset.k;if(sortK===k)sortAsc=!sortAsc;else{sortK=k;sortAsc=(k!=='work');}
+  render();
+});
+
+applyLang();
+loadData();
+</script>
+</body>
+</html>
