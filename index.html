@@ -55,6 +55,8 @@ body {
 .card.c2:hover { box-shadow:0 20px 60px rgba(0,206,201,.3); }
 .card.c3 { border-color:rgba(251,113,133,.4); }
 .card.c3:hover { box-shadow:0 20px 60px rgba(251,113,133,.3); }
+.card.c4 { border-color:rgba(251,191,36,.4); }
+.card.c4:hover { box-shadow:0 20px 60px rgba(251,191,36,.3); }
 
 /* 로그인 오버레이 */
 #loginOverlay{position:fixed;inset:0;z-index:9999;
@@ -121,6 +123,11 @@ body {
       <div class="title" data-i="pm_title">점검 스케줄</div>
       <div class="desc" data-i="pm_desc">스크러버 PM 점검<br>예방정비 관리</div>
     </a>
+    <a href="./fault/" class="card c4">
+      <div class="icon">🛠️</div>
+      <div class="title" data-i="ft_title">고장 분석</div>
+      <div class="desc" data-i="ft_desc">BM·CBM 고장 분석<br>알람·고장코드 추적</div>
+    </a>
   </div>
 
 <script>
@@ -147,10 +154,10 @@ function initLogin(){
 }
 
 const T={
-  ko:{sub:'원하는 대시보드를 선택하세요',hr_title:'인원 현황',hr_desc:'엔지니어 교육 · 직급 · 직무<br>인터랙티브 분석',sc_title:'설치 현황',sc_desc:'글로벌 스크러버 설치<br>통합 모니터링',pm_title:'점검 스케줄',pm_desc:'스크러버 PM 점검<br>예방정비 관리',login_title:'비밀번호를 입력하세요',login_ph:'비밀번호',login_btn:'로그인',login_wrong:'비밀번호가 올바르지 않습니다'},
-  en:{sub:'Select a dashboard',hr_title:'Workforce Status',hr_desc:'Engineer training · position · role<br>interactive analysis',sc_title:'Installation Status',sc_desc:'Global scrubber installation<br>integrated monitoring',pm_title:'PM Schedule',pm_desc:'Scrubber PM inspection<br>preventive maintenance',login_title:'Enter password',login_ph:'Password',login_btn:'Login',login_wrong:'Incorrect password'},
-  zh:{sub:'请选择仪表板',hr_title:'人员状况',hr_desc:'工程师培训 · 职级 · 职务<br>交互式分析',sc_title:'安装状况',sc_desc:'全球洗涤器安装<br>综合监控',pm_title:'点检计划',pm_desc:'洗涤器PM点检<br>预防性维护管理',login_title:'请输入密码',login_ph:'密码',login_btn:'登录',login_wrong:'密码不正确'},
-  ja:{sub:'ダッシュボードを選択',hr_title:'人員状況',hr_desc:'エンジニア教育 · 職級 · 職務<br>インタラクティブ分析',sc_title:'設置状況',sc_desc:'グローバルスクラバー設置<br>統合モニタリング',pm_title:'点検スケジュール',pm_desc:'スクラバーPM点検<br>予防保全管理',login_title:'パスワードを入力',login_ph:'パスワード',login_btn:'ログイン',login_wrong:'パスワードが正しくありません'}
+  ko:{sub:'원하는 대시보드를 선택하세요',hr_title:'인원 현황',hr_desc:'엔지니어 교육 · 직급 · 직무<br>인터랙티브 분석',sc_title:'설치 현황',sc_desc:'글로벌 스크러버 설치<br>통합 모니터링',pm_title:'점검 스케줄',pm_desc:'스크러버 PM 점검<br>예방정비 관리',ft_title:'고장 분석',ft_desc:'BM·CBM 고장 분석<br>알람·고장코드 추적',login_title:'비밀번호를 입력하세요',login_ph:'비밀번호',login_btn:'로그인',login_wrong:'비밀번호가 올바르지 않습니다'},
+  en:{sub:'Select a dashboard',hr_title:'Workforce Status',hr_desc:'Engineer training · position · role<br>interactive analysis',sc_title:'Installation Status',sc_desc:'Global scrubber installation<br>integrated monitoring',pm_title:'PM Schedule',pm_desc:'Scrubber PM inspection<br>preventive maintenance',ft_title:'Fault Analysis',ft_desc:'BM·CBM fault analysis<br>alarm & code tracking',login_title:'Enter password',login_ph:'Password',login_btn:'Login',login_wrong:'Incorrect password'},
+  zh:{sub:'请选择仪表板',hr_title:'人员状况',hr_desc:'工程师培训 · 职级 · 职务<br>交互式分析',sc_title:'安装状况',sc_desc:'全球洗涤器安装<br>综合监控',pm_title:'点检计划',pm_desc:'洗涤器PM点检<br>预防性维护管理',ft_title:'故障分析',ft_desc:'BM·CBM故障分析<br>报警·故障代码追踪',login_title:'请输入密码',login_ph:'密码',login_btn:'登录',login_wrong:'密码不正确'},
+  ja:{sub:'ダッシュボードを選択',hr_title:'人員状況',hr_desc:'エンジニア教育 · 職級 · 職務<br>インタラクティブ分析',sc_title:'設置状況',sc_desc:'グローバルスクラバー設置<br>統合モニタリング',pm_title:'点検スケジュール',pm_desc:'スクラバーPM点検<br>予防保全管理',ft_title:'故障分析',ft_desc:'BM·CBM故障分析<br>アラーム·故障コード追跡',login_title:'パスワードを入力',login_ph:'パスワード',login_btn:'ログイン',login_wrong:'パスワードが正しくありません'}
 };
 let LANG='ko';
 try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
