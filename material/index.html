@@ -66,12 +66,24 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px)}
 .card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
 .card-note{font-size:10px;color:var(--mut);margin-bottom:10px;font-style:italic}
-  .excl-box{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.excl-box{margin-bottom:10px}
+.excl-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
 .excl-chip{background:rgba(251,113,133,.15);border:1px solid rgba(251,113,133,.3);color:#fda4af;
   padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px}
 .excl-chip:hover{background:rgba(251,113,133,.25)}
 .excl-chip .x{font-weight:900}
-#exclAdd{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:20px;padding:3px 10px;color:var(--mut);font-size:10px;outline:none}
+.excl-dd-wrap{position:relative}
+.excl-dd-wrap input{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;
+  padding:6px 10px;color:var(--txt);font-size:11px;outline:none}
+.excl-dd-wrap input:focus{border-color:var(--a1)}
+.excl-dd{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#12222c;border:1px solid var(--glassb);
+  border-radius:10px;max-height:180px;overflow-y:auto;z-index:50;display:none;padding:4px}
+.excl-dd.open{display:block}
+.excl-dd::-webkit-scrollbar{width:4px}.excl-dd::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
+.excl-opt{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:11px}
+.excl-opt:hover{background:rgba(255,255,255,.06)}
+.excl-opt input{width:auto;margin:0}
+.excl-opt-empty{padding:8px;color:var(--mut);font-size:11px;text-align:center}
 .card .cw{position:relative;height:230px}
 .tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px);margin-bottom:16px}
 .tablecard h3{font-size:14px;font-weight:700;margin-bottom:4px}
@@ -168,12 +180,15 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 
 <div class="grid3">
-  <div class="card"><h3 data-i="ch_mat">🔩 자재별 교체 TOP</h3>
-  <div class="excl-box">
-  <div class="excl-chips" id="exclChips"></div>
-  <select id="exclAdd" onchange="addExcl(this.value)"><option value="">+ 제외할 자재 추가</option></select>
-</div>
-    <div class="card-note" data-i="note_mat">가장 많이 교체되는 자재</div><div class="cw"><canvas id="cMat"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_mat">🔩 자재별 교체 TOP</h3><div class="card-note" data-i="note_mat">가장 많이 교체되는 자재</div>
+    <div class="excl-box">
+      <div class="excl-chips" id="exclChips"></div>
+      <div class="excl-dd-wrap">
+        <input type="text" id="exclSearch" placeholder="제외할 자재 검색..." onclick="toggleExclDD(true)" oninput="renderExclOptions()">
+        <div class="excl-dd" id="exclDD"></div>
+      </div>
+    </div>
+    <div class="cw"><canvas id="cMat"></canvas></div></div>
   <div class="card"><h3 data-i="ch_eq">🖥️ 설비별 교체 TOP</h3><div class="card-note" data-i="note_eq">자재 소모 많은 설비</div><div class="cw"><canvas id="cEq"></canvas></div></div>
   <div class="card"><h3 data-i="ch_pf">💰 유상 vs 무상</h3><div class="card-note" data-i="note_pf">유무상 비율</div><div class="cw"><canvas id="cPf"></canvas></div></div>
 </div>
@@ -233,7 +248,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 
-const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
+const SHEET_URL='';
 
 const C={op:1,customer:2,line:5,process:7,detail:8,mainEq:9,eq:10,chamber:11,sn:12,model:14,
   matCode:15,unit:18,assy:20,part:20,qty:22,matName:23,spec:24,reason:25,
@@ -304,15 +319,44 @@ const T={
 };
 let LANG='ko', DATA=[], CHARTS={}, sortK='date', sortAsc=false, cycSortK='cnt', cycSortAsc=false;
 let CYCLE_BASIS='paid';
-  let EXCL_MAT=[]; // 제외할 자재명 목록
-function addExcl(name){ if(name && !EXCL_MAT.includes(name)){ EXCL_MAT.push(name); render(); } document.getElementById('exclAdd').value=''; }
-function removeExcl(name){ EXCL_MAT=EXCL_MAT.filter(n=>n!==name); render(); }
-function renderExclUI(f){
+let EXCL_MAT=[]; // 제외할 자재명 목록
+let ALL_MAT_NAMES=[]; // 현재 필터 기준 전체 자재명 (검색용)
+
+function toggleExcl(name,checked){
+  if(checked){ if(!EXCL_MAT.includes(name))EXCL_MAT.push(name); }
+  else{ EXCL_MAT=EXCL_MAT.filter(n=>n!==name); }
+  renderExclChips(); renderChartsOnly();
+}
+function removeExclChip(name){
+  EXCL_MAT=EXCL_MAT.filter(n=>n!==name);
+  renderExclChips(); renderExclOptions(); renderChartsOnly();
+}
+function renderExclChips(){
   const box=document.getElementById('exclChips');
-  box.innerHTML=EXCL_MAT.map(n=>`<div class="excl-chip" onclick="removeExcl('${n.replace(/'/g,"\\'")}')">${n} <span class="x">✕</span></div>`).join('');
-  const sel=document.getElementById('exclAdd');
-  const opts=Array.from(new Set(f.map(x=>x.matName))).filter(n=>!EXCL_MAT.includes(n)).sort();
-  sel.innerHTML='<option value="">+ 제외할 자재 추가</option>'+opts.map(n=>`<option value="${n}">${n}</option>`).join('');
+  box.innerHTML=EXCL_MAT.map(n=>`<div class="excl-chip" onclick="removeExclChip('${n.replace(/'/g,"\\'")}')">${n} <span class="x">✕</span></div>`).join('');
+}
+function renderExclOptions(){
+  const q=(document.getElementById('exclSearch').value||'').toLowerCase();
+  const dd=document.getElementById('exclDD');
+  const opts=ALL_MAT_NAMES.filter(n=>n.toLowerCase().includes(q));
+  if(!opts.length){ dd.innerHTML=`<div class="excl-opt-empty">${t('no_data')}</div>`; return; }
+  dd.innerHTML=opts.map(n=>{
+    const checked=EXCL_MAT.includes(n)?'checked':'';
+    const safe=n.replace(/'/g,"\\'");
+    return `<label class="excl-opt"><input type="checkbox" ${checked} onchange="toggleExcl('${safe}',this.checked)"> ${n}</label>`;
+  }).join('');
+}
+function toggleExclDD(open){
+  document.getElementById('exclDD').classList.toggle('open',open);
+  if(open)renderExclOptions();
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.excl-dd-wrap')) document.getElementById('exclDD').classList.remove('open');
+});
+function renderChartsOnly(){
+  const matF=LAST_F.filter(x=>!EXCL_MAT.includes(x.matName));
+  const mats=sumQtyBy(matF,'matName',12);
+  mkBar('cMat',mats.map(x=>x[0]),mats.map(x=>x[1]),'#2dd4bf',true);
 }
 const F={country:'',customer:'',line:'',process:'',detail:'',eq:'',pf:'',q:''};
 try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
@@ -469,9 +513,12 @@ function mkDonut(id,labels,data,colors){
 
 function cycleDays(x){return CYCLE_BASIS==='paid'?x.daysPaid:x.daysPrev;}
 
+let LAST_F=[];
 function render(){
   const f=filt();
-  renderExclUI(f);
+  LAST_F=f;
+  ALL_MAT_NAMES=Array.from(new Set(f.map(x=>x.matName))).sort();
+  renderExclChips();
   const paid=f.filter(x=>x.pf==='유상').length;
   const free=f.filter(x=>x.pf==='무상').length;
   const pct=f.length?Math.round(paid/f.length*100):0;
@@ -482,7 +529,8 @@ function render(){
   animVal(document.getElementById('kp5'),uniq('matName',f).length);
   animVal(document.getElementById('kp6'),uniq('eq',f).length);
 
-  const mats=sumQtyBy(f.filter(x=>!EXCL_MAT.includes(x.matName)),'matName',12);
+  const matF=f.filter(x=>!EXCL_MAT.includes(x.matName));
+  const mats=sumQtyBy(matF,'matName',12);
   mkBar('cMat',mats.map(x=>x[0]),mats.map(x=>x[1]),'#2dd4bf',true);
   const eqs=countBy(f,'eq',12);
   mkBar('cEq',eqs.map(x=>x[0]),eqs.map(x=>x[1]),'#38bdf8',true);
