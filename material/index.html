@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hi...!</title>
+<title>GST 프리미엄 대시보드</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -192,6 +192,18 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </style>
 </head>
 <body>
+
+<!-- ===== 로그인 ===== -->
+<div id="loginOverlay">
+  <div class="login-logo">GST Dashboard</div>
+  <div class="login-box">
+    <div class="lock">🔒</div>
+    <div class="ltitle">비밀번호를 입력하세요</div>
+    <input type="password" id="pwInput" placeholder="비밀번호" autocomplete="off">
+    <button onclick="checkPw()">로그인</button>
+    <div class="login-err" id="pwErr"></div>
+  </div>
+</div>
 
 <!-- ===== 헤더 ===== -->
 <div class="header">
@@ -465,16 +477,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 // ============================================================
 
 // ===== 로그인 =====
-window.checkPw = function() {
-  const v = document.getElementById('pwInput').value;
-  if (v === 'gst1234!') {
-    sessionStorage.setItem('gst_auth','1');
-    document.getElementById('loginOverlay').classList.add('hidden');
-  } else {
-    document.getElementById('pwErr').textContent = '비밀번호가 올바르지 않습니다';
-    document.getElementById('pwInput').value = '';
-  }
-};
+(function(){const P='gst1234!';window.checkPw=function(){const v=document.getElementById('pwInput').value;if(v===P){try{sessionStorage.setItem('gst_auth','1');}catch(e){}document.getElementById('loginOverlay').classList.add('hidden');}else{document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다';document.getElementById('pwInput').value='';}};if(sessionStorage.getItem('gst_auth')==='1')document.getElementById('loginOverlay').classList.add('hidden');document.getElementById('pwInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkPw();});})();
 
 // ===== 상수 =====
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
@@ -483,13 +486,7 @@ const PAL=['#2dd4bf','#38bdf8','#a78bfa','#fbbf24','#34d399','#fb7185'];
 
 const CUSTOMER_MAP={'powerchip':'PSMC','taiwan-asia':'TASC','taiwan asia':'TASC','taiwan-asia semiconductor':'TASC','powerchip technology':'PSMC'};
 function mapCustomer(n){if(!n)return '';const l=n.toLowerCase();for(const[k,v]of Object.entries(CUSTOMER_MAP)){if(l.includes(k))return v}return n.toUpperCase().slice(0,6)}
-function guessCountry(op){
-  if(!op)return '—';
-  const m=op.match(/GST\s+([A-Z]+)/i);
-  if(m){const c=m[1].toUpperCase();
-    const map={TAIWAN:'TAIWAN',KOREA:'KOREA',CHINA:'CHINA',JAPAN:'JAPAN',US:'USA',USA:'USA',SINGAPORE:'SINGAPORE'};
-    return map[c]||c;}
-  return op;}
+function extractCountry(v){const s=String(v||'').toUpperCase();if(s.includes('JAPAN'))return'JAPAN';if(s.includes('TAIWAN'))return'TAIWAN';if(s.includes('KOREA'))return'KOREA';if(s.includes('CHINA'))return'CHINA';const m=s.match(/GST\s*([A-Z]+)/);return m&&m[1]?m[1]:'기타'}
 
 // ===== 언어 =====
 const T={ko:{title:'📦 자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인',refresh:'새로고침',loading:'데이터 불러오는 중...',
@@ -658,148 +655,22 @@ tbody.innerHTML=rowF.map(r=>'<tr><td class="row-label">'+r+'</td>'+colF.map(c=>{
 '<tr style="background:rgba(255,255,255,.06);font-weight:700;"><td>Total</td>'+colF.map(c=>{let s=0;rowF.forEach(r=>s+=matrix[r][c]);return'<td class="num" style="color:#fbbf24;">'+s+'</td>'}).join('')+'<td class="num" style="color:#fff;background:rgba(251,191,36,.15);">'+rowF.reduce((s,r)=>s+matrix[r]._t,0)+'</td></tr>';
 renderCrossExclChips();
 const labels=rowF,barData=rowF.map(r=>matrix[r]._t||0),totalSum=rowF.reduce((s,r)=>s+matrix[r]._t,0),pctData=rowF.map(r=>totalSum>0?Math.round(matrix[r]._t/totalSum*100):0);
-const ctx=document.getElementById('crossChart');if(CROSS_CHART_INSTANCE){CROSS_CHART_INSTANCE.destroy()}CROSS_CHART_INSTANCE=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'건수 (Bar)',type:'bar',data:barData,backgroundColor:'rgba(45,212,191,0.6)',borderColor:'#2dd4bf',borderWidth:2,borderRadius:4,order:2},{label:'비율 % (Line)',type:'line',data:pctData,borderColor:'#fbbf24',backgroundColor:'transparent',borderWidth:3,pointBackgroundColor:'#fbbf24',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:4,tension:0.3,yAxisID:'y1',order:1}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:700,easing:'easeOutQuart'},plugins:{legend:{labels:{color:'#cbd5e1',font:{size:11},usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:function(ctx){return ctx.datasetIndex===0?'건수: '+ctx.raw:'비율: '+ctx.raw+'%'}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{display:false}},y:{position:'left',ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'rgba(255,255,255,.05)'},title:{display:true,text:'건수',color:'#94a3b8',font:{size:10}}},y1:{position:'right',ticks:{color:'#94a3b8',font:{size:9},callback:v=>v+'%'},grid:{display:false},title:{display:true,text:'비율 (%)',color:'#94a3b8',font:{size:10}},min:0,max:Math.max(100,Math.max(...pctData)*1.2)}}})}
+const ctx=document.getElementById('crossChart');if(CROSS_CHART_INSTANCE){CROSS_CHART_INSTANCE.destroy()}CROSS_CHART_INSTANCE=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'건수 (Bar)',type:'bar',data:barData,backgroundColor:'rgba(45,212,191,0.6)',borderColor:'#2dd4bf',borderWidth:2,borderRadius:4,order:2},{label:'비율 % (Line)',type:'line',data:pctData,borderColor:'#fbbf24',backgroundColor:'transparent',borderWidth:3,pointBackgroundColor:'#fbbf24',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:4,tension:0.3,yAxisID:'y1',order:1}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:700,easing:'easeOutQuart'},plugins:{legend:{labels:{color:'#cbd5e1',font:{size:11},usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:function(ctx){return ctx.datasetIndex===0?'건수: '+ctx.raw:'비율: '+ctx.raw+'%'}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{display:false}},y:{position:'left',ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'rgba(255,255,255,.05)'},title:{display:true,text:'건수',color:'#94a3b8',font:{size:10}}},y1:{position:'right',ticks:{color:'#94a3b8',font:{size:9},callback:v=>v+'%'},grid:{display:false},title:{display:true,text:'비율 (%)',color:'#94a3b8',font:{size:10}},min:0,max:Math.max(100,Math.max(...pctData)*1.2)}}}})}
 
-async function loadData(){
-  const status = document.getElementById('status');
-  const btn = document.getElementById('refreshBtn');
-  btn.disabled = true;
-  status.textContent = '⏳ ' + t('loading');
-  
-  try {
-    console.log('===== [GST 디버그] 데이터 로드 시작 =====');
-    
-    // 1. URL 확인
-    console.log('[1] SHEET_URL:', SHEET_URL);
-    
-    // 2. fetch 요청
-    const res = await fetch(SHEET_URL + '&t=' + Date.now());
-    console.log('[2] fetch 응답 상태:', res.status, res.statusText);
-    
-    if (!res.ok) throw new Error('HTTP 오류: ' + res.status);
-    
-    const text = await res.text();
-    console.log('[3] CSV 텍스트 길이:', text.length, 'bytes');
-    console.log('[3] CSV 첫 300자:', text.substring(0, 300));
-    
-    // 3. Papa Parse로 파싱
-    const parsed = Papa.parse(text, { skipEmptyLines: true, header: false });
-    console.log('[4] 파싱된 전체 행 수:', parsed.data.length);
-    
-    if (parsed.data.length < 2) {
-      throw new Error('CSV 데이터가 2행 미만입니다. (헤더+데이터)');
-    }
-    
-    const header = parsed.data[0] || [];
-    console.log('[5] 헤더 (첫 행):', header);
-    
-    // 4. 컬럼 인덱스 찾기 (디버깅 강화)
-    function findIdx(keywords) {
-      for (let k of keywords) {
-        const idx = header.findIndex(h => String(h).toLowerCase().includes(k.toLowerCase()));
-        if (idx !== -1) {
-          console.log('  ✅ 찾음: "' + k + '" → 인덱스 ' + idx);
-          return idx;
-        }
-      }
-      console.log('  ❌ 못 찾음:', keywords);
-      return -1;
-    }
-    
-    const map = {
-      op: findIdx(['작업장', 'op', 'plant']),
-      customer: findIdx(['고객', 'customer', 'client']),
-      line: findIdx(['라인', 'line']),
-      process: findIdx(['공정', 'process']),
-      detail: findIdx(['세부', 'detail', 'sub']),
-      mainEq: findIdx(['메인', 'main', 'equipment']),
-      eq: findIdx(['호기', 'eq', 'equip', '설비']),
-      qty: findIdx(['수량', 'qty', 'quantity']),
-      matName: findIdx(['자재명', 'material name', '품명']),
-      reason: findIdx(['사유', 'reason', 'cause']),
-      workDate: findIdx(['일자', 'date', 'day']),
-      daysPaid: findIdx(['유상', 'paid']),
-      daysPrev: findIdx(['전교체', 'prev']),
-      pf: findIdx(['유무상', 'pf', 'paid/free']),
-      freeReason: findIdx(['무상사유', 'free reason'])
-    };
-    console.log('[6] 최종 매핑 결과:', map);
-    
-    // 5. 데이터 행 처리
-    const rows = parsed.data.slice(1);
-    console.log('[7] 데이터 행 수 (헤더 제외):', rows.length);
-    
-    if (rows.length === 0) {
-      throw new Error('데이터 행이 없습니다. CSV가 비어있거나 헤더만 있습니다.');
-    }
-    
-    // 6. 숫자 파싱 헬퍼
-    const parseNum = (idx) => {
-      if (idx < 0) return null;
-      const v = rows[0][idx]; // 첫 행으로 테스트
-      if (v === undefined || v === null || String(v).trim() === '') return null;
-      const n = Number(v);
-      return isNaN(n) ? null : n;
-    };
-    
-    // 7. 실제 데이터 매핑 (필터링을 위해 matName이 있는 행만)
-    const mapped = rows
-      .filter(r => r.length > Math.max(...Object.values(map).filter(v => v >= 0)))
-      .map(r => {
-        const opVal = map.op >= 0 ? String(r[map.op] || '') : '';
-        const custVal = map.customer >= 0 ? String(r[map.customer] || '') : '';
-        return {
-          country: extractCountry(opVal),
-          customer: mapCustomer(custVal),
-          line: map.line >= 0 ? String(r[map.line] || '') : '',
-          process: map.process >= 0 ? String(r[map.process] || '') : '',
-          detail: map.detail >= 0 ? String(r[map.detail] || '') : '',
-          eq: map.eq >= 0 ? String(r[map.eq] || '') : (map.mainEq >= 0 ? String(r[map.mainEq] || '') : ''),
-          matName: map.matName >= 0 ? String(r[map.matName] || '') : '',
-          qty: parseNum(map.qty) || 1,
-          reason: map.reason >= 0 ? String(r[map.reason] || '') : '',
-          workDate: map.workDate >= 0 ? toDate(r[map.workDate]) : null,
-          daysPaid: parseNum(map.daysPaid),
-          daysPrev: parseNum(map.daysPrev),
-          pf: map.pf >= 0 ? String(r[map.pf] || '') : '',
-          freeReason: map.freeReason >= 0 ? String(r[map.freeReason] || '') : ''
-        };
-      });
-    
-    console.log('[8] 매핑 전 데이터 수:', mapped.length);
-    
-    // 8. 자재명이 있는 데이터만 필터링
-    DATA = mapped.filter(x => x.matName && x.matName.trim() !== '');
-    console.log('[9] 최종 DATA 건수:', DATA.length);
-    
-    if (DATA.length === 0) {
-      console.warn('[경고] DATA가 0건입니다. 헤더 매핑을 확인하세요.');
-      status.className = 'status err';
-      status.textContent = '⚠️ 데이터 0건. 헤더명을 확인하세요 (콘솔 로그 참조)';
-      btn.disabled = false;
-      return;
-    }
-    
-    // 9. 샘플 데이터 출력
-    console.log('[10] 샘플 데이터 (첫 3건):', DATA.slice(0, 3));
-    
-    // 10. 성공
-    status.className = 'status ok';
-    status.textContent = '✅ ' + new Date().toLocaleString('ko-KR') + ' · ' + DATA.length + '건';
-    rebuildFilters();
-    isFirstRender = true;
-    render();
-    
-  } catch (e) {
-    console.error('[ERROR] loadData 실패:', e);
-    status.className = 'status err';
-    status.textContent = '❌ ' + e.message;
-    if (e.message.includes('Failed to fetch')) {
-      status.textContent = '❌ 네트워크 오류: CORS 또는 URL 문제입니다. 콘솔을 확인하세요.';
-    }
-  }
-  btn.disabled = false;
-}
+// ===== 데이터 로드 (디버깅 강화) =====
+async function loadData(){const status=document.getElementById('status');const btn=document.getElementById('refreshBtn');btn.disabled=true;status.textContent='⏳ '+t('loading');try{console.log('[GST] 데이터 로드 시작...');const res=await fetch(SHEET_URL+'&t='+Date.now());console.log('[GST] fetch 응답:', res.status,res.statusText);const text=await res.text();console.log('[GST] CSV 첫 200자:', text.substring(0,200));const parsed=Papa.parse(text,{skipEmptyLines:true,header:false});console.log('[GST] 파싱된 행 수:', parsed.data.length);
+if(parsed.data.length<2){throw new Error('CSV 데이터가 비어있습니다. URL을 확인하세요.');}
+const header=parsed.data[0]||[];console.log('[GST] 헤더:', header);
+function findIdx(kw){for(let k of kw){const idx=header.findIndex(h=>String(h).toLowerCase().includes(k.toLowerCase()));if(idx!==-1){console.log('[GST] 찾음: "'+k+'" → 인덱스 '+idx);return idx}}console.log('[GST] 못 찾음:', kw);return -1}
+const map={op:findIdx(['작업장','op','plant']),customer:findIdx(['고객','customer','client']),line:findIdx(['라인','line']),process:findIdx(['공정','process']),detail:findIdx(['세부','detail','sub']),mainEq:findIdx(['메인','main','equipment']),eq:findIdx(['호기','eq','equip','설비']),qty:findIdx(['수량','qty','quantity']),matName:findIdx(['자재명','material name','품명']),reason:findIdx(['사유','reason','cause']),workDate:findIdx(['일자','date','day']),daysPaid:findIdx(['유상','paid']),daysPrev:findIdx(['전교체','prev']),pf:findIdx(['유무상','pf','paid/free']),freeReason:findIdx(['무상사유','free reason'])}
+const rows=parsed.data.slice(1);console.log('[GST] 데이터 행 수:', rows.length);
+const parseNum=(idx)=>{if(idx<0)return null;const v=r[idx];if(v===undefined||v===null||String(v).trim()==='')return null;const n=Number(v);return isNaN(n)?null:n};
+const mapped=rows.filter(r=>r.length>Math.max(...Object.values(map).filter(v=>v>=0))).map(r=>{const opVal=map.op>=0?String(r[map.op]||''):'';const custVal=map.customer>=0?String(r[map.customer]||''):'';return{country:extractCountry(opVal),customer:mapCustomer(custVal),line:map.line>=0?String(r[map.line]||''):'',process:map.process>=0?String(r[map.process]||''):'',detail:map.detail>=0?String(r[map.detail]||''):'',eq:map.eq>=0?String(r[map.eq]||''):(map.mainEq>=0?String(r[map.mainEq]||''):''),matName:map.matName>=0?String(r[map.matName]||''):'',qty:parseNum(map.qty)||1,reason:map.reason>=0?String(r[map.reason]||''):'',workDate:map.workDate>=0?toDate(r[map.workDate]):null,daysPaid:parseNum(map.daysPaid),daysPrev:parseNum(map.daysPrev),pf:map.pf>=0?String(r[map.pf]||''):'',freeReason:map.freeReason>=0?String(r[map.freeReason]||''):''}});
+DATA=mapped.filter(x=>x.matName&&x.matName.trim()!=='');
+console.log('[GST] 최종 데이터 건수:', DATA.length);
+status.className='status ok';status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+DATA.length+'건';
+rebuildFilters();isFirstRender=true;render()}catch(e){console.error('[GST] 오류:', e);status.className='status err';status.textContent='❌ '+e.message;if(e.message.includes('Failed to fetch')){status.textContent='❌ 네트워크 오류: CORS 또는 URL 문제입니다.';}}btn.disabled=false}
+
 // ===== 이벤트 =====
 function onSlicer(){F.country=document.getElementById('sl-country').value;F.customer=document.getElementById('sl-customer').value;F.line=document.getElementById('sl-line').value;F.process=document.getElementById('sl-process').value;F.detail=document.getElementById('sl-detail').value;F.eq=document.getElementById('sl-eq').value;F.mat=document.getElementById('sl-mat').value;F.dtFrom=document.getElementById('dtFrom').value;F.dtTo=document.getElementById('dtTo').value;render()}
 document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render()});
