@@ -477,7 +477,16 @@ tr:hover td{background:rgba(255,255,255,.04)}
 // ============================================================
 
 // ===== 로그인 =====
-(function(){const P='gst1234!';window.checkPw=function(){const v=document.getElementById('pwInput').value;if(v===P){try{sessionStorage.setItem('gst_auth','1');}catch(e){}document.getElementById('loginOverlay').classList.add('hidden');}else{document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다';document.getElementById('pwInput').value='';}};if(sessionStorage.getItem('gst_auth')==='1')document.getElementById('loginOverlay').classList.add('hidden');document.getElementById('pwInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkPw();});})();
+window.checkPw = function() {
+  const v = document.getElementById('pwInput').value;
+  if (v === 'gst1234!') {
+    sessionStorage.setItem('gst_auth','1');
+    document.getElementById('loginOverlay').classList.add('hidden');
+  } else {
+    document.getElementById('pwErr').textContent = '비밀번호가 올바르지 않습니다';
+    document.getElementById('pwInput').value = '';
+  }
+};
 
 // ===== 상수 =====
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
