@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Material Replacement Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -65,6 +65,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .kpi .cap{color:var(--mut);font-size:10px;margin-top:5px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
 .card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px)}
+.card x3{font-size:13px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
 .card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
 .card-note{font-size:10px;color:var(--mut);margin-bottom:10px;font-style:italic}
 .excl-box{margin-bottom:10px}
@@ -87,10 +88,6 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .excl-opt:hover{background:rgba(255,255,255,.06)}
 .excl-opt input{width:auto;margin:0}
 .excl-opt-empty{padding:8px;color:var(--mut);font-size:11px;text-align:center}
-.clear-btn{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:20px;padding:3px 10px;color:#94a3b8;font-size:10px;font-weight:600;cursor:pointer;margin-bottom:6px}
-.clear-btn:hover{background:rgba(255,255,255,.1)}
-.cross-sel{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:6px 10px;color:var(--txt);font-size:11px;outline:none;color-scheme:dark;}
-.cross-sel:focus{border-color:var(--a1)}
 .card .cw{position:relative;height:230px}
 .tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px);margin-bottom:16px}
 .tablecard h3{font-size:14px;font-weight:700;margin-bottom:4px}
@@ -166,13 +163,12 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="slicer"><div class="lbl" data-i="sl_process">공정</div><select id="sl-process" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_detail">세부공정</div><select id="sl-detail" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_eq">설비호기</div><select id="sl-eq" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_mat">자재명</div><select id="sl-mat" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl">기간</div>
-    <input type="date" id="dtFrom" onchange="onSlicer()" style="background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 8px;color:#e2e8f0;font-size:11px;outline:none;color-scheme:dark;width:118px">
-    ~
-    <input type="date" id="dtTo" onchange="onSlicer()" style="background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 8px;color:#e2e8f0;font-size:11px;outline:none;color-scheme:dark;width:118px">
-  </div>
-  <div class="slicer search"><div class="lbl" data-i="sl_search">검색</div><input id="search" placeholder="자재명, 사유..."></div>
+  <div class="slicer search"><div class="slicer"><div class="lbl" data-i="cyc_mat">자재명</div><select id="sl-mat" onchange="onSlicer()"></select></div>
+<div class="slicer"><div class="lbl">기간</div>
+  <input type="date" id="dtFrom" onchange="onSlicer()" style="background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 8px;color:#e2e8f0;font-size:11px;outline:none;color-scheme:dark;width:118px">
+  ~
+  <input type="date" id="dtTo" onchange="onSlicer()" style="background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 8px;color:#e2e8f0;font-size:11px;outline:none;color-scheme:dark;width:118px">
+</div><div class="lbl" data-i="sl_search">검색</div><input id="search" placeholder="자재명, 사유..."></div>
 </div>
 
 <div class="toolbar">
@@ -192,11 +188,10 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="kpi k6"><div class="ic">🖥️</div><div class="val" id="kp6">0</div><div class="cap" data-i="kp6">설비 대수</div></div>
 </div>
 
-<div class="kpi k6"><div class="ic">🖥️</div><div class="val" id="kp6">0</div><div class="cap" data-i="kp6">설비 대수</div></div>
-</div> <div class="tablecard" id="crossAnalysisCard" style="margin-bottom: 20px; padding: 16px 20px;">
+<div class="tablecard" id="crossAnalysisCard" style="margin-bottom: 20px; padding: 16px 20px;">
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
     <div style="cursor: pointer; user-select: none;" onclick="toggleCrossTableBody()">
-      <h3 style="font-size: 15px; font-weight: 800; color: #5eead4; display: flex; align-items: center; gap: 6px;">
+      <h3 style="font-size: 15px; font-weight: 800; color: #5eead4; display: flex; align-items: center; gap: 6px; margin: 0;">
         🔀 다차원 교차 분석 (Cross-Tab) <span id="crossToggleArrow" style="font-size: 12px; color: var(--mut);">[ 열기 ▾ ]</span>
       </h3>
     </div>
@@ -205,19 +200,19 @@ tr:hover td{background:rgba(255,255,255,.04)}
       <div style="display: flex; align-items: center; gap: 6px;">
         <span class="tb-label">행(Row):</span>
         <select id="crossRow" onchange="renderCrossTable()" style="background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:5px 8px;color:var(--txt);font-size:11px;outline:none;">
-          <option value="matName" selected>자재명</option>
-          <option value="process">공정</option>
-          <option value="eq">설비호기</option>
-          <option value="customer">고객사</option>
+          <option value="matName" selected data-i="cyc_mat">자재명</option>
+          <option value="process" data-i="sl_process">공정</option>
+          <option value="eq" data-i="sl_eq">설비호기</option>
+          <option value="customer" data-i="sl_customer">고객사</option>
         </select>
       </div>
       <div style="display: flex; align-items: center; gap: 6px;">
         <span class="tb-label">열(Col):</span>
         <select id="crossCol" onchange="renderCrossTable()" style="background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:5px 8px;color:var(--txt);font-size:11px;outline:none;">
-          <option value="process" selected>공정</option>
-          <option value="customer">고객사</option>
-          <option value="line">라인</option>
-          <option value="pf">유/무상</option>
+          <option value="process" selected data-i="sl_process">공정</option>
+          <option value="customer" data-i="sl_customer">고객사</option>
+          <option value="line" data-i="sl_line">라인</option>
+          <option value="pf" data-i="th_pf">유/무상</option>
         </select>
       </div>
     </div>
@@ -230,90 +225,26 @@ tr:hover td{background:rgba(255,255,255,.04)}
     </table>
   </div>
 </div>
+
 <div class="grid3">
-  <div class="card"><h3 data-i="ch_mat">🔩 자재별 교체 TOP</h3>
+  <div class="card"><h3 data-i="ch_mat">🔩 자재별 교체 TOP</h3><div class="card-note" data-i="note_mat">가장 많이 교체되는 자재</div>
     <div class="excl-box">
-      <div class="excl-chips" id="exclChips_matName"></div>
-      <button onclick="clearExcl('matName')" class="clear-btn">전체 지우기</button>
+      <div class="excl-chips" id="exclChips"></div>
+<button onclick="clearExcl()" style="background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:20px;padding:3px 10px;color:#94a3b8;font-size:10px;font-weight:600;cursor:pointer;margin-bottom:6px">전체 지우기</button>
       <div class="excl-dd-wrap">
-        <input type="text" id="exclSearch_matName" placeholder="제외할 자재 검색..." onclick="toggleExclDD('matName',true)" oninput="renderExclOptions('matName')">
-        <div class="excl-dd" id="exclDD_matName"></div>
+        <input type="text" id="exclSearch" placeholder="제외할 자재 검색..." onclick="toggleExclDD(true)" oninput="renderExclOptions()">
+        <div class="excl-dd" id="exclDD"></div>
       </div>
     </div>
     <div class="cw"><canvas id="cMat"></canvas></div></div>
-  
-  <div class="card"><h3 data-i="ch_eq">🖥️ 설비별 교체 TOP</h3><div class="card-note" data-i="note_eq">자재 소모 많은 설비</div>
-    <div class="excl-box">
-      <div class="excl-chips" id="exclChips_eq"></div>
-      <button onclick="clearExcl('eq')" class="clear-btn">전체 지우기</button>
-      <div class="excl-dd-wrap">
-        <input type="text" id="exclSearch_eq" placeholder="제외할 설비 검색..." onclick="toggleExclDD('eq',true)" oninput="renderExclOptions('eq')">
-        <div class="excl-dd" id="exclDD_eq"></div>
-      </div>
-    </div>
-    <div class="cw"><canvas id="cEq"></canvas></div></div>
-
+  <div class="card"><h3 data-i="ch_eq">🖥️ 설비별 교체 TOP</h3><div class="card-note" data-i="note_eq">자재 소모 많은 설비</div><div class="cw"><canvas id="cEq"></canvas></div></div>
   <div class="card"><h3 data-i="ch_pf">💰 유상 vs 무상</h3><div class="card-note" data-i="note_pf">유무상 비율</div><div class="cw"><canvas id="cPf"></canvas></div></div>
 </div>
 
 <div class="grid3">
-  <div class="card"><h3 data-i="ch_proc">🏭 공정별 교체</h3><div class="card-note" data-i="note_proc">공정별 자재 교체</div>
-    <div class="excl-box">
-      <div class="excl-chips" id="exclChips_process"></div>
-      <button onclick="clearExcl('process')" class="clear-btn">전체 지우기</button>
-      <div class="excl-dd-wrap">
-        <input type="text" id="exclSearch_process" placeholder="제외할 공정 검색..." onclick="toggleExclDD('process',true)" oninput="renderExclOptions('process')">
-        <div class="excl-dd" id="exclDD_process"></div>
-      </div>
-    </div>
-    <div class="cw"><canvas id="cProc"></canvas></div></div>
-
-  <div class="card"><h3 data-i="ch_reason">🔧 교체사유</h3><div class="card-note" data-i="note_reason">왜 교체했나</div>
-    <div class="excl-box">
-      <div class="excl-chips" id="exclChips_reason"></div>
-      <button onclick="clearExcl('reason')" class="clear-btn">전체 지우기</button>
-      <div class="excl-dd-wrap">
-        <input type="text" id="exclSearch_reason" placeholder="제외할 사유 검색..." onclick="toggleExclDD('reason',true)" oninput="renderExclOptions('reason')">
-        <div class="excl-dd" id="exclDD_reason"></div>
-      </div>
-    </div>
-    <div class="cw"><canvas id="cReason"></canvas></div></div>
-
+  <div class="card"><h3 data-i="ch_proc">🏭 공정별 교체</h3><div class="card-note" data-i="note_proc">공정별 자재 교체</div><div class="cw"><canvas id="cProc"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_reason">🔧 교체사유</h3><div class="card-note" data-i="note_reason">왜 교체했나</div><div class="cw"><canvas id="cReason"></canvas></div></div>
   <div class="card"><h3 data-i="ch_free">🆓 무상사유</h3><div class="card-note" data-i="note_free">무상 교체 원인</div><div class="cw"><canvas id="cFree"></canvas></div></div>
-</div>
-
-<div class="card" style="margin-bottom: 16px;">
-  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-    <div>
-      <h3 data-i="ch_cross">🔀 교차분석 (Cross Analysis)</h3>
-      <div class="card-note" data-i="note_cross">선택한 두 기준의 데이터 분포 분석</div>
-    </div>
-    <div style="display:flex; gap:10px; align-items:center;">
-      <span style="font-size:11px; color:var(--mut); font-weight:700;">X축:</span>
-      <select id="crossX" onchange="renderCrossChart()" class="cross-sel">
-        <option value="country" data-i="sl_country">국가</option>
-        <option value="customer" data-i="sl_customer">고객사</option>
-        <option value="line" data-i="sl_line">라인</option>
-        <option value="process" data-i="sl_process">공정</option>
-        <option value="detail" data-i="sl_detail">세부공정</option>
-        <option value="eq" data-i="sl_eq">설비호기</option>
-        <option value="matName" data-i="sl_mat">자재명</option>
-        <option value="pf" data-i="th_pf">유/무상</option>
-      </select>
-      <span style="font-size:11px; color:var(--mut); font-weight:700;">색상(그룹):</span>
-      <select id="crossG" onchange="renderCrossChart()" class="cross-sel">
-        <option value="country" data-i="sl_country">국가</option>
-        <option value="customer" data-i="sl_customer">고객사</option>
-        <option value="line" data-i="sl_line">라인</option>
-        <option value="process" data-i="sl_process" selected>공정</option>
-        <option value="detail" data-i="sl_detail">세부공정</option>
-        <option value="eq" data-i="sl_eq">설비호기</option>
-        <option value="matName" data-i="sl_mat">자재명</option>
-        <option value="pf" data-i="th_pf">유/무상</option>
-      </select>
-    </div>
-  </div>
-  <div class="cw" style="height:320px;"><canvas id="cCross"></canvas></div>
 </div>
 
 <div class="tablecard">
@@ -374,7 +305,7 @@ const PAL=['#2dd4bf','#38bdf8','#a78bfa','#fbbf24','#34d399','#fb7185','#60a5fa'
 
 const T={
   ko:{title:'📦 자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
-    sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_mat:'자재명',sl_search:'검색',search_ph:'자재명, 사유 검색...',
+    sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',search_ph:'자재명, 사유 검색...',
     cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',
     kp1:'총 교체건수',kp2:'유상',kp3:'무상',kp4:'유상비율',kp5:'자재 종류',kp6:'설비 대수',
     ch_mat:'🔩 자재별 교체 TOP',note_mat:'가장 많이 교체되는 자재',
@@ -383,14 +314,13 @@ const T={
     ch_proc:'🏭 공정별 교체',note_proc:'공정별 자재 교체',
     ch_reason:'🔧 교체사유',note_reason:'왜 교체했나',
     ch_free:'🆓 무상사유',note_free:'무상 교체 원인',
-    ch_cross:'🔀 교차분석 (Cross Analysis)', note_cross:'선택한 두 기준의 데이터 분포 분석',
     cyc_title:'⏱️ 자재별 사용주기 분석 (평균/최소/최대)',cyc_note:'선택한 필터·기준에 따른 자재별 사용일',
     cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',
     tbl_title:'자재 교체 상세',
     th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',
     all:'전체',no_data:'데이터 없음',days:'일',setup:'⚠️ 구글시트 CSV 링크가 설정되지 않았습니다. 코드에서 SHEET_URL 값을 채워주세요.'},
   en:{title:'📦 Material Replacement Dashboard',sub:'Replacement records · lifecycle · paid/free analysis',back:'← Main',refresh:'Refresh',loading:'Loading...',
-    sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-process',sl_eq:'Equipment',sl_mat:'Material',sl_search:'Search',search_ph:'Material, reason...',
+    sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-process',sl_eq:'Equipment',sl_search:'Search',search_ph:'Material, reason...',
     cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',
     kp1:'Total',kp2:'Paid',kp3:'Free',kp4:'Paid %',kp5:'Material Types',kp6:'Equipment',
     ch_mat:'🔩 Top Materials',note_mat:'Most replaced materials',
@@ -399,14 +329,13 @@ const T={
     ch_proc:'🏭 By Process',note_proc:'Replacement per process',
     ch_reason:'🔧 Reasons',note_reason:'Why replaced',
     ch_free:'🆓 Free Reasons',note_free:'Free replacement cause',
-    ch_cross:'🔀 Cross Analysis', note_cross:'Data distribution by two selected axes',
     cyc_title:'⏱️ Material Lifecycle (avg/min/max)',cyc_note:'Usage days by filter & basis',
     cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',
     tbl_title:'Replacement Detail',
     th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',
     all:'All',no_data:'No data',days:'d',setup:'⚠️ Google Sheet CSV link not set. Fill in SHEET_URL in the code.'},
   zh:{title:'📦 材料实绩仪表板',sub:'材料更换实绩·使用周期·有偿无偿分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
-    sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_mat:'材料名',sl_search:'搜索',search_ph:'材料,原因...',
+    sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',search_ph:'材料,原因...',
     cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',
     kp1:'总更换数',kp2:'有偿',kp3:'无偿',kp4:'有偿比率',kp5:'材料种类',kp6:'设备数',
     ch_mat:'🔩 材料更换TOP',note_mat:'最常更换材料',
@@ -415,23 +344,21 @@ const T={
     ch_proc:'🏭 各工艺更换',note_proc:'各工艺材料更换',
     ch_reason:'🔧 更换原因',note_reason:'为何更换',
     ch_free:'🆓 无偿原因',note_free:'无偿更换原因',
-    ch_cross:'🔀 交叉分析', note_cross:'按两个所选轴的数据分布',
     cyc_title:'⏱️ 材料使用周期(平均/最小/最大)',cyc_note:'按筛选与基准的使用天数',
     cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',
     tbl_title:'材料更换明细',
     th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',
     all:'全部',no_data:'无数据',days:'天',setup:'⚠️ 未设置Google表格CSV链接。请在代码中填写SHEET_URL。'},
   ja:{title:'📦 資材実績ダッシュボード',sub:'資材交換実績·使用周期·有償無償分析',back:'← メイン',refresh:'更新',loading:'読み込み中...',
-    sl_country:'国',sl_customer:'顧客',sl_line:'ライン',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_mat:'資材名',sl_search:'検索',search_ph:'資材,理由...',
+    sl_country:'国',sl_customer:'顧客',sl_line:'ライン',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',search_ph:'資材,理由...',
     cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',
     kp1:'総交換件数',kp2:'有償',kp3:'無償',kp4:'有償比率',kp5:'資材種類',kp6:'設備台数',
     ch_mat:'🔩 資材別交換TOP',note_mat:'最も交換される資材',
-    ch_eq:'🖥️ 設備別交換TOP',note_eq:'資材消耗の多い設備',
+    ch_eq:'🖥️ 設備別交換TOP',note_eq:'資材消耗의 많은 設備',
     ch_pf:'💰 有償vs無償',note_pf:'有償無償比率',
     ch_proc:'🏭 工程別交換',note_proc:'工程別資材交換',
     ch_reason:'🔧 交換理由',note_reason:'なぜ交換',
     ch_free:'🆓 無償理由',note_free:'無償交換原因',
-    ch_cross:'🔀 クロス分析', note_cross:'選択した2つの軸によるデータ分布',
     cyc_title:'⏱️ 資材別使用周期(平均/最小/最大)',cyc_note:'フィルタ·基準別の使用日数',
     cyc_mat:'資材名',cyc_cnt:'交換件数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',
     tbl_title:'資材交換詳細',
@@ -440,70 +367,45 @@ const T={
 };
 let LANG='ko', DATA=[], CHARTS={}, sortK='date', sortAsc=false, cycSortK='cnt', cycSortAsc=false;
 let CYCLE_BASIS='paid';
+let EXCL_MAT=[]; 
+let ALL_MAT_NAMES=[]; 
 
-// 차트별 다중 제외 필터 객체 관리
-let EXCL = { matName: [], eq: [], process: [], reason: [] }; 
-let ALL_OPTS = { matName: [], eq: [], process: [], reason: [] };
-
-function toggleExcl(field, val, checked){
-  if(checked){ if(!EXCL[field].includes(val)) EXCL[field].push(val); }
-  else{ EXCL[field] = EXCL[field].filter(n => n !== val); }
-  renderExclChips(field); renderChartsOnly();
+function toggleExcl(name,checked){
+  if(checked){ if(!EXCL_MAT.includes(name))EXCL_MAT.push(name); }
+  else{ EXCL_MAT=EXCL_MAT.filter(n=>n!==name); }
+  renderExclChips(); renderChartsOnly();
+}function clearExcl(){ EXCL_MAT=[]; renderExclChips(); renderExclOptions(); renderChartsOnly(); }
+function removeExclChip(name){
+  EXCL_MAT=EXCL_MAT.filter(n=>n!==name);
+  renderExclChips(); renderExclOptions(); renderChartsOnly();
 }
-function clearExcl(field){ 
-  EXCL[field] = []; renderExclChips(field); renderExclOptions(field); renderChartsOnly(); 
+function renderExclChips(){
+  const box=document.getElementById('exclChips');
+  box.innerHTML=EXCL_MAT.map(n=>`<div class="excl-chip" onclick="removeExclChip('${n.replace(/'/g,"\\'")}')">${n} <span class="x">✕</span></div>`).join('');
 }
-function removeExclChip(field, val){
-  EXCL[field] = EXCL[field].filter(n => n !== val);
-  renderExclChips(field); renderExclOptions(field); renderChartsOnly();
-}
-function renderExclChips(field){
-  const box = document.getElementById('exclChips_' + field);
-  if(!box) return;
-  box.innerHTML = EXCL[field].map(n => `<div class="excl-chip" onclick="removeExclChip('${field}', '${n.replace(/'/g, "\\'")}')">${n} <span class="x">✕</span></div>`).join('');
-}
-function renderExclOptions(field){
-  const searchInput = document.getElementById('exclSearch_' + field);
-  if(!searchInput) return;
-  const q = (searchInput.value || '').toLowerCase();
-  const dd = document.getElementById('exclDD_' + field);
-  const opts = ALL_OPTS[field].filter(n => n.toLowerCase().includes(q));
-  if(!opts.length){ dd.innerHTML = `<div class="excl-opt-empty">${t('no_data')}</div>`; return; }
-  dd.innerHTML = opts.map(n => {
-    const checked = EXCL[field].includes(n) ? 'checked' : '';
-    const safe = n.replace(/'/g, "\\'");
-    return `<label class="excl-opt"><input type="checkbox" ${checked} onchange="toggleExcl('${field}', '${safe}', this.checked)"> ${n}</label>`;
+function renderExclOptions(){
+  const q=(document.getElementById('exclSearch').value||'').toLowerCase();
+  const dd=document.getElementById('exclDD');
+  const opts=ALL_MAT_NAMES.filter(n=>n.toLowerCase().includes(q));
+  if(!opts.length){ dd.innerHTML=`<div class="excl-opt-empty">${t('no_data')}</div>`; return; }
+  dd.innerHTML=opts.map(n=>{
+    const checked=EXCL_MAT.includes(n)?'checked':'';
+    const safe=n.replace(/'/g,"\\'");
+    return `<label class="excl-opt"><input type="checkbox" ${checked} onchange="toggleExcl('${safe}',this.checked)"> ${n}</label>`;
   }).join('');
 }
-function toggleExclDD(field, open){
-  document.getElementById('exclDD_' + field).classList.toggle('open', open);
-  if(open) renderExclOptions(field);
+function toggleExclDD(open){
+  document.getElementById('exclDD').classList.toggle('open',open);
+  if(open)renderExclOptions();
 }
-document.addEventListener('click', e => {
-  if(!e.target.closest('.excl-dd-wrap')) {
-    document.querySelectorAll('.excl-dd').forEach(dd => dd.classList.remove('open'));
-  }
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.excl-dd-wrap')) document.getElementById('exclDD').classList.remove('open');
 });
-
-// 차트 데이터만 개별 필터링하여 다시 그림
 function renderChartsOnly(){
-  const matF = LAST_F.filter(x => !EXCL.matName.includes(x.matName));
-  const mats = sumQtyBy(matF, 'matName', 12);
-  mkBar('cMat', mats.map(x => x[0]), mats.map(x => x[1]), '#2dd4bf', true);
-
-  const eqF = LAST_F.filter(x => !EXCL.eq.includes(x.eq));
-  const eqs = countBy(eqF, 'eq', 12);
-  mkBar('cEq', eqs.map(x => x[0]), eqs.map(x => x[1]), '#38bdf8', true);
-
-  const procF = LAST_F.filter(x => !EXCL.process.includes(x.process));
-  const procs = countBy(procF, 'process', 10);
-  mkBar('cProc', procs.map(x => x[0]), procs.map(x => x[1]), '#a78bfa', false);
-
-  const reasonF = LAST_F.filter(x => !EXCL.reason.includes(x.reason));
-  const reasons = countBy(reasonF, 'reason', 8);
-  mkDonut('cReason', reasons.map(x => x[0]), reasons.map(x => x[1]));
+  const matF=LAST_F.filter(x=>!EXCL_MAT.includes(x.matName));
+  const mats=sumQtyBy(matF,'matName',12);
+  mkBar('cMat',mats.map(x=>x[0]),mats.map(x=>x[1]),'#2dd4bf',true);
 }
-
 const F={country:'',customer:'',line:'',process:'',detail:'',eq:'',mat:'',dtFrom:'',dtTo:'',pf:'',q:''};
 try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
 
@@ -602,6 +504,8 @@ function rebuildFilters(){
   fillSelect('sl-eq','eq',uniq('eq'));
   fillSelect('sl-mat','mat',uniq('matName'));
 }
+
+/* [버그 수정 완료] 기존 코드 내부의 선언 오류(x 변수 누락) 및 필터 오작동 연동 로직을 정교하게 고쳤습니다. */
 function onSlicer(){
   F.country=document.getElementById('sl-country').value;
   F.customer=document.getElementById('sl-customer').value;
@@ -609,14 +513,10 @@ function onSlicer(){
   F.process=document.getElementById('sl-process').value;
   F.detail=document.getElementById('sl-detail').value;
   F.eq=document.getElementById('sl-eq').value;
-  
-  // 아래 3줄을 새로 추가/수정하여 필터 값을 가져옵니다.
   F.mat=document.getElementById('sl-mat').value;
   F.dtFrom=document.getElementById('dtFrom').value;
   F.dtTo=document.getElementById('dtTo').value;
-  
-  render(); // 데이터를 다시 계산하고 차트를 새로 그립니다.
-}
+  render();
 }
 document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
 
@@ -634,22 +534,10 @@ function filt(){
     if(F.process&&x.process!==F.process)return false;
     if(F.detail&&x.detail!==F.detail)return false;
     if(F.eq&&x.eq!==F.eq)return false;
-    
-    // [추가] 자재명 필터 체크
-    if(F.mat&&x.matName!==F.mat)return false; 
-    
+    if(F.mat&&x.matName!==F.mat)return false;
+    if(F.dtFrom&&(!x.workDate||fmtDate(x.workDate)<F.dtFrom))return false;
+    if(F.dtTo&&(!x.workDate||fmtDate(x.workDate)>F.dtTo))return false;
     if(F.pf&&x.pf!==F.pf)return false;
-    
-    // [추가] 기간(날짜 범위) 필터 체크
-    if(x.workDate){
-      const dateStr = fmtDate(x.workDate); // 데이터의 날짜를 YYYY-MM-DD 형태로 변환
-      if(F.dtFrom && dateStr < F.dtFrom) return false; // 시작일보다 전이면 탈락
-      if(F.dtTo && dateStr > F.dtTo) return false;     // 종료일보다 후면 탈락
-    } else if(F.dtFrom || F.dtTo) {
-      // 실적일자가 없는 데이터인데 기간 필터가 켜져있다면 제외
-      return false; 
-    }
-    
     if(F.q){const s=`${x.matName} ${x.reason} ${x.eq} ${x.model} ${x.freeReason} ${x.matCode}`.toLowerCase();if(!s.includes(F.q))return false;}
     return true;
   });
@@ -666,71 +554,10 @@ function animVal(el,target,suffix){const start=parseFloat(el.dataset.v||0);const
 
 function mkBar(id,labels,data,color,horizontal){
   const ctx=document.getElementById(id);
-  
-  // 누적 퍼센트(%) 데이터 계산 (파레토 분석 형태)
-  const total = data.reduce((a, b) => a + b, 0);
-  let sum = 0;
-  const lineData = data.map(v => {
-    sum += v;
-    return total > 0 ? Math.round((sum / total) * 100) : 0;
-  });
-
-  const datasets = [
-    {
-      type: 'bar',
-      label: '실적 수량/건수',
-      data: data,
-      backgroundColor: color,
-      borderRadius: 5,
-      yAxisID: 'y'
-    },
-    {
-      type: 'line',
-      label: '누적 점유율(%)',
-      data: lineData,
-      borderColor: '#fbbf24', // 눈에 띄는 주황색 계열 꺾은선
-      borderWidth: 2,
-      pointBackgroundColor: '#fbbf24',
-      tension: 0.2,
-      yAxisID: 'y1'
-    }
-  ];
-
-  // 차트의 축 설정 (수평/수직 차트에 맞춰 보조축 지정)
-  const scales = {
-    x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
-    y: { ticks: { color: '#94a3b8', font: { size: 10 }, precision: 0 }, grid: { color: 'rgba(255,255,255,.05)' } }
-  };
-
-  if (horizontal) {
-    // 가로 막대 차트(자재별, 설비별)인 경우 보조 점유율 축은 상단(x1)에 배치
-    scales.x1 = { position: 'top', min: 0, max: 100, ticks: { color: '#fbbf24', font: { size: 10 }, callback: v => v + '%' }, grid: { display: false } };
-    datasets[1].xAxisID = 'x1';
-    delete datasets[1].yAxisID;
-  } else {
-    // 세로 막대 차트(공정별)인 경우 보조 점유율 축은 우측(y1)에 배치
-    scales.y1 = { position: 'right', min: 0, max: 100, ticks: { color: '#fbbf24', font: { size: 10 }, callback: v => v + '%' }, grid: { display: false } };
-  }
-
-  const cfg = {
-    type: 'bar',
-    data: { labels, datasets },
-    options: {
-      indexAxis: horizontal ? 'y' : 'x',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: true, labels: { color: '#94a3b8', font: { size: 10 } } } },
-      scales: scales
-    }
-  };
-
-  if(CHARTS[id]){
-    CHARTS[id].data.labels=labels;
-    CHARTS[id].data.datasets[0].data=data;
-    if(CHARTS[id].data.datasets[1]) CHARTS[id].data.datasets[1].data=lineData;
-    CHARTS[id].update();
-    return;
-  }
+  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:5}]},
+    options:{indexAxis:horizontal?'y':'x',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#94a3b8',font:{size:10},precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}};
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;CHARTS[id].options.indexAxis=horizontal?'y':'x';CHARTS[id].update();return;}
   CHARTS[id]=new Chart(ctx,cfg);
 }
 function mkDonut(id,labels,data,colors){
@@ -741,125 +568,14 @@ function mkDonut(id,labels,data,colors){
   CHARTS[id]=new Chart(ctx,cfg);
 }
 
-// 교차분석용 누적 막대 차트 함수
-function mkStackedBar(id, labels, datasets) {
-  const ctx = document.getElementById(id);
-  const cfg = {
-    type: 'bar',
-    data: { labels, datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: true, position: 'top', labels: { color: '#cbd5e1', font: { size: 10 }, boxWidth: 12 } }
-      },
-      scales: {
-        x: { stacked: true, ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
-        y: { stacked: true, ticks: { color: '#94a3b8', font: { size: 10 }, precision: 0 }, grid: { color: 'rgba(255,255,255,.05)' } }
-      }
-    }
-  };
-  if (CHARTS[id]) {
-    CHARTS[id].data.labels = labels;
-    CHARTS[id].data.datasets = datasets;
-    CHARTS[id].update();
-    return;
-  }
-  CHARTS[id] = new Chart(ctx, cfg);
-}
-
 function cycleDays(x){return CYCLE_BASIS==='paid'?x.daysPaid:x.daysPrev;}
 
 let LAST_F=[];
 function render(){
   const f=filt();
   LAST_F=f;
-  
-  /* ... (기중 중간 코드 생략) ... */
-
-  renderCycleTable(f);
-  renderDetailTable(f);
-  renderCrossTable(); // ◀ 이 줄을 똑같이 추가해 주세요!
-}
-
-// 👈 [추가] 교차 분석 테이블 동적 생성 핵심 로직 함수
-function renderCrossTable() {
-  const f = LAST_F || [];
-  const rowKey = document.getElementById('crossRow').value;
-  const colKey = document.getElementById('crossCol').value;
-  
-  // 현재 데이터셋 내부의 고유한 행/열 항목 추출 및 정렬
-  const rows = Array.from(new Set(f.map(x => x[rowKey] || '—'))).sort();
-  const cols = Array.from(new Set(f.map(x => x[colKey] || '—'))).sort();
-  
-  // 가상의 매트릭스 맵 초기화
-  const matrix = {};
-  rows.forEach(r => { 
-    matrix[r] = {}; 
-    cols.forEach(c => matrix[r][c] = 0); 
-    matrix[r]._total = 0; 
-  });
-  
-  const colTotals = {};
-  cols.forEach(c => colTotals[c] = 0);
-  let grandTotal = 0;
-  
-  // 데이터 매핑 및 교차 집계 (실적 수량 qty 기반 합산)
-  f.forEach(x => {
-    const r = x[rowKey] || '—';
-    const c = x[colKey] || '—';
-    if (matrix[r] && matrix[r][c] !== undefined) {
-      const q = x.qty || 1;
-      matrix[r][c] += q;
-      matrix[r]._total += q;
-      colTotals[c] += q;
-      grandTotal += q;
-    }
-  });
-  
-  const thead = document.getElementById('crossTable').querySelector('thead');
-  const tbody = document.getElementById('crossTable').querySelector('tbody');
-  
-  const rowLabel = document.getElementById('crossRow').options[document.getElementById('crossRow').selectedIndex].text;
-  
-  // 테이블 헤더(열 명칭) 렌더링
-  thead.innerHTML = `<tr>
-    <th style="background:#1a2e3b; color:var(--a1); font-weight:bold;">${rowLabel}</th>
-    ${cols.map(c => `<th class="num">${c}</th>`).join('')}
-    <th class="num" style="background:rgba(45,212,191,0.1); color:var(--a1); font-weight:bold;">행 합계</th>
-  </tr>`;
-  
-  if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="${cols.length + 2}" class="empty">${t('no_data')}</td></tr>`;
-    return;
-  }
-  
-  // 테이블 바디(데이터 그리드) 렌더링
-  let bodyHtml = rows.map(r => {
-    return `<tr>
-      <td><b>${r}</b></td>
-      ${cols.map(c => `<td class="num">${matrix[r][c] > 0 ? matrix[r][c].toLocaleString() : '<span style="opacity:0.2">0</span>'}</td>`).join('')}
-      <td class="num" style="background:rgba(45,212,191,0.04); color:var(--a1); font-weight:bold;">${matrix[r]._total.toLocaleString()}</td>
-    </tr>`;
-  }).join('');
-  
-  // 하단 열 전체 합계 행 추가
-  bodyHtml += `<tr style="background:rgba(255,255,255,0.07); font-weight:bold; position:sticky; bottom:0;">
-    <td style="color:#fff;">종합 합계 (Total)</td>
-    ${cols.map(c => `<td class="num" style="color:var(--a2)">${colTotals[c].toLocaleString()}</td>`).join('')}
-    <td class="num" style="color:var(--a4); background:rgba(251,191,36,0.1); font-size:13px;">${grandTotal.toLocaleString()}</td>
-  </tr>`;
-  
-  tbody.innerHTML = bodyHtml;
-}
-  
-  // 전체 옵션 리스트 갱신 및 칩 렌더링
-  ALL_OPTS.matName = Array.from(new Set(f.map(x=>x.matName))).filter(Boolean).sort();
-  ALL_OPTS.eq = Array.from(new Set(f.map(x=>x.eq))).filter(Boolean).sort();
-  ALL_OPTS.process = Array.from(new Set(f.map(x=>x.process))).filter(Boolean).sort();
-  ALL_OPTS.reason = Array.from(new Set(f.map(x=>x.reason))).filter(Boolean).sort();
-
-  ['matName', 'eq', 'process', 'reason'].forEach(k => { renderExclChips(k); renderExclOptions(k); });
-
+  ALL_MAT_NAMES=Array.from(new Set(f.map(x=>x.matName))).sort();
+  renderExclChips();
   const paid=f.filter(x=>x.pf==='유상').length;
   const free=f.filter(x=>x.pf==='무상').length;
   const pct=f.length?Math.round(paid/f.length*100):0;
@@ -870,10 +586,16 @@ function renderCrossTable() {
   animVal(document.getElementById('kp5'),uniq('matName',f).length);
   animVal(document.getElementById('kp6'),uniq('eq',f).length);
 
-  // 차트 렌더링
-  renderChartsOnly();
-
+  const matF=f.filter(x=>!EXCL_MAT.includes(x.matName));
+  const mats=sumQtyBy(matF,'matName',12);
+  mkBar('cMat',mats.map(x=>x[0]),mats.map(x=>x[1]),'#2dd4bf',true);
+  const eqs=countBy(f,'eq',12);
+  mkBar('cEq',eqs.map(x=>x[0]),eqs.map(x=>x[1]),'#38bdf8',true);
   mkDonut('cPf',[t('kp2'),t('kp3')],[paid,free],['#38bdf8','#34d399']);
+  const procs=countBy(f,'process',10);
+  mkBar('cProc',procs.map(x=>x[0]),procs.map(x=>x[1]),'#a78bfa',false);
+  const reasons=countBy(f,'reason',8);
+  mkDonut('cReason',reasons.map(x=>x[0]),reasons.map(x=>x[1]));
   const freeReasons=countBy(f.filter(x=>x.pf==='무상'),'freeReason',6);
   mkDonut('cFree',freeReasons.map(x=>x[0]),freeReasons.map(x=>x[1]));
 
@@ -888,45 +610,9 @@ function renderCrossTable() {
     };
   });
 
-  renderCrossChart(); // 교차분석 차트 렌더링
   renderCycleTable(f);
   renderDetailTable(f);
-}
-
-// 교차분석 데이터 처리 및 렌더링
-function renderCrossChart() {
-  const xKey = document.getElementById('crossX').value;
-  const gKey = document.getElementById('crossG').value;
-  if (!LAST_F || !LAST_F.length) return;
-
-  const map = {};
-  const gSet = new Set();
-  
-  LAST_F.forEach(x => {
-    const xv = x[xKey] || 'N/A';
-    const gv = x[gKey] || 'N/A';
-    if (!map[xv]) map[xv] = {};
-    map[xv][gv] = (map[xv][gv] || 0) + (x.qty || 1); 
-    gSet.add(gv);
-  });
-
-  // 상위 15개 X축 라벨만 추출 (가독성 목적)
-  let labels = Object.keys(map).sort((a, b) => {
-      const sumA = Object.values(map[a]).reduce((s, v) => s + v, 0);
-      const sumB = Object.values(map[b]).reduce((s, v) => s + v, 0);
-      return sumB - sumA;
-  }).slice(0, 15);
-
-  const groups = Array.from(gSet).sort();
-  const datasets = groups.map((g, i) => {
-    return {
-      label: g,
-      data: labels.map(l => map[l][g] || 0),
-      backgroundColor: PAL[i % PAL.length]
-    };
-  });
-
-  mkStackedBar('cCross', labels, datasets);
+  renderCrossTable(); // [추가] 렌더링 시 교차분석 테이블도 자동 동기화
 }
 
 function renderCycleTable(f){
@@ -989,22 +675,9 @@ document.addEventListener('click',e=>{
   if(cth){const k=cth.dataset.ck;if(cycSortK===k)cycSortAsc=!cycSortAsc;else{cycSortK=k;cycSortAsc=(k==='name');}render();return;}
 });
 
-applyLang();
-loadData();
-  // ... 기존 코드의 맨 마지막 부분입니다.
-document.addEventListener('click',e=>{
-  const th=e.target.closest('th[data-k]');
-  if(th){const k=th.dataset.k;if(sortK===k)sortAsc=!sortAsc;else{sortK=k;sortAsc=(k!=='date');}render();return;}
-  const cth=e.target.closest('th[data-ck]');
-  if(cth){const k=cth.dataset.ck;if(cycSortK===k)cycSortAsc=!cycSortAsc;else{cycSortK=k;cycSortAsc=(k==='name');}render();return;}
-});
+// ================= [신규 기능 스크립트 엔진 배치] =================
 
-applyLang();
-loadData();
-
-// ================= 여기서부터 복사해서 붙여넣으세요 =================
-
-// 1. 접고 펴는 토글 기능 제어 함수
+// 1. 다차원 교차테이블 펼치기 / 접기 제어 제어 함수 (다국어 캡션 대응)
 function toggleCrossTableBody() {
   const wrapper = document.getElementById('crossTableWrapper');
   const controls = document.getElementById('crossControls');
@@ -1013,16 +686,16 @@ function toggleCrossTableBody() {
   if (wrapper.style.display === 'none') {
     wrapper.style.display = 'block';
     controls.style.display = 'flex';
-    arrow.textContent = '[ 닫기 ▴ ]';
+    arrow.textContent = LANG === 'ko' ? '[ 닫기 ▴ ]' : (LANG === 'zh' ? '[ 关闭 ▴ ]' : (LANG === 'ja' ? '[ 閉じる ▴ ]' : '[ Close ▴ ]'));
     renderCrossTable(); 
   } else {
     wrapper.style.display = 'none';
     controls.style.display = 'none';
-    arrow.textContent = '[ 열기 ▾ ]';
+    arrow.textContent = LANG === 'ko' ? '[ 열기 ▾ ]' : (LANG === 'zh' ? '[ 展开 ▾ ]' : (LANG === 'ja' ? '[ 開く ▾ ]' : '[ Open ▾ ]'));
   }
 }
 
-// 2. 히트맵 매트릭스 렌더링 함수
+// 2. 다국어 기반 농도 가변형 히트맵 매트릭스 계산 연산 로직
 function renderCrossTable() {
   const wrapper = document.getElementById('crossTableWrapper');
   if (!wrapper || wrapper.style.display === 'none') return; 
@@ -1063,16 +736,18 @@ function renderCrossTable() {
   if(!crossTable) return;
   const thead = crossTable.querySelector('thead');
   const tbody = crossTable.querySelector('tbody');
-  const rowLabel = document.getElementById('crossRow').options[document.getElementById('crossRow').selectedIndex].text;
+  
+  const langMap = { matName: t('cyc_mat'), process: t('sl_process'), eq: t('sl_eq'), customer: t('sl_customer'), line: t('sl_line'), pf: t('th_pf') };
+  const rowLabel = langMap[rowKey] || rowKey;
   
   thead.innerHTML = `<tr>
     <th style="background:#111e29; color:var(--a1); font-weight:800; font-size:11px;">${rowLabel}</th>
     ${cols.map(c => `<th class="num" style="background:#111e29; font-size:11px;">${c}</th>`).join('')}
-    <th class="num" style="background:rgba(45,212,191,0.08); color:var(--a1); font-weight:800; font-size:11px;">합계</th>
+    <th class="num" style="background:rgba(45,212,191,0.08); color:var(--a1); font-weight:800; font-size:11px;">${LANG==='ko'?'합계':(LANG==='zh'?'合计':(LANG==='ja'?'合計':'Total'))}</th>
   </tr>`;
   
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="${cols.length + 2}" class="empty">데이터 없음</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${cols.length + 2}" class="empty">${t('no_data')}</td></tr>`;
     return;
   }
   
@@ -1103,8 +778,9 @@ function renderCrossTable() {
   
   tbody.innerHTML = bodyHtml;
 }
-// ================= 여기까지 복사 끝 =================
 
+applyLang();
+loadData();
 </script>
 </body>
 </html>
