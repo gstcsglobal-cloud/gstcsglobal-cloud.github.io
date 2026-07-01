@@ -486,7 +486,7 @@ const PAL=['#2dd4bf','#38bdf8','#a78bfa','#fbbf24','#34d399','#fb7185'];
 
 const CUSTOMER_MAP={'powerchip':'PSMC','taiwan-asia':'TASC','taiwan asia':'TASC','taiwan-asia semiconductor':'TASC','powerchip technology':'PSMC'};
 function mapCustomer(n){if(!n)return '';const l=n.toLowerCase();for(const[k,v]of Object.entries(CUSTOMER_MAP)){if(l.includes(k))return v}return n.toUpperCase().slice(0,6)}
-function guessCountry(op){
+function extraCountry(op){
   if(!op)return '—';
   const m=op.match(/GST\s+([A-Z]+)/i);
   if(m){const c=m[1].toUpperCase();
