@@ -660,7 +660,6 @@ renderCrossExclChips();
 const labels=rowF,barData=rowF.map(r=>matrix[r]._t||0),totalSum=rowF.reduce((s,r)=>s+matrix[r]._t,0),pctData=rowF.map(r=>totalSum>0?Math.round(matrix[r]._t/totalSum*100):0);
 const ctx=document.getElementById('crossChart');if(CROSS_CHART_INSTANCE){CROSS_CHART_INSTANCE.destroy()}CROSS_CHART_INSTANCE=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'건수 (Bar)',type:'bar',data:barData,backgroundColor:'rgba(45,212,191,0.6)',borderColor:'#2dd4bf',borderWidth:2,borderRadius:4,order:2},{label:'비율 % (Line)',type:'line',data:pctData,borderColor:'#fbbf24',backgroundColor:'transparent',borderWidth:3,pointBackgroundColor:'#fbbf24',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:4,tension:0.3,yAxisID:'y1',order:1}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:700,easing:'easeOutQuart'},plugins:{legend:{labels:{color:'#cbd5e1',font:{size:11},usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:function(ctx){return ctx.datasetIndex===0?'건수: '+ctx.raw:'비율: '+ctx.raw+'%'}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{display:false}},y:{position:'left',ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'rgba(255,255,255,.05)'},title:{display:true,text:'건수',color:'#94a3b8',font:{size:10}}},y1:{position:'right',ticks:{color:'#94a3b8',font:{size:9},callback:v=>v+'%'},grid:{display:false},title:{display:true,text:'비율 (%)',color:'#94a3b8',font:{size:10}},min:0,max:Math.max(100,Math.max(...pctData)*1.2)}}})}
 
-// ===== 데이터 로드 (완전 수정 버전) =====
 async function loadData(){
   const btn=document.getElementById('refreshBtn');const status=document.getElementById('status');
   const note=document.getElementById('setupNote');
@@ -691,7 +690,6 @@ async function loadData(){
   }catch(e){status.className='status err';status.textContent='❌ '+e.message;}
   btn.disabled=false;
 }
-
 // ===== 이벤트 =====
 function onSlicer(){F.country=document.getElementById('sl-country').value;F.customer=document.getElementById('sl-customer').value;F.line=document.getElementById('sl-line').value;F.process=document.getElementById('sl-process').value;F.detail=document.getElementById('sl-detail').value;F.eq=document.getElementById('sl-eq').value;F.mat=document.getElementById('sl-mat').value;F.dtFrom=document.getElementById('dtFrom').value;F.dtTo=document.getElementById('dtTo').value;render()}
 document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render()});
