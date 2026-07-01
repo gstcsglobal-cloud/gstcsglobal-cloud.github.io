@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Material Replacement Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg1:#0a1420;--bg2:#13232d;--bg3:#0f2027;
+  --a1:#2dd4bf;--a2:#38bdf8;--a3:#a78bfa;--a4:#fbbf24;--a5:#34d399;
+  --glass:rgba(255,255,255,0.06);--glassb:rgba(255,255,255,0.13);
+  --txt:#e2e8f0;--mut:#94a3b8;--ok:#34d399;--bad:#fb7185;--warn:#fbbf24;--paid:#38bdf8;--free:#34d399;
+}
+body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
+  background:linear-gradient(-45deg,var(--bg1),var(--bg2),var(--bg3),#0c1a1f);
+  background-size:400% 400%;animation:grad 22s ease infinite;min-height:100vh;padding:24px 28px}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:28px;font-weight:800;background:linear-gradient(90deg,#2dd4bf,#38bdf8,#a78bfa);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.header .sub{color:var(--mut);font-size:13px;margin-top:4px}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:9px 18px;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-grad{background:linear-gradient(90deg,var(--a1),var(--a2));color:#04252b}
+.btn-grad:hover{opacity:.85;transform:translateY(-1px)}
+.btn-glass{background:var(--glass);border:1px solid var(--glassb);color:var(--txt)}
+.btn-glass:hover{background:rgba(255,255,255,.1)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.lang-wrap{position:relative}
+.lang-btn{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);padding:9px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
+.lang-btn:hover{background:rgba(255,255,255,.1)}
+.lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:#12283a;border:1px solid var(--glassb);border-radius:14px;padding:6px;z-index:100;min-width:130px;display:none;backdrop-filter:blur(20px)}
+.lang-dropdown.open{display:block}
+.lang-item{padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600}
+.lang-item:hover{background:rgba(255,255,255,.08)}
+.status{font-size:12px;color:var(--mut);margin-bottom:16px;text-align:right}
+.status.ok{color:var(--a5)}.status.err{color:var(--bad)}
+.slicers{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:14px;padding:10px 14px;backdrop-filter:blur(12px);min-width:0}
+.slicer .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--mut);margin-bottom:7px;font-weight:700}
+.slicer select{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 10px;color:var(--txt);font-size:12px;outline:none;color-scheme:dark;max-width:160px}
+.slicer select:focus{border-color:var(--a1)}
+.slicer.search{margin-left:auto}
+.slicer.search input{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 12px;color:var(--txt);font-size:12px;width:190px;outline:none}
+.slicer.search input:focus{border-color:var(--a1)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+.cycle-toggle{display:flex;gap:4px;background:rgba(255,255,255,.05);border-radius:10px;padding:3px}
+.ct-btn{background:transparent;border:none;border-radius:8px;padding:7px 14px;color:var(--mut);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
+.ct-btn.active{background:rgba(45,212,191,.2);color:#5eead4}
+.tb-label{font-size:11px;color:var(--mut);font-weight:700}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:18px;padding:16px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s;cursor:pointer}
+.kpi:hover{transform:translateY(-4px)}
+.kpi.sel{border-color:var(--a1);box-shadow:0 0 0 1px var(--a1)}
+.kpi::before{content:'';position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;opacity:.25}
+.kpi.k1::before{background:var(--a1)}.kpi.k2::before{background:var(--paid)}
+.kpi.k3::before{background:var(--free)}.kpi.k4::before{background:var(--a4)}
+.kpi.k5::before{background:var(--a3)}.kpi.k6::before{background:var(--a2)}
+.kpi .ic{font-size:18px;margin-bottom:5px}
+.kpi .val{font-size:26px;font-weight:800;line-height:1}
+.kpi .cap{color:var(--mut);font-size:10px;margin-top:5px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px)}
+.card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
+.card-note{font-size:10px;color:var(--mut);margin-bottom:10px;font-style:italic}
+.card .cw{position:relative;height:230px}
+.tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px);margin-bottom:16px}
+.tablecard h3{font-size:14px;font-weight:700;margin-bottom:4px}
+.tbl-wrap{max-height:460px;overflow:auto;border-radius:10px}
+.tbl-wrap::-webkit-scrollbar{width:5px;height:5px}.tbl-wrap::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+th{text-align:left;padding:10px 11px;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:1px;
+  border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(10,20,32,.96);cursor:pointer;user-select:none}
+th:hover{color:var(--a1)}
+td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:hover td{background:rgba(255,255,255,.04)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.pill.paid{background:rgba(56,189,248,.18);color:#7dd3fc}
+.pill.free{background:rgba(52,211,153,.18);color:#6ee7b7}
+.empty{text-align:center;padding:40px;color:var(--mut)}
+.loading{text-align:center;padding:60px;color:var(--mut);font-size:15px}
+.setup-note{background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fde68a;padding:14px 18px;border-radius:12px;margin-bottom:16px;font-size:13px;line-height:1.6}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
+#loginOverlay{position:fixed;inset:0;z-index:99999;background:linear-gradient(-45deg,#0a1420,#13232d,#0f2027,#0c1a1f);
+  background-size:400% 400%;animation:grad 18s ease infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+#loginOverlay.hidden{display:none}
+.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#2dd4bf,#38bdf8,#a78bfa);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
+.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
+.login-box .lock{font-size:40px;margin-bottom:14px}
+.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px;color:#f5f6fa}
+.login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
+.login-box input:focus{border-color:#2dd4bf}
+.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#2dd4bf,#38bdf8);border:none;border-radius:30px;padding:13px;color:#04252b;font-size:15px;font-weight:700;cursor:pointer}
+.login-err{color:#fda4af;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
+</style>
+</head>
+<body>
+<div id="loginOverlay">
+  <div class="login-logo">GST Dashboard</div>
+  <div class="login-box">
+    <div class="lock">🔒</div>
+    <div class="ltitle">비밀번호를 입력하세요 / Enter password</div>
+    <input type="password" id="pwInput" placeholder="비밀번호 / Password" autocomplete="off">
+    <button onclick="checkPw()">로그인 / Login</button>
+    <div class="login-err" id="pwErr"></div>
+  </div>
+</div>
+
+<div class="header">
+  <div>
+    <h1 data-i="title">📦 자재 실적 대시보드</h1>
+    <div class="sub" data-i="sub">자재 교체 실적 · 사용주기 · 유무상 분석</div>
+  </div>
+  <div class="header-right">
+    <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← 메인으로</a>
+    <button class="btn btn-grad" id="refreshBtn" onclick="loadData()">🔄 <span data-i="refresh">새로고침</span></button>
+    <div class="lang-wrap">
+      <button class="lang-btn" onclick="toggleLang()">🌐 <span id="langLabel">KO</span> ▾</button>
+      <div class="lang-dropdown" id="langMenu">
+        <div class="lang-item" onclick="setLang('ko')">🇰🇷 한국어</div>
+        <div class="lang-item" onclick="setLang('en')">🇺🇸 English</div>
+        <div class="lang-item" onclick="setLang('zh')">🇨🇳 中文</div>
+        <div class="lang-item" onclick="setLang('ja')">🇯🇵 日本語</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="status" id="status">Loading...</div>
+<div class="setup-note" id="setupNote" style="display:none"></div>
+
+<div class="slicers">
+  <div class="slicer"><div class="lbl" data-i="sl_country">국가</div><select id="sl-country" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_customer">고객사</div><select id="sl-customer" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_line">라인</div><select id="sl-line" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_process">공정</div><select id="sl-process" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_detail">세부공정</div><select id="sl-detail" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_eq">설비호기</div><select id="sl-eq" onchange="onSlicer()"></select></div>
+  <div class="slicer search"><div class="lbl" data-i="sl_search">검색</div><input id="search" placeholder="자재명, 사유..."></div>
+</div>
+
+<div class="toolbar">
+  <span class="tb-label" data-i="cycle_basis">사용주기 기준:</span>
+  <div class="cycle-toggle">
+    <button class="ct-btn active" data-c="paid" onclick="setCycleBasis('paid')" data-i="cycle_paid">유상기준</button>
+    <button class="ct-btn" data-c="prev" onclick="setCycleBasis('prev')" data-i="cycle_prev">전교체일기준</button>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi k1 sel" data-f=""><div class="ic">📦</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">총 교체건수</div></div>
+  <div class="kpi k2" data-pf="유상"><div class="ic">💰</div><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">유상</div></div>
+  <div class="kpi k3" data-pf="무상"><div class="ic">🆓</div><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">무상</div></div>
+  <div class="kpi k4"><div class="ic">📊</div><div class="val" id="kp4">0%</div><div class="cap" data-i="kp4">유상비율</div></div>
+  <div class="kpi k5"><div class="ic">🔩</div><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">자재 종류</div></div>
+  <div class="kpi k6"><div class="ic">🖥️</div><div class="val" id="kp6">0</div><div class="cap" data-i="kp6">설비 대수</div></div>
+</div>
+
+<div class="grid3">
+  <div class="card"><h3 data-i="ch_mat">🔩 자재별 교체 TOP</h3><div class="card-note" data-i="note_mat">가장 많이 교체되는 자재</div><div class="cw"><canvas id="cMat"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_eq">🖥️ 설비별 교체 TOP</h3><div class="card-note" data-i="note_eq">자재 소모 많은 설비</div><div class="cw"><canvas id="cEq"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_pf">💰 유상 vs 무상</h3><div class="card-note" data-i="note_pf">유무상 비율</div><div class="cw"><canvas id="cPf"></canvas></div></div>
+</div>
+
+<div class="grid3">
+  <div class="card"><h3 data-i="ch_proc">🏭 공정별 교체</h3><div class="card-note" data-i="note_proc">공정별 자재 교체</div><div class="cw"><canvas id="cProc"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_reason">🔧 교체사유</h3><div class="card-note" data-i="note_reason">왜 교체했나</div><div class="cw"><canvas id="cReason"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_free">🆓 무상사유</h3><div class="card-note" data-i="note_free">무상 교체 원인</div><div class="cw"><canvas id="cFree"></canvas></div></div>
+</div>
+
+<div class="tablecard">
+  <h3 data-i="cyc_title">⏱️ 자재별 사용주기 분석 (평균/최소/최대)</h3>
+  <div class="card-note" data-i="cyc_note">선택한 필터 · 기준에 따른 자재별 사용일</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th data-ck="name" data-i-th="cyc_mat">자재명</th>
+        <th data-ck="cnt" class="num" data-i-th="cyc_cnt">교체건수</th>
+        <th data-ck="avg" class="num" data-i-th="cyc_avg">평균주기</th>
+        <th data-ck="min" class="num" data-i-th="cyc_min">최소</th>
+        <th data-ck="max" class="num" data-i-th="cyc_max">최대</th>
+      </tr></thead>
+      <tbody id="cycBody"><tr><td colspan="5" class="loading">⏳</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="tablecard">
+  <h3>📋 <span data-i="tbl_title">자재 교체 상세</span> (<span id="tblCnt">0</span>)</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th data-k="date" data-i-th="th_date">실적일자</th>
+        <th data-k="customer" data-i-th="th_customer">고객사</th>
+        <th data-k="line">LINE</th><th data-k="process" data-i-th="th_process">공정</th>
+        <th data-k="detail" data-i-th="th_detail">세부공정</th><th data-k="eq" data-i-th="th_eq">설비호기</th>
+        <th data-k="mat" data-i-th="th_mat">자재명</th><th data-k="qty" class="num" data-i-th="th_qty">수량</th>
+        <th data-k="reason" data-i-th="th_reason">교체사유</th><th data-k="pf" data-i-th="th_pf">유/무상</th>
+        <th data-k="cycle" class="num" data-i-th="th_cycle">사용일</th>
+      </tr></thead>
+      <tbody id="tbody"><tr><td colspan="11" class="loading">⏳ Loading...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<script>
+(function(){
+  const PASSWORD='gst1234!';
+  function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
+  window.checkPw=function(){
+    const v=document.getElementById('pwInput').value;
+    if(v===PASSWORD){try{sessionStorage.setItem('gst_auth','1');}catch(e){}document.getElementById('loginOverlay').classList.add('hidden');}
+    else{document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';document.getElementById('pwInput').value='';}
+  };
+  function init(){const ov=document.getElementById('loginOverlay');if(!ov)return;
+    if(isAuthed()){ov.classList.add('hidden');return;}
+    const inp=document.getElementById('pwInput');inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();});setTimeout(()=>inp.focus(),100);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+
+const SHEET_URL='';
+
+const C={op:1,customer:2,line:5,process:7,detail:8,mainEq:9,eq:10,chamber:11,sn:12,model:14,
+  matCode:15,unit:18,assy:20,part:20,qty:22,matName:23,spec:24,reason:25,
+  prevPaidDate:26,prevDate:27,workDate:28,daysPaid:29,daysPrev:30,pf:31,freeReason:32,price:34};
+const PAL=['#2dd4bf','#38bdf8','#a78bfa','#fbbf24','#34d399','#fb7185','#60a5fa','#c084fc','#4ade80','#f472b6'];
+
+const T={
+  ko:{title:'📦 자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
+    sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',search_ph:'자재명, 사유 검색...',
+    cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',
+    kp1:'총 교체건수',kp2:'유상',kp3:'무상',kp4:'유상비율',kp5:'자재 종류',kp6:'설비 대수',
+    ch_mat:'🔩 자재별 교체 TOP',note_mat:'가장 많이 교체되는 자재',
+    ch_eq:'🖥️ 설비별 교체 TOP',note_eq:'자재 소모 많은 설비',
+    ch_pf:'💰 유상 vs 무상',note_pf:'유무상 비율',
+    ch_proc:'🏭 공정별 교체',note_proc:'공정별 자재 교체',
+    ch_reason:'🔧 교체사유',note_reason:'왜 교체했나',
+    ch_free:'🆓 무상사유',note_free:'무상 교체 원인',
+    cyc_title:'⏱️ 자재별 사용주기 분석 (평균/최소/최대)',cyc_note:'선택한 필터·기준에 따른 자재별 사용일',
+    cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',
+    tbl_title:'자재 교체 상세',
+    th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',
+    all:'전체',no_data:'데이터 없음',days:'일',setup:'⚠️ 구글시트 CSV 링크가 설정되지 않았습니다. 코드에서 SHEET_URL 값을 채워주세요.'},
+  en:{title:'📦 Material Replacement Dashboard',sub:'Replacement records · lifecycle · paid/free analysis',back:'← Main',refresh:'Refresh',loading:'Loading...',
+    sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-process',sl_eq:'Equipment',sl_search:'Search',search_ph:'Material, reason...',
+    cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',
+    kp1:'Total',kp2:'Paid',kp3:'Free',kp4:'Paid %',kp5:'Material Types',kp6:'Equipment',
+    ch_mat:'🔩 Top Materials',note_mat:'Most replaced materials',
+    ch_eq:'🖥️ Top Equipment',note_eq:'Equipment using most parts',
+    ch_pf:'💰 Paid vs Free',note_pf:'Paid/free ratio',
+    ch_proc:'🏭 By Process',note_proc:'Replacement per process',
+    ch_reason:'🔧 Reasons',note_reason:'Why replaced',
+    ch_free:'🆓 Free Reasons',note_free:'Free replacement cause',
+    cyc_title:'⏱️ Material Lifecycle (avg/min/max)',cyc_note:'Usage days by filter & basis',
+    cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',
+    tbl_title:'Replacement Detail',
+    th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',
+    all:'All',no_data:'No data',days:'d',setup:'⚠️ Google Sheet CSV link not set. Fill in SHEET_URL in the code.'},
+  zh:{title:'📦 材料实绩仪表板',sub:'材料更换实绩·使用周期·有偿无偿分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
+    sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',search_ph:'材料,原因...',
+    cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',
+    kp1:'总更换数',kp2:'有偿',kp3:'无偿',kp4:'有偿比率',kp5:'材料种类',kp6:'设备数',
+    ch_mat:'🔩 材料更换TOP',note_mat:'最常更换材料',
+    ch_eq:'🖥️ 设备更换TOP',note_eq:'耗材最多设备',
+    ch_pf:'💰 有偿vs无偿',note_pf:'有偿无偿比例',
+    ch_proc:'🏭 各工艺更换',note_proc:'各工艺材料更换',
+    ch_reason:'🔧 更换原因',note_reason:'为何更换',
+    ch_free:'🆓 无偿原因',note_free:'无偿更换原因',
+    cyc_title:'⏱️ 材料使用周期(平均/最小/最大)',cyc_note:'按筛选与基准的使用天数',
+    cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',
+    tbl_title:'材料更换明细',
+    th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',
+    all:'全部',no_data:'无数据',days:'天',setup:'⚠️ 未设置Google表格CSV链接。请在代码中填写SHEET_URL。'},
+  ja:{title:'📦 資材実績ダッシュボード',sub:'資材交換実績·使用周期·有償無償分析',back:'← メイン',refresh:'更新',loading:'読み込み中...',
+    sl_country:'国',sl_customer:'顧客',sl_line:'ライン',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',search_ph:'資材,理由...',
+    cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',
+    kp1:'総交換件数',kp2:'有償',kp3:'無償',kp4:'有償比率',kp5:'資材種類',kp6:'設備台数',
+    ch_mat:'🔩 資材別交換TOP',note_mat:'最も交換される資材',
+    ch_eq:'🖥️ 設備別交換TOP',note_eq:'資材消耗の多い設備',
+    ch_pf:'💰 有償vs無償',note_pf:'有償無償比率',
+    ch_proc:'🏭 工程別交換',note_proc:'工程別資材交換',
+    ch_reason:'🔧 交換理由',note_reason:'なぜ交換',
+    ch_free:'🆓 無償理由',note_free:'無償交換原因',
+    cyc_title:'⏱️ 資材別使用周期(平均/最小/最大)',cyc_note:'フィルタ·基準別の使用日数',
+    cyc_mat:'資材名',cyc_cnt:'交換件数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',
+    tbl_title:'資材交換詳細',
+    th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',
+    all:'全体',no_data:'データなし',days:'日',setup:'⚠️ Google SheetのCSVリンクが未設定です。コードのSHEET_URLを入力してください。'}
+};
+let LANG='ko', DATA=[], CHARTS={}, sortK='date', sortAsc=false, cycSortK='cnt', cycSortAsc=false;
+let CYCLE_BASIS='paid';
+const F={country:'',customer:'',line:'',process:'',detail:'',eq:'',pf:'',q:''};
+try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
+
+Chart.defaults.color='#94a3b8';
+Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+
+function t(k){return (T[LANG]||T.ko)[k]||k;}
+function applyLang(){
+  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
+  document.querySelectorAll('[data-i-th]').forEach(el=>{el.textContent=t(el.getAttribute('data-i-th'));});
+  document.getElementById('langLabel').textContent=LANG.toUpperCase();
+  document.getElementById('search').placeholder=t('search_ph');
+}
+function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(DATA.length){rebuildFilters();render();}document.getElementById('langMenu').classList.remove('open');}
+function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');});
+
+function toDate(v){
+  if(!v||v==='')return null;
+  const n=Number(v);
+  if(!isNaN(n)&&n>20000&&n<80000)return new Date(Date.UTC(1899,11,30)+n*86400000);
+  const s=String(v).trim();const m=s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if(m)return new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));
+  const d=new Date(s);return isNaN(d)?null:d;
+}
+function fmtDate(d){return d?d.toISOString().slice(0,10):'—';}
+function cv(r,k){const v=r[C[k]];return(v!==undefined&&v!==null&&v!=='')?String(v).trim():'';}
+
+function guessCountry(op){
+  if(!op)return '—';
+  const m=op.match(/GST\s+([A-Z]+)/i);
+  if(m){const c=m[1].toUpperCase();
+    const map={TAIWAN:'TAIWAN',KOREA:'KOREA',CHINA:'CHINA',JAPAN:'JAPAN',US:'USA',USA:'USA',SINGAPORE:'SINGAPORE'};
+    return map[c]||c;}
+  return op;
+}
+function shortCustomer(name){
+  if(!name)return '—';
+  const up=name.toUpperCase();
+  if(up.includes('MICRON'))return 'MICRON';
+  if(up.includes('TAIWAN-ASIA')||up.includes('ASIA SEMICON'))return 'TASC';
+  if(up.includes('POWERCHIP'))return 'POWERCHIP';
+  if(up.includes('WINBOND'))return 'WINBOND';
+  if(up.includes('TSMC'))return 'TSMC';
+  if(up.includes('SAMSUNG'))return 'SAMSUNG';
+  if(up.includes('HYNIX'))return 'SK HYNIX';
+  return name.split(/[\s,\.(]/)[0].toUpperCase();
+}
+
+async function loadData(){
+  const btn=document.getElementById('refreshBtn');const status=document.getElementById('status');
+  const note=document.getElementById('setupNote');
+  if(!SHEET_URL){
+    note.style.display='block'; note.textContent=t('setup');
+    status.className='status err'; status.textContent='⚠️ SHEET_URL';
+    return;
+  }
+  note.style.display='none';
+  btn.disabled=true;status.className='status';status.textContent=t('loading');
+  try{
+    const res=await fetch(SHEET_URL+(SHEET_URL.includes('?')?'&':'?')+'t='+Date.now());
+    const text=await res.text();
+    const rows=Papa.parse(text,{skipEmptyLines:true}).data.slice(1);
+    DATA=rows.filter(r=>cv(r,'matName')).map(r=>({
+      country:guessCountry(cv(r,'op')),customer:shortCustomer(cv(r,'customer')),
+      line:cv(r,'line'),process:cv(r,'process'),detail:cv(r,'detail'),
+      eq:cv(r,'eq')||cv(r,'mainEq'),sn:cv(r,'sn'),model:cv(r,'model'),
+      matName:cv(r,'matName'),matCode:cv(r,'matCode'),spec:cv(r,'spec'),
+      qty:Number(r[C.qty])||1,reason:cv(r,'reason'),
+      workDate:toDate(r[C.workDate]),
+      daysPaid:Number(r[C.daysPaid])||null,daysPrev:Number(r[C.daysPrev])||null,
+      pf:cv(r,'pf'),freeReason:cv(r,'freeReason')
+    }));
+    status.className='status ok';
+    status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+DATA.length;
+    rebuildFilters();render();
+  }catch(e){status.className='status err';status.textContent='❌ '+e.message;}
+  btn.disabled=false;
+}
+
+function uniq(key,base){return Array.from(new Set((base||DATA).map(x=>x[key]).filter(Boolean))).sort();}
+function fillSelect(id,fkey,vals){
+  const s=document.getElementById(id);const cur=F[fkey];
+  s.innerHTML='';
+  const optAll=document.createElement('option');optAll.value='';optAll.textContent=t('all');s.appendChild(optAll);
+  vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o);});
+  s.value=vals.includes(cur)?cur:'';
+  if(!vals.includes(cur))F[fkey]='';
+}
+function rebuildFilters(){
+  fillSelect('sl-country','country',uniq('country'));
+  fillSelect('sl-customer','customer',uniq('customer'));
+  fillSelect('sl-line','line',uniq('line'));
+  fillSelect('sl-process','process',uniq('process'));
+  fillSelect('sl-detail','detail',uniq('detail'));
+  fillSelect('sl-eq','eq',uniq('eq'));
+}
+function onSlicer(){
+  F.country=document.getElementById('sl-country').value;
+  F.customer=document.getElementById('sl-customer').value;
+  F.line=document.getElementById('sl-line').value;
+  F.process=document.getElementById('sl-process').value;
+  F.detail=document.getElementById('sl-detail').value;
+  F.eq=document.getElementById('sl-eq').value;
+  render();
+}
+document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
+
+function setCycleBasis(b){
+  CYCLE_BASIS=b;
+  document.querySelectorAll('.ct-btn').forEach(x=>x.classList.toggle('active',x.dataset.c===b));
+  render();
+}
+
+function filt(){
+  return DATA.filter(x=>{
+    if(F.country&&x.country!==F.country)return false;
+    if(F.customer&&x.customer!==F.customer)return false;
+    if(F.line&&x.line!==F.line)return false;
+    if(F.process&&x.process!==F.process)return false;
+    if(F.detail&&x.detail!==F.detail)return false;
+    if(F.eq&&x.eq!==F.eq)return false;
+    if(F.pf&&x.pf!==F.pf)return false;
+    if(F.q){const s=`${x.matName} ${x.reason} ${x.eq} ${x.model} ${x.freeReason} ${x.matCode}`.toLowerCase();if(!s.includes(F.q))return false;}
+    return true;
+  });
+}
+function countBy(arr,key,top){const m={};arr.forEach(x=>{const k=x[key]||'N/A';if(k&&k!=='N/A')m[k]=(m[k]||0)+1;});
+  let e=Object.entries(m).sort((a,b)=>b[1]-a[1]);if(top)e=e.slice(0,top);return e;}
+function sumQtyBy(arr,key,top){const m={};arr.forEach(x=>{const k=x[key]||'N/A';if(k&&k!=='N/A')m[k]=(m[k]||0)+(x.qty||1);});
+  let e=Object.entries(m).sort((a,b)=>b[1]-a[1]);if(top)e=e.slice(0,top);return e;}
+
+function animVal(el,target,suffix){const start=parseFloat(el.dataset.v||0);const t0=performance.now();
+  function step(t){const p=Math.min((t-t0)/500,1);const cur=start+(target-start)*(1-Math.pow(1-p,3));
+    el.textContent=Math.round(cur)+(suffix||'');if(p<1)requestAnimationFrame(step);else el.dataset.v=target;}
+  requestAnimationFrame(step);}
+
+function mkBar(id,labels,data,color,horizontal){
+  const ctx=document.getElementById(id);
+  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:5}]},
+    options:{indexAxis:horizontal?'y':'x',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#94a3b8',font:{size:10},precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}};
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;CHARTS[id].options.indexAxis=horizontal?'y':'x';CHARTS[id].update();return;}
+  CHARTS[id]=new Chart(ctx,cfg);
+}
+function mkDonut(id,labels,data,colors){
+  const ctx=document.getElementById(id);
+  const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors||PAL,borderColor:'rgba(0,0,0,.15)',borderWidth:2,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'right',labels:{color:'#cbd5e1',font:{size:10},padding:7,usePointStyle:true,pointStyle:'circle'}}},animation:{animateScale:true}}};
+  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;if(colors)CHARTS[id].data.datasets[0].backgroundColor=colors;CHARTS[id].update();return;}
+  CHARTS[id]=new Chart(ctx,cfg);
+}
+
+function cycleDays(x){return CYCLE_BASIS==='paid'?x.daysPaid:x.daysPrev;}
+
+function render(){
+  const f=filt();
+  const paid=f.filter(x=>x.pf==='유상').length;
+  const free=f.filter(x=>x.pf==='무상').length;
+  const pct=f.length?Math.round(paid/f.length*100):0;
+  animVal(document.getElementById('kp1'),f.length);
+  animVal(document.getElementById('kp2'),paid);
+  animVal(document.getElementById('kp3'),free);
+  document.getElementById('kp4').textContent=pct+'%';
+  animVal(document.getElementById('kp5'),uniq('matName',f).length);
+  animVal(document.getElementById('kp6'),uniq('eq',f).length);
+
+  const mats=sumQtyBy(f,'matName',12);
+  mkBar('cMat',mats.map(x=>x[0]),mats.map(x=>x[1]),'#2dd4bf',true);
+  const eqs=countBy(f,'eq',12);
+  mkBar('cEq',eqs.map(x=>x[0]),eqs.map(x=>x[1]),'#38bdf8',true);
+  mkDonut('cPf',[t('kp2'),t('kp3')],[paid,free],['#38bdf8','#34d399']);
+  const procs=countBy(f,'process',10);
+  mkBar('cProc',procs.map(x=>x[0]),procs.map(x=>x[1]),'#a78bfa',false);
+  const reasons=countBy(f,'reason',8);
+  mkDonut('cReason',reasons.map(x=>x[0]),reasons.map(x=>x[1]));
+  const freeReasons=countBy(f.filter(x=>x.pf==='무상'),'freeReason',6);
+  mkDonut('cFree',freeReasons.map(x=>x[0]),freeReasons.map(x=>x[1]));
+
+  document.querySelectorAll('.kpi').forEach(k=>{
+    k.onclick=()=>{
+      if(k.hasAttribute('data-pf')){ F.pf=(F.pf===k.dataset.pf)?'':k.dataset.pf; }
+      else if(k.hasAttribute('data-f')){ F.pf=''; }
+      else return;
+      document.querySelectorAll('.kpi').forEach(x=>x.classList.remove('sel'));
+      if(F.pf)k.classList.add('sel'); else document.querySelector('.kpi.k1').classList.add('sel');
+      render();
+    };
+  });
+
+  renderCycleTable(f);
+  renderDetailTable(f);
+}
+
+function renderCycleTable(f){
+  const g={};
+  f.forEach(x=>{
+    const d=cycleDays(x);
+    if(d==null||isNaN(d)||d<=0)return;
+    if(!g[x.matName])g[x.matName]={name:x.matName,arr:[]};
+    g[x.matName].arr.push(d);
+  });
+  let stats=Object.values(g).map(o=>({
+    name:o.name,cnt:o.arr.length,
+    avg:Math.round(o.arr.reduce((a,b)=>a+b,0)/o.arr.length),
+    min:Math.min(...o.arr),max:Math.max(...o.arr)
+  }));
+  stats.sort((a,b)=>{
+    let x=a[cycSortK],y=b[cycSortK];
+    if(cycSortK==='name')return cycSortAsc?(''+x).localeCompare(''+y):(''+y).localeCompare(''+x);
+    return cycSortAsc?x-y:y-x;
+  });
+  const tb=document.getElementById('cycBody');
+  if(!stats.length){tb.innerHTML=`<tr><td colspan="5" class="empty">${t('no_data')}</td></tr>`;return;}
+  const unit=t('days');
+  tb.innerHTML=stats.map(s=>`<tr>
+    <td>${s.name}</td><td class="num">${s.cnt}</td>
+    <td class="num"><b style="color:#5eead4">${s.avg}${unit}</b></td>
+    <td class="num">${s.min}${unit}</td><td class="num">${s.max}${unit}</td></tr>`).join('');
+}
+
+function renderDetailTable(f){
+  document.getElementById('tblCnt').textContent=f.length;
+  let d=[...f];
+  d.sort((a,b)=>{
+    let x,y;
+    if(sortK==='date'){x=a.workDate?a.workDate.getTime():0;y=b.workDate?b.workDate.getTime():0;return sortAsc?x-y:y-x;}
+    if(sortK==='qty'){return sortAsc?a.qty-b.qty:b.qty-a.qty;}
+    if(sortK==='cycle'){x=cycleDays(a)||0;y=cycleDays(b)||0;return sortAsc?x-y:y-x;}
+    const map={customer:'customer',line:'line',process:'process',detail:'detail',eq:'eq',mat:'matName',reason:'reason',pf:'pf'};
+    x=a[map[sortK]]||'';y=b[map[sortK]]||'';
+    return sortAsc?(''+x).localeCompare(''+y,'ko',{numeric:true}):(''+y).localeCompare(''+x,'ko',{numeric:true});
+  });
+  const tbody=document.getElementById('tbody');
+  if(!d.length){tbody.innerHTML=`<tr><td colspan="11" class="empty">${t('no_data')}</td></tr>`;return;}
+  const unit=t('days');
+  tbody.innerHTML=d.slice(0,1000).map(x=>{
+    const cd=cycleDays(x);
+    return `<tr>
+    <td>${fmtDate(x.workDate)}</td><td>${x.customer||'—'}</td><td>${x.line||'—'}</td>
+    <td>${x.process||'—'}</td><td>${x.detail||'—'}</td><td>${x.eq||'—'}</td>
+    <td>${x.matName||'—'}</td><td class="num">${x.qty||1}</td><td>${x.reason||'—'}</td>
+    <td><span class="pill ${x.pf==='유상'?'paid':'free'}">${x.pf||'—'}</span></td>
+    <td class="num">${cd!=null?cd+unit:'—'}</td></tr>`;
+  }).join('');
+}
+
+document.addEventListener('click',e=>{
+  const th=e.target.closest('th[data-k]');
+  if(th){const k=th.dataset.k;if(sortK===k)sortAsc=!sortAsc;else{sortK=k;sortAsc=(k!=='date');}render();return;}
+  const cth=e.target.closest('th[data-ck]');
+  if(cth){const k=cth.dataset.ck;if(cycSortK===k)cycSortAsc=!cycSortAsc;else{cycSortK=k;cycSortAsc=(k==='name');}render();return;}
+});
+
+applyLang();
+loadData();
+</script>
+</body>
+</html>
