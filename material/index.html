@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Material Replacement Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -67,7 +68,9 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
 .card-note{font-size:10px;color:var(--mut);margin-bottom:10px;font-style:italic}
 .excl-box{margin-bottom:10px}
-.excl-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.excl-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;max-height:54px;overflow-y:auto}
+.excl-chips::-webkit-scrollbar{width:4px}
+.excl-chips::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
 .excl-chip{background:rgba(251,113,133,.15);border:1px solid rgba(251,113,133,.3);color:#fda4af;
   padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px}
 .excl-chip:hover{background:rgba(251,113,133,.25)}
@@ -159,7 +162,12 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="slicer"><div class="lbl" data-i="sl_process">공정</div><select id="sl-process" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_detail">세부공정</div><select id="sl-detail" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_eq">설비호기</div><select id="sl-eq" onchange="onSlicer()"></select></div>
-  <div class="slicer search"><div class="lbl" data-i="sl_search">검색</div><input id="search" placeholder="자재명, 사유..."></div>
+  <div class="slicer search"><div class="slicer"><div class="lbl">자재명</div><select id="sl-mat" onchange="onSlicer()"></select></div>
+<div class="slicer"><div class="lbl">기간</div>
+  <input type="date" id="dtFrom" onchange="onSlicer()" style="background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 8px;color:#e2e8f0;font-size:11px;outline:none;color-scheme:dark;width:118px">
+  ~
+  <input type="date" id="dtTo" onchange="onSlicer()" style="background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 8px;color:#e2e8f0;font-size:11px;outline:none;color-scheme:dark;width:118px">
+</div><div class="lbl" data-i="sl_search">검색</div><input id="search" placeholder="자재명, 사유..."></div>
 </div>
 
 <div class="toolbar">
@@ -183,6 +191,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="card"><h3 data-i="ch_mat">🔩 자재별 교체 TOP</h3><div class="card-note" data-i="note_mat">가장 많이 교체되는 자재</div>
     <div class="excl-box">
       <div class="excl-chips" id="exclChips"></div>
+<button onclick="clearExcl()" style="background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:20px;padding:3px 10px;color:#94a3b8;font-size:10px;font-weight:600;cursor:pointer;margin-bottom:6px">전체 지우기</button>
       <div class="excl-dd-wrap">
         <input type="text" id="exclSearch" placeholder="제외할 자재 검색..." onclick="toggleExclDD(true)" oninput="renderExclOptions()">
         <div class="excl-dd" id="exclDD"></div>
@@ -326,7 +335,7 @@ function toggleExcl(name,checked){
   if(checked){ if(!EXCL_MAT.includes(name))EXCL_MAT.push(name); }
   else{ EXCL_MAT=EXCL_MAT.filter(n=>n!==name); }
   renderExclChips(); renderChartsOnly();
-}
+}function clearExcl(){ EXCL_MAT=[]; renderExclChips(); renderExclOptions(); renderChartsOnly(); }
 function removeExclChip(name){
   EXCL_MAT=EXCL_MAT.filter(n=>n!==name);
   renderExclChips(); renderExclOptions(); renderChartsOnly();
@@ -358,7 +367,7 @@ function renderChartsOnly(){
   const mats=sumQtyBy(matF,'matName',12);
   mkBar('cMat',mats.map(x=>x[0]),mats.map(x=>x[1]),'#2dd4bf',true);
 }
-const F={country:'',customer:'',line:'',process:'',detail:'',eq:'',pf:'',q:''};
+const F={country:'',customer:'',line:'',process:'',detail:'',eq:'',mat:'',dtFrom:'',dtTo:'',pf:'',q:''};
 try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
 
 Chart.defaults.color='#94a3b8';
@@ -454,6 +463,7 @@ function rebuildFilters(){
   fillSelect('sl-process','process',uniq('process'));
   fillSelect('sl-detail','detail',uniq('detail'));
   fillSelect('sl-eq','eq',uniq('eq'));
+  fillSelect('sl-mat','mat',uniq('matName'));
 }
 function onSlicer(){
   F.country=document.getElementById('sl-country').value;
@@ -462,6 +472,9 @@ function onSlicer(){
   F.process=document.getElementById('sl-process').value;
   F.detail=document.getElementById('sl-detail').value;
   F.eq=document.getElementById('sl-eq').value;
+  if(F.mat&&x.matName!==F.mat)return false;
+    if(F.dtFrom&&(!x.workDate||fmtDate(x.workDate)<F.dtFrom))return false;
+    if(F.dtTo&&(!x.workDate||fmtDate(x.workDate)>F.dtTo))return false;
   render();
 }
 document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
