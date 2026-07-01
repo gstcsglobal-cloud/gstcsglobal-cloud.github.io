@@ -661,44 +661,40 @@ const labels=rowF,barData=rowF.map(r=>matrix[r]._t||0),totalSum=rowF.reduce((s,r
 const ctx=document.getElementById('crossChart');if(CROSS_CHART_INSTANCE){CROSS_CHART_INSTANCE.destroy()}CROSS_CHART_INSTANCE=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'건수 (Bar)',type:'bar',data:barData,backgroundColor:'rgba(45,212,191,0.6)',borderColor:'#2dd4bf',borderWidth:2,borderRadius:4,order:2},{label:'비율 % (Line)',type:'line',data:pctData,borderColor:'#fbbf24',backgroundColor:'transparent',borderWidth:3,pointBackgroundColor:'#fbbf24',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:4,tension:0.3,yAxisID:'y1',order:1}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:700,easing:'easeOutQuart'},plugins:{legend:{labels:{color:'#cbd5e1',font:{size:11},usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:function(ctx){return ctx.datasetIndex===0?'건수: '+ctx.raw:'비율: '+ctx.raw+'%'}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{display:false}},y:{position:'left',ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'rgba(255,255,255,.05)'},title:{display:true,text:'건수',color:'#94a3b8',font:{size:10}}},y1:{position:'right',ticks:{color:'#94a3b8',font:{size:9},callback:v=>v+'%'},grid:{display:false},title:{display:true,text:'비율 (%)',color:'#94a3b8',font:{size:10}},min:0,max:Math.max(100,Math.max(...pctData)*1.2)}}})}
 
 // ===== 데이터 로드 (완전 수정 버전) =====
-async function loadData() {
+async function loadData(){
   const status = document.getElementById('status');
   const btn = document.getElementById('refreshBtn');
-  if (btn) btn.disabled = true;
-  status.textContent = '⏳ 데이터 로딩 중...';
+  btn.disabled = true;
+  status.textContent = '⏳ ' + t('loading');
   
   try {
-    console.log('===== [GST] 데이터 로드 시작 =====');
+    console.log('===== [GST 디버그] 데이터 로드 시작 =====');
     
-    // 🔥 타임아웃 추가 (30초)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    // 1. URL 확인
+    console.log('[1] SHEET_URL:', SHEET_URL);
     
-    let res;
-    try {
-      res = await fetch(SHEET_URL + '&t=' + Date.now(), { signal: controller.signal });
-      clearTimeout(timeoutId);
-    } catch (fetchErr) {
-      clearTimeout(timeoutId);
-      if (fetchErr.name === 'AbortError') {
-        throw new Error('요청 시간 초과 (30초). 네트워크 또는 CORS를 확인하세요.');
-      }
-      throw fetchErr;
-    }
+    // 2. fetch 요청
+    const res = await fetch(SHEET_URL + '&t=' + Date.now());
+    console.log('[2] fetch 응답 상태:', res.status, res.statusText);
     
-    console.log('[GST] fetch 응답:', res.status);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) throw new Error('HTTP 오류: ' + res.status);
     
     const text = await res.text();
-    console.log('[GST] CSV 크기:', text.length, 'bytes');
+    console.log('[3] CSV 텍스트 길이:', text.length, 'bytes');
+    console.log('[3] CSV 첫 300자:', text.substring(0, 300));
     
+    // 3. Papa Parse로 파싱
     const parsed = Papa.parse(text, { skipEmptyLines: true, header: false });
-    const rows = parsed.data.slice(1);
-    const header = parsed.data[0] || [];
+    console.log('[4] 파싱된 전체 행 수:', parsed.data.length);
     
-    console.log('[GST] 헤더:', header);
-    console.log('[GST] 데이터 행 수:', rows.length);
-
+    if (parsed.data.length < 2) {
+      throw new Error('CSV 데이터가 2행 미만입니다. (헤더+데이터)');
+    }
+    
+    const header = parsed.data[0] || [];
+    console.log('[5] 헤더 (첫 행):', header);
+    
+    // 4. 컬럼 인덱스 찾기 (디버깅 강화)
     function findIdx(keywords) {
       for (let k of keywords) {
         const idx = header.findIndex(h => String(h).toLowerCase().includes(k.toLowerCase()));
@@ -710,7 +706,7 @@ async function loadData() {
       console.log('  ❌ 못 찾음:', keywords);
       return -1;
     }
-
+    
     const map = {
       op: findIdx(['작업장', 'op', 'plant']),
       customer: findIdx(['고객', 'customer', 'client']),
@@ -721,86 +717,90 @@ async function loadData() {
       eq: findIdx(['호기', 'eq', 'equip', '설비']),
       qty: findIdx(['수량', 'qty', 'quantity']),
       matName: findIdx(['자재명', 'material name', '품명']),
-      matCode: findIdx(['자재코드', 'material code', '품번']),
       reason: findIdx(['사유', 'reason', 'cause']),
       workDate: findIdx(['일자', 'date', 'day']),
       daysPaid: findIdx(['유상', 'paid']),
       daysPrev: findIdx(['전교체', 'prev']),
-      pf: findIdx(['유무상', 'pf', 'paid/free', '구분']),
+      pf: findIdx(['유무상', 'pf', 'paid/free']),
       freeReason: findIdx(['무상사유', 'free reason'])
     };
-
-    const mapped = [];
+    console.log('[6] 최종 매핑 결과:', map);
     
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
-      const hasData = Object.values(map).some(idx => idx >= 0 && r[idx] && String(r[idx]).trim() !== '');
-      if (!hasData) continue;
-      
-      const parseNum = (idx) => {
-        if (idx < 0) return null;
-        const v = r[idx];
-        if (v === undefined || v === null || String(v).trim() === '') return null;
-        const n = Number(v);
-        return isNaN(n) ? null : n;
-      };
-      
-      const opVal = map.op >= 0 ? String(r[map.op] || '') : '';
-      const custVal = map.customer >= 0 ? String(r[map.customer] || '') : '';
-      const matNameVal = map.matName >= 0 ? String(r[map.matName] || '').trim() : '';
-      
-      if (!matNameVal) continue;
-      
-      const pfVal = map.pf >= 0 ? String(r[map.pf] || '').trim() : '';
-      
-      mapped.push({
-        country: guessCountry(opVal),
-        customer: mapCustomer(custVal),
-        line: map.line >= 0 ? String(r[map.line] || '').trim() : '',
-        process: map.process >= 0 ? String(r[map.process] || '').trim() : '',
-        detail: map.detail >= 0 ? String(r[map.detail] || '').trim() : '',
-        eq: map.eq >= 0 ? String(r[map.eq] || '').trim() : (map.mainEq >= 0 ? String(r[map.mainEq] || '').trim() : ''),
-        matName: matNameVal,
-        matCode: map.matCode >= 0 ? String(r[map.matCode] || '').trim() : '',
-        qty: parseNum(map.qty) || 1,
-        reason: map.reason >= 0 ? String(r[map.reason] || '').trim() : '',
-        workDate: map.workDate >= 0 ? toDate(r[map.workDate]) : null,
-        daysPaid: parseNum(map.daysPaid),
-        daysPrev: parseNum(map.daysPrev),
-        pf: pfVal,
-        freeReason: map.freeReason >= 0 ? String(r[map.freeReason] || '').trim() : '',
-        year: map.workDate >= 0 ? (toDate(r[map.workDate]) ? toDate(r[map.workDate]).getFullYear() : null) : null,
-        month: map.workDate >= 0 ? (toDate(r[map.workDate]) ? toDate(r[map.workDate]).getMonth() + 1 : null) : null
-      });
+    // 5. 데이터 행 처리
+    const rows = parsed.data.slice(1);
+    console.log('[7] 데이터 행 수 (헤더 제외):', rows.length);
+    
+    if (rows.length === 0) {
+      throw new Error('데이터 행이 없습니다. CSV가 비어있거나 헤더만 있습니다.');
     }
-
-    DATA = mapped;
     
-    const pfValues = [...new Set(DATA.map(x => x.pf).filter(Boolean))];
-    console.log('[GST] 유무상 컬럼 값들:', pfValues);
-    console.log('[GST] 유상 데이터 수:', DATA.filter(x => x.pf === '유상').length);
-    console.log('[GST] 무상 데이터 수:', DATA.filter(x => x.pf === '무상').length);
-    console.log('[GST] 총 데이터 수:', DATA.length);
+    // 6. 숫자 파싱 헬퍼
+    const parseNum = (idx) => {
+      if (idx < 0) return null;
+      const v = rows[0][idx]; // 첫 행으로 테스트
+      if (v === undefined || v === null || String(v).trim() === '') return null;
+      const n = Number(v);
+      return isNaN(n) ? null : n;
+    };
+    
+    // 7. 실제 데이터 매핑 (필터링을 위해 matName이 있는 행만)
+    const mapped = rows
+      .filter(r => r.length > Math.max(...Object.values(map).filter(v => v >= 0)))
+      .map(r => {
+        const opVal = map.op >= 0 ? String(r[map.op] || '') : '';
+        const custVal = map.customer >= 0 ? String(r[map.customer] || '') : '';
+        return {
+          country: extractCountry(opVal),
+          customer: mapCustomer(custVal),
+          line: map.line >= 0 ? String(r[map.line] || '') : '',
+          process: map.process >= 0 ? String(r[map.process] || '') : '',
+          detail: map.detail >= 0 ? String(r[map.detail] || '') : '',
+          eq: map.eq >= 0 ? String(r[map.eq] || '') : (map.mainEq >= 0 ? String(r[map.mainEq] || '') : ''),
+          matName: map.matName >= 0 ? String(r[map.matName] || '') : '',
+          qty: parseNum(map.qty) || 1,
+          reason: map.reason >= 0 ? String(r[map.reason] || '') : '',
+          workDate: map.workDate >= 0 ? toDate(r[map.workDate]) : null,
+          daysPaid: parseNum(map.daysPaid),
+          daysPrev: parseNum(map.daysPrev),
+          pf: map.pf >= 0 ? String(r[map.pf] || '') : '',
+          freeReason: map.freeReason >= 0 ? String(r[map.freeReason] || '') : ''
+        };
+      });
+    
+    console.log('[8] 매핑 전 데이터 수:', mapped.length);
+    
+    // 8. 자재명이 있는 데이터만 필터링
+    DATA = mapped.filter(x => x.matName && x.matName.trim() !== '');
+    console.log('[9] 최종 DATA 건수:', DATA.length);
     
     if (DATA.length === 0) {
-      status.textContent = '⚠️ 데이터가 없습니다. 헤더 매핑을 확인하세요.';
+      console.warn('[경고] DATA가 0건입니다. 헤더 매핑을 확인하세요.');
       status.className = 'status err';
-      if (btn) btn.disabled = false;
+      status.textContent = '⚠️ 데이터 0건. 헤더명을 확인하세요 (콘솔 로그 참조)';
+      btn.disabled = false;
       return;
     }
     
-    status.textContent = '✅ Load OK (' + DATA.length + '건)';
-    status.className = 'status ok';
+    // 9. 샘플 데이터 출력
+    console.log('[10] 샘플 데이터 (첫 3건):', DATA.slice(0, 3));
     
+    // 10. 성공
+    status.className = 'status ok';
+    status.textContent = '✅ ' + new Date().toLocaleString('ko-KR') + ' · ' + DATA.length + '건';
     rebuildFilters();
     isFirstRender = true;
     render();
     
   } catch (e) {
-    console.error('[GST] 오류:', e);
-    status.textContent = '❌ ' + e.message;
+    console.error('[ERROR] loadData 실패:', e);
     status.className = 'status err';
+    status.textContent = '❌ ' + e.message;
+    if (e.message.includes('Failed to fetch')) {
+      status.textContent = '❌ 네트워크 오류: CORS 또는 URL 문제입니다. 콘솔을 확인하세요.';
+    }
   }
+  btn.disabled = false;
+}
   
   if (btn) btn.disabled = false;
 }
