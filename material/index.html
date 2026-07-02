@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Premium Material Replacement Dashboard</title>
+<title>Material Replacement Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -552,63 +552,54 @@ async function loadData(){
     console.log('[DEBUG] 파싱 결과:', { rows: parsed.data.length, firstRow: parsed.data[0] });
     
     const rows = parsed.data.slice(1);
-    
-    // 컬럼 인덱스 자동 감지 (헤더 기반)
-    const header = parsed.data[0] || [];
-    console.log('[DEBUG] 헤더:', header);
-    
-    // 헤더에서 컬럼 인덱스 찾기
-    function findColIndex(keywords) {
-      for(let k of keywords) {
-        const idx = header.findIndex(h => String(h).toLowerCase().includes(k.toLowerCase()));
-        if(idx !== -1) return idx;
-      }
-      return -1;
+
+    function cv(r,k){const v=r[C[k]];return(v!==undefined&&v!==null&&v!=='')?String(v).trim():'';}
+
+    // 국가 유추: 운영단위 "GST XXX SCRUBBER"
+    function guessCountry(op){
+      if(!op)return '—';
+      const m=op.match(/GST\s+([A-Z]+)/i);
+      if(m){const c=m[1].toUpperCase();
+        const map={TAIWAN:'TAIWAN',KOREA:'KOREA',CHINA:'CHINA',JAPAN:'JAPAN',US:'USA',USA:'USA',SINGAPORE:'SINGAPORE'};
+        return map[c]||c;}
+      return op;
     }
-    
-    // 자동 매핑 시도
-    const colMap = {
-      op: findColIndex(['작업장', 'op', 'plant']),
-      customer: findColIndex(['고객', 'customer', 'client']),
-      line: findColIndex(['라인', 'line']),
-      process: findColIndex(['공정', 'process']),
-      detail: findColIndex(['세부', 'detail', 'sub']),
-      mainEq: findColIndex(['메인', 'main', 'equipment']),
-      eq: findColIndex(['호기', 'eq', 'equip', '설비']),
-      qty: findColIndex(['수량', 'qty', 'quantity']),
-      matName: findColIndex(['자재', 'material', 'mat', '품명']),
-      reason: findColIndex(['사유', 'reason', 'cause']),
-      workDate: findColIndex(['일자', 'date', 'day']),
-      daysPaid: findColIndex(['유상', 'paid']),
-      daysPrev: findColIndex(['전교체', 'prev']),
-      pf: findColIndex(['유무상', 'pf', 'paid/free']),
-      freeReason: findColIndex(['무상사유', 'free reason'])
-    };
-    
-    console.log('[DEBUG] 자동 매핑 결과:', colMap);
-    
-    // 매핑된 인덱스로 데이터 변환
-    const mappedData = rows.filter(r => r.length > Math.max(...Object.values(colMap).filter(v => v >= 0))).map(r => ({
-      country: (colMap.op >= 0 ? String(r[colMap.op]||'') : '').includes('TAIWAN') ? 'TAIWAN' : 
-               (colMap.op >= 0 ? String(r[colMap.op]||'') : '').includes('KOREA') ? 'KOREA' : 'CHINA',
-      customer: colMap.customer >= 0 ? String(r[colMap.customer]||'').toUpperCase().slice(0,6) : '',
-      line: colMap.line >= 0 ? String(r[colMap.line]||'') : '',
-      process: colMap.process >= 0 ? String(r[colMap.process]||'') : '',
-      detail: colMap.detail >= 0 ? String(r[colMap.detail]||'') : '',
-      eq: colMap.eq >= 0 ? String(r[colMap.eq]||'') : (colMap.mainEq >= 0 ? String(r[colMap.mainEq]||'') : ''),
-      matName: colMap.matName >= 0 ? String(r[colMap.matName]||'') : '',
-      qty: colMap.qty >= 0 ? Number(r[colMap.qty]) || 1 : 1,
-      reason: colMap.reason >= 0 ? String(r[colMap.reason]||'') : '',
-      workDate: colMap.workDate >= 0 ? toDate(r[colMap.workDate]) : null,
-      daysPaid: colMap.daysPaid >= 0 ? Number(r[colMap.daysPaid]) || null : null,
-      daysPrev: colMap.daysPrev >= 0 ? Number(r[colMap.daysPrev]) || null : null,
-      pf: colMap.pf >= 0 ? String(r[colMap.pf]||'') : '',
-      freeReason: colMap.freeReason >= 0 ? String(r[colMap.freeReason]||'') : '',
-      year: colMap.workDate >= 0 ? (toDate(r[colMap.workDate]) ? toDate(r[colMap.workDate]).getFullYear() : null) : null,
-      month: colMap.workDate >= 0 ? (toDate(r[colMap.workDate]) ? toDate(r[colMap.workDate]).getMonth() + 1 : null) : null
-    }));
-    
-    // 자재명이 있는 데이터만 필터링
+    // 고객사 축약
+    function shortCustomer(name){
+      if(!name)return '—';
+      const up=name.toUpperCase();
+      if(up.includes('MICRON'))return 'MICRON';
+      if(up.includes('TAIWAN-ASIA')||up.includes('ASIA SEMICON'))return 'TASC';
+      if(up.includes('POWERCHIP'))return 'POWERCHIP';
+      if(up.includes('WINBOND'))return 'WINBOND';
+      if(up.includes('TSMC'))return 'TSMC';
+      if(up.includes('SAMSUNG'))return 'SAMSUNG';
+      if(up.includes('HYNIX'))return 'SK HYNIX';
+      return name.split(/[\s,\.(]/)[0].toUpperCase();
+    }
+
+    const mappedData = rows.map(r => {
+      const wd = toDate(r[C.workDate]);
+      return {
+        country: guessCountry(cv(r,'op')),
+        customer: shortCustomer(cv(r,'customer')),
+        line: cv(r,'line'),
+        process: cv(r,'process'),
+        detail: cv(r,'detail'),
+        eq: cv(r,'eq') || cv(r,'mainEq'),
+        matName: cv(r,'matName'),
+        qty: Number(r[C.qty]) || 1,
+        reason: cv(r,'reason'),
+        workDate: wd,
+        daysPaid: Number(r[C.daysPaid]) || null,
+        daysPrev: Number(r[C.daysPrev]) || null,
+        pf: cv(r,'pf'),
+        freeReason: cv(r,'freeReason'),
+        year: wd ? wd.getUTCFullYear() : null,
+        month: wd ? wd.getUTCMonth()+1 : null
+      };
+    });
+
     DATA = mappedData.filter(x => x.matName && x.matName.trim() !== '');
     
     debugData(DATA, '최종 데이터');
@@ -672,12 +663,30 @@ function countBy(arr,key,top){const m={}; arr.forEach(x=>{const k=x[key]; if(k)m
 function sumQtyBy(arr,key,top){const m={}; arr.forEach(x=>{const k=x[key]; if(k)m[k]=(m[k]||0)+x.qty;}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,top);}
 function cycleDays(x){return CYCLE_BASIS==='paid'?x.daysPaid:x.daysPrev;}
 
-function mkBar(id,labels,data,color,horizontal){
+function mkBar(id,labels,data,color,horizontal,withLine){
   const ctx=document.getElementById(id); const theme = THEME_PALETTES[ACTIVE_THEME_KEY];
-  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:5}]},
-    options:{indexAxis:horizontal?'y':'x',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{ticks:{color:theme.txt,font:{size:10}},grid:{display:false}},y:{ticks:{color:theme.txt,font:{size:10}},grid:{color:ACTIVE_THEME_KEY==='light'?'rgba(0,0,0,0.05)':'rgba(255,255,255,0.05)'}}}}};
-  if(CHARTS[id]){CHARTS[id].config.options=cfg.options; CHARTS[id].data.labels=labels; CHARTS[id].data.datasets[0].data=data; CHARTS[id].data.datasets[0].backgroundColor=color; CHARTS[id].update(); return;}
+  const total=data.reduce((a,b)=>a+b,0)||1;
+  const datasets=[{type:'bar',label:'건수',data,backgroundColor:color,borderRadius:5,order:2,yAxisID:horizontal?undefined:'y',xAxisID:horizontal?'x':undefined}];
+  if(withLine){
+    let cum=0; const cumPct=data.map(v=>{cum+=v;return Math.round(cum/total*1000)/10;});
+    const lineDs={type:'line',label:'누적%',data:cumPct,borderColor:'#fbbf24',backgroundColor:'#fbbf24',
+      borderWidth:2,pointRadius:2.5,pointBackgroundColor:'#fbbf24',tension:0.3,order:1};
+    if(horizontal){lineDs.xAxisID='xPct';}else{lineDs.yAxisID='yPct';}
+    datasets.push(lineDs);
+  }
+  const scales={
+    x:{ticks:{color:theme.txt,font:{size:10}},grid:{display:false}},
+    y:{ticks:{color:theme.txt,font:{size:10}},grid:{color:ACTIVE_THEME_KEY==='light'?'rgba(0,0,0,0.05)':'rgba(255,255,255,0.05)'}}
+  };
+  if(withLine){
+    if(horizontal){scales.xPct={position:'top',min:0,max:100,ticks:{color:'#fbbf24',font:{size:9},callback:v=>v+'%'},grid:{display:false}};}
+    else{scales.yPct={position:'right',min:0,max:100,ticks:{color:'#fbbf24',font:{size:9},callback:v=>v+'%'},grid:{display:false}};}
+  }
+  const cfg={data:{labels,datasets},
+    options:{indexAxis:horizontal?'y':'x',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:!!withLine,labels:{color:theme.txt,font:{size:9},usePointStyle:true,pointStyle:'circle',boxWidth:6}}},
+      scales}};
+  if(CHARTS[id]){CHARTS[id].destroy();}
   CHARTS[id]=new Chart(ctx,cfg);
 }
 function mkDonut(id,labels,data,colors){
@@ -708,19 +717,19 @@ function render(){
 
   const matF = f.filter(x=>!EXCL.mat.includes(x.matName));
   const mats = sumQtyBy(matF,'matName',12);
-  mkBar('cMat', mats.map(x=>x[0]), mats.map(x=>x[1]), pal[0], true);
+  mkBar('cMat', mats.map(x=>x[0]), mats.map(x=>x[1]), pal[0], true, true);
   renderExclChips('mat');
 
   const eqF = f.filter(x=>!EXCL.eq.includes(x.eq));
   const eqs = countBy(eqF,'eq',12);
-  mkBar('cEq', eqs.map(x=>x[0]), eqs.map(x=>x[1]), pal[1], true);
+  mkBar('cEq', eqs.map(x=>x[0]), eqs.map(x=>x[1]), pal[1], true, true);
   renderExclChips('eq');
 
   mkDonut('cPf',[t('kp2'),t('kp3')],[paid,free],[pal[1],pal[4]]);
 
   const procF = f.filter(x=>!EXCL.proc.includes(x.process));
   const procs = countBy(procF,'process',10);
-  mkBar('cProc', procs.map(x=>x[0]), procs.map(x=>x[1]), pal[2], false);
+  mkBar('cProc', procs.map(x=>x[0]), procs.map(x=>x[1]), pal[2], false, true);
   renderExclChips('proc');
 
   const reasonF = f.filter(x=>!EXCL.reason.includes(x.reason));
