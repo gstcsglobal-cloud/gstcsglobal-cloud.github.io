@@ -819,11 +819,13 @@ function renderCrossTable(){
   const body=document.getElementById('crossBody');
   if(body.style.display==='none') return;
   
-  const f=LAST_F;
-  const rK=document.getElementById('crossRow').value;
-  const cK=document.getElementById('crossCol').value;
-  const vK=document.getElementById('crossValue').value;
-  const topN=parseInt(document.getElementById('crossTopN').value);
+  const f=LAST_F.filter(x=>
+    !EXCL.mat.includes(x.matName) &&
+    !EXCL.eq.includes(x.eq) &&
+    !EXCL.proc.includes(x.process) &&
+    !EXCL.reason.includes(x.reason) &&
+    !EXCL.free.includes(x.freeReason)
+  );
   
   function getValue(row) {
     switch(vK) {
