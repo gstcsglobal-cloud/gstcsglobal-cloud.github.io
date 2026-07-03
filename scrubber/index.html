@@ -157,6 +157,11 @@ tr:hover td{background:rgba(255,255,255,.04)}
 .loading{text-align:center;padding:60px;color:var(--mut);font-size:15px}
 @media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
+.navtabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid rgba(255,255,255,0.13);padding-bottom:0}
+.navtab{padding:10px 18px;border-radius:10px 10px 0 0;font-size:13px;font-weight:700;text-decoration:none;
+  color:#94a3b8;border:1px solid transparent;border-bottom:none;transition:all .2s;position:relative;top:2px}
+.navtab:hover{color:#e2e8f0;background:rgba(255,255,255,0.06)}
+.navtab.active{color:#38bdf8;background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.13);border-bottom:2px solid transparent}
 </style>
 </head>
 <body>
@@ -182,6 +187,13 @@ tr:hover td{background:rgba(255,255,255,.04)}
       </div>
     </div>
   </div>
+</div>
+  <div class="navtabs">
+  <a href="https://gstcsglobal-cloud.github.io/hr/" class="navtab">인원 현황</a>
+  <a href="https://gstcsglobal-cloud.github.io/scrubber/" class="navtab active">설치 현황</a>
+  <a href="https://gstcsglobal-cloud.github.io/pm/" class="navtab">PM 점검</a>
+  <a href="https://gstcsglobal-cloud.github.io/fault/" class="navtab">고장 분석</a>
+  <a href="https://gstcsglobal-cloud.github.io/material/" class="navtab">자재 실적</a>
 </div>
 <div class="status" id="status">Loading...</div>
 
