@@ -767,8 +767,9 @@ function renderExclOptions(k) {
   const q = document.getElementById(id).value.toLowerCase();
   const list = ALL_VALUES[k].filter(m => !EXCL[k].includes(m) && m.toLowerCase().includes(q));
   const dd = document.getElementById(ddId);
-  if(!list.length){dd.innerHTML='<div class="excl-opt" style="color:var(--txt-muted)">검색 결과 없음</div>';return;}
+  if(!list.length){dd.innerHTML='<div class="excl-opt" style="color:var(--txt-muted)">검색 결과 없음</div>';dd.classList.add('open');return;}
   dd.innerHTML = list.map(m => `<div class="excl-opt" onclick="addExcl('${k}','${m}')">${m}</div>`).join('');
+  dd.classList.add('open');
 }
 
 window.addExcl = function(k, m) {
