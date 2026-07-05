@@ -5,35 +5,56 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Global CS Dashboard</title>
 <style>
-/* (디자인 CSS 영역은 기존과 100% 동일하므로 공간 절약을 위해 생략합니다. 기존 CSS 코드를 그대로 유지하세요) */
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg1:#0f172a;--bg2:#1e293b;--line:#334155;--txt:#e2e8f0;--mut:#94a3b8;--accent:#38bdf8;--glass:rgba(255,255,255,0.06);--glassb:rgba(255,255,255,0.13);}
+:root{
+  --bg1:#0f172a;--bg2:#1e293b;--line:#334155;--txt:#e2e8f0;--mut:#94a3b8;
+  --accent:#38bdf8;--glass:rgba(255,255,255,0.06);--glassb:rgba(255,255,255,0.13);
+}
 html,body{height:100%;overflow:hidden}
-body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);background:linear-gradient(135deg,#0a1420,#13232d);display:flex;flex-direction:column}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:rgba(15,23,42,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);flex-shrink:0}
-.brand{display:flex;align-items:center;gap:12px}.brand .logo{font-size:22px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
-.brand .tag{font-size:12px;color:var(--mut)}.topbar-right{display:flex;align-items:center;gap:10px}
-.tb-btn{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-decoration:none}
-.tb-btn:hover{background:rgba(255,255,255,.12)}.tb-btn.logout:hover{border-color:#fb7185;color:#fda4af}
-.tabbar{display:flex;gap:2px;padding:0 24px;background:rgba(15,23,42,.6);border-bottom:2px solid var(--line);flex-shrink:0;overflow-x:auto}
-.tabbar::-webkit-scrollbar{height:0}.tab{padding:13px 22px;font-size:14px;font-weight:700;color:var(--mut);cursor:pointer;border:none;background:transparent;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;position:relative;top:2px}
-.tab:hover{color:var(--txt)}.tab.active{color:var(--accent);border-bottom-color:var(--accent)}.tab .ic{margin-right:7px;display:inline-flex;vertical-align:-2px}
-.frame-wrap{flex:1;position:relative;background:#0f172a}.frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:none;display:none;background:#0f172a}.frame-wrap iframe.active{display:block}
-.frame-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;pointer-events:none}.spinner{width:36px;height:36px;border:3px solid var(--glassb);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
+  background:linear-gradient(135deg,#0a1420,#13232d);display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;
+  background:rgba(15,23,42,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);flex-shrink:0}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .logo{font-size:22px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.brand .tag{font-size:12px;color:var(--mut)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.tb-btn{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);
+  padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-decoration:none}
+.tb-btn:hover{background:rgba(255,255,255,.12)}
+.tb-btn.logout:hover{border-color:#fb7185;color:#fda4af}
+.tabbar{display:flex;gap:2px;padding:0 24px;background:rgba(15,23,42,.6);
+  border-bottom:2px solid var(--line);flex-shrink:0;overflow-x:auto}
+.tabbar::-webkit-scrollbar{height:0}
+.tab{padding:13px 22px;font-size:14px;font-weight:700;color:var(--mut);cursor:pointer;
+  border:none;background:transparent;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;position:relative;top:2px}
+.tab:hover{color:var(--txt)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab .ic{margin-right:7px;display:inline-flex;vertical-align:-2px}
+.frame-wrap{flex:1;position:relative;background:#0f172a}
+.frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:none;display:none;background:#0f172a}
+.frame-wrap iframe.active{display:block}
+.frame-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;pointer-events:none}
+.spinner{width:36px;height:36px;border:3px solid var(--glassb);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-#login{position:fixed;inset:0;z-index:9999;background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#1a1a2e);background-size:400% 400%;animation:grad 18s ease infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
-#login.hidden{display:none}@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
+#login{position:fixed;inset:0;z-index:9999;background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#1a1a2e);
+  background-size:400% 400%;animation:grad 18s ease infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+#login.hidden{display:none}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
 .login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
-.login-box .lock{font-size:40px;margin-bottom:14px}.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px}
+.login-box .lock{font-size:40px;margin-bottom:14px}
+.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px}
 .login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
-.login-box input:focus{border-color:#6c5ce7}.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.login-box input:focus{border-color:#6c5ce7}
+.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
 .login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
 </style>
 </head>
 <body>
 
-<!-- 로그인 대시보드 구조 레이아웃 -->
 <div id="login">
   <div class="login-logo">Global CS Dashboard</div>
   <div class="login-box">
@@ -64,10 +85,28 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);backgrou
   <div class="frame-loading" id="frameLoading"><div class="spinner"></div></div>
 </div>
 
-<!-- 브라우저에 공개되는 안전한 스크립트 (비밀번호와 중요 주소가 완전히 제거됨) -->
 <script>
-// [보안 반영] PASSWORD 변수와 BASE 변수를 제거했습니다.
-let SECURE_BASE = ''; 
+let SECURE_BASE = '';
+
+// 기존 아이콘 데이터 그대로 복구
+const SVG={
+  home:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z"/></svg>',
+  hr:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  scrubber:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  pm:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  fault:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  material:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>'
+};
+
+// 탭 데이터 리스트 재정의
+const TABS = [
+  { id:'home', name:'Home', icon:SVG.home, path:'/home/index.html' },
+  { id:'hr', name:'HR Status', icon:SVG.hr, path:'/hr/index.html' },
+  { id:'scrubber', name:'Scrubber', icon:SVG.scrubber, path:'/scrubber/index.html' },
+  { id:'pm', name:'PM Schedule', icon:SVG.pm, path:'/pm/index.html' },
+  { id:'fault', name:'Fault History', icon:SVG.fault, path:'/fault/index.html' },
+  { id:'material', name:'Material', icon:SVG.material, path:'/material/index.html' }
+];
 
 async function doLogin() {
   const inputPw = document.getElementById('pw').value;
@@ -75,26 +114,28 @@ async function doLogin() {
   errDiv.textContent = '';
 
   try {
-    // 브라우저에서 체크하지 않고, Vercel 비밀 서버(/api/check-auth)에 비밀번호가 맞는지 물어봅니다.
-    const response = await fetch('/api/check-auth', {
+    // Vercel 규칙에 맞게 주소 호출부를 수정했습니다 (/api/ ➔ api/)
+    const response = await fetch('api/check-auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: inputPw })
     });
 
+    if (!response.ok) {
+      errDiv.textContent = '비밀번호가 올바르지 않습니다 / Incorrect';
+      document.getElementById('pw').value = '';
+      return;
+    }
+
     const result = await response.json();
 
     if (result.success) {
-      // 서버가 비밀번호 인증을 승인하고 주소(BASE)를 내려보내 준 경우
       SECURE_BASE = result.data.base;
       sessionStorage.setItem('gst_auth_token', 'AUTHORIZED_SUCCESS');
       sessionStorage.setItem('gst_secure_base', SECURE_BASE);
       
       document.getElementById('login').classList.add('hidden');
-      initDashboard(); // 로그인 성공 시 대시보드 로드
-    } else {
-      errDiv.textContent = '비밀번호가 올바르지 않습니다 / Incorrect';
-      document.getElementById('pw').value = '';
+      initDashboard();
     }
   } catch (e) {
     errDiv.textContent = '서버 통신 오류가 발생했습니다.';
@@ -102,36 +143,44 @@ async function doLogin() {
 }
 
 function initDashboard() {
-  console.log("대시보드 초기화 시작 기본 경로:", SECURE_BASE);
-  // 여기에 기존에 탭을 그리고 iframe을 생성하던 나머지 로직을 이어서 붙이시면 됩니다.
-  // 주소가 필요할 때는 고정 주소 대신 서버가 전달해준 SECURE_BASE 변수를 조합해 사용하세요.
-}
-
-// 자동 로그인 체크 (세션 저장소 활용)
-window.onload = function() {
-  const token = sessionStorage.getItem('gst_auth_token');
-  const savedBase = sessionStorage.getItem('gst_secure_base');
-  if (token === 'AUTHORIZED_SUCCESS' && savedBase) {
-    SECURE_BASE = savedBase;
-    document.getElementById('login').classList.add('hidden');
-    initDashboard();
-  }
+  const tabbar = document.getElementById('tabbar');
+  const frameWrap = document.getElementById('frameWrap');
+  const loading = document.getElementById('frameLoading');
   
-  document.getElementById('pw').addEventListener('keydown', e => {
-    if (e.key === 'Enter') doLogin();
-  });
-};
+  tabbar.innerHTML = '';
+  
+  TABS.forEach((tab, index) => {
+    // 탭 버튼 생성
+    const btn = document.createElement('button');
+    btn.className = `tab ${index === 0 ? 'active' : ''}`;
+    btn.innerHTML = `<span class="ic">${tab.icon}</span>${tab.name}`;
+    btn.onclick = () => switchTab(tab.id);
+    tabbar.appendChild(btn);
 
-function doLogout() {
-  sessionStorage.clear();
-  window.location.reload();
+    // iframe 생성 및 보안 주소 조합 연결
+    const iframe = document.createElement('iframe');
+    iframe.id = `frame-${tab.id}`;
+    iframe.src = `${SECURE_BASE}${tab.path}`;
+    iframe.className = index === 0 ? 'active' : '';
+    
+    iframe.onload = () => { loading.style.display = 'none'; };
+    frameWrap.appendChild(iframe);
+  });
 }
 
-// 기타 부가 기능들 (테마 전환 등 기존 코드 그대로 유지)
-function cycleTheme() { /* 기존 코드 유지 */ }
-function cycleLang() { /* 기존 코드 유지 */ }
-function refreshActive() { /* 기존 코드 유지 */ }
-function exportActive() { /* 기존 코드 유지 */ }
-</script>
-</body>
-</html>
+function switchTab(tabId) {
+  const loading = document.getElementById('frameLoading');
+  loading.style.display = 'flex';
+  
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.frame-wrap iframe').forEach(f => f.classList.remove('active'));
+  
+  // 현재 타겟 활성화 처리
+  const activeIndex = TABS.findIndex(t => t.id === tabId);
+  if(activeIndex !== -1) {
+    document.querySelectorAll('.tab')[activeIndex].classList.add('active');
+    const targetFrame = document.getElementById(`frame-${tabId}`);
+    targetFrame.classList.add('active');
+    
+    // 만약 이미 로드되었다면 로딩 숨김처리
+    if(targetFrame.contentWindow.document.readyState === 'complete') {loading.style.display = 'none';}}}window.onload = function() {const token = sessionStorage.getItem('gst_auth_token');const savedBase = sessionStorage.getItem('gst_secure_base');if (token === 'AUTHORIZED_SUCCESS' && savedBase) {SECURE_BASE = savedBase;document.getElementById('login').classList.add('hidden');initDashboard();}document.getElementById('pw').addEventListener('keydown', e => {if (e.key === 'Enter') doLogin();});};function doLogout() {sessionStorage.clear();window.location.reload();}function cycleTheme() { document.body.classList.toggle('theme-light'); }function cycleLang() { /* 언어팩 로직 구성에 맞춰 연동 */ }function refreshActive() {const activeFrame = document.querySelector('.frame-wrap iframe.active');if(activeFrame) activeFrame.contentWindow.location.reload();}function exportActive() {const activeFrame = document.querySelector('.frame-wrap iframe.active');if(activeFrame) activeFrame.contentWindow.print();}
