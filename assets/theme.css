@@ -1,1 +1,113 @@
+/* ============================================================
+   GST Dashboard Design System v1.0
+   모든 대시보드가 이 파일 하나를 공유합니다.
+   여기를 고치면 전체가 바뀝니다.
+   ============================================================ */
 
+/* ---------- 1. 디자인 토큰 ---------- */
+:root{
+  /* 타이포그래피 스케일 */
+  --fs-display:28px;   /* 대시보드 제목 */
+  --fs-title:16px;     /* 섹션 제목 */
+  --fs-card:13px;      /* 카드 제목 */
+  --fs-body:12px;      /* 본문 */
+  --fs-table:11px;     /* 테이블 */
+  --fs-caption:10px;   /* 캡션/라벨 */
+  --fs-micro:9px;      /* 테이블 헤더 */
+  --fs-kpi:26px;       /* KPI 숫자 */
+
+  /* 간격 시스템 (8px 그리드) */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
+
+  /* 모서리 */
+  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-xl:20px; --r-pill:30px;
+
+  /* 그림자 */
+  --shadow-sm:0 2px 8px rgba(0,0,0,.15);
+  --shadow-md:0 8px 32px rgba(0,0,0,.37);
+
+  /* 전환 */
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+
+/* ---------- 2. 공통 컴포넌트 통일 ---------- */
+body{padding:var(--sp-6) 28px !important;font-family:'Segoe UI','Malgun Gothic',sans-serif !important}
+
+.header h1{font-size:var(--fs-display) !important;font-weight:800 !important;letter-spacing:-1px !important;
+  background:var(--title-gradient) !important;-webkit-background-clip:text !important;
+  background-clip:text !important;-webkit-text-fill-color:transparent !important}
+.header .sub{font-size:var(--fs-card) !important;margin-top:var(--sp-1) !important;color:var(--txt-muted) !important}
+
+.kpi{padding:var(--sp-4) !important;border-radius:var(--r-lg) !important;box-shadow:var(--shadow-md) !important;
+  transition:transform .25s var(--ease), box-shadow .25s var(--ease) !important}
+.kpi:hover{transform:translateY(-3px) !important}
+.kpi .val{font-size:var(--fs-kpi) !important;font-weight:800 !important;font-variant-numeric:tabular-nums}
+.kpi .cap{font-size:var(--fs-caption) !important;margin-top:5px !important;font-weight:600 !important;letter-spacing:.3px !important}
+.kpi .ic{font-size:18px !important;margin-bottom:5px !important}
+
+.card{border-radius:var(--r-xl) !important;box-shadow:var(--shadow-md) !important;
+  transition:box-shadow .25s var(--ease) !important}
+.card h3{font-size:var(--fs-card) !important;font-weight:700 !important;color:var(--txt-main) !important}
+.card-note{font-size:var(--fs-caption) !important;color:var(--txt-muted) !important}
+
+table{font-size:var(--fs-table) !important}
+th{padding:var(--sp-2) 10px !important;font-size:var(--fs-micro) !important;letter-spacing:.5px !important;
+  color:var(--txt-muted) !important;text-transform:uppercase}
+td{padding:6px 10px !important;color:var(--txt-main) !important}
+tr:hover td{background:var(--glass-hover) !important}
+
+.status{font-size:var(--fs-body) !important}
+
+/* 버튼 통일 */
+.btn,.tb-btn{transition:all .2s var(--ease) !important}
+.btn:hover,.tb-btn:hover{transform:translateY(-1px)}
+.btn:active,.tb-btn:active{transform:translateY(0)}
+
+/* 스크롤바 통일 */
+*::-webkit-scrollbar{width:6px;height:6px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:var(--glass-border);border-radius:4px}
+*::-webkit-scrollbar-thumb:hover{background:var(--txt-muted)}
+
+/* 포커스 접근성 */
+button:focus-visible,input:focus-visible,select:focus-visible{
+  outline:2px solid var(--accent-2) !important;outline-offset:2px}
+
+/* ---------- 3. 스켈레톤 로딩 ---------- */
+@keyframes skeleton-pulse{0%{opacity:.4}50%{opacity:.7}100%{opacity:.4}}
+.skeleton{background:var(--glass) !important;border-radius:var(--r-md);
+  animation:skeleton-pulse 1.4s ease-in-out infinite;color:transparent !important;user-select:none;pointer-events:none}
+.skeleton *{visibility:hidden}
+
+/* ---------- 4. 빈 상태 / 에러 상태 ---------- */
+.empty-state{text-align:center;padding:48px 20px;color:var(--txt-muted)}
+.empty-state .es-icon{font-size:40px;margin-bottom:12px;opacity:.5}
+.empty-state .es-title{font-size:14px;font-weight:700;color:var(--txt-main);margin-bottom:6px}
+.empty-state .es-desc{font-size:12px}
+
+/* ---------- 5. 모바일 반응형 ---------- */
+@media(max-width:768px){
+  body{padding:var(--sp-3) var(--sp-3) !important}
+  .header h1{font-size:20px !important}
+  .header .sub{font-size:11px !important}
+  .kpi .val{font-size:20px !important}
+  .kpi{padding:var(--sp-3) !important}
+  .kpis{grid-template-columns:repeat(2,1fr) !important;gap:var(--sp-2) !important}
+  .grid3,.grid{grid-template-columns:1fr !important}
+  .card .cw{height:200px !important}
+  .slicers{gap:var(--sp-2) !important}
+  .header-right{width:100%;justify-content:flex-start}
+  table{font-size:10px !important}
+}
+@media(max-width:480px){
+  .kpis{grid-template-columns:repeat(2,1fr) !important}
+  .header h1{font-size:18px !important}
+}
+
+/* ---------- 6. 인쇄 (PDF 내보내기용) ---------- */
+@media print{
+  body{background:#fff !important;color:#000 !important;padding:10mm !important}
+  .header-right,.slicers,.toolbar,.lang-wrap,.theme-wrap,button{display:none !important}
+  .card,.kpi,.tablecard{box-shadow:none !important;border:1px solid #ddd !important;break-inside:avoid}
+  .card h3,.kpi .cap,td,th{color:#000 !important}
+}
