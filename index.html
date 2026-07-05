@@ -3,182 +3,402 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GST Dashboard</title>
+<title>인력 현황 대시보드</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-:root {
-  --bg1:#0f0c29; --bg2:#302b63; --bg3:#24243e;
-  --glass:rgba(255,255,255,0.07); --glassb:rgba(255,255,255,0.15);
-  --txt:#f5f6fa; --muted:#a0a0c0;
+:root{
+  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
+  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
+  --glass: rgba(255,255,255,0.05); --glass-border: rgba(255,255,255,0.12); --glass-hover: rgba(255,255,255,0.1);
+  --txt-main:#e2e8f0; --txt-muted:#94a3b8;
+  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
+  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
+  /* 기존 변수명 별칭 */
+  --bg1:#0a1420; --bg2:#13232d; --bg3:#0f2027;
+  --accent:var(--accent-1); --accent2:var(--accent-2); --accent3:var(--accent-3);
+  --glassb:var(--glass-border); --txt:var(--txt-main); --muted:var(--txt-muted);
 }
-body {
-  font-family:'Segoe UI','Malgun Gothic',sans-serif; color:var(--txt);
-  background:linear-gradient(-45deg,var(--bg1),var(--bg2),var(--bg3),#1a1a2e);
-  background-size:400% 400%; animation:grad 18s ease infinite;
-  min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  position:relative;
+body.theme-burgundy{
+  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
+  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
+  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
+  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
+  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
+  --bg1:#1a0813; --bg2:#2d0b1e; --bg3:#1f0822;
+}
+body.theme-light{
+  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #faebd7, #f0f4f8);
+  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
+  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
+  --txt-main:#0f172a; --txt-muted:#64748b;
+  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
+  --bg1:#f1f5f9; --bg2:#e2e8f0; --bg3:#faebd7;
+}
+body{
+  font-family:'Segoe UI','Malgun Gothic',sans-serif; color:var(--txt-main);
+  background:var(--bg-gradient);
+  background-size:400% 400%; animation:grad 18s ease infinite; min-height:100vh; padding:28px 32px;
 }
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-
-/* 언어 버튼 (우측 상단) */
-.lang-wrap{position:absolute;top:24px;right:28px}
-.lang-btn{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);
-  padding:9px 16px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;backdrop-filter:blur(10px)}
-.lang-btn:hover{background:rgba(255,255,255,.12)}
-.lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;
-  background:#1a2744;border:1px solid var(--glassb);border-radius:14px;
-  padding:6px;z-index:100;min-width:130px;display:none;backdrop-filter:blur(20px)}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:32px;font-weight:800;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.header .sub{color:var(--muted);font-size:13px;margin-top:4px}
+.header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.badge{background:var(--glass);border:1px solid var(--glassb);border-radius:30px;padding:8px 18px;font-size:13px;backdrop-filter:blur(10px)}
+.btn{background:linear-gradient(90deg,var(--accent),var(--accent2));border:none;border-radius:30px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;padding:9px 20px;transition:opacity .2s;text-decoration:none;display:inline-block;}
+.btn:hover{opacity:.85} .btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-back{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);}
+.lang-wrap{position:relative}
+.lang-btn{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);padding:9px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
+.lang-btn:hover{background:rgba(255,255,255,.1)}
+.lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:#2a2550;border:1px solid var(--glassb);border-radius:14px;padding:6px;z-index:100;min-width:130px;display:none;backdrop-filter:blur(20px)}
 .lang-dropdown.open{display:block}
 .lang-item{padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600}
 .lang-item:hover{background:rgba(255,255,255,.08)}
+.status{font-size:12px;color:var(--muted);margin-bottom:16px;text-align:right;}
+.status.ok{color:var(--accent2)} .status.err{color:#fd79a8}
+.slicers{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:24px}
+.slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:18px;padding:14px 18px;backdrop-filter:blur(12px)}
+.slicer .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px;font-weight:700}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{cursor:pointer;border:1px solid var(--glassb);background:rgba(255,255,255,0.04);color:var(--txt);
+  padding:7px 15px;border-radius:30px;font-size:13px;font-weight:600;transition:all .25s;user-select:none}
+.chip:hover{transform:translateY(-2px);border-color:var(--accent2)}
+.chip.active{background:linear-gradient(90deg,var(--accent),var(--accent2));border-color:transparent;box-shadow:0 6px 20px rgba(108,92,231,.5)}
+.search{margin-left:auto}
+.search input{background:rgba(255,255,255,0.06);border:1px solid var(--glassb);border-radius:30px;padding:10px 18px;color:var(--txt);font-size:13px;width:200px;outline:none}
+.search input::placeholder{color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px}
+.kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:22px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s}
+.kpi:hover{transform:translateY(-5px)}
+.kpi::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;opacity:.35}
+.kpi.k1::before{background:var(--accent)}.kpi.k2::before{background:var(--accent2)}
+.kpi.k3::before{background:var(--accent3)}.kpi.k4::before{background:#fdcb6e}
+.kpi .ic{font-size:22px;margin-bottom:8px}
+.kpi .val{font-size:38px;font-weight:800;line-height:1}
+.kpi .cap{color:var(--muted);font-size:13px;margin-top:8px;font-weight:600}
+.grid{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:18px;margin-bottom:24px}
+.card{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px)}
+.card h3{font-size:14px;font-weight:700;margin-bottom:14px;color:#dfe6ff}
+.card .cw{position:relative;height:240px}
+.tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px)}
+.tablecard h3{font-size:14px;font-weight:700;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(20,18,45,.9)}
+td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05)}
+tr:hover td{background:rgba(255,255,255,.04)}
+.tag{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.t-done{background:rgba(0,206,201,.18);color:#00cec9}
+.t-prog{background:rgba(253,203,110,.2);color:#fdcb6e}
+.t-na{background:rgba(160,160,192,.18);color:#a0a0c0}
+.tw{max-height:360px;overflow-y:auto;border-radius:12px}
+.tw::-webkit-scrollbar{width:8px}.tw::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
+.empty{text-align:center;padding:30px;color:var(--muted)}
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
 
-.logo { font-size:42px; font-weight:900;
-  background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
-  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-  margin-bottom:8px; letter-spacing:-2px; }
-.sub { color:var(--muted); font-size:15px; margin-bottom:60px; }
-.cards { display:flex; gap:28px; flex-wrap:wrap; justify-content:center; }
-.card {
-  background:var(--glass); border:1px solid var(--glassb);
-  border-radius:28px; padding:44px 48px; text-align:center;
-  cursor:pointer; text-decoration:none; color:var(--txt);
-  transition:transform .3s, box-shadow .3s; backdrop-filter:blur(14px);
-  min-width:240px;
-}
-.card:hover { transform:translateY(-8px); box-shadow:0 20px 60px rgba(0,0,0,.4); }
-.card .icon { font-size:52px; margin-bottom:16px; }
-.card .title { font-size:20px; font-weight:800; margin-bottom:8px; }
-.card .desc { font-size:13px; color:var(--muted); line-height:1.6; }
-.card.c1 { border-color:rgba(108,92,231,.4); }
-.card.c1:hover { box-shadow:0 20px 60px rgba(108,92,231,.3); }
-.card.c2 { border-color:rgba(0,206,201,.4); }
-.card.c2:hover { box-shadow:0 20px 60px rgba(0,206,201,.3); }
-.card.c3 { border-color:rgba(251,113,133,.4); }
-.card.c3:hover { box-shadow:0 20px 60px rgba(251,113,133,.3); }
-.card.c4 { border-color:rgba(251,191,36,.4); }
-.card.c4:hover { box-shadow:0 20px 60px rgba(251,191,36,.3); }
-.card.c5 { border-color:rgba(45,212,191,.4); }
-.card.c5:hover { box-shadow:0 20px 60px rgba(45,212,191,.3); }
-
-/* 로그인 오버레이 */
-#loginOverlay{position:fixed;inset:0;z-index:9999;
+/* 로그인 가드 */
+#loginOverlay{position:fixed;inset:0;z-index:99999;
   background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#1a1a2e);
   background-size:400% 400%;animation:grad 18s ease infinite;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-family:'Segoe UI','Malgun Gothic',sans-serif}
 #loginOverlay.hidden{display:none}
-.login-logo{font-size:38px;font-weight:900;
-  background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  margin-bottom:6px;letter-spacing:-2px}
-.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);
-  border-radius:24px;padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
+.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
+.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;
+  padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
 .login-box .lock{font-size:40px;margin-bottom:14px}
 .login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px;color:#f5f6fa}
 .login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);
-  border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center;transition:border-color .2s}
+  border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
 .login-box input:focus{border-color:#6c5ce7}
 .login-box input::placeholder{color:#a0a0c0}
 .login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);
-  border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s}
+  border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
 .login-box button:hover{opacity:.88}
 .login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 </style>
 </head>
 <body>
-  <!-- 로그인 화면 -->
-  <div id="loginOverlay">
-    <div class="login-logo">GST Dashboard</div>
-    <div class="login-box">
-      <div class="lock">🔒</div>
-      <div class="ltitle" data-i="login_title">비밀번호를 입력하세요</div>
-      <input type="password" id="pwInput" data-i-ph="login_ph" placeholder="비밀번호" autocomplete="off">
-      <button onclick="checkPw()" data-i="login_btn">로그인</button>
-      <div class="login-err" id="pwErr"></div>
+
+<div id="loginOverlay">
+  <div class="login-logo">GST Dashboard</div>
+  <div class="login-box">
+    <div class="lock">🔒</div>
+    <div class="ltitle" id="lgTitle">비밀번호를 입력하세요 / Enter password</div>
+    <input type="password" id="pwInput" placeholder="비밀번호 / Password" autocomplete="off">
+    <button onclick="checkPw()" id="lgBtn">로그인 / Login</button>
+    <div class="login-err" id="pwErr"></div>
+  </div>
+</div>
+
+<div class="header">
+  <div>
+    <h1 data-i="title">인력 현황 대시보드</h1>
+    <div class="sub" data-i="sub">엔지니어 교육 · 직급 · 직무 인터랙티브 분석</div>
+  </div>
+  <div class="header-right">
+    <a href="https://gstcsglobal-cloud.github.io" class="btn btn-back" data-i="back">← 메인으로</a>
+    <div class="badge"><span data-i="total_pre">총</span> <b id="totRec">0</b><span data-i="total_post">명 · 실시간 필터</span></div>
+    <button class="btn" id="refreshBtn" onclick="loadData()">🔄 <span data-i="refresh">새로고침</span></button>
+    <div class="lang-wrap">
+      <button class="lang-btn" onclick="toggleLang()">🌐 <span id="langLabel">KO</span> ▾</button>
+      <div class="lang-dropdown" id="langMenu">
+        <div class="lang-item" onclick="setLang('ko')">🇰🇷 한국어</div>
+        <div class="lang-item" onclick="setLang('en')">🇺🇸 English</div>
+        <div class="lang-item" onclick="setLang('zh')">🇨🇳 中文</div>
+        <div class="lang-item" onclick="setLang('ja')">🇯🇵 日本語</div>
+      </div>
     </div>
   </div>
+</div>
+<div class="status" id="status" data-i="loading">데이터 불러오는 중...</div>
 
-  <div class="lang-wrap">
-    <button class="lang-btn" onclick="toggleLang()">🌐 <span id="langLabel">KO</span> ▾</button>
-    <div class="lang-dropdown" id="langMenu">
-      <div class="lang-item" onclick="setLang('ko')">🇰🇷 한국어</div>
-      <div class="lang-item" onclick="setLang('en')">🇺🇸 English</div>
-      <div class="lang-item" onclick="setLang('zh')">🇨🇳 中文</div>
-      <div class="lang-item" onclick="setLang('ja')">🇯🇵 日本語</div>
-    </div>
-  </div>
+<div class="slicers">
+  <div class="slicer"><div class="lbl" data-i="sl_pos">직급</div><div class="chips" id="sl-pos"></div></div>
+  <div class="slicer"><div class="lbl" data-i="sl_job">직무</div><div class="chips" id="sl-job"></div></div>
+  <div class="slicer"><div class="lbl">Basic <span data-i="sl_edu">교육</span></div><div class="chips" id="sl-basic"></div></div>
+  <div class="slicer"><div class="lbl">Veteran <span data-i="sl_edu2">교육</span></div><div class="chips" id="sl-vet"></div></div>
+  <div class="slicer search"><div class="lbl" data-i="sl_search">검색</div><input id="search" data-i-ph="search_ph" placeholder="이름 검색..."></div>
+</div>
 
-  <div class="logo">GST Dashboard</div>
-  <div class="sub" data-i="sub">원하는 대시보드를 선택하세요</div>
-  <div class="cards">
-    <a href="./hr/" class="card c1">
-      <div class="icon">👥</div>
-      <div class="title" data-i="hr_title">인원 현황</div>
-      <div class="desc" data-i="hr_desc">엔지니어 교육 · 직급 · 직무<br>인터랙티브 분석</div>
-    </a>
-    <a href="./scrubber/" class="card c2">
-      <div class="icon">🌐</div>
-      <div class="title" data-i="sc_title">설치 현황</div>
-      <div class="desc" data-i="sc_desc">글로벌 스크러버 설치<br>통합 모니터링</div>
-    </a>
-    <a href="./pm/" class="card c3">
-      <div class="icon">🔧</div>
-      <div class="title" data-i="pm_title">점검 스케줄</div>
-      <div class="desc" data-i="pm_desc">스크러버 PM 점검<br>예방정비 관리</div>
-    </a>
-    <a href="./fault/" class="card c4">
-      <div class="icon">🛠️</div>
-      <div class="title" data-i="ft_title">고장 분석</div>
-      <div class="desc" data-i="ft_desc">BM·CBM 고장 분석<br>알람·고장코드 추적</div>
-    </a>
-    <a href="./material/" class="card c5">
-      <div class="icon">📦</div>
-      <div class="title" data-i="mt_title">자재 실적</div>
-      <div class="desc" data-i="mt_desc">자재 교체·사용주기<br>유무상 분석</div>
-    </a>
-  </div>
+<div class="kpis">
+  <div class="kpi k1"><div class="ic">👥</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">선택 인원</div></div>
+  <div class="kpi k2"><div class="ic">🎓</div><div class="val" id="kp2">0%</div><div class="cap" data-i="kp2">Basic 이수율</div></div>
+  <div class="kpi k3"><div class="ic">🏅</div><div class="val" id="kp3">0%</div><div class="cap" data-i="kp3">Veteran 이수율</div></div>
+  <div class="kpi k4"><div class="ic">⚙️</div><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Engineer 인원</div></div>
+</div>
+
+<div class="grid">
+  <div class="card"><h3 data-i="ch_pos">직급별 인원</h3><div class="cw"><canvas id="cPos"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_edu">교육과정 이수 현황</h3><div class="cw"><canvas id="cEdu"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_job">직무별 인원</h3><div class="cw"><canvas id="cJob"></canvas></div></div>
+</div>
+
+<div class="tablecard">
+  <h3><span data-i="tbl_title">상세 명단</span> (<span id="tblCnt">0</span><span data-i="tbl_unit">명</span>)</h3>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th data-i="th_name">이름</th><th data-i="th_join">입사일</th><th data-i="th_exp">경력</th><th data-i="th_pos">직급</th><th data-i="th_job">직무</th><th>Basic</th><th>Veteran</th><th data-i="th_note">비고</th></tr></thead>
+    <tbody id="tbody"><tr><td colspan="9" class="empty">⏳ 데이터 불러오는 중...</td></tr></tbody>
+  </table></div>
+</div>
 
 <script>
-const PASSWORD = 'gst1234!';  // ← 비밀번호 변경 시 여기만 수정
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=0&single=true&output=csv';
 
-// 이미 인증했으면 로그인 화면 건너뛰기 (탭 유지되는 동안)
-function isAuthed(){ try{ return sessionStorage.getItem('gst_auth')==='1'; }catch(e){ return window.__authed===true; } }
-function setAuthed(){ try{ sessionStorage.setItem('gst_auth','1'); }catch(e){ window.__authed=true; } }
-function checkPw(){
-  const v=document.getElementById('pwInput').value;
-  if(v===PASSWORD){
-    setAuthed();
-    document.getElementById('loginOverlay').classList.add('hidden');
-  }else{
-    document.getElementById('pwErr').textContent=t('login_wrong');
-    document.getElementById('pwInput').value='';
-  }
-}
-function initLogin(){
-  if(isAuthed()){ document.getElementById('loginOverlay').classList.add('hidden'); }
-  const inp=document.getElementById('pwInput');
-  inp.addEventListener('keydown',e=>{ if(e.key==='Enter')checkPw(); });
-  if(!isAuthed()) setTimeout(()=>inp.focus(),100);
-}
-
-const T={
-  ko:{sub:'원하는 대시보드를 선택하세요',hr_title:'인원 현황',hr_desc:'엔지니어 교육 · 직급 · 직무<br>인터랙티브 분석',sc_title:'설치 현황',sc_desc:'글로벌 스크러버 설치<br>통합 모니터링',pm_title:'점검 스케줄',pm_desc:'스크러버 PM 점검<br>예방정비 관리',ft_title:'고장 분석',ft_desc:'BM·CBM 고장 분석<br>알람·고장코드 추적',mt_title:'자재 실적',mt_desc:'자재 교체·사용주기<br>유무상 분석',login_title:'비밀번호를 입력하세요',login_ph:'비밀번호',login_btn:'로그인',login_wrong:'비밀번호가 올바르지 않습니다'},
-  en:{sub:'Select a dashboard',hr_title:'Workforce Status',hr_desc:'Engineer training · position · role<br>interactive analysis',sc_title:'Installation Status',sc_desc:'Global scrubber installation<br>integrated monitoring',pm_title:'PM Schedule',pm_desc:'Scrubber PM inspection<br>preventive maintenance',ft_title:'Fault Analysis',ft_desc:'BM·CBM fault analysis<br>alarm & code tracking',mt_title:'Material',mt_desc:'Replacement·lifecycle<br>paid/free analysis',login_title:'Enter password',login_ph:'Password',login_btn:'Login',login_wrong:'Incorrect password'},
-  zh:{sub:'请选择仪表板',hr_title:'人员状况',hr_desc:'工程师培训 · 职级 · 职务<br>交互式分析',sc_title:'安装状况',sc_desc:'全球洗涤器安装<br>综合监控',pm_title:'点检计划',pm_desc:'洗涤器PM点检<br>预防性维护管理',ft_title:'故障分析',ft_desc:'BM·CBM故障分析<br>报警·故障代码追踪',mt_title:'材料实绩',mt_desc:'材料更换·使用周期<br>有偿无偿分析',login_title:'请输入密码',login_ph:'密码',login_btn:'登录',login_wrong:'密码不正确'},
-  ja:{sub:'ダッシュボードを選択',hr_title:'人員状況',hr_desc:'エンジニア教育 · 職級 · 職務<br>インタラクティブ分析',sc_title:'設置状況',sc_desc:'グローバルスクラバー設置<br>統合モニタリング',pm_title:'点検スケジュール',pm_desc:'スクラバーPM点検<br>予防保全管理',ft_title:'故障分析',ft_desc:'BM·CBM故障分析<br>アラーム·故障コード追跡',mt_title:'資材実績',mt_desc:'資材交換·使用周期<br>有償無償分析',login_title:'パスワードを入力',login_ph:'パスワード',login_btn:'ログイン',login_wrong:'パスワードが正しくありません'}
+const TR={
+  ko:{title:'인력 현황 대시보드',sub:'엔지니어 교육 · 직급 · 직무 인터랙티브 분석',
+    back:'← 메인으로',total_pre:'총',total_post:'명 · 실시간 필터',refresh:'새로고침',
+    loading:'데이터 불러오는 중...',
+    sl_pos:'직급',sl_job:'직무',sl_edu:'교육',sl_edu2:'교육',sl_search:'검색',search_ph:'이름 검색...',
+    kp1:'선택 인원',kp2:'Basic 이수율',kp3:'Veteran 이수율',kp4:'Engineer 인원',
+    ch_pos:'직급별 인원',ch_edu:'교육과정 이수 현황',ch_job:'직무별 인원',
+    tbl_title:'상세 명단',tbl_unit:'명',
+    th_name:'이름',th_join:'입사일',th_exp:'경력',th_pos:'직급',th_job:'직무',th_note:'비고'},
+  en:{title:'Workforce Dashboard',sub:'Engineer training · position · role interactive analysis',
+    back:'← Main',total_pre:'Total',total_post:' · live filter',refresh:'Refresh',
+    loading:'Loading data...',
+    sl_pos:'Position',sl_job:'Role',sl_edu:'Training',sl_edu2:'Training',sl_search:'Search',search_ph:'Search name...',
+    kp1:'Selected',kp2:'Basic Rate',kp3:'Veteran Rate',kp4:'Engineers',
+    ch_pos:'By Position',ch_edu:'Training Completion',ch_job:'By Role',
+    tbl_title:'Detail List',tbl_unit:'',
+    th_name:'Name',th_join:'Join',th_exp:'Exp',th_pos:'Position',th_job:'Role',th_note:'Note'},
+  zh:{title:'人员状况仪表板',sub:'工程师培训 · 职级 · 职务 交互式分析',
+    back:'← 主页',total_pre:'共',total_post:'人 · 实时筛选',refresh:'刷新',
+    loading:'正在加载数据...',
+    sl_pos:'职级',sl_job:'职务',sl_edu:'培训',sl_edu2:'培训',sl_search:'搜索',search_ph:'搜索姓名...',
+    kp1:'已选人数',kp2:'Basic完成率',kp3:'Veteran完成率',kp4:'工程师人数',
+    ch_pos:'按职级',ch_edu:'培训完成情况',ch_job:'按职务',
+    tbl_title:'详细名单',tbl_unit:'人',
+    th_name:'姓名',th_join:'入职日',th_exp:'经验',th_pos:'职级',th_job:'职务',th_note:'备注'},
+  ja:{title:'人員状況ダッシュボード',sub:'エンジニア教育 · 職級 · 職務 インタラクティブ分析',
+    back:'← メイン',total_pre:'合計',total_post:'名 · リアルタイム',refresh:'更新',
+    loading:'データ読み込み中...',
+    sl_pos:'職級',sl_job:'職務',sl_edu:'教育',sl_edu2:'教育',sl_search:'検索',search_ph:'名前検索...',
+    kp1:'選択人数',kp2:'Basic修了率',kp3:'Veteran修了率',kp4:'Engineer人数',
+    ch_pos:'職級別',ch_edu:'教育課程修了状況',ch_job:'職務別',
+    tbl_title:'詳細リスト',tbl_unit:'名',
+    th_name:'名前',th_join:'入社日',th_exp:'経験',th_pos:'職級',th_job:'職務',th_note:'備考'}
 };
 let LANG='ko';
-try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
-function t(k){return (T[LANG]||T.ko)[k]||k;}
+try{ if(window.name && TR[window.name]) LANG=window.name; }catch(e){}
+function tr(k){return (TR[LANG]||TR.ko)[k]||k;}
 function applyLang(){
-  document.querySelectorAll('[data-i]').forEach(el=>{el.innerHTML=t(el.getAttribute('data-i'));});
-  document.querySelectorAll('[data-i-ph]').forEach(el=>{el.placeholder=t(el.getAttribute('data-i-ph'));});
+  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=tr(el.getAttribute('data-i'));});
+  document.querySelectorAll('[data-i-ph]').forEach(el=>{el.placeholder=tr(el.getAttribute('data-i-ph'));});
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
 }
-function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();document.getElementById('langMenu').classList.remove('open');}
+function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(DATA.length){rebuildFilters();render();}document.getElementById('langMenu').classList.remove('open');}
 function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
 document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');});
+let DATA = [];
+const F = {pos:'전체', job:'전체', basic:'전체', vet:'전체', q:''};
+Chart.defaults.color = '#a0a0c0';
+Chart.defaults.font.family = "'Segoe UI','Malgun Gothic',sans-serif";
+const PAL = ['#6c5ce7','#00cec9','#fd79a8','#fdcb6e','#a29bfe','#55efc4'];
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,'').toLowerCase());
+  return lines.slice(1).map(line => {
+    const vals = []; let cur = '', inQ = false;
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    vals.push(cur.trim());
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (vals[i] || '').replace(/"/g,''));
+    return obj;
+  }).filter(d => d.name || d['이름']);
+}
+
+async function loadData() {
+  const btn = document.getElementById('refreshBtn');
+  const status = document.getElementById('status');
+  btn.disabled = true;
+  status.className = 'status'; status.textContent = tr('loading');
+  try {
+    const res = await fetch(SHEET_URL + '&t=' + Date.now());
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const colMap = {
+      no:['no','번호'], name:['name','이름','성명'], join:['join','입사일'],
+      exp:['exp','경력'], pos:['pos','직급','position'], job:['job','직무'],
+      basic:['basic','basic교육'], vet:['vet','veteran','veteran교육'], note:['note','비고']
+    };
+    DATA = rows.map(row => {
+      const mapped = {};
+      for (const [key, aliases] of Object.entries(colMap)) {
+        const found = aliases.find(a => row[a] !== undefined);
+        mapped[key] = found ? String(row[found]).trim() : '';
+      }
+      return mapped;
+    }).filter(d => d.name);
+    const now = new Date().toLocaleString('ko-KR');
+    status.className = 'status ok';
+    status.textContent = '✅ ' + now + ' · ' + DATA.length + tr('tbl_unit');
+    rebuildFilters(); render();
+  } catch(err) {
+    status.className = 'status err';
+    status.textContent = '❌ ' + tr('loading');
+    document.getElementById('tbody').innerHTML = '<tr><td colspan="9" class="empty">—</td></tr>';
+  }
+  btn.disabled = false;
+}
+
+function uniq(k) { return ['전체', ...Array.from(new Set(DATA.map(d => d[k]).filter(Boolean)))]; }
+function buildChips(id, key) {
+  const box = document.getElementById(id); box.innerHTML = '';
+  uniq(key).forEach(v => {
+    const c = document.createElement('div');
+    c.className = 'chip' + (v === '전체' ? ' active' : ''); c.textContent = v;
+    c.onclick = () => { F[key]=v; [...box.children].forEach(x=>x.classList.remove('active')); c.classList.add('active'); render(); };
+    box.appendChild(c);
+  });
+}
+function rebuildFilters() {
+  F.pos='전체'; F.job='전체'; F.basic='전체'; F.vet='전체'; F.q='';
+  document.getElementById('search').value = '';
+  buildChips('sl-pos','pos'); buildChips('sl-job','job');
+  buildChips('sl-basic','basic'); buildChips('sl-vet','vet');
+}
+document.getElementById('search').addEventListener('input', e => { F.q = e.target.value.toLowerCase(); render(); });
+function filt() {
+  return DATA.filter(d =>
+    (F.pos==='전체'||d.pos===F.pos) && (F.job==='전체'||d.job===F.job) &&
+    (F.basic==='전체'||d.basic===F.basic) && (F.vet==='전체'||d.vet===F.vet) &&
+    (F.q===''||d.name.toLowerCase().includes(F.q))
+  );
+}
+function tagCls(v) { return v==='이수완료'?'t-done':v==='진행중'?'t-prog':'t-na'; }
+function animVal(el, target, suffix, dec) {
+  const start = parseFloat(el.dataset.v || 0); const t0 = performance.now();
+  function step(t) {
+    const p = Math.min((t-t0)/600,1); const cur = start+(target-start)*(1-Math.pow(1-p,3));
+    el.textContent = (dec?cur.toFixed(1):Math.round(cur))+(suffix||'');
+    if (p<1) requestAnimationFrame(step); else el.dataset.v = target;
+  }
+  requestAnimationFrame(step);
+}
+let charts = {};
+function donut(id, labels, vals) {
+  const ctx = document.getElementById(id);
+  if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets[0].data=vals; charts[id].update(); return; }
+  charts[id] = new Chart(ctx, {type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:PAL,borderColor:'rgba(0,0,0,.2)',borderWidth:2,hoverOffset:10}]},
+    options:{cutout:'62%',plugins:{legend:{position:'bottom',labels:{padding:14,usePointStyle:true,pointStyle:'circle'}}},animation:{animateScale:true}}});
+}
+function bars(id, labels, datasets) {
+  const ctx = document.getElementById(id);
+  if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets=datasets; charts[id].update(); return; }
+  charts[id] = new Chart(ctx, {type:'bar',data:{labels,datasets},
+    options:{plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle'}}},
+    scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,.05)'}},y:{stacked:true,grid:{color:'rgba(255,255,255,.05)'},ticks:{precision:0}}}}});
+}
+function cnt(arr, key, val) { return arr.filter(d => d[key]===val).length; }
+function render() {
+  const f = filt();
+  document.getElementById('totRec').textContent = DATA.length;
+  animVal(document.getElementById('kp1'), f.length, '', false);
+  const bd = cnt(f,'basic','이수완료');
+  animVal(document.getElementById('kp2'), f.length?bd/f.length*100:0, '%', true);
+  const vTarget = f.filter(d => d.vet!=='비대상');
+  animVal(document.getElementById('kp3'), vTarget.length?cnt(vTarget,'vet','이수완료')/vTarget.length*100:0, '%', true);
+  animVal(document.getElementById('kp4'), cnt(f,'pos','Engineer'), '', false);
+  const posL = Array.from(new Set(DATA.map(d=>d.pos).filter(Boolean)));
+  donut('cPos', posL, posL.map(p=>cnt(f,'pos',p)));
+  const jobL = Array.from(new Set(DATA.map(d=>d.job).filter(Boolean)));
+  donut('cJob', jobL, jobL.map(j=>cnt(f,'job',j)));
+  bars('cEdu', ['Basic','Veteran'], [
+    {label:'이수완료',data:[cnt(f,'basic','이수완료'),cnt(f,'vet','이수완료')],backgroundColor:'#00cec9',borderRadius:6},
+    {label:'진행중',data:[cnt(f,'basic','진행중'),cnt(f,'vet','진행중')],backgroundColor:'#fdcb6e',borderRadius:6},
+    {label:'비대상',data:[cnt(f,'basic','비대상'),cnt(f,'vet','비대상')],backgroundColor:'#636e92',borderRadius:6},
+  ]);
+  const tb = document.getElementById('tbody'); tb.innerHTML = '';
+  document.getElementById('tblCnt').textContent = f.length;
+  if (!f.length) { tb.innerHTML='<tr><td colspan="9" class="empty">조건에 맞는 인원이 없습니다</td></tr>'; return; }
+  f.forEach((d,i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${d.no||i+1}</td><td><b>${d.name}</b></td><td>${d.join}</td><td>${d.exp}</td>
+      <td>${d.pos}</td><td>${d.job}</td>
+      <td><span class="tag ${tagCls(d.basic)}">${d.basic}</span></td>
+      <td><span class="tag ${tagCls(d.vet)}">${d.vet}</span></td>
+      <td style="color:var(--muted)">${d.note||'-'}</td>`;
+    tb.appendChild(tr);
+  });
+}
 applyLang();
-initLogin();
+loadData();
+</script>
+
+<script>
+(function(){
+  const PASSWORD='gst1234!';
+  function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
+  window.checkPw=function(){
+    const v=document.getElementById('pwInput').value;
+    if(v===PASSWORD){
+      try{sessionStorage.setItem('gst_auth','1');}catch(e){}
+      document.getElementById('loginOverlay').classList.add('hidden');
+    }else{
+      document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';
+      document.getElementById('pwInput').value='';
+    }
+  };
+  function init(){
+    const ov=document.getElementById('loginOverlay');
+    if(!ov)return;
+    if(isAuthed()){ov.classList.add('hidden');return;}
+    const inp=document.getElementById('pwInput');
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();});
+    setTimeout(()=>inp.focus(),100);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
+  else init();
+})();
 </script>
 </body>
 </html>
