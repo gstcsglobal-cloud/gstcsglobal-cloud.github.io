@@ -9,13 +9,34 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg1:#060d1f;--bg2:#0b1a35;--bg3:#0f2348;
-  --a1:#38bdf8;--a2:#2dd4bf;--a3:#a78bfa;--a4:#fbbf24;--a5:#f472b6;
-  --glass:rgba(255,255,255,0.06);--glassb:rgba(255,255,255,0.13);
-  --txt:#e2e8f0;--mut:#94a3b8;--ok:#34d399;--bad:#fb7185;
+  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
+  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
+  --glass:rgba(255,255,255,0.05); --glass-border:rgba(255,255,255,0.12); --glass-hover:rgba(255,255,255,0.1);
+  --txt-main:#e2e8f0; --txt-muted:#94a3b8;
+  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
+  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
+  --bg1:#0a1420;--bg2:#13232d;--bg3:#0f2027;
+  --a1:var(--accent-1);--a2:var(--accent-2);--a3:var(--accent-3);--a4:var(--accent-4);--a5:#f472b6;
+  --glassb:var(--glass-border);--txt:var(--txt-main);--mut:var(--txt-muted);--ok:#34d399;--bad:#fb7185;
+}
+body.theme-burgundy{
+  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
+  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
+  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
+  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
+  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
+  --bg1:#1a0813;--bg2:#2d0b1e;--bg3:#1f0822;
+}
+body.theme-light{
+  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #faebd7, #f0f4f8);
+  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
+  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
+  --txt-main:#0f172a; --txt-muted:#64748b;
+  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
+  --bg1:#f1f5f9;--bg2:#e2e8f0;--bg3:#faebd7;
 }
 body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
-  background:linear-gradient(-45deg,var(--bg1),var(--bg2),var(--bg3),#091528);
+  background:var(--bg-gradient);
   background-size:400% 400%;animation:grad 22s ease infinite;min-height:100vh;padding:24px 28px}
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
@@ -157,14 +178,43 @@ tr:hover td{background:rgba(255,255,255,.04)}
 .loading{text-align:center;padding:60px;color:var(--mut);font-size:15px}
 @media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
-.navtabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid rgba(255,255,255,0.13);padding-bottom:0}
-.navtab{padding:10px 18px;border-radius:10px 10px 0 0;font-size:13px;font-weight:700;text-decoration:none;
-  color:#94a3b8;border:1px solid transparent;border-bottom:none;transition:all .2s;position:relative;top:2px}
-.navtab:hover{color:#e2e8f0;background:rgba(255,255,255,0.06)}
-.navtab.active{color:#38bdf8;background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.13);border-bottom:2px solid transparent}
+
+/* 로그인 가드 */
+#loginOverlay{position:fixed;inset:0;z-index:99999;
+  background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#1a1a2e);
+  background-size:400% 400%;animation:grad 18s ease infinite;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-family:'Segoe UI','Malgun Gothic',sans-serif}
+#loginOverlay.hidden{display:none}
+.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
+.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;
+  padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
+.login-box .lock{font-size:40px;margin-bottom:14px}
+.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px;color:#f5f6fa}
+.login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);
+  border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
+.login-box input:focus{border-color:#6c5ce7}
+.login-box input::placeholder{color:#a0a0c0}
+.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);
+  border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.login-box button:hover{opacity:.88}
+.login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 </style>
 </head>
 <body>
+
+<div id="loginOverlay">
+  <div class="login-logo">GST Dashboard</div>
+  <div class="login-box">
+    <div class="lock">🔒</div>
+    <div class="ltitle" id="lgTitle">비밀번호를 입력하세요 / Enter password</div>
+    <input type="password" id="pwInput" placeholder="비밀번호 / Password" autocomplete="off">
+    <button onclick="checkPw()" id="lgBtn">로그인 / Login</button>
+    <div class="login-err" id="pwErr"></div>
+  </div>
+</div>
+
 
 <div class="header">
   <div>
@@ -187,13 +237,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
       </div>
     </div>
   </div>
-</div>
-  <div class="navtabs">
-  <a href="https://gstcsglobal-cloud.github.io/hr/" class="navtab">인원 현황</a>
-  <a href="https://gstcsglobal-cloud.github.io/scrubber/" class="navtab active">설치 현황</a>
-  <a href="https://gstcsglobal-cloud.github.io/pm/" class="navtab">PM 점검</a>
-  <a href="https://gstcsglobal-cloud.github.io/fault/" class="navtab">고장 분석</a>
-  <a href="https://gstcsglobal-cloud.github.io/material/" class="navtab">자재 실적</a>
 </div>
 <div class="status" id="status">Loading...</div>
 
@@ -230,10 +273,10 @@ tr:hover td{background:rgba(255,255,255,.04)}
     <span class="lbl" data-i="gran_lbl">View by</span>
     <div class="pchips">
       <div class="pchip" data-g="week" onclick="setGran('week')" data-i="g_week">Week</div>
-      <div class="pchip" data-g="month" onclick="setGran('month')" data-i="g_month">Month</div>
+      <div class="pchip active" data-g="month" onclick="setGran('month')" data-i="g_month">Month</div>
       <div class="pchip" data-g="quarter" onclick="setGran('quarter')" data-i="g_quarter">Quarter</div>
       <div class="pchip" data-g="half" onclick="setGran('half')" data-i="g_half">Half-Year</div>
-      <div class="pchip active" data-g="year" onclick="setGran('year')" data-i="g_year">Year</div>
+      <div class="pchip" data-g="year" onclick="setGran('year')" data-i="g_year">Year</div>
     </div>
     <span class="gran-note" data-i="gran_note">↑ Trend chart aggregation unit</span>
     <span class="gran-note" id="autoGranNote" style="color:#fbbf24"></span>
@@ -374,20 +417,20 @@ const CI={country:2,customer:3,location:4,code:5,sn:6,model:7,fab:9,group1:12,de
 const PAL=['#38bdf8','#2dd4bf','#a78bfa','#fbbf24','#f472b6','#34d399','#fb7185','#60a5fa','#c084fc','#4ade80','#f97316','#e879f9'];
 
 const T={
-  ko:{title:'🌐 글로벌 스크러버 설치 현황',sub:'Global Standard Technology',
-    back:'← Back',total_badge:'총',units:'Units',refresh:'Refresh',
-    date_range:'Date',apply:'Apply',reset:'Reset',
-    quick_select:'Quick Select',
-    q_1w:'1W',q_1m:'1M',q_3m:'3M',q_6m:'6M',q_1y:'1Y',q_all:'All',
+  ko:{title:'🌐 글로벌 스크러버 설치 현황',sub:'고객사 설치 스크러버 통합 모니터링 대시보드',
+    back:'← 메인으로',total_badge:'총',units:'대',refresh:'새로고침',
+    date_range:'기간 설정',apply:'적용',reset:'초기화',
+    quick_select:'빠른 선택',
+    q_1w:'1주',q_1m:'1개월',q_3m:'3개월',q_6m:'6개월',q_1y:'1년',q_all:'전체',
     gran_lbl:'집계 단위',gran_note:'↑ 추이 차트 적용',
-    g_week:'Week',g_month:'Month',g_quarter:'Quarter',g_half:'Half',g_year:'Year',
-    search_lbl:'Search',
-    kp1:'설치 대수',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty IN',kp5:'Warranty OUT',
-    trend_fabin:'📦 Fab-In ',trend_turnon:'⚡ Turn-On',
-    note_rate:'Bar: 대수 · Line: 비중(%)',note_warr:'IN/OUT 비율',
+    g_week:'주 단위',g_month:'월 단위',g_quarter:'분기 단위',g_half:'반기 단위',g_year:'연 단위',
+    search_lbl:'검색',
+    kp1:'필터 설치 대수',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty 유효',kp5:'Warranty 만료',
+    trend_fabin:'📦 누적 FAB In 추이 (반입 기준)',trend_turnon:'⚡ 누적 Turn On 추이 (가동 기준)',
+    note_rate:'Bar: 대수 · Line: 비중(%)',note_warr:'유효/만료 비율',
     note_model:'모델별 분포',note_group:'공정 그룹별 분포',note_yoy:'Bar: 대수 · Line: 전년비(%)',note_drill:'Bar: 대수 · Line: 비중(%) · 🖱️ 클릭 시 필터',note_drill2:'분포 · 🖱️ 클릭 시 필터',cross_title:'🔀 교차 분석',cross_x:'가로축',cross_color:'쌓기 기준',
     tbl_title:'상세 목록',loading:'데이터 불러오는 중...',
-    warr_all:'전체',warr_ok:'IN',warr_exp:'OUT',no_data:'조건에 맞는 데이터가 없습니다',
+    warr_all:'전체',warr_ok:'유효',warr_exp:'만료',no_data:'조건에 맞는 데이터가 없습니다',
     legend_cum:'누적',legend_new:'신규',range_all:'전체 기간',
     auto_switch:'기간이 길어 자동 전환됨',too_fine:'권장하지 않음'},
   en:{title:'🌐 Global Scrubber Installation Status',sub:'Integrated monitoring dashboard for installed scrubbers',
@@ -440,7 +483,7 @@ const T={
     auto_switch:'期間が長いため自動切替',too_fine:'非推奨'}
 };
 
-let LANG='ko', GRAN='year', RAW=[], CHARTS={}, sortK=null, sortAsc=true;
+let LANG='ko', GRAN='month', RAW=[], CHARTS={}, sortK=null, sortAsc=true;
 let DATE_FROM=null, DATE_TO=null, USER_PICKED_GRAN=false;
 const F={country:'ALL',customer:'ALL',model:'ALL',warr:'ALL',q:''};
 
@@ -901,6 +944,33 @@ document.addEventListener('click',e=>{
 
 applyLang();
 loadData();
+</script>
+
+<script>
+(function(){
+  const PASSWORD='gst1234!';
+  function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
+  window.checkPw=function(){
+    const v=document.getElementById('pwInput').value;
+    if(v===PASSWORD){
+      try{sessionStorage.setItem('gst_auth','1');}catch(e){}
+      document.getElementById('loginOverlay').classList.add('hidden');
+    }else{
+      document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';
+      document.getElementById('pwInput').value='';
+    }
+  };
+  function init(){
+    const ov=document.getElementById('loginOverlay');
+    if(!ov)return;
+    if(isAuthed()){ov.classList.add('hidden');return;}
+    const inp=document.getElementById('pwInput');
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();});
+    setTimeout(()=>inp.focus(),100);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
+  else init();
+})();
 </script>
 </body>
 </html>
