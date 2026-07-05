@@ -531,10 +531,12 @@ function changeDashboardTheme(themeClass, label) {
 document.addEventListener('click', e => {
   if(!e.target.closest('.theme-wrap')) document.getElementById('themeMenu').classList.remove('open');
   if(!e.target.closest('.lang-wrap')) document.getElementById('langMenu').classList.remove('open');
-  ['mat','eq','proc','reason','free'].forEach(k => {
-    const id = 'exclDD' + k.charAt(0).toUpperCase() + k.slice(1);
-    if(!e.target.closest('#' + id)) document.getElementById(id).classList.remove('open');
-  });
+  if(!e.target.closest('.excl-dd-wrap')){
+    ['mat','eq','proc','reason','free'].forEach(k => {
+      const id = 'exclDD' + k.charAt(0).toUpperCase() + k.slice(1);
+      document.getElementById(id).classList.remove('open');
+    });
+  }
 });
 
 function t(k){return (T[LANG]||T.ko)[k]||k;}
