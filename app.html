@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GST 통합 대시보드</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg1:#0f172a;--bg2:#1e293b;--line:#334155;--txt:#e2e8f0;--mut:#94a3b8;
+  --accent:#38bdf8;--glass:rgba(255,255,255,0.06);--glassb:rgba(255,255,255,0.13);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
+  background:linear-gradient(135deg,#0f172a,#1e293b);display:flex;flex-direction:column}
+
+/* 상단 바 */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;
+  background:rgba(15,23,42,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);flex-shrink:0}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .logo{font-size:22px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.brand .tag{font-size:12px;color:var(--mut)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.tb-btn{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);
+  padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-decoration:none}
+.tb-btn:hover{background:rgba(255,255,255,.12)}
+.tb-btn.logout:hover{border-color:#fb7185;color:#fda4af}
+
+/* 탭 바 */
+.tabbar{display:flex;gap:2px;padding:0 24px;background:rgba(15,23,42,.6);
+  border-bottom:2px solid var(--line);flex-shrink:0;overflow-x:auto}
+.tabbar::-webkit-scrollbar{height:0}
+.tab{padding:13px 22px;font-size:14px;font-weight:700;color:var(--mut);cursor:pointer;
+  border:none;background:transparent;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;position:relative;top:2px}
+.tab:hover{color:var(--txt)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab .ic{margin-right:6px}
+
+/* iframe 영역 */
+.frame-wrap{flex:1;position:relative;background:#0f172a}
+.frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:none;display:none;background:#0f172a}
+.frame-wrap iframe.active{display:block}
+.frame-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:var(--mut);font-size:15px;z-index:1;pointer-events:none}
+
+/* 로그인 */
+#login{position:fixed;inset:0;z-index:9999;background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#1a1a2e);
+  background-size:400% 400%;animation:grad 18s ease infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+#login.hidden{display:none}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
+.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
+.login-box .lock{font-size:40px;margin-bottom:14px}
+.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px}
+.login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
+.login-box input:focus{border-color:#6c5ce7}
+.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
+
+@media(max-width:768px){
+  .brand .tag{display:none}
+  .tab{padding:12px 14px;font-size:12px}
+  .topbar{padding:10px 14px}
+  .tabbar{padding:0 10px}
+}
+</style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<div id="login">
+  <div class="login-logo">GST Dashboard</div>
+  <div class="login-box">
+    <div class="lock">🔒</div>
+    <div class="ltitle" id="lgTitle">비밀번호를 입력하세요</div>
+    <input type="password" id="pw" placeholder="비밀번호" autocomplete="off">
+    <button onclick="doLogin()" id="lgBtn">로그인</button>
+    <div class="login-err" id="lgErr"></div>
+  </div>
+</div>
+
+<!-- 상단 바 -->
+<div class="topbar">
+  <div class="brand">
+    <span class="logo">GST Dashboard</span>
+    <span class="tag" id="brandTag">통합 모니터링 시스템</span>
+  </div>
+  <div class="topbar-right">
+    <button class="tb-btn" onclick="cycleLang()">🌐 <span id="langLabel">KO</span></button>
+    <button class="tb-btn logout" onclick="doLogout()" id="logoutBtn">로그아웃</button>
+  </div>
+</div>
+
+<!-- 탭 바 -->
+<div class="tabbar" id="tabbar"></div>
+
+<!-- iframe 영역 -->
+<div class="frame-wrap" id="frameWrap">
+  <div class="frame-loading" id="frameLoading">⏳ Loading...</div>
+</div>
+
+<script>
+const PASSWORD='gst1234!';
+const BASE='https://gstcsglobal-cloud.github.io';
+
+// 탭 정의 (순서대로)
+const TABS=[
+  {id:'hr',      path:'/hr/',       ic:'👥', ko:'인원 현황', en:'Workforce',    zh:'人员',   ja:'人員'},
+  {id:'scrubber',path:'/scrubber/', ic:'🌐', ko:'설치 현황', en:'Installation', zh:'安装',   ja:'設置'},
+  {id:'pm',      path:'/pm/',       ic:'🔧', ko:'PM 점검',   en:'PM Schedule',  zh:'PM点检', ja:'PM点検'},
+  {id:'fault',   path:'/fault/',    ic:'🛠️', ko:'고장 분석', en:'Fault',        zh:'故障',   ja:'故障'},
+  {id:'material',path:'/material/', ic:'📦', ko:'자재 실적', en:'Material',     zh:'材料',   ja:'資材'}
+];
+
+const L={
+  ko:{tag:'통합 모니터링 시스템',login:'비밀번호를 입력하세요',ph:'비밀번호',btn:'로그인',wrong:'비밀번호가 올바르지 않습니다',logout:'로그아웃'},
+  en:{tag:'Integrated Monitoring',login:'Enter password',ph:'Password',btn:'Login',wrong:'Incorrect password',logout:'Logout'},
+  zh:{tag:'综合监控系统',login:'请输入密码',ph:'密码',btn:'登录',wrong:'密码不正确',logout:'登出'},
+  ja:{tag:'統合モニタリング',login:'パスワードを入力',ph:'パスワード',btn:'ログイン',wrong:'パスワードが正しくありません',logout:'ログアウト'}
+};
+let LANG='ko';
+try{ if(window.name && L[window.name]) LANG=window.name; }catch(e){}
+
+const frames={}; // id -> iframe element
+let activeTab=null;
+
+function lt(k){return (L[LANG]||L.ko)[k]||k;}
+
+function applyLang(){
+  document.getElementById('brandTag').textContent=lt('tag');
+  document.getElementById('lgTitle').textContent=lt('login');
+  document.getElementById('pw').placeholder=lt('ph');
+  document.getElementById('lgBtn').textContent=lt('btn');
+  document.getElementById('logoutBtn').textContent=lt('logout');
+  document.getElementById('langLabel').textContent=LANG.toUpperCase();
+  // 탭 이름 갱신
+  document.querySelectorAll('.tab').forEach(el=>{
+    const tab=TABS.find(t=>t.id===el.dataset.id);
+    if(tab)el.querySelector('.tab-label').textContent=tab[LANG]||tab.ko;
+  });
+}
+
+function cycleLang(){
+  const order=['ko','en','zh','ja'];
+  LANG=order[(order.indexOf(LANG)+1)%4];
+  try{window.name=LANG;}catch(e){}
+  applyLang();
+}
+
+function buildTabs(){
+  const bar=document.getElementById('tabbar');
+  bar.innerHTML='';
+  TABS.forEach(tab=>{
+    const b=document.createElement('button');
+    b.className='tab'; b.dataset.id=tab.id;
+    b.innerHTML=`<span class="ic">${tab.ic}</span><span class="tab-label">${tab[LANG]||tab.ko}</span>`;
+    b.onclick=()=>switchTab(tab.id);
+    bar.appendChild(b);
+  });
+}
+
+function switchTab(id){
+  if(activeTab===id)return;
+  activeTab=id;
+  // 탭 하이라이트
+  document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
+  // iframe 없으면 생성 (지연 로딩)
+  if(!frames[id]){
+    const tab=TABS.find(t=>t.id===id);
+    const f=document.createElement('iframe');
+    f.src=BASE+tab.path;
+    f.dataset.id=id;
+    document.getElementById('frameWrap').appendChild(f);
+    frames[id]=f;
+  }
+  // 표시 전환
+  Object.values(frames).forEach(f=>f.classList.remove('active'));
+  frames[id].classList.add('active');
+  document.getElementById('frameLoading').style.display='none';
+  // 현재 탭 기억
+  try{sessionStorage.setItem('gst_tab',id);}catch(e){}
+}
+
+// 로그인
+function doLogin(){
+  const v=document.getElementById('pw').value;
+  if(v===PASSWORD){
+    try{sessionStorage.setItem('gst_auth','1');}catch(e){}
+    document.getElementById('login').classList.add('hidden');
+    start();
+  }else{
+    document.getElementById('lgErr').textContent=lt('wrong');
+    document.getElementById('pw').value='';
+  }
+}
+function doLogout(){
+  try{sessionStorage.removeItem('gst_auth');}catch(e){}
+  location.reload();
+}
+
+function start(){
+  buildTabs();
+  applyLang();
+  // 마지막 본 탭 or 첫 탭
+  let init=TABS[0].id;
+  try{const saved=sessionStorage.getItem('gst_tab');if(saved&&TABS.find(t=>t.id===saved))init=saved;}catch(e){}
+  switchTab(init);
+}
+
+// 초기화
+(function(){
+  let authed=false;
+  try{authed=sessionStorage.getItem('gst_auth')==='1';}catch(e){}
+  if(authed){
+    document.getElementById('login').classList.add('hidden');
+    start();
+  }else{
+    applyLang();
+    const pw=document.getElementById('pw');
+    pw.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+    setTimeout(()=>pw.focus(),100);
+  }
+})();
+</script>
+</body>
+</html>
