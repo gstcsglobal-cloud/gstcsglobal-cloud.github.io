@@ -219,7 +219,7 @@ const C={line:2,group1:3,detail1:5,model:17,code:18,work:23,sn:24,maint:25,aw:26
 const PAL=['#fb7185','#fbbf24','#a78bfa','#38bdf8','#34d399','#f472b6','#60a5fa','#c084fc','#4ade80','#f97316'];
 
 const T={
-  ko:{title:'🛠️ 고장 분석 대시보드',sub:'BM/CBM 고장 및 알람 분석',refresh:'새로고침',loading:'데이터 불러오는 중...',
+  ko:{title:'🛠️ 고장 분석 대시보드',sub:'BM/CBM 고장 및 알람 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
     sl_type:'유형',sl_search:'검색',
     kp1:'총 고장건수',kp2:'BM (고장정비)',kp3:'CBM (상태기반)',kp4:'Alarm',kp5:'Warning',
     ch_code:'🔥 고장코드 TOP',note_code:'가장 빈번한 고장코드',
@@ -443,6 +443,32 @@ document.addEventListener('click',e=>{
 
 applyLang();
 loadData();
+</script>
+<script>
+/* ===== 통합 셸 동기화 (iframe 안에서만 작동) ===== */
+(function(){
+  const inFrame = (window.self !== window.top);
+  if(inFrame){
+    // 헤더의 개별 버튼 숨김 (메인으로/새로고침/테마/언어)
+    const st=document.createElement('style');
+    st.textContent='.header-right{display:none !important}';
+    document.head.appendChild(st);
+  }
+  // 셸에서 오는 테마/언어 신호 수신
+  window.addEventListener('message',e=>{
+    const d=e.data||{};
+    if(d.type==='gst-theme'){
+      document.body.className = d.theme==='default' ? '' : 'theme-'+d.theme;
+      // 테마 전환 함수가 있으면 차트도 갱신
+      if(typeof changeDashboardTheme==='function'){
+        try{changeDashboardTheme(d.theme==='default'?'default':d.theme, d.theme);}catch(err){}
+      }
+    }
+    if(d.type==='gst-lang' && typeof setLang==='function'){
+      try{setLang(d.lang);}catch(err){}
+    }
+  });
+})();
 </script>
 </body>
 </html>
