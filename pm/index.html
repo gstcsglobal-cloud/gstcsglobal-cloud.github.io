@@ -3,19 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scrubber PM Schedule Dashboard</title>
+<title>Scrubber PM Schedule</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg1:#1a0a0f;--bg2:#2d1320;--bg3:#1f1235;
-  --a1:#fb7185;--a2:#fbbf24;--a3:#a78bfa;--a4:#38bdf8;--a5:#34d399;
-  --glass:rgba(255,255,255,0.06);--glassb:rgba(255,255,255,0.13);
-  --txt:#e2e8f0;--mut:#94a3b8;--ok:#34d399;--warn:#fbbf24;--bad:#fb7185;
+  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
+  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
+  --glass:rgba(255,255,255,0.05); --glass-border:rgba(255,255,255,0.12); --glass-hover:rgba(255,255,255,0.1);
+  --txt-main:#e2e8f0; --txt-muted:#94a3b8;
+  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
+  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
+  --bg1:#0a1420;--bg2:#13232d;--bg3:#0f2027;
+  --a1:var(--accent-1);--a2:var(--accent-2);--a3:var(--accent-3);--a4:var(--accent-4);--a5:var(--accent-5);
+  --glassb:var(--glass-border);--txt:var(--txt-main);--mut:var(--txt-muted);--ok:#34d399;--warn:#fbbf24;--bad:#fb7185;
+}
+body.theme-burgundy{
+  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
+  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
+  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
+  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
+  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
+  --bg1:#1a0813;--bg2:#2d0b1e;--bg3:#1f0822;
+}
+body.theme-light{
+  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #faebd7, #f0f4f8);
+  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
+  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
+  --txt-main:#0f172a; --txt-muted:#64748b;
+  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
+  --bg1:#f1f5f9;--bg2:#e2e8f0;--bg3:#faebd7;
 }
 body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
-  background:linear-gradient(-45deg,var(--bg1),var(--bg2),var(--bg3),#150c25);
+  background:var(--bg-gradient);
   background-size:400% 400%;animation:grad 22s ease infinite;min-height:100vh;padding:24px 28px}
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
@@ -196,11 +217,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
 .login-box button:hover{opacity:.88}
 .login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.navtabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid rgba(255,255,255,0.13);padding-bottom:0}
-.navtab{padding:10px 18px;border-radius:10px 10px 0 0;font-size:13px;font-weight:700;text-decoration:none;
-  color:#94a3b8;border:1px solid transparent;border-bottom:none;transition:all .2s;position:relative;top:2px}
-.navtab:hover{color:#e2e8f0;background:rgba(255,255,255,0.06)}
-.navtab.active{color:#38bdf8;background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.13);border-bottom:2px solid transparent}
 </style>
 </head>
 <body>
@@ -218,7 +234,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 
 <div class="header">
-</div>
   <div>
     <h1 data-i="title">🔧 Scrubber PM Schedule</h1>
     <div class="sub" data-i="sub">Preventive Maintenance schedule based on TBM history</div>
@@ -236,13 +251,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
       </div>
     </div>
   </div>
-</div>
-  <div class="navtabs">
-  <a href="https://gstcsglobal-cloud.github.io/hr/" class="navtab">인원 현황</a>
-  <a href="https://gstcsglobal-cloud.github.io/scrubber/" class="navtab">설치 현황</a>
-  <a href="https://gstcsglobal-cloud.github.io/pm/"class="navtab active">PM 점검</a>
-  <a href="https://gstcsglobal-cloud.github.io/fault/" class="navtab">고장 분석</a>
-  <a href="https://gstcsglobal-cloud.github.io/material/" class="navtab">자재 실적</a>
 </div>
 <div class="status" id="status">Loading...</div>
 
