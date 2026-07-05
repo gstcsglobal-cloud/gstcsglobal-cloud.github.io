@@ -479,13 +479,16 @@ canvas{cursor:pointer}
 <script>
 (function(){
   const PASSWORD='gst1234!';
+  function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
   window.checkPw=function(){
     const v=document.getElementById('pwInput').value;
     if(v===PASSWORD){try{sessionStorage.setItem('gst_auth','1');}catch(e){}document.getElementById('loginOverlay').classList.add('hidden');}
     else{document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';document.getElementById('pwInput').value='';}
   };
-  if(sessionStorage.getItem('gst_auth')==='1')document.getElementById('loginOverlay').classList.add('hidden');
-  document.getElementById('pwInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkPw();});
+  function init(){const ov=document.getElementById('loginOverlay');if(!ov)return;
+    if(isAuthed()){ov.classList.add('hidden');return;}
+    const inp=document.getElementById('pwInput');inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();});setTimeout(()=>inp.focus(),100);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
