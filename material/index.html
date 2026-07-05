@@ -93,9 +93,9 @@ body.theme-light .btn-grad { color: #fff; }
 .btn-glass:hover{background:var(--glass-hover)}
 
 .theme-wrap, .lang-wrap{position:relative}
-.theme-btn, .lang-btn{background:var(--glass);border:1px solid var(--glass-border);color:var(--txt-main);padding:9px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;backdrop-filter:blur(10px);box-shadow:var(--card-shadow);transition:all 0.3s;}
+.theme-btn, .lang-btn{background:var(--glass);border:1px solid var(--glass-border);color:var(--txt-main);padding:9px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
 .theme-btn:hover, .lang-btn:hover{background:var(--glass-hover);transform:scale(1.02)}
-.theme-dropdown, .lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:6px;z-index:100;min-width:150px;display:none;backdrop-filter:blur(25px);box-shadow:var(--card-shadow);}
+.theme-dropdown, .lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:6px;z-index:100;min-width:150px;display:none;backdrop-filter:blur(10px)}
 .theme-dropdown.open, .lang-dropdown.open{display:block}
 .theme-item, .lang-item{padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--txt-main);transition:all 0.2s;}
 .theme-item:hover, .lang-item:hover{background:var(--glass-hover);padding-left:18px;color:var(--accent-1);}
@@ -105,7 +105,7 @@ body.theme-light .btn-grad { color: #fff; }
 .slicers{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:10px;margin-bottom:16px}
 .slicer{background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:10px 14px;backdrop-filter:blur(12px);box-shadow:var(--card-shadow);}
 .slicer .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--txt-muted);margin-bottom:7px;font-weight:700}
-.slicer select, .slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;width:100%;color-scheme:dark;}
+.slicer select, .slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;width:100%;color-scheme:dark}
 body.theme-light .slicer select, body.theme-light .slicer input { color-scheme: light; color:#0f172a; }
 .slicer select:focus, .slicer input:focus{border-color:var(--accent-1)}
 .slicer.search{grid-column:span 2;}
@@ -117,7 +117,7 @@ body.theme-light .slicer select, body.theme-light .slicer input { color-scheme: 
 .tb-label{font-size:11px;color:var(--txt-muted);font-weight:700}
 
 .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
-.kpi{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:16px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:all .3s;cursor:pointer;box-shadow:var(--card-shadow);}
+.kpi{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:16px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:all .3s;cursor:pointer;box-shadow:var(--card-shadow)}
 .kpi:hover{transform:translateY(-4px);border-color:var(--accent-1);}
 .kpi.sel{border-color:var(--accent-1);box-shadow:0 0 15px 0 var(--accent-1);}
 .kpi .ic{font-size:18px;margin-bottom:5px}
@@ -145,7 +145,7 @@ body.theme-light .cross-controls .ctrl-group select { color-scheme: light; color
 .cross-layout .cross-table-wrap{max-height:380px;overflow:auto;border-radius:10px;border:1px solid var(--glass-border)}
 .cross-layout .cross-chart-wrap{height:380px;position:relative}
 .cross-layout table{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}
-.cross-layout table th{text-align:left;padding:8px 10px;color:var(--txt-muted);font-size:9px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--glass-border);position:sticky;top:0;background:var(--glass);backdrop-filter:blur(10px)}
+.cross-layout table th{text-align:left;padding:8px 10px;color:var(--txt-muted);font-size:9px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--glass-border);position:sticky;top:0;background:var(--glass);backdrop-filter:blur(8px)}
 .cross-layout table td{padding:6px 10px;border-bottom:1px solid var(--glass-border);color:var(--txt-main)}
 .cross-layout table .num{text-align:right;font-variant-numeric:tabular-nums}
 .cross-layout table .heat-cell{transition:background 0.2s;min-width:50px}
@@ -154,7 +154,7 @@ body.theme-light .cross-controls .ctrl-group select { color-scheme: light; color
 .cross-layout table .total-cell{color:var(--accent-2);font-weight:700}
 
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
-.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;backdrop-filter:blur(14px);box-shadow:var(--card-shadow);height:440px;display:flex;flex-direction:column;}
+.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;backdrop-filter:blur(14px);box-shadow:var(--card-shadow);height:440px;display:flex;flex-direction:column}
 .card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:var(--txt-main)}
 .card-note{font-size:10px;color:var(--txt-muted);margin-bottom:10px;font-style:italic}
 .card .cw{flex:1;position:relative;min-height:0}
@@ -166,7 +166,7 @@ body.theme-light .cross-controls .ctrl-group select { color-scheme: light; color
 .excl-dd-wrap{position:relative}
 .excl-dd-wrap input{width:100%;background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:6px 10px;color:var(--txt-main);font-size:11px;outline:none;}
 .excl-dd-wrap input:focus{border-color:var(--accent-1)}
-.excl-dd{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg-gradient);border:1px solid var(--glass-border);border-radius:10px;max-height:180px;overflow-y:auto;z-index:150;display:none;padding:4px}
+.excl-dd{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg-gradient);border:1px solid var(--glass-border);border-radius:10px;max-height:180px;overflow-y:auto;z-index:150;display:none}
 .excl-dd.open{display:block}
 .excl-opt{padding:6px 8px;border-radius:6px;cursor:pointer;font-size:11px;color:var(--txt-main)}
 .excl-opt:hover{background:var(--glass-hover);color:var(--accent-1)}
@@ -177,7 +177,7 @@ body.theme-light .cross-controls .ctrl-group select { color-scheme: light; color
 .tablecard h3{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--txt-main)}
 .tbl-wrap{max-height:460px;overflow:auto;border-radius:10px}
 table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
-th{text-align:left;padding:10px 11px;color:var(--txt-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--glass-border);position:sticky;top:0;background:var(--glass);backdrop-filter:blur(10px);cursor:pointer;user-select:none}
+th{text-align:left;padding:10px 11px;color:var(--txt-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--glass-border);position:sticky;top:0;background:var(--glass);backdrop-filter:blur(8px);cursor:pointer;user-select:none}
 th:hover{color:var(--accent-1)}
 td{padding:8px 11px;border-bottom:1px solid var(--glass-border);color:var(--txt-main);}
 tr:hover td{background:var(--glass-hover)}
@@ -190,8 +190,11 @@ tr:hover td{background:var(--glass-hover)}
 #loginOverlay{position:fixed;inset:0;z-index:99999;background:var(--bg-gradient);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
 #loginOverlay.hidden{display:none}
 .login-logo{font-size:38px;font-weight:900;background:var(--title-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
-.login-box{background:var(--glass);border:1px solid var(--glass-border);border-radius:24px;padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px;box-shadow:var(--card-shadow);}
+.login-box{background:var(--glass);border:1px solid var(--glass-border);border-radius:24px;padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px;box-shadow:var(--card-shadow)}
+.login-box .lock{font-size:40px;margin-bottom:14px}
+.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px}
 .login-box input{width:100%;background:var(--glass);border:1px solid var(--glass-border);border-radius:30px;padding:13px 20px;color:var(--txt-main);font-size:15px;outline:none;text-align:center}
+.login-box input:focus{border-color:var(--accent-1)}
 .login-box button{width:100%;margin-top:14px;background:var(--title-gradient);border:none;border-radius:30px;padding:13px;color:#0f172a;font-size:15px;font-weight:700;cursor:pointer}
 .login-err{color:#f87171;font-size:12px;margin-top:8px;min-height:20px}
 
@@ -208,13 +211,12 @@ tr:hover td{background:var(--glass-hover)}
 .fchip .fx{font-weight:900;font-size:10px}
 .fchip-clear{background:transparent;border:1px solid var(--glass-border);border-radius:20px;
   padding:4px 11px;color:var(--txt-muted);font-size:10px;font-weight:700;cursor:pointer;margin-left:auto}
-.fchip-clear:hover{color:var(--bad);border-color:var(--bad)}
+.fchip-clear:hover{color:#fb7185;border-color:#fb7185}
 canvas{cursor:pointer}
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
 <body>
-  
 <div id="loginOverlay">
   <div class="login-logo">GST Dashboard</div>
   <div class="login-box">
@@ -479,666 +481,50 @@ canvas{cursor:pointer}
 <script>
 (function(){
   const PASSWORD='gst1234!';
-  function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
+  
   window.checkPw=function(){
     const v=document.getElementById('pwInput').value;
-    if(v===PASSWORD){try{sessionStorage.setItem('gst_auth','1');}catch(e){}document.getElementById('loginOverlay').classList.add('hidden');}
-    else{document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';document.getElementById('pwInput').value='';}
+    if(v===PASSWORD){
+      try{sessionStorage.setItem('gst_auth','1');}catch(e){}
+      document.getElementById('loginOverlay').classList.add('hidden');
+    }
+    else{
+      document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';
+      document.getElementById('pwInput').value='';
+    }
   };
-  function init(){const ov=document.getElementById('loginOverlay');if(!ov)return;
-    if(isAuthed()){ov.classList.add('hidden');return;}
-    const inp=document.getElementById('pwInput');inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();});setTimeout(()=>inp.focus(),100);}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+  
+  // ✅ iframe 내에서 sessionStorage 확인
+  if(sessionStorage.getItem('gst_auth')==='1'){
+    document.getElementById('loginOverlay').classList.add('hidden');
+  }
+  
+  // ✅ 메인(parent window)에서 오는 인증 상태 메시지 수신
+  window.addEventListener('message',e=>{
+    const d=e.data||{};
+    
+    if(d.type==='gst-auth-status'){
+      if(d.authed){
+        try{sessionStorage.setItem('gst_auth','1');}catch(e){}
+        document.getElementById('loginOverlay').classList.add('hidden');
+      }
+      return;
+    }
+  });
+  
+  document.getElementById('pwInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter')checkPw();
+  });
 })();
 
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
 const C={op:1,customer:2,line:5,process:7,detail:8,mainEq:9,eq:10,qty:22,matName:23,reason:25,workDate:28,daysPaid:29,daysPrev:30,pf:31,freeReason:32};
 
 const T={
-  ko:{title:'자재 교체 현황',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'유상',kp3:'무상',kp4:'유상비율',kp5:'자재 종류',kp6:'설비 대수',cyc_title:'⏱️ 자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',f_active:'활성 필터',f_clear:'전체 해제',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
-  en:{title:'Part's Replaced Status',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-proc',sl_eq:'Equipment',sl_search:'Search',cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',kp1:'Total',kp2:'Paid',kp3:'Free',kp4:'Paid %',kp5:'Materials',kp6:'Equipment',cyc_title:'⏱️ Material Lifecycle (avg/min/max)',cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Replacement Detail',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',all:'All',no_data:'No data',days:'d',f_active:'Active Filters',f_clear:'Clear All',nav_hr:'Workforce',nav_sc:'Installation',nav_pm:'PM Schedule',nav_ft:'Fault',nav_mt:'Material'},
-  zh:{title:'材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',kp1:'总更换数',kp2:'有偿',kp3:'无偿',kp4:'有偿比率',kp5:'材料种类',kp6:'设备数',cyc_title:'⏱️ 材料使用周期(平均/最小/最大)',cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'材料更换明细',th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',all:'全部',no_data:'无数据',days:'天',f_active:'活动筛选',f_clear:'全部清除',nav_hr:'人员',nav_sc:'安装',nav_pm:'PM点检',nav_ft:'故障',nav_mt:'材料'},
-  ja:{title:'資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'라인',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',kp1:'総交換件수',kp2:'有償',kp3:'無償',kp4:'有償比率',kp5:'資材種類',kp6:'設備台数',cyc_title:'⏱️ 資材別使用周期(平均/最小/最大)',cyc_mat:'資材名',cyc_cnt:'交換件수',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'資材交換詳細',th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',all:'全体',no_data:'データなし',days:'日',f_active:'有効フィルタ',f_clear:'全解除',nav_hr:'人員',nav_sc:'設置',nav_pm:'PM点検',nav_ft:'故障',nav_mt:'資材'}
+  ko:{title:'자재 교체 현황',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',cyc_mat:'자재명',sl_search:'검색',cycle_basis:'사용주기 기준',cycle_paid:'유상기준',cycle_prev:'전교체일기준',f_active:'활성 필터',f_clear:'전체 해제',kp1:'총 교체건수',kp2:'유상',kp3:'무상',kp4:'유상비율',kp5:'자재 종류',kp6:'설비 대수',cyc_title:'자재별 사용주기 분석',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일'},
+  en:{title:'Part\'s Replaced Status',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Detail',sl_eq:'Equipment',cyc_mat:'Material',sl_search:'Search',cycle_basis:'Basis',cycle_paid:'Paid',cycle_prev:'All',f_active:'Active Filters',f_clear:'Clear All',kp1:'Total',kp2:'Paid',kp3:'Free',kp4:'Paid %',kp5:'Material Types',kp6:'Equipment Count',cyc_title:'Lifecycle',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Detail Records',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Detail',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days'},
+  zh:{title:'材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'详细工艺',sl_eq:'设备',cyc_mat:'材料',sl_search:'搜索',cycle_basis:'基础',cycle_paid:'付费',cycle_prev:'全部',f_active:'活动筛选器',f_clear:'全部清除',kp1:'总计',kp2:'付费',kp3:'免费',kp4:'付费%',kp5:'材料类型',kp6:'设备数',cyc_title:'生命周期',cyc_cnt:'计数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'详细记录',th_date:'日期',th_customer:'客户',th_process:'工艺',th_detail:'详细',th_eq:'设备',th_mat:'材料',th_qty:'数量',th_reason:'原因',th_pf:'付费/免费',th_cycle:'天数'},
+  ja:{title:'資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'ライン',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備',cyc_mat:'資材',sl_search:'検索',cycle_basis:'基準',cycle_paid:'有償',cycle_prev:'全て',f_active:'アクティブフィルター',f_clear:'すべてクリア',kp1:'合計',kp2:'有償',kp3:'無償',kp4:'有償率',kp5:'資材種類',kp6:'設備数',cyc_title:'使用周期',cyc_cnt:'回数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'詳細',th_date:'日付',th_customer:'顧客',th_process:'工程',th_detail:'詳細',th_eq:'設備',th_mat:'資材',th_qty:'数量',th_reason:'理由',th_pf:'有償/無償',th_cycle:'日数'}
 };
 
 let LANG='ko', DATA=[], CHARTS={}, sortK='date', sortAsc=false, cycSortK='cnt', cycSortAsc=false;
-let CYCLE_BASIS='paid';
-let CROSS_CHART_INSTANCE = null;
-const F={country:'',customer:'',line:'',process:'',detail:'',eq:'',mat:'',reason:'',dtFrom:'',dtTo:'',pf:'',q:''};
-
-const EXCL = { mat: [], eq: [], proc: [], reason: [], free: [] };
-const ALL_VALUES = { mat: [], eq: [], proc: [], reason: [], free: [] };
-
-Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
-
-const THEME_PALETTES = {
-  default: { txt: '#94a3b8', colors: ['#2dd4bf','#38bdf8','#a78bfa','#fbbf24','#34d399','#fb7185'] },
-  burgundy: { txt: '#b49aa9', colors: ['#fcd34d','#f472b6','#fb7185','#e2e8f0','#f472b6','#fb7185'] },
-  light: { txt: '#64748b', colors: ['#2563eb','#0284c7','#7c3aed','#ea580c','#16a34a','#ef4444'] }
-};
-let ACTIVE_THEME_KEY = 'default';
-
-function toggleThemeMenu() { document.getElementById('themeMenu').classList.toggle('open'); }
-function toggleLang() { document.getElementById('langMenu').classList.toggle('open'); }
-
-function changeDashboardTheme(themeClass, label) {
-  document.body.className = '';
-  if(themeClass !== 'default') document.body.classList.add('theme-' + themeClass);
-  ACTIVE_THEME_KEY = themeClass;
-  document.getElementById('themeLabel').textContent = label;
-  document.getElementById('themeMenu').classList.remove('open');
-  Chart.defaults.color = THEME_PALETTES[ACTIVE_THEME_KEY].txt;
-  if(DATA.length) { render(); }
-}
-
-document.addEventListener('click', e => {
-  if(!e.target.closest('.theme-wrap')) document.getElementById('themeMenu').classList.remove('open');
-  if(!e.target.closest('.lang-wrap')) document.getElementById('langMenu').classList.remove('open');
-  if(!e.target.closest('.excl-dd-wrap')){
-    ['mat','eq','proc','reason','free'].forEach(k => {
-      const id = 'exclDD' + k.charAt(0).toUpperCase() + k.slice(1);
-      document.getElementById(id).classList.remove('open');
-    });
-  }
-});
-
-function t(k){return (T[LANG]||T.ko)[k]||k;}
-function applyLang(){
-  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
-  document.querySelectorAll('[data-i-th]').forEach(el=>{el.textContent=t(el.getAttribute('data-i-th'));});
-  document.getElementById('langLabel').textContent=LANG.toUpperCase();
-}
-function setLang(l){LANG=l;applyLang();if(DATA.length){rebuildFilters();render();}document.getElementById('langMenu').classList.remove('open');}
-
-function toDate(v){
-  if(!v)return null; 
-  const n=Number(v); 
-  if(!isNaN(n)&&n>20000&&n<80000)return new Date(Date.UTC(1899,11,30)+n*86400000);
-  const s=String(v).trim(); 
-  const m=s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
-  return m?new Date(Date.UTC(+m[1],+m[2]-1,+m[3])):null;
-}
-function fmtDate(d){return d?d.toISOString().slice(0,10):'—';}
-function cv(r,k){const v=r[C[k]];return v!==undefined?String(v).trim():'';}
-
-// ===== 디버깅용: 데이터 상태 확인 =====
-function debugData(data, label) {
-  console.log(`[DEBUG] ${label}:`, {
-    total: data.length,
-    sample: data.slice(0, 3),
-    keys: data.length > 0 ? Object.keys(data[0]) : []
-  });
-}
-
-async function loadData(){
-  const status=document.getElementById('status');
-  try{
-    status.textContent='⏳ 데이터 로딩 중...';
-    const res=await fetch(SHEET_URL+'&t='+Date.now()); 
-    const text=await res.text();
-    
-    console.log('[DEBUG] CSV 첫 500자:', text.substring(0, 500));
-    
-    const parsed = Papa.parse(text, {skipEmptyLines:true, header:false});
-    console.log('[DEBUG] 파싱 결과:', { rows: parsed.data.length, firstRow: parsed.data[0] });
-    
-    const rows = parsed.data.slice(1);
-
-    function cv(r,k){const v=r[C[k]];return(v!==undefined&&v!==null&&v!=='')?String(v).trim():'';}
-
-    // 국가 유추: 운영단위 "GST XXX SCRUBBER"
-    function guessCountry(op){
-      if(!op)return '—';
-      const m=op.match(/GST\s+([A-Z]+)/i);
-      if(m){const c=m[1].toUpperCase();
-        const map={TAIWAN:'TAIWAN',KOREA:'KOREA',CHINA:'CHINA',JAPAN:'JAPAN',US:'USA',USA:'USA',SINGAPORE:'SINGAPORE'};
-        return map[c]||c;}
-      return op;
-    }
-    // 고객사 축약
-    function shortCustomer(name){
-      if(!name)return '—';
-      const up=name.toUpperCase();
-      if(up.includes('MICRON'))return 'MICRON';
-      if(up.includes('TAIWAN-ASIA')||up.includes('ASIA SEMICON'))return 'TASC';
-      if(up.includes('POWERCHIP'))return 'POWERCHIP';
-      if(up.includes('WINBOND'))return 'WINBOND';
-      if(up.includes('TSMC'))return 'TSMC';
-      if(up.includes('SAMSUNG'))return 'SAMSUNG';
-      if(up.includes('HYNIX'))return 'SK HYNIX';
-      return name.split(/[\s,\.(]/)[0].toUpperCase();
-    }
-
-    const mappedData = rows.map(r => {
-      const wd = toDate(r[C.workDate]);
-      return {
-        country: guessCountry(cv(r,'op')),
-        customer: shortCustomer(cv(r,'customer')),
-        line: cv(r,'line'),
-        process: cv(r,'process'),
-        detail: cv(r,'detail'),
-        eq: cv(r,'eq') || cv(r,'mainEq'),
-        matName: cv(r,'matName'),
-        qty: Number(r[C.qty]) || 1,
-        reason: cv(r,'reason'),
-        workDate: wd,
-        daysPaid: Number(r[C.daysPaid]) || null,
-        daysPrev: Number(r[C.daysPrev]) || null,
-        pf: cv(r,'pf'),
-        freeReason: cv(r,'freeReason'),
-        year: wd ? wd.getUTCFullYear() : null,
-        month: wd ? wd.getUTCMonth()+1 : null
-      };
-    });
-
-    DATA = mappedData.filter(x => x.matName && x.matName.trim() !== '');
-    
-    debugData(DATA, '최종 데이터');
-    
-    status.textContent='✅ Load OK ('+DATA.length+'건)';
-    if(DATA.length === 0) {
-      status.textContent='⚠️ 데이터가 없습니다. CSV 헤더를 확인해주세요.';
-      console.warn('[WARN] 데이터가 0건입니다. 매핑 설정을 확인하세요.');
-    }
-    rebuildFilters(); 
-    changeDashboardTheme('default','Cyber Turquoise');
-  }catch(e){
-    status.textContent='❌ '+e.message;
-    console.error('[ERROR]', e);
-  }
-}
-
-function uniq(key,base){return Array.from(new Set((base||DATA).map(x=>x[key]).filter(Boolean))).sort();}
-function fillSelect(id,fkey,vals){
-  const s=document.getElementById(id); const cur=F[fkey]; s.innerHTML='';
-  const oA=document.createElement('option'); oA.value=''; oA.textContent=t('all'); s.appendChild(oA);
-  vals.forEach(v=>{const o=document.createElement('option'); o.value=v; o.textContent=v; s.appendChild(o);});
-  s.value=vals.includes(cur)?cur:''; if(!vals.includes(cur))F[fkey]='';
-}
-function rebuildFilters(){
-  fillSelect('sl-country','country',uniq('country')); fillSelect('sl-customer','customer',uniq('customer'));
-  fillSelect('sl-line','line',uniq('line')); fillSelect('sl-process','process',uniq('process'));
-  fillSelect('sl-detail','detail',uniq('detail')); fillSelect('sl-eq','eq',uniq('eq'));
-  fillSelect('sl-mat','mat',uniq('matName'));
-}
-function onSlicer(){
-  F.country=document.getElementById('sl-country').value; F.customer=document.getElementById('sl-customer').value;
-  F.line=document.getElementById('sl-line').value; F.process=document.getElementById('sl-process').value;
-  F.detail=document.getElementById('sl-detail').value; F.eq=document.getElementById('sl-eq').value;
-  F.mat=document.getElementById('sl-mat').value; F.dtFrom=document.getElementById('dtFrom').value;
-  F.dtTo=document.getElementById('dtTo').value; render();
-}
-document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
-function setCycleBasis(b){ CYCLE_BASIS=b; document.querySelectorAll('.ct-btn').forEach(x=>x.classList.toggle('active',x.dataset.c===b)); render(); }
-function setPfFilter(v){
-  F.pf=v; document.querySelectorAll('.kpis .kpi').forEach(x=>x.classList.remove('sel'));
-  if(v==='유상') document.querySelector('.kpis .k2').classList.add('sel');
-  else if(v==='무상') document.querySelector('.kpis .k3').classList.add('sel');
-  else document.querySelector('.kpis .k1').classList.add('sel');
-  render();
-}
-
-
-// ===== 차트 클릭 크로스 필터링 =====
-const CLICK_MAP={cMat:'mat',cEq:'eq',cProc:'process',cPf:'pf',cReason:'reason'};
-const FIELD_LABEL={country:'국가',customer:'고객사',line:'라인',process:'공정',detail:'세부공정',eq:'설비',mat:'자재',reason:'사유',pf:'유/무상',dtFrom:'시작일',dtTo:'종료일',q:'검색'};
-function chartClick(chartId,label){
-  const key=CLICK_MAP[chartId]; if(!key)return;
-  let val=label;
-  if(chartId==='cPf'){ val = (label===t('kp2'))?'유상':'무상'; }
-  F[key] = (F[key]===val) ? '' : val;   // 같은 값 다시 클릭 → 해제
-  syncSlicerUI();
-  render();
-}
-function syncSlicerUI(){
-  const map={country:'sl-country',customer:'sl-customer',line:'sl-line',process:'sl-process',detail:'sl-detail',eq:'sl-eq',mat:'sl-mat'};
-  Object.entries(map).forEach(([k,id])=>{
-    const el=document.getElementById(id);
-    if(el)el.value=F[k]||'';
-  });
-}
-function renderFilterChips(){
-  const box=document.getElementById('fchips'), list=document.getElementById('fchipList');
-  if(!box)return;
-  const active=Object.entries(F).filter(([k,v])=>v);
-  if(!active.length){box.style.display='none';return;}
-  box.style.display='flex';
-  list.innerHTML=active.map(([k,v])=>
-    `<span class="fchip" onclick="clearFilter('${k}')">${FIELD_LABEL[k]||k}: <b>${v}</b> <span class="fx">✕</span></span>`).join('');
-}
-function clearFilter(k){
-  F[k]='';
-  if(k==='dtFrom')document.getElementById('dtFrom').value='';
-  if(k==='dtTo')document.getElementById('dtTo').value='';
-  if(k==='q')document.getElementById('search').value='';
-  syncSlicerUI(); render();
-}
-function clearAllFilters(){
-  Object.keys(F).forEach(k=>F[k]='');
-  ['dtFrom','dtTo','search'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  syncSlicerUI(); render();
-}
-
-function filt(){
-  return DATA.filter(x=>{
-    if(F.country&&x.country!==F.country)return false; if(F.customer&&x.customer!==F.customer)return false;
-    if(F.line&&x.line!==F.line)return false; if(F.process&&x.process!==F.process)return false;
-    if(F.detail&&x.detail!==F.detail)return false; if(F.eq&&x.eq!==F.eq)return false;
-    if(F.mat&&x.matName!==F.mat)return false; if(F.pf&&x.pf!==F.pf)return false;
-    if(F.reason&&x.reason!==F.reason)return false;
-    if(F.dtFrom&&(!x.workDate||fmtDate(x.workDate)<F.dtFrom))return false;
-    if(F.dtTo&&(!x.workDate||fmtDate(x.workDate)>F.dtTo))return false;
-    if(F.q){const s=`${x.matName} ${x.reason} ${x.eq} ${x.process} ${x.freeReason||''}`.toLowerCase(); if(!s.includes(F.q))return false;}
-    return true;
-  });
-}
-function countBy(arr,key,top){const m={}; arr.forEach(x=>{const k=x[key]; if(k)m[k]=(m[k]||0)+1;}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,top);}
-function sumQtyBy(arr,key,top){const m={}; arr.forEach(x=>{const k=x[key]; if(k)m[k]=(m[k]||0)+x.qty;}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,top);}
-function cycleDays(x){return CYCLE_BASIS==='paid'?x.daysPaid:x.daysPrev;}
-
-function mkBar(id,labels,data,color,horizontal,withLine){
-  const ctx=document.getElementById(id); const theme = THEME_PALETTES[ACTIVE_THEME_KEY];
-  const total=data.reduce((a,b)=>a+b,0)||1;
-  const datasets=[{type:'bar',label:'건수',data,backgroundColor:color,borderRadius:5,order:2,yAxisID:horizontal?undefined:'y',xAxisID:horizontal?'x':undefined}];
-  if(withLine){
-    let cum=0; const cumPct=data.map(v=>{cum+=v;return Math.round(cum/total*1000)/10;});
-    const lineDs={type:'line',label:'누적%',data:cumPct,borderColor:'#fbbf24',backgroundColor:'#fbbf24',
-      borderWidth:2,pointRadius:2.5,pointBackgroundColor:'#fbbf24',tension:0.3,order:1};
-    if(horizontal){lineDs.xAxisID='xPct';}else{lineDs.yAxisID='yPct';}
-    datasets.push(lineDs);
-  }
-  const scales={
-    x:{ticks:{color:theme.txt,font:{size:10}},grid:{display:false}},
-    y:{ticks:{color:theme.txt,font:{size:10}},grid:{color:ACTIVE_THEME_KEY==='light'?'rgba(0,0,0,0.05)':'rgba(255,255,255,0.05)'}}
-  };
-  if(withLine){
-    if(horizontal){scales.xPct={position:'top',min:0,max:100,ticks:{color:'#fbbf24',font:{size:9},callback:v=>v+'%'},grid:{display:false}};}
-    else{scales.yPct={position:'right',min:0,max:100,ticks:{color:'#fbbf24',font:{size:9},callback:v=>v+'%'},grid:{display:false}};}
-  }
-  const cfg={data:{labels,datasets},
-    options:{indexAxis:horizontal?'y':'x',responsive:true,maintainAspectRatio:false,
-      onClick:(e,els,chart)=>{if(els.length&&CLICK_MAP[id])chartClick(id,chart.data.labels[els[0].index]);},
-      plugins:{legend:{display:!!withLine,labels:{color:theme.txt,font:{size:9},usePointStyle:true,pointStyle:'circle',boxWidth:6}}},
-      scales}};
-  if(CHARTS[id]){CHARTS[id].destroy();}
-  CHARTS[id]=new Chart(ctx,cfg);
-}
-function mkDonut(id,labels,data,colors){
-  const ctx=document.getElementById(id);
-  const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors||THEME_PALETTES[ACTIVE_THEME_KEY].colors,borderWidth:0,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
-      onClick:(e,els,chart)=>{if(els.length&&CLICK_MAP[id])chartClick(id,chart.data.labels[els[0].index]);},plugins:{legend:{position:'right',labels:{color:THEME_PALETTES[ACTIVE_THEME_KEY].txt,font:{size:10},usePointStyle:true,pointStyle:'circle'}}}}};
-  if(CHARTS[id]){CHARTS[id].config.options=cfg.options; CHARTS[id].data.labels=labels; CHARTS[id].data.datasets[0].data=data; CHARTS[id].data.datasets[0].backgroundColor=colors||THEME_PALETTES[ACTIVE_THEME_KEY].colors; CHARTS[id].update(); return;}
-  CHARTS[id]=new Chart(ctx,cfg);
-}
-
-let LAST_F=[];
-function render(){
-  const f=filt(); LAST_F=f;
-  console.log('[DEBUG] render - 필터링된 데이터:', f.length, '건');
-  
-  const pal = THEME_PALETTES[ACTIVE_THEME_KEY].colors;
-  
-  const paid=f.filter(x=>x.pf==='유상').length; const free=f.filter(x=>x.pf==='무상').length;
-  document.getElementById('kp1').textContent=f.length; document.getElementById('kp2').textContent=paid;
-  document.getElementById('kp3').textContent=free; document.getElementById('kp4').textContent=(f.length?Math.round(paid/f.length*100):0)+'%';
-  document.getElementById('kp5').textContent=uniq('matName',f).length; document.getElementById('kp6').textContent=uniq('eq',f).length;
-
-  ALL_VALUES.mat = uniq('matName', f);
-  ALL_VALUES.eq = uniq('eq', f);
-  ALL_VALUES.proc = uniq('process', f);
-  ALL_VALUES.reason = uniq('reason', f);
-  ALL_VALUES.free = uniq('freeReason', f.filter(x=>x.freeReason));
-
-  const matF = f.filter(x=>!EXCL.mat.includes(x.matName));
-  const mats = sumQtyBy(matF,'matName',12);
-  mkBar('cMat', mats.map(x=>x[0]), mats.map(x=>x[1]), pal[0], true, true);
-  renderExclChips('mat');
-
-  const eqF = f.filter(x=>!EXCL.eq.includes(x.eq));
-  const eqs = countBy(eqF,'eq',12);
-  mkBar('cEq', eqs.map(x=>x[0]), eqs.map(x=>x[1]), pal[1], true, true);
-  renderExclChips('eq');
-
-  mkDonut('cPf',[t('kp2'),t('kp3')],[paid,free],[pal[1],pal[4]]);
-
-  const procF = f.filter(x=>!EXCL.proc.includes(x.process));
-  const procs = countBy(procF,'process',10);
-  mkBar('cProc', procs.map(x=>x[0]), procs.map(x=>x[1]), pal[2], false, true);
-  renderExclChips('proc');
-
-  const reasonF = f.filter(x=>!EXCL.reason.includes(x.reason));
-  const reasons = countBy(reasonF,'reason',8);
-  mkDonut('cReason', reasons.map(x=>x[0]), reasons.map(x=>x[1]));
-  renderExclChips('reason');
-
-  const freeF = f.filter(x=>x.pf==='무상' && !EXCL.free.includes(x.freeReason));
-  const frees = countBy(freeF,'freeReason',6);
-  mkDonut('cFree', frees.map(x=>x[0]), frees.map(x=>x[1]));
-  renderExclChips('free');
-
-  renderExclOptions('mat'); renderExclOptions('eq'); renderExclOptions('proc'); renderExclOptions('reason'); renderExclOptions('free');
-  renderFilterChips();
-  renderCycleTable(f); renderDetailTable(f); renderCrossTable();
-}
-
-function getExclId(k) { return k.charAt(0).toUpperCase() + k.slice(1); }
-
-function toggleExclDD(k, open) {
-  const el = document.getElementById('exclDD' + getExclId(k));
-  if(open !== undefined) { if(open) el.classList.add('open'); else el.classList.remove('open'); }
-  else { el.classList.toggle('open'); }
-}
-
-function renderExclChips(k) {
-  const container = document.getElementById('exclChips' + getExclId(k));
-  container.innerHTML = EXCL[k].map(m => 
-    `<span class="excl-chip" onclick="removeExcl('${k}','${m}')">${m} ✕</span>`
-  ).join('');
-}
-
-function renderExclOptions(k) {
-  const id = 'exclSearch' + getExclId(k);
-  const ddId = 'exclDD' + getExclId(k);
-  const q = document.getElementById(id).value.toLowerCase();
-  const list = ALL_VALUES[k].filter(m => !EXCL[k].includes(m) && m.toLowerCase().includes(q));
-  const dd = document.getElementById(ddId);
-  if(!list.length){dd.innerHTML='<div class="excl-opt" style="color:var(--txt-muted)">검색 결과 없음</div>';dd.classList.add('open');return;}
-  dd.innerHTML = list.map(m => `<div class="excl-opt" onclick="addExcl('${k}','${m}')">${m}</div>`).join('');
-  dd.classList.add('open');
-}
-
-window.addExcl = function(k, m) {
-  if(!EXCL[k].includes(m)) { EXCL[k].push(m); render(); document.getElementById('exclSearch' + getExclId(k)).value = ''; }
-};
-window.removeExcl = function(k, m) { EXCL[k] = EXCL[k].filter(x => x !== m); render(); };
-window.clearExcl = function(k) { EXCL[k] = []; render(); };
-
-window.sortCyc=function(k){if(cycSortK===k){cycSortAsc=!cycSortAsc;}else{cycSortK=k;cycSortAsc=false;} renderCycleTable(LAST_F);};
-window.sortTbl=function(k){if(sortK===k){sortAsc=!sortAsc;}else{sortK=k;sortAsc=false;} renderDetailTable(LAST_F);};
-
-function renderCycleTable(f){
-  const g={}; f.forEach(x=>{ const d=cycleDays(x); if(d) { if(!g[x.matName])g[x.matName]=[]; g[x.matName].push(d); } });
-  let s=Object.keys(g).map(k=>({name:k,cnt:g[k].length,avg:Math.round(g[k].reduce((a,b)=>a+b,0)/g[k].length),min:Math.min(...g[k]),max:Math.max(...g[k])}));
-  s.sort((a,b)=>{ let v1=a[cycSortK], v2=b[cycSortK]; if(typeof v1==='string') return cycSortAsc?v1.localeCompare(v2):v2.localeCompare(v1); return cycSortAsc?v1-v2:v2-v1; });
-  const tb=document.getElementById('cycBody');
-  if(!s.length){tb.innerHTML=`<tr><td colspan="5" class="empty">${t('no_data')}</td></tr>`;return;}
-  tb.innerHTML=s.map(x=>`<tr><td>${x.name}</td><td class="num">${x.cnt}</td><td class="num" style="color:var(--accent-1)">${x.avg} ${t('days')}</td><td class="num">${x.min}</td><td class="num">${x.max}</td></tr>`).join('');
-}
-
-function renderDetailTable(f){
-  document.getElementById('tblCnt').textContent=f.length;
-  let d=[...f];
-  d.sort((a,b)=>{
-    if(sortK==='date'){const x=a.workDate||0,y=b.workDate||0; return sortAsc?x-y:y-x;}
-    if(sortK==='qty'){return sortAsc?a.qty-b.qty:b.qty-a.qty;}
-    if(sortK==='cycle'){const x=cycleDays(a)||0,y=cycleDays(b)||0; return sortAsc?x-y:y-x;}
-    const map={customer:'customer',line:'line',process:'process',detail:'detail',eq:'eq',mat:'matName',reason:'reason',pf:'pf'};
-    let x=a[map[sortK]]||'', y=b[map[sortK]]||'';
-    return sortAsc?(''+x).localeCompare(''+y,'ko',{numeric:true}):(''+y).localeCompare(''+x,'ko',{numeric:true});
-  });
-  const tbody=document.getElementById('tbody');
-  if(!d.length){tbody.innerHTML=`<tr><td colspan="11" class="empty">${t('no_data')}</td></tr>`;return;}
-  tbody.innerHTML=d.slice(0,500).map(x=>`<tr><td>${fmtDate(x.workDate)}</td><td>${x.customer||'—'}</td><td>${x.line||'—'}</td><td>${x.process||'—'}</td><td>${x.detail||'—'}</td><td>${x.eq||'—'}</td><td>${x.matName||'—'}</td><td class="num">${x.qty||1}</td><td>${x.reason||'—'}</td><td><span class="pill ${x.pf==='유상'?'paid':'free'}">${x.pf||'—'}</span></td><td class="num">${cycleDays(x)||'—'}</td></tr>`).join('');
-}
-
-function toggleCrossTableBody() {
-  const body=document.getElementById('crossBody'), c=document.getElementById('crossControls'), a=document.getElementById('crossToggleArrow');
-  if(body.style.display==='none' || body.style.display===''){
-    body.style.display='block'; c.style.display='flex'; a.textContent='[ 닫기 ▴ ]'; renderCrossTable();
-  } else {
-    body.style.display='none'; c.style.display='none'; a.textContent='[ 열기 ▾ ]';
-  }
-}
-
-function renderCrossTable(){
-  const body=document.getElementById('crossBody');
-  if(body.style.display==='none') return;
-  
-  const f=LAST_F;
-  const rK=document.getElementById('crossRow').value;
-  const cK=document.getElementById('crossCol').value;
-  const vK=document.getElementById('crossValue').value;
-  const topN=parseInt(document.getElementById('crossTopN').value);
-  
-  function getValue(row) {
-    switch(vK) {
-      case 'count': return 1;
-      case 'qty': return row.qty || 1;
-      case 'avgDays': return cycleDays(row) || 0;
-      case 'avgPaid': return row.daysPaid || 0;
-      case 'minDays': return cycleDays(row) || 0;
-      case 'maxDays': return cycleDays(row) || 0;
-      default: return 1;
-    }
-  }
-  
-  function aggregate(arr) {
-    switch(vK) {
-      case 'count': return arr.length;
-      case 'qty': return arr.reduce((s,x) => s + (x.qty||1), 0);
-      case 'avgDays': 
-      case 'avgPaid': {
-        const vals = arr.map(x => vK==='avgDays' ? cycleDays(x) : x.daysPaid).filter(d => d !== null && d > 0);
-        return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
-      }
-      case 'minDays': {
-        const vals = arr.map(x => cycleDays(x)).filter(d => d !== null && d > 0);
-        return vals.length ? Math.min(...vals) : 0;
-      }
-      case 'maxDays': {
-        const vals = arr.map(x => cycleDays(x)).filter(d => d !== null && d > 0);
-        return vals.length ? Math.max(...vals) : 0;
-      }
-      default: return arr.length;
-    }
-  }
-  
-  const rows = Array.from(new Set(f.map(x => {
-    let val = x[rK];
-    if(rK === 'year') return val;
-    if(rK === 'month') return val;
-    return val || '—';
-  }))).sort((a,b) => {
-    if(rK === 'year' || rK === 'month') return a - b;
-    return String(a).localeCompare(String(b), 'ko');
-  });
-  
-  const cols = Array.from(new Set(f.map(x => {
-    let val = x[cK];
-    if(cK === 'year') return val;
-    if(cK === 'month') return val;
-    return val || '—';
-  }))).sort((a,b) => {
-    if(cK === 'year' || cK === 'month') return a - b;
-    return String(a).localeCompare(String(b), 'ko');
-  });
-  
-  const rowFiltered = rows.slice(0, topN);
-  const colFiltered = cols.slice(0, Math.min(topN, cols.length));
-  
-  const matrix = {};
-  rowFiltered.forEach(r => { matrix[r] = {}; colFiltered.forEach(c => matrix[r][c] = []); matrix[r]._t = []; });
-  
-  f.forEach(x => {
-    let rv = x[rK] || '—';
-    let cv = x[cK] || '—';
-    if(rK === 'year') rv = x.year;
-    if(rK === 'month') rv = x.month;
-    if(cK === 'year') cv = x.year;
-    if(cK === 'month') cv = x.month;
-    if(matrix[rv] && matrix[rv][cv] !== undefined) {
-      matrix[rv][cv].push(x);
-      matrix[rv]._t.push(x);
-    }
-  });
-  
-  const values = {};
-  rowFiltered.forEach(r => {
-    values[r] = {};
-    colFiltered.forEach(c => {
-      values[r][c] = aggregate(matrix[r][c] || []);
-    });
-    values[r]._t = aggregate(matrix[r]._t || []);
-  });
-  
-  let maxVal = 0;
-  rowFiltered.forEach(r => {
-    colFiltered.forEach(c => {
-      if(values[r][c] > maxVal) maxVal = values[r][c];
-    });
-  });
-  if(maxVal === 0) maxVal = 1;
-  
-  const colLabel = cK === 'year' ? '년도' : cK === 'month' ? '월' : cK === 'freeReason' ? '무상사유' : cK === 'reason' ? '교체사유' : cK === 'matName' ? '자재명' : cK === 'pf' ? '유무상' : cK === 'eq' ? '설비' : cK === 'detail' ? '세부공정' : cK === 'process' ? '공정' : cK === 'line' ? 'LINE' : cK === 'customer' ? '고객사' : cK === 'country' ? '국가' : cK;
-  const rowLabel = rK === 'year' ? '년도' : rK === 'month' ? '월' : rK === 'freeReason' ? '무상사유' : rK === 'reason' ? '교체사유' : rK === 'matName' ? '자재명' : rK === 'pf' ? '유무상' : rK === 'eq' ? '설비' : rK === 'detail' ? '세부공정' : rK === 'process' ? '공정' : rK === 'line' ? 'LINE' : rK === 'customer' ? '고객사' : rK === 'country' ? '국가' : rK;
-  
-  function getHeatColor(val) {
-    const ratio = maxVal > 0 ? val / maxVal : 0;
-    const r = Math.round(235 - ratio * 200);
-    const g = Math.round(245 - ratio * 100);
-    const b = Math.round(255 - ratio * 100);
-    return `rgba(${r}, ${g}, ${b}, ${0.3 + ratio * 0.6})`;
-  }
-  
-  const thead = document.getElementById('crossTable').querySelector('thead');
-  const tbody = document.getElementById('crossTable').querySelector('tbody');
-  thead.innerHTML = `<tr><th>${rowLabel}</th>${colFiltered.map(c => `<th>${c}</th>`).join('')}<th>Total</th></tr>`;
-  tbody.innerHTML = rowFiltered.map(r => {
-    return `<tr>
-      <td class="row-label">${r}</td>
-      ${colFiltered.map(c => {
-        const v = values[r][c] || 0;
-        return `<td class="num heat-cell" style="background:${getHeatColor(v)}">${v}</td>`;
-      }).join('')}
-      <td class="num total-cell">${values[r]._t}</td>
-    </tr>`;
-  }).join('');
-  
-  const chartLabels = rowFiltered;
-  const barData = rowFiltered.map(r => values[r]._t || 0);
-  const percentageData = rowFiltered.map(r => {
-    const total = rowFiltered.reduce((s, rr) => s + (values[rr]._t || 0), 0);
-    return total > 0 ? Math.round((values[r]._t || 0) / total * 100) : 0;
-  });
-  
-  const ctx = document.getElementById('crossChart').getContext('2d');
-  const theme = THEME_PALETTES[ACTIVE_THEME_KEY];
-  
-  if(CROSS_CHART_INSTANCE) { CROSS_CHART_INSTANCE.destroy(); }
-  
-  CROSS_CHART_INSTANCE = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: chartLabels,
-      datasets: [
-        {
-          label: '건수 (Bar)',
-          type: 'bar',
-          data: barData,
-          backgroundColor: theme.colors[0] + '80',
-          borderColor: theme.colors[0],
-          borderWidth: 2,
-          borderRadius: 4,
-          order: 2
-        },
-        {
-          label: '비율 % (Line)',
-          type: 'line',
-          data: percentageData,
-          borderColor: theme.colors[3] || '#fbbf24',
-          backgroundColor: 'transparent',
-          borderWidth: 3,
-          pointBackgroundColor: theme.colors[3] || '#fbbf24',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-          pointRadius: 4,
-          tension: 0.3,
-          yAxisID: 'y1',
-          order: 1
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          labels: { color: theme.txt, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' }
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              if(context.datasetIndex === 0) return `건수: ${context.raw}`;
-              else return `비율: ${context.raw}%`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: { ticks: { color: theme.txt, font: { size: 9 } }, grid: { display: false } },
-        y: {
-          position: 'left',
-          ticks: { color: theme.txt, font: { size: 9 } },
-          grid: { color: ACTIVE_THEME_KEY==='light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)' },
-          title: { display: true, text: '건수', color: theme.txt, font: { size: 10 } }
-        },
-        y1: {
-          position: 'right',
-          ticks: { color: theme.txt, font: { size: 9 }, callback: v => v + '%' },
-          grid: { display: false },
-          title: { display: true, text: '비율 (%)', color: theme.txt, font: { size: 10 } },
-          min: 0,
-          max: Math.max(100, Math.max(...percentageData) * 1.2)
-        }
-      }
-    }
-  });
-}
-
-applyLang(); loadData();
-</script>
-<script>
-/* ===== 통합 셸 동기화 (iframe 안에서만 작동) ===== */
-(function(){
-  const inFrame = (window.self !== window.top);
-  if(inFrame){
-    // 헤더의 개별 버튼 숨김 (메인으로/새로고침/테마/언어)
-    const st=document.createElement('style');
-    st.textContent='.header-right{display:none !important}';
-    document.head.appendChild(st);
-  }
-  // 시작 시 셸이 저장한 테마/언어를 직접 읽어 적용 (같은 도메인이라 공유됨)
-  function applyStoredTheme(){
-    let th=null,lg=null;
-    try{th=sessionStorage.getItem('gst_theme');lg=sessionStorage.getItem('gst_lang');}catch(e){}
-    if(th){
-      document.body.className = th==='default' ? '' : 'theme-'+th;
-      if(typeof changeDashboardTheme==='function'){try{changeDashboardTheme(th,th);}catch(e){}}
-    }
-    if(lg && typeof setLang==='function'){try{setLang(lg);}catch(e){}}
-  }
-  if(inFrame){
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyStoredTheme);
-    else applyStoredTheme();
-    // 데이터 로드 후 차트가 다시 그려질 수 있으니 한번 더
-    setTimeout(applyStoredTheme,1500);
-  }
-  // 셸에서 오는 테마/언어 신호 수신
-  window.addEventListener('message',e=>{
-    const d=e.data||{};
-    if(d.type==='gst-theme'){
-      document.body.className = d.theme==='default' ? '' : 'theme-'+d.theme;
-      // 테마 전환 함수가 있으면 차트도 갱신
-      if(typeof changeDashboardTheme==='function'){
-        try{changeDashboardTheme(d.theme==='default'?'default':d.theme, d.theme);}catch(err){}
-      }
-    }
-    if(d.type==='gst-lang' && typeof setLang==='function'){
-      try{setLang(d.lang);}catch(err){}
-    }
-  });
-})();
-</script>
-</body>
-</html>
