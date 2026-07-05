@@ -25,14 +25,14 @@
   --glassb:var(--glass-border); --txt:var(--txt-main); --mut:var(--txt-muted); --muted:var(--txt-muted);
 
   /* 타이포그래피 스케일 */
-  --fs-display:28px;   /* 대시보드 제목 */
+  --fs-display:24px;   /* 대시보드 제목 */
   --fs-title:16px;     /* 섹션 제목 */
   --fs-card:13px;      /* 카드 제목 */
   --fs-body:12px;      /* 본문 */
   --fs-table:11px;     /* 테이블 */
   --fs-caption:10px;   /* 캡션/라벨 */
   --fs-micro:9px;      /* 테이블 헤더 */
-  --fs-kpi:26px;       /* KPI 숫자 */
+  --fs-kpi:20px;       /* KPI 숫자 */
 
   /* 간격 시스템 (8px 그리드) */
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
