@@ -6,6 +6,24 @@
 
 /* ---------- 1. 디자인 토큰 ---------- */
 :root{
+  /* ===== 색상 테마: Dark (기본) ===== */
+  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
+  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
+  --glass: rgba(255,255,255,0.05);
+  --glass-border: rgba(255,255,255,0.12);
+  --glass-hover: rgba(255,255,255,0.1);
+  --txt-main:#e2e8f0;
+  --txt-muted:#94a3b8;
+  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
+  --ok:#34d399; --warn:#fbbf24; --bad:#fb7185;
+  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
+
+  /* 구버전 변수명 별칭 (각 대시보드 호환) */
+  --bg1:#0a1420; --bg2:#13232d; --bg3:#0f2027;
+  --a1:var(--accent-1); --a2:var(--accent-2); --a3:var(--accent-3); --a4:var(--accent-4); --a5:var(--accent-5);
+  --accent:var(--accent-1); --accent2:var(--accent-2); --accent3:var(--accent-3);
+  --glassb:var(--glass-border); --txt:var(--txt-main); --mut:var(--txt-muted); --muted:var(--txt-muted);
+
   /* 타이포그래피 스케일 */
   --fs-display:28px;   /* 대시보드 제목 */
   --fs-title:16px;     /* 섹션 제목 */
@@ -29,6 +47,31 @@
   /* 전환 */
   --ease:cubic-bezier(.4,0,.2,1);
 }
+
+/* ===== 색상 테마: Burgundy ===== */
+body.theme-burgundy{
+  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
+  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
+  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
+  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
+  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
+  --bg1:#1a0813; --bg2:#2d0b1e; --bg3:#1f0822;
+  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.5);
+}
+
+/* ===== 색상 테마: Light ===== */
+body.theme-light{
+  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #e8eef5, #f0f4f8);
+  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
+  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
+  --txt-main:#0f172a; --txt-muted:#64748b;
+  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
+  --bg1:#f1f5f9; --bg2:#e2e8f0; --bg3:#e8eef5;
+  --card-shadow:0 8px 32px 0 rgba(31,38,135,0.06);
+}
+
+/* 배경도 항상 통일 변수 사용 */
+body{background:var(--bg-gradient) !important;color:var(--txt-main) !important}
 
 /* ---------- 2. 공통 컴포넌트 통일 ---------- */
 body{padding:var(--sp-6) 28px !important;font-family:'Segoe UI','Malgun Gothic',sans-serif !important}
