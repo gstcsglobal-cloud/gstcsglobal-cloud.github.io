@@ -88,7 +88,6 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 <script>
 let SECURE_BASE = '';
 
-// 기존 아이콘 데이터 그대로 복구
 const SVG={
   home:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z"/></svg>',
   hr:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
@@ -98,7 +97,6 @@ const SVG={
   material:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>'
 };
 
-// 탭 데이터 리스트 재정의
 const TABS = [
   { id:'home', name:'Home', icon:SVG.home, path:'/home/index.html' },
   { id:'hr', name:'HR Status', icon:SVG.hr, path:'/hr/index.html' },
@@ -114,28 +112,25 @@ async function doLogin() {
   errDiv.textContent = '';
 
   try {
-    // Vercel 규칙에 맞게 주소 호출부를 수정했습니다 (/api/ ➔ api/)
-    const response = await fetch('api/check-auth', {
+    // [수정] Vercel 주소 자동 맵핑을 위해 맨 앞에 슬래시(/)를 명확히 추가했습니다.
+    const response = await fetch('/api/check-auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: inputPw })
     });
 
-    if (!response.ok) {
-      errDiv.textContent = '비밀번호가 올바르지 않습니다 / Incorrect';
-      document.getElementById('pw').value = '';
-      return;
-    }
-
     const result = await response.json();
 
-    if (result.success) {
+    if (response.ok && result.success) {
       SECURE_BASE = result.data.base;
       sessionStorage.setItem('gst_auth_token', 'AUTHORIZED_SUCCESS');
       sessionStorage.setItem('gst_secure_base', SECURE_BASE);
       
       document.getElementById('login').classList.add('hidden');
       initDashboard();
+    } else {
+      errDiv.textContent = '비밀번호가 올바르지 않습니다 / Incorrect';
+      document.getElementById('pw').value = '';
     }
   } catch (e) {
     errDiv.textContent = '서버 통신 오류가 발생했습니다.';
@@ -150,14 +145,12 @@ function initDashboard() {
   tabbar.innerHTML = '';
   
   TABS.forEach((tab, index) => {
-    // 탭 버튼 생성
     const btn = document.createElement('button');
     btn.className = `tab ${index === 0 ? 'active' : ''}`;
     btn.innerHTML = `<span class="ic">${tab.icon}</span>${tab.name}`;
     btn.onclick = () => switchTab(tab.id);
     tabbar.appendChild(btn);
 
-    // iframe 생성 및 보안 주소 조합 연결
     const iframe = document.createElement('iframe');
     iframe.id = `frame-${tab.id}`;
     iframe.src = `${SECURE_BASE}${tab.path}`;
@@ -175,12 +168,18 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.frame-wrap iframe').forEach(f => f.classList.remove('active'));
   
-  // 현재 타겟 활성화 처리
   const activeIndex = TABS.findIndex(t => t.id === tabId);
   if(activeIndex !== -1) {
     document.querySelectorAll('.tab')[activeIndex].classList.add('active');
     const targetFrame = document.getElementById(`frame-${tabId}`);
     targetFrame.classList.add('active');
     
-    // 만약 이미 로드되었다면 로딩 숨김처리
-    if(targetFrame.contentWindow.document.readyState === 'complete') {loading.style.display = 'none';}}}window.onload = function() {const token = sessionStorage.getItem('gst_auth_token');const savedBase = sessionStorage.getItem('gst_secure_base');if (token === 'AUTHORIZED_SUCCESS' && savedBase) {SECURE_BASE = savedBase;document.getElementById('login').classList.add('hidden');initDashboard();}document.getElementById('pw').addEventListener('keydown', e => {if (e.key === 'Enter') doLogin();});};function doLogout() {sessionStorage.clear();window.location.reload();}function cycleTheme() { document.body.classList.toggle('theme-light'); }function cycleLang() { /* 언어팩 로직 구성에 맞춰 연동 */ }function refreshActive() {const activeFrame = document.querySelector('.frame-wrap iframe.active');if(activeFrame) activeFrame.contentWindow.location.reload();}function exportActive() {const activeFrame = document.querySelector('.frame-wrap iframe.active');if(activeFrame) activeFrame.contentWindow.print();}
+    if(targetFrame.contentWindow.document.readyState === 'complete') {
+      loading.style.display = 'none';
+    }
+  }
+}
+
+window.onload = function() {
+  const token = sessionStorage.getItem('gst_auth_token');
+const savedBase = sessionStorage.getItem('gst_secure_base');if (token === 'AUTHORIZED_SUCCESS' && savedBase) {SECURE_BASE = savedBase;document.getElementById('login').classList.add('hidden');initDashboard();}document.getElementById('pw').addEventListener('keydown', e => {if (e.key === 'Enter') doLogin();});};function doLogout() {sessionStorage.clear();window.location.reload();}function cycleTheme() { document.body.classList.toggle('theme-light'); }function cycleLang() { }function refreshActive() {const activeFrame = document.querySelector('.frame-wrap iframe.active');if(activeFrame) activeFrame.contentWindow.location.reload();}function exportActive() {const activeFrame = document.querySelector('.frame-wrap iframe.active');if(activeFrame) activeFrame.contentWindow.print();}
