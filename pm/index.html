@@ -28,12 +28,12 @@ body.theme-burgundy{
   --bg1:#1a0813;--bg2:#2d0b1e;--bg3:#1f0822;
 }
 body.theme-light{
-  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #faebd7, #f0f4f8);
+  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #e8eef5, #f0f4f8);
   --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
   --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
   --txt-main:#0f172a; --txt-muted:#64748b;
   --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
-  --bg1:#f1f5f9;--bg2:#e2e8f0;--bg3:#faebd7;
+  --bg1:#f1f5f9;--bg2:#e2e8f0;--bg3:#e8eef5;
 }
 body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
   background:var(--bg-gradient);
@@ -217,7 +217,9 @@ tr:hover td{background:rgba(255,255,255,.04)}
 .login-box button:hover{opacity:.88}
 .login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
 </style>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
 <body>
 
@@ -1026,6 +1028,22 @@ loadData();
     const st=document.createElement('style');
     st.textContent='.header-right{display:none !important}';
     document.head.appendChild(st);
+  }
+  // 시작 시 셸이 저장한 테마/언어를 직접 읽어 적용 (같은 도메인이라 공유됨)
+  function applyStoredTheme(){
+    let th=null,lg=null;
+    try{th=sessionStorage.getItem('gst_theme');lg=sessionStorage.getItem('gst_lang');}catch(e){}
+    if(th){
+      document.body.className = th==='default' ? '' : 'theme-'+th;
+      if(typeof changeDashboardTheme==='function'){try{changeDashboardTheme(th,th);}catch(e){}}
+    }
+    if(lg && typeof setLang==='function'){try{setLang(lg);}catch(e){}}
+  }
+  if(inFrame){
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyStoredTheme);
+    else applyStoredTheme();
+    // 데이터 로드 후 차트가 다시 그려질 수 있으니 한번 더
+    setTimeout(applyStoredTheme,1500);
   }
   // 셸에서 오는 테마/언어 신호 수신
   window.addEventListener('message',e=>{
