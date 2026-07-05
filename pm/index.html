@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scrubber PM Schedule</title>
+<title>Scrubber PM Schedule Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
@@ -367,7 +367,7 @@ const WARN_RATIO=0.20;
 
 const T={
   ko:{title:'🔧 스크러버 PM 점검 스케줄',sub:'정기점검(TBM) 이력 기반 예방정비 스케줄',
-    refresh:'새로고침',loading:'데이터 불러오는 중...',
+    back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
     kp1:'총 점검대상',kp2:'점검 지연',kp3:'점검 임박',kp4:'정상',kp5:'주기없음',kp6:'당월 완료',year_unit:'년',kpi_basis:'기준 현황',
     ch_stat:'📊 점검 상태 분포',ch_line:'🏭 LINE별 지연·임박',ch_week:'📅 향후 60일 예정(주차별)',
     tbl_title:'🗓️ PM 점검 스케줄 (긴급순)',
@@ -1015,6 +1015,32 @@ loadData();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
   else init();
+})();
+</script>
+<script>
+/* ===== 통합 셸 동기화 (iframe 안에서만 작동) ===== */
+(function(){
+  const inFrame = (window.self !== window.top);
+  if(inFrame){
+    // 헤더의 개별 버튼 숨김 (메인으로/새로고침/테마/언어)
+    const st=document.createElement('style');
+    st.textContent='.header-right{display:none !important}';
+    document.head.appendChild(st);
+  }
+  // 셸에서 오는 테마/언어 신호 수신
+  window.addEventListener('message',e=>{
+    const d=e.data||{};
+    if(d.type==='gst-theme'){
+      document.body.className = d.theme==='default' ? '' : 'theme-'+d.theme;
+      // 테마 전환 함수가 있으면 차트도 갱신
+      if(typeof changeDashboardTheme==='function'){
+        try{changeDashboardTheme(d.theme==='default'?'default':d.theme, d.theme);}catch(err){}
+      }
+    }
+    if(d.type==='gst-lang' && typeof setLang==='function'){
+      try{setLang(d.lang);}catch(err){}
+    }
+  });
 })();
 </script>
 </body>
