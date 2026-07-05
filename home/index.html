@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GST Executive Summary</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
+  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
+  --glass:rgba(255,255,255,0.05); --glass-border:rgba(255,255,255,0.12); --glass-hover:rgba(255,255,255,0.1);
+  --txt-main:#e2e8f0; --txt-muted:#94a3b8;
+  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
+  --ok:#34d399; --warn:#fbbf24; --bad:#fb7185;
+  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
+}
+body.theme-burgundy{
+  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
+  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
+  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
+  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
+  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
+}
+body.theme-light{
+  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #e8eef5, #f0f4f8);
+  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
+  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
+  --txt-main:#0f172a; --txt-muted:#64748b;
+  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
+}
+body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt-main);
+  background:var(--bg-gradient);background-size:400% 400%;animation:grad 22s ease infinite;min-height:100vh;padding:24px 28px}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:28px;font-weight:800;background:var(--title-gradient);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.header .sub{color:var(--txt-muted);font-size:13px;margin-top:4px}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:9px 18px;
+  background:var(--glass);border:1px solid var(--glass-border);color:var(--txt-main)}
+.status{font-size:12px;color:var(--txt-muted);text-align:right;margin-bottom:14px}
+.status.ok{color:var(--ok)}
+
+/* 경고 배너 */
+.alerts{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.alert{flex:1;min-width:240px;display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:16px;
+  border:1px solid;cursor:pointer;transition:transform .2s}
+.alert:hover{transform:translateY(-2px)}
+.alert.bad{background:rgba(251,113,133,.1);border-color:rgba(251,113,133,.35)}
+.alert.warn{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.35)}
+.alert.ok{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.3)}
+.alert .a-ic{font-size:26px}
+.alert .a-num{font-size:24px;font-weight:800;line-height:1}
+.alert.bad .a-num{color:var(--bad)}.alert.warn .a-num{color:var(--warn)}.alert.ok .a-num{color:var(--ok)}
+.alert .a-cap{font-size:11px;color:var(--txt-muted);font-weight:600;margin-top:3px}
+
+/* 섹션 */
+.sec-title{font-size:13px;font-weight:800;color:var(--txt-muted);text-transform:uppercase;
+  letter-spacing:1.5px;margin:22px 0 12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:8px}
+.mcard{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;
+  backdrop-filter:blur(14px);box-shadow:var(--card-shadow);position:relative;overflow:hidden}
+.mcard .m-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.mcard h3{font-size:13px;font-weight:700;color:var(--txt-main)}
+.mcard .m-link{font-size:10px;color:var(--accent-2);cursor:pointer;font-weight:700;text-decoration:none}
+.mcard .m-link:hover{text-decoration:underline}
+.mrow{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--glass-border)}
+.mrow:last-child{border-bottom:none}
+.mrow .lbl{font-size:12px;color:var(--txt-muted)}
+.mrow .v{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.mrow .v.ok{color:var(--ok)}.mrow .v.warn{color:var(--warn)}.mrow .v.bad{color:var(--bad)}
+.cw{position:relative;height:170px}
+.skeleton{animation:skel 1.4s ease-in-out infinite;color:transparent !important}
+.skeleton .v,.skeleton .a-num{background:var(--glass);border-radius:6px;color:transparent !important}
+@keyframes skel{0%{opacity:.5}50%{opacity:.85}100%{opacity:.5}}
+@media(max-width:1100px){.grid4{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.grid4,.grid3{grid-template-columns:1fr}.alerts{flex-direction:column}
+  body{padding:14px}.header h1{font-size:20px}}
+</style>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1 data-i="title">Executive Summary</h1>
+    <div class="sub" data-i="sub">전체 운영 현황 한눈에 보기</div>
+  </div>
+  <div class="header-right">
+    <button class="btn" id="refreshBtn" onclick="loadAll()">🔄 <span data-i="refresh">새로고침</span></button>
+  </div>
+</div>
+<div class="status" id="status">—</div>
+
+<!-- 경고 배너 -->
+<div class="alerts" id="alerts">
+  <div class="alert bad skeleton" id="alOver" onclick="goTab('pm')">
+    <div class="a-ic">⛔</div><div><div class="a-num" id="alOverN">--</div><div class="a-cap" data-i="al_over">PM 점검 지연</div></div>
+  </div>
+  <div class="alert warn skeleton" id="alSoon" onclick="goTab('pm')">
+    <div class="a-ic">⚠️</div><div><div class="a-num" id="alSoonN">--</div><div class="a-cap" data-i="al_soon">점검 임박</div></div>
+  </div>
+  <div class="alert warn skeleton" id="alFault" onclick="goTab('fault')">
+    <div class="a-ic">🛠️</div><div><div class="a-num" id="alFaultN">--</div><div class="a-cap" data-i="al_fault">최근 30일 고장</div></div>
+  </div>
+  <div class="alert ok skeleton" id="alDone" onclick="goTab('pm')">
+    <div class="a-ic">✅</div><div><div class="a-num" id="alDoneN">--</div><div class="a-cap" data-i="al_done">이번 달 점검 완료</div></div>
+  </div>
+</div>
+
+<!-- 부문별 요약 -->
+<div class="sec-title" data-i="sec_ops">OPERATIONS</div>
+<div class="grid4">
+  <div class="mcard skeleton" id="cardPM">
+    <div class="m-head"><h3>🔧 <span data-i="c_pm">PM 점검</span></h3><a class="m-link" onclick="goTab('pm')" data-i="more">자세히 →</a></div>
+    <div class="mrow"><span class="lbl" data-i="pm_total">총 점검대상</span><span class="v" id="pmTotal">--</span></div>
+    <div class="mrow"><span class="lbl" data-i="pm_over">지연</span><span class="v bad" id="pmOver">--</span></div>
+    <div class="mrow"><span class="lbl" data-i="pm_soon">임박</span><span class="v warn" id="pmSoon">--</span></div>
+    <div class="mrow"><span class="lbl" data-i="pm_ok">정상</span><span class="v ok" id="pmOk">--</span></div>
+  </div>
+  <div class="mcard skeleton" id="cardFault">
+    <div class="m-head"><h3>🛠️ <span data-i="c_fault">고장 현황</span></h3><a class="m-link" onclick="goTab('fault')" data-i="more">자세히 →</a></div>
+    <div class="mrow"><span class="lbl" data-i="ft_30">최근 30일</span><span class="v" id="ft30">--</span></div>
+    <div class="mrow"><span class="lbl">BM</span><span class="v bad" id="ftBM">--</span></div>
+    <div class="mrow"><span class="lbl">CBM</span><span class="v" id="ftCBM">--</span></div>
+    <div class="mrow"><span class="lbl" data-i="ft_top">최다 고장코드</span><span class="v warn" id="ftTop">--</span></div>
+  </div>
+  <div class="mcard skeleton" id="cardMat">
+    <div class="m-head"><h3>📦 <span data-i="c_mat">자재 실적</span></h3><a class="m-link" onclick="goTab('material')" data-i="more">자세히 →</a></div>
+    <div class="mrow"><span class="lbl" data-i="mt_month">이번 달 교체</span><span class="v" id="mtMonth">--</span></div>
+    <div class="mrow"><span class="lbl" data-i="mt_paid">유상 비율</span><span class="v" id="mtPaid">--</span></div>
+    <div class="mrow"><span class="lbl" data-i="mt_top">최다 교체 자재</span><span class="v warn" id="mtTop">--</span></div>
+    <div class="mrow"><span class="lbl" data-i="mt_types">자재 종류</span><span class="v" id="mtTypes">--</span></div>
+  </div>
+  <div class="mcard skeleton" id="cardBase">
+    <div class="m-head"><h3>🏢 <span data-i="c_base">기반 현황</span></h3><a class="m-link" onclick="goTab('hr')" data-i="more">자세히 →</a></div>
+    <div class="mrow"><span class="lbl" data-i="bs_people">엔지니어</span><span class="v" id="bsPeople">--</span></div>
+    <div class="mrow"><span class="lbl" data-i="bs_basic">Basic 이수율</span><span class="v ok" id="bsBasic">--</span></div>
+    <div class="mrow"><span class="lbl" data-i="bs_scrubber">설치 스크러버</span><span class="v" id="bsScrubber">--</span></div>
+    <div class="mrow"><span class="lbl" data-i="bs_ton">Turn On 완료</span><span class="v ok" id="bsTon">--</span></div>
+  </div>
+</div>
+
+<!-- 차트 -->
+<div class="sec-title" data-i="sec_trend">TRENDS</div>
+<div class="grid3">
+  <div class="mcard"><div class="m-head"><h3>📊 <span data-i="ch_pm">PM 상태 분포</span></h3></div><div class="cw"><canvas id="chPm"></canvas></div></div>
+  <div class="mcard"><div class="m-head"><h3>📅 <span data-i="ch_ft">월별 고장 추이 (6개월)</span></h3></div><div class="cw"><canvas id="chFt"></canvas></div></div>
+  <div class="mcard"><div class="m-head"><h3>🔩 <span data-i="ch_mt">자재 교체 TOP 5</span></h3></div><div class="cw"><canvas id="chMt"></canvas></div></div>
+</div>
+<script>
+const PUB='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub';
+const URLS={
+  hr:  PUB+'?gid=0&single=true&output=csv',
+  inst:PUB+'?gid=891608329&single=true&output=csv',
+  pm:  PUB+'?gid=646668307&single=true&output=csv',
+  mat: PUB+'?gid=31302669&single=true&output=csv'
+};
+// 컬럼 인덱스
+const CP={line:2,tbmCycle:15,work:23,sn:24,maint:25,aw:26,failCode:29,chamber:33};
+const CI={fabIn:38,turnOn:40};
+const CM={customer:2,matName:23,workDate:28,pf:31};
+const WARN_RATIO=0.2;
+
+const T={
+  ko:{title:'Executive Summary',sub:'전체 운영 현황 한눈에 보기',refresh:'새로고침',
+    al_over:'PM 점검 지연',al_soon:'점검 임박',al_fault:'최근 30일 고장',al_done:'이번 달 점검 완료',
+    sec_ops:'OPERATIONS',sec_trend:'TRENDS',more:'자세히 →',
+    c_pm:'PM 점검',pm_total:'총 점검대상',pm_over:'지연',pm_soon:'임박',pm_ok:'정상',
+    c_fault:'고장 현황',ft_30:'최근 30일',ft_top:'최다 고장코드',
+    c_mat:'자재 실적',mt_month:'이번 달 교체',mt_paid:'유상 비율',mt_top:'최다 교체 자재',mt_types:'자재 종류',
+    c_base:'기반 현황',bs_people:'엔지니어',bs_basic:'Basic 이수율',bs_scrubber:'설치 스크러버',bs_ton:'Turn On 완료',
+    ch_pm:'PM 상태 분포',ch_ft:'월별 고장 추이 (6개월)',ch_mt:'자재 교체 TOP 5',
+    st_over:'지연',st_soon:'임박',st_ok:'정상',loaded:'업데이트'},
+  en:{title:'Executive Summary',sub:'Operations at a glance',refresh:'Refresh',
+    al_over:'PM Overdue',al_soon:'Due Soon',al_fault:'Faults (30d)',al_done:'Done This Month',
+    sec_ops:'OPERATIONS',sec_trend:'TRENDS',more:'Details →',
+    c_pm:'PM Schedule',pm_total:'Total',pm_over:'Overdue',pm_soon:'Due Soon',pm_ok:'Normal',
+    c_fault:'Faults',ft_30:'Last 30 days',ft_top:'Top fail code',
+    c_mat:'Materials',mt_month:'This month',mt_paid:'Paid ratio',mt_top:'Top material',mt_types:'Types',
+    c_base:'Foundation',bs_people:'Engineers',bs_basic:'Basic rate',bs_scrubber:'Scrubbers',bs_ton:'Turned On',
+    ch_pm:'PM Status',ch_ft:'Fault Trend (6mo)',ch_mt:'Material TOP 5',
+    st_over:'Overdue',st_soon:'Soon',st_ok:'OK',loaded:'Updated'},
+  zh:{title:'Executive Summary',sub:'运营状况一览',refresh:'刷新',
+    al_over:'PM点检延迟',al_soon:'点检临近',al_fault:'近30天故障',al_done:'本月点检完成',
+    sec_ops:'OPERATIONS',sec_trend:'TRENDS',more:'详情 →',
+    c_pm:'PM点检',pm_total:'总对象',pm_over:'延迟',pm_soon:'临近',pm_ok:'正常',
+    c_fault:'故障状况',ft_30:'近30天',ft_top:'最多故障码',
+    c_mat:'材料实绩',mt_month:'本月更换',mt_paid:'有偿比率',mt_top:'最多更换材料',mt_types:'材料种类',
+    c_base:'基础状况',bs_people:'工程师',bs_basic:'Basic完成率',bs_scrubber:'洗涤器',bs_ton:'Turn On完成',
+    ch_pm:'PM状态分布',ch_ft:'月度故障趋势(6个月)',ch_mt:'材料更换TOP5',
+    st_over:'延迟',st_soon:'临近',st_ok:'正常',loaded:'更新'},
+  ja:{title:'Executive Summary',sub:'運営状況一覧',refresh:'更新',
+    al_over:'PM点検遅延',al_soon:'点検間近',al_fault:'直近30日故障',al_done:'今月点検完了',
+    sec_ops:'OPERATIONS',sec_trend:'TRENDS',more:'詳細 →',
+    c_pm:'PM点検',pm_total:'総対象',pm_over:'遅延',pm_soon:'間近',pm_ok:'正常',
+    c_fault:'故障状況',ft_30:'直近30日',ft_top:'最多故障コード',
+    c_mat:'資材実績',mt_month:'今月交換',mt_paid:'有償比率',mt_top:'最多交換資材',mt_types:'資材種類',
+    c_base:'基盤状況',bs_people:'エンジニア',bs_basic:'Basic修了率',bs_scrubber:'スクラバー',bs_ton:'Turn On完了',
+    ch_pm:'PM状態分布',ch_ft:'月別故障推移(6ヶ月)',ch_mt:'資材交換TOP5',
+    st_over:'遅延',st_soon:'間近',st_ok:'正常',loaded:'更新'}
+};
+let LANG='ko', CHARTS={};
+try{const sl=sessionStorage.getItem('gst_lang');if(sl&&T[sl])LANG=sl;else if(window.name&&T[window.name])LANG=window.name;}catch(e){}
+Chart.defaults.color='#94a3b8';
+Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+
+function t(k){return (T[LANG]||T.ko)[k]||k;}
+function applyLang(){document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});}
+function setLang(l){if(T[l]){LANG=l;applyLang();if(window.__data)renderAll(window.__data);}}
+function goTab(id){
+  // 셸 안이면 셸에 탭 전환 요청, 아니면 직접 이동
+  if(window.self!==window.top){ window.parent.postMessage({type:'gst-goto',tab:id},'*'); }
+  else{ location.href='https://gstcsglobal-cloud.github.io/'+id+'/'; }
+}
+function toDate(v){
+  if(!v||v==='')return null;
+  const n=Number(v);
+  if(!isNaN(n)&&n>20000&&n<80000)return new Date(Date.UTC(1899,11,30)+n*86400000);
+  const s=String(v).trim();const m=s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if(m)return new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));
+  const d=new Date(s);return isNaN(d)?null:d;
+}
+async function fetchCSV(url){
+  const r=await fetch(url+'&t='+Date.now());
+  const tx=await r.text();
+  return Papa.parse(tx,{skipEmptyLines:true}).data.slice(1);
+}
+
+async function loadAll(){
+  const st=document.getElementById('status');
+  st.textContent='⏳';
+  document.querySelectorAll('.alert,.mcard').forEach(e=>e.classList.add('skeleton'));
+  const [hr,inst,pm,mat]=await Promise.allSettled([
+    fetchCSV(URLS.hr),fetchCSV(URLS.inst),fetchCSV(URLS.pm),fetchCSV(URLS.mat)
+  ]);
+  const D={
+    hr:hr.status==='fulfilled'?hr.value:[],
+    inst:inst.status==='fulfilled'?inst.value:[],
+    pm:pm.status==='fulfilled'?pm.value:[],
+    mat:mat.status==='fulfilled'?mat.value:[]
+  };
+  window.__data=D;
+  renderAll(D);
+  st.className='status ok';
+  st.textContent='✅ '+new Date().toLocaleString('ko-KR')+' '+t('loaded');
+}
+
+function renderAll(D){
+  document.querySelectorAll('.alert,.mcard').forEach(e=>e.classList.remove('skeleton'));
+  const today=new Date();today.setUTCHours(0,0,0,0);
+  const nowY=today.getUTCFullYear(),nowM=today.getUTCMonth();
+
+  // ===== PM 계산 =====
+  const g={};
+  const doneHist=[];
+  D.pm.forEach(r=>{
+    if((r[CP.maint]||'').toString().trim().toUpperCase()!=='TBM')return;
+    const sn=(r[CP.sn]||'').toString().trim();if(!sn)return;
+    const ch=((r[CP.chamber]||'').toString().trim())||'-';
+    const wd=toDate(r[CP.work]);if(!wd)return;
+    const k=sn+'||'+ch;
+    if(!g[k])g[k]={last:null,cycle:null};
+    if(!g[k].last||wd>g[k].last){g[k].last=wd;g[k].cycle=Number(r[CP.tbmCycle])||null;}
+    doneHist.push(wd);
+  });
+  let over=0,soon=0,ok=0,total=0;
+  Object.values(g).forEach(o=>{
+    total++;
+    if(!o.cycle||!o.last)return;
+    const next=new Date(o.last.getTime()+o.cycle*86400000);
+    const dl=Math.round((next-today)/86400000);
+    if(dl<0)over++;else if(dl<=o.cycle*WARN_RATIO)soon++;else ok++;
+  });
+  const doneMonth=doneHist.filter(d=>d.getUTCFullYear()===nowY&&d.getUTCMonth()===nowM).length;
+
+  setN('alOverN',over);setN('alSoonN',soon);setN('alDoneN',doneMonth);
+  setN('pmTotal',total);setN('pmOver',over);setN('pmSoon',soon);setN('pmOk',ok);
+
+  // ===== 고장 계산 =====
+  const d30=new Date(today.getTime()-30*86400000);
+  let ft30=0,bm=0,cbm=0;const codeCnt={};const monthly={};
+  D.pm.forEach(r=>{
+    const m=(r[CP.maint]||'').toString().trim().toUpperCase();
+    if(m!=='BM'&&m!=='CBM')return;
+    const wd=toDate(r[CP.work]);if(!wd)return;
+    if(wd>=d30){ft30++;if(m==='BM')bm++;else cbm++;}
+    const code=(r[CP.failCode]||'').toString().trim();
+    if(code&&wd>=d30)codeCnt[code]=(codeCnt[code]||0)+1;
+    // 6개월 추이
+    const mk=wd.getUTCFullYear()+'-'+String(wd.getUTCMonth()+1).padStart(2,'0');
+    monthly[mk]=(monthly[mk]||0)+1;
+  });
+  const topCode=Object.entries(codeCnt).sort((a,b)=>b[1]-a[1])[0];
+  setN('alFaultN',ft30);setN('ft30',ft30);setN('ftBM',bm);setN('ftCBM',cbm);
+  document.getElementById('ftTop').textContent=topCode?topCode[0]:'—';
+
+  // ===== 자재 계산 =====
+  let mtMonth=0,paid=0,tot=0;const matCnt={};const matSet=new Set();
+  D.mat.forEach(r=>{
+    const name=(r[CM.matName]||'').toString().trim();if(!name)return;
+    tot++;matSet.add(name);
+    const pf=(r[CM.pf]||'').toString().trim();
+    if(pf==='유상')paid++;
+    const wd=toDate(r[CM.workDate]);
+    if(wd&&wd.getUTCFullYear()===nowY&&wd.getUTCMonth()===nowM){mtMonth++;}
+    matCnt[name]=(matCnt[name]||0)+1;
+  });
+  const topMat=Object.entries(matCnt).sort((a,b)=>b[1]-a[1]);
+  setN('mtMonth',mtMonth);
+  document.getElementById('mtPaid').textContent=tot?Math.round(paid/tot*100)+'%':'—';
+  document.getElementById('mtTop').textContent=topMat[0]?topMat[0][0]:'—';
+  setN('mtTypes',matSet.size);
+
+  // ===== 기반 (인원/설치) =====
+  const people=D.hr.length;
+  let basicDone=0;
+  D.hr.forEach(r=>{const v=(r[6]||'').toString();if(v.includes('이수완료'))basicDone++;});
+  setN('bsPeople',people);
+  document.getElementById('bsBasic').textContent=people?Math.round(basicDone/people*100)+'%':'—';
+  setN('bsScrubber',D.inst.length);
+  const ton=D.inst.filter(r=>toDate(r[CI.turnOn])).length;
+  setN('bsTon',ton);
+
+  // ===== 차트 =====
+  mkDonut('chPm',[t('st_over'),t('st_soon'),t('st_ok')],[over,soon,ok],['#fb7185','#fbbf24','#34d399']);
+  const mkeys=Object.keys(monthly).sort().slice(-6);
+  mkBar('chFt',mkeys,mkeys.map(k=>monthly[k]),'#fb7185');
+  const top5=topMat.slice(0,5);
+  mkHBar('chMt',top5.map(x=>x[0]),top5.map(x=>x[1]),'#2dd4bf');
+}
+
+function setN(id,v){const el=document.getElementById(id);if(el)el.textContent=(v==null?'—':v.toLocaleString());}
+
+function mkDonut(id,labels,data,colors){
+  const ctx=document.getElementById(id);
+  if(CHARTS[id])CHARTS[id].destroy();
+  CHARTS[id]=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{position:'right',labels:{font:{size:10},usePointStyle:true,pointStyle:'circle',padding:8}}}}});
+}
+function mkBar(id,labels,data,color){
+  const ctx=document.getElementById(id);
+  if(CHARTS[id])CHARTS[id].destroy();
+  CHARTS[id]=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{font:{size:9}},grid:{display:false}},y:{ticks:{precision:0,font:{size:9}},grid:{color:'rgba(148,163,184,.1)'}}}}});
+}
+function mkHBar(id,labels,data,color){
+  const ctx=document.getElementById(id);
+  if(CHARTS[id])CHARTS[id].destroy();
+  CHARTS[id]=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:5}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{precision:0,font:{size:9}},grid:{display:false}},y:{ticks:{font:{size:9}},grid:{display:false}}}}});
+}
+
+/* ===== 통합 셸 동기화 ===== */
+(function(){
+  const inFrame=(window.self!==window.top);
+  function applyStoredTheme(){
+    let th=null,lg=null;
+    try{th=sessionStorage.getItem('gst_theme');lg=sessionStorage.getItem('gst_lang');}catch(e){}
+    if(th)document.body.className = th==='default'?'':'theme-'+th;
+    if(lg&&T[lg]){LANG=lg;applyLang();}
+  }
+  if(inFrame){applyStoredTheme();}
+  window.addEventListener('message',e=>{
+    const d=e.data||{};
+    if(d.type==='gst-theme')document.body.className=d.theme==='default'?'':'theme-'+d.theme;
+    if(d.type==='gst-lang')setLang(d.lang);
+  });
+  // 직접 접속 시 로그인 가드
+  if(!inFrame){
+    let ok=false;try{ok=sessionStorage.getItem('gst_auth')==='1';}catch(e){}
+    if(!ok)location.href='https://gstcsglobal-cloud.github.io/';
+  }
+})();
+
+applyLang();
+loadAll();
+</script>
+</body>
+</html>
