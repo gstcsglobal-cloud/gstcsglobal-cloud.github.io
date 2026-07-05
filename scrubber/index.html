@@ -972,5 +972,31 @@ loadData();
   else init();
 })();
 </script>
+<script>
+/* ===== 통합 셸 동기화 (iframe 안에서만 작동) ===== */
+(function(){
+  const inFrame = (window.self !== window.top);
+  if(inFrame){
+    // 헤더의 개별 버튼 숨김 (메인으로/새로고침/테마/언어)
+    const st=document.createElement('style');
+    st.textContent='.header-right{display:none !important}';
+    document.head.appendChild(st);
+  }
+  // 셸에서 오는 테마/언어 신호 수신
+  window.addEventListener('message',e=>{
+    const d=e.data||{};
+    if(d.type==='gst-theme'){
+      document.body.className = d.theme==='default' ? '' : 'theme-'+d.theme;
+      // 테마 전환 함수가 있으면 차트도 갱신
+      if(typeof changeDashboardTheme==='function'){
+        try{changeDashboardTheme(d.theme==='default'?'default':d.theme, d.theme);}catch(err){}
+      }
+    }
+    if(d.type==='gst-lang' && typeof setLang==='function'){
+      try{setLang(d.lang);}catch(err){}
+    }
+  });
+})();
+</script>
 </body>
 </html>
