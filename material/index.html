@@ -197,6 +197,19 @@ tr:hover td{background:var(--glass-hover)}
 
 @media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}.cross-layout{grid-template-columns:1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
 @media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}.slicers{grid-template-columns:1fr}}
+
+/* 크로스필터 칩 바 */
+.fchips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;
+  padding:10px 14px;background:var(--glass);border:1px solid var(--accent-2);border-radius:12px}
+.fchips-label{font-size:11px;font-weight:700;color:var(--accent-2)}
+.fchip{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;
+  background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.4);color:var(--txt-main);cursor:pointer}
+.fchip:hover{background:rgba(251,113,133,.15);border-color:rgba(251,113,133,.4)}
+.fchip .fx{font-weight:900;font-size:10px}
+.fchip-clear{background:transparent;border:1px solid var(--glass-border);border-radius:20px;
+  padding:4px 11px;color:var(--txt-muted);font-size:10px;font-weight:700;cursor:pointer;margin-left:auto}
+.fchip-clear:hover{color:var(--bad);border-color:var(--bad)}
+canvas{cursor:pointer}
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
@@ -215,7 +228,7 @@ tr:hover td{background:var(--glass-hover)}
 
 <div class="header">
   <div>
-    <h1 data-i="title">자재 현황</h1>
+    <h1 data-i="title">자재 실적 현황</h1>
     <div class="sub" data-i="sub">자재 교체 실적 · 사용주기 · 유무상 분석</div>
   </div>
   <div class="header-right">
@@ -271,6 +284,12 @@ tr:hover td{background:var(--glass-hover)}
     <button class="ct-btn active" data-c="paid" onclick="setCycleBasis('paid')" data-i="cycle_paid">유상기준</button>
     <button class="ct-btn" data-c="prev" onclick="setCycleBasis('prev')" data-i="cycle_prev">전교체일기준</button>
   </div>
+</div>
+
+<div class="fchips" id="fchips" style="display:none">
+  <span class="fchips-label">🎯 <span data-i="f_active">활성 필터</span>:</span>
+  <span id="fchipList"></span>
+  <button class="fchip-clear" onclick="clearAllFilters()" data-i="f_clear">전체 해제</button>
 </div>
 
 <div class="kpis">
@@ -473,16 +492,16 @@ const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XA
 const C={op:1,customer:2,line:5,process:7,detail:8,mainEq:9,eq:10,qty:22,matName:23,reason:25,workDate:28,daysPaid:29,daysPrev:30,pf:31,freeReason:32};
 
 const T={
-  ko:{title:'자재 현황',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'유상',kp3:'무상',kp4:'유상비율',kp5:'자재 종류',kp6:'설비 대수',cyc_title:'⏱️ 자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
-  en:{title:'Material Dashboard',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-proc',sl_eq:'Equipment',sl_search:'Search',cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',kp1:'Total',kp2:'Paid',kp3:'Free',kp4:'Paid %',kp5:'Materials',kp6:'Equipment',cyc_title:'⏱️ Material Lifecycle (avg/min/max)',cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Replacement Detail',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',all:'All',no_data:'No data',days:'d',nav_hr:'Workforce',nav_sc:'Installation',nav_pm:'PM Schedule',nav_ft:'Fault',nav_mt:'Material'},
-  zh:{title:'材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',kp1:'总更换数',kp2:'有偿',kp3:'无偿',kp4:'有偿比率',kp5:'材料种类',kp6:'设备数',cyc_title:'⏱️ 材料使用周期(平均/最小/最大)',cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'材料更换明细',th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',all:'全部',no_data:'无数据',days:'天',nav_hr:'人员',nav_sc:'安装',nav_pm:'PM点检',nav_ft:'故障',nav_mt:'材料'},
-  ja:{title:'資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'라인',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',kp1:'総交換件수',kp2:'有償',kp3:'無償',kp4:'有償比率',kp5:'資材種類',kp6:'設備台数',cyc_title:'⏱️ 資材別使用周期(平均/最小/最大)',cyc_mat:'資材名',cyc_cnt:'交換件수',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'資材交換詳細',th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',all:'全体',no_data:'データなし',days:'日',nav_hr:'人員',nav_sc:'設置',nav_pm:'PM点検',nav_ft:'故障',nav_mt:'資材'}
+  ko:{title:'📦 자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'유상',kp3:'무상',kp4:'유상비율',kp5:'자재 종류',kp6:'설비 대수',cyc_title:'⏱️ 자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',f_active:'활성 필터',f_clear:'전체 해제',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
+  en:{title:'📦 Material Dashboard',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-proc',sl_eq:'Equipment',sl_search:'Search',cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',kp1:'Total',kp2:'Paid',kp3:'Free',kp4:'Paid %',kp5:'Materials',kp6:'Equipment',cyc_title:'⏱️ Material Lifecycle (avg/min/max)',cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Replacement Detail',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',all:'All',no_data:'No data',days:'d',f_active:'Active Filters',f_clear:'Clear All',nav_hr:'Workforce',nav_sc:'Installation',nav_pm:'PM Schedule',nav_ft:'Fault',nav_mt:'Material'},
+  zh:{title:'📦 材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',kp1:'总更换数',kp2:'有偿',kp3:'无偿',kp4:'有偿比率',kp5:'材料种类',kp6:'设备数',cyc_title:'⏱️ 材料使用周期(平均/最小/最大)',cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'材料更换明细',th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',all:'全部',no_data:'无数据',days:'天',f_active:'活动筛选',f_clear:'全部清除',nav_hr:'人员',nav_sc:'安装',nav_pm:'PM点检',nav_ft:'故障',nav_mt:'材料'},
+  ja:{title:'📦 資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'라인',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',kp1:'総交換件수',kp2:'有償',kp3:'無償',kp4:'有償比率',kp5:'資材種類',kp6:'設備台数',cyc_title:'⏱️ 資材別使用周期(平均/最小/最大)',cyc_mat:'資材名',cyc_cnt:'交換件수',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'資材交換詳細',th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',all:'全体',no_data:'データなし',days:'日',f_active:'有効フィルタ',f_clear:'全解除',nav_hr:'人員',nav_sc:'設置',nav_pm:'PM点検',nav_ft:'故障',nav_mt:'資材'}
 };
 
 let LANG='ko', DATA=[], CHARTS={}, sortK='date', sortAsc=false, cycSortK='cnt', cycSortAsc=false;
 let CYCLE_BASIS='paid';
 let CROSS_CHART_INSTANCE = null;
-const F={country:'',customer:'',line:'',process:'',detail:'',eq:'',mat:'',dtFrom:'',dtTo:'',pf:'',q:''};
+const F={country:'',customer:'',line:'',process:'',detail:'',eq:'',mat:'',reason:'',dtFrom:'',dtTo:'',pf:'',q:''};
 
 const EXCL = { mat: [], eq: [], proc: [], reason: [], free: [] };
 const ALL_VALUES = { mat: [], eq: [], proc: [], reason: [], free: [] };
@@ -654,12 +673,54 @@ function setPfFilter(v){
   render();
 }
 
+
+// ===== 차트 클릭 크로스 필터링 =====
+const CLICK_MAP={cMat:'mat',cEq:'eq',cProc:'process',cPf:'pf',cReason:'reason'};
+const FIELD_LABEL={country:'국가',customer:'고객사',line:'라인',process:'공정',detail:'세부공정',eq:'설비',mat:'자재',reason:'사유',pf:'유/무상',dtFrom:'시작일',dtTo:'종료일',q:'검색'};
+function chartClick(chartId,label){
+  const key=CLICK_MAP[chartId]; if(!key)return;
+  let val=label;
+  if(chartId==='cPf'){ val = (label===t('kp2'))?'유상':'무상'; }
+  F[key] = (F[key]===val) ? '' : val;   // 같은 값 다시 클릭 → 해제
+  syncSlicerUI();
+  render();
+}
+function syncSlicerUI(){
+  const map={country:'sl-country',customer:'sl-customer',line:'sl-line',process:'sl-process',detail:'sl-detail',eq:'sl-eq',mat:'sl-mat'};
+  Object.entries(map).forEach(([k,id])=>{
+    const el=document.getElementById(id);
+    if(el)el.value=F[k]||'';
+  });
+}
+function renderFilterChips(){
+  const box=document.getElementById('fchips'), list=document.getElementById('fchipList');
+  if(!box)return;
+  const active=Object.entries(F).filter(([k,v])=>v);
+  if(!active.length){box.style.display='none';return;}
+  box.style.display='flex';
+  list.innerHTML=active.map(([k,v])=>
+    `<span class="fchip" onclick="clearFilter('${k}')">${FIELD_LABEL[k]||k}: <b>${v}</b> <span class="fx">✕</span></span>`).join('');
+}
+function clearFilter(k){
+  F[k]='';
+  if(k==='dtFrom')document.getElementById('dtFrom').value='';
+  if(k==='dtTo')document.getElementById('dtTo').value='';
+  if(k==='q')document.getElementById('search').value='';
+  syncSlicerUI(); render();
+}
+function clearAllFilters(){
+  Object.keys(F).forEach(k=>F[k]='');
+  ['dtFrom','dtTo','search'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  syncSlicerUI(); render();
+}
+
 function filt(){
   return DATA.filter(x=>{
     if(F.country&&x.country!==F.country)return false; if(F.customer&&x.customer!==F.customer)return false;
     if(F.line&&x.line!==F.line)return false; if(F.process&&x.process!==F.process)return false;
     if(F.detail&&x.detail!==F.detail)return false; if(F.eq&&x.eq!==F.eq)return false;
     if(F.mat&&x.matName!==F.mat)return false; if(F.pf&&x.pf!==F.pf)return false;
+    if(F.reason&&x.reason!==F.reason)return false;
     if(F.dtFrom&&(!x.workDate||fmtDate(x.workDate)<F.dtFrom))return false;
     if(F.dtTo&&(!x.workDate||fmtDate(x.workDate)>F.dtTo))return false;
     if(F.q){const s=`${x.matName} ${x.reason} ${x.eq} ${x.process} ${x.freeReason||''}`.toLowerCase(); if(!s.includes(F.q))return false;}
@@ -691,6 +752,7 @@ function mkBar(id,labels,data,color,horizontal,withLine){
   }
   const cfg={data:{labels,datasets},
     options:{indexAxis:horizontal?'y':'x',responsive:true,maintainAspectRatio:false,
+      onClick:(e,els,chart)=>{if(els.length&&CLICK_MAP[id])chartClick(id,chart.data.labels[els[0].index]);},
       plugins:{legend:{display:!!withLine,labels:{color:theme.txt,font:{size:9},usePointStyle:true,pointStyle:'circle',boxWidth:6}}},
       scales}};
   if(CHARTS[id]){CHARTS[id].destroy();}
@@ -699,7 +761,8 @@ function mkBar(id,labels,data,color,horizontal,withLine){
 function mkDonut(id,labels,data,colors){
   const ctx=document.getElementById(id);
   const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors||THEME_PALETTES[ACTIVE_THEME_KEY].colors,borderWidth:0,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'right',labels:{color:THEME_PALETTES[ACTIVE_THEME_KEY].txt,font:{size:10},usePointStyle:true,pointStyle:'circle'}}}}};
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+      onClick:(e,els,chart)=>{if(els.length&&CLICK_MAP[id])chartClick(id,chart.data.labels[els[0].index]);},plugins:{legend:{position:'right',labels:{color:THEME_PALETTES[ACTIVE_THEME_KEY].txt,font:{size:10},usePointStyle:true,pointStyle:'circle'}}}}};
   if(CHARTS[id]){CHARTS[id].config.options=cfg.options; CHARTS[id].data.labels=labels; CHARTS[id].data.datasets[0].data=data; CHARTS[id].data.datasets[0].backgroundColor=colors||THEME_PALETTES[ACTIVE_THEME_KEY].colors; CHARTS[id].update(); return;}
   CHARTS[id]=new Chart(ctx,cfg);
 }
@@ -750,6 +813,7 @@ function render(){
   renderExclChips('free');
 
   renderExclOptions('mat'); renderExclOptions('eq'); renderExclOptions('proc'); renderExclOptions('reason'); renderExclOptions('free');
+  renderFilterChips();
   renderCycleTable(f); renderDetailTable(f); renderCrossTable();
 }
 
@@ -774,8 +838,9 @@ function renderExclOptions(k) {
   const q = document.getElementById(id).value.toLowerCase();
   const list = ALL_VALUES[k].filter(m => !EXCL[k].includes(m) && m.toLowerCase().includes(q));
   const dd = document.getElementById(ddId);
-  if(!list.length){dd.innerHTML='<div class="excl-opt" style="color:var(--txt-muted)">검색 결과 없음</div>';return;}
+  if(!list.length){dd.innerHTML='<div class="excl-opt" style="color:var(--txt-muted)">검색 결과 없음</div>';dd.classList.add('open');return;}
   dd.innerHTML = list.map(m => `<div class="excl-opt" onclick="addExcl('${k}','${m}')">${m}</div>`).join('');
+  dd.classList.add('open');
 }
 
 window.addExcl = function(k, m) {
