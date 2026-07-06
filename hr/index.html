@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>인력 현황</title>
+<title>인력 현황 대시보드</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root{
@@ -138,8 +139,8 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <div class="header">
   <div>
-    <h1 data-i="title">인력 현황</h1>
-    <div class="sub" data-i="sub">인원 및 교육 현황</div>
+    <h1 data-i="title">인력 현황 대시보드</h1>
+    <div class="sub" data-i="sub">엔지니어 교육 · 직급 · 직무 인터랙티브 분석</div>
   </div>
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-back" data-i="back">← 메인으로</a>
@@ -188,10 +189,11 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 
 <script>
+if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=0&single=true&output=csv';
 
 const TR={
-  ko:{title:'인력 현황',sub:'인원 및 교육 현황',
+  ko:{title:'인력 현황 대시보드',sub:'엔지니어 교육 · 직급 · 직무 인터랙티브 분석',
     back:'← 메인으로',total_pre:'총',total_post:'명 · 실시간 필터',refresh:'새로고침',
     loading:'데이터 불러오는 중...',
     sl_pos:'직급',sl_job:'직무',sl_edu:'교육',sl_edu2:'교육',sl_search:'검색',search_ph:'이름 검색...',
@@ -403,46 +405,7 @@ loadData();
 })();
 </script>
 <script>
-/* ===== 통합 셸 동기화 (iframe 안에서만 작동) ===== */
-(function(){
-  const inFrame = (window.self !== window.top);
-  if(inFrame){
-    // 헤더의 개별 버튼 숨김 (메인으로/새로고침/테마/언어)
-    const st=document.createElement('style');
-    st.textContent='.header-right{display:none !important}';
-    document.head.appendChild(st);
-  }
-  // 시작 시 셸이 저장한 테마/언어를 직접 읽어 적용 (같은 도메인이라 공유됨)
-  function applyStoredTheme(){
-    let th=null,lg=null;
-    try{th=sessionStorage.getItem('gst_theme');lg=sessionStorage.getItem('gst_lang');}catch(e){}
-    if(th){
-      document.body.className = th==='default' ? '' : 'theme-'+th;
-      if(typeof changeDashboardTheme==='function'){try{changeDashboardTheme(th,th);}catch(e){}}
-    }
-    if(lg && typeof setLang==='function'){try{setLang(lg);}catch(e){}}
-  }
-  if(inFrame){
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyStoredTheme);
-    else applyStoredTheme();
-    // 데이터 로드 후 차트가 다시 그려질 수 있으니 한번 더
-    setTimeout(applyStoredTheme,1500);
-  }
-  // 셸에서 오는 테마/언어 신호 수신
-  window.addEventListener('message',e=>{
-    const d=e.data||{};
-    if(d.type==='gst-theme'){
-      document.body.className = d.theme==='default' ? '' : 'theme-'+d.theme;
-      // 테마 전환 함수가 있으면 차트도 갱신
-      if(typeof changeDashboardTheme==='function'){
-        try{changeDashboardTheme(d.theme==='default'?'default':d.theme, d.theme);}catch(err){}
-      }
-    }
-    if(d.type==='gst-lang' && typeof setLang==='function'){
-      try{setLang(d.lang);}catch(err){}
-    }
-  });
-})();
+GST.initSync();
 </script>
 </body>
 </html>
