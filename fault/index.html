@@ -6,6 +6,7 @@
 <title>Fault Analysis Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -156,7 +157,7 @@ canvas{cursor:pointer}
 
 <div class="header">
   <div>
-    <h1 data-i="title">Fault Analysis Dashboard</h1>
+    <h1 data-i="title">🛠️ Fault Analysis Dashboard</h1>
     <div class="sub" data-i="sub">BM/CBM breakdown & alarm analysis</div>
   </div>
   <div class="header-right">
@@ -233,6 +234,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
+if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 (function(){
   const PASSWORD='gst1234!';
   function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
@@ -252,7 +254,7 @@ const C={line:2,group1:3,detail1:5,model:17,code:18,work:23,sn:24,maint:25,aw:26
 const PAL=['#fb7185','#fbbf24','#a78bfa','#38bdf8','#34d399','#f472b6','#60a5fa','#c084fc','#4ade80','#f97316'];
 
 const T={
-  ko:{title:'고장 현황',sub:'BM/CBM 고장 및 알람 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
+  ko:{title:'🛠️ 고장 분석 대시보드',sub:'BM/CBM 고장 및 알람 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
     sl_type:'유형',sl_search:'검색',sl_sn:'설비 S/N',sl_code:'고장코드',sl_model:'모델',sl_period:'기간',all:'전체',f_active:'활성 필터',f_clear:'전체 해제',
     kp1:'총 고장건수',kp2:'BM (고장정비)',kp3:'CBM (상태기반)',kp4:'Alarm',kp5:'Warning',
     ch_code:'🔥 고장코드 TOP',note_code:'가장 빈번한 고장코드',
@@ -263,7 +265,7 @@ const T={
     ch_action:'🔩 조치 유형',note_action:'부품/점검/설계',
     tbl_title:'고장 상세 내역',th_msg:'메시지',th_ftype:'고장유형',th_action:'조치',
     no_data:'데이터 없음',search_ph:'S/N, 코드, 메시지 검색...'},
-  en:{title:'Fault Analysis Dashboard',sub:'BM/CBM breakdown & alarm analysis',back:'← Main',refresh:'Refresh',loading:'Loading...',
+  en:{title:'🛠️ Fault Analysis Dashboard',sub:'BM/CBM breakdown & alarm analysis',back:'← Main',refresh:'Refresh',loading:'Loading...',
     sl_type:'Type',sl_search:'Search',sl_sn:'Equipment S/N',sl_code:'Fail Code',sl_model:'Model',sl_period:'Period',all:'All',f_active:'Active Filters',f_clear:'Clear All',
     kp1:'Total Faults',kp2:'BM (Breakdown)',kp3:'CBM (Condition)',kp4:'Alarm',kp5:'Warning',
     ch_code:'🔥 Fault Code TOP',note_code:'Most frequent codes',
@@ -274,7 +276,7 @@ const T={
     ch_action:'🔩 Action Type',note_action:'Parts/Inspection/Design',
     tbl_title:'Fault Detail List',th_msg:'Message',th_ftype:'Fail Type',th_action:'Action',
     no_data:'No data',search_ph:'Search S/N, Code, Message...'},
-  zh:{title:'故障分析仪表板',sub:'BM/CBM故障及报警分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
+  zh:{title:'🛠️ 故障分析仪表板',sub:'BM/CBM故障及报警分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
     sl_type:'类型',sl_search:'搜索',sl_sn:'设备S/N',sl_code:'故障码',sl_model:'型号',sl_period:'期间',all:'全部',f_active:'活动筛选',f_clear:'全部清除',
     kp1:'总故障数',kp2:'BM(故障维修)',kp3:'CBM(状态维修)',kp4:'报警',kp5:'警告',
     ch_code:'🔥 故障代码TOP',note_code:'最频繁故障代码',
@@ -285,7 +287,7 @@ const T={
     ch_action:'🔩 处理类型',note_action:'部件/检查/设计',
     tbl_title:'故障明细',th_msg:'消息',th_ftype:'故障类型',th_action:'处理',
     no_data:'无数据',search_ph:'搜索S/N,代码,消息...'},
-  ja:{title:'故障分析ダッシュボード',sub:'BM/CBM故障・アラーム分析',back:'← メイン',refresh:'更新',loading:'読み込み中...',
+  ja:{title:'🛠️ 故障分析ダッシュボード',sub:'BM/CBM故障・アラーム分析',back:'← メイン',refresh:'更新',loading:'読み込み中...',
     sl_type:'種類',sl_search:'検索',sl_sn:'設備S/N',sl_code:'故障コード',sl_model:'モデル',sl_period:'期間',all:'全体',f_active:'有効フィルタ',f_clear:'全解除',
     kp1:'総故障件数',kp2:'BM(故障整備)',kp3:'CBM(状態基準)',kp4:'Alarm',kp5:'Warning',
     ch_code:'🔥 故障コードTOP',note_code:'最頻出コード',
@@ -316,15 +318,8 @@ function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(FAULTS.le
 function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
 document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');});
 
-function toDate(v){
-  if(!v||v==='')return null;
-  const n=Number(v);
-  if(!isNaN(n)&&n>20000&&n<80000)return new Date(Date.UTC(1899,11,30)+n*86400000);
-  const s=String(v).trim();const m=s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
-  if(m)return new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));
-  const d=new Date(s);return isNaN(d)?null:d;
-}
-function fmtDate(d){return d?d.toISOString().slice(0,10):'—';}
+const toDate=GST.toDate;
+const fmtDate=GST.fmtDate;
 function cv(r,k){const v=r[C[k]];return(v!==undefined&&v!=='')?String(v).trim():'';}
 
 async function loadData(){
@@ -351,7 +346,7 @@ async function loadData(){
   btn.disabled=false;
 }
 
-function uniq(key){return Array.from(new Set(FAULTS.map(x=>x[key]).filter(Boolean))).sort();}
+function uniq(key,base){return GST.uniq(base||FAULTS,key);}
 function buildChips(id,fkey,vals){
   const box=document.getElementById(id);box.innerHTML='';
   ['ALL',...vals].forEach(v=>{
@@ -361,14 +356,7 @@ function buildChips(id,fkey,vals){
     box.appendChild(c);
   });
 }
-function fillSelect(id,fkey,vals){
-  const s=document.getElementById(id);const cur=F[fkey];
-  s.innerHTML='';
-  const o0=document.createElement('option');o0.value='';o0.textContent=t('all')||'전체';s.appendChild(o0);
-  vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o);});
-  s.value=vals.includes(cur)?cur:'';
-  if(!vals.includes(cur))F[fkey]='';
-}
+function fillSelect(id,fkey,vals){GST.fillSelect(id,fkey,vals,F,t('all')||'전체');}
 function rebuildFilters(){
   fillSelect('sl-line','line',uniq('line'));
   fillSelect('sl-group','group',uniq('group'));
@@ -390,7 +378,7 @@ function onSlicer(){
 }
 document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
 
-function fmtD(d){return d?d.toISOString().slice(0,10):'';}
+const fmtD=GST.fmtD;
 function filt(){
   return FAULTS.filter(x=>{
     if(F.line&&x.line!==F.line)return false;
@@ -419,15 +407,7 @@ function syncSlicerUI(){
   const map={line:'sl-line',group:'sl-group',type:'sl-type',sn:'sl-sn',code:'sl-code',model:'sl-model'};
   Object.entries(map).forEach(([k,id])=>{const el=document.getElementById(id);if(el)el.value=F[k]||'';});
 }
-function renderFilterChips(){
-  const box=document.getElementById('fchips'),list=document.getElementById('fchipList');
-  if(!box)return;
-  const active=Object.entries(F).filter(([k,v])=>v);
-  if(!active.length){box.style.display='none';return;}
-  box.style.display='flex';
-  list.innerHTML=active.map(([k,v])=>
-    `<span class="fchip" onclick="clearFilter('${k}')">${FIELD_LABEL[k]||k}: <b>${v}</b> <span class="fx">✕</span></span>`).join('');
-}
+function renderFilterChips(){GST.renderChips(F,FIELD_LABEL,'clearFilter');}
 function clearFilter(k){
   F[k]='';
   if(k==='dtFrom'||k==='dtTo')document.getElementById(k).value='';
@@ -439,30 +419,17 @@ function clearAllFilters(){
   ['dtFrom','dtTo','search'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   syncSlicerUI(); render();
 }
-function countBy(arr,key){const m={};arr.forEach(x=>{const k=x[key]||'N/A';if(k&&k!=='N/A')m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);}
+const countBy=GST.countBy;
 
-function animVal(el,target){const start=parseFloat(el.dataset.v||0);const t0=performance.now();
-  function step(t){const p=Math.min((t-t0)/500,1);const cur=start+(target-start)*(1-Math.pow(1-p,3));el.textContent=Math.round(cur);if(p<1)requestAnimationFrame(step);else el.dataset.v=target;}
-  requestAnimationFrame(step);}
+const animVal=GST.animVal;
 
 function mkBar(id,labels,data,color,horizontal){
-  const ctx=document.getElementById(id);
-  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:5}]},
-    options:{indexAxis:horizontal?'y':'x',responsive:true,maintainAspectRatio:false,
-      onClick:(e,els,chart)=>{if(els.length&&CLICK_MAP[id])chartClick(id,chart.data.labels[els[0].index]);},
-      plugins:{legend:{display:false}},
-      scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#94a3b8',font:{size:10},precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}};
-  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;CHARTS[id].update();return;}
-  CHARTS[id]=new Chart(ctx,cfg);
+  GST.bar(CHARTS,id,{labels,data,color,horizontal,txt:'#94a3b8',
+    onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
 }
 function mkDonut(id,labels,data,colors){
-  const ctx=document.getElementById(id);
-  const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors||PAL,borderColor:'rgba(0,0,0,.15)',borderWidth:2,hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
-      onClick:(e,els,chart)=>{if(els.length&&CLICK_MAP[id])chartClick(id,chart.data.labels[els[0].index]);},
-      plugins:{legend:{position:'right',labels:{color:'#cbd5e1',font:{size:10},padding:8,usePointStyle:true,pointStyle:'circle'}}},animation:{animateScale:true}}};
-  if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;if(colors)CHARTS[id].data.datasets[0].backgroundColor=colors;CHARTS[id].update();return;}
-  CHARTS[id]=new Chart(ctx,cfg);
+  GST.donut(CHARTS,id,{labels,data,colors:colors||PAL,txt:'#cbd5e1',
+    onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
 }
 
 function render(){
@@ -542,46 +509,7 @@ applyLang();
 loadData();
 </script>
 <script>
-/* ===== 통합 셸 동기화 (iframe 안에서만 작동) ===== */
-(function(){
-  const inFrame = (window.self !== window.top);
-  if(inFrame){
-    // 헤더의 개별 버튼 숨김 (메인으로/새로고침/테마/언어)
-    const st=document.createElement('style');
-    st.textContent='.header-right{display:none !important}';
-    document.head.appendChild(st);
-  }
-  // 시작 시 셸이 저장한 테마/언어를 직접 읽어 적용 (같은 도메인이라 공유됨)
-  function applyStoredTheme(){
-    let th=null,lg=null;
-    try{th=sessionStorage.getItem('gst_theme');lg=sessionStorage.getItem('gst_lang');}catch(e){}
-    if(th){
-      document.body.className = th==='default' ? '' : 'theme-'+th;
-      if(typeof changeDashboardTheme==='function'){try{changeDashboardTheme(th,th);}catch(e){}}
-    }
-    if(lg && typeof setLang==='function'){try{setLang(lg);}catch(e){}}
-  }
-  if(inFrame){
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyStoredTheme);
-    else applyStoredTheme();
-    // 데이터 로드 후 차트가 다시 그려질 수 있으니 한번 더
-    setTimeout(applyStoredTheme,1500);
-  }
-  // 셸에서 오는 테마/언어 신호 수신
-  window.addEventListener('message',e=>{
-    const d=e.data||{};
-    if(d.type==='gst-theme'){
-      document.body.className = d.theme==='default' ? '' : 'theme-'+d.theme;
-      // 테마 전환 함수가 있으면 차트도 갱신
-      if(typeof changeDashboardTheme==='function'){
-        try{changeDashboardTheme(d.theme==='default'?'default':d.theme, d.theme);}catch(err){}
-      }
-    }
-    if(d.type==='gst-lang' && typeof setLang==='function'){
-      try{setLang(d.lang);}catch(err){}
-    }
-  });
-})();
+GST.initSync();
 </script>
 </body>
 </html>
