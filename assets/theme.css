@@ -25,14 +25,14 @@
   --glassb:var(--glass-border); --txt:var(--txt-main); --mut:var(--txt-muted); --muted:var(--txt-muted);
 
   /* 타이포그래피 스케일 */
-  --fs-display:24px;   /* 대시보드 제목 */
+  --fs-display:28px;   /* 대시보드 제목 */
   --fs-title:16px;     /* 섹션 제목 */
   --fs-card:13px;      /* 카드 제목 */
   --fs-body:12px;      /* 본문 */
   --fs-table:11px;     /* 테이블 */
   --fs-caption:10px;   /* 캡션/라벨 */
   --fs-micro:9px;      /* 테이블 헤더 */
-  --fs-kpi:20px;       /* KPI 숫자 */
+  --fs-kpi:26px;       /* KPI 숫자 */
 
   /* 간격 시스템 (8px 그리드) */
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
@@ -147,10 +147,67 @@ button:focus-visible,input:focus-visible,select:focus-visible{
   .header h1{font-size:18px !important}
 }
 
+
+/* ============================================================
+   Stage 5 — 마감 품질 (Polish)
+   ============================================================ */
+
+/* ---------- 진입 애니메이션 (카드가 순차적으로 떠오름) ---------- */
+@keyframes fadeInUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.kpi,.card,.mcard,.tablecard,.alert,.slicer{animation:fadeInUp .5s var(--ease) backwards}
+.kpi:nth-child(1),.alert:nth-child(1){animation-delay:.02s}
+.kpi:nth-child(2),.alert:nth-child(2){animation-delay:.06s}
+.kpi:nth-child(3),.alert:nth-child(3){animation-delay:.10s}
+.kpi:nth-child(4),.alert:nth-child(4){animation-delay:.14s}
+.kpi:nth-child(5){animation-delay:.18s}
+.kpi:nth-child(6){animation-delay:.22s}
+.card:nth-child(1),.mcard:nth-child(1){animation-delay:.08s}
+.card:nth-child(2),.mcard:nth-child(2){animation-delay:.14s}
+.card:nth-child(3),.mcard:nth-child(3){animation-delay:.20s}
+.card:nth-child(4),.mcard:nth-child(4){animation-delay:.26s}
+
+/* ---------- 호버 마이크로 인터랙션 ---------- */
+.card:hover,.mcard:hover{border-color:var(--accent-2) !important;
+  box-shadow:0 12px 40px rgba(0,0,0,.45), 0 0 0 1px var(--accent-2) inset !important}
+body.theme-light .card:hover,body.theme-light .mcard:hover{
+  box-shadow:0 12px 40px rgba(31,38,135,.12), 0 0 0 1px var(--accent-2) inset !important}
+.kpi{cursor:pointer}
+.kpi:active{transform:translateY(-1px) scale(.99) !important}
+tr{transition:background .15s var(--ease)}
+select,input[type="date"],input[type="text"],input[type="password"]{transition:border-color .2s var(--ease), box-shadow .2s var(--ease)}
+select:hover,input:hover{border-color:var(--txt-muted) !important}
+
+/* 텍스트 선택 색 */
+::selection{background:var(--accent-2);color:#fff}
+
+/* ---------- 라이트 테마 완성도 ---------- */
+body.theme-light select,body.theme-light input{color-scheme:light}
+body.theme-light select,body.theme-light input[type="date"],body.theme-light input[type="text"]{
+  background:rgba(255,255,255,.9) !important;color:var(--txt-main) !important}
+/* 테이블 고정 헤더 배경을 테마별로 */
+th{background:rgba(10,20,32,.96) !important}
+body.theme-burgundy th{background:rgba(26,8,19,.96) !important}
+body.theme-light th{background:rgba(241,245,249,.98) !important}
+/* 라이트에서 칩/배지 가독성 */
+body.theme-light .fchip{background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.35)}
+body.theme-light .status.ok{color:#16a34a}
+
+/* ---------- 접근성: 모션 최소화 설정 존중 ---------- */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  body{animation:none !important}
+}
+
 /* ---------- 6. 인쇄 (PDF 내보내기용) ---------- */
 @media print{
-  body{background:#fff !important;color:#000 !important;padding:10mm !important}
-  .header-right,.slicers,.toolbar,.lang-wrap,.theme-wrap,button{display:none !important}
-  .card,.kpi,.tablecard{box-shadow:none !important;border:1px solid #ddd !important;break-inside:avoid}
-  .card h3,.kpi .cap,td,th{color:#000 !important}
+  @page{size:A4 landscape;margin:10mm}
+  body{background:#fff !important;color:#000 !important;padding:0 !important;animation:none !important}
+  .header-right,.slicers,.toolbar,.lang-wrap,.theme-wrap,button,.fchips,.excl-box,.navtabs,.m-link{display:none !important}
+  .header h1{-webkit-text-fill-color:#000 !important;background:none !important;font-size:22px !important}
+  .header .sub{color:#555 !important}
+  .card,.kpi,.mcard,.tablecard,.alert{box-shadow:none !important;border:1px solid #ddd !important;
+    break-inside:avoid;background:#fff !important;animation:none !important}
+  .card h3,.mcard h3,.kpi .cap,.kpi .val,td,th,.mrow .lbl,.mrow .v{color:#000 !important}
+  th{background:#f0f0f0 !important}
+  .status{display:none !important}
 }
