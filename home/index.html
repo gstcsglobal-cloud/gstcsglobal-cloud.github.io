@@ -6,6 +6,7 @@
 <title>GST Executive Summary</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -211,24 +212,9 @@ Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
 function t(k){return (T[LANG]||T.ko)[k]||k;}
 function applyLang(){document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});}
 function setLang(l){if(T[l]){LANG=l;applyLang();if(window.__data)renderAll(window.__data);}}
-function goTab(id){
-  // 셸 안이면 셸에 탭 전환 요청, 아니면 직접 이동
-  if(window.self!==window.top){ window.parent.postMessage({type:'gst-goto',tab:id},'*'); }
-  else{ location.href='https://gstcsglobal-cloud.github.io/'+id+'/'; }
-}
-function toDate(v){
-  if(!v||v==='')return null;
-  const n=Number(v);
-  if(!isNaN(n)&&n>20000&&n<80000)return new Date(Date.UTC(1899,11,30)+n*86400000);
-  const s=String(v).trim();const m=s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
-  if(m)return new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));
-  const d=new Date(s);return isNaN(d)?null:d;
-}
-async function fetchCSV(url){
-  const r=await fetch(url+'&t='+Date.now());
-  const tx=await r.text();
-  return Papa.parse(tx,{skipEmptyLines:true}).data.slice(1);
-}
+const goTab=GST.goTab;
+const toDate=GST.toDate;
+async function fetchCSV(url){return (await GST.fetchCSV(url)).slice(1);}
 
 async function loadAll(){
   const st=document.getElementById('status');
@@ -333,7 +319,9 @@ function renderAll(D){
   mkHBar('chMt',top5.map(x=>x[0]),top5.map(x=>x[1]),'#2dd4bf');
 }
 
-function setN(id,v){const el=document.getElementById(id);if(el)el.textContent=(v==null?'—':v.toLocaleString());}
+function setN(id,v){const el=document.getElementById(id);if(!el)return;
+  if(v==null){el.textContent='—';return;}
+  GST.animVal(el,v);}
 
 function mkDonut(id,labels,data,colors){
   const ctx=document.getElementById(id);
@@ -357,27 +345,7 @@ function mkHBar(id,labels,data,color){
       scales:{x:{ticks:{precision:0,font:{size:9}},grid:{display:false}},y:{ticks:{font:{size:9}},grid:{display:false}}}}});
 }
 
-/* ===== 통합 셸 동기화 ===== */
-(function(){
-  const inFrame=(window.self!==window.top);
-  function applyStoredTheme(){
-    let th=null,lg=null;
-    try{th=sessionStorage.getItem('gst_theme');lg=sessionStorage.getItem('gst_lang');}catch(e){}
-    if(th)document.body.className = th==='default'?'':'theme-'+th;
-    if(lg&&T[lg]){LANG=lg;applyLang();}
-  }
-  if(inFrame){applyStoredTheme();}
-  window.addEventListener('message',e=>{
-    const d=e.data||{};
-    if(d.type==='gst-theme')document.body.className=d.theme==='default'?'':'theme-'+d.theme;
-    if(d.type==='gst-lang')setLang(d.lang);
-  });
-  // 직접 접속 시 로그인 가드
-  if(!inFrame){
-    let ok=false;try{ok=sessionStorage.getItem('gst_auth')==='1';}catch(e){}
-    if(!ok)location.href='https://gstcsglobal-cloud.github.io/';
-  }
-})();
+GST.initSync({loginRedirect:true});
 
 applyLang();
 loadAll();
