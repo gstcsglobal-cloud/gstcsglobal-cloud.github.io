@@ -146,9 +146,9 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-back" data-i="back">← 메인으로</a>
     <div class="badge"><span data-i="total_pre">총</span> <b id="totRec">0</b><span data-i="total_post">명 · 실시간 필터</span></div>
-    <button class="btn" id="refreshBtn" onclick="loadData()">🔄 <span data-i="refresh">새로고침</span></button>
+    <button class="btn" id="refreshBtn" onclick="loadData()"><span data-i="refresh">새로고침</span></button>
     <div class="lang-wrap">
-      <button class="lang-btn" onclick="toggleLang()">🌐 <span id="langLabel">KO</span> ▾</button>
+      <button class="lang-btn" onclick="toggleLang()"><span id="langLabel">KO</span> ▾</button>
       <div class="lang-dropdown" id="langMenu">
         <div class="lang-item" onclick="setLang('ko')">🇰🇷 한국어</div>
         <div class="lang-item" onclick="setLang('en')">🇺🇸 English</div>
@@ -169,10 +169,10 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 
 <div class="kpis">
-  <div class="kpi k1"><div class="ic">👥</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">선택 인원</div></div>
-  <div class="kpi k2"><div class="ic">🎓</div><div class="val" id="kp2">0%</div><div class="cap" data-i="kp2">Basic 이수율</div></div>
-  <div class="kpi k3"><div class="ic">🏅</div><div class="val" id="kp3">0%</div><div class="cap" data-i="kp3">Veteran 이수율</div></div>
-  <div class="kpi k4"><div class="ic">⚙️</div><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Engineer 인원</div></div>
+  <div class="kpi k1"><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">선택 인원</div></div>
+  <div class="kpi k2"><div class="val" id="kp2">0%</div><div class="cap" data-i="kp2">Basic 이수율</div></div>
+  <div class="kpi k3"><div class="val" id="kp3">0%</div><div class="cap" data-i="kp3">Veteran 이수율</div></div>
+  <div class="kpi k4"><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Engineer 인원</div></div>
 </div>
 
 <div class="grid">
