@@ -252,5 +252,42 @@ GST.fetchCSVCached = async function(url, key){
   }
 };
 
+/* ---------- 10. 스켈레톤 로딩 (Stage 3) ---------- */
+GST.skeleton=function(on){
+  document.querySelectorAll('.kpi,.card,.mcard,.tablecard,.alert').forEach(el=>el.classList.toggle('skeleton',!!on));
+};
+
+/* ---------- 11. 필터 상태 URL 공유 (Stage 4) ---------- */
+GST.encodeState=function(F){
+  const a={}; Object.entries(F).forEach(([k,v])=>{ if(v!==''&&v!=null&&v!=='ALL') a[k]=v; });
+  if(!Object.keys(a).length) return '';
+  return encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(a)))));
+};
+GST.decodeState=function(s){
+  try{ return JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(s))))); }catch(e){ return null; }
+};
+// 필터 변경 시 호출: iframe이면 셸 URL 갱신 요청, 직접 접속이면 자기 주소 갱신
+GST.pushState=function(F){
+  const s=GST.encodeState(F);
+  if(window.self!==window.top){ window.parent.postMessage({type:'gst-state',state:s},'*'); }
+  else{
+    try{ const u=new URL(location); if(s)u.searchParams.set('f',s); else u.searchParams.delete('f');
+      history.replaceState(null,'',u); }catch(e){}
+  }
+};
+// 시작 시 URL(?f=...)에서 필터 복원
+GST.readState=function(){
+  const s=new URLSearchParams(location.search).get('f');
+  return s ? GST.decodeState(s) : null;
+};
+
+/* ---------- 12. 인증 (SHA-256, 평문 비밀번호 제거) ---------- */
+GST.PW_HASH='1bd5c3fd55d0fc00720d7b6d891f7f7e722f43ba9db6dd35fd88aa1c02c00b1b';
+GST.sha256=async function(str){
+  const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+};
+GST.checkPw=async function(v){ return (await GST.sha256(v))===GST.PW_HASH; };
+
 global.GST = GST;
 })(window);
