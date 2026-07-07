@@ -177,6 +177,8 @@ tr{transition:background .15s var(--ease)}
 select,input[type="date"],input[type="text"],input[type="password"]{transition:border-color .2s var(--ease), box-shadow .2s var(--ease)}
 select:hover,input:hover{border-color:var(--txt-muted) !important}
 
+.kpi-delta{font-size:10px;font-weight:700;margin-top:4px;min-height:12px}
+
 /* 텍스트 선택 색 */
 ::selection{background:var(--accent-2);color:#fff}
 

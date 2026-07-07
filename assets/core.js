@@ -289,5 +289,38 @@ GST.sha256=async function(str){
 };
 GST.checkPw=async function(v){ return (await GST.sha256(v))===GST.PW_HASH; };
 
+/* ---------- 13. 인사이트 엔진 (최종) ---------- */
+// 증감률 (%). prev가 0/없음이면 null
+GST.pctDelta=function(cur,prev){
+  if(prev==null||prev===0||!isFinite(prev)) return null;
+  return Math.round((cur-prev)/prev*100);
+};
+// ▲/▼ 증감 배지 HTML. goodWhenDown=true면 감소가 초록(고장·교체 등)
+GST.deltaBadge=function(cur,prev,goodWhenDown){
+  const p=GST.pctDelta(cur,prev);
+  if(p===null) return '';
+  if(p===0) return '<span style="font-size:10px;font-weight:800;color:var(--txt-muted)">— 0%</span>';
+  const up=p>0;
+  const good = goodWhenDown ? !up : up;
+  const color = good ? 'var(--ok,#4ade80)' : 'var(--bad,#fb7185)';
+  return '<span style="font-size:10px;font-weight:800;color:'+color+'">'+(up?'▲':'▼')+' '+Math.abs(p)+'%</span>';
+};
+// 이상 탐지: 평균+k·표준편차 초과 항목 (entries=[[라벨,건수],...])
+GST.outliers=function(entries,k){
+  k=k||3;
+  const vals=entries.map(e=>e[1]);
+  if(vals.length<4) return new Set();
+  const sorted=[...vals].sort((a,b)=>a-b);
+  const med=sorted[Math.floor(sorted.length/2)];
+  const devs=vals.map(v=>Math.abs(v-med)).sort((a,b)=>a-b);
+  const mad=Math.max(devs[Math.floor(devs.length/2)], 0.5);
+  const th=med + k*1.4826*mad;
+  return new Set(entries.filter(e=>e[1]>th).map(e=>e[0]));
+};
+// 특정 연/월 건수 (dateKey는 Date 필드명)
+GST.monthCount=function(arr,dateKey,y,m){
+  return arr.filter(x=>{const d=x[dateKey];return d&&d.getUTCFullYear()===y&&d.getUTCMonth()===m;}).length;
+};
+
 global.GST = GST;
 })(window);
