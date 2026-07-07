@@ -7,19 +7,19 @@
 /* ---------- 1. 디자인 토큰 ---------- */
 :root{
   /* ===== 색상 테마: Dark (기본) ===== */
-  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
-  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
-  --glass: rgba(255,255,255,0.05);
-  --glass-border: rgba(255,255,255,0.12);
-  --glass-hover: rgba(255,255,255,0.1);
-  --txt-main:#e2e8f0;
-  --txt-muted:#94a3b8;
-  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
+  --bg-gradient: linear-gradient(-45deg, #16163a, #1e1d4d, #232057, #131230);
+  --title-gradient: linear-gradient(90deg, #ffffff, #c7d2fe);
+  --glass: rgba(255,255,255,0.06);
+  --glass-border: rgba(255,255,255,0.14);
+  --glass-hover: rgba(255,255,255,0.11);
+  --txt-main:#f1f5f9;
+  --txt-muted:#9ba3c9;
+  --accent-1:#5eead4; --accent-2:#60a5fa; --accent-3:#c4b5fd; --accent-4:#fbbf24; --accent-5:#4ade80;
   --ok:#34d399; --warn:#fbbf24; --bad:#fb7185;
   --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
 
   /* 구버전 변수명 별칭 (각 대시보드 호환) */
-  --bg1:#0a1420; --bg2:#13232d; --bg3:#0f2027;
+  --bg1:#16163a; --bg2:#1e1d4d; --bg3:#232057;
   --a1:var(--accent-1); --a2:var(--accent-2); --a3:var(--accent-3); --a4:var(--accent-4); --a5:var(--accent-5);
   --accent:var(--accent-1); --accent2:var(--accent-2); --accent3:var(--accent-3);
   --glassb:var(--glass-border); --txt:var(--txt-main); --mut:var(--txt-muted); --muted:var(--txt-muted);
@@ -185,7 +185,7 @@ body.theme-light select,body.theme-light input{color-scheme:light}
 body.theme-light select,body.theme-light input[type="date"],body.theme-light input[type="text"]{
   background:rgba(255,255,255,.9) !important;color:var(--txt-main) !important}
 /* 테이블 고정 헤더 배경을 테마별로 */
-th{background:rgba(10,20,32,.96) !important}
+th{background:rgba(22,22,58,.97) !important}
 body.theme-burgundy th{background:rgba(26,8,19,.96) !important}
 body.theme-light th{background:rgba(241,245,249,.98) !important}
 /* 라이트에서 칩/배지 가독성 */
