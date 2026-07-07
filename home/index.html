@@ -75,6 +75,12 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt-main);
 .mrow .v{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
 .mrow .v.ok{color:var(--ok)}.mrow .v.warn{color:var(--warn)}.mrow .v.bad{color:var(--bad)}
 .cw{position:relative;height:170px}
+.ins-row{display:flex;align-items:center;gap:11px;padding:10px 2px;border-bottom:1px solid var(--glass-border);cursor:pointer;font-size:13px;transition:background .15s}
+.ins-row:last-child{border-bottom:none}
+.ins-row:hover{background:var(--glass-hover)}
+.ins-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ins-go{margin-left:auto;color:var(--txt-muted);font-size:12px}
+.vd{margin-left:6px}
 .skeleton{animation:skel 1.4s ease-in-out infinite;color:transparent !important}
 .skeleton .v,.skeleton .a-num{background:var(--glass);border-radius:6px;color:transparent !important}
 @keyframes skel{0%{opacity:.5}50%{opacity:.85}100%{opacity:.5}}
@@ -91,7 +97,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt-main);
     <div class="sub" data-i="sub">전체 운영 현황 한눈에 보기</div>
   </div>
   <div class="header-right">
-    <button class="btn" id="refreshBtn" onclick="loadAll()">🔄 <span data-i="refresh">새로고침</span></button>
+    <button class="btn" id="refreshBtn" onclick="loadAll()"><span data-i="refresh">새로고침</span></button>
   </div>
 </div>
 <div class="status" id="status">—</div>
@@ -99,45 +105,53 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt-main);
 <!-- 경고 배너 -->
 <div class="alerts" id="alerts">
   <div class="alert bad skeleton" id="alOver" onclick="goTab('pm')">
-    <div class="a-ic">⛔</div><div><div class="a-num" id="alOverN">--</div><div class="a-cap" data-i="al_over">PM 점검 지연</div></div>
+    <div class="a-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="2" stroke-linecap="round"><polygon points="7.9 2 16.1 2 22 7.9 22 16.1 16.1 22 7.9 22 2 16.1 2 7.9"/><path d="M8 12h8"/></svg></div><div><div class="a-num" id="alOverN">--</div><div class="a-cap" data-i="al_over">PM 점검 지연</div></div>
   </div>
   <div class="alert warn skeleton" id="alSoon" onclick="goTab('pm')">
-    <div class="a-ic">⚠️</div><div><div class="a-num" id="alSoonN">--</div><div class="a-cap" data-i="al_soon">점검 임박</div></div>
+    <div class="a-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></div><div><div class="a-num" id="alSoonN">--</div><div class="a-cap" data-i="al_soon">점검 임박</div></div>
   </div>
   <div class="alert warn skeleton" id="alFault" onclick="goTab('fault')">
-    <div class="a-ic">🛠️</div><div><div class="a-num" id="alFaultN">--</div><div class="a-cap" data-i="al_fault">최근 30일 고장</div></div>
+    <div class="a-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><div><div class="a-num" id="alFaultN">--</div><div class="a-cap" data-i="al_fault">최근 30일 고장</div></div>
   </div>
   <div class="alert ok skeleton" id="alDone" onclick="goTab('pm')">
-    <div class="a-ic">✅</div><div><div class="a-num" id="alDoneN">--</div><div class="a-cap" data-i="al_done">이번 달 점검 완료</div></div>
+    <div class="a-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4 12 14l-3-3"/></svg></div><div><div class="a-num" id="alDoneN">--</div><div class="a-cap" data-i="al_done">이번 달 점검 완료</div></div>
   </div>
+</div>
+
+<!-- 인사이트 -->
+<div class="sec-title" data-i="sec_ins">KEY INSIGHTS</div>
+<div class="mcard" style="margin-bottom:8px">
+  <div class="m-head"><h3 data-i="ins_title">이번 주 주목할 인사이트</h3></div>
+  <div id="insList"><div class="ins-row"><span class="ins-dot" style="background:var(--txt-muted)"></span><span>⏳</span></div></div>
 </div>
 
 <!-- 부문별 요약 -->
 <div class="sec-title" data-i="sec_ops">OPERATIONS</div>
 <div class="grid4">
   <div class="mcard skeleton" id="cardPM">
-    <div class="m-head"><h3>🔧 <span data-i="c_pm">PM 점검</span></h3><a class="m-link" onclick="goTab('pm')" data-i="more">자세히 →</a></div>
+    <div class="m-head"><h3><span data-i="c_pm">PM 점검</span></h3><a class="m-link" onclick="goTab('pm')" data-i="more">자세히 →</a></div>
     <div class="mrow"><span class="lbl" data-i="pm_total">총 점검대상</span><span class="v" id="pmTotal">--</span></div>
     <div class="mrow"><span class="lbl" data-i="pm_over">지연</span><span class="v bad" id="pmOver">--</span></div>
     <div class="mrow"><span class="lbl" data-i="pm_soon">임박</span><span class="v warn" id="pmSoon">--</span></div>
     <div class="mrow"><span class="lbl" data-i="pm_ok">정상</span><span class="v ok" id="pmOk">--</span></div>
+    <div class="mrow"><span class="lbl" data-i="pm_due30">30일 내 도래</span><span class="v warn" id="pmDue30">--</span></div>
   </div>
   <div class="mcard skeleton" id="cardFault">
-    <div class="m-head"><h3>🛠️ <span data-i="c_fault">고장 현황</span></h3><a class="m-link" onclick="goTab('fault')" data-i="more">자세히 →</a></div>
-    <div class="mrow"><span class="lbl" data-i="ft_30">최근 30일</span><span class="v" id="ft30">--</span></div>
+    <div class="m-head"><h3><span data-i="c_fault">고장 현황</span></h3><a class="m-link" onclick="goTab('fault')" data-i="more">자세히 →</a></div>
+    <div class="mrow"><span class="lbl" data-i="ft_30">최근 30일</span><span class="v" id="ft30">--</span><span class="vd" id="ft30d"></span></div>
     <div class="mrow"><span class="lbl">BM</span><span class="v bad" id="ftBM">--</span></div>
     <div class="mrow"><span class="lbl">CBM</span><span class="v" id="ftCBM">--</span></div>
     <div class="mrow"><span class="lbl" data-i="ft_top">최다 고장코드</span><span class="v warn" id="ftTop">--</span></div>
   </div>
   <div class="mcard skeleton" id="cardMat">
-    <div class="m-head"><h3>📦 <span data-i="c_mat">자재 실적</span></h3><a class="m-link" onclick="goTab('material')" data-i="more">자세히 →</a></div>
-    <div class="mrow"><span class="lbl" data-i="mt_month">이번 달 교체</span><span class="v" id="mtMonth">--</span></div>
+    <div class="m-head"><h3><span data-i="c_mat">자재 실적</span></h3><a class="m-link" onclick="goTab('material')" data-i="more">자세히 →</a></div>
+    <div class="mrow"><span class="lbl" data-i="mt_month">이번 달 교체</span><span class="v" id="mtMonth">--</span><span class="vd" id="mtMonthd"></span></div>
     <div class="mrow"><span class="lbl" data-i="mt_paid">유상 비율</span><span class="v" id="mtPaid">--</span></div>
     <div class="mrow"><span class="lbl" data-i="mt_top">최다 교체 자재</span><span class="v warn" id="mtTop">--</span></div>
     <div class="mrow"><span class="lbl" data-i="mt_types">자재 종류</span><span class="v" id="mtTypes">--</span></div>
   </div>
   <div class="mcard skeleton" id="cardBase">
-    <div class="m-head"><h3>🏢 <span data-i="c_base">기반 현황</span></h3><a class="m-link" onclick="goTab('hr')" data-i="more">자세히 →</a></div>
+    <div class="m-head"><h3><span data-i="c_base">기반 현황</span></h3><a class="m-link" onclick="goTab('hr')" data-i="more">자세히 →</a></div>
     <div class="mrow"><span class="lbl" data-i="bs_people">엔지니어</span><span class="v" id="bsPeople">--</span></div>
     <div class="mrow"><span class="lbl" data-i="bs_basic">Basic 이수율</span><span class="v ok" id="bsBasic">--</span></div>
     <div class="mrow"><span class="lbl" data-i="bs_scrubber">설치 스크러버</span><span class="v" id="bsScrubber">--</span></div>
@@ -148,9 +162,9 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt-main);
 <!-- 차트 -->
 <div class="sec-title" data-i="sec_trend">TRENDS</div>
 <div class="grid3">
-  <div class="mcard"><div class="m-head"><h3>📊 <span data-i="ch_pm">PM 상태 분포</span></h3></div><div class="cw"><canvas id="chPm"></canvas></div></div>
-  <div class="mcard"><div class="m-head"><h3>📅 <span data-i="ch_ft">월별 고장 추이 (6개월)</span></h3></div><div class="cw"><canvas id="chFt"></canvas></div></div>
-  <div class="mcard"><div class="m-head"><h3>🔩 <span data-i="ch_mt">자재 교체 TOP 5</span></h3></div><div class="cw"><canvas id="chMt"></canvas></div></div>
+  <div class="mcard"><div class="m-head"><h3><span data-i="ch_pm">PM 상태 분포</span></h3></div><div class="cw"><canvas id="chPm"></canvas></div></div>
+  <div class="mcard"><div class="m-head"><h3><span data-i="ch_ft">월별 고장 추이 (6개월)</span></h3></div><div class="cw"><canvas id="chFt"></canvas></div></div>
+  <div class="mcard"><div class="m-head"><h3><span data-i="ch_mt">자재 교체 TOP 5</span></h3></div><div class="cw"><canvas id="chMt"></canvas></div></div>
 </div>
 <script>
 const PUB='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub';
@@ -175,7 +189,7 @@ const T={
     c_mat:'자재 실적',mt_month:'이번 달 교체',mt_paid:'유상 비율',mt_top:'최다 교체 자재',mt_types:'자재 종류',
     c_base:'기반 현황',bs_people:'엔지니어',bs_basic:'Basic 이수율',bs_scrubber:'설치 스크러버',bs_ton:'Turn On 완료',
     ch_pm:'PM 상태 분포',ch_ft:'월별 고장 추이 (6개월)',ch_mt:'자재 교체 TOP 5',
-    st_over:'지연',st_soon:'임박',st_ok:'정상',loaded:'업데이트'},
+    st_over:'지연',st_soon:'임박',st_ok:'정상',loaded:'업데이트',sec_ins:'KEY INSIGHTS',ins_title:'이번 주 주목할 인사이트',ins_none:'특이사항 없음 — 모든 지표 정상 범위',pm_due30:'30일 내 도래',ins_over:'PM 점검 지연 {n}건 — 즉시 조치 필요',ins_fault_up:'최근 30일 고장 {n}건 · 직전 30일 대비 ▲{p}%',ins_fault_down:'최근 30일 고장 {n}건 · 직전 대비 ▼{p}% 감소',ins_eq:'설비 {s} 고장 집중 {n}건 — 평균의 {x}배',ins_code:'전체 고장의 {p}%가 코드 {c}에 집중',ins_due:'향후 30일 내 PM 도래 {n}건 — 일정·인력 대비 필요',ins_mat_up:'이번 달 자재 교체 {n}건 · 전월 대비 ▲{p}%',ins_topmat:'{m} 자재가 전체 교체의 {p}% 차지',ins_free:'무상 교체 비율 {p}% — 보증 처리 비중 높음'},
   en:{title:'Executive Summary',sub:'Operations at a glance',refresh:'Refresh',
     al_over:'PM Overdue',al_soon:'Due Soon',al_fault:'Faults (30d)',al_done:'Done This Month',
     sec_ops:'OPERATIONS',sec_trend:'TRENDS',more:'Details →',
@@ -184,7 +198,7 @@ const T={
     c_mat:'Materials',mt_month:'This month',mt_paid:'Paid ratio',mt_top:'Top material',mt_types:'Types',
     c_base:'Foundation',bs_people:'Engineers',bs_basic:'Basic rate',bs_scrubber:'Scrubbers',bs_ton:'Turned On',
     ch_pm:'PM Status',ch_ft:'Fault Trend (6mo)',ch_mt:'Material TOP 5',
-    st_over:'Overdue',st_soon:'Soon',st_ok:'OK',loaded:'Updated'},
+    st_over:'Overdue',st_soon:'Soon',st_ok:'OK',loaded:'Updated',sec_ins:'KEY INSIGHTS',ins_title:'Highlights this week',ins_none:'No anomalies — all metrics in normal range',pm_due30:'Due in 30 days',ins_over:'{n} PM inspections overdue — action required',ins_fault_up:'{n} faults in last 30d · ▲{p}% vs prior 30d',ins_fault_down:'{n} faults in last 30d · ▼{p}% vs prior',ins_eq:'Equipment {s}: {n} faults — {x}× average',ins_code:'{p}% of faults concentrated in code {c}',ins_due:'{n} PM due within 30 days — plan capacity',ins_mat_up:'{n} replacements this month · ▲{p}% MoM',ins_topmat:'{m} accounts for {p}% of replacements',ins_free:'Free-of-charge ratio {p}% — high warranty share'},
   zh:{title:'Executive Summary',sub:'运营状况一览',refresh:'刷新',
     al_over:'PM点检延迟',al_soon:'点检临近',al_fault:'近30天故障',al_done:'本月点检完成',
     sec_ops:'OPERATIONS',sec_trend:'TRENDS',more:'详情 →',
@@ -193,7 +207,7 @@ const T={
     c_mat:'材料实绩',mt_month:'本月更换',mt_paid:'有偿比率',mt_top:'最多更换材料',mt_types:'材料种类',
     c_base:'基础状况',bs_people:'工程师',bs_basic:'Basic完成率',bs_scrubber:'洗涤器',bs_ton:'Turn On完成',
     ch_pm:'PM状态分布',ch_ft:'月度故障趋势(6个月)',ch_mt:'材料更换TOP5',
-    st_over:'延迟',st_soon:'临近',st_ok:'正常',loaded:'更新'},
+    st_over:'延迟',st_soon:'临近',st_ok:'正常',loaded:'更新',sec_ins:'KEY INSIGHTS',ins_title:'本周关注要点',ins_none:'无异常 — 所有指标正常',pm_due30:'30天内到期',ins_over:'PM点检延迟{n}件 — 需立即处理',ins_fault_up:'近30天故障{n}件 · 环比▲{p}%',ins_fault_down:'近30天故障{n}件 · 环比▼{p}%',ins_eq:'设备{s}故障集中{n}件 — 平均{x}倍',ins_code:'{p}%故障集中于代码{c}',ins_due:'未来30天PM到期{n}件 — 需安排人力',ins_mat_up:'本月更换{n}件 · 环比▲{p}%',ins_topmat:'{m}占总更换{p}%',ins_free:'无偿比率{p}% — 保修占比高'},
   ja:{title:'Executive Summary',sub:'運営状況一覧',refresh:'更新',
     al_over:'PM点検遅延',al_soon:'点検間近',al_fault:'直近30日故障',al_done:'今月点検完了',
     sec_ops:'OPERATIONS',sec_trend:'TRENDS',more:'詳細 →',
@@ -202,7 +216,7 @@ const T={
     c_mat:'資材実績',mt_month:'今月交換',mt_paid:'有償比率',mt_top:'最多交換資材',mt_types:'資材種類',
     c_base:'基盤状況',bs_people:'エンジニア',bs_basic:'Basic修了率',bs_scrubber:'スクラバー',bs_ton:'Turn On完了',
     ch_pm:'PM状態分布',ch_ft:'月別故障推移(6ヶ月)',ch_mt:'資材交換TOP5',
-    st_over:'遅延',st_soon:'間近',st_ok:'正常',loaded:'更新'}
+    st_over:'遅延',st_soon:'間近',st_ok:'正常',loaded:'更新',sec_ins:'KEY INSIGHTS',ins_title:'今週の注目ポイント',ins_none:'異常なし — 全指標正常範囲',pm_due30:'30日以内到来',ins_over:'PM点検遅延{n}件 — 即時対応必要',ins_fault_up:'直近30日故障{n}件 · 前期比▲{p}%',ins_fault_down:'直近30日故障{n}件 · 前期比▼{p}%',ins_eq:'設備{s}故障集中{n}件 — 平均の{x}倍',ins_code:'故障の{p}%がコード{c}に集中',ins_due:'今後30日PM到来{n}件 — 人員計画必要',ins_mat_up:'今月資材交換{n}件 · 前月比▲{p}%',ins_topmat:'{m}が全交換の{p}%',ins_free:'無償比率{p}% — 保証比重高い'}
 };
 let LANG='ko', CHARTS={};
 try{const sl=sessionStorage.getItem('gst_lang');if(sl&&T[sl])LANG=sl;else if(window.name&&T[window.name])LANG=window.name;}catch(e){}
@@ -214,14 +228,20 @@ function applyLang(){document.querySelectorAll('[data-i]').forEach(el=>{el.textC
 function setLang(l){if(T[l]){LANG=l;applyLang();if(window.__data)renderAll(window.__data);}}
 const goTab=GST.goTab;
 const toDate=GST.toDate;
-async function fetchCSV(url){return (await GST.fetchCSV(url)).slice(1);}
+let ANY_CACHED=0;
+async function fetchCSV(url,key){
+  const r=await GST.fetchCSVCached(url,key);
+  if(r.cached)ANY_CACHED=Math.max(ANY_CACHED,r.ageMin||1);
+  return r.rows.slice(1);
+}
 
 async function loadAll(){
   const st=document.getElementById('status');
   st.textContent='⏳';
   document.querySelectorAll('.alert,.mcard').forEach(e=>e.classList.add('skeleton'));
+  ANY_CACHED=0;
   const [hr,inst,pm,mat]=await Promise.allSettled([
-    fetchCSV(URLS.hr),fetchCSV(URLS.inst),fetchCSV(URLS.pm),fetchCSV(URLS.mat)
+    fetchCSV(URLS.hr,'hr'),fetchCSV(URLS.inst,'inst'),fetchCSV(URLS.pm,'pmsheet'),fetchCSV(URLS.mat,'material')
   ]);
   const D={
     hr:hr.status==='fulfilled'?hr.value:[],
@@ -232,7 +252,8 @@ async function loadAll(){
   window.__data=D;
   renderAll(D);
   st.className='status ok';
-  st.textContent='✅ '+new Date().toLocaleString('ko-KR')+' '+t('loaded');
+  if(ANY_CACHED){st.style.color='#fbbf24';st.textContent='📡 일부 시트 접속 실패 — 캐시('+ANY_CACHED+'분 전) 포함 표시 중';}
+  else{st.style.color='';st.textContent='✅ '+new Date().toLocaleString('ko-KR')+' '+t('loaded');}
 }
 
 function renderAll(D){
@@ -253,27 +274,32 @@ function renderAll(D){
     if(!g[k].last||wd>g[k].last){g[k].last=wd;g[k].cycle=Number(r[CP.tbmCycle])||null;}
     doneHist.push(wd);
   });
-  let over=0,soon=0,ok=0,total=0;
+  let over=0,soon=0,ok=0,total=0,due30=0;
   Object.values(g).forEach(o=>{
     total++;
     if(!o.cycle||!o.last)return;
     const next=new Date(o.last.getTime()+o.cycle*86400000);
     const dl=Math.round((next-today)/86400000);
-    if(dl<0)over++;else if(dl<=o.cycle*WARN_RATIO)soon++;else ok++;
+    if(dl<0)over++;else{if(dl<=30)due30++;if(dl<=o.cycle*WARN_RATIO)soon++;else ok++;}
   });
   const doneMonth=doneHist.filter(d=>d.getUTCFullYear()===nowY&&d.getUTCMonth()===nowM).length;
+  const prevY=nowM===0?nowY-1:nowY, prevM=nowM===0?11:nowM-1;
 
   setN('alOverN',over);setN('alSoonN',soon);setN('alDoneN',doneMonth);
   setN('pmTotal',total);setN('pmOver',over);setN('pmSoon',soon);setN('pmOk',ok);
 
   // ===== 고장 계산 =====
   const d30=new Date(today.getTime()-30*86400000);
-  let ft30=0,bm=0,cbm=0;const codeCnt={};const monthly={};
+  const d60=new Date(today.getTime()-60*86400000);
+  let ft30=0,ftPrev=0,bm=0,cbm=0;const codeCnt={};const monthly={};const snCnt={};
   D.pm.forEach(r=>{
     const m=(r[CP.maint]||'').toString().trim().toUpperCase();
     if(m!=='BM'&&m!=='CBM')return;
     const wd=toDate(r[CP.work]);if(!wd)return;
     if(wd>=d30){ft30++;if(m==='BM')bm++;else cbm++;}
+    else if(wd>=d60){ftPrev++;}
+    const _sn=(r[CP.sn]||'').toString().trim();
+    if(_sn)snCnt[_sn]=(snCnt[_sn]||0)+1;
     const code=(r[CP.failCode]||'').toString().trim();
     if(code&&wd>=d30)codeCnt[code]=(codeCnt[code]||0)+1;
     // 6개월 추이
@@ -285,7 +311,7 @@ function renderAll(D){
   document.getElementById('ftTop').textContent=topCode?topCode[0]:'—';
 
   // ===== 자재 계산 =====
-  let mtMonth=0,paid=0,tot=0;const matCnt={};const matSet=new Set();
+  let mtMonth=0,mtPrev=0,paid=0,tot=0;const matCnt={};const matSet=new Set();
   D.mat.forEach(r=>{
     const name=(r[CM.matName]||'').toString().trim();if(!name)return;
     tot++;matSet.add(name);
@@ -293,6 +319,7 @@ function renderAll(D){
     if(pf==='유상')paid++;
     const wd=toDate(r[CM.workDate]);
     if(wd&&wd.getUTCFullYear()===nowY&&wd.getUTCMonth()===nowM){mtMonth++;}
+    else if(wd&&wd.getUTCFullYear()===prevY&&wd.getUTCMonth()===prevM){mtPrev++;}
     matCnt[name]=(matCnt[name]||0)+1;
   });
   const topMat=Object.entries(matCnt).sort((a,b)=>b[1]-a[1]);
@@ -311,6 +338,34 @@ function renderAll(D){
   const ton=D.inst.filter(r=>toDate(r[CI.turnOn])).length;
   setN('bsTon',ton);
 
+  // ===== 인사이트 엔진 =====
+  setN('pmDue30',due30);
+  document.getElementById('ft30d').innerHTML=GST.deltaBadge(ft30,ftPrev,true);
+  document.getElementById('mtMonthd').innerHTML=GST.deltaBadge(mtMonth,mtPrev,true);
+  const INS=[];
+  if(over>0)INS.push({sev:3,tab:'pm',txt:t('ins_over').replace('{n}',over)});
+  const fd=GST.pctDelta(ft30,ftPrev);
+  if(fd!==null&&fd>=30)INS.push({sev:3,tab:'fault',txt:t('ins_fault_up').replace('{n}',ft30).replace('{p}',fd)});
+  else if(fd!==null&&fd<=-20)INS.push({sev:1,tab:'fault',txt:t('ins_fault_down').replace('{n}',ft30).replace('{p}',Math.abs(fd))});
+  const snE=Object.entries(snCnt).sort((a,b)=>b[1]-a[1]);
+  const snOut=GST.outliers(snE);
+  if(snOut.size){
+    const s=snE.find(e=>snOut.has(e[0]));
+    const snMean=snE.reduce((a,b)=>a+b[1],0)/snE.length;
+    INS.push({sev:2,tab:'fault',txt:t('ins_eq').replace('{s}',s[0]).replace('{n}',s[1]).replace('{x}',(s[1]/snMean).toFixed(1))});
+  }
+  if(topCode&&ft30>0&&topCode[1]/ft30>=0.3)
+    INS.push({sev:2,tab:'fault',txt:t('ins_code').replace('{p}',Math.round(topCode[1]/ft30*100)).replace('{c}',topCode[0])});
+  if(due30>0)INS.push({sev:2,tab:'pm',txt:t('ins_due').replace('{n}',due30)});
+  const md=GST.pctDelta(mtMonth,mtPrev);
+  if(md!==null&&md>=30)INS.push({sev:2,tab:'material',txt:t('ins_mat_up').replace('{n}',mtMonth).replace('{p}',md)});
+  if(topMat[0]&&tot>0&&topMat[0][1]/tot>=0.4)
+    INS.push({sev:1,tab:'material',txt:t('ins_topmat').replace('{m}',topMat[0][0]).replace('{p}',Math.round(topMat[0][1]/tot*100))});
+  if(tot>0&&(1-paid/tot)>=0.45)
+    INS.push({sev:1,tab:'material',txt:t('ins_free').replace('{p}',Math.round((1-paid/tot)*100))});
+  INS.sort((a,b)=>b.sev-a.sev);
+  renderInsights(INS);
+
   // ===== 차트 =====
   mkDonut('chPm',[t('st_over'),t('st_soon'),t('st_ok')],[over,soon,ok],['#fb7185','#fbbf24','#34d399']);
   const mkeys=Object.keys(monthly).sort().slice(-6);
@@ -319,6 +374,17 @@ function renderAll(D){
   mkHBar('chMt',top5.map(x=>x[0]),top5.map(x=>x[1]),'#2dd4bf');
 }
 
+function renderInsights(items){
+  const box=document.getElementById('insList');
+  if(!items.length){
+    box.innerHTML='<div class="ins-row" style="cursor:default"><span class="ins-dot" style="background:var(--ok)"></span><span>'+t('ins_none')+'</span></div>';
+    return;
+  }
+  const DOT={3:'#fb7185',2:'#fbbf24',1:'#60a5fa'};
+  box.innerHTML=items.slice(0,5).map(it=>
+    '<div class="ins-row" onclick="goTab(\''+it.tab+'\')"><span class="ins-dot" style="background:'+DOT[it.sev]+'"></span><span>'+it.txt+'</span><span class="ins-go">→</span></div>'
+  ).join('');
+}
 function setN(id,v){const el=document.getElementById(id);if(!el)return;
   if(v==null){el.textContent='—';return;}
   GST.animVal(el,v);}
