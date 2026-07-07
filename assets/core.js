@@ -208,5 +208,49 @@ GST.goTab = function(id){
   }
 };
 
+
+/* ---------- 9. 데이터 신뢰성 (Stage 2) ---------- */
+// 스키마 검증: 기대 {열인덱스:'헤더명'} 대비 실제 헤더 비교 → 불일치 목록 반환
+GST.validateSchema = function(header, expect){
+  const issues=[];
+  Object.entries(expect).forEach(([idx,name])=>{
+    const actual=(header[idx]||'').toString().trim();
+    if(!actual.includes(name)) issues.push((Number(idx)+1)+'열: 기대 "'+name+'" ↔ 실제 "'+(actual||'(빈값)')+'"');
+  });
+  return issues;
+};
+// 구조 변경 경고 배너 (틀린 숫자를 조용히 보여주는 것 방지)
+GST.schemaBanner = function(issues, sheetName){
+  let el=document.getElementById('gstSchemaWarn');
+  if(!issues.length){ if(el)el.remove(); return; }
+  const msg='⚠️ '+(sheetName||'시트')+' 구조 변경 감지 — 아래 숫자가 틀릴 수 있습니다. 시트 열 순서를 확인하세요. ('+issues.slice(0,3).join(' · ')+(issues.length>3?' 외 '+(issues.length-3)+'건':'')+')';
+  if(!el){
+    el=document.createElement('div'); el.id='gstSchemaWarn';
+    el.style.cssText='background:#7f1d1d;color:#fff;padding:11px 16px;border-radius:10px;margin:0 0 14px;font-size:12px;font-weight:600;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.3)';
+    const anchor=document.querySelector('.status')||document.body.firstElementChild;
+    anchor.parentNode.insertBefore(el, anchor.nextSibling);
+  }
+  el.textContent=msg;
+};
+// 오프라인 캐시: 마지막 정상 데이터를 localStorage에 보관
+GST.cacheSave=function(key,rows){
+  try{ localStorage.setItem('gstc_'+key, JSON.stringify({t:Date.now(),rows})); }catch(e){}
+};
+GST.cacheLoad=function(key){
+  try{ return JSON.parse(localStorage.getItem('gstc_'+key)||'null'); }catch(e){ return null; }
+};
+// 캐시 폴백 로드: 성공 시 저장, 실패 시 캐시로 대체 (cached/ageMin 플래그 반환)
+GST.fetchCSVCached = async function(url, key){
+  try{
+    const rows = await GST.fetchCSV(url);
+    if(rows && rows.length>1) GST.cacheSave(key, rows);
+    return {rows, cached:false, ageMin:0};
+  }catch(e){
+    const c = GST.cacheLoad(key);
+    if(c && c.rows) return {rows:c.rows, cached:true, ageMin:Math.round((Date.now()-c.t)/60000)};
+    throw e;
+  }
+};
+
 global.GST = GST;
 })(window);
