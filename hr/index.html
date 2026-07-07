@@ -3,214 +3,125 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Premium Material Replacement Dashboard</title>
+<title>인력 현황 대시보드</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-
-:root {
+* { margin:0; padding:0; box-sizing:border-box; }
+:root{
   --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
   --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
-  --glass: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-hover: rgba(255, 255, 255, 0.1);
-  --txt-main: #e2e8f0;
-  --txt-muted: #94a3b8;
-  --accent-1: #2dd4bf;
-  --accent-2: #38bdf8;
-  --accent-3: #a78bfa;
-  --accent-4: #fbbf24;
-  --accent-5: #34d399;
-  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --glass: rgba(255,255,255,0.05); --glass-border: rgba(255,255,255,0.12); --glass-hover: rgba(255,255,255,0.1);
+  --txt-main:#e2e8f0; --txt-muted:#94a3b8;
+  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
+  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
+  /* 기존 변수명 별칭 */
+  --bg1:#0a1420; --bg2:#13232d; --bg3:#0f2027;
+  --accent:var(--accent-1); --accent2:var(--accent-2); --accent3:var(--accent-3);
+  --glassb:var(--glass-border); --txt:var(--txt-main); --muted:var(--txt-muted);
 }
-
-body.theme-burgundy {
+body.theme-burgundy{
   --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
   --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
-  --glass: rgba(255, 255, 255, 0.04);
-  --glass-border: rgba(255, 240, 245, 0.12);
-  --glass-hover: rgba(255, 240, 245, 0.09);
-  --txt-main: #fbeaf4;
-  --txt-muted: #b49aa9;
-  --accent-1: #fcd34d;
-  --accent-2: #f472b6;
-  --accent-3: #fb7185;
-  --accent-4: #f472b6;
-  --accent-5: #fb7185;
-  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
+  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
+  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
+  --bg1:#1a0813; --bg2:#2d0b1e; --bg3:#1f0822;
 }
-
-body.theme-light {
+body.theme-light{
   --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #e8eef5, #f0f4f8);
   --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
-  --glass: rgba(255, 255, 255, 0.75);
-  --glass-border: rgba(15, 23, 42, 0.08);
-  --glass-hover: rgba(15, 23, 42, 0.04);
-  --txt-main: #0f172a;
-  --txt-muted: #64748b;
-  --accent-1: #2563eb;
-  --accent-2: #0284c7;
-  --accent-3: #7c3aed;
-  --accent-4: #ea580c; 
-  --accent-5: #16a34a;
-  --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06);
+  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
+  --txt-main:#0f172a; --txt-muted:#64748b;
+  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
+  --bg1:#f1f5f9; --bg2:#e2e8f0; --bg3:#e8eef5;
 }
-
-body {
-  font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
-  color: var(--txt-main);
-  background: var(--bg-gradient);
-  background-size: 400% 400%;
-  animation: grad 22s ease infinite;
-  min-height: 100vh;
-  padding: 24px 28px;
-  transition: background 0.5s ease, color 0.5s ease;
+body{
+  font-family:'Segoe UI','Malgun Gothic',sans-serif; color:var(--txt-main);
+  background:var(--bg-gradient);
+  background-size:400% 400%; animation:grad 18s ease infinite; min-height:100vh; padding:28px 32px;
 }
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:32px;font-weight:800;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.header .sub{color:var(--muted);font-size:13px;margin-top:4px}
+.header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.badge{background:var(--glass);border:1px solid var(--glassb);border-radius:30px;padding:8px 18px;font-size:13px;backdrop-filter:blur(10px)}
+.btn{background:linear-gradient(90deg,var(--accent),var(--accent2));border:none;border-radius:30px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;padding:9px 20px;transition:opacity .2s;text-decoration:none;display:inline-block;}
+.btn:hover{opacity:.85} .btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-back{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);}
+.lang-wrap{position:relative}
+.lang-btn{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);padding:9px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
+.lang-btn:hover{background:rgba(255,255,255,.1)}
+.lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:#2a2550;border:1px solid var(--glassb);border-radius:14px;padding:6px;z-index:100;min-width:130px;display:none;backdrop-filter:blur(20px)}
+.lang-dropdown.open{display:block}
+.lang-item{padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600}
+.lang-item:hover{background:rgba(255,255,255,.08)}
+.status{font-size:12px;color:var(--muted);margin-bottom:16px;text-align:right;}
+.status.ok{color:var(--accent2)} .status.err{color:#fd79a8}
+.slicers{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:24px}
+.slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:18px;padding:14px 18px;backdrop-filter:blur(12px)}
+.slicer .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px;font-weight:700}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{cursor:pointer;border:1px solid var(--glassb);background:rgba(255,255,255,0.04);color:var(--txt);
+  padding:7px 15px;border-radius:30px;font-size:13px;font-weight:600;transition:all .25s;user-select:none}
+.chip:hover{transform:translateY(-2px);border-color:var(--accent2)}
+.chip.active{background:linear-gradient(90deg,var(--accent),var(--accent2));border-color:transparent;box-shadow:0 6px 20px rgba(108,92,231,.5)}
+.search{margin-left:auto}
+.search input{background:rgba(255,255,255,0.06);border:1px solid var(--glassb);border-radius:30px;padding:10px 18px;color:var(--txt);font-size:13px;width:200px;outline:none}
+.search input::placeholder{color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px}
+.kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:22px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s}
+.kpi:hover{transform:translateY(-5px)}
+.kpi::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;opacity:.35}
+.kpi.k1::before{background:var(--accent)}.kpi.k2::before{background:var(--accent2)}
+.kpi.k3::before{background:var(--accent3)}.kpi.k4::before{background:#fdcb6e}
+.kpi .ic{font-size:22px;margin-bottom:8px}
+.kpi .val{font-size:38px;font-weight:800;line-height:1}
+.kpi .cap{color:var(--muted);font-size:13px;margin-top:8px;font-weight:600}
+.grid{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:18px;margin-bottom:24px}
+.card{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px)}
+.card h3{font-size:14px;font-weight:700;margin-bottom:14px;color:#dfe6ff}
+.card .cw{position:relative;height:240px}
+.tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px)}
+.tablecard h3{font-size:14px;font-weight:700;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(20,18,45,.9)}
+td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05)}
+tr:hover td{background:rgba(255,255,255,.04)}
+.tag{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.t-done{background:rgba(0,206,201,.18);color:#00cec9}
+.t-prog{background:rgba(253,203,110,.2);color:#fdcb6e}
+.t-na{background:rgba(160,160,192,.18);color:#a0a0c0}
+.tw{max-height:360px;overflow-y:auto;border-radius:12px}
+.tw::-webkit-scrollbar{width:8px}.tw::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
+.empty{text-align:center;padding:30px;color:var(--muted)}
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
 
-@keyframes grad {
-  0% { background-position: 0% 50% }
-  50% { background-position: 100% 50% }
-  100% { background-position: 0% 50% }
-}
-
-.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
-.header h1{font-size:28px;font-weight:800;background:var(--title-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
-.header .sub{color:var(--txt-muted);font-size:13px;margin-top:4px}
-.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.navtabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid var(--glass-border);padding-bottom:0}
-.navtab{padding:10px 18px;border-radius:10px 10px 0 0;font-size:13px;font-weight:700;text-decoration:none;
-  color:var(--txt-muted);border:1px solid transparent;border-bottom:none;transition:all .2s;position:relative;top:2px}
-.navtab:hover{color:var(--txt-main);background:var(--glass)}
-.navtab.active{color:var(--accent-1);background:var(--glass);border-color:var(--glass-border);border-bottom:2px solid var(--bg-1)}
-
-.btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:9px 18px;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
-.btn-grad{background:var(--title-gradient);color:#0f172a}
-body.theme-light .btn-grad { color: #fff; }
-.btn-grad:hover{opacity:.85;transform:translateY(-1px)}
-.btn-glass{background:var(--glass);border:1px solid var(--glass-border);color:var(--txt-main);box-shadow:var(--card-shadow);backdrop-filter:blur(10px)}
-.btn-glass:hover{background:var(--glass-hover)}
-
-.theme-wrap, .lang-wrap{position:relative}
-.theme-btn, .lang-btn{background:var(--glass);border:1px solid var(--glass-border);color:var(--txt-main);padding:9px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;backdrop-filter:blur(10px);box-shadow:var(--card-shadow);transition:all 0.3s;}
-.theme-btn:hover, .lang-btn:hover{background:var(--glass-hover);transform:scale(1.02)}
-.theme-dropdown, .lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:6px;z-index:100;min-width:150px;display:none;backdrop-filter:blur(25px);box-shadow:var(--card-shadow);}
-.theme-dropdown.open, .lang-dropdown.open{display:block}
-.theme-item, .lang-item{padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--txt-main);transition:all 0.2s;}
-.theme-item:hover, .lang-item:hover{background:var(--glass-hover);padding-left:18px;color:var(--accent-1);}
-
-.status{font-size:12px;color:var(--txt-muted);margin-bottom:16px;text-align:right}
-
-.slicers{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:10px;margin-bottom:16px}
-.slicer{background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:10px 14px;backdrop-filter:blur(12px);box-shadow:var(--card-shadow);}
-.slicer .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--txt-muted);margin-bottom:7px;font-weight:700}
-.slicer select, .slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;width:100%;color-scheme:dark;}
-body.theme-light .slicer select, body.theme-light .slicer input { color-scheme: light; color:#0f172a; }
-.slicer select:focus, .slicer input:focus{border-color:var(--accent-1)}
-.slicer.search{grid-column:span 2;}
-
-.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
-.cycle-toggle{display:flex;gap:4px;background:var(--glass);border-radius:10px;padding:3px;border:1px solid var(--glass-border)}
-.ct-btn{background:transparent;border:none;border-radius:8px;padding:7px 14px;color:var(--txt-muted);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
-.ct-btn.active{background:var(--glass-hover);color:var(--accent-1)}
-.tb-label{font-size:11px;color:var(--txt-muted);font-weight:700}
-
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
-.kpi{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:16px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:all .3s;cursor:pointer;box-shadow:var(--card-shadow);}
-.kpi:hover{transform:translateY(-4px);border-color:var(--accent-1);}
-.kpi.sel{border-color:var(--accent-1);box-shadow:0 0 15px 0 var(--accent-1);}
-.kpi .ic{font-size:18px;margin-bottom:5px}
-.kpi .val{font-size:26px;font-weight:800;line-height:1}
-.kpi .cap{color:var(--txt-muted);font-size:10px;margin-top:5px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
-
-#crossAnalysisCard {
-  margin-bottom: 20px;
-  padding: 16px 20px;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  backdrop-filter: blur(14px);
-  box-shadow: var(--card-shadow);
-}
-.cross-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
-.cross-header h3{font-size:15px;font-weight:800;margin:0;color:var(--accent-1);cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
-.cross-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
-.cross-controls .ctrl-group{display:flex;align-items:center;gap:6px}
-.cross-controls .ctrl-group select{background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;padding:5px 10px;color:var(--txt-main);font-size:11px;outline:none;color-scheme:dark}
-body.theme-light .cross-controls .ctrl-group select { color-scheme: light; color:#0f172a; }
-.cross-controls .ctrl-group select:focus { border-color: var(--accent-1); }
-
-.cross-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
-.cross-layout .cross-table-wrap{max-height:380px;overflow:auto;border-radius:10px;border:1px solid var(--glass-border)}
-.cross-layout .cross-chart-wrap{height:380px;position:relative}
-.cross-layout table{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}
-.cross-layout table th{text-align:left;padding:8px 10px;color:var(--txt-muted);font-size:9px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--glass-border);position:sticky;top:0;background:var(--glass);backdrop-filter:blur(10px)}
-.cross-layout table td{padding:6px 10px;border-bottom:1px solid var(--glass-border);color:var(--txt-main)}
-.cross-layout table .num{text-align:right;font-variant-numeric:tabular-nums}
-.cross-layout table .heat-cell{transition:background 0.2s;min-width:50px}
-.cross-layout table .heat-cell:hover{filter:brightness(1.3)}
-.cross-layout table .row-label{font-weight:600;position:sticky;left:0;background:var(--glass);backdrop-filter:blur(8px)}
-.cross-layout table .total-cell{color:var(--accent-2);font-weight:700}
-
-.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
-.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;backdrop-filter:blur(14px);box-shadow:var(--card-shadow);height:440px;display:flex;flex-direction:column;}
-.card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:var(--txt-main)}
-.card-note{font-size:10px;color:var(--txt-muted);margin-bottom:10px;font-style:italic}
-.card .cw{flex:1;position:relative;min-height:0}
-
-.excl-box{margin-bottom:10px}
-.excl-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;max-height:54px;overflow-y:auto}
-.excl-chip{background:var(--glass-hover);border:1px solid var(--glass-border);color:var(--accent-3);padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer}
-.excl-chip:hover{background:var(--glass-border);}
-.excl-dd-wrap{position:relative}
-.excl-dd-wrap input{width:100%;background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:6px 10px;color:var(--txt-main);font-size:11px;outline:none;}
-.excl-dd-wrap input:focus{border-color:var(--accent-1)}
-.excl-dd{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg-gradient);border:1px solid var(--glass-border);border-radius:10px;max-height:180px;overflow-y:auto;z-index:150;display:none;padding:4px}
-.excl-dd.open{display:block}
-.excl-opt{padding:6px 8px;border-radius:6px;cursor:pointer;font-size:11px;color:var(--txt-main)}
-.excl-opt:hover{background:var(--glass-hover);color:var(--accent-1)}
-.excl-clear-btn{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:3px 10px;color:var(--txt-muted);font-size:10px;font-weight:600;cursor:pointer;margin-bottom:6px}
-.excl-clear-btn:hover{background:var(--glass-hover);color:var(--accent-1)}
-
-.tablecard{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;backdrop-filter:blur(14px);box-shadow:var(--card-shadow);margin-bottom:16px}
-.tablecard h3{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--txt-main)}
-.tbl-wrap{max-height:460px;overflow:auto;border-radius:10px}
-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
-th{text-align:left;padding:10px 11px;color:var(--txt-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--glass-border);position:sticky;top:0;background:var(--glass);backdrop-filter:blur(10px);cursor:pointer;user-select:none}
-th:hover{color:var(--accent-1)}
-td{padding:8px 11px;border-bottom:1px solid var(--glass-border);color:var(--txt-main);}
-tr:hover td{background:var(--glass-hover)}
-.num{text-align:right;font-variant-numeric:tabular-nums}
-.pill{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
-.pill.paid{background:rgba(56,189,248,.18);color:var(--accent-2)}
-.pill.free{background:rgba(52,211,153,.18);color:var(--accent-5)}
-.empty, .loading{text-align:center;padding:40px;color:var(--txt-muted)}
-
-#loginOverlay{position:fixed;inset:0;z-index:99999;background:var(--bg-gradient);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+/* 로그인 가드 */
+#loginOverlay{position:fixed;inset:0;z-index:99999;
+  background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#1a1a2e);
+  background-size:400% 400%;animation:grad 18s ease infinite;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-family:'Segoe UI','Malgun Gothic',sans-serif}
 #loginOverlay.hidden{display:none}
-.login-logo{font-size:38px;font-weight:900;background:var(--title-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
-.login-box{background:var(--glass);border:1px solid var(--glass-border);border-radius:24px;padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px;box-shadow:var(--card-shadow);}
-.login-box input{width:100%;background:var(--glass);border:1px solid var(--glass-border);border-radius:30px;padding:13px 20px;color:var(--txt-main);font-size:15px;outline:none;text-align:center}
-.login-box button{width:100%;margin-top:14px;background:var(--title-gradient);border:none;border-radius:30px;padding:13px;color:#0f172a;font-size:15px;font-weight:700;cursor:pointer}
-.login-err{color:#f87171;font-size:12px;margin-top:8px;min-height:20px}
+.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
+.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;
+  padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
+.login-box .lock{font-size:40px;margin-bottom:14px}
+.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px;color:#f5f6fa}
+.login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);
+  border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
+.login-box input:focus{border-color:#6c5ce7}
+.login-box input::placeholder{color:#a0a0c0}
+.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);
+  border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.login-box button:hover{opacity:.88}
+.login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
-@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}.cross-layout{grid-template-columns:1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
-@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}.slicers{grid-template-columns:1fr}}
-
-/* 크로스필터 칩 바 */
-.fchips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;
-  padding:10px 14px;background:var(--glass);border:1px solid var(--accent-2);border-radius:12px}
-.fchips-label{font-size:11px;font-weight:700;color:var(--accent-2)}
-.fchip{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;
-  background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.4);color:var(--txt-main);cursor:pointer}
-.fchip:hover{background:rgba(251,113,133,.15);border-color:rgba(251,113,133,.4)}
-.fchip .fx{font-weight:900;font-size:10px}
-.fchip-clear{background:transparent;border:1px solid var(--glass-border);border-radius:20px;
-  padding:4px 11px;color:var(--txt-muted);font-size:10px;font-weight:700;cursor:pointer;margin-left:auto}
-.fchip-clear:hover{color:var(--bad);border-color:var(--bad)}
-canvas{cursor:pointer}
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
@@ -220,29 +131,22 @@ canvas{cursor:pointer}
   <div class="login-logo">GST Dashboard</div>
   <div class="login-box">
     <div class="lock">🔒</div>
-    <div class="ltitle">비밀번호를 입력하세요 / Enter password</div>
+    <div class="ltitle" id="lgTitle">비밀번호를 입력하세요 / Enter password</div>
     <input type="password" id="pwInput" placeholder="비밀번호 / Password" autocomplete="off">
-    <button onclick="checkPw()">로그인 / Login</button>
+    <button onclick="checkPw()" id="lgBtn">로그인 / Login</button>
     <div class="login-err" id="pwErr"></div>
   </div>
 </div>
 
 <div class="header">
   <div>
-    <h1 data-i="title">📦 자재 실적 대시보드</h1>
-    <div class="sub" data-i="sub">자재 교체 실적 · 사용주기 · 유무상 분석</div>
+    <h1 data-i="title">인력 현황 대시보드</h1>
+    <div class="sub" data-i="sub">엔지니어 교육 · 직급 · 직무 인터랙티브 분석</div>
   </div>
   <div class="header-right">
-    <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← 메인으로</a>
-    <button class="btn btn-grad" id="refreshBtn" onclick="loadData()">🔄 <span data-i="refresh">새로고침</span></button>
-    <div class="theme-wrap">
-      <button class="theme-btn" onclick="toggleThemeMenu()">🎨 <span id="themeLabel">Cyber Turquoise</span> ▾</button>
-      <div class="theme-dropdown" id="themeMenu">
-        <div class="theme-item" onclick="changeDashboardTheme('default', 'Cyber Turquoise')">🌌 Cyber Turquoise</div>
-        <div class="theme-item" onclick="changeDashboardTheme('burgundy', 'Royal Burgundy')">🍷 Royal Burgundy</div>
-        <div class="theme-item" onclick="changeDashboardTheme('light', 'Aurora Light')">🧊 Aurora Light</div>
-      </div>
-    </div>
+    <a href="https://gstcsglobal-cloud.github.io" class="btn btn-back" data-i="back">← 메인으로</a>
+    <div class="badge"><span data-i="total_pre">총</span> <b id="totRec">0</b><span data-i="total_post">명 · 실시간 필터</span></div>
+    <button class="btn" id="refreshBtn" onclick="loadData()">🔄 <span data-i="refresh">새로고침</span></button>
     <div class="lang-wrap">
       <button class="lang-btn" onclick="toggleLang()">🌐 <span id="langLabel">KO</span> ▾</button>
       <div class="lang-dropdown" id="langMenu">
@@ -254,804 +158,236 @@ canvas{cursor:pointer}
     </div>
   </div>
 </div>
-
-<div class="status" id="status">Loading...</div>
+<div class="status" id="status" data-i="loading">데이터 불러오는 중...</div>
 
 <div class="slicers">
-  <div class="slicer"><div class="lbl" data-i="sl_country">국가</div><select id="sl-country" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_customer">고객사</div><select id="sl-customer" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_line">라인</div><select id="sl-line" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_process">공정</div><select id="sl-process" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_detail">세부공정</div><select id="sl-detail" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_eq">설비호기</div><select id="sl-eq" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="cyc_mat">자재명</div><select id="sl-mat" onchange="onSlicer()"></select></div>
-  <div class="slicer">
-    <div class="lbl">기간</div>
-    <div style="display:flex;gap:4px;align-items:center;">
-      <input type="date" id="dtFrom" onchange="onSlicer()" style="flex:1;min-width:0;">
-      <span style="color:var(--txt-muted);font-size:11px;">~</span>
-      <input type="date" id="dtTo" onchange="onSlicer()" style="flex:1;min-width:0;">
-    </div>
-  </div>
-  <div class="slicer" style="grid-column:span 2;">
-    <div class="lbl" data-i="sl_search">검색</div>
-    <input id="search" placeholder="자재명, 사유, 설비 검색..." style="width:100%;">
-  </div>
-</div>
-
-<div class="toolbar">
-  <span class="tb-label" data-i="cycle_basis">사용주기 기준:</span>
-  <div class="cycle-toggle">
-    <button class="ct-btn active" data-c="paid" onclick="setCycleBasis('paid')" data-i="cycle_paid">유상기준</button>
-    <button class="ct-btn" data-c="prev" onclick="setCycleBasis('prev')" data-i="cycle_prev">전교체일기준</button>
-  </div>
-</div>
-
-<div class="fchips" id="fchips" style="display:none">
-  <span class="fchips-label">🎯 <span data-i="f_active">활성 필터</span>:</span>
-  <span id="fchipList"></span>
-  <button class="fchip-clear" onclick="clearAllFilters()" data-i="f_clear">전체 해제</button>
+  <div class="slicer"><div class="lbl" data-i="sl_pos">직급</div><div class="chips" id="sl-pos"></div></div>
+  <div class="slicer"><div class="lbl" data-i="sl_job">직무</div><div class="chips" id="sl-job"></div></div>
+  <div class="slicer"><div class="lbl">Basic <span data-i="sl_edu">교육</span></div><div class="chips" id="sl-basic"></div></div>
+  <div class="slicer"><div class="lbl">Veteran <span data-i="sl_edu2">교육</span></div><div class="chips" id="sl-vet"></div></div>
+  <div class="slicer search"><div class="lbl" data-i="sl_search">검색</div><input id="search" data-i-ph="search_ph" placeholder="이름 검색..."></div>
 </div>
 
 <div class="kpis">
-  <div class="kpi k1 sel" onclick="setPfFilter('')" data-f=""><div class="ic">📦</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">총 교체건수</div></div>
-  <div class="kpi k2" onclick="setPfFilter('유상')" data-pf="유상"><div class="ic">💰</div><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">유상</div></div>
-  <div class="kpi k3" onclick="setPfFilter('무상')" data-pf="무상"><div class="ic">🆓</div><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">무상</div></div>
-  <div class="kpi k4"><div class="ic">📊</div><div class="val" id="kp4">0%</div><div class="cap" data-i="kp4">유상비율</div></div>
-  <div class="kpi k5"><div class="ic">🔩</div><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">자재 종류</div></div>
-  <div class="kpi k6"><div class="ic">🖥️</div><div class="val" id="kp6">0</div><div class="cap" data-i="kp6">설비 대수</div></div>
+  <div class="kpi k1"><div class="ic">👥</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">선택 인원</div></div>
+  <div class="kpi k2"><div class="ic">🎓</div><div class="val" id="kp2">0%</div><div class="cap" data-i="kp2">Basic 이수율</div></div>
+  <div class="kpi k3"><div class="ic">🏅</div><div class="val" id="kp3">0%</div><div class="cap" data-i="kp3">Veteran 이수율</div></div>
+  <div class="kpi k4"><div class="ic">⚙️</div><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Engineer 인원</div></div>
 </div>
 
-<div id="crossAnalysisCard">
-  <div class="cross-header">
-    <h3 onclick="toggleCrossTableBody()">🔀 다차원 교차 분석 <span id="crossToggleArrow" style="font-size:12px;color:var(--txt-muted);">[ 열기 ▾ ]</span></h3>
-    <div id="crossControls" style="display:none;" class="cross-controls">
-      <div class="ctrl-group"><span class="tb-label">행:</span><select id="crossRow" onchange="renderCrossTable()">
-        <option value="country" data-i="sl_country">국가</option>
-        <option value="customer" data-i="sl_customer">고객사</option>
-        <option value="line" data-i="sl_line">LINE</option>
-        <option value="process" selected data-i="sl_process">공정</option>
-        <option value="detail" data-i="sl_detail">세부공정</option>
-        <option value="eq" data-i="sl_eq">설비</option>
-        <option value="matName" data-i="cyc_mat">자재명</option>
-        <option value="reason" data-i="th_reason">교체사유</option>
-        <option value="freeReason">무상사유</option>
-        <option value="pf" data-i="th_pf">유무상</option>
-        <option value="year">년도</option>
-        <option value="month">월</option>
-      </select></div>
-      <div class="ctrl-group"><span class="tb-label">열:</span><select id="crossCol" onchange="renderCrossTable()">
-        <option value="country" data-i="sl_country">국가</option>
-        <option value="customer" data-i="sl_customer">고객사</option>
-        <option value="line" data-i="sl_line">LINE</option>
-        <option value="process" selected data-i="sl_process">공정</option>
-        <option value="detail" data-i="sl_detail">세부공정</option>
-        <option value="eq" data-i="sl_eq">설비</option>
-        <option value="matName" data-i="cyc_mat">자재명</option>
-        <option value="reason" data-i="th_reason">교체사유</option>
-        <option value="freeReason">무상사유</option>
-        <option value="pf" data-i="th_pf">유무상</option>
-        <option value="year">년도</option>
-        <option value="month">월</option>
-      </select></div>
-      <div class="ctrl-group"><span class="tb-label">값:</span><select id="crossValue" onchange="renderCrossTable()">
-        <option value="count" selected>건수</option>
-        <option value="qty">수량</option>
-        <option value="avgDays">평균 사용일</option>
-        <option value="avgPaid">평균 유상주기</option>
-        <option value="minDays">최소 사용일</option>
-        <option value="maxDays">최대 사용일</option>
-      </select></div>
-      <div class="ctrl-group"><span class="tb-label">TOP N:</span><select id="crossTopN" onchange="renderCrossTable()">
-        <option value="5">Top 5</option>
-        <option value="10" selected>Top 10</option>
-        <option value="20">Top 20</option>
-        <option value="50">Top 50</option>
-        <option value="999">전체</option>
-      </select></div>
-    </div>
-  </div>
-  <div id="crossBody" style="display:none;">
-    <div class="cross-layout">
-      <div class="cross-table-wrap" id="crossTableWrap"><table id="crossTable"><thead><tr><th>-</th></tr></thead><tbody></tbody></table></div>
-      <div class="cross-chart-wrap"><canvas id="crossChart"></canvas></div>
-    </div>
-  </div>
-</div>
-
-<div class="grid3">
-  <div class="card">
-    <h3>🔩 자재별 교체 TOP</h3>
-    <div class="card-note">가장 많이 교체되는 자재</div>
-    <div class="excl-box">
-      <div class="excl-chips" id="exclChipsMat"></div>
-      <button class="excl-clear-btn" onclick="clearExcl('mat')">전체 지우기</button>
-      <div class="excl-dd-wrap">
-        <input type="text" id="exclSearchMat" placeholder="제외할 자재 검색..." onclick="toggleExclDD('mat',true)" oninput="renderExclOptions('mat')">
-        <div class="excl-dd" id="exclDDMat"></div>
-      </div>
-    </div>
-    <div class="cw"><canvas id="cMat"></canvas></div>
-  </div>
-
-  <div class="card">
-    <h3>🖥️ 설비별 교체 TOP</h3>
-    <div class="card-note">자재 소모 많은 설비</div>
-    <div class="excl-box">
-      <div class="excl-chips" id="exclChipsEq"></div>
-      <button class="excl-clear-btn" onclick="clearExcl('eq')">전체 지우기</button>
-      <div class="excl-dd-wrap">
-        <input type="text" id="exclSearchEq" placeholder="제외할 설비 검색..." onclick="toggleExclDD('eq',true)" oninput="renderExclOptions('eq')">
-        <div class="excl-dd" id="exclDDEq"></div>
-      </div>
-    </div>
-    <div class="cw"><canvas id="cEq"></canvas></div>
-  </div>
-
-  <div class="card">
-    <h3>💰 유상 vs 무상</h3>
-    <div class="card-note">유무상 비율</div>
-    <div class="cw"><canvas id="cPf"></canvas></div>
-  </div>
-</div>
-
-<div class="grid3">
-  <div class="card">
-    <h3>🏭 공정별 교체</h3>
-    <div class="card-note">공정별 자재 교체</div>
-    <div class="excl-box">
-      <div class="excl-chips" id="exclChipsProc"></div>
-      <button class="excl-clear-btn" onclick="clearExcl('proc')">전체 지우기</button>
-      <div class="excl-dd-wrap">
-        <input type="text" id="exclSearchProc" placeholder="제외할 공정 검색..." onclick="toggleExclDD('proc',true)" oninput="renderExclOptions('proc')">
-        <div class="excl-dd" id="exclDDProc"></div>
-      </div>
-    </div>
-    <div class="cw"><canvas id="cProc"></canvas></div>
-  </div>
-
-  <div class="card">
-    <h3>🔧 교체사유</h3>
-    <div class="card-note">왜 교체했나</div>
-    <div class="excl-box">
-      <div class="excl-chips" id="exclChipsReason"></div>
-      <button class="excl-clear-btn" onclick="clearExcl('reason')">전체 지우기</button>
-      <div class="excl-dd-wrap">
-        <input type="text" id="exclSearchReason" placeholder="제외할 사유 검색..." onclick="toggleExclDD('reason',true)" oninput="renderExclOptions('reason')">
-        <div class="excl-dd" id="exclDDReason"></div>
-      </div>
-    </div>
-    <div class="cw"><canvas id="cReason"></canvas></div>
-  </div>
-
-  <div class="card">
-    <h3>🆓 무상사유</h3>
-    <div class="card-note">무상 교체 원인</div>
-    <div class="excl-box">
-      <div class="excl-chips" id="exclChipsFree"></div>
-      <button class="excl-clear-btn" onclick="clearExcl('free')">전체 지우기</button>
-      <div class="excl-dd-wrap">
-        <input type="text" id="exclSearchFree" placeholder="제외할 사유 검색..." onclick="toggleExclDD('free',true)" oninput="renderExclOptions('free')">
-        <div class="excl-dd" id="exclDDFree"></div>
-      </div>
-    </div>
-    <div class="cw"><canvas id="cFree"></canvas></div>
-  </div>
+<div class="grid">
+  <div class="card"><h3 data-i="ch_pos">직급별 인원</h3><div class="cw"><canvas id="cPos"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_edu">교육과정 이수 현황</h3><div class="cw"><canvas id="cEdu"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_job">직무별 인원</h3><div class="cw"><canvas id="cJob"></canvas></div></div>
 </div>
 
 <div class="tablecard">
-  <h3 data-i="cyc_title">⏱️ 자재별 사용주기 분석 (평균/최소/최대)</h3>
-  <div class="tbl-wrap">
-    <table>
-      <thead><tr>
-        <th onclick="sortCyc('name')" data-i-th="cyc_mat">자재명</th>
-        <th onclick="sortCyc('cnt')" class="num" data-i-th="cyc_cnt">교체건수</th>
-        <th onclick="sortCyc('avg')" class="num" data-i-th="cyc_avg">평균주기</th>
-        <th onclick="sortCyc('min')" class="num" data-i-th="cyc_min">최소</th>
-        <th onclick="sortCyc('max')" class="num" data-i-th="cyc_max">최대</th>
-      </tr></thead>
-      <tbody id="cycBody"><tr><td colspan="5" class="loading">⏳</td></tr></tbody>
-    </table>
-  </div>
-</div>
-
-<div class="tablecard">
-  <h3>📋 <span data-i="tbl_title">자재 교체 상세</span> (<span id="tblCnt">0</span>)</h3>
-  <div class="tbl-wrap">
-    <table>
-      <thead><tr>
-        <th onclick="sortTbl('date')" data-i-th="th_date">실적일자</th>
-        <th onclick="sortTbl('customer')" data-i-th="th_customer">고객사</th>
-        <th onclick="sortTbl('line')">LINE</th>
-        <th onclick="sortTbl('process')" data-i-th="th_process">공정</th>
-        <th onclick="sortTbl('detail')" data-i-th="th_detail">세부공정</th>
-        <th onclick="sortTbl('eq')" data-i-th="th_eq">설비호기</th>
-        <th onclick="sortTbl('mat')" data-i-th="th_mat">자재명</th>
-        <th onclick="sortTbl('qty')" class="num" data-i-th="th_qty">수량</th>
-        <th onclick="sortTbl('reason')" data-i-th="th_reason">교체사유</th>
-        <th onclick="sortTbl('pf')" data-i-th="th_pf">유/무상</th>
-        <th onclick="sortTbl('cycle')" class="num" data-i-th="th_cycle">사용일</th>
-      </tr></thead>
-      <tbody id="tbody"><tr><td colspan="11" class="loading">⏳ Loading...</td></tr></tbody>
-    </table>
-  </div>
+  <h3><span data-i="tbl_title">상세 명단</span> (<span id="tblCnt">0</span><span data-i="tbl_unit">명</span>)</h3>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th data-i="th_name">이름</th><th data-i="th_join">입사일</th><th data-i="th_exp">경력</th><th data-i="th_pos">직급</th><th data-i="th_job">직무</th><th>Basic</th><th>Veteran</th><th data-i="th_note">비고</th></tr></thead>
+    <tbody id="tbody"><tr><td colspan="9" class="empty">⏳ 데이터 불러오는 중...</td></tr></tbody>
+  </table></div>
 </div>
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
-(function(){
-  const PASSWORD='gst1234!';
-  window.checkPw=function(){
-    const v=document.getElementById('pwInput').value;
-    if(v===PASSWORD){try{sessionStorage.setItem('gst_auth','1');}catch(e){}document.getElementById('loginOverlay').classList.add('hidden');}
-    else{document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';document.getElementById('pwInput').value='';}
-  };
-  if(sessionStorage.getItem('gst_auth')==='1')document.getElementById('loginOverlay').classList.add('hidden');
-  document.getElementById('pwInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkPw();});
-})();
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=0&single=true&output=csv';
 
-const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
-const C={op:1,customer:2,line:5,process:7,detail:8,mainEq:9,eq:10,qty:22,matName:23,reason:25,workDate:28,daysPaid:29,daysPrev:30,pf:31,freeReason:32};
-
-const T={
-  ko:{title:'📦 자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'유상',kp3:'무상',kp4:'유상비율',kp5:'자재 종류',kp6:'설비 대수',cyc_title:'⏱️ 자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',f_active:'활성 필터',f_clear:'전체 해제',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
-  en:{title:'📦 Material Dashboard',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-proc',sl_eq:'Equipment',sl_search:'Search',cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',kp1:'Total',kp2:'Paid',kp3:'Free',kp4:'Paid %',kp5:'Materials',kp6:'Equipment',cyc_title:'⏱️ Material Lifecycle (avg/min/max)',cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Replacement Detail',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',all:'All',no_data:'No data',days:'d',f_active:'Active Filters',f_clear:'Clear All',nav_hr:'Workforce',nav_sc:'Installation',nav_pm:'PM Schedule',nav_ft:'Fault',nav_mt:'Material'},
-  zh:{title:'📦 材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',kp1:'总更换数',kp2:'有偿',kp3:'无偿',kp4:'有偿比率',kp5:'材料种类',kp6:'设备数',cyc_title:'⏱️ 材料使用周期(平均/最小/最大)',cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'材料更换明细',th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',all:'全部',no_data:'无数据',days:'天',f_active:'活动筛选',f_clear:'全部清除',nav_hr:'人员',nav_sc:'安装',nav_pm:'PM点检',nav_ft:'故障',nav_mt:'材料'},
-  ja:{title:'📦 資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'라인',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',kp1:'総交換件수',kp2:'有償',kp3:'無償',kp4:'有償比率',kp5:'資材種類',kp6:'設備台数',cyc_title:'⏱️ 資材別使用周期(平均/最小/最大)',cyc_mat:'資材名',cyc_cnt:'交換件수',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'資材交換詳細',th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',all:'全体',no_data:'データなし',days:'日',f_active:'有効フィルタ',f_clear:'全解除',nav_hr:'人員',nav_sc:'設置',nav_pm:'PM点検',nav_ft:'故障',nav_mt:'資材'}
+const TR={
+  ko:{title:'인력 현황 대시보드',sub:'엔지니어 교육 · 직급 · 직무 인터랙티브 분석',
+    back:'← 메인으로',total_pre:'총',total_post:'명 · 실시간 필터',refresh:'새로고침',
+    loading:'데이터 불러오는 중...',
+    sl_pos:'직급',sl_job:'직무',sl_edu:'교육',sl_edu2:'교육',sl_search:'검색',search_ph:'이름 검색...',
+    kp1:'선택 인원',kp2:'Basic 이수율',kp3:'Veteran 이수율',kp4:'Engineer 인원',
+    ch_pos:'직급별 인원',ch_edu:'교육과정 이수 현황',ch_job:'직무별 인원',
+    tbl_title:'상세 명단',tbl_unit:'명',
+    th_name:'이름',th_join:'입사일',th_exp:'경력',th_pos:'직급',th_job:'직무',th_note:'비고'},
+  en:{title:'Workforce Dashboard',sub:'Engineer training · position · role interactive analysis',
+    back:'← Main',total_pre:'Total',total_post:' · live filter',refresh:'Refresh',
+    loading:'Loading data...',
+    sl_pos:'Position',sl_job:'Role',sl_edu:'Training',sl_edu2:'Training',sl_search:'Search',search_ph:'Search name...',
+    kp1:'Selected',kp2:'Basic Rate',kp3:'Veteran Rate',kp4:'Engineers',
+    ch_pos:'By Position',ch_edu:'Training Completion',ch_job:'By Role',
+    tbl_title:'Detail List',tbl_unit:'',
+    th_name:'Name',th_join:'Join',th_exp:'Exp',th_pos:'Position',th_job:'Role',th_note:'Note'},
+  zh:{title:'人员状况仪表板',sub:'工程师培训 · 职级 · 职务 交互式分析',
+    back:'← 主页',total_pre:'共',total_post:'人 · 实时筛选',refresh:'刷新',
+    loading:'正在加载数据...',
+    sl_pos:'职级',sl_job:'职务',sl_edu:'培训',sl_edu2:'培训',sl_search:'搜索',search_ph:'搜索姓名...',
+    kp1:'已选人数',kp2:'Basic完成率',kp3:'Veteran完成率',kp4:'工程师人数',
+    ch_pos:'按职级',ch_edu:'培训完成情况',ch_job:'按职务',
+    tbl_title:'详细名单',tbl_unit:'人',
+    th_name:'姓名',th_join:'入职日',th_exp:'经验',th_pos:'职级',th_job:'职务',th_note:'备注'},
+  ja:{title:'人員状況ダッシュボード',sub:'エンジニア教育 · 職級 · 職務 インタラクティブ分析',
+    back:'← メイン',total_pre:'合計',total_post:'名 · リアルタイム',refresh:'更新',
+    loading:'データ読み込み中...',
+    sl_pos:'職級',sl_job:'職務',sl_edu:'教育',sl_edu2:'教育',sl_search:'検索',search_ph:'名前検索...',
+    kp1:'選択人数',kp2:'Basic修了率',kp3:'Veteran修了率',kp4:'Engineer人数',
+    ch_pos:'職級別',ch_edu:'教育課程修了状況',ch_job:'職務別',
+    tbl_title:'詳細リスト',tbl_unit:'名',
+    th_name:'名前',th_join:'入社日',th_exp:'経験',th_pos:'職級',th_job:'職務',th_note:'備考'}
 };
-
-let LANG='ko', DATA=[], CHARTS={}, sortK='date', sortAsc=false, cycSortK='cnt', cycSortAsc=false;
-let CYCLE_BASIS='paid';
-let CROSS_CHART_INSTANCE = null;
-const F={country:'',customer:'',line:'',process:'',detail:'',eq:'',mat:'',reason:'',dtFrom:'',dtTo:'',pf:'',q:''};
-
-const EXCL = { mat: [], eq: [], proc: [], reason: [], free: [] };
-const ALL_VALUES = { mat: [], eq: [], proc: [], reason: [], free: [] };
-
-Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
-
-const THEME_PALETTES = {
-  default: { txt: '#94a3b8', colors: ['#2dd4bf','#38bdf8','#a78bfa','#fbbf24','#34d399','#fb7185'] },
-  burgundy: { txt: '#b49aa9', colors: ['#fcd34d','#f472b6','#fb7185','#e2e8f0','#f472b6','#fb7185'] },
-  light: { txt: '#64748b', colors: ['#2563eb','#0284c7','#7c3aed','#ea580c','#16a34a','#ef4444'] }
-};
-let ACTIVE_THEME_KEY = 'default';
-
-function toggleThemeMenu() { document.getElementById('themeMenu').classList.toggle('open'); }
-function toggleLang() { document.getElementById('langMenu').classList.toggle('open'); }
-
-function changeDashboardTheme(themeClass, label) {
-  document.body.className = '';
-  if(themeClass !== 'default') document.body.classList.add('theme-' + themeClass);
-  ACTIVE_THEME_KEY = themeClass;
-  document.getElementById('themeLabel').textContent = label;
-  document.getElementById('themeMenu').classList.remove('open');
-  Chart.defaults.color = THEME_PALETTES[ACTIVE_THEME_KEY].txt;
-  if(DATA.length) { render(); }
-}
-
-document.addEventListener('click', e => {
-  if(!e.target.closest('.theme-wrap')) document.getElementById('themeMenu').classList.remove('open');
-  if(!e.target.closest('.lang-wrap')) document.getElementById('langMenu').classList.remove('open');
-  if(!e.target.closest('.excl-dd-wrap')){
-    ['mat','eq','proc','reason','free'].forEach(k => {
-      const id = 'exclDD' + k.charAt(0).toUpperCase() + k.slice(1);
-      document.getElementById(id).classList.remove('open');
-    });
-  }
-});
-
-function t(k){return (T[LANG]||T.ko)[k]||k;}
+let LANG='ko';
+try{ if(window.name && TR[window.name]) LANG=window.name; }catch(e){}
+function tr(k){return (TR[LANG]||TR.ko)[k]||k;}
 function applyLang(){
-  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
-  document.querySelectorAll('[data-i-th]').forEach(el=>{el.textContent=t(el.getAttribute('data-i-th'));});
+  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=tr(el.getAttribute('data-i'));});
+  document.querySelectorAll('[data-i-ph]').forEach(el=>{el.placeholder=tr(el.getAttribute('data-i-ph'));});
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
 }
-function setLang(l){LANG=l;applyLang();if(DATA.length){rebuildFilters();render();}document.getElementById('langMenu').classList.remove('open');}
-
-const toDate=GST.toDate;
-const fmtDate=GST.fmtDate;
-function cv(r,k){const v=r[C[k]];return v!==undefined?String(v).trim():'';}
-
-// ===== 디버깅용: 데이터 상태 확인 =====
-function debugData(data, label) {
-  console.log(`[DEBUG] ${label}:`, {
-    total: data.length,
-    sample: data.slice(0, 3),
-    keys: data.length > 0 ? Object.keys(data[0]) : []
-  });
-}
-
-async function loadData(){
-  const status=document.getElementById('status');
-  try{
-    status.textContent='⏳ 데이터 로딩 중...';
-    const fetched = await GST.fetchCSVCached(SHEET_URL,'material');
-    GST.schemaBanner(GST.validateSchema(fetched.rows[0]||[],{
-      1:'운영단위',2:'고객사',5:'라인',7:'공정',8:'세부공정',10:'설비호기',
-      22:'사용수량',23:'자재명',25:'교체사유',28:'자재실적일자',
-      29:'사용일(유상기준)',30:'사용일(전교체일기준)',31:'유/무상',32:'무상사유'
-    }),'자재실적 시트');
-    const rows = fetched.rows.slice(1);
-
-    function cv(r,k){const v=r[C[k]];return(v!==undefined&&v!==null&&v!=='')?String(v).trim():'';}
-
-    // 국가 유추: 운영단위 "GST XXX SCRUBBER"
-    function guessCountry(op){
-      if(!op)return '—';
-      const m=op.match(/GST\s+([A-Z]+)/i);
-      if(m){const c=m[1].toUpperCase();
-        const map={TAIWAN:'TAIWAN',KOREA:'KOREA',CHINA:'CHINA',JAPAN:'JAPAN',US:'USA',USA:'USA',SINGAPORE:'SINGAPORE'};
-        return map[c]||c;}
-      return op;
-    }
-    // 고객사 축약
-    function shortCustomer(name){
-      if(!name)return '—';
-      const up=name.toUpperCase();
-      if(up.includes('MICRON'))return 'MICRON';
-      if(up.includes('TAIWAN-ASIA')||up.includes('ASIA SEMICON'))return 'TASC';
-      if(up.includes('POWERCHIP'))return 'POWERCHIP';
-      if(up.includes('WINBOND'))return 'WINBOND';
-      if(up.includes('TSMC'))return 'TSMC';
-      if(up.includes('SAMSUNG'))return 'SAMSUNG';
-      if(up.includes('HYNIX'))return 'SK HYNIX';
-      return name.split(/[\s,\.(]/)[0].toUpperCase();
-    }
-
-    const mappedData = rows.map(r => {
-      const wd = toDate(r[C.workDate]);
-      return {
-        country: guessCountry(cv(r,'op')),
-        customer: shortCustomer(cv(r,'customer')),
-        line: cv(r,'line'),
-        process: cv(r,'process'),
-        detail: cv(r,'detail'),
-        eq: cv(r,'eq') || cv(r,'mainEq'),
-        matName: cv(r,'matName'),
-        qty: Number(r[C.qty]) || 1,
-        reason: cv(r,'reason'),
-        workDate: wd,
-        daysPaid: Number(r[C.daysPaid]) || null,
-        daysPrev: Number(r[C.daysPrev]) || null,
-        pf: cv(r,'pf'),
-        freeReason: cv(r,'freeReason'),
-        year: wd ? wd.getUTCFullYear() : null,
-        month: wd ? wd.getUTCMonth()+1 : null
-      };
-    });
-
-    DATA = mappedData.filter(x => x.matName && x.matName.trim() !== '');
-    
-    debugData(DATA, '최종 데이터');
-    
-    status.textContent='✅ Load OK ('+DATA.length+'건)';
-    if(DATA.length === 0) {
-      status.textContent='⚠️ 데이터가 없습니다. CSV 헤더를 확인해주세요.';
-      console.warn('[WARN] 데이터가 0건입니다. 매핑 설정을 확인하세요.');
-    }
-    rebuildFilters(); 
-    // 저장된 테마 유지 (기존: 로드 때마다 default로 리셋되던 버그 수정)
-    try{const th=sessionStorage.getItem('gst_theme')||'default';changeDashboardTheme(th,th);}catch(e){}
-    if(fetched.cached){status.textContent='📡 시트 접속 실패 — 캐시 데이터('+fetched.ageMin+'분 전) 표시 중';status.style.color='#fbbf24';}
-  }catch(e){
-    status.textContent='❌ '+e.message;
-    console.error('[ERROR]', e);
-  }
-}
-
-function uniq(key,base){return GST.uniq(base||DATA,key);}
-function fillSelect(id,fkey,vals){GST.fillSelect(id,fkey,vals,F,t('all'));}
-function rebuildFilters(){
-  fillSelect('sl-country','country',uniq('country')); fillSelect('sl-customer','customer',uniq('customer'));
-  fillSelect('sl-line','line',uniq('line')); fillSelect('sl-process','process',uniq('process'));
-  fillSelect('sl-detail','detail',uniq('detail')); fillSelect('sl-eq','eq',uniq('eq'));
-  fillSelect('sl-mat','mat',uniq('matName'));
-}
-function onSlicer(){
-  F.country=document.getElementById('sl-country').value; F.customer=document.getElementById('sl-customer').value;
-  F.line=document.getElementById('sl-line').value; F.process=document.getElementById('sl-process').value;
-  F.detail=document.getElementById('sl-detail').value; F.eq=document.getElementById('sl-eq').value;
-  F.mat=document.getElementById('sl-mat').value; F.dtFrom=document.getElementById('dtFrom').value;
-  F.dtTo=document.getElementById('dtTo').value; render();
-}
-document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
-function setCycleBasis(b){ CYCLE_BASIS=b; document.querySelectorAll('.ct-btn').forEach(x=>x.classList.toggle('active',x.dataset.c===b)); render(); }
-function setPfFilter(v){
-  F.pf=v; document.querySelectorAll('.kpis .kpi').forEach(x=>x.classList.remove('sel'));
-  if(v==='유상') document.querySelector('.kpis .k2').classList.add('sel');
-  else if(v==='무상') document.querySelector('.kpis .k3').classList.add('sel');
-  else document.querySelector('.kpis .k1').classList.add('sel');
-  render();
-}
+function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(DATA.length){rebuildFilters();render();}document.getElementById('langMenu').classList.remove('open');}
+function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');});
+let DATA = [];
+const F = {pos:'전체', job:'전체', basic:'전체', vet:'전체', q:''};
+Chart.defaults.color = '#a0a0c0';
+Chart.defaults.font.family = "'Segoe UI','Malgun Gothic',sans-serif";
+const PAL = ['#6c5ce7','#00cec9','#fd79a8','#fdcb6e','#a29bfe','#55efc4'];
 
 
-// ===== 차트 클릭 크로스 필터링 =====
-const CLICK_MAP={cMat:'mat',cEq:'eq',cProc:'process',cPf:'pf',cReason:'reason'};
-const FIELD_LABEL={country:'국가',customer:'고객사',line:'라인',process:'공정',detail:'세부공정',eq:'설비',mat:'자재',reason:'사유',pf:'유/무상',dtFrom:'시작일',dtTo:'종료일',q:'검색'};
-function chartClick(chartId,label){
-  const key=CLICK_MAP[chartId]; if(!key)return;
-  let val=label;
-  if(chartId==='cPf'){ val = (label===t('kp2'))?'유상':'무상'; }
-  F[key] = (F[key]===val) ? '' : val;   // 같은 값 다시 클릭 → 해제
-  syncSlicerUI();
-  render();
-}
-function syncSlicerUI(){
-  const map={country:'sl-country',customer:'sl-customer',line:'sl-line',process:'sl-process',detail:'sl-detail',eq:'sl-eq',mat:'sl-mat'};
-  Object.entries(map).forEach(([k,id])=>{
-    const el=document.getElementById(id);
-    if(el)el.value=F[k]||'';
-  });
-}
-function renderFilterChips(){GST.renderChips(F,FIELD_LABEL,'clearFilter');}
-function clearFilter(k){
-  F[k]='';
-  if(k==='dtFrom')document.getElementById('dtFrom').value='';
-  if(k==='dtTo')document.getElementById('dtTo').value='';
-  if(k==='q')document.getElementById('search').value='';
-  syncSlicerUI(); render();
-}
-function clearAllFilters(){
-  Object.keys(F).forEach(k=>F[k]='');
-  ['dtFrom','dtTo','search'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  syncSlicerUI(); render();
-}
-
-function filt(){
-  return DATA.filter(x=>{
-    if(F.country&&x.country!==F.country)return false; if(F.customer&&x.customer!==F.customer)return false;
-    if(F.line&&x.line!==F.line)return false; if(F.process&&x.process!==F.process)return false;
-    if(F.detail&&x.detail!==F.detail)return false; if(F.eq&&x.eq!==F.eq)return false;
-    if(F.mat&&x.matName!==F.mat)return false; if(F.pf&&x.pf!==F.pf)return false;
-    if(F.reason&&x.reason!==F.reason)return false;
-    if(F.dtFrom&&(!x.workDate||fmtDate(x.workDate)<F.dtFrom))return false;
-    if(F.dtTo&&(!x.workDate||fmtDate(x.workDate)>F.dtTo))return false;
-    if(F.q){const s=`${x.matName} ${x.reason} ${x.eq} ${x.process} ${x.freeReason||''}`.toLowerCase(); if(!s.includes(F.q))return false;}
-    return true;
-  });
-}
-const countBy=GST.countBy;
-const sumQtyBy=(arr,key,top)=>GST.sumBy(arr,key,'qty',top);
-function cycleDays(x){return CYCLE_BASIS==='paid'?x.daysPaid:x.daysPrev;}
-
-function mkBar(id,labels,data,color,horizontal,withLine){
-  const th=THEME_PALETTES[ACTIVE_THEME_KEY];
-  GST.bar(CHARTS,id,{labels,data,color,horizontal,pareto:withLine,txt:th.txt,
-    grid:ACTIVE_THEME_KEY==='light'?'rgba(0,0,0,0.05)':'rgba(255,255,255,0.05)',
-    onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
-}
-function mkDonut(id,labels,data,colors){
-  const th=THEME_PALETTES[ACTIVE_THEME_KEY];
-  GST.donut(CHARTS,id,{labels,data,colors:colors||th.colors,txt:th.txt,
-    onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
-}
-
-let LAST_F=[];
-function render(){
-  const f=filt(); LAST_F=f;
-  console.log('[DEBUG] render - 필터링된 데이터:', f.length, '건');
-  
-  const pal = THEME_PALETTES[ACTIVE_THEME_KEY].colors;
-  
-  const paid=f.filter(x=>x.pf==='유상').length; const free=f.filter(x=>x.pf==='무상').length;
-  document.getElementById('kp1').textContent=f.length; document.getElementById('kp2').textContent=paid;
-  document.getElementById('kp3').textContent=free; document.getElementById('kp4').textContent=(f.length?Math.round(paid/f.length*100):0)+'%';
-  document.getElementById('kp5').textContent=uniq('matName',f).length; document.getElementById('kp6').textContent=uniq('eq',f).length;
-
-  ALL_VALUES.mat = uniq('matName', f);
-  ALL_VALUES.eq = uniq('eq', f);
-  ALL_VALUES.proc = uniq('process', f);
-  ALL_VALUES.reason = uniq('reason', f);
-  ALL_VALUES.free = uniq('freeReason', f.filter(x=>x.freeReason));
-
-  const matF = f.filter(x=>!EXCL.mat.includes(x.matName));
-  const mats = sumQtyBy(matF,'matName',12);
-  mkBar('cMat', mats.map(x=>x[0]), mats.map(x=>x[1]), pal[0], true, true);
-  renderExclChips('mat');
-
-  const eqF = f.filter(x=>!EXCL.eq.includes(x.eq));
-  const eqs = countBy(eqF,'eq',12);
-  mkBar('cEq', eqs.map(x=>x[0]), eqs.map(x=>x[1]), pal[1], true, true);
-  renderExclChips('eq');
-
-  mkDonut('cPf',[t('kp2'),t('kp3')],[paid,free],[pal[1],pal[4]]);
-
-  const procF = f.filter(x=>!EXCL.proc.includes(x.process));
-  const procs = countBy(procF,'process',10);
-  mkBar('cProc', procs.map(x=>x[0]), procs.map(x=>x[1]), pal[2], false, true);
-  renderExclChips('proc');
-
-  const reasonF = f.filter(x=>!EXCL.reason.includes(x.reason));
-  const reasons = countBy(reasonF,'reason',8);
-  mkDonut('cReason', reasons.map(x=>x[0]), reasons.map(x=>x[1]));
-  renderExclChips('reason');
-
-  const freeF = f.filter(x=>x.pf==='무상' && !EXCL.free.includes(x.freeReason));
-  const frees = countBy(freeF,'freeReason',6);
-  mkDonut('cFree', frees.map(x=>x[0]), frees.map(x=>x[1]));
-  renderExclChips('free');
-
-  renderExclOptions('mat'); renderExclOptions('eq'); renderExclOptions('proc'); renderExclOptions('reason'); renderExclOptions('free');
-  renderFilterChips();
-  renderCycleTable(f); renderDetailTable(f); renderCrossTable();
-}
-
-function getExclId(k) { return k.charAt(0).toUpperCase() + k.slice(1); }
-
-function toggleExclDD(k, open) {
-  const el = document.getElementById('exclDD' + getExclId(k));
-  if(open !== undefined) { if(open) el.classList.add('open'); else el.classList.remove('open'); }
-  else { el.classList.toggle('open'); }
-}
-
-function renderExclChips(k) {
-  const container = document.getElementById('exclChips' + getExclId(k));
-  container.innerHTML = EXCL[k].map(m => 
-    `<span class="excl-chip" onclick="removeExcl('${k}','${m}')">${m} ✕</span>`
-  ).join('');
-}
-
-function renderExclOptions(k) {
-  const id = 'exclSearch' + getExclId(k);
-  const ddId = 'exclDD' + getExclId(k);
-  const q = document.getElementById(id).value.toLowerCase();
-  const list = ALL_VALUES[k].filter(m => !EXCL[k].includes(m) && m.toLowerCase().includes(q));
-  const dd = document.getElementById(ddId);
-  if(!list.length){dd.innerHTML='<div class="excl-opt" style="color:var(--txt-muted)">검색 결과 없음</div>';dd.classList.add('open');return;}
-  dd.innerHTML = list.map(m => `<div class="excl-opt" onclick="addExcl('${k}','${m}')">${m}</div>`).join('');
-  dd.classList.add('open');
-}
-
-window.addExcl = function(k, m) {
-  if(!EXCL[k].includes(m)) { EXCL[k].push(m); render(); document.getElementById('exclSearch' + getExclId(k)).value = ''; }
-};
-window.removeExcl = function(k, m) { EXCL[k] = EXCL[k].filter(x => x !== m); render(); };
-window.clearExcl = function(k) { EXCL[k] = []; render(); };
-
-window.sortCyc=function(k){if(cycSortK===k){cycSortAsc=!cycSortAsc;}else{cycSortK=k;cycSortAsc=false;} renderCycleTable(LAST_F);};
-window.sortTbl=function(k){if(sortK===k){sortAsc=!sortAsc;}else{sortK=k;sortAsc=false;} renderDetailTable(LAST_F);};
-
-function renderCycleTable(f){
-  const g={}; f.forEach(x=>{ const d=cycleDays(x); if(d) { if(!g[x.matName])g[x.matName]=[]; g[x.matName].push(d); } });
-  let s=Object.keys(g).map(k=>({name:k,cnt:g[k].length,avg:Math.round(g[k].reduce((a,b)=>a+b,0)/g[k].length),min:Math.min(...g[k]),max:Math.max(...g[k])}));
-  s.sort((a,b)=>{ let v1=a[cycSortK], v2=b[cycSortK]; if(typeof v1==='string') return cycSortAsc?v1.localeCompare(v2):v2.localeCompare(v1); return cycSortAsc?v1-v2:v2-v1; });
-  const tb=document.getElementById('cycBody');
-  if(!s.length){tb.innerHTML=`<tr><td colspan="5" class="empty">${t('no_data')}</td></tr>`;return;}
-  tb.innerHTML=s.map(x=>`<tr><td>${x.name}</td><td class="num">${x.cnt}</td><td class="num" style="color:var(--accent-1)">${x.avg} ${t('days')}</td><td class="num">${x.min}</td><td class="num">${x.max}</td></tr>`).join('');
-}
-
-function renderDetailTable(f){
-  document.getElementById('tblCnt').textContent=f.length;
-  let d=[...f];
-  d.sort((a,b)=>{
-    if(sortK==='date'){const x=a.workDate||0,y=b.workDate||0; return sortAsc?x-y:y-x;}
-    if(sortK==='qty'){return sortAsc?a.qty-b.qty:b.qty-a.qty;}
-    if(sortK==='cycle'){const x=cycleDays(a)||0,y=cycleDays(b)||0; return sortAsc?x-y:y-x;}
-    const map={customer:'customer',line:'line',process:'process',detail:'detail',eq:'eq',mat:'matName',reason:'reason',pf:'pf'};
-    let x=a[map[sortK]]||'', y=b[map[sortK]]||'';
-    return sortAsc?(''+x).localeCompare(''+y,'ko',{numeric:true}):(''+y).localeCompare(''+x,'ko',{numeric:true});
-  });
-  const tbody=document.getElementById('tbody');
-  if(!d.length){tbody.innerHTML=`<tr><td colspan="11" class="empty">${t('no_data')}</td></tr>`;return;}
-  tbody.innerHTML=d.slice(0,500).map(x=>`<tr><td>${fmtDate(x.workDate)}</td><td>${x.customer||'—'}</td><td>${x.line||'—'}</td><td>${x.process||'—'}</td><td>${x.detail||'—'}</td><td>${x.eq||'—'}</td><td>${x.matName||'—'}</td><td class="num">${x.qty||1}</td><td>${x.reason||'—'}</td><td><span class="pill ${x.pf==='유상'?'paid':'free'}">${x.pf||'—'}</span></td><td class="num">${cycleDays(x)||'—'}</td></tr>`).join('');
-}
-
-function toggleCrossTableBody() {
-  const body=document.getElementById('crossBody'), c=document.getElementById('crossControls'), a=document.getElementById('crossToggleArrow');
-  if(body.style.display==='none' || body.style.display===''){
-    body.style.display='block'; c.style.display='flex'; a.textContent='[ 닫기 ▴ ]'; renderCrossTable();
-  } else {
-    body.style.display='none'; c.style.display='none'; a.textContent='[ 열기 ▾ ]';
-  }
-}
-
-function renderCrossTable(){
-  const body=document.getElementById('crossBody');
-  if(body.style.display==='none') return;
-  
-  const f=LAST_F;
-  const rK=document.getElementById('crossRow').value;
-  const cK=document.getElementById('crossCol').value;
-  const vK=document.getElementById('crossValue').value;
-  const topN=parseInt(document.getElementById('crossTopN').value);
-  
-  function getValue(row) {
-    switch(vK) {
-      case 'count': return 1;
-      case 'qty': return row.qty || 1;
-      case 'avgDays': return cycleDays(row) || 0;
-      case 'avgPaid': return row.daysPaid || 0;
-      case 'minDays': return cycleDays(row) || 0;
-      case 'maxDays': return cycleDays(row) || 0;
-      default: return 1;
-    }
-  }
-  
-  function aggregate(arr) {
-    switch(vK) {
-      case 'count': return arr.length;
-      case 'qty': return arr.reduce((s,x) => s + (x.qty||1), 0);
-      case 'avgDays': 
-      case 'avgPaid': {
-        const vals = arr.map(x => vK==='avgDays' ? cycleDays(x) : x.daysPaid).filter(d => d !== null && d > 0);
-        return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
+async function loadData(){ GST.skeleton(true);
+  const btn = document.getElementById('refreshBtn');
+  const status = document.getElementById('status');
+  btn.disabled = true;
+  status.className = 'status'; status.textContent = tr('loading');
+  try {
+    const fetched = await GST.fetchCSVCached(SHEET_URL,'hr');
+    const _hdr=(fetched.rows[0]||[]).map(x=>String(x).trim().toLowerCase());
+    const rows=fetched.rows.slice(1).map(r=>{const o={};_hdr.forEach((k,i)=>o[k]=(r[i]==null?'':String(r[i])).trim());return o;}).filter(d=>d.name||d['이름']);
+    const colMap = {
+      no:['no','번호'], name:['name','이름','성명'], join:['join','입사일'],
+      exp:['exp','경력'], pos:['pos','직급','position'], job:['job','직무'],
+      basic:['basic','basic교육'], vet:['vet','veteran','veteran교육'], note:['note','비고']
+    };
+    DATA = rows.map(row => {
+      const mapped = {};
+      for (const [key, aliases] of Object.entries(colMap)) {
+        const found = aliases.find(a => row[a] !== undefined);
+        mapped[key] = found ? String(row[found]).trim() : '';
       }
-      case 'minDays': {
-        const vals = arr.map(x => cycleDays(x)).filter(d => d !== null && d > 0);
-        return vals.length ? Math.min(...vals) : 0;
-      }
-      case 'maxDays': {
-        const vals = arr.map(x => cycleDays(x)).filter(d => d !== null && d > 0);
-        return vals.length ? Math.max(...vals) : 0;
-      }
-      default: return arr.length;
-    }
+      return mapped;
+    }).filter(d => d.name);
+    const now = new Date().toLocaleString('ko-KR');
+    status.className = 'status ok';
+    status.textContent = '✅ ' + now + ' · ' + DATA.length + tr('tbl_unit');
+    rebuildFilters(); render();
+    if(fetched.cached){status.textContent='📡 시트 접속 실패 — 캐시('+fetched.ageMin+'분 전) 표시 중';status.style.color='#fbbf24';}
+  } catch(err) { GST.skeleton(false);
+    status.className = 'status err';
+    status.textContent = '❌ ' + tr('loading');
+    document.getElementById('tbody').innerHTML = '<tr><td colspan="9" class="empty">—</td></tr>';
   }
-  
-  const rows = Array.from(new Set(f.map(x => {
-    let val = x[rK];
-    if(rK === 'year') return val;
-    if(rK === 'month') return val;
-    return val || '—';
-  }))).sort((a,b) => {
-    if(rK === 'year' || rK === 'month') return a - b;
-    return String(a).localeCompare(String(b), 'ko');
-  });
-  
-  const cols = Array.from(new Set(f.map(x => {
-    let val = x[cK];
-    if(cK === 'year') return val;
-    if(cK === 'month') return val;
-    return val || '—';
-  }))).sort((a,b) => {
-    if(cK === 'year' || cK === 'month') return a - b;
-    return String(a).localeCompare(String(b), 'ko');
-  });
-  
-  const rowFiltered = rows.slice(0, topN);
-  const colFiltered = cols.slice(0, Math.min(topN, cols.length));
-  
-  const matrix = {};
-  rowFiltered.forEach(r => { matrix[r] = {}; colFiltered.forEach(c => matrix[r][c] = []); matrix[r]._t = []; });
-  
-  f.forEach(x => {
-    let rv = x[rK] || '—';
-    let cv = x[cK] || '—';
-    if(rK === 'year') rv = x.year;
-    if(rK === 'month') rv = x.month;
-    if(cK === 'year') cv = x.year;
-    if(cK === 'month') cv = x.month;
-    if(matrix[rv] && matrix[rv][cv] !== undefined) {
-      matrix[rv][cv].push(x);
-      matrix[rv]._t.push(x);
-    }
-  });
-  
-  const values = {};
-  rowFiltered.forEach(r => {
-    values[r] = {};
-    colFiltered.forEach(c => {
-      values[r][c] = aggregate(matrix[r][c] || []);
-    });
-    values[r]._t = aggregate(matrix[r]._t || []);
-  });
-  
-  let maxVal = 0;
-  rowFiltered.forEach(r => {
-    colFiltered.forEach(c => {
-      if(values[r][c] > maxVal) maxVal = values[r][c];
-    });
-  });
-  if(maxVal === 0) maxVal = 1;
-  
-  const colLabel = cK === 'year' ? '년도' : cK === 'month' ? '월' : cK === 'freeReason' ? '무상사유' : cK === 'reason' ? '교체사유' : cK === 'matName' ? '자재명' : cK === 'pf' ? '유무상' : cK === 'eq' ? '설비' : cK === 'detail' ? '세부공정' : cK === 'process' ? '공정' : cK === 'line' ? 'LINE' : cK === 'customer' ? '고객사' : cK === 'country' ? '국가' : cK;
-  const rowLabel = rK === 'year' ? '년도' : rK === 'month' ? '월' : rK === 'freeReason' ? '무상사유' : rK === 'reason' ? '교체사유' : rK === 'matName' ? '자재명' : rK === 'pf' ? '유무상' : rK === 'eq' ? '설비' : rK === 'detail' ? '세부공정' : rK === 'process' ? '공정' : rK === 'line' ? 'LINE' : rK === 'customer' ? '고객사' : rK === 'country' ? '국가' : rK;
-  
-  function getHeatColor(val) {
-    const ratio = maxVal > 0 ? val / maxVal : 0;
-    const r = Math.round(235 - ratio * 200);
-    const g = Math.round(245 - ratio * 100);
-    const b = Math.round(255 - ratio * 100);
-    return `rgba(${r}, ${g}, ${b}, ${0.3 + ratio * 0.6})`;
-  }
-  
-  const thead = document.getElementById('crossTable').querySelector('thead');
-  const tbody = document.getElementById('crossTable').querySelector('tbody');
-  thead.innerHTML = `<tr><th>${rowLabel}</th>${colFiltered.map(c => `<th>${c}</th>`).join('')}<th>Total</th></tr>`;
-  tbody.innerHTML = rowFiltered.map(r => {
-    return `<tr>
-      <td class="row-label">${r}</td>
-      ${colFiltered.map(c => {
-        const v = values[r][c] || 0;
-        return `<td class="num heat-cell" style="background:${getHeatColor(v)}">${v}</td>`;
-      }).join('')}
-      <td class="num total-cell">${values[r]._t}</td>
-    </tr>`;
-  }).join('');
-  
-  const chartLabels = rowFiltered;
-  const barData = rowFiltered.map(r => values[r]._t || 0);
-  const percentageData = rowFiltered.map(r => {
-    const total = rowFiltered.reduce((s, rr) => s + (values[rr]._t || 0), 0);
-    return total > 0 ? Math.round((values[r]._t || 0) / total * 100) : 0;
-  });
-  
-  const ctx = document.getElementById('crossChart').getContext('2d');
-  const theme = THEME_PALETTES[ACTIVE_THEME_KEY];
-  
-  if(CROSS_CHART_INSTANCE) { CROSS_CHART_INSTANCE.destroy(); }
-  
-  CROSS_CHART_INSTANCE = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: chartLabels,
-      datasets: [
-        {
-          label: '건수 (Bar)',
-          type: 'bar',
-          data: barData,
-          backgroundColor: theme.colors[0] + '80',
-          borderColor: theme.colors[0],
-          borderWidth: 2,
-          borderRadius: 4,
-          order: 2
-        },
-        {
-          label: '비율 % (Line)',
-          type: 'line',
-          data: percentageData,
-          borderColor: theme.colors[3] || '#fbbf24',
-          backgroundColor: 'transparent',
-          borderWidth: 3,
-          pointBackgroundColor: theme.colors[3] || '#fbbf24',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-          pointRadius: 4,
-          tension: 0.3,
-          yAxisID: 'y1',
-          order: 1
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          labels: { color: theme.txt, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' }
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              if(context.datasetIndex === 0) return `건수: ${context.raw}`;
-              else return `비율: ${context.raw}%`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: { ticks: { color: theme.txt, font: { size: 9 } }, grid: { display: false } },
-        y: {
-          position: 'left',
-          ticks: { color: theme.txt, font: { size: 9 } },
-          grid: { color: ACTIVE_THEME_KEY==='light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)' },
-          title: { display: true, text: '건수', color: theme.txt, font: { size: 10 } }
-        },
-        y1: {
-          position: 'right',
-          ticks: { color: theme.txt, font: { size: 9 }, callback: v => v + '%' },
-          grid: { display: false },
-          title: { display: true, text: '비율 (%)', color: theme.txt, font: { size: 10 } },
-          min: 0,
-          max: Math.max(100, Math.max(...percentageData) * 1.2)
-        }
-      }
-    }
-  });
+  btn.disabled = false;
 }
 
-applyLang(); loadData();
+function uniq(k) { return ['전체', ...Array.from(new Set(DATA.map(d => d[k]).filter(Boolean)))]; }
+function buildChips(id, key) {
+  const box = document.getElementById(id); box.innerHTML = '';
+  uniq(key).forEach(v => {
+    const c = document.createElement('div');
+    c.className = 'chip' + (v === '전체' ? ' active' : ''); c.textContent = v;
+    c.onclick = () => { F[key]=v; [...box.children].forEach(x=>x.classList.remove('active')); c.classList.add('active'); render(); };
+    box.appendChild(c);
+  });
+}
+function rebuildFilters() {
+  F.pos='전체'; F.job='전체'; F.basic='전체'; F.vet='전체'; F.q='';
+  document.getElementById('search').value = '';
+  buildChips('sl-pos','pos'); buildChips('sl-job','job');
+  buildChips('sl-basic','basic'); buildChips('sl-vet','vet');
+}
+document.getElementById('search').addEventListener('input', e => { F.q = e.target.value.toLowerCase(); render(); });
+function filt() {
+  return DATA.filter(d =>
+    (F.pos==='전체'||d.pos===F.pos) && (F.job==='전체'||d.job===F.job) &&
+    (F.basic==='전체'||d.basic===F.basic) && (F.vet==='전체'||d.vet===F.vet) &&
+    (F.q===''||d.name.toLowerCase().includes(F.q))
+  );
+}
+function tagCls(v) { return v==='이수완료'?'t-done':v==='진행중'?'t-prog':'t-na'; }
+function animVal(el, target, suffix, dec) {
+  const start = parseFloat(el.dataset.v || 0); const t0 = performance.now();
+  function step(t) {
+    const p = Math.min((t-t0)/600,1); const cur = start+(target-start)*(1-Math.pow(1-p,3));
+    el.textContent = (dec?cur.toFixed(1):Math.round(cur))+(suffix||'');
+    if (p<1) requestAnimationFrame(step); else el.dataset.v = target;
+  }
+  requestAnimationFrame(step);
+}
+let charts = {};
+function donut(id, labels, vals) {
+  const ctx = document.getElementById(id);
+  if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets[0].data=vals; charts[id].update(); return; }
+  charts[id] = new Chart(ctx, {type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:PAL,borderColor:'rgba(0,0,0,.2)',borderWidth:2,hoverOffset:10}]},
+    options:{cutout:'62%',plugins:{legend:{position:'bottom',labels:{padding:14,usePointStyle:true,pointStyle:'circle'}}},animation:{animateScale:true}}});
+}
+function bars(id, labels, datasets) {
+  const ctx = document.getElementById(id);
+  if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets=datasets; charts[id].update(); return; }
+  charts[id] = new Chart(ctx, {type:'bar',data:{labels,datasets},
+    options:{plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle'}}},
+    scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,.05)'}},y:{stacked:true,grid:{color:'rgba(255,255,255,.05)'},ticks:{precision:0}}}}});
+}
+function cnt(arr, key, val) { return arr.filter(d => d[key]===val).length; }
+function render(){ GST.skeleton(false);
+  const f = filt();
+  document.getElementById('totRec').textContent = DATA.length;
+  animVal(document.getElementById('kp1'), f.length, '', false);
+  const bd = cnt(f,'basic','이수완료');
+  animVal(document.getElementById('kp2'), f.length?bd/f.length*100:0, '%', true);
+  const vTarget = f.filter(d => d.vet!=='비대상');
+  animVal(document.getElementById('kp3'), vTarget.length?cnt(vTarget,'vet','이수완료')/vTarget.length*100:0, '%', true);
+  animVal(document.getElementById('kp4'), cnt(f,'pos','Engineer'), '', false);
+  const posL = Array.from(new Set(DATA.map(d=>d.pos).filter(Boolean)));
+  donut('cPos', posL, posL.map(p=>cnt(f,'pos',p)));
+  const jobL = Array.from(new Set(DATA.map(d=>d.job).filter(Boolean)));
+  donut('cJob', jobL, jobL.map(j=>cnt(f,'job',j)));
+  bars('cEdu', ['Basic','Veteran'], [
+    {label:'이수완료',data:[cnt(f,'basic','이수완료'),cnt(f,'vet','이수완료')],backgroundColor:'#00cec9',borderRadius:6},
+    {label:'진행중',data:[cnt(f,'basic','진행중'),cnt(f,'vet','진행중')],backgroundColor:'#fdcb6e',borderRadius:6},
+    {label:'비대상',data:[cnt(f,'basic','비대상'),cnt(f,'vet','비대상')],backgroundColor:'#636e92',borderRadius:6},
+  ]);
+  const tb = document.getElementById('tbody'); tb.innerHTML = '';
+  document.getElementById('tblCnt').textContent = f.length;
+  if (!f.length) { tb.innerHTML='<tr><td colspan="9" class="empty">조건에 맞는 인원이 없습니다</td></tr>'; return; }
+  f.forEach((d,i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${d.no||i+1}</td><td><b>${d.name}</b></td><td>${d.join}</td><td>${d.exp}</td>
+      <td>${d.pos}</td><td>${d.job}</td>
+      <td><span class="tag ${tagCls(d.basic)}">${d.basic}</span></td>
+      <td><span class="tag ${tagCls(d.vet)}">${d.vet}</span></td>
+      <td style="color:var(--muted)">${d.note||'-'}</td>`;
+    tb.appendChild(tr);
+  });
+}
+applyLang();
+loadData();
+</script>
+
+<script>
+(function(){
+    function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
+  window.checkPw=async function(){
+    const v=document.getElementById('pwInput').value;
+    if(await GST.checkPw(v)){
+      try{sessionStorage.setItem('gst_auth','1');}catch(e){}
+      document.getElementById('loginOverlay').classList.add('hidden');
+    }else{
+      document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';
+      document.getElementById('pwInput').value='';
+    }
+  };
+  function init(){
+    const ov=document.getElementById('loginOverlay');
+    if(!ov)return;
+    if(isAuthed()){ov.classList.add('hidden');return;}
+    const inp=document.getElementById('pwInput');
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();});
+    setTimeout(()=>inp.focus(),100);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
+  else init();
+})();
 </script>
 <script>
 GST.initSync();
