@@ -157,14 +157,14 @@ canvas{cursor:pointer}
 
 <div class="header">
   <div>
-    <h1 data-i="title">🛠️ Fault Analysis Dashboard</h1>
+    <h1 data-i="title">Fault Analysis Dashboard</h1>
     <div class="sub" data-i="sub">BM/CBM breakdown & alarm analysis</div>
   </div>
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← Main</a>
-    <button class="btn btn-grad" id="refreshBtn" onclick="loadData()">🔄 <span data-i="refresh">Refresh</span></button>
+    <button class="btn btn-grad" id="refreshBtn" onclick="loadData()"><span data-i="refresh">Refresh</span></button>
     <div class="lang-wrap">
-      <button class="lang-btn" onclick="toggleLang()">🌐 <span id="langLabel">KO</span> ▾</button>
+      <button class="lang-btn" onclick="toggleLang()"><span id="langLabel">KO</span> ▾</button>
       <div class="lang-dropdown" id="langMenu">
         <div class="lang-item" onclick="setLang('ko')">🇰🇷 한국어</div>
         <div class="lang-item" onclick="setLang('en')">🇺🇸 English</div>
@@ -191,33 +191,33 @@ canvas{cursor:pointer}
 </div>
 
 <div class="fchips" id="fchips" style="display:none">
-  <span class="fchips-label">🎯 <span data-i="f_active">활성 필터</span>:</span>
+  <span class="fchips-label"><span data-i="f_active">활성 필터</span>:</span>
   <span id="fchipList"></span>
   <button class="fchip-clear" onclick="clearAllFilters()" data-i="f_clear">전체 해제</button>
 </div>
 
 <div class="kpis">
-  <div class="kpi k1 sel" data-f=""><div class="ic">🛠️</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">Total Faults</div></div>
-  <div class="kpi k2" data-f="BM"><div class="ic">⛔</div><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">BM (Breakdown)</div></div>
-  <div class="kpi k3" data-f="CBM"><div class="ic">🔧</div><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">CBM (Condition)</div></div>
-  <div class="kpi k4" data-aw="Alarm"><div class="ic">🚨</div><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Alarm</div></div>
-  <div class="kpi k5" data-aw="Warning"><div class="ic">⚠️</div><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">Warning</div></div>
+  <div class="kpi k1 sel" data-f=""><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">Total Faults</div><div class="kpi-delta" id="kd1"></div></div>
+  <div class="kpi k2" data-f="BM"><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">BM (Breakdown)</div></div>
+  <div class="kpi k3" data-f="CBM"><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">CBM (Condition)</div></div>
+  <div class="kpi k4" data-aw="Alarm"><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Alarm</div></div>
+  <div class="kpi k5" data-aw="Warning"><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">Warning</div></div>
 </div>
 
 <div class="grid3">
-  <div class="card"><h3 data-i="ch_code">🔥 Fault Code TOP</h3><div class="card-note" data-i="note_code">Most frequent fault codes</div><div class="cw"><canvas id="cCode"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_sn">🖥️ Fault by Equipment</h3><div class="card-note" data-i="note_sn">Equipment with most faults</div><div class="cw"><canvas id="cSn"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_type">📊 BM vs CBM</h3><div class="card-note" data-i="note_type">Maintenance type ratio</div><div class="cw"><canvas id="cType"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_code">Fault Code TOP</h3><div class="card-note" data-i="note_code">Most frequent fault codes</div><div class="cw"><canvas id="cCode"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_sn">Fault by Equipment</h3><div class="card-note" data-i="note_sn">Equipment with most faults</div><div class="cw"><canvas id="cSn"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_type">BM vs CBM</h3><div class="card-note" data-i="note_type">Maintenance type ratio</div><div class="cw"><canvas id="cType"></canvas></div></div>
 </div>
 
 <div class="grid3">
-  <div class="card"><h3 data-i="ch_line">🏭 Fault by LINE</h3><div class="card-note" data-i="note_line">Faults per production line</div><div class="cw"><canvas id="cLine"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_trend">📅 Monthly Trend</h3><div class="card-note" data-i="note_trend">Faults over time</div><div class="cw"><canvas id="cTrend"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_action">🔩 Action Type</h3><div class="card-note" data-i="note_action">Parts / Inspection / Design</div><div class="cw"><canvas id="cAction"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_line">Fault by LINE</h3><div class="card-note" data-i="note_line">Faults per production line</div><div class="cw"><canvas id="cLine"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_trend">Monthly Trend</h3><div class="card-note" data-i="note_trend">Faults over time</div><div class="cw"><canvas id="cTrend"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_action">Action Type</h3><div class="card-note" data-i="note_action">Parts / Inspection / Design</div><div class="cw"><canvas id="cAction"></canvas></div></div>
 </div>
 
 <div class="tablecard">
-  <h3>🛠️ <span data-i="tbl_title">Fault Detail List</span> (<span id="tblCnt">0</span>)</h3>
+  <h3><span data-i="tbl_title">Fault Detail List</span> (<span id="tblCnt">0</span>)</h3>
   <div class="tbl-wrap">
     <table>
       <thead><tr>
@@ -253,48 +253,48 @@ const C={line:2,group1:3,detail1:5,model:17,code:18,work:23,sn:24,maint:25,aw:26
 const PAL=['#fb7185','#fbbf24','#a78bfa','#38bdf8','#34d399','#f472b6','#60a5fa','#c084fc','#4ade80','#f97316'];
 
 const T={
-  ko:{title:'🛠️ 고장 분석 대시보드',sub:'BM/CBM 고장 및 알람 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
-    sl_type:'유형',sl_search:'검색',sl_sn:'설비 S/N',sl_code:'고장코드',sl_model:'모델',sl_period:'기간',all:'전체',f_active:'활성 필터',f_clear:'전체 해제',
+  ko:{title:'고장 분석 대시보드',sub:'BM/CBM 고장 및 알람 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
+    sl_type:'유형',sl_search:'검색',sl_sn:'설비 S/N',sl_code:'고장코드',sl_model:'모델',sl_period:'기간',all:'전체',last30:'최근 30일 {n}건',f_active:'활성 필터',f_clear:'전체 해제',
     kp1:'총 고장건수',kp2:'BM (고장정비)',kp3:'CBM (상태기반)',kp4:'Alarm',kp5:'Warning',
-    ch_code:'🔥 고장코드 TOP',note_code:'가장 빈번한 고장코드',
-    ch_sn:'🖥️ 설비별 고장',note_sn:'고장 많은 설비',
-    ch_type:'📊 BM vs CBM',note_type:'정비 유형 비율',
-    ch_line:'🏭 LINE별 고장',note_line:'라인별 고장건수',
-    ch_trend:'📅 월별 추이',note_trend:'시간별 고장 추이',
-    ch_action:'🔩 조치 유형',note_action:'부품/점검/설계',
+    ch_code:'고장코드 TOP',note_code:'가장 빈번한 고장코드',
+    ch_sn:'설비별 고장',note_sn:'고장 많은 설비',
+    ch_type:'BM vs CBM',note_type:'정비 유형 비율',
+    ch_line:'LINE별 고장',note_line:'라인별 고장건수',
+    ch_trend:'월별 추이',note_trend:'시간별 고장 추이',
+    ch_action:'조치 유형',note_action:'부품/점검/설계',
     tbl_title:'고장 상세 내역',th_msg:'메시지',th_ftype:'고장유형',th_action:'조치',
     no_data:'데이터 없음',search_ph:'S/N, 코드, 메시지 검색...'},
-  en:{title:'🛠️ Fault Analysis Dashboard',sub:'BM/CBM breakdown & alarm analysis',back:'← Main',refresh:'Refresh',loading:'Loading...',
-    sl_type:'Type',sl_search:'Search',sl_sn:'Equipment S/N',sl_code:'Fail Code',sl_model:'Model',sl_period:'Period',all:'All',f_active:'Active Filters',f_clear:'Clear All',
+  en:{title:'Fault Analysis Dashboard',sub:'BM/CBM breakdown & alarm analysis',back:'← Main',refresh:'Refresh',loading:'Loading...',
+    sl_type:'Type',sl_search:'Search',sl_sn:'Equipment S/N',sl_code:'Fail Code',sl_model:'Model',sl_period:'Period',all:'All',last30:'Last 30d {n}',f_active:'Active Filters',f_clear:'Clear All',
     kp1:'Total Faults',kp2:'BM (Breakdown)',kp3:'CBM (Condition)',kp4:'Alarm',kp5:'Warning',
-    ch_code:'🔥 Fault Code TOP',note_code:'Most frequent codes',
-    ch_sn:'🖥️ Fault by Equipment',note_sn:'Equipment with most faults',
-    ch_type:'📊 BM vs CBM',note_type:'Maintenance type ratio',
-    ch_line:'🏭 Fault by LINE',note_line:'Faults per line',
-    ch_trend:'📅 Monthly Trend',note_trend:'Faults over time',
-    ch_action:'🔩 Action Type',note_action:'Parts/Inspection/Design',
+    ch_code:'Fault Code TOP',note_code:'Most frequent codes',
+    ch_sn:'Fault by Equipment',note_sn:'Equipment with most faults',
+    ch_type:'BM vs CBM',note_type:'Maintenance type ratio',
+    ch_line:'Fault by LINE',note_line:'Faults per line',
+    ch_trend:'Monthly Trend',note_trend:'Faults over time',
+    ch_action:'Action Type',note_action:'Parts/Inspection/Design',
     tbl_title:'Fault Detail List',th_msg:'Message',th_ftype:'Fail Type',th_action:'Action',
     no_data:'No data',search_ph:'Search S/N, Code, Message...'},
-  zh:{title:'🛠️ 故障分析仪表板',sub:'BM/CBM故障及报警分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
-    sl_type:'类型',sl_search:'搜索',sl_sn:'设备S/N',sl_code:'故障码',sl_model:'型号',sl_period:'期间',all:'全部',f_active:'活动筛选',f_clear:'全部清除',
+  zh:{title:'故障分析仪表板',sub:'BM/CBM故障及报警分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
+    sl_type:'类型',sl_search:'搜索',sl_sn:'设备S/N',sl_code:'故障码',sl_model:'型号',sl_period:'期间',all:'全部',last30:'近30天{n}件',f_active:'活动筛选',f_clear:'全部清除',
     kp1:'总故障数',kp2:'BM(故障维修)',kp3:'CBM(状态维修)',kp4:'报警',kp5:'警告',
-    ch_code:'🔥 故障代码TOP',note_code:'最频繁故障代码',
-    ch_sn:'🖥️ 各设备故障',note_sn:'故障最多设备',
-    ch_type:'📊 BM vs CBM',note_type:'维修类型比例',
-    ch_line:'🏭 各LINE故障',note_line:'各线故障数',
-    ch_trend:'📅 月度趋势',note_trend:'故障时间趋势',
-    ch_action:'🔩 处理类型',note_action:'部件/检查/设计',
+    ch_code:'故障代码TOP',note_code:'最频繁故障代码',
+    ch_sn:'各设备故障',note_sn:'故障最多设备',
+    ch_type:'BM vs CBM',note_type:'维修类型比例',
+    ch_line:'各LINE故障',note_line:'各线故障数',
+    ch_trend:'月度趋势',note_trend:'故障时间趋势',
+    ch_action:'处理类型',note_action:'部件/检查/设计',
     tbl_title:'故障明细',th_msg:'消息',th_ftype:'故障类型',th_action:'处理',
     no_data:'无数据',search_ph:'搜索S/N,代码,消息...'},
-  ja:{title:'🛠️ 故障分析ダッシュボード',sub:'BM/CBM故障・アラーム分析',back:'← メイン',refresh:'更新',loading:'読み込み中...',
-    sl_type:'種類',sl_search:'検索',sl_sn:'設備S/N',sl_code:'故障コード',sl_model:'モデル',sl_period:'期間',all:'全体',f_active:'有効フィルタ',f_clear:'全解除',
+  ja:{title:'故障分析ダッシュボード',sub:'BM/CBM故障・アラーム分析',back:'← メイン',refresh:'更新',loading:'読み込み中...',
+    sl_type:'種類',sl_search:'検索',sl_sn:'設備S/N',sl_code:'故障コード',sl_model:'モデル',sl_period:'期間',all:'全体',last30:'直近30日{n}件',f_active:'有効フィルタ',f_clear:'全解除',
     kp1:'総故障件数',kp2:'BM(故障整備)',kp3:'CBM(状態基準)',kp4:'Alarm',kp5:'Warning',
-    ch_code:'🔥 故障コードTOP',note_code:'最頻出コード',
-    ch_sn:'🖥️ 設備別故障',note_sn:'故障の多い設備',
-    ch_type:'📊 BM vs CBM',note_type:'整備種類比率',
-    ch_line:'🏭 LINE別故障',note_line:'ライン別件数',
-    ch_trend:'📅 月別推移',note_trend:'時系列故障推移',
-    ch_action:'🔩 処置種類',note_action:'部品/点検/設計',
+    ch_code:'故障コードTOP',note_code:'最頻出コード',
+    ch_sn:'設備別故障',note_sn:'故障の多い設備',
+    ch_type:'BM vs CBM',note_type:'整備種類比率',
+    ch_line:'LINE別故障',note_line:'ライン別件数',
+    ch_trend:'月別推移',note_trend:'時系列故障推移',
+    ch_action:'処置種類',note_action:'部品/点検/設計',
     tbl_title:'故障詳細',th_msg:'メッセージ',th_ftype:'故障種類',th_action:'処置',
     no_data:'データなし',search_ph:'S/N,コード,メッセージ検索...'}
 };
@@ -446,6 +446,12 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   const alarm=f.filter(x=>x.aw==='Alarm').length;
   const warning=f.filter(x=>x.aw==='Warning').length;
   animVal(document.getElementById('kp1'),f.length);
+  {const _now=Date.now(),_d30=_now-30*864e5,_d60=_now-60*864e5;
+   const _c=f.filter(x=>x.work&&x.work.getTime()>=_d30).length;
+   const _p=f.filter(x=>x.work&&x.work.getTime()>=_d60&&x.work.getTime()<_d30).length;
+   const _b=GST.deltaBadge(_c,_p,true);
+   const _el=document.getElementById('kd1');
+   if(_el)_el.innerHTML=_b?(t('last30').replace('{n}',_c)+' '+_b):'';}
   animVal(document.getElementById('kp2'),bm);
   animVal(document.getElementById('kp3'),cbm);
   animVal(document.getElementById('kp4'),alarm);
@@ -456,7 +462,8 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   mkBar('cCode',codes.map(x=>x[0]),codes.map(x=>x[1]),'#fb7185',true);
   // 설비별 (가로 막대)
   const sns=countBy(f,'sn').slice(0,10);
-  mkBar('cSn',sns.map(x=>x[0]),sns.map(x=>x[1]),'#fbbf24',true);
+  const snOut=GST.outliers(sns);
+  mkBar('cSn',sns.map(x=>x[0]),sns.map(x=>x[1]),sns.map(e=>snOut.has(e[0])?'#fb7185':'#fbbf24'),true);
   // BM vs CBM
   mkDonut('cType',['BM','CBM'],[bm,cbm],['#fb7185','#a78bfa']);
   // LINE별
