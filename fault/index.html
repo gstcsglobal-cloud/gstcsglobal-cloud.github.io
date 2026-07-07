@@ -236,11 +236,10 @@ canvas{cursor:pointer}
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 (function(){
-  const PASSWORD='gst1234!';
-  function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
-  window.checkPw=function(){
+    function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
+  window.checkPw=async function(){
     const v=document.getElementById('pwInput').value;
-    if(v===PASSWORD){try{sessionStorage.setItem('gst_auth','1');}catch(e){}document.getElementById('loginOverlay').classList.add('hidden');}
+    if(await GST.checkPw(v)){try{sessionStorage.setItem('gst_auth','1');}catch(e){}document.getElementById('loginOverlay').classList.add('hidden');}
     else{document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';document.getElementById('pwInput').value='';}
   };
   function init(){const ov=document.getElementById('loginOverlay');if(!ov)return;
@@ -322,13 +321,12 @@ const toDate=GST.toDate;
 const fmtDate=GST.fmtDate;
 function cv(r,k){const v=r[C[k]];return(v!==undefined&&v!=='')?String(v).trim():'';}
 
-async function loadData(){
+async function loadData(){ GST.skeleton(true);
   const btn=document.getElementById('refreshBtn');const status=document.getElementById('status');
   btn.disabled=true;status.className='status';status.textContent=t('loading');
   try{
-    const res=await fetch(SHEET_URL+'&t='+Date.now());
-    const text=await res.text();
-    RAW=Papa.parse(text,{skipEmptyLines:true}).data.slice(1);
+    const fetched=await GST.fetchCSVCached(SHEET_URL,'pmsheet');
+    RAW=fetched.rows.slice(1);
     // BM, CBM만 (TBM 제외)
     FAULTS=RAW.filter(r=>{
       const m=cv(r,'maint').toUpperCase();
@@ -341,8 +339,16 @@ async function loadData(){
     }));
     status.className='status ok';
     status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+FAULTS.length;
-    rebuildFilters();render();
-  }catch(e){status.className='status err';status.textContent='❌ '+e.message;}
+    if(fetched.cached){status.textContent='📡 시트 접속 실패 — 캐시 데이터('+fetched.ageMin+'분 전) 표시 중';status.style.color='#fbbf24';}
+    rebuildFilters();const _st=GST.readState();
+    if(_st){
+      Object.assign(F,_st); syncSlicerUI();
+      if(F.dtFrom)document.getElementById('dtFrom').value=F.dtFrom;
+      if(F.dtTo)document.getElementById('dtTo').value=F.dtTo;
+      if(F.q)document.getElementById('search').value=F.q;
+    }
+    render();
+  }catch(e){ GST.skeleton(false);status.className='status err';status.textContent='❌ '+e.message;}
   btn.disabled=false;
 }
 
@@ -432,7 +438,7 @@ function mkDonut(id,labels,data,colors){
     onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
 }
 
-function render(){
+function render(){ GST.skeleton(false); GST.pushState(F);
   const f=filt();
   renderFilterChips();
   const bm=f.filter(x=>x.maint==='BM').length;
