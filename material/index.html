@@ -229,14 +229,14 @@ canvas{cursor:pointer}
 
 <div class="header">
   <div>
-    <h1 data-i="title">📦 자재 실적 대시보드</h1>
+    <h1 data-i="title">자재 실적 대시보드</h1>
     <div class="sub" data-i="sub">자재 교체 실적 · 사용주기 · 유무상 분석</div>
   </div>
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← 메인으로</a>
-    <button class="btn btn-grad" id="refreshBtn" onclick="loadData()">🔄 <span data-i="refresh">새로고침</span></button>
+    <button class="btn btn-grad" id="refreshBtn" onclick="loadData()"><span data-i="refresh">새로고침</span></button>
     <div class="theme-wrap">
-      <button class="theme-btn" onclick="toggleThemeMenu()">🎨 <span id="themeLabel">Cyber Turquoise</span> ▾</button>
+      <button class="theme-btn" onclick="toggleThemeMenu()"><span id="themeLabel">Cyber Turquoise</span> ▾</button>
       <div class="theme-dropdown" id="themeMenu">
         <div class="theme-item" onclick="changeDashboardTheme('default', 'Cyber Turquoise')">🌌 Cyber Turquoise</div>
         <div class="theme-item" onclick="changeDashboardTheme('burgundy', 'Royal Burgundy')">🍷 Royal Burgundy</div>
@@ -244,7 +244,7 @@ canvas{cursor:pointer}
       </div>
     </div>
     <div class="lang-wrap">
-      <button class="lang-btn" onclick="toggleLang()">🌐 <span id="langLabel">KO</span> ▾</button>
+      <button class="lang-btn" onclick="toggleLang()"><span id="langLabel">KO</span> ▾</button>
       <div class="lang-dropdown" id="langMenu">
         <div class="lang-item" onclick="setLang('ko')">🇰🇷 한국어</div>
         <div class="lang-item" onclick="setLang('en')">🇺🇸 English</div>
@@ -288,18 +288,18 @@ canvas{cursor:pointer}
 </div>
 
 <div class="fchips" id="fchips" style="display:none">
-  <span class="fchips-label">🎯 <span data-i="f_active">활성 필터</span>:</span>
+  <span class="fchips-label"><span data-i="f_active">활성 필터</span>:</span>
   <span id="fchipList"></span>
   <button class="fchip-clear" onclick="clearAllFilters()" data-i="f_clear">전체 해제</button>
 </div>
 
 <div class="kpis">
-  <div class="kpi k1 sel" onclick="setPfFilter('')" data-f=""><div class="ic">📦</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">총 교체건수</div></div>
-  <div class="kpi k2" onclick="setPfFilter('유상')" data-pf="유상"><div class="ic">💰</div><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">유상</div></div>
-  <div class="kpi k3" onclick="setPfFilter('무상')" data-pf="무상"><div class="ic">🆓</div><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">무상</div></div>
-  <div class="kpi k4"><div class="ic">📊</div><div class="val" id="kp4">0%</div><div class="cap" data-i="kp4">유상비율</div></div>
-  <div class="kpi k5"><div class="ic">🔩</div><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">자재 종류</div></div>
-  <div class="kpi k6"><div class="ic">🖥️</div><div class="val" id="kp6">0</div><div class="cap" data-i="kp6">설비 대수</div></div>
+  <div class="kpi k1 sel" onclick="setPfFilter('')" data-f=""><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">총 교체건수</div><div class="kpi-delta" id="kd1"></div></div>
+  <div class="kpi k2" onclick="setPfFilter('유상')" data-pf="유상"><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">유상</div></div>
+  <div class="kpi k3" onclick="setPfFilter('무상')" data-pf="무상"><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">무상</div></div>
+  <div class="kpi k4"><div class="val" id="kp4">0%</div><div class="cap" data-i="kp4">유상비율</div></div>
+  <div class="kpi k5"><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">자재 종류</div></div>
+  <div class="kpi k6"><div class="val" id="kp6">0</div><div class="cap" data-i="kp6">설비 대수</div></div>
 </div>
 
 <div id="crossAnalysisCard">
@@ -361,7 +361,7 @@ canvas{cursor:pointer}
 
 <div class="grid3">
   <div class="card">
-    <h3>🔩 자재별 교체 TOP</h3>
+    <h3>자재별 교체 TOP</h3>
     <div class="card-note">가장 많이 교체되는 자재</div>
     <div class="excl-box">
       <div class="excl-chips" id="exclChipsMat"></div>
@@ -375,7 +375,7 @@ canvas{cursor:pointer}
   </div>
 
   <div class="card">
-    <h3>🖥️ 설비별 교체 TOP</h3>
+    <h3>설비별 교체 TOP</h3>
     <div class="card-note">자재 소모 많은 설비</div>
     <div class="excl-box">
       <div class="excl-chips" id="exclChipsEq"></div>
@@ -389,7 +389,7 @@ canvas{cursor:pointer}
   </div>
 
   <div class="card">
-    <h3>💰 유상 vs 무상</h3>
+    <h3>유상 vs 무상</h3>
     <div class="card-note">유무상 비율</div>
     <div class="cw"><canvas id="cPf"></canvas></div>
   </div>
@@ -397,7 +397,7 @@ canvas{cursor:pointer}
 
 <div class="grid3">
   <div class="card">
-    <h3>🏭 공정별 교체</h3>
+    <h3>공정별 교체</h3>
     <div class="card-note">공정별 자재 교체</div>
     <div class="excl-box">
       <div class="excl-chips" id="exclChipsProc"></div>
@@ -411,7 +411,7 @@ canvas{cursor:pointer}
   </div>
 
   <div class="card">
-    <h3>🔧 교체사유</h3>
+    <h3>교체사유</h3>
     <div class="card-note">왜 교체했나</div>
     <div class="excl-box">
       <div class="excl-chips" id="exclChipsReason"></div>
@@ -425,7 +425,7 @@ canvas{cursor:pointer}
   </div>
 
   <div class="card">
-    <h3>🆓 무상사유</h3>
+    <h3>무상사유</h3>
     <div class="card-note">무상 교체 원인</div>
     <div class="excl-box">
       <div class="excl-chips" id="exclChipsFree"></div>
@@ -440,7 +440,7 @@ canvas{cursor:pointer}
 </div>
 
 <div class="tablecard">
-  <h3 data-i="cyc_title">⏱️ 자재별 사용주기 분석 (평균/최소/최대)</h3>
+  <h3 data-i="cyc_title">자재별 사용주기 분석 (평균/최소/최대)</h3>
   <div class="tbl-wrap">
     <table>
       <thead><tr>
@@ -456,7 +456,7 @@ canvas{cursor:pointer}
 </div>
 
 <div class="tablecard">
-  <h3>📋 <span data-i="tbl_title">자재 교체 상세</span> (<span id="tblCnt">0</span>)</h3>
+  <h3><span data-i="tbl_title">자재 교체 상세</span> (<span id="tblCnt">0</span>)</h3>
   <div class="tbl-wrap">
     <table>
       <thead><tr>
@@ -493,10 +493,10 @@ const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XA
 const C={op:1,customer:2,line:5,process:7,detail:8,mainEq:9,eq:10,qty:22,matName:23,reason:25,workDate:28,daysPaid:29,daysPrev:30,pf:31,freeReason:32};
 
 const T={
-  ko:{title:'📦 자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'유상',kp3:'무상',kp4:'유상비율',kp5:'자재 종류',kp6:'설비 대수',cyc_title:'⏱️ 자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',f_active:'활성 필터',f_clear:'전체 해제',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
-  en:{title:'📦 Material Dashboard',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-proc',sl_eq:'Equipment',sl_search:'Search',cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',kp1:'Total',kp2:'Paid',kp3:'Free',kp4:'Paid %',kp5:'Materials',kp6:'Equipment',cyc_title:'⏱️ Material Lifecycle (avg/min/max)',cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Replacement Detail',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',all:'All',no_data:'No data',days:'d',f_active:'Active Filters',f_clear:'Clear All',nav_hr:'Workforce',nav_sc:'Installation',nav_pm:'PM Schedule',nav_ft:'Fault',nav_mt:'Material'},
-  zh:{title:'📦 材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',kp1:'总更换数',kp2:'有偿',kp3:'无偿',kp4:'有偿比率',kp5:'材料种类',kp6:'设备数',cyc_title:'⏱️ 材料使用周期(平均/最小/最大)',cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'材料更换明细',th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',all:'全部',no_data:'无数据',days:'天',f_active:'活动筛选',f_clear:'全部清除',nav_hr:'人员',nav_sc:'安装',nav_pm:'PM点检',nav_ft:'故障',nav_mt:'材料'},
-  ja:{title:'📦 資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'라인',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',kp1:'総交換件수',kp2:'有償',kp3:'無償',kp4:'有償比率',kp5:'資材種類',kp6:'設備台数',cyc_title:'⏱️ 資材別使用周期(平均/最小/最大)',cyc_mat:'資材名',cyc_cnt:'交換件수',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'資材交換詳細',th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',all:'全体',no_data:'データなし',days:'日',f_active:'有効フィルタ',f_clear:'全解除',nav_hr:'人員',nav_sc:'設置',nav_pm:'PM点検',nav_ft:'故障',nav_mt:'資材'}
+  ko:{title:'자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'유상',kp3:'무상',kp4:'유상비율',kp5:'자재 종류',kp6:'설비 대수',cyc_title:'자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',this_month:'이번 달 {n}건',f_active:'활성 필터',f_clear:'전체 해제',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
+  en:{title:'Material Dashboard',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-proc',sl_eq:'Equipment',sl_search:'Search',cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',kp1:'Total',kp2:'Paid',kp3:'Free',kp4:'Paid %',kp5:'Materials',kp6:'Equipment',cyc_title:'Material Lifecycle (avg/min/max)',cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Replacement Detail',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',all:'All',no_data:'No data',days:'d',this_month:'This month {n}',f_active:'Active Filters',f_clear:'Clear All',nav_hr:'Workforce',nav_sc:'Installation',nav_pm:'PM Schedule',nav_ft:'Fault',nav_mt:'Material'},
+  zh:{title:'材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',kp1:'总更换数',kp2:'有偿',kp3:'无偿',kp4:'有偿比率',kp5:'材料种类',kp6:'设备数',cyc_title:'材料使用周期(平均/最小/最大)',cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'材料更换明细',th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',all:'全部',no_data:'无数据',days:'天',this_month:'本月{n}件',f_active:'活动筛选',f_clear:'全部清除',nav_hr:'人员',nav_sc:'安装',nav_pm:'PM点检',nav_ft:'故障',nav_mt:'材料'},
+  ja:{title:'資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'라인',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',kp1:'総交換件수',kp2:'有償',kp3:'無償',kp4:'有償比率',kp5:'資材種類',kp6:'設備台数',cyc_title:'資材別使用周期(平均/最小/最大)',cyc_mat:'資材名',cyc_cnt:'交換件수',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'資材交換詳細',th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',all:'全体',no_data:'データなし',days:'日',this_month:'今月{n}件',f_active:'有効フィルタ',f_clear:'全解除',nav_hr:'人員',nav_sc:'設置',nav_pm:'PM点検',nav_ft:'故障',nav_mt:'資材'}
 };
 
 let LANG='ko', DATA=[], CHARTS={}, sortK='date', sortAsc=false, cycSortK='cnt', cycSortAsc=false;
@@ -742,6 +742,12 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   
   const paid=f.filter(x=>x.pf==='유상').length; const free=f.filter(x=>x.pf==='무상').length;
   document.getElementById('kp1').textContent=f.length; document.getElementById('kp2').textContent=paid;
+  {const _n=new Date(),_y=_n.getUTCFullYear(),_m=_n.getUTCMonth();
+   const _py=_m===0?_y-1:_y,_pm=_m===0?11:_m-1;
+   const _c=GST.monthCount(f,'workDate',_y,_m),_p=GST.monthCount(f,'workDate',_py,_pm);
+   const _b=GST.deltaBadge(_c,_p,true);
+   const _el=document.getElementById('kd1');
+   if(_el)_el.innerHTML=_b?(t('this_month').replace('{n}',_c)+' '+_b):'';}
   document.getElementById('kp3').textContent=free; document.getElementById('kp4').textContent=(f.length?Math.round(paid/f.length*100):0)+'%';
   document.getElementById('kp5').textContent=uniq('matName',f).length; document.getElementById('kp6').textContent=uniq('eq',f).length;
 
@@ -758,7 +764,8 @@ function render(){ GST.skeleton(false); GST.pushState(F);
 
   const eqF = f.filter(x=>!EXCL.eq.includes(x.eq));
   const eqs = countBy(eqF,'eq',12);
-  mkBar('cEq', eqs.map(x=>x[0]), eqs.map(x=>x[1]), pal[1], true, true);
+  const eqOut=GST.outliers(eqs);
+  mkBar('cEq', eqs.map(x=>x[0]), eqs.map(x=>x[1]), eqs.map(e=>eqOut.has(e[0])?'#fb7185':pal[1]), true, true);
   renderExclChips('eq');
 
   mkDonut('cPf',[t('kp2'),t('kp3')],[paid,free],[pal[1],pal[4]]);
