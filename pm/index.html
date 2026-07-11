@@ -376,7 +376,7 @@ const T={
     ch_stat:'점검 상태 분포',ch_line:'LINE별 지연·임박',ch_week:'향후 60일 예정(주차별)',
     tbl_title:'🗓️ PM 점검 스케줄 (긴급순)',
     th_last:'최근 점검일',th_cycle:'주기(일)',th_next:'다음 예정일',th_dl:'잔여일',th_st:'상태',th_cnt:'이력수',
-    st_overdue:'지연',st_soon:'임박',st_ok:'정상',st_na:'주기없음',
+    st_overdue:'지연',st_soon:'임박',st_ok:'정상',st_na:'주기없음',ins_overdue:'점검 지연 {n}건 — 최장 D+{d} (전체 기준)',ins_due30:'30일 내 점검 도래 {n}건',ins_done:'이번 달 점검 완료 {n}건',
     no_data:'결과 없음',search_ph:'S/N, 모델, Line 검색...',
     f_site:'전체 SITE',f_line:'전체 LINE',f_model:'전체 모델',f_stat:'전체 상태',cal_today:'오늘',dow:['일','월','화','수','목','금','토'],months:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],cal_more:'외 N건',dm_copy:'복사',dm_copied:'복사됨',adj_loaded:'조정 N건',adj_saving:'저장 중...',adj_saved:'A → B 로 조정 저장됨',adj_failed:'저장 실패 (새로고침 후 재시도)',lg_adjusted:'조정됨',drag_hint:'💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ = 조정됨)',wk_title:'주차별 점검 현황 (오늘 기준 ±2개월)',wk_week:'주차',wk_plan:'예정',wk_done:'완료',wk_rate:'완료율',wk_thisweek:'이번주',wk_total:'전체',wk_inrange:'표시',wk_outrange:'범위밖 N건',mode_plan:'예정만',mode_done:'완료만',mode_both:'예정+완료',lg_done:'완료됨'},
   en:{title:'Scrubber PM Schedule',sub:'Preventive Maintenance schedule based on TBM history',
@@ -385,7 +385,7 @@ const T={
     ch_stat:'Status Distribution',ch_line:'Overdue/Soon by LINE',ch_week:'Next 60 Days (weekly)',
     tbl_title:'🗓️ PM Schedule (by urgency)',
     th_last:'Last PM',th_cycle:'Cycle(d)',th_next:'Next Due',th_dl:'D-day',th_st:'Status',th_cnt:'History',
-    st_overdue:'Overdue',st_soon:'Due Soon',st_ok:'Normal',st_na:'No Cycle',
+    st_overdue:'Overdue',st_soon:'Due Soon',st_ok:'Normal',st_na:'No Cycle',ins_overdue:'{n} PM overdue — worst D+{d} (all schedules)',ins_due30:'{n} PM due within 30 days',ins_done:'{n} completed this month',
     no_data:'No results',search_ph:'Search S/N, Model, Line...',
     f_site:'All SITE',f_line:'All LINE',f_model:'All Model',f_stat:'All Status',cal_today:'Today',dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],cal_more:'+N more',dm_copy:'Copy',dm_copied:'Copied',adj_loaded:'N adjusted',adj_saving:'Saving...',adj_saved:'Moved A → B',adj_failed:'Save failed (retry after refresh)',lg_adjusted:'Adjusted',drag_hint:'💡 Drag an item to another date to reschedule. Changes are shared with the whole team (✎ = adjusted)',wk_title:'Weekly PM Status (±2 months from today)',wk_week:'Week',wk_plan:'Planned',wk_done:'Done',wk_rate:'Rate',wk_thisweek:'This week',wk_total:'Total',wk_inrange:'Shown',wk_outrange:'N out of range',mode_plan:'Planned',mode_done:'Completed',mode_both:'Both',lg_done:'Completed'},
   zh:{title:'洗涤器PM点检计划',sub:'基于定期点检(TBM)履历的预防性维护计划',
@@ -394,7 +394,7 @@ const T={
     ch_stat:'点检状态分布',ch_line:'各LINE延迟·临近',ch_week:'未来60天计划(按周)',
     tbl_title:'🗓️ PM点检计划(紧急顺序)',
     th_last:'最近点检日',th_cycle:'周期(天)',th_next:'下次预定日',th_dl:'剩余天',th_st:'状态',th_cnt:'履历数',
-    st_overdue:'延迟',st_soon:'临近',st_ok:'正常',st_na:'无周期',
+    st_overdue:'延迟',st_soon:'临近',st_ok:'正常',st_na:'无周期',ins_overdue:'PM延迟 {n}件 — 最长 D+{d} (全部基准)',ins_due30:'30天内到期 {n}件',ins_done:'本月完成 {n}件',
     no_data:'无结果',search_ph:'搜索S/N, 型号, Line...',
     f_site:'全部SITE',f_line:'全部LINE',f_model:'全部型号',f_stat:'全部状态',cal_today:'今天',dow:['日','一','二','三','四','五','六'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'其他N项',dm_copy:'复制',dm_copied:'已复制',adj_loaded:'调整N项',adj_saving:'保存中...',adj_saved:'已调整 A → B',adj_failed:'保存失败(刷新后重试)',lg_adjusted:'已调整',drag_hint:'💡 将点检项拖到其他日期即可调整日程并与全队共享 (✎ = 已调整)',wk_title:'周点检状况 (今天±2个月)',wk_week:'周次',wk_plan:'计划',wk_done:'完成',wk_rate:'完成率',wk_thisweek:'本周',wk_total:'全部',wk_inrange:'显示',wk_outrange:'范围外N项',mode_plan:'仅计划',mode_done:'仅完成',mode_both:'计划+完成',lg_done:'已完成'},
   ja:{title:'スクラバーPM点検スケジュール',sub:'定期点検(TBM)履歴に基づく予防保全スケジュール',
@@ -403,7 +403,7 @@ const T={
     ch_stat:'点検状態分布',ch_line:'LINE別 遅延·間近',ch_week:'今後60日予定(週別)',
     tbl_title:'🗓️ PM点検スケジュール(緊急順)',
     th_last:'最近点検日',th_cycle:'周期(日)',th_next:'次回予定日',th_dl:'残日',th_st:'状態',th_cnt:'履歴数',
-    st_overdue:'遅延',st_soon:'間近',st_ok:'正常',st_na:'周期なし',
+    st_overdue:'遅延',st_soon:'間近',st_ok:'正常',st_na:'周期なし',ins_overdue:'点検遅延 {n}件 — 最長 D+{d} (全体基準)',ins_due30:'30日以内到来 {n}件',ins_done:'今月完了 {n}件',
     no_data:'結果なし',search_ph:'S/N, モデル, Line検索...',
     f_site:'全SITE',f_line:'全LINE',f_model:'全モデル',f_stat:'全ステータス',cal_today:'今日',dow:['日','月','火','水','木','金','土'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'他N件',dm_copy:'コピー',dm_copied:'コピー済',adj_loaded:'調整N件',adj_saving:'保存中...',adj_saved:'A → B に調整',adj_failed:'保存失敗(更新後再試行)',lg_adjusted:'調整済',drag_hint:'💡 点検項目を他の日付にドラッグすると日程が調整されチーム全体に共有されます (✎ = 調整済)',wk_title:'週別点検状況 (本日±2ヶ月)',wk_week:'週',wk_plan:'予定',wk_done:'完了',wk_rate:'完了率',wk_thisweek:'今週',wk_total:'全体',wk_inrange:'表示',wk_outrange:'範囲外N件',mode_plan:'予定のみ',mode_done:'完了のみ',mode_both:'予定+完了',lg_done:'完了'}
 };
@@ -414,8 +414,14 @@ let CAL_MODE='both'; // 'plan'(예정만) / 'done'(완료만) / 'both'(둘다)
 let DONE_HIST=[]; // 완료 이력 [{date, sn, ch, line, model, site, group}]
 try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
 
-Chart.defaults.color='#94a3b8';
+Chart.defaults.color=GST.chartTheme().txt;
 Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+// 테마 전환 시 차트를 새 잉크로 재생성 (initSync가 호출)
+window.changeDashboardTheme=function(){
+  Chart.defaults.color=GST.chartTheme().txt;
+  GST.reskinCharts(CHARTS);
+  if(SCHED.length)render();
+};
 
 function t(k){return (T[LANG]||T.ko)[k]||k;}
 function applyLang(){
@@ -510,6 +516,7 @@ function countBy(arr,f){const m={};arr.forEach(x=>{const k=f(x)||'N/A';m[k]=(m[k
 const animVal=GST.animVal;
 
 function render(){ GST.skeleton(false);
+  const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
   // 선택한 월(CAL_Y, CAL_M) 기준 필터
   const inMonth = x => x.next && x.next.getUTCFullYear()===CAL_Y && x.next.getUTCMonth()===CAL_M;
   const monthPlan = SCHED.filter(inMonth);
@@ -531,7 +538,7 @@ function render(){ GST.skeleton(false);
   if(mn){ mn.textContent='📌 '+CAL_Y+t('year_unit')+' '+t('months')[CAL_M]+' '+t('kpi_basis'); }
 
   // 도넛: 상태 분포 (선택 월 기준)
-  mkDonut('cStat',[t('st_overdue'),t('st_soon'),t('st_ok'),t('st_na')],[over,soon,ok,na],['#fb7185','#fbbf24','#34d399','#64748b']);
+  mkDonut('cStat',[t('st_overdue'),t('st_soon'),t('st_ok'),t('st_na')],[over,soon,ok,na],[TH.status.bad,TH.status.warn,TH.status.ok,TH.status.na]); // 상태색(시맨틱)
 
   // 주차별 현황 표
   renderWeeklyTable();
@@ -542,15 +549,33 @@ function render(){ GST.skeleton(false);
   // LINE별 지연/임박 (스택)
   const lines=[...new Set(SCHED.map(x=>x.line))].filter(l=>l&&l!=='—').slice(0,12);
   mkStackBar('cLine',lines,[
-    {label:t('st_overdue'),data:lines.map(l=>SCHED.filter(x=>x.line===l&&x.st==='overdue').length),backgroundColor:'#fb7185'},
-    {label:t('st_soon'),data:lines.map(l=>SCHED.filter(x=>x.line===l&&x.st==='soon').length),backgroundColor:'#fbbf24'}
+    {label:t('st_overdue'),data:lines.map(l=>SCHED.filter(x=>x.line===l&&x.st==='overdue').length),backgroundColor:TH.status.bad},
+    {label:t('st_soon'),data:lines.map(l=>SCHED.filter(x=>x.line===l&&x.st==='soon').length),backgroundColor:TH.status.warn}
   ]);
 
   // 향후 60일 주차별
   const weeks={};
   SCHED.forEach(x=>{if(x.dl!=null&&x.dl>=0&&x.dl<=60){const wk='+'+Math.floor(x.dl/7)+'w';weeks[wk]=(weeks[wk]||0)+1;}});
   const wk=Object.keys(weeks).sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
-  mkBar('cWeek',wk,wk.map(k=>weeks[k]),'#38bdf8');
+  mkBar('cWeek',wk,wk.map(k=>weeks[k]),TH.pal[0]);
+
+  // ===== 인사이트 (전체 스케줄 기준) =====
+  {
+    const ins=[];
+    const allOver=SCHED.filter(x=>x.st==='overdue');
+    if(allOver.length){
+      const worst=allOver.reduce((m,x)=>(x.dl!=null&&x.dl<m)?x.dl:m,0);
+      ins.push({sev:'bad',text:t('ins_overdue').replace('{n}','<b>'+allOver.length+'</b>').replace('{d}',Math.abs(worst))});
+    }
+    const due30=SCHED.filter(x=>x.dl!=null&&x.dl>=0&&x.dl<=30).length;
+    if(due30)ins.push({sev:'warn',text:t('ins_due30').replace('{n}','<b>'+due30+'</b>')});
+    {
+      const nowD=new Date();
+      const doneCur=DONE_HIST.filter(h=>h.date.getUTCFullYear()===nowD.getFullYear()&&h.date.getUTCMonth()===nowD.getMonth()).length;
+      ins.push({sev:'ok',text:t('ins_done').replace('{n}','<b>'+doneCur+'</b>')});
+    }
+    GST.insights(SCHED.length?ins:[]);
+  }
 
   // 필터 옵션 채우기
   fillSelect('fSite',x=>x.site);
@@ -953,7 +978,7 @@ function mkDonut(id,labels,data,colors){
   const ctx=document.getElementById(id);
   const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderColor:'rgba(0,0,0,.15)',borderWidth:2,hoverOffset:8}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
-      plugins:{legend:{position:'right',labels:{color:'#cbd5e1',font:{size:11},padding:8,usePointStyle:true,pointStyle:'circle'}}},
+      plugins:{legend:{position:'right',labels:{color:GST.chartTheme().txt,font:{size:11},padding:8,usePointStyle:true,pointStyle:'circle'}}},
       animation:{animateScale:true}}};
   if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;CHARTS[id].update();return;}
   CHARTS[id]=new Chart(ctx,cfg);
@@ -971,9 +996,9 @@ function mkStackBar(id,labels,datasets){
   const ctx=document.getElementById(id);
   const cfg={type:'bar',data:{labels,datasets},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{size:10},usePointStyle:true,pointStyle:'circle',padding:8}}},
-      scales:{x:{stacked:true,ticks:{color:'#94a3b8',font:{size:10},maxRotation:35},grid:{display:false}},
-              y:{stacked:true,ticks:{color:'#94a3b8',precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}};
+      plugins:{legend:{position:'bottom',labels:{color:GST.chartTheme().txt,font:{size:10},usePointStyle:true,pointStyle:'circle',padding:8}}},
+      scales:{x:{stacked:true,ticks:{color:GST.chartTheme().txt,font:{size:10},maxRotation:35},grid:{display:false}},
+              y:{stacked:true,ticks:{color:GST.chartTheme().txt,precision:0},grid:{color:GST.chartTheme().grid}}}}};
   if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets=datasets;CHARTS[id].update();return;}
   CHARTS[id]=new Chart(ctx,cfg);
 }
