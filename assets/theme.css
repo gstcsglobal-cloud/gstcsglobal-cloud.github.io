@@ -201,6 +201,23 @@ body.theme-light .status.ok{color:#16a34a}
 }
 
 /* ============================================================
+   인사이트 스트립 (GST.insights) — KPI 위에 자동 삽입되는 요약 문장
+   ============================================================ */
+.gst-insights{display:flex;align-items:center;flex-wrap:wrap;gap:6px 18px;
+  background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;
+  padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--txt-main);
+  backdrop-filter:blur(10px)}
+.gst-ins-head{font-size:9px;font-weight:800;letter-spacing:2px;color:var(--accent-2);
+  border:1px solid var(--accent-2);border-radius:5px;padding:2px 7px;opacity:.85;flex:none}
+.gst-ins{display:inline-flex;align-items:center;gap:7px;font-weight:600;color:var(--txt-main)}
+.gst-ins b{font-variant-numeric:tabular-nums}
+.gst-ins-dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--accent-2)}
+.gst-ins.bad  .gst-ins-dot{background:var(--bad)}
+.gst-ins.warn .gst-ins-dot{background:var(--warn)}
+.gst-ins.ok   .gst-ins-dot{background:var(--ok)}
+@media print{.gst-insights{border:1px solid #ddd !important;background:#fff !important}}
+
+/* ============================================================
    테마: Slate — 새 기본 디자인
    원칙: 표면 하나(#0B0F14) · 액센트 하나(GST 틸) · 플랫 카드 ·
    장식(그라데이션 애니메이션·블롭·유리효과) 제거 = 절제된 전문가 룩
@@ -222,6 +239,7 @@ body.theme-slate{
 body.theme-slate .kpi,body.theme-slate .card,body.theme-slate .mcard,
 body.theme-slate .tablecard,body.theme-slate .alert,body.theme-slate .trend-card,
 body.theme-slate .cross-card,body.theme-slate .date-panel,body.theme-slate .login-box,
+body.theme-slate .gst-insights,
 body.theme-slate .slicer{
   background:#111823 !important;border:1px solid rgba(151,170,196,.10) !important;
   backdrop-filter:none !important;box-shadow:none !important;border-radius:10px !important;

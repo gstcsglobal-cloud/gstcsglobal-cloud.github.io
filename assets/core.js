@@ -83,41 +83,60 @@ GST.fillSelect = function(id, fkey, vals, F, allLabel){
   if(!vals.includes(cur)) F[fkey]='';
 };
 
+/* ---------- 5b. 차트 팔레트 · 테마 잉크 ---------- */
+// 범주(시리즈) 팔레트 — 색각이상 시뮬레이션 검증 통과 조합, 고정 순서로만 사용
+GST.PAL  = ['#3987e5','#199e70','#c98500','#9085e9','#e66767'];
+GST.PAL8 = GST.PAL.concat(['#008300','#d55181','#d95926']);
+// 현재 테마에 맞는 차트 잉크/팔레트/상태색. 차트 생성 시점에 호출해야 함.
+// 상태색은 의미(정상/경고/위험) 전용 — 범주 시리즈로 재사용하지 않는다.
+GST.chartTheme = function(){
+  const b = document.body.className || '';
+  let key='default', txt='#94a3b8', grid='rgba(255,255,255,.05)';
+  if(b.indexOf('theme-slate')>-1){ key='slate'; txt='#8B98A9'; grid='rgba(151,170,196,.08)'; }
+  else if(b.indexOf('theme-light')>-1){ key='light'; txt='#64748b'; grid='rgba(15,23,42,.06)'; }
+  else if(b.indexOf('theme-burgundy')>-1){ key='burgundy'; txt='#b49aa9'; grid='rgba(255,240,245,.06)'; }
+  const slate = key==='slate';
+  return { key, txt, grid, pal:GST.PAL, pal8:GST.PAL8,
+    status:{ bad: slate?'#e66767':'#fb7185', warn: slate?'#fab219':'#fbbf24',
+             ok: slate?'#3fbf3f':'#34d399', na:'#64748b' } };
+};
+// 테마 전환 시 차트 전체 파기 — update()로는 축/범례 잉크가 갱신되지 않으므로
+// 파기 후 페이지 render()가 새 잉크로 다시 그리게 한다.
+GST.reskinCharts = function(store){
+  if(!store) return;
+  Object.keys(store).forEach(function(k){
+    try{ store[k].destroy(); }catch(e){}
+    delete store[k];
+  });
+};
+
 /* ---------- 6. 차트 팩토리 (Chart.js) ---------- */
-// 막대 차트 + 선택적 파레토(누적%) 라인
-// o = {labels, data, color, horizontal, pareto, txt, grid, onClick(label)}
+// 단일 축 막대 차트. o = {labels, data, color, horizontal, share, txt, grid, onClick(label)}
+// share:true → 툴팁에 전체 대비 비중(%) 표기 (이중 축 대신 툴팁 사용 원칙)
 GST.bar = function(store, id, o){
   const ctx = document.getElementById(id);
   if(!ctx) return;
-  const txt = o.txt || '#94a3b8';
-  const grid = o.grid || 'rgba(255,255,255,.05)';
+  const TH = GST.chartTheme();
+  const txt = o.txt || TH.txt;
+  const grid = o.grid || TH.grid;
   const total = o.data.reduce((a,b)=>a+b,0) || 1;
-  const datasets = [{type:'bar', label:'건수', data:o.data, backgroundColor:o.color,
-    borderRadius:5, order:2}];
-  if(o.pareto){
-    let cum=0;
-    const cumPct = o.data.map(v=>{ cum+=v; return Math.round(cum/total*1000)/10; });
-    const line = {type:'line', label:'누적%', data:cumPct, borderColor:'#fbbf24',
-      backgroundColor:'#fbbf24', borderWidth:2, pointRadius:2.5,
-      pointBackgroundColor:'#fbbf24', tension:.3, order:1};
-    if(o.horizontal) line.xAxisID='xPct'; else line.yAxisID='yPct';
-    datasets.push(line);
-  }
-  const scales = {
-    x:{ticks:{color:txt,font:{size:10}},grid:{display:false}},
-    y:{ticks:{color:txt,font:{size:10},precision:0},grid:{color:grid}}
-  };
-  if(o.pareto){
-    const pctAxis = {min:0,max:100,ticks:{color:'#fbbf24',font:{size:9},callback:v=>v+'%'},grid:{display:false}};
-    if(o.horizontal){ scales.xPct = Object.assign({position:'top'},pctAxis); }
-    else{ scales.yPct = Object.assign({position:'right'},pctAxis); }
+  const datasets = [{type:'bar', label:'건수', data:o.data, backgroundColor:o.color, borderRadius:5}];
+  const plugins = {legend:{display:false}};
+  if(o.share){
+    plugins.tooltip = {callbacks:{label:function(c){
+      const v = o.horizontal ? c.parsed.x : c.parsed.y;
+      return ' '+v.toLocaleString()+' ('+Math.round(v/total*100)+'%)';
+    }}};
   }
   const cfg = {data:{labels:o.labels, datasets},
     options:{
       indexAxis:o.horizontal?'y':'x', responsive:true, maintainAspectRatio:false,
       onClick:(e,els,chart)=>{ if(els.length && o.onClick) o.onClick(chart.data.labels[els[0].index]); },
-      plugins:{legend:{display:!!o.pareto, labels:{color:txt,font:{size:9},usePointStyle:true,pointStyle:'circle',boxWidth:6}}},
-      scales
+      plugins,
+      scales:{
+        x:{ticks:{color:txt,font:{size:10}},grid:o.horizontal?{color:grid}:{display:false}},
+        y:{ticks:{color:txt,font:{size:10},precision:0},grid:o.horizontal?{display:false}:{color:grid}}
+      }
     }};
   if(store[id]) store[id].destroy();
   store[id] = new Chart(ctx, cfg);
@@ -127,7 +146,7 @@ GST.bar = function(store, id, o){
 GST.donut = function(store, id, o){
   const ctx = document.getElementById(id);
   if(!ctx) return;
-  const txt = o.txt || '#94a3b8';
+  const txt = o.txt || GST.chartTheme().txt;
   const cfg = {type:'doughnut',
     data:{labels:o.labels, datasets:[{data:o.data, backgroundColor:o.colors,
       borderWidth:0, hoverOffset:8}]},
@@ -317,6 +336,26 @@ GST.outliers=function(entries,k){
 // 특정 연/월 건수 (dateKey는 Date 필드명)
 GST.monthCount=function(arr,dateKey,y,m){
   return arr.filter(x=>{const d=x[dateKey];return d&&d.getUTCFullYear()===y&&d.getUTCMonth()===m;}).length;
+};
+
+// 페이지 인사이트 스트립: .kpis 카드 위에 자동 삽입.
+// items = [{sev:'bad'|'warn'|'ok'|'info', text:'번역 완료된 문자열'}]
+// 빈 배열/미전달이면 스트립을 제거한다. 각 페이지 render() 끝에서
+// "필터가 적용된 데이터" 기준으로 계산해 호출할 것.
+GST.insights = function(items){
+  let box=document.getElementById('gstInsights');
+  if(!items || !items.length){ if(box) box.remove(); return; }
+  if(!box){
+    const anchor=document.querySelector('.kpis');
+    if(!anchor || !anchor.parentNode) return;
+    box=document.createElement('div');
+    box.id='gstInsights'; box.className='gst-insights';
+    anchor.parentNode.insertBefore(box, anchor);
+  }
+  box.innerHTML = '<span class="gst-ins-head">INSIGHT</span>' +
+    items.slice(0,4).map(function(it){
+      return '<span class="gst-ins '+(it.sev||'info')+'"><span class="gst-ins-dot"></span>'+it.text+'</span>';
+    }).join('');
 };
 
 /* ---------- 14. 필터 사이드바 ---------- */
