@@ -322,5 +322,125 @@ GST.monthCount=function(arr,dateKey,y,m){
   return arr.filter(x=>{const d=x[dateKey];return d&&d.getUTCFullYear()===y&&d.getUTCMonth()===m;}).length;
 };
 
+/* ---------- 14. 필터 사이드바 ---------- */
+// 페이지의 기존 필터 UI(기간 패널·슬라이서 등)를 왼쪽 사이드바 서랍으로 이동합니다.
+// DOM 노드를 "이동"만 하므로 ID와 이벤트 핸들러가 그대로 유지되어 페이지 로직 수정이 필요 없습니다.
+// opts = {
+//   title:    사이드바 제목 (기본 '필터 · Filters')
+//   sections: ['.selector', ...] 또는 [{selector:'.selector', label:'섹션 라벨'}, ...]
+//   onReset:  '초기화' 버튼 클릭 시 실행할 콜백 (생략 시 버튼 없음)
+// }
+GST.initSidebar = function(opts){
+  opts = opts || {};
+  if(document.getElementById('gstSidebar')) return;
+
+  // 서랍 본체
+  const sb = document.createElement('aside');
+  sb.id='gstSidebar'; sb.className='gst-sidebar'; sb.setAttribute('aria-label','filter sidebar');
+  const head = document.createElement('div'); head.className='gst-sb-head';
+  const title = document.createElement('span'); title.className='gst-sb-title';
+  title.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/></svg> ' + (opts.title || '필터 · Filters');
+  const closeBtn = document.createElement('button');
+  closeBtn.className='gst-sb-close'; closeBtn.type='button'; closeBtn.textContent='✕';
+  closeBtn.setAttribute('aria-label','close sidebar');
+  head.appendChild(title); head.appendChild(closeBtn);
+  const body = document.createElement('div'); body.className='gst-sb-body';
+  sb.appendChild(head); sb.appendChild(body);
+
+  // 기존 필터 블록을 사이드바로 이동 (핸들러 유지)
+  (opts.sections||[]).forEach(s=>{
+    const sel = (typeof s==='string') ? s : s.selector;
+    document.querySelectorAll(sel).forEach(el=>{
+      const sec=document.createElement('div'); sec.className='gst-sb-sec';
+      if(typeof s!=='string' && s.label){
+        const h=document.createElement('div'); h.className='gst-sb-lbl'; h.textContent=s.label;
+        sec.appendChild(h);
+      }
+      sec.appendChild(el); body.appendChild(sec);
+    });
+  });
+
+  // 초기화 버튼
+  if(typeof opts.onReset==='function'){
+    const foot=document.createElement('div'); foot.className='gst-sb-foot';
+    const rb=document.createElement('button'); rb.className='gst-sb-reset'; rb.type='button';
+    rb.textContent='↺ 초기화 · Reset all';
+    rb.onclick=function(){ try{ opts.onReset(); }catch(e){} };
+    foot.appendChild(rb); sb.appendChild(foot);
+  }
+
+  // 모바일 오버레이 배경 + 토글 핸들
+  const bd=document.createElement('div'); bd.className='gst-backdrop';
+  const tg=document.createElement('button'); tg.className='gst-sb-toggle'; tg.type='button';
+  tg.title='필터 · Filters'; tg.setAttribute('aria-label','toggle filter sidebar');
+  tg.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/></svg><span class="gst-sb-tglbl">FILTER</span>';
+  document.body.appendChild(sb);
+  document.body.appendChild(bd);
+  document.body.appendChild(tg);
+
+  function isMobile(){ return window.matchMedia('(max-width:900px)').matches; }
+  function setOpen(o,save){
+    document.body.classList.toggle('gst-sb-open', !!o);
+    if(save!==false){ try{ localStorage.setItem('gst_sb_open', o?'1':'0'); }catch(e){} }
+    // 레이아웃 변경 후 Chart.js 등 리사이즈 유도
+    setTimeout(function(){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }, 320);
+  }
+  let open;
+  try{ const s=localStorage.getItem('gst_sb_open'); open = (s==null) ? true : s==='1'; }catch(e){ open=true; }
+  if(isMobile()) open=false; // 모바일은 항상 닫힌 채로 시작
+  setOpen(open,false);
+
+  tg.onclick=function(){ setOpen(!document.body.classList.contains('gst-sb-open')); };
+  closeBtn.onclick=function(){ setOpen(false); };
+  bd.onclick=function(){ setOpen(false); };
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape' && isMobile()) setOpen(false);
+  });
+};
+
+// 자동 초기화: 페이지가 initSidebar를 직접 호출하지 않아도,
+// 알려진 필터 블록(.date-panel / .slicers / .filters)이 있으면 사이드바를 만든다.
+// (DOMContentLoaded는 페이지 하단 스크립트 실행 이후에 발생하므로,
+//  페이지가 직접 호출한 경우 그 설정이 우선되고 여기서는 no-op)
+GST.autoSidebar = function(){
+  if(document.getElementById('gstSidebar')) return;
+  const sections=[];
+  if(document.querySelector('.date-panel')) sections.push({selector:'.date-panel', label:'기간 · Date Range'});
+  if(document.querySelector('.slicers'))    sections.push({selector:'.slicers',    label:'필터 · Filters'});
+  if(document.querySelector('.filters'))    sections.push({selector:'.filters',    label:'필터 · Filters'});
+  if(!sections.length) return;
+  GST.initSidebar({
+    sections,
+    onReset:function(){
+      // 페이지가 전체 해제 함수를 제공하면 그것을 사용
+      if(typeof global.clearAllFilters==='function'){ try{ global.clearAllFilters(); return; }catch(e){} }
+      const sb=document.getElementById('gstSidebar');
+      if(!sb) return;
+      // select/입력값 초기화 후 이벤트 발생 → 페이지 필터 로직이 반응
+      sb.querySelectorAll('select').forEach(function(s){
+        s.value = s.options.length ? s.options[0].value : '';
+        s.dispatchEvent(new Event('input',{bubbles:true}));
+        s.dispatchEvent(new Event('change',{bubbles:true}));
+      });
+      sb.querySelectorAll('input').forEach(function(i){
+        i.value='';
+        i.dispatchEvent(new Event('input',{bubbles:true}));
+        i.dispatchEvent(new Event('change',{bubbles:true}));
+      });
+      // 칩 슬라이서는 첫 번째 칩(ALL/전체) 클릭
+      sb.querySelectorAll('.chips').forEach(function(box){
+        if(box.firstElementChild) box.firstElementChild.click();
+      });
+      // 기간 리셋 버튼은 마지막에 클릭 (예: 설치현황의 resetDateRange가 기본 기간 복원)
+      const rst=sb.querySelector('.reset-btn'); if(rst) rst.click();
+    }
+  });
+};
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', function(){ try{ GST.autoSidebar(); }catch(e){} });
+}else{
+  setTimeout(function(){ try{ GST.autoSidebar(); }catch(e){} }, 0);
+}
+
 global.GST = GST;
 })(window);

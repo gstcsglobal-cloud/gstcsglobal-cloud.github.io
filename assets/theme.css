@@ -200,10 +200,82 @@ body.theme-light .status.ok{color:#16a34a}
   body{animation:none !important}
 }
 
+/* ============================================================
+   필터 사이드바 (GST.initSidebar)
+   기존 필터 UI가 왼쪽 서랍으로 이동됩니다.
+   데스크톱: 콘텐츠를 밀어내는 고정 사이드바 / 모바일: 오버레이 서랍
+   ============================================================ */
+.gst-sidebar{position:fixed;top:0;left:0;bottom:0;width:300px;z-index:6000;
+  transform:translateX(-102%);transition:transform .28s var(--ease);
+  background:linear-gradient(180deg,var(--bg1),var(--bg2));
+  border-right:1px solid var(--glass-border);box-shadow:var(--shadow-md);
+  display:flex;flex-direction:column}
+body.gst-sb-open .gst-sidebar{transform:none}
+body.gst-sb-open{padding-left:324px !important}
+
+.gst-sb-head{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;border-bottom:1px solid var(--glass-border);flex-shrink:0}
+.gst-sb-title{font-size:13px;font-weight:800;letter-spacing:.5px;color:var(--txt-main);
+  display:inline-flex;align-items:center;gap:8px}
+.gst-sb-title svg{color:var(--accent-2)}
+.gst-sb-close{background:transparent;border:none;color:var(--txt-muted);font-size:14px;
+  cursor:pointer;padding:4px 9px;border-radius:8px;transition:all .2s var(--ease)}
+.gst-sb-close:hover{color:var(--txt-main);background:var(--glass-hover)}
+.gst-sb-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px;
+  display:flex;flex-direction:column;gap:12px}
+.gst-sb-sec{background:var(--glass);border:1px solid var(--glass-border);
+  border-radius:var(--r-md);padding:12px}
+.gst-sb-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;
+  color:var(--txt-muted);font-weight:700;margin-bottom:10px}
+.gst-sb-foot{padding:12px 14px;border-top:1px solid var(--glass-border);flex-shrink:0}
+.gst-sb-reset{width:100%;background:var(--glass);border:1px solid var(--glass-border);
+  color:var(--txt-main);border-radius:var(--r-pill);padding:9px;font-size:12px;
+  font-weight:700;cursor:pointer;transition:all .2s var(--ease)}
+.gst-sb-reset:hover{border-color:var(--bad);color:var(--bad)}
+
+/* 토글 핸들 (사이드바에 붙어 함께 이동) */
+.gst-sb-toggle{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:6001;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  background:linear-gradient(160deg,var(--accent-2),var(--accent-3));color:#fff;
+  border:none;border-radius:0 12px 12px 0;padding:13px 7px;cursor:pointer;
+  box-shadow:var(--shadow-md);transition:left .28s var(--ease),filter .2s}
+.gst-sb-toggle:hover{filter:brightness(1.12)}
+body.gst-sb-open .gst-sb-toggle{left:300px}
+.gst-sb-tglbl{font-size:9px;font-weight:800;writing-mode:vertical-rl;letter-spacing:2.5px}
+
+/* 모바일 오버레이 배경 */
+.gst-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:5999;
+  opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
+
+/* 사이드바 내부: 기존 필터 블록을 세로 스택으로 재배치 */
+.gst-sidebar .slicers,.gst-sidebar .filters{display:flex !important;flex-direction:column !important;
+  gap:12px !important;margin:0 !important;grid-template-columns:none !important}
+.gst-sidebar .slicer{width:100% !important;margin:0 !important;background:transparent !important;
+  border:none !important;padding:0 !important;backdrop-filter:none !important;animation:none !important}
+.gst-sidebar .slicer select,.gst-sidebar .slicer input,
+.gst-sidebar .filters select,.gst-sidebar .filters input{width:100% !important;min-width:0 !important}
+.gst-sidebar .search-sl,.gst-sidebar .slicer.search{margin-left:0 !important}
+.gst-sidebar .date-panel{margin:0 !important;padding:0 !important;background:transparent !important;
+  border:none !important;backdrop-filter:none !important;border-radius:0 !important}
+.gst-sidebar .date-panel-top{flex-direction:column;align-items:stretch !important;gap:8px !important}
+.gst-sidebar .date-inputs{flex-direction:column;align-items:stretch !important}
+.gst-sidebar .date-inputs input[type=date]{width:100%}
+.gst-sidebar .range-display{margin-left:0 !important;white-space:normal !important}
+.gst-sidebar .preset-row,.gst-sidebar .gran-row{flex-direction:column;align-items:flex-start !important}
+
+@media(max-width:900px){
+  body.gst-sb-open{padding-left:var(--sp-3) !important}
+  .gst-sidebar{width:min(84vw,320px)}
+  body.gst-sb-open .gst-sb-toggle{left:min(84vw,320px)}
+  body.gst-sb-open .gst-backdrop{opacity:1;pointer-events:auto}
+}
+
 /* ---------- 6. 인쇄 (PDF 내보내기용) ---------- */
 @media print{
   @page{size:A4 landscape;margin:10mm}
   body{background:#fff !important;color:#000 !important;padding:0 !important;animation:none !important}
+  body.gst-sb-open{padding-left:0 !important}
+  .gst-sidebar,.gst-sb-toggle,.gst-backdrop{display:none !important}
   .header-right,.slicers,.toolbar,.lang-wrap,.theme-wrap,button,.fchips,.excl-box,.navtabs,.m-link{display:none !important}
   .header h1{-webkit-text-fill-color:#000 !important;background:none !important;font-size:22px !important}
   .header .sub{color:#555 !important}
