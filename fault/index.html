@@ -250,11 +250,11 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
 const C={line:2,group1:3,detail1:5,model:17,code:18,work:23,sn:24,maint:25,aw:26,resp:27,msg:28,failCode:29,failType:31,action:32,chamber:33};
-const PAL=['#fb7185','#fbbf24','#a78bfa','#38bdf8','#34d399','#f472b6','#60a5fa','#c084fc','#4ade80','#f97316'];
+const PAL=GST.PAL8; // 공통 검증 팔레트 (고정 순서)
 
 const T={
   ko:{title:'고장 분석 대시보드',sub:'BM/CBM 고장 및 알람 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
-    sl_type:'유형',sl_search:'검색',sl_sn:'설비 S/N',sl_code:'고장코드',sl_model:'모델',sl_period:'기간',all:'전체',last30:'최근 30일 {n}건',f_active:'활성 필터',f_clear:'전체 해제',
+    sl_type:'유형',sl_search:'검색',sl_sn:'설비 S/N',sl_code:'고장코드',sl_model:'모델',sl_period:'기간',all:'전체',last30:'최근 30일 {n}건',ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcode:'고장코드 {v} 집중 — 전체의 {p}%',ins_outlier:'설비 {v} 이상 집중 — {n}건',f_active:'활성 필터',f_clear:'전체 해제',
     kp1:'총 고장건수',kp2:'BM (고장정비)',kp3:'CBM (상태기반)',kp4:'Alarm',kp5:'Warning',
     ch_code:'고장코드 TOP',note_code:'가장 빈번한 고장코드',
     ch_sn:'설비별 고장',note_sn:'고장 많은 설비',
@@ -265,7 +265,7 @@ const T={
     tbl_title:'고장 상세 내역',th_msg:'메시지',th_ftype:'고장유형',th_action:'조치',
     no_data:'데이터 없음',search_ph:'S/N, 코드, 메시지 검색...'},
   en:{title:'Fault Analysis Dashboard',sub:'BM/CBM breakdown & alarm analysis',back:'← Main',refresh:'Refresh',loading:'Loading...',
-    sl_type:'Type',sl_search:'Search',sl_sn:'Equipment S/N',sl_code:'Fail Code',sl_model:'Model',sl_period:'Period',all:'All',last30:'Last 30d {n}',f_active:'Active Filters',f_clear:'Clear All',
+    sl_type:'Type',sl_search:'Search',sl_sn:'Equipment S/N',sl_code:'Fail Code',sl_model:'Model',sl_period:'Period',all:'All',last30:'Last 30d {n}',ins_mom:'{n} faults in last 30d · {p} vs prior 30d',ins_topcode:'Code {v} concentration — {p}% of all',ins_outlier:'Equipment {v} outlier — {n} faults',f_active:'Active Filters',f_clear:'Clear All',
     kp1:'Total Faults',kp2:'BM (Breakdown)',kp3:'CBM (Condition)',kp4:'Alarm',kp5:'Warning',
     ch_code:'Fault Code TOP',note_code:'Most frequent codes',
     ch_sn:'Fault by Equipment',note_sn:'Equipment with most faults',
@@ -276,7 +276,7 @@ const T={
     tbl_title:'Fault Detail List',th_msg:'Message',th_ftype:'Fail Type',th_action:'Action',
     no_data:'No data',search_ph:'Search S/N, Code, Message...'},
   zh:{title:'故障分析仪表板',sub:'BM/CBM故障及报警分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
-    sl_type:'类型',sl_search:'搜索',sl_sn:'设备S/N',sl_code:'故障码',sl_model:'型号',sl_period:'期间',all:'全部',last30:'近30天{n}件',f_active:'活动筛选',f_clear:'全部清除',
+    sl_type:'类型',sl_search:'搜索',sl_sn:'设备S/N',sl_code:'故障码',sl_model:'型号',sl_period:'期间',all:'全部',last30:'近30天{n}件',ins_mom:'近30天{n}件 · 环比前30天 {p}',ins_topcode:'故障码 {v} 集中 — 占{p}%',ins_outlier:'设备 {v} 异常集中 — {n}件',f_active:'活动筛选',f_clear:'全部清除',
     kp1:'总故障数',kp2:'BM(故障维修)',kp3:'CBM(状态维修)',kp4:'报警',kp5:'警告',
     ch_code:'故障代码TOP',note_code:'最频繁故障代码',
     ch_sn:'各设备故障',note_sn:'故障最多设备',
@@ -287,7 +287,7 @@ const T={
     tbl_title:'故障明细',th_msg:'消息',th_ftype:'故障类型',th_action:'处理',
     no_data:'无数据',search_ph:'搜索S/N,代码,消息...'},
   ja:{title:'故障分析ダッシュボード',sub:'BM/CBM故障・アラーム分析',back:'← メイン',refresh:'更新',loading:'読み込み中...',
-    sl_type:'種類',sl_search:'検索',sl_sn:'設備S/N',sl_code:'故障コード',sl_model:'モデル',sl_period:'期間',all:'全体',last30:'直近30日{n}件',f_active:'有効フィルタ',f_clear:'全解除',
+    sl_type:'種類',sl_search:'検索',sl_sn:'設備S/N',sl_code:'故障コード',sl_model:'モデル',sl_period:'期間',all:'全体',last30:'直近30日{n}件',ins_mom:'直近30日{n}件 · 前30日比 {p}',ins_topcode:'コード {v} 集中 — 全体の{p}%',ins_outlier:'設備 {v} 異常集中 — {n}件',f_active:'有効フィルタ',f_clear:'全解除',
     kp1:'総故障件数',kp2:'BM(故障整備)',kp3:'CBM(状態基準)',kp4:'Alarm',kp5:'Warning',
     ch_code:'故障コードTOP',note_code:'最頻出コード',
     ch_sn:'設備別故障',note_sn:'故障の多い設備',
@@ -303,8 +303,14 @@ let LANG='ko', RAW=[], FAULTS=[], CHARTS={}, sortK='work', sortAsc=false;
 const F={line:'',group:'',type:'',aw:'',sn:'',code:'',model:'',action:'',dtFrom:'',dtTo:'',q:''};
 try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
 
-Chart.defaults.color='#94a3b8';
+Chart.defaults.color=GST.chartTheme().txt;
 Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+// 테마 전환 시 차트를 새 잉크로 재생성 (initSync가 호출)
+window.changeDashboardTheme=function(){
+  Chart.defaults.color=GST.chartTheme().txt;
+  GST.reskinCharts(CHARTS);
+  if(FAULTS.length)render();
+};
 
 function t(k){return (T[LANG]||T.ko)[k]||k;}
 function applyLang(){
@@ -430,15 +436,16 @@ const countBy=GST.countBy;
 const animVal=GST.animVal;
 
 function mkBar(id,labels,data,color,horizontal){
-  GST.bar(CHARTS,id,{labels,data,color,horizontal,txt:'#94a3b8',
+  GST.bar(CHARTS,id,{labels,data,color,horizontal,share:true,
     onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
 }
 function mkDonut(id,labels,data,colors){
-  GST.donut(CHARTS,id,{labels,data,colors:colors||PAL,txt:'#cbd5e1',
+  GST.donut(CHARTS,id,{labels,data,colors:colors||PAL,
     onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
 }
 
 function render(){ GST.skeleton(false); GST.pushState(F);
+  const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
   const f=filt();
   renderFilterChips();
   const bm=f.filter(x=>x.maint==='BM').length;
@@ -446,12 +453,12 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   const alarm=f.filter(x=>x.aw==='Alarm').length;
   const warning=f.filter(x=>x.aw==='Warning').length;
   animVal(document.getElementById('kp1'),f.length);
-  {const _now=Date.now(),_d30=_now-30*864e5,_d60=_now-60*864e5;
-   const _c=f.filter(x=>x.work&&x.work.getTime()>=_d30).length;
-   const _p=f.filter(x=>x.work&&x.work.getTime()>=_d60&&x.work.getTime()<_d30).length;
-   const _b=GST.deltaBadge(_c,_p,true);
+  const _now=Date.now(),_d30=_now-30*864e5,_d60=_now-60*864e5;
+  const c30=f.filter(x=>x.work&&x.work.getTime()>=_d30).length;
+  const p30=f.filter(x=>x.work&&x.work.getTime()>=_d60&&x.work.getTime()<_d30).length;
+  {const _b=GST.deltaBadge(c30,p30,true);
    const _el=document.getElementById('kd1');
-   if(_el)_el.innerHTML=_b?(t('last30').replace('{n}',_c)+' '+_b):'';}
+   if(_el)_el.innerHTML=_b?(t('last30').replace('{n}',c30)+' '+_b):'';}
   animVal(document.getElementById('kp2'),bm);
   animVal(document.getElementById('kp3'),cbm);
   animVal(document.getElementById('kp4'),alarm);
@@ -459,24 +466,41 @@ function render(){ GST.skeleton(false); GST.pushState(F);
 
   // 고장코드 TOP (가로 막대)
   const codes=countBy(f,'failCode').slice(0,10);
-  mkBar('cCode',codes.map(x=>x[0]),codes.map(x=>x[1]),'#fb7185',true);
+  mkBar('cCode',codes.map(x=>x[0]),codes.map(x=>x[1]),TH.pal[4],true);
   // 설비별 (가로 막대)
   const sns=countBy(f,'sn').slice(0,10);
   const snOut=GST.outliers(sns);
-  mkBar('cSn',sns.map(x=>x[0]),sns.map(x=>x[1]),sns.map(e=>snOut.has(e[0])?'#fb7185':'#fbbf24'),true);
+  mkBar('cSn',sns.map(x=>x[0]),sns.map(x=>x[1]),sns.map(e=>snOut.has(e[0])?TH.status.bad:TH.pal[2]),true); // 이상치만 상태색 강조
   // BM vs CBM
-  mkDonut('cType',['BM','CBM'],[bm,cbm],['#fb7185','#a78bfa']);
+  mkDonut('cType',['BM','CBM'],[bm,cbm],[TH.status.bad,TH.pal[0]]); // BM(고장)=상태색
   // LINE별
   const lines=countBy(f,'line').slice(0,10);
-  mkBar('cLine',lines.map(x=>x[0]),lines.map(x=>x[1]),'#38bdf8',false);
+  mkBar('cLine',lines.map(x=>x[0]),lines.map(x=>x[1]),TH.pal[0],false);
   // 월별 추이
   const months={};
   f.forEach(x=>{if(x.work){const k=`${x.work.getUTCFullYear()}-${String(x.work.getUTCMonth()+1).padStart(2,'0')}`;months[k]=(months[k]||0)+1;}});
   const mk=Object.keys(months).sort();
-  mkBar('cTrend',mk,mk.map(k=>months[k]),'#34d399',false);
+  mkBar('cTrend',mk,mk.map(k=>months[k]),TH.pal[1],false);
   // 조치 유형
   const actions=countBy(f,'failType').slice(0,8);
   mkDonut('cAction',actions.map(x=>x[0]),actions.map(x=>x[1]));
+
+  // ===== 인사이트 (필터 적용 기준) =====
+  {
+    const ins=[];
+    const pd=GST.pctDelta(c30,p30);
+    if(c30||p30)ins.push({sev:(pd!=null&&pd>=30)?'bad':(pd!=null&&pd<=-20)?'ok':'info',
+      text:t('ins_mom').replace('{n}','<b>'+c30+'</b>').replace('{p}',pd==null?'—':(pd>0?'+':'')+pd+'%')});
+    if(codes.length&&f.length){
+      const p=Math.round(codes[0][1]/f.length*100);
+      if(p>=30)ins.push({sev:'warn',text:t('ins_topcode').replace('{v}','<b>'+codes[0][0]+'</b>').replace('{p}',p)});
+    }
+    if(snOut.size){
+      const so=sns.find(e=>snOut.has(e[0]));
+      if(so)ins.push({sev:'warn',text:t('ins_outlier').replace('{v}','<b>'+so[0]+'</b>').replace('{n}',so[1])});
+    }
+    GST.insights(f.length?ins:[]);
+  }
 
   // KPI 클릭 필터
   document.querySelectorAll('.kpi').forEach(k=>{
