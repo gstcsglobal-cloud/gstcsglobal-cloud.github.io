@@ -167,19 +167,16 @@ GST.initSync = function(opts){
   function applyStored(){
     let th=null, lg=null;
     try{ th=sessionStorage.getItem('gst_theme'); lg=sessionStorage.getItem('gst_lang'); }catch(e){}
-    if(th){
-      document.body.className = th==='default' ? '' : 'theme-'+th;
-      if(typeof global.changeDashboardTheme==='function'){
-        try{ global.changeDashboardTheme(th, th); }catch(e){}
-      }
+    th = th || 'slate'; // 저장된 테마가 없으면 새 기본 디자인(Slate)
+    document.body.className = th==='default' ? '' : 'theme-'+th;
+    if(typeof global.changeDashboardTheme==='function'){
+      try{ global.changeDashboardTheme(th, th); }catch(e){}
     }
     if(lg && typeof global.setLang==='function'){ try{ global.setLang(lg); }catch(e){} }
   }
-  if(inFrame){
-    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', applyStored);
-    else applyStored();
-    setTimeout(applyStored, 1500);
-  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', applyStored);
+  else applyStored();
+  if(inFrame) setTimeout(applyStored, 1500);
   window.addEventListener('message', e=>{
     const d=e.data||{};
     if(d.type==='gst-theme'){
@@ -360,14 +357,67 @@ GST.initSidebar = function(opts){
     });
   });
 
-  // 초기화 버튼
+  // 기간 프리셋 주입: 사이드바 안에 #dtFrom/#dtTo가 있고 자체 프리셋(.pchip)이 없는 페이지
+  // (고장·자재) 에 빠른선택 칩을 추가한다. 값 설정 후 change 이벤트를 쏘면 페이지의
+  // onSlicer()가 그대로 반응하므로 페이지 수정이 필요 없다.
+  (function(){
+    const df=body.querySelector('#dtFrom'), dt=body.querySelector('#dtTo');
+    if(!df || !dt || body.querySelector('.pchip')) return;
+    const row=document.createElement('div'); row.className='gst-preset-row';
+    [['1m','1개월'],['3m','3개월'],['6m','6개월'],['1y','1년'],['all','전체']].forEach(function(p){
+      const b=document.createElement('button'); b.type='button'; b.className='gst-preset'; b.textContent=p[1];
+      b.onclick=function(){
+        const now=new Date(); let from=null;
+        if(p[0]!=='all'){
+          from=new Date();
+          if(p[0]==='1m')from.setMonth(now.getMonth()-1);
+          else if(p[0]==='3m')from.setMonth(now.getMonth()-3);
+          else if(p[0]==='6m')from.setMonth(now.getMonth()-6);
+          else if(p[0]==='1y')from.setFullYear(now.getFullYear()-1);
+        }
+        df.value = from ? from.toISOString().slice(0,10) : '';
+        dt.value = from ? now.toISOString().slice(0,10) : '';
+        [df,dt].forEach(function(el){
+          el.dispatchEvent(new Event('input',{bubbles:true}));
+          el.dispatchEvent(new Event('change',{bubbles:true}));
+          if(typeof el.onchange==='function'){ try{ el.onchange(); }catch(e){} }
+        });
+        row.querySelectorAll('.gst-preset').forEach(function(x){ x.classList.toggle('active',x===b); });
+      };
+      row.appendChild(b);
+    });
+    const host=df.closest('.slicer');
+    if(host && host.parentElement) host.parentElement.insertBefore(row, host.nextSibling);
+    else body.appendChild(row);
+  })();
+
+  // 푸터: 초기화 · CSV 내보내기 · 자동 새로고침 토글
+  const foot=document.createElement('div'); foot.className='gst-sb-foot';
   if(typeof opts.onReset==='function'){
-    const foot=document.createElement('div'); foot.className='gst-sb-foot';
     const rb=document.createElement('button'); rb.className='gst-sb-reset'; rb.type='button';
     rb.textContent='↺ 초기화 · Reset all';
     rb.onclick=function(){ try{ opts.onReset(); }catch(e){} };
-    foot.appendChild(rb); sb.appendChild(foot);
+    foot.appendChild(rb);
   }
+  const tools=document.createElement('div'); tools.className='gst-sb-tools';
+  if(document.querySelector('.tablecard table, table')){
+    const cb=document.createElement('button'); cb.className='gst-sb-tool'; cb.type='button';
+    cb.innerHTML='⬇ CSV';
+    cb.title='현재 필터가 적용된 테이블을 CSV로 다운로드';
+    cb.onclick=function(){ GST.exportTableCSV(); };
+    tools.appendChild(cb);
+  }
+  if(typeof window.loadData==='function' || typeof window.loadAll==='function'){
+    const ab=document.createElement('button'); ab.className='gst-sb-tool'; ab.type='button';
+    ab.title='10분마다 데이터만 다시 불러옵니다. 필터는 유지됩니다.';
+    function arOn(){ try{ return localStorage.getItem('gst_auto_refresh')!=='0'; }catch(e){ return true; } }
+    function syncAr(){ ab.textContent='⟳ 자동 10분 · '+(arOn()?'ON':'OFF'); ab.classList.toggle('on',arOn()); }
+    ab.onclick=function(){ try{ localStorage.setItem('gst_auto_refresh', arOn()?'0':'1'); }catch(e){} syncAr(); };
+    syncAr();
+    tools.appendChild(ab);
+  }
+  if(tools.children.length) foot.appendChild(tools);
+  if(foot.children.length) sb.appendChild(foot);
 
   // 모바일 오버레이 배경 + 토글 핸들
   const bd=document.createElement('div'); bd.className='gst-backdrop';
@@ -379,8 +429,10 @@ GST.initSidebar = function(opts){
   document.body.appendChild(tg);
 
   function isMobile(){ return window.matchMedia('(max-width:900px)').matches; }
+  let isOpen=false;
   function setOpen(o,save){
-    document.body.classList.toggle('gst-sb-open', !!o);
+    isOpen=!!o;
+    document.body.classList.toggle('gst-sb-open', isOpen);
     if(save!==false){ try{ localStorage.setItem('gst_sb_open', o?'1':'0'); }catch(e){} }
     // 레이아웃 변경 후 Chart.js 등 리사이즈 유도
     setTimeout(function(){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }, 320);
@@ -389,6 +441,14 @@ GST.initSidebar = function(opts){
   try{ const s=localStorage.getItem('gst_sb_open'); open = (s==null) ? true : s==='1'; }catch(e){ open=true; }
   if(isMobile()) open=false; // 모바일은 항상 닫힌 채로 시작
   setOpen(open,false);
+  // 테마 변경 등에서 body.className을 통째로 바꾸는 코드가 열림 상태 클래스를
+  // 지워버릴 수 있으므로, 지워지면 다시 붙인다.
+  try{
+    new MutationObserver(function(){
+      if(isOpen && !document.body.classList.contains('gst-sb-open'))
+        document.body.classList.add('gst-sb-open');
+    }).observe(document.body,{attributes:true,attributeFilter:['class']});
+  }catch(e){}
 
   tg.onclick=function(){ setOpen(!document.body.classList.contains('gst-sb-open')); };
   closeBtn.onclick=function(){ setOpen(false); };
@@ -396,6 +456,92 @@ GST.initSidebar = function(opts){
   document.addEventListener('keydown',function(e){
     if(e.key==='Escape' && isMobile()) setOpen(false);
   });
+};
+
+/* ---------- 15. CSV 내보내기 ---------- */
+// 화면에 렌더된 메인 테이블(=현재 필터가 적용된 상태)을 CSV로 저장.
+// BOM(﻿)을 붙여 엑셀에서 한글이 깨지지 않게 한다.
+GST.exportTableCSV = function(){
+  const tbl=document.querySelector('.tablecard table')||document.querySelector('table');
+  if(!tbl) return;
+  const rows=[].slice.call(tbl.querySelectorAll('tr')).map(function(tr){
+    return [].slice.call(tr.querySelectorAll('th,td')).map(function(c){
+      const v=(c.innerText||'').replace(/\s+/g,' ').trim();
+      return '"'+v.replace(/"/g,'""')+'"';
+    }).join(',');
+  });
+  const blob=new Blob(['﻿'+rows.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(document.title||'export').replace(/[\\/:*?"<>|\s]+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); },2000);
+};
+
+/* ---------- 16. 자동 새로고침 (필터 보존) ---------- */
+// 10분마다 페이지의 loadData()/loadAll()로 데이터만 다시 불러온다.
+// 페이지의 로드 함수가 필터를 리셋하는 경우가 있으므로(설치·인원),
+// 갱신 전에 사이드바의 필터 상태를 스냅샷으로 저장했다가 갱신 후 복원한다.
+// 복원은 실제 컨트롤 값을 되돌리고 이벤트를 발생시키는 방식이라 페이지 로직이 그대로 반응한다.
+GST._snapFilters = function(){
+  const sb=document.getElementById('gstSidebar');
+  if(!sb) return null;
+  const snap={sel:{},inp:{},chips:[],pchips:[]};
+  sb.querySelectorAll('select').forEach(function(s){ if(s.id) snap.sel[s.id]=s.value; });
+  sb.querySelectorAll('input').forEach(function(i){ if(i.id) snap.inp[i.id]=i.value; });
+  sb.querySelectorAll('.chips').forEach(function(box){
+    snap.chips.push([].slice.call(box.children)
+      .filter(function(c){ return c.classList.contains('active'); })
+      .map(function(c){ return c.textContent; }));
+  });
+  sb.querySelectorAll('.pchip.active').forEach(function(c){
+    if(c.dataset.g) snap.pchips.push('g:'+c.dataset.g);
+    else if(c.dataset.q) snap.pchips.push('q:'+c.dataset.q);
+  });
+  return snap;
+};
+GST._restoreFilters = function(snap){
+  if(!snap) return;
+  const sb=document.getElementById('gstSidebar');
+  if(!sb) return;
+  function fire(el){
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+    if(typeof el.onchange==='function'){ try{ el.onchange(); }catch(e){} }
+  }
+  Object.keys(snap.sel).forEach(function(id){
+    const el=document.getElementById(id);
+    if(el && el.value!==snap.sel[id]){ el.value=snap.sel[id]; fire(el); }
+  });
+  Object.keys(snap.inp).forEach(function(id){
+    const el=document.getElementById(id);
+    if(el && el.value!==snap.inp[id]){ el.value=snap.inp[id]; fire(el); }
+  });
+  sb.querySelectorAll('.chips').forEach(function(box,i){
+    const want=snap.chips[i]||[];
+    [].slice.call(box.children).forEach(function(c){
+      if(want.indexOf(c.textContent)>-1 && !c.classList.contains('active')) c.click();
+    });
+  });
+  snap.pchips.forEach(function(k){
+    const kv=k.split(':');
+    const el=sb.querySelector('.pchip[data-'+kv[0]+'="'+kv[1]+'"]');
+    if(el && !el.classList.contains('active')) el.click();
+  });
+  // 날짜 입력을 복원한 뒤 적용 버튼이 있으면 마지막에 눌러 기간을 재적용 (설치 현황)
+  const ap=sb.querySelector('.apply-btn'); if(ap) ap.click();
+};
+GST.startAutoRefresh = function(min){
+  if(GST._arTimer) return;
+  const fn = window.loadData || window.loadAll;
+  if(typeof fn!=='function') return;
+  GST._arTimer = setInterval(async function(){
+    let on=true; try{ on = localStorage.getItem('gst_auto_refresh')!=='0'; }catch(e){}
+    if(!on || document.hidden) return;   // 꺼짐/백그라운드 탭이면 건너뜀
+    const snap = GST._snapFilters();
+    try{ await fn(); }catch(e){ return; } // 로드 실패 시 상태 유지
+    setTimeout(function(){ try{ GST._restoreFilters(snap); }catch(e){} }, 300);
+  }, (min||10)*60000);
 };
 
 // 자동 초기화: 페이지가 initSidebar를 직접 호출하지 않아도,
@@ -436,10 +582,14 @@ GST.autoSidebar = function(){
     }
   });
 };
+function gstAutoStart(){
+  try{ GST.autoSidebar(); }catch(e){}
+  try{ GST.startAutoRefresh(10); }catch(e){}
+}
 if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded', function(){ try{ GST.autoSidebar(); }catch(e){} });
+  document.addEventListener('DOMContentLoaded', gstAutoStart);
 }else{
-  setTimeout(function(){ try{ GST.autoSidebar(); }catch(e){} }, 0);
+  setTimeout(gstAutoStart, 0);
 }
 
 global.GST = GST;

@@ -201,6 +201,81 @@ body.theme-light .status.ok{color:#16a34a}
 }
 
 /* ============================================================
+   테마: Slate — 새 기본 디자인
+   원칙: 표면 하나(#0B0F14) · 액센트 하나(GST 틸) · 플랫 카드 ·
+   장식(그라데이션 애니메이션·블롭·유리효과) 제거 = 절제된 전문가 룩
+   ============================================================ */
+body.theme-slate{
+  --bg-gradient:linear-gradient(180deg,#0B0F14,#0B0F14);
+  --title-gradient:linear-gradient(90deg,#F1F5F9,#8B98A9);
+  --glass:#111823; --glass-border:rgba(151,170,196,.10); --glass-hover:#16202C;
+  --txt-main:#E6EDF3; --txt-muted:#8B98A9;
+  --accent-1:#2DD4BF; --accent-2:#2DD4BF; --accent-3:#3987e5; --accent-4:#c98500; --accent-5:#199e70;
+  --ok:#3fbf3f; --warn:#fab219; --bad:#e66767;
+  --bg1:#0B0F14; --bg2:#0E141C; --bg3:#111823;
+  --card-shadow:none;
+  --shadow-md:none; --shadow-sm:none;
+  background:#0B0F14 !important;
+  animation:none !important;
+}
+/* 카드류: 유리효과·그림자 제거, 헤어라인 보더의 플랫 카드 */
+body.theme-slate .kpi,body.theme-slate .card,body.theme-slate .mcard,
+body.theme-slate .tablecard,body.theme-slate .alert,body.theme-slate .trend-card,
+body.theme-slate .cross-card,body.theme-slate .date-panel,body.theme-slate .login-box,
+body.theme-slate .slicer{
+  background:#111823 !important;border:1px solid rgba(151,170,196,.10) !important;
+  backdrop-filter:none !important;box-shadow:none !important;border-radius:10px !important;
+}
+body.theme-slate .kpi::before{display:none}       /* KPI 원형 블롭 제거 */
+body.theme-slate .kpi .val{letter-spacing:-.5px}
+body.theme-slate .card:hover,body.theme-slate .mcard:hover{
+  border-color:rgba(151,170,196,.24) !important;box-shadow:none !important}
+body.theme-slate .kpi:hover{transform:none !important;border-color:rgba(151,170,196,.24) !important}
+/* 상단 경고 배너(홈)는 시맨틱 톤 유지하되 채도만 절제 */
+body.theme-slate .alert.bad{background:rgba(208,59,59,.08) !important;border-color:rgba(208,59,59,.35) !important}
+body.theme-slate .alert.warn{background:rgba(250,178,25,.07) !important;border-color:rgba(250,178,25,.3) !important}
+body.theme-slate .alert.ok{background:rgba(12,163,12,.07) !important;border-color:rgba(12,163,12,.3) !important}
+/* 테이블 */
+body.theme-slate th{background:#0E141C !important;color:#8B98A9 !important}
+body.theme-slate td{border-bottom:1px solid rgba(151,170,196,.07) !important}
+body.theme-slate tr:hover td{background:#16202C !important}
+/* 칩·버튼: 무지개 그라데이션 → 단일 액센트 */
+body.theme-slate .chip,body.theme-slate .pchip{
+  border-radius:6px !important;background:transparent !important;
+  border:1px solid rgba(151,170,196,.16) !important;color:#8B98A9 !important;box-shadow:none !important}
+body.theme-slate .chip:hover,body.theme-slate .pchip:hover{
+  transform:none !important;color:#E6EDF3 !important;border-color:rgba(151,170,196,.3) !important}
+body.theme-slate .chip.active,body.theme-slate .pchip.active{
+  background:rgba(45,212,191,.10) !important;border-color:#2DD4BF !important;color:#2DD4BF !important}
+body.theme-slate .btn-grad,body.theme-slate .apply-btn,body.theme-slate .login-box button{
+  background:#2DD4BF !important;color:#04211C !important;border-radius:8px !important}
+body.theme-slate .btn,body.theme-slate .lang-btn,body.theme-slate .reset-btn{border-radius:8px !important}
+body.theme-slate .btn-glass,body.theme-slate .lang-btn,body.theme-slate .reset-btn{
+  background:transparent !important;border:1px solid rgba(151,170,196,.16) !important;color:#8B98A9 !important}
+body.theme-slate .btn-glass:hover,body.theme-slate .lang-btn:hover,body.theme-slate .reset-btn:hover{
+  background:#16202C !important;color:#E6EDF3 !important}
+/* 입력 요소 */
+body.theme-slate select,body.theme-slate input[type="date"],
+body.theme-slate input[type="text"],body.theme-slate input[type="password"],
+body.theme-slate input:not([type]){
+  background:#0B0F14 !important;border:1px solid rgba(151,170,196,.16) !important;
+  border-radius:7px !important;color:#E6EDF3 !important;color-scheme:dark}
+/* 제목: 무지개 → 차분한 듀오톤 (title-gradient 변수로 자동 적용됨) */
+body.theme-slate .header h1{letter-spacing:-.4px !important}
+body.theme-slate .status.ok{color:#3fbf3f !important}
+/* 드롭다운·팝업 표면 */
+body.theme-slate .lang-dropdown,body.theme-slate .theme-dropdown{
+  background:#16202C !important;border-color:rgba(151,170,196,.16) !important}
+/* 사이드바 */
+body.theme-slate .gst-sidebar{background:#0E141C;border-right-color:rgba(151,170,196,.10);box-shadow:none}
+body.theme-slate .gst-sb-sec{background:#111823;border-color:rgba(151,170,196,.10)}
+body.theme-slate .gst-sb-toggle{background:#2DD4BF;color:#04211C}
+body.theme-slate .gst-sb-title svg{color:#2DD4BF}
+/* 진입 애니메이션도 절제 */
+body.theme-slate .kpi,body.theme-slate .card,body.theme-slate .mcard,
+body.theme-slate .tablecard,body.theme-slate .alert,body.theme-slate .slicer{animation:none !important}
+
+/* ============================================================
    필터 사이드바 (GST.initSidebar)
    기존 필터 UI가 왼쪽 서랍으로 이동됩니다.
    데스크톱: 콘텐츠를 밀어내는 고정 사이드바 / 모바일: 오버레이 서랍
@@ -227,11 +302,28 @@ body.gst-sb-open{padding-left:324px !important}
   border-radius:var(--r-md);padding:12px}
 .gst-sb-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;
   color:var(--txt-muted);font-weight:700;margin-bottom:10px}
-.gst-sb-foot{padding:12px 14px;border-top:1px solid var(--glass-border);flex-shrink:0}
+.gst-sb-foot{padding:12px 14px;border-top:1px solid var(--glass-border);flex-shrink:0;
+  display:flex;flex-direction:column;gap:8px}
 .gst-sb-reset{width:100%;background:var(--glass);border:1px solid var(--glass-border);
   color:var(--txt-main);border-radius:var(--r-pill);padding:9px;font-size:12px;
   font-weight:700;cursor:pointer;transition:all .2s var(--ease)}
 .gst-sb-reset:hover{border-color:var(--bad);color:var(--bad)}
+/* 푸터 도구: CSV 내보내기 · 자동 새로고침 토글 */
+.gst-sb-tools{display:flex;gap:8px}
+.gst-sb-tool{flex:1;background:transparent;border:1px solid var(--glass-border);
+  color:var(--txt-muted);border-radius:8px;padding:7px 4px;font-size:11px;
+  font-weight:700;cursor:pointer;transition:all .2s var(--ease);white-space:nowrap}
+.gst-sb-tool:hover{color:var(--txt-main);border-color:var(--txt-muted)}
+.gst-sb-tool.on{color:var(--accent-1);border-color:var(--accent-1);
+  background:rgba(45,212,191,.07)}
+/* 기간 빠른선택 칩 (고장·자재 사이드바에 자동 주입) */
+.gst-preset-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.gst-preset{padding:4px 11px;border-radius:6px;border:1px solid var(--glass-border);
+  background:transparent;color:var(--txt-muted);font-size:11px;font-weight:600;
+  cursor:pointer;transition:all .15s var(--ease)}
+.gst-preset:hover{color:var(--txt-main);border-color:var(--txt-muted)}
+.gst-preset.active{border-color:var(--accent-1);color:var(--accent-1);
+  background:rgba(45,212,191,.08)}
 
 /* 토글 핸들 (사이드바에 붙어 함께 이동) */
 .gst-sb-toggle{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:6001;
