@@ -197,7 +197,7 @@ const TR={
   ko:{title:'인력 현황 대시보드',sub:'엔지니어 교육 · 직급 · 직무 인터랙티브 분석',
     back:'← 메인으로',total_pre:'총',total_post:'명 · 실시간 필터',refresh:'새로고침',
     loading:'데이터 불러오는 중...',
-    sl_pos:'직급',sl_job:'직무',sl_edu:'교육',sl_edu2:'교육',sl_search:'검색',search_ph:'이름 검색...',
+    sl_pos:'직급',sl_job:'직무',sl_edu:'교육',sl_edu2:'교육',sl_search:'검색',search_ph:'이름 검색...',ins_basic:'Basic 교육 미이수 {n}명 ({p}%)',ins_vet:'Veteran 교육 미이수 {n}명 (대상자의 {p}%)',ins_join:'최근 1년 입사 {n}명',
     kp1:'선택 인원',kp2:'Basic 이수율',kp3:'Veteran 이수율',kp4:'Engineer 인원',
     ch_pos:'직급별 인원',ch_edu:'교육과정 이수 현황',ch_job:'직무별 인원',
     tbl_title:'상세 명단',tbl_unit:'명',
@@ -205,7 +205,7 @@ const TR={
   en:{title:'Workforce Dashboard',sub:'Engineer training · position · role interactive analysis',
     back:'← Main',total_pre:'Total',total_post:' · live filter',refresh:'Refresh',
     loading:'Loading data...',
-    sl_pos:'Position',sl_job:'Role',sl_edu:'Training',sl_edu2:'Training',sl_search:'Search',search_ph:'Search name...',
+    sl_pos:'Position',sl_job:'Role',sl_edu:'Training',sl_edu2:'Training',sl_search:'Search',search_ph:'Search name...',ins_basic:'{n} pending Basic training ({p}%)',ins_vet:'{n} pending Veteran training ({p}% of eligible)',ins_join:'{n} joined in the last year',
     kp1:'Selected',kp2:'Basic Rate',kp3:'Veteran Rate',kp4:'Engineers',
     ch_pos:'By Position',ch_edu:'Training Completion',ch_job:'By Role',
     tbl_title:'Detail List',tbl_unit:'',
@@ -213,7 +213,7 @@ const TR={
   zh:{title:'人员状况仪表板',sub:'工程师培训 · 职级 · 职务 交互式分析',
     back:'← 主页',total_pre:'共',total_post:'人 · 实时筛选',refresh:'刷新',
     loading:'正在加载数据...',
-    sl_pos:'职级',sl_job:'职务',sl_edu:'培训',sl_edu2:'培训',sl_search:'搜索',search_ph:'搜索姓名...',
+    sl_pos:'职级',sl_job:'职务',sl_edu:'培训',sl_edu2:'培训',sl_search:'搜索',search_ph:'搜索姓名...',ins_basic:'Basic培训未完成 {n}人 ({p}%)',ins_vet:'Veteran培训未完成 {n}人 (对象的{p}%)',ins_join:'近1年入职 {n}人',
     kp1:'已选人数',kp2:'Basic完成率',kp3:'Veteran完成率',kp4:'工程师人数',
     ch_pos:'按职级',ch_edu:'培训完成情况',ch_job:'按职务',
     tbl_title:'详细名单',tbl_unit:'人',
@@ -221,7 +221,7 @@ const TR={
   ja:{title:'人員状況ダッシュボード',sub:'エンジニア教育 · 職級 · 職務 インタラクティブ分析',
     back:'← メイン',total_pre:'合計',total_post:'名 · リアルタイム',refresh:'更新',
     loading:'データ読み込み中...',
-    sl_pos:'職級',sl_job:'職務',sl_edu:'教育',sl_edu2:'教育',sl_search:'検索',search_ph:'名前検索...',
+    sl_pos:'職級',sl_job:'職務',sl_edu:'教育',sl_edu2:'教育',sl_search:'検索',search_ph:'名前検索...',ins_basic:'Basic教育未修了 {n}名 ({p}%)',ins_vet:'Veteran教育未修了 {n}名 (対象の{p}%)',ins_join:'直近1年入社 {n}名',
     kp1:'選択人数',kp2:'Basic修了率',kp3:'Veteran修了率',kp4:'Engineer人数',
     ch_pos:'職級別',ch_edu:'教育課程修了状況',ch_job:'職務別',
     tbl_title:'詳細リスト',tbl_unit:'名',
@@ -240,9 +240,15 @@ function toggleLang(){document.getElementById('langMenu').classList.toggle('open
 document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');});
 let DATA = [];
 const F = {pos:'전체', job:'전체', basic:'전체', vet:'전체', q:''};
-Chart.defaults.color = '#a0a0c0';
+Chart.defaults.color = GST.chartTheme().txt;
 Chart.defaults.font.family = "'Segoe UI','Malgun Gothic',sans-serif";
-const PAL = ['#6c5ce7','#00cec9','#fd79a8','#fdcb6e','#a29bfe','#55efc4'];
+// 테마 전환 시 차트를 새 잉크로 재생성 (initSync가 호출)
+window.changeDashboardTheme=function(){
+  Chart.defaults.color=GST.chartTheme().txt;
+  GST.reskinCharts(charts);
+  if(DATA.length)render();
+};
+const PAL = GST.PAL8; // 공통 검증 팔레트 (고정 순서)
 
 
 async function loadData(){ GST.skeleton(true);
@@ -317,19 +323,22 @@ function animVal(el, target, suffix, dec) {
 let charts = {};
 function donut(id, labels, vals) {
   const ctx = document.getElementById(id);
-  if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets[0].data=vals; charts[id].update(); return; }
+  if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets[0].data=vals;
+    charts[id].data.datasets[0].backgroundColor=PAL; charts[id].update(); return; }
   charts[id] = new Chart(ctx, {type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:PAL,borderColor:'rgba(0,0,0,.2)',borderWidth:2,hoverOffset:10}]},
     options:{cutout:'62%',plugins:{legend:{position:'bottom',labels:{padding:14,usePointStyle:true,pointStyle:'circle'}}},animation:{animateScale:true}}});
 }
 function bars(id, labels, datasets) {
   const ctx = document.getElementById(id);
+  const grid = GST.chartTheme().grid;
   if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets=datasets; charts[id].update(); return; }
   charts[id] = new Chart(ctx, {type:'bar',data:{labels,datasets},
     options:{plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle'}}},
-    scales:{x:{stacked:true,grid:{color:'rgba(255,255,255,.05)'}},y:{stacked:true,grid:{color:'rgba(255,255,255,.05)'},ticks:{precision:0}}}}});
+    scales:{x:{stacked:true,grid:{color:grid}},y:{stacked:true,grid:{color:grid},ticks:{precision:0}}}}});
 }
 function cnt(arr, key, val) { return arr.filter(d => d[key]===val).length; }
 function render(){ GST.skeleton(false);
+  const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
   const f = filt();
   document.getElementById('totRec').textContent = DATA.length;
   animVal(document.getElementById('kp1'), f.length, '', false);
@@ -343,10 +352,30 @@ function render(){ GST.skeleton(false);
   const jobL = Array.from(new Set(DATA.map(d=>d.job).filter(Boolean)));
   donut('cJob', jobL, jobL.map(j=>cnt(f,'job',j)));
   bars('cEdu', ['Basic','Veteran'], [
-    {label:'이수완료',data:[cnt(f,'basic','이수완료'),cnt(f,'vet','이수완료')],backgroundColor:'#00cec9',borderRadius:6},
-    {label:'진행중',data:[cnt(f,'basic','진행중'),cnt(f,'vet','진행중')],backgroundColor:'#fdcb6e',borderRadius:6},
-    {label:'비대상',data:[cnt(f,'basic','비대상'),cnt(f,'vet','비대상')],backgroundColor:'#636e92',borderRadius:6},
-  ]);
+    {label:'이수완료',data:[cnt(f,'basic','이수완료'),cnt(f,'vet','이수완료')],backgroundColor:TH.status.ok,borderRadius:6},
+    {label:'진행중',data:[cnt(f,'basic','진행중'),cnt(f,'vet','진행중')],backgroundColor:TH.status.warn,borderRadius:6},
+    {label:'비대상',data:[cnt(f,'basic','비대상'),cnt(f,'vet','비대상')],backgroundColor:TH.status.na,borderRadius:6},
+  ]); // 이수 상태 = 시맨틱 색
+
+  // ===== 인사이트 (필터 적용 기준) =====
+  {
+    const ins=[];
+    const bMiss=f.filter(d=>d.basic!=='이수완료'&&d.basic!=='비대상').length;
+    if(f.length){
+      const bp=Math.round(bMiss/f.length*100);
+      if(bMiss)ins.push({sev:bp>20?'warn':'info',text:tr('ins_basic').replace('{n}','<b>'+bMiss+'</b>').replace('{p}',bp)});
+      const vT=f.filter(d=>d.vet!=='비대상');
+      const vMiss=vT.filter(d=>d.vet!=='이수완료').length;
+      if(vT.length&&vMiss){
+        const vp=Math.round(vMiss/vT.length*100);
+        ins.push({sev:vp>30?'warn':'info',text:tr('ins_vet').replace('{n}','<b>'+vMiss+'</b>').replace('{p}',vp)});
+      }
+      const y1=Date.now()-365*86400000;
+      const joins=f.filter(d=>{const j=GST.toDate(d.join);return j&&j.getTime()>=y1;}).length;
+      if(joins)ins.push({sev:'ok',text:tr('ins_join').replace('{n}','<b>'+joins+'</b>')});
+    }
+    GST.insights(f.length?ins:[]);
+  }
   const tb = document.getElementById('tbody'); tb.innerHTML = '';
   document.getElementById('tblCnt').textContent = f.length;
   if (!f.length) { tb.innerHTML='<tr><td colspan="9" class="empty">조건에 맞는 인원이 없습니다</td></tr>'; return; }
