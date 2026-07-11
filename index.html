@@ -27,6 +27,22 @@ body.theme-light .brand .tag{color:#64748b}
 body.theme-light .frame-wrap{background:#f1f5f9}
 body.theme-light .frame-wrap iframe{background:#f1f5f9}
 
+/* Slate — 새 기본 테마: 단일 표면 + 단일 액센트 */
+body.theme-slate{background:#0B0F14;color:#E6EDF3}
+body.theme-slate .topbar,body.theme-slate .tabbar{background:#0E141C;border-color:rgba(151,170,196,.10)}
+body.theme-slate .brand .logo{background:linear-gradient(90deg,#2DD4BF,#E6EDF3);
+  -webkit-background-clip:text;background-clip:text}
+body.theme-slate .brand .tag{color:#5E6D80}
+body.theme-slate .tab{color:#8B98A9}
+body.theme-slate .tab:hover{color:#E6EDF3}
+body.theme-slate .tab.active{color:#2DD4BF;border-bottom-color:#2DD4BF}
+body.theme-slate .tb-btn{background:transparent;border-color:rgba(151,170,196,.16);color:#8B98A9;border-radius:8px}
+body.theme-slate .tb-btn:hover{background:#16202C;color:#E6EDF3}
+body.theme-slate .tb-btn.logout:hover{border-color:#e66767;color:#e66767}
+body.theme-slate .frame-wrap{background:#0B0F14}
+body.theme-slate .frame-wrap iframe{background:#0B0F14}
+body.theme-slate .spinner{border-color:rgba(151,170,196,.16);border-top-color:#2DD4BF}
+
 /* 상단 바 */
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;
   background:rgba(20,20,47,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);flex-shrink:0}
@@ -179,8 +195,8 @@ function applyLang(){
 
 
 // ===== 테마 (모든 iframe에 전파) =====
-const THEMES=[{key:'default',label:'Navy'},{key:'burgundy',label:'Burgundy'},{key:'light',label:'Light'}];
-let THEME='default';
+const THEMES=[{key:'slate',label:'Slate'},{key:'default',label:'Navy'},{key:'burgundy',label:'Burgundy'},{key:'light',label:'Light'}];
+let THEME='slate';
 try{const s=sessionStorage.getItem('gst_theme');if(s&&THEMES.find(t=>t.key===s))THEME=s;}catch(e){}
 
 function cycleTheme(){
@@ -308,6 +324,8 @@ function start(){
   buildTabs();
   applyLang();
   applyTheme();
+  // iframe이 직접 sessionStorage에서 테마를 읽을 수 있도록 현재 테마 저장
+  try{sessionStorage.setItem('gst_theme',THEME);}catch(e){}
   // 마지막 본 탭 or 첫 탭
   let init=TABS[0].id;
   try{const saved=sessionStorage.getItem('gst_tab');if(saved&&TABS.find(t=>t.id===saved))init=saved;}catch(e){}
