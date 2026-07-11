@@ -238,6 +238,7 @@ canvas{cursor:pointer}
     <div class="theme-wrap">
       <button class="theme-btn" onclick="toggleThemeMenu()"><span id="themeLabel">Cyber Turquoise</span> ▾</button>
       <div class="theme-dropdown" id="themeMenu">
+        <div class="theme-item" onclick="changeDashboardTheme('slate', 'Slate')">🖤 Slate</div>
         <div class="theme-item" onclick="changeDashboardTheme('default', 'Cyber Turquoise')">🌌 Cyber Turquoise</div>
         <div class="theme-item" onclick="changeDashboardTheme('burgundy', 'Royal Burgundy')">🍷 Royal Burgundy</div>
         <div class="theme-item" onclick="changeDashboardTheme('light', 'Aurora Light')">🧊 Aurora Light</div>
@@ -493,10 +494,10 @@ const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XA
 const C={op:1,customer:2,line:5,process:7,detail:8,mainEq:9,eq:10,qty:22,matName:23,reason:25,workDate:28,daysPaid:29,daysPrev:30,pf:31,freeReason:32};
 
 const T={
-  ko:{title:'자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'유상',kp3:'무상',kp4:'유상비율',kp5:'자재 종류',kp6:'설비 대수',cyc_title:'자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',this_month:'이번 달 {n}건',f_active:'활성 필터',f_clear:'전체 해제',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
-  en:{title:'Material Dashboard',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-proc',sl_eq:'Equipment',sl_search:'Search',cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',kp1:'Total',kp2:'Paid',kp3:'Free',kp4:'Paid %',kp5:'Materials',kp6:'Equipment',cyc_title:'Material Lifecycle (avg/min/max)',cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Replacement Detail',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',all:'All',no_data:'No data',days:'d',this_month:'This month {n}',f_active:'Active Filters',f_clear:'Clear All',nav_hr:'Workforce',nav_sc:'Installation',nav_pm:'PM Schedule',nav_ft:'Fault',nav_mt:'Material'},
-  zh:{title:'材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',kp1:'总更换数',kp2:'有偿',kp3:'无偿',kp4:'有偿比率',kp5:'材料种类',kp6:'设备数',cyc_title:'材料使用周期(平均/最小/最大)',cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'材料更换明细',th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',all:'全部',no_data:'无数据',days:'天',this_month:'本月{n}件',f_active:'活动筛选',f_clear:'全部清除',nav_hr:'人员',nav_sc:'安装',nav_pm:'PM点检',nav_ft:'故障',nav_mt:'材料'},
-  ja:{title:'資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'라인',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',kp1:'総交換件수',kp2:'有償',kp3:'無償',kp4:'有償比率',kp5:'資材種類',kp6:'設備台数',cyc_title:'資材別使用周期(平均/最小/最大)',cyc_mat:'資材名',cyc_cnt:'交換件수',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'資材交換詳細',th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',all:'全体',no_data:'データなし',days:'日',this_month:'今月{n}件',f_active:'有効フィルタ',f_clear:'全解除',nav_hr:'人員',nav_sc:'設置',nav_pm:'PM点検',nav_ft:'故障',nav_mt:'資材'}
+  ko:{title:'자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'유상',kp3:'무상',kp4:'유상비율',kp5:'자재 종류',kp6:'설비 대수',cyc_title:'자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',this_month:'이번 달 {n}건',ins_mom:'이번 달 교체 {n}건 · 전월 대비 {p}',ins_free:'무상 교체 비율 {p}% — 보증 처리 비중 확인 필요',ins_topmat:'자재 {v} — 전체 교체 수량의 {p}%',f_active:'활성 필터',f_clear:'전체 해제',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
+  en:{title:'Material Dashboard',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-proc',sl_eq:'Equipment',sl_search:'Search',cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',kp1:'Total',kp2:'Paid',kp3:'Free',kp4:'Paid %',kp5:'Materials',kp6:'Equipment',cyc_title:'Material Lifecycle (avg/min/max)',cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Replacement Detail',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',all:'All',no_data:'No data',days:'d',this_month:'This month {n}',ins_mom:'{n} replacements this month · {p} MoM',ins_free:'Free-of-charge ratio {p}% — review warranty share',ins_topmat:'Material {v} — {p}% of total quantity',f_active:'Active Filters',f_clear:'Clear All',nav_hr:'Workforce',nav_sc:'Installation',nav_pm:'PM Schedule',nav_ft:'Fault',nav_mt:'Material'},
+  zh:{title:'材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',kp1:'总更换数',kp2:'有偿',kp3:'无偿',kp4:'有偿比率',kp5:'材料种类',kp6:'设备数',cyc_title:'材料使用周期(平均/最小/最大)',cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'材料更换明细',th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',all:'全部',no_data:'无数据',days:'天',this_month:'本月{n}件',ins_mom:'本月更换 {n}件 · 环比 {p}',ins_free:'无偿比率 {p}% — 需确认保修占比',ins_topmat:'材料 {v} — 占总数量的{p}%',f_active:'活动筛选',f_clear:'全部清除',nav_hr:'人员',nav_sc:'安装',nav_pm:'PM点检',nav_ft:'故障',nav_mt:'材料'},
+  ja:{title:'資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'라인',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',kp1:'総交換件수',kp2:'有償',kp3:'無償',kp4:'有償比率',kp5:'資材種類',kp6:'設備台数',cyc_title:'資材別使用周期(平均/最小/最大)',cyc_mat:'資材名',cyc_cnt:'交換件수',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'資材交換詳細',th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',all:'全体',no_data:'データなし',days:'日',this_month:'今月{n}件',ins_mom:'今月交換 {n}件 · 前月比 {p}',ins_free:'無償比率 {p}% — 保証比重の確認要',ins_topmat:'資材 {v} — 全数量の{p}%',f_active:'有効フィルタ',f_clear:'全解除',nav_hr:'人員',nav_sc:'設置',nav_pm:'PM点検',nav_ft:'故障',nav_mt:'資材'}
 };
 
 let LANG='ko', DATA=[], CHARTS={}, sortK='date', sortAsc=false, cycSortK='cnt', cycSortAsc=false;
@@ -507,25 +508,25 @@ const F={country:'',customer:'',line:'',process:'',detail:'',eq:'',mat:'',reason
 const EXCL = { mat: [], eq: [], proc: [], reason: [], free: [] };
 const ALL_VALUES = { mat: [], eq: [], proc: [], reason: [], free: [] };
 
+Chart.defaults.color=GST.chartTheme().txt;
 Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
 
-const THEME_PALETTES = {
-  default: { txt: '#94a3b8', colors: ['#2dd4bf','#38bdf8','#a78bfa','#fbbf24','#34d399','#fb7185'] },
-  burgundy: { txt: '#b49aa9', colors: ['#fcd34d','#f472b6','#fb7185','#e2e8f0','#f472b6','#fb7185'] },
-  light: { txt: '#64748b', colors: ['#2563eb','#0284c7','#7c3aed','#ea580c','#16a34a','#ef4444'] }
-};
-let ACTIVE_THEME_KEY = 'default';
+// 차트 팔레트/잉크는 GST.chartTheme() (공통 검증 팔레트) 로 일원화
 
 function toggleThemeMenu() { document.getElementById('themeMenu').classList.toggle('open'); }
 function toggleLang() { document.getElementById('langMenu').classList.toggle('open'); }
 
+const THEME_LABELS={slate:'Slate',default:'Cyber Turquoise',burgundy:'Royal Burgundy',light:'Aurora Light'};
 function changeDashboardTheme(themeClass, label) {
   document.body.className = '';
   if(themeClass !== 'default') document.body.classList.add('theme-' + themeClass);
-  ACTIVE_THEME_KEY = themeClass;
-  document.getElementById('themeLabel').textContent = label;
-  document.getElementById('themeMenu').classList.remove('open');
-  Chart.defaults.color = THEME_PALETTES[ACTIVE_THEME_KEY].txt;
+  const lb=document.getElementById('themeLabel');
+  if(lb) lb.textContent = THEME_LABELS[themeClass] || label || themeClass;
+  const menu=document.getElementById('themeMenu');
+  if(menu) menu.classList.remove('open');
+  Chart.defaults.color = GST.chartTheme().txt;
+  GST.reskinCharts(CHARTS);
+  if(CROSS_CHART_INSTANCE){ try{CROSS_CHART_INSTANCE.destroy();}catch(e){} CROSS_CHART_INSTANCE=null; }
   if(DATA.length) { render(); }
 }
 
@@ -638,7 +639,7 @@ const _st=GST.readState();
       if(F.q)document.getElementById('search').value=F.q;
     }
         // 저장된 테마 유지 (기존: 로드 때마다 default로 리셋되던 버그 수정)
-    try{const th=sessionStorage.getItem('gst_theme')||'default';changeDashboardTheme(th,th);}catch(e){ GST.skeleton(false);}
+    try{const th=sessionStorage.getItem('gst_theme')||'slate';changeDashboardTheme(th,th);}catch(e){ GST.skeleton(false);}
     if(fetched.cached){status.textContent='📡 시트 접속 실패 — 캐시 데이터('+fetched.ageMin+'분 전) 표시 중';status.style.color='#fbbf24';}
   }catch(e){
     status.textContent='❌ '+e.message;
@@ -721,15 +722,12 @@ const countBy=GST.countBy;
 const sumQtyBy=(arr,key,top)=>GST.sumBy(arr,key,'qty',top);
 function cycleDays(x){return CYCLE_BASIS==='paid'?x.daysPaid:x.daysPrev;}
 
-function mkBar(id,labels,data,color,horizontal,withLine){
-  const th=THEME_PALETTES[ACTIVE_THEME_KEY];
-  GST.bar(CHARTS,id,{labels,data,color,horizontal,pareto:withLine,txt:th.txt,
-    grid:ACTIVE_THEME_KEY==='light'?'rgba(0,0,0,0.05)':'rgba(255,255,255,0.05)',
+function mkBar(id,labels,data,color,horizontal,withShare){
+  GST.bar(CHARTS,id,{labels,data,color,horizontal,share:withShare,
     onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
 }
 function mkDonut(id,labels,data,colors){
-  const th=THEME_PALETTES[ACTIVE_THEME_KEY];
-  GST.donut(CHARTS,id,{labels,data,colors:colors||th.colors,txt:th.txt,
+  GST.donut(CHARTS,id,{labels,data,colors:colors||GST.PAL8,
     onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
 }
 
@@ -738,16 +736,17 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   const f=filt(); LAST_F=f;
   console.log('[DEBUG] render - 필터링된 데이터:', f.length, '건');
   
-  const pal = THEME_PALETTES[ACTIVE_THEME_KEY].colors;
+  const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
+  const pal = TH.pal8;
   
   const paid=f.filter(x=>x.pf==='유상').length; const free=f.filter(x=>x.pf==='무상').length;
   document.getElementById('kp1').textContent=f.length; document.getElementById('kp2').textContent=paid;
-  {const _n=new Date(),_y=_n.getUTCFullYear(),_m=_n.getUTCMonth();
-   const _py=_m===0?_y-1:_y,_pm=_m===0?11:_m-1;
-   const _c=GST.monthCount(f,'workDate',_y,_m),_p=GST.monthCount(f,'workDate',_py,_pm);
-   const _b=GST.deltaBadge(_c,_p,true);
+  const _n=new Date(),_y=_n.getUTCFullYear(),_m=_n.getUTCMonth();
+  const _py=_m===0?_y-1:_y,_pm=_m===0?11:_m-1;
+  const monthCur=GST.monthCount(f,'workDate',_y,_m),monthPrev=GST.monthCount(f,'workDate',_py,_pm);
+  {const _b=GST.deltaBadge(monthCur,monthPrev,true);
    const _el=document.getElementById('kd1');
-   if(_el)_el.innerHTML=_b?(t('this_month').replace('{n}',_c)+' '+_b):'';}
+   if(_el)_el.innerHTML=_b?(t('this_month').replace('{n}',monthCur)+' '+_b):'';}
   document.getElementById('kp3').textContent=free; document.getElementById('kp4').textContent=(f.length?Math.round(paid/f.length*100):0)+'%';
   document.getElementById('kp5').textContent=uniq('matName',f).length; document.getElementById('kp6').textContent=uniq('eq',f).length;
 
@@ -765,10 +764,10 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   const eqF = f.filter(x=>!EXCL.eq.includes(x.eq));
   const eqs = countBy(eqF,'eq',12);
   const eqOut=GST.outliers(eqs);
-  mkBar('cEq', eqs.map(x=>x[0]), eqs.map(x=>x[1]), eqs.map(e=>eqOut.has(e[0])?'#fb7185':pal[1]), true, true);
+  mkBar('cEq', eqs.map(x=>x[0]), eqs.map(x=>x[1]), eqs.map(e=>eqOut.has(e[0])?TH.status.bad:pal[1]), true, true);
   renderExclChips('eq');
 
-  mkDonut('cPf',[t('kp2'),t('kp3')],[paid,free],[pal[1],pal[4]]);
+  mkDonut('cPf',[t('kp2'),t('kp3')],[paid,free],[pal[0],pal[2]]); // 유상=파랑 · 무상=앰버
 
   const procF = f.filter(x=>!EXCL.proc.includes(x.process));
   const procs = countBy(procF,'process',10);
@@ -786,6 +785,25 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   renderExclChips('free');
 
   renderExclOptions('mat'); renderExclOptions('eq'); renderExclOptions('proc'); renderExclOptions('reason'); renderExclOptions('free');
+
+  // ===== 인사이트 (필터 적용 기준) =====
+  {
+    const ins=[];
+    const pd=GST.pctDelta(monthCur,monthPrev);
+    if(monthCur||monthPrev)ins.push({sev:(pd!=null&&pd>=30)?'warn':'info',
+      text:t('ins_mom').replace('{n}','<b>'+monthCur+'</b>').replace('{p}',pd==null?'—':(pd>0?'+':'')+pd+'%')});
+    if(f.length){
+      const fp=Math.round(free/f.length*100);
+      if(fp>=45)ins.push({sev:'warn',text:t('ins_free').replace('{p}','<b>'+fp+'</b>')});
+      if(mats.length){
+        const totQ=mats.reduce((a,b)=>a+b[1],0);
+        const mp=totQ?Math.round(mats[0][1]/totQ*100):0;
+        if(mp>=40)ins.push({sev:'info',text:t('ins_topmat').replace('{v}','<b>'+mats[0][0]+'</b>').replace('{p}',mp)});
+      }
+    }
+    GST.insights(f.length?ins:[]);
+  }
+
   renderFilterChips();
   renderCycleTable(f); renderDetailTable(f); renderCrossTable();
 }
@@ -991,54 +1009,34 @@ function renderCrossTable(){
   });
   
   const ctx = document.getElementById('crossChart').getContext('2d');
-  const theme = THEME_PALETTES[ACTIVE_THEME_KEY];
-  
+  const theme = GST.chartTheme();
+
   if(CROSS_CHART_INSTANCE) { CROSS_CHART_INSTANCE.destroy(); }
-  
+
+  // 단일 축 막대 — 비율(%)은 이중 축 대신 툴팁으로 표기
   CROSS_CHART_INSTANCE = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: chartLabels,
-      datasets: [
-        {
-          label: '건수 (Bar)',
-          type: 'bar',
-          data: barData,
-          backgroundColor: theme.colors[0] + '80',
-          borderColor: theme.colors[0],
-          borderWidth: 2,
-          borderRadius: 4,
-          order: 2
-        },
-        {
-          label: '비율 % (Line)',
-          type: 'line',
-          data: percentageData,
-          borderColor: theme.colors[3] || '#fbbf24',
-          backgroundColor: 'transparent',
-          borderWidth: 3,
-          pointBackgroundColor: theme.colors[3] || '#fbbf24',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-          pointRadius: 4,
-          tension: 0.3,
-          yAxisID: 'y1',
-          order: 1
-        }
-      ]
+      datasets: [{
+        label: '건수',
+        type: 'bar',
+        data: barData,
+        backgroundColor: theme.pal[0] + '99',
+        borderColor: theme.pal[0],
+        borderWidth: 2,
+        borderRadius: 4
+      }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          labels: { color: theme.txt, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' }
-        },
+        legend: { display: false },
         tooltip: {
           callbacks: {
             label: function(context) {
-              if(context.datasetIndex === 0) return `건수: ${context.raw}`;
-              else return `비율: ${context.raw}%`;
+              return ` ${context.raw}건 (${percentageData[context.dataIndex]}%)`;
             }
           }
         }
@@ -1046,18 +1044,9 @@ function renderCrossTable(){
       scales: {
         x: { ticks: { color: theme.txt, font: { size: 9 } }, grid: { display: false } },
         y: {
-          position: 'left',
-          ticks: { color: theme.txt, font: { size: 9 } },
-          grid: { color: ACTIVE_THEME_KEY==='light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)' },
+          ticks: { color: theme.txt, font: { size: 9 }, precision: 0 },
+          grid: { color: theme.grid },
           title: { display: true, text: '건수', color: theme.txt, font: { size: 10 } }
-        },
-        y1: {
-          position: 'right',
-          ticks: { color: theme.txt, font: { size: 9 }, callback: v => v + '%' },
-          grid: { display: false },
-          title: { display: true, text: '비율 (%)', color: theme.txt, font: { size: 10 } },
-          min: 0,
-          max: Math.max(100, Math.max(...percentageData) * 1.2)
         }
       }
     }
