@@ -325,7 +325,7 @@ function renderAll(D){
   document.getElementById('ftTop').textContent=topCode?topCode[0]:'—';
 
   // ===== 자재 계산 =====
-  let mtMonth=0,mtPrev=0,paid=0,tot=0;const matCnt={'O-RING','CLAMP'};const matSet=new Set();
+  let mtMonth=0,mtPrev=0,paid=0,tot=0;const matCnt={};const matSet=new Set();
   D.mat.forEach(r=>{
     const name=(r[CM.matName]||'').toString().trim();if(!name)return;
     tot++;matSet.add(name);
