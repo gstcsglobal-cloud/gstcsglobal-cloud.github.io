@@ -219,6 +219,12 @@ tr:hover td{background:rgba(255,255,255,.04)}
 .login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
+/* 리치 KPI (설치현황과 동일 스타일) */
+.kpi .cap{margin:0 0 8px !important;font-size:10px !important;letter-spacing:1px !important;text-transform:uppercase}
+.kpi .krow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.kpi .unit{font-size:12px;color:var(--mut);font-weight:600}
+.kpi .kd{font-size:11px;font-weight:800}
+.kpi .kfoot{font-size:11px;color:var(--mut);margin-top:7px;min-height:13px}
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
@@ -260,14 +266,37 @@ tr:hover td{background:rgba(255,255,255,.04)}
 <div class="kpi-month-note" id="kpiMonthNote"></div>
 
 <div class="kpis">
-  <div class="kpi k1 sel" data-s=""><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">Total Targets</div></div>
-  <div class="kpi k2" data-s="overdue"><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">Overdue</div></div>
-  <div class="kpi k3" data-s="soon"><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">Due Soon</div></div>
-  <div class="kpi k4" data-s="ok"><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Normal</div></div>
-  <div class="kpi k5" data-s="na"><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">No Cycle</div></div>
-  <div class="kpi k6"><div class="val" id="kp6">0</div><div class="cap" data-i="kp6">Completed</div></div>
+  <div class="kpi k1 sel" data-s=""><div class="cap" data-i="kp1">Total Targets</div>
+    <div class="krow"><span class="val" id="kp1">0</span><span class="kd" id="kd1"></span></div>
+    <div class="kfoot" id="kf1"></div></div>
+  <div class="kpi k2" data-s="overdue"><div class="cap" data-i="kp2">Overdue</div>
+    <div class="krow"><span class="val" id="kp2">0</span><span class="kd" id="kd2"></span></div>
+    <div class="kfoot" id="kf2"></div></div>
+  <div class="kpi k3" data-s="soon"><div class="cap" data-i="kp3">Due Soon</div>
+    <div class="krow"><span class="val" id="kp3">0</span></div>
+    <div class="kfoot" id="kf3"></div></div>
+  <div class="kpi k4" data-s="ok"><div class="cap" data-i="kp4">Normal</div>
+    <div class="krow"><span class="val" id="kp4">0</span></div>
+    <div class="kfoot" id="kf4"></div></div>
+  <div class="kpi k5" data-s="na"><div class="cap" data-i="kp5">No Cycle</div>
+    <div class="krow"><span class="val" id="kp5">0</span></div>
+    <div class="kfoot" id="kf5"></div></div>
+  <div class="kpi k6"><div class="cap" data-i="kp6">Completed</div>
+    <div class="krow"><span class="val" id="kp6">0</span><span class="kd" id="kd6"></span></div>
+    <div class="kfoot" id="kf6"></div></div>
 </div>
 
+<!-- ═══ 섹션: 개요 ═══ -->
+<div data-sec="overview">
+  <div class="grid3">
+    <div class="card"><h3 data-i="ch_stat">Status Distribution</h3><div class="cw"><canvas id="cStat"></canvas></div></div>
+    <div class="card"><h3 data-i="ch_line">Overdue/Soon by LINE</h3><div class="cw"><canvas id="cLine"></canvas></div></div>
+    <div class="card"><h3 data-i="ch_done">월별 점검 완료 추이</h3><div class="cw"><canvas id="cDone"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ═══ 섹션: 캘린더·주차 ═══ -->
+<div data-sec="cal">
 <!-- 주차별 점검 현황 표 -->
 <div class="wk-card">
   <h3 data-i="wk_title">주차별 점검 현황 (오늘 기준 ±2개월)</h3>
@@ -325,11 +354,21 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 
 <div class="grid3">
-  <div class="card"><h3 data-i="ch_stat">Status Distribution</h3><div class="cw"><canvas id="cStat"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_line">Overdue/Soon by LINE</h3><div class="cw"><canvas id="cLine"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_week">Next 60 Days (weekly)</h3><div class="cw"><canvas id="cWeek"></canvas></div></div>
+  <div class="card" style="grid-column:span 3"><h3 data-i="ch_week">Next 60 Days (weekly)</h3><div class="cw"><canvas id="cWeek"></canvas></div></div>
+</div>
 </div>
 
+<!-- ═══ 섹션: 작업 부하 ═══ -->
+<div data-sec="load">
+  <div class="grid3">
+    <div class="card"><h3 data-i="ch_mantrend">월별 점검 공수</h3><div class="card-note" data-i="note_mantrend">TBM 기준 · 인·시</div><div class="cw"><canvas id="cManTrend"></canvas></div></div>
+    <div class="card"><h3 data-i="ch_worker">작업자 TOP (공수)</h3><div class="card-note" data-i="note_worker">공동작업은 인원수로 안분</div><div class="cw"><canvas id="cWorker"></canvas></div></div>
+    <div class="card"><h3 data-i="ch_linedur">LINE별 평균 점검시간</h3><div class="card-note" data-i="note_linedur">건당 평균(분)</div><div class="cw"><canvas id="cLineDur"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ═══ 섹션: 상세 목록 ═══ -->
+<div data-sec="data">
 <div class="tablecard">
   <h3 data-i="tbl_title">🗓️ PM Schedule (by urgency)</h3>
   <div class="filters">
@@ -348,7 +387,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="tbl-wrap">
     <table id="tbl">
       <thead><tr>
-        <th data-k="sn">S/N</th><th data-k="ch">Chamber</th><th data-k="site">SITE</th>
+        <th data-k="sn">S/N</th><th data-k="ch">Chamber</th><th data-k="site" data-i-th="th_site">고객사</th>
         <th data-k="line">LINE</th><th data-k="model">Model</th><th data-k="group">Group</th>
         <th data-k="last" data-i-th="th_last">Last PM</th><th data-k="cycle" data-i-th="th_cycle">Cycle(d)</th>
         <th data-k="next" data-i-th="th_next">Next Due</th><th data-k="dl" data-i-th="th_dl">D-day</th>
@@ -358,6 +397,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
     </table>
   </div>
 </div>
+</div>
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
@@ -366,7 +406,9 @@ const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbzJ6N-h9DXyqTwEoN
 let ADJUST={}; // 조정 내역 {key: {newDate, memo, updatedAt}}
 
 // 컬럼 인덱스 (0-based) — 시트3 점검이력
-const C={site:1,line:2,group1:3,tbmCycle:15,model:17,work:23,sn:24,maint:25,chamber:33};
+// 새 시트3(실적현황) 컬럼 맵 (0-based) — site=고객사, chamber=채널위치
+const C={site:3,line:5,group1:7,detail1:8,model:9,work:32,sn:21,maint:13,chamber:20,
+  workMin:39,manMin:40,workers:41,workerCnt:42};
 const WARN_RATIO=0.20;
 
 const T={
@@ -378,7 +420,7 @@ const T={
     th_last:'최근 점검일',th_cycle:'주기(일)',th_next:'다음 예정일',th_dl:'잔여일',th_st:'상태',th_cnt:'이력수',
     st_overdue:'지연',st_soon:'임박',st_ok:'정상',st_na:'주기없음',ins_overdue:'점검 지연 {n}건 — 최장 D+{d} (전체 기준)',ins_due30:'30일 내 점검 도래 {n}건',ins_done:'이번 달 점검 완료 {n}건',
     no_data:'결과 없음',search_ph:'S/N, 모델, Line 검색...',
-    f_site:'전체 SITE',f_line:'전체 LINE',f_model:'전체 모델',f_stat:'전체 상태',cal_today:'오늘',dow:['일','월','화','수','목','금','토'],months:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],cal_more:'외 N건',dm_copy:'복사',dm_copied:'복사됨',adj_loaded:'조정 N건',adj_saving:'저장 중...',adj_saved:'A → B 로 조정 저장됨',adj_failed:'저장 실패 (새로고침 후 재시도)',lg_adjusted:'조정됨',drag_hint:'💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ = 조정됨)',wk_title:'주차별 점검 현황 (오늘 기준 ±2개월)',wk_week:'주차',wk_plan:'예정',wk_done:'완료',wk_rate:'완료율',wk_thisweek:'이번주',wk_total:'전체',wk_inrange:'표시',wk_outrange:'범위밖 N건',mode_plan:'예정만',mode_done:'완료만',mode_both:'예정+완료',lg_done:'완료됨'},
+    f_site:'전체 고객사',sec_ov:'개요',sec_cal:'캘린더·주차',sec_ld:'작업 부하',sec_dt:'상세 목록',ch_done:'월별 점검 완료 추이',ch_mantrend:'월별 점검 공수',note_mantrend:'TBM 기준 · 인·시',ch_worker:'작업자 TOP (공수)',note_worker:'공동작업은 인원수로 안분',ch_linedur:'LINE별 평균 점검시간',note_linedur:'건당 평균(분)',kf1x:'주기: TBM 이력 기반 자동 산출',kf2x:'최장 D+{d}',kf6x:'전월 {n}건',th_site:'고객사',mon_u:'월',f_line:'전체 LINE',f_model:'전체 모델',f_stat:'전체 상태',cal_today:'오늘',dow:['일','월','화','수','목','금','토'],months:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],cal_more:'외 N건',dm_copy:'복사',dm_copied:'복사됨',adj_loaded:'조정 N건',adj_saving:'저장 중...',adj_saved:'A → B 로 조정 저장됨',adj_failed:'저장 실패 (새로고침 후 재시도)',lg_adjusted:'조정됨',drag_hint:'💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ = 조정됨)',wk_title:'주차별 점검 현황 (오늘 기준 ±2개월)',wk_week:'주차',wk_plan:'예정',wk_done:'완료',wk_rate:'완료율',wk_thisweek:'이번주',wk_total:'전체',wk_inrange:'표시',wk_outrange:'범위밖 N건',mode_plan:'예정만',mode_done:'완료만',mode_both:'예정+완료',lg_done:'완료됨'},
   en:{title:'Scrubber PM Schedule',sub:'Preventive Maintenance schedule based on TBM history',
     back:'← Main',refresh:'Refresh',loading:'Loading...',
     kp1:'Total Targets',kp2:'Overdue',kp3:'Due Soon',kp4:'Normal',kp5:'No Cycle',kp6:'Completed',year_unit:'',kpi_basis:'status',
@@ -387,7 +429,7 @@ const T={
     th_last:'Last PM',th_cycle:'Cycle(d)',th_next:'Next Due',th_dl:'D-day',th_st:'Status',th_cnt:'History',
     st_overdue:'Overdue',st_soon:'Due Soon',st_ok:'Normal',st_na:'No Cycle',ins_overdue:'{n} PM overdue — worst D+{d} (all schedules)',ins_due30:'{n} PM due within 30 days',ins_done:'{n} completed this month',
     no_data:'No results',search_ph:'Search S/N, Model, Line...',
-    f_site:'All SITE',f_line:'All LINE',f_model:'All Model',f_stat:'All Status',cal_today:'Today',dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],cal_more:'+N more',dm_copy:'Copy',dm_copied:'Copied',adj_loaded:'N adjusted',adj_saving:'Saving...',adj_saved:'Moved A → B',adj_failed:'Save failed (retry after refresh)',lg_adjusted:'Adjusted',drag_hint:'💡 Drag an item to another date to reschedule. Changes are shared with the whole team (✎ = adjusted)',wk_title:'Weekly PM Status (±2 months from today)',wk_week:'Week',wk_plan:'Planned',wk_done:'Done',wk_rate:'Rate',wk_thisweek:'This week',wk_total:'Total',wk_inrange:'Shown',wk_outrange:'N out of range',mode_plan:'Planned',mode_done:'Completed',mode_both:'Both',lg_done:'Completed'},
+    f_site:'All Customers',sec_ov:'Overview',sec_cal:'Calendar',sec_ld:'Workload',sec_dt:'Data',ch_done:'Monthly PM Completed',ch_mantrend:'Monthly PM Man-hours',note_mantrend:'TBM based · man-hours',ch_worker:'Top Workers (man-hours)',note_worker:'shared jobs split by headcount',ch_linedur:'Avg PM Time by LINE',note_linedur:'avg minutes per case',kf1x:'cycle: auto-derived from TBM history',kf2x:'worst D+{d}',kf6x:'prev month {n}',th_site:'Customer',mon_u:'',f_line:'All LINE',f_model:'All Model',f_stat:'All Status',cal_today:'Today',dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],cal_more:'+N more',dm_copy:'Copy',dm_copied:'Copied',adj_loaded:'N adjusted',adj_saving:'Saving...',adj_saved:'Moved A → B',adj_failed:'Save failed (retry after refresh)',lg_adjusted:'Adjusted',drag_hint:'💡 Drag an item to another date to reschedule. Changes are shared with the whole team (✎ = adjusted)',wk_title:'Weekly PM Status (±2 months from today)',wk_week:'Week',wk_plan:'Planned',wk_done:'Done',wk_rate:'Rate',wk_thisweek:'This week',wk_total:'Total',wk_inrange:'Shown',wk_outrange:'N out of range',mode_plan:'Planned',mode_done:'Completed',mode_both:'Both',lg_done:'Completed'},
   zh:{title:'洗涤器PM点检计划',sub:'基于定期点检(TBM)履历的预防性维护计划',
     back:'← 主页',refresh:'刷新',loading:'加载中...',
     kp1:'总点检对象',kp2:'点检延迟',kp3:'点检临近',kp4:'正常',kp5:'无周期',kp6:'本月完成',year_unit:'年',kpi_basis:'状况',
@@ -396,7 +438,7 @@ const T={
     th_last:'最近点检日',th_cycle:'周期(天)',th_next:'下次预定日',th_dl:'剩余天',th_st:'状态',th_cnt:'履历数',
     st_overdue:'延迟',st_soon:'临近',st_ok:'正常',st_na:'无周期',ins_overdue:'PM延迟 {n}件 — 最长 D+{d} (全部基准)',ins_due30:'30天内到期 {n}件',ins_done:'本月完成 {n}件',
     no_data:'无结果',search_ph:'搜索S/N, 型号, Line...',
-    f_site:'全部SITE',f_line:'全部LINE',f_model:'全部型号',f_stat:'全部状态',cal_today:'今天',dow:['日','一','二','三','四','五','六'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'其他N项',dm_copy:'复制',dm_copied:'已复制',adj_loaded:'调整N项',adj_saving:'保存中...',adj_saved:'已调整 A → B',adj_failed:'保存失败(刷新后重试)',lg_adjusted:'已调整',drag_hint:'💡 将点检项拖到其他日期即可调整日程并与全队共享 (✎ = 已调整)',wk_title:'周点检状况 (今天±2个月)',wk_week:'周次',wk_plan:'计划',wk_done:'完成',wk_rate:'完成率',wk_thisweek:'本周',wk_total:'全部',wk_inrange:'显示',wk_outrange:'范围外N项',mode_plan:'仅计划',mode_done:'仅完成',mode_both:'计划+完成',lg_done:'已完成'},
+    f_site:'全部客户',sec_ov:'概览',sec_cal:'日历·周次',sec_ld:'工时负荷',sec_dt:'明细',ch_done:'月度点检完成趋势',ch_mantrend:'月度点检工时',note_mantrend:'TBM基准 · 人·时',ch_worker:'作业者TOP (工时)',note_worker:'共同作业按人数分摊',ch_linedur:'按LINE平均点检时间',note_linedur:'每件平均(分)',kf1x:'周期: 基于TBM履历自动推算',kf2x:'最长 D+{d}',kf6x:'上月 {n}件',th_site:'客户',mon_u:'月',f_line:'全部LINE',f_model:'全部型号',f_stat:'全部状态',cal_today:'今天',dow:['日','一','二','三','四','五','六'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'其他N项',dm_copy:'复制',dm_copied:'已复制',adj_loaded:'调整N项',adj_saving:'保存中...',adj_saved:'已调整 A → B',adj_failed:'保存失败(刷新后重试)',lg_adjusted:'已调整',drag_hint:'💡 将点检项拖到其他日期即可调整日程并与全队共享 (✎ = 已调整)',wk_title:'周点检状况 (今天±2个月)',wk_week:'周次',wk_plan:'计划',wk_done:'完成',wk_rate:'完成率',wk_thisweek:'本周',wk_total:'全部',wk_inrange:'显示',wk_outrange:'范围外N项',mode_plan:'仅计划',mode_done:'仅完成',mode_both:'计划+完成',lg_done:'已完成'},
   ja:{title:'スクラバーPM点検スケジュール',sub:'定期点検(TBM)履歴に基づく予防保全スケジュール',
     back:'← メイン',refresh:'更新',loading:'読み込み中...',
     kp1:'総点検対象',kp2:'点検遅延',kp3:'点検間近',kp4:'正常',kp5:'周期なし',kp6:'当月完了',year_unit:'年',kpi_basis:'基準',
@@ -405,7 +447,7 @@ const T={
     th_last:'最近点検日',th_cycle:'周期(日)',th_next:'次回予定日',th_dl:'残日',th_st:'状態',th_cnt:'履歴数',
     st_overdue:'遅延',st_soon:'間近',st_ok:'正常',st_na:'周期なし',ins_overdue:'点検遅延 {n}件 — 最長 D+{d} (全体基準)',ins_due30:'30日以内到来 {n}件',ins_done:'今月完了 {n}件',
     no_data:'結果なし',search_ph:'S/N, モデル, Line検索...',
-    f_site:'全SITE',f_line:'全LINE',f_model:'全モデル',f_stat:'全ステータス',cal_today:'今日',dow:['日','月','火','水','木','金','土'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'他N件',dm_copy:'コピー',dm_copied:'コピー済',adj_loaded:'調整N件',adj_saving:'保存中...',adj_saved:'A → B に調整',adj_failed:'保存失敗(更新後再試行)',lg_adjusted:'調整済',drag_hint:'💡 点検項目を他の日付にドラッグすると日程が調整されチーム全体に共有されます (✎ = 調整済)',wk_title:'週別点検状況 (本日±2ヶ月)',wk_week:'週',wk_plan:'予定',wk_done:'完了',wk_rate:'完了率',wk_thisweek:'今週',wk_total:'全体',wk_inrange:'表示',wk_outrange:'範囲外N件',mode_plan:'予定のみ',mode_done:'完了のみ',mode_both:'予定+完了',lg_done:'完了'}
+    f_site:'全顧客',sec_ov:'概要',sec_cal:'カレンダー·週別',sec_ld:'工数負荷',sec_dt:'詳細',ch_done:'月別点検完了推移',ch_mantrend:'月別点検工数',note_mantrend:'TBM基準 · 人·時',ch_worker:'作業者TOP (工数)',note_worker:'共同作業は人数で按分',ch_linedur:'LINE別平均点検時間',note_linedur:'件当たり平均(分)',kf1x:'周期: TBM履歴から自動算出',kf2x:'最長 D+{d}',kf6x:'前月 {n}件',th_site:'顧客',mon_u:'月',f_line:'全LINE',f_model:'全モデル',f_stat:'全ステータス',cal_today:'今日',dow:['日','月','火','水','木','金','土'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'他N件',dm_copy:'コピー',dm_copied:'コピー済',adj_loaded:'調整N件',adj_saving:'保存中...',adj_saved:'A → B に調整',adj_failed:'保存失敗(更新後再試行)',lg_adjusted:'調整済',drag_hint:'💡 点検項目を他の日付にドラッグすると日程が調整されチーム全体に共有されます (✎ = 調整済)',wk_title:'週別点検状況 (本日±2ヶ月)',wk_week:'週',wk_plan:'予定',wk_done:'完了',wk_rate:'完了率',wk_thisweek:'今週',wk_total:'全体',wk_inrange:'表示',wk_outrange:'範囲外N件',mode_plan:'予定のみ',mode_done:'完了のみ',mode_both:'予定+完了',lg_done:'完了'}
 };
 
 let LANG='ko', RAW=[], SCHED=[], CHARTS={}, activeStatus='', sortK='dl', sortAsc=true;
@@ -424,7 +466,16 @@ window.changeDashboardTheme=function(){
 };
 
 function t(k){return (T[LANG]||T.ko)[k]||k;}
+function buildSecNav(){
+  GST.sectionNav([
+    {id:'overview',label:t('sec_ov')},
+    {id:'cal',     label:t('sec_cal')},
+    {id:'load',    label:t('sec_ld')},
+    {id:'data',    label:t('sec_dt')}
+  ]);
+}
 function applyLang(){
+  buildSecNav();
   document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
   document.querySelectorAll('[data-i-th]').forEach(el=>{el.textContent=t(el.getAttribute('data-i-th'));});
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
@@ -454,6 +505,9 @@ async function loadData(){ GST.skeleton(true);
       fetch(APPS_SCRIPT_URL+'?t='+Date.now()).then(r=>r.json())
     ]);
     if(csvRes.status==='fulfilled'){
+      GST.schemaBanner(GST.validateSchema(csvRes.value.rows[0]||[],{
+        5:'라인',9:'MODEL',13:'작업단계',21:'S/N',32:'작업시작일'
+      }),'실적현황 시트');
       RAW=csvRes.value.rows.slice(1);
     }
     ADJUST = (adjRes.status==='fulfilled' && adjRes.value) ? adjRes.value : {};
@@ -479,7 +533,8 @@ function buildSchedule(rows){
     const ch=((r[C.chamber]||'').toString().trim())||'-';
     const wd=toDate(r[C.work]); if(!wd)return;
     const k=sn+'||'+ch;
-    if(!g[k])g[k]={sn,ch,rows:0,last:null,meta:r};
+    if(!g[k])g[k]={sn,ch,rows:0,last:null,meta:r,dates:[]};
+    g[k].dates.push(wd);
     g[k].rows++; if(!g[k].last||wd>g[k].last){g[k].last=wd;g[k].meta=r;}
     // 완료 이력 기록 (모든 TBM 점검이력)
     DONE_HIST.push({date:wd,sn,ch,
@@ -487,8 +542,19 @@ function buildSchedule(rows){
       model:(r[C.model]||'—'),group:(r[C.group1]||'—')});
   });
   const today=new Date(); today.setUTCHours(0,0,0,0);
+  // 새 시트에는 점검주기 컬럼이 없으므로, 설비별 TBM 방문 간격의 중앙값으로 주기를 추정한다.
+  // (7일 미만 간격은 재방문/보정으로 보고 제외 · 이력 부족 시 전체 중앙값 → 90일 순 폴백)
+  const perCycle={}; const allCycles=[];
+  Object.entries(g).forEach(([k,o])=>{
+    const ds=o.dates.slice().sort((a,b)=>a-b);
+    const iv=[];
+    for(let i=1;i<ds.length;i++){const dd=(ds[i]-ds[i-1])/86400000;if(dd>=7)iv.push(dd);}
+    if(iv.length){iv.sort((a,b)=>a-b);const m=Math.round(iv[Math.floor(iv.length/2)]);perCycle[k]=m;allCycles.push(m);}
+  });
+  allCycles.sort((a,b)=>a-b);
+  const fleetCycle=allCycles.length?allCycles[Math.floor(allCycles.length/2)]:90;
   return Object.values(g).map(o=>{
-    const cycle=Number(o.meta[C.tbmCycle])||null;
+    const cycle=perCycle[o.sn+'||'+o.ch]||fleetCycle;
     let next=null,dl=null,st='na';
     if(cycle&&o.last){
       next=new Date(o.last.getTime()+cycle*86400000);
@@ -515,6 +581,51 @@ function countBy(arr,f){const m={};arr.forEach(x=>{const k=f(x)||'N/A';m[k]=(m[k
 
 const animVal=GST.animVal;
 
+// 값 직접 표기 플러그인 (설치현황과 동일)
+const valLabelPlugin={id:'valLabel',
+  afterDatasetsDraw(chart,args,o){
+    if(!o||!o.mode)return;
+    const meta=chart.getDatasetMeta(0), ds=chart.data.datasets[0], ctx=chart.ctx;
+    if(!meta||!meta.data||!meta.data.length)return;
+    const nums=ds.data.filter(v=>v!=null&&isFinite(v));
+    const max=nums.length?Math.max.apply(null,nums):null;
+    ctx.save();ctx.fillStyle=o.color||'#E6EDF3';
+    ctx.font='700 11px "Segoe UI","Malgun Gothic",sans-serif';
+    meta.data.forEach(function(el,i){
+      const v=ds.data[i]; if(v==null)return;
+      if(o.mode==='h'){ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(v.toLocaleString(),el.x+6,el.y);return;}
+      if(o.mode==='peaks'){
+        const fm=ds.data.findIndex(x=>x===max);
+        if(!((i===fm&&v>0)||(i===ds.data.length-1&&v>0)))return;
+      }
+      ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(v.toLocaleString(),el.x,el.y-6);
+    });
+    ctx.restore();
+  }};
+function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
+function mkBarV2(id,labels,data,color){
+  const ctx=document.getElementById(id); if(!ctx)return;
+  const TH=GST.chartTheme();
+  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
+      plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)}},
+      scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}},
+              y:{ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
+    plugins:[valLabelPlugin]};
+  if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
+}
+function mkHBar2(id,entries,color,topN){
+  const top=entries.slice(0,topN||10);
+  const ctx=document.getElementById(id); if(!ctx)return;
+  const TH=GST.chartTheme();
+  const cfg={type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{data:top.map(e=>e[1]),backgroundColor:color,borderRadius:5,barPercentage:.72}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:46}},
+      plugins:{legend:{display:false},valLabel:{mode:'h',color:inkStrong(TH)}},
+      scales:{x:{display:false},y:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}}}},
+    plugins:[valLabelPlugin]};
+  if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
+}
+
 function render(){ GST.skeleton(false);
   const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
   // 선택한 월(CAL_Y, CAL_M) 기준 필터
@@ -532,6 +643,18 @@ function render(){ GST.skeleton(false);
   animVal(document.getElementById('kp4'),ok);
   animVal(document.getElementById('kp5'),na);
   animVal(document.getElementById('kp6'),monthDone.length);
+  // KPI 보조 라인 (전체 스케줄 기준 배지/설명)
+  {
+    const setTxt=(id,v)=>{const e=document.getElementById(id);if(e)e.innerHTML=v;};
+    setTxt('kf1',t('kf1x'));
+    const allOver=SCHED.filter(x=>x.st==='overdue');
+    const worst=allOver.reduce((m,x)=>(x.dl!=null&&x.dl<m)?x.dl:m,0);
+    setTxt('kf2',allOver.length?t('kf2x').replace('{d}',Math.abs(worst)):'');
+    const pv=CAL_M===0?[CAL_Y-1,11]:[CAL_Y,CAL_M-1];
+    const prevDone=DONE_HIST.filter(h=>h.date.getUTCFullYear()===pv[0]&&h.date.getUTCMonth()===pv[1]).length;
+    setTxt('kd6',GST.deltaBadge(monthDone.length,prevDone,false));
+    setTxt('kf6',t('kf6x').replace('{n}',prevDone));
+  }
 
   // KPI 월 안내
   const mn=document.getElementById('kpiMonthNote');
@@ -558,6 +681,37 @@ function render(){ GST.skeleton(false);
   SCHED.forEach(x=>{if(x.dl!=null&&x.dl>=0&&x.dl<=60){const wk='+'+Math.floor(x.dl/7)+'w';weeks[wk]=(weeks[wk]||0)+1;}});
   const wk=Object.keys(weeks).sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
   mkBar('cWeek',wk,wk.map(k=>weeks[k]),TH.pal[0]);
+
+  // 월별 점검 완료 추이 (최근 8개월)
+  {
+    const dm={};
+    DONE_HIST.forEach(h=>{const k=h.date.getUTCFullYear()+'-'+String(h.date.getUTCMonth()+1).padStart(2,'0');dm[k]=(dm[k]||0)+1;});
+    const keys=Object.keys(dm).sort().slice(-8);
+    mkBarV2('cDone',keys.map(k=>(+k.slice(5))+t('mon_u')),keys.map(k=>dm[k]),TH.pal[1]);
+  }
+  // 작업 부하 (TBM 원본 행 기준: 공수·작업자·라인별 시간)
+  {
+    const manByM={}, perWorker={}, lineMin={};
+    RAW.forEach(r=>{
+      if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;
+      const wd=toDate(r[C.work]); if(!wd)return;
+      const man=Number(r[C.manMin])||0, wmin=Number(r[C.workMin])||0;
+      if(man>0&&man<14400){
+        const k=wd.getUTCFullYear()+'-'+String(wd.getUTCMonth()+1).padStart(2,'0');
+        manByM[k]=(manByM[k]||0)+man;
+        const names=(r[C.workers]||'').toString().split(',').map(x=>x.trim()).filter(Boolean);
+        if(names.length){const sh=man/names.length;names.forEach(nm=>{perWorker[nm]=(perWorker[nm]||0)+sh;});}
+      }
+      const ln=(r[C.line]||'').toString().trim();
+      if(ln&&wmin>0&&wmin<1440){(lineMin[ln]=lineMin[ln]||[]).push(wmin);}
+    });
+    const mmk=Object.keys(manByM).sort().slice(-8);
+    mkBarV2('cManTrend',mmk.map(k=>(+k.slice(5))+t('mon_u')),mmk.map(k=>Math.round(manByM[k]/60)),TH.pal[2]);
+    const we=Object.entries(perWorker).map(([k,v])=>[k,Math.round(v/60)]).sort((a,b)=>b[1]-a[1]);
+    mkHBar2('cWorker',we,TH.pal[3],10);
+    const le=Object.entries(lineMin).map(([k,v])=>[k,Math.round(v.reduce((a,b)=>a+b,0)/v.length)]).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    mkBarV2('cLineDur',le.map(e=>e[0]),le.map(e=>e[1]),TH.pal[1]);
+  }
 
   // ===== 인사이트 (전체 스케줄 기준) =====
   {
