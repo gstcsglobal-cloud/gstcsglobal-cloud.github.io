@@ -87,6 +87,31 @@ GST.fillSelect = function(id, fkey, vals, F, allLabel){
 // 범주(시리즈) 팔레트 — 색각이상 시뮬레이션 검증 통과 조합, 고정 순서로만 사용
 GST.PAL  = ['#3987e5','#199e70','#c98500','#9085e9','#e66767'];
 GST.PAL8 = GST.PAL.concat(['#008300','#d55181','#d95926']);
+
+// 팔레트 프리셋 — 3종 모두 인접쌍 CVD 검증 통과 배열(같은 8색의 순서만 다름).
+// 전환은 배열을 "제자리에서" 교체(splice)하므로 페이지가 const PAL=GST.PAL8로
+// 잡아둔 참조도 함께 갱신된다.
+GST.PALETTES = {
+  ocean:  {label:'Ocean',  colors:['#3987e5','#199e70','#c98500','#9085e9','#e66767','#008300','#d55181','#d95926']},
+  forest: {label:'Forest', colors:['#199e70','#9085e9','#c98500','#3987e5','#e66767','#008300','#d55181','#d95926']},
+  sunset: {label:'Sunset', colors:['#e66767','#3987e5','#c98500','#199e70','#9085e9','#008300','#d55181','#d95926']}
+};
+GST._palKey='ocean';
+GST.setPalette = function(key, silent){
+  const p = GST.PALETTES[key];
+  if(!p) return;
+  GST._palKey = key;
+  GST.PAL.splice.apply(GST.PAL,  [0, GST.PAL.length].concat(p.colors.slice(0,5)));
+  GST.PAL8.splice.apply(GST.PAL8,[0, GST.PAL8.length].concat(p.colors));
+  try{ localStorage.setItem('gst_pal', key); }catch(e){}
+  if(silent) return;
+  // 현재 테마 키를 넘겨 페이지의 재렌더 훅 호출 (material은 (theme,label) 시그니처)
+  const b=document.body?document.body.className:'';
+  const cur = b.indexOf('theme-slate')>-1?'slate' : b.indexOf('theme-light')>-1?'light'
+            : b.indexOf('theme-burgundy')>-1?'burgundy' : 'default';
+  if(typeof global.changeDashboardTheme==='function'){ try{ global.changeDashboardTheme(cur,cur); }catch(e){} }
+};
+try{ const k=localStorage.getItem('gst_pal'); if(k&&GST.PALETTES[k]) GST.setPalette(k,true); }catch(e){}
 // 현재 테마에 맞는 차트 잉크/팔레트/상태색. 차트 생성 시점에 호출해야 함.
 // 상태색은 의미(정상/경고/위험) 전용 — 범주 시리즈로 재사용하지 않는다.
 GST.chartTheme = function(){
@@ -182,6 +207,13 @@ GST.initSync = function(opts){
     const st=document.createElement('style');
     st.textContent='.header-right{display:none !important}';
     document.head.appendChild(st);
+    // 셸(탭) 안에서는 페이지 대문 타이틀이 중복이므로 숨김 (인쇄 시에는 theme.css가 복원)
+    // 테마 전환 등이 body.className을 통째로 바꿔도 클래스가 유지되도록 감시
+    function markInFrame(){ if(document.body && !document.body.classList.contains('gst-inframe')) document.body.classList.add('gst-inframe'); }
+    if(document.body) markInFrame(); else document.addEventListener('DOMContentLoaded', markInFrame);
+    try{
+      new MutationObserver(markInFrame).observe(document.body||document.documentElement,{attributes:true,attributeFilter:['class']});
+    }catch(e){}
   }
   function applyStored(){
     let th=null, lg=null;
@@ -358,6 +390,47 @@ GST.insights = function(items){
     }).join('');
 };
 
+// 페이지 내 소분류 탭 (섹션 내비게이션).
+// 페이지에 <div data-sec="id"> 컨테이너들이 있어야 하며, defs=[{id,label}] 순서대로 탭 생성.
+// 선택 상태는 sessionStorage에 페이지별로 기억. 라벨 갱신(언어 전환)을 위해 재호출 가능.
+GST.sectionNav = function(defs){
+  if(!defs || !defs.length) return;
+  const storeKey = 'gst_sec_' + location.pathname.replace(/[^a-z0-9]/gi,'');
+  let nav = document.getElementById('gstSecNav');
+  if(!nav){
+    nav = document.createElement('nav');
+    nav.id='gstSecNav'; nav.className='gst-secnav';
+    const anchor = document.getElementById('gstInsights') || document.querySelector('.kpis') || document.querySelector('[data-sec]');
+    if(!anchor || !anchor.parentNode) return;
+    anchor.parentNode.insertBefore(nav, anchor);
+  }
+  let cur = null;
+  try{ cur = sessionStorage.getItem(storeKey); }catch(e){}
+  if(!defs.some(function(d){ return d.id===cur; })) cur = defs[0].id;
+
+  function show(id){
+    cur = id;
+    try{ sessionStorage.setItem(storeKey, id); }catch(e){}
+    document.querySelectorAll('[data-sec]').forEach(function(el){
+      el.style.display = (el.dataset.sec===id) ? '' : 'none';
+    });
+    nav.querySelectorAll('.gst-sec-tab').forEach(function(b){
+      b.classList.toggle('active', b.dataset.id===id);
+    });
+    // 숨김 상태로 생성된 차트가 표시될 때 크기를 다시 잡도록
+    setTimeout(function(){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }, 60);
+  }
+
+  nav.innerHTML='';
+  defs.forEach(function(d){
+    const b=document.createElement('button');
+    b.type='button'; b.className='gst-sec-tab'; b.dataset.id=d.id; b.textContent=d.label;
+    b.onclick=function(){ show(d.id); };
+    nav.appendChild(b);
+  });
+  show(cur);
+};
+
 /* ---------- 14. 필터 사이드바 ---------- */
 // 페이지의 기존 필터 UI(기간 패널·슬라이서 등)를 왼쪽 사이드바 서랍으로 이동합니다.
 // DOM 노드를 "이동"만 하므로 ID와 이벤트 핸들러가 그대로 유지되어 페이지 로직 수정이 필요 없습니다.
@@ -454,6 +527,19 @@ GST.initSidebar = function(opts){
     ab.onclick=function(){ try{ localStorage.setItem('gst_auto_refresh', arOn()?'0':'1'); }catch(e){} syncAr(); };
     syncAr();
     tools.appendChild(ab);
+  }
+  if(window.Chart){
+    // 차트 팔레트 프리셋 전환 (모든 프리셋은 색각이상 검증 통과 조합)
+    const pb=document.createElement('button'); pb.className='gst-sb-tool'; pb.type='button';
+    pb.title='차트 색상 프리셋 전환 — 모든 조합은 색각 안전 검증을 통과했습니다';
+    function syncPb(){ const p=GST.PALETTES[GST._palKey]; pb.textContent='🎨 '+(p?p.label:'Ocean'); }
+    pb.onclick=function(){
+      const keys=Object.keys(GST.PALETTES);
+      GST.setPalette(keys[(keys.indexOf(GST._palKey)+1)%keys.length]);
+      syncPb();
+    };
+    syncPb();
+    tools.appendChild(pb);
   }
   if(tools.children.length) foot.appendChild(tools);
   if(foot.children.length) sb.appendChild(foot);

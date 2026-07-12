@@ -201,6 +201,26 @@ body.theme-light .status.ok{color:#16a34a}
 }
 
 /* ============================================================
+   셸(탭) 안에서는 페이지 대문 타이틀 숨김 — 탭바가 이미 위치를 알려주므로 중복.
+   직접 접속·인쇄에서는 유지된다.
+   ============================================================ */
+body.gst-inframe .header{display:none !important}
+body.gst-inframe .status{margin-top:2px}
+
+/* ============================================================
+   섹션 내비게이션 (GST.sectionNav) — 페이지 내 소분류 탭
+   ============================================================ */
+.gst-secnav{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:14px;
+  border-bottom:1px solid var(--glass-border)}
+.gst-sec-tab{background:none;border:none;border-bottom:2px solid transparent;
+  padding:9px 16px 10px;margin-bottom:-1px;color:var(--txt-muted);
+  font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;
+  transition:color .15s var(--ease)}
+.gst-sec-tab:hover{color:var(--txt-main)}
+.gst-sec-tab.active{color:var(--accent-1);border-bottom-color:var(--accent-1)}
+body.theme-slate .gst-sec-tab.active{color:#2DD4BF;border-bottom-color:#2DD4BF}
+
+/* ============================================================
    인사이트 스트립 (GST.insights) — KPI 위에 자동 삽입되는 요약 문장
    ============================================================ */
 .gst-insights{display:flex;align-items:center;flex-wrap:wrap;gap:6px 18px;
@@ -386,6 +406,10 @@ body.gst-sb-open .gst-sb-toggle{left:300px}
   body{background:#fff !important;color:#000 !important;padding:0 !important;animation:none !important}
   body.gst-sb-open{padding-left:0 !important}
   .gst-sidebar,.gst-sb-toggle,.gst-backdrop{display:none !important}
+  /* 인쇄물에는 제목 복원 + 모든 섹션 펼침 */
+  body.gst-inframe .header{display:flex !important}
+  .gst-secnav{display:none !important}
+  [data-sec]{display:block !important}
   .header-right,.slicers,.toolbar,.lang-wrap,.theme-wrap,button,.fchips,.excl-box,.navtabs,.m-link{display:none !important}
   .header h1{-webkit-text-fill-color:#000 !important;background:none !important;font-size:22px !important}
   .header .sub{color:#555 !important}
