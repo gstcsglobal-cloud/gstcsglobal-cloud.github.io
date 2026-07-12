@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fault Analysis Dashboard</title>
+<title>Service & Fault Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
@@ -63,82 +63,97 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .slicers{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
 .slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:16px;padding:12px 16px;backdrop-filter:blur(12px)}
 .slicer .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--mut);margin-bottom:8px;font-weight:700}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{cursor:pointer;border:1px solid var(--glassb);background:rgba(255,255,255,.04);color:var(--txt);
-  padding:6px 14px;border-radius:30px;font-size:12px;font-weight:600;transition:all .2s;user-select:none}
-.chip:hover{transform:translateY(-2px);border-color:var(--a2)}
-.chip.active{background:linear-gradient(90deg,var(--a1),var(--a2));border-color:transparent;box-shadow:0 4px 16px rgba(251,113,133,.35)}
+.slicer select,.dt-input{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 12px;color:var(--txt);font-size:12px;outline:none;min-width:120px;color-scheme:dark}
 .search-sl{margin-left:auto}
 .search-sl input{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:30px;padding:8px 16px;color:var(--txt);font-size:13px;width:210px;outline:none}
 .search-sl input:focus{border-color:var(--a1)}
 .search-sl input::placeholder{color:var(--mut)}
+/* KPI — 리치 카드 */
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
 .kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s;cursor:pointer}
-.kpi:hover{transform:translateY(-4px)}
 .kpi.sel{border-color:var(--a1);box-shadow:0 0 0 1px var(--a1)}
-.kpi::before{content:'';position:absolute;top:-35px;right:-35px;width:100px;height:100px;border-radius:50%;opacity:.28}
-.kpi.k1::before{background:var(--a1)}.kpi.k2::before{background:var(--bad)}
-.kpi.k3::before{background:var(--a3)}.kpi.k4::before{background:var(--warn)}.kpi.k5::before{background:var(--a4)}
-.kpi .ic{font-size:20px;margin-bottom:6px}
-.kpi .val{font-size:32px;font-weight:800;line-height:1}
-.kpi .cap{color:var(--mut);font-size:11px;margin-top:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.kpi .cap{color:var(--mut);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.kpi .krow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.kpi .val{font-size:30px;font-weight:800;line-height:1;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.kpi .unit{font-size:12px;color:var(--mut);font-weight:600}
+.kpi .kd{font-size:11px;font-weight:800}
+.kpi .kfoot{font-size:11px;color:var(--mut);margin-top:7px}
+.kpi.k2 .val{color:var(--bad)}
+/* 카드/차트 */
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.grid2-trend{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:900px){.grid2-trend{grid-template-columns:1fr}}
 .card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px)}
 .card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
 .card-note{font-size:10px;color:var(--mut);margin-bottom:10px;font-style:italic}
 .card .cw{position:relative;height:220px}
+.trend-card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px);margin-bottom:16px}
+.trend-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.trend-header h3{font-size:14px;font-weight:700;color:#dfe6ff}
+.trend-meta{font-size:11px;color:var(--mut);background:rgba(255,255,255,.05);padding:4px 12px;border-radius:20px}
+.trend-wrap{position:relative;height:240px}
+/* 유무상 분할바 카드 */
+.wbig{display:flex;align-items:baseline;gap:8px;margin:6px 0 12px}
+.wbig .wv{font-size:28px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.wbig .wlbl{font-size:11px;color:var(--mut)}
+.wbar{display:flex;height:16px;border-radius:5px;overflow:hidden;gap:2px;margin-bottom:12px}
+.wbar .wa{background:var(--a2);border-radius:5px 0 0 5px;transition:width .4s}
+.wbar .wb{background:rgba(151,170,196,.25);flex:1;border-radius:0 5px 5px 0}
+.wleg{display:flex;gap:18px;font-size:11.5px;color:var(--mut)}
+.wleg i{display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(151,170,196,.25);margin-right:6px}
+.wleg i.pa{background:var(--a2)}
+.wleg b{color:var(--txt);font-variant-numeric:tabular-nums}
+/* 테이블 */
 .tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px)}
 .tablecard h3{font-size:14px;font-weight:700;margin-bottom:12px}
-.tbl-wrap{max-height:480px;overflow:auto;border-radius:10px}
+.tbl-wrap{max-height:520px;overflow:auto;border-radius:10px}
 .tbl-wrap::-webkit-scrollbar{width:5px;height:5px}.tbl-wrap::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
 table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
 th{text-align:left;padding:10px 11px;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:1px;
   border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(31,10,10,.96);cursor:pointer;user-select:none}
 th:hover{color:var(--a1)}
-td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.04)}
+td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.04);max-width:340px;overflow:hidden;text-overflow:ellipsis}
 tr:hover td{background:rgba(255,255,255,.04)}
 .pill{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
 .pill.bm{background:rgba(251,113,133,.18);color:#fda4af}
 .pill.cbm{background:rgba(167,139,250,.18);color:#c4b5fd}
-.pill.alarm{background:rgba(251,113,133,.18);color:#fda4af}
-.pill.warning{background:rgba(251,191,36,.18);color:#fde68a}
+.pill.cm{background:rgba(56,189,248,.18);color:#7dd3fc}
+.pill.crm{background:rgba(251,191,36,.18);color:#fde68a}
+.pill.paid{background:rgba(56,189,248,.15);color:#7dd3fc}
+.pill.free{background:rgba(151,170,196,.18);color:var(--mut)}
 .empty{text-align:center;padding:40px;color:var(--mut)}
 .loading{text-align:center;padding:60px;color:var(--mut);font-size:15px}
-@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
-@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
-
-/* 로그인 */
-#loginOverlay{position:fixed;inset:0;z-index:99999;background:linear-gradient(-45deg,#1f0a0a,#2d1320,#1a1235,#150c25);
-  background-size:400% 400%;animation:grad 18s ease infinite;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
-#loginOverlay.hidden{display:none}
-.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#fb7185,#fbbf24,#a78bfa);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
-.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
-.login-box .lock{font-size:40px;margin-bottom:14px}
-.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px;color:#f5f6fa}
-.login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
-.login-box input:focus{border-color:#fb7185}
-.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#fb7185,#fbbf24);border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
-.login-err{color:#fda4af;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
-
-
-/* 드롭다운 슬라이서 + 크로스필터 칩 */
-.slicer select{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;
-  padding:7px 10px;color:var(--txt);font-size:12px;outline:none;color-scheme:dark;max-width:160px}
-.slicer select:focus{border-color:var(--a1)}
-.dt-input{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;
-  padding:6px 8px;color:var(--txt);font-size:11px;outline:none;color-scheme:dark;width:118px}
 .fchips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;
-  padding:10px 14px;background:var(--glass);border:1px solid var(--accent-2);border-radius:12px}
+  background:var(--glass);border:1px solid var(--glassb);border-radius:14px;padding:9px 14px}
 .fchips-label{font-size:11px;font-weight:700;color:var(--accent-2)}
-.fchip{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;
-  background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.4);color:var(--txt-main);cursor:pointer}
-.fchip:hover{background:rgba(251,113,133,.15);border-color:rgba(251,113,133,.4)}
-.fchip .fx{font-weight:900;font-size:10px}
-.fchip-clear{background:transparent;border:1px solid var(--glassb);border-radius:20px;
-  padding:4px 11px;color:var(--mut);font-size:10px;font-weight:700;cursor:pointer;margin-left:auto}
+.fchip{display:inline-flex;align-items:center;gap:5px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4);
+  color:var(--txt);padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer}
+.fchip .fx{opacity:.7;font-size:9px}
+.fchip:hover{border-color:var(--bad)}
+.fchip-clear{margin-left:auto;background:none;border:1px solid var(--glassb);color:var(--mut);
+  border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer}
 .fchip-clear:hover{color:var(--bad);border-color:var(--bad)}
 canvas{cursor:pointer}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
+/* 로그인 가드 */
+#loginOverlay{position:fixed;inset:0;z-index:99999;
+  background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#1a1a2e);
+  background-size:400% 400%;animation:grad 18s ease infinite;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-family:'Segoe UI','Malgun Gothic',sans-serif}
+#loginOverlay.hidden{display:none}
+.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
+.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;
+  padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
+.login-box .lock{font-size:40px;margin-bottom:14px}
+.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px;color:#f5f6fa}
+.login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);
+  border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
+.login-box input:focus{border-color:#6c5ce7}
+.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);
+  border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
@@ -157,8 +172,8 @@ canvas{cursor:pointer}
 
 <div class="header">
   <div>
-    <h1 data-i="title">Fault Analysis Dashboard</h1>
-    <div class="sub" data-i="sub">BM/CBM breakdown & alarm analysis</div>
+    <h1 data-i="title">Service & Fault Dashboard</h1>
+    <div class="sub" data-i="sub">BM·CBM·CM·CRM service records & workload</div>
   </div>
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← Main</a>
@@ -178,16 +193,16 @@ canvas{cursor:pointer}
 
 <div class="slicers">
   <div class="slicer"><div class="lbl">LINE</div><select id="sl-line" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl">GROUP</div><select id="sl-group" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_type">유형</div><select id="sl-type" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_sn">설비 S/N</div><select id="sl-sn" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_code">고장코드</div><select id="sl-code" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_stage">작업단계</div><select id="sl-stage" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_pf">유/무상</div><select id="sl-pf" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_cause">원인</div><select id="sl-cause" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_model">모델</div><select id="sl-model" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_sn">설비 S/N</div><select id="sl-sn" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_period">기간</div>
     <input type="date" id="dtFrom" onchange="onSlicer()" class="dt-input"> ~
     <input type="date" id="dtTo" onchange="onSlicer()" class="dt-input">
   </div>
-  <div class="slicer search-sl"><div class="lbl" data-i="sl_search">검색</div><input id="search" placeholder="S/N, 코드, 메시지..."></div>
+  <div class="slicer search-sl"><div class="lbl" data-i="sl_search">검색</div><input id="search" placeholder="S/N, 현상, 조치, 작업자..."></div>
 </div>
 
 <div class="fchips" id="fchips" style="display:none">
@@ -196,47 +211,167 @@ canvas{cursor:pointer}
   <button class="fchip-clear" onclick="clearAllFilters()" data-i="f_clear">전체 해제</button>
 </div>
 
+<!-- KPI (공통) -->
 <div class="kpis">
-  <div class="kpi k1 sel" data-f=""><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">Total Faults</div><div class="kpi-delta" id="kd1"></div></div>
-  <div class="kpi k2" data-f="BM"><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">BM (Breakdown)</div></div>
-  <div class="kpi k3" data-f="CBM"><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">CBM (Condition)</div></div>
-  <div class="kpi k4" data-aw="Alarm"><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Alarm</div></div>
-  <div class="kpi k5" data-aw="Warning"><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">Warning</div></div>
+  <div class="kpi k1 sel" data-stage=""><div class="cap" data-i="kp1">서비스 대응 건수</div>
+    <div class="krow"><span class="val" id="kp1">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd1"></span></div>
+    <div class="kfoot" id="kf1">—</div></div>
+  <div class="kpi k2" data-stage="BM"><div class="cap">BM (고장정비)</div>
+    <div class="krow"><span class="val" id="kp2">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd2"></span></div>
+    <div class="kfoot" id="kf2">—</div></div>
+  <div class="kpi k3"><div class="cap" data-i="kp3">평균 작업시간</div>
+    <div class="krow"><span class="val" id="kp3">0</span><span class="unit" data-i="u_min">분</span></div>
+    <div class="kfoot" id="kf3">—</div></div>
+  <div class="kpi k4"><div class="cap" data-i="kp4">총 작업공수</div>
+    <div class="krow"><span class="val" id="kp4">0</span><span class="unit" data-i="u_mh">인·시</span></div>
+    <div class="kfoot" id="kf4">—</div></div>
+  <div class="kpi k5"><div class="cap" data-i="kp5">유상 비율</div>
+    <div class="krow"><span class="val" id="kp5">0%</span><span class="kd" id="kd5"></span></div>
+    <div class="kfoot" id="kf5">—</div></div>
 </div>
 
-<div class="grid3">
-  <div class="card"><h3 data-i="ch_code">Fault Code TOP</h3><div class="card-note" data-i="note_code">Most frequent fault codes</div><div class="cw"><canvas id="cCode"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_sn">Fault by Equipment</h3><div class="card-note" data-i="note_sn">Equipment with most faults</div><div class="cw"><canvas id="cSn"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_type">BM vs CBM</h3><div class="card-note" data-i="note_type">Maintenance type ratio</div><div class="cw"><canvas id="cType"></canvas></div></div>
+<!-- ═══ 섹션: 개요 ═══ -->
+<div data-sec="overview">
+  <div class="grid2-trend">
+    <div class="trend-card" style="margin-bottom:0">
+      <div class="trend-header">
+        <h3 data-i="ch_trend">월별 서비스 추이</h3>
+        <div class="trend-meta" id="trendMeta"></div>
+      </div>
+      <div class="trend-wrap"><canvas id="cTrend"></canvas></div>
+    </div>
+    <div class="trend-card" style="margin-bottom:0">
+      <div class="trend-header">
+        <h3 data-i="ch_stage">작업단계 구성</h3>
+        <div class="trend-meta" data-i="note_stage">BM은 상태색으로 강조</div>
+      </div>
+      <div class="trend-wrap"><canvas id="cStage"></canvas></div>
+    </div>
+  </div>
+  <div class="grid3" style="margin-top:16px">
+    <div class="card">
+      <h3 data-i="ch_sn">설비별 대응 TOP</h3>
+      <div class="card-note" data-i="note_sn">이상 집중 설비는 붉게 표시 · 🖱️ 클릭 시 필터</div>
+      <div class="cw"><canvas id="cSn"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_line">LINE별 건수</h3>
+      <div class="card-note" data-i="note_line">🖱️ 클릭 시 필터</div>
+      <div class="cw"><canvas id="cLine"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_pf">유상 vs 무상</h3>
+      <div class="card-note" data-i="note_pf">서비스 대응의 유상/무상 구성</div>
+      <div class="wbig"><span class="wv" id="pfPct">0%</span><span class="wlbl" data-i="pf_ratio">유상 비율</span></div>
+      <div class="wbar"><div class="wa" id="pfBar" style="width:0%"></div><div class="wb"></div></div>
+      <div class="wleg">
+        <span><i class="pa"></i><span data-i="pf_paid">유상</span> <b id="pfPaid">0</b></span>
+        <span><i></i><span data-i="pf_free">무상</span> <b id="pfFree">0</b></span>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="grid3">
-  <div class="card"><h3 data-i="ch_line">Fault by LINE</h3><div class="card-note" data-i="note_line">Faults per production line</div><div class="cw"><canvas id="cLine"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_trend">Monthly Trend</h3><div class="card-note" data-i="note_trend">Faults over time</div><div class="cw"><canvas id="cTrend"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_action">Action Type</h3><div class="card-note" data-i="note_action">Parts / Inspection / Design</div><div class="cw"><canvas id="cAction"></canvas></div></div>
+<!-- ═══ 섹션: 원인·조치 ═══ -->
+<div data-sec="cause">
+  <div class="grid3">
+    <div class="card">
+      <h3 data-i="ch_phenom">현상 TOP</h3>
+      <div class="card-note" data-i="note_hbar">값은 막대 끝 · 비중은 툴팁</div>
+      <div class="cw"><canvas id="cPhenom"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_cause">원인 TOP</h3>
+      <div class="card-note" data-i="note_cause">🖱️ 클릭 시 필터</div>
+      <div class="cw"><canvas id="cCause"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_action">조치 유형</h3>
+      <div class="card-note" data-i="note_action">중앙: 전체 건수</div>
+      <div class="cw"><canvas id="cAction"></canvas></div>
+    </div>
+  </div>
+  <div class="grid3">
+    <div class="card">
+      <h3 data-i="ch_reqtype">의뢰유형</h3>
+      <div class="card-note" data-i="note_reqtype">고객요청/신규/이설 등</div>
+      <div class="cw"><canvas id="cReqType"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_model">모델별 대응</h3>
+      <div class="card-note" data-i="note_hbar">값은 막대 끝 · 비중은 툴팁</div>
+      <div class="cw"><canvas id="cModel"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_proc">공정별 대응</h3>
+      <div class="card-note" data-i="note_hbar">값은 막대 끝 · 비중은 툴팁</div>
+      <div class="cw"><canvas id="cProc"></canvas></div>
+    </div>
+  </div>
 </div>
 
+<!-- ═══ 섹션: 작업 부하 ═══ -->
+<div data-sec="load">
+  <div class="grid2-trend">
+    <div class="trend-card" style="margin-bottom:0">
+      <div class="trend-header">
+        <h3 data-i="ch_mantrend">월별 작업공수</h3>
+        <div class="trend-meta" data-i="note_mantrend">인·시 (작업공수 ÷ 60)</div>
+      </div>
+      <div class="trend-wrap"><canvas id="cManTrend"></canvas></div>
+    </div>
+    <div class="trend-card" style="margin-bottom:0">
+      <div class="trend-header">
+        <h3 data-i="ch_dur">작업시간 분포</h3>
+        <div class="trend-meta" data-i="note_dur">건당 소요시간(분) 구간</div>
+      </div>
+      <div class="trend-wrap"><canvas id="cDur"></canvas></div>
+    </div>
+  </div>
+  <div class="grid3" style="margin-top:16px">
+    <div class="card">
+      <h3 data-i="ch_worker">작업자 TOP (공수)</h3>
+      <div class="card-note" data-i="note_worker">개인별 누적 인·시 · 공동작업은 인원수로 안분</div>
+      <div class="cw"><canvas id="cWorker"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_wcnt">투입 인원수 구성</h3>
+      <div class="card-note" data-i="note_wcnt">건당 작업자수</div>
+      <div class="cw"><canvas id="cWcnt"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_lineman">LINE별 평균 작업시간</h3>
+      <div class="card-note" data-i="note_lineman">건당 평균(분)</div>
+      <div class="cw"><canvas id="cLineMan"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 섹션: 상세 목록 ═══ -->
+<div data-sec="data">
 <div class="tablecard">
-  <h3><span data-i="tbl_title">Fault Detail List</span> (<span id="tblCnt">0</span>)</h3>
+  <h3><span data-i="tbl_title">서비스 실적 상세</span> (<span id="tblCnt">0</span>)</h3>
   <div class="tbl-wrap">
     <table>
       <thead><tr>
-        <th data-k="work">Work Date</th><th data-k="sn">S/N</th>
-        <th data-k="line">LINE</th><th data-k="group">Group</th>
-        <th data-k="model">Model</th><th data-k="maint">Type</th>
-        <th data-k="aw">Alarm/Warn</th><th data-k="msg" data-i-th="th_msg">Message</th>
-        <th data-k="failCode">Fail Code</th><th data-k="failType" data-i-th="th_ftype">Fail Type</th>
-        <th data-k="action" data-i-th="th_action">Action</th><th data-k="chamber">Chamber</th>
+        <th data-k="work" data-i-th="th_date">작업일</th><th data-k="sn">S/N</th>
+        <th data-k="line">LINE</th><th data-k="model">Model</th>
+        <th data-k="stage" data-i-th="th_stage">단계</th><th data-k="pf" data-i-th="th_pf">유/무상</th>
+        <th data-k="phenom" data-i-th="th_phenom">현상</th><th data-k="cause" data-i-th="th_cause">원인</th>
+        <th data-k="action" data-i-th="th_action">조치</th>
+        <th data-k="workMin" data-i-th="th_min">시간(분)</th><th data-k="manMin" data-i-th="th_mh">공수</th>
+        <th data-k="workers" data-i-th="th_worker">작업자</th>
       </tr></thead>
       <tbody id="tbody"><tr><td colspan="12" class="loading">⏳ Loading...</td></tr></tbody>
     </table>
   </div>
 </div>
+</div>
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 (function(){
-    function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
+  function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
   window.checkPw=async function(){
     const v=document.getElementById('pwInput').value;
     if(await GST.checkPw(v)){try{sessionStorage.setItem('gst_auth','1');}catch(e){}document.getElementById('loginOverlay').classList.add('hidden');}
@@ -249,176 +384,198 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 })();
 
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
-const C={line:2,group1:3,detail1:5,model:17,code:18,work:23,sn:24,maint:25,aw:26,resp:27,msg:28,failCode:29,failType:31,action:32,chamber:33};
-const PAL=GST.PAL8; // 공통 검증 팔레트 (고정 순서)
+// 새 시트3(실적현황) 컬럼 맵 (0-based)
+const C={pg:1,op:2,customer:3,campus:4,line:5,bay:6,proc:7,subproc:8,model:9,rsCode:10,status:11,
+  reqType:12,stage:13,chamber:14,wrs:15,mainEq:16,prodCode:18,eqNo:19,chpos:20,snIn:21,snOut:22,
+  pf:24,alarm:25,phenom:26,cause:27,action:28,actionDetail:29,
+  dStart:32,dEnd:33,regDate:36,shipDate:37,moveMin:38,workMin:39,manMin:40,workers:41,workerCnt:42};
+// 서비스 대응으로 집계하는 작업단계 (점검 TBM·반입·셋업 제외)
+const SERVICE_STAGES=['BM','CBM','CM','CRM'];
+const PAL=GST.PAL8;
 
 const T={
-  ko:{title:'고장 분석 대시보드',sub:'BM/CBM 고장 및 알람 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
-    sl_type:'유형',sl_search:'검색',sl_sn:'설비 S/N',sl_code:'고장코드',sl_model:'모델',sl_period:'기간',all:'전체',last30:'최근 30일 {n}건',ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcode:'고장코드 {v} 집중 — 전체의 {p}%',ins_outlier:'설비 {v} 이상 집중 — {n}건',f_active:'활성 필터',f_clear:'전체 해제',
-    kp1:'총 고장건수',kp2:'BM (고장정비)',kp3:'CBM (상태기반)',kp4:'Alarm',kp5:'Warning',
-    ch_code:'고장코드 TOP',note_code:'가장 빈번한 고장코드',
-    ch_sn:'설비별 고장',note_sn:'고장 많은 설비',
-    ch_type:'BM vs CBM',note_type:'정비 유형 비율',
-    ch_line:'LINE별 고장',note_line:'라인별 고장건수',
-    ch_trend:'월별 추이',note_trend:'시간별 고장 추이',
-    ch_action:'조치 유형',note_action:'부품/점검/설계',
-    tbl_title:'고장 상세 내역',th_msg:'메시지',th_ftype:'고장유형',th_action:'조치',
-    no_data:'데이터 없음',search_ph:'S/N, 코드, 메시지 검색...'},
-  en:{title:'Fault Analysis Dashboard',sub:'BM/CBM breakdown & alarm analysis',back:'← Main',refresh:'Refresh',loading:'Loading...',
-    sl_type:'Type',sl_search:'Search',sl_sn:'Equipment S/N',sl_code:'Fail Code',sl_model:'Model',sl_period:'Period',all:'All',last30:'Last 30d {n}',ins_mom:'{n} faults in last 30d · {p} vs prior 30d',ins_topcode:'Code {v} concentration — {p}% of all',ins_outlier:'Equipment {v} outlier — {n} faults',f_active:'Active Filters',f_clear:'Clear All',
-    kp1:'Total Faults',kp2:'BM (Breakdown)',kp3:'CBM (Condition)',kp4:'Alarm',kp5:'Warning',
-    ch_code:'Fault Code TOP',note_code:'Most frequent codes',
-    ch_sn:'Fault by Equipment',note_sn:'Equipment with most faults',
-    ch_type:'BM vs CBM',note_type:'Maintenance type ratio',
-    ch_line:'Fault by LINE',note_line:'Faults per line',
-    ch_trend:'Monthly Trend',note_trend:'Faults over time',
-    ch_action:'Action Type',note_action:'Parts/Inspection/Design',
-    tbl_title:'Fault Detail List',th_msg:'Message',th_ftype:'Fail Type',th_action:'Action',
-    no_data:'No data',search_ph:'Search S/N, Code, Message...'},
-  zh:{title:'故障分析仪表板',sub:'BM/CBM故障及报警分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
-    sl_type:'类型',sl_search:'搜索',sl_sn:'设备S/N',sl_code:'故障码',sl_model:'型号',sl_period:'期间',all:'全部',last30:'近30天{n}件',ins_mom:'近30天{n}件 · 环比前30天 {p}',ins_topcode:'故障码 {v} 集中 — 占{p}%',ins_outlier:'设备 {v} 异常集中 — {n}件',f_active:'活动筛选',f_clear:'全部清除',
-    kp1:'总故障数',kp2:'BM(故障维修)',kp3:'CBM(状态维修)',kp4:'报警',kp5:'警告',
-    ch_code:'故障代码TOP',note_code:'最频繁故障代码',
-    ch_sn:'各设备故障',note_sn:'故障最多设备',
-    ch_type:'BM vs CBM',note_type:'维修类型比例',
-    ch_line:'各LINE故障',note_line:'各线故障数',
-    ch_trend:'月度趋势',note_trend:'故障时间趋势',
-    ch_action:'处理类型',note_action:'部件/检查/设计',
-    tbl_title:'故障明细',th_msg:'消息',th_ftype:'故障类型',th_action:'处理',
-    no_data:'无数据',search_ph:'搜索S/N,代码,消息...'},
-  ja:{title:'故障分析ダッシュボード',sub:'BM/CBM故障・アラーム分析',back:'← メイン',refresh:'更新',loading:'読み込み中...',
-    sl_type:'種類',sl_search:'検索',sl_sn:'設備S/N',sl_code:'故障コード',sl_model:'モデル',sl_period:'期間',all:'全体',last30:'直近30日{n}件',ins_mom:'直近30日{n}件 · 前30日比 {p}',ins_topcode:'コード {v} 集中 — 全体の{p}%',ins_outlier:'設備 {v} 異常集中 — {n}件',f_active:'有効フィルタ',f_clear:'全解除',
-    kp1:'総故障件数',kp2:'BM(故障整備)',kp3:'CBM(状態基準)',kp4:'Alarm',kp5:'Warning',
-    ch_code:'故障コードTOP',note_code:'最頻出コード',
-    ch_sn:'設備別故障',note_sn:'故障の多い設備',
-    ch_type:'BM vs CBM',note_type:'整備種類比率',
-    ch_line:'LINE別故障',note_line:'ライン別件数',
-    ch_trend:'月別推移',note_trend:'時系列故障推移',
-    ch_action:'処置種類',note_action:'部品/点検/設計',
-    tbl_title:'故障詳細',th_msg:'メッセージ',th_ftype:'故障種類',th_action:'処置',
-    no_data:'データなし',search_ph:'S/N,コード,メッセージ検索...'}
+  ko:{title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
+    sec_ov:'개요',sec_ca:'원인·조치',sec_ld:'작업 부하',sec_dt:'상세 목록',
+    sl_stage:'작업단계',sl_pf:'유/무상',sl_cause:'원인',sl_model:'모델',sl_sn:'설비 S/N',sl_period:'기간',sl_search:'검색',
+    all:'전체',f_active:'활성 필터',f_clear:'전체 해제',no_data:'조건에 맞는 데이터가 없습니다',
+    kp1:'서비스 대응 건수',kp3:'평균 작업시간',kp4:'총 작업공수',kp5:'유상 비율',
+    u_cnt:'건',u_min:'분',u_mh:'인·시',
+    kf1:'최근 30일 {n}건',kf2:'전체의 {p}%',kf3:'중앙값 {n}분',kf4:'공수 기록 {n}건 기준',kf5:'유상 {a} · 무상 {b}',
+    ch_trend:'월별 서비스 추이',ch_stage:'작업단계 구성',note_stage:'BM은 상태색으로 강조',
+    ch_sn:'설비별 대응 TOP',note_sn:'이상 집중 설비는 붉게 표시 · 🖱️ 클릭 시 필터',
+    ch_line:'LINE별 건수',note_line:'🖱️ 클릭 시 필터',ch_pf:'유상 vs 무상',note_pf:'서비스 대응의 유상/무상 구성',pf_ratio:'유상 비율',pf_paid:'유상',pf_free:'무상',
+    ch_phenom:'현상 TOP',ch_cause:'원인 TOP',note_cause:'🖱️ 클릭 시 필터',ch_action:'조치 유형',note_action:'중앙: 전체 건수',
+    ch_reqtype:'의뢰유형',note_reqtype:'고객요청/신규/이설 등',ch_model:'모델별 대응',ch_proc:'공정별 대응',note_hbar:'값은 막대 끝 · 비중은 툴팁',
+    ch_mantrend:'월별 작업공수',note_mantrend:'인·시 (작업공수 ÷ 60)',ch_dur:'작업시간 분포',note_dur:'건당 소요시간(분) 구간',
+    ch_worker:'작업자 TOP (공수)',note_worker:'개인별 누적 인·시 · 공동작업은 인원수로 안분',ch_wcnt:'투입 인원수 구성',note_wcnt:'건당 작업자수',
+    ch_lineman:'LINE별 평균 작업시간',note_lineman:'건당 평균(분)',
+    tbl_title:'서비스 실적 상세',th_date:'작업일',th_stage:'단계',th_pf:'유/무상',th_phenom:'현상',th_cause:'원인',th_action:'조치',th_min:'시간(분)',th_mh:'공수',th_worker:'작업자',
+    ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'월 작업공수 {n}인·시 · 전월 대비 {p}',
+    etc:'기타',mon_unit:'월',dur_b:['<30분','30–60분','1–2시간','2–4시간','4시간+'],wcnt_p:'{n}명'},
+  en:{title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
+    sec_ov:'Overview',sec_ca:'Cause & Action',sec_ld:'Workload',sec_dt:'Data',
+    sl_stage:'Stage',sl_pf:'Paid/Free',sl_cause:'Cause',sl_model:'Model',sl_sn:'Equipment S/N',sl_period:'Period',sl_search:'Search',
+    all:'All',f_active:'Active Filters',f_clear:'Clear All',no_data:'No data found',
+    kp1:'Service Cases',kp3:'Avg Work Time',kp4:'Total Man-hours',kp5:'Paid Ratio',
+    u_cnt:'',u_min:'min',u_mh:'m·h',
+    kf1:'{n} in last 30 days',kf2:'{p}% of all',kf3:'median {n} min',kf4:'based on {n} records',kf5:'paid {a} · free {b}',
+    ch_trend:'Monthly Service Trend',ch_stage:'By Work Stage',note_stage:'BM highlighted with status color',
+    ch_sn:'Top Equipment',note_sn:'outliers in red · click to filter',
+    ch_line:'Cases by LINE',note_line:'click to filter',ch_pf:'Paid vs Free',note_pf:'Paid/free mix of services',pf_ratio:'paid ratio',pf_paid:'Paid',pf_free:'Free',
+    ch_phenom:'Top Phenomena',ch_cause:'Top Causes',note_cause:'click to filter',ch_action:'Action Types',note_action:'center: total',
+    ch_reqtype:'Request Types',note_reqtype:'customer request / new / move',ch_model:'By Model',ch_proc:'By Process',note_hbar:'value at bar end · share in tooltip',
+    ch_mantrend:'Monthly Man-hours',note_mantrend:'man-hours (man-min ÷ 60)',ch_dur:'Duration Distribution',note_dur:'work minutes per case',
+    ch_worker:'Top Workers (man-hours)',note_worker:'per-person, shared jobs split by headcount',ch_wcnt:'Crew Size Mix',note_wcnt:'workers per case',
+    ch_lineman:'Avg Work Time by LINE',note_lineman:'avg minutes per case',
+    tbl_title:'Service Records',th_date:'Date',th_stage:'Stage',th_pf:'Paid/Free',th_phenom:'Phenomenon',th_cause:'Cause',th_action:'Action',th_min:'Min',th_mh:'Man-min',th_worker:'Workers',
+    ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours this month · {p} MoM',
+    etc:'Others',mon_unit:'',dur_b:['<30m','30–60m','1–2h','2–4h','4h+'],wcnt_p:'{n} ppl'},
+  zh:{title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
+    sec_ov:'概览',sec_ca:'原因·措施',sec_ld:'工时负荷',sec_dt:'明细',
+    sl_stage:'作业阶段',sl_pf:'有/无偿',sl_cause:'原因',sl_model:'型号',sl_sn:'设备S/N',sl_period:'期间',sl_search:'搜索',
+    all:'全部',f_active:'活动筛选',f_clear:'全部清除',no_data:'无数据',
+    kp1:'服务对应件数',kp3:'平均作业时间',kp4:'总作业工时',kp5:'有偿比率',
+    u_cnt:'件',u_min:'分',u_mh:'人·时',
+    kf1:'近30天 {n}件',kf2:'占全部{p}%',kf3:'中位数 {n}分',kf4:'基于{n}条工时记录',kf5:'有偿 {a} · 无偿 {b}',
+    ch_trend:'月度服务趋势',ch_stage:'作业阶段构成',note_stage:'BM以状态色强调',
+    ch_sn:'设备对应TOP',note_sn:'异常集中设备红色显示 · 点击筛选',
+    ch_line:'按LINE件数',note_line:'点击筛选',ch_pf:'有偿 vs 无偿',note_pf:'服务的有/无偿构成',pf_ratio:'有偿比率',pf_paid:'有偿',pf_free:'无偿',
+    ch_phenom:'现象TOP',ch_cause:'原因TOP',note_cause:'点击筛选',ch_action:'措施类型',note_action:'中央: 总件数',
+    ch_reqtype:'委托类型',note_reqtype:'客户要求/新增/移设等',ch_model:'按型号',ch_proc:'按工艺',note_hbar:'数值在柱端 · 占比见提示框',
+    ch_mantrend:'月度作业工时',note_mantrend:'人·时 (工时÷60)',ch_dur:'作业时间分布',note_dur:'每件耗时(分)区间',
+    ch_worker:'作业者TOP (工时)',note_worker:'按人累计,共同作业按人数分摊',ch_wcnt:'投入人数构成',note_wcnt:'每件作业人数',
+    ch_lineman:'按LINE平均作业时间',note_lineman:'每件平均(分)',
+    tbl_title:'服务实绩明细',th_date:'作业日',th_stage:'阶段',th_pf:'有/无偿',th_phenom:'现象',th_cause:'原因',th_action:'措施',th_min:'时间(分)',th_mh:'工时',th_worker:'作业者',
+    ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'本月工时 {n}人·时 · 环比 {p}',
+    etc:'其他',mon_unit:'月',dur_b:['<30分','30–60分','1–2时','2–4时','4时+'],wcnt_p:'{n}人'},
+  ja:{title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
+    sec_ov:'概要',sec_ca:'原因·処置',sec_ld:'工数負荷',sec_dt:'詳細',
+    sl_stage:'作業段階',sl_pf:'有/無償',sl_cause:'原因',sl_model:'モデル',sl_sn:'設備S/N',sl_period:'期間',sl_search:'検索',
+    all:'全体',f_active:'有効フィルタ',f_clear:'全解除',no_data:'データなし',
+    kp1:'サービス対応件数',kp3:'平均作業時間',kp4:'総作業工数',kp5:'有償比率',
+    u_cnt:'件',u_min:'分',u_mh:'人·時',
+    kf1:'直近30日 {n}件',kf2:'全体の{p}%',kf3:'中央値 {n}分',kf4:'工数記録{n}件基準',kf5:'有償 {a} · 無償 {b}',
+    ch_trend:'月別サービス推移',ch_stage:'作業段階構成',note_stage:'BMは状態色で強調',
+    ch_sn:'設備別対応TOP',note_sn:'異常集中設備は赤表示 · クリックで絞込',
+    ch_line:'LINE別件数',note_line:'クリックで絞込',ch_pf:'有償 vs 無償',note_pf:'サービスの有償/無償構成',pf_ratio:'有償比率',pf_paid:'有償',pf_free:'無償',
+    ch_phenom:'現象TOP',ch_cause:'原因TOP',note_cause:'クリックで絞込',ch_action:'処置タイプ',note_action:'中央: 総件数',
+    ch_reqtype:'依頼タイプ',note_reqtype:'顧客要請/新規/移設など',ch_model:'モデル別',ch_proc:'工程別',note_hbar:'値は棒の先 · 構成比はツールチップ',
+    ch_mantrend:'月別作業工数',note_mantrend:'人·時 (工数÷60)',ch_dur:'作業時間分布',note_dur:'件当たり所要時間(分)区分',
+    ch_worker:'作業者TOP (工数)',note_worker:'個人別累計·共同作業は人数で按分',ch_wcnt:'投入人数構成',note_wcnt:'件当たり作業者数',
+    ch_lineman:'LINE別平均作業時間',note_lineman:'件当たり平均(分)',
+    tbl_title:'サービス実績詳細',th_date:'作業日',th_stage:'段階',th_pf:'有/無償',th_phenom:'現象',th_cause:'原因',th_action:'処置',th_min:'時間(分)',th_mh:'工数',th_worker:'作業者',
+    ins_mom:'直近30日 {n}件 · 前30日比 {p}',ins_topcause:'原因 {v} 集中 — 全体の{p}%',ins_outlier:'設備 {v} 異常集中 — {n}件',ins_man:'今月工数 {n}人·時 · 前月比 {p}',
+    etc:'その他',mon_unit:'月',dur_b:['<30分','30–60分','1–2時間','2–4時間','4時間+'],wcnt_p:'{n}名'}
 };
 
-let LANG='ko', RAW=[], FAULTS=[], CHARTS={}, sortK='work', sortAsc=false;
-const F={line:'',group:'',type:'',aw:'',sn:'',code:'',model:'',action:'',dtFrom:'',dtTo:'',q:''};
-try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
+let LANG='ko', ROWS=[], CHARTS={}, sortK='work', sortAsc=false;
+try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&T[sl])LANG=sl; else if(window.name&&T[window.name])LANG=window.name; }catch(e){}
+const F={line:'',stage:'',pf:'',cause:'',model:'',sn:'',dtFrom:'',dtTo:'',q:''};
 
 Chart.defaults.color=GST.chartTheme().txt;
 Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
-// 테마 전환 시 차트를 새 잉크로 재생성 (initSync가 호출)
 window.changeDashboardTheme=function(){
   Chart.defaults.color=GST.chartTheme().txt;
   GST.reskinCharts(CHARTS);
-  if(FAULTS.length)render();
+  if(ROWS.length)render();
 };
 
 function t(k){return (T[LANG]||T.ko)[k]||k;}
+function buildSecNav(){
+  GST.sectionNav([
+    {id:'overview',label:t('sec_ov')},
+    {id:'cause',   label:t('sec_ca')},
+    {id:'load',    label:t('sec_ld')},
+    {id:'data',    label:t('sec_dt')}
+  ]);
+}
 function applyLang(){
   document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
   document.querySelectorAll('[data-i-th]').forEach(el=>{el.textContent=t(el.getAttribute('data-i-th'));});
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
-  document.getElementById('search').placeholder=t('search_ph');
+  buildSecNav();
+  if(ROWS.length){buildSlicers();render();}
 }
-function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(FAULTS.length)render();document.getElementById('langMenu').classList.remove('open');}
+function setLang(l){LANG=l;try{window.name=l;sessionStorage.setItem('gst_lang',l);}catch(e){}applyLang();document.getElementById('langMenu').classList.remove('open');}
 function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
 document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');});
 
-const toDate=GST.toDate;
-const fmtDate=GST.fmtDate;
-function cv(r,k){const v=r[C[k]];return(v!==undefined&&v!=='')?String(v).trim():'';}
+const toDate=GST.toDate, fmtDate=GST.fmtDate, fmtD=GST.fmtD, countBy=GST.countBy, animVal=GST.animVal;
 
 async function loadData(){ GST.skeleton(true);
-  const btn=document.getElementById('refreshBtn');const status=document.getElementById('status');
-  btn.disabled=true;status.className='status';status.textContent=t('loading');
+  const btn=document.getElementById('refreshBtn'); const status=document.getElementById('status');
+  btn.disabled=true; status.className='status'; status.textContent=t('loading');
   try{
-    const fetched=await GST.fetchCSVCached(SHEET_URL,'pmsheet');
-    RAW=fetched.rows.slice(1);
-    // BM, CBM만 (TBM 제외)
-    FAULTS=RAW.filter(r=>{
-      const m=cv(r,'maint').toUpperCase();
-      return m==='BM'||m==='CBM';
-    }).map(r=>({
-      work:toDate(r[C.work]),sn:cv(r,'sn'),line:cv(r,'line'),group:cv(r,'group1'),
-      model:cv(r,'model'),maint:cv(r,'maint').toUpperCase(),aw:cv(r,'aw'),
-      msg:cv(r,'msg'),failCode:cv(r,'failCode'),failType:cv(r,'failType'),
-      action:cv(r,'action'),chamber:cv(r,'chamber')||'-'
-    }));
+    const fetched=await GST.fetchCSVCached(SHEET_URL,'svc');
+    GST.schemaBanner(GST.validateSchema(fetched.rows[0]||[],{
+      5:'라인',9:'MODEL',13:'작업단계',21:'S/N',24:'유/무상',27:'원인',32:'작업시작일',39:'작업시간',40:'작업공수'
+    }),'실적현황 시트');
+    ROWS=fetched.rows.slice(1)
+      .filter(r=>SERVICE_STAGES.indexOf((r[C.stage]||'').toString().trim().toUpperCase())>-1)
+      .map(r=>({
+        line:(r[C.line]||'').toString().trim(), stage:(r[C.stage]||'').toString().trim().toUpperCase(),
+        pf:(r[C.pf]||'').toString().trim(), cause:(r[C.cause]||'').toString().trim(),
+        model:(r[C.model]||'').toString().trim(), sn:(r[C.snIn]||'').toString().trim(),
+        proc:(r[C.proc]||'').toString().trim(), reqType:(r[C.reqType]||'').toString().trim(),
+        phenom:(r[C.phenom]||'').toString().trim(), action:(r[C.action]||'').toString().trim(),
+        detail:(r[C.actionDetail]||'').toString().trim().slice(0,300),
+        customer:(r[C.customer]||'').toString().trim(),
+        work:toDate(r[C.dStart]),
+        workMin:Number(r[C.workMin])||null, manMin:Number(r[C.manMin])||null,
+        workers:(r[C.workers]||'').toString().trim(), workerCnt:Number(r[C.workerCnt])||null
+      }))
+      .filter(x=>x.sn||x.line);
     status.className='status ok';
-    status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+FAULTS.length;
-    if(fetched.cached){status.textContent='📡 시트 접속 실패 — 캐시 데이터('+fetched.ageMin+'분 전) 표시 중';status.style.color='#fbbf24';}
-    rebuildFilters();const _st=GST.readState();
-    if(_st){
-      Object.assign(F,_st); syncSlicerUI();
-      if(F.dtFrom)document.getElementById('dtFrom').value=F.dtFrom;
-      if(F.dtTo)document.getElementById('dtTo').value=F.dtTo;
-      if(F.q)document.getElementById('search').value=F.q;
-    }
-    render();
-  }catch(e){ GST.skeleton(false);status.className='status err';status.textContent='❌ '+e.message;}
+    status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+ROWS.length;
+    if(fetched.cached){status.textContent='📡 시트 접속 실패 — 캐시('+fetched.ageMin+'분 전) 표시 중';status.style.color='#fbbf24';}
+    buildSlicers(); render();
+  }catch(e){ GST.skeleton(false);
+    status.className='status err'; status.textContent='❌ '+e.message;
+  }
   btn.disabled=false;
 }
 
-function uniq(key,base){return GST.uniq(base||FAULTS,key);}
-function buildChips(id,fkey,vals){
-  const box=document.getElementById(id);box.innerHTML='';
-  ['ALL',...vals].forEach(v=>{
-    const c=document.createElement('div');c.className='chip'+(F[fkey]===v?' active':'');
-    c.textContent=v==='ALL'?'ALL':v;
-    c.onclick=()=>{F[fkey]=v;[...box.children].forEach(x=>x.classList.remove('active'));c.classList.add('active');render();};
-    box.appendChild(c);
-  });
-}
-function fillSelect(id,fkey,vals){GST.fillSelect(id,fkey,vals,F,t('all')||'전체');}
-function rebuildFilters(){
+function uniq(k){return Array.from(new Set(ROWS.map(x=>x[k]).filter(Boolean))).sort();}
+const fillSelect=(id,fkey,vals)=>GST.fillSelect(id,fkey,vals,F,t('all'));
+function buildSlicers(){
   fillSelect('sl-line','line',uniq('line'));
-  fillSelect('sl-group','group',uniq('group'));
-  fillSelect('sl-type','type',['BM','CBM']);
-  fillSelect('sl-sn','sn',uniq('sn'));
-  fillSelect('sl-code','code',uniq('failCode'));
+  fillSelect('sl-stage','stage',SERVICE_STAGES.filter(s=>ROWS.some(x=>x.stage===s)));
+  fillSelect('sl-pf','pf',uniq('pf'));
+  fillSelect('sl-cause','cause',uniq('cause'));
   fillSelect('sl-model','model',uniq('model'));
+  fillSelect('sl-sn','sn',uniq('sn'));
 }
 function onSlicer(){
   F.line=document.getElementById('sl-line').value;
-  F.group=document.getElementById('sl-group').value;
-  F.type=document.getElementById('sl-type').value;
-  F.sn=document.getElementById('sl-sn').value;
-  F.code=document.getElementById('sl-code').value;
+  F.stage=document.getElementById('sl-stage').value;
+  F.pf=document.getElementById('sl-pf').value;
+  F.cause=document.getElementById('sl-cause').value;
   F.model=document.getElementById('sl-model').value;
+  F.sn=document.getElementById('sl-sn').value;
   F.dtFrom=document.getElementById('dtFrom').value;
   F.dtTo=document.getElementById('dtTo').value;
   render();
 }
 document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
 
-const fmtD=GST.fmtD;
 function filt(){
-  return FAULTS.filter(x=>{
+  return ROWS.filter(x=>{
     if(F.line&&x.line!==F.line)return false;
-    if(F.group&&x.group!==F.group)return false;
-    if(F.type&&x.maint!==F.type)return false;
-    if(F.aw&&x.aw!==F.aw)return false;
-    if(F.sn&&x.sn!==F.sn)return false;
-    if(F.code&&x.failCode!==F.code)return false;
+    if(F.stage&&x.stage!==F.stage)return false;
+    if(F.pf&&x.pf!==F.pf)return false;
+    if(F.cause&&x.cause!==F.cause)return false;
     if(F.model&&x.model!==F.model)return false;
-    if(F.action&&x.action!==F.action)return false;
+    if(F.sn&&x.sn!==F.sn)return false;
     if(F.dtFrom&&(!x.work||fmtD(x.work)<F.dtFrom))return false;
     if(F.dtTo&&(!x.work||fmtD(x.work)>F.dtTo))return false;
-    if(F.q){const s=`${x.sn} ${x.failCode} ${x.msg} ${x.line} ${x.model} ${x.action}`.toLowerCase();if(!s.includes(F.q))return false;}
+    if(F.q){const s=(x.sn+' '+x.phenom+' '+x.cause+' '+x.action+' '+x.detail+' '+x.workers+' '+x.line+' '+x.model).toLowerCase();
+      if(!s.includes(F.q))return false;}
     return true;
   });
 }
-// ===== 차트 클릭 크로스 필터 =====
-const CLICK_MAP={cCode:'code',cSn:'sn',cType:'type',cLine:'line',cAction:'action'};
-const FIELD_LABEL={line:'LINE',group:'GROUP',type:'유형',aw:'Alarm/Warning',sn:'설비',code:'고장코드',model:'모델',action:'조치',dtFrom:'시작일',dtTo:'종료일',q:'검색'};
-function chartClick(chartId,label){
-  const key=CLICK_MAP[chartId]; if(!key)return;
-  F[key]=(F[key]===label)?'':label;
-  syncSlicerUI(); render();
-}
-function syncSlicerUI(){
-  const map={line:'sl-line',group:'sl-group',type:'sl-type',sn:'sl-sn',code:'sl-code',model:'sl-model'};
-  Object.entries(map).forEach(([k,id])=>{const el=document.getElementById(id);if(el)el.value=F[k]||'';});
-}
+
+// ===== 필터 칩 =====
+const FIELD_LABEL={line:'LINE',stage:'단계',pf:'유/무상',cause:'원인',model:'모델',sn:'설비',dtFrom:'시작일',dtTo:'종료일',q:'검색'};
 function renderFilterChips(){GST.renderChips(F,FIELD_LABEL,'clearFilter');}
 function clearFilter(k){
   F[k]='';
@@ -426,114 +583,275 @@ function clearFilter(k){
   if(k==='q')document.getElementById('search').value='';
   syncSlicerUI(); render();
 }
+function syncSlicerUI(){
+  const map={line:'sl-line',stage:'sl-stage',pf:'sl-pf',cause:'sl-cause',model:'sl-model',sn:'sl-sn'};
+  Object.entries(map).forEach(([k,id])=>{const el=document.getElementById(id);if(el)el.value=F[k]||'';});
+}
 function clearAllFilters(){
   Object.keys(F).forEach(k=>F[k]='');
   ['dtFrom','dtTo','search'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   syncSlicerUI(); render();
 }
-const countBy=GST.countBy;
 
-const animVal=GST.animVal;
+// ===== 차트 헬퍼 (설치현황과 동일 스타일) =====
+const valLabelPlugin={id:'valLabel',
+  afterDatasetsDraw(chart,args,o){
+    if(!o||!o.mode)return;
+    const meta=chart.getDatasetMeta(0), ds=chart.data.datasets[0], ctx=chart.ctx;
+    if(!meta||!meta.data||!meta.data.length)return;
+    const nums=ds.data.filter(v=>v!=null&&isFinite(v));
+    const max=nums.length?Math.max.apply(null,nums):null;
+    ctx.save(); ctx.fillStyle=o.color||'#E6EDF3';
+    ctx.font='700 11px "Segoe UI","Malgun Gothic",sans-serif';
+    meta.data.forEach(function(el,i){
+      const v=ds.data[i]; if(v==null)return;
+      if(o.mode==='h'){ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(v.toLocaleString(),el.x+6,el.y);return;}
+      if(o.mode==='peaks'){
+        const firstMax=ds.data.findIndex(x=>x===max);
+        if(!((i===firstMax&&v>0)||(i===ds.data.length-1&&v>0)))return;
+      }
+      ctx.textAlign='center';ctx.textBaseline='bottom';
+      ctx.fillText(v.toLocaleString(),el.x,el.y-6);
+    });
+    ctx.restore();
+  }};
+const donutCenterPlugin={id:'dCenter',
+  afterDraw(chart,args,o){
+    if(!o||!o.on)return;
+    const meta=chart.getDatasetMeta(0);
+    if(!meta||!meta.data||!meta.data[0])return;
+    const x=meta.data[0].x,y=meta.data[0].y,ctx=chart.ctx;
+    const total=chart.data.datasets[0].data.reduce((a,b)=>a+(+b||0),0);
+    ctx.save();ctx.textAlign='center';
+    ctx.fillStyle=o.color||'#E6EDF3';
+    ctx.font='800 17px "Segoe UI","Malgun Gothic",sans-serif';
+    ctx.textBaseline='bottom';ctx.fillText(total.toLocaleString(),x,y+2);
+    ctx.fillStyle=o.mut||'#8B98A9';
+    ctx.font='700 8px "Segoe UI",sans-serif';ctx.textBaseline='top';ctx.fillText('TOTAL',x,y+5);
+    ctx.restore();
+  }};
+function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
 
-function mkBar(id,labels,data,color,horizontal){
-  GST.bar(CHARTS,id,{labels,data,color,horizontal,share:true,
-    onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
+function mkHBar(id,entries,total,fkey,color,topN,colorFn){
+  const top=entries.slice(0,topN||8);
+  const rest=entries.slice(topN||8).reduce((a,b)=>a+b[1],0);
+  const labels=top.map(e=>e[0]); const data=top.map(e=>e[1]);
+  if(rest>0){labels.push(t('etc'));data.push(rest);}
+  const ctx=document.getElementById(id); if(!ctx)return;
+  const TH=GST.chartTheme();
+  const onClick=(evt,els)=>{
+    if(!fkey||!els.length)return;
+    const l=labels[els[0].index]; if(l===t('etc'))return;
+    F[fkey]=F[fkey]===l?'':l; syncSlicerUI(); render();
+  };
+  const cfg={type:'bar',data:{labels,datasets:[{
+      data,
+      backgroundColor:labels.map((l,i)=>l===t('etc')?'rgba(151,170,196,.35)':(colorFn?colorFn(l,i):(color||TH.pal[0]))),
+      borderRadius:5,barPercentage:.72}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,onClick,
+      layout:{padding:{right:46}},
+      plugins:{legend:{display:false},valLabel:{mode:'h',color:inkStrong(TH)},
+        tooltip:{callbacks:{label:c=>' '+c.parsed.x.toLocaleString()+' ('+Math.round(c.parsed.x/(total||1)*100)+'%)'}}},
+      scales:{x:{display:false},y:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}}}},
+    plugins:[valLabelPlugin]};
+  if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
 }
-function mkDonut(id,labels,data,colors){
-  GST.donut(CHARTS,id,{labels,data,colors:colors||PAL,
-    onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
+function mkBarV(id,labels,data,color,opts){
+  const ctx=document.getElementById(id); if(!ctx)return;
+  const TH=GST.chartTheme(); opts=opts||{};
+  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,onClick:opts.onClick,
+      layout:{padding:{top:16}},
+      plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)},
+        tooltip:opts.tooltip},
+      scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}},
+              y:{ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
+    plugins:[valLabelPlugin]};
+  if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
 }
+function mkDonut(id,entries,fkey,topN,colorFn){
+  const top=entries.slice(0,topN||5);
+  const rest=entries.slice(topN||5).reduce((a,b)=>a+b[1],0);
+  const labels=top.map(e=>e[0]); const data=top.map(e=>e[1]);
+  if(rest>0){labels.push(t('etc'));data.push(rest);}
+  const TH=GST.chartTheme();
+  const colors=labels.map((l,i)=>l===t('etc')?'rgba(151,170,196,.4)':(colorFn?colorFn(l,i):PAL[i%PAL.length]));
+  const total=data.reduce((a,b)=>a+b,0)||1;
+  const ctx=document.getElementById(id); if(!ctx)return;
+  const onClick=(evt,els)=>{
+    if(!fkey||!els.length)return;
+    const l=labels[els[0].index]; if(l===t('etc'))return;
+    F[fkey]=F[fkey]===l?'':l; syncSlicerUI(); render();
+  };
+  const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderColor:'rgba(0,0,0,.15)',borderWidth:2,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',onClick,
+      plugins:{
+        dCenter:{on:true,color:inkStrong(TH),mut:TH.txt},
+        legend:{position:'right',labels:{color:TH.txt,font:{size:10},padding:7,usePointStyle:true,pointStyle:'circle',boxWidth:6,
+          generateLabels:function(chart){
+            const d=chart.data;
+            return d.labels.map(function(l,i){
+              return {text:l+'  '+d.datasets[0].data[i].toLocaleString()+' · '+Math.round(d.datasets[0].data[i]/total*100)+'%',
+                fillStyle:d.datasets[0].backgroundColor[i],strokeStyle:'transparent',
+                fontColor:TH.txt,pointStyle:'circle',index:i};
+            });
+          }}}},
+      animation:{animateScale:true}},
+    plugins:[donutCenterPlugin]};
+  if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
+}
+function monthKey(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}
 
+// ===== 렌더 =====
 function render(){ GST.skeleton(false); GST.pushState(F);
   const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
   const f=filt();
   renderFilterChips();
-  const bm=f.filter(x=>x.maint==='BM').length;
-  const cbm=f.filter(x=>x.maint==='CBM').length;
-  const alarm=f.filter(x=>x.aw==='Alarm').length;
-  const warning=f.filter(x=>x.aw==='Warning').length;
+  const now=Date.now(), D30=now-30*864e5, D60=now-60*864e5;
+  const setTxt=(id,v)=>{const e=document.getElementById(id);if(e)e.innerHTML=v;};
+
+  // ── KPI ──
+  const c30=f.filter(x=>x.work&&x.work.getTime()>=D30).length;
+  const p30=f.filter(x=>x.work&&x.work.getTime()>=D60&&x.work.getTime()<D30).length;
   animVal(document.getElementById('kp1'),f.length);
-  const _now=Date.now(),_d30=_now-30*864e5,_d60=_now-60*864e5;
-  const c30=f.filter(x=>x.work&&x.work.getTime()>=_d30).length;
-  const p30=f.filter(x=>x.work&&x.work.getTime()>=_d60&&x.work.getTime()<_d30).length;
-  {const _b=GST.deltaBadge(c30,p30,true);
-   const _el=document.getElementById('kd1');
-   if(_el)_el.innerHTML=_b?(t('last30').replace('{n}',c30)+' '+_b):'';}
+  setTxt('kd1',GST.deltaBadge(c30,p30,true));
+  setTxt('kf1',t('kf1').replace('{n}',c30));
+
+  const bm=f.filter(x=>x.stage==='BM').length;
   animVal(document.getElementById('kp2'),bm);
-  animVal(document.getElementById('kp3'),cbm);
-  animVal(document.getElementById('kp4'),alarm);
-  animVal(document.getElementById('kp5'),warning);
+  setTxt('kd2','');
+  setTxt('kf2',t('kf2').replace('{p}',f.length?Math.round(bm/f.length*100):0));
 
-  // 고장코드 TOP (가로 막대)
-  const codes=countBy(f,'failCode').slice(0,10);
-  mkBar('cCode',codes.map(x=>x[0]),codes.map(x=>x[1]),TH.pal[4],true);
-  // 설비별 (가로 막대)
-  const sns=countBy(f,'sn').slice(0,10);
-  const snOut=GST.outliers(sns);
-  mkBar('cSn',sns.map(x=>x[0]),sns.map(x=>x[1]),sns.map(e=>snOut.has(e[0])?TH.status.bad:TH.pal[2]),true); // 이상치만 상태색 강조
-  // BM vs CBM
-  mkDonut('cType',['BM','CBM'],[bm,cbm],[TH.status.bad,TH.pal[0]]); // BM(고장)=상태색
-  // LINE별
-  const lines=countBy(f,'line').slice(0,10);
-  mkBar('cLine',lines.map(x=>x[0]),lines.map(x=>x[1]),TH.pal[0],false);
-  // 월별 추이
+  const mins=f.map(x=>x.workMin).filter(v=>v!=null&&v>0&&v<1440); // 24h 초과 이상치 제외
+  const avgMin=mins.length?Math.round(mins.reduce((a,b)=>a+b,0)/mins.length):0;
+  const medMin=mins.length?Math.round(mins.slice().sort((a,b)=>a-b)[Math.floor(mins.length/2)]):0;
+  animVal(document.getElementById('kp3'),avgMin);
+  setTxt('kf3',t('kf3').replace('{n}',medMin));
+
+  const mans=f.filter(x=>x.manMin!=null&&x.manMin>0&&x.manMin<14400);
+  const manH=Math.round(mans.reduce((a,b)=>a+b.manMin,0)/60);
+  animVal(document.getElementById('kp4'),manH);
+  setTxt('kf4',t('kf4').replace('{n}',mans.length));
+
+  const paid=f.filter(x=>x.pf==='유상').length, free=f.filter(x=>x.pf==='무상').length;
+  const pfp=(paid+free)?Math.round(paid/(paid+free)*100):0;
+  const kp5=document.getElementById('kp5'); if(kp5)kp5.textContent=pfp+'%';
+  setTxt('kf5',t('kf5').replace('{a}',paid).replace('{b}',free));
+
+  // KPI 클릭 → 단계 필터
+  document.querySelectorAll('.kpi[data-stage]').forEach(k=>{
+    k.onclick=()=>{
+      F.stage=(F.stage===k.dataset.stage)?'':k.dataset.stage;
+      syncSlicerUI();
+      document.querySelectorAll('.kpi[data-stage]').forEach(x=>x.classList.remove('sel'));
+      (F.stage? k : document.querySelector('.kpi[data-stage=""]')).classList.add('sel');
+      render();
+    };
+  });
+
+  // ── 개요 차트 ──
   const months={};
-  f.forEach(x=>{if(x.work){const k=`${x.work.getUTCFullYear()}-${String(x.work.getUTCMonth()+1).padStart(2,'0')}`;months[k]=(months[k]||0)+1;}});
+  f.forEach(x=>{if(x.work)months[monthKey(x.work)]=(months[monthKey(x.work)]||0)+1;});
   const mk=Object.keys(months).sort();
-  mkBar('cTrend',mk,mk.map(k=>months[k]),TH.pal[1],false);
-  // 조치 유형
-  const actions=countBy(f,'failType').slice(0,8);
-  mkDonut('cAction',actions.map(x=>x[0]),actions.map(x=>x[1]));
+  mkBarV('cTrend',mk.map(k=>+k.slice(5)+t('mon_unit')),mk.map(k=>months[k]),TH.pal[0]);
+  const meta=document.getElementById('trendMeta');
+  if(meta)meta.textContent=(mk[0]||'')+' ~ '+(mk[mk.length-1]||'');
 
-  // ===== 인사이트 (필터 적용 기준) =====
+  const stageColor=(l,i)=>l==='BM'?TH.status.bad:[TH.pal[0],TH.pal[1],TH.pal[3],TH.pal[4]][i%4];
+  mkDonut('cStage',countBy(f,'stage'),'stage',5,stageColor);
+
+  const sns=countBy(f,'sn').slice(0,12);
+  const snOut=GST.outliers(sns);
+  mkHBar('cSn',sns,f.length,'sn',TH.pal[2],8,(l)=>snOut.has(l)?TH.status.bad:TH.pal[2]);
+
+  const lines=countBy(f,'line');
+  mkBarV('cLine',lines.slice(0,10).map(x=>x[0]),lines.slice(0,10).map(x=>x[1]),TH.pal[0],
+    {onClick:(evt,els)=>{if(!els.length)return;const l=lines[els[0].index][0];F.line=F.line===l?'':l;syncSlicerUI();render();}});
+
+  const pfB=document.getElementById('pfBar'); if(pfB)pfB.style.width=pfp+'%';
+  setTxt('pfPct',pfp+'%'); setTxt('pfPaid',paid.toLocaleString()); setTxt('pfFree',free.toLocaleString());
+
+  // ── 원인·조치 ──
+  mkHBar('cPhenom',countBy(f,'phenom'),f.length,null,TH.pal[0],8);
+  const causes=countBy(f,'cause');
+  mkHBar('cCause',causes,f.length,'cause',TH.pal[4],8);
+  mkDonut('cAction',countBy(f,'action'),null,5);
+  mkDonut('cReqType',countBy(f,'reqType'),null,4);
+  mkHBar('cModel',countBy(f,'model'),f.length,'model',TH.pal[3],8);
+  mkHBar('cProc',countBy(f,'proc'),f.length,null,TH.pal[1],6);
+
+  // ── 작업 부하 ──
+  const manByM={};
+  mans.forEach(x=>{if(x.work)manByM[monthKey(x.work)]=(manByM[monthKey(x.work)]||0)+x.manMin;});
+  const mmk=Object.keys(manByM).sort();
+  mkBarV('cManTrend',mmk.map(k=>+k.slice(5)+t('mon_unit')),mmk.map(k=>Math.round(manByM[k]/60)),TH.pal[2]);
+
+  const durB=t('dur_b'); const durCnt=[0,0,0,0,0];
+  mins.forEach(v=>{durCnt[v<30?0:v<60?1:v<120?2:v<240?3:4]++;});
+  mkBarV('cDur',durB,durCnt,TH.pal[0]);
+
+  // 작업자별 공수 (공동 작업은 인원수로 안분)
+  const perWorker={};
+  mans.forEach(x=>{
+    const names=x.workers?x.workers.split(',').map(s=>s.trim()).filter(Boolean):[];
+    if(!names.length)return;
+    const share=x.manMin/names.length;
+    names.forEach(nm=>{perWorker[nm]=(perWorker[nm]||0)+share;});
+  });
+  const workerEnt=Object.entries(perWorker).map(([k,v])=>[k,Math.round(v/60)]).sort((a,b)=>b[1]-a[1]);
+  mkHBar('cWorker',workerEnt,workerEnt.reduce((a,b)=>a+b[1],0),null,TH.pal[3],10);
+
+  const wcnt={};
+  f.forEach(x=>{if(x.workerCnt){const k=t('wcnt_p').replace('{n}',x.workerCnt>=4?'4+':x.workerCnt);wcnt[k]=(wcnt[k]||0)+1;}});
+  mkDonut('cWcnt',Object.entries(wcnt).sort((a,b)=>b[1]-a[1]),null,4);
+
+  const lineMin={};
+  f.forEach(x=>{if(x.workMin&&x.workMin>0&&x.workMin<1440&&x.line){(lineMin[x.line]=lineMin[x.line]||[]).push(x.workMin);}});
+  const lmEnt=Object.entries(lineMin).map(([k,v])=>[k,Math.round(v.reduce((a,b)=>a+b,0)/v.length)]).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mkBarV('cLineMan',lmEnt.map(e=>e[0]),lmEnt.map(e=>e[1]),TH.pal[1]);
+
+  // ── 인사이트 ──
   {
     const ins=[];
     const pd=GST.pctDelta(c30,p30);
     if(c30||p30)ins.push({sev:(pd!=null&&pd>=30)?'bad':(pd!=null&&pd<=-20)?'ok':'info',
       text:t('ins_mom').replace('{n}','<b>'+c30+'</b>').replace('{p}',pd==null?'—':(pd>0?'+':'')+pd+'%')});
-    if(codes.length&&f.length){
-      const p=Math.round(codes[0][1]/f.length*100);
-      if(p>=30)ins.push({sev:'warn',text:t('ins_topcode').replace('{v}','<b>'+codes[0][0]+'</b>').replace('{p}',p)});
+    if(causes.length&&f.length){
+      const p=Math.round(causes[0][1]/f.length*100);
+      if(p>=25)ins.push({sev:'warn',text:t('ins_topcause').replace('{v}','<b>'+causes[0][0]+'</b>').replace('{p}',p)});
     }
     if(snOut.size){
       const so=sns.find(e=>snOut.has(e[0]));
       if(so)ins.push({sev:'warn',text:t('ins_outlier').replace('{v}','<b>'+so[0]+'</b>').replace('{n}',so[1])});
     }
+    if(mmk.length>=2){
+      const cur=Math.round(manByM[mmk[mmk.length-1]]/60), prev=Math.round(manByM[mmk[mmk.length-2]]/60);
+      const md=GST.pctDelta(cur,prev);
+      ins.push({sev:(md!=null&&md>=30)?'warn':'info',
+        text:t('ins_man').replace('{n}','<b>'+cur.toLocaleString()+'</b>').replace('{p}',md==null?'—':(md>0?'+':'')+md+'%')});
+    }
     GST.insights(f.length?ins:[]);
   }
 
-  // KPI 클릭 필터
-  document.querySelectorAll('.kpi').forEach(k=>{
-    k.onclick=()=>{
-      if(k.hasAttribute('data-f')){
-        F.type=k.dataset.f||''; F.aw='';
-        syncSlicerUI();
-      }else if(k.hasAttribute('data-aw')){
-        F.aw=(F.aw===k.dataset.aw)?'':k.dataset.aw; F.type='';
-        syncSlicerUI();
-      }
-      document.querySelectorAll('.kpi').forEach(x=>x.classList.remove('sel'));k.classList.add('sel');
-      render();
-    };
-  });
-
-  // 테이블
+  // ── 테이블 ──
   document.getElementById('tblCnt').textContent=f.length;
   let d=[...f];
   d.sort((a,b)=>{
     let x=a[sortK],y=b[sortK];
     if(sortK==='work'){x=x?x.getTime():0;y=y?y.getTime():0;return sortAsc?x-y:y-x;}
-    return sortAsc?(''+x).localeCompare(''+y,'ko',{numeric:true}):(''+y).localeCompare(''+x,'ko',{numeric:true});
+    if(sortK==='workMin'||sortK==='manMin'){return sortAsc?(x||0)-(y||0):(y||0)-(x||0);}
+    return sortAsc?(''+(x||'')).localeCompare(''+(y||''),'ko',{numeric:true}):(''+(y||'')).localeCompare(''+(x||''),'ko',{numeric:true});
   });
   const tbody=document.getElementById('tbody');
   if(!d.length){tbody.innerHTML=`<tr><td colspan="12" class="empty">${t('no_data')}</td></tr>`;return;}
-  const awCls=v=>v==='Alarm'?'alarm':v==='Warning'?'warning':'';
-  tbody.innerHTML=d.map(x=>`<tr>
-    <td>${fmtDate(x.work)}</td><td>${x.sn||'—'}</td><td>${x.line||'—'}</td><td>${x.group||'—'}</td>
-    <td>${x.model||'—'}</td><td><span class="pill ${x.maint==='BM'?'bm':'cbm'}">${x.maint}</span></td>
-    <td>${x.aw?`<span class="pill ${awCls(x.aw)}">${x.aw}</span>`:'—'}</td>
-    <td>${x.msg||'—'}</td><td><b>${x.failCode||'—'}</b></td><td>${x.failType||'—'}</td>
-    <td>${x.action||'—'}</td><td>${x.chamber||'—'}</td></tr>`).join('');
+  const stCls={BM:'bm',CBM:'cbm',CM:'cm',CRM:'crm'};
+  tbody.innerHTML=d.slice(0,800).map(x=>`<tr>
+    <td>${fmtDate(x.work)}</td><td>${x.sn||'—'}</td><td>${x.line||'—'}</td><td>${x.model||'—'}</td>
+    <td><span class="pill ${stCls[x.stage]||'cm'}">${x.stage}</span></td>
+    <td>${x.pf?`<span class="pill ${x.pf==='유상'?'paid':'free'}">${x.pf}</span>`:'—'}</td>
+    <td title="${(x.detail||'').replace(/"/g,'&quot;')}">${x.phenom||'—'}</td>
+    <td>${x.cause||'—'}</td><td>${x.action||'—'}</td>
+    <td>${x.workMin??'—'}</td><td>${x.manMin??'—'}</td><td>${x.workers||'—'}</td></tr>`).join('');
 }
 
 document.addEventListener('click',e=>{
