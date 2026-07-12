@@ -94,7 +94,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt-main);
 <div class="header">
   <div>
     <h1 data-i="title">Executive Summary</h1>
-    <div class="sub" data-i="sub">운영 현황</div>
+    <div class="sub" data-i="sub">전체 운영 현황 한눈에 보기</div>
   </div>
   <div class="header-right">
     <button class="btn" id="refreshBtn" onclick="loadAll()"><span data-i="refresh">새로고침</span></button>
@@ -121,7 +121,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt-main);
 <!-- 인사이트 -->
 <div class="sec-title" data-i="sec_ins">KEY INSIGHTS</div>
 <div class="mcard" style="margin-bottom:8px">
-  <div class="m-head"><h3 data-i="ins_title">금주 인사이트</h3></div>
+  <div class="m-head"><h3 data-i="ins_title">이번 주 주목할 인사이트</h3></div>
   <div id="insList"><div class="ins-row"><span class="ins-dot" style="background:var(--txt-muted)"></span><span>⏳</span></div></div>
 </div>
 
@@ -325,7 +325,9 @@ function renderAll(D){
   document.getElementById('ftTop').textContent=topCode?topCode[0]:'—';
 
   // ===== 자재 계산 =====
-  let mtMonth=0,mtPrev=0,paid=0,tot=0;const matCnt={};const matSet=new Set();
+  // 자재 페이지에서 제외한 소모품(gst_mat_excl)은 TOP 자재·인사이트에서 빠짐 (총량 KPI는 유지)
+  let exclMat=[];try{const _sv=JSON.parse(localStorage.getItem('gst_mat_excl')||'null');if(_sv&&Array.isArray(_sv.mat))exclMat=_sv.mat;}catch(e){}
+  let mtMonth=0,mtPrev=0,paid=0,tot=0,totEx=0;const matCnt={};const matSet=new Set();
   D.mat.forEach(r=>{
     const name=(r[CM.matName]||'').toString().trim();if(!name)return;
     tot++;matSet.add(name);
@@ -334,7 +336,7 @@ function renderAll(D){
     const wd=toDate(r[CM.workDate]);
     if(wd&&wd.getUTCFullYear()===nowY&&wd.getUTCMonth()===nowM){mtMonth++;}
     else if(wd&&wd.getUTCFullYear()===prevY&&wd.getUTCMonth()===prevM){mtPrev++;}
-    matCnt[name]=(matCnt[name]||0)+1;
+    if(!exclMat.includes(name)){totEx++;matCnt[name]=(matCnt[name]||0)+1;}
   });
   const topMat=Object.entries(matCnt).sort((a,b)=>b[1]-a[1]);
   setN('mtMonth',mtMonth);
@@ -373,8 +375,8 @@ function renderAll(D){
   if(due30>0)INS.push({sev:2,tab:'pm',txt:t('ins_due').replace('{n}',due30)});
   const md=GST.pctDelta(mtMonth,mtPrev);
   if(md!==null&&md>=30)INS.push({sev:2,tab:'material',txt:t('ins_mat_up').replace('{n}',mtMonth).replace('{p}',md)});
-  if(topMat[0]&&tot>0&&topMat[0][1]/tot>=0.4)
-    INS.push({sev:1,tab:'material',txt:t('ins_topmat').replace('{m}',topMat[0][0]).replace('{p}',Math.round(topMat[0][1]/tot*100))});
+  if(topMat[0]&&totEx>0&&topMat[0][1]/totEx>=0.4)
+    INS.push({sev:1,tab:'material',txt:t('ins_topmat').replace('{m}',topMat[0][0]).replace('{p}',Math.round(topMat[0][1]/totEx*100))});
   if(tot>0&&(1-paid/tot)>=0.45)
     INS.push({sev:1,tab:'material',txt:t('ins_free').replace('{p}',Math.round((1-paid/tot)*100))});
   INS.sort((a,b)=>b.sev-a.sev);
