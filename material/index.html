@@ -574,7 +574,16 @@ let CYCLE_BASIS='paid';
 let CROSS_CHART_INSTANCE = null;
 const F={country:'',customer:'',line:'',process:'',detail:'',eq:'',mat:'',reason:'',dtFrom:'',dtTo:'',pf:'',q:''};
 
-const EXCL = { mat: [], eq: [], proc: [], reason: [], free: [] };
+// 제외 목록 — localStorage에 저장되어 새로고침 후에도 유지됨
+const EXCL = (function(){
+  const d={ mat: [], eq: [], proc: [], reason: [], free: [] };
+  try{
+    const sv=JSON.parse(localStorage.getItem('gst_mat_excl')||'null');
+    if(sv) Object.keys(d).forEach(k=>{ if(Array.isArray(sv[k])) d[k]=sv[k]; });
+  }catch(e){}
+  return d;
+})();
+function saveExcl(){ try{ localStorage.setItem('gst_mat_excl', JSON.stringify(EXCL)); }catch(e){} }
 const ALL_VALUES = { mat: [], eq: [], proc: [], reason: [], free: [] };
 
 Chart.defaults.color=GST.chartTheme().txt;
@@ -932,10 +941,11 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   // ⑤ 교체 설비 수
   setTxt('kp5',uniq('eq',f).length.toLocaleString());
   setTxt('kf5',t('kf5').replace('{n}',uniq('sn',f).length));
-  // ⑥ 90일 미만 조기 재교체 (품질 신호)
-  const shortLife=f.filter(x=>{const d=cycleDays(x);return d!=null&&d>0&&d<90;}).length;
+  // ⑥ 90일 미만 조기 재교체 (품질 신호) — 제외 자재(소모품 등)는 계산에서 빠짐
+  const fEx=f.filter(x=>!EXCL.mat.includes(x.matName));
+  const shortLife=fEx.filter(x=>{const d=cycleDays(x);return d!=null&&d>0&&d<90;}).length;
   setTxt('kp6',shortLife.toLocaleString());
-  setTxt('kf6',t('kf6').replace('{p}',f.length?Math.round(shortLife/f.length*100):0));
+  setTxt('kf6',t('kf6').replace('{p}',fEx.length?Math.round(shortLife/fEx.length*100):0));
 
   ALL_VALUES.mat = uniq('matName', f);
   ALL_VALUES.eq = uniq('eq', f);
@@ -1018,7 +1028,7 @@ function render(){ GST.skeleton(false); GST.pushState(F);
         if(mp>=40)ins.push({sev:'info',text:t('ins_topmat').replace('{v}','<b>'+mats[0][0]+'</b>').replace('{p}',mp)});
       }
       if(shortLife>0){
-        const sp=Math.round(shortLife/f.length*100);
+        const sp=fEx.length?Math.round(shortLife/fEx.length*100):0;
         ins.push({sev:sp>=10?'warn':'info',text:t('ins_short').replace('{n}','<b>'+shortLife.toLocaleString()+'</b>').replace('{p}',sp)});
       }
       const nBad=f.filter(x=>x.qtyBad).length;
@@ -1058,10 +1068,10 @@ function renderExclOptions(k) {
 }
 
 window.addExcl = function(k, m) {
-  if(!EXCL[k].includes(m)) { EXCL[k].push(m); render(); document.getElementById('exclSearch' + getExclId(k)).value = ''; }
+  if(!EXCL[k].includes(m)) { EXCL[k].push(m); saveExcl(); render(); document.getElementById('exclSearch' + getExclId(k)).value = ''; }
 };
-window.removeExcl = function(k, m) { EXCL[k] = EXCL[k].filter(x => x !== m); render(); };
-window.clearExcl = function(k) { EXCL[k] = []; render(); };
+window.removeExcl = function(k, m) { EXCL[k] = EXCL[k].filter(x => x !== m); saveExcl(); render(); };
+window.clearExcl = function(k) { EXCL[k] = []; saveExcl(); render(); };
 
 window.sortCyc=function(k){if(cycSortK===k){cycSortAsc=!cycSortAsc;}else{cycSortK=k;cycSortAsc=false;} renderCycleTable(LAST_F);};
 window.sortTbl=function(k){if(sortK===k){sortAsc=!sortAsc;}else{sortK=k;sortAsc=false;} renderDetailTable(LAST_F);};
