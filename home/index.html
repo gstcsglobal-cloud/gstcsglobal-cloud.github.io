@@ -94,7 +94,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt-main);
 <div class="header">
   <div>
     <h1 data-i="title">Executive Summary</h1>
-    <div class="sub" data-i="sub">전체 운영 현황 한눈에 보기</div>
+    <div class="sub" data-i="sub">운영 현황</div>
   </div>
   <div class="header-right">
     <button class="btn" id="refreshBtn" onclick="loadAll()"><span data-i="refresh">새로고침</span></button>
@@ -121,7 +121,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt-main);
 <!-- 인사이트 -->
 <div class="sec-title" data-i="sec_ins">KEY INSIGHTS</div>
 <div class="mcard" style="margin-bottom:8px">
-  <div class="m-head"><h3 data-i="ins_title">이번 주 주목할 인사이트</h3></div>
+  <div class="m-head"><h3 data-i="ins_title">금주 인사이트</h3></div>
   <div id="insList"><div class="ins-row"><span class="ins-dot" style="background:var(--txt-muted)"></span><span>⏳</span></div></div>
 </div>
 
@@ -175,7 +175,8 @@ const URLS={
   mat: PUB+'?gid=31302669&single=true&output=csv'
 };
 // 컬럼 인덱스
-const CP={line:2,tbmCycle:15,work:23,sn:24,maint:25,aw:26,failCode:29,chamber:33};
+// 새 시트3(실적현황) 컬럼 맵 — failCode 자리는 '원인', chamber 자리는 채널위치
+const CP={line:5,work:32,sn:21,maint:13,aw:25,failCode:27,chamber:20};
 const CI={fabIn:38,turnOn:40};
 const CM={customer:2,matName:23,workDate:28,pf:31};
 const WARN_RATIO=0.2;
@@ -270,10 +271,23 @@ function renderAll(D){
     const ch=((r[CP.chamber]||'').toString().trim())||'-';
     const wd=toDate(r[CP.work]);if(!wd)return;
     const k=sn+'||'+ch;
-    if(!g[k])g[k]={last:null,cycle:null};
-    if(!g[k].last||wd>g[k].last){g[k].last=wd;g[k].cycle=Number(r[CP.tbmCycle])||null;}
+    if(!g[k])g[k]={last:null,dates:[]};
+    g[k].dates.push(wd);
+    if(!g[k].last||wd>g[k].last){g[k].last=wd;}
     doneHist.push(wd);
   });
+  // 주기: 설비별 TBM 간격 중앙값 (7일 미만 제외) → 전체 중앙값 → 90일 폴백
+  {
+    const all=[];
+    Object.values(g).forEach(o=>{
+      const ds=o.dates.slice().sort((a,b)=>a-b); const iv=[];
+      for(let i=1;i<ds.length;i++){const dd=(ds[i]-ds[i-1])/86400000;if(dd>=7)iv.push(dd);}
+      if(iv.length){iv.sort((a,b)=>a-b);o.cycle=Math.round(iv[Math.floor(iv.length/2)]);all.push(o.cycle);}
+    });
+    all.sort((a,b)=>a-b);
+    const fleet=all.length?all[Math.floor(all.length/2)]:90;
+    Object.values(g).forEach(o=>{if(!o.cycle)o.cycle=fleet;});
+  }
   let over=0,soon=0,ok=0,total=0,due30=0;
   Object.values(g).forEach(o=>{
     total++;
