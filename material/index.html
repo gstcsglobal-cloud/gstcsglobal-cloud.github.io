@@ -211,6 +211,23 @@ tr:hover td{background:var(--glass-hover)}
   padding:4px 11px;color:var(--txt-muted);font-size:10px;font-weight:700;cursor:pointer;margin-left:auto}
 .fchip-clear:hover{color:var(--bad);border-color:var(--bad)}
 canvas{cursor:pointer}
+/* 리치 KPI + 유무상 분할바 (설치현황과 동일 스타일) */
+.kpi .cap{margin:0 0 8px !important;font-size:10px !important;letter-spacing:1px !important;text-transform:uppercase}
+.kpi .krow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.kpi .unit{font-size:12px;color:var(--txt-muted);font-weight:600}
+.kpi .kd{font-size:11px;font-weight:800}
+.kpi .kfoot{font-size:11px;color:var(--txt-muted);margin-top:7px;min-height:13px}
+.kpi.k6 .val{color:var(--warn)}
+.wbig{display:flex;align-items:baseline;gap:8px;margin:6px 0 12px}
+.wbig .wv{font-size:28px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.wbig .wlbl{font-size:11px;color:var(--txt-muted)}
+.wbar{display:flex;height:16px;border-radius:5px;overflow:hidden;gap:2px;margin-bottom:12px}
+.wbar .wa{background:var(--accent-2);border-radius:5px 0 0 5px;transition:width .4s}
+.wbar .wb{background:rgba(151,170,196,.25);flex:1;border-radius:0 5px 5px 0}
+.wleg{display:flex;gap:18px;font-size:11.5px;color:var(--txt-muted)}
+.wleg i{display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(151,170,196,.25);margin-right:6px}
+.wleg i.pa{background:var(--accent-2)}
+.wleg b{color:var(--txt-main);font-variant-numeric:tabular-nums}
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
@@ -280,13 +297,6 @@ canvas{cursor:pointer}
   </div>
 </div>
 
-<div class="toolbar">
-  <span class="tb-label" data-i="cycle_basis">사용주기 기준:</span>
-  <div class="cycle-toggle">
-    <button class="ct-btn active" data-c="paid" onclick="setCycleBasis('paid')" data-i="cycle_paid">유상기준</button>
-    <button class="ct-btn" data-c="prev" onclick="setCycleBasis('prev')" data-i="cycle_prev">전교체일기준</button>
-  </div>
-</div>
 
 <div class="fchips" id="fchips" style="display:none">
   <span class="fchips-label"><span data-i="f_active">활성 필터</span>:</span>
@@ -295,14 +305,67 @@ canvas{cursor:pointer}
 </div>
 
 <div class="kpis">
-  <div class="kpi k1 sel" onclick="setPfFilter('')" data-f=""><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">총 교체건수</div><div class="kpi-delta" id="kd1"></div></div>
-  <div class="kpi k2" onclick="setPfFilter('유상')" data-pf="유상"><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">유상</div></div>
-  <div class="kpi k3" onclick="setPfFilter('무상')" data-pf="무상"><div class="val" id="kp3">0</div><div class="cap" data-i="kp3">무상</div></div>
-  <div class="kpi k4"><div class="val" id="kp4">0%</div><div class="cap" data-i="kp4">유상비율</div></div>
-  <div class="kpi k5"><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">자재 종류</div></div>
-  <div class="kpi k6"><div class="val" id="kp6">0</div><div class="cap" data-i="kp6">설비 대수</div></div>
+  <div class="kpi k1"><div class="cap" data-i="kp1">총 교체건수</div>
+    <div class="krow"><span class="val" id="kp1">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd1"></span></div>
+    <div class="kfoot" id="kf1"></div></div>
+  <div class="kpi k2"><div class="cap" data-i="kp2">이번 달 교체</div>
+    <div class="krow"><span class="val" id="kp2">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd2"></span></div>
+    <div class="kfoot" id="kf2"></div></div>
+  <div class="kpi k3"><div class="cap" data-i="kp3">유상 비율</div>
+    <div class="krow"><span class="val" id="kp3">0%</span></div>
+    <div class="kfoot" id="kf3"></div></div>
+  <div class="kpi k4"><div class="cap" data-i="kp4">자재 종류</div>
+    <div class="krow"><span class="val" id="kp4">0</span></div>
+    <div class="kfoot" id="kf4"></div></div>
+  <div class="kpi k5"><div class="cap" data-i="kp5">교체 설비 수</div>
+    <div class="krow"><span class="val" id="kp5">0</span><span class="unit" data-i="u_eq">대</span></div>
+    <div class="kfoot" id="kf5"></div></div>
+  <div class="kpi k6"><div class="cap" data-i="kp6">90일 미만 재교체</div>
+    <div class="krow"><span class="val" id="kp6">0</span><span class="unit" data-i="u_cnt">건</span></div>
+    <div class="kfoot" id="kf6"></div></div>
 </div>
 
+<!-- ═══ 섹션: 개요 ═══ -->
+<div data-sec="overview">
+  <div class="card" style="margin-bottom:16px">
+    <h3 data-i="ch_monthly">월별 교체 추이</h3>
+    <div class="card-note" data-i="note_monthly">자재실적일자 기준 건수</div>
+    <div class="cw" style="height:240px"><canvas id="cMonthly"></canvas></div>
+  </div>
+  <div class="grid3">
+        <div class="card">
+      <h3 data-i="ch_mat">자재별 교체 TOP</h3>
+      <div class="card-note" data-i="note_mat">수량 합계 기준 · 이상치 수량 제외 · 값은 막대 끝</div>
+      <div class="excl-box">
+        <div class="excl-chips" id="exclChipsMat"></div>
+        <button class="excl-clear-btn" onclick="clearExcl('mat')">전체 지우기</button>
+        <div class="excl-dd-wrap">
+          <input type="text" id="exclSearchMat" placeholder="제외할 자재 검색..." onclick="toggleExclDD('mat',true)" oninput="renderExclOptions('mat')">
+          <div class="excl-dd" id="exclDDMat"></div>
+        </div>
+      </div>
+      <div class="cw"><canvas id="cMat"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_pf2">유상 vs 무상</h3>
+      <div class="card-note" data-i="note_pf2">교체 건의 유무상 구성</div>
+      <div class="wbig"><span class="wv" id="pfPct">0%</span><span class="wlbl" data-i="pf_ratio">유상 비율</span></div>
+      <div class="wbar"><div class="wa" id="pfBar" style="width:0%"></div><div class="wb"></div></div>
+      <div class="wleg">
+        <span><i class="pa"></i><span data-i="pf_paid">유상</span> <b id="pfPaid">0</b></span>
+        <span><i></i><span data-i="pf_free">무상</span> <b id="pfFree">0</b></span>
+      </div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_model">모델별 교체</h3>
+      <div class="card-note" data-i="note_hbarx">값은 막대 끝 · 비중은 툴팁</div>
+      <div class="cw"><canvas id="cModel"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 섹션: 설비·공정 ═══ -->
+<div data-sec="eqsec">
 <div id="crossAnalysisCard">
   <div class="cross-header">
     <h3 onclick="toggleCrossTableBody()">🔀 다차원 교차 분석 <span id="crossToggleArrow" style="font-size:12px;color:var(--txt-muted);">[ 열기 ▾ ]</span></h3>
@@ -362,22 +425,8 @@ canvas{cursor:pointer}
 
 <div class="grid3">
   <div class="card">
-    <h3>자재별 교체 TOP</h3>
-    <div class="card-note">가장 많이 교체되는 자재</div>
-    <div class="excl-box">
-      <div class="excl-chips" id="exclChipsMat"></div>
-      <button class="excl-clear-btn" onclick="clearExcl('mat')">전체 지우기</button>
-      <div class="excl-dd-wrap">
-        <input type="text" id="exclSearchMat" placeholder="제외할 자재 검색..." onclick="toggleExclDD('mat',true)" oninput="renderExclOptions('mat')">
-        <div class="excl-dd" id="exclDDMat"></div>
-      </div>
-    </div>
-    <div class="cw"><canvas id="cMat"></canvas></div>
-  </div>
-
-  <div class="card">
-    <h3>설비별 교체 TOP</h3>
-    <div class="card-note">자재 소모 많은 설비</div>
+    <h3 data-i="ch_eq">설비별 교체 TOP</h3>
+    <div class="card-note" data-i="note_eq">건수 기준 · 이상 집중 설비는 붉게 · 값은 막대 끝</div>
     <div class="excl-box">
       <div class="excl-chips" id="exclChipsEq"></div>
       <button class="excl-clear-btn" onclick="clearExcl('eq')">전체 지우기</button>
@@ -388,18 +437,9 @@ canvas{cursor:pointer}
     </div>
     <div class="cw"><canvas id="cEq"></canvas></div>
   </div>
-
   <div class="card">
-    <h3>유상 vs 무상</h3>
-    <div class="card-note">유무상 비율</div>
-    <div class="cw"><canvas id="cPf"></canvas></div>
-  </div>
-</div>
-
-<div class="grid3">
-  <div class="card">
-    <h3>공정별 교체</h3>
-    <div class="card-note">공정별 자재 교체</div>
+    <h3 data-i="ch_proc2">공정별 교체</h3>
+    <div class="card-note" data-i="note_proc2">건수 · 최대/최신값 라벨</div>
     <div class="excl-box">
       <div class="excl-chips" id="exclChipsProc"></div>
       <button class="excl-clear-btn" onclick="clearExcl('proc')">전체 지우기</button>
@@ -410,7 +450,18 @@ canvas{cursor:pointer}
     </div>
     <div class="cw"><canvas id="cProc"></canvas></div>
   </div>
+  <div class="card">
+    <h3 data-i="ch_line2">LINE별 교체</h3>
+    <div class="card-note" data-i="note_line2">건수 · 최대/최신값 라벨</div>
+    <div class="cw"><canvas id="cLine2"></canvas></div>
+  </div>
+</div>
+</div>
 
+<!-- ═══ 섹션: 자재·수명 ═══ -->
+<div data-sec="matsec">
+
+<div class="grid3">
   <div class="card">
     <h3>교체사유</h3>
     <div class="card-note">왜 교체했나</div>
@@ -438,6 +489,19 @@ canvas{cursor:pointer}
     </div>
     <div class="cw"><canvas id="cFree"></canvas></div>
   </div>
+  <div class="card">
+    <h3 data-i="ch_life">자재 수명 분포</h3>
+    <div class="card-note" data-i="note_life">교체 시점의 사용일 구간 (주기 기준 토글 적용)</div>
+    <div class="cw"><canvas id="cLife"></canvas></div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <span class="tb-label" data-i="cycle_basis">사용주기 기준:</span>
+  <div class="cycle-toggle">
+    <button class="ct-btn active" data-c="paid" onclick="setCycleBasis('paid')" data-i="cycle_paid">유상기준</button>
+    <button class="ct-btn" data-c="prev" onclick="setCycleBasis('prev')" data-i="cycle_prev">전교체일기준</button>
+  </div>
 </div>
 
 <div class="tablecard">
@@ -456,6 +520,10 @@ canvas{cursor:pointer}
   </div>
 </div>
 
+</div>
+
+<!-- ═══ 섹션: 상세 목록 ═══ -->
+<div data-sec="data">
 <div class="tablecard">
   <h3><span data-i="tbl_title">자재 교체 상세</span> (<span id="tblCnt">0</span>)</h3>
   <div class="tbl-wrap">
@@ -477,6 +545,7 @@ canvas{cursor:pointer}
     </table>
   </div>
 </div>
+</div>
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
@@ -491,13 +560,13 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 })();
 
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
-const C={op:1,customer:2,line:5,process:7,detail:8,mainEq:9,eq:10,qty:22,matName:23,reason:25,workDate:28,daysPaid:29,daysPrev:30,pf:31,freeReason:32};
+const C={op:1,customer:2,line:5,process:7,detail:8,mainEq:9,eq:10,sn:12,model:14,qty:22,matName:23,spec:24,reason:25,workDate:28,daysPaid:29,daysPrev:30,pf:31,freeReason:32};
 
 const T={
-  ko:{title:'자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'유상',kp3:'무상',kp4:'유상비율',kp5:'자재 종류',kp6:'설비 대수',cyc_title:'자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',this_month:'이번 달 {n}건',ins_mom:'이번 달 교체 {n}건 · 전월 대비 {p}',ins_free:'무상 교체 비율 {p}% — 보증 처리 비중 확인 필요',ins_topmat:'자재 {v} — 전체 교체 수량의 {p}%',f_active:'활성 필터',f_clear:'전체 해제',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
-  en:{title:'Material Dashboard',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-proc',sl_eq:'Equipment',sl_search:'Search',cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',kp1:'Total',kp2:'Paid',kp3:'Free',kp4:'Paid %',kp5:'Materials',kp6:'Equipment',cyc_title:'Material Lifecycle (avg/min/max)',cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Replacement Detail',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',all:'All',no_data:'No data',days:'d',this_month:'This month {n}',ins_mom:'{n} replacements this month · {p} MoM',ins_free:'Free-of-charge ratio {p}% — review warranty share',ins_topmat:'Material {v} — {p}% of total quantity',f_active:'Active Filters',f_clear:'Clear All',nav_hr:'Workforce',nav_sc:'Installation',nav_pm:'PM Schedule',nav_ft:'Fault',nav_mt:'Material'},
-  zh:{title:'材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',kp1:'总更换数',kp2:'有偿',kp3:'无偿',kp4:'有偿比率',kp5:'材料种类',kp6:'设备数',cyc_title:'材料使用周期(平均/最小/最大)',cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'材料更换明细',th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',all:'全部',no_data:'无数据',days:'天',this_month:'本月{n}件',ins_mom:'本月更换 {n}件 · 环比 {p}',ins_free:'无偿比率 {p}% — 需确认保修占比',ins_topmat:'材料 {v} — 占总数量的{p}%',f_active:'活动筛选',f_clear:'全部清除',nav_hr:'人员',nav_sc:'安装',nav_pm:'PM点检',nav_ft:'故障',nav_mt:'材料'},
-  ja:{title:'資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'라인',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',kp1:'総交換件수',kp2:'有償',kp3:'無償',kp4:'有償比率',kp5:'資材種類',kp6:'設備台数',cyc_title:'資材別使用周期(平均/最小/最大)',cyc_mat:'資材名',cyc_cnt:'交換件수',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'資材交換詳細',th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',all:'全体',no_data:'データなし',days:'日',this_month:'今月{n}件',ins_mom:'今月交換 {n}件 · 前月比 {p}',ins_free:'無償比率 {p}% — 保証比重の確認要',ins_topmat:'資材 {v} — 全数量の{p}%',f_active:'有効フィルタ',f_clear:'全解除',nav_hr:'人員',nav_sc:'設置',nav_pm:'PM点検',nav_ft:'故障',nav_mt:'資材'}
+  ko:{title:'자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'이번 달 교체',kp3:'유상 비율',kp4:'자재 종류',kp5:'교체 설비 수',kp6:'90일 미만 재교체',u_cnt:'건',u_eq:'대',kf1:'사용 수량 {n}개 (이상치 제외)',kf2:'전월 {n}건',kf3:'유상 {a} · 무상 {b}',kf4:'TOP {v}',kf5:'S/N {n}종',kf6:'전체의 {p}%',sec_ov:'개요',sec_mat:'자재·수명',sec_eq:'설비·공정',sec_dt:'상세 목록',ch_monthly:'월별 교체 추이',note_monthly:'자재실적일자 기준 건수',ch_mat:'자재별 교체 TOP',note_mat:'수량 합계 · 이상치 수량 제외 · 값은 막대 끝',ch_model:'모델별 교체',ch_pf2:'유상 vs 무상',note_pf2:'교체 건의 유무상 구성',pf_ratio:'유상 비율',pf_paid:'유상',pf_free:'무상',ch_eq:'설비별 교체 TOP',note_eq:'건수 · 이상 집중 설비는 붉게 · 값은 막대 끝',ch_proc2:'공정별 교체',note_proc2:'건수 · 최대/최신값 라벨',ch_line2:'LINE별 교체',note_line2:'건수 · 최대/최신값 라벨',ch_life:'자재 수명 분포',note_life:'교체 시점 사용일 구간 (주기 기준 토글 적용)',life_b:['<90일','90–180일','180일–1년','1–2년','2년+'],note_hbarx:'값은 막대 끝 · 비중은 툴팁',ins_short:'90일 미만 조기 재교체 {n}건 ({p}%)',ins_qty:'수량 단위 오입력 의심 {n}건 — 시트 확인 필요',mon_u:'월',cyc_title:'자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',this_month:'이번 달 {n}건',ins_mom:'이번 달 교체 {n}건 · 전월 대비 {p}',ins_free:'무상 교체 비율 {p}% — 보증 처리 비중 확인 필요',ins_topmat:'자재 {v} — 전체 교체 수량의 {p}%',f_active:'활성 필터',f_clear:'전체 해제',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
+  en:{title:'Material Dashboard',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-proc',sl_eq:'Equipment',sl_search:'Search',cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',kp1:'Total Replacements',kp2:'This Month',kp3:'Paid Ratio',kp4:'Material Types',kp5:'Equipment',kp6:'Replaced <90 days',u_cnt:'',u_eq:'',kf1:'{n} pcs used (outliers excl.)',kf2:'prev month {n}',kf3:'paid {a} · free {b}',kf4:'TOP {v}',kf5:'{n} serials',kf6:'{p}% of all',sec_ov:'Overview',sec_mat:'Materials & Life',sec_eq:'Equipment & Process',sec_dt:'Data',ch_monthly:'Monthly Replacements',note_monthly:'by record date',ch_mat:'Top Materials',note_mat:'by quantity · outliers excluded · value at bar end',ch_model:'By Model',ch_pf2:'Paid vs Free',note_pf2:'paid/free mix',pf_ratio:'paid ratio',pf_paid:'Paid',pf_free:'Free',ch_eq:'Top Equipment',note_eq:'count · outliers in red · value at bar end',ch_proc2:'By Process',note_proc2:'count · peak/latest labeled',ch_line2:'By LINE',note_line2:'count · peak/latest labeled',ch_life:'Material Life Distribution',note_life:'days-in-use at replacement (follows cycle basis)',life_b:['<90d','90–180d','180d–1y','1–2y','2y+'],note_hbarx:'value at bar end · share in tooltip',ins_short:'{n} early replacements under 90 days ({p}%)',ins_qty:'{n} rows with suspicious quantity — check the sheet',mon_u:'',cyc_title:'Material Lifecycle (avg/min/max)',cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Replacement Detail',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',all:'All',no_data:'No data',days:'d',this_month:'This month {n}',ins_mom:'{n} replacements this month · {p} MoM',ins_free:'Free-of-charge ratio {p}% — review warranty share',ins_topmat:'Material {v} — {p}% of total quantity',f_active:'Active Filters',f_clear:'Clear All',nav_hr:'Workforce',nav_sc:'Installation',nav_pm:'PM Schedule',nav_ft:'Fault',nav_mt:'Material'},
+  zh:{title:'材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',kp1:'总更换件数',kp2:'本月更换',kp3:'有偿比率',kp4:'材料种类',kp5:'更换设备数',kp6:'90天内再更换',u_cnt:'件',u_eq:'台',kf1:'使用数量 {n}个 (除异常值)',kf2:'上月 {n}件',kf3:'有偿 {a} · 无偿 {b}',kf4:'TOP {v}',kf5:'S/N {n}种',kf6:'占全部{p}%',sec_ov:'概览',sec_mat:'材料·寿命',sec_eq:'设备·工艺',sec_dt:'明细',ch_monthly:'月度更换趋势',note_monthly:'按实绩日期件数',ch_mat:'材料更换TOP',note_mat:'数量合计 · 除异常值 · 数值在柱端',ch_model:'按型号',ch_pf2:'有偿 vs 无偿',note_pf2:'有/无偿构成',pf_ratio:'有偿比率',pf_paid:'有偿',pf_free:'无偿',ch_eq:'设备更换TOP',note_eq:'件数 · 异常集中设备红色 · 数值在柱端',ch_proc2:'按工艺',note_proc2:'件数 · 最大/最新标注',ch_line2:'按LINE',note_line2:'件数 · 最大/最新标注',ch_life:'材料寿命分布',note_life:'更换时使用天数区间',life_b:['<90天','90–180天','180天–1年','1–2年','2年+'],note_hbarx:'数值在柱端 · 占比见提示框',ins_short:'90天内提前再更换 {n}件 ({p}%)',ins_qty:'数量单位疑似错误 {n}件 — 请确认表格',mon_u:'月',cyc_title:'材料使用周期(平均/最小/最大)',cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'材料更换明细',th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',all:'全部',no_data:'无数据',days:'天',this_month:'本月{n}件',ins_mom:'本月更换 {n}件 · 环比 {p}',ins_free:'无偿比率 {p}% — 需确认保修占比',ins_topmat:'材料 {v} — 占总数量的{p}%',f_active:'活动筛选',f_clear:'全部清除',nav_hr:'人员',nav_sc:'安装',nav_pm:'PM点检',nav_ft:'故障',nav_mt:'材料'},
+  ja:{title:'資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'라인',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',kp1:'総交換件数',kp2:'今月交換',kp3:'有償比率',kp4:'資材種類',kp5:'交換設備数',kp6:'90日未満再交換',u_cnt:'件',u_eq:'台',kf1:'使用数量 {n}個 (異常値除外)',kf2:'前月 {n}件',kf3:'有償 {a} · 無償 {b}',kf4:'TOP {v}',kf5:'S/N {n}種',kf6:'全体の{p}%',sec_ov:'概要',sec_mat:'資材·寿命',sec_eq:'設備·工程',sec_dt:'詳細',ch_monthly:'月別交換推移',note_monthly:'実績日基準件数',ch_mat:'資材交換TOP',note_mat:'数量合計 · 異常値除外 · 値は棒の先',ch_model:'モデル別',ch_pf2:'有償 vs 無償',note_pf2:'有/無償構成',pf_ratio:'有償比率',pf_paid:'有償',pf_free:'無償',ch_eq:'設備交換TOP',note_eq:'件数 · 異常集中は赤 · 値は棒の先',ch_proc2:'工程別',note_proc2:'件数 · 最大/最新ラベル',ch_line2:'LINE別',note_line2:'件数 · 最大/最新ラベル',ch_life:'資材寿命分布',note_life:'交換時点の使用日区分',life_b:['<90日','90–180日','180日–1年','1–2年','2年+'],note_hbarx:'値は棒の先 · 構成比はツールチップ',ins_short:'90日未満の早期再交換 {n}件 ({p}%)',ins_qty:'数量単位誤入力疑い {n}件 — シート確認要',mon_u:'月',cyc_title:'資材別使用周期(平均/最小/最大)',cyc_mat:'資材名',cyc_cnt:'交換件수',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'資材交換詳細',th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',all:'全体',no_data:'データなし',days:'日',this_month:'今月{n}件',ins_mom:'今月交換 {n}件 · 前月比 {p}',ins_free:'無償比率 {p}% — 保証比重の確認要',ins_topmat:'資材 {v} — 全数量の{p}%',f_active:'有効フィルタ',f_clear:'全解除',nav_hr:'人員',nav_sc:'設置',nav_pm:'PM点検',nav_ft:'故障',nav_mt:'資材'}
 };
 
 let LANG='ko', DATA=[], CHARTS={}, sortK='date', sortAsc=false, cycSortK='cnt', cycSortAsc=false;
@@ -542,7 +611,16 @@ document.addEventListener('click', e => {
 });
 
 function t(k){return (T[LANG]||T.ko)[k]||k;}
+function buildSecNav(){
+  GST.sectionNav([
+    {id:'overview',label:t('sec_ov')},
+    {id:'matsec',  label:t('sec_mat')},
+    {id:'eqsec',   label:t('sec_eq')},
+    {id:'data',    label:t('sec_dt')}
+  ]);
+}
 function applyLang(){
+  buildSecNav();
   document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
   document.querySelectorAll('[data-i-th]').forEach(el=>{el.textContent=t(el.getAttribute('data-i-th'));});
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
@@ -601,6 +679,7 @@ async function loadData(){ GST.skeleton(true);
 
     const mappedData = rows.map(r => {
       const wd = toDate(r[C.workDate]);
+      const rawQty = Number(r[C.qty]) || 1;
       return {
         country: guessCountry(cv(r,'op')),
         customer: shortCustomer(cv(r,'customer')),
@@ -608,8 +687,11 @@ async function loadData(){ GST.skeleton(true);
         process: cv(r,'process'),
         detail: cv(r,'detail'),
         eq: cv(r,'eq') || cv(r,'mainEq'),
+        sn: cv(r,'sn'),
+        model: cv(r,'model'),
         matName: cv(r,'matName'),
-        qty: Number(r[C.qty]) || 1,
+        qty: rawQty,
+        qtyBad: rawQty>9999,  // 단위 오입력 의심(예: 호스 mm) — 수량 합산에서 제외
         reason: cv(r,'reason'),
         workDate: wd,
         daysPaid: Number(r[C.daysPaid]) || null,
@@ -719,16 +801,103 @@ function filt(){
   });
 }
 const countBy=GST.countBy;
-const sumQtyBy=(arr,key,top)=>GST.sumBy(arr,key,'qty',top);
+// 수량 합산 시 단위 오입력 의심 행(qtyBad)은 제외 — 인사이트로 별도 표기
+const sumQtyBy=(arr,key,top)=>GST.sumBy(arr.filter(x=>!x.qtyBad),key,'qty',top);
 function cycleDays(x){return CYCLE_BASIS==='paid'?x.daysPaid:x.daysPrev;}
+
+// 값 직접 표기 플러그인 (설치현황과 동일)
+const valLabelPlugin={id:'valLabel',
+  afterDatasetsDraw(chart,args,o){
+    if(!o||!o.mode)return;
+    const meta=chart.getDatasetMeta(0), ds=chart.data.datasets[0], ctx=chart.ctx;
+    if(!meta||!meta.data||!meta.data.length)return;
+    const nums=ds.data.filter(v=>v!=null&&isFinite(v));
+    const max=nums.length?Math.max.apply(null,nums):null;
+    ctx.save();ctx.fillStyle=o.color||'#E6EDF3';
+    ctx.font='700 11px "Segoe UI","Malgun Gothic",sans-serif';
+    meta.data.forEach(function(el,i){
+      const v=ds.data[i]; if(v==null)return;
+      if(o.mode==='h'){ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(v.toLocaleString(),el.x+6,el.y);return;}
+      if(o.mode==='peaks'){
+        const fm=ds.data.findIndex(x=>x===max);
+        if(!((i===fm&&v>0)||(i===ds.data.length-1&&v>0)))return;
+      }
+      ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(v.toLocaleString(),el.x,el.y-6);
+    });
+    ctx.restore();
+  }};
+const donutCenterPlugin={id:'dCenter',
+  afterDraw(chart,args,o){
+    if(!o||!o.on)return;
+    const meta=chart.getDatasetMeta(0);
+    if(!meta||!meta.data||!meta.data[0])return;
+    const x=meta.data[0].x,y=meta.data[0].y,ctx=chart.ctx;
+    const total=chart.data.datasets[0].data.reduce((a,b)=>a+(+b||0),0);
+    ctx.save();ctx.textAlign='center';
+    ctx.fillStyle=o.color||'#E6EDF3';
+    ctx.font='800 16px "Segoe UI","Malgun Gothic",sans-serif';
+    ctx.textBaseline='bottom';ctx.fillText(total.toLocaleString(),x,y+2);
+    ctx.fillStyle=o.mut||'#8B98A9';
+    ctx.font='700 8px "Segoe UI",sans-serif';ctx.textBaseline='top';ctx.fillText('TOTAL',x,y+5);
+    ctx.restore();
+  }};
+function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
+// 가로 막대 + 값 라벨 (클릭 필터 없음 — EXCL/슬라이서로 제어)
+function mkHBarX(id,entries,total,color,topN,colorFn){
+  const top=entries.slice(0,topN||10);
+  const ctx=document.getElementById(id); if(!ctx)return;
+  const TH=GST.chartTheme();
+  const cfg={type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{
+      data:top.map(e=>e[1]),
+      backgroundColor:top.map((e,i)=>colorFn?colorFn(e[0],i):(color||TH.pal[0])),
+      borderRadius:5,barPercentage:.72}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      layout:{padding:{right:52}},
+      plugins:{legend:{display:false},valLabel:{mode:'h',color:inkStrong(TH)},
+        tooltip:{callbacks:{label:c=>' '+c.parsed.x.toLocaleString()+(total?' ('+Math.round(c.parsed.x/total*100)+'%)':'')}}},
+      scales:{x:{display:false},y:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}}}},
+    plugins:[valLabelPlugin]};
+  if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
+}
+// 세로 막대 + 최대/최신 라벨
+function mkBarVX(id,labels,data,color){
+  const ctx=document.getElementById(id); if(!ctx)return;
+  const TH=GST.chartTheme();
+  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
+      plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)}},
+      scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}},
+              y:{ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
+    plugins:[valLabelPlugin]};
+  if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
+}
 
 function mkBar(id,labels,data,color,horizontal,withShare){
   GST.bar(CHARTS,id,{labels,data,color,horizontal,share:withShare,
     onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
 }
 function mkDonut(id,labels,data,colors){
-  GST.donut(CHARTS,id,{labels,data,colors:colors||GST.PAL8,
-    onClick:l=>{if(CLICK_MAP[id])chartClick(id,l);}});
+  const ctx=document.getElementById(id); if(!ctx)return;
+  const TH=GST.chartTheme();
+  const cols=colors||GST.PAL8;
+  const total=data.reduce((a,b)=>a+(+b||0),0)||1;
+  const onClick=(evt,els)=>{if(!CLICK_MAP[id]||!els.length)return;chartClick(id,labels[els[0].index]);};
+  const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:cols,borderColor:'rgba(0,0,0,.15)',borderWidth:2,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',onClick,
+      plugins:{
+        dCenter:{on:true,color:inkStrong(TH),mut:TH.txt},
+        legend:{position:'right',labels:{color:TH.txt,font:{size:10},padding:7,usePointStyle:true,pointStyle:'circle',boxWidth:6,
+          generateLabels:function(chart){
+            const d=chart.data;
+            return d.labels.map(function(l,i){
+              const bg=Array.isArray(d.datasets[0].backgroundColor)?d.datasets[0].backgroundColor[i]:d.datasets[0].backgroundColor;
+              return {text:String(l).slice(0,14)+'  '+(+d.datasets[0].data[i]).toLocaleString()+' · '+Math.round(d.datasets[0].data[i]/total*100)+'%',
+                fillStyle:bg,strokeStyle:'transparent',fontColor:TH.txt,pointStyle:'circle',index:i};
+            });
+          }}}},
+      animation:{animateScale:true}},
+    plugins:[donutCenterPlugin]};
+  if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
 }
 
 let LAST_F=[];
@@ -740,15 +909,33 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   const pal = TH.pal8;
   
   const paid=f.filter(x=>x.pf==='유상').length; const free=f.filter(x=>x.pf==='무상').length;
-  document.getElementById('kp1').textContent=f.length; document.getElementById('kp2').textContent=paid;
+  const setTxt=(id,v)=>{const e=document.getElementById(id);if(e)e.innerHTML=v;};
   const _n=new Date(),_y=_n.getUTCFullYear(),_m=_n.getUTCMonth();
   const _py=_m===0?_y-1:_y,_pm=_m===0?11:_m-1;
   const monthCur=GST.monthCount(f,'workDate',_y,_m),monthPrev=GST.monthCount(f,'workDate',_py,_pm);
-  {const _b=GST.deltaBadge(monthCur,monthPrev,true);
-   const _el=document.getElementById('kd1');
-   if(_el)_el.innerHTML=_b?(t('this_month').replace('{n}',monthCur)+' '+_b):'';}
-  document.getElementById('kp3').textContent=free; document.getElementById('kp4').textContent=(f.length?Math.round(paid/f.length*100):0)+'%';
-  document.getElementById('kp5').textContent=uniq('matName',f).length; document.getElementById('kp6').textContent=uniq('eq',f).length;
+
+  // ① 총 교체건수 + 사용 수량(이상치 제외)
+  setTxt('kp1',f.length.toLocaleString());
+  const qtySum=f.reduce((a,x)=>a+(x.qtyBad?0:x.qty),0);
+  setTxt('kd1',''); setTxt('kf1',t('kf1').replace('{n}',qtySum.toLocaleString()));
+  // ② 이번 달 교체 (전월 대비)
+  setTxt('kp2',monthCur.toLocaleString());
+  setTxt('kd2',GST.deltaBadge(monthCur,monthPrev,true));
+  setTxt('kf2',t('kf2').replace('{n}',monthPrev));
+  // ③ 유상 비율
+  const pfp=f.length?Math.round(paid/f.length*100):0;
+  setTxt('kp3',pfp+'%');
+  setTxt('kf3',t('kf3').replace('{a}',paid.toLocaleString()).replace('{b}',free.toLocaleString()));
+  // ④ 자재 종류 (+TOP)
+  const matKinds=uniq('matName',f).length;
+  setTxt('kp4',matKinds.toLocaleString());
+  // ⑤ 교체 설비 수
+  setTxt('kp5',uniq('eq',f).length.toLocaleString());
+  setTxt('kf5',t('kf5').replace('{n}',uniq('sn',f).length));
+  // ⑥ 90일 미만 조기 재교체 (품질 신호)
+  const shortLife=f.filter(x=>{const d=cycleDays(x);return d!=null&&d>0&&d<90;}).length;
+  setTxt('kp6',shortLife.toLocaleString());
+  setTxt('kf6',t('kf6').replace('{p}',f.length?Math.round(shortLife/f.length*100):0));
 
   ALL_VALUES.mat = uniq('matName', f);
   ALL_VALUES.eq = uniq('eq', f);
@@ -756,22 +943,52 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   ALL_VALUES.reason = uniq('reason', f);
   ALL_VALUES.free = uniq('freeReason', f.filter(x=>x.freeReason));
 
+  // 월별 교체 추이 (전체 기간)
+  {
+    const mm={};
+    f.forEach(x=>{if(x.workDate){const k=x.workDate.getUTCFullYear()+'-'+String(x.workDate.getUTCMonth()+1).padStart(2,'0');mm[k]=(mm[k]||0)+1;}});
+    const keys=Object.keys(mm).sort();
+    mkBarVX('cMonthly',keys.map(k=>(+k.slice(5))+t('mon_u')),keys.map(k=>mm[k]),TH.pal[0]);
+  }
+
   const matF = f.filter(x=>!EXCL.mat.includes(x.matName));
   const mats = sumQtyBy(matF,'matName',12);
-  mkBar('cMat', mats.map(x=>x[0]), mats.map(x=>x[1]), pal[0], true, true);
+  {
+    const totQ=matF.reduce((a,x)=>a+(x.qtyBad?0:x.qty),0);
+    mkHBarX('cMat', mats.slice(0,10), totQ, TH.pal[0], 10);
+  }
   renderExclChips('mat');
+  setTxt('kf4',mats.length?t('kf4').replace('{v}',mats[0][0]):'');
 
   const eqF = f.filter(x=>!EXCL.eq.includes(x.eq));
   const eqs = countBy(eqF,'eq',12);
   const eqOut=GST.outliers(eqs);
-  mkBar('cEq', eqs.map(x=>x[0]), eqs.map(x=>x[1]), eqs.map(e=>eqOut.has(e[0])?TH.status.bad:pal[1]), true, true);
+  mkHBarX('cEq', eqs.slice(0,10), eqF.length, TH.pal[2], 10, (l)=>eqOut.has(l)?TH.status.bad:TH.pal[2]);
   renderExclChips('eq');
 
-  mkDonut('cPf',[t('kp2'),t('kp3')],[paid,free],[pal[0],pal[2]]); // 유상=파랑 · 무상=앰버
+  // 유상 vs 무상 분할 바 카드
+  {
+    const eb=document.getElementById('pfBar'); if(eb)eb.style.width=pfp+'%';
+    setTxt('pfPct',pfp+'%'); setTxt('pfPaid',paid.toLocaleString()); setTxt('pfFree',free.toLocaleString());
+  }
+
+  // 모델별 / LINE별 (신규)
+  mkHBarX('cModel',countBy(f,'model',8),f.length,TH.pal[3],8);
+  {
+    const le=countBy(f,'line',10);
+    mkBarVX('cLine2',le.map(e=>e[0]),le.map(e=>e[1]),TH.pal[1]);
+  }
+  // 자재 수명 분포 (주기 기준 토글 적용)
+  {
+    const lb=t('life_b'); const cnt=[0,0,0,0,0];
+    f.forEach(x=>{const d=cycleDays(x);if(d==null||d<=0)return;
+      cnt[d<90?0:d<180?1:d<365?2:d<730?3:4]++;});
+    mkBarVX('cLife',lb,cnt,TH.pal[4]);
+  }
 
   const procF = f.filter(x=>!EXCL.proc.includes(x.process));
   const procs = countBy(procF,'process',10);
-  mkBar('cProc', procs.map(x=>x[0]), procs.map(x=>x[1]), pal[2], false, true);
+  mkBarVX('cProc', procs.map(x=>x[0]), procs.map(x=>x[1]), TH.pal[2]);
   renderExclChips('proc');
 
   const reasonF = f.filter(x=>!EXCL.reason.includes(x.reason));
@@ -800,6 +1017,12 @@ function render(){ GST.skeleton(false); GST.pushState(F);
         const mp=totQ?Math.round(mats[0][1]/totQ*100):0;
         if(mp>=40)ins.push({sev:'info',text:t('ins_topmat').replace('{v}','<b>'+mats[0][0]+'</b>').replace('{p}',mp)});
       }
+      if(shortLife>0){
+        const sp=Math.round(shortLife/f.length*100);
+        ins.push({sev:sp>=10?'warn':'info',text:t('ins_short').replace('{n}','<b>'+shortLife.toLocaleString()+'</b>').replace('{p}',sp)});
+      }
+      const nBad=f.filter(x=>x.qtyBad).length;
+      if(nBad>0)ins.push({sev:'warn',text:t('ins_qty').replace('{n}','<b>'+nBad+'</b>')});
     }
     GST.insights(f.length?ins:[]);
   }
