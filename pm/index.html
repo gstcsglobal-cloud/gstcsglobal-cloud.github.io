@@ -454,6 +454,15 @@ let LANG='ko', RAW=[], SCHED=[], CHARTS={}, activeStatus='', sortK='dl', sortAsc
 let CAL_Y=new Date().getFullYear(), CAL_M=new Date().getMonth();
 let CAL_MODE='both'; // 'plan'(예정만) / 'done'(완료만) / 'both'(둘다)
 let DONE_HIST=[]; // 완료 이력 [{date, sn, ch, line, model, site, group}]
+// 사이드바 필터(고객사/LINE/Model)가 적용된 뷰 — KPI·차트·캘린더·표 전부 이 뷰 기준
+let VS=[], VD=[];
+function gFilt(){
+  const g=id=>{const e=document.getElementById(id);return e?e.value:'';};
+  const fs=g('fSite'), fl=g('fLine'), fm=g('fModel');
+  VS=SCHED.filter(x=>(!fs||x.site===fs)&&(!fl||x.line===fl)&&(!fm||x.model===fm));
+  VD=DONE_HIST.filter(h=>(!fs||h.site===fs)&&(!fl||h.line===fl)&&(!fm||h.model===fm));
+  return {fs,fl,fm};
+}
 try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
 
 Chart.defaults.color=GST.chartTheme().txt;
@@ -628,10 +637,11 @@ function mkHBar2(id,entries,color,topN){
 
 function render(){ GST.skeleton(false);
   const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
+  const GF=gFilt(); // 사이드바 필터 반영 (VS/VD 갱신)
   // 선택한 월(CAL_Y, CAL_M) 기준 필터
   const inMonth = x => x.next && x.next.getUTCFullYear()===CAL_Y && x.next.getUTCMonth()===CAL_M;
-  const monthPlan = SCHED.filter(inMonth);
-  const monthDone = DONE_HIST.filter(h => h.date.getUTCFullYear()===CAL_Y && h.date.getUTCMonth()===CAL_M);
+  const monthPlan = VS.filter(inMonth);
+  const monthDone = VD.filter(h => h.date.getUTCFullYear()===CAL_Y && h.date.getUTCMonth()===CAL_M);
 
   const over=monthPlan.filter(x=>x.st==='overdue').length;
   const soon=monthPlan.filter(x=>x.st==='soon').length;
@@ -647,11 +657,11 @@ function render(){ GST.skeleton(false);
   {
     const setTxt=(id,v)=>{const e=document.getElementById(id);if(e)e.innerHTML=v;};
     setTxt('kf1',t('kf1x'));
-    const allOver=SCHED.filter(x=>x.st==='overdue');
+    const allOver=VS.filter(x=>x.st==='overdue');
     const worst=allOver.reduce((m,x)=>(x.dl!=null&&x.dl<m)?x.dl:m,0);
     setTxt('kf2',allOver.length?t('kf2x').replace('{d}',Math.abs(worst)):'');
     const pv=CAL_M===0?[CAL_Y-1,11]:[CAL_Y,CAL_M-1];
-    const prevDone=DONE_HIST.filter(h=>h.date.getUTCFullYear()===pv[0]&&h.date.getUTCMonth()===pv[1]).length;
+    const prevDone=VD.filter(h=>h.date.getUTCFullYear()===pv[0]&&h.date.getUTCMonth()===pv[1]).length;
     setTxt('kd6',GST.deltaBadge(monthDone.length,prevDone,false));
     setTxt('kf6',t('kf6x').replace('{n}',prevDone));
   }
@@ -670,22 +680,22 @@ function render(){ GST.skeleton(false);
   renderCalendar();
 
   // LINE별 지연/임박 (스택)
-  const lines=[...new Set(SCHED.map(x=>x.line))].filter(l=>l&&l!=='—').slice(0,12);
+  const lines=[...new Set(VS.map(x=>x.line))].filter(l=>l&&l!=='—').slice(0,12);
   mkStackBar('cLine',lines,[
-    {label:t('st_overdue'),data:lines.map(l=>SCHED.filter(x=>x.line===l&&x.st==='overdue').length),backgroundColor:TH.status.bad},
-    {label:t('st_soon'),data:lines.map(l=>SCHED.filter(x=>x.line===l&&x.st==='soon').length),backgroundColor:TH.status.warn}
+    {label:t('st_overdue'),data:lines.map(l=>VS.filter(x=>x.line===l&&x.st==='overdue').length),backgroundColor:TH.status.bad},
+    {label:t('st_soon'),data:lines.map(l=>VS.filter(x=>x.line===l&&x.st==='soon').length),backgroundColor:TH.status.warn}
   ]);
 
   // 향후 60일 주차별
   const weeks={};
-  SCHED.forEach(x=>{if(x.dl!=null&&x.dl>=0&&x.dl<=60){const wk='+'+Math.floor(x.dl/7)+'w';weeks[wk]=(weeks[wk]||0)+1;}});
+  VS.forEach(x=>{if(x.dl!=null&&x.dl>=0&&x.dl<=60){const wk='+'+Math.floor(x.dl/7)+'w';weeks[wk]=(weeks[wk]||0)+1;}});
   const wk=Object.keys(weeks).sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
   mkBar('cWeek',wk,wk.map(k=>weeks[k]),TH.pal[0]);
 
   // 월별 점검 완료 추이 (최근 8개월)
   {
     const dm={};
-    DONE_HIST.forEach(h=>{const k=h.date.getUTCFullYear()+'-'+String(h.date.getUTCMonth()+1).padStart(2,'0');dm[k]=(dm[k]||0)+1;});
+    VD.forEach(h=>{const k=h.date.getUTCFullYear()+'-'+String(h.date.getUTCMonth()+1).padStart(2,'0');dm[k]=(dm[k]||0)+1;});
     const keys=Object.keys(dm).sort().slice(-8);
     mkBarV2('cDone',keys.map(k=>(+k.slice(5))+t('mon_u')),keys.map(k=>dm[k]),TH.pal[1]);
   }
@@ -694,6 +704,9 @@ function render(){ GST.skeleton(false);
     const manByM={}, perWorker={}, lineMin={};
     RAW.forEach(r=>{
       if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;
+      if(GF.fs&&(r[C.site]||'—')!==GF.fs)return;
+      if(GF.fl&&(r[C.line]||'—')!==GF.fl)return;
+      if(GF.fm&&(r[C.model]||'—')!==GF.fm)return;
       const wd=toDate(r[C.work]); if(!wd)return;
       const man=Number(r[C.manMin])||0, wmin=Number(r[C.workMin])||0;
       if(man>0&&man<14400){
@@ -716,16 +729,16 @@ function render(){ GST.skeleton(false);
   // ===== 인사이트 (전체 스케줄 기준) =====
   {
     const ins=[];
-    const allOver=SCHED.filter(x=>x.st==='overdue');
+    const allOver=VS.filter(x=>x.st==='overdue');
     if(allOver.length){
       const worst=allOver.reduce((m,x)=>(x.dl!=null&&x.dl<m)?x.dl:m,0);
       ins.push({sev:'bad',text:t('ins_overdue').replace('{n}','<b>'+allOver.length+'</b>').replace('{d}',Math.abs(worst))});
     }
-    const due30=SCHED.filter(x=>x.dl!=null&&x.dl>=0&&x.dl<=30).length;
+    const due30=VS.filter(x=>x.dl!=null&&x.dl>=0&&x.dl<=30).length;
     if(due30)ins.push({sev:'warn',text:t('ins_due30').replace('{n}','<b>'+due30+'</b>')});
     {
       const nowD=new Date();
-      const doneCur=DONE_HIST.filter(h=>h.date.getUTCFullYear()===nowD.getFullYear()&&h.date.getUTCMonth()===nowD.getMonth()).length;
+      const doneCur=VD.filter(h=>h.date.getUTCFullYear()===nowD.getFullYear()&&h.date.getUTCMonth()===nowD.getMonth()).length;
       ins.push({sev:'ok',text:t('ins_done').replace('{n}','<b>'+doneCur+'</b>')});
     }
     GST.insights(SCHED.length?ins:[]);
@@ -750,16 +763,18 @@ function render(){ GST.skeleton(false);
 let selectsFilled=false;
 function fillSelect(id,f){
   const s=document.getElementById(id);
-  // 첫 옵션 빼고 비우고 다시 채움
+  const cur=s.value;
+  // 첫 옵션 빼고 비우고 다시 채움 (전체 SCHED 기준 — 선택지가 좁아지지 않게)
   while(s.options.length>1)s.remove(1);
   countBy(SCHED,f).forEach(([k])=>{if(k&&k!=='—'){const o=document.createElement('option');o.value=k;o.textContent=k;s.appendChild(o);}});
+  s.value=cur; if(s.value!==cur)s.value='';
 }
 
 function draw(){
   const q=document.getElementById('q').value.toLowerCase();
   const fs=document.getElementById('fSite').value,fl=document.getElementById('fLine').value,
         fm=document.getElementById('fModel').value,fst=document.getElementById('fStat').value;
-  let d=SCHED.filter(x=>{
+  let d=VS.filter(x=>{
     if(fs&&x.site!==fs)return false; if(fl&&x.line!==fl)return false;
     if(fm&&x.model!==fm)return false; if(fst&&x.st!==fst)return false;
     if(q&&!`${x.sn} ${x.model} ${x.line} ${x.site} ${x.ch} ${x.group}`.toLowerCase().includes(q))return false;
@@ -785,8 +800,10 @@ function draw(){
   }).join('');
 }
 
-['q','fSite','fLine','fModel','fStat'].forEach(id=>{
-  document.addEventListener('input',e=>{if(e.target.id===id)draw();});
+document.addEventListener('input',e=>{
+  const id=e.target&&e.target.id;
+  if(id==='fSite'||id==='fLine'||id==='fModel')render();   // 페이지 전체(KPI·차트·캘린더) 재계산
+  else if(id==='q'||id==='fStat')draw();                   // 표만
 });
 document.addEventListener('click',e=>{
   const th=e.target.closest('#tbl thead th');if(!th)return;
@@ -836,16 +853,11 @@ function renderWeeklyTable(){
   const planMap={};
   let planTotal=0, planInRange=0;
   const firstKey=weeks[0].key, lastKey=weeks[weeks.length-1].key;
-  SCHED.forEach(x=>{ if(x.next){ const k=weekKey(x.next); planMap[k]=(planMap[k]||0)+1; planTotal++; if(k>=firstKey&&k<=lastKey)planInRange++; } });
+  VS.forEach(x=>{ if(x.next){ const k=weekKey(x.next); planMap[k]=(planMap[k]||0)+1; planTotal++; if(k>=firstKey&&k<=lastKey)planInRange++; } });
 
   // 완료 집계 (실제 점검이력 Work Date 기준, TBM만)
   const doneMap={};
-  RAW.forEach(r=>{
-    if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;
-    const wd=toDate(r[C.work]); if(!wd)return;
-    const k=weekKey(wd);
-    doneMap[k]=(doneMap[k]||0)+1;
-  });
+  VD.forEach(h=>{ const k=weekKey(h.date); doneMap[k]=(doneMap[k]||0)+1; });
 
   // 주 라벨 (M/D ~ M/D)
   function weekLabel(wm){
@@ -917,7 +929,7 @@ function renderCalendar(){
   }
   // 예정 (다음 예정일 기준)
   if(CAL_MODE==='plan'||CAL_MODE==='both'){
-    SCHED.forEach(x=>{
+    VS.forEach(x=>{
       if(!x.next)return;
       if(x.next.getUTCFullYear()===CAL_Y && x.next.getUTCMonth()===CAL_M){
         pushDay(x.next.getUTCDate(), {...x, _type:'plan'});
@@ -926,7 +938,7 @@ function renderCalendar(){
   }
   // 완료 (실제 점검이력 Work Date 기준)
   if(CAL_MODE==='done'||CAL_MODE==='both'){
-    DONE_HIST.forEach(h=>{
+    VD.forEach(h=>{
       if(h.date.getUTCFullYear()===CAL_Y && h.date.getUTCMonth()===CAL_M){
         pushDay(h.date.getUTCDate(), {
           sn:h.sn,ch:h.ch,site:h.site,line:h.line,model:h.model,group:h.group,
