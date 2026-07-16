@@ -80,7 +80,11 @@ body.theme-light .pt-btn.active{color:#fff}
 .sec-h{font-size:13px;font-weight:800;color:var(--txt-muted);letter-spacing:1.5px;text-transform:uppercase;margin:22px 0 10px 2px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
 .grid2{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;margin-bottom:16px}
-.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:18px;backdrop-filter:blur(14px)}
+.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:18px;backdrop-filter:blur(14px);position:relative}
+.mini-per{position:absolute;top:14px;right:14px;display:flex;gap:0;z-index:5;border:1px solid var(--glass-border);border-radius:12px;overflow:hidden}
+.mp-btn{background:transparent;border:none;padding:3px 10px;font-size:10px;font-weight:700;color:var(--txt-muted);cursor:pointer}
+.mp-btn.active{background:var(--accent-1);color:#04211d}
+body.theme-light .mp-btn.active{color:#fff}
 .card h3{font-size:13.5px;font-weight:700;margin-bottom:4px;color:var(--txt-main)}
 .card .card-note{font-size:10.5px;color:var(--txt-muted);margin-bottom:10px}
 .card .cw{position:relative;height:250px}
@@ -102,7 +106,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 @media(max-width:800px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
 @media print{
   body{padding:10px;background:#fff !important;animation:none}
-  .header-right,.rpt-toolbar,.status{display:none !important}
+  .header-right,.rpt-toolbar,.status,.mini-per{display:none !important}
   .card,.tablecard,.kpi{break-inside:avoid;border:1px solid #ddd}
   .cw{height:220px}
 }
@@ -191,17 +195,17 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <div class="sec-h"><span data-i="sec1">인력 · 교육</span><span class="sec-note" data-i="hr_note">전사 기준 (필터 미적용)</span></div>
 <div class="grid3">
   <div class="card">
-    <h3 data-i="ch_hc">인원 추이 (경력구간)</h3>
+    <h3 data-i="ch_hc">인원 추이 (경력구간)</h3><div class="mini-per" data-ch="cHc"></div>
     <div class="card-note" data-i="note_hc">각 구간 말 기준 재직 인원 · 입사일/퇴사일 반영</div>
     <div class="cw"><canvas id="cHc"></canvas></div>
   </div>
   <div class="card">
-    <h3 data-i="ch_io">입사 · 퇴사</h3>
+    <h3 data-i="ch_io">입사 · 퇴사</h3><div class="mini-per" data-ch="cIo"></div>
     <div class="card-note" data-i="note_io">구간별 입사/퇴사 인원</div>
     <div class="cw"><canvas id="cIo"></canvas></div>
   </div>
   <div class="card">
-    <h3 data-i="ch_edu">교육 완료율 추이</h3>
+    <h3 data-i="ch_edu">교육 완료율 추이</h3><div class="mini-per" data-ch="cEdu"></div>
     <div class="card-note" data-i="note_edu">이수일 기준 누적 완료 / 해당 시점 재직 인원</div>
     <div class="cw"><canvas id="cEdu"></canvas></div>
   </div>
@@ -210,17 +214,17 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <div class="sec-h" data-i="sec2">작업 실행력</div>
 <div class="grid3">
   <div class="card">
-    <h3 data-i="ch_jobs">작업 건수</h3>
+    <h3 data-i="ch_jobs">작업 건수</h3><div class="mini-per" data-ch="cJobs"></div>
     <div class="card-note" data-i="note_jobs">전체 작업 실적 · 최대/최신값 라벨</div>
     <div class="cw"><canvas id="cJobs"></canvas></div>
   </div>
   <div class="card">
-    <h3 data-i="ch_man">작업 공수 (h)</h3>
+    <h3 data-i="ch_man">작업 공수 (h)</h3><div class="mini-per" data-ch="cMan"></div>
     <div class="card-note" data-i="note_man">PM · 서비스 · 설치 구분 (이상치 제외)</div>
     <div class="cw"><canvas id="cMan"></canvas></div>
   </div>
   <div class="card">
-    <h3 data-i="ch_pc">인당 작업 건수</h3>
+    <h3 data-i="ch_pc">인당 작업 건수</h3><div class="mini-per" data-ch="cPc"></div>
     <div class="card-note" data-i="note_pc">구간 내 실제 투입 인원 기준</div>
     <div class="cw"><canvas id="cPc"></canvas></div>
   </div>
@@ -234,7 +238,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <div class="cw"><canvas id="cSc"></canvas></div>
   </div>
   <div class="card">
-    <h3 data-i="ch_ft">고장 건수 (BM · CBM)</h3>
+    <h3 data-i="ch_ft">고장 건수 (BM · CBM)</h3><div class="mini-per" data-ch="cFt"></div>
     <div class="card-note" data-i="note_ft">합계는 툴팁</div>
     <div class="cw"><canvas id="cFt"></canvas></div>
   </div>
@@ -302,7 +306,7 @@ function guessCountry(op){
 }
 
 const T={
-ko:{title:'▦ 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 주간/월간 요약',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_period:'기간',all:'전체',hr_note:'전사 기준 (필터 미적용)',hr_note2:'국가 필터 적용 (고객사·라인 미적용)',per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',print:'🖨 인쇄',
+ko:{title:'▦ 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 주간/월간 요약',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_period:'기간',all:'전체',hr_note:'전사 기준 (필터 미적용)',hr_note2:'국가 필터 적용 (고객사·라인 미적용)',per_ws:'주',per_ms:'월',per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',print:'🖨 인쇄',
  kp1:'재직 인원',kp2:'이번 달 입사 · 퇴사',kp3:'Basic 교육 완료율',kp4:'작업 건수 · 최근 30일',kp5:'작업 공수(h) · 최근 30일',kp6:'PM 진행율 · 올해',
  kf1:'경력 2년+ {n}명 · 1년 미만 {m}명',kf2:'최근 12개월 입사 {n}명',kf3:'Veteran {p}% (대상 {n}명)',kf4:'이전 30일 {n}건',kf5:'PM 비중 {p}%',kf6:'계획 {a} · 완료 {b}',
  sec1:'인력 · 교육',sec2:'작업 실행력',sec3:'PM · 고장',sec4:'설비',
@@ -319,7 +323,7 @@ ko:{title:'▦ 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 �
  ch_sum:'설비 요약',bn_in:'전체 반입 설비',bn_on:'가동 설비 (Turn-On)',bn_rate:'가동율',
  ins_pm:'올해 PM 진행율 {p}% (계획 {a} · 완료 {b})',ins_ft:'최근 30일 고장 {n}건 · 직전 30일 대비 {p}',ins_hc:'재직 {n}명 · 이번 달 입사 {a} · 퇴사 {b}',
  loading:'데이터 불러오는 중...',loaded:'로드 완료',mon_u:'월',u_p:'명',u_c:'건'},
-en:{title:'▦ Weekly Status',sub:'Weekly/monthly summary — workforce, training, work, PM, faults',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_period:'Period',all:'All',hr_note:'company-wide (filters not applied)',hr_note2:'country filter applied (customer/line N/A)',per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',print:'🖨 Print',
+en:{title:'▦ Weekly Status',sub:'Weekly/monthly summary — workforce, training, work, PM, faults',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_period:'Period',all:'All',hr_note:'company-wide (filters not applied)',hr_note2:'country filter applied (customer/line N/A)',per_ws:'W',per_ms:'M',per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',print:'🖨 Print',
  kp1:'Headcount',kp2:'Joined · Left (this month)',kp3:'Basic Training Rate',kp4:'Jobs · last 30d',kp5:'Man-hours · last 30d',kp6:'PM Progress · YTD',
  kf1:'2y+ {n} · under 1y {m}',kf2:'{n} joined in 12mo',kf3:'Veteran {p}% ({n} targets)',kf4:'prev 30d {n}',kf5:'PM share {p}%',kf6:'plan {a} · done {b}',
  sec1:'Workforce · Training',sec2:'Work Execution',sec3:'PM · Faults',sec4:'Equipment',
@@ -336,7 +340,7 @@ en:{title:'▦ Weekly Status',sub:'Weekly/monthly summary — workforce, trainin
  ch_sum:'Equipment Summary',bn_in:'Total fab-in',bn_on:'Running (Turn-On)',bn_rate:'Run rate',
  ins_pm:'YTD PM progress {p}% (plan {a} · done {b})',ins_ft:'{n} faults in 30d · {p} vs prev 30d',ins_hc:'{n} active · joined {a} · left {b} this month',
  loading:'Loading...',loaded:'Loaded',mon_u:'',u_p:'',u_c:''},
-zh:{title:'▦ 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇总',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_period:'期间',all:'全部',hr_note:'全公司基准(不适用筛选)',hr_note2:'适用国家筛选(客户/线不适用)',per_w:'按周',per_m:'按月',per_note:'最近12个区间',print:'🖨 打印',
+zh:{title:'▦ 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇总',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_period:'期间',all:'全部',hr_note:'全公司基准(不适用筛选)',hr_note2:'适用国家筛选(客户/线不适用)',per_ws:'周',per_ms:'月',per_w:'按周',per_m:'按月',per_note:'最近12个区间',print:'🖨 打印',
  kp1:'在职人员',kp2:'本月入职·离职',kp3:'Basic教育完成率',kp4:'作业件数·近30天',kp5:'工时(h)·近30天',kp6:'PM进度·今年',
  kf1:'2年+ {n}名 · 1年内 {m}名',kf2:'近12个月入职 {n}名',kf3:'Veteran {p}% (对象 {n}名)',kf4:'前30天 {n}件',kf5:'PM占比 {p}%',kf6:'计划 {a} · 完成 {b}',
  sec1:'人力 · 教育',sec2:'作业执行力',sec3:'PM · 故障',sec4:'设备',
@@ -353,7 +357,7 @@ zh:{title:'▦ 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇�
  ch_sum:'设备汇总',bn_in:'全部搬入设备',bn_on:'运行设备(Turn-On)',bn_rate:'运行率',
  ins_pm:'今年PM进度 {p}% (计划 {a} · 完成 {b})',ins_ft:'近30天故障 {n}件 · 环比 {p}',ins_hc:'在职 {n}名 · 本月入职 {a} · 离职 {b}',
  loading:'加载中...',loaded:'已加载',mon_u:'月',u_p:'名',u_c:'件'},
-ja:{title:'▦ 週間現況',sub:'人員·教育·作業·PM·故障 週/月サマリー',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'ライン',sl_period:'期間',all:'全体',hr_note:'全社基準(フィルタ非適用)',hr_note2:'国フィルタ適用(顧客/ライン非適用)',per_w:'週別',per_m:'月別',per_note:'直近12区間',print:'🖨 印刷',
+ja:{title:'▦ 週間現況',sub:'人員·教育·作業·PM·故障 週/月サマリー',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'ライン',sl_period:'期間',all:'全体',hr_note:'全社基準(フィルタ非適用)',hr_note2:'国フィルタ適用(顧客/ライン非適用)',per_ws:'週',per_ms:'月',per_w:'週別',per_m:'月別',per_note:'直近12区間',print:'🖨 印刷',
  kp1:'在籍人員',kp2:'今月 入社·退社',kp3:'Basic教育完了率',kp4:'作業件数·直近30日',kp5:'工数(h)·直近30日',kp6:'PM進捗·今年',
  kf1:'2年+ {n}名 · 1年未満 {m}名',kf2:'直近12ヶ月入社 {n}名',kf3:'Veteran {p}% (対象 {n}名)',kf4:'前30日 {n}件',kf5:'PM比率 {p}%',kf6:'計画 {a} · 完了 {b}',
  sec1:'人員 · 教育',sec2:'作業実行力',sec3:'PM · 故障',sec4:'設備',
@@ -381,6 +385,18 @@ window.clearAllFilters=function(){
 };
 let PERIOD='m';
 try{const sp=localStorage.getItem('gst_rpt_period'); if(sp==='w'||sp==='m')PERIOD=sp;}catch(e){}
+// 차트별 주/월 오버라이드 (없으면 전역 PERIOD 따름)
+let PER={};
+try{const sv=JSON.parse(localStorage.getItem('gst_rpt_per')||'null'); if(sv&&typeof sv==='object'&&sv)PER=sv;}catch(e){}
+function savePer(){try{localStorage.setItem('gst_rpt_per',JSON.stringify(PER));}catch(e){}}
+window.setChartPer=function(id,u){ PER[id]=u; savePer(); render(); };
+function renderMiniToggles(){
+  document.querySelectorAll('.mini-per').forEach(box=>{
+    const id=box.dataset.ch;
+    const cur=(PER[id]==='w'||PER[id]==='m')?PER[id]:PERIOD;
+    box.innerHTML=['w','m'].map(u=>'<button class="mp-btn'+(cur===u?' active':'')+'" onclick="setChartPer(\''+id+'\',\''+u+'\')">'+(u==='w'?t('per_ws'):t('per_ms'))+'</button>').join('');
+  });
+}
 function t(k){return (T[LANG]||T.ko)[k]||k;}
 function applyLang(){
   document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
@@ -418,10 +434,11 @@ function isoW(d){
   const w=1+Math.round(((x-fy)/MS-3+((fy.getUTCDay()+6)%7))/7);
   return x.getUTCFullYear()+'-W'+String(w).padStart(2,'0');
 }
-function keyOfDate(d){return PERIOD==='w'?isoW(d):fmtYM(d);}
-function periods(n,anchor){
+function keyOfDate(d,u){return (u||PERIOD)==='w'?isoW(d):fmtYM(d);}
+function periods(n,anchor,unit){
+  const U=unit||PERIOD;
   const out=[]; const today=anchor?new Date(anchor.getTime()):new Date(); today.setUTCHours(0,0,0,0);
-  if(PERIOD==='w'){
+  if(U==='w'){
     const mon=new Date(today); mon.setUTCDate(mon.getUTCDate()-((mon.getUTCDay()+6)%7));
     for(let i=n-1;i>=0;i--){
       const st=new Date(mon.getTime()-i*7*MS), en=new Date(st.getTime()+6*MS);
@@ -437,7 +454,7 @@ function periods(n,anchor){
   }
   return out;
 }
-function setPeriod(p){PERIOD=p;try{localStorage.setItem('gst_rpt_period',p);}catch(e){}
+function setPeriod(p){PERIOD=p;PER={};savePer();try{localStorage.setItem('gst_rpt_period',p);}catch(e){}
   document.getElementById('ptW').classList.toggle('active',p==='w');
   document.getElementById('ptM').classList.toggle('active',p==='m');
   if(WK.length||HR.length)render();
@@ -567,8 +584,9 @@ function render(){
     if(F.line&&String(r[CI.line]||'').trim()!==F.line)return false;
     return true;
   });
-  const P=periods(12,anchor);
-  const labels=P.map(p=>p.label);
+  const PU=id=>{const u=(PER[id]==='w'||PER[id]==='m')?PER[id]:PERIOD;
+    const Pp=periods(12,anchor,u);return {P:Pp,labels:Pp.map(x=>x.label),u};};
+  renderMiniToggles();
   // HR: 시트에 국가 컬럼이 있으면 국가 필터 적용, 없으면 전사 기준
   const hrHasCountry=HR.some(p=>p.country);
   const fHR=(F.country&&hrHasCountry)?HR.filter(p=>p.country===F.country):HR;
@@ -596,6 +614,7 @@ function render(){
 
   // 인원 추이 (경력구간 스택)
   {
+    const {P,labels}=PU('cHc');
     const b1=[],b2=[],b3=[];
     P.forEach(p=>{
       const a=fHR.filter(x=>activeAt(x,p.end));
@@ -617,8 +636,9 @@ function render(){
   }
   // 입사/퇴사
   {
-    const ji=P.map(p=>fHR.filter(x=>x.join&&keyOfDate(x.join)===p.key).length);
-    const qi=P.map(p=>fHR.filter(x=>x.quit&&keyOfDate(x.quit)===p.key).length);
+    const {P,labels,u}=PU('cIo');
+    const ji=P.map(p=>fHR.filter(x=>x.join&&keyOfDate(x.join,u)===p.key).length);
+    const qi=P.map(p=>fHR.filter(x=>x.quit&&keyOfDate(x.quit,u)===p.key).length);
     destroyMk('cIo');
     CHARTS.cIo=new Chart(document.getElementById('cIo'),{type:'bar',
       data:{labels,datasets:[
@@ -630,6 +650,7 @@ function render(){
   }
   // 교육 완료율 추이 (누적, %)
   {
+    const {P,labels}=PU('cEdu');
     const bR=[],vR=[];
     P.forEach(p=>{
       const a=fHR.filter(x=>activeAt(x,p.end));
@@ -662,7 +683,8 @@ function render(){
   setTxt('kp5',Math.round(man30/60).toLocaleString());
   setTxt('kf5',t('kf5').replace('{p}',man30?Math.round(manPM30/man30*100):0));
   {
-    const jc=P.map(p=>fWK.filter(x=>keyOfDate(x.wd)===p.key).length);
+    const {P,labels,u}=PU('cJobs');
+    const jc=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key).length);
     destroyMk('cJobs');
     CHARTS.cJobs=new Chart(document.getElementById('cJobs'),{type:'bar',
       data:{labels,datasets:[{data:jc,backgroundColor:TH.pal[0],borderRadius:4}]},
@@ -672,9 +694,10 @@ function render(){
       plugins:[valLabelPlugin]});
   }
   {
-    const hPM=P.map(p=>Math.round(fWK.filter(x=>keyOfDate(x.wd)===p.key&&isPM(x.stage)).reduce((a,x)=>a+x.manMin,0)/60));
-    const hSv=P.map(p=>Math.round(fWK.filter(x=>keyOfDate(x.wd)===p.key&&isSvc(x.stage)).reduce((a,x)=>a+x.manMin,0)/60));
-    const hIn=P.map(p=>Math.round(fWK.filter(x=>keyOfDate(x.wd)===p.key&&isInst(x.stage)).reduce((a,x)=>a+x.manMin,0)/60));
+    const {P,labels,u}=PU('cMan');
+    const hPM=P.map(p=>Math.round(fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isPM(x.stage)).reduce((a,x)=>a+x.manMin,0)/60));
+    const hSv=P.map(p=>Math.round(fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isSvc(x.stage)).reduce((a,x)=>a+x.manMin,0)/60));
+    const hIn=P.map(p=>Math.round(fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isInst(x.stage)).reduce((a,x)=>a+x.manMin,0)/60));
     destroyMk('cMan');
     CHARTS.cMan=new Chart(document.getElementById('cMan'),{type:'bar',
       data:{labels,datasets:[
@@ -687,8 +710,9 @@ function render(){
         scales:baseScales(TH,true)}});
   }
   {
+    const {P,labels,u}=PU('cPc');
     const pc=P.map(p=>{
-      const rows=fWK.filter(x=>keyOfDate(x.wd)===p.key);
+      const rows=fWK.filter(x=>keyOfDate(x.wd,u)===p.key);
       const ppl=new Set(); rows.forEach(x=>x.workers.forEach(w=>ppl.add(w)));
       return ppl.size?Math.round(rows.length/ppl.size*10)/10:0;
     });
@@ -698,7 +722,7 @@ function render(){
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
         plugins:{legend:{display:false},valLabel:{mode:'peaks',color:ink},
           tooltip:{callbacks:{label:c=>{
-            const rows=fWK.filter(x=>keyOfDate(x.wd)===P[c.dataIndex].key);
+            const rows=fWK.filter(x=>keyOfDate(x.wd,u)===P[c.dataIndex].key);
             const ppl=new Set(); rows.forEach(x=>x.workers.forEach(w=>ppl.add(w)));
             return ' '+c.parsed.y+' ('+rows.length+t('u_c')+' / '+ppl.size+t('u_p')+')';}}}},
         scales:{x:baseScales(TH,false).x,
@@ -769,8 +793,9 @@ function render(){
 
   // ===== 고장 =====
   {
-    const bm=P.map(p=>fWK.filter(x=>keyOfDate(x.wd)===p.key&&x.stage==='BM').length);
-    const cbm=P.map(p=>fWK.filter(x=>keyOfDate(x.wd)===p.key&&x.stage==='CBM').length);
+    const {P,labels,u}=PU('cFt');
+    const bm=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&x.stage==='BM').length);
+    const cbm=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&x.stage==='CBM').length);
     destroyMk('cFt');
     CHARTS.cFt=new Chart(document.getElementById('cFt'),{type:'bar',
       data:{labels,datasets:[
