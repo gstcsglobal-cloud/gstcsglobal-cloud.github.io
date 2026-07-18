@@ -258,27 +258,24 @@ async function loadData(){ GST.skeleton(true);
   status.className = 'status'; status.textContent = tr('loading');
   try {
     const fetched = await GST.fetchCSVCached(SHEET_URL,'hr');
-    const _hdr=(fetched.rows[0]||[]).map(x=>String(x).trim().toLowerCase());
-    const rows=fetched.rows.slice(1).map(r=>{const o={};_hdr.forEach((k,i)=>o[k]=(r[i]==null?'':String(r[i])).trim());return o;}).filter(d=>d.name||d['이름']);
-    const colMap = {
-      no:['no','번호'], name:['name','이름','성명'], join:['join','입사일'],
-      exp:['exp','경력'], pos:['pos','직급','position'], job:['job','직무'],
-      basic:['basic','basic교육'], vet:['vet','veteran','veteran교육'], note:['note','비고'],
-      quit:['퇴사일','quit']
-    };
-    DATA = rows.map(row => {
-      const mapped = {};
-      for (const [key, aliases] of Object.entries(colMap)) {
-        const found = aliases.find(a => row[a] !== undefined);
-        mapped[key] = found ? String(row[found]).trim() : '';
-      }
-      return mapped;
-    }).filter(d => d.name);
-    // 퇴사일이 지난 인원은 현황 집계에서 제외
-    const _today=new Date(); _today.setHours(0,0,0,0);
-    const _pq=s=>{if(!s)return null;const m=String(s).trim().replace(/\.\s*/g,'-').replace(/\s/g,'').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):null;};
+    // 새 교육현황 구조: 3행 헤더(No/Site/인원/사원번호/입사일/... + Basic 4열 + Veteran 4열 + 비고)
+    const _rows=fetched.rows;
+    let _hi=-1;
+    for(let i=0;i<Math.min(_rows.length,6);i++){
+      const h=(_rows[i]||[]).map(x=>String(x||'').trim());
+      if(h.includes('교육과정')&&h.includes('인원')){_hi=i;break;}
+    }
+    const _cv=(r,i)=>(r[i]==null?'':String(r[i])).trim();
+    DATA = (_hi>=0?_rows.slice(_hi+3):[]).map(r=>({
+      no:_cv(r,0), site:_cv(r,1), name:_cv(r,2), join:_cv(r,4), exp:_cv(r,5),
+      pos:_cv(r,6), job:_cv(r,7),
+      basic:_cv(r,8), bdate:_cv(r,10),
+      vet:_cv(r,12), vdate:_cv(r,14),
+      note:_cv(r,16)
+    })).filter(d=>d.name);
+    // 비고에 '퇴사' 표기가 있는 인원은 현황 집계에서 제외
     const _all=DATA.length;
-    DATA = DATA.filter(d=>{const q=_pq(d.quit);return !(q&&q<=_today);});
+    DATA = DATA.filter(d=>!/퇴사/.test(d.note));
     const quitN=_all-DATA.length;
     const now = new Date().toLocaleString('ko-KR');
     status.className = 'status ok';
