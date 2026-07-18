@@ -614,8 +614,10 @@ function parseRoster(rows){
   const h=rows[hi].map(x=>String(x||'').trim().toLowerCase());
   const iWp=h.findIndex(x=>x==='work place'), iIn=h.findIndex(x=>x.startsWith('date of entry')),
         iOut=h.findIndex(x=>x.startsWith('resignation')), iOn=h.findIndex(x=>x.includes('현장'));
+  const iNm=h.findIndex(x=>x.includes('name')&&x.includes('영문'));
   return rows.slice(hi+1).map(r=>({
     site:siteKey(r[iWp]),
+    name:String(iNm>=0?(r[iNm]||''):(r[2]||'')).trim(),
     join:iIn>=0?pd(r[iIn]):null,
     quit:iOut>=0?pd(r[iOut]):null,
     onsite:String(iOn>=0?(r[iOn]||''):'').trim().toUpperCase()==='O'
@@ -795,11 +797,22 @@ function render(){
   {const em=document.getElementById('endM'),ew=document.getElementById('endW');
    if(em&&em.value!==ENDM)em.value=ENDM; if(ew&&ew.value!==ENDW)ew.value=ENDW;}
   renderMiniToggles();
-  // 인력 기준: 인원현황(입·퇴사일 보유) 우선, 없으면 교육현황 · 고객사 필터 연동
+  // 통일 색상: 막대 = 일렉트릭 블루, 보조 스택 = 인디고, 단일 꺾은선 = 앰버
+  const BAR_C='#38BDF8', BAR2_C='#818CF8', LINE_C='#F59E0B', LN_G='#34D399', LN_V='#A78BFA';
+  // 사이트 → 국가 매핑 (설치 시트 기반, 예: MICRON F10 → SINGAPORE)
+  const C2C={};
+  INST.forEach(r=>{const cu=normCust(r[CI.customer]);
+    if(cu&&!C2C[cu])C2C[cu]=guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();});
+  const siteOk=st=>(!F.customer||st===F.customer)&&(!F.country||(C2C[st]||'')===F.country||!C2C[st]);
+  // 인력 기준: 인원현황(입·퇴사일 보유) 우선, 없으면 교육현황 · 고객사/국가 필터 연동
   const PPL=ROSTER.length?ROSTER:HR;
-  const fHR=PPL.filter(p=>!F.customer||p.site===F.customer);
-  const fEDU=HR.filter(p=>!F.customer||p.site===F.customer);
-  const headAt=E=>fHR.filter(x=>activeAt(x,E)).length;   // 재적 총인원 (QBR 분모)
+  const fHR=PPL.filter(p=>siteOk(p.site));
+  const fEDU=HR.filter(p=>siteOk(p.site));
+  const headAt=E=>fHR.filter(x=>activeAt(x,E)).length;   // 재적 총인원
+  // 교육현황 이수일 조회 (인원현황 이름 ↔ 교육현황 인원 매칭)
+  const EDU_BY_NAME={};
+  HR.forEach(e=>{ if(e.name)EDU_BY_NAME[e.name.trim().toUpperCase()]=e; });
+  const eduOf=x=> x.bdate!==undefined ? x : (EDU_BY_NAME[(x.name||'').trim().toUpperCase()]||null);
   document.getElementById('ptW').classList.toggle('active',PERIOD==='w');
   document.getElementById('ptM').classList.toggle('active',PERIOD==='m');
 
@@ -860,23 +873,24 @@ function render(){
   // 교육 완료율 추이 (누적, %)
   {
     const {P,labels}=PU('cEdu');
-    // QBR 규칙: 입사 6개월 미만 = LV1(Basic)만 대상 · 6개월 이상 = LV2(Veteran) 대상
-    // 완료율 = (LV1 완료 + LV2 완료) / (LV1 대상 + LV2 대상)
+    // QBR 규칙: 대상 = 인원현황 재직자(구간 마감일 시점) — 6개월 미만 LV1 · 이상 LV2
+    // 완료 = 교육현황 이수일(이름 매칭): LV1은 Basic 완료일 · LV2는 Veteran 완료일 ≤ 마감일
     const tgt=[],don=[],rate=[];
     P.forEach(p=>{
-      const a=fEDU.filter(x=>activeAt(x,p.end)&&x.join);
+      const a=fHR.filter(x=>activeAt(x,p.end)&&x.join);
       const six=x=>((p.end-x.join)/MS)>=182;
       const lv1=a.filter(x=>!six(x)), lv2=a.filter(six);
-      const d1=lv1.filter(x=>x.bdate&&x.bdate<=p.end).length;
-      const d2=lv2.filter(x=>x.vdate&&x.vdate<=p.end).length;
+      const dOf=(x,k)=>{const e=eduOf(x);return e&&e[k]&&e[k]<=p.end;};
+      const d1=lv1.filter(x=>dOf(x,'bdate')).length;
+      const d2=lv2.filter(x=>dOf(x,'vdate')).length;
       const T=lv1.length+lv2.length, D=d1+d2;
       tgt.push(T); don.push(D); rate.push(T?Math.round(D/T*100):null);
     });
     destroyMk('cEdu');
     CHARTS.cEdu=new Chart(document.getElementById('cEdu'),{type:'bar',
       data:{labels,datasets:[
-        {label:t('edu_tg'),data:tgt,backgroundColor:TH.pal[0]+'59',borderColor:TH.pal[0],borderWidth:1,borderRadius:3,order:2},
-        lineDs(t('edu_rt'),rate,TH.status.warn,{yAxisID:'y2',_suf:'%'})]},
+        {label:t('edu_tg'),data:tgt,backgroundColor:BAR_C+'59',borderColor:BAR_C,borderWidth:1,borderRadius:3,order:2},
+        lineDs(t('edu_rt'),rate,LINE_C,{yAxisID:'y2',_suf:'%'})]},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
         plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
           valLabel:{mode:'all',color:ink},
@@ -896,7 +910,7 @@ function render(){
     if(wait)wait.style.display=ready?'none':'block';
     if(ready){
       const cust=F.customer;
-      const head=E=>ROSTER.filter(p=>p.onsite&&p.join<=E&&(!p.quit||p.quit>E)&&(!cust||p.site===cust)).length;
+      const head=E=>ROSTER.filter(p=>p.onsite&&p.join<=E&&(!p.quit||p.quit>E)&&siteOk(p.site)).length;
       const chIn=E=>fINST.reduce((a,r)=>{
         const fd=pd(r[CI.fabIn]); if(!fd||fd>E)return a;
         return a+(String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1);
@@ -908,7 +922,7 @@ function render(){
         const att=[],lv=[],hd=[],pj=[];
         P.forEach(p=>{
           const wd=(u==='m')?21:5;
-          const ls=LEAVE.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&(!cust||x.site===cust))?x.days:0),0);
+          const ls=LEAVE.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&siteOk(x.site))?x.days:0),0);
           const la=Math.round(ls/wd*10)/10;
           const hv=head(p.end);
           const jobs=fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isMaint(x.stage)).length;
@@ -921,10 +935,10 @@ function render(){
         destroyMk('cAtt');
         CHARTS.cAtt=new Chart(document.getElementById('cAtt'),{type:'bar',
           data:{labels,datasets:[
-            {label:t('att_a'),data:att,backgroundColor:TH.pal[0],stack:'s',borderRadius:2,order:3},
-            {label:t('att_l'),data:lv,backgroundColor:TH.status.warn,stack:'s',borderRadius:2,order:3},
-            lineDs(t('head_l'),hd,TH.pal[1]),
-            lineDs(t('att_pj'),pj,TH.pal[3],{yAxisID:'y2',borderDash:[5,4]})]},
+            {label:t('att_a'),data:att,backgroundColor:BAR_C,stack:'s',borderRadius:2,order:3},
+            {label:t('att_l'),data:lv,backgroundColor:BAR2_C,stack:'s',borderRadius:2,order:3},
+            lineDs(t('head_l'),hd,LN_G),
+            lineDs(t('att_pj'),pj,LN_V,{yAxisID:'y2',borderDash:[5,4]})]},
           options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
             plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
               valLabel:{mode:'all',color:ink},
@@ -944,8 +958,8 @@ function render(){
         destroyMk('cTo');
         CHARTS.cTo=new Chart(document.getElementById('cTo'),{type:'bar',
           data:{labels,datasets:[
-            {type:'bar',label:t('head_l'),data:hv,backgroundColor:TH.pal[0],borderRadius:3,order:2},
-            lineDs('TO',to,TH.status.warn,{borderDash:[6,4]})]},
+            {type:'bar',label:t('head_l'),data:hv,backgroundColor:BAR_C,borderRadius:3,order:2},
+            lineDs('TO',to,LINE_C,{borderDash:[6,4]})]},
           options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
             plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
               valLabel:{mode:'all',color:ink},
@@ -964,12 +978,12 @@ function render(){
         const chs=P.map(p=>chIn(p.end));
         const hv=P.map(p=>head(p.end));
         const per=chs.map((c,i)=>hv[i]?Math.round(c/hv[i]*10)/10:0);
-        const perMax=Math.max(10,Math.ceil(Math.max.apply(null,per)/10)*10+10);
+        const perMax=Math.max(10,Math.ceil(Math.max.apply(null,per)*2.4));   // 라인을 하단 40% 영역에 — 막대와 분리
         destroyMk('cChp');
         CHARTS.cChp=new Chart(document.getElementById('cChp'),{type:'bar',
           data:{labels,datasets:[
-            {label:t('chp_c'),data:chs,backgroundColor:TH.pal[0],borderRadius:3,order:2},
-            lineDs(t('chp_p'),per,TH.status.warn,{yAxisID:'y2'})]},
+            {label:t('chp_c'),data:chs,backgroundColor:BAR_C,borderRadius:3,barPercentage:.62,order:2},
+            lineDs(t('chp_p'),per,LINE_C,{yAxisID:'y2'})]},
           options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
             plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
               valLabel:{mode:'all',color:ink},
@@ -987,7 +1001,7 @@ function render(){
 
   // ===== CIP 진행율 (대상 = Not yet + 완료일 · 완료 = 완료일 · 항목별 1행 날짜부터 대상 산입) =====
   {
-    const fCIP=CIP.filter(x=>!F.customer||x.site===F.customer);
+    const fCIP=CIP.filter(x=>siteOk(x.site));
     const {P,labels}=PU('cCip');
     destroyMk('cCip');
     if(fCIP.length){
@@ -996,9 +1010,9 @@ function render(){
       const rate=tgt.map((v,i)=>v?Math.round(don[i]/v*100):null);
       CHARTS.cCip=new Chart(document.getElementById('cCip'),{type:'bar',
         data:{labels,datasets:[
-          {label:t('cip_t'),data:tgt,backgroundColor:TH.pal[0]+'2e',borderColor:TH.pal[0],borderWidth:1.5,borderRadius:3,order:3},
-          {label:t('cip_d'),data:don,backgroundColor:TH.pal[0],borderRadius:3,order:2},
-          lineDs(t('cip_p'),rate,TH.status.warn,{yAxisID:'y2',_suf:'%'})]},
+          {label:t('cip_t'),data:tgt,backgroundColor:BAR_C+'2e',borderColor:BAR_C,borderWidth:1.5,borderRadius:3,order:3},
+          {label:t('cip_d'),data:don,backgroundColor:BAR_C,borderRadius:3,order:2},
+          lineDs(t('cip_p'),rate,LINE_C,{yAxisID:'y2',_suf:'%'})]},
         options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
           plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
             valLabel:{mode:'all',color:ink},
@@ -1029,7 +1043,7 @@ function render(){
     const jc=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key).length);
     destroyMk('cJobs');
     CHARTS.cJobs=new Chart(document.getElementById('cJobs'),{type:'bar',
-      data:{labels,datasets:[{data:jc,backgroundColor:TH.pal[0],borderRadius:4}]},
+      data:{labels,datasets:[{data:jc,backgroundColor:BAR_C,borderRadius:4}]},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
         plugins:{legend:{display:false},valLabel:{mode:'peaks',color:ink}},
         scales:baseScales(TH,false)},
@@ -1037,18 +1051,24 @@ function render(){
   }
   {
     const {P,labels,u}=PU('cMan');
-    // QBR 산식: 인당 일평균 공수(h) = 구간 총공수 ÷ (재적 총인원 × 근무일 21/5)
+    // 산식(사용자 확정): 인당 일평균 공수(h) = 구간 총공수 ÷ (출근인원 × 근무일 21/5)
+    // 출근인원 = 재적 − 휴가건/근무일
     const r1=v=>Math.round(v*10)/10;
-    const denom=p=>Math.max(1,headAt(p.end)*(u==='m'?21:5));
+    const denom=p=>{
+      const wd=(u==='m')?21:5;
+      const ls=LEAVE.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&siteOk(x.site))?x.days:0),0);
+      const att=Math.max(1,headAt(p.end)-ls/wd);
+      return att*wd;
+    };
     const hPM=P.map(p=>r1(fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isPM(x.stage)).reduce((a,x)=>a+x.manMin,0)/60/denom(p)));
     const hNp=P.map(p=>r1(fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isSvc(x.stage)).reduce((a,x)=>a+x.manMin,0)/60/denom(p)));   // 非PM = CBM·CRM·CM·BM
     const hTot=hPM.map((v,i)=>r1(v+hNp[i]));
     destroyMk('cMan');
     CHARTS.cMan=new Chart(document.getElementById('cMan'),{type:'bar',
       data:{labels,datasets:[
-        {label:t('man_pm'),data:hPM,backgroundColor:TH.pal[0],stack:'s',borderRadius:2,order:3},
-        {label:t('man_np'),data:hNp,backgroundColor:TH.pal[2],stack:'s',borderRadius:2,order:3},
-        lineDs(t('man_tot'),hTot,TH.status.bad)]},
+        {label:t('man_pm'),data:hPM,backgroundColor:BAR_C,stack:'s',borderRadius:2,order:3},
+        {label:t('man_np'),data:hNp,backgroundColor:BAR2_C,stack:'s',borderRadius:2,order:3},
+        lineDs(t('man_tot'),hTot,LINE_C)]},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
         plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
           valLabel:{mode:'all',color:ink},
@@ -1068,7 +1088,7 @@ function render(){
     });
     destroyMk('cPc');
     CHARTS.cPc=new Chart(document.getElementById('cPc'),{type:'bar',
-      data:{labels,datasets:[{data:pc,backgroundColor:TH.pal[3],borderRadius:4}]},
+      data:{labels,datasets:[{data:pc,backgroundColor:BAR_C,borderRadius:4}]},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
         plugins:{legend:{display:false},valLabel:{mode:'peaks',color:ink},
           tooltip:{callbacks:{label:c=>{
