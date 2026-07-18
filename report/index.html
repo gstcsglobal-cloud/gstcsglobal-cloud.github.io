@@ -70,6 +70,7 @@ body.theme-light .pt-btn.active{color:#fff}
 .pt-note{font-size:11px;color:var(--txt-muted);margin-left:4px}
 .pt-inp{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:5px 8px;color:var(--txt-main);font-size:11px;outline:none;color-scheme:dark}
 body.theme-light .pt-inp{color-scheme:light;color:#0f172a}
+.pt-cap{font-size:10px;color:var(--txt-muted);font-weight:700;margin:0 2px 0 6px}
 .pt-sp{flex:1}
 
 .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
@@ -182,8 +183,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   <button class="pt-btn" id="ptM" onclick="setPeriod('m')" data-i="per_m">월별</button>
   <span class="pt-note" data-i="per_note">최근 12개 구간</span>
   <span class="pt-note" style="margin-left:14px" data-i="cutoff">마감</span>
-  <input type="month" id="endM" class="pt-inp" title="월간 차트 마감 월" onchange="setEnd('m',this.value)">
-  <input type="date" id="endW" class="pt-inp" title="주간 차트 마감일" onchange="setEnd('w',this.value)">
+  <span class="pt-cap">Month</span><input type="month" id="endM" class="pt-inp" title="월간 차트 마감 월" onchange="setEnd('m',this.value)">
+  <span class="pt-cap">Week</span><select id="endW" class="pt-inp" title="주간 차트 마감 주차" onchange="setEnd('w',this.value)"></select>
   <button class="pt-btn" title="마감 해제" onclick="clearEnds()">↺</button>
   <span class="pt-sp"></span>
   <button class="pt-btn" onclick="window.print()" data-i="print">🖨 인쇄</button>
@@ -456,9 +457,12 @@ window.clearEnds=function(){ ENDM='';ENDW='';
   if(em)em.value=''; if(ew)ew.value=''; render(); };
 // 설치현황 트렌드풍 꺾은선 (부드러운 곡선 + 링 포인트)
 function lineDs(label,data,color,extra){
+  const n=data.length;
   return Object.assign({type:'line',label,data,borderColor:color,backgroundColor:color,
-    borderWidth:2.5,tension:.35,pointRadius:3,pointBackgroundColor:'#0B0F14',
-    pointBorderColor:color,pointBorderWidth:2,fill:false,order:1},extra||{});
+    borderWidth:2.5,tension:.35,
+    pointRadius:data.map((_,i)=>i===n-1?5.5:2.4),
+    pointBackgroundColor:data.map((_,i)=>i===n-1?color:'#0B0F14'),
+    pointBorderColor:color,pointBorderWidth:2,pointHoverRadius:6,fill:false,order:1},extra||{});
 }
 window.setChartPer=function(id,u){ PER[id]=u; savePer(); render(); };
 function renderMiniToggles(){
@@ -791,19 +795,43 @@ function render(){
   const PU=id=>{const u=(PER[id]==='w'||PER[id]==='m')?PER[id]:PERIOD;
     let A=anchor;
     if(u==='m'&&ENDM){const mm=ENDM.split('-'); const e=new Date(Date.UTC(+mm[0],+mm[1],0)); if(e)A=e;}
-    if(u==='w'&&ENDW){const e=pd(ENDW); if(e)A=e;}
+    if(u==='w'&&ENDW){ // ENDW = ISO주차키(YYYY-Wnn) → 그 주 일요일
+      const t0=new Date(); t0.setUTCHours(0,0,0,0);
+      const mon=new Date(t0); mon.setUTCDate(mon.getUTCDate()-((mon.getUTCDay()+6)%7));
+      for(let i=0;i<80;i++){const d=new Date(mon.getTime()-i*7*MS); if(isoW(d)===ENDW){A=new Date(d.getTime()+6*MS);break;}}
+    }
     const rt=new Date(); rt.setUTCHours(0,0,0,0); if(A>rt)A=rt;
     const Pp=periods(12,A,u);return {P:Pp,labels:Pp.map(x=>x.label),u};};
   {const em=document.getElementById('endM'),ew=document.getElementById('endW');
-   if(em&&em.value!==ENDM)em.value=ENDM; if(ew&&ew.value!==ENDW)ew.value=ENDW;}
+   if(em&&em.value!==ENDM)em.value=ENDM;
+   if(ew){ // 최근 26주차 옵션 (오늘 기준)
+     if(ew.options.length<2){
+       const t0=new Date(); t0.setUTCHours(0,0,0,0);
+       const mon=new Date(t0); mon.setUTCDate(mon.getUTCDate()-((mon.getUTCDay()+6)%7));
+       let html='<option value="">— 최신 —</option>';
+       for(let i=0;i<26;i++){const d=new Date(mon.getTime()-i*7*MS);const k=isoW(d);html+='<option value="'+k+'">'+('W'+k.slice(-2))+' ('+(d.getUTCMonth()+1)+'/'+d.getUTCDate()+')</option>';}
+       ew.innerHTML=html;
+     }
+     if(ew.value!==ENDW)ew.value=ENDW;
+   }}
   renderMiniToggles();
-  // 통일 색상: 막대 = 일렉트릭 블루, 보조 스택 = 인디고, 단일 꺾은선 = 앰버
-  const BAR_C='#38BDF8', BAR2_C='#818CF8', LINE_C='#F59E0B', LN_G='#34D399', LN_V='#A78BFA';
-  // 사이트 → 국가 매핑 (설치 시트 기반, 예: MICRON F10 → SINGAPORE)
+  // 통일 색상 — 미래지향 블루 계열, 마지막 데이터 강조
+  const BAR_BASE='#2C5FAE', BAR_LAST='#5EC2FF';   // 막대: 스틸블루 → 마지막만 밝게
+  const BAR_C=BAR_BASE, BAR2_C='#7C6FE0', LINE_C=BAR_LAST, LN_G='#34D399', LN_V='#A78BFA';
+  // 단일 막대: 마지막 인덱스만 강조색
+  const barHi=n=>Array.from({length:n},(_,i)=>i===n-1?BAR_LAST:BAR_BASE);
+  // 꺾은선: 마지막 포인트만 크게 강조 (설치현황 트렌드 스타일)
+  const lastPt=(n,c)=>Array.from({length:n},(_,i)=>i===n-1?5.5:2.4);
+  const lastPtC=(n,c)=>Array.from({length:n},(_,i)=>i===n-1?c:'#0B0F14');
+  // 사이트 → 국가 매핑 (설치 시트 우선, 없으면 정적 규칙)
   const C2C={};
   INST.forEach(r=>{const cu=normCust(r[CI.customer]);
     if(cu&&!C2C[cu])C2C[cu]=guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();});
-  const siteOk=st=>(!F.customer||st===F.customer)&&(!F.country||(C2C[st]||'')===F.country||!C2C[st]);
+  const siteCountry=st=>{ if(C2C[st])return C2C[st];
+    const u=String(st||'').toUpperCase();
+    if(u.includes('F10')||u.includes('SINGAPORE'))return 'SINGAPORE';
+    if(u)return 'TAIWAN'; return ''; };
+  const siteOk=st=>(!F.customer||st===F.customer)&&(!F.country||siteCountry(st)===F.country);
   // 인력 기준: 인원현황(입·퇴사일 보유) 우선, 없으면 교육현황 · 고객사/국가 필터 연동
   const PPL=ROSTER.length?ROSTER:HR;
   const fHR=PPL.filter(p=>siteOk(p.site));
@@ -889,7 +917,7 @@ function render(){
     destroyMk('cEdu');
     CHARTS.cEdu=new Chart(document.getElementById('cEdu'),{type:'bar',
       data:{labels,datasets:[
-        {label:t('edu_tg'),data:tgt,backgroundColor:BAR_C+'59',borderColor:BAR_C,borderWidth:1,borderRadius:3,order:2},
+        {label:t('edu_tg'),data:tgt,backgroundColor:tgt.map((_,i)=>i===tgt.length-1?BAR_LAST+'99':BAR_BASE+'80'),borderColor:BAR_BASE,borderWidth:1,borderRadius:3,order:2},
         lineDs(t('edu_rt'),rate,LINE_C,{yAxisID:'y2',_suf:'%'})]},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
         plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
@@ -958,7 +986,7 @@ function render(){
         destroyMk('cTo');
         CHARTS.cTo=new Chart(document.getElementById('cTo'),{type:'bar',
           data:{labels,datasets:[
-            {type:'bar',label:t('head_l'),data:hv,backgroundColor:BAR_C,borderRadius:3,order:2},
+            {type:'bar',label:t('head_l'),data:hv,backgroundColor:barHi(hv.length),borderRadius:3,order:2},
             lineDs('TO',to,LINE_C,{borderDash:[6,4]})]},
           options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
             plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
@@ -982,7 +1010,7 @@ function render(){
         destroyMk('cChp');
         CHARTS.cChp=new Chart(document.getElementById('cChp'),{type:'bar',
           data:{labels,datasets:[
-            {label:t('chp_c'),data:chs,backgroundColor:BAR_C,borderRadius:3,barPercentage:.62,order:2},
+            {label:t('chp_c'),data:chs,backgroundColor:barHi(chs.length),borderRadius:3,barPercentage:.62,order:2},
             lineDs(t('chp_p'),per,LINE_C,{yAxisID:'y2'})]},
           options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
             plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
@@ -1011,7 +1039,7 @@ function render(){
       CHARTS.cCip=new Chart(document.getElementById('cCip'),{type:'bar',
         data:{labels,datasets:[
           {label:t('cip_t'),data:tgt,backgroundColor:BAR_C+'2e',borderColor:BAR_C,borderWidth:1.5,borderRadius:3,order:3},
-          {label:t('cip_d'),data:don,backgroundColor:BAR_C,borderRadius:3,order:2},
+          {label:t('cip_d'),data:don,backgroundColor:barHi(don.length),borderRadius:3,order:2},
           lineDs(t('cip_p'),rate,LINE_C,{yAxisID:'y2',_suf:'%'})]},
         options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
           plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
@@ -1043,7 +1071,7 @@ function render(){
     const jc=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key).length);
     destroyMk('cJobs');
     CHARTS.cJobs=new Chart(document.getElementById('cJobs'),{type:'bar',
-      data:{labels,datasets:[{data:jc,backgroundColor:BAR_C,borderRadius:4}]},
+      data:{labels,datasets:[{data:jc,backgroundColor:barHi(jc.length),borderRadius:4}]},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
         plugins:{legend:{display:false},valLabel:{mode:'peaks',color:ink}},
         scales:baseScales(TH,false)},
@@ -1088,7 +1116,7 @@ function render(){
     });
     destroyMk('cPc');
     CHARTS.cPc=new Chart(document.getElementById('cPc'),{type:'bar',
-      data:{labels,datasets:[{data:pc,backgroundColor:BAR_C,borderRadius:4}]},
+      data:{labels,datasets:[{data:pc,backgroundColor:barHi(pc.length),borderRadius:4}]},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
         plugins:{legend:{display:false},valLabel:{mode:'peaks',color:ink},
           tooltip:{callbacks:{label:c=>{
@@ -1169,7 +1197,7 @@ function render(){
     destroyMk('cFt');
     // All By-Pass 데이터가 아직 없어 Alarm(고장) 건수 단일 시리즈로 표시 — BM/CBM 세부는 툴팁
     CHARTS.cFt=new Chart(document.getElementById('cFt'),{type:'bar',
-      data:{labels,datasets:[{label:t('ft_total'),data:tot,backgroundColor:TH.status.bad,borderRadius:4}]},
+      data:{labels,datasets:[{label:t('ft_total'),data:tot,backgroundColor:tot.map((_,i)=>i===tot.length-1?'#FF8A8A':TH.status.bad),borderRadius:4}]},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
         plugins:{legend:{display:false},valLabel:{mode:'all',color:ink},
           tooltip:{callbacks:{label:c=>' '+c.parsed.y+' (BM '+bm[c.dataIndex]+' · CBM '+cbm[c.dataIndex]+')'}}},
