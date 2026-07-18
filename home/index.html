@@ -345,11 +345,11 @@ function renderAll(D){
   setN('mtTypes',matSet.size);
 
   // ===== 기반 (인원/설치) =====
-  // 퇴사일(K열, idx 10)이 지난 인원 제외
-  const hrAct=D.hr.filter(r=>{const q=toDate(r[10]);return !(q&&q<=today);});
+  // 새 교육현황 구조: 데이터 행 = 이름(idx2) 존재 · 비고(idx16)에 '퇴사' 표기 시 제외 · Basic 이수여부 = idx8
+  const hrAct=D.hr.filter(r=>String(r[2]||'').trim()&&String(r[8]||'').trim()&&!/퇴사/.test(String(r[16]||'')));
   const people=hrAct.length;
   let basicDone=0;
-  hrAct.forEach(r=>{const v=(r[6]||'').toString();if(v.includes('이수완료'))basicDone++;});
+  hrAct.forEach(r=>{const v=(r[8]||'').toString();if(v.includes('이수완료'))basicDone++;});
   setN('bsPeople',people);
   document.getElementById('bsBasic').textContent=people?Math.round(basicDone/people*100)+'%':'—';
   setN('bsScrubber',D.inst.length);
