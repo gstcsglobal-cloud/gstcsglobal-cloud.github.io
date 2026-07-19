@@ -311,6 +311,7 @@ const GID_ROSTER='1213453343';  // 인원현황 탭
 const GID_LEAVE ='262805841';   // 휴가현황 탭
 const GID_CIP11 ='2123129719';  // CIP현황 (F11)
 const GID_CIP16 ='1999732389';  // CIP현황 (F16)
+const GID_ABP   ='1263412805';  // All By-Pass 현황
 const URLS={
   hr:  PUB+'?gid=0&single=true&output=csv',
   inst:PUB+'?gid=891608329&single=true&output=csv',
@@ -318,12 +319,13 @@ const URLS={
   roster:PUB+'?gid='+GID_ROSTER+'&single=true&output=csv',
   leave: PUB+'?gid='+GID_LEAVE+'&single=true&output=csv',
   cip11: PUB+'?gid='+GID_CIP11+'&single=true&output=csv',
-  cip16: PUB+'?gid='+GID_CIP16+'&single=true&output=csv'
+  cip16: PUB+'?gid='+GID_CIP16+'&single=true&output=csv',
+  abp:   PUB+'?gid='+GID_ABP+'&single=true&output=csv'
 };
 // 시트3 실적현황 (0-based)
 const CW={op:2,customer:3,line:5,stage:13,chamber:20,sn:21,phenom:26,cause:27,action:28,work:32,workMin:39,manMin:40,workers:41};
 // 설치 시트
-const CI={country:2,customer:3,line:5,sn:6,fabIn:38,turnOn:40,type:75}; // type=BX열 Scrubber Type (DUAL=2챔버/SINGLE=1)
+const CI={country:2,customer:3,fab:9,sn:6,fabIn:38,turnOn:40,type:75}; // fab=J열 FAB(F16/F11/F16N) · type=BX열 Scrubber Type
 // 고객사 표기 통일 (시트마다 공식명/축약명이 섞여 있음) — 예: Micron Memory Taiwan Co., Ltd.(F16) → MICRON F16
 function normCust(name){
   if(!name)return '';
@@ -341,6 +343,18 @@ function normCust(name){
   const m=up.match(/\(([A-Z0-9\-]+)\)/) || up.match(/\b(F\d{1,2}N?)\b/);
   return m?base+' '+m[1]:base;
 }
+// 고객사 기준(그룹): MICRON / PSMC / TASC / WINBOND
+function custBase(s){const u=String(s||'').toUpperCase();
+  if(u.includes('PSMC')||u.includes('POWERCHIP'))return 'PSMC';
+  if(u.includes('TASC')||u.includes('TAIWAN-ASIA')||u.includes('ASIA SEMI'))return 'TASC';
+  if(u.includes('WINBOND'))return 'WINBOND';
+  if(u.includes('MICRON')||/\bF1[016]/.test(u))return 'MICRON';
+  return normCust(s);}
+function fabOf(s){const u=String(s||'').toUpperCase();
+  const m=u.match(/\bF(16N|16S|16|11|10)\b/); return m?('F'+m[1]):'';}
+function siteCountryStatic(s){const u=String(s||'').toUpperCase();
+  if(u.includes('F10')||u.includes('SINGAPORE'))return 'SINGAPORE';
+  if(u)return 'TAIWAN'; return '';}
 // 소속/사이트 표기 통일 (인원현황 Work Place · 휴가현황 소속 → normCust 어휘)
 function siteKey(sv){
   const up=String(sv||'').toUpperCase();
@@ -374,7 +388,7 @@ ko:{title:'▦ 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 �
  ch_man:'작업 공수 (h)',note_man:'PM · 서비스 · 설치 구분 (이상치 제외)',man_pm:'PM',man_np:'非PM',man_svc:'서비스',man_inst:'설치',
  ch_pc:'인당 작업 건수',note_pc:'구간 내 실제 투입 인원 기준',
  ch_sc:'PM 계획 대비 완료 (올해 누적)',note_sc:'계획 = 설비별 주기 기반 도래 건수 · 진행율은 툴팁',sc_plan:'계획(누적)',sc_done:'완료(누적)',
- ch_ft:'Alarm · 고장 건수',note_ft:'BM·CBM 세부는 툴팁 · All By-Pass 데이터 확보 시 추가',ft_total:'건수',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
+ ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',ft_total:'건수',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
  tbl_top:'고장 원인 TOP 3 (최근 30일)',th_cause:'원인',th_cnt:'건수',th_ph:'주요 현상',th_act:'최근 조치',top_etc:'기타 {n}건 · 원인 미기재 {m}건',
  ch_inst:'고객사별 반입 · 가동',note_inst:'설치 시트 기준 · 가동 = Turn-On 완료',inst_in:'반입',inst_on:'가동',
  ch_sum:'설비 요약',bn_in:'전체 반입 설비',bn_on:'가동 설비 (Turn-On)',bn_rate:'가동율',
@@ -391,7 +405,7 @@ en:{title:'▦ Weekly Status',sub:'Weekly/monthly summary — workforce, trainin
  ch_man:'Man-hours (h)',note_man:'PM · Service · Install (outliers excluded)',man_pm:'PM',man_np:'Non-PM',man_svc:'Service',man_inst:'Install',
  ch_pc:'Jobs per Person',note_pc:'based on workers actually deployed in period',
  ch_sc:'PM Plan vs Done (YTD cumulative)',note_sc:'plan = due events from per-tool cycles · progress in tooltip',sc_plan:'Plan (cum)',sc_done:'Done (cum)',
- ch_ft:'Alarm · Fault Count',note_ft:'BM/CBM detail in tooltip',ft_total:'Count',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
+ ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',ft_total:'Count',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
  tbl_top:'Top 3 Fault Causes (last 30 days)',th_cause:'Cause',th_cnt:'Count',th_ph:'Main Symptom',th_act:'Latest Action',top_etc:'others {n} · cause blank {m}',
  ch_inst:'Fab-in vs Turn-on by Customer',note_inst:'installation sheet · running = Turn-On done',inst_in:'Fab-in',inst_on:'Running',
  ch_sum:'Equipment Summary',bn_in:'Total fab-in',bn_on:'Running (Turn-On)',bn_rate:'Run rate',
@@ -408,7 +422,7 @@ zh:{title:'▦ 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇�
  ch_man:'作业工时(h)',note_man:'PM·服务·安装区分(除异常值)',man_pm:'PM',man_np:'非PM',man_svc:'服务',man_inst:'安装',
  ch_pc:'人均作业件数',note_pc:'按区间内实际投入人员',
  ch_sc:'PM计划 vs 完成(今年累计)',note_sc:'计划=按设备周期到期件数 · 进度见提示框',sc_plan:'计划(累计)',sc_done:'完成(累计)',
- ch_ft:'Alarm · 故障件数',note_ft:'BM/CBM明细见提示框',ft_total:'件数',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
+ ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
  tbl_top:'故障原因TOP3(近30天)',th_cause:'原因',th_cnt:'件数',th_ph:'主要现象',th_act:'最近措施',top_etc:'其他 {n}件 · 原因未填 {m}件',
  ch_inst:'按客户搬入·运行',note_inst:'安装表 · 运行=Turn-On完成',inst_in:'搬入',inst_on:'运行',
  ch_sum:'设备汇总',bn_in:'全部搬入设备',bn_on:'运行设备(Turn-On)',bn_rate:'运行率',
@@ -425,14 +439,14 @@ ja:{title:'▦ 週間現況',sub:'人員·教育·作業·PM·故障 週/月サ�
  ch_man:'作業工数(h)',note_man:'PM·サービス·設置区分(異常値除外)',man_pm:'PM',man_np:'非PM',man_svc:'サービス',man_inst:'設置',
  ch_pc:'一人当たり作業件数',note_pc:'区間内の実投入人員基準',
  ch_sc:'PM計画対完了(今年累計)',note_sc:'計画=設備別周期の到来件数 · 進捗はツールチップ',sc_plan:'計画(累計)',sc_done:'完了(累計)',
- ch_ft:'Alarm · 故障件数',note_ft:'BM/CBM詳細はツールチップ',ft_total:'件数',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
+ ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
  tbl_top:'故障原因TOP3(直近30日)',th_cause:'原因',th_cnt:'件数',th_ph:'主要現象',th_act:'最新対応',top_etc:'その他 {n}件 · 原因未記入 {m}件',
  ch_inst:'顧客別搬入·稼働',note_inst:'設置シート · 稼働=Turn-On完了',inst_in:'搬入',inst_on:'稼働',
  ch_sum:'設備サマリー',bn_in:'全搬入設備',bn_on:'稼働設備(Turn-On)',bn_rate:'稼働率',
  ins_pm:'今年PM進捗 {p}% (計画 {a} · 完了 {b})',ins_ft:'直近30日故障 {n}件 · 前30日比 {p}',ins_hc:'在籍 {n}名 · 今月入社 {a} · 退社 {b}',
  loading:'読み込み中...',loaded:'ロード完了',mon_u:'月',u_p:'名',u_c:'件'}
 };
-let LANG='ko', CHARTS={}, HR=[], WK=[], INST=[], ROSTER=[], LEAVE=[], CIP=[];
+let LANG='ko', CHARTS={}, HR=[], WK=[], INST=[], ROSTER=[], LEAVE=[], CIP=[], ABP={m:{},w:{}};
 const F={country:'',customer:'',line:'',dtFrom:'',dtTo:''};
 window.onFilt=function(k,v){F[k]=v;render();};
 window.clearAllFilters=function(){
@@ -621,6 +635,7 @@ function parseRoster(rows){
   const iNm=h.findIndex(x=>x.includes('name')&&x.includes('영문'));
   return rows.slice(hi+1).map(r=>({
     site:siteKey(r[iWp]),
+    custB:custBase(r[iWp]), fab:fabOf(r[iWp]),
     name:String(iNm>=0?(r[iNm]||''):(r[2]||'')).trim(),
     join:iIn>=0?pd(r[iIn]):null,
     quit:iOut>=0?pd(r[iOut]):null,
@@ -652,11 +667,11 @@ function parseLeave(rows){
       if(unit.includes('天')){
         const days=[];
         for(let d=new Date(st);d<=en;d=new Date(d.getTime()+MS)){const w=d.getUTCDay();if(w!==0&&w!==6)days.push(new Date(d));}
-        if(!days.length){out.push({date:st,days:Math.min(amt,1),site});return;}
+        if(!days.length){out.push({date:st,days:Math.min(amt,1),site,custB:custBase(r[iSite]),fab:fabOf(r[iSite])});return;}
         const per=Math.min(1,amt/days.length);
-        days.forEach(d=>out.push({date:d,days:per,site}));
+        days.forEach(d=>out.push({date:d,days:per,site,custB:custBase(r[iSite]),fab:fabOf(r[iSite])}));
       }else{
-        out.push({date:st,days:Math.min(1,amt/8),site}); // 시간 단위 → 1일=8h
+        out.push({date:st,days:Math.min(1,amt/8),site,custB:custBase(r[iSite]),fab:fabOf(r[iSite])}); // 시간 단위 → 1일=8h
       }
     });
   }else{
@@ -667,7 +682,7 @@ function parseLeave(rows){
       const d=pd(r[iD]); if(!d)return;
       if(!String(iType>=0?(r[iType]||''):'').trim())return;
       const hrs=Number(r[iAmt])||0; if(hrs<=0)return;
-      out.push({date:d,days:Math.min(1,hrs/8),site:siteKey(r[iSite])});
+      out.push({date:d,days:Math.min(1,hrs/8),site:siteKey(r[iSite]),custB:custBase(r[iSite]),fab:fabOf(r[iSite])});
     });
   }
   return out;
@@ -682,6 +697,7 @@ function parseHR(rows){
   if(hi<0)return [];
   return rows.slice(hi+3).map(r=>({
     site:siteKey(r[1]),
+    custB:custBase(r[1]), fab:fabOf(r[1]),
     name:String(r[2]||'').trim(),
     join:pd(r[4]),
     basic:String(r[8]||'').trim(),
@@ -690,6 +706,28 @@ function parseHR(rows){
     vdate:pd(r[14]),
     quit:/퇴사/.test(String(r[16]||''))   // 비고의 '퇴사일: …' 표기
   })).filter(x=>x.name&&(x.join||x.basic));
+}
+// ===== All By-Pass 파싱 — Month 블록(1행 월번호)·Week 블록(1행 W##) · 사이트행 값 =====
+// 반환 {m:{'7':{ALL:n, byC:{}, byF:{}}...}, w:{'W28':{...}}}
+function parseABP(rows){
+  const R={m:{},w:{}};
+  let mode=null, keys=null;
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i]||[]; const a=String(r[0]||'').trim().toLowerCase();
+    if(a==='month'){ mode='m'; keys=r.map(v=>String(v==null?'':v).trim()); continue; }
+    if(a==='week'){ mode='w'; keys=r.map(v=>{const t=String(v==null?'':v).trim();const mm=t.match(/W?(\d+)/);return mm?('W'+String(mm[1]).padStart(2,'0')):'';}); continue; }
+    if(a==='site'){ continue; }         // 날짜 행 스킵
+    if(!mode||!keys)continue;
+    const site=String(r[0]||'').trim(); if(!site)continue;   // 사이트 데이터 행
+    const cb=custBase(site), fb=fabOf(site);
+    for(let c=1;c<keys.length;c++){
+      const k=keys[c]; if(!k)continue;
+      const v=Number(r[c])||0; if(!v)continue;
+      const bkt=R[mode][k]||(R[mode][k]={ALL:0,byC:{},byF:{}});
+      bkt.ALL+=v; if(cb)bkt.byC[cb]=(bkt.byC[cb]||0)+v; if(fb)bkt.byF[fb]=(bkt.byF[fb]||0)+v;
+    }
+  }
+  return R;
 }
 // ===== CIP현황 파싱 — 1행: 항목 적용(대상 기준)일 · 2행: 항목명 · 셀: 날짜=완료, Not yet=대상, N/A 제외 =====
 function parseCIP(rows,site,c0,c1){
@@ -703,13 +741,13 @@ function parseCIP(rows,site,c0,c1){
       const v=String((rows[i]||[])[c]||'').trim(); if(!v)continue;
       const up=v.toUpperCase();
       if(up.startsWith('N/A')||up.startsWith('N.A'))continue;
-      if(up.includes('NOT')){out.push({site,item,ap,done:null});continue;}
-      const d=pd(v); if(d)out.push({site,item,ap,done:d});
+      if(up.includes('NOT')){out.push({site,custB:custBase(site),fab:fabOf(site),item,ap,done:null});continue;}
+      const d=pd(v); if(d)out.push({site,custB:custBase(site),fab:fabOf(site),item,ap,done:d});
     }
   }
   return out;
 }
-function activeAt(p,E){return p.join&&p.join<=E&&(!p.quit||p.quit>E);}
+function activeAt(p,E){return p.join&&p.join<=E&&(!p.quit||p.quit>=E);}  // 퇴사일=마지막 근무일 → 그 달 포함, 다음달 제외
 
 // ===== 로드 =====
 async function loadData(){
@@ -717,14 +755,15 @@ async function loadData(){
   st.className='status'; st.textContent=t('loading');
   try{
     const gidOk=g=>/^\d+$/.test(g);
-    const [hr,wk,inst,ro,lv,c11,c16]=await Promise.allSettled([
+    const [hr,wk,inst,ro,lv,c11,c16,abp]=await Promise.allSettled([
       GST.fetchCSVCached(URLS.hr,'hr'),
       GST.fetchCSVCached(URLS.wk,'sheet3'),
       GST.fetchCSVCached(URLS.inst,'inst'),
       gidOk(GID_ROSTER)?GST.fetchCSVCached(URLS.roster,'roster'):Promise.reject('gid 미설정'),
       gidOk(GID_LEAVE)?GST.fetchCSVCached(URLS.leave,'leave'):Promise.reject('gid 미설정'),
       gidOk(GID_CIP11)?GST.fetchCSVCached(URLS.cip11,'cip11'):Promise.reject('gid 미설정'),
-      gidOk(GID_CIP16)?GST.fetchCSVCached(URLS.cip16,'cip16'):Promise.reject('gid 미설정')
+      gidOk(GID_CIP16)?GST.fetchCSVCached(URLS.cip16,'cip16'):Promise.reject('gid 미설정'),
+      gidOk(GID_ABP)?GST.fetchCSVCached(URLS.abp,'abp'):Promise.reject('gid 미설정')
     ]);
     ROSTER = ro.status==='fulfilled'?parseRoster(ro.value.rows):[];
     LEAVE  = lv.status==='fulfilled'?parseLeave(lv.value.rows):[];
@@ -732,12 +771,13 @@ async function loadData(){
       c11.status==='fulfilled'?parseCIP(c11.value.rows,'MICRON F11',13,18):[],  // F11: N~S열
       c16.status==='fulfilled'?parseCIP(c16.value.rows,'MICRON F16',15,38):[]   // F16: P~AM열
     );
+    ABP = abp.status==='fulfilled'?parseABP(abp.value.rows):{m:{},w:{}};
     HR = hr.status==='fulfilled'?parseHR(hr.value.rows):[];
     WK = wk.status==='fulfilled'?wk.value.rows.slice(1).map(r=>{
       const stg=String(r[CW.stage]||'').trim().toUpperCase().replace(/\s/g,'');
       const wd=pd(r[CW.work]); if(!stg||!wd)return null;
       const manMin=Number(r[CW.manMin])||0, workMin=Number(r[CW.workMin])||0;
-      return {stage:stg,wd,customer:normCust(r[CW.customer]),sn:String(r[CW.sn]||'').trim(),
+      return {stage:stg,wd,customer:normCust(r[CW.customer]),custB:custBase(r[CW.customer]),fab:fabOf(r[CW.line])||String(r[CW.line]||'').trim(),sn:String(r[CW.sn]||'').trim(),
         country:guessCountry(r[CW.op]),line:String(r[CW.line]||'').trim(),
         chamber:String(r[CW.chamber]||'').trim(),cause:String(r[CW.cause]||'').trim(),
         phenom:String(r[CW.phenom]||'').trim(),action:String(r[CW.action]||'').trim(),
@@ -763,11 +803,13 @@ const isMaint=s=>isPM(s)||isSvc(s);   // TBM+CBM+BM+CRM+CM — 인당 작업건 
 
 function fillFilters(){
   const cSet=new Set(), uSet=new Set(), lSet=new Set();
-  WK.forEach(x=>{if(x.country)cSet.add(x.country); if(x.customer)uSet.add(x.customer); if(x.line)lSet.add(x.line);});
-  HR.forEach(p=>{if(p.country)cSet.add(p.country);});
+  const add=(cb,fb)=>{ if(cb)uSet.add(cb); if(fb&&/^F(10|11|16)/.test(fb))lSet.add(fb); };
+  WK.forEach(x=>{if(x.custB)add(x.custB,x.fab);});
+  ROSTER.forEach(p=>add(p.custB,p.fab));
   INST.forEach(r=>{const c=guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase(); if(c)cSet.add(c);
-    const u=normCust(r[CI.customer]); if(u)uSet.add(u);
-    const l=String(r[CI.line]||'').trim(); if(l)lSet.add(l);});
+    add(custBase(r[CI.customer]),fabOf(r[CI.fab]));});
+  // 국가: TAIWAN + (SINGAPORE 데이터 있으면)
+  cSet.add('TAIWAN'); ROSTER.forEach(p=>{const c=siteCountryStatic(p.fab||p.custB); if(c)cSet.add(c);});
   [['sl-country',cSet,'country'],['sl-customer',uSet,'customer'],['sl-line',lSet,'line']].forEach(([id,set,k])=>{
     const el=document.getElementById(id); if(!el)return;
     el.innerHTML='<option value="">'+t('all')+'</option>'+[...set].sort().map(v=>'<option value="'+String(v).replace(/"/g,'&quot;')+'"'+(F[k]===v?' selected':'')+'>'+v+'</option>').join('');
@@ -782,14 +824,14 @@ function render(){
   // 기준일: 종료일 필터가 있으면 그 날짜, 없으면 오늘
   const anchor=(F.dtTo&&pd(F.dtTo))||today;
   const from=F.dtFrom?pd(F.dtFrom):null;
-  const entOk=x=>(!F.country||x.country===F.country)&&(!F.customer||x.customer===F.customer)&&(!F.line||x.line===F.line);
+  const entOk=x=>(!F.country||x.country===F.country)&&(!F.customer||x.custB===F.customer)&&(!F.line||x.fab===F.line);
   const fWK=WK.filter(x=>entOk(x)&&(!from||x.wd>=from)&&(!F.dtTo||x.wd<=anchor));
   const sWK=WK.filter(entOk); // S-커브: 기간 필터 없이 연간
   const fINST=INST.filter(r=>{
     const c=guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();
     if(F.country&&c!==F.country)return false;
-    if(F.customer&&normCust(r[CI.customer])!==F.customer)return false;
-    if(F.line&&String(r[CI.line]||'').trim()!==F.line)return false;
+    if(F.customer&&custBase(r[CI.customer])!==F.customer)return false;
+    if(F.line&&fabOf(r[CI.fab])!==F.line)return false;
     return true;
   });
   const PU=id=>{const u=(PER[id]==='w'||PER[id]==='m')?PER[id]:PERIOD;
@@ -815,9 +857,13 @@ function render(){
      if(ew.value!==ENDW)ew.value=ENDW;
    }}
   renderMiniToggles();
-  // 통일 색상 — 미래지향 블루 계열, 마지막 데이터 강조
-  const BAR_BASE='#2C5FAE', BAR_LAST='#5EC2FF';   // 막대: 스틸블루 → 마지막만 밝게
-  const BAR_C=BAR_BASE, BAR2_C='#7C6FE0', LINE_C=BAR_LAST, LN_G='#34D399', LN_V='#A78BFA';
+  // 통일 색상 — 기본: 미래지향 블루 · 버건디 테마: QBR 엑셀 복제(회색 막대 + 빨강 라인)
+  const _isBg = TH.key==='burgundy';
+  const BAR_BASE = _isBg?'#8A8A8A':'#2C5FAE';
+  const BAR_LAST = _isBg?'#B4B4B4':'#5EC2FF';
+  const BAR_C=BAR_BASE, BAR2_C=_isBg?'#C7C7C7':'#7C6FE0';
+  const LINE_C=_isBg?'#E03131':'#5EC2FF';
+  const LN_G=_isBg?'#E03131':'#34D399', LN_V=_isBg?'#9A9A9A':'#A78BFA';
   // 단일 막대: 마지막 인덱스만 강조색
   const barHi=n=>Array.from({length:n},(_,i)=>i===n-1?BAR_LAST:BAR_BASE);
   // 꺾은선: 마지막 포인트만 크게 강조 (설치현황 트렌드 스타일)
@@ -827,15 +873,12 @@ function render(){
   const C2C={};
   INST.forEach(r=>{const cu=normCust(r[CI.customer]);
     if(cu&&!C2C[cu])C2C[cu]=guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();});
-  const siteCountry=st=>{ if(C2C[st])return C2C[st];
-    const u=String(st||'').toUpperCase();
-    if(u.includes('F10')||u.includes('SINGAPORE'))return 'SINGAPORE';
-    if(u)return 'TAIWAN'; return ''; };
-  const siteOk=st=>(!F.customer||st===F.customer)&&(!F.country||siteCountry(st)===F.country);
+  const siteCountry=siteCountryStatic;
+  const okCF=(cb,fb)=>(!F.customer||cb===F.customer)&&(!F.line||fb===F.line)&&(!F.country||siteCountry(fb||cb)===F.country);
   // 인력 기준: 인원현황(입·퇴사일 보유) 우선, 없으면 교육현황 · 고객사/국가 필터 연동
   const PPL=ROSTER.length?ROSTER:HR;
-  const fHR=PPL.filter(p=>siteOk(p.site));
-  const fEDU=HR.filter(p=>siteOk(p.site));
+  const fHR=PPL.filter(p=>okCF(p.custB,p.fab));
+  const fEDU=HR.filter(p=>okCF(p.custB,p.fab));
   const headAt=E=>fHR.filter(x=>activeAt(x,E)).length;   // 재적 총인원
   // 교육현황 이수일 조회 (인원현황 이름 ↔ 교육현황 인원 매칭)
   const EDU_BY_NAME={};
@@ -938,7 +981,7 @@ function render(){
     if(wait)wait.style.display=ready?'none':'block';
     if(ready){
       const cust=F.customer;
-      const head=E=>ROSTER.filter(p=>p.onsite&&p.join<=E&&(!p.quit||p.quit>E)&&siteOk(p.site)).length;
+      const head=E=>ROSTER.filter(p=>p.onsite&&p.join<=E&&(!p.quit||p.quit>=E)&&okCF(p.custB,p.fab)).length;
       const chIn=E=>fINST.reduce((a,r)=>{
         const fd=pd(r[CI.fabIn]); if(!fd||fd>E)return a;
         return a+(String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1);
@@ -950,7 +993,7 @@ function render(){
         const att=[],lv=[],hd=[],pj=[];
         P.forEach(p=>{
           const wd=(u==='m')?21:5;
-          const ls=LEAVE.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&siteOk(x.site))?x.days:0),0);
+          const ls=LEAVE.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
           const la=Math.round(ls/wd*10)/10;
           const hv=head(p.end);
           const jobs=fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isMaint(x.stage)).length;
@@ -1029,7 +1072,7 @@ function render(){
 
   // ===== CIP 진행율 (대상 = Not yet + 완료일 · 완료 = 완료일 · 항목별 1행 날짜부터 대상 산입) =====
   {
-    const fCIP=CIP.filter(x=>siteOk(x.site));
+    const fCIP=CIP.filter(x=>okCF(x.custB,x.fab));
     const {P,labels}=PU('cCip');
     destroyMk('cCip');
     if(fCIP.length){
@@ -1084,7 +1127,7 @@ function render(){
     const r1=v=>Math.round(v*10)/10;
     const denom=p=>{
       const wd=(u==='m')?21:5;
-      const ls=LEAVE.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&siteOk(x.site))?x.days:0),0);
+      const ls=LEAVE.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
       const att=Math.max(1,headAt(p.end)-ls/wd);
       return att*wd;
     };
@@ -1191,17 +1234,28 @@ function render(){
   // ===== 고장 =====
   {
     const {P,labels,u}=PU('cFt');
-    const bm=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&x.stage==='BM').length);
-    const cbm=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&x.stage==='CBM').length);
-    const tot=bm.map((v,i)=>v+cbm[i]);
+    // Alarm = BM 건수만 (CBM 제외) · All By-Pass = 별도 시트 · Total = Alarm + All By-Pass
+    const alarm=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&x.stage==='BM').length);
+    const abpAt=p=>{ const src=ABP[u]||{};
+      const key=(u==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
+      const bkt=src[key]; if(!bkt)return 0;
+      if(F.customer)return bkt.byC[F.customer]||0;
+      if(F.line)return bkt.byF[F.line]||0;
+      return bkt.ALL||0; };
+    const abp=P.map(abpAt);
+    const tot=alarm.map((v,i)=>v+abp[i]);
+    const hasABP=abp.some(v=>v>0);
     destroyMk('cFt');
-    // All By-Pass 데이터가 아직 없어 Alarm(고장) 건수 단일 시리즈로 표시 — BM/CBM 세부는 툴팁
+    const ds=[{label:t('ft_alarm'),data:alarm,backgroundColor:BAR_BASE,stack:'s',borderRadius:2,order:3}];
+    if(hasABP)ds.push({label:t('ft_abp'),data:abp,backgroundColor:BAR2_C,stack:'s',borderRadius:2,order:3});
+    ds.push(lineDs(t('ft_tot'),tot,LINE_C));
     CHARTS.cFt=new Chart(document.getElementById('cFt'),{type:'bar',
-      data:{labels,datasets:[{label:t('ft_total'),data:tot,backgroundColor:tot.map((_,i)=>i===tot.length-1?'#FF8A8A':TH.status.bad),borderRadius:4}]},
+      data:{labels,datasets:ds},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
-        plugins:{legend:{display:false},valLabel:{mode:'all',color:ink},
-          tooltip:{callbacks:{label:c=>' '+c.parsed.y+' (BM '+bm[c.dataIndex]+' · CBM '+cbm[c.dataIndex]+')'}}},
-        scales:baseScales(TH,false)},
+        plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+          valLabel:{mode:'all',color:ink},
+          tooltip:{callbacks:{footer:it=>t('ft_tot')+' '+(alarm[it[0].dataIndex]+abp[it[0].dataIndex])}}},
+        scales:baseScales(TH,true)},
       plugins:[valLabelPlugin]});
     {
       const _fi=tot.length-1, _pv=tot[_fi-1]||0;
