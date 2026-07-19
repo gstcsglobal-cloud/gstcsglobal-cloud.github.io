@@ -1222,9 +1222,12 @@ function render(){
     const denom=p=>{const wd=(u==='m')?21:5;
       const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
       return Math.max(1,Math.max(1,headOn(p.end))*wd-ls);};
-    const hPM=P.map(p=>r1(fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isPM(x.stage)).reduce((a,x)=>a+x.manMin,0)/60/denom(p)));
-    const hNp=P.map(p=>r1(fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isSvc(x.stage)).reduce((a,x)=>a+x.manMin,0)/60/denom(p)));   // 非PM = CBM·CRM·CM·BM
-    const hTot=hPM.map((v,i)=>r1(v+hNp[i]));
+    // 구간별 원시 분(minute) 합 → 총합은 원시합에서 한 번만 반올림(이중 반올림 방지)
+    const pmMin=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isPM(x.stage)).reduce((a,x)=>a+x.manMin,0));
+    const npMin=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isSvc(x.stage)).reduce((a,x)=>a+x.manMin,0));   // 非PM = CBM·CRM·CM·BM
+    const hPM=P.map((p,i)=>r1(pmMin[i]/60/denom(p)));
+    const hNp=P.map((p,i)=>r1(npMin[i]/60/denom(p)));
+    const hTot=P.map((p,i)=>r1((pmMin[i]+npMin[i])/60/denom(p)));
     destroyMk('cMan');
     CHARTS.cMan=new Chart(document.getElementById('cMan'),{type:'bar',
       data:{labels,datasets:[
@@ -1234,10 +1237,10 @@ function render(){
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
         plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
           valLabel:{mode:'all',color:ink},
-          tooltip:{callbacks:{footer:it=>t('man_sum')+' '+r1(it.reduce((a,i)=>a+i.parsed.y,0))+'h'}}},
+          tooltip:{callbacks:{footer:it=>t('man_sum')+' '+(hTot[it[0].dataIndex]??0)+'h'}}},
         scales:baseScales(TH,true)},
       plugins:[valLabelPlugin]});
-    const _mi=hPM.length-1, _tot=r1((hPM[_mi]||0)+(hNp[_mi]||0));
+    const _mi=hPM.length-1, _tot=hTot[_mi]??0;
     setNote('cMan',t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0));
   }
   // ===== PM S-커브 (올해, 월 고정) =====
