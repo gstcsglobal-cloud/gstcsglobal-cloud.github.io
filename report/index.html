@@ -744,6 +744,7 @@ function parseHR(rows){
   }
   if(hi<0)return [];
   return rows.slice(hi+3).map(r=>({
+    id:String(r[3]||'').trim(),
     site:siteKey(r[1]),
     custB:custBase(r[1]), fab:fabOf(r[1]),
     name:String(r[2]||'').trim(),
@@ -952,9 +953,12 @@ function render(){
   const headAt=E=>fHR.filter(x=>activeAt(x,E)).length;   // 재적 총인원
   const headOn=E=>fHR.filter(x=>x.onsite&&activeAt(x,E)).length;   // 현장(O) 재적 — 공수/출근 분모
   // 교육현황 이수일 조회 (인원현황 이름 ↔ 교육현황 인원 매칭)
-  const EDU_BY_NAME={};
-  HR.forEach(e=>{ if(e.name)EDU_BY_NAME[e.name.trim().toUpperCase()]=e; });
-  const eduOf=x=> x.bdate!==undefined ? x : (EDU_BY_NAME[(x.name||'').trim().toUpperCase()]||null);
+  const EDU_BY_ID={}, EDU_BY_NAME={};
+  HR.forEach(e=>{ if(e.id)EDU_BY_ID[e.id]=e; if(e.name)EDU_BY_NAME[e.name.trim().toUpperCase()]=e; });
+  // 사원번호로만 매칭(동명이인 오귀속 방지) · ID가 없는 레코드만 이름 폴백
+  // (ID가 있는데 HR에 없으면 미매칭으로 처리 — 이름 폴백 시 동명이인 레코드를 잘못 가져올 위험)
+  const eduOf=x=> x.bdate!==undefined ? x
+    : x.id ? (EDU_BY_ID[x.id]||null) : (EDU_BY_NAME[(x.name||'').trim().toUpperCase()]||null);
   document.getElementById('ptW').classList.toggle('active',PERIOD==='w');
   document.getElementById('ptM').classList.toggle('active',PERIOD==='m');
 
