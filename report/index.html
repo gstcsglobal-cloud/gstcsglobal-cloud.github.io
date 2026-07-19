@@ -1072,11 +1072,12 @@ function render(){
           const la=Math.round(ls/wd*10)/10;
           const hv=head(p.end);
           const jobs=fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isMaint(x.stage)).length;
+          const attV=Math.max(0,Math.round((hv-la)*10)/10);
           lv.push(la);
-          att.push(Math.max(0,Math.round((hv-la)*10)/10));
+          att.push(attV);
           hd.push(hv);
           jb.push(jobs);
-          pj.push(hv?Math.round(jobs/hv*10)/10:0);
+          pj.push(attV?Math.round(jobs/attV*10)/10:0);   // 인당작업 = 작업건수 ÷ 휴가차감 평균출근인원
         });
         const pjMax=Math.max(20,Math.ceil(Math.max.apply(null,pj))*5);   // 인당작업 라인을 차트 하단부에 배치해 막대·라벨과 겹침 방지
         destroyMk('cAtt');
