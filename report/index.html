@@ -109,6 +109,19 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .rank.r1{background:rgba(230,103,103,.25);color:#e66767}
 .rank.r2{background:rgba(250,178,25,.22);color:#fab219}
 .empty{text-align:center;padding:24px;color:var(--txt-muted)}
+/* Scrubber 가동 현황 표 */
+.tbl-wrap{overflow-x:auto}
+.op-tbl{min-width:1080px}
+.op-tbl th{text-align:center;padding:7px 8px;letter-spacing:.3px;vertical-align:middle;border-bottom:1px solid var(--glass-border)}
+.op-tbl thead tr:first-child th{border-bottom:none}
+.op-tbl th.gl,.op-tbl td.gl{border-left:1px solid var(--glass-border)}
+.op-tbl td{text-align:right;font-variant-numeric:tabular-nums;padding:7px 9px;white-space:nowrap}
+.op-tbl td.lb{text-align:left;font-weight:700;white-space:nowrap}
+.op-tbl td.corp{text-align:center;font-weight:800;vertical-align:middle;border-right:1px solid var(--glass-border)}
+.op-tbl tr.tot td{font-weight:800;background:var(--glass-hover);border-top:2px solid var(--glass-border)}
+.op-tbl td.neg{color:#fb7185}
+.op-tbl td.pos{color:#4ade80}
+.op-tbl td.mut{color:var(--txt-muted)}
 @media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
 @media(max-width:800px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
 @media print{
@@ -279,20 +292,35 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   </div>
 </div>
 <div class="sec-h" data-i="sec4">설비</div>
-<div class="grid2">
-  <div class="card">
-    <h3 data-i="ch_inst">고객사별 반입 · 가동</h3>
-    <div class="card-note" data-i="note_inst">설치 시트 기준 · 가동 = Turn-On 완료</div>
-    <div class="cw"><canvas id="cInst"></canvas></div>
-  </div>
-  <div class="card">
-    <h3 data-i="ch_sum">설비 요약</h3>
-    <div class="card-note">&nbsp;</div>
-    <div class="bignums">
-      <div class="bn"><span class="n" id="bnIn">—</span><span class="l" data-i="bn_in">전체 반입 설비</span></div>
-      <div class="bn"><span class="n" id="bnOn">—</span><span class="l" data-i="bn_on">가동 설비 (Turn-On)</span></div>
-      <div class="bn"><span class="n" id="bnRate">—</span><span class="l" data-i="bn_rate">가동율</span></div>
-    </div>
+<div class="tablecard" style="position:relative">
+  <h3 id="opTblTitle">Scrubber 가동 현황</h3><div class="mini-per" data-ch="opTbl" style="top:16px"></div>
+  <div class="card-note" data-i="note_op">가동 = Turn-On 완료 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 40/인 고정 · 마감일 기준</div>
+  <div class="tbl-wrap">
+  <table class="op-tbl">
+    <thead>
+      <tr>
+        <th rowspan="2" data-i="op_corp">법인</th>
+        <th rowspan="2" data-i="op_div">구분</th>
+        <th colspan="3" class="gl" data-i="op_run_u">가동 장비 대수</th>
+        <th colspan="3" class="gl" data-i="op_run_c">가동 챔버수</th>
+        <th colspan="2" class="gl" data-i="op_idle">미가동</th>
+        <th colspan="2" class="gl" data-i="op_staff">담당 인원(명)</th>
+        <th colspan="2" class="gl" data-i="op_to">목표 TO</th>
+        <th rowspan="2" class="gl" data-i="op_gap">증감<br>(명)</th>
+        <th rowspan="2" data-i="op_hire">모집<br>계획</th>
+        <th rowspan="2" class="gl" data-i="op_chp">인당<br>챔버</th>
+        <th rowspan="2" class="gl" data-i="op_pm">PM<br>(건)</th>
+      </tr>
+      <tr>
+        <th class="gl">TOTAL</th><th>W/I</th><th>W/O</th>
+        <th class="gl">TOTAL</th><th>W/I</th><th>W/O</th>
+        <th class="gl" data-i="op_unit">장비</th><th data-i="op_ch">챔버</th>
+        <th class="gl" data-i="op_expat">주재원</th><th data-i="op_local">현채인</th>
+        <th class="gl" data-i="op_fit">적정<br>챔버</th><th data-i="op_need">인원<br>(명)</th>
+      </tr>
+    </thead>
+    <tbody id="opTblBody"><tr><td colspan="18" class="empty">—</td></tr></tbody>
+  </table>
   </div>
 </div>
 
@@ -317,7 +345,7 @@ const URLS={
 // 시트3 실적현황 (0-based)
 const CW={op:2,customer:3,line:5,stage:13,chamber:20,sn:21,phenom:26,cause:27,action:28,work:32,workMin:39,manMin:40,workers:41};
 // 설치 시트
-const CI={country:2,customer:3,fab:9,sn:6,fabIn:38,turnOn:40,type:75}; // fab=J열 FAB(F16/F11/F16N) · type=BX열 Scrubber Type
+const CI={country:2,customer:3,fab:9,sn:6,fabIn:38,turnOn:40,warranty:43,type:75}; // fab=J열 FAB(F16/F11/F16N) · warranty=AR열 Warranty In/Out · type=BX열 Scrubber Type
 // 고객사 표기 통일 (시트마다 공식명/축약명이 섞여 있음) — 예: Micron Memory Taiwan Co., Ltd.(F16) → MICRON F16
 function normCust(name){
   if(!name)return '';
@@ -343,7 +371,10 @@ function custBase(s){const u=String(s||'').toUpperCase();
   if(u.includes('MICRON')||/\bF1[016]/.test(u))return 'MICRON';
   return normCust(s);}
 function fabOf(s){const u=String(s||'').toUpperCase();
-  const m=u.match(/\bF(16N|16S|16|11|10)\b/); return m?('F'+m[1]):'';}
+  const m=u.match(/\bF(16N|16S|16|11|10)\b/); if(m)return 'F'+m[1];
+  if(/TONG\s*L/.test(u))return 'F16N';   // Tong luo(통뤄) = F16N
+  if(/TAINAN/.test(u))return 'F16S';     // Tainan(타이난) = F16S
+  return '';}
 function siteCountryStatic(s){const u=String(s||'').toUpperCase();
   if(u.includes('F10')||u.includes('SINGAPORE'))return 'SINGAPORE';
   if(u)return 'TAIWAN'; return '';}
@@ -351,7 +382,8 @@ function siteCountryStatic(s){const u=String(s||'').toUpperCase();
 function siteKey(sv){
   const up=String(sv||'').toUpperCase();
   if(!up.trim())return '';
-  if(up.includes('F16N')||up.includes('TONGL'))return 'MICRON F16N';
+  if(up.includes('F16N')||/TONG\s*L/.test(up))return 'MICRON F16N';
+  if(up.includes('F16S')||up.includes('TAINAN'))return 'MICRON F16S';
   if(up.includes('F16'))return 'MICRON F16';
   if(up.includes('F11'))return 'MICRON F11';
   if(up.includes('F10'))return 'MICRON F10';
@@ -382,8 +414,8 @@ ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 �
  ch_sc:'PM 계획 대비 완료 (올해 누적)',note_sc:'계획 = 설비별 주기 기반 도래 건수 · 진행율은 툴팁',sc_plan:'계획(누적)',sc_done:'완료(누적)',
  ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',ft_total:'건수',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
  tbl_top:'고장 원인 TOP 3',th_cause:'원인',th_cnt:'건수',th_ph:'주요 현상',th_act:'최근 조치',top_etc:'기타 {n}건 · 원인 미기재 {m}건',
- ch_inst:'고객사별 반입 · 가동',note_inst:'설치 시트 기준 · 가동 = Turn-On 완료',inst_in:'반입',inst_on:'가동',
- ch_sum:'설비 요약',bn_in:'전체 반입 설비',bn_on:'가동 설비 (Turn-On)',bn_rate:'가동율',
+ tbl_op:'Scrubber 가동 현황',note_op:'가동 = Turn-On 완료 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 40/인 고정 · 마감일 기준',op_corp:'법인',op_div:'구분',op_run_u:'가동 장비 대수',op_run_c:'가동 챔버수',op_idle:'미가동',op_staff:'담당 인원(명)',op_to:'목표 TO',op_gap:'증감(명)',op_hire:'모집계획',op_chp:'인당 챔버',op_pm:'PM(건)',op_unit:'장비',op_ch:'챔버',op_expat:'주재원',op_local:'현채인',op_fit:'적정 챔버',op_need:'인원(명)',
+ 
  ins_pm:'올해 PM 진행율 {p}% (계획 {a} · 완료 {b})',ins_ft:'최근 30일 고장 {n}건 · 직전 30일 대비 {p}',ins_hc:'재직 {n}명 · 이번 달 입사 {a} · 퇴사 {b}',
  loading:'데이터 불러오는 중...',loaded:'로드 완료',mon_u:'월',u_p:'명',u_c:'건'},
 en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, training, work, PM, faults',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_period:'Period',all:'All',hr_note:'follows customer filter · country/line N/A',hr_note2:'',sec_ops:'Operations',ops_note:'available = on-site(O) active staff from roster · follows customer filter',ops_wait:'Roster/Leave sheets not linked — set GID_ROSTER / GID_LEAVE at the top of report/index.html',ch_att:'Attendance · Leave',note_att:'weekday daily avg · attendance = available − leave',att_a:'Attend',att_l:'Leave',ch_to:'Headcount vs TO',note_to:'TO = fab-in chambers ÷ 30 (DUAL=2·SINGLE=1)',head_l:'Headcount',ch_chp:'Chambers per Person',note_chp:'cumulative fab-in chambers ÷ available staff · detail in tooltip',cutoff:'As of',att_pj:'Jobs/person',man_tot:'Hours',grp_t:'Tenure',grp_s:'Site',cr_u1:'<1yr',cr_u1:'<1yr',cr_u2:'1-2yr',cr_u3:'2yr+',ch_career:'Headcount by Line',note_career:'active on-site(O) at each period end · by line',nCareer:'<1y {a} · 1-2y {b} · 2y+ {c}',edu_tg:'Targets',edu_tg:'Targets',edu_rt:'Rate',edu_ttf:'done {d} / target {t}',man_sum:'Total',chp_c:'Chambers',chp_p:'per person',nTo:'fill rate {p}% · {d} vs TO',nEdu:'rate {p}% · {d}/{t} done (LV1+LV2)',nCip:'progress {p}% · {n} remaining',nAtt:'daily avg attend {a} · leave {l}',nChp:'{v} chambers/person ({c}ch · {h} staff)',nMan:'{v}h per person·day · PM {pm}h',nFt:'{n} in latest period · {d} vs prev',per_ws:'W',per_ms:'M',per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',print:'🖨 Print',
@@ -399,8 +431,8 @@ en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, traini
  ch_sc:'PM Plan vs Done (YTD cumulative)',note_sc:'plan = due events from per-tool cycles · progress in tooltip',sc_plan:'Plan (cum)',sc_done:'Done (cum)',
  ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',ft_total:'Count',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
  tbl_top:'Top 3 Fault Causes',th_cause:'Cause',th_cnt:'Count',th_ph:'Main Symptom',th_act:'Latest Action',top_etc:'others {n} · cause blank {m}',
- ch_inst:'Fab-in vs Turn-on by Customer',note_inst:'installation sheet · running = Turn-On done',inst_in:'Fab-in',inst_on:'Running',
- ch_sum:'Equipment Summary',bn_in:'Total fab-in',bn_on:'Running (Turn-On)',bn_rate:'Run rate',
+ tbl_op:'Scrubber Operation Status',note_op:'running = Turn-On done · chamber DUAL=2·SINGLE=1 · 40 chambers/person fixed · as of cutoff',op_corp:'Entity',op_div:'Site',op_run_u:'Running Units',op_run_c:'Running Chambers',op_idle:'Idle',op_staff:'Staff',op_to:'Target TO',op_gap:'Gap',op_hire:'Hiring',op_chp:'Ch/person',op_pm:'PM',op_unit:'Units',op_ch:'Chambers',op_expat:'Expat',op_local:'Local',op_fit:'Fit ch.',op_need:'Headcount',
+ 
  ins_pm:'YTD PM progress {p}% (plan {a} · done {b})',ins_ft:'{n} faults in 30d · {p} vs prev 30d',ins_hc:'{n} active · joined {a} · left {b} this month',
  loading:'Loading...',loaded:'Loaded',mon_u:'',u_p:'',u_c:''},
 zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇总',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_period:'期间',all:'全部',hr_note:'联动客户筛选 · 国家/线不适用',hr_note2:'',sec_ops:'运营',ops_note:'可用人力=人员现况中现场(O)在职者·联动客户筛选',ops_wait:'人员现况/休假现况表未连接 — 请在 report/index.html 顶部填入 GID_ROSTER / GID_LEAVE',ch_att:'出勤 · 休假',note_att:'工作日日均 · 出勤=可用人力−休假',att_a:'出勤',att_l:'休假',ch_to:'总人员 vs TO',note_to:'TO=搬入腔体÷30 (DUAL=2·SINGLE=1)',head_l:'总人员',ch_chp:'人均管理腔体',note_chp:'累计搬入腔体÷可用人力·明细见提示框',cutoff:'截止',att_pj:'人均作业',man_tot:'工时(h)',grp_t:'工龄',grp_s:'所属',cr_u1:'1年内',cr_u1:'1年内',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'按线人员趋势',note_career:'各区间末现场(O)在职·按线堆叠',nCareer:'1年内 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'对象人员',edu_tg:'对象人员',edu_rt:'完成率',edu_ttf:'完成 {d} / 对象 {t}',man_sum:'合计',chp_c:'腔体(搬入)',chp_p:'人均管理',nTo:'满编率 {p}% · 较TO {d}名',nEdu:'完成率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'进度 {p}% · 剩余 {n}件',nAtt:'日均出勤 {a}名 · 休假 {l}名',nChp:'人均 {v}腔体 ({c}ch · {h}名)',nMan:'人均日 {v}h · PM {pm}h',nFt:'最近区间 {n}件 · 环比 {d}',per_ws:'周',per_ms:'月',per_w:'按周',per_m:'按月',per_note:'最近12个区间',print:'🖨 打印',
@@ -416,8 +448,8 @@ zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇
  ch_sc:'PM计划 vs 完成(今年累计)',note_sc:'计划=按设备周期到期件数 · 进度见提示框',sc_plan:'计划(累计)',sc_done:'完成(累计)',
  ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
  tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_ph:'主要现象',th_act:'最近措施',top_etc:'其他 {n}件 · 原因未填 {m}件',
- ch_inst:'按客户搬入·运行',note_inst:'安装表 · 运行=Turn-On完成',inst_in:'搬入',inst_on:'运行',
- ch_sum:'设备汇总',bn_in:'全部搬入设备',bn_on:'运行设备(Turn-On)',bn_rate:'运行率',
+ tbl_op:'Scrubber 运行现况',note_op:'运行=Turn-On完成 · 腔体 DUAL=2·SINGLE=1 · 人均40腔固定 · 截止日基准',op_corp:'法人',op_div:'区分',op_run_u:'运行设备台数',op_run_c:'运行腔体数',op_idle:'未运行',op_staff:'负责人员(名)',op_to:'目标 TO',op_gap:'增减(名)',op_hire:'招聘计划',op_chp:'人均腔体',op_pm:'PM(件)',op_unit:'设备',op_ch:'腔体',op_expat:'驻在员',op_local:'当地雇员',op_fit:'适定腔体',op_need:'人员(名)',
+ 
  ins_pm:'今年PM进度 {p}% (计划 {a} · 完成 {b})',ins_ft:'近30天故障 {n}件 · 环比 {p}',ins_hc:'在职 {n}名 · 本月入职 {a} · 离职 {b}',
  loading:'加载中...',loaded:'已加载',mon_u:'月',u_p:'名',u_c:'件'},
 ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サマリー',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'ライン',sl_period:'期間',all:'全体',hr_note:'顧客フィルタ連動 · 国/ライン非適用',hr_note2:'',sec_ops:'運営',ops_note:'可用人員=人員現況の現場(O)在籍者·顧客フィルタ連動',ops_wait:'人員現況/休暇現況シート未接続 — report/index.html 上部の GID_ROSTER / GID_LEAVE を設定してください',ch_att:'出勤 · 休暇',note_att:'平日の日平均 · 出勤=可用人員−休暇',att_a:'出勤',att_l:'休暇',ch_to:'総人員 vs TO',note_to:'TO=搬入チャンバー÷30 (DUAL=2·SINGLE=1)',head_l:'総人員',ch_chp:'一人当たり管理チャンバー',note_chp:'累計搬入チャンバー÷可用人員·詳細はツールチップ',cutoff:'締め',att_pj:'一人当たり作業',man_tot:'工数(h)',grp_t:'経歴',grp_s:'所属',cr_u1:'1年未満',cr_u1:'1年未満',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'ライン別人員推移',note_career:'各区間末の現場(O)在籍·ライン別スタック',nCareer:'1年未満 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'対象人員',edu_tg:'対象人員',edu_rt:'完了率',edu_ttf:'完了 {d} / 対象 {t}',man_sum:'合計',chp_c:'チャンバー(搬入)',chp_p:'一人当たり',nTo:'充足率 {p}% · TO比 {d}名',nEdu:'完了率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'進捗 {p}% · 残り {n}件',nAtt:'日平均出勤 {a}名 · 休暇 {l}名',nChp:'一人 {v}チャンバー ({c}ch · {h}名)',nMan:'一人日平均 {v}h · PM {pm}h',nFt:'直近 {n}件 · 前比 {d}',per_ws:'週',per_ms:'月',per_w:'週別',per_m:'月別',per_note:'直近12区間',print:'🖨 印刷',
@@ -433,8 +465,8 @@ ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サ
  ch_sc:'PM計画対完了(今年累計)',note_sc:'計画=設備別周期の到来件数 · 進捗はツールチップ',sc_plan:'計画(累計)',sc_done:'完了(累計)',
  ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
  tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_ph:'主要現象',th_act:'最新対応',top_etc:'その他 {n}件 · 原因未記入 {m}件',
- ch_inst:'顧客別搬入·稼働',note_inst:'設置シート · 稼働=Turn-On完了',inst_in:'搬入',inst_on:'稼働',
- ch_sum:'設備サマリー',bn_in:'全搬入設備',bn_on:'稼働設備(Turn-On)',bn_rate:'稼働率',
+ tbl_op:'Scrubber 稼働現況',note_op:'稼働=Turn-On完了 · チャンバー DUAL=2·SINGLE=1 · 適正40台/人固定 · 締め日基準',op_corp:'法人',op_div:'区分',op_run_u:'稼働設備台数',op_run_c:'稼働チャンバー数',op_idle:'未稼働',op_staff:'担当人員(名)',op_to:'目標 TO',op_gap:'増減(名)',op_hire:'採用計画',op_chp:'一人当たり',op_pm:'PM(件)',op_unit:'設備',op_ch:'チャンバー',op_expat:'駐在員',op_local:'現地採用',op_fit:'適正チャンバー',op_need:'人員(名)',
+ 
  ins_pm:'今年PM進捗 {p}% (計画 {a} · 完了 {b})',ins_ft:'直近30日故障 {n}件 · 前30日比 {p}',ins_hc:'在籍 {n}名 · 今月入社 {a} · 退社 {b}',
  loading:'読み込み中...',loaded:'ロード完了',mon_u:'月',u_p:'名',u_c:'件'}
 };
@@ -642,13 +674,15 @@ function parseRoster(rows){
   const iWp=h.findIndex(x=>x==='work place'), iIn=h.findIndex(x=>x.startsWith('date of entry')),
         iOut=h.findIndex(x=>x.startsWith('resignation')), iOn=h.findIndex(x=>x.includes('현장'));
   const iNm=h.findIndex(x=>x.includes('name')&&x.includes('영문'));
+  const iOrg=h.findIndex(x=>x.includes('조직도'));   // 조직도 위치 — '주재원' 표기
   return rows.slice(hi+1).map(r=>({
     site:siteKey(r[iWp]),
     custB:custBase(r[iWp]), fab:fabOf(r[iWp]),
     name:String(iNm>=0?(r[iNm]||''):(r[2]||'')).trim(),
     join:iIn>=0?pd(r[iIn]):null,
     quit:iOut>=0?pd(r[iOut]):null,
-    onsite:String(iOn>=0?(r[iOn]||''):'').trim().toUpperCase()==='O'
+    onsite:String(iOn>=0?(r[iOn]||''):'').trim().toUpperCase()==='O',
+    expat:/주재원/.test(String(iOrg>=0?(r[iOrg]||''):''))
   })).filter(x=>x.join);
 }
 // ===== 휴가현황 파싱 — 두 형식 지원 =====
@@ -1288,25 +1322,53 @@ function render(){
     }
   }
 
-  // ===== 설비 =====
+  // ===== 설비 — Scrubber 가동 현황 표 (QBR '가동 현황' 시트 형식) =====
   {
-    const on=fINST.filter(r=>pd(r[CI.turnOn])).length;
-    setTxt('bnIn',fINST.length.toLocaleString());
-    setTxt('bnOn',on.toLocaleString());
-    setTxt('bnRate',fINST.length?Math.round(on/fINST.length*100)+'%':'—');
-    const byCust={};
-    fINST.forEach(r=>{const c=normCust(r[CI.customer])||'—';
-      byCust[c]=byCust[c]||{in:0,on:0}; byCust[c].in++; if(pd(r[CI.turnOn]))byCust[c].on++;});
-    const topC=Object.entries(byCust).sort((a,b)=>b[1].in-a[1].in).slice(0,6);
-    destroyMk('cInst');
-    CHARTS.cInst=new Chart(document.getElementById('cInst'),{type:'bar',
-      data:{labels:topC.map(e=>e[0]),datasets:[
-        {label:t('inst_in'),data:topC.map(e=>e[1].in),backgroundColor:TH.pal[0]+'66',borderColor:TH.pal[0],borderWidth:1.5,borderRadius:3},
-        {label:t('inst_on'),data:topC.map(e=>e[1].on),backgroundColor:TH.pal[1],borderRadius:3}]},
-      options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
-          tooltip:{callbacks:{label:c=>' '+c.dataset.label+' '+c.parsed.y.toLocaleString()}}},
-        scales:baseScales(TH,false)}});
+    const _op=PU('opTbl'); const _oe=_op.P[_op.P.length-1].end, _olb=_op.P[_op.P.length-1].label;
+    {const tt=document.getElementById('opTblTitle'); if(tt)tt.textContent=t('tbl_op')+' ('+_olb+')';}
+    // 구분 행: Micron F16 / F11 / PSMC / TASC / Winbond / Tong luo(F16N) / Tainan(F16S)
+    const OROWS=[
+      {k:'F16',lbl:'Micron F16'},{k:'F11',lbl:'Micron F11'},
+      {k:'PSMC',lbl:'PSMC'},{k:'TASC',lbl:'TASC'},{k:'WINBOND',lbl:'Winbond'},
+      {k:'F16N',lbl:'Tong luo'},{k:'F16S',lbl:'Tainan'}];
+    const rkI=r=>fabOf(r[CI.fab])||custBase(r[CI.customer]);           // 설치 행 → 구분
+    const rkP=p=>p.fab||p.custB;                                        // 인원 행 → 구분
+    const rkW=x=>(/^F1[016]/.test(x.fab)?x.fab:x.custB);                // 실적 행 → 구분
+    const chW=r=>String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1;
+    const isWI=r=>{const w=String(r[CI.warranty]||'').toUpperCase();
+      return w.includes('IN')&&!w.includes('OUT');};                    // AR열 'Warranty In/Out'
+    const oy=_oe.getUTCFullYear();
+    const D=OROWS.map(R=>{
+      const ins=fINST.filter(r=>{const fd=pd(r[CI.fabIn]); return fd&&fd<=_oe&&rkI(r)===R.k;});
+      const run=ins.filter(r=>{const d=pd(r[CI.turnOn]); return d&&d<=_oe;});
+      const ru=run.length, rc=run.reduce((a,r)=>a+chW(r),0);
+      const wiU=run.filter(isWI).length, wiC=run.filter(isWI).reduce((a,r)=>a+chW(r),0);
+      const iu=ins.length-ru, ic=ins.reduce((a,r)=>a+chW(r),0)-rc;      // 미가동 = 반입 − 가동
+      const exp=fHR.filter(p=>p.expat&&activeAt(p,_oe)&&rkP(p)===R.k).length;
+      const loc=fHR.filter(p=>!p.expat&&p.onsite&&activeAt(p,_oe)&&rkP(p)===R.k).length;
+      const need=Math.round(rc/40);                                     // 인원 = 가동 챔버 ÷ 40(고정)
+      const gap=loc-need;
+      const pm=fWK.filter(x=>isPM(x.stage)&&x.wd.getUTCFullYear()===oy&&x.wd<=_oe&&rkW(x)===R.k).length;
+      return {lbl:R.lbl,ru,wiU,woU:ru-wiU,rc,wiC,woC:rc-wiC,iu,ic,exp,loc,need,gap,pm};
+    });
+    const S=D.reduce((a,d)=>{Object.keys(d).forEach(k=>{if(k!=='lbl')a[k]=(a[k]||0)+d[k];});return a;},{});
+    S.need=Math.round(S.rc/40); S.gap=S.loc-S.need;
+    const fm=v=>v?v.toLocaleString():'<span class="mut">-</span>';
+    const cell=d=>'<td class="gl">'+fm(d.ru)+'</td><td>'+fm(d.wiU)+'</td><td>'+fm(d.woU)+'</td>'
+      +'<td class="gl">'+fm(d.rc)+'</td><td>'+fm(d.wiC)+'</td><td>'+fm(d.woC)+'</td>'
+      +'<td class="gl">'+fm(d.iu)+'</td><td>'+fm(d.ic)+'</td>'
+      +'<td class="gl">'+fm(d.exp)+'</td><td>'+fm(d.loc)+'</td>'
+      +'<td class="gl">'+(d.rc?40:'<span class="mut">-</span>')+'</td><td>'+fm(d.need)+'</td>'
+      +'<td class="gl '+(d.gap<0?'neg':d.gap>0?'pos':'')+'">'+(d.rc||d.loc?(d.gap>0?'+':'')+d.gap:'<span class="mut">-</span>')+'</td>'
+      +'<td>'+(d.gap<0?(-d.gap):'<span class="mut">-</span>')+'</td>'
+      +'<td class="gl">'+((d.loc&&d.rc)?Math.round(d.rc/d.loc):'<span class="mut">-</span>')+'</td>'
+      +'<td class="gl">'+fm(d.pm)+'</td>';
+    const corp='GST '+(F.country?F.country.charAt(0)+F.country.slice(1).toLowerCase():'Taiwan');
+    const body=document.getElementById('opTblBody');
+    if(body)body.innerHTML=D.map((d,i)=>'<tr>'
+      +(i===0?'<td class="corp" rowspan="'+D.length+'">'+corp+'</td>':'')
+      +'<td class="lb">'+d.lbl+'</td>'+cell(d)+'</tr>').join('')
+      +'<tr class="tot"><td colspan="2" class="lb" style="text-align:center">TOTAL</td>'+cell(S)+'</tr>';
   }
 
   // ===== 인사이트 =====
