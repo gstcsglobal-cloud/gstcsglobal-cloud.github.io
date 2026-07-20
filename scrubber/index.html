@@ -962,17 +962,20 @@ function mkNewMonthly(id,f){
     const k=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');
     if(map[k]!==undefined||keys.indexOf(k)>-1)map[k]=(map[k]||0)+1;});
   const data=keys.map(k=>map[k]||0);
-  const cfg={type:'bar',data:{labels,datasets:[{
-      data,
-      backgroundColor:data.map((_,i)=>i===data.length-1?TH.pal[0]:TH.pal[0]+'8C'),
-      borderRadius:4
+  // B3 예측(당월 제외 추세) · B4 이상탐지
+  const realLen=data.length; let L=labels.slice(), D=data.slice();
+  let bg=D.map((_,i)=>i===realLen-1?TH.pal[0]:TH.pal[0]+'8C');
+  {const raw=(GST.linForecast?GST.linForecast(data.slice(0,-1),3):[])||[]; const fc=raw.slice(1);
+   fc.forEach((v,i)=>{L.push('+'+(i+1));D.push(v);bg.push('rgba(56,189,248,.5)');}); }
+  const cfg={type:'bar',data:{labels:L,datasets:[{
+      data:D, backgroundColor:bg, borderRadius:4
     }]},
     options:{responsive:true,maintainAspectRatio:false,
       layout:{padding:{top:16}},
-      plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)}},
+      plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)},trendAnno:{anomaly:true,realLen}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:6},grid:{display:false}},
               y:{grace:'14%',ticks:{color:TH.txt,precision:0,maxTicksLimit:4},grid:{color:TH.grid}}}},
-    plugins:[valLabelPlugin]};
+    plugins:[valLabelPlugin].concat(GST.trendAnnoPlugin?[GST.trendAnnoPlugin]:[])};
   if(CHARTS[id])CHARTS[id].destroy();
   CHARTS[id]=new Chart(ctx,cfg);
 }
