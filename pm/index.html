@@ -367,6 +367,21 @@ tr:hover td{background:rgba(255,255,255,.04)}
   </div>
 </div>
 
+<!-- ═══ 섹션: 준수·부하 ═══ -->
+<div data-sec="comp">
+  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi"><div class="cap" data-i="cmp1">PM 준수율</div><div class="krow"><span class="val" id="ck1">0</span><span class="kd">%</span></div><div class="kfoot" id="ckf1" data-i="cmp1f">정시 완료 비율(주기 내)</div></div>
+    <div class="kpi"><div class="cap" data-i="cmp2">지연 설비</div><div class="krow"><span class="val" id="ck2">0</span></div><div class="kfoot" id="ckf2" data-i="cmp2f">현재 지연 대수</div></div>
+    <div class="kpi"><div class="cap" data-i="cmp3">향후 8주 도래</div><div class="krow"><span class="val" id="ck3">0</span></div><div class="kfoot" id="ckf3" data-i="cmp3f">예정 점검 건</div></div>
+    <div class="kpi"><div class="cap" data-i="cmp4">예상 공수(8주)</div><div class="krow"><span class="val" id="ck4">0</span><span class="kd" data-i="u_hr">인·시</span></div><div class="kfoot" id="ckf4" data-i="cmp4f">도래 × 평균 공수</div></div>
+  </div>
+  <div class="grid3">
+    <div class="card"><h3 data-i="ch_aging">지연 경과일 분포</h3><div class="card-note" data-i="note_aging">현재 지연 설비의 경과일</div><div class="cw"><canvas id="cAging"></canvas></div></div>
+    <div class="card"><h3 data-i="ch_vsbm">PM 준수 vs 고장(BM)</h3><div class="card-note" data-i="note_vsbm">설비 상태별 대당 BM · 지연이 높으면 고장↑</div><div class="cw"><canvas id="cVsBm"></canvas></div></div>
+    <div class="card"><h3 data-i="ch_loadfcst">향후 8주 PM 부하</h3><div class="card-note" data-i="note_loadfcst">주별 예상 공수(인·시)</div><div class="cw"><canvas id="cLoadFcst"></canvas></div></div>
+  </div>
+</div>
+
 <!-- ═══ 섹션: 상세 목록 ═══ -->
 <div data-sec="data">
 <div class="tablecard">
@@ -420,7 +435,10 @@ const T={
     th_last:'최근 점검일',th_cycle:'주기(일)',th_next:'다음 예정일',th_dl:'잔여일',th_st:'상태',th_cnt:'이력수',
     st_overdue:'지연',st_soon:'임박',st_ok:'정상',st_na:'주기없음',ins_overdue:'점검 지연 {n}건 — 최장 D+{d} (전체 기준)',ins_due30:'30일 내 점검 도래 {n}건',ins_done:'이번 달 점검 완료 {n}건',
     no_data:'결과 없음',search_ph:'S/N, 모델, Line 검색...',
-    f_site:'전체 고객사',sec_ov:'개요',sec_cal:'캘린더·주차',sec_ld:'작업 부하',sec_dt:'상세 목록',ch_done:'월별 점검 완료 추이',ch_mantrend:'월별 점검 공수',note_mantrend:'TBM 기준 · 인·시',ch_worker:'작업자 TOP (공수)',note_worker:'공동작업은 인원수로 안분',ch_linedur:'LINE별 평균 점검시간',note_linedur:'건당 평균(분)',kf1x:'주기: TBM 이력 기반 자동 산출',kf2x:'최장 D+{d}',kf6x:'전월 {n}건',th_site:'고객사',mon_u:'월',f_line:'전체 LINE',f_model:'전체 모델',f_stat:'전체 상태',cal_today:'오늘',dow:['일','월','화','수','목','금','토'],months:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],cal_more:'외 N건',dm_copy:'복사',dm_copied:'복사됨',adj_loaded:'조정 N건',adj_saving:'저장 중...',adj_saved:'A → B 로 조정 저장됨',adj_failed:'저장 실패 (새로고침 후 재시도)',lg_adjusted:'조정됨',drag_hint:'💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ = 조정됨)',wk_title:'주차별 점검 현황 (오늘 기준 ±2개월)',wk_week:'주차',wk_plan:'예정',wk_done:'완료',wk_rate:'완료율',wk_thisweek:'이번주',wk_total:'전체',wk_inrange:'표시',wk_outrange:'범위밖 N건',mode_plan:'예정만',mode_done:'완료만',mode_both:'예정+완료',lg_done:'완료됨'},
+    f_site:'전체 고객사',sec_ov:'개요',sec_cal:'캘린더·주차',sec_ld:'작업 부하',sec_comp:'준수·부하',sec_dt:'상세 목록',
+    cmp1:'PM 준수율',cmp1f:'정시 완료 비율(주기 내)',cmp2:'지연 설비',cmp2f:'현재 지연 대수',cmp3:'향후 8주 도래',cmp3f:'예정 점검 건',cmp4:'예상 공수(8주)',cmp4f:'도래 × 평균 공수',
+    ch_aging:'지연 경과일 분포',note_aging:'현재 지연 설비의 경과일',ch_vsbm:'PM 준수 vs 고장(BM)',note_vsbm:'설비 상태별 대당 BM · 지연이 높으면 고장↑',ch_loadfcst:'향후 8주 PM 부하',note_loadfcst:'주별 예상 공수(인·시)',
+    aging_b:['D+1~7','D+8~30','D+31~90','D+90+'],vsbm_over:'지연 설비',vsbm_ok:'정상 설비',u_hr:'인·시',u_unit:'대',ch_done:'월별 점검 완료 추이',ch_mantrend:'월별 점검 공수',note_mantrend:'TBM 기준 · 인·시',ch_worker:'작업자 TOP (공수)',note_worker:'공동작업은 인원수로 안분',ch_linedur:'LINE별 평균 점검시간',note_linedur:'건당 평균(분)',kf1x:'주기: TBM 이력 기반 자동 산출',kf2x:'최장 D+{d}',kf6x:'전월 {n}건',th_site:'고객사',mon_u:'월',f_line:'전체 LINE',f_model:'전체 모델',f_stat:'전체 상태',cal_today:'오늘',dow:['일','월','화','수','목','금','토'],months:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],cal_more:'외 N건',dm_copy:'복사',dm_copied:'복사됨',adj_loaded:'조정 N건',adj_saving:'저장 중...',adj_saved:'A → B 로 조정 저장됨',adj_failed:'저장 실패 (새로고침 후 재시도)',lg_adjusted:'조정됨',drag_hint:'💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ = 조정됨)',wk_title:'주차별 점검 현황 (오늘 기준 ±2개월)',wk_week:'주차',wk_plan:'예정',wk_done:'완료',wk_rate:'완료율',wk_thisweek:'이번주',wk_total:'전체',wk_inrange:'표시',wk_outrange:'범위밖 N건',mode_plan:'예정만',mode_done:'완료만',mode_both:'예정+완료',lg_done:'완료됨'},
   en:{title:'Scrubber PM Schedule',sub:'Preventive Maintenance schedule based on TBM history',
     back:'← Main',refresh:'Refresh',loading:'Loading...',
     kp1:'Total Targets',kp2:'Overdue',kp3:'Due Soon',kp4:'Normal',kp5:'No Cycle',kp6:'Completed',year_unit:'',kpi_basis:'status',
@@ -429,7 +447,10 @@ const T={
     th_last:'Last PM',th_cycle:'Cycle(d)',th_next:'Next Due',th_dl:'D-day',th_st:'Status',th_cnt:'History',
     st_overdue:'Overdue',st_soon:'Due Soon',st_ok:'Normal',st_na:'No Cycle',ins_overdue:'{n} PM overdue — worst D+{d} (all schedules)',ins_due30:'{n} PM due within 30 days',ins_done:'{n} completed this month',
     no_data:'No results',search_ph:'Search S/N, Model, Line...',
-    f_site:'All Customers',sec_ov:'Overview',sec_cal:'Calendar',sec_ld:'Workload',sec_dt:'Data',ch_done:'Monthly PM Completed',ch_mantrend:'Monthly PM Man-hours',note_mantrend:'TBM based · man-hours',ch_worker:'Top Workers (man-hours)',note_worker:'shared jobs split by headcount',ch_linedur:'Avg PM Time by LINE',note_linedur:'avg minutes per case',kf1x:'cycle: auto-derived from TBM history',kf2x:'worst D+{d}',kf6x:'prev month {n}',th_site:'Customer',mon_u:'',f_line:'All LINE',f_model:'All Model',f_stat:'All Status',cal_today:'Today',dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],cal_more:'+N more',dm_copy:'Copy',dm_copied:'Copied',adj_loaded:'N adjusted',adj_saving:'Saving...',adj_saved:'Moved A → B',adj_failed:'Save failed (retry after refresh)',lg_adjusted:'Adjusted',drag_hint:'💡 Drag an item to another date to reschedule. Changes are shared with the whole team (✎ = adjusted)',wk_title:'Weekly PM Status (±2 months from today)',wk_week:'Week',wk_plan:'Planned',wk_done:'Done',wk_rate:'Rate',wk_thisweek:'This week',wk_total:'Total',wk_inrange:'Shown',wk_outrange:'N out of range',mode_plan:'Planned',mode_done:'Completed',mode_both:'Both',lg_done:'Completed'},
+    f_site:'All Customers',sec_ov:'Overview',sec_cal:'Calendar',sec_ld:'Workload',sec_comp:'Compliance & Load',sec_dt:'Data',
+    cmp1:'PM Compliance',cmp1f:'on-time within cycle',cmp2:'Overdue Units',cmp2f:'currently overdue',cmp3:'Due in 8 weeks',cmp3f:'scheduled PMs',cmp4:'Forecast Man-hrs (8w)',cmp4f:'due × avg man-hrs',
+    ch_aging:'Overdue Aging',note_aging:'days overdue of current units',ch_vsbm:'PM Compliance vs BM',note_vsbm:'BM/unit by status · overdue → more faults',ch_loadfcst:'PM Load Next 8 Weeks',note_loadfcst:'projected man-hours per week',
+    aging_b:['D+1–7','D+8–30','D+31–90','D+90+'],vsbm_over:'Overdue',vsbm_ok:'On-schedule',u_hr:'m·h',u_unit:'',ch_done:'Monthly PM Completed',ch_mantrend:'Monthly PM Man-hours',note_mantrend:'TBM based · man-hours',ch_worker:'Top Workers (man-hours)',note_worker:'shared jobs split by headcount',ch_linedur:'Avg PM Time by LINE',note_linedur:'avg minutes per case',kf1x:'cycle: auto-derived from TBM history',kf2x:'worst D+{d}',kf6x:'prev month {n}',th_site:'Customer',mon_u:'',f_line:'All LINE',f_model:'All Model',f_stat:'All Status',cal_today:'Today',dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],cal_more:'+N more',dm_copy:'Copy',dm_copied:'Copied',adj_loaded:'N adjusted',adj_saving:'Saving...',adj_saved:'Moved A → B',adj_failed:'Save failed (retry after refresh)',lg_adjusted:'Adjusted',drag_hint:'💡 Drag an item to another date to reschedule. Changes are shared with the whole team (✎ = adjusted)',wk_title:'Weekly PM Status (±2 months from today)',wk_week:'Week',wk_plan:'Planned',wk_done:'Done',wk_rate:'Rate',wk_thisweek:'This week',wk_total:'Total',wk_inrange:'Shown',wk_outrange:'N out of range',mode_plan:'Planned',mode_done:'Completed',mode_both:'Both',lg_done:'Completed'},
   zh:{title:'洗涤器PM点检计划',sub:'基于定期点检(TBM)履历的预防性维护计划',
     back:'← 主页',refresh:'刷新',loading:'加载中...',
     kp1:'总点检对象',kp2:'点检延迟',kp3:'点检临近',kp4:'正常',kp5:'无周期',kp6:'本月完成',year_unit:'年',kpi_basis:'状况',
@@ -438,7 +459,10 @@ const T={
     th_last:'最近点检日',th_cycle:'周期(天)',th_next:'下次预定日',th_dl:'剩余天',th_st:'状态',th_cnt:'履历数',
     st_overdue:'延迟',st_soon:'临近',st_ok:'正常',st_na:'无周期',ins_overdue:'PM延迟 {n}件 — 最长 D+{d} (全部基准)',ins_due30:'30天内到期 {n}件',ins_done:'本月完成 {n}件',
     no_data:'无结果',search_ph:'搜索S/N, 型号, Line...',
-    f_site:'全部客户',sec_ov:'概览',sec_cal:'日历·周次',sec_ld:'工时负荷',sec_dt:'明细',ch_done:'月度点检完成趋势',ch_mantrend:'月度点检工时',note_mantrend:'TBM基准 · 人·时',ch_worker:'作业者TOP (工时)',note_worker:'共同作业按人数分摊',ch_linedur:'按LINE平均点检时间',note_linedur:'每件平均(分)',kf1x:'周期: 基于TBM履历自动推算',kf2x:'最长 D+{d}',kf6x:'上月 {n}件',th_site:'客户',mon_u:'月',f_line:'全部LINE',f_model:'全部型号',f_stat:'全部状态',cal_today:'今天',dow:['日','一','二','三','四','五','六'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'其他N项',dm_copy:'复制',dm_copied:'已复制',adj_loaded:'调整N项',adj_saving:'保存中...',adj_saved:'已调整 A → B',adj_failed:'保存失败(刷新后重试)',lg_adjusted:'已调整',drag_hint:'💡 将点检项拖到其他日期即可调整日程并与全队共享 (✎ = 已调整)',wk_title:'周点检状况 (今天±2个月)',wk_week:'周次',wk_plan:'计划',wk_done:'完成',wk_rate:'完成率',wk_thisweek:'本周',wk_total:'全部',wk_inrange:'显示',wk_outrange:'范围外N项',mode_plan:'仅计划',mode_done:'仅完成',mode_both:'计划+完成',lg_done:'已完成'},
+    f_site:'全部客户',sec_ov:'概览',sec_cal:'日历·周次',sec_ld:'工时负荷',sec_comp:'合规·负荷',sec_dt:'明细',
+    cmp1:'PM合规率',cmp1f:'周期内按时完成',cmp2:'延迟设备',cmp2f:'当前延迟台数',cmp3:'未来8周到期',cmp3f:'计划点检件',cmp4:'预计工时(8周)',cmp4f:'到期×平均工时',
+    ch_aging:'延迟经过天数分布',note_aging:'当前延迟设备经过天数',ch_vsbm:'PM合规 vs 故障(BM)',note_vsbm:'各状态台均BM · 延迟越高故障↑',ch_loadfcst:'未来8周PM负荷',note_loadfcst:'每周预计工时(人·时)',
+    aging_b:['D+1~7','D+8~30','D+31~90','D+90+'],vsbm_over:'延迟设备',vsbm_ok:'正常设备',u_hr:'人·时',u_unit:'台',ch_done:'月度点检完成趋势',ch_mantrend:'月度点检工时',note_mantrend:'TBM基准 · 人·时',ch_worker:'作业者TOP (工时)',note_worker:'共同作业按人数分摊',ch_linedur:'按LINE平均点检时间',note_linedur:'每件平均(分)',kf1x:'周期: 基于TBM履历自动推算',kf2x:'最长 D+{d}',kf6x:'上月 {n}件',th_site:'客户',mon_u:'月',f_line:'全部LINE',f_model:'全部型号',f_stat:'全部状态',cal_today:'今天',dow:['日','一','二','三','四','五','六'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'其他N项',dm_copy:'复制',dm_copied:'已复制',adj_loaded:'调整N项',adj_saving:'保存中...',adj_saved:'已调整 A → B',adj_failed:'保存失败(刷新后重试)',lg_adjusted:'已调整',drag_hint:'💡 将点检项拖到其他日期即可调整日程并与全队共享 (✎ = 已调整)',wk_title:'周点检状况 (今天±2个月)',wk_week:'周次',wk_plan:'计划',wk_done:'完成',wk_rate:'完成率',wk_thisweek:'本周',wk_total:'全部',wk_inrange:'显示',wk_outrange:'范围外N项',mode_plan:'仅计划',mode_done:'仅完成',mode_both:'计划+完成',lg_done:'已完成'},
   ja:{title:'スクラバーPM点検スケジュール',sub:'定期点検(TBM)履歴に基づく予防保全スケジュール',
     back:'← メイン',refresh:'更新',loading:'読み込み中...',
     kp1:'総点検対象',kp2:'点検遅延',kp3:'点検間近',kp4:'正常',kp5:'周期なし',kp6:'当月完了',year_unit:'年',kpi_basis:'基準',
@@ -447,7 +471,10 @@ const T={
     th_last:'最近点検日',th_cycle:'周期(日)',th_next:'次回予定日',th_dl:'残日',th_st:'状態',th_cnt:'履歴数',
     st_overdue:'遅延',st_soon:'間近',st_ok:'正常',st_na:'周期なし',ins_overdue:'点検遅延 {n}件 — 最長 D+{d} (全体基準)',ins_due30:'30日以内到来 {n}件',ins_done:'今月完了 {n}件',
     no_data:'結果なし',search_ph:'S/N, モデル, Line検索...',
-    f_site:'全顧客',sec_ov:'概要',sec_cal:'カレンダー·週別',sec_ld:'工数負荷',sec_dt:'詳細',ch_done:'月別点検完了推移',ch_mantrend:'月別点検工数',note_mantrend:'TBM基準 · 人·時',ch_worker:'作業者TOP (工数)',note_worker:'共同作業は人数で按分',ch_linedur:'LINE別平均点検時間',note_linedur:'件当たり平均(分)',kf1x:'周期: TBM履歴から自動算出',kf2x:'最長 D+{d}',kf6x:'前月 {n}件',th_site:'顧客',mon_u:'月',f_line:'全LINE',f_model:'全モデル',f_stat:'全ステータス',cal_today:'今日',dow:['日','月','火','水','木','金','土'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'他N件',dm_copy:'コピー',dm_copied:'コピー済',adj_loaded:'調整N件',adj_saving:'保存中...',adj_saved:'A → B に調整',adj_failed:'保存失敗(更新後再試行)',lg_adjusted:'調整済',drag_hint:'💡 点検項目を他の日付にドラッグすると日程が調整されチーム全体に共有されます (✎ = 調整済)',wk_title:'週別点検状況 (本日±2ヶ月)',wk_week:'週',wk_plan:'予定',wk_done:'完了',wk_rate:'完了率',wk_thisweek:'今週',wk_total:'全体',wk_inrange:'表示',wk_outrange:'範囲外N件',mode_plan:'予定のみ',mode_done:'完了のみ',mode_both:'予定+完了',lg_done:'完了'}
+    f_site:'全顧客',sec_ov:'概要',sec_cal:'カレンダー·週別',sec_ld:'工数負荷',sec_comp:'遵守·負荷',sec_dt:'詳細',
+    cmp1:'PM遵守率',cmp1f:'周期内の定時完了',cmp2:'遅延設備',cmp2f:'現在の遅延台数',cmp3:'今後8週到来',cmp3f:'予定点検件',cmp4:'予想工数(8週)',cmp4f:'到来×平均工数',
+    ch_aging:'遅延経過日数分布',note_aging:'現在の遅延設備の経過日',ch_vsbm:'PM遵守 vs 故障(BM)',note_vsbm:'状態別台当BM · 遅延が高いと故障↑',ch_loadfcst:'今後8週PM負荷',note_loadfcst:'週別予想工数(人·時)',
+    aging_b:['D+1~7','D+8~30','D+31~90','D+90+'],vsbm_over:'遅延設備',vsbm_ok:'正常設備',u_hr:'人·時',u_unit:'台',ch_done:'月別点検完了推移',ch_mantrend:'月別点検工数',note_mantrend:'TBM基準 · 人·時',ch_worker:'作業者TOP (工数)',note_worker:'共同作業は人数で按分',ch_linedur:'LINE別平均点検時間',note_linedur:'件当たり平均(分)',kf1x:'周期: TBM履歴から自動算出',kf2x:'最長 D+{d}',kf6x:'前月 {n}件',th_site:'顧客',mon_u:'月',f_line:'全LINE',f_model:'全モデル',f_stat:'全ステータス',cal_today:'今日',dow:['日','月','火','水','木','金','土'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'他N件',dm_copy:'コピー',dm_copied:'コピー済',adj_loaded:'調整N件',adj_saving:'保存中...',adj_saved:'A → B に調整',adj_failed:'保存失敗(更新後再試行)',lg_adjusted:'調整済',drag_hint:'💡 点検項目を他の日付にドラッグすると日程が調整されチーム全体に共有されます (✎ = 調整済)',wk_title:'週別点検状況 (本日±2ヶ月)',wk_week:'週',wk_plan:'予定',wk_done:'完了',wk_rate:'完了率',wk_thisweek:'今週',wk_total:'全体',wk_inrange:'表示',wk_outrange:'範囲外N件',mode_plan:'予定のみ',mode_done:'完了のみ',mode_both:'予定+完了',lg_done:'完了'}
 };
 
 let LANG='ko', RAW=[], SCHED=[], CHARTS={}, activeStatus='', sortK='dl', sortAsc=true;
@@ -480,6 +507,7 @@ function buildSecNav(){
     {id:'overview',label:t('sec_ov')},
     {id:'cal',     label:t('sec_cal')},
     {id:'load',    label:t('sec_ld')},
+    {id:'comp',    label:t('sec_comp')},
     {id:'data',    label:t('sec_dt')}
   ]);
 }
@@ -587,6 +615,40 @@ function buildSchedule(rows){
 
 function countBy(arr,f){const m={};arr.forEach(x=>{const k=f(x)||'N/A';m[k]=(m[k]||0)+1;});
   return Object.entries(m).sort((a,b)=>b[1]-a[1]);}
+
+// ===== 준수·부하 (PM 준수율 · 지연경과 · PM↔BM 상관 · 8주 부하) =====
+function renderCompliance(){
+  const TH=GST.chartTheme();
+  const setV=(id,v)=>{const e=document.getElementById(id);if(e)animVal(e,v);};
+  // 1) PM 준수율 — 실제 TBM 간격이 주기(+허용) 내면 정시
+  const cyc={}; SCHED.forEach(s=>cyc[s.key]=s.cycle);
+  const byU={}; VD.forEach(h=>{const k=h.sn+'||'+h.ch;(byU[k]=byU[k]||[]).push(h.date);});
+  let onT=0,totIv=0;
+  Object.keys(byU).forEach(k=>{const ds=byU[k].slice().sort((a,b)=>a-b);const c=cyc[k]||90;
+    for(let i=1;i<ds.length;i++){const gap=(ds[i]-ds[i-1])/86400000;if(gap<7)continue;totIv++;if(gap<=c*(1+WARN_RATIO))onT++;}});
+  const comp=totIv?Math.round(onT/totIv*100):0;
+  const overU=VS.filter(x=>x.st==='overdue');
+  const H=56, due8=VS.filter(x=>x.dl!=null&&x.dl>=0&&x.dl<=H);
+  // 평균 점검 공수(분) — TBM manMin 중앙값
+  const mm=[]; RAW.forEach(r=>{if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;const v=Number(r[C.manMin]);if(v>0&&v<14400)mm.push(v);});
+  mm.sort((a,b)=>a-b); const manH=mm.length?mm[Math.floor(mm.length/2)]/60:0;
+  setV('ck1',comp); setV('ck2',overU.length); setV('ck3',due8.length); setV('ck4',Math.round(due8.length*manH));
+  // 2) 지연 경과일 분포
+  const ac=[0,0,0,0];
+  overU.forEach(x=>{const d=-(x.dl||0); ac[d<=7?0:d<=30?1:d<=90?2:3]++;});
+  mkBarV2('cAging',t('aging_b'),ac,TH.status.bad);
+  // 3) PM 준수 vs 고장(BM) — 설비 상태별 대당 BM
+  const bmU={}; RAW.forEach(r=>{if((r[C.maint]||'').toString().trim().toUpperCase()!=='BM')return;
+    const sn=(r[C.sn]||'').toString().trim();if(!sn)return;const ch=((r[C.chamber]||'').toString().trim())||'-';const k=sn+'||'+ch;bmU[k]=(bmU[k]||0)+1;});
+  const okU=VS.filter(x=>x.st==='ok');
+  const avg=arr=>arr.length?Math.round(arr.reduce((a,u)=>a+(bmU[u.key]||0),0)/arr.length*100)/100:0;
+  mkBarV2('cVsBm',[t('vsbm_over'),t('vsbm_ok')],[avg(overU),avg(okU)],TH.pal[0]);
+  // 4) 향후 8주 PM 부하(주별 예상 공수)
+  const wk=[0,0,0,0,0,0,0,0], lbl=[];
+  due8.forEach(x=>{const w=Math.floor(x.dl/7);if(w>=0&&w<8)wk[w]++;});
+  for(let i=0;i<8;i++)lbl.push('+'+(i+1)+'w');
+  mkBarV2('cLoadFcst',lbl,wk.map(c=>Math.round(c*manH)),TH.pal[2]);
+}
 
 const animVal=GST.animVal;
 
@@ -725,6 +787,9 @@ function render(){ GST.skeleton(false);
     const le=Object.entries(lineMin).map(([k,v])=>[k,Math.round(v.reduce((a,b)=>a+b,0)/v.length)]).sort((a,b)=>b[1]-a[1]).slice(0,8);
     mkBarV2('cLineDur',le.map(e=>e[0]),le.map(e=>e[1]),TH.pal[1]);
   }
+
+  // ===== 준수·부하 =====
+  renderCompliance();
 
   // ===== 인사이트 (전체 스케줄 기준) =====
   {
