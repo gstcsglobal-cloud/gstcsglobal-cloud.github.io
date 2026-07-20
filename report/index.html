@@ -852,14 +852,14 @@ async function loadData(){
         country:guessCountry(r[CW.op]),line:String(r[CW.line]||'').trim(),
         chamber:String(r[CW.chamber]||'').trim(),cause:String(r[CW.cause]||'').trim(),
         phenom:String(r[CW.phenom]||'').trim(),action:String(r[CW.action]||'').trim(),
-        manMin:(manMin>0&&manMin<14400)?manMin:0,
-        workMin:(workMin>0&&workMin<1440)?workMin:0,
+        manMin:(manMin>0)?manMin:0,   // 엑셀 매크로와 동일: 작업공수 상한 캡 없이 숫자값 그대로 합산(다인원·다일 작업 누락 방지)
+        workMin:(workMin>0)?workMin:0,
         workers:String(r[CW.workers]||'').split(/[,、;/]+/).map(s=>s.trim()).filter(Boolean)};
     }).filter(Boolean):[];
     INST = inst.status==='fulfilled'?inst.value.rows.slice(1).filter(r=>String(r[CI.sn]||'').trim()):[];
     const cached=(hr.status==='fulfilled'&&hr.value.cached)||(wk.status==='fulfilled'&&wk.value.cached);
     st.className='status ok';
-    st.textContent=(cached?'📡 ':'✅ ')+new Date().toLocaleString('ko-KR')+' · HR '+HR.length+' · 실적 '+WK.length.toLocaleString()+' · 설치 '+INST.length.toLocaleString()+' · v38';
+    st.textContent=(cached?'📡 ':'✅ ')+new Date().toLocaleString('ko-KR')+' · HR '+HR.length+' · 실적 '+WK.length.toLocaleString()+' · 설치 '+INST.length.toLocaleString()+' · v39';
     render();
   }catch(e){
     st.className='status err'; st.textContent='❌ '+t('loading');
