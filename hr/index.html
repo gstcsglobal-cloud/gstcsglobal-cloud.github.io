@@ -220,6 +220,11 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="card"><h3 data-i="ch_career">경력 분포</h3><div class="card-note" data-i="note_career">입사일 기준 근속 · 클릭 시 명단</div><div class="cw"><canvas id="cCareer"></canvas></div></div>
   <div class="card"><h3 data-i="ch_io">입사·퇴사 추이</h3><div class="card-note" data-i="note_io">최근 12개월 · 위 입사 · 아래 퇴사</div><div class="cw"><canvas id="cIo"></canvas></div></div>
 </div>
+<div class="grid3">
+  <div class="card"><h3 data-i="ch_attr">이직률 추이</h3><div class="card-note" data-i="note_attr">분기 퇴사 ÷ 평균 재직 (연환산 %)</div><div class="cw"><canvas id="cAttr"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_span">라인별 관리 스팬</h3><div class="card-note" data-i="note_span">리더 1인당 현장 인원 · 클릭 시 명단</div><div class="cw"><canvas id="cSpan"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_cohort">입사 코호트 생존율</h3><div class="card-note" data-i="note_cohort">입사연도별 현재 재직 비율</div><div class="cw"><canvas id="cCohort"></canvas></div></div>
+</div>
 
 <div class="tablecard">
   <h3><span data-i="tbl_title">상세 명단</span> (<span id="tblCnt">0</span><span data-i="tbl_unit">명</span>)</h3>
@@ -252,6 +257,7 @@ const TR={
     ch_org:'소속·공정별 인원',note_org:'조직도 위치 기준 · 클릭 시 명단',
     ch_career:'경력 분포',note_career:'입사일 기준 근속 · 클릭 시 명단',
     ch_io:'입사·퇴사 추이',note_io:'최근 12개월 · 위 입사 · 아래 퇴사',
+    ch_attr:'이직률 추이',note_attr:'분기 퇴사 ÷ 평균 재직 (연환산 %)',ch_span:'라인별 관리 스팬',note_span:'리더 1인당 현장 인원 · 클릭 시 명단',ch_cohort:'입사 코호트 생존율',note_cohort:'입사연도별 현재 재직 비율(%)',d_leader:'리더',d_member:'멤버',
     st_on:'현장',st_off:'비현장',st_done:'이수완료',st_prog:'진행중',st_miss:'미이수',st_na:'비대상',
     io_in:'입사',io_out:'퇴사',cr1:'1년 미만',cr2:'1~2년',cr3:'2년 이상',
     tbl_title:'상세 명단',tbl_unit:'명',th_name:'이름',th_site:'사이트',th_org:'소속',th_role:'직무',th_pos:'직급',th_exp:'경력',th_join:'입사일',th_status:'상태',
@@ -267,6 +273,7 @@ const TR={
     ch_org:'By Team/Process',note_org:'org chart position · click for names',
     ch_career:'Tenure Distribution',note_career:'by entry date · click for names',
     ch_io:'Join / Leave Trend',note_io:'last 12 months · up join · down leave',
+    ch_attr:'Attrition Trend',note_attr:'quarterly leavers ÷ avg headcount (annualized %)',ch_span:'Span of Control',note_span:'on-site staff per leader · click for names',ch_cohort:'Cohort Retention',note_cohort:'% still active by join year',d_leader:'Leaders',d_member:'Members',
     st_on:'On-site',st_off:'Off',st_done:'Done',st_prog:'In progress',st_miss:'Pending',st_na:'N/A',
     io_in:'Join',io_out:'Leave',cr1:'<1yr',cr2:'1-2yr',cr3:'2yr+',
     tbl_title:'Detail List',tbl_unit:'',th_name:'Name',th_site:'Site',th_org:'Team',th_role:'Role',th_pos:'Grade',th_exp:'Exp',th_join:'Join',th_status:'Status',
@@ -282,6 +289,7 @@ const TR={
     ch_org:'按所属·工序',note_org:'组织图位置 · 点击查看名单',
     ch_career:'工龄分布',note_career:'按入职日 · 点击查看名单',
     ch_io:'入职·离职趋势',note_io:'近12个月 · 上入职 · 下离职',
+    ch_attr:'离职率趋势',note_attr:'季度离职 ÷ 平均在职 (年化%)',ch_span:'管理跨度',note_span:'每位组长现场人数 · 点击查看名单',ch_cohort:'入职批次留存率',note_cohort:'按入职年份当前在职比例(%)',d_leader:'组长',d_member:'组员',
     st_on:'现场',st_off:'非现场',st_done:'完成',st_prog:'进行中',st_miss:'未完成',st_na:'不适用',
     io_in:'入职',io_out:'离职',cr1:'1年内',cr2:'1~2年',cr3:'2年以上',
     tbl_title:'详细名单',tbl_unit:'人',th_name:'姓名',th_site:'站点',th_org:'所属',th_role:'职务',th_pos:'职级',th_exp:'工龄',th_join:'入职日',th_status:'状态',
@@ -297,6 +305,7 @@ const TR={
     ch_org:'所属·工程別',note_org:'組織図位置 · クリックで名簿',
     ch_career:'勤続分布',note_career:'入社日基準 · クリックで名簿',
     ch_io:'入社·退社推移',note_io:'直近12ヶ月 · 上入社 · 下退社',
+    ch_attr:'離職率推移',note_attr:'四半期退社 ÷ 平均在籍 (年換算%)',ch_span:'管理スパン',note_span:'リーダー1人当り現場人員 · クリックで名簿',ch_cohort:'入社コホート定着率',note_cohort:'入社年別の現在在籍比率(%)',d_leader:'リーダー',d_member:'メンバー',
     st_on:'現場',st_off:'非現場',st_done:'修了',st_prog:'進行中',st_miss:'未修了',st_na:'対象外',
     io_in:'入社',io_out:'退社',cr1:'1年未満',cr2:'1~2年',cr3:'2年以上',
     tbl_title:'詳細リスト',tbl_unit:'名',th_name:'名前',th_site:'サイト',th_org:'所属',th_role:'職務',th_pos:'職級',th_exp:'経歴',th_join:'入社日',th_status:'状態',
@@ -680,6 +689,36 @@ function render(){ GST.skeleton(false);
     options:{maintainAspectRatio:false,layout:{padding:{top:16,bottom:6}},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle'}},valLabel:{mode:'stackTotal',color:TH.txt},tooltip:{callbacks:{label:c=>c.dataset.label+': '+Math.abs(c.parsed.y)+tr('tbl_unit')}}},
     scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},y:{stacked:true,grace:'22%',ticks:{color:TH.txt,precision:0,callback:v=>Math.abs(v)},grid:{color:TH.grid}}}}});
   DRILL.cIo={kind:'io',title:tr('ch_io'),labels:IO.map(p=>p.label+'월'),ins,outs};
+
+  /* ---- A6: 이직률 추이 (최근 8분기, 연환산) ---- */
+  const QN=8, Q=[];
+  for(let i=QN-1;i>=0;i--){ const d=new Date(TODAY); const qm=Math.floor(d.getUTCMonth()/3)*3 - i*3;
+    let y=d.getUTCFullYear(), m=qm; while(m<0){m+=12;y--;}
+    const st=new Date(Date.UTC(y,m,1)), en=new Date(Date.UTC(y,m+3,0));
+    Q.push({st,end:en>TODAY?TODAY:en,label:(y%100)+'Q'+(Math.floor(m/3)+1)}); }
+  const attr=Q.map(q=>{ const lv=fAll.filter(x=>x.quit&&x.quit>=q.st&&x.quit<=q.end).length;
+    const h0=fAll.filter(x=>activeAt(x,q.st)).length, h1=fAll.filter(x=>activeAt(x,q.end)).length;
+    const avg=(h0+h1)/2; return avg?Math.round(lv/avg*4*1000)/10:0; });
+  mk('cAttr',{type:'line',data:{labels:Q.map(q=>q.label),datasets:[{data:attr,borderColor:S.bad,backgroundColor:'rgba(251,113,133,.12)',fill:true,tension:.3,pointRadius:attr.map((_,i)=>i===attr.length-1?4:2.4),pointBackgroundColor:S.bad}]},
+    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+'%'}}},
+      scales:{x:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},y:{grace:'22%',beginAtZero:true,ticks:{color:TH.txt,callback:v=>v+'%',maxTicksLimit:5},grid:{color:TH.grid}}}}});
+
+  /* ---- A6: 라인별 관리 스팬 (리더 1인당 현장 인원) ---- */
+  const isLeader=p=>/leader/i.test(p.level||'')||/관리자|leader|단지장|site leader/i.test((p.duty||'')+' '+(p.org||''));
+  const spSites=orderSites(Array.from(new Set(f.filter(p=>p.onsite).map(p=>p.site).filter(Boolean))));
+  const spanData=spSites.map(s=>{const on=f.filter(p=>p.site===s&&p.onsite);const ld=on.filter(isLeader).length;const mb=on.length-ld;return ld?Math.round(mb/ld*10)/10:mb;});
+  mk('cSpan',{type:'bar',data:{labels:spSites.map(shortSite),datasets:[{data:spanData,backgroundColor:spSites.map((s,i)=>spanData[i]>15?S.warn:S.on),borderRadius:6}]},
+    plugins:[valLabelPlugin],
+    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{display:false},valLabel:{mode:'all',color:TH.txt}},scales:baseScales(TH,false)}});
+  DRILL.cSpan={kind:'people',title:tr('ch_span'),labels:spSites.map(shortSite),groups:spSites.map(s=>f.filter(p=>p.site===s&&p.onsite))};
+
+  /* ---- A6: 입사 코호트 생존율 (입사연도별 현재 재직 비율) ---- */
+  const yrs=Array.from(new Set(DATA.map(p=>p.join&&p.join.getUTCFullYear()).filter(Boolean))).sort().slice(-6);
+  const coh=yrs.map(y=>{const c=DATA.filter(p=>p.join&&p.join.getUTCFullYear()===y);const a=c.filter(isActive).length;return c.length?Math.round(a/c.length*100):0;});
+  mk('cCohort',{type:'bar',data:{labels:yrs.map(String),datasets:[{data:coh,backgroundColor:coh.map(v=>v>=70?S.good:v>=50?S.warn:S.bad),borderRadius:6}]},
+    plugins:[valLabelPlugin],
+    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{display:false},valLabel:{mode:'all',color:TH.txt},tooltip:{callbacks:{label:c=>c.parsed.y+'%'}}},
+      scales:{x:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},y:{grace:'18%',beginAtZero:true,max:100,ticks:{color:TH.txt,callback:v=>v+'%',maxTicksLimit:5},grid:{color:TH.grid}}}}});
 
   /* ---- 인사이트 ---- */
   { const arr=[];
