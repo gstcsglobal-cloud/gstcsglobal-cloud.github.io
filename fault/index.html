@@ -357,6 +357,55 @@ canvas{cursor:pointer}
   </div>
 </div>
 
+<!-- ═══ 섹션: 신뢰성 (설비 S/N × BM 고장) ═══ -->
+<div data-sec="rel">
+  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi"><div class="cap" data-i="r_mtbf">MTBF · 평균 고장간격</div>
+      <div class="krow"><span class="val" id="rk1">0</span><span class="unit" data-i="u_day">일</span></div>
+      <div class="kfoot" id="rf1">—</div></div>
+    <div class="kpi"><div class="cap" data-i="r_mttr">MTTR · 평균 수리시간</div>
+      <div class="krow"><span class="val" id="rk2">0</span><span class="unit" data-i="u_min">분</span></div>
+      <div class="kfoot" id="rf2">—</div></div>
+    <div class="kpi"><div class="cap" data-i="r_frate">연간 고장률 (건/대)</div>
+      <div class="krow"><span class="val" id="rk3">0</span></div>
+      <div class="kfoot" id="rf3">—</div></div>
+    <div class="kpi"><div class="cap" data-i="r_units">분석 설비</div>
+      <div class="krow"><span class="val" id="rk4">0</span><span class="unit" data-i="u_cnt">건</span></div>
+      <div class="kfoot" id="rf4">—</div></div>
+  </div>
+  <div class="grid3" style="margin-top:16px">
+    <div class="card">
+      <h3 data-i="ch_relrank">이상 집중 설비 TOP</h3>
+      <div class="card-note" data-i="note_relrank">연간 고장률 높은 설비 · 🖱️ 클릭 시 필터</div>
+      <div class="cw"><canvas id="cRelRank"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_relmodel">모델별 MTBF</h3>
+      <div class="card-note" data-i="note_relmodel">낮을수록 취약 · 평균 고장간격(일)</div>
+      <div class="cw"><canvas id="cRelModel"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_relage">설비 연차별 고장률</h3>
+      <div class="card-note" data-i="note_relage">가동연차별 대당 BM · 욕조곡선</div>
+      <div class="cw"><canvas id="cRelAge"></canvas></div>
+    </div>
+  </div>
+  <div class="tablecard" style="margin-top:16px">
+    <h3><span data-i="rel_tbl">설비 신뢰성 상세</span> (<span id="relCnt">0</span>)</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th data-rk="sn">S/N</th><th data-rk="model">Model</th><th data-rk="line">LINE</th>
+          <th data-rk="bm" data-i-th="th_bm">BM건</th><th data-rk="mtbf" data-i-th="th_mtbf">MTBF(일)</th>
+          <th data-rk="mttr" data-i-th="th_mttr">MTTR(분)</th><th data-rk="frate" data-i-th="r_frate">연간 고장률</th>
+          <th data-rk="since" data-i-th="th_since">가동기준</th><th data-rk="last" data-i-th="th_lastbm">최근 BM</th>
+        </tr></thead>
+        <tbody id="relBody"><tr><td colspan="9" class="loading">⏳</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 섹션: 상세 목록 ═══ -->
 <div data-sec="data">
 <div class="tablecard">
@@ -394,6 +443,11 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 })();
 
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
+// 설치현황 시트 — 설비 S/N별 Turn-On(가동개시일) 조인용 (MTBF 가동기간 정밀화). 미연동 시 최초 서비스일로 대체.
+const INST_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
+const INST_SN=6, INST_TON=40;   // 설치시트: S/N=col6, Turn-On=col40
+let INSTMAP={};  // normSN → Turn-On Date
+const normSN=s=>String(s==null?'':s).replace(/\s+/g,'').toUpperCase();
 // 새 시트3(실적현황) 컬럼 맵 (0-based)
 const C={pg:1,op:2,customer:3,campus:4,line:5,bay:6,proc:7,subproc:8,model:9,rsCode:10,status:11,
   reqType:12,stage:13,chamber:14,wrs:15,mainEq:16,prodCode:18,eqNo:19,chpos:20,snIn:21,snOut:22,
@@ -405,7 +459,11 @@ const PAL=GST.PAL8;
 
 const T={
   ko:{title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
-    sec_ov:'개요',sec_ca:'원인·조치',sec_ld:'작업 부하',sec_dt:'상세 목록',
+    sec_ov:'개요',sec_ca:'원인·조치',sec_ld:'작업 부하',sec_rel:'신뢰성',sec_dt:'상세 목록',
+    r_mtbf:'MTBF · 평균 고장간격',r_mttr:'MTTR · 평균 수리시간',r_frate:'연간 고장률 (건/대)',r_units:'분석 설비',
+    rf_mtbf:'중앙값 {n}일',rf_mttr:'BM {n}건 평균',rf_frate:'가동기간 환산',rf_units:'BM 2건↑ · 설치연동 {p}%',
+    ch_relrank:'이상 집중 설비 TOP',note_relrank:'연간 고장률 높은 설비 · 🖱️ 클릭 시 필터',ch_relmodel:'모델별 MTBF',note_relmodel:'낮을수록 취약 · 평균 고장간격(일)',ch_relage:'설비 연차별 고장률',note_relage:'가동연차별 대당 BM · 욕조곡선',
+    rel_tbl:'설비 신뢰성 상세',th_bm:'BM건',th_mtbf:'MTBF(일)',th_mttr:'MTTR(분)',th_lastbm:'최근 BM',th_since:'가동기준',u_day:'일',age_b:['<1년','1~2년','2~3년','3년+'],
     sl_stage:'작업단계',sl_pf:'유/무상',sl_cause:'원인',sl_model:'모델',sl_sn:'설비 S/N',sl_period:'기간',sl_search:'검색',
     all:'전체',f_active:'활성 필터',f_clear:'전체 해제',no_data:'조건에 맞는 데이터가 없습니다',
     kp1:'서비스 대응 건수',kp3:'평균 작업시간',kp4:'총 작업공수',kp5:'유상 비율',
@@ -423,7 +481,11 @@ const T={
     ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'월 작업공수 {n}인·시 · 전월 대비 {p}',
     etc:'기타',mon_unit:'월',dur_b:['<30분','30–60분','1–2시간','2–4시간','4시간+'],wcnt_p:'{n}명'},
   en:{title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
-    sec_ov:'Overview',sec_ca:'Cause & Action',sec_ld:'Workload',sec_dt:'Data',
+    sec_ov:'Overview',sec_ca:'Cause & Action',sec_ld:'Workload',sec_rel:'Reliability',sec_dt:'Data',
+    r_mtbf:'MTBF · mean time btw failures',r_mttr:'MTTR · mean time to repair',r_frate:'Annual failures / unit',r_units:'Units analyzed',
+    rf_mtbf:'median {n} d',rf_mttr:'avg of {n} BM',rf_frate:'annualized',rf_units:'BM≥2 · install-linked {p}%',
+    ch_relrank:'Top Unreliable Units',note_relrank:'high annual failure rate · click to filter',ch_relmodel:'MTBF by Model',note_relmodel:'lower = weaker · mean days btw failures',ch_relage:'Failure Rate by Age',note_relage:'BM per unit by service age · bathtub',
+    rel_tbl:'Equipment Reliability',th_bm:'BM',th_mtbf:'MTBF(d)',th_mttr:'MTTR(m)',th_lastbm:'Last BM',th_since:'Since',u_day:'d',age_b:['<1y','1–2y','2–3y','3y+'],
     sl_stage:'Stage',sl_pf:'Paid/Free',sl_cause:'Cause',sl_model:'Model',sl_sn:'Equipment S/N',sl_period:'Period',sl_search:'Search',
     all:'All',f_active:'Active Filters',f_clear:'Clear All',no_data:'No data found',
     kp1:'Service Cases',kp3:'Avg Work Time',kp4:'Total Man-hours',kp5:'Paid Ratio',
@@ -441,7 +503,11 @@ const T={
     ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours this month · {p} MoM',
     etc:'Others',mon_unit:'',dur_b:['<30m','30–60m','1–2h','2–4h','4h+'],wcnt_p:'{n} ppl'},
   zh:{title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
-    sec_ov:'概览',sec_ca:'原因·措施',sec_ld:'工时负荷',sec_dt:'明细',
+    sec_ov:'概览',sec_ca:'原因·措施',sec_ld:'工时负荷',sec_rel:'可靠性',sec_dt:'明细',
+    r_mtbf:'MTBF · 平均故障间隔',r_mttr:'MTTR · 平均修复时间',r_frate:'年故障率 (件/台)',r_units:'分析设备',
+    rf_mtbf:'中位数 {n}天',rf_mttr:'BM {n}件均值',rf_frate:'按运行期折算',rf_units:'BM≥2 · 安装关联 {p}%',
+    ch_relrank:'异常集中设备TOP',note_relrank:'年故障率高的设备 · 点击筛选',ch_relmodel:'按型号MTBF',note_relmodel:'越低越脆弱 · 平均故障间隔(天)',ch_relage:'按机龄故障率',note_relage:'各运行年台均BM · 浴盆曲线',
+    rel_tbl:'设备可靠性明细',th_bm:'BM件',th_mtbf:'MTBF(天)',th_mttr:'MTTR(分)',th_lastbm:'最近BM',th_since:'运行起始',u_day:'天',age_b:['<1年','1~2年','2~3年','3年+'],
     sl_stage:'作业阶段',sl_pf:'有/无偿',sl_cause:'原因',sl_model:'型号',sl_sn:'设备S/N',sl_period:'期间',sl_search:'搜索',
     all:'全部',f_active:'活动筛选',f_clear:'全部清除',no_data:'无数据',
     kp1:'服务对应件数',kp3:'平均作业时间',kp4:'总作业工时',kp5:'有偿比率',
@@ -459,7 +525,11 @@ const T={
     ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'本月工时 {n}人·时 · 环比 {p}',
     etc:'其他',mon_unit:'月',dur_b:['<30分','30–60分','1–2时','2–4时','4时+'],wcnt_p:'{n}人'},
   ja:{title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
-    sec_ov:'概要',sec_ca:'原因·処置',sec_ld:'工数負荷',sec_dt:'詳細',
+    sec_ov:'概要',sec_ca:'原因·処置',sec_ld:'工数負荷',sec_rel:'信頼性',sec_dt:'詳細',
+    r_mtbf:'MTBF · 平均故障間隔',r_mttr:'MTTR · 平均修理時間',r_frate:'年間故障率 (件/台)',r_units:'分析設備',
+    rf_mtbf:'中央値 {n}日',rf_mttr:'BM {n}件平均',rf_frate:'稼働期間換算',rf_units:'BM2件↑ · 設置連動 {p}%',
+    ch_relrank:'異常集中設備TOP',note_relrank:'年間故障率が高い設備 · クリックで絞込',ch_relmodel:'モデル別MTBF',note_relmodel:'低いほど脆弱 · 平均故障間隔(日)',ch_relage:'設備年次別故障率',note_relage:'稼働年次別台当BM · バスタブ曲線',
+    rel_tbl:'設備信頼性詳細',th_bm:'BM件',th_mtbf:'MTBF(日)',th_mttr:'MTTR(分)',th_lastbm:'直近BM',th_since:'稼働基準',u_day:'日',age_b:['<1年','1~2年','2~3年','3年+'],
     sl_stage:'作業段階',sl_pf:'有/無償',sl_cause:'原因',sl_model:'モデル',sl_sn:'設備S/N',sl_period:'期間',sl_search:'検索',
     all:'全体',f_active:'有効フィルタ',f_clear:'全解除',no_data:'データなし',
     kp1:'サービス対応件数',kp3:'平均作業時間',kp4:'総作業工数',kp5:'有償比率',
@@ -496,6 +566,7 @@ function buildSecNav(){
     {id:'overview',label:t('sec_ov')},
     {id:'cause',   label:t('sec_ca')},
     {id:'load',    label:t('sec_ld')},
+    {id:'rel',     label:t('sec_rel')},
     {id:'data',    label:t('sec_dt')}
   ]);
 }
@@ -516,7 +587,20 @@ async function loadData(){ GST.skeleton(true);
   const btn=document.getElementById('refreshBtn'); const status=document.getElementById('status');
   btn.disabled=true; status.className='status'; status.textContent=t('loading');
   try{
-    const fetched=await GST.fetchCSVCached(SHEET_URL,'svc');
+    const [svcR,instR]=await Promise.allSettled([
+      GST.fetchCSVCached(SHEET_URL,'svc'),
+      GST.fetchCSVCached(INST_URL,'svc_inst')
+    ]);
+    if(svcR.status!=='fulfilled')throw new Error(svcR.reason&&svcR.reason.message||'load fail');
+    const fetched=svcR.value;
+    // 설치 시트 → S/N별 Turn-On 맵 (실패해도 무시하고 최초 서비스일로 대체)
+    INSTMAP={};
+    if(instR.status==='fulfilled'&&instR.value.rows){
+      instR.value.rows.slice(1).forEach(r=>{
+        const sn=normSN(r[INST_SN]); const to=toDate(r[INST_TON]);
+        if(sn&&to&&(!INSTMAP[sn]||to<INSTMAP[sn]))INSTMAP[sn]=to;
+      });
+    }
     GST.schemaBanner(GST.validateSchema(fetched.rows[0]||[],{
       5:'라인',9:'MODEL',13:'작업단계',21:'S/N',24:'유/무상',27:'원인',32:'작업시작일',39:'작업시간',40:'작업공수'
     }),'실적현황 시트');
@@ -712,6 +796,102 @@ function mkDonut(id,entries,fkey,topN,colorFn){
 }
 function monthKey(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}
 
+// ===== 신뢰성 (설비 S/N × BM 고장) =====
+let relSortK='frate', relSortAsc=false;
+function buildReliability(rows){
+  // 관측 기준일: 데이터의 최신 작업일(없으면 오늘)
+  let asOf=null; ROWS.forEach(x=>{if(x.work&&(!asOf||x.work>asOf))asOf=x.work;});
+  if(!asOf)asOf=new Date();
+  const g={};
+  rows.forEach(x=>{
+    const sn=normSN(x.sn); if(!sn)return;
+    const e=g[sn]||(g[sn]={sn:x.sn,model:x.model||'',line:x.line||'',bm:0,evt:0,first:null,last:null,lastBM:null,bmMins:[]});
+    e.evt++;
+    if(x.work){ if(!e.first||x.work<e.first)e.first=x.work; if(!e.last||x.work>e.last)e.last=x.work; }
+    if(x.stage==='BM'){ e.bm++; if(x.work&&(!e.lastBM||x.work>e.lastBM))e.lastBM=x.work;
+      if(x.workMin!=null&&x.workMin>0&&x.workMin<1440)e.bmMins.push(x.workMin); }
+    if(!e.model&&x.model)e.model=x.model; if(!e.line&&x.line)e.line=x.line;
+    g[sn]=e;
+  });
+  const units=[];
+  Object.keys(g).forEach(k=>{
+    const e=g[k]; const inst=INSTMAP[k]; const since=inst||e.first; if(!since)return;
+    const opDays=Math.max(1,Math.round((asOf-since)/864e5));
+    e.since=since; e.linked=!!inst; e.opDays=opDays;
+    e.mtbf=e.bm>0?opDays/e.bm:null;
+    e.mttr=e.bmMins.length?e.bmMins.reduce((a,b)=>a+b,0)/e.bmMins.length:null;
+    e.frate=e.bm/(opDays/365);   // 연간 환산 고장건수/대
+    units.push(e);
+  });
+  return {units,asOf};
+}
+function renderReliability(f){
+  const TH=GST.chartTheme();
+  const {units}=buildReliability(f);
+  const withBM=units.filter(u=>u.bm>=1);
+  const rankable=units.filter(u=>u.bm>=2&&u.opDays>=14);   // 노이즈 제거
+  // Fleet 집계
+  const totOp=withBM.reduce((a,u)=>a+u.opDays,0), totBM=withBM.reduce((a,u)=>a+u.bm,0);
+  const fleetMTBF=totBM?totOp/totBM:0;
+  const mtbfArr=rankable.map(u=>u.mtbf).filter(v=>v!=null).sort((a,b)=>a-b);
+  const medMTBF=mtbfArr.length?mtbfArr[Math.floor(mtbfArr.length/2)]:0;
+  const allMins=withBM.reduce((a,u)=>a.concat(u.bmMins),[]);
+  const mttr=allMins.length?Math.round(allMins.reduce((a,b)=>a+b,0)/allMins.length):0;
+  const fleetFrate=totOp?(totBM/(totOp/365)):0;
+  const linked=units.filter(u=>u.linked).length, linkPct=units.length?Math.round(linked/units.length*100):0;
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  const seth=(id,v)=>{const e=document.getElementById(id);if(e)e.innerHTML=v;};
+  animVal(document.getElementById('rk1'),Math.round(medMTBF));
+  seth('rf1','Fleet '+Math.round(fleetMTBF)+t('u_day'));
+  animVal(document.getElementById('rk2'),mttr);
+  seth('rf2',t('rf_mttr').replace('{n}',allMins.length));
+  set('rk3',(Math.round(fleetFrate*10)/10).toFixed(1));
+  seth('rf3',t('rf_frate'));
+  animVal(document.getElementById('rk4'),rankable.length);
+  seth('rf4',t('rf_units').replace('{p}',linkPct));
+
+  // 이상 집중 설비 TOP — 연간 고장률 내림차순
+  const rank=rankable.slice().sort((a,b)=>b.frate-a.frate).slice(0,10);
+  const rankOut=GST.outliers(rank.map(u=>[u.sn,u.frate]));
+  mkHBar('cRelRank',rank.map(u=>[u.sn,Math.round(u.frate*10)/10]),
+    rank.reduce((a,u)=>a+u.frate,0)||1,'sn',TH.status.bad,10,(l)=>rankOut.has(l)?TH.status.bad:TH.pal[2]);
+
+  // 모델별 MTBF — 취약(낮은) 순, 상위 10
+  const mg={};
+  withBM.forEach(u=>{const m=u.model||'(미상)';const e=mg[m]||(mg[m]={op:0,bm:0});e.op+=u.opDays;e.bm+=u.bm;mg[m]=e;});
+  const modEnt=Object.keys(mg).map(m=>[m,mg[m].bm?Math.round(mg[m].op/mg[m].bm):0])
+    .filter(x=>x[1]>0).sort((a,b)=>a[1]-b[1]).slice(0,10);
+  mkHBar('cRelModel',modEnt,modEnt.reduce((a,x)=>a+x[1],0)||1,null,TH.pal[3],10,
+    (l,i)=>i<2?TH.status.warn:TH.pal[3]);
+
+  // 설비 연차별 고장률 — 대당 BM (욕조곡선)
+  const buckets=[[0,1],[1,2],[2,3],[3,99]]; const ab=t('age_b');
+  const bsum=buckets.map(()=>({bm:0,n:0}));
+  withBM.forEach(u=>{const yr=u.opDays/365; let bi=buckets.findIndex(b=>yr>=b[0]&&yr<b[1]); if(bi<0)bi=buckets.length-1;
+    bsum[bi].bm+=u.bm; bsum[bi].n++;});
+  mkBarV('cRelAge',ab,bsum.map(s=>s.n?Math.round(s.bm/s.n*10)/10:0),TH.pal[0]);
+
+  // 상세 테이블
+  const rows2=withBM.slice();
+  const val=(u,k)=>k==='sn'?u.sn:k==='model'?u.model:k==='line'?u.line:k==='bm'?u.bm:
+    k==='mtbf'?(u.mtbf||0):k==='mttr'?(u.mttr||0):k==='frate'?u.frate:
+    k==='since'?(u.since?u.since.getTime():0):k==='last'?(u.lastBM?u.lastBM.getTime():0):0;
+  rows2.sort((a,b)=>{const x=val(a,relSortK),y=val(b,relSortK);
+    const c=(typeof x==='number'&&typeof y==='number')?x-y:String(x).localeCompare(String(y),'ko',{numeric:true});
+    return relSortAsc?c:-c;});
+  const rb=document.getElementById('relBody');
+  document.getElementById('relCnt').textContent=rows2.length;
+  if(!rows2.length){rb.innerHTML='<tr><td colspan="9" class="loading">'+t('no_data')+'</td></tr>';return;}
+  rb.innerHTML=rows2.slice(0,400).map(u=>{
+    const hot=u.frate>=6?' style="color:'+TH.status.bad+';font-weight:800"':'';
+    return '<tr><td><b>'+esc(u.sn)+'</b>'+(u.linked?' 🔗':'')+'</td><td>'+esc(u.model||'—')+'</td><td>'+esc(u.line||'—')+'</td>'
+      +'<td>'+u.bm+'</td><td>'+(u.mtbf!=null?Math.round(u.mtbf):'—')+'</td><td>'+(u.mttr!=null?Math.round(u.mttr):'—')+'</td>'
+      +'<td'+hot+'>'+(Math.round(u.frate*10)/10).toFixed(1)+'</td>'
+      +'<td>'+(u.since?fmtDate(u.since):'—')+(u.linked?'':' *')+'</td><td>'+(u.lastBM?fmtDate(u.lastBM):'—')+'</td></tr>';
+  }).join('');
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+
 // ===== 렌더 =====
 function render(){ GST.skeleton(false); GST.pushState(F);
   const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
@@ -843,6 +1023,9 @@ function render(){ GST.skeleton(false); GST.pushState(F);
     GST.insights(f.length?ins:[]);
   }
 
+  // ── 신뢰성 (설비 S/N × BM) ──
+  renderReliability(f);
+
   // ── 테이블 ──
   document.getElementById('tblCnt').textContent=f.length;
   let d=[...f];
@@ -868,6 +1051,11 @@ document.addEventListener('click',e=>{
   const th=e.target.closest('th[data-k]');if(!th)return;
   const k=th.dataset.k;if(sortK===k)sortAsc=!sortAsc;else{sortK=k;sortAsc=(k!=='work');}
   render();
+});
+document.addEventListener('click',e=>{
+  const th=e.target.closest('th[data-rk]');if(!th)return;
+  const k=th.dataset.rk;if(relSortK===k)relSortAsc=!relSortAsc;else{relSortK=k;relSortAsc=(k==='sn'||k==='model'||k==='line');}
+  if(ROWS.length)render();
 });
 
 // ===== 차트 복사·저장 (PPT/엑셀에 고해상도로 붙여넣기) =====
