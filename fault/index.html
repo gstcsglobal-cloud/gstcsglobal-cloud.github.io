@@ -154,6 +154,14 @@ canvas{cursor:pointer}
 .login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);
   border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
 .login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
+/* 차트 복사·저장(PPT/PNG) 버튼 */
+.card,.trend-card,.tablecard{position:relative}
+.capbtns{position:absolute;top:12px;right:14px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
+.card:hover .capbtns,.trend-card:hover .capbtns,.tablecard:hover .capbtns{opacity:1}
+.capbtn{font-family:inherit;background:var(--glass,rgba(255,255,255,.06));border:1px solid var(--glass-border,rgba(255,255,255,.14));border-radius:8px;padding:2px 8px;color:var(--txt-muted,#94a3b8);font-size:11px;font-weight:700;cursor:pointer;height:22px;line-height:16px}
+.capbtn:hover{color:#fff;border-color:var(--accent-1,#2dd4bf)}
+#capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1,#2dd4bf);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
+@media print{.capbtns,.header-right,.slicers,.fchips{display:none!important}.card,.trend-card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
@@ -177,6 +185,8 @@ canvas{cursor:pointer}
   </div>
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← Main</a>
+    <button class="btn btn-glass" onclick="saveAllCharts()" title="모든 차트를 고해상도 PNG로 저장">🖼 전체 저장</button>
+    <button class="btn btn-glass" onclick="window.print()" title="인쇄 / PDF">🖨 인쇄</button>
     <button class="btn btn-grad" id="refreshBtn" onclick="loadData()"><span data-i="refresh">Refresh</span></button>
     <div class="lang-wrap">
       <button class="lang-btn" onclick="toggleLang()"><span id="langLabel">KO</span> ▾</button>
@@ -665,7 +675,7 @@ function mkBarV(id,labels,data,color,opts){
       plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)},
         tooltip:opts.tooltip},
       scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}},
-              y:{ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
+              y:{grace:'14%',ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
     plugins:[valLabelPlugin]};
   if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
 }
@@ -860,8 +870,35 @@ document.addEventListener('click',e=>{
   render();
 });
 
+// ===== 차트 복사·저장 (PPT/엑셀에 고해상도로 붙여넣기) =====
+function capToast(msg){ let el=document.getElementById('capToast'); if(!el){el=document.createElement('div');el.id='capToast';document.body.appendChild(el);}
+  el.textContent=msg; el.style.opacity='1'; clearTimeout(el._h); el._h=setTimeout(()=>el.style.opacity='0',1600); }
+function chartHiRes(id,scale){ const ch=CHARTS[id]; if(!ch||!ch.canvas)return null;
+  const cv=ch.canvas,w=cv.clientWidth||400,h=cv.clientHeight||300;
+  if(!scale)scale=Math.min(6,Math.max(3,Math.round(2400/w)));
+  const prev=ch.options.devicePixelRatio; ch.options.devicePixelRatio=scale; ch.resize(); ch.render();
+  const oc=document.createElement('canvas'); oc.width=Math.round(w*scale); oc.height=Math.round(h*scale);
+  const g=oc.getContext('2d'); g.fillStyle=getComputedStyle(document.body).backgroundColor||'#0B0F14'; g.fillRect(0,0,oc.width,oc.height); g.drawImage(cv,0,0,oc.width,oc.height);
+  ch.options.devicePixelRatio=prev; ch.resize(); ch.render(); return oc; }
+window.copyChart=async function(id){ const oc=chartHiRes(id); if(!oc){capToast('차트를 찾을 수 없습니다');return;}
+  try{ await new Promise((res,rej)=>oc.toBlob(async b=>{if(!b)return rej();try{await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);res();}catch(e){rej(e);}},'image/png'));
+    capToast('📋 차트 복사됨 — PPT에 붙여넣기(Ctrl+V)'); }catch(e){ capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요'); } };
+window.saveChart=function(id){ const oc=chartHiRes(id); if(!oc){capToast('차트를 찾을 수 없습니다');return;}
+  oc.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ '+id+'.png 저장됨');},'image/png'); };
+window.saveAllCharts=async function(){ const ids=Object.keys(CHARTS).filter(id=>CHARTS[id]&&CHARTS[id].canvas);
+  if(!ids.length){capToast('저장할 차트가 없습니다');return;} capToast('🖼 '+ids.length+'개 차트 저장 중…');
+  for(const id of ids){ const oc=chartHiRes(id); if(!oc)continue;
+    await new Promise(res=>oc.toBlob(b=>{if(b){const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}setTimeout(res,250);},'image/png')); }
+  capToast('🖼 전체 '+ids.length+'개 차트 저장 완료'); };
+function addCapBtns(){ document.querySelectorAll('.card canvas,.trend-card canvas').forEach(cv=>{
+    const id=cv.id, card=cv.closest('.card,.trend-card'); if(!id||!card||card.querySelector('.capbtns'))return;
+    const box=document.createElement('div'); box.className='capbtns';
+    box.innerHTML='<button class="capbtn" title="고해상도 복사(PPT 붙여넣기)" onclick="copyChart(\''+id+'\')">📋 복사</button><button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>';
+    card.appendChild(box); }); }
+
 applyLang();
 loadData();
+addCapBtns();
 </script>
 <script>
 GST.initSync();
