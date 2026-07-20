@@ -859,7 +859,7 @@ async function loadData(){
     INST = inst.status==='fulfilled'?inst.value.rows.slice(1).filter(r=>String(r[CI.sn]||'').trim()):[];
     const cached=(hr.status==='fulfilled'&&hr.value.cached)||(wk.status==='fulfilled'&&wk.value.cached);
     st.className='status ok';
-    st.textContent=(cached?'📡 ':'✅ ')+new Date().toLocaleString('ko-KR')+' · HR '+HR.length+' · 실적 '+WK.length.toLocaleString()+' · 설치 '+INST.length.toLocaleString();
+    st.textContent=(cached?'📡 ':'✅ ')+new Date().toLocaleString('ko-KR')+' · HR '+HR.length+' · 실적 '+WK.length.toLocaleString()+' · 설치 '+INST.length.toLocaleString()+' · v38';
     render();
   }catch(e){
     st.className='status err'; st.textContent='❌ '+t('loading');
