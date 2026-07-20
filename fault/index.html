@@ -359,13 +359,16 @@ canvas{cursor:pointer}
 
 <!-- ═══ 섹션: 신뢰성 (설비 S/N × BM 고장) ═══ -->
 <div data-sec="rel">
-  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+  <div class="kpis" style="grid-template-columns:repeat(5,1fr)">
     <div class="kpi"><div class="cap" data-i="r_mtbf">MTBF · 평균 고장간격</div>
       <div class="krow"><span class="val" id="rk1">0</span><span class="unit" data-i="u_day">일</span></div>
       <div class="kfoot" id="rf1">—</div></div>
     <div class="kpi"><div class="cap" data-i="r_mttr">MTTR · 평균 수리시간</div>
       <div class="krow"><span class="val" id="rk2">0</span><span class="unit" data-i="u_min">분</span></div>
       <div class="kfoot" id="rf2">—</div></div>
+    <div class="kpi"><div class="cap" data-i="r_ftfr">초기 수리 성공률 (FTFR)</div>
+      <div class="krow"><span class="val" id="rk5">0</span><span class="unit">%</span></div>
+      <div class="kfoot" id="rf5">—</div></div>
     <div class="kpi"><div class="cap" data-i="r_frate">연간 고장률 (건/대)</div>
       <div class="krow"><span class="val" id="rk3">0</span></div>
       <div class="kfoot" id="rf3">—</div></div>
@@ -388,6 +391,16 @@ canvas{cursor:pointer}
       <h3 data-i="ch_relage">설비 연차별 고장률</h3>
       <div class="card-note" data-i="note_relage">가동연차별 대당 BM · 욕조곡선</div>
       <div class="cw"><canvas id="cRelAge"></canvas></div>
+    </div>
+  </div>
+  <div class="grid2-trend" style="margin-top:16px">
+    <div class="trend-card" style="margin-bottom:0">
+      <div class="trend-header"><h3 data-i="ch_ftfrtrend">월별 FTFR 추이</h3><div class="trend-meta" data-i="note_ftfrtrend">초기 수리 성공률(%) · 목표 90%</div></div>
+      <div class="trend-wrap"><canvas id="cFtfrTrend"></canvas></div>
+    </div>
+    <div class="trend-card" style="margin-bottom:0">
+      <div class="trend-header"><h3 data-i="ch_ftfrmodel">모델별 FTFR</h3><div class="trend-meta" data-i="note_ftfrmodel">낮을수록 재작업 잦음(%)</div></div>
+      <div class="trend-wrap"><canvas id="cFtfrModel"></canvas></div>
     </div>
   </div>
   <div class="tablecard" style="margin-top:16px">
@@ -464,6 +477,7 @@ const T={
     rf_mtbf:'중앙값 {n}일',rf_mttr:'BM {n}건 평균',rf_frate:'가동기간 환산',rf_units:'BM 2건↑ · 설치연동 {p}%',
     ch_relrank:'이상 집중 설비 TOP',note_relrank:'연간 고장률 높은 설비 · 🖱️ 클릭 시 필터',ch_relmodel:'모델별 MTBF',note_relmodel:'낮을수록 취약 · 평균 고장간격(일)',ch_relage:'설비 연차별 고장률',note_relage:'가동연차별 대당 BM · 욕조곡선',
     rel_tbl:'설비 신뢰성 상세',th_bm:'BM건',th_mtbf:'MTBF(일)',th_mttr:'MTTR(분)',th_lastbm:'최근 BM',th_since:'가동기준',u_day:'일',age_b:['<1년','1~2년','2~3년','3년+'],
+    r_ftfr:'초기 수리 성공률 (FTFR)',rf_ftfr:'{w}일 내 재방문 {n}건',ch_ftfrtrend:'월별 FTFR 추이',note_ftfrtrend:'초기 수리 성공률(%) · 목표 90%',ch_ftfrmodel:'모델별 FTFR',note_ftfrmodel:'낮을수록 재작업 잦음(%)',
     sl_stage:'작업단계',sl_pf:'유/무상',sl_cause:'원인',sl_model:'모델',sl_sn:'설비 S/N',sl_period:'기간',sl_search:'검색',
     all:'전체',f_active:'활성 필터',f_clear:'전체 해제',no_data:'조건에 맞는 데이터가 없습니다',
     kp1:'서비스 대응 건수',kp3:'평균 작업시간',kp4:'총 작업공수',kp5:'유상 비율',
@@ -486,6 +500,7 @@ const T={
     rf_mtbf:'median {n} d',rf_mttr:'avg of {n} BM',rf_frate:'annualized',rf_units:'BM≥2 · install-linked {p}%',
     ch_relrank:'Top Unreliable Units',note_relrank:'high annual failure rate · click to filter',ch_relmodel:'MTBF by Model',note_relmodel:'lower = weaker · mean days btw failures',ch_relage:'Failure Rate by Age',note_relage:'BM per unit by service age · bathtub',
     rel_tbl:'Equipment Reliability',th_bm:'BM',th_mtbf:'MTBF(d)',th_mttr:'MTTR(m)',th_lastbm:'Last BM',th_since:'Since',u_day:'d',age_b:['<1y','1–2y','2–3y','3y+'],
+    r_ftfr:'First-Time-Fix Rate',rf_ftfr:'{n} revisits within {w}d',ch_ftfrtrend:'Monthly FTFR',note_ftfrtrend:'first-time-fix rate(%) · goal 90%',ch_ftfrmodel:'FTFR by Model',note_ftfrmodel:'lower = more rework(%)',
     sl_stage:'Stage',sl_pf:'Paid/Free',sl_cause:'Cause',sl_model:'Model',sl_sn:'Equipment S/N',sl_period:'Period',sl_search:'Search',
     all:'All',f_active:'Active Filters',f_clear:'Clear All',no_data:'No data found',
     kp1:'Service Cases',kp3:'Avg Work Time',kp4:'Total Man-hours',kp5:'Paid Ratio',
@@ -508,6 +523,7 @@ const T={
     rf_mtbf:'中位数 {n}天',rf_mttr:'BM {n}件均值',rf_frate:'按运行期折算',rf_units:'BM≥2 · 安装关联 {p}%',
     ch_relrank:'异常集中设备TOP',note_relrank:'年故障率高的设备 · 点击筛选',ch_relmodel:'按型号MTBF',note_relmodel:'越低越脆弱 · 平均故障间隔(天)',ch_relage:'按机龄故障率',note_relage:'各运行年台均BM · 浴盆曲线',
     rel_tbl:'设备可靠性明细',th_bm:'BM件',th_mtbf:'MTBF(天)',th_mttr:'MTTR(分)',th_lastbm:'最近BM',th_since:'运行起始',u_day:'天',age_b:['<1年','1~2年','2~3年','3年+'],
+    r_ftfr:'首次修复成功率(FTFR)',rf_ftfr:'{w}天内返修 {n}件',ch_ftfrtrend:'月度FTFR',note_ftfrtrend:'首次修复成功率(%) · 目标90%',ch_ftfrmodel:'按型号FTFR',note_ftfrmodel:'越低返工越多(%)',
     sl_stage:'作业阶段',sl_pf:'有/无偿',sl_cause:'原因',sl_model:'型号',sl_sn:'设备S/N',sl_period:'期间',sl_search:'搜索',
     all:'全部',f_active:'活动筛选',f_clear:'全部清除',no_data:'无数据',
     kp1:'服务对应件数',kp3:'平均作业时间',kp4:'总作业工时',kp5:'有偿比率',
@@ -530,6 +546,7 @@ const T={
     rf_mtbf:'中央値 {n}日',rf_mttr:'BM {n}件平均',rf_frate:'稼働期間換算',rf_units:'BM2件↑ · 設置連動 {p}%',
     ch_relrank:'異常集中設備TOP',note_relrank:'年間故障率が高い設備 · クリックで絞込',ch_relmodel:'モデル別MTBF',note_relmodel:'低いほど脆弱 · 平均故障間隔(日)',ch_relage:'設備年次別故障率',note_relage:'稼働年次別台当BM · バスタブ曲線',
     rel_tbl:'設備信頼性詳細',th_bm:'BM件',th_mtbf:'MTBF(日)',th_mttr:'MTTR(分)',th_lastbm:'直近BM',th_since:'稼働基準',u_day:'日',age_b:['<1年','1~2年','2~3年','3年+'],
+    r_ftfr:'初回修理成功率(FTFR)',rf_ftfr:'{w}日以内 再訪問 {n}件',ch_ftfrtrend:'月別FTFR',note_ftfrtrend:'初回修理成功率(%) · 目標90%',ch_ftfrmodel:'モデル別FTFR',note_ftfrmodel:'低いほど再作業多い(%)',
     sl_stage:'作業段階',sl_pf:'有/無償',sl_cause:'原因',sl_model:'モデル',sl_sn:'設備S/N',sl_period:'期間',sl_search:'検索',
     all:'全体',f_active:'有効フィルタ',f_clear:'全解除',no_data:'データなし',
     kp1:'サービス対応件数',kp3:'平均作業時間',kp4:'総作業工数',kp5:'有償比率',
@@ -870,6 +887,28 @@ function renderReliability(f){
   withBM.forEach(u=>{const yr=u.opDays/365; let bi=buckets.findIndex(b=>yr>=b[0]&&yr<b[1]); if(bi<0)bi=buckets.length-1;
     bsum[bi].bm+=u.bm; bsum[bi].n++;});
   mkBarV('cRelAge',ab,bsum.map(s=>s.n?Math.round(s.bm/s.n*10)/10:0),TH.pal[0]);
+
+  // ── FTFR (재방문율) — 동일 S/N이 WIN일 내 BM 재발생하면 초기수리 실패 ──
+  const WIN=30;
+  let asOf2=null; ROWS.forEach(x=>{if(x.work&&(!asOf2||x.work>asOf2))asOf2=x.work;}); if(!asOf2)asOf2=new Date();
+  const bySN={};
+  f.forEach(x=>{ if(x.stage!=='BM'||!x.work)return; const s=normSN(x.sn); if(!s)return; (bySN[s]=bySN[s]||[]).push(x); });
+  const fev=[];
+  Object.keys(bySN).forEach(s=>{const a=bySN[s].slice().sort((p,q)=>p.work-q.work);
+    for(let i=0;i<a.length;i++){const cur=a[i],nxt=a[i+1];
+      if(((asOf2-cur.work)/864e5)<WIN)continue;   // 관측창 미충족(우측 절단) — 판정 제외
+      const follow=nxt&&((nxt.work-cur.work)/864e5)<=WIN;
+      fev.push({work:cur.work,model:cur.model||'(미상)',repeat:!!follow});
+    }});
+  const obs=fev.length, rep=fev.filter(e=>e.repeat).length;
+  set('rk5',obs?Math.round((1-rep/obs)*100):'—');
+  seth('rf5',t('rf_ftfr').replace('{w}',WIN).replace('{n}',rep));
+  const mAgg={}; fev.forEach(e=>{const mk=e.work.getUTCFullYear()+'-'+String(e.work.getUTCMonth()+1).padStart(2,'0');const o=mAgg[mk]||(mAgg[mk]={o:0,r:0});o.o++;if(e.repeat)o.r++;});
+  const mk2=Object.keys(mAgg).sort().slice(-8);
+  mkBarV('cFtfrTrend',mk2.map(k=>+k.slice(5)+t('mon_unit')),mk2.map(k=>mAgg[k].o?Math.round((1-mAgg[k].r/mAgg[k].o)*100):0),TH.status.ok);
+  const mdl={}; fev.forEach(e=>{const o=mdl[e.model]||(mdl[e.model]={o:0,r:0});o.o++;if(e.repeat)o.r++;});
+  const mdlEnt=Object.keys(mdl).filter(m=>mdl[m].o>=3).map(m=>[m,Math.round((1-mdl[m].r/mdl[m].o)*100)]).sort((a,b)=>a[1]-b[1]).slice(0,10);
+  mkHBar('cFtfrModel',mdlEnt,100,null,TH.pal[1],10,(l,i)=>i<2?TH.status.bad:TH.pal[1]);
 
   // 상세 테이블
   const rows2=withBM.slice();
