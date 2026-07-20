@@ -16,7 +16,6 @@
   --txt-main:#e2e8f0; --txt-muted:#94a3b8;
   --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
   --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
-  /* 기존 변수명 별칭 */
   --bg1:#0a1420; --bg2:#13232d; --bg3:#0f2027;
   --accent:var(--accent-1); --accent2:var(--accent-2); --accent3:var(--accent-3);
   --glassb:var(--glass-border); --txt:var(--txt-main); --muted:var(--txt-muted);
@@ -47,11 +46,13 @@ body{
 .header h1{font-size:32px;font-weight:800;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
 .header .sub{color:var(--muted);font-size:13px;margin-top:4px}
-.header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .badge{background:var(--glass);border:1px solid var(--glassb);border-radius:30px;padding:8px 18px;font-size:13px;backdrop-filter:blur(10px)}
 .btn{background:linear-gradient(90deg,var(--accent),var(--accent2));border:none;border-radius:30px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;padding:9px 20px;transition:opacity .2s;text-decoration:none;display:inline-block;}
 .btn:hover{opacity:.85} .btn:disabled{opacity:.5;cursor:not-allowed}
 .btn-back{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);}
+.pt-btn{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:8px 15px;color:var(--txt-muted);font-size:12px;font-weight:700;cursor:pointer;height:34px}
+.pt-btn:hover{color:var(--txt);border-color:var(--accent-1)}
 .lang-wrap{position:relative}
 .lang-btn{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);padding:9px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
 .lang-btn:hover{background:rgba(255,255,255,.1)}
@@ -59,46 +60,77 @@ body{
 .lang-dropdown.open{display:block}
 .lang-item{padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600}
 .lang-item:hover{background:rgba(255,255,255,.08)}
-.status{font-size:12px;color:var(--muted);margin-bottom:16px;text-align:right;}
+.status{font-size:12px;color:var(--muted);margin-bottom:14px;text-align:right;}
 .status.ok{color:var(--accent2)} .status.err{color:#fd79a8}
-.slicers{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:24px}
-.slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:18px;padding:14px 18px;backdrop-filter:blur(12px)}
+#filtBadge{margin:-4px 0 16px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--accent-1);flex-wrap:wrap}
+#filtBadge .fchip{background:var(--glass);border:1px solid var(--accent-1);border-radius:14px;padding:3px 12px}
+#filtBadge .fclr{background:transparent;border:1px solid var(--glass-border);border-radius:14px;padding:3px 10px;color:var(--txt-muted);cursor:pointer;font-weight:700}
+.slicers{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:18px;padding:13px 17px;backdrop-filter:blur(12px)}
 .slicer .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px;font-weight:700}
-.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips{display:flex;gap:7px;flex-wrap:wrap;max-width:520px}
 .chip{cursor:pointer;border:1px solid var(--glassb);background:rgba(255,255,255,0.04);color:var(--txt);
-  padding:7px 15px;border-radius:30px;font-size:13px;font-weight:600;transition:all .25s;user-select:none}
+  padding:6px 13px;border-radius:30px;font-size:12.5px;font-weight:600;transition:all .25s;user-select:none}
 .chip:hover{transform:translateY(-2px);border-color:var(--accent2)}
 .chip.active{background:linear-gradient(90deg,var(--accent),var(--accent2));border-color:transparent;box-shadow:0 6px 20px rgba(108,92,231,.5)}
 .search{margin-left:auto}
 .search input{background:rgba(255,255,255,0.06);border:1px solid var(--glassb);border-radius:30px;padding:10px 18px;color:var(--txt);font-size:13px;width:200px;outline:none}
 .search input::placeholder{color:var(--muted)}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px}
-.kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:22px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-bottom:22px}
+.kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s}
 .kpi:hover{transform:translateY(-5px)}
-.kpi::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;opacity:.35}
+.kpi::before{content:'';position:absolute;top:-40px;right:-40px;width:110px;height:110px;border-radius:50%;opacity:.32}
 .kpi.k1::before{background:var(--accent)}.kpi.k2::before{background:var(--accent2)}
 .kpi.k3::before{background:var(--accent3)}.kpi.k4::before{background:#fdcb6e}
-.kpi .ic{font-size:22px;margin-bottom:8px}
-.kpi .val{font-size:38px;font-weight:800;line-height:1}
-.kpi .cap{color:var(--muted);font-size:13px;margin-top:8px;font-weight:600}
-.grid{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:18px;margin-bottom:24px}
-.card{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px)}
-.card h3{font-size:14px;font-weight:700;margin-bottom:14px;color:#dfe6ff}
-.card .cw{position:relative;height:240px}
-.tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px)}
+.kpi.k5::before{background:#34d399}.kpi.k6::before{background:#fb7185}
+.kpi .ic{font-size:18px;margin-bottom:6px;opacity:.9}
+.kpi .val{font-size:32px;font-weight:800;line-height:1}
+.kpi .cap{color:var(--muted);font-size:12px;margin-top:7px;font-weight:600}
+.kpi .spark{display:block;width:100%;height:22px;margin-top:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.card{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px);position:relative}
+.card h3{font-size:14px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
+.card .card-note{font-size:10.5px;color:var(--txt-muted);margin-bottom:10px}
+.card .cw{position:relative;height:250px}
+.tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px);position:relative}
 .tablecard h3{font-size:14px;font-weight:700;margin-bottom:14px}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;padding:10px 12px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(20,18,45,.9)}
+th{text-align:left;padding:10px 12px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(20,18,45,.92);cursor:pointer;white-space:nowrap}
+body.theme-light th{background:rgba(226,232,240,.95)}
 td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05)}
 tr:hover td{background:rgba(255,255,255,.04)}
 .tag{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
 .t-done{background:rgba(0,206,201,.18);color:#00cec9}
 .t-prog{background:rgba(253,203,110,.2);color:#fdcb6e}
 .t-na{background:rgba(160,160,192,.18);color:#a0a0c0}
-.tw{max-height:360px;overflow-y:auto;border-radius:12px}
-.tw::-webkit-scrollbar{width:8px}.tw::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
+.t-miss{background:rgba(253,121,168,.18);color:#fd79a8}
+.t-quit{background:rgba(160,160,192,.14);color:#8b93a7}
+.t-act{background:rgba(52,211,153,.16);color:#34d399}
+.tw{max-height:420px;overflow:auto;border-radius:12px}
+.tw::-webkit-scrollbar{width:8px;height:8px}.tw::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
 .empty{text-align:center;padding:30px;color:var(--muted)}
-@media(max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+.capbtns{position:absolute;top:14px;right:16px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
+.card:hover .capbtns,.tablecard:hover .capbtns{opacity:1}
+.capbtn{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;padding:2px 8px;color:var(--txt-muted);font-size:11px;font-weight:700;cursor:pointer;height:22px;line-height:16px}
+.capbtn:hover{color:#fff;border-color:var(--accent-1)}
+#capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
+#drillModal{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center}
+#drillModal .drill-bg{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px)}
+#drillModal .drill-box{position:relative;background:var(--bg2,#13232d);border:1px solid var(--glass-border);border-radius:16px;padding:20px 22px;max-width:680px;width:92%;max-height:82vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+#drillModal h3{font-size:15px;font-weight:800;margin:0 0 12px;padding-right:28px}
+#drillModal .drill-x{position:absolute;top:14px;right:16px;background:transparent;border:none;color:var(--txt-muted);font-size:18px;cursor:pointer;line-height:1}
+#drillModal table{width:100%;border-collapse:collapse;font-size:12px}
+#drillModal th{text-align:left;color:var(--txt-muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid var(--glass-border);position:static;background:transparent;cursor:default}
+#drillModal td{padding:6px 8px;border-bottom:1px solid var(--glass-border)}
+#drillModal td.num{text-align:right;font-variant-numeric:tabular-nums}
+#drillModal .dsum{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+#drillModal .dsum .b{background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;padding:8px 14px}
+#drillModal .dsum .b .n{font-size:20px;font-weight:800}
+#drillModal .dsum .b .l{font-size:11px;color:var(--txt-muted)}
+#drillModal .dhint{font-size:11px;color:var(--txt-muted);margin:10px 0 4px}
+@media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:800px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
+@media print{.capbtns,.slicers,.header-right,#filtBadge{display:none!important}.card,.tablecard{break-inside:avoid;page-break-inside:avoid}.grid3{grid-template-columns:1fr 1fr}}
 
 /* 로그인 가드 */
 #loginOverlay{position:fixed;inset:0;z-index:99999;
@@ -120,8 +152,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
   border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
 .login-box button:hover{opacity:.88}
 .login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
-@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
@@ -141,11 +171,13 @@ tr:hover td{background:rgba(255,255,255,.04)}
 <div class="header">
   <div>
     <h1 data-i="title">인력 현황 대시보드</h1>
-    <div class="sub" data-i="sub">엔지니어 교육 · 직급 · 직무 인터랙티브 분석</div>
+    <div class="sub" data-i="sub">인원명단 · 교육현황 통합 인터랙티브 분석</div>
   </div>
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-back" data-i="back">← 메인으로</a>
-    <div class="badge"><span data-i="total_pre">총</span> <b id="totRec">0</b><span data-i="total_post">명 · 실시간 필터</span></div>
+    <div class="badge"><span data-i="total_pre">재직</span> <b id="totRec">0</b><span data-i="total_post">명</span></div>
+    <button class="pt-btn" id="styleBtn" onclick="toggleStyle()" title="차트 색상 스타일">🎨 <span id="styleLbl">Vivid</span></button>
+    <button class="pt-btn" onclick="window.print()" data-i="print">🖨 인쇄</button>
     <button class="btn" id="refreshBtn" onclick="loadData()"><span data-i="refresh">새로고침</span></button>
     <div class="lang-wrap">
       <button class="lang-btn" onclick="toggleLang()"><span id="langLabel">KO</span> ▾</button>
@@ -159,73 +191,117 @@ tr:hover td{background:rgba(255,255,255,.04)}
   </div>
 </div>
 <div class="status" id="status" data-i="loading">데이터 불러오는 중...</div>
+<div id="filtBadge" style="display:none"></div>
 
 <div class="slicers">
-  <div class="slicer"><div class="lbl" data-i="sl_pos">직급</div><div class="chips" id="sl-pos"></div></div>
-  <div class="slicer"><div class="lbl" data-i="sl_job">직무</div><div class="chips" id="sl-job"></div></div>
-  <div class="slicer"><div class="lbl">Basic <span data-i="sl_edu">교육</span></div><div class="chips" id="sl-basic"></div></div>
-  <div class="slicer"><div class="lbl">Veteran <span data-i="sl_edu2">교육</span></div><div class="chips" id="sl-vet"></div></div>
-  <div class="slicer search"><div class="lbl" data-i="sl_search">검색</div><input id="search" data-i-ph="search_ph" placeholder="이름 검색..."></div>
+  <div class="slicer"><div class="lbl" data-i="sl_site">사이트</div><div class="chips" id="sl-site"></div></div>
+  <div class="slicer"><div class="lbl" data-i="sl_org">소속·공정</div><div class="chips" id="sl-org"></div></div>
+  <div class="slicer"><div class="lbl" data-i="sl_role">직무</div><div class="chips" id="sl-role"></div></div>
+  <div class="slicer"><div class="lbl" data-i="sl_edu">교육</div><div class="chips" id="sl-edu"></div></div>
+  <div class="slicer search"><div class="lbl" data-i="sl_search">검색</div><input id="search" data-i-ph="search_ph" placeholder="이름·사번 검색..."></div>
 </div>
 
 <div class="kpis">
-  <div class="kpi k1"><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">선택 인원</div></div>
-  <div class="kpi k2"><div class="val" id="kp2">0%</div><div class="cap" data-i="kp2">Basic 이수율</div></div>
-  <div class="kpi k3"><div class="val" id="kp3">0%</div><div class="cap" data-i="kp3">Veteran 이수율</div></div>
-  <div class="kpi k4"><div class="val" id="kp4">0</div><div class="cap" data-i="kp4">Engineer 인원</div></div>
+  <div class="kpi k1"><div class="ic">👥</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">재직 인원</div><div class="spark" id="sp1"></div></div>
+  <div class="kpi k2"><div class="ic">🏭</div><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">현장 인원</div><div class="spark" id="sp2"></div></div>
+  <div class="kpi k3"><div class="ic">🎓</div><div class="val" id="kp3">0%</div><div class="cap" data-i="kp3">Basic 이수율</div><div class="spark" id="sp3"></div></div>
+  <div class="kpi k4"><div class="ic">🏅</div><div class="val" id="kp4">0%</div><div class="cap" data-i="kp4">Veteran 이수율</div><div class="spark" id="sp4"></div></div>
+  <div class="kpi k5"><div class="ic">📈</div><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">평균 경력(년)</div></div>
+  <div class="kpi k6"><div class="ic">✨</div><div class="val" id="kp6">0</div><div class="cap" data-i="kp6">최근 1년 입사</div></div>
 </div>
 
-<div class="grid">
-  <div class="card"><h3 data-i="ch_pos">직급별 인원</h3><div class="cw"><canvas id="cPos"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_edu">교육과정 이수 현황</h3><div class="cw"><canvas id="cEdu"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_job">직무별 인원</h3><div class="cw"><canvas id="cJob"></canvas></div></div>
+<div class="grid3">
+  <div class="card"><h3 data-i="ch_site">사이트별 인원</h3><div class="card-note" data-i="note_site">현장(O)·비현장 스택 · 막대 클릭 시 명단</div><div class="cw"><canvas id="cSite"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_role">직무별 인원</h3><div class="card-note" data-i="note_role">2025 Position Role 기준 · 클릭 시 명단</div><div class="cw"><canvas id="cRole"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_edu">교육과정 이수 현황</h3><div class="card-note" data-i="note_edu">교육 대상자 기준 · 막대 클릭 시 명단</div><div class="cw"><canvas id="cEdu"></canvas></div></div>
+</div>
+<div class="grid3">
+  <div class="card"><h3 data-i="ch_org">소속·공정별 인원</h3><div class="card-note" data-i="note_org">조직도 위치 기준 · 클릭 시 명단</div><div class="cw"><canvas id="cOrg"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_career">경력 분포</h3><div class="card-note" data-i="note_career">입사일 기준 근속 · 클릭 시 명단</div><div class="cw"><canvas id="cCareer"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_io">입사·퇴사 추이</h3><div class="card-note" data-i="note_io">최근 12개월 · 위 입사 · 아래 퇴사</div><div class="cw"><canvas id="cIo"></canvas></div></div>
 </div>
 
 <div class="tablecard">
   <h3><span data-i="tbl_title">상세 명단</span> (<span id="tblCnt">0</span><span data-i="tbl_unit">명</span>)</h3>
-  <div class="tw"><table>
-    <thead><tr><th>#</th><th data-i="th_name">이름</th><th data-i="th_join">입사일</th><th data-i="th_exp">경력</th><th data-i="th_pos">직급</th><th data-i="th_job">직무</th><th>Basic</th><th>Veteran</th><th data-i="th_note">비고</th></tr></thead>
-    <tbody id="tbody"><tr><td colspan="9" class="empty">⏳ 데이터 불러오는 중...</td></tr></tbody>
+  <div class="tw"><table id="detTbl">
+    <thead><tr>
+      <th data-k="no">#</th><th data-k="name" data-i="th_name">이름</th><th data-k="site" data-i="th_site">사이트</th>
+      <th data-k="org" data-i="th_org">소속</th><th data-k="role" data-i="th_role">직무</th><th data-k="posKo" data-i="th_pos">직급</th>
+      <th data-k="exp" data-i="th_exp">경력</th><th data-k="join" data-i="th_join">입사일</th>
+      <th data-k="basic">Basic</th><th data-k="vet">Veteran</th><th data-k="status" data-i="th_status">상태</th>
+    </tr></thead>
+    <tbody id="tbody"><tr><td colspan="11" class="empty">⏳ 데이터 불러오는 중...</td></tr></tbody>
   </table></div>
 </div>
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=0&single=true&output=csv';
+const PUB='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub';
+const URL_ROSTER=PUB+'?gid=1213453343&single=true&output=csv';  // 인원명단
+const URL_EDU   =PUB+'?gid=0&single=true&output=csv';            // 교육현황
+const VER='v45';
 
 const TR={
-  ko:{title:'인력 현황 대시보드',sub:'엔지니어 교육 · 직급 · 직무 인터랙티브 분석',
-    back:'← 메인으로',total_pre:'총',total_post:'명 · 실시간 필터',refresh:'새로고침',
-    loading:'데이터 불러오는 중...',
-    sl_pos:'직급',sl_job:'직무',sl_edu:'교육',sl_edu2:'교육',sl_search:'검색',search_ph:'이름 검색...',ins_basic:'Basic 교육 미이수 {n}명 ({p}%)',ins_vet:'Veteran 교육 미이수 {n}명 (대상자의 {p}%)',ins_join:'최근 1년 입사 {n}명',
-    kp1:'선택 인원',kp2:'Basic 이수율',kp3:'Veteran 이수율',kp4:'Engineer 인원',
-    ch_pos:'직급별 인원',ch_edu:'교육과정 이수 현황',ch_job:'직무별 인원',
-    tbl_title:'상세 명단',tbl_unit:'명',
-    th_name:'이름',th_join:'입사일',th_exp:'경력',th_pos:'직급',th_job:'직무',th_note:'비고'},
-  en:{title:'Workforce Dashboard',sub:'Engineer training · position · role interactive analysis',
-    back:'← Main',total_pre:'Total',total_post:' · live filter',refresh:'Refresh',
-    loading:'Loading data...',
-    sl_pos:'Position',sl_job:'Role',sl_edu:'Training',sl_edu2:'Training',sl_search:'Search',search_ph:'Search name...',ins_basic:'{n} pending Basic training ({p}%)',ins_vet:'{n} pending Veteran training ({p}% of eligible)',ins_join:'{n} joined in the last year',
-    kp1:'Selected',kp2:'Basic Rate',kp3:'Veteran Rate',kp4:'Engineers',
-    ch_pos:'By Position',ch_edu:'Training Completion',ch_job:'By Role',
-    tbl_title:'Detail List',tbl_unit:'',
-    th_name:'Name',th_join:'Join',th_exp:'Exp',th_pos:'Position',th_job:'Role',th_note:'Note'},
-  zh:{title:'人员状况仪表板',sub:'工程师培训 · 职级 · 职务 交互式分析',
-    back:'← 主页',total_pre:'共',total_post:'人 · 实时筛选',refresh:'刷新',
-    loading:'正在加载数据...',
-    sl_pos:'职级',sl_job:'职务',sl_edu:'培训',sl_edu2:'培训',sl_search:'搜索',search_ph:'搜索姓名...',ins_basic:'Basic培训未完成 {n}人 ({p}%)',ins_vet:'Veteran培训未完成 {n}人 (对象的{p}%)',ins_join:'近1年入职 {n}人',
-    kp1:'已选人数',kp2:'Basic完成率',kp3:'Veteran完成率',kp4:'工程师人数',
-    ch_pos:'按职级',ch_edu:'培训完成情况',ch_job:'按职务',
-    tbl_title:'详细名单',tbl_unit:'人',
-    th_name:'姓名',th_join:'入职日',th_exp:'经验',th_pos:'职级',th_job:'职务',th_note:'备注'},
-  ja:{title:'人員状況ダッシュボード',sub:'エンジニア教育 · 職級 · 職務 インタラクティブ分析',
-    back:'← メイン',total_pre:'合計',total_post:'名 · リアルタイム',refresh:'更新',
-    loading:'データ読み込み中...',
-    sl_pos:'職級',sl_job:'職務',sl_edu:'教育',sl_edu2:'教育',sl_search:'検索',search_ph:'名前検索...',ins_basic:'Basic教育未修了 {n}名 ({p}%)',ins_vet:'Veteran教育未修了 {n}名 (対象の{p}%)',ins_join:'直近1年入社 {n}名',
-    kp1:'選択人数',kp2:'Basic修了率',kp3:'Veteran修了率',kp4:'Engineer人数',
-    ch_pos:'職級別',ch_edu:'教育課程修了状況',ch_job:'職務別',
-    tbl_title:'詳細リスト',tbl_unit:'名',
-    th_name:'名前',th_join:'入社日',th_exp:'経験',th_pos:'職級',th_job:'職務',th_note:'備考'}
+  ko:{title:'인력 현황 대시보드',sub:'인원명단 · 교육현황 통합 인터랙티브 분석',back:'← 메인으로',refresh:'새로고침',print:'🖨 인쇄',
+    total_pre:'재직',total_post:'명',loading:'데이터 불러오는 중...',
+    sl_site:'사이트',sl_org:'소속·공정',sl_role:'직무',sl_edu:'교육',sl_search:'검색',search_ph:'이름·사번 검색...',all:'전체',
+    kp1:'재직 인원',kp2:'현장 인원',kp3:'Basic 이수율',kp4:'Veteran 이수율',kp5:'평균 경력(년)',kp6:'최근 1년 입사',
+    ch_site:'사이트별 인원',note_site:'현장(O)·비현장 스택 · 막대 클릭 시 명단',
+    ch_role:'직무별 인원',note_role:'2025 Position Role 기준 · 클릭 시 명단',
+    ch_edu:'교육과정 이수 현황',note_edu:'교육 대상자 기준 · 막대 클릭 시 명단',
+    ch_org:'소속·공정별 인원',note_org:'조직도 위치 기준 · 클릭 시 명단',
+    ch_career:'경력 분포',note_career:'입사일 기준 근속 · 클릭 시 명단',
+    ch_io:'입사·퇴사 추이',note_io:'최근 12개월 · 위 입사 · 아래 퇴사',
+    st_on:'현장',st_off:'비현장',st_done:'이수완료',st_prog:'진행중',st_miss:'미이수',st_na:'비대상',
+    io_in:'입사',io_out:'퇴사',cr1:'1년 미만',cr2:'1~2년',cr3:'2년 이상',
+    tbl_title:'상세 명단',tbl_unit:'명',th_name:'이름',th_site:'사이트',th_org:'소속',th_role:'직무',th_pos:'직급',th_exp:'경력',th_join:'입사일',th_status:'상태',
+    s_act:'재직',s_quit:'퇴사',d_total:'인원',d_on:'현장',d_edu:'교육대상',d_done:'이수',
+    ins_basic:'Basic 미이수 {n}명 ({p}%)',ins_vet:'Veteran 미이수 {n}명 (대상의 {p}%)',ins_new:'최근 1년 입사 {n}명'},
+  en:{title:'Workforce Dashboard',sub:'Roster · training integrated interactive analysis',back:'← Main',refresh:'Refresh',print:'🖨 Print',
+    total_pre:'Active',total_post:'',loading:'Loading data...',
+    sl_site:'Site',sl_org:'Team/Process',sl_role:'Role',sl_edu:'Training',sl_search:'Search',search_ph:'Search name/ID...',all:'All',
+    kp1:'Active Staff',kp2:'On-site Staff',kp3:'Basic Rate',kp4:'Veteran Rate',kp5:'Avg Tenure (yr)',kp6:'Joined (1yr)',
+    ch_site:'By Site',note_site:'on-site(O) / off stacked · click a bar for names',
+    ch_role:'By Role',note_role:'2025 Position Role · click for names',
+    ch_edu:'Training Completion',note_edu:'eligible staff · click a bar for names',
+    ch_org:'By Team/Process',note_org:'org chart position · click for names',
+    ch_career:'Tenure Distribution',note_career:'by entry date · click for names',
+    ch_io:'Join / Leave Trend',note_io:'last 12 months · up join · down leave',
+    st_on:'On-site',st_off:'Off',st_done:'Done',st_prog:'In progress',st_miss:'Pending',st_na:'N/A',
+    io_in:'Join',io_out:'Leave',cr1:'<1yr',cr2:'1-2yr',cr3:'2yr+',
+    tbl_title:'Detail List',tbl_unit:'',th_name:'Name',th_site:'Site',th_org:'Team',th_role:'Role',th_pos:'Grade',th_exp:'Exp',th_join:'Join',th_status:'Status',
+    s_act:'Active',s_quit:'Left',d_total:'Staff',d_on:'On-site',d_edu:'Eligible',d_done:'Done',
+    ins_basic:'{n} pending Basic ({p}%)',ins_vet:'{n} pending Veteran ({p}% of eligible)',ins_new:'{n} joined in last year'},
+  zh:{title:'人员状况仪表板',sub:'人员名单 · 教育状况 综合交互分析',back:'← 主页',refresh:'刷新',print:'🖨 打印',
+    total_pre:'在职',total_post:'人',loading:'正在加载数据...',
+    sl_site:'站点',sl_org:'所属·工序',sl_role:'职务',sl_edu:'培训',sl_search:'搜索',search_ph:'搜索姓名/工号...',all:'全部',
+    kp1:'在职人数',kp2:'现场人数',kp3:'Basic完成率',kp4:'Veteran完成率',kp5:'平均工龄(年)',kp6:'近1年入职',
+    ch_site:'按站点',note_site:'现场(O)/非现场 堆叠 · 点击查看名单',
+    ch_role:'按职务',note_role:'2025 Position Role · 点击查看名单',
+    ch_edu:'培训完成情况',note_edu:'培训对象 · 点击查看名单',
+    ch_org:'按所属·工序',note_org:'组织图位置 · 点击查看名单',
+    ch_career:'工龄分布',note_career:'按入职日 · 点击查看名单',
+    ch_io:'入职·离职趋势',note_io:'近12个月 · 上入职 · 下离职',
+    st_on:'现场',st_off:'非现场',st_done:'完成',st_prog:'进行中',st_miss:'未完成',st_na:'不适用',
+    io_in:'入职',io_out:'离职',cr1:'1年内',cr2:'1~2年',cr3:'2年以上',
+    tbl_title:'详细名单',tbl_unit:'人',th_name:'姓名',th_site:'站点',th_org:'所属',th_role:'职务',th_pos:'职级',th_exp:'工龄',th_join:'入职日',th_status:'状态',
+    s_act:'在职',s_quit:'离职',d_total:'人数',d_on:'现场',d_edu:'对象',d_done:'完成',
+    ins_basic:'Basic未完成 {n}人 ({p}%)',ins_vet:'Veteran未完成 {n}人 (对象的{p}%)',ins_new:'近1年入职 {n}人'},
+  ja:{title:'人員状況ダッシュボード',sub:'人員名簿 · 教育状況 統合インタラクティブ分析',back:'← メイン',refresh:'更新',print:'🖨 印刷',
+    total_pre:'在籍',total_post:'名',loading:'データ読み込み中...',
+    sl_site:'サイト',sl_org:'所属·工程',sl_role:'職務',sl_edu:'教育',sl_search:'検索',search_ph:'名前·社番検索...',all:'全体',
+    kp1:'在籍人数',kp2:'現場人数',kp3:'Basic修了率',kp4:'Veteran修了率',kp5:'平均勤続(年)',kp6:'直近1年入社',
+    ch_site:'サイト別',note_site:'現場(O)/非現場 スタック · クリックで名簿',
+    ch_role:'職務別',note_role:'2025 Position Role · クリックで名簿',
+    ch_edu:'教育課程修了状況',note_edu:'教育対象者 · クリックで名簿',
+    ch_org:'所属·工程別',note_org:'組織図位置 · クリックで名簿',
+    ch_career:'勤続分布',note_career:'入社日基準 · クリックで名簿',
+    ch_io:'入社·退社推移',note_io:'直近12ヶ月 · 上入社 · 下退社',
+    st_on:'現場',st_off:'非現場',st_done:'修了',st_prog:'進行中',st_miss:'未修了',st_na:'対象外',
+    io_in:'入社',io_out:'退社',cr1:'1年未満',cr2:'1~2年',cr3:'2年以上',
+    tbl_title:'詳細リスト',tbl_unit:'名',th_name:'名前',th_site:'サイト',th_org:'所属',th_role:'職務',th_pos:'職級',th_exp:'経歴',th_join:'入社日',th_status:'状態',
+    s_act:'在籍',s_quit:'退社',d_total:'人数',d_on:'現場',d_edu:'対象',d_done:'修了',
+    ins_basic:'Basic未修了 {n}名 ({p}%)',ins_vet:'Veteran未修了 {n}名 (対象の{p}%)',ins_new:'直近1年入社 {n}名'}
 };
 let LANG='ko';
 try{ if(window.name && TR[window.name]) LANG=window.name; }catch(e){}
@@ -238,188 +314,503 @@ function applyLang(){
 function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(DATA.length){rebuildFilters();render();}document.getElementById('langMenu').classList.remove('open');}
 function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
 document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');});
-let DATA = [];
-const F = {pos:'전체', job:'전체', basic:'전체', vet:'전체', q:''};
-Chart.defaults.color = GST.chartTheme().txt;
-Chart.defaults.font.family = "'Segoe UI','Malgun Gothic',sans-serif";
-// 테마 전환 시 차트를 새 잉크로 재생성 (initSync가 호출)
-window.changeDashboardTheme=function(){
-  Chart.defaults.color=GST.chartTheme().txt;
-  GST.reskinCharts(charts);
-  if(DATA.length)render();
-};
-const PAL = GST.PAL8; // 공통 검증 팔레트 (고정 순서)
 
+/* ===== 공통 유틸 (report 페이지와 동일 규약) ===== */
+const MS=86400000;
+function normId(s){return String(s==null?'':s).trim().replace(/\.0+$/,'');}
+function pd(s){ if(!s)return null; s=String(s).trim(); if(!s)return null;
+  s=s.replace(/\.\s*/g,'-').replace(/\/-?/g,'-').replace(/-$/,'').replace(/\s/g,'');
+  const m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(!m)return null;
+  const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3])); return isNaN(d)?null:d; }
+function normCust(name){ if(!name)return ''; const up=String(name).toUpperCase().trim(); if(!up)return '';
+  let base=''; if(up.includes('MICRON'))base='MICRON';
+  else if(up.includes('TAIWAN-ASIA')||up.includes('ASIA SEMICON'))base='TASC';
+  else if(up.includes('POWERCHIP'))base='POWERCHIP'; else if(up.includes('WINBOND'))base='WINBOND';
+  else if(up.includes('TSMC'))base='TSMC'; else base=up.split(/[\s,\.(]/)[0];
+  const m=up.match(/\(([A-Z0-9\-]+)\)/)||up.match(/\b(F\d{1,2}N?)\b/); return m?base+' '+m[1]:base; }
+function custBase(s){const u=String(s||'').toUpperCase();
+  if(u.includes('PSMC')||u.includes('POWERCHIP'))return 'PSMC';
+  if(u.includes('TASC')||u.includes('ASIA SEMI'))return 'TASC';
+  if(u.includes('WINBOND'))return 'WINBOND';
+  if(u.includes('MICRON')||/\bF1[016]/.test(u))return 'MICRON'; return normCust(s);}
+function fabOf(s){const u=String(s||'').toUpperCase();
+  const m=u.match(/\bF(16N|16S|16|11|10)\b/); if(m)return 'F'+m[1];
+  if(/TONG\s*L/.test(u))return 'F16N'; if(/TAINAN/.test(u))return 'F16S'; return '';}
+function siteKey(sv){ const up=String(sv||'').toUpperCase(); if(!up.trim())return '';
+  if(up.includes('F16N')||/TONG\s*L/.test(up))return 'MICRON F16N';
+  if(up.includes('F16S')||up.includes('TAINAN'))return 'MICRON F16S';
+  if(up.includes('F16'))return 'MICRON F16'; if(up.includes('F11'))return 'MICRON F11';
+  if(up.includes('F10'))return 'MICRON F10';
+  if(up.includes('PSMC')||up.includes('POWERCHIP'))return 'POWERCHIP';
+  if(up.includes('WINBOND'))return 'WINBOND'; if(up.includes('TSMC'))return 'TSMC';
+  if(up.includes('TASC')||up.includes('ASIA SEMI'))return 'TASC'; return normCust(up); }
+function shortSite(s){return String(s||'').replace('MICRON ','');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function ymd(d){try{return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}catch(e){return '';}}
+function activeAt(p,E){return p.join&&p.join<=E&&(!p.quit||p.quit>=E);}
+const TODAY=(()=>{const t=new Date();t.setUTCHours(0,0,0,0);return t;})();
+function isActive(p){return activeAt(p,TODAY);}
+function tenureYr(p,E){ if(!p.join)return null; return ((E||TODAY)-p.join)/MS/365.25; }
+function tenureLabel(p){ const y=tenureYr(p); if(y==null)return '-';
+  const mo=Math.max(0,Math.round(y*12)); return Math.floor(mo/12)+'Y'+(mo%12)+'M'; }
 
-async function loadData(){ GST.skeleton(true);
-  const btn = document.getElementById('refreshBtn');
-  const status = document.getElementById('status');
-  btn.disabled = true;
-  status.className = 'status'; status.textContent = tr('loading');
-  try {
-    const fetched = await GST.fetchCSVCached(SHEET_URL,'hr');
-    // 새 교육현황 구조: 3행 헤더(No/Site/인원/사원번호/입사일/... + Basic 4열 + Veteran 4열 + 비고)
-    const _rows=fetched.rows;
-    let _hi=-1;
-    for(let i=0;i<Math.min(_rows.length,6);i++){
-      const h=(_rows[i]||[]).map(x=>String(x||'').trim());
-      if(h.includes('교육과정')&&h.includes('인원')){_hi=i;break;}
-    }
-    const _cv=(r,i)=>(r[i]==null?'':String(r[i])).trim();
-    DATA = (_hi>=0?_rows.slice(_hi+3):[]).map(r=>({
-      no:_cv(r,0), site:_cv(r,1), name:_cv(r,2), join:_cv(r,4), exp:_cv(r,5),
-      pos:_cv(r,6), job:_cv(r,7),
-      basic:_cv(r,8), bdate:_cv(r,10),
-      vet:_cv(r,12), vdate:_cv(r,14),
-      note:_cv(r,16)
-    })).filter(d=>d.name);
-    // 비고에 '퇴사' 표기가 있는 인원은 현황 집계에서 제외
-    const _all=DATA.length;
-    DATA = DATA.filter(d=>!/퇴사/.test(d.note));
-    const quitN=_all-DATA.length;
-    const now = new Date().toLocaleString('ko-KR');
-    status.className = 'status ok';
-    status.textContent = '✅ ' + now + ' · ' + DATA.length + tr('tbl_unit') + (quitN?' (퇴사 '+quitN+' 제외)':'');
-    rebuildFilters(); render();
-    if(fetched.cached){status.textContent='📡 시트 접속 실패 — 캐시('+fetched.ageMin+'분 전) 표시 중';status.style.color='#fbbf24';}
-  } catch(err) { GST.skeleton(false);
-    status.className = 'status err';
-    status.textContent = '❌ ' + tr('loading');
-    document.getElementById('tbody').innerHTML = '<tr><td colspan="9" class="empty">—</td></tr>';
+/* ===== 파싱 ===== */
+function parseRoster(rows){
+  let hi=-1;
+  for(let i=0;i<Math.min(rows.length,8);i++){
+    const h=(rows[i]||[]).map(x=>String(x||'').trim().toLowerCase());
+    if(h.includes('id')&&h.some(x=>x.includes('work place'))){hi=i;break;}
   }
-  btn.disabled = false;
+  if(hi<0)return [];
+  const h=rows[hi].map(x=>String(x||'').trim().toLowerCase());
+  const iId=h.indexOf('id'),
+    iNm=h.findIndex(x=>x.includes('name')&&x.includes('영문')),
+    iCn=h.findIndex(x=>x.includes('name')&&x.includes('중문')),
+    iDept=h.findIndex(x=>x.startsWith('dept')),
+    iLvl=h.findIndex(x=>x.includes('position level')),
+    iWp=h.findIndex(x=>x==='work place'),
+    iRole=h.findIndex(x=>x.includes('position role')),
+    iIn=h.findIndex(x=>x.startsWith('date of entry')),
+    iOut=h.findIndex(x=>x.startsWith('resignation')),
+    iOrg=h.findIndex(x=>x.includes('조직도')),
+    iPos=h.indexOf('직급'),
+    iDuty=h.findIndex(x=>x.includes('업무')),
+    iOn=h.findIndex(x=>x.includes('현장'));
+  return rows.slice(hi+1).map(r=>{
+    const wp=iWp>=0?r[iWp]:'';
+    return {
+      id:normId(iId>=0?r[iId]:''),
+      name:String((iNm>=0?r[iNm]:r[2])||'').trim(),
+      cn:String(iCn>=0?(r[iCn]||''):'').trim(),
+      dept:String(iDept>=0?(r[iDept]||''):'').trim(),
+      level:String(iLvl>=0?(r[iLvl]||''):'').trim(),
+      site:siteKey(wp), custB:custBase(wp), fab:fabOf(wp),
+      role:String(iRole>=0?(r[iRole]||''):'').trim(),
+      join:iIn>=0?pd(r[iIn]):null,
+      quit:iOut>=0?pd(r[iOut]):null,
+      org:String(iOrg>=0?(r[iOrg]||''):'').trim(),
+      posKo:String(iPos>=0?(r[iPos]||''):'').trim(),
+      duty:String(iDuty>=0?(r[iDuty]||''):'').trim(),
+      onsite:String(iOn>=0?(r[iOn]||''):'').trim().toUpperCase()==='O'
+    };
+  }).filter(x=>x.name&&x.join);
+}
+function parseEdu(rows){
+  let hi=-1;
+  for(let i=0;i<Math.min(rows.length,6);i++){
+    const h=(rows[i]||[]).map(x=>String(x||'').trim());
+    if(h.includes('교육과정')&&h.includes('인원')){hi=i;break;}
+  }
+  if(hi<0)return [];
+  return rows.slice(hi+3).map(r=>({
+    id:normId(r[3]), name:String(r[2]||'').trim(), site:siteKey(r[1]),
+    role:String(r[7]||'').trim(),
+    join:pd(r[4]),
+    basic:String(r[8]||'').trim(), bdate:pd(r[10]),
+    vet:String(r[12]||'').trim(), vdate:pd(r[14]),
+    note:String(r[16]||'').trim(),
+    quitNote:/퇴사/.test(String(r[16]||''))
+  })).filter(x=>x.name);
+}
+function buildPeople(){
+  const eById={}, eByNm={};
+  EDU.forEach(e=>{ if(e.id)eById[e.id]=e; if(e.name)eByNm[e.name.toUpperCase()]=e; });
+  let base;
+  if(ROSTER.length){ base=ROSTER; }
+  else { base=EDU.map(e=>({id:e.id,name:e.name,cn:'',dept:'',level:'',site:e.site,custB:custBase(e.site),fab:fabOf(e.site),
+    role:e.role,join:e.join,quit:e.quitNote?TODAY:null,org:'',posKo:'',duty:'',onsite:true})); }
+  return base.map(p=>{
+    const e=(p.id&&eById[p.id])||(p.name&&eByNm[p.name.toUpperCase()])||null;
+    return Object.assign({},p,{
+      edu:!!e,
+      basic:e?e.basic:'', bdate:e?e.bdate:null,
+      vet:e?e.vet:'', vdate:e?e.vdate:null,
+      eduNote:e?e.note:''
+    });
+  });
 }
 
-function uniq(k) { return ['전체', ...Array.from(new Set(DATA.map(d => d[k]).filter(Boolean)))]; }
-function buildChips(id, key) {
-  const box = document.getElementById(id); box.innerHTML = '';
-  uniq(key).forEach(v => {
-    const c = document.createElement('div');
-    c.className = 'chip' + (v === '전체' ? ' active' : ''); c.textContent = v;
-    c.onclick = () => { F[key]=v; [...box.children].forEach(x=>x.classList.remove('active')); c.classList.add('active'); render(); };
+/* 교육 상태 분류 */
+function clsB(p){ const v=p.basic; if(v==='이수완료')return '이수완료'; if(v==='진행중')return '진행중'; if(v==='비대상')return '비대상'; return '미이수'; }
+function clsV(p){ const v=p.vet; if(v==='이수완료')return '이수완료'; if(v==='진행중')return '진행중'; if(v==='비대상')return '비대상'; return '미이수'; }
+function eduStatusOf(p){ return p.edu?clsB(p):'미등록'; }
+
+/* ===== 상태/스타일 ===== */
+let DATA=[], ROSTER=[], EDU=[], CH={}, DRILL={}, LASTSPARK={};
+const F={site:'전체',org:'전체',role:'전체',edu:'전체',q:''};
+let SORT={k:'no',dir:1};
+let RSTYLE=''; try{RSTYLE=localStorage.getItem('gst_hr_style')||'';}catch(e){}
+Chart.defaults.color=GST.chartTheme().txt;
+Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+Chart.defaults.onClick=hrDrill;
+const STY={
+  vivid:   {lbl:'Vivid',    on:'#2C5FAE', off:'#7C6FE0', accent:'#5EC2FF', good:'#34D399', warn:'#F59E0B', bad:'#FB7185', pal:['#2C5FAE','#38BDF8','#5EC2FF','#7C6FE0','#34D399','#F59E0B','#F472B6','#A3E635']},
+  graphite:{lbl:'Graphite', on:'#5A5A5A', off:'#9A9A9A', accent:'#E03131', good:'#7A7A7A', warn:'#B4B4B4', bad:'#E03131', pal:['#5A5A5A','#7A7A7A','#9A9A9A','#B4B4B4','#C7C7C7','#8A8A8A','#E03131','#6E6E6E']},
+  ocean:   {lbl:'Ocean',    on:'#0E7490', off:'#2DD4BF', accent:'#22D3EE', good:'#34D399', warn:'#FBBF24', bad:'#F472B6', pal:['#0E7490','#0891B2','#22D3EE','#2DD4BF','#5EEAD4','#38BDF8','#A5F3FC','#F472B6']},
+  sunset:  {lbl:'Sunset',   on:'#EA580C', off:'#FB7185', accent:'#FBBF24', good:'#F59E0B', warn:'#FBBF24', bad:'#F43F5E', pal:['#EA580C','#F97316','#FB923C','#FBBF24','#FB7185','#F43F5E','#6366F1','#EC4899']},
+  forest:  {lbl:'Forest',   on:'#15803D', off:'#A3E635', accent:'#4ADE80', good:'#22C55E', warn:'#84CC16', bad:'#DC2626', pal:['#15803D','#16A34A','#22C55E','#4ADE80','#84CC16','#A3E635','#DC2626','#0E7490']},
+  cb:      {lbl:'Safe',     on:'#0072B2', off:'#CC79A7', accent:'#56B4E9', good:'#009E73', warn:'#E69F00', bad:'#D55E00', pal:['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00','#F0E442','#000000']}
+};
+window.toggleStyle=function(){ const ord=['vivid','graphite','ocean','sunset','forest','cb'];
+  let i=ord.indexOf(RSTYLE); if(i<0)i=0; RSTYLE=ord[(i+1)%ord.length];
+  try{localStorage.setItem('gst_hr_style',RSTYLE);}catch(e){} render(); };
+function curSty(){const TH=GST.chartTheme(); return STY[RSTYLE]?STY[RSTYLE]:(TH.key==='burgundy'?STY.graphite:STY.vivid);}
+
+/* 막대 색 위 라벨 명도 대비색 */
+function labelOn(fill){ if(typeof fill!=='string')return '#F8FAFC'; const m=fill.replace('#','');
+  if(m.length<6)return '#F8FAFC'; const r=parseInt(m.slice(0,2),16),g=parseInt(m.slice(2,4),16),b=parseInt(m.slice(4,6),16);
+  return (0.299*r+0.587*g+0.114*b)/255>0.6?'#0B0F14':'#F8FAFC'; }
+/* 값 라벨 플러그인 (all / stackTotal / stackAll) */
+const valLabelPlugin={id:'valLabel',
+  afterDatasetsDraw(chart,args,o){
+    if(!o||!o.mode)return; const ctx=chart.ctx;
+    const fmt=v=>{const n=+v;return Math.abs(n)>=1000?Math.round(n).toLocaleString():String(Math.round(n*10)/10);};
+    ctx.save();
+    if(o.mode==='all'){
+      ctx.font='700 10px "Segoe UI","Malgun Gothic",sans-serif';
+      chart.data.datasets.forEach((ds,di)=>{ const meta=chart.getDatasetMeta(di);
+        if(!meta||meta.hidden||!meta.data||ds._noLabel)return; const isLine=meta.type==='line';
+        meta.data.forEach((el,i)=>{ const v=ds.data[i]; if(v==null||!isFinite(v)||+v===0)return;
+          ctx.fillStyle=o.color||'#E6EDF3'; ctx.textAlign='center';
+          if(isLine){ctx.textBaseline='bottom';ctx.fillText(fmt(v),el.x,el.y-7);return;}
+          const hgt=el.base!=null?Math.abs(el.base-el.y):0;
+          if(ds.stack&&hgt>=9){let _f=ds.backgroundColor;if(Array.isArray(_f))_f=_f[i];ctx.fillStyle=labelOn(_f);ctx.textBaseline='middle';ctx.fillText(fmt(v),el.x,(el.y+el.base)/2);return;}
+          if(ds.stack)return;
+          if(hgt>20){ctx.textBaseline='top';ctx.fillText(fmt(v),el.x,el.y+4);}else{ctx.textBaseline='bottom';ctx.fillText(fmt(v),el.x,el.y-4);}
+        });
+      });
+      ctx.restore();return;
+    }
+    if(o.mode==='stackAll'||o.mode==='stackTotal'){
+      if(o.mode==='stackAll'){ ctx.font='700 9px "Segoe UI","Malgun Gothic",sans-serif';
+        chart.data.datasets.forEach((ds,di)=>{ const meta=chart.getDatasetMeta(di); if(!meta||meta.hidden||!meta.data||meta.type==='line')return;
+          meta.data.forEach((el,i)=>{ const v=ds.data[i]; if(v==null||!isFinite(v)||+v===0)return;
+            const hgt=el.base!=null?Math.abs(el.base-el.y):0; if(hgt<9)return;
+            let _f=ds.backgroundColor;if(Array.isArray(_f))_f=_f[i]; ctx.fillStyle=labelOn(_f); ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(fmt(Math.abs(v)),el.x,(el.y+el.base)/2); }); }); }
+      ctx.font='700 10px "Segoe UI","Malgun Gothic",sans-serif'; ctx.fillStyle=o.color||'#E6EDF3'; ctx.textAlign='center';
+      const bars=chart.data.datasets.map((ds,di)=>({ds,meta:chart.getDatasetMeta(di)})).filter(x=>x.meta&&!x.meta.hidden&&x.meta.type!=='line');
+      const n=(chart.data.labels||[]).length;
+      for(let i=0;i<n;i++){ let pos=0,neg=0,topY=null,botY=null,x=null;
+        bars.forEach(({ds,meta})=>{const v=+ds.data[i]||0;const el=meta.data[i];if(!el)return;x=el.x;
+          if(v>0){pos+=v;if(topY==null||el.y<topY)topY=el.y;}else if(v<0){neg+=v;if(botY==null||el.y>botY)botY=el.y;}});
+        if(x==null)continue;
+        if(pos>0&&topY!=null){ctx.textBaseline='bottom';ctx.fillText(fmt(pos),x,topY-3);}
+        if(neg<0&&botY!=null){ctx.textBaseline='top';ctx.fillText(fmt(-neg),x,botY+3);}
+      }
+      ctx.restore();return;
+    }
+    ctx.restore();
+  }};
+function baseScales(TH,stacked){
+  return {x:{stacked:!!stacked,ticks:{color:TH.txt,font:{size:10},maxRotation:30,autoSkip:false},grid:{display:false}},
+          y:{stacked:!!stacked,grace:'22%',beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}};
+}
+
+/* ===== 로드 ===== */
+async function loadData(){ GST.skeleton(true);
+  const btn=document.getElementById('refreshBtn'), status=document.getElementById('status');
+  btn.disabled=true; status.className='status'; status.textContent=tr('loading');
+  try{
+    const [ro,ed]=await Promise.allSettled([
+      GST.fetchCSVCached(URL_ROSTER,'hr_roster'),
+      GST.fetchCSVCached(URL_EDU,'hr_edu')
+    ]);
+    ROSTER = ro.status==='fulfilled'?parseRoster(ro.value.rows):[];
+    EDU    = ed.status==='fulfilled'?parseEdu(ed.value.rows):[];
+    DATA   = buildPeople();
+    const cached = (ro.status==='fulfilled'&&ro.value.cached)||(ed.status==='fulfilled'&&ed.value.cached);
+    if(!DATA.length) throw new Error('no data');
+    const act=DATA.filter(isActive).length, quit=DATA.length-act;
+    const matched=DATA.filter(isActive).filter(p=>p.edu).length;
+    const now=new Date().toLocaleString('ko-KR');
+    status.className='status ok';
+    status.textContent='✅ '+now+' · 재직 '+act+tr('tbl_unit')+(quit?' (퇴사 '+quit+' 제외)':'')
+      +' · 교육매칭 '+matched+' · 명단 '+ROSTER.length+'·교육 '+EDU.length+' · '+VER;
+    if(cached){status.textContent='📡 시트 접속 실패 — 캐시 표시 중 · '+VER;status.style.color='#fbbf24';}
+    rebuildFilters(); render(); addCapBtns();
+  }catch(err){ GST.skeleton(false);
+    status.className='status err'; status.textContent='❌ '+tr('loading');
+    document.getElementById('tbody').innerHTML='<tr><td colspan="11" class="empty">—</td></tr>';
+  }
+  btn.disabled=false;
+}
+
+/* ===== 필터 ===== */
+const SITE_ORDER=['MICRON F16','MICRON F11','MICRON F16N','MICRON F16S','MICRON F10','POWERCHIP','WINBOND','TSMC','TASC'];
+function orderSites(arr){ const s=new Set(arr); const out=SITE_ORDER.filter(x=>s.has(x)); arr.forEach(x=>{if(out.indexOf(x)<0)out.push(x);}); return out; }
+function actPop(){ return DATA.filter(isActive); }
+function uniqActive(k){ const a=actPop(); return Array.from(new Set(a.map(d=>d[k]).filter(v=>v!==''&&v!=null))); }
+function buildChips(id,key,vals){
+  const box=document.getElementById(id); box.innerHTML='';
+  ['전체',...vals].forEach(v=>{
+    const c=document.createElement('div');
+    c.className='chip'+(v===F[key]?' active':'');
+    c.textContent = v==='전체'?tr('all'):shortSite(v);
+    c.onclick=()=>{ F[key]=v; [...box.children].forEach(x=>x.classList.remove('active')); c.classList.add('active'); render(); };
     box.appendChild(c);
   });
 }
-function rebuildFilters() {
-  F.pos='전체'; F.job='전체'; F.basic='전체'; F.vet='전체'; F.q='';
-  document.getElementById('search').value = '';
-  buildChips('sl-pos','pos'); buildChips('sl-job','job');
-  buildChips('sl-basic','basic'); buildChips('sl-vet','vet');
+function rebuildFilters(){
+  F.site='전체';F.org='전체';F.role='전체';F.edu='전체';F.q='';
+  document.getElementById('search').value='';
+  buildChips('sl-site','site',orderSites(uniqActive('site')));
+  buildChips('sl-org','org',uniqActive('org').sort());
+  buildChips('sl-role','role',uniqActive('role').sort());
+  buildChips('sl-edu','edu',['이수완료','진행중','미이수','비대상','미등록'].filter(v=>actPop().some(p=>eduStatusOf(p)===v)));
 }
-document.getElementById('search').addEventListener('input', e => { F.q = e.target.value.toLowerCase(); render(); });
-function filt() {
-  return DATA.filter(d =>
-    (F.pos==='전체'||d.pos===F.pos) && (F.job==='전체'||d.job===F.job) &&
-    (F.basic==='전체'||d.basic===F.basic) && (F.vet==='전체'||d.vet===F.vet) &&
-    (F.q===''||d.name.toLowerCase().includes(F.q))
-  );
+document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
+function matchQ(p){ if(!F.q)return true; return (p.name||'').toLowerCase().includes(F.q)||(p.id||'').toLowerCase().includes(F.q)||(p.cn||'').toLowerCase().includes(F.q); }
+function slFilt(arr){ return arr.filter(p=>
+  (F.site==='전체'||p.site===F.site)&&(F.org==='전체'||p.org===F.org)&&
+  (F.role==='전체'||p.role===F.role)&&(F.edu==='전체'||eduStatusOf(p)===F.edu)&&matchQ(p)); }
+function updateFiltBadge(){
+  const b=document.getElementById('filtBadge'); const P=[];
+  if(F.site!=='전체')P.push('사이트: '+shortSite(F.site));
+  if(F.org!=='전체')P.push('소속: '+F.org);
+  if(F.role!=='전체')P.push('직무: '+F.role);
+  if(F.edu!=='전체')P.push('교육: '+F.edu);
+  if(F.q)P.push('검색: '+F.q);
+  if(!P.length){b.style.display='none';b.innerHTML='';return;}
+  b.style.display='flex';
+  b.innerHTML='🔎 '+P.map(x=>'<span class="fchip">'+esc(x)+'</span>').join('')+'<button class="fclr" onclick="clearFilt()">✕ 필터 해제</button>';
 }
-function tagCls(v) { return v==='이수완료'?'t-done':v==='진행중'?'t-prog':'t-na'; }
-function animVal(el, target, suffix, dec) {
-  const start = parseFloat(el.dataset.v || 0); const t0 = performance.now();
-  function step(t) {
-    const p = Math.min((t-t0)/600,1); const cur = start+(target-start)*(1-Math.pow(1-p,3));
-    el.textContent = (dec?cur.toFixed(1):Math.round(cur))+(suffix||'');
-    if (p<1) requestAnimationFrame(step); else el.dataset.v = target;
-  }
-  requestAnimationFrame(step);
+window.clearFilt=function(){F.site='전체';F.org='전체';F.role='전체';F.edu='전체';F.q='';document.getElementById('search').value='';rebuildFilters();render();};
+
+/* ===== 애니 값 ===== */
+function animVal(el,target,suffix,dec){ const start=parseFloat(el.dataset.v||0),t0=performance.now();
+  function step(t){const p=Math.min((t-t0)/600,1);const cur=start+(target-start)*(1-Math.pow(1-p,3));
+    el.textContent=(dec?cur.toFixed(1):Math.round(cur))+(suffix||''); if(p<1)requestAnimationFrame(step); else el.dataset.v=target;}
+  requestAnimationFrame(step); }
+function drawSpark(id,arr,color){ const el=document.getElementById(id); if(!el)return;
+  const v=arr.filter(x=>x!=null&&isFinite(x)); if(v.length<2){el.style.display='none';el.innerHTML='';return;}
+  el.style.display='block';
+  const mn=Math.min.apply(null,v),mx=Math.max.apply(null,v),rng=(mx-mn)||1,W=100,H=22,n=arr.length;
+  let pts=[],lx=0,ly=0;
+  arr.forEach((y,i)=>{if(y==null||!isFinite(y))return;const x=n>1?i/(n-1)*W:0;const yy=H-2-((y-mn)/rng)*(H-4);pts.push(x.toFixed(1)+','+yy.toFixed(1));lx=x;ly=yy;});
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" width="100%" height="22">'
+    +'<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+color+'" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>'
+    +'<circle cx="'+lx.toFixed(1)+'" cy="'+ly.toFixed(1)+'" r="2" fill="'+color+'"/></svg>';
 }
-let charts = {};
-function donut(id, labels, vals) {
-  const ctx = document.getElementById(id);
-  if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets[0].data=vals;
-    charts[id].data.datasets[0].backgroundColor=PAL; charts[id].update(); return; }
-  charts[id] = new Chart(ctx, {type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:PAL,borderColor:'rgba(0,0,0,.2)',borderWidth:2,hoverOffset:10}]},
-    options:{cutout:'62%',plugins:{legend:{position:'bottom',labels:{padding:14,usePointStyle:true,pointStyle:'circle'}}},animation:{animateScale:true}}});
-}
-function bars(id, labels, datasets) {
-  const ctx = document.getElementById(id);
-  const grid = GST.chartTheme().grid;
-  if (charts[id]) { charts[id].data.labels=labels; charts[id].data.datasets=datasets; charts[id].update(); return; }
-  charts[id] = new Chart(ctx, {type:'bar',data:{labels,datasets},
-    options:{plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle'}}},
-    scales:{x:{stacked:true,grid:{color:grid}},y:{stacked:true,grid:{color:grid},ticks:{precision:0}}}}});
-}
-function cnt(arr, key, val) { return arr.filter(d => d[key]===val).length; }
+function months(n){ const out=[]; for(let i=n-1;i>=0;i--){let y=TODAY.getUTCFullYear(),m=TODAY.getUTCMonth()-i;while(m<0){m+=12;y--;}
+  const end=new Date(Date.UTC(y,m+1,0)); out.push({y,m,end:end>TODAY?TODAY:end,st:new Date(Date.UTC(y,m,1)),label:(m+1)});} return out; }
+
+/* ===== 렌더 ===== */
+function mk(id,cfg){ if(CH[id]){CH[id].destroy();delete CH[id];} const el=document.getElementById(id); if(!el)return null; CH[id]=new Chart(el,cfg); return CH[id]; }
+window.changeDashboardTheme=function(){ Chart.defaults.color=GST.chartTheme().txt; GST.reskinCharts(CH); if(DATA.length)render(); };
+
 function render(){ GST.skeleton(false);
   const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
-  const f = filt();
-  document.getElementById('totRec').textContent = DATA.length;
-  animVal(document.getElementById('kp1'), f.length, '', false);
-  const bd = cnt(f,'basic','이수완료');
-  animVal(document.getElementById('kp2'), f.length?bd/f.length*100:0, '%', true);
-  const vTarget = f.filter(d => d.vet!=='비대상');
-  animVal(document.getElementById('kp3'), vTarget.length?cnt(vTarget,'vet','이수완료')/vTarget.length*100:0, '%', true);
-  animVal(document.getElementById('kp4'), cnt(f,'pos','Engineer'), '', false);
-  const posL = Array.from(new Set(DATA.map(d=>d.pos).filter(Boolean)));
-  donut('cPos', posL, posL.map(p=>cnt(f,'pos',p)));
-  const jobL = Array.from(new Set(DATA.map(d=>d.job).filter(Boolean)));
-  donut('cJob', jobL, jobL.map(j=>cnt(f,'job',j)));
-  bars('cEdu', ['Basic','Veteran'], [
-    {label:'이수완료',data:[cnt(f,'basic','이수완료'),cnt(f,'vet','이수완료')],backgroundColor:TH.status.ok,borderRadius:6},
-    {label:'진행중',data:[cnt(f,'basic','진행중'),cnt(f,'vet','진행중')],backgroundColor:TH.status.warn,borderRadius:6},
-    {label:'비대상',data:[cnt(f,'basic','비대상'),cnt(f,'vet','비대상')],backgroundColor:TH.status.na,borderRadius:6},
-  ]); // 이수 상태 = 시맨틱 색
+  const S=curSty(); {const l=document.getElementById('styleLbl'); if(l)l.textContent=S.lbl;}
+  updateFiltBadge();
+  const fAll=slFilt(DATA);            // 슬라이서 적용(재직/퇴사 전체) — 추이·스파크용
+  const f=fAll.filter(isActive);      // 현재 재직
+  document.getElementById('totRec').textContent=actPop().length;
 
-  // ===== 인사이트 (필터 적용 기준) =====
-  {
-    const ins=[];
-    const bMiss=f.filter(d=>d.basic!=='이수완료'&&d.basic!=='비대상').length;
-    if(f.length){
-      const bp=Math.round(bMiss/f.length*100);
-      if(bMiss)ins.push({sev:bp>20?'warn':'info',text:tr('ins_basic').replace('{n}','<b>'+bMiss+'</b>').replace('{p}',bp)});
-      const vT=f.filter(d=>d.vet!=='비대상');
-      const vMiss=vT.filter(d=>d.vet!=='이수완료').length;
-      if(vT.length&&vMiss){
-        const vp=Math.round(vMiss/vT.length*100);
-        ins.push({sev:vp>30?'warn':'info',text:tr('ins_vet').replace('{n}','<b>'+vMiss+'</b>').replace('{p}',vp)});
-      }
-      const y1=Date.now()-365*86400000;
-      const joins=f.filter(d=>{const j=GST.toDate(d.join);return j&&j.getTime()>=y1;}).length;
-      if(joins)ins.push({sev:'ok',text:tr('ins_join').replace('{n}','<b>'+joins+'</b>')});
-    }
-    GST.insights(f.length?ins:[]);
+  /* ---- KPI ---- */
+  animVal(document.getElementById('kp1'),f.length,'',false);
+  animVal(document.getElementById('kp2'),f.filter(p=>p.onsite).length,'',false);
+  const ep=f.filter(p=>p.edu&&clsB(p)!=='비대상');
+  const bd=ep.filter(p=>clsB(p)==='이수완료').length;
+  animVal(document.getElementById('kp3'),ep.length?bd/ep.length*100:0,'%',true);
+  const vp=f.filter(p=>p.edu&&clsV(p)!=='비대상');
+  const vd=vp.filter(p=>clsV(p)==='이수완료').length;
+  animVal(document.getElementById('kp4'),vp.length?vd/vp.length*100:0,'%',true);
+  const tenn=f.map(p=>tenureYr(p)).filter(x=>x!=null);
+  animVal(document.getElementById('kp5'),tenn.length?tenn.reduce((a,b)=>a+b,0)/tenn.length:0,'',true);
+  animVal(document.getElementById('kp6'),f.filter(p=>p.join&&(TODAY-p.join)/MS<=365).length,'',false);
+
+  /* ---- 스파크라인 (최근 12개월) ---- */
+  const SP=months(12);
+  drawSpark('sp1',SP.map(p=>fAll.filter(x=>activeAt(x,p.end)).length),S.on);
+  drawSpark('sp2',SP.map(p=>fAll.filter(x=>x.onsite&&activeAt(x,p.end)).length),S.off);
+  drawSpark('sp3',SP.map(p=>{const e=fAll.filter(x=>x.edu&&clsB(x)!=='비대상'&&activeAt(x,p.end));const d=e.filter(x=>clsB(x)==='이수완료'&&x.bdate&&x.bdate<=p.end);return e.length?Math.round(d.length/e.length*100):null;}),S.good);
+  drawSpark('sp4',SP.map(p=>{const e=fAll.filter(x=>x.edu&&clsV(x)!=='비대상'&&activeAt(x,p.end));const d=e.filter(x=>clsV(x)==='이수완료'&&x.vdate&&x.vdate<=p.end);return e.length?Math.round(d.length/e.length*100):null;}),S.accent);
+
+  /* ---- cSite: 사이트별 (현장/비현장 스택) ---- */
+  const siteL=orderSites(Array.from(new Set(f.map(p=>p.site).filter(Boolean))));
+  mk('cSite',{type:'bar',data:{labels:siteL.map(shortSite),datasets:[
+      {label:tr('st_on'),data:siteL.map(s=>f.filter(p=>p.site===s&&p.onsite).length),backgroundColor:S.on,stack:'a',borderRadius:5},
+      {label:tr('st_off'),data:siteL.map(s=>f.filter(p=>p.site===s&&!p.onsite).length),backgroundColor:S.off,stack:'a',borderRadius:5}
+    ]},plugins:[valLabelPlugin],
+    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle'}},valLabel:{mode:'stackTotal',color:TH.txt}},scales:baseScales(TH,true)}});
+  DRILL.cSite={kind:'people',title:tr('ch_site'),labels:siteL.map(shortSite),groups:siteL.map(s=>f.filter(p=>p.site===s))};
+
+  /* ---- cRole: 직무별 (도넛) ---- */
+  const roleL=Array.from(new Set(f.map(p=>p.role).filter(Boolean))).sort((a,b)=>f.filter(p=>p.role===b).length-f.filter(p=>p.role===a).length);
+  mk('cRole',{type:'doughnut',data:{labels:roleL,datasets:[{data:roleL.map(r=>f.filter(p=>p.role===r).length),backgroundColor:S.pal,borderColor:'rgba(0,0,0,.2)',borderWidth:2,hoverOffset:10}]},
+    options:{maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{padding:10,usePointStyle:true,pointStyle:'circle',font:{size:10}}},tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+tr('tbl_unit')}}},animation:{animateScale:true}}});
+  DRILL.cRole={kind:'people',title:tr('ch_role'),labels:roleL,groups:roleL.map(r=>f.filter(p=>p.role===r))};
+
+  /* ---- cEdu: 교육 이수 (Basic/Veteran 스택) ---- */
+  const epop=f.filter(p=>p.edu);
+  const stt=['이수완료','진행중','미이수','비대상'];
+  const stCol={'이수완료':S.good,'진행중':S.warn,'미이수':S.bad,'비대상':TH.status.na};
+  const stKey={'이수완료':'st_done','진행중':'st_prog','미이수':'st_miss','비대상':'st_na'};
+  mk('cEdu',{type:'bar',data:{labels:['Basic','Veteran'],datasets:stt.map(s=>({label:tr(stKey[s]),
+      data:[epop.filter(p=>clsB(p)===s).length,epop.filter(p=>clsV(p)===s).length],backgroundColor:stCol[s],stack:'e',borderRadius:5}))},
+    plugins:[valLabelPlugin],
+    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle'}},valLabel:{mode:'stackAll',color:TH.txt}},scales:baseScales(TH,true)}});
+  DRILL.cEdu={kind:'edu',title:tr('ch_edu'),epop,stt};
+
+  /* ---- cOrg: 소속·공정별 (도넛) ---- */
+  const orgOf=p=>p.org||tr('st_na');
+  const orgL=Array.from(new Set(f.map(orgOf))).sort((a,b)=>f.filter(p=>orgOf(p)===b).length-f.filter(p=>orgOf(p)===a).length);
+  mk('cOrg',{type:'doughnut',data:{labels:orgL,datasets:[{data:orgL.map(o=>f.filter(p=>orgOf(p)===o).length),backgroundColor:S.pal.concat(GST.PAL8),borderColor:'rgba(0,0,0,.2)',borderWidth:2,hoverOffset:10}]},
+    options:{maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{padding:8,usePointStyle:true,pointStyle:'circle',font:{size:9.5},boxWidth:8}},tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+tr('tbl_unit')}}},animation:{animateScale:true}}});
+  DRILL.cOrg={kind:'people',title:tr('ch_org'),labels:orgL,groups:orgL.map(o=>f.filter(p=>orgOf(p)===o))};
+
+  /* ---- cCareer: 경력 분포 ---- */
+  const crB=[f.filter(p=>{const y=tenureYr(p);return y!=null&&y<1;}),
+             f.filter(p=>{const y=tenureYr(p);return y!=null&&y>=1&&y<2;}),
+             f.filter(p=>{const y=tenureYr(p);return y!=null&&y>=2;})];
+  mk('cCareer',{type:'bar',data:{labels:[tr('cr1'),tr('cr2'),tr('cr3')],datasets:[{data:crB.map(a=>a.length),backgroundColor:[S.pal[0],S.pal[1],S.pal[2]],borderRadius:6}]},
+    plugins:[valLabelPlugin],
+    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{display:false},valLabel:{mode:'all',color:TH.txt}},scales:baseScales(TH,false)}});
+  DRILL.cCareer={kind:'people',title:tr('ch_career'),labels:[tr('cr1'),tr('cr2'),tr('cr3')],groups:crB};
+
+  /* ---- cIo: 입사/퇴사 추이 ---- */
+  const IO=months(12);
+  const ins=IO.map(p=>fAll.filter(x=>x.join&&x.join>=p.st&&x.join<=p.end)),
+        outs=IO.map(p=>fAll.filter(x=>x.quit&&x.quit>=p.st&&x.quit<=p.end));
+  mk('cIo',{type:'bar',data:{labels:IO.map(p=>p.label+'월'),datasets:[
+      {label:tr('io_in'),data:ins.map(a=>a.length),backgroundColor:S.good,stack:'i',borderRadius:4},
+      {label:tr('io_out'),data:outs.map(a=>-a.length),backgroundColor:S.bad,stack:'i',borderRadius:4}
+    ]},plugins:[valLabelPlugin],
+    options:{maintainAspectRatio:false,layout:{padding:{top:16,bottom:6}},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle'}},valLabel:{mode:'stackTotal',color:TH.txt},tooltip:{callbacks:{label:c=>c.dataset.label+': '+Math.abs(c.parsed.y)+tr('tbl_unit')}}},
+    scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},y:{stacked:true,grace:'22%',ticks:{color:TH.txt,precision:0,callback:v=>Math.abs(v)},grid:{color:TH.grid}}}}});
+  DRILL.cIo={kind:'io',title:tr('ch_io'),labels:IO.map(p=>p.label+'월'),ins,outs};
+
+  /* ---- 인사이트 ---- */
+  { const arr=[];
+    if(ep.length){const m=ep.length-bd,p=Math.round(m/ep.length*100); if(m)arr.push({sev:p>20?'warn':'info',text:tr('ins_basic').replace('{n}','<b>'+m+'</b>').replace('{p}',p)});}
+    if(vp.length){const m=vp.length-vd,p=Math.round(m/vp.length*100); if(m)arr.push({sev:p>30?'warn':'info',text:tr('ins_vet').replace('{n}','<b>'+m+'</b>').replace('{p}',p)});}
+    const nw=f.filter(p=>p.join&&(TODAY-p.join)/MS<=365).length; if(nw)arr.push({sev:'ok',text:tr('ins_new').replace('{n}','<b>'+nw+'</b>')});
+    GST.insights(f.length?arr:[]);
   }
-  const tb = document.getElementById('tbody'); tb.innerHTML = '';
-  document.getElementById('tblCnt').textContent = f.length;
-  if (!f.length) { tb.innerHTML='<tr><td colspan="9" class="empty">조건에 맞는 인원이 없습니다</td></tr>'; return; }
-  f.forEach((d,i) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${d.no||i+1}</td><td><b>${d.name}</b></td><td>${d.join}</td><td>${d.exp}</td>
-      <td>${d.pos}</td><td>${d.job}</td>
-      <td><span class="tag ${tagCls(d.basic)}">${d.basic}</span></td>
-      <td><span class="tag ${tagCls(d.vet)}">${d.vet}</span></td>
-      <td style="color:var(--muted)">${d.note||'-'}</td>`;
-    tb.appendChild(tr);
-  });
+
+  renderTable(f);
 }
+
+/* ===== 상세 테이블 ===== */
+function tagB(v){ return v==='이수완료'?'t-done':v==='진행중'?'t-prog':v==='비대상'?'t-na':'t-miss'; }
+function sortVal(p,k){
+  if(k==='join')return p.join?p.join.getTime():0;
+  if(k==='exp')return tenureYr(p)||0;
+  if(k==='no')return +p.no||0;
+  return String(p[k]||(k==='status'?'':'')).toLowerCase();
+}
+function renderTable(f){
+  const tb=document.getElementById('tbody'); document.getElementById('tblCnt').textContent=f.length;
+  if(!f.length){tb.innerHTML='<tr><td colspan="11" class="empty">조건에 맞는 인원이 없습니다</td></tr>';return;}
+  const rows=f.slice().sort((a,b)=>{const va=sortVal(a,SORT.k),vb=sortVal(b,SORT.k);return (va<vb?-1:va>vb?1:0)*SORT.dir;});
+  tb.innerHTML=rows.map((d,i)=>{
+    const bTag=d.edu?'<span class="tag '+tagB(clsB(d))+'">'+clsB(d)+'</span>':'<span style="color:var(--muted)">-</span>';
+    const vTag=d.edu?'<span class="tag '+tagB(clsV(d))+'">'+clsV(d)+'</span>':'<span style="color:var(--muted)">-</span>';
+    const act=isActive(d);
+    const sTag=act?'<span class="tag t-act">'+tr('s_act')+'</span>':'<span class="tag t-quit">'+tr('s_quit')+(d.quit?' '+ymd(d.quit).slice(2):'')+'</span>';
+    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(d.name)+'</b>'+(d.cn?' <span style="color:var(--muted);font-size:11px">'+esc(d.cn)+'</span>':'')+'</td>'
+      +'<td>'+esc(shortSite(d.site))+'</td><td>'+esc(d.org||'-')+'</td><td>'+esc(d.role||'-')+'</td><td>'+esc(d.posKo||'-')+'</td>'
+      +'<td>'+tenureLabel(d)+'</td><td>'+(d.join?ymd(d.join):'-')+'</td>'
+      +'<td>'+bTag+'</td><td>'+vTag+'</td><td>'+sTag+'</td></tr>';
+  }).join('');
+}
+document.getElementById('detTbl').querySelectorAll('th[data-k]').forEach(th=>{
+  th.addEventListener('click',()=>{const k=th.getAttribute('data-k'); if(SORT.k===k)SORT.dir*=-1; else{SORT.k=k;SORT.dir=1;} if(DATA.length)render();});
+});
+
+/* ===== 드릴다운 ===== */
+function hrDrill(evt,els,chart){ if(!els||!els.length)return; const id=chart.canvas.id, d=DRILL[id]; if(!d)return; const i=els[0].index;
+  if(d.kind==='people')return peopleDrill(d.title+' · '+d.labels[i],d.groups[i]);
+  if(d.kind==='io')return ioDrill(d,i);
+  if(d.kind==='edu')return eduDrill(d,i,els[0].datasetIndex);
+}
+function peopleTable(people){
+  if(!people||!people.length)return '<div class="dhint">'+tr('st_na')+'</div>';
+  const rows=people.slice().sort((a,b)=>(b.join?b.join.getTime():0)-(a.join?a.join.getTime():0));
+  return '<table><thead><tr><th>'+tr('th_name')+'</th><th>'+tr('th_site')+'</th><th>'+tr('th_role')+'</th><th>'+tr('th_join')+'</th><th>Basic</th><th>Veteran</th></tr></thead><tbody>'
+    +rows.map(d=>'<tr><td>'+esc(d.name)+'</td><td>'+esc(shortSite(d.site))+'</td><td>'+esc(d.role||'-')+'</td><td>'+(d.join?ymd(d.join):'-')+'</td>'
+      +'<td>'+(d.edu?clsB(d):'-')+'</td><td>'+(d.edu?clsV(d):'-')+'</td></tr>').join('')+'</tbody></table>';
+}
+function peopleDrill(title,people){
+  const on=people.filter(p=>p.onsite).length, ed=people.filter(p=>p.edu&&clsB(p)!=='비대상').length, dn=people.filter(p=>p.edu&&clsB(p)==='이수완료').length;
+  let h='<div class="dsum"><div class="b"><span class="n">'+people.length+'</span><span class="l">'+tr('d_total')+'</span></div>'
+    +'<div class="b"><span class="n">'+on+'</span><span class="l">'+tr('d_on')+'</span></div>'
+    +'<div class="b"><span class="n">'+dn+'/'+ed+'</span><span class="l">Basic '+tr('d_done')+'</span></div></div>';
+  h+=peopleTable(people); showDrill(title,h);
+}
+function ioDrill(d,i){
+  const ins=d.ins[i],outs=d.outs[i];
+  let h='<div class="dsum"><div class="b"><span class="n">+'+ins.length+'</span><span class="l">'+tr('io_in')+'</span></div>'
+    +'<div class="b"><span class="n">−'+outs.length+'</span><span class="l">'+tr('io_out')+'</span></div></div>';
+  const mk=(arr,dk)=>arr.length?('<table><thead><tr><th>'+tr('th_name')+'</th><th>'+tr('th_site')+'</th><th>'+tr('th_role')+'</th><th>'+tr('th_join')+'</th></tr></thead><tbody>'
+    +arr.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(shortSite(x.site))+'</td><td>'+esc(x.role||'-')+'</td><td>'+(x[dk]?ymd(x[dk]):'-')+'</td></tr>').join('')+'</tbody></table>'):'<div class="dhint">'+tr('st_na')+'</div>';
+  h+='<div class="dhint">'+tr('io_in')+'</div>'+mk(ins,'join')+'<div class="dhint">'+tr('io_out')+'</div>'+mk(outs,'quit');
+  showDrill(d.title+' · '+d.labels[i],h);
+}
+function eduDrill(d,course,dsIdx){
+  const status=d.stt[dsIdx]||'미이수'; const cls=course===0?clsB:clsV;
+  const people=d.epop.filter(p=>cls(p)===status);
+  showDrill(d.title+' · '+(course===0?'Basic':'Veteran')+' '+status,
+    '<div class="dsum"><div class="b"><span class="n">'+people.length+'</span><span class="l">'+status+'</span></div></div>'+peopleTable(people));
+}
+function showDrill(title,html){ let m=document.getElementById('drillModal');
+  if(!m){m=document.createElement('div');m.id='drillModal';
+    m.innerHTML='<div class="drill-bg" onclick="closeDrill()"></div><div class="drill-box"><button class="drill-x" onclick="closeDrill()">✕</button><h3 id="drillTitle"></h3><div id="drillBody"></div></div>';
+    document.body.appendChild(m); document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrill();});}
+  m.querySelector('#drillTitle').textContent=title; m.querySelector('#drillBody').innerHTML=html; m.style.display='flex';
+}
+window.closeDrill=function(){const m=document.getElementById('drillModal');if(m)m.style.display='none';};
+
+/* ===== 차트/표 복사 (PPT·엑셀) ===== */
+function capToast(msg){ let t=document.getElementById('capToast'); if(!t){t=document.createElement('div');t.id='capToast';document.body.appendChild(t);}
+  t.textContent=msg; t.style.opacity='1'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.opacity='0',1600); }
+function chartHiRes(id,scale){ const ch=CH[id]; if(!ch||!ch.canvas)return null;
+  const cv=ch.canvas,w=cv.clientWidth||400,h=cv.clientHeight||300;
+  if(!scale)scale=Math.min(6,Math.max(3,Math.round(2400/w)));
+  const prev=ch.options.devicePixelRatio; ch.options.devicePixelRatio=scale; ch.resize(); ch.render();
+  const oc=document.createElement('canvas'); oc.width=Math.round(w*scale); oc.height=Math.round(h*scale);
+  const g=oc.getContext('2d'); g.fillStyle=getComputedStyle(document.body).backgroundColor||'#0B0F14'; g.fillRect(0,0,oc.width,oc.height); g.drawImage(cv,0,0,oc.width,oc.height);
+  ch.options.devicePixelRatio=prev; ch.resize(); ch.render(); return oc; }
+window.copyChart=async function(id){ const oc=chartHiRes(id); if(!oc){capToast('차트를 찾을 수 없습니다');return;}
+  try{ await new Promise((res,rej)=>oc.toBlob(async b=>{if(!b)return rej();try{await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);res();}catch(e){rej(e);}},'image/png'));
+    capToast('📋 차트 복사됨 — PPT에 붙여넣기(Ctrl+V)'); }catch(e){ capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요'); } };
+window.saveChart=function(id){ const oc=chartHiRes(id); if(!oc){capToast('차트를 찾을 수 없습니다');return;}
+  oc.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ '+id+'.png 저장됨');},'image/png'); };
+function tableToTSV(tbl){ return [...tbl.rows].map(r=>[...r.cells].map(c=>(c.textContent||'').trim()).join('\t')).join('\n'); }
+window.copyTable=async function(){ const tbl=document.getElementById('detTbl'); const tsv=tableToTSV(tbl);
+  try{ await navigator.clipboard.writeText(tsv); capToast('📋 명단 복사됨 — 엑셀에 붙여넣기(Ctrl+V)'); }catch(e){ capToast('복사 미지원 브라우저'); } };
+window.saveCsv=function(){ const tbl=document.getElementById('detTbl');
+  const rows=[...tbl.rows].map(r=>[...r.cells].map(c=>{let t=(c.textContent||'').trim().replace(/"/g,'""');return /[",\n]/.test(t)?'"'+t+'"':t;}).join(','));
+  const b=new Blob(['﻿'+rows.join('\r\n')],{type:'text/csv'}); const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='workforce_roster.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ workforce_roster.csv 저장됨'); };
+function addCapBtns(){
+  document.querySelectorAll('.cw canvas').forEach(cv=>{ const id=cv.id,card=cv.closest('.card'); if(!id||!card||card.querySelector('.capbtns'))return;
+    const box=document.createElement('div'); box.className='capbtns';
+    box.innerHTML='<button class="capbtn" title="고해상도 복사(PPT 붙여넣기)" onclick="copyChart(\''+id+'\')">📋 복사</button><button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>';
+    card.appendChild(box); });
+  const tc=document.getElementById('detTbl'); const card=tc?tc.closest('.tablecard'):null;
+  if(card&&!card.querySelector('.capbtns')){ const box=document.createElement('div'); box.className='capbtns';
+    box.innerHTML='<button class="capbtn" title="명단을 엑셀에 붙여넣기" onclick="copyTable()">📋 표 복사</button><button class="capbtn" title="CSV 저장" onclick="saveCsv()">⤓</button>';
+    card.appendChild(box); }
+}
+
 applyLang();
 loadData();
 </script>
 
 <script>
 (function(){
-    function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
+  function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
   window.checkPw=async function(){
     const v=document.getElementById('pwInput').value;
-    if(await GST.checkPw(v)){
-      try{sessionStorage.setItem('gst_auth','1');}catch(e){}
-      document.getElementById('loginOverlay').classList.add('hidden');
-    }else{
-      document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';
-      document.getElementById('pwInput').value='';
-    }
+    if(await GST.checkPw(v)){ try{sessionStorage.setItem('gst_auth','1');}catch(e){} document.getElementById('loginOverlay').classList.add('hidden'); }
+    else{ document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect'; document.getElementById('pwInput').value=''; }
   };
-  function init(){
-    const ov=document.getElementById('loginOverlay');
-    if(!ov)return;
+  function init(){ const ov=document.getElementById('loginOverlay'); if(!ov)return;
     if(isAuthed()){ov.classList.add('hidden');return;}
-    const inp=document.getElementById('pwInput');
-    inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();});
-    setTimeout(()=>inp.focus(),100);
+    const inp=document.getElementById('pwInput'); inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();}); setTimeout(()=>inp.focus(),100);
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
-  else init();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init); else init();
 })();
 </script>
 <script>
