@@ -616,8 +616,21 @@ const valLabelPlugin={id:'valLabel',
       });
       ctx.restore();return;
     }
-    if(o.mode==='stackTotal'){
-      // 스택 막대 총합을 막대 위(양수)·아래(음수)에 표기 — 인원 차트용
+    if(o.mode==='stackAll'||o.mode==='stackTotal'){
+      // 각 세그먼트 값(stackAll) + 스택 총합 위/아래 표기 — 인원 차트용
+      if(o.mode==='stackAll'){
+        ctx.font='700 9px "Segoe UI","Malgun Gothic",sans-serif';
+        chart.data.datasets.forEach((ds,di)=>{
+          const meta=chart.getDatasetMeta(di); if(!meta||meta.hidden||!meta.data||meta.type==='line')return;
+          meta.data.forEach((el,i)=>{
+            const v=ds.data[i]; if(v==null||!isFinite(v)||+v===0)return;
+            const hgt=el.base!=null?Math.abs(el.base-el.y):0; if(hgt<9)return;   // 작으면 총합만
+            let _f=ds.backgroundColor; if(Array.isArray(_f))_f=_f[i];
+            ctx.fillStyle=labelOn(_f); ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(fmt(Math.abs(v)),el.x,(el.y+el.base)/2);
+          });
+        });
+      }
       ctx.font='700 10px "Segoe UI","Malgun Gothic",sans-serif'; ctx.fillStyle=o.color||'#E6EDF3'; ctx.textAlign='center';
       const bars=chart.data.datasets.map((ds,di)=>({ds,meta:chart.getDatasetMeta(di)})).filter(x=>x.meta&&!x.meta.hidden&&x.meta.type!=='line');
       const n=(chart.data.labels||[]).length;
@@ -1006,7 +1019,7 @@ function render(){
       data:{labels,datasets:dsets},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
         plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
-          valLabel:{mode:'stackTotal',color:ink},
+          valLabel:{mode:'stackAll',color:ink},
           tooltip:{callbacks:{footer:it=>'Σ '+it.reduce((a,i)=>a+i.parsed.y,0)}}},
         scales:baseScales(TH,true)},
       plugins:[valLabelPlugin]});
@@ -1027,7 +1040,7 @@ function render(){
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14,bottom:6}},
         plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8,
             filter:it=>!/^·/.test(it.text)}},
-          valLabel:{mode:'stackTotal',color:ink},
+          valLabel:{mode:'stackAll',color:ink},
           tooltip:{callbacks:{label:c=>' '+(c.dataset.label||'').replace(/^·/,'')+' '+(c.parsed.y<0?t('io_out')+' '+(-c.parsed.y):t('io_in')+' '+c.parsed.y)}}},
         scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:11}},grid:{display:false}},
                 y:{stacked:true,grace:'15%',ticks:{color:TH.txt,precision:0,maxTicksLimit:6,callback:v=>Math.abs(v)},grid:{color:TH.grid}}}},
@@ -1223,7 +1236,7 @@ function render(){
       data:{labels,datasets:cds},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
         plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
-          valLabel:{mode:'stackTotal',color:ink},
+          valLabel:{mode:'stackAll',color:ink},
           tooltip:{callbacks:{footer:it=>'Σ '+it.reduce((a,i)=>a+i.parsed.y,0)}}},
         scales:baseScales(TH,true)},
       plugins:[valLabelPlugin]});
