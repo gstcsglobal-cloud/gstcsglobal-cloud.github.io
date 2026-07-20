@@ -633,6 +633,7 @@ function renderCompliance(){
   const mm=[]; RAW.forEach(r=>{if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;const v=Number(r[C.manMin]);if(v>0&&v<14400)mm.push(v);});
   mm.sort((a,b)=>a-b); const manH=mm.length?mm[Math.floor(mm.length/2)]/60:0;
   setV('ck1',comp); setV('ck2',overU.length); setV('ck3',due8.length); setV('ck4',Math.round(due8.length*manH));
+  {const e1=document.getElementById('ck1'); if(e1)e1.style.color=GST.ragColor(comp,90,80,true);}   // 준수율 RAG
   // 2) 지연 경과일 분포
   const ac=[0,0,0,0];
   overU.forEach(x=>{const d=-(x.dl||0); ac[d<=7?0:d<=30?1:d<=90?2:3]++;});
@@ -674,15 +675,21 @@ const valLabelPlugin={id:'valLabel',
     ctx.restore();
   }};
 function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
-function mkBarV2(id,labels,data,color){
+function mkBarV2(id,labels,data,color,opts){
   const ctx=document.getElementById(id); if(!ctx)return;
-  const TH=GST.chartTheme();
-  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:4}]},
+  const TH=GST.chartTheme(); opts=opts||{};
+  let L=labels.slice(), D=data.slice(), bg=D.map(()=>color); const realLen=D.length;
+  if(opts.forecast){ const base=opts.skipLast===false?data:data.slice(0,-1);
+    const raw=GST.linForecast(base,opts.forecast+(opts.skipLast===false?0:1))||[];
+    const fc=opts.skipLast===false?raw:raw.slice(1);
+    fc.forEach((v,i)=>{L.push('+'+(i+1));D.push(v);bg.push(opts.fcColor||'rgba(56,189,248,.5)');}); }
+  const cfg={type:'bar',data:{labels:L,datasets:[{data:D,backgroundColor:bg,borderRadius:4}]},
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
       plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}},
-              y:{ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
+              y:{grace:'14%',ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
     plugins:[valLabelPlugin]};
+  if(opts.anomaly){ cfg.options.plugins.trendAnno={anomaly:true,realLen}; cfg.plugins.push(GST.trendAnnoPlugin); }
   if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
 }
 function mkHBar2(id,entries,color,topN){
@@ -759,7 +766,7 @@ function render(){ GST.skeleton(false);
     const dm={};
     VD.forEach(h=>{const k=h.date.getUTCFullYear()+'-'+String(h.date.getUTCMonth()+1).padStart(2,'0');dm[k]=(dm[k]||0)+1;});
     const keys=Object.keys(dm).sort().slice(-8);
-    mkBarV2('cDone',keys.map(k=>(+k.slice(5))+t('mon_u')),keys.map(k=>dm[k]),TH.pal[1]);
+    mkBarV2('cDone',keys.map(k=>(+k.slice(5))+t('mon_u')),keys.map(k=>dm[k]),TH.pal[1],{forecast:2,anomaly:true});
   }
   // 작업 부하 (TBM 원본 행 기준: 공수·작업자·라인별 시간)
   {
