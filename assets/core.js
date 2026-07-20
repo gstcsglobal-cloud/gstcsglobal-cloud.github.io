@@ -707,6 +707,62 @@ GST.autoSidebar = function(){
     }
   });
 };
+/* ---------- 고급 분석 헬퍼 (B1~B4 플랫폼) ---------- */
+// 최소제곱 선형회귀로 향후 n개 값 예측 (음수는 0, 소수1자리). 데이터 3개 미만이면 [].
+GST.linForecast = function(ys, n){
+  var pts=[]; (ys||[]).forEach(function(y,i){ if(y!=null&&isFinite(y)) pts.push([i,+y]); });
+  if(pts.length<3) return [];
+  var N=pts.length, sx=0,sy=0,sxy=0,sxx=0;
+  pts.forEach(function(p){ sx+=p[0]; sy+=p[1]; sxy+=p[0]*p[1]; sxx+=p[0]*p[0]; });
+  var den=(N*sxx-sx*sx)||1, b=(N*sxy-sx*sy)/den, a=(sy-b*sx)/N;
+  var last=pts[pts.length-1][0], out=[];
+  for(var i=1;i<=n;i++){ out.push(Math.max(0, Math.round((a+b*(last+i))*10)/10)); }
+  return out;
+};
+// MAD(중앙절대편차) 기반 이상치 인덱스 집합 (기본 임계 z=3)
+GST.anomalyIdx = function(ys, z){
+  z=z||3; var v=(ys||[]).filter(function(y){return y!=null&&isFinite(y);});
+  if(v.length<4) return new Set();
+  var s=v.slice().sort(function(a,b){return a-b;}), med=s[Math.floor(s.length/2)];
+  var dev=v.map(function(y){return Math.abs(y-med);}).sort(function(a,b){return a-b;});
+  var mad=dev[Math.floor(dev.length/2)]||0; var set=new Set();
+  if(mad<=0) return set;
+  (ys||[]).forEach(function(y,i){ if(y!=null&&isFinite(y)&&Math.abs(y-med)/(1.4826*mad)>=z) set.add(i); });
+  return set;
+};
+// 추세 주석 Chart.js 플러그인 — 이상치 링 표시(차트영역 내 안전). 예측선은 데이터셋 추가 방식 권장.
+// options.plugins.trendAnno = { anomaly:true, color:'#fb7185', dsIndex:0 }
+GST.trendAnnoPlugin = {
+  id:'trendAnno',
+  afterDatasetsDraw:function(chart, args, o){
+    if(!o||!o.anomaly) return;
+    var di=o.dsIndex||0, ds=chart.data.datasets[di], meta=chart.getDatasetMeta(di);
+    if(!ds||!meta||!meta.data) return;
+    var arr = o.realLen ? ds.data.slice(0, o.realLen) : ds.data;
+    var set=GST.anomalyIdx(arr), col=o.color||'#fb7185', ctx=chart.ctx;
+    if(!set.size) return;
+    ctx.save();
+    set.forEach(function(i){ var el=meta.data[i]; if(!el) return;
+      ctx.beginPath(); ctx.arc(el.x, el.y, 5.5, 0, 6.2832); ctx.strokeStyle=col; ctx.lineWidth=2; ctx.stroke(); });
+    ctx.restore();
+  }
+};
+// RAG(신호등) 색 — v와 임계치 비교. higherBetter=true면 클수록 좋음.
+GST.ragColor = function(v, good, warn, higherBetter){
+  if(v==null||!isFinite(v)) return '';
+  if(higherBetter) return v>=good ? 'var(--good,#34d399)' : (v>=warn ? 'var(--warn,#fbbf24)' : 'var(--bad,#fb7185)');
+  return v<=good ? 'var(--good,#34d399)' : (v<=warn ? 'var(--warn,#fbbf24)' : 'var(--bad,#fb7185)');
+};
+// 예측 데이터셋 헬퍼 — 실제 마지막점부터 이어지는 점선 라인 데이터 배열 생성
+// 반환 {labels:[...+예측라벨], line:[null...,실측마지막,예측...]} — 페이지가 labels 교체 + 라인 데이터셋 추가
+GST.forecastSeries = function(labels, data, n, fcLabel){
+  var fc=GST.linForecast(data, n); if(!fc.length) return null;
+  var L=labels.slice(), line=data.map(function(){return null;});
+  line[data.length-1]=data[data.length-1];
+  for(var i=0;i<fc.length;i++){ L.push((fcLabel||'+')+ (i+1)); line.push(fc[i]); }
+  return {labels:L, line:line, fc:fc};
+};
+
 function gstAutoStart(){
   try{ GST.autoSidebar(); }catch(e){}
   try{ GST.startAutoRefresh(10); }catch(e){}
