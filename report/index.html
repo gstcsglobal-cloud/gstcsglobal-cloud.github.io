@@ -616,6 +616,20 @@ const valLabelPlugin={id:'valLabel',
       });
       ctx.restore();return;
     }
+    if(o.mode==='stackTotal'){
+      // 스택 막대 총합을 막대 위(양수)·아래(음수)에 표기 — 인원 차트용
+      ctx.font='700 10px "Segoe UI","Malgun Gothic",sans-serif'; ctx.fillStyle=o.color||'#E6EDF3'; ctx.textAlign='center';
+      const bars=chart.data.datasets.map((ds,di)=>({ds,meta:chart.getDatasetMeta(di)})).filter(x=>x.meta&&!x.meta.hidden&&x.meta.type!=='line');
+      const n=(chart.data.labels||[]).length;
+      for(let i=0;i<n;i++){ let pos=0,neg=0,topY=null,botY=null,x=null;
+        bars.forEach(({ds,meta})=>{const v=+ds.data[i]||0; const el=meta.data[i]; if(!el)return; x=el.x;
+          if(v>0){pos+=v; if(topY==null||el.y<topY)topY=el.y;} else if(v<0){neg+=v; if(botY==null||el.y>botY)botY=el.y;}});
+        if(x==null)continue;
+        if(pos>0&&topY!=null){ctx.textBaseline='bottom'; ctx.fillText(fmt(pos),x,topY-3);}
+        if(neg<0&&botY!=null){ctx.textBaseline='top'; ctx.fillText(fmt(-neg),x,botY+3);}
+      }
+      ctx.restore();return;
+    }
     const meta=chart.getDatasetMeta(0), ds=chart.data.datasets[0];
     if(!meta||!meta.data||!meta.data.length){ctx.restore();return;}
     const nums=ds.data.filter(v=>v!=null&&isFinite(v));
@@ -990,10 +1004,12 @@ function render(){
     destroyMk('cHc');
     CHARTS.cHc=new Chart(document.getElementById('cHc'),{type:'bar',
       data:{labels,datasets:dsets},
-      options:{responsive:true,maintainAspectRatio:false,
+      options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
         plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+          valLabel:{mode:'stackTotal',color:ink},
           tooltip:{callbacks:{footer:it=>'Σ '+it.reduce((a,i)=>a+i.parsed.y,0)}}},
-        scales:baseScales(TH,true)}});
+        scales:baseScales(TH,true)},
+      plugins:[valLabelPlugin]});
   }
   // 입사/퇴사 — 라인(소속)별 다이버징: 0 기준 위=입사(+) · 아래=퇴사(−)
   {
@@ -1008,12 +1024,14 @@ function render(){
     destroyMk('cIo');
     CHARTS.cIo=new Chart(document.getElementById('cIo'),{type:'bar',
       data:{labels,datasets:inDs.concat(outDs)},
-      options:{responsive:true,maintainAspectRatio:false,
+      options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14,bottom:6}},
         plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8,
             filter:it=>!/^·/.test(it.text)}},
+          valLabel:{mode:'stackTotal',color:ink},
           tooltip:{callbacks:{label:c=>' '+(c.dataset.label||'').replace(/^·/,'')+' '+(c.parsed.y<0?t('io_out')+' '+(-c.parsed.y):t('io_in')+' '+c.parsed.y)}}},
         scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:11}},grid:{display:false}},
-                y:{stacked:true,grace:'15%',ticks:{color:TH.txt,precision:0,maxTicksLimit:6,callback:v=>Math.abs(v)},grid:{color:TH.grid}}}}});
+                y:{stacked:true,grace:'15%',ticks:{color:TH.txt,precision:0,maxTicksLimit:6,callback:v=>Math.abs(v)},grid:{color:TH.grid}}}},
+      plugins:[valLabelPlugin]});
   }
   // 교육 완료율 추이 (누적, %)
   {
@@ -1203,10 +1221,12 @@ function render(){
     destroyMk('cCareer');
     CHARTS.cCareer=new Chart(document.getElementById('cCareer'),{type:'bar',
       data:{labels,datasets:cds},
-      options:{responsive:true,maintainAspectRatio:false,
+      options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
         plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+          valLabel:{mode:'stackTotal',color:ink},
           tooltip:{callbacks:{footer:it=>'Σ '+it.reduce((a,i)=>a+i.parsed.y,0)}}},
-        scales:baseScales(TH,true)}});
+        scales:baseScales(TH,true)},
+      plugins:[valLabelPlugin]});
     setNote('cCareer',_last.map(a=>a[0]+' '+a[1]).join(' · '));
   }
   {
