@@ -1222,7 +1222,7 @@ function render(){
     const npMin=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isSvc(x.stage)).reduce((a,x)=>a+x.manMin,0));   // 非PM = CBM·CRM·CM·BM
     const hPM=P.map((p,i)=>r1(pmMin[i]/60/denom(p)));
     const hNp=P.map((p,i)=>r1(npMin[i]/60/denom(p)));
-    const hTot=P.map((p,i)=>r1((pmMin[i]+npMin[i])/60/denom(p)));
+    const hTot=hPM.map((v,i)=>r1(v+hNp[i]));   // 엑셀과 동일: 반올림된 PM공수 + 반올림된 비PM공수
     destroyMk('cMan');
     CHARTS.cMan=new Chart(document.getElementById('cMan'),{type:'bar',
       data:{labels,datasets:[
