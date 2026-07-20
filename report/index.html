@@ -704,22 +704,16 @@ function parseLeave(rows){
     const iSite=h.indexOf('소속'), iS=h.indexOf('휴가시작일'), iE=h.indexOf('휴가종료일'),
           iAmt=h.indexOf('휴가신청시간'), iU=h.indexOf('비고');
     const iEmp=h.indexOf('사원번호'), iNm=h.indexOf('이름');   // 인원현황(현장 O) 매칭용
+    // 휴가 = 시작일~종료일 구간의 '평일'을 각각 1일로 집계(신청시간 크기 무시, 주말 제외) — QBR 매크로와 동일
     rows.slice(hi+1).forEach(r=>{
       const st=pd(r[iS]); if(!st)return;
-      const en=pd(r[iE])||st;
-      const amt=Number(r[iAmt])||0; if(amt<=0)return;
+      let en=pd(r[iE])||st; if(en<st)en=st;
       const site=siteKey(r[iSite]);
       const empId=String(iEmp>=0?(r[iEmp]||''):'').trim();
       const nm=String(iNm>=0?(r[iNm]||''):'').trim();
-      const unit=String(iU>=0?(r[iU]||''):'').trim();
-      if(unit.includes('天')){
-        const days=[];
-        for(let d=new Date(st);d<=en;d=new Date(d.getTime()+MS)){const w=d.getUTCDay();if(w!==0&&w!==6)days.push(new Date(d));}
-        if(!days.length){out.push({date:st,days:Math.min(amt,1),site,custB:custBase(r[iSite]),fab:fabOf(r[iSite]),empId,name:nm});return;}
-        const per=Math.min(1,amt/days.length);
-        days.forEach(d=>out.push({date:d,days:per,site,custB:custBase(r[iSite]),fab:fabOf(r[iSite]),empId,name:nm}));
-      }else{
-        out.push({date:st,days:Math.min(1,amt/8),site,custB:custBase(r[iSite]),fab:fabOf(r[iSite]),empId,name:nm}); // 시간 단위 → 1일=8h
+      for(let d=new Date(st);d<=en;d=new Date(d.getTime()+MS)){
+        const w=d.getUTCDay(); if(w===0||w===6)continue;   // 주말 제외
+        out.push({date:new Date(d),days:1,site,custB:custBase(r[iSite]),fab:fabOf(r[iSite]),empId,name:nm});
       }
     });
   }else{
@@ -728,9 +722,10 @@ function parseLeave(rows){
           iAmt=h.findIndex(x=>x.replace(/\s/g,'').startsWith('휴가시간합계'));
     rows.slice(hi+1).forEach(r=>{
       const d=pd(r[iD]); if(!d)return;
+      const w=d.getUTCDay(); if(w===0||w===6)return;   // 주말 제외
       if(!String(iType>=0?(r[iType]||''):'').trim())return;
       const hrs=Number(r[iAmt])||0; if(hrs<=0)return;
-      out.push({date:d,days:Math.min(1,hrs/8),site:siteKey(r[iSite]),custB:custBase(r[iSite]),fab:fabOf(r[iSite])});
+      out.push({date:d,days:1,site:siteKey(r[iSite]),custB:custBase(r[iSite]),fab:fabOf(r[iSite])});   // 평일 휴가 있으면 1일
     });
   }
   return out;
