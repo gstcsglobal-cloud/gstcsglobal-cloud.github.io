@@ -1696,6 +1696,29 @@ window.saveOpCsv=function(){
   const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='scrubber_operation.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);
   capToast('⤓ scrubber_operation.csv 저장됨');
 };
+// 고장 원인 TOP3 표 — 복사(PPT/엑셀)·CSV
+function top3TableEl(){ const b=document.getElementById('top3Body'); return b?b.closest('table'):null; }
+window.copyTop3=async function(){
+  const tbl=top3TableEl(); if(!tbl){capToast('표를 찾을 수 없습니다');return;}
+  const card=tbl.closest('.tablecard'); const title=card?(card.querySelector('h3')||{}).textContent||'':'';
+  const html=tableToRichHTML(tbl,title), tsv=tableToTSV(tbl);
+  try{
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':new Blob([html],{type:'text/html'}),
+      'text/plain':new Blob([tsv],{type:'text/plain'})})]);
+    capToast('📋 표 복사됨 — PPT·엑셀에 붙여넣기(Ctrl+V)');
+  }catch(e){
+    try{ await navigator.clipboard.writeText(tsv); capToast('📋 표(텍스트) 복사됨 — 붙여넣기(Ctrl+V)'); }
+    catch(e2){ capToast('복사 미지원 — ⤓ CSV 저장을 이용하세요'); }
+  }
+};
+window.saveTop3Csv=function(){
+  const tbl=top3TableEl(); if(!tbl){capToast('표를 찾을 수 없습니다');return;}
+  const rows=[...tbl.rows].map(r=>[...r.cells].map(c=>{let t=(c.textContent||'').trim().replace(/"/g,'""');return /[",\n]/.test(t)?'"'+t+'"':t;}).join(','));
+  const b=new Blob(['﻿'+rows.join('\r\n')],{type:'text/csv'});
+  const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='fault_top_causes.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);
+  capToast('⤓ fault_top_causes.csv 저장됨');
+};
 function addCapBtns(){
   // Scrubber 가동 현황 표 — 복사(PPT/엑셀)·CSV 버튼
   const opCard=document.getElementById('opTblBody')?document.getElementById('opTblBody').closest('.tablecard'):null;
@@ -1704,6 +1727,14 @@ function addCapBtns(){
     box.innerHTML='<button class="capbtn" title="표를 PPT·엑셀에 붙여넣기" onclick="copyOpTable()">📋 표 복사</button>'
                  +'<button class="capbtn" title="CSV 저장" onclick="saveOpCsv()">⤓</button>';
     opCard.appendChild(box);
+  }
+  // 고장 원인 TOP3 표 — 복사·CSV 버튼
+  const t3Card=document.getElementById('top3Body')?document.getElementById('top3Body').closest('.tablecard'):null;
+  if(t3Card&&!t3Card.querySelector('.capbtns')){
+    const box=document.createElement('div'); box.className='capbtns';
+    box.innerHTML='<button class="capbtn" title="표를 PPT·엑셀에 붙여넣기" onclick="copyTop3()">📋 표 복사</button>'
+                 +'<button class="capbtn" title="CSV 저장" onclick="saveTop3Csv()">⤓</button>';
+    t3Card.appendChild(box);
   }
   document.querySelectorAll('.cw canvas').forEach(cv=>{
     const id=cv.id, card=cv.closest('.card'); if(!id||!card||card.querySelector('.capbtns'))return;
