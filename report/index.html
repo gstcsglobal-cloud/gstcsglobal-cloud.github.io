@@ -1732,6 +1732,7 @@ function addCapBtns(){
     box.innerHTML='<button class="capbtn" title="표를 PPT·엑셀에 붙여넣기" onclick="copyOpTable()">📋 표 복사</button>'
                  +'<button class="capbtn" title="CSV 저장" onclick="saveOpCsv()">⤓</button>';
     opCard.appendChild(box);
+    { const mp=opCard.querySelector('.mini-per'); if(mp)box.style.right=(mp.offsetWidth+24)+'px'; }  // 토글과 겹침 방지(왼쪽으로)
   }
   // 고장 원인 TOP3 표 — 복사·CSV 버튼
   const t3Card=document.getElementById('top3Body')?document.getElementById('top3Body').closest('.tablecard'):null;
@@ -1740,6 +1741,7 @@ function addCapBtns(){
     box.innerHTML='<button class="capbtn" title="표를 PPT·엑셀에 붙여넣기" onclick="copyTop3()">📋 표 복사</button>'
                  +'<button class="capbtn" title="CSV 저장" onclick="saveTop3Csv()">⤓</button>';
     t3Card.appendChild(box);
+    { const mp=t3Card.querySelector('.mini-per'); if(mp)box.style.right=(mp.offsetWidth+24)+'px'; }  // 주/월/연 토글과 겹침 방지
   }
   document.querySelectorAll('.cw canvas').forEach(cv=>{
     const id=cv.id, card=cv.closest('.card'); if(!id||!card||card.querySelector('.capbtns'))return;
