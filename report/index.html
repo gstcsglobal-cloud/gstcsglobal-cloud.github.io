@@ -956,6 +956,14 @@ function render(){
   const nowY=today.getUTCFullYear(), nowM=today.getUTCMonth();
   // 기준일: 종료일 필터가 있으면 그 날짜, 없으면 오늘
   const anchor=(F.dtTo&&pd(F.dtTo))||today;
+  // KPI·인사이트 기준일(as-of): 종료필터 > 마감(월) > 마감(주) > 오늘 · 실제 오늘로 상한
+  // 마감을 지정하지 않으면 asOf=today → 현행과 동일(검증값 불변)
+  let asOf=(F.dtTo&&pd(F.dtTo))||null;
+  if(!asOf&&ENDM){const _m=ENDM.split('-'); asOf=new Date(Date.UTC(+_m[0],+_m[1],0));}
+  if(!asOf&&ENDW){const _s=new Date(today); _s.setUTCDate(_s.getUTCDate()-_s.getUTCDay());
+    for(let i=0;i<80;i++){const d=new Date(_s.getTime()-i*7*MS); if(isoW(d)===ENDW){asOf=new Date(d.getTime()+6*MS);break;}}}
+  if(!asOf)asOf=today; if(asOf>today)asOf=today;
+  const asOfY=asOf.getUTCFullYear(), asOfM=asOf.getUTCMonth();
   const from=F.dtFrom?pd(F.dtFrom):null;
   const entOk=x=>(!F.country||x.country===F.country)&&(!F.customer||x.custB===F.customer)&&(!F.line||x.fab===F.line);
   const fWK=WK.filter(x=>entOk(x)&&(!from||x.wd>=from)&&(!F.dtTo||x.wd<=anchor));
@@ -1048,22 +1056,22 @@ function render(){
   document.getElementById('ptM').classList.toggle('active',PERIOD==='m');
 
   // ===== 인력 =====
-  const act=fHR.filter(p=>p.onsite&&activeAt(p,today));   // 재직 인원 = 현장(O) 재직자만 카운트
-  const yrs=p=>(today-p.join)/MS/365.25;
+  const act=fHR.filter(p=>p.onsite&&activeAt(p,asOf));   // 재직 인원 = 현장(O) 재직자만 카운트(기준일 as-of)
+  const yrs=p=>(asOf-p.join)/MS/365.25;
   const u1=act.filter(p=>yrs(p)<1).length, u3=act.filter(p=>yrs(p)>=2).length;
-  const joinM=fHR.filter(p=>p.join&&p.join.getUTCFullYear()===nowY&&p.join.getUTCMonth()===nowM).length;
-  const quitM=fHR.filter(p=>p.quit&&p.quit.getUTCFullYear()===nowY&&p.quit.getUTCMonth()===nowM).length;
-  const join12=fHR.filter(p=>p.join&&(today-p.join)/MS<=365).length;
+  const joinM=fHR.filter(p=>p.join&&p.join.getUTCFullYear()===asOfY&&p.join.getUTCMonth()===asOfM).length;
+  const quitM=fHR.filter(p=>p.quit&&p.quit.getUTCFullYear()===asOfY&&p.quit.getUTCMonth()===asOfM).length;
+  const join12=fHR.filter(p=>p.join&&(asOf-p.join)/MS<=365&&p.join<=asOf).length;
   const setTxt=(id,v)=>{const e=document.getElementById(id);if(e)e.innerHTML=v;};
   setTxt('kp1',act.length.toLocaleString());
   setTxt('kf1',t('kf1').replace('{n}',u3).replace('{m}',u1));
   setTxt('kp2','+'+joinM+' / -'+quitM);
   setTxt('kf2',t('kf2').replace('{n}',join12));
   // 교육 완료율 — cEdu 차트와 동일 로직(버그 수정): 현장(O) 재직자 · 6개월 미만 LV1(Basic)·이상 LV2(Veteran) · 이수일 ≤ 기준일(이름 매칭)
-  const eA=fHR.filter(x=>x.onsite&&activeAt(x,today)&&x.join);
-  const _six=x=>((today-x.join)/MS)>=182;
+  const eA=fHR.filter(x=>x.onsite&&activeAt(x,asOf)&&x.join);
+  const _six=x=>((asOf-x.join)/MS)>=182;
   const eLv1=eA.filter(x=>!_six(x)), eLv2=eA.filter(_six);
-  const _dOf=(x,k)=>{const e=eduOf(x);return !!(e&&e[k]&&e[k]<=today);};
+  const _dOf=(x,k)=>{const e=eduOf(x);return !!(e&&e[k]&&e[k]<=asOf);};
   const d1=eLv1.filter(x=>_dOf(x,'bdate')).length, d2=eLv2.filter(x=>_dOf(x,'vdate')).length;
   const eT=eLv1.length+eLv2.length, eD=d1+d2;
   setTxt('kp3',eT?Math.round(eD/eT*100)+'%':'—');
@@ -1278,8 +1286,8 @@ function render(){
   }
 
   // ===== 작업 실행력 =====
-  const d30=new Date(anchor.getTime()-30*MS), d60=new Date(anchor.getTime()-60*MS);
-  const w30=x=>x.wd>=d30&&x.wd<=anchor;
+  const d30=new Date(asOf.getTime()-30*MS), d60=new Date(asOf.getTime()-60*MS);
+  const w30=x=>x.wd>=d30&&x.wd<=asOf;
   const man30=fWK.filter(w30).reduce((a,x)=>a+x.manMin,0);
   const manPM30=fWK.filter(x=>w30(x)&&isPM(x.stage)).reduce((a,x)=>a+x.manMin,0);
   // kp4: BM 고장 건수(최근 30일) — 줄어들면 좋은 지표
@@ -1288,8 +1296,8 @@ function render(){
   setTxt('kp4',bm30.toLocaleString()); setTxt('kd4',GST.deltaBadge(bm30,bmPrev,true));
   setTxt('kf4',t('kf4').replace('{n}',bmPrev.toLocaleString()));
   // kp5: 인당 일평균 공수(h) = 총공수 ÷ 출근 연인원 · 출근 연인원 = 현장(O)×근무일(21) − 휴가일수
-  const _ls30=fLV.reduce((a,x)=>a+((x.date>=d30&&x.date<=anchor&&okCF(x.custB,x.fab))?x.days:0),0);
-  const _attPD=Math.max(1,Math.max(1,headOn(anchor))*21-_ls30);
+  const _ls30=fLV.reduce((a,x)=>a+((x.date>=d30&&x.date<=asOf&&okCF(x.custB,x.fab))?x.days:0),0);
+  const _attPD=Math.max(1,Math.max(1,headOn(asOf))*21-_ls30);
   setTxt('kp5',(Math.round(man30/60/_attPD*10)/10).toLocaleString());
   setTxt('kf5',t('kf5').replace('{p}',man30?Math.round(manPM30/man30*100):0));
   {
@@ -1344,7 +1352,7 @@ function render(){
   // ===== PM S-커브 (올해, 월 고정) =====
   let scPlan=0, scDone=0;
   {
-    const aY=anchor.getUTCFullYear(), aM=anchor.getUTCMonth();
+    const aY=asOf.getUTCFullYear(), aM=asOf.getUTCMonth();
     const tbm=sWK.filter(x=>isPM(x.stage)&&x.sn);
     const g={};
     tbm.forEach(x=>{
@@ -1362,10 +1370,10 @@ function render(){
     const y0=new Date(Date.UTC(aY,0,1));
     const planM=Array(aM+1).fill(0), doneM=Array(aM+1).fill(0);
     Object.values(g).forEach(ds=>{
-      ds.forEach(d=>{if(d>=y0&&d<=anchor)doneM[d.getUTCMonth()]++;});
+      ds.forEach(d=>{if(d>=y0&&d<=asOf)doneM[d.getUTCMonth()]++;});
       // 주기를 도출할 수 없는 챔버(TBM 간격 1회 이하)는 계획=실적으로 중립 처리
       if(!ds._cy){
-        ds.forEach(d=>{if(d>=y0&&d<=anchor)planM[d.getUTCMonth()]++;});
+        ds.forEach(d=>{if(d>=y0&&d<=asOf)planM[d.getUTCMonth()]++;});
         return;
       }
       const cy=ds._cy;
@@ -1376,8 +1384,8 @@ function render(){
       if(!anchorD){ first=ds.find(d=>d>=y0)||null; anchorD=first; }
       if(!anchorD)return;
       // 올해 첫 TBM을 앵커로 쓴 경우 그 1건도 계획에 포함 (완료와 짝 맞춤)
-      if(first&&first<=anchor)planM[first.getUTCMonth()]++;
-      for(let d=new Date(anchorD.getTime()+cy*MS); d<=anchor; d=new Date(d.getTime()+cy*MS)){
+      if(first&&first<=asOf)planM[first.getUTCMonth()]++;
+      for(let d=new Date(anchorD.getTime()+cy*MS); d<=asOf; d=new Date(d.getTime()+cy*MS)){
         if(d>=y0)planM[d.getUTCMonth()]++;
       }
     });
@@ -1522,7 +1530,7 @@ function render(){
   {const per={}; ['cFt','cMan','cAtt','cHc','cCareer','cIo'].forEach(id=>{try{per[id]=PU(id).P;}catch(e){}});
    window._DRILL={fWK,fHR,fLV,headOn,SITES,grpKey,per};}
   // KPI 스파크라인 (최근 12구간 추세 · 계산 무관 표시용)
-  try{ const SP=periods(12,anchor,PERIOD), wdv=(PERIOD==='m')?21:5;
+  try{ const SP=periods(12,asOf,PERIOD), wdv=(PERIOD==='m')?21:5;
     drawSpark('sp1',SP.map(p=>headOn(p.end)),'#3B82F6');
     drawSpark('sp3',SP.map(p=>{const a=fHR.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join),six=x=>((p.end-x.join)/MS)>=182;
       const D=a.filter(x=>!six(x)).filter(x=>{const e=eduOf(x);return e&&e.bdate&&e.bdate<=p.end;}).length
