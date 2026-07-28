@@ -239,6 +239,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   <span class="pt-sp"></span>
   <button class="pt-btn" id="styleBtn" onclick="toggleStyle()" title="차트 색상 스타일">🎨 <span id="styleLbl">Vivid</span></button>
   <button class="pt-btn" onclick="saveAllCharts()" title="모든 차트를 고해상도 PNG로 저장">🖼 전체 저장</button>
+  <button class="pt-btn" onclick="downloadPPT(this)" title="주간보고 PPT 자동 생성(슬라이드 3장) — 마감 기준일 반영">📊 PPT</button>
   <button class="pt-btn" onclick="window.print()" data-i="print">🖨 인쇄</button>
 </div>
 <div id="filtBadge" style="display:none"></div>
@@ -964,6 +965,8 @@ function render(){
     for(let i=0;i<80;i++){const d=new Date(_s.getTime()-i*7*MS); if(isoW(d)===ENDW){asOf=new Date(d.getTime()+6*MS);break;}}}
   if(!asOf)asOf=today; if(asOf>today)asOf=today;
   const asOfY=asOf.getUTCFullYear(), asOfM=asOf.getUTCMonth();
+  // PPT 내보내기용 스냅샷(표시 전용) — 각 블록이 렌더 값 그대로 채움
+  window._PPT={asOf:asOf.toISOString().slice(0,10),wk:'W'+isoW(asOf).slice(-2)};
   const from=F.dtFrom?pd(F.dtFrom):null;
   const entOk=x=>(!F.country||x.country===F.country)&&(!F.customer||x.custB===F.customer)&&(!F.line||x.fab===F.line);
   const fWK=WK.filter(x=>entOk(x)&&(!from||x.wd>=from)&&(!F.dtTo||x.wd<=anchor));
@@ -1074,6 +1077,7 @@ function render(){
   const _dOf=(x,k)=>{const e=eduOf(x);return !!(e&&e[k]&&e[k]<=asOf);};
   const d1=eLv1.filter(x=>_dOf(x,'bdate')).length, d2=eLv2.filter(x=>_dOf(x,'vdate')).length;
   const eT=eLv1.length+eLv2.length, eD=d1+d2;
+  window._PPT.edu={b:eLv1.length,bD:d1,v:eLv2.length,vD:d2};   // PPT 교육 표용
   setTxt('kp3',eT?Math.round(eD/eT*100)+'%':'—');
   setTxt('kf3',t('kf3').replace('{p}',eLv2.length?Math.round(d2/eLv2.length*100):0).replace('{n}',eLv2.length));
 
@@ -1430,6 +1434,20 @@ function render(){
       const _fd=GST.pctDelta(tot[_fi]||0,_pv);
       setNote('cFt',t('nFt').replace('{n}',tot[_fi]||0).replace('{d}',_fd==null?'—':(_fd>0?'+':'')+_fd+'%'));
     }
+    // PPT 내보내기용 — 주/월 양단위 Alarm·ABP 시리즈 스냅샷 (표시 전용 · 위 차트 계산과 동일 식)
+    // 앵커는 KPI와 동일한 asOf(마감 통합 기준일) — 월 마감만 잡아도 주간 시리즈가 그 시점으로 정렬
+    window._PPT.ft={};
+    ['w','m'].forEach(uu=>{
+      const _pp={P:periods(12,asOf,uu)}; _pp.labels=_pp.P.map(x=>x.label);
+      const _al=_pp.P.map(p=>fWK.filter(x=>keyOfDate(x.wd,uu)===p.key&&x.stage==='BM').length);
+      const _ab=_pp.P.map(p=>{const src=ABP[uu]||{};
+        const key=(uu==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
+        const bkt=src[key]; if(!bkt)return 0;
+        if(F.customer)return bkt.byC[F.customer]||0;
+        if(F.line)return bkt.byF[F.line]||0;
+        return bkt.ALL||0;});
+      window._PPT.ft[uu]={labels:_pp.labels,alarm:_al,abp:_ab,tot:_al.map((v,i)=>v+_ab[i])};
+    });
     // TOP3 표
     // TOP3: top3 카드 토글 — 주/월(마지막 구간) 또는 연(올해 1/1~마감일 누적)
     const _tp=PU('top3'); const _lp=_tp.P[_tp.P.length-1];
@@ -1528,7 +1546,7 @@ function render(){
   }
   // 드릴다운용 데이터·구간 스냅샷 (표시 계층 전용, 계산 무관)
   {const per={}; ['cFt','cMan','cAtt','cHc','cCareer','cIo'].forEach(id=>{try{per[id]=PU(id).P;}catch(e){}});
-   window._DRILL={fWK,fHR,fLV,headOn,SITES,grpKey,per};}
+   window._DRILL={fWK,fHR,fLV,headOn,SITES,grpKey,per,activeAt};}
   // KPI 스파크라인 (최근 12구간 추세 · 계산 무관 표시용)
   try{ const SP=periods(12,asOf,PERIOD), wdv=(PERIOD==='m')?21:5;
     drawSpark('sp1',SP.map(p=>headOn(p.end)),'#3B82F6');
@@ -1764,6 +1782,187 @@ function addCapBtns(){
     card.appendChild(box);
   });
 }
+
+// ===== PPT 주간보고 내보내기 — 주간보고 양식(3슬라이드) 자동 생성 =====
+// 표시 전용 계층: 화면에 렌더된 차트(CHARTS)·표(DOM)·스냅샷(_PPT)의 값을 그대로 옮긴다. 지표 계산 로직 무관.
+let _pptLoading=null;
+function pptLoad(){
+  if(window.PptxGenJS)return Promise.resolve();
+  if(_pptLoading)return _pptLoading;
+  _pptLoading=new Promise((res,rej)=>{const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
+    s.onload=res; s.onerror=()=>{_pptLoading=null;rej(new Error('PptxGenJS CDN 로드 실패'));};
+    document.head.appendChild(s);});
+  return _pptLoading;
+}
+function pptHex(c){ // Chart.js 색 → PPT 6자리 HEX ('#' 금지)
+  if(Array.isArray(c))c=c.find(v=>typeof v==='string')||c[0];
+  if(typeof c!=='string')return '5B9BD5';
+  if(c[0]==='#'){const h=c.slice(1);return (h.length>=6?h.slice(0,6):h.split('').map(x=>x+x).join('').slice(0,6)).toUpperCase();}
+  const m=c.match(/rgba?\s*\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i);
+  if(m)return [+m[1],+m[2],+m[3]].map(v=>Math.round(v).toString(16).padStart(2,'0')).join('').toUpperCase();
+  return '5B9BD5';
+}
+function pptSrc(ch){ // Chart.js 인스턴스 → {labels,bars,lines,stacked} (숨긴 시리즈 제외)
+  if(!ch||!ch.data)return null;
+  const labels=(ch.data.labels||[]).map(String), bars=[], lines=[];
+  ch.data.datasets.forEach((ds,i)=>{
+    try{ const mt=ch.getDatasetMeta(i); if(mt&&mt.hidden)return; }catch(e){}
+    if(ds.hidden)return;
+    const isLn=(ds.type||ch.config.type)==='line';
+    const vals=(ds.data||[]).map(v=>v==null?0:(typeof v==='object'?+(v.y||0):(+v||0)));
+    (isLn?lines:bars).push({name:String(ds.label||''),values:vals,
+      color:pptHex(isLn?(ds.borderColor||ds.backgroundColor):(ds.backgroundColor||ds.borderColor)),
+      y2:ds.yAxisID==='y2'});
+  });
+  const sc=(ch.options&&ch.options.scales)||{};
+  return {labels,bars,lines,stacked:!!((sc.y&&sc.y.stacked)||(sc.x&&sc.x.stacked))};
+}
+function pptCombo(pres,slide,src,x,y,w,h){ // 막대+꺾은선 네이티브 콤보 차트
+  if(!src||(!src.bars.length&&!src.lines.length))return;
+  const ln1=src.lines.filter(l=>!l.y2), ln2=src.lines.filter(l=>l.y2);
+  const useY2=ln2.length>0&&(src.bars.length>0||ln1.length>0);
+  const types=[];
+  if(src.bars.length)types.push({type:'bar',
+    data:src.bars.map(b=>({name:b.name,labels:src.labels,values:b.values})),
+    options:{chartColors:src.bars.map(b=>b.color),barGrouping:src.stacked?'stacked':'clustered'}});
+  const lnOpt=ls=>({chartColors:ls.map(l=>l.color),lineSize:1.5,lineSmooth:false,
+    lineDataSymbol:'circle',lineDataSymbolSize:4});
+  if(ln1.length)types.push({type:'line',
+    data:ln1.map(l=>({name:l.name,labels:src.labels,values:l.values})),options:lnOpt(ln1)});
+  if(ln2.length){const o=lnOpt(ln2); if(useY2){o.secondaryValAxis=true;o.secondaryCatAxis=true;}
+    types.push({type:'line',data:ln2.map(l=>({name:l.name,labels:src.labels,values:l.values})),options:o});}
+  const o={x,y,w,h,chartArea:{fill:{color:'FFFFFF'}},barGapWidthPct:60,
+    catAxisLabelColor:'333333',catAxisLabelFontSize:7.5,catAxisLineColor:'BFBFBF',
+    valAxisLabelColor:'333333',valAxisLabelFontSize:7.5,valAxisLineColor:'BFBFBF',
+    valGridLine:{color:'E8E8E8',size:0.5},catGridLine:{style:'none'},
+    showLegend:true,legendPos:'b',legendFontSize:7.5,legendColor:'333333',showTitle:false};
+  if(useY2){ // 보조축 사용 시 valAxes+catAxes 2쌍 필수 (미지정 시 PPT가 차트 폐기)
+    o.valAxes=[{showValAxisTitle:false,valGridLine:{color:'E8E8E8',size:0.5}},
+               {showValAxisTitle:false,valGridLine:{style:'none'}}];
+    o.catAxes=[{catAxisLabelFontSize:7.5},{catAxisHidden:true}];
+  }
+  slide.addChart(types,o);
+}
+const PPT_FONT='맑은 고딕';
+function pptCell(txt,o){return {text:String(txt==null?'':txt),options:Object.assign({fontFace:PPT_FONT,fontSize:8,align:'center',valign:'middle',color:'1A1A1A',fill:{color:'FFFFFF'},border:{pt:0.5,color:'9AA3AD'}},o||{})};}
+function pptHead(txt,o){return pptCell(txt,Object.assign({bold:true,fill:{color:'000000'},color:'FFFFFF'},o||{}));}
+function pptRowsFromDom(tbl){ // 화면 표 → PPT 표 행렬 (corp 세로합침 셀 제외)
+  const out=[];
+  [...tbl.rows].forEach(r=>{
+    const cells=[...r.cells].filter(c=>!c.classList.contains('corp'));
+    if(!cells.length)return;
+    const tot=r.classList.contains('tot');
+    out.push(cells.map(c=>{
+      const head=c.tagName==='TH', lb=c.classList.contains('lb');
+      const o={bold:head||tot||lb,align:head?'center':(lb?'left':'center')};
+      if(head){o.fill={color:'000000'};o.color='FFFFFF';}
+      else if(tot)o.fill={color:'EFEFEF'};
+      if(c.colSpan>1)o.colspan=c.colSpan;
+      return pptCell((c.textContent||'').trim().replace(/−/g,'-'),o);
+    }));
+  });
+  // corp 열 제거로 남은 초과 colspan 정규화 (예: TOTAL 행 colspan=2 → 1)
+  const wOf=r=>r.reduce((a,c)=>a+(c.options.colspan||1),0);
+  const target=Math.min.apply(null,out.map(wOf));
+  out.forEach(row=>{ let ex=wOf(row)-target;
+    for(const c of row){ if(ex<=0)break; const cs=c.options.colspan||1;
+      if(cs>1){const d=Math.min(ex,cs-1); c.options.colspan=(cs-d>1)?(cs-d):undefined; ex-=d;} } });
+  return out;
+}
+function pptHrRows(){ // 인력 현황 표 — 화면 차트와 동일 데이터(_DRILL)로 최근 5구간 집계
+  const D=window._DRILL;
+  if(!D||!D.per||!D.per.cHc||!D.per.cHc.length)return null;
+  const Ps=D.per.cHc.slice(-5);
+  const at=E=>D.fHR.filter(x=>x.onsite&&activeAt(x,E));
+  const yv=(x,E)=>(E-x.join)/MS/365.25;
+  const defs=[
+    ['1년 미만',p=>at(p.end).filter(x=>yv(x,p.end)<1).length],
+    ['1~2년',  p=>at(p.end).filter(x=>yv(x,p.end)>=1&&yv(x,p.end)<2).length],
+    ['2년 이상',p=>at(p.end).filter(x=>yv(x,p.end)>=2).length],
+    ['입사',   p=>D.fHR.filter(x=>x.join&&x.join>=p.st&&x.join<=p.end).length],
+    ['퇴사',   p=>D.fHR.filter(x=>x.quit&&x.quit>=p.st&&x.quit<=p.end).length],
+    ['합계',   p=>at(p.end).length]];
+  return [[pptHead('구분',{align:'center'})].concat(Ps.map(p=>pptHead(p.label)))]
+    .concat(defs.map(([lb,f])=>[pptCell(lb,{bold:true,align:'left'})].concat(Ps.map(p=>pptCell(f(p))))));
+}
+window.downloadPPT=async function(btn){
+  const P=window._PPT;
+  if(!P||!CHARTS||!Object.keys(CHARTS).length){capToast('데이터 로딩 완료 후 이용하세요');return;}
+  const old=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='⏳ 생성 중…';}
+  try{
+    await pptLoad();
+    const pres=new PptxGenJS(); pres.layout='LAYOUT_WIDE';
+    const corp='GST '+((F&&F.country)?(F.country.charAt(0)+F.country.slice(1).toLowerCase()):'Taiwan');
+    const header=(s,sec)=>{ s.background={color:'FFFFFF'};
+      s.addText(corp.toUpperCase(),{x:9.6,y:0.08,w:3.6,h:0.4,fontFace:PPT_FONT,fontSize:15,bold:true,color:'111111',align:'right',margin:0});
+      s.addText(sec,{x:0.76,y:0.1,w:8,h:0.4,fontFace:PPT_FONT,fontSize:14,bold:true,color:'111111',margin:0});
+      s.addText(P.asOf+' · '+P.wk+' 기준',{x:9.6,y:0.46,w:3.6,h:0.22,fontFace:PPT_FONT,fontSize:8,color:'808080',align:'right',margin:0});
+    };
+    const frame=(s,y,h,heads)=>{ const X=0.76,W=11.83,n=heads.length,cw=W/n;
+      heads.forEach((t0,i)=>{
+        s.addText(t0,{x:X+cw*i,y,w:cw,h:0.3,fill:{color:'000000'},color:'FFFFFF',fontFace:PPT_FONT,fontSize:10.5,bold:true,valign:'middle',margin:8,line:{color:'000000',width:0.75}});
+        s.addShape(pres.ShapeType.rect,{x:X+cw*i,y:y+0.3,w:cw,h:h-0.3,fill:{color:'FFFFFF'},line:{color:'8C8C8C',width:0.75}});
+      });};
+    const CW3=11.83/3;
+    const chartAt=(s,id,slot,y,h)=>{const src=pptSrc(CHARTS[id]); if(src)pptCombo(pres,s,src,0.76+CW3*slot+0.12,y,CW3-0.24,h);};
+    const perLbl=PERIOD==='m'?'월':'주';
+    // ---------- 슬라이드 1 · 운영 관리 (인력 / 교육 / CIP) ----------
+    const s1=pres.addSlide(); header(s1,'1. 운영 관리 부문 (SCR)');
+    frame(s1,0.62,3.5,['가. 인력현황 (경력구간·'+perLbl+')','나. 교육 완료율','다. CIP 진행 현황']);
+    chartAt(s1,'cHc',0,1.04,2.96); chartAt(s1,'cEdu',1,1.04,2.96); chartAt(s1,'cCip',2,1.04,2.96);
+    frame(s1,4.3,2.9,['인력 현황 (최근 5구간)','교육 현황','INSIGHT']);
+    const hrR=pptHrRows();
+    if(hrR)s1.addTable(hrR,{x:0.92,y:4.75,w:CW3-0.32,colW:[0.75].concat(Array(hrR[0].length-1).fill((CW3-0.32-0.75)/(hrR[0].length-1))),rowH:0.22,fontFace:PPT_FONT,fontSize:8});
+    if(P.edu){const e=P.edu,pct=(d,n)=>n?Math.round(d/n*100)+'%':'-';
+      s1.addTable([
+        [pptHead('교육과정'),pptHead('Basic (LV1)'),pptHead('Veteran (LV2)')],
+        [pptCell('대상',{bold:true,align:'left'}),pptCell(e.b),pptCell(e.v)],
+        [pptCell('이수완료',{bold:true,align:'left'}),pptCell(e.bD),pptCell(e.vD)],
+        [pptCell('미이수',{bold:true,align:'left'}),pptCell(e.b-e.bD),pptCell(e.v-e.vD)],
+        [pptCell('완료율',{bold:true,align:'left'}),pptCell(pct(e.bD,e.b),{bold:true}),pptCell(pct(e.vD,e.v),{bold:true})]
+      ],{x:0.92+CW3,y:4.75,w:CW3-0.32,colW:[1.1,(CW3-1.42)/2,(CW3-1.42)/2],rowH:0.24,fontFace:PPT_FONT,fontSize:8});}
+    { const ins=[...document.querySelectorAll('#gstInsights .gst-ins')].map(x=>'· '+(x.textContent||'').trim()).filter(Boolean);
+      s1.addText(ins.length?ins.join('\n'):'· 인사이트 없음',
+        {x:0.92+CW3*2,y:4.75,w:CW3-0.32,h:2.2,fontFace:PPT_FONT,fontSize:9,color:'333333',valign:'top',lineSpacingMultiple:1.35,margin:0}); }
+    // ---------- 슬라이드 2 · 운영 (출근·휴가 / 인당 챔버 / 공수) + 가동 현황 표 ----------
+    const s2=pres.addSlide(); header(s2,'1. 운영 관리 부문 (SCR)');
+    frame(s2,0.62,3.5,['가. 출근 · 휴가 ('+perLbl+')','나. 인당 관리 챔버','다. 작업 공수 (h)']);
+    chartAt(s2,'cAtt',0,1.04,2.96); chartAt(s2,'cChp',1,1.04,2.96); chartAt(s2,'cMan',2,1.04,2.96);
+    frame(s2,4.3,2.9,[(document.getElementById('opTblTitle')||{textContent:'Scrubber 가동 현황'}).textContent]);
+    { const tb=document.getElementById('opTblBody');   // 2단 머리글(rowspan)은 PPT 표로 직변환 불가 → 평면 머리글 별도 구성
+      if(tb&&!tb.querySelector('.empty')){
+        const hdr=['구분','가동(대)','W/I','W/O','가동(ch)','W/I','W/O','미가동(대)','미가동(ch)','주재원','현채인','적정챔버','인원','증감','모집','인당챔버','PM'].map(h=>pptHead(h));
+        const rows=[hdr].concat(pptRowsFromDom(tb));
+        s2.addTable(rows,{x:0.92,y:4.72,w:11.5,colW:[1.15].concat(Array(16).fill((11.5-1.15)/16)),rowH:0.2,fontFace:PPT_FONT,fontSize:6.8}); } }
+    // ---------- 슬라이드 3 · KPI (Alarm 월/주 + TOP3) ----------
+    const s3=pres.addSlide(); header(s3,'2. KPI 지표 부문 (SCR)');
+    frame(s3,0.62,2.62,['가. Alarm & All By-Pass [월/단위]','나. Alarm & All By-Pass [주/단위]']);
+    { const base=pptSrc(CHARTS.cFt);
+      const cA=base&&base.bars[0]?base.bars[0].color:'2C5FAE';
+      const cB=base&&base.bars[1]?base.bars[1].color:'7C6FE0';
+      const cT=base&&base.lines[0]?base.lines[0].color:'5EC2FF';
+      const mkFt=f=>f?{labels:f.labels,stacked:true,
+        bars:[{name:t('ft_alarm'),values:f.alarm,color:cA,y2:false}]
+          .concat(f.abp.some(v=>v)?[{name:t('ft_abp'),values:f.abp,color:cB,y2:false}]:[]),
+        lines:[{name:t('ft_tot'),values:f.tot,color:cT,y2:false}]}:null;
+      const CW2=11.83/2;
+      if(P.ft){ pptCombo(pres,s3,mkFt(P.ft.m),0.92,1.06,CW2-0.32,2.05);
+                pptCombo(pres,s3,mkFt(P.ft.w),0.92+CW2,1.06,CW2-0.32,2.05); } }
+    { const card=top3TableEl()?top3TableEl().closest('.tablecard'):null;
+      const ttl=card?((card.querySelector('h3')||{}).textContent||'고장 원인 TOP 3'):'고장 원인 TOP 3';
+      frame(s3,3.4,3.6,['Alarm 보고 사항 — '+ttl]);
+      const tbl=top3TableEl();
+      if(tbl){ const rows=pptRowsFromDom(tbl);
+        s3.addTable(rows,{x:0.92,y:3.85,w:11.5,colW:[0.55,3.1,0.75,3.55,3.55],rowH:0.26,fontFace:PPT_FONT,fontSize:8.5});
+        const etc=(document.getElementById('top3Etc')||{}).textContent||'';
+        if(etc)s3.addText('※ '+etc,{x:0.92,y:6.45,w:11.5,h:0.3,fontFace:PPT_FONT,fontSize:8,color:'808080',margin:0}); } }
+    await pres.writeFile({fileName:'GST_주간현황_'+(P.wk||P.asOf)+'.pptx'});
+    capToast('⤓ PPT 저장됨 — '+P.wk+' 기준 3슬라이드');
+  }catch(e){ console.error('PPT 생성 오류',e); capToast('PPT 생성 실패: '+((e&&e.message)||e)); }
+  finally{ if(btn){btn.disabled=false;btn.textContent=old;} }
+};
 
 applyLang(); loadData();
 </script>
