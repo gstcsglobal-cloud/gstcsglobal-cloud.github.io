@@ -1907,11 +1907,10 @@ window.downloadPPT=async function(btn){
       });};
     const CW3=11.83/3;
     const chartAt=(s,id,slot,y,h)=>{const src=pptSrc(CHARTS[id]); if(src)pptCombo(pres,s,src,0.76+CW3*slot+0.12,y,CW3-0.24,h);};
-    const perLbl=PERIOD==='m'?'월':'주';
     // ---------- 슬라이드 1 · 운영 관리 (인력 / 교육 / CIP) ----------
     const s1=pres.addSlide(); header(s1,'1. 운영 관리 부문 (SCR)');
-    frame(s1,0.62,3.5,['가. 인력현황 (경력구간·'+perLbl+')','나. 교육 완료율','다. CIP 진행 현황']);
-    chartAt(s1,'cHc',0,1.04,2.96); chartAt(s1,'cEdu',1,1.04,2.96); chartAt(s1,'cCip',2,1.04,2.96);
+    frame(s1,0.62,3.5,['가. 인력현황','나. 교육현황','다. CIP 진행 사항']);   // 원본 양식 슬롯: 총인원vsTO / 교육 / CIP
+    chartAt(s1,'cTo',0,1.04,2.96); chartAt(s1,'cEdu',1,1.04,2.96); chartAt(s1,'cCip',2,1.04,2.96);
     frame(s1,4.3,2.9,['인력 현황 (최근 5구간)','교육 현황','INSIGHT']);
     const hrR=pptHrRows();
     if(hrR)s1.addTable(hrR,{x:0.92,y:4.75,w:CW3-0.32,colW:[0.75].concat(Array(hrR[0].length-1).fill((CW3-0.32-0.75)/(hrR[0].length-1))),rowH:0.22,fontFace:PPT_FONT,fontSize:8});
@@ -1928,7 +1927,7 @@ window.downloadPPT=async function(btn){
         {x:0.92+CW3*2,y:4.75,w:CW3-0.32,h:2.2,fontFace:PPT_FONT,fontSize:9,color:'333333',valign:'top',lineSpacingMultiple:1.35,margin:0}); }
     // ---------- 슬라이드 2 · 운영 (출근·휴가 / 인당 챔버 / 공수) + 가동 현황 표 ----------
     const s2=pres.addSlide(); header(s2,'1. 운영 관리 부문 (SCR)');
-    frame(s2,0.62,3.5,['가. 출근 · 휴가 ('+perLbl+')','나. 인당 관리 챔버','다. 작업 공수 (h)']);
+    frame(s2,0.62,3.5,['가. 작업 건','나. 운영 설비','다. 작업 공수 (h)']);   // 원본 양식 문구 · 차트 배치 동일(출근·휴가+인당작업 / 챔버·인당관리 / 공수)
     chartAt(s2,'cAtt',0,1.04,2.96); chartAt(s2,'cChp',1,1.04,2.96); chartAt(s2,'cMan',2,1.04,2.96);
     frame(s2,4.3,2.9,[(document.getElementById('opTblTitle')||{textContent:'Scrubber 가동 현황'}).textContent]);
     { const tb=document.getElementById('opTblBody');   // 2단 머리글(rowspan)은 PPT 표로 직변환 불가 → 평면 머리글 별도 구성
