@@ -152,7 +152,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 #drillModal .efsec h4 .efnote{color:var(--txt-muted);font-weight:400;font-size:11px;margin-left:6px}
 #drillModal .efreq{color:#fd79a8}
 #drillModal .efnote{font-size:11px;color:var(--txt-muted);margin-top:6px}
-#drillModal .ef input[type=date]{width:100%;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;
+#drillModal .ef input[type=date],#drillModal .ef input[type=time]{width:100%;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;
   padding:6px 10px;color:var(--txt-main);font-size:13px;outline:none}
 .showquit{font-size:11px;color:var(--txt-muted);font-weight:400;margin-left:10px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;vertical-align:middle}
 .showquit input{accent-color:var(--accent);width:13px;height:13px}
@@ -215,7 +215,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="card"><h3 data-i="ch_edu">교육과정 이수 현황</h3><div class="card-note" data-i="note_edu">교육 대상자 기준 · 막대 클릭 시 명단</div><div class="cw"><canvas id="cEdu"></canvas></div></div>
 </div>
 <div class="grid3">
-  <div class="card"><h3 data-i="ch_org">소속·공정별 인원</h3><div class="card-note" data-i="note_org">조직도 위치 기준 · 클릭 시 명단</div><div class="cw"><canvas id="cOrg"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_lv">라인별 휴가 사용</h3><div class="card-note"><span data-i="note_lv">최근 12개월 · 평일 1일=1 · 막대 클릭 시 인원별</span> <button class="edbtn" id="btnLv" style="display:none;margin-left:6px" onclick="openLeave()">＋ <span data-i="lv_add">휴가 입력</span></button></div><div class="cw"><canvas id="cLv"></canvas></div></div>
   <div class="card"><h3 data-i="ch_career">경력 분포</h3><div class="card-note" data-i="note_career">입사일 기준 근속 · 클릭 시 명단</div><div class="cw"><canvas id="cCareer"></canvas></div></div>
   <div class="card"><h3 data-i="ch_io">입사·퇴사 추이</h3><div class="card-note" data-i="note_io">최근 12개월 · 위 입사 · 아래 퇴사</div><div class="cw"><canvas id="cIo"></canvas></div></div>
 </div>
@@ -247,7 +247,8 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 const PUB='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub';
 const URL_ROSTER=PUB+'?gid=1213453343&single=true&output=csv';  // 인원명단
 const URL_EDU   =PUB+'?gid=0&single=true&output=csv';            // 교육현황
-const VER='v47';
+const URL_LV    =PUB+'?gid=262805841&single=true&output=csv';    // 휴가현황
+const VER='v48';
 
 const TR={
   ko:{edit_title:'행 편집',ed_save:'저장',ed_cancel:'취소',ed_saving:'저장 중…',ed_saved:'저장되었습니다 (구글 시트에 반영됨)',ed_failed:'저장 실패',ed_conflict:'다른 사용자가 이미 이 행을 수정했습니다 — 아래 최신 값을 확인하고 다시 저장하세요',ed_locked:'다른 사용자가 저장 중입니다 — 잠시 후 다시 시도하세요',ed_readonly:'편집 권한이 없습니다 (관리자에게 요청하세요)',ed_nokey:'사번이 비어 있어 편집할 수 없습니다',ed_lockfld:'이 항목은 대시보드에서 수정할 수 없습니다',ed_gone:'시트에서 이 행을 찾을 수 없습니다',ed_dup:'사번이 중복되어 저장할 수 없습니다',ed_badval:'입력값을 확인하세요',ed_new:'신규 인원',ed_new_title:'신규 인원 등록',ed_sec_r:'인적사항 (인원명단 시트)',ed_sec_e:'교육현황 (교육현황 시트)',ed_edu_new:'교육현황 미등록 — 저장 시 새 행이 생성됩니다',ed_del:'행 삭제',ed_del_warn:'이 인원을 인원명단·교육현황 두 시트에서 삭제합니다. 입·퇴사 추이 등 이력 차트가 소급 변경되며 되돌릴 수 없습니다. 퇴사자는 삭제 대신 퇴사일 입력을 권장합니다.',ed_del_confirm:'삭제 실행',ed_deleted:'삭제되었습니다 (구글 시트에 반영됨)',ed_cascade_miss:'교육현황에서 짝 행을 찾지 못해 그쪽은 바뀌지 않았습니다',ed_partial:'인원명단은 저장됐지만 교육현황 저장에 실패했습니다 — 교육 항목만 다시 시도하세요',ed_required:'필수 항목(사번·이름·입사일)을 입력하세요',ed_baddate:'날짜 형식이 잘못되었습니다 (YYYY-MM-DD)',ed_srv:'시트 구조를 읽지 못했습니다 — 관리자에게 문의하세요',ed_sheets:'구글 시트 호출에 실패했습니다 — Supabase 로그를 확인하세요',ed_appended:'신규 인원이 등록되었습니다 (두 시트에 반영됨)',ed_quitnote:'교육현황 비고에 퇴사일 기록',ed_showquit:'퇴사자 표시',f_name:'이름(영문)',f_wp:'Work Place',f_duty:'업무/직책',f_quit:'퇴사일',f_basic:'Basic 이수여부',f_bsdate:'Basic 시작일',f_bdate:'Basic 완료일',f_vet:'Veteran 이수여부',f_vsdate:'Veteran 시작일',f_vdate:'Veteran 완료일',f_note:'비고',f_cn:'중문 이름',f_onsite:'현장 인원',f_id:'사번',title:'인력 현황 대시보드',sub:'인원명단 · 교육현황 통합 인터랙티브 분석',back:'← 메인으로',refresh:'새로고침',print:'🖨 인쇄',
@@ -257,7 +258,8 @@ const TR={
     ch_site:'사이트별 인원',note_site:'현장(O)·비현장 스택 · 막대 클릭 시 명단',
     ch_role:'직무별 인원',note_role:'2025 Position Role 기준 · 클릭 시 명단',
     ch_edu:'교육과정 이수 현황',note_edu:'교육 대상자 기준 · 막대 클릭 시 명단',
-    ch_org:'소속·공정별 인원',note_org:'조직도 위치 기준 · 클릭 시 명단',
+    ch_lv:'라인별 휴가 사용',note_lv:'최근 12개월 · 평일 1일=1 · 막대 클릭 시 인원별',
+    lv_add:'휴가 입력',lv_title:'휴가 입력 (휴가현황 시트)',lv_emp:'직원',lv_type:'항목(휴가 종류)',lv_start:'휴가 시작일',lv_end:'휴가 종료일',lv_stime:'시작 시간',lv_etime:'종료 시간',lv_occur:'발생일',lv_amt:'신청시간',lv_amt_ph:'예: 8 (선택)',lv_saved:'휴가가 등록되었습니다 (구글 시트에 반영됨)',lv_required:'직원·항목·시작일·종료일을 입력하세요',lv_order:'종료일이 시작일보다 빠릅니다',lv_unit:'일',lv_unit2:'휴가일수 합',lv_month:'해당월',lv_ytd:'올해 누적',ins_lv:'올해 휴가 TOP3: {s}',
     ch_career:'경력 분포',note_career:'입사일 기준 근속 · 클릭 시 명단',
     ch_io:'입사·퇴사 추이',note_io:'최근 12개월 · 위 입사 · 아래 퇴사',
     ch_attr:'이직률 추이',note_attr:'분기 퇴사 ÷ 평균 재직 (연환산 %)',ch_span:'라인별 관리 스팬',note_span:'리더 1인당 현장 인원 · 클릭 시 명단',ch_cohort:'입사 코호트 생존율',note_cohort:'입사연도별 현재 재직 비율(%)',d_leader:'리더',d_member:'멤버',
@@ -273,7 +275,8 @@ const TR={
     ch_site:'By Site',note_site:'on-site(O) / off stacked · click a bar for names',
     ch_role:'By Role',note_role:'2025 Position Role · click for names',
     ch_edu:'Training Completion',note_edu:'eligible staff · click a bar for names',
-    ch_org:'By Team/Process',note_org:'org chart position · click for names',
+    ch_lv:'Leave by Line',note_lv:'last 12 months · 1 weekday = 1 day · click a bar for people',
+    lv_add:'Add leave',lv_title:'Add leave (leave sheet)',lv_emp:'Employee',lv_type:'Type',lv_start:'Start date',lv_end:'End date',lv_stime:'Start time',lv_etime:'End time',lv_occur:'Occurrence date',lv_amt:'Requested hours',lv_amt_ph:'e.g. 8 (optional)',lv_saved:'Leave saved to the Google Sheet',lv_required:'Employee, type, start and end dates are required',lv_order:'End date is before start date',lv_unit:'d',lv_unit2:'Total leave days',lv_month:'Month',lv_ytd:'YTD',ins_lv:'Top leave users this year: {s}',
     ch_career:'Tenure Distribution',note_career:'by entry date · click for names',
     ch_io:'Join / Leave Trend',note_io:'last 12 months · up join · down leave',
     ch_attr:'Attrition Trend',note_attr:'quarterly leavers ÷ avg headcount (annualized %)',ch_span:'Span of Control',note_span:'on-site staff per leader · click for names',ch_cohort:'Cohort Retention',note_cohort:'% still active by join year',d_leader:'Leaders',d_member:'Members',
@@ -289,7 +292,8 @@ const TR={
     ch_site:'按站点',note_site:'现场(O)/非现场 堆叠 · 点击查看名单',
     ch_role:'按职务',note_role:'2025 Position Role · 点击查看名单',
     ch_edu:'培训完成情况',note_edu:'培训对象 · 点击查看名单',
-    ch_org:'按所属·工序',note_org:'组织图位置 · 点击查看名单',
+    ch_lv:'按产线休假使用',note_lv:'近12个月 · 工作日1天=1 · 点击柱查看人员',
+    lv_add:'录入休假',lv_title:'录入休假(休假表)',lv_emp:'员工',lv_type:'项目(休假类型)',lv_start:'开始日',lv_end:'结束日',lv_stime:'开始时间',lv_etime:'结束时间',lv_occur:'发生日',lv_amt:'申请时数',lv_amt_ph:'如 8 (可选)',lv_saved:'休假已保存到谷歌表格',lv_required:'请填写员工·项目·开始日·结束日',lv_order:'结束日早于开始日',lv_unit:'天',lv_unit2:'休假天数合计',lv_month:'当月',lv_ytd:'今年累计',ins_lv:'今年休假TOP3: {s}',
     ch_career:'工龄分布',note_career:'按入职日 · 点击查看名单',
     ch_io:'入职·离职趋势',note_io:'近12个月 · 上入职 · 下离职',
     ch_attr:'离职率趋势',note_attr:'季度离职 ÷ 平均在职 (年化%)',ch_span:'管理跨度',note_span:'每位组长现场人数 · 点击查看名单',ch_cohort:'入职批次留存率',note_cohort:'按入职年份当前在职比例(%)',d_leader:'组长',d_member:'组员',
@@ -305,7 +309,8 @@ const TR={
     ch_site:'サイト別',note_site:'現場(O)/非現場 スタック · クリックで名簿',
     ch_role:'職務別',note_role:'2025 Position Role · クリックで名簿',
     ch_edu:'教育課程修了状況',note_edu:'教育対象者 · クリックで名簿',
-    ch_org:'所属·工程別',note_org:'組織図位置 · クリックで名簿',
+    ch_lv:'ライン別休暇使用',note_lv:'直近12ヶ月 · 平日1日=1 · バークリックで名簿',
+    lv_add:'休暇入力',lv_title:'休暇入力(休暇シート)',lv_emp:'社員',lv_type:'項目(休暇種類)',lv_start:'開始日',lv_end:'終了日',lv_stime:'開始時間',lv_etime:'終了時間',lv_occur:'発生日',lv_amt:'申請時間',lv_amt_ph:'例: 8 (任意)',lv_saved:'休暇をGoogleシートに保存しました',lv_required:'社員·項目·開始日·終了日を入力してください',lv_order:'終了日が開始日より前です',lv_unit:'日',lv_unit2:'休暇日数合計',lv_month:'当月',lv_ytd:'今年累計',ins_lv:'今年の休暇TOP3: {s}',
     ch_career:'勤続分布',note_career:'入社日基準 · クリックで名簿',
     ch_io:'入社·退社推移',note_io:'直近12ヶ月 · 上入社 · 下退社',
     ch_attr:'離職率推移',note_attr:'四半期退社 ÷ 平均在籍 (年換算%)',ch_span:'管理スパン',note_span:'リーダー1人当り現場人員 · クリックで名簿',ch_cohort:'入社コホート定着率',note_cohort:'入社年別の現在在籍比率(%)',d_leader:'リーダー',d_member:'メンバー',
@@ -442,17 +447,55 @@ function buildPeople(){
   });
 }
 
+/* ===== 휴가현황 파싱 (report 페이지 parseLeave와 동일 규칙: 시작~종료 구간의 평일당 1일, 신청시간 무시) ===== */
+function parseLeaveHr(rows){
+  let hi=-1;
+  for(let i=0;i<Math.min(rows.length,8);i++){
+    const h=(rows[i]||[]).map(x=>String(x||'').trim());
+    if(h.includes('사원번호')&&h.includes('휴가시작일')){hi=i;break;}
+  }
+  if(hi<0)return [];
+  const h=rows[hi].map(x=>String(x||'').trim());
+  const iEmp=h.indexOf('사원번호'), iNm=h.indexOf('이름'), iSite=h.indexOf('소속'),
+        iType=h.indexOf('항목'), iS=h.indexOf('휴가시작일'), iE=h.indexOf('휴가종료일');
+  const out=[], types=new Set();
+  rows.slice(hi+1).forEach(r=>{
+    const st=pd(r[iS]); if(!st)return;
+    let en=pd(r[iE])||st; if(en<st)en=st;
+    const empId=normId(iEmp>=0?r[iEmp]:''), nm=String(iNm>=0?(r[iNm]||''):'').trim();
+    const ty=String(iType>=0?(r[iType]||''):'').trim(); if(ty)types.add(ty);
+    for(let d=new Date(st);d<=en;d=new Date(d.getTime()+MS)){
+      const w=d.getUTCDay(); if(w===0||w===6)continue;   // 주말 제외
+      out.push({date:new Date(d),days:1,site:siteKey(iSite>=0?r[iSite]:''),empId,name:nm,type:ty});
+    }
+  });
+  LVTYPES=Array.from(types).sort();
+  return out;
+}
+// 휴가 행 ↔ 인원명단 매칭: 사번 우선. 휴가 시트 이름은 "曾喚培 Willy"처럼 중문+영문이라
+// 이름 폴백은 공백 토큰 중 하나가 명단 영문 이름과 일치하는지로 판정한다.
+function lvPerson(rec,byId,byNm){
+  if(rec.empId&&byId[rec.empId])return byId[rec.empId];
+  if(rec.name){
+    const up=rec.name.toUpperCase();
+    if(byNm[up])return byNm[up];
+    for(const t of up.split(/\s+/)){ if(byNm[t])return byNm[t]; }
+  }
+  return null;
+}
+
 /* 교육 상태 분류 */
 function clsB(p){ const v=p.basic; if(v==='이수완료')return '이수완료'; if(v==='진행중')return '진행중'; if(v==='비대상')return '비대상'; return '미이수'; }
 function clsV(p){ const v=p.vet; if(v==='이수완료')return '이수완료'; if(v==='진행중')return '진행중'; if(v==='비대상')return '비대상'; return '미이수'; }
 function eduStatusOf(p){ return p.edu?clsB(p):'미등록'; }
 
 /* ===== 상태/스타일 ===== */
-let DATA=[], ROSTER=[], EDU=[], CH={}, DRILL={}, LASTSPARK={};
+let DATA=[], ROSTER=[], EDU=[], LV=[], LVTYPES=[], LVPPL=[], CH={}, DRILL={}, LASTSPARK={};
 /* 시트 편집 — 서버(sheet-write)가 권한·행위치·컬럼을 모두 결정한다.
    CAN_WRITE는 ✎ 버튼 노출 여부일 뿐 보안 경계가 아니다(서버가 다시 검사한다). */
 const GID_ROSTER='1213453343';
 const GID_EDU='0';
+const GID_LV='262805841';
 let CAN_WRITE=false, EDIT=null;   // EDIT={key, hash, fields, edu:{hash,fields}|null, isNew}
 let SHOWQUIT=false;               // 퇴사자 표시 토글 — 잘못 넣은 퇴사일을 UI에서 되돌릴 수 있게 한다
 const F={site:'전체',org:'전체',role:'전체',edu:'전체',q:''};
@@ -530,18 +573,21 @@ async function loadData(){ GST.skeleton(true);
   const btn=document.getElementById('refreshBtn'), status=document.getElementById('status');
   btn.disabled=true; status.className='status'; status.textContent=tr('loading');
   try{
-    const [ro,ed]=await Promise.allSettled([
+    const [ro,ed,lv]=await Promise.allSettled([
       GST.fetchCSVCached(URL_ROSTER,'hr_roster'),
-      GST.fetchCSVCached(URL_EDU,'hr_edu')
+      GST.fetchCSVCached(URL_EDU,'hr_edu'),
+      GST.fetchCSVCached(URL_LV,'hr_lv')
     ]);
     ROSTER = ro.status==='fulfilled'?parseRoster(ro.value.rows):[];
     EDU    = ed.status==='fulfilled'?parseEdu(ed.value.rows):[];
+    LV     = lv.status==='fulfilled'?parseLeaveHr(lv.value.rows):[];   // 실패해도 페이지는 뜬다(휴가 차트만 비움)
     DATA   = buildPeople();
     // 편집 권한 확인 — Sheets API를 부르지 않아 쿼터를 쓰지 않는다.
     // 실패해도 조회는 그대로 되어야 하므로 조용히 읽기 전용으로 둔다.
     try{ const p=await GST.sheetWrite('perm',GID_ROSTER); CAN_WRITE=!!(p&&p.can_write); }
     catch(e){ CAN_WRITE=false; }
-    {const bn=document.getElementById('btnNew'); if(bn)bn.style.display=CAN_WRITE?'':'none';}
+    {const bn=document.getElementById('btnNew'); if(bn)bn.style.display=CAN_WRITE?'':'none';
+     const bl=document.getElementById('btnLv'); if(bl)bl.style.display=CAN_WRITE?'':'none';}
     const cached = (ro.status==='fulfilled'&&ro.value.cached)||(ed.status==='fulfilled'&&ed.value.cached);
     if(!DATA.length) throw new Error('no data');
     const act=DATA.filter(isActive).length, quit=DATA.length-act;
@@ -676,12 +722,22 @@ function render(){ GST.skeleton(false);
     options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle'}},valLabel:{mode:'stackAll',color:TH.txt}},scales:baseScales(TH,true)}});
   DRILL.cEdu={kind:'edu',title:tr('ch_edu'),epop,stt};
 
-  /* ---- cOrg: 소속·공정별 (도넛) ---- */
-  const orgOf=p=>p.org||tr('st_na');
-  const orgL=Array.from(new Set(f.map(orgOf))).sort((a,b)=>f.filter(p=>orgOf(p)===b).length-f.filter(p=>orgOf(p)===a).length);
-  mk('cOrg',{type:'doughnut',data:{labels:orgL,datasets:[{data:orgL.map(o=>f.filter(p=>orgOf(p)===o).length),backgroundColor:S.pal.concat(GST.PAL8),borderColor:'rgba(0,0,0,.2)',borderWidth:2,hoverOffset:10}]},
-    options:{maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{padding:8,usePointStyle:true,pointStyle:'circle',font:{size:9.5},boxWidth:8}},tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+tr('tbl_unit')}}},animation:{animateScale:true}}});
-  DRILL.cOrg={kind:'people',title:tr('ch_org'),labels:orgL,groups:orgL.map(o=>f.filter(p=>orgOf(p)===o))};
+  /* ---- cLv: 라인별 휴가 사용 (최근 12개월 · 평일 1일 단위) ---- */
+  // 휴가 레코드를 명단과 조인(사번 우선)하고 현재 슬라이서에 걸린 인원만 집계 — 다른 차트와 동일 규칙
+  const _lvId={},_lvNm={};
+  DATA.forEach(p=>{ if(p.id)_lvId[p.id]=p; if(p.name)_lvNm[p.name.toUpperCase()]=p; });
+  const _fSet=new Set(fAll);
+  const LVJ=LV.map(rec=>{const p=lvPerson(rec,_lvId,_lvNm); return p&&_fSet.has(p)?{p,rec}:null;}).filter(Boolean);
+  const LM=months(12);
+  const lvSites=orderSites(Array.from(new Set(LVJ.map(x=>x.p.site).filter(Boolean))));
+  const lvAgg=LM.map(m=>{ const inM=LVJ.filter(x=>x.rec.date>=m.st&&x.rec.date<=m.end);
+    const bySite={}; inM.forEach(x=>{bySite[x.p.site]=(bySite[x.p.site]||0)+x.rec.days;});
+    return {m,inM,bySite}; });
+  mk('cLv',{type:'bar',data:{labels:LM.map(p=>p.label+'월'),datasets:lvSites.map((s,i)=>({label:shortSite(s),
+      data:lvAgg.map(a=>a.bySite[s]||0),backgroundColor:S.pal[i%S.pal.length],stack:'l',borderRadius:4}))},
+    plugins:[valLabelPlugin],
+    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}},valLabel:{mode:'stackTotal',color:TH.txt},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y+tr('lv_unit')}}},scales:baseScales(TH,true)}});
+  DRILL.cLv={kind:'lv',title:tr('ch_lv'),agg:lvAgg,all:LVJ};
 
   /* ---- cCareer: 경력 분포 ---- */
   const crB=[f.filter(p=>{const y=tenureYr(p);return y!=null&&y<1;}),
@@ -739,6 +795,12 @@ function render(){ GST.skeleton(false);
     if(ep.length){const m=ep.length-bd,p=Math.round(m/ep.length*100); if(m)arr.push({sev:p>20?'warn':'info',text:tr('ins_basic').replace('{n}','<b>'+m+'</b>').replace('{p}',p)});}
     if(vp.length){const m=vp.length-vd,p=Math.round(m/vp.length*100); if(m)arr.push({sev:p>30?'warn':'info',text:tr('ins_vet').replace('{n}','<b>'+m+'</b>').replace('{p}',p)});}
     const nw=f.filter(p=>p.join&&(TODAY-p.join)/MS<=365).length; if(nw)arr.push({sev:'ok',text:tr('ins_new').replace('{n}','<b>'+nw+'</b>')});
+    // 올해 휴가 최다 사용자 TOP3 — 누가 많이 썼는지 한눈에
+    { const y0=new Date(Date.UTC(TODAY.getUTCFullYear(),0,1)); const yt=new Map();
+      LVJ.forEach(x=>{ if(x.rec.date>=y0&&x.rec.date<=TODAY) yt.set(x.p,(yt.get(x.p)||0)+x.rec.days); });
+      const top=[...yt.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3);
+      if(top.length)arr.push({sev:'info',text:tr('ins_lv').replace('{s}',
+        top.map(([p,d])=>'<b>'+esc(p.name)+'</b> '+d+tr('lv_unit')).join(' · '))}); }
     GST.insights(f.length?arr:[]);
   }
 
@@ -789,6 +851,7 @@ function hrDrill(evt,els,chart){ if(!els||!els.length)return; const id=chart.can
   if(d.kind==='people')return peopleDrill(d.title+' · '+d.labels[i],d.groups[i]);
   if(d.kind==='io')return ioDrill(d,i);
   if(d.kind==='edu')return eduDrill(d,i,els[0].datasetIndex);
+  if(d.kind==='lv')return lvDrill(d,i);
 }
 function peopleTable(people){
   if(!people||!people.length)return '<div class="dhint">'+tr('st_na')+'</div>';
@@ -818,6 +881,21 @@ function eduDrill(d,course,dsIdx){
   const people=d.epop.filter(p=>cls(p)===status);
   showDrill(d.title+' · '+(course===0?'Basic':'Veteran')+' '+status,
     '<div class="dsum"><div class="b"><span class="n">'+people.length+'</span><span class="l">'+status+'</span></div></div>'+peopleTable(people));
+}
+function lvDrill(d,i){
+  const a=d.agg[i]; const byP=new Map();
+  a.inM.forEach(x=>{byP.set(x.p,(byP.get(x.p)||0)+x.rec.days);});
+  // 올해 누적: 그 달이 속한 해의 1/1 ~ 그 달 말 — '누가 많이 썼는지'는 월보다 누적이 말해준다
+  const y=a.m.end.getUTCFullYear(), y0=new Date(Date.UTC(y,0,1));
+  const ytd=new Map();
+  d.all.forEach(x=>{ if(x.rec.date>=y0&&x.rec.date<=a.m.end) ytd.set(x.p,(ytd.get(x.p)||0)+x.rec.days); });
+  const rows=[...byP.entries()].sort((q,w)=>w[1]-q[1]);
+  const tot=rows.reduce((s,r)=>s+r[1],0);
+  let h='<div class="dsum"><div class="b"><span class="n">'+tot+'</span><span class="l">'+tr('lv_unit2')+'</span></div>'
+    +'<div class="b"><span class="n">'+rows.length+'</span><span class="l">'+tr('d_total')+'</span></div></div>';
+  h+='<table><thead><tr><th>'+tr('th_name')+'</th><th>'+tr('th_site')+'</th><th>'+tr('lv_month')+'</th><th>'+tr('lv_ytd')+'</th></tr></thead><tbody>'
+    +rows.map(([p,dd])=>'<tr><td>'+esc(p.name)+(p.cn?' <span style="color:var(--muted);font-size:11px">'+esc(p.cn)+'</span>':'')+'</td><td>'+esc(shortSite(p.site))+'</td><td class="num">'+dd+'</td><td class="num">'+(ytd.get(p)||0)+'</td></tr>').join('')+'</tbody></table>';
+  showDrill(d.title+' · '+a.m.label+'월',h);
 }
 function showDrill(title,html){ let m=document.getElementById('drillModal');
   if(!m){m=document.createElement('div');m.id='drillModal';
@@ -1092,6 +1170,64 @@ async function saveNew(){
     if(msg)msg.textContent='❌ '+edErr(e);
   }
 }
+
+/* ===== 휴가 입력 (휴가현황 시트 append 전용) =====
+   휴가 시트는 같은 사람이 여러 행을 가져 고유 키가 없다 → 입력만 지원.
+   잘못 넣은 건은 구글 시트에서 직접 지운다. 대시보드 집계는 시작~종료 평일당 1일. */
+window.openLeave=function(){
+  if(!CAN_WRITE){ showDrill(tr('lv_title'),'<div class="dhint">'+esc(tr('ed_readonly'))+'</div>'); return; }
+  EDIT=null;
+  LVPPL=actPop().slice().sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0);
+  const row=(lb,inner,req)=>'<label>'+esc(lb)+(req?' <span class="efreq">*</span>':'')+'</label><div>'+inner+'</div>';
+  let h='<div class="ef">';
+  h+=row(tr('lv_emp'),'<select id="lv_emp">'+LVPPL.map((p,i)=>'<option value="'+i+'">'
+      +esc(p.name+(p.cn?' ('+p.cn+')':'')+' · '+shortSite(p.site))+'</option>').join('')+'</select>',true);
+  h+=row(tr('lv_type'),'<input id="lv_type" list="lv_type_dl" maxlength="40">'
+      +'<datalist id="lv_type_dl">'+LVTYPES.map(t=>'<option value="'+esc(t)+'">').join('')+'</datalist>',true);
+  h+=row(tr('lv_start'),'<input type="date" id="lv_start">',true);
+  h+=row(tr('lv_stime'),'<input type="time" id="lv_stime" value="09:00">');
+  h+=row(tr('lv_end'),'<input type="date" id="lv_end">',true);
+  h+=row(tr('lv_etime'),'<input type="time" id="lv_etime" value="18:00">');
+  h+=row(tr('lv_occur'),'<input type="date" id="lv_occur">');
+  h+=row(tr('lv_amt'),'<input id="lv_amt" maxlength="10" placeholder="'+esc(tr('lv_amt_ph'))+'">');
+  h+=row(tr('f_note'),'<input id="lv_note" maxlength="100">');
+  h+='</div><div class="efmsg" id="efMsg"></div>'
+    +'<div class="efbar"><button class="efbtn ghost" onclick="closeDrill()">'+esc(tr('ed_cancel'))+'</button>'
+    +'<button class="efbtn" id="efSave" onclick="saveLeave()">'+esc(tr('ed_save'))+'</button></div>';
+  showDrill(tr('lv_title'),h);
+};
+window.saveLeave=async function(){
+  const msg=document.getElementById('efMsg'), btn=document.getElementById('efSave');
+  const p=LVPPL[+document.getElementById('lv_emp').value];
+  const g=id=>{const el=document.getElementById(id);return el?String(el.value||'').trim():'';};
+  const t9=v=>v?(v.length===5?v+':00':v):'';               // 09:00 → 09:00:00 (시트 표기와 통일)
+  const flds={empId:p&&p.id||'', name:p?((p.cn?p.cn+' ':'')+p.name):'',   // 시트 관례: "중문 영문"
+    site:p?(p.fab||shortSite(p.site)):'', type:g('lv_type'), occur:g('lv_occur'),
+    start:g('lv_start'), stime:t9(g('lv_stime')), end:g('lv_end'), etime:t9(g('lv_etime')),
+    amt:g('lv_amt'), note:g('lv_note')};
+  if(!p||!flds.type||!flds.start||!flds.end){ msg.textContent='❌ '+tr('lv_required'); return; }
+  if(flds.end<flds.start){ msg.textContent='❌ '+tr('lv_order'); return; }
+  if(flds.amt&&!/^\d+(\.\d+)?$/.test(flds.amt)){ msg.textContent='❌ '+tr('ed_badval'); return; }
+  for(const k in flds) if(/^[=+\-@]/.test(flds[k])){ msg.textContent='❌ '+tr('ed_badval'); return; }
+  Object.keys(flds).forEach(k=>{ if(flds[k]==='')delete flds[k]; });
+  const status=document.getElementById('status');
+  status.className='status'; status.textContent='💾 '+tr('ed_saving'); btn.disabled=true; msg.textContent='';
+  try{
+    await GST.sheetWrite('append',GID_LV,{fields:flds});
+    // 낙관 반영: parseLeaveHr와 동일 규칙으로 평일 전개해 차트 즉시 갱신
+    const st=pd(flds.start), en=pd(flds.end)||st;
+    for(let d=new Date(st);d<=en;d=new Date(d.getTime()+MS)){
+      const w=d.getUTCDay(); if(w===0||w===6)continue;
+      LV.push({date:new Date(d),days:1,site:p.site,empId:p.id||'',name:flds.name,type:flds.type});
+    }
+    if(flds.type&&LVTYPES.indexOf(flds.type)<0)LVTYPES.push(flds.type);
+    render(); closeDrill();
+    status.className='status ok'; status.textContent='✅ '+tr('lv_saved');
+  }catch(e){
+    status.className='status err'; status.textContent='❌ '+tr('ed_failed')+' — '+edErr(e);
+    if(btn)btn.disabled=false; if(msg)msg.textContent='❌ '+edErr(e);
+  }
+};
 
 /* 삭제 — 오입력 정리용. 퇴사자는 퇴사일 입력이 정석(이력 차트 보존). 2단계 확인. */
 window.askDelete=function(){
