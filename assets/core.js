@@ -64,7 +64,13 @@ GST.sendOtp = async function(email){ var c=await GST.sb();
 GST.verifyOtp = async function(email,code){ var c=await GST.sb();
   var r=await c.auth.verifyOtp({email:email,token:code,type:'email'});
   return r.error?(r.error.message||'코드 확인 실패'):null; };
-GST.signOut = async function(){ try{var c=await GST.sb(); await c.auth.signOut();}catch(e){} location.reload(); };
+GST.signOut = async function(){ try{var c=await GST.sb(); await c.auth.signOut();}catch(e){}
+  try{ sessionStorage.clear(); Object.keys(localStorage).forEach(function(k){ if(/^sb-/.test(k))localStorage.removeItem(k); }); }catch(e){}
+  location.reload(); };
+// 인증된 테이블 접근 (RLS가 권한 통제) — 미설정 시 null 반환하므로 호출부에서 폴백 처리
+GST.db = async function(){ if(!GST.authOn())return null;
+  var s=await GST.getSession(); if(!s)return null;
+  return await GST.sb(); };
 // 로그인 완료 신호 — fetchCSV가 이 Promise를 기다리므로 loadData()를 먼저 불러도 안전
 GST._readyP=null; GST._readyRes=null;
 GST.authReady=function(){ if(!GST._readyP)GST._readyP=new Promise(function(r){GST._readyRes=r;}); return GST._readyP; };
@@ -126,18 +132,39 @@ GST.authDenied=function(code){
 };
 
 /* ---------- 2. CSV 로드 ---------- */
+// 프록시 함수 슬러그 자동 탐색 — Supabase는 함수 이름을 바꿔도 주소(슬러그)가 고정이라
+// 콘솔에서 기본 이름(quick-responder)으로 만든 뒤 이름만 바꾼 경우도 그대로 동작시킨다.
+GST.FN_SLUGS = (typeof window!=='undefined' && window.GST_FN_SLUGS) || ['sheet-proxy','quick-responder'];
+GST._fnSlug = null;
+GST.proxyFetch = async function(gid, tok){
+  var slugs = GST._fnSlug ? [GST._fnSlug] : GST.FN_SLUGS;
+  var last = null;
+  for(var i=0;i<slugs.length;i++){
+    var res;
+    try{ res = await fetch(GST.SB_URL+'/functions/v1/'+slugs[i]+'?gid='+gid+'&t='+Date.now(),
+      {headers:{Authorization:'Bearer '+tok}}); }
+    catch(e){ last=e; continue; }               // CORS·네트워크 실패 → 다음 후보
+    if(res.status===404){ last=new Error('HTTP 404 ('+slugs[i]+')'); continue; }
+    GST._fnSlug = slugs[i];                     // 성공한 슬러그 기억 (이후 1회 호출)
+    return res;
+  }
+  throw last || new Error('프록시 함수를 찾을 수 없습니다');
+};
 // PapaParse 필요. 캐시 무효화 포함. 반환: 헤더 포함 2차원 배열
-// Supabase 인증 활성 시: 시트 직접 URL → sheet-proxy(Edge Function)로 자동 치환 + JWT 첨부
+// Supabase 인증 활성 시: 시트 직접 URL → 프록시(Edge Function)로 자동 치환 + JWT 첨부
 GST.fetchCSV = async function(url){
   if(GST.authOn() && /docs\.google\.com/.test(url)){
     var gm=url.match(/[?&]gid=(\d+)/); var gid=gm?gm[1]:'0';
     var tok=await GST.token();
     if(!tok){ await GST.authReady(); tok=await GST.token(); }
-    var pres=await fetch(GST.SB_URL+'/functions/v1/sheet-proxy?gid='+gid+'&t='+Date.now(),
-      {headers:{Authorization:'Bearer '+tok}});
+    var pres=await GST.proxyFetch(gid, tok);
     if(pres.status===401||pres.status===403){ GST.authDenied(pres.status); throw new Error('AUTH '+pres.status); }
-    if(!pres.ok) throw new Error('HTTP '+pres.status);
-    return Papa.parse(await pres.text(), {skipEmptyLines:true}).data;
+    if(!pres.ok) throw new Error('HTTP '+pres.status+' — '+(await pres.text()).slice(0,120));
+    var txt=await pres.text();
+    // 프록시 대신 기본 샘플 함수 코드가 배포된 경우: JSON이 돌아와 CSV처럼 파싱되는 사고 방지
+    if(/^\s*\{/.test(txt)&&!/[\r\n]/.test(txt.slice(0,200)))
+      throw new Error('프록시 함수 코드가 아닙니다 — Edge Function의 Code 탭에 sheet-proxy 코드를 붙여넣고 다시 Deploy 하세요');
+    return Papa.parse(txt, {skipEmptyLines:true}).data;
   }
   const res = await fetch(url + (url.includes('?')?'&':'?') + 't=' + Date.now());
   if(!res.ok) throw new Error('HTTP ' + res.status);
@@ -356,7 +383,10 @@ GST.initSync = function(opts){
   if(!inFrame && opts.loginRedirect){
     let ok=false;
     try{ ok = sessionStorage.getItem('gst_auth')==='1'; }catch(e){}
-    if(!ok) location.href='https://gstcsglobal-cloud.github.io/';
+    if(GST.authOn()){
+      // Supabase 인증 사용 시: 세션이 있으면 그대로 두고, 없을 때만 셸(로그인 화면)로 이동
+      GST.getSession().then(function(s){ if(!s) location.href='https://gstcsglobal-cloud.github.io/'; });
+    }else if(!ok) location.href='https://gstcsglobal-cloud.github.io/';
   }
 };
 
@@ -443,12 +473,14 @@ GST.readState=function(){
 };
 
 /* ---------- 12. 인증 (SHA-256, 평문 비밀번호 제거) ---------- */
-GST.PW_HASH='1bd5c3fd55d0fc00720d7b6d891f7f7e722f43ba9db6dd35fd88aa1c02c00b1b';
+// 구 공용 비밀번호 방식 폐기 (Supabase 이메일 OTP로 대체).
+// 해시가 공개 소스에 있어 무염 SHA-256으로 역산 가능했고, 전원이 같은 비번을 써 추적·회수도 불가능했음.
+// 남아 있는 구 로그인 UI가 어떤 경로로 호출되더라도 인증되지 않도록 항상 실패시킨다(fail-closed).
 GST.sha256=async function(str){
   const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 };
-GST.checkPw=async function(v){ return (await GST.sha256(v))===GST.PW_HASH; };
+GST.checkPw=async function(){ return false; };
 
 /* ---------- 13. 인사이트 엔진 (최종) ---------- */
 // 증감률 (%). prev가 0/없음이면 null
