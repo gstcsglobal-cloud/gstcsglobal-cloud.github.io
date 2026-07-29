@@ -136,24 +136,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
 canvas{cursor:pointer}
 @media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
-/* 로그인 가드 */
-#loginOverlay{position:fixed;inset:0;z-index:99999;
-  background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#1a1a2e);
-  background-size:400% 400%;animation:grad 18s ease infinite;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-family:'Segoe UI','Malgun Gothic',sans-serif}
-#loginOverlay.hidden{display:none}
-.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
-.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;
-  padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
-.login-box .lock{font-size:40px;margin-bottom:14px}
-.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px;color:#f5f6fa}
-.login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);
-  border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
-.login-box input:focus{border-color:#6c5ce7}
-.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);
-  border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
-.login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
 /* 차트 복사·저장(PPT/PNG) 버튼 */
 .card,.trend-card,.tablecard{position:relative}
 .capbtns{position:absolute;top:12px;right:14px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
@@ -167,17 +149,7 @@ canvas{cursor:pointer}
 </head>
 <body>
 
-<div id="loginOverlay">
-  <div class="login-logo">GST Dashboard</div>
-  <div class="login-box">
-    <div class="lock">🔒</div>
-    <div class="ltitle">비밀번호를 입력하세요 / Enter password</div>
-    <input type="password" id="pwInput" placeholder="비밀번호 / Password" autocomplete="off">
-    <button onclick="checkPw()">로그인 / Login</button>
-    <div class="login-err" id="pwErr"></div>
-  </div>
-</div>
-
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
     <h1 data-i="title">Service & Fault Dashboard</h1>
@@ -442,19 +414,7 @@ canvas{cursor:pointer}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
-(function(){
-  function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
-  window.checkPw=async function(){
-    const v=document.getElementById('pwInput').value;
-    if(await GST.checkPw(v)){try{sessionStorage.setItem('gst_auth','1');}catch(e){}document.getElementById('loginOverlay').classList.add('hidden');}
-    else{document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';document.getElementById('pwInput').value='';}
-  };
-  function init(){const ov=document.getElementById('loginOverlay');if(!ov)return;
-    if(GST.authOn&&GST.authOn()){GST.authGate();return;}
-    if(isAuthed()){ov.classList.add('hidden');return;}
-    const inp=document.getElementById('pwInput');inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();});setTimeout(()=>inp.focus(),100);}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-})();
+GST.authGate();
 
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
 // 설치현황 시트 — 설비 S/N별 Turn-On(가동개시일) 조인용 (MTBF 가동기간 정밀화). 미연동 시 최초 서비스일로 대체.
