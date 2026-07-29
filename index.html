@@ -346,6 +346,12 @@ document.addEventListener('keydown',e=>{
 
 // 초기화
 (function(){
+  if(GST.authOn&&GST.authOn()){
+    document.getElementById('login').classList.add('hidden');
+    applyLang();
+    GST.authGate().then(function(r){ if(r) start(); });
+    return;
+  }
   let authed=false;
   try{authed=sessionStorage.getItem('gst_auth')==='1';}catch(e){}
   if(authed){
