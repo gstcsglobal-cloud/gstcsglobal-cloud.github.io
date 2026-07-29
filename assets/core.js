@@ -23,9 +23,8 @@ GST.toDate = function(v){
 GST.fmtDate = function(d){ return d ? d.toISOString().slice(0,10) : '—'; };
 GST.fmtD    = function(d){ return d ? d.toISOString().slice(0,10) : ''; };
 
-/* ---------- 1.5 Supabase 인증 (보안 D안) ----------
-   SETUP-SUPABASE.md 대로 프로젝트 생성 후 아래 두 값을 채우면 활성화된다.
-   비워두면 종전 방식(클라이언트 비밀번호 + 직접 시트 fetch) 그대로 동작. */
+/* ---------- 1.5 Supabase 인증 ----------
+   이메일 OTP 로그인이 유일한 인증 수단이다. 설정 절차는 SETUP-SUPABASE.md 참고. */
 GST.SB_URL  = (typeof window!=='undefined' && window.GST_SB_URL)  || 'https://wldzkdoucqunqliwabuf.supabase.co';
 GST.SB_ANON = (typeof window!=='undefined' && window.GST_SB_ANON) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZHprZG91Y3F1bnFsaXdhYnVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyNTgzMDcsImV4cCI6MjEwMDgzNDMwN30.8YW4Y2TG93ldmhxwGX_O8C6avwP5GyknTLwbZ5Q8thY';   // anon public key (공개돼도 안전 — allowlist가 보호)
 GST.authOn = function(){ return !!(GST.SB_URL && GST.SB_ANON); };
@@ -84,11 +83,18 @@ GST.authReady=function(){ if(!GST._readyP)GST._readyP=new Promise(function(r){GS
 GST._authOk=function(){ GST.authReady(); GST._readyRes&&GST._readyRes(); };
 // 로그인 게이트: #loginOverlay를 이메일 OTP UI로 교체(없으면 생성). 성공 시 resolve.
 GST.authGate = async function(){
-  if(!GST.authOn()) return 'legacy';
   var ov=document.getElementById('loginOverlay');
   if(!ov){ ov=document.createElement('div'); ov.id='loginOverlay'; ov.className='login-overlay';
     ov.style.cssText='position:fixed;inset:0;background:rgba(4,8,12,.92);z-index:9998;display:flex;align-items:center;justify-content:center';
     document.body.appendChild(ov); }
+  // 인증이 설정되지 않았으면 통과시키지 않는다(fail-closed). 예전엔 공용 비밀번호로 우회됐다.
+  if(!GST.authOn()){
+    ov.classList.remove('hidden'); ov.style.display='flex';
+    ov.innerHTML='<div style="max-width:340px;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
+      +'<div style="font-size:17px;font-weight:800;color:#ffb4b4;margin-bottom:8px">인증이 설정되지 않았습니다</div>'
+      +'<div style="font-size:12px;color:#8a97a5">관리자에게 문의하세요</div></div>';
+    return new Promise(function(){});   // 절대 resolve하지 않음 → 페이지가 열리지 않는다
+  }
   var s=await GST.getSession();
   if(s){ ov.classList.add('hidden'); ov.style.display='none'; GST._authOk(); return true; }
   ov.classList.remove('hidden'); ov.style.display='flex';
@@ -157,6 +163,45 @@ GST.proxyFetch = async function(gid, tok){
   }
   throw last || new Error('프록시 함수를 찾을 수 없습니다');
 };
+
+/* ---------- 2.5 시트 쓰기 (sheet-write Edge Function) ----------
+   읽기는 sheet-proxy(웹게시 CSV), 쓰기는 sheet-write(서비스계정 + Sheets API).
+   클라이언트는 gid와 논리 필드명만 알고, 시트 ID·행 번호·컬럼 위치는 서버가 정한다. */
+GST.FN_WRITE = (typeof window!=='undefined' && window.GST_FN_WRITE) || 'sheet-write';
+// op: perm(편집권한 확인) · row(폼 프리필+지문) · update(저장) · fresh(라이브 재조회)
+// body가 있으면 POST, 없으면 GET. 실패 시 err.status / err.data를 붙여 던진다.
+GST.sheetWrite = async function(op, gid, body, params){
+  var tok = await GST.token();
+  if(!tok){ await GST.authReady(); tok = await GST.token(); }
+  if(!tok){ var e0=new Error('unauthorized'); e0.status=401; throw e0; }
+  var qs = '?op='+encodeURIComponent(op)+'&gid='+encodeURIComponent(gid)+'&t='+Date.now();
+  if(params) Object.keys(params).forEach(function(k){ qs += '&'+k+'='+encodeURIComponent(params[k]); });
+  var h = {Authorization:'Bearer '+tok};
+  if(body) h['Content-Type']='application/json';
+  var res = await fetch(GST.SB_URL+'/functions/v1/'+GST.FN_WRITE+qs,
+    {method: body?'POST':'GET', headers:h, body: body?JSON.stringify(body):undefined});
+  var txt = await res.text(), data=null;
+  try{ data = JSON.parse(txt); }catch(e){}
+  if(res.ok) return data;
+  var err = new Error((data&&data.error)||('HTTP '+res.status));
+  err.status = res.status; err.data = data;
+  // 로그인 만료(401)와 미등록(forbidden)만 전면 차단 UI를 띄운다.
+  // read_only는 "조회는 되지만 편집 권한이 없다"는 뜻이라 화면을 잠그면 안 된다.
+  if(res.status===401 || (data&&data.error==='forbidden')) GST.authDenied(res.status);
+  throw err;
+};
+// 저장 직후 최신 데이터. 웹게시 CSV는 수 분 지연되므로 라이브 시트를 직접 읽는다.
+// 쿼터가 서비스계정 1개에 공유되므로 초기 로드·자동 새로고침에는 쓰지 말 것.
+GST.fetchCSVFresh = async function(gid){
+  var tok = await GST.token();
+  if(!tok){ await GST.authReady(); tok = await GST.token(); }
+  var res = await fetch(GST.SB_URL+'/functions/v1/'+GST.FN_WRITE+
+    '?op=fresh&gid='+encodeURIComponent(gid)+'&t='+Date.now(), {headers:{Authorization:'Bearer '+tok}});
+  if(res.status===401){ GST.authDenied(401); throw new Error('AUTH 401'); }
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return Papa.parse(await res.text(), {skipEmptyLines:true}).data;
+};
+
 // PapaParse 필요. 캐시 무효화 포함. 반환: 헤더 포함 2차원 배열
 // Supabase 인증 활성 시: 시트 직접 URL → 프록시(Edge Function)로 자동 치환 + JWT 첨부
 GST.fetchCSV = async function(url){
@@ -388,12 +433,8 @@ GST.initSync = function(opts){
     }
   });
   if(!inFrame && opts.loginRedirect){
-    let ok=false;
-    try{ ok = sessionStorage.getItem('gst_auth')==='1'; }catch(e){}
-    if(GST.authOn()){
-      // Supabase 인증 사용 시: 세션이 있으면 그대로 두고, 없을 때만 셸(로그인 화면)로 이동
-      GST.getSession().then(function(s){ if(!s) location.href='https://gstcsglobal-cloud.github.io/'; });
-    }else if(!ok) location.href='https://gstcsglobal-cloud.github.io/';
+    // 세션이 있으면 그대로 두고, 없을 때만 셸(로그인 화면)로 이동
+    GST.getSession().then(function(s){ if(!s) location.href='https://gstcsglobal-cloud.github.io/'; });
   }
 };
 
@@ -478,16 +519,6 @@ GST.readState=function(){
   const s=new URLSearchParams(location.search).get('f');
   return s ? GST.decodeState(s) : null;
 };
-
-/* ---------- 12. 인증 (SHA-256, 평문 비밀번호 제거) ---------- */
-// 구 공용 비밀번호 방식 폐기 (Supabase 이메일 OTP로 대체).
-// 해시가 공개 소스에 있어 무염 SHA-256으로 역산 가능했고, 전원이 같은 비번을 써 추적·회수도 불가능했음.
-// 남아 있는 구 로그인 UI가 어떤 경로로 호출되더라도 인증되지 않도록 항상 실패시킨다(fail-closed).
-GST.sha256=async function(str){
-  const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
-};
-GST.checkPw=async function(){ return false; };
 
 /* ---------- 13. 인사이트 엔진 (최종) ---------- */
 // 증감률 (%). prev가 0/없음이면 null
