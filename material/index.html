@@ -206,14 +206,6 @@ tr:hover td{background:var(--glass-hover)}
 .pill.free{background:rgba(52,211,153,.18);color:var(--accent-5)}
 .empty, .loading{text-align:center;padding:40px;color:var(--txt-muted)}
 
-#loginOverlay{position:fixed;inset:0;z-index:99999;background:var(--bg-gradient);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
-#loginOverlay.hidden{display:none}
-.login-logo{font-size:38px;font-weight:900;background:var(--title-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
-.login-box{background:var(--glass);border:1px solid var(--glass-border);border-radius:24px;padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px;box-shadow:var(--card-shadow);}
-.login-box input{width:100%;background:var(--glass);border:1px solid var(--glass-border);border-radius:30px;padding:13px 20px;color:var(--txt-main);font-size:15px;outline:none;text-align:center}
-.login-box button{width:100%;margin-top:14px;background:var(--title-gradient);border:none;border-radius:30px;padding:13px;color:#0f172a;font-size:15px;font-weight:700;cursor:pointer}
-.login-err{color:#f87171;font-size:12px;margin-top:8px;min-height:20px}
-
 @media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}.cross-layout{grid-template-columns:1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
 @media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}.slicers{grid-template-columns:1fr}}
 
@@ -251,17 +243,7 @@ canvas{cursor:pointer}
 </head>
 <body>
 
-<div id="loginOverlay">
-  <div class="login-logo">GST Dashboard</div>
-  <div class="login-box">
-    <div class="lock">🔒</div>
-    <div class="ltitle">비밀번호를 입력하세요 / Enter password</div>
-    <input type="password" id="pwInput" placeholder="비밀번호 / Password" autocomplete="off">
-    <button onclick="checkPw()">로그인 / Login</button>
-    <div class="login-err" id="pwErr"></div>
-  </div>
-</div>
-
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
     <h1 data-i="title">자재 실적 대시보드</h1>
@@ -592,18 +574,7 @@ canvas{cursor:pointer}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
-(function(){
-    window.checkPw=async function(){
-    const v=document.getElementById('pwInput').value;
-    if(await GST.checkPw(v)){try{sessionStorage.setItem('gst_auth','1');}catch(e){}document.getElementById('loginOverlay').classList.add('hidden');}
-    else{document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';document.getElementById('pwInput').value='';}
-  };
-  if(GST.authOn&&GST.authOn()){GST.authGate();}
-  else{
-    if(sessionStorage.getItem('gst_auth')==='1')document.getElementById('loginOverlay').classList.add('hidden');
-    document.getElementById('pwInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkPw();});
-  }
-})();
+GST.authGate();
 
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
 const C={op:1,customer:2,line:5,process:7,detail:8,mainEq:9,eq:10,sn:12,model:14,qty:22,matName:23,spec:24,reason:25,workDate:28,daysPaid:29,daysPrev:30,pf:31,freeReason:32};
