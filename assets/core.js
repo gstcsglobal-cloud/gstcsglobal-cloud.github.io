@@ -30,6 +30,12 @@ GST.SB_URL  = (typeof window!=='undefined' && window.GST_SB_URL)  || 'https://wl
 GST.SB_ANON = (typeof window!=='undefined' && window.GST_SB_ANON) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZHprZG91Y3F1bnFsaXdhYnVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyNTgzMDcsImV4cCI6MjEwMDgzNDMwN30.8YW4Y2TG93ldmhxwGX_O8C6avwP5GyknTLwbZ5Q8thY';   // anon public key (공개돼도 안전 — allowlist가 보호)
 GST.authOn = function(){ return !!(GST.SB_URL && GST.SB_ANON); };
 GST._sb=null; GST._sbLoad=null;
+// 세션을 sessionStorage에만 저장 → 브라우저(탭) 닫으면 자동 로그아웃, 다음 접속 시 OTP 재인증 (공용 PC 보호)
+GST._storage={
+  getItem:function(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null; } },
+  setItem:function(k,v){ try{ sessionStorage.setItem(k,v); localStorage.removeItem(k); }catch(e){} },
+  removeItem:function(k){ try{ sessionStorage.removeItem(k); localStorage.removeItem(k); }catch(e){} }
+};
 GST.sb = async function(){
   if(GST._sb) return GST._sb;
   if(!global.supabase){
@@ -40,7 +46,10 @@ GST.sb = async function(){
       document.head.appendChild(s); });
     await GST._sbLoad;
   }
-  GST._sb = global.supabase.createClient(GST.SB_URL, GST.SB_ANON);
+  // 이전 버전이 localStorage에 남긴 세션 청소 (브라우저 종료 시 로그아웃 정책 전환)
+  try{ Object.keys(localStorage).forEach(function(k){ if(/^sb-.+-auth-token/.test(k)) localStorage.removeItem(k); }); }catch(e){}
+  GST._sb = global.supabase.createClient(GST.SB_URL, GST.SB_ANON,
+    {auth:{storage:GST._storage, persistSession:true, autoRefreshToken:true}});
   return GST._sb;
 };
 GST.getSession = async function(){
