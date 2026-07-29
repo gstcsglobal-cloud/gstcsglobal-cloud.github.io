@@ -846,6 +846,7 @@ loadData();
     else{ document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect'; document.getElementById('pwInput').value=''; }
   };
   function init(){ const ov=document.getElementById('loginOverlay'); if(!ov)return;
+    if(GST.authOn&&GST.authOn()){GST.authGate();return;}
     if(isAuthed()){ov.classList.add('hidden');return;}
     const inp=document.getElementById('pwInput'); inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();}); setTimeout(()=>inp.focus(),100);
   }
