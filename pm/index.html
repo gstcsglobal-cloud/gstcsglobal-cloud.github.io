@@ -426,8 +426,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
-const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbzJ6N-h9DXyqTwEoNOnksBzMDsySqnkQ7OSiuR9kBFGuRY3oJ29QI9pnIfyEqvtpDf3/exec';
-let ADJUST={}; // 조정 내역 {key: {newDate, memo, updatedAt}}
+let ADJUST={}; // 조정 내역 {key: {newDate, memo, updatedAt}} — Supabase pm_adjust 테이블(로그인 필요)
 
 // 컬럼 인덱스 (0-based) — 시트3 점검이력
 // 새 시트3(실적현황) 컬럼 맵 (0-based) — site=고객사, chamber=채널위치
@@ -548,7 +547,7 @@ async function loadData(){ GST.skeleton(true);
     // 조정 내역 + 점검 데이터 동시 로드
     const [csvRes, adjRes]=await Promise.allSettled([
       GST.fetchCSVCached(SHEET_URL,'pmsheet'),
-      fetch(APPS_SCRIPT_URL+'?t='+Date.now()).then(r=>r.json())
+      loadAdjust()
     ]);
     if(csvRes.status==='fulfilled'){
       GST.schemaBanner(GST.validateSchema(csvRes.value.rows[0]||[],{
@@ -1125,13 +1124,23 @@ function renderCalendar(){
 
 // 드래그로 점검일 이동 → Apps Script 저장
 let DRAG_KEY=null;
+// 조정 내역 로드 — Supabase pm_adjust (로그인 필요). 미로그인/미설정 시 빈 객체.
+async function loadAdjust(){
+  const db=await GST.db(); if(!db)return {};
+  const r=await db.from('pm_adjust').select('key,new_date,memo,updated_at');
+  if(r.error)throw new Error(r.error.message);
+  const out={};
+  (r.data||[]).forEach(x=>{ out[x.key]={newDate:x.new_date,memo:x.memo||'',updatedAt:x.updated_at}; });
+  return out;
+}
 async function moveSchedule(key, newDate){
   const item=SCHED.find(x=>x.key===key);
   if(!item)return;
   const oldStr=fmtDate(item.next);
   if(oldStr===newDate)return; // 같은 날이면 무시
 
-  // 즉시 화면 반영 (낙관적 업데이트)
+  // 즉시 화면 반영 (낙관적 업데이트) — 실패 시 아래에서 되돌린다
+  const prev=ADJUST[key];
   ADJUST[key]={newDate, memo:item.memo||'', updatedAt:new Date().toISOString()};
   SCHED=buildSchedule(RAW);
   render();
@@ -1139,27 +1148,41 @@ async function moveSchedule(key, newDate){
   const status=document.getElementById('status');
   status.className='status'; status.textContent='💾 '+t('adj_saving');
 
+  const revert=msg=>{                      // 저장 실패 → 화면을 원래대로 복구 (거짓 '저장됨' 방지)
+    if(prev)ADJUST[key]=prev; else delete ADJUST[key];
+    SCHED=buildSchedule(RAW); render();
+    status.className='status err'; status.textContent='❌ '+t('adj_failed')+(msg?' — '+msg:'');
+  };
   try{
-    await fetch(APPS_SCRIPT_URL,{
-      method:'POST',
-      body:JSON.stringify({key, newDate, memo:item.memo||''})
-    });
+    const db=await GST.db();
+    if(!db){ revert('로그인이 필요합니다'); return; }
+    const sess=await GST.getSession();
+    const r=await db.from('pm_adjust').upsert({
+      key, new_date:newDate, memo:item.memo||'',
+      updated_by:(sess&&sess.user&&sess.user.email)||null, updated_at:new Date().toISOString()
+    },{onConflict:'key'});
+    if(r.error){ revert(r.error.message); return; }
     status.className='status ok';
     status.textContent='✅ '+t('adj_saved').replace('A',oldStr).replace('B',newDate);
-  }catch(e){
-    status.className='status err';
-    status.textContent='❌ '+t('adj_failed');
-  }
+  }catch(e){ revert((e&&e.message)||''); }
 }
 
 // 조정 취소 (원래 예정일로 복원)
 async function resetSchedule(key){
+  const prev=ADJUST[key];
   delete ADJUST[key];
   SCHED=buildSchedule(RAW);
   render();
   try{
-    await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({key,newDate:'__DELETE__'})});
-  }catch(e){}
+    const db=await GST.db();
+    if(!db)throw new Error('로그인이 필요합니다');
+    const r=await db.from('pm_adjust').delete().eq('key',key);
+    if(r.error)throw new Error(r.error.message);
+  }catch(e){
+    if(prev){ ADJUST[key]=prev; SCHED=buildSchedule(RAW); render(); }
+    const status=document.getElementById('status');
+    if(status){ status.className='status err'; status.textContent='❌ '+t('adj_failed')+' — '+((e&&e.message)||''); }
+  }
 }
 
 // 날짜 상세 팝업
