@@ -319,6 +319,7 @@ async function doLogin(){
 }
 function doLogout(){
   try{sessionStorage.removeItem('gst_auth');}catch(e){}
+  if(GST.authOn&&GST.authOn()){ GST.signOut(); return; }   // Supabase 세션까지 종료(공용 PC)
   location.reload();
 }
 
