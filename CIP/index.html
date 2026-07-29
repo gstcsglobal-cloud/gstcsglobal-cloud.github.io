@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIP 현황 — 개조·점검 진행 관리</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
+  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
+  --glass:rgba(255,255,255,0.05); --glass-border:rgba(255,255,255,0.12); --glass-hover:rgba(255,255,255,0.1);
+  --txt-main:#e2e8f0; --txt-muted:#94a3b8;
+  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
+  --warn:#fbbf24; --bad:#fb7185; --ok:#34d399;
+  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
+}
+body.theme-burgundy{
+  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
+  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
+  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
+  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
+  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
+}
+body.theme-light{
+  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #e8eef5, #f0f4f8);
+  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
+  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
+  --txt-main:#0f172a; --txt-muted:#64748b;
+  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
+}
+body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt-main);
+  background:var(--bg-gradient);background-size:400% 400%;animation:grad 22s ease infinite;min-height:100vh;padding:24px 28px;
+  transition:background .5s ease,color .5s ease}
+@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:28px;font-weight:800;background:var(--title-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
+.header .sub{color:var(--txt-muted);font-size:13px;margin-top:4px}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:9px 18px;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn-grad{background:var(--title-gradient);color:#0f172a}
+body.theme-light .btn-grad{color:#fff}
+.btn-grad:hover{opacity:.85;transform:translateY(-1px)}
+.btn-glass{background:var(--glass);border:1px solid var(--glass-border);color:var(--txt-main);box-shadow:var(--card-shadow);backdrop-filter:blur(10px)}
+.btn-glass:hover{background:var(--glass-hover)}
+.theme-wrap,.lang-wrap{position:relative}
+.theme-btn,.lang-btn{background:var(--glass);border:1px solid var(--glass-border);color:var(--txt-main);padding:9px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;backdrop-filter:blur(10px);box-shadow:var(--card-shadow);transition:all .3s}
+.theme-btn:hover,.lang-btn:hover{background:var(--glass-hover);transform:scale(1.02)}
+.theme-dropdown,.lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:6px;z-index:100;min-width:150px;display:none;backdrop-filter:blur(25px);box-shadow:var(--card-shadow)}
+.theme-dropdown.open,.lang-dropdown.open{display:block}
+.theme-item,.lang-item{padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--txt-main);transition:all .2s}
+.theme-item:hover,.lang-item:hover{background:var(--glass-hover);padding-left:18px;color:var(--accent-1)}
+.status{font-size:12px;color:var(--txt-muted);margin-bottom:16px;text-align:right}
+
+/* ── 기간 토글 · 마감 툴바 (주간현황에서 이식) ── */
+.rpt-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.pt-btn{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:6px 16px;color:var(--txt-muted);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;height:28px}
+.pt-btn.active{color:#fff;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));border-color:transparent}
+body.theme-light .pt-btn.active{color:#fff}
+.pt-note{font-size:11px;color:var(--txt-muted);margin-left:4px}
+.pt-inp{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:0 8px;color:var(--txt-main);font-size:11px;height:28px;line-height:28px;outline:none;color-scheme:dark;vertical-align:middle}
+body.theme-light .pt-inp{color-scheme:light;color:#0f172a}
+.pt-cap{font-family:inherit;font-size:10px;color:var(--txt-muted);font-weight:700;margin:0 2px 0 6px;vertical-align:middle}
+
+.slicers{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:10px;margin-bottom:16px}
+.slicer{background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:10px 14px;backdrop-filter:blur(12px);box-shadow:var(--card-shadow)}
+.slicer .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--txt-muted);margin-bottom:7px;font-weight:700}
+.slicer select,.slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;width:100%;color-scheme:dark}
+body.theme-light .slicer select,body.theme-light .slicer input{color-scheme:light;color:#0f172a}
+.slicer select:focus,.slicer input:focus{border-color:var(--accent-1)}
+.fchips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:10px 14px;background:var(--glass);border:1px solid var(--accent-2);border-radius:12px}
+.fchips-label{font-size:11px;font-weight:700;color:var(--accent-2)}
+.fchip{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.4);color:var(--txt-main);cursor:pointer}
+.fchip:hover{background:rgba(251,113,133,.15);border-color:rgba(251,113,133,.4)}
+.fchip .fx{font-weight:900;font-size:10px}
+.fchip-clear{background:transparent;border:1px solid var(--glass-border);border-radius:20px;padding:4px 11px;color:var(--txt-muted);font-size:10px;font-weight:700;cursor:pointer;margin-left:auto}
+.fchip-clear:hover{color:var(--bad);border-color:var(--bad)}
+
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:16px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:all .3s;box-shadow:var(--card-shadow)}
+.kpi:hover{transform:translateY(-4px);border-color:var(--accent-1)}
+.kpi .cap{margin:0 0 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--txt-muted);font-weight:600}
+.kpi .krow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.kpi .val{font-size:25px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.kpi .unit{font-size:12px;color:var(--txt-muted);font-weight:600}
+.kpi .kd{font-size:11px;font-weight:800}
+.kpi .kfoot{font-size:11px;color:var(--txt-muted);margin-top:7px;min-height:13px}
+.kpi.k1 .val{color:var(--accent-1)}
+.kpi.k4 .val{color:var(--warn)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.grid2b{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:16px}
+.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;backdrop-filter:blur(14px);box-shadow:var(--card-shadow);height:380px;display:flex;flex-direction:column;position:relative}
+.card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:var(--txt-main);padding-right:150px}
+.card-note{font-size:10px;color:var(--txt-muted);margin-bottom:10px;font-style:italic}
+.card .cw{flex:1;position:relative;min-height:0}
+.card.tall{height:460px}
+/* 차트별 주/월 미니 토글 */
+.mini-per{position:absolute;top:14px;right:14px;display:flex;gap:0;z-index:5;border:1px solid var(--glass-border);border-radius:12px;overflow:hidden}
+.mp-btn{background:transparent;border:none;padding:3px 10px;font-size:10px;font-weight:700;color:var(--txt-muted);cursor:pointer;font-family:inherit}
+.mp-btn.active{background:var(--accent-1);color:#04211d}
+body.theme-light .mp-btn.active{color:#fff}
+/* 차트 복사·저장·축설정 */
+.capbtns{position:absolute;top:11px;right:14px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
+.card:hover .capbtns,.tablecard:hover .capbtns{opacity:1}
+.capbtn{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;padding:2px 8px;color:var(--txt-muted);font-size:11px;font-weight:700;cursor:pointer;height:22px;line-height:16px}
+.capbtn:hover{color:#fff;border-color:var(--accent-1)}
+#capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
+/* 축 범위 편집 팝오버 */
+.axpop{position:absolute;top:42px;right:12px;z-index:60;background:var(--bg-card,#101720);border:1px solid var(--glass-border);border-radius:12px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.45);min-width:190px}
+body.theme-light .axpop{background:#fff}
+.axpop .axp-t{font-size:11px;font-weight:800;color:var(--txt-main);margin-bottom:8px}
+.axpop .axp-r{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:var(--txt-muted)}
+.axpop .axp-r b{width:16px;color:var(--txt-main)}
+.axpop input{width:62px;background:var(--glass);border:1px solid var(--glass-border);border-radius:6px;color:var(--txt-main);font-size:11px;padding:4px 6px}
+.axpop .axp-btns{display:flex;gap:6px;margin-top:8px}
+.axpop .axp-btns button{flex:1;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;color:var(--txt-main);font-size:11px;font-weight:700;padding:5px 0;cursor:pointer;font-family:inherit}
+.axpop .axp-btns button:hover{border-color:var(--accent-1)}
+/* 카드 내부 옵션 토글 (정렬·묶기) */
+.copt{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.co-btn{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:3px 11px;color:var(--txt-muted);font-size:10px;font-weight:700;cursor:pointer}
+.co-btn.active{background:var(--glass-hover);color:var(--accent-1);border-color:var(--accent-1)}
+
+.tablecard{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;backdrop-filter:blur(14px);box-shadow:var(--card-shadow);margin-bottom:16px;position:relative}
+.tablecard h3{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--txt-main)}
+.tbl-wrap{max-height:460px;overflow:auto;border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+th{text-align:left;padding:10px 11px;color:var(--txt-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--glass-border);position:sticky;top:0;background:var(--glass);backdrop-filter:blur(10px);cursor:pointer;user-select:none}
+th:hover{color:var(--accent-1)}
+td{padding:8px 11px;border-bottom:1px solid var(--glass-border);color:var(--txt-main)}
+tr:hover td{background:var(--glass-hover)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.empty,.loading{text-align:center;padding:40px;color:var(--txt-muted)}
+.pill{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(56,189,248,.18);color:var(--accent-2)}
+.pill.f11{background:rgba(167,139,250,.18);color:var(--accent-3)}
+.pbar{position:relative;height:14px;border-radius:4px;background:var(--glass-hover);overflow:hidden;min-width:70px}
+.pbar i{position:absolute;inset:0 auto 0 0;background:var(--accent-1);border-radius:4px}
+.pbar span{position:relative;font-size:9.5px;font-weight:800;line-height:14px;padding-left:5px;color:var(--txt-main)}
+/* 공정 × 항목 히트맵 */
+.hm-wrap{max-height:420px;overflow:auto;border-radius:10px;border:1px solid var(--glass-border)}
+.hm-wrap table{font-size:11px}
+.hm-wrap th{font-size:9px;padding:8px 8px;white-space:normal;min-width:74px;max-width:110px;line-height:1.3;cursor:default}
+.hm-wrap th.rh{position:sticky;left:0;z-index:3;background:var(--glass);text-align:left;white-space:nowrap;min-width:80px}
+.hm-wrap td{padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums}
+.hm-wrap td.rl{position:sticky;left:0;background:var(--glass);backdrop-filter:blur(8px);font-weight:700;text-align:left;white-space:nowrap;z-index:2}
+.hm-wrap td.hc{cursor:pointer}
+.hm-wrap td.hc:hover{outline:1px solid var(--accent-1);outline-offset:-1px}
+.hm-wrap tr.tot td{font-weight:800;color:var(--accent-2);background:var(--glass)}
+
+@media print{.capbtns,.header-right,.slicers,.fchips,.rpt-toolbar,.mini-per{display:none!important}.card{break-inside:avoid;page-break-inside:avoid}}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid2,.grid2b{grid-template-columns:1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
+@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.slicers{grid-template-columns:1fr}.card h3{padding-right:0}}
+</style>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
+</head>
+<body>
+
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
+<div class="header">
+  <div>
+    <h1 data-i="title">CIP 현황</h1>
+    <div class="sub" data-i="sub">스크러버 개조·점검(CIP) 항목별 진행 관리</div>
+  </div>
+  <div class="header-right">
+    <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← 메인으로</a>
+    <button class="btn btn-glass" onclick="saveAllCharts()" title="모든 차트를 고해상도 PNG로 저장">🖼</button>
+    <button class="btn btn-glass" onclick="window.print()" title="인쇄 / PDF">🖨</button>
+    <button class="btn btn-grad" id="refreshBtn" onclick="loadData()"><span data-i="refresh">새로고침</span></button>
+    <div class="theme-wrap">
+      <button class="theme-btn" onclick="toggleThemeMenu()"><span id="themeLabel">Slate</span> ▾</button>
+      <div class="theme-dropdown" id="themeMenu">
+        <div class="theme-item" onclick="changeDashboardTheme('slate','Slate')">🖤 Slate</div>
+        <div class="theme-item" onclick="changeDashboardTheme('default','Cyber Turquoise')">🌌 Cyber Turquoise</div>
+        <div class="theme-item" onclick="changeDashboardTheme('burgundy','Royal Burgundy')">🍷 Royal Burgundy</div>
+        <div class="theme-item" onclick="changeDashboardTheme('light','Aurora Light')">🧊 Aurora Light</div>
+      </div>
+    </div>
+    <div class="lang-wrap">
+      <button class="lang-btn" onclick="toggleLang()"><span id="langLabel">KO</span> ▾</button>
+      <div class="lang-dropdown" id="langMenu">
+        <div class="lang-item" onclick="setLang('ko')">🇰🇷 한국어</div>
+        <div class="lang-item" onclick="setLang('en')">🇺🇸 English</div>
+        <div class="lang-item" onclick="setLang('zh')">🇨🇳 中文</div>
+        <div class="lang-item" onclick="setLang('ja')">🇯🇵 日本語</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="status" id="status">Loading...</div>
+
+<!-- 기간 토글 · 마감 (주간현황과 설정 공유) -->
+<div class="rpt-toolbar">
+  <button class="pt-btn" id="ptW" onclick="setPeriod('w')" data-i="per_w">주별</button>
+  <button class="pt-btn" id="ptM" onclick="setPeriod('m')" data-i="per_m">월별</button>
+  <span class="pt-note" data-i="per_note">최근 12개 구간</span>
+  <span class="pt-note" style="margin-left:14px" data-i="cutoff">마감</span>
+  <span class="pt-cap">Month</span><input type="month" id="endM" class="pt-inp" title="월간 차트 마감 월" onchange="setEnd('m',this.value)">
+  <span class="pt-cap">Week</span><select id="endW" class="pt-inp" title="주간 차트 마감 주차" onchange="setEnd('w',this.value)"></select>
+  <button class="pt-btn" title="마감 해제" onclick="clearEnds()">↺</button>
+  <span class="pt-note" id="asOfNote"></span>
+</div>
+
+<div class="slicers">
+  <div class="slicer"><div class="lbl" data-i="sl_site">사이트</div><select id="sl-site" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_group">공정</div><select id="sl-group" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_floor">층·구역</div><select id="sl-floor" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_model">모델</div><select id="sl-model" onchange="onSlicer()"></select></div>
+  <div class="slicer" style="grid-column:span 2"><div class="lbl" data-i="sl_item">CIP 항목</div><select id="sl-item" onchange="onSlicer()"></select></div>
+  <div class="slicer" style="grid-column:span 2"><div class="lbl" data-i="sl_search">검색</div><input id="sl-q" placeholder="S/N, Code, 세부공정..." oninput="onSearch()"></div>
+</div>
+
+<div class="fchips" id="fchips" style="display:none">
+  <span class="fchips-label"><span data-i="f_active">활성 필터</span>:</span>
+  <span id="fchipList"></span>
+  <button class="fchip-clear" onclick="clearAllFilters()" data-i="f_clear">전체 해제</button>
+</div>
+
+<div class="kpis">
+  <div class="kpi k1"><div class="cap" data-i="kp1">진행율</div>
+    <div class="krow"><span class="val" id="kp1">—</span><span class="kd" id="kd1"></span></div>
+    <div class="kfoot" id="kf1"></div></div>
+  <div class="kpi"><div class="cap" data-i="kp2">대상</div>
+    <div class="krow"><span class="val" id="kp2">0</span><span class="unit" data-i="u_cnt">건</span></div>
+    <div class="kfoot" id="kf2"></div></div>
+  <div class="kpi"><div class="cap" data-i="kp3">완료</div>
+    <div class="krow"><span class="val" id="kp3">0</span><span class="unit" data-i="u_cnt">건</span></div>
+    <div class="kfoot" id="kf3"></div></div>
+  <div class="kpi k4"><div class="cap" data-i="kp4">잔여</div>
+    <div class="krow"><span class="val" id="kp4">0</span><span class="unit" data-i="u_cnt">건</span></div>
+    <div class="kfoot" id="kf4"></div></div>
+  <div class="kpi"><div class="cap" data-i="kp5">이번 구간 완료</div>
+    <div class="krow"><span class="val" id="kp5">0</span><span class="kd" id="kd5"></span></div>
+    <div class="kfoot" id="kf5"></div></div>
+  <div class="kpi"><div class="cap" data-i="kp6">잔여 설비</div>
+    <div class="krow"><span class="val" id="kp6">0</span><span class="unit" data-i="u_eq">대</span></div>
+    <div class="kfoot" id="kf6"></div></div>
+</div>
+
+<!-- ═══ 개요 ═══ -->
+<div data-sec="ov">
+  <div class="card tall" style="margin-bottom:16px">
+    <div class="mini-per" data-ch="cipTrend"></div>
+    <h3 data-i="ch_trend">CIP 진행 추이 (누계)</h3>
+    <div class="card-note" data-i="note_trend">대상 = Not yet + 완료 · 구간 말 기준 누계 · 진행율은 우측 축</div>
+    <div class="cw"><canvas id="cipTrend"></canvas></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="mini-per" data-ch="cipNew"></div>
+    <h3 data-i="ch_new">구간별 신규 완료</h3>
+    <div class="card-note" data-i="note_new">그 구간에 실제로 처리한 건수 (누계 차트로는 안 보이는 실적)</div>
+    <div class="cw"><canvas id="cipNew"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══ 공정 ═══ -->
+<div data-sec="proc">
+  <div class="card tall" style="margin-bottom:16px">
+    <h3 data-i="ch_proc">공정별 진행 현황</h3>
+    <div class="card-note" data-i="note_proc">완료·잔여 스택 + 진행율 · 작업 우선순위 판단 기준</div>
+    <div class="cw"><canvas id="cipProc"></canvas></div>
+  </div>
+  <div class="tablecard">
+    <h3>🔥 <span data-i="hm_title">공정 × 항목 잔여 히트맵</span> <span class="pt-note" data-i="hm_note">— 잔여 상위 12개 항목 · 셀 클릭 시 필터</span></h3>
+    <div class="hm-wrap"><table id="hmTbl"><tbody><tr><td class="loading">⏳</td></tr></tbody></table></div>
+  </div>
+</div>
+
+<!-- ═══ 항목 · 설비 ═══ -->
+<div data-sec="item">
+  <div class="card tall" style="margin-bottom:16px">
+    <h3 data-i="ch_item">항목별 진행 현황</h3>
+    <div class="copt">
+      <button class="co-btn" id="soRem" onclick="setItemSort('rem')" data-i="so_rem">잔여순</button>
+      <button class="co-btn" id="soRate" onclick="setItemSort('rate')" data-i="so_rate">진행율순</button>
+      <span style="flex:1"></span>
+      <button class="co-btn" id="soPair" onclick="togglePair()" data-i="so_pair">좌/우 묶기</button>
+    </div>
+    <div class="cw"><canvas id="cipItem"></canvas></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3 data-i="ch_age">잔여 경과일 분포</h3>
+      <div class="card-note" data-i="note_age">항목 적용일로부터 경과 · 오래 방치된 건이 오른쪽</div>
+      <div class="cw"><canvas id="cipAge"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_floor">층·구역별 잔여</h3>
+      <div class="card-note" data-i="note_floor">한 번에 순회할 작업 동선 기준 · 상위 12</div>
+      <div class="cw"><canvas id="cipFloor"></canvas></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3 data-i="ch_model">모델별 진행율</h3>
+      <div class="card-note" data-i="note_model">완료·잔여 + 진행율</div>
+      <div class="cw"><canvas id="cipModel"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_vint">반입 연도별 진행율</h3>
+      <div class="card-note" data-i="note_vint">FAB In 기준 · 노후 설비가 밀렸는지 확인</div>
+      <div class="cw"><canvas id="cipVint"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 상세 ═══ -->
+<div data-sec="data">
+  <div class="tablecard">
+    <h3 data-i="ti_title">항목 요약</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th onclick="sortItem('item')" data-i="th_item">항목</th>
+          <th onclick="sortItem('site')" data-i="th_site">사이트</th>
+          <th onclick="sortItem('ap')" data-i="th_ap">적용일</th>
+          <th class="num" onclick="sortItem('tgt')" data-i="th_tgt">대상</th>
+          <th class="num" onclick="sortItem('done')" data-i="th_done">완료</th>
+          <th class="num" onclick="sortItem('rem')" data-i="th_rem">잔여</th>
+          <th onclick="sortItem('rate')" data-i="th_rate">진행율</th>
+          <th onclick="sortItem('last')" data-i="th_last">최근 완료</th>
+        </tr></thead>
+        <tbody id="tItem"><tr><td colspan="8" class="loading">⏳</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="tablecard">
+    <h3><span data-i="td_title">미완료 상세</span> — <span id="tdCnt">0</span> <span data-i="u_cnt">건</span> <span class="pt-note" data-i="td_note">(최대 500행 표시)</span></h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th onclick="sortDet('sn')">S/N</th>
+          <th onclick="sortDet('site')" data-i="th_site">사이트</th>
+          <th onclick="sortDet('floor')" data-i="th_floor">층·구역</th>
+          <th onclick="sortDet('group')" data-i="th_group">공정</th>
+          <th onclick="sortDet('detail')" data-i="th_detail">세부</th>
+          <th onclick="sortDet('model')" data-i="th_model">모델</th>
+          <th onclick="sortDet('item')" data-i="th_item">항목</th>
+          <th onclick="sortDet('ap')" data-i="th_ap">적용일</th>
+          <th class="num" onclick="sortDet('age')" data-i="th_age">경과일</th>
+        </tr></thead>
+        <tbody id="tDet"><tr><td colspan="9" class="loading">⏳</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
+GST.authGate();
+const VER='v50';
+const MS=86400000;
+const PUB='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub';
+const GID_CIP11='2123129719', GID_CIP16='1999732389';
+const URLS={
+  cip11:PUB+'?gid='+GID_CIP11+'&single=true&output=csv',
+  cip16:PUB+'?gid='+GID_CIP16+'&single=true&output=csv'
+};
+// 파일별 고정열 맵 + CIP 항목 열 범위 (실측 스키마)
+const COLS={
+  F11:{sn:8, code:9, group:10,detail:11,fabIn:12,floor:4,area:-1,type:5,model:6,mtype:-1,pjt:7, c0:13,c1:18,n:6},
+  F16:{sn:10,code:11,group:12,detail:13,fabIn:14,floor:4,area:5, type:6,model:7,mtype:8, pjt:9, c0:15,c1:38,n:24}
+};
+
+const T={
+ko:{title:'CIP 현황',sub:'스크러버 개조·점검(CIP) 항목별 진행 관리',back:'← 메인으로',refresh:'새로고침',
+  per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',per_ws:'주',per_ms:'월',mon_u:'월',cutoff:'마감',
+  ax_t:'축 범위 (빈칸=자동)',ax_min:'최소',ax_max:'최대',ax_apply:'적용',ax_reset:'초기화',
+  sl_site:'사이트',sl_group:'공정',sl_floor:'층·구역',sl_model:'모델',sl_item:'CIP 항목',sl_search:'검색',
+  all:'전체',f_active:'활성 필터',f_clear:'전체 해제',asof:'기준 {d}',
+  kp1:'진행율',kp2:'대상',kp3:'완료',kp4:'잔여',kp5:'이번 구간 완료',kp6:'잔여 설비',u_cnt:'건',u_eq:'대',
+  kf1:'완료 {d} / 대상 {t}',kf2:'설비 {n}대 × 항목 {i}개',kf3:'전 구간 {n}건',kf4:'미착수 항목 {n}개',
+  kf5:'{lab} 구간 · 직전 {n}건',kf6:'전체 {t}대 중',
+  ch_trend:'CIP 진행 추이 (누계)',note_trend:'대상 = Not yet + 완료 · 구간 말 기준 누계 · 진행율은 우측 축',
+  ch_new:'구간별 신규 완료',note_new:'그 구간에 실제로 처리한 건수 (누계 차트로는 안 보이는 실적)',
+  ch_proc:'공정별 진행 현황',note_proc:'완료·잔여 스택 + 진행율 · 작업 우선순위 판단 기준',
+  hm_title:'공정 × 항목 잔여 히트맵',hm_note:'— 잔여 상위 12개 항목 · 셀 클릭 시 필터',
+  ch_item:'항목별 진행 현황',so_rem:'잔여순',so_rate:'진행율순',so_pair:'좌/우 묶기',
+  ch_age:'잔여 경과일 분포',note_age:'항목 적용일로부터 경과 · 오래 방치된 건이 오른쪽',
+  ch_floor:'층·구역별 잔여',note_floor:'한 번에 순회할 작업 동선 기준 · 상위 12',
+  ch_model:'모델별 진행율',note_model:'완료·잔여 + 진행율',
+  ch_vint:'반입 연도별 진행율',note_vint:'FAB In 기준 · 노후 설비가 밀렸는지 확인',
+  ti_title:'항목 요약',td_title:'미완료 상세',td_note:'(최대 500행 표시)',
+  th_item:'항목',th_site:'사이트',th_ap:'적용일',th_tgt:'대상',th_done:'완료',th_rem:'잔여',th_rate:'진행율',th_last:'최근 완료',
+  th_floor:'층·구역',th_group:'공정',th_detail:'세부',th_model:'모델',th_age:'경과일',
+  s_tgt:'대상',s_done:'완료',s_rem:'잔여',s_rate:'진행율',s_new:'신규 완료',s_cum:'누계 완료',
+  age_b:['30일 이하','31–90일','91–180일','180일 초과','적용일 미상'],
+  etc:'기타',unk:'미상',days:'일',
+  ins_rate:'진행율 {p}% · 잔여 {n}건',ins_proc:'{g} 공정 잔여 최다 {n}건 ({p}%)',
+  ins_item:'항목 {v} — 잔여 {n}건으로 최다',ins_old:'180일 넘게 미착수 {n}건 — 우선 처리 필요',
+  ins_new:'{lab} 신규 완료 {n}건',ins_bad:'날짜 이상 데이터 {n}건 — 시트 확인 필요',
+  no_data:'조건에 맞는 데이터가 없습니다',loading:'데이터 불러오는 중...',
+  sec_ov:'개요',sec_proc:'공정',sec_item:'항목·설비',sec_dt:'상세',
+  warn_cols:'CIP 항목 열 수가 예상과 다릅니다 ({s}: 예상 {e}개 · 실제 {a}개) — 시트에 열이 추가·삭제되었는지 확인하세요'},
+en:{title:'CIP Status',sub:'Scrubber retrofit/inspection (CIP) progress by item',back:'← Main',refresh:'Refresh',
+  per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',per_ws:'W',per_ms:'M',mon_u:'',cutoff:'As of',
+  ax_t:'Axis range (blank=auto)',ax_min:'Min',ax_max:'Max',ax_apply:'Apply',ax_reset:'Reset',
+  sl_site:'Site',sl_group:'Process',sl_floor:'Floor',sl_model:'Model',sl_item:'CIP Item',sl_search:'Search',
+  all:'All',f_active:'Active Filters',f_clear:'Clear All',asof:'as of {d}',
+  kp1:'Progress',kp2:'Target',kp3:'Done',kp4:'Remaining',kp5:'Done This Period',kp6:'Units Remaining',u_cnt:'',u_eq:'units',
+  kf1:'{d} done / {t} target',kf2:'{n} units × {i} items',kf3:'prev period {n}',kf4:'{n} items not started',
+  kf5:'{lab} · prev {n}',kf6:'of {t} units',
+  ch_trend:'CIP Progress Trend (cumulative)',note_trend:'target = Not yet + done · cumulative at period end · rate on right axis',
+  ch_new:'Newly Completed per Period',note_new:'what was actually processed in that period',
+  ch_proc:'Progress by Process',note_proc:'done/remaining stack + rate · priority basis',
+  hm_title:'Process × Item Remaining Heatmap',hm_note:'— top 12 items by remaining · click a cell to filter',
+  ch_item:'Progress by Item',so_rem:'By remaining',so_rate:'By rate',so_pair:'Merge L/R',
+  ch_age:'Age of Remaining Work',note_age:'days since item apply date · older to the right',
+  ch_floor:'Remaining by Floor',note_floor:'walk-route basis · top 12',
+  ch_model:'Progress by Model',note_model:'done/remaining + rate',
+  ch_vint:'Progress by FAB-In Year',note_vint:'checks whether older units lag behind',
+  ti_title:'Item Summary',td_title:'Remaining Detail',td_note:'(max 500 rows)',
+  th_item:'Item',th_site:'Site',th_ap:'Apply date',th_tgt:'Target',th_done:'Done',th_rem:'Remain',th_rate:'Rate',th_last:'Last done',
+  th_floor:'Floor',th_group:'Process',th_detail:'Detail',th_model:'Model',th_age:'Age',
+  s_tgt:'Target',s_done:'Done',s_rem:'Remaining',s_rate:'Progress',s_new:'Newly done',s_cum:'Cumulative',
+  age_b:['≤30d','31–90d','91–180d','>180d','no date'],
+  etc:'Others',unk:'N/A',days:'d',
+  ins_rate:'progress {p}% · {n} remaining',ins_proc:'{g} has most remaining: {n} ({p}%)',
+  ins_item:'Item {v} — most remaining at {n}',ins_old:'{n} items pending over 180 days — prioritize',
+  ins_new:'{lab}: {n} newly completed',ins_bad:'{n} rows with invalid dates — check the sheet',
+  no_data:'No data found',loading:'Loading...',
+  sec_ov:'Overview',sec_proc:'Process',sec_item:'Item & Unit',sec_dt:'Detail',
+  warn_cols:'CIP item column count differs ({s}: expected {e}, found {a}) — check for added/removed columns'},
+zh:{title:'CIP 现况',sub:'洗涤器改造·点检(CIP)按项目进度管理',back:'← 主页',refresh:'刷新',
+  per_w:'按周',per_m:'按月',per_note:'最近12个区间',per_ws:'周',per_ms:'月',mon_u:'月',cutoff:'截止',
+  ax_t:'轴范围 (空=自动)',ax_min:'最小',ax_max:'最大',ax_apply:'应用',ax_reset:'重置',
+  sl_site:'站点',sl_group:'工艺',sl_floor:'楼层',sl_model:'型号',sl_item:'CIP项目',sl_search:'搜索',
+  all:'全部',f_active:'活动筛选',f_clear:'全部清除',asof:'基准 {d}',
+  kp1:'进度',kp2:'对象',kp3:'完成',kp4:'剩余',kp5:'本区间完成',kp6:'剩余设备',u_cnt:'件',u_eq:'台',
+  kf1:'完成 {d} / 对象 {t}',kf2:'设备 {n}台 × 项目 {i}个',kf3:'上区间 {n}件',kf4:'未着手项目 {n}个',
+  kf5:'{lab} 区间 · 上次 {n}件',kf6:'共 {t}台中',
+  ch_trend:'CIP进度趋势 (累计)',note_trend:'对象 = Not yet + 完成 · 区间末累计 · 进度见右轴',
+  ch_new:'各区间新增完成',note_new:'该区间实际处理的件数 (累计图看不到)',
+  ch_proc:'按工艺进度',note_proc:'完成·剩余堆叠 + 进度 · 作业优先级依据',
+  hm_title:'工艺 × 项目 剩余热力图',hm_note:'— 剩余前12项 · 点击单元格筛选',
+  ch_item:'按项目进度',so_rem:'按剩余',so_rate:'按进度',so_pair:'合并左/右',
+  ch_age:'剩余经过天数分布',note_age:'自项目适用日起 · 越右越久',
+  ch_floor:'按楼层剩余',note_floor:'作业动线基准 · 前12',
+  ch_model:'按型号进度',note_model:'完成·剩余 + 进度',
+  ch_vint:'按搬入年度进度',note_vint:'确认老设备是否滞后',
+  ti_title:'项目汇总',td_title:'未完成明细',td_note:'(最多显示500行)',
+  th_item:'项目',th_site:'站点',th_ap:'适用日',th_tgt:'对象',th_done:'完成',th_rem:'剩余',th_rate:'进度',th_last:'最近完成',
+  th_floor:'楼层',th_group:'工艺',th_detail:'细分',th_model:'型号',th_age:'经过天',
+  s_tgt:'对象',s_done:'完成',s_rem:'剩余',s_rate:'进度',s_new:'新增完成',s_cum:'累计完成',
+  age_b:['30天以内','31–90天','91–180天','超180天','适用日不明'],
+  etc:'其他',unk:'不明',days:'天',
+  ins_rate:'进度 {p}% · 剩余 {n}件',ins_proc:'{g} 工艺剩余最多 {n}件 ({p}%)',
+  ins_item:'项目 {v} — 剩余 {n}件最多',ins_old:'超180天未着手 {n}件 — 需优先处理',
+  ins_new:'{lab} 新增完成 {n}件',ins_bad:'日期异常数据 {n}件 — 请确认表格',
+  no_data:'无数据',loading:'加载中...',
+  sec_ov:'概览',sec_proc:'工艺',sec_item:'项目·设备',sec_dt:'明细',
+  warn_cols:'CIP项目列数与预期不符 ({s}: 预期{e}个 · 实际{a}个) — 请确认是否增删了列'},
+ja:{title:'CIP 状況',sub:'スクラバー改造·点検(CIP)の項目別進捗管理',back:'← メイン',refresh:'更新',
+  per_w:'週別',per_m:'月別',per_note:'直近12区間',per_ws:'週',per_ms:'月',mon_u:'月',cutoff:'締め',
+  ax_t:'軸範囲 (空欄=自動)',ax_min:'最小',ax_max:'最大',ax_apply:'適用',ax_reset:'リセット',
+  sl_site:'サイト',sl_group:'工程',sl_floor:'フロア',sl_model:'モデル',sl_item:'CIP項目',sl_search:'検索',
+  all:'全体',f_active:'有効フィルタ',f_clear:'全解除',asof:'基準 {d}',
+  kp1:'進捗',kp2:'対象',kp3:'完了',kp4:'残り',kp5:'当区間完了',kp6:'残り設備',u_cnt:'件',u_eq:'台',
+  kf1:'完了 {d} / 対象 {t}',kf2:'設備 {n}台 × 項目 {i}個',kf3:'前区間 {n}件',kf4:'未着手項目 {n}個',
+  kf5:'{lab} 区間 · 直前 {n}件',kf6:'全 {t}台中',
+  ch_trend:'CIP進捗推移 (累計)',note_trend:'対象 = Not yet + 完了 · 区間末累計 · 進捗は右軸',
+  ch_new:'区間別 新規完了',note_new:'その区間に実際処理した件数 (累計では見えない実績)',
+  ch_proc:'工程別 進捗状況',note_proc:'完了·残り積み上げ + 進捗 · 優先順位の判断基準',
+  hm_title:'工程 × 項目 残りヒートマップ',hm_note:'— 残り上位12項目 · セルクリックで絞込',
+  ch_item:'項目別 進捗状況',so_rem:'残り順',so_rate:'進捗順',so_pair:'左/右をまとめる',
+  ch_age:'残りの経過日数分布',note_age:'項目適用日からの経過 · 右ほど古い',
+  ch_floor:'フロア別 残り',note_floor:'巡回動線基準 · 上位12',
+  ch_model:'モデル別 進捗',note_model:'完了·残り + 進捗',
+  ch_vint:'搬入年度別 進捗',note_vint:'古い設備が遅れていないか確認',
+  ti_title:'項目サマリ',td_title:'未完了 詳細',td_note:'(最大500行表示)',
+  th_item:'項目',th_site:'サイト',th_ap:'適用日',th_tgt:'対象',th_done:'完了',th_rem:'残り',th_rate:'進捗',th_last:'直近完了',
+  th_floor:'フロア',th_group:'工程',th_detail:'詳細',th_model:'モデル',th_age:'経過日',
+  s_tgt:'対象',s_done:'完了',s_rem:'残り',s_rate:'進捗',s_new:'新規完了',s_cum:'累計完了',
+  age_b:['30日以内','31–90日','91–180日','180日超','適用日不明'],
+  etc:'その他',unk:'不明',days:'日',
+  ins_rate:'進捗 {p}% · 残り {n}件',ins_proc:'{g} 工程の残りが最多 {n}件 ({p}%)',
+  ins_item:'項目 {v} — 残り {n}件で最多',ins_old:'180日超の未着手 {n}件 — 優先処理が必要',
+  ins_new:'{lab} 新規完了 {n}件',ins_bad:'日付異常データ {n}件 — シート確認要',
+  no_data:'データなし',loading:'読込中...',
+  sec_ov:'概要',sec_proc:'工程',sec_item:'項目·設備',sec_dt:'詳細',
+  warn_cols:'CIP項目の列数が想定と異なります ({s}: 想定{e}個 · 実際{a}個) — 列の追加·削除を確認してください'}
+};
+
+let LANG='ko', CHARTS={}, CIP=[], BADN=0, MODEL=null;
+let itemSort='rem', pairMerge=false;
+let iSortK='rem', iSortAsc=false, dSortK='age', dSortAsc=false;
+const F={site:'',group:'',floor:'',model:'',item:'',q:''};
+
+// ── 주간현황과 공유하는 설정 (gst_rpt_*) ──
+let PERIOD='m';
+try{const sp=localStorage.getItem('gst_rpt_period'); if(sp==='w'||sp==='m')PERIOD=sp;}catch(e){}
+let PER={};
+try{const sv=JSON.parse(localStorage.getItem('gst_rpt_per')||'null'); if(sv&&typeof sv==='object')PER=sv;}catch(e){}
+function savePer(){try{localStorage.setItem('gst_rpt_per',JSON.stringify(PER));}catch(e){}}
+let ENDM='',ENDW='';
+try{const se=JSON.parse(localStorage.getItem('gst_rpt_end')||'null'); if(se){ENDM=se.m||'';ENDW=se.w||'';}}catch(e){}
+let RSTYLE='vivid';
+try{const rs=localStorage.getItem('gst_rpt_style'); if(rs)RSTYLE=rs;}catch(e){}
+let AXB={}; try{AXB=JSON.parse(localStorage.getItem('gst_rpt_axb')||'{}')||{};}catch(e){}
+function saveAXB(){try{localStorage.setItem('gst_rpt_axb',JSON.stringify(AXB));}catch(e){}}
+function applyAXB(){ // 차트 생성 후 옵션 갱신+update — 생성 사이클 내 주입은 스케일이 무시함
+  Object.keys(AXB).forEach(id=>{const ch=CHARTS[id],b=AXB[id]; if(!ch||!b)return;
+    let dirty=false;
+    ['y','y2'].forEach(k=>{const s=ch.options.scales&&ch.options.scales[k],v=b[k]; if(!s||!v)return;
+      if(v.min!=null&&v.min!==''){s.min=+v.min;dirty=true;}
+      if(v.max!=null&&v.max!==''){s.max=+v.max;dirty=true;}});
+    if(dirty)ch.update('none');});
+}
+window.setEnd=function(k,v){ if(k==='m')ENDM=v||''; else ENDW=v||'';
+  try{localStorage.setItem('gst_rpt_end',JSON.stringify({m:ENDM,w:ENDW}));}catch(e){} render(); };
+window.clearEnds=function(){ ENDM='';ENDW='';
+  try{localStorage.setItem('gst_rpt_end','{}');}catch(e){}
+  const em=document.getElementById('endM'),ew=document.getElementById('endW');
+  if(em)em.value=''; if(ew)ew.value=''; render(); };
+function setPeriod(p){PERIOD=p;PER={};savePer();try{localStorage.setItem('gst_rpt_period',p);}catch(e){}
+  document.getElementById('ptW').classList.toggle('active',p==='w');
+  document.getElementById('ptM').classList.toggle('active',p==='m');
+  if(CIP.length)render();
+}
+window.setChartPer=function(id,u){ PER[id]=u; savePer(); render(); };
+function renderMiniToggles(){
+  document.querySelectorAll('.mini-per').forEach(box=>{
+    const id=box.dataset.ch;
+    const cur=(PER[id]==='w'||PER[id]==='m')?PER[id]:PERIOD;
+    const lab=u=>u==='w'?t('per_ws'):t('per_ms');
+    box.innerHTML=['w','m'].map(u=>'<button class="mp-btn'+(cur===u?' active':'')+'" onclick="setChartPer(\''+id+'\',\''+u+'\')">'+lab(u)+'</button>').join('');
+  });
+}
+
+// ── 날짜·구간 (주간현황과 동일 규칙: isoW = 엑셀 WEEKNUM 일~토) ──
+const pd=GST.toDate;
+function fmtYM(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}
+function isoW(d){
+  const sun=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));
+  sun.setUTCDate(sun.getUTCDate()-sun.getUTCDay());
+  const jan1=new Date(Date.UTC(sun.getUTCFullYear(),0,1));
+  const w=Math.ceil((((sun-jan1)/MS)+jan1.getUTCDay()+1)/7);
+  return sun.getUTCFullYear()+'-W'+String(w).padStart(2,'0');
+}
+function periods(n,anchor,unit){
+  const U=unit||PERIOD;
+  const out=[]; const today=anchor?new Date(anchor.getTime()):new Date(); today.setUTCHours(0,0,0,0);
+  if(U==='w'){
+    const mon=new Date(today); mon.setUTCDate(mon.getUTCDate()-mon.getUTCDay());
+    for(let i=n-1;i>=0;i--){
+      const st=new Date(mon.getTime()-i*7*MS), en=new Date(st.getTime()+6*MS);
+      const k=isoW(st);
+      out.push({key:k,label:'W'+k.slice(-2),st,end:en>today?today:en});
+    }
+  }else{
+    for(let i=n-1;i>=0;i--){
+      let y=today.getUTCFullYear(), m=today.getUTCMonth()-i; while(m<0){m+=12;y--;}
+      const en=new Date(Date.UTC(y,m+1,0));
+      out.push({key:y+'-'+String(m+1).padStart(2,'0'),label:(m+1)+t('mon_u'),st:new Date(Date.UTC(y,m,1)),end:en>today?today:en});
+    }
+  }
+  return out;
+}
+
+Chart.defaults.color=GST.chartTheme().txt;
+Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+window.changeDashboardTheme=function(themeClass,label){
+  document.body.className='';
+  if(themeClass!=='default')document.body.classList.add('theme-'+themeClass);
+  const L={slate:'Slate',default:'Cyber Turquoise',burgundy:'Royal Burgundy',light:'Aurora Light'};
+  const lb=document.getElementById('themeLabel'); if(lb)lb.textContent=L[themeClass]||label||themeClass;
+  const menu=document.getElementById('themeMenu'); if(menu)menu.classList.remove('open');
+  Chart.defaults.color=GST.chartTheme().txt;
+  GST.reskinCharts(CHARTS);
+  if(CIP.length)render();
+};
+function toggleThemeMenu(){document.getElementById('themeMenu').classList.toggle('open');}
+function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.theme-wrap'))document.getElementById('themeMenu').classList.remove('open');
+  if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');
+});
+// 빈 문자열 번역값(예: en의 mon_u)을 키 이름으로 되돌리지 않도록 in 연산자로 판정
+function t(k){const d=T[LANG]||T.ko; return (k in d)?d[k]:k;}
+function buildSecNav(){
+  GST.sectionNav([{id:'ov',label:t('sec_ov')},{id:'proc',label:t('sec_proc')},
+    {id:'item',label:t('sec_item')},{id:'data',label:t('sec_dt')}]);
+}
+function applyLang(){
+  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
+  document.getElementById('langLabel').textContent=LANG.toUpperCase();
+  buildSecNav();
+  const q=document.getElementById('sl-q'); if(q)q.placeholder='S/N, Code, '+t('th_detail')+'...';
+}
+function setLang(l){LANG=l;applyLang();if(CIP.length){fillSlicers();render();}document.getElementById('langMenu').classList.remove('open');}
+
+// ── 차트 유틸 (주간현황에서 이식) ──
+function destroyMk(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}}
+function pctAxis(TH,max){return {position:'right',min:0,max:max||100,grid:{drawOnChartArea:false},ticks:{color:TH.txt,callback:v=>v+'%',maxTicksLimit:5,font:{size:9}}};}
+function baseScales(TH,stacked){
+  return {x:{stacked:!!stacked,ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{display:false}},
+          y:{stacked:!!stacked,grace:'20%',beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}};
+}
+function lineDs(label,data,color,extra){
+  const n=data.length;
+  return Object.assign({type:'line',label,data,borderColor:color,backgroundColor:color,
+    borderWidth:2.5,tension:.35,
+    pointRadius:data.map((_,i)=>i===n-1?5.5:2.4),
+    pointBackgroundColor:data.map((_,i)=>i===n-1?color:'#0B0F14'),
+    pointBorderColor:color,pointBorderWidth:2,pointHoverRadius:6,fill:false,order:1},extra||{});
+}
+function setNote(canvasId,txt){
+  const c=document.getElementById(canvasId); if(!c)return;
+  const card=c.closest('.card'); if(!card)return;
+  const n=card.querySelector('.card-note'); if(n)n.textContent=txt;
+}
+
+// ── CIP 파싱 ──
+// 0행 = 항목 적용일 · 1행 = 항목명 · 2행~ = 설비 1대. 셀: N/A·N.A 제외 / Not yet = 미완료 / 날짜 = 완료
+// 헤더는 셀 안 줄바꿈을 포함한다 ("MFC Change\n (Final ver_G)\n (Left)") → 공백 1칸으로 접는다
+function normItem(s){return String(s||'').replace(/\s+/g,' ').trim();}
+// (Left)/(Right)는 이름 끝이 아닐 수도 있다 ("… (Left) GBWS-5192 Start") → 위치 무관하게 분리
+function stripSide(name){
+  const m=name.match(/\((Left|Right)\)/i);
+  if(!m)return {base:name,side:''};
+  return {base:normItem(name.replace(m[0],' ')),side:m[1].toUpperCase()==='LEFT'?'L':'R'};
+}
+// CIP 셀 날짜: 시트의 유효 날짜는 전부 YYYY-M-D 형식이다. Date 생성자 폴백을 쓰면
+// '3//6' 같은 오타가 2001-03-06으로 조용히 완료 처리되므로 형식을 강제한다.
+function cipDate(v){
+  const s=String(v==null?'':v).trim(); if(!s)return null;
+  const n=Number(s);
+  if(!isNaN(n)&&n>20000&&n<80000)return new Date(Date.UTC(1899,11,30)+n*86400000);
+  if(!/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/.test(s))return null;
+  return pd(s);
+}
+function normGroup(g){
+  const u=String(g||'').trim().toUpperCase();
+  if(!u||u==='0')return '';
+  if(u.startsWith('WET'))return 'WET';
+  if(u.startsWith('DIFF'))return 'DIFF';
+  if(u.includes('CVD'))return 'CVD';
+  if(u.startsWith('ETCH'))return 'ETCH';
+  return u;
+}
+function parseCIP(rows,site,C){
+  if(!rows||rows.length<3)return {recs:[],bad:0,cols:0};
+  const r0=rows[0]||[], hdr=rows[1]||[];
+  const recs=[]; let bad=0, cols=0;
+  const apByBase={};   // 병합셀 대응: 같은 논리 항목의 직전 적용일을 승계
+  for(let c=C.c0;c<=C.c1;c++){
+    const item=normItem(hdr[c]); if(!item)continue;
+    cols++;
+    const sp=stripSide(item);
+    let ap=cipDate(r0[c]);
+    if(ap)apByBase[sp.base]=ap;
+    else if(apByBase[sp.base])ap=apByBase[sp.base];   // (Right)가 (Left)의 적용일을 물려받음
+    for(let i=2;i<rows.length;i++){
+      const row=rows[i]||[];
+      const v=String(row[c]||'').trim(); if(!v)continue;
+      const up=v.toUpperCase();
+      if(up.startsWith('N/A')||up.startsWith('N.A'))continue;
+      const gv=k=>C[k]>=0?normItem(row[C[k]]):'';
+      const base={site,sn:gv('sn'),code:gv('code'),floor:gv('floor'),area:gv('area'),
+        group:normGroup(row[C.group]),detail:gv('detail').toUpperCase(),
+        type:gv('type'),model:gv('model'),mtype:gv('mtype'),pjt:gv('pjt'),fabIn:cipDate(row[C.fabIn]),
+        item:sp.base+(sp.side?' ('+(sp.side==='L'?'Left':'Right')+')':''),itemBase:sp.base,side:sp.side,ap};
+      if(up.includes('NOT')){recs.push(Object.assign({done:null,bad:false},base));continue;}
+      const d=cipDate(v);
+      if(d){
+        const yr=d.getUTCFullYear();
+        recs.push(Object.assign({done:d,bad:(yr<2000||d>new Date())},base));
+      }else bad++;   // '3//6', 'NA' 등 파싱 불가
+    }
+  }
+  return {recs,bad,cols};
+}
+
+// ── 데이터 로드 ──
+async function loadData(){ GST.skeleton(true);
+  const status=document.getElementById('status');
+  status.textContent='⏳ '+t('loading');
+  try{
+    const [c11,c16]=await Promise.all([
+      GST.fetchCSVCached(URLS.cip11,'cip11'),
+      GST.fetchCSVCached(URLS.cip16,'cip16')
+    ]);
+    const p11=parseCIP(c11.rows,'F11',COLS.F11);
+    const p16=parseCIP(c16.rows,'F16',COLS.F16);
+    CIP=p11.recs.concat(p16.recs);
+    BADN=p11.bad+p16.bad+CIP.filter(x=>x.bad).length;
+    // CIP 시트는 헤더가 항목명이라 validateSchema를 쓸 수 없다 → 항목 열 수로 구조 변동 감시
+    const issues=[];
+    if(p11.cols!==COLS.F11.n)issues.push(t('warn_cols').replace('{s}','F11').replace('{e}',COLS.F11.n).replace('{a}',p11.cols));
+    if(p16.cols!==COLS.F16.n)issues.push(t('warn_cols').replace('{s}','F16').replace('{e}',COLS.F16.n).replace('{a}',p16.cols));
+    GST.schemaBanner(issues,'CIP');
+    fillSlicers();
+    const cached=c11.cached||c16.cached;
+    status.textContent=(cached?'📡 캐시 표시 중 · ':'✅ ')+new Date().toLocaleString()
+      +' · '+t('kp2')+' '+CIP.length.toLocaleString()+' · F11 '+p11.recs.length+' · F16 '+p16.recs.length+' · '+VER;
+    status.style.color=cached?'#fbbf24':'';
+    render();
+  }catch(e){ status.textContent='❌ '+e.message; console.error(e); }
+  finally{ GST.skeleton(false); }
+}
+
+// ── 슬라이서 ──
+function fillSlicers(){
+  const uq=k=>Array.from(new Set(CIP.map(x=>x[k]).filter(Boolean))).sort();
+  GST.fillSelect('sl-site','site',uq('site'),F,t('all'));
+  GST.fillSelect('sl-group','group',uq('group'),F,t('all'));
+  GST.fillSelect('sl-floor','floor',uq('floor'),F,t('all'));
+  GST.fillSelect('sl-model','model',uq('model'),F,t('all'));
+  GST.fillSelect('sl-item','item',uq('item'),F,t('all'));
+}
+function onSlicer(){
+  F.site=document.getElementById('sl-site').value;
+  F.group=document.getElementById('sl-group').value;
+  F.floor=document.getElementById('sl-floor').value;
+  F.model=document.getElementById('sl-model').value;
+  F.item=document.getElementById('sl-item').value;
+  render();
+}
+let _qT=null;
+function onSearch(){ clearTimeout(_qT); _qT=setTimeout(()=>{F.q=document.getElementById('sl-q').value.trim().toUpperCase();render();},220); }
+function clearAllFilters(){Object.keys(F).forEach(k=>F[k]='');document.getElementById('sl-q').value='';fillSlicers();render();}
+window.clearF=function(k){F[k]='';if(k==='q')document.getElementById('sl-q').value='';fillSlicers();render();};
+window.setItemSort=function(k){itemSort=k;render();};
+window.togglePair=function(){pairMerge=!pairMerge;render();};
+window.sortItem=function(k){if(iSortK===k)iSortAsc=!iSortAsc;else{iSortK=k;iSortAsc=false;}renderItemTable();};
+window.sortDet=function(k){if(dSortK===k)dSortAsc=!dSortAsc;else{dSortK=k;dSortAsc=false;}renderDetTable();};
+window.hmPick=function(g,it){F.group=g===t('etc')?'':g;F.item=it;fillSlicers();render();};
+
+function match(x){
+  return (!F.site||x.site===F.site)&&(!F.group||x.group===F.group)&&(!F.floor||x.floor===F.floor)
+    &&(!F.model||x.model===F.model)&&(!F.item||x.item===F.item)
+    &&(!F.q||(x.sn+' '+x.code+' '+x.detail+' '+x.area).toUpperCase().includes(F.q));
+}
+
+// ── 렌더 ──
+function render(){
+  const TH=GST.chartTheme();
+  const STY={
+    vivid:   {bar:'#2C5FAE',last:'#5EC2FF',bar2:'#7C6FE0',line:'#5EC2FF'},
+    graphite:{bar:'#8A8A8A',last:'#B4B4B4',bar2:'#C7C7C7',line:'#E03131'},
+    ocean:   {bar:'#0E7490',last:'#22D3EE',bar2:'#2DD4BF',line:'#F472B6'},
+    sunset:  {bar:'#EA580C',last:'#FBBF24',bar2:'#FB7185',line:'#6366F1'},
+    forest:  {bar:'#15803D',last:'#4ADE80',bar2:'#A3E635',line:'#DC2626'},
+    cb:      {bar:'#0072B2',last:'#56B4E9',bar2:'#CC79A7',line:'#D55E00'}
+  };
+  const _sty=STY[RSTYLE]||STY[TH.key==='burgundy'?'graphite':'vivid'];
+  const BAR_C=_sty.bar, BAR_LAST=_sty.last, DONE_C=_sty.bar, REM_C=TH.status.warn, LINE_C=_sty.line;
+  const barHi=n=>Array.from({length:n},(_,i)=>i===n-1?BAR_LAST:BAR_C);
+  const today=new Date(); today.setUTCHours(0,0,0,0);
+
+  // 마감 기준일(asOf): 월 마감 > 주 마감 > 오늘
+  let asOf=null;
+  if(ENDM){const m=ENDM.split('-'); asOf=new Date(Date.UTC(+m[0],+m[1],0));}
+  if(!asOf&&ENDW){const s=new Date(today); s.setUTCDate(s.getUTCDate()-s.getUTCDay());
+    for(let i=0;i<80;i++){const d=new Date(s.getTime()-i*7*MS); if(isoW(d)===ENDW){asOf=new Date(d.getTime()+6*MS);break;}}}
+  if(!asOf)asOf=today; if(asOf>today)asOf=today;
+
+  // 차트별 구간(주/월 오버라이드 + 마감 앵커)
+  const PU=id=>{const u=(PER[id]==='w'||PER[id]==='m')?PER[id]:PERIOD;
+    let A=today;
+    if(u==='m'&&ENDM){const mm=ENDM.split('-'); A=new Date(Date.UTC(+mm[0],+mm[1],0));}
+    if(u==='w'&&ENDW){const s=new Date(today); s.setUTCDate(s.getUTCDate()-s.getUTCDay());
+      for(let i=0;i<80;i++){const d=new Date(s.getTime()-i*7*MS); if(isoW(d)===ENDW){A=new Date(d.getTime()+6*MS);break;}}}
+    if(A>today)A=today;
+    const P=periods(12,A,u); return {P,labels:P.map(x=>x.label),u};};
+
+  // 마감 UI 동기화
+  {const em=document.getElementById('endM'),ew=document.getElementById('endW');
+   if(em&&em.value!==ENDM)em.value=ENDM;
+   if(ew){
+     if(ew.options.length<2){
+       const s=new Date(today); s.setUTCDate(s.getUTCDate()-s.getUTCDay());
+       let html='<option value="">— '+t('all')+' —</option>';
+       for(let i=0;i<26;i++){const d=new Date(s.getTime()-i*7*MS);const k=isoW(d);
+         html+='<option value="'+k+'">'+('W'+k.slice(-2))+' ('+(d.getUTCMonth()+1)+'/'+d.getUTCDate()+')</option>';}
+       ew.innerHTML=html;
+     }
+     if(ew.value!==ENDW)ew.value=ENDW;
+   }}
+  document.getElementById('ptW').classList.toggle('active',PERIOD==='w');
+  document.getElementById('ptM').classList.toggle('active',PERIOD==='m');
+  document.getElementById('asOfNote').textContent=(ENDM||ENDW)?t('asof').replace('{d}',GST.fmtDate(asOf)):'';
+  renderMiniToggles();
+  ['soRem','soRate'].forEach(id=>document.getElementById(id).classList.toggle('active',itemSort===(id==='soRem'?'rem':'rate')));
+  document.getElementById('soPair').classList.toggle('active',pairMerge);
+  GST.renderChips(F,{site:t('sl_site'),group:t('sl_group'),floor:t('sl_floor'),model:t('sl_model'),item:t('sl_item'),q:t('sl_search')},'clearF');
+
+  const fR=CIP.filter(match);
+  // 마감 시점 스냅샷: 대상 = 적용일이 asOf 이전, 완료 = 완료일이 asOf 이전
+  const snap=fR.filter(x=>!x.ap||x.ap<=asOf);
+  const isDone=x=>!!(x.done&&x.done<=asOf);
+  const nT=snap.length, nD=snap.filter(isDone).length, nR=nT-nD;
+  const rate=nT?Math.round(nD/nT*100):0;
+  MODEL={snap,asOf,isDone};
+
+  // ── KPI ──
+  const put=(id,v)=>{document.getElementById(id).textContent=v;};
+  const {P:P0,labels:L0}=PU('cipTrend');
+  const lastP=P0[P0.length-1], prevP=P0[P0.length-2];
+  const inP=(x,p)=>x.done&&x.done>=p.st&&x.done<=p.end;
+  const newLast=fR.filter(x=>inP(x,lastP)).length;
+  const newPrev=prevP?fR.filter(x=>inP(x,prevP)).length:0;
+  const prevT=prevP?fR.filter(x=>!x.ap||x.ap<=prevP.end).length:0;
+  const prevD=prevP?fR.filter(x=>(!x.ap||x.ap<=prevP.end)&&x.done&&x.done<=prevP.end).length:0;
+  const prevRate=prevT?Math.round(prevD/prevT*100):null;
+  put('kp1',rate+'%'); put('kp2',nT.toLocaleString()); put('kp3',nD.toLocaleString());
+  put('kp4',nR.toLocaleString()); put('kp5',newLast.toLocaleString());
+  const remSn=new Set(snap.filter(x=>!isDone(x)).map(x=>x.site+'|'+x.sn));
+  const allSn=new Set(snap.map(x=>x.site+'|'+x.sn));
+  put('kp6',remSn.size.toLocaleString());
+  document.getElementById('kd1').innerHTML=prevRate!=null?GST.deltaBadge(rate,prevRate,false):'';
+  document.getElementById('kd5').innerHTML=prevP?GST.deltaBadge(newLast,newPrev,false):'';
+  put('kf1',t('kf1').replace('{d}',nD.toLocaleString()).replace('{t}',nT.toLocaleString()));
+  const itemSet=new Set(snap.map(x=>x.item));
+  put('kf2',t('kf2').replace('{n}',allSn.size.toLocaleString()).replace('{i}',itemSet.size));
+  put('kf3',prevP?t('kf3').replace('{n}',prevD.toLocaleString()):'');
+  const notStarted=Array.from(itemSet).filter(it=>snap.filter(x=>x.item===it).every(x=>!isDone(x))).length;
+  put('kf4',t('kf4').replace('{n}',notStarted));
+  put('kf5',t('kf5').replace('{lab}',lastP.label).replace('{n}',newPrev.toLocaleString()));
+  put('kf6',t('kf6').replace('{t}',allSn.size.toLocaleString()));
+
+  // ── 추이 (누계) ──
+  {
+    const {P,labels}=PU('cipTrend');
+    destroyMk('cipTrend');
+    if(fR.length){
+      const tgt=P.map(p=>fR.filter(x=>!x.ap||x.ap<=p.end).length);
+      const don=P.map(p=>fR.filter(x=>(!x.ap||x.ap<=p.end)&&x.done&&x.done<=p.end).length);
+      const rt=tgt.map((v,i)=>v?Math.round(don[i]/v*100):null);
+      CHARTS.cipTrend=new Chart(document.getElementById('cipTrend'),{type:'bar',
+        data:{labels,datasets:[
+          {label:t('s_tgt'),data:tgt,backgroundColor:BAR_C+'2e',borderColor:BAR_C,borderWidth:1.5,borderRadius:3,order:3},
+          {label:t('s_done'),data:don,backgroundColor:barHi(don.length),borderRadius:3,order:2},
+          lineDs(t('s_rate'),rt,LINE_C,{yAxisID:'y2'})]},
+        options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
+          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+            tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.y+(c.datasetIndex===2?'%':''),
+              footer:it=>{const i=it[0].dataIndex;return tgt[i]?(t('s_rem')+' '+(tgt[i]-don[i]).toLocaleString()):'';}}}},
+          scales:{x:baseScales(TH,false).x,
+            y:{grace:'20%',beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
+            y2:pctAxis(TH)}}});
+      setNote('cipTrend',t('ins_rate').replace('{p}',rt[rt.length-1]??'—').replace('{n}',(tgt[tgt.length-1]-don[don.length-1]).toLocaleString()));
+    }
+  }
+
+  // ── 구간별 신규 완료 (증분) ──
+  {
+    const {P,labels}=PU('cipNew');
+    destroyMk('cipNew');
+    if(fR.length){
+      const nw=P.map(p=>fR.filter(x=>inP(x,p)).length);
+      let acc=0; const cum=nw.map(v=>acc+=v);
+      CHARTS.cipNew=new Chart(document.getElementById('cipNew'),{type:'bar',
+        data:{labels,datasets:[
+          {label:t('s_new'),data:nw,backgroundColor:barHi(nw.length),borderRadius:3,order:2},
+          lineDs(t('s_cum'),cum,LINE_C,{yAxisID:'y2'})]},
+        options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
+          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}}},
+          scales:{x:baseScales(TH,false).x,
+            y:{grace:'20%',beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
+            y2:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:TH.txt,precision:0,maxTicksLimit:5,font:{size:9}}}}}});
+    }
+  }
+
+  // ── 공정별 (우선순위 축) ──
+  const GORDER=['DIFF','CVD','ETCH','WET','PVD'];
+  const gKey=x=>x.group||t('etc');
+  {
+    destroyMk('cipProc');
+    const gs={}; snap.forEach(x=>{const k=gKey(x);(gs[k]=gs[k]||{d:0,r:0})[isDone(x)?'d':'r']++;});
+    const keys=Object.keys(gs).sort((a,b)=>{
+      const ia=GORDER.indexOf(a), ib=GORDER.indexOf(b);
+      if(ia>=0&&ib>=0)return ia-ib; if(ia>=0)return -1; if(ib>=0)return 1;
+      return (gs[b].d+gs[b].r)-(gs[a].d+gs[a].r);});
+    if(keys.length){
+      const dd=keys.map(k=>gs[k].d), rr=keys.map(k=>gs[k].r);
+      const rt=keys.map(k=>{const s=gs[k].d+gs[k].r;return s?Math.round(gs[k].d/s*100):null;});
+      CHARTS.cipProc=new Chart(document.getElementById('cipProc'),{type:'bar',
+        data:{labels:keys,datasets:[
+          {label:t('s_done'),data:dd,backgroundColor:DONE_C,borderRadius:3,stack:'s',order:3},
+          {label:t('s_rem'),data:rr,backgroundColor:REM_C,borderRadius:3,stack:'s',order:3},
+          lineDs(t('s_rate'),rt,LINE_C,{yAxisID:'y2'})]},
+        options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
+          onClick:(e,els,ch)=>{if(els.length){F.group=ch.data.labels[els[0].index]===t('etc')?'':ch.data.labels[els[0].index];fillSlicers();render();}},
+          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+            tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.y+(c.datasetIndex===2?'%':''),
+              footer:it=>{const i=it[0].dataIndex;return t('s_tgt')+' '+(dd[i]+rr[i]).toLocaleString();}}}},
+          scales:{x:baseScales(TH,true).x,y:baseScales(TH,true).y,y2:pctAxis(TH)}}});
+    }
+  }
+
+  // ── 공정 × 항목 히트맵 ──
+  {
+    const remRecs=snap.filter(x=>!isDone(x));
+    const byItem={}; remRecs.forEach(x=>{byItem[x.item]=(byItem[x.item]||0)+1;});
+    const topItems=Object.entries(byItem).sort((a,b)=>b[1]-a[1]).slice(0,12).map(x=>x[0]);
+    const gset=Array.from(new Set(remRecs.map(gKey))).sort((a,b)=>{
+      const ia=GORDER.indexOf(a),ib=GORDER.indexOf(b);
+      if(ia>=0&&ib>=0)return ia-ib; if(ia>=0)return -1; if(ib>=0)return 1; return a.localeCompare(b);});
+    const cell={}; remRecs.forEach(x=>{const k=gKey(x)+'|'+x.item; cell[k]=(cell[k]||0)+1;});
+    const mx=Math.max(1,...Object.values(cell));
+    const short=s=>s.length>26?s.slice(0,25)+'…':s;
+    const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    let html='<thead><tr><th class="rh">'+t('th_group')+' \\ '+t('th_item')+'</th>'
+      +topItems.map(it=>'<th title="'+esc(it)+'">'+esc(short(it))+'</th>').join('')
+      +'<th class="num">Σ</th></tr></thead><tbody>';
+    gset.forEach(g=>{
+      let rt=0;
+      const tds=topItems.map(it=>{
+        const v=cell[g+'|'+it]||0; rt+=v;
+        const a=v?(0.12+0.55*(v/mx)).toFixed(3):0;
+        return '<td class="hc" style="background:rgba(251,113,133,'+a+')" onclick="hmPick(\''+esc(g).replace(/'/g,"\\'")+'\',\''+esc(it).replace(/'/g,"\\'")+'\')">'+(v||'')+'</td>';
+      }).join('');
+      html+='<tr><td class="rl">'+esc(g)+'</td>'+tds+'<td class="num">'+rt.toLocaleString()+'</td></tr>';
+    });
+    const colT=topItems.map(it=>remRecs.filter(x=>x.item===it).length);
+    html+='<tr class="tot"><td class="rl">Σ</td>'+colT.map(v=>'<td>'+v.toLocaleString()+'</td>').join('')
+      +'<td class="num">'+remRecs.length.toLocaleString()+'</td></tr></tbody>';
+    document.getElementById('hmTbl').innerHTML=gset.length?html:'<tbody><tr><td class="empty">'+t('no_data')+'</td></tr></tbody>';
+  }
+
+  // ── 항목별 (정렬·묶기 토글) ──
+  {
+    destroyMk('cipItem');
+    const key=x=>pairMerge?x.itemBase:x.item;
+    const im={}; snap.forEach(x=>{const k=key(x);(im[k]=im[k]||{d:0,r:0})[isDone(x)?'d':'r']++;});
+    let ent=Object.entries(im);
+    ent.sort(itemSort==='rem'
+      ? (a,b)=>b[1].r-a[1].r
+      : (a,b)=>{const ra=(a[1].d+a[1].r)?a[1].d/(a[1].d+a[1].r):1, rb=(b[1].d+b[1].r)?b[1].d/(b[1].d+b[1].r):1; return ra-rb;});
+    ent=ent.slice(0,16);
+    if(ent.length){
+      const labs=ent.map(x=>x[0].length>34?x[0].slice(0,33)+'…':x[0]);
+      CHARTS.cipItem=new Chart(document.getElementById('cipItem'),{type:'bar',
+        data:{labels:labs,datasets:[
+          {label:t('s_done'),data:ent.map(x=>x[1].d),backgroundColor:DONE_C,borderRadius:3,stack:'s'},
+          {label:t('s_rem'),data:ent.map(x=>x[1].r),backgroundColor:REM_C,borderRadius:3,stack:'s'}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+          onClick:(e,els)=>{if(els.length&&!pairMerge){F.item=ent[els[0].index][0];fillSlicers();render();}},
+          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+            tooltip:{callbacks:{title:it=>ent[it[0].dataIndex][0],
+              footer:it=>{const o=ent[it[0].dataIndex][1],s=o.d+o.r;return t('s_rate')+' '+(s?Math.round(o.d/s*100):0)+'%';}}}},
+          scales:{x:{stacked:true,beginAtZero:true,ticks:{color:TH.txt,precision:0,font:{size:10}},grid:{color:TH.grid}},
+            y:{stacked:true,ticks:{color:TH.txt,font:{size:9}},grid:{display:false}}}}});
+    }
+  }
+
+  // ── 잔여 경과일 분포 ──
+  {
+    destroyMk('cipAge');
+    const B=t('age_b'), cnt=[0,0,0,0,0];
+    snap.filter(x=>!isDone(x)).forEach(x=>{
+      if(!x.ap){cnt[4]++;return;}
+      const d=Math.floor((asOf-x.ap)/MS);
+      cnt[d<=30?0:d<=90?1:d<=180?2:3]++;
+    });
+    const show=cnt[4]>0?[0,1,2,3,4]:[0,1,2,3];
+    CHARTS.cipAge=new Chart(document.getElementById('cipAge'),{type:'bar',
+      data:{labels:show.map(i=>B[i]),datasets:[{label:t('s_rem'),data:show.map(i=>cnt[i]),
+        backgroundColor:show.map(i=>i===3?TH.status.bad:i===4?TH.status.na:REM_C),borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{x:baseScales(TH,false).x,y:baseScales(TH,false).y}}});
+    setNote('cipAge',cnt[3]>0?t('ins_old').replace('{n}',cnt[3].toLocaleString()):t('note_age'));
+  }
+
+  // ── 층·구역별 잔여 ──
+  {
+    destroyMk('cipFloor');
+    const fm={}; snap.filter(x=>!isDone(x)).forEach(x=>{const k=x.floor||t('unk');fm[k]=(fm[k]||0)+1;});
+    const ent=Object.entries(fm).sort((a,b)=>b[1]-a[1]).slice(0,12);
+    if(ent.length){
+      CHARTS.cipFloor=new Chart(document.getElementById('cipFloor'),{type:'bar',
+        data:{labels:ent.map(x=>x[0]),datasets:[{label:t('s_rem'),data:ent.map(x=>x[1]),backgroundColor:REM_C,borderRadius:4}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+          onClick:(e,els)=>{if(els.length){F.floor=ent[els[0].index][0]===t('unk')?'':ent[els[0].index][0];fillSlicers();render();}},
+          plugins:{legend:{display:false}},
+          scales:{x:{beginAtZero:true,ticks:{color:TH.txt,precision:0,font:{size:10}},grid:{color:TH.grid}},
+            y:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}}}}});
+    }
+  }
+
+  // ── 모델별 ──
+  {
+    destroyMk('cipModel');
+    const mm={}; snap.forEach(x=>{const k=x.model||t('unk');(mm[k]=mm[k]||{d:0,r:0})[isDone(x)?'d':'r']++;});
+    const ent=Object.entries(mm).sort((a,b)=>(b[1].d+b[1].r)-(a[1].d+a[1].r)).slice(0,8);
+    if(ent.length){
+      const rt=ent.map(x=>{const s=x[1].d+x[1].r;return s?Math.round(x[1].d/s*100):null;});
+      CHARTS.cipModel=new Chart(document.getElementById('cipModel'),{type:'bar',
+        data:{labels:ent.map(x=>x[0]),datasets:[
+          {label:t('s_done'),data:ent.map(x=>x[1].d),backgroundColor:DONE_C,borderRadius:3,stack:'s',order:3},
+          {label:t('s_rem'),data:ent.map(x=>x[1].r),backgroundColor:REM_C,borderRadius:3,stack:'s',order:3},
+          lineDs(t('s_rate'),rt,LINE_C,{yAxisID:'y2'})]},
+        options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
+          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:9.5},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:6}}},
+          scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:9},maxRotation:30},grid:{display:false}},
+            y:baseScales(TH,true).y,y2:pctAxis(TH)}}});
+    }
+  }
+
+  // ── 반입 연도별 ──
+  {
+    destroyMk('cipVint');
+    const vm={}; snap.forEach(x=>{const k=x.fabIn?String(x.fabIn.getUTCFullYear()):t('unk');
+      (vm[k]=vm[k]||{d:0,r:0})[isDone(x)?'d':'r']++;});
+    const ent=Object.entries(vm).sort((a,b)=>a[0].localeCompare(b[0]));
+    if(ent.length){
+      const rt=ent.map(x=>{const s=x[1].d+x[1].r;return s?Math.round(x[1].d/s*100):null;});
+      CHARTS.cipVint=new Chart(document.getElementById('cipVint'),{type:'bar',
+        data:{labels:ent.map(x=>x[0]),datasets:[
+          {label:t('s_done'),data:ent.map(x=>x[1].d),backgroundColor:DONE_C,borderRadius:3,stack:'s',order:3},
+          {label:t('s_rem'),data:ent.map(x=>x[1].r),backgroundColor:REM_C,borderRadius:3,stack:'s',order:3},
+          lineDs(t('s_rate'),rt,LINE_C,{yAxisID:'y2'})]},
+        options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
+          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:9.5},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:6}}},
+          scales:{x:baseScales(TH,true).x,y:baseScales(TH,true).y,y2:pctAxis(TH)}}});
+    }
+  }
+
+  renderItemTable();
+  renderDetTable();
+
+  // ── 인사이트 (경고를 앞에 — 4개만 표시된다) ──
+  const ins=[];
+  if(BADN>0)ins.push({sev:'warn',text:t('ins_bad').replace('{n}','<b>'+BADN+'</b>')});
+  {
+    const oldN=snap.filter(x=>!isDone(x)&&x.ap&&(asOf-x.ap)/MS>180).length;
+    if(oldN>0)ins.push({sev:'bad',text:t('ins_old').replace('{n}','<b>'+oldN.toLocaleString()+'</b>')});
+  }
+  ins.push({sev:rate>=80?'ok':rate>=50?'info':'warn',
+    text:t('ins_rate').replace('{p}','<b>'+rate+'</b>').replace('{n}','<b>'+nR.toLocaleString()+'</b>')});
+  {
+    const gr={}; snap.filter(x=>!isDone(x)).forEach(x=>{const k=gKey(x);gr[k]=(gr[k]||0)+1;});
+    const top=Object.entries(gr).sort((a,b)=>b[1]-a[1])[0];
+    if(top)ins.push({sev:'info',text:t('ins_proc').replace('{g}','<b>'+top[0]+'</b>')
+      .replace('{n}','<b>'+top[1].toLocaleString()+'</b>').replace('{p}',nR?Math.round(top[1]/nR*100):0)});
+  }
+  {
+    const im={}; snap.filter(x=>!isDone(x)).forEach(x=>{im[x.item]=(im[x.item]||0)+1;});
+    const top=Object.entries(im).sort((a,b)=>b[1]-a[1])[0];
+    if(top)ins.push({sev:'info',text:t('ins_item').replace('{v}','<b>'+(top[0].length>30?top[0].slice(0,29)+'…':top[0])+'</b>')
+      .replace('{n}','<b>'+top[1].toLocaleString()+'</b>')});
+  }
+  if(newLast>0)ins.push({sev:'ok',text:t('ins_new').replace('{lab}','<b>'+lastP.label+'</b>').replace('{n}','<b>'+newLast+'</b>')});
+  GST.insights(CIP.length?ins:[]);
+
+  addCapBtns();
+  applyAXB();   // ⚙ 사용자 축 범위 오버라이드 (표시 전용) — 차트 재생성 후에 덮어야 적용된다
+}
+
+// ── 항목 요약 표 ──
+function renderItemTable(){
+  if(!MODEL)return;
+  const {snap,isDone}=MODEL;
+  const im={};
+  snap.forEach(x=>{
+    const o=im[x.item]=im[x.item]||{item:x.item,site:x.site,ap:x.ap,tgt:0,done:0,last:null};
+    o.tgt++;
+    if(isDone(x)){o.done++; if(!o.last||x.done>o.last)o.last=x.done;}
+  });
+  let rows=Object.values(im).map(o=>Object.assign(o,{rem:o.tgt-o.done,rate:o.tgt?o.done/o.tgt:0}));
+  rows.sort((a,b)=>{
+    const va=a[iSortK],vb=b[iSortK];
+    if(va instanceof Date||vb instanceof Date)return iSortAsc?((va?+va:0)-(vb?+vb:0)):((vb?+vb:0)-(va?+va:0));
+    if(typeof va==='string')return iSortAsc?va.localeCompare(vb):vb.localeCompare(va);
+    return iSortAsc?va-vb:vb-va;
+  });
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  document.getElementById('tItem').innerHTML=rows.length?rows.map(o=>{
+    const p=Math.round(o.rate*100);
+    return '<tr><td title="'+esc(o.item)+'">'+esc(o.item.length>44?o.item.slice(0,43)+'…':o.item)+'</td>'
+      +'<td><span class="pill'+(o.site==='F11'?' f11':'')+'">'+o.site+'</span></td>'
+      +'<td>'+(o.ap?GST.fmtDate(o.ap):'—')+'</td>'
+      +'<td class="num">'+o.tgt.toLocaleString()+'</td><td class="num">'+o.done.toLocaleString()+'</td>'
+      +'<td class="num">'+o.rem.toLocaleString()+'</td>'
+      +'<td><div class="pbar"><i style="width:'+p+'%"></i><span>'+p+'%</span></div></td>'
+      +'<td>'+(o.last?GST.fmtDate(o.last):'—')+'</td></tr>';
+  }).join(''):'<tr><td colspan="8" class="empty">'+t('no_data')+'</td></tr>';
+}
+
+// ── 미완료 상세 표 ──
+function renderDetTable(){
+  if(!MODEL)return;
+  const {snap,asOf,isDone}=MODEL;
+  let rows=snap.filter(x=>!isDone(x)).map(x=>Object.assign({age:x.ap?Math.floor((asOf-x.ap)/MS):-1},x));
+  rows.sort((a,b)=>{
+    const va=a[dSortK],vb=b[dSortK];
+    if(va instanceof Date||vb instanceof Date)return dSortAsc?((va?+va:0)-(vb?+vb:0)):((vb?+vb:0)-(va?+va:0));
+    if(typeof va==='string')return dSortAsc?va.localeCompare(vb):vb.localeCompare(va);
+    return dSortAsc?va-vb:vb-va;
+  });
+  document.getElementById('tdCnt').textContent=rows.length.toLocaleString();
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  document.getElementById('tDet').innerHTML=rows.length?rows.slice(0,500).map(x=>
+    '<tr><td>'+esc(x.sn||'—')+'</td>'
+    +'<td><span class="pill'+(x.site==='F11'?' f11':'')+'">'+x.site+'</span></td>'
+    +'<td>'+esc(x.floor||'—')+(x.area?' <span style="color:var(--txt-muted)">'+esc(x.area)+'</span>':'')+'</td>'
+    +'<td>'+esc(x.group||'—')+'</td><td>'+esc(x.detail||'—')+'</td><td>'+esc(x.model||'—')+'</td>'
+    +'<td title="'+esc(x.item)+'">'+esc(x.item.length>34?x.item.slice(0,33)+'…':x.item)+'</td>'
+    +'<td>'+(x.ap?GST.fmtDate(x.ap):'—')+'</td>'
+    +'<td class="num"'+(x.age>180?' style="color:var(--bad);font-weight:800"':'')+'>'+(x.age>=0?x.age.toLocaleString():'—')+'</td></tr>'
+  ).join(''):'<tr><td colspan="9" class="empty">'+t('no_data')+'</td></tr>';
+}
+
+// ── 차트 복사·저장·축설정 ──
+function capToast(msg){let el=document.getElementById('capToast');if(!el){el=document.createElement('div');el.id='capToast';document.body.appendChild(el);}el.textContent=msg;el.style.opacity='1';clearTimeout(el._h);el._h=setTimeout(()=>el.style.opacity='0',1600);}
+function chartHiRes(id,scale){const ch=CHARTS[id];if(!ch||!ch.canvas)return null;const cv=ch.canvas,w=cv.clientWidth||400,h=cv.clientHeight||300;if(!scale)scale=Math.min(6,Math.max(3,Math.round(2400/w)));const prev=ch.options.devicePixelRatio;ch.options.devicePixelRatio=scale;ch.resize();ch.render();const oc=document.createElement('canvas');oc.width=Math.round(w*scale);oc.height=Math.round(h*scale);const g=oc.getContext('2d');g.fillStyle=getComputedStyle(document.body).backgroundColor||'#0B0F14';g.fillRect(0,0,oc.width,oc.height);g.drawImage(cv,0,0,oc.width,oc.height);ch.options.devicePixelRatio=prev;ch.resize();ch.render();return oc;}
+window.copyChart=async function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}try{await new Promise((res,rej)=>oc.toBlob(async b=>{if(!b)return rej();try{await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);res();}catch(e){rej(e);}},'image/png'));capToast('📋 차트 복사됨 — PPT에 붙여넣기(Ctrl+V)');}catch(e){capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요');}};
+window.saveChart=function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}oc.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ '+id+'.png 저장됨');},'image/png');};
+window.saveAllCharts=async function(){const ids=Object.keys(CHARTS).filter(id=>CHARTS[id]&&CHARTS[id].canvas);if(!ids.length){capToast('저장할 차트가 없습니다');return;}capToast('🖼 '+ids.length+'개 차트 저장 중…');for(const id of ids){const oc=chartHiRes(id);if(!oc)continue;await new Promise(res=>oc.toBlob(b=>{if(b){const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}setTimeout(res,250);},'image/png'));}capToast('🖼 전체 '+ids.length+'개 차트 저장 완료');};
+function addCapBtns(){
+  document.querySelectorAll('.cw canvas').forEach(cv=>{
+    const id=cv.id,card=cv.closest('.card');
+    if(!id||!card||card.querySelector('.capbtns'))return;
+    const box=document.createElement('div'); box.className='capbtns';
+    box.innerHTML='<button class="capbtn" title="고해상도 복사(PPT 붙여넣기)" onclick="copyChart(\''+id+'\')">📋 복사</button>'
+                 +'<button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>'
+                 +'<button class="capbtn" title="축 범위 설정 (min/max)" onclick="axOpen(\''+id+'\')">⚙</button>';
+    card.appendChild(box);
+    const mp=card.querySelector('.mini-per'); if(mp)box.style.right=(mp.offsetWidth+24)+'px';
+  });
+}
+// 차트별 축 범위(min/max) 편집 — 표시 전용, render 후 applyAXB가 주입
+window.axOpen=function(id){
+  const cv=document.getElementById(id); const host=cv?cv.closest('.card'):null; if(!host)return;
+  const old=host.querySelector('.axpop'); if(old){old.remove();return;}
+  document.querySelectorAll('.axpop').forEach(p=>p.remove());
+  const ch=CHARTS[id]; if(!ch)return;
+  const hasY2=!!(ch.options.scales&&ch.options.scales.y2);
+  const b=AXB[id]||{}, gv=(o,k)=>(o&&o[k]!=null&&o[k]!=='')?o[k]:'';
+  const row=(lbl,cls,o)=>'<div class="axp-r"><b>'+lbl+'</b>'
+    +'<input type="number" step="any" class="'+cls+'min" placeholder="'+t('ax_min')+'" value="'+gv(o,'min')+'">'
+    +'<span>~</span><input type="number" step="any" class="'+cls+'max" placeholder="'+t('ax_max')+'" value="'+gv(o,'max')+'"></div>';
+  const pop=document.createElement('div'); pop.className='axpop';
+  pop.innerHTML='<div class="axp-t">⚙ '+t('ax_t')+'</div>'
+    +row('Y','axy',b.y)+(hasY2?row('%','axy2',b.y2):'')
+    +'<div class="axp-btns"><button onclick="axApply(\''+id+'\','+hasY2+')">'+t('ax_apply')+'</button>'
+    +'<button onclick="axReset(\''+id+'\')">'+t('ax_reset')+'</button></div>';
+  host.appendChild(pop);
+};
+window.axApply=function(id,hasY2){
+  const host=document.getElementById(id).closest('.card'), pop=host&&host.querySelector('.axpop'); if(!pop)return;
+  const rd=cls=>{const el=pop.querySelector('.'+cls); const v=el?el.value.trim():''; return v===''?null:+v;};
+  const mk=(mn,mx)=>{const o={}; if(mn!=null&&isFinite(mn))o.min=mn; if(mx!=null&&isFinite(mx))o.max=mx; return Object.keys(o).length?o:null;};
+  const y=mk(rd('axymin'),rd('axymax')), y2=hasY2?mk(rd('axy2min'),rd('axy2max')):null;
+  if((y&&y.min!=null&&y.max!=null&&y.min>=y.max)||(y2&&y2.min!=null&&y2.max!=null&&y2.min>=y2.max)){
+    capToast('⚠ 최소값은 최대값보다 작아야 합니다'); return; }
+  const nb={}; if(y)nb.y=y; if(y2)nb.y2=y2;
+  if(Object.keys(nb).length)AXB[id]=nb; else delete AXB[id];
+  saveAXB(); pop.remove(); render(); capToast('⚙ '+id+' 축 범위 적용');
+};
+window.axReset=function(id){
+  const host=document.getElementById(id).closest('.card'), pop=host&&host.querySelector('.axpop');
+  if(pop)pop.remove();
+  delete AXB[id]; saveAXB(); render(); capToast('⚙ '+id+' 축 범위 초기화');
+};
+
+applyLang(); loadData();
+</script>
+<script>
+GST.initSync();
+</script>
+</body>
+</html>
