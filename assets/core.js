@@ -58,9 +58,16 @@ GST.getSession = async function(){
   catch(e){ return null; }
 };
 GST.token   = async function(){ var s=await GST.getSession(); return s?s.access_token:null; };
+// shouldCreateUser:false — 관리자가 Supabase 콘솔(Authentication → Users → Invite user)로
+// 미리 초대한 이메일만 인증코드를 받을 수 있다. 승인 안 된 이메일은 코드 발급 자체가 거부된다.
 GST.sendOtp = async function(email){ var c=await GST.sb();
-  var r=await c.auth.signInWithOtp({email:email,options:{shouldCreateUser:true}});
-  return r.error?(r.error.message||'전송 실패'):null; };
+  var r=await c.auth.signInWithOtp({email:email,options:{shouldCreateUser:false}});
+  if(!r.error)return null;
+  var m=String(r.error.message||'');
+  if(/signup|not allowed|not found|does not exist/i.test(m))
+    return '등록되지 않은 이메일입니다. 관리자에게 이메일 등록을 요청하세요.';
+  return m||'전송 실패';
+};
 GST.verifyOtp = async function(email,code){ var c=await GST.sb();
   var r=await c.auth.verifyOtp({email:email,token:code,type:'email'});
   return r.error?(r.error.message||'코드 확인 실패'):null; };
@@ -103,7 +110,7 @@ GST.authGate = async function(){
       err(''); $('sbSend').disabled=true; $('sbSend').textContent='전송 중…';
       var e=await GST.sendOtp(em);
       $('sbSend').disabled=false; $('sbSend').textContent='인증코드 다시 받기';
-      if(e){err('전송 실패: '+e);return;}
+      if(e){err(/^등록되지 않은/.test(e)?e:('전송 실패: '+e));return;}
       $('sbStep2').style.display='block'; $('sbCode').focus();
       err('메일이 안 보이면 스팸함을 확인하세요');
     };
