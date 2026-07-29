@@ -128,46 +128,35 @@ tr:hover td{background:rgba(255,255,255,.04)}
 #drillModal .dsum .b .n{font-size:20px;font-weight:800}
 #drillModal .dsum .b .l{font-size:11px;color:var(--txt-muted)}
 #drillModal .dhint{font-size:11px;color:var(--txt-muted);margin:10px 0 4px}
+/* 행 편집 */
+.edcol,.edcell{width:38px;text-align:center;padding:4px!important}
+.edbtn{background:transparent;border:1px solid var(--glass-border);border-radius:6px;color:var(--txt-muted);
+  font-size:12px;line-height:1;padding:3px 6px;cursor:pointer}
+.edbtn:hover{color:var(--accent);border-color:var(--accent)}
+.edlock{color:var(--txt-muted);opacity:.45;font-size:11px}
+#drillModal .ef{display:grid;grid-template-columns:112px 1fr;gap:9px 12px;align-items:center;margin:4px 0 6px}
+#drillModal .ef label{font-size:11px;color:var(--txt-muted)}
+#drillModal .ef input[type=text],#drillModal .ef input:not([type]),#drillModal .ef select{
+  width:100%;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;
+  padding:7px 10px;color:var(--txt-main);font-size:13px;outline:none}
+#drillModal .ef input:disabled{opacity:.4;cursor:not-allowed}
+#drillModal .ef input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
+#drillModal .efmsg{font-size:11px;color:#fd79a8;min-height:15px;margin-top:6px}
+#drillModal .efbar{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+#drillModal .efbtn{background:var(--accent);border:none;border-radius:8px;padding:8px 18px;
+  color:#04211c;font-size:12px;font-weight:700;cursor:pointer}
+#drillModal .efbtn.ghost{background:transparent;border:1px solid var(--glass-border);color:var(--txt-muted)}
+#drillModal .efbtn:disabled{opacity:.5;cursor:default}
 @media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:800px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
 @media print{.capbtns,.slicers,.header-right,#filtBadge{display:none!important}.card,.tablecard{break-inside:avoid;page-break-inside:avoid}.grid3{grid-template-columns:1fr 1fr}}
 
-/* 로그인 가드 */
-#loginOverlay{position:fixed;inset:0;z-index:99999;
-  background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#1a1a2e);
-  background-size:400% 400%;animation:grad 18s ease infinite;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-family:'Segoe UI','Malgun Gothic',sans-serif}
-#loginOverlay.hidden{display:none}
-.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
-.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;
-  padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
-.login-box .lock{font-size:40px;margin-bottom:14px}
-.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px;color:#f5f6fa}
-.login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);
-  border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
-.login-box input:focus{border-color:#6c5ce7}
-.login-box input::placeholder{color:#a0a0c0}
-.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);
-  border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
-.login-box button:hover{opacity:.88}
-.login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
 <body>
 
-<div id="loginOverlay">
-  <div class="login-logo">GST Dashboard</div>
-  <div class="login-box">
-    <div class="lock">🔒</div>
-    <div class="ltitle" id="lgTitle">비밀번호를 입력하세요 / Enter password</div>
-    <input type="password" id="pwInput" placeholder="비밀번호 / Password" autocomplete="off">
-    <button onclick="checkPw()" id="lgBtn">로그인 / Login</button>
-    <div class="login-err" id="pwErr"></div>
-  </div>
-</div>
-
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
     <h1 data-i="title">인력 현황 대시보드</h1>
@@ -234,8 +223,9 @@ tr:hover td{background:rgba(255,255,255,.04)}
       <th data-k="org" data-i="th_org">소속</th><th data-k="role" data-i="th_role">직무</th><th data-k="posKo" data-i="th_pos">직급</th>
       <th data-k="exp" data-i="th_exp">경력</th><th data-k="join" data-i="th_join">입사일</th>
       <th data-k="basic">Basic</th><th data-k="vet">Veteran</th><th data-k="status" data-i="th_status">상태</th>
+      <th class="edcol">✎</th>
     </tr></thead>
-    <tbody id="tbody"><tr><td colspan="11" class="empty">⏳ 데이터 불러오는 중...</td></tr></tbody>
+    <tbody id="tbody"><tr><td colspan="12" class="empty">⏳ 데이터 불러오는 중...</td></tr></tbody>
   </table></div>
 </div>
 
@@ -244,10 +234,10 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 const PUB='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub';
 const URL_ROSTER=PUB+'?gid=1213453343&single=true&output=csv';  // 인원명단
 const URL_EDU   =PUB+'?gid=0&single=true&output=csv';            // 교육현황
-const VER='v45';
+const VER='v46';
 
 const TR={
-  ko:{title:'인력 현황 대시보드',sub:'인원명단 · 교육현황 통합 인터랙티브 분석',back:'← 메인으로',refresh:'새로고침',print:'🖨 인쇄',
+  ko:{edit_title:'행 편집',ed_save:'저장',ed_cancel:'취소',ed_saving:'저장 중…',ed_saved:'저장되었습니다 (구글 시트에 반영됨)',ed_failed:'저장 실패',ed_conflict:'다른 사용자가 이미 이 행을 수정했습니다 — 아래 최신 값을 확인하고 다시 저장하세요',ed_locked:'다른 사용자가 저장 중입니다 — 잠시 후 다시 시도하세요',ed_readonly:'편집 권한이 없습니다 (관리자에게 요청하세요)',ed_nokey:'사번이 비어 있어 편집할 수 없습니다',ed_lockfld:'이 항목은 대시보드에서 수정할 수 없습니다',ed_gone:'시트에서 이 행을 찾을 수 없습니다',ed_dup:'사번이 중복되어 저장할 수 없습니다',ed_badval:'입력값을 확인하세요',f_cn:'중문 이름',f_onsite:'현장 인원',f_id:'사번',title:'인력 현황 대시보드',sub:'인원명단 · 교육현황 통합 인터랙티브 분석',back:'← 메인으로',refresh:'새로고침',print:'🖨 인쇄',
     total_pre:'재직',total_post:'명',loading:'데이터 불러오는 중...',
     sl_site:'사이트',sl_org:'소속·공정',sl_role:'직무',sl_edu:'교육',sl_search:'검색',search_ph:'이름·사번 검색...',all:'전체',
     kp1:'재직 인원',kp2:'현장 인원',kp3:'Basic 이수율',kp4:'Veteran 이수율',kp5:'평균 경력(년)',kp6:'최근 1년 입사',
@@ -263,7 +253,7 @@ const TR={
     tbl_title:'상세 명단',tbl_unit:'명',th_name:'이름',th_site:'사이트',th_org:'소속',th_role:'직무',th_pos:'직급',th_exp:'경력',th_join:'입사일',th_status:'상태',
     s_act:'재직',s_quit:'퇴사',d_total:'인원',d_on:'현장',d_edu:'교육대상',d_done:'이수',
     ins_basic:'Basic 미이수 {n}명 ({p}%)',ins_vet:'Veteran 미이수 {n}명 (대상의 {p}%)',ins_new:'최근 1년 입사 {n}명'},
-  en:{title:'Workforce Dashboard',sub:'Roster · training integrated interactive analysis',back:'← Main',refresh:'Refresh',print:'🖨 Print',
+  en:{edit_title:'Edit row',ed_save:'Save',ed_cancel:'Cancel',ed_saving:'Saving…',ed_saved:'Saved to the Google Sheet',ed_failed:'Save failed',ed_conflict:'Someone else already changed this row — check the latest values below and save again',ed_locked:'Another user is saving — please retry shortly',ed_readonly:'You do not have edit permission',ed_nokey:'No employee ID — cannot edit',ed_lockfld:'This field cannot be edited here',ed_gone:'This row no longer exists in the sheet',ed_dup:'Duplicate employee ID — cannot save',ed_badval:'Please check the entered value',f_cn:'Chinese name',f_onsite:'On-site',f_id:'Employee ID',title:'Workforce Dashboard',sub:'Roster · training integrated interactive analysis',back:'← Main',refresh:'Refresh',print:'🖨 Print',
     total_pre:'Active',total_post:'',loading:'Loading data...',
     sl_site:'Site',sl_org:'Team/Process',sl_role:'Role',sl_edu:'Training',sl_search:'Search',search_ph:'Search name/ID...',all:'All',
     kp1:'Active Staff',kp2:'On-site Staff',kp3:'Basic Rate',kp4:'Veteran Rate',kp5:'Avg Tenure (yr)',kp6:'Joined (1yr)',
@@ -279,7 +269,7 @@ const TR={
     tbl_title:'Detail List',tbl_unit:'',th_name:'Name',th_site:'Site',th_org:'Team',th_role:'Role',th_pos:'Grade',th_exp:'Exp',th_join:'Join',th_status:'Status',
     s_act:'Active',s_quit:'Left',d_total:'Staff',d_on:'On-site',d_edu:'Eligible',d_done:'Done',
     ins_basic:'{n} pending Basic ({p}%)',ins_vet:'{n} pending Veteran ({p}% of eligible)',ins_new:'{n} joined in last year'},
-  zh:{title:'人员状况仪表板',sub:'人员名单 · 教育状况 综合交互分析',back:'← 主页',refresh:'刷新',print:'🖨 打印',
+  zh:{edit_title:'编辑行',ed_save:'保存',ed_cancel:'取消',ed_saving:'保存中…',ed_saved:'已保存到谷歌表格',ed_failed:'保存失败',ed_conflict:'该行已被他人修改 — 请确认下方最新值后重新保存',ed_locked:'其他用户正在保存 — 请稍后重试',ed_readonly:'没有编辑权限',ed_nokey:'工号为空，无法编辑',ed_lockfld:'此项不可在此修改',ed_gone:'表格中已无此行',ed_dup:'工号重复，无法保存',ed_badval:'请检查输入值',f_cn:'中文姓名',f_onsite:'现场人员',f_id:'工号',title:'人员状况仪表板',sub:'人员名单 · 教育状况 综合交互分析',back:'← 主页',refresh:'刷新',print:'🖨 打印',
     total_pre:'在职',total_post:'人',loading:'正在加载数据...',
     sl_site:'站点',sl_org:'所属·工序',sl_role:'职务',sl_edu:'培训',sl_search:'搜索',search_ph:'搜索姓名/工号...',all:'全部',
     kp1:'在职人数',kp2:'现场人数',kp3:'Basic完成率',kp4:'Veteran完成率',kp5:'平均工龄(年)',kp6:'近1年入职',
@@ -295,7 +285,7 @@ const TR={
     tbl_title:'详细名单',tbl_unit:'人',th_name:'姓名',th_site:'站点',th_org:'所属',th_role:'职务',th_pos:'职级',th_exp:'工龄',th_join:'入职日',th_status:'状态',
     s_act:'在职',s_quit:'离职',d_total:'人数',d_on:'现场',d_edu:'对象',d_done:'完成',
     ins_basic:'Basic未完成 {n}人 ({p}%)',ins_vet:'Veteran未完成 {n}人 (对象的{p}%)',ins_new:'近1年入职 {n}人'},
-  ja:{title:'人員状況ダッシュボード',sub:'人員名簿 · 教育状況 統合インタラクティブ分析',back:'← メイン',refresh:'更新',print:'🖨 印刷',
+  ja:{edit_title:'行の編集',ed_save:'保存',ed_cancel:'キャンセル',ed_saving:'保存中…',ed_saved:'Googleシートに保存しました',ed_failed:'保存失敗',ed_conflict:'この行は既に他のユーザーが変更しました — 下の最新値を確認して再保存してください',ed_locked:'他のユーザーが保存中です — しばらくして再試行してください',ed_readonly:'編集権限がありません',ed_nokey:'社番が空のため編集できません',ed_lockfld:'この項目はここでは編集できません',ed_gone:'シートにこの行が見つかりません',ed_dup:'社番が重複しており保存できません',ed_badval:'入力値を確認してください',f_cn:'中国語名',f_onsite:'現場人員',f_id:'社番',title:'人員状況ダッシュボード',sub:'人員名簿 · 教育状況 統合インタラクティブ分析',back:'← メイン',refresh:'更新',print:'🖨 印刷',
     total_pre:'在籍',total_post:'名',loading:'データ読み込み中...',
     sl_site:'サイト',sl_org:'所属·工程',sl_role:'職務',sl_edu:'教育',sl_search:'検索',search_ph:'名前·社番検索...',all:'全体',
     kp1:'在籍人数',kp2:'現場人数',kp3:'Basic修了率',kp4:'Veteran修了率',kp5:'平均勤続(年)',kp6:'直近1年入社',
@@ -446,6 +436,10 @@ function eduStatusOf(p){ return p.edu?clsB(p):'미등록'; }
 
 /* ===== 상태/스타일 ===== */
 let DATA=[], ROSTER=[], EDU=[], CH={}, DRILL={}, LASTSPARK={};
+/* 시트 편집 — 서버(sheet-write)가 권한·행위치·컬럼을 모두 결정한다.
+   CAN_WRITE는 ✎ 버튼 노출 여부일 뿐 보안 경계가 아니다(서버가 다시 검사한다). */
+const GID_ROSTER='1213453343';
+let CAN_WRITE=false, EDIT=null;   // EDIT={key, hash, fields}
 const F={site:'전체',org:'전체',role:'전체',edu:'전체',q:''};
 let SORT={k:'no',dir:1};
 let RSTYLE=''; try{RSTYLE=localStorage.getItem('gst_hr_style')||'';}catch(e){}
@@ -528,6 +522,10 @@ async function loadData(){ GST.skeleton(true);
     ROSTER = ro.status==='fulfilled'?parseRoster(ro.value.rows):[];
     EDU    = ed.status==='fulfilled'?parseEdu(ed.value.rows):[];
     DATA   = buildPeople();
+    // 편집 권한 확인 — Sheets API를 부르지 않아 쿼터를 쓰지 않는다.
+    // 실패해도 조회는 그대로 되어야 하므로 조용히 읽기 전용으로 둔다.
+    try{ const p=await GST.sheetWrite('perm',GID_ROSTER); CAN_WRITE=!!(p&&p.can_write); }
+    catch(e){ CAN_WRITE=false; }
     const cached = (ro.status==='fulfilled'&&ro.value.cached)||(ed.status==='fulfilled'&&ed.value.cached);
     if(!DATA.length) throw new Error('no data');
     const act=DATA.filter(isActive).length, quit=DATA.length-act;
@@ -540,7 +538,7 @@ async function loadData(){ GST.skeleton(true);
     rebuildFilters(); render(); addCapBtns();
   }catch(err){ GST.skeleton(false);
     status.className='status err'; status.textContent='❌ '+tr('loading');
-    document.getElementById('tbody').innerHTML='<tr><td colspan="11" class="empty">—</td></tr>';
+    document.getElementById('tbody').innerHTML='<tr><td colspan="12" class="empty">—</td></tr>';
   }
   btn.disabled=false;
 }
@@ -741,7 +739,7 @@ function sortVal(p,k){
 }
 function renderTable(f){
   const tb=document.getElementById('tbody'); document.getElementById('tblCnt').textContent=f.length;
-  if(!f.length){tb.innerHTML='<tr><td colspan="11" class="empty">조건에 맞는 인원이 없습니다</td></tr>';return;}
+  if(!f.length){tb.innerHTML='<tr><td colspan="12" class="empty">조건에 맞는 인원이 없습니다</td></tr>';return;}
   const rows=f.slice().sort((a,b)=>{const va=sortVal(a,SORT.k),vb=sortVal(b,SORT.k);return (va<vb?-1:va>vb?1:0)*SORT.dir;});
   tb.innerHTML=rows.map((d,i)=>{
     const bTag=d.edu?'<span class="tag '+tagB(clsB(d))+'">'+clsB(d)+'</span>':'<span style="color:var(--muted)">-</span>';
@@ -751,9 +749,20 @@ function renderTable(f){
     return '<tr><td>'+(i+1)+'</td><td><b>'+esc(d.name)+'</b>'+(d.cn?' <span style="color:var(--muted);font-size:11px">'+esc(d.cn)+'</span>':'')+'</td>'
       +'<td>'+esc(shortSite(d.site))+'</td><td>'+esc(d.org||'-')+'</td><td>'+esc(d.role||'-')+'</td><td>'+esc(d.posKo||'-')+'</td>'
       +'<td>'+tenureLabel(d)+'</td><td>'+(d.join?ymd(d.join):'-')+'</td>'
-      +'<td>'+bTag+'</td><td>'+vTag+'</td><td>'+sTag+'</td></tr>';
+      +'<td>'+bTag+'</td><td>'+vTag+'</td><td>'+sTag+'</td>'
+      // 속성값에는 encodeURIComponent를 거친 사번만 넣는다 — esc()는 따옴표를 이스케이프하지
+      // 않으므로 시트 셀 내용이 속성을 탈출할 수 있다
+      +'<td class="edcell">'+(CAN_WRITE
+          ? (d.id ? '<button class="edbtn" data-key="'+encodeURIComponent(d.id)+'" title="'+tr('edit_title')+'">✎</button>'
+                  : '<span class="edlock" title="'+tr('ed_nokey')+'">—</span>')
+          : '')+'</td></tr>';
   }).join('');
 }
+// 위임 리스너 — renderTable이 innerHTML을 통째로 갈아치우므로 안에서 바인딩하면 누수된다
+document.getElementById('tbody').addEventListener('click',e=>{
+  const b=e.target.closest('.edbtn'); if(!b)return;
+  openEdit(decodeURIComponent(b.dataset.key));
+});
 document.getElementById('detTbl').querySelectorAll('th[data-k]').forEach(th=>{
   th.addEventListener('click',()=>{const k=th.getAttribute('data-k'); if(SORT.k===k)SORT.dir*=-1; else{SORT.k=k;SORT.dir=1;} if(DATA.length)render();});
 });
@@ -799,7 +808,101 @@ function showDrill(title,html){ let m=document.getElementById('drillModal');
     document.body.appendChild(m); document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrill();});}
   m.querySelector('#drillTitle').textContent=title; m.querySelector('#drillBody').innerHTML=html; m.style.display='flex';
 }
-window.closeDrill=function(){const m=document.getElementById('drillModal');if(m)m.style.display='none';};
+window.closeDrill=function(){const m=document.getElementById('drillModal');if(m)m.style.display='none';EDIT=null;};
+
+/* ===== 시트 편집 (구글시트에 직접 반영) =====
+   대시보드에서 고친 값이 sheet-write Edge Function을 거쳐 실제 인원명단 시트에 저장된다.
+   열어둔 항목은 표시성 컬럼뿐이다 — 사번·이름·입사일·퇴사일·Work Place는 조인키이거나
+   값이 비면 그 사람이 대시보드에서 통째로 사라져 서버에서 잠가 두었다. */
+const ED_FIELDS=[
+  {k:'cn',    label:()=>tr('f_cn'),        type:'text'},
+  {k:'posKo', label:()=>tr('th_pos'),      type:'text'},
+  {k:'role',  label:()=>tr('th_role'),     type:'select', opts:()=>uniqActive('role').sort()},
+  {k:'org',   label:()=>tr('th_org'),      type:'select', opts:()=>uniqActive('org').sort()},
+  {k:'onsite',label:()=>tr('f_onsite'),    type:'check'}
+];
+const edErr=e=>{const c=(e&&e.data&&e.data.error)||(e&&e.message)||'';
+  return {read_only:tr('ed_readonly'), locked:tr('ed_locked'), conflict:tr('ed_conflict'),
+    not_found:tr('ed_gone'), dup_key:tr('ed_dup'), bad_value:tr('ed_badval'),
+    too_long:tr('ed_badval'), field_locked:tr('ed_lockfld')}[c] || c || tr('ed_failed');};
+
+async function openEdit(key){
+  if(!CAN_WRITE){ showDrill(tr('edit_title'),'<div class="dhint">'+esc(tr('ed_readonly'))+'</div>'); return; }
+  showDrill(tr('edit_title'),'<div class="dhint">⏳</div>');
+  try{
+    const r=await GST.sheetWrite('row',GID_ROSTER,null,{key});   // 서버가 라이브 시트를 읽고 지문을 발급
+    EDIT={key, hash:r.hash, fields:r.fields};
+    showDrill(tr('edit_title')+' · '+(r.fields.name||key), editFormHtml(r.fields));
+  }catch(e){ showDrill(tr('edit_title'),'<div class="dhint">❌ '+esc(edErr(e))+'</div>'); }
+}
+function editFormHtml(f){
+  const row=(lb,inner)=>'<label>'+esc(lb)+'</label><div>'+inner+'</div>';
+  let h='<div class="ef">';
+  h+=row(tr('f_id'),'<input value="'+esc(f.id||'')+'" disabled title="'+esc(tr('ed_lockfld'))+'">');
+  ED_FIELDS.forEach(d=>{
+    const v=f[d.k]==null?'':String(f[d.k]);
+    if(d.type==='select'){
+      const opts=d.opts(); const has=opts.indexOf(v)>=0;
+      h+=row(d.label(),'<select id="ef_'+d.k+'">'+(has?'':'<option value="'+esc(v)+'" selected>'+esc(v||'—')+'</option>')
+        +opts.map(o=>'<option value="'+esc(o)+'"'+(o===v?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select>');
+    }else if(d.type==='check'){
+      h+=row(d.label(),'<input type="checkbox" id="ef_'+d.k+'"'+(v.toUpperCase()==='O'?' checked':'')+'>');
+    }else{
+      h+=row(d.label(),'<input id="ef_'+d.k+'" maxlength="40" value="'+esc(v)+'">');
+    }
+  });
+  h+='</div><div class="efmsg" id="efMsg"></div>'
+    +'<div class="efbar"><button class="efbtn ghost" onclick="closeDrill()">'+esc(tr('ed_cancel'))+'</button>'
+    +'<button class="efbtn" id="efSave" onclick="saveEdit()">'+esc(tr('ed_save'))+'</button></div>';
+  return h;
+}
+function collectChanges(){
+  const ch={};
+  ED_FIELDS.forEach(d=>{
+    const el=document.getElementById('ef_'+d.k); if(!el)return;
+    const v = d.type==='check' ? (el.checked?'O':'') : String(el.value||'').trim();
+    if(v !== String(EDIT.fields[d.k]==null?'':EDIT.fields[d.k])) ch[d.k]=v;
+  });
+  return ch;
+}
+window.saveEdit=async function(){
+  if(!EDIT)return;
+  const msg=document.getElementById('efMsg'), btn=document.getElementById('efSave');
+  const changes=collectChanges();
+  if(!Object.keys(changes).length){ closeDrill(); return; }
+  // 수식 인젝션 방어 — 서버도 같은 검사를 하지만 왕복 전에 막아 사용자에게 즉시 알린다
+  for(const k in changes) if(/^[=+\-@]/.test(changes[k])){ msg.textContent='❌ '+tr('ed_badval'); return; }
+
+  const i=ROSTER.findIndex(p=>p.id===EDIT.key);
+  if(i<0){ msg.textContent='❌ '+tr('ed_gone'); return; }
+  const snap=Object.assign({},ROSTER[i]);            // 롤백용
+  applyFields(ROSTER[i],changes);                    // ① 낙관적 반영
+  DATA=buildPeople(); render();                      //   ※ rebuildFilters()는 부르지 않는다(필터가 초기화된다)
+  const status=document.getElementById('status');
+  status.className='status'; status.textContent='💾 '+tr('ed_saving');
+  btn.disabled=true; msg.textContent='';
+
+  try{
+    const r=await GST.sheetWrite('update',GID_ROSTER,{key:EDIT.key, baseHash:EDIT.hash, changes});
+    applyFields(ROSTER[i],r.fields);                 // ② 시트가 실제로 가진 값으로 재확정
+    DATA=buildPeople(); render(); closeDrill();
+    status.className='status ok'; status.textContent='✅ '+tr('ed_saved');
+  }catch(e){
+    ROSTER[i]=snap; DATA=buildPeople(); render();     // ③ 롤백 — 거짓 '저장됨' 방지
+    status.className='status err'; status.textContent='❌ '+tr('ed_failed')+' — '+edErr(e);
+    if(btn)btn.disabled=false;
+    if(e.status===409 && e.data && e.data.fields){    // 그 사이 누군가 같은 행을 고쳤다
+      EDIT={key:EDIT.key, hash:e.data.hash, fields:e.data.fields};
+      showDrill(tr('edit_title'),'<div class="dhint">⚠ '+esc(tr('ed_conflict'))+'</div>'+editFormHtml(e.data.fields));
+    }else if(msg){ msg.textContent='❌ '+edErr(e); }
+  }
+};
+// 시트의 문자열 값을 ROSTER 레코드 형태로 되돌린다 (onsite는 'O'/'' → boolean)
+function applyFields(p,f){
+  if(f.cn!=null)p.cn=f.cn; if(f.posKo!=null)p.posKo=f.posKo;
+  if(f.role!=null)p.role=f.role; if(f.org!=null)p.org=f.org;
+  if(f.onsite!=null)p.onsite=String(f.onsite).trim().toUpperCase()==='O';
+}
 
 /* ===== 차트/표 복사 (PPT·엑셀) ===== */
 function capToast(msg){ let t=document.getElementById('capToast'); if(!t){t=document.createElement('div');t.id='capToast';document.body.appendChild(t);}
@@ -816,11 +919,13 @@ window.copyChart=async function(id){ const oc=chartHiRes(id); if(!oc){capToast('
     capToast('📋 차트 복사됨 — PPT에 붙여넣기(Ctrl+V)'); }catch(e){ capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요'); } };
 window.saveChart=function(id){ const oc=chartHiRes(id); if(!oc){capToast('차트를 찾을 수 없습니다');return;}
   oc.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ '+id+'.png 저장됨');},'image/png'); };
-function tableToTSV(tbl){ return [...tbl.rows].map(r=>[...r.cells].map(c=>(c.textContent||'').trim()).join('\t')).join('\n'); }
+// ✎ 열은 내보내기에서 제외한다 (표 복사·CSV 저장에 편집 버튼이 섞이지 않도록)
+const expCells=r=>[...r.cells].filter(c=>!c.classList.contains('edcell')&&!c.classList.contains('edcol'));
+function tableToTSV(tbl){ return [...tbl.rows].map(r=>expCells(r).map(c=>(c.textContent||'').trim()).join('\t')).join('\n'); }
 window.copyTable=async function(){ const tbl=document.getElementById('detTbl'); const tsv=tableToTSV(tbl);
   try{ await navigator.clipboard.writeText(tsv); capToast('📋 명단 복사됨 — 엑셀에 붙여넣기(Ctrl+V)'); }catch(e){ capToast('복사 미지원 브라우저'); } };
 window.saveCsv=function(){ const tbl=document.getElementById('detTbl');
-  const rows=[...tbl.rows].map(r=>[...r.cells].map(c=>{let t=(c.textContent||'').trim().replace(/"/g,'""');return /[",\n]/.test(t)?'"'+t+'"':t;}).join(','));
+  const rows=[...tbl.rows].map(r=>expCells(r).map(c=>{let t=(c.textContent||'').trim().replace(/"/g,'""');return /[",\n]/.test(t)?'"'+t+'"':t;}).join(','));
   const b=new Blob(['﻿'+rows.join('\r\n')],{type:'text/csv'}); const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='workforce_roster.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ workforce_roster.csv 저장됨'); };
 function addCapBtns(){
   document.querySelectorAll('.cw canvas').forEach(cv=>{ const id=cv.id,card=cv.closest('.card'); if(!id||!card||card.querySelector('.capbtns'))return;
@@ -838,20 +943,7 @@ loadData();
 </script>
 
 <script>
-(function(){
-  function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
-  window.checkPw=async function(){
-    const v=document.getElementById('pwInput').value;
-    if(await GST.checkPw(v)){ try{sessionStorage.setItem('gst_auth','1');}catch(e){} document.getElementById('loginOverlay').classList.add('hidden'); }
-    else{ document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect'; document.getElementById('pwInput').value=''; }
-  };
-  function init(){ const ov=document.getElementById('loginOverlay'); if(!ov)return;
-    if(GST.authOn&&GST.authOn()){GST.authGate();return;}
-    if(isAuthed()){ov.classList.add('hidden');return;}
-    const inp=document.getElementById('pwInput'); inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();}); setTimeout(()=>inp.focus(),100);
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init); else init();
-})();
+GST.authGate();
 </script>
 <script>
 GST.initSync();
