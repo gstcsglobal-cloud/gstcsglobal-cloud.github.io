@@ -172,40 +172,12 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   .cw{height:220px}
 }
 
-/* 로그인 가드 */
-#loginOverlay{position:fixed;inset:0;z-index:99999;
-  background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#1a1a2e);
-  background-size:400% 400%;animation:grad 18s ease infinite;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-family:'Segoe UI','Malgun Gothic',sans-serif}
-#loginOverlay.hidden{display:none}
-.login-logo{font-size:38px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;letter-spacing:-2px}
-.login-box{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:24px;
-  padding:36px 40px;backdrop-filter:blur(14px);text-align:center;min-width:300px}
-.login-box .lock{font-size:40px;margin-bottom:14px}
-.login-box .ltitle{font-size:16px;font-weight:700;margin-bottom:18px;color:#f5f6fa}
-.login-box input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);
-  border-radius:30px;padding:13px 20px;color:#f5f6fa;font-size:15px;outline:none;text-align:center}
-.login-box input::placeholder{color:#a0a0c0}
-.login-box button{width:100%;margin-top:14px;background:linear-gradient(90deg,#6c5ce7,#00cec9);
-  border:none;border-radius:30px;padding:13px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
-.login-err{color:#fd79a8;font-size:13px;margin-top:12px;min-height:18px;font-weight:600}
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
 <body>
 
-<div id="loginOverlay">
-  <div class="login-logo">GST Dashboard</div>
-  <div class="login-box">
-    <div class="lock">🔒</div>
-    <div class="ltitle">비밀번호를 입력하세요 / Enter password</div>
-    <input type="password" id="pwInput" placeholder="비밀번호 / Password" autocomplete="off">
-    <button onclick="checkPw()">로그인 / Login</button>
-    <div class="login-err" id="pwErr"></div>
-  </div>
-</div>
-
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
     <h1 data-i="title" data-lock>📊 주간 현황</h1>
@@ -2035,28 +2007,7 @@ window.downloadPPT=async function(btn){
 applyLang(); loadData();
 </script>
 <script>
-(function(){
-  function isAuthed(){try{return sessionStorage.getItem('gst_auth')==='1';}catch(e){return false;}}
-  window.checkPw=async function(){
-    const v=document.getElementById('pwInput').value;
-    if(await GST.checkPw(v)){
-      try{sessionStorage.setItem('gst_auth','1');}catch(e){}
-      document.getElementById('loginOverlay').classList.add('hidden');
-    }else{
-      document.getElementById('pwErr').textContent='비밀번호가 올바르지 않습니다 / Incorrect';
-      document.getElementById('pwInput').value='';
-    }
-  };
-  function init(){
-    if(GST.authOn&&GST.authOn()){GST.authGate();return;}
-    if(isAuthed()){document.getElementById('loginOverlay').classList.add('hidden');return;}
-    const inp=document.getElementById('pwInput');
-    inp.addEventListener('keydown',e=>{if(e.key==='Enter')window.checkPw();});
-    setTimeout(()=>inp.focus(),100);
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
-  else init();
-})();
+GST.authGate();
 GST.initSync();
 </script>
 <script>
