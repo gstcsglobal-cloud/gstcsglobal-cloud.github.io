@@ -23,9 +23,113 @@ GST.toDate = function(v){
 GST.fmtDate = function(d){ return d ? d.toISOString().slice(0,10) : '—'; };
 GST.fmtD    = function(d){ return d ? d.toISOString().slice(0,10) : ''; };
 
+/* ---------- 1.5 Supabase 인증 (보안 D안) ----------
+   SETUP-SUPABASE.md 대로 프로젝트 생성 후 아래 두 값을 채우면 활성화된다.
+   비워두면 종전 방식(클라이언트 비밀번호 + 직접 시트 fetch) 그대로 동작. */
+GST.SB_URL  = (typeof window!=='undefined' && window.GST_SB_URL)  || 'https://wldzkdoucqunqliwabuf.supabase.co';
+GST.SB_ANON = (typeof window!=='undefined' && window.GST_SB_ANON) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsZHprZG91Y3F1bnFsaXdhYnVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyNTgzMDcsImV4cCI6MjEwMDgzNDMwN30.8YW4Y2TG93ldmhxwGX_O8C6avwP5GyknTLwbZ5Q8thY';   // anon public key (공개돼도 안전 — allowlist가 보호)
+GST.authOn = function(){ return !!(GST.SB_URL && GST.SB_ANON); };
+GST._sb=null; GST._sbLoad=null;
+GST.sb = async function(){
+  if(GST._sb) return GST._sb;
+  if(!global.supabase){
+    if(!GST._sbLoad) GST._sbLoad=new Promise(function(res,rej){
+      var s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+      s.onload=res; s.onerror=function(){GST._sbLoad=null;rej(new Error('supabase-js CDN 로드 실패'));};
+      document.head.appendChild(s); });
+    await GST._sbLoad;
+  }
+  GST._sb = global.supabase.createClient(GST.SB_URL, GST.SB_ANON);
+  return GST._sb;
+};
+GST.getSession = async function(){
+  if(!GST.authOn()) return null;
+  try{ var c=await GST.sb(); var r=await c.auth.getSession(); return (r.data&&r.data.session)||null; }
+  catch(e){ return null; }
+};
+GST.token   = async function(){ var s=await GST.getSession(); return s?s.access_token:null; };
+GST.sendOtp = async function(email){ var c=await GST.sb();
+  var r=await c.auth.signInWithOtp({email:email,options:{shouldCreateUser:true}});
+  return r.error?(r.error.message||'전송 실패'):null; };
+GST.verifyOtp = async function(email,code){ var c=await GST.sb();
+  var r=await c.auth.verifyOtp({email:email,token:code,type:'email'});
+  return r.error?(r.error.message||'코드 확인 실패'):null; };
+GST.signOut = async function(){ try{var c=await GST.sb(); await c.auth.signOut();}catch(e){} location.reload(); };
+// 로그인 완료 신호 — fetchCSV가 이 Promise를 기다리므로 loadData()를 먼저 불러도 안전
+GST._readyP=null; GST._readyRes=null;
+GST.authReady=function(){ if(!GST._readyP)GST._readyP=new Promise(function(r){GST._readyRes=r;}); return GST._readyP; };
+GST._authOk=function(){ GST.authReady(); GST._readyRes&&GST._readyRes(); };
+// 로그인 게이트: #loginOverlay를 이메일 OTP UI로 교체(없으면 생성). 성공 시 resolve.
+GST.authGate = async function(){
+  if(!GST.authOn()) return 'legacy';
+  var ov=document.getElementById('loginOverlay');
+  if(!ov){ ov=document.createElement('div'); ov.id='loginOverlay'; ov.className='login-overlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(4,8,12,.92);z-index:9998;display:flex;align-items:center;justify-content:center';
+    document.body.appendChild(ov); }
+  var s=await GST.getSession();
+  if(s){ ov.classList.add('hidden'); ov.style.display='none'; GST._authOk(); return true; }
+  ov.classList.remove('hidden'); ov.style.display='flex';
+  ov.innerHTML='<div class="login-card" style="max-width:340px;width:90%;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
+    +'<div style="font-size:20px;font-weight:800;color:#e6edf3;margin-bottom:6px">GST CS Dashboard</div>'
+    +'<div style="font-size:12px;color:#8a97a5;margin-bottom:18px">등록된 이메일로 인증코드를 받아 로그인하세요</div>'
+    +'<input id="sbEmail" type="email" placeholder="name@company.com" autocomplete="email" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#e6edf3;font-size:14px;margin-bottom:8px">'
+    +'<button id="sbSend" style="width:100%;padding:10px;border-radius:10px;border:0;background:#2C5FAE;color:#fff;font-weight:700;font-size:14px;cursor:pointer">인증코드 받기</button>'
+    +'<div id="sbStep2" style="display:none;margin-top:10px">'
+      +'<input id="sbCode" inputmode="numeric" maxlength="8" placeholder="이메일로 받은 6자리 코드" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#e6edf3;font-size:14px;letter-spacing:3px;text-align:center;margin-bottom:8px">'
+      +'<button id="sbVerify" style="width:100%;padding:10px;border-radius:10px;border:0;background:#34D399;color:#04211d;font-weight:800;font-size:14px;cursor:pointer">로그인</button></div>'
+    +'<div id="sbErr" style="color:#ff8a8a;font-size:12px;margin-top:10px;min-height:16px"></div></div>';
+  var $=function(id){return document.getElementById(id);};
+  var err=function(m){ $('sbErr').textContent=m||''; };
+  return new Promise(function(resolve){
+    $('sbSend').onclick=async function(){
+      var em=($('sbEmail').value||'').trim().toLowerCase();
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){err('이메일 형식을 확인하세요');return;}
+      err(''); $('sbSend').disabled=true; $('sbSend').textContent='전송 중…';
+      var e=await GST.sendOtp(em);
+      $('sbSend').disabled=false; $('sbSend').textContent='인증코드 다시 받기';
+      if(e){err('전송 실패: '+e);return;}
+      $('sbStep2').style.display='block'; $('sbCode').focus();
+      err('메일이 안 보이면 스팸함을 확인하세요');
+    };
+    $('sbVerify').onclick=async function(){
+      var em=($('sbEmail').value||'').trim().toLowerCase(), cd=($('sbCode').value||'').trim();
+      if(!cd){err('코드를 입력하세요');return;}
+      err(''); $('sbVerify').disabled=true;
+      var e=await GST.verifyOtp(em,cd);
+      $('sbVerify').disabled=false;
+      if(e){err('로그인 실패: '+e);return;}
+      ov.classList.add('hidden'); ov.style.display='none';
+      GST._authOk(); resolve(true);
+    };
+    $('sbCode')&&$('sbCode').addEventListener('keydown',function(ev){if(ev.key==='Enter')$('sbVerify').click();});
+    $('sbEmail').addEventListener('keydown',function(ev){if(ev.key==='Enter')$('sbSend').click();});
+  });
+};
+// 미등록 이메일(403) 안내
+GST.authDenied=function(code){
+  var ov=document.getElementById('loginOverlay'); if(!ov)return;
+  ov.classList.remove('hidden'); ov.style.display='flex';
+  ov.innerHTML='<div class="login-card" style="max-width:360px;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
+    +'<div style="font-size:17px;font-weight:800;color:#ffb4b4;margin-bottom:8px">'+(code===403?'접근 권한이 없습니다':'로그인이 만료되었습니다')+'</div>'
+    +'<div style="font-size:12px;color:#8a97a5;margin-bottom:16px">'+(code===403?'관리자에게 이메일 등록을 요청하세요':'다시 로그인해 주세요')+'</div>'
+    +'<button onclick="GST.signOut()" style="padding:9px 22px;border-radius:10px;border:0;background:#2C5FAE;color:#fff;font-weight:700;cursor:pointer">다시 로그인</button></div>';
+};
+
 /* ---------- 2. CSV 로드 ---------- */
 // PapaParse 필요. 캐시 무효화 포함. 반환: 헤더 포함 2차원 배열
+// Supabase 인증 활성 시: 시트 직접 URL → sheet-proxy(Edge Function)로 자동 치환 + JWT 첨부
 GST.fetchCSV = async function(url){
+  if(GST.authOn() && /docs\.google\.com/.test(url)){
+    var gm=url.match(/[?&]gid=(\d+)/); var gid=gm?gm[1]:'0';
+    var tok=await GST.token();
+    if(!tok){ await GST.authReady(); tok=await GST.token(); }
+    var pres=await fetch(GST.SB_URL+'/functions/v1/sheet-proxy?gid='+gid+'&t='+Date.now(),
+      {headers:{Authorization:'Bearer '+tok}});
+    if(pres.status===401||pres.status===403){ GST.authDenied(pres.status); throw new Error('AUTH '+pres.status); }
+    if(!pres.ok) throw new Error('HTTP '+pres.status);
+    return Papa.parse(await pres.text(), {skipEmptyLines:true}).data;
+  }
   const res = await fetch(url + (url.includes('?')?'&':'?') + 't=' + Date.now());
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const text = await res.text();
