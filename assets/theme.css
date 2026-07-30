@@ -88,6 +88,23 @@ body{padding:var(--sp-6) 28px !important;font-family:'Segoe UI','Malgun Gothic',
 .kpi .cap{font-size:var(--fs-caption) !important;margin-top:5px !important;font-weight:600 !important;letter-spacing:.3px !important}
 .kpi .ic{font-size:18px !important;margin-bottom:5px !important}
 
+/* KPI 정본 레이아웃 — 주간현황 형식으로 전 페이지 통일.
+   페이지별 인라인 .kpis/.kpi 규칙은 제거했고 여기만 고치면 8개 페이지가 함께 바뀐다.
+   6열 고정이라 KPI가 5개인 페이지도 카드 크기가 같다. */
+.kpis{display:grid !important;grid-template-columns:repeat(6,1fr) !important;
+  gap:14px !important;margin-bottom:20px !important;align-items:stretch}
+.kpi{background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(14px)}
+.kpi::before{display:none !important}          /* 일부 페이지에만 있던 원형 글로우 제거 */
+.kpi .val{line-height:1.12 !important}
+.kpi .krow{display:flex;align-items:baseline;gap:3px;flex-wrap:wrap}
+.kpi .unit{font-size:12px;font-weight:700;margin-left:1px;color:var(--txt-muted)}
+.kpi .kd{font-size:11px;font-weight:700;margin-left:4px}
+.kpi .kf{font-size:10.5px !important;font-weight:600;margin-top:3px !important;color:var(--txt-muted) !important;
+  min-height:13px;line-height:1.3}
+.kpi .spark{display:block;width:100%;height:22px;margin-top:6px}
+.kpi.sel{border-color:var(--accent-1) !important}
+@media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr) !important}}
+
 .card{border-radius:var(--r-xl) !important;box-shadow:var(--shadow-md) !important;
   transition:box-shadow .25s var(--ease) !important}
 .card h3{font-size:var(--fs-card) !important;font-weight:700 !important;color:var(--txt-main) !important}

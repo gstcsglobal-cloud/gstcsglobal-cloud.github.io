@@ -379,6 +379,7 @@ GST.donut = function(store, id, o){
 
 /* ---------- 7. 활성 필터 칩 렌더 ---------- */
 GST.renderChips = function(F, LABELS, onClearName){
+  try{ GST.ctxSave(F); }catch(e){}   // 사이트·공정은 다른 탭으로 승계
   const box=document.getElementById('fchips'), list=document.getElementById('fchipList');
   if(!box || !list) return;
   const active = Object.entries(F).filter(([k,v])=>v);
@@ -507,6 +508,7 @@ GST.decodeState=function(s){
 };
 // 필터 변경 시 호출: iframe이면 셸 URL 갱신 요청, 직접 접속이면 자기 주소 갱신
 GST.pushState=function(F){
+  try{ GST.ctxSave(F); }catch(e){}   // 사이트·공정은 다른 탭으로 승계
   const s=GST.encodeState(F);
   if(window.self!==window.top){ window.parent.postMessage({type:'gst-state',state:s},'*'); }
   else{
@@ -711,19 +713,7 @@ GST.initSidebar = function(opts){
     syncAr();
     tools.appendChild(ab);
   }
-  if(window.Chart){
-    // 차트 팔레트 프리셋 전환 (모든 프리셋은 색각이상 검증 통과 조합)
-    const pb=document.createElement('button'); pb.className='gst-sb-tool'; pb.type='button';
-    pb.title='차트 색상 프리셋 전환 — 모든 조합은 색각 안전 검증을 통과했습니다';
-    function syncPb(){ const p=GST.PALETTES[GST._palKey]; pb.textContent='🎨 '+(p?p.label:'Ocean'); }
-    pb.onclick=function(){
-      const keys=Object.keys(GST.PALETTES);
-      GST.setPalette(keys[(keys.indexOf(GST._palKey)+1)%keys.length]);
-      syncPb();
-    };
-    syncPb();
-    tools.appendChild(pb);
-  }
+  // 차트 색상 전환 버튼은 셸 상단 공통바(🎨)로 일원화 — 사이드바에서는 제거
   if(tools.children.length) foot.appendChild(tools);
   if(foot.children.length) sb.appendChild(foot);
 
@@ -946,9 +936,460 @@ GST.forecastSeries = function(labels, data, n, fcLabel){
   return {labels:L, line:line, fc:fc};
 };
 
+/* ============================================================
+   16. 기준값 — 대시보드 공통 상수 (한 곳에서만 고친다)
+   페이지에 흩어져 있던 나눗셈 분모·목표치·신호등 임계값을 모았다.
+   GST.conf(key, fallback) — 값이 없으면 fallback을 그대로 반환하므로
+   호출부에 기존 하드코딩 값을 폴백으로 남겨두면 회귀가 없다.
+   ============================================================ */
+GST.CONF = {
+  to_divisor:   30,          // TO = 반입 챔버 ÷ 30
+  staff_divisor:40,          // 관리 인원 산정 ÷ 40
+  edu_goal:     90,          // 교육 완료율 목표 %
+  warn_ratio:   0.2,         // 경고 임계 비율
+  rag_pm:   [90,80],         // PM 달성률 [양호, 주의] %
+  rag_ftfr: [90,80],         // FTFR [양호, 주의] %
+  rag_frate:[3,6],           // 고장률 [양호, 주의] % (낮을수록 좋음)
+  sites: ['F16','F11','F16N','PSMC','TASC','WINBOND']
+};
+GST.conf = function(k, fb){ return (k in GST.CONF) ? GST.CONF[k] : fb; };
+
+/* ============================================================
+   17. 차트 디자인(스타일) — 전 페이지 공통 1개 키
+   기존 report(gst_rpt_style)·hr(gst_hr_style)·사이드바 팔레트(gst_pal)가
+   따로 놀던 것을 gst_chart_style 하나로 합쳤다. 최초 1회 자동 이관.
+   ============================================================ */
+GST.STY = {
+  vivid:   {lbl:'Vivid',    bar:'#2C5FAE', last:'#5EC2FF', bar2:'#7C6FE0', line:'#5EC2FF', lnG:'#34D399', lnV:'#A78BFA',
+            site:['#2C5FAE','#38BDF8','#5EC2FF','#7C6FE0','#34D399','#F59E0B'],
+            pal8:['#3987e5','#199e70','#c98500','#9085e9','#e66767','#008300','#d55181','#d95926']},
+  graphite:{lbl:'Graphite', bar:'#8A8A8A', last:'#B4B4B4', bar2:'#C7C7C7', line:'#E03131', lnG:'#E03131', lnV:'#9A9A9A',
+            site:['#5A5A5A','#7A7A7A','#9A9A9A','#B4B4B4','#8A8A8A','#C7C7C7'],
+            pal8:['#5A5A5A','#E03131','#9A9A9A','#7A7A7A','#C7C7C7','#B4B4B4','#8A8A8A','#6E6E6E']},
+  ocean:   {lbl:'Ocean',    bar:'#0E7490', last:'#22D3EE', bar2:'#2DD4BF', line:'#F472B6', lnG:'#34D399', lnV:'#38BDF8',
+            site:['#0E7490','#0891B2','#22D3EE','#2DD4BF','#5EEAD4','#A5F3FC'],
+            pal8:['#3987e5','#199e70','#c98500','#9085e9','#e66767','#008300','#d55181','#d95926']},
+  sunset:  {lbl:'Sunset',   bar:'#EA580C', last:'#FBBF24', bar2:'#FB7185', line:'#6366F1', lnG:'#F59E0B', lnV:'#EC4899',
+            site:['#EA580C','#F97316','#FB923C','#FBBF24','#FB7185','#F43F5E'],
+            pal8:['#e66767','#3987e5','#c98500','#199e70','#9085e9','#008300','#d55181','#d95926']},
+  forest:  {lbl:'Forest',   bar:'#15803D', last:'#4ADE80', bar2:'#A3E635', line:'#DC2626', lnG:'#22C55E', lnV:'#84CC16',
+            site:['#15803D','#16A34A','#22C55E','#4ADE80','#84CC16','#A3E635'],
+            pal8:['#199e70','#9085e9','#c98500','#3987e5','#e66767','#008300','#d55181','#d95926']},
+  cb:      {lbl:'Safe',     bar:'#0072B2', last:'#56B4E9', bar2:'#CC79A7', line:'#D55E00', lnG:'#009E73', lnV:'#E69F00',
+            site:['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00'],
+            pal8:['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00','#F0E442','#666666']}
+};
+GST.STY_ORDER = ['vivid','graphite','ocean','sunset','forest','cb'];
+GST._styKey = 'vivid';
+GST.style = function(){ return GST._styKey; };
+GST.sty    = function(){ return GST.STY[GST._styKey] || GST.STY.vivid; };
+// 스타일 적용 — 팔레트 배열을 제자리 교체하므로 GST.PAL을 잡아둔 페이지도 함께 갱신된다
+GST.setStyle = function(key, silent, fromShell){
+  const s = GST.STY[key]; if(!s) return;
+  GST._styKey = key; GST._palKey = key;
+  GST.PAL.splice.apply(GST.PAL,  [0, GST.PAL.length ].concat(s.pal8.slice(0,5)));
+  GST.PAL8.splice.apply(GST.PAL8,[0, GST.PAL8.length].concat(s.pal8));
+  try{ localStorage.setItem('gst_chart_style', key); }catch(e){}
+  if(silent) return;
+  // 이미 열려 있는 다른 탭도 같이 바뀌도록 셸을 통해 전파 (테마·언어와 같은 경로)
+  if(!fromShell && window.self!==window.top){
+    try{ window.parent.postMessage({type:'gst-style', style:key}, '*'); }catch(e){}
+  }
+  // 차트 색은 생성 시점에 굳으므로 파기 후 재렌더가 필요하다 (테마 전환과 같은 경로)
+  const b = document.body ? document.body.className : '';
+  const cur = b.indexOf('theme-slate')>-1?'slate' : b.indexOf('theme-light')>-1?'light'
+            : b.indexOf('theme-burgundy')>-1?'burgundy' : 'default';
+  if(typeof global.changeDashboardTheme==='function'){ try{ global.changeDashboardTheme(cur,cur); }catch(e){} }
+  else if(typeof global.render==='function'){ try{ global.render(); }catch(e){} }
+  GST.barSync();
+};
+GST.nextStyle = function(){
+  const o=GST.STY_ORDER;
+  GST.setStyle(o[(o.indexOf(GST._styKey)+1)%o.length]);
+};
+// 구 API 호환 — 사이드바/외부 호출이 팔레트 키를 넘겨도 스타일로 흡수
+GST.setPalette = function(key, silent){ if(GST.STY[key]) GST.setStyle(key, silent); };
+(function(){   // 저장값 로드 + 구 키 자동 이관 (gst_chart_style → gst_rpt_style → gst_hr_style → gst_pal)
+  let k=null;
+  try{
+    k = localStorage.getItem('gst_chart_style');
+    if(!k || !GST.STY[k]) k = localStorage.getItem('gst_rpt_style') || localStorage.getItem('gst_hr_style') || localStorage.getItem('gst_pal');
+  }catch(e){}
+  GST.setStyle((k && GST.STY[k]) ? k : 'vivid', true);
+})();
+
+/* ============================================================
+   18. 공통 상단바 — 셸 탭바 우측(#gbar) ↔ 현재 페이지
+   페이지는 "내가 지원하는 컨트롤 + 현재값"만 등록하고, 실제 동작은
+   페이지 자신의 함수가 한다. 셸이 없으면(직접 접속) 같은 바를
+   페이지 상단에 직접 그려서 기능이 동일하게 유지된다.
+   ============================================================ */
+GST.BAR_T = {
+  ko:{w:'주별',m:'월별',note:'최근 12개 구간',cut:'마감',mon:'Month',wk:'Week',clr:'마감 해제',sty:'차트 디자인',ppt:'PPT 저장',latest:'— 최신 —'},
+  en:{w:'Weekly',m:'Monthly',note:'Last 12',cut:'Cut-off',mon:'Month',wk:'Week',clr:'Clear cut-off',sty:'Chart style',ppt:'Export PPT',latest:'— Latest —'},
+  zh:{w:'周',m:'月',note:'最近12期',cut:'截止',mon:'月',wk:'周',clr:'清除截止',sty:'图表配色',ppt:'导出PPT',latest:'— 最新 —'},
+  ja:{w:'週別',m:'月別',note:'直近12区間',cut:'締め',mon:'Month',wk:'Week',clr:'締め解除',sty:'チャート配色',ppt:'PPT出力',latest:'— 最新 —'}
+};
+// reg = {caps:{period,cutoff:'wm'|'m'|false,style,ppt}, state:{period,endM,endW,style}, weeks:[{v,t}]}
+GST.barHTML = function(reg, lang){
+  const T = GST.BAR_T[lang] || GST.BAR_T.ko;
+  const c = (reg && reg.caps) || {}, s = (reg && reg.state) || {};
+  let h='';
+  if(c.period){
+    h+='<span class="gb-seg">'
+      +'<button type="button" class="gb-b'+(s.period==='w'?' on':'')+'" data-gb="period" data-v="w">'+T.w+'</button>'
+      +'<button type="button" class="gb-b'+(s.period==='m'?' on':'')+'" data-gb="period" data-v="m">'+T.m+'</button>'
+      +'</span><span class="gb-note">'+T.note+'</span>';
+  }
+  if(c.cutoff){
+    h+='<span class="gb-note gb-cut">'+T.cut+'</span>'
+      +'<input type="month" class="gb-inp" data-gb="endM" title="'+T.mon+'" value="'+(s.endM||'')+'">';
+    if(c.cutoff==='wm'){
+      const ws=(reg&&reg.weeks)||[];
+      h+='<select class="gb-inp" data-gb="endW" title="'+T.wk+'"><option value="">'+T.latest+'</option>'
+        + ws.map(function(w){ return '<option value="'+w.v+'"'+(s.endW===w.v?' selected':'')+'>'+w.t+'</option>'; }).join('')
+        +'</select>';
+    }
+    h+='<button type="button" class="gb-b" data-gb="clear" title="'+T.clr+'">↺</button>';
+  }
+  if(c.style){
+    const st=GST.STY[s.style]||GST.sty();
+    h+='<button type="button" class="gb-b" data-gb="style" title="'+T.sty+'">🎨 <span class="gb-sty">'+st.lbl+'</span></button>';
+  }
+  if(c.ppt) h+='<button type="button" class="gb-b" data-gb="ppt" title="'+T.ppt+'">📊 PPT</button>';
+  return h;
+};
+// 바 안의 컨트롤을 send(key,val)로 연결. 셸/페이지 양쪽이 같은 함수를 쓴다.
+GST.barBind = function(root, send){
+  root.addEventListener('click', function(e){
+    const b=e.target.closest('[data-gb]'); if(!b||b.tagName==='INPUT'||b.tagName==='SELECT')return;
+    const k=b.dataset.gb;
+    send(k, k==='period' ? b.dataset.v : null);
+  });
+  root.addEventListener('change', function(e){
+    const el=e.target.closest('[data-gb]'); if(!el)return;
+    if(el.tagName==='INPUT'||el.tagName==='SELECT') send(el.dataset.gb, el.value);
+  });
+};
+
+GST._bar = null;
+// 페이지가 호출: 지원 컨트롤과 실제 동작을 등록한다.
+// render()를 한 번 감싸 두면 페이지가 다시 그릴 때마다 바 상태가 자동으로 최신이 된다.
+GST.pageBar = function(spec){
+  GST._bar = spec||null;
+  function wrap(){
+    const r=global.render;
+    if(typeof r!=='function' || r.__gstBar) return typeof r==='function';
+    const w=function(){ const out=r.apply(this,arguments); try{ GST.barSync(); }catch(e){} return out; };
+    w.__gstBar=true; global.render=w; return true;
+  }
+  if(!wrap()) document.addEventListener('DOMContentLoaded', wrap);
+  GST.barSync();
+};
+// 페이지가 render() 말미에 호출: 현재 상태를 바에 되쏜다
+GST.barSync = function(){
+  const s=GST._bar; if(!s) return;
+  const reg={type:'gst-bar-reg', caps:s.caps||{},
+             state:(typeof s.state==='function')?s.state():{},
+             weeks:(typeof s.weeks==='function')?s.weeks():null};
+  if(window.self!==window.top){ try{ window.parent.postMessage(reg,'*'); }catch(e){} }
+  else GST._localBar(reg);
+};
+GST._barDo = function(key, val){
+  const s=GST._bar; if(!s) return;
+  const on=s.on||{};
+  if(key==='style'){ if(on.style) on.style(); else GST.nextStyle(); return; }
+  if(key==='ppt'){  if(on.ppt) on.ppt(); else GST.pptAuto(); return; }
+  if(typeof on[key]==='function'){ try{ on[key](val); }catch(e){} }
+};
+// 직접 접속(셸 밖)일 때 페이지 안에 같은 바를 렌더
+GST._localBar = function(reg){
+  if(!document.body) return;
+  let el=document.getElementById('gstLocalBar');
+  if(!el){
+    const st=document.createElement('style');
+    st.textContent='#gstLocalBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px}'
+      +'#gstLocalBar .gb-seg{display:inline-flex;border:1px solid var(--glass-border);border-radius:8px;overflow:hidden}'
+      +'#gstLocalBar .gb-b{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;'
+      +'padding:0 12px;height:28px;color:var(--txt-muted);font-size:11.5px;font-weight:700;cursor:pointer}'
+      +'#gstLocalBar .gb-seg .gb-b{border:none;border-radius:0}'
+      +'#gstLocalBar .gb-b.on{background:var(--accent-1);color:#04211d}'
+      +'#gstLocalBar .gb-inp{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;'
+      +'padding:0 8px;height:28px;color:var(--txt-main);font-size:11px;outline:none}'
+      +'#gstLocalBar .gb-note{font-size:11px;color:var(--txt-muted);font-weight:700}'
+      +'#gstLocalBar .gb-cut{margin-left:10px}'
+      +'@media print{#gstLocalBar{display:none !important}}';
+    document.head.appendChild(st);
+    el=document.createElement('div'); el.id='gstLocalBar';
+    const anchor=document.querySelector('.status')||document.querySelector('.header');
+    if(anchor&&anchor.parentNode) anchor.parentNode.insertBefore(el, anchor.nextSibling);
+    else document.body.insertBefore(el, document.body.firstChild);
+    GST.barBind(el, GST._barDo);
+  }
+  let lg='ko'; try{ lg=sessionStorage.getItem('gst_lang')||'ko'; }catch(e){}
+  el.innerHTML=GST.barHTML(reg, lg);
+};
+// 셸에서 온 지시 수신 (테마·언어는 initSync가 처리)
+window.addEventListener('message', function(e){
+  const d=e.data||{};
+  if(d.type==='gst-bar-set'){ GST._barDo(d.key, d.val); return; }
+  if(d.type==='gst-bar-ask'){ GST.barSync(); return; }
+  if(d.type==='gst-style'){ if(d.style && d.style!==GST._styKey) GST.setStyle(d.style, false, true); return; }
+  if(d.type==='gst-filter'){
+    const o = d.f ? GST.decodeState(d.f) : null;
+    if(o){ let n=0; const tick=setInterval(function(){       // 데이터 로딩 중이면 될 때까지 재시도
+      if(GST.applyState(o)||++n>40) clearInterval(tick); },250); }
+  }
+});
+
+/* ============================================================
+   19. 범용 PPT 내보내기 — 현재 화면의 차트를 슬라이드로
+   주간현황은 자체 QBR 양식(downloadPPT)을 쓰고, 나머지 페이지가 이걸 쓴다.
+   ============================================================ */
+GST._pptP = null;
+GST.pptLoad = function(){
+  if(window.PptxGenJS) return Promise.resolve();
+  if(GST._pptP) return GST._pptP;
+  GST._pptP = new Promise(function(res,rej){
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
+    s.onload=res; s.onerror=function(){ GST._pptP=null; rej(new Error('PptxGenJS CDN 로드 실패')); };
+    document.head.appendChild(s);
+  });
+  return GST._pptP;
+};
+// 차트를 고배율로 다시 그려 배경 채운 캔버스 반환 (PPT 확대에도 선명)
+GST.chartHiRes = function(id, scale){
+  const cv=document.getElementById(id); if(!cv) return null;
+  let ch=null;
+  try{ ch = (window.Chart&&Chart.getChart) ? Chart.getChart(cv) : null; }catch(e){}
+  if(!ch && window.CHARTS) ch=window.CHARTS[id];
+  if(!ch) return null;
+  const w=cv.clientWidth||400, h=cv.clientHeight||300;
+  if(!scale) scale=Math.min(6,Math.max(3,Math.round(2400/w)));
+  const prev=ch.options.devicePixelRatio;
+  ch.options.devicePixelRatio=scale; ch.resize(); ch.render();
+  const oc=document.createElement('canvas'); oc.width=Math.round(w*scale); oc.height=Math.round(h*scale);
+  const g=oc.getContext('2d');
+  g.fillStyle=getComputedStyle(document.body).backgroundColor||'#0B0F14';
+  g.fillRect(0,0,oc.width,oc.height);
+  g.drawImage(cv,0,0,oc.width,oc.height);
+  ch.options.devicePixelRatio=prev; ch.resize(); ch.render();
+  return oc;
+};
+GST.pptAuto = async function(opt){
+  opt=opt||{};
+  try{ await GST.pptLoad(); }catch(e){ alert('PPT 라이브러리를 불러오지 못했습니다. 네트워크를 확인하세요.'); return; }
+  // 숨겨진 섹션의 차트도 담기 위해 잠시 전부 보이게 한다
+  const secs=[].slice.call(document.querySelectorAll('[data-sec]'));
+  const hid=secs.filter(function(s){ return s.style.display==='none'; });
+  hid.forEach(function(s){ s.style.display=''; });
+  if(hid.length){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} await new Promise(function(r){ setTimeout(r,350); }); }
+
+  const dark = (getComputedStyle(document.body).backgroundColor||'').indexOf('255, 255, 255')<0;
+  const BG = dark ? '0B0F14' : 'FFFFFF', FG = dark ? 'E6EDF3' : '1A2230', MUT = dark ? '8B98A9' : '64748B';
+  const p=new PptxGenJS(); p.layout='LAYOUT_16x9';
+  const title = opt.title || (document.querySelector('.header h1')||{}).textContent || document.title || 'Dashboard';
+  const stamp = new Date().toLocaleString('ko-KR');
+  const chips = ([].slice.call(document.querySelectorAll('#fchips .fchip, #fchipList .fchip'))
+                  .map(function(c){ return (c.innerText||'').replace(/\s*✕\s*$/,'').trim(); })
+                  .filter(Boolean).join('  ·  ')) || '전체';
+  const ins = [].slice.call(document.querySelectorAll('#gstInsights .gst-ins'))
+                .map(function(x){ return (x.innerText||'').trim(); }).filter(Boolean);
+
+  const cover=p.addSlide(); cover.background={color:BG};
+  cover.addText(title.trim(), {x:0.6,y:1.5,w:12,h:0.9,fontSize:34,bold:true,color:FG});
+  cover.addText(stamp+'   |   필터: '+chips, {x:0.6,y:2.5,w:12,h:0.4,fontSize:12,color:MUT});
+  if(ins.length) cover.addText(ins.map(function(s){ return {text:'• '+s, options:{breakLine:true}}; }),
+                               {x:0.6,y:3.1,w:12,h:2.4,fontSize:12,color:FG});
+
+  const cvs=[].slice.call(document.querySelectorAll('.cw canvas'))
+              .filter(function(c){ return c.id && c.clientWidth>0; });
+  let n=0;
+  for(const cv of cvs){
+    const oc=GST.chartHiRes(cv.id); if(!oc) continue;
+    const card=cv.closest('.card')||cv.closest('.mcard');
+    const h3=card?card.querySelector('h3'):null;
+    const cap=h3?(h3.innerText||'').trim():cv.id;
+    const sl=p.addSlide(); sl.background={color:BG};
+    sl.addText(cap, {x:0.5,y:0.3,w:12.3,h:0.5,fontSize:18,bold:true,color:FG});
+    // 16:9 슬라이드(13.33×7.5in) 안에 비율 유지로 배치
+    const availW=12.3, availH=5.9, r=oc.width/oc.height;
+    let w=availW, h=w/r; if(h>availH){ h=availH; w=h*r; }
+    sl.addImage({data:oc.toDataURL('image/png'), x:(13.33-w)/2, y:1.0+(availH-h)/2, w:w, h:h});
+    n++;
+  }
+  hid.forEach(function(s){ s.style.display='none'; });
+  if(hid.length){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }
+  if(!n){ alert('내보낼 차트가 없습니다.'); return; }
+  const fn=title.trim().replace(/[\\/:*?"<>|]/g,'').slice(0,40)+'_'+new Date().toISOString().slice(0,10)+'.pptx';
+  await p.writeFile({fileName:fn});
+};
+
+/* ============================================================
+   20. 페이지 간 연동 — 설비(S/N) 드릴다운 + 사이트·공정 컨텍스트 승계
+   ============================================================ */
+// GST.goTab('pm', {sn:'GBWS-1234'}) — 탭 전환과 동시에 그 설비로 필터
+GST.goTab = function(id, state){
+  const f = state ? GST.encodeState(state) : '';
+  if(window.self !== window.top){
+    window.parent.postMessage({type:'gst-goto', tab:id, f:f}, '*');
+  }else{
+    location.href='https://gstcsglobal-cloud.github.io/'+id+'/'+(f?('?f='+f):'');
+  }
+};
+
+// ── 컨텍스트(사이트·공정) 승계 ──
+// 필터를 바꾸면 pushState 경유로 저장되고, 다른 탭이 셀렉트를 채울 때 한 번 적용된다.
+GST._CTX_MAP={site:'site',country:'site',customer:'site',line:'site',wp:'site',
+              group:'group',group1:'group',process:'group',proc:'group'};
+GST._ctxKind=function(k){ return GST._CTX_MAP[k]||''; };
+GST.ctxSave = function(F){
+  if(!F) return;
+  try{
+    const cur=JSON.parse(sessionStorage.getItem('gst_ctx')||'{}');
+    let touched=false;
+    Object.keys(F).forEach(function(k){
+      const kind=GST._ctxKind(k); if(!kind) return;
+      const v=F[k];
+      if(typeof v!=='string'||v==='ALL'||!v) return;
+      cur[kind]=v; touched=true;
+    });
+    if(touched){ cur.t=Date.now(); sessionStorage.setItem('gst_ctx', JSON.stringify(cur)); }
+  }catch(e){}
+};
+GST.ctxLoad = function(){
+  try{
+    const c=JSON.parse(sessionStorage.getItem('gst_ctx')||'{}');
+    if(c.t && Date.now()-c.t > 30*60*1000) return {};   // 30분 지나면 승계하지 않음
+    return c;
+  }catch(e){ return {}; }
+};
+GST._ctxPend = GST.ctxLoad();
+// 이어온 컨텍스트를 이 페이지의 필터 위젯(셀렉트·칩)에 한 번 적용한다.
+// 사용자가 이미 고른 값이 있으면 건드리지 않고, 값이 목록에 없으면 조용히 넘어간다.
+GST._CTX_IDS={site:['sl-site','sl-country','sl-customer','sl-line','sl-wp','sl-cust'],
+              group:['sl-group','sl-proc','sl-process','sl-group1']};
+GST.ctxApply=function(){
+  const c=GST._ctxPend||{};
+  if(!c.site && !c.group) return true;
+  let done=false, waiting=false;
+  Object.keys(GST._CTX_IDS).forEach(function(kind){
+    const want=c[kind]; if(!want) return;
+    for(let i=0;i<GST._CTX_IDS[kind].length;i++){
+      const el=document.getElementById(GST._CTX_IDS[kind][i]); if(!el) continue;
+      if(el.tagName==='SELECT'){
+        if(el.options.length<=1){ waiting=true; continue; }     // 아직 '전체'뿐 = 데이터 로딩 중
+        if(el.value) return;                                   // 이미 선택돼 있으면 존중
+        const hit=[].slice.call(el.options).some(function(o){ return o.value===want; });
+        if(!hit) continue;
+        el.value=want; el.dispatchEvent(new Event('change',{bubbles:true})); done=true; return;
+      }
+      const chips=[].slice.call(el.querySelectorAll('.chip,.pchip,button'));
+      if(chips.length<=1){ waiting=true; continue; }
+      const act=chips.filter(function(x){ return x.classList.contains('active'); })[0];
+      if(act && !/전체|^all$/i.test((act.textContent||'').trim())) return;
+      const hit=chips.filter(function(x){ return (x.textContent||'').trim()===want; })[0];
+      if(hit){ hit.click(); done=true; return; }
+    }
+  });
+  return done || !waiting;
+};
+
+// ── 설비(S/N) 드릴다운 ──
+// 표의 S/N 열을 클릭하면 같은 설비를 다른 페이지에서 열 수 있는 메뉴가 뜬다.
+// 표 마크업을 바꾸지 않는다 — 헤더 텍스트로 S/N 열을 알아낸다.
+// 설비 단위 필터를 가진 페이지만 대상 (자재 실적은 사용자 요청으로 제외, TCO는 설비 검색이 없어 제외)
+GST.SN_PAGES=[{id:'scrubber',ko:'설치 현황',en:'Installation'},{id:'pm',ko:'PM 점검',en:'PM'},
+              {id:'fault',ko:'고장 분석',en:'Fault'},{id:'cip',ko:'CIP 현황',en:'CIP'}];
+GST._snHdr=/(^|[^a-z])s\/?n([^a-z]|$)|serial|설비\s*번호|설비코드/i;
+GST._snOf=function(td){
+  if(!td||!td.parentNode||td.tagName!=='TD') return '';
+  const tbl=td.closest('table'); if(!tbl) return '';
+  const idx=[].indexOf.call(td.parentNode.children, td);
+  const hr=tbl.querySelector('thead tr')||tbl.rows[0]; if(!hr) return '';
+  const h=(hr.children[idx]||{}).textContent||'';
+  if(!GST._snHdr.test(h)) return '';
+  const v=(td.textContent||'').trim();
+  return (v.length>=3 && v!=='-' && v!=='—') ? v : '';
+};
+GST.snMenu=function(sn, x, y){
+  const old=document.getElementById('gstSnMenu'); if(old)old.remove();
+  const here=(location.pathname.match(/\/([a-z]+)\/?$/)||[])[1]||'';
+  const lang=(function(){ try{ return sessionStorage.getItem('gst_lang')||'ko'; }catch(e){ return 'ko'; } })();
+  const m=document.createElement('div'); m.id='gstSnMenu';
+  m.style.cssText='position:fixed;z-index:9999;min-width:180px;background:var(--glass,#111823);'
+    +'border:1px solid var(--glass-border,rgba(151,170,196,.2));border-radius:10px;padding:8px;'
+    +'box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12px;color:var(--txt-main,#E6EDF3);backdrop-filter:blur(10px)';
+  let h='<div style="font-size:10px;font-weight:800;letter-spacing:1px;opacity:.7;margin:2px 4px 7px">'
+       +sn.replace(/</g,'&lt;')+'</div>';
+  GST.SN_PAGES.filter(p=>p.id!==here).forEach(function(p){
+    h+='<button type="button" data-go="'+p.id+'" style="display:block;width:100%;text-align:left;'
+      +'background:transparent;border:none;color:inherit;font:inherit;padding:6px 8px;border-radius:7px;cursor:pointer">'
+      +'→ '+(lang==='ko'?p.ko:p.en)+'</button>';
+  });
+  m.innerHTML=h;
+  document.body.appendChild(m);
+  const w=m.offsetWidth, hh=m.offsetHeight;
+  m.style.left=Math.max(6,Math.min(x, innerWidth-w-8))+'px';
+  m.style.top =Math.max(6,Math.min(y, innerHeight-hh-8))+'px';
+  m.addEventListener('mouseover',e=>{const b=e.target.closest('button'); if(b)b.style.background='var(--glass-hover,#16202C)';});
+  m.addEventListener('mouseout', e=>{const b=e.target.closest('button'); if(b)b.style.background='transparent';});
+  m.addEventListener('click',function(e){
+    const b=e.target.closest('[data-go]'); if(!b)return;
+    m.remove(); GST.goTab(b.dataset.go,{sn:sn});
+  });
+  setTimeout(function(){
+    document.addEventListener('click',function close(){ const el=document.getElementById('gstSnMenu'); if(el)el.remove();
+      document.removeEventListener('click',close); },{once:true});
+  },0);
+};
+// 다른 탭에서 넘어온 설비 필터 적용 — 페이지가 window.applyState를 정의했으면 그쪽이 우선
+GST.applyState=function(o){
+  if(!o) return false;
+  if(typeof global.applyState==='function'){ try{ return global.applyState(o)!==false; }catch(e){} }
+  if(!o.sn) return false;
+  const sels=['#sl-sn','#sl-eq','#sl-q','#search','#q','#sl-search','.search-sl input','input[placeholder*="S/N"]'];
+  for(let i=0;i<sels.length;i++){
+    const el=document.querySelector(sels[i]); if(!el) continue;
+    if(el.tagName==='SELECT'){
+      const hit=[].slice.call(el.options).some(function(op){ return op.value===o.sn; });
+      if(!hit) continue;
+    }
+    el.value=o.sn;
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+    return true;
+  }
+  return false;
+};
+function gstSnStart(){
+  // S/N 열 위에서만 커서·밑줄로 클릭 가능함을 알린다 (표가 다시 그려져도 유효)
+  document.addEventListener('mouseover',function(e){
+    const td=e.target&&e.target.closest?e.target.closest('td'):null; if(!td||td.dataset.gstSn)return;
+    if(!GST._snOf(td))return;
+    td.dataset.gstSn='1'; td.style.cursor='pointer';
+    td.style.textDecoration='underline dotted'; td.style.textUnderlineOffset='3px';
+    td.title='다른 페이지에서 이 설비 보기';
+  },true);
+  document.addEventListener('click',function(e){
+    const td=e.target&&e.target.closest?e.target.closest('td'):null; if(!td)return;
+    const sn=GST._snOf(td); if(!sn)return;
+    e.preventDefault(); e.stopPropagation();
+    GST.snMenu(sn, e.clientX, e.clientY);
+  },true);
+  // 시작 시 ?f= 로 들어온 설비 필터 적용 (셸이 새 탭을 열 때 경로)
+  const st=GST.readState();
+  if(st&&st.sn){ let n=0; const tick=setInterval(function(){
+    if(GST.applyState(st)||++n>40) clearInterval(tick); },300); return; }
+  // 드릴다운이 아니면 다른 탭에서 보던 사이트·공정을 이어받는다
+  let m=0; const t2=setInterval(function(){ if(GST.ctxApply()||++m>25) clearInterval(t2); },400);
+}
+
 function gstAutoStart(){
   try{ GST.autoSidebar(); }catch(e){}
   try{ GST.startAutoRefresh(10); }catch(e){}
+  try{ gstSnStart(); }catch(e){}
 }
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded', gstAutoStart);
