@@ -69,15 +69,12 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .search-sl input:focus{border-color:var(--a1)}
 .search-sl input::placeholder{color:var(--mut)}
 /* KPI — 리치 카드 */
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+
 .kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s;cursor:pointer}
 .kpi.sel{border-color:var(--a1);box-shadow:0 0 0 1px var(--a1)}
-.kpi .cap{color:var(--mut);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.kpi .krow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.kpi .val{font-size:30px;font-weight:800;line-height:1;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
-.kpi .unit{font-size:12px;color:var(--mut);font-weight:600}
-.kpi .kd{font-size:11px;font-weight:800}
-.kpi .kfoot{font-size:11px;color:var(--mut);margin-top:7px}
+
+
+
 .kpi.k2 .val{color:var(--bad)}
 /* 카드/차트 */
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
@@ -134,8 +131,8 @@ tr:hover td{background:rgba(255,255,255,.04)}
   border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer}
 .fchip-clear:hover{color:var(--bad);border-color:var(--bad)}
 canvas{cursor:pointer}
-@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
-@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
+@media(max-width:1200px){.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.grid3{grid-template-columns:1fr}}
 /* 차트 복사·저장(PPT/PNG) 버튼 */
 .card,.trend-card,.tablecard{position:relative}
 .capbtns{position:absolute;top:12px;right:14px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
@@ -157,8 +154,6 @@ canvas{cursor:pointer}
   </div>
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← Main</a>
-    <button class="btn btn-glass" onclick="saveAllCharts()" title="모든 차트를 고해상도 PNG로 저장">🖼 전체 저장</button>
-    <button class="btn btn-glass" onclick="window.print()" title="인쇄 / PDF">🖨 인쇄</button>
     <button class="btn btn-grad" id="refreshBtn" onclick="loadData()"><span data-i="refresh">Refresh</span></button>
     <div class="lang-wrap">
       <button class="lang-btn" onclick="toggleLang()"><span id="langLabel">KO</span> ▾</button>
@@ -195,21 +190,21 @@ canvas{cursor:pointer}
 
 <!-- KPI (공통) -->
 <div class="kpis">
-  <div class="kpi k1 sel" data-stage=""><div class="cap" data-i="kp1">서비스 대응 건수</div>
-    <div class="krow"><span class="val" id="kp1">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd1"></span></div>
-    <div class="kfoot" id="kf1">—</div></div>
-  <div class="kpi k2" data-stage="BM"><div class="cap">BM (고장정비)</div>
-    <div class="krow"><span class="val" id="kp2">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd2"></span></div>
-    <div class="kfoot" id="kf2">—</div></div>
-  <div class="kpi k3"><div class="cap" data-i="kp3">평균 작업시간</div>
-    <div class="krow"><span class="val" id="kp3">0</span><span class="unit" data-i="u_min">분</span></div>
-    <div class="kfoot" id="kf3">—</div></div>
-  <div class="kpi k4"><div class="cap" data-i="kp4">총 작업공수</div>
-    <div class="krow"><span class="val" id="kp4">0</span><span class="unit" data-i="u_mh">인·시</span></div>
-    <div class="kfoot" id="kf4">—</div></div>
-  <div class="kpi k5"><div class="cap" data-i="kp5">유상 비율</div>
-    <div class="krow"><span class="val" id="kp5">0%</span><span class="kd" id="kd5"></span></div>
-    <div class="kfoot" id="kf5">—</div></div>
+  <div class="kpi k1 sel" data-stage=""><div class="krow"><span class="val" id="kp1">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd1"></span></div>
+    <div class="cap" data-i="kp1">서비스 대응 건수</div>
+    <div class="kf" id="kf1">—</div></div>
+  <div class="kpi k2" data-stage="BM"><div class="krow"><span class="val" id="kp2">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd2"></span></div>
+    <div class="cap">BM (고장정비)</div>
+    <div class="kf" id="kf2">—</div></div>
+  <div class="kpi k3"><div class="krow"><span class="val" id="kp3">0</span><span class="unit" data-i="u_min">분</span></div>
+    <div class="cap" data-i="kp3">평균 작업시간</div>
+    <div class="kf" id="kf3">—</div></div>
+  <div class="kpi k4"><div class="krow"><span class="val" id="kp4">0</span><span class="unit" data-i="u_mh">인·시</span></div>
+    <div class="cap" data-i="kp4">총 작업공수</div>
+    <div class="kf" id="kf4">—</div></div>
+  <div class="kpi k5"><div class="krow"><span class="val" id="kp5">0%</span><span class="kd" id="kd5"></span></div>
+    <div class="cap" data-i="kp5">유상 비율</div>
+    <div class="kf" id="kf5">—</div></div>
 </div>
 
 <!-- ═══ 섹션: 개요 ═══ -->
@@ -332,21 +327,21 @@ canvas{cursor:pointer}
 <!-- ═══ 섹션: 신뢰성 (설비 S/N × BM 고장) ═══ -->
 <div data-sec="rel">
   <div class="kpis" style="grid-template-columns:repeat(5,1fr)">
-    <div class="kpi"><div class="cap" data-i="r_mtbf">MTBF · 평균 고장간격</div>
-      <div class="krow"><span class="val" id="rk1">0</span><span class="unit" data-i="u_day">일</span></div>
-      <div class="kfoot" id="rf1">—</div></div>
-    <div class="kpi"><div class="cap" data-i="r_mttr">MTTR · 평균 수리시간</div>
-      <div class="krow"><span class="val" id="rk2">0</span><span class="unit" data-i="u_min">분</span></div>
-      <div class="kfoot" id="rf2">—</div></div>
-    <div class="kpi"><div class="cap" data-i="r_ftfr">초기 수리 성공률 (FTFR)</div>
-      <div class="krow"><span class="val" id="rk5">0</span><span class="unit">%</span></div>
-      <div class="kfoot" id="rf5">—</div></div>
-    <div class="kpi"><div class="cap" data-i="r_frate">연간 고장률 (건/대)</div>
-      <div class="krow"><span class="val" id="rk3">0</span></div>
-      <div class="kfoot" id="rf3">—</div></div>
-    <div class="kpi"><div class="cap" data-i="r_units">분석 설비</div>
-      <div class="krow"><span class="val" id="rk4">0</span><span class="unit" data-i="u_cnt">건</span></div>
-      <div class="kfoot" id="rf4">—</div></div>
+    <div class="kpi"><div class="krow"><span class="val" id="rk1">0</span><span class="unit" data-i="u_day">일</span></div>
+      <div class="cap" data-i="r_mtbf">MTBF · 평균 고장간격</div>
+      <div class="kf" id="rf1">—</div></div>
+    <div class="kpi"><div class="krow"><span class="val" id="rk2">0</span><span class="unit" data-i="u_min">분</span></div>
+      <div class="cap" data-i="r_mttr">MTTR · 평균 수리시간</div>
+      <div class="kf" id="rf2">—</div></div>
+    <div class="kpi"><div class="krow"><span class="val" id="rk5">0</span><span class="unit">%</span></div>
+      <div class="cap" data-i="r_ftfr">초기 수리 성공률 (FTFR)</div>
+      <div class="kf" id="rf5">—</div></div>
+    <div class="kpi"><div class="krow"><span class="val" id="rk3">0</span></div>
+      <div class="cap" data-i="r_frate">연간 고장률 (건/대)</div>
+      <div class="kf" id="rf3">—</div></div>
+    <div class="kpi"><div class="krow"><span class="val" id="rk4">0</span><span class="unit" data-i="u_cnt">건</span></div>
+      <div class="cap" data-i="r_units">분석 설비</div>
+      <div class="kf" id="rf4">—</div></div>
   </div>
   <div class="grid3" style="margin-top:16px">
     <div class="card">
@@ -538,7 +533,7 @@ window.changeDashboardTheme=function(){
   if(ROWS.length)render();
 };
 
-function t(k){return (T[LANG]||T.ko)[k]||k;}
+function t(k){const d=T[LANG]||T.ko; return (k in d)?d[k]:k;}
 function buildSecNav(){
   GST.sectionNav([
     {id:'overview',label:t('sec_ov')},
@@ -647,6 +642,20 @@ function filt(){
 }
 
 // ===== 필터 칩 =====
+// ── 공통 상단바 (셸 #gbar) — 마감(월)은 종료일(dtTo)로 연결 ──
+let CUT_M='';
+function applyCut(v){
+  CUT_M=v||'';
+  const el=document.getElementById('dtTo');
+  if(el){ const p=CUT_M.split('-');
+    el.value = CUT_M ? new Date(Date.UTC(+p[0],+p[1],0)).toISOString().slice(0,10) : ''; }
+  onSlicer();
+}
+GST.pageBar({
+  caps:{cutoff:'m', style:true, ppt:'auto'},
+  state:()=>({endM:CUT_M, style:GST.style()}),
+  on:{ endM:v=>applyCut(v), clear:()=>applyCut('') }
+});
 const FIELD_LABEL={line:'LINE',stage:'단계',pf:'유/무상',cause:'원인',model:'모델',sn:'설비',dtFrom:'시작일',dtTo:'종료일',q:'검색'};
 function renderFilterChips(){GST.renderChips(F,FIELD_LABEL,'clearFilter');}
 function clearFilter(k){
@@ -870,8 +879,8 @@ function renderReliability(f){
   const obs=fev.length, rep=fev.filter(e=>e.repeat).length;
   const ftfrVal=obs?Math.round((1-rep/obs)*100):null;
   set('rk5',ftfrVal==null?'—':ftfrVal);
-  {const e5=document.getElementById('rk5'); if(e5)e5.style.color=GST.ragColor(ftfrVal,90,80,true);}
-  {const e3=document.getElementById('rk3'); if(e3)e3.style.color=GST.ragColor(fleetFrate,3,6,false);}
+  {const e5=document.getElementById('rk5'); if(e5)e5.style.color=GST.ragColor(ftfrVal,GST.conf('rag_ftfr',[90,80])[0],GST.conf('rag_ftfr',[90,80])[1],true);}
+  {const e3=document.getElementById('rk3'); if(e3)e3.style.color=GST.ragColor(fleetFrate,GST.conf('rag_frate',[3,6])[0],GST.conf('rag_frate',[3,6])[1],false);}
   seth('rf5',t('rf_ftfr').replace('{w}',WIN).replace('{n}',rep));
   const mAgg={}; fev.forEach(e=>{const mk=e.work.getUTCFullYear()+'-'+String(e.work.getUTCMonth()+1).padStart(2,'0');const o=mAgg[mk]||(mAgg[mk]={o:0,r:0});o.o++;if(e.repeat)o.r++;});
   const mk2=Object.keys(mAgg).sort().slice(-8);
