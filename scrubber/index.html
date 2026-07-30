@@ -116,19 +116,15 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .search-sl input::placeholder{color:var(--mut)}
 
 /* KPIS */
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+
 .kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;
   backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s}
 .kpi:hover{transform:translateY(-4px)}
-.kpi::before{content:'';position:absolute;top:-35px;right:-35px;width:100px;height:100px;border-radius:50%;opacity:.28}
-.kpi.k1::before{background:var(--a1)}.kpi.k2::before{background:var(--a2)}
-.kpi.k3::before{background:var(--a3)}.kpi.k4::before{background:var(--ok)}.kpi.k5::before{background:var(--bad)}
-.kpi .cap{color:var(--mut);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.kpi .krow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.kpi .val{font-size:30px;font-weight:800;line-height:1;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
-.kpi .unit{font-size:12px;color:var(--mut);font-weight:600}
-.kpi .kd{font-size:11px;font-weight:800}
-.kpi .kfoot{font-size:11px;color:var(--mut);margin-top:7px}
+
+
+
+
+
 .kpi.k4 .val{color:var(--ok)}.kpi.k5 .val{color:var(--bad)}
 /* Warranty 분할 바 카드 */
 .wbig{display:flex;align-items:baseline;gap:8px;margin:6px 0 12px}
@@ -195,8 +191,8 @@ tr:hover td{background:rgba(255,255,255,.04)}
 .pill.bad{background:rgba(251,113,133,.18);color:var(--bad)}
 .empty{text-align:center;padding:40px;color:var(--mut)}
 .loading{text-align:center;padding:60px;color:var(--mut);font-size:15px}
-@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
-@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
+@media(max-width:1200px){.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.grid3{grid-template-columns:1fr}}
 
 /* 차트 복사·저장(PPT/PNG) 버튼 */
 .card,.trend-card,.cross-card,.tablecard{position:relative}
@@ -222,8 +218,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
     <div class="btn btn-glass" style="pointer-events:none">
       <span data-i="total_badge">Total</span>&nbsp;<b id="totRec">0</b>&nbsp;<span data-i="units">units</span>
     </div>
-    <button class="btn btn-glass" onclick="saveAllCharts()" title="모든 차트를 고해상도 PNG로 저장">🖼 전체 저장</button>
-    <button class="btn btn-glass" onclick="window.print()" title="인쇄 / PDF">🖨 인쇄</button>
     <button class="btn btn-grad" id="refreshBtn" onclick="loadData()"><span data-i="refresh">Refresh</span></button>
     <div class="lang-wrap">
       <button class="lang-btn" onclick="toggleLang()"><span id="langLabel">KO</span> ▾</button>
@@ -295,21 +289,21 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <!-- KPI -->
 <div class="kpis">
-  <div class="kpi k1"><div class="cap" data-i="kp1">설치 대수</div>
-    <div class="krow"><span class="val" id="kp1">0</span><span class="unit" data-i="unit_ea">대</span><span class="kd" id="kd1"></span></div>
-    <div class="kfoot" id="kf1">—</div></div>
-  <div class="kpi k2"><div class="cap" data-i="kp2">설치 국가</div>
-    <div class="krow"><span class="val" id="kp2">0</span><span class="unit" data-i="unit_cty">개국</span><span class="kd" id="kd2"></span></div>
-    <div class="kfoot" id="kf2">—</div></div>
-  <div class="kpi k3"><div class="cap" data-i="kp3">고객사</div>
-    <div class="krow"><span class="val" id="kp3">0</span><span class="unit" data-i="unit_co">사</span><span class="kd" id="kd3"></span></div>
-    <div class="kfoot" id="kf3">—</div></div>
-  <div class="kpi k4"><div class="cap" data-i="kp4">Warranty 유효</div>
-    <div class="krow"><span class="val" id="kp4">0</span><span class="unit" data-i="unit_ea">대</span><span class="kd" id="kd4"></span></div>
-    <div class="kfoot" id="kf4">—</div></div>
-  <div class="kpi k5"><div class="cap" data-i="kp5">90일 내 만료 예정</div>
-    <div class="krow"><span class="val" id="kp5">0</span><span class="unit" data-i="unit_ea">대</span><span class="kd" id="kd5"></span></div>
-    <div class="kfoot" id="kf5">—</div></div>
+  <div class="kpi k1"><div class="krow"><span class="val" id="kp1">0</span><span class="unit" data-i="unit_ea">대</span><span class="kd" id="kd1"></span></div>
+    <div class="cap" data-i="kp1">설치 대수</div>
+    <div class="kf" id="kf1">—</div></div>
+  <div class="kpi k2"><div class="krow"><span class="val" id="kp2">0</span><span class="unit" data-i="unit_cty">개국</span><span class="kd" id="kd2"></span></div>
+    <div class="cap" data-i="kp2">설치 국가</div>
+    <div class="kf" id="kf2">—</div></div>
+  <div class="kpi k3"><div class="krow"><span class="val" id="kp3">0</span><span class="unit" data-i="unit_co">사</span><span class="kd" id="kd3"></span></div>
+    <div class="cap" data-i="kp3">고객사</div>
+    <div class="kf" id="kf3">—</div></div>
+  <div class="kpi k4"><div class="krow"><span class="val" id="kp4">0</span><span class="unit" data-i="unit_ea">대</span><span class="kd" id="kd4"></span></div>
+    <div class="cap" data-i="kp4">Warranty 유효</div>
+    <div class="kf" id="kf4">—</div></div>
+  <div class="kpi k5"><div class="krow"><span class="val" id="kp5">0</span><span class="unit" data-i="unit_ea">대</span><span class="kd" id="kd5"></span></div>
+    <div class="cap" data-i="kp5">90일 내 만료 예정</div>
+    <div class="kf" id="kf5">—</div></div>
 </div>
 
 <!-- ═══ 섹션: 개요 ═══ -->
@@ -584,7 +578,7 @@ window.changeDashboardTheme=function(){
   if(RAW.length)render();
 };
 
-function t(k){return(T[LANG]||T.ko)[k]||k;}
+function t(k){const d=T[LANG]||T.ko; return (k in d)?d[k]:k;}
 
 function buildSecNav(){
   GST.sectionNav([
@@ -1097,6 +1091,24 @@ document.getElementById('crossX').addEventListener('change',()=>{if(RAW.length)r
 document.getElementById('crossColor').addEventListener('change',()=>{if(RAW.length)render();});
 
 const animVal=GST.animVal;
+
+// ── 공통 상단바 (셸 #gbar) — 마감(월)은 종료일로 연결, 차트 디자인·PPT는 공통 ──
+let CUT_M='';
+function cutEnd(v){ const p=String(v).split('-'); return new Date(Date.UTC(+p[0],+p[1],0)).toISOString().slice(0,10); }
+function applyCut(v){
+  CUT_M=v||'';
+  const el=document.getElementById('dateTo');
+  if(CUT_M){ const s=cutEnd(CUT_M); if(el)el.value=s; DATE_TO=new Date(s); DATE_TO.setHours(23,59,59,999); }
+  else { if(el)el.value=''; DATE_TO=null; }
+  document.querySelectorAll('[data-q]').forEach(c=>c.classList.remove('active'));
+  updateRangeDisplay();
+  if(RAW.length)render(); else GST.barSync();
+}
+GST.pageBar({
+  caps:{cutoff:'m', style:true, ppt:'auto'},
+  state:()=>({endM:CUT_M, style:GST.style()}),
+  on:{ endM:v=>applyCut(v), clear:()=>applyCut('') }
+});
 
 function render(){ GST.skeleton(false);
   syncGranButtons();
