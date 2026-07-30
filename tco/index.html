@@ -67,15 +67,12 @@ body.theme-light .slicer select{color-scheme:light;color:#0f172a}
 .fchip .fx{font-weight:900;font-size:10px}
 .fchip-clear{background:transparent;border:1px solid var(--glass-border);border-radius:20px;padding:4px 11px;color:var(--txt-muted);font-size:10px;font-weight:700;cursor:pointer;margin-left:auto}
 .fchip-clear:hover{color:var(--bad);border-color:var(--bad)}
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+
 .kpi{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:16px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:all .3s;box-shadow:var(--card-shadow)}
 .kpi:hover{transform:translateY(-4px);border-color:var(--accent-1)}
-.kpi .cap{margin:0 0 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--txt-muted);font-weight:600}
-.kpi .krow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.kpi .val{font-size:23px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
-.kpi .unit{font-size:12px;color:var(--txt-muted);font-weight:600}
-.kpi .kd{font-size:11px;font-weight:800}
-.kpi .kfoot{font-size:11px;color:var(--txt-muted);margin-top:7px;min-height:13px}
+
+
+
 .kpi.k1 .val{color:var(--accent-1)}
 .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:16px}
 .grid2e{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
@@ -116,8 +113,8 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
 .asnote b{color:var(--txt-main)}
 .asnote li{margin-left:16px;margin-bottom:2px}
 @media print{.capbtns,.header-right,.slicers,.fchips{display:none!important}.card{break-inside:avoid;page-break-inside:avoid}}
-@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid2,.grid2e{grid-template-columns:1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
-@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.slicers{grid-template-columns:1fr}}
+@media(max-width:1200px){.grid2,.grid2e{grid-template-columns:1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
+@media(max-width:768px){.slicers{grid-template-columns:1fr}}
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
@@ -131,8 +128,6 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
   </div>
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← 메인으로</a>
-    <button class="btn btn-glass" onclick="saveAllCharts()" title="모든 차트를 고해상도 PNG로 저장">🖼</button>
-    <button class="btn btn-glass" onclick="window.print()" title="인쇄 / PDF">🖨</button>
     <button class="btn btn-grad" id="refreshBtn" onclick="loadData()"><span data-i="refresh">새로고침</span></button>
     <div class="theme-wrap">
       <button class="theme-btn" onclick="toggleThemeMenu()"><span id="themeLabel">Slate</span> ▾</button>
@@ -171,24 +166,24 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
 </div>
 
 <div class="kpis">
-  <div class="kpi k1"><div class="cap" data-i="kp1">월 TCO 합계</div>
-    <div class="krow"><span class="val" id="kp1">—</span><span class="kd" id="kd1"></span></div>
-    <div class="kfoot" id="kf1"></div></div>
-  <div class="kpi"><div class="cap" data-i="kp2">유틸리티 비용</div>
-    <div class="krow"><span class="val" id="kp2">—</span><span class="kd" id="kd2"></span></div>
-    <div class="kfoot" id="kf2"></div></div>
-  <div class="kpi"><div class="cap" data-i="kp3">파츠 비용</div>
-    <div class="krow"><span class="val" id="kp3">—</span><span class="kd" id="kd3"></span></div>
-    <div class="kfoot" id="kf3"></div></div>
-  <div class="kpi"><div class="cap" data-i="kp4">가동 챔버</div>
-    <div class="krow"><span class="val" id="kp4">0</span><span class="unit" data-i="u_ch">챔버</span></div>
-    <div class="kfoot" id="kf4"></div></div>
-  <div class="kpi"><div class="cap" data-i="kp5">작업 정지시간</div>
-    <div class="krow"><span class="val" id="kp5">0</span><span class="unit">h</span></div>
-    <div class="kfoot" id="kf5"></div></div>
-  <div class="kpi"><div class="cap" data-i="kp6">챔버당 월 비용</div>
-    <div class="krow"><span class="val" id="kp6">—</span></div>
-    <div class="kfoot" id="kf6"></div></div>
+  <div class="kpi k1"><div class="krow"><span class="val" id="kp1">—</span><span class="kd" id="kd1"></span></div>
+    <div class="cap" data-i="kp1">월 TCO 합계</div>
+    <div class="kf" id="kf1"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp2">—</span><span class="kd" id="kd2"></span></div>
+    <div class="cap" data-i="kp2">유틸리티 비용</div>
+    <div class="kf" id="kf2"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp3">—</span><span class="kd" id="kd3"></span></div>
+    <div class="cap" data-i="kp3">파츠 비용</div>
+    <div class="kf" id="kf3"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp4">0</span><span class="unit" data-i="u_ch">챔버</span></div>
+    <div class="cap" data-i="kp4">가동 챔버</div>
+    <div class="kf" id="kf4"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp5">0</span><span class="unit">h</span></div>
+    <div class="cap" data-i="kp5">작업 정지시간</div>
+    <div class="kf" id="kf5"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp6">—</span></div>
+    <div class="cap" data-i="kp6">챔버당 월 비용</div>
+    <div class="kf" id="kf6"></div></div>
 </div>
 
 <div class="card" style="margin-bottom:16px;height:340px">
@@ -441,7 +436,7 @@ document.addEventListener('click',e=>{
   if(!e.target.closest('.theme-wrap'))document.getElementById('themeMenu').classList.remove('open');
   if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');
 });
-function t(k){return (T[LANG]||T.ko)[k]||k;}
+function t(k){const d=T[LANG]||T.ko; return (k in d)?d[k]:k;}
 function applyLang(){
   document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
@@ -575,6 +570,15 @@ function fillSlicers(){
   GST.fillSelect('sl-proc','proc',ps,F,t('all'));
   document.getElementById('sl-proc').querySelectorAll('option').forEach(o=>{if(o.value==='ETC')o.textContent=procLabel('ETC');});
 }
+// ── 공통 상단바 (셸 #gbar) — 마감(월)은 기준 월 셀렉터로 연결 ──
+GST.pageBar({
+  caps:{cutoff:'m', style:true, ppt:'auto'},
+  state:()=>({endM:(MONTHS.length?SEL_M:'')||'', style:GST.style()}),
+  on:{ endM:v=>{ if(!v)return; const sm=document.getElementById('sl-month');
+         if(sm&&MONTHS.find(m=>m.key===v)){ sm.value=v; onSlicer(); } },
+       clear:()=>{ const sm=document.getElementById('sl-month');
+         if(sm&&MONTHS.length){ sm.value=MONTHS[MONTHS.length-1].key; onSlicer(); } } }
+});
 function onSlicer(){
   SEL_M=document.getElementById('sl-month').value;
   F.cust=document.getElementById('sl-cust').value;
