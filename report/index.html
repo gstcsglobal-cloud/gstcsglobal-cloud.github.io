@@ -63,26 +63,14 @@ body.theme-light .slicer select,body.theme-light .slicer input{color-scheme:ligh
 .slicer .dts input{min-width:130px}
 .slicer .dts span{color:var(--txt-muted)}
 .sec-note{font-size:10px;color:var(--txt-muted);font-weight:600;margin-left:8px;text-transform:none;letter-spacing:0}
-.rpt-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
-.pt-btn{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:6px 16px;color:var(--txt-muted);font-size:12px;font-weight:700;cursor:pointer;vertical-align:middle;height:28px}
-.pt-btn.active{color:#fff;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));border-color:transparent}
-body.theme-light .pt-btn.active{color:#fff}
-.pt-note{font-size:11px;color:var(--txt-muted);margin-left:4px}
-.pt-inp{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:0 8px;color:var(--txt-main);font-size:11px;height:28px;line-height:28px;outline:none;color-scheme:dark;vertical-align:middle}
-body.theme-light .pt-inp{color-scheme:light;color:#0f172a}
-.pt-cap{font-family:inherit;font-size:10px;color:var(--txt-muted);font-weight:700;margin:0 2px 0 6px;vertical-align:middle}
 .grp-tog{display:inline-flex;gap:0;margin-left:12px;border:1px solid var(--glass-border);border-radius:10px;overflow:hidden;vertical-align:middle}
 .gt-btn{font-family:inherit;background:transparent;border:none;padding:3px 12px;font-size:11px;font-weight:700;color:var(--txt-muted);cursor:pointer}
 .gt-btn.active{background:var(--accent-1);color:#04211d}
 body.theme-light .gt-btn.active{color:#fff}
-.pt-sp{flex:1}
 
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
-.kpi{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:16px 18px;backdrop-filter:blur(14px)}
-.kpi .val{font-size:27px;font-weight:800;line-height:1.1}
-.kpi .cap{color:var(--txt-muted);font-size:11.5px;margin-top:6px;font-weight:600}
-.kpi .kf{color:var(--txt-muted);font-size:10.5px;margin-top:3px}
-.kpi .kd{font-size:11px;font-weight:700;margin-left:4px}
+/* KPI 레이아웃은 assets/theme.css 의 정본(.kpis/.kpi)이 담당 — 여기서는 카드 외형만 */
+.kpi{border-radius:18px;padding:16px 18px}
+
 
 .sec-h{font-size:13px;font-weight:800;color:var(--txt-muted);letter-spacing:1.5px;text-transform:uppercase;margin:22px 0 10px 2px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
@@ -125,7 +113,7 @@ body.theme-light .gt-btn.active{color:#fff}
 #drillModal .dhint{font-size:11px;color:var(--txt-muted);margin-top:10px}
 .cw canvas{cursor:pointer}
 /* KPI 스파크라인 */
-.kpi .spark{display:block;width:100%;height:22px;margin-top:6px}
+
 /* 로딩 스켈레톤 */
 .skel{position:relative;overflow:hidden;background:var(--glass)}
 .skel::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);animation:skelmove 1.2s infinite}
@@ -163,11 +151,11 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .op-tbl td.neg{color:#fb7185}
 .op-tbl td.pos{color:#4ade80}
 .op-tbl td.mut{color:var(--txt-muted)}
-@media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
-@media(max-width:800px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
+@media(max-width:1250px){.grid3{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+@media(max-width:800px){.grid3{grid-template-columns:1fr}}
 @media print{
   body{padding:10px;background:#fff !important;animation:none}
-  .header-right,.rpt-toolbar,.status,.mini-per{display:none !important}
+  .header-right,.status,.mini-per{display:none !important}
   .card,.tablecard,.kpi{break-inside:avoid;border:1px solid #ddd}
   .cw{height:220px}
 }
@@ -208,31 +196,18 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   </div>
 </div>
 
-<div class="rpt-toolbar">
-  <button class="pt-btn" id="ptW" onclick="setPeriod('w')" data-i="per_w">주별</button>
-  <button class="pt-btn" id="ptM" onclick="setPeriod('m')" data-i="per_m">월별</button>
-  <span class="pt-note" data-i="per_note">최근 12개 구간</span>
-  <span class="pt-note" style="margin-left:14px" data-i="cutoff">마감</span>
-  <span class="pt-cap">Month</span><input type="month" id="endM" class="pt-inp" title="월간 차트 마감 월" onchange="setEnd('m',this.value)">
-  <span class="pt-cap">Week</span><select id="endW" class="pt-inp" title="주간 차트 마감 주차" onchange="setEnd('w',this.value)"></select>
-  <button class="pt-btn" title="마감 해제" onclick="clearEnds()">↺</button>
-  <span class="pt-sp"></span>
-  <button class="pt-btn" id="styleBtn" onclick="toggleStyle()" title="차트 색상 스타일">🎨 <span id="styleLbl">Vivid</span></button>
-  <button class="pt-btn" onclick="saveAllCharts()" title="모든 차트를 고해상도 PNG로 저장">🖼 전체 저장</button>
-  <button class="pt-btn" onclick="downloadPPT(this)" title="주간보고 PPT 자동 생성(슬라이드 3장) — 마감 기준일 반영">📊 PPT</button>
-  <button class="pt-btn" onclick="window.print()" data-i="print">🖨 인쇄</button>
-</div>
+<!-- 기간·마감·차트 디자인·PPT 컨트롤은 셸 상단 공통바(#gbar)로 이동 — GST.pageBar 등록부 참조 -->
 <div id="filtBadge" style="display:none"></div>
 
 <div id="wkNarr" style="font-size:13px;color:var(--txt-muted);margin:-2px 0 16px;padding:10px 15px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;line-height:1.7">
   <b id="wkNarrLabel" style="color:var(--txt-main)">📋 이번 주 요약</b> <span id="wkNarrTxt" style="margin-left:6px"></span></div>
 <div class="kpis">
-  <div class="kpi"><div class="val" id="kp1">—</div><div class="cap" data-i="kp1">재직 인원</div><div class="kf" id="kf1"></div><div class="spark" id="sp1"></div></div>
-  <div class="kpi"><div class="val" id="kp2">—</div><div class="cap" data-i="kp2">이번 달 입사 · 퇴사</div><div class="kf" id="kf2"></div><div class="spark" id="sp2"></div></div>
-  <div class="kpi"><div class="val" id="kp3">—</div><div class="cap" data-i="kp3">교육 완료율</div><div class="kf" id="kf3"></div><div class="spark" id="sp3"></div></div>
-  <div class="kpi"><div class="val" id="kp4">—<span class="kd" id="kd4"></span></div><div class="cap" data-i="kp4">BM 건수 · 최근 30일</div><div class="kf" id="kf4"></div><div class="spark" id="sp4"></div></div>
-  <div class="kpi"><div class="val" id="kp5">—</div><div class="cap" data-i="kp5">인당 공수(h) · 최근 30일</div><div class="kf" id="kf5"></div><div class="spark" id="sp5"></div></div>
-  <div class="kpi"><div class="val" id="kp6">—</div><div class="cap" data-i="kp6">PM 진행율 · 올해</div><div class="kf" id="kf6"></div><div class="spark" id="sp6"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp1">—</span></div><div class="cap" data-i="kp1">재직 인원</div><div class="kf" id="kf1"></div><div class="spark" id="sp1"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp2">—</span></div><div class="cap" data-i="kp2">이번 달 입사 · 퇴사</div><div class="kf" id="kf2"></div><div class="spark" id="sp2"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp3">—</span></div><div class="cap" data-i="kp3">교육 완료율</div><div class="kf" id="kf3"></div><div class="spark" id="sp3"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp4">—</span><span class="kd" id="kd4"></span></div><div class="cap" data-i="kp4">BM 건수 · 최근 30일</div><div class="kf" id="kf4"></div><div class="spark" id="sp4"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp5">—</span></div><div class="cap" data-i="kp5">인당 공수(h) · 최근 30일</div><div class="kf" id="kf5"></div><div class="spark" id="sp5"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp6">—</span></div><div class="cap" data-i="kp6">PM 진행율 · 올해</div><div class="kf" id="kf6"></div><div class="spark" id="sp6"></div></div>
 </div>
 
 <div class="sec-h"><span data-i="sec1">핵심 지표</span><span class="sec-note" data-i="hr_note">고객사 필터 연동 · 국가/라인 미적용</span></div>
@@ -433,7 +408,6 @@ ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 �
  ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',ft_total:'건수',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
  tbl_top:'고장 원인 TOP 3',th_cause:'원인',th_cnt:'건수',th_ph:'주요 현상',th_act:'최근 조치',top_etc:'기타 {n}건 · 원인 미기재 {m}건',
  tbl_op:'Scrubber 가동 현황',note_op:'가동 = Turn-On 완료 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 40/인 고정 · PM = 해당 구간 TBM · 마감일 기준',op_corp:'법인',op_div:'구분',op_run_u:'가동 장비 대수',op_run_c:'가동 챔버수',op_idle:'미가동',op_staff:'담당 인원(명)',op_to:'목표 TO',op_gap:'증감(명)',op_hire:'모집계획',op_chp:'인당 챔버',op_pm:'PM(건)',op_unit:'장비',op_ch:'챔버',op_expat:'주재원',op_local:'현채인',op_fit:'적정 챔버',op_need:'인원(명)',
- 
  ins_pm:'올해 PM 진행율 {p}% (계획 {a} · 완료 {b})',ins_ft:'최근 30일 고장 {n}건 · 직전 30일 대비 {p}',ins_hc:'재직 {n}명 · 이번 달 입사 {a} · 퇴사 {b}',
  ax_t:'축 범위 (빈칸=자동)',ax_min:'최소',ax_max:'최대',ax_apply:'적용',ax_reset:'초기화',loading:'데이터 불러오는 중...',loaded:'로드 완료',mon_u:'월',u_p:'명',u_c:'건'},
 en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, training, work, PM, faults',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_period:'Period',all:'All',hr_note:'follows customer filter · country/line N/A',hr_note2:'',sec_ops:'Operations',ops_note:'available = on-site(O) active staff from roster · follows customer filter',ops_wait:'Roster/Leave sheets not linked — set GID_ROSTER / GID_LEAVE at the top of report/index.html',ch_att:'Attendance · Leave',note_att:'weekday daily avg · attendance = available − leave',att_a:'Attend',att_l:'Leave',ch_to:'Headcount vs TO',note_to:'TO = fab-in chambers ÷ 30 (DUAL=2·SINGLE=1)',head_l:'Headcount',ch_chp:'Chambers per Person',note_chp:'cumulative fab-in chambers ÷ available staff · detail in tooltip',cutoff:'As of',att_pj:'Jobs/person',man_tot:'Hours',grp_t:'Tenure',grp_s:'Site',cr_u1:'<1yr',cr_u1:'<1yr',cr_u2:'1-2yr',cr_u3:'2yr+',ch_career:'Headcount by Line',note_career:'active on-site(O) at each period end · by line',nCareer:'<1y {a} · 1-2y {b} · 2y+ {c}',edu_tg:'Targets',edu_tg:'Targets',edu_rt:'Rate',edu_goal:'Goal 90%',edu_ttf:'done {d} / target {t}',man_sum:'Total',chp_c:'Chambers',chp_p:'per person',nTo:'fill rate {p}% · {d} vs TO',nEdu:'rate {p}% · {d}/{t} done (LV1+LV2)',nCip:'progress {p}% · {n} remaining',nAtt:'daily avg attend {a} · leave {l} · {j} jobs ({p}/person)',nChp:'{v} chambers/person ({c}ch · {h} staff)',nMan:'{v}h per person·day · PM {pm}h',nFt:'{n} in latest period · {d} vs prev',per_ws:'W',per_ms:'M',per_ys:'Y',ytd:'{y} YTD',top_allblank:'{m} faults · cause blank — fill the Cause column in the sheet',per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',print:'🖨 Print',wk_narr:'📋 Summary',wk_narr_w:'📋 This Week',wk_narr_m:'📋 This Month',
@@ -450,7 +424,6 @@ en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, traini
  ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',ft_total:'Count',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
  tbl_top:'Top 3 Fault Causes',th_cause:'Cause',th_cnt:'Count',th_ph:'Main Symptom',th_act:'Latest Action',top_etc:'others {n} · cause blank {m}',
  tbl_op:'Scrubber Operation Status',note_op:'running = Turn-On done · chamber DUAL=2·SINGLE=1 · 40 chambers/person fixed · PM = TBM in period · as of cutoff',op_corp:'Entity',op_div:'Site',op_run_u:'Running Units',op_run_c:'Running Chambers',op_idle:'Idle',op_staff:'Staff',op_to:'Target TO',op_gap:'Gap',op_hire:'Hiring',op_chp:'Ch/person',op_pm:'PM',op_unit:'Units',op_ch:'Chambers',op_expat:'Expat',op_local:'Local',op_fit:'Fit ch.',op_need:'Headcount',
- 
  ins_pm:'YTD PM progress {p}% (plan {a} · done {b})',ins_ft:'{n} faults in 30d · {p} vs prev 30d',ins_hc:'{n} active · joined {a} · left {b} this month',
  ax_t:'Axis range (blank=auto)',ax_min:'Min',ax_max:'Max',ax_apply:'Apply',ax_reset:'Reset',loading:'Loading...',loaded:'Loaded',mon_u:'',u_p:'',u_c:''},
 zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇总',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_period:'期间',all:'全部',hr_note:'联动客户筛选 · 国家/线不适用',hr_note2:'',sec_ops:'运营',ops_note:'可用人力=人员现况中现场(O)在职者·联动客户筛选',ops_wait:'人员现况/休假现况表未连接 — 请在 report/index.html 顶部填入 GID_ROSTER / GID_LEAVE',ch_att:'出勤 · 休假',note_att:'工作日日均 · 出勤=可用人力−休假',att_a:'出勤',att_l:'休假',ch_to:'总人员 vs TO',note_to:'TO=搬入腔体÷30 (DUAL=2·SINGLE=1)',head_l:'总人员',ch_chp:'人均管理腔体',note_chp:'累计搬入腔体÷可用人力·明细见提示框',cutoff:'截止',att_pj:'人均作业',man_tot:'工时(h)',grp_t:'工龄',grp_s:'所属',cr_u1:'1年内',cr_u1:'1年内',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'按线人员趋势',note_career:'各区间末现场(O)在职·按线堆叠',nCareer:'1年内 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'对象人员',edu_tg:'对象人员',edu_rt:'完成率',edu_goal:'目标90%',edu_ttf:'完成 {d} / 对象 {t}',man_sum:'合计',chp_c:'腔体(搬入)',chp_p:'人均管理',nTo:'满编率 {p}% · 较TO {d}名',nEdu:'完成率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'进度 {p}% · 剩余 {n}件',nAtt:'日均出勤 {a}名 · 休假 {l}名 · 作业 {j}件 (人均 {p}件)',nChp:'人均 {v}腔体 ({c}ch · {h}名)',nMan:'人均日 {v}h · PM {pm}h',nFt:'最近区间 {n}件 · 环比 {d}',per_ws:'周',per_ms:'月',per_ys:'年',ytd:'{y} 累计',top_allblank:'故障{m}件 · 原因未填 — 需在表中填写原因列',per_w:'按周',per_m:'按月',per_note:'最近12个区间',print:'🖨 打印',wk_narr:'📋 本期摘要',wk_narr_w:'📋 本周摘要',wk_narr_m:'📋 本月摘要',
@@ -467,7 +440,6 @@ zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇
  ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
  tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_ph:'主要现象',th_act:'最近措施',top_etc:'其他 {n}件 · 原因未填 {m}件',
  tbl_op:'Scrubber 运行现况',note_op:'运行=Turn-On完成 · 腔体 DUAL=2·SINGLE=1 · 人均40腔固定 · PM=该区间TBM · 截止日基准',op_corp:'法人',op_div:'区分',op_run_u:'运行设备台数',op_run_c:'运行腔体数',op_idle:'未运行',op_staff:'负责人员(名)',op_to:'目标 TO',op_gap:'增减(名)',op_hire:'招聘计划',op_chp:'人均腔体',op_pm:'PM(件)',op_unit:'设备',op_ch:'腔体',op_expat:'驻在员',op_local:'当地雇员',op_fit:'适定腔体',op_need:'人员(名)',
- 
  ins_pm:'今年PM进度 {p}% (计划 {a} · 完成 {b})',ins_ft:'近30天故障 {n}件 · 环比 {p}',ins_hc:'在职 {n}名 · 本月入职 {a} · 离职 {b}',
  ax_t:'轴范围 (空=自动)',ax_min:'最小',ax_max:'最大',ax_apply:'应用',ax_reset:'重置',loading:'加载中...',loaded:'已加载',mon_u:'月',u_p:'名',u_c:'件'},
 ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サマリー',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'ライン',sl_period:'期間',all:'全体',hr_note:'顧客フィルタ連動 · 国/ライン非適用',hr_note2:'',sec_ops:'運営',ops_note:'可用人員=人員現況の現場(O)在籍者·顧客フィルタ連動',ops_wait:'人員現況/休暇現況シート未接続 — report/index.html 上部の GID_ROSTER / GID_LEAVE を設定してください',ch_att:'出勤 · 休暇',note_att:'平日の日平均 · 出勤=可用人員−休暇',att_a:'出勤',att_l:'休暇',ch_to:'総人員 vs TO',note_to:'TO=搬入チャンバー÷30 (DUAL=2·SINGLE=1)',head_l:'総人員',ch_chp:'一人当たり管理チャンバー',note_chp:'累計搬入チャンバー÷可用人員·詳細はツールチップ',cutoff:'締め',att_pj:'一人当たり作業',man_tot:'工数(h)',grp_t:'経歴',grp_s:'所属',cr_u1:'1年未満',cr_u1:'1年未満',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'ライン別人員推移',note_career:'各区間末の現場(O)在籍·ライン別スタック',nCareer:'1年未満 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'対象人員',edu_tg:'対象人員',edu_rt:'完了率',edu_goal:'目標90%',edu_ttf:'完了 {d} / 対象 {t}',man_sum:'合計',chp_c:'チャンバー(搬入)',chp_p:'一人当たり',nTo:'充足率 {p}% · TO比 {d}名',nEdu:'完了率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'進捗 {p}% · 残り {n}件',nAtt:'日平均出勤 {a}名 · 休暇 {l}名 · 作業 {j}件 (一人 {p}件)',nChp:'一人 {v}チャンバー ({c}ch · {h}名)',nMan:'一人日平均 {v}h · PM {pm}h',nFt:'直近 {n}件 · 前比 {d}',per_ws:'週',per_ms:'月',per_ys:'年',ytd:'{y} 累計',top_allblank:'故障{m}件 · 原因未記入 — シートの原因欄の入力が必要',per_w:'週別',per_m:'月別',per_note:'直近12区間',print:'🖨 印刷',wk_narr:'📋 今週サマリー',wk_narr_w:'📋 今週サマリー',wk_narr_m:'📋 今月サマリー',
@@ -484,7 +456,6 @@ ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サ
  ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
  tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_ph:'主要現象',th_act:'最新対応',top_etc:'その他 {n}件 · 原因未記入 {m}件',
  tbl_op:'Scrubber 稼働現況',note_op:'稼働=Turn-On完了 · チャンバー DUAL=2·SINGLE=1 · 適正40台/人固定 · PM=当該区間TBM · 締め日基準',op_corp:'法人',op_div:'区分',op_run_u:'稼働設備台数',op_run_c:'稼働チャンバー数',op_idle:'未稼働',op_staff:'担当人員(名)',op_to:'目標 TO',op_gap:'増減(名)',op_hire:'採用計画',op_chp:'一人当たり',op_pm:'PM(件)',op_unit:'設備',op_ch:'チャンバー',op_expat:'駐在員',op_local:'現地採用',op_fit:'適正チャンバー',op_need:'人員(名)',
- 
  ins_pm:'今年PM進捗 {p}% (計画 {a} · 完了 {b})',ins_ft:'直近30日故障 {n}件 · 前30日比 {p}',ins_hc:'在籍 {n}名 · 今月入社 {a} · 退社 {b}',
  ax_t:'軸範囲 (空欄=自動)',ax_min:'最小',ax_max:'最大',ax_apply:'適用',ax_reset:'リセット',loading:'読み込み中...',loaded:'ロード完了',mon_u:'月',u_p:'名',u_c:'件'}
 };
@@ -520,7 +491,7 @@ function savePer(){try{localStorage.setItem('gst_rpt_per',JSON.stringify(PER));}
 // 주/월 독립 마감(as-of): 월간은 특정 월 말일까지, 주간은 특정일까지 — 비우면 기간필터/오늘 기준
 let ENDM='',ENDW='';
 try{const se=JSON.parse(localStorage.getItem('gst_rpt_end')||'null'); if(se){ENDM=se.m||'';ENDW=se.w||'';}}catch(e){}
-let RSTYLE=''; try{RSTYLE=localStorage.getItem('gst_rpt_style')||'';}catch(e){}
+// 차트 색상 스타일은 core.js가 전 페이지 공통으로 관리한다 (GST.style()/GST.STY, 키 gst_chart_style)
 // 차트별 사용자 축 경계(min/max) 오버라이드 — 표시 전용, 렌더 시 주입 (PPT도 자동 반영)
 let AXB={}; try{AXB=JSON.parse(localStorage.getItem('gst_rpt_axb')||'{}')||{};}catch(e){}
 function saveAXB(){try{localStorage.setItem('gst_rpt_axb',JSON.stringify(AXB));}catch(e){}}
@@ -534,15 +505,10 @@ function applyAXB(){ // 차트 생성 후 옵션 갱신+update — 생성 사이
 }
 let GRP='tenure'; try{GRP=localStorage.getItem('gst_rpt_grp')||'tenure';}catch(e){}
 window.setGrp=function(g){ GRP=g; try{localStorage.setItem('gst_rpt_grp',g);}catch(e){} render(); };
-window.toggleStyle=function(){ const ord=['vivid','graphite','ocean','sunset','forest','cb'];
-  let i=ord.indexOf(RSTYLE); if(i<0)i=0; RSTYLE=ord[(i+1)%ord.length];
-  try{localStorage.setItem('gst_rpt_style',RSTYLE);}catch(e){} render(); };
 window.setEnd=function(k,v){ if(k==='m')ENDM=v||''; else ENDW=v||'';
   try{localStorage.setItem('gst_rpt_end',JSON.stringify({m:ENDM,w:ENDW}));}catch(e){} render(); };
 window.clearEnds=function(){ ENDM='';ENDW='';
-  try{localStorage.setItem('gst_rpt_end','{}');}catch(e){}
-  const em=document.getElementById('endM'),ew=document.getElementById('endW');
-  if(em)em.value=''; if(ew)ew.value=''; render(); };
+  try{localStorage.setItem('gst_rpt_end','{}');}catch(e){} render(); };
 // 설치현황 트렌드풍 꺾은선 (부드러운 곡선 + 링 포인트)
 function lineDs(label,data,color,extra){
   const n=data.length;
@@ -562,7 +528,8 @@ function renderMiniToggles(){
     box.innerHTML=opts.map(u=>'<button class="mp-btn'+(cur===u?' active':'')+'" onclick="setChartPer(\''+id+'\',\''+u+'\')">'+lab(u)+'</button>').join('');
   });
 }
-function t(k){return (T[LANG]||T.ko)[k]||k;}
+// 키가 있으면 그 값을 그대로 쓴다 — 빈 문자열 번역(영문 단위 생략 등)이 키 이름으로 새는 것 방지
+function t(k){const d=T[LANG]||T.ko; return (k in d)?d[k]:k;}
 function applyLang(){
   document.querySelectorAll('[data-i]').forEach(el=>{if(el.hasAttribute('data-lock'))return;el.textContent=t(el.getAttribute('data-i'));});
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
@@ -623,10 +590,25 @@ function periods(n,anchor,unit){
   return out;
 }
 function setPeriod(p){PERIOD=p;PER={};savePer();try{localStorage.setItem('gst_rpt_period',p);}catch(e){}
-  document.getElementById('ptW').classList.toggle('active',p==='w');
-  document.getElementById('ptM').classList.toggle('active',p==='m');
-  if(WK.length||HR.length)render();
+  if(WK.length||HR.length)render(); else GST.barSync();
 }
+// 마감(주차) 선택 옵션 — 최근 26주. 공통 상단바가 이 목록으로 Week 셀렉트를 만든다.
+function weekOpts(){
+  const t0=new Date(); t0.setUTCHours(0,0,0,0);
+  const sun=new Date(t0); sun.setUTCDate(sun.getUTCDate()-sun.getUTCDay());
+  const out=[];
+  for(let i=0;i<26;i++){ const d=new Date(sun.getTime()-i*7*MS), k=isoW(d);
+    out.push({v:k, t:'W'+k.slice(-2)+' ('+(d.getUTCMonth()+1)+'/'+d.getUTCDate()+')'}); }
+  return out;
+}
+// 공통 상단바 등록 — 기간/마감/차트 디자인/PPT(주간보고 양식)
+GST.pageBar({
+  caps:{period:true, cutoff:'wm', style:true, ppt:'qbr'},
+  state:()=>({period:PERIOD, endM:ENDM, endW:ENDW, style:GST.style()}),
+  weeks:weekOpts,
+  on:{ period:v=>setPeriod(v), endM:v=>setEnd('m',v), endW:v=>setEnd('w',v),
+       clear:()=>clearEnds(), style:()=>GST.nextStyle(), ppt:()=>downloadPPT() }
+});
 
 // 값 라벨 플러그인 (peaks: 최대 1곳 + 마지막, h 없음)
 const valLabelPlugin={id:'valLabel',
@@ -979,32 +961,11 @@ function render(){
     }
     const rt=new Date(); rt.setUTCHours(0,0,0,0); if(A>rt)A=rt;
     const Pp=periods(12,A,u);return {P:Pp,labels:Pp.map(x=>x.label),u};};
-  {const em=document.getElementById('endM'),ew=document.getElementById('endW');
-   if(em&&em.value!==ENDM)em.value=ENDM;
-   if(ew){ // 최근 26주차 옵션 (오늘 기준)
-     if(ew.options.length<2){
-       const t0=new Date(); t0.setUTCHours(0,0,0,0);
-       const sun=new Date(t0); sun.setUTCDate(sun.getUTCDate()-sun.getUTCDay());   // 이번 주 일요일(주 시작)
-       let html='<option value="">— 최신 —</option>';
-       for(let i=0;i<26;i++){const d=new Date(sun.getTime()-i*7*MS);const k=isoW(d);html+='<option value="'+k+'">'+('W'+k.slice(-2))+' ('+(d.getUTCMonth()+1)+'/'+d.getUTCDate()+')</option>';}
-       ew.innerHTML=html;
-     }
-     if(ew.value!==ENDW)ew.value=ENDW;
-   }}
   renderMiniToggles();
-  // 차트 색상 스타일 5종: Vivid(미래지향 블루) / Graphite(회색+빨강, 임원 보고) / Ocean(청량 틸) / Sunset(웜 앰버) / Forest(그린)
-  const STY={
-    vivid:   {lbl:'Vivid',    bar:'#2C5FAE', last:'#5EC2FF', bar2:'#7C6FE0', line:'#5EC2FF', lnG:'#34D399', lnV:'#A78BFA', site:['#2C5FAE','#38BDF8','#5EC2FF','#7C6FE0','#34D399','#F59E0B']},
-    graphite:{lbl:'Graphite', bar:'#8A8A8A', last:'#B4B4B4', bar2:'#C7C7C7', line:'#E03131', lnG:'#E03131', lnV:'#9A9A9A', site:['#5A5A5A','#7A7A7A','#9A9A9A','#B4B4B4','#8A8A8A','#C7C7C7']},
-    ocean:   {lbl:'Ocean',    bar:'#0E7490', last:'#22D3EE', bar2:'#2DD4BF', line:'#F472B6', lnG:'#34D399', lnV:'#38BDF8', site:['#0E7490','#0891B2','#22D3EE','#2DD4BF','#5EEAD4','#A5F3FC']},
-    sunset:  {lbl:'Sunset',   bar:'#EA580C', last:'#FBBF24', bar2:'#FB7185', line:'#6366F1', lnG:'#F59E0B', lnV:'#EC4899', site:['#EA580C','#F97316','#FB923C','#FBBF24','#FB7185','#F43F5E']},
-    forest:  {lbl:'Forest',   bar:'#15803D', last:'#4ADE80', bar2:'#A3E635', line:'#DC2626', lnG:'#22C55E', lnV:'#84CC16', site:['#15803D','#16A34A','#22C55E','#4ADE80','#84CC16','#A3E635']},
-    cb:      {lbl:'Safe',     bar:'#0072B2', last:'#56B4E9', bar2:'#CC79A7', line:'#D55E00', lnG:'#009E73', lnV:'#E69F00', site:['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00']}  // 색각이상 안전(Okabe-Ito)
-  };
-  const gStyle = (STY[RSTYLE]?RSTYLE:(TH.key==='burgundy'?'graphite':'vivid'));
-  const _sty = STY[gStyle];
+  // 차트 색상 스타일 6종은 core.js(GST.STY)가 전 페이지 공통으로 보유 — 상단 공통바 🎨로 전환
+  const gStyle = GST.style();
+  const _sty = GST.sty();
   const _g = gStyle==='graphite';
-  {const _l=document.getElementById('styleLbl'); if(_l)_l.textContent=_sty.lbl;}
   const BAR_BASE=_sty.bar, BAR_LAST=_sty.last;
   const BAR_C=BAR_BASE, BAR2_C=_sty.bar2;
   const LINE_C=_sty.line;
@@ -1046,8 +1007,6 @@ function render(){
   // (ID가 있는데 HR에 없으면 미매칭으로 처리 — 이름 폴백 시 동명이인 레코드를 잘못 가져올 위험)
   const eduOf=x=> x.bdate!==undefined ? x
     : x.id ? (EDU_BY_ID[x.id]||null) : (EDU_BY_NAME[(x.name||'').trim().toUpperCase()]||null);
-  document.getElementById('ptW').classList.toggle('active',PERIOD==='w');
-  document.getElementById('ptM').classList.toggle('active',PERIOD==='m');
 
   // ===== 인력 =====
   const act=fHR.filter(p=>p.onsite&&activeAt(p,asOf));   // 재직 인원 = 현장(O) 재직자만 카운트(기준일 as-of)
@@ -1138,7 +1097,7 @@ function render(){
     CHARTS.cEdu=new Chart(document.getElementById('cEdu'),{type:'bar',
       data:{labels,datasets:[
         {label:t('edu_tg'),data:tgt,backgroundColor:tgt.map((_,i)=>i===tgt.length-1?BAR_LAST+'99':BAR_BASE+'80'),borderColor:BAR_BASE,borderWidth:1,borderRadius:3,order:2},
-        {type:'line',label:t('edu_goal'),data:P.map(()=>90),borderColor:'#F59E0B',borderDash:[4,4],borderWidth:1.2,pointRadius:0,yAxisID:'y2',order:1,_noLabel:true},
+        {type:'line',label:t('edu_goal'),data:P.map(()=>GST.conf('edu_goal',90)),borderColor:'#F59E0B',borderDash:[4,4],borderWidth:1.2,pointRadius:0,yAxisID:'y2',order:1,_noLabel:true},
         lineDs(t('edu_rt'),rate,LINE_C,{yAxisID:'y2',_suf:'%'})]},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
         plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
@@ -1206,7 +1165,7 @@ function render(){
       {
         const {P,labels}=PU('cTo');
         const hv=P.map(p=>head(p.end));
-        const to=P.map(p=>Math.round(chIn(p.end)/30*10)/10);
+        const to=P.map(p=>Math.round(chIn(p.end)/GST.conf('to_divisor',30)*10)/10);
         destroyMk('cTo');
         CHARTS.cTo=new Chart(document.getElementById('cTo'),{type:'bar',
           data:{labels,datasets:[
@@ -1494,13 +1453,13 @@ function render(){
       const iu=ins.length-ru, ic=ins.reduce((a,r)=>a+chW(r),0)-rc;      // 미가동 = 반입 − 가동
       const exp=fHR.filter(p=>p.expat&&activeAt(p,_oe)&&rkP(p)===R.k).length;
       const loc=fHR.filter(p=>!p.expat&&p.onsite&&activeAt(p,_oe)&&rkP(p)===R.k).length;
-      const need=Math.round(rc/40);                                     // 인원 = 가동 챔버 ÷ 40(고정)
+      const need=Math.round(rc/GST.conf('staff_divisor',40));           // 인원 = 가동 챔버 ÷ 기준값(core.js GST.CONF)
       const gap=loc-need;
       const pm=fWK.filter(x=>isPM(x.stage)&&x.wd>=_ost&&x.wd<=_oe&&rkW(x)===R.k).length;   // 해당 마감 구간의 TBM만
       return {lbl:R.lbl,ru,wiU,woU:ru-wiU,rc,wiC,woC:rc-wiC,iu,ic,exp,loc,need,gap,pm};
     });
     const S=D.reduce((a,d)=>{Object.keys(d).forEach(k=>{if(k!=='lbl')a[k]=(a[k]||0)+d[k];});return a;},{});
-    S.need=Math.round(S.rc/40); S.gap=S.loc-S.need;
+    S.need=Math.round(S.rc/GST.conf('staff_divisor',40)); S.gap=S.loc-S.need;
     const fm=v=>v?v.toLocaleString():'<span class="mut">-</span>';
     const cell=d=>'<td class="gl">'+fm(d.ru)+'</td><td>'+fm(d.wiU)+'</td><td>'+fm(d.woU)+'</td>'
       +'<td class="gl">'+fm(d.rc)+'</td><td>'+fm(d.wiC)+'</td><td>'+fm(d.woC)+'</td>'
@@ -1554,6 +1513,7 @@ function render(){
   }catch(e){}
   addCapBtns();
   applyAXB();   // ⚙ 사용자 축 범위 오버라이드 (표시 전용)
+  GST.barSync();  // 공통 상단바에 현재 기간·마감·스타일 되쏘기
 }
 
 // ===== 차트 고해상도 복사·저장 (PPT용) =====
@@ -1669,18 +1629,6 @@ window.saveChart=function(id){
   oc.toBlob(b=>{ const u=URL.createObjectURL(b); const a=document.createElement('a');
     a.href=u; a.download=id+'.png'; a.click(); setTimeout(()=>URL.revokeObjectURL(u),2000);
     capToast('⤓ '+id+'.png 저장됨'); },'image/png');
-};
-// 모든 차트를 순차적으로 고해상도 PNG 저장
-window.saveAllCharts=async function(){
-  const ids=[...document.querySelectorAll('.cw canvas')].map(c=>c.id).filter(id=>CHARTS[id]);
-  if(!ids.length){capToast('저장할 차트가 없습니다');return;}
-  capToast('🖼 '+ids.length+'개 차트 저장 중…');
-  for(const id of ids){
-    const oc=chartHiRes(id); if(!oc)continue;
-    await new Promise(res=>oc.toBlob(b=>{ if(b){const u=URL.createObjectURL(b);const a=document.createElement('a');
-      a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);} setTimeout(res,250); },'image/png'));
-  }
-  capToast('🖼 전체 '+ids.length+'개 차트 저장 완료');
 };
 // ===== 표(Scrubber 가동 현황) 복사·저장 — PPT/엑셀에 '진짜 표'로 붙여넣기 =====
 function opTableEl(){ const b=document.getElementById('opTblBody'); return b?b.closest('table'):null; }
@@ -2043,7 +1991,6 @@ GST.initSync();
   window._updWkNarr=upd;
   var box=document.querySelector('.kpis');
   if(box&&window.MutationObserver){ new MutationObserver(upd).observe(box,{subtree:true,childList:true,characterData:true}); }
-  ['ptW','ptM'].forEach(function(id){var b=document.getElementById(id); if(b)b.addEventListener('click',function(){setTimeout(upd,500);setTimeout(upd,1300);});});
   setTimeout(upd,2200); setInterval(upd,4000);
 })();
 </script>
