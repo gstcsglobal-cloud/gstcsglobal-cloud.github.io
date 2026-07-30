@@ -61,20 +61,17 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .lang-item:hover{background:rgba(255,255,255,.08)}
 .status{font-size:12px;color:var(--mut);margin-bottom:16px;text-align:right}
 .status.ok{color:var(--a5)}.status.err{color:var(--bad)}
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
-.kpi-month-note{font-size:12px;color:#7dd3fc;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);border-radius:10px;padding:6px 14px;margin-bottom:12px;display:inline-block}
+
 .kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;
   backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s;cursor:pointer}
 .kpi:hover{transform:translateY(-4px)}
 .kpi.sel{border-color:var(--a1);box-shadow:0 0 0 1px var(--a1)}
-.kpi::before{content:'';position:absolute;top:-35px;right:-35px;width:100px;height:100px;border-radius:50%;opacity:.28}
-.kpi.k1::before{background:var(--a4)}.kpi.k2::before{background:var(--bad)}
-.kpi.k3::before{background:var(--warn)}.kpi.k4::before{background:var(--ok)}.kpi.k5::before{background:#64748b}
-.kpi.k6::before{background:#34d399}.kpi.k6 .val{color:#34d399}
-.kpi .ic{font-size:20px;margin-bottom:6px}
-.kpi .val{font-size:32px;font-weight:800;line-height:1}
+
+
+.kpi.k6 .val{color:#34d399}
+
 .kpi.k2 .val{color:var(--bad)}.kpi.k3 .val{color:var(--warn)}.kpi.k4 .val{color:var(--ok)}
-.kpi .cap{color:var(--mut);font-size:11px;margin-top:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
 
 /* CALENDAR */
@@ -194,15 +191,13 @@ tr:hover td{background:rgba(255,255,255,.04)}
 .dl{font-weight:700}.dl.bad{color:var(--bad)}.dl.warn{color:var(--warn)}.dl.ok{color:var(--ok)}
 .empty{text-align:center;padding:40px;color:var(--mut)}
 .loading{text-align:center;padding:60px;color:var(--mut);font-size:15px}
-@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
-@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
+@media(max-width:1200px){.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.grid3{grid-template-columns:1fr}}
 
 /* 리치 KPI (설치현황과 동일 스타일) */
-.kpi .cap{margin:0 0 8px !important;font-size:10px !important;letter-spacing:1px !important;text-transform:uppercase}
-.kpi .krow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.kpi .unit{font-size:12px;color:var(--mut);font-weight:600}
-.kpi .kd{font-size:11px;font-weight:800}
-.kpi .kfoot{font-size:11px;color:var(--mut);margin-top:7px;min-height:13px}
+
+
+
 .card{position:relative}
 .capbtns{position:absolute;top:12px;right:14px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
 .card:hover .capbtns{opacity:1}
@@ -223,8 +218,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
   </div>
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← Main</a>
-    <button class="btn btn-glass" onclick="saveAllCharts()" title="모든 차트를 고해상도 PNG로 저장">🖼 전체 저장</button>
-    <button class="btn btn-glass" onclick="window.print()" title="인쇄 / PDF">🖨 인쇄</button>
     <button class="btn btn-grad" id="refreshBtn" onclick="loadData()"><span data-i="refresh">Refresh</span></button>
     <div class="lang-wrap">
       <button class="lang-btn" onclick="toggleLang()"><span id="langLabel">KO</span> ▾</button>
@@ -239,27 +232,26 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 <div class="status" id="status">Loading...</div>
 
-<div class="kpi-month-note" id="kpiMonthNote"></div>
 
 <div class="kpis">
-  <div class="kpi k1 sel" data-s=""><div class="cap" data-i="kp1">Total Targets</div>
-    <div class="krow"><span class="val" id="kp1">0</span><span class="kd" id="kd1"></span></div>
-    <div class="kfoot" id="kf1"></div></div>
-  <div class="kpi k2" data-s="overdue"><div class="cap" data-i="kp2">Overdue</div>
-    <div class="krow"><span class="val" id="kp2">0</span><span class="kd" id="kd2"></span></div>
-    <div class="kfoot" id="kf2"></div></div>
-  <div class="kpi k3" data-s="soon"><div class="cap" data-i="kp3">Due Soon</div>
-    <div class="krow"><span class="val" id="kp3">0</span></div>
-    <div class="kfoot" id="kf3"></div></div>
-  <div class="kpi k4" data-s="ok"><div class="cap" data-i="kp4">Normal</div>
-    <div class="krow"><span class="val" id="kp4">0</span></div>
-    <div class="kfoot" id="kf4"></div></div>
-  <div class="kpi k5" data-s="na"><div class="cap" data-i="kp5">No Cycle</div>
-    <div class="krow"><span class="val" id="kp5">0</span></div>
-    <div class="kfoot" id="kf5"></div></div>
-  <div class="kpi k6"><div class="cap" data-i="kp6">Completed</div>
-    <div class="krow"><span class="val" id="kp6">0</span><span class="kd" id="kd6"></span></div>
-    <div class="kfoot" id="kf6"></div></div>
+  <div class="kpi k1 sel" data-s=""><div class="krow"><span class="val" id="kp1">0</span><span class="kd" id="kd1"></span></div>
+    <div class="cap" data-i="kp1">Total Targets</div>
+    <div class="kf" id="kf1"></div></div>
+  <div class="kpi k2" data-s="overdue"><div class="krow"><span class="val" id="kp2">0</span><span class="kd" id="kd2"></span></div>
+    <div class="cap" data-i="kp2">Overdue</div>
+    <div class="kf" id="kf2"></div></div>
+  <div class="kpi k3" data-s="soon"><div class="krow"><span class="val" id="kp3">0</span></div>
+    <div class="cap" data-i="kp3">Due Soon</div>
+    <div class="kf" id="kf3"></div></div>
+  <div class="kpi k4" data-s="ok"><div class="krow"><span class="val" id="kp4">0</span></div>
+    <div class="cap" data-i="kp4">Normal</div>
+    <div class="kf" id="kf4"></div></div>
+  <div class="kpi k5" data-s="na"><div class="krow"><span class="val" id="kp5">0</span></div>
+    <div class="cap" data-i="kp5">No Cycle</div>
+    <div class="kf" id="kf5"></div></div>
+  <div class="kpi k6"><div class="krow"><span class="val" id="kp6">0</span><span class="kd" id="kd6"></span></div>
+    <div class="cap" data-i="kp6">Completed</div>
+    <div class="kf" id="kf6"></div></div>
 </div>
 
 <!-- ═══ 섹션: 개요 ═══ -->
@@ -346,10 +338,10 @@ tr:hover td{background:rgba(255,255,255,.04)}
 <!-- ═══ 섹션: 준수·부하 ═══ -->
 <div data-sec="comp">
   <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
-    <div class="kpi"><div class="cap" data-i="cmp1">PM 준수율</div><div class="krow"><span class="val" id="ck1">0</span><span class="kd">%</span></div><div class="kfoot" id="ckf1" data-i="cmp1f">정시 완료 비율(주기 내)</div></div>
-    <div class="kpi"><div class="cap" data-i="cmp2">지연 설비</div><div class="krow"><span class="val" id="ck2">0</span></div><div class="kfoot" id="ckf2" data-i="cmp2f">현재 지연 대수</div></div>
-    <div class="kpi"><div class="cap" data-i="cmp3">향후 8주 도래</div><div class="krow"><span class="val" id="ck3">0</span></div><div class="kfoot" id="ckf3" data-i="cmp3f">예정 점검 건</div></div>
-    <div class="kpi"><div class="cap" data-i="cmp4">예상 공수(8주)</div><div class="krow"><span class="val" id="ck4">0</span><span class="kd" data-i="u_hr">인·시</span></div><div class="kfoot" id="ckf4" data-i="cmp4f">도래 × 평균 공수</div></div>
+    <div class="kpi"><div class="krow"><span class="val" id="ck1">0</span><span class="kd">%</span></div><div class="cap" data-i="cmp1">PM 준수율</div><div class="kf" id="ckf1" data-i="cmp1f">정시 완료 비율(주기 내)</div></div>
+    <div class="kpi"><div class="krow"><span class="val" id="ck2">0</span></div><div class="cap" data-i="cmp2">지연 설비</div><div class="kf" id="ckf2" data-i="cmp2f">현재 지연 대수</div></div>
+    <div class="kpi"><div class="krow"><span class="val" id="ck3">0</span></div><div class="cap" data-i="cmp3">향후 8주 도래</div><div class="kf" id="ckf3" data-i="cmp3f">예정 점검 건</div></div>
+    <div class="kpi"><div class="krow"><span class="val" id="ck4">0</span><span class="kd" data-i="u_hr">인·시</span></div><div class="cap" data-i="cmp4">예상 공수(8주)</div><div class="kf" id="ckf4" data-i="cmp4f">도래 × 평균 공수</div></div>
   </div>
   <div class="grid3">
     <div class="card"><h3 data-i="ch_aging">지연 경과일 분포</h3><div class="card-note" data-i="note_aging">현재 지연 설비의 경과일</div><div class="cw"><canvas id="cAging"></canvas></div></div>
@@ -399,7 +391,7 @@ let ADJUST={}; // 조정 내역 {key: {newDate, memo, updatedAt}} — Supabase p
 // 새 시트3(실적현황) 컬럼 맵 (0-based) — site=고객사, chamber=채널위치
 const C={site:3,line:5,group1:7,detail1:8,model:9,work:32,sn:21,maint:13,chamber:20,
   workMin:39,manMin:40,workers:41,workerCnt:42};
-const WARN_RATIO=0.20;
+const WARN_RATIO=GST.conf('warn_ratio',0.20);   // 기준값은 core.js GST.CONF 에서 관리
 
 const T={
   ko:{title:'스크러버 PM 점검 스케줄',sub:'정기점검(TBM) 이력 기반 예방정비 스케줄',
@@ -476,7 +468,7 @@ window.changeDashboardTheme=function(){
   if(SCHED.length)render();
 };
 
-function t(k){return (T[LANG]||T.ko)[k]||k;}
+function t(k){const d=T[LANG]||T.ko; return (k in d)?d[k]:k;}
 function buildSecNav(){
   GST.sectionNav([
     {id:'overview',label:t('sec_ov')},
@@ -608,7 +600,7 @@ function renderCompliance(){
   const mm=[]; RAW.forEach(r=>{if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;const v=Number(r[C.manMin]);if(v>0&&v<14400)mm.push(v);});
   mm.sort((a,b)=>a-b); const manH=mm.length?mm[Math.floor(mm.length/2)]/60:0;
   setV('ck1',comp); setV('ck2',overU.length); setV('ck3',due8.length); setV('ck4',Math.round(due8.length*manH));
-  {const e1=document.getElementById('ck1'); if(e1)e1.style.color=GST.ragColor(comp,90,80,true);}   // 준수율 RAG
+  {const e1=document.getElementById('ck1'); if(e1)e1.style.color=GST.ragColor(comp,GST.conf('rag_pm',[90,80])[0],GST.conf('rag_pm',[90,80])[1],true);}   // 준수율 RAG
   // 2) 지연 경과일 분포
   const ac=[0,0,0,0];
   overU.forEach(x=>{const d=-(x.dl||0); ac[d<=7?0:d<=30?1:d<=90?2:3]++;});
@@ -709,10 +701,6 @@ function render(){ GST.skeleton(false);
     setTxt('kd6',GST.deltaBadge(monthDone.length,prevDone,false));
     setTxt('kf6',t('kf6x').replace('{n}',prevDone));
   }
-
-  // KPI 월 안내
-  const mn=document.getElementById('kpiMonthNote');
-  if(mn){ mn.textContent='📌 '+CAL_Y+t('year_unit')+' '+t('months')[CAL_M]+' '+t('kpi_basis'); }
 
   // 도넛: 상태 분포 (선택 월 기준)
   mkDonut('cStat',[t('st_overdue'),t('st_soon'),t('st_ok'),t('st_na')],[over,soon,ok,na],[TH.status.bad,TH.status.warn,TH.status.ok,TH.status.na]); // 상태색(시맨틱)
@@ -1203,6 +1191,13 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDayModal();});
 function calPrev(){ CAL_M--; if(CAL_M<0){CAL_M=11;CAL_Y--;} render(); }
 function calNext(){ CAL_M++; if(CAL_M>11){CAL_M=0;CAL_Y++;} render(); }
 function calJump(){ CAL_Y=+document.getElementById('calYear').value; CAL_M=+document.getElementById('calMonth').value; render(); }
+// ── 공통 상단바 (셸 #gbar) — 마감(월)은 기준 월(CAL_Y·CAL_M)로 연결 ──
+GST.pageBar({
+  caps:{cutoff:'m', style:true, ppt:'auto'},
+  state:()=>({endM:CAL_Y+'-'+String(CAL_M+1).padStart(2,'0'), style:GST.style()}),
+  on:{ endM:v=>{ if(!v)return; const p=v.split('-'); CAL_Y=+p[0]; CAL_M=+p[1]-1; render(); },
+       clear:()=>{ const n=new Date(); CAL_Y=n.getFullYear(); CAL_M=n.getMonth(); render(); } }
+});
 function calToday(){ const n=new Date(); CAL_Y=n.getFullYear(); CAL_M=n.getMonth(); render(); }
 function setCalMode(m){
   CAL_MODE=m;
