@@ -124,13 +124,10 @@ body.theme-light .slicer select, body.theme-light .slicer input { color-scheme: 
 .ct-btn.active{background:var(--glass-hover);color:var(--accent-1)}
 .tb-label{font-size:11px;color:var(--txt-muted);font-weight:700}
 
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
 .kpi{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:16px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:all .3s;cursor:pointer;box-shadow:var(--card-shadow);}
 .kpi:hover{transform:translateY(-4px);border-color:var(--accent-1);}
 .kpi.sel{border-color:var(--accent-1);box-shadow:0 0 15px 0 var(--accent-1);}
-.kpi .ic{font-size:18px;margin-bottom:5px}
-.kpi .val{font-size:26px;font-weight:800;line-height:1}
-.kpi .cap{color:var(--txt-muted);font-size:10px;margin-top:5px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+
 
 #crossAnalysisCard {
   margin-bottom: 20px;
@@ -206,8 +203,8 @@ tr:hover td{background:var(--glass-hover)}
 .pill.free{background:rgba(52,211,153,.18);color:var(--accent-5)}
 .empty, .loading{text-align:center;padding:40px;color:var(--txt-muted)}
 
-@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}.cross-layout{grid-template-columns:1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
-@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}.slicers{grid-template-columns:1fr}}
+@media(max-width:1200px){.grid3{grid-template-columns:1fr 1fr}.cross-layout{grid-template-columns:1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
+@media(max-width:768px){.grid3{grid-template-columns:1fr}.slicers{grid-template-columns:1fr}}
 
 /* 크로스필터 칩 바 */
 .fchips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;
@@ -222,11 +219,9 @@ tr:hover td{background:var(--glass-hover)}
 .fchip-clear:hover{color:var(--bad);border-color:var(--bad)}
 canvas{cursor:pointer}
 /* 리치 KPI + 유무상 분할바 (설치현황과 동일 스타일) */
-.kpi .cap{margin:0 0 8px !important;font-size:10px !important;letter-spacing:1px !important;text-transform:uppercase}
-.kpi .krow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.kpi .unit{font-size:12px;color:var(--txt-muted);font-weight:600}
-.kpi .kd{font-size:11px;font-weight:800}
-.kpi .kfoot{font-size:11px;color:var(--txt-muted);margin-top:7px;min-height:13px}
+
+
+
 .kpi.k6 .val{color:var(--warn)}
 .wbig{display:flex;align-items:baseline;gap:8px;margin:6px 0 12px}
 .wbig .wv{font-size:28px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
@@ -251,8 +246,6 @@ canvas{cursor:pointer}
   </div>
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← 메인으로</a>
-    <button class="btn btn-glass" onclick="saveAllCharts()" title="모든 차트를 고해상도 PNG로 저장">🖼 전체 저장</button>
-    <button class="btn btn-glass" onclick="window.print()" title="인쇄 / PDF">🖨 인쇄</button>
     <button class="btn btn-grad" id="refreshBtn" onclick="loadData()"><span data-i="refresh">새로고침</span></button>
     <div class="theme-wrap">
       <button class="theme-btn" onclick="toggleThemeMenu()"><span id="themeLabel">Cyber Turquoise</span> ▾</button>
@@ -299,7 +292,6 @@ canvas{cursor:pointer}
   </div>
 </div>
 
-
 <div class="fchips" id="fchips" style="display:none">
   <span class="fchips-label"><span data-i="f_active">활성 필터</span>:</span>
   <span id="fchipList"></span>
@@ -307,24 +299,24 @@ canvas{cursor:pointer}
 </div>
 
 <div class="kpis">
-  <div class="kpi k1"><div class="cap" data-i="kp1">총 교체건수</div>
-    <div class="krow"><span class="val" id="kp1">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd1"></span></div>
-    <div class="kfoot" id="kf1"></div></div>
-  <div class="kpi k2"><div class="cap" data-i="kp2">이번 달 교체</div>
-    <div class="krow"><span class="val" id="kp2">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd2"></span></div>
-    <div class="kfoot" id="kf2"></div></div>
-  <div class="kpi k3"><div class="cap" data-i="kp3">유상 비율</div>
-    <div class="krow"><span class="val" id="kp3">0%</span></div>
-    <div class="kfoot" id="kf3"></div></div>
-  <div class="kpi k4"><div class="cap" data-i="kp4">자재 종류</div>
-    <div class="krow"><span class="val" id="kp4">0</span></div>
-    <div class="kfoot" id="kf4"></div></div>
-  <div class="kpi k5"><div class="cap" data-i="kp5">교체 설비 수</div>
-    <div class="krow"><span class="val" id="kp5">0</span><span class="unit" data-i="u_eq">대</span></div>
-    <div class="kfoot" id="kf5"></div></div>
-  <div class="kpi k6"><div class="cap" data-i="kp6">90일 미만 재교체</div>
-    <div class="krow"><span class="val" id="kp6">0</span><span class="unit" data-i="u_cnt">건</span></div>
-    <div class="kfoot" id="kf6"></div></div>
+  <div class="kpi k1"><div class="krow"><span class="val" id="kp1">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd1"></span></div>
+    <div class="cap" data-i="kp1">총 교체건수</div>
+    <div class="kf" id="kf1"></div></div>
+  <div class="kpi k2"><div class="krow"><span class="val" id="kp2">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd2"></span></div>
+    <div class="cap" data-i="kp2">이번 달 교체</div>
+    <div class="kf" id="kf2"></div></div>
+  <div class="kpi k3"><div class="krow"><span class="val" id="kp3">0%</span></div>
+    <div class="cap" data-i="kp3">유상 비율</div>
+    <div class="kf" id="kf3"></div></div>
+  <div class="kpi k4"><div class="krow"><span class="val" id="kp4">0</span></div>
+    <div class="cap" data-i="kp4">자재 종류</div>
+    <div class="kf" id="kf4"></div></div>
+  <div class="kpi k5"><div class="krow"><span class="val" id="kp5">0</span><span class="unit" data-i="u_eq">대</span></div>
+    <div class="cap" data-i="kp5">교체 설비 수</div>
+    <div class="kf" id="kf5"></div></div>
+  <div class="kpi k6"><div class="krow"><span class="val" id="kp6">0</span><span class="unit" data-i="u_cnt">건</span></div>
+    <div class="cap" data-i="kp6">90일 미만 재교체</div>
+    <div class="kf" id="kf6"></div></div>
 </div>
 
 <!-- ═══ 섹션: 개요 ═══ -->
@@ -638,7 +630,7 @@ document.addEventListener('click', e => {
   }
 });
 
-function t(k){return (T[LANG]||T.ko)[k]||k;}
+function t(k){const d=T[LANG]||T.ko; return (k in d)?d[k]:k;}
 function buildSecNav(){
   GST.sectionNav([
     {id:'overview',label:t('sec_ov')},
@@ -732,9 +724,7 @@ async function loadData(){ GST.skeleton(true);
     });
 
     DATA = mappedData.filter(x => x.matName && x.matName.trim() !== '');
-    
     debugData(DATA, '최종 데이터');
-    
     status.textContent='✅ Load OK ('+DATA.length+'건)';
     if(DATA.length === 0) {
       status.textContent='⚠️ 데이터가 없습니다. CSV 헤더를 확인해주세요.';
@@ -782,9 +772,22 @@ function setPfFilter(v){
   render();
 }
 
-
 // ===== 차트 클릭 크로스 필터링 =====
 const CLICK_MAP={cMat:'mat',cEq:'eq',cProc:'process',cPf:'pf',cReason:'reason'};
+// ── 공통 상단바 (셸 #gbar) — 마감(월)은 종료일(dtTo)로 연결 ──
+let CUT_M='';
+function applyCut(v){
+  CUT_M=v||'';
+  const el=document.getElementById('dtTo');
+  if(el){ const p=CUT_M.split('-');
+    el.value = CUT_M ? new Date(Date.UTC(+p[0],+p[1],0)).toISOString().slice(0,10) : ''; }
+  onSlicer();
+}
+GST.pageBar({
+  caps:{cutoff:'m', style:true, ppt:'auto'},
+  state:()=>({endM:CUT_M, style:GST.style()}),
+  on:{ endM:v=>applyCut(v), clear:()=>applyCut('') }
+});
 const FIELD_LABEL={country:'국가',customer:'고객사',line:'라인',process:'공정',detail:'세부공정',eq:'설비',mat:'자재',reason:'사유',pf:'유/무상',dtFrom:'시작일',dtTo:'종료일',q:'검색'};
 function chartClick(chartId,label){
   const key=CLICK_MAP[chartId]; if(!key)return;
@@ -939,10 +942,8 @@ let LAST_F=[];
 function render(){ GST.skeleton(false); GST.pushState(F);
   const f=filt(); LAST_F=f;
   console.log('[DEBUG] render - 필터링된 데이터:', f.length, '건');
-  
   const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
   const pal = TH.pal8;
-  
   const paid=f.filter(x=>x.pf==='유상').length; const free=f.filter(x=>x.pf==='무상').length;
   const setTxt=(id,v)=>{const e=document.getElementById(id);if(e)e.innerHTML=v;};
   const _n=new Date(),_y=_n.getUTCFullYear(),_m=_n.getUTCMonth();
@@ -1231,7 +1232,6 @@ function renderEqDrill(){
 function renderCrossTable(){
   const body=document.getElementById('crossBody');
   if(body.style.display==='none') return;
-  
   // 제외 목록(소모품 등) 반영
   const f=LAST_F.filter(x=>!EXCL.mat.includes(x.matName)&&!EXCL.eq.includes(x.eq)
     &&!EXCL.proc.includes(x.process)&&!EXCL.reason.includes(x.reason)
@@ -1241,7 +1241,6 @@ function renderCrossTable(){
   const cK=document.getElementById('crossCol').value;
   const vK=document.getElementById('crossValue').value;
   const topN=parseInt(document.getElementById('crossTopN').value);
-  
   function getValue(row) {
     switch(vK) {
       case 'count': return 1;
@@ -1253,7 +1252,6 @@ function renderCrossTable(){
       default: return 1;
     }
   }
-  
   function aggregate(arr) {
     switch(vK) {
       case 'count': return arr.length;
@@ -1274,7 +1272,6 @@ function renderCrossTable(){
       default: return arr.length;
     }
   }
-  
   // TOP N은 집계값 기준 상위 N (년도/월은 시간순)
   const keyOf=(x,k)=>String(k==='year'?x.year:k==='month'?x.month:(x[k]||'—'));
   const rowGroups={}, colGroups={};
@@ -1302,7 +1299,6 @@ function renderCrossTable(){
     }
   });
   CROSS_MATRIX = matrix;
-  
   const values = {};
   rowFiltered.forEach(r => {
     values[r] = {};
@@ -1311,7 +1307,6 @@ function renderCrossTable(){
     });
     values[r]._t = aggregate(matrix[r]._t || []);
   });
-  
   let maxVal = 0;
   rowFiltered.forEach(r => {
     colFiltered.forEach(c => {
@@ -1319,10 +1314,8 @@ function renderCrossTable(){
     });
   });
   if(maxVal === 0) maxVal = 1;
-  
   const colLabel = cK === 'year' ? '년도' : cK === 'month' ? '월' : cK === 'freeReason' ? '무상사유' : cK === 'reason' ? '교체사유' : cK === 'matName' ? '자재명' : cK === 'pf' ? '유무상' : cK === 'eq' ? '설비' : cK === 'detail' ? '세부공정' : cK === 'process' ? '공정' : cK === 'line' ? 'LINE' : cK === 'customer' ? '고객사' : cK === 'country' ? '국가' : cK;
   const rowLabel = rK === 'year' ? '년도' : rK === 'month' ? '월' : rK === 'freeReason' ? '무상사유' : rK === 'reason' ? '교체사유' : rK === 'matName' ? '자재명' : rK === 'pf' ? '유무상' : rK === 'eq' ? '설비' : rK === 'detail' ? '세부공정' : rK === 'process' ? '공정' : rK === 'line' ? 'LINE' : rK === 'customer' ? '고객사' : rK === 'country' ? '국가' : rK;
-  
   // 히트맵 — 테마 팔레트 1색 농도 (테마 전환 자동 반영)
   const _hh=(theme.pal[0]||'#3987e5').replace('#','');
   const _hr=parseInt(_hh.slice(0,2),16),_hg=parseInt(_hh.slice(2,4),16),_hb=parseInt(_hh.slice(4,6),16);
@@ -1330,7 +1323,6 @@ function renderCrossTable(){
     const ratio = maxVal > 0 ? val / maxVal : 0;
     return `rgba(${_hr},${_hg},${_hb},${(0.05 + ratio * 0.5).toFixed(3)})`;
   }
-  
   const thead = document.getElementById('crossTable').querySelector('thead');
   const tbody = document.getElementById('crossTable').querySelector('tbody');
   thead.innerHTML = `<tr><th>${rowLabel}</th>${colFiltered.map(c => `<th>${c}</th>`).join('')}<th>Total</th></tr>`;
@@ -1344,14 +1336,12 @@ function renderCrossTable(){
       <td class="num total-cell">${values[r]._t}</td>
     </tr>`;
   }).join('');
-  
   const chartLabels = rowFiltered;
   const barData = rowFiltered.map(r => values[r]._t || 0);
   const percentageData = rowFiltered.map(r => {
     const total = rowFiltered.reduce((s, rr) => s + (values[rr]._t || 0), 0);
     return total > 0 ? Math.round((values[r]._t || 0) / total * 100) : 0;
   });
-  
   const ctx = document.getElementById('crossChart').getContext('2d');
 
   if(CROSS_CHART_INSTANCE) { CROSS_CHART_INSTANCE.destroy(); }
