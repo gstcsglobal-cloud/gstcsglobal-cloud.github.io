@@ -212,7 +212,7 @@ canvas{cursor:pointer}
   <div class="grid2-trend">
     <div class="trend-card" style="margin-bottom:0">
       <div class="trend-header">
-        <h3 data-i="ch_trend">월별 서비스 추이</h3>
+        <h3 data-i="ch_trend">서비스 추이 (주/월)</h3>
         <div class="trend-meta" id="trendMeta"></div>
       </div>
       <div class="trend-wrap"><canvas id="cTrend"></canvas></div>
@@ -292,7 +292,7 @@ canvas{cursor:pointer}
   <div class="grid2-trend">
     <div class="trend-card" style="margin-bottom:0">
       <div class="trend-header">
-        <h3 data-i="ch_mantrend">월별 작업공수</h3>
+        <h3 data-i="ch_mantrend">작업공수 추이 (주/월)</h3>
         <div class="trend-meta" data-i="note_mantrend">인·시 (작업공수 ÷ 60)</div>
       </div>
       <div class="trend-wrap"><canvas id="cManTrend"></canvas></div>
@@ -362,7 +362,7 @@ canvas{cursor:pointer}
   </div>
   <div class="grid2-trend" style="margin-top:16px">
     <div class="trend-card" style="margin-bottom:0">
-      <div class="trend-header"><h3 data-i="ch_ftfrtrend">월별 FTFR 추이</h3><div class="trend-meta" data-i="note_ftfrtrend">초기 수리 성공률(%) · 목표 90%</div></div>
+      <div class="trend-header"><h3 data-i="ch_ftfrtrend">FTFR 추이 (주/월)</h3><div class="trend-meta" data-i="note_ftfrtrend">초기 수리 성공률(%) · 목표 90%</div></div>
       <div class="trend-wrap"><canvas id="cFtfrTrend"></canvas></div>
     </div>
     <div class="trend-card" style="margin-bottom:0">
@@ -433,22 +433,22 @@ const T={
     rf_mtbf:'중앙값 {n}일',rf_mttr:'BM {n}건 평균',rf_frate:'가동기간 환산',rf_units:'BM 2건↑ · 설치연동 {p}%',
     ch_relrank:'이상 집중 설비 TOP',note_relrank:'연간 고장률 높은 설비 · 🖱️ 클릭 시 필터',ch_relmodel:'모델별 MTBF',note_relmodel:'낮을수록 취약 · 평균 고장간격(일)',ch_relage:'설비 연차별 고장률',note_relage:'가동연차별 대당 BM · 욕조곡선',
     rel_tbl:'설비 신뢰성 상세',th_bm:'BM건',th_mtbf:'MTBF(일)',th_mttr:'MTTR(분)',th_lastbm:'최근 BM',th_since:'가동기준',u_day:'일',age_b:['<1년','1~2년','2~3년','3년+'],
-    r_ftfr:'초기 수리 성공률 (FTFR)',rf_ftfr:'{w}일 내 재방문 {n}건',ch_ftfrtrend:'월별 FTFR 추이',note_ftfrtrend:'초기 수리 성공률(%) · 목표 90%',ch_ftfrmodel:'모델별 FTFR',note_ftfrmodel:'낮을수록 재작업 잦음(%)',
+    r_ftfr:'초기 수리 성공률 (FTFR)',rf_ftfr:'{w}일 내 재방문 {n}건',ch_ftfrtrend:'FTFR 추이 (주/월)',note_ftfrtrend:'초기 수리 성공률(%) · 목표 90%',ch_ftfrmodel:'모델별 FTFR',note_ftfrmodel:'낮을수록 재작업 잦음(%)',
     sl_stage:'작업단계',sl_pf:'유/무상',sl_cause:'원인',sl_model:'모델',sl_sn:'설비 S/N',sl_period:'기간',sl_search:'검색',
     all:'전체',f_active:'활성 필터',f_clear:'전체 해제',no_data:'조건에 맞는 데이터가 없습니다',
     kp1:'서비스 대응 건수',kp3:'평균 작업시간',kp4:'총 작업공수',kp5:'유상 비율',
     u_cnt:'건',u_min:'분',u_mh:'인·시',
     kf1:'최근 30일 {n}건',kf2:'전체의 {p}%',kf3:'중앙값 {n}분',kf4:'공수 기록 {n}건 기준',kf5:'유상 {a} · 무상 {b}',
-    ch_trend:'월별 서비스 추이',ch_stage:'작업단계 구성',note_stage:'BM은 상태색으로 강조',
+    ch_trend:'서비스 추이 (주/월)',ch_stage:'작업단계 구성',note_stage:'BM은 상태색으로 강조',
     ch_sn:'설비별 대응 TOP',note_sn:'이상 집중 설비는 붉게 표시 · 🖱️ 클릭 시 필터',
     ch_line:'LINE별 건수',note_line:'🖱️ 클릭 시 필터',ch_pf:'유상 vs 무상',note_pf:'서비스 대응의 유상/무상 구성',pf_ratio:'유상 비율',pf_paid:'유상',pf_free:'무상',
     ch_phenom:'현상 TOP',ch_cause:'원인 TOP',note_cause:'🖱️ 클릭 시 필터',ch_action:'조치 유형',note_action:'중앙: 전체 건수',
     ch_reqtype:'의뢰유형',note_reqtype:'고객요청/신규/이설 등',ch_model:'모델별 대응',ch_proc:'공정별 대응',note_hbar:'값은 막대 끝 · 비중은 툴팁',
-    ch_mantrend:'월별 작업공수',note_mantrend:'인·시 (작업공수 ÷ 60)',ch_dur:'작업시간 분포',note_dur:'건당 소요시간(분) 구간',
+    ch_mantrend:'작업공수 추이 (주/월)',note_mantrend:'인·시 (작업공수 ÷ 60)',ch_dur:'작업시간 분포',note_dur:'건당 소요시간(분) 구간',
     ch_worker:'작업자 TOP (공수)',note_worker:'개인별 누적 인·시 · 공동작업은 인원수로 안분',ch_wcnt:'투입 인원수 구성',note_wcnt:'건당 작업자수',
     ch_lineman:'LINE별 평균 작업시간',note_lineman:'건당 평균(분)',
     tbl_title:'서비스 실적 상세',th_date:'작업일',th_stage:'단계',th_pf:'유/무상',th_phenom:'현상',th_cause:'원인',th_action:'조치',th_min:'시간(분)',th_mh:'공수',th_worker:'작업자',
-    ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'월 작업공수 {n}인·시 · 전월 대비 {p}',
+    ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'최근 구간 작업공수 {n}인·시 · 직전 구간 대비 {p}',
     etc:'기타',mon_unit:'월',dur_b:['<30분','30–60분','1–2시간','2–4시간','4시간+'],wcnt_p:'{n}명'},
   en:{title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
     sec_ov:'Overview',sec_ca:'Cause & Action',sec_ld:'Workload',sec_rel:'Reliability',sec_dt:'Data',
@@ -456,22 +456,22 @@ const T={
     rf_mtbf:'median {n} d',rf_mttr:'avg of {n} BM',rf_frate:'annualized',rf_units:'BM≥2 · install-linked {p}%',
     ch_relrank:'Top Unreliable Units',note_relrank:'high annual failure rate · click to filter',ch_relmodel:'MTBF by Model',note_relmodel:'lower = weaker · mean days btw failures',ch_relage:'Failure Rate by Age',note_relage:'BM per unit by service age · bathtub',
     rel_tbl:'Equipment Reliability',th_bm:'BM',th_mtbf:'MTBF(d)',th_mttr:'MTTR(m)',th_lastbm:'Last BM',th_since:'Since',u_day:'d',age_b:['<1y','1–2y','2–3y','3y+'],
-    r_ftfr:'First-Time-Fix Rate',rf_ftfr:'{n} revisits within {w}d',ch_ftfrtrend:'Monthly FTFR',note_ftfrtrend:'first-time-fix rate(%) · goal 90%',ch_ftfrmodel:'FTFR by Model',note_ftfrmodel:'lower = more rework(%)',
+    r_ftfr:'First-Time-Fix Rate',rf_ftfr:'{n} revisits within {w}d',ch_ftfrtrend:'FTFR Trend (W/M)',note_ftfrtrend:'first-time-fix rate(%) · goal 90%',ch_ftfrmodel:'FTFR by Model',note_ftfrmodel:'lower = more rework(%)',
     sl_stage:'Stage',sl_pf:'Paid/Free',sl_cause:'Cause',sl_model:'Model',sl_sn:'Equipment S/N',sl_period:'Period',sl_search:'Search',
     all:'All',f_active:'Active Filters',f_clear:'Clear All',no_data:'No data found',
     kp1:'Service Cases',kp3:'Avg Work Time',kp4:'Total Man-hours',kp5:'Paid Ratio',
     u_cnt:'',u_min:'min',u_mh:'m·h',
     kf1:'{n} in last 30 days',kf2:'{p}% of all',kf3:'median {n} min',kf4:'based on {n} records',kf5:'paid {a} · free {b}',
-    ch_trend:'Monthly Service Trend',ch_stage:'By Work Stage',note_stage:'BM highlighted with status color',
+    ch_trend:'Service Trend (W/M)',ch_stage:'By Work Stage',note_stage:'BM highlighted with status color',
     ch_sn:'Top Equipment',note_sn:'outliers in red · click to filter',
     ch_line:'Cases by LINE',note_line:'click to filter',ch_pf:'Paid vs Free',note_pf:'Paid/free mix of services',pf_ratio:'paid ratio',pf_paid:'Paid',pf_free:'Free',
     ch_phenom:'Top Phenomena',ch_cause:'Top Causes',note_cause:'click to filter',ch_action:'Action Types',note_action:'center: total',
     ch_reqtype:'Request Types',note_reqtype:'customer request / new / move',ch_model:'By Model',ch_proc:'By Process',note_hbar:'value at bar end · share in tooltip',
-    ch_mantrend:'Monthly Man-hours',note_mantrend:'man-hours (man-min ÷ 60)',ch_dur:'Duration Distribution',note_dur:'work minutes per case',
+    ch_mantrend:'Man-hours Trend (W/M)',note_mantrend:'man-hours (man-min ÷ 60)',ch_dur:'Duration Distribution',note_dur:'work minutes per case',
     ch_worker:'Top Workers (man-hours)',note_worker:'per-person, shared jobs split by headcount',ch_wcnt:'Crew Size Mix',note_wcnt:'workers per case',
     ch_lineman:'Avg Work Time by LINE',note_lineman:'avg minutes per case',
     tbl_title:'Service Records',th_date:'Date',th_stage:'Stage',th_pf:'Paid/Free',th_phenom:'Phenomenon',th_cause:'Cause',th_action:'Action',th_min:'Min',th_mh:'Man-min',th_worker:'Workers',
-    ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours this month · {p} MoM',
+    ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours in latest period · {p} vs prev',
     etc:'Others',mon_unit:'',dur_b:['<30m','30–60m','1–2h','2–4h','4h+'],wcnt_p:'{n} ppl'},
   zh:{title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
     sec_ov:'概览',sec_ca:'原因·措施',sec_ld:'工时负荷',sec_rel:'可靠性',sec_dt:'明细',
@@ -479,22 +479,22 @@ const T={
     rf_mtbf:'中位数 {n}天',rf_mttr:'BM {n}件均值',rf_frate:'按运行期折算',rf_units:'BM≥2 · 安装关联 {p}%',
     ch_relrank:'异常集中设备TOP',note_relrank:'年故障率高的设备 · 点击筛选',ch_relmodel:'按型号MTBF',note_relmodel:'越低越脆弱 · 平均故障间隔(天)',ch_relage:'按机龄故障率',note_relage:'各运行年台均BM · 浴盆曲线',
     rel_tbl:'设备可靠性明细',th_bm:'BM件',th_mtbf:'MTBF(天)',th_mttr:'MTTR(分)',th_lastbm:'最近BM',th_since:'运行起始',u_day:'天',age_b:['<1年','1~2年','2~3年','3年+'],
-    r_ftfr:'首次修复成功率(FTFR)',rf_ftfr:'{w}天内返修 {n}件',ch_ftfrtrend:'月度FTFR',note_ftfrtrend:'首次修复成功率(%) · 目标90%',ch_ftfrmodel:'按型号FTFR',note_ftfrmodel:'越低返工越多(%)',
+    r_ftfr:'首次修复成功率(FTFR)',rf_ftfr:'{w}天内返修 {n}件',ch_ftfrtrend:'FTFR趋势 (周/月)',note_ftfrtrend:'首次修复成功率(%) · 目标90%',ch_ftfrmodel:'按型号FTFR',note_ftfrmodel:'越低返工越多(%)',
     sl_stage:'作业阶段',sl_pf:'有/无偿',sl_cause:'原因',sl_model:'型号',sl_sn:'设备S/N',sl_period:'期间',sl_search:'搜索',
     all:'全部',f_active:'活动筛选',f_clear:'全部清除',no_data:'无数据',
     kp1:'服务对应件数',kp3:'平均作业时间',kp4:'总作业工时',kp5:'有偿比率',
     u_cnt:'件',u_min:'分',u_mh:'人·时',
     kf1:'近30天 {n}件',kf2:'占全部{p}%',kf3:'中位数 {n}分',kf4:'基于{n}条工时记录',kf5:'有偿 {a} · 无偿 {b}',
-    ch_trend:'月度服务趋势',ch_stage:'作业阶段构成',note_stage:'BM以状态色强调',
+    ch_trend:'服务趋势 (周/月)',ch_stage:'作业阶段构成',note_stage:'BM以状态色强调',
     ch_sn:'设备对应TOP',note_sn:'异常集中设备红色显示 · 点击筛选',
     ch_line:'按LINE件数',note_line:'点击筛选',ch_pf:'有偿 vs 无偿',note_pf:'服务的有/无偿构成',pf_ratio:'有偿比率',pf_paid:'有偿',pf_free:'无偿',
     ch_phenom:'现象TOP',ch_cause:'原因TOP',note_cause:'点击筛选',ch_action:'措施类型',note_action:'中央: 总件数',
     ch_reqtype:'委托类型',note_reqtype:'客户要求/新增/移设等',ch_model:'按型号',ch_proc:'按工艺',note_hbar:'数值在柱端 · 占比见提示框',
-    ch_mantrend:'月度作业工时',note_mantrend:'人·时 (工时÷60)',ch_dur:'作业时间分布',note_dur:'每件耗时(分)区间',
+    ch_mantrend:'工时趋势 (周/月)',note_mantrend:'人·时 (工时÷60)',ch_dur:'作业时间分布',note_dur:'每件耗时(分)区间',
     ch_worker:'作业者TOP (工时)',note_worker:'按人累计,共同作业按人数分摊',ch_wcnt:'投入人数构成',note_wcnt:'每件作业人数',
     ch_lineman:'按LINE平均作业时间',note_lineman:'每件平均(分)',
     tbl_title:'服务实绩明细',th_date:'作业日',th_stage:'阶段',th_pf:'有/无偿',th_phenom:'现象',th_cause:'原因',th_action:'措施',th_min:'时间(分)',th_mh:'工时',th_worker:'作业者',
-    ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'本月工时 {n}人·时 · 环比 {p}',
+    ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'最近区间工时 {n}人·时 · 环比 {p}',
     etc:'其他',mon_unit:'月',dur_b:['<30分','30–60分','1–2时','2–4时','4时+'],wcnt_p:'{n}人'},
   ja:{title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
     sec_ov:'概要',sec_ca:'原因·処置',sec_ld:'工数負荷',sec_rel:'信頼性',sec_dt:'詳細',
@@ -502,22 +502,22 @@ const T={
     rf_mtbf:'中央値 {n}日',rf_mttr:'BM {n}件平均',rf_frate:'稼働期間換算',rf_units:'BM2件↑ · 設置連動 {p}%',
     ch_relrank:'異常集中設備TOP',note_relrank:'年間故障率が高い設備 · クリックで絞込',ch_relmodel:'モデル別MTBF',note_relmodel:'低いほど脆弱 · 平均故障間隔(日)',ch_relage:'設備年次別故障率',note_relage:'稼働年次別台当BM · バスタブ曲線',
     rel_tbl:'設備信頼性詳細',th_bm:'BM件',th_mtbf:'MTBF(日)',th_mttr:'MTTR(分)',th_lastbm:'直近BM',th_since:'稼働基準',u_day:'日',age_b:['<1年','1~2年','2~3年','3年+'],
-    r_ftfr:'初回修理成功率(FTFR)',rf_ftfr:'{w}日以内 再訪問 {n}件',ch_ftfrtrend:'月別FTFR',note_ftfrtrend:'初回修理成功率(%) · 目標90%',ch_ftfrmodel:'モデル別FTFR',note_ftfrmodel:'低いほど再作業多い(%)',
+    r_ftfr:'初回修理成功率(FTFR)',rf_ftfr:'{w}日以内 再訪問 {n}件',ch_ftfrtrend:'FTFR推移 (週/月)',note_ftfrtrend:'初回修理成功率(%) · 目標90%',ch_ftfrmodel:'モデル別FTFR',note_ftfrmodel:'低いほど再作業多い(%)',
     sl_stage:'作業段階',sl_pf:'有/無償',sl_cause:'原因',sl_model:'モデル',sl_sn:'設備S/N',sl_period:'期間',sl_search:'検索',
     all:'全体',f_active:'有効フィルタ',f_clear:'全解除',no_data:'データなし',
     kp1:'サービス対応件数',kp3:'平均作業時間',kp4:'総作業工数',kp5:'有償比率',
     u_cnt:'件',u_min:'分',u_mh:'人·時',
     kf1:'直近30日 {n}件',kf2:'全体の{p}%',kf3:'中央値 {n}分',kf4:'工数記録{n}件基準',kf5:'有償 {a} · 無償 {b}',
-    ch_trend:'月別サービス推移',ch_stage:'作業段階構成',note_stage:'BMは状態色で強調',
+    ch_trend:'サービス推移 (週/月)',ch_stage:'作業段階構成',note_stage:'BMは状態色で強調',
     ch_sn:'設備別対応TOP',note_sn:'異常集中設備は赤表示 · クリックで絞込',
     ch_line:'LINE別件数',note_line:'クリックで絞込',ch_pf:'有償 vs 無償',note_pf:'サービスの有償/無償構成',pf_ratio:'有償比率',pf_paid:'有償',pf_free:'無償',
     ch_phenom:'現象TOP',ch_cause:'原因TOP',note_cause:'クリックで絞込',ch_action:'処置タイプ',note_action:'中央: 総件数',
     ch_reqtype:'依頼タイプ',note_reqtype:'顧客要請/新規/移設など',ch_model:'モデル別',ch_proc:'工程別',note_hbar:'値は棒の先 · 構成比はツールチップ',
-    ch_mantrend:'月別作業工数',note_mantrend:'人·時 (工数÷60)',ch_dur:'作業時間分布',note_dur:'件当たり所要時間(分)区分',
+    ch_mantrend:'工数推移 (週/月)',note_mantrend:'人·時 (工数÷60)',ch_dur:'作業時間分布',note_dur:'件当たり所要時間(分)区分',
     ch_worker:'作業者TOP (工数)',note_worker:'個人別累計·共同作業は人数で按分',ch_wcnt:'投入人数構成',note_wcnt:'件当たり作業者数',
     ch_lineman:'LINE別平均作業時間',note_lineman:'件当たり平均(分)',
     tbl_title:'サービス実績詳細',th_date:'作業日',th_stage:'段階',th_pf:'有/無償',th_phenom:'現象',th_cause:'原因',th_action:'処置',th_min:'時間(分)',th_mh:'工数',th_worker:'作業者',
-    ins_mom:'直近30日 {n}件 · 前30日比 {p}',ins_topcause:'原因 {v} 集中 — 全体の{p}%',ins_outlier:'設備 {v} 異常集中 — {n}件',ins_man:'今月工数 {n}人·時 · 前月比 {p}',
+    ins_mom:'直近30日 {n}件 · 前30日比 {p}',ins_topcause:'原因 {v} 集中 — 全体の{p}%',ins_outlier:'設備 {v} 異常集中 — {n}件',ins_man:'直近区間工数 {n}人·時 · 前区間比 {p}',
     etc:'その他',mon_unit:'月',dur_b:['<30分','30–60分','1–2時間','2–4時間','4時間+'],wcnt_p:'{n}名'}
 };
 
@@ -652,9 +652,10 @@ function applyCut(v){
   onSlicer();
 }
 GST.pageBar({
-  caps:{cutoff:'m', style:true, ppt:'auto'},
-  state:()=>({endM:CUT_M, style:GST.style()}),
-  on:{ endM:v=>applyCut(v), clear:()=>applyCut('') }
+  caps:{period:true, cutoff:'m', style:true, ppt:'auto'},
+  state:()=>({period:GST.period(), endM:CUT_M, style:GST.style()}),
+  on:{ period:v=>{ GST.setPeriod(v); render(); },
+       endM:v=>applyCut(v), clear:()=>applyCut('') }
 });
 const FIELD_LABEL={line:'LINE',stage:'단계',pf:'유/무상',cause:'원인',model:'모델',sn:'설비',dtFrom:'시작일',dtTo:'종료일',q:'검색'};
 function renderFilterChips(){GST.renderChips(F,FIELD_LABEL,'clearFilter');}
@@ -882,9 +883,11 @@ function renderReliability(f){
   {const e5=document.getElementById('rk5'); if(e5)e5.style.color=GST.ragColor(ftfrVal,GST.conf('rag_ftfr',[90,80])[0],GST.conf('rag_ftfr',[90,80])[1],true);}
   {const e3=document.getElementById('rk3'); if(e3)e3.style.color=GST.ragColor(fleetFrate,GST.conf('rag_frate',[3,6])[0],GST.conf('rag_frate',[3,6])[1],false);}
   seth('rf5',t('rf_ftfr').replace('{w}',WIN).replace('{n}',rep));
-  const mAgg={}; fev.forEach(e=>{const mk=e.work.getUTCFullYear()+'-'+String(e.work.getUTCMonth()+1).padStart(2,'0');const o=mAgg[mk]||(mAgg[mk]={o:0,r:0});o.o++;if(e.repeat)o.r++;});
-  const mk2=Object.keys(mAgg).sort().slice(-8);
-  mkBarV('cFtfrTrend',mk2.map(k=>+k.slice(5)+t('mon_unit')),mk2.map(k=>mAgg[k].o?Math.round((1-mAgg[k].r/mAgg[k].o)*100):0),TH.status.ok);
+  const mAgg={}; const _pk=window._perKey||(d=>d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'));
+  fev.forEach(e=>{const mk=_pk(e.work);const o=mAgg[mk]||(mAgg[mk]={o:0,r:0});o.o++;if(e.repeat)o.r++;});
+  const PB2=window._PERB||[];
+  mkBarV('cFtfrTrend',PB2.map(p=>p.label),
+    PB2.map(p=>{const o=mAgg[p.key];return o&&o.o?Math.round((1-o.r/o.o)*100):null;}),TH.status.ok);
   const mdl={}; fev.forEach(e=>{const o=mdl[e.model]||(mdl[e.model]={o:0,r:0});o.o++;if(e.repeat)o.r++;});
   const mdlEnt=Object.keys(mdl).filter(m=>mdl[m].o>=3).map(m=>[m,Math.round((1-mdl[m].r/mdl[m].o)*100)]).sort((a,b)=>a[1]-b[1]).slice(0,10);
   mkHBar('cFtfrModel',mdlEnt,100,null,TH.pal[1],10,(l,i)=>i<2?TH.status.bad:TH.pal[1]);
@@ -957,13 +960,19 @@ function render(){ GST.skeleton(false); GST.pushState(F);
     };
   });
 
-  // ── 개요 차트 ──
+  // ── 개요 차트 — 추이는 상단 공통바 주/월 토글, 최근 12구간 ──
+  const PU=GST.period();
+  const _anch=F.dtTo?new Date(F.dtTo+'T00:00:00Z')
+             :ROWS.reduce((a,x)=>(x.work&&(!a||x.work>a))?x.work:a,null)||new Date();
+  window._PERB=GST.periods(12,_anch,PU,t('mon_unit'));   // renderReliability(cFtfrTrend)도 같은 구간 사용
+  const PB=window._PERB;
+  const perKey=x=>PU==='w'?GST.isoW(x):monthKey(x);
+  window._perKey=perKey;
   const months={};
-  f.forEach(x=>{if(x.work)months[monthKey(x.work)]=(months[monthKey(x.work)]||0)+1;});
-  const mk=Object.keys(months).sort();
-  mkBarV('cTrend',mk.map(k=>+k.slice(5)+t('mon_unit')),mk.map(k=>months[k]),TH.pal[0],{forecast:3,anomaly:true});
+  f.forEach(x=>{if(x.work)months[perKey(x.work)]=(months[perKey(x.work)]||0)+1;});
+  mkBarV('cTrend',PB.map(p=>p.label),PB.map(p=>months[p.key]||0),TH.pal[0],{forecast:3,anomaly:true});
   const meta=document.getElementById('trendMeta');
-  if(meta)meta.textContent=(mk[0]||'')+' ~ '+(mk[mk.length-1]||'');
+  if(meta)meta.textContent=PB[0].key+' ~ '+PB[PB.length-1].key;
 
   const stageColor=(l,i)=>l==='BM'?TH.status.bad:[TH.pal[0],TH.pal[1],TH.pal[3],TH.pal[4]][i%4];
   mkDonut('cStage',countBy(f,'stage'),'stage',5,stageColor);
@@ -990,9 +999,9 @@ function render(){ GST.skeleton(false); GST.pushState(F);
 
   // ── 작업 부하 ──
   const manByM={};
-  mans.forEach(x=>{if(x.work)manByM[monthKey(x.work)]=(manByM[monthKey(x.work)]||0)+x.manMin;});
-  const mmk=Object.keys(manByM).sort();
-  mkBarV('cManTrend',mmk.map(k=>+k.slice(5)+t('mon_unit')),mmk.map(k=>Math.round(manByM[k]/60)),TH.pal[2]);
+  mans.forEach(x=>{if(x.work)manByM[perKey(x.work)]=(manByM[perKey(x.work)]||0)+x.manMin;});
+  const mmk=PB.filter(p=>manByM[p.key]!=null).map(p=>p.key);   // 인사이트(직전 구간 대비)용
+  mkBarV('cManTrend',PB.map(p=>p.label),PB.map(p=>Math.round((manByM[p.key]||0)/60)),TH.pal[2]);
 
   const durB=t('dur_b'); const durCnt=[0,0,0,0,0];
   mins.forEach(v=>{durCnt[v<30?0:v<60?1:v<120?2:v<240?3:4]++;});
