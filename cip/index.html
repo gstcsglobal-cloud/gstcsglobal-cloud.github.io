@@ -79,15 +79,11 @@ body.theme-light .slicer select,body.theme-light .slicer input{color-scheme:ligh
 .fchip-clear{background:transparent;border:1px solid var(--glass-border);border-radius:20px;padding:4px 11px;color:var(--txt-muted);font-size:10px;font-weight:700;cursor:pointer;margin-left:auto}
 .fchip-clear:hover{color:var(--bad);border-color:var(--bad)}
 
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
 .kpi{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:16px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:all .3s;box-shadow:var(--card-shadow)}
 .kpi:hover{transform:translateY(-4px);border-color:var(--accent-1)}
-.kpi .cap{margin:0 0 8px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--txt-muted);font-weight:600}
-.kpi .krow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.kpi .val{font-size:25px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
-.kpi .unit{font-size:12px;color:var(--txt-muted);font-weight:600}
-.kpi .kd{font-size:11px;font-weight:800}
-.kpi .kfoot{font-size:11px;color:var(--txt-muted);margin-top:7px;min-height:13px}
+
+
+
 .kpi.k1 .val{color:var(--accent-1)}
 .kpi.k4 .val{color:var(--warn)}
 
@@ -151,8 +147,8 @@ tr:hover td{background:var(--glass-hover)}
 .hm-wrap tr.tot td{font-weight:800;color:var(--accent-2);background:var(--glass)}
 
 @media print{.capbtns,.header-right,.slicers,.fchips,.rpt-toolbar,.mini-per{display:none!important}.card{break-inside:avoid;page-break-inside:avoid}}
-@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid2,.grid2b{grid-template-columns:1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
-@media(max-width:768px){.kpis{grid-template-columns:repeat(2,1fr)}.slicers{grid-template-columns:1fr}.card h3{padding-right:0}}
+@media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
+@media(max-width:768px){.slicers{grid-template-columns:1fr}.card h3{padding-right:0}}
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
 </head>
@@ -166,8 +162,6 @@ tr:hover td{background:var(--glass-hover)}
   </div>
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← 메인으로</a>
-    <button class="btn btn-glass" onclick="saveAllCharts()" title="모든 차트를 고해상도 PNG로 저장">🖼</button>
-    <button class="btn btn-glass" onclick="window.print()" title="인쇄 / PDF">🖨</button>
     <button class="btn btn-grad" id="refreshBtn" onclick="loadData()"><span data-i="refresh">새로고침</span></button>
     <div class="theme-wrap">
       <button class="theme-btn" onclick="toggleThemeMenu()"><span id="themeLabel">Slate</span> ▾</button>
@@ -192,17 +186,8 @@ tr:hover td{background:var(--glass-hover)}
 
 <div class="status" id="status">Loading...</div>
 
-<!-- 기간 토글 · 마감 (주간현황과 설정 공유) -->
-<div class="rpt-toolbar">
-  <button class="pt-btn" id="ptW" onclick="setPeriod('w')" data-i="per_w">주별</button>
-  <button class="pt-btn" id="ptM" onclick="setPeriod('m')" data-i="per_m">월별</button>
-  <span class="pt-note" data-i="per_note">최근 12개 구간</span>
-  <span class="pt-note" style="margin-left:14px" data-i="cutoff">마감</span>
-  <span class="pt-cap">Month</span><input type="month" id="endM" class="pt-inp" title="월간 차트 마감 월" onchange="setEnd('m',this.value)">
-  <span class="pt-cap">Week</span><select id="endW" class="pt-inp" title="주간 차트 마감 주차" onchange="setEnd('w',this.value)"></select>
-  <button class="pt-btn" title="마감 해제" onclick="clearEnds()">↺</button>
-  <span class="pt-note" id="asOfNote"></span>
-</div>
+<!-- 기간·마감·차트 디자인·PPT 컨트롤은 셸 상단 공통바(#gbar)로 이동 — GST.pageBar 등록부 참조 -->
+<div class="pt-note" id="asOfNote" style="margin:-4px 0 12px"></div>
 
 <div class="slicers">
   <div class="slicer"><div class="lbl" data-i="sl_site">사이트</div><select id="sl-site" onchange="onSlicer()"></select></div>
@@ -220,24 +205,24 @@ tr:hover td{background:var(--glass-hover)}
 </div>
 
 <div class="kpis">
-  <div class="kpi k1"><div class="cap" data-i="kp1">진행율</div>
-    <div class="krow"><span class="val" id="kp1">—</span><span class="kd" id="kd1"></span></div>
-    <div class="kfoot" id="kf1"></div></div>
-  <div class="kpi"><div class="cap" data-i="kp2">대상</div>
-    <div class="krow"><span class="val" id="kp2">0</span><span class="unit" data-i="u_cnt">건</span></div>
-    <div class="kfoot" id="kf2"></div></div>
-  <div class="kpi"><div class="cap" data-i="kp3">완료</div>
-    <div class="krow"><span class="val" id="kp3">0</span><span class="unit" data-i="u_cnt">건</span></div>
-    <div class="kfoot" id="kf3"></div></div>
-  <div class="kpi k4"><div class="cap" data-i="kp4">잔여</div>
-    <div class="krow"><span class="val" id="kp4">0</span><span class="unit" data-i="u_cnt">건</span></div>
-    <div class="kfoot" id="kf4"></div></div>
-  <div class="kpi"><div class="cap" data-i="kp5">이번 구간 완료</div>
-    <div class="krow"><span class="val" id="kp5">0</span><span class="kd" id="kd5"></span></div>
-    <div class="kfoot" id="kf5"></div></div>
-  <div class="kpi"><div class="cap" data-i="kp6">잔여 설비</div>
-    <div class="krow"><span class="val" id="kp6">0</span><span class="unit" data-i="u_eq">대</span></div>
-    <div class="kfoot" id="kf6"></div></div>
+  <div class="kpi k1"><div class="krow"><span class="val" id="kp1">—</span><span class="kd" id="kd1"></span></div>
+    <div class="cap" data-i="kp1">진행율</div>
+    <div class="kf" id="kf1"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp2">0</span><span class="unit" data-i="u_cnt">건</span></div>
+    <div class="cap" data-i="kp2">대상</div>
+    <div class="kf" id="kf2"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp3">0</span><span class="unit" data-i="u_cnt">건</span></div>
+    <div class="cap" data-i="kp3">완료</div>
+    <div class="kf" id="kf3"></div></div>
+  <div class="kpi k4"><div class="krow"><span class="val" id="kp4">0</span><span class="unit" data-i="u_cnt">건</span></div>
+    <div class="cap" data-i="kp4">잔여</div>
+    <div class="kf" id="kf4"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp5">0</span><span class="kd" id="kd5"></span></div>
+    <div class="cap" data-i="kp5">이번 구간 완료</div>
+    <div class="kf" id="kf5"></div></div>
+  <div class="kpi"><div class="krow"><span class="val" id="kp6">0</span><span class="unit" data-i="u_eq">대</span></div>
+    <div class="cap" data-i="kp6">잔여 설비</div>
+    <div class="kf" id="kf6"></div></div>
 </div>
 
 <!-- ═══ 개요 ═══ -->
@@ -497,8 +482,7 @@ try{const sv=JSON.parse(localStorage.getItem('gst_rpt_per')||'null'); if(sv&&typ
 function savePer(){try{localStorage.setItem('gst_rpt_per',JSON.stringify(PER));}catch(e){}}
 let ENDM='',ENDW='';
 try{const se=JSON.parse(localStorage.getItem('gst_rpt_end')||'null'); if(se){ENDM=se.m||'';ENDW=se.w||'';}}catch(e){}
-let RSTYLE='vivid';
-try{const rs=localStorage.getItem('gst_rpt_style'); if(rs)RSTYLE=rs;}catch(e){}
+// 차트 색상 스타일은 core.js(GST.STY)가 전 페이지 공통 관리
 let AXB={}; try{AXB=JSON.parse(localStorage.getItem('gst_rpt_axb')||'{}')||{};}catch(e){}
 function saveAXB(){try{localStorage.setItem('gst_rpt_axb',JSON.stringify(AXB));}catch(e){}}
 function applyAXB(){ // 차트 생성 후 옵션 갱신+update — 생성 사이클 내 주입은 스케일이 무시함
@@ -512,14 +496,26 @@ function applyAXB(){ // 차트 생성 후 옵션 갱신+update — 생성 사이
 window.setEnd=function(k,v){ if(k==='m')ENDM=v||''; else ENDW=v||'';
   try{localStorage.setItem('gst_rpt_end',JSON.stringify({m:ENDM,w:ENDW}));}catch(e){} render(); };
 window.clearEnds=function(){ ENDM='';ENDW='';
-  try{localStorage.setItem('gst_rpt_end','{}');}catch(e){}
-  const em=document.getElementById('endM'),ew=document.getElementById('endW');
-  if(em)em.value=''; if(ew)ew.value=''; render(); };
+  try{localStorage.setItem('gst_rpt_end','{}');}catch(e){} render(); };
 function setPeriod(p){PERIOD=p;PER={};savePer();try{localStorage.setItem('gst_rpt_period',p);}catch(e){}
-  document.getElementById('ptW').classList.toggle('active',p==='w');
-  document.getElementById('ptM').classList.toggle('active',p==='m');
-  if(CIP.length)render();
+  if(CIP.length)render(); else GST.barSync();
 }
+// 마감(주차) 옵션 — 최근 26주. 공통 상단바가 이 목록으로 Week 셀렉트를 만든다.
+function weekOpts(){
+  const t0=new Date(); t0.setUTCHours(0,0,0,0);
+  const s=new Date(t0); s.setUTCDate(s.getUTCDate()-s.getUTCDay());
+  const out=[];
+  for(let i=0;i<26;i++){ const d=new Date(s.getTime()-i*7*MS), k=isoW(d);
+    out.push({v:k, t:'W'+k.slice(-2)+' ('+(d.getUTCMonth()+1)+'/'+d.getUTCDate()+')'}); }
+  return out;
+}
+// 공통 상단바 등록 — 기간/마감/차트 디자인/PPT(범용)
+GST.pageBar({
+  caps:{period:true, cutoff:'wm', style:true, ppt:'auto'},
+  state:()=>({period:PERIOD, endM:ENDM, endW:ENDW, style:GST.style()}),
+  weeks:weekOpts,
+  on:{ period:v=>setPeriod(v), endM:v=>setEnd('m',v), endW:v=>setEnd('w',v), clear:()=>clearEnds() }
+});
 window.setChartPer=function(id,u){ PER[id]=u; savePer(); render(); };
 function renderMiniToggles(){
   document.querySelectorAll('.mini-per').forEach(box=>{
@@ -738,15 +734,7 @@ function match(x){
 // ── 렌더 ──
 function render(){
   const TH=GST.chartTheme();
-  const STY={
-    vivid:   {bar:'#2C5FAE',last:'#5EC2FF',bar2:'#7C6FE0',line:'#5EC2FF'},
-    graphite:{bar:'#8A8A8A',last:'#B4B4B4',bar2:'#C7C7C7',line:'#E03131'},
-    ocean:   {bar:'#0E7490',last:'#22D3EE',bar2:'#2DD4BF',line:'#F472B6'},
-    sunset:  {bar:'#EA580C',last:'#FBBF24',bar2:'#FB7185',line:'#6366F1'},
-    forest:  {bar:'#15803D',last:'#4ADE80',bar2:'#A3E635',line:'#DC2626'},
-    cb:      {bar:'#0072B2',last:'#56B4E9',bar2:'#CC79A7',line:'#D55E00'}
-  };
-  const _sty=STY[RSTYLE]||STY[TH.key==='burgundy'?'graphite':'vivid'];
+  const _sty=GST.sty();   // 차트 색상 스타일 6종은 core.js(GST.STY) 공통
   const BAR_C=_sty.bar, BAR_LAST=_sty.last, DONE_C=_sty.bar, REM_C=TH.status.warn, LINE_C=_sty.line;
   const barHi=n=>Array.from({length:n},(_,i)=>i===n-1?BAR_LAST:BAR_C);
   const today=new Date(); today.setUTCHours(0,0,0,0);
@@ -767,22 +755,8 @@ function render(){
     if(A>today)A=today;
     const P=periods(12,A,u); return {P,labels:P.map(x=>x.label),u};};
 
-  // 마감 UI 동기화
-  {const em=document.getElementById('endM'),ew=document.getElementById('endW');
-   if(em&&em.value!==ENDM)em.value=ENDM;
-   if(ew){
-     if(ew.options.length<2){
-       const s=new Date(today); s.setUTCDate(s.getUTCDate()-s.getUTCDay());
-       let html='<option value="">— '+t('all')+' —</option>';
-       for(let i=0;i<26;i++){const d=new Date(s.getTime()-i*7*MS);const k=isoW(d);
-         html+='<option value="'+k+'">'+('W'+k.slice(-2))+' ('+(d.getUTCMonth()+1)+'/'+d.getUTCDate()+')</option>';}
-       ew.innerHTML=html;
-     }
-     if(ew.value!==ENDW)ew.value=ENDW;
-   }}
-  document.getElementById('ptW').classList.toggle('active',PERIOD==='w');
-  document.getElementById('ptM').classList.toggle('active',PERIOD==='m');
-  document.getElementById('asOfNote').textContent=(ENDM||ENDW)?t('asof').replace('{d}',GST.fmtDate(asOf)):'';
+  {const n=document.getElementById('asOfNote');
+   if(n)n.textContent=(ENDM||ENDW)?t('asof').replace('{d}',GST.fmtDate(asOf)):'';}
   renderMiniToggles();
   ['soRem','soRate'].forEach(id=>document.getElementById(id).classList.toggle('active',itemSort===(id==='soRem'?'rem':'rate')));
   document.getElementById('soPair').classList.toggle('active',pairMerge);
@@ -1111,7 +1085,6 @@ function capToast(msg){let el=document.getElementById('capToast');if(!el){el=doc
 function chartHiRes(id,scale){const ch=CHARTS[id];if(!ch||!ch.canvas)return null;const cv=ch.canvas,w=cv.clientWidth||400,h=cv.clientHeight||300;if(!scale)scale=Math.min(6,Math.max(3,Math.round(2400/w)));const prev=ch.options.devicePixelRatio;ch.options.devicePixelRatio=scale;ch.resize();ch.render();const oc=document.createElement('canvas');oc.width=Math.round(w*scale);oc.height=Math.round(h*scale);const g=oc.getContext('2d');g.fillStyle=getComputedStyle(document.body).backgroundColor||'#0B0F14';g.fillRect(0,0,oc.width,oc.height);g.drawImage(cv,0,0,oc.width,oc.height);ch.options.devicePixelRatio=prev;ch.resize();ch.render();return oc;}
 window.copyChart=async function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}try{await new Promise((res,rej)=>oc.toBlob(async b=>{if(!b)return rej();try{await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);res();}catch(e){rej(e);}},'image/png'));capToast('📋 차트 복사됨 — PPT에 붙여넣기(Ctrl+V)');}catch(e){capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요');}};
 window.saveChart=function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}oc.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ '+id+'.png 저장됨');},'image/png');};
-window.saveAllCharts=async function(){const ids=Object.keys(CHARTS).filter(id=>CHARTS[id]&&CHARTS[id].canvas);if(!ids.length){capToast('저장할 차트가 없습니다');return;}capToast('🖼 '+ids.length+'개 차트 저장 중…');for(const id of ids){const oc=chartHiRes(id);if(!oc)continue;await new Promise(res=>oc.toBlob(b=>{if(b){const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}setTimeout(res,250);},'image/png'));}capToast('🖼 전체 '+ids.length+'개 차트 저장 완료');};
 function addCapBtns(){
   document.querySelectorAll('.cw canvas').forEach(cv=>{
     const id=cv.id,card=cv.closest('.card');
