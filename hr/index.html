@@ -359,7 +359,21 @@ function shortSite(s){return String(s||'').replace('MICRON ','');}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 function ymd(d){try{return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}catch(e){return '';}}
 function activeAt(p,E){return p.join&&p.join<=E&&(!p.quit||p.quit>=E);}
-const TODAY=(()=>{const t=new Date();t.setUTCHours(0,0,0,0);return t;})();
+// 기준일 — 상단 공통바의 마감(월)으로 과거 시점 재현이 가능하다. 기본 = 실제 오늘.
+const REAL_TODAY=(()=>{const t=new Date();t.setUTCHours(0,0,0,0);return t;})();
+let TODAY=REAL_TODAY, CUT_M='';
+function setCutoff(v){
+  CUT_M=v||'';
+  if(CUT_M){ const p=CUT_M.split('-'); const e=new Date(Date.UTC(+p[0],+p[1],0));
+    TODAY = e<REAL_TODAY ? e : REAL_TODAY; }
+  else TODAY=REAL_TODAY;
+  if(ROSTER.length)render(); else GST.barSync();
+}
+GST.pageBar({
+  caps:{cutoff:'m', style:true, ppt:'auto'},
+  state:()=>({endM:CUT_M, style:GST.style()}),
+  on:{ endM:v=>setCutoff(v), clear:()=>setCutoff('') }
+});
 function isActive(p){return activeAt(p,TODAY);}
 function tenureYr(p,E){ if(!p.join)return null; return ((E||TODAY)-p.join)/MS/365.25; }
 function tenureLabel(p){ const y=tenureYr(p); if(y==null)return '-';
@@ -429,7 +443,7 @@ function buildPeople(){
   let base;
   if(ROSTER.length){ base=ROSTER; }
   else { base=EDU.map(e=>({id:e.id,name:e.name,cn:'',dept:'',level:'',site:e.site,custB:custBase(e.site),fab:fabOf(e.site),
-    role:e.role,join:e.join,quit:e.quitNote?TODAY:null,org:'',posKo:'',duty:'',onsite:true})); }
+    role:e.role,join:e.join,quit:e.quitNote?REAL_TODAY:null,org:'',posKo:'',duty:'',onsite:true})); }
   return base.map(p=>{
     const e=(p.id&&eById[p.id])||(p.name&&eByNm[p.name.toUpperCase()])||null;
     return Object.assign({},p,{
@@ -507,8 +521,7 @@ const STY={
   cb:      {lbl:'Safe',     on:'#0072B2', off:'#CC79A7', accent:'#56B4E9', good:'#009E73', warn:'#E69F00', bad:'#D55E00', pal:['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00','#F0E442','#000000']}
 };
 function curSty(){ return STY[GST.style()]||STY.vivid; }
-// 공통 상단바 (셸 #gbar) — 인원현황은 기간·마감 개념이 없어 차트 디자인·PPT만 노출
-GST.pageBar({ caps:{style:true, ppt:'auto'}, state:()=>({style:GST.style()}) });
+// 공통 상단바 등록은 위(기준일 setCutoff 옆)에서 1회만 — 여기서 재등록하면 마감 caps가 덮인다
 
 /* 막대 색 위 라벨 명도 대비색 */
 function labelOn(fill){ if(typeof fill!=='string')return '#F8FAFC'; const m=fill.replace('#','');
