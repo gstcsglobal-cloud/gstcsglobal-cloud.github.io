@@ -1031,32 +1031,32 @@ GST.BAR_T = {
   ja:{w:'週別',m:'月別',note:'直近12区間',cut:'締め',mon:'Month',wk:'Week',clr:'締め解除',sty:'チャート配色',ppt:'PPT出力',latest:'— 最新 —'}
 };
 // reg = {caps:{period,cutoff:'wm'|'m'|false,style,ppt}, state:{period,endM,endW,style}, weeks:[{v,t}]}
+// 전 페이지 **동일 세트**를 항상 렌더한다 — 지원하지 않는 컨트롤은 비활성(.off)으로
+// 자리만 유지해 페이지를 옮겨도 바의 구성·폭이 변하지 않는다.
 GST.barHTML = function(reg, lang){
   const T = GST.BAR_T[lang] || GST.BAR_T.ko;
   const c = (reg && reg.caps) || {}, s = (reg && reg.state) || {};
+  const off = function(on){ return on ? '' : ' off'; };
+  const dis = function(on){ return on ? '' : ' disabled'; };
   let h='';
-  if(c.period){
-    h+='<span class="gb-seg">'
-      +'<button type="button" class="gb-b'+(s.period==='w'?' on':'')+'" data-gb="period" data-v="w">'+T.w+'</button>'
-      +'<button type="button" class="gb-b'+(s.period==='m'?' on':'')+'" data-gb="period" data-v="m">'+T.m+'</button>'
-      +'</span><span class="gb-note">'+T.note+'</span>';
-  }
-  if(c.cutoff){
-    h+='<span class="gb-note gb-cut">'+T.cut+'</span>'
-      +'<input type="month" class="gb-inp" data-gb="endM" title="'+T.mon+'" value="'+(s.endM||'')+'">';
-    if(c.cutoff==='wm'){
-      const ws=(reg&&reg.weeks)||[];
-      h+='<select class="gb-inp" data-gb="endW" title="'+T.wk+'"><option value="">'+T.latest+'</option>'
-        + ws.map(function(w){ return '<option value="'+w.v+'"'+(s.endW===w.v?' selected':'')+'>'+w.t+'</option>'; }).join('')
-        +'</select>';
-    }
-    h+='<button type="button" class="gb-b" data-gb="clear" title="'+T.clr+'">↺</button>';
-  }
-  if(c.style){
-    const st=GST.STY[s.style]||GST.sty();
-    h+='<button type="button" class="gb-b" data-gb="style" title="'+T.sty+'">🎨 <span class="gb-sty">'+st.lbl+'</span></button>';
-  }
-  if(c.ppt) h+='<button type="button" class="gb-b" data-gb="ppt" title="'+T.ppt+'">📊 PPT</button>';
+  // 주/월 토글 (추이 차트가 있는 페이지만 활성)
+  h+='<span class="gb-seg'+off(c.period)+'">'
+    +'<button type="button" class="gb-b'+(c.period&&s.period==='w'?' on':'')+'" data-gb="period" data-v="w"'+dis(c.period)+'>'+T.w+'</button>'
+    +'<button type="button" class="gb-b'+(c.period&&s.period==='m'?' on':'')+'" data-gb="period" data-v="m"'+dis(c.period)+'>'+T.m+'</button>'
+    +'</span><span class="gb-note'+off(c.period)+'">'+T.note+'</span>';
+  // 마감 — Month는 전 페이지, Week는 주간 마감을 갖는 페이지(report·cip)만 활성
+  const hasCut = !!c.cutoff, hasWk = c.cutoff==='wm';
+  h+='<span class="gb-note gb-cut'+off(hasCut)+'">'+T.cut+'</span>'
+    +'<input type="month" class="gb-inp'+off(hasCut)+'" data-gb="endM" title="'+T.mon+'" value="'+(hasCut?(s.endM||''):'')+'"'+dis(hasCut)+'>';
+  const ws=(hasWk&&reg&&reg.weeks)||[];
+  h+='<select class="gb-inp'+off(hasWk)+'" data-gb="endW" title="'+T.wk+'"'+dis(hasWk)+'><option value="">'+T.latest+'</option>'
+    + ws.map(function(w){ return '<option value="'+w.v+'"'+(s.endW===w.v?' selected':'')+'>'+w.t+'</option>'; }).join('')
+    +'</select>'
+    +'<button type="button" class="gb-b'+off(hasCut)+'" data-gb="clear" title="'+T.clr+'"'+dis(hasCut)+'>↺</button>';
+  // 차트 디자인·PPT — 전 페이지 공통
+  const st=GST.STY[s.style]||GST.sty();
+  h+='<button type="button" class="gb-b'+off(c.style!==false)+'" data-gb="style" title="'+T.sty+'">🎨 <span class="gb-sty">'+st.lbl+'</span></button>'
+    +'<button type="button" class="gb-b'+off(!!c.ppt)+'" data-gb="ppt" title="'+T.ppt+'"'+dis(!!c.ppt)+'>📊 PPT</button>';
   return h;
 };
 // 바 안의 컨트롤을 send(key,val)로 연결. 셸/페이지 양쪽이 같은 함수를 쓴다.
@@ -1108,16 +1108,20 @@ GST._localBar = function(reg){
   let el=document.getElementById('gstLocalBar');
   if(!el){
     const st=document.createElement('style');
-    st.textContent='#gstLocalBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px}'
-      +'#gstLocalBar .gb-seg{display:inline-flex;border:1px solid var(--glass-border);border-radius:8px;overflow:hidden}'
+    // 셸 #gbar와 동일 규격(높이 27px·Month 118px·Week 104px) — 직접 접속에서도 같은 모양
+    st.textContent='#gstLocalBar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:0 0 14px}'
+      +'#gstLocalBar .gb-seg{display:inline-flex;border:1px solid var(--glass-border);border-radius:8px;overflow:hidden;flex:none}'
       +'#gstLocalBar .gb-b{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;'
-      +'padding:0 12px;height:28px;color:var(--txt-muted);font-size:11.5px;font-weight:700;cursor:pointer}'
+      +'padding:0 12px;height:27px;color:var(--txt-muted);font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex:none}'
       +'#gstLocalBar .gb-seg .gb-b{border:none;border-radius:0}'
       +'#gstLocalBar .gb-b.on{background:var(--accent-1);color:#04211d}'
       +'#gstLocalBar .gb-inp{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;'
-      +'padding:0 8px;height:28px;color:var(--txt-main);font-size:11px;outline:none}'
-      +'#gstLocalBar .gb-note{font-size:11px;color:var(--txt-muted);font-weight:700}'
-      +'#gstLocalBar .gb-cut{margin-left:10px}'
+      +'padding:0 7px;height:27px;color:var(--txt-main);font-size:11px;outline:none;flex:none}'
+      +'#gstLocalBar .gb-inp[type=month]{width:118px}'
+      +'#gstLocalBar select.gb-inp{width:104px}'
+      +'#gstLocalBar .gb-note{font-size:11px;color:var(--txt-muted);font-weight:700;white-space:nowrap;flex:none}'
+      +'#gstLocalBar .gb-cut{margin-left:8px}'
+      +'#gstLocalBar .off{opacity:.32;pointer-events:none}'
       +'@media print{#gstLocalBar{display:none !important}}';
     document.head.appendChild(st);
     el=document.createElement('div'); el.id='gstLocalBar';
