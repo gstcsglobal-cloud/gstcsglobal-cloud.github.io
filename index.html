@@ -16,9 +16,11 @@ html,body{height:100%;overflow:hidden}
 body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
   background:linear-gradient(135deg,#14142f,#1e1d4d);display:flex;flex-direction:column}
 body.theme-burgundy{background:linear-gradient(135deg,#1a0813,#2d0b1e)}
-body.theme-burgundy .topbar,body.theme-burgundy .tabrow{background:rgba(26,8,19,.85)}
+body.theme-burgundy .topbar,body.theme-burgundy .tabbar{background:rgba(26,8,19,.85)}
+body.theme-burgundy .gbarrow{background:rgba(26,8,19,.7)}
 body.theme-light{background:linear-gradient(135deg,#f1f5f9,#e2e8f0);color:#0f172a}
-body.theme-light .topbar,body.theme-light .tabrow{background:rgba(241,245,249,.9);border-color:rgba(15,23,42,.1)}
+body.theme-light .topbar,body.theme-light .tabbar{background:rgba(241,245,249,.9);border-color:rgba(15,23,42,.1)}
+body.theme-light .gbarrow{background:rgba(241,245,249,.75);border-color:rgba(15,23,42,.08)}
 body.theme-light .gb-b{background:rgba(15,23,42,.05);border-color:rgba(15,23,42,.12);color:#334155}
 body.theme-light .gb-inp{background:rgba(255,255,255,.9);border-color:rgba(15,23,42,.12);color:#0f172a;color-scheme:light}
 body.theme-light .gb-b.on{background:#2563eb;color:#fff;border-color:#2563eb}
@@ -32,7 +34,8 @@ body.theme-light .frame-wrap iframe{background:#f1f5f9}
 
 /* Slate — 새 기본 테마: 단일 표면 + 단일 액센트 */
 body.theme-slate{background:#0B0F14;color:#E6EDF3}
-body.theme-slate .topbar,body.theme-slate .tabrow{background:#0E141C;border-color:rgba(151,170,196,.10)}
+body.theme-slate .topbar,body.theme-slate .tabbar{background:#0E141C;border-color:rgba(151,170,196,.10)}
+body.theme-slate .gbarrow{background:#0C1219;border-color:rgba(151,170,196,.08)}
 body.theme-slate .gb-b,body.theme-slate .gb-inp{background:transparent;border-color:rgba(151,170,196,.16);color:#8B98A9}
 body.theme-slate .gb-b:hover{background:#16202C;color:#E6EDF3}
 body.theme-slate .gb-b.on{background:#2DD4BF;color:#04211C;border-color:#2DD4BF}
@@ -62,26 +65,33 @@ body.theme-slate .spinner{border-color:rgba(151,170,196,.16);border-top-color:#2
 .tb-btn:hover{background:rgba(255,255,255,.12)}
 .tb-btn.logout:hover{border-color:#fb7185;color:#fda4af}
 
-/* 탭 행 = 탭(좌) + 공통 컨트롤 바(우) */
-.tabrow{display:flex;align-items:center;gap:14px;padding:0 24px;background:rgba(20,20,47,.6);
-  border-bottom:2px solid var(--line);flex-shrink:0}
-.tabbar{display:flex;gap:2px;flex:1;min-width:0;overflow-x:auto}
+/* 탭 바 — 자기 줄 전체를 쓴다 (툴바가 탭을 가리지 않도록 분리) */
+.tabbar{display:flex;gap:2px;padding:0 24px;background:rgba(20,20,47,.6);
+  border-bottom:2px solid var(--line);flex-shrink:0;overflow-x:auto}
 .tabbar::-webkit-scrollbar{height:0}
 
-/* 공통 컨트롤 바 — 기간·마감·차트 디자인·PPT (활성 페이지가 지원하는 것만 표시) */
-#gbar{flex:none;display:flex;align-items:center;gap:7px;padding:5px 0}
+/* 공통 컨트롤 바 — 탭 줄 바로 아래 전용 줄. 전 페이지 동일 세트(미지원은 비활성) */
+.gbarrow{display:flex;justify-content:flex-end;padding:0 24px;background:rgba(20,20,47,.45);
+  border-bottom:1px solid var(--line);flex-shrink:0;overflow-x:auto}
+.gbarrow::-webkit-scrollbar{height:0}
+.gbarrow:has(#gbar:empty){display:none}
+#gbar{display:flex;align-items:center;gap:7px;padding:5px 0}
 #gbar:empty{display:none}
-.gb-seg{display:inline-flex;border:1px solid var(--glassb);border-radius:8px;overflow:hidden}
+.gb-seg{display:inline-flex;border:1px solid var(--glassb);border-radius:8px;overflow:hidden;flex:none}
 .gb-b{font-family:inherit;background:var(--glass);border:1px solid var(--glassb);border-radius:8px;
   padding:0 12px;height:27px;color:var(--mut);font-size:11.5px;font-weight:700;cursor:pointer;
-  white-space:nowrap;transition:all .2s}
+  white-space:nowrap;transition:all .2s;flex:none}
 .gb-b:hover{background:rgba(255,255,255,.12);color:var(--txt)}
 .gb-seg .gb-b{border:none;border-radius:0}
 .gb-b.on{background:var(--accent);color:#04211d}
 .gb-inp{font-family:inherit;background:var(--glass);border:1px solid var(--glassb);border-radius:8px;
-  padding:0 7px;height:27px;color:var(--txt);font-size:11px;outline:none;color-scheme:dark}
-.gb-note{font-size:11px;color:var(--mut);font-weight:700;white-space:nowrap}
+  padding:0 7px;height:27px;color:var(--txt);font-size:11px;outline:none;color-scheme:dark;flex:none}
+.gb-inp[type=month]{width:118px}
+select.gb-inp{width:104px}
+.gb-note{font-size:11px;color:var(--mut);font-weight:700;white-space:nowrap;flex:none}
 .gb-cut{margin-left:8px}
+/* 이 페이지가 지원하지 않는 컨트롤 — 자리는 유지(폭 통일), 동작만 막는다 */
+#gbar .off,#gstLocalBar .off{opacity:.32;pointer-events:none}
 .tab{padding:13px 22px;font-size:14px;font-weight:700;color:var(--mut);cursor:pointer;
   border:none;background:transparent;border-bottom:3px solid transparent;transition:color .2s,border-color .25s cubic-bezier(.4,0,.2,1);white-space:nowrap;position:relative;top:2px}
 .tab:hover{color:var(--txt)}
@@ -103,8 +113,8 @@ body.theme-slate .spinner{border-color:rgba(151,170,196,.16);border-top-color:#2
   .tab{padding:11px 12px;font-size:12px}
   .tab .ic{margin-right:4px}
   .topbar{padding:8px 12px;gap:6px}
-  .tabrow{padding:0 8px;flex-wrap:wrap;gap:0}
-  #gbar{width:100%;padding:0 0 7px;overflow-x:auto}
+  .tabbar{padding:0 8px}
+  .gbarrow{padding:0 8px}
   .gb-note:not(.gb-cut){display:none}
   .tb-btn{padding:7px 10px;font-size:11px}
   .tb-btn span{display:none}
@@ -130,11 +140,10 @@ body.theme-slate .spinner{border-color:rgba(151,170,196,.16);border-top-color:#2
   </div>
 </div>
 
-<!-- 탭 바 + 공통 컨트롤 바 -->
-<div class="tabrow">
-  <div class="tabbar" id="tabbar"></div>
-  <div id="gbar"></div>
-</div>
+<!-- 탭 바 -->
+<div class="tabbar" id="tabbar"></div>
+<!-- 공통 컨트롤 바 (전용 줄 — 탭을 가리지 않는다) -->
+<div class="gbarrow"><div id="gbar"></div></div>
 
 <!-- iframe 영역 -->
 <div class="frame-wrap" id="frameWrap">
