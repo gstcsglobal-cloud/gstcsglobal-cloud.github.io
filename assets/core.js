@@ -1025,10 +1025,10 @@ GST.setPalette = function(key, silent){ if(GST.STY[key]) GST.setStyle(key, silen
    페이지 상단에 직접 그려서 기능이 동일하게 유지된다.
    ============================================================ */
 GST.BAR_T = {
-  ko:{w:'주별',m:'월별',note:'최근 12개 구간',cut:'마감',mon:'Month',wk:'Week',clr:'마감 해제',sty:'차트 디자인',ppt:'PPT 저장',latest:'— 최신 —'},
-  en:{w:'Weekly',m:'Monthly',note:'Last 12',cut:'Cut-off',mon:'Month',wk:'Week',clr:'Clear cut-off',sty:'Chart style',ppt:'Export PPT',latest:'— Latest —'},
-  zh:{w:'周',m:'月',note:'最近12期',cut:'截止',mon:'月',wk:'周',clr:'清除截止',sty:'图表配色',ppt:'导出PPT',latest:'— 最新 —'},
-  ja:{w:'週別',m:'月別',note:'直近12区間',cut:'締め',mon:'Month',wk:'Week',clr:'締め解除',sty:'チャート配色',ppt:'PPT出力',latest:'— 最新 —'}
+  ko:{w:'주별',m:'월별',note:'최근 12개 구간',cut:'마감',mon:'Month',wk:'Week',clr:'마감 해제',sty:'차트 디자인',ppt:'PPT 저장',latest:'— 최신 —',na:'이 페이지에서는 사용되지 않습니다'},
+  en:{w:'Weekly',m:'Monthly',note:'Last 12',cut:'Cut-off',mon:'Month',wk:'Week',clr:'Clear cut-off',sty:'Chart style',ppt:'Export PPT',latest:'— Latest —',na:'Not used on this page'},
+  zh:{w:'周',m:'月',note:'最近12期',cut:'截止',mon:'月',wk:'周',clr:'清除截止',sty:'图表配色',ppt:'导出PPT',latest:'— 最新 —',na:'此页面不适用'},
+  ja:{w:'週別',m:'月別',note:'直近12区間',cut:'締め',mon:'Month',wk:'Week',clr:'締め解除',sty:'チャート配色',ppt:'PPT出力',latest:'— 最新 —',na:'このページでは使用されません'}
 };
 // reg = {caps:{period,cutoff:'wm'|'m'|false,style,ppt}, state:{period,endM,endW,style}, weeks:[{v,t}]}
 // 전 페이지 **동일 세트**를 항상 렌더한다 — 지원하지 않는 컨트롤은 비활성(.off)으로
@@ -1036,7 +1036,7 @@ GST.BAR_T = {
 GST.barHTML = function(reg, lang){
   const T = GST.BAR_T[lang] || GST.BAR_T.ko;
   const c = (reg && reg.caps) || {}, s = (reg && reg.state) || {};
-  const off = function(on){ return on ? '' : ' off'; };
+  const off = function(on){ return on ? '' : ' off" title="'+T.na; };   // 비활성엔 이유 툴팁
   const dis = function(on){ return on ? '' : ' disabled'; };
   let h='';
   // 주/월 토글 (추이 차트가 있는 페이지만 활성)
@@ -1080,7 +1080,13 @@ GST.pageBar = function(spec){
   function wrap(){
     const r=global.render;
     if(typeof r!=='function' || r.__gstBar) return typeof r==='function';
-    const w=function(){ const out=r.apply(this,arguments); try{ GST.barSync(); }catch(e){} return out; };
+    const w=function(){
+      const out=r.apply(this,arguments);
+      try{ GST.barSync(); }catch(e){}
+      // 렌더 직후 ⚙ 버튼 부착 + 저장된 축 경계 적용 (capbtns가 렌더 뒤에 생기는 페이지 대비 1틱 지연)
+      try{ setTimeout(function(){ GST.axBtns(); GST.axbApply(); },0); }catch(e){}
+      return out;
+    };
     w.__gstBar=true; global.render=w; return true;
   }
   if(!wrap()) document.addEventListener('DOMContentLoaded', wrap);
@@ -1121,7 +1127,7 @@ GST._localBar = function(reg){
       +'#gstLocalBar select.gb-inp{width:104px}'
       +'#gstLocalBar .gb-note{font-size:11px;color:var(--txt-muted);font-weight:700;white-space:nowrap;flex:none}'
       +'#gstLocalBar .gb-cut{margin-left:8px}'
-      +'#gstLocalBar .off{opacity:.32;pointer-events:none}'
+      +'#gstLocalBar .off{opacity:.32}'
       +'@media print{#gstLocalBar{display:none !important}}';
     document.head.appendChild(st);
     el=document.createElement('div'); el.id='gstLocalBar';
@@ -1228,6 +1234,164 @@ GST.pptAuto = async function(opt){
   if(!n){ alert('내보낼 차트가 없습니다.'); return; }
   const fn=title.trim().replace(/[\\/:*?"<>|]/g,'').slice(0,40)+'_'+new Date().toISOString().slice(0,10)+'.pptx';
   await p.writeFile({fileName:fn});
+};
+
+/* ============================================================
+   19b. 기간 버킷 — 주(엑셀 WEEKNUM·일~토)/월 12구간
+   주간현황의 isoW/periods와 동일 규칙을 전 페이지가 쓸 수 있게 승격.
+   반환: [{key,label,st,end}] — st/end는 UTC 자정 Date, end는 anchor를 넘지 않음.
+   ============================================================ */
+GST.isoW = function(d){
+  const MS=86400000;
+  const sun=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));
+  sun.setUTCDate(sun.getUTCDate()-sun.getUTCDay());
+  const jan1=new Date(Date.UTC(sun.getUTCFullYear(),0,1));
+  const w=Math.ceil((((sun-jan1)/MS)+jan1.getUTCDay()+1)/7);
+  return sun.getUTCFullYear()+'-W'+String(w).padStart(2,'0');
+};
+GST.periods = function(n, anchor, unit, monU){
+  const MS=86400000, U=unit||'m', out=[];
+  const today=anchor?new Date(anchor.getTime()):new Date(); today.setUTCHours(0,0,0,0);
+  if(U==='w'){
+    const sun=new Date(today); sun.setUTCDate(sun.getUTCDate()-sun.getUTCDay());
+    for(let i=n-1;i>=0;i--){
+      const st=new Date(sun.getTime()-i*7*MS), en=new Date(st.getTime()+6*MS);
+      const k=GST.isoW(st);
+      out.push({key:k,label:'W'+k.slice(-2),st,end:en>today?today:en});
+    }
+  }else{
+    for(let i=n-1;i>=0;i--){
+      let y=today.getUTCFullYear(), m=today.getUTCMonth()-i; while(m<0){m+=12;y--;}
+      const en=new Date(Date.UTC(y,m+1,0));
+      out.push({key:y+'-'+String(m+1).padStart(2,'0'),label:(m+1)+(monU!=null?monU:'월'),
+                st:new Date(Date.UTC(y,m,1)),end:en>today?today:en});
+    }
+  }
+  return out;
+};
+// 페이지 공통 PERIOD 상태 — gst_rpt_period 키를 전 페이지가 공유(주간현황과 연동)
+GST.period = function(){ try{ const p=localStorage.getItem('gst_rpt_period'); return p==='w'?'w':'m'; }catch(e){ return 'm'; } };
+GST.setPeriod = function(p){ try{ localStorage.setItem('gst_rpt_period', p==='w'?'w':'m'); }catch(e){} };
+
+/* ============================================================
+   19c. 차트 축 경계 편집(⚙) — 전 페이지 공통
+   주간현황·CIP는 자체 구현(공유 키 gst_rpt_axb)을 그대로 쓰고,
+   나머지 페이지는 core가 같은 UX(⚙ → min/max 팝오버)를 제공한다.
+   저장 키는 페이지별(gst_axb_<page>)이라 차트 id가 겹쳐도 안전.
+   ============================================================ */
+GST.AX_T={ko:{t:'축 범위 (min / max)',apply:'적용',reset:'초기화'},
+          en:{t:'Axis range (min / max)',apply:'Apply',reset:'Reset'},
+          zh:{t:'轴范围 (min / max)',apply:'应用',reset:'重置'},
+          ja:{t:'軸範囲 (min / max)',apply:'適用',reset:'リセット'}};
+GST.axbKey = function(){
+  const p=(location.pathname.match(/\/([a-z]+)\/?(?:index\.html)?$/)||[])[1]||'root';
+  return (p==='report'||p==='cip') ? 'gst_rpt_axb' : 'gst_axb_'+p;
+};
+GST.axbLoad = function(){ try{ return JSON.parse(localStorage.getItem(GST.axbKey())||'{}')||{}; }catch(e){ return {}; } };
+GST.axbSave = function(o){ try{ localStorage.setItem(GST.axbKey(), JSON.stringify(o)); }catch(e){} };
+// 차트의 "값 축"을 알아낸다 — 가로 막대(indexAxis:'y')는 x가 값 축이다.
+// 도넛처럼 스케일이 없는 차트는 편집 대상이 아니다.
+GST._axInfo = function(ch){
+  const sc=ch&&ch.options&&ch.options.scales;
+  if(!sc||(!sc.x&&!sc.y)) return null;
+  const horiz=(ch.options.indexAxis==='y');
+  const val=horiz?'x':'y';
+  if(!sc[val]) return null;
+  return {val:val, hasY2:!horiz&&!!sc.y2};
+};
+// 렌더 후 저장된 경계를 주입 — 차트 생성 사이클 안에서는 스케일이 무시하므로 update로 덮는다
+GST.axbApply = function(){
+  if(!window.Chart||!Chart.getChart) return;
+  const A=GST.axbLoad();
+  Object.keys(A).forEach(function(id){
+    const cv=document.getElementById(id); const ch=cv&&Chart.getChart(cv); const b=A[id];
+    if(!ch||!b) return;
+    const info=GST._axInfo(ch); if(!info) return;
+    let dirty=false;
+    Object.keys(b).forEach(function(k){
+      if(k!==info.val&&k!=='y2') return;      // 카테고리 축은 절대 건드리지 않는다
+      const s=ch.options.scales&&ch.options.scales[k], v=b[k]; if(!s||!v)return;
+      if(v.min!=null&&v.min!==''){s.min=+v.min;dirty=true;}
+      if(v.max!=null&&v.max!==''){s.max=+v.max;dirty=true;}
+    });
+    if(dirty) ch.update('none');
+  });
+};
+GST._axCSS=false;
+GST._axCss=function(){
+  if(GST._axCSS) return; GST._axCSS=true;
+  const st=document.createElement('style');
+  st.textContent='.gaxpop{position:absolute;top:42px;right:12px;z-index:60;background:var(--glass,#101720);'
+    +'border:1px solid var(--glass-border,rgba(151,170,196,.2));border-radius:12px;padding:12px 14px;'
+    +'box-shadow:0 8px 24px rgba(0,0,0,.45);min-width:200px;backdrop-filter:blur(10px)}'
+    +'.gaxpop .gx-t{font-size:11px;font-weight:800;color:var(--txt-main,#E6EDF3);margin-bottom:8px}'
+    +'.gaxpop .gx-r{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:var(--txt-muted,#8B98A9)}'
+    +'.gaxpop .gx-r b{width:20px;color:var(--txt-main,#E6EDF3)}'
+    +'.gaxpop input{width:64px;background:var(--glass,rgba(255,255,255,.06));border:1px solid var(--glass-border,rgba(151,170,196,.2));'
+    +'border-radius:6px;color:var(--txt-main,#E6EDF3);font-size:11px;padding:4px 6px}'
+    +'.gaxpop .gx-btns{display:flex;gap:6px;margin-top:8px}'
+    +'.gaxpop .gx-btns button{flex:1;background:var(--glass,rgba(255,255,255,.06));border:1px solid var(--glass-border,rgba(151,170,196,.2));'
+    +'border-radius:8px;color:var(--txt-main,#E6EDF3);font-size:11px;font-weight:700;padding:5px 0;cursor:pointer}'
+    +'.gaxpop .gx-btns button:hover{border-color:var(--accent-1,#2DD4BF)}';
+  document.head.appendChild(st);
+};
+GST.axOpen = function(id){
+  GST._axCss();
+  const cv=document.getElementById(id); const ch=cv&&Chart.getChart(cv); if(!ch) return;
+  const info=GST._axInfo(ch); if(!info) return;
+  const card=cv.closest('.card,.mcard,.trend-card,.cross-card'); if(!card) return;
+  const old=card.querySelector('.gaxpop');
+  document.querySelectorAll('.gaxpop').forEach(function(p){ p.remove(); });
+  if(old) return;   // 같은 카드에서 다시 누르면 토글 닫기
+  let lg='ko'; try{ lg=sessionStorage.getItem('gst_lang')||'ko'; }catch(e){}
+  const T=GST.AX_T[lg]||GST.AX_T.ko;
+  const A=GST.axbLoad(), b=A[id]||{};
+  const VAL=info.val, hasY2=info.hasY2;   // 값 축 — 가로 막대는 x가 값 축이다
+  const pop=document.createElement('div'); pop.className='gaxpop';
+  const row=function(axis,lbl,v){ return '<div class="gx-r"><b>'+lbl+'</b>'
+    +'<input class="gx-'+axis+'min" placeholder="auto" value="'+((v&&v.min!=null)?v.min:'')+'">'
+    +'<span>~</span><input class="gx-'+axis+'max" placeholder="auto" value="'+((v&&v.max!=null)?v.max:'')+'"></div>'; };
+  pop.innerHTML='<div class="gx-t">⚙ '+T.t+'</div>'+row('v','Y',b[VAL])+(hasY2?row('y2','%',b.y2):'')
+    +'<div class="gx-btns"><button data-ax="apply">'+T.apply+'</button><button data-ax="reset">'+T.reset+'</button></div>';
+  card.appendChild(pop);
+  pop.addEventListener('click',function(e){
+    const btn=e.target.closest('[data-ax]'); if(!btn)return;
+    const A2=GST.axbLoad();
+    if(btn.dataset.ax==='reset'){
+      delete A2[id]; GST.axbSave(A2);
+      // update-재사용 차트는 render가 스케일을 새로 만들지 않으므로 지금 직접 푼다
+      ['x','y','y2'].forEach(function(k){ const s=ch.options.scales&&ch.options.scales[k];
+        if(s){ delete s.min; delete s.max; } });
+      try{ ch.update('none'); }catch(err){}
+    }else{
+      const g=function(c){ const el=pop.querySelector('.'+c); const n=el?el.value.trim():''; return n===''?'':+n; };
+      const nb={}; nb[VAL]={min:g('gx-vmin'),max:g('gx-vmax')};
+      if(hasY2) nb.y2={min:g('gx-y2min'),max:g('gx-y2max')};
+      const bad=Object.keys(nb).some(function(k){ const v=nb[k]; return v&&v.min!==''&&v.max!==''&&+v.min>=+v.max; });
+      if(bad) return;
+      A2[id]=nb; GST.axbSave(A2);
+    }
+    pop.remove();
+    if(typeof window.render==='function'){ try{ window.render(); }catch(err){} }
+    GST.axbApply();
+  });
+};
+// 각 차트 카드에 ⚙ 버튼 추가 — 페이지 자체 구현(report/cip의 axOpen)이 있으면 건너뛴다.
+// 스케일 없는 차트(도넛)는 편집이 무의미하므로 붙이지 않는다.
+GST.axBtns = function(){
+  if(!window.Chart||!Chart.getChart) return;
+  document.querySelectorAll('.card canvas,.mcard canvas,.trend-card canvas,.cross-card canvas').forEach(function(cv){
+    const id=cv.id, card=cv.closest('.card,.mcard,.trend-card,.cross-card');
+    if(!id||!card) return;
+    if(card.querySelector('[data-gax]')||card.querySelector('.capbtn[onclick^="axOpen"]')) return;
+    const ch=Chart.getChart(cv); if(!ch||!GST._axInfo(ch)) return;
+    const box=card.querySelector('.capbtns');
+    if(!box) return;   // 복사/저장 버튼 박스가 아직 없으면 다음 렌더에서
+    const b=document.createElement('button'); b.className='capbtn'; b.type='button';
+    b.dataset.gax=id; b.title='축 범위 설정 (min/max)'; b.textContent='⚙';
+    b.onclick=function(){ GST.axOpen(id); };
+    box.appendChild(b);
+  });
 };
 
 /* ============================================================
