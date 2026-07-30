@@ -76,17 +76,13 @@ body{
 .search{margin-left:auto}
 .search input{background:rgba(255,255,255,0.06);border:1px solid var(--glassb);border-radius:30px;padding:10px 18px;color:var(--txt);font-size:13px;width:200px;outline:none}
 .search input::placeholder{color:var(--muted)}
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-bottom:22px}
+
 .kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s}
 .kpi:hover{transform:translateY(-5px)}
-.kpi::before{content:'';position:absolute;top:-40px;right:-40px;width:110px;height:110px;border-radius:50%;opacity:.32}
-.kpi.k1::before{background:var(--accent)}.kpi.k2::before{background:var(--accent2)}
-.kpi.k3::before{background:var(--accent3)}.kpi.k4::before{background:#fdcb6e}
-.kpi.k5::before{background:#34d399}.kpi.k6::before{background:#fb7185}
-.kpi .ic{font-size:18px;margin-bottom:6px;opacity:.9}
-.kpi .val{font-size:32px;font-weight:800;line-height:1}
-.kpi .cap{color:var(--muted);font-size:12px;margin-top:7px;font-weight:600}
-.kpi .spark{display:block;width:100%;height:22px;margin-top:8px}
+
+
+
+
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
 .card{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px);position:relative}
 .card h3{font-size:14px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
@@ -157,8 +153,8 @@ tr:hover td{background:rgba(255,255,255,.04)}
 .showquit{font-size:11px;color:var(--txt-muted);font-weight:400;margin-left:10px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;vertical-align:middle}
 .showquit input{accent-color:var(--accent);width:13px;height:13px}
 #btnNew{margin-left:10px;font-size:11px;padding:4px 10px;vertical-align:middle}
-@media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
-@media(max-width:800px){.kpis{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}}
+@media(max-width:1250px){.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:800px){.grid3{grid-template-columns:1fr}}
 @media print{.capbtns,.slicers,.header-right,#filtBadge{display:none!important}.card,.tablecard{break-inside:avoid;page-break-inside:avoid}.grid3{grid-template-columns:1fr 1fr}}
 
 </style>
@@ -175,8 +171,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-back" data-i="back">← 메인으로</a>
     <div class="badge"><span data-i="total_pre">재직</span> <b id="totRec">0</b><span data-i="total_post">명</span></div>
-    <button class="pt-btn" id="styleBtn" onclick="toggleStyle()" title="차트 색상 스타일">🎨 <span id="styleLbl">Vivid</span></button>
-    <button class="pt-btn" onclick="window.print()" data-i="print">🖨 인쇄</button>
     <button class="btn" id="refreshBtn" onclick="loadData()"><span data-i="refresh">새로고침</span></button>
     <div class="lang-wrap">
       <button class="lang-btn" onclick="toggleLang()"><span id="langLabel">KO</span> ▾</button>
@@ -201,12 +195,12 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 
 <div class="kpis">
-  <div class="kpi k1"><div class="ic">👥</div><div class="val" id="kp1">0</div><div class="cap" data-i="kp1">재직 인원</div><div class="spark" id="sp1"></div></div>
-  <div class="kpi k2"><div class="ic">🏭</div><div class="val" id="kp2">0</div><div class="cap" data-i="kp2">현장 인원</div><div class="spark" id="sp2"></div></div>
-  <div class="kpi k3"><div class="ic">🎓</div><div class="val" id="kp3">0%</div><div class="cap" data-i="kp3">Basic 이수율</div><div class="spark" id="sp3"></div></div>
-  <div class="kpi k4"><div class="ic">🏅</div><div class="val" id="kp4">0%</div><div class="cap" data-i="kp4">Veteran 이수율</div><div class="spark" id="sp4"></div></div>
-  <div class="kpi k5"><div class="ic">📈</div><div class="val" id="kp5">0</div><div class="cap" data-i="kp5">평균 경력(년)</div></div>
-  <div class="kpi k6"><div class="ic">✨</div><div class="val" id="kp6">0</div><div class="cap" data-i="kp6">최근 1년 입사</div></div>
+  <div class="kpi k1"><div class="krow"><span class="val" id="kp1">0</span></div><div class="cap" data-i="kp1">재직 인원</div><div class="spark" id="sp1"></div></div>
+  <div class="kpi k2"><div class="krow"><span class="val" id="kp2">0</span></div><div class="cap" data-i="kp2">현장 인원</div><div class="spark" id="sp2"></div></div>
+  <div class="kpi k3"><div class="krow"><span class="val" id="kp3">0%</span></div><div class="cap" data-i="kp3">Basic 이수율</div><div class="spark" id="sp3"></div></div>
+  <div class="kpi k4"><div class="krow"><span class="val" id="kp4">0%</span></div><div class="cap" data-i="kp4">Veteran 이수율</div><div class="spark" id="sp4"></div></div>
+  <div class="kpi k5"><div class="krow"><span class="val" id="kp5">0</span></div><div class="cap" data-i="kp5">평균 경력(년)</div></div>
+  <div class="kpi k6"><div class="krow"><span class="val" id="kp6">0</span></div><div class="cap" data-i="kp6">최근 1년 입사</div></div>
 </div>
 
 <div class="grid3">
@@ -322,7 +316,7 @@ const TR={
 };
 let LANG='ko';
 try{ if(window.name && TR[window.name]) LANG=window.name; }catch(e){}
-function tr(k){return (TR[LANG]||TR.ko)[k]||k;}
+function tr(k){const d=TR[LANG]||TR.ko; return (k in d)?d[k]:k;}
 function applyLang(){
   document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=tr(el.getAttribute('data-i'));});
   document.querySelectorAll('[data-i-ph]').forEach(el=>{el.placeholder=tr(el.getAttribute('data-i-ph'));});
@@ -500,7 +494,7 @@ let CAN_WRITE=false, EDIT=null;   // EDIT={key, hash, fields, edu:{hash,fields}|
 let SHOWQUIT=false;               // 퇴사자 표시 토글 — 잘못 넣은 퇴사일을 UI에서 되돌릴 수 있게 한다
 const F={site:'전체',org:'전체',role:'전체',edu:'전체',q:''};
 let SORT={k:'no',dir:1};
-let RSTYLE=''; try{RSTYLE=localStorage.getItem('gst_hr_style')||'';}catch(e){}
+// 차트 색상 스타일은 core.js(GST.style())가 전 페이지 공통 관리 — 아래 STY는 hr 전용 색 매핑
 Chart.defaults.color=GST.chartTheme().txt;
 Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
 Chart.defaults.onClick=hrDrill;
@@ -512,10 +506,9 @@ const STY={
   forest:  {lbl:'Forest',   on:'#15803D', off:'#A3E635', accent:'#4ADE80', good:'#22C55E', warn:'#84CC16', bad:'#DC2626', pal:['#15803D','#16A34A','#22C55E','#4ADE80','#84CC16','#A3E635','#DC2626','#0E7490']},
   cb:      {lbl:'Safe',     on:'#0072B2', off:'#CC79A7', accent:'#56B4E9', good:'#009E73', warn:'#E69F00', bad:'#D55E00', pal:['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00','#F0E442','#000000']}
 };
-window.toggleStyle=function(){ const ord=['vivid','graphite','ocean','sunset','forest','cb'];
-  let i=ord.indexOf(RSTYLE); if(i<0)i=0; RSTYLE=ord[(i+1)%ord.length];
-  try{localStorage.setItem('gst_hr_style',RSTYLE);}catch(e){} render(); };
-function curSty(){const TH=GST.chartTheme(); return STY[RSTYLE]?STY[RSTYLE]:(TH.key==='burgundy'?STY.graphite:STY.vivid);}
+function curSty(){ return STY[GST.style()]||STY.vivid; }
+// 공통 상단바 (셸 #gbar) — 인원현황은 기간·마감 개념이 없어 차트 디자인·PPT만 노출
+GST.pageBar({ caps:{style:true, ppt:'auto'}, state:()=>({style:GST.style()}) });
 
 /* 막대 색 위 라벨 명도 대비색 */
 function labelOn(fill){ if(typeof fill!=='string')return '#F8FAFC'; const m=fill.replace('#','');
@@ -670,7 +663,7 @@ window.changeDashboardTheme=function(){ Chart.defaults.color=GST.chartTheme().tx
 
 function render(){ GST.skeleton(false);
   const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
-  const S=curSty(); {const l=document.getElementById('styleLbl'); if(l)l.textContent=S.lbl;}
+  const S=curSty();
   updateFiltBadge();
   const fAll=slFilt(DATA);            // 슬라이서 적용(재직/퇴사 전체) — 추이·스파크용
   const f=fAll.filter(isActive);      // 현재 재직
