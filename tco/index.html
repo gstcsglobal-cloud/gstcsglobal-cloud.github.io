@@ -187,7 +187,7 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
 </div>
 
 <div class="card" style="margin-bottom:16px;height:340px">
-  <h3 data-i="ch_trend">월별 TCO 추이 (최근 12개월)</h3>
+  <h3 data-i="ch_trend">TCO 추이 (주/월)</h3>
   <div class="card-note" data-i="note_trend">유틸리티 6종 + 파츠 스택 · 작업시간 차감 반영 · 금액은 툴팁</div>
   <div class="cw"><canvas id="cTrend"></canvas></div>
 </div>
@@ -317,7 +317,7 @@ ko:{title:'TCO 분석',sub:'Total Cost of Ownership — 유틸리티 · 전력 �
   sl_month:'기준 월',sl_cust:'고객사',sl_line:'라인',sl_proc:'공정',all:'전체',f_active:'활성 필터',f_clear:'전체 해제',cur:'(진행중)',
   kp1:'월 TCO 합계',kp2:'유틸리티 비용',kp3:'파츠 비용',kp4:'가동 챔버',kp5:'작업 정지시간',kp6:'챔버당 월 비용',u_ch:'챔버',
   kf1:'유틸 {u} · 파츠 {p}',kf2:'전월 {v}',kf3:'교체 {n}건',kf4:'설비 {n}대 (DUAL=2)',kf5:'작업 {n}건 가동 차감',kf6:'유틸 {u} · 파츠 {p}',
-  ch_trend:'월별 TCO 추이 (최근 12개월)',note_trend:'유틸리티 6종 + 파츠 스택 · 작업시간 차감 반영 · 금액은 툴팁',
+  ch_trend:'TCO 추이 (주/월 · 최근 12구간)',mon_u:'월',note_trend:'유틸리티 6종 + 파츠 스택 · 작업시간 차감 반영 · 금액은 툴팁',
   ch_line:'라인별 TCO',note_line:'기준 월 · 비용 구성 스택',ch_mix:'비용 구성',note_mix:'기준 월 · 항목별 비중',
   ch_proc:'공정별 TCO',note_proc:'기준 월 · LNG 유량이 공정마다 달라 비용도 달라집니다',
   ch_top:'설비별 비용 TOP 12',note_top:'기준 월 · 유틸리티+파츠 · 값은 툴팁',
@@ -341,7 +341,7 @@ en:{title:'TCO Analysis',sub:'Total Cost of Ownership — monthly utility · pow
   sl_month:'Month',sl_cust:'Customer',sl_line:'Line',sl_proc:'Process',all:'All',f_active:'Active Filters',f_clear:'Clear All',cur:'(ongoing)',
   kp1:'Monthly TCO',kp2:'Utility Cost',kp3:'Parts Cost',kp4:'Running Chambers',kp5:'Work Downtime',kp6:'TCO per Chamber',u_ch:'ch',
   kf1:'util {u} · parts {p}',kf2:'prev {v}',kf3:'{n} replacements',kf4:'{n} units (DUAL=2)',kf5:'{n} jobs deducted',kf6:'util {u} · parts {p}',
-  ch_trend:'Monthly TCO Trend (12 months)',note_trend:'6 utilities + parts stacked · downtime deducted · amounts in tooltip',
+  ch_trend:'TCO Trend (W/M · last 12)',mon_u:'',note_trend:'6 utilities + parts stacked · downtime deducted · amounts in tooltip',
   ch_line:'TCO by Line',note_line:'selected month · cost stack',ch_mix:'Cost Mix',note_mix:'selected month · share by item',
   ch_proc:'TCO by Process',note_proc:'selected month · LNG flow differs by process',
   ch_top:'Top 12 Units by Cost',note_top:'selected month · utility+parts · value in tooltip',
@@ -365,7 +365,7 @@ zh:{title:'TCO 分析',sub:'Total Cost of Ownership — 公用·电力·零件 �
   sl_month:'基准月',sl_cust:'客户',sl_line:'线',sl_proc:'工艺',all:'全部',f_active:'活动筛选',f_clear:'全部清除',cur:'(进行中)',
   kp1:'月度TCO合计',kp2:'公用设施费用',kp3:'零件费用',kp4:'运行腔体',kp5:'作业停机时间',kp6:'每腔体月费用',u_ch:'腔',
   kf1:'公用 {u} · 零件 {p}',kf2:'上月 {v}',kf3:'更换 {n}件',kf4:'设备 {n}台 (DUAL=2)',kf5:'扣除 {n}件作业',kf6:'公用 {u} · 零件 {p}',
-  ch_trend:'月度TCO趋势 (近12个月)',note_trend:'6种公用+零件堆叠 · 扣除作业时间 · 金额见提示框',
+  ch_trend:'TCO趋势 (周/月 · 近12期)',mon_u:'月',note_trend:'6种公用+零件堆叠 · 扣除作业时间 · 金额见提示框',
   ch_line:'按线TCO',note_line:'基准月 · 费用构成堆叠',ch_mix:'费用构成',note_mix:'基准月 · 按项目占比',
   ch_proc:'按工艺TCO',note_proc:'基准月 · LNG流量因工艺而异',
   ch_top:'设备费用TOP 12',note_top:'基准月 · 公用+零件 · 数值见提示框',
@@ -389,7 +389,7 @@ ja:{title:'TCO 分析',sub:'Total Cost of Ownership — ユーティリティ·�
   sl_month:'基準月',sl_cust:'顧客',sl_line:'ライン',sl_proc:'工程',all:'全体',f_active:'有効フィルタ',f_clear:'全解除',cur:'(進行中)',
   kp1:'月間TCO合計',kp2:'ユーティリティ費',kp3:'パーツ費',kp4:'稼働チャンバー',kp5:'作業停止時間',kp6:'チャンバー当り月費用',u_ch:'ch',
   kf1:'ユーティリティ {u} · パーツ {p}',kf2:'前月 {v}',kf3:'交換 {n}件',kf4:'設備 {n}台 (DUAL=2)',kf5:'作業 {n}件を控除',kf6:'ユーティリティ {u} · パーツ {p}',
-  ch_trend:'月別TCO推移 (直近12ヶ月)',note_trend:'ユーティリティ6種+パーツ積み上げ · 作業時間控除 · 金額はツールチップ',
+  ch_trend:'TCO推移 (週/月 · 直近12区間)',mon_u:'月',note_trend:'ユーティリティ6種+パーツ積み上げ · 作業時間控除 · 金額はツールチップ',
   ch_line:'ライン別TCO',note_line:'基準月 · 費用構成積み上げ',ch_mix:'費用構成',note_mix:'基準月 · 項目別構成比',
   ch_proc:'工程別TCO',note_proc:'基準月 · LNG流量が工程ごとに異なります',
   ch_top:'設備別費用TOP 12',note_top:'基準月 · ユーティリティ+パーツ · 値はツールチップ',
@@ -572,9 +572,10 @@ function fillSlicers(){
 }
 // ── 공통 상단바 (셸 #gbar) — 마감(월)은 기준 월 셀렉터로 연결 ──
 GST.pageBar({
-  caps:{cutoff:'m', style:true, ppt:'auto'},
-  state:()=>({endM:(MONTHS.length?SEL_M:'')||'', style:GST.style()}),
-  on:{ endM:v=>{ if(!v)return; const sm=document.getElementById('sl-month');
+  caps:{period:true, cutoff:'m', style:true, ppt:'auto'},
+  state:()=>({period:GST.period(), endM:(MONTHS.length?SEL_M:'')||'', style:GST.style()}),
+  on:{ period:v=>{ GST.setPeriod(v); if(EQUIP.length)render(); else GST.barSync(); },
+       endM:v=>{ if(!v)return; const sm=document.getElementById('sl-month');
          if(sm&&MONTHS.find(m=>m.key===v)){ sm.value=v; onSlicer(); } },
        clear:()=>{ const sm=document.getElementById('sl-month');
          if(sm&&MONTHS.length){ sm.value=MONTHS[MONTHS.length-1].key; onSlicer(); } } }
@@ -622,12 +623,28 @@ function compute(){
   const parts=PARTS.filter(p=>(!F.cust||p.cust===F.cust)&&(!F.line||p.line===F.line)&&(!F.proc||p.proc===F.proc));
   const byMonth={},byProcSel={},byLineSel={},eqSel=[],selChambers={n:0,units:0},selJobs={n:0};
   MONTHS.forEach(m=>{byMonth[m.key]=emptyBucket();});
+  // 추이용 12구간(주/월) — 앵커는 기준월 말일(최신월이면 오늘). GST.periods.end는 '마지막 날 자정(포함)'
+  // 이므로 시간 적분에는 +1일 배타 경계로 바꿔 쓴다(빼먹으면 각 구간 마지막 하루가 통째로 누락).
+  const PU=GST.period();
+  const _mm=(SEL_M||'').split('-');
+  let _anch=new Date(); _anch.setUTCHours(0,0,0,0);
+  if(_mm.length===2){ const e=new Date(Date.UTC(+_mm[0],+_mm[1],0)); if(e<_anch)_anch=e; }
+  const PER=GST.periods(12,_anch,PU,t('mon_u'));
+  const byPer={}; PER.forEach(p=>{byPer[p.key]=emptyBucket();});
   PROCS.forEach(p=>{byProcSel[p]=emptyBucket();});
   const selM=MONTHS.find(m=>m.key===SEL_M);
   let qtyBadSel=0;
 
   eqs.forEach(e=>{
     const rt=rates(e.proc);
+    PER.forEach(p=>{                                     // 추이 버킷 (유틸리티 시간 비례)
+      const s=Math.max(+p.st,+e.turnOn), en=Math.min(+p.end+864e5,NOW);
+      if(en<=s)return;
+      const hours=(en-s)/36e5;
+      let downMin=0;
+      for(const w of e.down){ if(w.t>=s&&w.t<en)downMin+=w.min; }
+      addUtil(byPer[p.key],rt,Math.max(0,e.chambers*hours-downMin/60));
+    });
     MONTHS.forEach(m=>{
       const s=Math.max(m.start,+e.turnOn), en=Math.min(m.end,NOW);
       if(en<=s)return;
@@ -655,6 +672,8 @@ function compute(){
 
   const eqIdx={}; eqSel.forEach(x=>{eqIdx[x.snKey]=x;});
   parts.forEach(p=>{
+    {const per=PER.find(pp=>p.t>=+pp.st&&p.t<+pp.end+864e5);
+     if(per)addParts(byPer[per.key],p.qty*CFG.pPart,p.qty);}
     const m=MONTHS.find(mm=>p.t>=mm.start&&p.t<mm.end);
     if(!m)return;
     const cost=p.qty*CFG.pPart;
@@ -670,7 +689,7 @@ function compute(){
   });
   eqSel.forEach(x=>{x.total=x.util+x.parts;});
 
-  return {byMonth,byProcSel,byLineSel,eqSel,selChambers,selJobs,qtyBadSel,
+  return {byMonth,byPer,PER,byProcSel,byLineSel,eqSel,selChambers,selJobs,qtyBadSel,
     sel:byMonth[SEL_M],prev:byMonth[(MONTHS[MONTHS.findIndex(m=>m.key===SEL_M)-1]||{}).key]||null};
 }
 
@@ -704,12 +723,13 @@ function render(){
     const u=LANG==='zh'?['亿','万']:LANG==='ja'?['億','万']:['억','만'];
     return Math.abs(v)>=1e8?(v/1e8)+u[0]:Math.abs(v)>=1e4?Math.round(v/1e4).toLocaleString()+u[1]:v; };
 
-  // --- 추이 (12개월 스택) ---
-  const trendDs=UKEYS.map((k,i)=>({label:uLabel(k),data:MONTHS.map(m=>Math.round(MODEL.byMonth[m.key].cost[k])),
+  // --- 추이 (12구간 스택 · 상단 공통바 주/월 토글) ---
+  const PERt=MODEL.PER;
+  const trendDs=UKEYS.map((k,i)=>({label:uLabel(k),data:PERt.map(p=>Math.round(MODEL.byPer[p.key].cost[k])),
     backgroundColor:PAL[i],stack:'tco',borderRadius:2}));
-  mkChart('cTrend',{type:'bar',data:{labels:MONTHS.map(m=>m.label),datasets:trendDs},
+  mkChart('cTrend',{type:'bar',data:{labels:PERt.map(p=>p.label),datasets:trendDs},
     options:baseOpt({stacked:true,axisFmt,
-      footer:items=>{const i=items[0].dataIndex;return 'Σ '+won(MODEL.byMonth[MONTHS[i].key].total);}})});
+      footer:items=>{const i=items[0].dataIndex;return 'Σ '+won(MODEL.byPer[PERt[i].key].total);}})});
 
   // --- 라인별 ---
   const lines=Object.entries(MODEL.byLineSel).sort((a,b)=>b[1].total-a[1].total);
