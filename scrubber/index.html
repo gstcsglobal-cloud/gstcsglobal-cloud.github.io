@@ -318,7 +318,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
     </div>
     <div class="trend-card">
       <div class="trend-header">
-        <h3 data-i="ch_newm">월별 신규 Turn On</h3>
+        <h3 data-i="ch_newm">신규 Turn On 추이 (주/월)</h3>
         <div class="trend-meta" data-i="note_newm">최근 12개월</div>
       </div>
       <div class="trend-wrap"><canvas id="cNewMonthly"></canvas></div>
@@ -503,7 +503,7 @@ const T={
     gran_lbl:'집계 단위',gran_note:'↑ 추이 차트 적용',
     g_week:'주 단위',g_month:'월 단위',g_quarter:'분기 단위',g_half:'반기 단위',g_year:'연 단위',
     search_lbl:'검색',
-    kp1:'설치 대수',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty 유효',kp5:'90일 내 만료 예정',unit_ea:'대',unit_cty:'개국',unit_co:'사',kf1:'전년 동기 {n}대',kf2:'최다 {v} · {n}대',kf3:'신규 {n}개사 (12개월)',kf4:'전체의 {p}%',kf5:'30일 내 {n}대 · 갱신 협의 대상',w_ratio:'유효 비율',ch_newm:'월별 신규 Turn On',note_newm:'최근 12개월 · 월간 신규 가동',note_hbar:'🖱️ 클릭 시 필터 · 비중은 툴팁',etc:'기타',mon_unit:'월',
+    kp1:'설치 대수',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty 유효',kp5:'90일 내 만료 예정',unit_ea:'대',unit_cty:'개국',unit_co:'사',kf1:'전년 동기 {n}대',kf2:'최다 {v} · {n}대',kf3:'신규 {n}개사 (12개월)',kf4:'전체의 {p}%',kf5:'30일 내 {n}대 · 갱신 협의 대상',w_ratio:'유효 비율',ch_newm:'신규 Turn On 추이 (주/월)',note_newm:'최근 12구간(주/월) · 신규 가동',note_hbar:'🖱️ 클릭 시 필터 · 비중은 툴팁',etc:'기타',mon_unit:'월',
     trend_fabin:'누적 FAB In 추이 (반입 기준)',trend_turnon:'⚡ 누적 Turn On 추이 (가동 기준)',
     note_rate:'Bar: 대수 · Line: 비중(%)',note_warr:'유효/만료 비율',
     note_model:'모델별 분포',note_group:'공정 그룹별 분포',note_yoy:'대수 막대 · 전년비(%)는 툴팁',note_drill:'대수 막대 · 비중(%)은 툴팁 · 🖱️ 클릭 시 필터',note_drill2:'분포 · 🖱️ 클릭 시 필터',cross_title:'🔀 교차 분석',cross_x:'가로축',cross_color:'쌓기 기준',
@@ -520,7 +520,7 @@ const T={
     gran_lbl:'View By',gran_note:'↑ Trend chart unit',
     g_week:'Week',g_month:'Month',g_quarter:'Quarter',g_half:'Half-Year',g_year:'Year',
     search_lbl:'Search',
-    kp1:'Installed Units',kp2:'Countries',kp3:'Customers',kp4:'Warranty Active',kp5:'Expiring in 90 days',unit_ea:'units',unit_cty:'countries',unit_co:'cos.',kf1:'A year ago: {n}',kf2:'Top {v} · {n}',kf3:'{n} new customers (12mo)',kf4:'{p}% of total',kf5:'{n} within 30d · renewal targets',w_ratio:'active ratio',ch_newm:'Monthly New Turn On',note_newm:'Last 12 months',note_hbar:'🖱️ click to filter · share in tooltip',etc:'Others',mon_unit:'',
+    kp1:'Installed Units',kp2:'Countries',kp3:'Customers',kp4:'Warranty Active',kp5:'Expiring in 90 days',unit_ea:'units',unit_cty:'countries',unit_co:'cos.',kf1:'A year ago: {n}',kf2:'Top {v} · {n}',kf3:'{n} new customers (12mo)',kf4:'{p}% of total',kf5:'{n} within 30d · renewal targets',w_ratio:'active ratio',ch_newm:'New Turn On Trend (W/M)',note_newm:'Last 12 periods (W/M)',note_hbar:'🖱️ click to filter · share in tooltip',etc:'Others',mon_unit:'',
     trend_fabin:'Cumulative FAB In Trend',trend_turnon:'⚡ Cumulative Turn On Trend',
     note_rate:'Bar: count · Line: rate(%)',note_warr:'Active vs Expired ratio',
     note_model:'By model',note_group:'By process group',note_yoy:'Count bars · YoY(%) in tooltip',note_drill:'Count bars · rate(%) in tooltip · 🖱️ click to filter',note_drill2:'Distribution · 🖱️ click to filter',cross_title:'🔀 Cross Analysis',cross_x:'X-Axis',cross_color:'Stack By',
@@ -537,7 +537,7 @@ const T={
     gran_lbl:'聚合单位',gran_note:'↑ 趋势图适用',
     g_week:'按周',g_month:'按月',g_quarter:'按季度',g_half:'按半年',g_year:'按年',
     search_lbl:'搜索',
-    kp1:'安装台数',kp2:'国家',kp3:'客户',kp4:'保修有效',kp5:'90天内到期',unit_ea:'台',unit_cty:'国',unit_co:'家',kf1:'去年同期 {n}台',kf2:'最多 {v} · {n}台',kf3:'新客户 {n}家 (12个月)',kf4:'占总数{p}%',kf5:'30天内 {n}台 · 续约对象',w_ratio:'有效比率',ch_newm:'月度新增Turn On',note_newm:'近12个月',note_hbar:'🖱️点击筛选 · 占比见提示框',etc:'其他',mon_unit:'月',
+    kp1:'安装台数',kp2:'国家',kp3:'客户',kp4:'保修有效',kp5:'90天内到期',unit_ea:'台',unit_cty:'国',unit_co:'家',kf1:'去年同期 {n}台',kf2:'最多 {v} · {n}台',kf3:'新客户 {n}家 (12个月)',kf4:'占总数{p}%',kf5:'30天内 {n}台 · 续约对象',w_ratio:'有效比率',ch_newm:'新增Turn On趋势 (周/月)',note_newm:'近12期(周/月)',note_hbar:'🖱️点击筛选 · 占比见提示框',etc:'其他',mon_unit:'月',
     trend_fabin:'累计FAB In趋势（搬入）',trend_turnon:'⚡ 累计Turn On趋势（运行）',
     note_rate:'柱:台数·线:占比%',note_warr:'有效/到期比率',
     note_model:'按型号',note_group:'按工艺组',note_yoy:'台数柱状 · 同比%见提示框',note_drill:'台数柱状 · 占比%见提示框 · 🖱️点击筛选',note_drill2:'分布 · 🖱️点击筛选',cross_title:'🔀 交叉分析',cross_x:'横轴',cross_color:'堆叠依据',
@@ -554,7 +554,7 @@ const T={
     gran_lbl:'集計単位',gran_note:'↑ 推移チャート適用',
     g_week:'週単位',g_month:'月単位',g_quarter:'四半期',g_half:'半期',g_year:'年単位',
     search_lbl:'検索',
-    kp1:'設置台数',kp2:'設置国',kp3:'顧客',kp4:'保証有効',kp5:'90日以内期限切れ',unit_ea:'台',unit_cty:'カ国',unit_co:'社',kf1:'前年同期 {n}台',kf2:'最多 {v} · {n}台',kf3:'新規 {n}社 (12ヶ月)',kf4:'全体の{p}%',kf5:'30日以内 {n}台 · 更新協議対象',w_ratio:'有効比率',ch_newm:'月別新規Turn On',note_newm:'直近12ヶ月',note_hbar:'🖱️クリックで絞込 · 構成比はツールチップ',etc:'その他',mon_unit:'月',
+    kp1:'設置台数',kp2:'設置国',kp3:'顧客',kp4:'保証有効',kp5:'90日以内期限切れ',unit_ea:'台',unit_cty:'カ国',unit_co:'社',kf1:'前年同期 {n}台',kf2:'最多 {v} · {n}台',kf3:'新規 {n}社 (12ヶ月)',kf4:'全体の{p}%',kf5:'30日以内 {n}台 · 更新協議対象',w_ratio:'有効比率',ch_newm:'新規Turn On推移 (週/月)',note_newm:'直近12区間(週/月)',note_hbar:'🖱️クリックで絞込 · 構成比はツールチップ',etc:'その他',mon_unit:'月',
     trend_fabin:'累積FAB In推移（搬入）',trend_turnon:'⚡ 累積Turn On推移（稼働）',
     note_rate:'棒:台数·線:構成比%',note_warr:'有効/切れ比率',
     note_model:'モデル別',note_group:'工程グループ別',note_yoy:'台数棒 · 前年比%はツールチップ',note_drill:'台数棒 · 構成比%はツールチップ · 🖱️クリックで絞込',note_drill2:'分布 · 🖱️クリックで絞込',cross_title:'🔀 クロス分析',cross_x:'横軸',cross_color:'積み上げ基準',
@@ -575,7 +575,7 @@ Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
 window.changeDashboardTheme=function(){
   Chart.defaults.color=GST.chartTheme().txt;
   GST.reskinCharts(CHARTS);
-  if(RAW.length)render();
+  render();   // 데이터 0행이어도 다시 그린다 — 안 그리면 테마 전환 후 카드가 빈 채 남는다
 };
 
 function t(k){const d=T[LANG]||T.ko; return (k in d)?d[k]:k;}
@@ -917,16 +917,15 @@ function mkTrend(id,labels,cumData,lineColor,fillFrom){
 function mkNewMonthly(id,f){
   const ctx=document.getElementById(id);
   const TH=GST.chartTheme();
-  const nowD=new Date(); const keys=[],labels=[];
-  for(let i=11;i>=0;i--){
-    const d=new Date(nowD.getFullYear(),nowD.getMonth()-i,1);
-    keys.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
-    labels.push((d.getMonth()+1)+t('mon_unit'));
-  }
+  // 상단 공통바 주/월 토글 — 최근 12구간. 앵커 = 종료일 필터(마감 포함) 또는 오늘.
+  // 주 키는 GST.isoW(엑셀 WEEKNUM·일~토) — 페이지 GRAN 칩의 week(로컬 연도 기준)와 다른 규칙이므로 혼용 금지.
+  const PU=GST.period();
+  const PBn=GST.periods(12,(DATE_TO?new Date(DATE_TO):new Date()),PU,t('mon_unit'));
+  const keys=PBn.map(p=>p.key), labels=PBn.map(p=>p.label);
   const map={};
   f.forEach(r=>{const d=toDate(r[CI.turnOn]);if(!d)return;
-    const k=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');
-    if(map[k]!==undefined||keys.indexOf(k)>-1)map[k]=(map[k]||0)+1;});
+    const k=PU==='w'?GST.isoW(d):d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');
+    if(keys.indexOf(k)>-1)map[k]=(map[k]||0)+1;});
   const data=keys.map(k=>map[k]||0);
   // B3 예측(당월 제외 추세) · B4 이상탐지
   const realLen=data.length; let L=labels.slice(), D=data.slice();
@@ -1105,9 +1104,10 @@ function applyCut(v){
   if(RAW.length)render(); else GST.barSync();
 }
 GST.pageBar({
-  caps:{cutoff:'m', style:true, ppt:'auto'},
-  state:()=>({endM:CUT_M, style:GST.style()}),
-  on:{ endM:v=>applyCut(v), clear:()=>applyCut('') }
+  caps:{period:true, cutoff:'m', style:true, ppt:'auto'},
+  state:()=>({period:GST.period(), endM:CUT_M, style:GST.style()}),
+  on:{ period:v=>{ GST.setPeriod(v); render(); },
+       endM:v=>applyCut(v), clear:()=>applyCut('') }
 });
 
 function render(){ GST.skeleton(false);
