@@ -1554,6 +1554,92 @@ function gstSnStart(){
   let m=0; const t2=setInterval(function(){ if(GST.ctxApply()||++m>25) clearInterval(t2); },400);
 }
 
+/* ============================================================
+   21. 고장 원인 요약(그룹핑) — 자유 서술·중문 원인을 핵심 키로 묶는다
+   1차: 다국어 키워드 사전(카테고리) — 순서가 우선순위다(위가 먼저 매칭).
+   2차: 사전에 없으면 말뭉치에서 자주 나오는 핵심 토큰(영문 단어·한글 어절·
+        한자 2자 조각)으로 묶는다(2건 이상 반복될 때만).
+   3차: 그래도 없으면 원문 그대로 — 짧은 코드성 표기는 기존과 동일하게 동작.
+   ============================================================ */
+GST.CAUSE_CATS=[
+  {k:'human',   re:/HUMAN|휴먼|오조작|誤操作|误操作|人為|人为/i},
+  {k:'powder',  re:/POWDER|파우더|막힘|CLOG|堵|粉末/i},
+  {k:'mfc',     re:/MFC/i},
+  {k:'sensor',  re:/SENSOR|센서|感測|感应|感應|传感|傳感/i},
+  {k:'level',   re:/LEVEL|레벨|液位/i},
+  {k:'flow',    re:/FLOW|유량|流量/i},
+  {k:'temp',    re:/TEMP|온도|温度|溫度|HEATER|히터|加热|加熱|과열|OVERHEAT/i},
+  {k:'leak',    re:/LEAK|누수|누설|漏/i},
+  {k:'pump',    re:/PUMP|펌프|泵/i},
+  {k:'valve',   re:/VALVE|밸브|阀|閥/i},
+  {k:'pipe',    re:/PIPING|PIPE|배관|配管|管路/i},
+  {k:'motor',   re:/MOTOR|모터|馬達|马达|\bFAN\b|팬|風機|风机|블로워|BLOWER/i},
+  {k:'elec',    re:/전장|전기|ELECTRIC|PCB|CONVERTER|INVERTER|电气|電氣|電裝|电装|누전|합선|SMPS|POWER SUPPLY|FUSE|퓨즈/i},
+  {k:'sw',      re:/PROGRAM|프로그램|SOFTWARE|\bSW\b|\bPLC\b|\bCTC\b|제어|控制|程序|程式|통신|\bCOMM\b|通信/i},
+  {k:'seal',    re:/O-?RING|씰|실링|\bSEAL\b|密封|GASKET|가스켓/i},
+  {k:'customer',re:/고객|客户|客戶|顧客|CUSTOMER/i},
+  {k:'parts',   re:/PART/i}
+];
+GST.CAUSE_LBL={
+  human:{ko:'휴먼 에러',en:'Human error',zh:'人为失误',ja:'ヒューマンエラー'},
+  powder:{ko:'파우더·막힘',en:'Powder/Clog',zh:'粉末·堵塞',ja:'パウダー·詰まり'},
+  mfc:{ko:'MFC',en:'MFC',zh:'MFC',ja:'MFC'},
+  sensor:{ko:'센서',en:'Sensor',zh:'传感器',ja:'センサー'},
+  level:{ko:'레벨',en:'Level',zh:'液位',ja:'レベル'},
+  flow:{ko:'유량(Flow)',en:'Flow',zh:'流量',ja:'流量'},
+  temp:{ko:'온도·히터',en:'Temp/Heater',zh:'温度·加热',ja:'温度·ヒーター'},
+  leak:{ko:'누수·누출',en:'Leak',zh:'泄漏',ja:'漏れ'},
+  pump:{ko:'펌프',en:'Pump',zh:'泵',ja:'ポンプ'},
+  valve:{ko:'밸브',en:'Valve',zh:'阀',ja:'バルブ'},
+  pipe:{ko:'배관',en:'Piping',zh:'管路',ja:'配管'},
+  motor:{ko:'모터·팬',en:'Motor/Fan',zh:'马达·风机',ja:'モーター·ファン'},
+  elec:{ko:'전장·전기',en:'Electrical',zh:'电气',ja:'電装·電気'},
+  sw:{ko:'프로그램·제어',en:'SW/Control',zh:'程序·控制',ja:'プログラム·制御'},
+  seal:{ko:'O-RING·씰',en:'O-ring/Seal',zh:'O环·密封',ja:'Oリング·シール'},
+  customer:{ko:'고객사 관련',en:'Customer-related',zh:'客户相关',ja:'顧客関連'},
+  parts:{ko:'부품 불량(기타)',en:'Part fail (etc.)',zh:'零件不良(其他)',ja:'部品不良(その他)'}
+};
+GST.causeCat=function(s){
+  if(!s) return null; const u=String(s);
+  for(let i=0;i<GST.CAUSE_CATS.length;i++){ if(GST.CAUSE_CATS[i].re.test(u)) return GST.CAUSE_CATS[i]; }
+  return null;
+};
+GST._CAUSE_STOP=new Set(['FAIL','FAILURE','ERROR','ISSUE','PROBLEM','CHECK','HIGH','LOW','MAIN','THE','AND','FOR','NOT','AFTER',
+  '고장','불량','이상','발생','작업','확인','교체','조치','요청','관련','문제','설비','원인','미상','기타',
+  '故障','异常','異常','问题','問題','发生','發生','更换','更換','确认','確認','原因','处理','處理','导致','導致','进行','進行','设备','設備']);
+// texts: 원인 문자열 배열(전체 말뭉치) → Map(원문 → {key,label})
+GST.causeMap=function(texts, lang){
+  lang=lang||'ko';
+  const uniq=Array.from(new Set((texts||[]).filter(Boolean).map(function(s){ return String(s).trim(); }).filter(Boolean)));
+  const tokensOf=function(s){
+    const out=[];
+    (s.toUpperCase().match(/[A-Z0-9][A-Z0-9\-]{1,}|[가-힣]{2,}|[一-鿿]{2,}/g)||[]).forEach(function(tk){
+      if(/^[一-鿿]+$/.test(tk)){
+        // 중문은 띄어쓰기가 없어 긴 덩어리가 됨 — 2자 조각(bigram)으로 쪼개 반복 조각을 찾는다
+        for(let i=0;i+2<=tk.length;i++){ const bg=tk.slice(i,i+2); if(!GST._CAUSE_STOP.has(bg)) out.push(bg); }
+      }else if(!GST._CAUSE_STOP.has(tk)) out.push(tk);
+    });
+    return out;
+  };
+  // 1패스: 카테고리 미매칭 텍스트들의 토큰 말뭉치 빈도
+  const freq={};
+  const unmatched=uniq.filter(function(s){ return !GST.causeCat(s); });
+  unmatched.forEach(function(s){ Array.from(new Set(tokensOf(s))).forEach(function(tk){ freq[tk]=(freq[tk]||0)+1; }); });
+  // 2패스: 원문 → 그룹 키
+  const map=new Map();
+  uniq.forEach(function(s){
+    const cat=GST.causeCat(s);
+    if(cat){ const L=GST.CAUSE_LBL[cat.k]||{}; map.set(s,{key:'§'+cat.k,label:L[lang]||L.ko||cat.k}); return; }
+    let best=null;
+    tokensOf(s).forEach(function(tk){
+      if((freq[tk]||0)>=2 && (!best || freq[tk]>freq[best] || (freq[tk]===freq[best]&&tk.length>best.length))) best=tk;
+    });
+    if(best){ map.set(s,{key:'~'+best,label:best}); return; }
+    map.set(s,{key:s,label:s});
+  });
+  return map;
+};
+
 function gstAutoStart(){
   try{ GST.autoSidebar(); }catch(e){}
   try{ GST.startAutoRefresh(10); }catch(e){}
