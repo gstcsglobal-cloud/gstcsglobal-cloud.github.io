@@ -77,6 +77,9 @@ body.theme-light .gt-btn.active{color:#fff}
 .grid2{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;margin-bottom:16px}
 .card{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:18px;backdrop-filter:blur(14px);position:relative}
 .mini-per{position:absolute;top:14px;right:14px;display:flex;gap:0;z-index:5;border:1px solid var(--glass-border);border-radius:12px;overflow:hidden}
+/* 카드 안 인라인 체크 토글 (입사·퇴사 현장 인원 필터) */
+.onsw{display:inline-flex;align-items:center;gap:4px;margin-left:8px;cursor:pointer;user-select:none;white-space:nowrap}
+.onsw input{accent-color:var(--accent-1);width:12px;height:12px;margin:0;cursor:pointer}
 /* 차트 고해상도 복사·저장 버튼 (카드 hover 시 표시) */
 .capbtns{position:absolute;top:11px;right:70px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
 .card:hover .capbtns,.tablecard:hover .capbtns{opacity:1}
@@ -259,7 +262,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   <div class="tablecard" style="position:relative">
   <h3 data-i="tbl_top">고장 원인 TOP 3</h3><div class="mini-per" data-ch="top3" style="top:16px"></div>
   <table>
-    <thead><tr><th>#</th><th data-i="th_cause">원인</th><th data-i="th_cnt">건수</th><th data-i="th_ph">주요 현상</th><th data-i="th_act">최근 조치</th></tr></thead>
+    <thead><tr><th>#</th><th data-i="th_al">주요 알람유형</th><th data-i="th_cause">원인</th><th data-i="th_cnt" style="white-space:nowrap">건수</th><th data-i="th_act">최근 조치</th></tr></thead>
     <tbody id="top3Body"><tr><td colspan="5" class="empty">—</td></tr></tbody>
   </table>
   <div class="card-note" id="top3Etc" style="margin-top:8px"></div>
@@ -275,7 +278,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   </div>
   <div class="card">
     <h3 data-i="ch_io">입사 · 퇴사 (라인별)</h3><div class="mini-per" data-ch="cIo"></div>
-    <div class="card-note" data-i="note_io">위 = 입사 · 아래 = 퇴사 · 라인(소속)별 구분</div>
+    <div class="card-note"><span data-i="note_io">위 = 입사 · 아래 = 퇴사 · 라인(소속)별 구분</span>
+      <label class="onsw"><input type="checkbox" id="ioOnsite" onchange="setIoOnsite(this.checked)"><span data-i="io_onsite">현장(O) 인원만</span></label></div>
     <div class="cw"><canvas id="cIo"></canvas></div>
   </div>
   <div class="card">
@@ -336,7 +340,8 @@ const URLS={
   abp:   PUB+'?gid='+GID_ABP+'&single=true&output=csv'
 };
 // 시트3 실적현황 (0-based)
-const CW={op:2,customer:3,line:5,stage:13,chamber:20,sn:21,phenom:26,cause:27,action:28,work:32,workMin:39,manMin:40,workers:41};
+// alarm=Z열 알람유형 · phenom=AA열 현상 · cause=AB열 원인 · action=AC열 조치
+const CW={op:2,customer:3,line:5,stage:13,chamber:20,sn:21,alarm:25,phenom:26,cause:27,action:28,work:32,workMin:39,manMin:40,workers:41};
 // 설치 시트
 const CI={country:2,customer:3,fab:9,sn:6,fabIn:38,turnOn:40,warranty:43,type:75}; // fab=J열 FAB(F16/F11/F16N) · warranty=AR열 Warranty In/Out · type=BX열 Scrubber Type
 // 고객사 표기 통일 (시트마다 공식명/축약명이 섞여 있음) — 예: Micron Memory Taiwan Co., Ltd.(F16) → MICRON F16
@@ -399,14 +404,15 @@ ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 �
  kf1:'경력 2년+ {n}명 · 1년 미만 {m}명',kf2:'최근 12개월 입사 {n}명',kf3:'Veteran {p}% (대상 {n}명)',kf4:'이전 30일 {n}건',kf5:'PM 비중 {p}%',kf6:'계획 {a} · 완료 {b}',
  sec1:'핵심 지표',sec2:'상세 분석',sec3:'Alarm · 고장',sec4:'설비',
  ch_hc:'인원 추이 (경력구간)',note_hc:'각 구간 말 기준 재직 인원 · 입사일/퇴사일 반영',hc_u1:'1년 미만',hc_u2:'1–2년',hc_u3:'2년 이상',
- ch_io:'입사 · 퇴사 (라인별)',note_io:'위 = 입사 · 아래 = 퇴사 · 라인(소속)별 구분',io_in:'입사',io_out:'퇴사',
+ ch_io:'입사 · 퇴사 (라인별)',io_onsite:'현장(O) 인원만',note_io:'위 = 입사 · 아래 = 퇴사 · 라인(소속)별 구분',io_in:'입사',io_out:'퇴사',
  ch_edu:'교육 완료율 추이',note_edu:'이수일 기준 누적 완료 / 해당 시점 재직 인원',
  ch_jobs:'작업 건수',note_jobs:'전체 작업 실적 · 최대/최신값 라벨',
  ch_man:'작업 공수 (h)',note_man:'PM · 서비스 · 설치 구분 (이상치 제외)',man_pm:'PM',man_np:'非PM',man_svc:'서비스',man_inst:'설치',
  ch_pc:'인당 작업 건수',note_pc:'구간 내 실제 투입 인원 기준',
  ch_sc:'PM 계획 대비 완료 (올해 누적)',note_sc:'계획 = 설비별 주기 기반 도래 건수 · 진행율은 툴팁',sc_plan:'계획(누적)',sc_done:'완료(누적)',
  ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',ft_total:'건수',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
- tbl_top:'고장 원인 TOP 3',th_cause:'원인',th_cnt:'건수',th_ph:'주요 현상',th_act:'최근 조치',top_etc:'기타 {n}건 · 원인 미기재 {m}건',top_var:'(표기 {n}종 묶음)',
+ tbl_top:'고장 원인 TOP 3',th_cause:'원인',th_cnt:'건수',th_al:'주요 알람유형',th_act:'최근 조치',top_etc:'기타 {n}건 · 원인 미기재 {m}건',top_var:'(표기 {n}종 묶음)',
+ top_alfb:'알람유형(Z열) 미기재 — 현상(AA열)으로 표기',
  tbl_op:'Scrubber 가동 현황',note_op:'가동 = Turn-On 완료 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 40/인 고정 · PM = 해당 구간 TBM · 마감일 기준',op_corp:'법인',op_div:'구분',op_run_u:'가동 장비 대수',op_run_c:'가동 챔버수',op_idle:'미가동',op_staff:'담당 인원(명)',op_to:'목표 TO',op_gap:'증감(명)',op_hire:'모집계획',op_chp:'인당 챔버',op_pm:'PM(건)',op_unit:'장비',op_ch:'챔버',op_expat:'주재원',op_local:'현채인',op_fit:'적정 챔버',op_need:'인원(명)',
  ins_pm:'올해 PM 진행율 {p}% (계획 {a} · 완료 {b})',ins_ft:'최근 30일 고장 {n}건 · 직전 30일 대비 {p}',ins_hc:'재직 {n}명 · 이번 달 입사 {a} · 퇴사 {b}',
  ax_t:'축 범위 (빈칸=자동)',ax_min:'최소',ax_max:'최대',ax_apply:'적용',ax_reset:'초기화',loading:'데이터 불러오는 중...',loaded:'로드 완료',mon_u:'월',u_p:'명',u_c:'건'},
@@ -415,14 +421,15 @@ en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, traini
  kf1:'2y+ {n} · under 1y {m}',kf2:'{n} joined in 12mo',kf3:'Veteran {p}% ({n} targets)',kf4:'prev 30d {n}',kf5:'PM share {p}%',kf6:'plan {a} · done {b}',
  sec1:'Key Metrics',sec2:'Details',sec3:'Alarm · Faults',sec4:'Equipment',
  ch_hc:'Headcount by Tenure',note_hc:'active at each period end (join/leave applied)',hc_u1:'<1y',hc_u2:'1–2y',hc_u3:'2y+',
- ch_io:'Joins · Leaves (by line)',note_io:'up = joins · down = leaves · by line',io_in:'Joined',io_out:'Left',
+ ch_io:'Joins · Leaves (by line)',io_onsite:'On-site (O) only',note_io:'up = joins · down = leaves · by line',io_in:'Joined',io_out:'Left',
  ch_edu:'Training Completion Trend',note_edu:'cumulative completions / active headcount',
  ch_jobs:'Job Count',note_jobs:'all work records · peak/latest labeled',
  ch_man:'Man-hours (h)',note_man:'PM · Service · Install (outliers excluded)',man_pm:'PM',man_np:'Non-PM',man_svc:'Service',man_inst:'Install',
  ch_pc:'Jobs per Person',note_pc:'based on workers actually deployed in period',
  ch_sc:'PM Plan vs Done (YTD cumulative)',note_sc:'plan = due events from per-tool cycles · progress in tooltip',sc_plan:'Plan (cum)',sc_done:'Done (cum)',
  ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',ft_total:'Count',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
- tbl_top:'Top 3 Fault Causes',th_cause:'Cause',th_cnt:'Count',th_ph:'Main Symptom',th_act:'Latest Action',top_etc:'others {n} · cause blank {m}',top_var:'({n} variants)',
+ tbl_top:'Top 3 Fault Causes',th_cause:'Cause',th_cnt:'Count',th_al:'Main Alarm Type',th_act:'Latest Action',top_etc:'others {n} · cause blank {m}',top_var:'({n} variants)',
+ top_alfb:'alarm type blank (col Z) — showing symptom (col AA)',
  tbl_op:'Scrubber Operation Status',note_op:'running = Turn-On done · chamber DUAL=2·SINGLE=1 · 40 chambers/person fixed · PM = TBM in period · as of cutoff',op_corp:'Entity',op_div:'Site',op_run_u:'Running Units',op_run_c:'Running Chambers',op_idle:'Idle',op_staff:'Staff',op_to:'Target TO',op_gap:'Gap',op_hire:'Hiring',op_chp:'Ch/person',op_pm:'PM',op_unit:'Units',op_ch:'Chambers',op_expat:'Expat',op_local:'Local',op_fit:'Fit ch.',op_need:'Headcount',
  ins_pm:'YTD PM progress {p}% (plan {a} · done {b})',ins_ft:'{n} faults in 30d · {p} vs prev 30d',ins_hc:'{n} active · joined {a} · left {b} this month',
  ax_t:'Axis range (blank=auto)',ax_min:'Min',ax_max:'Max',ax_apply:'Apply',ax_reset:'Reset',loading:'Loading...',loaded:'Loaded',mon_u:'',u_p:'',u_c:''},
@@ -431,14 +438,15 @@ zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇
  kf1:'2年+ {n}名 · 1年内 {m}名',kf2:'近12个月入职 {n}名',kf3:'Veteran {p}% (对象 {n}名)',kf4:'前30天 {n}件',kf5:'PM占比 {p}%',kf6:'计划 {a} · 完成 {b}',
  sec1:'核心指标',sec2:'详细分析',sec3:'Alarm · 故障',sec4:'设备',
  ch_hc:'人员趋势(工龄区间)',note_hc:'各区间末在职 · 反映入职/离职日',hc_u1:'1年内',hc_u2:'1–2年',hc_u3:'2年以上',
- ch_io:'入职 · 离职(按线)',note_io:'上=入职·下=离职·按线区分',io_in:'入职',io_out:'离职',
+ ch_io:'入职 · 离职(按线)',io_onsite:'仅现场(O)人员',note_io:'上=入职·下=离职·按线区分',io_in:'入职',io_out:'离职',
  ch_edu:'教育完成率趋势',note_edu:'按完成日累计 / 当时在职人数',
  ch_jobs:'作业件数',note_jobs:'全部作业实绩 · 最大/最新标注',
  ch_man:'作业工时(h)',note_man:'PM·服务·安装区分(除异常值)',man_pm:'PM',man_np:'非PM',man_svc:'服务',man_inst:'安装',
  ch_pc:'人均作业件数',note_pc:'按区间内实际投入人员',
  ch_sc:'PM计划 vs 完成(今年累计)',note_sc:'计划=按设备周期到期件数 · 进度见提示框',sc_plan:'计划(累计)',sc_done:'完成(累计)',
  ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
- tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_ph:'主要现象',th_act:'最近措施',top_etc:'其他 {n}件 · 原因未填 {m}件',top_var:'({n}种写法合并)',
+ tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'主要报警类型',th_act:'最近措施',top_etc:'其他 {n}件 · 原因未填 {m}件',top_var:'({n}种写法合并)',
+ top_alfb:'报警类型(Z列)未填 — 显示现象(AA列)',
  tbl_op:'Scrubber 运行现况',note_op:'运行=Turn-On完成 · 腔体 DUAL=2·SINGLE=1 · 人均40腔固定 · PM=该区间TBM · 截止日基准',op_corp:'法人',op_div:'区分',op_run_u:'运行设备台数',op_run_c:'运行腔体数',op_idle:'未运行',op_staff:'负责人员(名)',op_to:'目标 TO',op_gap:'增减(名)',op_hire:'招聘计划',op_chp:'人均腔体',op_pm:'PM(件)',op_unit:'设备',op_ch:'腔体',op_expat:'驻在员',op_local:'当地雇员',op_fit:'适定腔体',op_need:'人员(名)',
  ins_pm:'今年PM进度 {p}% (计划 {a} · 完成 {b})',ins_ft:'近30天故障 {n}件 · 环比 {p}',ins_hc:'在职 {n}名 · 本月入职 {a} · 离职 {b}',
  ax_t:'轴范围 (空=自动)',ax_min:'最小',ax_max:'最大',ax_apply:'应用',ax_reset:'重置',loading:'加载中...',loaded:'已加载',mon_u:'月',u_p:'名',u_c:'件'},
@@ -447,14 +455,15 @@ ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サ
  kf1:'2年+ {n}名 · 1年未満 {m}名',kf2:'直近12ヶ月入社 {n}名',kf3:'Veteran {p}% (対象 {n}名)',kf4:'前30日 {n}件',kf5:'PM比率 {p}%',kf6:'計画 {a} · 完了 {b}',
  sec1:'主要指標',sec2:'詳細分析',sec3:'Alarm · 故障',sec4:'設備',
  ch_hc:'人員推移(経歴区分)',note_hc:'各区間末の在籍 · 入社/退社日反映',hc_u1:'1年未満',hc_u2:'1–2年',hc_u3:'2年以上',
- ch_io:'入社 · 退社(ライン別)',note_io:'上=入社·下=退社·ライン別',io_in:'入社',io_out:'退社',
+ ch_io:'入社 · 退社(ライン別)',io_onsite:'現場(O)のみ',note_io:'上=入社·下=退社·ライン別',io_in:'入社',io_out:'退社',
  ch_edu:'教育完了率推移',note_edu:'完了日基準の累計 / 当時の在籍数',
  ch_jobs:'作業件数',note_jobs:'全作業実績 · 最大/最新ラベル',
  ch_man:'作業工数(h)',note_man:'PM·サービス·設置区分(異常値除外)',man_pm:'PM',man_np:'非PM',man_svc:'サービス',man_inst:'設置',
  ch_pc:'一人当たり作業件数',note_pc:'区間内の実投入人員基準',
  ch_sc:'PM計画対完了(今年累計)',note_sc:'計画=設備別周期の到来件数 · 進捗はツールチップ',sc_plan:'計画(累計)',sc_done:'完了(累計)',
  ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
- tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_ph:'主要現象',th_act:'最新対応',top_etc:'その他 {n}件 · 原因未記入 {m}件',top_var:'({n}表記まとめ)',
+ tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'主なアラーム種別',th_act:'最新対応',top_etc:'その他 {n}件 · 原因未記入 {m}件',top_var:'({n}表記まとめ)',
+ top_alfb:'アラーム種別(Z列)未記入 — 現象(AA列)で表示',
  tbl_op:'Scrubber 稼働現況',note_op:'稼働=Turn-On完了 · チャンバー DUAL=2·SINGLE=1 · 適正40台/人固定 · PM=当該区間TBM · 締め日基準',op_corp:'法人',op_div:'区分',op_run_u:'稼働設備台数',op_run_c:'稼働チャンバー数',op_idle:'未稼働',op_staff:'担当人員(名)',op_to:'目標 TO',op_gap:'増減(名)',op_hire:'採用計画',op_chp:'一人当たり',op_pm:'PM(件)',op_unit:'設備',op_ch:'チャンバー',op_expat:'駐在員',op_local:'現地採用',op_fit:'適正チャンバー',op_need:'人員(名)',
  ins_pm:'今年PM進捗 {p}% (計画 {a} · 完了 {b})',ins_ft:'直近30日故障 {n}件 · 前30日比 {p}',ins_hc:'在籍 {n}名 · 今月入社 {a} · 退社 {b}',
  ax_t:'軸範囲 (空欄=自動)',ax_min:'最小',ax_max:'最大',ax_apply:'適用',ax_reset:'リセット',loading:'読み込み中...',loaded:'ロード完了',mon_u:'月',u_p:'名',u_c:'件'}
@@ -505,6 +514,9 @@ function applyAXB(){ // 차트 생성 후 옵션 갱신+update — 생성 사이
 }
 let GRP='tenure'; try{GRP=localStorage.getItem('gst_rpt_grp')||'tenure';}catch(e){}
 window.setGrp=function(g){ GRP=g; try{localStorage.setItem('gst_rpt_grp',g);}catch(e){} render(); };
+// 입사·퇴사(cIo) 현장(O) 인원만 보기 — 기본 ON(다른 인원 차트와 동일 기준). 해제하면 전 인원.
+let IO_ONSITE=true; try{if(localStorage.getItem('gst_rpt_ioon')==='0')IO_ONSITE=false;}catch(e){}
+window.setIoOnsite=function(v){ IO_ONSITE=!!v; try{localStorage.setItem('gst_rpt_ioon',IO_ONSITE?'1':'0');}catch(e){} render(); };
 window.setEnd=function(k,v){ if(k==='m')ENDM=v||''; else ENDW=v||'';
   try{localStorage.setItem('gst_rpt_end',JSON.stringify({m:ENDM,w:ENDW}));}catch(e){} render(); };
 window.clearEnds=function(){ ENDM='';ENDW='';
@@ -883,6 +895,7 @@ async function loadData(){
       return {stage:stg,wd,customer:normCust(r[CW.customer]),custB:custBase(r[CW.customer]),fab:fabOf(r[CW.line])||String(r[CW.line]||'').trim(),sn:String(r[CW.sn]||'').trim(),
         country:guessCountry(r[CW.op]),line:String(r[CW.line]||'').trim(),
         chamber:String(r[CW.chamber]||'').trim(),cause:String(r[CW.cause]||'').trim(),
+        alarm:String(r[CW.alarm]||'').trim(),
         phenom:String(r[CW.phenom]||'').trim(),action:String(r[CW.action]||'').trim(),
         manMin:manMin,   // 값 그대로 합산 — 상한/이상치 제거 없음(엑셀 매크로와 동일)
         workMin:workMin,
@@ -1052,12 +1065,15 @@ function render(){
   // 입사/퇴사 — 라인(소속)별 다이버징: 0 기준 위=입사(+) · 아래=퇴사(−)
   {
     const {P,labels,u}=PU('cIo');
-    const used=SITES.filter(sk=>fHR.some(x=>grpKey(x)===sk&&(x.join||x.quit)));
+    // 현장(O)만 토글 — 기본 ON. cHc·cCareer 등 다른 인원 차트와 같은 모집단이 된다.
+    const ioR=IO_ONSITE?fHR.filter(x=>x.onsite):fHR;
+    { const _ck=document.getElementById('ioOnsite'); if(_ck)_ck.checked=IO_ONSITE; }
+    const used=SITES.filter(sk=>ioR.some(x=>grpKey(x)===sk&&(x.join||x.quit)));
     const inDs=used.map(sk=>({label:sk,
-      data:P.map(p=>fHR.filter(x=>x.join&&keyOfDate(x.join,u)===p.key&&grpKey(x)===sk).length),
+      data:P.map(p=>ioR.filter(x=>x.join&&keyOfDate(x.join,u)===p.key&&grpKey(x)===sk).length),
       backgroundColor:SITE_C[SITES.indexOf(sk)],stack:'io',borderRadius:2}));
     const outDs=used.map(sk=>({label:'·'+sk,   // 범례 숨김(라인 색은 입사 데이터셋으로 표시) · 아래=퇴사
-      data:P.map(p=>-fHR.filter(x=>x.quit&&keyOfDate(x.quit,u)===p.key&&grpKey(x)===sk).length),
+      data:P.map(p=>-ioR.filter(x=>x.quit&&keyOfDate(x.quit,u)===p.key&&grpKey(x)===sk).length),
       backgroundColor:SITE_C[SITES.indexOf(sk)],stack:'io',borderRadius:2}));
     destroyMk('cIo');
     CHARTS.cIo=new Chart(document.getElementById('cIo'),{type:'bar',
@@ -1411,9 +1427,10 @@ function render(){
     const f30=fWK.filter(x=>x.wd>=_tSt&&x.wd<=_tEn&&isFault(x.stage));
     const byCause={}; let noCause=0;
     // 원인 요약 그룹핑 — 서술형·중문 표기도 핵심 키워드로 묶는다(GST.causeMap).
-    // 원인 미기재 건은 현상으로 대체, 원인·현상 모두 없을 때만 미기재 집계.
-    const _cm=GST.causeMap(f30.map(x=>x.cause||x.phenom), LANG);
-    f30.forEach(x=>{ const raw=(x.cause||x.phenom||'').trim(); if(!raw){noCause++;return;}
+    // 원인(AB) 미기재 건은 알람유형(Z) → 현상(AA) 순으로 대체, 셋 다 없을 때만 미기재 집계.
+    const _ck=x=>x.cause||x.alarm||x.phenom;
+    const _cm=GST.causeMap(f30.map(_ck), LANG);
+    f30.forEach(x=>{ const raw=(_ck(x)||'').trim(); if(!raw){noCause++;return;}
       const g=_cm.get(raw)||{key:raw,label:raw};
       const e=(byCause[g.key]=byCause[g.key]||{label:g.label,raws:{},arr:[]});
       e.arr.push(x); e.raws[raw]=(e.raws[raw]||0)+1; });
@@ -1426,14 +1443,25 @@ function render(){
     else{
       body.innerHTML=top.slice(0,3).map((e,i)=>{
         const arr=e.arr;
-        const ph={}; arr.forEach(x=>{if(x.phenom)ph[x.phenom]=(ph[x.phenom]||0)+1;});
-        const topPh=Object.entries(ph).sort((a,b)=>b[1]-a[1])[0];
+        // 주요 알람유형 = Z열. 그룹에 알람 기재가 하나도 없으면 현상(AA열)으로 대체 표기.
+        const _rank=k=>{const m={}; arr.forEach(x=>{const v=(x[k]||'').trim(); if(v)m[v]=(m[v]||0)+1;});
+          return Object.entries(m).sort((a,b)=>b[1]-a[1]);};
+        let al=_rank('alarm'); const alFb=!al.length; if(alFb)al=_rank('phenom');
+        const topAl=al[0];
+        const alTip=al.length>1||alFb
+          ? ' title="'+esc(al.slice(0,6).map(r=>r[0]+' ('+r[1]+')').join('\n')+(al.length>6?'\n…':'')
+              +(alFb?'\n※ '+t('top_alfb'):''))+'"' : '';
         const latest=arr.slice().sort((a,b)=>b.wd-a.wd).find(x=>x.action);
         // 묶인 원문이 여러 표기면 셀 툴팁으로 보여주고 '외 n종'을 붙인다
         const rk=Object.keys(e.raws);
         const tip=rk.length>1?' title="'+esc(rk.slice(0,6).map(r=>r+' ('+e.raws[r]+')').join('\n')+(rk.length>6?'\n…':''))+'"':'';
         const extra=rk.length>1?' <span style="font-size:10px;color:var(--txt-muted)">'+t('top_var').replace('{n}',rk.length)+'</span>':'';
-        return '<tr><td><span class="rank r'+(i+1)+'">'+(i+1)+'</span></td><td'+tip+'>'+esc(e.label)+extra+'</td><td class="num"><b>'+arr.length+'</b></td><td>'+(topPh?esc(topPh[0]):'—')+'</td><td>'+(latest?esc(latest.action):'—')+'</td></tr>';
+        // 열 순서 = 시트 열 순서(Z 알람유형 → AB 원인 → AC 조치)
+        return '<tr><td><span class="rank r'+(i+1)+'">'+(i+1)+'</span></td>'
+          +'<td'+alTip+'>'+(topAl?esc(topAl[0]):'—')+'</td>'
+          +'<td'+tip+'>'+esc(e.label)+extra+'</td>'
+          +'<td class="num"><b>'+arr.length+'</b></td>'
+          +'<td>'+(latest?esc(latest.action):'—')+'</td></tr>';
       }).join('');
       const etcN=top.slice(3).reduce((a,e)=>a+e.arr.length,0);
       document.getElementById('top3Etc').textContent=(etcN||noCause)?t('top_etc').replace('{n}',etcN).replace('{m}',noCause):'';
@@ -1571,14 +1599,16 @@ function onDrill(evt,els,chart){
 }
 function drillFault(p){ const D=window._DRILL;
   const rows=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&x.stage==='BM').sort((a,b)=>b.wd-a.wd);
-  const _dm=GST.causeMap(rows.map(x=>x.cause||x.phenom), LANG);
-  const by={}; rows.forEach(x=>{const raw=(x.cause||x.phenom||'').trim();
+  const _dk=x=>x.cause||x.alarm||x.phenom;   // TOP3 표와 동일한 대체 순서
+  const _dm=GST.causeMap(rows.map(_dk), LANG);
+  const by={}; rows.forEach(x=>{const raw=(_dk(x)||'').trim();
     const k=raw?(_dm.get(raw)||{label:raw}).label:'미기재'; by[k]=(by[k]||0)+1;});
   const top=Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,6);
   let h='<div class="dsum"><div class="b"><span class="n">'+rows.length+'</span><span class="l">BM 고장 건수</span></div></div>';
-  if(top.length)h+='<table><thead><tr><th>원인/현상</th><th class="num">건수</th></tr></thead><tbody>'+top.map(e=>'<tr><td>'+esc(e[0])+'</td><td class="num">'+e[1]+'</td></tr>').join('')+'</tbody></table>';
-  h+='<div class="dhint">최근순 상세 (최대 40건)</div><table><thead><tr><th>일자</th><th>라인</th><th>원인</th><th>현상</th><th>조치</th></tr></thead><tbody>'
-    +(rows.length?rows.slice(0,40).map(x=>'<tr><td>'+_md(x.wd)+'</td><td>'+esc(x.fab||x.custB)+'</td><td>'+esc(x.cause)+'</td><td>'+esc(x.phenom)+'</td><td>'+esc(x.action)+'</td></tr>').join(''):'<tr><td colspan="5" style="text-align:center;color:var(--txt-muted)">고장 없음</td></tr>')+'</tbody></table>';
+  if(top.length)h+='<table><thead><tr><th>원인/알람</th><th class="num">건수</th></tr></thead><tbody>'+top.map(e=>'<tr><td>'+esc(e[0])+'</td><td class="num">'+e[1]+'</td></tr>').join('')+'</tbody></table>';
+  // 상세 열 순서 = 시트 열 순서(Z 알람유형 · AA 현상 · AB 원인 · AC 조치)
+  h+='<div class="dhint">최근순 상세 (최대 40건)</div><table><thead><tr><th>일자</th><th>라인</th><th>알람유형</th><th>현상</th><th>원인</th><th>조치</th></tr></thead><tbody>'
+    +(rows.length?rows.slice(0,40).map(x=>'<tr><td>'+_md(x.wd)+'</td><td>'+esc(x.fab||x.custB)+'</td><td>'+esc(x.alarm)+'</td><td>'+esc(x.phenom)+'</td><td>'+esc(x.cause)+'</td><td>'+esc(x.action)+'</td></tr>').join(''):'<tr><td colspan="6" style="text-align:center;color:var(--txt-muted)">고장 없음</td></tr>')+'</tbody></table>';
   showDrill('고장 상세 · '+p.label,h);
 }
 function drillMan(p){ const D=window._DRILL;
@@ -1606,7 +1636,8 @@ function drillHead(p){ const D=window._DRILL;
   showDrill('인원 상세 · '+p.label,h);
 }
 function drillIo(p){ const D=window._DRILL;
-  const ins=D.fHR.filter(x=>x.join&&x.join>=p.st&&x.join<=p.end), outs=D.fHR.filter(x=>x.quit&&x.quit>=p.st&&x.quit<=p.end);
+  const R=IO_ONSITE?D.fHR.filter(x=>x.onsite):D.fHR;   // 차트와 동일 모집단
+  const ins=R.filter(x=>x.join&&x.join>=p.st&&x.join<=p.end), outs=R.filter(x=>x.quit&&x.quit>=p.st&&x.quit<=p.end);
   const mk=(arr,dk)=>arr.length?('<table><thead><tr><th>이름</th><th>라인</th><th>일자</th></tr></thead><tbody>'+arr.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.fab||x.custB)+'</td><td>'+_md(x[dk])+'</td></tr>').join('')+'</tbody></table>'):'<div class="dhint">없음</div>';
   let h='<div class="dsum"><div class="b"><span class="n">+'+ins.length+'</span><span class="l">입사</span></div><div class="b"><span class="n">−'+outs.length+'</span><span class="l">퇴사</span></div></div>';
   h+='<div class="dhint">입사</div>'+mk(ins,'join')+'<div class="dhint" style="margin-top:12px">퇴사</div>'+mk(outs,'quit');
@@ -1955,7 +1986,7 @@ window.downloadPPT=async function(btn){
       frame(s3,3.4,3.6,['Alarm 보고 사항 — '+ttl]);
       const tbl=top3TableEl();
       if(tbl){ const rows=pptRowsFromDom(tbl);
-        s3.addTable(rows,{x:0.92,y:3.85,w:11.5,colW:[0.55,3.1,0.75,3.55,3.55],rowH:0.26,fontFace:PPT_FONT,fontSize:8.5});
+        s3.addTable(rows,{x:0.92,y:3.85,w:11.5,colW:[0.55,3.55,3.1,0.75,3.55],rowH:0.26,fontFace:PPT_FONT,fontSize:8.5});
         const etc=(document.getElementById('top3Etc')||{}).textContent||'';
         if(etc)s3.addText('※ '+etc,{x:0.92,y:6.45,w:11.5,h:0.3,fontFace:PPT_FONT,fontSize:8,color:'808080',margin:0}); } }
     await pres.writeFile({fileName:'GST_주간현황_'+(P.wk||P.asOf)+'.pptx'});
