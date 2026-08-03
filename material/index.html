@@ -1070,6 +1070,20 @@ function render(){ GST.skeleton(false); GST.pushState(F);
 
   renderFilterChips();
   renderCycleTable(f); renderDetailTable(f); renderCrossTable(); renderEqDrill();
+  // 🧊 피벗 — 현재 필터가 적용된 자재 교체 실적을 교차 집계한다
+  GST.pivotReg({
+    rows:()=>LAST_F,
+    dims:[{k:'country',t:t('sl_country')},{k:'customer',t:t('sl_customer')},{k:'line',t:t('sl_line')},
+          {k:'process',t:t('sl_process')},{k:'detail',t:t('sl_detail')},{k:'eq',t:t('sl_eq')},
+          {k:'matName',t:t('cyc_mat')},{k:'reason',t:t('th_reason')},{k:'pf',t:t('th_pf')},
+          {k:x=>x.year?(x.year+'-'+String(x.month).padStart(2,'0')):'',t:t('th_date')}],
+    measures:[{k:'cnt',t:t('cyc_cnt'),agg:'count'},
+              {k:'qty',t:t('th_qty'),agg:'sum',f:'qty'},
+              {k:'cyc',t:t('th_cycle'),agg:'avg',f:x=>cycleDays(x)},
+              {k:'eq',t:t('sl_eq'),agg:'uniq',f:'eq'}],
+    detailCols:[{k:'workDate',t:t('th_date')},{k:'line',t:t('sl_line')},{k:'eq',t:t('th_eq')},
+                {k:'matName',t:t('th_mat')},{k:'qty',t:t('th_qty')},{k:'reason',t:t('th_reason')},{k:'pf',t:t('th_pf')}]
+  });
 }
 
 function getExclId(k) { return k.charAt(0).toUpperCase() + k.slice(1); }

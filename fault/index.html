@@ -580,10 +580,12 @@ async function loadData(){ GST.skeleton(true);
     ROWS=fetched.rows.slice(1)
       .filter(r=>SERVICE_STAGES.indexOf((r[C.stage]||'').toString().trim().toUpperCase())>-1)
       .map(r=>({
-        line:(r[C.line]||'').toString().trim(), stage:(r[C.stage]||'').toString().trim().toUpperCase(),
+        // 분류 축(라인·모델·S/N·공정)은 전각이 섞여 들어오므로 반각으로 통일 — 같은 라인이 두 그룹으로 갈라지는 것을 막는다.
+        // 자유 서술(원인·현상·조치)은 원문 그대로 둔다.
+        line:GST.nfw(r[C.line]||'').trim(), stage:(r[C.stage]||'').toString().trim().toUpperCase(),
         pf:(r[C.pf]||'').toString().trim(), cause:(r[C.cause]||'').toString().trim(),
-        model:(r[C.model]||'').toString().trim(), sn:(r[C.snIn]||'').toString().trim(),
-        proc:(r[C.proc]||'').toString().trim(), reqType:(r[C.reqType]||'').toString().trim(),
+        model:GST.nfw(r[C.model]||'').trim(), sn:GST.nfw(r[C.snIn]||'').trim(),
+        proc:GST.nfw(r[C.proc]||'').trim(), reqType:(r[C.reqType]||'').toString().trim(),
         phenom:(r[C.phenom]||'').toString().trim(), action:(r[C.action]||'').toString().trim(),
         detail:(r[C.actionDetail]||'').toString().trim().slice(0,300),
         customer:(r[C.customer]||'').toString().trim(),
@@ -1052,6 +1054,19 @@ function render(){ GST.skeleton(false); GST.pushState(F);
 
   // ── 신뢰성 (설비 S/N × BM) ──
   renderReliability(f);
+  // 🧊 피벗 — 현재 필터가 적용된 서비스 레코드를 교차 집계한다
+  GST.pivotReg({
+    rows:()=>f,
+    dims:[{k:'line',t:FIELD_LABEL.line},{k:'stage',t:t('sl_stage')},{k:'pf',t:t('sl_pf')},
+          {k:'cause',t:t('sl_cause')},{k:'model',t:t('sl_model')},{k:'proc',t:FIELD_LABEL.proc||'PROCESS'},
+          {k:'sn',t:t('sl_sn')},{k:x=>x.work?GST.isoW(x.work):'',t:t('sl_period')}],
+    measures:[{k:'cnt',t:t('th_cnt')||'건수',agg:'count'},
+              {k:'man',t:t('th_mh'),agg:'sum',f:x=>(x.manMin>0&&x.manMin<14400)?Math.round(x.manMin/60*10)/10:null},
+              {k:'min',t:t('th_min'),agg:'avg',f:x=>(x.workMin>0&&x.workMin<1440)?x.workMin:null},
+              {k:'sn',t:t('sl_sn'),agg:'uniq',f:'sn'}],
+    detailCols:[{k:'work',t:t('th_date')},{k:'line',t:FIELD_LABEL.line},{k:'sn',t:t('sl_sn')},
+                {k:'stage',t:t('th_stage')},{k:'cause',t:t('th_cause')},{k:'phenom',t:t('th_phenom')},{k:'action',t:t('th_action')}]
+  });
 
   // ── 테이블 ──
   document.getElementById('tblCnt').textContent=f.length;

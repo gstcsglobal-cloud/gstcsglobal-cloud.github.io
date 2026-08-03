@@ -468,7 +468,7 @@ function procOf(s){
   if(u.includes('ETCH'))return 'ETCH';
   return 'ETC';
 }
-function custBase(s){const u=String(s||'').toUpperCase();
+function custBase(s){const u=GST.upk(s);
   if(u.includes('PSMC')||u.includes('POWERCHIP'))return 'PSMC';
   if(u.includes('TASC')||u.includes('TAIWAN-ASIA')||u.includes('ASIA SEMI'))return 'TASC';
   if(u.includes('WINBOND'))return 'WINBOND';
@@ -763,6 +763,19 @@ function render(){
   renderEqTable();
   renderInsights(sel,prev);
   renderAssump();
+  // 🧊 피벗 — 선택 월의 설비별 TCO를 교차 집계한다
+  GST.pivotReg({
+    rows:()=>((MODEL&&MODEL.eqSel)||[]),
+    dims:[{k:'fab',t:t('sl_line')},{k:'proc',t:t('sl_proc')},{k:'type',t:t('th_type')},
+          {k:x=>String(x.chambers||''),t:'CH'},{k:'sn',t:'S/N'}],
+    measures:[{k:'total',t:t('th_total'),agg:'sum',f:'total'},
+              {k:'util', t:t('th_util'), agg:'sum',f:'util'},
+              {k:'parts',t:t('th_parts'),agg:'sum',f:'parts'},
+              {k:'run',  t:t('th_run'),  agg:'sum',f:'run'},
+              {k:'sn',   t:'S/N',        agg:'uniq',f:'sn'}],
+    detailCols:[{k:'sn',t:'S/N'},{k:'fab',t:t('sl_line')},{k:'proc',t:t('sl_proc')},{k:'type',t:t('th_type')},
+                {k:'run',t:t('th_run')},{k:'util',t:t('th_util')},{k:'parts',t:t('th_parts')},{k:'total',t:t('th_total')}]
+  });
 }
 
 function baseOpt(o){

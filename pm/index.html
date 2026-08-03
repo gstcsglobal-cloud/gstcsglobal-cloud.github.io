@@ -533,8 +533,9 @@ function buildSchedule(rows){
   DONE_HIST=[]; // 완료 이력 초기화
   rows.forEach(r=>{
     if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;
-    const sn=(r[C.sn]||'').toString().trim(); if(!sn)return;
-    const ch=((r[C.chamber]||'').toString().trim())||'-';
+    // S/N·챔버는 설비 마스터와 조인하는 키다. 전각이 섞이면 같은 설비가 둘로 갈라지므로 반각으로 통일한다.
+    const sn=GST.nfw(r[C.sn]||'').trim(); if(!sn)return;
+    const ch=GST.nfw(r[C.chamber]||'').trim()||'-';
     const wd=toDate(r[C.work]); if(!wd)return;
     const k=sn+'||'+ch;
     if(!g[k])g[k]={sn,ch,rows:0,last:null,meta:r,dates:[]};
@@ -542,8 +543,8 @@ function buildSchedule(rows){
     g[k].rows++; if(!g[k].last||wd>g[k].last){g[k].last=wd;g[k].meta=r;}
     // 완료 이력 기록 (모든 TBM 점검이력)
     DONE_HIST.push({date:wd,sn,ch,
-      site:(r[C.site]||'—'),line:(r[C.line]||'—'),
-      model:(r[C.model]||'—'),group:(r[C.group1]||'—')});
+      site:GST.nfw(r[C.site]||'')||'—',line:GST.nfw(r[C.line]||'')||'—',
+      model:GST.nfw(r[C.model]||'')||'—',group:GST.nfw(r[C.group1]||'')||'—'});
   });
   const today=new Date(); today.setUTCHours(0,0,0,0);
   // 새 시트에는 점검주기 컬럼이 없으므로, 설비별 TBM 방문 간격의 중앙값으로 주기를 추정한다.
@@ -607,7 +608,7 @@ function renderCompliance(){
   mkBarV2('cAging',t('aging_b'),ac,TH.status.bad);
   // 3) PM 준수 vs 고장(BM) — 설비 상태별 대당 BM
   const bmU={}; RAW.forEach(r=>{if((r[C.maint]||'').toString().trim().toUpperCase()!=='BM')return;
-    const sn=(r[C.sn]||'').toString().trim();if(!sn)return;const ch=((r[C.chamber]||'').toString().trim())||'-';const k=sn+'||'+ch;bmU[k]=(bmU[k]||0)+1;});
+    const sn=GST.nfw(r[C.sn]||'').trim();if(!sn)return;const ch=GST.nfw(r[C.chamber]||'').trim()||'-';const k=sn+'||'+ch;bmU[k]=(bmU[k]||0)+1;});
   const okU=VS.filter(x=>x.st==='ok');
   const avg=arr=>arr.length?Math.round(arr.reduce((a,u)=>a+(bmU[u.key]||0),0)/arr.length*100)/100:0;
   mkBarV2('cVsBm',[t('vsbm_over'),t('vsbm_ok')],[avg(overU),avg(okU)],TH.pal[0]);
@@ -793,6 +794,18 @@ function render(){ GST.skeleton(false);
       document.querySelectorAll('.kpi').forEach(x=>x.classList.remove('sel')); k.classList.add('sel');
       draw();
     };
+  });
+  // 🧊 피벗 — 현재 필터가 적용된 점검 스케줄을 교차 집계한다
+  GST.pivotReg({
+    rows:()=>VS,
+    dims:[{k:'site',t:t('th_site')},{k:'line',t:t('f_line')},{k:'model',t:t('f_model')},
+          {k:'group',t:'GROUP'},{k:'st',t:t('th_st')},{k:'sn',t:'S/N'}],
+    measures:[{k:'cnt',t:t('th_cnt'),agg:'count'},
+              {k:'dl', t:t('th_dl'),   agg:'avg',f:'dl'},
+              {k:'cyc',t:t('th_cycle'),agg:'avg',f:'cycle'},
+              {k:'sn', t:'S/N',        agg:'uniq',f:'sn'}],
+    detailCols:[{k:'sn',t:'S/N'},{k:'ch',t:'CH'},{k:'site',t:t('th_site')},{k:'model',t:t('f_model')},
+                {k:'last',t:t('th_last')},{k:'next',t:t('th_next')},{k:'dl',t:t('th_dl')}]
   });
   draw();
 }

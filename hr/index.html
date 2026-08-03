@@ -90,6 +90,22 @@ body{
 .card .cw{position:relative;height:250px}
 .tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px);position:relative}
 .tablecard h3{font-size:14px;font-weight:700;margin-bottom:14px}
+/* 🧪 인력 시나리오 */
+.simhint{font-size:10.5px;font-weight:600;color:var(--txt-muted);margin-left:8px}
+.simrow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.simrow label{font-size:10.5px;font-weight:700;color:var(--txt-muted)}
+.simrow input,.simrow select{font-family:inherit;background:var(--glass);border:1px solid var(--glassb);border-radius:8px;
+  padding:0 7px;height:27px;color:var(--txt-main);font-size:11px;outline:none}
+.simrow input[type=number]{width:66px}.simrow input[type=month]{width:118px}.simrow select{max-width:150px}
+.simbtn{font-family:inherit;background:var(--glass);border:1px solid var(--glassb);border-radius:8px;height:27px;
+  padding:0 13px;color:var(--txt-main);font-size:11px;font-weight:700;cursor:pointer}
+.simbtn:hover{border-color:var(--accent-1,#2DD4BF)}
+.simkpi{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:12px}
+.simkpi .sk{flex:1;min-width:132px;background:rgba(151,170,196,.07);border:1px solid var(--glassb);border-radius:12px;padding:9px 12px}
+.simkpi .sk .l{font-size:10px;color:var(--txt-muted);font-weight:700;margin-bottom:3px}
+.simkpi .sk .v{font-size:15px;font-weight:800;color:var(--txt-main)}
+.simkpi .sk .d{font-size:11px;font-weight:800;margin-left:5px}
+.simnote{font-size:10px;color:var(--txt-muted);margin-top:9px;line-height:1.5}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;padding:10px 12px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(20,18,45,.92);cursor:pointer;white-space:nowrap}
 body.theme-light th{background:rgba(226,232,240,.95)}
@@ -219,6 +235,23 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="card"><h3 data-i="ch_cohort">입사 코호트 생존율</h3><div class="card-note" data-i="note_cohort">입사연도별 현재 재직 비율</div><div class="cw"><canvas id="cCohort"></canvas></div></div>
 </div>
 
+<!-- 🧪 인력 시나리오 — 채용/이탈 가정을 넣고 12개월 영향을 미리 본다 (원본 데이터 무변경 · 샌드박스) -->
+<div class="tablecard" id="simCard">
+  <h3>🧪 <span data-i="sim_t">인력 시나리오</span>
+    <span class="simhint" data-i="sim_sub">채용·이탈을 가정해 12개월 뒤 인원과 교육 이수율을 미리 본다</span></h3>
+  <div class="simrow">
+    <label data-i="sim_n">신규 입사</label><input type="number" id="simN" min="0" max="500" step="1" value="0">
+    <label data-i="sim_when">입사 시점</label><input type="month" id="simWhen">
+    <label data-i="sim_line">배치 라인</label><select id="simLine"></select>
+    <label data-i="sim_out">월 이탈 가정</label><input type="number" id="simOut" min="0" max="50" step="0.5" value="0">
+    <button class="simbtn" id="simRun" data-i="sim_run">실행</button>
+    <button class="simbtn" id="simClr" data-i="sim_clr">초기화</button>
+  </div>
+  <div id="simKpi" class="simkpi"></div>
+  <div class="cw" style="height:250px"><canvas id="cSim"></canvas></div>
+  <div class="simnote" data-i="sim_note">가정: 신입은 입사 시점에 Basic 미이수로 편입되고 3개월 뒤 이수 완료 · 이탈은 매월 균등 발생 · 확정 퇴사일은 기준선에 이미 반영됨</div>
+</div>
+
 <div class="tablecard">
   <h3><span data-i="tbl_title">상세 명단</span> (<span id="tblCnt">0</span><span data-i="tbl_unit">명</span>)
     <button class="edbtn" id="btnNew" style="display:none" onclick="openNew()">＋ <span data-i="ed_new">신규 인원</span></button>
@@ -261,7 +294,7 @@ const TR={
     io_in:'입사',io_out:'퇴사',cr1:'1년 미만',cr2:'1~2년',cr3:'2년 이상',
     tbl_title:'상세 명단',tbl_unit:'명',th_name:'이름',th_site:'사이트',th_org:'소속',th_role:'직무',th_pos:'직급',th_exp:'경력',th_join:'입사일',th_status:'상태',
     s_act:'재직',s_quit:'퇴사',d_total:'인원',d_on:'현장',d_edu:'교육대상',d_done:'이수',
-    ins_basic:'Basic 미이수 {n}명 ({p}%)',ins_vet:'Veteran 미이수 {n}명 (대상의 {p}%)',ins_new:'최근 1년 입사 {n}명'},
+    ins_basic:'Basic 미이수 {n}명 ({p}%)',ins_vet:'Veteran 미이수 {n}명 (대상의 {p}%)',ins_new:'최근 1년 입사 {n}명',sim_t:'인력 시나리오',sim_sub:'채용·이탈을 가정해 12개월 뒤 인원과 교육 이수율을 미리 본다',sim_n:'신규 입사',sim_when:'입사 시점',sim_line:'배치 라인',sim_out:'월 이탈 가정',sim_run:'실행',sim_clr:'초기화',sim_note:'가정: 신입은 입사 시점에 Basic 미이수로 편입되고 3개월 뒤 이수 완료 · 이탈은 매월 균등 발생 · 확정 퇴사일은 기준선에 이미 반영됨',sim_k1:'12개월 뒤 재직',sim_k2:'12개월 뒤 Basic 이수율',sim_k3:'이수율 최저점',sim_k4:'입사 / 이탈 (12개월)',sim_base:'기준',sim_scen:'시나리오'},
   en:{edit_title:'Edit row',ed_save:'Save',ed_cancel:'Cancel',ed_saving:'Saving…',ed_saved:'Saved to the Google Sheet',ed_failed:'Save failed',ed_conflict:'Someone else already changed this row — check the latest values below and save again',ed_locked:'Another user is saving — please retry shortly',ed_readonly:'You do not have edit permission',ed_nokey:'No employee ID — cannot edit',ed_lockfld:'This field cannot be edited here',ed_gone:'This row no longer exists in the sheet',ed_dup:'Duplicate employee ID — cannot save',ed_badval:'Please check the entered value',ed_new:'New hire',ed_new_title:'Register new hire',ed_sec_r:'Personal (roster sheet)',ed_sec_e:'Training (education sheet)',ed_edu_new:'Not in education sheet — a new row will be created on save',ed_del:'Delete row',ed_del_warn:'Deletes this person from BOTH sheets. Historical charts (join/leave trends) change retroactively and this cannot be undone. For leavers, set a resignation date instead.',ed_del_confirm:'Delete',ed_deleted:'Deleted (reflected in the Google Sheet)',ed_cascade_miss:'No matching education row found — that sheet was not changed',ed_partial:'Roster saved, but the education sheet failed — retry the training fields',ed_required:'Fill the required fields (ID · name · entry date)',ed_baddate:'Invalid date (YYYY-MM-DD)',ed_srv:'Could not read the sheet structure — contact the admin',ed_sheets:'Google Sheets call failed — check Supabase logs',ed_appended:'New hire registered (both sheets)',ed_quitnote:'Note the quit date in the education sheet',ed_showquit:'Show leavers',f_name:'Name (EN)',f_wp:'Work Place',f_duty:'Duty',f_quit:'Resignation',f_basic:'Basic status',f_bsdate:'Basic start',f_bdate:'Basic done',f_vet:'Veteran status',f_vsdate:'Veteran start',f_vdate:'Veteran done',f_note:'Note',f_cn:'Chinese name',f_onsite:'On-site',f_id:'Employee ID',title:'Workforce Dashboard',sub:'Roster · training integrated interactive analysis',back:'← Main',refresh:'Refresh',print:'🖨 Print',
     total_pre:'Active',total_post:'',loading:'Loading data...',
     sl_site:'Site',sl_org:'Team/Process',sl_role:'Role',sl_edu:'Training',sl_search:'Search',search_ph:'Search name/ID...',all:'All',
@@ -278,7 +311,7 @@ const TR={
     io_in:'Join',io_out:'Leave',cr1:'<1yr',cr2:'1-2yr',cr3:'2yr+',
     tbl_title:'Detail List',tbl_unit:'',th_name:'Name',th_site:'Site',th_org:'Team',th_role:'Role',th_pos:'Grade',th_exp:'Exp',th_join:'Join',th_status:'Status',
     s_act:'Active',s_quit:'Left',d_total:'Staff',d_on:'On-site',d_edu:'Eligible',d_done:'Done',
-    ins_basic:'{n} pending Basic ({p}%)',ins_vet:'{n} pending Veteran ({p}% of eligible)',ins_new:'{n} joined in last year'},
+    ins_basic:'{n} pending Basic ({p}%)',ins_vet:'{n} pending Veteran ({p}% of eligible)',ins_new:'{n} joined in last year',sim_t:'Workforce Scenario',sim_sub:'Model hiring and attrition to preview 12-month headcount and training impact',sim_n:'New hires',sim_when:'Start month',sim_line:'Assign to line',sim_out:'Monthly attrition',sim_run:'Run',sim_clr:'Reset',sim_note:'Assumptions: new hires enter as Basic-incomplete and finish 3 months later · attrition spread evenly per month · confirmed leave dates already in the baseline',sim_k1:'Headcount in 12 months',sim_k2:'Basic rate in 12 months',sim_k3:'Lowest rate',sim_k4:'Hires / Attrition (12m)',sim_base:'Baseline',sim_scen:'Scenario'},
   zh:{edit_title:'编辑行',ed_save:'保存',ed_cancel:'取消',ed_saving:'保存中…',ed_saved:'已保存到谷歌表格',ed_failed:'保存失败',ed_conflict:'该行已被他人修改 — 请确认下方最新值后重新保存',ed_locked:'其他用户正在保存 — 请稍后重试',ed_readonly:'没有编辑权限',ed_nokey:'工号为空，无法编辑',ed_lockfld:'此项不可在此修改',ed_gone:'表格中已无此行',ed_dup:'工号重复，无法保存',ed_badval:'请检查输入值',ed_new:'新员工',ed_new_title:'登记新员工',ed_sec_r:'人员信息(名单表)',ed_sec_e:'培训状况(教育表)',ed_edu_new:'教育表中无此人 — 保存时将新建一行',ed_del:'删除行',ed_del_warn:'将从名单·教育两个表中删除此人。入职·离职趋势等历史图表会追溯变化且无法恢复。离职人员建议填写离职日而非删除。',ed_del_confirm:'执行删除',ed_deleted:'已删除(已反映到谷歌表格)',ed_cascade_miss:'教育表中未找到对应行 — 该表未修改',ed_partial:'名单已保存，但教育表保存失败 — 请仅重试培训项',ed_required:'请填写必填项(工号·姓名·入职日)',ed_baddate:'日期格式错误 (YYYY-MM-DD)',ed_srv:'无法读取表结构 — 请联系管理员',ed_sheets:'谷歌表格调用失败 — 请查看Supabase日志',ed_appended:'新员工已登记(两表均已反映)',ed_quitnote:'在教育表备注中记录离职日',ed_showquit:'显示离职者',f_name:'姓名(英文)',f_wp:'Work Place',f_duty:'业务/职责',f_quit:'离职日',f_basic:'Basic状态',f_bsdate:'Basic开始日',f_bdate:'Basic完成日',f_vet:'Veteran状态',f_vsdate:'Veteran开始日',f_vdate:'Veteran完成日',f_note:'备注',f_cn:'中文姓名',f_onsite:'现场人员',f_id:'工号',title:'人员状况仪表板',sub:'人员名单 · 教育状况 综合交互分析',back:'← 主页',refresh:'刷新',print:'🖨 打印',
     total_pre:'在职',total_post:'人',loading:'正在加载数据...',
     sl_site:'站点',sl_org:'所属·工序',sl_role:'职务',sl_edu:'培训',sl_search:'搜索',search_ph:'搜索姓名/工号...',all:'全部',
@@ -295,7 +328,7 @@ const TR={
     io_in:'入职',io_out:'离职',cr1:'1年内',cr2:'1~2年',cr3:'2年以上',
     tbl_title:'详细名单',tbl_unit:'人',th_name:'姓名',th_site:'站点',th_org:'所属',th_role:'职务',th_pos:'职级',th_exp:'工龄',th_join:'入职日',th_status:'状态',
     s_act:'在职',s_quit:'离职',d_total:'人数',d_on:'现场',d_edu:'对象',d_done:'完成',
-    ins_basic:'Basic未完成 {n}人 ({p}%)',ins_vet:'Veteran未完成 {n}人 (对象的{p}%)',ins_new:'近1年入职 {n}人'},
+    ins_basic:'Basic未完成 {n}人 ({p}%)',ins_vet:'Veteran未完成 {n}人 (对象的{p}%)',ins_new:'近1年入职 {n}人',sim_t:'人力情景模拟',sim_sub:'假设招聘与流失，预览12个月后的人数与教育完成率',sim_n:'新进人数',sim_when:'入职时点',sim_line:'配置线别',sim_out:'月流失假设',sim_run:'执行',sim_clr:'重置',sim_note:'假设：新人入职时为Basic未完成，3个月后完成 · 流失按月均匀发生 · 已确定的离职日期已计入基准',sim_k1:'12个月后在职',sim_k2:'12个月后Basic完成率',sim_k3:'完成率最低点',sim_k4:'入职 / 流失 (12个月)',sim_base:'基准',sim_scen:'情景'},
   ja:{edit_title:'行の編集',ed_save:'保存',ed_cancel:'キャンセル',ed_saving:'保存中…',ed_saved:'Googleシートに保存しました',ed_failed:'保存失敗',ed_conflict:'この行は既に他のユーザーが変更しました — 下の最新値を確認して再保存してください',ed_locked:'他のユーザーが保存中です — しばらくして再試行してください',ed_readonly:'編集権限がありません',ed_nokey:'社番が空のため編集できません',ed_lockfld:'この項目はここでは編集できません',ed_gone:'シートにこの行が見つかりません',ed_dup:'社番が重複しており保存できません',ed_badval:'入力値を確認してください',ed_new:'新規人員',ed_new_title:'新規人員の登録',ed_sec_r:'人的事項(名簿シート)',ed_sec_e:'教育状況(教育シート)',ed_edu_new:'教育シート未登録 — 保存時に新しい行を作成します',ed_del:'行削除',ed_del_warn:'この人員を名簿・教育の両シートから削除します。入退社推移など履歴チャートが遡って変わり、元に戻せません。退社者は削除ではなく退社日入力を推奨します。',ed_del_confirm:'削除実行',ed_deleted:'削除しました(Googleシートに反映)',ed_cascade_miss:'教育シートに対応行が見つからず、そちらは変更されていません',ed_partial:'名簿は保存されましたが教育シートの保存に失敗 — 教育項目のみ再試行してください',ed_required:'必須項目(社番·名前·入社日)を入力してください',ed_baddate:'日付形式が不正です (YYYY-MM-DD)',ed_srv:'シート構造を読めませんでした — 管理者に連絡してください',ed_sheets:'Googleシート呼び出しに失敗 — Supabaseログを確認してください',ed_appended:'新規人員を登録しました(両シートに反映)',ed_quitnote:'教育シートの備考に退社日を記録',ed_showquit:'退社者表示',f_name:'名前(英文)',f_wp:'Work Place',f_duty:'業務/職責',f_quit:'退社日',f_basic:'Basic状態',f_bsdate:'Basic開始日',f_bdate:'Basic完了日',f_vet:'Veteran状態',f_vsdate:'Veteran開始日',f_vdate:'Veteran完了日',f_note:'備考',f_cn:'中国語名',f_onsite:'現場人員',f_id:'社番',title:'人員状況ダッシュボード',sub:'人員名簿 · 教育状況 統合インタラクティブ分析',back:'← メイン',refresh:'更新',print:'🖨 印刷',
     total_pre:'在籍',total_post:'名',loading:'データ読み込み中...',
     sl_site:'サイト',sl_org:'所属·工程',sl_role:'職務',sl_edu:'教育',sl_search:'検索',search_ph:'名前·社番検索...',all:'全体',
@@ -312,7 +345,7 @@ const TR={
     io_in:'入社',io_out:'退社',cr1:'1年未満',cr2:'1~2年',cr3:'2年以上',
     tbl_title:'詳細リスト',tbl_unit:'名',th_name:'名前',th_site:'サイト',th_org:'所属',th_role:'職務',th_pos:'職級',th_exp:'経歴',th_join:'入社日',th_status:'状態',
     s_act:'在籍',s_quit:'退社',d_total:'人数',d_on:'現場',d_edu:'対象',d_done:'修了',
-    ins_basic:'Basic未修了 {n}名 ({p}%)',ins_vet:'Veteran未修了 {n}名 (対象の{p}%)',ins_new:'直近1年入社 {n}名'}
+    ins_basic:'Basic未修了 {n}名 ({p}%)',ins_vet:'Veteran未修了 {n}名 (対象の{p}%)',ins_new:'直近1年入社 {n}名',sim_t:'人員シナリオ',sim_sub:'採用・離職を仮定して12ヶ月後の人員と教育完了率を先読みする',sim_n:'新規入社',sim_when:'入社時点',sim_line:'配置ライン',sim_out:'月離職の仮定',sim_run:'実行',sim_clr:'リセット',sim_note:'仮定: 新人は入社時点でBasic未修了として編入され3ヶ月後に修了 · 離職は毎月均等に発生 · 確定した退社日は基準線に反映済み',sim_k1:'12ヶ月後の在籍',sim_k2:'12ヶ月後のBasic修了率',sim_k3:'修了率の最低点',sim_k4:'入社 / 離職 (12ヶ月)',sim_base:'基準',sim_scen:'シナリオ'}
 };
 let LANG='ko';
 try{ if(window.name && TR[window.name]) LANG=window.name; }catch(e){}
@@ -333,21 +366,21 @@ function pd(s){ if(!s)return null; s=String(s).trim(); if(!s)return null;
   s=s.replace(/\.\s*/g,'-').replace(/\/-?/g,'-').replace(/-$/,'').replace(/\s/g,'');
   const m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(!m)return null;
   const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3])); return isNaN(d)?null:d; }
-function normCust(name){ if(!name)return ''; const up=String(name).toUpperCase().trim(); if(!up)return '';
+function normCust(name){ if(!name)return ''; const up=GST.upk(name).trim(); if(!up)return '';
   let base=''; if(up.includes('MICRON'))base='MICRON';
   else if(up.includes('TAIWAN-ASIA')||up.includes('ASIA SEMICON'))base='TASC';
   else if(up.includes('POWERCHIP'))base='POWERCHIP'; else if(up.includes('WINBOND'))base='WINBOND';
   else if(up.includes('TSMC'))base='TSMC'; else base=up.split(/[\s,\.(]/)[0];
   const m=up.match(/\(([A-Z0-9\-]+)\)/)||up.match(/\b(F\d{1,2}N?)\b/); return m?base+' '+m[1]:base; }
-function custBase(s){const u=String(s||'').toUpperCase();
+function custBase(s){const u=GST.upk(s);
   if(u.includes('PSMC')||u.includes('POWERCHIP'))return 'PSMC';
   if(u.includes('TASC')||u.includes('ASIA SEMI'))return 'TASC';
   if(u.includes('WINBOND'))return 'WINBOND';
   if(u.includes('MICRON')||/\bF1[016]/.test(u))return 'MICRON'; return normCust(s);}
-function fabOf(s){const u=String(s||'').toUpperCase();
+function fabOf(s){const u=GST.upk(s);
   const m=u.match(/\bF(16N|16S|16|11|10)\b/); if(m)return 'F'+m[1];
   if(/TONG\s*L/.test(u))return 'F16N'; if(/TAINAN/.test(u))return 'F16S'; return '';}
-function siteKey(sv){ const up=String(sv||'').toUpperCase(); if(!up.trim())return '';
+function siteKey(sv){ const up=GST.upk(sv); if(!up.trim())return '';
   if(up.includes('F16N')||/TONG\s*L/.test(up))return 'MICRON F16N';
   if(up.includes('F16S')||up.includes('TAINAN'))return 'MICRON F16S';
   if(up.includes('F16'))return 'MICRON F16'; if(up.includes('F11'))return 'MICRON F11';
@@ -698,11 +731,16 @@ function render(){ GST.skeleton(false);
   animVal(document.getElementById('kp6'),f.filter(p=>p.join&&(TODAY-p.join)/MS<=365).length,'',false);
 
   /* ---- 스파크라인 (최근 12개월) ---- */
-  const SP=months(12);
-  drawSpark('sp1',SP.map(p=>fAll.filter(x=>activeAt(x,p.end)).length),S.on);
-  drawSpark('sp2',SP.map(p=>fAll.filter(x=>x.onsite&&activeAt(x,p.end)).length),S.off);
-  drawSpark('sp3',SP.map(p=>{const e=fAll.filter(x=>x.edu&&clsB(x)!=='비대상'&&activeAt(x,p.end));const d=e.filter(x=>clsB(x)==='이수완료'&&x.bdate&&x.bdate<=p.end);return e.length?Math.round(d.length/e.length*100):null;}),S.good);
-  drawSpark('sp4',SP.map(p=>{const e=fAll.filter(x=>x.edu&&clsV(x)!=='비대상'&&activeAt(x,p.end));const d=e.filter(x=>clsV(x)==='이수완료'&&x.vdate&&x.vdate<=p.end);return e.length?Math.round(d.length/e.length*100):null;}),S.accent);
+  const SP=months(12), spL=SP.map(p=>p.label);
+  // 배열을 이름 있는 상수로 뽑아 두면 스파크라인과 자동 브리핑이 같은 값을 쓴다(계산 동일)
+  const sHead=SP.map(p=>fAll.filter(x=>activeAt(x,p.end)).length);
+  const sOn  =SP.map(p=>fAll.filter(x=>x.onsite&&activeAt(x,p.end)).length);
+  const sB   =SP.map(p=>{const e=fAll.filter(x=>x.edu&&clsB(x)!=='비대상'&&activeAt(x,p.end));const d=e.filter(x=>clsB(x)==='이수완료'&&x.bdate&&x.bdate<=p.end);return e.length?Math.round(d.length/e.length*100):null;});
+  const sV   =SP.map(p=>{const e=fAll.filter(x=>x.edu&&clsV(x)!=='비대상'&&activeAt(x,p.end));const d=e.filter(x=>clsV(x)==='이수완료'&&x.vdate&&x.vdate<=p.end);return e.length?Math.round(d.length/e.length*100):null;});
+  drawSpark('sp1',sHead,S.on);
+  drawSpark('sp2',sOn,S.off);
+  drawSpark('sp3',sB,S.good);
+  drawSpark('sp4',sV,S.accent);
 
   /* ---- cSite: 사이트별 (현장/비현장 스택) ---- */
   const siteL=orderSites(Array.from(new Set(f.map(p=>p.site).filter(Boolean))));
@@ -812,8 +850,131 @@ function render(){ GST.skeleton(false);
     GST.insights(f.length?arr:[]);
   }
 
+  /* ---- 🔔 자동 브리핑 · 🧊 피벗 · 🧪 시나리오 (표시 계층 — 위 계산 결과를 그대로 재사용) ---- */
+  GST.watch([
+    {k:'head', label:tr('kp1'), labels:spL, data:sHead, unit:tr('tbl_unit'),
+     parts:i=>{const m={}; fAll.forEach(x=>{ if(activeAt(x,SP[i].end)){ const g=shortSite(x.site)||'—'; m[g]=(m[g]||0)+1; } });
+               return Object.keys(m).map(g=>({name:g,v:m[g]}));}},
+    {k:'on',   label:tr('kp2'), labels:spL, data:sOn, unit:tr('tbl_unit')},
+    {k:'basic',label:tr('kp3'), labels:spL, data:sB, unit:'%'},
+    {k:'vet',  label:tr('kp4'), labels:spL, data:sV, unit:'%'},
+    {k:'in',   label:tr('io_in'),  labels:IO.map(p=>p.label), data:ins.map(a=>a.length),  unit:tr('tbl_unit')},
+    {k:'out',  label:tr('io_out'), labels:IO.map(p=>p.label), data:outs.map(a=>a.length), unit:tr('tbl_unit'), goodWhenDown:true}
+  ]);
+  GST.pivotReg({
+    rows:()=>f,
+    dims:[{k:p=>shortSite(p.site)||'—', t:tr('sl_site')},
+          {k:'org',  t:tr('sl_org')},
+          {k:'role', t:tr('sl_role')},
+          {k:p=>p.onsite?tr('st_on'):tr('st_off'), t:tr('f_onsite')},
+          {k:p=>clsB(p), t:tr('f_basic')},
+          {k:p=>clsV(p), t:tr('f_vet')},
+          {k:p=>{const y=tenureYr(p); return y==null?'—':(y<1?tr('cr1'):(y<2?tr('cr2'):tr('cr3')));}, t:tr('kp5')}],
+    measures:[{k:'cnt', t:tr('tbl_unit'), agg:'count'},
+              {k:'ten', t:tr('kp5'), agg:'avg', f:p=>tenureYr(p)}],
+    detailCols:[{k:'name',t:tr('f_name')},{k:'id',t:tr('f_id')},{k:p=>shortSite(p.site),t:tr('sl_site')},
+                {k:'role',t:tr('sl_role')},{k:'join',t:tr('th_join')},
+                {k:p=>clsB(p),t:tr('f_basic')},{k:p=>clsV(p),t:tr('f_vet')}]
+  });
+  renderSim(fAll);
+
   renderTable(SHOWQUIT?fAll:f);   // 토글 시 퇴사자 포함 — 퇴사일 수정·삭제 진입 경로
 }
+/* ============================================================
+   🧪 인력 시나리오 (What-If) — 채용·이탈 가정의 12개월 영향을 미리 본다.
+   ROSTER/EDU 원본은 절대 건드리지 않는다. 순수 계산 + 별도 차트만 그린다.
+   기준선(base) = 지금 확정된 것만(입사 완료 + 확정 퇴사일 반영)
+   시나리오(scen) = 기준선 + 신규 입사 − 이탈 가정
+   ============================================================ */
+const SIM_EDU_LAG=3;   // 신입이 Basic을 이수하기까지 가정하는 개월 수
+function simInputs(){
+  const g=id=>document.getElementById(id)||{};
+  return {n:Math.max(0,Math.round(+g('simN').value||0)),
+          when:g('simWhen').value||'',
+          line:g('simLine').value||'',
+          churn:Math.max(0,+g('simOut').value||0)};
+}
+function simCalc(pool,o){
+  const R={labels:[],base:[],scen:[],baseB:[],scenB:[]};
+  let start=null;
+  if(o.when){ const p=o.when.split('-'); if(p.length===2) start=new Date(Date.UTC(+p[0],+p[1]-1,1)); }
+  for(let i=1;i<=12;i++){
+    const end=new Date(Date.UTC(TODAY.getUTCFullYear(),TODAY.getUTCMonth()+i+1,0));   // i개월 뒤 말일
+    R.labels.push((end.getUTCMonth()+1)+'월');
+    const act=pool.filter(x=>activeAt(x,end));
+    const added=(start&&end>=start)?o.n:0;
+    const lost=Math.round(o.churn*i);
+    R.base.push(act.length);
+    R.scen.push(Math.max(0,act.length+added-lost));
+    // Basic 이수율 — 신입은 미이수로 편입되어 분모만 늘렸다가 LAG 후 분자에 합류
+    const ep=act.filter(p=>p.edu&&clsB(p)!=='비대상');
+    const dn=ep.filter(p=>clsB(p)==='이수완료'&&p.bdate&&p.bdate<=end).length;
+    R.baseB.push(ep.length?Math.round(dn/ep.length*100):null);
+    let doneAdd=0;
+    if(added&&start){
+      const mo=(end.getUTCFullYear()-start.getUTCFullYear())*12+(end.getUTCMonth()-start.getUTCMonth());
+      if(mo>=SIM_EDU_LAG) doneAdd=added;
+    }
+    const T2=ep.length+added, D2=dn+doneAdd;
+    R.scenB.push(T2?Math.round(D2/T2*100):null);
+  }
+  return R;
+}
+function renderSim(fAll){
+  if(!document.getElementById('simCard')) return;
+  const sel=document.getElementById('simLine');
+  if(sel){
+    const cur=sel.value;
+    const sites=orderSites(Array.from(new Set(fAll.map(x=>x.site).filter(Boolean))));
+    sel.innerHTML='<option value="">'+esc(tr('all'))+'</option>'
+      +sites.map(s=>'<option value="'+esc(s)+'">'+esc(shortSite(s))+'</option>').join('');
+    if(cur&&sites.indexOf(cur)>=0) sel.value=cur;
+  }
+  const w=document.getElementById('simWhen');
+  if(w&&!w.value){ const d=new Date(Date.UTC(TODAY.getUTCFullYear(),TODAY.getUTCMonth()+1,1));
+    w.value=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'); }
+
+  const o=simInputs();
+  const pool=o.line?fAll.filter(x=>x.site===o.line):fAll;
+  const R=simCalc(pool,o);
+  const L=11;   // 12개월 뒤
+  const dlt=(a,b,goodUp)=>{ if(a==null||b==null) return '';
+    const d=Math.round((b-a)*10)/10; if(!d) return '';
+    const ok=goodUp?d>0:d<0;
+    return '<span class="d" style="color:'+(ok?'var(--ok,#4ade80)':'var(--bad,#fb7185)')+'">'+(d>0?'+':'')+d+'</span>'; };
+  const tile=(l,v,d)=>'<div class="sk"><div class="l">'+l+'</div><div class="v">'+v+(d||'')+'</div></div>';
+  const bMin=R.scenB.filter(v=>v!=null);
+  document.getElementById('simKpi').innerHTML=
+      tile(tr('sim_k1'), R.base[L]+' → '+R.scen[L]+tr('tbl_unit'), dlt(R.base[L],R.scen[L],true))
+    + tile(tr('sim_k2'), (R.baseB[L]==null?'—':R.baseB[L]+'%')+' → '+(R.scenB[L]==null?'—':R.scenB[L]+'%'), dlt(R.baseB[L],R.scenB[L],true))
+    + tile(tr('sim_k3'), bMin.length?Math.min.apply(null,bMin)+'%':'—')
+    + tile(tr('sim_k4'), (o.n?('+'+o.n):'0')+' / −'+Math.round(o.churn*12));
+
+  const TH=GST.chartTheme(), S=curSty();
+  const ln=(lbl,data,col,dash,ax)=>({type:'line',label:lbl,data:data,borderColor:col,backgroundColor:col,
+    borderWidth:2,borderDash:dash?[5,4]:undefined,pointRadius:2,pointHoverRadius:4,tension:.25,fill:false,yAxisID:ax||'y',spanGaps:true});
+  mk('cSim',{type:'line',
+    data:{labels:R.labels,datasets:[
+      ln(tr('sim_base')+' · '+tr('kp1'), R.base, S.off,  false,'y'),
+      ln(tr('sim_scen')+' · '+tr('kp1'), R.scen, S.on,   true, 'y'),
+      ln(tr('sim_base')+' · Basic %',    R.baseB,S.accent,false,'y2'),
+      ln(tr('sim_scen')+' · Basic %',    R.scenB,S.good, true, 'y2')]},
+    options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10},boxWidth:6,padding:8}}},
+      scales:{x:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},
+              y:{grace:'12%',ticks:{color:TH.txt,precision:0},grid:{color:TH.grid},title:{display:false}},
+              y2:{position:'right',min:0,max:100,ticks:{color:TH.txt,callback:v=>v+'%'},grid:{display:false}}}}});
+}
+['simN','simWhen','simLine','simOut'].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.addEventListener('change',()=>{ if(DATA.length)render(); });
+});
+{ const r=document.getElementById('simRun'); if(r) r.onclick=()=>{ if(DATA.length)render(); };
+  const c=document.getElementById('simClr'); if(c) c.onclick=()=>{
+    const g=id=>document.getElementById(id);
+    if(g('simN'))g('simN').value=0; if(g('simOut'))g('simOut').value=0;
+    if(g('simLine'))g('simLine').value=''; if(g('simWhen'))g('simWhen').value='';
+    if(DATA.length)render(); }; }
+
 document.getElementById('showQuit').addEventListener('change',e=>{SHOWQUIT=e.target.checked;if(DATA.length)render();});
 
 /* ===== 상세 테이블 ===== */

@@ -1285,6 +1285,24 @@ function render(){ GST.skeleton(false);
     GST.insights(f.length?ins:[]);
   }
 
+  // 🧊 피벗 — 현재 필터가 적용된 설비 마스터를 교차 집계한다.
+  // 이 페이지의 레코드는 파싱 객체가 아니라 원시 CSV 배열이라 접근자 함수로 열을 꺼낸다.
+  { const g=i=>r=>GST.nfw(r[i]||'').trim();
+    GST.pivotReg({
+      rows:()=>f,
+      dims:[{k:g(CI.country),t:'Country'},{k:g(CI.customer),t:'Customer'},{k:g(CI.fab),t:'FAB'},
+            {k:g(CI.model),t:'Model'},{k:g(CI.group1),t:'Process'},{k:g(CI.location),t:'Location'},
+            {k:g(CI.toolMaker),t:'Tool Maker'},
+            {k:r=>{const w=toDate(r[CI.warranty]);return w?(w>=now?'Warranty In':'Warranty Out'):'—';},t:'Warranty'},
+            {k:r=>{const d0=toDate(r[CI.turnOn]);return d0?granKey(d0):'—';},t:'Turn-On'}],
+      measures:[{k:'cnt',t:'Count',agg:'count'},
+                {k:'sn', t:'S/N', agg:'uniq',f:g(CI.sn)}],
+      detailCols:[{k:g(CI.sn),t:'S/N'},{k:g(CI.customer),t:'Customer'},{k:g(CI.fab),t:'FAB'},
+                  {k:g(CI.model),t:'Model'},{k:g(CI.group1),t:'Process'},
+                  {k:r=>fmtDate(toDate(r[CI.turnOn])),t:'Turn-On'},
+                  {k:r=>fmtDate(toDate(r[CI.warranty])),t:'Warranty'}]
+    }); }
+
   document.getElementById('tblCnt').textContent=f.length;
   let d=[...f];
   if(sortK)d.sort((a,b)=>{const x=(a[CI[sortK]]||'')+'',y2=(b[CI[sortK]]||'')+'';
