@@ -954,6 +954,19 @@ GST.CONF = {
 };
 GST.conf = function(k, fb){ return (k in GST.CONF) ? GST.CONF[k] : fb; };
 
+// 전각(ＦＵＬＬＷＩＤＴＨ) 영숫자·기호를 반각으로 정규화한다.
+// 대만/중국 쪽 입력기로 친 시트 값에 ＰＳＭＣ·Ｆ１６ 같은 전각 문자열이 섞여 들어오는데,
+// 그대로 두면 PSMC와 ＰＳＭＣ가 서로 다른 라인으로 집계된다(실측 722건).
+// 한글·한자·가나는 건드리지 않는다 — 대상은 U+FF01~U+FF5E(전각 ASCII)와 전각 공백뿐이다.
+GST.nfw = function(s){
+  s = (s==null) ? '' : String(s);
+  if(!/[！-～　]/.test(s)) return s;   // 대부분의 값은 여기서 즉시 반환(비용 0)
+  return s.replace(/[！-～]/g, function(c){ return String.fromCharCode(c.charCodeAt(0)-0xFEE0); })
+          .replace(/　/g, ' ');
+};
+// 그룹 키 비교용 대문자화 — 전각 정규화까지 한 번에
+GST.upk = function(s){ return GST.nfw(s).toUpperCase(); };
+
 /* ============================================================
    17. 차트 디자인(스타일) — 전 페이지 공통 1개 키
    기존 report(gst_rpt_style)·hr(gst_hr_style)·사이드바 팔레트(gst_pal)가
@@ -1025,10 +1038,10 @@ GST.setPalette = function(key, silent){ if(GST.STY[key]) GST.setStyle(key, silen
    페이지 상단에 직접 그려서 기능이 동일하게 유지된다.
    ============================================================ */
 GST.BAR_T = {
-  ko:{w:'주별',m:'월별',note:'최근 12개 구간',cut:'마감',mon:'Month',wk:'Week',clr:'마감 해제',sty:'차트 디자인',ppt:'PPT 저장',latest:'— 최신 —',na:'이 페이지에서는 사용되지 않습니다'},
-  en:{w:'Weekly',m:'Monthly',note:'Last 12',cut:'Cut-off',mon:'Month',wk:'Week',clr:'Clear cut-off',sty:'Chart style',ppt:'Export PPT',latest:'— Latest —',na:'Not used on this page'},
-  zh:{w:'周',m:'月',note:'最近12期',cut:'截止',mon:'月',wk:'周',clr:'清除截止',sty:'图表配色',ppt:'导出PPT',latest:'— 最新 —',na:'此页面不适用'},
-  ja:{w:'週別',m:'月別',note:'直近12区間',cut:'締め',mon:'Month',wk:'Week',clr:'締め解除',sty:'チャート配色',ppt:'PPT出力',latest:'— 最新 —',na:'このページでは使用されません'}
+  ko:{w:'주별',m:'월별',note:'최근 12개 구간',cut:'마감',mon:'Month',wk:'Week',clr:'마감 해제',sty:'차트 디자인',ppt:'PPT 저장',latest:'— 최신 —',na:'이 페이지에서는 사용되지 않습니다',brf:'브리핑',piv:'피벗'},
+  en:{w:'Weekly',m:'Monthly',note:'Last 12',cut:'Cut-off',mon:'Month',wk:'Week',clr:'Clear cut-off',sty:'Chart style',ppt:'Export PPT',latest:'— Latest —',na:'Not used on this page',brf:'Briefing',piv:'Pivot'},
+  zh:{w:'周',m:'月',note:'最近12期',cut:'截止',mon:'月',wk:'周',clr:'清除截止',sty:'图表配色',ppt:'导出PPT',latest:'— 最新 —',na:'此页面不适用',brf:'简报',piv:'透视'},
+  ja:{w:'週別',m:'月別',note:'直近12区間',cut:'締め',mon:'Month',wk:'Week',clr:'締め解除',sty:'チャート配色',ppt:'PPT出力',latest:'— 最新 —',na:'このページでは使用されません',brf:'ブリーフ',piv:'ピボット'}
 };
 // reg = {caps:{period,cutoff:'wm'|'m'|false,style,ppt}, state:{period,endM,endW,style}, weeks:[{v,t}]}
 // 전 페이지 **동일 세트**를 항상 렌더한다 — 지원하지 않는 컨트롤은 비활성(.off)으로
@@ -1057,6 +1070,10 @@ GST.barHTML = function(reg, lang){
   const st=GST.STY[s.style]||GST.sty();
   h+='<button type="button" class="gb-b'+off(c.style!==false)+'" data-gb="style" title="'+T.sty+'">🎨 <span class="gb-sty">'+st.lbl+'</span></button>'
     +'<button type="button" class="gb-b'+off(!!c.ppt)+'" data-gb="ppt" title="'+T.ppt+'"'+dis(!!c.ppt)+'>📊 PPT</button>';
+  // 브리핑·피벗 — 페이지가 GST.watch()/GST.pivotReg()로 데이터를 등록하면 자동 활성
+  h+='<button type="button" class="gb-b'+off(!!c.brief)+'" data-gb="brief" title="'+T.brf+'"'+dis(!!c.brief)+'>🔔 '+T.brf
+    + (s.briefN ? '<span class="gb-badge">'+s.briefN+'</span>' : '') +'</button>'
+    +'<button type="button" class="gb-b'+off(!!c.pivot)+'" data-gb="pivot" title="'+T.piv+'"'+dis(!!c.pivot)+'>🧊 '+T.piv+'</button>';
   return h;
 };
 // 바 안의 컨트롤을 send(key,val)로 연결. 셸/페이지 양쪽이 같은 함수를 쓴다.
@@ -1095,13 +1112,19 @@ GST.pageBar = function(spec){
 // 페이지가 render() 말미에 호출: 현재 상태를 바에 되쏜다
 GST.barSync = function(){
   const s=GST._bar; if(!s) return;
-  const reg={type:'gst-bar-reg', caps:s.caps||{},
-             state:(typeof s.state==='function')?s.state():{},
+  // 브리핑·피벗은 페이지가 데이터를 등록했는지로 자동 판단 — caps에 따로 적지 않아도 된다
+  const caps=Object.assign({}, s.caps||{});
+  const st=(typeof s.state==='function')?(s.state()||{}):{};
+  if((GST._watch||[]).length){ caps.brief=true; try{ st.briefN=GST.briefFind().filter(function(f){return f.sev==='bad'||f.sev==='warn';}).length; }catch(e){} }
+  if(GST._pivot) caps.pivot=true;
+  const reg={type:'gst-bar-reg', caps:caps, state:st,
              weeks:(typeof s.weeks==='function')?s.weeks():null};
   if(window.self!==window.top){ try{ window.parent.postMessage(reg,'*'); }catch(e){} }
   else GST._localBar(reg);
 };
 GST._barDo = function(key, val){
+  if(key==='brief'){ GST.briefOpen(); return; }
+  if(key==='pivot'){ GST.pivotOpen(); return; }
   const s=GST._bar; if(!s) return;
   const on=s.on||{};
   if(key==='style'){ if(on.style) on.style(); else GST.nextStyle(); return; }
@@ -1128,6 +1151,8 @@ GST._localBar = function(reg){
       +'#gstLocalBar .gb-note{font-size:11px;color:var(--txt-muted);font-weight:700;white-space:nowrap;flex:none}'
       +'#gstLocalBar .gb-cut{margin-left:8px}'
       +'#gstLocalBar .off{opacity:.32}'
+      +'#gstLocalBar .gb-badge{display:inline-block;margin-left:5px;min-width:15px;padding:0 4px;border-radius:8px;'
+      +'background:var(--bad,#fb7185);color:#1a0508;font-size:9.5px;font-weight:800;line-height:15px;text-align:center}'
       +'@media print{#gstLocalBar{display:none !important}}';
     document.head.appendChild(st);
     el=document.createElement('div'); el.id='gstLocalBar';
@@ -1638,6 +1663,420 @@ GST.causeMap=function(texts, lang){
     map.set(s,{key:s,label:s});
   });
   return map;
+};
+
+/* ============================================================
+   22. 자동 브리핑 — 이상 탐지 · 추세 · 예측 · 원인 귀속
+   페이지가 render() 안에서 GST.watch([...])로 "지금 화면에 그린 시계열"을
+   등록하면, 상단바 🔔 버튼이 자동으로 켜지고 배지에 주의 건수가 뜬다.
+   계산은 전부 이미 있는 헬퍼(anomalyIdx·linForecast·pctDelta)를 재사용하므로
+   지표 계산식은 건드리지 않는다 — 읽기 전용 분석 계층이다.
+
+   등록 형식:
+     GST.watch([{ k:'man', label:'인당 공수', labels:['W17',…], data:[…],
+                  unit:'h', goodWhenDown:false,
+                  parts:function(i){ return [{name:'F16',v:12},…]; } }])
+   parts(i)를 주면 "왜 변했는지"를 구성요소 기여도로 분해해 문장으로 만든다.
+   ============================================================ */
+GST.BRF_T={
+  ko:{t:'자동 브리핑',sub:'최근 구간 변화·이상·예측',none:'주의할 변화가 없습니다.',anom:'이상치',
+      why:'주요 요인',fc:'다음 구간 예상',cfg:'민감도',warn:'변화 임계(%)',z:'이상치 z',save:'저장',
+      copy:'복사',copied:'복사됨',close:'닫기',up:'증가',dn:'감소',all:'전체 지표',rise:'상승 추세',fall:'하락 추세'},
+  en:{t:'Auto Briefing',sub:'Recent change · anomaly · forecast',none:'No notable changes.',anom:'anomaly',
+      why:'Drivers',fc:'Next period',cfg:'Sensitivity',warn:'Change threshold (%)',z:'Anomaly z',save:'Save',
+      copy:'Copy',copied:'Copied',close:'Close',up:'up',dn:'down',all:'All metrics',rise:'rising',fall:'falling'},
+  zh:{t:'自动简报',sub:'近期变化·异常·预测',none:'无明显变化。',anom:'异常',
+      why:'主要因素',fc:'下期预测',cfg:'灵敏度',warn:'变化阈值(%)',z:'异常 z',save:'保存',
+      copy:'复制',copied:'已复制',close:'关闭',up:'上升',dn:'下降',all:'全部指标',rise:'上升趋势',fall:'下降趋势'},
+  ja:{t:'自動ブリーフィング',sub:'直近の変化・異常・予測',none:'注意すべき変化はありません。',anom:'異常値',
+      why:'主要因',fc:'次区間の予想',cfg:'感度',warn:'変化しきい値(%)',z:'異常値 z',save:'保存',
+      copy:'コピー',copied:'コピー済',close:'閉じる',up:'増加',dn:'減少',all:'全指標',rise:'上昇傾向',fall:'下降傾向'}
+};
+GST._watch=[];
+// 페이지가 render()마다 호출 — 이전 등록을 대체한다(필터가 바뀌면 값도 바뀌므로)
+GST.watch=function(defs){
+  GST._watch=(defs||[]).filter(function(d){ return d && d.data && d.data.length>=2; });
+};
+// 구성요소 기여도 분해 — 두 시점의 [{name,v,inv}] 배열을 받아 기여도 큰 순으로 정렬.
+//   d   = 지표에 대한 기여도 (inv:true면 부호를 뒤집는다 — 휴가처럼 빼는 항목)
+//   own = 그 구성요소 자체의 변화량 (사람이 읽는 값: "휴가 −9.2일")
+// 예) 출근 = 재적 − 휴가 → 휴가를 {v:lv, inv:true}로 주면
+//     휴가가 9.2 줄었을 때 own=−9.2(표시) · d=+9.2(출근을 끌어올린 기여)로 갈라진다.
+GST.attribute=function(prevParts, curParts){
+  const m=new Map();
+  const put=function(p, side){
+    if(!p||p.name==null) return;
+    const k=String(p.name), e=m.get(k)||{name:k,prev:0,cur:0,inv:false};
+    e[side]=+p.v||0; if(p.inv) e.inv=true; m.set(k,e);
+  };
+  (prevParts||[]).forEach(function(p){ put(p,'prev'); });
+  (curParts ||[]).forEach(function(p){ put(p,'cur');  });
+  const out=[]; m.forEach(function(e){
+    const own=e.cur-e.prev;
+    out.push({name:e.name,prev:e.prev,cur:e.cur,own:own,d:e.inv?-own:own});
+  });
+  out.sort(function(a,b){ return Math.abs(b.d)-Math.abs(a.d); });
+  return out;
+};
+GST.BRF_KEY='gst_brief_cfg';
+GST.briefCfg=function(){
+  let o={}; try{ o=JSON.parse(localStorage.getItem(GST.BRF_KEY)||'{}')||{}; }catch(e){}
+  const warn=+o.warn, z=+o.z;
+  return {warn:(isFinite(warn)&&warn>0)?warn:15, z:(isFinite(z)&&z>=1)?z:3};
+};
+GST.briefCfgSave=function(o){ try{ localStorage.setItem(GST.BRF_KEY, JSON.stringify(o)); }catch(e){} };
+// 등록된 시계열을 분석해 발견 목록을 만든다. 심각도·변화폭 순 정렬.
+GST.briefFind=function(){
+  const cfg=GST.briefCfg(), out=[];
+  (GST._watch||[]).forEach(function(d){
+    const data=(d.data||[]).map(function(v){ return (v==null||v===''||!isFinite(v))?null:+v; });
+    const idx=[]; data.forEach(function(v,i){ if(v!=null) idx.push(i); });
+    if(idx.length<2) return;
+    const iC=idx[idx.length-1], iP=idx[idx.length-2];
+    const cur=data[iC], prev=data[iP];
+    const pct=GST.pctDelta(cur,prev);
+    const anom=GST.anomalyIdx(data,cfg.z).has(iC);
+    const up=cur>prev, flat=cur===prev;
+    // goodWhenDown이면 감소가 좋은 지표(고장·교체 등)
+    const good = flat ? true : (d.goodWhenDown ? !up : up);
+    const big = (pct!=null) && Math.abs(pct)>=cfg.warn;
+    if(!anom && !big) return;                      // 임계 미만 + 이상치 아님 → 보고하지 않는다
+    const sev = good ? 'ok' : (anom ? 'bad' : 'warn');
+    const fc=GST.linForecast(data.filter(function(v){return v!=null;}),1);
+    const labels=d.labels||[];
+    const f={k:d.k, label:d.label||d.k, unit:d.unit||'', sev:sev, anom:anom,
+             cur:cur, prev:prev, pct:pct, up:up,
+             curL:labels[iC]!=null?String(labels[iC]):'', prevL:labels[iP]!=null?String(labels[iP]):'',
+             data:data, fc:fc.length?fc[0]:null,
+             score:(Math.abs(pct==null?0:pct)+(anom?40:0))*(good?0.35:1)};
+    // 원인 귀속 — 페이지가 parts(i)를 준 경우에만
+    if(typeof d.parts==='function' && !flat){
+      try{
+        const A=GST.attribute(d.parts(iP), d.parts(iC));
+        const sign=up?1:-1;
+        f.why=A.filter(function(a){ return a.d!==0 && (a.d>0?1:-1)===sign; }).slice(0,3);
+      }catch(e){}
+    }
+    out.push(f);
+  });
+  out.sort(function(a,b){ return b.score-a.score; });
+  return out;
+};
+// 인라인 스파크라인 (의존성 없음)
+GST._spark=function(data,w,h,col){
+  const pts=[], v=[];
+  (data||[]).forEach(function(y){ if(y!=null&&isFinite(y)) v.push(y); });
+  if(v.length<2) return '';
+  const mn=Math.min.apply(null,v), mx=Math.max.apply(null,v), rg=(mx-mn)||1, n=data.length;
+  data.forEach(function(y,i){ if(y==null||!isFinite(y))return;
+    pts.push([(n>1?(i/(n-1)):0)*(w-3)+1.5, h-2-((y-mn)/rg)*(h-4)]); });
+  if(pts.length<2) return '';
+  const dd=pts.map(function(p,i){ return (i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1); }).join(' ');
+  const last=pts[pts.length-1];
+  return '<svg class="gbf-sp" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" aria-hidden="true">'
+    +'<path d="'+dd+'" fill="none" stroke="'+col+'" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>'
+    +'<circle cx="'+last[0].toFixed(1)+'" cy="'+last[1].toFixed(1)+'" r="2.3" fill="'+col+'"/></svg>';
+};
+GST._ovCSS=false;
+GST._ovCss=function(){
+  if(GST._ovCSS) return; GST._ovCSS=true;
+  const st=document.createElement('style');
+  st.textContent=
+   '.gov{position:fixed;inset:0;z-index:9000;background:rgba(3,7,18,.72);display:flex;align-items:flex-start;'
+  +'justify-content:center;padding:34px 14px;overflow:auto;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}'
+  +'.gov-w{width:min(780px,100%);background:var(--card,#101720);border:1px solid var(--glass-border,rgba(151,170,196,.2));'
+  +'border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden}'
+  +'.gov-w.wide{width:min(1120px,100%)}'
+  +'.gov-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--glass-border,rgba(151,170,196,.16))}'
+  +'.gov-h h4{margin:0;font-size:14px;font-weight:800;color:var(--txt-main,#E6EDF3)}'
+  +'.gov-h .gov-sub{font-size:11px;color:var(--txt-muted,#8B98A9);font-weight:600}'
+  +'.gov-h .gov-sp{flex:1}'
+  +'.gov-b{background:var(--glass,rgba(255,255,255,.06));border:1px solid var(--glass-border,rgba(151,170,196,.2));'
+  +'border-radius:8px;color:var(--txt-main,#E6EDF3);font-family:inherit;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer}'
+  +'.gov-b:hover{border-color:var(--accent-1,#2DD4BF)}'
+  +'.gov-body{padding:8px 18px 16px;max-height:calc(100vh - 150px);overflow:auto}'
+  +'.gov-f{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 18px;border-top:1px solid var(--glass-border,rgba(151,170,196,.16));'
+  +'font-size:11px;color:var(--txt-muted,#8B98A9)}'
+  +'.gov-f input{width:56px;background:var(--glass,rgba(255,255,255,.06));border:1px solid var(--glass-border,rgba(151,170,196,.2));'
+  +'border-radius:6px;color:var(--txt-main,#E6EDF3);font-family:inherit;font-size:11px;padding:4px 6px}'
+  // 브리핑 항목
+  +'.gbf-i{display:flex;gap:11px;align-items:flex-start;padding:11px 2px;border-bottom:1px solid var(--glass-border,rgba(151,170,196,.1))}'
+  +'.gbf-i:last-child{border-bottom:none}'
+  +'.gbf-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex:none;background:var(--txt-muted,#8B98A9)}'
+  +'.gbf-i.bad .gbf-dot{background:var(--bad,#fb7185)}.gbf-i.warn .gbf-dot{background:var(--warn,#fbbf24)}'
+  +'.gbf-i.ok .gbf-dot{background:var(--ok,#4ade80)}'
+  +'.gbf-m{flex:1;min-width:0}'
+  +'.gbf-t{font-size:12px;font-weight:800;color:var(--txt-main,#E6EDF3);margin-bottom:2px}'
+  +'.gbf-tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:rgba(251,113,133,.18);'
+  +'color:var(--bad,#fb7185);font-size:9.5px;font-weight:800;vertical-align:1px}'
+  +'.gbf-v{font-size:11.5px;color:var(--txt-main,#E6EDF3);font-weight:600}'
+  +'.gbf-v .gbf-mut{color:var(--txt-muted,#8B98A9);font-weight:600}'
+  +'.gbf-w,.gbf-fc{font-size:10.5px;color:var(--txt-muted,#8B98A9);margin-top:3px}'
+  +'.gbf-sp{flex:none;margin-top:3px;opacity:.85}'
+  +'.gbf-none{padding:26px 4px;text-align:center;font-size:12px;color:var(--txt-muted,#8B98A9)}'
+  // 피벗
+  +'.gpv-c{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--glass-border,rgba(151,170,196,.16))}'
+  +'.gpv-c label{font-size:10.5px;color:var(--txt-muted,#8B98A9);font-weight:700}'
+  +'.gpv-c select{background:var(--glass,rgba(255,255,255,.06));border:1px solid var(--glass-border,rgba(151,170,196,.2));'
+  +'border-radius:7px;color:var(--txt-main,#E6EDF3);font-family:inherit;font-size:11px;padding:4px 6px;max-width:150px}'
+  +'.gpv-sc{overflow:auto;max-height:calc(100vh - 250px)}'
+  +'.gpv-t{border-collapse:separate;border-spacing:0;width:100%;font-size:11px}'
+  +'.gpv-t th,.gpv-t td{padding:5px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--glass-border,rgba(151,170,196,.1))}'
+  +'.gpv-t th{position:sticky;top:0;z-index:2;background:var(--card,#101720);color:var(--txt-muted,#8B98A9);font-size:10px;font-weight:800}'
+  +'.gpv-t th:first-child,.gpv-t td:first-child{text-align:left;position:sticky;left:0;z-index:1;background:var(--card,#101720);font-weight:700}'
+  +'.gpv-t th:first-child{z-index:3}'
+  +'.gpv-t td.gpv-cell{cursor:pointer;color:var(--txt-main,#E6EDF3);font-weight:700}'
+  +'.gpv-t td.gpv-cell:hover{outline:1px solid var(--accent-1,#2DD4BF);outline-offset:-1px}'
+  +'.gpv-t tr.gpv-tot td,.gpv-t td.gpv-tot{font-weight:800;color:var(--txt-main,#E6EDF3);background:rgba(151,170,196,.07)}'
+  +'.gpv-d{border-top:1px solid var(--glass-border,rgba(151,170,196,.16));padding:8px 18px 4px;font-size:10.5px;color:var(--txt-muted,#8B98A9)}'
+  +'.gpv-d table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:5px}'
+  +'.gpv-d td,.gpv-d th{padding:3px 6px;border-bottom:1px solid var(--glass-border,rgba(151,170,196,.1));text-align:left;white-space:nowrap}'
+  +'.gpv-d th{color:var(--txt-muted,#8B98A9);font-weight:800}'
+  +'.gpv-d td{color:var(--txt-main,#E6EDF3)}'
+  +'@media print{.gov{display:none !important}}';
+  document.head.appendChild(st);
+};
+GST._lang=function(){ let l='ko'; try{ l=sessionStorage.getItem('gst_lang')||'ko'; }catch(e){} return l; };
+GST._esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+GST._ovClose=function(){ document.querySelectorAll('.gov').forEach(function(o){ o.remove(); }); };
+GST._ovOpen=function(inner, wide){
+  GST._ovCss(); GST._ovClose();
+  const ov=document.createElement('div'); ov.className='gov';
+  ov.innerHTML='<div class="gov-w'+(wide?' wide':'')+'">'+inner+'</div>';
+  ov.addEventListener('click',function(e){ if(e.target===ov) GST._ovClose(); });
+  document.addEventListener('keydown', function esc(e){
+    if(e.key==='Escape'){ GST._ovClose(); document.removeEventListener('keydown',esc); } });
+  document.body.appendChild(ov);
+  return ov;
+};
+GST._num=function(v){
+  if(v==null||!isFinite(v)) return '—';
+  return (Math.round(v*10)/10).toLocaleString(undefined,{maximumFractionDigits:1});
+};
+GST.briefText=function(){
+  const T=GST.BRF_T[GST._lang()]||GST.BRF_T.ko, F=GST.briefFind();
+  const head=(document.title||'')+' — '+T.t;
+  if(!F.length) return head+'\n'+T.none;
+  return head+'\n'+F.map(function(f){
+    let s='• '+f.label+': '+(f.prevL?f.prevL+' ':'')+GST._num(f.prev)+' → '+(f.curL?f.curL+' ':'')+GST._num(f.cur)+(f.unit||'')
+        +(f.pct!=null?' ('+(f.pct>0?'+':'')+f.pct+'%)':'')+(f.anom?' ['+T.anom+']':'');
+    if(f.why&&f.why.length) s+='\n  '+T.why+': '+f.why.map(function(w){
+      return w.name+' '+(w.own>0?'+':'')+GST._num(w.own); }).join(', ');
+    if(f.fc!=null) s+='\n  '+T.fc+': '+GST._num(f.fc)+(f.unit||'');
+    return s;
+  }).join('\n');
+};
+GST.briefOpen=function(){
+  const T=GST.BRF_T[GST._lang()]||GST.BRF_T.ko, cfg=GST.briefCfg(), F=GST.briefFind();
+  const sty=GST.sty();
+  let body='';
+  if(!F.length) body='<div class="gbf-none">✅ '+T.none+'</div>';
+  else body=F.map(function(f){
+    const col=f.sev==='bad'?'#fb7185':(f.sev==='warn'?'#fbbf24':(f.sev==='ok'?'#4ade80':sty.line));
+    const arrow=f.pct==null?'':(f.pct>0?'▲':(f.pct<0?'▼':'—'));
+    let h='<div class="gbf-i '+f.sev+'"><span class="gbf-dot"></span><div class="gbf-m">'
+      +'<div class="gbf-t">'+GST._esc(f.label)+(f.anom?'<span class="gbf-tag">'+T.anom+'</span>':'')+'</div>'
+      +'<div class="gbf-v"><span class="gbf-mut">'+GST._esc(f.prevL)+'</span> '+GST._num(f.prev)
+      +' <span class="gbf-mut">→</span> <span class="gbf-mut">'+GST._esc(f.curL)+'</span> '+GST._num(f.cur)
+      +'<span class="gbf-mut">'+GST._esc(f.unit)+'</span>'
+      +(f.pct!=null?' <span style="color:'+col+';font-weight:800">'+arrow+' '+Math.abs(f.pct)+'%</span>':'')+'</div>';
+    if(f.why&&f.why.length) h+='<div class="gbf-w">↳ '+T.why+': '+f.why.map(function(w){
+      return GST._esc(w.name)+' <b style="color:'+col+'">'+(w.own>0?'+':'')+GST._num(w.own)+'</b>'; }).join(', ')+'</div>';
+    if(f.fc!=null) h+='<div class="gbf-fc">↻ '+T.fc+': <b>'+GST._num(f.fc)+GST._esc(f.unit)+'</b></div>';
+    return h+'</div>'+GST._spark(f.data,86,30,col)+'</div>';
+  }).join('');
+  const ov=GST._ovOpen(
+     '<div class="gov-h"><h4>🔔 '+T.t+'</h4><span class="gov-sub">'+T.sub+'</span><span class="gov-sp"></span>'
+    +'<button class="gov-b" data-brf="copy">'+T.copy+'</button>'
+    +'<button class="gov-b" data-brf="close">'+T.close+'</button></div>'
+    +'<div class="gov-body">'+body+'</div>'
+    +'<div class="gov-f"><span>'+T.cfg+'</span>'
+    +'<label>'+T.warn+' <input id="gbfWarn" type="number" min="1" max="200" value="'+cfg.warn+'"></label>'
+    +'<label>'+T.z+' <input id="gbfZ" type="number" min="1" max="6" step="0.5" value="'+cfg.z+'"></label>'
+    +'<button class="gov-b" data-brf="save">'+T.save+'</button></div>');
+  ov.addEventListener('click',function(e){
+    const b=e.target.closest('[data-brf]'); if(!b)return;
+    const a=b.dataset.brf;
+    if(a==='close'){ GST._ovClose(); return; }
+    if(a==='copy'){
+      const txt=GST.briefText();
+      const done=function(){ b.textContent=T.copied; setTimeout(function(){ b.textContent=T.copy; },1400); };
+      if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done,function(){});
+      else { const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
+             ta.select(); try{ document.execCommand('copy'); done(); }catch(err){} ta.remove(); }
+      return;
+    }
+    if(a==='save'){
+      const w=+(document.getElementById('gbfWarn')||{}).value, z=+(document.getElementById('gbfZ')||{}).value;
+      GST.briefCfgSave({warn:(isFinite(w)&&w>0)?w:15, z:(isFinite(z)&&z>=1)?z:3});
+      GST._ovClose(); GST.barSync(); GST.briefOpen();
+    }
+  });
+};
+
+/* ============================================================
+   23. 다차원 피벗 — 현재 필터가 걸린 원시 레코드를 행×열로 교차 집계
+   페이지가 GST.pivotReg({rows,dims,measures})로 등록하면 상단바 🧊 버튼이 켜진다.
+   rows()는 "지금 화면에 반영된" 배열을 그대로 돌려주면 된다 — 필터가 그대로 승계된다.
+     dims     = [{k:'site', t:'사이트'}, …]           k는 필드명 또는 function(rec)
+     measures = [{k:'cnt', t:'건수', agg:'count'},
+                 {k:'hours', t:'공수', agg:'sum', f:'manHour'}, …]   agg: count|sum|avg|uniq
+   ============================================================ */
+GST.PIV_T={
+  ko:{t:'다차원 피벗',sub:'현재 필터 기준 교차 집계',row:'행',col:'열',val:'값',swap:'⇄ 전치',
+      copy:'복사(TSV)',copied:'복사됨',close:'닫기',tot:'합계',none:'표시할 데이터가 없습니다.',
+      no:'(없음)',detail:'상세',more:'외 %n건'},
+  en:{t:'Pivot',sub:'Cross-tab on current filters',row:'Rows',col:'Cols',val:'Value',swap:'⇄ Swap',
+      copy:'Copy (TSV)',copied:'Copied',close:'Close',tot:'Total',none:'No data to show.',
+      no:'(none)',detail:'Detail',more:'+%n more'},
+  zh:{t:'多维透视',sub:'按当前筛选交叉汇总',row:'行',col:'列',val:'值',swap:'⇄ 转置',
+      copy:'复制(TSV)',copied:'已复制',close:'关闭',tot:'合计',none:'无数据。',
+      no:'(无)',detail:'明细',more:'其他%n条'},
+  ja:{t:'多次元ピボット',sub:'現在のフィルタで集計',row:'行',col:'列',val:'値',swap:'⇄ 転置',
+      copy:'コピー(TSV)',copied:'コピー済',close:'閉じる',tot:'合計',none:'データがありません。',
+      no:'(なし)',detail:'明細',more:'他%n件'}
+};
+GST._pivot=null;
+GST.pivotReg=function(spec){ GST._pivot=spec||null; };
+GST._pivGet=function(rec,k){
+  if(typeof k==='function'){ try{ return k(rec); }catch(e){ return null; } }
+  return rec ? rec[k] : null;
+};
+GST._pivLbl=function(v,T){
+  if(v==null||v===''||(typeof v==='number'&&!isFinite(v))) return T.no;
+  if(v instanceof Date) return GST.fmtDate(v);
+  return String(v);
+};
+// 교차 집계 — {rNames, cNames, cell(r,c), rowTot, colTot, grand, recs(r,c)}
+GST.pivotCalc=function(rows, rowK, colK, meas, T){
+  const buck=new Map(), rSet=new Map(), cSet=new Map();
+  (rows||[]).forEach(function(rec){
+    const rv=GST._pivLbl(GST._pivGet(rec,rowK),T), cv=colK?GST._pivLbl(GST._pivGet(rec,colK),T):T.tot;
+    rSet.set(rv,(rSet.get(rv)||0)+1); cSet.set(cv,(cSet.get(cv)||0)+1);
+    const key=rv+' '+cv; let a=buck.get(key); if(!a){ a=[]; buck.set(key,a); }
+    a.push(rec);
+  });
+  const agg=function(recs){
+    if(!recs||!recs.length) return null;
+    const a=meas.agg||'count';
+    if(a==='count') return recs.length;
+    if(a==='uniq'){ const s=new Set(); recs.forEach(function(r){ const v=GST._pivGet(r,meas.f); if(v!=null&&v!=='') s.add(String(v)); }); return s.size; }
+    let sum=0,n=0;
+    recs.forEach(function(r){ const v=+GST._pivGet(r,meas.f); if(isFinite(v)){ sum+=v; n++; } });
+    if(a==='avg') return n?Math.round(sum/n*10)/10:null;
+    return Math.round(sum*10)/10;
+  };
+  const rNames=[...rSet.keys()].sort(), cNames=[...cSet.keys()].sort();
+  const cell=function(r,c){ return agg(buck.get(r+' '+c)); };
+  const recsOf=function(r,c){ return buck.get(r+' '+c)||[]; };
+  const rowRecs=function(r){ let a=[]; cNames.forEach(function(c){ a=a.concat(recsOf(r,c)); }); return a; };
+  const colRecs=function(c){ let a=[]; rNames.forEach(function(r){ a=a.concat(recsOf(r,c)); }); return a; };
+  return {rNames:rNames, cNames:cNames, cell:cell, recs:recsOf,
+          rowTot:function(r){ return agg(rowRecs(r)); },
+          colTot:function(c){ return agg(colRecs(c)); },
+          grand:agg(rows||[])};
+};
+GST._pivState=function(){
+  const k='gst_piv_'+location.pathname.replace(/[^a-z0-9]/gi,'');
+  let o={}; try{ o=JSON.parse(sessionStorage.getItem(k)||'{}')||{}; }catch(e){}
+  return {get:o, set:function(n){ try{ sessionStorage.setItem(k, JSON.stringify(n)); }catch(e){} }};
+};
+GST.pivotOpen=function(){
+  const S=GST._pivot; if(!S) return;
+  const T=GST.PIV_T[GST._lang()]||GST.PIV_T.ko;
+  const dims=(S.dims||[]).filter(Boolean), meas=(S.measures||[]).filter(Boolean);
+  if(!dims.length||!meas.length) return;
+  const ST=GST._pivState(), sv=ST.get;
+  let ri=dims[sv.r]?+sv.r:0, ci=dims[sv.c]?+sv.c:(dims.length>1?1:0), mi=meas[sv.m]?+sv.m:0;
+  if(ci===ri && dims.length>1) ci=(ri+1)%dims.length;
+
+  const opt=function(list,sel){ return list.map(function(d,i){
+    return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'+GST._esc(d.t||d.k)+'</option>'; }).join(''); };
+
+  const ov=GST._ovOpen(
+     '<div class="gov-h"><h4>🧊 '+T.t+'</h4><span class="gov-sub">'+T.sub+'</span><span class="gov-sp"></span>'
+    +'<button class="gov-b" data-piv="copy">'+T.copy+'</button>'
+    +'<button class="gov-b" data-piv="close">'+T.close+'</button></div>'
+    +'<div class="gpv-c"><label>'+T.row+'</label><select id="gpvR">'+opt(dims,ri)+'</select>'
+    +'<label>'+T.col+'</label><select id="gpvC">'+opt(dims,ci)+'</select>'
+    +'<button class="gov-b" data-piv="swap">'+T.swap+'</button>'
+    +'<label>'+T.val+'</label><select id="gpvM">'+opt(meas,mi)+'</select></div>'
+    +'<div class="gpv-sc" id="gpvSc"></div><div id="gpvD"></div>', true);
+
+  let LAST=null;
+  function draw(){
+    ri=+document.getElementById('gpvR').value; ci=+document.getElementById('gpvC').value; mi=+document.getElementById('gpvM').value;
+    ST.set({r:ri,c:ci,m:mi});
+    let rows=[]; try{ rows=(typeof S.rows==='function')?(S.rows()||[]):(S.rows||[]); }catch(e){ rows=[]; }
+    const P=GST.pivotCalc(rows, dims[ri].k, (ci===ri?null:dims[ci].k), meas[mi], T);
+    LAST=P;
+    const sc=document.getElementById('gpvSc'), dv=document.getElementById('gpvD');
+    dv.innerHTML='';
+    if(!P.rNames.length){ sc.innerHTML='<div class="gbf-none">'+T.none+'</div>'; return; }
+    // 열 상한 — 카디널리티가 큰 축을 잘못 고르면 표가 폭발하므로 막는다
+    const cN=P.cNames.slice(0,40), cut=P.cNames.length-cN.length;
+    let mx=0; P.rNames.forEach(function(r){ cN.forEach(function(c){ const v=P.cell(r,c); if(v!=null&&v>mx)mx=v; }); });
+    let h='<table class="gpv-t"><thead><tr><th>'+GST._esc(dims[ri].t||dims[ri].k)+'</th>'
+      + cN.map(function(c){ return '<th>'+GST._esc(c)+'</th>'; }).join('')
+      + '<th class="gpv-tot">'+T.tot+'</th></tr></thead><tbody>';
+    P.rNames.forEach(function(r){
+      h+='<tr><td>'+GST._esc(r)+'</td>'+cN.map(function(c){
+        const v=P.cell(r,c);
+        if(v==null) return '<td class="gpv-mut">·</td>';
+        const a=mx>0?(0.07+0.42*(v/mx)):0.1;
+        return '<td class="gpv-cell" data-r="'+GST._esc(r)+'" data-c="'+GST._esc(c)+'" '
+          +'style="background:rgba(45,212,191,'+a.toFixed(3)+')">'+GST._num(v)+'</td>';
+      }).join('')+'<td class="gpv-tot">'+GST._num(P.rowTot(r))+'</td></tr>';
+    });
+    h+='</tbody><tfoot><tr class="gpv-tot"><td>'+T.tot+'</td>'
+      + cN.map(function(c){ return '<td>'+GST._num(P.colTot(c))+'</td>'; }).join('')
+      + '<td>'+GST._num(P.grand)+'</td></tr></tfoot></table>';
+    if(cut>0) h+='<div class="gpv-d">'+T.more.replace('%n',cut)+'</div>';
+    sc.innerHTML=h;
+  }
+  function detail(r,c){
+    const dv=document.getElementById('gpvD'); if(!LAST||!dv) return;
+    const recs=LAST.recs(r,c), cols=(S.detailCols&&S.detailCols.length)?S.detailCols
+      : Object.keys(recs[0]||{}).filter(function(k){ const v=recs[0][k];
+          return v==null||typeof v!=='object'||v instanceof Date; }).slice(0,7).map(function(k){ return {k:k,t:k}; });
+    const show=recs.slice(0,60);
+    dv.innerHTML='<div class="gpv-d"><b>'+GST._esc(r)+' × '+GST._esc(c)+'</b> — '+T.detail+' '+recs.length
+      +(recs.length>show.length?' ('+T.more.replace('%n',recs.length-show.length)+')':'')
+      +'<div style="overflow:auto;max-height:190px"><table><thead><tr>'
+      + cols.map(function(cc){ return '<th>'+GST._esc(cc.t||cc.k)+'</th>'; }).join('')+'</tr></thead><tbody>'
+      + show.map(function(rec){ return '<tr>'+cols.map(function(cc){
+          const v=GST._pivGet(rec,cc.k);
+          return '<td>'+GST._esc(v instanceof Date?GST.fmtDate(v):(v==null?'':v))+'</td>'; }).join('')+'</tr>'; }).join('')
+      +'</tbody></table></div></div>';
+  }
+  function tsv(){
+    if(!LAST) return '';
+    const cN=LAST.cNames.slice(0,40);
+    let out=[[dims[ri].t||dims[ri].k].concat(cN).concat([T.tot]).join('\t')];
+    LAST.rNames.forEach(function(r){
+      out.push([r].concat(cN.map(function(c){ const v=LAST.cell(r,c); return v==null?'':v; })).concat([LAST.rowTot(r)]).join('\t'));
+    });
+    out.push([T.tot].concat(cN.map(function(c){ return LAST.colTot(c); })).concat([LAST.grand]).join('\t'));
+    return out.join('\n');
+  }
+  ov.addEventListener('change',function(e){ if(e.target.closest('#gpvR,#gpvC,#gpvM')) draw(); });
+  ov.addEventListener('click',function(e){
+    const cell=e.target.closest('.gpv-cell');
+    if(cell){ detail(cell.dataset.r, cell.dataset.c); return; }
+    const b=e.target.closest('[data-piv]'); if(!b)return;
+    const a=b.dataset.piv;
+    if(a==='close'){ GST._ovClose(); return; }
+    if(a==='swap'){ const R=document.getElementById('gpvR'), C=document.getElementById('gpvC');
+      const t=R.value; R.value=C.value; C.value=t; draw(); return; }
+    if(a==='copy'){
+      const txt=tsv(), done=function(){ b.textContent=T.copied; setTimeout(function(){ b.textContent=T.copy; },1400); };
+      if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done,function(){});
+      else { const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
+             ta.select(); try{ document.execCommand('copy'); done(); }catch(err){} ta.remove(); }
+    }
+  });
+  draw();
 };
 
 function gstAutoStart(){
