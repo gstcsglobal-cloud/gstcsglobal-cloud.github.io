@@ -583,6 +583,9 @@ async function loadData(){ GST.skeleton(true);
         // 분류 축(라인·모델·S/N·공정)은 전각이 섞여 들어오므로 반각으로 통일 — 같은 라인이 두 그룹으로 갈라지는 것을 막는다.
         // 자유 서술(원인·현상·조치)은 원문 그대로 둔다.
         line:GST.nfw(r[C.line]||'').trim(), stage:(r[C.stage]||'').toString().trim().toUpperCase(),
+        alarm:GST.nfw(r[C.alarm]||'').trim(),
+        country:(String(r[C.op]||'').match(/GST\s+([A-Za-z]+)/i)||[])[1]?String(r[C.op]).match(/GST\s+([A-Za-z]+)/i)[1].toUpperCase():'',
+        campus:GST.nfw(r[C.campus]||'').trim(),
         pf:(r[C.pf]||'').toString().trim(), cause:(r[C.cause]||'').toString().trim(),
         model:GST.nfw(r[C.model]||'').trim(), sn:GST.nfw(r[C.snIn]||'').trim(),
         proc:GST.nfw(r[C.proc]||'').trim(), reqType:(r[C.reqType]||'').toString().trim(),
@@ -659,7 +662,7 @@ GST.pageBar({
   on:{ period:v=>{ GST.setPeriod(v); render(); },
        endM:v=>applyCut(v), clear:()=>applyCut('') }
 });
-const FIELD_LABEL={line:'LINE',stage:'단계',pf:'유/무상',cause:'원인',model:'모델',sn:'설비',dtFrom:'시작일',dtTo:'종료일',q:'검색'};
+const FIELD_LABEL={line:'LINE',stage:'단계',pf:'유/무상',cause:'원인',model:'모델',sn:'설비',dtFrom:'시작일',dtTo:'종료일',q:'검색',alarm:'알람',country:'국가',campus:'CAMPUS',proc:'공정'};
 function renderFilterChips(){GST.renderChips(F,FIELD_LABEL,'clearFilter');}
 function clearFilter(k){
   F[k]='';
@@ -1063,7 +1066,7 @@ function render(){ GST.skeleton(false); GST.pushState(F);
     const _mh=_P.map(p=>Math.round(f.filter(x=>_in(x,p)).reduce((a,x)=>a+((x.manMin>0&&x.manMin<14400)?x.manMin:0),0)/60*10)/10);
     GST.watch([
       {k:'cnt', label:t('sl_stage'), labels:_P.map(p=>p.label), data:_cnt, unit:'', goodWhenDown:true,
-       parts:i=>{const m={}; f.forEach(x=>{ if(_in(x,_P[i])){ const g=x.line||'—'; m[g]=(m[g]||0)+1; } });
+       parts:i=>{const m={}; f.forEach(x=>{ if(_in(x,_P[i])){ const g=x.alarm||x.line||'—'; m[g]=(m[g]||0)+1; } });
                  return Object.keys(m).map(g=>({name:g,v:m[g]}));}},
       {k:'mh',  label:t('th_mh'), labels:_P.map(p=>p.label), data:_mh, unit:'h', goodWhenDown:true}
     ]);
@@ -1072,15 +1075,18 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   // 🧊 피벗 — 현재 필터가 적용된 서비스 레코드를 교차 집계한다
   GST.pivotReg({
     rows:()=>f,
-    dims:[{k:'line',t:FIELD_LABEL.line},{k:'stage',t:t('sl_stage')},{k:'pf',t:t('sl_pf')},
-          {k:'cause',t:t('sl_cause')},{k:'model',t:t('sl_model')},{k:'proc',t:FIELD_LABEL.proc||'PROCESS'},
-          {k:'sn',t:t('sl_sn')},{k:x=>x.work?GST.isoW(x.work):'',t:t('sl_period')}],
+    dims:[{k:'country',t:FIELD_LABEL.country},{k:'customer',t:'Customer'},{k:'campus',t:FIELD_LABEL.campus},
+          {k:'line',t:FIELD_LABEL.line},{k:'proc',t:FIELD_LABEL.proc},{k:'sn',t:t('sl_sn')},
+          {k:'stage',t:t('sl_stage')},{k:'alarm',t:FIELD_LABEL.alarm},{k:'cause',t:t('sl_cause')},
+          {k:'action',t:t('th_action')},{k:'model',t:t('sl_model')},{k:'pf',t:t('sl_pf')},
+          {k:x=>x.work?GST.isoW(x.work):'',t:t('sl_period')+'(W)'},
+          {k:x=>x.work?(x.work.getUTCFullYear()+'-'+String(x.work.getUTCMonth()+1).padStart(2,'0')):'',t:t('sl_period')+'(M)'}],
     measures:[{k:'cnt',t:t('th_cnt')||'건수',agg:'count'},
               {k:'man',t:t('th_mh'),agg:'sum',f:x=>(x.manMin>0&&x.manMin<14400)?Math.round(x.manMin/60*10)/10:null},
               {k:'min',t:t('th_min'),agg:'avg',f:x=>(x.workMin>0&&x.workMin<1440)?x.workMin:null},
               {k:'sn',t:t('sl_sn'),agg:'uniq',f:'sn'}],
     detailCols:[{k:'work',t:t('th_date')},{k:'line',t:FIELD_LABEL.line},{k:'sn',t:t('sl_sn')},
-                {k:'stage',t:t('th_stage')},{k:'cause',t:t('th_cause')},{k:'phenom',t:t('th_phenom')},{k:'action',t:t('th_action')}]
+                {k:'stage',t:t('th_stage')},{k:'alarm',t:FIELD_LABEL.alarm},{k:'cause',t:t('th_cause')},{k:'action',t:t('th_action')}]
   });
 
   // ── 테이블 ──

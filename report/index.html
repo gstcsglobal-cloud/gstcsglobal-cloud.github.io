@@ -413,7 +413,7 @@ ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 �
  ch_man:'작업 공수 (h)',note_man:'PM · 서비스 · 설치 구분 (이상치 제외)',man_pm:'PM',man_np:'非PM',man_svc:'서비스',man_inst:'설치',
  ch_pc:'인당 작업 건수',note_pc:'구간 내 실제 투입 인원 기준',
  ch_sc:'PM 계획 대비 완료 (올해 누적)',note_sc:'계획 = 설비별 주기 기반 도래 건수 · 진행율은 툴팁',sc_plan:'계획(누적)',sc_done:'완료(누적)',
- ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',pv_stage:'작업단계',pv_sn:'설비 S/N',ft_total:'건수',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
+ ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',pv_stage:'작업단계',pv_sn:'설비 S/N',pv_s_ft:'고장 (BM·수리)',pv_s_wk:'작업 실적 (전체)',pv_s_hr:'인원',pv_s_io:'입·퇴사',pv_join:'입사',pv_quit:'퇴사',pv_active:'재직',ft_total:'건수',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
  tbl_top:'고장 원인 TOP 3',th_cause:'원인',th_cnt:'건수',th_al:'주요 알람유형',th_act:'조치',top_more:'외 {n}종',top_etc:'기타 {n}건 · 알람유형 미기재 {m}건',top_var:'(표기 {n}종 묶음)',
  top_alfb:'* 알람유형(Z열) 미기재 — 현상(AA열)으로 표기',
  tbl_op:'Scrubber 가동 현황',note_op:'가동 = Turn-On 완료 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 40/인 고정 · PM = 해당 구간 TBM · 마감일 기준',op_corp:'법인',op_div:'구분',op_run_u:'가동 장비 대수',op_run_c:'가동 챔버수',op_idle:'미가동',op_staff:'담당 인원(명)',op_to:'목표 TO',op_gap:'증감(명)',op_hire:'모집계획',op_chp:'인당 챔버',op_pm:'PM(건)',op_unit:'장비',op_ch:'챔버',op_expat:'주재원',op_local:'현채인',op_fit:'적정 챔버',op_need:'인원(명)',
@@ -430,7 +430,7 @@ en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, traini
  ch_man:'Man-hours (h)',note_man:'PM · Service · Install (outliers excluded)',man_pm:'PM',man_np:'Non-PM',man_svc:'Service',man_inst:'Install',
  ch_pc:'Jobs per Person',note_pc:'based on workers actually deployed in period',
  ch_sc:'PM Plan vs Done (YTD cumulative)',note_sc:'plan = due events from per-tool cycles · progress in tooltip',sc_plan:'Plan (cum)',sc_done:'Done (cum)',
- ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',pv_stage:'Stage',pv_sn:'Equipment S/N',ft_total:'Count',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
+ ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',pv_stage:'Stage',pv_sn:'Equipment S/N',pv_s_ft:'Faults (BM)',pv_s_wk:'All work records',pv_s_hr:'Headcount',pv_s_io:'Join / Leave',pv_join:'Join',pv_quit:'Leave',pv_active:'Active',ft_total:'Count',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
  tbl_top:'Top 3 Fault Causes',th_cause:'Cause',th_cnt:'Count',th_al:'Main Alarm Type',th_act:'Action',top_more:'+{n} more',top_etc:'others {n} · alarm blank {m}',top_var:'({n} variants)',
  top_alfb:'* alarm type blank (col Z) — showing symptom (col AA)',
  tbl_op:'Scrubber Operation Status',note_op:'running = Turn-On done · chamber DUAL=2·SINGLE=1 · 40 chambers/person fixed · PM = TBM in period · as of cutoff',op_corp:'Entity',op_div:'Site',op_run_u:'Running Units',op_run_c:'Running Chambers',op_idle:'Idle',op_staff:'Staff',op_to:'Target TO',op_gap:'Gap',op_hire:'Hiring',op_chp:'Ch/person',op_pm:'PM',op_unit:'Units',op_ch:'Chambers',op_expat:'Expat',op_local:'Local',op_fit:'Fit ch.',op_need:'Headcount',
@@ -447,7 +447,7 @@ zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇
  ch_man:'作业工时(h)',note_man:'PM·服务·安装区分(除异常值)',man_pm:'PM',man_np:'非PM',man_svc:'服务',man_inst:'安装',
  ch_pc:'人均作业件数',note_pc:'按区间内实际投入人员',
  ch_sc:'PM计划 vs 完成(今年累计)',note_sc:'计划=按设备周期到期件数 · 进度见提示框',sc_plan:'计划(累计)',sc_done:'完成(累计)',
- ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',pv_stage:'作业阶段',pv_sn:'设备S/N',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
+ ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',pv_stage:'作业阶段',pv_sn:'设备S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全部作业记录',pv_s_hr:'人员',pv_s_io:'入职·离职',pv_join:'入职',pv_quit:'离职',pv_active:'在职',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
  tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'主要报警类型',th_act:'措施',top_more:'其他{n}种',top_etc:'其他 {n}件 · 报警类型未填 {m}件',top_var:'({n}种写法合并)',
  top_alfb:'* 报警类型(Z列)未填 — 显示现象(AA列)',
  tbl_op:'Scrubber 运行现况',note_op:'运行=Turn-On完成 · 腔体 DUAL=2·SINGLE=1 · 人均40腔固定 · PM=该区间TBM · 截止日基准',op_corp:'法人',op_div:'区分',op_run_u:'运行设备台数',op_run_c:'运行腔体数',op_idle:'未运行',op_staff:'负责人员(名)',op_to:'目标 TO',op_gap:'增减(名)',op_hire:'招聘计划',op_chp:'人均腔体',op_pm:'PM(件)',op_unit:'设备',op_ch:'腔体',op_expat:'驻在员',op_local:'当地雇员',op_fit:'适定腔体',op_need:'人员(名)',
@@ -464,7 +464,7 @@ ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サ
  ch_man:'作業工数(h)',note_man:'PM·サービス·設置区分(異常値除外)',man_pm:'PM',man_np:'非PM',man_svc:'サービス',man_inst:'設置',
  ch_pc:'一人当たり作業件数',note_pc:'区間内の実投入人員基準',
  ch_sc:'PM計画対完了(今年累計)',note_sc:'計画=設備別周期の到来件数 · 進捗はツールチップ',sc_plan:'計画(累計)',sc_done:'完了(累計)',
- ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',pv_stage:'作業段階',pv_sn:'設備S/N',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
+ ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',pv_stage:'作業段階',pv_sn:'設備S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全作業記録',pv_s_hr:'人員',pv_s_io:'入社·退社',pv_join:'入社',pv_quit:'退社',pv_active:'在籍',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
  tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'主なアラーム種別',th_act:'対応',top_more:'他{n}種',top_etc:'その他 {n}件 · アラーム種別未記入 {m}件',top_var:'({n}表記まとめ)',
  top_alfb:'* アラーム種別(Z列)未記入 — 現象(AA列)で表示',
  tbl_op:'Scrubber 稼働現況',note_op:'稼働=Turn-On完了 · チャンバー DUAL=2·SINGLE=1 · 適正40台/人固定 · PM=当該区間TBM · 締め日基準',op_corp:'法人',op_div:'区分',op_run_u:'稼働設備台数',op_run_c:'稼働チャンバー数',op_idle:'未稼働',op_staff:'担当人員(名)',op_to:'目標 TO',op_gap:'増減(名)',op_hire:'採用計画',op_chp:'一人当たり',op_pm:'PM(件)',op_unit:'設備',op_ch:'チャンバー',op_expat:'駐在員',op_local:'現地採用',op_fit:'適正チャンバー',op_need:'人員(名)',
@@ -1580,48 +1580,52 @@ function render(){
   }catch(e){}
   // 🔔 자동 브리핑 — 위 차트들이 쌓아 둔 시계열을 넘긴다(이상치·추세·예측·원인 분해)
   GST.watch(_W);
-  // 🧊 피벗 — 이 페이지는 시트 5개를 합쳐 쓰므로 데이터 세트를 골라 볼 수 있게 한다.
-  // (실적 하나만 넘기면 인원·휴가·CIP·설치는 아예 파고들 수 없어 활용도가 없다)
-  GST.pivotReg({sets:[
-    { k:'wk', t:t('ch_ft'), rows:()=>fWK, date:'wd',
-      dims:[{k:'fab',t:t('sl_line')},{k:'custB',t:t('sl_customer')},{k:'country',t:t('sl_country')},
-            {k:'stage',t:t('pv_stage')},{k:'alarm',t:'Alarm'},{k:'cause',t:t('th_cause')},{k:'action',t:t('th_act')},
-            {k:x=>x.wd?keyOfDate(x.wd,PERIOD):'',t:t('sl_period')},
-            {k:'sn',t:t('pv_sn')},{k:'chamber',t:t('chp_c')}],
-      measures:[{k:'cnt',t:t('ft_total'),agg:'count'},
-                {k:'man',t:t('man_tot'),agg:'sum',f:x=>Math.round(x.manMin/60*10)/10},
-                {k:'sn',t:t('pv_sn'),agg:'uniq',f:'sn'}],
-      detailCols:[{k:'wd',t:t('sl_period')},{k:'fab',t:t('sl_line')},{k:'sn',t:t('pv_sn')},
-                  {k:'stage',t:t('pv_stage')},{k:'alarm',t:'Alarm'},{k:'cause',t:t('th_cause')},{k:'action',t:t('th_act')}] },
-    { k:'hr', t:t('head_l'), rows:()=>fHR, date:'join',
-      dims:[{k:x=>x.fab||x.custB||'ETC',t:t('sl_line')},{k:'custB',t:t('sl_customer')},
-            {k:x=>x.onsite?'현장(O)':'—',t:t('sec_ops')},
-            {k:x=>x.quit?'퇴사':'재직',t:t('grp_s')},
-            {k:x=>x.join?keyOfDate(x.join,PERIOD):'',t:t('sl_period')}],
-      measures:[{k:'cnt',t:t('head_l'),agg:'count'},{k:'id',t:'ID',agg:'uniq',f:'id'}],
-      detailCols:[{k:'name',t:t('head_l')},{k:'id',t:'ID'},{k:'fab',t:t('sl_line')},{k:'join',t:t('sl_period')},{k:'quit',t:t('grp_s')}] },
-    { k:'lv', t:t('att_l'), rows:()=>fLV, date:'date',
-      dims:[{k:'fab',t:t('sl_line')},{k:'custB',t:t('sl_customer')},
-            {k:x=>x.date?keyOfDate(x.date,PERIOD):'',t:t('sl_period')}],
-      measures:[{k:'d',t:t('att_l'),agg:'sum',f:'days'},{k:'cnt',t:t('ft_total'),agg:'count'}],
-      detailCols:[{k:'date',t:t('sl_period')},{k:'fab',t:t('sl_line')},{k:'days',t:t('att_l')}] },
-    { k:'cip', t:t('ch_cip'), rows:()=>CIP.filter(x=>okCF(x.custB,x.fab)), date:'done',
-      dims:[{k:'fab',t:t('sl_line')},{k:'custB',t:t('sl_customer')},{k:'item',t:t('cip_t')},
-            {k:x=>x.done?t('cip_d'):t('cip_t'),t:t('cip_p')}],
-      measures:[{k:'cnt',t:t('cip_t'),agg:'count'},{k:'done',t:t('cip_d'),agg:'sum',f:x=>x.done?1:0}],
-      detailCols:[{k:'fab',t:t('sl_line')},{k:'item',t:t('cip_t')},{k:'ap',t:t('sl_period')},{k:'done',t:t('cip_d')}] },
-    { k:'inst', t:t('ch_to'), rows:()=>fINST, date:r=>pd(r[CI.turnOn]),
-      dims:[{k:r=>GST.nfw(r[CI.fab]||'').trim()||'—',t:t('sl_line')},
-            {k:r=>GST.nfw(r[CI.customer]||'').trim()||'—',t:t('sl_customer')},
-            {k:r=>GST.nfw(r[CI.country]||'').trim()||'—',t:t('sl_country')},
-            {k:r=>String(r[CI.type]||'').toUpperCase().includes('DUAL')?'DUAL':'SINGLE',t:t('chp_c')}],
-      measures:[{k:'ch',t:t('op_ch')||t('chp_c'),agg:'sum',f:r=>String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1},
-                {k:'cnt',t:t('ft_total'),agg:'count'},
-                {k:'sn',t:t('pv_sn'),agg:'uniq',f:r=>GST.nfw(r[CI.sn]||'').trim()}],
-      detailCols:[{k:r=>GST.nfw(r[CI.sn]||'').trim(),t:t('pv_sn')},
-                  {k:r=>GST.nfw(r[CI.fab]||'').trim(),t:t('sl_line')},
-                  {k:r=>GST.fmtDate(pd(r[CI.turnOn])),t:t('ch_to')}] }
-  ]});
+  // 🧊 피벗 — 보고 싶은 "항목"을 고르면 그에 맞는 레코드가 나온다.
+  // 고장(BM) / 작업 실적 전체 / 인원 / 입·퇴사 / 휴가 / CIP — 표시 계층 전용, 지표 계산과 무관.
+  {
+    const _dimsWK=[{k:'fab',t:t('sl_line')},{k:'custB',t:t('sl_customer')},{k:'country',t:t('sl_country')},
+          {k:'stage',t:t('pv_stage')},{k:'alarm',t:'Alarm'},{k:'cause',t:t('th_cause')},{k:'action',t:t('th_act')},
+          {k:x=>x.wd?keyOfDate(x.wd,PERIOD):'',t:t('sl_period')},
+          {k:'sn',t:t('pv_sn')},{k:'chamber',t:t('chp_c')}];
+    const _measWK=[{k:'cnt',t:t('ft_total'),agg:'count'},
+          {k:'man',t:t('man_tot'),agg:'sum',f:x=>Math.round(x.manMin/60*10)/10},
+          {k:'sn',t:t('pv_sn'),agg:'uniq',f:'sn'}];
+    const _detWK=[{k:'wd',t:t('sl_period')},{k:'fab',t:t('sl_line')},{k:'sn',t:t('pv_sn')},
+          {k:'stage',t:t('pv_stage')},{k:'alarm',t:'Alarm'},{k:'cause',t:t('th_cause')},{k:'action',t:t('th_act')}];
+    GST.pivotReg({sets:[
+      { k:'ft', t:t('pv_s_ft'), rows:()=>fWK.filter(x=>isFault(x.stage)), date:'wd',
+        dims:_dimsWK, measures:_measWK, detailCols:_detWK },
+      { k:'wk', t:t('pv_s_wk'), rows:()=>fWK, date:'wd',
+        dims:_dimsWK, measures:_measWK, detailCols:_detWK },
+      { k:'hr', t:t('pv_s_hr'), rows:()=>fHR, date:'join',
+        dims:[{k:x=>x.fab||x.custB||'ETC',t:t('sl_line')},{k:'custB',t:t('sl_customer')},
+              {k:x=>x.onsite?'현장(O)':'—',t:t('sec_ops')},
+              {k:x=>x.quit instanceof Date?t('pv_quit'):t('pv_active'),t:t('grp_s')},
+              {k:x=>x.join?keyOfDate(x.join,PERIOD):'',t:t('sl_period')}],
+        measures:[{k:'cnt',t:t('head_l'),agg:'count'},{k:'id',t:'ID',agg:'uniq',f:'id'}],
+        detailCols:[{k:'name',t:t('head_l')},{k:'id',t:'ID'},{k:'fab',t:t('sl_line')},{k:'join',t:t('sl_period')}] },
+      { k:'io', t:t('pv_s_io'), date:'date',
+        rows:()=>{ const ev=[];
+          fHR.forEach(p=>{
+            if(p.join) ev.push({ev:t('pv_join'),date:p.join,fab:p.fab||p.custB||'ETC',custB:p.custB,name:p.name,id:p.id});
+            if(p.quit instanceof Date) ev.push({ev:t('pv_quit'),date:p.quit,fab:p.fab||p.custB||'ETC',custB:p.custB,name:p.name,id:p.id});
+          }); return ev; },
+        dims:[{k:'ev',t:t('pv_s_io')},{k:'fab',t:t('sl_line')},{k:'custB',t:t('sl_customer')},
+              {k:x=>x.date?keyOfDate(x.date,PERIOD):'',t:t('sl_period')}],
+        measures:[{k:'cnt',t:t('ft_total'),agg:'count'},{k:'id',t:'ID',agg:'uniq',f:'id'}],
+        detailCols:[{k:'ev',t:t('pv_s_io')},{k:'name',t:t('head_l')},{k:'fab',t:t('sl_line')},{k:'date',t:t('sl_period')}] },
+      { k:'lv', t:t('att_l'), rows:()=>fLV, date:'date',
+        dims:[{k:'fab',t:t('sl_line')},{k:'custB',t:t('sl_customer')},
+              {k:x=>x.date?keyOfDate(x.date,PERIOD):'',t:t('sl_period')}],
+        measures:[{k:'d',t:t('att_l'),agg:'sum',f:'days'},{k:'cnt',t:t('ft_total'),agg:'count'}],
+        detailCols:[{k:'date',t:t('sl_period')},{k:'fab',t:t('sl_line')},{k:'days',t:t('att_l')}] },
+      { k:'cip', t:t('ch_cip'), rows:()=>CIP.filter(x=>okCF(x.custB,x.fab)), date:'done',
+        dims:[{k:'fab',t:t('sl_line')},{k:'custB',t:t('sl_customer')},{k:'item',t:t('cip_t')},
+              {k:x=>x.done?t('cip_d'):t('cip_t'),t:t('cip_p')}],
+        measures:[{k:'cnt',t:t('cip_t'),agg:'count'},{k:'done',t:t('cip_d'),agg:'sum',f:x=>x.done?1:0}],
+        detailCols:[{k:'fab',t:t('sl_line')},{k:'item',t:t('cip_t')},{k:'ap',t:t('sl_period')},{k:'done',t:t('cip_d')}] }
+    ]});
+  }
   addCapBtns();
   applyAXB();   // ⚙ 사용자 축 범위 오버라이드 (표시 전용)
   GST.barSync();  // 공통 상단바에 현재 기간·마감·스타일 되쏘기

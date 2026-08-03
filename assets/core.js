@@ -2114,9 +2114,8 @@ GST.pivotOpen=function(){
       +'<label>'+T.disp+'</label><select id="gpvDisp">'
         +['raw','row','col','all'].map(function(k){ return '<option value="'+k+'"'+(disp===k?' selected':'')+'>'+T['d_'+k]+'</option>'; }).join('')
       +'</select>'
-      +'<label>'+T.top+'</label><select id="gpvTop">'
-        +[0,5,10,20,50].map(function(n){ return '<option value="'+n+'"'+(topN===n?' selected':'')+'>'+(n?n:T.t_all)+'</option>'; }).join('')
-      +'</select>'
+      +'<label>'+T.top+'</label><input type="number" id="gpvTop" min="0" step="1" value="'+(topN||'')+'"'
+        +' placeholder="'+T.t_all+'" title="'+T.top+' N — 0/'+T.t_all+'" style="width:52px">'
       +'<label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer">'
         +'<input type="checkbox" id="gpvSub"'+(showSub?' checked':'')+'>'+T.sub_on+'</label>';
     document.getElementById('gpvC0').innerHTML=h;
