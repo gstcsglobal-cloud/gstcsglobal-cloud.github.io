@@ -916,6 +916,9 @@ GST.trendAnnoPlugin = {
     if(!set.size) return;
     ctx.save();
     set.forEach(function(i){ var el=meta.data[i]; if(!el) return;
+      // 값이 0/빈 구간에는 링을 찍지 않는다. 막대 차트에서 0은 요소 높이가 0이라
+      // 링이 x축 선 위에 그려져 "정체불명의 빨간 동그라미"로 보인다.
+      var v=arr[i]; if(v==null||!isFinite(v)||v===0) return;
       ctx.beginPath(); ctx.arc(el.x, el.y, 5.5, 0, 6.2832); ctx.strokeStyle=col; ctx.lineWidth=2; ctx.stroke(); });
     ctx.restore();
   }
@@ -1782,57 +1785,89 @@ GST._ovCss=function(){
   if(GST._ovCSS) return; GST._ovCSS=true;
   const st=document.createElement('style');
   st.textContent=
-   '.gov{position:fixed;inset:0;z-index:9000;background:rgba(3,7,18,.72);display:flex;align-items:flex-start;'
+  // 테마 대응 — 페이지마다 --card 같은 변수가 없어서 밝은 테마에서 글씨가 묻혔다.
+  // 오버레이가 쓰는 색은 여기서 자급자족하고, body의 테마 클래스로만 갈아끼운다.
+   '.gov{--gov-bg:#101720;--gov-fg:#E6EDF3;--gov-mut:#8B98A9;--gov-line:rgba(151,170,196,.22);'
+  +'--gov-soft:rgba(151,170,196,.09);--gov-heat:45,212,191}'
+  +'body.theme-slate .gov{--gov-bg:#0C1219;--gov-fg:#e2e8f0;--gov-mut:#94a3b8;--gov-line:rgba(151,170,196,.18);--gov-soft:rgba(151,170,196,.08)}'
+  +'body.theme-burgundy .gov{--gov-bg:#1f0822;--gov-fg:#fbeaf4;--gov-mut:#b49aa9;--gov-line:rgba(255,240,245,.18);'
+  +'--gov-soft:rgba(255,240,245,.08);--gov-heat:244,114,182}'
+  +'body.theme-light .gov{--gov-bg:#ffffff;--gov-fg:#0f172a;--gov-mut:#64748b;--gov-line:rgba(15,23,42,.14);'
+  +'--gov-soft:rgba(15,23,42,.05);--gov-heat:37,99,235}'
+  +'.gov{position:fixed;inset:0;z-index:9000;background:rgba(3,7,18,.72);display:flex;align-items:flex-start;'
   +'justify-content:center;padding:34px 14px;overflow:auto;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}'
-  +'.gov-w{width:min(780px,100%);background:var(--card,#101720);border:1px solid var(--glass-border,rgba(151,170,196,.2));'
-  +'border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden}'
-  +'.gov-w.wide{width:min(1120px,100%)}'
-  +'.gov-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--glass-border,rgba(151,170,196,.16))}'
-  +'.gov-h h4{margin:0;font-size:14px;font-weight:800;color:var(--txt-main,#E6EDF3)}'
-  +'.gov-h .gov-sub{font-size:11px;color:var(--txt-muted,#8B98A9);font-weight:600}'
+  +'.gov-w{position:relative;width:min(780px,100%);background:var(--gov-bg);color:var(--gov-fg);'
+  +'border:1px solid var(--gov-line);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden}'
+  +'.gov-w.wide{width:min(1180px,100%)}'
+  +'.gov *{color:inherit}'
+  +'.gov-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--gov-line)}'
+  +'.gov-h h4{margin:0;font-size:14px;font-weight:800}'
+  +'.gov-h .gov-sub{font-size:11px;color:var(--gov-mut) !important;font-weight:600}'
   +'.gov-h .gov-sp{flex:1}'
-  +'.gov-b{background:var(--glass,rgba(255,255,255,.06));border:1px solid var(--glass-border,rgba(151,170,196,.2));'
-  +'border-radius:8px;color:var(--txt-main,#E6EDF3);font-family:inherit;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer}'
+  +'.gov-b{background:var(--gov-soft);border:1px solid var(--gov-line);border-radius:8px;color:var(--gov-fg);'
+  +'font-family:inherit;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;white-space:nowrap}'
   +'.gov-b:hover{border-color:var(--accent-1,#2DD4BF)}'
+  +'.gov-b.on{border-color:var(--accent-1,#2DD4BF)}'
   +'.gov-body{padding:8px 18px 16px;max-height:calc(100vh - 150px);overflow:auto}'
-  +'.gov-f{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 18px;border-top:1px solid var(--glass-border,rgba(151,170,196,.16));'
-  +'font-size:11px;color:var(--txt-muted,#8B98A9)}'
-  +'.gov-f input{width:56px;background:var(--glass,rgba(255,255,255,.06));border:1px solid var(--glass-border,rgba(151,170,196,.2));'
-  +'border-radius:6px;color:var(--txt-main,#E6EDF3);font-family:inherit;font-size:11px;padding:4px 6px}'
+  +'.gov-f{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 18px;border-top:1px solid var(--gov-line);'
+  +'font-size:11px;color:var(--gov-mut)}'
+  +'.gov-f input{width:56px;background:var(--gov-soft);border:1px solid var(--gov-line);'
+  +'border-radius:6px;color:var(--gov-fg);font-family:inherit;font-size:11px;padding:4px 6px}'
   // 브리핑 항목
-  +'.gbf-i{display:flex;gap:11px;align-items:flex-start;padding:11px 2px;border-bottom:1px solid var(--glass-border,rgba(151,170,196,.1))}'
+  +'.gbf-i{display:flex;gap:11px;align-items:flex-start;padding:11px 2px;border-bottom:1px solid var(--gov-line)}'
   +'.gbf-i:last-child{border-bottom:none}'
-  +'.gbf-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex:none;background:var(--txt-muted,#8B98A9)}'
-  +'.gbf-i.bad .gbf-dot{background:var(--bad,#fb7185)}.gbf-i.warn .gbf-dot{background:var(--warn,#fbbf24)}'
-  +'.gbf-i.ok .gbf-dot{background:var(--ok,#4ade80)}'
+  +'.gbf-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex:none;background:var(--gov-mut)}'
+  +'.gbf-i.bad .gbf-dot{background:#fb7185}.gbf-i.warn .gbf-dot{background:#fbbf24}'
+  +'.gbf-i.ok .gbf-dot{background:#4ade80}'
   +'.gbf-m{flex:1;min-width:0}'
-  +'.gbf-t{font-size:12px;font-weight:800;color:var(--txt-main,#E6EDF3);margin-bottom:2px}'
+  +'.gbf-t{font-size:12px;font-weight:800;margin-bottom:2px}'
   +'.gbf-tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:rgba(251,113,133,.18);'
-  +'color:var(--bad,#fb7185);font-size:9.5px;font-weight:800;vertical-align:1px}'
-  +'.gbf-v{font-size:11.5px;color:var(--txt-main,#E6EDF3);font-weight:600}'
-  +'.gbf-v .gbf-mut{color:var(--txt-muted,#8B98A9);font-weight:600}'
-  +'.gbf-w,.gbf-fc{font-size:10.5px;color:var(--txt-muted,#8B98A9);margin-top:3px}'
+  +'color:#fb7185 !important;font-size:9.5px;font-weight:800;vertical-align:1px}'
+  +'.gbf-v{font-size:11.5px;font-weight:600}'
+  +'.gbf-v .gbf-mut{color:var(--gov-mut) !important;font-weight:600}'
+  +'.gbf-w,.gbf-fc{font-size:10.5px;color:var(--gov-mut) !important;margin-top:3px}'
   +'.gbf-sp{flex:none;margin-top:3px;opacity:.85}'
-  +'.gbf-none{padding:26px 4px;text-align:center;font-size:12px;color:var(--txt-muted,#8B98A9)}'
-  // 피벗
-  +'.gpv-c{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--glass-border,rgba(151,170,196,.16))}'
-  +'.gpv-c label{font-size:10.5px;color:var(--txt-muted,#8B98A9);font-weight:700}'
-  +'.gpv-c select{background:var(--glass,rgba(255,255,255,.06));border:1px solid var(--glass-border,rgba(151,170,196,.2));'
-  +'border-radius:7px;color:var(--txt-main,#E6EDF3);font-family:inherit;font-size:11px;padding:4px 6px;max-width:150px}'
-  +'.gpv-sc{overflow:auto;max-height:calc(100vh - 250px)}'
+  +'.gbf-none{padding:26px 4px;text-align:center;font-size:12px;color:var(--gov-mut) !important}'
+  +'.gbf-src{font-size:9.5px;color:var(--gov-mut) !important;margin-left:6px;font-weight:600}'
+  // 피벗 컨트롤
+  +'.gpv-c{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--gov-line);position:relative}'
+  +'.gpv-c label{font-size:10.5px;color:var(--gov-mut) !important;font-weight:700}'
+  +'.gpv-c select,.gpv-c input{background:var(--gov-soft);border:1px solid var(--gov-line);'
+  +'border-radius:7px;color:var(--gov-fg);font-family:inherit;font-size:11px;padding:4px 6px;max-width:170px}'
+  +'.gpv-c input[type=date]{width:130px}'
+  +'.gpv-badge{display:inline-block;margin-left:4px;padding:0 4px;border-radius:6px;background:var(--accent-1,#2DD4BF);'
+  +'color:#04211d !important;font-size:9px;font-weight:800}'
+  // 값 필터 팝오버
+  +'.gpv-pop{position:absolute;z-index:40;top:44px;background:var(--gov-bg);border:1px solid var(--gov-line);'
+  +'border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.45);padding:9px;width:236px}'
+  +'.gpv-pop input[type=search]{width:100%;margin-bottom:6px;background:var(--gov-soft);border:1px solid var(--gov-line);'
+  +'border-radius:6px;color:var(--gov-fg);font-family:inherit;font-size:11px;padding:4px 7px}'
+  +'.gpv-list{max-height:210px;overflow:auto;margin-bottom:7px}'
+  +'.gpv-list label{display:flex;align-items:center;gap:6px;padding:3px 2px;font-size:11px;cursor:pointer;'
+  +'color:var(--gov-fg) !important;font-weight:600;white-space:nowrap}'
+  +'.gpv-list label:hover{background:var(--gov-soft)}'
+  +'.gpv-list .n{margin-left:auto;color:var(--gov-mut) !important;font-size:10px;font-weight:700}'
+  +'.gpv-pop .gpv-pb{display:flex;gap:6px}'
+  +'.gpv-pop .gpv-pb .gov-b{flex:1;text-align:center}'
+  // 피벗 표
+  +'.gpv-sc{overflow:auto;max-height:calc(100vh - 280px)}'
   +'.gpv-t{border-collapse:separate;border-spacing:0;width:100%;font-size:11px}'
-  +'.gpv-t th,.gpv-t td{padding:5px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--glass-border,rgba(151,170,196,.1))}'
-  +'.gpv-t th{position:sticky;top:0;z-index:2;background:var(--card,#101720);color:var(--txt-muted,#8B98A9);font-size:10px;font-weight:800}'
-  +'.gpv-t th:first-child,.gpv-t td:first-child{text-align:left;position:sticky;left:0;z-index:1;background:var(--card,#101720);font-weight:700}'
-  +'.gpv-t th:first-child{z-index:3}'
-  +'.gpv-t td.gpv-cell{cursor:pointer;color:var(--txt-main,#E6EDF3);font-weight:700}'
-  +'.gpv-t td.gpv-cell:hover{outline:1px solid var(--accent-1,#2DD4BF);outline-offset:-1px}'
-  +'.gpv-t tr.gpv-tot td,.gpv-t td.gpv-tot{font-weight:800;color:var(--txt-main,#E6EDF3);background:rgba(151,170,196,.07)}'
-  +'.gpv-d{border-top:1px solid var(--glass-border,rgba(151,170,196,.16));padding:8px 18px 4px;font-size:10.5px;color:var(--txt-muted,#8B98A9)}'
-  +'.gpv-d table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:5px}'
-  +'.gpv-d td,.gpv-d th{padding:3px 6px;border-bottom:1px solid var(--glass-border,rgba(151,170,196,.1));text-align:left;white-space:nowrap}'
-  +'.gpv-d th{color:var(--txt-muted,#8B98A9);font-weight:800}'
-  +'.gpv-d td{color:var(--txt-main,#E6EDF3)}'
+  +'.gov .gpv-t th,.gov .gpv-t td{padding:5px 8px;text-align:right;white-space:nowrap;'
+  +'border-bottom:1px solid var(--gov-line);text-transform:none;letter-spacing:0;cursor:default}'
+  +'.gov .gpv-t th{position:sticky;top:0;z-index:2;background:var(--gov-bg) !important;'
+  +'color:var(--gov-mut) !important;font-size:10px;font-weight:800}'
+  +'.gov .gpv-t th:first-child,.gov .gpv-t td:first-child{text-align:left;position:sticky;left:0;z-index:1;'
+  +'background:var(--gov-bg) !important;font-weight:700;color:var(--gov-fg) !important}'
+  +'.gov .gpv-t th:first-child{z-index:3;color:var(--gov-mut) !important}'
+  +'.gov .gpv-t th.gpv-sort{cursor:pointer;user-select:none}'+'.gov .gpv-t th.gpv-sort:hover{color:var(--gov-fg) !important}'+'.gov .gpv-t td.gpv-cell{cursor:pointer;font-weight:700}'
+  +'.gov .gpv-t td.gpv-cell:hover{outline:1px solid var(--accent-1,#2DD4BF);outline-offset:-1px}'
+  +'.gov .gpv-t tr.gpv-tot td,.gov .gpv-t td.gpv-tot{font-weight:800;background:var(--gov-soft) !important}'
+  +'.gpv-d{border-top:1px solid var(--gov-line);padding:8px 18px 10px;font-size:10.5px;color:var(--gov-mut)}'
+  +'.gov .gpv-d table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:5px}'
+  +'.gov .gpv-d td,.gov .gpv-d th{padding:3px 6px;border-bottom:1px solid var(--gov-line);text-align:left;'
+  +'white-space:nowrap;position:static;text-transform:none;letter-spacing:0}'
+  +'.gov .gpv-d th{color:var(--gov-mut) !important;font-weight:800;background:transparent !important}'
+  +'.gov .gpv-d td{color:var(--gov-fg) !important;background:transparent !important}'
   +'@media print{.gov{display:none !important}}';
   document.head.appendChild(st);
 };
@@ -1916,29 +1951,61 @@ GST.briefOpen=function(){
 };
 
 /* ============================================================
-   23. 다차원 피벗 — 현재 필터가 걸린 원시 레코드를 행×열로 교차 집계
-   페이지가 GST.pivotReg({rows,dims,measures})로 등록하면 상단바 🧊 버튼이 켜진다.
-   rows()는 "지금 화면에 반영된" 배열을 그대로 돌려주면 된다 — 필터가 그대로 승계된다.
-     dims     = [{k:'site', t:'사이트'}, …]           k는 필드명 또는 function(rec)
-     measures = [{k:'cnt', t:'건수', agg:'count'},
-                 {k:'hours', t:'공수', agg:'sum', f:'manHour'}, …]   agg: count|sum|avg|uniq
+   23. 다차원 피벗 — 엑셀 피벗테이블에 준하는 교차 분석
+   페이지는 "데이터 세트"를 하나 이상 등록한다. 한 페이지 안에서도 성격이 다른
+   표(작업 실적 / 인원 / 휴가 / 설치 …)를 골라 볼 수 있게 하기 위해서다.
+
+     GST.pivotReg({sets:[
+       {k:'wk', t:'작업 실적', rows:()=>fWK, date:'wd',
+        dims:[{k:'fab',t:'라인'},…], measures:[{k:'cnt',t:'건수',agg:'count'},…],
+        detailCols:[…]},
+       …]});
+   세트가 하나뿐이면 예전 형태({rows,dims,measures})도 그대로 받는다.
+
+   기능(엑셀 대응)
+     · 데이터 세트 전환 · 기간(날짜 범위) 좁히기
+     · 행 축 3단계 중첩 + 소계  — 예) 알람유형 → 원인 → 조치
+     · 열 축 1단계 · 축 전치
+     · 값(측정값) 여러 개 동시 표시 — 열값 × 측정값으로 컬럼이 늘어난다
+     · 값 표시 형식: 원값 / 행 대비 % / 열 대비 % / 총계 대비 %
+     · 행·열 값 골라보기(체크박스 + 검색) · 상위 N만 보기(나머지는 '기타'로 합산)
+     · 헤더 클릭 정렬(내림 → 오름 → 해제)
+     · TSV 복사 · CSV 내려받기 · 셀 클릭 시 원본 상세
    ============================================================ */
 GST.PIV_T={
-  ko:{t:'다차원 피벗',sub:'현재 필터 기준 교차 집계',row:'행',col:'열',val:'값',swap:'⇄ 전치',
-      copy:'복사(TSV)',copied:'복사됨',close:'닫기',tot:'합계',none:'표시할 데이터가 없습니다.',
-      no:'(없음)',detail:'상세',more:'외 %n건'},
-  en:{t:'Pivot',sub:'Cross-tab on current filters',row:'Rows',col:'Cols',val:'Value',swap:'⇄ Swap',
-      copy:'Copy (TSV)',copied:'Copied',close:'Close',tot:'Total',none:'No data to show.',
-      no:'(none)',detail:'Detail',more:'+%n more'},
-  zh:{t:'多维透视',sub:'按当前筛选交叉汇总',row:'行',col:'列',val:'值',swap:'⇄ 转置',
-      copy:'复制(TSV)',copied:'已复制',close:'关闭',tot:'合计',none:'无数据。',
-      no:'(无)',detail:'明细',more:'其他%n条'},
-  ja:{t:'多次元ピボット',sub:'現在のフィルタで集計',row:'行',col:'列',val:'値',swap:'⇄ 転置',
-      copy:'コピー(TSV)',copied:'コピー済',close:'閉じる',tot:'合計',none:'データがありません。',
-      no:'(なし)',detail:'明細',more:'他%n件'}
+  ko:{t:'다차원 피벗',sub:'현재 필터 기준 교차 집계',src:'데이터',per:'기간',row:'행',col:'열',val:'값',swap:'⇄ 전치',
+      copy:'복사(TSV)',copied:'복사됨',csv:'CSV',close:'닫기',tot:'합계',sub2:'소계',etc:'기타',
+      none:'표시할 데이터가 없습니다.',no:'(없음)',detail:'상세',more:'외 {n}건',pick:'값 고르기',
+      all:'전체',clr:'해제',apply:'적용',find:'검색',rows:'{n}행',non:'—',
+      disp:'표시',d_raw:'원값',d_row:'행 대비 %',d_col:'열 대비 %',d_all:'총계 대비 %',
+      top:'상위',t_all:'전체',sub_on:'소계'},
+  en:{t:'Pivot',sub:'Cross-tab on current filters',src:'Data',per:'Period',row:'Rows',col:'Cols',val:'Values',swap:'⇄ Swap',
+      copy:'Copy (TSV)',copied:'Copied',csv:'CSV',close:'Close',tot:'Total',sub2:'Subtotal',etc:'Others',
+      none:'No data to show.',no:'(none)',detail:'Detail',more:'+{n} more',pick:'Filter',
+      all:'All',clr:'Clear',apply:'Apply',find:'Search',rows:'{n} rows',non:'—',
+      disp:'Show as',d_raw:'Value',d_row:'% of row',d_col:'% of column',d_all:'% of total',
+      top:'Top',t_all:'All',sub_on:'Subtotals'},
+  zh:{t:'多维透视',sub:'按当前筛选交叉汇总',src:'数据',per:'期间',row:'行',col:'列',val:'值',swap:'⇄ 转置',
+      copy:'复制(TSV)',copied:'已复制',csv:'CSV',close:'关闭',tot:'合计',sub2:'小计',etc:'其他',
+      none:'无数据。',no:'(无)',detail:'明细',more:'其他{n}条',pick:'筛选值',
+      all:'全部',clr:'清除',apply:'应用',find:'搜索',rows:'{n}行',non:'—',
+      disp:'显示方式',d_raw:'数值',d_row:'占行%',d_col:'占列%',d_all:'占总计%',
+      top:'前',t_all:'全部',sub_on:'小计'},
+  ja:{t:'多次元ピボット',sub:'現在のフィルタで集計',src:'データ',per:'期間',row:'行',col:'列',val:'値',swap:'⇄ 転置',
+      copy:'コピー(TSV)',copied:'コピー済',csv:'CSV',close:'閉じる',tot:'合計',sub2:'小計',etc:'その他',
+      none:'データがありません。',no:'(なし)',detail:'明細',more:'他{n}件',pick:'値を選ぶ',
+      all:'全体',clr:'解除',apply:'適用',find:'検索',rows:'{n}行',non:'—',
+      disp:'表示形式',d_raw:'実数',d_row:'行比%',d_col:'列比%',d_all:'総計比%',
+      top:'上位',t_all:'全体',sub_on:'小計'}
 };
 GST._pivot=null;
-GST.pivotReg=function(spec){ GST._pivot=spec||null; };
+GST.PIV_LV=3;                 // 행 축 중첩 단계 수
+GST._PIV_SEP='';
+GST.pivotReg=function(spec){
+  if(spec && !spec.sets) spec={sets:[Object.assign({k:'d0'},spec)]};
+  if(spec && spec.sets) spec.sets=spec.sets.filter(function(s){ return s&&s.rows&&(s.dims||[]).length&&(s.measures||[]).length; });
+  GST._pivot=(spec&&spec.sets&&spec.sets.length)?spec:null;
+};
 GST._pivGet=function(rec,k){
   if(typeof k==='function'){ try{ return k(rec); }catch(e){ return null; } }
   return rec ? rec[k] : null;
@@ -1948,101 +2015,292 @@ GST._pivLbl=function(v,T){
   if(v instanceof Date) return GST.fmtDate(v);
   return String(v);
 };
-// 교차 집계 — {rNames, cNames, cell(r,c), rowTot, colTot, grand, recs(r,c)}
-GST.pivotCalc=function(rows, rowK, colK, meas, T){
-  const buck=new Map(), rSet=new Map(), cSet=new Map();
+// 레코드 묶음 하나를 측정값 정의대로 집계
+GST.pivotAgg=function(recs, meas){
+  if(!recs||!recs.length) return null;
+  const a=meas.agg||'count';
+  if(a==='count') return recs.length;
+  if(a==='uniq'){ const s=new Set();
+    recs.forEach(function(r){ const v=GST._pivGet(r,meas.f); if(v!=null&&v!=='') s.add(String(v)); }); return s.size; }
+  let sum=0,n=0;
+  recs.forEach(function(r){ const v=+GST._pivGet(r,meas.f); if(isFinite(v)){ sum+=v; n++; } });
+  if(!n) return null;
+  if(a==='avg') return Math.round(sum/n*10)/10;
+  return Math.round(sum*10)/10;
+};
+// 레코드를 행키(중첩)×열값으로 버킷팅. 집계는 호출부가 측정값별로 수행한다.
+GST.pivotCalc=function(rows, rowKs, colK, T){
+  const SEP=GST._PIV_SEP, buck=new Map(), rMap=new Map(), cSet=new Set();
   (rows||[]).forEach(function(rec){
-    const rv=GST._pivLbl(GST._pivGet(rec,rowK),T), cv=colK?GST._pivLbl(GST._pivGet(rec,colK),T):T.tot;
-    rSet.set(rv,(rSet.get(rv)||0)+1); cSet.set(cv,(cSet.get(cv)||0)+1);
-    const key=rv+' '+cv; let a=buck.get(key); if(!a){ a=[]; buck.set(key,a); }
+    const parts=rowKs.map(function(k){ return GST._pivLbl(GST._pivGet(rec,k),T); });
+    const rv=parts.join(SEP);
+    const cv=colK?GST._pivLbl(GST._pivGet(rec,colK),T):T.tot;
+    if(!rMap.has(rv)) rMap.set(rv,parts);
+    cSet.add(cv);
+    const key=rv+SEP+SEP+cv; let a=buck.get(key); if(!a){ a=[]; buck.set(key,a); }
     a.push(rec);
   });
-  const agg=function(recs){
-    if(!recs||!recs.length) return null;
-    const a=meas.agg||'count';
-    if(a==='count') return recs.length;
-    if(a==='uniq'){ const s=new Set(); recs.forEach(function(r){ const v=GST._pivGet(r,meas.f); if(v!=null&&v!=='') s.add(String(v)); }); return s.size; }
-    let sum=0,n=0;
-    recs.forEach(function(r){ const v=+GST._pivGet(r,meas.f); if(isFinite(v)){ sum+=v; n++; } });
-    if(a==='avg') return n?Math.round(sum/n*10)/10:null;
-    return Math.round(sum*10)/10;
-  };
-  const rNames=[...rSet.keys()].sort(), cNames=[...cSet.keys()].sort();
-  const cell=function(r,c){ return agg(buck.get(r+' '+c)); };
-  const recsOf=function(r,c){ return buck.get(r+' '+c)||[]; };
-  const rowRecs=function(r){ let a=[]; cNames.forEach(function(c){ a=a.concat(recsOf(r,c)); }); return a; };
-  const colRecs=function(c){ let a=[]; rNames.forEach(function(r){ a=a.concat(recsOf(r,c)); }); return a; };
-  return {rNames:rNames, cNames:cNames, cell:cell, recs:recsOf,
-          rowTot:function(r){ return agg(rowRecs(r)); },
-          colTot:function(c){ return agg(colRecs(c)); },
-          grand:agg(rows||[])};
+  const rKeys=[...rMap.keys()].sort(), cNames=[...cSet].sort();
+  const recsOf=function(rk,c){ return buck.get(rk+SEP+SEP+c)||[]; };
+  const rowRecs=function(rk){ let a=[]; cNames.forEach(function(c){ a=a.concat(recsOf(rk,c)); }); return a; };
+  const many=function(keys,c){ let a=[];
+    keys.forEach(function(rk){ a=a.concat(c==null?rowRecs(rk):recsOf(rk,c)); }); return a; };
+  const preKeys=function(pfx){ return rKeys.filter(function(rk){ return rk===pfx||rk.indexOf(pfx+SEP)===0; }); };
+  return {rKeys:rKeys, cNames:cNames, parts:function(rk){ return rMap.get(rk)||[]; },
+          recs:recsOf, rowRecs:rowRecs, many:many, preKeys:preKeys,
+          colRecs:function(c){ return many(rKeys,c); },
+          allRecs:function(){ return many(rKeys,null); }};
 };
-GST._pivState=function(){
-  const k='gst_piv_'+location.pathname.replace(/[^a-z0-9]/gi,'');
-  let o={}; try{ o=JSON.parse(sessionStorage.getItem(k)||'{}')||{}; }catch(e){}
-  return {get:o, set:function(n){ try{ sessionStorage.setItem(k, JSON.stringify(n)); }catch(e){} }};
-};
-GST.pivotOpen=function(){
-  const S=GST._pivot; if(!S) return;
-  const T=GST.PIV_T[GST._lang()]||GST.PIV_T.ko;
-  const dims=(S.dims||[]).filter(Boolean), meas=(S.measures||[]).filter(Boolean);
-  if(!dims.length||!meas.length) return;
-  const ST=GST._pivState(), sv=ST.get;
-  let ri=dims[sv.r]?+sv.r:0, ci=dims[sv.c]?+sv.c:(dims.length>1?1:0), mi=meas[sv.m]?+sv.m:0;
-  if(ci===ri && dims.length>1) ci=(ri+1)%dims.length;
+GST._pivKey=function(){ return 'gst_piv_'+location.pathname.replace(/[^a-z0-9]/gi,''); };
+GST._pivLoad=function(){ try{ return JSON.parse(sessionStorage.getItem(GST._pivKey())||'{}')||{}; }catch(e){ return {}; } };
+GST._pivSave=function(o){ try{ sessionStorage.setItem(GST._pivKey(), JSON.stringify(o)); }catch(e){} };
 
-  const opt=function(list,sel){ return list.map(function(d,i){
-    return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'+GST._esc(d.t||d.k)+'</option>'; }).join(''); };
+GST.pivotOpen=function(){
+  const SPEC=GST._pivot; if(!SPEC) return;
+  const T=GST.PIV_T[GST._lang()]||GST.PIV_T.ko, SEP=GST._PIV_SEP, LV=GST.PIV_LV;
+  const SETS=SPEC.sets, sv=GST._pivLoad();
+  let si=(SETS[sv.s]?+sv.s:0);
+  let RD=[0,-1,-1], ci=-1, MS=[0];
+  let from=sv.from||'', to=sv.to||'';
+  let RF=[null,null,null], CF=null;
+  let sortC=sv.sc||'', sortD=(sv.sd===-1?-1:1);
+  let disp=sv.disp||'raw', topN=+sv.top||0, showSub=(sv.sub!==0);
+  let LAST=null, POP=null, VIEW=null;
+
+  const S=function(){ return SETS[si]; };
+  const dims=function(){ return S().dims; }, meas=function(){ return S().measures; };
+  function norm(){
+    const D=dims(), M=meas();
+    RD=RD.map(function(v){ return (v>=0&&v<D.length)?v:-1; });
+    if(RD.every(function(v){ return v<0; })) RD[0]=0;
+    if(ci>=D.length) ci=-1;
+    MS=MS.filter(function(i){ return i>=0&&i<M.length; });
+    if(!MS.length) MS=[0];
+  }
+  if(SETS[sv.s]&&Array.isArray(sv.rd)){ RD=sv.rd.slice(0,LV); while(RD.length<LV)RD.push(-1);
+    ci=(sv.c==null?-1:+sv.c); MS=Array.isArray(sv.ms)?sv.ms.slice():[0]; }
+  else { const D=SETS[si].dims; RD=[0,-1,-1]; ci=D.length>1?1:-1; MS=[0]; }
+  norm();
+  const active=function(){ return RD.filter(function(v){ return v>=0; }); };
+  const save=function(){ GST._pivSave({s:si,rd:RD,c:ci,ms:MS,from:from,to:to,sc:sortC,sd:sortD,disp:disp,top:topN,sub:showSub?1:0}); };
+
+  const opt=function(list,sel,none){ return (none?'<option value="-1"'+(sel<0?' selected':'')+'>'+T.non+'</option>':'')
+    + list.map(function(d,i){ return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'+GST._esc(d.t||d.k)+'</option>'; }).join(''); };
 
   const ov=GST._ovOpen(
      '<div class="gov-h"><h4>🧊 '+T.t+'</h4><span class="gov-sub">'+T.sub+'</span><span class="gov-sp"></span>'
     +'<button class="gov-b" data-piv="copy">'+T.copy+'</button>'
+    +'<button class="gov-b" data-piv="csv">'+T.csv+'</button>'
     +'<button class="gov-b" data-piv="close">'+T.close+'</button></div>'
-    +'<div class="gpv-c"><label>'+T.row+'</label><select id="gpvR">'+opt(dims,ri)+'</select>'
-    +'<label>'+T.col+'</label><select id="gpvC">'+opt(dims,ci)+'</select>'
-    +'<button class="gov-b" data-piv="swap">'+T.swap+'</button>'
-    +'<label>'+T.val+'</label><select id="gpvM">'+opt(meas,mi)+'</select></div>'
+    +'<div class="gpv-c" id="gpvC0"></div>'
     +'<div class="gpv-sc" id="gpvSc"></div><div id="gpvD"></div>', true);
 
-  let LAST=null;
+  function ctrls(){
+    const D=dims(), M=meas(), hasDate=!!S().date;
+    const badge=function(f){ return f?'<span class="gpv-badge">'+f.size+'</span>':''; };
+    let h=(SETS.length>1?'<label>'+T.src+'</label><select id="gpvS">'+opt(SETS,si,false)+'</select>':'')
+      +(hasDate?('<label>'+T.per+'</label><input type="date" id="gpvF" value="'+from+'">'
+                +'<span style="opacity:.6">~</span><input type="date" id="gpvT" value="'+to+'">'):'')
+      +'<label>'+T.row+'</label>';
+    for(let L=0;L<LV;L++){
+      h+='<select id="gpvR'+L+'" data-lv="'+L+'">'+opt(D,RD[L],L>0)+'</select>'
+        +(RD[L]>=0?'<button class="gov-b'+(RF[L]?' on':'')+'" data-piv="rf" data-lv="'+L+'" title="'+T.pick+'">▾'+badge(RF[L])+'</button>':'');
+    }
+    h+='<label>'+T.col+'</label><select id="gpvC">'+opt(D,ci,true)+'</select>'
+      +(ci>=0?'<button class="gov-b'+(CF?' on':'')+'" data-piv="cf" title="'+T.pick+'">▾'+badge(CF)+'</button>':'')
+      +'<button class="gov-b" data-piv="swap">'+T.swap+'</button>'
+      +'<label>'+T.val+'</label><button class="gov-b'+(MS.length>1?' on':'')+'" data-piv="ms">'
+        + GST._esc(MS.map(function(i){ return M[i].t||M[i].k; }).join(', ')) +' ▾</button>'
+      +'<label>'+T.disp+'</label><select id="gpvDisp">'
+        +['raw','row','col','all'].map(function(k){ return '<option value="'+k+'"'+(disp===k?' selected':'')+'>'+T['d_'+k]+'</option>'; }).join('')
+      +'</select>'
+      +'<label>'+T.top+'</label><select id="gpvTop">'
+        +[0,5,10,20,50].map(function(n){ return '<option value="'+n+'"'+(topN===n?' selected':'')+'>'+(n?n:T.t_all)+'</option>'; }).join('')
+      +'</select>'
+      +'<label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer">'
+        +'<input type="checkbox" id="gpvSub"'+(showSub?' checked':'')+'>'+T.sub_on+'</label>';
+    document.getElementById('gpvC0').innerHTML=h;
+  }
+  function baseRows(){
+    let rows=[]; try{ const r=S().rows; rows=(typeof r==='function')?(r()||[]):(r||[]); }catch(e){ rows=[]; }
+    const dk=S().date; if(!dk||(!from&&!to)) return rows;
+    const fd=from?new Date(from+'T00:00:00Z'):null, td=to?new Date(to+'T23:59:59Z'):null;
+    return rows.filter(function(rec){
+      const d=GST._pivGet(rec,dk); if(!(d instanceof Date)||isNaN(d)) return false;
+      if(fd&&d<fd) return false; if(td&&d>td) return false; return true; });
+  }
+  function filtered(){
+    const D=dims();
+    return baseRows().filter(function(rec){
+      for(let L=0;L<LV;L++){ if(RD[L]>=0&&RF[L]&&!RF[L].has(GST._pivLbl(GST._pivGet(rec,D[RD[L]].k),T))) return false; }
+      if(ci>=0&&CF&&!CF.has(GST._pivLbl(GST._pivGet(rec,D[ci].k),T))) return false;
+      return true; });
+  }
+  const fmtV=function(v,base){
+    if(v==null) return '·';
+    if(disp==='raw') return GST._num(v);
+    if(base==null||!base) return '·';
+    return (Math.round(v/base*1000)/10)+'%';
+  };
   function draw(){
-    ri=+document.getElementById('gpvR').value; ci=+document.getElementById('gpvC').value; mi=+document.getElementById('gpvM').value;
-    ST.set({r:ri,c:ci,m:mi});
-    let rows=[]; try{ rows=(typeof S.rows==='function')?(S.rows()||[]):(S.rows||[]); }catch(e){ rows=[]; }
-    const P=GST.pivotCalc(rows, dims[ri].k, (ci===ri?null:dims[ci].k), meas[mi], T);
-    LAST=P;
+    ctrls(); save();
+    const D=dims(), M=meas(), AC=active(), rows=filtered();
+    const P=GST.pivotCalc(rows, AC.map(function(i){ return D[i].k; }), ci>=0?D[ci].k:null, T);
+    const A=GST.pivotAgg;
+    const cell =function(rk,c,m){ return A(P.recs(rk,c), M[m]); };
+    const rowT =function(rk,m){ return A(P.rowRecs(rk), M[m]); };
+    const colT =function(c,m){ return A(P.colRecs(c), M[m]); };
+    const preC =function(ks,c,m){ return A(P.many(ks,c), M[m]); };
+    const preT =function(ks,m){ return A(P.many(ks,null), M[m]); };
+    const grand=function(m){ return A(P.allRecs(), M[m]); };
+    const nLv=AC.length;
     const sc=document.getElementById('gpvSc'), dv=document.getElementById('gpvD');
     dv.innerHTML='';
-    if(!P.rNames.length){ sc.innerHTML='<div class="gbf-none">'+T.none+'</div>'; return; }
-    // 열 상한 — 카디널리티가 큰 축을 잘못 고르면 표가 폭발하므로 막는다
-    const cN=P.cNames.slice(0,40), cut=P.cNames.length-cN.length;
-    let mx=0; P.rNames.forEach(function(r){ cN.forEach(function(c){ const v=P.cell(r,c); if(v!=null&&v>mx)mx=v; }); });
-    let h='<table class="gpv-t"><thead><tr><th>'+GST._esc(dims[ri].t||dims[ri].k)+'</th>'
-      + cN.map(function(c){ return '<th>'+GST._esc(c)+'</th>'; }).join('')
-      + '<th class="gpv-tot">'+T.tot+'</th></tr></thead><tbody>';
-    P.rNames.forEach(function(r){
-      h+='<tr><td>'+GST._esc(r)+'</td>'+cN.map(function(c){
-        const v=P.cell(r,c);
-        if(v==null) return '<td class="gpv-mut">·</td>';
-        const a=mx>0?(0.07+0.42*(v/mx)):0.1;
-        return '<td class="gpv-cell" data-r="'+GST._esc(r)+'" data-c="'+GST._esc(c)+'" '
-          +'style="background:rgba(45,212,191,'+a.toFixed(3)+')">'+GST._num(v)+'</td>';
-      }).join('')+'<td class="gpv-tot">'+GST._num(P.rowTot(r))+'</td></tr>';
+    if(!P.rKeys.length){ sc.innerHTML='<div class="gbf-none">'+T.none+'</div>'; return; }
+
+    // ---- 정렬 ----
+    // 중첩일 때는 반드시 1단계 그룹이 붙어 있어야 한다. 그렇지 않으면 같은 그룹의
+    // 소계가 표 여기저기서 반복 출력된다. 그래서 정렬은 항상 (그룹, 그 안의 값) 2단계로 한다.
+    let keys=P.rKeys.slice();
+    const gVal={}; if(nLv>1) keys.forEach(function(rk){ const g=P.parts(rk)[0];
+      if(!(g in gVal)) gVal[g]=preT(P.preKeys(g),MS[0])||0; });
+    const leafVal=function(rk){
+      let v;
+      if(!sortC||sortC==='#tot') v=rowT(rk,MS[0]);
+      else if(sortC==='#lab') return null;
+      else { const q=String(sortC).split(SEP); v=cell(rk,q[0],+q[1]||0); }
+      return v==null?-Infinity:v;
+    };
+    const order=function(list){
+      if(sortC==='#lab'){
+        list.sort(function(a,b){ return String(a).localeCompare(String(b),undefined,{numeric:true})*(sortD>0?1:-1); });
+        return list;
+      }
+      if(nLv>1) list.sort(function(a,b){
+        const ga=P.parts(a)[0], gb=P.parts(b)[0];
+        if(ga!==gb) return (gVal[gb]-gVal[ga])*sortD || String(ga).localeCompare(String(gb));
+        return (leafVal(b)-leafVal(a))*sortD; });
+      else list.sort(function(a,b){ return (leafVal(b)-leafVal(a))*sortD; });
+      return list;
+    };
+    order(keys);
+    // ---- 상위 N ----
+    // 중첩일 때는 '상위 N개 그룹'(엑셀의 행 필드 상위 N과 같은 의미)을 남긴다.
+    // 잎 단위로 자르면 한 그룹이 반토막 나서 소계가 실제와 어긋난다.
+    let etcKeys=[];
+    if(topN>0){
+      if(nLv>1){
+        const gs=Object.keys(gVal).sort(function(a,b){ return gVal[b]-gVal[a]; });
+        if(gs.length>topN){
+          const keep=new Set(gs.slice(0,topN));
+          etcKeys=keys.filter(function(rk){ return !keep.has(P.parts(rk)[0]); });
+          keys=keys.filter(function(rk){ return keep.has(P.parts(rk)[0]); });
+        }
+      }else if(keys.length>topN){
+        etcKeys=keys.slice(topN); keys=keys.slice(0,topN);
+      }
+    }
+    // 열 축이 없으면 pivotCalc이 만든 합성 '합계' 열과 행 합계 열이 중복된다 → 합계 열만 남긴다
+    const noCol=(ci<0);
+    const cN=noCol?[]:P.cNames.slice(0,40), cut=noCol?0:(P.cNames.length-cN.length);
+    // 히트맵 기준값 (원값일 때만)
+    let mx=0; if(disp==='raw') keys.forEach(function(rk){
+      if(noCol){ MS.forEach(function(m){ const v=rowT(rk,m); if(v!=null&&v>mx)mx=v; }); }
+      else cN.forEach(function(c){ MS.forEach(function(m){ const v=cell(rk,c,m); if(v!=null&&v>mx)mx=v; }); }); });
+
+    const arrow=function(k){ return sortC===k?(sortD>0?' ▼':' ▲'):''; };
+    const multi=MS.length>1;
+    // ---- 헤더 ----
+    let h='<table class="gpv-t"><thead><tr>';
+    AC.forEach(function(i,n){ h+= n===0
+      ? '<th class="gpv-sort" data-sc="#lab"'+(multi?' rowspan="2"':'')+'>'+GST._esc(D[i].t||D[i].k)+arrow('#lab')+'</th>'
+      : '<th'+(multi?' rowspan="2"':'')+'>'+GST._esc(D[i].t||D[i].k)+'</th>'; });
+    cN.forEach(function(c){
+      if(multi) h+='<th colspan="'+MS.length+'" style="text-align:center">'+GST._esc(c)+'</th>';
+      else h+='<th class="gpv-sort" data-sc="'+GST._esc(c+SEP+MS[0])+'">'+GST._esc(c)+arrow(c+SEP+MS[0])+'</th>';
     });
-    h+='</tbody><tfoot><tr class="gpv-tot"><td>'+T.tot+'</td>'
-      + cN.map(function(c){ return '<td>'+GST._num(P.colTot(c))+'</td>'; }).join('')
-      + '<td>'+GST._num(P.grand)+'</td></tr></tfoot></table>';
-    if(cut>0) h+='<div class="gpv-d">'+T.more.replace('%n',cut)+'</div>';
+    h+= multi?'<th colspan="'+MS.length+'" style="text-align:center">'+T.tot+'</th>'
+             :'<th class="gpv-sort" data-sc="#tot">'+T.tot+arrow('#tot')+'</th>';
+    h+='</tr>';
+    if(multi){
+      h+='<tr>';
+      cN.forEach(function(c){ MS.forEach(function(m){
+        h+='<th class="gpv-sort" data-sc="'+GST._esc(c+SEP+m)+'">'+GST._esc(M[m].t||M[m].k)+arrow(c+SEP+m)+'</th>'; }); });
+      MS.forEach(function(m){ h+='<th'+(m===MS[0]?' class="gpv-sort" data-sc="#tot"':'')+'>'+GST._esc(M[m].t||M[m].k)+(m===MS[0]?arrow('#tot'):'')+'</th>'; });
+      h+='</tr>';
+    }
+    h+='</thead><tbody>';
+    // ---- 본문 ----
+    const cellHTML=function(rk,c,m){
+      const v=cell(rk,c,m);
+      if(v==null) return '<td>·</td>';
+      const base = disp==='row'?rowT(rk,m) : disp==='col'?colT(c,m) : disp==='all'?grand(m) : null;
+      const a=(disp==='raw'&&mx>0)?(0.07+0.42*(v/mx)):0;
+      return '<td class="gpv-cell" data-r="'+GST._esc(rk)+'" data-c="'+GST._esc(c)+'"'
+        +(a?' style="background:rgba(var(--gov-heat),'+a.toFixed(3)+')"':'')+'>'+fmtV(v,base)+'</td>';
+    };
+    let prev=[];
+    const subRow=function(g){
+      const ks=P.preKeys(g).filter(function(rk){ return keys.indexOf(rk)>=0; });
+      if(!ks.length) return '';
+      return '<tr class="gpv-tot"><td colspan="'+nLv+'">'+GST._esc(g)+' '+T.sub2+'</td>'
+        + cN.map(function(c){ return MS.map(function(m){
+            const v=preC(ks,c,m);
+            const base= disp==='row'?preT(ks,m) : disp==='col'?colT(c,m) : disp==='all'?grand(m) : null;
+            return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
+        + MS.map(function(m){ const v=preT(ks,m);
+            return '<td>'+fmtV(v, disp==='raw'?null:(disp==='all'?grand(m):v))+'</td>'; }).join('')
+        + '</tr>';
+    };
+    keys.forEach(function(rk,idx){
+      const parts=P.parts(rk);
+      if(showSub && nLv>1 && idx>0 && parts[0]!==prev[0]) h+=subRow(prev[0]);
+      let lab='';
+      for(let L=0;L<nLv;L++){
+        const same=(prev.length&&L<nLv-1&&parts.slice(0,L+1).join(SEP)===prev.slice(0,L+1).join(SEP));
+        lab+='<td'+(same?' style="opacity:.35"':'')+'>'+(same?'〃':GST._esc(parts[L]))+'</td>';
+      }
+      h+='<tr>'+lab
+        + cN.map(function(c){ return MS.map(function(m){ return cellHTML(rk,c,m); }).join(''); }).join('')
+        + MS.map(function(m){ const v=rowT(rk,m);
+            const a2=(noCol&&disp==='raw'&&mx>0&&v!=null)?(0.07+0.42*(v/mx)):0;
+            return '<td class="'+(noCol?'gpv-cell':'gpv-tot')+'"'
+              +(noCol?' data-r="'+GST._esc(rk)+'" data-c="'+GST._esc(T.tot)+'"':'')
+              +(a2?' style="background:rgba(var(--gov-heat),'+a2.toFixed(3)+')"':'')+'>'
+              +fmtV(v, disp==='all'?grand(m):(disp==='raw'?null:v))+'</td>'; }).join('')
+        + '</tr>';
+      prev=parts;
+    });
+    if(showSub && nLv>1 && prev.length) h+=subRow(prev[0]);
+    if(etcKeys.length){
+      h+='<tr class="gpv-tot"><td'+(nLv>1?' colspan="'+nLv+'"':'')+'>'+T.etc+' ('+etcKeys.length+')</td>'
+        + cN.map(function(c){ return MS.map(function(m){ const v=preC(etcKeys,c,m);
+            const base= disp==='col'?colT(c,m) : disp==='all'?grand(m) : disp==='row'?preT(etcKeys,m) : null;
+            return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
+        + MS.map(function(m){ const v=preT(etcKeys,m);
+            return '<td>'+fmtV(v, disp==='all'?grand(m):(disp==='raw'?null:v))+'</td>'; }).join('')+'</tr>';
+    }
+    h+='</tbody><tfoot><tr class="gpv-tot"><td'+(nLv>1?' colspan="'+nLv+'"':'')+'>'+T.tot+'</td>'
+      + cN.map(function(c){ return MS.map(function(m){ const v=colT(c,m);
+          const base= disp==='row'?grand(m) : disp==='col'?v : disp==='all'?grand(m) : null;
+          return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
+      + MS.map(function(m){ const v=grand(m); return '<td>'+fmtV(v, disp==='raw'?null:v)+'</td>'; }).join('')
+      + '</tr></tfoot></table>';
     sc.innerHTML=h;
+    VIEW={P:P,keys:keys,cN:cN,noCol:noCol,AC:AC,nLv:nLv,cell:cell,rowT:rowT,colT:colT,grand:grand,M:M,D:D};
+    LAST=VIEW;
+    dv.innerHTML='<div class="gpv-d">'+T.rows.replace('{n}',rows.length.toLocaleString())
+      +(cut>0?' · '+T.more.replace('{n}',cut):'')+'</div>';
   }
-  function detail(r,c){
-    const dv=document.getElementById('gpvD'); if(!LAST||!dv) return;
-    const recs=LAST.recs(r,c), cols=(S.detailCols&&S.detailCols.length)?S.detailCols
+  function detail(rk,c){
+    const dv=document.getElementById('gpvD'); if(!VIEW||!dv) return;
+    const recs=VIEW.P.recs(rk,c);
+    const cols=(S().detailCols&&S().detailCols.length)?S().detailCols
       : Object.keys(recs[0]||{}).filter(function(k){ const v=recs[0][k];
           return v==null||typeof v!=='object'||v instanceof Date; }).slice(0,7).map(function(k){ return {k:k,t:k}; });
     const show=recs.slice(0,60);
-    dv.innerHTML='<div class="gpv-d"><b>'+GST._esc(r)+' × '+GST._esc(c)+'</b> — '+T.detail+' '+recs.length
-      +(recs.length>show.length?' ('+T.more.replace('%n',recs.length-show.length)+')':'')
+    dv.innerHTML='<div class="gpv-d"><b>'+GST._esc(String(rk).split(SEP).join(' › '))+' × '+GST._esc(c)+'</b> — '+T.detail+' '+recs.length
+      +(recs.length>show.length?' ('+T.more.replace('{n}',recs.length-show.length)+')':'')
       +'<div style="overflow:auto;max-height:190px"><table><thead><tr>'
       + cols.map(function(cc){ return '<th>'+GST._esc(cc.t||cc.k)+'</th>'; }).join('')+'</tr></thead><tbody>'
       + show.map(function(rec){ return '<tr>'+cols.map(function(cc){
@@ -2050,30 +2308,120 @@ GST.pivotOpen=function(){
           return '<td>'+GST._esc(v instanceof Date?GST.fmtDate(v):(v==null?'':v))+'</td>'; }).join('')+'</tr>'; }).join('')
       +'</tbody></table></div></div>';
   }
-  function tsv(){
-    if(!LAST) return '';
-    const cN=LAST.cNames.slice(0,40);
-    let out=[[dims[ri].t||dims[ri].k].concat(cN).concat([T.tot]).join('\t')];
-    LAST.rNames.forEach(function(r){
-      out.push([r].concat(cN.map(function(c){ const v=LAST.cell(r,c); return v==null?'':v; })).concat([LAST.rowTot(r)]).join('\t'));
+  // 체크박스 팝오버 — 값 고르기(rf/cf)와 측정값 고르기(ms)를 함께 처리
+  function popup(kind, lv, btn){
+    const id=kind+lv, was=POP&&POP._id===id;
+    if(POP){ POP.remove(); POP=null; }
+    if(was) return;
+    const D=dims(), M=meas();
+    let names=[], counts=null, cur=null;
+    if(kind==='ms'){ names=M.map(function(m,i){ return String(i); }); cur=new Set(MS.map(String)); }
+    else{
+      const di=(kind==='rf')?RD[lv]:ci; if(di<0) return;
+      const m=new Map();
+      baseRows().forEach(function(rec){ const k=GST._pivLbl(GST._pivGet(rec,D[di].k),T); m.set(k,(m.get(k)||0)+1); });
+      names=[...m.keys()].sort(); counts=m;
+      const f=(kind==='rf')?RF[lv]:CF; cur=f;
+    }
+    if(!names.length) return;
+    const p=document.createElement('div'); p.className='gpv-pop'; p._id=id;
+    p.innerHTML=(kind==='ms'?'':'<input type="search" placeholder="'+T.find+'">')
+      +'<div class="gpv-list">'+names.map(function(n){
+          const on=(kind==='ms')?cur.has(n):(!cur||cur.has(n));
+          const lbl=(kind==='ms')?(M[+n].t||M[+n].k):n;
+          return '<label><input type="checkbox" data-v="'+GST._esc(n)+'"'+(on?' checked':'')+'>'
+            +'<span>'+GST._esc(lbl)+'</span>'+(counts?'<span class="n">'+counts.get(n).toLocaleString()+'</span>':'')+'</label>'; }).join('')
+      +'</div><div class="gpv-pb">'+(kind==='ms'?'':'<button class="gov-b" data-pp="all">'+T.all+'</button>'
+      +'<button class="gov-b" data-pp="clr">'+T.clr+'</button>')
+      +'<button class="gov-b" data-pp="ok">'+T.apply+'</button></div>';
+    const c0=document.getElementById('gpvC0');
+    c0.appendChild(p);
+    p.style.left=Math.max(8,Math.min(btn.offsetLeft, c0.clientWidth-248))+'px';
+    p.style.top=(btn.offsetTop+btn.offsetHeight+6)+'px';
+    POP=p;
+    const se=p.querySelector('input[type=search]');
+    if(se) se.addEventListener('input',function(e){
+      const q=e.target.value.trim().toLowerCase();
+      p.querySelectorAll('.gpv-list label').forEach(function(l){
+        l.style.display=(!q||l.textContent.toLowerCase().indexOf(q)>=0)?'':'none'; });
     });
-    out.push([T.tot].concat(cN.map(function(c){ return LAST.colTot(c); })).concat([LAST.grand]).join('\t'));
-    return out.join('\n');
+    p.addEventListener('click',function(e){
+      const b=e.target.closest('[data-pp]'); if(!b)return;
+      const boxes=[].slice.call(p.querySelectorAll('.gpv-list input'));
+      const vis=boxes.filter(function(x){ return x.closest('label').style.display!=='none'; });
+      if(b.dataset.pp==='all'){ vis.forEach(function(x){ x.checked=true; }); return; }
+      if(b.dataset.pp==='clr'){ vis.forEach(function(x){ x.checked=false; }); return; }
+      const sel=new Set(); boxes.forEach(function(x){ if(x.checked) sel.add(x.dataset.v); });
+      if(kind==='ms'){ const a=[...sel].map(Number).sort(function(x,y){return x-y;}); MS=a.length?a:[0]; sortC=''; }
+      else if(kind==='rf') RF[lv]=(sel.size===boxes.length)?null:sel;
+      else CF=(sel.size===boxes.length)?null:sel;
+      p.remove(); POP=null; draw();
+    });
   }
-  ov.addEventListener('change',function(e){ if(e.target.closest('#gpvR,#gpvC,#gpvM')) draw(); });
+  function matrix(){
+    if(!VIEW) return [];
+    const V=VIEW, out=[];
+    const head=V.AC.map(function(i){ return V.D[i].t||V.D[i].k; });
+    V.cN.forEach(function(c){ MS.forEach(function(m){ head.push(MS.length>1?(c+' · '+(V.M[m].t||V.M[m].k)):c); }); });
+    MS.forEach(function(m){ head.push(T.tot+(MS.length>1?(' · '+(V.M[m].t||V.M[m].k)):'')); });
+    out.push(head);
+    V.keys.forEach(function(rk){
+      const r=V.P.parts(rk).slice();
+      V.cN.forEach(function(c){ MS.forEach(function(m){ const v=V.cell(rk,c,m); r.push(v==null?'':v); }); });
+      MS.forEach(function(m){ const v=V.rowT(rk,m); r.push(v==null?'':v); });
+      out.push(r);
+    });
+    const tot=[T.tot].concat(Array(Math.max(0,V.nLv-1)).fill(''));
+    V.cN.forEach(function(c){ MS.forEach(function(m){ const v=V.colT(c,m); tot.push(v==null?'':v); }); });
+    MS.forEach(function(m){ const v=V.grand(m); tot.push(v==null?'':v); });
+    out.push(tot);
+    return out;
+  }
+  ov.addEventListener('change',function(e){
+    const el=e.target;
+    if(el.id==='gpvS'){ si=+el.value; RF=[null,null,null]; CF=null; from=to=''; sortC='';
+      const D=dims(); RD=[0,-1,-1]; ci=D.length>1?1:-1; MS=[0]; norm(); draw(); return; }
+    if(el.id&&el.id.indexOf('gpvR')===0){ const L=+el.dataset.lv; RD[L]=+el.value; RF[L]=null; norm(); draw(); return; }
+    if(el.id==='gpvC'){ ci=+el.value; CF=null; sortC=''; draw(); return; }
+    if(el.id==='gpvDisp'){ disp=el.value; draw(); return; }
+    if(el.id==='gpvTop'){ topN=+el.value; draw(); return; }
+    if(el.id==='gpvSub'){ showSub=el.checked; draw(); return; }
+    if(el.id==='gpvF'){ from=el.value; RF=[null,null,null]; CF=null; draw(); return; }
+    if(el.id==='gpvT'){ to=el.value;   RF=[null,null,null]; CF=null; draw(); return; }
+  });
   ov.addEventListener('click',function(e){
+    if(POP && !e.target.closest('.gpv-pop') && !e.target.closest('[data-piv="rf"],[data-piv="cf"],[data-piv="ms"]')){ POP.remove(); POP=null; }
+    const th=e.target.closest('.gpv-sort');
+    if(th){ const k=th.dataset.sc;
+      if(sortC===k){ if(sortD>0) sortD=-1; else { sortC=''; sortD=1; } }   // 내림 → 오름 → 해제
+      else { sortC=k; sortD=1; }
+      draw(); return; }
     const cell=e.target.closest('.gpv-cell');
     if(cell){ detail(cell.dataset.r, cell.dataset.c); return; }
     const b=e.target.closest('[data-piv]'); if(!b)return;
     const a=b.dataset.piv;
     if(a==='close'){ GST._ovClose(); return; }
-    if(a==='swap'){ const R=document.getElementById('gpvR'), C=document.getElementById('gpvC');
-      const t=R.value; R.value=C.value; C.value=t; draw(); return; }
+    if(a==='rf'){ popup('rf', +b.dataset.lv, b); return; }
+    if(a==='cf'){ popup('cf', 0, b); return; }
+    if(a==='ms'){ popup('ms', 0, b); return; }
+    if(a==='swap'){ const t0=RD[0], f0=RF[0]; RD[0]=(ci<0?RD[0]:ci); ci=(t0<0?-1:t0);
+      RF[0]=CF; CF=f0; sortC=''; norm(); draw(); return; }
     if(a==='copy'){
-      const txt=tsv(), done=function(){ b.textContent=T.copied; setTimeout(function(){ b.textContent=T.copy; },1400); };
+      const txt=matrix().map(function(r){ return r.join('\t'); }).join('\n');
+      const done=function(){ b.textContent=T.copied; setTimeout(function(){ b.textContent=T.copy; },1400); };
       if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done,function(){});
       else { const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta);
              ta.select(); try{ document.execCommand('copy'); done(); }catch(err){} ta.remove(); }
+      return;
+    }
+    if(a==='csv'){
+      const esc=function(v){ const s2=String(v==null?'':v); return /[",\n]/.test(s2)?'"'+s2.replace(/"/g,'""')+'"':s2; };
+      const csv='﻿'+matrix().map(function(r){ return r.map(esc).join(','); }).join('\r\n');
+      try{ const bl=new Blob([csv],{type:'text/csv;charset=utf-8'}), u=URL.createObjectURL(bl);
+        const el2=document.createElement('a'); el2.href=u;
+        el2.download='pivot-'+(S().t||S().k||'data')+'.csv';
+        document.body.appendChild(el2); el2.click(); el2.remove(); setTimeout(function(){ URL.revokeObjectURL(u); },1500);
+      }catch(err){}
     }
   });
   draw();

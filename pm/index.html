@@ -795,6 +795,21 @@ function render(){ GST.skeleton(false);
       draw();
     };
   });
+  // 🔔 자동 브리핑 — 최근 12구간 완료 건수 + 현재 지연/임박
+  try{
+    const _u=GST.period(), _P=GST.periods(12,new Date(),_u);
+    const _in=(x,p)=>x.date&&x.date>=p.st&&x.date<=p.end;
+    const over=VS.filter(x=>x.st==='overdue').length, soon=VS.filter(x=>x.st==='soon').length;
+    GST.watch([
+      {k:'done', label:t('th_cnt'), labels:_P.map(p=>p.label), data:_P.map(p=>VD.filter(x=>_in(x,p)).length), unit:'',
+       parts:i=>{const m={}; VD.forEach(x=>{ if(_in(x,_P[i])){ const g=x.site||'—'; m[g]=(m[g]||0)+1; } });
+                 return Object.keys(m).map(g=>({name:g,v:m[g]}));}},
+      {k:'over', label:t('st_overdue'), labels:_P.map(p=>p.label),
+       data:_P.map((p,i)=>i===_P.length-1?over:null), unit:'', goodWhenDown:true},
+      {k:'soon', label:t('st_soon'), labels:_P.map(p=>p.label),
+       data:_P.map((p,i)=>i===_P.length-1?soon:null), unit:'', goodWhenDown:true}
+    ]);
+  }catch(e){}
   // 🧊 피벗 — 현재 필터가 적용된 점검 스케줄을 교차 집계한다
   GST.pivotReg({
     rows:()=>VS,

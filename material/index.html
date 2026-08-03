@@ -1070,6 +1070,18 @@ function render(){ GST.skeleton(false); GST.pushState(F);
 
   renderFilterChips();
   renderCycleTable(f); renderDetailTable(f); renderCrossTable(); renderEqDrill();
+  // 🔔 자동 브리핑 — 최근 12구간 교체 건수·수량
+  try{
+    const _u=GST.period(), _P=GST.periods(12,new Date(),_u);
+    const _in=(x,p)=>x.workDate&&x.workDate>=p.st&&x.workDate<=p.end;
+    GST.watch([
+      {k:'cnt', label:t('cyc_cnt'), labels:_P.map(p=>p.label), data:_P.map(p=>f.filter(x=>_in(x,p)).length), unit:'', goodWhenDown:true,
+       parts:i=>{const m={}; f.forEach(x=>{ if(_in(x,_P[i])){ const g=x.line||'—'; m[g]=(m[g]||0)+1; } });
+                 return Object.keys(m).map(g=>({name:g,v:m[g]}));}},
+      {k:'qty', label:t('th_qty'), labels:_P.map(p=>p.label),
+       data:_P.map(p=>f.filter(x=>_in(x,p)).reduce((a,x)=>a+(+x.qty||0),0)), unit:'', goodWhenDown:true}
+    ]);
+  }catch(e){}
   // 🧊 피벗 — 현재 필터가 적용된 자재 교체 실적을 교차 집계한다
   GST.pivotReg({
     rows:()=>LAST_F,

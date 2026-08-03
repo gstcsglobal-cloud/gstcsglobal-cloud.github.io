@@ -491,19 +491,23 @@ tr:hover td{background:rgba(255,255,255,.04)}
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
-const CI={country:2,customer:3,location:4,code:5,sn:6,model:7,fab:9,group1:12,detail1:14,toolMaker:18,toolModel:19,fabIn:38,turnOn:40,warranty:42};
+const CI={country:2,customer:3,location:4,code:5,sn:6,model:7,fab:9,group1:12,detail1:14,toolMaker:18,toolModel:19,fabIn:38,turnOn:40,warranty:42,type:75};
+// 이 페이지의 모든 수량은 설비 대수가 아니라 **챔버 수**로 센다 (BX열 DUAL=2 · SINGLE=1).
+// 주간현황(report)·TCO와 같은 규칙이라 페이지 간 숫자가 어긋나지 않는다.
+const chW=r=>String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1;
+const chSum=rows=>(rows||[]).reduce((a,r)=>a+chW(r),0);
 const PAL=GST.PAL8; // 공통 검증 팔레트 (고정 순서)
 
 const T={
   ko:{title:'글로벌 스크러버 설치 현황',sub:'고객사 설치 스크러버 통합 모니터링 대시보드',
-    back:'← 메인으로',total_badge:'총',units:'대',refresh:'새로고침',
+    back:'← 메인으로',total_badge:'총',units:'챔버',refresh:'새로고침',
     date_range:'기간 설정',apply:'적용',reset:'초기화',
     quick_select:'빠른 선택',
     q_1w:'1주',q_1m:'1개월',q_3m:'3개월',q_6m:'6개월',q_1y:'1년',q_all:'전체',
     gran_lbl:'집계 단위',gran_note:'↑ 추이 차트 적용',
     g_week:'주 단위',g_month:'월 단위',g_quarter:'분기 단위',g_half:'반기 단위',g_year:'연 단위',
     search_lbl:'검색',
-    kp1:'설치 대수',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty 유효',kp5:'90일 내 만료 예정',unit_ea:'대',unit_cty:'개국',unit_co:'사',kf1:'전년 동기 {n}대',kf2:'최다 {v} · {n}대',kf3:'신규 {n}개사 (12개월)',kf4:'전체의 {p}%',kf5:'30일 내 {n}대 · 갱신 협의 대상',w_ratio:'유효 비율',ch_newm:'신규 Turn On 추이 (주/월)',note_newm:'최근 12구간(주/월) · 신규 가동',note_hbar:'🖱️ 클릭 시 필터 · 비중은 툴팁',etc:'기타',mon_unit:'월',
+    kp1:'설치 챔버',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty 유효',kp5:'90일 내 만료 예정',unit_ea:'ch',unit_cty:'개국',unit_co:'사',kf1:'전년 동기 {n}ch',kf2:'최다 {v} · {n}대',kf3:'신규 {n}개사 (12개월)',kf4:'전체의 {p}%',kf5:'30일 내 {n}대 · 갱신 협의 대상',w_ratio:'유효 비율',ch_newm:'신규 Turn On 추이 (주/월)',note_newm:'최근 12구간(주/월) · 신규 가동',note_hbar:'🖱️ 클릭 시 필터 · 비중은 툴팁',etc:'기타',mon_unit:'월',
     trend_fabin:'누적 FAB In 추이 (반입 기준)',trend_turnon:'⚡ 누적 Turn On 추이 (가동 기준)',
     note_rate:'Bar: 대수 · Line: 비중(%)',note_warr:'유효/만료 비율',
     note_model:'모델별 분포',note_group:'공정 그룹별 분포',note_yoy:'대수 막대 · 전년비(%)는 툴팁',note_drill:'대수 막대 · 비중(%)은 툴팁 · 🖱️ 클릭 시 필터',note_drill2:'분포 · 🖱️ 클릭 시 필터',cross_title:'🔀 교차 분석',cross_x:'가로축',cross_color:'쌓기 기준',
@@ -513,14 +517,14 @@ const T={
     legend_cum:'누적',legend_new:'신규',range_all:'전체 기간',
     auto_switch:'기간이 길어 자동 전환됨',too_fine:'권장하지 않음'},
   en:{title:'Global Scrubber Installation Status',sub:'Integrated monitoring dashboard for installed scrubbers',
-    back:'← Main',total_badge:'Total',units:'units',refresh:'Refresh',
+    back:'← Main',total_badge:'Total',units:'chambers',refresh:'Refresh',
     date_range:'Date Range',apply:'Apply',reset:'Reset',
     quick_select:'Quick Select',
     q_1w:'1 Week',q_1m:'1 Month',q_3m:'3 Months',q_6m:'6 Months',q_1y:'1 Year',q_all:'All',
     gran_lbl:'View By',gran_note:'↑ Trend chart unit',
     g_week:'Week',g_month:'Month',g_quarter:'Quarter',g_half:'Half-Year',g_year:'Year',
     search_lbl:'Search',
-    kp1:'Installed Units',kp2:'Countries',kp3:'Customers',kp4:'Warranty Active',kp5:'Expiring in 90 days',unit_ea:'units',unit_cty:'countries',unit_co:'cos.',kf1:'A year ago: {n}',kf2:'Top {v} · {n}',kf3:'{n} new customers (12mo)',kf4:'{p}% of total',kf5:'{n} within 30d · renewal targets',w_ratio:'active ratio',ch_newm:'New Turn On Trend (W/M)',note_newm:'Last 12 periods (W/M)',note_hbar:'🖱️ click to filter · share in tooltip',etc:'Others',mon_unit:'',
+    kp1:'Installed Chambers',kp2:'Countries',kp3:'Customers',kp4:'Warranty Active',kp5:'Expiring in 90 days',unit_ea:'ch',unit_cty:'countries',unit_co:'cos.',kf1:'A year ago: {n}',kf2:'Top {v} · {n}',kf3:'{n} new customers (12mo)',kf4:'{p}% of total',kf5:'{n} within 30d · renewal targets',w_ratio:'active ratio',ch_newm:'New Turn On Trend (W/M)',note_newm:'Last 12 periods (W/M)',note_hbar:'🖱️ click to filter · share in tooltip',etc:'Others',mon_unit:'',
     trend_fabin:'Cumulative FAB In Trend',trend_turnon:'⚡ Cumulative Turn On Trend',
     note_rate:'Bar: count · Line: rate(%)',note_warr:'Active vs Expired ratio',
     note_model:'By model',note_group:'By process group',note_yoy:'Count bars · YoY(%) in tooltip',note_drill:'Count bars · rate(%) in tooltip · 🖱️ click to filter',note_drill2:'Distribution · 🖱️ click to filter',cross_title:'🔀 Cross Analysis',cross_x:'X-Axis',cross_color:'Stack By',
@@ -530,14 +534,14 @@ const T={
     legend_cum:'Cumulative',legend_new:'New',range_all:'All time',
     auto_switch:'Auto-switched (range too long)',too_fine:'not recommended'},
   zh:{title:'全球洗涤器安装状况',sub:'客户安装洗涤器综合监控仪表板',
-    back:'← 主页',total_badge:'共',units:'台',refresh:'刷新',
+    back:'← 主页',total_badge:'共',units:'腔体',refresh:'刷新',
     date_range:'日期范围',apply:'应用',reset:'重置',
     quick_select:'快速选择',
     q_1w:'1周',q_1m:'1个月',q_3m:'3个月',q_6m:'6个月',q_1y:'1年',q_all:'全部',
     gran_lbl:'聚合单位',gran_note:'↑ 趋势图适用',
     g_week:'按周',g_month:'按月',g_quarter:'按季度',g_half:'按半年',g_year:'按年',
     search_lbl:'搜索',
-    kp1:'安装台数',kp2:'国家',kp3:'客户',kp4:'保修有效',kp5:'90天内到期',unit_ea:'台',unit_cty:'国',unit_co:'家',kf1:'去年同期 {n}台',kf2:'最多 {v} · {n}台',kf3:'新客户 {n}家 (12个月)',kf4:'占总数{p}%',kf5:'30天内 {n}台 · 续约对象',w_ratio:'有效比率',ch_newm:'新增Turn On趋势 (周/月)',note_newm:'近12期(周/月)',note_hbar:'🖱️点击筛选 · 占比见提示框',etc:'其他',mon_unit:'月',
+    kp1:'安装腔体',kp2:'国家',kp3:'客户',kp4:'保修有效',kp5:'90天内到期',unit_ea:'腔',unit_cty:'国',unit_co:'家',kf1:'去年同期 {n}腔',kf2:'最多 {v} · {n}台',kf3:'新客户 {n}家 (12个月)',kf4:'占总数{p}%',kf5:'30天内 {n}台 · 续约对象',w_ratio:'有效比率',ch_newm:'新增Turn On趋势 (周/月)',note_newm:'近12期(周/月)',note_hbar:'🖱️点击筛选 · 占比见提示框',etc:'其他',mon_unit:'月',
     trend_fabin:'累计FAB In趋势（搬入）',trend_turnon:'⚡ 累计Turn On趋势（运行）',
     note_rate:'柱:台数·线:占比%',note_warr:'有效/到期比率',
     note_model:'按型号',note_group:'按工艺组',note_yoy:'台数柱状 · 同比%见提示框',note_drill:'台数柱状 · 占比%见提示框 · 🖱️点击筛选',note_drill2:'分布 · 🖱️点击筛选',cross_title:'🔀 交叉分析',cross_x:'横轴',cross_color:'堆叠依据',
@@ -547,14 +551,14 @@ const T={
     legend_cum:'累计',legend_new:'新增',range_all:'全部时间',
     auto_switch:'区间过长已自动切换',too_fine:'不推荐'},
   ja:{title:'グローバルスクラバー設置状況',sub:'顧客設置スクラバー統合モニタリング',
-    back:'← メイン',total_badge:'合計',units:'台',refresh:'更新',
+    back:'← メイン',total_badge:'合計',units:'チャンバー',refresh:'更新',
     date_range:'期間設定',apply:'適用',reset:'リセット',
     quick_select:'クイック選択',
     q_1w:'1週間',q_1m:'1ヶ月',q_3m:'3ヶ月',q_6m:'6ヶ月',q_1y:'1年',q_all:'全体',
     gran_lbl:'集計単位',gran_note:'↑ 推移チャート適用',
     g_week:'週単位',g_month:'月単位',g_quarter:'四半期',g_half:'半期',g_year:'年単位',
     search_lbl:'検索',
-    kp1:'設置台数',kp2:'設置国',kp3:'顧客',kp4:'保証有効',kp5:'90日以内期限切れ',unit_ea:'台',unit_cty:'カ国',unit_co:'社',kf1:'前年同期 {n}台',kf2:'最多 {v} · {n}台',kf3:'新規 {n}社 (12ヶ月)',kf4:'全体の{p}%',kf5:'30日以内 {n}台 · 更新協議対象',w_ratio:'有効比率',ch_newm:'新規Turn On推移 (週/月)',note_newm:'直近12区間(週/月)',note_hbar:'🖱️クリックで絞込 · 構成比はツールチップ',etc:'その他',mon_unit:'月',
+    kp1:'設置チャンバー',kp2:'設置国',kp3:'顧客',kp4:'保証有効',kp5:'90日以内期限切れ',unit_ea:'ch',unit_cty:'カ国',unit_co:'社',kf1:'前年同期 {n}ch',kf2:'最多 {v} · {n}台',kf3:'新規 {n}社 (12ヶ月)',kf4:'全体の{p}%',kf5:'30日以内 {n}台 · 更新協議対象',w_ratio:'有効比率',ch_newm:'新規Turn On推移 (週/月)',note_newm:'直近12区間(週/月)',note_hbar:'🖱️クリックで絞込 · 構成比はツールチップ',etc:'その他',mon_unit:'月',
     trend_fabin:'累積FAB In推移（搬入）',trend_turnon:'⚡ 累積Turn On推移（稼働）',
     note_rate:'棒:台数·線:構成比%',note_warr:'有効/切れ比率',
     note_model:'モデル別',note_group:'工程グループ別',note_yoy:'台数棒 · 前年比%はツールチップ',note_drill:'台数棒 · 構成比%はツールチップ · 🖱️クリックで絞込',note_drill2:'分布 · 🖱️クリックで絞込',cross_title:'🔀 クロス分析',cross_x:'横軸',cross_color:'積み上げ基準',
@@ -720,7 +724,7 @@ async function loadData(){ GST.skeleton(true);
     const fetched=await GST.fetchCSVCached(SHEET_URL,'install');
     const parsed={data:fetched.rows};
     RAW=parsed.data.slice(1).filter(r=>r[CI.code]&&String(r[CI.code]).trim()!=='');
-    document.getElementById('totRec').textContent=RAW.length;
+    document.getElementById('totRec').textContent=chSum(RAW);
     status.className='status ok';
     status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+RAW.length+' '+t('units');
     initDefaultRange();
@@ -785,7 +789,7 @@ function filt(skipDate){
 
 function countBy(rows,idx){
   const m={};
-  rows.forEach(r=>{const k=(r[idx]||'N/A').toString().trim()||'N/A';m[k]=(m[k]||0)+1;});
+  rows.forEach(r=>{const k=(r[idx]||'N/A').toString().trim()||'N/A';m[k]=(m[k]||0)+chW(r);});
   return Object.entries(m).sort((a,b)=>b[1]-a[1]);
 }
 
@@ -805,7 +809,7 @@ function granKey(d){
 
 // 누적 추이 (전체 RAW 기준 누적 + 필터된 신규) - 날짜 컬럼 지정
 function getCumulativeTrend(filtered, dateCol, metaId){
-  const allDated=RAW.map(r=>toDate(r[dateCol])).filter(Boolean).sort((a,b)=>a-b);
+  const allDated=RAW.map(r=>({d:toDate(r[dateCol]),ch:chW(r)})).filter(x=>x.d).sort((a,b)=>a.d-b.d);
   if(!allDated.length){
     const meta=document.getElementById(metaId);
     if(meta)meta.textContent='—';
@@ -814,12 +818,12 @@ function getCumulativeTrend(filtered, dateCol, metaId){
 
   // 전체 기간 라벨
   const labelSet=new Set();
-  allDated.forEach(d=>labelSet.add(granKey(d)));
+  allDated.forEach(x=>labelSet.add(granKey(x.d)));
   const labels=Array.from(labelSet).sort();
 
   // 전체 신규
   const allMap={};
-  allDated.forEach(d=>{const k=granKey(d);allMap[k]=(allMap[k]||0)+1;});
+  allDated.forEach(x=>{const k=granKey(x.d);allMap[k]=(allMap[k]||0)+x.ch;});
 
   // 누적
   let cum=0;
@@ -827,7 +831,7 @@ function getCumulativeTrend(filtered, dateCol, metaId){
 
   // 필터된 신규 (해당 날짜값이 있는 것만)
   const filtMap={};
-  filtered.forEach(r=>{const d=toDate(r[dateCol]);if(d){const k=granKey(d);filtMap[k]=(filtMap[k]||0)+1;}});
+  filtered.forEach(r=>{const d=toDate(r[dateCol]);if(d){const k=granKey(d);filtMap[k]=(filtMap[k]||0)+chW(r);}});
   const newData=labels.map(l=>filtMap[l]||0);
 
   // 추이 메타 정보
@@ -925,7 +929,7 @@ function mkNewMonthly(id,f){
   const map={};
   f.forEach(r=>{const d=toDate(r[CI.turnOn]);if(!d)return;
     const k=PU==='w'?GST.isoW(d):d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');
-    if(keys.indexOf(k)>-1)map[k]=(map[k]||0)+1;});
+    if(keys.indexOf(k)>-1)map[k]=(map[k]||0)+chW(r);});
   const data=keys.map(k=>map[k]||0);
   // B3 예측(당월 제외 추세) · B4 이상탐지
   const realLen=data.length; let L=labels.slice(), D=data.slice();
@@ -937,7 +941,7 @@ function mkNewMonthly(id,f){
     }]},
     options:{responsive:true,maintainAspectRatio:false,
       layout:{padding:{top:16}},
-      plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)},trendAnno:{anomaly:true,realLen}},
+      plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)},trendAnno:{anomaly:true,realLen:Math.max(0,realLen-1)}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:6},grid:{display:false}},
               y:{grace:'14%',ticks:{color:TH.txt,precision:0,maxTicksLimit:4},grid:{color:TH.grid}}}},
     plugins:[valLabelPlugin].concat(GST.trendAnnoPlugin?[GST.trendAnnoPlugin]:[])};
@@ -1060,7 +1064,7 @@ function mkCross(rows){
   rows.forEach(r=>{
     const xv=(r[xIdx]||'N/A').toString().trim()||'N/A';
     const cv=(r[cIdx]||'N/A').toString().trim()||'N/A';
-    if(matrix[xv]&&cCats.includes(cv)) matrix[xv][cv]++;
+    if(matrix[xv]&&cCats.includes(cv)) matrix[xv][cv]+=chW(r);
   });
 
   const datasets=cCats.map((c,i)=>({
@@ -1117,20 +1121,21 @@ function render(){ GST.skeleton(false);
   const DAY=86400000;
   const yearAgo=new Date(now.getTime()-365.25*DAY);
   let active=0,expired=0;
-  f.forEach(r=>{const w=toDate(r[CI.warranty]);if(w){w>=now?active++:expired++;}});
+  f.forEach(r=>{const w=toDate(r[CI.warranty]);if(w){const c=chW(r); w>=now?active+=c:expired+=c;}});
 
   // 90일/30일 내 만료 예정 (KPI·인사이트·Warranty 카드 공용)
   const in90=new Date(now.getTime()+90*DAY), in30=new Date(now.getTime()+30*DAY);
   let exp90=0,exp30=0;
-  f.forEach(r=>{const w=toDate(r[CI.warranty]);
-    if(w&&w>=now&&w<=in90){exp90++;if(w<=in30)exp30++;}});
+  f.forEach(r=>{const w=toDate(r[CI.warranty]); const c=chW(r);
+    if(w&&w>=now&&w<=in90){exp90+=c;if(w<=in30)exp30+=c;}});
 
   // ── KPI + 비교 라인 ──
   const setTxt=(id,v)=>{const e=document.getElementById(id);if(e)e.innerHTML=v;};
   // ① 설치 대수: 전년 동기(1년 전 시점 누적) 대비
-  const prevCnt=f.filter(r=>{const d=toDate(r[CI.turnOn]);return d&&d<=yearAgo;}).length;
-  animVal(document.getElementById('kp1'),f.length);
-  setTxt('kd1',GST.deltaBadge(f.length,prevCnt,false));
+  const prevCnt=chSum(f.filter(r=>{const d=toDate(r[CI.turnOn]);return d&&d<=yearAgo;}));
+  const chN=chSum(f);
+  animVal(document.getElementById('kp1'),chN);
+  setTxt('kd1',GST.deltaBadge(chN,prevCnt,false));
   setTxt('kf1',t('kf1').replace('{n}',prevCnt.toLocaleString()));
   // ② 설치 국가: 최다 국가 표기
   const ctrySet=new Set(f.map(r=>(r[CI.country]||'').trim()).filter(Boolean));
@@ -1152,11 +1157,11 @@ function render(){ GST.skeleton(false);
   setTxt('kd3',GST.deltaBadge(custN,prevCust,false));
   setTxt('kf3',t('kf3').replace('{n}',newCust));
   // ④ Warranty 유효: 1년 전 시점 유효 대비 + 비율
-  const prevActive=f.filter(r=>{const w=toDate(r[CI.warranty]);const d=toDate(r[CI.turnOn]);
-    return w&&d&&d<=yearAgo&&w>=yearAgo;}).length;
+  const prevActive=chSum(f.filter(r=>{const w=toDate(r[CI.warranty]);const d=toDate(r[CI.turnOn]);
+    return w&&d&&d<=yearAgo&&w>=yearAgo;}));
   animVal(document.getElementById('kp4'),active);
   setTxt('kd4',GST.deltaBadge(active,prevActive,false));
-  setTxt('kf4',t('kf4').replace('{p}',f.length?Math.round(active/f.length*100):0));
+  setTxt('kf4',t('kf4').replace('{p}',chSum(f)?Math.round(active/chSum(f)*100):0));
   // ⑤ 90일 내 만료 예정
   animVal(document.getElementById('kp5'),exp90);
   setTxt('kd5','');
@@ -1171,8 +1176,8 @@ function render(){ GST.skeleton(false);
   // 교차 분석
   mkCross(f);
 
-  mkHBar('cCountry',ctryAll,f.length,'country',TH.pal[0],5);
-  mkHBar('cCustomer',countBy(f,CI.customer),f.length,'customer',TH.pal[0],8);
+  mkHBar('cCountry',ctryAll,chN,'country',TH.pal[0],5);
+  mkHBar('cCustomer',countBy(f,CI.customer),chN,'customer',TH.pal[0],8);
   mkDonut('cModel',countBy(f,CI.model),'model',4);
   mkDonut('cGroup',countBy(f,CI.group1),'group1',5);
 
@@ -1193,7 +1198,7 @@ function render(){ GST.skeleton(false);
     }
   }
   const yrs={};
-  f.forEach(r=>{const d=toDate(r[CI.turnOn]);if(d){const y=d.getUTCFullYear();yrs[y]=(yrs[y]||0)+1;}});
+  f.forEach(r=>{const d=toDate(r[CI.turnOn]);if(d){const y=d.getUTCFullYear();yrs[y]=(yrs[y]||0)+chW(r);}});
   const yk=Object.keys(yrs).sort();
   mkYoY('cYear',yk,yk.map(y=>yrs[y]));
 
@@ -1214,7 +1219,7 @@ function render(){ GST.skeleton(false);
   {
     const b=[0,0,0,0];
     f.forEach(r=>{const d=toDate(r[CI.turnOn]);if(!d)return;const y=(now-d)/(365.25*DAY);
-      b[y<1?0:y<3?1:y<5?2:3]++;});
+      b[y<1?0:y<3?1:y<5?2:3]+=chW(r);});
     GST.bar(CHARTS,'cAge',{labels:[t('age_1'),t('age_13'),t('age_35'),t('age_5')],data:b,color:TH.pal[0],share:true});
   }
   // Tool Maker별
@@ -1231,12 +1236,13 @@ function render(){ GST.skeleton(false);
       const w=toDate(r[CI.warranty]);
       if(w){
         const dl=Math.round((w-now)/DAY);
-        if(dl<0)buckets[0]++;
-        else if(dl<=30)buckets[1]++;
-        else if(dl<=90)buckets[2]++;
-        else if(dl<=180)buckets[3]++;
-        else if(dl<=365)buckets[4]++;
-        else buckets[5]++;
+        const cw=chW(r);
+        if(dl<0)buckets[0]+=cw;
+        else if(dl<=30)buckets[1]+=cw;
+        else if(dl<=90)buckets[2]+=cw;
+        else if(dl<=180)buckets[3]+=cw;
+        else if(dl<=365)buckets[4]+=cw;
+        else buckets[5]+=cw;
         if(dl>=0&&dl<=180)soonL.push({r,w,dl});
       }
     });
@@ -1251,15 +1257,15 @@ function render(){ GST.skeleton(false);
       color:[TH.status.na,TH.status.bad,TH.status.warn,TH.pal[2],TH.pal[0],TH.pal[1]]});
     soonL.sort((a,b)=>a.dl-b.dl);
     // A4: 고객사별 갱신 기회 (180일 내 만료 대수)
-    { const rc={}; soonL.forEach(x=>{const c=(String(x.r[CI.customer]||'').trim())||'ETC'; rc[c]=(rc[c]||0)+1;});
+    { const rc={}; soonL.forEach(x=>{const c=(String(x.r[CI.customer]||'').trim())||'ETC'; rc[c]=(rc[c]||0)+chW(x.r);});
       const rcE=Object.entries(rc).sort((a,b)=>b[1]-a[1]);
-      if(typeof mkHBar==='function') mkHBar('cRenewCust',rcE,soonL.length,'customer',TH.pal[0],8); }
+      if(typeof mkHBar==='function') mkHBar('cRenewCust',rcE,chSum(soonL.map(x=>x.r)),'customer',TH.pal[0],8); }
     const wb=document.getElementById('warrSoonBody');
     if(wb)wb.innerHTML=soonL.length?soonL.slice(0,15).map(x=>
       `<tr><td>${cell(x.r,'code')}</td><td>${cell(x.r,'sn')}</td><td>${cell(x.r,'country')}</td><td>${cell(x.r,'customer')}</td><td>${cell(x.r,'model')}</td><td>${fmtDate(x.w)}</td><td><span class="pill ${x.dl<=30?'bad':'ok'}">D-${x.dl}</span></td></tr>`
     ).join(''):`<tr><td colspan="7" class="empty">${t('no_data')}</td></tr>`;
     idleL.sort((a,b)=>b.days-a.days);
-    idleCount=idleL.length;
+    idleCount=chSum(idleL.map(x=>x.r));
     const ib=document.getElementById('idleBody');
     if(ib)ib.innerHTML=idleL.length?idleL.slice(0,15).map(x=>
       `<tr><td>${cell(x.r,'code')}</td><td>${cell(x.r,'sn')}</td><td>${cell(x.r,'customer')}</td><td>${cell(x.r,'location')}</td><td>${fmtDate(x.fi)}</td><td><b>${x.days}${t('days_unit')}</b></td></tr>`
@@ -1271,13 +1277,13 @@ function render(){ GST.skeleton(false);
     const ins=[];
     if(exp90>0)ins.push({sev:'warn',text:t('ins_warr90').replace('{n}','<b>'+exp90+'</b>')});
     if(ctryAll.length&&f.length){
-      const p=Math.round(ctryAll[0][1]/f.length*100);
+      const p=Math.round(ctryAll[0][1]/(chN||1)*100);
       ins.push({sev:p>=50?'warn':'info',text:t('ins_topctry').replace('{v}','<b>'+ctryAll[0][0]+'</b>').replace('{p}',p).replace('{n}',ctryAll[0][1])});
     }
     {
       const d365=new Date(now.getTime()-365*86400000), d730=new Date(now.getTime()-730*86400000);
       let c=0,p0=0;
-      f.forEach(r=>{const d=toDate(r[CI.turnOn]);if(!d)return;if(d>=d365)c++;else if(d>=d730)p0++;});
+      f.forEach(r=>{const d=toDate(r[CI.turnOn]);if(!d)return;const cw=chW(r);if(d>=d365)c+=cw;else if(d>=d730)p0+=cw;});
       const pd=GST.pctDelta(c,p0);
       if(c||p0)ins.push({sev:(pd!=null&&pd<0)?'warn':'ok',text:t('ins_turnon').replace('{n}','<b>'+c+'</b>').replace('{p}',pd==null?'—':(pd>0?'+':'')+pd+'%')});
     }
@@ -1285,6 +1291,22 @@ function render(){ GST.skeleton(false);
     GST.insights(f.length?ins:[]);
   }
 
+  // 🔔 자동 브리핑 — 신규 Turn On(챔버) · Warranty 만료 임박
+  try{
+    const _u=GST.period(), _P=GST.periods(12,(DATE_TO?new Date(DATE_TO):new Date()),_u,t('mon_unit'));
+    const _k=d=>_u==='w'?GST.isoW(d):(d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'));
+    const _keys=_P.map(p=>p.key);
+    const _new=_keys.map(()=>0);
+    f.forEach(r=>{const d=toDate(r[CI.turnOn]); if(!d)return; const i=_keys.indexOf(_k(d)); if(i>=0)_new[i]+=chW(r);});
+    GST.watch([
+      {k:'ton', label:t('ch_newm'), labels:_P.map(p=>p.label), data:_new, unit:'ch',
+       parts:i=>{const m={}; f.forEach(r=>{const d=toDate(r[CI.turnOn]);
+                   if(d&&_k(d)===_keys[i]){ const g=GST.nfw(r[CI.fab]||'').trim()||'—'; m[g]=(m[g]||0)+chW(r); } });
+                 return Object.keys(m).map(g=>({name:g,v:m[g]}));}},
+      {k:'w90', label:t('kp5'), labels:_P.map(p=>p.label),
+       data:_P.map((p,i)=>i===_P.length-1?exp90:null), unit:'ch', goodWhenDown:true}
+    ]);
+  }catch(e){}
   // 🧊 피벗 — 현재 필터가 적용된 설비 마스터를 교차 집계한다.
   // 이 페이지의 레코드는 파싱 객체가 아니라 원시 CSV 배열이라 접근자 함수로 열을 꺼낸다.
   { const g=i=>r=>GST.nfw(r[i]||'').trim();
@@ -1295,15 +1317,16 @@ function render(){ GST.skeleton(false);
             {k:g(CI.toolMaker),t:'Tool Maker'},
             {k:r=>{const w=toDate(r[CI.warranty]);return w?(w>=now?'Warranty In':'Warranty Out'):'—';},t:'Warranty'},
             {k:r=>{const d0=toDate(r[CI.turnOn]);return d0?granKey(d0):'—';},t:'Turn-On'}],
-      measures:[{k:'cnt',t:'Count',agg:'count'},
-                {k:'sn', t:'S/N', agg:'uniq',f:g(CI.sn)}],
+      measures:[{k:'ch', t:'Chambers', agg:'sum',   f:r=>chW(r)},
+                {k:'cnt',t:'Units',    agg:'count'},
+                {k:'sn', t:'S/N',      agg:'uniq', f:g(CI.sn)}],
       detailCols:[{k:g(CI.sn),t:'S/N'},{k:g(CI.customer),t:'Customer'},{k:g(CI.fab),t:'FAB'},
                   {k:g(CI.model),t:'Model'},{k:g(CI.group1),t:'Process'},
                   {k:r=>fmtDate(toDate(r[CI.turnOn])),t:'Turn-On'},
                   {k:r=>fmtDate(toDate(r[CI.warranty])),t:'Warranty'}]
     }); }
 
-  document.getElementById('tblCnt').textContent=f.length;
+  document.getElementById('tblCnt').textContent=chSum(f);
   let d=[...f];
   if(sortK)d.sort((a,b)=>{const x=(a[CI[sortK]]||'')+'',y2=(b[CI[sortK]]||'')+'';
     return sortAsc?x.localeCompare(y2,'ko',{numeric:true}):y2.localeCompare(x,'ko',{numeric:true});});

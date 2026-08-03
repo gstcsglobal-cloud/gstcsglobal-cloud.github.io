@@ -1022,6 +1022,19 @@ function render(){
   if(newLast>0)ins.push({sev:'ok',text:t('ins_new').replace('{lab}','<b>'+lastP.label+'</b>').replace('{n}','<b>'+newLast+'</b>')});
   GST.insights(CIP.length?ins:[]);
 
+  // 🔔 자동 브리핑 — 추이 차트가 쓰는 시계열을 그대로 넘긴다
+  try{
+    const _P=PU('cipTrend'), _L=_P.labels;
+    const _tg=_P.P.map(p=>fR.filter(x=>!x.ap||x.ap<=p.end).length);
+    const _dn=_P.P.map(p=>fR.filter(x=>(!x.ap||x.ap<=p.end)&&x.done&&x.done<=p.end).length);
+    GST.watch([
+      {k:'rate', label:t('s_rate'), labels:_L, data:_tg.map((v,i)=>v?Math.round(_dn[i]/v*100):null), unit:'%'},
+      {k:'rem',  label:t('s_rem'),  labels:_L, data:_tg.map((v,i)=>v-_dn[i]), unit:'', goodWhenDown:true,
+       parts:i=>{const m={}; fR.forEach(x=>{ if((!x.ap||x.ap<=_P.P[i].end)&&!(x.done&&x.done<=_P.P[i].end)){
+                   const g=x.group||'—'; m[g]=(m[g]||0)+1; } }); return Object.keys(m).map(g=>({name:g,v:m[g]}));}},
+      {k:'done', label:t('s_done'), labels:_L, data:_dn, unit:''}
+    ]);
+  }catch(e){}
   // 🧊 피벗 — 현재 필터·마감이 적용된 CIP 레코드를 교차 집계한다
   GST.pivotReg({
     rows:()=>snap,

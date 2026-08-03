@@ -1054,6 +1054,21 @@ function render(){ GST.skeleton(false); GST.pushState(F);
 
   // ── 신뢰성 (설비 S/N × BM) ──
   renderReliability(f);
+  // 🔔 자동 브리핑 — 최근 12구간(주/월) 건수·공수 추이
+  try{
+    const _u=GST.period(), _P=GST.periods(12,(F.dtTo?new Date(F.dtTo):new Date()),_u);
+    const _key=d=>_u==='w'?GST.isoW(d):(d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'));
+    const _in=(x,p)=>x.work&&x.work>=p.st&&x.work<=p.end;
+    const _cnt=_P.map(p=>f.filter(x=>_in(x,p)).length);
+    const _mh=_P.map(p=>Math.round(f.filter(x=>_in(x,p)).reduce((a,x)=>a+((x.manMin>0&&x.manMin<14400)?x.manMin:0),0)/60*10)/10);
+    GST.watch([
+      {k:'cnt', label:t('sl_stage'), labels:_P.map(p=>p.label), data:_cnt, unit:'', goodWhenDown:true,
+       parts:i=>{const m={}; f.forEach(x=>{ if(_in(x,_P[i])){ const g=x.line||'—'; m[g]=(m[g]||0)+1; } });
+                 return Object.keys(m).map(g=>({name:g,v:m[g]}));}},
+      {k:'mh',  label:t('th_mh'), labels:_P.map(p=>p.label), data:_mh, unit:'h', goodWhenDown:true}
+    ]);
+    void _key;
+  }catch(e){}
   // 🧊 피벗 — 현재 필터가 적용된 서비스 레코드를 교차 집계한다
   GST.pivotReg({
     rows:()=>f,

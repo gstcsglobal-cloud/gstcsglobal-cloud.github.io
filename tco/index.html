@@ -763,6 +763,22 @@ function render(){
   renderEqTable();
   renderInsights(sel,prev);
   renderAssump();
+  // 🔔 자동 브리핑 — 월별 총비용/유틸리티/파츠 추이
+  try{
+    if(MODEL&&MODEL.PER&&MODEL.PER.length){
+      const _L=MODEL.PER.map(p=>p.label||p.key);
+      const B=p=>MODEL.byPer[p.key]||{};
+      const tot=MODEL.PER.map(p=>Math.round(B(p).total||0));
+      const ut =MODEL.PER.map(p=>Math.round(B(p).util||0));
+      const pt =MODEL.PER.map(p=>Math.round(B(p).parts||0));
+      if(tot.some(v=>v)) GST.watch([
+        {k:'tot',  label:t('th_total'), labels:_L, data:tot, unit:'', goodWhenDown:true,
+         parts:i=>[{name:t('th_util'),v:ut[i]},{name:t('th_parts'),v:pt[i]}]},
+        {k:'util', label:t('th_util'),  labels:_L, data:ut, unit:'', goodWhenDown:true},
+        {k:'parts',label:t('th_parts'), labels:_L, data:pt, unit:'', goodWhenDown:true}
+      ]);
+    }
+  }catch(e){}
   // 🧊 피벗 — 선택 월의 설비별 TCO를 교차 집계한다
   GST.pivotReg({
     rows:()=>((MODEL&&MODEL.eqSel)||[]),
