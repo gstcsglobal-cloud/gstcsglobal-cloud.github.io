@@ -1024,7 +1024,7 @@ GST.STY = {
             site:['#2C5FAE','#38BDF8','#5EC2FF','#7C6FE0','#34D399','#D9A441'],
             pal8:['#5B9BD8','#3FAE8A','#D9A441','#9B8FE8','#E07A85','#7CA982','#C97FB0','#D08A5E']},
   /* QBR 양식과 동일 팔레트 — 막대 accent1/accent2, 꺾은선 빨강(비율)·파랑(총인원), 직선·원형 마커(qbr 플래그) */
-  graphite:{lbl:'QBR 양식', bar:'#4F81BD', last:'#4F81BD', bar2:'#C0504D', line:'#FF0000', lnG:'#0D0DF7', lnV:'#9BBB59',
+  graphite:{lbl:'Global CS', bar:'#4F81BD', last:'#4F81BD', bar2:'#C0504D', line:'#FF0000', lnG:'#0D0DF7', lnV:'#9BBB59',
             lnH:'#0D0DF7', lnP:'#FF0000', qbr:true,
             site:['#4F81BD','#C0504D','#9BBB59','#8064A2','#4BACC6','#F79646'],
             pal8:['#4F81BD','#C0504D','#9BBB59','#8064A2','#4BACC6','#F79646','#95B3D7','#D99694']},
