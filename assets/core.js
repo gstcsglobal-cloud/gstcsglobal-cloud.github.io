@@ -1016,27 +1016,21 @@ GST.upk = function(s){ return GST.nfw(s).toUpperCase(); };
    기존 report(gst_rpt_style)·hr(gst_hr_style)·사이드바 팔레트(gst_pal)가
    따로 놀던 것을 gst_chart_style 하나로 합쳤다. 최초 1회 자동 이관.
    ============================================================ */
+/* 차트 디자인 3종 — "많은 선택지"보다 "전부 고급"이 낫다 (사용자 확정).
+   ocean/sunset/forest는 제거 — 저장값이 그 키였던 사용자는 로더의 폴백으로 Aurora가 된다.
+   키 'vivid'/'cb'는 localStorage 하위호환을 위해 유지하고 라벨만 바꾼다. */
 GST.STY = {
-  vivid:   {lbl:'Vivid',    bar:'#2C5FAE', last:'#5EC2FF', bar2:'#7C6FE0', line:'#5EC2FF', lnG:'#34D399', lnV:'#A78BFA',
-            site:['#2C5FAE','#38BDF8','#5EC2FF','#7C6FE0','#34D399','#F59E0B'],
+  vivid:   {lbl:'Aurora',   bar:'#2C5FAE', last:'#5EC2FF', bar2:'#7C6FE0', line:'#5EC2FF', lnG:'#34D399', lnV:'#A78BFA',
+            site:['#2C5FAE','#38BDF8','#5EC2FF','#7C6FE0','#34D399','#D9A441'],
             pal8:['#5B9BD8','#3FAE8A','#D9A441','#9B8FE8','#E07A85','#7CA982','#C97FB0','#D08A5E']},
   graphite:{lbl:'Graphite', bar:'#8A8A8A', last:'#B4B4B4', bar2:'#C7C7C7', line:'#E03131', lnG:'#E03131', lnV:'#9A9A9A',
             site:['#5A5A5A','#7A7A7A','#9A9A9A','#B4B4B4','#8A8A8A','#C7C7C7'],
             pal8:['#5A5A5A','#E03131','#9A9A9A','#7A7A7A','#C7C7C7','#B4B4B4','#8A8A8A','#6E6E6E']},
-  ocean:   {lbl:'Ocean',    bar:'#0E7490', last:'#22D3EE', bar2:'#2DD4BF', line:'#F472B6', lnG:'#34D399', lnV:'#38BDF8',
-            site:['#0E7490','#0891B2','#22D3EE','#2DD4BF','#5EEAD4','#A5F3FC'],
-            pal8:['#5B9BD8','#D9A441','#3FAE8A','#9B8FE8','#D08A5E','#7CA982','#C97FB0','#E07A85']},
-  sunset:  {lbl:'Sunset',   bar:'#EA580C', last:'#FBBF24', bar2:'#FB7185', line:'#6366F1', lnG:'#F59E0B', lnV:'#EC4899',
-            site:['#EA580C','#F97316','#FB923C','#FBBF24','#FB7185','#F43F5E'],
-            pal8:['#E07A85','#5B9BD8','#D9A441','#3FAE8A','#9B8FE8','#7CA982','#C97FB0','#D08A5E']},
-  forest:  {lbl:'Forest',   bar:'#15803D', last:'#4ADE80', bar2:'#A3E635', line:'#DC2626', lnG:'#22C55E', lnV:'#84CC16',
-            site:['#15803D','#16A34A','#22C55E','#4ADE80','#84CC16','#A3E635'],
-            pal8:['#3FAE8A','#9B8FE8','#D9A441','#5B9BD8','#E07A85','#7CA982','#C97FB0','#D08A5E']},
   cb:      {lbl:'Safe',     bar:'#0072B2', last:'#56B4E9', bar2:'#CC79A7', line:'#D55E00', lnG:'#009E73', lnV:'#E69F00',
             site:['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00'],
             pal8:['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00','#F0E442','#666666']}
 };
-GST.STY_ORDER = ['vivid','graphite','ocean','sunset','forest','cb'];
+GST.STY_ORDER = ['vivid','graphite','cb'];
 GST._styKey = 'vivid';
 GST.style = function(){ return GST._styKey; };
 GST.sty    = function(){ return GST.STY[GST._styKey] || GST.STY.vivid; };
