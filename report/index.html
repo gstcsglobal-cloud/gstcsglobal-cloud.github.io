@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
+<script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -1568,6 +1569,55 @@ function render(){
       return Math.round(mm/60/den*10)/10;}),'#5EC2FF');
     ['sp2','sp6'].forEach(id=>{const e=document.getElementById(id);if(e){e.style.display='none';}});
   }catch(e){}
+  // ===== QBR 양식 PPT 데이터 — 내보내기 전용 · 화면 토글과 무관하게 양식 고정 단위(월 6종·주 2종) =====
+  try{
+    const r1q=v=>Math.round(v*10)/10, r2q=v=>Math.round(v*100)/100;
+    const MP=periods(12,asOf,'m'), WPq=periods(12,asOf,'w');
+    const catsM=MP.map(p=>QBRPPT.excelSerial(p.end)), catsW=WPq.map(p=>p.label);
+    const chInQ=E=>fINST.reduce((a,r)=>{const fd=pd(r[CI.fabIn]);if(!fd||fd>E)return a;
+      if(!/F1[016]|PSMC|TASC|WINBOND/.test(GST.upk(String(r[CI.fab]||''))))return a;
+      const ty=GST.upk(String(r[CI.type]||''));
+      return a+(ty.includes('DUAL')?2:(ty.includes('SINGLE')?1:0));},0);
+    const hdM=MP.map(p=>headOn(p.end));
+    const chsM=MP.map(p=>chInQ(p.end));
+    const eduAgg=pp=>{const a=fHR.filter(x=>x.onsite&&activeAt(x,pp.end)&&x.join);
+      const six=x=>((pp.end-x.join)/MS)>=182; const lv1=a.filter(x=>!six(x)),lv2=a.filter(six);
+      const dOf=(x,k)=>{const e=eduOf(x);return e&&e[k]&&e[k]<=pp.end;};
+      return {T:a.length,D:lv1.filter(x=>dOf(x,'bdate')).length+lv2.filter(x=>dOf(x,'vdate')).length};};
+    const fCIPq=CIP.filter(x=>okCF(x.custB,x.fab));
+    const cipT=MP.map(p=>fCIPq.filter(x=>!x.ap||x.ap<=p.end).length);
+    const cipD=MP.map(p=>fCIPq.filter(x=>(!x.ap||x.ap<=p.end)&&x.done&&x.done<=p.end).length);
+    const lsOf=p=>fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
+    const attW=[],lvW=[],hdW=[],pjW=[],pmW=[],npW=[],htW=[];
+    WPq.forEach(p=>{const ls=lsOf(p),hv=headOn(p.end),la=r1q(ls/5);
+      const jobs=fWK.filter(x=>keyOfDate(x.wd,'w')===p.key&&isMaint(x.stage)).length;
+      const av=Math.max(0,r1q(hv-la));
+      attW.push(av);lvW.push(la);hdW.push(hv);pjW.push(av?r1q(jobs/av):0);
+      const den=Math.max(1,Math.max(1,hv)*5-ls);
+      const pm=fWK.filter(x=>keyOfDate(x.wd,'w')===p.key&&isPM(x.stage)).reduce((a,x)=>a+x.manMin,0);
+      const np=fWK.filter(x=>keyOfDate(x.wd,'w')===p.key&&isSvc(x.stage)).reduce((a,x)=>a+x.manMin,0);
+      pmW.push(r2q(pm/60/den));npW.push(r2q(np/60/den));htW.push(r2q((pm+np)/60/den));});
+    const siteOfQ=x=>{const s=GST.upk(String(x.fab||'')+' '+String(x.custB||'')+' '+String(x.customer||''));
+      if(/F16N|TONG/.test(s))return 'N'; if(/F16S|TAINAN/.test(s))return 'S';
+      if(/F11/.test(s))return 'F11'; if(/F16/.test(s))return 'F16';
+      if(/WINBOND/.test(s))return 'WB'; if(/PSMC|POWERCHIP|TASC|ASIA/.test(s))return 'PT'; return '';};
+    const ftM=MP.map(p=>{const o={F11:0,F16:0,WB:0,PT:0,N:0,S:0};
+      fWK.forEach(x=>{if(x.stage==='BM'&&keyOfDate(x.wd,'m')===p.key){const k=siteOfQ(x);if(o[k]!=null)o[k]+=1;}});
+      const bkt=(ABP.m||{})[String(parseInt((p.key||'').slice(5),10))];
+      if(bkt){o.F11+=bkt.byF.F11||0;o.F16+=bkt.byF.F16||0;o.N+=bkt.byF.F16N||0;o.S+=bkt.byF.F16S||0;
+        o.WB+=(bkt.byC.WINBOND||0);o.PT+=(bkt.byC.POWERCHIP||0)+(bkt.byC.TASC||0);}
+      return o;});
+    window._PPT.qbr={week:window._PPT.wk,charts:{
+      chart1:{cats:catsM,series:{'대상건수':cipT,'완료건수':cipD,'진행율':cipT.map((v,i)=>v?r2q(cipD[i]/v):0)}},
+      chart2:{cats:catsM,series:{'총인원':hdM,'TO':chsM.map(v=>r1q(v/GST.conf('to_divisor',30)))}},
+      chart3:{cats:catsM,series:{'대상인원':MP.map(p=>eduAgg(p).T),'완료율':MP.map(p=>{const e=eduAgg(p);return e.T?r2q(e.D/e.T):0;})}},
+      chart4:{cats:catsW,series:{'출근평균':attW,'휴가평균':lvW,'총 인원':hdW,'인당작업':pjW}},
+      chart5:{cats:catsM,series:{'GST Taiwan':chsM,'전체 인당 관리':chsM.map((c,i)=>hdM[i]?r1q(c/hdM[i]):0)}},
+      chart6:{cats:catsW,series:{'PM':pmW,'非 PM':npW,'공수(h)':htW}},
+      chart7:{cats:catsM,series:{'Micron F11':ftM.map(o=>o.F11),'Micron F16':ftM.map(o=>o.F16),'Micron_Total':ftM.map(o=>o.F11+o.F16)}},
+      chart8:{cats:catsM,series:{'WInbond':ftM.map(o=>o.WB),'PSMC & TASC':ftM.map(o=>o.PT),'ETC_Total':ftM.map(o=>o.WB+o.PT+o.N+o.S)}}
+    }};
+  }catch(e){console.warn('QBR PPT 데이터 수집 실패',e);}
   // 🔔 자동 브리핑 — 위 차트들이 쌓아 둔 시계열을 넘긴다(이상치·추세·예측·원인 분해)
   GST.watch(_W);
   // 🧊 피벗 — 보고 싶은 "항목"을 고르면 그에 맞는 레코드가 나온다.
@@ -1985,7 +2035,41 @@ function pptHrRows(){ // 인력 현황 표 — 화면 차트와 동일 데이터
   return [[pptHead('구분',{align:'center'})].concat(Ps.map(p=>pptHead(p.label)))]
     .concat(defs.map(([lb,f])=>[pptCell(lb,{bold:true,align:'left'})].concat(Ps.map(p=>pptCell(f(p))))));
 }
+/* QBR 양식 PPT — 리포 내장 양식(qbr-template.pptx)을 열어 차트 캐시·표·주차만 교체.
+   마스터 배경·표 서식·차트 디자인이 양식 원본과 바이트 단위로 동일하게 유지된다. */
 window.downloadPPT=async function(btn){
+  const P=window._PPT;
+  if(!P||!P.qbr){capToast('데이터 로딩 완료 후 이용하세요');return;}
+  const old=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='⏳ 생성 중…';}
+  try{
+    if(!window.JSZip)await new Promise((res,rej)=>{const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';s.onload=res;s.onerror=()=>rej(new Error('JSZip 로드 실패'));document.head.appendChild(s);});
+    const tpl=await fetch('qbr-template.pptx').then(r=>{if(!r.ok)throw new Error('양식 파일 로드 실패('+r.status+')');return r.arrayBuffer();});
+    const data=Object.assign({},P.qbr);
+    if(P.edu){const e=P.edu,pct=(d,n)=>n?Math.round(d/n*100)+'%':'-';
+      data.eduTable={b:{no:e.b-e.bD,ing:0,done:e.bD,rate:pct(e.bD,e.b)},
+                     v:{no:e.v-e.vD,ing:0,done:e.vD,rate:pct(e.vD,e.v)}};}
+    { const tb=document.getElementById('opTblBody');
+      if(tb&&!tb.querySelector('.empty')){
+        const rows=pptRowsFromDom(tb).map(r=>r.map(c=>(c&&typeof c==='object')?(c.text||''):String(c==null?'':c)));
+        // 양식 열: 구분·가동TOT/WI/WO·챔버TOT/WI/WO·미가동(대/ch)·주재원·현채인·PM — 대시보드 표에서 해당 열만
+        data.opRows=rows.map(r=>[r[0],r[1],r[2],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[10],r[16]]); } }
+    { const tbl=top3TableEl();
+      if(tbl){ const rows=pptRowsFromDom(tbl).map(r=>r.map(c=>(c&&typeof c==='object')?(c.text||''):String(c==null?'':c)))
+          .filter(r=>r.length>=4&&!/^(#|no)$/i.test(String(r[0]).trim()));
+        // 양식 열 = No·원인·건수·주요 현상·조치 ← 대시보드 #·알람유형·건수·원인·조치
+        data.top3=rows.slice(0,3).map((r,i)=>[String(i+1),r[1]||'',r[2]||'',r[3]||'',r[4]||'']); } }
+    const blob=await QBRPPT.build(window.JSZip,tpl,data);
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='GST_주간보고_'+(P.wk||P.asOf)+'.pptx'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    capToast('⤓ 주간보고 PPT 저장됨 — '+(P.wk||'')+' · 양식 서식 원본 유지');
+  }catch(e){ console.error('PPT 생성 오류',e); capToast('PPT 생성 실패: '+((e&&e.message)||e)); }
+  finally{ if(btn){btn.disabled=false;btn.textContent=old;} }
+};
+// (구) pptxgenjs 재구성 방식 — 양식 수술 방식으로 대체됨
+window._downloadPPT_legacy=async function(btn){
   const P=window._PPT;
   if(!P||!CHARTS||!Object.keys(CHARTS).length){capToast('데이터 로딩 완료 후 이용하세요');return;}
   const old=btn?btn.textContent:'';
