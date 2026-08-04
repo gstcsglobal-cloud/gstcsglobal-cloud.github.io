@@ -216,6 +216,13 @@ function renderGBar(){
   el.innerHTML = reg ? GST.barHTML(reg, LANG) : '';
 }
 function barSend(key,val){
+  // 구간 범위는 전 페이지 공통 상태 — 셸이 먼저 확정하고 살아 있는 모든 프레임에 뿌린다.
+  // 활성 탭에만 보내면 다른 탭이 낡은 구간으로 남는다.
+  if(key==='span'){
+    GST.setSpan12(val===true||val==='true');
+    Object.values(frames).forEach(f=>{ try{ f.contentWindow.postMessage({type:'gst-bar-set',key:key,val:val},'*'); }catch(err){} });
+    renderGBar(); return;
+  }
   const f=frames[activeTab]; if(!f)return;
   try{ f.contentWindow.postMessage({type:'gst-bar-set',key:key,val:val},'*'); }catch(e){}
 }

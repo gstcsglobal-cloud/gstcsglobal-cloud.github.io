@@ -1108,18 +1108,27 @@ let CUT_M='';
 function cutEnd(v){ const p=String(v).split('-'); return new Date(Date.UTC(+p[0],+p[1],0)).toISOString().slice(0,10); }
 function applyCut(v){
   CUT_M=v||'';
-  const el=document.getElementById('dateTo');
+  const el=document.getElementById('dateTo'), fe=document.getElementById('dateFrom');
   if(CUT_M){ const s=cutEnd(CUT_M); if(el)el.value=s; DATE_TO=new Date(s); DATE_TO.setHours(23,59,59,999); }
   else { if(el)el.value=''; DATE_TO=null; }
+  // 구간 토글 OFF면 시작일도 그 달 1일로 — KPI·표가 그 달만 집계된다
+  if(CUT_M && !GST.span12()){ const s0=CUT_M+'-01'; if(fe)fe.value=s0; DATE_FROM=new Date(s0); DATE_FROM.setHours(0,0,0,0); }
+  else if(CUT_M){ if(fe)fe.value=''; DATE_FROM=null; }
   document.querySelectorAll('[data-q]').forEach(c=>c.classList.remove('active'));
   updateRangeDisplay();
   if(RAW.length)render(); else GST.barSync();
 }
+// 마감이 없을 때 "그 달"의 기준 — 데이터 최신일이 속한 달
+function cutFallbackM(){
+  const d=RAW.reduce((a,r)=>{const v=toDate(r[CI.turnOn]); return v&&(!a||v>a)?v:a;},null)||new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+function applySpan(on){ applyCut(!on && !CUT_M ? cutFallbackM() : CUT_M); }
 GST.pageBar({
   caps:{period:true, cutoff:'m', style:true, ppt:'auto'},
   state:()=>({period:GST.period(), endM:CUT_M, style:GST.style()}),
   on:{ period:v=>{ GST.setPeriod(v); render(); },
-       endM:v=>applyCut(v), clear:()=>applyCut('') }
+       endM:v=>applyCut(v), clear:()=>applyCut(''), span:on=>applySpan(on) }
 });
 
 function render(){ GST.skeleton(false);

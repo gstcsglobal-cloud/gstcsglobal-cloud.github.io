@@ -538,6 +538,7 @@ function isoW(d){
 }
 function periods(n,anchor,unit){
   const U=unit||PERIOD;
+  if(!GST.span12()) return GST._monthSpan(anchor,U,t('mon_u'));   // 상단바 토글 OFF = 마감 월만
   const out=[]; const today=anchor?new Date(anchor.getTime()):new Date(); today.setUTCHours(0,0,0,0);
   if(U==='w'){
     const mon=new Date(today); mon.setUTCDate(mon.getUTCDate()-mon.getUTCDay());

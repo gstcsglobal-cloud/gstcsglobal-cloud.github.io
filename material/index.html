@@ -777,18 +777,26 @@ function setPfFilter(v){
 const CLICK_MAP={cMat:'mat',cEq:'eq',cProc:'process',cPf:'pf',cReason:'reason'};
 // ── 공통 상단바 (셸 #gbar) — 마감(월)은 종료일(dtTo)로 연결 ──
 let CUT_M='';
+// 마감이 없을 때 "그 달"의 기준 — 데이터 최신 작업일이 속한 달
+function cutFallbackM(){
+  const d=DATA.reduce((a,x)=>(x.workDate&&(!a||x.workDate>a))?x.workDate:a,null)||new Date();
+  return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');
+}
 function applyCut(v){
   CUT_M=v||'';
-  const el=document.getElementById('dtTo');
-  if(el){ const p=CUT_M.split('-');
-    el.value = CUT_M ? new Date(Date.UTC(+p[0],+p[1],0)).toISOString().slice(0,10) : ''; }
+  const p=CUT_M.split('-');
+  const to=document.getElementById('dtTo'), fr=document.getElementById('dtFrom');
+  if(to) to.value = CUT_M ? new Date(Date.UTC(+p[0],+p[1],0)).toISOString().slice(0,10) : '';
+  // 구간 토글 OFF면 시작일도 그 달 1일로 — KPI·표가 그 달만 집계된다
+  if(fr) fr.value = (CUT_M && !GST.span12()) ? (CUT_M+'-01') : '';
   onSlicer();
 }
+function applySpan(on){ applyCut(!on && !CUT_M ? cutFallbackM() : CUT_M); }
 GST.pageBar({
   caps:{period:true, cutoff:'m', style:true, ppt:'auto'},
   state:()=>({period:GST.period(), endM:CUT_M, style:GST.style()}),
   on:{ period:v=>{ GST.setPeriod(v); render(); },
-       endM:v=>applyCut(v), clear:()=>applyCut('') }
+       endM:v=>applyCut(v), clear:()=>applyCut(''), span:on=>applySpan(on) }
 });
 const FIELD_LABEL={country:'국가',customer:'고객사',line:'라인',process:'공정',detail:'세부공정',eq:'설비',mat:'자재',reason:'사유',pf:'유/무상',dtFrom:'시작일',dtTo:'종료일',q:'검색'};
 function chartClick(chartId,label){

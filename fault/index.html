@@ -65,7 +65,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .slicer .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--mut);margin-bottom:8px;font-weight:700}
 .slicer select,.dt-input{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 12px;color:var(--txt);font-size:12px;outline:none;min-width:120px;color-scheme:dark}
 .search-sl{margin-left:auto}
-/* 입력 충실도 스트립 */
+/* 데이터 입력 정합성 스트립 */
 .dq-strip{display:flex;flex-direction:column;gap:5px;margin-top:4px}
 .dq-row{display:grid;grid-template-columns:64px 1fr 92px;align-items:center;gap:9px;font-size:11.5px}
 .dq-row .l{font-weight:700;color:var(--txt-muted);white-space:nowrap}
@@ -304,7 +304,7 @@ canvas{cursor:pointer}
       <div class="cw"><canvas id="cAlarmP"></canvas></div>
     </div>
     <div class="tablecard">
-      <h3><span data-i="dq_title">고장 기록 입력 충실도 (BM 기준)</span></h3>
+      <h3><span data-i="dq_title">데이터 입력 정합성 (BM 기준)</span></h3>
       <div id="dqStrip" class="dq-strip"></div>
       <div class="card-note" style="margin:8px 0 6px"><span data-i="dq_missing">미기재 목록 (최근 BM)</span>
         — <span data-i="dq_note">행의 ✎로 알람·원인·조치를 바로 채울 수 있습니다 (구글 시트에 저장)</span></div>
@@ -478,7 +478,7 @@ const T={
     ch_worker:'작업자 TOP (공수)',note_worker:'개인별 누적 인·시 · 공동작업은 인원수로 안분',ch_wcnt:'투입 인원수 구성',note_wcnt:'건당 작업자수',
     ch_lineman:'LINE별 평균 작업시간',note_lineman:'건당 평균(분)',
     tbl_title:'서비스 실적 상세',th_date:'작업일',ft_cnt:'건수',th_stage:'단계',th_pf:'유/무상',th_phenom:'현상',th_cause:'원인',th_action:'조치',th_min:'시간(분)',th_mh:'공수',th_worker:'작업자',
-    ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ch_alarmp:'알람 TOP (파레토)',note_alarmp:'알람(Z) 미기재 시 현상(AA) 폴백 · 라인=누적 %',dq_title:'고장 기록 입력 충실도 (BM 기준)',dq_missing:'미기재 목록 (최근 BM)',dq_note:'행의 ✎로 알람·원인·조치를 바로 채울 수 있습니다 (구글 시트에 저장)',dq_fill:'입력',dq_all:'알람·원인·조치가 모두 기재되어 있습니다',dq_missN:'미기재 {n}건 제외',dq_mt:'고장 기록 입력',dq_close:'닫기',dq_save:'저장',dq_saved:'저장됨 — 구글 시트에 반영되었습니다',dq_savefail:'저장 실패 — 잠시 후 다시 시도하세요',dq_conflict:'다른 사람이 먼저 수정했습니다 — 다시 열어주세요',dq_loadfail:'행을 불러오지 못했습니다',dq_zcol:'Z열',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'최근 구간 작업공수 {n}인·시 · 직전 구간 대비 {p}',
+    ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ch_alarmp:'알람 TOP (파레토)',note_alarmp:'알람(Z) 미기재 시 현상(AA) 폴백 · 라인=누적 %',dq_title:'데이터 입력 정합성 (BM 기준)',dq_missing:'미기재 목록 (최근 BM)',dq_note:'행의 ✎로 알람·원인·조치를 바로 채울 수 있습니다 (구글 시트에 저장)',dq_fill:'입력',dq_all:'알람·원인·조치가 모두 기재되어 있습니다',dq_missN:'미기재 {n}건 제외',dq_mt:'고장 기록 입력',dq_close:'닫기',dq_save:'저장',dq_saved:'저장됨 — 구글 시트에 반영되었습니다',dq_savefail:'저장 실패 — 잠시 후 다시 시도하세요',dq_conflict:'다른 사람이 먼저 수정했습니다 — 다시 열어주세요',dq_loadfail:'행을 불러오지 못했습니다',dq_zcol:'Z열',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'최근 구간 작업공수 {n}인·시 · 직전 구간 대비 {p}',
     etc:'기타',mon_unit:'월',dur_b:['<30분','30–60분','1–2시간','2–4시간','4시간+'],wcnt_p:'{n}명'},
   en:{title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
     sec_ov:'Overview',sec_ca:'Cause & Action',sec_ld:'Workload',sec_rel:'Reliability',sec_dt:'Data',
@@ -501,7 +501,7 @@ const T={
     ch_worker:'Top Workers (man-hours)',note_worker:'per-person, shared jobs split by headcount',ch_wcnt:'Crew Size Mix',note_wcnt:'workers per case',
     ch_lineman:'Avg Work Time by LINE',note_lineman:'avg minutes per case',
     tbl_title:'Service Records',th_date:'Date',ft_cnt:'Count',th_stage:'Stage',th_pf:'Paid/Free',th_phenom:'Phenomenon',th_cause:'Cause',th_action:'Action',th_min:'Min',th_mh:'Man-min',th_worker:'Workers',
-    ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ch_alarmp:'Top Alarms (Pareto)',note_alarmp:'falls back to symptom(AA) when alarm(Z) blank · line = cumulative %',dq_title:'Fault record completeness (BM)',dq_missing:'Missing entries (recent BM)',dq_note:'click ✎ to fill alarm/cause/action right here (saved to the Google Sheet)',dq_fill:'Fill',dq_all:'Alarm, cause and action are all filled in',dq_missN:'{n} blank excluded',dq_mt:'Fill fault record',dq_close:'Close',dq_save:'Save',dq_saved:'Saved to the Google Sheet',dq_savefail:'Save failed — try again',dq_conflict:'Someone edited this row first — reopen it',dq_loadfail:'Could not load the row',dq_zcol:'col Z',ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours in latest period · {p} vs prev',
+    ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ch_alarmp:'Top Alarms (Pareto)',note_alarmp:'falls back to symptom(AA) when alarm(Z) blank · line = cumulative %',dq_title:'Data entry integrity (BM)',dq_missing:'Missing entries (recent BM)',dq_note:'click ✎ to fill alarm/cause/action right here (saved to the Google Sheet)',dq_fill:'Fill',dq_all:'Alarm, cause and action are all filled in',dq_missN:'{n} blank excluded',dq_mt:'Fill fault record',dq_close:'Close',dq_save:'Save',dq_saved:'Saved to the Google Sheet',dq_savefail:'Save failed — try again',dq_conflict:'Someone edited this row first — reopen it',dq_loadfail:'Could not load the row',dq_zcol:'col Z',ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours in latest period · {p} vs prev',
     etc:'Others',mon_unit:'',dur_b:['<30m','30–60m','1–2h','2–4h','4h+'],wcnt_p:'{n} ppl'},
   zh:{title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
     sec_ov:'概览',sec_ca:'原因·措施',sec_ld:'工时负荷',sec_rel:'可靠性',sec_dt:'明细',
@@ -524,7 +524,7 @@ const T={
     ch_worker:'作业者TOP (工时)',note_worker:'按人累计,共同作业按人数分摊',ch_wcnt:'投入人数构成',note_wcnt:'每件作业人数',
     ch_lineman:'按LINE平均作业时间',note_lineman:'每件平均(分)',
     tbl_title:'服务实绩明细',th_date:'作业日',ft_cnt:'件数',th_stage:'阶段',th_pf:'有/无偿',th_phenom:'现象',th_cause:'原因',th_action:'措施',th_min:'时间(分)',th_mh:'工时',th_worker:'作业者',
-    ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ch_alarmp:'报警TOP (帕累托)',note_alarmp:'报警(Z)未填时用现象(AA) · 线=累计%',dq_title:'故障记录填写完整度 (BM)',dq_missing:'未填写清单 (近期BM)',dq_note:'点✎可直接填写报警·原因·措施 (保存到谷歌表格)',dq_fill:'填写',dq_all:'报警·原因·措施均已填写',dq_missN:'未填{n}件除外',dq_mt:'填写故障记录',dq_close:'关闭',dq_save:'保存',dq_saved:'已保存到谷歌表格',dq_savefail:'保存失败 — 请稍后重试',dq_conflict:'他人已先修改 — 请重新打开',dq_loadfail:'无法读取该行',dq_zcol:'Z列',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'最近区间工时 {n}人·时 · 环比 {p}',
+    ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ch_alarmp:'报警TOP (帕累托)',note_alarmp:'报警(Z)未填时用现象(AA) · 线=累计%',dq_title:'数据录入完整性 (BM)',dq_missing:'未填写清单 (近期BM)',dq_note:'点✎可直接填写报警·原因·措施 (保存到谷歌表格)',dq_fill:'填写',dq_all:'报警·原因·措施均已填写',dq_missN:'未填{n}件除外',dq_mt:'填写故障记录',dq_close:'关闭',dq_save:'保存',dq_saved:'已保存到谷歌表格',dq_savefail:'保存失败 — 请稍后重试',dq_conflict:'他人已先修改 — 请重新打开',dq_loadfail:'无法读取该行',dq_zcol:'Z列',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'最近区间工时 {n}人·时 · 环比 {p}',
     etc:'其他',mon_unit:'月',dur_b:['<30分','30–60分','1–2时','2–4时','4时+'],wcnt_p:'{n}人'},
   ja:{title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
     sec_ov:'概要',sec_ca:'原因·処置',sec_ld:'工数負荷',sec_rel:'信頼性',sec_dt:'詳細',
@@ -547,7 +547,7 @@ const T={
     ch_worker:'作業者TOP (工数)',note_worker:'個人別累計·共同作業は人数で按分',ch_wcnt:'投入人数構成',note_wcnt:'件当たり作業者数',
     ch_lineman:'LINE別平均作業時間',note_lineman:'件当たり平均(分)',
     tbl_title:'サービス実績詳細',th_date:'作業日',ft_cnt:'件数',th_stage:'段階',th_pf:'有/無償',th_phenom:'現象',th_cause:'原因',th_action:'処置',th_min:'時間(分)',th_mh:'工数',th_worker:'作業者',
-    ins_mom:'直近30日 {n}件 · 前30日比 {p}',ins_topcause:'原因 {v} 集中 — 全体の{p}%',ch_alarmp:'アラームTOP (パレート)',note_alarmp:'アラーム(Z)未記入時は現象(AA) · 線=累積%',dq_title:'故障記録の入力充実度 (BM)',dq_missing:'未記入リスト (直近BM)',dq_note:'✎でアラーム・原因・対応をその場で入力 (Googleシートに保存)',dq_fill:'入力',dq_all:'アラーム・原因・対応がすべて記入済みです',dq_missN:'未記入{n}件除外',dq_mt:'故障記録の入力',dq_close:'閉じる',dq_save:'保存',dq_saved:'Googleシートに保存しました',dq_savefail:'保存失敗 — 再試行してください',dq_conflict:'他の人が先に編集しました — 開き直してください',dq_loadfail:'行を読み込めませんでした',dq_zcol:'Z列',ins_outlier:'設備 {v} 異常集中 — {n}件',ins_man:'直近区間工数 {n}人·時 · 前区間比 {p}',
+    ins_mom:'直近30日 {n}件 · 前30日比 {p}',ins_topcause:'原因 {v} 集中 — 全体の{p}%',ch_alarmp:'アラームTOP (パレート)',note_alarmp:'アラーム(Z)未記入時は現象(AA) · 線=累積%',dq_title:'データ入力整合性 (BM)',dq_missing:'未記入リスト (直近BM)',dq_note:'✎でアラーム・原因・対応をその場で入力 (Googleシートに保存)',dq_fill:'入力',dq_all:'アラーム・原因・対応がすべて記入済みです',dq_missN:'未記入{n}件除外',dq_mt:'故障記録の入力',dq_close:'閉じる',dq_save:'保存',dq_saved:'Googleシートに保存しました',dq_savefail:'保存失敗 — 再試行してください',dq_conflict:'他の人が先に編集しました — 開き直してください',dq_loadfail:'行を読み込めませんでした',dq_zcol:'Z列',ins_outlier:'設備 {v} 異常集中 — {n}件',ins_man:'直近区間工数 {n}人·時 · 前区間比 {p}',
     etc:'その他',mon_unit:'月',dur_b:['<30分','30–60分','1–2時間','2–4時間','4時間+'],wcnt_p:'{n}名'}
 };
 
@@ -688,18 +688,27 @@ function filt(){
 // ===== 필터 칩 =====
 // ── 공통 상단바 (셸 #gbar) — 마감(월)은 종료일(dtTo)로 연결 ──
 let CUT_M='';
+// 마감이 없을 때 "그 달"의 기준 — 데이터 최신 작업일이 속한 달
+function cutFallbackM(){
+  const d=ROWS.reduce((a,x)=>(x.work&&(!a||x.work>a))?x.work:a,null)||new Date();
+  return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');
+}
 function applyCut(v){
   CUT_M=v||'';
-  const el=document.getElementById('dtTo');
-  if(el){ const p=CUT_M.split('-');
-    el.value = CUT_M ? new Date(Date.UTC(+p[0],+p[1],0)).toISOString().slice(0,10) : ''; }
+  const p=CUT_M.split('-');
+  const to=document.getElementById('dtTo'), fr=document.getElementById('dtFrom');
+  if(to) to.value = CUT_M ? new Date(Date.UTC(+p[0],+p[1],0)).toISOString().slice(0,10) : '';
+  // 구간 토글 OFF면 시작일도 그 달 1일로 — KPI·표·원인차트가 그 달만 집계된다
+  if(fr) fr.value = (CUT_M && !GST.span12()) ? (CUT_M+'-01') : '';
   onSlicer();
 }
+// 토글 전환: 끌 때 마감이 비어 있으면 최신 데이터 월로 채워 "한 달" 기준을 확정한다
+function applySpan(on){ applyCut(!on && !CUT_M ? cutFallbackM() : CUT_M); }
 GST.pageBar({
   caps:{period:true, cutoff:'m', style:true, ppt:'auto'},
   state:()=>({period:GST.period(), endM:CUT_M, style:GST.style()}),
   on:{ period:v=>{ GST.setPeriod(v); render(); },
-       endM:v=>applyCut(v), clear:()=>applyCut('') }
+       endM:v=>applyCut(v), clear:()=>applyCut(''), span:on=>applySpan(on) }
 });
 const FIELD_LABEL={line:'LINE',stage:'단계',pf:'유/무상',cause:'원인',model:'모델',sn:'설비',dtFrom:'시작일',dtTo:'종료일',q:'검색',alarm:'알람',country:'국가',campus:'CAMPUS',proc:'공정'};
 function renderFilterChips(){GST.renderChips(F,FIELD_LABEL,'clearFilter');}
@@ -758,7 +767,7 @@ const donutCenterPlugin={id:'dCenter',
   }};
 function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
 
-/* ===== 고장 기록 입력 충실도 + 미기재 목록 + 현장 입력 =====
+/* ===== 데이터 입력 정합성 + 미기재 목록 + 현장 입력 =====
    알람·현상·원인·조치 입력률이 2%대라 심층 분석이 막혀 있다(실측).
    여기서 바로 채울 수 있게 한다 — 실적코드(고유 키)로 그 행의 4개 열만 update. */
 function renderDQ(f){

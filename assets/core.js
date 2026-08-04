@@ -1041,10 +1041,14 @@ GST.setPalette = function(key, silent){ if(GST.STY[key]) GST.setStyle(key, silen
    페이지 상단에 직접 그려서 기능이 동일하게 유지된다.
    ============================================================ */
 GST.BAR_T = {
-  ko:{w:'주별',m:'월별',note:'최근 12개 구간',cut:'마감',mon:'Month',wk:'Week',clr:'마감 해제',sty:'차트 디자인',ppt:'PPT 저장',latest:'— 최신 —',na:'이 페이지에서는 사용되지 않습니다',brf:'브리핑',piv:'피벗'},
-  en:{w:'Weekly',m:'Monthly',note:'Last 12',cut:'Cut-off',mon:'Month',wk:'Week',clr:'Clear cut-off',sty:'Chart style',ppt:'Export PPT',latest:'— Latest —',na:'Not used on this page',brf:'Briefing',piv:'Pivot'},
-  zh:{w:'周',m:'月',note:'最近12期',cut:'截止',mon:'月',wk:'周',clr:'清除截止',sty:'图表配色',ppt:'导出PPT',latest:'— 最新 —',na:'此页面不适用',brf:'简报',piv:'透视'},
-  ja:{w:'週別',m:'月別',note:'直近12区間',cut:'締め',mon:'Month',wk:'Week',clr:'締め解除',sty:'チャート配色',ppt:'PPT出力',latest:'— 最新 —',na:'このページでは使用されません',brf:'ブリーフ',piv:'ピボット'}
+  ko:{w:'주별',m:'월별',note:'최근 12개 구간',note1:'마감 월만',cut:'마감',mon:'Month',wk:'Week',clr:'마감 해제',sty:'차트 디자인',ppt:'PPT 저장',latest:'— 최신 —',na:'이 페이지에서는 사용되지 않습니다',brf:'브리핑',piv:'피벗',
+      spanOnT:'최근 12개 구간을 봅니다 — 누르면 마감 월만',spanOffT:'마감으로 지정한 달만 봅니다 — 누르면 최근 12개 구간'},
+  en:{w:'Weekly',m:'Monthly',note:'Last 12',note1:'Cut-off month',cut:'Cut-off',mon:'Month',wk:'Week',clr:'Clear cut-off',sty:'Chart style',ppt:'Export PPT',latest:'— Latest —',na:'Not used on this page',brf:'Briefing',piv:'Pivot',
+      spanOnT:'Showing last 12 periods — click for cut-off month only',spanOffT:'Showing the cut-off month only — click for last 12 periods'},
+  zh:{w:'周',m:'月',note:'最近12期',note1:'仅截止月',cut:'截止',mon:'月',wk:'周',clr:'清除截止',sty:'图表配色',ppt:'导出PPT',latest:'— 最新 —',na:'此页面不适用',brf:'简报',piv:'透视',
+      spanOnT:'显示最近12期 — 点击切换为仅截止月',spanOffT:'仅显示截止月 — 点击切换为最近12期'},
+  ja:{w:'週別',m:'月別',note:'直近12区間',note1:'締め月のみ',cut:'締め',mon:'Month',wk:'Week',clr:'締め解除',sty:'チャート配色',ppt:'PPT出力',latest:'— 最新 —',na:'このページでは使用されません',brf:'ブリーフ',piv:'ピボット',
+      spanOnT:'直近12区間を表示 — クリックで締め月のみ',spanOffT:'締め月のみ表示 — クリックで直近12区間'}
 };
 // reg = {caps:{period,cutoff:'wm'|'m'|false,style,ppt}, state:{period,endM,endW,style}, weeks:[{v,t}]}
 // 전 페이지 **동일 세트**를 항상 렌더한다 — 지원하지 않는 컨트롤은 비활성(.off)으로
@@ -1059,7 +1063,12 @@ GST.barHTML = function(reg, lang){
   h+='<span class="gb-seg'+off(c.period)+'">'
     +'<button type="button" class="gb-b'+(c.period&&s.period==='w'?' on':'')+'" data-gb="period" data-v="w"'+dis(c.period)+'>'+T.w+'</button>'
     +'<button type="button" class="gb-b'+(c.period&&s.period==='m'?' on':'')+'" data-gb="period" data-v="m"'+dis(c.period)+'>'+T.m+'</button>'
-    +'</span><span class="gb-note'+off(c.period)+'">'+T.note+'</span>';
+    +'</span>'
+  // 구간 범위 토글 — 켜면 최근 12구간, 끄면 마감 월만 (전 페이지 공통)
+  // 전역 상태(localStorage)를 직접 읽는다 — 페이지가 보고한 값은 탭 전환 시 낡을 수 있다
+    +(function(){ const sp=GST.span12();
+      return '<button type="button" class="gb-b'+(sp?' on':'')+off(c.period)+'" data-gb="span" title="'
+        + (sp?T.spanOnT:T.spanOffT) +'"'+dis(c.period)+'>'+(sp?T.note:T.note1)+'</button>'; })();
   // 마감 — Month는 전 페이지, Week는 주간 마감을 갖는 페이지(report·cip)만 활성
   const hasCut = !!c.cutoff, hasWk = c.cutoff==='wm';
   h+='<span class="gb-note gb-cut'+off(hasCut)+'">'+T.cut+'</span>'
@@ -1074,8 +1083,10 @@ GST.barHTML = function(reg, lang){
   h+='<button type="button" class="gb-b'+off(c.style!==false)+'" data-gb="style" title="'+T.sty+'">🎨 <span class="gb-sty">'+st.lbl+'</span></button>'
     +'<button type="button" class="gb-b'+off(!!c.ppt)+'" data-gb="ppt" title="'+T.ppt+'"'+dis(!!c.ppt)+'>📊 PPT</button>';
   // 브리핑·피벗 — 페이지가 GST.watch()/GST.pivotReg()로 데이터를 등록하면 자동 활성
+  // 배지는 건수가 0이어도 자리를 비워 둔다 — 있고 없고에 따라 바 폭이 달라지면
+  // 페이지를 옮길 때마다 툴바가 흔들리고 탭이 밀린다(전 페이지 동일 폭 원칙).
   h+='<button type="button" class="gb-b'+off(!!c.brief)+'" data-gb="brief" title="'+T.brf+'"'+dis(!!c.brief)+'>🔔 '+T.brf
-    + (s.briefN ? '<span class="gb-badge">'+s.briefN+'</span>' : '') +'</button>'
+    + '<span class="gb-badge"'+(s.briefN?'':' style="visibility:hidden"')+'>'+(s.briefN||0)+'</span></button>'
     +'<button type="button" class="gb-b'+off(!!c.pivot)+'" data-gb="pivot" title="'+T.piv+'"'+dis(!!c.pivot)+'>🧊 '+T.piv+'</button>';
   return h;
 };
@@ -1084,7 +1095,8 @@ GST.barBind = function(root, send){
   root.addEventListener('click', function(e){
     const b=e.target.closest('[data-gb]'); if(!b||b.tagName==='INPUT'||b.tagName==='SELECT')return;
     const k=b.dataset.gb;
-    send(k, k==='period' ? b.dataset.v : null);
+    // span은 "뒤집어라"가 아니라 **새 값**을 보낸다 — 여러 프레임에 뿌려도 결과가 같아야 한다
+    send(k, k==='period' ? b.dataset.v : k==='span' ? !GST.span12() : null);
   });
   root.addEventListener('change', function(e){
     const el=e.target.closest('[data-gb]'); if(!el)return;
@@ -1118,6 +1130,7 @@ GST.barSync = function(){
   // 브리핑·피벗은 페이지가 데이터를 등록했는지로 자동 판단 — caps에 따로 적지 않아도 된다
   const caps=Object.assign({}, s.caps||{});
   const st=(typeof s.state==='function')?(s.state()||{}):{};
+  st.span12=GST.span12();     // 구간 범위 토글은 전 페이지 공통 상태 — 페이지가 보고하지 않아도 된다
   if((GST._watch||[]).length){ caps.brief=true; try{ st.briefN=GST.briefFind().filter(function(f){return f.sev==='bad'||f.sev==='warn';}).length; }catch(e){} }
   if(GST._pivot) caps.pivot=true;
   const reg={type:'gst-bar-reg', caps:caps, state:st,
@@ -1130,6 +1143,15 @@ GST._barDo = function(key, val){
   if(key==='pivot'){ GST.pivotOpen(); return; }
   const s=GST._bar; if(!s) return;
   const on=s.on||{};
+  // 구간 범위 토글 — core가 상태를 뒤집고, 페이지는 on.span이 있으면 그걸로(마감 시작일 재적용 등) 없으면 재렌더
+  if(key==='span'){
+    // val이 오면 그 값으로 확정(브로드캐스트 안전), 없으면 뒤집기
+    GST.setSpan12(val===null||val===undefined ? !GST.span12() : (val===true||val==='true'));
+    if(typeof on.span==='function'){ try{ on.span(GST.span12()); }catch(e){} }
+    else if(typeof global.render==='function'){ try{ global.render(); }catch(e){} }
+    else GST.barSync();
+    return;
+  }
   if(key==='style'){ if(on.style) on.style(); else GST.nextStyle(); return; }
   if(key==='ppt'){  if(on.ppt) on.ppt(); else GST.pptAuto(); return; }
   if(typeof on[key]==='function'){ try{ on[key](val); }catch(e){} }
@@ -1277,8 +1299,36 @@ GST.isoW = function(d){
   const w=Math.ceil((((sun-jan1)/MS)+jan1.getUTCDay()+1)/7);
   return sun.getUTCFullYear()+'-W'+String(w).padStart(2,'0');
 };
+/* 구간 범위 토글 — 전 페이지 공유(gst_rpt_span12).
+   ON(기본)  = 최근 12개 구간 (주간현황 형식, 기존 동작)
+   OFF       = 마감으로 지정한 그 달만. 월별이면 1구간, 주별이면 그 달에 걸친 주차들. */
+GST.span12 = function(){ try{ return localStorage.getItem('gst_rpt_span12')!=='0'; }catch(e){ return true; } };
+GST.setSpan12 = function(b){ try{ localStorage.setItem('gst_rpt_span12', b?'1':'0'); }catch(e){} };
+// 마감 월 하나만 덮는 구간 배열 — anchor가 속한 달을 기준으로 만든다
+GST._monthSpan = function(anchor, unit, monU){
+  const MS=86400000, out=[];
+  const a=anchor?new Date(anchor.getTime()):new Date(); a.setUTCHours(0,0,0,0);
+  const now=new Date(); now.setUTCHours(0,0,0,0);
+  const y=a.getUTCFullYear(), m=a.getUTCMonth();
+  const m0=new Date(Date.UTC(y,m,1)), m1=new Date(Date.UTC(y,m+1,0));
+  const cap=function(d){ return d>now?now:d; };          // 미래 구간은 오늘까지만
+  if(unit==='w'){
+    // 그 달에 걸치는 주(일~토)를 모두 — 주의 시작이 달을 벗어나도 겹치면 포함
+    let s=new Date(m0); s.setUTCDate(s.getUTCDate()-s.getUTCDay());
+    for(let g=0; g<6 && s<=m1; g++){
+      const en=new Date(s.getTime()+6*MS), k=GST.isoW(s);
+      out.push({key:k,label:'W'+k.slice(-2),st:new Date(s),end:cap(en)});
+      s=new Date(s.getTime()+7*MS);
+    }
+  }else{
+    out.push({key:y+'-'+String(m+1).padStart(2,'0'),label:(m+1)+(monU!=null?monU:'월'),
+              st:m0,end:cap(m1)});
+  }
+  return out;
+};
 GST.periods = function(n, anchor, unit, monU){
   const MS=86400000, U=unit||'m', out=[];
+  if(!GST.span12()) return GST._monthSpan(anchor, U, monU);
   const today=anchor?new Date(anchor.getTime()):new Date(); today.setUTCHours(0,0,0,0);
   if(U==='w'){
     const sun=new Date(today); sun.setUTCDate(sun.getUTCDate()-sun.getUTCDay());

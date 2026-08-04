@@ -587,6 +587,7 @@ function isoW(d){ // 엑셀 WEEKNUM(일~토, 1/1 포함 주=W1) — 시트 주�
 function keyOfDate(d,u){return (u||PERIOD)==='w'?isoW(d):fmtYM(d);}
 function periods(n,anchor,unit){
   const U=unit||PERIOD;
+  if(!GST.span12()) return GST._monthSpan(anchor,U,t('mon_u'));   // 상단바 토글 OFF = 마감 월만
   const out=[]; const today=anchor?new Date(anchor.getTime()):new Date(); today.setUTCHours(0,0,0,0);
   if(U==='w'){
     const mon=new Date(today); mon.setUTCDate(mon.getUTCDate()-mon.getUTCDay());   // 그 주 일요일(주 시작)
