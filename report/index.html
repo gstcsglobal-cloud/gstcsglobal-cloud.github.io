@@ -1009,7 +1009,10 @@ function render(){
   const QBR_SITE=new Set(['MICRON F11','MICRON F16','MICRON F16N','MICRON F16S','MICRON F10','POWERCHIP','TASC','WINBOND']);
   const qbrOk=p=>QBR_SITE.has(p.site);
   const headAt=E=>fHR.filter(x=>activeAt(x,E)).length;   // 재적 총인원
-  const headOn=E=>fHR.filter(x=>x.onsite&&qbrOk(x)&&activeAt(x,E)).length;   // 현장(O)·사이트 재적 — 공수/출근 분모
+  const headOn=E=>fHR.filter(x=>x.onsite&&qbrOk(x)&&activeAt(x,E)).length;   // 현장(O)·사이트 재적 — as-of 지표용
+  // QBR 정합: 주/월 운영지표 분모는 '구간 중 재직'(구간 내 퇴사자 포함) — 엑셀 매크로와 동일
+  const activeIn=(x,st,en)=>x.join<=en&&(!x.quit||x.quit>=st);
+  const headOnP=p=>fHR.filter(x=>x.onsite&&qbrOk(x)&&activeIn(x,p.st,p.end)).length;
   // 교육현황 이수일 조회 (인원현황 이름 ↔ 교육현황 인원 매칭)
   const EDU_BY_ID={}, EDU_BY_NAME={};
   HR.forEach(e=>{ if(e.id)EDU_BY_ID[e.id]=e; if(e.name)EDU_BY_NAME[e.name.trim().toUpperCase()]=e; });
@@ -1132,7 +1135,7 @@ function render(){
     if(wait)wait.style.display=ready?'none':'block';
     if(ready){
       const cust=F.customer;
-      const head=E=>ROSTER.filter(p=>p.onsite&&qbrOk(p)&&p.join<=E&&(!p.quit||p.quit>=E)&&okCF(p.custB,p.fab)).length;
+      const head=P_=>ROSTER.filter(x=>x.onsite&&qbrOk(x)&&activeIn(x,P_.st,P_.end)&&okCF(x.custB,x.fab)).length;   // 구간 중 재직
       const chIn=E=>fINST.reduce((a,r)=>{
         const fd=pd(r[CI.fabIn]); if(!fd||fd>E)return a;
         if(!/F1[016]|PSMC|TASC|WINBOND/.test(GST.upk(String(r[CI.fab]||''))))return a;   // 매크로 NarrowUp: 사이트 키 행만
@@ -1148,7 +1151,7 @@ function render(){
           const wd=(u==='m')?21:5;
           const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
           const la=Math.round(ls/wd*10)/10;
-          const hv=head(p.end);
+          const hv=head(p);
           const jobs=fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isMaint(x.stage)).length;
           const attV=Math.max(0,Math.round((hv-la)*10)/10);
           lv.push(la);
@@ -1183,12 +1186,12 @@ function render(){
       // 총인원 vs TO (둘 다 '명' — 단일축)
       {
         const {P,labels}=PU('cTo');
-        const hv=P.map(p=>head(p.end));
+        const hv=P.map(p=>head(p));
         const to=P.map(p=>Math.round(chIn(p.end)/GST.conf('to_divisor',30)*10)/10);
         // 총인원 — 라인별 재직자로 분해(어느 라인이 늘고 줄었는지)
         _W.push({k:'to',label:t('head_l'),labels,data:hv,unit:'',
                  parts:i=>SITES.map(s=>({name:s,
-                   v:fHR.filter(x=>x.onsite&&grpKey(x)===s&&activeAt(x,P[i].end)).length}))});
+                   v:fHR.filter(x=>x.onsite&&qbrOk(x)&&grpKey(x)===s&&activeIn(x,P[i].st,P[i].end)).length}))});
         destroyMk('cTo');
         CHARTS.cTo=new Chart(document.getElementById('cTo'),{type:'bar',
           data:{labels,datasets:[
@@ -1210,7 +1213,7 @@ function render(){
       {
         const {P,labels}=PU('cChp');
         const chs=P.map(p=>chIn(p.end));
-        const hv=P.map(p=>head(p.end));
+        const hv=P.map(p=>head(p));
         const per=chs.map((c,i)=>hv[i]?Math.round(c/hv[i]*10)/10:0);
         const perMax=Math.max(10,Math.ceil(Math.max.apply(null,per)*2.4));   // 라인을 하단 40% 영역에 — 막대와 분리
         destroyMk('cChp');
@@ -1305,7 +1308,7 @@ function render(){
     const r1=v=>Math.round(v*10)/10;
     const denom=p=>{const wd=(u==='m')?21:5;
       const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
-      return Math.max(1,Math.max(1,headOn(p.end))*wd-ls);};
+      return Math.max(1,Math.max(1,headOnP(p))*wd-ls);};
     // 구간별 원시 분(minute) 합 → 총합은 원시합에서 한 번만 반올림(이중 반올림 방지)
     const pmMin=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isPM(x.stage)).reduce((a,x)=>a+x.manMin,0));
     const npMin=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isSvc(x.stage)).reduce((a,x)=>a+x.manMin,0));   // 非PM = CBM·CRM·CM·BM
@@ -1553,17 +1556,17 @@ function render(){
   }
   // 드릴다운용 데이터·구간 스냅샷 (표시 계층 전용, 계산 무관)
   {const per={}; ['cFt','cMan','cAtt','cHc','cCareer','cIo'].forEach(id=>{try{per[id]=PU(id).P;}catch(e){}});
-   window._DRILL={fWK,fHR,fLV,headOn,SITES,grpKey,per,activeAt};}
+   window._DRILL={fWK,fHR,fLV,headOn,headOnP,SITES,grpKey,per,activeAt,activeIn,qbrOk};}
   // KPI 스파크라인 (최근 12구간 추세 · 계산 무관 표시용)
   try{ const SP=periods(12,asOf,PERIOD), wdv=(PERIOD==='m')?21:5;
-    drawSpark('sp1',SP.map(p=>headOn(p.end)),'#3B82F6');
+    drawSpark('sp1',SP.map(p=>headOnP(p)),'#3B82F6');
     drawSpark('sp3',SP.map(p=>{const a=fHR.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join),six=x=>((p.end-x.join)/MS)>=182;
       const D=a.filter(x=>!six(x)).filter(x=>{const e=eduOf(x);return e&&e.bdate&&e.bdate<=p.end;}).length
              +a.filter(six).filter(x=>{const e=eduOf(x);return e&&e.vdate&&e.vdate<=p.end;}).length;
       return a.length?Math.round(D/a.length*100):null;}),'#34D399');
     drawSpark('sp4',SP.map(p=>fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&x.stage==='BM').length),'#E03131');
     drawSpark('sp5',SP.map(p=>{const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
-      const den=Math.max(1,Math.max(1,headOn(p.end))*wdv-ls);
+      const den=Math.max(1,Math.max(1,headOnP(p))*wdv-ls);
       const mm=fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&(isPM(x.stage)||isSvc(x.stage))).reduce((a,x)=>a+x.manMin,0);
       return Math.round(mm/60/den*10)/10;}),'#5EC2FF');
     ['sp2','sp6'].forEach(id=>{const e=document.getElementById(id);if(e){e.style.display='none';}});
@@ -1689,13 +1692,13 @@ function drillMan(p){ const D=window._DRILL;
   showDrill('작업공수 상세 · '+p.label,h);
 }
 function drillAtt(p){ const D=window._DRILL;
-  const head=D.headOn(p.end), ls=D.fLV.filter(x=>x.date>=p.st&&x.date<=p.end).reduce((a,x)=>a+x.days,0);
+  const head=D.headOnP(p), ls=D.fLV.filter(x=>x.date>=p.st&&x.date<=p.end).reduce((a,x)=>a+x.days,0);
   const jobs=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&isMaint(x.stage)).length;
   const h='<div class="dsum"><div class="b"><span class="n">'+head+'</span><span class="l">현장 재직</span></div><div class="b"><span class="n">'+(Math.round(ls*10)/10)+'</span><span class="l">휴가(평일 합)</span></div><div class="b"><span class="n">'+jobs.toLocaleString()+'</span><span class="l">작업 건수</span></div></div><div class="dhint">작업 = TBM·BM·CBM·CRM·CM 합계</div>';
   showDrill('출근·작업 상세 · '+p.label,h);
 }
 function drillHead(p){ const D=window._DRILL;
-  const act=D.fHR.filter(x=>x.onsite&&activeAt(x,p.end)); const bl={}; let etc=0;
+  const act=D.fHR.filter(x=>x.onsite&&D.qbrOk(x)&&D.activeIn(x,p.st,p.end)); const bl={}; let etc=0;
   act.forEach(x=>{const k=D.grpKey(x); if(D.SITES.indexOf(k)>=0)bl[k]=(bl[k]||0)+1; else etc++;});
   const rows=D.SITES.filter(s=>bl[s]).map(s=>[s,bl[s]]);
   let h='<div class="dsum"><div class="b"><span class="n">'+act.length+'</span><span class="l">현장(O) 재직</span></div></div>';
