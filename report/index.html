@@ -55,6 +55,16 @@ body.theme-light .gt-btn.active{color:#fff}
 .sec-h{font-size:13px;font-weight:800;color:var(--txt-muted);letter-spacing:1.5px;text-transform:uppercase;margin:22px 0 10px 2px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
 .grid2{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;margin-bottom:16px}
+/* Alarm·고장 행 — 3카드(차트·TOP3·교육계획) 동일 높이 · 내용은 카드 안에서 미니 스크롤 */
+.arow{display:grid;grid-template-columns:1.05fr 1.15fr .8fr;gap:16px;margin-bottom:16px}
+.arow>.card,.arow>.tablecard{height:365px;display:flex;flex-direction:column;margin-bottom:0;min-width:0}
+.arow .cw{flex:1;height:auto;min-height:0}
+.arow .tbl-wrap{flex:1;min-height:0;overflow:auto}
+.arow .tbl-wrap thead th{position:sticky;top:0;background:var(--bg-card,#101720);z-index:2}
+@media(max-width:1250px){.arow{grid-template-columns:1fr}
+  .arow>.card,.arow>.tablecard{height:auto}
+  .arow .cw{height:var(--ch-std,240px);flex:none}
+  .arow .tbl-wrap{max-height:260px;flex:none}}
 .card{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:18px;backdrop-filter:blur(14px);position:relative}
 .mini-per{position:absolute;top:14px;right:14px;display:flex;gap:0;z-index:5;border:1px solid var(--glass-border);border-radius:12px;overflow:hidden}
 /* 카드 안 인라인 체크 토글 (입사·퇴사 현장 인원 필터) */
@@ -235,7 +245,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 </div>
 
 <div class="sec-h" data-i="sec3">Alarm · 고장</div>
-<div class="grid2" style="grid-template-columns:1.05fr 1.15fr .8fr">
+<div class="arow">
   <div class="card">
     <h3 data-i="ch_ft">고장 건수 (BM · CBM)</h3><div class="mini-per" data-ch="cFt"></div>
     <div class="card-note" data-i="note_ft">합계는 툴팁</div>
@@ -244,21 +254,26 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   </div>
   <div class="tablecard" style="position:relative">
   <h3 data-i="tbl_top">고장 원인 TOP 3</h3><div class="mini-per" data-ch="top3" style="top:16px"></div>
+  <div class="tbl-wrap">
   <table>
     <thead><tr><th>#</th><th data-i="th_al">주요 알람유형</th><th data-i="th_cnt" style="white-space:nowrap">건수</th><th data-i="th_cause">원인</th><th data-i="th_act">조치</th></tr></thead>
     <tbody id="top3Body"><tr><td colspan="5" class="empty">—</td></tr></tbody>
   </table>
+  </div>
   <div class="card-note" id="top3Etc" style="margin-top:8px"></div>
 </div>
   <div class="tablecard" style="position:relative">
     <h3>교육 계획</h3>
     <select id="eduPlanSite" onchange="setEduPlanSite(this.value)"
       style="position:absolute;right:14px;top:14px;background:var(--bg-2,#12161C);color:inherit;border:1px solid var(--line,#2A3340);border-radius:6px;padding:3px 6px;font-size:12px"></select>
+    <div class="tbl-wrap">
     <table>
       <thead><tr><th>교육과정</th><th style="text-align:center">Basic (LV1)</th><th style="text-align:center">Veteran (LV2)</th></tr></thead>
       <tbody id="eduPlanBody"><tr><td colspan="3" class="empty">—</td></tr></tbody>
     </table>
+    </div>
     <div class="card-note" id="eduPlanNote" style="margin-top:8px"></div>
+    <div class="card-note" id="eduPlanMiss" style="display:none;margin-top:4px;color:var(--warn,#fbbf24)"></div>
   </div>
 </div>
 
@@ -1064,12 +1079,16 @@ function render(){
   const headAt=E=>fHR.filter(x=>activeAt(x,E)).length;   // 재적 총인원
   const headOn=E=>fHR.filter(x=>x.onsite&&qbrOk(x)&&activeAt(x,E)).length;   // 현장(O)·사이트 재적 — 공수/출근 분모
   // 교육현황 이수일 조회 (인원현황 이름 ↔ 교육현황 인원 매칭)
-  const EDU_BY_ID={}, EDU_BY_NAME={};
-  HR.forEach(e=>{ if(e.id)EDU_BY_ID[e.id]=e; if(e.name)EDU_BY_NAME[e.name.trim().toUpperCase()]=e; });
-  // 사원번호로만 매칭(동명이인 오귀속 방지) · ID가 없는 레코드만 이름 폴백
-  // (ID가 있는데 HR에 없으면 미매칭으로 처리 — 이름 폴백 시 동명이인 레코드를 잘못 가져올 위험)
-  const eduOf=x=> x.bdate!==undefined ? x
-    : x.id ? (EDU_BY_ID[x.id]||null) : (EDU_BY_NAME[(x.name||'').trim().toUpperCase()]||null);
+  const EDU_BY_ID={}, EDU_BY_NAME={}, EDU_NAME_DUP=new Set();
+  HR.forEach(e=>{ if(e.id)EDU_BY_ID[e.id]=e;
+    if(e.name){const k=e.name.trim().toUpperCase();
+      if(EDU_BY_NAME[k])EDU_NAME_DUP.add(k); EDU_BY_NAME[k]=e;} });
+  // 사원번호 우선 매칭(동명이인 오귀속 방지) · ID가 교육시트에 없거나 ID 자체가 없으면
+  // 이름이 교육시트에서 유일할 때만 이름 폴백 — ID 오타·미기재로 인한 가짜 미이수 차단
+  const eduOf=x=>{ if(x.bdate!==undefined)return x;
+    if(x.id&&EDU_BY_ID[x.id])return EDU_BY_ID[x.id];
+    const k=(x.name||'').trim().toUpperCase();
+    return (k&&!EDU_NAME_DUP.has(k)&&EDU_BY_NAME[k])||null; };
 
   // ===== 인력 =====
   const act=fHR.filter(p=>p.onsite&&activeAt(p,asOf));   // 재직 인원 = 현장(O) 재직자만 카운트(기준일 as-of)
@@ -1097,23 +1116,44 @@ function render(){
     const base=fHR.filter(x=>x.onsite&&activeAt(x,asOf)&&x.join&&(!selv||grpKey(x)===selv));
     const sixP=x=>((asOf-x.join)/MS)>=182;
     const lv1=base.filter(x=>!sixP(x)), lv2=base.filter(sixP);
-    const dOfP=(x,k)=>{const e=eduOf(x);return !!(e&&e[k]&&e[k]<=asOf);};
-    const bT=lv1.length, bD2=lv1.filter(x=>dOfP(x,'bdate')).length;
-    const vT=lv2.length, vD2=lv2.filter(x=>dOfP(x,'vdate')).length;
+    // 인별 상태 분류 — 시트의 상태 열(이수완료/진행중)을 존중한다.
+    // done: 이수일<=기준일 · ing: 상태 '진행중'(미완료) · no: 그 외 미이수(사유 보관)
+    const clsP=(x,dk,sk)=>{const e=eduOf(x);
+      if(e&&e[dk]&&e[dk]<=asOf)return {c:'done'};
+      if(e&&String(e[sk]||'').trim()==='진행중')return {c:'ing'};
+      if(!e)return {c:'no',why:'매칭없음'};
+      if(e[dk])return {c:'no',why:'이수 '+(e[dk].getUTCMonth()+1)+'/'+e[dk].getUTCDate()+'(기준일후)'};
+      return {c:'no',why:'이수일없음'};};
+    const tally=(arr,dk,sk)=>{const r={t:arr.length,done:0,ing:0,no:0,noList:[]};
+      arr.forEach(x=>{const c=clsP(x,dk,sk);
+        if(c.c==='done')r.done++; else if(c.c==='ing')r.ing++;
+        else {r.no++; r.noList.push(x.name+'('+c.why+')');}});
+      return r;};
+    const B=tally(lv1,'bdate','basic'), V=tally(lv2,'vdate','vet');
     const pctP=(d,n)=>n?Math.round(d/n*100)+'%':'-';
     window._PPT.eduPlan={site:selv,
-      b:{no:bT-bD2,ing:0,done:bD2,rate:pctP(bD2,bT)},
-      v:{no:vT-vD2,ing:0,done:vD2,rate:pctP(vD2,vT)}};
+      b:{tgt:B.t,no:B.no,ing:B.ing,done:B.done,rate:pctP(B.done,B.t)},
+      v:{tgt:V.t,no:V.no,ing:V.ing,done:V.done,rate:pctP(V.done,V.t)}};
     const sel=document.getElementById('eduPlanSite');
     if(sel){ if(!sel.options.length)
         sel.innerHTML=[''].concat(SITES).map(s=>'<option value="'+s+'">'+(s||'전체 라인')+'</option>').join('');
       sel.value=selv; }
     const bd=document.getElementById('eduPlanBody');
     if(bd){const E=window._PPT.eduPlan;
-      bd.innerHTML=[['미이수',E.b.no,E.v.no],['진행중',E.b.ing,E.v.ing],['이수완료',E.b.done,E.v.done],['완료율',E.b.rate,E.v.rate]]
+      bd.innerHTML=[['대상인원',E.b.tgt,E.v.tgt],['이수완료',E.b.done,E.v.done],['진행중',E.b.ing,E.v.ing],['미이수',E.b.no,E.v.no],['완료율',E.b.rate,E.v.rate]]
         .map(r=>'<tr><td>'+r[0]+'</td><td style="text-align:center">'+r[1]+'</td><td style="text-align:center">'+r[2]+'</td></tr>').join('');}
     const nt=document.getElementById('eduPlanNote');
-    if(nt)nt.textContent=(selv||'전체 라인')+' · 대상 LV1 '+bT+'명 · LV2 '+vT+'명 · PPT 교육계획 표 연동';
+    if(nt){
+      nt.textContent=(selv||'전체 라인')+' · 기준일 '+asOf.toISOString().slice(0,10)+' (W'+isoW(asOf).slice(-2)+') · PPT 연동';
+      // 미이수 명단 — 누가 잡혔는지 카드에서 바로 확인 (전체 명단은 툴팁)
+      const miss=B.noList.map(s=>'LV1 '+s).concat(V.noList.map(s=>'LV2 '+s));
+      const mEl=document.getElementById('eduPlanMiss');
+      if(mEl){ if(miss.length){
+          mEl.style.display='';
+          mEl.textContent='미이수: '+miss.slice(0,3).join(', ')+(miss.length>3?' 외 '+(miss.length-3)+'명':'');
+          mEl.title=miss.join('\n');
+        } else { mEl.style.display='none'; mEl.textContent=''; mEl.title=''; } }
+    }
   }
   setTxt('kp3',eT?Math.round(eD/eT*100)+'%':'—');
   setTxt('kf3',t('kf3').replace('{p}',eLv2.length?Math.round(d2/eLv2.length*100):0).replace('{n}',eLv2.length));
