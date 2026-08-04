@@ -1,0 +1,169 @@
+/* QBR 양식 PPT 내보내기 — 양식(.pptx)을 그대로 열어 차트 캐시·표 셀·주차 텍스트만 교체한다.
+   마스터·배경·서식·차트 스타일은 원본 바이트 그대로 유지되므로 양식과 완전히 동일한 파일이 나온다.
+   순수 함수 모듈: 브라우저(window.QBRPPT)와 node(module.exports) 양쪽에서 동작 — 회귀 테스트용. */
+(function(root){
+'use strict';
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const unesc=s=>String(s||'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+
+// ---- 차트 캐시 패치 ---------------------------------------------------------
+// pts: null/undefined 값은 빈 포인트로 건너뛴다(캐시에 미기재)
+function buildPts(vals){
+  let out='<c:ptCount val="'+vals.length+'"/>';
+  vals.forEach((v,i)=>{ if(v==null||v==='')return;
+    out+='<c:pt idx="'+i+'"><c:v>'+esc(v)+'</c:v></c:pt>'; });
+  return out;
+}
+// cache 블록(numCache|strCache) 내부의 ptCount+pt들만 교체 — formatCode 등은 보존
+function swapCache(cacheXml,vals){
+  const inner=buildPts(vals);
+  return cacheXml.replace(/<c:ptCount[^>]*\/>[\s\S]*?(?=<\/c:(num|str)Cache>)/,inner)
+                 .replace(/(<c:(num|str)Cache>)(?![\s\S]*<c:ptCount)/,'$1'+inner); // ptCount가 없던 경우
+}
+// <c:cat>/<c:val> 블록에서 첫 캐시를 찾아 교체
+function swapIn(block,vals){
+  const m=block.match(/<c:(num|str)Cache>[\s\S]*?<\/c:\1Cache>/);
+  if(!m)return block;
+  return block.replace(m[0],swapCache(m[0],vals));
+}
+/* chartXml 패치: cats = 카테고리 배열, series = {시리즈명: 값배열}
+   - 각 <c:ser>의 <c:tx>…<c:v>이름</c:v>으로 시리즈를 식별해 해당 값만 교체
+   - cat 캐시 타입(num/str)은 양식 것을 따른다: strCache면 cats를 문자열로, numCache면 숫자로 기입 */
+function patchChart(chartXml,cats,series){
+  return chartXml.replace(/<c:ser>[\s\S]*?<\/c:ser>/g,ser=>{
+    const nm=ser.match(/<c:tx>[\s\S]*?<c:v>([\s\S]*?)<\/c:v>/);
+    const name=nm?unesc(nm[1]).trim():'';
+    const vals=series[name];
+    if(!vals)return ser;                                  // 매핑 없는 시리즈는 그대로
+    let out=ser;
+    const cat=out.match(/<c:cat>[\s\S]*?<\/c:cat>/);
+    if(cat&&cats)out=out.replace(cat[0],swapIn(cat[0],cats));
+    const val=out.match(/<c:val>[\s\S]*?<\/c:val>/);
+    if(val)out=out.replace(val[0],swapIn(val[0],vals));
+    return out;
+  });
+}
+
+// ---- 표 셀 패치 -------------------------------------------------------------
+// 슬라이드 XML에서 signature 문자열을 포함한 <a:tbl>을 찾아 [행][열] 첫 텍스트런을 교체.
+// edits: [{r,c,v}] (r,c는 0-기준 · 표 서식/병합/스타일은 그대로)
+function patchTable(slideXml,signature,edits){
+  const tbls=slideXml.match(/<a:tbl>[\s\S]*?<\/a:tbl>/g)||[];
+  const target=tbls.find(tb=>tb.indexOf(signature)>=0);
+  if(!target)return slideXml;
+  const rows=target.match(/<a:tr[\s\S]*?<\/a:tr>/g)||[];
+  let out=target;
+  edits.forEach(e=>{
+    const row=rows[e.r]; if(!row)return;
+    const cells=row.match(/<a:tc[ >][\s\S]*?<\/a:tc>/g)||[];
+    const cell=cells[e.c]; if(!cell)return;
+    let newCell, replaced=false;
+    if(/<a:t>[\s\S]*?<\/a:t>/.test(cell)){
+      let first=true;
+      newCell=cell.replace(/<a:t>[\s\S]*?<\/a:t>/g,mm=>{ // 첫 런에 값, 나머지 런은 비움(서식 유지)
+        if(first){first=false;return '<a:t>'+esc(e.v)+'</a:t>';}
+        return '<a:t></a:t>';});
+      replaced=true;
+    }else{ // 빈 셀: 단락에 런 삽입 (엔드태그 직전)
+      newCell=cell.replace(/(<a:p>)([\s\S]*?)(<\/a:p>)/,(mm,a,b,c)=>a+b+'<a:r><a:t>'+esc(e.v)+'</a:t></a:r>'+c);
+      replaced=newCell!==cell;
+    }
+    if(replaced){
+      const newRow=row.replace(cell,newCell);
+      out=out.replace(row,newRow);
+      rows[e.r]=newRow;
+    }
+  });
+  return slideXml.replace(target,out);
+}
+
+// ---- 텍스트 치환 (주차 라벨 등) ---------------------------------------------
+function patchText(slideXml,re,repl){ return slideXml.replace(re,repl); }
+
+/* ---- 메인: build(JSZipRef, tplBuf, data) -> Promise<Blob|Buffer> ------------
+data = {
+ week:'W31',
+ charts:{ 'chart1':{cats:[...],series:{...}}, ... 'chart8':{...} },
+ eduTable:{b:{no,ing,done,rate}, v:{no,ing,done,rate}},              // 교육과정 표
+ opRows:[[구분, 가동TOT,WI,WO, 챔버TOT,WI,WO, 미가동대,미가동ch, 주재원,현채인, PM], ...],
+ top3:[[no,원인,건수,현상,조치] x3]
+} */
+function build(JSZipRef,tplBuf,data){
+  return JSZipRef.loadAsync(tplBuf).then(zip=>{
+    const jobs=[];
+    // 1) 차트 8개
+    Object.keys(data.charts||{}).forEach(cn=>{
+      const path='ppt/charts/'+cn+'.xml';
+      const f=zip.file(path); if(!f)return;
+      jobs.push(f.async('string').then(xml=>{
+        const d=data.charts[cn];
+        zip.file(path,patchChart(xml,d.cats,d.series));
+      }));
+    });
+    // 2) 슬라이드 표·텍스트
+    jobs.push(zip.file('ppt/slides/slide1.xml').async('string').then(xml=>{
+      if(data.eduTable){ const e=data.eduTable;
+        xml=patchTable(xml,'교육과정',[
+          {r:1,c:1,v:e.b.no},{r:1,c:2,v:e.v.no},        // 미이수
+          {r:2,c:1,v:e.b.ing},{r:2,c:2,v:e.v.ing},      // 진행중
+          {r:3,c:1,v:e.b.done},{r:3,c:2,v:e.v.done},    // 이수완료
+          {r:4,c:1,v:e.b.rate},{r:4,c:2,v:e.v.rate}]);  // 완료율
+      }
+      zip.file('ppt/slides/slide1.xml',xml);
+    }));
+    jobs.push(zip.file('ppt/slides/slide2.xml').async('string').then(xml=>{
+      if(data.opRows){
+        const rows=xml.match(/<a:tbl>[\s\S]*?<\/a:tbl>/g)||[];
+        const tb=rows.find(tb0=>tb0.indexOf('가동 장비 대수')>=0);
+        if(tb){
+          const trs=tb.match(/<a:tr[\s\S]*?<\/a:tr>/g)||[];
+          // 데이터 행은 3행(idx 2)부터: 행 라벨을 읽어 opRows에서 매칭
+          const edits=[];
+          for(let r=2;r<trs.length;r++){
+            const lbl=(trs[r].match(/<a:t>([\s\S]*?)<\/a:t>/)||[])[1]||'';
+            const key=unesc(lbl).replace(/\s+/g,'').toUpperCase();
+            const src=data.opRows.find(rr=>{
+              const k=String(rr[0]).replace(/\s+/g,'').toUpperCase();
+              if(key.indexOf('TOTAL')>=0||key.indexOf('합계')>=0)return /TOTAL|합계/.test(k);
+              if(/TONG|F16N/.test(key))return /TONG|F16N/.test(k);
+              if(/TAINAN|F16S/.test(key))return /TAINAN|F16S/.test(k);
+              if(/F16(?!N|S)/.test(key))return /F16(?!N|S)/.test(k)&&!/TONG|TAINAN/.test(k);
+              if(/F11/.test(key))return /F11/.test(k);
+              if(/PSMC/.test(key))return /PSMC/.test(k)&&!/TASC/.test(k);
+              if(/TASC/.test(key))return /TASC/.test(k)&&!/PSMC/.test(k);
+              if(/WINBOND/.test(key))return /WINBOND/.test(k);
+              return false;
+            });
+            if(src)for(let c=1;c<Math.min(src.length,12);c++)edits.push({r,c,v:src[c]});
+          }
+          xml=patchTable(xml,'가동 장비 대수',edits);
+        }
+      }
+      zip.file('ppt/slides/slide2.xml',xml);
+    }));
+    jobs.push(zip.file('ppt/slides/slide3.xml').async('string').then(xml=>{
+      if(data.week)xml=patchText(xml,/TOP\s*3\s*\(W\d+\)/,'TOP 3 ('+data.week+')');
+      if(data.top3&&data.top3.length){
+        const edits=[];
+        data.top3.slice(0,3).forEach((row,i)=>{
+          row.forEach((v,c)=>edits.push({r:i+1,c,v})); });
+        xml=patchTable(xml,'주요 현상',edits);
+      }
+      zip.file('ppt/slides/slide3.xml',xml);
+    }));
+    return Promise.all(jobs).then(()=>{
+      const isNode=typeof window==='undefined';
+      return zip.generateAsync({type:isNode?'nodebuffer':'blob',
+        mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        compression:'DEFLATE'});
+    });
+  });
+}
+
+// Excel 날짜 시리얼 (1899-12-30 기준) — 월말 카테고리용
+function excelSerial(d){ return Math.round((d.getTime()-Date.UTC(1899,11,30))/86400000); }
+
+const API={build,patchChart,patchTable,excelSerial};
+if(typeof module!=='undefined'&&module.exports)module.exports=API;
+else root.QBRPPT=API;
+})(typeof window!=='undefined'?window:globalThis);

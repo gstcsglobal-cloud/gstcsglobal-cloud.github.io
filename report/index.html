@@ -506,12 +506,14 @@ window.clearEnds=function(){ ENDM='';ENDW='';
   try{localStorage.setItem('gst_rpt_end','{}');}catch(e){} render(); };
 // 설치현황 트렌드풍 꺾은선 (부드러운 곡선 + 링 포인트)
 function lineDs(label,data,color,extra){
-  const n=data.length;
-  return Object.assign({type:'line',label,data,borderColor:color,backgroundColor:color,
-    borderWidth:2.5,tension:.35,
-    pointRadius:data.map((_,i)=>i===n-1?5.5:2.4),
-    pointBackgroundColor:data.map((_,i)=>i===n-1?color:'#0B0F14'),
-    pointBorderColor:color,pointBorderWidth:2,pointHoverRadius:6,fill:false,order:1},extra||{});
+  const n=data.length, q=!!(GST.sty()||{}).qbr;   // QBR 양식 스타일: 직선 + 균일 원형 마커(엑셀 차트와 동일)
+  const ds=Object.assign({type:'line',label,data,borderColor:color,backgroundColor:color,
+    borderWidth:q?2:2.5,tension:q?0:.35,
+    pointRadius:q?data.map(()=>3):data.map((_,i)=>i===n-1?5.5:2.4),
+    pointBackgroundColor:q?data.map(()=>color):data.map((_,i)=>i===n-1?color:'#0B0F14'),
+    pointBorderColor:color,pointBorderWidth:q?1.5:2,pointHoverRadius:6,fill:false,order:1},extra||{});
+  if(q)delete ds.borderDash;   // 양식은 실선
+  return ds;
 }
 window.setChartPer=function(id,u){ PER[id]=u; savePer(); render(); };
 function renderMiniToggles(){
@@ -613,33 +615,44 @@ const valLabelPlugin={id:'valLabel',
     const fmt=v=>{const n=+v;return Math.abs(n)>=1000?Math.round(n).toLocaleString():String(Math.round(n*10)/10);};
     ctx.save();
     if(o.mode==='all'){
-      // QBR 스타일 값 표기 — 겹침 방지: 막대는 안쪽 상단, 라인은 위쪽, 작은 스택 세그먼트는 생략(툴팁으로)
+      // QBR 스타일 값 표기 — 겹침 방지: 그려진 라벨 박스를 기록하고, 겹치면 위로 밀어낸다(막대 먼저 → 라인)
       ctx.font='700 9.5px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
-      chart.data.datasets.forEach((ds,di)=>{
+      const rects=[];
+      const hit=b=>rects.some(r=>!(b.r<r.l||b.l>r.r||b.b<r.t||b.t>r.b));
+      const put=(txt,x,y,base,color)=>{
+        const w=ctx.measureText(txt).width, h=10;
+        let yy=y, tries=0;
+        const box=()=>{const top=base==='top'?yy:yy-h; return {l:x-w/2-1,r:x+w/2+1,t:top,b:top+h};};
+        let b=box();
+        while(tries<6&&hit(b)){ yy-=11; b=box(); tries++; }   // 겹치면 11px씩 위로
+        rects.push(b);
+        ctx.fillStyle=color; ctx.textAlign='center'; ctx.textBaseline=base;
+        ctx.fillText(txt,x,yy);
+      };
+      const pass=wantLine=>chart.data.datasets.forEach((ds,di)=>{
         const meta=chart.getDatasetMeta(di);
         if(!meta||meta.hidden||!meta.data||ds._noLabel)return;
-        const isLine=meta.type==='line';
+        const isLine=meta.type==='line'; if(isLine!==wantLine)return;
         meta.data.forEach((el,i)=>{
           const v=ds.data[i]; if(v==null||!isFinite(v)||+v===0)return;
-          ctx.fillStyle=o.color||'#E6EDF3';
-          ctx.textAlign='center';
-          if(isLine){
-            ctx.textBaseline='bottom';
-            ctx.fillText(fmt(v)+(ds._suf||''),el.x,el.y-7);
-            return;
-          }
+          if(isLine){ put(fmt(v)+(ds._suf||''),el.x,el.y-7,'bottom',o.color||'#E6EDF3'); return; }
           const hgt=el.base!=null?Math.abs(el.base-el.y):0;
           if(ds.stack){
             // 막대 색 위 라벨은 명도 대비색으로 — 연한 막대에 흰 글씨가 묻히는 문제 방지
             let _f=ds.backgroundColor; if(Array.isArray(_f))_f=_f[i];
-            if(hgt>=9){ ctx.fillStyle=labelOn(_f); ctx.textBaseline='middle'; ctx.fillText(fmt(v)+(ds._suf||''),el.x,(el.y+el.base)/2); }
+            if(hgt>=9){ const txt=fmt(v)+(ds._suf||'');
+              ctx.fillStyle=labelOn(_f); ctx.textAlign='center'; ctx.textBaseline='middle';
+              ctx.fillText(txt,el.x,(el.y+el.base)/2);
+              const w=ctx.measureText(txt).width, cy=(el.y+el.base)/2;
+              rects.push({l:el.x-w/2-1,r:el.x+w/2+1,t:cy-5,b:cy+5}); }
             // 9px 미만 아주 작은 세그먼트만 생략(툴팁으로 확인)
             return;
           }
-          if(hgt>20){ ctx.textBaseline='top'; ctx.fillText(fmt(v)+(ds._suf||''),el.x,el.y+4); }
-          else{ ctx.textBaseline='bottom'; ctx.fillText(fmt(v)+(ds._suf||''),el.x,el.y-4); }
+          if(hgt>20)put(fmt(v)+(ds._suf||''),el.x,el.y+4,'top',o.color||'#E6EDF3');
+          else put(fmt(v)+(ds._suf||''),el.x,el.y-4,'bottom',o.color||'#E6EDF3');
         });
       });
+      pass(false); pass(true);   // 막대 라벨 먼저 고정 → 라인 라벨이 회피
       ctx.restore();return;
     }
     if(o.mode==='stackAll'||o.mode==='stackTotal'){
@@ -1167,8 +1180,8 @@ function render(){
           data:{labels,datasets:[
             {label:t('att_a'),data:att,backgroundColor:BAR_C,stack:'s',order:3},
             {label:t('att_l'),data:lv,backgroundColor:BAR2_C,stack:'s',order:3},
-            lineDs(t('head_l'),hd,'#3B82F6'),
-            lineDs(t('att_pj'),pj,'#E03131',{yAxisID:'y2',borderDash:[5,4]})]},
+            lineDs(t('head_l'),hd,_sty.lnH||'#3B82F6'),
+            lineDs(t('att_pj'),pj,_sty.lnP||'#E03131',{yAxisID:'y2',borderDash:[5,4]})]},
           options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
             plugins:{legend:{position:'bottom',labels:{padding:8}},
               valLabel:{mode:'all',color:ink},
@@ -1572,8 +1585,9 @@ function render(){
   // ===== QBR 양식 PPT 데이터 — 내보내기 전용 · 화면 토글과 무관하게 양식 고정 단위(월 6종·주 2종) =====
   try{
     const r1q=v=>Math.round(v*10)/10, r2q=v=>Math.round(v*100)/100;
+    const exSer=d=>Math.round((d.getTime()-Date.UTC(1899,11,30))/86400000);   // 엑셀 날짜 시리얼 (QBRPPT 미로드여도 수집은 진행)
     const MP=periods(12,asOf,'m'), WPq=periods(12,asOf,'w');
-    const catsM=MP.map(p=>QBRPPT.excelSerial(p.end)), catsW=WPq.map(p=>p.label);
+    const catsM=MP.map(p=>exSer(p.end)), catsW=WPq.map(p=>p.label);
     const chInQ=E=>fINST.reduce((a,r)=>{const fd=pd(r[CI.fabIn]);if(!fd||fd>E)return a;
       if(!/F1[016]|PSMC|TASC|WINBOND/.test(GST.upk(String(r[CI.fab]||''))))return a;
       const ty=GST.upk(String(r[CI.type]||''));
@@ -1617,7 +1631,7 @@ function render(){
       chart7:{cats:catsM,series:{'Micron F11':ftM.map(o=>o.F11),'Micron F16':ftM.map(o=>o.F16),'Micron_Total':ftM.map(o=>o.F11+o.F16)}},
       chart8:{cats:catsM,series:{'WInbond':ftM.map(o=>o.WB),'PSMC & TASC':ftM.map(o=>o.PT),'ETC_Total':ftM.map(o=>o.WB+o.PT+o.N+o.S)}}
     }};
-  }catch(e){console.warn('QBR PPT 데이터 수집 실패',e);}
+  }catch(e){window._PPT.qbrErr=(e&&e.message)||String(e);console.warn('QBR PPT 데이터 수집 실패',e);}
   // 🔔 자동 브리핑 — 위 차트들이 쌓아 둔 시계열을 넘긴다(이상치·추세·예측·원인 분해)
   GST.watch(_W);
   // 🧊 피벗 — 보고 싶은 "항목"을 고르면 그에 맞는 레코드가 나온다.
@@ -2039,10 +2053,11 @@ function pptHrRows(){ // 인력 현황 표 — 화면 차트와 동일 데이터
    마스터 배경·표 서식·차트 디자인이 양식 원본과 바이트 단위로 동일하게 유지된다. */
 window.downloadPPT=async function(btn){
   const P=window._PPT;
-  if(!P||!P.qbr){capToast('데이터 로딩 완료 후 이용하세요');return;}
+  if(!P||!P.qbr){capToast(P&&P.qbrErr?('PPT 데이터 수집 오류: '+P.qbrErr):'데이터 로딩 완료 후 이용하세요');return;}
   const old=btn?btn.textContent:'';
   if(btn){btn.disabled=true;btn.textContent='⏳ 생성 중…';}
   try{
+    if(typeof QBRPPT==='undefined')throw new Error('assets/qbr-ppt.js 미배포 — assets 폴더의 새 파일도 함께 올려주세요');
     if(!window.JSZip)await new Promise((res,rej)=>{const s=document.createElement('script');
       s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';s.onload=res;s.onerror=()=>rej(new Error('JSZip 로드 실패'));document.head.appendChild(s);});
     const tpl=await fetch('qbr-template.pptx').then(r=>{if(!r.ok)throw new Error('양식 파일 로드 실패('+r.status+')');return r.arrayBuffer();});
