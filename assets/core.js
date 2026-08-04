@@ -8,6 +8,19 @@
 'use strict';
 const GST = {};
 
+/* ---------- 0. 폰트 단일 출처 ----------
+   DOM은 theme.css가, 캔버스(ctx.font·Chart.defaults)는 이 상수가 담당한다.
+   두 곳이 어긋나면 차트 안 글자만 다른 폰트가 되므로 반드시 여기서만 바꾼다. */
+GST.FONT_STACK = '"Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
+GST.font = function(px, weight){ return (weight||400)+' '+px+'px '+GST.FONT_STACK; };
+// 웹폰트는 첫 렌더보다 늦게 도착할 수 있다 — 캔버스는 스스로 다시 그리지 않으므로
+// 폰트 준비가 끝나면 한 번 재렌더해서 폴백 메트릭으로 그려진 차트를 교정한다.
+if (typeof document!=='undefined' && document.fonts && document.fonts.ready){
+  document.fonts.ready.then(function(){
+    try{ if(typeof window!=='undefined' && typeof window.render==='function') window.render(); }catch(e){}
+  });
+}
+
 /* ---------- 1. 날짜 유틸 ---------- */
 // 구글시트의 다양한 날짜 표현(시리얼 숫자, YYYY-MM-DD, Date 문자열)을 UTC Date로 통일
 GST.toDate = function(v){
@@ -90,7 +103,7 @@ GST.authGate = async function(){
   // 인증이 설정되지 않았으면 통과시키지 않는다(fail-closed). 예전엔 공용 비밀번호로 우회됐다.
   if(!GST.authOn()){
     ov.classList.remove('hidden'); ov.style.display='flex';
-    ov.innerHTML='<div style="max-width:340px;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
+    ov.innerHTML='<div style="max-width:340px;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
       +'<div style="font-size:17px;font-weight:800;color:#ffb4b4;margin-bottom:8px">인증이 설정되지 않았습니다</div>'
       +'<div style="font-size:12px;color:#8a97a5">관리자에게 문의하세요</div></div>';
     return new Promise(function(){});   // 절대 resolve하지 않음 → 페이지가 열리지 않는다
@@ -98,7 +111,7 @@ GST.authGate = async function(){
   var s=await GST.getSession();
   if(s){ ov.classList.add('hidden'); ov.style.display='none'; GST._authOk(); return true; }
   ov.classList.remove('hidden'); ov.style.display='flex';
-  ov.innerHTML='<div class="login-card" style="max-width:340px;width:90%;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
+  ov.innerHTML='<div class="login-card" style="max-width:340px;width:90%;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
     +'<div style="font-size:20px;font-weight:800;color:#e6edf3;margin-bottom:6px">GST CS Dashboard</div>'
     +'<div style="font-size:12px;color:#8a97a5;margin-bottom:18px">등록된 이메일로 인증코드를 받아 로그인하세요</div>'
     +'<input id="sbEmail" type="email" placeholder="name@company.com" autocomplete="email" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#e6edf3;font-size:14px;margin-bottom:8px">'
@@ -138,7 +151,7 @@ GST.authGate = async function(){
 GST.authDenied=function(code){
   var ov=document.getElementById('loginOverlay'); if(!ov)return;
   ov.classList.remove('hidden'); ov.style.display='flex';
-  ov.innerHTML='<div class="login-card" style="max-width:360px;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
+  ov.innerHTML='<div class="login-card" style="max-width:360px;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
     +'<div style="font-size:17px;font-weight:800;color:#ffb4b4;margin-bottom:8px">'+(code===403?'접근 권한이 없습니다':'로그인이 만료되었습니다')+'</div>'
     +'<div style="font-size:12px;color:#8a97a5;margin-bottom:16px">'+(code===403?'관리자에게 이메일 등록을 요청하세요':'다시 로그인해 주세요')+'</div>'
     +'<button onclick="GST.signOut()" style="padding:9px 22px;border-radius:10px;border:0;background:#2C5FAE;color:#fff;font-weight:700;cursor:pointer">다시 로그인</button></div>';
@@ -284,9 +297,9 @@ GST.PAL8 = GST.PAL.concat(['#008300','#d55181','#d95926']);
 // 전환은 배열을 "제자리에서" 교체(splice)하므로 페이지가 const PAL=GST.PAL8로
 // 잡아둔 참조도 함께 갱신된다.
 GST.PALETTES = {
-  ocean:  {label:'Ocean',  colors:['#3987e5','#199e70','#c98500','#9085e9','#e66767','#008300','#d55181','#d95926']},
-  forest: {label:'Forest', colors:['#199e70','#9085e9','#c98500','#3987e5','#e66767','#008300','#d55181','#d95926']},
-  sunset: {label:'Sunset', colors:['#e66767','#3987e5','#c98500','#199e70','#9085e9','#008300','#d55181','#d95926']}
+  ocean:  {label:'Ocean',  colors:['#5B9BD8','#D9A441','#3FAE8A','#9B8FE8','#D08A5E','#7CA982','#C97FB0','#E07A85']},
+  forest: {label:'Forest', colors:['#3FAE8A','#9B8FE8','#D9A441','#5B9BD8','#E07A85','#7CA982','#C97FB0','#D08A5E']},
+  sunset: {label:'Sunset', colors:['#E07A85','#5B9BD8','#D9A441','#3FAE8A','#9B8FE8','#7CA982','#C97FB0','#D08A5E']}
 };
 GST._palKey='ocean';
 GST.setPalette = function(key, silent){
@@ -317,6 +330,34 @@ GST.chartTheme = function(){
     status:{ bad: slate?'#e66767':'#fb7185', warn: slate?'#fab219':'#fbbf24',
              ok: slate?'#3fbf3f':'#34d399', na:'#64748b' } };
 };
+/* 차트 전역 규격 — 8개 페이지가 각자 설정하던 것을 한 곳으로.
+   페이지는 로드 시와 테마 전환 시 GST.chartDefaults()만 부른다.
+   개별 차트가 명시한 옵션은 여전히 이긴다(Chart.js 옵션 우선순위). */
+GST.chartDefaults = function(){
+  if(typeof Chart==='undefined') return;
+  const TH=GST.chartTheme();
+  Chart.defaults.color = TH.txt;
+  Chart.defaults.font.family = GST.FONT_STACK;
+  Chart.defaults.font.size = 11;
+  Chart.defaults.borderColor = TH.grid;
+  // 범례: 점 스타일 — 사각 스와치보다 정돈된 인상
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.legend.labels.boxWidth = 6;
+  Chart.defaults.plugins.legend.labels.boxHeight = 6;
+  Chart.defaults.plugins.legend.labels.padding = 14;
+  // 툴팁: 다크 글래스 — 테마와 무관하게 일관(라이트에서도 다크 툴팁이 가독 우수)
+  const tt=Chart.defaults.plugins.tooltip;
+  tt.backgroundColor='rgba(13,20,28,.92)'; tt.borderColor='rgba(151,170,196,.25)'; tt.borderWidth=1;
+  tt.cornerRadius=8; tt.padding=10; tt.titleColor='#E6EDF3'; tt.bodyColor='#B7C3D3';
+  tt.titleFont={family:GST.FONT_STACK,size:11.5,weight:'700'};
+  tt.bodyFont={family:GST.FONT_STACK,size:11};
+  tt.boxPadding=4; tt.usePointStyle=true;
+  // 막대 기하 — 페이지마다 2~6으로 흩어져 있던 radius를 한 값으로, 두께 상한으로 과비만 방지
+  Chart.defaults.elements.bar.borderRadius = 4;
+  Chart.defaults.datasets.bar.maxBarThickness = 34;
+};
+try{ GST.chartDefaults(); }catch(e){}
+
 // 테마 전환 시 차트 전체 파기 — update()로는 축/범례 잉크가 갱신되지 않으므로
 // 파기 후 페이지 render()가 새 잉크로 다시 그리게 한다.
 GST.reskinCharts = function(store){
@@ -337,7 +378,7 @@ GST.bar = function(store, id, o){
   const txt = o.txt || TH.txt;
   const grid = o.grid || TH.grid;
   const total = o.data.reduce((a,b)=>a+b,0) || 1;
-  const datasets = [{type:'bar', label:'건수', data:o.data, backgroundColor:o.color, borderRadius:5}];
+  const datasets = [{type:'bar', label:'건수', data:o.data, backgroundColor:o.color}];
   const plugins = {legend:{display:false}};
   if(o.share){
     plugins.tooltip = {callbacks:{label:function(c){
@@ -978,19 +1019,19 @@ GST.upk = function(s){ return GST.nfw(s).toUpperCase(); };
 GST.STY = {
   vivid:   {lbl:'Vivid',    bar:'#2C5FAE', last:'#5EC2FF', bar2:'#7C6FE0', line:'#5EC2FF', lnG:'#34D399', lnV:'#A78BFA',
             site:['#2C5FAE','#38BDF8','#5EC2FF','#7C6FE0','#34D399','#F59E0B'],
-            pal8:['#3987e5','#199e70','#c98500','#9085e9','#e66767','#008300','#d55181','#d95926']},
+            pal8:['#5B9BD8','#3FAE8A','#D9A441','#9B8FE8','#E07A85','#7CA982','#C97FB0','#D08A5E']},
   graphite:{lbl:'Graphite', bar:'#8A8A8A', last:'#B4B4B4', bar2:'#C7C7C7', line:'#E03131', lnG:'#E03131', lnV:'#9A9A9A',
             site:['#5A5A5A','#7A7A7A','#9A9A9A','#B4B4B4','#8A8A8A','#C7C7C7'],
             pal8:['#5A5A5A','#E03131','#9A9A9A','#7A7A7A','#C7C7C7','#B4B4B4','#8A8A8A','#6E6E6E']},
   ocean:   {lbl:'Ocean',    bar:'#0E7490', last:'#22D3EE', bar2:'#2DD4BF', line:'#F472B6', lnG:'#34D399', lnV:'#38BDF8',
             site:['#0E7490','#0891B2','#22D3EE','#2DD4BF','#5EEAD4','#A5F3FC'],
-            pal8:['#3987e5','#199e70','#c98500','#9085e9','#e66767','#008300','#d55181','#d95926']},
+            pal8:['#5B9BD8','#D9A441','#3FAE8A','#9B8FE8','#D08A5E','#7CA982','#C97FB0','#E07A85']},
   sunset:  {lbl:'Sunset',   bar:'#EA580C', last:'#FBBF24', bar2:'#FB7185', line:'#6366F1', lnG:'#F59E0B', lnV:'#EC4899',
             site:['#EA580C','#F97316','#FB923C','#FBBF24','#FB7185','#F43F5E'],
-            pal8:['#e66767','#3987e5','#c98500','#199e70','#9085e9','#008300','#d55181','#d95926']},
+            pal8:['#E07A85','#5B9BD8','#D9A441','#3FAE8A','#9B8FE8','#7CA982','#C97FB0','#D08A5E']},
   forest:  {lbl:'Forest',   bar:'#15803D', last:'#4ADE80', bar2:'#A3E635', line:'#DC2626', lnG:'#22C55E', lnV:'#84CC16',
             site:['#15803D','#16A34A','#22C55E','#4ADE80','#84CC16','#A3E635'],
-            pal8:['#199e70','#9085e9','#c98500','#3987e5','#e66767','#008300','#d55181','#d95926']},
+            pal8:['#3FAE8A','#9B8FE8','#D9A441','#5B9BD8','#E07A85','#7CA982','#C97FB0','#D08A5E']},
   cb:      {lbl:'Safe',     bar:'#0072B2', last:'#56B4E9', bar2:'#CC79A7', line:'#D55E00', lnG:'#009E73', lnV:'#E69F00',
             site:['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00'],
             pal8:['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00','#F0E442','#666666']}

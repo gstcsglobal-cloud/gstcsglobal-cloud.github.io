@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Premium Material Replacement Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -60,7 +61,7 @@ body.theme-light {
 }
 
 body {
-  font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+  font-family: 'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif;
   color: var(--txt-main);
   background: var(--bg-gradient);
   background-size: 400% 400%;
@@ -77,8 +78,6 @@ body {
 }
 
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
-.header h1{font-size:28px;font-weight:800;background:var(--title-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
-.header .sub{color:var(--txt-muted);font-size:13px;margin-top:4px}
 .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .navtabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid var(--glass-border);padding-bottom:0}
 .navtab{padding:10px 18px;border-radius:10px 10px 0 0;font-size:13px;font-weight:700;text-decoration:none;
@@ -159,10 +158,10 @@ body.theme-light .cross-controls .ctrl-group select { color-scheme: light; color
 .cross-layout table .total-cell{color:var(--accent-2);font-weight:700}
 
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
-.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;backdrop-filter:blur(14px);box-shadow:var(--card-shadow);height:440px;display:flex;flex-direction:column;}
+.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;backdrop-filter:blur(14px);box-shadow:var(--card-shadow)}
 .card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:var(--txt-main)}
 .card-note{font-size:10px;color:var(--txt-muted);margin-bottom:10px;font-style:italic}
-.card .cw{flex:1;position:relative;min-height:0}
+.card .cw{position:relative;height:var(--ch-std,240px)}
 
 .excl-box{margin-bottom:10px}
 .excl-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;max-height:54px;overflow-y:auto}
@@ -321,12 +320,25 @@ canvas{cursor:pointer}
 
 <!-- ═══ 섹션: 개요 ═══ -->
 <div data-sec="overview">
-  <div class="card" style="margin-bottom:16px">
-    <h3 data-i="ch_monthly">교체 추이 (주/월)</h3>
-    <div class="card-note" data-i="note_monthly">자재실적일자 기준 건수</div>
-    <div class="cw" style="height:240px"><canvas id="cMonthly"></canvas></div>
+  <!-- 추이는 2/3이면 충분 — 전폭은 12막대에 과하고 유·무상 요약이 첫 화면에 오르는 게 낫다 -->
+  <div class="grid3" style="grid-template-columns:2fr 1fr">
+    <div class="card tall">
+      <h3 data-i="ch_monthly">교체 추이 (주/월)</h3>
+      <div class="card-note" data-i="note_monthly">자재실적일자 기준 건수</div>
+      <div class="cw"><canvas id="cMonthly"></canvas></div>
+    </div>
+    <div class="card tall">
+      <h3 data-i="ch_pf2">유상 vs 무상</h3>
+      <div class="card-note" data-i="note_pf2">교체 건의 유무상 구성</div>
+      <div class="wbig"><span class="wv" id="pfPct">0%</span><span class="wlbl" data-i="pf_ratio">유상 비율</span></div>
+      <div class="wbar"><div class="wa" id="pfBar" style="width:0%"></div><div class="wb"></div></div>
+      <div class="wleg">
+        <span><i class="pa"></i><span data-i="pf_paid">유상</span> <b id="pfPaid">0</b></span>
+        <span><i></i><span data-i="pf_free">무상</span> <b id="pfFree">0</b></span>
+      </div>
+    </div>
   </div>
-  <div class="grid3">
+  <div class="grid3" style="grid-template-columns:1fr 1fr">
         <div class="card">
       <h3 data-i="ch_mat">자재별 교체 TOP</h3>
       <div class="card-note" data-i="note_mat">수량 합계 기준 · 이상치 수량 제외 · 값은 막대 끝</div>
@@ -339,16 +351,6 @@ canvas{cursor:pointer}
         </div>
       </div>
       <div class="cw"><canvas id="cMat"></canvas></div>
-    </div>
-    <div class="card">
-      <h3 data-i="ch_pf2">유상 vs 무상</h3>
-      <div class="card-note" data-i="note_pf2">교체 건의 유무상 구성</div>
-      <div class="wbig"><span class="wv" id="pfPct">0%</span><span class="wlbl" data-i="pf_ratio">유상 비율</span></div>
-      <div class="wbar"><div class="wa" id="pfBar" style="width:0%"></div><div class="wb"></div></div>
-      <div class="wleg">
-        <span><i class="pa"></i><span data-i="pf_paid">유상</span> <b id="pfPaid">0</b></span>
-        <span><i></i><span data-i="pf_free">무상</span> <b id="pfFree">0</b></span>
-      </div>
     </div>
     <div class="card">
       <h3 data-i="ch_model">모델별 교체</h3>
@@ -597,8 +599,7 @@ const EXCL = (function(){
 function saveExcl(){ try{ localStorage.setItem('gst_mat_excl', JSON.stringify(EXCL)); }catch(e){} }
 const ALL_VALUES = { mat: [], eq: [], proc: [], reason: [], free: [] };
 
-Chart.defaults.color=GST.chartTheme().txt;
-Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+GST.chartDefaults();
 
 // 차트 팔레트/잉크는 GST.chartTheme() (공통 검증 팔레트) 로 일원화
 
@@ -613,7 +614,7 @@ function changeDashboardTheme(themeClass, label) {
   if(lb) lb.textContent = THEME_LABELS[themeClass] || label || themeClass;
   const menu=document.getElementById('themeMenu');
   if(menu) menu.classList.remove('open');
-  Chart.defaults.color = GST.chartTheme().txt;
+  GST.chartDefaults();
   GST.reskinCharts(CHARTS);
   if(CROSS_CHART_INSTANCE){ try{CROSS_CHART_INSTANCE.destroy();}catch(e){} CROSS_CHART_INSTANCE=null; }
   if(DATA.length) { render(); }
@@ -855,7 +856,7 @@ const valLabelPlugin={id:'valLabel',
     const nums=ds.data.filter(v=>v!=null&&isFinite(v));
     const max=nums.length?Math.max.apply(null,nums):null;
     ctx.save();ctx.fillStyle=o.color||'#E6EDF3';
-    ctx.font='700 11px "Segoe UI","Malgun Gothic",sans-serif';
+    ctx.font='700 11px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
     meta.data.forEach(function(el,i){
       const v=ds.data[i]; if(v==null)return;
       if(o.mode==='h'){ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(v.toLocaleString(),el.x+6,el.y);return;}
@@ -876,10 +877,10 @@ const donutCenterPlugin={id:'dCenter',
     const total=chart.data.datasets[0].data.reduce((a,b)=>a+(+b||0),0);
     ctx.save();ctx.textAlign='center';
     ctx.fillStyle=o.color||'#E6EDF3';
-    ctx.font='800 16px "Segoe UI","Malgun Gothic",sans-serif';
+    ctx.font='800 16px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
     ctx.textBaseline='bottom';ctx.fillText(total.toLocaleString(),x,y+2);
     ctx.fillStyle=o.mut||'#8B98A9';
-    ctx.font='700 8px "Segoe UI",sans-serif';ctx.textBaseline='top';ctx.fillText('TOTAL',x,y+5);
+    ctx.font='700 8px "Pretendard Variable",Pretendard,"Segoe UI",sans-serif';ctx.textBaseline='top';ctx.fillText('TOTAL',x,y+5);
     ctx.restore();
   }};
 function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
@@ -891,7 +892,7 @@ function mkHBarX(id,entries,total,color,topN,colorFn,onClickCb){
   const cfg={type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{
       data:top.map(e=>e[1]),
       backgroundColor:top.map((e,i)=>colorFn?colorFn(e[0],i):(color||TH.pal[0])),
-      borderRadius:5,barPercentage:.72}]},
+      barPercentage:.72}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       onClick:(evt,els)=>{if(onClickCb&&els.length)onClickCb(cfg.data.labels[els[0].index]);},
       layout:{padding:{right:52}},
@@ -910,7 +911,7 @@ function mkBarVX(id,labels,data,color,opts){
     const raw=GST.linForecast(base,opts.forecast+(opts.skipLast===false?0:1))||[];
     const fc=opts.skipLast===false?raw:raw.slice(1);
     fc.forEach((v,i)=>{L.push('+'+(i+1));D.push(v);bg.push(opts.fcColor||'rgba(56,189,248,.5)');}); }
-  const cfg={type:'bar',data:{labels:L,datasets:[{data:D,backgroundColor:bg,borderRadius:4}]},
+  const cfg={type:'bar',data:{labels:L,datasets:[{data:D,backgroundColor:bg}]},
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
       plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}},
@@ -952,7 +953,7 @@ let LAST_F=[];
 function render(){ GST.skeleton(false); GST.pushState(F);
   const f=filt(); LAST_F=f;
   console.log('[DEBUG] render - 필터링된 데이터:', f.length, '건');
-  const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
+  const TH=GST.chartTheme(); GST.chartDefaults();
   const pal = TH.pal8;
   const paid=f.filter(x=>x.pf==='유상').length; const free=f.filter(x=>x.pf==='무상').length;
   const setTxt=(id,v)=>{const e=document.getElementById(id);if(e)e.innerHTML=v;};
@@ -1242,14 +1243,14 @@ function renderEqDrill(){
       if(hit){const k=ym(x.workDate);m[k]=(m[k]||0)+1;} });
     return months.map(k=>m[k]||0);
   };
-  const datasets=topM.map((m,i)=>({label:String(m).slice(0,18),data:cntFor(m),backgroundColor:TH.pal8[i%8],stack:'s',borderRadius:2}));
+  const datasets=topM.map((m,i)=>({label:String(m).slice(0,18),data:cntFor(m),backgroundColor:TH.pal8[i%8],stack:'s'}));
   const etc=cntFor('__etc');
-  if(etc.some(v=>v>0))datasets.push({label:'ETC',data:etc,backgroundColor:TH.status.na,stack:'s',borderRadius:2});
+  if(etc.some(v=>v>0))datasets.push({label:'ETC',data:etc,backgroundColor:TH.status.na,stack:'s'});
   const ctx=document.getElementById('cEqDrill');
   if(CHARTS.cEqDrill)CHARTS.cEqDrill.destroy();
   CHARTS.cEqDrill=new Chart(ctx,{type:'bar',data:{labels:months.map(k=>k.slice(2)),datasets},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:9},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:6}},
+      plugins:{legend:{position:'bottom',labels:{padding:6}},
         tooltip:{callbacks:{footer:items=>'Σ '+items.reduce((a,i)=>a+i.parsed.y,0)}}},
       scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{display:false}},
               y:{stacked:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}}});
@@ -1396,8 +1397,7 @@ function renderCrossTable(){
         data: barData,
         backgroundColor: theme.pal[0] + '99',
         borderColor: theme.pal[0],
-        borderWidth: 2,
-        borderRadius: 4
+        borderWidth: 2
       }]
     },
     options: {

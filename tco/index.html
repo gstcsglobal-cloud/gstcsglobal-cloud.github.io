@@ -4,41 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TCO — Total Cost of Ownership</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
-  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
-  --glass:rgba(255,255,255,0.05); --glass-border:rgba(255,255,255,0.12); --glass-hover:rgba(255,255,255,0.1);
-  --txt-main:#e2e8f0; --txt-muted:#94a3b8;
-  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
-  --warn:#fbbf24; --bad:#fb7185; --ok:#34d399;
-  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
-}
-body.theme-burgundy{
-  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
-  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
-  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
-  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
-  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
-}
-body.theme-light{
-  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #e8eef5, #f0f4f8);
-  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
-  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
-  --txt-main:#0f172a; --txt-muted:#64748b;
-  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
-}
-body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt-main);
+
+
+
+body{color:var(--txt-main);
   background:var(--bg-gradient);background-size:400% 400%;animation:grad 22s ease infinite;min-height:100vh;padding:24px 28px;
   transition:background .5s ease,color .5s ease}
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
-.header h1{font-size:28px;font-weight:800;background:var(--title-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
-.header .sub{color:var(--txt-muted);font-size:13px;margin-top:4px}
 .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:9px 18px;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .btn-grad{background:var(--title-gradient);color:#0f172a}
@@ -76,11 +55,11 @@ body.theme-light .slicer select{color-scheme:light;color:#0f172a}
 .kpi.k1 .val{color:var(--accent-1)}
 .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:16px}
 .grid2e{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
-.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;backdrop-filter:blur(14px);box-shadow:var(--card-shadow);height:380px;display:flex;flex-direction:column;position:relative}
+.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;backdrop-filter:blur(14px);box-shadow:var(--card-shadow);position:relative}
 .card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:var(--txt-main)}
 .card-note{font-size:10px;color:var(--txt-muted);margin-bottom:10px;font-style:italic}
-.card .cw{flex:1;position:relative;min-height:0}
-.card.tall{height:440px}
+.card .cw{position:relative;height:var(--ch-std,240px)}
+.card.tall .cw{height:var(--ch-tall,300px)}
 .capbtns{position:absolute;top:12px;right:14px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
 .card:hover .capbtns{opacity:1}
 .capbtn{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;padding:2px 8px;color:var(--txt-muted);font-size:11px;font-weight:700;cursor:pointer;height:22px;line-height:16px}
@@ -186,7 +165,7 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
     <div class="kf" id="kf6"></div></div>
 </div>
 
-<div class="card" style="margin-bottom:16px;height:340px">
+<div class="card tall" style="margin-bottom:16px">
   <h3 data-i="ch_trend">TCO 추이 (주/월)</h3>
   <div class="card-note" data-i="note_trend">유틸리티 6종 + 파츠 스택 · 작업시간 차감 반영 · 금액은 툴팁</div>
   <div class="cw"><canvas id="cTrend"></canvas></div>
@@ -252,27 +231,35 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
   </div>
 </div>
 
-<div class="cfgcard">
-  <h3>⚙ <span data-i="cfg_title">단가 · 가정값 설정</span></h3>
-  <div class="card-note" data-i="cfg_note">이 브라우저에 저장됩니다 · 실제 계약 단가로 바꾸면 전체 차트가 다시 계산됩니다</div>
-  <div class="cfg-grid" id="cfgGrid"></div>
-  <div class="cfg-actions">
-    <button class="btn btn-grad" onclick="saveCfg()" data-i="cfg_save">저장 후 재계산</button>
-    <button class="btn btn-glass" onclick="resetCfg()" data-i="cfg_reset">기본값 복원</button>
-    <span class="cfg-msg" id="cfgMsg"></span>
+<!-- 설정·가정은 접이식 — 대시보드 본문에 입력 폼이 상시 노출되면 페이지가 관리 화면처럼 보인다 -->
+<details class="cfgcard" style="padding:0;overflow:hidden">
+  <summary style="cursor:pointer;padding:14px 18px;font-size:13px;font-weight:700;list-style:none;display:flex;align-items:center;gap:8px">
+    ⚙ <span data-i="cfg_title">단가 · 가정값 설정</span>
+    <span style="font-weight:400;font-size:11px;color:var(--txt-muted)" data-i="cfg_open">— 펼쳐서 계약 단가로 교체</span>
+  </summary>
+  <div style="padding:0 18px 16px">
+    <div class="card-note" data-i="cfg_note">이 브라우저에 저장됩니다 · 실제 계약 단가로 바꾸면 전체 차트가 다시 계산됩니다</div>
+    <div class="cfg-grid" id="cfgGrid"></div>
+    <div class="cfg-actions">
+      <button class="btn btn-grad" onclick="saveCfg()" data-i="cfg_save">저장 후 재계산</button>
+      <button class="btn btn-glass" onclick="resetCfg()" data-i="cfg_reset">기본값 복원</button>
+      <span class="cfg-msg" id="cfgMsg"></span>
+    </div>
   </div>
-</div>
+</details>
 
-<div class="cfgcard">
-  <h3>📐 <span data-i="as_title">계산 기준 (가정)</span></h3>
-  <ul class="asnote" style="margin-top:8px">
+<details class="cfgcard" style="padding:0;overflow:hidden">
+  <summary style="cursor:pointer;padding:14px 18px;font-size:13px;font-weight:700;list-style:none;display:flex;align-items:center;gap:8px">
+    📐 <span data-i="as_title">계산 기준 (가정)</span>
+  </summary>
+  <ul class="asnote" style="margin:0;padding:0 18px 16px 34px">
     <li id="as1"></li>
     <li id="as2"></li>
     <li id="as3"></li>
     <li id="as4"></li>
     <li id="as5"></li>
   </ul>
-</div>
+</details>
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
@@ -324,7 +311,7 @@ ko:{title:'TCO 분석',sub:'Total Cost of Ownership — 유틸리티 · 전력 �
   tu_title:'유틸리티 명세 (기준 월)',tu_util:'항목',tu_flow:'기준 유량',tu_usage:'사용량',tu_price:'단가',tu_cost:'비용',tu_share:'비중',
   te_title:'설비별 TCO 상세 (기준 월)',th_line:'라인',th_proc:'공정',th_type:'타입',th_run:'가동(h)',th_down:'정지(h)',th_util:'유틸리티',th_parts:'파츠',th_total:'합계',
   u_lng:'LNG',u_o2:'O₂',u_cda:'CDA',u_cw:'CW',u_pcw:'PCW',u_pwr:'전력',u_parts:'파츠',proc_etc:'기타',
-  cfg_title:'단가 · 가정값 설정',cfg_note:'이 브라우저에 저장됩니다 · 실제 계약 단가로 바꾸면 전체 차트가 다시 계산됩니다',
+  cfg_open:'— 펼쳐서 계약 단가로 교체',cfg_title:'단가 · 가정값 설정',cfg_note:'이 브라우저에 저장됩니다 · 실제 계약 단가로 바꾸면 전체 차트가 다시 계산됩니다',
   cfg_save:'저장 후 재계산',cfg_reset:'기본값 복원',cfg_saved:'✓ 저장됨',
   cfg_price:'단가 (원)',cfg_lng:'LNG 유량 LPM/챔버 (공정별)',cfg_kw:'전력 kW/챔버 (공정별)',cfg_flow:'공통 유량 LPM/챔버',
   c_pLng:'LNG 원/m³',c_pO2:'O₂ 원/m³',c_pCda:'CDA 원/m³',c_pCw:'CW 원/m³',c_pPcw:'PCW 원/m³',c_pKwh:'전기 원/kWh',c_pPart:'파츠 원/개',
@@ -348,7 +335,7 @@ en:{title:'TCO Analysis',sub:'Total Cost of Ownership — monthly utility · pow
   tu_title:'Utility Detail (selected month)',tu_util:'Item',tu_flow:'Base Flow',tu_usage:'Usage',tu_price:'Unit Price',tu_cost:'Cost',tu_share:'Share',
   te_title:'Per-Unit TCO Detail (selected month)',th_line:'Line',th_proc:'Process',th_type:'Type',th_run:'Run(h)',th_down:'Down(h)',th_util:'Utility',th_parts:'Parts',th_total:'Total',
   u_lng:'LNG',u_o2:'O₂',u_cda:'CDA',u_cw:'CW',u_pcw:'PCW',u_pwr:'Power',u_parts:'Parts',proc_etc:'Others',
-  cfg_title:'Unit Prices & Assumptions',cfg_note:'saved in this browser · change to contract prices and everything recalculates',
+  cfg_open:'— expand to set contract rates',cfg_title:'Unit Prices & Assumptions',cfg_note:'saved in this browser · change to contract prices and everything recalculates',
   cfg_save:'Save & Recalculate',cfg_reset:'Reset Defaults',cfg_saved:'✓ Saved',
   cfg_price:'Unit Prices (KRW)',cfg_lng:'LNG Flow LPM/chamber (by process)',cfg_kw:'Power kW/chamber (by process)',cfg_flow:'Common Flow LPM/chamber',
   c_pLng:'LNG ₩/m³',c_pO2:'O₂ ₩/m³',c_pCda:'CDA ₩/m³',c_pCw:'CW ₩/m³',c_pPcw:'PCW ₩/m³',c_pKwh:'Power ₩/kWh',c_pPart:'Parts ₩/pc',
@@ -372,7 +359,7 @@ zh:{title:'TCO 分析',sub:'Total Cost of Ownership — 公用·电力·零件 �
   tu_title:'公用设施明细 (基准月)',tu_util:'项目',tu_flow:'基准流量',tu_usage:'用量',tu_price:'单价',tu_cost:'费用',tu_share:'占比',
   te_title:'设备TCO明细 (基准月)',th_line:'线',th_proc:'工艺',th_type:'类型',th_run:'运行(h)',th_down:'停机(h)',th_util:'公用',th_parts:'零件',th_total:'合计',
   u_lng:'LNG',u_o2:'O₂',u_cda:'CDA',u_cw:'CW',u_pcw:'PCW',u_pwr:'电力',u_parts:'零件',proc_etc:'其他',
-  cfg_title:'单价·假设值设置',cfg_note:'保存在此浏览器 · 改为合同单价后全部重新计算',
+  cfg_open:'— 展开填写合同单价',cfg_title:'单价·假设值设置',cfg_note:'保存在此浏览器 · 改为合同单价后全部重新计算',
   cfg_save:'保存并重算',cfg_reset:'恢复默认',cfg_saved:'✓ 已保存',
   cfg_price:'单价 (韩元)',cfg_lng:'LNG流量 LPM/腔 (按工艺)',cfg_kw:'电力 kW/腔 (按工艺)',cfg_flow:'通用流量 LPM/腔',
   c_pLng:'LNG 元/m³',c_pO2:'O₂ 元/m³',c_pCda:'CDA 元/m³',c_pCw:'CW 元/m³',c_pPcw:'PCW 元/m³',c_pKwh:'电 元/kWh',c_pPart:'零件 元/个',
@@ -396,7 +383,7 @@ ja:{title:'TCO 分析',sub:'Total Cost of Ownership — ユーティリティ·�
   tu_title:'ユーティリティ明細 (基準月)',tu_util:'項目',tu_flow:'基準流量',tu_usage:'使用量',tu_price:'単価',tu_cost:'費用',tu_share:'構成比',
   te_title:'設備別TCO詳細 (基準月)',th_line:'ライン',th_proc:'工程',th_type:'タイプ',th_run:'稼働(h)',th_down:'停止(h)',th_util:'ユーティリティ',th_parts:'パーツ',th_total:'合計',
   u_lng:'LNG',u_o2:'O₂',u_cda:'CDA',u_cw:'CW',u_pcw:'PCW',u_pwr:'電力',u_parts:'パーツ',proc_etc:'その他',
-  cfg_title:'単価·仮定値設定',cfg_note:'このブラウザに保存 · 契約単価に変えると全体が再計算されます',
+  cfg_open:'— 展開して契約単価に置換',cfg_title:'単価·仮定値設定',cfg_note:'このブラウザに保存 · 契約単価に変えると全体が再計算されます',
   cfg_save:'保存して再計算',cfg_reset:'既定値に戻す',cfg_saved:'✓ 保存済み',
   cfg_price:'単価 (ウォン)',cfg_lng:'LNG流量 LPM/ch (工程別)',cfg_kw:'電力 kW/ch (工程別)',cfg_flow:'共通流量 LPM/ch',
   c_pLng:'LNG ₩/m³',c_pO2:'O₂ ₩/m³',c_pCda:'CDA ₩/m³',c_pCw:'CW ₩/m³',c_pPcw:'PCW ₩/m³',c_pKwh:'電気 ₩/kWh',c_pPart:'パーツ ₩/個',
@@ -416,8 +403,7 @@ let EQUIP=[], WK=[], PARTS=[], MONTHS=[], MODEL=null;
 const F={cust:'',line:'',proc:''};
 let SEL_M='';
 
-Chart.defaults.color=GST.chartTheme().txt;
-Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+GST.chartDefaults();
 window.changeDashboardTheme=function(themeClass,label){
   document.body.className='';
   if(themeClass!=='default')document.body.classList.add('theme-'+themeClass);
@@ -426,7 +412,7 @@ window.changeDashboardTheme=function(themeClass,label){
   if(lb)lb.textContent=THEME_LABELS[themeClass]||label||themeClass;
   const menu=document.getElementById('themeMenu');
   if(menu)menu.classList.remove('open');
-  Chart.defaults.color=GST.chartTheme().txt;
+  GST.chartDefaults();
   GST.reskinCharts(CHARTS);
   if(MODEL)render();
 };
@@ -726,7 +712,7 @@ function render(){
   // --- 추이 (12구간 스택 · 상단 공통바 주/월 토글) ---
   const PERt=MODEL.PER;
   const trendDs=UKEYS.map((k,i)=>({label:uLabel(k),data:PERt.map(p=>Math.round(MODEL.byPer[p.key].cost[k])),
-    backgroundColor:PAL[i],stack:'tco',borderRadius:2}));
+    backgroundColor:PAL[i],stack:'tco'}));
   mkChart('cTrend',{type:'bar',data:{labels:PERt.map(p=>p.label),datasets:trendDs},
     options:baseOpt({stacked:true,axisFmt,
       footer:items=>{const i=items[0].dataIndex;return 'Σ '+won(MODEL.byPer[PERt[i].key].total);}})});
@@ -734,26 +720,26 @@ function render(){
   // --- 라인별 ---
   const lines=Object.entries(MODEL.byLineSel).sort((a,b)=>b[1].total-a[1].total);
   mkChart('cLine',{type:'bar',data:{labels:lines.map(x=>x[0]||'—'),
-    datasets:UKEYS.map((k,i)=>({label:uLabel(k),data:lines.map(x=>Math.round(x[1].cost[k])),backgroundColor:PAL[i],stack:'l',borderRadius:2}))},
+    datasets:UKEYS.map((k,i)=>({label:uLabel(k),data:lines.map(x=>Math.round(x[1].cost[k])),backgroundColor:PAL[i],stack:'l'}))},
     options:baseOpt({stacked:true,axisFmt,footer:items=>{const i=items[0].dataIndex;return 'Σ '+won(lines[i][1].total);}})});
 
   // --- 구성 도넛 ---
   mkChart('cMix',{type:'doughnut',
     data:{labels:UKEYS.map(uLabel),datasets:[{data:UKEYS.map(k=>Math.round(sel.cost[k])),backgroundColor:UKEYS.map((k,i)=>PAL[i]),borderWidth:0,hoverOffset:8}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
-      plugins:{legend:{position:'right',labels:{color:TH.txt,font:{size:10},padding:8,usePointStyle:true,pointStyle:'circle'}},
+      plugins:{legend:{position:'right',labels:{padding:8}},
         tooltip:{callbacks:{label:c=>' '+c.label+': '+won(c.parsed)+' ('+(sel.total?Math.round(c.parsed/sel.total*100):0)+'%)'}}}}});
 
   // --- 공정별 ---
   const procs=PROCS.filter(p=>MODEL.byProcSel[p].total>0.5);
   mkChart('cProc',{type:'bar',data:{labels:procs.map(procLabel),
-    datasets:UKEYS.map((k,i)=>({label:uLabel(k),data:procs.map(p=>Math.round(MODEL.byProcSel[p].cost[k])),backgroundColor:PAL[i],stack:'p',borderRadius:2}))},
+    datasets:UKEYS.map((k,i)=>({label:uLabel(k),data:procs.map(p=>Math.round(MODEL.byProcSel[p].cost[k])),backgroundColor:PAL[i],stack:'p'}))},
     options:baseOpt({stacked:true,axisFmt,footer:items=>{const i=items[0].dataIndex;return 'Σ '+won(MODEL.byProcSel[procs[i]].total);}})});
 
   // --- 설비 TOP 12 ---
   const top=MODEL.eqSel.slice().sort((a,b)=>b.total-a.total).slice(0,12);
   mkChart('cTop',{type:'bar',data:{labels:top.map(x=>x.sn),
-    datasets:[{label:'TCO',data:top.map(x=>Math.round(x.total)),backgroundColor:PAL[0],borderRadius:4}]},
+    datasets:[{label:'TCO',data:top.map(x=>Math.round(x.total)),backgroundColor:PAL[0]}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+won(c.parsed.x)+' ('+procLabel(top[c.dataIndex].proc)+' · '+top[c.dataIndex].type+')'}}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10},callback:axisFmt},grid:{color:TH.grid}},
@@ -797,7 +783,7 @@ function render(){
 function baseOpt(o){
   const TH=GST.chartTheme();
   return {responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:9.5},boxWidth:9,padding:8}},
+    plugins:{legend:{position:'bottom',labels:{padding:8}},
       tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+fmtWon(c.parsed.y!=null?c.parsed.y:c.parsed.x),
         footer:o.footer||undefined}}},
     scales:{x:{stacked:!!o.stacked,ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},

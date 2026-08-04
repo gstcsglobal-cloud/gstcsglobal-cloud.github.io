@@ -4,47 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scrubber PM Schedule Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
-  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
-  --glass:rgba(255,255,255,0.05); --glass-border:rgba(255,255,255,0.12); --glass-hover:rgba(255,255,255,0.1);
-  --txt-main:#e2e8f0; --txt-muted:#94a3b8;
-  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
-  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
-  --bg1:#0a1420;--bg2:#13232d;--bg3:#0f2027;
-  --a1:var(--accent-1);--a2:var(--accent-2);--a3:var(--accent-3);--a4:var(--accent-4);--a5:var(--accent-5);
-  --glassb:var(--glass-border);--txt:var(--txt-main);--mut:var(--txt-muted);--ok:#34d399;--warn:#fbbf24;--bad:#fb7185;
-}
-body.theme-burgundy{
-  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
-  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
-  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
-  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
-  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
-  --bg1:#1a0813;--bg2:#2d0b1e;--bg3:#1f0822;
-}
-body.theme-light{
-  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #e8eef5, #f0f4f8);
-  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
-  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
-  --txt-main:#0f172a; --txt-muted:#64748b;
-  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
-  --bg1:#f1f5f9;--bg2:#e2e8f0;--bg3:#e8eef5;
-}
-body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
+
+
+
+body{color:var(--txt);
   background:var(--bg-gradient);
   background-size:400% 400%;animation:grad 22s ease infinite;min-height:100vh;padding:24px 28px}
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
-.header h1{font-size:28px;font-weight:800;
-  background:linear-gradient(90deg,#fb7185,#fbbf24,#a78bfa);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
-.header .sub{color:var(--mut);font-size:13px;margin-top:4px}
 .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:9px 18px;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .btn-grad{background:linear-gradient(90deg,var(--a1),var(--a2));color:#fff}
@@ -167,7 +140,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .dm-empty{text-align:center;padding:30px;color:var(--mut)}
 .card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px)}
 .card h3{font-size:13px;font-weight:700;margin-bottom:12px;color:#dfe6ff}
-.card .cw{position:relative;height:220px}
+.card .cw{position:relative;height:var(--ch-std,240px)}
 .tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px)}
 .tablecard h3{font-size:14px;font-weight:700;margin-bottom:12px}
 .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
@@ -261,6 +234,13 @@ tr:hover td{background:rgba(255,255,255,.04)}
     <div class="card"><h3 data-i="ch_line">Overdue/Soon by LINE</h3><div class="cw"><canvas id="cLine"></canvas></div></div>
     <div class="card"><h3 data-i="ch_done">점검 완료 추이 (주/월)</h3><div class="cw"><canvas id="cDone"></canvas></div></div>
   </div>
+  <!-- 2행 — "지금 뭐가 밀렸고 이번 주 뭘 해야 하나"가 개요에서 바로 보이게 -->
+  <div class="grid3">
+    <div class="card"><h3 data-i="ch_aging">지연 경과일 분포</h3><div class="card-note" data-i="note_aging">현재 지연 설비의 경과일</div><div class="cw"><canvas id="cAging"></canvas></div></div>
+    <div class="card"><h3 data-i="ch_mdlover">모델별 지연 TOP</h3><div class="card-note" data-i="note_mdlover">지연 설비 수 상위 8 — 어느 모델부터</div><div class="cw"><canvas id="cMdlOver"></canvas></div></div>
+    <div class="card"><h3 data-i="ch_due7">7일 내 도래</h3><div class="card-note" data-i="note_due7">가까운 순 8건 · 캘린더 탭에서 조정</div>
+      <div class="cw" style="overflow:auto"><table id="due7Tbl" style="width:100%"><tbody><tr><td class="empty">—</td></tr></tbody></table></div></div>
+  </div>
 </div>
 
 <!-- ═══ 섹션: 캘린더·주차 ═══ -->
@@ -343,8 +323,8 @@ tr:hover td{background:rgba(255,255,255,.04)}
     <div class="kpi"><div class="krow"><span class="val" id="ck3">0</span></div><div class="cap" data-i="cmp3">향후 8주 도래</div><div class="kf" id="ckf3" data-i="cmp3f">예정 점검 건</div></div>
     <div class="kpi"><div class="krow"><span class="val" id="ck4">0</span><span class="kd" data-i="u_hr">인·시</span></div><div class="cap" data-i="cmp4">예상 공수(8주)</div><div class="kf" id="ckf4" data-i="cmp4f">도래 × 평균 공수</div></div>
   </div>
-  <div class="grid3">
-    <div class="card"><h3 data-i="ch_aging">지연 경과일 분포</h3><div class="card-note" data-i="note_aging">현재 지연 설비의 경과일</div><div class="cw"><canvas id="cAging"></canvas></div></div>
+  <!-- 지연 경과일 분포는 개요로 이동 -->
+  <div class="grid3" style="grid-template-columns:1fr 1fr">
     <div class="card"><h3 data-i="ch_vsbm">PM 준수 vs 고장(BM)</h3><div class="card-note" data-i="note_vsbm">설비 상태별 대당 BM · 지연이 높으면 고장↑</div><div class="cw"><canvas id="cVsBm"></canvas></div></div>
     <div class="card"><h3 data-i="ch_loadfcst">향후 8주 PM 부하</h3><div class="card-note" data-i="note_loadfcst">주별 예상 공수(인·시)</div><div class="cw"><canvas id="cLoadFcst"></canvas></div></div>
   </div>
@@ -404,7 +384,7 @@ const T={
     no_data:'결과 없음',search_ph:'S/N, 모델, Line 검색...',
     f_site:'전체 고객사',sec_ov:'개요',sec_cal:'캘린더·주차',sec_ld:'작업 부하',sec_comp:'준수·부하',sec_dt:'상세 목록',
     cmp1:'PM 준수율',cmp1f:'정시 완료 비율(주기 내)',cmp2:'지연 설비',cmp2f:'현재 지연 대수',cmp3:'향후 8주 도래',cmp3f:'예정 점검 건',cmp4:'예상 공수(8주)',cmp4f:'도래 × 평균 공수',
-    ch_aging:'지연 경과일 분포',note_aging:'현재 지연 설비의 경과일',ch_vsbm:'PM 준수 vs 고장(BM)',note_vsbm:'설비 상태별 대당 BM · 지연이 높으면 고장↑',ch_loadfcst:'향후 8주 PM 부하',note_loadfcst:'주별 예상 공수(인·시)',
+    ch_mdlover:'모델별 지연 TOP',note_mdlover:'지연 설비 수 상위 8 — 어느 모델부터',ch_due7:'7일 내 도래',note_due7:'가까운 순 8건 · 캘린더 탭에서 조정',due7_none:'7일 내 도래 없음',ch_aging:'지연 경과일 분포',note_aging:'현재 지연 설비의 경과일',ch_vsbm:'PM 준수 vs 고장(BM)',note_vsbm:'설비 상태별 대당 BM · 지연이 높으면 고장↑',ch_loadfcst:'향후 8주 PM 부하',note_loadfcst:'주별 예상 공수(인·시)',
     aging_b:['D+1~7','D+8~30','D+31~90','D+90+'],vsbm_over:'지연 설비',vsbm_ok:'정상 설비',u_hr:'인·시',u_unit:'대',ch_done:'점검 완료 추이 (주/월)',ch_mantrend:'점검 공수 추이 (주/월)',note_mantrend:'TBM 기준 · 인·시',ch_worker:'작업자 TOP (공수)',note_worker:'공동작업은 인원수로 안분',ch_linedur:'LINE별 평균 점검시간',note_linedur:'건당 평균(분)',kf1x:'주기: TBM 이력 기반 자동 산출',kf2x:'최장 D+{d}',kf6x:'전월 {n}건',th_site:'고객사',mon_u:'월',f_line:'전체 LINE',f_model:'전체 모델',f_stat:'전체 상태',cal_today:'오늘',dow:['일','월','화','수','목','금','토'],months:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],cal_more:'외 N건',dm_copy:'복사',dm_copied:'복사됨',adj_loaded:'조정 N건',adj_saving:'저장 중...',adj_saved:'A → B 로 조정 저장됨',adj_failed:'저장 실패 (새로고침 후 재시도)',lg_adjusted:'조정됨',drag_hint:'💡 점검 건을 다른 날짜로 드래그하면 일정이 조정되고 팀 전체에 공유됩니다 (✎ = 조정됨)',wk_title:'주차별 점검 현황 (오늘 기준 ±2개월)',wk_week:'주차',wk_plan:'예정',wk_done:'완료',wk_rate:'완료율',wk_thisweek:'이번주',wk_total:'전체',wk_inrange:'표시',wk_outrange:'범위밖 N건',mode_plan:'예정만',mode_done:'완료만',mode_both:'예정+완료',lg_done:'완료됨'},
   en:{title:'Scrubber PM Schedule',sub:'Preventive Maintenance schedule based on TBM history',
     back:'← Main',refresh:'Refresh',loading:'Loading...',
@@ -416,7 +396,7 @@ const T={
     no_data:'No results',search_ph:'Search S/N, Model, Line...',
     f_site:'All Customers',sec_ov:'Overview',sec_cal:'Calendar',sec_ld:'Workload',sec_comp:'Compliance & Load',sec_dt:'Data',
     cmp1:'PM Compliance',cmp1f:'on-time within cycle',cmp2:'Overdue Units',cmp2f:'currently overdue',cmp3:'Due in 8 weeks',cmp3f:'scheduled PMs',cmp4:'Forecast Man-hrs (8w)',cmp4f:'due × avg man-hrs',
-    ch_aging:'Overdue Aging',note_aging:'days overdue of current units',ch_vsbm:'PM Compliance vs BM',note_vsbm:'BM/unit by status · overdue → more faults',ch_loadfcst:'PM Load Next 8 Weeks',note_loadfcst:'projected man-hours per week',
+    ch_mdlover:'Overdue by Model',note_mdlover:'top 8 by overdue units',ch_due7:'Due in 7 days',note_due7:'nearest 8 · adjust in Calendar tab',due7_none:'Nothing due in 7 days',ch_aging:'Overdue Aging',note_aging:'days overdue of current units',ch_vsbm:'PM Compliance vs BM',note_vsbm:'BM/unit by status · overdue → more faults',ch_loadfcst:'PM Load Next 8 Weeks',note_loadfcst:'projected man-hours per week',
     aging_b:['D+1–7','D+8–30','D+31–90','D+90+'],vsbm_over:'Overdue',vsbm_ok:'On-schedule',u_hr:'m·h',u_unit:'',ch_done:'PM Completed Trend (W/M)',ch_mantrend:'PM Man-hours Trend (W/M)',note_mantrend:'TBM based · man-hours',ch_worker:'Top Workers (man-hours)',note_worker:'shared jobs split by headcount',ch_linedur:'Avg PM Time by LINE',note_linedur:'avg minutes per case',kf1x:'cycle: auto-derived from TBM history',kf2x:'worst D+{d}',kf6x:'prev month {n}',th_site:'Customer',mon_u:'',f_line:'All LINE',f_model:'All Model',f_stat:'All Status',cal_today:'Today',dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],cal_more:'+N more',dm_copy:'Copy',dm_copied:'Copied',adj_loaded:'N adjusted',adj_saving:'Saving...',adj_saved:'Moved A → B',adj_failed:'Save failed (retry after refresh)',lg_adjusted:'Adjusted',drag_hint:'💡 Drag an item to another date to reschedule. Changes are shared with the whole team (✎ = adjusted)',wk_title:'Weekly PM Status (±2 months from today)',wk_week:'Week',wk_plan:'Planned',wk_done:'Done',wk_rate:'Rate',wk_thisweek:'This week',wk_total:'Total',wk_inrange:'Shown',wk_outrange:'N out of range',mode_plan:'Planned',mode_done:'Completed',mode_both:'Both',lg_done:'Completed'},
   zh:{title:'洗涤器PM点检计划',sub:'基于定期点检(TBM)履历的预防性维护计划',
     back:'← 主页',refresh:'刷新',loading:'加载中...',
@@ -428,7 +408,7 @@ const T={
     no_data:'无结果',search_ph:'搜索S/N, 型号, Line...',
     f_site:'全部客户',sec_ov:'概览',sec_cal:'日历·周次',sec_ld:'工时负荷',sec_comp:'合规·负荷',sec_dt:'明细',
     cmp1:'PM合规率',cmp1f:'周期内按时完成',cmp2:'延迟设备',cmp2f:'当前延迟台数',cmp3:'未来8周到期',cmp3f:'计划点检件',cmp4:'预计工时(8周)',cmp4f:'到期×平均工时',
-    ch_aging:'延迟经过天数分布',note_aging:'当前延迟设备经过天数',ch_vsbm:'PM合规 vs 故障(BM)',note_vsbm:'各状态台均BM · 延迟越高故障↑',ch_loadfcst:'未来8周PM负荷',note_loadfcst:'每周预计工时(人·时)',
+    ch_mdlover:'各型号延迟TOP',note_mdlover:'延迟设备数前8',ch_due7:'7天内到期',note_due7:'最近8件 · 在日历页调整',due7_none:'7天内无到期',ch_aging:'延迟经过天数分布',note_aging:'当前延迟设备经过天数',ch_vsbm:'PM合规 vs 故障(BM)',note_vsbm:'各状态台均BM · 延迟越高故障↑',ch_loadfcst:'未来8周PM负荷',note_loadfcst:'每周预计工时(人·时)',
     aging_b:['D+1~7','D+8~30','D+31~90','D+90+'],vsbm_over:'延迟设备',vsbm_ok:'正常设备',u_hr:'人·时',u_unit:'台',ch_done:'点检完成趋势 (周/月)',ch_mantrend:'点检工时趋势 (周/月)',note_mantrend:'TBM基准 · 人·时',ch_worker:'作业者TOP (工时)',note_worker:'共同作业按人数分摊',ch_linedur:'按LINE平均点检时间',note_linedur:'每件平均(分)',kf1x:'周期: 基于TBM履历自动推算',kf2x:'最长 D+{d}',kf6x:'上月 {n}件',th_site:'客户',mon_u:'月',f_line:'全部LINE',f_model:'全部型号',f_stat:'全部状态',cal_today:'今天',dow:['日','一','二','三','四','五','六'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'其他N项',dm_copy:'复制',dm_copied:'已复制',adj_loaded:'调整N项',adj_saving:'保存中...',adj_saved:'已调整 A → B',adj_failed:'保存失败(刷新后重试)',lg_adjusted:'已调整',drag_hint:'💡 将点检项拖到其他日期即可调整日程并与全队共享 (✎ = 已调整)',wk_title:'周点检状况 (今天±2个月)',wk_week:'周次',wk_plan:'计划',wk_done:'完成',wk_rate:'完成率',wk_thisweek:'本周',wk_total:'全部',wk_inrange:'显示',wk_outrange:'范围外N项',mode_plan:'仅计划',mode_done:'仅完成',mode_both:'计划+完成',lg_done:'已完成'},
   ja:{title:'スクラバーPM点検スケジュール',sub:'定期点検(TBM)履歴に基づく予防保全スケジュール',
     back:'← メイン',refresh:'更新',loading:'読み込み中...',
@@ -440,7 +420,7 @@ const T={
     no_data:'結果なし',search_ph:'S/N, モデル, Line検索...',
     f_site:'全顧客',sec_ov:'概要',sec_cal:'カレンダー·週別',sec_ld:'工数負荷',sec_comp:'遵守·負荷',sec_dt:'詳細',
     cmp1:'PM遵守率',cmp1f:'周期内の定時完了',cmp2:'遅延設備',cmp2f:'現在の遅延台数',cmp3:'今後8週到来',cmp3f:'予定点検件',cmp4:'予想工数(8週)',cmp4f:'到来×平均工数',
-    ch_aging:'遅延経過日数分布',note_aging:'現在の遅延設備の経過日',ch_vsbm:'PM遵守 vs 故障(BM)',note_vsbm:'状態別台当BM · 遅延が高いと故障↑',ch_loadfcst:'今後8週PM負荷',note_loadfcst:'週別予想工数(人·時)',
+    ch_mdlover:'モデル別遅延TOP',note_mdlover:'遅延設備数上位8',ch_due7:'7日以内到来',note_due7:'近い順8件 · カレンダーで調整',due7_none:'7日以内の到来なし',ch_aging:'遅延経過日数分布',note_aging:'現在の遅延設備の経過日',ch_vsbm:'PM遵守 vs 故障(BM)',note_vsbm:'状態別台当BM · 遅延が高いと故障↑',ch_loadfcst:'今後8週PM負荷',note_loadfcst:'週別予想工数(人·時)',
     aging_b:['D+1~7','D+8~30','D+31~90','D+90+'],vsbm_over:'遅延設備',vsbm_ok:'正常設備',u_hr:'人·時',u_unit:'台',ch_done:'点検完了推移 (週/月)',ch_mantrend:'点検工数推移 (週/月)',note_mantrend:'TBM基準 · 人·時',ch_worker:'作業者TOP (工数)',note_worker:'共同作業は人数で按分',ch_linedur:'LINE別平均点検時間',note_linedur:'件当たり平均(分)',kf1x:'周期: TBM履歴から自動算出',kf2x:'最長 D+{d}',kf6x:'前月 {n}件',th_site:'顧客',mon_u:'月',f_line:'全LINE',f_model:'全モデル',f_stat:'全ステータス',cal_today:'今日',dow:['日','月','火','水','木','金','土'],months:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],cal_more:'他N件',dm_copy:'コピー',dm_copied:'コピー済',adj_loaded:'調整N件',adj_saving:'保存中...',adj_saved:'A → B に調整',adj_failed:'保存失敗(更新後再試行)',lg_adjusted:'調整済',drag_hint:'💡 点検項目を他の日付にドラッグすると日程が調整されチーム全体に共有されます (✎ = 調整済)',wk_title:'週別点検状況 (本日±2ヶ月)',wk_week:'週',wk_plan:'予定',wk_done:'完了',wk_rate:'完了率',wk_thisweek:'今週',wk_total:'全体',wk_inrange:'表示',wk_outrange:'範囲外N件',mode_plan:'予定のみ',mode_done:'完了のみ',mode_both:'予定+完了',lg_done:'完了'}
 };
 
@@ -459,11 +439,10 @@ function gFilt(){
 }
 try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
 
-Chart.defaults.color=GST.chartTheme().txt;
-Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+GST.chartDefaults();
 // 테마 전환 시 차트를 새 잉크로 재생성 (initSync가 호출)
 window.changeDashboardTheme=function(){
-  Chart.defaults.color=GST.chartTheme().txt;
+  GST.chartDefaults();
   GST.reskinCharts(CHARTS);
   if(SCHED.length)render();
 };
@@ -632,7 +611,7 @@ const valLabelPlugin={id:'valLabel',
     const nums=ds.data.filter(v=>v!=null&&isFinite(v));
     const max=nums.length?Math.max.apply(null,nums):null;
     ctx.save();ctx.fillStyle=o.color||'#E6EDF3';
-    ctx.font='700 11px "Segoe UI","Malgun Gothic",sans-serif';
+    ctx.font='700 11px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
     meta.data.forEach(function(el,i){
       const v=ds.data[i]; if(v==null)return;
       if(o.mode==='h'){ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(v.toLocaleString(),el.x+6,el.y);return;}
@@ -653,7 +632,7 @@ function mkBarV2(id,labels,data,color,opts){
     const raw=GST.linForecast(base,opts.forecast+(opts.skipLast===false?0:1))||[];
     const fc=opts.skipLast===false?raw:raw.slice(1);
     fc.forEach((v,i)=>{L.push('+'+(i+1));D.push(v);bg.push(opts.fcColor||'rgba(56,189,248,.5)');}); }
-  const cfg={type:'bar',data:{labels:L,datasets:[{data:D,backgroundColor:bg,borderRadius:4}]},
+  const cfg={type:'bar',data:{labels:L,datasets:[{data:D,backgroundColor:bg}]},
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
       plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}},
@@ -666,7 +645,7 @@ function mkHBar2(id,entries,color,topN){
   const top=entries.slice(0,topN||10);
   const ctx=document.getElementById(id); if(!ctx)return;
   const TH=GST.chartTheme();
-  const cfg={type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{data:top.map(e=>e[1]),backgroundColor:color,borderRadius:5,barPercentage:.72}]},
+  const cfg={type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{data:top.map(e=>e[1]),backgroundColor:color,barPercentage:.72}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:46}},
       plugins:{legend:{display:false},valLabel:{mode:'h',color:inkStrong(TH)}},
       scales:{x:{display:false},y:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}}}},
@@ -675,7 +654,7 @@ function mkHBar2(id,entries,color,topN){
 }
 
 function render(){ GST.skeleton(false);
-  const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
+  const TH=GST.chartTheme(); GST.chartDefaults();
   const GF=gFilt(); // 사이드바 필터 반영 (VS/VD 갱신)
   // 선택한 월(CAL_Y, CAL_M) 기준 필터
   const inMonth = x => x.next && x.next.getUTCFullYear()===CAL_Y && x.next.getUTCMonth()===CAL_M;
@@ -736,6 +715,38 @@ function render(){ GST.skeleton(false);
     const dm={};
     VD.forEach(h=>{const k=perKey(h.date);dm[k]=(dm[k]||0)+1;});
     mkBarV2('cDone',PB.map(p=>p.label),PB.map(p=>dm[p.key]||0),TH.pal[1],{forecast:2,anomaly:true});
+  }
+  // ── 개요 2행: 모델별 지연 TOP 8 ──
+  {
+    if(CHARTS.cMdlOver){try{CHARTS.cMdlOver.destroy();}catch(e){} delete CHARTS.cMdlOver;}
+    const mo={}; VS.forEach(x=>{if(x.st==='overdue'){const m=x.model||'—';mo[m]=(mo[m]||0)+1;}});
+    const top=Object.entries(mo).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const el=document.getElementById('cMdlOver');
+    if(el&&top.length){
+      const short=s=>s.length>18?s.slice(0,17)+'…':s;
+      CHARTS.cMdlOver=new Chart(el,{type:'bar',
+        data:{labels:top.map(x=>short(x[0])),datasets:[{label:t('st_overdue'),data:top.map(x=>x[1]),
+          backgroundColor:TH.status.bad}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{display:false},tooltip:{callbacks:{title:it=>top[it[0].dataIndex][0]}}},
+          scales:{x:{beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
+                  y:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}}}}});
+    }
+  }
+  // ── 개요 2행: 7일 내 도래 미니표 — 지연(D+)이 있으면 그것부터 ──
+  {
+    const el=document.getElementById('due7Tbl');
+    if(el){
+      const up=VS.filter(x=>x.dl!=null&&x.dl<=7&&x.st!=='na')
+        .sort((a,b)=>a.dl-b.dl).slice(0,8);
+      el.innerHTML = up.length
+        ? up.map(x=>{const d=x.dl<0?'D+'+(-x.dl):x.dl===0?'D-DAY':'D-'+x.dl;
+            const c=x.dl<0?'var(--bad,#fb7185)':x.dl<=2?'var(--warn,#fbbf24)':'var(--txt-muted)';
+            return '<tr><td style="font-weight:700;color:'+c+';white-space:nowrap">'+d+'</td>'
+              +'<td>'+(x.sn||'—')+'</td><td>'+(x.line||'—')+'</td>'
+              +'<td style="text-align:right;color:var(--txt-muted)">'+GST.fmtDate(x.next)+'</td></tr>';}).join('')
+        : '<tr><td class="empty">'+t('due7_none')+'</td></tr>';
+    }
   }
   // 작업 부하 (TBM 원본 행 기준: 공수·작업자·라인별 시간)
   {
@@ -1243,14 +1254,14 @@ function mkDonut(id,labels,data,colors){
   const ctx=document.getElementById(id);
   const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderColor:'rgba(0,0,0,.15)',borderWidth:2,hoverOffset:8}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
-      plugins:{legend:{position:'right',labels:{color:GST.chartTheme().txt,font:{size:11},padding:8,usePointStyle:true,pointStyle:'circle'}}},
+      plugins:{legend:{position:'right',labels:{padding:8}}},
       animation:{animateScale:true}}};
   if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets[0].data=data;CHARTS[id].update();return;}
   CHARTS[id]=new Chart(ctx,cfg);
 }
 function mkBar(id,labels,data,color){
   const ctx=document.getElementById(id);
-  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:color,borderRadius:5}]},
+  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:color}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{display:false}},
               y:{ticks:{color:'#94a3b8',precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}};
@@ -1261,7 +1272,7 @@ function mkStackBar(id,labels,datasets){
   const ctx=document.getElementById(id);
   const cfg={type:'bar',data:{labels,datasets},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom',labels:{color:GST.chartTheme().txt,font:{size:10},usePointStyle:true,pointStyle:'circle',padding:8}}},
+      plugins:{legend:{position:'bottom',labels:{padding:8}}},
       scales:{x:{stacked:true,ticks:{color:GST.chartTheme().txt,font:{size:10},maxRotation:35},grid:{display:false}},
               y:{stacked:true,ticks:{color:GST.chartTheme().txt,precision:0},grid:{color:GST.chartTheme().grid}}}}};
   if(CHARTS[id]){CHARTS[id].data.labels=labels;CHARTS[id].data.datasets=datasets;CHARTS[id].update();return;}

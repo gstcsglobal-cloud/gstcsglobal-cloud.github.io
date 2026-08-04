@@ -4,41 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CIP 현황 — 개조·점검 진행 관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
-  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
-  --glass:rgba(255,255,255,0.05); --glass-border:rgba(255,255,255,0.12); --glass-hover:rgba(255,255,255,0.1);
-  --txt-main:#e2e8f0; --txt-muted:#94a3b8;
-  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
-  --warn:#fbbf24; --bad:#fb7185; --ok:#34d399;
-  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
-}
-body.theme-burgundy{
-  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
-  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
-  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
-  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
-  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
-}
-body.theme-light{
-  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #e8eef5, #f0f4f8);
-  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
-  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
-  --txt-main:#0f172a; --txt-muted:#64748b;
-  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
-}
-body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt-main);
+
+
+
+body{color:var(--txt-main);
   background:var(--bg-gradient);background-size:400% 400%;animation:grad 22s ease infinite;min-height:100vh;padding:24px 28px;
   transition:background .5s ease,color .5s ease}
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
-.header h1{font-size:28px;font-weight:800;background:var(--title-gradient);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
-.header .sub{color:var(--txt-muted);font-size:13px;margin-top:4px}
 .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:9px 18px;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .btn-grad{background:var(--title-gradient);color:#0f172a}
@@ -89,11 +68,12 @@ body.theme-light .slicer select,body.theme-light .slicer input{color-scheme:ligh
 
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
 .grid2b{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:16px}
-.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;backdrop-filter:blur(14px);box-shadow:var(--card-shadow);height:380px;display:flex;flex-direction:column;position:relative}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:18px;backdrop-filter:blur(14px);box-shadow:var(--card-shadow);position:relative}
 .card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:var(--txt-main);padding-right:150px}
 .card-note{font-size:10px;color:var(--txt-muted);margin-bottom:10px;font-style:italic}
-.card .cw{flex:1;position:relative;min-height:0}
-.card.tall{height:460px}
+.card .cw{position:relative;height:var(--ch-std,240px)}
+.card.tall .cw{height:var(--ch-tall,300px)}
 /* 차트별 주/월 미니 토글 */
 .mini-per{position:absolute;top:14px;right:14px;display:flex;gap:0;z-index:5;border:1px solid var(--glass-border);border-radius:12px;overflow:hidden}
 .mp-btn{background:transparent;border:none;padding:3px 10px;font-size:10px;font-weight:700;color:var(--txt-muted);cursor:pointer;font-family:inherit}
@@ -147,7 +127,8 @@ tr:hover td{background:var(--glass-hover)}
 .hm-wrap tr.tot td{font-weight:800;color:var(--accent-2);background:var(--glass)}
 
 @media print{.capbtns,.header-right,.slicers,.fchips,.rpt-toolbar,.mini-per{display:none!important}.card{break-inside:avoid;page-break-inside:avoid}}
-@media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
+@media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
+@media(max-width:820px){.grid3{grid-template-columns:1fr}}
 @media(max-width:768px){.slicers{grid-template-columns:1fr}.card h3{padding-right:0}}
 </style>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
@@ -227,17 +208,37 @@ tr:hover td{background:var(--glass-hover)}
 
 <!-- ═══ 개요 ═══ -->
 <div data-sec="ov">
-  <div class="card tall" style="margin-bottom:16px">
-    <div class="mini-per" data-ch="cipTrend"></div>
-    <h3 data-i="ch_trend">CIP 진행 추이 (누계)</h3>
-    <div class="card-note" data-i="note_trend">대상 = Not yet + 완료 · 구간 말 기준 누계 · 진행율은 우측 축</div>
-    <div class="cw"><canvas id="cipTrend"></canvas></div>
+  <!-- 추이 한 쌍을 나란히 — 전폭 거대 카드 2장 적층은 페이지를 비어 보이게 한다 -->
+  <div class="grid2">
+    <div class="card tall">
+      <div class="mini-per" data-ch="cipTrend"></div>
+      <h3 data-i="ch_trend">CIP 진행 추이 (누계)</h3>
+      <div class="card-note" data-i="note_trend">대상 = Not yet + 완료 · 구간 말 기준 누계 · 진행율은 우측 축</div>
+      <div class="cw"><canvas id="cipTrend"></canvas></div>
+    </div>
+    <div class="card tall">
+      <div class="mini-per" data-ch="cipNew"></div>
+      <h3 data-i="ch_new">구간별 신규 완료</h3>
+      <div class="card-note" data-i="note_new">그 구간에 실제로 처리한 건수 (누계 차트로는 안 보이는 실적)</div>
+      <div class="cw"><canvas id="cipNew"></canvas></div>
+    </div>
   </div>
-  <div class="card" style="margin-bottom:16px">
-    <div class="mini-per" data-ch="cipNew"></div>
-    <h3 data-i="ch_new">구간별 신규 완료</h3>
-    <div class="card-note" data-i="note_new">그 구간에 실제로 처리한 건수 (누계 차트로는 안 보이는 실적)</div>
-    <div class="cw"><canvas id="cipNew"></canvas></div>
+  <div class="grid3">
+    <div class="card">
+      <h3 data-i="ch_site">사이트별 진행율</h3>
+      <div class="card-note" data-i="note_site">F11 · F16 완료/잔여 — 사이트 간 진도 비교</div>
+      <div class="cw"><canvas id="cipSite"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_age">잔여 경과일 분포</h3>
+      <div class="card-note" data-i="note_age">항목 적용일로부터 경과 · 오래 방치된 건이 오른쪽</div>
+      <div class="cw"><canvas id="cipAge"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_toprem">잔여 TOP 항목</h3>
+      <div class="card-note" data-i="note_toprem">잔여 건수 상위 8개 — 어디부터 칠지</div>
+      <div class="cw"><canvas id="cipTopRem"></canvas></div>
+    </div>
   </div>
 </div>
 
@@ -266,19 +267,13 @@ tr:hover td{background:var(--glass-hover)}
     </div>
     <div class="cw"><canvas id="cipItem"></canvas></div>
   </div>
-  <div class="grid2">
-    <div class="card">
-      <h3 data-i="ch_age">잔여 경과일 분포</h3>
-      <div class="card-note" data-i="note_age">항목 적용일로부터 경과 · 오래 방치된 건이 오른쪽</div>
-      <div class="cw"><canvas id="cipAge"></canvas></div>
-    </div>
+  <!-- 경과일 분포는 개요로 이동 — 여기는 설비 축 3종을 한 줄로 -->
+  <div class="grid3">
     <div class="card">
       <h3 data-i="ch_floor">층·구역별 잔여</h3>
       <div class="card-note" data-i="note_floor">한 번에 순회할 작업 동선 기준 · 상위 12</div>
       <div class="cw"><canvas id="cipFloor"></canvas></div>
     </div>
-  </div>
-  <div class="grid2">
     <div class="card">
       <h3 data-i="ch_model">모델별 진행율</h3>
       <div class="card-note" data-i="note_model">완료·잔여 + 진행율</div>
@@ -359,7 +354,7 @@ ko:{title:'CIP 현황',sub:'스크러버 개조·점검(CIP) 항목별 진행 �
   kp1:'진행율',kp2:'대상',kp3:'완료',kp4:'잔여',kp5:'이번 구간 완료',kp6:'잔여 설비',u_cnt:'건',u_eq:'대',
   kf1:'완료 {d} / 대상 {t}',kf2:'설비 {n}대 × 항목 {i}개',kf3:'전 구간 {n}건',kf4:'미착수 항목 {n}개',
   kf5:'{lab} 구간 · 직전 {n}건',kf6:'전체 {t}대 중',
-  ch_trend:'CIP 진행 추이 (누계)',note_trend:'대상 = Not yet + 완료 · 구간 말 기준 누계 · 진행율은 우측 축',
+  ch_site:'사이트별 진행율',note_site:'F11 · F16 완료/잔여 — 사이트 간 진도 비교 · 🖱️ 클릭 시 필터',ch_toprem:'잔여 TOP 항목',note_toprem:'잔여 건수 상위 8개 — 어디부터 칠지',ch_trend:'CIP 진행 추이 (누계)',note_trend:'대상 = Not yet + 완료 · 구간 말 기준 누계 · 진행율은 우측 축',
   ch_new:'구간별 신규 완료',note_new:'그 구간에 실제로 처리한 건수 (누계 차트로는 안 보이는 실적)',
   ch_proc:'공정별 진행 현황',note_proc:'완료·잔여 스택 + 진행율 · 작업 우선순위 판단 기준',
   hm_title:'공정 × 항목 잔여 히트맵',hm_note:'— 잔여 상위 12개 항목 · 셀 클릭 시 필터',
@@ -388,7 +383,7 @@ en:{title:'CIP Status',sub:'Scrubber retrofit/inspection (CIP) progress by item'
   kp1:'Progress',kp2:'Target',kp3:'Done',kp4:'Remaining',kp5:'Done This Period',kp6:'Units Remaining',u_cnt:'',u_eq:'units',
   kf1:'{d} done / {t} target',kf2:'{n} units × {i} items',kf3:'prev period {n}',kf4:'{n} items not started',
   kf5:'{lab} · prev {n}',kf6:'of {t} units',
-  ch_trend:'CIP Progress Trend (cumulative)',note_trend:'target = Not yet + done · cumulative at period end · rate on right axis',
+  ch_site:'Progress by Site',note_site:'F11 · F16 done/remaining — click to filter',ch_toprem:'Top Remaining Items',note_toprem:'Top 8 by remaining count — where to start',ch_trend:'CIP Progress Trend (cumulative)',note_trend:'target = Not yet + done · cumulative at period end · rate on right axis',
   ch_new:'Newly Completed per Period',note_new:'what was actually processed in that period',
   ch_proc:'Progress by Process',note_proc:'done/remaining stack + rate · priority basis',
   hm_title:'Process × Item Remaining Heatmap',hm_note:'— top 12 items by remaining · click a cell to filter',
@@ -417,7 +412,7 @@ zh:{title:'CIP 现况',sub:'洗涤器改造·点检(CIP)按项目进度管理',b
   kp1:'进度',kp2:'对象',kp3:'完成',kp4:'剩余',kp5:'本区间完成',kp6:'剩余设备',u_cnt:'件',u_eq:'台',
   kf1:'完成 {d} / 对象 {t}',kf2:'设备 {n}台 × 项目 {i}个',kf3:'上区间 {n}件',kf4:'未着手项目 {n}个',
   kf5:'{lab} 区间 · 上次 {n}件',kf6:'共 {t}台中',
-  ch_trend:'CIP进度趋势 (累计)',note_trend:'对象 = Not yet + 完成 · 区间末累计 · 进度见右轴',
+  ch_site:'各站点进度',note_site:'F11 · F16 完成/剩余 — 点击筛选',ch_toprem:'剩余TOP项目',note_toprem:'剩余数量前8 — 从哪里开始',ch_trend:'CIP进度趋势 (累计)',note_trend:'对象 = Not yet + 完成 · 区间末累计 · 进度见右轴',
   ch_new:'各区间新增完成',note_new:'该区间实际处理的件数 (累计图看不到)',
   ch_proc:'按工艺进度',note_proc:'完成·剩余堆叠 + 进度 · 作业优先级依据',
   hm_title:'工艺 × 项目 剩余热力图',hm_note:'— 剩余前12项 · 点击单元格筛选',
@@ -446,7 +441,7 @@ ja:{title:'CIP 状況',sub:'スクラバー改造·点検(CIP)の項目別進捗
   kp1:'進捗',kp2:'対象',kp3:'完了',kp4:'残り',kp5:'当区間完了',kp6:'残り設備',u_cnt:'件',u_eq:'台',
   kf1:'完了 {d} / 対象 {t}',kf2:'設備 {n}台 × 項目 {i}個',kf3:'前区間 {n}件',kf4:'未着手項目 {n}個',
   kf5:'{lab} 区間 · 直前 {n}件',kf6:'全 {t}台中',
-  ch_trend:'CIP進捗推移 (累計)',note_trend:'対象 = Not yet + 完了 · 区間末累計 · 進捗は右軸',
+  ch_site:'サイト別進捗率',note_site:'F11 · F16 完了/残り — クリックでフィルタ',ch_toprem:'残りTOP項目',note_toprem:'残り件数上位8 — どこから着手するか',ch_trend:'CIP進捗推移 (累計)',note_trend:'対象 = Not yet + 完了 · 区間末累計 · 進捗は右軸',
   ch_new:'区間別 新規完了',note_new:'その区間に実際処理した件数 (累計では見えない実績)',
   ch_proc:'工程別 進捗状況',note_proc:'完了·残り積み上げ + 進捗 · 優先順位の判断基準',
   hm_title:'工程 × 項目 残りヒートマップ',hm_note:'— 残り上位12項目 · セルクリックで絞込',
@@ -557,15 +552,14 @@ function periods(n,anchor,unit){
   return out;
 }
 
-Chart.defaults.color=GST.chartTheme().txt;
-Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+GST.chartDefaults();
 window.changeDashboardTheme=function(themeClass,label){
   document.body.className='';
   if(themeClass!=='default')document.body.classList.add('theme-'+themeClass);
   const L={slate:'Slate',default:'Cyber Turquoise',burgundy:'Royal Burgundy',light:'Aurora Light'};
   const lb=document.getElementById('themeLabel'); if(lb)lb.textContent=L[themeClass]||label||themeClass;
   const menu=document.getElementById('themeMenu'); if(menu)menu.classList.remove('open');
-  Chart.defaults.color=GST.chartTheme().txt;
+  GST.chartDefaults();
   GST.reskinCharts(CHARTS);
   if(CIP.length)render();
 };
@@ -807,11 +801,11 @@ function render(){
       const rt=tgt.map((v,i)=>v?Math.round(don[i]/v*100):null);
       CHARTS.cipTrend=new Chart(document.getElementById('cipTrend'),{type:'bar',
         data:{labels,datasets:[
-          {label:t('s_tgt'),data:tgt,backgroundColor:BAR_C+'2e',borderColor:BAR_C,borderWidth:1.5,borderRadius:3,order:3},
-          {label:t('s_done'),data:don,backgroundColor:barHi(don.length),borderRadius:3,order:2},
+          {label:t('s_tgt'),data:tgt,backgroundColor:BAR_C+'2e',borderColor:BAR_C,borderWidth:1.5,order:3},
+          {label:t('s_done'),data:don,backgroundColor:barHi(don.length),order:2},
           lineDs(t('s_rate'),rt,LINE_C,{yAxisID:'y2'})]},
         options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+          plugins:{legend:{position:'bottom',labels:{padding:8}},
             tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.y+(c.datasetIndex===2?'%':''),
               footer:it=>{const i=it[0].dataIndex;return tgt[i]?(t('s_rem')+' '+(tgt[i]-don[i]).toLocaleString()):'';}}}},
           scales:{x:baseScales(TH,false).x,
@@ -830,13 +824,50 @@ function render(){
       let acc=0; const cum=nw.map(v=>acc+=v);
       CHARTS.cipNew=new Chart(document.getElementById('cipNew'),{type:'bar',
         data:{labels,datasets:[
-          {label:t('s_new'),data:nw,backgroundColor:barHi(nw.length),borderRadius:3,order:2},
+          {label:t('s_new'),data:nw,backgroundColor:barHi(nw.length),order:2},
           lineDs(t('s_cum'),cum,LINE_C,{yAxisID:'y2'})]},
         options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}}},
+          plugins:{legend:{position:'bottom',labels:{padding:8}}},
           scales:{x:baseScales(TH,false).x,
             y:{grace:'20%',beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
             y2:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:TH.txt,precision:0,maxTicksLimit:5,font:{size:9}}}}}});
+    }
+  }
+
+  // ── 사이트별 진행율 (개요) — F11/F16 완료·잔여 가로 스택, 라벨에 % ──
+  {
+    destroyMk('cipSite');
+    const ss={}; snap.forEach(x=>{const k=x.site||'—';(ss[k]=ss[k]||{d:0,r:0})[isDone(x)?'d':'r']++;});
+    const keys=Object.keys(ss).sort();
+    if(keys.length){
+      const labs=keys.map(k=>{const s=ss[k].d+ss[k].r;return k+' · '+(s?Math.round(ss[k].d/s*100):0)+'%';});
+      CHARTS.cipSite=new Chart(document.getElementById('cipSite'),{type:'bar',
+        data:{labels:labs,datasets:[
+          {label:t('s_done'),data:keys.map(k=>ss[k].d),backgroundColor:DONE_C,stack:'s'},
+          {label:t('s_rem'),data:keys.map(k=>ss[k].r),backgroundColor:REM_C,stack:'s'}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+          onClick:(e,els,ch)=>{if(els.length){F.site=keys[els[0].index];fillSlicers();render();}},
+          plugins:{legend:{position:'bottom',labels:{padding:8}}},
+          scales:{x:{stacked:true,beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
+                  y:{stacked:true,ticks:{color:TH.txt},grid:{display:false}}}}});
+    }
+  }
+
+  // ── 잔여 TOP 항목 (개요) — 어디부터 칠지 ──
+  {
+    destroyMk('cipTopRem');
+    const rm={}; snap.filter(x=>!isDone(x)).forEach(x=>{const k=x.itemBase||x.item;rm[k]=(rm[k]||0)+1;});
+    const top=Object.entries(rm).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    if(top.length){
+      const short=s=>s.length>22?s.slice(0,21)+'…':s;
+      CHARTS.cipTopRem=new Chart(document.getElementById('cipTopRem'),{type:'bar',
+        data:{labels:top.map(x=>short(x[0])),datasets:[{label:t('s_rem'),data:top.map(x=>x[1]),
+          backgroundColor:barHi(top.length).map(()=>REM_C)}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{display:false},
+            tooltip:{callbacks:{title:it=>top[it[0].dataIndex][0]}}},
+          scales:{x:{beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
+                  y:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}}}}});
     }
   }
 
@@ -855,12 +886,12 @@ function render(){
       const rt=keys.map(k=>{const s=gs[k].d+gs[k].r;return s?Math.round(gs[k].d/s*100):null;});
       CHARTS.cipProc=new Chart(document.getElementById('cipProc'),{type:'bar',
         data:{labels:keys,datasets:[
-          {label:t('s_done'),data:dd,backgroundColor:DONE_C,borderRadius:3,stack:'s',order:3},
-          {label:t('s_rem'),data:rr,backgroundColor:REM_C,borderRadius:3,stack:'s',order:3},
+          {label:t('s_done'),data:dd,backgroundColor:DONE_C,stack:'s',order:3},
+          {label:t('s_rem'),data:rr,backgroundColor:REM_C,stack:'s',order:3},
           lineDs(t('s_rate'),rt,LINE_C,{yAxisID:'y2'})]},
         options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
           onClick:(e,els,ch)=>{if(els.length){F.group=ch.data.labels[els[0].index]===t('etc')?'':ch.data.labels[els[0].index];fillSlicers();render();}},
-          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+          plugins:{legend:{position:'bottom',labels:{padding:8}},
             tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.y+(c.datasetIndex===2?'%':''),
               footer:it=>{const i=it[0].dataIndex;return t('s_tgt')+' '+(dd[i]+rr[i]).toLocaleString();}}}},
           scales:{x:baseScales(TH,true).x,y:baseScales(TH,true).y,y2:pctAxis(TH)}}});
@@ -911,11 +942,11 @@ function render(){
       const labs=ent.map(x=>x[0].length>34?x[0].slice(0,33)+'…':x[0]);
       CHARTS.cipItem=new Chart(document.getElementById('cipItem'),{type:'bar',
         data:{labels:labs,datasets:[
-          {label:t('s_done'),data:ent.map(x=>x[1].d),backgroundColor:DONE_C,borderRadius:3,stack:'s'},
-          {label:t('s_rem'),data:ent.map(x=>x[1].r),backgroundColor:REM_C,borderRadius:3,stack:'s'}]},
+          {label:t('s_done'),data:ent.map(x=>x[1].d),backgroundColor:DONE_C,stack:'s'},
+          {label:t('s_rem'),data:ent.map(x=>x[1].r),backgroundColor:REM_C,stack:'s'}]},
         options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
           onClick:(e,els)=>{if(els.length&&!pairMerge){F.item=ent[els[0].index][0];fillSlicers();render();}},
-          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+          plugins:{legend:{position:'bottom',labels:{padding:8}},
             tooltip:{callbacks:{title:it=>ent[it[0].dataIndex][0],
               footer:it=>{const o=ent[it[0].dataIndex][1],s=o.d+o.r;return t('s_rate')+' '+(s?Math.round(o.d/s*100):0)+'%';}}}},
           scales:{x:{stacked:true,beginAtZero:true,ticks:{color:TH.txt,precision:0,font:{size:10}},grid:{color:TH.grid}},
@@ -935,7 +966,7 @@ function render(){
     const show=cnt[4]>0?[0,1,2,3,4]:[0,1,2,3];
     CHARTS.cipAge=new Chart(document.getElementById('cipAge'),{type:'bar',
       data:{labels:show.map(i=>B[i]),datasets:[{label:t('s_rem'),data:show.map(i=>cnt[i]),
-        backgroundColor:show.map(i=>i===3?TH.status.bad:i===4?TH.status.na:REM_C),borderRadius:4}]},
+        backgroundColor:show.map(i=>i===3?TH.status.bad:i===4?TH.status.na:REM_C)}]},
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false}},
         scales:{x:baseScales(TH,false).x,y:baseScales(TH,false).y}}});
@@ -949,7 +980,7 @@ function render(){
     const ent=Object.entries(fm).sort((a,b)=>b[1]-a[1]).slice(0,12);
     if(ent.length){
       CHARTS.cipFloor=new Chart(document.getElementById('cipFloor'),{type:'bar',
-        data:{labels:ent.map(x=>x[0]),datasets:[{label:t('s_rem'),data:ent.map(x=>x[1]),backgroundColor:REM_C,borderRadius:4}]},
+        data:{labels:ent.map(x=>x[0]),datasets:[{label:t('s_rem'),data:ent.map(x=>x[1]),backgroundColor:REM_C}]},
         options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
           onClick:(e,els)=>{if(els.length){F.floor=ent[els[0].index][0]===t('unk')?'':ent[els[0].index][0];fillSlicers();render();}},
           plugins:{legend:{display:false}},
@@ -967,11 +998,11 @@ function render(){
       const rt=ent.map(x=>{const s=x[1].d+x[1].r;return s?Math.round(x[1].d/s*100):null;});
       CHARTS.cipModel=new Chart(document.getElementById('cipModel'),{type:'bar',
         data:{labels:ent.map(x=>x[0]),datasets:[
-          {label:t('s_done'),data:ent.map(x=>x[1].d),backgroundColor:DONE_C,borderRadius:3,stack:'s',order:3},
-          {label:t('s_rem'),data:ent.map(x=>x[1].r),backgroundColor:REM_C,borderRadius:3,stack:'s',order:3},
+          {label:t('s_done'),data:ent.map(x=>x[1].d),backgroundColor:DONE_C,stack:'s',order:3},
+          {label:t('s_rem'),data:ent.map(x=>x[1].r),backgroundColor:REM_C,stack:'s',order:3},
           lineDs(t('s_rate'),rt,LINE_C,{yAxisID:'y2'})]},
         options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:9.5},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:6}}},
+          plugins:{legend:{position:'bottom',labels:{padding:6}}},
           scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:9},maxRotation:30},grid:{display:false}},
             y:baseScales(TH,true).y,y2:pctAxis(TH)}}});
     }
@@ -987,11 +1018,11 @@ function render(){
       const rt=ent.map(x=>{const s=x[1].d+x[1].r;return s?Math.round(x[1].d/s*100):null;});
       CHARTS.cipVint=new Chart(document.getElementById('cipVint'),{type:'bar',
         data:{labels:ent.map(x=>x[0]),datasets:[
-          {label:t('s_done'),data:ent.map(x=>x[1].d),backgroundColor:DONE_C,borderRadius:3,stack:'s',order:3},
-          {label:t('s_rem'),data:ent.map(x=>x[1].r),backgroundColor:REM_C,borderRadius:3,stack:'s',order:3},
+          {label:t('s_done'),data:ent.map(x=>x[1].d),backgroundColor:DONE_C,stack:'s',order:3},
+          {label:t('s_rem'),data:ent.map(x=>x[1].r),backgroundColor:REM_C,stack:'s',order:3},
           lineDs(t('s_rate'),rt,LINE_C,{yAxisID:'y2'})]},
         options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:9.5},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:6}}},
+          plugins:{legend:{position:'bottom',labels:{padding:6}}},
           scales:{x:baseScales(TH,true).x,y:baseScales(TH,true).y,y2:pctAxis(TH)}}});
     }
   }

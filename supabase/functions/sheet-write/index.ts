@@ -189,17 +189,21 @@ type SheetSchema = {
   // 양쪽에 같은 정규화를 걸지 않으면 전부 NOT_FOUND가 난다 (hr/index.html normId와 동일).
   normKey: (s: string) => string;
   key: { field: string } & ColRef;
-  nameRef: ColRef;                  // 이름 컬럼 — 캐스케이드의 이름 폴백 탐색·이름 전파에 사용
+  // 이름 컬럼 — 캐스케이드의 이름 폴백 탐색·이름 전파에 사용.
+  // 선택: 실적현황처럼 이름 열이 없고 캐스케이드도 없는 시트가 있다.
+  nameRef?: ColRef;
   fields: Record<string, FieldDef>;
-  requiredOnAppend: string[];       // 신규 행에 반드시 있어야 하는 논리 필드
+  requiredOnAppend?: string[];      // 신규 행에 반드시 있어야 하는 논리 필드 (append를 쓰는 시트만)
   noCol?: ColRef;                   // 'No' 표시열 — 아무 페이지도 읽지 않는다. 사람 가독용으로 max+1 채움
   cascadeTo?: string;               // 이 탭의 사번/이름 변경·추가·삭제를 전파할 상대 gid
   allowDup?: boolean;               // 같은 키가 여러 행일 수 있는 시트(휴가) — append 중복검사 생략
   dateRange?: { start: string; end: string };  // 종료일 >= 시작일 검사 (append)
 };
 const lc = (s: string) => String(s ?? "").trim().toLowerCase();
-const colIdx = (header: string[], ref: ColRef): number =>
-  "col" in ref ? ref.col : header.map(lc).findIndex(ref.match);
+// ref가 없으면 -1 — 선택 필드(nameRef)를 가진 스키마에서 TypeError로 죽지 않게 한다.
+// (실적현황에 nameRef를 빠뜨려 op=row가 전부 500이 됐던 실제 사고)
+const colIdx = (header: string[], ref?: ColRef): number =>
+  !ref ? -1 : ("col" in ref ? ref.col : header.map(lc).findIndex(ref.match));
 
 const SCHEMAS: Record<string, SheetSchema> = {
   // 인원명단(인력현황). v2: 차트가 쓰는 컬럼 전부 편집 허용.
@@ -296,6 +300,7 @@ const SCHEMAS: Record<string, SheetSchema> = {
     dataOffset: 1,
     normKey: (s) => String(s ?? "").trim().replace(/\.0+$/, ""),
     key: { field: "rs", match: (h) => h === "실적코드" },
+    // nameRef 없음 — 이름 열이 없고 캐스케이드도 없다. scanTab/colIdx가 이 경우를 -1로 처리한다.
     fields: {
       alarm:  { match: (h) => h === "알람유형", max: 80 },
       phenom: { match: (h) => h === "현상",     max: 120 },
@@ -595,7 +600,7 @@ Deno.serve(async (req) => {
         if (err) return json({ error: err, field: name }, 400);
       }
       if (forAppend) {
-        for (const rq of schema.requiredOnAppend) {
+        for (const rq of schema.requiredOnAppend ?? []) {
           if (!String((vals as Record<string, string>)[rq] ?? "").trim()) {
             return json({ error: "missing_field", field: rq }, 400);
           }

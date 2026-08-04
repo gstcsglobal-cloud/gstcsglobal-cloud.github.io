@@ -4,46 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Service & Fault Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
-  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
-  --glass:rgba(255,255,255,0.05); --glass-border:rgba(255,255,255,0.12); --glass-hover:rgba(255,255,255,0.1);
-  --txt-main:#e2e8f0; --txt-muted:#94a3b8;
-  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
-  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
-  --bg1:#0a1420;--bg2:#13232d;--bg3:#0f2027;
-  --a1:var(--accent-1);--a2:var(--accent-2);--a3:var(--accent-3);--a4:var(--accent-4);--a5:var(--accent-5);
-  --glassb:var(--glass-border);--txt:var(--txt-main);--mut:var(--txt-muted);--ok:#34d399;--bad:#fb7185;--warn:#fbbf24;
-}
-body.theme-burgundy{
-  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
-  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
-  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
-  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
-  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
-  --bg1:#1a0813;--bg2:#2d0b1e;--bg3:#1f0822;
-}
-body.theme-light{
-  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #e8eef5, #f0f4f8);
-  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
-  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
-  --txt-main:#0f172a; --txt-muted:#64748b;
-  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
-  --bg1:#f1f5f9;--bg2:#e2e8f0;--bg3:#e8eef5;
-}
-body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
+
+
+
+body{color:var(--txt);
   background:var(--bg-gradient);
   background-size:400% 400%;animation:grad 22s ease infinite;min-height:100vh;padding:24px 28px}
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
-.header h1{font-size:28px;font-weight:800;background:linear-gradient(90deg,#fb7185,#fbbf24,#a78bfa);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
-.header .sub{color:var(--mut);font-size:13px;margin-top:4px}
 .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:9px 18px;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .btn-grad{background:linear-gradient(90deg,var(--a1),var(--a2));color:#fff}
@@ -94,7 +68,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px)}
 .card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
 .card-note{font-size:10px;color:var(--mut);margin-bottom:10px;font-style:italic}
-.card .cw{position:relative;height:220px}
+.card .cw{position:relative;height:var(--ch-std,240px)}
 .trend-card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px);margin-bottom:16px}
 .trend-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
 .trend-header h3{font-size:14px;font-weight:700;color:#dfe6ff}
@@ -559,10 +533,9 @@ let LANG='ko', ROWS=[], TBM_ROWS=[], CHARTS={}, sortK='work', sortAsc=false;
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&T[sl])LANG=sl; else if(window.name&&T[window.name])LANG=window.name; }catch(e){}
 const F={line:'',stage:'',pf:'',cause:'',model:'',sn:'',proc:'',dtFrom:'',dtTo:'',q:''};
 
-Chart.defaults.color=GST.chartTheme().txt;
-Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+GST.chartDefaults();
 window.changeDashboardTheme=function(){
-  Chart.defaults.color=GST.chartTheme().txt;
+  GST.chartDefaults();
   GST.reskinCharts(CHARTS);
   if(ROWS.length)render();
 };
@@ -765,7 +738,7 @@ const valLabelPlugin={id:'valLabel',
     const nums=ds.data.filter(v=>v!=null&&isFinite(v));
     const max=nums.length?Math.max.apply(null,nums):null;
     ctx.save(); ctx.fillStyle=o.color||'#E6EDF3';
-    ctx.font='700 11px "Segoe UI","Malgun Gothic",sans-serif';
+    ctx.font='700 11px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
     meta.data.forEach(function(el,i){
       const v=ds.data[i]; if(v==null)return;
       if(o.mode==='h'){ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(v.toLocaleString(),el.x+6,el.y);return;}
@@ -787,10 +760,10 @@ const donutCenterPlugin={id:'dCenter',
     const total=chart.data.datasets[0].data.reduce((a,b)=>a+(+b||0),0);
     ctx.save();ctx.textAlign='center';
     ctx.fillStyle=o.color||'#E6EDF3';
-    ctx.font='800 17px "Segoe UI","Malgun Gothic",sans-serif';
+    ctx.font='800 17px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
     ctx.textBaseline='bottom';ctx.fillText(total.toLocaleString(),x,y+2);
     ctx.fillStyle=o.mut||'#8B98A9';
-    ctx.font='700 8px "Segoe UI",sans-serif';ctx.textBaseline='top';ctx.fillText('TOTAL',x,y+5);
+    ctx.font='700 8px "Pretendard Variable",Pretendard,"Segoe UI",sans-serif';ctx.textBaseline='top';ctx.fillText('TOTAL',x,y+5);
     ctx.restore();
   }};
 function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
@@ -898,7 +871,7 @@ function mkPareto(id,f){
   let cum=0; const cumPct=ent.map(e=>{cum+=e[1];return Math.round(cum/tot*100);});
   CHARTS[id]=new Chart(ctx,{type:'bar',
     data:{labels:ent.map(e=>e[0].length>22?e[0].slice(0,21)+'…':e[0]),datasets:[
-      {data:ent.map(e=>e[1]),backgroundColor:TH.pal[0],borderRadius:3,order:2},
+      {data:ent.map(e=>e[1]),backgroundColor:TH.pal[0],order:2},
       {type:'line',data:cumPct,borderColor:TH.status.warn,borderWidth:2,pointRadius:2.5,
        yAxisID:'y2',order:1,tension:.2}]},
     options:{responsive:true,maintainAspectRatio:false,
@@ -927,7 +900,7 @@ function mkHBar(id,entries,total,fkey,color,topN,colorFn){
   const cfg={type:'bar',data:{labels,datasets:[{
       data,
       backgroundColor:labels.map((l,i)=>l===t('etc')?'rgba(151,170,196,.35)':(colorFn?colorFn(l,i):(color||TH.pal[0]))),
-      borderRadius:5,barPercentage:.72}]},
+      barPercentage:.72}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,onClick,
       layout:{padding:{right:46}},
       plugins:{legend:{display:false},valLabel:{mode:'h',color:inkStrong(TH)},
@@ -944,7 +917,7 @@ function mkBarV(id,labels,data,color,opts){
     const raw=GST.linForecast(base,opts.forecast+(opts.skipLast===false?0:1))||[];
     const fc=opts.skipLast===false?raw:raw.slice(1);
     fc.forEach((v,i)=>{L.push('+'+(i+1));D.push(v);bg.push(opts.fcColor||'rgba(56,189,248,.5)');}); }
-  const cfg={type:'bar',data:{labels:L,datasets:[{data:D,backgroundColor:bg,borderRadius:4}]},
+  const cfg={type:'bar',data:{labels:L,datasets:[{data:D,backgroundColor:bg}]},
     options:{responsive:true,maintainAspectRatio:false,onClick:opts.onClick,
       layout:{padding:{top:16}},
       plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)},
@@ -1118,7 +1091,7 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 
 // ===== 렌더 =====
 function render(){ GST.skeleton(false); GST.pushState(F);
-  const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
+  const TH=GST.chartTheme(); GST.chartDefaults();
   const f=filt();
   renderFilterChips();
   const now=Date.now(), D30=now-30*864e5, D60=now-60*864e5;

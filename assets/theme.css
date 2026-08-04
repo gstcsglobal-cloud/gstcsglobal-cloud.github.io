@@ -24,6 +24,10 @@
   --accent:var(--accent-1); --accent2:var(--accent-2); --accent3:var(--accent-3);
   --glassb:var(--glass-border); --txt:var(--txt-main); --mut:var(--txt-muted); --muted:var(--txt-muted);
 
+  /* 차트 영역 높이 3단 — 전 페이지 공통 (카드가 자라는 게 아니라 .cw가 정한다) */
+  --ch-mini:180px;
+  --ch-std:240px;
+  --ch-tall:300px;
   /* 타이포그래피 스케일 */
   --fs-display:28px;   /* 대시보드 제목 */
   --fs-title:16px;     /* 섹션 제목 */
@@ -74,7 +78,7 @@ body.theme-light{
 body{background:var(--bg-gradient) !important;color:var(--txt-main) !important}
 
 /* ---------- 2. 공통 컴포넌트 통일 ---------- */
-body{padding:var(--sp-6) 28px !important;font-family:'Segoe UI','Malgun Gothic',sans-serif !important}
+body{padding:var(--sp-6) 28px !important;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif !important}
 
 .header h1{font-size:var(--fs-display) !important;font-weight:800 !important;letter-spacing:-1px !important;
   background:var(--title-gradient) !important;-webkit-background-clip:text !important;
@@ -85,6 +89,8 @@ body{padding:var(--sp-6) 28px !important;font-family:'Segoe UI','Malgun Gothic',
   transition:transform .25s var(--ease), box-shadow .25s var(--ease) !important}
 .kpi:hover{transform:translateY(-3px) !important}
 .kpi .val{font-size:var(--fs-kpi) !important;font-weight:800 !important;font-variant-numeric:tabular-nums}
+/* 숫자 열 정렬 — 표·배지·푸터의 숫자가 흔들리지 않게 (KPI val과 동일 원칙) */
+td,.kpi .kd,.kpi .kf,.gb-inp{font-variant-numeric:tabular-nums}
 .kpi .cap{font-size:var(--fs-caption) !important;margin-top:5px !important;font-weight:600 !important;letter-spacing:.3px !important}
 .kpi .ic{font-size:18px !important;margin-bottom:5px !important}
 
@@ -107,6 +113,10 @@ body{padding:var(--sp-6) 28px !important;font-family:'Segoe UI','Malgun Gothic',
 
 .card{border-radius:var(--r-xl) !important;box-shadow:var(--shadow-md) !important;
   transition:box-shadow .25s var(--ease) !important}
+/* 카드 표면 캔온 — 페이지 인라인에 8벌 복제돼 있던 글래스 정의의 단일 출처.
+   theme.css가 마지막에 로드되므로 같은 특이도의 페이지 규칙을 이긴다. */
+.card,.trend-card,.tablecard,.cfgcard{background:var(--glass);border:1px solid var(--glass-border);
+  backdrop-filter:blur(14px);padding:18px}
 .card h3{font-size:var(--fs-card) !important;font-weight:700 !important;color:var(--txt-main) !important}
 .card-note{font-size:var(--fs-caption) !important;color:var(--txt-muted) !important}
 

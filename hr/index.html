@@ -4,48 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>인력 현황 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-:root{
-  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
-  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
-  --glass: rgba(255,255,255,0.05); --glass-border: rgba(255,255,255,0.12); --glass-hover: rgba(255,255,255,0.1);
-  --txt-main:#e2e8f0; --txt-muted:#94a3b8;
-  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
-  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
-  --bg1:#0a1420; --bg2:#13232d; --bg3:#0f2027;
-  --accent:var(--accent-1); --accent2:var(--accent-2); --accent3:var(--accent-3);
-  --glassb:var(--glass-border); --txt:var(--txt-main); --muted:var(--txt-muted);
-}
-body.theme-burgundy{
-  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
-  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
-  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
-  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
-  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
-  --bg1:#1a0813; --bg2:#2d0b1e; --bg3:#1f0822;
-}
-body.theme-light{
-  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #e8eef5, #f0f4f8);
-  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
-  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
-  --txt-main:#0f172a; --txt-muted:#64748b;
-  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
-  --bg1:#f1f5f9; --bg2:#e2e8f0; --bg3:#e8eef5;
-}
+
+
+
 body{
-  font-family:'Segoe UI','Malgun Gothic',sans-serif; color:var(--txt-main);
+   color:var(--txt-main);
   background:var(--bg-gradient);
   background-size:400% 400%; animation:grad 18s ease infinite; min-height:100vh; padding:28px 32px;
 }
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
-.header h1{font-size:32px;font-weight:800;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
-.header .sub{color:var(--muted);font-size:13px;margin-top:4px}
 .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .badge{background:var(--glass);border:1px solid var(--glassb);border-radius:30px;padding:8px 18px;font-size:13px;backdrop-filter:blur(10px)}
 .btn{background:linear-gradient(90deg,var(--accent),var(--accent2));border:none;border-radius:30px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;padding:9px 20px;transition:opacity .2s;text-decoration:none;display:inline-block;}
@@ -87,7 +61,7 @@ body{
 .card{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px);position:relative}
 .card h3{font-size:14px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
 .card .card-note{font-size:10.5px;color:var(--txt-muted);margin-bottom:10px}
-.card .cw{position:relative;height:250px}
+.card .cw{position:relative;height:var(--ch-std,240px)}
 .tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:22px;padding:20px;backdrop-filter:blur(14px);position:relative}
 .tablecard h3{font-size:14px;font-weight:700;margin-bottom:14px}
 /* 🧪 인력 시나리오 */
@@ -248,7 +222,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
     <button class="simbtn" id="simClr" data-i="sim_clr">초기화</button>
   </div>
   <div id="simKpi" class="simkpi"></div>
-  <div class="cw" style="height:250px"><canvas id="cSim"></canvas></div>
+  <div class="cw"><canvas id="cSim"></canvas></div>
   <div class="simnote" data-i="sim_note">가정: 신입은 입사 시점에 Basic 미이수로 편입되고 3개월 뒤 이수 완료 · 이탈은 매월 균등 발생 · 확정 퇴사일은 기준선에 이미 반영됨</div>
 </div>
 
@@ -559,8 +533,7 @@ let SHOWQUIT=false;               // 퇴사자 표시 토글 — 잘못 넣은 �
 const F={site:'전체',org:'전체',role:'전체',edu:'전체',q:''};
 let SORT={k:'no',dir:1};
 // 차트 색상 스타일은 core.js(GST.style())가 전 페이지 공통 관리 — 아래 STY는 hr 전용 색 매핑
-Chart.defaults.color=GST.chartTheme().txt;
-Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+GST.chartDefaults();
 Chart.defaults.onClick=hrDrill;
 const STY={
   vivid:   {lbl:'Vivid',    on:'#2C5FAE', off:'#7C6FE0', accent:'#5EC2FF', good:'#34D399', warn:'#F59E0B', bad:'#FB7185', pal:['#2C5FAE','#38BDF8','#5EC2FF','#7C6FE0','#34D399','#F59E0B','#F472B6','#A3E635']},
@@ -584,7 +557,7 @@ const valLabelPlugin={id:'valLabel',
     const fmt=v=>{const n=+v;return Math.abs(n)>=1000?Math.round(n).toLocaleString():String(Math.round(n*10)/10);};
     ctx.save();
     if(o.mode==='all'){
-      ctx.font='700 10px "Segoe UI","Malgun Gothic",sans-serif';
+      ctx.font='700 10px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
       chart.data.datasets.forEach((ds,di)=>{ const meta=chart.getDatasetMeta(di);
         if(!meta||meta.hidden||!meta.data||ds._noLabel)return; const isLine=meta.type==='line';
         meta.data.forEach((el,i)=>{ const v=ds.data[i]; if(v==null||!isFinite(v)||+v===0)return;
@@ -599,13 +572,13 @@ const valLabelPlugin={id:'valLabel',
       ctx.restore();return;
     }
     if(o.mode==='stackAll'||o.mode==='stackTotal'){
-      if(o.mode==='stackAll'){ ctx.font='700 9px "Segoe UI","Malgun Gothic",sans-serif';
+      if(o.mode==='stackAll'){ ctx.font='700 9px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
         chart.data.datasets.forEach((ds,di)=>{ const meta=chart.getDatasetMeta(di); if(!meta||meta.hidden||!meta.data||meta.type==='line')return;
           meta.data.forEach((el,i)=>{ const v=ds.data[i]; if(v==null||!isFinite(v)||+v===0)return;
             const hgt=el.base!=null?Math.abs(el.base-el.y):0; if(hgt<9)return;
             let _f=ds.backgroundColor;if(Array.isArray(_f))_f=_f[i]; ctx.fillStyle=labelOn(_f); ctx.textAlign='center'; ctx.textBaseline='middle';
             ctx.fillText(fmt(Math.abs(v)),el.x,(el.y+el.base)/2); }); }); }
-      ctx.font='700 10px "Segoe UI","Malgun Gothic",sans-serif'; ctx.fillStyle=o.color||'#E6EDF3'; ctx.textAlign='center';
+      ctx.font='700 10px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif'; ctx.fillStyle=o.color||'#E6EDF3'; ctx.textAlign='center';
       const bars=chart.data.datasets.map((ds,di)=>({ds,meta:chart.getDatasetMeta(di)})).filter(x=>x.meta&&!x.meta.hidden&&x.meta.type!=='line');
       const n=(chart.data.labels||[]).length;
       for(let i=0;i<n;i++){ let pos=0,neg=0,topY=null,botY=null,x=null;
@@ -722,10 +695,10 @@ function months(n){ return GST.periods(n,TODAY,PERIOD); }
 
 /* ===== 렌더 ===== */
 function mk(id,cfg){ if(CH[id]){CH[id].destroy();delete CH[id];} const el=document.getElementById(id); if(!el)return null; CH[id]=new Chart(el,cfg); return CH[id]; }
-window.changeDashboardTheme=function(){ Chart.defaults.color=GST.chartTheme().txt; GST.reskinCharts(CH); if(DATA.length)render(); };
+window.changeDashboardTheme=function(){ GST.chartDefaults(); GST.reskinCharts(CH); if(DATA.length)render(); };
 
 function render(){ GST.skeleton(false);
-  const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
+  const TH=GST.chartTheme(); GST.chartDefaults();
   const S=curSty();
   updateFiltBadge();
   const fAll=slFilt(DATA);            // 슬라이서 적용(재직/퇴사 전체) — 추이·스파크용
@@ -760,16 +733,16 @@ function render(){ GST.skeleton(false);
   /* ---- cSite: 사이트별 (현장/비현장 스택) ---- */
   const siteL=orderSites(Array.from(new Set(f.map(p=>p.site).filter(Boolean))));
   mk('cSite',{type:'bar',data:{labels:siteL.map(shortSite),datasets:[
-      {label:tr('st_on'),data:siteL.map(s=>f.filter(p=>p.site===s&&p.onsite).length),backgroundColor:S.on,stack:'a',borderRadius:5},
-      {label:tr('st_off'),data:siteL.map(s=>f.filter(p=>p.site===s&&!p.onsite).length),backgroundColor:S.off,stack:'a',borderRadius:5}
+      {label:tr('st_on'),data:siteL.map(s=>f.filter(p=>p.site===s&&p.onsite).length),backgroundColor:S.on,stack:'a'},
+      {label:tr('st_off'),data:siteL.map(s=>f.filter(p=>p.site===s&&!p.onsite).length),backgroundColor:S.off,stack:'a'}
     ]},plugins:[valLabelPlugin],
-    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle'}},valLabel:{mode:'stackTotal',color:TH.txt}},scales:baseScales(TH,true)}});
+    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{position:'bottom'},valLabel:{mode:'stackTotal',color:TH.txt}},scales:baseScales(TH,true)}});
   DRILL.cSite={kind:'people',title:tr('ch_site'),labels:siteL.map(shortSite),groups:siteL.map(s=>f.filter(p=>p.site===s))};
 
   /* ---- cRole: 직무별 (도넛) ---- */
   const roleL=Array.from(new Set(f.map(p=>p.role).filter(Boolean))).sort((a,b)=>f.filter(p=>p.role===b).length-f.filter(p=>p.role===a).length);
   mk('cRole',{type:'doughnut',data:{labels:roleL,datasets:[{data:roleL.map(r=>f.filter(p=>p.role===r).length),backgroundColor:S.pal,borderColor:'rgba(0,0,0,.2)',borderWidth:2,hoverOffset:10}]},
-    options:{maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{padding:10,usePointStyle:true,pointStyle:'circle',font:{size:10}}},tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+tr('tbl_unit')}}},animation:{animateScale:true}}});
+    options:{maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{padding:10}},tooltip:{callbacks:{label:c=>c.label+': '+c.parsed+tr('tbl_unit')}}},animation:{animateScale:true}}});
   DRILL.cRole={kind:'people',title:tr('ch_role'),labels:roleL,groups:roleL.map(r=>f.filter(p=>p.role===r))};
 
   /* ---- cEdu: 교육 이수 (Basic/Veteran 스택) ---- */
@@ -778,9 +751,9 @@ function render(){ GST.skeleton(false);
   const stCol={'이수완료':S.good,'진행중':S.warn,'미이수':S.bad,'비대상':TH.status.na};
   const stKey={'이수완료':'st_done','진행중':'st_prog','미이수':'st_miss','비대상':'st_na'};
   mk('cEdu',{type:'bar',data:{labels:['Basic','Veteran'],datasets:stt.map(s=>({label:tr(stKey[s]),
-      data:[epop.filter(p=>clsB(p)===s).length,epop.filter(p=>clsV(p)===s).length],backgroundColor:stCol[s],stack:'e',borderRadius:5}))},
+      data:[epop.filter(p=>clsB(p)===s).length,epop.filter(p=>clsV(p)===s).length],backgroundColor:stCol[s],stack:'e'}))},
     plugins:[valLabelPlugin],
-    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle'}},valLabel:{mode:'stackAll',color:TH.txt}},scales:baseScales(TH,true)}});
+    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{position:'bottom'},valLabel:{mode:'stackAll',color:TH.txt}},scales:baseScales(TH,true)}});
   DRILL.cEdu={kind:'edu',title:tr('ch_edu'),epop,stt};
 
   /* ---- cLv: 라인별 휴가 사용 (최근 12개월 · 평일 1일 단위) ---- */
@@ -795,16 +768,16 @@ function render(){ GST.skeleton(false);
     const bySite={}; inM.forEach(x=>{bySite[x.p.site]=(bySite[x.p.site]||0)+x.rec.days;});
     return {m,inM,bySite}; });
   mk('cLv',{type:'bar',data:{labels:LM.map(p=>p.label),datasets:lvSites.map((s,i)=>({label:shortSite(s),
-      data:lvAgg.map(a=>a.bySite[s]||0),backgroundColor:S.pal[i%S.pal.length],stack:'l',borderRadius:4}))},
+      data:lvAgg.map(a=>a.bySite[s]||0),backgroundColor:S.pal[i%S.pal.length],stack:'l'}))},
     plugins:[valLabelPlugin],
-    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10}}},valLabel:{mode:'stackTotal',color:TH.txt},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y+tr('lv_unit')}}},scales:baseScales(TH,true)}});
+    options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{position:'bottom'},valLabel:{mode:'stackTotal',color:TH.txt},tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.parsed.y+tr('lv_unit')}}},scales:baseScales(TH,true)}});
   DRILL.cLv={kind:'lv',title:tr('ch_lv'),agg:lvAgg,all:LVJ};
 
   /* ---- cCareer: 경력 분포 ---- */
   const crB=[f.filter(p=>{const y=tenureYr(p);return y!=null&&y<1;}),
              f.filter(p=>{const y=tenureYr(p);return y!=null&&y>=1&&y<2;}),
              f.filter(p=>{const y=tenureYr(p);return y!=null&&y>=2;})];
-  mk('cCareer',{type:'bar',data:{labels:[tr('cr1'),tr('cr2'),tr('cr3')],datasets:[{data:crB.map(a=>a.length),backgroundColor:[S.pal[0],S.pal[1],S.pal[2]],borderRadius:6}]},
+  mk('cCareer',{type:'bar',data:{labels:[tr('cr1'),tr('cr2'),tr('cr3')],datasets:[{data:crB.map(a=>a.length),backgroundColor:[S.pal[0],S.pal[1],S.pal[2]]}]},
     plugins:[valLabelPlugin],
     options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{display:false},valLabel:{mode:'all',color:TH.txt}},scales:baseScales(TH,false)}});
   DRILL.cCareer={kind:'people',title:tr('ch_career'),labels:[tr('cr1'),tr('cr2'),tr('cr3')],groups:crB};
@@ -814,10 +787,10 @@ function render(){ GST.skeleton(false);
   const ins=IO.map(p=>fAll.filter(x=>x.join&&x.join>=p.st&&x.join<=p.end)),
         outs=IO.map(p=>fAll.filter(x=>x.quit&&x.quit>=p.st&&x.quit<=p.end));
   mk('cIo',{type:'bar',data:{labels:IO.map(p=>p.label),datasets:[
-      {label:tr('io_in'),data:ins.map(a=>a.length),backgroundColor:S.good,stack:'i',borderRadius:4},
-      {label:tr('io_out'),data:outs.map(a=>-a.length),backgroundColor:S.bad,stack:'i',borderRadius:4}
+      {label:tr('io_in'),data:ins.map(a=>a.length),backgroundColor:S.good,stack:'i'},
+      {label:tr('io_out'),data:outs.map(a=>-a.length),backgroundColor:S.bad,stack:'i'}
     ]},plugins:[valLabelPlugin],
-    options:{maintainAspectRatio:false,layout:{padding:{top:16,bottom:6}},plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle'}},valLabel:{mode:'stackTotal',color:TH.txt},tooltip:{callbacks:{label:c=>c.dataset.label+': '+Math.abs(c.parsed.y)+tr('tbl_unit')}}},
+    options:{maintainAspectRatio:false,layout:{padding:{top:16,bottom:6}},plugins:{legend:{position:'bottom'},valLabel:{mode:'stackTotal',color:TH.txt},tooltip:{callbacks:{label:c=>c.dataset.label+': '+Math.abs(c.parsed.y)+tr('tbl_unit')}}},
     scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},y:{stacked:true,grace:'22%',ticks:{color:TH.txt,precision:0,callback:v=>Math.abs(v)},grid:{color:TH.grid}}}}});
   DRILL.cIo={kind:'io',title:tr('ch_io'),labels:IO.map(p=>p.label),ins,outs};
 
@@ -838,7 +811,7 @@ function render(){ GST.skeleton(false);
   const isLeader=p=>/leader/i.test(p.level||'')||/관리자|leader|단지장|site leader/i.test((p.duty||'')+' '+(p.org||''));
   const spSites=orderSites(Array.from(new Set(f.filter(p=>p.onsite).map(p=>p.site).filter(Boolean))));
   const spanData=spSites.map(s=>{const on=f.filter(p=>p.site===s&&p.onsite);const ld=on.filter(isLeader).length;const mb=on.length-ld;return ld?Math.round(mb/ld*10)/10:mb;});
-  mk('cSpan',{type:'bar',data:{labels:spSites.map(shortSite),datasets:[{data:spanData,backgroundColor:spSites.map((s,i)=>spanData[i]>15?S.warn:S.on),borderRadius:6}]},
+  mk('cSpan',{type:'bar',data:{labels:spSites.map(shortSite),datasets:[{data:spanData,backgroundColor:spSites.map((s,i)=>spanData[i]>15?S.warn:S.on)}]},
     plugins:[valLabelPlugin],
     options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{display:false},valLabel:{mode:'all',color:TH.txt}},scales:baseScales(TH,false)}});
   DRILL.cSpan={kind:'people',title:tr('ch_span'),labels:spSites.map(shortSite),groups:spSites.map(s=>f.filter(p=>p.site===s&&p.onsite))};
@@ -846,7 +819,7 @@ function render(){ GST.skeleton(false);
   /* ---- A6: 입사 코호트 생존율 (입사연도별 현재 재직 비율) ---- */
   const yrs=Array.from(new Set(DATA.map(p=>p.join&&p.join.getUTCFullYear()).filter(Boolean))).sort().slice(-6);
   const coh=yrs.map(y=>{const c=DATA.filter(p=>p.join&&p.join.getUTCFullYear()===y);const a=c.filter(isActive).length;return c.length?Math.round(a/c.length*100):0;});
-  mk('cCohort',{type:'bar',data:{labels:yrs.map(String),datasets:[{data:coh,backgroundColor:coh.map(v=>v>=70?S.good:v>=50?S.warn:S.bad),borderRadius:6}]},
+  mk('cCohort',{type:'bar',data:{labels:yrs.map(String),datasets:[{data:coh,backgroundColor:coh.map(v=>v>=70?S.good:v>=50?S.warn:S.bad)}]},
     plugins:[valLabelPlugin],
     options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{display:false},valLabel:{mode:'all',color:TH.txt},tooltip:{callbacks:{label:c=>c.parsed.y+'%'}}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},y:{grace:'18%',beginAtZero:true,max:100,ticks:{color:TH.txt,callback:v=>v+'%',maxTicksLimit:5},grid:{color:TH.grid}}}}});
@@ -988,7 +961,7 @@ function renderSim(fAll){
       ln(tr('sim_base')+' · Basic %',    R.baseB,S.accent,false,'y2'),
       ln(tr('sim_scen')+' · Basic %',    R.scenB,S.good, true, 'y2')]},
     options:{maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,pointStyle:'circle',font:{size:10},boxWidth:6,padding:8}}},
+      plugins:{legend:{position:'bottom',labels:{padding:8}}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},
               y:{grace:'12%',ticks:{color:TH.txt,precision:0},grid:{color:TH.grid},title:{display:false}},
               y2:{position:'right',min:0,max:100,ticks:{color:TH.txt,callback:v=>v+'%'},grid:{display:false}}}}});

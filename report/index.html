@@ -4,43 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>주간 현황</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-:root{
-  --bg-gradient: linear-gradient(-45deg, #0a1420, #13232d, #0f2027, #0c1a1f);
-  --title-gradient: linear-gradient(90deg, #2dd4bf, #38bdf8, #a78bfa);
-  --glass: rgba(255,255,255,0.05); --glass-border: rgba(255,255,255,0.12); --glass-hover: rgba(255,255,255,0.1);
-  --txt-main:#e2e8f0; --txt-muted:#94a3b8;
-  --accent-1:#2dd4bf; --accent-2:#38bdf8; --accent-3:#a78bfa; --accent-4:#fbbf24; --accent-5:#34d399;
-  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
-}
-body.theme-burgundy{
-  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
-  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
-  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
-  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
-  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
-}
-body.theme-light{
-  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #e8eef5, #f0f4f8);
-  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
-  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
-  --txt-main:#0f172a; --txt-muted:#64748b;
-  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
-}
+
+
+
 body{
-  font-family:'Segoe UI','Malgun Gothic',sans-serif; color:var(--txt-main);
+   color:var(--txt-main);
   background:var(--bg-gradient);
   background-size:400% 400%; animation:grad 18s ease infinite; min-height:100vh; padding:28px 32px;
 }
 @keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
-.header h1{font-size:32px;font-weight:800;background:var(--title-gradient);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
-.header .sub{color:var(--txt-muted);font-size:13px;margin-top:4px}
 .header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .btn{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));border:none;border-radius:30px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;padding:9px 20px;transition:opacity .2s;text-decoration:none;display:inline-block}
 .btn:hover{opacity:.85}
@@ -126,7 +105,7 @@ body.theme-light .gt-btn.active{color:#fff}
 body.theme-light .mp-btn.active{color:#fff}
 .card h3{font-size:13.5px;font-weight:700;margin-bottom:4px;color:var(--txt-main)}
 .card .card-note{font-size:10.5px;color:var(--txt-muted);margin-bottom:10px}
-.card .cw{position:relative;height:275px}
+.card .cw{position:relative;height:var(--ch-std,240px)}
 .bignums{display:flex;flex-direction:column;gap:14px;justify-content:center;height:250px}
 .bn{display:flex;align-items:baseline;gap:10px}
 .bn .n{font-size:30px;font-weight:800;min-width:110px;text-align:right}
@@ -553,13 +532,12 @@ function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(WK.length
 function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
 document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');});
 
-Chart.defaults.color=GST.chartTheme().txt;
-Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
+GST.chartDefaults();
 const THEME_LABELS={slate:'Slate',default:'Cyber Turquoise',burgundy:'Royal Burgundy',light:'Aurora Light'};
 function changeDashboardTheme(themeClass,label){
   document.body.className='';
   if(themeClass!=='default')document.body.classList.add('theme-'+themeClass);
-  Chart.defaults.color=GST.chartTheme().txt;
+  GST.chartDefaults();
   GST.reskinCharts(CHARTS);
   if(WK.length||HR.length)render();
 }
@@ -635,7 +613,7 @@ const valLabelPlugin={id:'valLabel',
     ctx.save();
     if(o.mode==='all'){
       // QBR 스타일 값 표기 — 겹침 방지: 막대는 안쪽 상단, 라인은 위쪽, 작은 스택 세그먼트는 생략(툴팁으로)
-      ctx.font='700 9.5px "Segoe UI","Malgun Gothic",sans-serif';
+      ctx.font='700 9.5px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
       chart.data.datasets.forEach((ds,di)=>{
         const meta=chart.getDatasetMeta(di);
         if(!meta||meta.hidden||!meta.data||ds._noLabel)return;
@@ -666,7 +644,7 @@ const valLabelPlugin={id:'valLabel',
     if(o.mode==='stackAll'||o.mode==='stackTotal'){
       // 각 세그먼트 값(stackAll) + 스택 총합 위/아래 표기 — 인원 차트용
       if(o.mode==='stackAll'){
-        ctx.font='700 9px "Segoe UI","Malgun Gothic",sans-serif';
+        ctx.font='700 9px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
         chart.data.datasets.forEach((ds,di)=>{
           const meta=chart.getDatasetMeta(di); if(!meta||meta.hidden||!meta.data||meta.type==='line')return;
           meta.data.forEach((el,i)=>{
@@ -678,7 +656,7 @@ const valLabelPlugin={id:'valLabel',
           });
         });
       }
-      ctx.font='700 10px "Segoe UI","Malgun Gothic",sans-serif'; ctx.fillStyle=o.color||'#E6EDF3'; ctx.textAlign='center';
+      ctx.font='700 10px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif'; ctx.fillStyle=o.color||'#E6EDF3'; ctx.textAlign='center';
       const bars=chart.data.datasets.map((ds,di)=>({ds,meta:chart.getDatasetMeta(di)})).filter(x=>x.meta&&!x.meta.hidden&&x.meta.type!=='line');
       const n=(chart.data.labels||[]).length;
       for(let i=0;i<n;i++){ let pos=0,neg=0,topY=null,botY=null,x=null;
@@ -695,7 +673,7 @@ const valLabelPlugin={id:'valLabel',
     const nums=ds.data.filter(v=>v!=null&&isFinite(v));
     const max=nums.length?Math.max.apply(null,nums):null;
     ctx.fillStyle=o.color||'#E6EDF3';
-    ctx.font='700 11px "Segoe UI","Malgun Gothic",sans-serif';
+    ctx.font='700 11px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
     meta.data.forEach(function(el,i){
       const v=ds.data[i]; if(v==null)return;
       if(o.mode==='peaks'){
@@ -941,7 +919,7 @@ function fillFilters(){
   });
 }
 function render(){
-  const TH=GST.chartTheme(); Chart.defaults.color=TH.txt;
+  const TH=GST.chartTheme(); GST.chartDefaults();
   Chart.defaults.onClick=onDrill;   // 막대/라인 클릭 → 구간 상세 드릴다운
   const ink=inkStrong(TH);
   fillFilters();
@@ -1061,14 +1039,14 @@ function render(){
     const {P,labels}=PU('cHc');
     const yy=(x,e)=>(e-x.join)/MS/365.25;
     const b=(lo,hi)=>P.map(p=>fHR.filter(x=>x.onsite&&activeAt(x,p.end)&&yy(x,p.end)>=lo&&(hi==null||yy(x,p.end)<hi)).length);
-    const dsets=[{label:t('hc_u1'),data:b(0,1),backgroundColor:BAR2_C,stack:'s',borderRadius:2},
-           {label:t('hc_u2'),data:b(1,2),backgroundColor:BAR_BASE,stack:'s',borderRadius:2},
-           {label:t('hc_u3'),data:b(2,null),backgroundColor:BAR_LAST,stack:'s',borderRadius:2}];
+    const dsets=[{label:t('hc_u1'),data:b(0,1),backgroundColor:BAR2_C,stack:'s'},
+           {label:t('hc_u2'),data:b(1,2),backgroundColor:BAR_BASE,stack:'s'},
+           {label:t('hc_u3'),data:b(2,null),backgroundColor:BAR_LAST,stack:'s'}];
     destroyMk('cHc');
     CHARTS.cHc=new Chart(document.getElementById('cHc'),{type:'bar',
       data:{labels,datasets:dsets},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-        plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+        plugins:{legend:{position:'bottom',labels:{padding:8}},
           valLabel:{mode:'stackAll',color:ink},
           tooltip:{callbacks:{footer:it=>'Σ '+it.reduce((a,i)=>a+i.parsed.y,0)}}},
         scales:baseScales(TH,true)},
@@ -1083,10 +1061,10 @@ function render(){
     const used=SITES.filter(sk=>ioR.some(x=>grpKey(x)===sk&&(x.join||x.quit)));
     const inDs=used.map(sk=>({label:sk,
       data:P.map(p=>ioR.filter(x=>x.join&&keyOfDate(x.join,u)===p.key&&grpKey(x)===sk).length),
-      backgroundColor:SITE_C[SITES.indexOf(sk)],stack:'io',borderRadius:2}));
+      backgroundColor:SITE_C[SITES.indexOf(sk)],stack:'io'}));
     const outDs=used.map(sk=>({label:'·'+sk,   // 범례 숨김(라인 색은 입사 데이터셋으로 표시) · 아래=퇴사
       data:P.map(p=>-ioR.filter(x=>x.quit&&keyOfDate(x.quit,u)===p.key&&grpKey(x)===sk).length),
-      backgroundColor:SITE_C[SITES.indexOf(sk)],stack:'io',borderRadius:2}));
+      backgroundColor:SITE_C[SITES.indexOf(sk)],stack:'io'}));
     destroyMk('cIo');
     CHARTS.cIo=new Chart(document.getElementById('cIo'),{type:'bar',
       data:{labels,datasets:inDs.concat(outDs)},
@@ -1096,7 +1074,7 @@ function render(){
             const vis=ch.isDatasetVisible(i); ch.setDatasetVisibility(i,!vis);
             const j=ch.data.datasets.findIndex(d=>d.label==='·'+nm); if(j>=0)ch.setDatasetVisibility(j,!vis);   // 입사·퇴사 함께 토글
             ch.update(); },
-          labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8,
+          labels:{padding:8,
             filter:it=>!/^·/.test(it.text)}},
           valLabel:{mode:'stackAll',color:ink},
           tooltip:{callbacks:{label:c=>' '+(c.dataset.label||'').replace(/^·/,'')+' '+(c.parsed.y<0?t('io_out')+' '+(-c.parsed.y):t('io_in')+' '+c.parsed.y)}}},
@@ -1125,11 +1103,11 @@ function render(){
     destroyMk('cEdu');
     CHARTS.cEdu=new Chart(document.getElementById('cEdu'),{type:'bar',
       data:{labels,datasets:[
-        {label:t('edu_tg'),data:tgt,backgroundColor:tgt.map((_,i)=>i===tgt.length-1?BAR_LAST+'99':BAR_BASE+'80'),borderColor:BAR_BASE,borderWidth:1,borderRadius:3,order:2},
+        {label:t('edu_tg'),data:tgt,backgroundColor:tgt.map((_,i)=>i===tgt.length-1?BAR_LAST+'99':BAR_BASE+'80'),borderColor:BAR_BASE,borderWidth:1,order:2},
         {type:'line',label:t('edu_goal'),data:P.map(()=>GST.conf('edu_goal',90)),borderColor:'#F59E0B',borderDash:[4,4],borderWidth:1.2,pointRadius:0,yAxisID:'y2',order:1,_noLabel:true},
         lineDs(t('edu_rt'),rate,LINE_C,{yAxisID:'y2',_suf:'%'})]},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-        plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+        plugins:{legend:{position:'bottom',labels:{padding:8}},
           valLabel:{mode:'all',color:ink},
           tooltip:{callbacks:{footer:it=>{const i=it[0].dataIndex;return t('edu_ttf').replace('{d}',don[i]).replace('{t}',tgt[i]);}}}},
         scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{display:false}},
@@ -1177,12 +1155,12 @@ function render(){
         destroyMk('cAtt');
         CHARTS.cAtt=new Chart(document.getElementById('cAtt'),{type:'bar',
           data:{labels,datasets:[
-            {label:t('att_a'),data:att,backgroundColor:BAR_C,stack:'s',borderRadius:2,order:3},
-            {label:t('att_l'),data:lv,backgroundColor:BAR2_C,stack:'s',borderRadius:2,order:3},
+            {label:t('att_a'),data:att,backgroundColor:BAR_C,stack:'s',order:3},
+            {label:t('att_l'),data:lv,backgroundColor:BAR2_C,stack:'s',order:3},
             lineDs(t('head_l'),hd,'#3B82F6'),
             lineDs(t('att_pj'),pj,'#E03131',{yAxisID:'y2',borderDash:[5,4]})]},
           options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-            plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+            plugins:{legend:{position:'bottom',labels:{padding:8}},
               valLabel:{mode:'all',color:ink},
               tooltip:{callbacks:{footer:it=>'Σ '+Math.round(it.reduce((a,i)=>a+(i.dataset.type==='line'?0:i.parsed.y),0)*10)/10}}},
             scales:{x:baseScales(TH,true).x,
@@ -1205,10 +1183,10 @@ function render(){
         destroyMk('cTo');
         CHARTS.cTo=new Chart(document.getElementById('cTo'),{type:'bar',
           data:{labels,datasets:[
-            {type:'bar',label:t('head_l'),data:hv,backgroundColor:barHi(hv.length),borderRadius:3,order:2},
+            {type:'bar',label:t('head_l'),data:hv,backgroundColor:barHi(hv.length),order:2},
             lineDs('TO',to,LINE_C,{borderDash:[6,4]})]},
           options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-            plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+            plugins:{legend:{position:'bottom',labels:{padding:8}},
               valLabel:{mode:'all',color:ink},
               tooltip:{callbacks:{footer:it=>{
                 const i=it[0].dataIndex;
@@ -1229,10 +1207,10 @@ function render(){
         destroyMk('cChp');
         CHARTS.cChp=new Chart(document.getElementById('cChp'),{type:'bar',
           data:{labels,datasets:[
-            {label:t('chp_c'),data:chs,backgroundColor:barHi(chs.length),borderRadius:3,barPercentage:.62,order:2},
+            {label:t('chp_c'),data:chs,backgroundColor:barHi(chs.length),barPercentage:.62,order:2},
             lineDs(t('chp_p'),per,LINE_C,{yAxisID:'y2'})]},
           options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-            plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+            plugins:{legend:{position:'bottom',labels:{padding:8}},
               valLabel:{mode:'all',color:ink},
               tooltip:{callbacks:{label:c=>c.datasetIndex?(' '+t('chp_p')+' '+c.parsed.y+' ('+chs[c.dataIndex].toLocaleString()+'ch / '+hv[c.dataIndex]+t('u_p')+')')
                 :(' '+t('chp_c')+' '+c.parsed.y.toLocaleString())}}},
@@ -1258,11 +1236,11 @@ function render(){
       _W.push({k:'cip',label:t('ch_cip'),labels,data:rate,unit:'%'});
       CHARTS.cCip=new Chart(document.getElementById('cCip'),{type:'bar',
         data:{labels,datasets:[
-          {label:t('cip_t'),data:tgt,backgroundColor:BAR_C+'2e',borderColor:BAR_C,borderWidth:1.5,borderRadius:3,order:3},
-          {label:t('cip_d'),data:don,backgroundColor:barHi(don.length),borderRadius:3,order:2},
+          {label:t('cip_t'),data:tgt,backgroundColor:BAR_C+'2e',borderColor:BAR_C,borderWidth:1.5,order:3},
+          {label:t('cip_d'),data:don,backgroundColor:barHi(don.length),order:2},
           lineDs(t('cip_p'),rate,LINE_C,{yAxisID:'y2',_suf:'%'})]},
         options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-          plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+          plugins:{legend:{position:'bottom',labels:{padding:8}},
             valLabel:{mode:'all',color:ink},
             tooltip:{callbacks:{footer:it=>{
               const i=it[0].dataIndex;
@@ -1297,14 +1275,14 @@ function render(){
     const used=SITES.filter(sk=>fHR.some(x=>x.onsite&&grpKey(x)===sk));
     const cds=used.map(sk=>({label:sk,
       data:P.map(p=>fHR.filter(x=>x.onsite&&activeAt(x,p.end)&&grpKey(x)===sk).length),
-      backgroundColor:SITE_C[SITES.indexOf(sk)],stack:'s',borderRadius:2}));
+      backgroundColor:SITE_C[SITES.indexOf(sk)],stack:'s'}));
     const _le=P[P.length-1].end;
     const _last=used.map(sk=>[sk,fHR.filter(x=>x.onsite&&activeAt(x,_le)&&grpKey(x)===sk).length]);
     destroyMk('cCareer');
     CHARTS.cCareer=new Chart(document.getElementById('cCareer'),{type:'bar',
       data:{labels,datasets:cds},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-        plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+        plugins:{legend:{position:'bottom',labels:{padding:8}},
           valLabel:{mode:'stackAll',color:ink},
           tooltip:{callbacks:{footer:it=>'Σ '+it.reduce((a,i)=>a+i.parsed.y,0)}}},
         scales:baseScales(TH,true)},
@@ -1331,11 +1309,11 @@ function render(){
     destroyMk('cMan');
     CHARTS.cMan=new Chart(document.getElementById('cMan'),{type:'bar',
       data:{labels,datasets:[
-        {label:t('man_pm'),data:hPM,backgroundColor:BAR_C,stack:'s',borderRadius:2,order:3},
-        {label:t('man_np'),data:hNp,backgroundColor:BAR2_C,stack:'s',borderRadius:2,order:3},
+        {label:t('man_pm'),data:hPM,backgroundColor:BAR_C,stack:'s',order:3},
+        {label:t('man_np'),data:hNp,backgroundColor:BAR2_C,stack:'s',order:3},
         lineDs(t('man_tot'),hTot,LINE_C)]},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-        plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+        plugins:{legend:{position:'bottom',labels:{padding:8}},
           valLabel:{mode:'all',color:ink},
           tooltip:{callbacks:{footer:it=>t('man_sum')+' '+(hTot[it[0].dataIndex]??0)+'h'}}},
         scales:baseScales(TH,true)},
@@ -1413,13 +1391,13 @@ function render(){
                        return Object.keys(m).map(g=>({name:g,v:m[g]}));}});
     const hasABP=abp.some(v=>v>0);
     destroyMk('cFt');
-    const ds=[{label:t('ft_alarm'),data:alarm,backgroundColor:BAR_BASE,stack:'s',borderRadius:2,order:3}];
-    if(hasABP)ds.push({label:t('ft_abp'),data:abp,backgroundColor:BAR2_C,stack:'s',borderRadius:2,order:3});
+    const ds=[{label:t('ft_alarm'),data:alarm,backgroundColor:BAR_BASE,stack:'s',order:3}];
+    if(hasABP)ds.push({label:t('ft_abp'),data:abp,backgroundColor:BAR2_C,stack:'s',order:3});
     ds.push(lineDs(t('ft_tot'),tot,LINE_C));
     CHARTS.cFt=new Chart(document.getElementById('cFt'),{type:'bar',
       data:{labels,datasets:ds},
       options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
-        plugins:{legend:{position:'bottom',labels:{color:TH.txt,font:{size:10},usePointStyle:true,pointStyle:'circle',boxWidth:6,padding:8}},
+        plugins:{legend:{position:'bottom',labels:{padding:8}},
           valLabel:{mode:'all',color:ink},
           tooltip:{callbacks:{footer:it=>t('ft_tot')+' '+(alarm[it[0].dataIndex]+abp[it[0].dataIndex])}}},
         scales:baseScales(TH,true)},
