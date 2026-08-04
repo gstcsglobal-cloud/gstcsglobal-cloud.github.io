@@ -239,6 +239,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   <div class="card">
     <h3 data-i="ch_ft">고장 건수 (BM · CBM)</h3><div class="mini-per" data-ch="cFt"></div>
     <div class="card-note" data-i="note_ft">합계는 툴팁</div>
+    <div id="ftLines" class="card-note" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:4px 0 2px"></div>
     <div class="cw"><canvas id="cFt"></canvas></div>
   </div>
   <div class="tablecard" style="position:relative">
@@ -514,6 +515,10 @@ window.setEnd=function(k,v){ if(k==='m')ENDM=v||''; else ENDW=v||'';
   try{localStorage.setItem('gst_rpt_end',JSON.stringify({m:ENDM,w:ENDW}));}catch(e){} render(); };
 window.clearEnds=function(){ ENDM='';ENDW='';
   try{localStorage.setItem('gst_rpt_end','{}');}catch(e){} render(); };
+// Alarm·고장 차트 전용 라인 필터 (체크박스) — 비우면 전체 · PPT Alarm 차트도 동일 적용
+window._FTSEL=new Set((function(){try{return localStorage.getItem('gst_rpt_ftlines')||'';}catch(e){return '';}})().split(',').filter(Boolean));
+window.toggleFtLine=function(k,on){ if(on)window._FTSEL.add(k); else window._FTSEL.delete(k);
+  try{localStorage.setItem('gst_rpt_ftlines',Array.from(window._FTSEL).join(','));}catch(e){} render(); };
 // 교육 계획 카드 라인 선택 — PPT 슬라이드1 교육계획 표와 1:1 연동
 window._EDUPLAN=(function(){try{return localStorage.getItem('gst_rpt_eduplan')||'';}catch(e){return '';}})();
 window.setEduPlanSite=function(v){ window._EDUPLAN=v;
@@ -971,7 +976,9 @@ function render(){
   const from=F.dtFrom?pd(F.dtFrom):null;
   const entOk=x=>(!F.country||x.country===F.country)&&(!F.customer||x.custB===F.customer)&&(!F.line||x.fab===F.line);
   // QBR 매크로 정합: 작업내역은 사이트 키 행만 집계(라인 미기재·기타 행 제외) — 매크로 NarrowUp과 동일
-  const wkQ=x=>/F1[016]|PSMC|TASC|WINBOND/.test(GST.upk(String(x.fab||'')));
+  // 라인 열만으로 판정하면 PSMC처럼 라인 표기가 다른 사이트 행이 누락된다 → 라인+고객사 통합 판정
+  const wkQ=x=>/F1[016]|PSMC|POWERCHIP|TASC|ASIA|WINBOND/.test(
+    GST.upk(String(x.fab||'')+' '+String(x.custB||'')+' '+String(x.customer||'')));
   const fWK=WK.filter(x=>wkQ(x)&&entOk(x)&&(!from||x.wd>=from)&&(!F.dtTo||x.wd<=anchor));
   const sWK=WK.filter(x=>wkQ(x)&&entOk(x)); // S-커브: 기간 필터 없이 연간
   const fINST=INST.filter(r=>{
@@ -1018,6 +1025,24 @@ function render(){
     if(cu&&!C2C[cu])C2C[cu]=guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();});
   const siteCountry=siteCountryStatic;
   const okCF=(cb,fb)=>(!F.customer||cb===F.customer)&&(!F.line||fb===F.line)&&(!F.country||siteCountry(fb||cb)===F.country);
+  // Alarm·고장 차트 전용 라인 필터 — 체크박스 선택(비면 전체) · PPT Alarm 차트도 동일 적용
+  const FTSEL=window._FTSEL||new Set();
+  const ftKey=x=>{const s=GST.upk(String(x.fab||'')+' '+String(x.custB||'')+' '+String(x.customer||''));
+    if(/F16N|TONG/.test(s))return 'F16N'; if(/F16S|TAINAN/.test(s))return 'F16S';
+    if(/F11/.test(s))return 'F11'; if(/F16/.test(s))return 'F16';
+    if(/WINBOND/.test(s))return 'WINBOND';
+    if(/PSMC|POWERCHIP/.test(s))return 'PSMC'; if(/TASC|ASIA/.test(s))return 'TASC'; return '';};
+  const ftLineOk=x=>!FTSEL.size||FTSEL.has(ftKey(x));
+  const abpSel=bkt=>{ if(!bkt)return 0;
+    if(FTSEL.size){ let s=0;
+      FTSEL.forEach(k=>{ if(k==='PSMC')s+=(bkt.byC.POWERCHIP||bkt.byC.PSMC||0);
+        else if(k==='TASC')s+=(bkt.byC.TASC||0);
+        else if(k==='WINBOND')s+=(bkt.byC.WINBOND||0);
+        else s+=(bkt.byF[k]||0); });
+      return s; }
+    if(F.customer)return bkt.byC[F.customer]||0;
+    if(F.line)return bkt.byF[F.line]||0;
+    return bkt.ALL||0; };
   // 인력 기준: 인원현황(입·퇴사일 보유) 우선, 없으면 교육현황 · 고객사/국가 필터 연동
   // 폴백(교육현황) 레코드에는 onsite가 없고 quit이 boolean이라, 그대로 쓰면
   // 재직 0명 + p.quit.getUTCFullYear() TypeError로 렌더가 죽는다. hr 페이지와 동일 규칙으로 보정.
@@ -1436,14 +1461,17 @@ function render(){
   {
     const {P,labels,u}=PU('cFt');
     // Alarm = BM 건수만 (CBM 제외) · All By-Pass = 별도 시트 · Total = Alarm + All By-Pass
-    const alarm=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&x.stage==='BM').length);
+    const alarm=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&x.stage==='BM'&&ftLineOk(x)).length);
     const abpAt=p=>{ const src=ABP[u]||{};
       const key=(u==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
-      const bkt=src[key]; if(!bkt)return 0;
-      if(F.customer)return bkt.byC[F.customer]||0;
-      if(F.line)return bkt.byF[F.line]||0;
-      return bkt.ALL||0; };
+      return abpSel(src[key]); };
     const abp=P.map(abpAt);
+    // 라인 체크박스 UI — 범례 대신 카드 상단에서 선택 · 현재 선택 표시
+    { const el=document.getElementById('ftLines');
+      if(el){ const KS=['F16','F11','F16N','F16S','PSMC','TASC','WINBOND'];
+        el.innerHTML=KS.map(k=>'<label style="display:flex;gap:3px;align-items:center;cursor:pointer;font-size:11px">'
+            +'<input type="checkbox" '+(FTSEL.has(k)?'checked':'')+' onchange="toggleFtLine(\''+k+'\',this.checked)">'+k+'</label>').join('')
+          +'<span style="margin-left:auto;opacity:.85">라인: '+(FTSEL.size?Array.from(FTSEL).join(' · '):'전체')+'</span>'; } }
     const tot=alarm.map((v,i)=>v+abp[i]);
     // 고장은 줄어드는 게 좋은 지표 · 라인별로 어디서 늘었는지 분해
     _W.push({k:'ft',label:t('ft_alarm'),labels,data:alarm,unit:'',goodWhenDown:true,
@@ -1473,13 +1501,10 @@ function render(){
     window._PPT.ft={};
     ['w','m'].forEach(uu=>{
       const _pp={P:periods(12,asOf,uu)}; _pp.labels=_pp.P.map(x=>x.label);
-      const _al=_pp.P.map(p=>fWK.filter(x=>keyOfDate(x.wd,uu)===p.key&&x.stage==='BM').length);
+      const _al=_pp.P.map(p=>fWK.filter(x=>keyOfDate(x.wd,uu)===p.key&&x.stage==='BM'&&ftLineOk(x)).length);
       const _ab=_pp.P.map(p=>{const src=ABP[uu]||{};
         const key=(uu==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
-        const bkt=src[key]; if(!bkt)return 0;
-        if(F.customer)return bkt.byC[F.customer]||0;
-        if(F.line)return bkt.byF[F.line]||0;
-        return bkt.ALL||0;});
+        return abpSel(src[key]);});
       window._PPT.ft[uu]={labels:_pp.labels,alarm:_al,abp:_ab,tot:_al.map((v,i)=>v+_ab[i])};
     });
     // TOP3 표
@@ -1657,13 +1682,10 @@ function render(){
       pmW.push(r2q(pm/60/den));npW.push(r2q(np/60/den));htW.push(r2q((pm+np)/60/den));});
     // Alarm(BM)·All By-Pass — 슬라이드3: 가=주간, 나=월간 (cFt 차트와 동일 산식)
     const abpOf=(uu,p)=>{const src=ABP[uu]||{};const key=(uu==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
-      const bkt=src[key]; if(!bkt)return 0;
-      if(F.customer)return bkt.byC[F.customer]||0;
-      if(F.line)return bkt.byF[F.line]||0;
-      return bkt.ALL||0;};
-    const alarmW=WPq.map(p=>fWK.filter(x=>keyOfDate(x.wd,'w')===p.key&&x.stage==='BM').length);
+      return abpSel(src[key]);};
+    const alarmW=WPq.map(p=>fWK.filter(x=>keyOfDate(x.wd,'w')===p.key&&x.stage==='BM'&&ftLineOk(x)).length);
     const abpW=WPq.map(p=>abpOf('w',p));
-    const alarmM=MP.map(p=>fWK.filter(x=>keyOfDate(x.wd,'m')===p.key&&x.stage==='BM').length);
+    const alarmM=MP.map(p=>fWK.filter(x=>keyOfDate(x.wd,'m')===p.key&&x.stage==='BM'&&ftLineOk(x)).length);
     const abpM=MP.map(p=>abpOf('m',p));
     // 입사·퇴사(라인별) — 슬라이드1 인력현황: 주간·사이트별 다이버징 스택 (0은 비워 라벨 생략)
     const GRAYS=['404040','595959','7F7F7F','A6A6A6','BFBFBF','D9D9D9'];   // 보고서 그림과 동일한 회색조
