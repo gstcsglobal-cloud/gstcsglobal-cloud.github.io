@@ -26,22 +26,69 @@ function swapIn(block,vals){
   if(!m)return block;
   return block.replace(m[0],swapCache(m[0],vals));
 }
-/* chartXml 패치: cats = 카테고리 배열, series = {시리즈명: 값배열}
+// <c:cat> 내부를 문자열 참조(strRef)로 통째 교체 — 주간 W## 라벨을 날짜축 차트에 넣을 때
+function catToStr(catBlock,cats){
+  const f=(catBlock.match(/<c:f>([\s\S]*?)<\/c:f>/)||[])[1]||'';
+  return '<c:cat><c:strRef><c:f>'+f+'</c:f><c:strCache>'+buildPts(cats)+'</c:strCache></c:strRef></c:cat>';
+}
+// 날짜축(dateAx) → 카테고리축(catAx): 태그 개명 + 날짜 전용 자식 제거 (strCache 카테고리와 함께 사용)
+function dateAxToCatAx(chartXml){
+  return chartXml.replace(/<c:dateAx>([\s\S]*?)<\/c:dateAx>/g,(m,inner)=>{
+    inner=inner.replace(/<c:(baseTimeUnit|majorTimeUnit|minorTimeUnit|majorUnit|minorUnit)[^>]*\/>/g,'');
+    return '<c:catAx>'+inner+'</c:catAx>';
+  });
+}
+/* chartXml 패치: cats = 카테고리 배열, series = {시리즈명: 값배열}, opts={rename:{구명:새명}, catAsStr:true}
    - 각 <c:ser>의 <c:tx>…<c:v>이름</c:v>으로 시리즈를 식별해 해당 값만 교체
-   - cat 캐시 타입(num/str)은 양식 것을 따른다: strCache면 cats를 문자열로, numCache면 숫자로 기입 */
-function patchChart(chartXml,cats,series){
-  return chartXml.replace(/<c:ser>[\s\S]*?<\/c:ser>/g,ser=>{
+   - cat 캐시 타입(num/str)은 양식 것을 따르고, catAsStr이면 strRef로 강제 전환(축도 catAx로) */
+function patchChart(chartXml,cats,series,opts){
+  opts=opts||{};
+  let out=chartXml.replace(/<c:ser>[\s\S]*?<\/c:ser>/g,ser=>{
     const nm=ser.match(/<c:tx>[\s\S]*?<c:v>([\s\S]*?)<\/c:v>/);
     const name=nm?unesc(nm[1]).trim():'';
     const vals=series[name];
     if(!vals)return ser;                                  // 매핑 없는 시리즈는 그대로
-    let out=ser;
-    const cat=out.match(/<c:cat>[\s\S]*?<\/c:cat>/);
-    if(cat&&cats)out=out.replace(cat[0],swapIn(cat[0],cats));
-    const val=out.match(/<c:val>[\s\S]*?<\/c:val>/);
-    if(val)out=out.replace(val[0],swapIn(val[0],vals));
-    return out;
+    let s2=ser;
+    const cat=s2.match(/<c:cat>[\s\S]*?<\/c:cat>/);
+    if(cat&&cats)s2=s2.replace(cat[0],opts.catAsStr?catToStr(cat[0],cats):swapIn(cat[0],cats));
+    const val=s2.match(/<c:val>[\s\S]*?<\/c:val>/);
+    if(val)s2=s2.replace(val[0],swapIn(val[0],vals));
+    if(opts.rename&&opts.rename[name])
+      s2=s2.replace(/(<c:tx>[\s\S]*?<c:v>)[\s\S]*?(<\/c:v>)/,'$1'+esc(opts.rename[name])+'$2');
+    return s2;
   });
+  if(opts.catAsStr)out=dateAxToCatAx(out);
+  return out;
+}
+/* 입사·퇴사(라인별) 다이버징 스택 재구성 — 양식 chart2용:
+   기존 막대 시리즈 1개를 원형(proto)으로 사이트별 시리즈 N개를 생성하고, 꺾은선(TO)은 제거.
+   sers=[{name,color(6자리 hex),values(퇴사는 음수, 0은 null)}] */
+function rebuildIo(chartXml,cats,sers){
+  let out=chartXml.replace(/<c:lineChart>[\s\S]*?<\/c:lineChart>/,'');   // 축은 barChart와 공유 — 제거 안전
+  const barM=out.match(/<c:barChart>[\s\S]*?<\/c:barChart>/);
+  if(!barM)return out;
+  const bar=barM[0];
+  const protoM=bar.match(/<c:ser>[\s\S]*?<\/c:ser>/);
+  if(!protoM)return out;
+  const proto=protoM[0];
+  const mk=(s,i)=>{
+    let x=proto
+      .replace(/<c:idx val="\d+"\/>/,'<c:idx val="'+i+'"/>')
+      .replace(/<c:order val="\d+"\/>/,'<c:order val="'+i+'"/>')
+      .replace(/(<c:tx>[\s\S]*?<c:v>)[\s\S]*?(<\/c:v>)/,'$1'+esc(s.name)+'$2');
+    const fill='<c:spPr><a:solidFill><a:srgbClr val="'+s.color+'"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>';
+    if(/<c:ser>[\s\S]*?<c:spPr>/.test(x)&&x.indexOf('<c:spPr>')<x.indexOf('<c:cat>'))
+      x=x.replace(/<c:spPr>[\s\S]*?<\/c:spPr>/,fill);
+    else x=x.replace(/<\/c:tx>/,'</c:tx>'+fill);
+    const cat=x.match(/<c:cat>[\s\S]*?<\/c:cat>/);
+    if(cat)x=x.replace(cat[0],catToStr(cat[0],cats));
+    const val=x.match(/<c:val>[\s\S]*?<\/c:val>/);
+    if(val)x=x.replace(val[0],swapIn(val[0],s.values));
+    return x;
+  };
+  const newBar=bar.replace(proto,sers.map(mk).join(''));
+  out=out.replace(bar,newBar);
+  return dateAxToCatAx(out);
 }
 
 // ---- 표 셀 패치 -------------------------------------------------------------
@@ -97,7 +144,7 @@ function build(JSZipRef,tplBuf,data){
       const f=zip.file(path); if(!f)return;
       jobs.push(f.async('string').then(xml=>{
         const d=data.charts[cn];
-        zip.file(path,patchChart(xml,d.cats,d.series));
+        zip.file(path,d.io?rebuildIo(xml,d.cats,d.io):patchChart(xml,d.cats,d.series,{rename:d.rename,catAsStr:d.catAsStr}));
       }));
     });
     // 2) 슬라이드 표·텍스트
@@ -143,6 +190,10 @@ function build(JSZipRef,tplBuf,data){
     }));
     jobs.push(zip.file('ppt/slides/slide3.xml').async('string').then(xml=>{
       if(data.week)xml=patchText(xml,/TOP\s*3\s*\(W\d+\)/,'TOP 3 ('+data.week+')');
+      // 슬롯 제목: 가=(주간) · 나=(월간) — 기존 (Micron)/(Micron 外) 표기 대체
+      xml=xml.replace('By Pass(Micron)','By Pass(주간)')
+             .replace('By Pass(Micron ','By Pass(월간')
+             .replace('<a:t>外)</a:t>','<a:t></a:t>').replace('<a:t>外</a:t>','<a:t></a:t>');
       if(data.top3&&data.top3.length){
         const edits=[];
         data.top3.slice(0,3).forEach((row,i)=>{

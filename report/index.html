@@ -1617,25 +1617,39 @@ function render(){
       const pm=fWK.filter(x=>keyOfDate(x.wd,'w')===p.key&&isPM(x.stage)).reduce((a,x)=>a+x.manMin,0);
       const np=fWK.filter(x=>keyOfDate(x.wd,'w')===p.key&&isSvc(x.stage)).reduce((a,x)=>a+x.manMin,0);
       pmW.push(r2q(pm/60/den));npW.push(r2q(np/60/den));htW.push(r2q((pm+np)/60/den));});
-    const siteOfQ=x=>{const s=GST.upk(String(x.fab||'')+' '+String(x.custB||'')+' '+String(x.customer||''));
-      if(/F16N|TONG/.test(s))return 'N'; if(/F16S|TAINAN/.test(s))return 'S';
-      if(/F11/.test(s))return 'F11'; if(/F16/.test(s))return 'F16';
-      if(/WINBOND/.test(s))return 'WB'; if(/PSMC|POWERCHIP|TASC|ASIA/.test(s))return 'PT'; return '';};
-    const ftM=MP.map(p=>{const o={F11:0,F16:0,WB:0,PT:0,N:0,S:0};
-      fWK.forEach(x=>{if(x.stage==='BM'&&keyOfDate(x.wd,'m')===p.key){const k=siteOfQ(x);if(o[k]!=null)o[k]+=1;}});
-      const bkt=(ABP.m||{})[String(parseInt((p.key||'').slice(5),10))];
-      if(bkt){o.F11+=bkt.byF.F11||0;o.F16+=bkt.byF.F16||0;o.N+=bkt.byF.F16N||0;o.S+=bkt.byF.F16S||0;
-        o.WB+=(bkt.byC.WINBOND||0);o.PT+=(bkt.byC.POWERCHIP||0)+(bkt.byC.TASC||0);}
-      return o;});
+    // Alarm(BM)·All By-Pass — 슬라이드3: 가=주간, 나=월간 (cFt 차트와 동일 산식)
+    const abpOf=(uu,p)=>{const src=ABP[uu]||{};const key=(uu==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
+      const bkt=src[key]; if(!bkt)return 0;
+      if(F.customer)return bkt.byC[F.customer]||0;
+      if(F.line)return bkt.byF[F.line]||0;
+      return bkt.ALL||0;};
+    const alarmW=WPq.map(p=>fWK.filter(x=>keyOfDate(x.wd,'w')===p.key&&x.stage==='BM').length);
+    const abpW=WPq.map(p=>abpOf('w',p));
+    const alarmM=MP.map(p=>fWK.filter(x=>keyOfDate(x.wd,'m')===p.key&&x.stage==='BM').length);
+    const abpM=MP.map(p=>abpOf('m',p));
+    // 입사·퇴사(라인별) — 슬라이드1 인력현황: 주간·사이트별 다이버징 스택 (0은 비워 라벨 생략)
+    const OFFICE=['4F81BD','C0504D','9BBB59','8064A2','4BACC6','F79646'];
+    const ioRq=fHR.filter(x=>x.onsite), nzq=a=>a.map(v=>v||null);
+    const ioSers=[];
+    SITES.forEach((sk,si)=>{
+      const ins=WPq.map(p=>ioRq.filter(x=>x.join&&keyOfDate(x.join,'w')===p.key&&grpKey(x)===sk).length);
+      const outs=WPq.map(p=>-ioRq.filter(x=>x.quit&&keyOfDate(x.quit,'w')===p.key&&grpKey(x)===sk).length);
+      if(ins.some(v=>v))ioSers.push({name:sk+' 입사',color:OFFICE[si%6],values:nzq(ins)});
+      if(outs.some(v=>v))ioSers.push({name:sk+' 퇴사',color:OFFICE[si%6],values:nzq(outs)});
+    });
     window._PPT.qbr={week:(WPq.length?WPq[WPq.length-1].label:window._PPT.wk),charts:{
       chart1:{cats:catsM,series:{'대상건수':cipT,'완료건수':cipD,'진행율':cipT.map((v,i)=>v?r2q(cipD[i]/v):0)}},
-      chart2:{cats:catsM,series:{'총인원':hdM,'TO':chsM.map(v=>r1q(v/GST.conf('to_divisor',30)))}},
+      chart2:{cats:catsW,io:ioSers},   // 가. 인력현황 = 입사·퇴사(라인별) 주간
       chart3:{cats:catsM,series:{'대상인원':MP.map(p=>eduAgg(p).T),'완료율':MP.map(p=>{const e=eduAgg(p);return e.T?r2q(e.D/e.T):0;})}},
       chart4:{cats:catsW,series:{'출근평균':attW,'휴가평균':lvW,'총 인원':hdW,'인당작업':pjW}},
       chart5:{cats:catsM,series:{'GST Taiwan':chsM,'전체 인당 관리':chsM.map((c,i)=>hdM[i]?r1q(c/hdM[i]):0)}},
       chart6:{cats:catsW,series:{'PM':pmW,'非 PM':npW,'공수(h)':htW}},
-      chart7:{cats:catsM,series:{'Micron F11':ftM.map(o=>o.F11),'Micron F16':ftM.map(o=>o.F16),'Micron_Total':ftM.map(o=>o.F11+o.F16)}},
-      chart8:{cats:catsM,series:{'WInbond':ftM.map(o=>o.WB),'PSMC & TASC':ftM.map(o=>o.PT),'ETC_Total':ftM.map(o=>o.WB+o.PT+o.N+o.S)}}
+      chart7:{cats:catsW,catAsStr:true,   // 가. Alarm & All By-Pass (주간)
+        series:{'Micron F11':alarmW,'Micron F16':abpW,'Micron_Total':alarmW.map((v,i)=>v+abpW[i])},
+        rename:{'Micron F11':'Alarm(BM)','Micron F16':'All By-Pass','Micron_Total':'Total'}},
+      chart8:{cats:catsM,                 // 나. Alarm & All By-Pass (월간)
+        series:{'WInbond':alarmM,'PSMC & TASC':abpM,'ETC_Total':alarmM.map((v,i)=>v+abpM[i])},
+        rename:{'WInbond':'Alarm(BM)','PSMC & TASC':'All By-Pass','ETC_Total':'Total'}}
     }};
   }catch(e){window._PPT.qbrErr=(e&&e.message)||String(e);console.warn('QBR PPT 데이터 수집 실패',e);}
   // 🔔 자동 브리핑 — 위 차트들이 쌓아 둔 시계열을 넘긴다(이상치·추세·예측·원인 분해)
