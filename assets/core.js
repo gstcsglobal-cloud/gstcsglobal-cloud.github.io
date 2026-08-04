@@ -1976,25 +1976,25 @@ GST.PIV_T={
   ko:{t:'다차원 피벗',sub:'현재 필터 기준 교차 집계',src:'데이터',per:'기간',row:'행',col:'열',val:'값',swap:'⇄ 전치',
       copy:'복사(TSV)',copied:'복사됨',csv:'CSV',close:'닫기',tot:'합계',sub2:'소계',etc:'기타',
       none:'표시할 데이터가 없습니다.',no:'(없음)',detail:'상세',more:'외 {n}건',pick:'값 고르기',
-      all:'전체',clr:'해제',apply:'적용',find:'검색',rows:'{n}행',non:'—',
+      all:'전체',clr:'해제',apply:'적용',find:'검색',rows:'{n}행',non:'—',cmp:'Δ 기간비교',cmpA:'기간 A',cmpB:'직전 B',cmpD:'Δ%',cmpHint:'A=기간 필터(비우면 최근 30일) · B=같은 길이의 직전 구간',
       disp:'표시',d_raw:'원값',d_row:'행 대비 %',d_col:'열 대비 %',d_all:'총계 대비 %',
       top:'상위',t_all:'전체',sub_on:'소계'},
   en:{t:'Pivot',sub:'Cross-tab on current filters',src:'Data',per:'Period',row:'Rows',col:'Cols',val:'Values',swap:'⇄ Swap',
       copy:'Copy (TSV)',copied:'Copied',csv:'CSV',close:'Close',tot:'Total',sub2:'Subtotal',etc:'Others',
       none:'No data to show.',no:'(none)',detail:'Detail',more:'+{n} more',pick:'Filter',
-      all:'All',clr:'Clear',apply:'Apply',find:'Search',rows:'{n} rows',non:'—',
+      all:'All',clr:'Clear',apply:'Apply',find:'Search',rows:'{n} rows',non:'—',cmp:'Δ Compare',cmpA:'Period A',cmpB:'Prev B',cmpD:'Δ%',cmpHint:'A = date filter (last 30d if empty) · B = preceding window of equal length',
       disp:'Show as',d_raw:'Value',d_row:'% of row',d_col:'% of column',d_all:'% of total',
       top:'Top',t_all:'All',sub_on:'Subtotals'},
   zh:{t:'多维透视',sub:'按当前筛选交叉汇总',src:'数据',per:'期间',row:'行',col:'列',val:'值',swap:'⇄ 转置',
       copy:'复制(TSV)',copied:'已复制',csv:'CSV',close:'关闭',tot:'合计',sub2:'小计',etc:'其他',
       none:'无数据。',no:'(无)',detail:'明细',more:'其他{n}条',pick:'筛选值',
-      all:'全部',clr:'清除',apply:'应用',find:'搜索',rows:'{n}行',non:'—',
+      all:'全部',clr:'清除',apply:'应用',find:'搜索',rows:'{n}行',non:'—',cmp:'Δ 期间对比',cmpA:'期间A',cmpB:'前一期B',cmpD:'Δ%',cmpHint:'A=所选期间(空则近30天) · B=等长的前一区间',
       disp:'显示方式',d_raw:'数值',d_row:'占行%',d_col:'占列%',d_all:'占总计%',
       top:'前',t_all:'全部',sub_on:'小计'},
   ja:{t:'多次元ピボット',sub:'現在のフィルタで集計',src:'データ',per:'期間',row:'行',col:'列',val:'値',swap:'⇄ 転置',
       copy:'コピー(TSV)',copied:'コピー済',csv:'CSV',close:'閉じる',tot:'合計',sub2:'小計',etc:'その他',
       none:'データがありません。',no:'(なし)',detail:'明細',more:'他{n}件',pick:'値を選ぶ',
-      all:'全体',clr:'解除',apply:'適用',find:'検索',rows:'{n}行',non:'—',
+      all:'全体',clr:'解除',apply:'適用',find:'検索',rows:'{n}行',non:'—',cmp:'Δ 期間比較',cmpA:'期間A',cmpB:'直前B',cmpD:'Δ%',cmpHint:'A=期間フィルタ(空なら直近30日) · B=同じ長さの直前区間',
       disp:'表示形式',d_raw:'実数',d_row:'行比%',d_col:'列比%',d_all:'総計比%',
       top:'上位',t_all:'全体',sub_on:'小計'}
 };
@@ -2064,7 +2064,7 @@ GST.pivotOpen=function(){
   let from=sv.from||'', to=sv.to||'';
   let RF=[null,null,null], CF=null;
   let sortC=sv.sc||'', sortD=(sv.sd===-1?-1:1);
-  let disp=sv.disp||'raw', topN=+sv.top||0, showSub=(sv.sub!==0);
+  let disp=sv.disp||'raw', topN=+sv.top||0, showSub=(sv.sub!==0), cmp=(sv.cmp===1);
   let LAST=null, POP=null, VIEW=null;
 
   const S=function(){ return SETS[si]; };
@@ -2082,7 +2082,7 @@ GST.pivotOpen=function(){
   else { const D=SETS[si].dims; RD=[0,-1,-1]; ci=D.length>1?1:-1; MS=[0]; }
   norm();
   const active=function(){ return RD.filter(function(v){ return v>=0; }); };
-  const save=function(){ GST._pivSave({s:si,rd:RD,c:ci,ms:MS,from:from,to:to,sc:sortC,sd:sortD,disp:disp,top:topN,sub:showSub?1:0}); };
+  const save=function(){ GST._pivSave({s:si,rd:RD,c:ci,ms:MS,from:from,to:to,sc:sortC,sd:sortD,disp:disp,top:topN,sub:showSub?1:0,cmp:cmp?1:0}); };
 
   const opt=function(list,sel,none){ return (none?'<option value="-1"'+(sel<0?' selected':'')+'>'+T.non+'</option>':'')
     + list.map(function(d,i){ return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'+GST._esc(d.t||d.k)+'</option>'; }).join(''); };
@@ -2117,7 +2117,9 @@ GST.pivotOpen=function(){
       +'<label>'+T.top+'</label><input type="number" id="gpvTop" min="0" step="1" value="'+(topN||'')+'"'
         +' placeholder="'+T.t_all+'" title="'+T.top+' N — 0/'+T.t_all+'" style="width:52px">'
       +'<label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer">'
-        +'<input type="checkbox" id="gpvSub"'+(showSub?' checked':'')+'>'+T.sub_on+'</label>';
+        +'<input type="checkbox" id="gpvSub"'+(showSub?' checked':'')+'>'+T.sub_on+'</label>'
+      +(hasDate?('<label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer" title="'+(T.cmpHint||'')+'">'
+        +'<input type="checkbox" id="gpvCmp"'+(cmp?' checked':'')+'>'+T.cmp+'</label>'):'');
     document.getElementById('gpvC0').innerHTML=h;
   }
   function baseRows(){
@@ -2141,10 +2143,33 @@ GST.pivotOpen=function(){
     if(base==null||!base) return '·';
     return (Math.round(v/base*1000)/10)+'%';
   };
+  // Δ 기간비교: A = 기간 필터(비우면 데이터 최신일 기준 최근 30일) · B = 같은 길이의 직전 구간.
+  // 열 축을 A/B 버킷 함수로 바꿔치기하면 정렬·소계·%·값필터가 전부 그대로 동작한다.
+  function cmpWins(){
+    const dk=S().date; if(!dk)return null;
+    let a1=to?new Date(to+'T23:59:59Z'):null, a0=from?new Date(from+'T00:00:00Z'):null;
+    if(!a1){ let mx=null, rows0=[];
+      try{ const r=S().rows; rows0=(typeof r==='function')?(r()||[]):(r||[]); }catch(e){}
+      rows0.forEach(function(rec){ const d=GST._pivGet(rec,dk); if(d instanceof Date&&!isNaN(d)&&(!mx||d>mx))mx=d; });
+      a1=mx||new Date(); }
+    if(!a0) a0=new Date(a1.getTime()-29*864e5);
+    const len=a1.getTime()-a0.getTime()+1;
+    return {a0:a0,a1:a1,b0:new Date(a0.getTime()-len),b1:new Date(a0.getTime()-1)};
+  }
   function draw(){
     ctrls(); save();
-    const D=dims(), M=meas(), AC=active(), rows=filtered();
-    const P=GST.pivotCalc(rows, AC.map(function(i){ return D[i].k; }), ci>=0?D[ci].k:null, T);
+    const D=dims(), M=meas(), AC=active();
+    let rows, colK=(ci>=0?D[ci].k:null), W=null;
+    if(cmp&&S().date){
+      W=cmpWins();
+      const dk=S().date;
+      const dfSave=[from,to]; from=''; to='';        // 기간 필터는 A창 정의로만 쓰고
+      const all=filtered(); from=dfSave[0]; to=dfSave[1];
+      rows=all.filter(function(rec){ const d=GST._pivGet(rec,dk);
+        return d instanceof Date&&!isNaN(d)&&d>=W.b0&&d<=W.a1; });
+      colK=function(rec){ const d=GST._pivGet(rec,dk); return d>=W.a0?T.cmpA:T.cmpB; };
+    } else rows=filtered();
+    const P=GST.pivotCalc(rows, AC.map(function(i){ return D[i].k; }), colK, T);
     const A=GST.pivotAgg;
     const cell =function(rk,c,m){ return A(P.recs(rk,c), M[m]); };
     const rowT =function(rk,m){ return A(P.rowRecs(rk), M[m]); };
@@ -2218,6 +2243,8 @@ GST.pivotOpen=function(){
       if(multi) h+='<th colspan="'+MS.length+'" style="text-align:center">'+GST._esc(c)+'</th>';
       else h+='<th class="gpv-sort" data-sc="'+GST._esc(c+SEP+MS[0])+'">'+GST._esc(c)+arrow(c+SEP+MS[0])+'</th>';
     });
+    const cmpOn=!!(W&&cN.indexOf(T.cmpA)>=0&&cN.indexOf(T.cmpB)>=0&&MS.length===1);
+    if(cmpOn) h+='<th>'+T.cmpD+'</th>';
     h+= multi?'<th colspan="'+MS.length+'" style="text-align:center">'+T.tot+'</th>'
              :'<th class="gpv-sort" data-sc="#tot">'+T.tot+arrow('#tot')+'</th>';
     h+='</tr>';
@@ -2247,6 +2274,7 @@ GST.pivotOpen=function(){
             const v=preC(ks,c,m);
             const base= disp==='row'?preT(ks,m) : disp==='col'?colT(c,m) : disp==='all'?grand(m) : null;
             return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
+        + (cmpOn?'<td></td>':'')
         + MS.map(function(m){ const v=preT(ks,m);
             return '<td>'+fmtV(v, disp==='raw'?null:(disp==='all'?grand(m):v))+'</td>'; }).join('')
         + '</tr>';
@@ -2259,8 +2287,15 @@ GST.pivotOpen=function(){
         const same=(prev.length&&L<nLv-1&&parts.slice(0,L+1).join(SEP)===prev.slice(0,L+1).join(SEP));
         lab+='<td'+(same?' style="opacity:.35"':'')+'>'+(same?'〃':GST._esc(parts[L]))+'</td>';
       }
+      let dHtml='';
+      if(cmpOn){ const va=cell(rk,T.cmpA,MS[0])||0, vb=cell(rk,T.cmpB,MS[0]);
+        if(vb==null||!vb) dHtml='<td>'+(va?'NEW':'·')+'</td>';
+        else { const dpc=Math.round(va/vb*1000)/10-100;
+          const cc=dpc>0?'var(--bad,#fb7185)':(dpc<0?'var(--ok,#4ade80)':'var(--gov-mut)');
+          dHtml='<td style="font-weight:800;color:'+cc+'">'+(dpc>0?'+':'')+(Math.round(dpc*10)/10)+'%</td>'; } }
       h+='<tr>'+lab
         + cN.map(function(c){ return MS.map(function(m){ return cellHTML(rk,c,m); }).join(''); }).join('')
+        + dHtml
         + MS.map(function(m){ const v=rowT(rk,m);
             const a2=(noCol&&disp==='raw'&&mx>0&&v!=null)?(0.07+0.42*(v/mx)):0;
             return '<td class="'+(noCol?'gpv-cell':'gpv-tot')+'"'
@@ -2276,6 +2311,7 @@ GST.pivotOpen=function(){
         + cN.map(function(c){ return MS.map(function(m){ const v=preC(etcKeys,c,m);
             const base= disp==='col'?colT(c,m) : disp==='all'?grand(m) : disp==='row'?preT(etcKeys,m) : null;
             return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
+        + (cmpOn?'<td></td>':'')
         + MS.map(function(m){ const v=preT(etcKeys,m);
             return '<td>'+fmtV(v, disp==='all'?grand(m):(disp==='raw'?null:v))+'</td>'; }).join('')+'</tr>';
     }
@@ -2283,6 +2319,11 @@ GST.pivotOpen=function(){
       + cN.map(function(c){ return MS.map(function(m){ const v=colT(c,m);
           const base= disp==='row'?grand(m) : disp==='col'?v : disp==='all'?grand(m) : null;
           return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
+      + (cmpOn?(function(){ const ta=colT(T.cmpA,MS[0])||0, tb=colT(T.cmpB,MS[0]);
+          if(tb==null||!tb) return '<td></td>';
+          const dpc=Math.round(ta/tb*1000)/10-100;
+          const cc=dpc>0?'var(--bad,#fb7185)':(dpc<0?'var(--ok,#4ade80)':'inherit');
+          return '<td style="color:'+cc+'">'+(dpc>0?'+':'')+(Math.round(dpc*10)/10)+'%</td>'; })():'')
       + MS.map(function(m){ const v=grand(m); return '<td>'+fmtV(v, disp==='raw'?null:v)+'</td>'; }).join('')
       + '</tr></tfoot></table>';
     sc.innerHTML=h;
@@ -2385,6 +2426,7 @@ GST.pivotOpen=function(){
     if(el.id==='gpvDisp'){ disp=el.value; draw(); return; }
     if(el.id==='gpvTop'){ topN=+el.value; draw(); return; }
     if(el.id==='gpvSub'){ showSub=el.checked; draw(); return; }
+    if(el.id==='gpvCmp'){ cmp=el.checked; sortC=''; draw(); return; }
     if(el.id==='gpvF'){ from=el.value; RF=[null,null,null]; CF=null; draw(); return; }
     if(el.id==='gpvT'){ to=el.value;   RF=[null,null,null]; CF=null; draw(); return; }
   });

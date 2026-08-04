@@ -575,8 +575,10 @@ function buildSchedule(rows){
       dl=Math.round((next-today)/86400000);
       st = cycle ? (dl<0?'overdue':(dl<=cycle*WARN_RATIO?'soon':'ok')) : (dl<0?'overdue':'ok');
     }
-    return {sn:o.sn,ch:o.ch,site:o.meta[C.site]||'—',line:o.meta[C.line]||'—',
-      model:o.meta[C.model]||'—',group:o.meta[C.group1]||'—',
+    // DONE_HIST와 같은 규칙으로 정규화해야 한다. 한쪽만 반각화하면 슬라이서에 PSMC와 ＰＳＭＣ가
+    // 따로 떠서, 어느 쪽을 골라도 표(SCHED)와 추이·준수율(DONE_HIST)의 모집단이 어긋난다.
+    return {sn:o.sn,ch:o.ch,site:GST.nfw(o.meta[C.site]||'')||'—',line:GST.nfw(o.meta[C.line]||'')||'—',
+      model:GST.nfw(o.meta[C.model]||'')||'—',group:GST.nfw(o.meta[C.group1]||'')||'—',
       last:o.last,cycle,next,origNext,dl,st,cnt:o.rows,key,adjusted,memo};
   });
 }

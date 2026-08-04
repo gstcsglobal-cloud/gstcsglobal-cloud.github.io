@@ -1008,7 +1008,9 @@ function render(){
   const siteCountry=siteCountryStatic;
   const okCF=(cb,fb)=>(!F.customer||cb===F.customer)&&(!F.line||fb===F.line)&&(!F.country||siteCountry(fb||cb)===F.country);
   // 인력 기준: 인원현황(입·퇴사일 보유) 우선, 없으면 교육현황 · 고객사/국가 필터 연동
-  const PPL=ROSTER.length?ROSTER:HR;
+  // 폴백(교육현황) 레코드에는 onsite가 없고 quit이 boolean이라, 그대로 쓰면
+  // 재직 0명 + p.quit.getUTCFullYear() TypeError로 렌더가 죽는다. hr 페이지와 동일 규칙으로 보정.
+  const PPL=ROSTER.length?ROSTER:HR.map(e=>Object.assign({},e,{onsite:true,quit:e.quit?today:null}));
   const fHR=PPL.filter(p=>okCF(p.custB,p.fab));
   // 휴가 = 인원현황의 현장(O) 재직자 것만 차감 — 行政部·기술부 등 비현장/미등재 인원 휴가 제외
   // 사원번호(우선)·이름으로 매칭, 소속(custB/fab)은 인원현황 Work Place 기준으로 귀속

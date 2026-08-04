@@ -65,6 +65,16 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 .slicer .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--mut);margin-bottom:8px;font-weight:700}
 .slicer select,.dt-input{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 12px;color:var(--txt);font-size:12px;outline:none;min-width:120px;color-scheme:dark}
 .search-sl{margin-left:auto}
+/* 입력 충실도 스트립 */
+.dq-strip{display:flex;flex-direction:column;gap:5px;margin-top:4px}
+.dq-row{display:grid;grid-template-columns:64px 1fr 92px;align-items:center;gap:9px;font-size:11.5px}
+.dq-row .l{font-weight:700;color:var(--txt-muted);white-space:nowrap}
+.dq-tr{height:8px;background:rgba(151,170,196,.12);border-radius:2px;overflow:hidden}
+.dq-tr i{display:block;height:100%;border-radius:1px}
+.dq-row .p{font-family:inherit;font-variant-numeric:tabular-nums;font-size:10.5px;color:var(--txt-muted);text-align:right;white-space:nowrap}
+.dq-fill{background:none;border:1px solid var(--glassb);border-radius:6px;color:var(--accent-1,#2DD4BF);
+  font-size:11px;font-weight:700;padding:2px 8px;cursor:pointer}
+.dq-fill:hover{border-color:var(--accent-1,#2DD4BF)}
 .search-sl input{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:30px;padding:8px 16px;color:var(--txt);font-size:13px;width:210px;outline:none}
 .search-sl input:focus{border-color:var(--a1)}
 .search-sl input::placeholder{color:var(--mut)}
@@ -285,6 +295,26 @@ canvas{cursor:pointer}
       <div class="cw"><canvas id="cProc"></canvas></div>
     </div>
   </div>
+
+  <!-- 알람 파레토 + 기록 입력 충실도 -->
+  <div class="grid2-trend">
+    <div class="card">
+      <h3 data-i="ch_alarmp">알람 TOP (파레토)</h3>
+      <div class="card-note" data-i="note_alarmp">알람(Z) 미기재 시 현상(AA)으로 폴백 · 라인=누적 %</div>
+      <div class="cw"><canvas id="cAlarmP"></canvas></div>
+    </div>
+    <div class="tablecard">
+      <h3><span data-i="dq_title">고장 기록 입력 충실도 (BM 기준)</span></h3>
+      <div id="dqStrip" class="dq-strip"></div>
+      <div class="card-note" style="margin:8px 0 6px"><span data-i="dq_missing">미기재 목록 (최근 BM)</span>
+        — <span data-i="dq_note">행의 ✎로 알람·원인·조치를 바로 채울 수 있습니다 (구글 시트에 저장)</span></div>
+      <div class="tbl-wrap" style="max-height:230px;overflow:auto">
+        <table><thead><tr><th data-i="th_date">작업일</th><th>S/N</th><th>LINE</th>
+          <th>Alarm</th><th data-i="th_cause">원인</th><th data-i="th_action">조치</th><th></th></tr></thead>
+        <tbody id="dqBody"><tr><td colspan="7" class="empty">—</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ 섹션: 작업 부하 ═══ -->
@@ -447,8 +477,8 @@ const T={
     ch_mantrend:'작업공수 추이 (주/월)',note_mantrend:'인·시 (작업공수 ÷ 60)',ch_dur:'작업시간 분포',note_dur:'건당 소요시간(분) 구간',
     ch_worker:'작업자 TOP (공수)',note_worker:'개인별 누적 인·시 · 공동작업은 인원수로 안분',ch_wcnt:'투입 인원수 구성',note_wcnt:'건당 작업자수',
     ch_lineman:'LINE별 평균 작업시간',note_lineman:'건당 평균(분)',
-    tbl_title:'서비스 실적 상세',th_date:'작업일',th_stage:'단계',th_pf:'유/무상',th_phenom:'현상',th_cause:'원인',th_action:'조치',th_min:'시간(분)',th_mh:'공수',th_worker:'작업자',
-    ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'최근 구간 작업공수 {n}인·시 · 직전 구간 대비 {p}',
+    tbl_title:'서비스 실적 상세',th_date:'작업일',ft_cnt:'건수',th_stage:'단계',th_pf:'유/무상',th_phenom:'현상',th_cause:'원인',th_action:'조치',th_min:'시간(분)',th_mh:'공수',th_worker:'작업자',
+    ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ch_alarmp:'알람 TOP (파레토)',note_alarmp:'알람(Z) 미기재 시 현상(AA) 폴백 · 라인=누적 %',dq_title:'고장 기록 입력 충실도 (BM 기준)',dq_missing:'미기재 목록 (최근 BM)',dq_note:'행의 ✎로 알람·원인·조치를 바로 채울 수 있습니다 (구글 시트에 저장)',dq_fill:'입력',dq_all:'알람·원인·조치가 모두 기재되어 있습니다',dq_missN:'미기재 {n}건 제외',dq_mt:'고장 기록 입력',dq_close:'닫기',dq_save:'저장',dq_saved:'저장됨 — 구글 시트에 반영되었습니다',dq_savefail:'저장 실패 — 잠시 후 다시 시도하세요',dq_conflict:'다른 사람이 먼저 수정했습니다 — 다시 열어주세요',dq_loadfail:'행을 불러오지 못했습니다',dq_zcol:'Z열',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'최근 구간 작업공수 {n}인·시 · 직전 구간 대비 {p}',
     etc:'기타',mon_unit:'월',dur_b:['<30분','30–60분','1–2시간','2–4시간','4시간+'],wcnt_p:'{n}명'},
   en:{title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
     sec_ov:'Overview',sec_ca:'Cause & Action',sec_ld:'Workload',sec_rel:'Reliability',sec_dt:'Data',
@@ -470,8 +500,8 @@ const T={
     ch_mantrend:'Man-hours Trend (W/M)',note_mantrend:'man-hours (man-min ÷ 60)',ch_dur:'Duration Distribution',note_dur:'work minutes per case',
     ch_worker:'Top Workers (man-hours)',note_worker:'per-person, shared jobs split by headcount',ch_wcnt:'Crew Size Mix',note_wcnt:'workers per case',
     ch_lineman:'Avg Work Time by LINE',note_lineman:'avg minutes per case',
-    tbl_title:'Service Records',th_date:'Date',th_stage:'Stage',th_pf:'Paid/Free',th_phenom:'Phenomenon',th_cause:'Cause',th_action:'Action',th_min:'Min',th_mh:'Man-min',th_worker:'Workers',
-    ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours in latest period · {p} vs prev',
+    tbl_title:'Service Records',th_date:'Date',ft_cnt:'Count',th_stage:'Stage',th_pf:'Paid/Free',th_phenom:'Phenomenon',th_cause:'Cause',th_action:'Action',th_min:'Min',th_mh:'Man-min',th_worker:'Workers',
+    ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ch_alarmp:'Top Alarms (Pareto)',note_alarmp:'falls back to symptom(AA) when alarm(Z) blank · line = cumulative %',dq_title:'Fault record completeness (BM)',dq_missing:'Missing entries (recent BM)',dq_note:'click ✎ to fill alarm/cause/action right here (saved to the Google Sheet)',dq_fill:'Fill',dq_all:'Alarm, cause and action are all filled in',dq_missN:'{n} blank excluded',dq_mt:'Fill fault record',dq_close:'Close',dq_save:'Save',dq_saved:'Saved to the Google Sheet',dq_savefail:'Save failed — try again',dq_conflict:'Someone edited this row first — reopen it',dq_loadfail:'Could not load the row',dq_zcol:'col Z',ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours in latest period · {p} vs prev',
     etc:'Others',mon_unit:'',dur_b:['<30m','30–60m','1–2h','2–4h','4h+'],wcnt_p:'{n} ppl'},
   zh:{title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
     sec_ov:'概览',sec_ca:'原因·措施',sec_ld:'工时负荷',sec_rel:'可靠性',sec_dt:'明细',
@@ -493,8 +523,8 @@ const T={
     ch_mantrend:'工时趋势 (周/月)',note_mantrend:'人·时 (工时÷60)',ch_dur:'作业时间分布',note_dur:'每件耗时(分)区间',
     ch_worker:'作业者TOP (工时)',note_worker:'按人累计,共同作业按人数分摊',ch_wcnt:'投入人数构成',note_wcnt:'每件作业人数',
     ch_lineman:'按LINE平均作业时间',note_lineman:'每件平均(分)',
-    tbl_title:'服务实绩明细',th_date:'作业日',th_stage:'阶段',th_pf:'有/无偿',th_phenom:'现象',th_cause:'原因',th_action:'措施',th_min:'时间(分)',th_mh:'工时',th_worker:'作业者',
-    ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'最近区间工时 {n}人·时 · 环比 {p}',
+    tbl_title:'服务实绩明细',th_date:'作业日',ft_cnt:'件数',th_stage:'阶段',th_pf:'有/无偿',th_phenom:'现象',th_cause:'原因',th_action:'措施',th_min:'时间(分)',th_mh:'工时',th_worker:'作业者',
+    ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ch_alarmp:'报警TOP (帕累托)',note_alarmp:'报警(Z)未填时用现象(AA) · 线=累计%',dq_title:'故障记录填写完整度 (BM)',dq_missing:'未填写清单 (近期BM)',dq_note:'点✎可直接填写报警·原因·措施 (保存到谷歌表格)',dq_fill:'填写',dq_all:'报警·原因·措施均已填写',dq_missN:'未填{n}件除外',dq_mt:'填写故障记录',dq_close:'关闭',dq_save:'保存',dq_saved:'已保存到谷歌表格',dq_savefail:'保存失败 — 请稍后重试',dq_conflict:'他人已先修改 — 请重新打开',dq_loadfail:'无法读取该行',dq_zcol:'Z列',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'最近区间工时 {n}人·时 · 环比 {p}',
     etc:'其他',mon_unit:'月',dur_b:['<30分','30–60分','1–2时','2–4时','4时+'],wcnt_p:'{n}人'},
   ja:{title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
     sec_ov:'概要',sec_ca:'原因·処置',sec_ld:'工数負荷',sec_rel:'信頼性',sec_dt:'詳細',
@@ -516,14 +546,14 @@ const T={
     ch_mantrend:'工数推移 (週/月)',note_mantrend:'人·時 (工数÷60)',ch_dur:'作業時間分布',note_dur:'件当たり所要時間(分)区分',
     ch_worker:'作業者TOP (工数)',note_worker:'個人別累計·共同作業は人数で按分',ch_wcnt:'投入人数構成',note_wcnt:'件当たり作業者数',
     ch_lineman:'LINE別平均作業時間',note_lineman:'件当たり平均(分)',
-    tbl_title:'サービス実績詳細',th_date:'作業日',th_stage:'段階',th_pf:'有/無償',th_phenom:'現象',th_cause:'原因',th_action:'処置',th_min:'時間(分)',th_mh:'工数',th_worker:'作業者',
-    ins_mom:'直近30日 {n}件 · 前30日比 {p}',ins_topcause:'原因 {v} 集中 — 全体の{p}%',ins_outlier:'設備 {v} 異常集中 — {n}件',ins_man:'直近区間工数 {n}人·時 · 前区間比 {p}',
+    tbl_title:'サービス実績詳細',th_date:'作業日',ft_cnt:'件数',th_stage:'段階',th_pf:'有/無償',th_phenom:'現象',th_cause:'原因',th_action:'処置',th_min:'時間(分)',th_mh:'工数',th_worker:'作業者',
+    ins_mom:'直近30日 {n}件 · 前30日比 {p}',ins_topcause:'原因 {v} 集中 — 全体の{p}%',ch_alarmp:'アラームTOP (パレート)',note_alarmp:'アラーム(Z)未記入時は現象(AA) · 線=累積%',dq_title:'故障記録の入力充実度 (BM)',dq_missing:'未記入リスト (直近BM)',dq_note:'✎でアラーム・原因・対応をその場で入力 (Googleシートに保存)',dq_fill:'入力',dq_all:'アラーム・原因・対応がすべて記入済みです',dq_missN:'未記入{n}件除外',dq_mt:'故障記録の入力',dq_close:'閉じる',dq_save:'保存',dq_saved:'Googleシートに保存しました',dq_savefail:'保存失敗 — 再試行してください',dq_conflict:'他の人が先に編集しました — 開き直してください',dq_loadfail:'行を読み込めませんでした',dq_zcol:'Z列',ins_outlier:'設備 {v} 異常集中 — {n}件',ins_man:'直近区間工数 {n}人·時 · 前区間比 {p}',
     etc:'その他',mon_unit:'月',dur_b:['<30分','30–60分','1–2時間','2–4時間','4時間+'],wcnt_p:'{n}名'}
 };
 
 let LANG='ko', ROWS=[], CHARTS={}, sortK='work', sortAsc=false;
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&T[sl])LANG=sl; else if(window.name&&T[window.name])LANG=window.name; }catch(e){}
-const F={line:'',stage:'',pf:'',cause:'',model:'',sn:'',dtFrom:'',dtTo:'',q:''};
+const F={line:'',stage:'',pf:'',cause:'',model:'',sn:'',proc:'',dtFrom:'',dtTo:'',q:''};
 
 Chart.defaults.color=GST.chartTheme().txt;
 Chart.defaults.font.family="'Segoe UI','Malgun Gothic',sans-serif";
@@ -556,6 +586,12 @@ document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))documen
 
 const toDate=GST.toDate, fmtDate=GST.fmtDate, fmtD=GST.fmtD, countBy=GST.countBy, animVal=GST.animVal;
 
+const GID_WK='646668307';
+let CAN_WRITE=false;
+(async()=>{ try{ const p=await GST.sheetWrite('perm',GID_WK); CAN_WRITE=!!(p&&p.can_write); }
+  catch(e){ CAN_WRITE=false; }
+  if(ROWS.length)render(); })();
+
 async function loadData(){ GST.skeleton(true);
   const btn=document.getElementById('refreshBtn'); const status=document.getElementById('status');
   btn.disabled=true; status.className='status'; status.textContent=t('loading');
@@ -582,6 +618,8 @@ async function loadData(){ GST.skeleton(true);
       .map(r=>({
         // 분류 축(라인·모델·S/N·공정)은 전각이 섞여 들어오므로 반각으로 통일 — 같은 라인이 두 그룹으로 갈라지는 것을 막는다.
         // 자유 서술(원인·현상·조치)은 원문 그대로 둔다.
+        rs:String(r[C.rsCode]||'').trim().replace(/\.0+$/,''),   // 실적코드 — 시트 쓰기 키(고유)
+        code:GST.nfw(r[C.eqNo]||'').trim(),                       // 설비호기(Scrubber Code, KTINL50800)
         line:GST.nfw(r[C.line]||'').trim(), stage:(r[C.stage]||'').toString().trim().toUpperCase(),
         alarm:GST.nfw(r[C.alarm]||'').trim(),
         country:(String(r[C.op]||'').match(/GST\s+([A-Za-z]+)/i)||[])[1]?String(r[C.op]).match(/GST\s+([A-Za-z]+)/i)[1].toUpperCase():'',
@@ -638,9 +676,10 @@ function filt(){
     if(F.cause&&x.cause!==F.cause)return false;
     if(F.model&&x.model!==F.model)return false;
     if(F.sn&&x.sn!==F.sn)return false;
+    if(F.proc&&x.proc!==F.proc)return false;
     if(F.dtFrom&&(!x.work||fmtD(x.work)<F.dtFrom))return false;
     if(F.dtTo&&(!x.work||fmtD(x.work)>F.dtTo))return false;
-    if(F.q){const s=(x.sn+' '+x.phenom+' '+x.cause+' '+x.action+' '+x.detail+' '+x.workers+' '+x.line+' '+x.model).toLowerCase();
+    if(F.q){const s=(x.sn+' '+x.code+' '+x.alarm+' '+x.phenom+' '+x.cause+' '+x.action+' '+x.detail+' '+x.workers+' '+x.line+' '+x.model).toLowerCase();
       if(!s.includes(F.q))return false;}
     return true;
   });
@@ -718,6 +757,118 @@ const donutCenterPlugin={id:'dCenter',
     ctx.restore();
   }};
 function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
+
+/* ===== 고장 기록 입력 충실도 + 미기재 목록 + 현장 입력 =====
+   알람·현상·원인·조치 입력률이 2%대라 심층 분석이 막혀 있다(실측).
+   여기서 바로 채울 수 있게 한다 — 실적코드(고유 키)로 그 행의 4개 열만 update. */
+function renderDQ(f){
+  const bm=f.filter(x=>x.stage==='BM');
+  const strip=document.getElementById('dqStrip'), body=document.getElementById('dqBody');
+  if(!strip||!body)return;
+  const THc=GST.chartTheme();
+  const rate=k=>bm.length?bm.filter(x=>(x[k]||'').trim()).length:0;
+  const rows=[['Alarm','alarm'],[t('th_phenom'),'phenom'],[t('th_cause'),'cause'],[t('th_action'),'action']];
+  strip.innerHTML=rows.map(([lbl,k])=>{
+    const n=rate(k), p=bm.length?Math.round(n/bm.length*100):0;
+    const col=p>=70?'var(--ok,#4ade80)':(p>=30?'var(--warn,#fbbf24)':'var(--bad,#fb7185)');
+    return '<div class="dq-row"><span class="l">'+lbl+'</span>'
+      +'<span class="dq-tr"><i style="width:'+p+'%;background:'+col+'"></i></span>'
+      +'<span class="p">'+p+'% · '+n.toLocaleString()+'/'+bm.length.toLocaleString()+'</span></div>';
+  }).join('');
+  // 미기재 목록 — 알람·원인·조치 중 하나라도 빈 BM, 최근순 40건
+  const missing=bm.filter(x=>!(x.alarm&&x.cause&&x.action)&&x.rs)
+    .sort((a,b)=>(b.work||0)-(a.work||0)).slice(0,40);
+  if(!missing.length){ body.innerHTML='<tr><td colspan="7" class="empty">'+t('dq_all')+'</td></tr>'; return; }
+  const chk=v=>v?'✓':'<span style="color:var(--bad,#fb7185)">—</span>';
+  body.innerHTML=missing.map(x=>'<tr>'
+    +'<td>'+fmtDate(x.work)+'</td><td>'+(x.sn||'—')+'</td><td>'+(x.line||'—')+'</td>'
+    +'<td>'+chk(x.alarm)+'</td><td>'+chk(x.cause)+'</td><td>'+chk(x.action)+'</td>'
+    +'<td>'+(CAN_WRITE?'<button class="dq-fill" data-rs="'+x.rs+'">✎ '+t('dq_fill')+'</button>':'')+'</td></tr>').join('');
+  void THc;
+}
+// 입력 모달 — 알람은 기존 값 datalist(표기 통일 유도), 원인·조치도 기존 값 제안
+async function dqOpen(rs){
+  const rec=ROWS.find(x=>x.rs===rs); if(!rec)return;
+  let row=null;
+  try{ row=await GST.sheetWrite('row',GID_WK,null,{key:rs}); }
+  catch(e){ capToastF(t('dq_loadfail')); return; }
+  const opts=k=>[...new Set(ROWS.map(x=>(x[k]||'').trim()).filter(Boolean))].sort()
+    .map(v=>'<option value="'+esc2(v)+'">').join('');
+  const fld=(id,lbl,k)=>'<div style="margin-bottom:9px"><div style="font-size:11px;font-weight:700;'
+    +'color:var(--gov-mut);margin-bottom:3px">'+lbl+'</div>'
+    +'<input id="'+id+'" list="'+id+'L" value="'+esc2(row.fields&&row.fields[k]||'')+'" style="width:100%;'
+    +'background:var(--gov-soft);border:1px solid var(--gov-line);border-radius:7px;color:var(--gov-fg);'
+    +'font-family:inherit;font-size:12px;padding:7px 9px"><datalist id="'+id+'L">'+opts(k)+'</datalist></div>';
+  const ov=GST._ovOpen(
+     '<div class="gov-h"><h4>✎ '+t('dq_mt')+'</h4><span class="gov-sub">'+esc2(rec.sn||'')+' · '
+    +esc2(fmtDate(rec.work))+' · '+esc2(rec.stage)+'</span><span class="gov-sp"></span>'
+    +'<button class="gov-b" data-dq="close">'+t('dq_close')+'</button></div>'
+    +'<div class="gov-body">'
+    + fld('dqAl','Alarm ('+t('dq_zcol')+')','alarm')
+    + fld('dqPh',t('th_phenom')+' (AA)','phenom')
+    + fld('dqCa',t('th_cause')+' (AB)','cause')
+    + fld('dqAc',t('th_action')+' (AC)','action')
+    +'<button class="gov-b" data-dq="save" style="width:100%;padding:9px 0;margin-top:4px">'+t('dq_save')+'</button>'
+    +'</div>');
+  ov.addEventListener('click',async e=>{
+    const b=e.target.closest('[data-dq]'); if(!b)return;
+    if(b.dataset.dq==='close'){ GST._ovClose(); return; }
+    if(b.dataset.dq!=='save')return;
+    const g=id=>document.getElementById(id).value.trim();
+    const changes={alarm:g('dqAl'),phenom:g('dqPh'),cause:g('dqCa'),action:g('dqAc')};
+    b.disabled=true; b.textContent='…';
+    try{
+      const r=await GST.sheetWrite('update',GID_WK,{key:rs,baseHash:row.hash,changes});
+      // 낙관 반영 — 응답의 정본 값으로 로컬 레코드 갱신 후 즉시 재렌더
+      const f2=(r&&r.fields)||changes;
+      Object.assign(rec,{alarm:GST.nfw(f2.alarm||'').trim(),phenom:(f2.phenom||'').trim(),
+                         cause:(f2.cause||'').trim(),action:(f2.action||'').trim()});
+      GST._ovClose(); capToastF(t('dq_saved')); render();
+    }catch(err){
+      b.disabled=false; b.textContent=t('dq_save');
+      capToastF(err&&err.data&&err.data.error==='conflict'?t('dq_conflict'):t('dq_savefail'));
+    }
+  });
+}
+function esc2(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+function capToastF(msg){ let el=document.getElementById('dqToast');
+  if(!el){el=document.createElement('div');el.id='dqToast';
+    el.style.cssText='position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:9500;'
+      +'background:var(--glass,#101720);border:1px solid var(--glassb,rgba(151,170,196,.3));border-radius:10px;'
+      +'padding:9px 16px;font-size:12px;font-weight:700;color:var(--txt-main,#E6EDF3);opacity:0;transition:opacity .25s';
+    document.body.appendChild(el);}
+  el.textContent=msg; el.style.opacity='1'; clearTimeout(el._h); el._h=setTimeout(()=>el.style.opacity='0',2200); }
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.dq-fill'); if(b)dqOpen(b.dataset.rs);
+});
+
+/* ===== 알람 파레토 — 어떤 고장이 제일 많은지 + 상위 몇 개가 전체의 몇 %인지 ===== */
+function mkPareto(id,f){
+  const ctx=document.getElementById(id); if(!ctx)return;
+  const TH=GST.chartTheme();
+  // 알람(Z) 우선, 미기재면 현상(AA) — 주간현황 TOP3와 같은 폴백 규칙
+  const m={}; let miss=0;
+  f.forEach(x=>{ const k=(x.alarm||x.phenom||'').trim(); if(!k){miss++;return;} m[k]=(m[k]||0)+1; });
+  const ent=Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  if(CHARTS[id])CHARTS[id].destroy();
+  if(!ent.length){ CHARTS[id]=null; return; }
+  const tot=ent.reduce((a,e)=>a+e[1],0);
+  let cum=0; const cumPct=ent.map(e=>{cum+=e[1];return Math.round(cum/tot*100);});
+  CHARTS[id]=new Chart(ctx,{type:'bar',
+    data:{labels:ent.map(e=>e[0].length>22?e[0].slice(0,21)+'…':e[0]),datasets:[
+      {data:ent.map(e=>e[1]),backgroundColor:TH.pal[0],borderRadius:3,order:2},
+      {type:'line',data:cumPct,borderColor:TH.status.warn,borderWidth:2,pointRadius:2.5,
+       yAxisID:'y2',order:1,tension:.2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{title:it=>ent[it[0].dataIndex][0],
+          label:c=>c.datasetIndex? (' 누적 '+c.parsed.y+'%') : (' '+c.parsed.y+'건')}}},
+      scales:{x:{ticks:{color:TH.txt,font:{size:9},maxRotation:45,minRotation:30},grid:{display:false}},
+        y:{ticks:{color:TH.txt,precision:0},grid:{color:TH.grid}},
+        y2:{position:'right',min:0,max:100,ticks:{color:TH.txt,callback:v=>v+'%'},grid:{display:false}}}}});
+  const note=ctx.closest('.card').querySelector('.card-note');
+  if(note&&miss)note.textContent=t('note_alarmp')+' · '+t('dq_missN').replace('{n}',miss.toLocaleString());
+}
 
 function mkHBar(id,entries,total,fkey,color,topN,colorFn){
   const top=entries.slice(0,topN||8);
@@ -798,9 +949,13 @@ function monthKey(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).pad
 // ===== 신뢰성 (설비 S/N × BM 고장) =====
 let relSortK='frate', relSortAsc=false;
 function buildReliability(rows){
-  // 관측 기준일: 데이터의 최신 작업일(없으면 오늘)
-  let asOf=null; ROWS.forEach(x=>{if(x.work&&(!asOf||x.work>asOf))asOf=x.work;});
+  // 관측 기준일·시작일을 **필터된 행 기준**으로 잡는다.
+  // 전에는 asOf를 전체(ROWS)에서, 고장 건수를 필터에서 가져와 기간 필터를 걸면
+  // 분자(고장)만 줄고 분모(가동일)는 그대로라 고장률이 크게 과소평가됐다.
+  let asOf=null; rows.forEach(x=>{if(x.work&&(!asOf||x.work>asOf))asOf=x.work;});
+  if(!asOf){ ROWS.forEach(x=>{if(x.work&&(!asOf||x.work>asOf))asOf=x.work;}); }
   if(!asOf)asOf=new Date();
+  const winFrom=F.dtFrom?new Date(F.dtFrom+'T00:00:00Z'):null;
   const g={};
   rows.forEach(x=>{
     const sn=normSN(x.sn); if(!sn)return;
@@ -814,7 +969,8 @@ function buildReliability(rows){
   });
   const units=[];
   Object.keys(g).forEach(k=>{
-    const e=g[k]; const inst=INSTMAP[k]; const since=inst||e.first; if(!since)return;
+    const e=g[k]; const inst=INSTMAP[k]; let since=inst||e.first; if(!since)return;
+    if(winFrom&&winFrom>since)since=winFrom;   // 관측 창 시작 = max(가동 시작, 기간 필터 시작)
     const opDays=Math.max(1,Math.round((asOf-since)/864e5));
     e.since=since; e.linked=!!inst; e.opDays=opDays;
     e.mtbf=e.bm>0?opDays/e.bm:null;
@@ -997,10 +1153,12 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   mkHBar('cPhenom',countBy(f,'phenom'),f.length,null,TH.pal[0],8);
   const causes=countBy(f,'cause');
   mkHBar('cCause',causes,f.length,'cause',TH.pal[4],8);
+  // 알람 파레토 — 알람(Z) 미기재 시 현상(AA) 폴백(주간현황 TOP3와 동일 규칙) + 누적 % 라인
+  mkPareto('cAlarmP', f);
   mkDonut('cAction',countBy(f,'action'),null,5);
   mkDonut('cReqType',countBy(f,'reqType'),null,4);
   mkHBar('cModel',countBy(f,'model'),f.length,'model',TH.pal[3],8);
-  mkHBar('cProc',countBy(f,'proc'),f.length,null,TH.pal[1],6);
+  mkHBar('cProc',countBy(f,'proc'),f.length,'proc',TH.pal[1],6);
 
   // ── 작업 부하 ──
   const manByM={};
@@ -1057,6 +1215,7 @@ function render(){ GST.skeleton(false); GST.pushState(F);
 
   // ── 신뢰성 (설비 S/N × BM) ──
   renderReliability(f);
+  renderDQ(f);
   // 🔔 자동 브리핑 — 최근 12구간(주/월) 건수·공수 추이
   try{
     const _u=GST.period(), _P=GST.periods(12,(F.dtTo?new Date(F.dtTo):new Date()),_u);
@@ -1075,22 +1234,23 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   // 🧊 피벗 — 현재 필터가 적용된 서비스 레코드를 교차 집계한다
   GST.pivotReg({
     rows:()=>f,
+    date:'work',
     dims:[{k:'country',t:FIELD_LABEL.country},{k:'customer',t:'Customer'},{k:'campus',t:FIELD_LABEL.campus},
           {k:'line',t:FIELD_LABEL.line},{k:'proc',t:FIELD_LABEL.proc},{k:'sn',t:t('sl_sn')},
+          {k:'code',t:'Scrubber Code'},
           {k:'stage',t:t('sl_stage')},{k:'alarm',t:FIELD_LABEL.alarm},{k:'cause',t:t('sl_cause')},
           {k:'action',t:t('th_action')},{k:'model',t:t('sl_model')},{k:'pf',t:t('sl_pf')},
           {k:x=>x.work?GST.isoW(x.work):'',t:t('sl_period')+'(W)'},
           {k:x=>x.work?(x.work.getUTCFullYear()+'-'+String(x.work.getUTCMonth()+1).padStart(2,'0')):'',t:t('sl_period')+'(M)'}],
-    measures:[{k:'cnt',t:t('th_cnt')||'건수',agg:'count'},
+    measures:[{k:'cnt',t:t('ft_cnt'),agg:'count'},
               {k:'man',t:t('th_mh'),agg:'sum',f:x=>(x.manMin>0&&x.manMin<14400)?Math.round(x.manMin/60*10)/10:null},
               {k:'min',t:t('th_min'),agg:'avg',f:x=>(x.workMin>0&&x.workMin<1440)?x.workMin:null},
               {k:'sn',t:t('sl_sn'),agg:'uniq',f:'sn'}],
-    detailCols:[{k:'work',t:t('th_date')},{k:'line',t:FIELD_LABEL.line},{k:'sn',t:t('sl_sn')},
+    detailCols:[{k:'work',t:t('th_date')},{k:'line',t:FIELD_LABEL.line},{k:'sn',t:t('sl_sn')},{k:'code',t:'Code'},
                 {k:'stage',t:t('th_stage')},{k:'alarm',t:FIELD_LABEL.alarm},{k:'cause',t:t('th_cause')},{k:'action',t:t('th_action')}]
   });
 
   // ── 테이블 ──
-  document.getElementById('tblCnt').textContent=f.length;
   let d=[...f];
   d.sort((a,b)=>{
     let x=a[sortK],y=b[sortK];
@@ -1101,6 +1261,8 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   const tbody=document.getElementById('tbody');
   if(!d.length){tbody.innerHTML=`<tr><td colspan="12" class="empty">${t('no_data')}</td></tr>`;return;}
   const stCls={BM:'bm',CBM:'cbm',CM:'cm',CRM:'crm'};
+  { const tc=document.getElementById('tblCnt');
+    if(tc) tc.textContent = d.length>800 ? ('800 / '+d.length.toLocaleString()) : d.length.toLocaleString(); }
   tbody.innerHTML=d.slice(0,800).map(x=>`<tr>
     <td>${fmtDate(x.work)}</td><td>${x.sn||'—'}</td><td>${x.line||'—'}</td><td>${x.model||'—'}</td>
     <td><span class="pill ${stCls[x.stage]||'cm'}">${x.stage}</span></td>

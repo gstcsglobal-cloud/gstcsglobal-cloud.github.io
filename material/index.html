@@ -702,13 +702,14 @@ async function loadData(){ GST.skeleton(true);
       const rawQty = Number(r[C.qty]) || 1;
       return {
         country: guessCountry(cv(r,'op')),
-        customer: shortCustomer(cv(r,'customer')),
-        line: cv(r,'line'),
-        process: cv(r,'process'),
-        detail: cv(r,'detail'),
-        eq: cv(r,'eq') || cv(r,'mainEq'),
-        sn: cv(r,'sn'),
-        model: cv(r,'model'),
+        // 분류 축은 전각(Ｆ１６ 등) 반각화 — 같은 라인·설비가 두 그룹으로 갈라지지 않게
+        customer: shortCustomer(GST.nfw(cv(r,'customer'))),
+        line: GST.nfw(cv(r,'line')),
+        process: GST.nfw(cv(r,'process')),
+        detail: GST.nfw(cv(r,'detail')),
+        eq: GST.nfw(cv(r,'eq') || cv(r,'mainEq')),
+        sn: GST.nfw(cv(r,'sn')),
+        model: GST.nfw(cv(r,'model')),
         matName: cv(r,'matName'),
         qty: rawQty,
         qtyBad: rawQty>9999,  // 단위 오입력 의심(예: 호스 mm) — 수량 합산에서 제외

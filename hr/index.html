@@ -491,6 +491,7 @@ function buildPeople(){
 }
 
 /* ===== 휴가현황 파싱 (report 페이지 parseLeave와 동일 규칙: 시작~종료 구간의 평일당 1일, 신청시간 무시) ===== */
+const LV_HRS_PER_DAY=8;   // '天' 단위 신청건을 시간으로 환산할 때 쓰는 1일 근무시간
 function parseLeaveHr(rows){
   let hi=-1;
   for(let i=0;i<Math.min(rows.length,8);i++){
@@ -501,7 +502,7 @@ function parseLeaveHr(rows){
   const h=rows[hi].map(x=>String(x||'').trim());
   const iEmp=h.indexOf('사원번호'), iNm=h.indexOf('이름'), iSite=h.indexOf('소속'),
         iType=h.indexOf('항목'), iS=h.indexOf('휴가시작일'), iE=h.indexOf('휴가종료일'),
-        iAmt=h.indexOf('휴가신청시간');
+        iAmt=h.indexOf('휴가신청시간'), iUnit=h.indexOf('비고');
   const out=[], types=new Set();
   rows.slice(hi+1).forEach((r,ri)=>{
     const st=pd(r[iS]); if(!st)return;
@@ -512,7 +513,14 @@ function parseLeaveHr(rows){
     // days:1 규칙(주간현황과 동일)은 그대로 두고, hrs는 별도 필드 — 기존 차트 값 불변.
     let wd=0; for(let d=new Date(st);d<=en;d=new Date(d.getTime()+MS)){
       const w=d.getUTCDay(); if(w!==0&&w!==6)wd++; }
-    const amt=iAmt>=0?(parseFloat(r[iAmt])||0):0;
+    // 신청시간의 단위는 값이 아니라 비고 열에 있다(小時=시간 · 天=일 · 分鐘=분).
+    // 단위를 안 보고 전부 시간으로 더하면 '天' 건이 통째로 축소된다(실측 12.3% 과소집계).
+    let amt=iAmt>=0?(parseFloat(r[iAmt])||0):0;
+    const un=String(iUnit>=0?(r[iUnit]||''):'').trim();
+    if(amt>0){
+      if(/天|일|day/i.test(un))      amt*=LV_HRS_PER_DAY;   // 일 → 시간
+      else if(/分鐘|분|min/i.test(un)) amt/=60;               // 분 → 시간
+    }
     const perDay=(amt>0&&wd>0)?Math.round(amt/wd*100)/100:null;   // 미기재면 null(시간 합계에서 제외)
     for(let d=new Date(st);d<=en;d=new Date(d.getTime()+MS)){
       const w=d.getUTCDay(); if(w===0||w===6)continue;   // 주말 제외
@@ -1405,9 +1413,15 @@ window.saveLeave=async function(){
     await GST.sheetWrite('append',GID_LV,{fields:flds});
     // 낙관 반영: parseLeaveHr와 동일 규칙으로 평일 전개해 차트 즉시 갱신
     const st=pd(flds.start), en=pd(flds.end)||st;
+    // 신청시간이 입력됐으면 파서와 같은 규칙으로 평일에 배분 — 저장 직후에도 시간 합계가 맞게
+    let _wd=0; for(let d=new Date(st);d<=en;d=new Date(d.getTime()+MS)){
+      const w=d.getUTCDay(); if(w!==0&&w!==6)_wd++; }
+    const _amt=parseFloat(flds.amt)||0;
+    const _ph=(_amt>0&&_wd>0)?Math.round(_amt/_wd*100)/100:null;
+    const _rq='opt'+Date.now();
     for(let d=new Date(st);d<=en;d=new Date(d.getTime()+MS)){
       const w=d.getUTCDay(); if(w===0||w===6)continue;
-      LV.push({date:new Date(d),days:1,site:p.site,empId:p.id||'',name:flds.name,type:flds.type});
+      LV.push({date:new Date(d),days:1,hrs:_ph,req:_rq,site:p.site,empId:p.id||'',name:flds.name,type:flds.type});
     }
     if(flds.type&&LVTYPES.indexOf(flds.type)<0)LVTYPES.push(flds.type);
     render(); closeDrill();

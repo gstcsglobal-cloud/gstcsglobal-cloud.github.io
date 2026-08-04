@@ -474,7 +474,7 @@ function custBase(s){const u=GST.upk(s);
   if(u.includes('WINBOND'))return 'WINBOND';
   if(u.includes('MICRON')||/\bF1[016]/.test(u))return 'MICRON';
   const m=u.split(/[\s,\.(]/)[0]; return m||'';}
-const lineKey=s=>String(s||'').toUpperCase().trim();
+const lineKey=s=>GST.upk(s).trim();   // 전각(Ｆ１６ 등) 반각화 포함 — 같은 라인이 둘로 갈라지지 않게
 const toDate=GST.toDate;
 const procLabel=p=>p==='ETC'?t('proc_etc'):p;
 const uLabel=k=>t('u_'+k);
