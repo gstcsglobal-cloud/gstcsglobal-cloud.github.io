@@ -1637,9 +1637,11 @@ function render(){
       if(ins.some(v=>v))ioSers.push({name:sk+' 입사',color:OFFICE[si%6],values:nzq(ins)});
       if(outs.some(v=>v))ioSers.push({name:sk+' 퇴사',color:OFFICE[si%6],values:nzq(outs)});
     });
-    window._PPT.qbr={week:(WPq.length?WPq[WPq.length-1].label:window._PPT.wk),charts:{
+    window._PPT.qbr={week:(WPq.length?WPq[WPq.length-1].label:window._PPT.wk),
+      io:{labels:catsW,sers:ioSers},   // 슬라이드1 하단 '인력 현황' 그림 슬롯용 (입사·퇴사 라인별)
+      charts:{
       chart1:{cats:catsM,series:{'대상건수':cipT,'완료건수':cipD,'진행율':cipT.map((v,i)=>v?r2q(cipD[i]/v):0)}},
-      chart2:{cats:catsW,io:ioSers},   // 가. 인력현황 = 입사·퇴사(라인별) 주간
+      chart2:{cats:catsM,series:{'총인원':hdM,'TO':chsM.map(v=>r1q(v/GST.conf('to_divisor',30)))}},   // 가. 인력현황(상단) = 총인원 vs TO 유지
       chart3:{cats:catsM,series:{'대상인원':MP.map(p=>eduAgg(p).T),'완료율':MP.map(p=>{const e=eduAgg(p);return e.T?r2q(e.D/e.T):0;})}},
       chart4:{cats:catsW,series:{'출근평균':attW,'휴가평균':lvW,'총 인원':hdW,'인당작업':pjW}},
       chart5:{cats:catsM,series:{'GST Taiwan':chsM,'전체 인당 관리':chsM.map((c,i)=>hdM[i]?r1q(c/hdM[i]):0)}},
@@ -2095,6 +2097,27 @@ window.downloadPPT=async function(btn){
           .filter(r=>r.length>=4&&!/^(#|no)$/i.test(String(r[0]).trim()));
         // 양식 열 = No·원인·건수·주요 현상·조치 ← 대시보드 #·알람유형·건수·원인·조치
         data.top3=rows.slice(0,3).map((r,i)=>[String(i+1),r[1]||'',r[2]||'',r[3]||'',r[4]||'']); } }
+    // 슬라이드1 하단 '인력 현황' 그림 = 입사·퇴사(라인별) 라이트 렌더 (양식 그림 슬롯 2550×1375 비율)
+    if(P.qbr.io&&P.qbr.io.sers&&P.qbr.io.sers.length&&window.Chart){
+      const cv=document.createElement('canvas'); cv.width=1020; cv.height=550;
+      const ds=P.qbr.io.sers.map(s=>({label:s.name,data:s.values.map(v=>v==null?0:v),
+        backgroundColor:'#'+s.color,stack:'io',borderWidth:0}));
+      const ch=new Chart(cv.getContext('2d'),{type:'bar',
+        data:{labels:P.qbr.io.labels,datasets:ds},
+        options:{responsive:false,animation:false,devicePixelRatio:2.5,
+          plugins:{legend:{position:'bottom',labels:{color:'#333',font:{size:11},boxWidth:12,
+              filter:it=>!/퇴사$/.test(it.text)}},   // 범례는 사이트당 1개(입사 색 기준)
+            valLabel:{mode:'stackAll',color:'#333'},
+            tooltip:{enabled:false}},
+          scales:{x:{stacked:true,ticks:{color:'#333',font:{size:10}},grid:{display:false}},
+                  y:{stacked:true,grace:'15%',ticks:{color:'#333',callback:v=>Math.abs(v)},
+                     grid:{color:c=>(c.tick&&c.tick.value===0)?'#333':'#E3E3E3'}}}},
+        plugins:[valLabelPlugin]});
+      const oc=document.createElement('canvas'); oc.width=cv.width; oc.height=cv.height;
+      const g=oc.getContext('2d'); g.fillStyle='#FFFFFF'; g.fillRect(0,0,oc.width,oc.height); g.drawImage(cv,0,0,oc.width,oc.height);
+      data.images={'ppt/media/image2.png':oc.toDataURL('image/png').split(',')[1]};
+      ch.destroy();
+    }
     const blob=await QBRPPT.build(window.JSZip,tpl,data);
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
     a.download='GST_주간보고_'+(data.week||P.wk||P.asOf)+'.pptx'; a.click();

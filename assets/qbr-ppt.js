@@ -138,6 +138,8 @@ data = {
 function build(JSZipRef,tplBuf,data){
   return JSZipRef.loadAsync(tplBuf).then(zip=>{
     const jobs=[];
+    // 0) 이미지 교체 (예: 슬라이드1 '인력 현황' 그림 = 입사·퇴사 차트 렌더) — base64 문자열
+    if(data.images)Object.keys(data.images).forEach(p=>zip.file(p,data.images[p],{base64:true}));
     // 1) 차트 8개
     Object.keys(data.charts||{}).forEach(cn=>{
       const path='ppt/charts/'+cn+'.xml';
