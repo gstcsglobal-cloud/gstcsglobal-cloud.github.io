@@ -2097,26 +2097,43 @@ window.downloadPPT=async function(btn){
           .filter(r=>r.length>=4&&!/^(#|no)$/i.test(String(r[0]).trim()));
         // 양식 열 = No·원인·건수·주요 현상·조치 ← 대시보드 #·알람유형·건수·원인·조치
         data.top3=rows.slice(0,3).map((r,i)=>[String(i+1),r[1]||'',r[2]||'',r[3]||'',r[4]||'']); } }
-    // 슬라이드1 하단 '인력 현황' 그림 = 입사·퇴사(라인별) 라이트 렌더 (양식 그림 슬롯 2550×1375 비율)
-    if(P.qbr.io&&P.qbr.io.sers&&P.qbr.io.sers.length&&window.Chart){
-      const cv=document.createElement('canvas'); cv.width=1020; cv.height=550;
-      const ds=P.qbr.io.sers.map(s=>({label:s.name,data:s.values.map(v=>v==null?0:v),
-        backgroundColor:'#'+s.color,stack:'io',borderWidth:0}));
-      const ch=new Chart(cv.getContext('2d'),{type:'bar',
-        data:{labels:P.qbr.io.labels,datasets:ds},
-        options:{responsive:false,animation:false,devicePixelRatio:2.5,
-          plugins:{legend:{position:'bottom',labels:{color:'#333',font:{size:11},boxWidth:12,
-              filter:it=>!/^·/.test(it.text)}},   // 범례는 사이트당 1개(·접두 퇴사 숨김 — 보고서 그림과 동일)
-            valLabel:{mode:'stackAll',color:'#333'},
-            tooltip:{enabled:false}},
-          scales:{x:{stacked:true,ticks:{color:'#333',font:{size:10}},grid:{display:false}},
-                  y:{stacked:true,grace:'15%',ticks:{color:'#333',callback:v=>Math.abs(v)},
-                     grid:{color:c=>(c.tick&&c.tick.value===0)?'#333':'#E3E3E3'}}}},
-        plugins:[valLabelPlugin]});
-      const oc=document.createElement('canvas'); oc.width=cv.width; oc.height=cv.height;
-      const g=oc.getContext('2d'); g.fillStyle='#FFFFFF'; g.fillRect(0,0,oc.width,oc.height); g.drawImage(cv,0,0,oc.width,oc.height);
-      data.images={'ppt/media/image2.png':oc.toDataURL('image/png').split(',')[1]};
-      ch.destroy();
+    // 슬라이드1 하단 '인력 현황' 그림 = 화면의 입사·퇴사 차트를 그대로 미러 (범례에서 끈 사이트 제외 ·
+    // 현재 단위·현재 색). 라이트 렌더 + 큰 글자(논리 560px 기준)로 축소돼도 읽히게.
+    if(window.Chart&&CHARTS.cIo){
+      const src=CHARTS.cIo;
+      const ds=[];
+      src.data.datasets.forEach((d,i)=>{
+        if(!src.isDatasetVisible(i))return;               // 사용자가 범례에서 끈 라인은 제외 — 화면 그대로
+        ds.push({label:d.label,data:d.data.slice(),backgroundColor:Array.isArray(d.backgroundColor)?d.backgroundColor[0]:d.backgroundColor,
+                 stack:'io',borderWidth:0});
+      });
+      if(ds.length){
+        const _luma=hx=>{const m=String(hx||'').replace('#','');if(m.length<6)return 0;
+          return .299*parseInt(m.slice(0,2),16)+.587*parseInt(m.slice(2,4),16)+.114*parseInt(m.slice(4,6),16);};
+        const ioLbl={id:'ioLbl',afterDatasetsDraw(c){ const g2=c.ctx; g2.save();
+          g2.font='700 12px "Segoe UI","Malgun Gothic",sans-serif'; g2.textAlign='center'; g2.textBaseline='middle';
+          c.data.datasets.forEach((d,di)=>{ const meta=c.getDatasetMeta(di); if(!meta||meta.hidden)return;
+            const fill=_luma(d.backgroundColor)>150?'#333333':'#FFFFFF';   // 연한 막대엔 진한 글씨
+            meta.data.forEach((el,i)=>{ const v=d.data[i]; if(!v)return;
+              const h=Math.abs((el.base||el.y)-el.y); if(h<12)return;
+              g2.fillStyle=fill; g2.fillText(String(Math.abs(v)),el.x,(el.y+el.base)/2); }); });
+          g2.restore(); }};
+        const cv=document.createElement('canvas'); cv.width=560; cv.height=302;
+        const ch=new Chart(cv.getContext('2d'),{type:'bar',
+          data:{labels:src.data.labels.slice(),datasets:ds},
+          options:{responsive:false,animation:false,devicePixelRatio:4,
+            plugins:{legend:{position:'bottom',labels:{color:'#333',font:{size:12},boxWidth:14,padding:10,
+                filter:it=>!/^·/.test(it.text)}},   // ·접두(퇴사)는 범례 숨김 — 화면과 동일
+              tooltip:{enabled:false}},
+            scales:{x:{stacked:true,ticks:{color:'#333',font:{size:12}},grid:{display:false}},
+                    y:{stacked:true,grace:'15%',ticks:{color:'#333',font:{size:12},callback:v=>Math.abs(v)},
+                       grid:{color:c=>(c.tick&&c.tick.value===0)?'#666':'#E3E3E3'}}}},
+          plugins:[ioLbl]});
+        const oc=document.createElement('canvas'); oc.width=cv.width; oc.height=cv.height;
+        const g=oc.getContext('2d'); g.fillStyle='#FFFFFF'; g.fillRect(0,0,oc.width,oc.height); g.drawImage(cv,0,0,oc.width,oc.height);
+        data.images={'ppt/media/image2.png':oc.toDataURL('image/png').split(',')[1]};
+        ch.destroy();
+      }
     }
     const blob=await QBRPPT.build(window.JSZip,tpl,data);
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob);

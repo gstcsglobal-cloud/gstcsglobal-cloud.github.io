@@ -38,6 +38,11 @@ function dateAxToCatAx(chartXml){
     return '<c:catAx>'+inner+'</c:catAx>';
   });
 }
+// 축 고정 해제 — 양식에 박제된 min/max가 새 데이터 범위를 자르지 않도록 자동 스케일로
+function autoAxes(chartXml){
+  return chartXml.replace(/<c:(catAx|valAx|dateAx)>[\s\S]*?<\/c:\1>/g,ax=>
+    ax.replace(/<c:max val="[^"]*"\/>/g,'').replace(/<c:min val="[^"]*"\/>/g,''));
+}
 /* chartXml 패치: cats = 카테고리 배열, series = {시리즈명: 값배열}, opts={rename:{구명:새명}, catAsStr:true}
    - 각 <c:ser>의 <c:tx>…<c:v>이름</c:v>으로 시리즈를 식별해 해당 값만 교체
    - cat 캐시 타입(num/str)은 양식 것을 따르고, catAsStr이면 strRef로 강제 전환(축도 catAx로) */
@@ -58,7 +63,24 @@ function patchChart(chartXml,cats,series,opts){
     return s2;
   });
   if(opts.catAsStr)out=dateAxToCatAx(out);
-  return out;
+  return autoAxes(out);
+}
+// 라벨 기준 표 행 숫자 치환 — 행의 첫 텍스트(라벨)는 두고 이후 텍스트만 순서대로 교체 (병합/속성 무관)
+function setRowNums(slideXml,signature,rows){
+  const tbls=slideXml.match(/<a:tbl>[\s\S]*?<\/a:tbl>/g)||[];
+  const target=tbls.find(tb=>tb.indexOf(signature)>=0);
+  if(!target)return slideXml;
+  let out=target;
+  Object.keys(rows).forEach(lbl=>{
+    const trs=out.match(/<a:tr[\s\S]*?<\/a:tr>/g)||[];
+    const tr=trs.find(r=>r.indexOf(lbl)>=0); if(!tr)return;
+    const vals=rows[lbl]; let k=-1;
+    const ntr=tr.replace(/<a:t>[\s\S]*?<\/a:t>/g,m=>{k++;
+      if(k===0)return m;                       // 행 라벨 유지
+      const v=vals[k-1]; return v==null?m:'<a:t>'+esc(v)+'</a:t>';});
+    out=out.replace(tr,ntr);
+  });
+  return slideXml.replace(target,out);
 }
 /* 입사·퇴사(라인별) 다이버징 스택 재구성 — 양식 chart2용:
    기존 막대 시리즈 1개를 원형(proto)으로 사이트별 시리즈 N개를 생성하고, 꺾은선(TO)은 제거.
@@ -88,7 +110,7 @@ function rebuildIo(chartXml,cats,sers){
   };
   const newBar=bar.replace(proto,sers.map(mk).join(''));
   out=out.replace(bar,newBar);
-  return dateAxToCatAx(out);
+  return autoAxes(dateAxToCatAx(out));
 }
 
 // ---- 표 셀 패치 -------------------------------------------------------------
@@ -152,11 +174,9 @@ function build(JSZipRef,tplBuf,data){
     // 2) 슬라이드 표·텍스트
     jobs.push(zip.file('ppt/slides/slide1.xml').async('string').then(xml=>{
       if(data.eduTable){ const e=data.eduTable;
-        xml=patchTable(xml,'교육과정',[
-          {r:1,c:1,v:e.b.no},{r:1,c:2,v:e.v.no},        // 미이수
-          {r:2,c:1,v:e.b.ing},{r:2,c:2,v:e.v.ing},      // 진행중
-          {r:3,c:1,v:e.b.done},{r:3,c:2,v:e.v.done},    // 이수완료
-          {r:4,c:1,v:e.b.rate},{r:4,c:2,v:e.v.rate}]);  // 완료율
+        xml=setRowNums(xml,'교육과정',{
+          '미이수':[e.b.no,e.v.no],'진행중':[e.b.ing,e.v.ing],
+          '이수완료':[e.b.done,e.v.done],'완료율':[e.b.rate,e.v.rate]});
       }
       zip.file('ppt/slides/slide1.xml',xml);
     }));
