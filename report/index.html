@@ -736,8 +736,10 @@ function parseRoster(rows){
     join:iIn>=0?pd(r[iIn]):null,
     quit:iOut>=0?pd(r[iOut]):null,
     onsite:String(iOn>=0?(r[iOn]||''):'').trim().toUpperCase()==='O',
-    expat:/주재원/.test(String(iOrg>=0?(r[iOrg]||''):''))
-  })).filter(x=>x.join);
+    expat:/주재원/.test(String(iOrg>=0?(r[iOrg]||''):'')),
+    // 대시보드는 스크러버 전용 — 조직도상 Chiller 인원은 전 지표에서 제외
+    chiller:/CHILLER/i.test(String(iOrg>=0?(r[iOrg]||''):''))
+  })).filter(x=>x.join&&!x.chiller);
 }
 // ===== 휴가현황 파싱 — 두 형식 지원 =====
 // A) Leave & Overtime Report (일 단위: Work Place/Date/휴가 시간 합계)
@@ -940,8 +942,10 @@ function render(){
   window._PPT={asOf:asOf.toISOString().slice(0,10),wk:'W'+isoW(asOf).slice(-2)};
   const from=F.dtFrom?pd(F.dtFrom):null;
   const entOk=x=>(!F.country||x.country===F.country)&&(!F.customer||x.custB===F.customer)&&(!F.line||x.fab===F.line);
-  const fWK=WK.filter(x=>entOk(x)&&(!from||x.wd>=from)&&(!F.dtTo||x.wd<=anchor));
-  const sWK=WK.filter(entOk); // S-커브: 기간 필터 없이 연간
+  // QBR 매크로 정합: 작업내역은 사이트 키 행만 집계(라인 미기재·기타 행 제외) — 매크로 NarrowUp과 동일
+  const wkQ=x=>/F1[016]|PSMC|TASC|WINBOND/.test(GST.upk(String(x.fab||'')));
+  const fWK=WK.filter(x=>wkQ(x)&&entOk(x)&&(!from||x.wd>=from)&&(!F.dtTo||x.wd<=anchor));
+  const sWK=WK.filter(x=>wkQ(x)&&entOk(x)); // S-커브: 기간 필터 없이 연간
   const fINST=INST.filter(r=>{
     const c=guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();
     if(F.country&&c!==F.country)return false;
@@ -1001,8 +1005,11 @@ function render(){
     return {date:x.date,days:x.days,custB:p.custB,fab:p.fab};
   }).filter(Boolean);
   const fEDU=HR.filter(p=>okCF(p.custB,p.fab));
+  // QBR 매크로 정합: 운영지표(출근·공수·인당) 분모는 사이트 소속 인원만 — TSMC·행정 등 비사이트 제외
+  const QBR_SITE=new Set(['MICRON F11','MICRON F16','MICRON F16N','MICRON F16S','MICRON F10','POWERCHIP','TASC','WINBOND']);
+  const qbrOk=p=>QBR_SITE.has(p.site);
   const headAt=E=>fHR.filter(x=>activeAt(x,E)).length;   // 재적 총인원
-  const headOn=E=>fHR.filter(x=>x.onsite&&activeAt(x,E)).length;   // 현장(O) 재적 — 공수/출근 분모
+  const headOn=E=>fHR.filter(x=>x.onsite&&qbrOk(x)&&activeAt(x,E)).length;   // 현장(O)·사이트 재적 — 공수/출근 분모
   // 교육현황 이수일 조회 (인원현황 이름 ↔ 교육현황 인원 매칭)
   const EDU_BY_ID={}, EDU_BY_NAME={};
   HR.forEach(e=>{ if(e.id)EDU_BY_ID[e.id]=e; if(e.name)EDU_BY_NAME[e.name.trim().toUpperCase()]=e; });
@@ -1125,10 +1132,12 @@ function render(){
     if(wait)wait.style.display=ready?'none':'block';
     if(ready){
       const cust=F.customer;
-      const head=E=>ROSTER.filter(p=>p.onsite&&p.join<=E&&(!p.quit||p.quit>=E)&&okCF(p.custB,p.fab)).length;
+      const head=E=>ROSTER.filter(p=>p.onsite&&qbrOk(p)&&p.join<=E&&(!p.quit||p.quit>=E)&&okCF(p.custB,p.fab)).length;
       const chIn=E=>fINST.reduce((a,r)=>{
         const fd=pd(r[CI.fabIn]); if(!fd||fd>E)return a;
-        return a+(String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1);
+        if(!/F1[016]|PSMC|TASC|WINBOND/.test(GST.upk(String(r[CI.fab]||''))))return a;   // 매크로 NarrowUp: 사이트 키 행만
+        const ty=GST.upk(String(r[CI.type]||''));
+        return a+(ty.includes('DUAL')?2:(ty.includes('SINGLE')?1:0));   // 매크로 동일: DUAL=2·SINGLE=1·그 외 0
       },0);
       // 출근·휴가 (QBR 산식: 근무일 월 21일·주 5일 고정 · 출근 = 재적 − 휴가/근무일)
       {

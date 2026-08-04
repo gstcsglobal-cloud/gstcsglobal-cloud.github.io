@@ -427,7 +427,8 @@ function parseRoster(rows){
       duty:String(iDuty>=0?(r[iDuty]||''):'').trim(),
       onsite:String(iOn>=0?(r[iOn]||''):'').trim().toUpperCase()==='O'
     };
-  }).filter(x=>x.name&&x.join);
+  // 대시보드는 스크러버 전용 — 조직도상 Chiller 인원은 명단·조직도·전 지표에서 제외
+  }).filter(x=>x.name&&x.join&&!/CHILLER/i.test(x.org));
 }
 function parseEdu(rows){
   let hi=-1;

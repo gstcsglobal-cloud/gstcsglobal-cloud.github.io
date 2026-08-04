@@ -810,7 +810,9 @@ function render(){ GST.skeleton(false);
   });
   // 🔔 자동 브리핑 — 최근 12구간 완료 건수 + 현재 지연/임박
   try{
-    const _u=GST.period(), _P=GST.periods(12,new Date(),_u);
+    // 앵커 = min(캘린더 월 말일, 오늘) — 마감(월) 지정 시 브리핑도 그 시점 기준 (화면 숫자와 정합)
+    const _eomB=new Date(Date.UTC(CAL_Y,CAL_M+1,0)), _tdyB=new Date(); _tdyB.setUTCHours(0,0,0,0);
+    const _u=GST.period(), _P=GST.periods(12,(_eomB<_tdyB?_eomB:_tdyB),_u);
     const _in=(x,p)=>x.date&&x.date>=p.st&&x.date<=p.end;
     const over=VS.filter(x=>x.st==='overdue').length, soon=VS.filter(x=>x.st==='soon').length;
     GST.watch([

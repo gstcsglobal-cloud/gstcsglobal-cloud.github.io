@@ -1082,7 +1082,8 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   renderCycleTable(f); renderDetailTable(f); renderCrossTable(); renderEqDrill();
   // 🔔 자동 브리핑 — 최근 12구간 교체 건수·수량
   try{
-    const _u=GST.period(), _P=GST.periods(12,new Date(),_u);
+    // 앵커 = 마감 종료일(dtTo) 또는 오늘 — 교체 추이 차트(:997)와 같은 규칙 (마감 시 화면·브리핑 정합)
+    const _u=GST.period(), _P=GST.periods(12,(F.dtTo?new Date(F.dtTo+'T00:00:00Z'):new Date()),_u);
     const _in=(x,p)=>x.workDate&&x.workDate>=p.st&&x.workDate<=p.end;
     GST.watch([
       {k:'cnt', label:t('cyc_cnt'), labels:_P.map(p=>p.label), data:_P.map(p=>f.filter(x=>_in(x,p)).length), unit:'', goodWhenDown:true,
