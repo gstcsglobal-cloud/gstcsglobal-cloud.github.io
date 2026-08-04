@@ -86,6 +86,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
 
 
 .kpi.k2 .val{color:var(--bad)}
+.kpi.k6 .val{color:var(--warn)}
 /* 카드/차트 */
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
 .grid2-trend{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
@@ -204,8 +205,11 @@ canvas{cursor:pointer}
     <div class="cap" data-i="kp1">서비스 대응 건수</div>
     <div class="kf" id="kf1">—</div></div>
   <div class="kpi k2" data-stage="BM"><div class="krow"><span class="val" id="kp2">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd2"></span></div>
-    <div class="cap">BM (고장정비)</div>
+    <div class="cap" data-i="kp2">BM · 고장정비</div>
     <div class="kf" id="kf2">—</div></div>
+  <div class="kpi k6" data-stage="CBM"><div class="krow"><span class="val" id="kp6">0</span><span class="unit" data-i="u_cnt">건</span><span class="kd" id="kd6"></span></div>
+    <div class="cap" data-i="kp6">CBM · 계획 외 정비(UPM)</div>
+    <div class="kf" id="kf6">—</div></div>
   <div class="kpi k3"><div class="krow"><span class="val" id="kp3">0</span><span class="unit" data-i="u_min">분</span></div>
     <div class="cap" data-i="kp3">평균 작업시간</div>
     <div class="kf" id="kf3">—</div></div>
@@ -466,9 +470,9 @@ const T={
     r_ftfr:'초기 수리 성공률 (FTFR)',rf_ftfr:'{w}일 내 재방문 {n}건',ch_ftfrtrend:'FTFR 추이 (주/월)',note_ftfrtrend:'초기 수리 성공률(%) · 목표 90%',ch_ftfrmodel:'모델별 FTFR',note_ftfrmodel:'낮을수록 재작업 잦음(%)',
     sl_stage:'작업단계',sl_pf:'유/무상',sl_cause:'원인',sl_model:'모델',sl_sn:'설비 S/N',sl_period:'기간',sl_search:'검색',
     all:'전체',f_active:'활성 필터',f_clear:'전체 해제',no_data:'조건에 맞는 데이터가 없습니다',
-    kp1:'서비스 대응 건수',kp3:'평균 작업시간',kp4:'총 작업공수',kp5:'유상 비율',
+    kp1:'서비스 대응 건수',kp2:'BM · 고장정비',kp6:'CBM · 계획 외 정비(UPM)',kp3:'평균 작업시간',kp4:'총 작업공수',kp5:'유상 비율',
     u_cnt:'건',u_min:'분',u_mh:'인·시',
-    kf1:'최근 30일 {n}건',kf2:'전체의 {p}%',kf3:'중앙값 {n}분',kf4:'공수 기록 {n}건 기준',kf5:'유상 {a} · 무상 {b}',
+    kf1:'최근 30일 {n}건',kf6:'UPM율 {p}% · 전체 PM {t}+{u}',kf2:'전체의 {p}%',kf3:'중앙값 {n}분',kf4:'공수 기록 {n}건 기준',kf5:'유상 {a} · 무상 {b}',
     ch_trend:'서비스 추이 (주/월)',ch_stage:'작업단계 구성',note_stage:'BM은 상태색으로 강조',
     ch_sn:'설비별 대응 TOP',note_sn:'이상 집중 설비는 붉게 표시 · 🖱️ 클릭 시 필터',
     ch_line:'LINE별 건수',note_line:'🖱️ 클릭 시 필터',ch_pf:'유상 vs 무상',note_pf:'서비스 대응의 유상/무상 구성',pf_ratio:'유상 비율',pf_paid:'유상',pf_free:'무상',
@@ -489,9 +493,9 @@ const T={
     r_ftfr:'First-Time-Fix Rate',rf_ftfr:'{n} revisits within {w}d',ch_ftfrtrend:'FTFR Trend (W/M)',note_ftfrtrend:'first-time-fix rate(%) · goal 90%',ch_ftfrmodel:'FTFR by Model',note_ftfrmodel:'lower = more rework(%)',
     sl_stage:'Stage',sl_pf:'Paid/Free',sl_cause:'Cause',sl_model:'Model',sl_sn:'Equipment S/N',sl_period:'Period',sl_search:'Search',
     all:'All',f_active:'Active Filters',f_clear:'Clear All',no_data:'No data found',
-    kp1:'Service Cases',kp3:'Avg Work Time',kp4:'Total Man-hours',kp5:'Paid Ratio',
+    kp1:'Service Cases',kp2:'BM · Breakdown',kp6:'CBM · Unscheduled PM',kp3:'Avg Work Time',kp4:'Total Man-hours',kp5:'Paid Ratio',
     u_cnt:'',u_min:'min',u_mh:'m·h',
-    kf1:'{n} in last 30 days',kf2:'{p}% of all',kf3:'median {n} min',kf4:'based on {n} records',kf5:'paid {a} · free {b}',
+    kf1:'{n} in last 30 days',kf6:'UPM rate {p}% · total PM {t}+{u}',kf2:'{p}% of all',kf3:'median {n} min',kf4:'based on {n} records',kf5:'paid {a} · free {b}',
     ch_trend:'Service Trend (W/M)',ch_stage:'By Work Stage',note_stage:'BM highlighted with status color',
     ch_sn:'Top Equipment',note_sn:'outliers in red · click to filter',
     ch_line:'Cases by LINE',note_line:'click to filter',ch_pf:'Paid vs Free',note_pf:'Paid/free mix of services',pf_ratio:'paid ratio',pf_paid:'Paid',pf_free:'Free',
@@ -512,9 +516,9 @@ const T={
     r_ftfr:'首次修复成功率(FTFR)',rf_ftfr:'{w}天内返修 {n}件',ch_ftfrtrend:'FTFR趋势 (周/月)',note_ftfrtrend:'首次修复成功率(%) · 目标90%',ch_ftfrmodel:'按型号FTFR',note_ftfrmodel:'越低返工越多(%)',
     sl_stage:'作业阶段',sl_pf:'有/无偿',sl_cause:'原因',sl_model:'型号',sl_sn:'设备S/N',sl_period:'期间',sl_search:'搜索',
     all:'全部',f_active:'活动筛选',f_clear:'全部清除',no_data:'无数据',
-    kp1:'服务对应件数',kp3:'平均作业时间',kp4:'总作业工时',kp5:'有偿比率',
+    kp1:'服务对应件数',kp2:'BM · 故障维修',kp6:'CBM · 计划外维护(UPM)',kp3:'平均作业时间',kp4:'总作业工时',kp5:'有偿比率',
     u_cnt:'件',u_min:'分',u_mh:'人·时',
-    kf1:'近30天 {n}件',kf2:'占全部{p}%',kf3:'中位数 {n}分',kf4:'基于{n}条工时记录',kf5:'有偿 {a} · 无偿 {b}',
+    kf1:'近30天 {n}件',kf6:'UPM率 {p}% · 全部PM {t}+{u}',kf2:'占全部{p}%',kf3:'中位数 {n}分',kf4:'基于{n}条工时记录',kf5:'有偿 {a} · 无偿 {b}',
     ch_trend:'服务趋势 (周/月)',ch_stage:'作业阶段构成',note_stage:'BM以状态色强调',
     ch_sn:'设备对应TOP',note_sn:'异常集中设备红色显示 · 点击筛选',
     ch_line:'按LINE件数',note_line:'点击筛选',ch_pf:'有偿 vs 无偿',note_pf:'服务的有/无偿构成',pf_ratio:'有偿比率',pf_paid:'有偿',pf_free:'无偿',
@@ -535,9 +539,9 @@ const T={
     r_ftfr:'初回修理成功率(FTFR)',rf_ftfr:'{w}日以内 再訪問 {n}件',ch_ftfrtrend:'FTFR推移 (週/月)',note_ftfrtrend:'初回修理成功率(%) · 目標90%',ch_ftfrmodel:'モデル別FTFR',note_ftfrmodel:'低いほど再作業多い(%)',
     sl_stage:'作業段階',sl_pf:'有/無償',sl_cause:'原因',sl_model:'モデル',sl_sn:'設備S/N',sl_period:'期間',sl_search:'検索',
     all:'全体',f_active:'有効フィルタ',f_clear:'全解除',no_data:'データなし',
-    kp1:'サービス対応件数',kp3:'平均作業時間',kp4:'総作業工数',kp5:'有償比率',
+    kp1:'サービス対応件数',kp2:'BM · 故障整備',kp6:'CBM · 計画外整備(UPM)',kp3:'平均作業時間',kp4:'総作業工数',kp5:'有償比率',
     u_cnt:'件',u_min:'分',u_mh:'人·時',
-    kf1:'直近30日 {n}件',kf2:'全体の{p}%',kf3:'中央値 {n}分',kf4:'工数記録{n}件基準',kf5:'有償 {a} · 無償 {b}',
+    kf1:'直近30日 {n}件',kf6:'UPM率 {p}% · 全PM {t}+{u}',kf2:'全体の{p}%',kf3:'中央値 {n}分',kf4:'工数記録{n}件基準',kf5:'有償 {a} · 無償 {b}',
     ch_trend:'サービス推移 (週/月)',ch_stage:'作業段階構成',note_stage:'BMは状態色で強調',
     ch_sn:'設備別対応TOP',note_sn:'異常集中設備は赤表示 · クリックで絞込',
     ch_line:'LINE別件数',note_line:'クリックで絞込',ch_pf:'有償 vs 無償',note_pf:'サービスの有償/無償構成',pf_ratio:'有償比率',pf_paid:'有償',pf_free:'無償',
@@ -551,7 +555,7 @@ const T={
     etc:'その他',mon_unit:'月',dur_b:['<30分','30–60分','1–2時間','2–4時間','4時間+'],wcnt_p:'{n}名'}
 };
 
-let LANG='ko', ROWS=[], CHARTS={}, sortK='work', sortAsc=false;
+let LANG='ko', ROWS=[], TBM_ROWS=[], CHARTS={}, sortK='work', sortAsc=false;
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&T[sl])LANG=sl; else if(window.name&&T[window.name])LANG=window.name; }catch(e){}
 const F={line:'',stage:'',pf:'',cause:'',model:'',sn:'',proc:'',dtFrom:'',dtTo:'',q:''};
 
@@ -635,6 +639,16 @@ async function loadData(){ GST.skeleton(true);
         workers:(r[C.workers]||'').toString().trim(), workerCnt:Number(r[C.workerCnt])||null
       }))
       .filter(x=>x.sn||x.line);
+    // TBM(계획 정비)은 서비스 대응 집계에서 빠지지만 UPM율의 분모라 따로 보관한다.
+    // 분류 축만 담아 슬라이서가 동일하게 걸리게 한다.
+    TBM_ROWS=fetched.rows.slice(1)
+      .filter(r=>(r[C.stage]||'').toString().trim().toUpperCase()==='TBM')
+      .map(r=>({ line:GST.nfw(r[C.line]||'').trim(), model:GST.nfw(r[C.model]||'').trim(),
+        sn:GST.nfw(r[C.snIn]||'').trim(), proc:GST.nfw(r[C.proc]||'').trim(),
+        campus:GST.nfw(r[C.campus]||'').trim(),
+        country:(String(r[C.op]||'').match(/GST\s+([A-Za-z]+)/i)||[])[1]?String(r[C.op]).match(/GST\s+([A-Za-z]+)/i)[1].toUpperCase():'',
+        work:toDate(r[C.dStart]) }))
+      .filter(x=>x.sn||x.line);
     status.className='status ok';
     status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+ROWS.length;
     if(fetched.cached){status.textContent='📡 시트 접속 실패 — 캐시('+fetched.ageMin+'분 전) 표시 중';status.style.color='#fbbf24';}
@@ -681,6 +695,20 @@ function filt(){
     if(F.dtTo&&(!x.work||fmtD(x.work)>F.dtTo))return false;
     if(F.q){const s=(x.sn+' '+x.code+' '+x.alarm+' '+x.phenom+' '+x.cause+' '+x.action+' '+x.detail+' '+x.workers+' '+x.line+' '+x.model).toLowerCase();
       if(!s.includes(F.q))return false;}
+    return true;
+  });
+}
+
+// TBM에 걸 수 있는 축만 동일하게 적용 — 단계·유상·원인·알람·검색은 서비스 전용이라 제외.
+// (KPI 단계 필터 F.stage도 제외: BM/CBM을 고른 상태에서도 UPM율 분모는 그대로여야 한다)
+function filtTBM(){
+  return TBM_ROWS.filter(x=>{
+    if(F.line&&x.line!==F.line)return false;
+    if(F.model&&x.model!==F.model)return false;
+    if(F.sn&&x.sn!==F.sn)return false;
+    if(F.proc&&x.proc!==F.proc)return false;
+    if(F.dtFrom&&(!x.work||fmtD(x.work)<F.dtFrom))return false;
+    if(F.dtTo&&(!x.work||fmtD(x.work)>F.dtTo))return false;
     return true;
   });
 }
@@ -1102,6 +1130,14 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   animVal(document.getElementById('kp2'),bm);
   setTxt('kd2','');
   setTxt('kf2',t('kf2').replace('{p}',f.length?Math.round(bm/f.length*100):0));
+
+  // CBM = 계획 외 정비(UPM). UPM율 = UPM ÷ 전체 PM(TBM+UPM) — 분모는 단계 필터와 무관.
+  const upm=f.filter(x=>x.stage==='CBM').length;
+  const tbm=filtTBM().length, pmAll=tbm+upm;
+  const rate=pmAll?Math.round(upm/pmAll*1000)/10:0;
+  animVal(document.getElementById('kp6'),upm);
+  setTxt('kd6',pmAll?rate+'%':'');
+  setTxt('kf6',t('kf6').replace('{p}',rate).replace('{t}',GST.fmt?GST.fmt(tbm):tbm).replace('{u}',upm));
 
   const mins=f.map(x=>x.workMin).filter(v=>v!=null&&v>0&&v<1440); // 24h 초과 이상치 제외
   const avgMin=mins.length?Math.round(mins.reduce((a,b)=>a+b,0)/mins.length):0;
