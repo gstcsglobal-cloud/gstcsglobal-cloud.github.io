@@ -831,8 +831,9 @@ function renderDQ(f){
 async function dqOpen(rs){
   const rec=ROWS.find(x=>x.rs===rs); if(!rec)return;
   let row=null;
+  // 서버가 주는 에러 코드를 화면에 같이 띄운다 — 없으면 원인 파악에 개발자도구가 필요하다
   try{ row=await GST.sheetWrite('row',GID_WK,null,{key:rs}); }
-  catch(e){ capToastF(t('dq_loadfail')); return; }
+  catch(e){ capToastF(t('dq_loadfail')+' ('+((e&&e.data&&e.data.error)||(e&&e.status)||'?')+')'); return; }
   const opts=k=>[...new Set(ROWS.map(x=>(x[k]||'').trim()).filter(Boolean))].sort()
     .map(v=>'<option value="'+esc2(v)+'">').join('');
   const fld=(id,lbl,k)=>'<div style="margin-bottom:9px"><div style="font-size:11px;font-weight:700;'
