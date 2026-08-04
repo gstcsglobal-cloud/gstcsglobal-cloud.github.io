@@ -1023,11 +1023,11 @@ GST.STY = {
   vivid:   {lbl:'Aurora',   bar:'#2C5FAE', last:'#5EC2FF', bar2:'#7C6FE0', line:'#5EC2FF', lnG:'#34D399', lnV:'#A78BFA',
             site:['#2C5FAE','#38BDF8','#5EC2FF','#7C6FE0','#34D399','#D9A441'],
             pal8:['#5B9BD8','#3FAE8A','#D9A441','#9B8FE8','#E07A85','#7CA982','#C97FB0','#D08A5E']},
-  /* QBR 양식과 동일 팔레트 — 막대 accent1/accent2, 꺾은선 빨강(비율)·파랑(총인원), 직선·원형 마커(qbr 플래그) */
-  graphite:{lbl:'Global CS', bar:'#4F81BD', last:'#4F81BD', bar2:'#C0504D', line:'#FF0000', lnG:'#0D0DF7', lnV:'#9BBB59',
+  /* QBR 보고서와 동일 룩 — 회색 막대(보조=진회색) + 빨간 점선 + 원형 마커 + 회색조 라인 팔레트 */
+  graphite:{lbl:'Global CS', bar:'#A6A6A6', last:'#A6A6A6', bar2:'#404040', line:'#FF0000', lnG:'#0D0DF7', lnV:'#7F7F7F',
             lnH:'#0D0DF7', lnP:'#FF0000', qbr:true,
-            site:['#4F81BD','#C0504D','#9BBB59','#8064A2','#4BACC6','#F79646'],
-            pal8:['#4F81BD','#C0504D','#9BBB59','#8064A2','#4BACC6','#F79646','#95B3D7','#D99694']},
+            site:['#404040','#595959','#7F7F7F','#A6A6A6','#BFBFBF','#D9D9D9'],
+            pal8:['#A6A6A6','#404040','#7F7F7F','#FF0000','#595959','#BFBFBF','#D9D9D9','#0D0DF7']},
   cb:      {lbl:'Safe',     bar:'#0072B2', last:'#56B4E9', bar2:'#CC79A7', line:'#D55E00', lnG:'#009E73', lnV:'#E69F00',
             site:['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00'],
             pal8:['#0072B2','#E69F00','#009E73','#CC79A7','#56B4E9','#D55E00','#F0E442','#666666']}

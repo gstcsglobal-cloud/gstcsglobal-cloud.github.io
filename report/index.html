@@ -512,7 +512,7 @@ function lineDs(label,data,color,extra){
     pointRadius:q?data.map(()=>3):data.map((_,i)=>i===n-1?5.5:2.4),
     pointBackgroundColor:q?data.map(()=>color):data.map((_,i)=>i===n-1?color:'#0B0F14'),
     pointBorderColor:color,pointBorderWidth:q?1.5:2,pointHoverRadius:6,fill:false,order:1},extra||{});
-  if(q)delete ds.borderDash;   // 양식은 실선
+  if(q)ds.borderDash=[5,3];   // 보고서 룩: 빨간/파란 점선
   return ds;
 }
 window.setChartPer=function(id,u){ PER[id]=u; savePer(); render(); };
@@ -1628,14 +1628,14 @@ function render(){
     const alarmM=MP.map(p=>fWK.filter(x=>keyOfDate(x.wd,'m')===p.key&&x.stage==='BM').length);
     const abpM=MP.map(p=>abpOf('m',p));
     // 입사·퇴사(라인별) — 슬라이드1 인력현황: 주간·사이트별 다이버징 스택 (0은 비워 라벨 생략)
-    const OFFICE=['4F81BD','C0504D','9BBB59','8064A2','4BACC6','F79646'];
+    const GRAYS=['404040','595959','7F7F7F','A6A6A6','BFBFBF','D9D9D9'];   // 보고서 그림과 동일한 회색조
     const ioRq=fHR.filter(x=>x.onsite), nzq=a=>a.map(v=>v||null);
     const ioSers=[];
     SITES.forEach((sk,si)=>{
       const ins=WPq.map(p=>ioRq.filter(x=>x.join&&keyOfDate(x.join,'w')===p.key&&grpKey(x)===sk).length);
       const outs=WPq.map(p=>-ioRq.filter(x=>x.quit&&keyOfDate(x.quit,'w')===p.key&&grpKey(x)===sk).length);
-      if(ins.some(v=>v))ioSers.push({name:sk+' 입사',color:OFFICE[si%6],values:nzq(ins)});
-      if(outs.some(v=>v))ioSers.push({name:sk+' 퇴사',color:OFFICE[si%6],values:nzq(outs)});
+      if(ins.some(v=>v))ioSers.push({name:sk,color:GRAYS[si%6],values:nzq(ins)});
+      if(outs.some(v=>v))ioSers.push({name:'·'+sk,color:GRAYS[si%6],values:nzq(outs)});   // ·접두 = 퇴사(범례 숨김)
     });
     window._PPT.qbr={week:(WPq.length?WPq[WPq.length-1].label:window._PPT.wk),
       io:{labels:catsW,sers:ioSers},   // 슬라이드1 하단 '인력 현황' 그림 슬롯용 (입사·퇴사 라인별)
@@ -2106,7 +2106,7 @@ window.downloadPPT=async function(btn){
         data:{labels:P.qbr.io.labels,datasets:ds},
         options:{responsive:false,animation:false,devicePixelRatio:2.5,
           plugins:{legend:{position:'bottom',labels:{color:'#333',font:{size:11},boxWidth:12,
-              filter:it=>!/퇴사$/.test(it.text)}},   // 범례는 사이트당 1개(입사 색 기준)
+              filter:it=>!/^·/.test(it.text)}},   // 범례는 사이트당 1개(·접두 퇴사 숨김 — 보고서 그림과 동일)
             valLabel:{mode:'stackAll',color:'#333'},
             tooltip:{enabled:false}},
           scales:{x:{stacked:true,ticks:{color:'#333',font:{size:10}},grid:{display:false}},
