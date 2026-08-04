@@ -235,7 +235,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 </div>
 
 <div class="sec-h" data-i="sec3">Alarm · 고장</div>
-<div class="grid2">
+<div class="grid2" style="grid-template-columns:1.05fr 1.15fr .8fr">
   <div class="card">
     <h3 data-i="ch_ft">고장 건수 (BM · CBM)</h3><div class="mini-per" data-ch="cFt"></div>
     <div class="card-note" data-i="note_ft">합계는 툴팁</div>
@@ -249,6 +249,16 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   </table>
   <div class="card-note" id="top3Etc" style="margin-top:8px"></div>
 </div>
+  <div class="tablecard" style="position:relative">
+    <h3>교육 계획</h3>
+    <select id="eduPlanSite" onchange="setEduPlanSite(this.value)"
+      style="position:absolute;right:14px;top:14px;background:var(--bg-2,#12161C);color:inherit;border:1px solid var(--line,#2A3340);border-radius:6px;padding:3px 6px;font-size:12px"></select>
+    <table>
+      <thead><tr><th>교육과정</th><th style="text-align:center">Basic (LV1)</th><th style="text-align:center">Veteran (LV2)</th></tr></thead>
+      <tbody id="eduPlanBody"><tr><td colspan="3" class="empty">—</td></tr></tbody>
+    </table>
+    <div class="card-note" id="eduPlanNote" style="margin-top:8px"></div>
+  </div>
 </div>
 
 <div class="sec-h"><span data-i="sec2">상세 분석</span></div>
@@ -504,6 +514,10 @@ window.setEnd=function(k,v){ if(k==='m')ENDM=v||''; else ENDW=v||'';
   try{localStorage.setItem('gst_rpt_end',JSON.stringify({m:ENDM,w:ENDW}));}catch(e){} render(); };
 window.clearEnds=function(){ ENDM='';ENDW='';
   try{localStorage.setItem('gst_rpt_end','{}');}catch(e){} render(); };
+// 교육 계획 카드 라인 선택 — PPT 슬라이드1 교육계획 표와 1:1 연동
+window._EDUPLAN=(function(){try{return localStorage.getItem('gst_rpt_eduplan')||'';}catch(e){return '';}})();
+window.setEduPlanSite=function(v){ window._EDUPLAN=v;
+  try{localStorage.setItem('gst_rpt_eduplan',v);}catch(e){} render(); };
 // 설치현황 트렌드풍 꺾은선 (부드러운 곡선 + 링 포인트)
 function lineDs(label,data,color,extra){
   const n=data.length, q=!!(GST.sty()||{}).qbr;   // QBR 양식 스타일: 직선 + 균일 원형 마커(엑셀 차트와 동일)
@@ -1052,6 +1066,30 @@ function render(){
   const d1=eLv1.filter(x=>_dOf(x,'bdate')).length, d2=eLv2.filter(x=>_dOf(x,'vdate')).length;
   const eT=eLv1.length+eLv2.length, eD=d1+d2;
   window._PPT.edu={b:eLv1.length,bD:d1,v:eLv2.length,vD:d2};   // PPT 교육 표용
+  // ===== 교육 계획 카드 — 라인 선택 가능 · 이 표의 값이 PPT 슬라이드1 교육계획 표에 그대로 들어간다 =====
+  {
+    const selv=window._EDUPLAN||'';
+    const base=fHR.filter(x=>x.onsite&&activeAt(x,asOf)&&x.join&&(!selv||grpKey(x)===selv));
+    const sixP=x=>((asOf-x.join)/MS)>=182;
+    const lv1=base.filter(x=>!sixP(x)), lv2=base.filter(sixP);
+    const dOfP=(x,k)=>{const e=eduOf(x);return !!(e&&e[k]&&e[k]<=asOf);};
+    const bT=lv1.length, bD2=lv1.filter(x=>dOfP(x,'bdate')).length;
+    const vT=lv2.length, vD2=lv2.filter(x=>dOfP(x,'vdate')).length;
+    const pctP=(d,n)=>n?Math.round(d/n*100)+'%':'-';
+    window._PPT.eduPlan={site:selv,
+      b:{no:bT-bD2,ing:0,done:bD2,rate:pctP(bD2,bT)},
+      v:{no:vT-vD2,ing:0,done:vD2,rate:pctP(vD2,vT)}};
+    const sel=document.getElementById('eduPlanSite');
+    if(sel){ if(!sel.options.length)
+        sel.innerHTML=[''].concat(SITES).map(s=>'<option value="'+s+'">'+(s||'전체 라인')+'</option>').join('');
+      sel.value=selv; }
+    const bd=document.getElementById('eduPlanBody');
+    if(bd){const E=window._PPT.eduPlan;
+      bd.innerHTML=[['미이수',E.b.no,E.v.no],['진행중',E.b.ing,E.v.ing],['이수완료',E.b.done,E.v.done],['완료율',E.b.rate,E.v.rate]]
+        .map(r=>'<tr><td>'+r[0]+'</td><td style="text-align:center">'+r[1]+'</td><td style="text-align:center">'+r[2]+'</td></tr>').join('');}
+    const nt=document.getElementById('eduPlanNote');
+    if(nt)nt.textContent=(selv||'전체 라인')+' · 대상 LV1 '+bT+'명 · LV2 '+vT+'명 · PPT 교육계획 표 연동';
+  }
   setTxt('kp3',eT?Math.round(eD/eT*100)+'%':'—');
   setTxt('kf3',t('kf3').replace('{p}',eLv2.length?Math.round(d2/eLv2.length*100):0).replace('{n}',eLv2.length));
 
@@ -2084,7 +2122,8 @@ window.downloadPPT=async function(btn){
       s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';s.onload=res;s.onerror=()=>rej(new Error('JSZip 로드 실패'));document.head.appendChild(s);});
     const tpl=await fetch('qbr-template.pptx').then(r=>{if(!r.ok)throw new Error('양식 파일 로드 실패('+r.status+')');return r.arrayBuffer();});
     const data=Object.assign({},P.qbr);
-    if(P.edu){const e=P.edu,pct=(d,n)=>n?Math.round(d/n*100)+'%':'-';
+    if(P.eduPlan){ data.eduTable={b:P.eduPlan.b,v:P.eduPlan.v}; }   // 교육 계획 카드(라인 선택) 그대로
+    else if(P.edu){const e=P.edu,pct=(d,n)=>n?Math.round(d/n*100)+'%':'-';
       data.eduTable={b:{no:e.b-e.bD,ing:0,done:e.bD,rate:pct(e.bD,e.b)},
                      v:{no:e.v-e.vD,ing:0,done:e.vD,rate:pct(e.vD,e.v)}};}
     { const tb=document.getElementById('opTblBody');
