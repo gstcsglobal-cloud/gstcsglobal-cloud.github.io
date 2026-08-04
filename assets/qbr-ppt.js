@@ -192,10 +192,13 @@ function build(JSZipRef,tplBuf,data){
     }));
     jobs.push(zip.file('ppt/slides/slide3.xml').async('string').then(xml=>{
       if(data.week)xml=patchText(xml,/TOP\s*3\s*\(W\d+\)/,'TOP 3 ('+data.week+')');
-      // 슬롯 제목: 가=(주간) · 나=(월간) — 기존 (Micron)/(Micron 外) 표기 대체
-      xml=xml.replace('By Pass(Micron)','By Pass(주간)')
-             .replace('By Pass(Micron ','By Pass(월간')
-             .replace('<a:t>外)</a:t>','<a:t></a:t>').replace('<a:t>外</a:t>','<a:t></a:t>');
+      // 슬롯 제목: 'Alarm & All By Pass'로 통일 — (Micron)/(Micron 外) 꼬리 제거 (단위는 기존 [월/단위]·[주/단위] 라벨)
+      xml=xml.replace('By Pass(Micron)','By Pass');
+      { const i=xml.indexOf('<a:t>外</a:t>');
+        if(i>=0){ const head=xml.slice(0,i);
+          const tail=xml.slice(i).replace('<a:t>外</a:t>','<a:t></a:t>').replace('<a:t>)</a:t>','<a:t></a:t>');
+          xml=head+tail; } }
+      xml=xml.replace('By Pass(Micron ','By Pass');
       if(data.top3&&data.top3.length){
         const edits=[];
         data.top3.slice(0,3).forEach((row,i)=>{
