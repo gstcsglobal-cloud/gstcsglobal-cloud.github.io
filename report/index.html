@@ -40,6 +40,20 @@ body{
 .slicer select,.slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;min-width:150px;color-scheme:dark}
 body.theme-light .slicer select,body.theme-light .slicer input{color-scheme:light;color:#0f172a}
 .slicer .dts{display:flex;align-items:center;gap:6px}
+.fitcell{cursor:pointer;border-bottom:1px dashed var(--txt-muted)}
+.fitcell:hover{color:var(--accent,#2dd4bf)}
+/* 라인 다중선택 — 엑셀 필터 박스처럼 체크박스 목록 */
+.linebtn{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;
+  color:var(--txt-main);font-size:12px;min-width:150px;text-align:left;cursor:pointer}
+.linebox{display:none;position:absolute;top:100%;left:0;z-index:60;min-width:170px;margin-top:4px;
+  background:var(--bg-card,#101720);border:1px solid var(--glass-border);border-radius:12px;
+  padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.linebox label{display:flex;gap:7px;align-items:center;font-size:12px;padding:4px 6px;border-radius:8px;cursor:pointer}
+.linebox label:hover{background:var(--glass)}
+.linebox .lb-all{display:flex;gap:6px;border-bottom:1px solid var(--glass-border);padding-bottom:6px;margin-bottom:6px}
+.linebox .lb-all button{flex:1;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;
+  padding:4px 0;color:var(--txt-main);font-size:11px;cursor:pointer}
+body.theme-light .linebox{background:#fff}
 .slicer .dts input{min-width:130px}
 .slicer .dts span{color:var(--txt-muted)}
 .sec-note{font-size:10px;color:var(--txt-muted);font-weight:600;margin-left:8px;text-transform:none;letter-spacing:0}
@@ -56,8 +70,9 @@ body.theme-light .gt-btn.active{color:#fff}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
 .grid2{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;margin-bottom:16px}
 /* Alarm·고장 행 — 3카드(차트·TOP3·교육계획) 동일 높이 · 내용은 카드 안에서 미니 스크롤 */
-.arow{display:grid;grid-template-columns:1.05fr 1.15fr .8fr;gap:16px;margin-bottom:16px}
-.arow>.card,.arow>.tablecard{height:365px;display:flex;flex-direction:column;margin-bottom:0;min-width:0}
+/* Alarm·고장 행 — 다른 행(.grid3)과 동일한 균등 3열 · 카드 높이도 표준 차트 카드와 동일 */
+.arow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.arow>.card,.arow>.tablecard{height:328px;display:flex;flex-direction:column;margin-bottom:0;min-width:0}
 .arow .cw{flex:1;height:auto;min-height:0}
 .arow .tbl-wrap{flex:1;min-height:0;overflow:auto}
 .arow .tbl-wrap thead th{position:sticky;top:0;background:var(--bg-card,#101720);z-index:2}
@@ -185,7 +200,10 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <div class="slicers">
   <div class="slicer"><div class="lbl" data-i="sl_country">국가</div><select id="sl-country" onchange="onFilt('country',this.value)"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_customer">고객사</div><select id="sl-customer" onchange="onFilt('customer',this.value)"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_line">라인</div><select id="sl-line" onchange="onFilt('line',this.value)"></select></div>
+  <div class="slicer" style="position:relative"><div class="lbl" data-i="sl_line">라인</div>
+    <button id="lineBtn" class="linebtn" onclick="toggleLineBox(event)">전체 ▾</button>
+    <div id="lineBox" class="linebox"></div>
+  </div>
   <div class="slicer"><div class="lbl" data-i="sl_period">기간</div>
     <div class="dts"><input type="date" id="dtFrom" onchange="onFilt('dtFrom',this.value)"><span>~</span><input type="date" id="dtTo" onchange="onFilt('dtTo',this.value)"></div>
   </div>
@@ -249,7 +267,6 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   <div class="card">
     <h3 data-i="ch_ft">고장 건수 (BM · CBM)</h3><div class="mini-per" data-ch="cFt"></div>
     <div class="card-note" data-i="note_ft">합계는 툴팁</div>
-    <div id="ftLines" class="card-note" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:4px 0 2px"></div>
     <div class="cw"><canvas id="cFt"></canvas></div>
   </div>
   <div class="tablecard" style="position:relative">
@@ -299,7 +316,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <div class="sec-h" data-i="sec4">설비</div>
 <div class="tablecard" style="position:relative">
   <h3 id="opTblTitle">Scrubber 가동 현황</h3><div class="mini-per" data-ch="opTbl" style="top:16px"></div>
-  <div class="card-note" data-i="note_op">가동 = Turn-On 완료 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 40/인 고정 · PM = 해당 구간 TBM · 마감일 기준</div>
+  <div class="card-note" data-i="note_op">가동 = Turn-On 완료 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 = 사이트별 설정(셀 ✎ 클릭 · 기본 40) · PM = 해당 구간 TBM · 마감일 기준</div>
   <div class="tbl-wrap">
   <table class="op-tbl">
     <thead>
@@ -422,7 +439,7 @@ ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 �
  ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',pv_stage:'작업단계',pv_sn:'설비 S/N',pv_s_ft:'고장 (BM·수리)',pv_s_wk:'작업 실적 (전체)',pv_s_hr:'인원',pv_s_io:'입·퇴사',pv_join:'입사',pv_quit:'퇴사',pv_active:'재직',ft_total:'건수',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
  tbl_top:'고장 원인 TOP 3',th_cause:'원인',th_cnt:'건수',th_al:'주요 알람유형',th_act:'조치',top_more:'외 {n}종',top_etc:'기타 {n}건 · 알람유형 미기재 {m}건',top_var:'(표기 {n}종 묶음)',
  top_alfb:'* 알람유형(Z열) 미기재 — 현상(AA열)으로 표기',
- tbl_op:'Scrubber 가동 현황',note_op:'가동 = Turn-On 완료 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 40/인 고정 · PM = 해당 구간 TBM · 마감일 기준',op_corp:'법인',op_div:'구분',op_run_u:'가동 장비 대수',op_run_c:'가동 챔버수',op_idle:'미가동',op_staff:'담당 인원(명)',op_to:'목표 TO',op_gap:'증감(명)',op_hire:'모집계획',op_chp:'인당 챔버',op_pm:'PM(건)',op_unit:'장비',op_ch:'챔버',op_expat:'주재원',op_local:'현채인',op_fit:'적정 챔버',op_need:'인원(명)',
+ tbl_op:'Scrubber 가동 현황',note_op:'가동 = Turn-On 완료 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 = 사이트별 설정(셀 ✎ 클릭 · 기본 40) · PM = 해당 구간 TBM · 마감일 기준',op_corp:'법인',op_div:'구분',op_run_u:'가동 장비 대수',op_run_c:'가동 챔버수',op_idle:'미가동',op_staff:'담당 인원(명)',op_to:'목표 TO',op_gap:'증감(명)',op_hire:'모집계획',op_chp:'인당 챔버',op_pm:'PM(건)',op_unit:'장비',op_ch:'챔버',op_expat:'주재원',op_local:'현채인',op_fit:'적정 챔버',op_need:'인원(명)',
  ins_pm:'올해 PM 진행율 {p}% (계획 {a} · 완료 {b})',ins_ft:'최근 30일 고장 {n}건 · 직전 30일 대비 {p}',ins_hc:'재직 {n}명 · 이번 달 입사 {a} · 퇴사 {b}',
  ax_t:'축 범위 (빈칸=자동)',ax_min:'최소',ax_max:'최대',ax_apply:'적용',ax_reset:'초기화',loading:'데이터 불러오는 중...',loaded:'로드 완료',mon_u:'월',u_p:'명',u_c:'건'},
 en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, training, work, PM, faults',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_period:'Period',all:'All',hr_note:'follows customer filter · country/line N/A',hr_note2:'',sec_ops:'Operations',ops_note:'available = on-site(O) active staff from roster · follows customer filter',ops_wait:'Roster/Leave sheets not linked — set GID_ROSTER / GID_LEAVE at the top of report/index.html',ch_att:'Attendance · Leave',note_att:'weekday daily avg · attendance = available − leave',att_a:'Attend',att_l:'Leave',ch_to:'Headcount vs TO',note_to:'TO = fab-in chambers ÷ 30 (DUAL=2·SINGLE=1)',head_l:'Headcount',ch_chp:'Chambers per Person',note_chp:'cumulative fab-in chambers ÷ available staff · detail in tooltip',cutoff:'As of',att_pj:'Jobs/person',man_tot:'Hours',grp_t:'Tenure',grp_s:'Site',cr_u1:'<1yr',cr_u1:'<1yr',cr_u2:'1-2yr',cr_u3:'2yr+',ch_career:'Headcount by Line',note_career:'active on-site(O) at each period end · by line',nCareer:'<1y {a} · 1-2y {b} · 2y+ {c}',edu_tg:'Targets',edu_tg:'Targets',edu_rt:'Rate',edu_goal:'Goal 90%',edu_ttf:'done {d} / target {t}',man_sum:'Total',chp_c:'Chambers',chp_p:'per person',nTo:'fill rate {p}% · {d} vs TO',nEdu:'rate {p}% · {d}/{t} done (LV1+LV2)',nCip:'progress {p}% · {n} remaining',nAtt:'daily avg attend {a} · leave {l} · {j} jobs ({p}/person)',nChp:'{v} chambers/person ({c}ch · {h} staff)',nMan:'{v}h per person·day · PM {pm}h',nFt:'{n} in latest period · {d} vs prev',per_ws:'W',per_ms:'M',per_ys:'Y',ytd:'{y} YTD',top_allblank:'{m} faults · alarm type blank — fill column Z in the sheet',per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',print:'🖨 Print',wk_narr:'📋 Summary',wk_narr_w:'📋 This Week',wk_narr_m:'📋 This Month',
@@ -439,7 +456,7 @@ en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, traini
  ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',pv_stage:'Stage',pv_sn:'Equipment S/N',pv_s_ft:'Faults (BM)',pv_s_wk:'All work records',pv_s_hr:'Headcount',pv_s_io:'Join / Leave',pv_join:'Join',pv_quit:'Leave',pv_active:'Active',ft_total:'Count',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
  tbl_top:'Top 3 Fault Causes',th_cause:'Cause',th_cnt:'Count',th_al:'Main Alarm Type',th_act:'Action',top_more:'+{n} more',top_etc:'others {n} · alarm blank {m}',top_var:'({n} variants)',
  top_alfb:'* alarm type blank (col Z) — showing symptom (col AA)',
- tbl_op:'Scrubber Operation Status',note_op:'running = Turn-On done · chamber DUAL=2·SINGLE=1 · 40 chambers/person fixed · PM = TBM in period · as of cutoff',op_corp:'Entity',op_div:'Site',op_run_u:'Running Units',op_run_c:'Running Chambers',op_idle:'Idle',op_staff:'Staff',op_to:'Target TO',op_gap:'Gap',op_hire:'Hiring',op_chp:'Ch/person',op_pm:'PM',op_unit:'Units',op_ch:'Chambers',op_expat:'Expat',op_local:'Local',op_fit:'Fit ch.',op_need:'Headcount',
+ tbl_op:'Scrubber Operation Status',note_op:'running = Turn-On done · chamber DUAL=2·SINGLE=1 · fit chambers/person editable per site (click ✎ · default 40) · PM = TBM in period · as of cutoff',op_corp:'Entity',op_div:'Site',op_run_u:'Running Units',op_run_c:'Running Chambers',op_idle:'Idle',op_staff:'Staff',op_to:'Target TO',op_gap:'Gap',op_hire:'Hiring',op_chp:'Ch/person',op_pm:'PM',op_unit:'Units',op_ch:'Chambers',op_expat:'Expat',op_local:'Local',op_fit:'Fit ch.',op_need:'Headcount',
  ins_pm:'YTD PM progress {p}% (plan {a} · done {b})',ins_ft:'{n} faults in 30d · {p} vs prev 30d',ins_hc:'{n} active · joined {a} · left {b} this month',
  ax_t:'Axis range (blank=auto)',ax_min:'Min',ax_max:'Max',ax_apply:'Apply',ax_reset:'Reset',loading:'Loading...',loaded:'Loaded',mon_u:'',u_p:'',u_c:''},
 zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇总',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_period:'期间',all:'全部',hr_note:'联动客户筛选 · 国家/线不适用',hr_note2:'',sec_ops:'运营',ops_note:'可用人力=人员现况中现场(O)在职者·联动客户筛选',ops_wait:'人员现况/休假现况表未连接 — 请在 report/index.html 顶部填入 GID_ROSTER / GID_LEAVE',ch_att:'出勤 · 休假',note_att:'工作日日均 · 出勤=可用人力−休假',att_a:'出勤',att_l:'休假',ch_to:'总人员 vs TO',note_to:'TO=搬入腔体÷30 (DUAL=2·SINGLE=1)',head_l:'总人员',ch_chp:'人均管理腔体',note_chp:'累计搬入腔体÷可用人力·明细见提示框',cutoff:'截止',att_pj:'人均作业',man_tot:'工时(h)',grp_t:'工龄',grp_s:'所属',cr_u1:'1年内',cr_u1:'1年内',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'按线人员趋势',note_career:'各区间末现场(O)在职·按线堆叠',nCareer:'1年内 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'对象人员',edu_tg:'对象人员',edu_rt:'完成率',edu_goal:'目标90%',edu_ttf:'完成 {d} / 对象 {t}',man_sum:'合计',chp_c:'腔体(搬入)',chp_p:'人均管理',nTo:'满编率 {p}% · 较TO {d}名',nEdu:'完成率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'进度 {p}% · 剩余 {n}件',nAtt:'日均出勤 {a}名 · 休假 {l}名 · 作业 {j}件 (人均 {p}件)',nChp:'人均 {v}腔体 ({c}ch · {h}名)',nMan:'人均日 {v}h · PM {pm}h',nFt:'最近区间 {n}件 · 环比 {d}',per_ws:'周',per_ms:'月',per_ys:'年',ytd:'{y} 累计',top_allblank:'故障{m}件 · 报警类型未填 — 需填写表格Z列',per_w:'按周',per_m:'按月',per_note:'最近12个区间',print:'🖨 打印',wk_narr:'📋 本期摘要',wk_narr_w:'📋 本周摘要',wk_narr_m:'📋 本月摘要',
@@ -456,7 +473,7 @@ zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇
  ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',pv_stage:'作业阶段',pv_sn:'设备S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全部作业记录',pv_s_hr:'人员',pv_s_io:'入职·离职',pv_join:'入职',pv_quit:'离职',pv_active:'在职',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
  tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'主要报警类型',th_act:'措施',top_more:'其他{n}种',top_etc:'其他 {n}件 · 报警类型未填 {m}件',top_var:'({n}种写法合并)',
  top_alfb:'* 报警类型(Z列)未填 — 显示现象(AA列)',
- tbl_op:'Scrubber 运行现况',note_op:'运行=Turn-On完成 · 腔体 DUAL=2·SINGLE=1 · 人均40腔固定 · PM=该区间TBM · 截止日基准',op_corp:'法人',op_div:'区分',op_run_u:'运行设备台数',op_run_c:'运行腔体数',op_idle:'未运行',op_staff:'负责人员(名)',op_to:'目标 TO',op_gap:'增减(名)',op_hire:'招聘计划',op_chp:'人均腔体',op_pm:'PM(件)',op_unit:'设备',op_ch:'腔体',op_expat:'驻在员',op_local:'当地雇员',op_fit:'适定腔体',op_need:'人员(名)',
+ tbl_op:'Scrubber 运行现况',note_op:'运行=Turn-On完成 · 腔体 DUAL=2·SINGLE=1 · 人均适定腔体可按站点修改(点✎ · 默认40) · PM=该区间TBM · 截止日基准',op_corp:'法人',op_div:'区分',op_run_u:'运行设备台数',op_run_c:'运行腔体数',op_idle:'未运行',op_staff:'负责人员(名)',op_to:'目标 TO',op_gap:'增减(名)',op_hire:'招聘计划',op_chp:'人均腔体',op_pm:'PM(件)',op_unit:'设备',op_ch:'腔体',op_expat:'驻在员',op_local:'当地雇员',op_fit:'适定腔体',op_need:'人员(名)',
  ins_pm:'今年PM进度 {p}% (计划 {a} · 完成 {b})',ins_ft:'近30天故障 {n}件 · 环比 {p}',ins_hc:'在职 {n}名 · 本月入职 {a} · 离职 {b}',
  ax_t:'轴范围 (空=自动)',ax_min:'最小',ax_max:'最大',ax_apply:'应用',ax_reset:'重置',loading:'加载中...',loaded:'已加载',mon_u:'月',u_p:'名',u_c:'件'},
 ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サマリー',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'ライン',sl_period:'期間',all:'全体',hr_note:'顧客フィルタ連動 · 国/ライン非適用',hr_note2:'',sec_ops:'運営',ops_note:'可用人員=人員現況の現場(O)在籍者·顧客フィルタ連動',ops_wait:'人員現況/休暇現況シート未接続 — report/index.html 上部の GID_ROSTER / GID_LEAVE を設定してください',ch_att:'出勤 · 休暇',note_att:'平日の日平均 · 出勤=可用人員−休暇',att_a:'出勤',att_l:'休暇',ch_to:'総人員 vs TO',note_to:'TO=搬入チャンバー÷30 (DUAL=2·SINGLE=1)',head_l:'総人員',ch_chp:'一人当たり管理チャンバー',note_chp:'累計搬入チャンバー÷可用人員·詳細はツールチップ',cutoff:'締め',att_pj:'一人当たり作業',man_tot:'工数(h)',grp_t:'経歴',grp_s:'所属',cr_u1:'1年未満',cr_u1:'1年未満',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'ライン別人員推移',note_career:'各区間末の現場(O)在籍·ライン別スタック',nCareer:'1年未満 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'対象人員',edu_tg:'対象人員',edu_rt:'完了率',edu_goal:'目標90%',edu_ttf:'完了 {d} / 対象 {t}',man_sum:'合計',chp_c:'チャンバー(搬入)',chp_p:'一人当たり',nTo:'充足率 {p}% · TO比 {d}名',nEdu:'完了率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'進捗 {p}% · 残り {n}件',nAtt:'日平均出勤 {a}名 · 休暇 {l}名 · 作業 {j}件 (一人 {p}件)',nChp:'一人 {v}チャンバー ({c}ch · {h}名)',nMan:'一人日平均 {v}h · PM {pm}h',nFt:'直近 {n}件 · 前比 {d}',per_ws:'週',per_ms:'月',per_ys:'年',ytd:'{y} 累計',top_allblank:'故障{m}件 · アラーム種別未記入 — シートZ列の入力が必要',per_w:'週別',per_m:'月別',per_note:'直近12区間',print:'🖨 印刷',wk_narr:'📋 今週サマリー',wk_narr_w:'📋 今週サマリー',wk_narr_m:'📋 今月サマリー',
@@ -473,30 +490,73 @@ ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サ
  ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',pv_stage:'作業段階',pv_sn:'設備S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全作業記録',pv_s_hr:'人員',pv_s_io:'入社·退社',pv_join:'入社',pv_quit:'退社',pv_active:'在籍',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
  tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'主なアラーム種別',th_act:'対応',top_more:'他{n}種',top_etc:'その他 {n}件 · アラーム種別未記入 {m}件',top_var:'({n}表記まとめ)',
  top_alfb:'* アラーム種別(Z列)未記入 — 現象(AA列)で表示',
- tbl_op:'Scrubber 稼働現況',note_op:'稼働=Turn-On完了 · チャンバー DUAL=2·SINGLE=1 · 適正40台/人固定 · PM=当該区間TBM · 締め日基準',op_corp:'法人',op_div:'区分',op_run_u:'稼働設備台数',op_run_c:'稼働チャンバー数',op_idle:'未稼働',op_staff:'担当人員(名)',op_to:'目標 TO',op_gap:'増減(名)',op_hire:'採用計画',op_chp:'一人当たり',op_pm:'PM(件)',op_unit:'設備',op_ch:'チャンバー',op_expat:'駐在員',op_local:'現地採用',op_fit:'適正チャンバー',op_need:'人員(名)',
+ tbl_op:'Scrubber 稼働現況',note_op:'稼働=Turn-On完了 · チャンバー DUAL=2·SINGLE=1 · 適正チャンバーはサイト別に編集可(✎クリック · 既定40) · PM=当該区間TBM · 締め日基準',op_corp:'法人',op_div:'区分',op_run_u:'稼働設備台数',op_run_c:'稼働チャンバー数',op_idle:'未稼働',op_staff:'担当人員(名)',op_to:'目標 TO',op_gap:'増減(名)',op_hire:'採用計画',op_chp:'一人当たり',op_pm:'PM(件)',op_unit:'設備',op_ch:'チャンバー',op_expat:'駐在員',op_local:'現地採用',op_fit:'適正チャンバー',op_need:'人員(名)',
  ins_pm:'今年PM進捗 {p}% (計画 {a} · 完了 {b})',ins_ft:'直近30日故障 {n}件 · 前30日比 {p}',ins_hc:'在籍 {n}名 · 今月入社 {a} · 退社 {b}',
  ax_t:'軸範囲 (空欄=自動)',ax_min:'最小',ax_max:'最大',ax_apply:'適用',ax_reset:'リセット',loading:'読み込み中...',loaded:'ロード完了',mon_u:'月',u_p:'名',u_c:'件'}
 };
 let LANG='ko', CHARTS={}, HR=[], WK=[], INST=[], ROSTER=[], LEAVE=[], CIP=[], ABP={m:{},w:{}};
-const F={country:'',customer:'',line:'',dtFrom:'',dtTo:''};
+// 라인(line)만 다중 선택 — Set으로 관리한다. 비어 있으면 '전체'.
+// 값 체계는 Alarm·고장 차트가 쓰던 7키(F16/F11/F16N/F16S/PSMC/TASC/WINBOND)로 통일했다.
+// 예전엔 라인 드롭다운이 fab(F1x)만 담고 Alarm 차트만 7키를 써서 두 곳의 어휘가 달랐다.
+const F={country:'',customer:'',line:new Set(),dtFrom:'',dtTo:''};
+try{ const sl=localStorage.getItem('gst_rpt_lines')||''; sl.split(',').filter(Boolean).forEach(k=>F.line.add(k)); }catch(e){}
+function saveLines(){ try{localStorage.setItem('gst_rpt_lines',Array.from(F.line).join(','));}catch(e){} }
+// fab/고객사 문자열 → 라인 키. 전 데이터셋(실적·설치·인원·휴가·ABP)에서 같은 규칙을 쓴다.
+function lineKeyOf(fb,cb){
+  const s=GST.upk(String(fb||'')+' '+String(cb||''));
+  if(/F16N|TONG/.test(s))return 'F16N';  if(/F16S|TAINAN/.test(s))return 'F16S';
+  if(/F11/.test(s))return 'F11';         if(/F16/.test(s))return 'F16';
+  if(/WINBOND/.test(s))return 'WINBOND';
+  if(/PSMC|POWERCHIP/.test(s))return 'PSMC'; if(/TASC|ASIA/.test(s))return 'TASC';
+  return '';
+}
+const LINE_KEYS=['F16','F11','F16N','F16S','PSMC','TASC','WINBOND'];
+const lineOk=(fb,cb)=>!F.line.size||F.line.has(lineKeyOf(fb,cb));
 window.onFilt=function(k,v){F[k]=v;render();};
+// 적정 챔버 — 사이트(구분)별 값. 미설정 사이트는 40. 표의 적정챔버 셀 클릭으로 수정.
+let FITCH={};
+try{ FITCH=JSON.parse(localStorage.getItem('gst_rpt_fitch')||'{}')||{}; }catch(e){FITCH={};}
+const fitOf=k=>{ const v=+FITCH[k]; return (isFinite(v)&&v>0)?v:GST.conf('staff_divisor',40); };
+window.editFit=function(k){
+  const cur=fitOf(k);
+  const v=prompt(k+' 적정 챔버 (명당 관리 챔버 수)\n비우면 기본 40으로 복원',cur);
+  if(v===null)return;
+  const n=parseFloat(v);
+  if(v.trim()===''){ delete FITCH[k]; }
+  else if(isFinite(n)&&n>0){ FITCH[k]=n; }
+  else { alert('양수를 입력하세요'); return; }
+  try{localStorage.setItem('gst_rpt_fitch',JSON.stringify(FITCH));}catch(e){}
+  render();
+};
+window.toggleLine=function(k,on){ if(on)F.line.add(k); else F.line.delete(k); saveLines(); render(); };
+window.setAllLines=function(on){ F.line.clear(); if(on)LINE_KEYS.forEach(k=>F.line.add(k)); saveLines(); render(); };
+// 체크박스 목록 열고 닫기 (엑셀 필터 박스 느낌)
+window.toggleLineBox=function(ev){
+  if(ev)ev.stopPropagation();
+  const el=document.getElementById('lineBox'); if(!el)return;
+  el.style.display = el.style.display==='block' ? 'none' : 'block';
+};
+document.addEventListener('click',function(e){
+  const box=document.getElementById('lineBox'), btn=document.getElementById('lineBtn');
+  if(box&&box.style.display==='block'&&!box.contains(e.target)&&e.target!==btn)box.style.display='none';
+});
 // 활성 필터 배지
 function updateFiltBadge(){
   const b=document.getElementById('filtBadge'); if(!b)return;
   const P=[];
   if(F.country)P.push(t('sl_country')+': '+F.country);
   if(F.customer)P.push(t('sl_customer')+': '+F.customer);
-  if(F.line)P.push(t('sl_line')+': '+F.line);
+  if(F.line.size)P.push(t('sl_line')+': '+Array.from(F.line).join('·'));
   if(F.dtFrom||F.dtTo)P.push((F.dtFrom||'…')+' ~ '+(F.dtTo||'…'));
   if(!P.length){b.style.display='none';b.innerHTML='';return;}
   b.style.display='flex';
   b.innerHTML='🔎 '+P.map(x=>'<span class="fchip">'+x+'</span>').join('')+'<button class="fclr" onclick="clearFilt()">✕ 필터 해제</button>';
 }
-window.clearFilt=function(){ F.country='';F.customer='';F.line='';F.dtFrom='';F.dtTo='';
-  ['sl-country','sl-customer','sl-line','dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+window.clearFilt=function(){ F.country='';F.customer='';F.line.clear();saveLines();F.dtFrom='';F.dtTo='';
+  ['sl-country','sl-customer','dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render(); };
 window.clearAllFilters=function(){
-  Object.keys(F).forEach(k=>F[k]='');
+  F.country='';F.customer='';F.line.clear();saveLines();F.dtFrom='';F.dtTo='';
   ['dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render();
 };
@@ -530,10 +590,6 @@ window.setEnd=function(k,v){ if(k==='m')ENDM=v||''; else ENDW=v||'';
   try{localStorage.setItem('gst_rpt_end',JSON.stringify({m:ENDM,w:ENDW}));}catch(e){} render(); };
 window.clearEnds=function(){ ENDM='';ENDW='';
   try{localStorage.setItem('gst_rpt_end','{}');}catch(e){} render(); };
-// Alarm·고장 차트 전용 라인 필터 (체크박스) — 비우면 전체 · PPT Alarm 차트도 동일 적용
-window._FTSEL=new Set((function(){try{return localStorage.getItem('gst_rpt_ftlines')||'';}catch(e){return '';}})().split(',').filter(Boolean));
-window.toggleFtLine=function(k,on){ if(on)window._FTSEL.add(k); else window._FTSEL.delete(k);
-  try{localStorage.setItem('gst_rpt_ftlines',Array.from(window._FTSEL).join(','));}catch(e){} render(); };
 // 교육 계획 카드 라인 선택 — PPT 슬라이드1 교육계획 표와 1:1 연동
 window._EDUPLAN=(function(){try{return localStorage.getItem('gst_rpt_eduplan')||'';}catch(e){return '';}})();
 window.setEduPlanSite=function(v){ window._EDUPLAN=v;
@@ -850,7 +906,8 @@ function parseHR(rows){
     bdate:pd(r[10]),
     vet:String(r[12]||'').trim(),
     vdate:pd(r[14]),
-    quit:/퇴사/.test(String(r[16]||''))   // 비고의 '퇴사일: …' 표기
+    lv2date:pd(r[16]), lv3date:pd(r[17]),  // 본사 교육과정(Scrubber Lv.2/Lv.3) 완료일 — 신규 열
+    quit:/퇴사/.test(String(r[18]||''))   // 비고(열 이동: 16→18. Q·R열에 본사 과정이 추가됨)
   })).filter(x=>x.name&&(x.join||x.basic));
 }
 // ===== All By-Pass 파싱 — Month 블록(1행 월번호)·Week 블록(1행 W##) · 사이트행 값 =====
@@ -955,18 +1012,32 @@ const isFault=s=>s==='BM';   // 고장(TOP3·인사이트) = Alarm 차트와 동
 const isMaint=s=>isPM(s)||isSvc(s);   // TBM+CBM+BM+CRM+CM — 인당 작업건 분자 (설치 제외)
 
 function fillFilters(){
-  const cSet=new Set(), uSet=new Set(), lSet=new Set();
-  const add=(cb,fb)=>{ if(cb)uSet.add(cb); if(fb&&/^F(10|11|16)/.test(fb))lSet.add(fb); };
+  const cSet=new Set(), uSet=new Set();
+  const add=(cb)=>{ if(cb)uSet.add(cb); };
   WK.forEach(x=>{if(x.custB)add(x.custB,x.fab);});
   ROSTER.forEach(p=>add(p.custB,p.fab));
   INST.forEach(r=>{const c=guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase(); if(c)cSet.add(c);
     add(custBase(r[CI.customer]),fabOf(r[CI.fab]));});
   // 국가: TAIWAN + (SINGAPORE 데이터 있으면)
   cSet.add('TAIWAN'); ROSTER.forEach(p=>{const c=siteCountryStatic(p.fab||p.custB); if(c)cSet.add(c);});
-  [['sl-country',cSet,'country'],['sl-customer',uSet,'customer'],['sl-line',lSet,'line']].forEach(([id,set,k])=>{
+  [['sl-country',cSet,'country'],['sl-customer',uSet,'customer']].forEach(([id,set,k])=>{
     const el=document.getElementById(id); if(!el)return;
     el.innerHTML='<option value="">'+t('all')+'</option>'+[...set].sort().map(v=>'<option value="'+String(v).replace(/"/g,'&quot;')+'"'+(F[k]===v?' selected':'')+'>'+v+'</option>').join('');
   });
+  // 라인 — 엑셀식 다중선택 체크박스 (7키 고정 목록, F.line=Set)
+  // 박스는 최초 1회만 생성하고 이후엔 체크 상태만 갱신 — 렌더마다 innerHTML을 갈면
+  // 체크 직후 문서 클릭 판정에서 분리된 노드가 되어 목록이 닫혀버린다.
+  { const box=document.getElementById('lineBox');
+    if(box&&!box.dataset.built){
+      box.dataset.built='1';
+      box.innerHTML=
+        '<div class="lb-all"><button onclick="setAllLines(true)">전체 선택</button><button onclick="setAllLines(false)">전체 해제</button></div>'
+        +LINE_KEYS.map(k=>'<label><input type="checkbox" data-k="'+k+'" onchange="toggleLine(\''+k+'\',this.checked)">'+k+'</label>').join('');
+    }
+    if(box) box.querySelectorAll('input[data-k]').forEach(inp=>{inp.checked=F.line.has(inp.dataset.k);});
+    const btn=document.getElementById('lineBtn');
+    if(btn) btn.textContent=(F.line.size?Array.from(F.line).join(' · '):t('all'))+' ▾';
+  }
 }
 function render(){
   const TH=GST.chartTheme(); GST.chartDefaults();
@@ -978,18 +1049,21 @@ function render(){
   const nowY=today.getUTCFullYear(), nowM=today.getUTCMonth();
   // 기준일: 종료일 필터가 있으면 그 날짜, 없으면 오늘
   const anchor=(F.dtTo&&pd(F.dtTo))||today;
-  // KPI·인사이트 기준일(as-of): 종료필터 > 마감(월) > 마감(주) > 오늘 · 실제 오늘로 상한
-  // 마감을 지정하지 않으면 asOf=today → 현행과 동일(검증값 불변)
+  // KPI·인사이트 기준일(as-of): 종료필터 > [주별이면 마감(주), 월별이면 마감(월)] > 나머지 마감 > 오늘
+  // 상단 주/월 토글(PERIOD)이 어느 마감을 우선할지 결정한다 — 주별 화면인데 월 마감이
+  // KPI를 지배하던 문제 수정. 마감을 지정하지 않으면 asOf=today(현행 동일).
+  const _endMDate=()=>{ if(!ENDM)return null; const _m=ENDM.split('-'); return new Date(Date.UTC(+_m[0],+_m[1],0)); };
+  const _endWDate=()=>{ if(!ENDW)return null; const _s=new Date(today); _s.setUTCDate(_s.getUTCDate()-_s.getUTCDay());
+    for(let i=0;i<80;i++){const d=new Date(_s.getTime()-i*7*MS); if(isoW(d)===ENDW)return new Date(d.getTime()+6*MS);}
+    return null; };
   let asOf=(F.dtTo&&pd(F.dtTo))||null;
-  if(!asOf&&ENDM){const _m=ENDM.split('-'); asOf=new Date(Date.UTC(+_m[0],+_m[1],0));}
-  if(!asOf&&ENDW){const _s=new Date(today); _s.setUTCDate(_s.getUTCDate()-_s.getUTCDay());
-    for(let i=0;i<80;i++){const d=new Date(_s.getTime()-i*7*MS); if(isoW(d)===ENDW){asOf=new Date(d.getTime()+6*MS);break;}}}
+  if(!asOf)asOf=(PERIOD==='w') ? (_endWDate()||_endMDate()) : (_endMDate()||_endWDate());
   if(!asOf)asOf=today; if(asOf>today)asOf=today;
   const asOfY=asOf.getUTCFullYear(), asOfM=asOf.getUTCMonth();
   // PPT 내보내기용 스냅샷(표시 전용) — 각 블록이 렌더 값 그대로 채움
   window._PPT={asOf:asOf.toISOString().slice(0,10),wk:'W'+isoW(asOf).slice(-2)};
   const from=F.dtFrom?pd(F.dtFrom):null;
-  const entOk=x=>(!F.country||x.country===F.country)&&(!F.customer||x.custB===F.customer)&&(!F.line||x.fab===F.line);
+  const entOk=x=>(!F.country||x.country===F.country)&&(!F.customer||x.custB===F.customer)&&lineOk(x.fab,x.custB||x.customer);
   // QBR 매크로 정합: 작업내역은 사이트 키 행만 집계(라인 미기재·기타 행 제외) — 매크로 NarrowUp과 동일
   // 라인 열만으로 판정하면 PSMC처럼 라인 표기가 다른 사이트 행이 누락된다 → 라인+고객사 통합 판정
   const wkQ=x=>/F1[016]|PSMC|POWERCHIP|TASC|ASIA|WINBOND/.test(
@@ -1000,7 +1074,7 @@ function render(){
     const c=guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();
     if(F.country&&c!==F.country)return false;
     if(F.customer&&custBase(r[CI.customer])!==F.customer)return false;
-    if(F.line&&fabOf(r[CI.fab])!==F.line)return false;
+    if(!lineOk(fabOf(r[CI.fab]),r[CI.customer]))return false;
     return true;
   });
   const PU=id=>{const u=(PER[id]==='w'||PER[id]==='m')?PER[id]:PERIOD;
@@ -1039,14 +1113,11 @@ function render(){
   INST.forEach(r=>{const cu=normCust(r[CI.customer]);
     if(cu&&!C2C[cu])C2C[cu]=guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();});
   const siteCountry=siteCountryStatic;
-  const okCF=(cb,fb)=>(!F.customer||cb===F.customer)&&(!F.line||fb===F.line)&&(!F.country||siteCountry(fb||cb)===F.country);
+  const okCF=(cb,fb)=>(!F.customer||cb===F.customer)&&lineOk(fb,cb)&&(!F.country||siteCountry(fb||cb)===F.country);
   // Alarm·고장 차트 전용 라인 필터 — 체크박스 선택(비면 전체) · PPT Alarm 차트도 동일 적용
-  const FTSEL=window._FTSEL||new Set();
-  const ftKey=x=>{const s=GST.upk(String(x.fab||'')+' '+String(x.custB||'')+' '+String(x.customer||''));
-    if(/F16N|TONG/.test(s))return 'F16N'; if(/F16S|TAINAN/.test(s))return 'F16S';
-    if(/F11/.test(s))return 'F11'; if(/F16/.test(s))return 'F16';
-    if(/WINBOND/.test(s))return 'WINBOND';
-    if(/PSMC|POWERCHIP/.test(s))return 'PSMC'; if(/TASC|ASIA/.test(s))return 'TASC'; return '';};
+  // Alarm·고장 차트도 좌측 라인 필터(F.line)를 그대로 따른다 — 카드 내부 체크박스는 제거됨
+  const FTSEL=F.line;
+  const ftKey=x=>lineKeyOf(x.fab,x.custB||x.customer);
   const ftLineOk=x=>!FTSEL.size||FTSEL.has(ftKey(x));
   const abpSel=bkt=>{ if(!bkt)return 0;
     if(FTSEL.size){ let s=0;
@@ -1056,7 +1127,6 @@ function render(){
         else s+=(bkt.byF[k]||0); });
       return s; }
     if(F.customer)return bkt.byC[F.customer]||0;
-    if(F.line)return bkt.byF[F.line]||0;
     return bkt.ALL||0; };
   // 인력 기준: 인원현황(입·퇴사일 보유) 우선, 없으면 교육현황 · 고객사/국가 필터 연동
   // 폴백(교육현황) 레코드에는 onsite가 없고 quit이 boolean이라, 그대로 쓰면
@@ -1506,12 +1576,6 @@ function render(){
       const key=(u==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
       return abpSel(src[key]); };
     const abp=P.map(abpAt);
-    // 라인 체크박스 UI — 범례 대신 카드 상단에서 선택 · 현재 선택 표시
-    { const el=document.getElementById('ftLines');
-      if(el){ const KS=['F16','F11','F16N','F16S','PSMC','TASC','WINBOND'];
-        el.innerHTML=KS.map(k=>'<label style="display:flex;gap:3px;align-items:center;cursor:pointer;font-size:11px">'
-            +'<input type="checkbox" '+(FTSEL.has(k)?'checked':'')+' onchange="toggleFtLine(\''+k+'\',this.checked)">'+k+'</label>').join('')
-          +'<span style="margin-left:auto;opacity:.85">라인: '+(FTSEL.size?Array.from(FTSEL).join(' · '):'전체')+'</span>'; } }
     const tot=alarm.map((v,i)=>v+abp[i]);
     // 고장은 줄어드는 게 좋은 지표 · 라인별로 어디서 늘었는지 분해
     _W.push({k:'ft',label:t('ft_alarm'),labels,data:alarm,unit:'',goodWhenDown:true,
@@ -1627,19 +1691,20 @@ function render(){
       const iu=ins.length-ru, ic=ins.reduce((a,r)=>a+chW(r),0)-rc;      // 미가동 = 반입 − 가동
       const exp=fHR.filter(p=>p.expat&&activeAt(p,_oe)&&rkP(p)===R.k).length;
       const loc=fHR.filter(p=>!p.expat&&p.onsite&&activeAt(p,_oe)&&rkP(p)===R.k).length;
-      const need=Math.round(rc/GST.conf('staff_divisor',40));           // 인원 = 가동 챔버 ÷ 기준값(core.js GST.CONF)
+      const fit=fitOf(R.k);                                             // 사이트별 적정 챔버(수정 가능·기본 40)
+      const need=Math.round(rc/fit);                                    // 인원 = 가동 챔버 ÷ 적정 챔버
       const gap=loc-need;
       const pm=fWK.filter(x=>isPM(x.stage)&&x.wd>=_ost&&x.wd<=_oe&&rkW(x)===R.k).length;   // 해당 마감 구간의 TBM만
-      return {lbl:R.lbl,ru,wiU,woU:ru-wiU,rc,wiC,woC:rc-wiC,iu,ic,exp,loc,need,gap,pm};
+      return {k:R.k,lbl:R.lbl,ru,wiU,woU:ru-wiU,rc,wiC,woC:rc-wiC,iu,ic,exp,loc,fit,need,gap,pm};
     });
-    const S=D.reduce((a,d)=>{Object.keys(d).forEach(k=>{if(k!=='lbl')a[k]=(a[k]||0)+d[k];});return a;},{});
-    S.need=Math.round(S.rc/GST.conf('staff_divisor',40)); S.gap=S.loc-S.need;
+    const S=D.reduce((a,d)=>{Object.keys(d).forEach(k=>{if(k!=='lbl'&&k!=='k'&&k!=='fit')a[k]=(a[k]||0)+d[k];});return a;},{});
+    S.gap=S.loc-S.need;   // need는 행별 합(사이트별 적정 챔버가 다를 수 있어 총합에서 재나눗셈하지 않는다)
     const fm=v=>v?v.toLocaleString():'<span class="mut">-</span>';
     const cell=d=>'<td class="gl">'+fm(d.ru)+'</td><td>'+fm(d.wiU)+'</td><td>'+fm(d.woU)+'</td>'
       +'<td class="gl">'+fm(d.rc)+'</td><td>'+fm(d.wiC)+'</td><td>'+fm(d.woC)+'</td>'
       +'<td class="gl">'+fm(d.iu)+'</td><td>'+fm(d.ic)+'</td>'
       +'<td class="gl">'+fm(d.exp)+'</td><td>'+fm(d.loc)+'</td>'
-      +'<td class="gl">'+(d.rc?40:'<span class="mut">-</span>')+'</td><td>'+fm(d.need)+'</td>'
+      +'<td class="gl">'+(d.k?('<span class="fitcell" title="클릭해서 수정" onclick="editFit(\''+d.k+'\')">'+fitOf(d.k)+(FITCH[d.k]?'':'')+' ✎</span>'):(d.rc?'—':'<span class="mut">-</span>'))+'</td><td>'+fm(d.need)+'</td>'
       +'<td class="gl '+(d.gap<0?'neg':d.gap>0?'pos':'')+'">'+(d.rc||d.loc?(d.gap>0?'+':'')+d.gap:'<span class="mut">-</span>')+'</td>'
       +'<td>'+(d.gap<0?(-d.gap):'<span class="mut">-</span>')+'</td>'
       +'<td class="gl">'+((d.loc&&d.rc)?Math.round(d.rc/d.loc):'<span class="mut">-</span>')+'</td>'
