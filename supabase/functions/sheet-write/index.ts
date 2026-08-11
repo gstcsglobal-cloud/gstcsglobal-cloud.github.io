@@ -237,13 +237,17 @@ const SCHEMAS: Record<string, SheetSchema> = {
       onsite: { match: (h) => h.includes("현장"), max: 1, enum: ["O", ""] },
     },
   },
-  // 교육현황. 3단 헤더: 헤더행(hi) → Basic/Veteran 병합띠(hi+1) → 이수여부/시작일/완료일/시간(hi+2) → 데이터(hi+3).
+  // 교육현황. 3단 헤더: 헤더행(hi) → 법인/본사 과정 병합띠(hi+1) → 이수여부/시작일/완료일/시간(hi+2) → 데이터(hi+3).
+  // 실물 열: 0 No · 1 Site · 2 인원 · 3 사원번호 · 4 입사일 · 6 직급 · 7 직무 ·
+  //          8~11 Basic(LV1) · 12~15 Veteran(LV2) · 16 Scrubber Lv.2 완료일 · 17 Lv.3 완료일 · 18 비고
   // 사번(col 3)은 fields에 없다 — 교육 시트의 사번은 캐스케이드 전용이라
   // 클라이언트가 gid 0 update로 두 시트의 조인을 깨뜨릴 수 없다.
   // 상태값 enum은 hr 페이지가 요구하는 정확한 문자열 — 다른 값은 조용히 '미이수'가 되므로 서버에서 거부.
   "0": {
     ops: ["perm", "fresh", "row", "update", "append", "delete"],
-    headerHint: [(h) => h === "교육과정", (h) => h === "인원"],
+    // 머리글이 바뀌어도 버티게 한다: B열은 '교육과정'/'Site' 둘 다 쓰인 이력이 있고,
+    // 8열은 '법인 교육과정'으로 바뀌었다. 정확일치로 두면 NO_HEADER로 교육 시트 쓰기가 전부 막힌다.
+    headerHint: [(h) => h.includes("인원"), (h) => h.includes("교육과정") || h === "site"],
     dataOffset: 3,
     normKey: (s) => String(s ?? "").trim().replace(/\.0+$/, ""),
     key: { field: "id", col: 3 },
@@ -262,7 +266,11 @@ const SCHEMAS: Record<string, SheetSchema> = {
       vet:    { col: 12, max: 10, enum: ["이수완료", "진행중", "비대상", ""] },
       vsdate: { col: 13, max: 10, date: true },
       vdate:  { col: 14, max: 10, date: true },
-      note:   { col: 16, max: 200 },
+      // 본사 교육과정(Scrubber Lv.2/Lv.3) 완료일 — Q·R열 신설. 이수여부 열이 없어 완료일이 곧 이수 판정.
+      lv2date: { col: 16, max: 10, date: true },
+      lv3date: { col: 17, max: 10, date: true },
+      // 비고는 Q·R 신설로 16 → 18로 밀렸다. 16을 그대로 두면 비고 저장이 Lv.2 완료일을 덮어쓴다.
+      note:   { col: 18, max: 200 },
     },
   },
   // 휴가현황. 같은 사람이 여러 건을 갖는 시트라 고유 키가 없다 → 입력(append) 전용.
