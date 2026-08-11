@@ -202,7 +202,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 <div class="grid3">
   <div class="card"><h3 data-i="ch_edu">교육과정 이수 현황</h3><div class="card-note" data-i="note_edu">좌 = 법인(Basic·Veteran) · 우 = 본사(Lv.2·Lv.3) · 막대 클릭 시 명단</div><div class="cw"><canvas id="cEdu"></canvas></div></div>
-  <div class="card"><h3 data-i="ch_pareto">교육 미이수 파레토</h3><div class="card-note" data-i="note_pareto">사이트별 미이수 인원 내림차순 + 누적 % · 마감·주/월 연동</div><div class="cw"><canvas id="cPareto"></canvas></div></div>
+  <div class="card"><h3 data-i="ch_etr">교육 이수 추이</h3><div class="card-note" data-i="note_etr">최근 12구간(주/월) 과정별 이수 인원 + 누적 · 마감·주/월 연동</div><div class="cw"><canvas id="cEtr"></canvas></div></div>
   <div class="card"><h3 data-i="ch_funnel">교육 단계 퍼널</h3><div class="card-note" data-i="note_funnel">Basic → Veteran → Lv.2 → Lv.3 이수 잔존 — 육성 병목 확인</div><div class="cw"><canvas id="cFunnel"></canvas></div></div>
 </div>
 <div class="grid3">
@@ -265,7 +265,7 @@ const TR={
     lv_add:'휴가 입력',lv_title:'휴가 입력 (휴가현황 시트)',lv_emp:'직원',lv_type:'항목(휴가 종류)',lv_start:'휴가 시작일',lv_end:'휴가 종료일',lv_stime:'시작 시간',lv_etime:'종료 시간',lv_occur:'발생일',lv_amt:'신청시간',lv_amt_ph:'예: 8 (선택)',lv_saved:'휴가가 등록되었습니다 (구글 시트에 반영됨)',lv_required:'직원·항목·시작일·종료일을 입력하세요',lv_order:'종료일이 시작일보다 빠릅니다',lv_unit:'일',lv_unit2:'휴가일수 합',lv_hours:'신청시간(h)',lv_cnt:'신청 건수',lv_month:'해당월',lv_ytd:'올해 누적',ins_lv:'올해 휴가 TOP3: {s}',
     ch_career:'경력 분포',note_career:'입사일 기준 근속 · 클릭 시 명단',
     ch_io:'입사·퇴사 추이',note_io:'최근 12구간(주/월) · 위 입사 · 아래 퇴사',
-    ch_attr:'이직률 추이',note_attr:'분기 퇴사 ÷ 평균 재직 (연환산 %)',ch_pareto:'교육 미이수 파레토',note_pareto:'사이트별 미이수 인원 내림차순 + 누적 % · 마감 기준',ch_funnel:'교육 단계 퍼널',note_funnel:'Basic → Veteran → Lv.2 → Lv.3 이수 잔존 — 육성 병목 확인',
+    ch_attr:'이직률 추이',note_attr:'분기 퇴사 ÷ 평균 재직 (연환산 %)',ch_etr:'교육 이수 추이',note_etr:'최근 12구간(주/월) 과정별 이수 인원 + 누적 · 마감·주/월 연동',etr_cum:'누적 이수',ch_funnel:'교육 단계 퍼널',note_funnel:'Basic → Veteran → Lv.2 → Lv.3 이수 잔존 — 육성 병목 확인',
     st_on:'현장',st_off:'비현장',st_done:'이수완료',st_prog:'진행중',st_miss:'미이수',st_na:'비대상',
     io_in:'입사',io_out:'퇴사',cr1:'1년 미만',cr2:'1~2년',cr3:'2년 이상',
     tbl_title:'상세 명단',tbl_unit:'명',th_name:'이름',th_site:'사이트',th_org:'소속',th_role:'직무',th_pos:'직급',th_exp:'경력',th_join:'입사일',th_status:'상태',
@@ -282,7 +282,7 @@ const TR={
     lv_add:'Add leave',lv_title:'Add leave (leave sheet)',lv_emp:'Employee',lv_type:'Type',lv_start:'Start date',lv_end:'End date',lv_stime:'Start time',lv_etime:'End time',lv_occur:'Occurrence date',lv_amt:'Requested hours',lv_amt_ph:'e.g. 8 (optional)',lv_saved:'Leave saved to the Google Sheet',lv_required:'Employee, type, start and end dates are required',lv_order:'End date is before start date',lv_unit:'d',lv_unit2:'Total leave days',lv_hours:'Requested (h)',lv_cnt:'Requests',lv_month:'Month',lv_ytd:'YTD',ins_lv:'Top leave users this year: {s}',
     ch_career:'Tenure Distribution',note_career:'by entry date · click for names',
     ch_io:'Join / Leave Trend',note_io:'last 12 periods (W/M) · up join · down leave',
-    ch_attr:'Attrition Trend',note_attr:'quarterly leavers ÷ avg headcount (annualized %)',ch_pareto:'Training Gap Pareto',note_pareto:'not-completed by site, descending + cumulative % · as of cutoff',ch_funnel:'Training Funnel',note_funnel:'Basic → Veteran → Lv.2 → Lv.3 completion — spot the bottleneck',
+    ch_attr:'Attrition Trend',note_attr:'quarterly leavers ÷ avg headcount (annualized %)',ch_etr:'Training Completion Trend',note_etr:'last 12 periods (W/M) · completions by course + cumulative',etr_cum:'Cumulative',ch_funnel:'Training Funnel',note_funnel:'Basic → Veteran → Lv.2 → Lv.3 completion — spot the bottleneck',
     st_on:'On-site',st_off:'Off',st_done:'Done',st_prog:'In progress',st_miss:'Pending',st_na:'N/A',
     io_in:'Join',io_out:'Leave',cr1:'<1yr',cr2:'1-2yr',cr3:'2yr+',
     tbl_title:'Detail List',tbl_unit:'',th_name:'Name',th_site:'Site',th_org:'Team',th_role:'Role',th_pos:'Grade',th_exp:'Exp',th_join:'Join',th_status:'Status',
@@ -299,7 +299,7 @@ const TR={
     lv_add:'录入休假',lv_title:'录入休假(休假表)',lv_emp:'员工',lv_type:'项目(休假类型)',lv_start:'开始日',lv_end:'结束日',lv_stime:'开始时间',lv_etime:'结束时间',lv_occur:'发生日',lv_amt:'申请时数',lv_amt_ph:'如 8 (可选)',lv_saved:'休假已保存到谷歌表格',lv_required:'请填写员工·项目·开始日·结束日',lv_order:'结束日早于开始日',lv_unit:'天',lv_unit2:'休假天数合计',lv_hours:'申请时数(h)',lv_cnt:'申请件数',lv_month:'当月',lv_ytd:'今年累计',ins_lv:'今年休假TOP3: {s}',
     ch_career:'工龄分布',note_career:'按入职日 · 点击查看名单',
     ch_io:'入职·离职趋势',note_io:'近12期(周/月) · 上入职 · 下离职',
-    ch_attr:'离职率趋势',note_attr:'季度离职 ÷ 平均在职 (年化%)',ch_pareto:'未完成培训帕累托',note_pareto:'按站点未完成人数降序 + 累计% · 截止日基准',ch_funnel:'培训阶段漏斗',note_funnel:'Basic → Veteran → Lv.2 → Lv.3 完成留存 — 找出瓶颈',
+    ch_attr:'离职率趋势',note_attr:'季度离职 ÷ 平均在职 (年化%)',ch_etr:'培训完成趋势',note_etr:'近12期(周/月) 各课程完成人数 + 累计 · 与截止日联动',etr_cum:'累计完成',ch_funnel:'培训阶段漏斗',note_funnel:'Basic → Veteran → Lv.2 → Lv.3 完成留存 — 找出瓶颈',
     st_on:'现场',st_off:'非现场',st_done:'完成',st_prog:'进行中',st_miss:'未完成',st_na:'不适用',
     io_in:'入职',io_out:'离职',cr1:'1年内',cr2:'1~2年',cr3:'2年以上',
     tbl_title:'详细名单',tbl_unit:'人',th_name:'姓名',th_site:'站点',th_org:'所属',th_role:'职务',th_pos:'职级',th_exp:'工龄',th_join:'入职日',th_status:'状态',
@@ -316,7 +316,7 @@ const TR={
     lv_add:'休暇入力',lv_title:'休暇入力(休暇シート)',lv_emp:'社員',lv_type:'項目(休暇種類)',lv_start:'開始日',lv_end:'終了日',lv_stime:'開始時間',lv_etime:'終了時間',lv_occur:'発生日',lv_amt:'申請時間',lv_amt_ph:'例: 8 (任意)',lv_saved:'休暇をGoogleシートに保存しました',lv_required:'社員·項目·開始日·終了日を入力してください',lv_order:'終了日が開始日より前です',lv_unit:'日',lv_unit2:'休暇日数合計',lv_hours:'申請時間(h)',lv_cnt:'申請件数',lv_month:'当月',lv_ytd:'今年累計',ins_lv:'今年の休暇TOP3: {s}',
     ch_career:'勤続分布',note_career:'入社日基準 · クリックで名簿',
     ch_io:'入社·退社推移',note_io:'直近12区間(週/月) · 上入社 · 下退社',
-    ch_attr:'離職率推移',note_attr:'四半期退社 ÷ 平均在籍 (年換算%)',ch_pareto:'未修了パレート',note_pareto:'サイト別未修了人数降順 + 累積% · 締め日基準',ch_funnel:'教育ファネル',note_funnel:'Basic → Veteran → Lv.2 → Lv.3 修了残存 — ボトルネック確認',
+    ch_attr:'離職率推移',note_attr:'四半期退社 ÷ 平均在籍 (年換算%)',ch_etr:'教育修了推移',note_etr:'直近12区間(週/月) 課程別修了人数 + 累計 · 締め日連動',etr_cum:'累計修了',ch_funnel:'教育ファネル',note_funnel:'Basic → Veteran → Lv.2 → Lv.3 修了残存 — ボトルネック確認',
     st_on:'現場',st_off:'非現場',st_done:'修了',st_prog:'進行中',st_miss:'未修了',st_na:'対象外',
     io_in:'入社',io_out:'退社',cr1:'1年未満',cr2:'1~2年',cr3:'2年以上',
     tbl_title:'詳細リスト',tbl_unit:'名',th_name:'名前',th_site:'サイト',th_org:'所属',th_role:'職務',th_pos:'職級',th_exp:'経歴',th_join:'入社日',th_status:'状態',
@@ -423,7 +423,7 @@ async function downloadHrPPT(){
 
   // ---- 3~. 차트 2장/슬라이드 (화면 배치 순서) ----
   const CH_IDS=[['cSite','사이트별 인원'],['cRole','직무별 인원'],['cLv','라인별 휴가 사용'],
-    ['cEdu','교육과정 이수 현황 (법인 | 본사)'],['cPareto','교육 미이수 파레토'],['cFunnel','교육 단계 퍼널'],
+    ['cEdu','교육과정 이수 현황 (법인 | 본사)'],['cEtr','교육 이수 추이'],['cFunnel','교육 단계 퍼널'],
     ['cAttr','이직률 추이'],['cCareer','경력 분포'],['cIo','입사·퇴사 추이']];
   for(let i=0;i<CH_IDS.length;i+=2){
     const sl=ppt.addSlide({masterName:'GST'}); head(sl,'현황 차트');
@@ -913,33 +913,31 @@ function render(){ GST.skeleton(false);
     options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+'%'}}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},y:{grace:'22%',beginAtZero:true,ticks:{color:TH.txt,callback:v=>v+'%',maxTicksLimit:5},grid:{color:TH.grid}}}}});
 
-  /* ---- 5. 교육 미이수 파레토 (사이트별 미이수 인원 내림차순 + 누적 %) ----
-     미이수 = 법인(Basic·Veteran '미이수') 또는 본사(Lv.2 대상 미완료 · Lv.2 이수자의 Lv.3 미완료)
-     기준일 = 상단 마감(TODAY). 인원은 중복 없이 1인 1회. ---- */
-  const missAny=p=>{
-    if(p.edu&&(clsB(p)==='미이수'||clsV(p)==='미이수'))return true;
-    if(sixUp(p)&&!lv2Done(p))return true;          // Lv.2 대상(6개월+)인데 미완료
-    if(lv2Done(p)&&!lv3Done(p))return true;        // Lv.3 대상(Lv.2 이수자)인데 미완료
-    return false;
-  };
-  { const bySite={};
-    f.filter(p=>p.onsite&&missAny(p)).forEach(p=>{const k=shortSite(p.site)||'ETC';(bySite[k]=bySite[k]||[]).push(p);});
-    const ent=Object.entries(bySite).sort((a,b)=>b[1].length-a[1].length);
-    const labels=ent.map(e=>e[0]), vals=ent.map(e=>e[1].length);
-    const tot=vals.reduce((a,b)=>a+b,0)||1;
-    let acc=0; const cum=vals.map(v=>{acc+=v;return Math.round(acc/tot*100);});
-    mk('cPareto',{type:'bar',
-      data:{labels,datasets:[
-        {type:'line',data:cum,yAxisID:'y2',borderColor:S.warn,backgroundColor:S.warn,tension:.2,pointRadius:3,order:0},
-        {data:vals,backgroundColor:S.bad,order:1}]},
-      plugins:[valLabelPlugin],
-      options:{maintainAspectRatio:false,layout:{padding:{top:16}},
-        plugins:{legend:{display:false},valLabel:{mode:'all',color:TH.txt},
-          tooltip:{callbacks:{label:c=>c.dataset.yAxisID==='y2'?('누적 '+c.parsed.y+'%'):(c.parsed.y+'명')}}},
-        scales:{x:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},
-          y:{beginAtZero:true,grace:'18%',ticks:{color:TH.txt,maxTicksLimit:5},grid:{color:TH.grid}},
-          y2:{position:'right',beginAtZero:true,max:100,ticks:{color:TH.txt,callback:v=>v+'%',maxTicksLimit:5},grid:{display:false}}}}});
-    DRILL.cPareto={kind:'people',title:tr('ch_pareto'),labels,groups:ent.map(e=>e[1])};
+  /* ---- 5. 교육 이수 추이 (최근 12구간 과정별 이수 인원 + 누적) ----
+     구간 = 상단 주/월 토글(PERIOD)·마감(TODAY) 연동 — 다른 추이 차트와 같은 12버킷.
+     막대 = 그 구간에 완료일이 찍힌 인원(과정별 스택) · 선 = 기준일까지 전체 누적(4과정 합).
+     인구는 fAll(퇴사자 포함) — 과거 구간의 이수 이력은 퇴사해도 사실로 남는다. ---- */
+  { const EP=months(12);
+    const CRS=[
+      {nm:'Basic',        dt:p=>p.bdate,   col:S.on},
+      {nm:'Veteran',      dt:p=>p.vdate,   col:S.good},
+      {nm:'Scrubber Lv.2',dt:p=>p.lv2date, col:S.warn},
+      {nm:'Scrubber Lv.3',dt:p=>p.lv3date, col:S.bad}];
+    const inP=(d,P)=>!!(d&&d>=P.st&&d<=P.end);
+    const bars=CRS.map(c=>EP.map(P=>fAll.filter(p=>inP(c.dt(p),P)).length));
+    const cum=EP.map(P=>CRS.reduce((a,c)=>a+fAll.filter(p=>{const d=c.dt(p);return d&&d<=P.end;}).length,0));
+    mk('cEtr',{type:'bar',
+      data:{labels:EP.map(P=>P.label),datasets:[
+        {type:'line',label:tr('etr_cum'),data:cum,yAxisID:'y2',borderColor:S.accent,backgroundColor:S.accent,tension:.25,pointRadius:2.6,order:0},
+        ...CRS.map((c,i)=>({label:c.nm,data:bars[i],backgroundColor:c.col,stack:'e',order:1}))]},
+      options:{maintainAspectRatio:false,layout:{padding:{top:8}},
+        plugins:{legend:{position:'bottom',labels:{color:TH.txt,boxWidth:10,font:{size:10}}},
+          tooltip:{callbacks:{label:c=>c.dataset.label+' '+c.parsed.y+tr('tbl_unit')}}},
+        scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},
+          y:{stacked:true,beginAtZero:true,grace:'15%',ticks:{color:TH.txt,maxTicksLimit:5,precision:0},grid:{color:TH.grid}},
+          y2:{position:'right',beginAtZero:true,ticks:{color:TH.txt,maxTicksLimit:5,precision:0},grid:{display:false}}}}});
+    DRILL.cEtr={kind:'people',title:tr('ch_etr'),labels:EP.map(P=>P.label),
+      groups:EP.map(P=>fAll.filter(p=>CRS.some(c=>inP(c.dt(p),P))))};
   }
 
   /* ---- 6. 교육 단계 퍼널 (Basic → Veteran → Lv.2 → Lv.3 이수 잔존) ---- */
