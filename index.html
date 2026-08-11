@@ -329,7 +329,7 @@ window.addEventListener('message',e=>{
 });
 /* ===== 대시보드 챗봇 =====
    각 탭(iframe)에 '지금 화면의 숫자'를 물어 모은 뒤(gst-ask → gst-facts) 답한다.
-   ① AI 경로: dash-chat 엣지펑션이 있으면 Claude가 자유 문장으로 답한다.
+   ① AI 경로: kakao-bot 엣지펑션의 op=web 분기 — 카카오봇과 같은 엔진(시트 미러링)으로 답한다.
    ② 로컬 경로: 펑션이 없으면 core의 규칙 엔진이 해당 지표를 찾아 즉답한다.
    숫자는 어느 쪽이든 페이지가 계산한 값 그대로라 화면과 어긋나지 않는다. */
 const ASK={hist:[],busy:false,ai:null,seq:0,pend:{}};
@@ -388,13 +388,13 @@ async function askSend(){
       const unopened=TABS.filter(t=>!frames[t.id]).length;
       askSay('a','그 값은 지금 열려 있는 탭에서 못 찾았습니다.'
         +(unopened?('\n안 연 탭이 '+unopened+'개 있습니다 — 아래 버튼을 누르면 전 탭을 불러와 다음 질문부터 함께 찾습니다.'):'')
-        +'\n※ 자유로운 문장으로 답하게 하려면 dash-chat 엣지펑션을 배포하면 됩니다.');
+        +'\n※ AI 응답은 kakao-bot 엣지펑션(op=web 지원 버전)이 배포돼 있어야 합니다.');
       if(unopened){ const b=document.createElement('button'); b.className='ask-tip'; b.textContent='📥 전 탭 불러오기';
         b.onclick=()=>{ askLoadAll(); b.remove(); }; document.getElementById('askLog').appendChild(b); }
       ASK.busy=false; return;
     }
     askSay('a',ans);
-    document.getElementById('askMode').textContent=mode==='AI'?'AI 응답':'기본 응답(엣지펑션 미배포)';
+    document.getElementById('askMode').textContent=mode==='AI'?'AI 응답(시트 원본)':'기본 응답(화면 값만)';
     ASK.hist.push({role:'user',content:q},{role:'assistant',content:String(ans).slice(0,600)});
   }catch(err){ wait.textContent='오류: '+(err&&err.message||err); }
   finally{ ASK.busy=false; }

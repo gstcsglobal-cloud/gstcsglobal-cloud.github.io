@@ -2622,7 +2622,9 @@ if(document.readyState==='loading'){
    ② AI  : GST.FN_CHAT 엣지펑션이 있으면 같은 fact를 Claude에 넘겨 자유 문장으로 답한다.
    숫자는 어느 경로든 대시보드가 계산한 값 그대로라 화면과 어긋나지 않는다.
    ============================================================ */
-GST.FN_CHAT = (typeof window!=='undefined' && window.GST_FN_CHAT) || 'dash-chat';
+// 웹 챗봇도 카카오봇과 같은 엔진을 쓴다(kakao-bot의 op=web 분기) — 한 두뇌, 두 프런트엔드.
+// 봇이 시트를 bot_cache에 미러링해 두므로 행 단위 질문(라인×기간 교차 등)에도 답할 수 있다.
+GST.FN_CHAT = (typeof window!=='undefined' && window.GST_FN_CHAT) || 'kakao-bot';
 GST._chatNorm = function(s){ return GST.nfw(String(s==null?'':s)).toLowerCase().replace(/[\s,·]/g,''); };
 // 질문↔항목 유사도 — 한국어는 조사가 붙어 토큰이 어긋나므로 부분일치 위주로 센다
 GST._chatScore = function(q, text){
@@ -2659,8 +2661,9 @@ GST.chatLocal = function(q, packs){
 GST.chatAI = async function(q, packs, hist){
   if(!GST.SB_URL) throw new Error('no-endpoint');
   var tok=null; try{ tok=await GST.token(); }catch(e){}
-  var h={'Content-Type':'application/json'}; if(tok)h.Authorization='Bearer '+tok;
-  var res=await fetch(GST.SB_URL+'/functions/v1/'+GST.FN_CHAT,
+  if(!tok){ var e401=new Error('unauthorized'); e401.status=401; throw e401; }   // 봇 웹 분기는 로그인 필수
+  var h={'Content-Type':'application/json',Authorization:'Bearer '+tok};
+  var res=await fetch(GST.SB_URL+'/functions/v1/'+GST.FN_CHAT+'?op=web',
     {method:'POST',headers:h,body:JSON.stringify({q:q,facts:packs,history:(hist||[]).slice(-6)})});
   var txt=await res.text(), data=null; try{ data=JSON.parse(txt); }catch(e){}
   if(!res.ok)throw new Error((data&&data.error)||('HTTP '+res.status));
