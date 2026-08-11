@@ -72,10 +72,41 @@ body.theme-slate .spinner{border-color:rgba(151,170,196,.16);border-top-color:#2
 .tabbar::-webkit-scrollbar{height:0}
 
 /* 공통 컨트롤 바 — 탭 줄 바로 아래 전용 줄. 전 페이지 동일 세트(미지원은 비활성) */
-.gbarrow{display:flex;justify-content:flex-end;padding:0 24px;background:rgba(20,20,47,.45);
-  border-bottom:1px solid var(--line);flex-shrink:0;overflow-x:auto}
+/* 컨트롤은 왼쪽 정렬 — 오른쪽 빈자리는 챗봇이 쓴다 */
+.gbarrow{display:flex;justify-content:flex-start;align-items:center;gap:10px;padding:0 24px;
+  background:rgba(20,20,47,.45);border-bottom:1px solid var(--line);flex-shrink:0;overflow:visible;position:relative;flex-wrap:wrap}
 .gbarrow::-webkit-scrollbar{height:0}
-.gbarrow:has(#gbar:empty){display:none}
+/* 챗봇 입력줄 */
+.askwrap{margin-left:auto;display:flex;align-items:center;gap:6px;height:27px;padding:0 8px;flex:0 1 340px;min-width:150px;
+  background:var(--glass);border:1px solid var(--glassb);border-radius:8px;transition:border-color .2s,box-shadow .2s}
+.askwrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(45,212,191,.16)}
+.askwrap .ask-ic{color:var(--accent);flex:none}
+.ask-inp{font-family:inherit;flex:1;min-width:0;background:transparent;border:none;outline:none;
+  color:var(--txt);font-size:11.5px;font-weight:600}
+.ask-inp::placeholder{color:var(--mut);font-weight:600}
+.ask-go{font-family:inherit;background:transparent;border:none;color:var(--mut);cursor:pointer;font-size:12px;
+  font-weight:800;padding:0 2px;flex:none}
+.ask-go:hover{color:var(--accent)}
+.askpanel{display:none;position:absolute;z-index:60;right:24px;top:calc(100% - 2px);width:min(520px,calc(100vw - 32px));
+  max-height:min(60vh,520px);flex-direction:column;background:var(--card,#111827);border:1px solid var(--glassb);
+  border-radius:0 0 12px 12px;box-shadow:0 18px 44px rgba(0,0,0,.5);overflow:hidden}
+.askpanel.open{display:flex}
+.ask-head{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--txt)}
+.ask-mode{font-size:10px;font-weight:700;color:var(--mut)}
+.ask-x{margin-left:auto;background:none;border:none;color:var(--mut);cursor:pointer;font-size:12px}
+.ask-log{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:9px}
+.ask-msg{font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.ask-msg.q{align-self:flex-end;max-width:85%;background:var(--accent);color:#04211d;font-weight:700;
+  padding:6px 10px;border-radius:10px 10px 2px 10px}
+.ask-msg.a{align-self:flex-start;max-width:95%;color:var(--txt);background:var(--glass);
+  border:1px solid var(--glassb);padding:8px 10px;border-radius:10px 10px 10px 2px}
+.ask-msg.a b{color:var(--accent)}
+.ask-msg .ct-src{font-size:9.5px;color:var(--mut);margin-left:4px}
+.ask-tips{display:flex;flex-wrap:wrap;gap:5px;padding:8px 12px;border-top:1px solid var(--line)}
+.ask-tip{font-family:inherit;background:var(--glass);border:1px solid var(--glassb);border-radius:20px;
+  padding:4px 9px;font-size:10.5px;color:var(--mut);cursor:pointer;white-space:nowrap}
+.ask-tip:hover{color:var(--accent);border-color:var(--accent)}
+.gbarrow:has(#gbar:empty) .askwrap{margin-left:0}
 #gbar{display:flex;align-items:center;gap:7px;padding:5px 0}
 #gbar:empty{display:none}
 .gb-seg{display:inline-flex;border:1px solid var(--glassb);border-radius:8px;overflow:hidden;flex:none}
@@ -146,7 +177,20 @@ select.gb-inp{width:104px}
 <!-- 탭 바 -->
 <div class="tabbar" id="tabbar"></div>
 <!-- 공통 컨트롤 바 (전용 줄 — 탭을 가리지 않는다) -->
-<div class="gbarrow"><div id="gbar"></div></div>
+<div class="gbarrow"><div id="gbar"></div>
+  <!-- 챗봇 — 컨트롤을 왼쪽으로 붙이고 남은 오른쪽 공간에 둔다 -->
+  <div class="askwrap" id="askWrap">
+    <svg class="ask-ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.1A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5z"/></svg>
+    <input id="askInp" class="ask-inp" type="text" autocomplete="off" placeholder="대시보드에 물어보세요 — 예: F16 재직 몇 명?">
+    <button class="ask-go" id="askGo" title="질문">↵</button>
+  </div>
+  <!-- 패널은 .gbarrow(position:relative) 안에 둔다 — 밖에 두면 기준이 body가 돼 화면 아래로 내려간다 -->
+  <div class="askpanel" id="askPanel">
+    <div class="ask-head"><b>대시보드 챗봇</b><span id="askMode" class="ask-mode"></span><button class="ask-x" onclick="askClose()">✕</button></div>
+    <div class="ask-log" id="askLog"></div>
+    <div class="ask-tips" id="askTips"></div>
+  </div>
+</div>
 
 <!-- iframe 영역 -->
 <div class="frame-wrap" id="frameWrap">
@@ -282,6 +326,87 @@ window.addEventListener('message',e=>{
   const d=e.data||{};
   if(d.type==='gst-state'){ TAB_STATE[activeTab]=d.state||''; updateHash(); }
 });
+/* ===== 대시보드 챗봇 =====
+   각 탭(iframe)에 '지금 화면의 숫자'를 물어 모은 뒤(gst-ask → gst-facts) 답한다.
+   ① AI 경로: dash-chat 엣지펑션이 있으면 Claude가 자유 문장으로 답한다.
+   ② 로컬 경로: 펑션이 없으면 core의 규칙 엔진이 해당 지표를 찾아 즉답한다.
+   숫자는 어느 쪽이든 페이지가 계산한 값 그대로라 화면과 어긋나지 않는다. */
+const ASK={hist:[],busy:false,ai:null,seq:0,pend:{}};
+const ASK_TIPS=['재직 인원 몇 명?','교육 완료율 어때?','최근 30일 고장 몇 건?','PM 진행율 알려줘','라인별 인원 알려줘','설치 대수 몇 대야?'];
+function askOpen(){ const p=document.getElementById('askPanel'); p.classList.add('open');
+  if(!document.getElementById('askLog').children.length)askSay('a','안녕하세요. 대시보드에 있는 값은 무엇이든 물어보세요.\n탭을 여러 개 열어두면 그 탭들까지 함께 찾아 답합니다.');
+  askTips(); }
+function askClose(){ document.getElementById('askPanel').classList.remove('open'); }
+function askTips(){ const b=document.getElementById('askTips'); if(b.children.length)return;
+  ASK_TIPS.forEach(t=>{ const el=document.createElement('button'); el.className='ask-tip'; el.textContent=t;
+    el.onclick=()=>{ document.getElementById('askInp').value=t; askSend(); }; b.appendChild(el); }); }
+function askSay(kind,txt){
+  const log=document.getElementById('askLog'), d=document.createElement('div');
+  d.className='ask-msg '+kind;
+  d.innerHTML=String(txt).replace(/[<>]/g,c=>({'<':'&lt;','>':'&gt;'}[c]))
+    .replace(/&lt;span class="ct-src"&gt;(.*?)&lt;\/span&gt;/g,'<span class="ct-src">$1</span>')
+    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+  log.appendChild(d); log.scrollTop=log.scrollHeight; return d;
+}
+// 살아 있는 모든 탭에 사실을 요청 — 응답이 오는 대로 모으고 잠시 뒤 마감
+function askFacts(ms){
+  const id=++ASK.seq, got=[];
+  ASK.pend[id]=got;
+  Object.keys(frames).forEach(k=>{ try{ frames[k].contentWindow.postMessage({type:'gst-ask',id:id},'*'); }catch(e){} });
+  return new Promise(res=>setTimeout(()=>{ delete ASK.pend[id]; res(got); },ms||400));
+}
+// 안 연 탭은 데이터가 없다 — 백그라운드로 모두 띄워 전 탭을 답변 범위에 넣는다
+function askLoadAll(){
+  const miss=TABS.filter(t=>!frames[t.id]);
+  if(!miss.length)return false;
+  miss.forEach(t=>{ const f=document.createElement('iframe'); f.src=BASE+t.path; f.dataset.id=t.id;
+    document.getElementById('frameWrap').appendChild(f); frames[t.id]=f; });
+  askSay('a','다른 탭 '+miss.length+'개를 백그라운드로 불러오는 중입니다. 10~20초 뒤 다시 물어보시면 전 탭에서 찾아 답합니다.');
+  return true;
+}
+window.addEventListener('message',e=>{
+  const d=e.data||{};
+  if(d.type==='gst-facts'&&ASK.pend[d.id]&&d.pack)ASK.pend[d.id].push(d.pack);
+});
+async function askSend(){
+  const inp=document.getElementById('askInp'), q=(inp.value||'').trim();
+  if(!q||ASK.busy)return;
+  askOpen(); inp.value=''; askSay('q',q); ASK.busy=true;
+  const wait=askSay('a','…찾는 중');
+  try{
+    const packs=await askFacts();
+    if(!packs.length){ wait.textContent='탭이 아직 로딩 중입니다. 잠시 뒤 다시 물어봐 주세요.'; return; }
+    let ans=null, mode='';
+    if(ASK.ai!==false){                                  // AI 경로 우선(엣지펑션이 있으면)
+      try{ ans=await GST.chatAI(q,packs,ASK.hist); ASK.ai=true; mode='AI'; }
+      catch(err){ ASK.ai=false; }                        // 없거나 실패하면 이후로는 로컬만
+    }
+    if(!ans){ ans=GST.chatLocal(q,packs); mode='기본'; }
+    wait.remove();
+    if(!ans){
+      const unopened=TABS.filter(t=>!frames[t.id]).length;
+      askSay('a','그 값은 지금 열려 있는 탭에서 못 찾았습니다.'
+        +(unopened?('\n안 연 탭이 '+unopened+'개 있습니다 — 아래 버튼을 누르면 전 탭을 불러와 다음 질문부터 함께 찾습니다.'):'')
+        +'\n※ 자유로운 문장으로 답하게 하려면 dash-chat 엣지펑션을 배포하면 됩니다.');
+      if(unopened){ const b=document.createElement('button'); b.className='ask-tip'; b.textContent='📥 전 탭 불러오기';
+        b.onclick=()=>{ askLoadAll(); b.remove(); }; document.getElementById('askLog').appendChild(b); }
+      ASK.busy=false; return;
+    }
+    askSay('a',ans);
+    document.getElementById('askMode').textContent=mode==='AI'?'AI 응답':'기본 응답(엣지펑션 미배포)';
+    ASK.hist.push({role:'user',content:q},{role:'assistant',content:String(ans).slice(0,600)});
+  }catch(err){ wait.textContent='오류: '+(err&&err.message||err); }
+  finally{ ASK.busy=false; }
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const inp=document.getElementById('askInp');
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter')askSend(); });
+  inp.addEventListener('focus',askOpen);
+  document.getElementById('askGo').onclick=askSend;
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('#askPanel')&&!e.target.closest('#askWrap'))askClose(); });
+});
+
 function shareLink(){
   navigator.clipboard.writeText(location.href).then(()=>{
     const s=document.getElementById('shareLabel'); const o=s.textContent;

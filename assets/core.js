@@ -1227,8 +1227,58 @@ GST._localBar = function(reg){
   el.innerHTML=GST.barHTML(reg, lg);
 };
 // 셸에서 온 지시 수신 (테마·언어는 initSync가 처리)
+/* ============================================================
+   18.5 대시보드 챗봇 — 페이지 사실(fact) 수집
+   페이지를 고치지 않아도 '지금 화면의 숫자'를 모은다:
+     ① KPI 카드(.kpi) ② watch 시계열 ③ 피벗 원본의 차원별 집계 ④ 활성 필터
+   숫자는 화면과 같은 계산 결과라, 답변이 대시보드와 어긋날 수 없다.
+   ============================================================ */
+GST.factPack = function(opt){
+  const O=opt||{}, TOPN=O.top||10, SER=O.series||12;
+  const P={tab:(location.pathname.replace(/\/index\.html$/,'').split('/').filter(Boolean).pop()||'main'),
+           title:(document.title||'').trim(), kpi:[], series:[], groups:[], filters:[]};
+  try{ const st=document.getElementById('status'); if(st)P.status=st.textContent.trim().slice(0,220); }catch(e){}
+  // ① KPI 카드 — 화면에 뜬 값 그대로
+  try{ document.querySelectorAll('.kpi').forEach(function(k){
+    const v=k.querySelector('.val'), c=k.querySelector('.cap'), f=k.querySelector('.kf');
+    if(v&&c)P.kpi.push({name:c.textContent.trim(), value:v.textContent.trim(), sub:f?f.textContent.trim():''});
+  }); }catch(e){}
+  // ② 시계열(브리핑용 watch 등록분)
+  try{ (GST._watch||[]).forEach(function(w){
+    P.series.push({name:String(w.label||w.k||''), unit:w.unit||'',
+      labels:(w.labels||[]).slice(-SER), data:(w.data||[]).slice(-SER)});
+  }); }catch(e){}
+  // ③ 피벗 원본 → 차원별 상위 집계 (사이트별·라인별·원인별… 자동 생성)
+  try{ const pv=GST._pivot;
+    if(pv&&pv.sets)pv.sets.slice(0,4).forEach(function(s){
+      let rows=[]; try{ rows=(typeof s.rows==='function'?s.rows():s.rows)||[]; }catch(e){}
+      if(!rows.length)return;
+      const meas=(s.measures||[]).slice(0,2);
+      (s.dims||[]).slice(0,5).forEach(function(dm){
+        const m={}; let n=0;
+        for(let i=0;i<rows.length&&i<40000;i++){
+          const key=String(GST._pivGet(rows[i],dm.k)==null?'':GST._pivGet(rows[i],dm.k)).trim()||'(미기재)';
+          const e2=m[key]||(m[key]={c:0,v:{}}); e2.c++; n++;
+          meas.forEach(function(ms){ if(ms.agg==='sum'||ms.agg==='avg'){
+            const val=+GST._pivGet(rows[i],ms.f||ms.k)||0; e2.v[ms.t]=(e2.v[ms.t]||0)+val; } });
+        }
+        const ent=Object.keys(m).map(function(k){
+          const o={name:k,count:m[k].c}; Object.keys(m[k].v).forEach(function(t){o[t]=Math.round(m[k].v[t]*10)/10;}); return o;})
+          .sort(function(a,b){return b.count-a.count;});
+        if(ent.length>1)P.groups.push({set:s.t||s.k, by:dm.t||String(dm.k), total:n, top:ent.slice(0,TOPN)});
+      });
+    });
+  }catch(e){}
+  try{ const fb=document.getElementById('filtBadge')||document.querySelector('.fbar');
+    if(fb&&fb.offsetParent)P.filters.push(fb.textContent.replace(/\s+/g,' ').trim().slice(0,160)); }catch(e){}
+  return P;
+};
+
 window.addEventListener('message', function(e){
   const d=e.data||{};
+  if(d.type==='gst-ask'){                       // 셸 챗봇의 사실 수집 요청
+    try{ (e.source||window.parent).postMessage({type:'gst-facts', id:d.id, pack:GST.factPack(d.opt)}, '*'); }catch(x){}
+    return; }
   if(d.type==='gst-bar-set'){ GST._barDo(d.key, d.val); return; }
   if(d.type==='gst-bar-ask'){ GST.barSync(); return; }
   if(d.type==='gst-style'){ if(d.style && d.style!==GST._styKey) GST.setStyle(d.style, false, true); return; }
@@ -2565,6 +2615,57 @@ if(document.readyState==='loading'){
 }else{
   setTimeout(gstAutoStart, 0);
 }
+
+/* ============================================================
+   26. 대시보드 챗봇 — 답변 엔진
+   ① 로컬: 수집한 fact(화면의 숫자)에서 질문과 맞는 항목을 찾아 즉답. 배포 없이 바로 동작.
+   ② AI  : GST.FN_CHAT 엣지펑션이 있으면 같은 fact를 Claude에 넘겨 자유 문장으로 답한다.
+   숫자는 어느 경로든 대시보드가 계산한 값 그대로라 화면과 어긋나지 않는다.
+   ============================================================ */
+GST.FN_CHAT = (typeof window!=='undefined' && window.GST_FN_CHAT) || 'dash-chat';
+GST._chatNorm = function(s){ return GST.nfw(String(s==null?'':s)).toLowerCase().replace(/[\s,·]/g,''); };
+// 질문↔항목 유사도 — 한국어는 조사가 붙어 토큰이 어긋나므로 부분일치 위주로 센다
+GST._chatScore = function(q, text){
+  const a=GST._chatNorm(q), b=GST._chatNorm(text); if(!a||!b)return 0;
+  let sc=0; if(a.indexOf(b)>=0||b.indexOf(a)>=0)sc+=b.length*2;
+  const toks=String(text).split(/[\s()·,\/|]+/).filter(function(t){return t.length>1;});
+  toks.forEach(function(t){ if(a.indexOf(GST._chatNorm(t))>=0)sc+=GST._chatNorm(t).length; });
+  const SYN={'인원':'명 사람 인력','고장':'bm 알람 문제','공수':'시간 man','교육':'이수 훈련',
+             '완료율':'달성률 진행율','설치':'install','휴가':'연차','퇴사':'이탈','입사':'채용'};
+  Object.keys(SYN).forEach(function(k){ if(b.indexOf(k)>=0)SYN[k].split(' ').forEach(function(w){ if(a.indexOf(w)>=0)sc+=2; }); });
+  return sc;
+};
+GST.chatLocal = function(q, packs){
+  const hits=[];
+  (packs||[]).forEach(function(P){
+    (P.kpi||[]).forEach(function(k){ hits.push({s:GST._chatScore(q,k.name),kind:'kpi',tab:P.title||P.tab,
+      txt:k.name+' — **'+k.value+'**'+(k.sub?' ('+k.sub+')':'')}); });
+    (P.series||[]).forEach(function(w){ const n=w.data.length; if(!n)return;
+      const last=w.data[n-1], prev=n>1?w.data[n-2]:null;
+      const dl=(prev!=null&&isFinite(prev)&&isFinite(last))?(last-prev):null;
+      hits.push({s:GST._chatScore(q,w.name),kind:'series',tab:P.title||P.tab,
+        txt:w.name+' — 최근 '+(w.labels[n-1]||'')+' **'+last+(w.unit||'')+'**'
+           +(dl!=null?(' (직전 대비 '+(dl>0?'+':'')+Math.round(dl*10)/10+')'):'')}); });
+    (P.groups||[]).forEach(function(g){
+      const head=g.top.slice(0,5).map(function(t){return t.name+' '+t.count;}).join(' · ');
+      hits.push({s:GST._chatScore(q,g.by)+GST._chatScore(q,g.set)*0.6,kind:'group',tab:P.title||P.tab,
+        txt:g.set+' · '+g.by+'별 (총 '+g.total+') — '+head}); });
+  });
+  hits.sort(function(a,b){return b.s-a.s;});
+  const best=hits.filter(function(h){return h.s>=4;}).slice(0,4);
+  if(!best.length)return null;
+  return best.map(function(h){return '· '+h.txt+'  <span class="ct-src">'+h.tab+'</span>';}).join('\n');
+};
+GST.chatAI = async function(q, packs, hist){
+  if(!GST.SB_URL) throw new Error('no-endpoint');
+  var tok=null; try{ tok=await GST.token(); }catch(e){}
+  var h={'Content-Type':'application/json'}; if(tok)h.Authorization='Bearer '+tok;
+  var res=await fetch(GST.SB_URL+'/functions/v1/'+GST.FN_CHAT,
+    {method:'POST',headers:h,body:JSON.stringify({q:q,facts:packs,history:(hist||[]).slice(-6)})});
+  var txt=await res.text(), data=null; try{ data=JSON.parse(txt); }catch(e){}
+  if(!res.ok)throw new Error((data&&data.error)||('HTTP '+res.status));
+  return (data&&(data.answer||data.text))||'';
+};
 
 global.GST = GST;
 })(window);
