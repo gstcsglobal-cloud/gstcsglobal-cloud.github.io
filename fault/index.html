@@ -423,14 +423,12 @@ GST.authGate();
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
 // 설치현황 시트 — 설비 S/N별 Turn-On(가동개시일) 조인용 (MTBF 가동기간 정밀화). 미연동 시 최초 서비스일로 대체.
 const INST_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
-const INST_SN=6, INST_TON=40;   // 설치시트: S/N=col6, Turn-On=col40
 let INSTMAP={};  // normSN → Turn-On Date
 const normSN=s=>String(s==null?'':s).replace(/\s+/g,'').toUpperCase();
-// 새 시트3(실적현황) 컬럼 맵 (0-based)
-const C={pg:1,op:2,customer:3,campus:4,line:5,bay:6,proc:7,subproc:8,model:9,rsCode:10,status:11,
-  reqType:12,stage:13,chamber:14,wrs:15,mainEq:16,prodCode:18,eqNo:19,chpos:20,snIn:21,snOut:22,
-  pf:24,alarm:25,phenom:26,cause:27,action:28,actionDetail:29,
-  dStart:32,dEnd:33,regDate:36,shipDate:37,moveMin:38,workMin:39,manMin:40,workers:41,workerCnt:42};
+// 실적현황·설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
+// 시트에 열이 끼어들거나 순서가 바뀌어도 따라가고, 이름이 바뀌면 배너로 알린다.
+// 정의는 core.js의 GST.SM.SPEC 한 곳에만 있어 다른 페이지와 갈라지지 않는다.
+let C={}, CINST={}, HI_WK=0, HI_INST=0;
 // 서비스 대응으로 집계하는 작업단계 (점검 TBM·반입·셋업 제외)
 const SERVICE_STAGES=['BM','CBM','CM','CRM'];
 const PAL=GST.PAL8;
@@ -581,18 +579,20 @@ async function loadData(){ GST.skeleton(true);
     ]);
     if(svcR.status!=='fulfilled')throw new Error(svcR.reason&&svcR.reason.message||'load fail');
     const fetched=svcR.value;
+    // 헤더 이름으로 열 위치 확정 — 이 시점 이후 C.* 는 실제 시트 기준이다
+    const mWk=GST.SM.map(fetched.rows, GST.SM.SPEC.wk);
+    C=mWk.C; HI_WK=mWk.hi>=0?mWk.hi:0;
     // 설치 시트 → S/N별 Turn-On 맵 (실패해도 무시하고 최초 서비스일로 대체)
     INSTMAP={};
     if(instR.status==='fulfilled'&&instR.value.rows){
-      instR.value.rows.slice(1).forEach(r=>{
-        const sn=normSN(r[INST_SN]); const to=toDate(r[INST_TON]);
+      const mIn=GST.SM.map(instR.value.rows, GST.SM.SPEC.inst);
+      CINST=mIn.C; HI_INST=mIn.hi>=0?mIn.hi:0;
+      instR.value.rows.slice(HI_INST+1).forEach(r=>{
+        const sn=normSN(GST.SM.val(r,CINST,'sn')); const to=toDate(GST.SM.val(r,CINST,'turnOn'));
         if(sn&&to&&(!INSTMAP[sn]||to<INSTMAP[sn]))INSTMAP[sn]=to;
       });
     }
-    GST.schemaBanner(GST.validateSchema(fetched.rows[0]||[],{
-      5:'라인',9:'MODEL',13:'작업단계',21:'S/N',24:'유/무상',27:'원인',32:'작업시작일',39:'작업시간',40:'작업공수'
-    }),'실적현황 시트');
-    ROWS=fetched.rows.slice(1)
+    ROWS=fetched.rows.slice(HI_WK+1)
       .filter(r=>SERVICE_STAGES.indexOf((r[C.stage]||'').toString().trim().toUpperCase())>-1)
       .map(r=>({
         // 분류 축(라인·모델·S/N·공정)은 전각이 섞여 들어오므로 반각으로 통일 — 같은 라인이 두 그룹으로 갈라지는 것을 막는다.
@@ -616,7 +616,7 @@ async function loadData(){ GST.skeleton(true);
       .filter(x=>x.sn||x.line);
     // TBM(계획 정비)은 서비스 대응 집계에서 빠지지만 UPM율의 분모라 따로 보관한다.
     // 분류 축만 담아 슬라이서가 동일하게 걸리게 한다.
-    TBM_ROWS=fetched.rows.slice(1)
+    TBM_ROWS=fetched.rows.slice(HI_WK+1)
       .filter(r=>(r[C.stage]||'').toString().trim().toUpperCase()==='TBM')
       .map(r=>({ line:GST.nfw(r[C.line]||'').trim(), model:GST.nfw(r[C.model]||'').trim(),
         sn:GST.nfw(r[C.snIn]||'').trim(), proc:GST.nfw(r[C.proc]||'').trim(),

@@ -571,7 +571,9 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 GST.authGate();
 
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
-const C={op:1,customer:2,line:5,process:7,detail:8,mainEq:9,eq:10,sn:12,model:14,qty:22,matName:23,spec:24,reason:25,workDate:28,daysPaid:29,daysPrev:30,pf:31,freeReason:32};
+// 자재실적 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
+// 열이 끼어들거나 순서가 바뀌어도 따라가고, 이름이 바뀌면 배너로 알린다.
+let C={}, HI_MAT=0;
 
 const T={
   ko:{title:'자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'이번 달 교체',kp3:'유상 비율',kp4:'자재 종류',kp5:'교체 설비 수',kp6:'90일 미만 재교체',u_cnt:'건',u_eq:'대',kf1:'사용 수량 {n}개 (이상치 제외)',kf2:'전월 {n}건',kf3:'유상 {a} · 무상 {b}',kf4:'TOP {v}',kf5:'S/N {n}종',kf6:'전체의 {p}%',sec_ov:'개요',sec_mat:'자재·수명',sec_eq:'설비·공정',sec_dt:'상세 목록',ch_monthly:'교체 추이 (주/월)',note_monthly:'자재실적일자 기준 · 향후 3개월 예측·이상',ch_mat:'자재별 교체 TOP',note_mat:'수량 합계 · 이상치 수량 제외 · 값은 막대 끝',ch_model:'모델별 교체',ch_pf2:'유상 vs 무상',note_pf2:'교체 건의 유무상 구성',pf_ratio:'유상 비율',pf_paid:'유상',pf_free:'무상',ch_eq:'설비별 교체 TOP',note_eq:'건수 · 이상 집중 설비는 붉게 · 값은 막대 끝',ch_proc2:'공정별 교체',note_proc2:'건수 · 최대/최신값 라벨',ch_line2:'LINE별 교체',note_line2:'건수 · 최대/최신값 라벨',ch_life:'자재 수명 분포',note_life:'교체 시점 사용일 구간 (주기 기준 토글 적용)',life_b:['<90일','90–180일','180일–1년','1–2년','2년+'],note_hbarx:'값은 막대 끝 · 비중은 툴팁',ins_short:'90일 미만 조기 재교체 {n}건 ({p}%)',ins_qty:'수량 단위 오입력 의심 {n}건 — 시트 확인 필요',mon_u:'월',cyc_title:'자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',this_month:'이번 달 {n}건',ins_mom:'이번 달 교체 {n}건 · 전월 대비 {p}',ins_free:'무상 교체 비율 {p}% — 보증 처리 비중 확인 필요',ins_topmat:'자재 {v} — 전체 교체 수량의 {p}%',ch_cross:'🔀 교차분석',cp1:'설비×자재',cp2:'자재×월',cp3:'고객사×유무상',eq_drill:'🔍 설비 상세',note_eqdr:'설비별 교체 TOP 막대를 클릭하거나 검색 — 언제 · 어떤 자재를 · 얼마나 교체했는지',eq_dr_empty:'설비를 선택하면 상세 내역이 표시됩니다',dr_last:'최근 교체일',f_active:'활성 필터',f_clear:'전체 해제',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
@@ -666,12 +668,11 @@ async function loadData(){ GST.skeleton(true);
   try{
     status.textContent='⏳ 데이터 로딩 중...';
     const fetched = await GST.fetchCSVCached(SHEET_URL,'material');
-    GST.schemaBanner(GST.validateSchema(fetched.rows[0]||[],{
-      1:'운영단위',2:'고객사',5:'라인',7:'공정',8:'세부공정',10:'설비호기',
-      22:'사용수량',23:'자재명',25:'교체사유',28:'자재실적일자',
-      29:'사용일(유상기준)',30:'사용일(전교체일기준)',31:'유/무상',32:'무상사유'
-    }),'자재실적 시트');
-    const rows = fetched.rows.slice(1);
+    // 헤더 이름으로 열 위치 확정 — 이 시점 이후 C.* 는 실제 시트 기준이다
+    const mMat=GST.SM.map(fetched.rows, GST.SM.SPEC.mat);
+    C=mMat.C; C.process=C.proc;   // 이 페이지는 공정을 process로 부른다
+    HI_MAT=mMat.hi>=0?mMat.hi:0;
+    const rows = fetched.rows.slice(HI_MAT+1);
 
     function cv(r,k){const v=r[C[k]];return(v!==undefined&&v!==null&&v!=='')?String(v).trim():'';}
 

@@ -367,10 +367,9 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
 let ADJUST={}; // 조정 내역 {key: {newDate, memo, updatedAt}} — Supabase pm_adjust 테이블(로그인 필요)
 
-// 컬럼 인덱스 (0-based) — 시트3 점검이력
-// 새 시트3(실적현황) 컬럼 맵 (0-based) — site=고객사, chamber=채널위치
-const C={site:3,line:5,group1:7,detail1:8,model:9,work:32,sn:21,maint:13,chamber:20,
-  workMin:39,manMin:40,workers:41,workerCnt:42};
+// 실적현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
+// 이 페이지가 쓰는 이름(site=고객사, group1=공정, chamber=채널위치)은 아래에서 이어 붙인다.
+let C={}, HI_WK=0;
 const WARN_RATIO=GST.conf('warn_ratio',0.20);   // 기준값은 core.js GST.CONF 에서 관리
 
 const T={
@@ -488,10 +487,13 @@ async function loadData(){ GST.skeleton(true);
       loadAdjust()
     ]);
     if(csvRes.status==='fulfilled'){
-      GST.schemaBanner(GST.validateSchema(csvRes.value.rows[0]||[],{
-        5:'라인',9:'MODEL',13:'작업단계',21:'S/N',32:'작업시작일'
-      }),'실적현황 시트');
-      RAW=csvRes.value.rows.slice(1);
+      const mWk=GST.SM.map(csvRes.value.rows, GST.SM.SPEC.wk);
+      C=mWk.C;
+      // 이 페이지에서 쓰는 별명들 — 시트 열은 같고 부르는 이름만 다르다
+      C.site=C.customer; C.group1=C.proc; C.detail1=C.subproc;
+      C.work=C.dStart;   C.sn=C.snIn;     C.maint=C.stage;    C.chamber=C.chpos;
+      HI_WK=mWk.hi>=0?mWk.hi:0;
+      RAW=csvRes.value.rows.slice(HI_WK+1);
     }
     ADJUST = (adjRes.status==='fulfilled' && adjRes.value) ? adjRes.value : {};
     SCHED=buildSchedule(RAW);
