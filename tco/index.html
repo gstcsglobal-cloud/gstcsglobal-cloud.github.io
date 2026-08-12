@@ -271,12 +271,9 @@ const URLS={
   wk:  PUB+'?gid=646668307&single=true&output=csv',   // 실적현황 (작업시간 → 가동 차감)
   mat: PUB+'?gid=31302669&single=true&output=csv'     // 자재교체 실적 (파츠)
 };
-// 설치 시트 (주간현황 CI와 동일)
-const CI={country:2,customer:3,sn:6,fab:9,group1:12,turnOn:40,type:75};
-// 실적 시트 — sn=S/N(IN), workMin=작업시간(분)
-const CW={customer:3,line:5,proc:7,sn:21,work:32,workMin:39};
-// 자재 시트 (자재 실적 대시보드 C와 동일)
-const CM={customer:2,line:5,proc:7,sn:12,qty:22,workDate:28};
+// 세 시트 모두 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
+// 정의는 core.js GST.SM.SPEC 한 곳에만 있어 다른 페이지와 갈라지지 않는다.
+let CI={}, CW={}, CM={}, HI_INST=0, HI_WK=0, HI_MAT=0;
 
 const PROCS=['DIFF','CVD','ETCH','ETC'];
 const UKEYS=['lng','o2','cda','cw','pcw','pwr','parts'];   // 표시·스택 순서
@@ -475,14 +472,19 @@ async function loadData(){ GST.skeleton(true);
       GST.fetchCSVCached(URLS.wk,'tco_wk'),
       GST.fetchCSVCached(URLS.mat,'tco_mat')
     ]);
-    // 실적·자재 시트 구조 감시 (설치 시트는 헤더 라벨이 비어 있어 검증 제외)
-    GST.schemaBanner(
-      GST.validateSchema(wk.rows[0]||[],{5:'라인',7:'공정',21:'S/N'})
-        .concat(GST.validateSchema(mat.rows[0]||[],{5:'라인',7:'공정',22:'사용수량',28:'자재실적일자'})),
-      '실적/자재 시트');
+    // 헤더 이름으로 세 시트의 열 위치를 확정한다.
+    // 설치 시트도 포함한다 — Country·FAB·Turn On·Scrubber type 모두 헤더가 정상적으로 있다.
+    // (이전에는 헤더가 없다고 보고 검증에서 빼두었으나 실제 시트를 확인한 결과 사실이 아니었다.)
+    const mIn=GST.SM.map(inst.rows, GST.SM.SPEC.inst);
+    const mWk=GST.SM.map(wk.rows,   GST.SM.SPEC.wk);
+    const mMt=GST.SM.map(mat.rows,  GST.SM.SPEC.mat);
+    CI=mIn.C; HI_INST=mIn.hi>=0?mIn.hi:0;
+    CW=mWk.C; HI_WK  =mWk.hi>=0?mWk.hi:0;
+    CM=mMt.C; HI_MAT =mMt.hi>=0?mMt.hi:0;
+    CW.sn=CW.snIn; CW.work=CW.dStart;   // 이 페이지에서 쓰는 별명
 
     // 설치현황 → 설비 목록 (Turn-On만)
-    EQUIP=inst.rows.slice(1).map(r=>{
+    EQUIP=inst.rows.slice(HI_INST+1).map(r=>{
       const sn=String(r[CI.sn]||'').trim();
       const ton=toDate(r[CI.turnOn]);
       if(!sn||!ton)return null;
@@ -493,7 +495,7 @@ async function loadData(){ GST.skeleton(true);
 
     // 실적현황 → 정지시간 + S/N→공정 추정 맵
     const snProc={};
-    WK=wk.rows.slice(1).map(r=>{
+    WK=wk.rows.slice(HI_WK+1).map(r=>{
       const d=toDate(r[CW.work]); const snKey=normSN(r[CW.sn]);
       if(!snKey)return null;
       const p=procOf(r[CW.proc]);
@@ -514,7 +516,7 @@ async function loadData(){ GST.skeleton(true);
     EQUIP.forEach(e=>{e.down=wkIdx[e.snKey]||[];});
 
     // 자재교체 → 파츠
-    PARTS=mat.rows.slice(1).map(r=>{
+    PARTS=mat.rows.slice(HI_MAT+1).map(r=>{
       const d=toDate(r[CM.workDate]);
       if(!d)return null;
       const rawQty=Number(r[CM.qty])||1;

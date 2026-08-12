@@ -364,11 +364,10 @@ const URLS={
   cip16: PUB+'?gid='+GID_CIP16+'&single=true&output=csv',
   abp:   PUB+'?gid='+GID_ABP+'&single=true&output=csv'
 };
-// 시트3 실적현황 (0-based)
-// alarm=Z열 알람유형 · phenom=AA열 현상 · cause=AB열 원인 · action=AC열 조치
-const CW={op:2,customer:3,line:5,stage:13,chamber:20,sn:21,alarm:25,phenom:26,cause:27,action:28,work:32,workMin:39,manMin:40,workers:41};
-// 설치 시트
-const CI={country:2,customer:3,fab:9,sn:6,fabIn:38,turnOn:40,warranty:43,type:75}; // fab=J열 FAB(F16/F11/F16N) · warranty=AR열 Warranty In/Out · type=BX열 Scrubber Type
+// 실적현황·설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
+// 설치 시트는 128열이라 위치 고정이 특히 위험했다(type이 75열째).
+// 정의는 core.js GST.SM.SPEC 한 곳에만 있어 다른 페이지와 갈라지지 않는다.
+let CW={}, CI={}, HI_WK=0, HI_INST=0;
 // 고객사 표기 통일 (시트마다 공식명/축약명이 섞여 있음) — 예: Micron Memory Taiwan Co., Ltd.(F16) → MICRON F16
 function normCust(name){
   if(!name)return '';
@@ -1014,7 +1013,17 @@ async function loadData(){
     ABP = abp.status==='fulfilled'?parseABP(abp.value.rows):{m:{},w:{}};
     HR = hr.status==='fulfilled'?parseHR(hr.value.rows):[];
     const _wkRaw = wk.status==='fulfilled'?Math.max(0,wk.value.rows.length-1):0;
-    WK = wk.status==='fulfilled'?wk.value.rows.slice(1).map(r=>{
+    // 헤더 이름으로 열 위치 확정 — 이 시점 이후 CW.*/CI.* 는 실제 시트 기준이다
+    if(wk.status==='fulfilled'){
+      const m=GST.SM.map(wk.value.rows, GST.SM.SPEC.wk);
+      CW=m.C; HI_WK=m.hi>=0?m.hi:0;
+      CW.sn=CW.snIn; CW.work=CW.dStart; CW.chamber=CW.chpos;   // 이 페이지에서 쓰는 별명
+    }
+    if(inst.status==='fulfilled'){
+      const m=GST.SM.map(inst.value.rows, GST.SM.SPEC.inst);
+      CI=m.C; HI_INST=m.hi>=0?m.hi:0;
+    }
+    WK = wk.status==='fulfilled'?wk.value.rows.slice(HI_WK+1).map(r=>{
       const stg=String(r[CW.stage]||'').trim().toUpperCase().replace(/\s/g,'');
       const wd=pd(r[CW.work]); if(!stg||!wd)return null;
       const manMin=numv(r[CW.manMin]), workMin=numv(r[CW.workMin]);
@@ -1030,7 +1039,7 @@ async function loadData(){
         workMin:workMin,
         workers:String(r[CW.workers]||'').split(/[,、;/]+/).map(s=>s.trim()).filter(Boolean)};
     }).filter(Boolean):[];
-    INST = inst.status==='fulfilled'?inst.value.rows.slice(1).filter(r=>String(r[CI.sn]||'').trim()):[];
+    INST = inst.status==='fulfilled'?inst.value.rows.slice(HI_INST+1).filter(r=>String(r[CI.sn]||'').trim()):[];
     const cached=(hr.status==='fulfilled'&&hr.value.cached)||(wk.status==='fulfilled'&&wk.value.cached);
     const _wkDrop=Math.max(0,_wkRaw-WK.length);   // 작업단계·작업일 공란으로 집계 제외된 행
     st.className='status ok';

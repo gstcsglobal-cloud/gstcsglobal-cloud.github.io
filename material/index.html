@@ -515,6 +515,31 @@ canvas{cursor:pointer}
   </div>
 </div>
 
+<!-- 다각화 — "어떤 자재가 어디서 얼마나 갈리나"를 축을 바꿔가며 본다 -->
+<div class="grid3" style="margin-top:16px">
+  <div class="card">
+    <h3 data-i="ch_matpareto">자재 집중도 (파레토)</h3>
+    <div class="card-note" data-i="note_matpareto">상위 자재가 전체 교체의 몇 %를 차지하는지 · 선은 누적 %</div>
+    <div class="cw"><canvas id="cMatPareto"></canvas></div>
+  </div>
+  <div class="card">
+    <h3 data-i="ch_reasoncyc">교체사유별 평균 사용주기</h3>
+    <div class="card-note" data-i="note_reasoncyc">소모성 교체와 고장 교체의 주기 차이 · 10건 이상 사유</div>
+    <div class="cw"><canvas id="cReasonCyc"></canvas></div>
+  </div>
+  <div class="card">
+    <h3 data-i="ch_early">조기교체 의심 자재</h3>
+    <div class="card-note" data-i="note_early">그 자재의 평균 주기 절반도 못 가고 교체된 비율 · 5건 이상</div>
+    <div class="cw"><canvas id="cEarly"></canvas></div>
+  </div>
+</div>
+
+<div class="tablecard" style="margin-top:16px">
+  <h3><span data-i="ch_matproc">자재 × 공정 히트맵</span></h3>
+  <div class="card-note" data-i="note_matproc">어떤 공정에서 어떤 자재가 많이 갈리는지 · 상위 자재 15종 · 진할수록 많음</div>
+  <div id="matProcHeat" style="overflow-x:auto;margin-top:10px"></div>
+</div>
+
 <div class="toolbar">
   <span class="tb-label" data-i="cycle_basis">사용주기 기준:</span>
   <div class="cycle-toggle">
@@ -571,13 +596,15 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 GST.authGate();
 
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
-const C={op:1,customer:2,line:5,process:7,detail:8,mainEq:9,eq:10,sn:12,model:14,qty:22,matName:23,spec:24,reason:25,workDate:28,daysPaid:29,daysPrev:30,pf:31,freeReason:32};
+// 자재실적 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
+// 열이 끼어들거나 순서가 바뀌어도 따라가고, 이름이 바뀌면 배너로 알린다.
+let C={}, HI_MAT=0;
 
 const T={
-  ko:{title:'자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'이번 달 교체',kp3:'유상 비율',kp4:'자재 종류',kp5:'교체 설비 수',kp6:'90일 미만 재교체',u_cnt:'건',u_eq:'대',kf1:'사용 수량 {n}개 (이상치 제외)',kf2:'전월 {n}건',kf3:'유상 {a} · 무상 {b}',kf4:'TOP {v}',kf5:'S/N {n}종',kf6:'전체의 {p}%',sec_ov:'개요',sec_mat:'자재·수명',sec_eq:'설비·공정',sec_dt:'상세 목록',ch_monthly:'교체 추이 (주/월)',note_monthly:'자재실적일자 기준 · 향후 3개월 예측·이상',ch_mat:'자재별 교체 TOP',note_mat:'수량 합계 · 이상치 수량 제외 · 값은 막대 끝',ch_model:'모델별 교체',ch_pf2:'유상 vs 무상',note_pf2:'교체 건의 유무상 구성',pf_ratio:'유상 비율',pf_paid:'유상',pf_free:'무상',ch_eq:'설비별 교체 TOP',note_eq:'건수 · 이상 집중 설비는 붉게 · 값은 막대 끝',ch_proc2:'공정별 교체',note_proc2:'건수 · 최대/최신값 라벨',ch_line2:'LINE별 교체',note_line2:'건수 · 최대/최신값 라벨',ch_life:'자재 수명 분포',note_life:'교체 시점 사용일 구간 (주기 기준 토글 적용)',life_b:['<90일','90–180일','180일–1년','1–2년','2년+'],note_hbarx:'값은 막대 끝 · 비중은 툴팁',ins_short:'90일 미만 조기 재교체 {n}건 ({p}%)',ins_qty:'수량 단위 오입력 의심 {n}건 — 시트 확인 필요',mon_u:'월',cyc_title:'자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',this_month:'이번 달 {n}건',ins_mom:'이번 달 교체 {n}건 · 전월 대비 {p}',ins_free:'무상 교체 비율 {p}% — 보증 처리 비중 확인 필요',ins_topmat:'자재 {v} — 전체 교체 수량의 {p}%',ch_cross:'🔀 교차분석',cp1:'설비×자재',cp2:'자재×월',cp3:'고객사×유무상',eq_drill:'🔍 설비 상세',note_eqdr:'설비별 교체 TOP 막대를 클릭하거나 검색 — 언제 · 어떤 자재를 · 얼마나 교체했는지',eq_dr_empty:'설비를 선택하면 상세 내역이 표시됩니다',dr_last:'최근 교체일',f_active:'활성 필터',f_clear:'전체 해제',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
-  en:{title:'Material Dashboard',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-proc',sl_eq:'Equipment',sl_search:'Search',cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',kp1:'Total Replacements',kp2:'This Month',kp3:'Paid Ratio',kp4:'Material Types',kp5:'Equipment',kp6:'Replaced <90 days',u_cnt:'',u_eq:'',kf1:'{n} pcs used (outliers excl.)',kf2:'prev month {n}',kf3:'paid {a} · free {b}',kf4:'TOP {v}',kf5:'{n} serials',kf6:'{p}% of all',sec_ov:'Overview',sec_mat:'Materials & Life',sec_eq:'Equipment & Process',sec_dt:'Data',ch_monthly:'Replacement Trend (W/M)',note_monthly:'by record date · 3-mo forecast & anomaly',ch_mat:'Top Materials',note_mat:'by quantity · outliers excluded · value at bar end',ch_model:'By Model',ch_pf2:'Paid vs Free',note_pf2:'paid/free mix',pf_ratio:'paid ratio',pf_paid:'Paid',pf_free:'Free',ch_eq:'Top Equipment',note_eq:'count · outliers in red · value at bar end',ch_proc2:'By Process',note_proc2:'count · peak/latest labeled',ch_line2:'By LINE',note_line2:'count · peak/latest labeled',ch_life:'Material Life Distribution',note_life:'days-in-use at replacement (follows cycle basis)',life_b:['<90d','90–180d','180d–1y','1–2y','2y+'],note_hbarx:'value at bar end · share in tooltip',ins_short:'{n} early replacements under 90 days ({p}%)',ins_qty:'{n} rows with suspicious quantity — check the sheet',mon_u:'',cyc_title:'Material Lifecycle (avg/min/max)',cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Replacement Detail',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',all:'All',no_data:'No data',days:'d',this_month:'This month {n}',ins_mom:'{n} replacements this month · {p} MoM',ins_free:'Free-of-charge ratio {p}% — review warranty share',ins_topmat:'Material {v} — {p}% of total quantity',ch_cross:'🔀 Cross Analysis',cp1:'Equip×Material',cp2:'Material×Month',cp3:'Customer×Paid/Free',eq_drill:'🔍 Equipment Detail',note_eqdr:'Click a bar in Top Equipment or search — when · which material · how much',eq_dr_empty:'Select an equipment to see details',dr_last:'Last replaced',f_active:'Active Filters',f_clear:'Clear All',nav_hr:'Workforce',nav_sc:'Installation',nav_pm:'PM Schedule',nav_ft:'Fault',nav_mt:'Material'},
-  zh:{title:'材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',kp1:'总更换件数',kp2:'本月更换',kp3:'有偿比率',kp4:'材料种类',kp5:'更换设备数',kp6:'90天内再更换',u_cnt:'件',u_eq:'台',kf1:'使用数量 {n}个 (除异常值)',kf2:'上月 {n}件',kf3:'有偿 {a} · 无偿 {b}',kf4:'TOP {v}',kf5:'S/N {n}种',kf6:'占全部{p}%',sec_ov:'概览',sec_mat:'材料·寿命',sec_eq:'设备·工艺',sec_dt:'明细',ch_monthly:'更换趋势 (周/月)',note_monthly:'按实绩日期 · 未来3月预测·异常',ch_mat:'材料更换TOP',note_mat:'数量合计 · 除异常值 · 数值在柱端',ch_model:'按型号',ch_pf2:'有偿 vs 无偿',note_pf2:'有/无偿构成',pf_ratio:'有偿比率',pf_paid:'有偿',pf_free:'无偿',ch_eq:'设备更换TOP',note_eq:'件数 · 异常集中设备红色 · 数值在柱端',ch_proc2:'按工艺',note_proc2:'件数 · 最大/最新标注',ch_line2:'按LINE',note_line2:'件数 · 最大/最新标注',ch_life:'材料寿命分布',note_life:'更换时使用天数区间',life_b:['<90天','90–180天','180天–1年','1–2年','2年+'],note_hbarx:'数值在柱端 · 占比见提示框',ins_short:'90天内提前再更换 {n}件 ({p}%)',ins_qty:'数量单位疑似错误 {n}件 — 请确认表格',mon_u:'月',cyc_title:'材料使用周期(平均/最小/最大)',cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'材料更换明细',th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',all:'全部',no_data:'无数据',days:'天',this_month:'本月{n}件',ins_mom:'本月更换 {n}件 · 环比 {p}',ins_free:'无偿比率 {p}% — 需确认保修占比',ins_topmat:'材料 {v} — 占总数量的{p}%',ch_cross:'🔀 交叉分析',cp1:'设备×材料',cp2:'材料×月',cp3:'客户×有无偿',eq_drill:'🔍 设备详情',note_eqdr:'点击设备TOP柱条或搜索 — 何时·何种材料·多少',eq_dr_empty:'选择设备后显示详情',dr_last:'最近更换日',f_active:'活动筛选',f_clear:'全部清除',nav_hr:'人员',nav_sc:'安装',nav_pm:'PM点检',nav_ft:'故障',nav_mt:'材料'},
-  ja:{title:'資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'라인',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',kp1:'総交換件数',kp2:'今月交換',kp3:'有償比率',kp4:'資材種類',kp5:'交換設備数',kp6:'90日未満再交換',u_cnt:'件',u_eq:'台',kf1:'使用数量 {n}個 (異常値除外)',kf2:'前月 {n}件',kf3:'有償 {a} · 無償 {b}',kf4:'TOP {v}',kf5:'S/N {n}種',kf6:'全体の{p}%',sec_ov:'概要',sec_mat:'資材·寿命',sec_eq:'設備·工程',sec_dt:'詳細',ch_monthly:'交換推移 (週/月)',note_monthly:'実績日基準 · 今後3ヶ月予測·異常',ch_mat:'資材交換TOP',note_mat:'数量合計 · 異常値除外 · 値は棒の先',ch_model:'モデル別',ch_pf2:'有償 vs 無償',note_pf2:'有/無償構成',pf_ratio:'有償比率',pf_paid:'有償',pf_free:'無償',ch_eq:'設備交換TOP',note_eq:'件数 · 異常集中は赤 · 値は棒の先',ch_proc2:'工程別',note_proc2:'件数 · 最大/最新ラベル',ch_line2:'LINE別',note_line2:'件数 · 最大/最新ラベル',ch_life:'資材寿命分布',note_life:'交換時点の使用日区分',life_b:['<90日','90–180日','180日–1年','1–2年','2年+'],note_hbarx:'値は棒の先 · 構成比はツールチップ',ins_short:'90日未満の早期再交換 {n}件 ({p}%)',ins_qty:'数量単位誤入力疑い {n}件 — シート確認要',mon_u:'月',cyc_title:'資材別使用周期(平均/最小/最大)',cyc_mat:'資材名',cyc_cnt:'交換件수',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'資材交換詳細',th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',all:'全体',no_data:'データなし',days:'日',this_month:'今月{n}件',ins_mom:'今月交換 {n}件 · 前月比 {p}',ins_free:'無償比率 {p}% — 保証比重の確認要',ins_topmat:'資材 {v} — 全数量の{p}%',ch_cross:'🔀 クロス分析',cp1:'設備×資材',cp2:'資材×月',cp3:'顧客×有無償',eq_drill:'🔍 設備詳細',note_eqdr:'設備TOPの棒をクリックまたは検索 — いつ·どの資材を·どれだけ',eq_dr_empty:'設備を選択すると詳細が表示されます',dr_last:'最終交換日',f_active:'有効フィルタ',f_clear:'全解除',nav_hr:'人員',nav_sc:'設置',nav_pm:'PM点検',nav_ft:'故障',nav_mt:'資材'}
+  ko:{ch_matpareto:'자재 집중도 (파레토)',note_matpareto:'상위 자재가 전체 교체의 몇 %를 차지하는지 · 선은 누적 %',ch_reasoncyc:'교체사유별 평균 사용주기',note_reasoncyc:'소모성 교체와 고장 교체의 주기 차이 · 10건 이상 사유',ch_early:'조기교체 의심 자재',note_early:'그 자재의 평균 주기 절반도 못 가고 교체된 비율 · 5건 이상',ch_matproc:'자재 × 공정 히트맵',note_matproc:'어떤 공정에서 어떤 자재가 많이 갈리는지 · 상위 자재 15종 · 진할수록 많음',title:'자재 실적 대시보드',sub:'자재 교체 실적 · 사용주기 · 유무상 분석',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_process:'공정',sl_detail:'세부공정',sl_eq:'설비호기',sl_search:'검색',cycle_basis:'사용주기 기준:',cycle_paid:'유상기준',cycle_prev:'전교체일기준',kp1:'총 교체건수',kp2:'이번 달 교체',kp3:'유상 비율',kp4:'자재 종류',kp5:'교체 설비 수',kp6:'90일 미만 재교체',u_cnt:'건',u_eq:'대',kf1:'사용 수량 {n}개 (이상치 제외)',kf2:'전월 {n}건',kf3:'유상 {a} · 무상 {b}',kf4:'TOP {v}',kf5:'S/N {n}종',kf6:'전체의 {p}%',sec_ov:'개요',sec_mat:'자재·수명',sec_eq:'설비·공정',sec_dt:'상세 목록',ch_monthly:'교체 추이 (주/월)',note_monthly:'자재실적일자 기준 · 향후 3개월 예측·이상',ch_mat:'자재별 교체 TOP',note_mat:'수량 합계 · 이상치 수량 제외 · 값은 막대 끝',ch_model:'모델별 교체',ch_pf2:'유상 vs 무상',note_pf2:'교체 건의 유무상 구성',pf_ratio:'유상 비율',pf_paid:'유상',pf_free:'무상',ch_eq:'설비별 교체 TOP',note_eq:'건수 · 이상 집중 설비는 붉게 · 값은 막대 끝',ch_proc2:'공정별 교체',note_proc2:'건수 · 최대/최신값 라벨',ch_line2:'LINE별 교체',note_line2:'건수 · 최대/최신값 라벨',ch_life:'자재 수명 분포',note_life:'교체 시점 사용일 구간 (주기 기준 토글 적용)',life_b:['<90일','90–180일','180일–1년','1–2년','2년+'],note_hbarx:'값은 막대 끝 · 비중은 툴팁',ins_short:'90일 미만 조기 재교체 {n}건 ({p}%)',ins_qty:'수량 단위 오입력 의심 {n}건 — 시트 확인 필요',mon_u:'월',cyc_title:'자재별 사용주기 분석 (평균/최소/최대)',cyc_mat:'자재명',cyc_cnt:'교체건수',cyc_avg:'평균주기',cyc_min:'최소',cyc_max:'최대',tbl_title:'자재 교체 상세',th_date:'실적일자',th_customer:'고객사',th_process:'공정',th_detail:'세부공정',th_eq:'설비호기',th_mat:'자재명',th_qty:'수량',th_reason:'교체사유',th_pf:'유/무상',th_cycle:'사용일',all:'전체',no_data:'데이터 없음',days:'일',this_month:'이번 달 {n}건',ins_mom:'이번 달 교체 {n}건 · 전월 대비 {p}',ins_free:'무상 교체 비율 {p}% — 보증 처리 비중 확인 필요',ins_topmat:'자재 {v} — 전체 교체 수량의 {p}%',ch_cross:'🔀 교차분석',cp1:'설비×자재',cp2:'자재×월',cp3:'고객사×유무상',eq_drill:'🔍 설비 상세',note_eqdr:'설비별 교체 TOP 막대를 클릭하거나 검색 — 언제 · 어떤 자재를 · 얼마나 교체했는지',eq_dr_empty:'설비를 선택하면 상세 내역이 표시됩니다',dr_last:'최근 교체일',f_active:'활성 필터',f_clear:'전체 해제',nav_hr:'인원 현황',nav_sc:'설치 현황',nav_pm:'PM 점검',nav_ft:'고장 분석',nav_mt:'자재 실적'},
+  en:{ch_matpareto:'Material Concentration (Pareto)',note_matpareto:'share of total replacements held by top materials · line is cumulative %',ch_reasoncyc:'Mean Service Life by Reason',note_reasoncyc:'wear-out vs failure replacement cycles · reasons with 10+ records',ch_early:'Suspected Early Replacement',note_early:'share replaced before half the material\u0027s own mean life · 5+ records',ch_matproc:'Material × Process Heatmap',note_matproc:'which process consumes which material · top 15 materials · darker means more',title:'Material Dashboard',sub:'Replacement records & lifecycle',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_process:'Process',sl_detail:'Sub-proc',sl_eq:'Equipment',sl_search:'Search',cycle_basis:'Cycle basis:',cycle_paid:'Paid-based',cycle_prev:'Prev-replace',kp1:'Total Replacements',kp2:'This Month',kp3:'Paid Ratio',kp4:'Material Types',kp5:'Equipment',kp6:'Replaced <90 days',u_cnt:'',u_eq:'',kf1:'{n} pcs used (outliers excl.)',kf2:'prev month {n}',kf3:'paid {a} · free {b}',kf4:'TOP {v}',kf5:'{n} serials',kf6:'{p}% of all',sec_ov:'Overview',sec_mat:'Materials & Life',sec_eq:'Equipment & Process',sec_dt:'Data',ch_monthly:'Replacement Trend (W/M)',note_monthly:'by record date · 3-mo forecast & anomaly',ch_mat:'Top Materials',note_mat:'by quantity · outliers excluded · value at bar end',ch_model:'By Model',ch_pf2:'Paid vs Free',note_pf2:'paid/free mix',pf_ratio:'paid ratio',pf_paid:'Paid',pf_free:'Free',ch_eq:'Top Equipment',note_eq:'count · outliers in red · value at bar end',ch_proc2:'By Process',note_proc2:'count · peak/latest labeled',ch_line2:'By LINE',note_line2:'count · peak/latest labeled',ch_life:'Material Life Distribution',note_life:'days-in-use at replacement (follows cycle basis)',life_b:['<90d','90–180d','180d–1y','1–2y','2y+'],note_hbarx:'value at bar end · share in tooltip',ins_short:'{n} early replacements under 90 days ({p}%)',ins_qty:'{n} rows with suspicious quantity — check the sheet',mon_u:'',cyc_title:'Material Lifecycle (avg/min/max)',cyc_mat:'Material',cyc_cnt:'Count',cyc_avg:'Avg',cyc_min:'Min',cyc_max:'Max',tbl_title:'Replacement Detail',th_date:'Date',th_customer:'Customer',th_process:'Process',th_detail:'Sub-proc',th_eq:'Equipment',th_mat:'Material',th_qty:'Qty',th_reason:'Reason',th_pf:'Paid/Free',th_cycle:'Days',all:'All',no_data:'No data',days:'d',this_month:'This month {n}',ins_mom:'{n} replacements this month · {p} MoM',ins_free:'Free-of-charge ratio {p}% — review warranty share',ins_topmat:'Material {v} — {p}% of total quantity',ch_cross:'🔀 Cross Analysis',cp1:'Equip×Material',cp2:'Material×Month',cp3:'Customer×Paid/Free',eq_drill:'🔍 Equipment Detail',note_eqdr:'Click a bar in Top Equipment or search — when · which material · how much',eq_dr_empty:'Select an equipment to see details',dr_last:'Last replaced',f_active:'Active Filters',f_clear:'Clear All',nav_hr:'Workforce',nav_sc:'Installation',nav_pm:'PM Schedule',nav_ft:'Fault',nav_mt:'Material'},
+  zh:{ch_matpareto:'材料集中度 (帕累托)',note_matpareto:'排名靠前的材料占总更换的百分比 · 线为累计%',ch_reasoncyc:'各更换原因平均使用周期',note_reasoncyc:'消耗性更换与故障更换的周期差异 · 10件以上原因',ch_early:'疑似提前更换材料',note_early:'未达该材料平均周期一半即更换的比例 · 5件以上',ch_matproc:'材料 × 工序热力图',note_matproc:'哪个工序消耗哪种材料 · 前15种材料 · 颜色越深越多',title:'材料实绩仪表板',sub:'材料更换实绩·使用周期分析',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_process:'工艺',sl_detail:'细分工艺',sl_eq:'设备号机',sl_search:'搜索',cycle_basis:'周期基准:',cycle_paid:'有偿基准',cycle_prev:'前更换日',kp1:'总更换件数',kp2:'本月更换',kp3:'有偿比率',kp4:'材料种类',kp5:'更换设备数',kp6:'90天内再更换',u_cnt:'件',u_eq:'台',kf1:'使用数量 {n}个 (除异常值)',kf2:'上月 {n}件',kf3:'有偿 {a} · 无偿 {b}',kf4:'TOP {v}',kf5:'S/N {n}种',kf6:'占全部{p}%',sec_ov:'概览',sec_mat:'材料·寿命',sec_eq:'设备·工艺',sec_dt:'明细',ch_monthly:'更换趋势 (周/月)',note_monthly:'按实绩日期 · 未来3月预测·异常',ch_mat:'材料更换TOP',note_mat:'数量合计 · 除异常值 · 数值在柱端',ch_model:'按型号',ch_pf2:'有偿 vs 无偿',note_pf2:'有/无偿构成',pf_ratio:'有偿比率',pf_paid:'有偿',pf_free:'无偿',ch_eq:'设备更换TOP',note_eq:'件数 · 异常集中设备红色 · 数值在柱端',ch_proc2:'按工艺',note_proc2:'件数 · 最大/最新标注',ch_line2:'按LINE',note_line2:'件数 · 最大/最新标注',ch_life:'材料寿命分布',note_life:'更换时使用天数区间',life_b:['<90天','90–180天','180天–1年','1–2年','2年+'],note_hbarx:'数值在柱端 · 占比见提示框',ins_short:'90天内提前再更换 {n}件 ({p}%)',ins_qty:'数量单位疑似错误 {n}件 — 请确认表格',mon_u:'月',cyc_title:'材料使用周期(平均/最小/最大)',cyc_mat:'材料名',cyc_cnt:'更换数',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'材料更换明细',th_date:'实绩日期',th_customer:'客户',th_process:'工艺',th_detail:'细分工艺',th_eq:'设备号机',th_mat:'材料名',th_qty:'数量',th_reason:'更换原因',th_pf:'有偿/无偿',th_cycle:'使用天',all:'全部',no_data:'无数据',days:'天',this_month:'本月{n}件',ins_mom:'本月更换 {n}件 · 环比 {p}',ins_free:'无偿比率 {p}% — 需确认保修占比',ins_topmat:'材料 {v} — 占总数量的{p}%',ch_cross:'🔀 交叉分析',cp1:'设备×材料',cp2:'材料×月',cp3:'客户×有无偿',eq_drill:'🔍 设备详情',note_eqdr:'点击设备TOP柱条或搜索 — 何时·何种材料·多少',eq_dr_empty:'选择设备后显示详情',dr_last:'最近更换日',f_active:'活动筛选',f_clear:'全部清除',nav_hr:'人员',nav_sc:'安装',nav_pm:'PM点检',nav_ft:'故障',nav_mt:'材料'},
+  ja:{ch_matpareto:'部材集中度 (パレート)',note_matpareto:'上位部材が全交換の何%を占めるか · 線は累積%',ch_reasoncyc:'交換理由別平均使用周期',note_reasoncyc:'消耗交換と故障交換の周期差 · 10件以上の理由',ch_early:'早期交換の疑いがある部材',note_early:'その部材の平均周期の半分も持たずに交換された割合 · 5件以上',ch_matproc:'部材 × 工程ヒートマップ',note_matproc:'どの工程でどの部材が多く交換されるか · 上位15種 · 濃いほど多い',title:'資材実績ダッシュボード',sub:'資材交換実績·使用周期分析',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'라인',sl_process:'工程',sl_detail:'詳細工程',sl_eq:'設備号機',sl_search:'検索',cycle_basis:'周期基準:',cycle_paid:'有償基準',cycle_prev:'前交換日',kp1:'総交換件数',kp2:'今月交換',kp3:'有償比率',kp4:'資材種類',kp5:'交換設備数',kp6:'90日未満再交換',u_cnt:'件',u_eq:'台',kf1:'使用数量 {n}個 (異常値除外)',kf2:'前月 {n}件',kf3:'有償 {a} · 無償 {b}',kf4:'TOP {v}',kf5:'S/N {n}種',kf6:'全体の{p}%',sec_ov:'概要',sec_mat:'資材·寿命',sec_eq:'設備·工程',sec_dt:'詳細',ch_monthly:'交換推移 (週/月)',note_monthly:'実績日基準 · 今後3ヶ月予測·異常',ch_mat:'資材交換TOP',note_mat:'数量合計 · 異常値除外 · 値は棒の先',ch_model:'モデル別',ch_pf2:'有償 vs 無償',note_pf2:'有/無償構成',pf_ratio:'有償比率',pf_paid:'有償',pf_free:'無償',ch_eq:'設備交換TOP',note_eq:'件数 · 異常集中は赤 · 値は棒の先',ch_proc2:'工程別',note_proc2:'件数 · 最大/最新ラベル',ch_line2:'LINE別',note_line2:'件数 · 最大/最新ラベル',ch_life:'資材寿命分布',note_life:'交換時点の使用日区分',life_b:['<90日','90–180日','180日–1年','1–2年','2年+'],note_hbarx:'値は棒の先 · 構成比はツールチップ',ins_short:'90日未満の早期再交換 {n}件 ({p}%)',ins_qty:'数量単位誤入力疑い {n}件 — シート確認要',mon_u:'月',cyc_title:'資材別使用周期(平均/最小/最大)',cyc_mat:'資材名',cyc_cnt:'交換件수',cyc_avg:'平均',cyc_min:'最小',cyc_max:'最大',tbl_title:'資材交換詳細',th_date:'実績日',th_customer:'顧客',th_process:'工程',th_detail:'詳細工程',th_eq:'設備号機',th_mat:'資材名',th_qty:'数量',th_reason:'交換理由',th_pf:'有償/無償',th_cycle:'使用日',all:'全体',no_data:'データなし',days:'日',this_month:'今月{n}件',ins_mom:'今月交換 {n}件 · 前月比 {p}',ins_free:'無償比率 {p}% — 保証比重の確認要',ins_topmat:'資材 {v} — 全数量の{p}%',ch_cross:'🔀 クロス分析',cp1:'設備×資材',cp2:'資材×月',cp3:'顧客×有無償',eq_drill:'🔍 設備詳細',note_eqdr:'設備TOPの棒をクリックまたは検索 — いつ·どの資材を·どれだけ',eq_dr_empty:'設備を選択すると詳細が表示されます',dr_last:'最終交換日',f_active:'有効フィルタ',f_clear:'全解除',nav_hr:'人員',nav_sc:'設置',nav_pm:'PM点検',nav_ft:'故障',nav_mt:'資材'}
 };
 
 let LANG='ko', DATA=[], CHARTS={}, sortK='date', sortAsc=false, cycSortK='cnt', cycSortAsc=false;
@@ -666,12 +693,11 @@ async function loadData(){ GST.skeleton(true);
   try{
     status.textContent='⏳ 데이터 로딩 중...';
     const fetched = await GST.fetchCSVCached(SHEET_URL,'material');
-    GST.schemaBanner(GST.validateSchema(fetched.rows[0]||[],{
-      1:'운영단위',2:'고객사',5:'라인',7:'공정',8:'세부공정',10:'설비호기',
-      22:'사용수량',23:'자재명',25:'교체사유',28:'자재실적일자',
-      29:'사용일(유상기준)',30:'사용일(전교체일기준)',31:'유/무상',32:'무상사유'
-    }),'자재실적 시트');
-    const rows = fetched.rows.slice(1);
+    // 헤더 이름으로 열 위치 확정 — 이 시점 이후 C.* 는 실제 시트 기준이다
+    const mMat=GST.SM.map(fetched.rows, GST.SM.SPEC.mat);
+    C=mMat.C; C.process=C.proc;   // 이 페이지는 공정을 process로 부른다
+    HI_MAT=mMat.hi>=0?mMat.hi:0;
+    const rows = fetched.rows.slice(HI_MAT+1);
 
     function cv(r,k){const v=r[C[k]];return(v!==undefined&&v!==null&&v!=='')?String(v).trim():'';}
 
@@ -1035,6 +1061,77 @@ function render(){ GST.skeleton(false); GST.pushState(F);
     f.forEach(x=>{const d=cycleDays(x);if(d==null||d<=0)return;
       cnt[d<90?0:d<180?1:d<365?2:d<730?3:4]++;});
     mkBarVX('cLife',lb,cnt,TH.pal[4]);
+  }
+
+  /* ── 다각화 ────────────────────────────────────────────────────
+     같은 자재 데이터를 축을 바꿔가며 본다. 어떤 자재가 어디서 얼마나 갈리는지. */
+  // ① 파레토 — 상위 몇 종이 전체 교체의 대부분을 차지하는가(관리 우선순위 판단)
+  {
+    const top=countBy(f,'matName',12), tot=f.length||1;
+    let acc=0; const cum=top.map(e=>{acc+=e[1];return Math.round(acc/tot*100);});
+    if(CHARTS.cMatPareto)CHARTS.cMatPareto.destroy();
+    CHARTS.cMatPareto=new Chart(document.getElementById('cMatPareto'),{
+      data:{labels:top.map(e=>e[0]),datasets:[
+        {type:'bar',label:t('u_cnt')||'건',data:top.map(e=>e[1]),backgroundColor:TH.pal[0],order:2,yAxisID:'y'},
+        {type:'line',label:'누적 %',data:cum,borderColor:TH.status.warn||TH.pal[5],backgroundColor:'transparent',
+         pointRadius:3,borderWidth:2,order:1,yAxisID:'y1'}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.datasetIndex?('누적 '+c.parsed.y+'%'):(c.parsed.y+'건')}}},
+        scales:{x:{ticks:{color:TH.txt,font:{size:9.5},maxRotation:60,minRotation:35},grid:{display:false}},
+          y:{ticks:{color:TH.txt,font:{size:10}},grid:{color:TH.grid}},
+          y1:{position:'right',min:0,max:100,ticks:{color:TH.txt,font:{size:10},callback:v=>v+'%'},grid:{display:false}}}}
+    });
+  }
+  // ② 교체사유별 평균 사용주기 — 소모성으로 도는 주기와 고장으로 갈리는 주기는 다르다
+  {
+    const g={};
+    f.forEach(x=>{const d=cycleDays(x); if(d==null||d<=0)return;
+      const k=x.reason||'(미상)'; (g[k]=g[k]||[]).push(d);});
+    const ent=Object.keys(g).filter(k=>g[k].length>=10)
+      .map(k=>[k+' ('+g[k].length+')',Math.round(g[k].reduce((a,b)=>a+b,0)/g[k].length)])
+      .sort((a,b)=>b[1]-a[1]).slice(0,10);
+    mkHBarX('cReasonCyc',ent,ent.length?ent[0][1]:1,TH.pal[5],10);
+  }
+  // ③ 조기교체 의심 — 그 자재의 평균 주기 절반도 못 버티고 교체된 비율.
+  //    자재마다 정상 주기가 다르므로 고정 일수(예: 90일)가 아니라 자기 평균과 비교한다.
+  {
+    const by={};
+    f.forEach(x=>{const d=cycleDays(x); if(d==null||d<=0)return;
+      (by[x.matName]=by[x.matName]||[]).push(d);});
+    const ent=Object.keys(by).filter(k=>by[k].length>=5).map(k=>{
+      const a=by[k], avg=a.reduce((s,v)=>s+v,0)/a.length;
+      const early=a.filter(v=>v<avg/2).length;
+      return [k+' ('+a.length+')',Math.round(early/a.length*100)];
+    }).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    mkHBarX('cEarly',ent,100,TH.status.bad,10);
+  }
+  // ④ 자재 × 공정 히트맵 — "어떤 공정에서 어떤 자재가 갈리나"
+  {
+    const el=document.getElementById('matProcHeat');
+    if(el){
+      const mats=countBy(f,'matName',15).map(e=>e[0]);
+      const procsAll=countBy(f,'process',8).map(e=>e[0]);
+      const cell={}; let mx=0;
+      f.forEach(x=>{ if(mats.indexOf(x.matName)<0||procsAll.indexOf(x.process)<0)return;
+        const k=x.matName+' '+x.process; cell[k]=(cell[k]||0)+1; if(cell[k]>mx)mx=cell[k]; });
+      const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+      let h='<table style="border-collapse:collapse;font-size:11px;min-width:100%"><thead><tr>'
+        +'<th style="text-align:left;padding:5px 8px;position:sticky;left:0;background:var(--card,#161b22)">'+t('cyc_mat')+'</th>'
+        +procsAll.map(p=>'<th style="padding:5px 6px;font-weight:600;white-space:nowrap">'+esc(p)+'</th>').join('')
+        +'<th style="padding:5px 8px">계</th></tr></thead><tbody>';
+      mats.forEach(m=>{
+        let rowTot=0;
+        const tds=procsAll.map(p=>{
+          const v=cell[m+' '+p]||0; rowTot+=v;
+          const a=mx?Math.pow(v/mx,.6):0;   // 큰 값 하나에 눌리지 않도록 감마 보정
+          return '<td style="text-align:center;padding:5px 6px;background:rgba(59,130,246,'+(v?(.10+a*.65).toFixed(3):0)+')'
+            +';border-radius:4px">'+(v||'')+'</td>';
+        }).join('');
+        h+='<tr><td style="padding:5px 8px;white-space:nowrap;position:sticky;left:0;background:var(--card,#161b22)">'
+          +esc(m)+'</td>'+tds+'<td style="text-align:center;padding:5px 8px;opacity:.65">'+rowTot+'</td></tr>';
+      });
+      el.innerHTML=h+'</tbody></table>'+(mats.length?'':'<div style="opacity:.6;padding:14px">데이터 없음</div>');
+    }
   }
 
   const procF = f.filter(x=>!EXCL.proc.includes(x.process));

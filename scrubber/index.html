@@ -466,7 +466,10 @@ tr:hover td{background:rgba(255,255,255,.04)}
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
-const CI={country:2,customer:3,location:4,code:5,sn:6,model:7,fab:9,group1:12,detail1:14,toolMaker:18,toolModel:19,fabIn:38,turnOn:40,warranty:43,type:75};
+// 설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
+// 이 시트는 128열이라 위치 고정이 특히 위험했다(type이 75열째). 이제 이름으로 따라간다.
+// 'Type'은 44·79·96열에 중복이라 쓰지 않고, 챔버 판정은 'Scrubber type'만 본다.
+let CI={}, HI_INST=0;
 // Warranty는 AR열(43)의 'Warranty In / Warranty Out' **라벨**이다 — 만료일 열은 시트에 없다.
 // (기존 코드는 42열을 날짜로 읽어 관련 KPI·차트가 전부 0이었다)
 const wLbl=r=>{const w=GST.nfw(r[CI.warranty]||'').toUpperCase();
@@ -703,7 +706,10 @@ async function loadData(){ GST.skeleton(true);
     const parsed={data:fetched.rows};
     // 행 포함 조건은 S/N — 주간현황(report)과 동일 규칙. code(F열)는 비어 있는 시트가 있어
     // 그 기준으로 거르면 페이지 전체가 0이 된다.
-    RAW=parsed.data.slice(1).filter(r=>r[CI.sn]&&String(r[CI.sn]).trim()!=='');
+    // 헤더 이름으로 열 위치 확정 — 이 시점 이후 CI.* 는 실제 시트 기준이다
+    const mIn=GST.SM.map(fetched.rows, GST.SM.SPEC.inst);
+    CI=mIn.C; HI_INST=mIn.hi>=0?mIn.hi:0;
+    RAW=parsed.data.slice(HI_INST+1).filter(r=>r[CI.sn]&&String(r[CI.sn]).trim()!=='');
     document.getElementById('totRec').textContent=chSum(RAW);
     status.className='status ok';
     status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+RAW.length+' '+t('units');
