@@ -414,6 +414,75 @@ canvas{cursor:pointer}
   </div>
 </div>
 
+<!-- ═══ 섹션: 설비 일대기 ═══
+     설비 한 대를 골라 설치부터 지금까지를 한 화면에서 본다.
+     설치현황(언제 들어왔나) + 수선실적(무슨 일이 있었나) + 자재실적(뭘 갈았나)을 S/N으로 잇는다. -->
+<div data-sec="life">
+<div class="card" style="margin-bottom:16px">
+  <h3><span data-i="life_pick">설비 선택</span></h3>
+  <div class="note" data-i="note_lifepick">S/N 또는 설비호기로 검색하세요. 설비별 대응 TOP 차트의 막대를 눌러도 열립니다.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
+    <input id="lifeQ" type="search" placeholder="GBWS-6870 / KTINL50800" autocomplete="off"
+      style="flex:1;min-width:220px;max-width:380px;padding:9px 12px;border-radius:10px;
+             border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);
+             color:inherit;font-size:13.5px">
+    <span id="lifeHits" class="note" style="margin:0"></span>
+  </div>
+  <div id="lifeSug" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px"></div>
+</div>
+
+<div id="lifeBody" style="display:none">
+  <div class="card" style="margin-bottom:16px">
+    <h3 id="lifeTitle" style="margin-bottom:4px">—</h3>
+    <div id="lifeMeta" class="note" style="margin-bottom:0"></div>
+    <div id="lifeFacts" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin-top:14px"></div>
+  </div>
+
+  <div class="trend-card">
+    <div class="trend-header">
+      <h3 data-i="ch_lifetl">이력 타임라인</h3>
+      <div class="trend-meta" data-i="note_lifetl">설치·Turn On·고장/정비·자재교체를 시간순으로 · 점에 커서를 올리면 상세</div>
+    </div>
+    <div class="trend-wrap"><canvas id="cLifeTL"></canvas></div>
+  </div>
+
+  <div class="grid3" style="margin-top:16px">
+    <div class="card">
+      <h3 data-i="ch_lifestage">작업단계 구성</h3>
+      <div class="note" data-i="note_lifestage">이 설비에 어떤 작업이 얼마나 있었나</div>
+      <div class="cw"><canvas id="cLifeStage"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_lifepart">교체 자재 TOP</h3>
+      <div class="note" data-i="note_lifepart">이 설비에서 제일 많이 간 자재 · 건수</div>
+      <div class="cw"><canvas id="cLifePart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 data-i="ch_lifecycle">자재별 평균 사용주기</h3>
+      <div class="note" data-i="note_lifecycle">교체 시점의 사용일(전교체일 기준) 평균 · 2회 이상 교체된 자재</div>
+      <div class="cw"><canvas id="cLifeCycle"></canvas></div>
+    </div>
+  </div>
+
+  <div class="tablecard" style="margin-top:16px">
+    <h3><span data-i="life_tbl">전체 이력</span> (<span id="lifeCnt">0</span>)</h3>
+    <div class="tbl-wrap" style="max-height:460px">
+      <table>
+        <thead><tr>
+          <th data-i-th="th_date">일자</th><th data-i-th="life_kind">구분</th>
+          <th data-i-th="life_what">내용</th><th data-i-th="th_worker">작업자</th>
+          <th data-i-th="th_pf2">유/무상</th>
+        </tr></thead>
+        <tbody id="lifeBodyTbl"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div id="lifeEmpty" class="card" style="text-align:center;padding:44px 20px;opacity:.65">
+  <div data-i="life_empty">설비를 검색하면 그 설비의 일대기가 표시됩니다</div>
+</div>
+</div>
+
 <!-- ═══ 섹션: 상세 목록 ═══ -->
 <div data-sec="data">
 <div class="tablecard">
@@ -442,7 +511,11 @@ GST.authGate();
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
 // 설치현황 시트 — 설비 S/N별 Turn-On(가동개시일) 조인용 (MTBF 가동기간 정밀화). 미연동 시 최초 서비스일로 대체.
 const INST_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
+// 자재실적 — 설비 일대기에서 "이 설비가 뭘 갈았나"를 잇기 위해 함께 읽는다
+const MAT_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
 let INSTMAP={};  // normSN → Turn-On Date
+let INSTROW={};  // normSN → 설치 제원 (일대기 기본정보용)
+let MAT_ROWS=[]; // 자재 교체 이력
 const normSN=s=>String(s==null?'':s).replace(/\s+/g,'').toUpperCase();
 // 실적현황·설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
 // 시트에 열이 끼어들거나 순서가 바뀌어도 따라가고, 이름이 바뀌면 배너로 알린다.
@@ -453,7 +526,7 @@ const SERVICE_STAGES=['BM','CBM','CM','CRM'];
 const PAL=GST.PAL8;
 
 const T={
-  ko:{ch_tbmw:'작업자별 TBM 사후 재고장률',note_tbmw:'TBM 후 30일 내 같은 설비 BM 발생 비율 · 낮을수록 좋음 · TBM 10건 이상',ch_tbmgap:'TBM → 다음 고장 경과일',note_tbmgap:'재고장이 난 건만 · 짧을수록 정비 품질 문제',ch_tbmline:'LINE별 TBM 사후 재고장률',note_tbmline:'TBM 5건 이상 · 값은 막대 끝',title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
+  ko:{sec_life:'설비 일대기',life_pick:'설비 선택',note_lifepick:'S/N 또는 설비호기로 검색하세요. 설비별 대응 TOP 차트의 막대를 눌러도 열립니다.',ch_lifetl:'이력 타임라인',note_lifetl:'설치·Turn On·고장/정비·자재교체를 시간순으로 · 점에 커서를 올리면 상세',ch_lifestage:'작업단계 구성',note_lifestage:'이 설비에 어떤 작업이 얼마나 있었나',ch_lifepart:'교체 자재 TOP',note_lifepart:'이 설비에서 제일 많이 간 자재 · 건수',ch_lifecycle:'자재별 평균 사용주기',note_lifecycle:'교체 시점의 사용일(전교체일 기준) 평균 · 2회 이상 교체된 자재',life_tbl:'전체 이력',life_kind:'구분',life_what:'내용',th_worker:'작업자',th_pf2:'유/무상',life_empty:'설비를 검색하면 그 설비의 일대기가 표시됩니다',ch_tbmw:'작업자별 TBM 사후 재고장률',note_tbmw:'TBM 후 30일 내 같은 설비 BM 발생 비율 · 낮을수록 좋음 · TBM 10건 이상',ch_tbmgap:'TBM → 다음 고장 경과일',note_tbmgap:'재고장이 난 건만 · 짧을수록 정비 품질 문제',ch_tbmline:'LINE별 TBM 사후 재고장률',note_tbmline:'TBM 5건 이상 · 값은 막대 끝',title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
     sec_ov:'개요',sec_ca:'원인·조치',sec_ld:'작업 부하',sec_rel:'신뢰성',sec_dt:'상세 목록',
     r_mtbf:'MTBF · 평균 고장간격',r_mttr:'MTTR · 평균 수리시간',r_frate:'연간 고장률 (건/대)',r_units:'분석 설비',
     rf_mtbf:'중앙값 {n}일',rf_mttr:'BM {n}건 평균',rf_frate:'가동기간 환산',rf_units:'BM 2건↑ · 설치연동 {p}%',
@@ -476,7 +549,7 @@ const T={
     tbl_title:'서비스 실적 상세',th_date:'작업일',ft_cnt:'건수',th_stage:'단계',th_pf:'유/무상',th_phenom:'현상',th_cause:'원인',th_action:'조치',th_min:'시간(분)',th_mh:'공수',th_worker:'작업자',
     ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ch_alarmp:'알람 TOP (파레토)',note_alarmp:'알람(Z) 미기재 시 현상(AA) 폴백 · 라인=누적 %',dq_title:'데이터 입력 정합성 (BM 기준)',dq_missing:'미기재 {n}건 / BM {t}건',dq_note:'행의 ✎로 알람·현상·원인·조치를 바로 채울 수 있습니다 (구글 시트에 저장)',dq_fill:'입력',dq_all:'알람·현상·원인·조치가 모두 기재되어 있습니다',dq_missN:'미기재 {n}건 제외',dq_mt:'고장 기록 입력',dq_close:'닫기',dq_save:'저장',dq_saved:'저장됨 — 구글 시트에 반영되었습니다',dq_savefail:'저장 실패 — 잠시 후 다시 시도하세요',dq_conflict:'다른 사람이 먼저 수정했습니다 — 다시 열어주세요',dq_loadfail:'행을 불러오지 못했습니다',dq_zcol:'Z열',dq_savenext:'저장 후 다음 →',dq_left:'남은 {n}건',dq_done:'미기재 건을 모두 처리했습니다',dq_byworker:'작업자별 미기재 TOP',sr_upm:'UPM율 %',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'최근 구간 작업공수 {n}인·시 · 직전 구간 대비 {p}',
     etc:'기타',mon_unit:'월',dur_b:['<30분','30–60분','1–2시간','2–4시간','4시간+'],wcnt_p:'{n}명'},
-  en:{ch_tbmw:'Post-TBM Failure Rate by Worker',note_tbmw:'BM within 30d after TBM on same unit · lower is better · ≥10 TBMs',ch_tbmgap:'Days from TBM to Next Failure',note_tbmgap:'only recurring cases · shorter means poorer PM quality',ch_tbmline:'Post-TBM Failure Rate by LINE',note_tbmline:'≥5 TBMs · value at bar end',title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
+  en:{sec_life:'Equipment Life',life_pick:'Select Equipment',note_lifepick:'Search by S/N or equipment code. Clicking a bar in Top Equipment also opens it.',ch_lifetl:'Life Timeline',note_lifetl:'install · Turn On · faults/PM · part swaps in time order · hover a point for detail',ch_lifestage:'Work Stage Mix',note_lifestage:'what happened on this unit, and how often',ch_lifepart:'Top Replaced Parts',note_lifepart:'most frequently replaced on this unit · count',ch_lifecycle:'Mean Service Life by Part',note_lifecycle:'mean days-in-use at replacement (prev-replace basis) · parts replaced 2+ times',life_tbl:'Full History',life_kind:'Type',life_what:'Detail',th_worker:'Worker',th_pf2:'Paid/Free',life_empty:'Search for an equipment to see its life story',ch_tbmw:'Post-TBM Failure Rate by Worker',note_tbmw:'BM within 30d after TBM on same unit · lower is better · ≥10 TBMs',ch_tbmgap:'Days from TBM to Next Failure',note_tbmgap:'only recurring cases · shorter means poorer PM quality',ch_tbmline:'Post-TBM Failure Rate by LINE',note_tbmline:'≥5 TBMs · value at bar end',title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
     sec_ov:'Overview',sec_ca:'Cause & Action',sec_ld:'Workload',sec_rel:'Reliability',sec_dt:'Data',
     r_mtbf:'MTBF · mean time btw failures',r_mttr:'MTTR · mean time to repair',r_frate:'Annual failures / unit',r_units:'Units analyzed',
     rf_mtbf:'median {n} d',rf_mttr:'avg of {n} BM',rf_frate:'annualized',rf_units:'BM≥2 · install-linked {p}%',
@@ -499,7 +572,7 @@ const T={
     tbl_title:'Service Records',th_date:'Date',ft_cnt:'Count',th_stage:'Stage',th_pf:'Paid/Free',th_phenom:'Phenomenon',th_cause:'Cause',th_action:'Action',th_min:'Min',th_mh:'Man-min',th_worker:'Workers',
     ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ch_alarmp:'Top Alarms (Pareto)',note_alarmp:'falls back to symptom(AA) when alarm(Z) blank · line = cumulative %',dq_title:'Data entry integrity (BM)',dq_missing:'{n} missing / {t} BM',dq_note:'click ✎ to fill alarm/phenomenon/cause/action right here (saved to the Google Sheet)',dq_fill:'Fill',dq_all:'Alarm, phenomenon, cause and action are all filled in',dq_missN:'{n} blank excluded',dq_mt:'Fill fault record',dq_close:'Close',dq_save:'Save',dq_saved:'Saved to the Google Sheet',dq_savefail:'Save failed — try again',dq_conflict:'Someone edited this row first — reopen it',dq_loadfail:'Could not load the row',dq_zcol:'col Z',dq_savenext:'Save & next →',dq_left:'{n} left',dq_done:'All missing records are filled',dq_byworker:'Missing entries by worker (top)',sr_upm:'UPM rate %',ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours in latest period · {p} vs prev',
     etc:'Others',mon_unit:'',dur_b:['<30m','30–60m','1–2h','2–4h','4h+'],wcnt_p:'{n} ppl'},
-  zh:{ch_tbmw:'按作业者 TBM 后再故障率',note_tbmw:'TBM 后30天内同设备发生BM的比例 · 越低越好 · TBM 10件以上',ch_tbmgap:'TBM → 下次故障间隔天数',note_tbmgap:'仅统计再故障件 · 越短表示保养质量越差',ch_tbmline:'按LINE TBM 后再故障率',note_tbmline:'TBM 5件以上 · 数值在条形末端',title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
+  zh:{sec_life:'设备履历',life_pick:'选择设备',note_lifepick:'按 S/N 或设备号搜索。点击设备对应TOP图表的条形也可打开。',ch_lifetl:'履历时间轴',note_lifetl:'安装·Turn On·故障/保养·材料更换按时间顺序 · 悬停查看详情',ch_lifestage:'作业阶段构成',note_lifestage:'这台设备发生过哪些作业，各多少次',ch_lifepart:'更换材料 TOP',note_lifepart:'该设备更换最多的材料 · 件数',ch_lifecycle:'各材料平均使用周期',note_lifecycle:'更换时使用天数(前次更换基准)平均 · 更换2次以上的材料',life_tbl:'全部履历',life_kind:'类别',life_what:'内容',th_worker:'作业者',th_pf2:'有偿/无偿',life_empty:'搜索设备后显示该设备的履历',ch_tbmw:'按作业者 TBM 后再故障率',note_tbmw:'TBM 后30天内同设备发生BM的比例 · 越低越好 · TBM 10件以上',ch_tbmgap:'TBM → 下次故障间隔天数',note_tbmgap:'仅统计再故障件 · 越短表示保养质量越差',ch_tbmline:'按LINE TBM 后再故障率',note_tbmline:'TBM 5件以上 · 数值在条形末端',title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
     sec_ov:'概览',sec_ca:'原因·措施',sec_ld:'工时负荷',sec_rel:'可靠性',sec_dt:'明细',
     r_mtbf:'MTBF · 平均故障间隔',r_mttr:'MTTR · 平均修复时间',r_frate:'年故障率 (件/台)',r_units:'分析设备',
     rf_mtbf:'中位数 {n}天',rf_mttr:'BM {n}件均值',rf_frate:'按运行期折算',rf_units:'BM≥2 · 安装关联 {p}%',
@@ -522,7 +595,7 @@ const T={
     tbl_title:'服务实绩明细',th_date:'作业日',ft_cnt:'件数',th_stage:'阶段',th_pf:'有/无偿',th_phenom:'现象',th_cause:'原因',th_action:'措施',th_min:'时间(分)',th_mh:'工时',th_worker:'作业者',
     ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ch_alarmp:'报警TOP (帕累托)',note_alarmp:'报警(Z)未填时用现象(AA) · 线=累计%',dq_title:'数据录入完整性 (BM)',dq_missing:'未填写 {n}件 / BM {t}件',dq_note:'点✎可直接填写报警·现象·原因·措施 (保存到谷歌表格)',dq_fill:'填写',dq_all:'报警·现象·原因·措施均已填写',dq_missN:'未填{n}件除外',dq_mt:'填写故障记录',dq_close:'关闭',dq_save:'保存',dq_saved:'已保存到谷歌表格',dq_savefail:'保存失败 — 请稍后重试',dq_conflict:'他人已先修改 — 请重新打开',dq_loadfail:'无法读取该行',dq_zcol:'Z列',dq_savenext:'保存并下一条 →',dq_left:'剩余 {n}件',dq_done:'未填写记录已全部处理',dq_byworker:'按作业者未填TOP',sr_upm:'UPM率 %',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'最近区间工时 {n}人·时 · 环比 {p}',
     etc:'其他',mon_unit:'月',dur_b:['<30分','30–60分','1–2时','2–4时','4时+'],wcnt_p:'{n}人'},
-  ja:{ch_tbmw:'作業者別TBM後再故障率',note_tbmw:'TBM後30日以内に同一設備でBM発生した割合 · 低いほど良い · TBM10件以上',ch_tbmgap:'TBM → 次故障までの日数',note_tbmgap:'再故障した件のみ · 短いほど整備品質の問題',ch_tbmline:'LINE別TBM後再故障率',note_tbmline:'TBM5件以上 · 値は棒の末端',title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
+  ja:{sec_life:'設備一代記',life_pick:'設備選択',note_lifepick:'S/Nまたは設備号機で検索してください。設備別対応TOPのバーをクリックしても開きます。',ch_lifetl:'履歴タイムライン',note_lifetl:'設置·Turn On·故障/整備·部材交換を時系列で · 点にカーソルを合わせると詳細',ch_lifestage:'作業段階構成',note_lifestage:'この設備にどんな作業がどれだけあったか',ch_lifepart:'交換部材TOP',note_lifepart:'この設備で最も多く交換された部材 · 件数',ch_lifecycle:'部材別平均使用周期',note_lifecycle:'交換時点の使用日数(前回交換基準)平均 · 2回以上交換された部材',life_tbl:'全履歴',life_kind:'区分',life_what:'内容',th_worker:'作業者',th_pf2:'有償/無償',life_empty:'設備を検索するとその設備の履歴が表示されます',ch_tbmw:'作業者別TBM後再故障率',note_tbmw:'TBM後30日以内に同一設備でBM発生した割合 · 低いほど良い · TBM10件以上',ch_tbmgap:'TBM → 次故障までの日数',note_tbmgap:'再故障した件のみ · 短いほど整備品質の問題',ch_tbmline:'LINE別TBM後再故障率',note_tbmline:'TBM5件以上 · 値は棒の末端',title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
     sec_ov:'概要',sec_ca:'原因·処置',sec_ld:'工数負荷',sec_rel:'信頼性',sec_dt:'詳細',
     r_mtbf:'MTBF · 平均故障間隔',r_mttr:'MTTR · 平均修理時間',r_frate:'年間故障率 (件/台)',r_units:'分析設備',
     rf_mtbf:'中央値 {n}日',rf_mttr:'BM {n}件平均',rf_frate:'稼働期間換算',rf_units:'BM2件↑ · 設置連動 {p}%',
@@ -566,6 +639,7 @@ function buildSecNav(){
     {id:'cause',   label:t('sec_ca')},
     {id:'load',    label:t('sec_ld')},
     {id:'rel',     label:t('sec_rel')},
+    {id:'life',    label:t('sec_life')},
     {id:'data',    label:t('sec_dt')}
   ]);
 }
@@ -592,9 +666,10 @@ async function loadData(){ GST.skeleton(true);
   const btn=document.getElementById('refreshBtn'); const status=document.getElementById('status');
   btn.disabled=true; status.className='status'; status.textContent=t('loading');
   try{
-    const [svcR,instR]=await Promise.allSettled([
+    const [svcR,instR,matR]=await Promise.allSettled([
       GST.fetchCSVCached(SHEET_URL,'svc'),
-      GST.fetchCSVCached(INST_URL,'svc_inst')
+      GST.fetchCSVCached(INST_URL,'svc_inst'),
+      GST.fetchCSVCached(MAT_URL,'svc_mat')
     ]);
     if(svcR.status!=='fulfilled')throw new Error(svcR.reason&&svcR.reason.message||'load fail');
     const fetched=svcR.value;
@@ -606,10 +681,33 @@ async function loadData(){ GST.skeleton(true);
     if(instR.status==='fulfilled'&&instR.value.rows){
       const mIn=GST.SM.map(instR.value.rows, GST.SM.SPEC.inst);
       CINST=mIn.C; HI_INST=mIn.hi>=0?mIn.hi:0;
+      const v=(r,k)=>GST.SM.val(r,CINST,k);
       instR.value.rows.slice(HI_INST+1).forEach(r=>{
-        const sn=normSN(GST.SM.val(r,CINST,'sn')); const to=toDate(GST.SM.val(r,CINST,'turnOn'));
-        if(sn&&to&&(!INSTMAP[sn]||to<INSTMAP[sn]))INSTMAP[sn]=to;
+        const sn=normSN(v(r,'sn')); const to=toDate(v(r,'turnOn'));
+        if(!sn)return;
+        if(to&&(!INSTMAP[sn]||to<INSTMAP[sn]))INSTMAP[sn]=to;
+        // 일대기 기본정보 — 같은 S/N이 여러 행이면 먼저 나온 것을 쓴다
+        if(!INSTROW[sn]) INSTROW[sn]={
+          code:v(r,'code'), model:v(r,'model'), fab:v(r,'fab'), floor:v(r,'floor'), bay:v(r,'bay'),
+          customer:v(r,'customer'), location:v(r,'location'), group1:v(r,'group1'), detail1:v(r,'detail1'),
+          toolMaker:v(r,'toolMaker'), toolModel:v(r,'toolModel'), pmCycle:v(r,'pmCycle'),
+          warranty:v(r,'warranty'), type:v(r,'type'), fabIn:toDate(v(r,'fabIn')), turnOn:to
+        };
       });
+    }
+    // 자재 교체 이력 — S/N으로 설비에 붙인다
+    MAT_ROWS=[];
+    if(matR.status==='fulfilled'&&matR.value.rows){
+      const mM=GST.SM.map(matR.value.rows, GST.SM.SPEC.mat), CM=mM.C, hi=mM.hi>=0?mM.hi:0;
+      const v=(r,k)=>GST.SM.val(r,CM,k);
+      MAT_ROWS=matR.value.rows.slice(hi+1).map(r=>({
+        sn:normSN(v(r,'sn')), eq:GST.nfw(v(r,'eq')), date:toDate(v(r,'workDate')),
+        name:v(r,'matName'), code:v(r,'matCode'), qty:Number(v(r,'qty'))||1,
+        reason:v(r,'reason'), pf:v(r,'pf'), spec:v(r,'spec'),
+        // 사용주기는 시트가 이미 계산해 둔 값을 쓴다(전교체일 기준 / 유상 기준)
+        daysPrev:Number(v(r,'daysPrev'))||null, daysPaid:Number(v(r,'daysPaid'))||null,
+        proc:v(r,'proc'), model:v(r,'model')
+      })).filter(x=>x.sn&&x.name);
     }
     ROWS=fetched.rows.slice(HI_WK+1)
       .filter(r=>SERVICE_STAGES.indexOf((r[C.stage]||'').toString().trim().toUpperCase())>-1)
@@ -1485,7 +1583,153 @@ function addCapBtns(){ document.querySelectorAll('.card canvas,.trend-card canva
     box.innerHTML='<button class="capbtn" title="고해상도 복사(PPT 붙여넣기)" onclick="copyChart(\''+id+'\')">📋 복사</button><button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>';
     card.appendChild(box); }); }
 
+/* ══════ 설비 일대기 ══════════════════════════════════════════════
+   설비 한 대의 설치→수선→자재교체를 S/N 하나로 이어 붙인다.
+   세 시트가 S/N 표기를 조금씩 다르게 쓰므로 normSN으로 맞춘 뒤 조인한다. */
+let LIFE_SN='';
+const lifeFmt=d=>d?fmtD(d):'—';
+
+// 검색어로 후보 설비를 찾는다 — S/N과 설비호기(code) 양쪽을 본다
+function lifeCandidates(q){
+  const k=normSN(q); if(!k)return [];
+  const seen={}, out=[];
+  ROWS.concat(TBM_ROWS).forEach(r=>{
+    const s=normSN(r.sn); if(!s||seen[s])return;
+    const code=normSN(r.code||'');
+    if(s.includes(k)||(code&&code.includes(k))){ seen[s]=1; out.push({sn:r.sn,code:r.code||''}); }
+  });
+  return out.slice(0,12);
+}
+
+function renderLife(){
+  const body=document.getElementById('lifeBody'), empty=document.getElementById('lifeEmpty');
+  if(!body||!empty)return;
+  const TH=GST.chartTheme();
+  const key=normSN(LIFE_SN);
+  if(!key){ body.style.display='none'; empty.style.display=''; return; }
+  body.style.display=''; empty.style.display='none';
+
+  // 이 설비의 이력 — 슬라이서와 무관하게 전체 기간을 본다(일대기이므로)
+  const svc=ROWS.filter(r=>normSN(r.sn)===key&&r.work).sort((a,b)=>a.work-b.work);
+  const tbm=TBM_ROWS.filter(r=>normSN(r.sn)===key&&r.work).sort((a,b)=>a.work-b.work);
+  const mat=MAT_ROWS.filter(r=>r.sn===key&&r.date).sort((a,b)=>a.date-b.date);
+  const info=INSTROW[key]||{};
+  const disp=(svc[0]&&svc[0].sn)||(tbm[0]&&tbm[0].sn)||LIFE_SN;
+
+  document.getElementById('lifeTitle').textContent=disp+(info.code?'  ·  '+info.code:'');
+  document.getElementById('lifeMeta').textContent=[
+    info.customer, info.fab, info.floor&&info.floor+' '+(info.bay||''),
+    info.model, info.group1&&info.group1+(info.detail1?'/'+info.detail1:''),
+    info.toolMaker&&('Main Tool '+info.toolMaker+' '+(info.toolModel||''))
+  ].filter(Boolean).join('  ·  ')||'설치현황에서 이 S/N의 제원을 찾지 못했습니다';
+
+  // 기본 지표
+  const bm=svc.filter(x=>x.stage==='BM');
+  const span=info.turnOn?Math.max(1,Math.round((Date.now()-info.turnOn)/864e5)):null;
+  const mtbf=(bm.length>1)?Math.round((bm[bm.length-1].work-bm[0].work)/864e5/(bm.length-1)):null;
+  const manh=svc.reduce((a,x)=>a+(x.manMin||0),0);
+  const paid=svc.filter(x=>/유상/.test(x.pf)).length, freeN=svc.filter(x=>/무상/.test(x.pf)).length;
+  const facts=[
+    ['설치(FAB In)',lifeFmt(info.fabIn)], ['Turn On',lifeFmt(info.turnOn)],
+    ['가동일수',span?span.toLocaleString()+'일':'—'],
+    ['서비스 건수',svc.length.toLocaleString()], ['그중 고장(BM)',bm.length.toLocaleString()],
+    ['계획정비(TBM)',tbm.length.toLocaleString()],
+    ['MTBF',mtbf?mtbf.toLocaleString()+'일':'—'],
+    ['누적 작업공수',manh?Math.round(manh/60).toLocaleString()+'h':'—'],
+    ['자재교체',mat.length.toLocaleString()+'건'],
+    ['유/무상',paid+' / '+freeN],
+    ['보증',info.warranty||'—'], ['챔버',/DUAL/i.test(info.type||'')?'DUAL(2)':'SINGLE(1)']
+  ];
+  document.getElementById('lifeFacts').innerHTML=facts.map(([k,v])=>
+    '<div style="background:rgba(255,255,255,.05);border-radius:10px;padding:9px 11px">'
+    +'<div style="font-size:10.5px;opacity:.6;margin-bottom:3px">'+k+'</div>'
+    +'<div style="font-size:15px;font-weight:700">'+v+'</div></div>').join('');
+
+  // ── 타임라인 — 종류별로 y를 나눠 겹치지 않게 뿌린다
+  const KIND=[
+    {k:'설치',   y:4, col:TH.pal[6], pts:[info.fabIn&&{x:info.fabIn,label:'FAB In'},info.turnOn&&{x:info.turnOn,label:'Turn On'}].filter(Boolean)},
+    {k:'고장 BM',y:3, col:TH.status.bad, pts:bm.map(x=>({x:x.work,label:(x.phenom||x.alarm||x.cause||'BM')+(x.workers?' · '+x.workers:'')}))},
+    {k:'기타 서비스',y:2, col:TH.pal[1], pts:svc.filter(x=>x.stage!=='BM').map(x=>({x:x.work,label:x.stage+(x.workers?' · '+x.workers:'')}))},
+    {k:'계획정비 TBM',y:1, col:TH.pal[3], pts:tbm.map(x=>({x:x.work,label:'TBM'+(x.workers?' · '+x.workers:'')}))},
+    {k:'자재교체',y:0, col:TH.pal[4], pts:mat.map(x=>({x:x.date,label:x.name+' ×'+x.qty+(x.reason?' · '+x.reason:'')}))}
+  ];
+  if(CHARTS.cLifeTL)CHARTS.cLifeTL.destroy();
+  CHARTS.cLifeTL=new Chart(document.getElementById('cLifeTL'),{
+    type:'scatter',
+    data:{datasets:KIND.map(g=>({label:g.k,backgroundColor:g.col,borderColor:g.col,
+      pointRadius:g.k==='설치'?7:4.5,pointHoverRadius:8,
+      // x는 타임스탬프(숫자). Chart.js의 time 축은 별도 날짜 어댑터가 필요한데
+      // 이 페이지는 어댑터를 싣지 않으므로 linear 축에 눈금만 날짜로 찍는다.
+      data:g.pts.map(p=>({x:p.x.getTime(),y:g.y,_l:p.label}))}))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:TH.fg,boxWidth:10,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>fmtD(new Date(c.parsed.x))+' · '+(c.raw._l||'')}}},
+      scales:{
+        x:{type:'linear',ticks:{color:TH.mut,font:{size:10},maxTicksLimit:8,
+             callback:v=>{const d=new Date(v);return isNaN(d)?'':d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}},
+           grid:{color:TH.grid}},
+        y:{min:-.6,max:4.6,ticks:{color:TH.mut,font:{size:10},stepSize:1,
+             callback:v=>({0:'자재교체',1:'TBM',2:'서비스',3:'고장',4:'설치'})[v]||''},
+           grid:{color:TH.grid}}}}
+  });
+
+  // 작업단계 구성
+  const stg={}; svc.forEach(x=>{stg[x.stage]=(stg[x.stage]||0)+1;});
+  if(tbm.length)stg['TBM']=tbm.length;
+  mkDonut('cLifeStage',Object.entries(stg).sort((a,b)=>b[1]-a[1]),null,6);
+
+  // 교체 자재 TOP
+  const pc={}; mat.forEach(x=>{pc[x.name]=(pc[x.name]||0)+1;});
+  mkHBar('cLifePart',Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,10),mat.length,null,TH.pal[4],10);
+
+  // 자재별 평균 사용주기 — 시트가 계산해 둔 '사용일(전교체일 기준)'을 쓴다.
+  // 2회 이상 교체된 자재만 봐야 주기라는 말이 성립한다.
+  const cyc={};
+  mat.forEach(x=>{ if(x.daysPrev==null||x.daysPrev<=0)return;
+    (cyc[x.name]=cyc[x.name]||[]).push(x.daysPrev); });
+  const cycEnt=Object.keys(cyc).filter(k=>cyc[k].length>=2)
+    .map(k=>[k,Math.round(cyc[k].reduce((a,b)=>a+b,0)/cyc[k].length)])
+    .sort((a,b)=>a[1]-b[1]).slice(0,10);
+  mkHBar('cLifeCycle',cycEnt,cycEnt.length?cycEnt[cycEnt.length-1][1]:1,null,TH.pal[2],10);
+
+  // 전체 이력 표
+  const ev=[]
+    .concat(svc.map(x=>({d:x.work,k:x.stage,w:[x.phenom,x.cause,x.action,x.detail].filter(Boolean).join(' / ')||x.alarm||'',by:x.workers||'',pf:x.pf||''})))
+    .concat(tbm.map(x=>({d:x.work,k:'TBM',w:'계획정비',by:x.workers||'',pf:''})))
+    .concat(mat.map(x=>({d:x.date,k:'자재',w:x.name+' ×'+x.qty+(x.spec?' ('+x.spec+')':'')+(x.reason?' · '+x.reason:''),by:'',pf:x.pf||''})))
+    .sort((a,b)=>b.d-a.d);
+  document.getElementById('lifeCnt').textContent=ev.length;
+  const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  document.getElementById('lifeBodyTbl').innerHTML=ev.length
+    ? ev.map(e=>'<tr><td>'+fmtD(e.d)+'</td><td>'+esc(e.k)+'</td><td>'+esc(e.w)
+        +'</td><td>'+esc(e.by)+'</td><td>'+esc(e.pf)+'</td></tr>').join('')
+    : '<tr><td colspan="5" style="text-align:center;opacity:.6;padding:20px">이력이 없습니다</td></tr>';
+}
+
+function bindLife(){
+  const q=document.getElementById('lifeQ'), sug=document.getElementById('lifeSug'),
+        hits=document.getElementById('lifeHits');
+  if(!q)return;
+  const run=()=>{
+    const cands=lifeCandidates(q.value);
+    hits.textContent=q.value.trim()?(cands.length+'대 검색됨'):'';
+    sug.innerHTML=cands.map(c=>'<button class="chip" data-sn="'+c.sn+'" style="padding:5px 10px;'
+      +'border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);'
+      +'color:inherit;font-size:11.5px;cursor:pointer">'+c.sn+(c.code?' · '+c.code:'')+'</button>').join('');
+    // 정확히 한 대면 바로 연다
+    if(cands.length===1){ LIFE_SN=cands[0].sn; renderLife(); }
+  };
+  q.addEventListener('input',run);
+  sug.addEventListener('click',e=>{const b=e.target.closest('[data-sn]'); if(!b)return;
+    LIFE_SN=b.getAttribute('data-sn'); renderLife();
+    document.querySelector('[data-sec="life"]').scrollIntoView({behavior:'smooth',block:'start'}); });
+}
+// 다른 화면에서 설비를 지정해 들어올 수 있게 열어 둔다 (설비별 TOP 차트 클릭 등)
+window.openLife=function(sn){ LIFE_SN=sn; const q=document.getElementById('lifeQ');
+  if(q)q.value=sn; renderLife(); GST.gotoSection&&GST.gotoSection('life'); };
+
 applyLang();
+bindLife();
 loadData();
 addCapBtns();
 </script>
