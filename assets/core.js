@@ -513,6 +513,171 @@ GST.schemaBanner = function(issues, sheetName){
   }
   el.textContent=msg;
 };
+/* ---------- 9-b. 시트 열 자동 매핑 (헤더 이름 → 열 번호) ----------
+   열 번호를 코드에 박아두면 시트에 열이 하나만 끼어들어도 전 지표가 조용히 틀어진다.
+   (교육현황에 Scrubber Lv.2/Lv.3 두 열이 들어왔을 때 실제로 그렇게 깨졌다.)
+   여기서는 헤더 '이름'으로 위치를 찾는다. 규칙은 셋뿐:
+     · 정규화 후 정확일치 — 부분일치는 쓰지 않는다
+       ('입사일'이 '재입사일'을, 'no'가 'note'를 잡는 사고를 막는다)
+     · 이름이 바뀔 수 있으면 별칭 배열로 나열한다 — 앞에서부터 먼저 맞는 것을 쓴다
+     · 못 찾으면 조용히 넘어가지 않는다 — miss에 남기고 진단 패널·배너로 띄운다
+   열이 중간에 끼어들거나 순서가 바뀌는 것은 이제 코드 수정 없이 따라간다. */
+GST.SM = {};
+// 줄바꿈·공백·마침표·중점·괄호·슬래시·밑줄·하이픈을 지우고 전각→반각 후 소문자.
+// 'Scrubber⏎Lv.2' · 'scrubber lv2' · 'SCRUBBER_LV-2' 를 모두 같은 것으로 본다.
+GST.SM.norm = function(s){
+  const t = GST.nfw ? GST.nfw(String(s==null?'':s)) : String(s==null?'':s);
+  return t.replace(/[\s.·()[\]{}/\\_-]/g,'').toLowerCase();
+};
+/* 힌트로 준 이름이 '모두' 들어 있는 첫 행을 헤더로 본다. 못 찾으면 -1.
+   힌트 하나가 이름이 바뀌었다고 시트 전체가 죽지 않도록, 각 힌트는 배열(별칭)도 받는다.
+   ['실적코드', ['자재명','부품명']] → 앞은 정확일치, 뒤는 둘 중 하나만 있으면 통과. */
+GST.SM.headerRow = function(rows, hints, scan){
+  const want=(hints||[]).map(h=>[].concat(h).map(GST.SM.norm)), n=Math.min((rows||[]).length, scan||12);
+  for(let i=0;i<n;i++){
+    const h=(rows[i]||[]).map(GST.SM.norm);
+    if(want.every(alts=>alts.some(w=>h.indexOf(w)>=0))) return i;
+  }
+  return -1;
+};
+/* spec = {name, gid, hints:[], scan, opt:[], fields:{논리명:'헤더명' | ['별칭1','별칭2']}}
+   반환 = {ok, hi, C:{논리명:열번호(-1=못찾음)}, miss:[], dup:[]}
+   C는 기존 하드코딩 상수와 같은 모양이라 하위 코드(r[C.alarm] 등)는 손대지 않아도 된다. */
+GST.SM.map = function(rows, spec){
+  const hi=GST.SM.headerRow(rows, spec.hints, spec.scan);
+  const out={sheet:spec.name||'', hi:hi, C:{}, miss:[], dup:[], ok:false};
+  const opt=spec.opt||[];
+  if(hi<0){
+    Object.keys(spec.fields).forEach(k=>{ out.C[k]=-1; });
+    out.miss.push('헤더 행 자체를 찾지 못함 (힌트: '+(spec.hints||[]).join(' + ')+')');
+    GST.SM._log(out); return out;
+  }
+  const H=(rows[hi]||[]).map(GST.SM.norm), at={};
+  H.forEach((h,i)=>{ if(h) (at[h]=at[h]||[]).push(i); });
+  Object.keys(spec.fields).forEach(function(k){
+    const names=[].concat(spec.fields[k]);
+    let idx=-1;
+    for(let i=0;i<names.length;i++){
+      const hit=at[GST.SM.norm(names[i])];
+      if(hit&&hit.length){
+        idx=hit[0];
+        // 같은 이름 열이 둘 이상이면 첫 번째를 쓰되, 사람이 볼 수 있게 남긴다
+        if(hit.length>1) out.dup.push(k+' "'+names[i]+'" → '+hit.map(c=>c+1).join('·')+'열 (첫 번째 사용)');
+        break;
+      }
+    }
+    out.C[k]=idx;
+    if(idx<0 && opt.indexOf(k)<0) out.miss.push(k+' ['+names.join(' / ')+']');
+  });
+  out.ok=!out.miss.length;
+  GST.SM._log(out); return out;
+};
+// 값 꺼내기 — 못 찾은 열(-1)은 r[-1]=undefined가 되므로 반드시 이걸 거친다
+GST.SM.val = function(row, C, k){
+  const i=C[k]; return (i>=0 && row && row[i]!=null) ? String(row[i]).trim() : '';
+};
+/* ---- 시트 정의 (실제 시트 헤더 기준) ----
+   여러 페이지가 같은 시트를 각자 파싱하다 갈라지는 것을 막으려고 여기 한 곳에만 둔다.
+   시트에서 열 이름이 바뀌면 별칭 배열에 새 이름을 한 줄 추가하면 전 페이지가 같이 따라온다. */
+GST.SM.SPEC = {
+  // 수선실적 gid 646668307 — 헤더 67개, 정규화 후 중복 없음
+  wk: { name:'수선실적', gid:'646668307', hints:['실적코드','작업단계'],
+    // 알람유형·현상·원인·조치는 현재 입력률이 낮다(BM 기준 4~10%).
+    // 열 자체는 있으므로 매핑해 두고, 데이터가 차면 관련 차트가 자동으로 살아난다.
+    opt:['alarm','phenom','cause','actionDetail','reqType','chamber'],
+    fields:{
+      pg:'제품군', op:'운영단위', customer:'고객사', campus:'단지', line:'라인', bay:'BAY',
+      proc:'공정', subproc:'세부공정', model:'MODEL(자사)', rsCode:'실적코드', status:'상태',
+      reqType:'의뢰유형', stage:'작업단계', chamber:'챔버', wrs:'WRS NO', mainEq:'메인설비호기',
+      prodCode:'제품코드', eqNo:'설비호기', chpos:'채널위치', snIn:'S/N(IN)', snOut:'S/N(OUT)',
+      pf:'유/무상', alarm:'알람유형', phenom:'현상', cause:'원인', action:'조치',
+      actionDetail:'세부조치내용', dStart:'작업시작일', dEnd:'작업종료일',
+      tStart:'작업시작시간', tEnd:'작업종료시간', regDate:'실적등록일', shipDate:'출하일자',
+      moveMin:'총 이동시간(분)', workMin:'작업시간(분)', manMin:'작업공수',
+      workers:'작업자', workerCnt:'작업자수'
+    }},
+  // 자재실적 gid 31302669 — 헤더 41개, 중복 없음
+  mat: { name:'자재실적', gid:'31302669', hints:['수선실적번호',['자재코드','자재명']],
+    // UNIT·ASSEMBLY·PART는 현재 전부 공란이라 자재명으로 대체해 쓴다. 채워지면 자동 반영.
+    opt:['unit','assembly','part','custMatCode','warrantyTerm','kitSn','snIn','snOut'],
+    fields:{
+      op:'운영단위', customer:'고객사', rsCode:'수선실적번호', campus:'단지', line:'라인',
+      bay:'BAY', proc:'공정', detail:'세부공정', mainEq:'메인설비호기', eq:'설비호기',
+      chamber:'챔버', sn:'S/N', wo:'W/O번호', model:'모델명', matCode:'자재코드',
+      custMatCode:'고객사자재코드', eqPos:'설비위치', unit:'UNIT', assembly:'ASSEMBLY',
+      part:'PART', matPos:'자재위치', qty:'사용수량', matName:'자재명', spec:'규격',
+      reason:'교체사유', prevPaidDate:'전유상교체일', prevDate:'전교체일',
+      workDate:'자재실적일자', daysPaid:'사용일(유상기준)', daysPrev:'사용일(전교체일기준)',
+      pf:'유/무상', freeReason:'무상사유', warrantyTerm:'자재보증기간', price:'단가',
+      kitSn:'KIT S/N', snIn:'IN SN', snOut:'OUT SN', stockChk:'재고체크여부', store:'자재창고'
+    }},
+  // 설치현황 gid 891608329 — 128열. 'Type'은 44·79·96열에 중복이라 절대 쓰지 않고,
+  // 챔버 판정에는 'Scrubber type'(75열)만 쓴다. 'Main Tool ID'도 17·30 중복(첫 번째 사용).
+  inst: { name:'설치현황', gid:'891608329', hints:['Scrubber CODE','FAB'],
+    opt:['toolId','pmCycle','warrantyDate','start','group2','detail2'],
+    fields:{
+      pjt:'PJT.', country:'Country', customer:'Customer', location:'Location',
+      code:'Scrubber CODE', sn:'Scrubber S/N', model:'Scrubber Model', burner:'Burner Type',
+      fab:'FAB', floor:'Floor', bay:'Bay', group1:'Group_1', group2:'Group_2',
+      detail1:'Detail_1', detail2:'Detail_2', toolId:'Main Tool ID',
+      toolMaker:'Main Tool Maker', toolModel:'Main Tool Model',
+      fabIn:'FAB In', start:'Start', turnOn:'Turn On',
+      warrantyDate:'Warranty date', warranty:'Warranty In/Out',
+      pmCycle:'Target PM Cycle', type:'Scrubber type'
+    }}
+};
+// 매핑 결과 누적 — 진단 패널이 읽는다
+GST.SM._reg = [];
+GST.SM._log = function(res){
+  GST.SM._reg = GST.SM._reg.filter(r=>r.sheet!==res.sheet).concat([res]);
+  const bad=GST.SM._reg.filter(r=>r.miss.length);
+  if(bad.length) GST.SM.banner(bad);
+};
+// 못 찾은 열이 있으면 배너로 알린다 — 조용히 틀린 숫자를 보여주지 않는 것이 핵심
+GST.SM.banner = function(bad){
+  let el=document.getElementById('gstColWarn');
+  if(!bad||!bad.length){ if(el)el.remove(); return; }
+  const lines=bad.map(r=>r.sheet+': '+r.miss.slice(0,3).join(' · ')+(r.miss.length>3?' 외 '+(r.miss.length-3)+'건':''));
+  if(!el){
+    el=document.createElement('div'); el.id='gstColWarn';
+    el.style.cssText='background:#7f1d1d;color:#fff;padding:11px 16px;border-radius:10px;margin:0 0 14px;font-size:12px;font-weight:600;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.3);cursor:pointer';
+    el.title='클릭하면 열 인식 상태를 자세히 봅니다';
+    el.onclick=GST.SM.panel;
+    const anchor=document.querySelector('.status')||document.body.firstElementChild;
+    if(anchor&&anchor.parentNode) anchor.parentNode.insertBefore(el, anchor.nextSibling);
+    else document.body.insertAdjacentElement('afterbegin', el);
+  }
+  el.textContent='⚠️ 시트에서 찾지 못한 열이 있습니다 — 해당 항목은 비어 보입니다. ('+lines.join(' | ')+') 클릭하면 상세';
+};
+/* 열 인식 상태 진단 — 어떤 항목이 몇 번 열로 잡혔는지, 못 찾은 건 무엇인지 한눈에.
+   시트를 바꾼 뒤 여기만 보면 30초 안에 확인이 끝난다. 콘솔에서 GST.SM.panel()로도 연다. */
+GST.SM.panel = function(){
+  const old=document.getElementById('gstColPanel'); if(old){ old.remove(); return; }
+  const wrap=document.createElement('div'); wrap.id='gstColPanel';
+  wrap.style.cssText='position:fixed;inset:0;z-index:999998;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:24px';
+  const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  let html='<div style="background:var(--card,#161b22);color:var(--fg,#e6edf3);max-width:900px;width:100%;max-height:84vh;overflow:auto;border-radius:14px;padding:20px 22px;box-shadow:0 18px 50px rgba(0,0,0,.5)">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+    +'<b style="font-size:15px">시트 열 인식 상태</b>'
+    +'<span style="opacity:.6;font-size:12px">닫기 ✕</span></div>'
+    +'<div style="opacity:.65;font-size:11.5px;margin-bottom:14px">헤더 이름으로 찾은 결과입니다. 열이 끼어들거나 순서가 바뀌어도 따라가지만, <b>이름이 바뀌면</b> 여기 "못 찾음"으로 뜹니다.</div>';
+  if(!GST.SM._reg.length) html+='<div style="opacity:.6">아직 매핑된 시트가 없습니다.</div>';
+  GST.SM._reg.forEach(function(r){
+    const found=Object.keys(r.C).filter(k=>r.C[k]>=0);
+    html+='<div style="margin:0 0 16px"><div style="font-weight:700;margin-bottom:5px">'+esc(r.sheet)
+      +' <span style="font-weight:400;opacity:.6;font-size:11.5px">헤더 '+(r.hi>=0?(r.hi+1)+'행':'못 찾음')
+      +' · 인식 '+found.length+'/'+Object.keys(r.C).length+'</span></div>';
+    if(r.miss.length) html+='<div style="background:#7f1d1d;padding:8px 10px;border-radius:8px;font-size:12px;margin-bottom:6px"><b>못 찾음</b> — '+esc(r.miss.join(' · '))+'</div>';
+    if(r.dup.length)  html+='<div style="background:#78350f;padding:8px 10px;border-radius:8px;font-size:12px;margin-bottom:6px"><b>이름 중복</b> — '+esc(r.dup.join(' · '))+'</div>';
+    html+='<div style="display:flex;flex-wrap:wrap;gap:4px 8px;font-size:11.5px;opacity:.85">'
+      +found.map(k=>esc(k)+'<span style="opacity:.5">→'+(r.C[k]+1)+'</span>').join(' · ')+'</div></div>';
+  });
+  html+='</div>';
+  wrap.innerHTML=html;
+  wrap.onclick=function(e){ if(e.target===wrap||e.target.textContent==='닫기 ✕') wrap.remove(); };
+  document.body.appendChild(wrap);
+};
+
 // 오프라인 캐시: 마지막 정상 데이터를 localStorage에 보관
 GST.cacheSave=function(key,rows){
   try{ localStorage.setItem('gstc_'+key, JSON.stringify({t:Date.now(),rows})); }catch(e){}
@@ -1656,6 +1821,14 @@ GST.snMenu=function(sn, x, y){
     +'box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12px;color:var(--txt-main,#E6EDF3);backdrop-filter:blur(10px)';
   let h='<div style="font-size:10px;font-weight:800;letter-spacing:1px;opacity:.7;margin:2px 4px 7px">'
        +sn.replace(/</g,'&lt;')+'</div>';
+  // 페이지 자체 항목 — 현재 페이지가 이 설비로 할 수 있는 일을 메뉴 맨 위에 끼워 넣는다.
+  // (예: 고장현황의 '설비 일대기'.) S/N 셀 클릭은 이 메뉴가 캡처 단계에서 선점하므로,
+  // 페이지가 따로 클릭 핸들러를 달아도 절대 실행되지 않는다 — 반드시 이 훅을 쓴다.
+  (GST.snMenuExtra||[]).forEach(function(x,i){
+    h+='<button type="button" data-extra="'+i+'" style="display:block;width:100%;text-align:left;'
+      +'background:transparent;border:none;color:inherit;font:inherit;padding:6px 8px;border-radius:7px;cursor:pointer;font-weight:700">'
+      +x.label+'</button>';
+  });
   GST.SN_PAGES.filter(p=>p.id!==here).forEach(function(p){
     h+='<button type="button" data-go="'+p.id+'" style="display:block;width:100%;text-align:left;'
       +'background:transparent;border:none;color:inherit;font:inherit;padding:6px 8px;border-radius:7px;cursor:pointer">'
@@ -1669,6 +1842,8 @@ GST.snMenu=function(sn, x, y){
   m.addEventListener('mouseover',e=>{const b=e.target.closest('button'); if(b)b.style.background='var(--glass-hover,#16202C)';});
   m.addEventListener('mouseout', e=>{const b=e.target.closest('button'); if(b)b.style.background='transparent';});
   m.addEventListener('click',function(e){
+    const xb=e.target.closest('[data-extra]');
+    if(xb){ const it=(GST.snMenuExtra||[])[+xb.dataset.extra]; m.remove(); if(it&&it.fn)it.fn(sn); return; }
     const b=e.target.closest('[data-go]'); if(!b)return;
     m.remove(); GST.goTab(b.dataset.go,{sn:sn});
   });
