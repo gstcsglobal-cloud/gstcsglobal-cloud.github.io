@@ -664,10 +664,15 @@ GST.canon = {
     if(/^WET\s*PROCESS$/.test(t)) return 'WET';
     return t;
   },
-  // 설비호기: 'NA'·공백·너무 짧은 코드는 집계에서 빼야 순위가 오염되지 않는다
+  /* 설비호기: 값이 아닌 것(빈칸·NA·하이픈)만 버린다.
+     한때 '너무 짧으면 버린다'며 4자 미만을 잘랐는데, 실측해 보니 2VR·4AC·W6S 같은
+     3자리 호기가 114종 1,034행 있었고 전부 GBWS-2557처럼 멀쩡한 S/N을 달고 있었다.
+     길이로 자르면 그 설비들이 Best/Worst·주기·설비축에서 통째로 사라진다 —
+     화면에는 아무 표시도 없이. 쓰레기는 이름으로 거르고, 짧다는 이유로 버리지 않는다. */
   eq: function(s){
     const t = GST.upk(s).trim();
-    return (!t || t === 'NA' || t.length < 4) ? '' : t;
+    if(!t || t.length < 2) return '';
+    return /^(NA|N\/A|NONE|NULL|-+|\.+)$/.test(t) ? '' : t;
   }
 };
 
@@ -1872,7 +1877,9 @@ GST.snMenu=function(sn, x, y){
   (GST.snMenuExtra||[]).forEach(function(x,i){
     h+='<button type="button" data-extra="'+i+'" style="display:block;width:100%;text-align:left;'
       +'background:transparent;border:none;color:inherit;font:inherit;padding:6px 8px;border-radius:7px;cursor:pointer;font-weight:700">'
-      +x.label+'</button>';
+      // 라벨은 함수로도 받는다 — 문자열로 굳혀두면 로드 시점 언어에 갇혀
+      // 나중에 언어를 바꿔도 이 항목만 옛 언어로 남는다
+      +(typeof x.label==='function'?x.label():x.label)+'</button>';
   });
   GST.SN_PAGES.filter(p=>p.id!==here).forEach(function(p){
     h+='<button type="button" data-go="'+p.id+'" style="display:block;width:100%;text-align:left;'
@@ -2384,7 +2391,10 @@ GST.pivotAgg=function(recs, meas){
   if(!n) return null;
   if(a==='avg') return Math.round(sum/n*10)/10;
   if(a==='med'){                       // 교체 간격처럼 한쪽으로 치우친 값은 평균이 왜곡된다
-    const v=[]; recs.forEach(function(r){ const x=+GST._pivGet(r,meas.f); if(isFinite(x))v.push(x); });
+    // null을 그냥 +로 바꾸면 0이 되고 isFinite(0)은 참이라 '값 없음'이 0으로 섞인다.
+    // 재교체 간격은 첫 교체 행이 전부 null이라, 이대로면 중앙값이 0에 붙어버린다.
+    const v=[]; recs.forEach(function(r){ const raw=GST._pivGet(r,meas.f);
+      if(raw==null||raw==='')return; const x=+raw; if(isFinite(x))v.push(x); });
     if(!v.length) return null; v.sort(function(p,q){return p-q;});
     const h=v.length>>1; return v.length%2?v[h]:Math.round((v[h-1]+v[h])/2*10)/10;
   }

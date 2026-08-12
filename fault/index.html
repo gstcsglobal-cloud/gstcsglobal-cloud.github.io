@@ -560,7 +560,7 @@ canvas{cursor:pointer}
   <h3><span data-i="life_pick">설비 선택</span></h3>
   <div class="note" data-i="note_lifepick">S/N 또는 설비호기로 검색하세요. 아무 표에서나 S/N을 클릭하면 뜨는 메뉴의 「설비 일대기」로도 열립니다.</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
-    <input id="lifeQ" type="search" placeholder="GBWS-6870 / KTINL50800" autocomplete="off"
+    <input id="lifeQ" type="search" placeholder="S/N 또는 설비호기" autocomplete="off"
       style="flex:1;min-width:220px;max-width:380px;padding:9px 12px;border-radius:10px;
              border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);
              color:inherit;font-size:13.5px">
@@ -664,7 +664,7 @@ const SERVICE_STAGES=['BM','CBM','CM','CRM'];
 const PAL=GST.PAL8;
 
 const T={
-  ko:{dp_sub:'공정·세부공정 중 어디가 유독 고장인가',dp_sub_n:'BM율 = 고장(BM) ÷ 그 구분에 들어간 모든 작업 · 작업 {n}건 이상 {u}개 구분 · 전체 평균 {p}% · 줄을 누르면 그 구분으로 화면이 좁혀집니다 · ◆ 는 그 구분 BM의 절반 이상이 한 호기에서 나온 경우',dp_th_sub:'구분',dp_th_eqn:'설비수',dp_th_top:'최다 호기',sl_proc2:'공정',sl_line2:'라인',sec_deep:'심층분석',
+  ko:{th_from:'시작일',th_to:'종료일',sl_alarm:'알람',sl_country2:'국가',dp_sub:'공정·세부공정 중 어디가 유독 고장인가',dp_sub_n:'BM율 = 고장(BM) ÷ 그 구분에 들어간 모든 작업 · 작업 {n}건 이상 {u}개 구분 · 전체 평균 {p}% · 줄을 누르면 그 구분으로 화면이 좁혀집니다 · ◆ 는 그 구분 BM의 절반 이상이 한 호기에서 나온 경우',dp_th_sub:'구분',dp_th_eqn:'설비수',dp_th_top:'최다 호기',sl_proc2:'공정',sl_line2:'라인',sec_deep:'심층분석',
     dp_h1:'다차원 분석 — 축을 바꿔가며 묻는다',
     dp_g1:'행·열에 원하는 축을 놓습니다 — 설비호기·공정·세부공정·모델·BAY·채널위치·주차/월, 그리고 작업자까지.',
     dp_g2:'표시를 「집중지수(×)」로 바꾸면 흔한 항목에 가리지 않고 유독 한 칸에 몰린 조합이 배수로 드러납니다.',
@@ -709,7 +709,7 @@ const T={
     tbl_title:'서비스 실적 상세',th_date:'작업일',ft_cnt:'건수',th_stage:'단계',th_pf:'유/무상',th_phenom:'현상',th_cause:'원인',th_action:'조치',th_min:'시간(분)',th_mh:'공수',th_worker:'작업자',
     ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ch_alarmp:'알람 TOP (파레토)',note_alarmp:'알람(Z) 미기재 시 현상(AA) 폴백 · 라인=누적 %',dq_title:'데이터 입력 정합성 (BM 기준)',dq_missing:'미기재 {n}건 / BM {t}건',dq_note:'행의 ✎로 알람·현상·원인·조치를 바로 채울 수 있습니다 (구글 시트에 저장)',dq_fill:'입력',dq_all:'알람·현상·원인·조치가 모두 기재되어 있습니다',dq_missN:'미기재 {n}건 제외',dq_mt:'고장 기록 입력',dq_close:'닫기',dq_save:'저장',dq_saved:'저장됨 — 구글 시트에 반영되었습니다',dq_savefail:'저장 실패 — 잠시 후 다시 시도하세요',dq_conflict:'다른 사람이 먼저 수정했습니다 — 다시 열어주세요',dq_loadfail:'행을 불러오지 못했습니다',dq_zcol:'Z열',dq_savenext:'저장 후 다음 →',dq_left:'남은 {n}건',dq_done:'미기재 건을 모두 처리했습니다',dq_byworker:'작업자별 미기재 TOP',sr_upm:'UPM율 %',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'최근 구간 작업공수 {n}인·시 · 직전 구간 대비 {p}',
     etc:'기타',mon_unit:'월',dur_b:['<30분','30–60분','1–2시간','2–4시간','4시간+'],wcnt_p:'{n}명'},
-  en:{dp_sub:'Which Process or Sub-process Fails Disproportionately',dp_sub_n:'BM rate = failures ÷ all work in that group · {u} groups with {n}+ jobs · overall {p}% · click a row to narrow the page · ◆ means over half that group\u2019s failures came from a single unit',dp_th_sub:'Group',dp_th_eqn:'Units',dp_th_top:'Top unit',sl_proc2:'Process',sl_line2:'Line',sec_deep:'Deep Dive',
+  en:{th_from:'From',th_to:'To',sl_alarm:'Alarm',sl_country2:'Country',dp_sub:'Which Process or Sub-process Fails Disproportionately',dp_sub_n:'BM rate = failures ÷ all work in that group · {u} groups with {n}+ jobs · overall {p}% · click a row to narrow the page · ◆ means over half that group\u2019s failures came from a single unit',dp_th_sub:'Group',dp_th_eqn:'Units',dp_th_top:'Top unit',sl_proc2:'Process',sl_line2:'Line',sec_deep:'Deep Dive',
     dp_h1:'Multi-dimensional analysis — change the axis, change the question',
     dp_g1:'Put any axis on rows and columns — unit, process, sub-process, model, BAY, channel, week/month, even the worker.',
     dp_g2:'Switch "Show as" to Lift (×) and the combinations that really pile up surface as multiples, instead of being buried under common items.',
@@ -754,7 +754,7 @@ const T={
     tbl_title:'Service Records',th_date:'Date',ft_cnt:'Count',th_stage:'Stage',th_pf:'Paid/Free',th_phenom:'Phenomenon',th_cause:'Cause',th_action:'Action',th_min:'Min',th_mh:'Man-min',th_worker:'Workers',
     ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ch_alarmp:'Top Alarms (Pareto)',note_alarmp:'falls back to symptom(AA) when alarm(Z) blank · line = cumulative %',dq_title:'Data entry integrity (BM)',dq_missing:'{n} missing / {t} BM',dq_note:'click ✎ to fill alarm/phenomenon/cause/action right here (saved to the Google Sheet)',dq_fill:'Fill',dq_all:'Alarm, phenomenon, cause and action are all filled in',dq_missN:'{n} blank excluded',dq_mt:'Fill fault record',dq_close:'Close',dq_save:'Save',dq_saved:'Saved to the Google Sheet',dq_savefail:'Save failed — try again',dq_conflict:'Someone edited this row first — reopen it',dq_loadfail:'Could not load the row',dq_zcol:'col Z',dq_savenext:'Save & next →',dq_left:'{n} left',dq_done:'All missing records are filled',dq_byworker:'Missing entries by worker (top)',sr_upm:'UPM rate %',ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours in latest period · {p} vs prev',
     etc:'Others',mon_unit:'',dur_b:['<30m','30–60m','1–2h','2–4h','4h+'],wcnt_p:'{n} ppl'},
-  zh:{dp_sub:'哪个工序·细分工序故障异常集中',dp_sub_n:'BM率 = 故障(BM) ÷ 该分类下全部作业 · 作业{n}件以上共{u}个分类 · 全体平均{p}% · 点击行可按该分类收窄画面 · ◆ 表示该分类过半故障来自同一号机',dp_th_sub:'分类',dp_th_eqn:'设备数',dp_th_top:'最多号机',sl_proc2:'工序',sl_line2:'线',sec_deep:'深度分析',
+  zh:{th_from:'开始日',th_to:'结束日',sl_alarm:'报警',sl_country2:'国家',dp_sub:'哪个工序·细分工序故障异常集中',dp_sub_n:'BM率 = 故障(BM) ÷ 该分类下全部作业 · 作业{n}件以上共{u}个分类 · 全体平均{p}% · 点击行可按该分类收窄画面 · ◆ 表示该分类过半故障来自同一号机',dp_th_sub:'分类',dp_th_eqn:'设备数',dp_th_top:'最多号机',sl_proc2:'工序',sl_line2:'线',sec_deep:'深度分析',
     dp_h1:'多维分析 — 换个轴，换个问题',
     dp_g1:'把任意轴放到行和列 — 设备号机·工序·细分工序·型号·BAY·通道位置·周/月，甚至作业者。',
     dp_g2:'把显示方式切换为「集中指数(×)」，被常见项掩盖的、真正扎堆的组合会以倍数浮现出来。',
@@ -799,7 +799,7 @@ const T={
     tbl_title:'服务实绩明细',th_date:'作业日',ft_cnt:'件数',th_stage:'阶段',th_pf:'有/无偿',th_phenom:'现象',th_cause:'原因',th_action:'措施',th_min:'时间(分)',th_mh:'工时',th_worker:'作业者',
     ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ch_alarmp:'报警TOP (帕累托)',note_alarmp:'报警(Z)未填时用现象(AA) · 线=累计%',dq_title:'数据录入完整性 (BM)',dq_missing:'未填写 {n}件 / BM {t}件',dq_note:'点✎可直接填写报警·现象·原因·措施 (保存到谷歌表格)',dq_fill:'填写',dq_all:'报警·现象·原因·措施均已填写',dq_missN:'未填{n}件除外',dq_mt:'填写故障记录',dq_close:'关闭',dq_save:'保存',dq_saved:'已保存到谷歌表格',dq_savefail:'保存失败 — 请稍后重试',dq_conflict:'他人已先修改 — 请重新打开',dq_loadfail:'无法读取该行',dq_zcol:'Z列',dq_savenext:'保存并下一条 →',dq_left:'剩余 {n}件',dq_done:'未填写记录已全部处理',dq_byworker:'按作业者未填TOP',sr_upm:'UPM率 %',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'最近区间工时 {n}人·时 · 环比 {p}',
     etc:'其他',mon_unit:'月',dur_b:['<30分','30–60分','1–2时','2–4时','4时+'],wcnt_p:'{n}人'},
-  ja:{dp_sub:'工程·詳細工程のどこが特に故障するか',dp_sub_n:'BM率 = 故障(BM) ÷ その区分に入った全作業 · 作業{n}件以上の{u}区分 · 全体平均{p}% · 行を押すとその区分で画面が絞られます · ◆ はその区分の故障の半分以上が1号機から出ている場合',dp_th_sub:'区分',dp_th_eqn:'設備数',dp_th_top:'最多号機',sl_proc2:'工程',sl_line2:'ライン',sec_deep:'深層分析',
+  ja:{th_from:'開始日',th_to:'終了日',sl_alarm:'アラーム',sl_country2:'国',dp_sub:'工程·詳細工程のどこが特に故障するか',dp_sub_n:'BM率 = 故障(BM) ÷ その区分に入った全作業 · 作業{n}件以上の{u}区分 · 全体平均{p}% · 行を押すとその区分で画面が絞られます · ◆ はその区分の故障の半分以上が1号機から出ている場合',dp_th_sub:'区分',dp_th_eqn:'設備数',dp_th_top:'最多号機',sl_proc2:'工程',sl_line2:'ライン',sec_deep:'深層分析',
     dp_h1:'多次元分析 — 軸を変えて問いを変える',
     dp_g1:'行と列に好きな軸を置きます — 設備号機·工程·詳細工程·モデル·BAY·チャンネル位置·週/月、そして作業者まで。',
     dp_g2:'表示形式を「集中指数(×)」に切り替えると、よくある項目に埋もれずに、特に偏った組み合わせが倍率で浮かび上がります。',
@@ -876,6 +876,7 @@ function buildSecNav(){
   ]);
 }
 function applyLang(){
+  buildFieldLabel();
   document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
   document.querySelectorAll('[data-i-th]').forEach(el=>{el.textContent=t(el.getAttribute('data-i-th'));});
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
@@ -950,7 +951,7 @@ async function loadData(){ GST.skeleton(true);
         // 분류 축(라인·모델·S/N·공정)은 전각이 섞여 들어오므로 반각으로 통일 — 같은 라인이 두 그룹으로 갈라지는 것을 막는다.
         // 자유 서술(원인·현상·조치)은 원문 그대로 둔다.
         rs:String(r[C.rsCode]||'').trim().replace(/\.0+$/,''),   // 실적코드 — 시트 쓰기 키(고유)
-        code:GST.nfw(r[C.eqNo]||'').trim(),                       // 설비호기(Scrubber Code, KTINL50800)
+        code:GST.nfw(r[C.eqNo]||'').trim(),                       // 설비호기(Scrubber Code)
         line:GST.nfw(r[C.line]||'').trim(), stage:(r[C.stage]||'').toString().trim().toUpperCase(),
         alarm:GST.nfw(r[C.alarm]||'').trim(),
         country:(String(r[C.op]||'').match(/GST\s+([A-Za-z]+)/i)||[])[1]?String(r[C.op]).match(/GST\s+([A-Za-z]+)/i)[1].toUpperCase():'',
@@ -1114,7 +1115,15 @@ GST.pageBar({
   on:{ period:v=>{ GST.setPeriod(v); render(); },
        endM:v=>applyCut(v), clear:()=>applyCut(''), span:on=>applySpan(on) }
 });
-const FIELD_LABEL={line:'LINE',stage:'단계',pf:'유/무상',cause:'원인',model:'모델',sn:'설비',dtFrom:'시작일',dtTo:'종료일',q:'검색',alarm:'알람',country:'국가',campus:'CAMPUS',proc:'공정',subproc:'세부공정'};
+// 칩 라벨은 상수로 두면 언어를 바꿔도 한국어로 남는다 — 매번 현재 언어로 다시 만든다.
+let FIELD_LABEL={};
+function buildFieldLabel(){
+  FIELD_LABEL={line:'LINE',stage:t('sl_stage'),pf:t('sl_pf'),cause:t('sl_cause'),
+    model:t('sl_model'),sn:t('sl_sn'),dtFrom:t('th_from'),dtTo:t('th_to'),q:t('sl_search'),
+    alarm:t('sl_alarm'),country:t('sl_country2'),campus:'CAMPUS',
+    proc:t('sl_proc2'),subproc:t('pv_subproc')};
+}
+buildFieldLabel();
 function renderFilterChips(){GST.renderChips(F,FIELD_LABEL,'clearFilter');}
 function clearFilter(k){
   F[k]='';
@@ -1626,7 +1635,9 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   setTxt('kf2',t('kf2').replace('{p}',f.length?Math.round(bm/f.length*100):0));
 
   // CBM = 계획 외 정비(UPM). UPM율 = UPM ÷ 전체 PM(TBM+UPM) — 분모는 단계 필터와 무관.
-  const upm=f.filter(x=>x.stage==='CBM').length;
+  // 분자도 분모와 같은 축 필터만 받아야 한다 — f(=filt())는 단계 필터를 품고 있어
+  // BM KPI를 누르는 순간 CBM이 0이 되고 UPM율이 0%로 떨어졌다(아래 추이선은 10~20%인데).
+  const upm=filtUPM().length;
   const tbm=filtTBM().length, pmAll=tbm+upm;
   const rate=pmAll?Math.round(upm/pmAll*1000)/10:0;
   animVal(document.getElementById('kp6'),upm);
@@ -2375,7 +2386,7 @@ window.openLife=function(sn){ LIFE_SN=sn; const q=document.getElementById('lifeQ
 // S/N 셀 클릭은 core.js의 설비 드릴다운 메뉴가 캡처 단계에서 선점한다(stopPropagation).
 // 셀에 직접 클릭 핸들러를 달면 절대 실행되지 않으므로, 그 메뉴에 항목으로 합류한다 —
 // 이 페이지의 모든 표·차트에서 S/N을 클릭하면 메뉴 맨 위에 '설비 일대기'가 뜬다.
-GST.snMenuExtra=[{label:'📜 '+t('sec_life'), fn:sn=>openLife(sn)}];
+GST.snMenuExtra=[{label:()=>'📜 '+t('sec_life'), fn:sn=>openLife(sn)}];
 
 applyLang();
 bindLife();
