@@ -1821,6 +1821,14 @@ GST.snMenu=function(sn, x, y){
     +'box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12px;color:var(--txt-main,#E6EDF3);backdrop-filter:blur(10px)';
   let h='<div style="font-size:10px;font-weight:800;letter-spacing:1px;opacity:.7;margin:2px 4px 7px">'
        +sn.replace(/</g,'&lt;')+'</div>';
+  // 페이지 자체 항목 — 현재 페이지가 이 설비로 할 수 있는 일을 메뉴 맨 위에 끼워 넣는다.
+  // (예: 고장현황의 '설비 일대기'.) S/N 셀 클릭은 이 메뉴가 캡처 단계에서 선점하므로,
+  // 페이지가 따로 클릭 핸들러를 달아도 절대 실행되지 않는다 — 반드시 이 훅을 쓴다.
+  (GST.snMenuExtra||[]).forEach(function(x,i){
+    h+='<button type="button" data-extra="'+i+'" style="display:block;width:100%;text-align:left;'
+      +'background:transparent;border:none;color:inherit;font:inherit;padding:6px 8px;border-radius:7px;cursor:pointer;font-weight:700">'
+      +x.label+'</button>';
+  });
   GST.SN_PAGES.filter(p=>p.id!==here).forEach(function(p){
     h+='<button type="button" data-go="'+p.id+'" style="display:block;width:100%;text-align:left;'
       +'background:transparent;border:none;color:inherit;font:inherit;padding:6px 8px;border-radius:7px;cursor:pointer">'
@@ -1834,6 +1842,8 @@ GST.snMenu=function(sn, x, y){
   m.addEventListener('mouseover',e=>{const b=e.target.closest('button'); if(b)b.style.background='var(--glass-hover,#16202C)';});
   m.addEventListener('mouseout', e=>{const b=e.target.closest('button'); if(b)b.style.background='transparent';});
   m.addEventListener('click',function(e){
+    const xb=e.target.closest('[data-extra]');
+    if(xb){ const it=(GST.snMenuExtra||[])[+xb.dataset.extra]; m.remove(); if(it&&it.fn)it.fn(sn); return; }
     const b=e.target.closest('[data-go]'); if(!b)return;
     m.remove(); GST.goTab(b.dataset.go,{sn:sn});
   });

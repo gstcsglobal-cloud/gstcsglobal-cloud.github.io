@@ -1077,9 +1077,9 @@ function render(){ GST.skeleton(false); GST.pushState(F);
          pointRadius:3,borderWidth:2,order:1,yAxisID:'y1'}]},
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.datasetIndex?('누적 '+c.parsed.y+'%'):(c.parsed.y+'건')}}},
-        scales:{x:{ticks:{color:TH.mut,font:{size:9.5},maxRotation:60,minRotation:35},grid:{display:false}},
-          y:{ticks:{color:TH.mut,font:{size:10}},grid:{color:TH.grid}},
-          y1:{position:'right',min:0,max:100,ticks:{color:TH.mut,font:{size:10},callback:v=>v+'%'},grid:{display:false}}}}
+        scales:{x:{ticks:{color:TH.txt,font:{size:9.5},maxRotation:60,minRotation:35},grid:{display:false}},
+          y:{ticks:{color:TH.txt,font:{size:10}},grid:{color:TH.grid}},
+          y1:{position:'right',min:0,max:100,ticks:{color:TH.txt,font:{size:10},callback:v=>v+'%'},grid:{display:false}}}}
     });
   }
   // ② 교체사유별 평균 사용주기 — 소모성으로 도는 주기와 고장으로 갈리는 주기는 다르다
@@ -1116,7 +1116,7 @@ function render(){ GST.skeleton(false); GST.pushState(F);
         const k=x.matName+' '+x.process; cell[k]=(cell[k]||0)+1; if(cell[k]>mx)mx=cell[k]; });
       const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
       let h='<table style="border-collapse:collapse;font-size:11px;min-width:100%"><thead><tr>'
-        +'<th style="text-align:left;padding:5px 8px;position:sticky;left:0;background:var(--card,#161b22)">자재</th>'
+        +'<th style="text-align:left;padding:5px 8px;position:sticky;left:0;background:var(--card,#161b22)">'+t('cyc_mat')+'</th>'
         +procsAll.map(p=>'<th style="padding:5px 6px;font-weight:600;white-space:nowrap">'+esc(p)+'</th>').join('')
         +'<th style="padding:5px 8px">계</th></tr></thead><tbody>';
       mats.forEach(m=>{
