@@ -1,0 +1,23 @@
+# 이 저장소는 GitHub Pages라 공개다. 실제 운영 데이터가 절대 올라가면 안 된다.
+# 검증용 픽스처에는 작업자 실명·고객사·설비호기가 들어 있다 —
+# 각자 로컬에서 만들어 쓰고, 저장소에는 만드는 방법(tests/README.md)만 둔다.
+tests/*.csv
+tests/hdr*.json
+tests/local-hashes.json
+tests/sw-extract.ts
+*.xlsx
+*.xls
+
+# 의존성 · 산출물
+# 슬래시 없는 형태도 함께 막는다 — 심볼릭 링크는 디렉터리 규칙(node_modules/)에 걸리지 않는다
+tests/node_modules
+tests/node_modules/
+node_modules
+node_modules/
+tests/screenshots/
+*.zip
+*.bundle
+
+# OS
+.DS_Store
+Thumbs.db
