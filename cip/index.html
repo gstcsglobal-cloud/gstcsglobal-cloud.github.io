@@ -339,11 +339,10 @@ const URLS={
   cip11:PUB+'?gid='+GID_CIP11+'&single=true&output=csv',
   cip16:PUB+'?gid='+GID_CIP16+'&single=true&output=csv'
 };
-// 파일별 고정열 맵 + CIP 항목 열 범위 (실측 스키마)
-const COLS={
-  F11:{sn:8, code:9, group:10,detail:11,fabIn:12,floor:4,area:-1,type:5,model:6,mtype:-1,pjt:7, c0:13,c1:18,n:6},
-  F16:{sn:10,code:11,group:12,detail:13,fabIn:14,floor:4,area:5, type:6,model:7,mtype:8, pjt:9, c0:15,c1:38,n:24}
-};
+// 열 위치는 헤더 이름으로 찾는다(GST.SM.SPEC.cip, core.js). F11·F16은 열 위치가 다르지만
+// 머리글 이름이 같아 스펙 하나로 둘 다 처리된다. 항목 열 범위도 'FAB In'~'Remark'로 유도한다 —
+// 예전에는 F11 13~18 · F16 15~38을 박아둬서 점검 항목이 늘 때마다 코드를 고쳐야 했다.
+// F11에 없는 area·mtype은 못 찾으면 -1이 되고, 기존 -1 처리 로직이 그대로 받는다.
 
 const T={
 ko:{title:'CIP 현황',sub:'스크러버 개조·점검(CIP) 항목별 진행 관리',back:'← 메인으로',refresh:'새로고침',
@@ -632,9 +631,15 @@ function normGroup(g){
   if(u.startsWith('ETCH'))return 'ETCH';
   return u;
 }
-function parseCIP(rows,site,C){
+function parseCIP(rows,site){
   if(!rows||rows.length<3)return {recs:[],bad:0,cols:0};
-  const r0=rows[0]||[], hdr=rows[1]||[];
+  // 헤더 행·열 위치·항목 구간을 전부 이름으로 찾는다
+  const m=GST.SM.map(rows,{...GST.SM.SPEC.cip,name:'CIP현황 '+site});
+  if(m.hi<0)return {recs:[],bad:0,cols:0};
+  const hdr=rows[m.hi]||[], r0=rows[m.hi-1]||[];   // 헤더 바로 윗줄이 항목별 적용일자 띠
+  const rg=GST.SM.cipRange(hdr); if(!rg)return {recs:[],bad:0,cols:0};
+  const C={...m.C, c0:rg.c0, c1:rg.c1};
+  const dataFrom=m.hi+1;
   const recs=[]; let bad=0, cols=0;
   const apByBase={};   // 병합셀 대응: 같은 논리 항목의 직전 적용일을 승계
   for(let c=C.c0;c<=C.c1;c++){
@@ -644,15 +649,15 @@ function parseCIP(rows,site,C){
     let ap=cipDate(r0[c]);
     if(ap)apByBase[sp.base]=ap;
     else if(apByBase[sp.base])ap=apByBase[sp.base];   // (Right)가 (Left)의 적용일을 물려받음
-    for(let i=2;i<rows.length;i++){
+    for(let i=dataFrom;i<rows.length;i++){
       const row=rows[i]||[];
       const v=String(row[c]||'').trim(); if(!v)continue;
       const up=v.toUpperCase();
       if(up.startsWith('N/A')||up.startsWith('N.A'))continue;
       const gv=k=>C[k]>=0?normItem(row[C[k]]):'';
       const base={site,sn:gv('sn'),code:gv('code'),floor:gv('floor'),area:gv('area'),
-        group:normGroup(row[C.group]),detail:gv('detail').toUpperCase(),
-        type:gv('type'),model:gv('model'),mtype:gv('mtype'),pjt:gv('pjt'),fabIn:cipDate(row[C.fabIn]),
+        group:C.group>=0?normGroup(row[C.group]):'',detail:gv('detail').toUpperCase(),
+        type:gv('type'),model:gv('model'),mtype:gv('mtype'),pjt:gv('pjt'),fabIn:C.fabIn>=0?cipDate(row[C.fabIn]):null,
         item:sp.base+(sp.side?' ('+(sp.side==='L'?'Left':'Right')+')':''),itemBase:sp.base,side:sp.side,ap};
       if(up.includes('NOT')){recs.push(Object.assign({done:null,bad:false},base));continue;}
       const d=cipDate(v);
@@ -674,14 +679,15 @@ async function loadData(){ GST.skeleton(true);
       GST.fetchCSVCached(URLS.cip11,'cip11'),
       GST.fetchCSVCached(URLS.cip16,'cip16')
     ]);
-    const p11=parseCIP(c11.rows,'F11',COLS.F11);
-    const p16=parseCIP(c16.rows,'F16',COLS.F16);
+    const p11=parseCIP(c11.rows,'F11');
+    const p16=parseCIP(c16.rows,'F16');
     CIP=p11.recs.concat(p16.recs);
     BADN=p11.bad+p16.bad+CIP.filter(x=>x.bad).length;
     // CIP 시트는 헤더가 항목명이라 validateSchema를 쓸 수 없다 → 항목 열 수로 구조 변동 감시
     const issues=[];
-    if(p11.cols!==COLS.F11.n)issues.push(t('warn_cols').replace('{s}','F11').replace('{e}',COLS.F11.n).replace('{a}',p11.cols));
-    if(p16.cols!==COLS.F16.n)issues.push(t('warn_cols').replace('{s}','F16').replace('{e}',COLS.F16.n).replace('{a}',p16.cols));
+    // 항목 구간을 헤더에서 유도하므로 개수를 미리 박아두지 않는다. 0개면 구조가 깨진 것이다.
+    if(!p11.cols)issues.push(t('warn_cols').replace('{s}','F11').replace('{e}','1+').replace('{a}',p11.cols));
+    if(!p16.cols)issues.push(t('warn_cols').replace('{s}','F16').replace('{e}','1+').replace('{a}',p16.cols));
     GST.schemaBanner(issues,'CIP');
     fillSlicers();
     const cached=c11.cached||c16.cached;

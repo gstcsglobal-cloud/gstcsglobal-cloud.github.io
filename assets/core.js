@@ -626,6 +626,26 @@ GST.SM.SPEC = {
       pmCycle:'Target PM Cycle', type:'Scrubber type'
     }}
 };
+/* CIP 시트(F11 gid 2123129719 · F16 gid 1999732389)는 점검 '항목'이 열로 늘어난다.
+   F11과 F16은 열 위치가 다르지만 머리글 이름은 같아서 스펙 하나로 둘 다 처리된다.
+   헤더는 0행이 아니라 1행이다(0행은 항목별 적용일자 띠). */
+GST.SM.SPEC.cip = { name:'CIP현황', hints:['Scrubber S/N','FAB In'], scan:6,
+  opt:['area','mtype'],   // F11에는 없는 열 — 못 찾아도 정상이다
+  fields:{
+    floor:'Floor', area:'area', type:'Type', model:'Model', mtype:'Model Type', pjt:'PJT.',
+    sn:'Scrubber S/N', code:'Scrubber Code', group:'Group', detail:'Detail', fabIn:'FAB In'
+  }};
+/* 점검 항목 구간을 이름으로 유도한다: 'FAB In' 다음 ~ 'Remark' 직전.
+   예전에는 F11 13~18 · F16 15~38을 코드에 박아, 항목이 늘 때마다 손으로 고쳐야 했다.
+   이제 항목이 추가되면 그대로 잡힌다. Remark가 없으면 헤더 끝까지 본다. */
+GST.SM.cipRange = function(headerRow){
+  const H=(headerRow||[]).map(GST.SM.norm);
+  const c0=H.indexOf(GST.SM.norm('FAB In'))+1;
+  const rmk=H.indexOf(GST.SM.norm('Remark'));
+  const c1=(rmk>c0?rmk:H.length)-1;
+  return (c0>0&&c1>=c0) ? {c0:c0,c1:c1} : null;
+};
+
 // 매핑 결과 누적 — 진단 패널이 읽는다
 GST.SM._reg = [];
 GST.SM._log = function(res){

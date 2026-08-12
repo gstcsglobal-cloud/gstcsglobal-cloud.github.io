@@ -969,14 +969,20 @@ function parseABP(rows){
   return R;
 }
 // ===== CIP현황 파싱 — 1행: 항목 적용(대상 기준)일 · 2행: 항목명 · 셀: 날짜=완료, Not yet=대상, N/A 제외 =====
-function parseCIP(rows,site,c0,c1){
+// 항목 열 범위를 숫자로 받지 않는다 — 헤더에서 'FAB In'~'Remark'로 유도한다(GST.SM.cipRange).
+// 예전에는 호출부에 13,18 / 15,38이 박혀 있어 CIP 항목이 늘 때마다 코드를 고쳐야 했다.
+function parseCIP(rows,site){
   if(!rows||rows.length<3)return [];
-  const r1=rows[0]||[], hdr=rows[1]||[];
+  const hi=GST.SM.headerRow(rows,GST.SM.SPEC.cip.hints,GST.SM.SPEC.cip.scan);
+  if(hi<0)return [];
+  const hdr=rows[hi]||[], r1=rows[hi-1]||[];   // 헤더 바로 윗줄이 항목별 적용일자 띠
+  const rg=GST.SM.cipRange(hdr); if(!rg)return [];
+  const c0=rg.c0, c1=rg.c1;
   const out=[];
   for(let c=c0;c<=c1;c++){
     const item=String(hdr[c]||'').trim(); if(!item)continue;
     const ap=pd(r1[c]);
-    for(let i=2;i<rows.length;i++){
+    for(let i=hi+1;i<rows.length;i++){
       const v=String((rows[i]||[])[c]||'').trim(); if(!v)continue;
       const up=v.toUpperCase();
       if(up.startsWith('N/A')||up.startsWith('N.A'))continue;
@@ -1007,8 +1013,8 @@ async function loadData(){
     ROSTER = ro.status==='fulfilled'?parseRoster(ro.value.rows):[];
     LEAVE  = lv.status==='fulfilled'?parseLeave(lv.value.rows):[];
     CIP = [].concat(
-      c11.status==='fulfilled'?parseCIP(c11.value.rows,'MICRON F11',13,18):[],  // F11: N~S열
-      c16.status==='fulfilled'?parseCIP(c16.value.rows,'MICRON F16',15,38):[]   // F16: P~AM열
+      c11.status==='fulfilled'?parseCIP(c11.value.rows,'MICRON F11'):[],
+      c16.status==='fulfilled'?parseCIP(c16.value.rows,'MICRON F16'):[]
     );
     ABP = abp.status==='fulfilled'?parseABP(abp.value.rows):{m:{},w:{}};
     HR = hr.status==='fulfilled'?parseHR(hr.value.rows):[];

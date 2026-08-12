@@ -129,6 +129,17 @@ export function parseCSV(text) {
 }
 
 const lc = (s) => String(s ?? '').trim().toLowerCase();
+/* 헤더 전용 정규화 — 줄바꿈·공백·마침표·중점·괄호·슬래시·밑줄·하이픈을 지우고
+   전각→반각 후 소문자. 설치·CIP 머리글이 'Scrubber⏎S/N' · 'Main Tool⏎Maker'처럼
+   줄바꿈을 품고 있어 lc()로는 정확일치가 아예 불가능하다.
+   값 정규화(nfw/upk)와는 별개다 — 데이터 값에까지 이 규칙을 쓰면 필터가 깨진다.
+   SPEC-SYNC: 정본은 assets/core.js GST.SM.norm — 셋(core.js·hr.js·sheet-write)이 같아야 한다. */
+const hnorm = (s) =>
+  String(s ?? '').replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/　/g, ' ').replace(/[\s.·()[\]{}/\\_-]/g, '').toLowerCase();
+// 이름 하나 이상과 정규화 정확일치. 부분일치를 쓰지 않아 '입사일'이 '재입사일'을 잡지 않는다.
+const hEq = (...names) => (h) => names.some((n) => hnorm(n) === hnorm(h));
+
 function headerRowOf(rows, hints, maxScan = 8) {
   for (let i = 0; i < Math.min(rows.length, maxScan); i++) {
     const h = (rows[i] ?? []).map(lc);
@@ -137,6 +148,19 @@ function headerRowOf(rows, hints, maxScan = 8) {
   throw new Error('NO_HEADER');
 }
 const colIdx = (header, match) => header.map(lc).findIndex(match);
+/* 이름 목록 → 열 번호 맵. 못 찾은 항목은 miss에 담아 돌려준다 —
+   조용히 옛 번호로 되돌아가지 않는 것이 이번 개편의 핵심이다. */
+function mapCols(headerRow, spec) {
+  const H = (headerRow ?? []).map(hnorm), C = {}, miss = [];
+  for (const key of Object.keys(spec)) {
+    const names = [].concat(spec[key]);
+    let idx = -1;
+    for (const n of names) { const i = H.indexOf(hnorm(n)); if (i >= 0) { idx = i; break; } }
+    C[key] = idx;
+    if (idx < 0) miss.push(`${key}[${names.join('/')}]`);
+  }
+  return { C, miss };
+}
 
 /* ---------- 인원명단 (gid 1213453343) ---------- */
 export function parseRoster(csvText) {
@@ -325,22 +349,31 @@ export function eduPlan(roster, eduIndex, asOf, opts = {}) {
 }
 
 /* ---------- 설치현황 (gid 891608329) ---------- */
-// 시트 실물 기준: C Country · D Customer · E Location · F CODE · G S/N · H Model ·
-// I Burner Type · J FAB · K Floor · L Bay(기둥번호) · M~N Group · O~P Detail · AR Warranty · BX Type
-export const INSTALL_COL = {
-  country: 2, customer: 3, location: 4, code: 5, sn: 6, model: 7, burner: 8, fab: 9,
-  floor: 10, bay: 11, group1: 12, group2: 13, detail1: 14, detail2: 15,
-  fabIn: 38, turnOn: 40, warranty: 43, type: 75,
+/* 설치현황 — 128열짜리 넓은 시트라 위치 고정이 특히 위험했다(type이 75열째).
+   이름으로 찾는다. 주의: 이 시트는 같은 이름이 여러 번 나온다 —
+   'Main Tool ID'(17·30) · 'Type'(44·79·96) · 'N2 Purge (slm)'(22·25·49·53).
+   그래서 챔버 판정은 'Type'이 아니라 'Scrubber type'으로만 잡는다(Type으로 잡으면
+   44열을 물어 전 설비가 SINGLE로 계산된다).
+   SPEC-SYNC: assets/core.js GST.SM.SPEC.inst 와 같은 이름을 써야 한다. */
+const INSTALL_SPEC = {
+  country: 'Country', customer: 'Customer', location: 'Location',
+  code: 'Scrubber CODE', sn: 'Scrubber S/N', model: 'Scrubber Model', burner: 'Burner Type',
+  fab: 'FAB', floor: 'Floor', bay: 'Bay',
+  group1: 'Group_1', group2: 'Group_2', detail1: 'Detail_1', detail2: 'Detail_2',
+  fabIn: 'FAB In', turnOn: 'Turn On', warranty: 'Warranty In/Out', type: 'Scrubber type',
 };
 export function parseInstall(csvText) {
   const rows = parseCSV(csvText);
+  const hIdx = headerRowOf(rows, [hEq('Scrubber CODE'), hEq('FAB')]);
+  const { C: IC } = mapCols(rows[hIdx], INSTALL_SPEC);
   const out = [];
-  for (const r of rows) {
-    const sn = (r[INSTALL_COL.sn] ?? '').trim();
+  for (let i = hIdx + 1; i < rows.length; i++) {
+    const r = rows[i] ?? [];
+    const sn = (r[IC.sn] ?? '').trim();
     if (!sn) continue;
-    // 헤더/배너 행 스킵 — 헤더 셀은 'Scrubber S/N'처럼 S/N 문구를 포함하고 실제 S/N에는 숫자가 있다
+    // 중간에 섞인 배너/소계 행을 거르는 안전망 — 실제 S/N에는 숫자가 있고 머리글 문구는 없다
     if (!/\d/.test(sn) || /S\s*\/\s*N/i.test(sn)) continue;
-    const g = (k) => (r[INSTALL_COL[k]] ?? '').trim();
+    const g = (k) => (r[IC[k]] ?? '').trim();
     out.push({
       sn,
       code: g('code'),
@@ -356,9 +389,9 @@ export function parseInstall(csvText) {
       group2: g('group2'),
       detail1: g('detail1'),
       detail2: g('detail2'),
-      turnOn: dateCell(r[INSTALL_COL.turnOn]),
+      turnOn: dateCell(r[IC.turnOn]),
       warranty: g('warranty'),
-      chambers: String(r[INSTALL_COL.type] ?? '').toUpperCase().includes('DUAL') ? 2 : 1,
+      chambers: String(r[IC.type] ?? '').toUpperCase().includes('DUAL') ? 2 : 1,
     });
   }
   return out;
@@ -376,22 +409,27 @@ export function findEquip(installRows, query) {
 }
 
 /* ---------- 실적현황 (gid 646668307) — fault/index.html:430~433 컬럼맵 ---------- */
-// 주의: 실적코드는 0열이 아니라 **10열**(rsCode:10). 0열을 키로 쓰면 엉뚱한 값이 들어간다.
-export const FAULT_COL = {
-  customer: 3, campus: 4, line: 5, bay: 6, proc: 7, model: 9, rsCode: 10,
-  stage: 13, sn: 21, pf: 24, alarm: 25, phenom: 26, cause: 27, action: 28,
-  dStart: 32, workMin: 39, manMin: 40, workers: 41,
+/* 예전에는 헤더를 찾아놓고도(hIdx) 열은 고정 번호로 읽었다. 시트가 밀려도 NO_HEADER 없이
+   통과한 뒤 엉뚱한 열을 읽는 가장 위험한 조합이었다 — 이제 찾은 헤더에서 이름으로 해석한다.
+   수선실적은 헤더 67개·정규화 후 중복 0이라 평면 매칭으로 충분하다(실측 확인).
+   SPEC-SYNC: assets/core.js GST.SM.SPEC.wk 와 같은 이름을 써야 한다. */
+const FAULT_SPEC = {
+  customer: '고객사', campus: '단지', line: '라인', bay: 'BAY', proc: '공정',
+  model: 'MODEL(자사)', rsCode: '실적코드', stage: '작업단계', sn: 'S/N(IN)',
+  pf: '유/무상', alarm: '알람유형', phenom: '현상', cause: '원인', action: '조치',
+  dStart: '작업시작일', workMin: '작업시간(분)', manMin: '작업공수', workers: '작업자',
 };
 export function parseFaultRecords(csvText) {
   const rows = parseCSV(csvText);
-  const hIdx = headerRowOf(rows, [(h) => h === '실적코드', (h) => h === '작업단계']);
+  const hIdx = headerRowOf(rows, [hEq('실적코드'), hEq('작업단계')]);
+  const { C: FC } = mapCols(rows[hIdx], FAULT_SPEC);
   const out = [];
   for (let i = hIdx + 1; i < rows.length; i++) {
     const r = rows[i];
     if (!r) continue;
-    const g = (k) => (r[FAULT_COL[k]] ?? '').trim();
+    const g = (k) => (r[FC[k]] ?? '').trim();
     const stage = g('stage');
-    const start = pd(r[FAULT_COL.dStart]);
+    const start = pd(r[FC.dStart]);
     // 대시보드(report:924~925)와 동일한 행 게이트 — 작업단계와 작업시작일이 있어야 실적으로 센다
     if (!stage || !start) continue;
     const line = g('line');
@@ -410,7 +448,7 @@ export function parseFaultRecords(csvText) {
       cause: g('cause'),
       action: g('action'),
       start,
-      manhour: parseFloat(r[FAULT_COL.manMin]) || 0,
+      manhour: parseFloat(r[FC.manMin]) || 0,
     });
   }
   return out;
@@ -440,29 +478,38 @@ export function top3Cause(records) {
 }
 
 /* ---------- CIP (gid 2123129719=F11 · 1999732389=F16) ---------- */
-export const CIP_LAYOUT = {
-  F11: { sn: 8, c0: 13, c1: 18 },
-  F16: { sn: 10, c0: 15, c1: 38 },
-};
 const normItem = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+/* CIP는 점검 항목이 '열'로 늘어나는 시트라, 항목 구간을 숫자로 박아두면 항목이 추가될 때마다
+   코드를 고쳐야 했다(F11 13~18 · F16 15~38을 손으로 관리). 구간을 이름으로 유도한다:
+   'FAB In' 다음 ~ 'Remark' 직전이 항목 구간이다. 실측으로 기존 값을 정확히 재현하고,
+   앞으로 항목이 늘어나면 코드 수정 없이 자동으로 잡힌다.
+   헤더 행도 rows[1] 고정 대신 찾는다(F11·F16 모두 0행은 적용일자 띠라 헤더가 아니다). */
 export function parseCIP(csvText, site) {
   const rows = parseCSV(csvText);
-  const C = CIP_LAYOUT[site];
-  if (!C || rows.length < 3) return [];
-  const hdr = rows[1] || [];
+  if (rows.length < 3) return [];
+  let hIdx;
+  try { hIdx = headerRowOf(rows, [hEq('Scrubber S/N'), hEq('FAB In')], 6); }
+  catch { return []; }                       // 구조가 다른 시트는 조용히 건너뛴다(기존 동작 유지)
+  const hdr = rows[hIdx] || [];
+  const H = hdr.map(hnorm);
+  const snC = H.indexOf(hnorm('Scrubber S/N'));
+  const c0 = H.indexOf(hnorm('FAB In')) + 1;
+  const rmk = H.indexOf(hnorm('Remark'));
+  const c1 = (rmk > c0 ? rmk : hdr.length) - 1;   // Remark가 없으면 헤더 끝까지
+  if (snC < 0 || c0 <= 0 || c1 < c0) return [];
   const recs = [];
-  for (let c = C.c0; c <= C.c1; c++) {
+  for (let c = c0; c <= c1; c++) {
     const item = normItem(hdr[c]);
     if (!item) continue;
-    for (let i = 2; i < rows.length; i++) {
+    for (let i = hIdx + 1; i < rows.length; i++) {
       const row = rows[i] || [];
       const v = String(row[c] || '').trim();
       if (!v) continue;
       const up = v.toUpperCase();
       if (up.startsWith('N/A') || up.startsWith('N.A')) continue;
-      if (up.includes('NOT')) { recs.push({ site, item, sn: row[C.sn], done: null }); continue; }
+      if (up.includes('NOT')) { recs.push({ site, item, sn: row[snC], done: null }); continue; }
       const d = dateCell(v);
-      if (d) recs.push({ site, item, sn: row[C.sn], done: d });
+      if (d) recs.push({ site, item, sn: row[snC], done: d });
     }
   }
   return recs;
