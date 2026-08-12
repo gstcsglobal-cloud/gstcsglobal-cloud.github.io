@@ -1,0 +1,22 @@
+{
+  "name": "gst-dashboard-tests",
+  "private": true,
+  "type": "module",
+  "description": "시트 열 매핑 검증. 루트 배포에는 영향이 없다 — tests/ 안에서만 쓴다.",
+  "scripts": {
+    "map": "node t-map.mjs",
+    "keys": "node t-keys.mjs",
+    "hr": "node t-hr.mjs",
+    "sync": "node --experimental-strip-types t-sync.mjs",
+    "smoke": "node t-smoke.mjs",
+    "shift": "node t-shift.mjs",
+    "deep": "node t-deep.mjs",
+    "leak": "node t-leak.mjs",
+    "all": "npm run map && npm run keys && npm run hr && npm run sync && npm run smoke && npm run shift && npm run deep && npm run leak"
+  },
+  "devDependencies": {
+    "chart.js": "4.4.1",
+    "papaparse": "5.4.1",
+    "playwright": "^1.40.0"
+  }
+}

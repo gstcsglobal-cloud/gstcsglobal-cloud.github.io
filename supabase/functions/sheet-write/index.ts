@@ -173,7 +173,10 @@ const toCSV = (rows: string[][]) =>
 //   · {match} — 매 요청 헤더 행을 읽어 텍스트로 찾는다 (인원명단: 열 추가·이동에 안전)
 //   · {col}   — 고정 인덱스 (교육현황: 3단 헤더라 라벨 행이 없다. 대시보드 parseEdu와 동일 규약)
 type Matcher = (h: string) => boolean;
-type ColRef = { match: Matcher } | { col: number };
+//   · {match} — 헤더 텍스트로 찾는다 (열 추가·이동에 안전)
+//   · {band,sub} — 3단 머리글에서 상위 밴드로 범위를 좁힌 뒤 소제목으로 찾는다 (교육 시트)
+//   · {col}   — 고정 인덱스 (더는 쓰지 않는다. 남겨둔 건 과거 스키마 호환용)
+type ColRef = { match: Matcher } | { band: string; sub: RegExp } | { col: number };
 type FieldDef = ColRef & {
   max: number;
   enum?: string[];     // 허용 값 목록 — 대시보드가 정확한 문자열을 요구하는 상태값
@@ -200,10 +203,63 @@ type SheetSchema = {
   dateRange?: { start: string; end: string };  // 종료일 >= 시작일 검사 (append)
 };
 const lc = (s: string) => String(s ?? "").trim().toLowerCase();
+/* 헤더 전용 정규화 — 대시보드 core.js의 GST.SM.norm과 문자 단위로 같아야 한다.
+   줄바꿈·공백·마침표·중점·괄호·슬래시·밑줄·하이픈을 지우고 전각→반각 후 소문자.
+   교육 시트 머리글이 'Basic⏎ (Level 1)'처럼 줄바꿈을 품고 있어 lc()로는 잡히지 않는다.
+   SPEC-SYNC: 정본은 assets/core.js GST.SM.norm — 고치면 hr.js hnorm()도 같이 고칠 것. */
+const hn = (s: string) =>
+  String(s ?? "").replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/　/g, " ").replace(/[\s.·()[\]{}/\\_-]/g, "").toLowerCase();
+// 이름 하나 이상과 정규화 정확일치. 부분일치를 쓰지 않아 '입사일'이 '재입사일'을 잡지 않는다.
+const eq = (...names: string[]) => (h: string) => names.some((n) => hn(n) === hn(h));
+
+/* 교육 시트는 머리글이 3단이고 소제목이 겹친다:
+     r0  ... 법인 교육과정(8) ................ 본사 교육과정(16) ... 비고(18)
+     r1      Basic(8)  Veteran(12)  Scrubber Lv.2(16)  Scrubber Lv.3(17)
+     r2      이수여부(8) 완료일(10) | 이수여부(12) 완료일(14) | 완료일(16) | 완료일(17)
+   '이수여부'가 8·12 두 곳, '완료일'이 10·14·16·17 네 곳이라 이름만으로는 구분이 불가능하다.
+   상위 밴드로 범위를 좁힌 뒤 그 안에서 찾는다 — kakao-bot hr.js eduMap과 같은 규약. */
+type BandCtx = { rows: string[][]; r0: number; r1: number; bands: { k: string; col: number }[]; width: number };
+function bandCtx(rows: string[][], hIdx: number, width: number): BandCtx {
+  const r0 = Math.max(0, hIdx - 2), r1 = Math.min(rows.length, hIdx + 3);
+  const bands: { k: string; col: number }[] = [];
+  for (let i = r0; i < r1; i++) {
+    const row = rows[i] ?? [];
+    for (let c = 0; c < row.length; c++) {
+      const t = hn(row[c]);
+      if (!t) continue;
+      const k = /scrubber/.test(t)
+        ? (/lv3|level3/.test(t) ? "lv3" : /lv2|level2/.test(t) ? "lv2" : "")
+        : /^basic/.test(t) ? "basic" : /veteran/.test(t) ? "vet" : "";
+      if (k && !bands.some((b) => b.k === k)) bands.push({ k, col: c });
+    }
+  }
+  bands.sort((a, b) => a.col - b.col);
+  return { rows, r0, r1, bands, width };
+}
+// 밴드 안에서 소제목을 찾는다. 밴드 범위 = 자기 열 ~ 다음 밴드 직전(마지막이면 시트 폭).
+function bandCol(bc: BandCtx, band: string, sub: RegExp): number {
+  const i = bc.bands.findIndex((b) => b.k === band);
+  if (i < 0) return -1;
+  const start = bc.bands[i].col;
+  const end = i + 1 < bc.bands.length ? bc.bands[i + 1].col : Math.max(start + 1, bc.width);
+  for (let r = bc.r0; r < bc.r1; r++) {
+    const row = bc.rows[r] ?? [];
+    for (let c = start; c < end && c < row.length; c++) {
+      const t = hn(row[c]);
+      if (t && sub.test(t)) return c;
+    }
+  }
+  // 소제목이 아예 없는 밴드(본사 과정은 완료일 한 칸뿐)는 밴드 열 자체가 값 열이다
+  return start;
+}
 // ref가 없으면 -1 — 선택 필드(nameRef)를 가진 스키마에서 TypeError로 죽지 않게 한다.
 // (실적현황에 nameRef를 빠뜨려 op=row가 전부 500이 됐던 실제 사고)
-const colIdx = (header: string[], ref?: ColRef): number =>
-  !ref ? -1 : ("col" in ref ? ref.col : header.map(lc).findIndex(ref.match));
+const colIdx = (header: string[], ref?: ColRef, bc?: BandCtx): number =>
+  !ref ? -1
+  : "col" in ref ? ref.col
+  : "band" in ref ? (bc ? bandCol(bc, ref.band, ref.sub) : -1)
+  : header.map(lc).findIndex(ref.match);
 
 const SCHEMAS: Record<string, SheetSchema> = {
   // 인원명단(인력현황). v2: 차트가 쓰는 컬럼 전부 편집 허용.
@@ -237,32 +293,45 @@ const SCHEMAS: Record<string, SheetSchema> = {
       onsite: { match: (h) => h.includes("현장"), max: 1, enum: ["O", ""] },
     },
   },
-  // 교육현황. 3단 헤더: 헤더행(hi) → Basic/Veteran 병합띠(hi+1) → 이수여부/시작일/완료일/시간(hi+2) → 데이터(hi+3).
+  // 교육현황. 3단 헤더: 헤더행(hi) → 법인/본사 과정 병합띠(hi+1) → 이수여부/시작일/완료일/시간(hi+2) → 데이터(hi+3).
+  // 실물 열: 0 No · 1 Site · 2 인원 · 3 사원번호 · 4 입사일 · 6 직급 · 7 직무 ·
+  //          8~11 Basic(LV1) · 12~15 Veteran(LV2) · 16 Scrubber Lv.2 완료일 · 17 Lv.3 완료일 · 18 비고
   // 사번(col 3)은 fields에 없다 — 교육 시트의 사번은 캐스케이드 전용이라
   // 클라이언트가 gid 0 update로 두 시트의 조인을 깨뜨릴 수 없다.
   // 상태값 enum은 hr 페이지가 요구하는 정확한 문자열 — 다른 값은 조용히 '미이수'가 되므로 서버에서 거부.
   "0": {
     ops: ["perm", "fresh", "row", "update", "append", "delete"],
-    headerHint: [(h) => h === "교육과정", (h) => h === "인원"],
+    // 머리글이 바뀌어도 버티게 한다: B열은 '교육과정'/'Site' 둘 다 쓰인 이력이 있고,
+    // 8열은 '법인 교육과정'으로 바뀌었다. 정확일치로 두면 NO_HEADER로 교육 시트 쓰기가 전부 막힌다.
+    headerHint: [(h) => h.includes("인원"), (h) => h.includes("교육과정") || h === "site"],
     dataOffset: 3,
     normKey: (s) => String(s ?? "").trim().replace(/\.0+$/, ""),
-    key: { field: "id", col: 3 },
-    nameRef: { col: 2 },
-    noCol: { col: 0 },
+    // 아래는 전부 이름/밴드 기반이다. 예전에는 열 번호를 박아둬서, 시트에 열이 하나만 끼면
+    // 저장이 엉뚱한 칸에 들어갔다(실제로 Scrubber Lv.2/Lv.3 신설 때 비고가 16→18로 밀렸다).
+    // SPEC-SYNC: 정본은 assets/core.js GST.SM.SPEC / kakao-bot hr.js eduMap — 셋이 같아야 한다.
+    key: { field: "id", match: eq("사원번호", "사번") },
+    nameRef: { match: eq("인원") },
+    noCol: { match: eq("No") },
     requiredOnAppend: ["name"],
     fields: {
-      site:   { col: 1,  max: 40 },
-      name:   { col: 2,  max: 40, notBlank: true },
-      join:   { col: 4,  max: 10, date: true },
-      posKo:  { col: 6,  max: 40 },
-      role:   { col: 7,  max: 60 },
-      basic:  { col: 8,  max: 10, enum: ["이수완료", "진행중", "비대상", ""] },
-      bsdate: { col: 9,  max: 10, date: true },
-      bdate:  { col: 10, max: 10, date: true },
-      vet:    { col: 12, max: 10, enum: ["이수완료", "진행중", "비대상", ""] },
-      vsdate: { col: 13, max: 10, date: true },
-      vdate:  { col: 14, max: 10, date: true },
-      note:   { col: 16, max: 200 },
+      // 머리글 1행에서 이름으로 유일하게 잡히는 열
+      site:   { match: eq("Site", "교육과정"), max: 40 },
+      name:   { match: eq("인원"), max: 40, notBlank: true },
+      join:   { match: eq("입사일"), max: 10, date: true },
+      posKo:  { match: eq("직급"), max: 40 },
+      role:   { match: eq("직무"), max: 60 },
+      note:   { match: eq("비고"), max: 200 },
+      // 법인 교육과정 — '이수여부'·'교육완료일'이 Basic/Veteran 양쪽에 같은 이름으로 있어
+      // 밴드로 범위를 좁히지 않으면 구분할 수 없다.
+      basic:  { band: "basic", sub: /이수여부|수료여부/, max: 10, enum: ["이수완료", "진행중", "비대상", ""] },
+      bsdate: { band: "basic", sub: /시작일/, max: 10, date: true },
+      bdate:  { band: "basic", sub: /완료일|수료일/, max: 10, date: true },
+      vet:    { band: "vet",   sub: /이수여부|수료여부/, max: 10, enum: ["이수완료", "진행중", "비대상", ""] },
+      vsdate: { band: "vet",   sub: /시작일/, max: 10, date: true },
+      vdate:  { band: "vet",   sub: /완료일|수료일/, max: 10, date: true },
+      // 본사 교육과정(Scrubber Lv.2/Lv.3) — 이수여부 열이 없어 완료일이 곧 이수 판정.
+      lv2date: { band: "lv2", sub: /완료일|수료일/, max: 10, date: true },
+      lv3date: { band: "lv3", sub: /완료일|수료일/, max: 10, date: true },
     },
   },
   // 휴가현황. 같은 사람이 여러 건을 갖는 시트라 고유 키가 없다 → 입력(append) 전용.
@@ -352,14 +421,15 @@ function headerRowOf(rows: string[][], sc: SheetSchema): number {
 }
 
 // 한 탭을 한 번 읽고 필요한 좌표를 전부 계산한다 — update/append/delete/캐스케이드가 공유
-type Scan = { tab: TabInfo; rows: string[][]; header: string[]; hIdx: number; kc: number; nc: number; dataStart: number };
+type Scan = { tab: TabInfo; rows: string[][]; header: string[]; bc: BandCtx; hIdx: number; kc: number; nc: number; dataStart: number };
 async function scanTab(gid: string, sc: SheetSchema): Promise<Scan> {
   const { tab, rows } = await readTab(gid);
   const hIdx = headerRowOf(rows, sc);
   const header = rows[hIdx] ?? [];
-  const kc = colIdx(header, sc.key);
+  const bc = bandCtx(rows, hIdx, header.length);
+  const kc = colIdx(header, sc.key, bc);
   if (kc < 0) throw new Error("NO_KEY_COL: 키 컬럼을 찾지 못했습니다");
-  return { tab, rows, header, hIdx, kc, nc: colIdx(header, sc.nameRef), dataStart: hIdx + sc.dataOffset };
+  return { tab, rows, header, bc, hIdx, kc, nc: colIdx(header, sc.nameRef, bc), dataStart: hIdx + sc.dataOffset };
 }
 function keyHits(s: Scan, sc: SheetSchema, key: string): number[] {
   const want = sc.normKey(key);
@@ -375,9 +445,9 @@ function nameHits(s: Scan, name: string): number[] {
     if (String(s.rows[i][s.nc] ?? "").trim().toUpperCase() === want) hits.push(i);
   return hits;
 }
-type Located = { tab: TabInfo; header: string[]; hIdx: number; rowNo: number; row: string[] };
+type Located = { tab: TabInfo; header: string[]; bc: BandCtx; hIdx: number; rowNo: number; row: string[] };
 const atRow = (s: Scan, i: number): Located =>
-  ({ tab: s.tab, header: s.header, hIdx: s.hIdx, rowNo: i + 1 /* A1은 1-base */, row: s.rows[i] });
+  ({ tab: s.tab, header: s.header, bc: s.bc, hIdx: s.hIdx, rowNo: i + 1 /* A1은 1-base */, row: s.rows[i] });
 function pick(s: Scan, sc: SheetSchema, key: string): Located {
   const hits = keyHits(s, sc, key);
   if (hits.length === 0) throw new Error(`NOT_FOUND: ${key}`);
@@ -410,14 +480,14 @@ function pickForWrite(s: Scan, sc: SheetSchema, key: string, altName?: string): 
 }
 
 // 편집 폼에 채울 값 (논리 필드명 → 현재 값)
-function fieldsOf(header: string[], row: string[], sc: SheetSchema): Record<string, string> {
+function fieldsOf(header: string[], row: string[], sc: SheetSchema, bc?: BandCtx): Record<string, string> {
   const o: Record<string, string> = {};
   for (const [name, def] of Object.entries(sc.fields)) {
-    const ci = colIdx(header, def);
+    const ci = colIdx(header, def, bc);
     if (ci >= 0) o[name] = (row[ci] ?? "").trim();
   }
   // 키는 정규화해서 돌려준다 — 대시보드가 화면 전체에서 쓰는 표기와 맞춘다
-  const kc = colIdx(header, sc.key);
+  const kc = colIdx(header, sc.key, bc);
   if (kc >= 0) o[sc.key.field] = sc.normKey(row[kc] ?? "");
   return o;
 }
@@ -430,7 +500,7 @@ function buildRow(s: Scan, sc: SheetSchema, vals: Record<string, string>): strin
   const w = s.header.length; // readTab이 전 행을 같은 폭으로 패딩 → 헤더 길이 = 시트 폭
   const row = Array.from({ length: w }, () => "");
   if (sc.noCol) {
-    const ni = colIdx(s.header, sc.noCol);
+    const ni = colIdx(s.header, sc.noCol, s.bc);
     if (ni >= 0) {
       let mx = 0;
       for (let i = s.dataStart; i < s.rows.length; i++) {
@@ -445,7 +515,7 @@ function buildRow(s: Scan, sc: SheetSchema, vals: Record<string, string>): strin
     if (name === sc.key.field) continue;
     const def = sc.fields[name];
     if (!def) continue; // 검증 단계에서 이미 걸렀지만 방어
-    const ci = colIdx(s.header, def);
+    const ci = colIdx(s.header, def, s.bc);
     if (ci >= 0 && ci < w) row[ci] = val;
   }
   return row;
@@ -476,7 +546,7 @@ async function appendOne(gid: string, sc: SheetSchema, vals: Record<string, stri
   const s2 = await scanTab(gid, sc);
   const after = keyVal ? pick(s2, sc, keyVal) : pickByName(s2, vals.name ?? "");
   if (!after) throw new Error(`NOT_FOUND: ${keyVal || vals.name}`);
-  return { hash: await rowHash(after.row), fields: fieldsOf(after.header, after.row, sc), row: after.row };
+  return { hash: await rowHash(after.row), fields: fieldsOf(after.header, after.row, sc, after.bc), row: after.row };
 }
 // 행 삭제 — 아래 행들은 시트가 자동으로 위로 당긴다. 모든 동작이 매번 키로 행을
 // 다시 찾으므로(행 번호를 기억하지 않으므로) 이후 요청은 영향받지 않는다.
@@ -568,16 +638,16 @@ Deno.serve(async (req) => {
       if (!key) return json({ error: "no_key" }, 400);
       const loc = await locate(gid, sc, key);
       const res: Record<string, unknown> = {
-        ok: true, hash: await rowHash(loc.row), fields: fieldsOf(loc.header, loc.row, sc),
+        ok: true, hash: await rowHash(loc.row), fields: fieldsOf(loc.header, loc.row, sc, loc.bc),
       };
       if (url.searchParams.get("with") === "edu" && sc.cascadeTo) {
         res.edu = null;
         try {
           const csc = SCHEMAS[sc.cascadeTo];
           const cs = await scanTab(sc.cascadeTo, csc);
-          const name = loc.row[colIdx(loc.header, sc.nameRef)] ?? "";
+          const name = loc.row[colIdx(loc.header, sc.nameRef, loc.bc)] ?? "";
           const eloc = pickPeer(cs, csc, key, name);
-          if (eloc) res.edu = { hash: await rowHash(eloc.row), fields: fieldsOf(eloc.header, eloc.row, csc) };
+          if (eloc) res.edu = { hash: await rowHash(eloc.row), fields: fieldsOf(eloc.header, eloc.row, csc, eloc.bc) };
         } catch (e) { console.error("row edu", (e as Error).message); }
       }
       return json(res);
@@ -634,7 +704,7 @@ Deno.serve(async (req) => {
       // 지문 불일치 = 내가 폼을 연 뒤 누군가(대시보드든 구글시트 UI든) 이 행을 고쳤다.
       // 락으로는 잡을 수 없는 유일한 경로라서 이 검사가 반드시 필요하다.
       if (baseHash && baseHash !== cur) {
-        return json({ error: "conflict", hash: cur, fields: fieldsOf(loc.header, loc.row, sc) }, 409);
+        return json({ error: "conflict", hash: cur, fields: fieldsOf(loc.header, loc.row, sc, loc.bc) }, 409);
       }
       // 사번을 바꾼다면 잠금 안에서 중복 검사 (자기 행 제외)
       if (changes.id != null) {
@@ -643,7 +713,7 @@ Deno.serve(async (req) => {
       }
 
       const data = Object.entries(changes).map(([name, val]) => {
-        const ci = colIdx(loc.header, sc.fields[name]);
+        const ci = colIdx(loc.header, sc.fields[name], loc.bc);
         if (ci < 0) throw new Error(`NO_COL: ${name}`);
         return { range: a1(loc.tab.title, `${colLetter(ci)}${loc.rowNo}`), values: [[val]] };
       });
@@ -666,7 +736,7 @@ Deno.serve(async (req) => {
         try {
           const csc = SCHEMAS[sc.cascadeTo!];
           const cs = await scanTab(sc.cascadeTo!, csc);
-          const oldName = loc.row[colIdx(loc.header, sc.nameRef)] ?? "";
+          const oldName = loc.row[colIdx(loc.header, sc.nameRef, loc.bc)] ?? "";
           const eloc = pickPeer(cs, csc, key /* 구 키로 찾는다 */, oldName);
           if (eloc) {
             const cdata: { range: string; values: string[][] }[] = [];
@@ -687,7 +757,7 @@ Deno.serve(async (req) => {
               if (changes.name != null && cs.nc >= 0) newRow[cs.nc] = changes.name;
               await audit(svc, sc.cascadeTo!, newKey, "update", eloc.row, newRow, email);
               cascade = {
-                done: true, hash: await rowHash(newRow), fields: fieldsOf(cs.header, newRow, csc),
+                done: true, hash: await rowHash(newRow), fields: fieldsOf(cs.header, newRow, csc, cs.bc),
               };
             } else cascade = { done: true };
           }
@@ -696,7 +766,7 @@ Deno.serve(async (req) => {
       }
 
       return json({
-        ok: true, hash: await rowHash(after.row), fields: fieldsOf(after.header, after.row, sc), cascade,
+        ok: true, hash: await rowHash(after.row), fields: fieldsOf(after.header, after.row, sc, after.bc), cascade,
       });
     }
 
@@ -760,7 +830,7 @@ Deno.serve(async (req) => {
       const loc = pick(s, sc, key);
       const cur = await rowHash(loc.row);
       if (baseHash !== cur) {
-        return json({ error: "conflict", hash: cur, fields: fieldsOf(loc.header, loc.row, sc) }, 409);
+        return json({ error: "conflict", hash: cur, fields: fieldsOf(loc.header, loc.row, sc, loc.bc) }, 409);
       }
       if (loc.rowNo - 1 < s.dataStart) return json({ error: "bad_value" }, 400); // 헤더 3단 보호(방어)
       await deleteRow(loc);
@@ -771,7 +841,7 @@ Deno.serve(async (req) => {
         try {
           const csc = SCHEMAS[sc.cascadeTo!];
           const cs = await scanTab(sc.cascadeTo!, csc);
-          const name = loc.row[colIdx(loc.header, sc.nameRef)] ?? "";
+          const name = loc.row[colIdx(loc.header, sc.nameRef, loc.bc)] ?? "";
           const eloc = pickPeer(cs, csc, key, name);
           if (eloc && eloc.rowNo - 1 >= cs.dataStart) {
             await deleteRow(eloc);

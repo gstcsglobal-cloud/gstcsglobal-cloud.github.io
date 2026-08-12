@@ -646,6 +646,36 @@ GST.SM.cipRange = function(headerRow){
   return (c0>0&&c1>=c0) ? {c0:c0,c1:c1} : null;
 };
 
+/* ---------- 값 정규화 — 같은 것이 여러 표기로 갈라지면 집계가 거짓말을 한다 ----------
+   실측: 모델명이 GAIA-I-D(21,020) / GAIA-I_D(3,081) / GAIA_I_D(373) 세 조각으로 나뉘어 있었다.
+   이대로 모델축으로 묶으면 1위가 셋으로 쪼개져 순위 자체가 틀린다.
+   시트를 고치는 게 근본이지만, 고치기 전에도 고친 뒤에도 같은 답이 나오도록 읽는 쪽에서 흡수한다. */
+GST.canon = {
+  // 구분자만 다른 표기를 하나로: GAIA_I_D · GAIA-I-D · GAIA I D → GAIA-I-D
+  model: function(s){
+    const t = GST.upk(s).replace(/[\s_]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    return t || '';
+  },
+  // 공정 약칭·변형 통일: DIFF→DIFFUSION · WET PROCESS→WET
+  proc: function(s){
+    const t = GST.upk(s).trim();
+    if(!t) return '';
+    if(/^DIFF$/.test(t)) return 'DIFFUSION';
+    if(/^WET\s*PROCESS$/.test(t)) return 'WET';
+    return t;
+  },
+  /* 설비호기: 값이 아닌 것(빈칸·NA·하이픈)만 버린다.
+     한때 '너무 짧으면 버린다'며 4자 미만을 잘랐는데, 실측해 보니 2VR·4AC·W6S 같은
+     3자리 호기가 114종 1,034행 있었고 전부 GBWS-0000처럼 멀쩡한 S/N을 달고 있었다.
+     길이로 자르면 그 설비들이 Best/Worst·주기·설비축에서 통째로 사라진다 —
+     화면에는 아무 표시도 없이. 쓰레기는 이름으로 거르고, 짧다는 이유로 버리지 않는다. */
+  eq: function(s){
+    const t = GST.upk(s).trim();
+    if(!t || t.length < 2) return '';
+    return /^(NA|N\/A|NONE|NULL|-+|\.+)$/.test(t) ? '' : t;
+  }
+};
+
 // 매핑 결과 누적 — 진단 패널이 읽는다
 GST.SM._reg = [];
 GST.SM._log = function(res){
@@ -1747,7 +1777,7 @@ GST.axBtns = function(){
 /* ============================================================
    20. 페이지 간 연동 — 설비(S/N) 드릴다운 + 사이트·공정 컨텍스트 승계
    ============================================================ */
-// GST.goTab('pm', {sn:'GBWS-1234'}) — 탭 전환과 동시에 그 설비로 필터
+// GST.goTab('pm', {sn:'GBWS-0000'}) — 탭 전환과 동시에 그 설비로 필터
 GST.goTab = function(id, state){
   const f = state ? GST.encodeState(state) : '';
   if(window.self !== window.top){
@@ -1847,7 +1877,9 @@ GST.snMenu=function(sn, x, y){
   (GST.snMenuExtra||[]).forEach(function(x,i){
     h+='<button type="button" data-extra="'+i+'" style="display:block;width:100%;text-align:left;'
       +'background:transparent;border:none;color:inherit;font:inherit;padding:6px 8px;border-radius:7px;cursor:pointer;font-weight:700">'
-      +x.label+'</button>';
+      // 라벨은 함수로도 받는다 — 문자열로 굳혀두면 로드 시점 언어에 갇혀
+      // 나중에 언어를 바꿔도 이 항목만 옛 언어로 남는다
+      +(typeof x.label==='function'?x.label():x.label)+'</button>';
   });
   GST.SN_PAGES.filter(p=>p.id!==here).forEach(function(p){
     h+='<button type="button" data-go="'+p.id+'" style="display:block;width:100%;text-align:left;'
@@ -2309,25 +2341,25 @@ GST.PIV_T={
       copy:'복사(TSV)',copied:'복사됨',csv:'CSV',close:'닫기',tot:'합계',sub2:'소계',etc:'기타',
       none:'표시할 데이터가 없습니다.',no:'(없음)',detail:'상세',more:'외 {n}건',pick:'값 고르기',
       all:'전체',clr:'해제',apply:'적용',find:'검색',rows:'{n}행',non:'—',cmp:'Δ 기간비교',cmpA:'기간 A',cmpB:'직전 B',cmpD:'Δ%',cmpHint:'A=기간 필터(비우면 최근 30일) · B=같은 길이의 직전 구간',
-      disp:'표시',d_raw:'원값',d_row:'행 대비 %',d_col:'열 대비 %',d_all:'총계 대비 %',
+      disp:'표시',d_raw:'원값',d_row:'행 대비 %',d_col:'열 대비 %',d_all:'총계 대비 %',d_lift:'집중지수(×)',
       top:'상위',t_all:'전체',sub_on:'소계'},
   en:{t:'Pivot',sub:'Cross-tab on current filters',src:'Data',per:'Period',row:'Rows',col:'Cols',val:'Values',swap:'⇄ Swap',
       copy:'Copy (TSV)',copied:'Copied',csv:'CSV',close:'Close',tot:'Total',sub2:'Subtotal',etc:'Others',
       none:'No data to show.',no:'(none)',detail:'Detail',more:'+{n} more',pick:'Filter',
       all:'All',clr:'Clear',apply:'Apply',find:'Search',rows:'{n} rows',non:'—',cmp:'Δ Compare',cmpA:'Period A',cmpB:'Prev B',cmpD:'Δ%',cmpHint:'A = date filter (last 30d if empty) · B = preceding window of equal length',
-      disp:'Show as',d_raw:'Value',d_row:'% of row',d_col:'% of column',d_all:'% of total',
+      disp:'Show as',d_raw:'Value',d_row:'% of row',d_col:'% of column',d_all:'% of total',d_lift:'Lift (×)',
       top:'Top',t_all:'All',sub_on:'Subtotals'},
   zh:{t:'多维透视',sub:'按当前筛选交叉汇总',src:'数据',per:'期间',row:'行',col:'列',val:'值',swap:'⇄ 转置',
       copy:'复制(TSV)',copied:'已复制',csv:'CSV',close:'关闭',tot:'合计',sub2:'小计',etc:'其他',
       none:'无数据。',no:'(无)',detail:'明细',more:'其他{n}条',pick:'筛选值',
       all:'全部',clr:'清除',apply:'应用',find:'搜索',rows:'{n}行',non:'—',cmp:'Δ 期间对比',cmpA:'期间A',cmpB:'前一期B',cmpD:'Δ%',cmpHint:'A=所选期间(空则近30天) · B=等长的前一区间',
-      disp:'显示方式',d_raw:'数值',d_row:'占行%',d_col:'占列%',d_all:'占总计%',
+      disp:'显示方式',d_raw:'数值',d_row:'占行%',d_col:'占列%',d_all:'占总计%',d_lift:'集中指数(×)',
       top:'前',t_all:'全部',sub_on:'小计'},
   ja:{t:'多次元ピボット',sub:'現在のフィルタで集計',src:'データ',per:'期間',row:'行',col:'列',val:'値',swap:'⇄ 転置',
       copy:'コピー(TSV)',copied:'コピー済',csv:'CSV',close:'閉じる',tot:'合計',sub2:'小計',etc:'その他',
       none:'データがありません。',no:'(なし)',detail:'明細',more:'他{n}件',pick:'値を選ぶ',
       all:'全体',clr:'解除',apply:'適用',find:'検索',rows:'{n}行',non:'—',cmp:'Δ 期間比較',cmpA:'期間A',cmpB:'直前B',cmpD:'Δ%',cmpHint:'A=期間フィルタ(空なら直近30日) · B=同じ長さの直前区間',
-      disp:'表示形式',d_raw:'実数',d_row:'行比%',d_col:'列比%',d_all:'総計比%',
+      disp:'表示形式',d_raw:'実数',d_row:'行比%',d_col:'列比%',d_all:'総計比%',d_lift:'集中指数(×)',
       top:'上位',t_all:'全体',sub_on:'小計'}
 };
 GST._pivot=null;
@@ -2358,6 +2390,14 @@ GST.pivotAgg=function(recs, meas){
   recs.forEach(function(r){ const v=+GST._pivGet(r,meas.f); if(isFinite(v)){ sum+=v; n++; } });
   if(!n) return null;
   if(a==='avg') return Math.round(sum/n*10)/10;
+  if(a==='med'){                       // 교체 간격처럼 한쪽으로 치우친 값은 평균이 왜곡된다
+    // null을 그냥 +로 바꾸면 0이 되고 isFinite(0)은 참이라 '값 없음'이 0으로 섞인다.
+    // 재교체 간격은 첫 교체 행이 전부 null이라, 이대로면 중앙값이 0에 붙어버린다.
+    const v=[]; recs.forEach(function(r){ const raw=GST._pivGet(r,meas.f);
+      if(raw==null||raw==='')return; const x=+raw; if(isFinite(x))v.push(x); });
+    if(!v.length) return null; v.sort(function(p,q){return p-q;});
+    const h=v.length>>1; return v.length%2?v[h]:Math.round((v[h-1]+v[h])/2*10)/10;
+  }
   return Math.round(sum*10)/10;
 };
 // 레코드를 행키(중첩)×열값으로 버킷팅. 집계는 호출부가 측정값별로 수행한다.
@@ -2444,7 +2484,7 @@ GST.pivotOpen=function(){
       +'<label>'+T.val+'</label><button class="gov-b'+(MS.length>1?' on':'')+'" data-piv="ms">'
         + GST._esc(MS.map(function(i){ return M[i].t||M[i].k; }).join(', ')) +' ▾</button>'
       +'<label>'+T.disp+'</label><select id="gpvDisp">'
-        +['raw','row','col','all'].map(function(k){ return '<option value="'+k+'"'+(disp===k?' selected':'')+'>'+T['d_'+k]+'</option>'; }).join('')
+        +['raw','row','col','all','lift'].map(function(k){ return '<option value="'+k+'"'+(disp===k?' selected':'')+'>'+T['d_'+k]+'</option>'; }).join('')
       +'</select>'
       +'<label>'+T.top+'</label><input type="number" id="gpvTop" min="0" step="1" value="'+(topN||'')+'"'
         +' placeholder="'+T.t_all+'" title="'+T.top+' N — 0/'+T.t_all+'" style="width:52px">'
@@ -2469,9 +2509,27 @@ GST.pivotOpen=function(){
       if(ci>=0&&CF&&!CF.has(GST._pivLbl(GST._pivGet(rec,D[ci].k),T))) return false;
       return true; });
   }
-  const fmtV=function(v,base){
+  /* 집중지수(lift) = 관측 ÷ 기대.  기대 = 행합 × 열합 ÷ 총합.
+     "이 조합이 평균보다 몇 배로 몰려 있나"를 표의 주변합만으로 구한다 — 추가 데이터가 필요 없다.
+     단순 건수는 흔한 항목이 전부 1등을 차지해 쓸모가 없다(자재는 O-RING이 44%다).
+     lift로 보면 'STR 세부공정에서 DRAIN PIPE-E가 229배'처럼 유독 몰린 칸이 드러난다.
+     표본이 적으면 배수가 튀므로 관측 3건 미만은 표시하지 않는다. */
+  const fmtV=function(v,base,mi){
     if(v==null) return '·';
     if(disp==='raw') return GST._num(v);
+    if(disp==='lift'){
+      /* 기대 = 행합 × 열합 ÷ 총합은 '더할 수 있는 값'에서만 성립한다.
+         중앙값·고유수·평균은 주변합이라는 것 자체가 없어서 배수에 뜻이 없다
+         (중앙값끼리 나누면 단위가 1/일이 된다). 그런 측정값은 원값을 그대로 보여준다 —
+         화면에서 값을 여러 개 얹은 채로 표시만 집중지수로 바꾸는 게 흔한 조작이라
+         '·'로 지워버리면 멀쩡한 열이 통째로 사라진 것처럼 보인다. */
+      const ag=(mi!=null&&meas()[mi])?(meas()[mi].agg||'count'):'count';
+      if(ag!=='count'&&ag!=='sum') return GST._num(v);
+      if(!base) return '·';
+      if(v<3) return '·';                       // 표본 부족 — 배수가 튄다
+      const x=v/base;
+      return (x>=10?Math.round(x):Math.round(x*10)/10)+'×';
+    }
     if(base==null||!base) return '·';
     return (Math.round(v/base*1000)/10)+'%';
   };
@@ -2592,10 +2650,11 @@ GST.pivotOpen=function(){
     const cellHTML=function(rk,c,m){
       const v=cell(rk,c,m);
       if(v==null) return '<td>·</td>';
-      const base = disp==='row'?rowT(rk,m) : disp==='col'?colT(c,m) : disp==='all'?grand(m) : null;
+      const base = disp==='row'?rowT(rk,m) : disp==='col'?colT(c,m) : disp==='all'?grand(m)
+        : disp==='lift'?(grand(m)?rowT(rk,m)*colT(c,m)/grand(m):null) : null;
       const a=(disp==='raw'&&mx>0)?(0.07+0.42*(v/mx)):0;
       return '<td class="gpv-cell" data-r="'+GST._esc(rk)+'" data-c="'+GST._esc(c)+'"'
-        +(a?' style="background:rgba(var(--gov-heat),'+a.toFixed(3)+')"':'')+'>'+fmtV(v,base)+'</td>';
+        +(a?' style="background:rgba(var(--gov-heat),'+a.toFixed(3)+')"':'')+'>'+fmtV(v,base,m)+'</td>';
     };
     let prev=[];
     const subRow=function(g){
@@ -2604,11 +2663,12 @@ GST.pivotOpen=function(){
       return '<tr class="gpv-tot"><td colspan="'+nLv+'">'+GST._esc(g)+' '+T.sub2+'</td>'
         + cN.map(function(c){ return MS.map(function(m){
             const v=preC(ks,c,m);
-            const base= disp==='row'?preT(ks,m) : disp==='col'?colT(c,m) : disp==='all'?grand(m) : null;
-            return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
+            const base= disp==='row'?preT(ks,m) : disp==='col'?colT(c,m) : disp==='all'?grand(m)
+              : disp==='lift'?(grand(m)?preT(ks,m)*colT(c,m)/grand(m):null) : null;
+            return '<td>'+fmtV(v,base,m)+'</td>'; }).join(''); }).join('')
         + (cmpOn?'<td></td>':'')
         + MS.map(function(m){ const v=preT(ks,m);
-            return '<td>'+fmtV(v, disp==='raw'?null:(disp==='all'?grand(m):v))+'</td>'; }).join('')
+            return '<td>'+fmtV(v, disp==='raw'?null:(disp==='all'?grand(m):v), m)+'</td>'; }).join('')
         + '</tr>';
     };
     keys.forEach(function(rk,idx){
@@ -2633,7 +2693,7 @@ GST.pivotOpen=function(){
             return '<td class="'+(noCol?'gpv-cell':'gpv-tot')+'"'
               +(noCol?' data-r="'+GST._esc(rk)+'" data-c="'+GST._esc(T.tot)+'"':'')
               +(a2?' style="background:rgba(var(--gov-heat),'+a2.toFixed(3)+')"':'')+'>'
-              +fmtV(v, disp==='all'?grand(m):(disp==='raw'?null:v))+'</td>'; }).join('')
+              +fmtV(v, disp==='all'?grand(m):(disp==='raw'?null:v), m)+'</td>'; }).join('')
         + '</tr>';
       prev=parts;
     });
@@ -2641,22 +2701,23 @@ GST.pivotOpen=function(){
     if(etcKeys.length){
       h+='<tr class="gpv-tot"><td'+(nLv>1?' colspan="'+nLv+'"':'')+'>'+T.etc+' ('+etcKeys.length+')</td>'
         + cN.map(function(c){ return MS.map(function(m){ const v=preC(etcKeys,c,m);
-            const base= disp==='col'?colT(c,m) : disp==='all'?grand(m) : disp==='row'?preT(etcKeys,m) : null;
-            return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
+            const base= disp==='col'?colT(c,m) : disp==='all'?grand(m) : disp==='row'?preT(etcKeys,m)
+              : disp==='lift'?(grand(m)?preT(etcKeys,m)*colT(c,m)/grand(m):null) : null;
+            return '<td>'+fmtV(v,base,m)+'</td>'; }).join(''); }).join('')
         + (cmpOn?'<td></td>':'')
         + MS.map(function(m){ const v=preT(etcKeys,m);
-            return '<td>'+fmtV(v, disp==='all'?grand(m):(disp==='raw'?null:v))+'</td>'; }).join('')+'</tr>';
+            return '<td>'+fmtV(v, disp==='all'?grand(m):(disp==='raw'?null:v), m)+'</td>'; }).join('')+'</tr>';
     }
     h+='</tbody><tfoot><tr class="gpv-tot"><td'+(nLv>1?' colspan="'+nLv+'"':'')+'>'+T.tot+'</td>'
       + cN.map(function(c){ return MS.map(function(m){ const v=colT(c,m);
           const base= disp==='row'?grand(m) : disp==='col'?v : disp==='all'?grand(m) : null;
-          return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
+          return '<td>'+fmtV(v,base,m)+'</td>'; }).join(''); }).join('')
       + (cmpOn?(function(){ const ta=colT(T.cmpA,MS[0])||0, tb=colT(T.cmpB,MS[0]);
           if(tb==null||!tb) return '<td></td>';
           const dpc=Math.round(ta/tb*1000)/10-100;
           const cc=dpc>0?'var(--bad,#fb7185)':(dpc<0?'var(--ok,#4ade80)':'inherit');
           return '<td style="color:'+cc+'">'+(dpc>0?'+':'')+(Math.round(dpc*10)/10)+'%</td>'; })():'')
-      + MS.map(function(m){ const v=grand(m); return '<td>'+fmtV(v, disp==='raw'?null:v)+'</td>'; }).join('')
+      + MS.map(function(m){ const v=grand(m); return '<td>'+fmtV(v, disp==='raw'?null:v, m)+'</td>'; }).join('')
       + '</tr></tfoot></table>';
     sc.innerHTML=h;
     VIEW={P:P,keys:keys,cN:cN,noCol:noCol,AC:AC,nLv:nLv,cell:cell,rowT:rowT,colT:colT,grand:grand,M:M,D:D};
