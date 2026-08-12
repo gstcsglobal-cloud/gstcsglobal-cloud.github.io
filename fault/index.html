@@ -116,6 +116,19 @@ tr:hover td{background:rgba(255,255,255,.04)}
   border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer}
 .fchip-clear:hover{color:var(--bad);border-color:var(--bad)}
 canvas{cursor:pointer}
+/* 심층분석 — 안내문을 읽히게 두려고 card-note(10px 이탤릭)를 쓰지 않는다 */
+.dp-guide{font-size:12.5px;line-height:1.75;color:var(--txt-muted,#97aac4);margin-top:10px}
+.dp-note{font-size:11.5px;color:var(--mut);line-height:1.55;margin-top:3px}
+.dp-h{font-size:12px;font-weight:800;letter-spacing:.3px;margin-bottom:7px}
+.bw2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
+@media(max-width:900px){.bw2{grid-template-columns:1fr}}
+.dp-tile{background:rgba(255,255,255,.05);border-radius:10px;padding:10px 12px}
+.dp-tile .l{font-size:10.5px;opacity:.6}
+.dp-tile .v{font-size:20px;font-weight:800;margin:2px 0 1px;font-variant-numeric:tabular-nums}
+.dp-tile .d{font-size:11px;opacity:.65}
+.dp-recs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.dp-tab.active{border-color:var(--acc,#6366f1);color:var(--acc,#818cf8);font-weight:800}
+.dp-row:hover td{background:rgba(99,102,241,.13)}
 @media(max-width:1200px){.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){.grid3{grid-template-columns:1fr}}
 /* 차트 복사·저장(PPT/PNG) 버튼 */
@@ -461,6 +474,84 @@ canvas{cursor:pointer}
 </div>
 </div>
 
+<!-- ═══ 섹션: 심층분석 ═══
+     다른 섹션의 차트는 축이 고정이라 "설비 TOP10" 같은 질문 하나밖에 못 던진다.
+     여기서는 축을 사용자가 고른다. 다만 빈 피벗을 던져주면 아무도 안 여므로,
+     축을 고르기 전에 먼저 봐야 할 것 — 신뢰성의 양 끝과 좌우 비대칭 — 을 꺼내 둔다. -->
+<div data-sec="deep">
+  <div class="card" style="margin-bottom:16px">
+    <h3 data-i="dp_h1">다차원 분석 — 축을 바꿔가며 묻는다</h3>
+    <div class="dp-guide">
+      <div data-i="dp_g1">·</div>
+      <div data-i="dp_g2">·</div>
+      <div data-i="dp_g3">·</div>
+    </div>
+    <div class="dp-recs">
+      <button class="btn btn-grad" style="padding:12px 22px;font-size:14px" onclick="openPivot()" data-i="dp_open">다차원 분석 열기</button>
+      <span class="dp-note" style="margin:0 2px 0 8px" data-i="dp_rec">추천 조합</span>
+      <button class="btn btn-glass" onclick="pivPreset(1)" data-i="dp_r1">세부공정 × 모델</button>
+      <button class="btn btn-glass" onclick="pivPreset(2)" data-i="dp_r2">설비호기 × 월</button>
+      <button class="btn btn-glass" onclick="pivPreset(3)" data-i="dp_r3">작업자 × 작업단계</button>
+    </div>
+  </div>
+
+  <div class="tablecard" style="margin-bottom:16px">
+    <h3><span data-i="dp_sub">공정·세부공정 중 어디가 유독 고장인가</span></h3>
+    <div class="dp-note" id="subNote">—</div>
+    <div class="dp-recs" style="margin:10px 0">
+      <button class="btn btn-glass dp-tab active" data-sub="subproc" onclick="setSubAxis('subproc')" data-i="pv_subproc">세부공정</button>
+      <button class="btn btn-glass dp-tab" data-sub="proc" onclick="setSubAxis('proc')" data-i="sl_proc2">공정</button>
+      <button class="btn btn-glass dp-tab" data-sub="model" onclick="setSubAxis('model')" data-i="sl_model">모델</button>
+      <button class="btn btn-glass dp-tab" data-sub="line" onclick="setSubAxis('line')" data-i="sl_line2">라인</button>
+    </div>
+    <div class="tbl-wrap" style="max-height:400px">
+      <table><thead><tr>
+        <th data-i-th="dp_th_sub">구분</th><th data-i-th="dp_th_n">작업</th>
+        <th data-i-th="dp_th_bm">BM</th><th data-i-th="dp_th_rate">BM율</th>
+        <th data-i-th="dp_th_x">전체 대비</th><th data-i-th="dp_th_eqn">설비수</th>
+        <th data-i-th="dp_th_top">최다 호기</th>
+      </tr></thead><tbody id="subBody"><tr><td colspan="7" class="loading">⏳</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <div class="tablecard" style="margin-bottom:16px">
+    <h3><span data-i="dp_bw">Best of Best / Worst of Worst</span></h3>
+    <div class="dp-note" id="bwNote">—</div>
+    <div class="bw2">
+      <div>
+        <div class="dp-h" style="color:var(--bad,#fb7185)" data-i="dp_worst">Worst — 고장이 몰리는 설비</div>
+        <div class="tbl-wrap" style="max-height:340px">
+          <table><thead><tr>
+            <th data-i-th="dp_th_eq">설비호기</th><th>S/N</th><th data-i-th="dp_th_n">작업</th>
+            <th data-i-th="dp_th_bm">BM</th><th data-i-th="dp_th_rate">BM율</th><th data-i-th="dp_th_x">전체 대비</th>
+          </tr></thead><tbody id="bwWorst"><tr><td colspan="6" class="loading">⏳</td></tr></tbody></table>
+        </div>
+      </div>
+      <div>
+        <div class="dp-h" style="color:var(--ok,#4ade80)" data-i="dp_best">Best — 무고장 설비</div>
+        <div class="tbl-wrap" style="max-height:340px">
+          <table><thead><tr>
+            <th data-i-th="dp_th_eq">설비호기</th><th>S/N</th><th data-i-th="dp_th_n">작업</th>
+            <th data-i-th="dp_th_bm">BM</th><th>LINE</th>
+          </tr></thead><tbody id="bwBest"><tr><td colspan="5" class="loading">⏳</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tablecard">
+    <h3><span data-i="dp_ch">좌우 채널 비대칭</span></h3>
+    <div class="dp-note" id="chNote">—</div>
+    <div id="chKpi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0"></div>
+    <div class="tbl-wrap" style="max-height:400px">
+      <table><thead><tr>
+        <th data-i-th="dp_th_eq">설비호기</th><th>S/N</th><th data-i-th="dp_th_lr">LEFT : RIGHT</th>
+        <th data-i-th="dp_th_skew">편중도</th><th data-i-th="dp_th_bmlr">그중 BM</th><th>LINE</th>
+      </tr></thead><tbody id="chBody"><tr><td colspan="6" class="loading">⏳</td></tr></tbody></table>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ 섹션: 설비 일대기 ═══
      설비 한 대를 골라 설치부터 지금까지를 한 화면에서 본다.
      설치현황(언제 들어왔나) + 수선실적(무슨 일이 있었나) + 자재실적(뭘 갈았나)을 S/N으로 잇는다. -->
@@ -573,7 +664,29 @@ const SERVICE_STAGES=['BM','CBM','CM','CRM'];
 const PAL=GST.PAL8;
 
 const T={
-  ko:{sec_watch:'급상승 감지',watch_title:'무엇이 올라오고 있나',watch_win:'비교 구간',ch_rise_sn:'급상승 설비',note_rise:'직전 같은 기간 대비 고장 증가 · 막대는 증가분 · 라벨은 이전→최근',ch_rise_proc:'급상승 공정',note_rise2:'같은 기준 · 공정 단위로 묶어 본다',ch_rise_model:'급상승 모델',note_rise3:'같은 모델에서 함께 오르면 설계·부품 이슈를 의심한다',ch_alarmmat:'알람이 뜨면 무슨 자재를 가나',sec_life:'설비 일대기',life_pick:'설비 선택',note_lifepick:'S/N 또는 설비호기로 검색하세요. 아무 표에서나 S/N을 클릭하면 뜨는 메뉴의 「설비 일대기」로도 열립니다.',ch_lifetl:'이력 타임라인',note_lifetl:'설치·Turn On·고장/정비·자재교체를 시간순으로 · 점에 커서를 올리면 상세',ch_lifestage:'작업단계 구성',note_lifestage:'이 설비에 어떤 작업이 얼마나 있었나',ch_lifepart:'교체 자재 TOP',note_lifepart:'이 설비에서 제일 많이 간 자재 · 건수',ch_lifecycle:'자재별 평균 사용주기',note_lifecycle:'교체 시점의 사용일(전교체일 기준) 평균 · 2회 이상 교체된 자재',life_tbl:'전체 이력',life_kind:'구분',life_what:'내용',th_worker:'작업자',th_pf2:'유/무상',life_empty:'설비를 검색하면 그 설비의 일대기가 표시됩니다',ch_tbmw:'작업자별 TBM 사후 재고장률',note_tbmw:'TBM 후 30일 내 같은 설비 BM 발생 비율 · 낮을수록 좋음 · TBM 10건 이상',ch_tbmgap:'TBM → 다음 고장 경과일',note_tbmgap:'재고장이 난 건만 · 짧을수록 정비 품질 문제',ch_tbmline:'LINE별 TBM 사후 재고장률',note_tbmline:'TBM 5건 이상 · 값은 막대 끝',title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
+  ko:{dp_sub:'공정·세부공정 중 어디가 유독 고장인가',dp_sub_n:'BM율 = 고장(BM) ÷ 그 구분에 들어간 모든 작업 · 작업 {n}건 이상 {u}개 구분 · 전체 평균 {p}% · 줄을 누르면 그 구분으로 화면이 좁혀집니다 · ◆ 는 그 구분 BM의 절반 이상이 한 호기에서 나온 경우',dp_th_sub:'구분',dp_th_eqn:'설비수',dp_th_top:'최다 호기',sl_proc2:'공정',sl_line2:'라인',sec_deep:'심층분석',
+    dp_h1:'다차원 분석 — 축을 바꿔가며 묻는다',
+    dp_g1:'행·열에 원하는 축을 놓습니다 — 설비호기·공정·세부공정·모델·BAY·채널위치·주차/월, 그리고 작업자까지.',
+    dp_g2:'표시를 「집중지수(×)」로 바꾸면 흔한 항목에 가리지 않고 유독 한 칸에 몰린 조합이 배수로 드러납니다.',
+    dp_g3:'행 축은 3단까지 겹칠 수 있고, 값 칸을 누르면 그 칸을 만든 원본 작업이 그대로 나옵니다.',
+    dp_open:'🧊 다차원 분석 열기',dp_rec:'추천 조합',
+    dp_r1:'세부공정 × 모델 (집중지수)',dp_r2:'설비호기 × 월 (건수)',dp_r3:'작업자 × 작업단계 (건수)',
+    dp_t1:'세부공정 × 모델 · 집중지수 — 1을 크게 넘는 칸이 「유독 여기서만」 나는 조합입니다',
+    dp_t2:'설비호기 × 월 — 한 줄을 가로로 읽으면 그 설비가 언제 몰렸는지 보입니다',
+    dp_t3:'작업자 × 작업단계 — 쉼표로 묶인 담당자를 사람 수만큼 펼친 데이터입니다',
+    dp_bw:'Best of Best / Worst of Worst',
+    dp_bw_n:'BM율 = 고장(BM) ÷ 그 설비에 들어간 모든 작업 · 작업 {n}건 이상 {u}대 대상 · 전체 평균 {p}%',
+    dp_worst:'Worst — 고장이 몰리는 설비',dp_best:'Best — 무고장 설비',
+    dp_th_eq:'설비호기',dp_th_n:'작업',dp_th_bm:'BM',dp_th_rate:'BM율',dp_th_x:'전체 대비',
+    dp_none:'작업 {n}건 이상인 설비가 없습니다',
+    dp_ch:'좌우 채널 비대칭',
+    dp_ch_n:'듀얼 챔버는 좌우가 같은 조건으로 돕니다 — 한쪽에만 계속 손이 가면 배관·드레인 같은 물리적 원인을 의심합니다. 편중도 = max(L,R) ÷ (L+R) · 좌우 합 {m}건 이상만',
+    dp_ch_l:'LEFT BM율',dp_ch_r:'RIGHT BM율',dp_ch_sk:'한쪽 70%↑ 설비',dp_ch_skd:'좌우 합 {m}건 이상 {n}대 중',
+    dp_th_lr:'LEFT : RIGHT',dp_th_skew:'편중도',dp_th_bmlr:'그중 BM',
+    dp_ch_none:'좌우 합 {m}건 이상인 설비가 없습니다',dp_unit:'대',
+    pv_set1:'서비스 실적',pv_set2:'작업자별 (펼침)',pv_subproc:'세부공정',pv_bay:'BAY',
+    pv_chpos:'채널위치',pv_maineq:'메인설비호기',pv_worker:'작업자',pv_bm:'BM건수',pv_wkrn:'작업자수',
+    sec_watch:'급상승 감지',watch_title:'무엇이 올라오고 있나',watch_win:'비교 구간',ch_rise_sn:'급상승 설비',note_rise:'직전 같은 기간 대비 고장 증가 · 막대는 증가분 · 라벨은 이전→최근',ch_rise_proc:'급상승 공정',note_rise2:'같은 기준 · 공정 단위로 묶어 본다',ch_rise_model:'급상승 모델',note_rise3:'같은 모델에서 함께 오르면 설계·부품 이슈를 의심한다',ch_alarmmat:'알람이 뜨면 무슨 자재를 가나',sec_life:'설비 일대기',life_pick:'설비 선택',note_lifepick:'S/N 또는 설비호기로 검색하세요. 아무 표에서나 S/N을 클릭하면 뜨는 메뉴의 「설비 일대기」로도 열립니다.',ch_lifetl:'이력 타임라인',note_lifetl:'설치·Turn On·고장/정비·자재교체를 시간순으로 · 점에 커서를 올리면 상세',ch_lifestage:'작업단계 구성',note_lifestage:'이 설비에 어떤 작업이 얼마나 있었나',ch_lifepart:'교체 자재 TOP',note_lifepart:'이 설비에서 제일 많이 간 자재 · 건수',ch_lifecycle:'자재별 평균 사용주기',note_lifecycle:'교체 시점의 사용일(전교체일 기준) 평균 · 2회 이상 교체된 자재',life_tbl:'전체 이력',life_kind:'구분',life_what:'내용',th_worker:'작업자',th_pf2:'유/무상',life_empty:'설비를 검색하면 그 설비의 일대기가 표시됩니다',ch_tbmw:'작업자별 TBM 사후 재고장률',note_tbmw:'TBM 후 30일 내 같은 설비 BM 발생 비율 · 낮을수록 좋음 · TBM 10건 이상',ch_tbmgap:'TBM → 다음 고장 경과일',note_tbmgap:'재고장이 난 건만 · 짧을수록 정비 품질 문제',ch_tbmline:'LINE별 TBM 사후 재고장률',note_tbmline:'TBM 5건 이상 · 값은 막대 끝',title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
     sec_ov:'개요',sec_ca:'원인·조치',sec_ld:'작업 부하',sec_rel:'신뢰성',sec_dt:'상세 목록',
     r_mtbf:'MTBF · 평균 고장간격',r_mttr:'MTTR · 평균 수리시간',r_frate:'연간 고장률 (건/대)',r_units:'분석 설비',
     rf_mtbf:'중앙값 {n}일',rf_mttr:'BM {n}건 평균',rf_frate:'가동기간 환산',rf_units:'BM 2건↑ · 설치연동 {p}%',
@@ -596,7 +709,29 @@ const T={
     tbl_title:'서비스 실적 상세',th_date:'작업일',ft_cnt:'건수',th_stage:'단계',th_pf:'유/무상',th_phenom:'현상',th_cause:'원인',th_action:'조치',th_min:'시간(분)',th_mh:'공수',th_worker:'작업자',
     ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ch_alarmp:'알람 TOP (파레토)',note_alarmp:'알람(Z) 미기재 시 현상(AA) 폴백 · 라인=누적 %',dq_title:'데이터 입력 정합성 (BM 기준)',dq_missing:'미기재 {n}건 / BM {t}건',dq_note:'행의 ✎로 알람·현상·원인·조치를 바로 채울 수 있습니다 (구글 시트에 저장)',dq_fill:'입력',dq_all:'알람·현상·원인·조치가 모두 기재되어 있습니다',dq_missN:'미기재 {n}건 제외',dq_mt:'고장 기록 입력',dq_close:'닫기',dq_save:'저장',dq_saved:'저장됨 — 구글 시트에 반영되었습니다',dq_savefail:'저장 실패 — 잠시 후 다시 시도하세요',dq_conflict:'다른 사람이 먼저 수정했습니다 — 다시 열어주세요',dq_loadfail:'행을 불러오지 못했습니다',dq_zcol:'Z열',dq_savenext:'저장 후 다음 →',dq_left:'남은 {n}건',dq_done:'미기재 건을 모두 처리했습니다',dq_byworker:'작업자별 미기재 TOP',sr_upm:'UPM율 %',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'최근 구간 작업공수 {n}인·시 · 직전 구간 대비 {p}',
     etc:'기타',mon_unit:'월',dur_b:['<30분','30–60분','1–2시간','2–4시간','4시간+'],wcnt_p:'{n}명'},
-  en:{sec_watch:'Rising Issues',watch_title:'What is trending up',watch_win:'Compare window',ch_rise_sn:'Rising Equipment',note_rise:'increase vs the same prior window · bar is the delta · label is before→after',ch_rise_proc:'Rising Processes',note_rise2:'same basis, grouped by process',ch_rise_model:'Rising Models',note_rise3:'if a whole model rises together, suspect design or parts',ch_alarmmat:'Which Parts Follow Each Alarm',sec_life:'Equipment Life',life_pick:'Select Equipment',note_lifepick:'Search by S/N or equipment code. Or click any S/N cell and pick Equipment Life from the menu.',ch_lifetl:'Life Timeline',note_lifetl:'install · Turn On · faults/PM · part swaps in time order · hover a point for detail',ch_lifestage:'Work Stage Mix',note_lifestage:'what happened on this unit, and how often',ch_lifepart:'Top Replaced Parts',note_lifepart:'most frequently replaced on this unit · count',ch_lifecycle:'Mean Service Life by Part',note_lifecycle:'mean days-in-use at replacement (prev-replace basis) · parts replaced 2+ times',life_tbl:'Full History',life_kind:'Type',life_what:'Detail',th_worker:'Worker',th_pf2:'Paid/Free',life_empty:'Search for an equipment to see its life story',ch_tbmw:'Post-TBM Failure Rate by Worker',note_tbmw:'BM within 30d after TBM on same unit · lower is better · ≥10 TBMs',ch_tbmgap:'Days from TBM to Next Failure',note_tbmgap:'only recurring cases · shorter means poorer PM quality',ch_tbmline:'Post-TBM Failure Rate by LINE',note_tbmline:'≥5 TBMs · value at bar end',title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
+  en:{dp_sub:'Which Process or Sub-process Fails Disproportionately',dp_sub_n:'BM rate = failures ÷ all work in that group · {u} groups with {n}+ jobs · overall {p}% · click a row to narrow the page · ◆ means over half that group\u2019s failures came from a single unit',dp_th_sub:'Group',dp_th_eqn:'Units',dp_th_top:'Top unit',sl_proc2:'Process',sl_line2:'Line',sec_deep:'Deep Dive',
+    dp_h1:'Multi-dimensional analysis — change the axis, change the question',
+    dp_g1:'Put any axis on rows and columns — unit, process, sub-process, model, BAY, channel, week/month, even the worker.',
+    dp_g2:'Switch "Show as" to Lift (×) and the combinations that really pile up surface as multiples, instead of being buried under common items.',
+    dp_g3:'Rows nest up to three levels, and clicking a value opens the raw records behind that cell.',
+    dp_open:'🧊 Open pivot',dp_rec:'Suggested views',
+    dp_r1:'Sub-process × Model (Lift)',dp_r2:'Unit × Month (Count)',dp_r3:'Worker × Stage (Count)',
+    dp_t1:'Sub-process × Model, Lift — cells far above 1 are the "only happens here" combinations',
+    dp_t2:'Unit × Month — read a row across to see when that unit piled up',
+    dp_t3:'Worker × Stage — comma-joined crews expanded into one row per person',
+    dp_bw:'Best of Best / Worst of Worst',
+    dp_bw_n:'BM rate = breakdowns ÷ all work done on that unit · {u} units with {n}+ jobs · fleet average {p}%',
+    dp_worst:'Worst — failures pile up here',dp_best:'Best — zero breakdowns',
+    dp_th_eq:'Unit',dp_th_n:'Jobs',dp_th_bm:'BM',dp_th_rate:'BM rate',dp_th_x:'vs fleet',
+    dp_none:'No unit reaches {n} jobs',
+    dp_ch:'Left / Right channel asymmetry',
+    dp_ch_n:'Both channels of a dual chamber run the same duty — if only one keeps needing work, suspect a physical cause such as piping or drain. Skew = max(L,R) ÷ (L+R) · L+R ≥ {m} only',
+    dp_ch_l:'LEFT BM rate',dp_ch_r:'RIGHT BM rate',dp_ch_sk:'Units ≥70% one side',dp_ch_skd:'of {n} units with L+R ≥ {m}',
+    dp_th_lr:'LEFT : RIGHT',dp_th_skew:'Skew',dp_th_bmlr:'of which BM',
+    dp_ch_none:'No unit reaches L+R ≥ {m}',dp_unit:'',
+    pv_set1:'Service records',pv_set2:'By worker (expanded)',pv_subproc:'Sub-process',pv_bay:'BAY',
+    pv_chpos:'Channel',pv_maineq:'Main equipment',pv_worker:'Worker',pv_bm:'BM count',pv_wkrn:'Workers',
+    sec_watch:'Rising Issues',watch_title:'What is trending up',watch_win:'Compare window',ch_rise_sn:'Rising Equipment',note_rise:'increase vs the same prior window · bar is the delta · label is before→after',ch_rise_proc:'Rising Processes',note_rise2:'same basis, grouped by process',ch_rise_model:'Rising Models',note_rise3:'if a whole model rises together, suspect design or parts',ch_alarmmat:'Which Parts Follow Each Alarm',sec_life:'Equipment Life',life_pick:'Select Equipment',note_lifepick:'Search by S/N or equipment code. Or click any S/N cell and pick Equipment Life from the menu.',ch_lifetl:'Life Timeline',note_lifetl:'install · Turn On · faults/PM · part swaps in time order · hover a point for detail',ch_lifestage:'Work Stage Mix',note_lifestage:'what happened on this unit, and how often',ch_lifepart:'Top Replaced Parts',note_lifepart:'most frequently replaced on this unit · count',ch_lifecycle:'Mean Service Life by Part',note_lifecycle:'mean days-in-use at replacement (prev-replace basis) · parts replaced 2+ times',life_tbl:'Full History',life_kind:'Type',life_what:'Detail',th_worker:'Worker',th_pf2:'Paid/Free',life_empty:'Search for an equipment to see its life story',ch_tbmw:'Post-TBM Failure Rate by Worker',note_tbmw:'BM within 30d after TBM on same unit · lower is better · ≥10 TBMs',ch_tbmgap:'Days from TBM to Next Failure',note_tbmgap:'only recurring cases · shorter means poorer PM quality',ch_tbmline:'Post-TBM Failure Rate by LINE',note_tbmline:'≥5 TBMs · value at bar end',title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
     sec_ov:'Overview',sec_ca:'Cause & Action',sec_ld:'Workload',sec_rel:'Reliability',sec_dt:'Data',
     r_mtbf:'MTBF · mean time btw failures',r_mttr:'MTTR · mean time to repair',r_frate:'Annual failures / unit',r_units:'Units analyzed',
     rf_mtbf:'median {n} d',rf_mttr:'avg of {n} BM',rf_frate:'annualized',rf_units:'BM≥2 · install-linked {p}%',
@@ -619,7 +754,29 @@ const T={
     tbl_title:'Service Records',th_date:'Date',ft_cnt:'Count',th_stage:'Stage',th_pf:'Paid/Free',th_phenom:'Phenomenon',th_cause:'Cause',th_action:'Action',th_min:'Min',th_mh:'Man-min',th_worker:'Workers',
     ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ch_alarmp:'Top Alarms (Pareto)',note_alarmp:'falls back to symptom(AA) when alarm(Z) blank · line = cumulative %',dq_title:'Data entry integrity (BM)',dq_missing:'{n} missing / {t} BM',dq_note:'click ✎ to fill alarm/phenomenon/cause/action right here (saved to the Google Sheet)',dq_fill:'Fill',dq_all:'Alarm, phenomenon, cause and action are all filled in',dq_missN:'{n} blank excluded',dq_mt:'Fill fault record',dq_close:'Close',dq_save:'Save',dq_saved:'Saved to the Google Sheet',dq_savefail:'Save failed — try again',dq_conflict:'Someone edited this row first — reopen it',dq_loadfail:'Could not load the row',dq_zcol:'col Z',dq_savenext:'Save & next →',dq_left:'{n} left',dq_done:'All missing records are filled',dq_byworker:'Missing entries by worker (top)',sr_upm:'UPM rate %',ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours in latest period · {p} vs prev',
     etc:'Others',mon_unit:'',dur_b:['<30m','30–60m','1–2h','2–4h','4h+'],wcnt_p:'{n} ppl'},
-  zh:{sec_watch:'上升趋势检测',watch_title:'哪些正在上升',watch_win:'对比区间',ch_rise_sn:'上升设备',note_rise:'与前一同期相比故障增加 · 条形为增量 · 标签为之前→最近',ch_rise_proc:'上升工序',note_rise2:'同一基准 · 按工序汇总',ch_rise_model:'上升型号',note_rise3:'同型号一起上升时应怀疑设计或部件问题',ch_alarmmat:'报警发生时更换了哪些材料',sec_life:'设备履历',life_pick:'选择设备',note_lifepick:'按 S/N 或设备号搜索。也可点击任意表中的 S/N，在弹出菜单中选择「设备履历」。',ch_lifetl:'履历时间轴',note_lifetl:'安装·Turn On·故障/保养·材料更换按时间顺序 · 悬停查看详情',ch_lifestage:'作业阶段构成',note_lifestage:'这台设备发生过哪些作业，各多少次',ch_lifepart:'更换材料 TOP',note_lifepart:'该设备更换最多的材料 · 件数',ch_lifecycle:'各材料平均使用周期',note_lifecycle:'更换时使用天数(前次更换基准)平均 · 更换2次以上的材料',life_tbl:'全部履历',life_kind:'类别',life_what:'内容',th_worker:'作业者',th_pf2:'有偿/无偿',life_empty:'搜索设备后显示该设备的履历',ch_tbmw:'按作业者 TBM 后再故障率',note_tbmw:'TBM 后30天内同设备发生BM的比例 · 越低越好 · TBM 10件以上',ch_tbmgap:'TBM → 下次故障间隔天数',note_tbmgap:'仅统计再故障件 · 越短表示保养质量越差',ch_tbmline:'按LINE TBM 后再故障率',note_tbmline:'TBM 5件以上 · 数值在条形末端',title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
+  zh:{dp_sub:'哪个工序·细分工序故障异常集中',dp_sub_n:'BM率 = 故障(BM) ÷ 该分类下全部作业 · 作业{n}件以上共{u}个分类 · 全体平均{p}% · 点击行可按该分类收窄画面 · ◆ 表示该分类过半故障来自同一号机',dp_th_sub:'分类',dp_th_eqn:'设备数',dp_th_top:'最多号机',sl_proc2:'工序',sl_line2:'线',sec_deep:'深度分析',
+    dp_h1:'多维分析 — 换个轴，换个问题',
+    dp_g1:'把任意轴放到行和列 — 设备号机·工序·细分工序·型号·BAY·通道位置·周/月，甚至作业者。',
+    dp_g2:'把显示方式切换为「集中指数(×)」，被常见项掩盖的、真正扎堆的组合会以倍数浮现出来。',
+    dp_g3:'行轴最多可嵌套三层，点击数值单元格即可看到构成该格的原始作业记录。',
+    dp_open:'🧊 打开多维分析',dp_rec:'推荐组合',
+    dp_r1:'细分工序 × 型号 (集中指数)',dp_r2:'设备号机 × 月 (件数)',dp_r3:'作业者 × 作业阶段 (件数)',
+    dp_t1:'细分工序 × 型号 · 集中指数 — 远大于1的格子就是「只在这里发生」的组合',
+    dp_t2:'设备号机 × 月 — 横向读一行，就能看出该设备在何时集中',
+    dp_t3:'作业者 × 作业阶段 — 已按人数把逗号分隔的负责人展开为每人一行',
+    dp_bw:'Best of Best / Worst of Worst',
+    dp_bw_n:'BM率 = 故障(BM) ÷ 该设备的全部作业 · 作业{n}件以上共{u}台 · 整体平均{p}%',
+    dp_worst:'Worst — 故障集中的设备',dp_best:'Best — 零故障设备',
+    dp_th_eq:'设备号机',dp_th_n:'作业',dp_th_bm:'BM',dp_th_rate:'BM率',dp_th_x:'相对整体',
+    dp_none:'没有作业{n}件以上的设备',
+    dp_ch:'左右通道不对称',
+    dp_ch_n:'双腔体左右在相同条件下运行 — 若只有一侧反复需要维护，应怀疑管路·排水等物理原因。偏重度 = max(L,R) ÷ (L+R) · 仅统计左右合计{m}件以上',
+    dp_ch_l:'LEFT BM率',dp_ch_r:'RIGHT BM率',dp_ch_sk:'单侧70%以上设备',dp_ch_skd:'左右合计{m}件以上的{n}台中',
+    dp_th_lr:'LEFT : RIGHT',dp_th_skew:'偏重度',dp_th_bmlr:'其中BM',
+    dp_ch_none:'没有左右合计{m}件以上的设备',dp_unit:'台',
+    pv_set1:'服务实绩',pv_set2:'按作业者 (展开)',pv_subproc:'细分工序',pv_bay:'BAY',
+    pv_chpos:'通道位置',pv_maineq:'主设备号机',pv_worker:'作业者',pv_bm:'BM件数',pv_wkrn:'作业者数',
+    sec_watch:'上升趋势检测',watch_title:'哪些正在上升',watch_win:'对比区间',ch_rise_sn:'上升设备',note_rise:'与前一同期相比故障增加 · 条形为增量 · 标签为之前→最近',ch_rise_proc:'上升工序',note_rise2:'同一基准 · 按工序汇总',ch_rise_model:'上升型号',note_rise3:'同型号一起上升时应怀疑设计或部件问题',ch_alarmmat:'报警发生时更换了哪些材料',sec_life:'设备履历',life_pick:'选择设备',note_lifepick:'按 S/N 或设备号搜索。也可点击任意表中的 S/N，在弹出菜单中选择「设备履历」。',ch_lifetl:'履历时间轴',note_lifetl:'安装·Turn On·故障/保养·材料更换按时间顺序 · 悬停查看详情',ch_lifestage:'作业阶段构成',note_lifestage:'这台设备发生过哪些作业，各多少次',ch_lifepart:'更换材料 TOP',note_lifepart:'该设备更换最多的材料 · 件数',ch_lifecycle:'各材料平均使用周期',note_lifecycle:'更换时使用天数(前次更换基准)平均 · 更换2次以上的材料',life_tbl:'全部履历',life_kind:'类别',life_what:'内容',th_worker:'作业者',th_pf2:'有偿/无偿',life_empty:'搜索设备后显示该设备的履历',ch_tbmw:'按作业者 TBM 后再故障率',note_tbmw:'TBM 后30天内同设备发生BM的比例 · 越低越好 · TBM 10件以上',ch_tbmgap:'TBM → 下次故障间隔天数',note_tbmgap:'仅统计再故障件 · 越短表示保养质量越差',ch_tbmline:'按LINE TBM 后再故障率',note_tbmline:'TBM 5件以上 · 数值在条形末端',title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
     sec_ov:'概览',sec_ca:'原因·措施',sec_ld:'工时负荷',sec_rel:'可靠性',sec_dt:'明细',
     r_mtbf:'MTBF · 平均故障间隔',r_mttr:'MTTR · 平均修复时间',r_frate:'年故障率 (件/台)',r_units:'分析设备',
     rf_mtbf:'中位数 {n}天',rf_mttr:'BM {n}件均值',rf_frate:'按运行期折算',rf_units:'BM≥2 · 安装关联 {p}%',
@@ -642,7 +799,29 @@ const T={
     tbl_title:'服务实绩明细',th_date:'作业日',ft_cnt:'件数',th_stage:'阶段',th_pf:'有/无偿',th_phenom:'现象',th_cause:'原因',th_action:'措施',th_min:'时间(分)',th_mh:'工时',th_worker:'作业者',
     ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ch_alarmp:'报警TOP (帕累托)',note_alarmp:'报警(Z)未填时用现象(AA) · 线=累计%',dq_title:'数据录入完整性 (BM)',dq_missing:'未填写 {n}件 / BM {t}件',dq_note:'点✎可直接填写报警·现象·原因·措施 (保存到谷歌表格)',dq_fill:'填写',dq_all:'报警·现象·原因·措施均已填写',dq_missN:'未填{n}件除外',dq_mt:'填写故障记录',dq_close:'关闭',dq_save:'保存',dq_saved:'已保存到谷歌表格',dq_savefail:'保存失败 — 请稍后重试',dq_conflict:'他人已先修改 — 请重新打开',dq_loadfail:'无法读取该行',dq_zcol:'Z列',dq_savenext:'保存并下一条 →',dq_left:'剩余 {n}件',dq_done:'未填写记录已全部处理',dq_byworker:'按作业者未填TOP',sr_upm:'UPM率 %',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'最近区间工时 {n}人·时 · 环比 {p}',
     etc:'其他',mon_unit:'月',dur_b:['<30分','30–60分','1–2时','2–4时','4时+'],wcnt_p:'{n}人'},
-  ja:{sec_watch:'急上昇検知',watch_title:'何が上がってきているか',watch_win:'比較区間',ch_rise_sn:'急上昇設備',note_rise:'直前の同期間比の故障増加 · 棒は増加分 · ラベルは以前→最近',ch_rise_proc:'急上昇工程',note_rise2:'同じ基準 · 工程単位でまとめる',ch_rise_model:'急上昇モデル',note_rise3:'同一モデルで揃って上がる場合は設計·部品の問題を疑う',ch_alarmmat:'アラーム発生時に交換される部材',sec_life:'設備一代記',life_pick:'設備選択',note_lifepick:'S/Nまたは設備号機で検索してください。任意の表のS/Nをクリックし、メニューの「設備一代記」からも開けます。',ch_lifetl:'履歴タイムライン',note_lifetl:'設置·Turn On·故障/整備·部材交換を時系列で · 点にカーソルを合わせると詳細',ch_lifestage:'作業段階構成',note_lifestage:'この設備にどんな作業がどれだけあったか',ch_lifepart:'交換部材TOP',note_lifepart:'この設備で最も多く交換された部材 · 件数',ch_lifecycle:'部材別平均使用周期',note_lifecycle:'交換時点の使用日数(前回交換基準)平均 · 2回以上交換された部材',life_tbl:'全履歴',life_kind:'区分',life_what:'内容',th_worker:'作業者',th_pf2:'有償/無償',life_empty:'設備を検索するとその設備の履歴が表示されます',ch_tbmw:'作業者別TBM後再故障率',note_tbmw:'TBM後30日以内に同一設備でBM発生した割合 · 低いほど良い · TBM10件以上',ch_tbmgap:'TBM → 次故障までの日数',note_tbmgap:'再故障した件のみ · 短いほど整備品質の問題',ch_tbmline:'LINE別TBM後再故障率',note_tbmline:'TBM5件以上 · 値は棒の末端',title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
+  ja:{dp_sub:'工程·詳細工程のどこが特に故障するか',dp_sub_n:'BM率 = 故障(BM) ÷ その区分に入った全作業 · 作業{n}件以上の{u}区分 · 全体平均{p}% · 行を押すとその区分で画面が絞られます · ◆ はその区分の故障の半分以上が1号機から出ている場合',dp_th_sub:'区分',dp_th_eqn:'設備数',dp_th_top:'最多号機',sl_proc2:'工程',sl_line2:'ライン',sec_deep:'深層分析',
+    dp_h1:'多次元分析 — 軸を変えて問いを変える',
+    dp_g1:'行と列に好きな軸を置きます — 設備号機·工程·詳細工程·モデル·BAY·チャンネル位置·週/月、そして作業者まで。',
+    dp_g2:'表示形式を「集中指数(×)」に切り替えると、よくある項目に埋もれずに、特に偏った組み合わせが倍率で浮かび上がります。',
+    dp_g3:'行軸は3段まで入れ子にでき、値のセルを押すとそのセルを作った元の作業がそのまま出ます。',
+    dp_open:'🧊 多次元分析を開く',dp_rec:'おすすめの組み合わせ',
+    dp_r1:'詳細工程 × モデル (集中指数)',dp_r2:'設備号機 × 月 (件数)',dp_r3:'作業者 × 作業段階 (件数)',
+    dp_t1:'詳細工程 × モデル · 集中指数 — 1を大きく超えるセルが「ここでだけ起きる」組み合わせです',
+    dp_t2:'設備号機 × 月 — 一行を横に読むと、その設備がいつ集中したか分かります',
+    dp_t3:'作業者 × 作業段階 — カンマで束ねられた担当者を人数分に展開したデータです',
+    dp_bw:'Best of Best / Worst of Worst',
+    dp_bw_n:'BM率 = 故障(BM) ÷ その設備に入った全作業 · 作業{n}件以上の{u}台が対象 · 全体平均{p}%',
+    dp_worst:'Worst — 故障が集中する設備',dp_best:'Best — 無故障設備',
+    dp_th_eq:'設備号機',dp_th_n:'作業',dp_th_bm:'BM',dp_th_rate:'BM率',dp_th_x:'全体比',
+    dp_none:'作業{n}件以上の設備がありません',
+    dp_ch:'左右チャンネルの非対称',
+    dp_ch_n:'デュアルチャンバーは左右が同じ条件で回ります — 片側だけ手が掛かり続けるなら配管·ドレーンなど物理的な原因を疑います。偏り度 = max(L,R) ÷ (L+R) · 左右合計{m}件以上のみ',
+    dp_ch_l:'LEFT BM率',dp_ch_r:'RIGHT BM率',dp_ch_sk:'片側70%以上の設備',dp_ch_skd:'左右合計{m}件以上の{n}台のうち',
+    dp_th_lr:'LEFT : RIGHT',dp_th_skew:'偏り度',dp_th_bmlr:'うちBM',
+    dp_ch_none:'左右合計{m}件以上の設備がありません',dp_unit:'台',
+    pv_set1:'サービス実績',pv_set2:'作業者別 (展開)',pv_subproc:'詳細工程',pv_bay:'BAY',
+    pv_chpos:'チャンネル位置',pv_maineq:'メイン設備号機',pv_worker:'作業者',pv_bm:'BM件数',pv_wkrn:'作業者数',
+    sec_watch:'急上昇検知',watch_title:'何が上がってきているか',watch_win:'比較区間',ch_rise_sn:'急上昇設備',note_rise:'直前の同期間比の故障増加 · 棒は増加分 · ラベルは以前→最近',ch_rise_proc:'急上昇工程',note_rise2:'同じ基準 · 工程単位でまとめる',ch_rise_model:'急上昇モデル',note_rise3:'同一モデルで揃って上がる場合は設計·部品の問題を疑う',ch_alarmmat:'アラーム発生時に交換される部材',sec_life:'設備一代記',life_pick:'設備選択',note_lifepick:'S/Nまたは設備号機で検索してください。任意の表のS/Nをクリックし、メニューの「設備一代記」からも開けます。',ch_lifetl:'履歴タイムライン',note_lifetl:'設置·Turn On·故障/整備·部材交換を時系列で · 点にカーソルを合わせると詳細',ch_lifestage:'作業段階構成',note_lifestage:'この設備にどんな作業がどれだけあったか',ch_lifepart:'交換部材TOP',note_lifepart:'この設備で最も多く交換された部材 · 件数',ch_lifecycle:'部材別平均使用周期',note_lifecycle:'交換時点の使用日数(前回交換基準)平均 · 2回以上交換された部材',life_tbl:'全履歴',life_kind:'区分',life_what:'内容',th_worker:'作業者',th_pf2:'有償/無償',life_empty:'設備を検索するとその設備の履歴が表示されます',ch_tbmw:'作業者別TBM後再故障率',note_tbmw:'TBM後30日以内に同一設備でBM発生した割合 · 低いほど良い · TBM10件以上',ch_tbmgap:'TBM → 次故障までの日数',note_tbmgap:'再故障した件のみ · 短いほど整備品質の問題',ch_tbmline:'LINE別TBM後再故障率',note_tbmline:'TBM5件以上 · 値は棒の末端',title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
     sec_ov:'概要',sec_ca:'原因·処置',sec_ld:'工数負荷',sec_rel:'信頼性',sec_dt:'詳細',
     r_mtbf:'MTBF · 平均故障間隔',r_mttr:'MTTR · 平均修理時間',r_frate:'年間故障率 (件/台)',r_units:'分析設備',
     rf_mtbf:'中央値 {n}日',rf_mttr:'BM {n}件平均',rf_frate:'稼働期間換算',rf_units:'BM2件↑ · 設置連動 {p}%',
@@ -668,9 +847,13 @@ const T={
 };
 
 let LANG='ko', ROWS=[], TBM_ROWS=[], CHARTS={}, sortK='work', sortAsc=false;
+let ALLW_ROWS=[];       // 전 작업단계 원장 — 단계 필터를 받으면 안 되는 비율 지표(설비 BM율·좌우 편중)용
+let ROWS_BYWORKER=[];   // 작업자 축 — 다중 담당자 행을 사람 수만큼 펼친 것. 피벗을 열 때 채워진다.
+let PIV_ROWS=[];        // 피벗이 열릴 때 읽을 "현재 필터 결과". render()가 갱신한다.
+let PIV_DIMS=[];        // 세트별 축 목록 — 추천 조합 버튼이 축 번호로 상태를 저장하므로 필요하다
 let DQ_LIST=[];   // 미기재 rs 목록(renderDQ가 갱신) — 연속 입력 모드의 순번
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&T[sl])LANG=sl; else if(window.name&&T[window.name])LANG=window.name; }catch(e){}
-const F={line:'',stage:'',pf:'',cause:'',model:'',sn:'',proc:'',dtFrom:'',dtTo:'',q:''};
+const F={line:'',stage:'',pf:'',cause:'',model:'',sn:'',proc:'',subproc:'',dtFrom:'',dtTo:'',q:''};
 
 GST.chartDefaults();
 window.changeDashboardTheme=function(){
@@ -687,6 +870,7 @@ function buildSecNav(){
     {id:'load',    label:t('sec_ld')},
     {id:'rel',     label:t('sec_rel')},
     {id:'watch',   label:t('sec_watch')},
+    {id:'deep',    label:t('sec_deep')},
     {id:'life',    label:t('sec_life')},
     {id:'data',    label:t('sec_dt')}
   ]);
@@ -772,28 +956,53 @@ async function loadData(){ GST.skeleton(true);
         country:(String(r[C.op]||'').match(/GST\s+([A-Za-z]+)/i)||[])[1]?String(r[C.op]).match(/GST\s+([A-Za-z]+)/i)[1].toUpperCase():'',
         campus:GST.nfw(r[C.campus]||'').trim(),
         pf:(r[C.pf]||'').toString().trim(), cause:(r[C.cause]||'').toString().trim(),
-        model:GST.nfw(r[C.model]||'').trim(), sn:GST.nfw(r[C.snIn]||'').trim(),
-        proc:GST.nfw(r[C.proc]||'').trim(), reqType:(r[C.reqType]||'').toString().trim(),
+        // 모델·공정은 표기가 갈라져 있다(GAIA-I-D / GAIA_I_D, DIFF / DIFFUSION).
+        // 그대로 두면 1등이 여러 조각으로 쪼개져 순위 자체가 거짓말이 되므로 읽는 쪽에서 흡수한다.
+        model:GST.canon.model(r[C.model]||''), sn:GST.nfw(r[C.snIn]||'').trim(),
+        proc:GST.canon.proc(r[C.proc]||''), reqType:(r[C.reqType]||'').toString().trim(),
+        // 세부공정·BAY·채널위치·메인설비호기 — 시트에는 있는데 행에 안 실려 있어
+        // "CVD의 어느 세부공정에서" 같은 질문을 던질 수 없었다. 피벗 축으로 쓴다.
+        subproc:GST.nfw(r[C.subproc]||'').trim(), bay:GST.nfw(r[C.bay]||'').trim(),
+        chpos:GST.upk(r[C.chpos]||'').trim(), mainEq:GST.nfw(r[C.mainEq]||'').trim(),
         phenom:(r[C.phenom]||'').toString().trim(), action:(r[C.action]||'').toString().trim(),
         detail:(r[C.actionDetail]||'').toString().trim().slice(0,300),
         customer:(r[C.customer]||'').toString().trim(),
         work:toDate(r[C.dStart]),
         workMin:Number(r[C.workMin])||null, manMin:Number(r[C.manMin])||null,
-        workers:(r[C.workers]||'').toString().trim(), workerCnt:Number(r[C.workerCnt])||null
+        workers:(r[C.workers]||'').toString().trim(), workerCnt:Number(r[C.workerCnt])||null,
+        // 작업자는 "김대기,LI.LO"처럼 한 칸에 여러 명이 들어 있다. 축으로 쓰려면 먼저 쪼개야 한다.
+        workerList:(r[C.workers]||'').toString().split(',').map(s=>s.trim()).filter(Boolean)
       }))
       .filter(x=>x.sn||x.line);
     // TBM(계획 정비)은 서비스 대응 집계에서 빠지지만 UPM율의 분모라 따로 보관한다.
     // 분류 축만 담아 슬라이서가 동일하게 걸리게 한다.
     TBM_ROWS=fetched.rows.slice(HI_WK+1)
       .filter(r=>(r[C.stage]||'').toString().trim().toUpperCase()==='TBM')
-      .map(r=>({ line:GST.nfw(r[C.line]||'').trim(), model:GST.nfw(r[C.model]||'').trim(),
-        sn:GST.nfw(r[C.snIn]||'').trim(), proc:GST.nfw(r[C.proc]||'').trim(),
+      // 모델·공정은 ROWS와 똑같이 정규화해야 한다 — 슬라이서 값이 ROWS 기준으로 만들어지므로
+      // 여기만 원문으로 두면 모델을 고른 순간 TBM 분모가 통째로 사라진다.
+      .map(r=>({ line:GST.nfw(r[C.line]||'').trim(), model:GST.canon.model(r[C.model]||''),
+        sn:GST.nfw(r[C.snIn]||'').trim(), proc:GST.canon.proc(r[C.proc]||''),
+        subproc:GST.nfw(r[C.subproc]||'').trim(),
         campus:GST.nfw(r[C.campus]||'').trim(),
         country:(String(r[C.op]||'').match(/GST\s+([A-Za-z]+)/i)||[])[1]?String(r[C.op]).match(/GST\s+([A-Za-z]+)/i)[1].toUpperCase():'',
         // TBM 사후 재고장을 작업자별로 보려면 담당자가 필요하다. 시트는 쉼표로 여러 명을 묶어 둔다.
         workers:(r[C.workers]||'').toString().trim(),
         work:toDate(r[C.dStart]) }))
       .filter(x=>x.sn||x.line);
+    // 전 작업단계(반입·SET-UP·TURN-ON까지) — 설비 BM율의 분모다.
+    // ROWS는 서비스 4단계만, TBM_ROWS는 TBM만 담아 둘을 합쳐도 분모가 모자라고,
+    // 분모가 달라지면 같은 설비가 47%도 되고 70%도 된다. 비율 지표는 분모로 결정된다.
+    ALLW_ROWS=fetched.rows.slice(HI_WK+1).map(r=>({
+      stage:(r[C.stage]||'').toString().trim().toUpperCase(),
+      code:GST.nfw(r[C.eqNo]||'').trim(), sn:GST.nfw(r[C.snIn]||'').trim(),
+      line:GST.nfw(r[C.line]||'').trim(), model:GST.canon.model(r[C.model]||''),
+      proc:GST.canon.proc(r[C.proc]||''), subproc:GST.nfw(r[C.subproc]||'').trim(),
+      chpos:GST.upk(r[C.chpos]||'').trim(),
+      work:toDate(r[C.dStart])
+      // subproc까지 실어야 하는 이유: filtAxis가 F.subproc으로도 거르고,
+      // 세부공정 BM율 표가 이 배열을 그룹핑한다. 빠지면 표가 통째로 비고,
+      // 세부공정 드릴다운을 누른 순간 심층분석 섹션 전체가 0건이 된다.
+    })).filter(x=>x.sn||x.code);
     status.className='status ok';
     status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+ROWS.length;
     if(fetched.cached){status.textContent='📡 시트 접속 실패 — 캐시('+fetched.ageMin+'분 전) 표시 중';status.style.color='#fbbf24';}
@@ -836,6 +1045,7 @@ function filt(){
     if(F.model&&x.model!==F.model)return false;
     if(F.sn&&x.sn!==F.sn)return false;
     if(F.proc&&x.proc!==F.proc)return false;
+    if(F.subproc&&x.subproc!==F.subproc)return false;
     if(F.dtFrom&&(!x.work||fmtD(x.work)<F.dtFrom))return false;
     if(F.dtTo&&(!x.work||fmtD(x.work)>F.dtTo))return false;
     if(F.q){const s=(x.sn+' '+x.code+' '+x.alarm+' '+x.phenom+' '+x.cause+' '+x.action+' '+x.detail+' '+x.workers+' '+x.line+' '+x.model).toLowerCase();
@@ -844,19 +1054,24 @@ function filt(){
   });
 }
 
-// TBM에 걸 수 있는 축만 동일하게 적용 — 단계·유상·원인·알람·검색은 서비스 전용이라 제외.
-// (KPI 단계 필터 F.stage도 제외: BM/CBM을 고른 상태에서도 UPM율 분모는 그대로여야 한다)
-function filtTBM(){
-  return TBM_ROWS.filter(x=>{
+// 축 필터만 — 단계·유상·원인·알람·검색은 걸지 않는다.
+// 비율 지표(UPM율·설비 BM율·좌우 편중)는 분자와 분모가 같은 모집단이어야 성립하는데,
+// F.stage로 BM만 남기면 "BM 중 BM 비율"이 되어 100%가, CM만 남기면 0%가 나온다.
+function filtAxis(list){
+  return (list||[]).filter(x=>{
     if(F.line&&x.line!==F.line)return false;
     if(F.model&&x.model!==F.model)return false;
     if(F.sn&&x.sn!==F.sn)return false;
     if(F.proc&&x.proc!==F.proc)return false;
+    if(F.subproc&&x.subproc!==F.subproc)return false;
     if(F.dtFrom&&(!x.work||fmtD(x.work)<F.dtFrom))return false;
     if(F.dtTo&&(!x.work||fmtD(x.work)>F.dtTo))return false;
     return true;
   });
 }
+// TBM에 걸 수 있는 축만 동일하게 적용 — 단계·유상·원인·알람·검색은 서비스 전용이라 제외.
+// (KPI 단계 필터 F.stage도 제외: BM/CBM을 고른 상태에서도 UPM율 분모는 그대로여야 한다)
+function filtTBM(){ return filtAxis(TBM_ROWS); }
 
 // UPM율 추이의 분자 — 분모(filtTBM)와 정확히 같은 축만 적용한 CBM.
 // 단계·유상·원인·검색 필터가 비율을 왜곡하지 않아야 구간 간 비교가 성립한다.
@@ -867,6 +1082,7 @@ function filtUPM(){
     if(F.model&&x.model!==F.model)return false;
     if(F.sn&&x.sn!==F.sn)return false;
     if(F.proc&&x.proc!==F.proc)return false;
+    if(F.subproc&&x.subproc!==F.subproc)return false;
     if(F.dtFrom&&(!x.work||fmtD(x.work)<F.dtFrom))return false;
     if(F.dtTo&&(!x.work||fmtD(x.work)>F.dtTo))return false;
     return true;
@@ -898,7 +1114,7 @@ GST.pageBar({
   on:{ period:v=>{ GST.setPeriod(v); render(); },
        endM:v=>applyCut(v), clear:()=>applyCut(''), span:on=>applySpan(on) }
 });
-const FIELD_LABEL={line:'LINE',stage:'단계',pf:'유/무상',cause:'원인',model:'모델',sn:'설비',dtFrom:'시작일',dtTo:'종료일',q:'검색',alarm:'알람',country:'국가',campus:'CAMPUS',proc:'공정'};
+const FIELD_LABEL={line:'LINE',stage:'단계',pf:'유/무상',cause:'원인',model:'모델',sn:'설비',dtFrom:'시작일',dtTo:'종료일',q:'검색',alarm:'알람',country:'국가',campus:'CAMPUS',proc:'공정',subproc:'세부공정'};
 function renderFilterChips(){GST.renderChips(F,FIELD_LABEL,'clearFilter');}
 function clearFilter(k){
   F[k]='';
@@ -1550,6 +1766,7 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   // ── 신뢰성 (설비 S/N × BM) ──
   renderReliability(f);
   renderWatch();          // 급상승 감지 — 슬라이서를 그대로 따른다
+  renderDeep();           // 심층분석 — 비율 지표라 축 필터만 따른다(filtAxis)
   renderDQ(f);
   // 🔔 자동 브리핑 — 최근 12구간(주/월) 건수·공수 추이
   try{
@@ -1566,24 +1783,18 @@ function render(){ GST.skeleton(false); GST.pushState(F);
     ]);
     void _key;
   }catch(e){}
-  // 🧊 피벗 — 현재 필터가 적용된 서비스 레코드를 교차 집계한다
-  GST.pivotReg({
-    rows:()=>f,
-    date:'work',
-    dims:[{k:'country',t:FIELD_LABEL.country},{k:'customer',t:'Customer'},{k:'campus',t:FIELD_LABEL.campus},
-          {k:'line',t:FIELD_LABEL.line},{k:'proc',t:FIELD_LABEL.proc},{k:'sn',t:t('sl_sn')},
-          {k:'code',t:'Scrubber Code'},
-          {k:'stage',t:t('sl_stage')},{k:'alarm',t:FIELD_LABEL.alarm},{k:'cause',t:t('sl_cause')},
-          {k:'action',t:t('th_action')},{k:'model',t:t('sl_model')},{k:'pf',t:t('sl_pf')},
-          {k:x=>x.work?GST.isoW(x.work):'',t:t('sl_period')+'(W)'},
-          {k:x=>x.work?(x.work.getUTCFullYear()+'-'+String(x.work.getUTCMonth()+1).padStart(2,'0')):'',t:t('sl_period')+'(M)'}],
-    measures:[{k:'cnt',t:t('ft_cnt'),agg:'count'},
-              {k:'man',t:t('th_mh'),agg:'sum',f:x=>(x.manMin>0&&x.manMin<14400)?Math.round(x.manMin/60*10)/10:null},
-              {k:'min',t:t('th_min'),agg:'avg',f:x=>(x.workMin>0&&x.workMin<1440)?x.workMin:null},
-              {k:'sn',t:t('sl_sn'),agg:'uniq',f:'sn'}],
-    detailCols:[{k:'work',t:t('th_date')},{k:'line',t:FIELD_LABEL.line},{k:'sn',t:t('sl_sn')},{k:'code',t:'Code'},
-                {k:'stage',t:t('th_stage')},{k:'alarm',t:FIELD_LABEL.alarm},{k:'cause',t:t('th_cause')},{k:'action',t:t('th_action')}]
-  });
+  // 🧊 피벗 — 현재 필터가 적용된 서비스 레코드를 교차 집계한다.
+  //    세트 2개: 원본 1행=1작업 / 작업자로 펼친 1행=1사람. 축·측정 정의는 pivDims·pivMeas 한 곳에 있다.
+  PIV_ROWS=f;
+  const DIM_S=pivDims(false), DIM_W=pivDims(true);
+  PIV_DIMS=[DIM_S,DIM_W];
+  GST.pivotReg({sets:[
+    {k:'svc', t:t('pv_set1'), rows:()=>f, date:'work',
+     dims:DIM_S, measures:pivMeas(false), detailCols:pivDetail(false)},
+    // 매 렌더마다 수천 행을 사람 수만큼 복제하면 낭비다 — 피벗을 실제로 열 때 한 번만 펼친다.
+    {k:'wkr', t:t('pv_set2'), rows:()=>{ ROWS_BYWORKER=byWorker(PIV_ROWS); return ROWS_BYWORKER; },
+     date:'work', dims:DIM_W, measures:pivMeas(true), detailCols:pivDetail(true)}
+  ]});
 
   // ── 테이블 ──
   let d=[...f];
@@ -1752,6 +1963,252 @@ function renderAlarmMat(f){
           +'padding:2px 9px;margin:2px 4px 2px 0;white-space:nowrap">'+esc(p[0])
           +' <b>'+p[1]+'</b></span>').join('')+'</td></tr>').join('')
     +'</tbody></table>';
+}
+
+/* ══════ 심층분석 ══════════════════════════════════════════════
+   고정 축 차트("설비 TOP 10")는 질문을 하나만 던진다. 같은 사건을 설비로도, 공정으로도,
+   세부공정으로도, 주차로도 잘라 봐야 "CVD의 어느 세부공정에서 무엇이 갈리나"에 닿는다.
+   피벗 엔진은 core.js에 이미 있었지만 셸 상단바 버튼으로만 열려 사실상 없는 기능이었다 —
+   여기서 화면으로 꺼낸다. */
+
+/* 피벗 축 목록. 두 세트가 같은 축을 공유하되 작업자 세트만 맨 앞에 '작업자'가 붙는다.
+   추천 조합 버튼이 "몇 번째 축"으로 상태를 저장하므로, 번호를 손으로 세지 않고
+   id로 찾는다(dIdx) — 축을 중간에 끼워 넣어도 버튼이 어긋나지 않게. */
+function pivDims(withWorker){
+  const D=[];
+  if(withWorker) D.push({id:'worker',k:'worker',t:t('pv_worker')});
+  return D.concat([
+    {id:'country', k:'country', t:FIELD_LABEL.country},
+    {id:'customer',k:'customer',t:'Customer'},
+    {id:'campus',  k:'campus',  t:FIELD_LABEL.campus},
+    {id:'line',    k:'line',    t:FIELD_LABEL.line},
+    {id:'bay',     k:'bay',     t:t('pv_bay')},
+    {id:'proc',    k:'proc',    t:FIELD_LABEL.proc},
+    {id:'subproc', k:'subproc', t:t('pv_subproc')},
+    {id:'sn',      k:'sn',      t:t('sl_sn')},
+    {id:'code',    k:'code',    t:'Scrubber Code'},
+    {id:'mainEq',  k:'mainEq',  t:t('pv_maineq')},
+    {id:'chpos',   k:'chpos',   t:t('pv_chpos')},
+    {id:'stage',   k:'stage',   t:t('sl_stage')},
+    {id:'reqType', k:'reqType', t:t('ch_reqtype')},
+    {id:'alarm',   k:'alarm',   t:FIELD_LABEL.alarm},
+    {id:'phenom',  k:'phenom',  t:t('th_phenom')},
+    {id:'cause',   k:'cause',   t:t('sl_cause')},
+    {id:'action',  k:'action',  t:t('th_action')},
+    {id:'model',   k:'model',   t:t('sl_model')},
+    {id:'pf',      k:'pf',      t:t('sl_pf')},
+    {id:'w', k:x=>x.work?GST.isoW(x.work):'', t:t('sl_period')+'(W)'},
+    {id:'m', k:x=>x.work?(x.work.getUTCFullYear()+'-'+String(x.work.getUTCMonth()+1).padStart(2,'0')):'',
+             t:t('sl_period')+'(M)'}
+  ]);
+}
+const dIdx=(D,id)=>D.findIndex(d=>d.id===id);
+function pivMeas(withWorker){
+  const M=[
+    {k:'cnt',t:t('ft_cnt'),agg:'count'},
+    // BM만 세는 측정. 건수 옆에 나란히 놓아야 "이 조합은 유독 고장이 많다"를 한 표에서 읽는다.
+    // (합계 축에 태워야 소계·집중지수까지 같은 규칙으로 계산되므로 sum으로 만든다)
+    {k:'bm',t:t('pv_bm'),agg:'sum',f:x=>x.stage==='BM'?1:0},
+    {k:'man',t:t('th_mh'),agg:'sum',f:x=>(x.manMin>0&&x.manMin<14400)?Math.round(x.manMin/60*10)/10:null},
+    {k:'min',t:t('th_min'),agg:'avg',f:x=>(x.workMin>0&&x.workMin<1440)?x.workMin:null},
+    {k:'snU',t:t('sl_sn'),agg:'uniq',f:'sn'}
+  ];
+  // 작업자수는 펼친 세트에서만 정확하다. 원본은 한 칸에 "김대기,LI.LO"처럼 묶여 있어
+  // 그대로 uniq를 걸면 사람이 아니라 '조 편성'의 가짓수가 세어진다 — 그래서 세트를 나눴다.
+  if(withWorker) M.push({k:'wkrU',t:t('pv_wkrn'),agg:'uniq',f:'worker'});
+  return M;
+}
+function pivDetail(withWorker){
+  const D=[{k:'work',t:t('th_date')},{k:'line',t:FIELD_LABEL.line},{k:'sn',t:t('sl_sn')},{k:'code',t:'Code'},
+           {k:'proc',t:FIELD_LABEL.proc},{k:'subproc',t:t('pv_subproc')},
+           {k:'stage',t:t('th_stage')},{k:'alarm',t:FIELD_LABEL.alarm},
+           {k:'cause',t:t('th_cause')},{k:'action',t:t('th_action')}];
+  if(withWorker) D.splice(1,0,{k:'worker',t:t('pv_worker')});
+  return D;
+}
+// 다중 담당자 행을 사람 수만큼 복제해 1행=1작업자로 만든다.
+// 공수는 인원수로 나눠야 펼친 뒤 합계가 원래 공수와 같다(안 나누면 2인 작업이 두 배로 잡힌다).
+function byWorker(list){
+  const out=[];
+  (list||[]).forEach(x=>{
+    const w=x.workerList; if(!w||!w.length)return;
+    w.forEach(nm=>{
+      const c=Object.assign({},x);
+      c.worker=nm;
+      c.manMin=(x.manMin!=null)?Math.round(x.manMin/w.length*10)/10:null;
+      out.push(c);
+    });
+  });
+  return out;
+}
+window.openPivot=function(){ if(GST._pivot)GST.pivotOpen(); };
+// 추천 조합 — 빈 피벗을 열어주면 아무도 축을 고르지 않는다. 답이 나오는 조합을 미리 앉혀 준다.
+// pivotOpen은 sessionStorage에 저장된 상태를 읽어 열리므로, 상태를 먼저 심고 연다.
+const PIV_PRESET={
+  1:{s:0,r:'subproc',c:'model', disp:'lift',tip:'dp_t1'},
+  2:{s:0,r:'code',   c:'m',     disp:'raw', tip:'dp_t2'},
+  3:{s:1,r:'worker', c:'stage', disp:'raw', tip:'dp_t3'}
+};
+window.pivPreset=function(n){
+  const p=PIV_PRESET[n]; if(!p||!GST._pivot||!PIV_DIMS[p.s])return;
+  const D=PIV_DIMS[p.s];
+  GST._pivSave({s:p.s, rd:[dIdx(D,p.r),-1,-1], c:dIdx(D,p.c), ms:[0],
+                from:'', to:'', sc:'', sd:1, disp:p.disp, top:0, sub:1, cmp:0});
+  GST.pivotOpen();
+  capToastF(t(p.tip));
+};
+
+/* Best of Best / Worst of Worst · 좌우 채널 비대칭.
+   둘 다 "비율"이라 두 가지를 조심해야 한다.
+   ① 단계 필터(F.stage)를 받으면 안 된다 — BM만 남기면 100%, CM만 남기면 0%가 된다.
+      그래서 filt()가 아니라 filtAxis()(라인·모델·설비·공정·기간만)를 쓴다.
+   ② 분모는 서비스 4단계가 아니라 그 설비에 들어간 '모든 작업'이다(ALLW_ROWS).
+      서비스만 세면 반입·SET-UP·TBM이 빠져 같은 설비가 47%에서 70%로 뛴다. */
+const BW_MIN=20;   // 표본이 얇으면 1건이 5%p를 흔든다 — 순위표에 올릴 최소 작업 수
+const CH_MIN=12;   // 좌우 합이 이만큼은 되어야 '편중'이라는 말이 성립한다
+const SUB_MIN=30;  // 공정·세부공정은 표본이 더 커야 비율이 안정된다
+let SUB_AXIS='subproc';
+window.setSubAxis=function(k){
+  SUB_AXIS=k;
+  document.querySelectorAll('.dp-tab').forEach(b=>b.classList.toggle('active',b.dataset.sub===k));
+  renderDeep();
+};
+// 표의 줄 → 그 구분으로 화면 전체를 좁힌다. 슬라이서와 같은 상태를 쓰므로 모든 카드가 함께 따라온다.
+window.drillSub=function(v){
+  const key={subproc:'subproc',proc:'proc',model:'model',line:'line'}[SUB_AXIS];
+  if(!key)return;
+  F[key]=(F[key]===v)?'':v;      // 같은 줄을 다시 누르면 해제
+  if(typeof syncSlicerUI==='function')syncSlicerUI();
+  render();
+  const el=document.querySelector('[data-sec="deep"]'); if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+};
+const CH_HI=0.7;   // 한쪽이 70%를 넘으면 우연으로 보기 어렵다 — 요약 타일에 셀 기준
+
+// 설비호기 단위 집계 — BM율과 좌우 분포를 한 번에 모은다
+function eqAgg(rows){
+  const m=new Map();
+  rows.forEach(x=>{
+    // 'NA'와 너무 짧은 코드는 여러 설비가 한 칸에 뭉쳐 순위를 오염시킨다
+    const k=GST.canon.eq(x.code); if(!k)return;
+    let o=m.get(k);
+    if(!o){ o={n:0,bm:0,L:0,R:0,Lb:0,Rb:0,sn:'',line:'',last:null}; m.set(k,o); }
+    o.n++;
+    const isBM=(x.stage==='BM'); if(isBM)o.bm++;
+    if(x.chpos==='LEFT'){ o.L++; if(isBM)o.Lb++; }
+    else if(x.chpos==='RIGHT'){ o.R++; if(isBM)o.Rb++; }
+    // 호기는 자리, S/N은 그 자리에 놓인 기계다. 교체됐을 수 있으니 가장 최근 것을 보여준다.
+    if(x.sn&&(!o.last||(x.work&&x.work>o.last))){ o.sn=x.sn; o.last=x.work||o.last; }
+    if(x.line&&!o.line)o.line=x.line;
+  });
+  return m;
+}
+
+function renderDeep(){
+  const rows=filtAxis(ALLW_ROWS);
+  const agg=eqAgg(rows);
+  const tot=rows.length, totBM=rows.filter(x=>x.stage==='BM').length;
+  const base=tot?totBM/tot:0;                       // 전체 평균 BM율 — '몇 배'의 기준
+  const nf=n=>Number(n||0).toLocaleString();
+  const pc1=v=>(v*100).toFixed(1)+'%';
+
+  /* ── 어느 공정·세부공정이 유독 고장인가 ─────────────────────────────
+     건수로 줄을 세우면 그냥 큰 공정이 1등이다 — 작업이 많으니 고장도 많은 것뿐이라
+     "여기가 문제다"라는 말이 안 된다. 그래서 BM율과 전체 평균 대비 배수로 본다.
+     실측: 세부공정 ALDNIT의 BM율 33.5% — 전체 평균 6.5%의 5.2배다. */
+  const g=new Map();
+  rows.forEach(x=>{
+    const k=x[SUB_AXIS]; if(!k)return;
+    let o=g.get(k); if(!o){ o={n:0,bm:0,eq:new Map()}; g.set(k,o); }
+    o.n++; if(x.stage==='BM'){ o.bm++;
+      const e=GST.canon.eq(x.code); if(e) o.eq.set(e,(o.eq.get(e)||0)+1); }
+  });
+  const sub=[];
+  g.forEach((o,k)=>{
+    if(o.n<SUB_MIN) return;                          // 10건짜리가 100%로 1등이 되면 표가 거짓말을 한다
+    let tk='', tv=0; o.eq.forEach((v,e)=>{ if(v>tv){tv=v;tk=e;} });
+    sub.push({k:k,n:o.n,bm:o.bm,r:o.bm/o.n,eqn:o.eq.size,top:tk,topN:tv});
+  });
+  sub.sort((a,b)=>b.r-a.r||b.bm-a.bm);
+  const sNote=document.getElementById('subNote');
+  if(sNote)sNote.textContent=t('dp_sub_n').replace('{n}',SUB_MIN)
+    .replace('{u}',nf(sub.length)).replace('{p}',(base*100).toFixed(1));
+  const sEl=document.getElementById('subBody');
+  if(sEl)sEl.innerHTML=sub.length
+    ? sub.slice(0,25).map(a=>{
+        const x=base?a.r/base:0;
+        const col=x>=3?'var(--bad,#fb7185)':(x>=1.5?'#fbbf24':'inherit');
+        return '<tr class="dp-row" style="cursor:pointer" onclick="drillSub('+JSON.stringify(a.k).replace(/"/g,'&quot;')+')">'
+          +'<td>'+esc2(a.k)+'</td><td>'+nf(a.n)+'</td><td>'+nf(a.bm)+'</td>'
+          +'<td style="color:'+col+';font-weight:800">'+pc1(a.r)+'</td>'
+          +'<td style="color:'+col+';font-weight:800">'+(base?('×'+x.toFixed(1)):'—')+'</td>'
+          +'<td>'+nf(a.eqn)+'</td>'
+          // 1위 호기가 그 구분의 BM 절반을 넘게 먹으면 '특정 호기 문제'라는 뜻이다
+          +'<td>'+(a.top?esc2(a.top)+' <span style="opacity:.6">'+a.topN+'</span>'
+              +(a.bm&&a.topN/a.bm>=.5?' <span style="color:var(--bad,#fb7185)">◆</span>':''):'—')+'</td></tr>';
+      }).join('')
+    : '<tr><td colspan="7" class="empty">'+t('dp_none').replace('{n}',SUB_MIN)+'</td></tr>';
+
+  // ── Best / Worst ────────────────────────────────────────────
+  const arr=[];
+  agg.forEach((o,k)=>{ if(o.n>=BW_MIN) arr.push({k:k,n:o.n,bm:o.bm,sn:o.sn,line:o.line,r:o.bm/o.n}); });
+  const worst=arr.filter(a=>a.bm>0).sort((a,b)=>b.r-a.r||b.bm-a.bm).slice(0,8);
+  const best =arr.filter(a=>a.bm===0).sort((a,b)=>b.n-a.n).slice(0,8);
+  const bwNote=document.getElementById('bwNote');
+  if(bwNote)bwNote.textContent=t('dp_bw_n').replace('{n}',BW_MIN)
+    .replace('{u}',nf(arr.length)).replace('{p}',(base*100).toFixed(1));
+  const wEl=document.getElementById('bwWorst');
+  if(wEl)wEl.innerHTML=worst.length
+    ? worst.map(a=>'<tr><td>'+esc2(a.k)+'</td><td>'+esc2(a.sn||'—')+'</td>'
+        +'<td>'+nf(a.n)+'</td><td>'+nf(a.bm)+'</td>'
+        +'<td style="color:var(--bad,#fb7185);font-weight:800">'+pc1(a.r)+'</td>'
+        +'<td>'+(base?('×'+(a.r/base).toFixed(1)):'—')+'</td></tr>').join('')
+    : '<tr><td colspan="6" class="empty">'+t('dp_none').replace('{n}',BW_MIN)+'</td></tr>';
+  const bEl=document.getElementById('bwBest');
+  if(bEl)bEl.innerHTML=best.length
+    ? best.map(a=>'<tr><td>'+esc2(a.k)+'</td><td>'+esc2(a.sn||'—')+'</td>'
+        +'<td style="font-weight:800">'+nf(a.n)+'</td>'
+        +'<td style="color:var(--ok,#4ade80);font-weight:800">0</td>'
+        +'<td>'+esc2(a.line||'—')+'</td></tr>').join('')
+    : '<tr><td colspan="5" class="empty">'+t('dp_none').replace('{n}',BW_MIN)+'</td></tr>';
+
+  // ── 좌우 채널 비대칭 ─────────────────────────────────────────
+  let L=0,Lb=0,R=0,Rb=0;
+  rows.forEach(x=>{
+    if(x.chpos==='LEFT'){ L++; if(x.stage==='BM')Lb++; }
+    else if(x.chpos==='RIGHT'){ R++; if(x.stage==='BM')Rb++; }
+  });
+  const sk=[];
+  agg.forEach((o,k)=>{ const s=o.L+o.R;
+    if(s>=CH_MIN) sk.push({k:k,sn:o.sn,line:o.line,L:o.L,R:o.R,Lb:o.Lb,Rb:o.Rb,tt:s,b:Math.max(o.L,o.R)/s}); });
+  sk.sort((a,b)=>b.b-a.b||b.tt-a.tt);
+  const top=sk.slice(0,10);
+  const chNote=document.getElementById('chNote');
+  if(chNote)chNote.textContent=t('dp_ch_n').replace('{m}',CH_MIN);
+  const tile=(l,v,d)=>'<div class="dp-tile"><div class="l">'+l+'</div><div class="v">'+v+'</div>'
+    +'<div class="d">'+(d||'&nbsp;')+'</div></div>';
+  const kEl=document.getElementById('chKpi');
+  if(kEl)kEl.innerHTML=
+     tile(t('dp_ch_l'), L?(Lb/L*100).toFixed(2)+'%':'—', nf(Lb)+' / '+nf(L))
+    +tile(t('dp_ch_r'), R?(Rb/R*100).toFixed(2)+'%':'—', nf(Rb)+' / '+nf(R))
+    // 후보 수가 아니라 '실제로 기운 대수'를 세어야 타일이 뜻을 갖는다
+    +tile(t('dp_ch_sk'), nf(sk.filter(a=>a.b>=CH_HI).length)+t('dp_unit'),
+          t('dp_ch_skd').replace('{m}',CH_MIN).replace('{n}',nf(sk.length)));
+  const cEl=document.getElementById('chBody');
+  if(cEl)cEl.innerHTML=top.length
+    ? top.map(a=>{
+        // 어느 쪽으로 기울었는지 색으로 바로 보이게 — 많은 쪽만 강조한다
+        const hot='color:var(--bad,#fb7185);font-weight:800', dim='opacity:.65';
+        const lr='<span style="'+(a.L>=a.R?hot:dim)+'">'+nf(a.L)+'</span> : '
+                +'<span style="'+(a.R>a.L?hot:dim)+'">'+nf(a.R)+'</span>';
+        // 작업이 기운 것과 고장이 기운 것은 다른 이야기다.
+        // BM이 아예 없으면 흐리게 눌러, "손은 많이 갔지만 고장은 아니다"를 한눈에 구분한다.
+        const bmTot=a.Lb+a.Rb;
+        const bm='<span style="'+(bmTot?'':'opacity:.4')+'">'+nf(a.Lb)+' : '+nf(a.Rb)+'</span>';
+        return '<tr><td>'+esc2(a.k)+'</td><td>'+esc2(a.sn||'—')+'</td><td>'+lr+'</td>'
+          +'<td style="font-weight:800">'+Math.round(a.b*100)+'%</td>'
+          +'<td>'+bm+'</td><td>'+esc2(a.line||'—')+'</td></tr>';
+      }).join('')
+    : '<tr><td colspan="6" class="empty">'+t('dp_ch_none').replace('{m}',CH_MIN)+'</td></tr>';
 }
 
 /* ══════ 설비 일대기 ══════════════════════════════════════════════

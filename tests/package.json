@@ -10,7 +10,8 @@
     "sync": "node --experimental-strip-types t-sync.mjs",
     "smoke": "node t-smoke.mjs",
     "shift": "node t-shift.mjs",
-    "all": "npm run map && npm run keys && npm run hr && npm run sync && npm run smoke && npm run shift"
+    "deep": "node t-deep.mjs",
+    "all": "npm run map && npm run keys && npm run hr && npm run sync && npm run smoke && npm run shift && npm run deep"
   },
   "devDependencies": {
     "chart.js": "4.4.1",

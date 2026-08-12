@@ -646,6 +646,31 @@ GST.SM.cipRange = function(headerRow){
   return (c0>0&&c1>=c0) ? {c0:c0,c1:c1} : null;
 };
 
+/* ---------- 값 정규화 — 같은 것이 여러 표기로 갈라지면 집계가 거짓말을 한다 ----------
+   실측: 모델명이 GAIA-I-D(21,020) / GAIA-I_D(3,081) / GAIA_I_D(373) 세 조각으로 나뉘어 있었다.
+   이대로 모델축으로 묶으면 1위가 셋으로 쪼개져 순위 자체가 틀린다.
+   시트를 고치는 게 근본이지만, 고치기 전에도 고친 뒤에도 같은 답이 나오도록 읽는 쪽에서 흡수한다. */
+GST.canon = {
+  // 구분자만 다른 표기를 하나로: GAIA_I_D · GAIA-I-D · GAIA I D → GAIA-I-D
+  model: function(s){
+    const t = GST.upk(s).replace(/[\s_]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    return t || '';
+  },
+  // 공정 약칭·변형 통일: DIFF→DIFFUSION · WET PROCESS→WET
+  proc: function(s){
+    const t = GST.upk(s).trim();
+    if(!t) return '';
+    if(/^DIFF$/.test(t)) return 'DIFFUSION';
+    if(/^WET\s*PROCESS$/.test(t)) return 'WET';
+    return t;
+  },
+  // 설비호기: 'NA'·공백·너무 짧은 코드는 집계에서 빼야 순위가 오염되지 않는다
+  eq: function(s){
+    const t = GST.upk(s).trim();
+    return (!t || t === 'NA' || t.length < 4) ? '' : t;
+  }
+};
+
 // 매핑 결과 누적 — 진단 패널이 읽는다
 GST.SM._reg = [];
 GST.SM._log = function(res){
@@ -2309,25 +2334,25 @@ GST.PIV_T={
       copy:'복사(TSV)',copied:'복사됨',csv:'CSV',close:'닫기',tot:'합계',sub2:'소계',etc:'기타',
       none:'표시할 데이터가 없습니다.',no:'(없음)',detail:'상세',more:'외 {n}건',pick:'값 고르기',
       all:'전체',clr:'해제',apply:'적용',find:'검색',rows:'{n}행',non:'—',cmp:'Δ 기간비교',cmpA:'기간 A',cmpB:'직전 B',cmpD:'Δ%',cmpHint:'A=기간 필터(비우면 최근 30일) · B=같은 길이의 직전 구간',
-      disp:'표시',d_raw:'원값',d_row:'행 대비 %',d_col:'열 대비 %',d_all:'총계 대비 %',
+      disp:'표시',d_raw:'원값',d_row:'행 대비 %',d_col:'열 대비 %',d_all:'총계 대비 %',d_lift:'집중지수(×)',
       top:'상위',t_all:'전체',sub_on:'소계'},
   en:{t:'Pivot',sub:'Cross-tab on current filters',src:'Data',per:'Period',row:'Rows',col:'Cols',val:'Values',swap:'⇄ Swap',
       copy:'Copy (TSV)',copied:'Copied',csv:'CSV',close:'Close',tot:'Total',sub2:'Subtotal',etc:'Others',
       none:'No data to show.',no:'(none)',detail:'Detail',more:'+{n} more',pick:'Filter',
       all:'All',clr:'Clear',apply:'Apply',find:'Search',rows:'{n} rows',non:'—',cmp:'Δ Compare',cmpA:'Period A',cmpB:'Prev B',cmpD:'Δ%',cmpHint:'A = date filter (last 30d if empty) · B = preceding window of equal length',
-      disp:'Show as',d_raw:'Value',d_row:'% of row',d_col:'% of column',d_all:'% of total',
+      disp:'Show as',d_raw:'Value',d_row:'% of row',d_col:'% of column',d_all:'% of total',d_lift:'Lift (×)',
       top:'Top',t_all:'All',sub_on:'Subtotals'},
   zh:{t:'多维透视',sub:'按当前筛选交叉汇总',src:'数据',per:'期间',row:'行',col:'列',val:'值',swap:'⇄ 转置',
       copy:'复制(TSV)',copied:'已复制',csv:'CSV',close:'关闭',tot:'合计',sub2:'小计',etc:'其他',
       none:'无数据。',no:'(无)',detail:'明细',more:'其他{n}条',pick:'筛选值',
       all:'全部',clr:'清除',apply:'应用',find:'搜索',rows:'{n}行',non:'—',cmp:'Δ 期间对比',cmpA:'期间A',cmpB:'前一期B',cmpD:'Δ%',cmpHint:'A=所选期间(空则近30天) · B=等长的前一区间',
-      disp:'显示方式',d_raw:'数值',d_row:'占行%',d_col:'占列%',d_all:'占总计%',
+      disp:'显示方式',d_raw:'数值',d_row:'占行%',d_col:'占列%',d_all:'占总计%',d_lift:'集中指数(×)',
       top:'前',t_all:'全部',sub_on:'小计'},
   ja:{t:'多次元ピボット',sub:'現在のフィルタで集計',src:'データ',per:'期間',row:'行',col:'列',val:'値',swap:'⇄ 転置',
       copy:'コピー(TSV)',copied:'コピー済',csv:'CSV',close:'閉じる',tot:'合計',sub2:'小計',etc:'その他',
       none:'データがありません。',no:'(なし)',detail:'明細',more:'他{n}件',pick:'値を選ぶ',
       all:'全体',clr:'解除',apply:'適用',find:'検索',rows:'{n}行',non:'—',cmp:'Δ 期間比較',cmpA:'期間A',cmpB:'直前B',cmpD:'Δ%',cmpHint:'A=期間フィルタ(空なら直近30日) · B=同じ長さの直前区間',
-      disp:'表示形式',d_raw:'実数',d_row:'行比%',d_col:'列比%',d_all:'総計比%',
+      disp:'表示形式',d_raw:'実数',d_row:'行比%',d_col:'列比%',d_all:'総計比%',d_lift:'集中指数(×)',
       top:'上位',t_all:'全体',sub_on:'小計'}
 };
 GST._pivot=null;
@@ -2358,6 +2383,11 @@ GST.pivotAgg=function(recs, meas){
   recs.forEach(function(r){ const v=+GST._pivGet(r,meas.f); if(isFinite(v)){ sum+=v; n++; } });
   if(!n) return null;
   if(a==='avg') return Math.round(sum/n*10)/10;
+  if(a==='med'){                       // 교체 간격처럼 한쪽으로 치우친 값은 평균이 왜곡된다
+    const v=[]; recs.forEach(function(r){ const x=+GST._pivGet(r,meas.f); if(isFinite(x))v.push(x); });
+    if(!v.length) return null; v.sort(function(p,q){return p-q;});
+    const h=v.length>>1; return v.length%2?v[h]:Math.round((v[h-1]+v[h])/2*10)/10;
+  }
   return Math.round(sum*10)/10;
 };
 // 레코드를 행키(중첩)×열값으로 버킷팅. 집계는 호출부가 측정값별로 수행한다.
@@ -2444,7 +2474,7 @@ GST.pivotOpen=function(){
       +'<label>'+T.val+'</label><button class="gov-b'+(MS.length>1?' on':'')+'" data-piv="ms">'
         + GST._esc(MS.map(function(i){ return M[i].t||M[i].k; }).join(', ')) +' ▾</button>'
       +'<label>'+T.disp+'</label><select id="gpvDisp">'
-        +['raw','row','col','all'].map(function(k){ return '<option value="'+k+'"'+(disp===k?' selected':'')+'>'+T['d_'+k]+'</option>'; }).join('')
+        +['raw','row','col','all','lift'].map(function(k){ return '<option value="'+k+'"'+(disp===k?' selected':'')+'>'+T['d_'+k]+'</option>'; }).join('')
       +'</select>'
       +'<label>'+T.top+'</label><input type="number" id="gpvTop" min="0" step="1" value="'+(topN||'')+'"'
         +' placeholder="'+T.t_all+'" title="'+T.top+' N — 0/'+T.t_all+'" style="width:52px">'
@@ -2469,9 +2499,20 @@ GST.pivotOpen=function(){
       if(ci>=0&&CF&&!CF.has(GST._pivLbl(GST._pivGet(rec,D[ci].k),T))) return false;
       return true; });
   }
+  /* 집중지수(lift) = 관측 ÷ 기대.  기대 = 행합 × 열합 ÷ 총합.
+     "이 조합이 평균보다 몇 배로 몰려 있나"를 표의 주변합만으로 구한다 — 추가 데이터가 필요 없다.
+     단순 건수는 흔한 항목이 전부 1등을 차지해 쓸모가 없다(자재는 O-RING이 44%다).
+     lift로 보면 'STR 세부공정에서 DRAIN PIPE-E가 229배'처럼 유독 몰린 칸이 드러난다.
+     표본이 적으면 배수가 튀므로 관측 3건 미만은 표시하지 않는다. */
   const fmtV=function(v,base){
     if(v==null) return '·';
     if(disp==='raw') return GST._num(v);
+    if(disp==='lift'){
+      if(!base||v==null) return '·';
+      if(v<3) return '·';                       // 표본 부족 — 배수가 의미 없다
+      const x=v/base;
+      return (x>=10?Math.round(x):Math.round(x*10)/10)+'×';
+    }
     if(base==null||!base) return '·';
     return (Math.round(v/base*1000)/10)+'%';
   };
@@ -2592,7 +2633,8 @@ GST.pivotOpen=function(){
     const cellHTML=function(rk,c,m){
       const v=cell(rk,c,m);
       if(v==null) return '<td>·</td>';
-      const base = disp==='row'?rowT(rk,m) : disp==='col'?colT(c,m) : disp==='all'?grand(m) : null;
+      const base = disp==='row'?rowT(rk,m) : disp==='col'?colT(c,m) : disp==='all'?grand(m)
+        : disp==='lift'?(grand(m)?rowT(rk,m)*colT(c,m)/grand(m):null) : null;
       const a=(disp==='raw'&&mx>0)?(0.07+0.42*(v/mx)):0;
       return '<td class="gpv-cell" data-r="'+GST._esc(rk)+'" data-c="'+GST._esc(c)+'"'
         +(a?' style="background:rgba(var(--gov-heat),'+a.toFixed(3)+')"':'')+'>'+fmtV(v,base)+'</td>';
@@ -2604,7 +2646,8 @@ GST.pivotOpen=function(){
       return '<tr class="gpv-tot"><td colspan="'+nLv+'">'+GST._esc(g)+' '+T.sub2+'</td>'
         + cN.map(function(c){ return MS.map(function(m){
             const v=preC(ks,c,m);
-            const base= disp==='row'?preT(ks,m) : disp==='col'?colT(c,m) : disp==='all'?grand(m) : null;
+            const base= disp==='row'?preT(ks,m) : disp==='col'?colT(c,m) : disp==='all'?grand(m)
+              : disp==='lift'?(grand(m)?preT(ks,m)*colT(c,m)/grand(m):null) : null;
             return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
         + (cmpOn?'<td></td>':'')
         + MS.map(function(m){ const v=preT(ks,m);
@@ -2641,7 +2684,8 @@ GST.pivotOpen=function(){
     if(etcKeys.length){
       h+='<tr class="gpv-tot"><td'+(nLv>1?' colspan="'+nLv+'"':'')+'>'+T.etc+' ('+etcKeys.length+')</td>'
         + cN.map(function(c){ return MS.map(function(m){ const v=preC(etcKeys,c,m);
-            const base= disp==='col'?colT(c,m) : disp==='all'?grand(m) : disp==='row'?preT(etcKeys,m) : null;
+            const base= disp==='col'?colT(c,m) : disp==='all'?grand(m) : disp==='row'?preT(etcKeys,m)
+              : disp==='lift'?(grand(m)?preT(etcKeys,m)*colT(c,m)/grand(m):null) : null;
             return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
         + (cmpOn?'<td></td>':'')
         + MS.map(function(m){ const v=preT(etcKeys,m);
