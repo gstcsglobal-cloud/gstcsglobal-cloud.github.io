@@ -135,6 +135,45 @@ const browser=await chromium.launch(PW_OPTS);
     else bad('2배 미만인데 급증으로 잡힌 행이 있다');
   }
 
+  // ── 월별 급증 막대: 붉게 칠해진 달이 실제 급증 달과 같은지 ──
+  // CHARTS는 스크립트 지역 변수라 window에 없다 — Chart.js 레지스트리에서 캔버스로 찾는다
+  const surge=await page.evaluate(()=>{
+    const c=(window.Chart&&Chart.getChart)?Chart.getChart('cSurge'):null; if(!c) return null;
+    const bg=c.data.datasets[0].backgroundColor;
+    const arr=Array.isArray(bg)?bg:[];
+    const uniq=Array.from(new Set(arr));
+    return {n:c.data.labels.length, colors:arr.length, tones:uniq.length,
+            note:(document.getElementById('surgeNote')||{}).textContent||''};
+  });
+  if(!surge) bad('월별 급증 차트가 그려지지 않았다');
+  else{
+    console.log('  · 급증 차트:', surge.n+'개월 · 색배열 '+surge.colors+' · '+surge.note.slice(0,90));
+    if(surge.colors===surge.n) ok('막대별 색 배열이 개월 수와 일치 (opts.colors가 실제로 먹는다)');
+    else bad(`색 배열 ${surge.colors} ≠ 개월 수 ${surge.n} — 단색으로 떨어졌다`);
+    /* 전체 합계는 여러 자재가 섞여 완만하다 — 색이 한 가지인 게 정상이다.
+       급증은 자재를 좁혀야 드러난다(O-RING 26-04). 그래서 좁힌 뒤에 확인한다. */
+    if(surge.tones===1) ok('전체 문맥에서는 급증 없음 — 합계가 완만하다는 뜻이라 정상');
+    else console.log('  · 전체 문맥에서도 급증 달 있음 (색 '+surge.tones+'종)');
+    await page.evaluate(()=>{ F.mat='O-RING'; if(window.syncSlicerUI)syncSlicerUI(); render(); });
+    await page.waitForTimeout(1500);
+    const s2=await page.evaluate(()=>{
+      const c=Chart.getChart('cSurge'); if(!c) return null;
+      const bg=c.data.datasets[0].backgroundColor;
+      const arr=Array.isArray(bg)?bg:[];
+      const hot=c.data.labels.filter((l,i)=>arr[i]!==arr[0]);
+      return {tones:new Set(arr).size, hot:hot,
+              note:(document.getElementById('surgeNote')||{}).textContent||''};
+    });
+    if(s2&&s2.tones>=2&&s2.hot.length){
+      ok(`O-RING으로 좁히면 급증 달이 붉게: ${s2.hot.join(' · ')}`);
+      console.log('    ' + s2.note.slice(0,110));
+      if(s2.hot.some(l=>/26-04/.test(l))) ok('실측 26-04 급증이 차트에도 표시됨');
+      else bad('26-04가 붉게 표시되지 않았다: '+s2.hot.join(','));
+    } else bad('O-RING으로 좁혀도 급증 달이 표시되지 않았다: '+JSON.stringify(s2));
+    await page.evaluate(()=>{ F.mat=''; if(window.syncSlicerUI)syncSlicerUI(); render(); });
+    await page.waitForTimeout(1200);
+  }
+
   // ── Best / Worst ──
   const best=await grab(page,'dpBestBody'), worst=await grab(page,'dpWorstBody');
   if(worst&&worst.length){
