@@ -2504,12 +2504,19 @@ GST.pivotOpen=function(){
      단순 건수는 흔한 항목이 전부 1등을 차지해 쓸모가 없다(자재는 O-RING이 44%다).
      lift로 보면 'STR 세부공정에서 DRAIN PIPE-E가 229배'처럼 유독 몰린 칸이 드러난다.
      표본이 적으면 배수가 튀므로 관측 3건 미만은 표시하지 않는다. */
-  const fmtV=function(v,base){
+  const fmtV=function(v,base,mi){
     if(v==null) return '·';
     if(disp==='raw') return GST._num(v);
     if(disp==='lift'){
-      if(!base||v==null) return '·';
-      if(v<3) return '·';                       // 표본 부족 — 배수가 의미 없다
+      /* 기대 = 행합 × 열합 ÷ 총합은 '더할 수 있는 값'에서만 성립한다.
+         중앙값·고유수·평균은 주변합이라는 것 자체가 없어서 배수에 뜻이 없다
+         (중앙값끼리 나누면 단위가 1/일이 된다). 그런 측정값은 원값을 그대로 보여준다 —
+         화면에서 값을 여러 개 얹은 채로 표시만 집중지수로 바꾸는 게 흔한 조작이라
+         '·'로 지워버리면 멀쩡한 열이 통째로 사라진 것처럼 보인다. */
+      const ag=(mi!=null&&meas()[mi])?(meas()[mi].agg||'count'):'count';
+      if(ag!=='count'&&ag!=='sum') return GST._num(v);
+      if(!base) return '·';
+      if(v<3) return '·';                       // 표본 부족 — 배수가 튄다
       const x=v/base;
       return (x>=10?Math.round(x):Math.round(x*10)/10)+'×';
     }
@@ -2637,7 +2644,7 @@ GST.pivotOpen=function(){
         : disp==='lift'?(grand(m)?rowT(rk,m)*colT(c,m)/grand(m):null) : null;
       const a=(disp==='raw'&&mx>0)?(0.07+0.42*(v/mx)):0;
       return '<td class="gpv-cell" data-r="'+GST._esc(rk)+'" data-c="'+GST._esc(c)+'"'
-        +(a?' style="background:rgba(var(--gov-heat),'+a.toFixed(3)+')"':'')+'>'+fmtV(v,base)+'</td>';
+        +(a?' style="background:rgba(var(--gov-heat),'+a.toFixed(3)+')"':'')+'>'+fmtV(v,base,m)+'</td>';
     };
     let prev=[];
     const subRow=function(g){
@@ -2648,10 +2655,10 @@ GST.pivotOpen=function(){
             const v=preC(ks,c,m);
             const base= disp==='row'?preT(ks,m) : disp==='col'?colT(c,m) : disp==='all'?grand(m)
               : disp==='lift'?(grand(m)?preT(ks,m)*colT(c,m)/grand(m):null) : null;
-            return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
+            return '<td>'+fmtV(v,base,m)+'</td>'; }).join(''); }).join('')
         + (cmpOn?'<td></td>':'')
         + MS.map(function(m){ const v=preT(ks,m);
-            return '<td>'+fmtV(v, disp==='raw'?null:(disp==='all'?grand(m):v))+'</td>'; }).join('')
+            return '<td>'+fmtV(v, disp==='raw'?null:(disp==='all'?grand(m):v), m)+'</td>'; }).join('')
         + '</tr>';
     };
     keys.forEach(function(rk,idx){
@@ -2676,7 +2683,7 @@ GST.pivotOpen=function(){
             return '<td class="'+(noCol?'gpv-cell':'gpv-tot')+'"'
               +(noCol?' data-r="'+GST._esc(rk)+'" data-c="'+GST._esc(T.tot)+'"':'')
               +(a2?' style="background:rgba(var(--gov-heat),'+a2.toFixed(3)+')"':'')+'>'
-              +fmtV(v, disp==='all'?grand(m):(disp==='raw'?null:v))+'</td>'; }).join('')
+              +fmtV(v, disp==='all'?grand(m):(disp==='raw'?null:v), m)+'</td>'; }).join('')
         + '</tr>';
       prev=parts;
     });
@@ -2686,21 +2693,21 @@ GST.pivotOpen=function(){
         + cN.map(function(c){ return MS.map(function(m){ const v=preC(etcKeys,c,m);
             const base= disp==='col'?colT(c,m) : disp==='all'?grand(m) : disp==='row'?preT(etcKeys,m)
               : disp==='lift'?(grand(m)?preT(etcKeys,m)*colT(c,m)/grand(m):null) : null;
-            return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
+            return '<td>'+fmtV(v,base,m)+'</td>'; }).join(''); }).join('')
         + (cmpOn?'<td></td>':'')
         + MS.map(function(m){ const v=preT(etcKeys,m);
-            return '<td>'+fmtV(v, disp==='all'?grand(m):(disp==='raw'?null:v))+'</td>'; }).join('')+'</tr>';
+            return '<td>'+fmtV(v, disp==='all'?grand(m):(disp==='raw'?null:v), m)+'</td>'; }).join('')+'</tr>';
     }
     h+='</tbody><tfoot><tr class="gpv-tot"><td'+(nLv>1?' colspan="'+nLv+'"':'')+'>'+T.tot+'</td>'
       + cN.map(function(c){ return MS.map(function(m){ const v=colT(c,m);
           const base= disp==='row'?grand(m) : disp==='col'?v : disp==='all'?grand(m) : null;
-          return '<td>'+fmtV(v,base)+'</td>'; }).join(''); }).join('')
+          return '<td>'+fmtV(v,base,m)+'</td>'; }).join(''); }).join('')
       + (cmpOn?(function(){ const ta=colT(T.cmpA,MS[0])||0, tb=colT(T.cmpB,MS[0]);
           if(tb==null||!tb) return '<td></td>';
           const dpc=Math.round(ta/tb*1000)/10-100;
           const cc=dpc>0?'var(--bad,#fb7185)':(dpc<0?'var(--ok,#4ade80)':'inherit');
           return '<td style="color:'+cc+'">'+(dpc>0?'+':'')+(Math.round(dpc*10)/10)+'%</td>'; })():'')
-      + MS.map(function(m){ const v=grand(m); return '<td>'+fmtV(v, disp==='raw'?null:v)+'</td>'; }).join('')
+      + MS.map(function(m){ const v=grand(m); return '<td>'+fmtV(v, disp==='raw'?null:v, m)+'</td>'; }).join('')
       + '</tr></tfoot></table>';
     sc.innerHTML=h;
     VIEW={P:P,keys:keys,cN:cN,noCol:noCol,AC:AC,nLv:nLv,cell:cell,rowT:rowT,colT:colT,grand:grand,M:M,D:D};
