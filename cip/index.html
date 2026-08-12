@@ -607,7 +607,7 @@ function setNote(canvasId,txt){
 // 0행 = 항목 적용일 · 1행 = 항목명 · 2행~ = 설비 1대. 셀: N/A·N.A 제외 / Not yet = 미완료 / 날짜 = 완료
 // 헤더는 셀 안 줄바꿈을 포함한다 ("MFC Change\n (Final ver_G)\n (Left)") → 공백 1칸으로 접는다
 function normItem(s){return String(s||'').replace(/\s+/g,' ').trim();}
-// (Left)/(Right)는 이름 끝이 아닐 수도 있다 ("… (Left) GBWS-5192 Start") → 위치 무관하게 분리
+// (Left)/(Right)는 이름 끝이 아닐 수도 있다 ("… (Left) GBWS-0000 Start") → 위치 무관하게 분리
 function stripSide(name){
   const m=name.match(/\((Left|Right)\)/i);
   if(!m)return {base:name,side:''};

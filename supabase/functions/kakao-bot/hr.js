@@ -397,7 +397,7 @@ export function parseInstall(csvText) {
   return out;
 }
 
-// S/N 비교 정규화 — 대소문자·공백·하이픈 차이를 흡수한다("dbw 2148" == "DBW-2148")
+// S/N 비교 정규화 — 대소문자·공백·하이픈 차이를 흡수한다("dbw 2148" == "DBW-0000")
 const snNorm = (s) => upk(s).replace(/[^A-Z0-9]/g, '');
 export function snMatch(rowVal, want) {
   const a = snNorm(rowVal), b = snNorm(want);

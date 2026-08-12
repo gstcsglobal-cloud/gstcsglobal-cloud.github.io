@@ -30,6 +30,7 @@ npm run all      # 전부
 npm run sync     # 세 곳이 어긋나지 않았는지 (가장 중요)
 npm run shift    # 열을 끼워 넣어도 숫자가 그대로인지
 npm run deep     # 심층 분석 숫자가 실측과 맞는지
+npm run leak     # 실데이터가 소스에 섞이지 않았는지
 ```
 
 브라우저 경로를 직접 지정해야 하면 `PW_CHROMIUM=/path/to/chrome npm run smoke`.
@@ -44,7 +45,8 @@ npm run deep     # 심층 분석 숫자가 실측과 맞는지
 | `t-sync` | **core.js · hr.js · sheet-write 세 곳이 같은 열을 보는지** | 57/57 |
 | `t-smoke` | 6개 페이지를 실제로 띄워 렌더·JS 에러 확인 | 6페이지 통과 |
 | `t-shift` | 시트 중간에 열 2개를 넣고 KPI가 한 자리도 안 변하는지 | 전 페이지 동일 |
-| `t-deep` | 심층 분석이 **실측값과 같은 숫자**를 그리는지 (집중지수·재교체주기·급증·BM율) | 28/28 |
+| `t-deep` | 심층 분석이 **실측값과 같은 숫자**를 그리는지 (집중지수·재교체주기·급증·BM율) | 32/32 |
+| `t-leak` | **공개 저장소에 실데이터가 새어 나갔는지** — 커밋 대상 전 파일을 실제 명단과 대조 | 누출 0 |
 
 `t-deep`이 대조하는 실측 기준값: `STR × DRAIN PIPE-E` **집중지수 230배** ·
 `HARPXT × VCR GASKET` **축내 59.5%** · O-RING 재교체 **중앙값 82일** ·

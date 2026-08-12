@@ -335,7 +335,7 @@ async function analyzeAndAnswer(
 규칙:
 - 추측 금지·정확한 숫자·친근한 말투·500자 이내·데이터 없으면 솔직히 말하기
 - 카카오톡이라 마크다운 절대 금지: **굵게**, |표|, --- 전부 사용 금지. 일반 텍스트만
-- S/N 목록 나열 금지: 건수/통계/순위로 요약하라. "GBWS-1234, GBWS-5678..." 이런 나열 금지
+- S/N 목록 나열 금지: 건수/통계/순위로 요약하라. "GBWS-0000, GBWS-5678..." 이런 나열 금지
 - BM/고장 현황 질문 → 알람유형(alarm 필드) TOP3 우선 표시, 그 다음 라인별 건수
 - 원인 질문 → 알람유형으로 서머리 (alarm 필드 기준)
 업무 용어: BM=고장수리(stage에 BM/고장/긴급), PM=예방점검, TBM=정기점검, ALARM=alarm 필드값, W30등=주차.
@@ -617,7 +617,7 @@ function cacheStampStr(cache: Record<string, Cache>): string {
 
 function helpText(): string {
   return "이렇게 물어보세요 😊\n" +
-    "· \"DBW-1536\" → 설비 상세 안내\n" +
+    "· \"DBW-0000\" → 설비 상세 안내\n" +
     "· \"2025년 F16 고장 TOP3 설비는?\"\n" +
     "· \"올해 원인별 고장 분석해줘\"\n" +
     "· \"W30 기준 LV1 미이수자 알려줘\"\n" +
@@ -677,7 +677,7 @@ async function handleMenu(
   if (step === "root") {
     if (u === "설비정보") {
       await saveMenu("equip_sn", {});
-      return { payload: simpleText("조회할 설비 S/N 또는 CODE를 입력해주세요. 예) GBWS-1536, DBW-2148, TEVNBX100") };
+      return { payload: simpleText("조회할 설비 S/N 또는 CODE를 입력해주세요. 예) GBWS-1536, DBW-0000, TEVNBX100") };
     }
     if (u === "BM") {
       await saveMenu("bm", {});

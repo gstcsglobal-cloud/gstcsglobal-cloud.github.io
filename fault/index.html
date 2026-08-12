@@ -971,7 +971,7 @@ async function loadData(){ GST.skeleton(true);
         work:toDate(r[C.dStart]),
         workMin:Number(r[C.workMin])||null, manMin:Number(r[C.manMin])||null,
         workers:(r[C.workers]||'').toString().trim(), workerCnt:Number(r[C.workerCnt])||null,
-        // 작업자는 "김대기,LI.LO"처럼 한 칸에 여러 명이 들어 있다. 축으로 쓰려면 먼저 쪼개야 한다.
+        // 작업자는 "홍길동,LI.LO"처럼 한 칸에 여러 명이 들어 있다. 축으로 쓰려면 먼저 쪼개야 한다.
         workerList:(r[C.workers]||'').toString().split(',').map(s=>s.trim()).filter(Boolean)
       }))
       .filter(x=>x.sn||x.line);
@@ -1546,7 +1546,7 @@ function renderReliability(f){
      "예방정비를 했는데 곧 또 고장났는가"를 본다. 위 FTFR(BM→BM 재발)과는 다른 질문이다.
      판정: TBM 시점 이후 TBM_WIN일 안에 같은 설비(S/N)에 BM이 나면 '재고장'.
      관측창이 아직 안 찬 최근 TBM은 제외한다(우측 절단) — 넣으면 재고장률이 실제보다 낮게 나온다.
-     작업자 열은 "김대기,LI.LO"처럼 여러 명이 묶여 있어 쉼표로 나눠 각자에게 귀속시킨다. */
+     작업자 열은 "홍길동,LI.LO"처럼 여러 명이 묶여 있어 쉼표로 나눠 각자에게 귀속시킨다. */
   const TBM_WIN=30;
   // BM 조회는 f(화면 필터 적용본)가 아니라 ROWS에서 직접 뽑는다.
   // f는 KPI의 단계 필터(F.stage)를 타므로, 사용자가 CBM 등을 골라둔 상태면
@@ -2024,7 +2024,7 @@ function pivMeas(withWorker){
     {k:'min',t:t('th_min'),agg:'avg',f:x=>(x.workMin>0&&x.workMin<1440)?x.workMin:null},
     {k:'snU',t:t('sl_sn'),agg:'uniq',f:'sn'}
   ];
-  // 작업자수는 펼친 세트에서만 정확하다. 원본은 한 칸에 "김대기,LI.LO"처럼 묶여 있어
+  // 작업자수는 펼친 세트에서만 정확하다. 원본은 한 칸에 "홍길동,LI.LO"처럼 묶여 있어
   // 그대로 uniq를 걸면 사람이 아니라 '조 편성'의 가짓수가 세어진다 — 그래서 세트를 나눴다.
   if(withWorker) M.push({k:'wkrU',t:t('pv_wkrn'),agg:'uniq',f:'worker'});
   return M;
