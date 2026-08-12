@@ -21,3 +21,6 @@ tests/screenshots/
 # OS
 .DS_Store
 Thumbs.db
+
+# 분석 도구가 만드는 산출물 — 소스가 아니다
+*.decls.json
