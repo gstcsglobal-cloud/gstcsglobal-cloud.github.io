@@ -379,6 +379,25 @@ canvas{cursor:pointer}
       <div class="trend-wrap"><canvas id="cFtfrModel"></canvas></div>
     </div>
   </div>
+  <!-- TBM 사후 재고장 — 예방정비가 실제로 고장을 막았는지 본다.
+       FTFR(BM→BM 재발)과는 다른 지표다: 여기는 TBM 이후 같은 설비에 BM이 났는지를 센다. -->
+  <div class="grid3" style="margin-top:16px">
+    <div class="card">
+      <h3><span data-i="ch_tbmw">작업자별 TBM 사후 재고장률</span></h3>
+      <div class="note" data-i="note_tbmw">TBM 후 30일 내 같은 설비 BM 발생 비율 · 낮을수록 좋음 · TBM 10건 이상</div>
+      <div class="cw"><canvas id="cTbmWorker"></canvas></div>
+    </div>
+    <div class="card">
+      <h3><span data-i="ch_tbmgap">TBM → 다음 고장 경과일</span></h3>
+      <div class="note" data-i="note_tbmgap">재고장이 난 건만 · 짧을수록 정비 품질 문제</div>
+      <div class="cw"><canvas id="cTbmGap"></canvas></div>
+    </div>
+    <div class="card">
+      <h3><span data-i="ch_tbmline">LINE별 TBM 사후 재고장률</span></h3>
+      <div class="note" data-i="note_tbmline">TBM 5건 이상 · 값은 막대 끝</div>
+      <div class="cw"><canvas id="cTbmLine"></canvas></div>
+    </div>
+  </div>
   <div class="tablecard" style="margin-top:16px">
     <h3><span data-i="rel_tbl">설비 신뢰성 상세</span> (<span id="relCnt">0</span>)</h3>
     <div class="tbl-wrap">
@@ -434,7 +453,7 @@ const SERVICE_STAGES=['BM','CBM','CM','CRM'];
 const PAL=GST.PAL8;
 
 const T={
-  ko:{title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
+  ko:{ch_tbmw:'작업자별 TBM 사후 재고장률',note_tbmw:'TBM 후 30일 내 같은 설비 BM 발생 비율 · 낮을수록 좋음 · TBM 10건 이상',ch_tbmgap:'TBM → 다음 고장 경과일',note_tbmgap:'재고장이 난 건만 · 짧을수록 정비 품질 문제',ch_tbmline:'LINE별 TBM 사후 재고장률',note_tbmline:'TBM 5건 이상 · 값은 막대 끝',title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
     sec_ov:'개요',sec_ca:'원인·조치',sec_ld:'작업 부하',sec_rel:'신뢰성',sec_dt:'상세 목록',
     r_mtbf:'MTBF · 평균 고장간격',r_mttr:'MTTR · 평균 수리시간',r_frate:'연간 고장률 (건/대)',r_units:'분석 설비',
     rf_mtbf:'중앙값 {n}일',rf_mttr:'BM {n}건 평균',rf_frate:'가동기간 환산',rf_units:'BM 2건↑ · 설치연동 {p}%',
@@ -457,7 +476,7 @@ const T={
     tbl_title:'서비스 실적 상세',th_date:'작업일',ft_cnt:'건수',th_stage:'단계',th_pf:'유/무상',th_phenom:'현상',th_cause:'원인',th_action:'조치',th_min:'시간(분)',th_mh:'공수',th_worker:'작업자',
     ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ch_alarmp:'알람 TOP (파레토)',note_alarmp:'알람(Z) 미기재 시 현상(AA) 폴백 · 라인=누적 %',dq_title:'데이터 입력 정합성 (BM 기준)',dq_missing:'미기재 {n}건 / BM {t}건',dq_note:'행의 ✎로 알람·현상·원인·조치를 바로 채울 수 있습니다 (구글 시트에 저장)',dq_fill:'입력',dq_all:'알람·현상·원인·조치가 모두 기재되어 있습니다',dq_missN:'미기재 {n}건 제외',dq_mt:'고장 기록 입력',dq_close:'닫기',dq_save:'저장',dq_saved:'저장됨 — 구글 시트에 반영되었습니다',dq_savefail:'저장 실패 — 잠시 후 다시 시도하세요',dq_conflict:'다른 사람이 먼저 수정했습니다 — 다시 열어주세요',dq_loadfail:'행을 불러오지 못했습니다',dq_zcol:'Z열',dq_savenext:'저장 후 다음 →',dq_left:'남은 {n}건',dq_done:'미기재 건을 모두 처리했습니다',dq_byworker:'작업자별 미기재 TOP',sr_upm:'UPM율 %',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'최근 구간 작업공수 {n}인·시 · 직전 구간 대비 {p}',
     etc:'기타',mon_unit:'월',dur_b:['<30분','30–60분','1–2시간','2–4시간','4시간+'],wcnt_p:'{n}명'},
-  en:{title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
+  en:{ch_tbmw:'Post-TBM Failure Rate by Worker',note_tbmw:'BM within 30d after TBM on same unit · lower is better · ≥10 TBMs',ch_tbmgap:'Days from TBM to Next Failure',note_tbmgap:'only recurring cases · shorter means poorer PM quality',ch_tbmline:'Post-TBM Failure Rate by LINE',note_tbmline:'≥5 TBMs · value at bar end',title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
     sec_ov:'Overview',sec_ca:'Cause & Action',sec_ld:'Workload',sec_rel:'Reliability',sec_dt:'Data',
     r_mtbf:'MTBF · mean time btw failures',r_mttr:'MTTR · mean time to repair',r_frate:'Annual failures / unit',r_units:'Units analyzed',
     rf_mtbf:'median {n} d',rf_mttr:'avg of {n} BM',rf_frate:'annualized',rf_units:'BM≥2 · install-linked {p}%',
@@ -480,7 +499,7 @@ const T={
     tbl_title:'Service Records',th_date:'Date',ft_cnt:'Count',th_stage:'Stage',th_pf:'Paid/Free',th_phenom:'Phenomenon',th_cause:'Cause',th_action:'Action',th_min:'Min',th_mh:'Man-min',th_worker:'Workers',
     ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ch_alarmp:'Top Alarms (Pareto)',note_alarmp:'falls back to symptom(AA) when alarm(Z) blank · line = cumulative %',dq_title:'Data entry integrity (BM)',dq_missing:'{n} missing / {t} BM',dq_note:'click ✎ to fill alarm/phenomenon/cause/action right here (saved to the Google Sheet)',dq_fill:'Fill',dq_all:'Alarm, phenomenon, cause and action are all filled in',dq_missN:'{n} blank excluded',dq_mt:'Fill fault record',dq_close:'Close',dq_save:'Save',dq_saved:'Saved to the Google Sheet',dq_savefail:'Save failed — try again',dq_conflict:'Someone edited this row first — reopen it',dq_loadfail:'Could not load the row',dq_zcol:'col Z',dq_savenext:'Save & next →',dq_left:'{n} left',dq_done:'All missing records are filled',dq_byworker:'Missing entries by worker (top)',sr_upm:'UPM rate %',ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours in latest period · {p} vs prev',
     etc:'Others',mon_unit:'',dur_b:['<30m','30–60m','1–2h','2–4h','4h+'],wcnt_p:'{n} ppl'},
-  zh:{title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
+  zh:{ch_tbmw:'按作业者 TBM 后再故障率',note_tbmw:'TBM 后30天内同设备发生BM的比例 · 越低越好 · TBM 10件以上',ch_tbmgap:'TBM → 下次故障间隔天数',note_tbmgap:'仅统计再故障件 · 越短表示保养质量越差',ch_tbmline:'按LINE TBM 后再故障率',note_tbmline:'TBM 5件以上 · 数值在条形末端',title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
     sec_ov:'概览',sec_ca:'原因·措施',sec_ld:'工时负荷',sec_rel:'可靠性',sec_dt:'明细',
     r_mtbf:'MTBF · 平均故障间隔',r_mttr:'MTTR · 平均修复时间',r_frate:'年故障率 (件/台)',r_units:'分析设备',
     rf_mtbf:'中位数 {n}天',rf_mttr:'BM {n}件均值',rf_frate:'按运行期折算',rf_units:'BM≥2 · 安装关联 {p}%',
@@ -503,7 +522,7 @@ const T={
     tbl_title:'服务实绩明细',th_date:'作业日',ft_cnt:'件数',th_stage:'阶段',th_pf:'有/无偿',th_phenom:'现象',th_cause:'原因',th_action:'措施',th_min:'时间(分)',th_mh:'工时',th_worker:'作业者',
     ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ch_alarmp:'报警TOP (帕累托)',note_alarmp:'报警(Z)未填时用现象(AA) · 线=累计%',dq_title:'数据录入完整性 (BM)',dq_missing:'未填写 {n}件 / BM {t}件',dq_note:'点✎可直接填写报警·现象·原因·措施 (保存到谷歌表格)',dq_fill:'填写',dq_all:'报警·现象·原因·措施均已填写',dq_missN:'未填{n}件除外',dq_mt:'填写故障记录',dq_close:'关闭',dq_save:'保存',dq_saved:'已保存到谷歌表格',dq_savefail:'保存失败 — 请稍后重试',dq_conflict:'他人已先修改 — 请重新打开',dq_loadfail:'无法读取该行',dq_zcol:'Z列',dq_savenext:'保存并下一条 →',dq_left:'剩余 {n}件',dq_done:'未填写记录已全部处理',dq_byworker:'按作业者未填TOP',sr_upm:'UPM率 %',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'最近区间工时 {n}人·时 · 环比 {p}',
     etc:'其他',mon_unit:'月',dur_b:['<30分','30–60分','1–2时','2–4时','4时+'],wcnt_p:'{n}人'},
-  ja:{title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
+  ja:{ch_tbmw:'作業者別TBM後再故障率',note_tbmw:'TBM後30日以内に同一設備でBM発生した割合 · 低いほど良い · TBM10件以上',ch_tbmgap:'TBM → 次故障までの日数',note_tbmgap:'再故障した件のみ · 短いほど整備品質の問題',ch_tbmline:'LINE別TBM後再故障率',note_tbmline:'TBM5件以上 · 値は棒の末端',title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
     sec_ov:'概要',sec_ca:'原因·処置',sec_ld:'工数負荷',sec_rel:'信頼性',sec_dt:'詳細',
     r_mtbf:'MTBF · 平均故障間隔',r_mttr:'MTTR · 平均修理時間',r_frate:'年間故障率 (件/台)',r_units:'分析設備',
     rf_mtbf:'中央値 {n}日',rf_mttr:'BM {n}件平均',rf_frate:'稼働期間換算',rf_units:'BM2件↑ · 設置連動 {p}%',
@@ -622,6 +641,8 @@ async function loadData(){ GST.skeleton(true);
         sn:GST.nfw(r[C.snIn]||'').trim(), proc:GST.nfw(r[C.proc]||'').trim(),
         campus:GST.nfw(r[C.campus]||'').trim(),
         country:(String(r[C.op]||'').match(/GST\s+([A-Za-z]+)/i)||[])[1]?String(r[C.op]).match(/GST\s+([A-Za-z]+)/i)[1].toUpperCase():'',
+        // TBM 사후 재고장을 작업자별로 보려면 담당자가 필요하다. 시트는 쉼표로 여러 명을 묶어 둔다.
+        workers:(r[C.workers]||'').toString().trim(),
         work:toDate(r[C.dStart]) }))
       .filter(x=>x.sn||x.line);
     status.className='status ok';
@@ -905,6 +926,24 @@ document.addEventListener('click',e=>{
 });
 
 /* ===== 알람 파레토 — 어떤 고장이 제일 많은지 + 상위 몇 개가 전체의 몇 %인지 ===== */
+/* 입력률이 낮은 열을 쓰는 차트에 안내를 붙인다.
+   시트에 열은 있는데 값이 거의 비어 있는 상태(알람유형·현상·원인·조치)를,
+   차트 버그와 구분해서 보여주기 위한 것. 30% 이상 채워지면 안내는 자동으로 사라진다. */
+function fillHint(canvasId, rows, key, altKey){
+  const card=(document.getElementById(canvasId)||{}).closest?document.getElementById(canvasId).closest('.card'):null;
+  if(!card)return;
+  let el=card.querySelector('.fill-hint');
+  const n=rows.length;
+  const got=rows.filter(r=>String(r[key]||'').trim()||(altKey&&String(r[altKey]||'').trim())).length;
+  const pct=n?Math.round(got/n*100):0;
+  if(!n||pct>=30){ if(el)el.remove(); return; }
+  if(!el){ el=document.createElement('div'); el.className='fill-hint';
+    el.style.cssText='margin:6px 0 2px;padding:7px 10px;border-radius:8px;background:rgba(234,179,8,.12);'
+      +'border:1px solid rgba(234,179,8,.35);font-size:11.5px;line-height:1.45;color:var(--fg,#e6edf3);opacity:.9';
+    const cw=card.querySelector('.cw'); card.insertBefore(el, cw||null); }
+  el.textContent='ⓘ 이 항목은 시트 입력률이 '+pct+'% ('+got.toLocaleString()+'/'+n.toLocaleString()+'건)입니다. '
+    +'입력이 쌓이면 이 차트가 자동으로 채워집니다.';
+}
 function mkPareto(id,f){
   const ctx=document.getElementById(id); if(!ctx)return;
   const TH=GST.chartTheme();
@@ -1129,6 +1168,48 @@ function renderReliability(f){
   const mdlEnt=Object.keys(mdl).filter(m=>mdl[m].o>=3).map(m=>[m,Math.round((1-mdl[m].r/mdl[m].o)*100)]).sort((a,b)=>a[1]-b[1]).slice(0,10);
   mkHBar('cFtfrModel',mdlEnt,100,null,TH.pal[1],10,(l,i)=>i<2?TH.status.bad:TH.pal[1]);
 
+  /* ── TBM 사후 재고장 ─────────────────────────────────────────────
+     "예방정비를 했는데 곧 또 고장났는가"를 본다. 위 FTFR(BM→BM 재발)과는 다른 질문이다.
+     판정: TBM 시점 이후 TBM_WIN일 안에 같은 설비(S/N)에 BM이 나면 '재고장'.
+     관측창이 아직 안 찬 최근 TBM은 제외한다(우측 절단) — 넣으면 재고장률이 실제보다 낮게 나온다.
+     작업자 열은 "김대기,LI.LO"처럼 여러 명이 묶여 있어 쉼표로 나눠 각자에게 귀속시킨다. */
+  const TBM_WIN=30;
+  const bmBySN={};
+  f.forEach(x=>{ if(x.stage!=='BM'||!x.work)return; const s=normSN(x.sn); if(!s)return; (bmBySN[s]=bmBySN[s]||[]).push(x.work); });
+  Object.keys(bmBySN).forEach(s=>bmBySN[s].sort((a,b)=>a-b));
+  const tbmEv=[];
+  filtTBM().forEach(x=>{
+    if(!x.work)return; const s=normSN(x.sn); if(!s)return;
+    if(((asOf2-x.work)/864e5)<TBM_WIN)return;            // 관측창 미충족 — 판정 제외
+    const after=(bmBySN[s]||[]).find(d=>d>x.work);
+    const gap=after?Math.round((after-x.work)/864e5):null;
+    tbmEv.push({line:x.line,workers:x.workers,gap:(gap!=null&&gap<=TBM_WIN)?gap:null,
+                bad:(gap!=null&&gap<=TBM_WIN)});
+  });
+  // 작업자별 — 표본이 적으면 비율이 요동치므로 최소 건수를 넘긴 사람만 보여준다
+  const wAgg={};
+  tbmEv.forEach(e=>{
+    String(e.workers||'').split(/[,;/]/).map(s=>s.trim()).filter(Boolean).forEach(w=>{
+      const o=wAgg[w]||(wAgg[w]={n:0,bad:0}); o.n++; if(e.bad)o.bad++;
+    });
+  });
+  const wEnt=Object.keys(wAgg).filter(w=>wAgg[w].n>=10)
+    .map(w=>[w+' ('+wAgg[w].n+')',Math.round(wAgg[w].bad/wAgg[w].n*100)])
+    .sort((a,b)=>b[1]-a[1]).slice(0,12);
+  mkHBar('cTbmWorker',wEnt,100,null,TH.pal[3],12,(l,i)=>i<3?TH.status.bad:TH.pal[3]);
+  // 경과일 분포 — 재고장이 난 건만. 왼쪽에 몰릴수록 정비 직후 재발이라 품질 문제에 가깝다.
+  const gb=[0,0,0,0], gl=['~7일','8~14일','15~21일','22~30일'];
+  tbmEv.forEach(e=>{ if(e.gap==null)return;
+    gb[e.gap<=7?0:e.gap<=14?1:e.gap<=21?2:3]++; });
+  mkBarV('cTbmGap',gl,gb,TH.pal[5]);
+  // LINE별
+  const lAgg={};
+  tbmEv.forEach(e=>{const k=e.line||'(미상)';const o=lAgg[k]||(lAgg[k]={n:0,bad:0});o.n++;if(e.bad)o.bad++;});
+  const lEnt=Object.keys(lAgg).filter(k=>lAgg[k].n>=5)
+    .map(k=>[k+' ('+lAgg[k].n+')',Math.round(lAgg[k].bad/lAgg[k].n*100)])
+    .sort((a,b)=>b[1]-a[1]).slice(0,10);
+  mkHBar('cTbmLine',lEnt,100,null,TH.pal[2],10);
+
   // 상세 테이블
   const rows2=withBM.slice();
   const val=(u,k)=>k==='sn'?u.sn:k==='model'?u.model:k==='line'?u.line:k==='bm'?u.bm:
@@ -1240,6 +1321,11 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   setTxt('pfPct',pfp+'%'); setTxt('pfPaid',paid.toLocaleString()); setTxt('pfFree',free.toLocaleString());
 
   // ── 원인·조치 ──
+  // 알람유형·현상·원인·조치는 아직 시트 입력률이 낮다(고장 BM 기준 4~10%).
+  // 빈 차트를 그대로 두면 "데이터가 없다"인지 "차트가 고장났다"인지 알 수 없으므로,
+  // 입력률을 함께 알려준다. 입력이 차오르면 안내가 사라지고 차트가 그대로 살아난다.
+  fillHint('cPhenom',f,'phenom'); fillHint('cCause',f,'cause');
+  fillHint('cAction',f,'action'); fillHint('cAlarmP',f,'alarm','phenom');
   mkHBar('cPhenom',countBy(f,'phenom'),f.length,null,TH.pal[0],8);
   const causes=countBy(f,'cause');
   mkHBar('cCause',causes,f.length,'cause',TH.pal[4],8);
