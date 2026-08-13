@@ -80,6 +80,7 @@ create table if not exists public.sheet_wk (
   man_min                    text,   -- 작업공수
   workers                    text,   -- 작업자
   worker_cnt                 text,   -- 작업자수
+  extra      jsonb,                 -- SPEC 밖의 열 전부(헤더 이름을 키로). 시트를 지워도 안 잃게
   synced_at  timestamptz not null default now()
 );
 comment on table public.sheet_wk is '구글시트 «수선실적» 미러 (gid 646668307). 원장은 아직 시트다.';
@@ -135,6 +136,7 @@ create table if not exists public.sheet_mat (
   sn_out                     text,   -- OUT SN
   stock_chk                  text,   -- 재고체크여부
   store                      text,   -- 자재창고
+  extra      jsonb,                 -- SPEC 밖의 열 전부(헤더 이름을 키로). 시트를 지워도 안 잃게
   synced_at  timestamptz not null default now()
 );
 comment on table public.sheet_mat is '구글시트 «자재실적» 미러 (gid 31302669). 원장은 아직 시트다.';
@@ -176,6 +178,7 @@ create table if not exists public.sheet_inst (
   warranty                   text,   -- Warranty In/Out
   pm_cycle                   text,   -- Target PM Cycle
   type                       text,   -- Scrubber type
+  extra      jsonb,                 -- SPEC 밖의 열 전부(헤더 이름을 키로). 시트를 지워도 안 잃게
   synced_at  timestamptz not null default now()
 );
 comment on table public.sheet_inst is '구글시트 «설치현황» 미러 (gid 891608329). 원장은 아직 시트다.';
@@ -226,7 +229,8 @@ alter table public.sheet_wk
   add column if not exists work_min text,
   add column if not exists man_min text,
   add column if not exists workers text,
-  add column if not exists worker_cnt text;
+  add column if not exists worker_cnt text,
+  add column if not exists extra jsonb;
 alter table public.sheet_mat
   add column if not exists op text,
   add column if not exists customer text,
@@ -266,7 +270,8 @@ alter table public.sheet_mat
   add column if not exists sn_in text,
   add column if not exists sn_out text,
   add column if not exists stock_chk text,
-  add column if not exists store text;
+  add column if not exists store text,
+  add column if not exists extra jsonb;
 alter table public.sheet_inst
   add column if not exists pjt text,
   add column if not exists country text,
@@ -292,7 +297,8 @@ alter table public.sheet_inst
   add column if not exists warranty_date text,
   add column if not exists warranty text,
   add column if not exists pm_cycle text,
-  add column if not exists type text;
+  add column if not exists type text,
+  add column if not exists extra jsonb;
 commit;
 
 /* ---------- 동기화 기록 ---------- */

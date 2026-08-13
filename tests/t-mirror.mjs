@@ -42,7 +42,7 @@ const typeSrc     = src.slice(src.indexOf('type ColMap'), src.indexOf('/* ------
 const tmp = HERE + '/sync-extract.ts';
 fs.writeFileSync(tmp, [parseCSVSrc, hnormSrc, typeSrc, cut,
   'export { parseCSV, hnorm, planSync, toRows };'].join('\n'));
-const { parseCSV, hnorm, planSync } = await import('file://' + tmp + '?v=' + Date.now());
+const { parseCSV, hnorm, planSync, toRows } = await import('file://' + tmp + '?v=' + Date.now());
 
 /* ---------- 2. 대시보드 파서(GST.SM)를 띄운다 ---------- */
 global.window = {};
@@ -228,6 +228,35 @@ console.log('\n[6] sheet-proxy 허용목록이 모든 소비자를 덮는지');
     const unused = [...allow].filter(g => !want.has(g));
     if (unused.length) console.log(`     · 참고: 아무도 안 쓰는 허용 gid ${unused.length}개 — ${unused.join(', ')}`);
   }
+}
+
+/* ---------- 10. 시트를 지워도 되는가 — «한 열도 안 잃는지» ----------
+   미러는 원래 대시보드가 쓰는 열만 복사했다(설치현황 111열 중 25열). 시트를 원장에서
+   내리려면 그것만으로는 손실이다. `extra`(SPEC 밖 열 전부)가 나머지를 실제로 담는지 본다.
+   담기지 않은 열이 하나라도 있으면 **시트를 지우면 안 된다.** */
+console.log('\n[7] 시트의 모든 열이 미러에 담기는지 (extra 포함)');
+for (const k of ['wk', 'mat', 'inst']) {
+  const f = path.join(HERE, FIX[k]);
+  if (!fs.existsSync(f)) { console.log(`  … ${k} 픽스처 없음 — 건너뜀`); continue; }
+  const plan = planSync(SPEC[k], CMAP[k].map(c => ({ ...c })), fs.readFileSync(f, 'utf8'));
+  // 전 행을 돌린다. 일부만 떼어 담아놓고 «전체»에서 값을 찾으면, 뒤쪽에만 값이 있는 열이
+  // 유실로 오진된다(실제로 wk 의 '스크러버 설비구분'이 그렇게 잡혔다). 양쪽 범위를 맞춘다.
+  const rows = toRows(plan.data, plan.cmap, 0, plan.header);
+  const mapped = new Set(plan.cmap.filter(c => c.idx >= 0).map(c => c.idx));
+  const hasVal = i => plan.data.some(r => String(r[i] ?? '').trim() !== '');
+  // 값이 하나라도 있는 «이름 있는» 열은 전부 담겨야 한다
+  const named = plan.header.map((h, i) => ({ i, h: String(h ?? '').trim() })).filter(x => x.h);
+  const lost = named.filter(x => !mapped.has(x.i)).filter(x =>
+    hasVal(x.i) && !rows.some(o => o.extra && x.h in o.extra));
+  // 이름 없는 열에 값이 들어 있으면 담을 키가 없다 — 이건 시트를 고쳐야 한다
+  const unnamed = plan.header.map((h, i) => ({ i, h: String(h ?? '').trim() }))
+    .filter(x => !x.h && hasVal(x.i));
+  const extraN = new Set(); rows.forEach(o => o.extra && Object.keys(o.extra).forEach(x => extraN.add(x)));
+  lost.length
+    ? err(`${k}: 미러에 안 담기는 열 ${lost.length}개 — ${lost.slice(0,5).map(x=>x.h).join(', ')}`)
+    : ok(`${k}: 시트 ${named.length}열 = 매핑 ${mapped.size} + extra ${extraN.size} · 유실 0`);
+  if (unnamed.length)
+    console.log(`     ⚠ 머리글이 빈 열에 값이 있다 (${unnamed.map(x=>'col'+x.i).join(', ')}) — 담을 키가 없으니 시트에 이름을 붙여야 한다`);
 }
 
 fs.unlinkSync(tmp);

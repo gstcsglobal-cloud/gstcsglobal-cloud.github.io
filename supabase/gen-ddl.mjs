@@ -84,6 +84,9 @@ for (const k of Object.keys(T)) {
   cols.forEach(([c, h]) => {
     tables += `  ${c.padEnd(W)} text,${h ? '   -- ' + String(h).replace(/\n/g, '⏎') : ''}\n`;
   });
+  // SPEC이 모르는 열을 통째로 담는다 — 미러는 «대시보드가 쓰는 열»만 복사하므로
+  // (설치현황 111열 중 25열) 시트를 지울 생각이라면 그것만으로는 손실이다.
+  tables += `  extra      jsonb,                 -- SPEC 밖의 열 전부(헤더 이름을 키로). 시트를 지워도 안 잃게\n`;
   tables += `  synced_at  timestamptz not null default now()\n);\n`;
   tables += `comment on table public.sheet_${k} is '구글시트 «${T[k].label}» 미러 (gid ${S.gid}). 원장은 아직 시트다.';\n`;
   T[k].idx.forEach(c => {
@@ -92,7 +95,8 @@ for (const k of Object.keys(T)) {
   });
 
   alters += `alter table public.sheet_${k}\n` +
-    cols.map(([c]) => `  add column if not exists ${c} text`).join(',\n') + ';\n';
+    cols.map(([c]) => `  add column if not exists ${c} text`).concat(
+      ['  add column if not exists extra jsonb']).join(',\n') + ';\n';
 
   /* 스펙을 표로. 엣지펑션은 이걸 읽어 헤더를 해석한다 — 스펙을 다시 적지 않는다. */
   const opt = new Set(S.opt || []);

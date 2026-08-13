@@ -66,7 +66,7 @@ function planSync(
   spec: { hints: unknown[]; scan?: number },
   cmap: ColMap[],
   csvText: string,
-): { hi: number; cmap: ColMap[]; data: string[][] } {
+): { hi: number; cmap: ColMap[]; data: string[][]; header: string[] } {
   const rows = parseCSV(csvText);
 
   /* hints는 [["실적코드"],["자재코드","자재명"]] 꼴 — 바깥 AND, 안쪽 OR. */
@@ -98,18 +98,34 @@ function planSync(
   /* 데이터 행. 전 칸이 빈 행은 구글시트의 빈 격자일 뿐이라 뺀다 —
      이걸 안 빼면 미러가 시트 격자 크기만큼 부풀어 오른다. */
   const data = rows.slice(hi + 1).filter((r) => r.some((c) => String(c ?? "").trim() !== ""));
-  return { hi, cmap, data };
+  return { hi, cmap, data, header: (rows[hi] ?? []).map((x) => String(x ?? "")) };
 }
 
 /* 한 배치를 DB 행 객체로. 빈 문자열은 null로 눕힌다 — 시트의 빈 칸과 '' 를
-   DB에서 구분할 방법이 없고, 구분해봐야 화면이 둘을 똑같이 취급한다. */
-function toRows(data: string[][], cmap: ColMap[], off: number) {
+   DB에서 구분할 방법이 없고, 구분해봐야 화면이 둘을 똑같이 취급한다.
+
+   `extra` — **SPEC이 모르는 열을 통째로 담는다.** 미러는 원래 «대시보드가 쓰는 열»만
+   복사했다(설치현황 111열 중 25열). 시트를 지울 생각이라면 그건 손실이다.
+   전체를 다시 담으면 적재 페이로드가 두 배가 되어 자재실적이 타임아웃에 걸리므로,
+   **매핑되지 않은 열만** 헤더 이름을 키로 담는다. 손실은 0, 크기는 최소.
+   나중에 필요해지면 `extra->>'열이름'`으로 꺼내 정식 열로 승격하면 된다. */
+function toRows(data: string[][], cmap: ColMap[], off: number, header: string[] = []) {
+  const mapped = new Set(cmap.map((c) => c.idx).filter((i) => i >= 0));
+  // 헤더가 빈 열은 담을 이름이 없다 — 값이 있어도 키를 못 만든다. 담지 않고 세어만 둔다.
+  const extraCols = header.map((h, i) => ({ i, h: String(h ?? "").trim() }))
+    .filter((x) => !mapped.has(x.i) && x.h !== "");
   return data.map((r, i) => {
     const o: Record<string, unknown> = { src_row: off + i };
     for (const c of cmap) {
       const v = c.idx >= 0 ? String(r[c.idx] ?? "") : "";
       o[c.col] = v === "" ? null : v;
     }
+    const ex: Record<string, string> = {};
+    for (const x of extraCols) {
+      const v = String(r[x.i] ?? "").trim();
+      if (v !== "") ex[x.h] = v;           // 빈 칸은 넣지 않는다 — jsonb 가 공허하게 커진다
+    }
+    o.extra = Object.keys(ex).length ? ex : null;
     return o;
   });
 }
@@ -166,12 +182,12 @@ async function syncOne(svc: any, tbl: string) {
     const cmap: ColMap[] = cmRaw.map((c: any) => ({ ...c, idx: -1 }));
 
     /* 2~4. 시트를 받아 헤더를 해석하고 데이터 행을 고른다 (순수 변환부) */
-    const { hi, data } = planSync(spec, cmap, await fetchCsv(gid));
+    const { hi, data, header } = planSync(spec, cmap, await fetchCsv(gid));
 
     /* 5. 배치 upsert. 키는 시트 행번호(src_row)다 — 실적코드·CODE는 실측상
           빈값과 중복이 있어 키로 못 쓴다(setup-4-tables.sql 상단 주석 참조). */
     for (let off = 0; off < data.length; off += BATCH) {
-      const chunk = toRows(data.slice(off, off + BATCH), cmap, off);
+      const chunk = toRows(data.slice(off, off + BATCH), cmap, off, header);
       const { error } = await svc.rpc("sheet_sync_upsert", { p_tbl: tbl, p_rows: chunk });
       if (error) throw new Error(`UPSERT@${off}: ${error.message}`);
     }
