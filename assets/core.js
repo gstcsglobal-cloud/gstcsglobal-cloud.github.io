@@ -423,11 +423,14 @@ GST.renderChips = function(F, LABELS, onClearName){
   try{ GST.ctxSave(F); }catch(e){}   // 사이트·공정은 다른 탭으로 승계
   const box=document.getElementById('fchips'), list=document.getElementById('fchipList');
   if(!box || !list) return;
-  const active = Object.entries(F).filter(([k,v])=>v);
+  // 다중선택(Set)도 칩으로 보여야 한다 — 걸린 조건이 화면에 안 보이면 모집단을 오해한다
+  const shown = v => (v instanceof Set) ? Array.from(v).join(' · ') : v;
+  const has   = v => (v instanceof Set) ? v.size > 0 : !!v;
+  const active = Object.entries(F).filter(([k,v])=>has(v));
   if(!active.length){ box.style.display='none'; return; }
   box.style.display='flex';
   list.innerHTML = active.map(([k,v])=>
-    `<span class="fchip" onclick="${onClearName}('${k}')">${LABELS[k]||k}: <b>${v}</b> <span class="fx">✕</span></span>`
+    `<span class="fchip" onclick="${onClearName}('${k}')">${LABELS[k]||k}: <b>${GST._esc(shown(v))}</b> <span class="fx">✕</span></span>`
   ).join('');
 };
 
@@ -676,6 +679,211 @@ GST.canon = {
   }
 };
 
+/* ---------- 조직 3계층 — Customer · FAB · Floor ------------------------------
+   SPEC-SYNC: 정본은 여기다. kakao-bot/hr.js에 같은 규약이 복제돼 있다(런타임이 갈라
+   파일 공유가 안 된다). 고치면 거기도 같이 고치고 tests/t-sync.mjs를 돌릴 것.
+
+   왜 만들었나. 여섯 페이지가 각자 '고객사'와 '라인'을 해석하다 두 차원이 한 축에 섞였다.
+   report의 lineKeyOf는 `fab + ' ' + customer`를 한 문자열로 합쳐 7키로 뭉갰고,
+   그 바람에 Micron의 F16N(Tongluo)이 PSMC·TASC와 동급 형제로 렌더됐다.
+   실측: 설치현황에 Customer=MICRON · Location=TONGLUO · FAB=F16N 58건, 예외 0건.
+   Tongluo는 별도 고객사가 아니라 Micron의 **별도 FAB**이다.
+
+   계층은 이렇게 고정한다:
+     Customer  고객사 법인      MICRON · PSMC · TASC · WINBOND
+     FAB       공장             F16 · F11 · F16N · F16S · F15 · F10
+     Floor     그 안의 동·층    'A3 M2 4F' · 'B 2F' — 화면 표기는 'Line'
+   실적 시트(수선·자재)에는 Floor 열이 없다. 설치현황을 S/N으로 조인해야 얻는다(instIndex).
+   ------------------------------------------------------------------------- */
+GST.ORG = {
+  /* 법인명 → 고객사. 수선·자재 시트의 고객사 열은 법인명 안에 FAB이 박혀 있다
+     ('Micron Memory Taiwan Co., Ltd.(F16)'). Micron은 대만 F16·대만 F11·일본·싱가포르
+     네 법인으로 흩어져 있으나 전부 한 고객사다. */
+  customer: function(s){
+    const u = GST.upk(s || '');
+    if(!u) return '';
+    if(/PSMC|POWERCHIP/.test(u)) return 'PSMC';
+    if(/TASC|TAIWAN-ASIA|ASIA\s*SEMI/.test(u)) return 'TASC';
+    if(/WINBOND/.test(u)) return 'WINBOND';
+    if(/MICRON/.test(u)) return 'MICRON';
+    if(/TSMC/.test(u)) return 'TSMC';
+    if(/SAMSUNG/.test(u)) return 'SAMSUNG';
+    if(/HYNIX/.test(u)) return 'SK HYNIX';
+    // FAB 표기만 있고 법인명이 없는 행 — F1x대는 Micron 사이트다
+    if(/(^|[^A-Z])F1[0156]/.test(u)) return 'MICRON';
+    return u.split(/[\s,.(]/)[0] || '';
+  },
+
+  /* 값 → FAB. 실적 시트는 '라인' 열, 설치·CIP는 'FAB' 열에서 온다.
+     ⚠ 단어경계(\b)를 쓰지 않는다. 예전 `\bF10\b`가 'F10A'에서 A가 word char라 매치에
+     실패해, 싱가포르 F10A/N/X와 일본 F15_E/F/B 합계 4,027건(자재의 13.6%)이
+     빈 키로 떨어져 필터에서 통째로 사라졌다. 접두 매칭으로 바꿔 그 구멍을 막는다. */
+  fab: function(s){
+    const u = GST.upk(s || '').replace(/\s+/g, '');
+    if(!u) return '';
+    if(/TONGL/.test(u)) return 'F16N';      // Tong luo(통뤄) = F16N
+    if(/TAINAN/.test(u)) return 'F16S';     // Tainan(타이난) = F16S
+    const m = u.match(/F(16N|16S|16|15|11|10)/);
+    return m ? 'F' + m[1] : '';
+  },
+
+  /* 하위 표기까지 살린 FAB — F10A · F15_E처럼 같은 FAB 안의 갈래를 구분해야 할 때.
+     fab()이 'F15'로 뭉개는 것을 여기서는 'F15_E'로 남긴다. */
+  fabFull: function(s){
+    const u = GST.upk(s || '').replace(/\s+/g, '');
+    if(!u) return '';
+    const m = u.match(/F(?:16N|16S|16|15|11|10)[A-Z_0-9]*/);
+    return m ? m[0] : GST.ORG.fab(u);
+  },
+
+  // 'MICRON F16' — 고객사와 FAB을 한 줄로 보일 때. hr의 SITE_ORDER와 같은 표기다.
+  label: function(cust, fab){
+    const c = GST.ORG.customer(cust), f = GST.ORG.fab(fab || cust);
+    if(c && f && c === 'MICRON') return c + ' ' + f;   // Micron만 FAB이 여럿이다
+    return c || f || '';
+  },
+
+  /* Floor 값 정리. 설치현황 Floor는 'A3 M2 4F'·'B 2F' 형식인데 오염값이 섞여 있다
+     (F16N에 도시명 '台中' 1건). 층 표기가 아닌 것은 받지 않는다 — 조용히 통과시키면
+     Floor 축에 도시가 한 칸 끼어 축 자체를 의심하게 만든다. */
+  floor: function(s){
+    const t = String(s == null ? '' : s).replace(/\s+/g, ' ').trim().toUpperCase();
+    if(!t) return '';
+    return /\d\s*F$|^\d+F/.test(t) ? t : '';
+  },
+
+  /* 설치현황 조인 인덱스 — 실적 시트에 없는 Floor·Location을 S/N으로 끌어온다.
+     조회 순서는 설비호기(Scrubber CODE) 먼저, 미스면 S/N. 실측 커버리지가 이 순서에서
+     가장 높다(수선 95.7% · 자재 85.7%).
+     ⚠ 일본(F15_*)·싱가포르(F10*) 설비는 설치현황 시트에 아예 없어 원리적으로 못 붙는다.
+        자재 미매치 4,235건 중 4,027건이 그것이다. 빈칸으로 두지 말고 '미상'으로 세라. */
+  instIndex: function(rows, C, hi){
+    const byCode = new Map(), bySN = new Map();
+    const key = s => String(s == null ? '' : s).replace(/\s+/g, '').toUpperCase();
+    (rows || []).slice((hi || 0) + 1).forEach(function(r){
+      const rec = {
+        customer: GST.ORG.customer(GST.SM.val(r, C, 'customer')),
+        fab:      GST.ORG.fab(GST.SM.val(r, C, 'fab')),
+        floor:    GST.ORG.floor(GST.SM.val(r, C, 'floor')),
+        location: GST.upk(GST.SM.val(r, C, 'location') || '').trim(),
+        bay:      GST.nfw(GST.SM.val(r, C, 'bay') || '').trim()
+      };
+      const c = key(GST.SM.val(r, C, 'code')), s = key(GST.SM.val(r, C, 'sn'));
+      if(c && !byCode.has(c)) byCode.set(c, rec);
+      if(s && !bySN.has(s)) bySN.set(s, rec);
+    });
+    return {
+      byCode: byCode, bySN: bySN,
+      // 설비호기 → S/N 순으로 찾는다. 못 찾으면 null (호출부가 '미상'으로 라벨링한다)
+      find: function(code, sn){
+        return byCode.get(key(code)) || bySN.get(key(sn)) || null;
+      }
+    };
+  }
+};
+
+/* 배수 표기 — '×'는 곱하기로 읽힌다. 4.5배라고 쓴다.
+   한때 fault는 '×5.2'(접두), material·피벗은 '5.2×'(접미)로 갈려 있었다.
+   같은 화면의 같은 개념이 두 표기로 나오면 사용자는 다른 지표라고 읽는다. */
+GST.XMUL = { ko:'배', en:'x', zh:'倍', ja:'倍' };
+GST.xmul = function(v){
+  if(v == null || !isFinite(v)) return '—';
+  const n = v >= 10 ? Math.round(v) : Math.round(v * 10) / 10;
+  return n + (GST.XMUL[GST._lang()] || GST.XMUL.ko);
+};
+// 배수의 세기를 색으로 — 3배 넘으면 눈에 걸리고, 10배 넘으면 먼저 보여야 한다
+GST.xcol = function(v){
+  return (v >= 10) ? 'var(--bad,#fb7185)' : (v >= 3 ? '#fbbf24' : 'inherit');
+};
+
+/* 월별 급증 판정 — 고장·자재 두 페이지가 **이 함수 하나만** 쓴다.
+   v75에서 막대와 표가 각자 판정하다 같은 문구를 달고 서로 반대 결론을 낸 조합이
+   110건 나왔다. 판정이 두 벌이면 반드시 갈라진다.
+
+   ① 월 축을 '자료가 있는 달'이 아니라 최소~최대 사이 **연속 달력**으로 채운다.
+      안 그러면 25-09와 26-03이 나란한 막대로 붙어 '꾸준히 늘다 튀었다'로 읽히고,
+      '직전 6개월 평균'이 '직전 6개 항목 평균'으로 바뀌어 배수가 부풀려진다.
+   ② 기준선 분모는 6으로 고정하고, 앞이 6개월 확보되지 않은 달은 판정하지 않는다. */
+GST.SURGE = { minN: 5, x: 2 };
+GST.monthSeq = function(counts){
+  const ks = Object.keys(counts || {}).sort();
+  if(!ks.length) return [];
+  const idx = k => { const p = k.split('-'); return (+p[0]) * 12 + (+p[1] - 1); };
+  const lab = i => Math.floor(i / 12) + '-' + String(i % 12 + 1).padStart(2, '0');
+  const out = [];
+  for(let i = idx(ks[0]); i <= idx(ks[ks.length - 1]); i++){
+    const k = lab(i); out.push({ k: k, n: counts[k] || 0 });
+  }
+  return out;
+};
+GST.monthSurges = function(counts, opt){
+  const o = opt || {}, minN = o.minN != null ? o.minN : GST.SURGE.minN,
+        X = o.x != null ? o.x : GST.SURGE.x;
+  const seq = GST.monthSeq(counts), hits = [];
+  for(let i = 6; i < seq.length; i++){
+    const cur = seq[i].n;
+    if(cur < minN) continue;
+    let sum = 0; for(let j = i - 6; j < i; j++) sum += seq[j].n;
+    const base = sum / 6;                       // 빈 달도 0으로 세는 고정 분모
+    if(base <= 0) continue;                     // 기준선 0이면 배수가 무한대다
+    if(cur / base >= X) hits.push({ k: seq[i].k, n: cur, base: base, x: cur / base });
+  }
+  return { seq: seq, hits: hits };
+};
+
+/* 다중선택 체크박스 — FAB처럼 여러 개를 동시에 고르는 필터.
+   주간현황이 쓰던 것을 공용으로 올렸다. **함정이 하나 있어 규약으로 고정한다:**
+   박스는 최초 1회만 만들고 이후엔 체크 상태만 갱신한다. 렌더마다 innerHTML을 갈면
+   체크 직후 그 노드가 문서에서 분리되어, 바깥 클릭 판정에 걸려 목록이 닫혀버린다.
+
+     GST.mselFill('fab', ['F16','F11'], F.fab, onChange)   // 값 목록은 데이터에서
+   마크업은 페이지가 둔다:
+     <button id="fabBtn" class="mselbtn" onclick="GST.mselToggle('fab',event)">전체 ▾</button>
+     <div id="fabBox" class="mselbox"></div>                                        */
+GST.mselToggle = function(id, ev){
+  if(ev) ev.stopPropagation();
+  const el = document.getElementById(id + 'Box'); if(!el) return;
+  el.style.display = el.style.display === 'block' ? 'none' : 'block';
+};
+GST.mselFill = function(id, values, sel, onChange){
+  const box = document.getElementById(id + 'Box'), btn = document.getElementById(id + 'Btn');
+  if(!box) return;
+  if(!box.dataset.built || box.dataset.keys !== values.join('\u001f')){
+    box.dataset.built = '1'; box.dataset.keys = values.join('\u001f');
+    GST._msel = GST._msel || {};
+    GST._msel[id] = { sel: sel, cb: onChange };
+    box.innerHTML =
+      '<div class="ms-all"><button type="button" data-all="1">' + (GST._lang()==='ko'?'전체 선택':'All')
+      + '</button><button type="button" data-all="0">' + (GST._lang()==='ko'?'전체 해제':'None') + '</button></div>'
+      + values.map(function(v){
+          return '<label><input type="checkbox" data-v="' + GST._esc(v) + '">' + GST._esc(v) + '</label>';
+        }).join('');
+    box.onclick = function(e){
+      const a = e.target.closest('[data-all]');
+      if(a){ sel.clear(); if(a.dataset.all === '1') values.forEach(function(v){ sel.add(v); });
+             GST.mselSync(id, values, sel); onChange && onChange(); return; }
+      const c = e.target.closest('input[data-v]');
+      if(c){ if(c.checked) sel.add(c.dataset.v); else sel.delete(c.dataset.v);
+             GST.mselSync(id, values, sel); onChange && onChange(); }
+    };
+  } else if(GST._msel && GST._msel[id]) { GST._msel[id].sel = sel; GST._msel[id].cb = onChange; }
+  GST.mselSync(id, values, sel);
+};
+GST.mselSync = function(id, values, sel){
+  const box = document.getElementById(id + 'Box'), btn = document.getElementById(id + 'Btn');
+  if(box) box.querySelectorAll('input[data-v]').forEach(function(i){ i.checked = sel.has(i.dataset.v); });
+  if(btn) btn.textContent = (sel.size ? Array.from(sel).join(' · ')
+    : (GST.PIV_T[GST._lang()] || GST.PIV_T.ko).all) + ' \u25be';
+};
+// 바깥을 누르면 닫는다 — 한 번만 걸어 두고 모든 박스가 공유한다
+if(typeof document !== 'undefined') document.addEventListener('click', function(e){
+  document.querySelectorAll('.mselbox').forEach(function(b){
+    if(b.style.display !== 'block') return;
+    const id = b.id.replace(/Box$/, ''), btn = document.getElementById(id + 'Btn');
+    if(!b.contains(e.target) && e.target !== btn) b.style.display = 'none';
+  });
+});
+
 // 매핑 결과 누적 — 진단 패널이 읽는다
 GST.SM._reg = [];
 GST.SM._log = function(res){
@@ -754,13 +962,30 @@ GST.skeleton=function(on){
 };
 
 /* ---------- 11. 필터 상태 URL 공유 (Stage 4) ---------- */
+/* 다중선택(Set)도 실어야 한다. JSON.stringify(new Set) 은 '{}' 가 되므로 그대로 두면
+   ① 링크에 FAB 선택이 안 담기고 ② 복원할 때 F.fab 이 빈 객체로 덮여 .has 가 사라진다
+   (실제로 자재현황이 이 순서로 죽었다: "sel.has is not a function"). 배열로 눕혀 담는다. */
 GST.encodeState=function(F){
-  const a={}; Object.entries(F).forEach(([k,v])=>{ if(v!==''&&v!=null&&v!=='ALL') a[k]=v; });
+  const a={}; Object.entries(F).forEach(([k,v])=>{
+    if(v instanceof Set){ if(v.size) a[k]=Array.from(v); return; }
+    if(v!==''&&v!=null&&v!=='ALL') a[k]=v;
+  });
   if(!Object.keys(a).length) return '';
   return encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(a)))));
 };
 GST.decodeState=function(s){
   try{ return JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(s))))); }catch(e){ return null; }
+};
+/* 복원은 Object.assign 으로 하면 안 된다 — 배열이 Set 자리를 차지한다.
+   현재 F 의 타입을 기준으로 되살린다. 페이지는 이 함수만 부르면 된다. */
+GST.applyState=function(F, st){
+  if(!st) return F;
+  Object.keys(st).forEach(function(k){
+    if(!(k in F)) return;
+    if(F[k] instanceof Set){ F[k].clear(); [].concat(st[k]||[]).forEach(function(v){ F[k].add(v); }); }
+    else F[k]=st[k];
+  });
+  return F;
 };
 // 필터 변경 시 호출: iframe이면 셸 URL 갱신 요청, 직접 접속이면 자기 주소 갱신
 GST.pushState=function(F){
@@ -2337,29 +2562,29 @@ GST.briefOpen=function(){
      · TSV 복사 · CSV 내려받기 · 셀 클릭 시 원본 상세
    ============================================================ */
 GST.PIV_T={
-  ko:{t:'다차원 피벗',sub:'현재 필터 기준 교차 집계',src:'데이터',per:'기간',row:'행',col:'열',val:'값',swap:'⇄ 전치',
+  ko:{t:'교차분석',sub:'현재 필터 기준 교차 집계',src:'데이터',per:'기간',row:'행',col:'열',val:'값',swap:'⇄ 전치',
       copy:'복사(TSV)',copied:'복사됨',csv:'CSV',close:'닫기',tot:'합계',sub2:'소계',etc:'기타',
       none:'표시할 데이터가 없습니다.',no:'(없음)',detail:'상세',more:'외 {n}건',pick:'값 고르기',
       all:'전체',clr:'해제',apply:'적용',find:'검색',rows:'{n}행',non:'—',cmp:'Δ 기간비교',cmpA:'기간 A',cmpB:'직전 B',cmpD:'Δ%',cmpHint:'A=기간 필터(비우면 최근 30일) · B=같은 길이의 직전 구간',
-      disp:'표시',d_raw:'원값',d_row:'행 대비 %',d_col:'열 대비 %',d_all:'총계 대비 %',d_lift:'집중지수(×)',
+      disp:'표시',d_raw:'원값',d_row:'행 대비 %',d_col:'열 대비 %',d_all:'총계 대비 %',d_lift:'집중지수',
       top:'상위',t_all:'전체',sub_on:'소계'},
-  en:{t:'Pivot',sub:'Cross-tab on current filters',src:'Data',per:'Period',row:'Rows',col:'Cols',val:'Values',swap:'⇄ Swap',
+  en:{t:'Cross Analysis',sub:'Cross-tab on current filters',src:'Data',per:'Period',row:'Rows',col:'Cols',val:'Values',swap:'⇄ Swap',
       copy:'Copy (TSV)',copied:'Copied',csv:'CSV',close:'Close',tot:'Total',sub2:'Subtotal',etc:'Others',
       none:'No data to show.',no:'(none)',detail:'Detail',more:'+{n} more',pick:'Filter',
       all:'All',clr:'Clear',apply:'Apply',find:'Search',rows:'{n} rows',non:'—',cmp:'Δ Compare',cmpA:'Period A',cmpB:'Prev B',cmpD:'Δ%',cmpHint:'A = date filter (last 30d if empty) · B = preceding window of equal length',
-      disp:'Show as',d_raw:'Value',d_row:'% of row',d_col:'% of column',d_all:'% of total',d_lift:'Lift (×)',
+      disp:'Show as',d_raw:'Value',d_row:'% of row',d_col:'% of column',d_all:'% of total',d_lift:'Lift',
       top:'Top',t_all:'All',sub_on:'Subtotals'},
-  zh:{t:'多维透视',sub:'按当前筛选交叉汇总',src:'数据',per:'期间',row:'行',col:'列',val:'值',swap:'⇄ 转置',
+  zh:{t:'交叉分析',sub:'按当前筛选交叉汇总',src:'数据',per:'期间',row:'行',col:'列',val:'值',swap:'⇄ 转置',
       copy:'复制(TSV)',copied:'已复制',csv:'CSV',close:'关闭',tot:'合计',sub2:'小计',etc:'其他',
       none:'无数据。',no:'(无)',detail:'明细',more:'其他{n}条',pick:'筛选值',
       all:'全部',clr:'清除',apply:'应用',find:'搜索',rows:'{n}行',non:'—',cmp:'Δ 期间对比',cmpA:'期间A',cmpB:'前一期B',cmpD:'Δ%',cmpHint:'A=所选期间(空则近30天) · B=等长的前一区间',
-      disp:'显示方式',d_raw:'数值',d_row:'占行%',d_col:'占列%',d_all:'占总计%',d_lift:'集中指数(×)',
+      disp:'显示方式',d_raw:'数值',d_row:'占行%',d_col:'占列%',d_all:'占总计%',d_lift:'集中指数',
       top:'前',t_all:'全部',sub_on:'小计'},
-  ja:{t:'多次元ピボット',sub:'現在のフィルタで集計',src:'データ',per:'期間',row:'行',col:'列',val:'値',swap:'⇄ 転置',
+  ja:{t:'クロス分析',sub:'現在のフィルタで集計',src:'データ',per:'期間',row:'行',col:'列',val:'値',swap:'⇄ 転置',
       copy:'コピー(TSV)',copied:'コピー済',csv:'CSV',close:'閉じる',tot:'合計',sub2:'小計',etc:'その他',
       none:'データがありません。',no:'(なし)',detail:'明細',more:'他{n}件',pick:'値を選ぶ',
       all:'全体',clr:'解除',apply:'適用',find:'検索',rows:'{n}行',non:'—',cmp:'Δ 期間比較',cmpA:'期間A',cmpB:'直前B',cmpD:'Δ%',cmpHint:'A=期間フィルタ(空なら直近30日) · B=同じ長さの直前区間',
-      disp:'表示形式',d_raw:'実数',d_row:'行比%',d_col:'列比%',d_all:'総計比%',d_lift:'集中指数(×)',
+      disp:'表示形式',d_raw:'実数',d_row:'行比%',d_col:'列比%',d_all:'総計比%',d_lift:'集中指数',
       top:'上位',t_all:'全体',sub_on:'小計'}
 };
 GST._pivot=null;
@@ -2528,7 +2753,7 @@ GST.pivotOpen=function(){
       if(!base) return '·';
       if(v<3) return '·';                       // 표본 부족 — 배수가 튄다
       const x=v/base;
-      return (x>=10?Math.round(x):Math.round(x*10)/10)+'×';
+      return GST.xmul(x);
     }
     if(base==null||!base) return '·';
     return (Math.round(v/base*1000)/10)+'%';
