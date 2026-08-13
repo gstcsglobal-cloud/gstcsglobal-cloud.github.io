@@ -17,7 +17,11 @@ const s0 = inst[0];
 console.log('  첫 행:', JSON.stringify({sn:s0.sn, code:s0.code, fab:s0.fab, floor:s0.floor,
   bay:s0.bay, model:s0.model, group1:s0.group1, detail1:s0.detail1,
   turnOn: s0.turnOn && s0.turnOn.toISOString().slice(0,10), warranty:s0.warranty, chambers:s0.chambers}));
-ok(inst.length === 1490, `설치 대수 기대 1490(기존 검증값) → ${inst.length}`);
+/* 이 1490은 «픽스처»의 대수지 시트의 대수가 아니다. 시트는 계속 는다 —
+   2026-08-13 실측 1,515대. 픽스처를 새로 뜨면 여기가 먼저 실패하는데,
+   그건 파서가 깨진 게 아니라 모집단이 바뀐 것이다. 새 숫자를 확인하고
+   여기와 tests/README.md 기준값을 같이 올린다. */
+ok(inst.length === 1490, `설치 대수 기대 1490(픽스처 기준) → ${inst.length}`);
 ok(s0.sn === 'GBWS-6870', `첫 S/N 기대 GBWS-6870 → ${s0.sn}`);
 ok(s0.code === 'TDALNBV100', `code 기대 TDALNBV100 → ${s0.code}`);
 ok(s0.fab === 'F16N', `fab 기대 F16N → ${s0.fab}`);

@@ -16,7 +16,9 @@ const HERE = path.dirname(new URL(import.meta.url).pathname);
 const files = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' })
   .split('\n').filter(Boolean)
   .filter(f => !f.startsWith('tests/'))
-  .filter(f => /\.(html|js|ts|md|json|css)$/.test(f));
+  // .sql도 본다 — setup-4-tables.sql은 생성물이라, 생성기가 잘못 잡으면
+  // 시트 값이 그대로 시드에 박혀 커밋될 수 있다.
+  .filter(f => /\.(html|js|ts|md|json|css|sql)$/.test(f));
 
 // 실데이터 원본과 대조한다. 패턴만으로는 '전체'·'고객사' 같은 UI 단어까지 인명으로 잡혀
 // 경고가 홍수를 이루고, 홍수가 나면 아무도 안 본다. 명단에 있는 것만 잡는다.
