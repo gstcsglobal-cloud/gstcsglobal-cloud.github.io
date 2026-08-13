@@ -140,5 +140,52 @@ console.log('\n[3] gid 지도 — 미러와 CSV 표가 같은 gid 를 다투지 
              : ok(`미러 ${a.length}개 · CSV ${b.length}개 · 겹침 없음`);
 }
 
+/* ---------- 4. 읽기 — 정렬 열을 «가정하지 않는지» ----------
+   Table Editor 로 만든 표에 id 가 늘 있는 것이 아니다. 실제로 없었고,
+   `.order('id')` 를 박아둔 탓에 `column sheet_roster.id does not exist` 로
+   교육·인원·휴가 셋이 통째로 못 읽혔다(폴백이 시트로 돌려 화면은 살았지만
+   그때부터는 DB 를 안 보고 있던 것이다). 그 상황을 그대로 재현한다. */
+console.log('\n[4] 읽기 — 표에 id 가 없어도 읽는지');
+{
+  // Supabase 클라이언트를 흉내낸다. 요청한 정렬 열이 없으면 PostgREST 처럼 에러를 낸다.
+  const mkClient = rowsByTable => ({
+    from(t) {
+      const rows = rowsByTable[t] || [];
+      const st = { ord: null };
+      const api = {
+        select() { return api; },
+        order(col) { st.ord = col; return api; },
+        limit(k) { return Promise.resolve({ data: rows.slice(0, k), error: null }); },
+        range(a, b) {
+          if (st.ord && !(rows[0] && st.ord in rows[0]))
+            return Promise.resolve({ data: null, error: { message: `column ${t}.${st.ord} does not exist` } });
+          const s = st.ord ? rows.slice().sort((x, y) => String(x[st.ord]).localeCompare(String(y[st.ord]))) : rows;
+          return Promise.resolve({ data: s.slice(a, b + 1), error: null });
+        },
+      };
+      return api;
+    },
+  });
+  const cases = [
+    ['id 있는 표',  [{ id: 2, 'No': '2', '인원': 'B' }, { id: 1, 'No': '1', '인원': 'A' }], 'id'],
+    ['id 없는 표',  [{ 'No': '2', '인원': 'B' }, { 'No': '1', '인원': 'A' }], 'No'],
+    ['이름뿐인 표', [{ '사원번호': '9', '이름': 'Z' }, { '사원번호': '8', '이름': 'Y' }], '사원번호'],
+  ];
+  const realDb = G.db;
+  for (const [label, rows, wantOrd] of cases) {
+    const got = G._csvOrderCol(Object.keys(rows[0]));
+    got === wantOrd ? ok(`${label}: 정렬 열 '${got}' 선택`) : err(`${label}: 정렬 열 '${got}' (기대 '${wantOrd}')`);
+    G.db = async () => mkClient({ t: rows });
+    try {
+      const out = await G.csvTableRows('t');
+      const head = out[0];
+      // 관리용 열(id)은 헤더로 나가면 안 된다 — 파서가 그걸 시트 열로 착각한다
+      head.indexOf('id') < 0 ? ok(`${label}: 헤더 [${head.join(', ')}] · ${out.length - 1}행 (id 제외됨)`)
+                             : err(`${label}: 헤더에 id 가 섞였다`);
+    } catch (e) { err(`${label}: 읽기 실패 — ${e.message}`); }
+  }
+  G.db = realDb;
+}
+
 console.log(`\n${bad ? '❌' : '✅'} ${n - bad}/${n} 통과`);
 process.exit(bad ? 1 : 0);

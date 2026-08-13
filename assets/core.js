@@ -1050,14 +1050,32 @@ GST.CSV_TABLE_OF_GID = {
 // Import 표에 딸려오는 관리용 열 — 헤더로 내보내지 않는다
 GST._CSV_SKIP = { id:1, created_at:1, imported_at:1, src_row:1, synced_at:1, extra:1 };
 
+/* 정렬 열을 **가정하지 않는다.** Table Editor 로 만든 표에 id 가 늘 있는 것이 아니다
+   (실제로 없었고, `column sheet_roster.id does not exist` 로 읽기가 통째로 실패했다).
+   한 행을 먼저 받아 실제 열 이름을 보고 고른다. */
+GST._csvOrderCol = function(keys){
+  const pref = ['id','src_row','No','no','NO','No.'];
+  for(let i=0;i<pref.length;i++) if(keys.indexOf(pref[i])>=0) return pref[i];
+  return keys[0] || null;               // 없으면 첫 열 — 정렬이 없으면 페이지가 겹칠 수 있다
+};
+
 GST.csvTableRows = async function(table){
   const c = await GST.db(); if(!c) throw new Error('DB_OFF');
+
+  const probe = await c.from(table).select('*').limit(1);
+  if(probe.error) throw new Error('READ '+probe.error.message);
+  if(!probe.data || !probe.data.length) throw new Error('EMPTY — '+table+' 에 행이 없다 (Import 했는가)');
+  const ordCol = GST._csvOrderCol(Object.keys(probe.data[0]));
+
   /* 페이지네이션은 미러와 같은 규약 — 「요청한 만큼 안 오면 끝」으로 판정하지 않는다.
      PostgREST 의 행수 상한은 프로젝트 설정이라, 상한에 걸린 것을 완료로 착각하면
-     잘린 데이터를 조용히 그린다. **0행일 때만 멈춘다.** */
+     잘린 데이터를 조용히 그린다. **0행일 때만 멈춘다.**
+     정렬이 없으면 range() 로 나눠 받을 때 행이 겹치거나 빠질 수 있으므로 반드시 건다. */
   const STEP = 5000; let from = 0; const out = [];
   for(let guard=0; guard<400; guard++){
-    const r = await c.from(table).select('*').order('id', {ascending:true}).range(from, from+STEP-1);
+    let q = c.from(table).select('*');
+    if(ordCol) q = q.order(ordCol, {ascending:true});
+    const r = await q.range(from, from+STEP-1);
     if(r.error) throw new Error('READ '+r.error.message);
     const n = (r.data||[]).length; if(!n) break;
     for(let i=0;i<n;i++) out.push(r.data[i]);
