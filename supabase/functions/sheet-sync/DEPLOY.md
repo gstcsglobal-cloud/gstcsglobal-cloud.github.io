@@ -86,15 +86,23 @@ Edge Functions → Secrets. **값이 아니라 이름만 여기 적는다.**
 
 | 이름 | 상태 |
 |---|---|
-| `SYNC_SECRET` | **이미 있다** — `kakao-bot`이 `?op=sync` 인증에 쓰는 것과 같은 값 |
-| `SHEET_PUB_URL` | **이미 있다** — `sheet-proxy`·`kakao-bot`이 쓰는 것과 같은 값 |
+| `SYNC_SECRET` | **Secrets 화면에서 직접 확인할 것** — 있을 수도, 없을 수도 있다 (아래 경고) |
+| `SHEET_PUB_URL` | 이미 있다 — `sheet-proxy`·`kakao-bot`이 쓰는 것과 같은 값 |
 | `SUPABASE_URL` | 플랫폼이 자동 주입 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 플랫폼이 자동 주입 |
 
-> **`SYNC_SECRET`을 새로 만들지 말 것.** Supabase 시크릿은 함수별이 아니라
-> **프로젝트 전체 공용**이라 `sheet-sync`가 기존 값을 그대로 본다.
-> 값을 바꾸면 `kakao-bot`의 기존 sync 호출이 같이 깨진다.
-> 값을 모르겠으면 Secrets 화면에서 확인하거나, 바꾸려면 **두 함수의 호출부를 같이** 고친다.
+> ⚠ **`SYNC_SECRET`을 만들면 `kakao-bot`의 sync 인증이 그 순간 켜진다.**
+> Supabase 시크릿은 함수별이 아니라 **프로젝트 전체 공용**이다. 그런데 `kakao-bot`(`index.ts:840`)의
+> 검사는 `if (want && 헤더 !== want)` 라서 — **시크릿이 없으면 인증을 아예 건너뛴다.**
+> 없는 상태로 `?op=sync`를 부르던 호출이 있었다면, 시크릿을 만드는 순간 **전부 403**이 된다.
+>
+> 실제로 그렇게 됐다. 이 문서가 한때 "`SYNC_SECRET`은 이미 있다"고 단정했는데
+> (`kakao-bot/DEPLOY.md`의 목록만 보고 쓴 것이고 프로젝트를 확인한 게 아니었다)
+> 이 프로젝트엔 없었다. 만들자마자 `x-sync-secret` 없이 돌던 `sync-kakao-bot` cron이 403으로 죽었다.
+>
+> **그래서 만들기 전에 반드시 `select command from cron.job;` 으로**
+> `kakao-bot ... op=sync` 를 부르는 잡이 있는지 보고, 있으면 그 잡에 헤더를 같이 넣는다.
+> 값을 바꿀 때도 마찬가지다 — **두 함수의 호출부를 함께** 고친다.
 
 ### 4. 손으로 한 번 돌려 본다
 
@@ -129,11 +137,11 @@ anon key는 원래 공개값이다(Settings → API → `anon public`, 또는 `a
 > Verify JWT를 끄는 방법도 있다(kakao-bot이 그 형태다 — 카카오 서버가 Supabase JWT를
 > 못 만드니 필연). 다만 위 형태는 **켜져 있든 꺼져 있든 통과**하므로 설정을 건드릴 이유가 없다.
 
-가장 작은 표(설치현황 1,490행)부터 한다. 응답은 이런 모양이다:
+가장 작은 표(설치현황, 2026-08-13 실측 1,515행)부터 한다. 응답은 이런 모양이다:
 
 ```json
 { "ok": true, "result": [ { "tbl":"inst", "ok":true, "headerRow":0,
-    "rows":1490, "trimmed":0, "sheet_rows":1490, "ms":3100 } ] }
+    "rows":1515, "trimmed":0, "sheet_rows":1515, "ms":7113 } ] }
 ```
 
 `rows`와 `sheet_rows`가 같아야 정상이다. 다르면 적재가 덜 된 것이다.
@@ -180,10 +188,31 @@ select cron.schedule('sync-mat',  '20,50 * * * *', $$
 ```
 
 30분 간격이다. 시트가 그보다 자주 바뀌지 않는다.
-확인은 `select * from cron.job;` ·
-`select * from cron.job_run_details order by start_time desc limit 10;`
-(타임아웃에 걸렸다면 여기서 잡힌다. `sheet_sync_log`는 함수가 끝까지 갔을 때만 남으므로
-**cron 쪽이 조용하고 log 쪽만 비어 있으면 타임아웃을 의심한다.**)
+
+#### cron이 실제로 성공했는지 보는 법 — `job_run_details`를 믿지 말 것
+
+**`net.http_post`는 비동기다.** 요청을 큐에 넣고 곧바로 반환하므로,
+HTTP가 403이든 타임아웃이든 `cron.job_run_details`에는 **`succeeded`로 남는다.**
+거기만 보면 "cron 잘 돌고 있네"로 읽힌다 — 실제로 그렇게 오진했다.
+
+진실은 `net._http_response`에 있다:
+
+```sql
+select id, status_code, error_msg, left(content,200) as body, created
+  from net._http_response order by created desc limit 20;
+```
+
+| 보이는 것 | 뜻 |
+|---|---|
+| `status_code` 200 | 정상 |
+| `status_code` 403 · `forbidden` | `x-sync-secret`이 없거나 틀림 |
+| `status_code` NULL · `Timeout of 5000 ms reached` | `timeout_milliseconds`를 안 줬다 |
+
+> 타임아웃이 떠도 **엣지펑션은 취소되지 않는다.** pg_net이 기다리기를 포기할 뿐
+> 함수는 서버에서 계속 돌아 적재를 끝낸다. 그래서 "타임아웃인데 데이터는 들어와 있는"
+> 상태가 생기고, 이게 고장을 오래 눈치 못 채게 만든다. 타임아웃은 반드시 없앤다.
+
+적재 내용 자체는 `select * from sheet_sync_log;` — 함수가 끝까지 갔을 때만 남는다.
 
 되돌리려면 `select cron.unschedule('sync-mat');`
 
