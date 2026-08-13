@@ -207,18 +207,26 @@ jobid를 돌려준다. 그래서 등록하자마자 이걸 돌린다:
 
 ```sql
 select jobname,
-       command ~ '<[^>]+>'                        as 자리표시자_남음,
-       command ~ '"x-sync-secret":"[0-9a-f]{64}"' as 다이제스트_의심,
-       command like '%timeout_milliseconds%'      as 타임아웃_있음
+       substring(command from '"x-sync-secret"\s*:\s*"([^"]{0,8})') as 값_앞8자,
+       command ~ '<[^>]+>'                                          as 자리표시자_남음,
+       command ~ '"x-sync-secret"\s*:\s*"[0-9a-f]{64}"'             as 다이제스트_의심,
+       command like '%timeout_milliseconds%'                        as 타임아웃_있음
   from cron.job order by jobname;
 ```
 
-**`false · false · true`** 가 아닌 줄이 있으면 그 잡은 지금 실패하도록 등록된 것이다.
+`값_앞8자`가 **Secrets에 설정된 값의 앞 8자와 같아야** 하고, 나머지는 **`false · false · true`**.
 셋 다 이번에 실제로 한 번씩 겪었다 — 자리표시자를 안 바꾼 채 네 개를 등록했고,
 그다음엔 Secrets의 DIGEST를 값으로 붙여넣었다.
 
-> `다이제스트_의심`은 **정확히 64자 16진수**를 잡는다. 진짜 시크릿이 우연히 그 꼴이면
-> 거짓 경보가 나지만, 그때는 값 보기로 대조하면 1초에 끝난다. 반대 방향(놓치는 것)이 훨씬 비싸다.
+> **`\s*`를 빼지 말 것.** `json_build_object(...)::text`는 콜론 양쪽에 공백을 넣는다
+> (`"x-sync-secret" : "값"`). 공백 없는 패턴으로 쓰면 그 형태에서 **매칭 자체가 안 되어
+> 전부 `false`로 나온다** — 통과한 것처럼 보이지만 실은 아무것도 검사하지 않은 것이다.
+> 실제로 그렇게 한 번 속았다. `값_앞8자`를 같이 뽑는 이유가 이것이다 —
+> **거기가 `NULL`이면 나머지 열은 믿을 수 없다.**
+
+> `다이제스트_의심`은 **정확히 64자 16진수**를 잡는다. 진짜 시크릿이 그 꼴이면 거짓 경보가 나므로,
+> 시크릿은 **16진수가 아닌 값**으로 두는 게 낫다(`gst-sync-2026-08-13-kx7m` 처럼).
+> 그러면 이 검사가 다이제스트만 정확히 걸러낸다.
 
 #### cron이 실제로 성공했는지 보는 법 — `job_run_details`를 믿지 말 것
 
