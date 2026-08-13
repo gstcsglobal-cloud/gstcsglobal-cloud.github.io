@@ -371,7 +371,7 @@ ko:{title:'CIP 현황',sub:'스크러버 개조·점검(CIP) 항목별 진행 �
   ins_rate:'진행율 {p}% · 잔여 {n}건',ins_proc:'{g} 공정 잔여 최다 {n}건 ({p}%)',
   ins_item:'항목 {v} — 잔여 {n}건으로 최다',ins_old:'180일 넘게 미착수 {n}건 — 우선 처리 필요',
   ins_new:'{lab} 신규 완료 {n}건',ins_bad:'날짜 이상 데이터 {n}건 — 시트 확인 필요',
-  no_data:'조건에 맞는 데이터가 없습니다',loading:'데이터 불러오는 중...',
+  no_data:'조건에 맞는 데이터가 없습니다',rd_cip:'S/N|Floor|구분|항목|적용일|완료일',loading:'데이터 불러오는 중...',
   sec_ov:'개요',sec_proc:'공정',sec_item:'항목·설비',sec_dt:'상세',
   warn_cols:'CIP 항목 열 수가 예상과 다릅니다 ({s}: 예상 {e}개 · 실제 {a}개) — 시트에 열이 추가·삭제되었는지 확인하세요'},
 en:{title:'CIP Status',sub:'Scrubber retrofit/inspection (CIP) progress by item',back:'← Main',refresh:'Refresh',
@@ -400,7 +400,7 @@ en:{title:'CIP Status',sub:'Scrubber retrofit/inspection (CIP) progress by item'
   ins_rate:'progress {p}% · {n} remaining',ins_proc:'{g} has most remaining: {n} ({p}%)',
   ins_item:'Item {v} — most remaining at {n}',ins_old:'{n} items pending over 180 days — prioritize',
   ins_new:'{lab}: {n} newly completed',ins_bad:'{n} rows with invalid dates — check the sheet',
-  no_data:'No data found',loading:'Loading...',
+  no_data:'No data found',rd_cip:'S/N|Floor|Group|Item|Applied|Done',loading:'Loading...',
   sec_ov:'Overview',sec_proc:'Process',sec_item:'Item & Unit',sec_dt:'Detail',
   warn_cols:'CIP item column count differs ({s}: expected {e}, found {a}) — check for added/removed columns'},
 zh:{title:'CIP 现况',sub:'洗涤器改造·点检(CIP)按项目进度管理',back:'← 主页',refresh:'刷新',
@@ -429,7 +429,7 @@ zh:{title:'CIP 现况',sub:'洗涤器改造·点检(CIP)按项目进度管理',b
   ins_rate:'进度 {p}% · 剩余 {n}件',ins_proc:'{g} 工艺剩余最多 {n}件 ({p}%)',
   ins_item:'项目 {v} — 剩余 {n}件最多',ins_old:'超180天未着手 {n}件 — 需优先处理',
   ins_new:'{lab} 新增完成 {n}件',ins_bad:'日期异常数据 {n}件 — 请确认表格',
-  no_data:'无数据',loading:'加载中...',
+  no_data:'无数据',rd_cip:'S/N|楼层|分组|项目|适用日|完成日',loading:'加载中...',
   sec_ov:'概览',sec_proc:'工艺',sec_item:'项目·设备',sec_dt:'明细',
   warn_cols:'CIP项目列数与预期不符 ({s}: 预期{e}个 · 实际{a}个) — 请确认是否增删了列'},
 ja:{title:'CIP 状況',sub:'スクラバー改造·点検(CIP)の項目別進捗管理',back:'← メイン',refresh:'更新',
@@ -458,7 +458,7 @@ ja:{title:'CIP 状況',sub:'スクラバー改造·点検(CIP)の項目別進捗
   ins_rate:'進捗 {p}% · 残り {n}件',ins_proc:'{g} 工程の残りが最多 {n}件 ({p}%)',
   ins_item:'項目 {v} — 残り {n}件で最多',ins_old:'180日超の未着手 {n}件 — 優先処理が必要',
   ins_new:'{lab} 新規完了 {n}件',ins_bad:'日付異常データ {n}件 — シート確認要',
-  no_data:'データなし',loading:'読込中...',
+  no_data:'データなし',rd_cip:'S/N|フロア|区分|項目|適用日|完了日',loading:'読込中...',
   sec_ov:'概要',sec_proc:'工程',sec_item:'項目·設備',sec_dt:'詳細',
   warn_cols:'CIP項目の列数が想定と異なります ({s}: 想定{e}個 · 実際{a}個) — 列の追加·削除を確認してください'}
 };
@@ -771,6 +771,13 @@ function render(){
   const rate=nT?Math.round(nD/nT*100):0;
   MODEL={snap,asOf,isDone};
 
+  // 차트 세부내역(v83 · chart.$rows 규약) 공용 행 빌더 — 6개 차트가 같은 6열을 내도록
+  // 한 곳에 둔다. 각자 열을 고르게 두면 같은 레코드가 차트마다 다르게 보인다.
+  // 정렬은 완료일(없으면 적용일) 최신순 — 방금 처리된 건이 맨 위에 오는 게 확인 동선이다.
+  const rdet=(recs,title)=>({title,cols:t('rd_cip').split('|'),
+    rows:recs.slice().sort((a,b)=>(b.done||b.ap||0)-(a.done||a.ap||0))
+      .map(x=>[x.sn,x.floor,x.group,x.item,x.ap?GST.fmtDate(x.ap):'—',x.done?GST.fmtDate(x.done):'—'])});
+
   // ── KPI ──
   const put=(id,v)=>{document.getElementById(id).textContent=v;};
   const {P:P0,labels:L0}=PU('cipTrend');
@@ -817,6 +824,14 @@ function render(){
           scales:{x:baseScales(TH,false).x,
             y:{grace:'20%',beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
             y2:pctAxis(TH)}}});
+      // 세부내역 — 막대와 같은 필터식(tgt/don 계산식 그대로)이어야 숫자가 맞는다
+      CHARTS.cipTrend.$rows=(di,i)=>{
+        if(di===2||!P[i])return null;                       // 진행율 선은 비율 — 원본 행 목록이 없다
+        const recs=di===0
+          ? fR.filter(x=>!x.ap||x.ap<=P[i].end)
+          : fR.filter(x=>(!x.ap||x.ap<=P[i].end)&&x.done&&x.done<=P[i].end);
+        return rdet(recs,P[i].label+' — '+(di===0?t('s_tgt'):t('s_done'))+' '+recs.length);
+      };
       setNote('cipTrend',t('ins_rate').replace('{p}',rt[rt.length-1]??'—').replace('{n}',(tgt[tgt.length-1]-don[don.length-1]).toLocaleString()));
     }
   }
@@ -837,6 +852,16 @@ function render(){
           scales:{x:baseScales(TH,false).x,
             y:{grace:'20%',beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
             y2:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:TH.txt,precision:0,maxTicksLimit:5,font:{size:9}}}}}});
+      // 세부내역 — 신규는 inP(그 구간에 완료). 누계 선은 nw의 창 내 누계라
+      // 표시 12구간 첫 구간(P[0].st)부터 세야 선의 숫자와 행 수가 일치한다 —
+      // 창 이전 완료까지 넣으면 행이 선값보다 많아진다.
+      CHARTS.cipNew.$rows=(di,i)=>{
+        if(!P[i])return null;
+        const recs=di===0
+          ? fR.filter(x=>inP(x,P[i]))
+          : fR.filter(x=>x.done&&x.done>=P[0].st&&x.done<=P[i].end);
+        return rdet(recs,P[i].label+' — '+(di===0?t('s_new'):t('s_cum'))+' '+recs.length);
+      };
     }
   }
 
@@ -874,6 +899,12 @@ function render(){
             tooltip:{callbacks:{title:it=>top[it[0].dataIndex][0]}}},
           scales:{x:{beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
                   y:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}}}}});
+      // 세부내역 — 집계 키(itemBase||item)를 그대로 되풀이해야 막대 수와 행 수가 일치한다
+      CHARTS.cipTopRem.$rows=(di,i)=>{
+        if(!top[i])return null;
+        const recs=snap.filter(x=>!isDone(x)&&(x.itemBase||x.item)===top[i][0]);
+        return rdet(recs,top[i][0]+' — '+t('s_rem')+' '+recs.length);
+      };
     }
   }
 
@@ -976,6 +1007,18 @@ function render(){
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false}},
         scales:{x:baseScales(TH,false).x,y:baseScales(TH,false).y}}});
+    // 세부내역 — 막대 i는 show[i] 버킷이다(미상 버킷이 없으면 4가 빠진다).
+    // 경계식은 위 집계와 한 글자도 다르면 안 된다 — 합이 잔여 건수와 어긋난다.
+    CHARTS.cipAge.$rows=(di,i)=>{
+      const b=show[i]; if(b==null)return null;
+      const recs=snap.filter(x=>{
+        if(isDone(x))return false;
+        if(!x.ap)return b===4;
+        const d=Math.floor((asOf-x.ap)/MS);
+        return (d<=30?0:d<=90?1:d<=180?2:3)===b;
+      });
+      return rdet(recs,B[b]+' — '+t('s_rem')+' '+recs.length);
+    };
     setNote('cipAge',cnt[3]>0?t('ins_old').replace('{n}',cnt[3].toLocaleString()):t('note_age'));
   }
 
@@ -1011,6 +1054,12 @@ function render(){
           plugins:{legend:{position:'bottom',labels:{padding:6}}},
           scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:9},maxRotation:30},grid:{display:false}},
             y:baseScales(TH,true).y,y2:pctAxis(TH)}}});
+      // 세부내역 — 집계 키(model||미상)를 그대로 되풀이한다. 진행율 선(di 2)은 비율이라 없음
+      CHARTS.cipModel.$rows=(di,i)=>{
+        if(di===2||!ent[i])return null;
+        const recs=snap.filter(x=>(x.model||t('unk'))===ent[i][0]&&isDone(x)===(di===0));
+        return rdet(recs,ent[i][0]+' — '+(di===0?t('s_done'):t('s_rem'))+' '+recs.length);
+      };
     }
   }
 
@@ -1030,6 +1079,13 @@ function render(){
         options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
           plugins:{legend:{position:'bottom',labels:{padding:6}}},
           scales:{x:baseScales(TH,true).x,y:baseScales(TH,true).y,y2:pctAxis(TH)}}});
+      // 세부내역 — 집계 키(fabIn 연도||미상)를 그대로 되풀이한다. 진행율 선(di 2)은 없음
+      CHARTS.cipVint.$rows=(di,i)=>{
+        if(di===2||!ent[i])return null;
+        const recs=snap.filter(x=>(x.fabIn?String(x.fabIn.getUTCFullYear()):t('unk'))===ent[i][0]
+          &&isDone(x)===(di===0));
+        return rdet(recs,ent[i][0]+' — '+(di===0?t('s_done'):t('s_rem'))+' '+recs.length);
+      };
     }
   }
 

@@ -685,7 +685,7 @@ const T={
     dp_ch_n:'듀얼 챔버는 좌우가 같은 조건으로 돕니다 — 한쪽에만 계속 손이 가면 배관·드레인 같은 물리적 원인을 의심합니다. 편중도 = max(L,R) ÷ (L+R) · 좌우 합 {m}건 이상만',
     dp_ch_l:'LEFT BM율',dp_ch_r:'RIGHT BM율',dp_ch_sk:'한쪽 70%↑ 설비',dp_ch_skd:'좌우 합 {m}건 이상 {n}대 중',
     dp_th_lr:'LEFT : RIGHT',dp_th_skew:'편중도',dp_th_bmlr:'그중 BM',
-    dp_ch_none:'좌우 합 {m}건 이상인 설비가 없습니다',dp_unit:'대',dp_th_sh:'BM 점유율',dp_sub_sh:'BM 점유율 = 그 구분의 BM ÷ 전체 BM {b}건',rd_wk:'일자|설비호기|S/N|단계|라인|공정|세부공정|모델',
+    dp_ch_none:'좌우 합 {m}건 이상인 설비가 없습니다',dp_unit:'대',dp_th_sh:'BM 점유율',dp_sub_sh:'BM 점유율 = 그 구분의 BM ÷ 전체 BM {b}건',rd_wk:'일자|설비호기|S/N|단계|라인|공정|세부공정|모델',rd_share:'공수는 인원수로 안분한 값입니다',rd_mean:'막대는 평균값입니다 — 목록은 원본 전체',
     pv_set1:'서비스 실적',pv_set2:'작업자별 (펼침)',pv_subproc:'세부공정',pv_bay:'BAY',
     pv_chpos:'채널위치',pv_maineq:'메인설비호기',pv_worker:'작업자',pv_bm:'BM건수',pv_wkrn:'작업자수',
     ch_alarmmat:'알람이 뜨면 무슨 자재를 가나',sec_life:'설비 일대기',life_pick:'설비 선택',note_lifepick:'S/N 또는 설비호기로 검색하세요. 아무 표에서나 S/N을 클릭하면 뜨는 메뉴의 「설비 일대기」로도 열립니다.',ch_lifetl:'이력 타임라인',note_lifetl:'설치·Turn On·고장/정비·자재교체를 시간순으로 · 점에 커서를 올리면 상세',ch_lifestage:'작업단계 구성',note_lifestage:'이 설비에 어떤 작업이 얼마나 있었나',ch_lifepart:'교체 자재 TOP',note_lifepart:'이 설비에서 제일 많이 간 자재 · 건수',ch_lifecycle:'자재별 평균 사용주기',note_lifecycle:'교체 시점의 사용일(전교체일 기준) 평균 · 2회 이상 교체된 자재',life_tbl:'전체 이력',life_kind:'구분',life_what:'내용',th_worker:'작업자',th_pf2:'유/무상',life_empty:'설비를 검색하면 그 설비의 일대기가 표시됩니다',ch_tbmw:'작업자별 TBM 사후 재고장률',note_tbmw:'TBM 후 30일 내 같은 설비 BM 발생 비율 · 낮을수록 좋음 · TBM 10건 이상',ch_tbmgap:'TBM → 다음 고장 경과일',note_tbmgap:'재고장이 난 건만 · 짧을수록 정비 품질 문제',ch_tbmline:'LINE별 TBM 사후 재고장률',note_tbmline:'TBM 5건 이상 · 값은 막대 끝',title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
@@ -730,7 +730,7 @@ const T={
     dp_ch_n:'Both channels of a dual chamber run the same duty — if only one keeps needing work, suspect a physical cause such as piping or drain. Skew = max(L,R) ÷ (L+R) · L+R ≥ {m} only',
     dp_ch_l:'LEFT BM rate',dp_ch_r:'RIGHT BM rate',dp_ch_sk:'Units ≥70% one side',dp_ch_skd:'of {n} units with L+R ≥ {m}',
     dp_th_lr:'LEFT : RIGHT',dp_th_skew:'Skew',dp_th_bmlr:'of which BM',
-    dp_ch_none:'No unit reaches L+R ≥ {m}',dp_unit:'',dp_th_sh:'BM share',dp_sub_sh:'BM share = its BM ÷ all BM ({b})',rd_wk:'Date|Equip|S/N|Stage|FAB|Process|Detail|Model',
+    dp_ch_none:'No unit reaches L+R ≥ {m}',dp_unit:'',dp_th_sh:'BM share',dp_sub_sh:'BM share = its BM ÷ all BM ({b})',rd_wk:'Date|Equip|S/N|Stage|FAB|Process|Detail|Model',rd_share:'Man-hours are prorated by crew size',rd_mean:'Bar shows the mean — list is all source rows',
     pv_set1:'Service records',pv_set2:'By worker (expanded)',pv_subproc:'Sub-process',pv_bay:'BAY',
     pv_chpos:'Channel',pv_maineq:'Main equipment',pv_worker:'Worker',pv_bm:'BM count',pv_wkrn:'Workers',
     ch_alarmmat:'Which Parts Follow Each Alarm',sec_life:'Equipment Life',life_pick:'Select Equipment',note_lifepick:'Search by S/N or equipment code. Or click any S/N cell and pick Equipment Life from the menu.',ch_lifetl:'Life Timeline',note_lifetl:'install · Turn On · faults/PM · part swaps in time order · hover a point for detail',ch_lifestage:'Work Stage Mix',note_lifestage:'what happened on this unit, and how often',ch_lifepart:'Top Replaced Parts',note_lifepart:'most frequently replaced on this unit · count',ch_lifecycle:'Mean Service Life by Part',note_lifecycle:'mean days-in-use at replacement (prev-replace basis) · parts replaced 2+ times',life_tbl:'Full History',life_kind:'Type',life_what:'Detail',th_worker:'Worker',th_pf2:'Paid/Free',life_empty:'Search for an equipment to see its life story',ch_tbmw:'Post-TBM Failure Rate by Worker',note_tbmw:'BM within 30d after TBM on same unit · lower is better · ≥10 TBMs',ch_tbmgap:'Days from TBM to Next Failure',note_tbmgap:'only recurring cases · shorter means poorer PM quality',ch_tbmline:'Post-TBM Failure Rate by LINE',note_tbmline:'≥5 TBMs · value at bar end',title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
@@ -775,7 +775,7 @@ const T={
     dp_ch_n:'双腔体左右在相同条件下运行 — 若只有一侧反复需要维护，应怀疑管路·排水等物理原因。偏重度 = max(L,R) ÷ (L+R) · 仅统计左右合计{m}件以上',
     dp_ch_l:'LEFT BM率',dp_ch_r:'RIGHT BM率',dp_ch_sk:'单侧70%以上设备',dp_ch_skd:'左右合计{m}件以上的{n}台中',
     dp_th_lr:'LEFT : RIGHT',dp_th_skew:'偏重度',dp_th_bmlr:'其中BM',
-    dp_ch_none:'没有左右合计{m}件以上的设备',dp_unit:'台',dp_th_sh:'BM占比',dp_sub_sh:'BM占比 = 该类BM ÷ 全部BM {b}件',rd_wk:'日期|设备|S/N|阶段|FAB|工艺|细分工艺|型号',
+    dp_ch_none:'没有左右合计{m}件以上的设备',dp_unit:'台',dp_th_sh:'BM占比',dp_sub_sh:'BM占比 = 该类BM ÷ 全部BM {b}件',rd_wk:'日期|设备|S/N|阶段|FAB|工艺|细分工艺|型号',rd_share:'工时按人数分摊',rd_mean:'柱为平均值 — 列表为全部原始行',
     pv_set1:'服务实绩',pv_set2:'按作业者 (展开)',pv_subproc:'细分工序',pv_bay:'BAY',
     pv_chpos:'通道位置',pv_maineq:'主设备号机',pv_worker:'作业者',pv_bm:'BM件数',pv_wkrn:'作业者数',
     ch_alarmmat:'报警发生时更换了哪些材料',sec_life:'设备履历',life_pick:'选择设备',note_lifepick:'按 S/N 或设备号搜索。也可点击任意表中的 S/N，在弹出菜单中选择「设备履历」。',ch_lifetl:'履历时间轴',note_lifetl:'安装·Turn On·故障/保养·材料更换按时间顺序 · 悬停查看详情',ch_lifestage:'作业阶段构成',note_lifestage:'这台设备发生过哪些作业，各多少次',ch_lifepart:'更换材料 TOP',note_lifepart:'该设备更换最多的材料 · 件数',ch_lifecycle:'各材料平均使用周期',note_lifecycle:'更换时使用天数(前次更换基准)平均 · 更换2次以上的材料',life_tbl:'全部履历',life_kind:'类别',life_what:'内容',th_worker:'作业者',th_pf2:'有偿/无偿',life_empty:'搜索设备后显示该设备的履历',ch_tbmw:'按作业者 TBM 后再故障率',note_tbmw:'TBM 后30天内同设备发生BM的比例 · 越低越好 · TBM 10件以上',ch_tbmgap:'TBM → 下次故障间隔天数',note_tbmgap:'仅统计再故障件 · 越短表示保养质量越差',ch_tbmline:'按LINE TBM 后再故障率',note_tbmline:'TBM 5件以上 · 数值在条形末端',title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
@@ -820,7 +820,7 @@ const T={
     dp_ch_n:'デュアルチャンバーは左右が同じ条件で回ります — 片側だけ手が掛かり続けるなら配管·ドレーンなど物理的な原因を疑います。偏り度 = max(L,R) ÷ (L+R) · 左右合計{m}件以上のみ',
     dp_ch_l:'LEFT BM率',dp_ch_r:'RIGHT BM率',dp_ch_sk:'片側70%以上の設備',dp_ch_skd:'左右合計{m}件以上の{n}台のうち',
     dp_th_lr:'LEFT : RIGHT',dp_th_skew:'偏り度',dp_th_bmlr:'うちBM',
-    dp_ch_none:'左右合計{m}件以上の設備がありません',dp_unit:'台',dp_th_sh:'BM構成比',dp_sub_sh:'BM構成比 = 区分のBM ÷ 全BM {b}件',rd_wk:'日付|設備|S/N|段階|FAB|工程|詳細工程|モデル',
+    dp_ch_none:'左右合計{m}件以上の設備がありません',dp_unit:'台',dp_th_sh:'BM構成比',dp_sub_sh:'BM構成比 = 区分のBM ÷ 全BM {b}件',rd_wk:'日付|設備|S/N|段階|FAB|工程|詳細工程|モデル',rd_share:'工数は人数で按分した値です',rd_mean:'棒は平均値 — 一覧は元データ全件',
     pv_set1:'サービス実績',pv_set2:'作業者別 (展開)',pv_subproc:'詳細工程',pv_bay:'BAY',
     pv_chpos:'チャンネル位置',pv_maineq:'メイン設備号機',pv_worker:'作業者',pv_bm:'BM件数',pv_wkrn:'作業者数',
     ch_alarmmat:'アラーム発生時に交換される部材',sec_life:'設備一代記',life_pick:'設備選択',note_lifepick:'S/Nまたは設備号機で検索してください。任意の表のS/Nをクリックし、メニューの「設備一代記」からも開けます。',ch_lifetl:'履歴タイムライン',note_lifetl:'設置·Turn On·故障/整備·部材交換を時系列で · 点にカーソルを合わせると詳細',ch_lifestage:'作業段階構成',note_lifestage:'この設備にどんな作業がどれだけあったか',ch_lifepart:'交換部材TOP',note_lifepart:'この設備で最も多く交換された部材 · 件数',ch_lifecycle:'部材別平均使用周期',note_lifecycle:'交換時点の使用日数(前回交換基準)平均 · 2回以上交換された部材',life_tbl:'全履歴',life_kind:'区分',life_what:'内容',th_worker:'作業者',th_pf2:'有償/無償',life_empty:'設備を検索するとその設備の履歴が表示されます',ch_tbmw:'作業者別TBM後再故障率',note_tbmw:'TBM後30日以内に同一設備でBM発生した割合 · 低いほど良い · TBM10件以上',ch_tbmgap:'TBM → 次故障までの日数',note_tbmgap:'再故障した件のみ · 短いほど整備品質の問題',ch_tbmline:'LINE別TBM後再故障率',note_tbmline:'TBM5件以上 · 値は棒の末端',title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
@@ -1798,6 +1798,57 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   f.forEach(x=>{if(x.workMin&&x.workMin>0&&x.workMin<1440&&x.line){(lineMin[x.line]=lineMin[x.line]||[]).push(x.workMin);}});
   const lmEnt=Object.entries(lineMin).map(([k,v])=>[k,Math.round(v.reduce((a,b)=>a+b,0)/v.length)]).sort((a,b)=>b[1]-a[1]).slice(0,8);
   mkBarV('cLineMan',lmEnt.map(e=>e[0]),lmEnt.map(e=>e[1]),TH.pal[1]);
+
+  /* ── 차트 세부내역 ($rows) — 클릭=필터인 차트(cStage·cSn·cLine·cCause·cModel·cProc)는
+     기존 동작을 지키고, 클릭이 없던 차트에만 단다. '기타' 뭉치는 원본이 여럿이라 목록을 내지 않는다. */
+  const nf=n=>Number(n||0).toLocaleString();
+  const byLbl=(id,fld,arr,note)=>{ const ch=CHARTS[id]; if(!ch)return;
+    ch.$rows=(di,i)=>{ if(di!==0)return null;
+      const l=ch.data.labels[i]; if(l==null||l===t('etc'))return null;
+      const src=(arr||f).filter(x=>String(x[fld]||'')===String(l));
+      return src.length?Object.assign(wkDetail(src,l+' — '+nf(src.length)),{note:note}):null; }; };
+  byLbl('cPhenom','phenom'); byLbl('cAction','action'); byLbl('cReqType','reqType');
+  if(CHARTS.cTrend)CHARTS.cTrend.$rows=(di,i)=>{
+    if(di!==0||i>=PB.length)return null;          // di1=UPM 라인, 꼬리=예측 막대
+    const src=f.filter(x=>x.work&&perKey(x.work)===PB[i].key);
+    return src.length?wkDetail(src,PB[i].label+' — '+nf(src.length)):null;
+  };
+  if(CHARTS.cAlarmP)CHARTS.cAlarmP.$rows=(di,i)=>{
+    if(di!==0)return null;
+    const l=String(CHARTS.cAlarmP.data.labels[i]||'');
+    // 파레토 라벨은 22자에서 잘린다 — 원본도 같은 길이로 잘라 대조한다
+    const src=f.filter(x=>{const k=String(x.alarm||x.phenom||'').trim();
+      return k&&k.slice(0,22)===l.slice(0,22);});
+    return src.length?wkDetail(src,l+' — '+nf(src.length)):null;
+  };
+  if(CHARTS.cManTrend)CHARTS.cManTrend.$rows=(di,i)=>{
+    if(di!==0||i>=PB.length)return null;
+    const src=mans.filter(x=>x.work&&perKey(x.work)===PB[i].key);
+    return src.length?wkDetail(src,PB[i].label+' — '+nf(src.length)):null;
+  };
+  if(CHARTS.cDur)CHARTS.cDur.$rows=(di,i)=>{
+    if(di!==0)return null;
+    const bi=v=>v<30?0:v<60?1:v<120?2:v<240?3:4;   // 막대와 같은 구간 경계
+    const src=f.filter(x=>x.workMin>0&&x.workMin<1440&&bi(x.workMin)===i);
+    return src.length?wkDetail(src,durB[i]+' — '+nf(src.length)):null;
+  };
+  if(CHARTS.cWorker)CHARTS.cWorker.$rows=(di,i)=>{
+    if(di!==0)return null;
+    const l=CHARTS.cWorker.data.labels[i]; if(l==null||l===t('etc'))return null;
+    const src=mans.filter(x=>x.workers&&x.workers.split(',').map(s=>s.trim()).indexOf(l)>=0);
+    return src.length?Object.assign(wkDetail(src,l+' — '+nf(src.length)),{note:t('rd_share')}):null;
+  };
+  if(CHARTS.cWcnt)CHARTS.cWcnt.$rows=(di,i)=>{
+    const l=CHARTS.cWcnt.data.labels[i]; if(l==null)return null;
+    const src=f.filter(x=>x.workerCnt&&t('wcnt_p').replace('{n}',x.workerCnt>=4?'4+':x.workerCnt)===l);
+    return src.length?wkDetail(src,l+' — '+nf(src.length)):null;
+  };
+  if(CHARTS.cLineMan)CHARTS.cLineMan.$rows=(di,i)=>{
+    if(di!==0||!lmEnt[i])return null;
+    const l=lmEnt[i][0];
+    const src=f.filter(x=>x.line===l&&x.workMin>0&&x.workMin<1440);
+    return src.length?Object.assign(wkDetail(src,l+' — '+nf(src.length)),{note:t('rd_mean')}):null;
+  };
 
   // ── 인사이트 ──
   {

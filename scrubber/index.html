@@ -484,6 +484,7 @@ const T={
   ko:{title:'글로벌 스크러버 설치 현황',sub:'고객사 설치 스크러버 통합 모니터링 대시보드',
     back:'← 메인으로',total_badge:'총',units:'챔버',refresh:'새로고침',
     date_range:'기간 설정',apply:'적용',reset:'초기화',
+    rd_sc:'CODE|S/N|국가|고객사|모델|FAB|반입일|Turn On',rd_sc_ld:'CODE|S/N|고객사|반입일|Turn On|리드타임(일)',rd_sc_new:'막대는 누적, 목록은 그 기간 신규분입니다',rd_sc_w:'값은 챔버 가중(DUAL=2)이라 행 수와 다릅니다',rd_sc_mean:'막대는 평균값입니다 — 행별 값은 목록에',
     quick_select:'빠른 선택',
     q_1w:'1주',q_1m:'1개월',q_3m:'3개월',q_6m:'6개월',q_1y:'1년',q_all:'전체',
     gran_lbl:'집계 단위',gran_note:'↑ 추이 차트 적용',
@@ -501,6 +502,7 @@ const T={
   en:{title:'Global Scrubber Installation Status',sub:'Integrated monitoring dashboard for installed scrubbers',
     back:'← Main',total_badge:'Total',units:'chambers',refresh:'Refresh',
     date_range:'Date Range',apply:'Apply',reset:'Reset',
+    rd_sc:'CODE|S/N|Country|Customer|Model|FAB|FAB In|Turn On',rd_sc_ld:'CODE|S/N|Customer|FAB In|Turn On|Lead Time (d)',rd_sc_new:'Bars are cumulative — the list shows units new in that period',rd_sc_w:'Values are chamber-weighted (DUAL=2), so they differ from row counts',rd_sc_mean:'Bars show averages — per-row values are in the list',
     quick_select:'Quick Select',
     q_1w:'1 Week',q_1m:'1 Month',q_3m:'3 Months',q_6m:'6 Months',q_1y:'1 Year',q_all:'All',
     gran_lbl:'View By',gran_note:'↑ Trend chart unit',
@@ -518,6 +520,7 @@ const T={
   zh:{title:'全球洗涤器安装状况',sub:'客户安装洗涤器综合监控仪表板',
     back:'← 主页',total_badge:'共',units:'腔体',refresh:'刷新',
     date_range:'日期范围',apply:'应用',reset:'重置',
+    rd_sc:'CODE|S/N|国家|客户|型号|FAB|搬入日|Turn On',rd_sc_ld:'CODE|S/N|客户|搬入日|Turn On|周期(天)',rd_sc_new:'柱为累计值，列表为该期间新增',rd_sc_w:'数值按腔体加权(DUAL=2)，与行数不同',rd_sc_mean:'柱为平均值 — 每行数值见列表',
     quick_select:'快速选择',
     q_1w:'1周',q_1m:'1个月',q_3m:'3个月',q_6m:'6个月',q_1y:'1年',q_all:'全部',
     gran_lbl:'聚合单位',gran_note:'↑ 趋势图适用',
@@ -535,6 +538,7 @@ const T={
   ja:{title:'グローバルスクラバー設置状況',sub:'顧客設置スクラバー統合モニタリング',
     back:'← メイン',total_badge:'合計',units:'チャンバー',refresh:'更新',
     date_range:'期間設定',apply:'適用',reset:'リセット',
+    rd_sc:'CODE|S/N|国|顧客|モデル|FAB|搬入日|Turn On',rd_sc_ld:'CODE|S/N|顧客|搬入日|Turn On|リードタイム(日)',rd_sc_new:'棒は累積、リストはその期間の新規分です',rd_sc_w:'値はチャンバー加重(DUAL=2)のため行数と異なります',rd_sc_mean:'棒は平均値です — 行別の値はリストに',
     quick_select:'クイック選択',
     q_1w:'1週間',q_1m:'1ヶ月',q_3m:'3ヶ月',q_6m:'6ヶ月',q_1y:'1年',q_all:'全体',
     gran_lbl:'集計単位',gran_note:'↑ 推移チャート適用',
@@ -684,6 +688,8 @@ function updateRangeDisplay(){
 const toDate=GST.toDate;
 const fmtDate=GST.fmtDate;
 function cell(r,k){const v=r[CI[k]];return(v!==undefined&&v!=='')?v:'—';}
+// 세부내역 모달(gstRows) 공통 행 — 열 순서는 rd_sc 헤더와 한 벌이다. 갈라지면 값이 엉뚱한 열 밑에 선다.
+const rdRow=r=>[cell(r,'code'),cell(r,'sn'),cell(r,'country'),cell(r,'customer'),cell(r,'model'),cell(r,'fab'),fmtDate(toDate(r[CI.fabIn])),fmtDate(toDate(r[CI.turnOn]))];
 
 // 초기 기본 기간: 현재로부터 20년 전 ~ 오늘
 function initDefaultRange(){
@@ -933,6 +939,15 @@ function mkNewMonthly(id,f){
     plugins:[valLabelPlugin].concat(GST.trendAnnoPlugin?[GST.trendAnnoPlugin]:[])};
   if(CHARTS[id])CHARTS[id].destroy();
   CHARTS[id]=new Chart(ctx,cfg);
+  // 세부내역 — 키 규칙(주=GST.isoW · 월=UTC)이 위 집계와 한 벌이라 여기서 단다.
+  // 예측 막대(i>=realLen)는 추세 외삽이라 원본 행이 없다 — null이면 모달이 열리지 않는다.
+  CHARTS[id].$rows=(di,i)=>{
+    if(i>=realLen)return null;
+    const rows=f.filter(r=>{const d=toDate(r[CI.turnOn]);if(!d)return false;
+      const k=PU==='w'?GST.isoW(d):d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');
+      return k===keys[i];});
+    return {title:t('ch_newm')+' · '+labels[i],cols:t('rd_sc').split('|'),rows:rows.map(rdRow),note:t('rd_sc_w')};
+  };
 }
 
 // 가로 막대 (상위 N + 기타) — 값을 막대 끝에 직접 표기, 비중은 툴팁
@@ -1066,8 +1081,16 @@ function mkCross(rows){
         tooltip:{mode:'index',intersect:false}},
       scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:10},maxRotation:35},grid:{display:false}},
         y:{stacked:true,ticks:{color:TH.txt,precision:0},grid:{color:TH.grid}}}}};
-  if(CHARTS['cCross']){CHARTS['cCross'].data.labels=xCats;CHARTS['cCross'].data.datasets=datasets;CHARTS['cCross'].update();return;}
-  CHARTS['cCross']=new Chart(ctx,cfg);
+  if(CHARTS['cCross']){CHARTS['cCross'].data.labels=xCats;CHARTS['cCross'].data.datasets=datasets;CHARTS['cCross'].update();}
+  else CHARTS['cCross']=new Chart(ctx,cfg);
+  // 세부내역 — 이 차트는 파기하지 않고 update()로 재사용하므로, 매 렌더 새 클로저로 갈아 끼운다.
+  // 옛 클로저를 두면 필터·축 변경 뒤에도 이전 rows/카테고리를 보여준다(조용히 틀리는 자리).
+  CHARTS['cCross'].$rows=(di,i)=>{
+    const xv=xCats[i], cv=cCats[di]; if(xv==null||cv==null)return null;
+    const sub=rows.filter(r=>((r[xIdx]||'N/A').toString().trim()||'N/A')===xv
+      &&((r[cIdx]||'N/A').toString().trim()||'N/A')===cv);
+    return {title:xv+' × '+cv,cols:t('rd_sc').split('|'),rows:sub.map(rdRow)};
+  };
 }
 
 // 교차분석 축 변경/교환
@@ -1158,8 +1181,21 @@ function render(){ GST.skeleton(false);
 
   const trendFab=getCumulativeTrend(f, CI.fabIn, 'trendMetaFab');
   mkTrend('cTrendFab',trendFab.labels,trendFab.cumData,GST.PAL[1],'rgba(25,158,112,.25)');
+  // 세부내역 — 점의 값은 누적이지만 목록은 그 구간 «신규분»만 보여준다.
+  // 누적 전체를 나열하면 수천 행이라 목록의 목적(어떤 건들인지 확인)을 잃는다. 노트로 그 차이를 밝힌다.
+  // 누적은 RAW 기준(getCumulativeTrend와 동일)이므로 목록도 RAW에서 거른다.
+  if(CHARTS.cTrendFab)CHARTS.cTrendFab.$rows=(di,i)=>{
+    const lb=trendFab.labels[i]; if(lb==null)return null;
+    const rows=RAW.filter(r=>{const d=toDate(r[CI.fabIn]);return d&&granKey(d)===lb;});
+    return {title:t('trend_fabin')+' · '+lb,cols:t('rd_sc').split('|'),rows:rows.map(rdRow),note:t('rd_sc_new')};
+  };
   const trendTon=getCumulativeTrend(f, CI.turnOn, 'trendMetaTon');
   mkTrend('cTrendTon',trendTon.labels,trendTon.cumData,GST.PAL[0],'rgba(57,135,229,.28)');
+  if(CHARTS.cTrendTon)CHARTS.cTrendTon.$rows=(di,i)=>{
+    const lb=trendTon.labels[i]; if(lb==null)return null;
+    const rows=RAW.filter(r=>{const d=toDate(r[CI.turnOn]);return d&&granKey(d)===lb;});
+    return {title:t('trend_turnon')+' · '+lb,cols:t('rd_sc').split('|'),rows:rows.map(rdRow),note:t('rd_sc_new')};
+  };
   mkNewMonthly('cNewMonthly',f);
 
   // 교차 분석
@@ -1190,6 +1226,12 @@ function render(){ GST.skeleton(false);
   f.forEach(r=>{const d=toDate(r[CI.turnOn]);if(d){const y=d.getUTCFullYear();yrs[y]=(yrs[y]||0)+chW(r);}});
   const yk=Object.keys(yrs).sort();
   mkYoY('cYear',yk,yk.map(y=>yrs[y]));
+  // 세부내역 — 연도 키는 위 집계와 같은 UTC 연도. 값은 챔버 가중이라 행 수와 다르다(노트로 밝힌다).
+  if(CHARTS.cYear)CHARTS.cYear.$rows=(di,i)=>{
+    const y=yk[i]; if(y==null)return null;
+    const rows=f.filter(r=>{const d=toDate(r[CI.turnOn]);return d&&String(d.getUTCFullYear())===y;});
+    return {title:'Turn On '+y,cols:t('rd_sc').split('|'),rows:rows.map(rdRow),note:t('rd_sc_w')};
+  };
 
   // ===== 신규 분석: 리드타임 · 장비나이 · 툴메이커 · Warranty 파이프라인 · 관리 목록 =====
   // 고객사별 평균 리드타임 (FAB In → Turn On)
@@ -1203,6 +1245,16 @@ function render(){ GST.skeleton(false);
       .map(([k,v])=>[k,Math.round(v.reduce((x,y)=>x+y,0)/v.length)])
       .sort((a,b)=>b[1]-a[1]).slice(0,10);
     GST.bar(CHARTS,'cLead',{labels:ent.map(e=>e[0]),data:ent.map(e=>e[1]),color:TH.pal[2],horizontal:true});
+    // 세부내역 — 막대는 평균이므로 행별 리드타임을 열로 실어준다. 포함 조건(두 날짜 존재·b>=a)은 위 집계와 동일.
+    if(CHARTS.cLead)CHARTS.cLead.$rows=(di,i)=>{
+      const c=ent[i]?ent[i][0]:null; if(c==null)return null;
+      const rows=f.filter(r=>{const a=toDate(r[CI.fabIn]),b=toDate(r[CI.turnOn]);
+        return a&&b&&b>=a&&(((r[CI.customer]||'').toString().trim())||'N/A')===c;});
+      return {title:t('ch_lead')+' · '+c,cols:t('rd_sc_ld').split('|'),
+        rows:rows.map(r=>{const a=toDate(r[CI.fabIn]),b=toDate(r[CI.turnOn]);
+          return [cell(r,'code'),cell(r,'sn'),cell(r,'customer'),fmtDate(a),fmtDate(b),Math.round((b-a)/DAY)];}),
+        note:t('rd_sc_mean')};
+    };
   }
   // 장비 나이 분포 (Turn On 기준)
   {
@@ -1210,11 +1262,25 @@ function render(){ GST.skeleton(false);
     f.forEach(r=>{const d=toDate(r[CI.turnOn]);if(!d)return;const y=(now-d)/(365.25*DAY);
       b[y<1?0:y<3?1:y<5?2:3]+=chW(r);});
     GST.bar(CHARTS,'cAge',{labels:[t('age_1'),t('age_13'),t('age_35'),t('age_5')],data:b,color:TH.pal[0],share:true});
+    // 세부내역 — 버킷 판정식(y<1/3/5)을 위 집계와 같은 식으로 재적용. 갈라지면 경계 연차가 다른 버킷에 선다.
+    if(CHARTS.cAge)CHARTS.cAge.$rows=(di,i)=>{
+      if(i<0||i>3)return null;
+      const rows=f.filter(r=>{const d=toDate(r[CI.turnOn]);if(!d)return false;
+        const y=(now-d)/(365.25*DAY);return (y<1?0:y<3?1:y<5?2:3)===i;});
+      return {title:t('ch_age')+' · '+[t('age_1'),t('age_13'),t('age_35'),t('age_5')][i],
+        cols:t('rd_sc').split('|'),rows:rows.map(rdRow),note:t('rd_sc_w')};
+    };
   }
   // Tool Maker별
   {
     const tm=countBy(f,CI.toolMaker).slice(0,10);
     GST.bar(CHARTS,'cToolMaker',{labels:tm.map(x=>x[0]),data:tm.map(x=>x[1]),color:TH.pal[3],horizontal:true,share:true});
+    // 세부내역 — 라벨 정규화는 countBy와 같은 식(빈값→'N/A')이어야 같은 막대에 같은 행이 선다.
+    if(CHARTS.cToolMaker)CHARTS.cToolMaker.$rows=(di,i)=>{
+      const k=tm[i]?tm[i][0]:null; if(k==null)return null;
+      const rows=f.filter(r=>((r[CI.toolMaker]||'N/A').toString().trim()||'N/A')===k);
+      return {title:t('ch_toolmaker')+' · '+k,cols:t('rd_sc').split('|'),rows:rows.map(rdRow)};
+    };
   }
   // Warranty 만료 파이프라인 + 임박/미가동 목록
   let idleCount=0;
@@ -1243,7 +1309,15 @@ function render(){ GST.skeleton(false);
         options:{responsive:true,maintainAspectRatio:false,
           plugins:{legend:{position:'bottom'}},
           scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},
-                  y:{stacked:true,ticks:{color:TH.txt,precision:0},grid:{color:TH.grid}}}}}); }
+                  y:{stacked:true,ticks:{color:TH.txt,precision:0},grid:{color:TH.grid}}}}});
+      // 세부내역 — 데이터셋 순서가 [IN, OUT]이므로 di로 라벨을 가른다.
+      // FAB 키 정규화(GST.nfw…||'—')는 위 byFab 집계와 같은 식이어야 같은 막대에 같은 행이 선다.
+      CHARTS.cWarrPipe.$rows=(di,i)=>{
+        const fb=fbs[i]; if(fb==null)return null;
+        const lbl=di===1?'OUT':'IN';
+        const rows=f.filter(r=>wLbl(r)===lbl&&(GST.nfw(r[CI.fab]||'').trim()||'—')===fb);
+        return {title:fb+' · Warranty '+lbl,cols:t('rd_sc').split('|'),rows:rows.map(rdRow)};
+      }; }
     // 고객사별 Warranty OUT (현재)
     { const rc={}; soonL.forEach(x=>{const c=(GST.nfw(x.r[CI.customer]||'').trim())||'ETC'; rc[c]=(rc[c]||0)+chW(x.r);});
       const rcE=Object.entries(rc).sort((a,b)=>b[1]-a[1]);
