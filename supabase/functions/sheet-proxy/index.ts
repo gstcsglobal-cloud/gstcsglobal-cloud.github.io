@@ -226,6 +226,9 @@ async function selfcheckOne(gid: string) {
   return {
     gid,
     name: ALLOW_GID[gid],
+    // 구글이 말하는 실제 탭 이름. name(내가 박아둔 이름)과 다르면 gid가 옮겨간 것이다 —
+    // gid 0은 «맨 처음 만들어진 탭»이라 탭을 지웠다 만들면 엉뚱한 것을 가리킬 수 있다.
+    title: (await tabByGid(gid)).title,
     api: { rows: apiRows.length, cols: ca.length },
     pub: { rows: pubRows.length, cols: cp.length },
     same: diff.length === 0 && apiRows.length === pubRows.length,
