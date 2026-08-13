@@ -200,7 +200,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <div class="slicers">
   <div class="slicer"><div class="lbl" data-i="sl_country">국가</div><select id="sl-country" onchange="onFilt('country',this.value)"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_customer">고객사</div><select id="sl-customer" onchange="onFilt('customer',this.value)"></select></div>
-  <div class="slicer" style="position:relative"><div class="lbl" data-i="sl_line">라인</div>
+  <div class="slicer" style="position:relative"><div class="lbl" data-i="sl_fab">FAB</div>
     <button id="lineBtn" class="linebtn" onclick="toggleLineBox(event)">전체 ▾</button>
     <div id="lineBox" class="linebox"></div>
   </div>
@@ -386,17 +386,11 @@ function normCust(name){
   return m?base+' '+m[1]:base;
 }
 // 고객사 기준(그룹): MICRON / PSMC / TASC / WINBOND
-function custBase(s){const u=GST.upk(s);
-  if(u.includes('PSMC')||u.includes('POWERCHIP'))return 'PSMC';
-  if(u.includes('TASC')||u.includes('TAIWAN-ASIA')||u.includes('ASIA SEMI'))return 'TASC';
-  if(u.includes('WINBOND'))return 'WINBOND';
-  if(u.includes('MICRON')||/\bF1[016]/.test(u))return 'MICRON';
-  return normCust(s);}
-function fabOf(s){const u=GST.upk(s);
-  const m=u.match(/\bF(16N|16S|16|11|10)\b/); if(m)return 'F'+m[1];
-  if(/TONG\s*L/.test(u))return 'F16N';   // Tong luo(통뤄) = F16N
-  if(/TAINAN/.test(u))return 'F16S';     // Tainan(타이난) = F16S
-  return '';}
+/* 고객사·FAB 분류는 core.js의 GST.ORG가 정본이다(SPEC-SYNC).
+   여기 있던 custBase/fabOf가 이미 옳게 2축 분리하고 있었는데, 아래 lineKeyOf가 그 둘을
+   한 문자열로 도로 합쳐 7키로 뭉갰다. 분리는 살리고 병합을 걷어낸다. */
+const custBase = s => GST.ORG.customer(s) || normCust(s);
+const fabOf    = s => GST.ORG.fab(s);
 function siteCountryStatic(s){const u=GST.upk(s);
   if(u.includes('F10')||u.includes('SINGAPORE'))return 'SINGAPORE';
   if(u)return 'TAIWAN'; return '';}
@@ -424,7 +418,7 @@ function guessCountry(op){
 }
 
 const T={
-ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 주간/월간 요약',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_period:'기간',all:'전체',hr_note:'고객사 필터 연동 · 국가/라인 미적용',hr_note2:'',sec_ops:'운영',ops_note:'가용인력 = 인원현황의 현장(O) 재직자 · 고객사 필터 연동',ops_wait:'인원현황·휴가현황 시트 연결 대기 — report/index.html 상단의 GID_ROSTER / GID_LEAVE 값을 시트 gid 숫자로 바꿔주세요',ch_att:'출근 · 휴가',note_att:'평일 기준 일평균 · 출근 = 가용인력 − 휴가',att_a:'출근',att_l:'휴가',ch_to:'총인원 vs TO',note_to:'TO = 반입 챔버 ÷ 30 (DUAL=2·SINGLE=1) · 총인원 = 현장 가용인력',head_l:'총인원',ch_chp:'인당 관리 챔버',note_chp:'반입 챔버(누적) ÷ 가용인력 · 챔버/인원 수는 툴팁',cutoff:'마감',att_pj:'인당작업',man_tot:'공수(h)',grp_t:'경력',grp_s:'소속',cr_u1:'1년 미만',cr_u1:'1년 미만',cr_u2:'1~2년',cr_u3:'2년 이상',ch_career:'라인별 인원 추이',note_career:'각 구간 말 기준 현장(O) 재직 · 라인(소속)별 스택',nCareer:'1년미만 {a} · 1~2년 {b} · 2년+ {c}명',edu_tg:'대상인원',edu_tg:'대상인원',edu_rt:'완료율',edu_goal:'목표 90%',edu_ttf:'완료 {d} / 대상 {t}',man_sum:'합계',chp_c:'챔버(반입)',chp_p:'인당 관리',nTo:'충원율 {p}% · TO 대비 {d}명',nEdu:'완료율 {p}% · 완료 {d}/{t}명 (LV1+LV2)',nCip:'진행율 {p}% · 잔여 {n}건',nAtt:'일평균 출근 {a}명 · 휴가 {l}명 · 작업 {j}건 (인당 {p}건)',nChp:'인당 {v}챔버 (챔버 {c} · 인원 {h}명)',nMan:'인당 일평균 {v}h · PM {pm}h',nFt:'최근 구간 {n}건 · 직전 대비 {d}',per_ws:'주',per_ms:'월',per_ys:'연',ytd:'{y} 누적',top_allblank:'고장 {m}건 · 알람유형 미기재 — 시트 Z열 입력 필요',per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',print:'🖨 인쇄',wk_narr:'📋 이번 주 요약',wk_narr_w:'📋 이번 주 요약',wk_narr_m:'📋 이번 달 요약',
+ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 주간/월간 요약',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_customer:'고객사',sl_line:'라인',sl_fab:'FAB',sl_period:'기간',all:'전체',hr_note:'고객사 필터 연동 · 국가/라인 미적용',hr_note2:'',sec_ops:'운영',ops_note:'가용인력 = 인원현황의 현장(O) 재직자 · 고객사 필터 연동',ops_wait:'인원현황·휴가현황 시트 연결 대기 — report/index.html 상단의 GID_ROSTER / GID_LEAVE 값을 시트 gid 숫자로 바꿔주세요',ch_att:'출근 · 휴가',note_att:'평일 기준 일평균 · 출근 = 가용인력 − 휴가',att_a:'출근',att_l:'휴가',ch_to:'총인원 vs TO',note_to:'TO = 반입 챔버 ÷ 30 (DUAL=2·SINGLE=1) · 총인원 = 현장 가용인력',head_l:'총인원',ch_chp:'인당 관리 챔버',note_chp:'반입 챔버(누적) ÷ 가용인력 · 챔버/인원 수는 툴팁',cutoff:'마감',att_pj:'인당작업',man_tot:'공수(h)',grp_t:'경력',grp_s:'소속',cr_u1:'1년 미만',cr_u1:'1년 미만',cr_u2:'1~2년',cr_u3:'2년 이상',ch_career:'라인별 인원 추이',note_career:'각 구간 말 기준 현장(O) 재직 · 라인(소속)별 스택',nCareer:'1년미만 {a} · 1~2년 {b} · 2년+ {c}명',edu_tg:'대상인원',edu_tg:'대상인원',edu_rt:'완료율',edu_goal:'목표 90%',edu_ttf:'완료 {d} / 대상 {t}',man_sum:'합계',chp_c:'챔버(반입)',chp_p:'인당 관리',nTo:'충원율 {p}% · TO 대비 {d}명',nEdu:'완료율 {p}% · 완료 {d}/{t}명 (LV1+LV2)',nCip:'진행율 {p}% · 잔여 {n}건',nAtt:'일평균 출근 {a}명 · 휴가 {l}명 · 작업 {j}건 (인당 {p}건)',nChp:'인당 {v}챔버 (챔버 {c} · 인원 {h}명)',nMan:'인당 일평균 {v}h · PM {pm}h',nFt:'최근 구간 {n}건 · 직전 대비 {d}',per_ws:'주',per_ms:'월',per_ys:'연',ytd:'{y} 누적',top_allblank:'고장 {m}건 · 알람유형 미기재 — 시트 Z열 입력 필요',per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',print:'🖨 인쇄',wk_narr:'📋 이번 주 요약',wk_narr_w:'📋 이번 주 요약',wk_narr_m:'📋 이번 달 요약',
  kp1:'재직 인원',kp2:'이번 달 입사 · 퇴사',kp3:'교육 완료율',kp4:'BM 건수 · 최근 30일',kp5:'인당 공수(h) · 최근 30일',kp6:'PM 진행율 · 올해',
  kf1:'경력 2년+ {n}명 · 1년 미만 {m}명',kf2:'최근 12개월 입사 {n}명',kf3:'Veteran {p}% (대상 {n}명)',kf4:'이전 30일 {n}건',kf5:'PM 비중 {p}%',kf6:'계획 {a} · 완료 {b}',
  sec1:'핵심 지표',sec2:'상세 분석',sec3:'Alarm · 고장',sec4:'설비',
@@ -441,7 +435,7 @@ ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 �
  tbl_op:'Scrubber 가동 현황',note_op:'가동 = Turn-On 완료 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 = 사이트별 설정(셀 ✎ 클릭 · 기본 40) · PM = 해당 구간 TBM · 마감일 기준',op_corp:'법인',op_div:'구분',op_run_u:'가동 장비 대수',op_run_c:'가동 챔버수',op_idle:'미가동',op_staff:'담당 인원(명)',op_to:'목표 TO',op_gap:'증감(명)',op_hire:'모집계획',op_chp:'인당 챔버',op_pm:'PM(건)',op_unit:'장비',op_ch:'챔버',op_expat:'주재원',op_local:'현채인',op_fit:'적정 챔버',op_need:'인원(명)',
  ins_pm:'올해 PM 진행율 {p}% (계획 {a} · 완료 {b})',ins_ft:'최근 30일 고장 {n}건 · 직전 30일 대비 {p}',ins_hc:'재직 {n}명 · 이번 달 입사 {a} · 퇴사 {b}',
  ax_t:'축 범위 (빈칸=자동)',ax_min:'최소',ax_max:'최대',ax_apply:'적용',ax_reset:'초기화',loading:'데이터 불러오는 중...',loaded:'로드 완료',mon_u:'월',u_p:'명',u_c:'건'},
-en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, training, work, PM, faults',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_period:'Period',all:'All',hr_note:'follows customer filter · country/line N/A',hr_note2:'',sec_ops:'Operations',ops_note:'available = on-site(O) active staff from roster · follows customer filter',ops_wait:'Roster/Leave sheets not linked — set GID_ROSTER / GID_LEAVE at the top of report/index.html',ch_att:'Attendance · Leave',note_att:'weekday daily avg · attendance = available − leave',att_a:'Attend',att_l:'Leave',ch_to:'Headcount vs TO',note_to:'TO = fab-in chambers ÷ 30 (DUAL=2·SINGLE=1)',head_l:'Headcount',ch_chp:'Chambers per Person',note_chp:'cumulative fab-in chambers ÷ available staff · detail in tooltip',cutoff:'As of',att_pj:'Jobs/person',man_tot:'Hours',grp_t:'Tenure',grp_s:'Site',cr_u1:'<1yr',cr_u1:'<1yr',cr_u2:'1-2yr',cr_u3:'2yr+',ch_career:'Headcount by Line',note_career:'active on-site(O) at each period end · by line',nCareer:'<1y {a} · 1-2y {b} · 2y+ {c}',edu_tg:'Targets',edu_tg:'Targets',edu_rt:'Rate',edu_goal:'Goal 90%',edu_ttf:'done {d} / target {t}',man_sum:'Total',chp_c:'Chambers',chp_p:'per person',nTo:'fill rate {p}% · {d} vs TO',nEdu:'rate {p}% · {d}/{t} done (LV1+LV2)',nCip:'progress {p}% · {n} remaining',nAtt:'daily avg attend {a} · leave {l} · {j} jobs ({p}/person)',nChp:'{v} chambers/person ({c}ch · {h} staff)',nMan:'{v}h per person·day · PM {pm}h',nFt:'{n} in latest period · {d} vs prev',per_ws:'W',per_ms:'M',per_ys:'Y',ytd:'{y} YTD',top_allblank:'{m} faults · alarm type blank — fill column Z in the sheet',per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',print:'🖨 Print',wk_narr:'📋 Summary',wk_narr_w:'📋 This Week',wk_narr_m:'📋 This Month',
+en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, training, work, PM, faults',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_customer:'Customer',sl_line:'Line',sl_fab:'FAB',sl_period:'Period',all:'All',hr_note:'follows customer filter · country/line N/A',hr_note2:'',sec_ops:'Operations',ops_note:'available = on-site(O) active staff from roster · follows customer filter',ops_wait:'Roster/Leave sheets not linked — set GID_ROSTER / GID_LEAVE at the top of report/index.html',ch_att:'Attendance · Leave',note_att:'weekday daily avg · attendance = available − leave',att_a:'Attend',att_l:'Leave',ch_to:'Headcount vs TO',note_to:'TO = fab-in chambers ÷ 30 (DUAL=2·SINGLE=1)',head_l:'Headcount',ch_chp:'Chambers per Person',note_chp:'cumulative fab-in chambers ÷ available staff · detail in tooltip',cutoff:'As of',att_pj:'Jobs/person',man_tot:'Hours',grp_t:'Tenure',grp_s:'Site',cr_u1:'<1yr',cr_u1:'<1yr',cr_u2:'1-2yr',cr_u3:'2yr+',ch_career:'Headcount by Line',note_career:'active on-site(O) at each period end · by line',nCareer:'<1y {a} · 1-2y {b} · 2y+ {c}',edu_tg:'Targets',edu_tg:'Targets',edu_rt:'Rate',edu_goal:'Goal 90%',edu_ttf:'done {d} / target {t}',man_sum:'Total',chp_c:'Chambers',chp_p:'per person',nTo:'fill rate {p}% · {d} vs TO',nEdu:'rate {p}% · {d}/{t} done (LV1+LV2)',nCip:'progress {p}% · {n} remaining',nAtt:'daily avg attend {a} · leave {l} · {j} jobs ({p}/person)',nChp:'{v} chambers/person ({c}ch · {h} staff)',nMan:'{v}h per person·day · PM {pm}h',nFt:'{n} in latest period · {d} vs prev',per_ws:'W',per_ms:'M',per_ys:'Y',ytd:'{y} YTD',top_allblank:'{m} faults · alarm type blank — fill column Z in the sheet',per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',print:'🖨 Print',wk_narr:'📋 Summary',wk_narr_w:'📋 This Week',wk_narr_m:'📋 This Month',
  kp1:'Headcount',kp2:'Joined · Left (this month)',kp3:'Training Rate',kp4:'BM count · last 30d',kp5:'Hours/person · last 30d',kp6:'PM Progress · YTD',
  kf1:'2y+ {n} · under 1y {m}',kf2:'{n} joined in 12mo',kf3:'Veteran {p}% ({n} targets)',kf4:'prev 30d {n}',kf5:'PM share {p}%',kf6:'plan {a} · done {b}',
  sec1:'Key Metrics',sec2:'Details',sec3:'Alarm · Faults',sec4:'Equipment',
@@ -458,7 +452,7 @@ en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, traini
  tbl_op:'Scrubber Operation Status',note_op:'running = Turn-On done · chamber DUAL=2·SINGLE=1 · fit chambers/person editable per site (click ✎ · default 40) · PM = TBM in period · as of cutoff',op_corp:'Entity',op_div:'Site',op_run_u:'Running Units',op_run_c:'Running Chambers',op_idle:'Idle',op_staff:'Staff',op_to:'Target TO',op_gap:'Gap',op_hire:'Hiring',op_chp:'Ch/person',op_pm:'PM',op_unit:'Units',op_ch:'Chambers',op_expat:'Expat',op_local:'Local',op_fit:'Fit ch.',op_need:'Headcount',
  ins_pm:'YTD PM progress {p}% (plan {a} · done {b})',ins_ft:'{n} faults in 30d · {p} vs prev 30d',ins_hc:'{n} active · joined {a} · left {b} this month',
  ax_t:'Axis range (blank=auto)',ax_min:'Min',ax_max:'Max',ax_apply:'Apply',ax_reset:'Reset',loading:'Loading...',loaded:'Loaded',mon_u:'',u_p:'',u_c:''},
-zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇总',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_period:'期间',all:'全部',hr_note:'联动客户筛选 · 国家/线不适用',hr_note2:'',sec_ops:'运营',ops_note:'可用人力=人员现况中现场(O)在职者·联动客户筛选',ops_wait:'人员现况/休假现况表未连接 — 请在 report/index.html 顶部填入 GID_ROSTER / GID_LEAVE',ch_att:'出勤 · 休假',note_att:'工作日日均 · 出勤=可用人力−休假',att_a:'出勤',att_l:'休假',ch_to:'总人员 vs TO',note_to:'TO=搬入腔体÷30 (DUAL=2·SINGLE=1)',head_l:'总人员',ch_chp:'人均管理腔体',note_chp:'累计搬入腔体÷可用人力·明细见提示框',cutoff:'截止',att_pj:'人均作业',man_tot:'工时(h)',grp_t:'工龄',grp_s:'所属',cr_u1:'1年内',cr_u1:'1年内',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'按线人员趋势',note_career:'各区间末现场(O)在职·按线堆叠',nCareer:'1年内 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'对象人员',edu_tg:'对象人员',edu_rt:'完成率',edu_goal:'目标90%',edu_ttf:'完成 {d} / 对象 {t}',man_sum:'合计',chp_c:'腔体(搬入)',chp_p:'人均管理',nTo:'满编率 {p}% · 较TO {d}名',nEdu:'完成率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'进度 {p}% · 剩余 {n}件',nAtt:'日均出勤 {a}名 · 休假 {l}名 · 作业 {j}件 (人均 {p}件)',nChp:'人均 {v}腔体 ({c}ch · {h}名)',nMan:'人均日 {v}h · PM {pm}h',nFt:'最近区间 {n}件 · 环比 {d}',per_ws:'周',per_ms:'月',per_ys:'年',ytd:'{y} 累计',top_allblank:'故障{m}件 · 报警类型未填 — 需填写表格Z列',per_w:'按周',per_m:'按月',per_note:'最近12个区间',print:'🖨 打印',wk_narr:'📋 本期摘要',wk_narr_w:'📋 本周摘要',wk_narr_m:'📋 本月摘要',
+zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇总',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_customer:'客户',sl_line:'线',sl_fab:'FAB',sl_period:'期间',all:'全部',hr_note:'联动客户筛选 · 国家/线不适用',hr_note2:'',sec_ops:'运营',ops_note:'可用人力=人员现况中现场(O)在职者·联动客户筛选',ops_wait:'人员现况/休假现况表未连接 — 请在 report/index.html 顶部填入 GID_ROSTER / GID_LEAVE',ch_att:'出勤 · 休假',note_att:'工作日日均 · 出勤=可用人力−休假',att_a:'出勤',att_l:'休假',ch_to:'总人员 vs TO',note_to:'TO=搬入腔体÷30 (DUAL=2·SINGLE=1)',head_l:'总人员',ch_chp:'人均管理腔体',note_chp:'累计搬入腔体÷可用人力·明细见提示框',cutoff:'截止',att_pj:'人均作业',man_tot:'工时(h)',grp_t:'工龄',grp_s:'所属',cr_u1:'1年内',cr_u1:'1年内',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'按线人员趋势',note_career:'各区间末现场(O)在职·按线堆叠',nCareer:'1年内 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'对象人员',edu_tg:'对象人员',edu_rt:'完成率',edu_goal:'目标90%',edu_ttf:'完成 {d} / 对象 {t}',man_sum:'合计',chp_c:'腔体(搬入)',chp_p:'人均管理',nTo:'满编率 {p}% · 较TO {d}名',nEdu:'完成率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'进度 {p}% · 剩余 {n}件',nAtt:'日均出勤 {a}名 · 休假 {l}名 · 作业 {j}件 (人均 {p}件)',nChp:'人均 {v}腔体 ({c}ch · {h}名)',nMan:'人均日 {v}h · PM {pm}h',nFt:'最近区间 {n}件 · 环比 {d}',per_ws:'周',per_ms:'月',per_ys:'年',ytd:'{y} 累计',top_allblank:'故障{m}件 · 报警类型未填 — 需填写表格Z列',per_w:'按周',per_m:'按月',per_note:'最近12个区间',print:'🖨 打印',wk_narr:'📋 本期摘要',wk_narr_w:'📋 本周摘要',wk_narr_m:'📋 本月摘要',
  kp1:'在职人员',kp2:'本月入职·离职',kp3:'教育完成率',kp4:'BM件数·近30天',kp5:'人均工时(h)·近30天',kp6:'PM进度·今年',
  kf1:'2年+ {n}名 · 1年内 {m}名',kf2:'近12个月入职 {n}名',kf3:'Veteran {p}% (对象 {n}名)',kf4:'前30天 {n}件',kf5:'PM占比 {p}%',kf6:'计划 {a} · 完成 {b}',
  sec1:'核心指标',sec2:'详细分析',sec3:'Alarm · 故障',sec4:'设备',
@@ -475,7 +469,7 @@ zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇
  tbl_op:'Scrubber 运行现况',note_op:'运行=Turn-On完成 · 腔体 DUAL=2·SINGLE=1 · 人均适定腔体可按站点修改(点✎ · 默认40) · PM=该区间TBM · 截止日基准',op_corp:'法人',op_div:'区分',op_run_u:'运行设备台数',op_run_c:'运行腔体数',op_idle:'未运行',op_staff:'负责人员(名)',op_to:'目标 TO',op_gap:'增减(名)',op_hire:'招聘计划',op_chp:'人均腔体',op_pm:'PM(件)',op_unit:'设备',op_ch:'腔体',op_expat:'驻在员',op_local:'当地雇员',op_fit:'适定腔体',op_need:'人员(名)',
  ins_pm:'今年PM进度 {p}% (计划 {a} · 完成 {b})',ins_ft:'近30天故障 {n}件 · 环比 {p}',ins_hc:'在职 {n}名 · 本月入职 {a} · 离职 {b}',
  ax_t:'轴范围 (空=自动)',ax_min:'最小',ax_max:'最大',ax_apply:'应用',ax_reset:'重置',loading:'加载中...',loaded:'已加载',mon_u:'月',u_p:'名',u_c:'件'},
-ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サマリー',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'ライン',sl_period:'期間',all:'全体',hr_note:'顧客フィルタ連動 · 国/ライン非適用',hr_note2:'',sec_ops:'運営',ops_note:'可用人員=人員現況の現場(O)在籍者·顧客フィルタ連動',ops_wait:'人員現況/休暇現況シート未接続 — report/index.html 上部の GID_ROSTER / GID_LEAVE を設定してください',ch_att:'出勤 · 休暇',note_att:'平日の日平均 · 出勤=可用人員−休暇',att_a:'出勤',att_l:'休暇',ch_to:'総人員 vs TO',note_to:'TO=搬入チャンバー÷30 (DUAL=2·SINGLE=1)',head_l:'総人員',ch_chp:'一人当たり管理チャンバー',note_chp:'累計搬入チャンバー÷可用人員·詳細はツールチップ',cutoff:'締め',att_pj:'一人当たり作業',man_tot:'工数(h)',grp_t:'経歴',grp_s:'所属',cr_u1:'1年未満',cr_u1:'1年未満',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'ライン別人員推移',note_career:'各区間末の現場(O)在籍·ライン別スタック',nCareer:'1年未満 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'対象人員',edu_tg:'対象人員',edu_rt:'完了率',edu_goal:'目標90%',edu_ttf:'完了 {d} / 対象 {t}',man_sum:'合計',chp_c:'チャンバー(搬入)',chp_p:'一人当たり',nTo:'充足率 {p}% · TO比 {d}名',nEdu:'完了率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'進捗 {p}% · 残り {n}件',nAtt:'日平均出勤 {a}名 · 休暇 {l}名 · 作業 {j}件 (一人 {p}件)',nChp:'一人 {v}チャンバー ({c}ch · {h}名)',nMan:'一人日平均 {v}h · PM {pm}h',nFt:'直近 {n}件 · 前比 {d}',per_ws:'週',per_ms:'月',per_ys:'年',ytd:'{y} 累計',top_allblank:'故障{m}件 · アラーム種別未記入 — シートZ列の入力が必要',per_w:'週別',per_m:'月別',per_note:'直近12区間',print:'🖨 印刷',wk_narr:'📋 今週サマリー',wk_narr_w:'📋 今週サマリー',wk_narr_m:'📋 今月サマリー',
+ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サマリー',back:'← メイン',refresh:'更新',sl_country:'国',sl_customer:'顧客',sl_line:'ライン',sl_fab:'FAB',sl_period:'期間',all:'全体',hr_note:'顧客フィルタ連動 · 国/ライン非適用',hr_note2:'',sec_ops:'運営',ops_note:'可用人員=人員現況の現場(O)在籍者·顧客フィルタ連動',ops_wait:'人員現況/休暇現況シート未接続 — report/index.html 上部の GID_ROSTER / GID_LEAVE を設定してください',ch_att:'出勤 · 休暇',note_att:'平日の日平均 · 出勤=可用人員−休暇',att_a:'出勤',att_l:'休暇',ch_to:'総人員 vs TO',note_to:'TO=搬入チャンバー÷30 (DUAL=2·SINGLE=1)',head_l:'総人員',ch_chp:'一人当たり管理チャンバー',note_chp:'累計搬入チャンバー÷可用人員·詳細はツールチップ',cutoff:'締め',att_pj:'一人当たり作業',man_tot:'工数(h)',grp_t:'経歴',grp_s:'所属',cr_u1:'1年未満',cr_u1:'1年未満',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'ライン別人員推移',note_career:'各区間末の現場(O)在籍·ライン別スタック',nCareer:'1年未満 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'対象人員',edu_tg:'対象人員',edu_rt:'完了率',edu_goal:'目標90%',edu_ttf:'完了 {d} / 対象 {t}',man_sum:'合計',chp_c:'チャンバー(搬入)',chp_p:'一人当たり',nTo:'充足率 {p}% · TO比 {d}名',nEdu:'完了率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'進捗 {p}% · 残り {n}件',nAtt:'日平均出勤 {a}名 · 休暇 {l}名 · 作業 {j}件 (一人 {p}件)',nChp:'一人 {v}チャンバー ({c}ch · {h}名)',nMan:'一人日平均 {v}h · PM {pm}h',nFt:'直近 {n}件 · 前比 {d}',per_ws:'週',per_ms:'月',per_ys:'年',ytd:'{y} 累計',top_allblank:'故障{m}件 · アラーム種別未記入 — シートZ列の入力が必要',per_w:'週別',per_m:'月別',per_note:'直近12区間',print:'🖨 印刷',wk_narr:'📋 今週サマリー',wk_narr_w:'📋 今週サマリー',wk_narr_m:'📋 今月サマリー',
  kp1:'在籍人員',kp2:'今月 入社·退社',kp3:'教育完了率',kp4:'BM件数·直近30日',kp5:'一人工数(h)·直近30日',kp6:'PM進捗·今年',
  kf1:'2年+ {n}名 · 1年未満 {m}名',kf2:'直近12ヶ月入社 {n}名',kf3:'Veteran {p}% (対象 {n}名)',kf4:'前30日 {n}件',kf5:'PM比率 {p}%',kf6:'計画 {a} · 完了 {b}',
  sec1:'主要指標',sec2:'詳細分析',sec3:'Alarm · 故障',sec4:'設備',
@@ -501,15 +495,31 @@ const F={country:'',customer:'',line:new Set(),dtFrom:'',dtTo:''};
 try{ const sl=localStorage.getItem('gst_rpt_lines')||''; sl.split(',').filter(Boolean).forEach(k=>F.line.add(k)); }catch(e){}
 function saveLines(){ try{localStorage.setItem('gst_rpt_lines',Array.from(F.line).join(','));}catch(e){} }
 // fab/고객사 문자열 → 라인 키. 전 데이터셋(실적·설치·인원·휴가·ABP)에서 같은 규칙을 쓴다.
+/* FAB 하나만 돌려준다. 예전엔 `fab + ' ' + customer`를 한 문자열로 합쳐
+   F16·F11·F16N·F16S(=FAB)와 PSMC·TASC·WINBOND(=Customer)를 7키로 뭉갰다.
+   그래서 Micron의 F16N(Tongluo)이 PSMC와 동급 형제로 렌더돼 "Tongluo도 마이크론인데
+   왜 따로 잡히나"라는 말이 나왔다. 실측: 설치현황에 Customer=MICRON · FAB=F16N 58건, 예외 0.
+   FAB이 없는 고객사(PSMC·TASC·WINBOND)는 고객사 자체를 키로 쓴다 — 그들은 FAB이 하나뿐이다. */
 function lineKeyOf(fb,cb){
-  const s=GST.upk(String(fb||'')+' '+String(cb||''));
-  if(/F16N|TONG/.test(s))return 'F16N';  if(/F16S|TAINAN/.test(s))return 'F16S';
-  if(/F11/.test(s))return 'F11';         if(/F16/.test(s))return 'F16';
-  if(/WINBOND/.test(s))return 'WINBOND';
-  if(/PSMC|POWERCHIP/.test(s))return 'PSMC'; if(/TASC|ASIA/.test(s))return 'TASC';
-  return '';
+  const f=GST.ORG.fab(fb)||GST.ORG.fab(cb); if(f) return f;
+  const c=GST.ORG.customer(cb)||GST.ORG.customer(fb);
+  // Micron은 FAB이 여럿이라 고객사로 폴백하면 어느 공장인지가 사라진다 → 미상으로 세운다.
+  // PSMC·TASC·Winbond는 FAB이 하나뿐이라 고객사명이 곧 FAB 라벨이다.
+  return (c==='MICRON') ? '미상' : (c||'');
 }
-const LINE_KEYS=['F16','F11','F16N','F16S','PSMC','TASC','WINBOND'];
+/* FAB 목록은 하드코딩하지 않는다. 7키 고정이던 시절 F10(싱가포르)·F15(일본)가 목록에 없어
+   그 물량이 필터에서 통째로 사라졌다(자재 기준 4,027건). 데이터에 실제로 나온 것만 올린다. */
+let LINE_KEYS=[];
+function rebuildFabKeys(){
+  const set=new Set();
+  WK.forEach(x=>{ const k=lineKeyOf(x.fab,x.custB||x.customer); if(k)set.add(k); });
+  (INST||[]).forEach(r=>{ const k=lineKeyOf(r[CI.fab],r[CI.customer]); if(k)set.add(k); });
+  // FAB(F…) 먼저, 그다음 고객사. 각 그룹 안에서는 이름순.
+  LINE_KEYS=Array.from(set).sort((a,b)=>{
+    const fa=/^F\d/.test(a), fb2=/^F\d/.test(b);
+    return fa!==fb2 ? (fa?-1:1) : a.localeCompare(b);
+  });
+}
 const lineOk=(fb,cb)=>!F.line.size||F.line.has(lineKeyOf(fb,cb));
 window.onFilt=function(k,v){F[k]=v;render();};
 // 적정 챔버 — 사이트(구분)별 값. 미설정 사이트는 40. 표의 적정챔버 셀 클릭으로 수정.
@@ -1083,9 +1093,16 @@ function fillFilters(){
   // 라인 — 엑셀식 다중선택 체크박스 (7키 고정 목록, F.line=Set)
   // 박스는 최초 1회만 생성하고 이후엔 체크 상태만 갱신 — 렌더마다 innerHTML을 갈면
   // 체크 직후 문서 클릭 판정에서 분리된 노드가 되어 목록이 닫혀버린다.
+  rebuildFabKeys();
   { const box=document.getElementById('lineBox');
-    if(box&&!box.dataset.built){
-      box.dataset.built='1';
+    /* 박스는 목록이 바뀔 때만 다시 만든다.
+       예전엔 '최초 1회만'이었는데, LINE_KEYS가 상수라 늘 가득 차 있어서 문제가 없었다.
+       목록을 데이터에서 만들도록 바꾸는 순간 함정이 드러났다 — 데이터 로드 전에 한 번
+       그려지면 빈 목록으로 굳어 FAB 필터가 통째로 사라진다.
+       그래도 매 렌더 다시 그리면 안 된다(체크 직후 노드가 분리돼 목록이 닫힌다) → 키 비교. */
+    const _kk=LINE_KEYS.join('\u001f');
+    if(box&&box.dataset.keys!==_kk){
+      box.dataset.keys=_kk;
       box.innerHTML=
         '<div class="lb-all"><button onclick="setAllLines(true)">전체 선택</button><button onclick="setAllLines(false)">전체 해제</button></div>'
         +LINE_KEYS.map(k=>'<label><input type="checkbox" data-k="'+k+'" onchange="toggleLine(\''+k+'\',this.checked)">'+k+'</label>').join('');
@@ -1728,14 +1745,16 @@ function render(){
   {
     const _op=PU('opTbl'); const _oe=_op.P[_op.P.length-1].end, _ost=_op.P[_op.P.length-1].st, _olb=_op.P[_op.P.length-1].label;
     {const tt=document.getElementById('opTblTitle'); if(tt)tt.textContent=t('tbl_op')+' ('+_olb+')';}
-    // 구분 행: Micron F16 / F11 / PSMC / TASC / Winbond / Tong luo(F16N) / Tainan(F16S)
+    /* 구분 행. Micron은 FAB이 여럿이라 'Micron F16'처럼 붙여 쓰고,
+       PSMC·TASC·Winbond는 FAB이 하나라 고객사명만 쓴다.
+       예전엔 Tong luo·Tainan에만 Micron 접두어가 없어 별개 고객사로 읽혔다 — 둘 다 Micron이다. */
     const OROWS=[
       {k:'F16',lbl:'Micron F16'},{k:'F11',lbl:'Micron F11'},
-      {k:'PSMC',lbl:'PSMC'},{k:'TASC',lbl:'TASC'},{k:'WINBOND',lbl:'Winbond'},
-      {k:'F16N',lbl:'Tong luo'},{k:'F16S',lbl:'Tainan'}];
+      {k:'F16N',lbl:'Micron F16N (Tong luo)'},{k:'F16S',lbl:'Micron F16S (Tainan)'},
+      {k:'PSMC',lbl:'PSMC'},{k:'TASC',lbl:'TASC'},{k:'WINBOND',lbl:'Winbond'}];
     const rkI=r=>fabOf(r[CI.fab])||custBase(r[CI.customer]);           // 설치 행 → 구분
     const rkP=p=>p.fab||p.custB;                                        // 인원 행 → 구분
-    const rkW=x=>(/^F1[016]/.test(x.fab)?x.fab:x.custB);                // 실적 행 → 구분
+    const rkW=x=>lineKeyOf(x.fab,x.custB||x.customer);                   // 실적 행 → 구분
     const chW=r=>String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1;
     const isWI=r=>{const w=String(r[CI.warranty]||'').toUpperCase();
       return w.includes('IN')&&!w.includes('OUT');};                    // AR열 'Warranty In/Out'
