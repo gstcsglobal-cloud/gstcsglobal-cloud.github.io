@@ -79,13 +79,40 @@ r2      이수여부(8) 완료일(10) | 이수여부(12) 완료일(14) | 완료�
 
 ---
 
+## 데이터 출처가 둘이다 — 미러(Supabase)와 시트 (v77)
+
+구글시트 셀 한도에 걸려 **조회를 Supabase 미러로 옮겼다.** 쓰기는 그대로 시트로 간다.
+
+| gid | 시트 | 지금 어디서 읽나 |
+|---|---|---|
+| 646668307 · 31302669 · 891608329 | 수선·자재·설치 | **미러** `sheet_wk` · `sheet_mat` · `sheet_inst` |
+| 그 밖(CIP·인원명단·교육·휴가) | | 아직 시트 |
+
+- 페이지는 **한 곳도 안 고쳤다.** `GST.fetchCSVCached`가 gid를 보고 갈라진다
+  (`GST.TABLE_OF_GID`). 첫 행에 시트 헤더 이름을 얹어 2차원 배열로 돌려주므로 `GST.SM`이 그대로 돈다.
+  맵에 없는 gid는 시트로 간다 — 그래서 부분 이관이 자연스럽다.
+- **되돌리기는 `GST.USE_DB=false` 한 줄.** 시트는 하나도 안 건드렸다.
+- **컬럼 매핑을 엣지펑션에 적지 말 것.** `sheet-sync`는 `sheet_spec`·`sheet_colmap` 표를
+  읽어 헤더를 해석한다. 함수에 적으면 스펙의 **네 번째 사본**이 된다.
+  두 표는 `supabase/gen-ddl.mjs`가 `GST.SM.SPEC`에서 뽑는다.
+  **시트에 열이 늘면**: core.js SPEC 수정 → `node supabase/gen-ddl.mjs` →
+  나온 SQL을 Run → `npm run mirror`. 함수는 재배포하지 않는다.
+- **PK는 `src_row`(시트 행번호)다.** 실적코드·Scrubber CODE를 키로 쓰면 안 된다 —
+  실측상 빈값 246·162건에 중복도 있다. 근거는 `setup-4-tables.sql` 상단 주석.
+- **페이지네이션을 "요청한 만큼 안 오면 끝"으로 판정하지 말 것.** PostgREST의 행수 상한은
+  프로젝트 설정이라, 상한에 걸린 것을 완료로 착각하면 잘린 데이터를 조용히 그린다.
+- 미러가 3시간 넘게 안 돌았거나 마지막 적재가 실패하면 화면에 밝힌다(`GST._dbBanner`).
+  **읽기는 성공하는데 값이 옛날 것**인 경우가 가장 설명하기 어려운 실패다.
+
 ## 배포 순서 (틀리면 화면이 안 뜬다)
 
 1. **`assets/core.js` 먼저.** 페이지들이 배포본 core.js를 절대경로로 부르므로,
    core.js가 구버전이면 `GST.SM`이 없어 아무것도 렌더되지 않는다.
 2. 그다음 페이지들 (`fault` · `material` · `pm` · `scrubber` · `tco` · `report` · `cip` · `hr`)
-3. Supabase는 **별개**다. `sheet-write`와 `kakao-bot`은 콘솔에서 코드 교체 후 Deploy.
-   GitHub에 올린다고 반영되지 않는다.
+3. Supabase는 **별개**다. `sheet-write`·`kakao-bot`·`sheet-sync`는 콘솔에서 코드 교체 후 Deploy.
+   GitHub에 올린다고 반영되지 않는다. SQL도 마찬가지 —
+   `setup-4-tables.sql` → `setup-5-sync-rpc.sql` 순서로 Run
+   (자세한 것은 `supabase/functions/sheet-sync/DEPLOY.md`).
 
 ---
 
@@ -120,7 +147,7 @@ r2      이수여부(8) 완료일(10) | 이수여부(12) 완료일(14) | 완료�
 
 ## 검증
 
-`tests/`에 9종이 있다. 시트 파싱을 건드렸으면 최소 `t-sync.mjs`와 `t-shift.mjs`,
+`tests/`에 10종이 있다. 시트 파싱을 건드렸으면 최소 `t-sync.mjs`·`t-shift.mjs`·`t-mirror.mjs`,
 분석 화면을 건드렸으면 `t-deep.mjs`를 돌린다. 실행법과 픽스처 만드는 법은 `tests/README.md`.
 
 | 스크립트 | 지키는 것 |
@@ -133,6 +160,7 @@ r2      이수여부(8) 완료일(10) | 이수여부(12) 완료일(14) | 완료�
 | `t-shift.mjs` | 시트에 열을 끼워 넣어도 KPI가 그대로인지 |
 | `t-deep.mjs` | 심층 분석이 실측값과 같은 숫자를 그리는지 |
 | `t-leak.mjs` | **공개 저장소에 실데이터가 새어 나갔는지** (설비 S/N·작업자 실명) |
+| `t-mirror.mjs` | **미러가 시트와 같은 값을 내는지** (두 파싱 경로를 열별 체크섬으로) |
 | `t-snap.mjs` | 큰 이행 전후로 8페이지 KPI·차트·표가 한 자리도 안 움직였는지 |
 
 브라우저 경로는 `PW_CHROMIUM=/opt/pw-browsers/chromium-1194/chrome-linux/chrome` 로 넘긴다.
