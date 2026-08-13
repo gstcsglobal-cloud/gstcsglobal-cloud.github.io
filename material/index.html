@@ -1584,7 +1584,7 @@ function renderDeepSurge(f){
   const colors=R.seq.map(function(s){ return hotSet[s.k]?TH.status.bad:TH.pal[1]; });
   mkBarVX('cSurge', R.seq.map(function(s){return s.k.slice(2);}), R.seq.map(function(s){return s.n;}),
           TH.pal[1], {colors:colors});
-  const hot=R.hits.map(function(h){ return h.k+' '+(Math.round(h.x*10)/10)+'×'; });
+  const hot=R.hits.map(function(h){ return h.k+' '+GST.xmul(h.x); });
   if(note) note.textContent = hot.length ? t('dp_sg_hot').replace('{v}',hot.join(' · ')) : t('dp_sg_none');
 }
 
@@ -1648,7 +1648,7 @@ function renderDeepLift(f){
       +'<td>'+esc(r.a)+'</td><td>'+esc(r.m)+'</td>'
       +'<td class="num">'+r.n+'</td>'
       +'<td class="num">'+(Math.round(r.share*1000)/10)+'%</td>'
-      +'<td class="num" style="font-weight:800;color:'+hot+'">'+lf+'×</td>'
+      +'<td class="num" style="font-weight:800;color:'+hot+'">'+GST.xmul(r.lift)+'</td>'
       +'<td class="num">'+(r.eqn||'—')+'</td>'
       +'<td style="color:'+spread.c+';font-weight:700">'+spread.s+'</td></tr>';
   }).join('');
@@ -1727,7 +1727,7 @@ function renderDeepSpike(f){
     return '<tr class="dp-row" style="cursor:pointer" onclick="deepPickMat('+JSON.stringify(r.m).replace(/"/g,'&quot;')+')">'
       +'<td>'+esc(r.m)+'</td><td>'+r.mo+'</td><td class="num" style="font-weight:800">'+r.n+'</td>'
       +'<td class="num">'+r.base+'</td>'
-      +'<td class="num" style="font-weight:800;color:#fbbf24">'+(Math.round(r.x*10)/10)+'×</td>'
+      +'<td class="num" style="font-weight:800;color:'+GST.xcol(r.x)+'">'+GST.xmul(r.x)+'</td>'
       +'<td>'+esc(r.where)+'</td></tr>';
   }).join('');
 }
@@ -1763,9 +1763,9 @@ function renderDeepBoW(f){
   const best=eligible.slice().sort(function(p,q){ return p.n-q.n || q.kinds-p.kinds; }).slice(0,15);
   const worst=arr.slice().sort(function(p,q){ return q.n-p.n; }).slice(0,15);
   const row=function(r,mode){
-    const c=mode==='w'?(r.vs>=3?'#f87171':(r.vs>=2?'#fbbf24':'inherit')):'inherit';
+    const c=mode==='w'?GST.xcol(r.vs||0):'inherit';
     const third=mode==='w'
-      ? '<td class="num" style="font-weight:800;color:'+c+'">'+(r.vs?Math.round(r.vs*10)/10+'×':'—')+'</td>'
+      ? '<td class="num" style="font-weight:800;color:'+c+'">'+(r.vs?GST.xmul(r.vs):'—')+'</td>'
       : '<td class="num">'+r.kinds+'</td>';
     return '<tr class="dp-row" style="cursor:pointer" onclick="deepPickEq('+JSON.stringify(r.eq).replace(/"/g,'&quot;')+')">'
       +'<td>'+esc(r.eq)+'</td><td class="num">'+r.n+'</td>'+third
