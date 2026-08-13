@@ -1052,11 +1052,17 @@ GST._CSV_SKIP = { id:1, created_at:1, imported_at:1, src_row:1, synced_at:1, ext
 
 /* 정렬 열을 **가정하지 않는다.** Table Editor 로 만든 표에 id 가 늘 있는 것이 아니다
    (실제로 없었고, `column sheet_roster.id does not exist` 로 읽기가 통째로 실패했다).
-   한 행을 먼저 받아 실제 열 이름을 보고 고른다. */
+   한 행을 먼저 받아 실제 열 이름을 보고 고른다.
+   그리고 **이름에 점·공백이 든 열은 후보에서 뺀다** — PostgREST 의 order= 구문은
+   점(.)이 «컬럼.방향» 구분자라, 인원현황의 «No.» 를 넘겼더니
+   `failed to parse order (No..asc)` 로 읽기가 통째로 죽었다(실제 사고).
+   안전한 열이 하나도 없으면 정렬 없이 간다 — 이 표들은 전부 한 페이지(5,000행)
+   안이라 겹치거나 빠질 위험이 없다. */
 GST._csvOrderCol = function(keys){
-  const pref = ['id','src_row','No','no','NO','No.'];
-  for(let i=0;i<pref.length;i++) if(keys.indexOf(pref[i])>=0) return pref[i];
-  return keys[0] || null;               // 없으면 첫 열 — 정렬이 없으면 페이지가 겹칠 수 있다
+  const safe = keys.filter(function(k){ return /^[A-Za-z0-9_가-힣]+$/.test(k); });
+  const pref = ['id','src_row','No','no','NO'];
+  for(let i=0;i<pref.length;i++) if(safe.indexOf(pref[i])>=0) return pref[i];
+  return safe[0] || null;
 };
 
 GST.csvTableRows = async function(table){

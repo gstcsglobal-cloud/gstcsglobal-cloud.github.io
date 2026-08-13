@@ -157,6 +157,10 @@ console.log('\n[4] 읽기 — 표에 id 가 없어도 읽는지');
         order(col) { st.ord = col; return api; },
         limit(k) { return Promise.resolve({ data: rows.slice(0, k), error: null }); },
         range(a, b) {
+          // PostgREST 는 order= 에서 점(.)을 «컬럼.방향» 구분자로 파싱한다 —
+          // 이름에 점이 든 열을 넘기면 실제로 이렇게 죽는다(인원현황 «No.» 실사고).
+          if (st.ord && /[^A-Za-z0-9_가-힣]/.test(st.ord))
+            return Promise.resolve({ data: null, error: { message: `"failed to parse order (${st.ord}.asc)" (line 1, column 4)` } });
           if (st.ord && !(rows[0] && st.ord in rows[0]))
             return Promise.resolve({ data: null, error: { message: `column ${t}.${st.ord} does not exist` } });
           const s = st.ord ? rows.slice().sort((x, y) => String(x[st.ord]).localeCompare(String(y[st.ord]))) : rows;
@@ -170,6 +174,9 @@ console.log('\n[4] 읽기 — 표에 id 가 없어도 읽는지');
     ['id 있는 표',  [{ id: 2, 'No': '2', '인원': 'B' }, { id: 1, 'No': '1', '인원': 'A' }], 'id'],
     ['id 없는 표',  [{ 'No': '2', '인원': 'B' }, { 'No': '1', '인원': 'A' }], 'No'],
     ['이름뿐인 표', [{ '사원번호': '9', '이름': 'Z' }, { '사원번호': '8', '이름': 'Y' }], '사원번호'],
+    // 인원현황 실사고 재현 — 첫 열이 «No.»(점 포함). 점·공백 든 이름은 후보에서 빠져야 한다.
+    ['점 든 이름 표', [{ 'No.': '2', 'ID': 'E2', 'Name((영문)': 'B', 'Date of entry': '2024-01-01' },
+                       { 'No.': '1', 'ID': 'E1', 'Name((영문)': 'A', 'Date of entry': '2023-01-01' }], 'ID'],
   ];
   const realDb = G.db;
   for (const [label, rows, wantOrd] of cases) {
@@ -183,6 +190,23 @@ console.log('\n[4] 읽기 — 표에 id 가 없어도 읽는지');
       head.indexOf('id') < 0 ? ok(`${label}: 헤더 [${head.join(', ')}] · ${out.length - 1}행 (id 제외됨)`)
                              : err(`${label}: 헤더에 id 가 섞였다`);
     } catch (e) { err(`${label}: 읽기 실패 — ${e.message}`); }
+  }
+  /* 음성 대조 — 잡는지 확인 안 된 검사는 검사가 아니다. 예전처럼 «No.» 로 정렬을 걸면
+     위 모의 클라이언트가 실제 PostgREST 와 같은 파싱 에러를 내는지 확인한다. */
+  {
+    const rows = [{ 'No.': '1', 'ID': 'E1' }];
+    G.db = async () => mkClient({ t: rows });
+    const realOrd = G._csvOrderCol;
+    G._csvOrderCol = () => 'No.';
+    try {
+      await G.csvTableRows('t');
+      err('음성 대조: «No.» 정렬이 에러를 내지 않았다 — 모의가 실사고를 재현하지 못한다');
+    } catch (e) {
+      /failed to parse order/.test(e.message)
+        ? ok(`음성 대조: «No.» 정렬 → ${e.message.slice(0, 60)}…`)
+        : err(`음성 대조: 예상과 다른 에러 — ${e.message}`);
+    }
+    G._csvOrderCol = realOrd;
   }
   G.db = realDb;
 }
