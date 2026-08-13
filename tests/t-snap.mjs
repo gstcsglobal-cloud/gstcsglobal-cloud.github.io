@@ -21,10 +21,27 @@ const CSV = { '646668307':'csv_wk.csv', '31302669':'csv_mat.csv', '891608329':'c
 
 const PAGES = ['fault','material','pm','scrubber','tco','cip','report','hr'];
 
+/* 시계를 고정한다. tco가 유틸리티 비용을 **벽시계 경과시간에 적분**하기 때문에
+   (tco/index.html의 `const NOW=Date.now()`) 코드를 한 줄도 안 고치고 하루 뒤 다시 재면
+   값이 계속 흐른다. 예전에는 0.5% 허용오차로 덮었는데, 그러면 그만큼의 진짜 회귀를
+   못 잡고 시간이 더 지나면 결국 거짓 실패가 난다(실제로 났다).
+   고정하면 대조가 정확해진다. 기간 필터도 이 시각을 기준으로 일관되게 돈다. */
+const FROZEN = Date.UTC(2026, 7, 13, 3, 0, 0);   // 2026-08-13 12:00 KST
+const FREEZE = `(() => {
+  const R = Date, T = ${FROZEN};
+  function D(...a){ return a.length ? new R(...a) : new R(T); }
+  D.prototype = R.prototype;
+  D.now = () => T; D.parse = R.parse; D.UTC = R.UTC;
+  Object.setPrototypeOf(D, R);
+  globalThis.Date = D;
+  globalThis.performance && (globalThis.performance.now = () => 0);
+})();`;
+
 async function shot(browser, page_){
   const ctx = await browser.newContext();
   const errs = [];
   const page = await ctx.newPage();
+  await page.addInitScript(FREEZE);
   page.on('pageerror', e => errs.push('JS: ' + e.message));
   page.on('console', m => { if (m.type() === 'error') errs.push('con: ' + m.text().slice(0,140)); });
 
@@ -119,12 +136,9 @@ for (const p of PAGES) {
     a.kpi.forEach((v,i) => { if (v !== b.kpi[i]) console.log(`       [${i}] ${v} → ${b.kpi[i]}`); });
     if (b.kpi.length !== a.kpi.length) console.log(`       개수 ${a.kpi.length} → ${b.kpi.length}`);
   }
-  /* 차트 합은 상대오차를 준다. TCO가 유틸리티 비용을 **벽시계 경과시간에 적분**하기 때문이다
-     (tco/index.html의 `const NOW=Date.now()`). 코드를 한 줄도 안 고치고 90초 뒤 다시 재면
-     2,445,558,478 → 2,448,571,330처럼 값이 계속 흐른다. 절대비교로 두면 매번 거짓 실패가 나고,
-     거짓 실패가 나는 검사는 아무도 안 본다.
-     이행 사고는 이 정도로 작게 나지 않는다 — 차트가 0이 되거나 절반이 날아간다. */
-  const TOL = 0.005;
+  /* 시계를 고정했으므로(위 FREEZE) 차트 합은 **정확히** 같아야 한다.
+     부동소수점 누적 오차만 열어 둔다. 허용오차를 넓게 두면 그만큼의 회귀를 못 잡는다. */
+  const TOL = 1e-9;
   Object.keys(a.charts).forEach(k => {
     const x = a.charts[k], y = b.charts[k];
     if (!y) return say(`차트 ${k} 사라짐`);

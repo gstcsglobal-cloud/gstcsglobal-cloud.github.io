@@ -943,12 +943,110 @@ GST.cacheSave=function(key,rows){
 GST.cacheLoad=function(key){
   try{ return JSON.parse(localStorage.getItem('gstc_'+key)||'null'); }catch(e){ return null; }
 };
+/* ---------- 9-b. Supabase 미러 읽기 (v77) ----------
+   구글시트 셀 한도에 걸려 조회를 DB로 옮긴다. 페이지는 한 곳도 고치지 않는다 —
+   `fetchCSVCached(url, key)`의 시그니처와 **2차원 배열 반환**을 그대로 지키고
+   내부만 갈아끼운다. 첫 행에 시트 헤더 이름을 얹어 돌려주므로 `GST.SM`이 그대로 돈다.
+
+   여기 없는 gid는 지금처럼 시트로 간다. 그래서 부분 이관이 자연스럽다
+   (CIP·인원명단·교육현황은 아직 시트다 — 행이 100개 안팎이라 급하지 않다). */
+GST.TABLE_OF_GID = { '646668307':'wk', '31302669':'mat', '891608329':'inst' };
+GST.USE_DB = true;                       // 되돌리려면 이 한 줄을 false로
+GST._snake = function(s){ return String(s).replace(/([a-z0-9])([A-Z])/g,'$1_$2').toLowerCase(); };
+
+/* 미러에서 못 읽었을 때 조용히 넘어가지 않는다. 시트로 되돌아가는 것 자체는 안전하지만,
+   그 사실을 안 알리면 "왜 어제 넣은 데이터가 안 보이나"를 아무도 설명할 수 없다. */
+GST._dbWarn = function(table, e){
+  const m = String((e&&e.message)||e).slice(0,120);
+  GST._dbMiss = (GST._dbMiss||[]).filter(function(x){ return x.t!==table; }).concat([{ t:table, m:m }]);
+  try{ console.warn('[미러] '+table+': '+m); }catch(_){}
+  GST._dbBanner();
+};
+/* 열 미인식 배너(붉은색)와 **다른 색·다른 자리**를 쓴다. 이건 숫자가 틀렸다는 뜻이 아니라
+   "지금 보는 값의 출처가 예정과 다르다"는 뜻이다. 둘을 같은 붉은 배너로 묶으면
+   진짜 위험한 쪽이 묻힌다. 아무 문제 없으면 배너 자체가 없다. */
+GST._dbBanner = function(){
+  const bad = GST._dbMiss||[];
+  let el = document.getElementById('gstMirrorWarn');
+  if(!bad.length){ if(el) el.remove(); return; }
+  if(!el){
+    el = document.createElement('div'); el.id='gstMirrorWarn';
+    el.style.cssText='background:#78350f;color:#fde68a;padding:9px 14px;border-radius:10px;'+
+      'margin:0 0 12px;font-size:12px;font-weight:600;line-height:1.5';
+    const a=document.querySelector('.status')||document.body.firstElementChild;
+    if(a&&a.parentNode) a.parentNode.insertBefore(el, a.nextSibling);
+    else document.body.insertAdjacentElement('afterbegin', el);
+  }
+  el.textContent='ℹ️ '+bad.map(function(x){ return x.t+' — '+x.m; }).join(' | ');
+};
+
+/* 한 표를 통째로 읽어 [헤더행, ...데이터행] 2차원 배열로 되돌린다. */
+GST.dbRows = async function(table){
+  const c = await GST.db(); if(!c) throw new Error('DB_OFF');
+  const S = GST.SM.SPEC[table]; if(!S) throw new Error('NO_SPEC '+table);
+  const keys = Object.keys(S.fields);
+  const cols = keys.map(GST._snake);
+  // 헤더 행은 SPEC의 **첫 번째 이름**을 쓴다. 별칭은 시트 쪽 사정이고 미러는 컬럼이 고정이다.
+  const head = keys.map(function(k){ return [].concat(S.fields[k])[0]; });
+
+  /* 기대 행수를 먼저 본다. 미러가 아직 안 채워졌는데 빈 배열을 돌려주면
+     화면이 "데이터 0건"으로 멀쩡히 그려진다 — 그게 가장 위험한 실패다. */
+  const lg = await c.from('sheet_sync_log').select('rows,err,synced_at').eq('tbl', table).maybeSingle();
+  if(lg.error) throw new Error('LOG '+lg.error.message);
+  const want = lg.data && lg.data.rows;
+  if(!want) throw new Error('MIRROR_EMPTY — 아직 적재된 적이 없다');
+
+  /* 미러가 멈춰 있으면 **읽기는 성공하는데 값이 옛날 것**이다. 이게 가장 설명하기 어려운
+     실패라 화면에 밝힌다. 30분마다 도는 것을 전제로 3시간(여섯 번 거름)에서 알린다.
+     막지는 않는다 — 옛 데이터라도 없는 것보다 낫고, 판단은 사람이 한다. */
+  const ageMin = Math.round((Date.now() - new Date(lg.data.synced_at).getTime())/60000);
+  if(lg.data.err) GST._dbWarn(table, '마지막 적재 실패: '+String(lg.data.err).slice(0,80));
+  else if(ageMin > 180) GST._dbWarn(table, '미러가 '+Math.round(ageMin/60)+'시간째 갱신되지 않았습니다');
+  GST._dbAge = Math.max(GST._dbAge||0, ageMin);
+
+  /* 페이지네이션. PostgREST는 한 번에 돌려주는 행수에 상한이 있고 그 값은 프로젝트 설정이다.
+     그래서 "요청한 만큼 안 왔으면 끝"으로 판정하면 안 된다 — 상한에 걸린 것을 완료로 착각해
+     조용히 잘린 데이터를 그린다. **받은 만큼만 전진하고 0행일 때 멈춘다.** */
+  const STEP = 5000; let from = 0; const out = [];
+  for(let guard=0; guard<200; guard++){
+    const r = await c.from('sheet_'+table).select(cols.join(',') + ',src_row')
+                     .order('src_row', {ascending:true}).range(from, from+STEP-1);
+    if(r.error) throw new Error('READ '+r.error.message);
+    const n = (r.data||[]).length; if(!n) break;
+    for(let i=0;i<n;i++) out.push(r.data[i]);
+    from += n;
+    if(out.length >= want) break;
+  }
+  /* 적재 기록과 실제로 받은 행수가 다르면 그 자리에서 멈춘다.
+     모자란 채로 그리면 KPI가 조용히 작아진다. */
+  if(out.length !== want) throw new Error('MIRROR_SHORT '+out.length+'/'+want);
+
+  const rows = new Array(out.length+1); rows[0] = head;
+  for(let i=0;i<out.length;i++){
+    const o = out[i], r = new Array(cols.length);
+    for(let j=0;j<cols.length;j++){ const v=o[cols[j]]; r[j] = (v==null?'':String(v)); }
+    rows[i+1] = r;
+  }
+  return rows;
+};
+
 // 캐시 폴백 로드: 성공 시 저장, 실패 시 캐시로 대체 (cached/ageMin 플래그 반환)
 GST.fetchCSVCached = async function(url, key){
+  const gm = String(url||'').match(/[?&]gid=(\d+)/);
+  const table = gm && GST.TABLE_OF_GID[gm[1]];
+  /* 인증이 꺼진 환경(로컬 파일 열기·검증 스크립트)에서는 Supabase 자체가 없다.
+     그건 폴백이 아니라 원래 시트 경로이므로 경고하지 않는다 — 늘 뜨는 경고는 아무도 안 본다. */
+  if(table && GST.USE_DB && GST.authOn()){
+    try{
+      const rows = await GST.dbRows(table);
+      if(rows && rows.length>1){ GST.cacheSave(key, rows); return {rows, cached:false, ageMin:0, src:'db'}; }
+      throw new Error('MIRROR_EMPTY');
+    }catch(e){ GST._dbWarn(table, e); }   // 시트로 되돌아간다. 아래가 그 경로다.
+  }
   try{
     const rows = await GST.fetchCSV(url);
     if(rows && rows.length>1) GST.cacheSave(key, rows);
-    return {rows, cached:false, ageMin:0};
+    return {rows, cached:false, ageMin:0, src:'sheet'};
   }catch(e){
     const c = GST.cacheLoad(key);
     if(c && c.rows) return {rows:c.rows, cached:true, ageMin:Math.round((Date.now()-c.t)/60000)};
@@ -3088,7 +3186,10 @@ GST.pivotOpen=function(){
 
 function gstAutoStart(){
   try{ GST.autoSidebar(); }catch(e){}
-  try{ GST.startAutoRefresh(10); }catch(e){}
+  /* 10분 → 30분. 한 번의 새로고침이 시트 8개를 통째로 다시 받는다(주간현황 기준).
+     10분이면 한 사람이 하루 8시간 열어두는 것만으로 하루 768MB — 무료 5GB가 일주일에 사라진다.
+     시트는 그렇게 자주 바뀌지 않고, 미러 자체도 30분 주기로 돈다(sheet-sync/DEPLOY.md). */
+  try{ GST.startAutoRefresh(30); }catch(e){}
   try{ gstSnStart(); }catch(e){}
 }
 if(document.readyState==='loading'){
