@@ -216,7 +216,8 @@ async function colSums(rows: string[][]): Promise<string[]> {
   for (let c = 0; c < w; c++) out.push(await sha(rows.map((r) => r[c] ?? "").join("")));
   return out;
 }
-async function selfcheck(gid: string) {
+async function selfcheckOne(gid: string) {
+  const t0 = Date.now();
   const [apiRows, pubText] = await Promise.all([readTabRows(gid), readPubCSV(gid)]);
   const pubRows = parseCSV(pubText);
   const [ca, cp] = await Promise.all([colSums(apiRows), colSums(pubRows)]);
@@ -229,6 +230,32 @@ async function selfcheck(gid: string) {
     pub: { rows: pubRows.length, cols: cp.length },
     same: diff.length === 0 && apiRows.length === pubRows.length,
     diff_cols: diff.slice(0, 20), // 열 번호만 — 값은 내보내지 않는다
+    ms: Date.now() - t0,
+  };
+}
+/* gid를 안 주면 «전부» 돈다. 아홉 개를 사람이 외워 하나씩 넣게 두면 반드시 빠뜨린다.
+   한 gid씩 순차로 — 자재실적 3만 행을 두 경로로 동시에 들면 메모리에 걸린다.
+   하나가 실패해도 나머지는 계속 본다(전체가 죽으면 어디가 문제인지 못 가른다). */
+async function selfcheck(gidParam: string | null) {
+  const list = (!gidParam || gidParam === "all")
+    ? Object.keys(ALLOW_GID)
+    : gidParam.split(",").map((s) => s.trim()).filter(Boolean);
+  const bad = list.filter((g) => !(g in ALLOW_GID));
+  if (bad.length) return { error: `gid not allowed: ${bad.join(",")}` };
+
+  const results: unknown[] = [];
+  for (const g of list) {
+    try { results.push(await selfcheckOne(g)); }
+    catch (e) { results.push({ gid: g, name: ALLOW_GID[g], error: String((e as Error).message).slice(0, 160) }); }
+  }
+  const same = results.filter((r: any) => r.same).length;
+  return {
+    checked: results.length,
+    same_count: same,
+    all_same: same === results.length,
+    // 한눈에 볼 줄 — 여기만 보고도 판정된다
+    summary: results.map((r: any) => `${r.same ? "OK  " : r.error ? "ERR " : "DIFF"} ${r.gid} ${r.name}`),
+    results,
   };
 }
 
@@ -254,14 +281,19 @@ Deno.serve(async (req) => {
       if (!allowed) return txt("forbidden", 403);
     }
 
-    const gid = url.searchParams.get("gid") ?? "0";
-    if (!(gid in ALLOW_GID)) return txt(`gid not allowed: ${gid}`, 400);
+    const gidParam = url.searchParams.get("gid");
 
+    // gid를 안 주면 아홉 개 전부 — 사람이 목록을 외우게 두지 않는다
     if (url.searchParams.get("op") === "selfcheck") {
-      return new Response(JSON.stringify(await selfcheck(gid), null, 1), {
+      const out = await selfcheck(gidParam);
+      return new Response(JSON.stringify(out, null, 1), {
+        status: (out as any).error ? 400 : 200,
         headers: { ...CORS, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
       });
     }
+
+    const gid = gidParam ?? "0";
+    if (!(gid in ALLOW_GID)) return txt(`gid not allowed: ${gid}`, 400);
 
     const csv = url.searchParams.get("via") === "pub"
       ? await readPubCSV(gid)

@@ -45,24 +45,27 @@
 `op=selfcheck`가 같은 탭을 **웹게시로 한 번, API로 한 번** 읽어 **열별 SHA-256**을 맞춰본다.
 행수만 맞춰서는 아무것도 증명되지 않는다 — 열이 한 칸 밀려도 행수는 그대로다.
 
-콘솔 → Edge Functions → sheet-proxy → Test:
+콘솔 → Edge Functions → **sheet-proxy** → Test. **`gid`는 비워 둔다 — 아홉 개를 전부 돈다.**
+목록을 사람이 외워 하나씩 넣게 두면 반드시 빠뜨린다.
 
 ```
-Query Parameters:  op = selfcheck ,  gid = 646668307
+Query Parameters:  op = selfcheck
 Headers:           Authorization: Bearer <anon key>
                    x-sync-secret: <SYNC_SECRET>
 ```
 
 ```json
-{ "gid": "646668307", "name": "수선실적",
-  "api": { "rows": 17338, "cols": 67 },
-  "pub": { "rows": 17338, "cols": 67 },
-  "same": true, "diff_cols": [] }
+{ "checked": 9, "same_count": 9, "all_same": true,
+  "summary": ["OK   646668307 수선실적", "OK   31302669 자재실적", … ],
+  "results": [ { "gid":"646668307", "api":{"rows":17338,"cols":67},
+                 "pub":{"rows":17338,"cols":67}, "same":true, "diff_cols":[], "ms":4100 }, … ] }
 ```
 
-**아홉 개 gid를 전부 돌린다** — `646668307` · `31302669` · `891608329` · `2123129719` ·
-`1999732389` · `0` · `1213453343` · `262805841` · `1263412805`.
-전부 `"same": true` 여야 한다. 값은 응답에 나오지 않는다(열 번호와 체크섬만).
+**`"all_same": true`** 하나만 보면 된다. 아니면 `summary`에서 `DIFF`/`ERR` 줄을 찾는다.
+값은 응답에 나오지 않는다(열 번호와 체크섬만).
+
+한 시트만 다시 보려면 `gid=646668307`, 몇 개만 보려면 쉼표로 `gid=0,1213453343`.
+전체가 시간 초과로 끊기면(자재실적 3만 행이 무겁다) 그렇게 나눠 돌린다.
 
 `same:false`면 `diff_cols`의 열 번호를 보고 원인을 가른다:
 
