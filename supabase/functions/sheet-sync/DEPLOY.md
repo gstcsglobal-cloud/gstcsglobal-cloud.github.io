@@ -26,19 +26,36 @@ Edge Functions → Deploy a new function → 이름을 정확히 **`sheet-sync`*
 
 Edge Functions → Secrets. **값이 아니라 이름만 여기 적는다.**
 
-| 이름 | 비고 |
+| 이름 | 상태 |
 |---|---|
-| `SYNC_SECRET` | 새로 만든다. 아무 긴 무작위 문자열. 미설정이면 함수가 500으로 거부한다 |
+| `SYNC_SECRET` | **이미 있다** — `kakao-bot`이 `?op=sync` 인증에 쓰는 것과 같은 값 |
 | `SHEET_PUB_URL` | **이미 있다** — `sheet-proxy`·`kakao-bot`이 쓰는 것과 같은 값 |
 | `SUPABASE_URL` | 플랫폼이 자동 주입 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 플랫폼이 자동 주입 |
+
+> **`SYNC_SECRET`을 새로 만들지 말 것.** Supabase 시크릿은 함수별이 아니라
+> **프로젝트 전체 공용**이라 `sheet-sync`가 기존 값을 그대로 본다.
+> 값을 바꾸면 `kakao-bot`의 기존 sync 호출이 같이 깨진다.
+> 값을 모르겠으면 Secrets 화면에서 확인하거나, 바꾸려면 **두 함수의 호출부를 같이** 고친다.
 
 ### 4. 손으로 한 번 돌려 본다
 
 ```bash
 curl -X POST "https://<프로젝트>.supabase.co/functions/v1/sheet-sync?op=sync&key=inst" \
+     -H "Authorization: Bearer <anon key>" \
      -H "x-sync-secret: <SYNC_SECRET>"
 ```
+
+**`Authorization` 헤더를 빠뜨리지 말 것.** 엣지펑션의 `Verify JWT` 설정이 기본 켜짐이라,
+켜져 있으면 이 헤더가 없는 요청은 **함수 코드에 닿기도 전에** 플랫폼이 401로 끊는다.
+증상이 "본문 없는 401"이면 십중팔구 이것이다.
+
+anon key는 원래 공개값이다(Settings → API → `anon public`, 또는 `assets/core.js:42`에
+그대로 들어 있다 — 대시보드가 브라우저에서 쓰는 값). 실제 권한 판정은 여전히
+`SYNC_SECRET`이 한다. **service_role key를 쓰지 말 것** — 아래 cron 정의에 평문으로 남는다.
+
+> Verify JWT를 끄는 방법도 있다(kakao-bot이 그 형태다 — 카카오 서버가 Supabase JWT를
+> 못 만드니 필연). 다만 위 형태는 **켜져 있든 꺼져 있든 통과**하므로 설정을 건드릴 이유가 없다.
 
 가장 작은 표(설치현황 1,490행)부터 한다. 응답은 이런 모양이다:
 
@@ -63,29 +80,38 @@ select * from sheet_sync_log;
 SQL Editor에서. **표마다 따로, 시각을 어긋나게 건다.**
 `key=all`로 한 번에 돌리면 자재실적 9MB가 앞을 막아 무료 요금제 실행시간에 걸릴 수 있다.
 
+**`timeout_milliseconds`를 반드시 준다.** `net.http_post`의 기본값은 **5초**인데
+자재실적은 CSV만 9MB에 배치가 20회라 5초에 절대 안 끝난다. 안 주면 매번 끊긴다.
+
 ```sql
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
--- <프로젝트>와 <SYNC_SECRET>을 실제 값으로 바꾼다
+-- <프로젝트> · <anon key> · <SYNC_SECRET>을 실제 값으로 바꾼다
 select cron.schedule('sync-inst', '5,35 * * * *', $$
   select net.http_post(
     url := 'https://<프로젝트>.supabase.co/functions/v1/sheet-sync?op=sync&key=inst',
-    headers := '{"x-sync-secret":"<SYNC_SECRET>"}'::jsonb) $$);
+    headers := '{"Authorization":"Bearer <anon key>","x-sync-secret":"<SYNC_SECRET>"}'::jsonb,
+    timeout_milliseconds := 120000) $$);
 
 select cron.schedule('sync-wk',   '10,40 * * * *', $$
   select net.http_post(
     url := 'https://<프로젝트>.supabase.co/functions/v1/sheet-sync?op=sync&key=wk',
-    headers := '{"x-sync-secret":"<SYNC_SECRET>"}'::jsonb) $$);
+    headers := '{"Authorization":"Bearer <anon key>","x-sync-secret":"<SYNC_SECRET>"}'::jsonb,
+    timeout_milliseconds := 120000) $$);
 
 select cron.schedule('sync-mat',  '20,50 * * * *', $$
   select net.http_post(
     url := 'https://<프로젝트>.supabase.co/functions/v1/sheet-sync?op=sync&key=mat',
-    headers := '{"x-sync-secret":"<SYNC_SECRET>"}'::jsonb) $$);
+    headers := '{"Authorization":"Bearer <anon key>","x-sync-secret":"<SYNC_SECRET>"}'::jsonb,
+    timeout_milliseconds := 120000) $$);
 ```
 
 30분 간격이다. 시트가 그보다 자주 바뀌지 않는다.
-확인은 `select * from cron.job;` · `select * from cron.job_run_details order by start_time desc limit 10;`
+확인은 `select * from cron.job;` ·
+`select * from cron.job_run_details order by start_time desc limit 10;`
+(타임아웃에 걸렸다면 여기서 잡힌다. `sheet_sync_log`는 함수가 끝까지 갔을 때만 남으므로
+**cron 쪽이 조용하고 log 쪽만 비어 있으면 타임아웃을 의심한다.**)
 
 되돌리려면 `select cron.unschedule('sync-mat');`
 
@@ -107,3 +133,7 @@ select cron.schedule('sync-mat',  '20,50 * * * *', $$
   자르면 시트를 못 읽었을 때 멀쩡한 미러가 통째로 지워진다.
 - `key`는 화이트리스트다(`wk`·`mat`·`inst`). RPC 안에서도 한 번 더 막는다 —
   표 이름을 문자열로 받아 `EXECUTE`하기 때문이다.
+- **자재실적은 실행시간 여유가 크지 않다.** CSV 9MB를 받아 배치 20회(1,500행씩)를 돈다.
+  무료 요금제 벽시계 안에 들어가긴 하지만 넉넉하진 않다.
+  시간 초과가 나면 **`index.ts`의 `BATCH`를 1500 → 3000으로 올린다** — 왕복이 절반이 된다.
+  더 올리면 jsonb 한 덩이가 커져 이번엔 메모리에 걸리므로 3000쯤에서 멈추는 게 좋다.
