@@ -83,6 +83,29 @@ GST.sendOtp = async function(email){ var c=await GST.sb();
 GST.verifyOtp = async function(email,code){ var c=await GST.sb();
   var r=await c.auth.verifyOtp({email:email,token:code,type:'email'});
   return r.error?(r.error.message||'코드 확인 실패'):null; };
+/* 아이디+비밀번호 로그인 (조회 전용 계정용).
+   Supabase 는 이메일 형태만 받으므로, @ 없는 아이디에는 아래 도메인을 붙여 계정 이메일로 만든다.
+   계정은 관리자가 콘솔(Authentication → Add user, Auto Confirm)에서 만들고 allowed_users 에
+   can_write=false 로 넣는다 — 쓰기 권한은 RLS 가 막으므로 화면 조회만 된다. */
+GST.PW_DOMAIN='gstcs.view';
+GST.pwLogin = async function(id,pw){ var c=await GST.sb();
+  var em=(id.indexOf('@')>=0?id:(id+'@'+GST.PW_DOMAIN)).toLowerCase();
+  var r=await c.auth.signInWithPassword({email:em,password:pw});
+  if(!r.error)return null;
+  var m=String(r.error.message||'');
+  if(/invalid login credentials|invalid_credentials/i.test(m))return '아이디 또는 비밀번호가 올바르지 않습니다';
+  if(/email not confirmed/i.test(m))return '계정이 승인되지 않았습니다 — 관리자가 Auto Confirm 으로 만들어야 합니다';
+  return m||'로그인 실패';
+};
+/* 401 을 받았다고 곧장 «다시 로그인»을 띄우지 않는다. 절전·백그라운드 탭에서는 브라우저가
+   타이머를 늦춰 자동 갱신을 놓치고, 만료된 액세스 토큰으로 첫 요청이 나가 401이 된다 —
+   갱신 토큰은 살아 있으므로 한 번 갱신해 재시도하고, 그래도 401이면 그때가 진짜 만료다.
+   (주간현황을 오래 켜두면 가끔 재로그인을 요구하던 원인이 이것이었다.) */
+GST.freshToken = async function(){
+  try{ var c=await GST.sb(); var r=await c.auth.refreshSession();
+       return (r.data&&r.data.session&&r.data.session.access_token)||null; }
+  catch(e){ return null; }
+};
 GST.signOut = async function(){ try{var c=await GST.sb(); await c.auth.signOut();}catch(e){}
   try{ sessionStorage.clear(); Object.keys(localStorage).forEach(function(k){ if(/^sb-/.test(k))localStorage.removeItem(k); }); }catch(e){}
   location.reload(); };
@@ -119,7 +142,13 @@ GST.authGate = async function(){
     +'<div id="sbStep2" style="display:none;margin-top:10px">'
       +'<input id="sbCode" inputmode="numeric" maxlength="8" placeholder="이메일로 받은 6자리 코드" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#e6edf3;font-size:14px;letter-spacing:3px;text-align:center;margin-bottom:8px">'
       +'<button id="sbVerify" style="width:100%;padding:10px;border-radius:10px;border:0;background:#34D399;color:#04211d;font-weight:800;font-size:14px;cursor:pointer">로그인</button></div>'
-    +'<div id="sbErr" style="color:#ff8a8a;font-size:12px;margin-top:10px;min-height:16px"></div></div>';
+    // 아이디+비밀번호 (조회 전용 계정) — 이메일 인증 없이 들어온다. 권한은 RLS(allowed_users)가 판정.
+    +'<div id="sbPw" style="display:none">'
+      +'<input id="pwId" placeholder="아이디" autocomplete="username" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#e6edf3;font-size:14px;margin-bottom:8px">'
+      +'<input id="pwPw" type="password" placeholder="비밀번호" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#e6edf3;font-size:14px;margin-bottom:8px">'
+      +'<button id="pwGo" style="width:100%;padding:10px;border-radius:10px;border:0;background:#2C5FAE;color:#fff;font-weight:700;font-size:14px;cursor:pointer">로그인</button></div>'
+    +'<div id="sbErr" style="color:#ff8a8a;font-size:12px;margin-top:10px;min-height:16px"></div>'
+    +'<a id="sbMode" style="display:block;font-size:12px;color:#5EC2FF;margin-top:8px;cursor:pointer;user-select:none">🔑 아이디·비밀번호로 로그인</a></div>';
   var $=function(id){return document.getElementById(id);};
   var err=function(m){ $('sbErr').textContent=m||''; };
   return new Promise(function(resolve){
@@ -145,6 +174,28 @@ GST.authGate = async function(){
     };
     $('sbCode')&&$('sbCode').addEventListener('keydown',function(ev){if(ev.key==='Enter')$('sbVerify').click();});
     $('sbEmail').addEventListener('keydown',function(ev){if(ev.key==='Enter')$('sbSend').click();});
+    // 이메일 인증 ↔ 아이디·비밀번호 전환
+    var pwMode=false;
+    $('sbMode').onclick=function(){
+      pwMode=!pwMode; err('');
+      $('sbPw').style.display=pwMode?'block':'none';
+      $('sbEmail').style.display=pwMode?'none':'block';
+      $('sbSend').style.display=pwMode?'none':'block';
+      $('sbStep2').style.display='none';
+      $('sbMode').textContent=pwMode?'✉ 이메일 인증코드로 로그인':'🔑 아이디·비밀번호로 로그인';
+      (pwMode?$('pwId'):$('sbEmail')).focus();
+    };
+    $('pwGo').onclick=async function(){
+      var id=($('pwId').value||'').trim(), pw=$('pwPw').value||'';
+      if(!id||!pw){err('아이디와 비밀번호를 입력하세요');return;}
+      err(''); $('pwGo').disabled=true; $('pwGo').textContent='확인 중…';
+      var e=await GST.pwLogin(id,pw);
+      $('pwGo').disabled=false; $('pwGo').textContent='로그인';
+      if(e){err(e);return;}
+      ov.classList.add('hidden'); ov.style.display='none';
+      GST._authOk(); resolve(true);
+    };
+    $('pwPw').addEventListener('keydown',function(ev){if(ev.key==='Enter')$('pwGo').click();});
   });
 };
 // 미등록 이메일(403) 안내
@@ -198,6 +249,12 @@ GST.sheetWrite = async function(op, gid, body, params){
   if(body) h['Content-Type']='application/json';
   var res = await fetch(GST.SB_URL+'/functions/v1/'+GST.FN_WRITE+qs,
     {method: body?'POST':'GET', headers:h, body: body?JSON.stringify(body):undefined});
+  if(res.status===401){                            // 만료 의심 — 갱신 후 한 번만 재시도
+    var tok2=await GST.freshToken();
+    if(tok2){ h.Authorization='Bearer '+tok2;
+      res=await fetch(GST.SB_URL+'/functions/v1/'+GST.FN_WRITE+qs,
+        {method: body?'POST':'GET', headers:h, body: body?JSON.stringify(body):undefined}); }
+  }
   var txt = await res.text(), data=null;
   try{ data = JSON.parse(txt); }catch(e){}
   if(res.ok) return data;
@@ -438,6 +495,11 @@ GST.fetchCSVFresh = async function(gid){
   if(!tok){ await GST.authReady(); tok = await GST.token(); }
   var res = await fetch(GST.SB_URL+'/functions/v1/'+GST.FN_WRITE+
     '?op=fresh&gid='+encodeURIComponent(gid)+'&t='+Date.now(), {headers:{Authorization:'Bearer '+tok}});
+  if(res.status===401){                            // 만료 의심 — 갱신 후 한 번만 재시도
+    var tok2=await GST.freshToken();
+    if(tok2) res=await fetch(GST.SB_URL+'/functions/v1/'+GST.FN_WRITE+
+      '?op=fresh&gid='+encodeURIComponent(gid)+'&t='+Date.now(), {headers:{Authorization:'Bearer '+tok2}});
+  }
   if(res.status===401){ GST.authDenied(401); throw new Error('AUTH 401'); }
   if(!res.ok) throw new Error('HTTP '+res.status);
   return Papa.parse(await res.text(), {skipEmptyLines:true}).data;
@@ -451,6 +513,10 @@ GST.fetchCSV = async function(url){
     var tok=await GST.token();
     if(!tok){ await GST.authReady(); tok=await GST.token(); }
     var pres=await GST.proxyFetch(gid, tok);
+    if(pres.status===401){                        // 만료 의심 — 갱신 후 한 번만 재시도
+      var tok2=await GST.freshToken();
+      if(tok2) pres=await GST.proxyFetch(gid, tok2);
+    }
     if(pres.status===401||pres.status===403){ GST.authDenied(pres.status); throw new Error('AUTH '+pres.status); }
     if(!pres.ok) throw new Error('HTTP '+pres.status+' — '+(await pres.text()).slice(0,120));
     var txt=await pres.text();
