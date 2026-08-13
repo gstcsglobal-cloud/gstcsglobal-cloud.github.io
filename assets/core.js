@@ -583,8 +583,61 @@ GST.chartDefaults = function(){
   // 막대 기하 — 페이지마다 2~6으로 흩어져 있던 radius를 한 값으로, 두께 상한으로 과비만 방지
   Chart.defaults.elements.bar.borderRadius = 4;
   Chart.defaults.datasets.bar.maxBarThickness = 34;
+
+  /* 차트 세부내역 (v84) — 막대·꺾은선·점을 누르면 그 점을 «구성하는 원본 레코드»를 보여준다.
+     페이지는 차트를 만든 뒤 `chart.$rows = (di, i) => ({title, cols, rows})` 한 줄만 단다.
+     $rows 가 없는 차트는 아무 일도 없다 — 기존 클릭 핸들러(드릴·필터 좁히기)와 공존한다.
+     플러그인으로 심는 이유: 페이지들이 Chart.defaults.onClick 을 각자 덮어써서(hr 등)
+     onClick 에 끼우면 어느 페이지에선 조용히 사라진다. */
+  if(!Chart.registry.plugins.get('gstRows')) Chart.register({
+    id:'gstRows',
+    afterEvent(chart, args){
+      if(args.event.type!=='click' || typeof chart.$rows!=='function') return;
+      let els=[];
+      try{ els=chart.getElementsAtEventForMode(args.event.native,'nearest',{intersect:true},true); }catch(e){}
+      if(!els.length) return;
+      let spec=null;
+      try{ spec=chart.$rows(els[0].datasetIndex, els[0].index); }catch(e){}
+      if(spec && spec.rows) GST.rowsModal(spec.title, spec.cols, spec.rows, spec.note);
+    }
+  });
 };
 try{ GST.chartDefaults(); }catch(e){}
+
+/* 세부내역 모달 — 차트/표 어디서든 «이 숫자를 만든 행들»을 보여준다.
+   rows 는 2차원 배열(값은 문자열/숫자), cols 는 헤더. 500행까지만 그린다 —
+   그 이상은 브라우저가 버벅이고, 목록의 목적(어떤 건들인지 눈으로 확인)에 500이면 충분하다. */
+GST._ROWS_T = {
+  ko:{n:'건', more:'처음 {m}건만 표시', close:'닫기', copy:'⧉ 복사', copied:'복사됨'},
+  en:{n:' rows', more:'showing first {m}', close:'Close', copy:'⧉ Copy', copied:'Copied'},
+  zh:{n:'件', more:'仅显示前 {m} 件', close:'关闭', copy:'⧉ 复制', copied:'已复制'},
+  ja:{n:'件', more:'先頭 {m} 件のみ表示', close:'閉じる', copy:'⧉ コピー', copied:'コピー済み'}
+};
+GST.rowsModal = function(title, cols, rows, note){
+  const T=GST._ROWS_T[GST._lang()]||GST._ROWS_T.ko, esc=GST._esc, MAX=500;
+  const shown=rows.slice(0,MAX);
+  const sub=rows.length.toLocaleString()+T.n
+    +(rows.length>MAX?' · '+T.more.replace('{m}',MAX):'')
+    +(note?' · '+esc(note):'');
+  const ov=GST._ovOpen(
+     '<div class="gov-h"><h4>'+esc(title)+'</h4><span class="gov-sub">'+sub+'</span><span class="gov-sp"></span>'
+    +'<button class="gov-b" data-rm="copy">'+T.copy+'</button>'
+    +'<button class="gov-b" data-rm="close">'+T.close+'</button></div>'
+    +'<div class="gov-body" style="overflow:auto;max-height:72vh;padding-top:6px"><table class="gpv-t"><thead><tr>'
+    +cols.map(function(c){ return '<th>'+esc(c)+'</th>'; }).join('')+'</tr></thead><tbody>'
+    +shown.map(function(r){ return '<tr>'+r.map(function(v){ return '<td>'+esc(v)+'</td>'; }).join('')+'</tr>'; }).join('')
+    +'</tbody></table></div>', true);
+  ov.addEventListener('click', function(e){
+    const b=e.target.closest('[data-rm]'); if(!b) return;
+    if(b.dataset.rm==='close'){ GST._ovClose(); return; }
+    if(b.dataset.rm==='copy'){
+      // 전량(500 제한 없이)을 탭 구분으로 — 엑셀에 그대로 붙는다
+      const txt=[cols.join('\t')].concat(rows.map(function(r){ return r.join('\t'); })).join('\n');
+      try{ navigator.clipboard.writeText(txt); b.textContent=T.copied; }catch(err){}
+    }
+  });
+  return ov;
+};
 
 // 테마 전환 시 차트 전체 파기 — update()로는 축/범례 잉크가 갱신되지 않으므로
 // 파기 후 페이지 render()가 새 잉크로 다시 그리게 한다.
