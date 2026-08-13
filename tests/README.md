@@ -31,6 +31,7 @@ npm run sync     # 세 곳이 어긋나지 않았는지 (가장 중요)
 npm run shift    # 열을 끼워 넣어도 숫자가 그대로인지
 npm run deep     # 심층 분석 숫자가 실측과 맞는지
 npm run leak     # 실데이터가 소스에 섞이지 않았는지
+npm run mirror   # 미러(Supabase) 경로가 시트 경로와 같은 값을 내는지
 node t-snap.mjs --save   # 큰 이행 '전'에 기준을 뜬다
 node t-snap.mjs          # 이행 '후' 대조
 ```
@@ -49,6 +50,7 @@ node t-snap.mjs          # 이행 '후' 대조
 | `t-shift` | 시트 중간에 열 2개를 넣고 KPI가 한 자리도 안 변하는지 | 전 페이지 동일 |
 | `t-deep` | 심층 분석이 **실측값과 같은 숫자**를 그리는지 (집중지수·재교체주기·급증·BM율) | 32/32 |
 | `t-leak` | **공개 저장소에 실데이터가 새어 나갔는지** — 커밋 대상 전 파일을 실제 명단과 대조 | 누출 0 |
+| `t-mirror` | **Supabase 미러가 시트와 같은 값을 내는지** — 두 파싱 경로를 열별 체크섬으로 대조 | 9/9 |
 | `t-snap` | 큰 이행 전후 8페이지 KPI·차트 87개·표 27개 대조 (`--save`로 기준 저장) | 동일 |
 
 `t-deep`이 대조하는 실측 기준값: `STR × DRAIN PIPE-E` **집중지수 230배** ·
@@ -76,6 +78,9 @@ O-RING **26-04 2,118건**(직전 6개월 평균의 3.3배) · 세부공정 `ALDN
 
 - `sw-extract.ts`는 `t-sync`가 실행 시 `sheet-write/index.ts`에서 만들어 쓰는 중간 산물이다.
   (Deno 전용 파일이라 통째로 import할 수 없어 해석기 부분만 떼어낸다.) 커밋하지 않는다.
+  `sync-extract.ts`도 같다 — `t-mirror`가 `sheet-sync/index.ts`의 순수 변환부를 떼어 쓴다.
+  **사본을 만들어 검증하면 사본만 맞는다.** 그래서 배포될 코드를 그대로 떼어 온다.
+  둘 다 타입 표기가 남아 있어 `node --experimental-strip-types`로 돌린다.
 - 페이지들은 배포된 `core.js`를 절대경로로 부른다. 테스트는 그 요청을 가로채
   **로컬 `assets/core.js`** 를 먹인다 — 그래서 배포 전에도 검증할 수 있다.
 - 인증·CDN도 같은 방식으로 가로챈다. 실제 Supabase나 외부망에 접속하지 않는다.

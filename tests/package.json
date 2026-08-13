@@ -13,7 +13,8 @@
     "deep": "node t-deep.mjs",
     "leak": "node t-leak.mjs",
     "snap": "node t-snap.mjs",
-    "all": "npm run map && npm run keys && npm run hr && npm run sync && npm run smoke && npm run shift && npm run deep && npm run leak && npm run snap"
+    "mirror": "node --experimental-strip-types t-mirror.mjs",
+    "all": "npm run map && npm run keys && npm run hr && npm run sync && npm run smoke && npm run shift && npm run deep && npm run leak && npm run mirror && npm run snap"
   },
   "devDependencies": {
     "chart.js": "4.4.1",

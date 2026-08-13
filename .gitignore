@@ -5,6 +5,7 @@ tests/*.csv
 tests/hdr*.json
 tests/local-hashes.json
 tests/sw-extract.ts
+tests/sync-extract.ts
 *.xlsx
 *.xls
 
