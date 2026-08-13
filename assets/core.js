@@ -1149,6 +1149,48 @@ GST._abpWide = function(rows){
   return out;
 };
 
+/* ---------- 9-d. 출처 표시 (v79) ----------
+   "아직 구글시트를 읽는 것 같다"를 사람이 눈으로 판정할 방법이 없었다. 배너는 «실패했을 때»만
+   뜨므로 «성공했는데 시트에서 읽은» 경우와 «DB 에서 읽은» 경우가 화면상 구별되지 않는다.
+   그래서 성공 경로도 남긴다. 이관 중에는 이 한 줄이 추측을 없앤다. */
+GST._srcSeen = {};
+GST._srcLabel = { db:'Supabase', sheet:'구글시트', cache:'브라우저 캐시' };
+GST._srcNote = function(key, src, n){
+  GST._srcSeen[key] = { src:src, n:n };
+  try{ console.info('[출처] '+key+' ← '+(GST._srcLabel[src]||src)+' '+n+'행'); }catch(_){}
+  GST._srcChip();
+};
+GST._srcChip = function(){
+  const ks = Object.keys(GST._srcSeen); if(!ks.length || !document.body) return;
+  let db=0, sh=0, ca=0;
+  ks.forEach(function(k){ const s=GST._srcSeen[k].src; if(s==='db')db++; else if(s==='cache')ca++; else sh++; });
+  let el = document.getElementById('gstSrcChip');
+  if(!el){
+    el = document.createElement('div'); el.id='gstSrcChip';
+    el.style.cssText='position:fixed;left:10px;bottom:10px;z-index:999998;padding:4px 10px;border-radius:999px;'+
+      'font:11px/1.5 system-ui,-apple-system,sans-serif;font-weight:700;cursor:pointer;opacity:.8;user-select:none';
+    el.title = '데이터를 어디서 읽었는지 — 누르면 자세히';
+    el.onclick = function(){
+      let d = document.getElementById('gstSrcDetail');
+      if(d){ d.remove(); return; }
+      d = document.createElement('div'); d.id='gstSrcDetail';
+      d.style.cssText='position:fixed;left:10px;bottom:38px;z-index:999998;max-width:320px;padding:9px 12px;'+
+        'border-radius:10px;background:#111827;color:#e5e7eb;font:11px/1.7 system-ui,sans-serif;'+
+        'box-shadow:0 6px 24px rgba(0,0,0,.35);white-space:pre-wrap';
+      d.textContent = Object.keys(GST._srcSeen).map(function(k){
+        const v = GST._srcSeen[k];
+        return (v.src==='db'?'✅ ':'⚠️ ')+k+' ← '+(GST._srcLabel[v.src]||v.src)+' · '+v.n+'행';
+      }).join('\n');
+      document.body.appendChild(d);
+    };
+    document.body.appendChild(el);
+  }
+  const bad = sh + ca;
+  el.style.background = bad ? '#78350f' : '#064e3b';
+  el.style.color      = bad ? '#fde68a' : '#a7f3d0';
+  el.textContent = '출처 DB '+db + (sh?' · 시트 '+sh:'') + (ca?' · 캐시 '+ca:'');
+};
+
 // 캐시 폴백 로드: 성공 시 저장, 실패 시 캐시로 대체 (cached/ageMin 플래그 반환)
 GST.fetchCSVCached = async function(url, key){
   const gm = String(url||'').match(/[?&]gid=(\d+)/);
@@ -1158,7 +1200,7 @@ GST.fetchCSVCached = async function(url, key){
   if(table && GST.USE_DB && GST.authOn()){
     try{
       const rows = await GST.dbRows(table);
-      if(rows && rows.length>1){ GST.cacheSave(key, rows); return {rows, cached:false, ageMin:0, src:'db'}; }
+      if(rows && rows.length>1){ GST.cacheSave(key, rows); GST._srcNote(key,'db',rows.length-1); return {rows, cached:false, ageMin:0, src:'db'}; }
       throw new Error('MIRROR_EMPTY');
     }catch(e){ GST._dbWarn(table, e); }   // 시트로 되돌아간다. 아래가 그 경로다.
   }
@@ -1170,17 +1212,19 @@ GST.fetchCSVCached = async function(url, key){
       let rows = await GST.csvTableRows(ctbl);
       if(/^sheet_cip_/.test(ctbl)) rows = [GST._cipBand(rows)].concat(rows);  // 적용일자 띠 복원
       else if(ctbl === 'sheet_abp') rows = GST._abpWide(rows);                // 크로스탭 복원
-      if(rows && rows.length>1){ GST.cacheSave(key, rows); return {rows, cached:false, ageMin:0, src:'db'}; }
+      if(rows && rows.length>1){ GST.cacheSave(key, rows); GST._srcNote(key,'db',rows.length-1); return {rows, cached:false, ageMin:0, src:'db'}; }
       throw new Error('EMPTY');
     }catch(e){ GST._dbWarn(ctbl, e); }
   }
   try{
     const rows = await GST.fetchCSV(url);
     if(rows && rows.length>1) GST.cacheSave(key, rows);
+    GST._srcNote(key,'sheet',Math.max(0,(rows||[]).length-1));
     return {rows, cached:false, ageMin:0, src:'sheet'};
   }catch(e){
     const c = GST.cacheLoad(key);
-    if(c && c.rows) return {rows:c.rows, cached:true, ageMin:Math.round((Date.now()-c.t)/60000)};
+    if(c && c.rows){ GST._srcNote(key,'cache',Math.max(0,c.rows.length-1));
+      return {rows:c.rows, cached:true, ageMin:Math.round((Date.now()-c.t)/60000)}; }
     throw e;
   }
 };

@@ -54,8 +54,21 @@ begin
   t := 'sheet_' || p_tbl;
 
   if p_err is null then
-    execute format('delete from public.%I where src_row >= $1', t) using p_sheet_rows;
-    get diagnostics cut = row_count;
+    /* 꼬리를 자르기 «전»에 얼마나 잘리는지 먼저 센다.
+       시트에서 데이터를 지우면 그 지움이 30분 안에 미러까지 따라온다 — 실제로 겪었다.
+       사용자가 시트에서 잠깐 행을 지워 보는 것만으로 미러가 통째로 비었다.
+       시트가 갑자기 반토막 나는 것은 «정상 축소»보다 «편집 사고»일 확률이 훨씬 높으므로
+       자르지 않고 err 로 남긴다. err 는 sheet_sync_log 를 거쳐 화면 배너로 올라온다.
+       조용히 지우는 것보다 시끄럽게 안 지우는 쪽이 낫다 — 지운 것은 되돌릴 수 없다. */
+    execute format('select count(*) from public.%I', t) into n;
+    execute format('select count(*) from public.%I where src_row >= $1', t) into cut using p_sheet_rows;
+    if n > 100 and cut > n / 2 then
+      p_err := format('보호: 시트가 %s행이라 미러 %s행 중 %s행이 지워질 뻔했습니다 — 자르지 않았습니다', p_sheet_rows, n, cut);
+      cut := 0;
+    else
+      execute format('delete from public.%I where src_row >= $1', t) using p_sheet_rows;
+      get diagnostics cut = row_count;
+    end if;
   else
     cut := 0;   -- 실패한 적재로 꼬리를 자르면 멀쩡한 행을 지운다
   end if;
