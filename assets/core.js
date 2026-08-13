@@ -1210,17 +1210,19 @@ GST.dbRows = async function(table){
 
   /* 기대 행수를 먼저 본다. 미러가 아직 안 채워졌는데 빈 배열을 돌려주면
      화면이 "데이터 0건"으로 멀쩡히 그려진다 — 그게 가장 위험한 실패다. */
-  const lg = await c.from('sheet_sync_log').select('rows,err,synced_at').eq('tbl', table).maybeSingle();
+  const lg = await c.from('sheet_sync_log').select('rows,err,synced_at,ms').eq('tbl', table).maybeSingle();
   if(lg.error) throw new Error('LOG '+lg.error.message);
   const want = lg.data && lg.data.rows;
   if(!want) throw new Error('MIRROR_EMPTY — 아직 적재된 적이 없다');
 
   /* 미러가 멈춰 있으면 **읽기는 성공하는데 값이 옛날 것**이다. 이게 가장 설명하기 어려운
      실패라 화면에 밝힌다. 30분마다 도는 것을 전제로 3시간(여섯 번 거름)에서 알린다.
-     막지는 않는다 — 옛 데이터라도 없는 것보다 낫고, 판단은 사람이 한다. */
+     막지는 않는다 — 옛 데이터라도 없는 것보다 낫고, 판단은 사람이 한다.
+     예외: ms = -1 은 «수동 CSV 업로드 모드» 표식이다(csv_upload_finish 가 남긴다).
+     cron 이 없으니 오래된 것이 정상이고, 나이 경고를 계속 띄우면 아무도 안 보게 된다. */
   const ageMin = Math.round((Date.now() - new Date(lg.data.synced_at).getTime())/60000);
   if(lg.data.err) GST._dbWarn(table, '마지막 적재 실패: '+String(lg.data.err).slice(0,80));
-  else if(ageMin > 180) GST._dbWarn(table, '미러가 '+Math.round(ageMin/60)+'시간째 갱신되지 않았습니다');
+  else if(ageMin > 180 && lg.data.ms !== -1) GST._dbWarn(table, '미러가 '+Math.round(ageMin/60)+'시간째 갱신되지 않았습니다');
   GST._dbAge = Math.max(GST._dbAge||0, ageMin);
 
   /* 페이지네이션. PostgREST는 한 번에 돌려주는 행수에 상한이 있고 그 값은 프로젝트 설정이다.

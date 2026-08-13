@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSV 업로드 — GST CS Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{color:var(--txt,#e6edf3);background:var(--bg-gradient,#0b1118);background-size:400% 400%;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
+h1{font-size:20px;margin-bottom:4px}
+.sub{font-size:12px;color:var(--mut,#8a97a5);margin-bottom:20px;line-height:1.6}
+.card{background:var(--glass,rgba(255,255,255,.05));border:1px solid var(--glassb,rgba(255,255,255,.1));border-radius:16px;padding:18px 20px;margin-bottom:14px;max-width:860px}
+.card h3{font-size:14px;margin-bottom:10px}
+select,input[type=file]{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:inherit;padding:9px 12px;font-size:13px;width:100%;max-width:480px}
+select option{background:#101820;color:#e6edf3}
+.btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:10px 22px;background:linear-gradient(90deg,var(--a1,#38bdf8),var(--a2,#34d399));color:#fff;margin-top:10px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.danger{background:linear-gradient(90deg,#e05252,#b83280)}
+#chk,#log{font-size:12.5px;line-height:1.9;white-space:pre-wrap;word-break:break-all}
+.ok{color:#34d399}.warn{color:#fbbf24}.bad{color:#fb7185}
+.big{font-size:14px;font-weight:800}
+a{color:var(--a1,#38bdf8)}
+</style>
+</head>
+<body>
+<script>
+if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
+</script>
+
+<h1>📤 CSV 업로드</h1>
+<div class="sub">구글시트 대신 여기서 데이터를 올립니다. 파일을 고르면 <b>검사 → 표 비우기 → 적재 → 행수 대조</b>가 한 번에 진행됩니다.<br>
+실적 3종(수선·자재·설치)은 시트와 같은 머리글의 CSV를 그대로, 나머지는 처음 이관 때와 같은 형식의 CSV를 올리면 됩니다.</div>
+
+<div class="card">
+  <h3>1. 어느 표에 올리나</h3>
+  <select id="tsel"></select>
+</div>
+<div class="card">
+  <h3>2. CSV 파일</h3>
+  <input type="file" id="fsel" accept=".csv,text/csv">
+  <div id="chk" style="margin-top:10px"></div>
+  <button class="btn" id="goBtn" disabled onclick="doUpload()">업로드 (기존 데이터를 이 파일로 교체)</button>
+</div>
+<div class="card"><h3>진행</h3><div id="log">—</div></div>
+
+<script>
+/* 관리자 1인용 도구라 단일 언어(한국어)다. 공개 페이지로 승격하면 T 규약(4개 언어)으로 옮길 것. */
+
+/* 표 목록.
+   mirror  — 컬럼이 snake_case 인 미러 표. 시트 머리글 CSV 를 GST.SM.SPEC 으로 해석해
+             sheet-sync 의 toRows 와 «똑같은 규칙»으로 변환한다(t-mirror 가 지키는 그 규칙).
+   import  — 컬럼이 시트 머리글 그대로인 표. CSV 헤더가 표 컬럼과 (정규화 후) 일치해야 한다. */
+const TABLES = [
+  { key:'wk',   label:'수선실적 (시트 머리글 CSV)',  table:'sheet_wk',   kind:'mirror' },
+  { key:'mat',  label:'자재실적 (시트 머리글 CSV)',  table:'sheet_mat',  kind:'mirror' },
+  { key:'inst', label:'설치현황 (시트 머리글 CSV)',  table:'sheet_inst', kind:'mirror' },
+  { label:'교육현황 (edu.csv 형식)',      table:'sheet_edu',     kind:'import' },
+  { label:'인원현황 (roster.csv 형식)',   table:'sheet_roster',  kind:'import' },
+  { label:'휴가현황 (leave.csv 형식)',    table:'sheet_leave',   kind:'import' },
+  { label:'CIP F11 (cip_f11.csv 형식)',  table:'sheet_cip_f11', kind:'import' },
+  { label:'CIP F16 (cip_f16.csv 형식)',  table:'sheet_cip_f16', kind:'import' },
+  { label:'All By-Pass (abp.csv 세로형)', table:'sheet_abp',     kind:'import' },
+];
+const $=id=>document.getElementById(id);
+TABLES.forEach((t,i)=>{ $('tsel').insertAdjacentHTML('beforeend','<option value="'+i+'">'+t.label+'</option>'); });
+
+let PREP=null;   // {t, rows(객체배열), fileRows, oldCount, warns[]}
+
+function logLine(cls,msg){ const el=$('log'); if(el.textContent==='—')el.textContent='';
+  el.insertAdjacentHTML('beforeend','<div class="'+(cls||'')+'">'+msg+'</div>'); }
+function chkShow(html){ $('chk').innerHTML=html; }
+
+async function tableCount(c,t){
+  const r=await c.from(t).select('*',{count:'exact',head:true});
+  if(r.error)throw new Error(r.error.message);
+  return r.count||0;
+}
+
+/* ---------- 검사 — 업로드 전에 파일이 표에 맞는지 그 자리에서 판정 ---------- */
+$('fsel').onchange=async function(){
+  PREP=null; $('goBtn').disabled=true; $('log').textContent='—';
+  const t=TABLES[+$('tsel').value], f=this.files[0];
+  if(!f)return;
+  chkShow('⏳ 파일 해석 중…');
+  const txt=await f.text();
+  const rows=Papa.parse(txt.replace(/^﻿/,''),{skipEmptyLines:false}).data;
+  try{
+    const c=await GST.db(); if(!c)throw new Error('로그인이 필요합니다');
+    const oldCount=await tableCount(c,t.table);
+    let out, msgs=[];
+
+    if(t.kind==='mirror'){
+      /* sheet-sync 와 같은 해석 — SPEC 으로 열을 «이름으로» 찾는다. 못 찾으면 막는다. */
+      const S=GST.SM.SPEC[t.key];
+      const m=GST.SM.map(rows,S);
+      if(!m.ok)throw new Error('열을 못 찾았습니다: '+m.miss.join(', ')+'\n(시트 머리글이 그대로 있는 CSV 인지 확인하세요)');
+      const keys=Object.keys(S.fields), C=m.C;
+      const header=(rows[m.hi]||[]).map(x=>String(x==null?'':x));
+      const mapped=new Set(keys.map(k=>C[k]).filter(i=>i>=0));
+      const extraCols=header.map((h,i)=>({i,h:h.trim()})).filter(x=>!mapped.has(x.i)&&x.h!=='');
+      const data=rows.slice(m.hi+1).filter(r=>r.some(cell=>String(cell==null?'':cell).trim()!==''));
+      out=data.map((r,i)=>{
+        const o={src_row:m.hi+1+i};                       // sheet-sync toRows 와 동일: off + 필터후 순번
+        keys.forEach(k=>{ const v=String((C[k]>=0?r[C[k]]:'')==null?'':r[C[k]]??'');
+          o[GST._snake(k)]=v===''?null:v; });
+        const ex={};
+        extraCols.forEach(x=>{ const v=String(r[x.i]==null?'':r[x.i]).trim(); if(v!=='')ex[x.h]=v; });
+        o.extra=Object.keys(ex).length?ex:null;
+        return o;
+      });
+      msgs.push('<span class="ok">✅ 열 인식 '+keys.length+'개 · 추가로 담는 열(extra) '+extraCols.length+'개</span>');
+    }else{
+      /* Import 표 — CSV 헤더가 표의 실제 컬럼과 정규화 후 정확일치해야 한다.
+         모르는 헤더가 있으면 막는다(조용히 버리면 그 열은 «올린 줄 알았는데 없는» 상태가 된다). */
+      const probe=await c.from(t.table).select('*').limit(1);
+      if(probe.error)throw new Error(probe.error.message);
+      if(!probe.data||!probe.data.length)throw new Error(t.table+' 이 비어 있어 컬럼을 알 수 없습니다 — 첫 적재는 Table Editor Import 로 하세요');
+      const colOf={}; Object.keys(probe.data[0]).forEach(k=>{ if(!GST._CSV_SKIP[k])colOf[GST.SM.norm(k)]=k; });
+      const header=(rows[0]||[]).map(x=>String(x==null?'':x).trim());
+      const unknown=header.filter(h=>h&&!colOf[GST.SM.norm(h)]);
+      if(unknown.length)throw new Error('표에 없는 헤더: '+unknown.join(', ')+'\n(처음 이관 때 쓴 CSV 와 같은 형식인지 확인하세요)');
+      const missing=Object.values(colOf).filter(col=>!header.some(h=>GST.SM.norm(h)===GST.SM.norm(col)));
+      if(missing.length)msgs.push('<span class="warn">⚠ CSV 에 없는 컬럼(빈 값으로 들어감): '+missing.join(', ')+'</span>');
+      const data=rows.slice(1).filter(r=>r.some(cell=>String(cell==null?'':cell).trim()!==''));
+      out=data.map(r=>{
+        const o={};
+        header.forEach((h,i)=>{ if(!h)return; const v=String(r[i]==null?'':r[i]);
+          o[colOf[GST.SM.norm(h)]]=v===''?null:v; });
+        return o;
+      });
+      msgs.push('<span class="ok">✅ 헤더 '+header.filter(Boolean).length+'개 전부 컬럼과 일치</span>');
+    }
+
+    if(!out.length)throw new Error('데이터 행이 없습니다');
+    msgs.push('파일 <b>'+out.length.toLocaleString()+'행</b> ↔ 표의 현재 <b>'+oldCount.toLocaleString()+'행</b>');
+    const shrink=oldCount>100&&out.length<oldCount/2;
+    if(shrink)msgs.push('<span class="bad big">⚠ 파일이 기존의 절반도 안 됩니다 — 잘린 파일이 아닌지 확인하세요. 그래도 진행하면 기존 데이터가 이 파일로 줄어듭니다.</span>');
+    chkShow(msgs.join('<br>'));
+    PREP={t,rows:out,oldCount,shrink};
+    $('goBtn').disabled=false;
+    $('goBtn').className='btn'+(shrink?' danger':'');
+  }catch(e){ chkShow('<span class="bad">❌ '+String(e.message||e).replace(/\n/g,'<br>')+'</span>'); }
+};
+document.getElementById('tsel').onchange=function(){ $('fsel').value=''; $('chk').innerHTML=''; $('goBtn').disabled=true; PREP=null; };
+
+/* ---------- 업로드 — 비우기 → 배치 적재 → 행수 대조 ---------- */
+window.doUpload=async function(){
+  if(!PREP)return;
+  if(PREP.shrink&&!confirm('파일('+PREP.rows.length+'행)이 기존('+PREP.oldCount+'행)보다 훨씬 작습니다.\n정말 이 파일로 교체합니까?'))return;
+  if(!confirm(PREP.t.table+' 의 기존 '+PREP.oldCount.toLocaleString()+'행을 지우고\n이 파일의 '+PREP.rows.length.toLocaleString()+'행으로 교체합니다. 진행할까요?'))return;
+  $('goBtn').disabled=true; $('log').textContent='';
+  const c=await GST.db();
+  try{
+    logLine('','① 표 비우는 중…');
+    const b=await c.rpc('csv_upload_begin',{p_tbl:PREP.t.table});
+    if(b.error)throw new Error('비우기 실패: '+b.error.message+(/(function|does not exist)/i.test(b.error.message)?' — setup-8-csv-upload.sql 을 Run 했는지 확인':''));
+    logLine('ok','   비움 완료');
+
+    const BATCH=500, N=PREP.rows.length;
+    for(let i=0;i<N;i+=BATCH){
+      const part=PREP.rows.slice(i,i+BATCH);
+      const r=await c.from(PREP.t.table).insert(part);
+      if(r.error)throw new Error('적재 실패('+(i+1)+'행째): '+r.error.message);
+      logLine('','② 적재 '+Math.min(i+BATCH,N).toLocaleString()+' / '+N.toLocaleString());
+    }
+
+    const fin=await c.rpc('csv_upload_finish',{p_tbl:PREP.t.table});
+    if(fin.error)throw new Error('마무리 실패: '+fin.error.message);
+
+    const now=await tableCount(c,PREP.t.table);
+    if(now!==N)throw new Error('행수 불일치: 표 '+now+' ≠ 파일 '+N+' — 다시 업로드하세요');
+    logLine('ok big','③ 완료 ✅ '+PREP.t.table+' = '+now.toLocaleString()+'행 (파일과 일치)');
+    logLine('','대시보드를 새로고침하면 새 데이터가 보입니다.');
+  }catch(e){
+    logLine('bad big','❌ '+String(e.message||e));
+    logLine('bad','표가 비워진 상태일 수 있습니다 — 같은 파일로 다시 업로드하면 복구됩니다.');
+    $('goBtn').disabled=false;
+  }
+};
+
+/* 로그인 게이트 — 다른 페이지와 동일. 쓰기 권한(can_write)은 RLS 가 최종 판정한다. */
+GST.authGate().then(async()=>{
+  try{ const p=await GST.sheetWrite('perm','1213453343');
+       if(!p.can_write){ chkShow('<span class="bad">이 계정은 읽기 전용입니다 — 업로드 권한(can_write)이 없습니다.</span>'); $('fsel').disabled=true; } }
+  catch(e){}
+});
+</script>
+</body>
+</html>
