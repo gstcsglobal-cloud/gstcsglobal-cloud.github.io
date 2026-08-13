@@ -43,14 +43,23 @@ select 항목, 실제, 기대, case when 실제 = 기대 then 'OK' else '<<< 다
   union all select 4, '적재 함수 개수',    (select count(*)::int from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
      where n.nspname='public' and p.proname in ('sheet_sync_upsert','sheet_sync_finish')), 2
-  union all select 5, 'RLS 켜진 sheet_* 표', (select count(*)::int from pg_class
-     where relkind='r' and relname like 'sheet\_%' and relrowsecurity), 6
+  union all select 5, 'RLS 켜진 미러 표', (select count(*)::int from pg_class
+     where relkind='r' and relnamespace='public'::regnamespace
+       and relname in ('sheet_wk','sheet_mat','sheet_inst',
+                       'sheet_sync_log','sheet_spec','sheet_colmap')
+       and relrowsecurity), 6
 ) x order by ord, 항목;
 ```
 
 표 이름을 직접 쓰지 않고 `to_regclass` + `query_to_xml`로 감싼 이유가 있다.
 직접 쓰면 표가 하나도 없을 때 Postgres가 **파싱 단계에서 거부**해,
 정작 진단이 가장 필요한 "아무것도 안 들어간 상태"에서 오류만 뜨고 아무것도 못 본다.
+
+마지막 줄의 여섯 개 목록은 **`setup-4-tables.sql`의 `foreach ... array[...]`와 같아야 한다.**
+표를 추가하면 둘 다 고친다. 예전에 여기가 `relname like 'sheet\_%'` 였는데,
+시트쓰기가 쓰는 `sheet_edits`·`sheet_locks`까지 세어 **멀쩡한 배포에 8 ≠ 6으로 빨간불**이 켜졌다.
+남의 이름공간에 와일드카드를 걸면 표가 하나 늘 때마다 거짓 경보가 난다 —
+그리고 거짓 경보를 내는 검사는 곧 무시당한다.
 
 `<<< 다름`이 나오면:
 
@@ -60,6 +69,7 @@ select 항목, 실제, 기대, case when 실제 = 기대 then 'OK' else '<<< 다
 | 표 열수는 맞는데 **colmap·spec이 0** | `setup-4`의 **끝부분(시드)** 이 안 들어갔다 | `setup-4`를 **통째로** 다시 Run |
 | **함수 개수 0** | `setup-5`를 안 돌렸다 | `setup-5` Run |
 | 열수가 기대보다 **적다** | 시트에 열이 늘어 SPEC이 앞서간 것 | 아래 「시트에 열이 늘었을 때」 |
+| **RLS가 6보다 크게 나온다** | 옛 와일드카드 쿼리를 쓰고 있다 | 위 쿼리로 교체. `sheet_edits`·`sheet_locks`는 시트쓰기 표라 이 확인의 대상이 아니다 |
 
 어느 쪽이든 **통째로 다시 Run해도 안전하다.**
 
