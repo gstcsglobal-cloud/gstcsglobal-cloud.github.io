@@ -184,6 +184,11 @@ GST.FN_WRITE = (typeof window!=='undefined' && window.GST_FN_WRITE) || 'sheet-wr
 // op: perm(편집권한 확인) · row(폼 프리필+지문) · update(저장) · fresh(라이브 재조회)
 // body가 있으면 POST, 없으면 GET. 실패 시 err.status / err.data를 붙여 던진다.
 GST.sheetWrite = async function(op, gid, body, params){
+  /* v80 — 교육·인원·휴가는 쓰기도 Import 표(Supabase)로 간다. 읽기가 DB 로 옮겨진 뒤(v79)
+     쓰기만 시트로 가면 «저장했는데 새로고침하면 사라지는» 상태가 된다 — 화면이 시트를
+     더 이상 안 보기 때문이다. gid 로 갈라지므로 페이지는 한 줄도 안 고친다(읽기 이관과 같은 수법).
+     수선실적(646668307) dq 편집은 그대로 sheet-write 로 간다. */
+  if(GST.DBW && GST.DBW[String(gid)]) return GST.dbWrite(op, String(gid), body, params);
   var tok = await GST.token();
   if(!tok){ await GST.authReady(); tok = await GST.token(); }
   if(!tok){ var e0=new Error('unauthorized'); e0.status=401; throw e0; }
@@ -203,6 +208,220 @@ GST.sheetWrite = async function(op, gid, body, params){
   if(res.status===401 || (data&&data.error==='forbidden')) GST.authDenied(res.status);
   throw err;
 };
+/* ---------- 2.6 DB 쓰기 (v80) ----------
+   Import 표에 브라우저에서 직접 쓴다 — pm_adjust 와 같은 규약(RLS 가 최종 권한).
+   sheet-write 의 op 규약(perm·row·update·append·delete)과 응답 모양을 그대로 흉내내므로
+   hr 페이지의 저장·충돌(409)·롤백 흐름이 전부 무수정으로 동작한다.
+
+   컬럼은 표의 실제 열 이름에서 «정규화 후 정확일치»로 찾는다(GST.SM.norm — 제1원칙).
+   못 찾으면 no_col 로 던진다. 행 지정은 PK 가 아니라 업무 키(사번)로 하되
+   **정확히 한 행일 때만** 쓴다 — sheet-write mirrorWrite 와 같은 규율. 0행이면 not_found,
+   2행이면 dup_key. 낙관적 잠금은 행 전체를 직렬화한 지문(baseHash)으로 유지한다. */
+GST.DBW = {
+  '1213453343': {
+    table:'sheet_roster', keyField:'id', keyCol:'ID', nameField:'name', cascadeTo:'0',
+    required:['id','name','join'],
+    cols:{ id:'ID', name:'Name((영문)', cn:'Name(중문)', dept:'Dept.', level:'Position Level',
+           wp:'Work Place', role:'2025 Position Role', join:'Date of entry', quit:'Resignation',
+           org:'조직도 위치', posKo:'직급', duty:'업무/직책', onsite:'현장 인원여부' }
+  },
+  '0': {
+    table:'sheet_edu', keyField:'id', keyCol:'사원번호', nameField:'name',
+    required:['name'],
+    cols:{ id:'사원번호', site:'Site', name:'인원',
+           bdate:'Basic 교육완료일', vdate:'Veteran 교육완료일',
+           lv2date:'Scrubber Lv.2 교육완료일', lv3date:'Scrubber Lv.3 교육완료일' }
+  },
+  '262805841': {
+    table:'sheet_leave', appendOnly:true, keyField:'empId', keyCol:'사원번호', nameField:'name',
+    required:['name','type','start','end'],
+    cols:{ empId:'사원번호', name:'이름', site:'소속', type:'항목', occur:'발생일',
+           start:'휴가시작일', stime:'휴가시작시간', end:'휴가종료일', etime:'휴가종료시간',
+           amt:'휴가신청시간', note:'비고' }
+  }
+};
+GST._dbwErr = function(code, status, extra){
+  var e = new Error(code); e.status = status||400;
+  e.data = Object.assign({error:code}, extra||{});
+  return e;
+};
+// 실제 행의 열 이름 사전 (정규화 → 원래 이름). 관리용 열은 뺀다.
+GST._dbwColMap = function(rowObj){
+  var m = {};
+  Object.keys(rowObj||{}).forEach(function(k){ if(!GST._CSV_SKIP[k]) m[GST.SM.norm(k)] = k; });
+  return m;
+};
+GST._dbwCol = function(cmap, want){
+  var k = cmap[GST.SM.norm(want)];
+  if(!k) throw GST._dbwErr('no_col', 500, {col:want});
+  return k;
+};
+/* 낙관적 잠금 지문 — 열이름순 직렬화의 FNV+djb2. sheet-write 의 SHA-256 과 형식은 다르지만
+   역할이 같다: 폼을 연 뒤 누가 같은 행을 고쳤으면 저장이 409 로 막힌다. */
+GST._dbwHash = function(rowObj){
+  var ks = Object.keys(rowObj||{}).filter(function(k){ return !GST._CSV_SKIP[k]; }).sort();
+  var s = ks.map(function(k){ return k+''+String(rowObj[k]==null?'':rowObj[k]); }).join('');
+  var h1=0x811c9dc5, h2=0x1505;
+  for(var i=0;i<s.length;i++){ var c=s.charCodeAt(i);
+    h1=((h1^c)*0x01000193)>>>0; h2=(((h2<<5)+h2)^c)>>>0; }
+  return h1.toString(16)+'-'+h2.toString(16);
+};
+GST._dbwFields = function(W, rowObj){          // 표 행 → 페이지가 아는 논리 필드
+  var cmap = GST._dbwColMap(rowObj), out = {};
+  Object.keys(W.cols).forEach(function(f){
+    var k = cmap[GST.SM.norm(W.cols[f])];
+    if(k!=null) out[f] = rowObj[k]==null?'':String(rowObj[k]);
+  });
+  return out;
+};
+/* 업무 키로 행을 찾는다. 키가 비었거나 못 찾으면 이름으로 한 번 더(교육 표에는 사번이
+   빈 행이 실제로 있다). 어느 쪽이든 **정확히 한 행**이 아니면 던진다. */
+GST._dbwFind = async function(c, W, key, name){
+  var tries = [];
+  if(key) tries.push([W.keyCol, key]);
+  if(name) tries.push([W.cols[W.nameField], name]);
+  if(!tries.length) throw GST._dbwErr('not_found', 404);
+  var lastEmpty = true;
+  for(var i=0;i<tries.length;i++){
+    var probe = await c.from(W.table).select('*').limit(1);
+    if(probe.error) throw GST._dbwErr('sheets_error', 500, {detail:probe.error.message});
+    if(!probe.data || !probe.data.length) throw GST._dbwErr('not_found', 404);
+    var col = GST._dbwCol(GST._dbwColMap(probe.data[0]), tries[i][0]);
+    var r = await c.from(W.table).select('*').eq(col, tries[i][1]);
+    if(r.error) throw GST._dbwErr('sheets_error', 500, {detail:r.error.message});
+    var n = (r.data||[]).length;
+    if(n === 1) return { row:r.data[0], matchCol:col, matchVal:tries[i][1] };
+    if(n > 1) throw GST._dbwErr('dup_key', 409, {n:n});
+  }
+  throw GST._dbwErr('not_found', 404);
+};
+GST._dbwGuard = function(vals){                // 수식 주입 차단 — sheet-write 와 같은 검사
+  for(var k in vals){ if(/^[=+\-@]/.test(String(vals[k]||''))) throw GST._dbwErr('bad_value', 400, {field:k}); }
+};
+GST.dbWrite = async function(op, gid, body, params){
+  var W = GST.DBW[gid]; body = body||{}; params = params||{};
+  var c = await GST.db(); if(!c) throw GST._dbwErr('unauthorized', 401);
+  var s = await GST.getSession(); if(!s) throw GST._dbwErr('unauthorized', 401);
+  var email = String((s.user && s.user.email) || '').toLowerCase();
+
+  /* 권한 — allowed_users.can_write. RLS 가 최종 결정하므로 이 검사는 UI·메시지용이다
+     (검사를 우회해도 정책이 막는다). 자기 행 조회는 setup-7 의 self read 정책이 연다. */
+  // ilike = 대소문자 무시 일치. %·_ 는 와일드카드라 이메일에 든 _ 를 이스케이프한다
+  var au = await c.from('allowed_users').select('email,can_write')
+                  .ilike('email', email.replace(/[%_\\]/g, '\\$&')).maybeSingle();
+  if(au.error) throw GST._dbwErr('sheets_error', 500, {detail:au.error.message});
+  if(!au.data){ GST.authDenied && GST.authDenied(403); throw GST._dbwErr('forbidden', 403); }
+  if(op === 'perm') return { ok:true, email:email, can_write:!!au.data.can_write };
+  if(!au.data.can_write) throw GST._dbwErr('read_only', 403);
+
+  if(op === 'row'){
+    var f0 = await GST._dbwFind(c, W, params.key, params.name);
+    var out = { ok:true, hash:GST._dbwHash(f0.row), fields:GST._dbwFields(W, f0.row) };
+    if(params['with'] === 'edu' && W.cascadeTo && GST.DBW[W.cascadeTo]){
+      var We0 = GST.DBW[W.cascadeTo];
+      try{ var fe0 = await GST._dbwFind(c, We0, params.key, out.fields.name);
+           out.edu = { hash:GST._dbwHash(fe0.row), fields:GST._dbwFields(We0, fe0.row) }; }
+      catch(e){ out.edu = null; }         // 교육 미등록 — 페이지가 append 로 새 행을 만든다
+    }
+    return out;
+  }
+
+  if(op === 'update'){
+    if(W.appendOnly) throw GST._dbwErr('op_disabled', 400);
+    var ch = body.changes || {};
+    if(!Object.keys(ch).length) throw GST._dbwErr('no_changes', 400);
+    GST._dbwGuard(ch);
+    (W.required||[]).forEach(function(k){ if(ch[k]!=null && ch[k]==='') throw GST._dbwErr('missing_field', 400, {field:k}); });
+    var f = await GST._dbwFind(c, W, body.key, body.name);
+    var hash = GST._dbwHash(f.row);
+    if(body.baseHash && body.baseHash !== hash)
+      throw GST._dbwErr('conflict', 409, {hash:hash, fields:GST._dbwFields(W, f.row)});
+    var cmap = GST._dbwColMap(f.row), upd = {};
+    Object.keys(ch).forEach(function(k){ if(W.cols[k]) upd[GST._dbwCol(cmap, W.cols[k])] = String(ch[k]); });
+    if(!Object.keys(upd).length) throw GST._dbwErr('no_changes', 400);
+    var r = await c.from(W.table).update(upd).eq(f.matchCol, f.matchVal).select('*');
+    if(r.error) throw GST._dbwErr('sheets_error', 500, {detail:r.error.message});
+    /* RLS 가 막으면 PostgREST 는 에러가 아니라 **0행**을 돌려준다. 그걸 '저장됨'으로
+       보이게 두면 안 되므로 여기서 던진다. */
+    if(!r.data || r.data.length !== 1) throw GST._dbwErr('read_only', 403);
+    var row = r.data[0];
+    var res = { ok:true, hash:GST._dbwHash(row), fields:GST._dbwFields(W, row) };
+    // 사번/이름이 바뀌면 교육 표의 짝 행도 같은 문자열로 — 조인이 깨지지 않게 (sheet-write 규약)
+    if(W.cascadeTo && GST.DBW[W.cascadeTo] && (ch.id!=null || ch.name!=null)){
+      var We = GST.DBW[W.cascadeTo], oldF = GST._dbwFields(W, f.row);
+      try{
+        var fe = await GST._dbwFind(c, We, body.key, oldF.name);
+        var cm2 = GST._dbwColMap(fe.row), up2 = {};
+        if(ch.id!=null)   up2[GST._dbwCol(cm2, We.cols.id)]   = String(ch.id);
+        if(ch.name!=null) up2[GST._dbwCol(cm2, We.cols.name)] = String(ch.name);
+        var r2 = await c.from(We.table).update(up2).eq(fe.matchCol, fe.matchVal).select('*');
+        if(r2.error || !r2.data || r2.data.length !== 1) res.cascade = { done:false };
+        else res.cascade = { done:true, hash:GST._dbwHash(r2.data[0]), fields:GST._dbwFields(We, r2.data[0]) };
+      }catch(e){ res.cascade = { done:false }; }
+    }
+    return res;
+  }
+
+  if(op === 'append'){
+    var flds = body.fields || {};
+    (W.required||[]).forEach(function(k){ if(!flds[k]) throw GST._dbwErr('missing_field', 400, {field:k}); });
+    GST._dbwGuard(flds);
+    // 키 중복 차단 (휴가는 같은 사람 여러 행이 정상이라 검사하지 않는다)
+    if(!W.appendOnly && flds[W.keyField]){
+      try{ await GST._dbwFind(c, W, flds[W.keyField], null); throw GST._dbwErr('dup_key', 409); }
+      catch(e){ if(e && e.data && e.data.error !== 'not_found') throw e; }
+    }
+    var ins = {};
+    Object.keys(flds).forEach(function(k){
+      /* 시트 시절 잔재 필드(join·role·posKo 등 교육 표에서 없어진 열)는 버린다 —
+         페이지가 아직 보내지만 담을 열이 없다. 여기 한정으로 의도된 무시다. */
+      if(W.cols[k]) ins[W.cols[k]] = String(flds[k]);
+    });
+    if(!Object.keys(ins).length) throw GST._dbwErr('bad_value', 400);
+    var ri = await c.from(W.table).insert(ins).select('*');
+    if(ri.error) throw GST._dbwErr('sheets_error', 500, {detail:ri.error.message});
+    if(!ri.data || !ri.data.length) throw GST._dbwErr('read_only', 403);   // RLS 거부 = 0행
+    var nrow = ri.data[0];
+    var out2 = { ok:true, hash:GST._dbwHash(nrow), fields:GST._dbwFields(W, nrow) };
+    // 인원 신규 등록이면 교육 표에도 짝 행 (같은 사번/이름 문자열 — sheet-write 규약)
+    if(body.edu && W.cascadeTo && GST.DBW[W.cascadeTo]){
+      var We2 = GST.DBW[W.cascadeTo];
+      var ef = Object.assign({ id:flds.id||'', name:flds.name||'', site:flds.wp||'' }, body.edu);
+      try{
+        var ins2 = {};
+        Object.keys(ef).forEach(function(k){ if(We2.cols[k]) ins2[We2.cols[k]] = String(ef[k]); });
+        var r3 = await c.from(We2.table).insert(ins2).select('*');
+        if(r3.error || !r3.data || !r3.data.length) out2.edu = { ok:false, error:(r3.error&&r3.error.message)||'insert failed' };
+        else out2.edu = { ok:true, hash:GST._dbwHash(r3.data[0]), fields:GST._dbwFields(We2, r3.data[0]) };
+      }catch(e){ out2.edu = { ok:false, error:String(e&&e.message||e) }; }
+    }
+    return out2;
+  }
+
+  if(op === 'delete'){
+    if(W.appendOnly) throw GST._dbwErr('op_disabled', 400);
+    var fd = await GST._dbwFind(c, W, body.key, body.name);
+    var hd = GST._dbwHash(fd.row);
+    if(body.baseHash && body.baseHash !== hd)
+      throw GST._dbwErr('conflict', 409, {hash:hd, fields:GST._dbwFields(W, fd.row)});
+    var rd = await c.from(W.table)['delete']().eq(fd.matchCol, fd.matchVal).select('*');
+    if(rd.error) throw GST._dbwErr('sheets_error', 500, {detail:rd.error.message});
+    if(!rd.data || rd.data.length !== 1) throw GST._dbwErr('read_only', 403);
+    var del = { row:true, edu:false };
+    if(body.cascade && W.cascadeTo && GST.DBW[W.cascadeTo]){
+      var We3 = GST.DBW[W.cascadeTo];
+      try{
+        var fe3 = await GST._dbwFind(c, We3, body.key, GST._dbwFields(W, fd.row).name);
+        var r4 = await c.from(We3.table)['delete']().eq(fe3.matchCol, fe3.matchVal).select('*');
+        del.edu = !!(r4.data && r4.data.length === 1);
+      }catch(e){ /* 교육 미등록 — 지울 것이 없다 */ }
+    }
+    return { ok:true, deleted:del };
+  }
+
+  throw GST._dbwErr('op_disabled', 400, {op:op});
+};
+
 // 저장 직후 최신 데이터. 웹게시 CSV는 수 분 지연되므로 라이브 시트를 직접 읽는다.
 // 쿼터가 서비스계정 1개에 공유되므로 초기 로드·자동 새로고침에는 쓰지 말 것.
 GST.fetchCSVFresh = async function(gid){
