@@ -582,10 +582,10 @@ canvas{cursor:pointer}
   <h3><span data-i="dp_hero">무엇을 캐물을까</span></h3>
   <div class="note" data-i="dp_note">아래 표의 줄을 누르면 그 조건으로 화면 전체가 좁혀집니다. 좁힌 뒤 다시 누르면 더 파고듭니다.</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px">
-    <button class="btn btn-grad" onclick="openPivot()" data-i="dp_pivot">🧊 피벗 탐색기 열기</button>
+    <button class="btn btn-grad" onclick="openPivot()" data-i="dp_pivot">🧊교차분석</button>
     <span id="dpCrumb" class="note" style="margin:0"></span>
   </div>
-  <div class="note" data-i="dp_pivot_n" style="margin-top:8px">축(공정·세부공정·호기·주/월·자재)을 마음대로 갈아끼워 교차 집계 · 표시를 「집중지수」로 두면 유독 몰린 칸이 드러납니다</div>
+  <div class="note" data-i="dp_pivot_n" style="margin-top:8px">축(공정·세부공정·호기·주/월·자재)</div>
   <div class="note" data-i="dp_how" style="margin-top:4px"></div>
   <div class="note" data-i="dp_how2" style="margin-top:4px"></div>
   <!-- 추천 조합 — 빈 피벗을 열어 축을 처음부터 고르게 하지 않는다. 물음 세 개를 미리 차려 둔다. -->
@@ -641,8 +641,7 @@ canvas{cursor:pointer}
 </div>
 
 <div class="tablecard">
-  <h3><span data-i="dp_gap">얼마만에 또 가나 — 재교체 주기</span></h3>
-  <div class="note" data-i="note_dpgap">같은 설비·같은 자재의 연속 교체 간격입니다. 같은 날 여러 줄은 1회로 묶습니다. 분포가 한쪽으로 늘어져 평균이 부풀기 때문에 중앙값으로 봅니다.</div>
+  <h3><span data-i="dp_gap">교체 주기</span></h3>
   <div class="tbl-wrap" style="max-height:430px">
     <table>
       <thead><tr>
@@ -752,8 +751,6 @@ let C={}, HI_MAT=0;
 const T={
   ko:{sl_period:'기간',sl_fab:'FAB',sl_floor:'Line',sl_more:'자재현황 전용',pv_month:'월',th_early_t:'그 자재 자신의 중앙값 절반도 못 가고 다시 교체된 비율입니다. 아래 「조기교체 의심 자재」 차트는 평균 기준이라 값이 다릅니다.',th_from:'시작일',th_to:'종료일',dp_cut:'⚖ 배수가 튀지 않게 하한을 둡니다 — 전체 {a}건 미만인 축의 조합 {na}개, {c}건 미만인 칸 {nc}개는 순위에서 제외했습니다.',sec_deep:'심층 분석',dp_hero:'무엇을 캐물을까',dp_note:'아래 표의 줄을 누르면 그 조건으로 화면 전체가 좁혀집니다. 좁힌 뒤 다시 누르면 더 파고듭니다.',dp_pivot:'🧊 피벗 탐색기 열기',dp_pivot_n:'축(공정·세부공정·호기·주/월·자재)을 마음대로 갈아끼워 교차 집계 · 표시를 「집중지수」로 두면 유독 몰린 칸이 드러납니다',dp_lift:'유독 몰리는 조합 — 집중지수 TOP',note_dplift:'집중지수 = 이 축에서의 비중 ÷ 전체에서의 비중. 2배면 평소의 두 배로 몰렸다는 뜻입니다. 건수만 보면 어디나 O-RING이라 안 보입니다.',dp_axis:'기준 축',dp_axis2:'상위 분류',dp_ax_none:'(없음)',dp_unk:'(미상)',rd_mat:'일자|설비호기|공정|세부공정|자재명|수량|교체사유',dp_min:'최소 건수',th_lift:'집중지수',th_share:'축내 비중',th_cnt2:'건수',th_eqn:'설비수',th_spread:'퍼짐',sp_one:'특정 호기',sp_few:'일부 편중',sp_wide:'전반적',dp_gap:'얼마만에 또 가나 — 재교체 주기',note_dpgap:'같은 설비·같은 자재의 연속 교체 간격을 우리가 직접 이어 붙인 값입니다. 같은 날 여러 줄은 1회로 묶고, 분포가 한쪽으로 늘어져 평균이 부풀기 때문에 중앙값으로 봅니다. ⚠ 아래 「자재별 사용주기」 표(시트가 계산해 둔 사용일)와는 다른 지표이며, 사용주기 기준 토글(유상/전교체일)의 영향을 받지 않습니다. 간격 표본 20개 이상 · 짧은 순.',th_pairs:'조합',th_gapn:'간격표본',th_q1:'하위25%',th_med:'중앙값',th_q3:'상위25%',th_fast:'최단',th_early:'조기',dp_spike:'언제 몰렸나 — 급증 구간',note_dpspike:'월 교체건수가 직전 6개월 평균의 2배를 넘고 그 달이 5건 이상인 구간입니다. 자료가 없는 달은 0으로 세므로 위 막대와 정확히 같은 판정이며, 앞이 6개월 확보되지 않은 달은 판정하지 않습니다. 줄을 누르면 그 자재로 좁혀집니다.',th_month:'시기',th_base:'직전평균',th_where:'주로 어디서',dp_best:'Best of Best — 손 덜 가는 설비',note_dpbob:'설비 한 대의 총 교체건수 기준. 지난달 설치돼 자연히 적은 설비가 1등이 되지 않도록 관측 기간(첫 교체~마지막 교체) 6개월 이상 · 3건 이상인 설비만 순위에 넣습니다.',dp_worst:'Worst of Worst — 자재를 먹는 설비',note_dpwow:'같은 라인 평균 대비 몇 배인지 함께 봅니다. 한 자재에만 몰려 있으면 그 부위의 물리적 원인을 의심합니다.',th_kinds:'자재종',th_topmat:'최다 자재',th_vsline:'라인평균비',dp_none:'조건에 맞는 항목이 없습니다',cross_more:'↗ 3단 중첩·집중지수는 피벗에서',dp_q1hot:'하위 25%가 60일 미만 — 조기교체 다발',pv_ch:'챔버',pv_model:'모델',pv_matcode:'자재코드',pv_week:'주차',pv_quarter:'분기',pv_gapmed:'재교체간격(중앙)',pv_paid:'유상률',pv_free:'무상사유',pv_eqn:'설비수',pv_early:'조기교체(30일↓)',
       dp_reco:'추천 조합:',dp_r1:'세부공정 × 자재명 (집중지수)',dp_r2:'자재명 × 월 (건수)',dp_r3:'설비호기 × 자재명 (재교체간격)',
-      dp_how:'표시를 「집중지수(×)」로 바꾸세요. 건수로는 O-RING이 전체의 44%라 어느 축을 잡아도 O-RING만 1등입니다.',
-      dp_how2:'행 축은 3단까지 겹칩니다(공정 → 세부공정 → 설비호기). 값에 「재교체간격(중앙)」·「설비수」를 얹으면 "얼마만에 가나"와 "특정 호기만인가"를 같은 표에서 봅니다.',
       dp_sg_t:'월별 급증 — 붉은 막대',
       dp_sg_n:'현재 필터 문맥의 월별 교체 건수. 직전 6개월 평균의 2배를 넘고 그 달이 5건 이상이면 붉게 칠합니다(자료가 없는 달은 0으로 세고, 앞이 6개월 확보되지 않은 달은 판정하지 않습니다). 아래 「급증 구간」 표와 같은 규칙입니다. 자재를 하나 고르면(예: O-RING) 그 자재가 언제 쏟아졌는지 드러납니다.',th_xmul:'직전대비',
       dp_sg_hot:'급증 {v}',dp_sg_none:'이 문맥에서는 직전 6개월 평균의 2배를 넘은 달이 없습니다.',
