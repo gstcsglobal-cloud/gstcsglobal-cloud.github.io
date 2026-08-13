@@ -579,6 +579,42 @@ async function acquireLocks(svc: any, gids: string[], email: string, ttl: number
   }
   return held;
 }
+/* ---------- 미러 write-through (v78) ----------
+   v77에서 조회가 Supabase 미러로 옮겨졌다. 시트에만 쓰면 다음 sheet-sync 까지 **최대 30분**
+   화면이 옛 값을 보여준다. fault의 dq 편집창이 낙관 반영을 하므로 저장 직후 화면은 맞지만,
+   그 사이 새로고침하면 방금 채운 값이 빈칸으로 되돌아 보인다. 그래서 미러에도 같이 넣는다.
+
+   행을 **업무 키로** 찾는다. 미러 PK인 src_row로 찾는 게 자연스러워 보이지만 그건
+   `sheet-sync`가 **빈 행을 걸러낸 뒤의 순번**이다(planSync의 filter). A1 행번호에서 유도하려면
+   그 필터 규칙을 여기 복제해야 하고, 규칙이 갈라지는 순간 **남의 행을 덮는다** —
+   쓰기 경로에서 가장 나쁜 실패다. 그래서 키로 찾고 **정확히 한 행일 때만** 쓴다.
+   못 찾거나 여러 건이면 조용히 넘어간다 — 다음 sync가 어차피 맞춘다(늦을 뿐 틀리지 않는다). */
+const MIRROR_OF_GID: Record<string, { tbl: string; keyCol: string; cols: string[] }> = {
+  // 수선실적. cols는 미러 컬럼명이자 이 시트 스키마의 필드명이다(우연이 아니라 둘 다 SPEC에서 왔다).
+  "646668307": { tbl: "sheet_wk", keyCol: "rs_code", cols: ["alarm", "phenom", "cause", "action"] },
+};
+async function mirrorWrite(svc: any, gid: string, key: string, changes: Record<string, unknown>) {
+  const m = MIRROR_OF_GID[gid];
+  if (!m) return { skipped: "not_mirrored" };
+  const patch: Record<string, unknown> = {};
+  for (const c of m.cols) if (c in changes) patch[c] = changes[c] === "" ? null : changes[c]; // 빈칸은 sheet-sync와 같게 null
+  if (!Object.keys(patch).length) return { skipped: "no_mirrored_field" };
+  try {
+    // limit(3) — 중복이면 몇 건인지 알리되 전부 읽지는 않는다
+    const { data: hit, error: e1 } = await svc.from(m.tbl).select("src_row").eq(m.keyCol, key).limit(3);
+    if (e1) throw new Error(e1.message);
+    if (!hit?.length) return { skipped: "no_rows" };
+    if (hit.length !== 1) return { skipped: `ambiguous_${hit.length}` }; // 키 중복 — 손대지 않는다
+    const { error: e2 } = await svc.from(m.tbl).update(patch).eq("src_row", hit[0].src_row);
+    if (e2) throw new Error(e2.message);
+    return { ok: true, src_row: hit[0].src_row, cols: Object.keys(patch) };
+  } catch (e) {
+    // 저장 자체는 이미 끝났다. 미러가 늦어질 뿐이므로 사용자 응답을 실패로 바꾸지 않는다.
+    console.error("mirrorWrite", (e as Error).message);
+    return { error: String((e as Error).message).slice(0, 120) };
+  }
+}
+
 // 감사 로그 — 실패해도 사용자 응답은 성공으로 둔다(저장은 이미 끝났다)
 async function audit(svc: any, gid: string, key: string, op: string,
   before: string[] | null, after: string[] | null, email: string): Promise<void> {
@@ -765,8 +801,11 @@ Deno.serve(async (req) => {
         } catch (e) { console.error("cascade", (e as Error).message); }
       }
 
+      const mirror = await mirrorWrite(svc, gid, String(newKey), changes);
+
       return json({
         ok: true, hash: await rowHash(after.row), fields: fieldsOf(after.header, after.row, sc, after.bc), cascade,
+        mirror, // 관측용 — 실패해도 저장은 성공이다. 값은 다음 sheet-sync 가 어차피 맞춘다.
       });
     }
 

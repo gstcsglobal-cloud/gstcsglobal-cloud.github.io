@@ -189,6 +189,47 @@ console.log('\n[5] 필수 열 이름이 바뀌면 멈추는지');
   }
 }
 
+/* ---------- 9. sheet-proxy 허용목록이 «읽는 쪽 전부»를 덮는지 ----------
+   v78에서 sheet-proxy가 gid 허용목록을 갖게 됐다. 목록에서 빠진 gid는 400으로 거절되는데,
+   페이지 입장에서는 그 시트만 조용히 비는 것으로 보인다 — 에러 배너도 안 뜬다.
+   그래서 사람 눈으로 지키지 않고 여기서 대조한다. */
+console.log('\n[6] sheet-proxy 허용목록이 모든 소비자를 덮는지');
+{
+  const PROXY = ROOT + '/supabase/functions/sheet-proxy/index.ts';
+  const psrc = fs.readFileSync(PROXY, 'utf8');
+  const block = psrc.slice(psrc.indexOf('const ALLOW_GID'), psrc.indexOf('/* ====='));
+  const allow = new Set([...block.matchAll(/"(\d+)"\s*:/g)].map(m => m[1]));
+  if (!allow.size) err('sheet-proxy에서 ALLOW_GID를 못 읽었다 — 블록 표식이 바뀌었나');
+  else {
+    // 소비자 ①: 대시보드 페이지들이 URL에 박아 쓰는 gid
+    const want = new Map();               // gid → 어디서 쓰나
+    for (const p of ['fault','material','pm','scrubber','tco','report','cip','hr']) {
+      const f = ROOT + '/' + p + '/index.html';
+      if (!fs.existsSync(f)) continue;
+      const h = fs.readFileSync(f, 'utf8');
+      for (const m of h.matchAll(/gid=(\d+)|GID_[A-Z0-9]+\s*=\s*'(\d+)'/g))
+        (want.get(m[1] ?? m[2]) ?? want.set(m[1] ?? m[2], []).get(m[1] ?? m[2])).push(p);
+    }
+    // 소비자 ②: kakao-bot의 GID 표
+    const ksrc = fs.readFileSync(ROOT + '/supabase/functions/kakao-bot/index.ts', 'utf8');
+    const kblk = ksrc.slice(ksrc.indexOf('const GID'), ksrc.indexOf('const GID') + 400);
+    for (const m of kblk.matchAll(/:\s*"(\d+)"/g))
+      (want.get(m[1]) ?? want.set(m[1], []).get(m[1])).push('kakao-bot');
+    // 소비자 ③: core.js SPEC (미러 경로도 결국 sheet-proxy를 통해 채워진다)
+    for (const k of Object.keys(SPEC))
+      (want.get(SPEC[k].gid) ?? want.set(SPEC[k].gid, []).get(SPEC[k].gid)).push('SPEC.' + k);
+
+    const missing = [...want.keys()].filter(g => !allow.has(g));
+    missing.length
+      ? err(`허용목록에 없는 gid ${missing.length}개: ` +
+            missing.map(g => `${g}(${[...new Set(want.get(g))].join(',')})`).join(' · '))
+      : ok(`소비자 ${want.size}개 gid 전부 허용됨`);
+
+    const unused = [...allow].filter(g => !want.has(g));
+    if (unused.length) console.log(`     · 참고: 아무도 안 쓰는 허용 gid ${unused.length}개 — ${unused.join(', ')}`);
+  }
+}
+
 fs.unlinkSync(tmp);
 console.log(`\n${bad ? '❌' : '✅'} ${n - bad}/${n} 통과`);
 process.exit(bad ? 1 : 0);

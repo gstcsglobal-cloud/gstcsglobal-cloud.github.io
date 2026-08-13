@@ -1,10 +1,11 @@
-/* sheet-sync — 구글시트 웹게시 CSV를 미러 표(sheet_wk · sheet_mat · sheet_inst)에 적재한다.
+/* sheet-sync — 구글시트를 미러 표(sheet_wk · sheet_mat · sheet_inst)에 적재한다.
  *
  *   POST/GET  ?op=sync&key=wk        헤더 x-sync-secret: <SYNC_SECRET>
  *             ?op=sync&key=all       셋 다 (느리다 — 아래 주석 참조)
  *             ?op=status             마지막 적재 기록만 조회 (시크릿 필요)
  *
- * Secret: SYNC_SECRET · SHEET_PUB_URL · SUPABASE_URL · SUPABASE_SERVICE_ROLE_KEY
+ * Secret: SYNC_SECRET · SUPABASE_URL · SUPABASE_SERVICE_ROLE_KEY
+ *   (v78부터 SHEET_PUB_URL은 여기에 필요 없다 — 시트는 sheet-proxy가 서비스 계정으로 읽는다)
  *
  * ── 이 함수에 시트 스펙이 없는 이유 ──────────────────────────────
  * 헤더 이름 → 컬럼 대응은 `sheet_spec` · `sheet_colmap` 표에서 **읽는다**.
@@ -114,12 +115,22 @@ function toRows(data: string[][], cmap: ColMap[], off: number) {
 }
 /* ---------- 순수 변환부 끝 ---------- */
 
+/* 시트는 sheet-proxy를 통해서만 읽는다 (v78).
+   예전에는 웹게시 CSV를 직접 받았는데, 웹게시는 인증이 없어 URL만 알면 누구나 전량을 받는다.
+   지금은 sheet-proxy가 서비스 계정으로 읽어 준다 — 구글 자격증명이 이 함수에는 없다.
+   자격증명과 읽기 로직을 여러 함수에 복제하면 반드시 갈라진다(CLAUDE.md 제2원칙). */
 async function fetchCsv(gid: string) {
-  const base = Deno.env.get("SHEET_PUB_URL");
-  if (!base) throw new Error("CONFIG: SHEET_PUB_URL 미설정");
-  const r = await fetch(`${base}?gid=${gid}&single=true&output=csv`,
-    { signal: AbortSignal.timeout(60000) });
-  if (!r.ok) throw new Error(`SHEET_FETCH ${r.status}`);
+  const url = Deno.env.get("SUPABASE_URL");
+  const sec = Deno.env.get("SYNC_SECRET");
+  if (!url) throw new Error("CONFIG: SUPABASE_URL 미설정");
+  if (!sec) throw new Error("CONFIG: SYNC_SECRET 미설정 — sheet-proxy 서버 호출에 필요하다");
+  const key = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const r = await fetch(`${url}/functions/v1/sheet-proxy?gid=${gid}`, {
+    // Authorization은 플랫폼 JWT 게이트용이고, 실제 권한 판정은 x-sync-secret이 한다.
+    headers: { Authorization: `Bearer ${key}`, "x-sync-secret": sec },
+    signal: AbortSignal.timeout(90000), // API 읽기는 웹게시 CSV보다 느리다 (자재실적 3만행)
+  });
+  if (!r.ok) throw new Error(`SHEET_FETCH ${r.status}: ${(await r.text()).slice(0, 200)}`);
   return await r.text();
 }
 

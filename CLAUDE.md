@@ -109,10 +109,13 @@ r2      이수여부(8) 완료일(10) | 이수여부(12) 완료일(14) | 완료�
 1. **`assets/core.js` 먼저.** 페이지들이 배포본 core.js를 절대경로로 부르므로,
    core.js가 구버전이면 `GST.SM`이 없어 아무것도 렌더되지 않는다.
 2. 그다음 페이지들 (`fault` · `material` · `pm` · `scrubber` · `tco` · `report` · `cip` · `hr`)
-3. Supabase는 **별개**다. `sheet-write`·`kakao-bot`·`sheet-sync`는 콘솔에서 코드 교체 후 Deploy.
-   GitHub에 올린다고 반영되지 않는다. SQL도 마찬가지 —
+3. Supabase는 **별개**다. `sheet-write`·`kakao-bot`·`sheet-sync`·`sheet-proxy`는
+   콘솔에서 코드 교체 후 Deploy. GitHub에 올린다고 반영되지 않는다. SQL도 마찬가지 —
    `setup-4-tables.sql` → `setup-5-sync-rpc.sql` 순서로 Run
    (자세한 것은 `supabase/functions/sheet-sync/DEPLOY.md`).
+4. **엣지펑션끼리도 순서가 있다 — `sheet-proxy`가 먼저다.** `sheet-sync`·`kakao-bot`이
+   구글이 아니라 `sheet-proxy`를 부르므로(v78), 뒤집으면 새 호출자가 옛 프록시를 만나
+   **401로 전부 멎는다.** `supabase/functions/sheet-proxy/DEPLOY.md`
 
 ---
 
@@ -142,6 +145,29 @@ r2      이수여부(8) 완료일(10) | 이수여부(12) 완료일(14) | 완료�
   실제로 그렇게 새어 나갔다 — 설명 주석에 든 실제 S/N 하나와 작업자 실명 하나.
   화면에 안 나와도 저장소에는 남고, 지워도 git 이력에 남는다. `tests/t-leak.mjs`가 이제 막는다.
 - 대시보드는 Supabase 인증 뒤에 있다. 시트는 `sheet-proxy`를 거쳐 읽는다.
+
+## 구글시트 접근 — 웹게시는 인증이 없다 (v78)
+
+**`sheet-proxy`가 구글시트를 읽는 유일한 통로다.** 서비스 계정(Sheets API v4)으로 읽는다.
+`sheet-sync`·`kakao-bot`은 구글이 아니라 **`sheet-proxy`를 부른다**(`x-sync-secret`).
+구글 자격증명(`GS_SA_*`·`GS_SHEET_ID`)은 `sheet-proxy`·`sheet-write` **둘만** 갖는다.
+
+- **왜.** 예전에는 셋 다 웹게시(publish to web) CSV를 받았다. **웹게시에는 인증이 없다** —
+  URL만 알면 누구나 전량을 받는다(작업자 실명·고객사·설비 S/N). 옛 주석의 *"URL이 secret이라
+  노출되지 않음"* 은 **가린 것이지 보호한 게 아니었다.**
+- **읽기 방식을 복제하지 말 것.** 세 함수에 흩어놓으면 제2원칙의 사고가 재현된다.
+  `sheet-proxy`의 「구글 읽기」 블록은 `sheet-write`와 한 벌이고 `SPEC-SYNC` 주석이 달려 있다.
+- **`FORMATTED_VALUE` 고정.** `UNFORMATTED_VALUE`로 바꾸면 날짜가 시리얼 숫자(45000)로 와서
+  **모든 날짜 컬럼이 조용히 깨진다.** `values.get`은 꼬리 빈칸을 생략하므로 **직사각형 패딩**도 필수다.
+- **gid 허용목록**(`ALLOW_GID`)에 없으면 400이다. 화면에는 그 시트만 조용히 빈다 —
+  `tests/t-mirror.mjs`의 [6]번이 소비자 전부를 덮는지 대조하므로 잊으면 거기서 걸린다.
+- `GS_SHEET_ID`는 편집 주소의 `/d/<여기>/edit`다. 웹게시의 `/d/e/2PACX-…`를 넣으면 404 —
+  가장 흔한 설정 실수다.
+
+**미러가 원장이 아닌 동안에는 쓰기가 두 곳에 간다.** `sheet-write`는 시트에 쓴 뒤
+같은 행을 미러에도 넣는다(`mirrorWrite`). 행은 **업무 키로 찾고 정확히 한 행일 때만** 쓴다 —
+미러 PK `src_row`는 `sheet-sync`가 **빈 행을 걸러낸 뒤의 순번**이라 A1 행번호에서 유도할 수 없다.
+그 규칙을 복제해 어긋나면 **남의 행을 덮는다.**
 
 ---
 

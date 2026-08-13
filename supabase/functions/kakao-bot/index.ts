@@ -80,11 +80,20 @@ async function postCallback(callbackUrl: string, payload: unknown) {
 /* ============================================================
    1. 동기화 — 구글 시트 → bot_cache
    ============================================================ */
+/* 시트는 sheet-proxy를 통해서만 읽는다 (v78).
+   웹게시는 인증이 없어 URL만 알면 누구나 전량을 받는다 — 그래서 서비스 계정 경로로 옮겼다.
+   구글 자격증명은 sheet-proxy·sheet-write 둘만 갖는다. */
 async function fetchCsv(gid: string) {
-  const base = Deno.env.get("SHEET_PUB_URL");
-  if (!base) throw new Error("CONFIG: SHEET_PUB_URL 미설정");
+  const url = Deno.env.get("SUPABASE_URL");
+  const sec = Deno.env.get("SYNC_SECRET");
+  if (!url) throw new Error("CONFIG: SUPABASE_URL 미설정");
+  if (!sec) throw new Error("CONFIG: SYNC_SECRET 미설정 — sheet-proxy 서버 호출에 필요하다");
+  const key = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const t = Date.now();
-  const r = await fetch(`${base}?gid=${gid}&single=true&output=csv`, { signal: AbortSignal.timeout(20000) });
+  const r = await fetch(`${url}/functions/v1/sheet-proxy?gid=${gid}`, {
+    headers: { Authorization: `Bearer ${key}`, "x-sync-secret": sec },
+    signal: AbortSignal.timeout(60000), // 웹게시 20초 → API 읽기가 더 느리다
+  });
   if (!r.ok) throw new Error(`SHEET_FETCH ${r.status}`);
   const text = await r.text();
   return { text, bytes: text.length, ms: Date.now() - t };
