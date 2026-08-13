@@ -14,6 +14,54 @@ Supabase → SQL Editor → New query → 전체 붙여넣고 Run. **이 순서�
 
 두 번째가 첫 번째의 표를 참조하므로 순서를 바꾸면 실패한다.
 둘 다 **여러 번 돌려도 안전**하다(`if not exists` · `create or replace`).
+이미 Run했다면 **다시 할 필요 없다** — 아래 확인 쿼리로 상태만 보면 된다.
+
+#### Run이 제대로 됐는지 확인
+
+SQL Editor에 붙여넣고 Run. 아홉 줄이 **전부 `OK`** 여야 한다.
+
+```sql
+with cnt as (
+  select t, case when to_regclass('public.'||t) is null then 0
+    else (xpath('/row/c/text()',
+          query_to_xml('select count(*) as c from public.'||t, false, true, '')))[1]::text::int end n
+  from (values ('sheet_spec'),('sheet_colmap')) v(t)
+)
+select 항목, 실제, 기대, case when 실제 = 기대 then 'OK' else '<<< 다름' end 판정 from (
+  select 1 ord, '표 sheet_'||t||' 열수' 항목,
+         (select count(*) from information_schema.columns
+           where table_schema='public' and table_name='sheet_'||t) 실제, e 기대
+    from (values ('wk',40),('mat',41),('inst',27)) v(t,e)
+  union all
+  select 2, '매핑 colmap '||t,
+         case when to_regclass('public.sheet_colmap') is null then 0
+         else (xpath('/row/c/text()', query_to_xml(
+                'select count(*) as c from public.sheet_colmap where tbl='''||t||'''',
+                false, true, '')))[1]::text::int end, e
+    from (values ('wk',38),('mat',39),('inst',25)) v(t,e)
+  union all select 3, 'sheet_spec 행수',   (select n from cnt where t='sheet_spec'), 3
+  union all select 4, '적재 함수 개수',    (select count(*)::int from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname='public' and p.proname in ('sheet_sync_upsert','sheet_sync_finish')), 2
+  union all select 5, 'RLS 켜진 sheet_* 표', (select count(*)::int from pg_class
+     where relkind='r' and relname like 'sheet\_%' and relrowsecurity), 6
+) x order by ord, 항목;
+```
+
+표 이름을 직접 쓰지 않고 `to_regclass` + `query_to_xml`로 감싼 이유가 있다.
+직접 쓰면 표가 하나도 없을 때 Postgres가 **파싱 단계에서 거부**해,
+정작 진단이 가장 필요한 "아무것도 안 들어간 상태"에서 오류만 뜨고 아무것도 못 본다.
+
+`<<< 다름`이 나오면:
+
+| 어디가 다른가 | 뜻 | 할 일 |
+|---|---|---|
+| 전부 0 | SQL을 아직 안 돌렸다 | `setup-4` → `setup-5` 순서로 Run |
+| 표 열수는 맞는데 **colmap·spec이 0** | `setup-4`의 **끝부분(시드)** 이 안 들어갔다 | `setup-4`를 **통째로** 다시 Run |
+| **함수 개수 0** | `setup-5`를 안 돌렸다 | `setup-5` Run |
+| 열수가 기대보다 **적다** | 시트에 열이 늘어 SPEC이 앞서간 것 | 아래 「시트에 열이 늘었을 때」 |
+
+어느 쪽이든 **통째로 다시 Run해도 안전하다.**
 
 ### 2. 함수 배포
 
@@ -46,9 +94,23 @@ curl -X POST "https://<프로젝트>.supabase.co/functions/v1/sheet-sync?op=sync
      -H "x-sync-secret: <SYNC_SECRET>"
 ```
 
+콘솔의 **Edge Functions → sheet-sync → Test** 패널로도 같은 것을 할 수 있다.
+Query Parameters에 `key`=`inst`, **Headers에 `x-sync-secret`** 을 넣는다
+(`op`은 기본값이 `sync`라 생략해도 된다).
+
+**401이 나오면 본문을 보고 원인을 가른다.** 두 가지가 전혀 다른 문제다:
+
+| 응답 본문 | 누가 막았나 | 원인 · 할 일 |
+|---|---|---|
+| `{"error":"unauthorized"}` | **이 함수 코드** | `x-sync-secret` 헤더가 없거나 값이 틀렸다. Headers에 추가하라 |
+| 그 밖의 401 (`Missing authorization header` 등) | **플랫폼 JWT 게이트** | `Authorization: Bearer <anon key>`를 추가하라 |
+
+앞의 것이 나왔다면 **`SYNC_SECRET`이 프로젝트에 존재한다는 증거이기도 하다** —
+미설정이면 이 함수는 401이 아니라 **500**(`SYNC_SECRET 미설정`)을 낸다.
+
 **`Authorization` 헤더를 빠뜨리지 말 것.** 엣지펑션의 `Verify JWT` 설정이 기본 켜짐이라,
-켜져 있으면 이 헤더가 없는 요청은 **함수 코드에 닿기도 전에** 플랫폼이 401로 끊는다.
-증상이 "본문 없는 401"이면 십중팔구 이것이다.
+켜져 있으면 이 헤더가 없는 요청은 **함수 코드에 닿기도 전에** 플랫폼이 401로 끊는다
+(콘솔 Test 패널은 자체적으로 붙여주므로 여기서는 안 걸릴 수 있다 — curl·pg_cron에서 걸린다).
 
 anon key는 원래 공개값이다(Settings → API → `anon public`, 또는 `assets/core.js:42`에
 그대로 들어 있다 — 대시보드가 브라우저에서 쓰는 값). 실제 권한 판정은 여전히
@@ -122,6 +184,8 @@ select cron.schedule('sync-mat',  '20,50 * * * *', $$
 1. `assets/core.js`의 `GST.SM.SPEC`에 필드를 추가한다 (정본)
 2. `node supabase/gen-ddl.mjs` — `setup-4-tables.sql`이 다시 만들어진다
 3. 그 SQL을 Run (열 추가 + 매핑 시드 갱신이 같이 들어 있다)
+   — 시드는 `delete` 후 다시 넣으므로 **매핑이 통째로 갈아끼워지는 것이 정상**이다.
+   SPEC에서 열을 뺐다면 여기서도 사라져야 하기 때문에 그렇게 만들어 두었다.
 4. `cd tests && npm run mirror` 로 세 곳이 안 갈라졌는지 확인
 5. 함수는 **재배포할 필요가 없다** — 매핑을 표에서 읽기 때문이다
 
