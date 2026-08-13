@@ -119,10 +119,18 @@ for (const p of PAGES) {
     a.kpi.forEach((v,i) => { if (v !== b.kpi[i]) console.log(`       [${i}] ${v} → ${b.kpi[i]}`); });
     if (b.kpi.length !== a.kpi.length) console.log(`       개수 ${a.kpi.length} → ${b.kpi.length}`);
   }
+  /* 차트 합은 상대오차를 준다. TCO가 유틸리티 비용을 **벽시계 경과시간에 적분**하기 때문이다
+     (tco/index.html의 `const NOW=Date.now()`). 코드를 한 줄도 안 고치고 90초 뒤 다시 재면
+     2,445,558,478 → 2,448,571,330처럼 값이 계속 흐른다. 절대비교로 두면 매번 거짓 실패가 나고,
+     거짓 실패가 나는 검사는 아무도 안 본다.
+     이행 사고는 이 정도로 작게 나지 않는다 — 차트가 0이 되거나 절반이 날아간다. */
+  const TOL = 0.005;
   Object.keys(a.charts).forEach(k => {
     const x = a.charts[k], y = b.charts[k];
     if (!y) return say(`차트 ${k} 사라짐`);
-    if (x.sum !== y.sum || x.n !== y.n) say(`차트 ${k} 합 ${x.sum}(${x.n}) → ${y.sum}(${y.n})`);
+    if (x.n !== y.n) return say(`차트 ${k} 데이터 점수 ${x.n} → ${y.n}`);
+    const d = Math.abs(y.sum - x.sum), rel = x.sum ? d / Math.abs(x.sum) : (d ? 1 : 0);
+    if (rel > TOL) say(`차트 ${k} 합 ${x.sum} → ${y.sum} (${(rel*100).toFixed(2)}%)`);
   });
   Object.keys(a.tables).forEach(k => {
     if (b.tables[k] === undefined) return say(`표 ${k} 사라짐`);

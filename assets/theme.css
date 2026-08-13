@@ -446,3 +446,27 @@ body.gst-sb-open .gst-sb-toggle{left:300px}
   th{background:#f0f0f0 !important}
   .status{display:none !important}
 }
+
+/* ── 사이드바 공통 필터 (v76) ────────────────────────────────────────────────
+   Customer · FAB · Line · 공정 · 세부공정 · 기간을 모든 페이지가 같은 순서·같은
+   생김새로 쓴다. 페이지마다 복붙하던 다중선택 박스 스타일을 여기로 올렸다. */
+
+/* FAB 다중선택 — 엑셀 필터 박스처럼 체크박스 목록 */
+.mselbtn{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;
+  color:var(--txt-main);font-size:12px;min-width:150px;text-align:left;cursor:pointer}
+.mselbox{display:none;position:absolute;top:100%;left:0;z-index:60;min-width:170px;margin-top:4px;
+  background:var(--bg-card,#101720);border:1px solid var(--glass-border);border-radius:12px;
+  padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.45);max-height:280px;overflow-y:auto}
+.mselbox label{display:flex;gap:7px;align-items:center;font-size:12px;padding:4px 6px;border-radius:8px;cursor:pointer}
+.mselbox label:hover{background:var(--glass)}
+.mselbox .ms-all{display:flex;gap:6px;border-bottom:1px solid var(--glass-border);padding-bottom:6px;margin-bottom:6px}
+.mselbox .ms-all button{flex:1;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;
+  padding:4px 0;color:var(--txt-main);font-size:11px;cursor:pointer}
+body.theme-light .mselbox{background:#fff}
+/* 사이드바 안에서는 카드 외형을 벗으므로 버튼도 폭을 채운다 */
+.gst-sidebar .mselbtn{width:100% !important;min-width:0 !important}
+
+/* 공통 필터와 페이지 고유 필터를 가르는 선 — 어디까지가 공통인지 눈에 보이게 */
+.slicer-div{border-top:1px solid var(--glass-border);margin:2px 0 0;padding-top:10px;
+  font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--txt-muted);font-weight:700}
+.slicers .slicer-div{flex-basis:100%}

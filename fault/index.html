@@ -167,16 +167,23 @@ canvas{cursor:pointer}
 <div class="status" id="status">Loading...</div>
 
 <div class="slicers">
-  <div class="slicer"><div class="lbl">LINE</div><select id="sl-line" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_customer">Customer</div><select id="sl-customer" onchange="onSlicer()"></select></div>
+  <div class="slicer" style="position:relative"><div class="lbl" data-i="sl_fab">FAB</div>
+    <button id="fabBtn" type="button" class="mselbtn" onclick="GST.mselToggle('fab',event)">전체 ▾</button>
+    <div id="fabBox" class="mselbox"></div></div>
+  <div class="slicer"><div class="lbl" data-i="sl_floor">Line</div><select id="sl-floor" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_proc2">공정</div><select id="sl-proc" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="pv_subproc">세부공정</div><select id="sl-subproc" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl" data-i="sl_period">기간</div>
+    <input type="date" id="dtFrom" onchange="onSlicer()" class="dt-input"> ~
+    <input type="date" id="dtTo" onchange="onSlicer()" class="dt-input">
+  </div>
+  <div class="slicer-div" data-i="sl_more">고장분석 전용</div>
   <div class="slicer"><div class="lbl" data-i="sl_stage">작업단계</div><select id="sl-stage" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_pf">유/무상</div><select id="sl-pf" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_cause">원인</div><select id="sl-cause" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_model">모델</div><select id="sl-model" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_sn">설비 S/N</div><select id="sl-sn" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_period">기간</div>
-    <input type="date" id="dtFrom" onchange="onSlicer()" class="dt-input"> ~
-    <input type="date" id="dtTo" onchange="onSlicer()" class="dt-input">
-  </div>
   <div class="slicer search-sl"><div class="lbl" data-i="sl_search">검색</div><input id="search" placeholder="S/N, 현상, 조치, 작업자..."></div>
 </div>
 
@@ -636,9 +643,18 @@ const INST_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAW
 // 자재실적 — 설비 일대기에서 "이 설비가 뭘 갈았나"를 잇기 위해 함께 읽는다
 const MAT_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
 let INSTMAP={};  // normSN → Turn-On Date
+let INSTIX=null; // 설비호기·S/N → 설치 제원(Floor 등). GST.ORG.instIndex가 만든다
 let INSTROW={};  // normSN → 설치 제원 (일대기 기본정보용)
 let MAT_ROWS=[]; // 자재 교체 이력
 const normSN=s=>String(s==null?'':s).replace(/\s+/g,'').toUpperCase();
+/* Floor 조회. 못 붙으면 '미상'으로 세운다 — 빈칸으로 두면 Floor 축에서 조용히 사라진다.
+   일본(F15_*)·싱가포르(F10*) 설비는 설치현황 시트에 아예 없어 원리적으로 못 붙는다. */
+const FLOOR_NA='미상';
+function instFloor(code,sn){
+  if(!INSTIX) return '';
+  const rec=INSTIX.find(code,sn);
+  return (rec&&rec.floor)?rec.floor:FLOOR_NA;
+}
 // 실적현황·설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
 // 시트에 열이 끼어들거나 순서가 바뀌어도 따라가고, 이름이 바뀌면 배너로 알린다.
 // 정의는 core.js의 GST.SM.SPEC 한 곳에만 있어 다른 페이지와 갈라지지 않는다.
@@ -648,7 +664,7 @@ const SERVICE_STAGES=['BM','CBM','CM','CRM'];
 const PAL=GST.PAL8;
 
 const T={
-  ko:{dp_trend:'월별 BM율 추이',dp_trend_n:'그 달의 고장(BM) ÷ 그 달 전체 작업 · 점선은 전체 평균 {p}% · 자료가 없는 달은 0으로 채운 연속 달력입니다.',dp_rise:'오르는 것',dp_rise_n:'직전 6개월 평균의 2배를 넘은 달만 · 월 {n}건 이상 · {u}건 · 자재현황 급증과 같은 판정입니다.',dp_rise_none:'월 {n}건 이상으로 급증한 구간이 없습니다',dp_th_mon:'시기',dp_th_base:'직전평균',dp_avg:'전체 평균',th_from:'시작일',th_to:'종료일',sl_alarm:'알람',sl_country2:'국가',dp_sub:'공정·세부공정 중 어디가 유독 고장인가',dp_sub_n:'BM율 = 고장(BM) ÷ 그 구분에 들어간 모든 작업 · 작업 {n}건 이상 {u}개 구분 · 전체 평균 {p}% · 줄을 누르면 그 구분으로 화면이 좁혀집니다 · ◆ 는 그 구분 BM의 절반 이상이 한 호기에서 나온 경우',dp_th_sub:'구분',dp_th_eqn:'설비수',dp_th_top:'최다 호기',sl_proc2:'공정',sl_line2:'라인',sec_deep:'심층분석',
+  ko:{sl_customer:'Customer',sl_fab:'FAB',sl_floor:'Line',sl_more:'고장분석 전용',dp_trend:'월별 BM율 추이',dp_trend_n:'그 달의 고장(BM) ÷ 그 달 전체 작업 · 점선은 전체 평균 {p}% · 자료가 없는 달은 0으로 채운 연속 달력입니다.',dp_rise:'오르는 것',dp_rise_n:'직전 6개월 평균의 2배를 넘은 달만 · 월 {n}건 이상 · {u}건 · 자재현황 급증과 같은 판정입니다.',dp_rise_none:'월 {n}건 이상으로 급증한 구간이 없습니다',dp_th_mon:'시기',dp_th_base:'직전평균',dp_avg:'전체 평균',th_from:'시작일',th_to:'종료일',sl_alarm:'알람',sl_country2:'국가',dp_sub:'공정·세부공정 중 어디가 유독 고장인가',dp_sub_n:'BM율 = 고장(BM) ÷ 그 구분에 들어간 모든 작업 · 작업 {n}건 이상 {u}개 구분 · 전체 평균 {p}% · 줄을 누르면 그 구분으로 화면이 좁혀집니다 · ◆ 는 그 구분 BM의 절반 이상이 한 호기에서 나온 경우',dp_th_sub:'구분',dp_th_eqn:'설비수',dp_th_top:'최다 호기',sl_proc2:'공정',sl_line2:'라인',sec_deep:'심층분석',
     
     
     
@@ -693,7 +709,7 @@ const T={
     tbl_title:'서비스 실적 상세',th_date:'작업일',ft_cnt:'건수',th_stage:'단계',th_pf:'유/무상',th_phenom:'현상',th_cause:'원인',th_action:'조치',th_min:'시간(분)',th_mh:'공수',th_worker:'작업자',
     ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ch_alarmp:'알람 TOP (파레토)',note_alarmp:'알람(Z) 미기재 시 현상(AA) 폴백 · 라인=누적 %',dq_title:'데이터 입력 정합성 (BM 기준)',dq_missing:'미기재 {n}건 / BM {t}건',dq_note:'행의 ✎로 알람·현상·원인·조치를 바로 채울 수 있습니다 (구글 시트에 저장)',dq_fill:'입력',dq_all:'알람·현상·원인·조치가 모두 기재되어 있습니다',dq_missN:'미기재 {n}건 제외',dq_mt:'고장 기록 입력',dq_close:'닫기',dq_save:'저장',dq_saved:'저장됨 — 구글 시트에 반영되었습니다',dq_savefail:'저장 실패 — 잠시 후 다시 시도하세요',dq_conflict:'다른 사람이 먼저 수정했습니다 — 다시 열어주세요',dq_loadfail:'행을 불러오지 못했습니다',dq_zcol:'Z열',dq_savenext:'저장 후 다음 →',dq_left:'남은 {n}건',dq_done:'미기재 건을 모두 처리했습니다',dq_byworker:'작업자별 미기재 TOP',sr_upm:'UPM율 %',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'최근 구간 작업공수 {n}인·시 · 직전 구간 대비 {p}',
     etc:'기타',mon_unit:'월',dur_b:['<30분','30–60분','1–2시간','2–4시간','4시간+'],wcnt_p:'{n}명'},
-  en:{dp_trend:'Monthly BM Rate',dp_trend_n:'failures that month ÷ all work that month · dashed line is the {p}% fleet average · months with no data are filled with zero on a continuous calendar.',dp_rise:'What Is Rising',dp_rise_n:'only months above 2x the trailing 6-month average · at least {n} that month · {u} found · same rule as the Material surge card.',dp_rise_none:'no month surged with at least {n} records',dp_th_mon:'Period',dp_th_base:'Prior avg',dp_avg:'Fleet average',th_from:'From',th_to:'To',sl_alarm:'Alarm',sl_country2:'Country',dp_sub:'Which Process or Sub-process Fails Disproportionately',dp_sub_n:'BM rate = failures ÷ all work in that group · {u} groups with {n}+ jobs · overall {p}% · click a row to narrow the page · ◆ means over half that group\u2019s failures came from a single unit',dp_th_sub:'Group',dp_th_eqn:'Units',dp_th_top:'Top unit',sl_proc2:'Process',sl_line2:'Line',sec_deep:'Deep Dive',
+  en:{sl_customer:'Customer',sl_fab:'FAB',sl_floor:'Line',sl_more:'Fault only',dp_trend:'Monthly BM Rate',dp_trend_n:'failures that month ÷ all work that month · dashed line is the {p}% fleet average · months with no data are filled with zero on a continuous calendar.',dp_rise:'What Is Rising',dp_rise_n:'only months above 2x the trailing 6-month average · at least {n} that month · {u} found · same rule as the Material surge card.',dp_rise_none:'no month surged with at least {n} records',dp_th_mon:'Period',dp_th_base:'Prior avg',dp_avg:'Fleet average',th_from:'From',th_to:'To',sl_alarm:'Alarm',sl_country2:'Country',dp_sub:'Which Process or Sub-process Fails Disproportionately',dp_sub_n:'BM rate = failures ÷ all work in that group · {u} groups with {n}+ jobs · overall {p}% · click a row to narrow the page · ◆ means over half that group\u2019s failures came from a single unit',dp_th_sub:'Group',dp_th_eqn:'Units',dp_th_top:'Top unit',sl_proc2:'Process',sl_line2:'Line',sec_deep:'Deep Dive',
     
     
     
@@ -738,7 +754,7 @@ const T={
     tbl_title:'Service Records',th_date:'Date',ft_cnt:'Count',th_stage:'Stage',th_pf:'Paid/Free',th_phenom:'Phenomenon',th_cause:'Cause',th_action:'Action',th_min:'Min',th_mh:'Man-min',th_worker:'Workers',
     ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ch_alarmp:'Top Alarms (Pareto)',note_alarmp:'falls back to symptom(AA) when alarm(Z) blank · line = cumulative %',dq_title:'Data entry integrity (BM)',dq_missing:'{n} missing / {t} BM',dq_note:'click ✎ to fill alarm/phenomenon/cause/action right here (saved to the Google Sheet)',dq_fill:'Fill',dq_all:'Alarm, phenomenon, cause and action are all filled in',dq_missN:'{n} blank excluded',dq_mt:'Fill fault record',dq_close:'Close',dq_save:'Save',dq_saved:'Saved to the Google Sheet',dq_savefail:'Save failed — try again',dq_conflict:'Someone edited this row first — reopen it',dq_loadfail:'Could not load the row',dq_zcol:'col Z',dq_savenext:'Save & next →',dq_left:'{n} left',dq_done:'All missing records are filled',dq_byworker:'Missing entries by worker (top)',sr_upm:'UPM rate %',ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours in latest period · {p} vs prev',
     etc:'Others',mon_unit:'',dur_b:['<30m','30–60m','1–2h','2–4h','4h+'],wcnt_p:'{n} ppl'},
-  zh:{dp_trend:'每月BM率趋势',dp_trend_n:'当月故障(BM) ÷ 当月全部作业 · 虚线为整体平均{p}% · 无数据的月份在连续日历上按0填充。',dp_rise:'正在上升的',dp_rise_n:'仅超过前6个月平均2倍的月份 · 当月{n}件以上 · 共{u}件 · 与材料实绩激增判定相同。',dp_rise_none:'没有当月{n}件以上的激增区间',dp_th_mon:'时期',dp_th_base:'前期均值',dp_avg:'整体平均',th_from:'开始日',th_to:'结束日',sl_alarm:'报警',sl_country2:'国家',dp_sub:'哪个工序·细分工序故障异常集中',dp_sub_n:'BM率 = 故障(BM) ÷ 该分类下全部作业 · 作业{n}件以上共{u}个分类 · 全体平均{p}% · 点击行可按该分类收窄画面 · ◆ 表示该分类过半故障来自同一号机',dp_th_sub:'分类',dp_th_eqn:'设备数',dp_th_top:'最多号机',sl_proc2:'工序',sl_line2:'线',sec_deep:'深度分析',
+  zh:{sl_customer:'Customer',sl_fab:'FAB',sl_floor:'Line',sl_more:'故障分析专用',dp_trend:'每月BM率趋势',dp_trend_n:'当月故障(BM) ÷ 当月全部作业 · 虚线为整体平均{p}% · 无数据的月份在连续日历上按0填充。',dp_rise:'正在上升的',dp_rise_n:'仅超过前6个月平均2倍的月份 · 当月{n}件以上 · 共{u}件 · 与材料实绩激增判定相同。',dp_rise_none:'没有当月{n}件以上的激增区间',dp_th_mon:'时期',dp_th_base:'前期均值',dp_avg:'整体平均',th_from:'开始日',th_to:'结束日',sl_alarm:'报警',sl_country2:'国家',dp_sub:'哪个工序·细分工序故障异常集中',dp_sub_n:'BM率 = 故障(BM) ÷ 该分类下全部作业 · 作业{n}件以上共{u}个分类 · 全体平均{p}% · 点击行可按该分类收窄画面 · ◆ 表示该分类过半故障来自同一号机',dp_th_sub:'分类',dp_th_eqn:'设备数',dp_th_top:'最多号机',sl_proc2:'工序',sl_line2:'线',sec_deep:'深度分析',
     
     
     
@@ -783,7 +799,7 @@ const T={
     tbl_title:'服务实绩明细',th_date:'作业日',ft_cnt:'件数',th_stage:'阶段',th_pf:'有/无偿',th_phenom:'现象',th_cause:'原因',th_action:'措施',th_min:'时间(分)',th_mh:'工时',th_worker:'作业者',
     ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ch_alarmp:'报警TOP (帕累托)',note_alarmp:'报警(Z)未填时用现象(AA) · 线=累计%',dq_title:'数据录入完整性 (BM)',dq_missing:'未填写 {n}件 / BM {t}件',dq_note:'点✎可直接填写报警·现象·原因·措施 (保存到谷歌表格)',dq_fill:'填写',dq_all:'报警·现象·原因·措施均已填写',dq_missN:'未填{n}件除外',dq_mt:'填写故障记录',dq_close:'关闭',dq_save:'保存',dq_saved:'已保存到谷歌表格',dq_savefail:'保存失败 — 请稍后重试',dq_conflict:'他人已先修改 — 请重新打开',dq_loadfail:'无法读取该行',dq_zcol:'Z列',dq_savenext:'保存并下一条 →',dq_left:'剩余 {n}件',dq_done:'未填写记录已全部处理',dq_byworker:'按作业者未填TOP',sr_upm:'UPM率 %',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'最近区间工时 {n}人·时 · 环比 {p}',
     etc:'其他',mon_unit:'月',dur_b:['<30分','30–60分','1–2时','2–4时','4时+'],wcnt_p:'{n}人'},
-  ja:{dp_trend:'月別BM率の推移',dp_trend_n:'その月の故障(BM) ÷ その月の全作業 · 破線は全体平均{p}% · データのない月は0として連続カレンダーで埋めます。',dp_rise:'上がっているもの',dp_rise_n:'直前6ヶ月平均の2倍を超えた月のみ · 月{n}件以上 · {u}件 · 資材実績の急増と同じ判定です。',dp_rise_none:'月{n}件以上で急増した区間がありません',dp_th_mon:'時期',dp_th_base:'直前平均',dp_avg:'全体平均',th_from:'開始日',th_to:'終了日',sl_alarm:'アラーム',sl_country2:'国',dp_sub:'工程·詳細工程のどこが特に故障するか',dp_sub_n:'BM率 = 故障(BM) ÷ その区分に入った全作業 · 作業{n}件以上の{u}区分 · 全体平均{p}% · 行を押すとその区分で画面が絞られます · ◆ はその区分の故障の半分以上が1号機から出ている場合',dp_th_sub:'区分',dp_th_eqn:'設備数',dp_th_top:'最多号機',sl_proc2:'工程',sl_line2:'ライン',sec_deep:'深層分析',
+  ja:{sl_customer:'Customer',sl_fab:'FAB',sl_floor:'Line',sl_more:'故障分析専用',dp_trend:'月別BM率の推移',dp_trend_n:'その月の故障(BM) ÷ その月の全作業 · 破線は全体平均{p}% · データのない月は0として連続カレンダーで埋めます。',dp_rise:'上がっているもの',dp_rise_n:'直前6ヶ月平均の2倍を超えた月のみ · 月{n}件以上 · {u}件 · 資材実績の急増と同じ判定です。',dp_rise_none:'月{n}件以上で急増した区間がありません',dp_th_mon:'時期',dp_th_base:'直前平均',dp_avg:'全体平均',th_from:'開始日',th_to:'終了日',sl_alarm:'アラーム',sl_country2:'国',dp_sub:'工程·詳細工程のどこが特に故障するか',dp_sub_n:'BM率 = 故障(BM) ÷ その区分に入った全作業 · 作業{n}件以上の{u}区分 · 全体平均{p}% · 行を押すとその区分で画面が絞られます · ◆ はその区分の故障の半分以上が1号機から出ている場合',dp_th_sub:'区分',dp_th_eqn:'設備数',dp_th_top:'最多号機',sl_proc2:'工程',sl_line2:'ライン',sec_deep:'深層分析',
     
     
     
@@ -837,7 +853,12 @@ let PIV_ROWS=[];        // 피벗이 열릴 때 읽을 "현재 필터 결과". r
 let PIV_DIMS=[];        // 세트별 축 목록 — 추천 조합 버튼이 축 번호로 상태를 저장하므로 필요하다
 let DQ_LIST=[];   // 미기재 rs 목록(renderDQ가 갱신) — 연속 입력 모드의 순번
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&T[sl])LANG=sl; else if(window.name&&T[window.name])LANG=window.name; }catch(e){}
-const F={line:'',stage:'',pf:'',cause:'',model:'',sn:'',proc:'',subproc:'',dtFrom:'',dtTo:'',q:''};
+/* line(문자열)이 fab(Set)과 floor로 갈라졌다.
+   'F16'은 FAB이고, 그 안의 'A3 M2 4F'가 Floor다(화면 표기는 Line).
+   FAB만 다중선택인 이유: 여러 공장을 합쳐 보는 일은 흔하지만 층을 합쳐 보는 일은 드물다. */
+const F={customer:'',fab:new Set(),floor:'',proc:'',subproc:'',
+         stage:'',pf:'',cause:'',model:'',sn:'',dtFrom:'',dtTo:'',q:''};
+const fabOk=v=>!F.fab.size||F.fab.has(v);
 
 GST.chartDefaults();
 window.changeDashboardTheme=function(){
@@ -897,6 +918,8 @@ async function loadData(){ GST.skeleton(true);
     if(instR.status==='fulfilled'&&instR.value.rows){
       const mIn=GST.SM.map(instR.value.rows, GST.SM.SPEC.inst);
       CINST=mIn.C; HI_INST=mIn.hi>=0?mIn.hi:0;
+      // Floor는 실적 시트에 열 자체가 없다. 설비호기 → S/N 순으로 설치현황에서 끌어온다.
+      INSTIX=GST.ORG.instIndex(instR.value.rows, CINST, HI_INST);
       const v=(r,k)=>GST.SM.val(r,CINST,k);
       instR.value.rows.slice(HI_INST+1).forEach(r=>{
         const sn=normSN(v(r,'sn')); const to=toDate(v(r,'turnOn'));
@@ -947,6 +970,9 @@ async function loadData(){ GST.skeleton(true);
         // 세부공정·BAY·채널위치·메인설비호기 — 시트에는 있는데 행에 안 실려 있어
         // "CVD의 어느 세부공정에서" 같은 질문을 던질 수 없었다. 피벗 축으로 쓴다.
         subproc:GST.nfw(r[C.subproc]||'').trim(), bay:GST.nfw(r[C.bay]||'').trim(),
+        // '라인' 열이 담고 있던 건 사실 FAB이다. Floor는 실적 시트에 없어 설치현황에서 끌어온다.
+        fab:GST.ORG.fab(r[C.line]||''), floor:instFloor(r[C.eqNo],r[C.snIn]),
+        customerN:GST.ORG.customer(r[C.customer]||''),
         chpos:GST.upk(r[C.chpos]||'').trim(), mainEq:GST.nfw(r[C.mainEq]||'').trim(),
         phenom:(r[C.phenom]||'').toString().trim(), action:(r[C.action]||'').toString().trim(),
         detail:(r[C.actionDetail]||'').toString().trim().slice(0,300),
@@ -967,6 +993,11 @@ async function loadData(){ GST.skeleton(true);
       .map(r=>({ line:GST.nfw(r[C.line]||'').trim(), model:GST.canon.model(r[C.model]||''),
         sn:GST.nfw(r[C.snIn]||'').trim(), proc:GST.canon.proc(r[C.proc]||''),
         subproc:GST.nfw(r[C.subproc]||'').trim(),
+        // fab·floor·customer도 ROWS와 똑같이 실어야 한다. filtAxis가 이 셋으로도 거르므로
+        // 여기만 빠지면 FAB을 고르는 순간 UPM율 분모가 통째로 사라진다 — 모델 때 겪은 것과 같다.
+        fab:GST.ORG.fab(r[C.line]||''), floor:instFloor(r[C.eqNo],r[C.snIn]),
+        customer:(r[C.customer]||'').toString().trim(),
+        customerN:GST.ORG.customer(r[C.customer]||''),
         campus:GST.nfw(r[C.campus]||'').trim(),
         country:(String(r[C.op]||'').match(/GST\s+([A-Za-z]+)/i)||[])[1]?String(r[C.op]).match(/GST\s+([A-Za-z]+)/i)[1].toUpperCase():'',
         // TBM 사후 재고장을 작업자별로 보려면 담당자가 필요하다. 시트는 쉼표로 여러 명을 묶어 둔다.
@@ -982,6 +1013,9 @@ async function loadData(){ GST.skeleton(true);
       line:GST.nfw(r[C.line]||'').trim(), model:GST.canon.model(r[C.model]||''),
       proc:GST.canon.proc(r[C.proc]||''), subproc:GST.nfw(r[C.subproc]||'').trim(),
       chpos:GST.upk(r[C.chpos]||'').trim(),
+      fab:GST.ORG.fab(r[C.line]||''), floor:instFloor(r[C.eqNo],r[C.snIn]),
+      customer:(r[C.customer]||'').toString().trim(),
+      customerN:GST.ORG.customer(r[C.customer]||''),
       work:toDate(r[C.dStart])
       // subproc까지 실어야 하는 이유: filtAxis가 F.subproc으로도 거르고,
       // 세부공정 BM율 표가 이 배열을 그룹핑한다. 빠지면 표가 통째로 비고,
@@ -1000,7 +1034,13 @@ async function loadData(){ GST.skeleton(true);
 function uniq(k){return Array.from(new Set(ROWS.map(x=>x[k]).filter(Boolean))).sort();}
 const fillSelect=(id,fkey,vals)=>GST.fillSelect(id,fkey,vals,F,t('all'));
 function buildSlicers(){
-  fillSelect('sl-line','line',uniq('line'));
+  fillSelect('sl-customer','customer',uniq('customerN'));
+  // FAB 목록은 하드코딩하지 않고 데이터에 실제로 나온 것만 — 예전 7키 고정이
+  // 싱가포르 F10·일본 F15를 목록에서 통째로 빠뜨렸다
+  GST.mselFill('fab', uniq('fab'), F.fab, function(){ render(); });
+  fillSelect('sl-floor','floor',uniq('floor'));
+  fillSelect('sl-proc','proc',uniq('proc'));
+  fillSelect('sl-subproc','subproc',uniq('subproc'));
   fillSelect('sl-stage','stage',SERVICE_STAGES.filter(s=>ROWS.some(x=>x.stage===s)));
   fillSelect('sl-pf','pf',uniq('pf'));
   fillSelect('sl-cause','cause',uniq('cause'));
@@ -1008,7 +1048,10 @@ function buildSlicers(){
   fillSelect('sl-sn','sn',uniq('sn'));
 }
 function onSlicer(){
-  F.line=document.getElementById('sl-line').value;
+  F.customer=document.getElementById('sl-customer').value;
+  F.floor=document.getElementById('sl-floor').value;
+  F.proc=document.getElementById('sl-proc').value;
+  F.subproc=document.getElementById('sl-subproc').value;
   F.stage=document.getElementById('sl-stage').value;
   F.pf=document.getElementById('sl-pf').value;
   F.cause=document.getElementById('sl-cause').value;
@@ -1022,7 +1065,9 @@ document.getElementById('search').addEventListener('input',e=>{F.q=e.target.valu
 
 function filt(){
   return ROWS.filter(x=>{
-    if(F.line&&x.line!==F.line)return false;
+    if(!fabOk(x.fab))return false;
+    if(F.floor&&x.floor!==F.floor)return false;
+    if(F.customer&&x.customerN!==F.customer)return false;
     if(F.stage&&x.stage!==F.stage)return false;
     if(F.pf&&x.pf!==F.pf)return false;
     if(F.cause&&x.cause!==F.cause)return false;
@@ -1043,7 +1088,9 @@ function filt(){
 // F.stage로 BM만 남기면 "BM 중 BM 비율"이 되어 100%가, CM만 남기면 0%가 나온다.
 function filtAxis(list){
   return (list||[]).filter(x=>{
-    if(F.line&&x.line!==F.line)return false;
+    if(!fabOk(x.fab))return false;
+    if(F.floor&&x.floor!==F.floor)return false;
+    if(F.customer&&x.customerN!==F.customer)return false;
     if(F.model&&x.model!==F.model)return false;
     if(F.sn&&x.sn!==F.sn)return false;
     if(F.proc&&x.proc!==F.proc)return false;
@@ -1062,7 +1109,9 @@ function filtTBM(){ return filtAxis(TBM_ROWS); }
 function filtUPM(){
   return ROWS.filter(x=>{
     if(x.stage!=='CBM')return false;
-    if(F.line&&x.line!==F.line)return false;
+    if(!fabOk(x.fab))return false;
+    if(F.floor&&x.floor!==F.floor)return false;
+    if(F.customer&&x.customerN!==F.customer)return false;
     if(F.model&&x.model!==F.model)return false;
     if(F.sn&&x.sn!==F.sn)return false;
     if(F.proc&&x.proc!==F.proc)return false;
@@ -1101,7 +1150,8 @@ GST.pageBar({
 // 칩 라벨은 상수로 두면 언어를 바꿔도 한국어로 남는다 — 매번 현재 언어로 다시 만든다.
 let FIELD_LABEL={};
 function buildFieldLabel(){
-  FIELD_LABEL={line:'LINE',stage:t('sl_stage'),pf:t('sl_pf'),cause:t('sl_cause'),
+  FIELD_LABEL={customer:t('sl_customer'),fab:t('sl_fab'),floor:t('sl_floor'),
+    stage:t('sl_stage'),pf:t('sl_pf'),cause:t('sl_cause'),
     model:t('sl_model'),sn:t('sl_sn'),dtFrom:t('th_from'),dtTo:t('th_to'),q:t('sl_search'),
     alarm:t('sl_alarm'),country:t('sl_country2'),campus:'CAMPUS',
     proc:t('sl_proc2'),subproc:t('pv_subproc')};
@@ -1109,17 +1159,20 @@ function buildFieldLabel(){
 buildFieldLabel();
 function renderFilterChips(){GST.renderChips(F,FIELD_LABEL,'clearFilter');}
 function clearFilter(k){
-  F[k]='';
+  if(F[k] instanceof Set)F[k].clear(); else F[k]='';
   if(k==='dtFrom'||k==='dtTo')document.getElementById(k).value='';
   if(k==='q')document.getElementById('search').value='';
   syncSlicerUI(); render();
 }
 function syncSlicerUI(){
-  const map={line:'sl-line',stage:'sl-stage',pf:'sl-pf',cause:'sl-cause',model:'sl-model',sn:'sl-sn'};
+  const map={customer:'sl-customer',floor:'sl-floor',proc:'sl-proc',subproc:'sl-subproc',
+             stage:'sl-stage',pf:'sl-pf',cause:'sl-cause',model:'sl-model',sn:'sl-sn'};
+  GST.mselSync('fab', uniq('fab'), F.fab);
   Object.entries(map).forEach(([k,id])=>{const el=document.getElementById(id);if(el)el.value=F[k]||'';});
 }
 function clearAllFilters(){
-  Object.keys(F).forEach(k=>F[k]='');
+  // Set을 ''로 덮으면 fabOk가 .has를 못 찾아 터진다 — 타입을 지켜 비운다
+  Object.keys(F).forEach(k=>{ if(F[k] instanceof Set)F[k].clear(); else F[k]=''; });
   ['dtFrom','dtTo','search'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   syncSlicerUI(); render();
 }
@@ -1546,7 +1599,7 @@ function renderReliability(f){
   const bmBySN={};
   ROWS.forEach(x=>{
     if(x.stage!=='BM'||!x.work)return;
-    if(F.line&&x.line!==F.line)return; if(F.model&&x.model!==F.model)return;
+    if(!fabOk(x.fab))return; if(F.model&&x.model!==F.model)return;
     if(F.sn&&x.sn!==F.sn)return;       if(F.proc&&x.proc!==F.proc)return;
     const s=normSN(x.sn); if(!s)return; (bmBySN[s]=bmBySN[s]||[]).push(x.work);
   });
@@ -1691,7 +1744,9 @@ function render(){ GST.skeleton(false); GST.pushState(F);
 
   const lines=countBy(f,'line');
   mkBarV('cLine',lines.slice(0,10).map(x=>x[0]),lines.slice(0,10).map(x=>x[1]),TH.pal[0],
-    {onClick:(evt,els)=>{if(!els.length)return;const l=lines[els[0].index][0];F.line=F.line===l?'':l;syncSlicerUI();render();}});
+    {onClick:(evt,els)=>{if(!els.length)return;const l=lines[els[0].index][0];
+      if(F.fab.has(l))F.fab.delete(l); else F.fab.add(l);   // 막대 클릭 = 그 FAB 토글
+      syncSlicerUI();render();}});
 
   const pfB=document.getElementById('pfBar'); if(pfB)pfB.style.width=pfp+'%';
   setTxt('pfPct',pfp+'%'); setTxt('pfPaid',paid.toLocaleString()); setTxt('pfFree',free.toLocaleString());
@@ -1968,12 +2023,13 @@ function pivDims(withWorker){
   const D=[];
   if(withWorker) D.push({id:'worker',k:'worker',t:t('pv_worker')});
   return D.concat([
-    {id:'country', k:'country', t:FIELD_LABEL.country},
+    {id:'country', k:'country', t:t('sl_country2')},
     {id:'customer',k:'customer',t:'Customer'},
-    {id:'campus',  k:'campus',  t:FIELD_LABEL.campus},
-    {id:'line',    k:'line',    t:FIELD_LABEL.line},
+    {id:'campus',  k:'campus',  t:'CAMPUS'},
+    {id:'fab',     k:'fab',     t:t('sl_fab')},
+    {id:'floor',   k:'floor',   t:t('sl_floor')},
     {id:'bay',     k:'bay',     t:t('pv_bay')},
-    {id:'proc',    k:'proc',    t:FIELD_LABEL.proc},
+    {id:'proc',    k:'proc',    t:t('sl_proc2')},
     {id:'subproc', k:'subproc', t:t('pv_subproc')},
     {id:'sn',      k:'sn',      t:t('sl_sn')},
     {id:'code',    k:'code',    t:'Scrubber Code'},
@@ -1981,7 +2037,7 @@ function pivDims(withWorker){
     {id:'chpos',   k:'chpos',   t:t('pv_chpos')},
     {id:'stage',   k:'stage',   t:t('sl_stage')},
     {id:'reqType', k:'reqType', t:t('ch_reqtype')},
-    {id:'alarm',   k:'alarm',   t:FIELD_LABEL.alarm},
+    {id:'alarm',   k:'alarm',   t:t('sl_alarm')},
     {id:'phenom',  k:'phenom',  t:t('th_phenom')},
     {id:'cause',   k:'cause',   t:t('sl_cause')},
     {id:'action',  k:'action',  t:t('th_action')},
@@ -2009,9 +2065,9 @@ function pivMeas(withWorker){
   return M;
 }
 function pivDetail(withWorker){
-  const D=[{k:'work',t:t('th_date')},{k:'line',t:FIELD_LABEL.line},{k:'sn',t:t('sl_sn')},{k:'code',t:'Code'},
-           {k:'proc',t:FIELD_LABEL.proc},{k:'subproc',t:t('pv_subproc')},
-           {k:'stage',t:t('th_stage')},{k:'alarm',t:FIELD_LABEL.alarm},
+  const D=[{k:'work',t:t('th_date')},{k:'fab',t:t('sl_fab')},{k:'sn',t:t('sl_sn')},{k:'code',t:'Code'},
+           {k:'proc',t:t('sl_proc2')},{k:'subproc',t:t('pv_subproc')},
+           {k:'stage',t:t('th_stage')},{k:'alarm',t:t('sl_alarm')},
            {k:'cause',t:t('th_cause')},{k:'action',t:t('th_action')}];
   if(withWorker) D.splice(1,0,{k:'worker',t:t('pv_worker')});
   return D;

@@ -423,11 +423,14 @@ GST.renderChips = function(F, LABELS, onClearName){
   try{ GST.ctxSave(F); }catch(e){}   // 사이트·공정은 다른 탭으로 승계
   const box=document.getElementById('fchips'), list=document.getElementById('fchipList');
   if(!box || !list) return;
-  const active = Object.entries(F).filter(([k,v])=>v);
+  // 다중선택(Set)도 칩으로 보여야 한다 — 걸린 조건이 화면에 안 보이면 모집단을 오해한다
+  const shown = v => (v instanceof Set) ? Array.from(v).join(' · ') : v;
+  const has   = v => (v instanceof Set) ? v.size > 0 : !!v;
+  const active = Object.entries(F).filter(([k,v])=>has(v));
   if(!active.length){ box.style.display='none'; return; }
   box.style.display='flex';
   list.innerHTML = active.map(([k,v])=>
-    `<span class="fchip" onclick="${onClearName}('${k}')">${LABELS[k]||k}: <b>${v}</b> <span class="fx">✕</span></span>`
+    `<span class="fchip" onclick="${onClearName}('${k}')">${LABELS[k]||k}: <b>${GST._esc(shown(v))}</b> <span class="fx">✕</span></span>`
   ).join('');
 };
 
@@ -828,6 +831,59 @@ GST.monthSurges = function(counts, opt){
   return { seq: seq, hits: hits };
 };
 
+/* 다중선택 체크박스 — FAB처럼 여러 개를 동시에 고르는 필터.
+   주간현황이 쓰던 것을 공용으로 올렸다. **함정이 하나 있어 규약으로 고정한다:**
+   박스는 최초 1회만 만들고 이후엔 체크 상태만 갱신한다. 렌더마다 innerHTML을 갈면
+   체크 직후 그 노드가 문서에서 분리되어, 바깥 클릭 판정에 걸려 목록이 닫혀버린다.
+
+     GST.mselFill('fab', ['F16','F11'], F.fab, onChange)   // 값 목록은 데이터에서
+   마크업은 페이지가 둔다:
+     <button id="fabBtn" class="mselbtn" onclick="GST.mselToggle('fab',event)">전체 ▾</button>
+     <div id="fabBox" class="mselbox"></div>                                        */
+GST.mselToggle = function(id, ev){
+  if(ev) ev.stopPropagation();
+  const el = document.getElementById(id + 'Box'); if(!el) return;
+  el.style.display = el.style.display === 'block' ? 'none' : 'block';
+};
+GST.mselFill = function(id, values, sel, onChange){
+  const box = document.getElementById(id + 'Box'), btn = document.getElementById(id + 'Btn');
+  if(!box) return;
+  if(!box.dataset.built || box.dataset.keys !== values.join('\u001f')){
+    box.dataset.built = '1'; box.dataset.keys = values.join('\u001f');
+    GST._msel = GST._msel || {};
+    GST._msel[id] = { sel: sel, cb: onChange };
+    box.innerHTML =
+      '<div class="ms-all"><button type="button" data-all="1">' + (GST._lang()==='ko'?'전체 선택':'All')
+      + '</button><button type="button" data-all="0">' + (GST._lang()==='ko'?'전체 해제':'None') + '</button></div>'
+      + values.map(function(v){
+          return '<label><input type="checkbox" data-v="' + GST._esc(v) + '">' + GST._esc(v) + '</label>';
+        }).join('');
+    box.onclick = function(e){
+      const a = e.target.closest('[data-all]');
+      if(a){ sel.clear(); if(a.dataset.all === '1') values.forEach(function(v){ sel.add(v); });
+             GST.mselSync(id, values, sel); onChange && onChange(); return; }
+      const c = e.target.closest('input[data-v]');
+      if(c){ if(c.checked) sel.add(c.dataset.v); else sel.delete(c.dataset.v);
+             GST.mselSync(id, values, sel); onChange && onChange(); }
+    };
+  } else if(GST._msel && GST._msel[id]) { GST._msel[id].sel = sel; GST._msel[id].cb = onChange; }
+  GST.mselSync(id, values, sel);
+};
+GST.mselSync = function(id, values, sel){
+  const box = document.getElementById(id + 'Box'), btn = document.getElementById(id + 'Btn');
+  if(box) box.querySelectorAll('input[data-v]').forEach(function(i){ i.checked = sel.has(i.dataset.v); });
+  if(btn) btn.textContent = (sel.size ? Array.from(sel).join(' · ')
+    : (GST.PIV_T[GST._lang()] || GST.PIV_T.ko).all) + ' \u25be';
+};
+// 바깥을 누르면 닫는다 — 한 번만 걸어 두고 모든 박스가 공유한다
+if(typeof document !== 'undefined') document.addEventListener('click', function(e){
+  document.querySelectorAll('.mselbox').forEach(function(b){
+    if(b.style.display !== 'block') return;
+    const id = b.id.replace(/Box$/, ''), btn = document.getElementById(id + 'Btn');
+    if(!b.contains(e.target) && e.target !== btn) b.style.display = 'none';
+  });
+});
+
 // 매핑 결과 누적 — 진단 패널이 읽는다
 GST.SM._reg = [];
 GST.SM._log = function(res){
@@ -906,13 +962,30 @@ GST.skeleton=function(on){
 };
 
 /* ---------- 11. 필터 상태 URL 공유 (Stage 4) ---------- */
+/* 다중선택(Set)도 실어야 한다. JSON.stringify(new Set) 은 '{}' 가 되므로 그대로 두면
+   ① 링크에 FAB 선택이 안 담기고 ② 복원할 때 F.fab 이 빈 객체로 덮여 .has 가 사라진다
+   (실제로 자재현황이 이 순서로 죽었다: "sel.has is not a function"). 배열로 눕혀 담는다. */
 GST.encodeState=function(F){
-  const a={}; Object.entries(F).forEach(([k,v])=>{ if(v!==''&&v!=null&&v!=='ALL') a[k]=v; });
+  const a={}; Object.entries(F).forEach(([k,v])=>{
+    if(v instanceof Set){ if(v.size) a[k]=Array.from(v); return; }
+    if(v!==''&&v!=null&&v!=='ALL') a[k]=v;
+  });
   if(!Object.keys(a).length) return '';
   return encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(a)))));
 };
 GST.decodeState=function(s){
   try{ return JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(s))))); }catch(e){ return null; }
+};
+/* 복원은 Object.assign 으로 하면 안 된다 — 배열이 Set 자리를 차지한다.
+   현재 F 의 타입을 기준으로 되살린다. 페이지는 이 함수만 부르면 된다. */
+GST.applyState=function(F, st){
+  if(!st) return F;
+  Object.keys(st).forEach(function(k){
+    if(!(k in F)) return;
+    if(F[k] instanceof Set){ F[k].clear(); [].concat(st[k]||[]).forEach(function(v){ F[k].add(v); }); }
+    else F[k]=st[k];
+  });
+  return F;
 };
 // 필터 변경 시 호출: iframe이면 셸 URL 갱신 요청, 직접 접속이면 자기 주소 갱신
 GST.pushState=function(F){
