@@ -13,6 +13,19 @@
 `sheet-write`가 이미 서비스 계정으로 시트를 **쓰고** 있었다. 같은 방식으로 **읽기만** 하면
 웹게시를 끌 수 있다. 새로 만든 것은 없고 검증된 코드를 옮겼다.
 
+## ⚠ 함수 «슬러그»가 표시 이름과 다르다
+
+이 프로젝트의 프록시는 목록에 **`sheet-proxy`** 로 보이지만 URL은
+**`/functions/v1/quick-responder`** 다. 콘솔에서 *Deploy a new function* 으로 만들면
+`quick-responder` 같은 기본 이름이 붙고, 나중에 **표시 이름만 바꿔도 슬러그는 안 바뀐다.**
+
+- **`quick-responder`를 «별도 함수»로 착각해 지우지 말 것.** 그게 곧 sheet-proxy다.
+- 호출하는 쪽은 전부 두 슬러그를 시도한다 — `assets/core.js:163`(`GST.FN_SLUGS`) ·
+  `sheet-sync`·`kakao-bot`의 `PROXY_SLUGS`. 하나로 박아두면 404로 조용히 멎는다.
+- 고정하고 싶으면 시크릿 `SHEET_PROXY_SLUG`에 실제 슬러그를 넣는다(쉼표로 여러 개 가능).
+- **코드를 붙여넣을 함수는 «목록에서 sheet-proxy 로 보이는 그 행»이다** — 새로 만들지 말 것.
+  새로 만들면 또 다른 슬러그가 생기고, 옛 함수에 옛 코드가 남아 어느 쪽이 도는지 알 수 없게 된다.
+
 ## 순서가 중요하다 — sheet-proxy를 «먼저» 배포한다
 
 `sheet-sync`·`kakao-bot`이 이제 구글이 아니라 **sheet-proxy를 호출한다.**

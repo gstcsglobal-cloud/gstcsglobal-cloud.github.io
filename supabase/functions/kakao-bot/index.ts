@@ -83,6 +83,12 @@ async function postCallback(callbackUrl: string, payload: unknown) {
 /* 시트는 sheet-proxy를 통해서만 읽는다 (v78).
    웹게시는 인증이 없어 URL만 알면 누구나 전량을 받는다 — 그래서 서비스 계정 경로로 옮겼다.
    구글 자격증명은 sheet-proxy·sheet-write 둘만 갖는다. */
+/* 함수 «슬러그»는 표시 이름과 다를 수 있다 — 콘솔에서 만든 기본 이름(quick-responder)이
+   URL 로 굳고 표시 이름만 바뀐 상태가 실제로 있다. assets/core.js:163 도 두 슬러그를 시도한다. */
+const PROXY_SLUGS = (Deno.env.get("SHEET_PROXY_SLUG") ?? "sheet-proxy,quick-responder")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+let PROXY_OK: string | null = null;
+
 async function fetchCsv(gid: string) {
   const url = Deno.env.get("SUPABASE_URL");
   const sec = Deno.env.get("SYNC_SECRET");
@@ -90,13 +96,19 @@ async function fetchCsv(gid: string) {
   if (!sec) throw new Error("CONFIG: SYNC_SECRET 미설정 — sheet-proxy 서버 호출에 필요하다");
   const key = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const t = Date.now();
-  const r = await fetch(`${url}/functions/v1/sheet-proxy?gid=${gid}`, {
-    headers: { Authorization: `Bearer ${key}`, "x-sync-secret": sec },
-    signal: AbortSignal.timeout(60000), // 웹게시 20초 → API 읽기가 더 느리다
-  });
-  if (!r.ok) throw new Error(`SHEET_FETCH ${r.status}`);
-  const text = await r.text();
-  return { text, bytes: text.length, ms: Date.now() - t };
+  let last = "";
+  for (const slug of (PROXY_OK ? [PROXY_OK] : PROXY_SLUGS)) {
+    const r = await fetch(`${url}/functions/v1/${slug}?gid=${gid}`, {
+      headers: { Authorization: `Bearer ${key}`, "x-sync-secret": sec },
+      signal: AbortSignal.timeout(60000), // 웹게시 20초 → API 읽기가 더 느리다
+    });
+    if (r.status === 404) { last = `404 ${slug}`; continue; }
+    if (!r.ok) throw new Error(`SHEET_FETCH ${r.status}`);
+    PROXY_OK = slug;
+    const text = await r.text();
+    return { text, bytes: text.length, ms: Date.now() - t };
+  }
+  throw new Error(`SHEET_PROXY_NOT_FOUND: ${PROXY_SLUGS.join("/")} (${last})`);
 }
 
 const DIGEST: Record<string, (csv: string, now: Date) => unknown> = {

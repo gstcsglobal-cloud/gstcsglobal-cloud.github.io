@@ -119,19 +119,33 @@ function toRows(data: string[][], cmap: ColMap[], off: number) {
    예전에는 웹게시 CSV를 직접 받았는데, 웹게시는 인증이 없어 URL만 알면 누구나 전량을 받는다.
    지금은 sheet-proxy가 서비스 계정으로 읽어 준다 — 구글 자격증명이 이 함수에는 없다.
    자격증명과 읽기 로직을 여러 함수에 복제하면 반드시 갈라진다(CLAUDE.md 제2원칙). */
+/* 함수 «슬러그»는 표시 이름과 다를 수 있다. 콘솔에서 Deploy a new function 으로 만들면
+   quick-responder 같은 기본 이름이 붙고, 나중에 표시 이름만 sheet-proxy 로 바꿔도
+   URL 은 그대로다. 실제로 이 프로젝트가 그 상태다 — assets/core.js:163 도 같은 이유로
+   두 슬러그를 시도한다. 하나로 박아두면 404 로 적재가 통째로 멎는다. */
+const PROXY_SLUGS = (Deno.env.get("SHEET_PROXY_SLUG") ?? "sheet-proxy,quick-responder")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+let PROXY_OK: string | null = null;   // 한 번 통한 슬러그는 isolate 가 사는 동안 재사용
+
 async function fetchCsv(gid: string) {
   const url = Deno.env.get("SUPABASE_URL");
   const sec = Deno.env.get("SYNC_SECRET");
   if (!url) throw new Error("CONFIG: SUPABASE_URL 미설정");
   if (!sec) throw new Error("CONFIG: SYNC_SECRET 미설정 — sheet-proxy 서버 호출에 필요하다");
   const key = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const r = await fetch(`${url}/functions/v1/sheet-proxy?gid=${gid}`, {
-    // Authorization은 플랫폼 JWT 게이트용이고, 실제 권한 판정은 x-sync-secret이 한다.
-    headers: { Authorization: `Bearer ${key}`, "x-sync-secret": sec },
-    signal: AbortSignal.timeout(90000), // API 읽기는 웹게시 CSV보다 느리다 (자재실적 3만행)
-  });
-  if (!r.ok) throw new Error(`SHEET_FETCH ${r.status}: ${(await r.text()).slice(0, 200)}`);
-  return await r.text();
+  let last = "";
+  for (const slug of (PROXY_OK ? [PROXY_OK] : PROXY_SLUGS)) {
+    const r = await fetch(`${url}/functions/v1/${slug}?gid=${gid}`, {
+      // Authorization은 플랫폼 JWT 게이트용이고, 실제 권한 판정은 x-sync-secret이 한다.
+      headers: { Authorization: `Bearer ${key}`, "x-sync-secret": sec },
+      signal: AbortSignal.timeout(90000), // API 읽기는 웹게시 CSV보다 느리다 (자재실적 3만행)
+    });
+    if (r.status === 404) { last = `404 ${slug}`; continue; }   // 그 이름의 함수가 없다 → 다음 후보
+    if (!r.ok) throw new Error(`SHEET_FETCH ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    PROXY_OK = slug;
+    return await r.text();
+  }
+  throw new Error(`SHEET_PROXY_NOT_FOUND: ${PROXY_SLUGS.join("/")} 중 어느 것도 없다 (${last})`);
 }
 
 async function syncOne(svc: any, tbl: string) {
