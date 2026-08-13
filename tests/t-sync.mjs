@@ -122,24 +122,40 @@ const resolve = (header, name) => header.map(hnorm).indexOf(hnorm(name));
   }
 }
 
-/* ── 4. 교육현황: sheet-write ↔ hr.js eduMap 이 같은 열을 보는가 ── */
+/* ── 4. 교육현황: sheet-write ↔ hr.js eduMap 이 «같은 열»을 보는가 ──
+   열 번호를 박아두지 않는다 — 2026-08 개편으로 레이아웃이 통째로 바뀌었고, 박아둔 숫자는
+   그때 전부 거짓이 됐다. 절대값은 t-edu.mjs 가 두 레이아웃으로 지키고, 여기서는
+   «세 해석기가 서로 어긋나지 않는가»만 본다. 그게 SPEC-SYNC 가 지키려는 성질이다. */
 {
-  const rows = JSON.parse(fs.readFileSync(path.join(HERE, 'hdr-edu.json'), 'utf8'));
-  const bc = SW.bandCtx(rows, 0, rows[0].length);
-  const swCol = (k) => SW.colIdx(rows[0], SW.SCHEMA_EDU.fields[k], bc);
-  // hr.js eduMap은 같은 규약(밴드+소제목)으로 짜여 있다 — 결과 열 번호를 직접 대조
   const hrMod = await import(ROOT + '/supabase/functions/kakao-bot/hr.js');
-  const csv = PapaMod.default.unparse(rows);
-  // eduMap은 export되지 않으므로 parseEdu 결과로 간접 확인: 열이 맞아야 값이 제대로 들어온다
-  const expect = { site:1, name:2, join:4, posKo:6, role:7, basic:8, bsdate:9, bdate:10,
-    vet:12, vsdate:13, vdate:14, lv2date:16, lv3date:17, note:18 };
-  let n = 0;
-  for (const [k, want] of Object.entries(expect)) {
-    ok(swCol(k) === want, `교육현황 ${k}: sheet-write ${swCol(k)} (기대 ${want})`);
-    n++;
+  // 병합셀은 CSV에서 첫 칸에만 값이 남는다 — 실제 시트가 그렇게 보인다
+  const LAYOUTS = {
+    '개편후(밴드가 헤더 위)': [
+      ['','','','','법인 교육과정','','본사 교육과정',''],
+      ['','','','','Basic','Veteran','Scrubber Lv.2','Scrubber Lv.3'],
+      ['No','Site','인원','사원번호','교육완료일','교육완료일','교육완료일','교육완료일'],
+    ],
+    '개편전(밴드가 헤더 아래)': [
+      ['No','Site','인원','사원번호','입사일','경력','직급','직무','법인 교육과정','','','','','','','','본사 교육과정','','비고'],
+      ['','','','','','','','','Basic (Level 1)','','','','Veteran (Level 2)','','','','Scrubber Lv.2','Scrubber Lv.3',''],
+      ['','','','','','','','','이수여부','시작일','완료일','시간','이수여부','시작일','완료일','시간','완료일','완료일',''],
+    ],
+  };
+  // sheet-write 필드명 → hr.js eduMap 키
+  const PAIR = [['site','site'],['name','name'],['bdate','bdate'],['vdate','vdate'],
+                ['lv2date','lv2'],['lv3date','lv3']];
+  for (const [lname, rows] of Object.entries(LAYOUTS)) {
+    const hi = rows.findIndex(r => r.some(x => String(x).includes('인원')));
+    const bc = SW.bandCtx(rows, hi, rows[hi].length);
+    const m = hrMod.eduMap(rows);
+    if (!m) { ok(false, `교육현황 ${lname}: hr.js eduMap 이 헤더를 못 찾았다`); continue; }
+    ok(m.hi === hi, `교육현황 ${lname}: 헤더행 sheet-write ${hi} · hr.js ${m.hi}`);
+    for (const [swk, hrk] of PAIR) {
+      const a = SW.colIdx(rows[hi], SW.SCHEMA_EDU.fields[swk], bc), b = m.c[hrk];
+      ok(a === b && a >= 0, `교육현황 ${lname} ${swk}: sheet-write ${a} · hr.js ${b}`);
+    }
+    console.log(`교육현황 ${lname}: 헤더 ${hi}행 · 밴드 ${bc.bands.map(b=>b.k+'@'+b.col).join(' ')} · ${PAIR.length}필드 일치`);
   }
-  console.log(`교육현황 ${n}개 필드 대조 · 밴드 ${bc.bands.map(b=>b.k+'@'+b.col).join(' ')}`);
-  void hrMod; void csv;
 }
 
 console.log(`\n동기화 대조: ${pass} 통과 / ${fail} 실패`);

@@ -8,14 +8,16 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 import fs from 'fs';
 // 사본 둘을 «각각» 떼어 같은 시험을 먹인다. 하나만 고치고 다른 하나를 잊는 것이 이 저장소의 단골 사고다.
 const COPIES = [
-  ['hr',     '/hr/index.html',     'function parseEdu(rows){'],
-  ['report', '/report/index.html', 'function parseHR(rows){'],
+  ['hr',        '/hr/index.html',                        'function eduMap(rows){',        'function parseEdu(rows){'],
+  ['report',    '/report/index.html',                    'function eduMap(rows){',        'function parseHR(rows){'],
+  ['kakao-bot', '/supabase/functions/kakao-bot/hr.js',   'export function eduMap(rows) {', 'export function parseEdu(csvText) {'],
 ];
-function loadEduMap(file, endMark){
+function loadEduMap(file, startMark, endMark){
   const src = fs.readFileSync(ROOT + file, 'utf8');
-  const a = src.indexOf('function eduMap(rows){'), b = src.indexOf(endMark);
+  const a = src.indexOf(startMark), b = src.indexOf(endMark);
   if (a < 0 || b < 0) throw new Error(`${file}: eduMap 블록을 못 찾았다`);
-  return new Function(src.slice(a, b) + '; return eduMap;')();
+  // Deno 쪽은 export 가 붙어 있어 new Function 에 그대로 못 넣는다
+  return new Function(src.slice(a, b).replace(/^export\s+/gm, '') + '; return eduMap;')();
 }
 
 // 새 레이아웃 — 사용자가 보여준 화면 그대로 (병합셀은 CSV에서 첫 칸에만 값이 남는다)
@@ -36,9 +38,9 @@ let bad=0;
 const chk=(nm,got,want)=>{ const ok=JSON.stringify(got)===JSON.stringify(want);
   console.log(`  ${ok?'✅':'❌'} ${nm}: ${JSON.stringify(got)}${ok?'':' ← 기대 '+JSON.stringify(want)}`); if(!ok)bad++; };
 
-for (const [nm, file, endMark] of COPIES) {
+for (const [nm, file, startMark, endMark] of COPIES) {
 console.log(`\n===== ${nm} 의 eduMap =====`);
-const eduMap = loadEduMap(file, endMark);
+const eduMap = loadEduMap(file, startMark, endMark);
 console.log('[새 레이아웃]');
 const a = eduMap(NEW);
 if(!a){ console.log('  ❌ null 반환 — 헤더행을 못 찾았다'); bad++; }

@@ -187,7 +187,7 @@ type FieldDef = ColRef & {
 type SheetSchema = {
   ops: string[];                    // 이 탭에서 허용되는 동작
   headerHint: Matcher[];            // 헤더 행을 알아보는 조건 (대시보드 파서와 동일 규칙)
-  dataOffset: number;               // 헤더 행 + dataOffset = 첫 데이터 행 (명단 1 · 교육 3: 병합띠 2행)
+  dataOffset: number;               // 헤더 행 + dataOffset = 첫 데이터 행 (전부 1 — 밴드는 헤더 위에 있다)
   // 키 정규화: 시트 사번은 "10908059.0"처럼 저장돼 있고 대시보드는 ".0"을 뗀 값을 보낸다.
   // 양쪽에 같은 정규화를 걸지 않으면 전부 NOT_FOUND가 난다 (hr/index.html normId와 동일).
   normKey: (s: string) => string;
@@ -303,35 +303,33 @@ const SCHEMAS: Record<string, SheetSchema> = {
     ops: ["perm", "fresh", "row", "update", "append", "delete"],
     // 머리글이 바뀌어도 버티게 한다: B열은 '교육과정'/'Site' 둘 다 쓰인 이력이 있고,
     // 8열은 '법인 교육과정'으로 바뀌었다. 정확일치로 두면 NO_HEADER로 교육 시트 쓰기가 전부 막힌다.
-    headerHint: [(h) => h.includes("인원"), (h) => h.includes("교육과정") || h === "site"],
-    dataOffset: 3,
+    // 헤더행은 «인원 + 사원번호»로 찾는다. 예전에는 '교육과정'을 같이 요구했는데,
+    // 2026-08 개편 후 그 말은 밴드 행에 있고 '인원'은 헤더행에 있어 한 행에 둘 다 있는 행이 없다.
+    headerHint: [(h) => h.includes("인원"), (h) => h.includes("사원번호") || h === "사번"],
+    // 개편 전에는 3이었다 — 헤더행이 r0 이고 그 «아래» 두 줄이 밴드/소제목이었기 때문이다.
+    // 이제 밴드가 헤더 «위»(r0·r1)로 올라가 헤더행 다음 줄이 곧 데이터다.
+    dataOffset: 1,
     normKey: (s) => String(s ?? "").trim().replace(/\.0+$/, ""),
     // 아래는 전부 이름/밴드 기반이다. 예전에는 열 번호를 박아둬서, 시트에 열이 하나만 끼면
     // 저장이 엉뚱한 칸에 들어갔다(실제로 Scrubber Lv.2/Lv.3 신설 때 비고가 16→18로 밀렸다).
-    // SPEC-SYNC: 정본은 assets/core.js GST.SM.SPEC / kakao-bot hr.js eduMap — 셋이 같아야 한다.
+    // SPEC-SYNC: 정본은 hr/index.html eduMap — report/index.html · kakao-bot/hr.js 와 셋이 같아야 한다.
+    //
+    // 2026-08 개편으로 이 시트는 «사번 + 과정별 완료일 4개»만 남았다.
+    // 없어진 열(입사일·직급·직무·비고·이수여부·시작일·교육시간)은 여기서도 뺀다 —
+    // 스키마에 남겨두면 쓰기가 «있지도 않은 칸»을 만들어 시트를 오염시킨다.
+    // 인적사항은 인원명단(1213453343)이 원장이고, 이수 판정은 완료일 유무다.
     key: { field: "id", match: eq("사원번호", "사번") },
     nameRef: { match: eq("인원") },
     noCol: { match: eq("No") },
     requiredOnAppend: ["name"],
     fields: {
-      // 머리글 1행에서 이름으로 유일하게 잡히는 열
       site:   { match: eq("Site", "교육과정"), max: 40 },
       name:   { match: eq("인원"), max: 40, notBlank: true },
-      join:   { match: eq("입사일"), max: 10, date: true },
-      posKo:  { match: eq("직급"), max: 40 },
-      role:   { match: eq("직무"), max: 60 },
-      note:   { match: eq("비고"), max: 200 },
-      // 법인 교육과정 — '이수여부'·'교육완료일'이 Basic/Veteran 양쪽에 같은 이름으로 있어
-      // 밴드로 범위를 좁히지 않으면 구분할 수 없다.
-      basic:  { band: "basic", sub: /이수여부|수료여부/, max: 10, enum: ["이수완료", "진행중", "비대상", ""] },
-      bsdate: { band: "basic", sub: /시작일/, max: 10, date: true },
-      bdate:  { band: "basic", sub: /완료일|수료일/, max: 10, date: true },
-      vet:    { band: "vet",   sub: /이수여부|수료여부/, max: 10, enum: ["이수완료", "진행중", "비대상", ""] },
-      vsdate: { band: "vet",   sub: /시작일/, max: 10, date: true },
-      vdate:  { band: "vet",   sub: /완료일|수료일/, max: 10, date: true },
-      // 본사 교육과정(Scrubber Lv.2/Lv.3) — 이수여부 열이 없어 완료일이 곧 이수 판정.
-      lv2date: { band: "lv2", sub: /완료일|수료일/, max: 10, date: true },
-      lv3date: { band: "lv3", sub: /완료일|수료일/, max: 10, date: true },
+      // 과정별 완료일. 네 열의 머리글이 전부 '교육완료일'이라 **밴드로 범위를 좁혀야** 구분된다.
+      bdate:   { band: "basic", sub: /완료일|수료일/, max: 10, date: true },
+      vdate:   { band: "vet",   sub: /완료일|수료일/, max: 10, date: true },
+      lv2date: { band: "lv2",   sub: /완료일|수료일/, max: 10, date: true },
+      lv3date: { band: "lv3",   sub: /완료일|수료일/, max: 10, date: true },
     },
   },
   // 휴가현황. 같은 사람이 여러 건을 갖는 시트라 고유 키가 없다 → 입력(append) 전용.

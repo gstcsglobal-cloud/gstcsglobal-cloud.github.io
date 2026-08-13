@@ -544,7 +544,7 @@ function serializeData(
 
       const fmt = (p: any) => {
         const e = idx.of(p) ?? {};
-        return `이름:${p.name} 사번:${p.id||"-"} 사이트:${grpKey(p)} 직책:${p.posKo||"-"} 현장:${p.onsite?"O":"-"} 입사:${fmtDate(p.join)} LV1완료:${e.bdate?fmtDate(e.bdate):e.basic||"-"} LV2완료:${e.vdate?fmtDate(e.vdate):e.vet||"-"}`;
+        return `이름:${p.name} 사번:${p.id||"-"} 사이트:${grpKey(p)} 직책:${p.posKo||"-"} 현장:${p.onsite?"O":"-"} 입사:${fmtDate(p.join)} LV1완료:${e.bdate?fmtDate(e.bdate):"-"} LV2완료:${e.vdate?fmtDate(e.vdate):"-"}`;
       };
 
       parts.push(

@@ -212,26 +212,34 @@ export function parseRoster(csvText) {
    실제로 B열 '교육과정'→'Site', 8열이 '법인 교육과정'으로 바뀌면서 NO_HEADER로 전부 0행이 됐다.
    → 머리글 문자열로 위치를 찾고, 못 찾은 것만 옛 고정 위치로 폴백한다.
    대시보드(hr/index.html eduMap · report/index.html eduMap)와 같은 규칙이다. */
+/* 교육현황 컬럼 해석.
+   SPEC-SYNC — hr/index.html · report/index.html 에 같은 규약의 사본이 있다. 정본은 hr/index.html.
+   2026-08 시트 개편 후 이 시트는 «사번 + 과정별 완료일»만 갖는다:
+     r0            법인 교육과정(병합) · 본사 교육과정(병합)
+     r1            Basic · Veteran · Scrubber Lv.2 · Scrubber Lv.3
+     r2 ← 헤더행    No · Site · 인원 · 사원번호 · 교육완료일 ×4
+   인적사항(입사일·직급·직무·퇴사)은 인원명단이 원장이다 — 여기서 찾지 않는다.
+   이수여부·시작일·교육시간 열도 없어졌다 → 완료일이 있으면 이수로 본다. */
 export function eduMap(rows) {
   const nm = (v) => String(v == null ? '' : v).replace(/[\s.·()]/g, '').toLowerCase();
+  // 헤더행은 «인원 + 사원번호»로 찾는다. 예전에는 '교육과정'을 같이 요구했는데, 개편 후 그 말은
+  // 밴드 행(r0)에 있고 '인원'은 r2에 있어 한 행에 둘 다 있는 행이 없다 → null 을 반환하며
+  // 교육 답변이 통째로 죽었다.
   let hi = -1;
   for (let i = 0; i < Math.min(rows.length, 12); i++) {
     const h = (rows[i] ?? []).map(nm);
-    if (h.some((x) => x.includes('인원')) && h.some((x) => x.includes('교육과정'))) { hi = i; break; }
+    if (h.some((x) => x.includes('인원')) && h.some((x) => x.includes('사원번호') || x === '사번')) { hi = i; break; }
   }
   if (hi < 0) return null;
-  const R0 = Math.max(0, hi - 2), R1 = Math.min(rows.length, hi + 3);
+  const R0 = Math.max(0, hi - 2), R1 = Math.min(rows.length, hi + 3); // 밴드는 헤더 «위»에도 «아래»에도 있다
   const H = (rows[hi] ?? []).map(nm);
-  const find = (pred, dflt) => { const i = H.findIndex((x) => x && pred(x)); return i >= 0 ? i : dflt; };
+  // 못 찾으면 -1. 옛 열 번호로 폴백하지 않는다 — 개편 후 4열은 Basic 완료일이라
+  // 폴백이 살아 있으면 «완료일을 입사일로» 읽는다.
+  const find = (pred) => H.findIndex((x) => x && pred(x));
   const c = {
-    // 사이트 열은 'Site'와 '교육과정' 둘 다 쓰인 이력이 있다.
-    // '법인/본사 교육과정'은 과정 그룹 머리글이라 정확일치로만 잡는다.
-    site: find((x) => x === 'site' || x === '교육과정', 1),
-    name: find((x) => x.includes('인원'), 2),
-    id:   find((x) => x.includes('사원번호') || x === '사번', 3),
-    join: find((x) => x.includes('입사일'), 4),
-    role: find((x) => x.includes('직무'), 7),
-    note: find((x) => x.includes('비고'), 18),
+    site: find((x) => x === 'site' || x === '교육과정'),
+    name: find((x) => x.includes('인원')),
+    id:   find((x) => x.includes('사원번호') || x === '사번'),
   };
   const G = [];
   for (let i = R0; i < R1; i++) (rows[i] ?? []).forEach((v, col) => {
@@ -246,21 +254,13 @@ export function eduMap(rows) {
       for (let col = st; col < en && col < r.length; col++) { const t = nm(r[col]); if (t && re.test(t)) return col; } }
     return -1;
   };
-  const DF = { basic: [8, 10], vet: [12, 14], lv2: [16, 16], lv3: [17, 17] };
+  const DATE = { basic: 'bdate', vet: 'vdate', lv2: 'lv2', lv3: 'lv3' };
   G.forEach((g, i) => {
-    const end = i + 1 < G.length ? G[i + 1].col : (c.note > g.col ? c.note : Math.max(g.col + 1, (rows[hi] ?? []).length));
-    const st = colIn(g.col, end, /이수여부|수료여부/), dt = colIn(g.col, end, /완료일|수료일/);
-    if (g.k === 'basic' || g.k === 'vet') {
-      c[g.k] = st >= 0 ? st : DF[g.k][0];
-      c[g.k === 'basic' ? 'bdate' : 'vdate'] = dt >= 0 ? dt : DF[g.k][1];
-    } else c[g.k] = dt >= 0 ? dt : g.col;   // 본사 과정은 완료일 1개 열 = 그 열 자체
+    const end = i + 1 < G.length ? G[i + 1].col : Math.max(g.col + 1, (rows[hi] ?? []).length);
+    const dt = colIn(g.col, end, /완료일|수료일/);
+    c[DATE[g.k]] = dt >= 0 ? dt : g.col;   // 과정당 완료일 1열 — 못 찾으면 밴드 열 자체
   });
-  if (c.basic == null) c.basic = DF.basic[0];
-  if (c.vet == null) c.vet = DF.vet[0];
-  if (c.bdate == null) c.bdate = DF.basic[1];
-  if (c.vdate == null) c.vdate = DF.vet[1];
-  if (c.lv2 == null) c.lv2 = DF.lv2[0];
-  if (c.lv3 == null) c.lv3 = DF.lv3[0];
+  for (const k of ['bdate', 'vdate', 'lv2', 'lv3']) if (c[k] == null) c[k] = -1;
   return { hi, c };
 }
 export function parseEdu(csvText) {
@@ -280,15 +280,11 @@ export function parseEdu(csvText) {
     out.push({
       id, name,
       site: gv(r, c.site),
-      basic: gv(r, c.basic),
+      // 이수여부·비고 열은 시트에서 없어졌다 → 이수 판정은 완료일 유무, 퇴사는 인원명단이 원장.
       bdate: pd(r[c.bdate]),
-      vet: gv(r, c.vet),
       vdate: pd(r[c.vdate]),
-      // 본사 교육과정(Scrubber Lv.2/Lv.3) — 이수여부 열이 없어 완료일 유무로 판정한다
       lv2date: pd(r[c.lv2]),
       lv3date: pd(r[c.lv3]),
-      note: gv(r, c.note),
-      quitNote: /퇴사/.test(gv(r, c.note)),
     });
   }
   return out;
