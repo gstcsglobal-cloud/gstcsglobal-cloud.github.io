@@ -901,22 +901,35 @@ function parseLeave(rows){
 /* 교육현황 시트 열 자동 탐지 — 열을 번호로 박아두면 시트에 열/머리글이 바뀔 때 전 지표가 조용히 0이 된다.
    (실제로 B열 '교육과정'→'Site', 그룹 머리글 '법인/본사 교육과정' 변경으로 통째로 깨졌다.)
    헤더 문자열로 위치를 찾고, 못 찾은 항목만 옛 고정 위치로 폴백한다. hr/index.html과 동일 로직. */
+/* 교육현황 컬럼 해석. SPEC-SYNC — hr/index.html · kakao-bot/hr.js 에 같은 규약의 사본이 있다.
+   2026-08 시트 개편 후 이 시트는 «사번 + 과정별 완료일» 만 갖는다:
+     r0            법인 교육과정(E:F 병합) · 본사 교육과정(G:H 병합)
+     r1            Basic · Veteran · Scrubber Lv.2 · Scrubber Lv.3
+     r2 ← 헤더행    No · Site · 인원 · 사원번호 · 교육완료일 ×4
+   인적사항(입사일·직급·직무·퇴사)은 **인원현황 시트로 옮겨갔다** — 여기서 찾지 않는다.
+   이수여부·시작일·교육시간 열도 없어졌다 → **완료일이 있으면 이수**로 판정한다. */
 function eduMap(rows){
   const nm=s=>String(s==null?'':s).replace(/[\s.·()]/g,'').toLowerCase();
+  // 헤더행은 «인원 + 사원번호»로 찾는다. 예전에는 '교육과정'을 같이 요구했는데,
+  // 개편 후 그 말은 밴드 행(r0)에 있고 '인원'은 r2에 있어 **한 행에 둘 다 있는 행이 없다**.
+  // 그래서 eduMap이 통째로 null을 반환했고 교육 지표가 전부 빈칸이 됐다.
   let hi=-1;
   for(let i=0;i<Math.min(rows.length,12);i++){
     const h=(rows[i]||[]).map(nm);
-    if(h.some(x=>x.includes('인원'))&&h.some(x=>x.includes('교육과정'))){hi=i;break;}
+    if(h.some(x=>x.includes('인원'))&&h.some(x=>x.includes('사원번호')||x==='사번')){hi=i;break;}
   }
   if(hi<0)return null;
-  const R0=Math.max(0,hi-2), R1=Math.min(rows.length,hi+3);   // 헤더는 2~3행에 걸쳐 있다
+  const R0=Math.max(0,hi-2), R1=Math.min(rows.length,hi+3);   // 밴드는 헤더 «위»에도 «아래»에도 있을 수 있다
   const H=(rows[hi]||[]).map(nm);
-  const find=(pred,dflt)=>{const i=H.findIndex(x=>x&&pred(x));return i>=0?i:dflt;};
+  // 못 찾으면 -1. **옛 열 번호로 폴백하지 않는다**(제1원칙) — 예전에는 입사일을 못 찾으면 4열로
+  // 폴백했는데, 개편 후 4열이 Basic 완료일이라 **완료일을 입사일로 읽고 있었다.**
+  const find=pred=>H.findIndex(x=>x&&pred(x));
   const c={
-    site:find(x=>x==='site'||x==='교육과정',1), name:find(x=>x.includes('인원'),2),
-    id:find(x=>x.includes('사원번호')||x==='사번',3), join:find(x=>x.includes('입사일'),4),
-    role:find(x=>x.includes('직무'),7), note:find(x=>x.includes('비고'),18)
+    // 사이트 열 머리글은 'Site'와 '교육과정' 둘 다 쓰인 이력이 있다.
+    site:find(x=>x==='site'||x==='교육과정'), name:find(x=>x.includes('인원')),
+    id:find(x=>x.includes('사원번호')||x==='사번')
   };
+  // 과정 그룹(Basic · Veteran · Scrubber Lv.2 · Lv.3)의 시작 열
   const G=[];
   for(let i=R0;i<R1;i++)(rows[i]||[]).forEach((v,col)=>{
     const t=nm(v); if(!t)return;
@@ -927,34 +940,29 @@ function eduMap(rows){
   G.sort((a,b)=>a.col-b.col);
   const colIn=(s,e,re)=>{ for(let i=R0;i<R1;i++){ const r=rows[i]||[];
     for(let col=s;col<e&&col<r.length;col++){ const t=nm(r[col]); if(t&&re.test(t))return col; } } return -1; };
-  const DF={basic:[8,10],vet:[12,14],lv2:[16,16],lv3:[17,17]};
+  const DATE={basic:'bdate',vet:'vdate',lv2:'lv2',lv3:'lv3'};
   G.forEach((g,i)=>{
-    const end=i+1<G.length?G[i+1].col:(c.note>g.col?c.note:Math.max(g.col+1,(rows[hi]||[]).length));
-    const st=colIn(g.col,end,/이수여부|수료여부/), dt=colIn(g.col,end,/완료일|수료일/);
-    if(g.k==='basic'||g.k==='vet'){ c[g.k]=st>=0?st:DF[g.k][0]; c[g.k==='basic'?'bdate':'vdate']=dt>=0?dt:DF[g.k][1]; }
-    else c[g.k]=dt>=0?dt:g.col;                 // 본사 과정은 완료일 1개 열 = 그 열 자체
+    const end=i+1<G.length?G[i+1].col:Math.max(g.col+1,(rows[hi]||[]).length);
+    const dt=colIn(g.col,end,/완료일|수료일/);
+    c[DATE[g.k]]=dt>=0?dt:g.col;     // 과정당 완료일 1열 — 못 찾으면 밴드 열 자체
   });
-  ['basic','vet'].forEach(k=>{ if(c[k]==null)c[k]=DF[k][0]; });
-  if(c.bdate==null)c.bdate=DF.basic[1]; if(c.vdate==null)c.vdate=DF.vet[1];
-  if(c.lv2==null)c.lv2=DF.lv2[0]; if(c.lv3==null)c.lv3=DF.lv3[0];
+  ['bdate','vdate','lv2','lv3'].forEach(k=>{ if(c[k]==null)c[k]=-1; });
   return {hi,c};
 }
 function parseHR(rows){
   const M=eduMap(rows); if(!M)return [];
   const c=M.c, gv=(r,i)=>String((i>=0?r[i]:'')||'').trim();
+  // 이 시트는 «사번 + 과정별 완료일»만 갖는다(2026-08 개편). 입사일·퇴사는 인원현황이 원장이고
+  // 아래 PPL이 인원현황을 우선 쓰므로 여기서 읽지 않는다. 이수 판정은 완료일 유무.
   return rows.slice(M.hi+1).map(r=>({
     id:gv(r,c.id),
     site:siteKey(r[c.site]),
     custB:custBase(r[c.site]), fab:fabOf(r[c.site]),
     name:gv(r,c.name),
-    join:pd(r[c.join]),
-    basic:gv(r,c.basic),
-    bdate:pd(r[c.bdate]),
-    vet:gv(r,c.vet),
-    vdate:pd(r[c.vdate]),
-    lv2date:pd(r[c.lv2]), lv3date:pd(r[c.lv3]),  // 본사 교육과정(Scrubber Lv.2/Lv.3) 완료일
-    quit:/퇴사/.test(gv(r,c.note))
-  })).filter(x=>x.name&&!/^(인원|name|이수여부)$/i.test(x.name)&&(x.join||x.basic));
+    bdate:pd(r[c.bdate]), vdate:pd(r[c.vdate]),
+    lv2date:pd(r[c.lv2]), lv3date:pd(r[c.lv3])
+  // 예전 필터는 (x.join||x.basic)을 요구했다 — 두 열 다 없어진 지금 그대로 두면 전 행이 버려진다.
+  })).filter(x=>x.name&&!/^(인원|name|이수여부)$/i.test(x.name));
 }
 // ===== All By-Pass 파싱 — Month 블록(1행 월번호)·Week 블록(1행 W##) · 사이트행 값 =====
 // 반환 {m:{'7':{ALL:n, byC:{}, byF:{}}...}, w:{'W28':{...}}}
@@ -1204,7 +1212,9 @@ function render(){
   // 인력 기준: 인원현황(입·퇴사일 보유) 우선, 없으면 교육현황 · 고객사/국가 필터 연동
   // 폴백(교육현황) 레코드에는 onsite가 없고 quit이 boolean이라, 그대로 쓰면
   // 재직 0명 + p.quit.getUTCFullYear() TypeError로 렌더가 죽는다. hr 페이지와 동일 규칙으로 보정.
-  const PPL=ROSTER.length?ROSTER:HR.map(e=>Object.assign({},e,{onsite:true,quit:e.quit?today:null}));
+  // 폴백 레코드에는 입사일·퇴사일이 없다(교육현황에서 그 열이 없어졌다) → 재직 판정이 불가능하다.
+  // 인원현황을 못 읽으면 인력 카드가 비는 게 정상이고, 그 사실이 화면에 드러나는 편이 낫다.
+  const PPL=ROSTER.length?ROSTER:HR.map(e=>Object.assign({},e,{onsite:true,join:null,quit:null}));
   const fHR=PPL.filter(p=>okCF(p.custB,p.fab));
   // 휴가 = 인원현황의 현장(O) 재직자 것만 차감 — 行政部·기술부 등 비현장/미등재 인원 휴가 제외
   // 사원번호(우선)·이름으로 매칭, 소속(custB/fab)은 인원현황 Work Place 기준으로 귀속

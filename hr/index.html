@@ -513,23 +513,33 @@ function parseRoster(rows){
    열을 번호로 박아두면 시트에 열이 하나만 끼어들어도 전 지표가 0이 된다(실제로 그렇게 깨졌다).
    헤더 문자열로 위치를 찾고, 못 찾은 항목만 옛 고정 위치로 폴백한다. */
 let EDU_MAP=null;
+/* 교육현황 컬럼 해석. SPEC-SYNC — report/index.html · kakao-bot/hr.js 에 같은 규약의 사본이 있다.
+   2026-08 시트 개편 후 이 시트는 «사번 + 과정별 완료일» 만 갖는다:
+     r0            법인 교육과정(E:F 병합) · 본사 교육과정(G:H 병합)
+     r1            Basic · Veteran · Scrubber Lv.2 · Scrubber Lv.3
+     r2 ← 헤더행    No · Site · 인원 · 사원번호 · 교육완료일 ×4
+   인적사항(입사일·직급·직무·퇴사)은 **인원현황 시트로 옮겨갔다** — 여기서 찾지 않는다.
+   이수여부·시작일·교육시간 열도 없어졌다 → **완료일이 있으면 이수**로 판정한다. */
 function eduMap(rows){
   const nm=s=>String(s==null?'':s).replace(/[\s.·()]/g,'').toLowerCase();
+  // 헤더행은 «인원 + 사원번호»로 찾는다. 예전에는 '교육과정'을 같이 요구했는데,
+  // 개편 후 그 말은 밴드 행(r0)에 있고 '인원'은 r2에 있어 **한 행에 둘 다 있는 행이 없다**.
+  // 그래서 eduMap이 통째로 null을 반환했고 교육 지표가 전부 빈칸이 됐다.
   let hi=-1;
   for(let i=0;i<Math.min(rows.length,12);i++){
     const h=(rows[i]||[]).map(nm);
-    if(h.some(x=>x.includes('인원'))&&h.some(x=>x.includes('교육과정'))){hi=i;break;}
+    if(h.some(x=>x.includes('인원'))&&h.some(x=>x.includes('사원번호')||x==='사번')){hi=i;break;}
   }
   if(hi<0)return null;
-  const R0=Math.max(0,hi-2), R1=Math.min(rows.length,hi+3);   // 헤더는 2~3행에 걸쳐 있다
+  const R0=Math.max(0,hi-2), R1=Math.min(rows.length,hi+3);   // 밴드는 헤더 «위»에도 «아래»에도 있을 수 있다
   const H=(rows[hi]||[]).map(nm);
-  const find=(pred,dflt)=>{const i=H.findIndex(x=>x&&pred(x));return i>=0?i:dflt;};
+  // 못 찾으면 -1. **옛 열 번호로 폴백하지 않는다**(제1원칙) — 예전에는 입사일을 못 찾으면 4열로
+  // 폴백했는데, 개편 후 4열이 Basic 완료일이라 **완료일을 입사일로 읽고 있었다.**
+  const find=pred=>H.findIndex(x=>x&&pred(x));
   const c={
     // 사이트 열 머리글은 'Site'와 '교육과정' 둘 다 쓰인 이력이 있다.
-    // '법인 교육과정'·'본사 교육과정'은 과정 그룹 머리글이므로 정확일치로만 잡는다.
-    site:find(x=>x==='site'||x==='교육과정',1), name:find(x=>x.includes('인원'),2),
-    id:find(x=>x.includes('사원번호')||x==='사번',3), join:find(x=>x.includes('입사일'),4),
-    role:find(x=>x.includes('직무'),7), note:find(x=>x.includes('비고'),18)
+    site:find(x=>x==='site'||x==='교육과정'), name:find(x=>x.includes('인원')),
+    id:find(x=>x.includes('사원번호')||x==='사번')
   };
   // 과정 그룹(Basic · Veteran · Scrubber Lv.2 · Lv.3)의 시작 열
   const G=[];
@@ -542,32 +552,25 @@ function eduMap(rows){
   G.sort((a,b)=>a.col-b.col);
   const colIn=(s,e,re)=>{ for(let i=R0;i<R1;i++){ const r=rows[i]||[];
     for(let col=s;col<e&&col<r.length;col++){ const t=nm(r[col]); if(t&&re.test(t))return col; } } return -1; };
-  const DF={basic:[8,10],vet:[12,14],lv2:[16,16],lv3:[17,17]};
+  const DATE={basic:'bdate',vet:'vdate',lv2:'lv2',lv3:'lv3'};
   G.forEach((g,i)=>{
-    const end=i+1<G.length?G[i+1].col:(c.note>g.col?c.note:Math.max(g.col+1,(rows[hi]||[]).length));
-    const st=colIn(g.col,end,/이수여부|수료여부/), dt=colIn(g.col,end,/완료일|수료일/);
-    if(g.k==='basic'||g.k==='vet'){ c[g.k]=st>=0?st:DF[g.k][0]; c[g.k==='basic'?'bdate':'vdate']=dt>=0?dt:DF[g.k][1]; }
-    else c[g.k]=dt>=0?dt:g.col;                 // 본사 과정은 완료일 1개 열 = 그 열 자체
+    const end=i+1<G.length?G[i+1].col:Math.max(g.col+1,(rows[hi]||[]).length);
+    const dt=colIn(g.col,end,/완료일|수료일/);
+    c[DATE[g.k]]=dt>=0?dt:g.col;     // 과정당 완료일 1열 — 못 찾으면 밴드 열 자체
   });
-  ['basic','vet'].forEach(k=>{ if(c[k]==null)c[k]=DF[k][0]; });
-  if(c.bdate==null)c.bdate=DF.basic[1]; if(c.vdate==null)c.vdate=DF.vet[1];
-  if(c.lv2==null)c.lv2=DF.lv2[0]; if(c.lv3==null)c.lv3=DF.lv3[0];
+  ['bdate','vdate','lv2','lv3'].forEach(k=>{ if(c[k]==null)c[k]=-1; });
   return {hi,c};
 }
 function parseEdu(rows){
   const M=EDU_MAP=eduMap(rows); if(!M)return [];
   const c=M.c, gv=(r,i)=>String((i>=0?r[i]:'')||'').trim();
   // 데이터 시작을 hi+3으로 고정하지 않는다 — 헤더가 2행이든 3행이든 이름 칸이 빈 행은 자연히 걸러진다
+  // 이 시트는 이제 «사번 + 과정별 완료일»만 갖는다. 이수여부·시작일·교육시간·비고 열은 없어졌고
+  // 인적사항(입사일·직급·직무·퇴사)은 인원현황이 원장이다 — 여기서 읽지 않는다.
   return rows.slice(M.hi+1).map(r=>({
     id:normId(gv(r,c.id)), name:gv(r,c.name), site:siteKey(r[c.site]),
-    role:gv(r,c.role),
-    join:pd(r[c.join]),
-    basic:gv(r,c.basic), bdate:pd(r[c.bdate]),
-    vet:gv(r,c.vet), vdate:pd(r[c.vdate]),
-    // 본사 교육과정(Scrubber Lv.2/Lv.3) — 이수여부 열이 없어 완료일 유무로 판정한다
-    lv2date:pd(r[c.lv2]), lv3date:pd(r[c.lv3]),
-    note:gv(r,c.note),
-    quitNote:/퇴사/.test(gv(r,c.note))
+    bdate:pd(r[c.bdate]), vdate:pd(r[c.vdate]),
+    lv2date:pd(r[c.lv2]), lv3date:pd(r[c.lv3])
   })).filter(x=>x.name&&!/^(인원|name|이수여부)$/i.test(x.name));
 }
 function buildPeople(){
@@ -575,16 +578,16 @@ function buildPeople(){
   EDU.forEach(e=>{ if(e.id)eById[e.id]=e; if(e.name)eByNm[e.name.toUpperCase()]=e; });
   let base;
   if(ROSTER.length){ base=ROSTER; }
+  // 인원현황을 못 읽었을 때의 최소 폴백. 교육현황에는 인적사항이 없으므로 이름·사번·사이트뿐이고
+  // 입사일이 없어 Basic/Veteran «대상» 판정(입사 6개월)이 불가능하다 — 화면이 비는 게 정상이다.
   else { base=EDU.map(e=>({id:e.id,name:e.name,cn:'',dept:'',level:'',site:e.site,custB:custBase(e.site),fab:fabOf(e.site),
-    role:e.role,join:e.join,quit:e.quitNote?REAL_TODAY:null,org:'',posKo:'',duty:'',onsite:true})); }
+    role:'',join:null,quit:null,org:'',posKo:'',duty:'',onsite:true})); }
   return base.map(p=>{
     const e=(p.id&&eById[p.id])||(p.name&&eByNm[p.name.toUpperCase()])||null;
     return Object.assign({},p,{
       edu:!!e,
-      basic:e?e.basic:'', bdate:e?e.bdate:null,
-      vet:e?e.vet:'', vdate:e?e.vdate:null,
-      lv2date:e?e.lv2date:null, lv3date:e?e.lv3date:null,
-      eduNote:e?e.note:''
+      bdate:e?e.bdate:null, vdate:e?e.vdate:null,
+      lv2date:e?e.lv2date:null, lv3date:e?e.lv3date:null
     });
   });
 }
@@ -641,9 +644,10 @@ function lvPerson(rec,byId,byNm){
   return null;
 }
 
-/* 교육 상태 분류 */
-function clsB(p){ const v=p.basic; if(v==='이수완료')return '이수완료'; if(v==='진행중')return '진행중'; if(v==='비대상')return '비대상'; return '미이수'; }
-function clsV(p){ const v=p.vet; if(v==='이수완료')return '이수완료'; if(v==='진행중')return '진행중'; if(v==='비대상')return '비대상'; return '미이수'; }
+/* 교육 상태 분류 — 이수여부 열이 시트에서 없어져 **완료일 유무로 판정한다.**
+   예전 '진행중'·'비대상'은 그 열에만 있던 값이라 함께 사라졌다(사용자 확정: 영영 안 쓴다). */
+function clsB(p){ return (p.bdate&&p.bdate<=TODAY)?'이수완료':'미이수'; }
+function clsV(p){ return (p.vdate&&p.vdate<=TODAY)?'이수완료':'미이수'; }
 function eduStatusOf(p){ return p.edu?clsB(p):'미등록'; }
 
 /* ===== 상태/스타일 ===== */
