@@ -1030,6 +1030,107 @@ GST.dbRows = async function(table){
   return rows;
 };
 
+/* ---------- 9-c. CSV Import 표 (v79) ----------
+   Table Editor 로 직접 올린 표. 위의 미러(sheet_wk 등)와 두 가지가 다르다:
+     · 컬럼 이름이 **시트 머리글 그대로**다(snake_case 가 아니다) → SPEC 이 필요 없다
+     · sheet_sync_log 에 적재 기록이 없다 → 행수 대조를 할 수 없다
+   그래서 별도 경로로 읽는다. 반환 모양은 같다 — [헤더행, ...데이터행].
+
+   여기가 «모양 복원»을 맡는다. Import 하면서 잃은 구조(CIP 의 적용일자 띠,
+   All By-Pass 의 크로스탭)를 되살려 페이지에 넘긴다. 그래야 페이지·파서를 한 줄도
+   안 고친다 — 고치면 시트 경로와 DB 경로가 갈라지고, 갈라진 것은 반드시 어긋난다. */
+GST.CSV_TABLE_OF_GID = {
+  '0':          'sheet_edu',
+  '1213453343': 'sheet_roster',
+  '262805841':  'sheet_leave',
+  '2123129719': 'sheet_cip_f11',
+  '1999732389': 'sheet_cip_f16',
+  '1263412805': 'sheet_abp'
+};
+// Import 표에 딸려오는 관리용 열 — 헤더로 내보내지 않는다
+GST._CSV_SKIP = { id:1, created_at:1, imported_at:1, src_row:1, synced_at:1, extra:1 };
+
+GST.csvTableRows = async function(table){
+  const c = await GST.db(); if(!c) throw new Error('DB_OFF');
+  /* 페이지네이션은 미러와 같은 규약 — 「요청한 만큼 안 오면 끝」으로 판정하지 않는다.
+     PostgREST 의 행수 상한은 프로젝트 설정이라, 상한에 걸린 것을 완료로 착각하면
+     잘린 데이터를 조용히 그린다. **0행일 때만 멈춘다.** */
+  const STEP = 5000; let from = 0; const out = [];
+  for(let guard=0; guard<400; guard++){
+    const r = await c.from(table).select('*').order('id', {ascending:true}).range(from, from+STEP-1);
+    if(r.error) throw new Error('READ '+r.error.message);
+    const n = (r.data||[]).length; if(!n) break;
+    for(let i=0;i<n;i++) out.push(r.data[i]);
+    from += n;
+  }
+  if(!out.length) throw new Error('EMPTY — '+table+' 에 행이 없다 (Import 했는가)');
+
+  const head = Object.keys(out[0]).filter(function(k){ return !GST._CSV_SKIP[k]; });
+  const rows = new Array(out.length+1); rows[0] = head;
+  for(let i=0;i<out.length;i++){
+    const o = out[i], r = new Array(head.length);
+    for(let j=0;j<head.length;j++){ const v=o[head[j]]; r[j] = (v==null?'':String(v)); }
+    rows[i+1] = r;
+  }
+  return rows;
+};
+
+/* CIP — Import 표에는 «적용일자 띠»(시트 0행)가 없다. Table Editor 는 머리글을 한 줄만 받는다.
+   열별 «가장 이른 완료일»로 되살린다. 실측 대조: F11 6/6 밴드와 일치, F16 14/18 일치이고
+   나머지도 몇 달 차이다. 밴드가 아예 없던 (Right) 열들은 오히려 제 날짜를 갖게 된다
+   (예전에는 (Left) 의 병합셀을 물려받았다).
+   **2010년 이전은 버린다** — 시트에 `1901-02-19` 오타가 하나 있고, 그걸 최솟값으로 쓰면
+   그 열의 경과일이 4만 5천 일이 되어 「잔여 경과일 분포」가 통째로 망가진다. */
+GST._cipBand = function(rows){
+  const head = rows[0]||[], band = new Array(head.length).fill('');
+  const D = /^(\d{4})-(\d{2})-(\d{2})/;
+  for(let c=0;c<head.length;c++){
+    let min = '';
+    for(let i=1;i<rows.length;i++){
+      const m = D.exec(String((rows[i]||[])[c]||'').trim());
+      if(!m || m[1] < '2010') continue;
+      const d = m[0].slice(0,10);
+      if(!min || d < min) min = d;
+    }
+    band[c] = min;
+  }
+  return band;
+};
+
+/* All By-Pass — 세로형으로 Import 했다(period_type·period_key·period_end·site·bypass_count).
+   report 의 parseABP 는 시트의 크로스탭(‘Month’/‘Week’ 라벨 행 + 사이트 행)을 전제하므로
+   여기서 그 모양으로 되돌린다. 파서를 고치는 대신 모양을 복원하는 이유는 위와 같다 —
+   시트 경로와 DB 경로가 같은 입력을 보게 해야 갈라지지 않는다. */
+GST._abpWide = function(rows){
+  const H = {}; (rows[0]||[]).forEach(function(h,i){ H[String(h).trim().toLowerCase()] = i; });
+  const iT=H['period_type'], iK=H['period_key'], iE=H['period_end'], iS=H['site'], iV=H['bypass_count'];
+  if(iT==null||iK==null||iS==null||iV==null) return rows;   // 모양이 다르면 손대지 않는다
+  const blk = { month:{keys:[], ends:{}, sites:[], v:{}}, week:{keys:[], ends:{}, sites:[], v:{}} };
+  for(let i=1;i<rows.length;i++){
+    const r = rows[i]||[], t = String(r[iT]||'').trim().toLowerCase(), b = blk[t];
+    if(!b) continue;
+    const k = String(r[iK]||'').trim(), s = String(r[iS]||'').trim();
+    if(!k||!s) continue;
+    if(b.keys.indexOf(k)<0) b.keys.push(k);
+    if(b.sites.indexOf(s)<0) b.sites.push(s);
+    b.ends[k] = iE!=null ? String(r[iE]||'') : '';
+    b.v[s+' '+k] = String(r[iV]||'');
+  }
+  const out = [];
+  ['month','week'].forEach(function(t){
+    const b = blk[t]; if(!b.keys.length) return;
+    // parseABP 는 월을 숫자로, 주를 W## 로 읽는다. 월 키는 2025-07 이므로 월 숫자만 떼어 준다.
+    const label = t==='month' ? function(k){ return String(Number(k.slice(5,7))||k); } : function(k){ return k; };
+    out.push([t==='month'?'Month':'Week'].concat(b.keys.map(label)));
+    out.push(['Site'].concat(b.keys.map(function(k){ return b.ends[k]||''; })));
+    b.sites.forEach(function(s){
+      out.push([s].concat(b.keys.map(function(k){ return b.v[s+' '+k] || '0'; })));
+    });
+    out.push([]);                                   // 블록 사이 빈 줄 — 시트와 같다
+  });
+  return out;
+};
+
 // 캐시 폴백 로드: 성공 시 저장, 실패 시 캐시로 대체 (cached/ageMin 플래그 반환)
 GST.fetchCSVCached = async function(url, key){
   const gm = String(url||'').match(/[?&]gid=(\d+)/);
@@ -1042,6 +1143,18 @@ GST.fetchCSVCached = async function(url, key){
       if(rows && rows.length>1){ GST.cacheSave(key, rows); return {rows, cached:false, ageMin:0, src:'db'}; }
       throw new Error('MIRROR_EMPTY');
     }catch(e){ GST._dbWarn(table, e); }   // 시트로 되돌아간다. 아래가 그 경로다.
+  }
+  /* CSV Import 표 (v79). 위 미러와 같은 자리에서 갈라지고 실패하면 똑같이 시트로 되돌아간다.
+     모양 복원은 여기서 한다 — 페이지는 자기가 DB 를 보는지 시트를 보는지 모른다. */
+  const ctbl = gm && GST.CSV_TABLE_OF_GID[gm[1]];
+  if(ctbl && GST.USE_DB && GST.authOn()){
+    try{
+      let rows = await GST.csvTableRows(ctbl);
+      if(/^sheet_cip_/.test(ctbl)) rows = [GST._cipBand(rows)].concat(rows);  // 적용일자 띠 복원
+      else if(ctbl === 'sheet_abp') rows = GST._abpWide(rows);                // 크로스탭 복원
+      if(rows && rows.length>1){ GST.cacheSave(key, rows); return {rows, cached:false, ageMin:0, src:'db'}; }
+      throw new Error('EMPTY');
+    }catch(e){ GST._dbWarn(ctbl, e); }
   }
   try{
     const rows = await GST.fetchCSV(url);

@@ -99,8 +99,23 @@ r3~ 데이터
 
 | gid | 시트 | 지금 어디서 읽나 |
 |---|---|---|
-| 646668307 · 31302669 · 891608329 | 수선·자재·설치 | **미러** `sheet_wk` · `sheet_mat` · `sheet_inst` |
-| 그 밖(CIP·인원명단·교육·휴가) | | 아직 시트 |
+| 646668307 · 31302669 · 891608329 | 수선·자재·설치 | **미러** `sheet_wk` · `sheet_mat` · `sheet_inst` (sheet-sync 가 30분마다) |
+| 0 · 1213453343 · 262805841 | 교육·인원·휴가 | **CSV Import 표** `sheet_edu` · `sheet_roster` · `sheet_leave` |
+| 2123129719 · 1999732389 · 1263412805 | CIP F11·F16 · ABP | **CSV Import 표** `sheet_cip_f11` · `sheet_cip_f16` · `sheet_abp` |
+
+**두 경로가 다르다.** 미러는 `sheet-sync` 가 자동으로 채우고 컬럼이 snake_case 이며
+`sheet_sync_log` 로 행수를 대조한다. CSV Import 표는 **사람이 Table Editor 로 올리고**
+컬럼 이름이 **시트 머리글 그대로**다. `GST.TABLE_OF_GID`(미러) 와
+`GST.CSV_TABLE_OF_GID`(Import) 로 갈린다 — **같은 gid 를 양쪽에 넣지 말 것.**
+어느 쪽을 읽는지가 코드 순서에 달리고, 나중에 «왜 옛 값이 보이나»로 돌아온다
+(`tests/t-csvdb.mjs` 의 [3]번이 막는다).
+
+**Import 하면 모양을 잃는다 — core.js 가 되살린다.** Table Editor 는 머리글을 한 줄만 받는다.
+그래서 CIP 의 «적용일자 띠»(시트 0행)와 ABP 의 크로스탭이 사라진다.
+`GST._cipBand` 는 **열별 최초 완료일**로 띠를 되살리고(2010년 이전은 버린다 —
+시트에 `1901-02-19` 오타가 있고 그걸 쓰면 경과일이 4만 5천 일이 된다),
+`GST._abpWide` 는 세로형을 크로스탭으로 되편다.
+**페이지·파서는 한 줄도 안 고쳤다** — 고치면 시트 경로와 DB 경로가 갈라진다.
 
 - 페이지는 **한 곳도 안 고쳤다.** `GST.fetchCSVCached`가 gid를 보고 갈라진다
   (`GST.TABLE_OF_GID`). 첫 행에 시트 헤더 이름을 얹어 2차원 배열로 돌려주므로 `GST.SM`이 그대로 돈다.

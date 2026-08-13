@@ -33,6 +33,7 @@ npm run deep     # 심층 분석 숫자가 실측과 맞는지
 npm run edu      # 교육현황 해석기 세 사본이 옛·새 레이아웃 양쪽에서 일치하는지
 npm run leak     # 실데이터가 소스에 섞이지 않았는지
 npm run mirror   # 미러(Supabase) 경로가 시트 경로와 같은 값을 내는지
+npm run csvdb    # CSV Import 표에서 되살린 모양이 시트와 같은 값을 내는지
 node t-snap.mjs --save   # 큰 이행 '전'에 기준을 뜬다
 node t-snap.mjs          # 이행 '후' 대조
 ```
@@ -53,6 +54,7 @@ node t-snap.mjs          # 이행 '후' 대조
 | `t-deep` | 심층 분석이 **실측값과 같은 숫자**를 그리는지 (집중지수·재교체주기·급증·BM율) | 32/32 |
 | `t-leak` | **공개 저장소에 실데이터가 새어 나갔는지** — 커밋 대상 전 파일을 실제 명단과 대조 | 누출 0 |
 | `t-mirror` | **Supabase 미러가 시트와 같은 값을 내는지** — 두 파싱 경로를 열별 체크섬으로 대조 + sheet-proxy 허용목록이 소비자 전부를 덮는지 | 10/10 |
+| `t-csvdb` | **CSV Import 표 어댑터** — CIP 적용일자 띠 복원 · ABP 세로형↔크로스탭 등가 | 9/9 |
 | `t-snap` | 큰 이행 전후 8페이지 KPI·차트 87개·표 27개 대조 (`--save`로 기준 저장) | 동일 |
 
 `t-deep`이 대조하는 실측 기준값: `STR × DRAIN PIPE-E` **집중지수 230배** ·
