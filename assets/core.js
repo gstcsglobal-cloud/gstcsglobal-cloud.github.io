@@ -238,6 +238,14 @@ GST.DBW = {
     cols:{ empId:'사원번호', name:'이름', site:'소속', type:'항목', occur:'발생일',
            start:'휴가시작일', stime:'휴가시작시간', end:'휴가종료일', etime:'휴가종료시간',
            amt:'휴가신청시간', note:'비고' }
+  },
+  /* 수선실적 dq 4열 (v82) — 시트 은퇴 후 실적 원장은 sheet_wk(CSV 업로드)다.
+     예전에는 sheet-write 가 시트에 쓰고 미러에 따라 적었지만, 시트가 죽으면 그 절반이
+     허공에 쓰는 것이라 미러에 직접 쓴다. ops 로 update 만 연다 — 실적 행의 생성·삭제는
+     CSV 업로드가 원장이고, 여기서 지우면 다음 업로드 때 «누가 왜 지웠는지» 아무도 모른다. */
+  '646668307': {
+    table:'sheet_wk', keyField:'rs', keyCol:'rs_code', ops:['perm','row','update'],
+    cols:{ rs:'rs_code', alarm:'alarm', phenom:'phenom', cause:'cause', action:'action' }
   }
 };
 GST._dbwErr = function(code, status, extra){
@@ -313,6 +321,7 @@ GST.dbWrite = async function(op, gid, body, params){
   if(!au.data){ GST.authDenied && GST.authDenied(403); throw GST._dbwErr('forbidden', 403); }
   if(op === 'perm') return { ok:true, email:email, can_write:!!au.data.can_write };
   if(!au.data.can_write) throw GST._dbwErr('read_only', 403);
+  if(W.ops && W.ops.indexOf(op) < 0) throw GST._dbwErr('op_disabled', 400, {op:op});
 
   if(op === 'row'){
     var f0 = await GST._dbwFind(c, W, params.key, params.name);

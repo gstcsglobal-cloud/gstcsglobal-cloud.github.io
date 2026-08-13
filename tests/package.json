@@ -18,7 +18,8 @@
     "edu": "node t-edu.mjs",
     "csvdb": "node t-csvdb.mjs",
     "dbw": "node t-dbw.mjs",
-    "upload": "node --experimental-strip-types t-upload.mjs"
+    "upload": "node --experimental-strip-types t-upload.mjs",
+    "botdb": "node --experimental-strip-types t-botdb.mjs"
   },
   "devDependencies": {
     "chart.js": "4.4.1",

@@ -240,7 +240,29 @@ console.log('\n[7] delete — 지문 확인 + 교육 캐스케이드');
     ? ok('명단 1행 · 교육 0행') : err('행수가 틀리다');
 }
 
-console.log('\n[8] RLS 거부 — 0행 반환을 «저장됨»으로 오인하지 않는지');
+console.log('\n[8] 수선실적 dq (v82) — rs_code 로 정확히 한 행 · update 만 허용');
+{
+  const t = freshTables(true);
+  t.sheet_wk = { cols: ['src_row','rs_code','alarm','phenom','cause','action','synced_at'],
+    rows: [ { src_row: 1, rs_code: 'RS001', alarm: null, phenom: null, cause: null, action: null },
+            { src_row: 2, rs_code: 'RS002', alarm: '기존', phenom: null, cause: null, action: null } ] };
+  useDb(t);
+  const GID_W = '646668307';
+  const r0 = await G.dbWrite('row', GID_W, null, { key: 'RS001' });
+  r0.fields.rs === 'RS001' ? ok('row: rs 필드 번역') : err('row 필드가 틀리다');
+  const r = await G.dbWrite('update', GID_W, { key: 'RS001', baseHash: r0.hash,
+    changes: { alarm: 'GAS LOW', cause: 'O-RING 마모' } }, {});
+  t.sheet_wk.rows[0].alarm === 'GAS LOW' && t.sheet_wk.rows[0].cause === 'O-RING 마모'
+    ? ok('alarm·cause 열에 저장됨') : err('열 번역이 틀리다');
+  r.fields.alarm === 'GAS LOW' ? ok('응답 fields 갱신') : err('응답이 옛값');
+  for (const [op, body] of [['append', { fields: { rs: 'RSX', alarm: 'x' } }],
+                            ['delete', { key: 'RS001' }]]) {
+    try { await G.dbWrite(op, GID_W, body, {}); err(`실적 ${op} 가 통과 — CSV 업로드가 원장인데 행을 만들/지울 수 있다`); }
+    catch (e) { codeOf(e) === 'op_disabled' ? ok(`실적 ${op} → op_disabled`) : err(`op_disabled 대신 ` + codeOf(e)); }
+  }
+}
+
+console.log('\n[9] RLS 거부 — 0행 반환을 «저장됨»으로 오인하지 않는지');
 {
   const t = freshTables(true); useDb(t, { rlsDeny: true });
   const before = t.sheet_roster.rows[0]['직급'];

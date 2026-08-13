@@ -80,35 +80,89 @@ async function postCallback(callbackUrl: string, payload: unknown) {
 /* ============================================================
    1. 동기화 — 구글 시트 → bot_cache
    ============================================================ */
-/* 시트는 sheet-proxy를 통해서만 읽는다 (v78).
-   웹게시는 인증이 없어 URL만 알면 누구나 전량을 받는다 — 그래서 서비스 계정 경로로 옮겼다.
-   구글 자격증명은 sheet-proxy·sheet-write 둘만 갖는다. */
-/* 함수 «슬러그»는 표시 이름과 다를 수 있다 — 콘솔에서 만든 기본 이름(quick-responder)이
-   URL 로 굳고 표시 이름만 바뀐 상태가 실제로 있다. assets/core.js:163 도 두 슬러그를 시도한다. */
-const PROXY_SLUGS = (Deno.env.get("SHEET_PROXY_SLUG") ?? "sheet-proxy,quick-responder")
-  .split(",").map((s) => s.trim()).filter(Boolean);
-let PROXY_OK: string | null = null;
+/* v82 — 구글시트 은퇴. 데이터는 이제 CSV 업로드로 Supabase 에 들어온다(/upload/).
+   여기서도 시트(sheet-proxy)가 아니라 **같은 Supabase 표를 읽는다** — 안 옮기면 봇은
+   마지막 시트 상태에서 영원히 멈춘 답을 한다.
+
+   파서(hr.js)는 CSV 텍스트를 받으므로, 표를 «시트 모양 CSV»로 되살려 돌려준다.
+   그래서 파서·bot_cache·라우팅·분석은 한 줄도 안 바뀐다 — 대시보드 이관과 같은 수법이다.
+
+   표가 두 종류다 (CLAUDE.md 「데이터 출처가 둘이다」):
+     mirror — sheet_wk·sheet_inst. 컬럼이 snake_case 라 시트 머리글을 모른다.
+              머리글은 sheet_colmap(tbl·col·headers·ord)에서 되살린다 — 여기 적으면
+              스펙의 네 번째 사본이 된다(제2원칙). 행 순서는 src_row.
+     import — 교육·인원·휴가·CIP. 컬럼 이름이 시트 머리글 그대로라 그대로 내보낸다.
+              정렬 열 이름에 점·공백이 들면 PostgREST order= 구문이 깨진다(core.js 와
+              같은 규칙 — «No.» 실사고). tests/t-botdb.mjs 가 이 복원이 원본 CSV 와
+              같은 파싱 결과를 내는지 대조한다. */
+/* ---------- 순수 복원부 ---------- */
+const CSV_SKIP = new Set(["id", "created_at", "imported_at", "src_row", "synced_at", "extra"]);
+const DB_OF_GID: Record<string, { tbl: string; kind: "mirror" | "import" }> = {
+  "646668307":  { tbl: "sheet_wk",      kind: "mirror" },
+  "891608329":  { tbl: "sheet_inst",    kind: "mirror" },
+  "0":          { tbl: "sheet_edu",     kind: "import" },
+  "1213453343": { tbl: "sheet_roster",  kind: "import" },
+  "262805841":  { tbl: "sheet_leave",   kind: "import" },
+  "2123129719": { tbl: "sheet_cip_f11", kind: "import" },
+  "1999732389": { tbl: "sheet_cip_f16", kind: "import" },
+};
+function csvCell(v: unknown) {
+  const s = v == null ? "" : String(v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+// 표 행(객체 배열) → 시트 모양 CSV. head = 머리글 행, cols = 각 머리글이 읽을 컬럼.
+function rowsToCsv(head: string[], cols: string[], rows: Record<string, unknown>[]) {
+  const out = [head.map(csvCell).join(",")];
+  for (const o of rows) out.push(cols.map((c) => csvCell(o[c])).join(","));
+  return out.join("\n");
+}
+function importOrderCol(keys: string[]) {
+  const safe = keys.filter((k) => /^[A-Za-z0-9_가-힣]+$/.test(k));
+  return ["id", "src_row", "No", "no", "NO"].find((p) => safe.includes(p)) ?? safe[0] ?? null;
+}
+/* ---------- 순수 복원부 끝 ---------- */
 
 async function fetchCsv(gid: string) {
-  const url = Deno.env.get("SUPABASE_URL");
-  const sec = Deno.env.get("SYNC_SECRET");
-  if (!url) throw new Error("CONFIG: SUPABASE_URL 미설정");
-  if (!sec) throw new Error("CONFIG: SYNC_SECRET 미설정 — sheet-proxy 서버 호출에 필요하다");
-  const key = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const t = Date.now();
-  let last = "";
-  for (const slug of (PROXY_OK ? [PROXY_OK] : PROXY_SLUGS)) {
-    const r = await fetch(`${url}/functions/v1/${slug}?gid=${gid}`, {
-      headers: { Authorization: `Bearer ${key}`, "x-sync-secret": sec },
-      signal: AbortSignal.timeout(60000), // 웹게시 20초 → API 읽기가 더 느리다
-    });
-    if (r.status === 404) { last = `404 ${slug}`; continue; }
-    if (!r.ok) throw new Error(`SHEET_FETCH ${r.status}`);
-    PROXY_OK = slug;
-    const text = await r.text();
-    return { text, bytes: text.length, ms: Date.now() - t };
+  const D = DB_OF_GID[gid];
+  if (!D) throw new Error("NO_TABLE gid=" + gid);
+  const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+  let head: string[], cols: string[], ord: string | null;
+  if (D.kind === "mirror") {
+    const cm = await svc.from("sheet_colmap").select("col,headers,ord")
+      .eq("tbl", D.tbl.replace("sheet_", "")).order("ord", { ascending: true });
+    if (cm.error) throw new Error("COLMAP " + cm.error.message);
+    if (!cm.data?.length) throw new Error("COLMAP_MISSING " + D.tbl);
+    cols = cm.data.map((c: any) => c.col);
+    head = cm.data.map((c: any) => (c.headers ?? [])[0] ?? c.col);   // 머리글 = 첫 별칭 (core.js dbRows 와 동일)
+    ord = "src_row";
+  } else {
+    const probe = await svc.from(D.tbl).select("*").limit(1);
+    if (probe.error) throw new Error("READ " + probe.error.message);
+    if (!probe.data?.length) throw new Error("EMPTY " + D.tbl);
+    cols = Object.keys(probe.data[0]).filter((k) => !CSV_SKIP.has(k));
+    head = cols;
+    ord = importOrderCol(Object.keys(probe.data[0]));
   }
-  throw new Error(`SHEET_PROXY_NOT_FOUND: ${PROXY_SLUGS.join("/")} (${last})`);
+
+  /* 페이지네이션 — 「요청한 만큼 안 오면 끝」으로 판정하지 않는다. PostgREST 행수 상한은
+     프로젝트 설정이라, 상한에 걸린 것을 완료로 착각하면 잘린 데이터로 답하게 된다. */
+  const all: Record<string, unknown>[] = [];
+  const STEP = 5000;
+  for (let from = 0, guard = 0; guard < 400; guard++) {
+    let q = svc.from(D.tbl).select("*");
+    if (ord) q = q.order(ord, { ascending: true });
+    const r = await q.range(from, from + STEP - 1);
+    if (r.error) throw new Error("READ " + r.error.message);
+    const n = r.data?.length ?? 0;
+    if (!n) break;
+    for (const o of r.data) all.push(o);
+    from += n;
+  }
+  if (!all.length) throw new Error("EMPTY " + D.tbl);
+  const text = rowsToCsv(head, cols, all);
+  return { text, bytes: text.length, ms: Date.now() - t };
 }
 
 const DIGEST: Record<string, (csv: string, now: Date) => unknown> = {

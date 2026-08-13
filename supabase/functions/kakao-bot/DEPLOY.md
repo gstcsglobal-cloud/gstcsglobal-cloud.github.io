@@ -1,4 +1,24 @@
-# kakao-bot 재배포 — 웹 챗봇 통합 버전
+# kakao-bot 재배포
+
+## v82 (2026-08-13) — 데이터 출처를 구글시트 → Supabase 로
+
+구글시트가 은퇴했다(신규 데이터는 `/upload/` CSV 업로드). 봇이 계속 시트를 읽으면
+**마지막 시트 상태에서 영원히 멈춘 답**을 하므로, `fetchCsv`가 시트(sheet-proxy) 대신
+같은 Supabase 표를 읽어 «시트 모양 CSV»로 되살린다. 파서(hr.js)·캐시·라우팅은 무수정 —
+**이번 배포는 `index.ts` 하나만 교체하면 된다** (hr.js 변경 없음).
+
+- 배포: Edge Functions → kakao-bot → `index.ts` 전체 교체 → Deploy
+- Secret: 추가·삭제 없음. `SHEET_PUB_URL`·`SHEET_PROXY_SLUG`는 더 이상 읽지 않지만
+  지워도 되고 놔둬도 된다.
+- **sync-kakao-bot cron 은 절대 끄지 말 것** — 이제 DB→bot_cache 갱신의 유일한 경로다.
+- 배포 후 확인: `?op=sync` 한 번 돌리고(아래 5번 방식) 카톡에서
+  "올해 F16 고장 TOP3" → 대시보드 고장분석 수치와 일치하면 성공.
+- 검증 근거: `tests/t-botdb.mjs` — 원본 CSV 파싱과 표 복원 CSV 파싱을 레코드 단위로
+  대조 (수선 17,091 · 설치 1,490 · CIP 4,700 전부 일치).
+
+---
+
+# (이전) 웹 챗봇 통합 버전
 
 이 폴더의 `index.ts` + `hr.js`는 **현재 배포하신 kakao-bot(2026-08-11 전달본) 기준 수정본**입니다.
 카카오톡 동작은 그대로 두고, 두 가지가 더해졌습니다:
