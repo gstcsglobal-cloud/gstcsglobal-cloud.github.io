@@ -1080,7 +1080,9 @@ GST.ORG = {
     /* '국내' 를 빼먹으면 안 된다 — 실측 운영단위에 '국내기타 SCRUBBER' 가 있다.
        반대편 '해외 기타 SCRUBBER' 는 «해외» 글자로 잡히는데 국내만 안 잡혀,
        그 행이 «구분 미상»이 되어 국내 필터에서 조용히 빠졌다. 두 어휘를 대칭으로 둔다. */
-    if(/^SEC|^SDC|KOREA|한국|국내|이천|청주/.test(u)) return '국내';
+    /* 인원현황 새 양식의 「지역」·「고객사」 어휘. 국내 사업장은 도시명으로 들어온다. */
+    if(/^SEC|^PSEC|^KSEC|^SDC|^SK\b|KOREA|한국|국내|이천|청주|화성|평택|기흥|탕정|천안/.test(u)) return '국내';
+    if(/TAICHUNG|LINKOU|TAINAN|TONGLUO|HSINCHU|SINCHU|KAOHSIUNG/.test(u)) return '해외';
     if(/^GST|해외/.test(u)) return '해외';
     /* 사업부명이 아니라 «국가»가 그대로 들어오는 자료가 있다(옛 설치현황 Country = 'TAIWAN').
        국가를 알면 구분도 아는 것이므로 여기서 되돌린다 — 이 줄이 없으면 그런 행이 전부
@@ -1165,7 +1167,12 @@ GST.ORG = {
     /* 한 회사가 한글·영문 두 이름으로 들어온다 — 합치지 않으면 사이드바에 같은 회사가
        두 번 뜨고(실측 삼성 6,315+1,205 · 하이닉스 336+258) 필터를 걸면 절반만 잡힌다.
        디스플레이를 먼저 본다 — '삼성디스플레이' 는 아래 삼성 규칙에도 걸리기 때문이다. */
-    if(/삼성디스플레이|SAMSUNG\s*DISPLAY/.test(u)) return 'SAMSUNG DISPLAY';
+    /* 인원현황 새 양식은 고객사를 약어로 쓴다 — SEC·PSEC·KSEC 는 지역이 다를 뿐
+       전부 삼성전자다(실측: 화성 155 · 평택 100 · 기흥 98). 지역은 단지 축으로 간다.
+       ^ 를 붙여 다른 낱말 안에 든 SEC(예: SECOND)를 잡지 않게 한다. */
+    if(/^SDC\b|삼성디스플레이|SAMSUNG\s*DISPLAY/.test(u)) return 'SAMSUNG DISPLAY';
+    if(/^(P|K)?SEC\b/.test(u)) return 'SAMSUNG';
+    if(/^SK\b/.test(u)) return 'SK HYNIX';
     if(/삼성|SAMSUNG/.test(u)) return 'SAMSUNG';
     if(/하이닉스|HYNIX/.test(u)) return 'SK HYNIX';
     /* 한 브랜드가 도시·법인별로 갈라져 들어오는 것들. Customer 축은 «브랜드»이고

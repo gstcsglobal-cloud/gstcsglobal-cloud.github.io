@@ -840,41 +840,64 @@ function workdaysBetween(st,en){
 }
 // ===== 인원현황 파싱 (헤더 행 자동 탐지) =====
 function parseRoster(rows){
+  /* 인원현황은 양식이 두 번 바뀌었다 — 옛 양식(Work Place·Date of entry…)과
+     새 양식(19열: 인사·담당구분·고객사·지역·팀·단지·라인·입사일·퇴사일).
+     둘 다 받는다. 한쪽만 읽게 만들면 «업로드 전후로 화면이 죽는» 구간이 생긴다. */
+  const idx=(h,names)=>{ for(const n of names){ const i=h.findIndex(x=>x===n); if(i>=0)return i; } return -1; };
+  const pre=(h,names)=>{ for(const n of names){ const i=h.findIndex(x=>x.startsWith(n)); if(i>=0)return i; } return -1; };
   let hi=-1;
   for(let i=0;i<Math.min(rows.length,8);i++){
     const h=(rows[i]||[]).map(x=>String(x||'').trim().toLowerCase());
-    if(h.includes('id')&&h.some(x=>x.includes('work place'))){hi=i;break;}
+    // 두 양식 공통으로 ID 가 있고, 그 옆에 근무지(옛) 또는 입사일/라인(새)이 있다
+    if(h.includes('id')&&(h.some(x=>x.includes('work place'))||h.includes('입사일')||h.includes('라인'))){hi=i;break;}
   }
   if(hi<0)return [];
   const h=rows[hi].map(x=>String(x||'').trim().toLowerCase());
-  const iWp=h.findIndex(x=>x==='work place'), iIn=h.findIndex(x=>x.startsWith('date of entry')),
-        iOut=h.findIndex(x=>x.startsWith('resignation')), iOn=h.findIndex(x=>x.includes('현장'));
-  const iNm=h.findIndex(x=>x.includes('name')&&x.includes('영문'));
-  const iOrg=h.findIndex(x=>x.includes('조직도'));   // 조직도 위치 — '주재원' 표기
-  const iId=h.findIndex(x=>x==='id');                // 사원번호 — 휴가현황 매칭용
-  // 국내/해외 판정 근거 — 인원현황에는 국가 열이 없다. 중문명·Dept·사번으로 가른다(GST.ORG.emp)
-  const iCn=h.findIndex(x=>x.includes('name')&&x.includes('중문'));
-  const iDept=h.findIndex(x=>x.startsWith('dept'));
-  const iTeam=h.findIndex(x=>x==='팀');   // 새 인원현황 양식(19열). 옛 양식엔 없어 -1 → 빈 값
-  return rows.slice(hi+1).map(r=>({
-    id:String(iId>=0?(r[iId]||''):'').trim(),
-    region:GST.ORG.emp({cn:iCn>=0?r[iCn]:'', dept:iDept>=0?r[iDept]:'',
-                        id:iId>=0?r[iId]:'', wp:r[iWp]}),
-    // 국가는 근무지에서 푼다. 국내 인원의 Work Place 는 'P1'·'청주' 처럼 사이트 코드라
-    // 국가로 풀리지 않으므로, 구분이 국내면 KOREA 로 확정한다.
-    country:(GST.ORG.emp({cn:iCn>=0?r[iCn]:'',dept:iDept>=0?r[iDept]:'',id:iId>=0?r[iId]:'',wp:r[iWp]})==='국내')
-            ?'KOREA':GST.ORG.country(r[iWp]),
-    site:siteKey(r[iWp]),
-    custB:custBase(r[iWp]), fab:fabOf(r[iWp]), wp:String(r[iWp]||'').trim(),
-    team:String(iTeam>=0?(r[iTeam]||''):'').trim(),
-    name:String(iNm>=0?(r[iNm]||''):(r[2]||'')).trim(),
-    join:iIn>=0?pd(r[iIn]):null,
-    quit:iOut>=0?pd(r[iOut]):null,
-    onsite:String(iOn>=0?(r[iOn]||''):'').trim().toUpperCase()==='O',
-    expat:/주재원/.test(String(iOrg>=0?(r[iOrg]||''):'')),
-    // 대시보드는 스크러버 전용 — 조직도상 Chiller 인원은 전 지표에서 제외
-    chiller:/CHILLER/i.test(String(iOrg>=0?(r[iOrg]||''):''))
-  })).filter(x=>x.join&&!x.chiller);
+  const iId=idx(h,['id']);
+  const iNm=idx(h,['이름(영문)'])>=0?idx(h,['이름(영문)']):h.findIndex(x=>x.includes('name')&&x.includes('영문'));
+  const iCn=idx(h,['이름(중문)'])>=0?idx(h,['이름(중문)']):h.findIndex(x=>x.includes('name')&&x.includes('중문'));
+  const iIn=idx(h,['입사일'])>=0?idx(h,['입사일']):pre(h,['date of entry']);
+  const iOut=idx(h,['퇴사일'])>=0?idx(h,['퇴사일']):pre(h,['resignation']);
+  const iOn=h.findIndex(x=>x.includes('현장'));
+  const iHr=idx(h,['인사']);                 // 새 양식: 재직·퇴직·해외출장·휴직
+  const iDuty=idx(h,['담당구분']);           // 새 양식: Scrubber·Chiller (옛 조직도 문자열 대체)
+  const iCust=idx(h,['고객사','사업부']);
+  const iArea=idx(h,['지역']);
+  const iTeam=idx(h,['팀']);
+  const iCamp=idx(h,['단지']);
+  const iLine=idx(h,['라인']);
+  const iWp=h.findIndex(x=>x==='work place');
+  const iOrg=h.findIndex(x=>x.includes('조직도'));
+  const iRole=idx(h,['업무/직책']);
+  const iDept=pre(h,['dept']);
+  const g=(r,i)=>String(i>=0?(r[i]||''):'').trim();
+  return rows.slice(hi+1).map(r=>{
+    const cust=g(r,iCust), area=g(r,iArea), line=g(r,iLine), camp=g(r,iCamp), wpOld=g(r,iWp);
+    /* 구분은 새 양식이면 고객사·지역이 바로 말해 준다(SEC=국내 · Taichung=해외).
+       옛 양식에는 그 열이 없어 중문명·Dept·사번 다수결로 갈랐다 — 그 길도 남긴다. */
+    const region=GST.ORG.region(cust)||GST.ORG.region(area)
+      ||GST.ORG.emp({cn:g(r,iCn),dept:g(r,iDept),id:g(r,iId),wp:wpOld||line});
+    // 근무지 — 옛 양식은 Work Place 한 칸이 라인 노릇을 했다. 새 양식은 라인 열이 따로 있다.
+    const wp=line||wpOld;
+    const org=g(r,iOrg), role=g(r,iRole), duty=g(r,iDuty), hrst=g(r,iHr);
+    const quitD=iOut>=0?pd(r[iOut]):null;
+    return {
+      id:g(r,iId), region:region,
+      country:(region==='국내')?'KOREA':(GST.ORG.country(area)||GST.ORG.country(wp)),
+      site:siteKey(wpOld||camp||line),
+      custB:cust?GST.ORG.customer(cust):custBase(wpOld),
+      fab:fabOf(line||wpOld), wp:wp, team:g(r,iTeam),
+      campus:GST.ORG.campus(camp, line, area||cust),
+      name:g(r,iNm)||String(r[2]||'').trim(),
+      join:iIn>=0?pd(r[iIn]):null,
+      // 퇴사 판정: 퇴사일이 있거나, 새 양식의 「인사」가 퇴직이면 퇴사다
+      quit:quitD||(/퇴직|퇴사/.test(hrst)?new Date(0):null),
+      onsite:g(r,iOn).toUpperCase()==='O',
+      expat:/주재원/.test(org+' '+role+' '+line),
+      // 대시보드는 스크러버 전용 — Chiller 인원은 전 지표에서 제외
+      chiller:duty?/CHILLER/i.test(duty):/CHILLER/i.test(org)
+    };
+  }).filter(x=>x.join&&!x.chiller);
 }
 // ===== 휴가현황 파싱 — 두 형식 지원 =====
 // A) Leave & Overtime Report (일 단위: Work Place/Date/휴가 시간 합계)
