@@ -1265,7 +1265,27 @@ function render(){
   const okCF=(cb,fb)=>(!F.customer||cb===F.customer)&&(!F.country||siteCountry(fb||cb)===F.country);
   /* 인원은 근무지 어휘로 국가를 못 맞힌다(국내 Work Place 는 'P1'·'A3'·'청주' 처럼 사이트 코드다).
      그래서 행에 실어둔 region(중문명·Dept·사번 다수결)을 쓴다. */
-  const okP=p=>(!F.customer||p.custB===F.customer)&&lineOk(p.wp)
+  /* 인원현황에는 운영단위 열이 없다. 그래서 «운영단위 → 그 운영단위가 쓰는 단지·라인 집합»을
+     실적·설치에서 만들어 두고, 사람의 단지나 라인이 그 집합에 들면 그 운영단위 사람으로 본다.
+     사용자 확정: 단지·라인이 둘 다 비어 있는 사람은 뺀다 — 어차피 현장(O) 인원만 센다.
+     ⚠ 이어 붙이는 것이지 «없으면 통과»가 아니다. 통과시키면 운영단위를 걸어도 인원이
+       안 줄어 카드끼리 모집단이 갈린다. */
+  const OP_SETS=(function(){
+    const m={};
+    const add=(op,ca,li)=>{ op=String(op||'').trim(); if(!op)return;
+      const e=m[op]||(m[op]={ca:new Set(),li:new Set()});
+      if(ca)e.ca.add(ca); if(li)e.li.add(li); };
+    WK.forEach(x=>add(x.op, x.campus, x.line));
+    INST.slice(HI_INST+1).forEach(r=>add(r[CI.country],
+      GST.ORG.campus(r[CI.location], r[CI.fab], r[CI.country]), String(r[CI.fab]||'').trim()));
+    return m;
+  })();
+  const opPerson=p=>{
+    if(!F.op)return true;
+    const e=OP_SETS[F.op]; if(!e)return false;
+    return !!((p.campus&&e.ca.has(p.campus))||(p.wp&&e.li.has(p.wp)));
+  };
+  const okP=p=>opPerson(p)&&(!F.customer||p.custB===F.customer)&&lineOk(p.wp)
     &&(!F.team||p.team===F.team)
     &&(!F.region||p.region===F.region)
     &&(!F.country||(p.country||siteCountry(p.fab||p.custB))===F.country);
