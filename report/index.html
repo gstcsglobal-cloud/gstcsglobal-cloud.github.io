@@ -504,9 +504,9 @@ let LANG='ko', CHARTS={}, HR=[], WK=[], INST=[], ROSTER=[], LEAVE=[], CIP=[], AB
 /* 기본 필터(구분·고객사·단지·라인·기간)의 «원본»은 GST.filters 다(v90).
    여기 F 는 그 값을 복사해 두는 곳 — 이 페이지의 술어 네 벌(entOk·fINST·okCF·okP)과
    QBR 표·PPT 수집기가 전부 F 를 보고 있어, 원본을 옮기되 읽는 쪽은 그대로 뒀다. */
-const F={region:'',country:'',customer:'',campus:'',lineRaw:'',team:'',dtFrom:'',dtTo:''};
+const F={region:'',op:'',country:'',customer:'',campus:'',lineRaw:'',team:'',dtFrom:'',dtTo:''};
 function syncCommon(){ const G=GST.filters.F;
-  F.region=G.region; F.customer=G.customer; F.campus=G.campus; F.lineRaw=G.line; F.team=G.team;
+  F.region=G.region; F.op=G.op; F.customer=G.customer; F.campus=G.campus; F.lineRaw=G.line; F.team=G.team;
   F.dtFrom=G.dtFrom; F.dtTo=G.dtTo; }
 function saveLines(){}
 // fab/고객사 문자열 → 라인 키. 전 데이터셋(실적·설치·인원·휴가·ABP)에서 같은 규칙을 쓴다.
@@ -559,6 +559,7 @@ function updateFiltBadge(){
   const b=document.getElementById('filtBadge'); if(!b)return;
   const P=[];
   if(F.region)P.push(t('sl_region')+': '+F.region);
+  if(F.op)P.push('운영단위: '+F.op);
   if(F.country)P.push(t('sl_country')+': '+F.country);
   if(F.customer)P.push(t('sl_customer')+': '+F.customer);
   if(F.campus)P.push('단지: '+F.campus);
@@ -1152,18 +1153,20 @@ function fillFilters(){
      실적과 설치 두 자료를 합쳐 넘긴다 — 한쪽만 주면 그쪽에 없는 값이 목록에서 조용히 빠진다. */
   GST.filters.mount({ page:'report', rows:function(){
       const out=[];
-      WK.forEach(function(x){ out.push({region:x.region,customer:x.custB,campus:x.campus,line:x.line}); });
+      WK.forEach(function(x){ out.push({region:x.region,op:x.op,customer:x.custB,campus:x.campus,line:x.line}); });
       INST.slice(HI_INST+1).forEach(function(r){
-        out.push({ region:GST.ORG.region(r[CI.country]), customer:custBase(r[CI.customer]),
+        out.push({ region:GST.ORG.region(r[CI.country]), op:String(r[CI.country]||'').trim(), customer:custBase(r[CI.customer]),
                    campus:GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country]), line:String(r[CI.fab]||'').trim() });
       });
       /* 인원은 «구분»만 보탠다. 고객사·단지·라인 칸은 비워서 넘긴다 —
          인원현황에는 그 열이 없어 근무지가 대신 들어가면, 고객사 목록에 A3·P1·라인장이
          뜨던 그 사고가 그대로 재현된다(빈 값은 목록에 안 오른다). */
-      ROSTER.forEach(function(p){ out.push({region:p.region,customer:'',campus:'',line:'',team:p.team}); });
+      // 인원현황에는 운영단위 열이 없다 — op 를 비워 넘기고 loose 로 «거르지 않음» 처리한다
+      ROSTER.forEach(function(p){ out.push({region:p.region,op:'',customer:'',campus:'',line:'',team:p.team}); });
       return out;
     }, onChange:function(){ syncCommon(); render(); },
-    get:{ region:x=>x.region, customer:x=>x.customer, campus:x=>x.campus, line:x=>x.line, team:x=>x.team },
+    get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer, campus:x=>x.campus, line:x=>x.line, team:x=>x.team },
+    loose:{ op:true },   // 인원현황엔 운영단위가 없다 — 그 축으로 인원을 지우지 않는다
     drop:{ line:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
   syncCommon();
 }
@@ -1192,6 +1195,7 @@ function render(){
   window._PPT={asOf:asOf.toISOString().slice(0,10),wk:'W'+isoW(asOf).slice(-2)};
   const from=F.dtFrom?pd(F.dtFrom):null;
   const entOk=x=>(!F.region||(x.region||GST.ORG.region(x.op||''))===F.region)
+    &&(!F.op||String(x.op||'').trim()===F.op)
     &&(!F.country||x.country===F.country)&&(!F.customer||x.custB===F.customer)
     &&(!F.campus||x.campus===F.campus)&&lineOk(x.line);
   // QBR 매크로 정합: 작업내역은 사이트 키 행만 집계(라인 미기재·기타 행 제외) — 매크로 NarrowUp과 동일
@@ -1216,6 +1220,7 @@ function render(){
   const fINST=INST.filter(r=>{
     const c=GST.ORG.country(r[CI.country])||guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();
     if(F.region&&GST.ORG.region(r[CI.country])!==F.region)return false;
+    if(F.op&&String(r[CI.country]||'').trim()!==F.op)return false;
     if(F.country&&c!==F.country)return false;
     if(F.customer&&custBase(r[CI.customer])!==F.customer)return false;
     if(F.campus&&GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country])!==F.campus)return false;

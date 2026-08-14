@@ -2152,9 +2152,9 @@ GST.startAutoRefresh = function(min){
 GST.FILT_DROP_ORG = /^(라인장|단지장|운영관리|세정|정산|주재원|국내|해외|기타|미정|TRANSLATOR|CHILLER|SCRUBBER|OFFICE|통합|REPAIR CENTER|서비스자재)$/i;
 
 GST.filters = (function(){
-  const F = { region:'', customer:'', campus:'', line:'', team:'', dtFrom:'', dtTo:'' };
+  const F = { region:'', op:'', customer:'', campus:'', line:'', team:'', dtFrom:'', dtTo:'' };
   let CFG = null, KEY = '';
-  const L = { region:'구분', customer:'고객사', campus:'단지', line:'라인', team:'팀', period:'기간' };
+  const L = { region:'구분', op:'운영단위', customer:'고객사', campus:'단지', line:'라인', team:'팀', period:'기간' };
   const val = (g, x) => { try{ const v = g ? g(x) : ''; return v==null?'':String(v).trim(); }catch(e){ return ''; } };
   const dstr = v => {
     if(!v) return '';
@@ -2186,11 +2186,13 @@ GST.filters = (function(){
      자기 자신은 빼고 본다 — 안 그러면 한 번 고른 값 말고는 목록에서 사라져 되돌릴 수 없다. */
   function passExcept(x, skip){
     const g = CFG.get || {};
-    const chk = ['region','customer','campus','line','team'];
+    const chk = ['region','op','customer','campus','line','team'];
     for(let i=0;i<chk.length;i++){
       const k = chk[i];
       if(k===skip || !F[k]) continue;
-      if(val(g[k], x) !== F[k]) return false;
+      const v = val(g[k], x);
+      if(!v){ if(CFG.loose && CFG.loose[k]) continue; return false; }
+      if(v !== F[k]) return false;
     }
     return true;
   }
@@ -2213,7 +2215,7 @@ GST.filters = (function(){
 
   function refresh(){
     if(!CFG) return;
-    ['region','customer','campus','line','team'].forEach(function(k){
+    ['region','op','customer','campus','line','team'].forEach(function(k){
       fill('gf-'+k, k, opts(k, function(x){ return passExcept(x, k); }));
     });
     const a=document.getElementById('gf-from'), b=document.getElementById('gf-to');
@@ -2221,7 +2223,7 @@ GST.filters = (function(){
   }
 
   function read(changed){
-    ['region','customer','campus','line','team'].forEach(function(k){
+    ['region','op','customer','campus','line','team'].forEach(function(k){
       const el=document.getElementById('gf-'+k); if(el) F[k]=el.value;
     });
     const a=document.getElementById('gf-from'), b=document.getElementById('gf-to');
@@ -2244,12 +2246,24 @@ GST.filters = (function(){
     const sel = (id,label) => '<div class="slicer"><div class="lbl">'+label+'</div>'
       + '<select id="'+id+'" onchange="GST.filters._on(\''+id.slice(3)+'\')"></select></div>';
     return '<div class="gf-base">'
-      + sel('gf-region', L.region) + sel('gf-customer', L.customer)
+      + sel('gf-region', L.region) + sel('gf-op', L.op) + sel('gf-customer', L.customer)
       + sel('gf-campus', L.campus) + sel('gf-line', L.line) + sel('gf-team', L.team)
       + '<div class="slicer"><div class="lbl">'+L.period+'</div>'
       + '<input type="date" id="gf-from" class="dt-input" onchange="GST.filters._on()"> ~ '
       + '<input type="date" id="gf-to" class="dt-input" onchange="GST.filters._on()"></div>'
       + '</div>';
+  }
+
+  /* «그 축이 아예 없는 자료»는 그 축으로 거르지 않는다. 예: 운영단위는 실적·설치에만 있고
+     인원현황에는 없다(사업부 열이 있으나 값이 고객사와 같다). 그대로 거르면 운영단위를
+     고르는 순간 인원이 통째로 0 이 된다 — «모르는 것»과 «아닌 것»은 다르다.
+     CFG.loose 에 적은 축만 이렇게 다룬다. 아무 축에나 적용하면 미상 행이 전 필터를 통과해
+     숫자가 부풀어 오른다. */
+  function axOk(key, x){
+    const g = CFG.get || {};
+    const v = val(g[key], x);
+    if(!v) return !!(CFG.loose && CFG.loose[key]);
+    return v === F[key];
   }
 
   return {
@@ -2278,6 +2292,7 @@ GST.filters = (function(){
       if(!CFG) return true;
       const g = CFG.get || {};
       if(F.region   && val(g.region,x)   !== F.region)   return false;
+      if(F.op       && !axOk('op', x))                   return false;
       if(F.customer && val(g.customer,x) !== F.customer) return false;
       if(F.campus   && val(g.campus,x)   !== F.campus)   return false;
       if(F.line     && val(g.line,x)     !== F.line)     return false;
@@ -2298,6 +2313,7 @@ GST.filters = (function(){
     active: function(){
       const out=[];
       if(F.region)   out.push({k:'region',   label:L.region,   value:F.region});
+      if(F.op)       out.push({k:'op',       label:L.op,       value:F.op});
       if(F.customer) out.push({k:'customer', label:L.customer, value:F.customer});
       if(F.campus)   out.push({k:'campus',   label:L.campus,   value:F.campus});
       if(F.line)     out.push({k:'line',     label:L.line,     value:F.line});
