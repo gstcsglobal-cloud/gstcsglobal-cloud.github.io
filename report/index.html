@@ -1279,6 +1279,31 @@ function render(){
   /* 단지 조건이 여기 빠져 있었다 — 실적(entOk)·설치(fINST)에는 넣고 인원만 안 넣어서,
      단지를 골라도 인원이 안 줄었다(단지=PSMC 인데 재직 47명). 같은 모집단을 서로 다른
      술어로 거르면 카드끼리 숫자가 갈린다. */
+  /* CIP·ABP 에는 운영단위 열이 없다. 그런데 그 자료는 대만 F11·F16 뿐이라, 다른 운영단위를
+     골라도 그대로 남았다 — HEFEI 를 걸었는데 CIP 4,440 이 뜨던 것이 이것이다.
+     설비가 같으니 설치현황에서 «라인 → 운영단위»를 끌어와 판정한다(추론이 아니라 조인이다). */
+  const LINE2OP=(function(){ const m={};
+    INST.slice(HI_INST+1).forEach(r=>{
+      const f=String(r[CI.fab]||'').trim(), o=String(r[CI.country]||'').trim();
+      if(f&&o){ (m[f]=m[f]||new Set()).add(o); } });
+    return m; })();
+  /* 그 자료가 «어느 운영단위의 것인지»를 라인으로 판정. 못 찾으면 해당 없음(0)이다 —
+     통과시키면 필터를 걸어도 안 줄어 카드끼리 모집단이 갈린다. */
+  const okCIP=x=>{
+    const f=String(x.fab||'').trim();
+    if(F.op){ const st=LINE2OP[f]; if(!st||!st.has(F.op))return false; }
+    if(F.region && GST.ORG.region(GST.ORG.country(f)||'')!==F.region) return false;
+    if(F.campus && f!==F.campus) return false;
+    if(F.lineRaw && f!==F.lineRaw) return false;
+    return okCF(x.custB,x.fab);
+  };
+  // ABP 는 대만 전용 집계다 — 대만이 아닌 운영단위·구분을 고르면 해당 없음
+  const abpOn=()=>{
+    if(F.op && GST.ORG.country(F.op)!=='TAIWAN') return false;
+    if(F.region && F.region!==GST.ORG.REGION_OS) return false;
+    if(F.campus && GST.ORG.country(F.campus)!=='TAIWAN') return false;
+    return true;
+  };
   const okP=p=>opPerson(p)&&(!F.customer||p.custB===F.customer)
     &&(!F.campus||p.campus===F.campus)&&lineOk(p.wp)
     &&(!F.team||p.team===F.team)
@@ -1289,7 +1314,7 @@ function render(){
      바뀌었으므로(v90) 여기도 같은 상태를 본다 — 두 곳이 다른 어휘를 쓰면 카드끼리 숫자가 갈린다. */
   const ftKey=x=>lineKeyOf(x.fab,x.custB||x.customer);
   const ftLineOk=x=>lineOk(x.line);
-  const abpSel=bkt=>{ if(!bkt)return 0;
+  const abpSel=bkt=>{ if(!bkt||!abpOn())return 0;
     /* ABP 는 라인 원본값이 아니라 7키(F16·PSMC…)로 집계돼 있다. 라인을 고르면 그 키로
        환산해 고르되, 환산이 안 되는 국내 라인은 0 이 아니라 «해당 없음»으로 둔다. */
     if(F.lineRaw){ const k=lineKeyOf(F.lineRaw,F.lineRaw);
@@ -1649,7 +1674,7 @@ function render(){
 
   // ===== CIP 진행율 (대상 = Not yet + 완료일 · 완료 = 완료일 · 항목별 1행 날짜부터 대상 산입) =====
   {
-    const fCIP=CIP.filter(x=>okCF(x.custB,x.fab));
+    const fCIP=CIP.filter(okCIP);
     const {P,labels}=PU('cCip');
     destroyMk('cCip');
     if(fCIP.length){
@@ -2025,7 +2050,7 @@ function render(){
       const six=x=>((pp.end-x.join)/MS)>=182; const lv1=a.filter(x=>!six(x)),lv2=a.filter(six);
       const dOf=(x,k)=>{const e=eduOf(x);return e&&e[k]&&e[k]<=pp.end;};
       return {T:a.length,D:lv1.filter(x=>dOf(x,'bdate')).length+lv2.filter(x=>dOf(x,'vdate')).length};};
-    const fCIPq=CIP.filter(x=>okCF(x.custB,x.fab));
+    const fCIPq=CIP.filter(okCIP);
     const cipT=MP.map(p=>fCIPq.filter(x=>!x.ap||x.ap<=p.end).length);
     const cipD=MP.map(p=>fCIPq.filter(x=>(!x.ap||x.ap<=p.end)&&x.done&&x.done<=p.end).length);
     const lsOf=p=>fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
@@ -2113,7 +2138,7 @@ function render(){
               {k:x=>x.date?keyOfDate(x.date,PERIOD):'',t:t('sl_period')}],
         measures:[{k:'d',t:t('att_l'),agg:'sum',f:'days'},{k:'cnt',t:t('ft_total'),agg:'count'}],
         detailCols:[{k:'date',t:t('sl_period')},{k:'fab',t:t('sl_line')},{k:'days',t:t('att_l')}] },
-      { k:'cip', t:t('ch_cip'), rows:()=>CIP.filter(x=>okCF(x.custB,x.fab)), date:'done',
+      { k:'cip', t:t('ch_cip'), rows:()=>CIP.filter(okCIP), date:'done',
         dims:[{k:'fab',t:t('sl_line')},{k:'custB',t:t('sl_customer')},{k:'item',t:t('cip_t')},
               {k:x=>x.done?t('cip_d'):t('cip_t'),t:t('cip_p')}],
         measures:[{k:'cnt',t:t('cip_t'),agg:'count'},{k:'done',t:t('cip_d'),agg:'sum',f:x=>x.done?1:0}],
