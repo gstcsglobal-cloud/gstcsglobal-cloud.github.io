@@ -1209,10 +1209,13 @@ function render(){
   // 라인 열만으로 판정하면 PSMC처럼 라인 표기가 다른 사이트 행이 누락된다 → 라인+고객사 통합 판정
   /* 예전에는 대만 사이트 어휘만 통과시켰다(F16·PSMC·WINBOND…). 국내·중국·미국 실적이
      들어온 뒤로는 그 행들이 집계에서 통째로 빠진다 → 사이트 키가 잡히거나 국내 실적이면 통과. */
+  /* 행 내용만으로 정해지는 판정이라 필터가 바뀌어도 답이 같다 → 행에 한 번만 새긴다.
+     실적 24만 행에 대해 렌더마다 upk+정규식을 두 번씩 돌리던 자리다. */
   const wkQ=x=>{
+    if(x._q!==undefined)return x._q;
     const u=GST.upk(String(x.fab||'')+' '+String(x.custB||'')+' '+String(x.customer||''));
-    if(/F1[016]|PSMC|POWERCHIP|TASC|ASIA|WINBOND/.test(u))return true;
-    return !!(x.region||GST.ORG.region(x.op||''));
+    if(/F1[016]|PSMC|POWERCHIP|TASC|ASIA|WINBOND/.test(u))return (x._q=true);
+    return (x._q=!!(x.region||GST.ORG.region(x.op||'')));
   };
   /* 설치 행 «사이트 키» 판정 — 챔버·TO 산식의 모집단(라인 미기재 행 제외).
      예전엔 여기도 대만 어휘(F1x·PSMC·TASC·WINBOND)만 통과시켜, 국내 설비 7,337대가
@@ -1222,8 +1225,25 @@ function render(){
     if(String(r[CI.fab]||'').trim())return true;
     return /PSMC|POWERCHIP|TASC|ASIA|WINBOND/.test(GST.upk(String(r[CI.customer]||'')));
   };
-  const fWK=WK.filter(x=>wkQ(x)&&entOk(x)&&(!from||x.wd>=from)&&(!F.dtTo||x.wd<=anchor));
   const sWK=WK.filter(x=>wkQ(x)&&entOk(x)); // S-커브: 기간 필터 없이 연간
+  const fWK=sWK.filter(x=>(!from||x.wd>=from)&&(!F.dtTo||x.wd<=anchor));   // 같은 모집단에 기간만 더 건다
+  /* 구간별 집계를 «구간마다 전량 스캔»에서 «한 번 훑어 통에 담기»로 바꾼다.
+     실적이 1.7만 → 24만 행이 되면서 P.map(p=>fWK.filter(...)) 한 줄이 12구간 × 24만 = 288만 회,
+     그런 줄이 열 곳 넘어 필터를 한 번 바꿀 때마다 수천만 회를 돌았다(체감 수 초 멈춤).
+     통은 이 render 안에서만 산다 — 필터가 바뀌면 fWK 자체가 새로 만들어진다. */
+  const _BK={};
+  const bkAll=u=>{ let m=_BK[u]; if(m)return m; m=_BK[u]=new Map();
+    for(let i=0;i<fWK.length;i++){ const x=fWK[i], k=keyOfDate(x.wd,u);
+      let a=m.get(k); if(!a)m.set(k,a=[]); a.push(x); }
+    return m; };
+  const bk=(u,key)=>bkAll(u).get(key)||[];
+  /* 키가 아니라 «날짜 구간»으로 묻는 자리(스파크라인·인사이트)는 정렬 1회 + 이분탐색으로.
+     같은 배열을 열 번 훑던 곳이다. 경계는 [st, en] 양끝 포함 — 원래 술어와 같다. */
+  const _SWK=fWK.slice().sort((a,b)=>a.wd-b.wd);
+  const _lbW=d=>{let lo=0,hi=_SWK.length; while(lo<hi){const m=(lo+hi)>>1; if(_SWK[m].wd<d)lo=m+1; else hi=m;} return lo;};
+  const wkIn=(st,en)=>{ let b=_lbW(en); while(b<_SWK.length && +_SWK[b].wd===+en) b++;
+    return _SWK.slice(_lbW(st), b); };
+  const wkInX=(st,en)=>_SWK.slice(_lbW(st), _lbW(en));   // en 미포함(직전 구간 비교용)
   const fINST=INST.filter(r=>{
     const c=GST.ORG.country(r[CI.country])||guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();
     if(F.region&&GST.ORG.region(r[CI.country])!==F.region)return false;
@@ -1586,7 +1606,7 @@ function render(){
           const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
           const la=Math.round(ls/wd*10)/10;
           const hv=head(p.end);
-          const jobs=fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isMaint(x.stage)).length;
+          const jobs=bk(u,p.key).filter(x=>isMaint(x.stage)).length;
           const attV=Math.max(0,Math.round((hv-la)*10)/10);
           lv.push(la);
           att.push(attV);
@@ -1727,11 +1747,12 @@ function render(){
   // ===== 작업 실행력 =====
   const d30=new Date(asOf.getTime()-30*MS), d60=new Date(asOf.getTime()-60*MS);
   const w30=x=>x.wd>=d30&&x.wd<=asOf;
-  const man30=fWK.filter(w30).reduce((a,x)=>a+x.manMin,0);
-  const manPM30=fWK.filter(x=>w30(x)&&isPM(x.stage)).reduce((a,x)=>a+x.manMin,0);
+  const _w30=wkIn(d30,asOf);
+  const man30=_w30.reduce((a,x)=>a+x.manMin,0);
+  const manPM30=_w30.reduce((a,x)=>a+(isPM(x.stage)?x.manMin:0),0);
   // kp4: BM 고장 건수(최근 30일) — 줄어들면 좋은 지표
-  const bm30=fWK.filter(x=>w30(x)&&x.stage==='BM').length;
-  const bmPrev=fWK.filter(x=>x.wd>=d60&&x.wd<d30&&x.stage==='BM').length;
+  const bm30=_w30.filter(x=>x.stage==='BM').length;
+  const bmPrev=wkInX(d60,d30).filter(x=>x.stage==='BM').length;
   setTxt('kp4',bm30.toLocaleString()); setTxt('kd4',GST.deltaBadge(bm30,bmPrev,true));
   setTxt('kf4',t('kf4').replace('{n}',bmPrev.toLocaleString()));
   // kp5: 인당 일평균 공수(h) = 총공수 ÷ 출근 연인원 · 출근 연인원 = 현장(O)×근무일(21) − 휴가일수
@@ -1768,8 +1789,8 @@ function render(){
       const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
       return Math.max(1,Math.max(1,headOn(p.end))*wd-ls);};
     // 구간별 원시 분(minute) 합 → 총합은 원시합에서 한 번만 반올림(이중 반올림 방지)
-    const pmMin=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isPM(x.stage)).reduce((a,x)=>a+x.manMin,0));
-    const npMin=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&isSvc(x.stage)).reduce((a,x)=>a+x.manMin,0));   // 非PM = CBM·CRM·CM·BM
+    const pmMin=P.map(p=>bk(u,p.key).reduce((a,x)=>a+(isPM(x.stage)?x.manMin:0),0));
+    const npMin=P.map(p=>bk(u,p.key).reduce((a,x)=>a+(isSvc(x.stage)?x.manMin:0),0));   // 非PM = CBM·CRM·CM·BM
     const hPM=P.map((p,i)=>r1(pmMin[i]/60/denom(p)));
     const hNp=P.map((p,i)=>r1(npMin[i]/60/denom(p)));
     const hTot=P.map((p,i)=>r1((pmMin[i]+npMin[i])/60/denom(p)));   // 엑셀 매크로와 동일: PM분+비PM분 원시합에서 단일 반올림
@@ -1845,7 +1866,7 @@ function render(){
   {
     const {P,labels,u}=PU('cFt');
     // Alarm = BM 건수만 (CBM 제외) · All By-Pass = 별도 시트 · Total = Alarm + All By-Pass
-    const alarm=P.map(p=>fWK.filter(x=>keyOfDate(x.wd,u)===p.key&&x.stage==='BM'&&ftLineOk(x)).length);
+    const alarm=P.map(p=>bk(u,p.key).filter(x=>x.stage==='BM'&&ftLineOk(x)).length);
     const abpAt=p=>{ const src=ABP[u]||{};
       const key=(u==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
       return abpSel(src[key]); };
@@ -1853,7 +1874,7 @@ function render(){
     const tot=alarm.map((v,i)=>v+abp[i]);
     // 고장은 줄어드는 게 좋은 지표 · 라인별로 어디서 늘었는지 분해
     _W.push({k:'ft',label:t('ft_alarm'),labels,data:alarm,unit:'',goodWhenDown:true,
-             parts:i=>{const m={}; fWK.forEach(x=>{ if(keyOfDate(x.wd,u)===P[i].key&&x.stage==='BM'){
+             parts:i=>{const m={}; bk(u,P[i].key).forEach(x=>{ if(x.stage==='BM'){
                          const g=grpKey(x); m[g]=(m[g]||0)+1; } });
                        return Object.keys(m).map(g=>({name:g,v:m[g]}));}});
     const hasABP=abp.some(v=>v>0);
@@ -1879,7 +1900,7 @@ function render(){
     window._PPT.ft={};
     ['w','m'].forEach(uu=>{
       const _pp={P:periods(12,asOf,uu)}; _pp.labels=_pp.P.map(x=>x.label);
-      const _al=_pp.P.map(p=>fWK.filter(x=>keyOfDate(x.wd,uu)===p.key&&x.stage==='BM'&&ftLineOk(x)).length);
+      const _al=_pp.P.map(p=>bk(uu,p.key).filter(x=>x.stage==='BM'&&ftLineOk(x)).length);
       const _ab=_pp.P.map(p=>{const src=ABP[uu]||{};
         const key=(uu==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
         return abpSel(src[key]);});
@@ -1895,7 +1916,7 @@ function render(){
       _tSt=new Date(Date.UTC(_yy,0,1));
       let _ye=new Date(Date.UTC(_yy,11,31)); if(_ye>_rt)_ye=_rt;   // 과거연도=연말까지·올해=오늘까지
       _tEn=_ye; _tLab=t('ytd').replace('{y}',_yy); }
-    const f30=fWK.filter(x=>x.wd>=_tSt&&x.wd<=_tEn&&isFault(x.stage));
+    const f30=wkIn(_tSt,_tEn).filter(x=>isFault(x.stage));
     // 대분류 = 알람유형(Z열). 기재가 없으면 현상(AA열)으로 대체 표기한다.
     const _alOf=x=>GST.nfw((x.alarm||'').trim())||GST.nfw((x.phenom||'').trim());
     const byAl={}; let noAl=0;
@@ -1955,10 +1976,13 @@ function render(){
                 F16S:'Micron F16S (Tainan)',PSMC:'PSMC',TASC:'TASC',WINBOND:'Winbond'};
     const OORD=['F16','F11','F16N','F16S','PSMC','TASC','WINBOND'];
     const rkI=r=>fabOf(r[CI.fab])||custBase(r[CI.customer]);           // 설치 행 → 구분
-    const rkP=p=>p.fab||p.custB;                                        // 인원 행 → 구분
+    /* 인원 행 → 구분. 설치와 «같은 순서»로 풀어야 맞물린다 — FAB 먼저, 없으면 고객사.
+       새 인원현황 양식은 대만 단지를 F16·F11·F16N 으로 적는데(사용자 정리), 예전엔 라인 칸만
+       보고 fabOf 를 걸어 대만 인원이 전원 'MICRON' 으로 떨어졌다. 그래서 설치는 'F16' 행,
+       인원은 'MICRON' 행으로 갈라져 Micron F16 담당 인원이 967대에 4명으로 찍혔다. */
+    const rkP=p=>fabOf(p.campus)||p.fab||(p.campus&&OLBL[p.campus]?p.campus:'')||p.custB;
     const rkW=x=>lineKeyOf(x.fab,x.custB||x.customer);                   // 실적 행 → 구분
-    /* ⚠ 설치는 FAB·고객사에서, 인원은 근무지에서 키가 나온다. 대만은 두 어휘가 같아 맞물리지만
-       국내는 설비가 '삼성전자'·인원이 'P1'·'A3' 라 서로 안 붙는다 — 그 행의 인원 칸은 '-' 로 남는다.
+    /* ⚠ 그래도 국내는 설비가 '삼성전자'·인원이 'H1'·'P1' 이라 어휘가 안 맞을 수 있다.
        억지로 잇지 않는다. 매핑표가 생기기 전까지는 «빈 칸이 곧 자료가 없다는 사실»이다. */
     const OROWS=(function(){
       const w={}, add=(k,n)=>{ if(k)w[k]=(w[k]||0)+n; };
@@ -1974,18 +1998,26 @@ function render(){
     const chW=r=>String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1;
     const isWI=r=>{const w=String(r[CI.warranty]||'').toUpperCase();
       return w.includes('IN')&&!w.includes('OUT');};                    // AR열 'Warranty In/Out'
+    /* 행마다 fINST·fHR·fWK 를 다시 훑으면 12행 × (설비 9천 + 실적 24만) 이 된다.
+       구분 키로 한 번에 나눠 담고 행은 자기 통만 본다 — 결과는 같고 스캔은 3회로 끝난다. */
+    const _gI={}, _gP={}, _pmN={};
+    fINST.forEach(r=>{ const fd=pd(r[CI.fabIn]); if(!fd||fd>_oe)return;
+      const k=rkI(r); if(!k)return; (_gI[k]||(_gI[k]=[])).push(r); });
+    fHR.forEach(p=>{ if(!activeAt(p,_oe))return; const k=rkP(p); if(!k)return; (_gP[k]||(_gP[k]=[])).push(p); });
+    wkIn(_ost,_oe).forEach(x=>{ if(!isPM(x.stage))return; const k=rkW(x); if(k)_pmN[k]=(_pmN[k]||0)+1; });
     const D=OROWS.map(R=>{
-      const ins=fINST.filter(r=>{const fd=pd(r[CI.fabIn]); return fd&&fd<=_oe&&rkI(r)===R.k;});
+      const ins=_gI[R.k]||[];
       const run=ins.filter(r=>{const d=pd(r[CI.turnOn]); return d&&d<=_oe;});
       const ru=run.length, rc=run.reduce((a,r)=>a+chW(r),0);
       const wiU=run.filter(isWI).length, wiC=run.filter(isWI).reduce((a,r)=>a+chW(r),0);
       const iu=ins.length-ru, ic=ins.reduce((a,r)=>a+chW(r),0)-rc;      // 미가동 = 반입 − 가동
-      const exp=fHR.filter(p=>p.expat&&activeAt(p,_oe)&&rkP(p)===R.k).length;
-      const loc=fHR.filter(p=>!p.expat&&p.onsite&&activeAt(p,_oe)&&rkP(p)===R.k).length;
+      const ppl=_gP[R.k]||[];
+      const exp=ppl.filter(p=>p.expat).length;
+      const loc=ppl.filter(p=>!p.expat&&p.onsite).length;
       const fit=fitOf(R.k);                                             // 사이트별 적정 챔버(수정 가능·기본 40)
       const need=Math.round(rc/fit);                                    // 인원 = 가동 챔버 ÷ 적정 챔버
       const gap=loc-need;
-      const pm=fWK.filter(x=>isPM(x.stage)&&x.wd>=_ost&&x.wd<=_oe&&rkW(x)===R.k).length;   // 해당 마감 구간의 TBM만
+      const pm=_pmN[R.k]||0;                                            // 해당 마감 구간의 TBM만
       return {k:R.k,lbl:R.lbl,ru,wiU,woU:ru-wiU,rc,wiC,woC:rc-wiC,iu,ic,exp,loc,fit,need,gap,pm};
     });
     const S=D.reduce((a,d)=>{Object.keys(d).forEach(k=>{if(k!=='lbl'&&k!=='k'&&k!=='fit')a[k]=(a[k]||0)+d[k];});return a;},{});
@@ -2016,8 +2048,8 @@ function render(){
       ins.push({sev:p<70?'warn':'ok',text:t('ins_pm').replace('{p}','<b>'+p+'</b>')
         .replace('{a}',scPlan.toLocaleString()).replace('{b}',scDone.toLocaleString())});
     }
-    const f30n=fWK.filter(x=>w30(x)&&isFault(x.stage)).length;
-    const fPrev=fWK.filter(x=>x.wd>=d60&&x.wd<d30&&isFault(x.stage)).length;
+    const f30n=_w30.filter(x=>isFault(x.stage)).length;
+    const fPrev=wkInX(d60,d30).filter(x=>isFault(x.stage)).length;
     const fd=GST.pctDelta(f30n,fPrev);
     if(f30n||fPrev)ins.push({sev:(fd!=null&&fd>=30)?'bad':(fd!=null&&fd<=-20)?'ok':'info',
       text:t('ins_ft').replace('{n}','<b>'+f30n+'</b>').replace('{p}',fd==null?'—':(fd>0?'+':'')+fd+'%')});
@@ -2034,10 +2066,10 @@ function render(){
       const D=a.filter(x=>!six(x)).filter(x=>{const e=eduOf(x),k=eduKey(x,1);return e&&e[k]&&e[k]<=p.end;}).length
              +a.filter(six).filter(x=>{const e=eduOf(x),k=eduKey(x,2);return e&&e[k]&&e[k]<=p.end;}).length;
       return a.length?Math.round(D/a.length*100):null;}),'#34D399');
-    drawSpark('sp4',SP.map(p=>fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&x.stage==='BM').length),'#E03131');
+    drawSpark('sp4',SP.map(p=>wkIn(p.st,p.end).filter(x=>x.stage==='BM').length),'#E03131');
     drawSpark('sp5',SP.map(p=>{const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
       const den=Math.max(1,Math.max(1,headOn(p.end))*wdv-ls);
-      const mm=fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&(isPM(x.stage)||isSvc(x.stage))).reduce((a,x)=>a+x.manMin,0);
+      const mm=wkIn(p.st,p.end).reduce((a,x)=>a+((isPM(x.stage)||isSvc(x.stage))?x.manMin:0),0);
       return Math.round(mm/60/den*10)/10;}),'#5EC2FF');
     ['sp2','sp6'].forEach(id=>{const e=document.getElementById(id);if(e){e.style.display='none';}});
   }catch(e){}
@@ -2069,19 +2101,19 @@ function render(){
     const lsOf=p=>fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
     const attW=[],lvW=[],hdW=[],pjW=[],pmW=[],npW=[],htW=[];
     WPq.forEach(p=>{const ls=lsOf(p),hv=headOn(p.end),la=r1q(ls/5);
-      const jobs=fWK.filter(x=>keyOfDate(x.wd,'w')===p.key&&isMaint(x.stage)).length;
+      const jobs=bk('w',p.key).filter(x=>isMaint(x.stage)).length;
       const av=Math.max(0,r1q(hv-la));
       attW.push(av);lvW.push(la);hdW.push(hv);pjW.push(av?r1q(jobs/av):0);
       const den=Math.max(1,Math.max(1,hv)*5-ls);
-      const pm=fWK.filter(x=>keyOfDate(x.wd,'w')===p.key&&isPM(x.stage)).reduce((a,x)=>a+x.manMin,0);
-      const np=fWK.filter(x=>keyOfDate(x.wd,'w')===p.key&&isSvc(x.stage)).reduce((a,x)=>a+x.manMin,0);
+      const pm=bk('w',p.key).reduce((a,x)=>a+(isPM(x.stage)?x.manMin:0),0);
+      const np=bk('w',p.key).reduce((a,x)=>a+(isSvc(x.stage)?x.manMin:0),0);
       pmW.push(r2q(pm/60/den));npW.push(r2q(np/60/den));htW.push(r2q((pm+np)/60/den));});
     // Alarm(BM)·All By-Pass — 슬라이드3: 가=주간, 나=월간 (cFt 차트와 동일 산식)
     const abpOf=(uu,p)=>{const src=ABP[uu]||{};const key=(uu==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
       return abpSel(src[key]);};
-    const alarmW=WPq.map(p=>fWK.filter(x=>keyOfDate(x.wd,'w')===p.key&&x.stage==='BM'&&ftLineOk(x)).length);
+    const alarmW=WPq.map(p=>bk('w',p.key).filter(x=>x.stage==='BM'&&ftLineOk(x)).length);
     const abpW=WPq.map(p=>abpOf('w',p));
-    const alarmM=MP.map(p=>fWK.filter(x=>keyOfDate(x.wd,'m')===p.key&&x.stage==='BM'&&ftLineOk(x)).length);
+    const alarmM=MP.map(p=>bk('m',p.key).filter(x=>x.stage==='BM'&&ftLineOk(x)).length);
     const abpM=MP.map(p=>abpOf('m',p));
     // 입사·퇴사(라인별) — 슬라이드1 인력현황: 주간·사이트별 다이버징 스택 (0은 비워 라벨 생략)
     const GRAYS=['404040','595959','7F7F7F','A6A6A6','BFBFBF','D9D9D9'];   // 보고서 그림과 동일한 회색조
