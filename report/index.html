@@ -504,9 +504,9 @@ let LANG='ko', CHARTS={}, HR=[], WK=[], INST=[], ROSTER=[], LEAVE=[], CIP=[], AB
 /* 기본 필터(구분·고객사·단지·라인·기간)의 «원본»은 GST.filters 다(v90).
    여기 F 는 그 값을 복사해 두는 곳 — 이 페이지의 술어 네 벌(entOk·fINST·okCF·okP)과
    QBR 표·PPT 수집기가 전부 F 를 보고 있어, 원본을 옮기되 읽는 쪽은 그대로 뒀다. */
-const F={region:'',country:'',customer:'',campus:'',lineRaw:'',dtFrom:'',dtTo:''};
+const F={region:'',country:'',customer:'',campus:'',lineRaw:'',team:'',dtFrom:'',dtTo:''};
 function syncCommon(){ const G=GST.filters.F;
-  F.region=G.region; F.customer=G.customer; F.campus=G.campus; F.lineRaw=G.line;
+  F.region=G.region; F.customer=G.customer; F.campus=G.campus; F.lineRaw=G.line; F.team=G.team;
   F.dtFrom=G.dtFrom; F.dtTo=G.dtTo; }
 function saveLines(){}
 // fab/고객사 문자열 → 라인 키. 전 데이터셋(실적·설치·인원·휴가·ABP)에서 같은 규칙을 쓴다.
@@ -563,6 +563,7 @@ function updateFiltBadge(){
   if(F.customer)P.push(t('sl_customer')+': '+F.customer);
   if(F.campus)P.push('단지: '+F.campus);
   if(F.lineRaw)P.push('라인: '+F.lineRaw);
+  if(F.team)P.push('팀: '+F.team);
   if(F.dtFrom||F.dtTo)P.push((F.dtFrom||'…')+' ~ '+(F.dtTo||'…'));
   if(!P.length){b.style.display='none';b.innerHTML='';return;}
   b.style.display='flex';
@@ -854,6 +855,7 @@ function parseRoster(rows){
   // 국내/해외 판정 근거 — 인원현황에는 국가 열이 없다. 중문명·Dept·사번으로 가른다(GST.ORG.emp)
   const iCn=h.findIndex(x=>x.includes('name')&&x.includes('중문'));
   const iDept=h.findIndex(x=>x.startsWith('dept'));
+  const iTeam=h.findIndex(x=>x==='팀');   // 새 인원현황 양식(19열). 옛 양식엔 없어 -1 → 빈 값
   return rows.slice(hi+1).map(r=>({
     id:String(iId>=0?(r[iId]||''):'').trim(),
     region:GST.ORG.emp({cn:iCn>=0?r[iCn]:'', dept:iDept>=0?r[iDept]:'',
@@ -864,6 +866,7 @@ function parseRoster(rows){
             ?'KOREA':GST.ORG.country(r[iWp]),
     site:siteKey(r[iWp]),
     custB:custBase(r[iWp]), fab:fabOf(r[iWp]), wp:String(r[iWp]||'').trim(),
+    team:String(iTeam>=0?(r[iTeam]||''):'').trim(),
     name:String(iNm>=0?(r[iNm]||''):(r[2]||'')).trim(),
     join:iIn>=0?pd(r[iIn]):null,
     quit:iOut>=0?pd(r[iOut]):null,
@@ -1076,7 +1079,7 @@ async function loadData(){
       return {stage:stg,wd,customer:normCust(r[CW.customer]),custB:custBase(r[CW.customer]),fab:fabOf(lineN)||lineN,sn:GST.nfw(String(r[CW.sn]||'')).trim(),
         country:GST.ORG.country(r[CW.op])||guessCountry(r[CW.op]),
         op:String(r[CW.op]||''), region:GST.ORG.region(r[CW.op]), line:lineN,
-        campus:GST.nfw(String(r[CW.campus]||'')).trim(),
+        campus:GST.ORG.campus(r[CW.campus], lineN, r[CW.op]),
         chamber:String(r[CW.chamber]||'').trim(),cause:String(r[CW.cause]||'').trim(),
         alarm:String(r[CW.alarm]||'').trim(),
         phenom:String(r[CW.phenom]||'').trim(),action:String(r[CW.action]||'').trim(),
@@ -1129,15 +1132,15 @@ function fillFilters(){
       WK.forEach(function(x){ out.push({region:x.region,customer:x.custB,campus:x.campus,line:x.line}); });
       INST.slice(HI_INST+1).forEach(function(r){
         out.push({ region:GST.ORG.region(r[CI.country]), customer:custBase(r[CI.customer]),
-                   campus:String(r[CI.location]||'').trim(), line:String(r[CI.fab]||'').trim() });
+                   campus:GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country]), line:String(r[CI.fab]||'').trim() });
       });
       /* 인원은 «구분»만 보탠다. 고객사·단지·라인 칸은 비워서 넘긴다 —
          인원현황에는 그 열이 없어 근무지가 대신 들어가면, 고객사 목록에 A3·P1·라인장이
          뜨던 그 사고가 그대로 재현된다(빈 값은 목록에 안 오른다). */
-      ROSTER.forEach(function(p){ out.push({region:p.region,customer:'',campus:'',line:''}); });
+      ROSTER.forEach(function(p){ out.push({region:p.region,customer:'',campus:'',line:'',team:p.team}); });
       return out;
     }, onChange:function(){ syncCommon(); render(); },
-    get:{ region:x=>x.region, customer:x=>x.customer, campus:x=>x.campus, line:x=>x.line },
+    get:{ region:x=>x.region, customer:x=>x.customer, campus:x=>x.campus, line:x=>x.line, team:x=>x.team },
     drop:{ line:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
   syncCommon();
 }
@@ -1192,7 +1195,7 @@ function render(){
     if(F.region&&GST.ORG.region(r[CI.country])!==F.region)return false;
     if(F.country&&c!==F.country)return false;
     if(F.customer&&custBase(r[CI.customer])!==F.customer)return false;
-    if(F.campus&&String(r[CI.location]||'').trim()!==F.campus)return false;
+    if(F.campus&&GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country])!==F.campus)return false;
     if(!lineOk(r[CI.fab]))return false;
     return true;
   });
@@ -1235,6 +1238,7 @@ function render(){
   /* 인원은 근무지 어휘로 국가를 못 맞힌다(국내 Work Place 는 'P1'·'A3'·'청주' 처럼 사이트 코드다).
      그래서 행에 실어둔 region(중문명·Dept·사번 다수결)을 쓴다. */
   const okP=p=>(!F.customer||p.custB===F.customer)&&lineOk(p.wp)
+    &&(!F.team||p.team===F.team)
     &&(!F.region||p.region===F.region)
     &&(!F.country||(p.country||siteCountry(p.fab||p.custB))===F.country);
   // Alarm·고장 차트 전용 라인 필터 — 체크박스 선택(비면 전체) · PPT Alarm 차트도 동일 적용

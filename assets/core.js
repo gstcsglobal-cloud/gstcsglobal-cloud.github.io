@@ -1104,6 +1104,21 @@ GST.ORG = {
     if(/F1[0156]|PSMC|POWERCHIP|WINBOND|TSMC|TASC|TONGL|TAINAN|TAICHUNG/.test(GST.upk(o.wp||''))) os += 2;
     return os > kr ? '해외' : (kr > os ? '국내' : '');
   },
+  /* 단지 — 자료마다 채워진 층위가 다르다. 사용자 확정(2026-08): «대만은 단지 구분이 없다».
+     실측이 그것을 뒷받침한다 — 대만 실적은 16,000행 전부 단지가 '기타'이고, 설치는
+     도시명(TAICHUNG·LINKOU·TONGLUO)이 들어 있어 두 자료가 서로 안 맞물렸다.
+     그 상태로 단지를 고르면 «설비는 나오는데 작업 실적이 0» 이 된다.
+     → 대만은 단지 자리에 라인을 넣는다(F16 의 단지는 F16). 두 자료가 같은 값이 된다.
+     ctx 는 국가를 알 수 있는 값이면 무엇이든 된다(운영단위·Country·FAB). */
+  campus: function(campus, line, ctx){
+    const ln = String(line == null ? '' : line).trim();
+    if(GST.ORG.country(ctx || '') === 'TAIWAN') return ln;
+    const c = String(campus == null ? '' : campus).trim();
+    // 단지 칸에 든 «단지가 아닌 것»(OFFICE·통합·기타…)은 값으로 쓰지 않는다 — 미상으로 둔다
+    if(!c || (GST.FILT_DROP_ORG && GST.FILT_DROP_ORG.test(c))) return '';
+    return c;
+  },
+
   /* 값 → 국가. 설치현황 Country 열에 'GST HEFEI SCRUBBER' 같은 사업부명이 섞여 들어와
      («국가» 축에 사업부명이 뜬다) 여기서 국가로 되돌린다. 모르면 ''. */
   country: function(s){
@@ -2161,11 +2176,13 @@ GST.filters = (function(){
 
   function fill(id, key, list){
     const el = document.getElementById(id); if(!el) return;
-    /* 자료에 그 축이 아예 없으면 칸을 감춘다(팀은 인원현황에만 있다). 빈 드롭다운을
-       남겨두면 «필터가 안 먹는다»로 읽힌다 — 없는 것은 없다고 보이는 편이 낫다. */
-    const box = el.closest('.slicer'); if(box) box.style.display = list.length ? '' : 'none';
+    /* 사용자 확정: 기본 필터는 «구현 안 돼도 공통으로» 다섯 칸 그대로 보인다.
+       페이지마다 칸이 나타났다 사라지면 그것 자체가 «페이지마다 필터가 다르다» 로 읽힌다.
+       대신 그 자료에 값이 없으면 «자료 없음» 이라고 적고 잠근다 — 보이되 거짓말은 안 한다. */
+    const box = el.closest('.slicer'); if(box) box.style.display = '';
+    el.disabled = !list.length;
     const cur = F[key];
-    el.innerHTML = '<option value="">전체</option>' + list.map(function(v){
+    el.innerHTML = '<option value="">' + (list.length ? '전체' : '전체 (자료 없음)') + '</option>' + list.map(function(v){
       return '<option value="'+String(v).replace(/"/g,'&quot;')+'">'+v+'</option>';
     }).join('');
     // 목록에서 사라진 선택값은 버린다 — 남겨두면 «아무것도 안 나오는» 화면이 된다
