@@ -1153,6 +1153,15 @@ GST.ORG = {
     if(/삼성디스플레이|SAMSUNG\s*DISPLAY/.test(u)) return 'SAMSUNG DISPLAY';
     if(/삼성|SAMSUNG/.test(u)) return 'SAMSUNG';
     if(/하이닉스|HYNIX/.test(u)) return 'SK HYNIX';
+    /* 한 브랜드가 도시·법인별로 갈라져 들어오는 것들. Customer 축은 «브랜드»이고
+       도시는 Location(하위 계층)이므로 여기서 모은다 — Micron 이 F16·F11·일본·싱가포르를
+       한 고객사로 묶는 것과 같은 논리다. 실측(설치현황): 长鑫 계열 3종 1,601대 ·
+       天马 계열 3종 100대 · CSOT 2종 142대로 갈라져 있었다.
+       ⚠ 도시 이름을 자동으로 잘라 합치지 않는다 — 브랜드가 도시명인 회사를 지워버린다.
+         «가르는 것이 기본, 합치는 것만 규칙»이다. 모르는 고객사는 이름 전체를 그대로 쓴다. */
+    if(/CHANGXIN|长鑫|長鑫/.test(u)) return 'CHANGXIN';
+    if(/TIANMA|天马|天馬/.test(u)) return 'TIANMA';
+    if(/CSOT/.test(u)) return 'CSOT';
     // FAB 표기만 있고 법인명이 없는 행 — F1x대는 Micron 사이트다
     if(/(^|[^A-Z])F1[0156]/.test(u)) return 'MICRON';
     const t = u.replace(GST.ORG._CUST_KR,' ').replace(GST.ORG._CUST_EN,' ')

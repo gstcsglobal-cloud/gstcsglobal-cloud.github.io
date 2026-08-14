@@ -220,6 +220,20 @@ console.log('[9] 고객사 분류');
   ok(cu('Powerchip Semiconductor Manufacturing') === 'PSMC', 'PSMC 무변경');
   ok(cu('WINBOND(GX)') === 'WINBOND', 'WINBOND 무변경');
   ok(cu('Taiwan-Asia Semiconductor') === 'TASC', 'TASC 무변경');
+  /* 브랜드가 도시·법인별로 갈라져 오는 것들 — Customer 축은 브랜드, 도시는 Location 이다.
+     합치는 것은 «명시 규칙»으로만 한다. 도시 이름을 자동으로 잘라 합치면
+     브랜드가 도시명인 회사(예: 아래 SEUL)를 지워버린다. */
+  ok(cu('Changxin Memory Technologies , Inc(') === 'CHANGXIN'
+     && cu('Changxin Jidian (Beijing) Memory Te') === 'CHANGXIN'
+     && cu('Changxin XinQiao Memory Technologie') === 'CHANGXIN', 'CHANGXIN 3종이 안 합쳐진다');
+  ok(cu('Xiamen Tianma Diaplay Technology Co') === 'TIANMA'
+     && cu('WUHAN TIANMA MICRO ELECTRONICS') === 'TIANMA'
+     && cu('SHANGHAI TIANMA Micro Electronics') === 'TIANMA', 'TIANMA 3종이 안 합쳐진다');
+  ok(cu('CSOT') === 'CSOT' && cu('Suzhou CSOT') === 'CSOT', 'CSOT 2종이 안 합쳐진다');
+  // 도시 자동 제거를 넣으면 이게 깨진다 — 브랜드 자체가 도시명처럼 생긴 회사
+  ok(cu('SEUL PTE. LTD.') === 'SEUL', '도시로 오인해 브랜드를 지웠다: '+cu('SEUL PTE. LTD.'));
+  ok(cu('Hangzhou HFC Semiconductor Corp.') === 'HANGZHOU HFC SEMICONDUCTOR',
+     '규칙에 없는 고객사는 이름 전체를 그대로 둔다: '+cu('Hangzhou HFC Semiconductor Corp.'));
   ok(cu('') === '' && cu('   ') === '', '빈 값은 빈 값');
   // 챗봇도 같은 답을 내야 한다(제2원칙) — 소스에 같은 규약이 들어갔는지
   const HR = fs.readFileSync(ROOT+'/supabase/functions/kakao-bot/hr.js','utf8');

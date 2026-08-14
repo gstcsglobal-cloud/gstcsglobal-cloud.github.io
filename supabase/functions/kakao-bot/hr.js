@@ -70,6 +70,10 @@ export function normCust(name) {
   else if (/삼성디스플레이|SAMSUNG\s*DISPLAY/.test(up)) base = 'SAMSUNG DISPLAY';
   else if (/삼성|SAMSUNG/.test(up)) base = 'SAMSUNG';
   else if (/하이닉스|HYNIX/.test(up)) base = 'SK HYNIX';
+  // 한 브랜드가 도시·법인별로 갈라져 들어오는 것들 (SPEC-SYNC: core.js GST.ORG.customer)
+  else if (/CHANGXIN|长鑫|長鑫/.test(up)) base = 'CHANGXIN';
+  else if (/TIANMA|天马|天馬/.test(up)) base = 'TIANMA';
+  else if (up.includes('CSOT')) base = 'CSOT';
   /* SPEC-SYNC: core.js GST.ORG.customer 와 같은 규약.
      예전에는 «첫 단어»를 잘랐는데, 고객사가 50개를 넘자 '주식회사 X' 꼴 네 회사가
      전부 `주식회사` 한 칸에 뭉치고 'Global Foundries' 가 `GLOBAL` 이 됐다.
