@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 89;
+GST.VER = 90;
 GST.needVer = function(n){
   if(GST.VER >= n) return true;
   try{
@@ -2086,6 +2086,162 @@ GST.startAutoRefresh = function(min){
 // 알려진 필터 블록(.date-panel / .slicers / .filters)이 있으면 사이드바를 만든다.
 // (DOMContentLoaded는 페이지 하단 스크립트 실행 이후에 발생하므로,
 //  페이지가 직접 호출한 경우 그 설정이 우선되고 여기서는 no-op)
+/* ============================================================
+   19. GST.filters — 전 페이지 «기본 필터» 한 벌 (v90)
+
+   왜 여기 있나. 여덟 페이지가 사이드바를 각자 손으로 짰다. 그래서 같은 대시보드인데
+   페이지를 옮길 때마다 필터 항목·이름·동작이 달랐고(주간=구분/국가/고객사 ·
+   고장=고객사/FAB/Line/공정 · 인원=칩), 국내 자료가 들어오자 갈 곳 없는 값들이
+   고객사 목록으로 흘러들었다(인원현황 근무지가 고객사 칸에 뜨던 일).
+   복제된 것은 반드시 갈라진다 — 그래서 기본 필터는 여기 한 곳에서만 만든다.
+
+   기본 5종: 구분(국내/해외) · 고객사 · 단지 · 라인 · 기간
+     · 단지 > 라인은 «종속»이다. 단지를 고르면 라인 목록이 그 단지 것만 남는다.
+       실측으로 두 자료가 같은 계층을 쓰는 것을 확인했다 — 설치현황 Location>FAB 와
+       실적 단지>라인이 같은 조합이다(H2>U2 · H2>15B · 탕정>A3 · TAICHUNG>F16).
+     · FAB(F16·F11…)은 «라인 값을 대만식으로 정규화한 것»뿐이라 라인에 흡수했다.
+       국내 라인(U2·15B·P3-D)은 애초에 FAB 으로 안 잡혀 목록이 비어 있었다.
+     · 국가는 구분 아래 개념이라 기본에서 뺐다. 필요한 페이지는 고유 필터로 둔다.
+
+   페이지가 할 일은 «데이터를 어디서 읽는지» 알려주는 것뿐이다:
+     GST.filters.mount({ page:'fault', rows:()=>ROWS, onChange:render,
+       get:{ region:x=>x.region, customer:x=>x.customer,
+             campus:x=>x.campus, line:x=>x.line, date:x=>x.work } });
+   그 뒤 페이지의 술어에 `GST.filters.pass(x)` 한 줄만 넣으면 된다.
+   ============================================================ */
+GST.filters = (function(){
+  const F = { region:'', customer:'', campus:'', line:'', dtFrom:'', dtTo:'' };
+  let CFG = null, KEY = '';
+  const L = { region:'구분', customer:'고객사', campus:'단지', line:'라인', period:'기간' };
+  const val = (g, x) => { try{ const v = g ? g(x) : ''; return v==null?'':String(v).trim(); }catch(e){ return ''; } };
+  const dstr = v => {
+    if(!v) return '';
+    if(v instanceof Date) return isNaN(v)?'':v.toISOString().slice(0,10);
+    return String(v).slice(0,10);
+  };
+
+  /* 값 목록은 «데이터에 실제로 나온 것»만 올린다. 고정 목록을 두면 새 사이트가
+     생겼을 때 목록에 없는 행이 필터에서 통째로 사라진다 — 에러 없이. */
+  function opts(key, narrow){
+    const g = (CFG.get||{})[key], rows = (CFG.rows && CFG.rows()) || [];
+    if(!g) return [];
+    const s = new Set();
+    for(let i=0;i<rows.length;i++){
+      const x = rows[i];
+      if(narrow && !narrow(x)) continue;
+      const v = val(g, x); if(v) s.add(v);
+    }
+    return [...s].sort((a,b)=>a.localeCompare(b,'ko'));
+  }
+
+  function fill(id, key, list){
+    const el = document.getElementById(id); if(!el) return;
+    const cur = F[key];
+    el.innerHTML = '<option value="">전체</option>' + list.map(function(v){
+      return '<option value="'+String(v).replace(/"/g,'&quot;')+'">'+v+'</option>';
+    }).join('');
+    // 목록에서 사라진 선택값은 버린다 — 남겨두면 «아무것도 안 나오는» 화면이 된다
+    if(list.indexOf(cur) < 0) F[key] = '';
+    el.value = F[key];
+  }
+
+  function refresh(){
+    if(!CFG) return;
+    fill('gf-region','region', opts('region'));
+    fill('gf-customer','customer', opts('customer'));
+    fill('gf-campus','campus', opts('campus'));
+    // 라인은 «고른 단지 안»에서만 — 종속 필터
+    const gc = (CFG.get||{}).campus;
+    fill('gf-line','line', opts('line', F.campus && gc ? (x=>val(gc,x)===F.campus) : null));
+    const a=document.getElementById('gf-from'), b=document.getElementById('gf-to');
+    if(a) a.value=F.dtFrom; if(b) b.value=F.dtTo;
+  }
+
+  function read(changed){
+    ['region','customer','campus','line'].forEach(function(k){
+      const el=document.getElementById('gf-'+k); if(el) F[k]=el.value;
+    });
+    const a=document.getElementById('gf-from'), b=document.getElementById('gf-to');
+    F.dtFrom=a?a.value:''; F.dtTo=b?b.value:'';
+    // 단지가 바뀌면 라인 목록이 달라진다 — 그 전에 고른 라인은 유효하지 않을 수 있다
+    if(changed==='campus') F.line='';
+    save(); refresh();
+    if(CFG && CFG.onChange) CFG.onChange();
+  }
+
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(F)); }catch(e){} }
+  function load(){
+    try{ const o=JSON.parse(localStorage.getItem(KEY)||'{}');
+      Object.keys(F).forEach(function(k){ if(typeof o[k]==='string') F[k]=o[k]; });
+    }catch(e){}
+  }
+
+  function markup(){
+    const sel = (id,label) => '<div class="slicer"><div class="lbl">'+label+'</div>'
+      + '<select id="'+id+'" onchange="GST.filters._on(\''+id.slice(3)+'\')"></select></div>';
+    return '<div class="gf-base">'
+      + sel('gf-region', L.region) + sel('gf-customer', L.customer)
+      + sel('gf-campus', L.campus) + sel('gf-line', L.line)
+      + '<div class="slicer"><div class="lbl">'+L.period+'</div>'
+      + '<input type="date" id="gf-from" class="dt-input" onchange="GST.filters._on()"> ~ '
+      + '<input type="date" id="gf-to" class="dt-input" onchange="GST.filters._on()"></div>'
+      + '</div>';
+  }
+
+  return {
+    F: F,
+    _on: read,
+    /* 공통 블록을 페이지의 .slicers 맨 앞에 끼우고, 원래 있던 항목들은 구분선 아래
+       «이 페이지 전용»으로 밀어낸다. 사이드바 이동(autoSidebar)은 그대로 동작한다. */
+    mount: function(cfg){
+      CFG = cfg || {}; KEY = 'gst_bf_' + (CFG.page||'x');
+      load();
+      const box = document.querySelector('.slicers'); if(!box) return;
+      if(!document.getElementById('gf-region')){
+        const own = [].slice.call(box.children);
+        box.insertAdjacentHTML('afterbegin', markup());
+        if(own.length){
+          const d=document.createElement('div'); d.className='slicer-div';
+          const h=document.createElement('div'); h.className='lbl gf-own'; h.textContent='이 페이지 전용';
+          box.insertBefore(d, own[0]); box.insertBefore(h, own[0]);
+        }
+      }
+      refresh();
+    },
+    refresh: refresh,
+    /* 기본 필터 술어. 페이지의 filt() 맨 앞에 한 줄로 넣는다. */
+    pass: function(x){
+      if(!CFG) return true;
+      const g = CFG.get || {};
+      if(F.region   && val(g.region,x)   !== F.region)   return false;
+      if(F.customer && val(g.customer,x) !== F.customer) return false;
+      if(F.campus   && val(g.campus,x)   !== F.campus)   return false;
+      if(F.line     && val(g.line,x)     !== F.line)     return false;
+      if(F.dtFrom || F.dtTo){
+        const d = dstr(g.date ? g.date(x) : '');
+        if(!d) return false;                       // 날짜가 없으면 기간 조건을 만족할 수 없다
+        if(F.dtFrom && d < F.dtFrom) return false;
+        if(F.dtTo   && d > F.dtTo)   return false;
+      }
+      return true;
+    },
+    clear: function(){
+      Object.keys(F).forEach(function(k){ F[k]=''; });
+      save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
+    },
+    // 활성 필터 칩용 — [{k,label,value}]
+    active: function(){
+      const out=[];
+      if(F.region)   out.push({k:'region',   label:L.region,   value:F.region});
+      if(F.customer) out.push({k:'customer', label:L.customer, value:F.customer});
+      if(F.campus)   out.push({k:'campus',   label:L.campus,   value:F.campus});
+      if(F.line)     out.push({k:'line',     label:L.line,     value:F.line});
+      if(F.dtFrom||F.dtTo) out.push({k:'period', label:L.period, value:(F.dtFrom||'…')+' ~ '+(F.dtTo||'…')});
+      return out;
+    }
+  };
+})();
+
 GST.autoSidebar = function(){
   if(document.getElementById('gstSidebar')) return;
   const sections=[];
