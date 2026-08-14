@@ -198,17 +198,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <div class="status" id="status">데이터 불러오는 중...</div>
 
 <div class="slicers">
-  <div class="slicer"><div class="lbl" data-i="sl_region">구분</div><select id="sl-region" onchange="onFilt('region',this.value)">
-    <option value="">전체</option><option value="국내">국내</option><option value="해외">해외</option></select></div>
+  <div class="slicer-div" data-i="sl_more">주간현황 전용</div>
   <div class="slicer"><div class="lbl" data-i="sl_country">국가</div><select id="sl-country" onchange="onFilt('country',this.value)"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_customer">고객사</div><select id="sl-customer" onchange="onFilt('customer',this.value)"></select></div>
-  <div class="slicer" style="position:relative"><div class="lbl" data-i="sl_fab">FAB</div>
-    <button id="lineBtn" class="linebtn" onclick="toggleLineBox(event)">전체 ▾</button>
-    <div id="lineBox" class="linebox"></div>
-  </div>
-  <div class="slicer"><div class="lbl" data-i="sl_period">기간</div>
-    <div class="dts"><input type="date" id="dtFrom" onchange="onFilt('dtFrom',this.value)"><span>~</span><input type="date" id="dtTo" onchange="onFilt('dtTo',this.value)"></div>
-  </div>
 </div>
 
 <!-- 기간·마감·차트 디자인·PPT 컨트롤은 셸 상단 공통바(#gbar)로 이동 — GST.pageBar 등록부 참조 -->
@@ -510,9 +501,14 @@ let LANG='ko', CHARTS={}, HR=[], WK=[], INST=[], ROSTER=[], LEAVE=[], CIP=[], AB
 // 라인(line)만 다중 선택 — Set으로 관리한다. 비어 있으면 '전체'.
 // 값 체계는 Alarm·고장 차트가 쓰던 7키(F16/F11/F16N/F16S/PSMC/TASC/WINBOND)로 통일했다.
 // 예전엔 라인 드롭다운이 fab(F1x)만 담고 Alarm 차트만 7키를 써서 두 곳의 어휘가 달랐다.
-const F={region:'',country:'',customer:'',line:new Set(),dtFrom:'',dtTo:''};
-try{ const sl=localStorage.getItem('gst_rpt_lines')||''; sl.split(',').filter(Boolean).forEach(k=>F.line.add(k)); }catch(e){}
-function saveLines(){ try{localStorage.setItem('gst_rpt_lines',Array.from(F.line).join(','));}catch(e){} }
+/* 기본 필터(구분·고객사·단지·라인·기간)의 «원본»은 GST.filters 다(v90).
+   여기 F 는 그 값을 복사해 두는 곳 — 이 페이지의 술어 네 벌(entOk·fINST·okCF·okP)과
+   QBR 표·PPT 수집기가 전부 F 를 보고 있어, 원본을 옮기되 읽는 쪽은 그대로 뒀다. */
+const F={region:'',country:'',customer:'',campus:'',lineRaw:'',dtFrom:'',dtTo:''};
+function syncCommon(){ const G=GST.filters.F;
+  F.region=G.region; F.customer=G.customer; F.campus=G.campus; F.lineRaw=G.line;
+  F.dtFrom=G.dtFrom; F.dtTo=G.dtTo; }
+function saveLines(){}
 // fab/고객사 문자열 → 라인 키. 전 데이터셋(실적·설치·인원·휴가·ABP)에서 같은 규칙을 쓴다.
 /* FAB 하나만 돌려준다. 예전엔 `fab + ' ' + customer`를 한 문자열로 합쳐
    F16·F11·F16N·F16S(=FAB)와 PSMC·TASC·WINBOND(=Customer)를 7키로 뭉갰다.
@@ -539,7 +535,9 @@ function rebuildFabKeys(){
     return fa!==fb2 ? (fa?-1:1) : a.localeCompare(b);
   });
 }
-const lineOk=(fb,cb)=>!F.line.size||F.line.has(lineKeyOf(fb,cb));
+/* FAB 다중선택(7키)은 라인 필터에 흡수됐다(v90). 라인은 시트의 원본값을 그대로 쓴다 —
+   대만은 F16·F11 이고 국내는 U2·15B·P3-D 라, 정규화하면 국내가 통째로 빠졌다. */
+const lineOk=(raw)=>!F.lineRaw||String(raw||'').trim()===F.lineRaw;
 window.onFilt=function(k,v){F[k]=v;render();};
 // 적정 챔버 — 사이트(구분)별 값. 미설정 사이트는 40. 표의 적정챔버 셀 클릭으로 수정.
 let FITCH={};
@@ -556,18 +554,6 @@ window.editFit=function(k){
   try{localStorage.setItem('gst_rpt_fitch',JSON.stringify(FITCH));}catch(e){}
   render();
 };
-window.toggleLine=function(k,on){ if(on)F.line.add(k); else F.line.delete(k); saveLines(); render(); };
-window.setAllLines=function(on){ F.line.clear(); if(on)LINE_KEYS.forEach(k=>F.line.add(k)); saveLines(); render(); };
-// 체크박스 목록 열고 닫기 (엑셀 필터 박스 느낌)
-window.toggleLineBox=function(ev){
-  if(ev)ev.stopPropagation();
-  const el=document.getElementById('lineBox'); if(!el)return;
-  el.style.display = el.style.display==='block' ? 'none' : 'block';
-};
-document.addEventListener('click',function(e){
-  const box=document.getElementById('lineBox'), btn=document.getElementById('lineBtn');
-  if(box&&box.style.display==='block'&&!box.contains(e.target)&&e.target!==btn)box.style.display='none';
-});
 // 활성 필터 배지
 function updateFiltBadge(){
   const b=document.getElementById('filtBadge'); if(!b)return;
@@ -575,17 +561,18 @@ function updateFiltBadge(){
   if(F.region)P.push(t('sl_region')+': '+F.region);
   if(F.country)P.push(t('sl_country')+': '+F.country);
   if(F.customer)P.push(t('sl_customer')+': '+F.customer);
-  if(F.line.size)P.push(t('sl_line')+': '+Array.from(F.line).join('·'));
+  if(F.campus)P.push('단지: '+F.campus);
+  if(F.lineRaw)P.push('라인: '+F.lineRaw);
   if(F.dtFrom||F.dtTo)P.push((F.dtFrom||'…')+' ~ '+(F.dtTo||'…'));
   if(!P.length){b.style.display='none';b.innerHTML='';return;}
   b.style.display='flex';
   b.innerHTML='🔎 '+P.map(x=>'<span class="fchip">'+x+'</span>').join('')+'<button class="fclr" onclick="clearFilt()">✕ 필터 해제</button>';
 }
-window.clearFilt=function(){ F.region='';F.country='';F.customer='';F.line.clear();saveLines();F.dtFrom='';F.dtTo='';
+window.clearFilt=function(){ F.country='';GST.filters.clear();syncCommon();
   ['sl-country','sl-customer','dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render(); };
 window.clearAllFilters=function(){
-  F.region='';F.country='';F.customer='';F.line.clear();saveLines();F.dtFrom='';F.dtTo='';
+  F.country='';GST.filters.clear();syncCommon();
   ['dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render();
 };
@@ -876,7 +863,7 @@ function parseRoster(rows){
     country:(GST.ORG.emp({cn:iCn>=0?r[iCn]:'',dept:iDept>=0?r[iDept]:'',id:iId>=0?r[iId]:'',wp:r[iWp]})==='국내')
             ?'KOREA':GST.ORG.country(r[iWp]),
     site:siteKey(r[iWp]),
-    custB:custBase(r[iWp]), fab:fabOf(r[iWp]),
+    custB:custBase(r[iWp]), fab:fabOf(r[iWp]), wp:String(r[iWp]||'').trim(),
     name:String(iNm>=0?(r[iNm]||''):(r[2]||'')).trim(),
     join:iIn>=0?pd(r[iIn]):null,
     quit:iOut>=0?pd(r[iOut]):null,
@@ -1089,6 +1076,7 @@ async function loadData(){
       return {stage:stg,wd,customer:normCust(r[CW.customer]),custB:custBase(r[CW.customer]),fab:fabOf(lineN)||lineN,sn:GST.nfw(String(r[CW.sn]||'')).trim(),
         country:GST.ORG.country(r[CW.op])||guessCountry(r[CW.op]),
         op:String(r[CW.op]||''), region:GST.ORG.region(r[CW.op]), line:lineN,
+        campus:GST.nfw(String(r[CW.campus]||'')).trim(),
         chamber:String(r[CW.chamber]||'').trim(),cause:String(r[CW.cause]||'').trim(),
         alarm:String(r[CW.alarm]||'').trim(),
         phenom:String(r[CW.phenom]||'').trim(),action:String(r[CW.action]||'').trim(),
@@ -1122,7 +1110,6 @@ function fillFilters(){
   const cSet=new Set(), uSet=new Set();
   const add=(cb)=>{ if(cb)uSet.add(cb); };
   WK.forEach(x=>{if(x.custB)add(x.custB,x.fab);});
-  ROSTER.forEach(p=>add(p.custB,p.fab));
   /* 국가 목록은 «데이터에 실제로 나온 것»만 올린다. 예전엔 TAIWAN 을 무조건 넣었는데,
      국내만 올린 상태에서도 TAIWAN 이 떠 고르면 전부 빈 화면이 됐다. */
   INST.forEach(r=>{const c=GST.ORG.country(r[CI.country]); if(c)cSet.add(c);
@@ -1135,27 +1122,23 @@ function fillFilters(){
     const el=document.getElementById(id); if(!el)return;
     el.innerHTML='<option value="">'+t('all')+'</option>'+[...set].sort().map(v=>'<option value="'+String(v).replace(/"/g,'&quot;')+'"'+(F[k]===v?' selected':'')+'>'+v+'</option>').join('');
   });
-  // 라인 — 엑셀식 다중선택 체크박스 (7키 고정 목록, F.line=Set)
-  // 박스는 최초 1회만 생성하고 이후엔 체크 상태만 갱신 — 렌더마다 innerHTML을 갈면
-  // 체크 직후 문서 클릭 판정에서 분리된 노드가 되어 목록이 닫혀버린다.
-  rebuildFabKeys();
-  { const box=document.getElementById('lineBox');
-    /* 박스는 목록이 바뀔 때만 다시 만든다.
-       예전엔 '최초 1회만'이었는데, LINE_KEYS가 상수라 늘 가득 차 있어서 문제가 없었다.
-       목록을 데이터에서 만들도록 바꾸는 순간 함정이 드러났다 — 데이터 로드 전에 한 번
-       그려지면 빈 목록으로 굳어 FAB 필터가 통째로 사라진다.
-       그래도 매 렌더 다시 그리면 안 된다(체크 직후 노드가 분리돼 목록이 닫힌다) → 키 비교. */
-    const _kk=LINE_KEYS.join('\u001f');
-    if(box&&box.dataset.keys!==_kk){
-      box.dataset.keys=_kk;
-      box.innerHTML=
-        '<div class="lb-all"><button onclick="setAllLines(true)">전체 선택</button><button onclick="setAllLines(false)">전체 해제</button></div>'
-        +LINE_KEYS.map(k=>'<label><input type="checkbox" data-k="'+k+'" onchange="toggleLine(\''+k+'\',this.checked)">'+k+'</label>').join('');
-    }
-    if(box) box.querySelectorAll('input[data-k]').forEach(inp=>{inp.checked=F.line.has(inp.dataset.k);});
-    const btn=document.getElementById('lineBtn');
-    if(btn) btn.textContent=(F.line.size?Array.from(F.line).join(' · '):t('all'))+' ▾';
-  }
+  /* 공통 기본 필터(구분·고객사·단지·라인·기간)는 core.js 가 만든다. 목록 재료는
+     실적과 설치 두 자료를 합쳐 넘긴다 — 한쪽만 주면 그쪽에 없는 값이 목록에서 조용히 빠진다. */
+  GST.filters.mount({ page:'report', rows:function(){
+      const out=[];
+      WK.forEach(function(x){ out.push({region:x.region,customer:x.custB,campus:x.campus,line:x.line}); });
+      INST.slice(HI_INST+1).forEach(function(r){
+        out.push({ region:GST.ORG.region(r[CI.country]), customer:custBase(r[CI.customer]),
+                   campus:String(r[CI.location]||'').trim(), line:String(r[CI.fab]||'').trim() });
+      });
+      /* 인원은 «구분»만 보탠다. 고객사·단지·라인 칸은 비워서 넘긴다 —
+         인원현황에는 그 열이 없어 근무지가 대신 들어가면, 고객사 목록에 A3·P1·라인장이
+         뜨던 그 사고가 그대로 재현된다(빈 값은 목록에 안 오른다). */
+      ROSTER.forEach(function(p){ out.push({region:p.region,customer:'',campus:'',line:''}); });
+      return out;
+    }, onChange:function(){ syncCommon(); render(); },
+    get:{ region:x=>x.region, customer:x=>x.customer, campus:x=>x.campus, line:x=>x.line } });
+  syncCommon();
 }
 function render(){
   const TH=GST.chartTheme(); GST.chartDefaults();
@@ -1182,7 +1165,8 @@ function render(){
   window._PPT={asOf:asOf.toISOString().slice(0,10),wk:'W'+isoW(asOf).slice(-2)};
   const from=F.dtFrom?pd(F.dtFrom):null;
   const entOk=x=>(!F.region||(x.region||GST.ORG.region(x.op||''))===F.region)
-    &&(!F.country||x.country===F.country)&&(!F.customer||x.custB===F.customer)&&lineOk(x.fab,x.custB||x.customer);
+    &&(!F.country||x.country===F.country)&&(!F.customer||x.custB===F.customer)
+    &&(!F.campus||x.campus===F.campus)&&lineOk(x.line);
   // QBR 매크로 정합: 작업내역은 사이트 키 행만 집계(라인 미기재·기타 행 제외) — 매크로 NarrowUp과 동일
   // 라인 열만으로 판정하면 PSMC처럼 라인 표기가 다른 사이트 행이 누락된다 → 라인+고객사 통합 판정
   /* 예전에는 대만 사이트 어휘만 통과시켰다(F16·PSMC·WINBOND…). 국내·중국·미국 실적이
@@ -1207,7 +1191,8 @@ function render(){
     if(F.region&&GST.ORG.region(r[CI.country])!==F.region)return false;
     if(F.country&&c!==F.country)return false;
     if(F.customer&&custBase(r[CI.customer])!==F.customer)return false;
-    if(!lineOk(fabOf(r[CI.fab]),r[CI.customer]))return false;
+    if(F.campus&&String(r[CI.location]||'').trim()!==F.campus)return false;
+    if(!lineOk(r[CI.fab]))return false;
     return true;
   });
   const PU=id=>{const u=(PER[id]==='w'||PER[id]==='m')?PER[id]:PERIOD;
@@ -1245,24 +1230,26 @@ function render(){
   INST.forEach(r=>{const cu=normCust(r[CI.customer]);
     if(cu&&!C2C[cu])C2C[cu]=guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();});
   const siteCountry=siteCountryStatic;
-  const okCF=(cb,fb)=>(!F.customer||cb===F.customer)&&lineOk(fb,cb)&&(!F.country||siteCountry(fb||cb)===F.country);
+  const okCF=(cb,fb)=>(!F.customer||cb===F.customer)&&(!F.country||siteCountry(fb||cb)===F.country);
   /* 인원은 근무지 어휘로 국가를 못 맞힌다(국내 Work Place 는 'P1'·'A3'·'청주' 처럼 사이트 코드다).
      그래서 행에 실어둔 region(중문명·Dept·사번 다수결)을 쓴다. */
-  const okP=p=>(!F.customer||p.custB===F.customer)&&lineOk(p.fab,p.custB)
+  const okP=p=>(!F.customer||p.custB===F.customer)&&lineOk(p.wp)
     &&(!F.region||p.region===F.region)
     &&(!F.country||(p.country||siteCountry(p.fab||p.custB))===F.country);
   // Alarm·고장 차트 전용 라인 필터 — 체크박스 선택(비면 전체) · PPT Alarm 차트도 동일 적용
-  // Alarm·고장 차트도 좌측 라인 필터(F.line)를 그대로 따른다 — 카드 내부 체크박스는 제거됨
-  const FTSEL=F.line;
+  /* Alarm·고장 차트도 좌측 라인 필터를 그대로 따른다. FAB 다중선택이 라인 단일 선택으로
+     바뀌었으므로(v90) 여기도 같은 상태를 본다 — 두 곳이 다른 어휘를 쓰면 카드끼리 숫자가 갈린다. */
   const ftKey=x=>lineKeyOf(x.fab,x.custB||x.customer);
-  const ftLineOk=x=>!FTSEL.size||FTSEL.has(ftKey(x));
+  const ftLineOk=x=>lineOk(x.line);
   const abpSel=bkt=>{ if(!bkt)return 0;
-    if(FTSEL.size){ let s=0;
-      FTSEL.forEach(k=>{ if(k==='PSMC')s+=(bkt.byC.POWERCHIP||bkt.byC.PSMC||0);
-        else if(k==='TASC')s+=(bkt.byC.TASC||0);
-        else if(k==='WINBOND')s+=(bkt.byC.WINBOND||0);
-        else s+=(bkt.byF[k]||0); });
-      return s; }
+    /* ABP 는 라인 원본값이 아니라 7키(F16·PSMC…)로 집계돼 있다. 라인을 고르면 그 키로
+       환산해 고르되, 환산이 안 되는 국내 라인은 0 이 아니라 «해당 없음»으로 둔다. */
+    if(F.lineRaw){ const k=lineKeyOf(F.lineRaw,F.lineRaw);
+      if(!k) return 0;
+      if(k==='PSMC')return (bkt.byC.POWERCHIP||bkt.byC.PSMC||0);
+      if(k==='TASC')return (bkt.byC.TASC||0);
+      if(k==='WINBOND')return (bkt.byC.WINBOND||0);
+      return (bkt.byF[k]||0); }
     if(F.customer)return bkt.byC[F.customer]||0;
     return bkt.ALL||0; };
   // 인력 기준: 인원현황(입·퇴사일 보유) 우선, 없으면 교육현황 · 고객사/국가 필터 연동
