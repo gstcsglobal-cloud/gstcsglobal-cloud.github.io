@@ -865,6 +865,7 @@ function parseRoster(rows){
   const iCust=idx(h,['고객사','사업부']);
   const iArea=idx(h,['지역']);
   const iTeam=idx(h,['팀']);
+  const iOp=idx(h,['운영단위']);   // 새 양식(v2). 없으면 빈 값 → 운영단위 필터에서 제외된다
   const iCamp=idx(h,['단지']);
   const iLine=idx(h,['라인']);
   const iWp=h.findIndex(x=>x==='work place');
@@ -887,7 +888,7 @@ function parseRoster(rows){
       country:(region==='국내')?'KOREA':(GST.ORG.country(area)||GST.ORG.country(wp)),
       site:siteKey(wpOld||camp||line),
       custB:cust?GST.ORG.customer(cust):custBase(wpOld),
-      fab:fabOf(line||wpOld), wp:wp, team:g(r,iTeam),
+      fab:fabOf(line||wpOld), wp:wp, team:g(r,iTeam), op:g(r,iOp),
       campus:GST.ORG.campus(camp, camp||line, area||cust),   // 인원현황은 단지 칸이 곧 FAB 층위(F16)다
       name:g(r,iNm)||String(r[2]||'').trim(),
       join:iIn>=0?pd(r[iIn]):null,
@@ -1161,12 +1162,10 @@ function fillFilters(){
       /* 인원은 «구분»만 보탠다. 고객사·단지·라인 칸은 비워서 넘긴다 —
          인원현황에는 그 열이 없어 근무지가 대신 들어가면, 고객사 목록에 A3·P1·라인장이
          뜨던 그 사고가 그대로 재현된다(빈 값은 목록에 안 오른다). */
-      // 인원현황에는 운영단위 열이 없다 — op 를 비워 넘기고 loose 로 «거르지 않음» 처리한다
-      ROSTER.forEach(function(p){ out.push({region:p.region,op:'',customer:'',campus:'',line:'',team:p.team}); });
+      ROSTER.forEach(function(p){ out.push({region:p.region,op:p.op,customer:'',campus:'',line:'',team:p.team}); });
       return out;
     }, onChange:function(){ syncCommon(); render(); },
     get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer, campus:x=>x.campus, line:x=>x.line, team:x=>x.team },
-    loose:{ op:true },   // 인원현황엔 운영단위가 없다 — 그 축으로 인원을 지우지 않는다
     drop:{ line:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
   syncCommon();
 }
@@ -1270,27 +1269,13 @@ function render(){
      사용자 확정: 단지·라인이 둘 다 비어 있는 사람은 뺀다 — 어차피 현장(O) 인원만 센다.
      ⚠ 이어 붙이는 것이지 «없으면 통과»가 아니다. 통과시키면 운영단위를 걸어도 인원이
        안 줄어 카드끼리 모집단이 갈린다. */
-  const OP_SETS=(function(){
-    const m={};
-    const add=(op,ca,li)=>{ op=String(op||'').trim(); if(!op)return;
-      const e=m[op]||(m[op]={ca:new Set(),li:new Set()});
-      if(ca)e.ca.add(ca); if(li)e.li.add(li); };
-    WK.forEach(x=>add(x.op, x.campus, x.line));
-    INST.slice(HI_INST+1).forEach(r=>add(r[CI.country],
-      GST.ORG.campus(r[CI.location], r[CI.fab], r[CI.country]), String(r[CI.fab]||'').trim()));
-    return m;
-  })();
-  /* ⚠ 단지·라인 이름만으로 이으면 «동음이의어»에 걸린다 — 실측: 대만 PSMC 의 FAB 이
-     P1·P2·P3 인데 국내 삼성 평택의 단지도 P1·P2·P3 다(인원 75명). 그래서 운영단위를
-     GST TAIWAN SCRUBBER 로 걸었더니 국내 평택 인원이 딸려 왔다.
-     → 구분(국내/해외)을 함께 맞춘다. 이름이 같아도 구분이 다르면 다른 곳이다. */
-  const opPerson=p=>{
-    if(!F.op)return true;
-    const e=OP_SETS[F.op]; if(!e)return false;
-    const rg=GST.ORG.region(F.op);
-    if(rg && p.region && p.region!==rg) return false;
-    return !!((p.campus&&e.ca.has(p.campus))||(p.wp&&e.li.has(p.wp)));
-  };
+
+  /* 인원현황에 운영단위 열이 생겼다(2026-08) — 이름으로 잇던 추론을 걷어냈다.
+     추론은 동음이의어에 원리적으로 진다: 대만 PSMC 의 FAB 이 P1·P2·P3 인데 국내 삼성
+     평택의 단지도 P1·P2·P3 라, 대만을 걸면 국내 평택 인원이 딸려 왔다.
+     운영단위가 빈 사람은 운영단위를 고를 때 빠진다 — 사용자 확정이고, 실측상 그 85명은
+     거의 전부 현장(O)이 아니라 운영지표 분모에도 안 들어간다. */
+  const opPerson=p=>!F.op || String(p.op||'').trim()===F.op;
   /* 단지 조건이 여기 빠져 있었다 — 실적(entOk)·설치(fINST)에는 넣고 인원만 안 넣어서,
      단지를 골라도 인원이 안 줄었다(단지=PSMC 인데 재직 47명). 같은 모집단을 서로 다른
      술어로 거르면 카드끼리 숫자가 갈린다. */
