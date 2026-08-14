@@ -11,6 +11,24 @@ const GST = {};
 /* ---------- 0. 폰트 단일 출처 ----------
    DOM은 theme.css가, 캔버스(ctx.font·Chart.defaults)는 이 상수가 담당한다.
    두 곳이 어긋나면 차트 안 글자만 다른 폰트가 되므로 반드시 여기서만 바꾼다. */
+/* ---------- 0.1 버전 ----------
+   페이지들은 배포본 core.js 를 «절대경로»로 부른다. 그래서 core.js 만 캐시에 옛 것이 남으면
+   페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
+   보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
+   그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
+GST.VER = 89;
+GST.needVer = function(n){
+  if(GST.VER >= n) return true;
+  try{
+    var d = document.createElement('div');
+    d.style.cssText='background:#7f1d1d;color:#fff;padding:10px 16px;font:13px/1.5 sans-serif;position:relative;z-index:99999';
+    d.textContent='⚠️ core.js 가 구버전입니다 (실행 v'+GST.VER+' · 이 페이지는 v'+n+' 필요). '
+      +'브라우저 캐시 탓입니다 — Ctrl+Shift+R (Mac ⌘⇧R) 로 강력 새로고침하세요. '
+      +'그래도 같으면 assets/core.js 배포가 페이지보다 늦은 것입니다.';
+    (document.body||document.documentElement).insertAdjacentElement('afterbegin', d);
+  }catch(e){}
+  return false;
+};
 GST.FONT_STACK = '"Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
 GST.font = function(px, weight){ return (weight||400)+' '+px+'px '+GST.FONT_STACK; };
 // 웹폰트는 첫 렌더보다 늦게 도착할 수 있다 — 캔버스는 스스로 다시 그리지 않으므로
@@ -1061,6 +1079,11 @@ GST.ORG = {
     if(!u.trim()) return '';
     if(/^SEC|^SDC|KOREA|한국|이천|청주/.test(u)) return '국내';
     if(/^GST|해외/.test(u)) return '해외';
+    /* 사업부명이 아니라 «국가»가 그대로 들어오는 자료가 있다(옛 설치현황 Country = 'TAIWAN').
+       국가를 알면 구분도 아는 것이므로 여기서 되돌린다 — 이 줄이 없으면 그런 행이 전부
+       «구분 미상»으로 떨어져, 해외를 걸었는데 설비가 하나도 안 나오는 상태가 된다. */
+    const c = GST.ORG.country(u);
+    if(c) return c === 'KOREA' ? '국내' : '해외';
     return '';
   },
   /* 인원현황 행 → 국내/해외. 실측(421명, 예외 0): 대만 인원은 중문명·Dept. 가 있고

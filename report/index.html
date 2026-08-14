@@ -349,6 +349,10 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 </div>
 
 <script>
+// 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
+// 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
+if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
+GST.needVer&&GST.needVer(89);
 const PUB='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub';
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -397,6 +401,14 @@ const fabOf    = s => GST.ORG.fab(s);
    2026-08 국내 인원·실적이 들어오자 국내(P1·A3·청주…)까지 TAIWAN 으로 판정돼
    국가 필터가 전원 통과했다 — 걸어도 숫자가 안 변하던 원인. 정본은 GST.ORG. */
 function siteCountryStatic(s){ return GST.ORG.country(s); }
+/* 표·PPT 머리의 법인 표기. 예전 기본값이 'GST Taiwan' 이라, 국내를 걸어도 표 왼쪽에
+   'GST Taiwan' 이 그대로 붙어 있었다 — 화면이 거짓말을 하는 자리다. 필터를 따라간다. */
+function corpLabel(){
+  if(F.country)return 'GST '+F.country.charAt(0)+F.country.slice(1).toLowerCase();
+  if(F.region===GST.ORG.REGION_KR)return 'GST Korea';
+  if(F.region===GST.ORG.REGION_OS)return 'GST Overseas';
+  return 'GST Global';
+}
 // 소속/사이트 표기 통일 (인원현황 Work Place · 휴가현황 소속 → normCust 어휘)
 function siteKey(sv){
   const up=GST.upk(sv);
@@ -1180,6 +1192,14 @@ function render(){
     if(/F1[016]|PSMC|POWERCHIP|TASC|ASIA|WINBOND/.test(u))return true;
     return !!(x.region||GST.ORG.region(x.op||''));
   };
+  /* 설치 행 «사이트 키» 판정 — 챔버·TO 산식의 모집단(라인 미기재 행 제외).
+     예전엔 여기도 대만 어휘(F1x·PSMC·TASC·WINBOND)만 통과시켜, 국내 설비 7,337대가
+     통째로 탈락했다 → 국내 필터에서 TO·인당 챔버가 0. 실측: 대만 1,515대는 «FAB 값이 있다»
+     로도 100% 통과하므로 대만 숫자는 한 자리도 안 움직인다. */
+  const instQ=r=>{
+    if(String(r[CI.fab]||'').trim())return true;
+    return /PSMC|POWERCHIP|TASC|ASIA|WINBOND/.test(GST.upk(String(r[CI.customer]||'')));
+  };
   const fWK=WK.filter(x=>wkQ(x)&&entOk(x)&&(!from||x.wd>=from)&&(!F.dtTo||x.wd<=anchor));
   const sWK=WK.filter(x=>wkQ(x)&&entOk(x)); // S-커브: 기간 필터 없이 연간
   const fINST=INST.filter(r=>{
@@ -1212,10 +1232,9 @@ function render(){
   const BAR_C=BAR_BASE, BAR2_C=_sty.bar2;
   const LINE_C=_sty.line;
   const LN_G=_sty.lnG, LN_V=_sty.lnV;
-  // 소속(라인) 구분 팔레트 — F16/F11/F16N/PSMC/TASC/WINBOND
-  const SITES=['F16','F11','F16N','PSMC','TASC','WINBOND'];
+  // 소속(라인) 구분 팔레트 — 목록 자체는 fHR 이 정해진 뒤 데이터에서 만든다(아래 SITES)
   const SITE_C=_sty.site;
-  const grpKey=x=>x.fab||x.custB||'ETC';
+  const _grpRaw=x=>x.fab||x.custB||'ETC';
   // 단일 막대: 마지막 인덱스만 강조색
   const barHi=n=>Array.from({length:n},(_,i)=>i===n-1?BAR_LAST:BAR_BASE);
   // 꺾은선: 마지막 포인트만 크게 강조 (설치현황 트렌드 스타일)
@@ -1264,9 +1283,29 @@ function render(){
     return {date:x.date,days:x.days,custB:p.custB,fab:p.fab};
   }).filter(Boolean);
   const fEDU=HR.filter(p=>okCF(p.custB,p.fab)&&(!F.region||!p.region||p.region===F.region));
-  // QBR 매크로 정합: 운영지표(출근·공수·인당) 분모는 사이트 소속 인원만 — TSMC·행정 등 비사이트 제외
-  const QBR_SITE=new Set(['MICRON F11','MICRON F16','MICRON F16N','MICRON F16S','MICRON F10','POWERCHIP','TASC','WINBOND']);
-  const qbrOk=p=>QBR_SITE.has(p.site);
+  /* QBR 매크로 정합: 운영지표(출근·공수·인당) 분모는 «사이트 소속» 인원만 — 근무지 미기재·TSMC 제외.
+     ⚠ 예전에는 대만 사이트 8개를 적어 둔 «허용목록»이었다. 국내(P1·A3·청주…) 인원이 들어오자
+       그 목록에 하나도 없어 통째로 빠졌고, 국내 필터를 걸면 재직 인원·공수·인당챔버가 전부 0 이 됐다.
+       그래서 허용목록을 «제외목록»으로 뒤집는다 — 새 사이트가 생겨도 조용히 사라지지 않는다.
+       실측(인원현황 585행): 현장(O) 인원 중 대만 쪽에서 이 규칙이 떨구는 것은 TSMC 1명뿐이라
+       대만 숫자는 한 자리도 움직이지 않는다. */
+  const QBR_EX=/TSMC/;
+  const qbrOk=p=>{ const s=String(p.site||'').trim(); return !!s && !QBR_EX.test(GST.upk(s)); };
+  /* 소속(라인) 구분 목록 — 데이터에서 만든다. 스택 막대라 목록에서 빠진 사람은 합계에서
+     조용히 사라지므로, 상위 N 밖은 '기타'로 모아 반드시 포함시킨다(버리지 않는다). */
+  const SITE_ORD=['F16','F11','F16N','F16S','PSMC','TASC','WINBOND'], SITE_MAX=11;
+  const SITES=(function(){
+    const cnt={}; fHR.forEach(x=>{ const k=_grpRaw(x); if(k)cnt[k]=(cnt[k]||0)+1; });
+    const rank=k=>k==='ETC'?98:(SITE_ORD.indexOf(k)<0?50:SITE_ORD.indexOf(k));   // ETC(근무지 미기재)는 맨 뒤
+    const keys=Object.keys(cnt).sort(function(a,b){
+      return (rank(a)-rank(b)) || (cnt[b]-cnt[a]) || (a<b?-1:1);
+    });
+    return keys.length>SITE_MAX ? keys.slice(0,SITE_MAX).concat(['기타']) : keys;
+  })();
+  const _SITESET=new Set(SITES);
+  const grpKey=x=>{ const k=_grpRaw(x); return _SITESET.has(k)?k:(_SITESET.has('기타')?'기타':k); };
+  // 팔레트는 6색뿐 — 그 너머는 색상환으로 이어 붙인다(undefined 색이면 막대가 투명해진다)
+  const siteC=sk=>{ const i=SITES.indexOf(sk); return i<0?'#94A3B8':(i<SITE_C.length?SITE_C[i]:'hsl('+((i*47)%360)+' 55% 55%)'); };
   const headAt=E=>fHR.filter(x=>activeAt(x,E)).length;   // 재적 총인원
   const headOn=E=>fHR.filter(x=>x.onsite&&qbrOk(x)&&activeAt(x,E)).length;   // 현장(O)·사이트 재적 — 공수/출근 분모
   // 교육현황 이수일 조회 (인원현황 이름 ↔ 교육현황 인원 매칭)
@@ -1376,10 +1415,10 @@ function render(){
     const used=SITES.filter(sk=>ioR.some(x=>grpKey(x)===sk&&(x.join||x.quit)));
     const inDs=used.map(sk=>({label:sk,
       data:P.map(p=>ioR.filter(x=>x.join&&keyOfDate(x.join,u)===p.key&&grpKey(x)===sk).length),
-      backgroundColor:SITE_C[SITES.indexOf(sk)],stack:'io'}));
+      backgroundColor:siteC(sk),stack:'io'}));
     const outDs=used.map(sk=>({label:'·'+sk,   // 범례 숨김(라인 색은 입사 데이터셋으로 표시) · 아래=퇴사
       data:P.map(p=>-ioR.filter(x=>x.quit&&keyOfDate(x.quit,u)===p.key&&grpKey(x)===sk).length),
-      backgroundColor:SITE_C[SITES.indexOf(sk)],stack:'io'}));
+      backgroundColor:siteC(sk),stack:'io'}));
     destroyMk('cIo');
     CHARTS.cIo=new Chart(document.getElementById('cIo'),{type:'bar',
       data:{labels,datasets:inDs.concat(outDs)},
@@ -1452,11 +1491,13 @@ function render(){
       const cust=F.customer;
       // 목록 버전(headL·chRows)을 따로 두는 이유: 세부내역($rows)이 술어를 복제하면
       // 한쪽만 고쳐질 때 막대 수와 클릭 목록 수가 조용히 어긋난다 — 술어는 한 벌만 둔다.
-      const headL=E=>ROSTER.filter(p=>p.onsite&&qbrOk(p)&&p.join<=E&&(!p.quit||p.quit>=E)&&okCF(p.custB,p.fab));
+      /* okCF 가 아니라 okP 를 쓴다 — okCF 에는 구분(국내/해외) 조건이 없어서, 국내를 걸어도
+         이 계열만 대만 인원을 그대로 세고 있었다(KPI 는 0 인데 총인원 차트만 대만 값이 남던 원인). */
+      const headL=E=>ROSTER.filter(p=>p.onsite&&qbrOk(p)&&p.join<=E&&(!p.quit||p.quit>=E)&&okP(p));
       const head=E=>headL(E).length;
       const chRows=E=>fINST.filter(r=>{
         const fd=pd(r[CI.fabIn]); if(!fd||fd>E)return false;
-        return /F1[016]|PSMC|TASC|WINBOND/.test(GST.upk(String(r[CI.fab]||'')));   // 매크로 NarrowUp: 사이트 키 행만
+        return instQ(r);
       });
       const chIn=E=>chRows(E).reduce((a,r)=>{
         const ty=GST.upk(String(r[CI.type]||''));
@@ -1631,7 +1672,7 @@ function render(){
     const used=SITES.filter(sk=>fHR.some(x=>x.onsite&&grpKey(x)===sk));
     const cds=used.map(sk=>({label:sk,
       data:P.map(p=>fHR.filter(x=>x.onsite&&activeAt(x,p.end)&&grpKey(x)===sk).length),
-      backgroundColor:SITE_C[SITES.indexOf(sk)],stack:'s'}));
+      backgroundColor:siteC(sk),stack:'s'}));
     const _le=P[P.length-1].end;
     const _last=used.map(sk=>[sk,fHR.filter(x=>x.onsite&&activeAt(x,_le)&&grpKey(x)===sk).length]);
     destroyMk('cCareer');
@@ -1834,14 +1875,29 @@ function render(){
     {const tt=document.getElementById('opTblTitle'); if(tt)tt.textContent=t('tbl_op')+' ('+_olb+')';}
     /* 구분 행. Micron은 FAB이 여럿이라 'Micron F16'처럼 붙여 쓰고,
        PSMC·TASC·Winbond는 FAB이 하나라 고객사명만 쓴다.
-       예전엔 Tong luo·Tainan에만 Micron 접두어가 없어 별개 고객사로 읽혔다 — 둘 다 Micron이다. */
-    const OROWS=[
-      {k:'F16',lbl:'Micron F16'},{k:'F11',lbl:'Micron F11'},
-      {k:'F16N',lbl:'Micron F16N (Tong luo)'},{k:'F16S',lbl:'Micron F16S (Tainan)'},
-      {k:'PSMC',lbl:'PSMC'},{k:'TASC',lbl:'TASC'},{k:'WINBOND',lbl:'Winbond'}];
+       예전엔 Tong luo·Tainan에만 Micron 접두어가 없어 별개 고객사로 읽혔다 — 둘 다 Micron이다.
+       ⚠ 행 목록을 대만 7개로 박아 두었더니, 국내 설비 7,337대가 어느 행에도 안 붙어
+         국내 필터에서 표 전체가 '-' 로 떴다. 이제 «현재 필터에 실제로 있는 구분»으로 만든다. */
+    const OLBL={F16:'Micron F16',F11:'Micron F11',F16N:'Micron F16N (Tong luo)',
+                F16S:'Micron F16S (Tainan)',PSMC:'PSMC',TASC:'TASC',WINBOND:'Winbond'};
+    const OORD=['F16','F11','F16N','F16S','PSMC','TASC','WINBOND'];
     const rkI=r=>fabOf(r[CI.fab])||custBase(r[CI.customer]);           // 설치 행 → 구분
     const rkP=p=>p.fab||p.custB;                                        // 인원 행 → 구분
     const rkW=x=>lineKeyOf(x.fab,x.custB||x.customer);                   // 실적 행 → 구분
+    /* ⚠ 설치는 FAB·고객사에서, 인원은 근무지에서 키가 나온다. 대만은 두 어휘가 같아 맞물리지만
+       국내는 설비가 '삼성전자'·인원이 'P1'·'A3' 라 서로 안 붙는다 — 그 행의 인원 칸은 '-' 로 남는다.
+       억지로 잇지 않는다. 매핑표가 생기기 전까지는 «빈 칸이 곧 자료가 없다는 사실»이다. */
+    const OROWS=(function(){
+      const w={}, add=(k,n)=>{ if(k)w[k]=(w[k]||0)+n; };
+      fINST.forEach(r=>{const fd=pd(r[CI.fabIn]); if(fd&&fd<=_oe)add(rkI(r),1);});
+      fHR.forEach(p=>{ if(activeAt(p,_oe))add(rkP(p),1); });
+      const keys=Object.keys(w).sort(function(a,b){
+        const ia=OORD.indexOf(a), ib=OORD.indexOf(b);
+        if(ia>=0||ib>=0)return (ia<0?99:ia)-(ib<0?99:ib);
+        return (w[b]-w[a]) || (a<b?-1:1);
+      }).slice(0,12);
+      return (keys.length?keys:OORD).map(k=>({k:k,lbl:OLBL[k]||k}));
+    })();
     const chW=r=>String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1;
     const isWI=r=>{const w=String(r[CI.warranty]||'').toUpperCase();
       return w.includes('IN')&&!w.includes('OUT');};                    // AR열 'Warranty In/Out'
@@ -1871,7 +1927,7 @@ function render(){
       +'<td>'+(d.gap<0?(-d.gap):'<span class="mut">-</span>')+'</td>'
       +'<td class="gl">'+((d.loc&&d.rc)?Math.round(d.rc/d.loc):'<span class="mut">-</span>')+'</td>'
       +'<td class="gl">'+fm(d.pm)+'</td>';
-    const corp='GST '+(F.country?F.country.charAt(0)+F.country.slice(1).toLowerCase():'Taiwan');
+    const corp=corpLabel();
     const body=document.getElementById('opTblBody');
     if(body)body.innerHTML=D.map((d,i)=>'<tr>'
       +(i===0?'<td class="corp" rowspan="'+D.length+'">'+corp+'</td>':'')
@@ -1925,7 +1981,7 @@ function render(){
     const MP=periods(12,AM,'m'), WPq=periods(12,AW,'w');
     const catsM=MP.map(p=>exSer(p.end)), catsW=WPq.map(p=>p.label);
     const chInQ=E=>fINST.reduce((a,r)=>{const fd=pd(r[CI.fabIn]);if(!fd||fd>E)return a;
-      if(!/F1[016]|PSMC|TASC|WINBOND/.test(GST.upk(String(r[CI.fab]||''))))return a;
+      if(!instQ(r))return a;
       const ty=GST.upk(String(r[CI.type]||''));
       return a+(ty.includes('DUAL')?2:(ty.includes('SINGLE')?1:0));},0);
     const hdM=MP.map(p=>headOn(p.end));
@@ -2480,7 +2536,7 @@ window._downloadPPT_legacy=async function(btn){
   try{
     await pptLoad();
     const pres=new PptxGenJS(); pres.layout='LAYOUT_WIDE';
-    const corp='GST '+((F&&F.country)?(F.country.charAt(0)+F.country.slice(1).toLowerCase()):'Taiwan');
+    const corp=corpLabel();
     const header=(s,sec)=>{ s.background={color:'FFFFFF'};
       s.addText(corp.toUpperCase(),{x:9.6,y:0.08,w:3.6,h:0.4,fontFace:PPT_FONT,fontSize:15,bold:true,color:'111111',align:'right',margin:0});
       s.addText(sec,{x:0.76,y:0.1,w:8,h:0.4,fontFace:PPT_FONT,fontSize:14,bold:true,color:'111111',margin:0});
