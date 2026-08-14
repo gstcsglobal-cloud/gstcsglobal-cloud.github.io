@@ -1114,10 +1114,20 @@ GST.ORG = {
      ctx 는 국가를 알 수 있는 값이면 무엇이든 된다(운영단위·Country·FAB). */
   campus: function(campus, line, ctx){
     const ln = String(line == null ? '' : line).trim();
-    if(GST.ORG.country(ctx || '') === 'TAIWAN') return ln;
-    const c = String(campus == null ? '' : campus).trim();
-    // 단지 칸에 든 «단지가 아닌 것»(OFFICE·통합·기타…)은 값으로 쓰지 않는다 — 미상으로 둔다
-    if(!c || (GST.FILT_DROP_ORG && GST.FILT_DROP_ORG.test(c))) return '';
+    const c  = String(campus == null ? '' : campus).trim();
+    const bad = c && GST.FILT_DROP_ORG && GST.FILT_DROP_ORG.test(c);
+    if(GST.ORG.country(ctx || '') === 'TAIWAN'){
+      /* 대만의 단지 어휘는 F16·F11·F16N·PSMC 다(사용자가 인원현황을 그렇게 맞췄다).
+         세 자료가 채워 넣은 것이 서로 다르다:
+           인원현황  단지=F16      → 그대로 쓴다
+           실적      단지='기타'   → 비어 있는 것과 같다 → 라인(F16)으로 대체
+           설치현황  Location=TAICHUNG → 그건 «지역»이지 단지가 아니다 → FAB(F16)으로 대체
+         도시명을 단지로 쓰면 인원·실적과 안 맞물려 «설비는 있는데 실적이 0» 이 된다. */
+      if(c && !bad && !/TAICHUNG|LINKOU|TAINAN|TONGLUO|HSINCHU|SINCHU|KAOHSIUNG|台/i.test(c)) return c;
+      return ln;
+    }
+    // 단지 칸에 든 «단지가 아닌 것»(OFFICE·통합·Repair Center…)은 값으로 쓰지 않는다 — 미상으로
+    if(!c || bad) return '';
     return c;
   },
 

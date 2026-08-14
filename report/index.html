@@ -887,7 +887,7 @@ function parseRoster(rows){
       site:siteKey(wpOld||camp||line),
       custB:cust?GST.ORG.customer(cust):custBase(wpOld),
       fab:fabOf(line||wpOld), wp:wp, team:g(r,iTeam),
-      campus:GST.ORG.campus(camp, line, area||cust),
+      campus:GST.ORG.campus(camp, camp||line, area||cust),   // 인원현황은 단지 칸이 곧 FAB 층위(F16)다
       name:g(r,iNm)||String(r[2]||'').trim(),
       join:iIn>=0?pd(r[iIn]):null,
       // 퇴사 판정: 퇴사일이 있거나, 새 양식의 「인사」가 퇴직이면 퇴사다
