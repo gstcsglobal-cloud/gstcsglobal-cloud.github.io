@@ -106,24 +106,52 @@ async function tableCount(c,t){
   return r.count||0;
 }
 
+/* 파일 읽기 — 인코딩을 스스로 정한다.
+   엑셀(한국어 Windows)의 «다른 이름으로 저장 → CSV(쉼표로 분리)»는 UTF-8 이 아니라
+   **CP949** 로 쓴다. 그걸 UTF-8 로 읽으면 한글이 전부 U+FFFD 가 되고, 헤더 이름이
+   하나도 안 맞아 «헤더 행 자체를 찾지 못함»이 된다 — 화면에는 원인이 안 드러나고
+   «열 이름이 틀렸나»만 의심하게 되는 실패다. 그래서 깨지면 CP949 로 되읽는다. */
+async function readText(f){
+  const buf=await f.arrayBuffer();
+  const utf=new TextDecoder('utf-8').decode(buf);
+  if(utf.indexOf('�')<0)return {txt:utf, enc:'UTF-8'};
+  for(const enc of ['euc-kr','shift_jis','big5','windows-1252']){
+    try{ const s=new TextDecoder(enc).decode(buf);
+      if(s.indexOf('�')<0)return {txt:s, enc:enc==='euc-kr'?'CP949(euc-kr)':enc}; }catch(e){}
+  }
+  return {txt:utf, enc:'UTF-8(깨짐)'};
+}
+/* 헤더를 못 찾았을 때 파일이 «실제로 어떻게 읽혔는지» 보여준다.
+   숫자만 보여주는 실패("인식 0/38")는 인코딩 문제인지 이름 문제인지 못 가른다. */
+function peek(rows,rd){
+  const esc=s=>String(s==null?'':s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const lines=(rows||[]).slice(0,3).map((r,i)=>'  '+i+'행: '
+    +(r||[]).slice(0,12).map(x=>esc(String(x==null?'':x).replace(/\n/g,'⏎')).slice(0,18)).join(' | ')
+    +((r||[]).length>12?'  … (총 '+r.length+'칸)':''));
+  return '\n\n── 파일이 이렇게 읽혔습니다 ('+rd.enc+') ──\n'+lines.join('\n')
+    +'\n\n한글이 깨져 보이면 인코딩, 이름이 멀쩡한데 안 맞으면 머리글 이름 문제입니다.';
+}
+
 /* ---------- 검사 — 업로드 전에 파일이 표에 맞는지 그 자리에서 판정 ---------- */
 $('fsel').onchange=async function(){
   PREP=null; $('goBtn').disabled=true; $('log').textContent='—';
   const t=TABLES[+$('tsel').value], f=this.files[0];
   if(!f)return;
   chkShow('⏳ 파일 해석 중…');
-  const txt=await f.text();
-  const rows=Papa.parse(txt.replace(/^﻿/,''),{skipEmptyLines:false}).data;
+  const rd=await readText(f);
+  const rows=Papa.parse(rd.txt.replace(/^﻿/,''),{skipEmptyLines:false}).data;
   try{
     const c=await GST.db(); if(!c)throw new Error('로그인이 필요합니다');
     const oldCount=await tableCount(c,t.table);
     let out, msgs=[], missing=[];
+    if(rd.enc!=='UTF-8')msgs.push('<span class="warn">ℹ '+rd.enc+' 로 읽었습니다 (엑셀에서 저장한 CSV)</span>');
 
     if(t.kind==='mirror'){
       /* sheet-sync 와 같은 해석 — SPEC 으로 열을 «이름으로» 찾는다. 못 찾으면 막는다. */
       const S=GST.SM.SPEC[t.key];
       const m=GST.SM.map(rows,S);
-      if(!m.ok)throw new Error('열을 못 찾았습니다: '+m.miss.join(', ')+'\n(시트 머리글이 그대로 있는 CSV 인지 확인하세요)');
+      if(!m.ok)throw new Error('열을 못 찾았습니다: '+m.miss.join(', ')
+        +'\n(시트 머리글이 그대로 있는 CSV 인지 확인하세요)'+peek(rows,rd));
       const keys=Object.keys(S.fields), C=m.C;
       const header=(rows[m.hi]||[]).map(x=>String(x==null?'':x));
       const mapped=new Set(keys.map(k=>C[k]).filter(i=>i>=0));
@@ -148,7 +176,8 @@ $('fsel').onchange=async function(){
       const colOf={}; Object.keys(probe.data[0]).forEach(k=>{ if(!GST._CSV_SKIP[k])colOf[GST.SM.norm(k)]=k; });
       const header=(rows[0]||[]).map(x=>String(x==null?'':x).trim());
       const unknown=header.filter(h=>h&&!colOf[GST.SM.norm(h)]);
-      if(unknown.length)throw new Error('표에 없는 헤더: '+unknown.join(', ')+'\n(처음 이관 때 쓴 CSV 와 같은 형식인지 확인하세요)');
+      if(unknown.length)throw new Error('표에 없는 헤더: '+unknown.join(', ')
+        +'\n(처음 이관 때 쓴 CSV 와 같은 형식인지 확인하세요)'+peek(rows,rd));
       /* 표에는 있는데 CSV 에 없는 컬럼. 통째 교체면 표를 비우고 넣으므로 그 컬럼이
          **전 행 NULL** 이 된다 — 「올린 줄 알았는데 값이 사라진」 형태의 손실이다.
          작은 노란 글씨로는 지나친다. 붉게 띄우고 확인창에도 다시 적는다. */

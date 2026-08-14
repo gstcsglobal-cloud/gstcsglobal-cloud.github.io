@@ -1077,7 +1077,10 @@ GST.ORG = {
   region: function(s){
     const u = GST.upk(s || '');
     if(!u.trim()) return '';
-    if(/^SEC|^SDC|KOREA|한국|이천|청주/.test(u)) return '국내';
+    /* '국내' 를 빼먹으면 안 된다 — 실측 운영단위에 '국내기타 SCRUBBER' 가 있다.
+       반대편 '해외 기타 SCRUBBER' 는 «해외» 글자로 잡히는데 국내만 안 잡혀,
+       그 행이 «구분 미상»이 되어 국내 필터에서 조용히 빠졌다. 두 어휘를 대칭으로 둔다. */
+    if(/^SEC|^SDC|KOREA|한국|국내|이천|청주/.test(u)) return '국내';
     if(/^GST|해외/.test(u)) return '해외';
     /* 사업부명이 아니라 «국가»가 그대로 들어오는 자료가 있다(옛 설치현황 Country = 'TAIWAN').
        국가를 알면 구분도 아는 것이므로 여기서 되돌린다 — 이 줄이 없으면 그런 행이 전부
