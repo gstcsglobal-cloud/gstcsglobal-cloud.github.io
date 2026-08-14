@@ -571,7 +571,7 @@ function updateFiltBadge(){
   b.innerHTML='🔎 '+P.map(x=>'<span class="fchip">'+x+'</span>').join('')+'<button class="fclr" onclick="clearFilt()">✕ 필터 해제</button>';
 }
 window.clearFilt=function(){ F.country='';GST.filters.clear();syncCommon();
-  ['sl-country','sl-customer','dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['sl-country','dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render(); };
 window.clearAllFilters=function(){
   F.country='';GST.filters.clear();syncCommon();
@@ -1153,8 +1153,10 @@ function fillFilters(){
   WK.forEach(x=>{ if(x.country)cSet.add(x.country); });
   ROSTER.forEach(p=>{ if(p.region==='국내')cSet.add('KOREA');
     else { const c=GST.ORG.country(p.fab||p.custB); if(c)cSet.add(c); } });
-  { const el=document.getElementById('sl-region'); if(el)el.value=F.region||''; }
-  [['sl-country',cSet,'country'],['sl-customer',uSet,'customer']].forEach(([id,set,k])=>{
+  /* 구분·고객사 셀렉터는 GST.filters 로 옮겨갔다 — 여기 남은 것은 이 페이지 전용인 「국가」뿐이다.
+     (옛 sl-region·sl-customer 를 채우던 줄은 마크업이 없어져 아무 일도 안 하고 있었다.
+      죽은 채로 두면 다음 사람이 «여기서도 고객사를 채우는구나» 로 읽고 두 벌을 만든다.) */
+  [['sl-country',cSet,'country']].forEach(([id,set,k])=>{
     const el=document.getElementById(id); if(!el)return;
     el.innerHTML='<option value="">'+t('all')+'</option>'+[...set].sort().map(v=>'<option value="'+String(v).replace(/"/g,'&quot;')+'"'+(F[k]===v?' selected':'')+'>'+v+'</option>').join('');
   });
