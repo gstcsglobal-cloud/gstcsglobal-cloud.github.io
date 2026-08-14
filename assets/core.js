@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 91;
+GST.VER = 92;
 GST.needVer = function(n){
   if(GST.VER >= n) return true;
   try{
@@ -1012,6 +1012,210 @@ GST.SM.cipRange = function(headerRow){
   const rmk=H.indexOf(GST.SM.norm('Remark'));
   const c1=(rmk>c0?rmk:H.length)-1;
   return (c0>0&&c1>=c0) ? {c0:c0,c1:c1} : null;
+};
+
+/* ============================================================
+   국내 알람 · 올바이패스 (v92)
+
+   왜 별도 자료인가. 국내는 BM 건수를 수선실적에서 세면 정합성이 안 맞는다(사용자 확인).
+   현장이 실제로 쓰는 것은 「CS 알람관리」 워크북이고, 그것을 원장으로 삼는다.
+
+   ⚠ 한 워크북 안에서 K·P·H 세 운영단위가 «각자 다른 양식»으로 관리한다.
+     같은 뜻의 열이 사이트마다 다른 이름이다 — 알람 유형 / 알람분류 / 대분류,
+     외부 내부 / 내적 외적 / 구분기준. 세 벌로 파싱하면 반드시 갈라지므로(제2원칙)
+     별칭 배열 하나로 흡수해 «한 스키마»로 눕힌다. 사이트별 코드를 만들지 말 것.
+
+   ⚠ 집계 대상 판정을 새로 발명하지 말 것. 시트가 이미 자기 답을 열로 갖고 있다 —
+     P는 「내적 / 제외」, H·K는 「내적/외적」·「외부 / 내부」. 그 열을 읽는다.
+     그리고 H 올바이패스는 한 사건이 Seq 1·2·3 세 줄로 들어 있어(실측 각 918행),
+     그냥 세면 건수가 정확히 3배가 된다. Seq=1 만 한 사건이다.
+   ============================================================ */
+GST.SM.SPEC.alarm = { name:'국내 알람', scan:8,
+  hints:['SEQP S/N', ['Alarm Comment','ALARM COMMENT']],
+  /* 거의 전부가 opt 다 — 어느 사이트에도 «전부 다 있는» 열은 S/N·알람·발생시각뿐이다.
+     opt 에서 빼면 그 열이 없는 사이트의 시트가 통째로 거부된다. */
+  opt:['site','line','area','bay','eqpId','proc','subproc','chamber','chpos','seqpId',
+       'status','maker','model','ch','alevel','alarmName','relTime','hold','atype','ctype',
+       'ctype2','inout','incl','cause','phenom','action','module','srcMonth','srcWeek',
+       'srcYear','checker'],
+  fields:{
+    site:'Site', line:'Line', area:'Area', bay:'Bay', eqpId:['EQP ID','EQPID'],
+    proc:'공정', subproc:['세부공정','소공정'],
+    chamber:'Chamber ID', chpos:'Chamber Position',
+    sn:'SEQP S/N', seqpId:['SEQP ID','SEQPID2'], status:'Status', maker:'Maker',
+    model:'SEQP Model', ch:'SEQP CH', alevel:'Alarm Level',
+    alarm:['Alarm Comment','ALARM COMMENT'], alarmName:'알람',
+    occur:'Occur Time', relTime:'Release Time', hold:'Holding Time',
+    // 현상 계열(무엇이 났나) — PRESSURE·FLAME·INLET P …
+    atype:['알람 유형','알람분류','대분류'],
+    // 원인 계열(왜 났나) — POWDER·PART·HUMAN …
+    ctype:'유형1', ctype2:'유형2',
+    inout:['외부 / 내부','내적/외적','구분기준'],
+    incl:'내적 / 제외',
+    cause:['알람 실제원인','발생 사유(서술형)'], phenom:'현상',
+    action:['조치내용','조치 내용'], module:'발생 모듈',
+    srcMonth:['정산월','월별'], srcWeek:'주차', srcYear:['년도','연도'],
+    checker:['담당자','확인자']
+  }};
+
+GST.SM.SPEC.abp2 = { name:'국내 올바이패스', scan:8,
+  /* K 시트는 손으로 관리하는 별개 양식이라 P·H 와 공통 머리글이 하나도 없다.
+     그래서 힌트도 별칭으로 준다(둘 중 하나만 있으면 통과). */
+  hints:[['SEQP S/N','SEQP ID','S/N'], ['Occur Date','발생날짜','주차']],
+  opt:['site','line','area','eqpId','chamber','model','maker','occurT','relTime','hold',
+       'alarm','seq','real','inout','incl','atype','ctype','cause','action','phenom',
+       'srcMonth','srcWeek','srcYear','checker'],
+  fields:{
+    site:'Site', line:['Line','라인'], area:'Area',
+    eqpId:['EQP ID','호기'], chamber:'Chamber ID',
+    sn:['SEQP S/N','SEQP ID','S/N'],
+    model:'SEQP Model', maker:'Maker',
+    occur:['Occur Date','발생날짜'], occurT:'Occur Time', relTime:'Release Time',
+    hold:['Holding Time','By pass 유지시간','유지시간'],
+    alarm:['ALARM COMMENT','Alarm Comment','All Bypass 발생 Alarm명'],
+    seq:'All-ByPass Seq', real:'진성/가성',
+    inout:['내/외','내적/외적','발생 구분'], incl:'발생 구분2',
+    atype:'알람구분', ctype:'유형',
+    cause:['발생사유','All Bypass 발생사유','알람 발생 사유','실제원인'],
+    action:'조치내용', phenom:'현상',
+    srcMonth:['정산월','발생월 삼성기준','월'], srcWeek:'주차', srcYear:['년도','연도'],
+    checker:'확인자'
+  }};
+
+GST.ALARM = {
+  /* 설비 S/N 조인 키. 표기가 사이트마다 다르다 — SBW0527 · DBW-1177S · GBWS-3738L.
+     영숫자만 남기면 설치현황(GBWS-7561)과 붙는다. 그래도 안 붙으면 채널 접미(L/R/S)를
+     떼고 한 번 더 본다 — 실측 조인율 99.9%(설치현황 S/N 은 15,474대 중 두 대만 문자로 끝나
+     접미 제거가 남의 설비를 물 위험이 사실상 없다). */
+  key: function(v){ return String(v==null?'':v).toUpperCase().replace(/[^A-Z0-9]/g,''); },
+  keyBase: function(v){ return GST.ALARM.key(v).replace(/[A-Z]+$/,''); },
+  /* 시트의 «정산월/주차»를 비교 가능한 꼴로 눕힌다. 표기가 넷이다:
+       26년 7월 · 26_08 · 26년 02월 · 25_01   → 2026-07
+       26년 25W · 21년4W · 26_32 · 26년 04주  → 2026-W25
+     ⚠ 달력 월/주차로 대체하지 말 것 — 국내는 «삼성 기준 월»이 달력과 다르다
+       (실측: 발생일 2022-02-18 인데 시트의 발생월은 22년 3월). 그래서 시트 값을 살린다. */
+  /* ⚠ 한 열 안에서도 표기가 섞인다(실측 K 알람: 옛 행은 월별 '12' + 년도 '20년',
+     새 행은 월별 '21년 1월'). 연도가 값에 없으면 년도 열을 받아 붙인다 — 안 그러면
+     옛 행이 통째로 «월 미상»이 되어 추이 앞부분이 사라진다. */
+  ym: function(s, yr){
+    const t=String(s==null?'':s).trim(); if(!t) return '';
+    let m=t.match(/(\d{2,4})\s*[년_\-.]\s*(\d{1,2})\s*월?\s*$/);
+    let y, mo;
+    if(m){ y=+m[1]; mo=+m[2]; }
+    else {
+      const only=t.match(/^(\d{1,2})\s*월?$/); if(!only) return '';
+      const ym2=String(yr==null?'':yr).match(/(\d{2,4})/); if(!ym2) return '';
+      y=+ym2[1]; mo=+only[1];
+    }
+    if(y<100) y+=2000;
+    if(mo<1||mo>12) return '';
+    return y+'-'+String(mo).padStart(2,'0');
+  },
+  yw: function(s, yr){
+    const t=String(s==null?'':s).trim(); if(!t) return '';
+    if(/월/.test(t)) return '';                      // 월 표기를 주차로 읽지 않는다
+    let m=t.match(/(\d{2,4})\s*[년_\-.]\s*(\d{1,2})\s*(?:W|w|주)?\s*$/);
+    let y, w;
+    if(m){ y=+m[1]; w=+m[2]; }
+    else {
+      const only=t.match(/^(\d{1,2})\s*(?:W|w|주)?$/); if(!only) return '';
+      const ym2=String(yr==null?'':yr).match(/(\d{2,4})/); if(!ym2) return '';
+      y=+ym2[1]; w=+only[1];
+    }
+    if(y<100) y+=2000;
+    if(w<1||w>53) return '';
+    return y+'-W'+String(w).padStart(2,'0');
+  },
+  /* 발생일. 엑셀에서 이 칸은 «날짜형과 문자열이 섞여» 온다(실측 K 알람 7,396행 중
+     날짜형은 164행뿐, 나머지는 '2020-12-21 00:15:54' 문자열). 하나만 처리하면
+     한쪽이 통째로 버려진다 — 셋 다 받는다(Date · 문자열 · 엑셀 시리얼). */
+  day: function(v){
+    if(v==null||v==='') return '';
+    if(v instanceof Date) return isNaN(v)?'':v.toISOString().slice(0,10);
+    const t=String(v).trim();
+    const n=Number(t);
+    if(t && !isNaN(n) && n>20000 && n<80000)
+      return new Date(Date.UTC(1899,11,30)+n*86400000).toISOString().slice(0,10);
+    const m=t.match(/(\d{4})[-./]\s*(\d{1,2})[-./]\s*(\d{1,2})/);
+    if(!m) return '';
+    const y=+m[1], mo=+m[2], d=+m[3];
+    if(mo<1||mo>12||d<1||d>31) return '';
+    return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  },
+  /* 집계 대상인가. 새로 발명하지 않고 «시트가 이미 적어 둔 답»을 읽는다.
+       ① Seq 가 있고 1이 아니면 같은 사건의 2·3차 줄이다 → 제외 (H 올바이패스)
+       ② 「내적 / 제외」·「발생 구분2」 같은 포함/제외 열이 있으면 그 답을 따른다
+       ③ 그 열이 없는 사이트는 「내부·내적」만 센다 (K·H 알람)
+     올바이패스는 ③을 적용하지 않는다 — 외적 사유로 난 올바이패스도 «발생 건수»다.
+     그래서 kind 를 받는다. 판정을 바꾸려면 여기 한 곳만 고친다. */
+  // ISO 주차 — 시트에 주차 열이 없는 사이트(P 알람)의 폴백. 화면이 «주차 미상»으로 비지 않게.
+  isoWeek: function(ymd){
+    if(!ymd) return '';
+    const d=new Date(ymd+'T00:00:00Z'); if(isNaN(d)) return '';
+    const t=new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay()||7));
+    const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));
+    const w=Math.ceil(((t-y0)/86400000+1)/7);
+    return t.getUTCFullYear()+'-W'+String(w).padStart(2,'0');
+  },
+  counts: function(row, kind){
+    const g=k=>String(row&&row[k]!=null?row[k]:'').trim();
+    const seq=g('seq');
+    if(seq && seq!=='1') return false;
+    const incl=g('incl');
+    if(incl) return incl==='포함';
+    if(kind==='abp2') return true;
+    const io=g('inout');
+    if(io) return io==='내부'||io==='내적';
+    return true;
+  },
+
+  /* 시트 한 장 → DB 행. 업로드 화면과 검증 스크립트가 «같은 함수»를 쓴다 —
+     화면에만 두면 테스트가 흉내를 내게 되고, 흉내는 반드시 본체와 갈라진다
+     (t-upload 가 그 이유로 실제 페이지를 띄워 대조하고 있다).
+     tag = 'K'|'P'|'H' (어느 운영단위 시트인가) · kind = 'alarm'|'abp2' */
+  build: function(rows, kind, tag){
+    const S=GST.SM.SPEC[kind==='abp2'?'abp2':'alarm'];
+    const m=GST.SM.map(rows, S);
+    if(m.hi<0) return {err:'헤더 행을 찾지 못했습니다 (힌트: '+(S.hints||[]).join(' + ')+')'};
+    if(m.miss.length) return {err:'열을 못 찾았습니다: '+m.miss.join(', ')};
+    const keys=Object.keys(S.fields), C=m.C;
+    const header=(rows[m.hi]||[]).map(function(x){ return String(x==null?'':x); });
+    const mapped={}; keys.forEach(function(k){ if(C[k]>=0) mapped[C[k]]=1; });
+    /* SPEC 에 없는 열은 버리지 않고 extra 로 담는다 — 사이트마다 자기만 쓰는 열이 있고
+       (K 의 발생 모듈, H 의 추적완료여부 …), 버리면 «올린 줄 알았는데 없는» 상태가 된다. */
+    const extraCols=[];
+    header.forEach(function(h,i){ if(!mapped[i] && h.trim()!=='') extraCols.push({i:i,h:h.trim()}); });
+    const out=[]; let skipped=0;
+    for(let i=m.hi+1;i<rows.length;i++){
+      const r=rows[i]||[];
+      let any=false;
+      for(let j=0;j<r.length;j++){ if(String(r[j]==null?'':r[j]).trim()!==''){ any=true; break; } }
+      if(!any) continue;
+      const v={};
+      keys.forEach(function(k){ v[k]=C[k]>=0?String(r[C[k]]==null?'':r[C[k]]).trim():''; });
+      const day=GST.ALARM.day(v.occur)||GST.ALARM.day(v.occurT);
+      /* 설비도 날짜도 없는 줄은 자료가 아니다 — 이 시트들에는 합계·메모 줄이 섞여 있고
+         (K 올바이패스 오른쪽에는 피벗표까지 붙어 있다) 그대로 넣으면 건수가 부풀어 오른다.
+         조용히 버리지 않고 몇 줄을 건너뛰었는지 화면에 돌려준다. */
+      if(!v.sn && !day){ skipped++; continue; }
+      const o={};
+      keys.forEach(function(k){ o[GST._snake(k)] = v[k]===''?null:v[k]; });
+      o.src_sheet=tag; o.op=tag+'운영';
+      o.sn_key=GST.ALARM.key(v.sn)||null;
+      o.occur_date=day||null;
+      // 시트의 «정산월·주차»를 우선 쓴다(국내는 삼성 기준 월이 달력과 다르다). 없으면 달력.
+      o.fmonth=GST.ALARM.ym(v.srcMonth, v.srcYear) || (day?day.slice(0,7):null);
+      o.fweek =GST.ALARM.yw(v.srcWeek,  v.srcYear) || (day?GST.ALARM.isoWeek(day):null);
+      o.cnt=GST.ALARM.counts(v, kind);
+      const ex={};
+      extraCols.forEach(function(x){ const t=String(r[x.i]==null?'':r[x.i]).trim(); if(t) ex[x.h]=t; });
+      o.extra=Object.keys(ex).length?ex:null;
+      out.push(o);
+    }
+    return {rows:out, skipped:skipped, hi:m.hi, extra:extraCols.length,
+            found:keys.filter(function(k){return C[k]>=0;}).length, total:keys.length};
+  }
 };
 
 /* ---------- 값 정규화 — 같은 것이 여러 표기로 갈라지면 집계가 거짓말을 한다 ----------

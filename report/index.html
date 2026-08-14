@@ -685,6 +685,49 @@ function isoW(d){ // 엑셀 WEEKNUM(일~토, 1/1 포함 주=W1) — 시트 주�
   return sun.getUTCFullYear()+'-W'+String(w).padStart(2,'0');
 }
 function keyOfDate(d,u){return (u||PERIOD)==='w'?isoW(d):fmtYM(d);}
+
+/* ===== 국내 알람·올바이패스 원장 (v92) =====
+   사용자 결정: **국내는 BM·All By-Pass 를 수선실적에서 세지 않는다.** 수선실적의 BM
+   정합성이 아직 안 맞아서, 현장이 쓰는 「CS 알람관리」 워크북을 원장으로 삼는다.
+   대만은 지금까지대로 수선실적 BM + ABP 시트를 쓴다 — 두 계통이 공존한다.
+
+   ⚠ 원장이 비어 있으면 «없는 것»으로 두고 옛 경로 그대로 간다. 그래야 올리기 전후로
+     대만 숫자가 한 자리도 안 움직이고, 국내는 올린 뒤부터 제대로 나온다. */
+let KRA=[], KRB=[];
+function krParse(rows){
+  if(!rows||rows.length<2)return [];
+  const h=rows[0], ix={}; h.forEach(function(k,i){ ix[k]=i; });
+  const g=(r,k)=>ix[k]==null?'':String(r[ix[k]]==null?'':r[ix[k]]).trim();
+  return rows.slice(1).map(function(r){
+    return { snk:g(r,'sn_key'), sn:g(r,'sn'), d:g(r,'occur_date').slice(0,10),
+             fm:g(r,'fmonth'), fw:g(r,'fweek'),
+             // boolean 은 csvTableRows 가 문자열로 돌려준다 — 'false' 가 참이 되지 않게 명시 비교
+             cnt:/^(true|t|1)$/i.test(g(r,'cnt')),
+             srcSite:g(r,'site'), srcLine:g(r,'line'),
+             atype:g(r,'atype'), ctype:g(r,'ctype'), alarm:g(r,'alarm'),
+             cause:g(r,'cause'), op0:g(r,'op') };
+  });
+}
+/* 조직 축은 설비 S/N 으로 설치현황에서 가져온다 — 원장에 담아 두면 설치현황이
+   갱신될 때 두 벌이 갈라진다(CIP 와 같은 규약). 실측 조인율 99.9%. */
+function krJoin(list, inst, CI){
+  const ix={};
+  inst.forEach(function(r){
+    const k=GST.ALARM.key(r[CI.sn]); if(!k)return;
+    const o={ region:GST.ORG.region(r[CI.country]), op:String(r[CI.country]||'').trim(),
+              custB:custBase(r[CI.customer]),
+              campus:GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country]),
+              line:String(r[CI.fab]||'').trim() };
+    if(!ix[k])ix[k]=o;
+    const b=GST.ALARM.keyBase(r[CI.sn]); if(!ix[b])ix[b]=o;
+  });
+  list.forEach(function(x){
+    const o=ix[x.snk]||ix[GST.ALARM.keyBase(x.snk)]||null;
+    x.region=o?o.region:''; x.op=o?o.op:''; x.custB=o?o.custB:'';
+    x.campus=o?o.campus:''; x.lineN=(o&&o.line)||x.srcLine;
+  });
+  return list;
+}
 function periods(n,anchor,unit){
   const U=unit||PERIOD;
   if(!GST.span12()) return GST._monthSpan(anchor,U,t('mon_u'));   // 상단바 토글 OFF = 마감 월만
@@ -1073,7 +1116,7 @@ async function loadData(){
   st.className='status'; st.textContent=t('loading');
   try{
     const gidOk=g=>/^\d+$/.test(g);
-    const [hr,wk,inst,ro,lv,c11,c16,abp]=await Promise.allSettled([
+    const [hr,wk,inst,ro,lv,c11,c16,abp,kra,krb]=await Promise.allSettled([
       GST.fetchCSVCached(URLS.hr,'hr'),
       GST.fetchCSVCached(URLS.wk,'sheet3'),
       GST.fetchCSVCached(URLS.inst,'inst'),
@@ -1081,8 +1124,14 @@ async function loadData(){
       gidOk(GID_LEAVE)?GST.fetchCSVCached(URLS.leave,'leave'):Promise.reject('gid 미설정'),
       gidOk(GID_CIP11)?GST.fetchCSVCached(URLS.cip11,'cip11'):Promise.reject('gid 미설정'),
       gidOk(GID_CIP16)?GST.fetchCSVCached(URLS.cip16,'cip16'):Promise.reject('gid 미설정'),
-      gidOk(GID_ABP)?GST.fetchCSVCached(URLS.abp,'abp'):Promise.reject('gid 미설정')
+      gidOk(GID_ABP)?GST.fetchCSVCached(URLS.abp,'abp'):Promise.reject('gid 미설정'),
+      /* 국내 알람·올바이패스 원장 (v92). 아직 안 올렸으면 EMPTY 로 떨어지고,
+         그때는 지금까지대로 수선실적 BM 에서 센다 — 대만 숫자가 한 자리도 안 움직여야 한다. */
+      GST.csvTableRows('sheet_alarm'),
+      GST.csvTableRows('sheet_allbypass')
     ]);
+    KRA = kra.status==='fulfilled'?krParse(kra.value):[];
+    KRB = krb.status==='fulfilled'?krParse(krb.value):[];
     ROSTER = ro.status==='fulfilled'?parseRoster(ro.value.rows):[];
     LEAVE  = lv.status==='fulfilled'?parseLeave(lv.value.rows):[];
     CIP = [].concat(
@@ -1121,6 +1170,7 @@ async function loadData(){
         workers:String(r[CW.workers]||'').split(/[,、;/]+/).map(s=>s.trim()).filter(Boolean)};
     }).filter(Boolean):[];
     INST = inst.status==='fulfilled'?inst.value.rows.slice(HI_INST+1).filter(r=>String(r[CI.sn]||'').trim()):[];
+    krJoin(KRA, INST, CI); krJoin(KRB, INST, CI);   // 조직 축은 설치현황에서 — CI 가 확정된 뒤여야 한다
     const cached=(hr.status==='fulfilled'&&hr.value.cached)||(wk.status==='fulfilled'&&wk.value.cached);
     const _wkDrop=Math.max(0,_wkRaw-WK.length);   // 작업단계·작업일 공란으로 집계 제외된 행
     st.className='status ok';
@@ -1129,7 +1179,11 @@ async function loadData(){
     const _hrWarn=!HR.length&&_hrRaw>3?' ⚠ 교육시트 열 인식 실패(원본 '+_hrRaw+'행)':(!HR.length&&_hrRaw<0?' ⚠ 교육시트 로드 실패':'');
     if(_hrWarn)st.className='status err';
     st.textContent=(cached?'📡 ':'✅ ')+new Date().toLocaleString('ko-KR')+' · HR '+HR.length+_hrWarn+' · 실적 '+WK.length.toLocaleString()
-      +(_wkDrop?' (제외 '+_wkDrop.toLocaleString()+'·단계/일자 공란)':'')+' · 설치 '+INST.length.toLocaleString()+' · v44';
+      +(_wkDrop?' (제외 '+_wkDrop.toLocaleString()+'·단계/일자 공란)':'')+' · 설치 '+INST.length.toLocaleString()
+      +(KRA.length||KRB.length ? ' · 국내알람 '+KRA.filter(x=>x.cnt).length.toLocaleString()
+          +'/'+KRA.length.toLocaleString()+' · 국내올바 '+KRB.filter(x=>x.cnt).length.toLocaleString()
+          +'/'+KRB.length.toLocaleString() : '')
+      +' · v45';
     render();
   }catch(e){
     st.className='status err'; st.textContent='❌ '+t('loading');
@@ -1246,6 +1300,36 @@ function render(){
   const wkIn=(st,en)=>{ let b=_lbW(en); while(b<_SWK.length && +_SWK[b].wd===+en) b++;
     return _SWK.slice(_lbW(st), b); };
   const wkInX=(st,en)=>_SWK.slice(_lbW(st), _lbW(en));   // en 미포함(직전 구간 비교용)
+
+  /* ---- 국내 알람·올바이패스 원장 (v92) ----
+     구간 키는 «시트가 적어 둔 정산월·주차»를 쓴다(fm·fw). 국내는 삼성 기준 월이
+     달력과 달라서(실측: 발생일 2/18 인데 시트의 발생월은 3월) 달력으로 다시 세면
+     현장이 보고하는 숫자와 어긋난다. 그 열이 없는 사이트만 발생일에서 채워져 있다. */
+  const _fromS=from?fmtD(from):'', _toS=F.dtTo?fmtD(anchor):'';
+  const krOk=x=>(!F.region||x.region===F.region)&&(!F.op||x.op===F.op)
+    &&(!F.country||GST.ORG.country(x.op)===F.country)
+    &&(!F.customer||x.custB===F.customer)&&(!F.campus||x.campus===F.campus)&&lineOk(x.lineN)
+    &&(!_fromS||(x.d&&x.d>=_fromS))&&(!_toS||(x.d&&x.d<=_toS));
+  /* 원장에 해외 설비로 조인되는 행이 섞여 들어오면 대만은 «수선실적 BM + 원장» 으로
+     이중 계산된다. 이 원장은 국내용이라는 약속이므로, 해외로 판정된 행만 뺀다
+     (조인이 안 된 «미상» 은 남긴다 — 국내 설비인데 설치현황에 없을 수 있다). */
+  const krDom=x=>x.region!==GST.ORG.REGION_OS;
+  const KRAf=KRA.filter(x=>x.cnt&&krDom(x)&&krOk(x)), KRBf=KRB.filter(x=>x.cnt&&krDom(x)&&krOk(x));
+  const _krOS=KRA.filter(x=>x.cnt&&!krDom(x)).length+KRB.filter(x=>x.cnt&&!krDom(x)).length;
+  const _krBk={};
+  const krBk=(list,tag,u)=>{ const id=tag+u; let m=_krBk[id]; if(m)return m;
+    m=_krBk[id]=new Map();
+    list.forEach(function(x){ const k=(u==='w')?x.fw:x.fm; if(!k)return;
+      m.set(k,(m.get(k)||0)+1); });
+    return m; };
+  const krN=(list,tag,u,key)=>krBk(list,tag,u).get(key)||0;
+  /* 원장이 «비어 있으면» 국내 BM 도 지금까지대로 수선실적에서 센다.
+     비었는데 빼 버리면 올리기 전까지 국내 알람이 통째로 0 이 된다 — 가장 설명하기 어려운 실패다. */
+  const KR_ON = KRA.length>0;
+  const _KR='국내';
+  const alarmAt=(u,key)=>bk(u,key).filter(x=>x.stage==='BM'&&ftLineOk(x)
+                            &&!(KR_ON&&x.region===_KR)).length
+                       + (KR_ON?krN(KRAf,'a',u,key):0);
   const fINST=INST.filter(r=>{
     const c=GST.ORG.country(r[CI.country])||guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();
     if(F.region&&GST.ORG.region(r[CI.country])!==F.region)return false;
@@ -1879,16 +1963,20 @@ function render(){
   {
     const {P,labels,u}=PU('cFt');
     // Alarm = BM 건수만 (CBM 제외) · All By-Pass = 별도 시트 · Total = Alarm + All By-Pass
-    const alarm=P.map(p=>bk(u,p.key).filter(x=>x.stage==='BM'&&ftLineOk(x)).length);
+    const alarm=P.map(p=>alarmAt(u,p.key));
     const abpAt=p=>{ const src=ABP[u]||{};
       const key=(u==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
-      return abpSel(src[key]); };
+      return abpSel(src[key]) + krN(KRBf,'b',u,p.key);   // 대만 ABP 시트 + 국내 올바이패스 원장
+    };
     const abp=P.map(abpAt);
     const tot=alarm.map((v,i)=>v+abp[i]);
     // 고장은 줄어드는 게 좋은 지표 · 라인별로 어디서 늘었는지 분해
     _W.push({k:'ft',label:t('ft_alarm'),labels,data:alarm,unit:'',goodWhenDown:true,
-             parts:i=>{const m={}; bk(u,P[i].key).forEach(x=>{ if(x.stage==='BM'){
+             parts:i=>{const m={};
+                       bk(u,P[i].key).forEach(x=>{ if(x.stage==='BM'&&!(KR_ON&&x.region===_KR)){
                          const g=grpKey(x); m[g]=(m[g]||0)+1; } });
+                       if(KR_ON)KRAf.forEach(x=>{ if(((u==='w')?x.fw:x.fm)===P[i].key){
+                         const g=x.campus||x.srcSite||'미상'; m[g]=(m[g]||0)+1; } });
                        return Object.keys(m).map(g=>({name:g,v:m[g]}));}});
     const hasABP=abp.some(v=>v>0);
     destroyMk('cFt');
@@ -1910,6 +1998,8 @@ function render(){
       /* «막대가 전부 0» 은 두 가지 뜻이다 — 정말 고장이 없었거나, 이 조건의 행에 BM 단계가
          아예 없거나. 둘은 완전히 다른 사실인데 화면은 똑같이 0으로만 보인다(가장 설명하기
          어려운 실패). 그래서 후자면 «어떤 단계가 있는지» 를 그대로 적어 준다. */
+      if(KR_ON) _note += ' · 국내는 알람 원장 기준 (수선실적 BM 제외)'
+        + (_krOS? ' · 원장의 해외 설비 '+_krOS.toLocaleString()+'행은 이중 계산을 막으려 뺐습니다':'');
       if(!tot.some(v=>v>0)){
         const _st={}; let _n=0;
         P.forEach(p=>bk(u,p.key).forEach(x=>{ _st[x.stage||'(공란)']=(_st[x.stage||'(공란)']||0)+1; _n++; }));
@@ -1923,10 +2013,10 @@ function render(){
     window._PPT.ft={};
     ['w','m'].forEach(uu=>{
       const _pp={P:periods(12,asOf,uu)}; _pp.labels=_pp.P.map(x=>x.label);
-      const _al=_pp.P.map(p=>bk(uu,p.key).filter(x=>x.stage==='BM'&&ftLineOk(x)).length);
+      const _al=_pp.P.map(p=>alarmAt(uu,p.key));
       const _ab=_pp.P.map(p=>{const src=ABP[uu]||{};
         const key=(uu==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
-        return abpSel(src[key]);});
+        return abpSel(src[key]) + krN(KRBf,'b',uu,p.key);});
       window._PPT.ft[uu]={labels:_pp.labels,alarm:_al,abp:_ab,tot:_al.map((v,i)=>v+_ab[i])};
     });
     // TOP3 표
@@ -2133,10 +2223,10 @@ function render(){
       pmW.push(r2q(pm/60/den));npW.push(r2q(np/60/den));htW.push(r2q((pm+np)/60/den));});
     // Alarm(BM)·All By-Pass — 슬라이드3: 가=주간, 나=월간 (cFt 차트와 동일 산식)
     const abpOf=(uu,p)=>{const src=ABP[uu]||{};const key=(uu==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
-      return abpSel(src[key]);};
-    const alarmW=WPq.map(p=>bk('w',p.key).filter(x=>x.stage==='BM'&&ftLineOk(x)).length);
+      return abpSel(src[key]) + krN(KRBf,'b',uu,p.key);};
+    const alarmW=WPq.map(p=>alarmAt('w',p.key));
     const abpW=WPq.map(p=>abpOf('w',p));
-    const alarmM=MP.map(p=>bk('m',p.key).filter(x=>x.stage==='BM'&&ftLineOk(x)).length);
+    const alarmM=MP.map(p=>alarmAt('m',p.key));
     const abpM=MP.map(p=>abpOf('m',p));
     // 입사·퇴사(라인별) — 슬라이드1 인력현황: 주간·사이트별 다이버징 스택 (0은 비워 라벨 생략)
     const GRAYS=['404040','595959','7F7F7F','A6A6A6','BFBFBF','D9D9D9'];   // 보고서 그림과 동일한 회색조

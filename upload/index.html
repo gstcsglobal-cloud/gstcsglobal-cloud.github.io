@@ -54,7 +54,7 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 
 <div class="card">
   <h3>2. CSV 파일</h3>
-  <input type="file" id="fsel" accept=".csv,text/csv">
+  <input type="file" id="fsel" accept=".csv,text/csv,.xlsx">
   <div id="chk" style="margin-top:10px"></div>
   <button class="btn" id="goBtn" disabled onclick="doUpload()">업로드 (기존 데이터를 이 파일로 교체)</button>
 </div>
@@ -79,6 +79,13 @@ const TABLES = [
   { label:'CIP F11 (cip_f11.csv 형식)',  table:'sheet_cip_f11', kind:'import' },
   { label:'CIP F16 (cip_f16.csv 형식)',  table:'sheet_cip_f16', kind:'import' },
   { label:'All By-Pass (abp.csv 세로형)', table:'sheet_abp',     kind:'import' },
+  /* 국내 알람 원장 — 한 워크북(.xlsx)에 K·P·H 세 운영단위 시트가 «각자 다른 양식»으로 들어 있다.
+     CSV 여섯 개로 쪼개 올리게 하면 어느 시트를 어느 표에 넣는지 사람이 틀린다 →
+     워크북 하나를 받아 이름으로 시트를 골라 한 번에 넣는다. */
+  { key:'alarm', label:'국내 알람 (CS 알람관리 .xlsx)',      table:'sheet_alarm',
+    kind:'xlsx', win:'occurDate', sheets:/^([KPH])운영[_\s]*ALARM$/i,     hint:'○운영_ALARM' },
+  { key:'abp2',  label:'국내 올바이패스 (CS 알람관리 .xlsx)', table:'sheet_allbypass',
+    kind:'xlsx', win:'occurDate', sheets:/^([KPH])운영[_\s]*ALL[_\s]*BYPASS$/i, hint:'○운영_ALLBYPASS' },
 ];
 const $=id=>document.getElementById(id);
 TABLES.forEach((t,i)=>{ $('tsel').insertAdjacentHTML('beforeend','<option value="'+i+'">'+t.label+'</option>'); });
@@ -132,21 +139,86 @@ function peek(rows,rd){
     +'\n\n한글이 깨져 보이면 인코딩, 이름이 멀쩡한데 안 맞으면 머리글 이름 문제입니다.';
 }
 
+/* xlsx 리더는 «필요할 때만» 받는다. CSV 만 올리는 날에 CDN 을 부르지 않게, 그리고
+   CDN 이 막혀도 CSV 경로는 멀쩡하게 두려고 지연 로드한다. */
+let _XLSX=null;
+async function xlsxLib(){
+  if(_XLSX)return _XLSX;
+  if(!window.XLSX){
+    await new Promise((ok,ng)=>{ const el=document.createElement('script');
+      el.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      el.onload=ok; el.onerror=()=>ng(new Error('xlsx 라이브러리를 받지 못했습니다 (CDN 차단?) — 시트를 CSV 로 저장해 올리세요'));
+      document.head.appendChild(el); });
+  }
+  _XLSX=window.XLSX; if(!_XLSX)throw new Error('xlsx 라이브러리 로드 실패');
+  return _XLSX;
+}
+/* 셀 → 문자열. 날짜는 «현지 시각 구성요소»로 찍는다 — toISOString 을 쓰면 UTC 로 밀려
+   자정 근처 행의 날짜가 하루 어긋난다(엑셀은 시각대 개념 없이 저장한다). */
+function cellStr(v){
+  if(v==null)return '';
+  if(v instanceof Date){
+    const p=n=>String(n).padStart(2,'0');
+    return v.getFullYear()+'-'+p(v.getMonth()+1)+'-'+p(v.getDate())
+      +' '+p(v.getHours())+':'+p(v.getMinutes())+':'+p(v.getSeconds());
+  }
+  return String(v);
+}
+
 /* ---------- 검사 — 업로드 전에 파일이 표에 맞는지 그 자리에서 판정 ---------- */
 $('fsel').onchange=async function(){
   PREP=null; $('goBtn').disabled=true; $('log').textContent='—';
   const t=TABLES[+$('tsel').value], f=this.files[0];
   if(!f)return;
   chkShow('⏳ 파일 해석 중…');
-  const rd=await readText(f);
-  const rows=Papa.parse(rd.txt.replace(/^﻿/,''),{skipEmptyLines:false}).data;
+  /* 표와 파일 종류가 어긋나면 «깨진 인코딩»·«헤더 못 찾음» 같은 엉뚱한 오류로 나타난다.
+     실제 원인(표를 잘못 골랐다)을 그 자리에서 말해 준다. */
+  {
+    const isX=/\.xls[xm]$/i.test(f.name||'');
+    if(t.kind==='xlsx'&&!isX){ chkShow('<span class="bad">❌ 「'+t.label+'」 은 워크북(.xlsx) 을 받습니다 — 고른 파일은 «'+f.name+'» 입니다.<br>시트를 나눠 저장하지 말고 워크북 그대로 올리세요.</span>'); return; }
+    if(t.kind!=='xlsx'&&isX){ chkShow('<span class="bad">❌ 「'+t.label+'」 은 CSV 를 받습니다 — 고른 파일은 «'+f.name+'» 입니다.<br>엑셀에서 «다른 이름으로 저장 → CSV» 로 내보내세요.</span>'); return; }
+  }
+  // xlsx 는 바이너리다 — 텍스트로 먼저 읽으면 «깨진 인코딩»으로 오진한다
+  const rd = (t.kind==='xlsx') ? {txt:'', enc:'xlsx'} : await readText(f);
+  const rows = (t.kind==='xlsx') ? [] : Papa.parse(rd.txt.replace(/^﻿/,''),{skipEmptyLines:false}).data;
   try{
     const c=await GST.db(); if(!c)throw new Error('로그인이 필요합니다');
     const oldCount=await tableCount(c,t.table);
     let out, msgs=[], missing=[];
-    if(rd.enc!=='UTF-8')msgs.push('<span class="warn">ℹ '+rd.enc+' 로 읽었습니다 (엑셀에서 저장한 CSV)</span>');
+    if(rd.enc!=='UTF-8'&&rd.enc!=='xlsx')msgs.push('<span class="warn">ℹ '+rd.enc+' 로 읽었습니다 (엑셀에서 저장한 CSV)</span>');
 
-    if(t.kind==='mirror'){
+    if(t.kind==='xlsx'){
+      /* 워크북 → 여러 시트를 «한 표»로 눕힌다. 시트마다 양식이 달라도 SPEC 의 별칭이
+         흡수한다(GST.SM.SPEC.alarm · abp2). 사이트별 코드를 여기 만들지 말 것 — 제2원칙. */
+      const XLSX=await xlsxLib();
+      const wb=XLSX.read(new Uint8Array(await f.arrayBuffer()),{type:'array',cellDates:true});
+      const hit=[];
+      wb.SheetNames.forEach(function(n){ const mm=t.sheets.exec(String(n).trim()); if(mm)hit.push([n,mm[1].toUpperCase()]); });
+      if(!hit.length)throw new Error('워크북에 «'+t.hint+'» 이름의 시트가 없습니다'
+        +'\n(이 파일에 있는 시트: '+wb.SheetNames.join(', ')+')');
+      out=[]; const per=[]; let skipTot=0;
+      for(const pair of hit){
+        const rr=XLSX.utils.sheet_to_json(wb.Sheets[pair[0]],{header:1,raw:true,defval:''})
+                     .map(function(row){ return (row||[]).map(cellStr); });
+        const b=GST.ALARM.build(rr,t.key,pair[1]);
+        if(b.err)throw new Error(pair[0]+' — '+b.err+peek(rr,{enc:'xlsx'}));
+        skipTot+=b.skipped;
+        per.push(pair[0]+' <b>'+b.rows.length.toLocaleString()+'</b>행(열 '+b.found+'/'+b.total+')');
+        out=out.concat(b.rows);
+      }
+      out.forEach(function(o,i){ o.src_row=i; });
+      msgs.push('<span class="ok">✅ 시트 '+hit.length+'개 — '+per.join(' · ')+'</span>');
+      if(skipTot)msgs.push('<span class="warn">ℹ 설비도 날짜도 없는 '+skipTot.toLocaleString()
+        +'줄은 건너뛰었습니다 (합계·메모 줄)</span>');
+      const cn=out.filter(function(o){return o.cnt;}).length;
+      const nd=out.filter(function(o){return !o.occur_date;}).length;
+      msgs.push('집계 대상 <b>'+cn.toLocaleString()+'</b>행 / 전체 '+out.length.toLocaleString()
+        +' — 판정은 시트가 적어 둔 내/외·포함 열을 그대로 따르고, 한 사건이 여러 줄인 것은 첫 줄만 셉니다'
+        +(nd?' · <span class="warn">발생일을 못 읽은 '+nd.toLocaleString()+'행은 시계열에서 빠집니다</span>':''));
+      const nj=out.filter(function(o){return !o.sn_key;}).length;
+      if(nj)msgs.push('<span class="warn">ℹ 설비 S/N 이 없는 '+nj.toLocaleString()
+        +'행은 사이트·라인 조인이 안 됩니다 (「미상」으로 잡힙니다)</span>');
+    }else if(t.kind==='mirror'){
       /* sheet-sync 와 같은 해석 — SPEC 으로 열을 «이름으로» 찾는다. 못 찾으면 막는다. */
       const S=GST.SM.SPEC[t.key];
       const m=GST.SM.map(rows,S);
