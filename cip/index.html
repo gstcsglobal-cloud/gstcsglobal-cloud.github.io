@@ -171,7 +171,7 @@ tr:hover td{background:var(--glass-hover)}
 <div class="pt-note" id="asOfNote" style="margin:-4px 0 12px"></div>
 
 <div class="slicers">
-  <div class="slicer"><div class="lbl" data-i="sl_site">사이트</div><select id="sl-site" onchange="onSlicer()"></select></div>
+  <!-- 사이트(F11·F16)는 GST.filters 의 라인으로 흡수됐다 — 그 값이 곧 FAB 이다. -->
   <div class="slicer"><div class="lbl" data-i="sl_group">공정</div><select id="sl-group" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_floor">층·구역</div><select id="sl-floor" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_model">모델</div><select id="sl-model" onchange="onSlicer()"></select></div>
@@ -334,10 +334,13 @@ GST.authGate();
 const VER='v50';
 const MS=86400000;
 const PUB='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub';
-const GID_CIP11='2123129719', GID_CIP16='1999732389';
+const GID_CIP11='2123129719', GID_CIP16='1999732389', GID_INST='891608329';
 const URLS={
   cip11:PUB+'?gid='+GID_CIP11+'&single=true&output=csv',
-  cip16:PUB+'?gid='+GID_CIP16+'&single=true&output=csv'
+  cip16:PUB+'?gid='+GID_CIP16+'&single=true&output=csv',
+  // CIP 시트에는 구분·운영단위·고객사가 없다. 그 축은 설치현황을 S/N 으로 조인해 얻는다 —
+  // 없으면 «국내로 걸었는데 CIP 는 대만 값 그대로» 가 된다(실제로 그랬다).
+  inst :PUB+'?gid='+GID_INST +'&single=true&output=csv'
 };
 // 열 위치는 헤더 이름으로 찾는다(GST.SM.SPEC.cip, core.js). F11·F16은 열 위치가 다르지만
 // 머리글 이름이 같아 스펙 하나로 둘 다 처리된다. 항목 열 범위도 'FAB In'~'Remark'로 유도한다 —
@@ -466,7 +469,7 @@ ja:{title:'CIP 状況',sub:'スクラバー改造·点検(CIP)の項目別進捗
 let LANG='ko', CHARTS={}, CIP=[], BADN=0, MODEL=null;
 let itemSort='rem', pairMerge=false;
 let iSortK='rem', iSortAsc=false, dSortK='age', dSortAsc=false;
-const F={site:'',group:'',floor:'',model:'',item:'',q:''};
+const F={group:'',floor:'',model:'',item:'',q:''};
 
 // ── 주간현황과 공유하는 설정 (gst_rpt_*) ──
 let PERIOD='m';
@@ -631,6 +634,35 @@ function normGroup(g){
   if(u.startsWith('ETCH'))return 'ETCH';
   return u;
 }
+/* 설비 S/N → 조직(구분·운영단위·고객사·단지·라인) 색인. 조회는 S/N 먼저, 없으면 Scrubber CODE.
+   ⚠ 못 찾은 행을 버리지 않는다 — 단지·라인은 CIP 자신의 사이트(F11·F16)로 폴백하고
+   나머지는 빈 값으로 둔다. 버리면 «필터를 걸면 표가 반으로 준다» 가 된다. */
+let INSTIX={sn:{},code:{}};
+function buildInstIndex(rows){
+  INSTIX={sn:{},code:{}};
+  if(!rows||rows.length<2)return;
+  const m=GST.SM.map(rows, GST.SM.SPEC.inst); if(m.hi<0)return;
+  const C=m.C, key=v=>GST.upk(String(v==null?'':v)).replace(/[^A-Z0-9]/g,'');
+  rows.slice(m.hi+1).forEach(r=>{
+    const o={ region:GST.ORG.region(r[C.country]), op:String(r[C.country]||'').trim(),
+              customer:GST.ORG.customer(r[C.customer]),
+              campus:GST.ORG.campus(r[C.location], r[C.fab], r[C.country]),
+              line:String(r[C.fab]||'').trim() };
+    const s=key(r[C.sn]), c=key(r[C.code]);
+    if(s&&!INSTIX.sn[s])INSTIX.sn[s]=o;
+    if(c&&!INSTIX.code[c])INSTIX.code[c]=o;
+  });
+}
+function attachOrg(x){
+  const key=v=>GST.upk(String(v==null?'':v)).replace(/[^A-Z0-9]/g,'');
+  const o=INSTIX.sn[key(x.sn)]||INSTIX.code[key(x.code)]||null;
+  x.region  = o?o.region:'';
+  x.op      = o?o.op:'';
+  x.customer= o?o.customer:'';
+  x.campus  = (o&&o.campus)||x.site;
+  x.orgLine = (o&&o.line)||x.site;
+  return x;
+}
 function parseCIP(rows,site){
   if(!rows||rows.length<3)return {recs:[],bad:0,cols:0};
   // 헤더 행·열 위치·항목 구간을 전부 이름으로 찾는다
@@ -675,13 +707,18 @@ async function loadData(){ GST.skeleton(true);
   const status=document.getElementById('status');
   status.textContent='⏳ '+t('loading');
   try{
-    const [c11,c16]=await Promise.all([
+    const [r11,r16,rin]=await Promise.allSettled([
       GST.fetchCSVCached(URLS.cip11,'cip11'),
-      GST.fetchCSVCached(URLS.cip16,'cip16')
+      GST.fetchCSVCached(URLS.cip16,'cip16'),
+      GST.fetchCSVCached(URLS.inst ,'cip_inst')   // 실패해도 CIP 는 뜬다 — 조직 축만 비게 둔다
     ]);
+    if(r11.status!=='fulfilled')throw r11.reason;
+    if(r16.status!=='fulfilled')throw r16.reason;
+    const c11=r11.value, c16=r16.value;
+    buildInstIndex(rin.status==='fulfilled'?rin.value.rows:null);
     const p11=parseCIP(c11.rows,'F11');
     const p16=parseCIP(c16.rows,'F16');
-    CIP=p11.recs.concat(p16.recs);
+    CIP=p11.recs.concat(p16.recs).map(attachOrg);
     BADN=p11.bad+p16.bad+CIP.filter(x=>x.bad).length;
     // CIP 시트는 헤더가 항목명이라 validateSchema를 쓸 수 없다 → 항목 열 수로 구조 변동 감시
     const issues=[];
@@ -702,14 +739,18 @@ async function loadData(){ GST.skeleton(true);
 // ── 슬라이서 ──
 function fillSlicers(){
   const uq=k=>Array.from(new Set(CIP.map(x=>x[k]).filter(Boolean))).sort();
-  GST.fillSelect('sl-site','site',uq('site'),F,t('all'));
+  /* 기간 칸은 접근자를 주지 않아 잠긴다 — CIP 는 «구간 말 누계» 로 그리므로 완료일로
+     행을 잘라내면 대상(Not yet)이 통째로 사라져 진행율이 100% 가 된다. */
+  GST.filters.mount({ page:'cip', rows:()=>CIP, onChange:render,
+    get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer,
+          campus:x=>x.campus, line:x=>x.orgLine },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
   GST.fillSelect('sl-group','group',uq('group'),F,t('all'));
   GST.fillSelect('sl-floor','floor',uq('floor'),F,t('all'));
   GST.fillSelect('sl-model','model',uq('model'),F,t('all'));
   GST.fillSelect('sl-item','item',uq('item'),F,t('all'));
 }
 function onSlicer(){
-  F.site=document.getElementById('sl-site').value;
   F.group=document.getElementById('sl-group').value;
   F.floor=document.getElementById('sl-floor').value;
   F.model=document.getElementById('sl-model').value;
@@ -718,8 +759,12 @@ function onSlicer(){
 }
 let _qT=null;
 function onSearch(){ clearTimeout(_qT); _qT=setTimeout(()=>{F.q=document.getElementById('sl-q').value.trim().toUpperCase();render();},220); }
-function clearAllFilters(){Object.keys(F).forEach(k=>F[k]='');document.getElementById('sl-q').value='';fillSlicers();render();}
-window.clearF=function(k){F[k]='';if(k==='q')document.getElementById('sl-q').value='';fillSlicers();render();};
+function clearAllFilters(){Object.keys(F).forEach(k=>F[k]='');document.getElementById('sl-q').value='';GST.filters.clear();fillSlicers();render();}
+window.clearF=function(k){
+  if(k.indexOf('gf_')===0){ const kk=k.slice(3);
+    if(kk==='period'){GST.filters.F.dtFrom='';GST.filters.F.dtTo='';} else GST.filters.F[kk]='';
+    GST.filters.refresh(); render(); return; }
+  F[k]='';if(k==='q')document.getElementById('sl-q').value='';fillSlicers();render();};
 window.setItemSort=function(k){itemSort=k;render();};
 window.togglePair=function(){pairMerge=!pairMerge;render();};
 window.sortItem=function(k){if(iSortK===k)iSortAsc=!iSortAsc;else{iSortK=k;iSortAsc=false;}renderItemTable();};
@@ -727,7 +772,7 @@ window.sortDet=function(k){if(dSortK===k)dSortAsc=!dSortAsc;else{dSortK=k;dSortA
 window.hmPick=function(g,it){F.group=g===t('etc')?'':g;F.item=it;fillSlicers();render();};
 
 function match(x){
-  return (!F.site||x.site===F.site)&&(!F.group||x.group===F.group)&&(!F.floor||x.floor===F.floor)
+  return GST.filters.pass(x)&&(!F.group||x.group===F.group)&&(!F.floor||x.floor===F.floor)
     &&(!F.model||x.model===F.model)&&(!F.item||x.item===F.item)
     &&(!F.q||(x.sn+' '+x.code+' '+x.detail+' '+x.area).toUpperCase().includes(F.q));
 }
@@ -761,7 +806,11 @@ function render(){
   renderMiniToggles();
   ['soRem','soRate'].forEach(id=>document.getElementById(id).classList.toggle('active',itemSort===(id==='soRem'?'rem':'rate')));
   document.getElementById('soPair').classList.toggle('active',pairMerge);
-  GST.renderChips(F,{site:t('sl_site'),group:t('sl_group'),floor:t('sl_floor'),model:t('sl_model'),item:t('sl_item'),q:t('sl_search')},'clearF');
+  // 기본 필터도 같은 칩 줄에 보여야 한다 — 걸린 조건이 화면에 안 보이면 모집단을 오해한다
+  const _chips=Object.assign({},F);
+  GST.filters.active().forEach(x=>{ _chips['gf_'+x.k]=x.value; });
+  GST.renderChips(_chips,Object.assign({group:t('sl_group'),floor:t('sl_floor'),model:t('sl_model'),item:t('sl_item'),q:t('sl_search')},
+    {gf_region:'구분',gf_op:'운영단위',gf_customer:'고객사',gf_campus:'단지',gf_line:'라인',gf_team:'팀',gf_period:'기간'}),'clearF');
 
   const fR=CIP.filter(match);
   // 마감 시점 스냅샷: 대상 = 적용일이 asOf 이전, 완료 = 완료일이 asOf 이전
@@ -877,7 +926,9 @@ function render(){
           {label:t('s_done'),data:keys.map(k=>ss[k].d),backgroundColor:DONE_C,stack:'s'},
           {label:t('s_rem'),data:keys.map(k=>ss[k].r),backgroundColor:REM_C,stack:'s'}]},
         options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-          onClick:(e,els,ch)=>{if(els.length){F.site=keys[els[0].index];fillSlicers();render();}},
+          onClick:(e,els,ch)=>{if(els.length){const v=keys[els[0].index];
+            // 사이트 축은 GST.filters 의 라인으로 옮겼다 — 페이지의 F 를 건드리면 눌러도 아무 일이 없다
+            GST.filters.F.line=(GST.filters.F.line===v)?'':v; GST.filters.refresh(); render();}},
           plugins:{legend:{position:'bottom',labels:{padding:8}}},
           scales:{x:{stacked:true,beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
                   y:{stacked:true,ticks:{color:TH.txt},grid:{display:false}}}}});

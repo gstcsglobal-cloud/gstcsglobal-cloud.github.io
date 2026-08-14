@@ -1893,7 +1893,17 @@ function render(){
     {
       const _fi=tot.length-1, _pv=tot[_fi-1]||0;
       const _fd=GST.pctDelta(tot[_fi]||0,_pv);
-      setNote('cFt',t('nFt').replace('{n}',tot[_fi]||0).replace('{d}',_fd==null?'—':(_fd>0?'+':'')+_fd+'%'));
+      let _note=t('nFt').replace('{n}',tot[_fi]||0).replace('{d}',_fd==null?'—':(_fd>0?'+':'')+_fd+'%');
+      /* «막대가 전부 0» 은 두 가지 뜻이다 — 정말 고장이 없었거나, 이 조건의 행에 BM 단계가
+         아예 없거나. 둘은 완전히 다른 사실인데 화면은 똑같이 0으로만 보인다(가장 설명하기
+         어려운 실패). 그래서 후자면 «어떤 단계가 있는지» 를 그대로 적어 준다. */
+      if(!tot.some(v=>v>0)){
+        const _st={}; let _n=0;
+        P.forEach(p=>bk(u,p.key).forEach(x=>{ _st[x.stage||'(공란)']=(_st[x.stage||'(공란)']||0)+1; _n++; }));
+        if(_n) _note += ' · 이 조건에는 BM 행이 없습니다 (있는 단계: '
+          + Object.entries(_st).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>e[0]+' '+e[1]).join(' · ')+')';
+      }
+      setNote('cFt',_note);
     }
     // PPT 내보내기용 — 주/월 양단위 Alarm·ABP 시리즈 스냅샷 (표시 전용 · 위 차트 계산과 동일 식)
     // 앵커는 KPI와 동일한 asOf(마감 통합 기준일) — 월 마감만 잡아도 주간 시리즈가 그 시점으로 정렬
