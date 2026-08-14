@@ -452,7 +452,7 @@ async function downloadHrPPT(){
     const l2t=f.filter(p=>p.onsite&&six(p)), l2d=l2t.filter(p=>p.lv2date&&p.lv2date<=TODAY);
     const l3t=f.filter(p=>p.onsite&&p.lv2date&&p.lv2date<=TODAY), l3d=l3t.filter(p=>p.lv3date&&p.lv3date<=TODAY);
     // 법인 과정 대상은 주간현황과 동일: 6개월 미만=Basic · 6개월 이상=Veteran (한 사람 한 과정)
-    const cp=f.filter(p=>p.onsite&&p.join);
+    const cp=f.filter(p=>p.onsite&&p.join&&hasCorp(p));   // 국내는 법인 과정 대상이 아니다
     const ep=cp.filter(p=>!six(p)), bd=ep.filter(p=>p.bdate&&p.bdate<=TODAY);
     const vp=cp.filter(six),        vd=vp.filter(p=>p.vdate&&p.vdate<=TODAY);
     const pct=(d,t)=>t?Math.round(d/t*100)+'%':'-';
@@ -678,10 +678,19 @@ function lvPerson(rec,byId,byNm){
 }
 
 /* 교육 상태 분류 — 이수여부 열이 시트에서 없어져 **완료일 유무로 판정한다.**
-   예전 '진행중'·'비대상'은 그 열에만 있던 값이라 함께 사라졌다(사용자 확정: 영영 안 쓴다). */
-function clsB(p){ return (p.bdate&&p.bdate<=TODAY)?'이수완료':'미이수'; }
-function clsV(p){ return (p.vdate&&p.vdate<=TODAY)?'이수완료':'미이수'; }
-function eduStatusOf(p){ return p.edu?clsB(p):'미등록'; }
+   예전 '진행중'은 그 열에만 있던 값이라 함께 사라졌다(사용자 확정: 영영 안 쓴다).
+
+   ⚠ 국내(SEC·SDC·SK)에는 법인 교육과정(Basic·Veteran)이 «아예 없다».
+     그 인원을 미이수로 세면 이수율이 국내 인원 수만큼 깎여 사실과 다른 낮은 숫자가 나오고,
+     명단에도 «미이수» 라는 틀린 사실이 찍힌다 → 대상이 아니면 «비대상» 이다.
+     적용 여부는 hasCorp 한 곳에서만 판정한다 — 두 벌이면 카드마다 다른 답이 나온다. */
+const eduDoneAt=(d,E)=>!!(d&&d<=(E||TODAY));
+function hasCorp(p){ return p.region!=='국내'; }          // 법인 과정(Basic·Veteran) 대상인가
+function clsB(p){ return hasCorp(p)?(eduDoneAt(p.bdate)?'이수완료':'미이수'):'비대상'; }
+function clsV(p){ return hasCorp(p)?(eduDoneAt(p.vdate)?'이수완료':'미이수'):'비대상'; }
+function clsL2(p){ return eduDoneAt(p.lv2date)?'이수완료':'미이수'; }
+// 명단·칩의 «교육» 한 칸은 그 사람에게 실제로 적용되는 과정으로 판정한다
+function eduStatusOf(p){ return !p.edu?'미등록':(hasCorp(p)?clsB(p):clsL2(p)); }
 
 /* ===== 상태/스타일 ===== */
 let DATA=[], ROSTER=[], EDU=[], LV=[], LVTYPES=[], LVPPL=[], CH={}, DRILL={}, LASTSPARK={};
@@ -926,7 +935,7 @@ function render(){ GST.skeleton(false);
   // 대상 정의는 주간현황과 동일하게 맞춘다(사용자 확정): 현장(O) 재직자를 근속으로 갈라
   // 입사 6개월 미만 = Basic 대상 · 6개월 이상 = Veteran 대상 (한 사람은 한 과정만 평가).
   // 완료 판정도 주간현황과 같이 '완료일 ≤ 기준일' — 마감을 걸면 그 시점이 그대로 재현된다.
-  const corpPop=f.filter(p=>p.onsite&&p.join);
+  const corpPop=f.filter(p=>p.onsite&&p.join&&hasCorp(p));   // 국내는 법인 과정 자체가 없다
   const bDone=p=>!!(p.bdate&&p.bdate<=TODAY), vDone=p=>!!(p.vdate&&p.vdate<=TODAY);
   const ep=corpPop.filter(p=>!sixUp(p)), bd=ep.filter(bDone).length;   // Basic 대상 = 6개월 미만
   const vp=corpPop.filter(sixUp),        vd=vp.filter(vDone).length;   // Veteran 대상 = 6개월 이상
@@ -952,7 +961,7 @@ function render(){ GST.skeleton(false);
   const sHead=SP.map(p=>fAll.filter(x=>activeAt(x,p.end)).length);
   const sOn  =SP.map(p=>fAll.filter(x=>x.onsite&&activeAt(x,p.end)).length);
   // 법인 종합 — kp3과 같은 정의(6개월 미만=Basic 대상 · 이상=Veteran 대상, 완료일 ≤ 구간말)
-  const sB   =SP.map(p=>{const pp=fAll.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join);
+  const sB   =SP.map(p=>{const pp=fAll.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join&&hasCorp(x));
     const e=pp.filter(x=>((p.end-x.join)/86400000)<182), bD=e.filter(x=>x.bdate&&x.bdate<=p.end);
     const v=pp.filter(x=>((p.end-x.join)/86400000)>=182), vD=v.filter(x=>x.vdate&&x.vdate<=p.end);
     const T=e.length+v.length;return T?Math.round((bD.length+vD.length)/T*100):null;});
@@ -991,11 +1000,23 @@ function render(){ GST.skeleton(false);
   // 본사 과정은 상태 열이 없어 이수완료/미이수 2상태만 존재한다
   const hqCnt=(tg,done)=>st=>st==='이수완료'?tg.filter(done).length:st==='미이수'?tg.filter(p=>!done(p)).length:0;
   const cntL2=hqCnt(l2t,lv2Done), cntL3=hqCnt(l3t,lv3Done);
-  mk('cEdu',{type:'bar',data:{labels:['Basic','Veteran','Lv.2','Lv.3'],datasets:stt.map(s=>({label:tr(stKey[s]),
-      data:[epop.filter(p=>clsB(p)===s).length,epop.filter(p=>clsV(p)===s).length,cntL2(s),cntL3(s)],backgroundColor:stCol[s],stack:'e'}))},
+  /* 법인 과정 막대는 «대상이 한 명이라도 있을 때만» 그린다. 국내만 걸린 화면에서
+     0짜리 Basic·Veteran 막대를 남기면 «못 채운 것» 처럼 읽힌다 — 없는 과정이다. */
+  const corpE=epop.filter(hasCorp);
+  const COLS=[];
+  if(corpE.length){
+    COLS.push({nm:'Basic',  cnt:st=>corpE.filter(p=>clsB(p)===st).length, pick:st=>corpE.filter(p=>clsB(p)===st)});
+    COLS.push({nm:'Veteran',cnt:st=>corpE.filter(p=>clsV(p)===st).length, pick:st=>corpE.filter(p=>clsV(p)===st)});
+  }
+  COLS.push({nm:'Scrubber Lv.2',lb:'Lv.2',cnt:cntL2,
+    pick:st=>st==='이수완료'?l2t.filter(lv2Done):st==='미이수'?l2t.filter(p=>!lv2Done(p)):[]});
+  COLS.push({nm:'Scrubber Lv.3',lb:'Lv.3',cnt:cntL3,
+    pick:st=>st==='이수완료'?l3t.filter(lv3Done):st==='미이수'?l3t.filter(p=>!lv3Done(p)):[]});
+  mk('cEdu',{type:'bar',data:{labels:COLS.map(c=>c.lb||c.nm),datasets:stt.map(s=>({label:tr(stKey[s]),
+      data:COLS.map(c=>c.cnt(s)),backgroundColor:stCol[s],stack:'e'}))},
     plugins:[valLabelPlugin],
     options:{maintainAspectRatio:false,layout:{padding:{top:16}},plugins:{legend:{position:'bottom'},valLabel:{mode:'stackAll',color:TH.txt}},scales:baseScales(TH,true)}});
-  DRILL.cEdu={kind:'edu',title:tr('ch_edu'),epop,stt,hq:[{t:l2t,d:lv2Done,nm:'Scrubber Lv.2'},{t:l3t,d:lv3Done,nm:'Scrubber Lv.3'}]};
+  DRILL.cEdu={kind:'edu',title:tr('ch_edu'),stt,cols:COLS};
 
   /* ---- cLv: 라인별 휴가 사용 (최근 12개월 · 평일 1일 단위) ---- */
   // 휴가 레코드를 명단과 조인(사번 우선)하고 현재 슬라이서에 걸린 인원만 집계 — 다른 차트와 동일 규칙
@@ -1057,8 +1078,8 @@ function render(){ GST.skeleton(false);
     const sixAt=(p,E)=>!!(p.join&&((E-p.join)/MS)>=182);
     // tg = 그 시점의 대상 여부 — KPI 카드와 같은 정의(법인은 한 사람 한 과정)
     const CRS=[
-      {nm:'Basic',        dt:p=>p.bdate,   tg:(p,E)=>!sixAt(p,E),                 col:S.on},
-      {nm:'Veteran',      dt:p=>p.vdate,   tg:(p,E)=>sixAt(p,E),                  col:S.good},
+      {nm:'Basic',        dt:p=>p.bdate,   tg:(p,E)=>hasCorp(p)&&!sixAt(p,E),     col:S.on},
+      {nm:'Veteran',      dt:p=>p.vdate,   tg:(p,E)=>hasCorp(p)&&sixAt(p,E),      col:S.good},
       {nm:'Scrubber Lv.2',dt:p=>p.lv2date, tg:(p,E)=>sixAt(p,E),                  col:S.warn},
       {nm:'Scrubber Lv.3',dt:p=>p.lv3date, tg:(p,E)=>!!(p.lv2date&&p.lv2date<=E), col:S.bad}];
     // 막대는 '그 시점 현장 재직자 중 이수를 마친 인원'(사실 그대로) — 대상에서 빠진 사람의 이수 이력도 남긴다.
@@ -1091,12 +1112,12 @@ function render(){ GST.skeleton(false);
   }
 
   /* ---- 6. 교육 단계 퍼널 (Basic → Veteran → Lv.2 → Lv.3 이수 잔존) ---- */
-  { const on=f.filter(p=>p.onsite);
-    const st=[
-      {k:'Basic',    g:on.filter(p=>p.edu&&clsB(p)==='이수완료')},
-      {k:'Veteran',  g:on.filter(p=>p.edu&&clsV(p)==='이수완료')},
+  { const on=f.filter(p=>p.onsite), onC=on.filter(hasCorp);
+    const st=(onC.length?[
+      {k:'Basic',    g:onC.filter(p=>p.edu&&clsB(p)==='이수완료')},
+      {k:'Veteran',  g:onC.filter(p=>p.edu&&clsV(p)==='이수완료')}]:[]).concat([
       {k:'Scrubber Lv.2', g:on.filter(lv2Done)},
-      {k:'Scrubber Lv.3', g:on.filter(lv3Done)}];
+      {k:'Scrubber Lv.3', g:on.filter(lv3Done)}]);
     const vals=st.map(x=>x.g.length);
     const pctOfPrev=vals.map((v,i)=>i===0?100:(vals[i-1]?Math.round(v/vals[i-1]*100):0));
     mk('cFunnel',{type:'bar',
@@ -1335,11 +1356,9 @@ function ioDrill(d,i){
 }
 function eduDrill(d,course,dsIdx){
   const status=d.stt[dsIdx]||'미이수';
-  let people,nm;
-  if(course<2){ const cls=course===0?clsB:clsV; nm=course===0?'Basic':'Veteran';
-    people=d.epop.filter(p=>cls(p)===status); }
-  else { const h=d.hq[course-2]; nm=h.nm;                     // 본사 과정: 이수완료/미이수만
-    people=status==='이수완료'?h.t.filter(h.d):status==='미이수'?h.t.filter(p=>!h.d(p)):[]; }
+  // 열 번호를 박지 않는다 — 국내만 걸리면 Basic·Veteran 막대가 없어 인덱스가 밀린다
+  const c=d.cols[course]; if(!c)return;
+  const nm=c.nm, people=c.pick(status);
   showDrill(d.title+' · '+nm+' '+status,
     '<div class="dsum"><div class="b"><span class="n">'+people.length+'</span><span class="l">'+status+'</span></div></div>'+peopleTable(people));
 }

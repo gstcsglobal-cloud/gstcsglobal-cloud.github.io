@@ -278,7 +278,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       style="position:absolute;right:14px;top:14px;background:var(--bg-2,#12161C);color:inherit;border:1px solid var(--line,#2A3340);border-radius:6px;padding:3px 6px;font-size:12px"></select>
     <div class="tbl-wrap">
     <table>
-      <thead><tr><th>교육과정</th><th style="text-align:center">Basic (LV1)</th><th style="text-align:center">Veteran (LV2)</th></tr></thead>
+      <thead><tr><th>교육과정</th><th style="text-align:center" id="eduPlanH1">Basic (LV1)</th><th style="text-align:center" id="eduPlanH2">Veteran (LV2)</th></tr></thead>
       <tbody id="eduPlanBody"><tr><td colspan="3" class="empty">—</td></tr></tbody>
     </table>
     </div>
@@ -1457,6 +1457,17 @@ function render(){
     window._PPT.eduPlan={site:selv,
       b:{tgt:B.t,no:B.no,ing:B.ing,done:B.done,rate:pctP(B.done,B.t)},
       v:{tgt:V.t,no:V.no,ing:V.ing,done:V.done,rate:pctP(V.done,V.t)}};
+    /* 머리글은 «누가 잡혔는지» 를 따라간다. 국내에는 Basic·Veteran 과정이 없고
+       Scrubber Lv.2·Lv.3 을 본다(eduKey 가 이미 그렇게 고른다). 머리글만 Basic 으로
+       남겨 두면 표는 Lv.2 숫자를 세면서 Basic 이라고 말하는 셈이 된다. */
+    {
+      const _kr=base.filter(x=>x.region===GST.ORG.REGION_KR).length, _ov=base.length-_kr;
+      const _h1=document.getElementById('eduPlanH1'), _h2=document.getElementById('eduPlanH2');
+      const L = (!base.length||(_ov&&!_kr)) ? ['Basic (LV1)','Veteran (LV2)']
+              : (_kr&&!_ov) ? ['Scrubber Lv.2','Scrubber Lv.3']
+              : ['LV1 (Basic · Lv.2)','LV2 (Veteran · Lv.3)'];
+      if(_h1)_h1.textContent=L[0]; if(_h2)_h2.textContent=L[1];
+    }
     const sel=document.getElementById('eduPlanSite');
     if(sel){ if(!sel.options.length)
         sel.innerHTML=[''].concat(SITES).map(s=>'<option value="'+s+'">'+(s||'전체 라인')+'</option>').join('');
