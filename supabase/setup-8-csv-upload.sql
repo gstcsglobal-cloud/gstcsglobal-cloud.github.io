@@ -98,6 +98,21 @@ begin
   return jsonb_build_object('rows', n, 'log', true);
 end $$;
 
+/* 표의 실제 컬럼 목록 — 업로드 화면이 «비우기 전에» 대조하는 데 쓴다.
+   한 행을 받아 키를 보는 방법은 표가 비어 있으면 통하지 않는데, 하필 그때가
+   이 검사가 가장 필요한 순간이다(적재 실패로 비워진 직후). 그래서 서버에 묻는다.
+   실제로 겪은 사고: 콘솔에서 extra 컬럼을 지운 채 업로드 → 비우기는 되고 적재가
+   실패해 표가 빈 채로 남았다. 이제 비우기 전에 걸린다. */
+create or replace function public.csv_table_cols(p_tbl text)
+returns text[] language sql stable security definer set search_path = public as $$
+  select coalesce(array_agg(column_name::text order by ordinal_position), '{}')
+    from information_schema.columns
+   where table_schema='public' and table_name=p_tbl
+$$;
+
+revoke execute on function public.csv_table_cols(text) from public, anon;
+grant  execute on function public.csv_table_cols(text) to authenticated;
+
 revoke execute on function public.csv_upload_begin(text)  from public, anon;
 revoke execute on function public.csv_upload_finish(text) from public, anon;
 grant  execute on function public.csv_upload_begin(text)  to authenticated;

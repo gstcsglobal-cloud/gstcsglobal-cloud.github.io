@@ -73,6 +73,17 @@ function logLine(cls,msg){ const el=$('log'); if(el.textContent==='—')el.textC
   el.insertAdjacentHTML('beforeend','<div class="'+(cls||'')+'">'+msg+'</div>'); }
 function chkShow(html){ $('chk').innerHTML=html; }
 
+/* 표의 실제 컬럼 목록. 한 행을 받아 키를 보는 방법은 «표가 비어 있으면» 통하지 않는다 —
+   그리고 비어 있는 순간이 바로 이 검사가 가장 필요한 때다(적재 실패로 비워진 직후).
+   그래서 information_schema 를 읽는 RPC 를 쓴다. RPC 가 아직 없으면(구 SQL) null 을
+   돌려주고 검사를 건너뛴다 — 검사가 없다고 업로드를 막을 이유는 없다. */
+async function tableCols(c,t){
+  try{
+    const r=await c.rpc('csv_table_cols',{p_tbl:t});
+    if(r.error||!r.data||!r.data.length)return null;
+    return r.data.map(x=>typeof x==='string'?x:(x.column_name||x.col));
+  }catch(e){ return null; }
+}
 async function tableCount(c,t){
   const r=await c.from(t).select('*',{count:'exact',head:true});
   if(r.error)throw new Error(r.error.message);
@@ -135,6 +146,25 @@ $('fsel').onchange=async function(){
     }
 
     if(!out.length)throw new Error('데이터 행이 없습니다');
+
+    /* 표에 «실제로 있는 열»과 대조한다 — 비우기 전에.
+       예전에는 이 검사 없이 비우고 적재해서, 표에서 열 하나가 지워져 있으면
+       (실제로 extra 를 콘솔에서 지운 일이 있었다) 비운 직후 적재가 실패해
+       **표가 빈 채로 남았다.** 순서가 곧 안전장치다. */
+    const cols=await tableCols(c,t.table);
+    if(cols){
+      const have=new Set(cols);
+      const need=Object.keys(out[0]).filter(k=>!have.has(k));
+      // src_row 처럼 없으면 안 되는 열이 빠졌으면 아예 진행하지 않는다
+      const vital=need.filter(k=>k!=='extra');
+      if(vital.length)throw new Error('표 '+t.table+' 에 없는 컬럼: '+vital.join(', ')
+        +'\n(setup-4-tables.sql 로 표를 다시 만들거나 컬럼을 추가하세요 — 지금 진행하면 표만 비워집니다)');
+      if(need.length){        // extra 만 없는 경우: 담을 곳이 없다고 밝히고 빼고 진행
+        out.forEach(o=>{ need.forEach(k=>{ delete o[k]; }); });
+        msgs.push('<span class="warn">⚠ 표에 '+need.join(', ')+' 컬럼이 없어 그 값은 넣지 않습니다'
+          +' (되살리려면: alter table public.'+t.table+' add column if not exists extra jsonb;)</span>');
+      }
+    }
     msgs.push('파일 <b>'+out.length.toLocaleString()+'행</b> ↔ 표의 현재 <b>'+oldCount.toLocaleString()+'행</b>');
     const shrink=oldCount>100&&out.length<oldCount/2;
     if(shrink)msgs.push('<span class="bad big">⚠ 파일이 기존의 절반도 안 됩니다 — 잘린 파일이 아닌지 확인하세요. 그래도 진행하면 기존 데이터가 이 파일로 줄어듭니다.</span>');
