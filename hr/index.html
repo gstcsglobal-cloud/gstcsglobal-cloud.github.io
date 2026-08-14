@@ -339,7 +339,14 @@ document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))documen
 /* ===== 공통 유틸 (report 페이지와 동일 규약) ===== */
 const MS=86400000;
 function normId(s){return String(s==null?'':s).trim().replace(/\.0+$/,'');}
-function pd(s){ if(!s)return null; s=String(s).trim(); if(!s)return null;
+function pd(s){ if(!s)return null;
+  if(s instanceof Date) return isNaN(s)?null:s;
+  s=String(s).trim(); if(!s)return null;
+  /* 엑셀 시리얼 날짜(46153). CSV 가 날짜 서식을 잃으면 숫자로 들어오는데, 이걸 못 읽으면
+     그 행이 통째로 버려진다 — report 에서 25만 중 24만 행이 그렇게 사라졌다.
+     core.js GST.toDate 와 같은 규칙. */
+  const _n=Number(s);
+  if(!isNaN(_n) && _n>20000 && _n<80000) return new Date(Date.UTC(1899,11,30)+_n*86400000);
   s=s.replace(/\.\s*/g,'-').replace(/\/-?/g,'-').replace(/-$/,'').replace(/\s/g,'');
   const m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(!m)return null;
   const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3])); return isNaN(d)?null:d; }

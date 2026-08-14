@@ -657,8 +657,16 @@ const MS=86400000;
 // 숫자 파싱 — 콤마/공백/단위 등 서식이 섞여도 값 그대로 읽기(값 누락 방지). 빈칸·비숫자는 0.
 function numv(s){ if(s==null)return 0; if(typeof s==='number')return isFinite(s)?s:0;
   const v=parseFloat(String(s).replace(/[^0-9.\-]/g,'')); return isFinite(v)?v:0; }
-function pd(s){ // '2022. 8. 1' / '2025-07-10' / Date
-  if(!s)return null; s=String(s).trim(); if(!s)return null;
+function pd(s){ // '2022. 8. 1' / '2025-07-10' / 엑셀 시리얼(46153) / Date
+  if(!s)return null;
+  if(s instanceof Date) return isNaN(s)?null:s;
+  s=String(s).trim(); if(!s)return null;
+  /* 엑셀 시리얼 날짜. 국내 실적 CSV 가 날짜 서식을 잃은 채 숫자로 들어온다(실측 46153·45765).
+     이걸 못 읽어 25만 행 중 24만 행이 «일자 공란»으로 통째로 버려졌고, 화면에는
+     인당작업·공수·알람이 0 으로만 보였다 — 필터 문제로 오해하기 딱 좋은 실패였다.
+     core.js GST.toDate 와 «같은 규칙»을 쓴다. 두 벌이면 또 갈라진다. */
+  const _n=Number(s);
+  if(!isNaN(_n) && _n>20000 && _n<80000) return new Date(Date.UTC(1899,11,30)+_n*86400000);
   s=s.replace(/\.\s*/g,'-').replace(/\/-?/g,'-').replace(/-$/,'').replace(/\s/g,'');
   const m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if(!m)return null;
