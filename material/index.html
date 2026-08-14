@@ -933,7 +933,7 @@ async function loadData(){ GST.skeleton(true);
         customer: GST.ORG.customer(cv(r,'customer')),
         line: GST.nfw(cv(r,'line')),
         campus: GST.nfw(cv(r,'campus')),
-        region: GST.ORG.region(cv(r,'op')),
+        region: GST.ORG.region(cv(r,'op')), op: String(cv(r,'op')||'').trim(),
         // '라인' 열이 담고 있던 건 사실 FAB이다. Floor는 이 시트에 없어 설치현황에서 끌어온다.
         fab: GST.ORG.fab(cv(r,'line')),
         floor: instFloor(cv(r,'eq')||cv(r,'mainEq'), cv(r,'sn')),
@@ -986,8 +986,9 @@ function uniq(key,base){return GST.uniq(base||DATA,key);}
 function fillSelect(id,fkey,vals){GST.fillSelect(id,fkey,vals,F,t('all'));}
 function rebuildFilters(){
   GST.filters.mount({ page:'material', rows:()=>DATA, onChange:render,
-    get:{ region:x=>x.region, customer:x=>x.customer,
-          campus:x=>x.campus, line:x=>x.line, date:x=>x.workDate } });
+    get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer,
+          campus:x=>x.campus, line:x=>x.line, date:x=>x.workDate },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
   fillSelect('sl-country','country',uniq('country'));
   // FAB 목록은 데이터에 실제로 나온 것만 — 하드코딩 7키가 F10·F15를 빠뜨리던 문제
   fillSelect('sl-floor','floor',uniq('floor')); fillSelect('sl-process','process',uniq('process'));

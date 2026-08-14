@@ -1174,7 +1174,7 @@ function fillFilters(){
       return out;
     }, onChange:function(){ syncCommon(); render(); },
     get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer, campus:x=>x.campus, line:x=>x.line, team:x=>x.team },
-    drop:{ line:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
+    drop:{ customer:GST.FILT_DROP_CUST, line:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
   syncCommon();
 }
 function render(){

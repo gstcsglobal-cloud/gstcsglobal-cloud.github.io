@@ -177,8 +177,8 @@ tr:hover td{background:rgba(255,255,255,.04)}
 <div id="filtBadge" style="display:none"></div>
 
 <div class="slicers">
-  <div class="slicer"><div class="lbl" data-i="sl_site">사이트</div><div class="chips" id="sl-site"></div></div>
-  <div class="slicer"><div class="lbl" data-i="sl_org">소속·공정</div><div class="chips" id="sl-org"></div></div>
+  <!-- 사이트·소속 칩은 GST.filters 의 구분·운영단위·고객사·단지·라인·팀으로 흡수됐다.
+       페이지마다 다른 조직 필터를 두면 같은 대시보드인데 페이지를 옮길 때마다 어휘가 바뀐다. -->
   <div class="slicer"><div class="lbl" data-i="sl_role">직무</div><div class="chips" id="sl-role"></div></div>
   <div class="slicer"><div class="lbl" data-i="sl_edu">교육</div><div class="chips" id="sl-edu"></div></div>
   <div class="slicer search"><div class="lbl" data-i="sl_search">검색</div><input id="search" data-i-ph="search_ph" placeholder="이름·사번 검색..."></div>
@@ -247,7 +247,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(89);   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
+GST.needVer&&GST.needVer(91);   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
 const PUB='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub';
 const URL_ROSTER=PUB+'?gid=1213453343&single=true&output=csv';  // 인원명단
 const URL_EDU   =PUB+'?gid=0&single=true&output=csv';            // 교육현황
@@ -476,45 +476,69 @@ function tenureLabel(p){ const y=tenureYr(p); if(y==null)return '-';
   const mo=Math.max(0,Math.round(y*12)); return Math.floor(mo/12)+'Y'+(mo%12)+'M'; }
 
 /* ===== 파싱 ===== */
+/* 인원현황 파싱 — 옛 양식(Work Place·Dept·조직도)과 새 양식(운영단위·고객사·단지·라인·팀)을 둘 다 읽는다.
+   SPEC-SYNC: report/index.html 의 parseRoster 와 같은 규약이다(런타임이 같아도 페이지가 자족이라 복제).
+   ⚠ 헤더 판정을 «Work Place 가 있어야 인원현황» 으로 두었더니, 새 양식에 그 열이 없어
+     헤더를 못 찾고 조용히 빈 배열을 냈다 — 화면은 에러 없이 재직 0명이 됐다.
+     그래서 판정은 «ID + (근무지 | 입사일 | 라인)» 으로 넓힌다. */
 function parseRoster(rows){
+  const nz=x=>String(x==null?'':x).trim().toLowerCase();
   let hi=-1;
   for(let i=0;i<Math.min(rows.length,8);i++){
-    const h=(rows[i]||[]).map(x=>String(x||'').trim().toLowerCase());
-    if(h.includes('id')&&h.some(x=>x.includes('work place'))){hi=i;break;}
+    const h=(rows[i]||[]).map(nz);
+    if(h.includes('id')&&(h.some(x=>x.includes('work place'))||h.includes('입사일')||h.includes('라인'))){hi=i;break;}
   }
   if(hi<0)return [];
-  const h=rows[hi].map(x=>String(x||'').trim().toLowerCase());
+  const h=rows[hi].map(nz);
+  const idx=(names)=>{ for(const n of names){ const i=h.indexOf(n); if(i>=0)return i; } return -1; };
+  const pre=(names)=>{ for(const n of names){ const i=h.findIndex(x=>x.startsWith(n)); if(i>=0)return i; } return -1; };
   const iId=h.indexOf('id'),
-    iNm=h.findIndex(x=>x.includes('name')&&x.includes('영문')),
-    iCn=h.findIndex(x=>x.includes('name')&&x.includes('중문')),
-    iDept=h.findIndex(x=>x.startsWith('dept')),
-    iLvl=h.findIndex(x=>x.includes('position level')),
+    iNm=idx(['이름(영문)'])>=0?idx(['이름(영문)']):h.findIndex(x=>x.includes('name')&&x.includes('영문')),
+    iCn=idx(['이름(중문)'])>=0?idx(['이름(중문)']):h.findIndex(x=>x.includes('name')&&x.includes('중문')),
+    iTeam=idx(['팀']),
+    iDept=pre(['dept']),
+    iLvl=idx(['직급(영문)'])>=0?idx(['직급(영문)']):h.findIndex(x=>x.includes('position level')),
     iWp=h.findIndex(x=>x==='work place'),
     iRole=h.findIndex(x=>x.includes('position role')),
-    iIn=h.findIndex(x=>x.startsWith('date of entry')),
-    iOut=h.findIndex(x=>x.startsWith('resignation')),
+    iIn=idx(['입사일'])>=0?idx(['입사일']):pre(['date of entry']),
+    iOut=idx(['퇴사일'])>=0?idx(['퇴사일']):pre(['resignation']),
     iOrg=h.findIndex(x=>x.includes('조직도')),
-    iPos=h.indexOf('직급'),
+    iDuty2=idx(['담당구분']),                 // 새 양식: Scrubber · Chiller (옛 조직도 문자열 대체)
+    iHr=idx(['인사']),                        // 새 양식: 재직 · 퇴직 · 해외출장 · 휴직
+    iOp=idx(['운영단위']), iCust=idx(['고객사','사업부']), iArea=idx(['지역']),
+    iCamp=idx(['단지']), iLine=idx(['라인']),
+    iPos=idx(['직급(한글)'])>=0?idx(['직급(한글)']):h.indexOf('직급'),
     iDuty=h.findIndex(x=>x.includes('업무')),
     iOn=h.findIndex(x=>x.includes('현장'));
+  const g=(r,i)=>String(i>=0?(r[i]||''):'').trim();
   return rows.slice(hi+1).map(r=>{
-    const wp=iWp>=0?r[iWp]:'';
+    const wpOld=g(r,iWp), line=g(r,iLine), camp=g(r,iCamp),
+          cust=g(r,iCust), area=g(r,iArea), duty2=g(r,iDuty2), hrst=g(r,iHr);
+    const wp=camp||line||wpOld;               // 새 양식은 근무지가 단지·라인 두 칸으로 갈라졌다
+    const org=g(r,iOrg)||duty2;               // Chiller 판정에 쓰던 자리 — 새 양식은 담당구분
+    const quitD=iOut>=0?pd(r[iOut]):null;
     return {
       id:normId(iId>=0?r[iId]:''),
       name:String((iNm>=0?r[iNm]:r[2])||'').trim(),
-      cn:String(iCn>=0?(r[iCn]||''):'').trim(),
-      dept:String(iDept>=0?(r[iDept]||''):'').trim(),
-      level:String(iLvl>=0?(r[iLvl]||''):'').trim(),
-      site:siteKey(wp), custB:custBase(wp), fab:fabOf(wp),
-      role:String(iRole>=0?(r[iRole]||''):'').trim(),
+      cn:g(r,iCn),
+      dept:g(r,iDept)||g(r,iTeam),
+      level:g(r,iLvl),
+      site:siteKey(wp), custB:cust?GST.ORG.customer(cust):custBase(wpOld), fab:fabOf(wp),
+      // 기본 필터(GST.filters)가 보는 축 — 구분은 고객사·지역이 바로 말해 주고,
+      // 그 열이 없는 옛 양식은 중문명·Dept·사번 다수결로 가른다(GST.ORG.emp).
+      region:GST.ORG.region(cust)||GST.ORG.region(area)
+             ||GST.ORG.emp({cn:g(r,iCn),dept:g(r,iDept),id:normId(iId>=0?r[iId]:''),wp:wpOld||line}),
+      op:g(r,iOp), campus:camp, line:line, team:g(r,iTeam),
+      role:g(r,iRole)||g(r,iDuty),
       join:iIn>=0?pd(r[iIn]):null,
-      quit:iOut>=0?pd(r[iOut]):null,
-      org:String(iOrg>=0?(r[iOrg]||''):'').trim(),
-      posKo:String(iPos>=0?(r[iPos]||''):'').trim(),
-      duty:String(iDuty>=0?(r[iDuty]||''):'').trim(),
-      onsite:String(iOn>=0?(r[iOn]||''):'').trim().toUpperCase()==='O'
+      // 퇴사 판정: 퇴사일이 있거나, 새 양식의 「인사」가 퇴직이면 퇴사다
+      quit:quitD||(/퇴직|퇴사/.test(hrst)?new Date(0):null),
+      org:org,
+      posKo:g(r,iPos),
+      duty:g(r,iDuty),
+      onsite:g(r,iOn).toUpperCase()==='O'
     };
-  // 대시보드는 스크러버 전용 — 조직도상 Chiller 인원은 명단·조직도·전 지표에서 제외
+  // 대시보드는 스크러버 전용 — Chiller 인원은 명단·조직도·전 지표에서 제외
   }).filter(x=>x.name&&x.join&&!/CHILLER/i.test(x.org));
 }
 /* ===== 교육현황 시트 열 자동 탐지 =====
@@ -589,6 +613,7 @@ function buildPeople(){
   // 인원현황을 못 읽었을 때의 최소 폴백. 교육현황에는 인적사항이 없으므로 이름·사번·사이트뿐이고
   // 입사일이 없어 Basic/Veteran «대상» 판정(입사 6개월)이 불가능하다 — 화면이 비는 게 정상이다.
   else { base=EDU.map(e=>({id:e.id,name:e.name,cn:'',dept:'',level:'',site:e.site,custB:custBase(e.site),fab:fabOf(e.site),
+    region:'',op:'',campus:'',line:'',team:'',
     role:'',join:null,quit:null,org:'',posKo:'',duty:'',onsite:true})); }
   return base.map(p=>{
     const e=(p.id&&eById[p.id])||(p.name&&eByNm[p.name.toUpperCase()])||null;
@@ -667,7 +692,7 @@ const GID_EDU='0';
 const GID_LV='262805841';
 let CAN_WRITE=false, EDIT=null;   // EDIT={key, hash, fields, edu:{hash,fields}|null, isNew}
 let SHOWQUIT=false;               // 퇴사자 표시 토글 — 잘못 넣은 퇴사일을 UI에서 되돌릴 수 있게 한다
-const F={site:'전체',org:'전체',role:'전체',edu:'전체',q:''};
+const F={role:'전체',edu:'전체',q:''};
 let SORT={k:'no',dir:1};
 // 차트 색상 스타일은 core.js(GST.style())가 전 페이지 공통 관리 — 아래 STY는 hr 전용 색 매핑
 GST.chartDefaults();
@@ -831,22 +856,25 @@ function buildChips(id,key,vals){
   });
 }
 function rebuildFilters(){
-  F.site='전체';F.org='전체';F.role='전체';F.edu='전체';F.q='';
+  F.role='전체';F.edu='전체';F.q='';
   document.getElementById('search').value='';
-  buildChips('sl-site','site',orderSites(uniqActive('site')));
-  buildChips('sl-org','org',uniqActive('org').sort());
+  /* 기본 필터(구분·운영단위·고객사·단지·라인·팀)는 GST.filters 가 갖는다 — 여기 있는 것은
+     이 페이지 전용(직무·교육·검색)뿐이다. 기간 칸은 접근자를 주지 않아 잠긴다:
+     이 화면의 시간축은 상단 마감(기준일)이고, 두 개를 함께 두면 어느 쪽이 이겼는지 알 수 없다. */
+  GST.filters.mount({ page:'hr', rows:()=>actPop(), onChange:render,
+    get:{ region:p=>p.region, op:p=>p.op, customer:p=>p.custB,
+          campus:p=>p.campus, line:p=>p.line, team:p=>p.team },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
   buildChips('sl-role','role',uniqActive('role').sort());
   buildChips('sl-edu','edu',['이수완료','진행중','미이수','비대상','미등록'].filter(v=>actPop().some(p=>eduStatusOf(p)===v)));
 }
 document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
 function matchQ(p){ if(!F.q)return true; return (p.name||'').toLowerCase().includes(F.q)||(p.id||'').toLowerCase().includes(F.q)||(p.cn||'').toLowerCase().includes(F.q); }
-function slFilt(arr){ return arr.filter(p=>
-  (F.site==='전체'||p.site===F.site)&&(F.org==='전체'||p.org===F.org)&&
+function slFilt(arr){ return arr.filter(p=> GST.filters.pass(p)&&
   (F.role==='전체'||p.role===F.role)&&(F.edu==='전체'||eduStatusOf(p)===F.edu)&&matchQ(p)); }
 function updateFiltBadge(){
   const b=document.getElementById('filtBadge'); const P=[];
-  if(F.site!=='전체')P.push('사이트: '+shortSite(F.site));
-  if(F.org!=='전체')P.push('소속: '+F.org);
+  GST.filters.active().forEach(x=>P.push(x.label+': '+x.value));
   if(F.role!=='전체')P.push('직무: '+F.role);
   if(F.edu!=='전체')P.push('교육: '+F.edu);
   if(F.q)P.push('검색: '+F.q);
@@ -854,7 +882,7 @@ function updateFiltBadge(){
   b.style.display='flex';
   b.innerHTML='🔎 '+P.map(x=>'<span class="fchip">'+esc(x)+'</span>').join('')+'<button class="fclr" onclick="clearFilt()">✕ 필터 해제</button>';
 }
-window.clearFilt=function(){F.site='전체';F.org='전체';F.role='전체';F.edu='전체';F.q='';document.getElementById('search').value='';rebuildFilters();render();};
+window.clearFilt=function(){F.role='전체';F.edu='전체';F.q='';document.getElementById('search').value='';GST.filters.clear();rebuildFilters();render();};
 
 /* ===== 애니 값 ===== */
 function animVal(el,target,suffix,dec){ const start=parseFloat(el.dataset.v||0),t0=performance.now();

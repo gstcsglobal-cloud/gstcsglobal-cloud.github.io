@@ -957,7 +957,7 @@ async function loadData(){ GST.skeleton(true);
         alarm:GST.nfw(r[C.alarm]||'').trim(),
         country:(String(r[C.op]||'').match(/GST\s+([A-Za-z]+)/i)||[])[1]?String(r[C.op]).match(/GST\s+([A-Za-z]+)/i)[1].toUpperCase():'',
         // 구분(국내/해외)은 운영단위에서 온다 — 판정은 GST.ORG 가 정본이다
-        region:GST.ORG.region(r[C.op]||''),
+        region:GST.ORG.region(r[C.op]||''), op:String(r[C.op]||'').trim(),
         campus:GST.nfw(r[C.campus]||'').trim(),
         pf:(r[C.pf]||'').toString().trim(), cause:(r[C.cause]||'').toString().trim(),
         // 모델·공정은 표기가 갈라져 있다(GAIA-I-D / GAIA_I_D, DIFF / DIFFUSION).
@@ -997,7 +997,7 @@ async function loadData(){ GST.skeleton(true);
         customerN:GST.ORG.customer(r[C.customer]||''),
         campus:GST.nfw(r[C.campus]||'').trim(),
         line:GST.nfw(r[C.line]||'').trim(),
-        region:GST.ORG.region(r[C.op]||''),
+        region:GST.ORG.region(r[C.op]||''), op:String(r[C.op]||'').trim(),
         country:(String(r[C.op]||'').match(/GST\s+([A-Za-z]+)/i)||[])[1]?String(r[C.op]).match(/GST\s+([A-Za-z]+)/i)[1].toUpperCase():'',
         // TBM 사후 재고장을 작업자별로 보려면 담당자가 필요하다. 시트는 쉼표로 여러 명을 묶어 둔다.
         workers:(r[C.workers]||'').toString().trim(),
@@ -1015,6 +1015,11 @@ async function loadData(){ GST.skeleton(true);
       fab:GST.ORG.fab(r[C.line]||''), floor:instFloor(r[C.eqNo],r[C.snIn]),
       customer:(r[C.customer]||'').toString().trim(),
       customerN:GST.ORG.customer(r[C.customer]||''),
+      // 기본 필터(구분·운영단위·단지)도 ROWS·TBM_ROWS와 똑같이 실어야 한다.
+      // 여기만 빠지면 구분을 고르는 순간 GST.filters.pass 가 전 행을 떨어뜨려
+      // 설비 BM율·좌우 편중의 «분모»가 0이 된다 — 에러 없이 표가 빈다.
+      region:GST.ORG.region(r[C.op]||''), op:String(r[C.op]||'').trim(),
+      campus:GST.nfw(r[C.campus]||'').trim(),
       work:toDate(r[C.dStart])
       // subproc까지 실어야 하는 이유: filtAxis가 F.subproc으로도 거르고,
       // 세부공정 BM율 표가 이 배열을 그룹핑한다. 빠지면 표가 통째로 비고,
@@ -1034,8 +1039,9 @@ function uniq(k){return Array.from(new Set(ROWS.map(x=>x[k]).filter(Boolean))).s
 const fillSelect=(id,fkey,vals)=>GST.fillSelect(id,fkey,vals,F,t('all'));
 function buildSlicers(){
   GST.filters.mount({ page:'fault', rows:()=>ROWS, onChange:render,
-    get:{ region:x=>x.region, customer:x=>x.customerN,
-          campus:x=>x.campus, line:x=>x.line, date:x=>x.work } });
+    get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customerN,
+          campus:x=>x.campus, line:x=>x.line, date:x=>x.work },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
   fillSelect('sl-floor','floor',uniq('floor'));
   fillSelect('sl-proc','proc',uniq('proc'));
   fillSelect('sl-subproc','subproc',uniq('subproc'));

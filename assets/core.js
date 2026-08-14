@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 90;
+GST.VER = 91;
 GST.needVer = function(n){
   if(GST.VER >= n) return true;
   try{
@@ -2149,6 +2149,11 @@ GST.startAutoRefresh = function(min){
    (라인장·단지장·운영관리·세정·정산·주재원·Translator·Chiller·국내 …). 목록에 올리면
    지금 고객사 칸에 근무지가 뜨던 것과 같은 거짓말이 된다 — 목록에서만 뺀다(행은 남는다).
    ⚠ 값을 «고치는» 것이 아니다. 원본은 양식에서 바로잡는 것이 맞고, 이건 그때까지의 가림막이다. */
+/* 「고객사」 칸에 들어온 «고객사가 아닌 것». 인원현황은 소속을 이 칸에 적어서 본사·칠러가
+   고객사 목록에 뜬다(실측 본사 26 · 칠러 1). 예전에 설치현황의 GST CHINA 1행이 목록에 떠
+   그것을 고르면 화면이 통째로 비던 것과 같은 부류다 — 목록에서만 뺀다(행은 남는다). */
+GST.FILT_DROP_CUST = /^(본사|칠러|CHILLER|OFFICE|통합|미정|기타|해당없음|N\/A)$/i;
+
 GST.FILT_DROP_ORG = /^(라인장|단지장|운영관리|세정|정산|주재원|국내|해외|기타|미정|TRANSLATOR|CHILLER|SCRUBBER|OFFICE|통합|REPAIR CENTER|서비스자재)$/i;
 
 GST.filters = (function(){
@@ -2218,7 +2223,15 @@ GST.filters = (function(){
     ['region','op','customer','campus','line','team'].forEach(function(k){
       fill('gf-'+k, k, opts(k, function(x){ return passExcept(x, k); }));
     });
+    /* 기간은 «그 자료에 날짜 축이 있을 때만» 걸 수 있다. tco 의 기준 월, hr 의 기준일처럼
+       페이지가 자기 시간축을 따로 갖는 곳은 date 접근자를 주지 않는다. 그때 칸을 그냥
+       두면 날짜를 넣는 순간 조건을 만족할 수 없어 화면이 통째로 빈다 — 목록이 빈 select
+       를 잠그는 것과 같은 이유로 잠근다(보이되 거짓말은 안 한다). */
+    const hasD = !!(CFG.get||{}).date;
     const a=document.getElementById('gf-from'), b=document.getElementById('gf-to');
+    [a,b].forEach(function(el){ if(!el)return; el.disabled=!hasD;
+      el.title = hasD ? '' : '이 화면은 자체 기준일을 씁니다'; });
+    if(!hasD){ F.dtFrom=''; F.dtTo=''; }
     if(a) a.value=F.dtFrom; if(b) b.value=F.dtTo;
   }
 
@@ -2297,8 +2310,8 @@ GST.filters = (function(){
       if(F.campus   && val(g.campus,x)   !== F.campus)   return false;
       if(F.line     && val(g.line,x)     !== F.line)     return false;
       if(F.team     && val(g.team,x)     !== F.team)     return false;
-      if(F.dtFrom || F.dtTo){
-        const d = dstr(g.date ? g.date(x) : '');
+      if((F.dtFrom || F.dtTo) && g.date){
+        const d = dstr(g.date(x));
         if(!d) return false;                       // 날짜가 없으면 기간 조건을 만족할 수 없다
         if(F.dtFrom && d < F.dtFrom) return false;
         if(F.dtTo   && d > F.dtTo)   return false;
