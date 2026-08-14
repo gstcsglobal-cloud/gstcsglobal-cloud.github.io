@@ -234,6 +234,9 @@ console.log('[9] 고객사 분류');
   ok(cu('SEUL PTE. LTD.') === 'SEUL', '도시로 오인해 브랜드를 지웠다: '+cu('SEUL PTE. LTD.'));
   ok(cu('Hangzhou HFC Semiconductor Corp.') === 'HANGZHOU HFC SEMICONDUCTOR',
      '규칙에 없는 고객사는 이름 전체를 그대로 둔다: '+cu('Hangzhou HFC Semiconductor Corp.'));
+  // 자사 법인은 고객사가 아니다 — 고르면 «전부 0» 이 되는 값이 목록에 있으면 안 된다
+  ok(cu('GST CHINA Co., LTD') === '', "자사 법인이 고객사로 뜬다: "+cu('GST CHINA Co., LTD'));
+  ok(cu('GST Taiwan') === '', '자사 법인이 고객사로 뜬다');
   ok(cu('') === '' && cu('   ') === '', '빈 값은 빈 값');
   // 챗봇도 같은 답을 내야 한다(제2원칙) — 소스에 같은 규약이 들어갔는지
   const HR = fs.readFileSync(ROOT+'/supabase/functions/kakao-bot/hr.js','utf8');

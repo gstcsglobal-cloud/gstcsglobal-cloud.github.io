@@ -1169,6 +1169,10 @@ GST.ORG = {
   customer: function(s){
     const u = GST.upk(s || '');
     if(!u.trim()) return '';
+    /* 자사(GST) 법인은 고객사가 아니다 — 설치현황 Customer 열에 'GST CHINA Co., LTD' 가
+       1건 섞여 들어와 고객사 목록에 떴다. 고르면 실적·인원이 하나도 없어 «전부 0» 이 된다.
+       미상으로 떨어뜨려 목록에서 뺀다(행은 남는다). */
+    if(/^GST\b/.test(u.trim())) return '';
     if(/PSMC|POWERCHIP/.test(u)) return 'PSMC';
     if(/TASC|TAIWAN-ASIA|ASIA\s*SEMI/.test(u)) return 'TASC';
     if(/WINBOND/.test(u)) return 'WINBOND';
