@@ -1291,7 +1291,11 @@ function render(){
     if(rg && p.region && p.region!==rg) return false;
     return !!((p.campus&&e.ca.has(p.campus))||(p.wp&&e.li.has(p.wp)));
   };
-  const okP=p=>opPerson(p)&&(!F.customer||p.custB===F.customer)&&lineOk(p.wp)
+  /* 단지 조건이 여기 빠져 있었다 — 실적(entOk)·설치(fINST)에는 넣고 인원만 안 넣어서,
+     단지를 골라도 인원이 안 줄었다(단지=PSMC 인데 재직 47명). 같은 모집단을 서로 다른
+     술어로 거르면 카드끼리 숫자가 갈린다. */
+  const okP=p=>opPerson(p)&&(!F.customer||p.custB===F.customer)
+    &&(!F.campus||p.campus===F.campus)&&lineOk(p.wp)
     &&(!F.team||p.team===F.team)
     &&(!F.region||p.region===F.region)
     &&(!F.country||(p.country||siteCountry(p.fab||p.custB))===F.country);
