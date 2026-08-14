@@ -2109,10 +2109,16 @@ GST.startAutoRefresh = function(min){
              campus:x=>x.campus, line:x=>x.line, date:x=>x.work } });
    그 뒤 페이지의 술어에 `GST.filters.pass(x)` 한 줄만 넣으면 된다.
    ============================================================ */
+/* 「라인·단지」 칸에 들어온 «그 축의 값이 아닌 것». 인원현황 라인 칸에 직무가 섞여 온다
+   (라인장·단지장·운영관리·세정·정산·주재원·Translator·Chiller·국내 …). 목록에 올리면
+   지금 고객사 칸에 근무지가 뜨던 것과 같은 거짓말이 된다 — 목록에서만 뺀다(행은 남는다).
+   ⚠ 값을 «고치는» 것이 아니다. 원본은 양식에서 바로잡는 것이 맞고, 이건 그때까지의 가림막이다. */
+GST.FILT_DROP_ORG = /^(라인장|단지장|운영관리|세정|정산|주재원|국내|해외|기타|미정|TRANSLATOR|CHILLER|SCRUBBER|OFFICE|통합|REPAIR CENTER|서비스자재)$/i;
+
 GST.filters = (function(){
-  const F = { region:'', customer:'', campus:'', line:'', dtFrom:'', dtTo:'' };
+  const F = { region:'', customer:'', campus:'', line:'', team:'', dtFrom:'', dtTo:'' };
   let CFG = null, KEY = '';
-  const L = { region:'구분', customer:'고객사', campus:'단지', line:'라인', period:'기간' };
+  const L = { region:'구분', customer:'고객사', campus:'단지', line:'라인', team:'팀', period:'기간' };
   const val = (g, x) => { try{ const v = g ? g(x) : ''; return v==null?'':String(v).trim(); }catch(e){ return ''; } };
   const dstr = v => {
     if(!v) return '';
@@ -2121,21 +2127,43 @@ GST.filters = (function(){
   };
 
   /* 값 목록은 «데이터에 실제로 나온 것»만 올린다. 고정 목록을 두면 새 사이트가
-     생겼을 때 목록에 없는 행이 필터에서 통째로 사라진다 — 에러 없이. */
+     생겼을 때 목록에 없는 행이 필터에서 통째로 사라진다 — 에러 없이.
+     drop: 값이긴 한데 그 축의 값이 아닌 것(라인 칸에 든 '라인장'·'주재원' 같은 직무).
+     걸러도 그 행이 사라지지는 않는다 — 목록에서만 안 보인다. */
   function opts(key, narrow){
     const g = (CFG.get||{})[key], rows = (CFG.rows && CFG.rows()) || [];
     if(!g) return [];
+    const dr = (CFG.drop||{})[key];
     const s = new Set();
     for(let i=0;i<rows.length;i++){
       const x = rows[i];
       if(narrow && !narrow(x)) continue;
-      const v = val(g, x); if(v) s.add(v);
+      const v = val(g, x); if(!v) continue;
+      if(dr && dr.test(v)) continue;
+      s.add(v);
     }
     return [...s].sort((a,b)=>a.localeCompare(b,'ko'));
   }
 
+  /* 종속(cascading) — 각 칸의 목록은 «나머지 칸이 이미 고른 것»을 통과한 행에서만 만든다.
+     그래야 단지를 고르면 그 단지의 라인만, 고객사를 고르면 그 고객사의 단지만 남는다.
+     자기 자신은 빼고 본다 — 안 그러면 한 번 고른 값 말고는 목록에서 사라져 되돌릴 수 없다. */
+  function passExcept(x, skip){
+    const g = CFG.get || {};
+    const chk = ['region','customer','campus','line','team'];
+    for(let i=0;i<chk.length;i++){
+      const k = chk[i];
+      if(k===skip || !F[k]) continue;
+      if(val(g[k], x) !== F[k]) return false;
+    }
+    return true;
+  }
+
   function fill(id, key, list){
     const el = document.getElementById(id); if(!el) return;
+    /* 자료에 그 축이 아예 없으면 칸을 감춘다(팀은 인원현황에만 있다). 빈 드롭다운을
+       남겨두면 «필터가 안 먹는다»로 읽힌다 — 없는 것은 없다고 보이는 편이 낫다. */
+    const box = el.closest('.slicer'); if(box) box.style.display = list.length ? '' : 'none';
     const cur = F[key];
     el.innerHTML = '<option value="">전체</option>' + list.map(function(v){
       return '<option value="'+String(v).replace(/"/g,'&quot;')+'">'+v+'</option>';
@@ -2147,23 +2175,21 @@ GST.filters = (function(){
 
   function refresh(){
     if(!CFG) return;
-    fill('gf-region','region', opts('region'));
-    fill('gf-customer','customer', opts('customer'));
-    fill('gf-campus','campus', opts('campus'));
-    // 라인은 «고른 단지 안»에서만 — 종속 필터
-    const gc = (CFG.get||{}).campus;
-    fill('gf-line','line', opts('line', F.campus && gc ? (x=>val(gc,x)===F.campus) : null));
+    ['region','customer','campus','line','team'].forEach(function(k){
+      fill('gf-'+k, k, opts(k, function(x){ return passExcept(x, k); }));
+    });
     const a=document.getElementById('gf-from'), b=document.getElementById('gf-to');
     if(a) a.value=F.dtFrom; if(b) b.value=F.dtTo;
   }
 
   function read(changed){
-    ['region','customer','campus','line'].forEach(function(k){
+    ['region','customer','campus','line','team'].forEach(function(k){
       const el=document.getElementById('gf-'+k); if(el) F[k]=el.value;
     });
     const a=document.getElementById('gf-from'), b=document.getElementById('gf-to');
     F.dtFrom=a?a.value:''; F.dtTo=b?b.value:'';
-    // 단지가 바뀌면 라인 목록이 달라진다 — 그 전에 고른 라인은 유효하지 않을 수 있다
+    /* 단지를 바꾸면 그 아래 라인은 대개 유효하지 않다 — 명시적으로 비운다.
+       (나머지 칸은 refresh 의 fill 이 «목록에 없으면 버린다»로 스스로 정리한다.) */
     if(changed==='campus') F.line='';
     save(); refresh();
     if(CFG && CFG.onChange) CFG.onChange();
@@ -2181,7 +2207,7 @@ GST.filters = (function(){
       + '<select id="'+id+'" onchange="GST.filters._on(\''+id.slice(3)+'\')"></select></div>';
     return '<div class="gf-base">'
       + sel('gf-region', L.region) + sel('gf-customer', L.customer)
-      + sel('gf-campus', L.campus) + sel('gf-line', L.line)
+      + sel('gf-campus', L.campus) + sel('gf-line', L.line) + sel('gf-team', L.team)
       + '<div class="slicer"><div class="lbl">'+L.period+'</div>'
       + '<input type="date" id="gf-from" class="dt-input" onchange="GST.filters._on()"> ~ '
       + '<input type="date" id="gf-to" class="dt-input" onchange="GST.filters._on()"></div>'
@@ -2217,6 +2243,7 @@ GST.filters = (function(){
       if(F.customer && val(g.customer,x) !== F.customer) return false;
       if(F.campus   && val(g.campus,x)   !== F.campus)   return false;
       if(F.line     && val(g.line,x)     !== F.line)     return false;
+      if(F.team     && val(g.team,x)     !== F.team)     return false;
       if(F.dtFrom || F.dtTo){
         const d = dstr(g.date ? g.date(x) : '');
         if(!d) return false;                       // 날짜가 없으면 기간 조건을 만족할 수 없다
@@ -2236,6 +2263,7 @@ GST.filters = (function(){
       if(F.customer) out.push({k:'customer', label:L.customer, value:F.customer});
       if(F.campus)   out.push({k:'campus',   label:L.campus,   value:F.campus});
       if(F.line)     out.push({k:'line',     label:L.line,     value:F.line});
+      if(F.team)     out.push({k:'team',     label:L.team,     value:F.team});
       if(F.dtFrom||F.dtTo) out.push({k:'period', label:L.period, value:(F.dtFrom||'…')+' ~ '+(F.dtTo||'…')});
       return out;
     }

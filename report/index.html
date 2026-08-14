@@ -1137,7 +1137,8 @@ function fillFilters(){
       ROSTER.forEach(function(p){ out.push({region:p.region,customer:'',campus:'',line:''}); });
       return out;
     }, onChange:function(){ syncCommon(); render(); },
-    get:{ region:x=>x.region, customer:x=>x.customer, campus:x=>x.campus, line:x=>x.line } });
+    get:{ region:x=>x.region, customer:x=>x.customer, campus:x=>x.campus, line:x=>x.line },
+    drop:{ line:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
   syncCommon();
 }
 function render(){
