@@ -1043,6 +1043,65 @@ GST.canon = {
    실적 시트(수선·자재)에는 Floor 열이 없다. 설치현황을 S/N으로 조인해야 얻는다(instIndex).
    ------------------------------------------------------------------------- */
 GST.ORG = {
+  /* ---------- 국내 / 해외 (v88) ----------
+     2026-08 에 국내(삼성·SK) 실적이 들어오면서 «전부 대만»이라는 전제가 깨졌다.
+     판정 근거가 자료마다 다르므로 여기 한 곳에 모은다 — 페이지마다 새로 짜면 갈라진다.
+
+       실적(수선·자재)  운영단위: 'SEC Scrubber'·'SDC Scrubber' = 국내 / 'GST XXX' = 해외
+       설치현황         Country: 'KOREA' = 국내 / 'GST XXX' = 해외
+                        ⚠ 이 열에는 국가가 아니라 사업부명이 섞여 들어온다(실측) —
+                          그래서 국가로 쓰려면 아래 country() 로 한 번 걸러야 한다.
+       인원현황         중문명·Dept.·사번 — 아래 emp() 참조
+
+     반환값은 '국내' / '해외' / ''(모름). 빈 문자열을 국내로 치지 않는다 —
+     모르는 것을 아는 척하면 합계가 조용히 틀어진다. */
+  REGION_KR: '국내', REGION_OS: '해외',
+  region: function(s){
+    const u = GST.upk(s || '');
+    if(!u.trim()) return '';
+    if(/^SEC|^SDC|KOREA|한국|이천|청주/.test(u)) return '국내';
+    if(/^GST|해외/.test(u)) return '해외';
+    return '';
+  },
+  /* 인원현황 행 → 국내/해외. 실측(421명, 예외 0): 대만 인원은 중문명·Dept. 가 있고
+     사번이 민국력(10x·11x), 국내 인원은 셋 다 반대(사번 서기 20xx)다.
+     한 신호만 쓰면 그 열이 비는 날 통째로 틀리므로 **다수결**로 본다. */
+  emp: function(o){
+    o = o || {};
+    let kr = 0, os = 0;
+    const cn = String(o.cn || '').trim(), dept = String(o.dept || '').trim();
+    const id = String(o.id || '').trim();
+    if(cn) os++; else kr++;
+    if(dept) os++; else kr++;
+    if(/^20/.test(id)) kr++; else if(/^1[0-9]/.test(id)) os++;
+    // 근무지가 대만 사이트 어휘면 그것이 가장 직접적인 증거다
+    if(/F1[0156]|PSMC|POWERCHIP|WINBOND|TSMC|TASC|TONGL|TAINAN|TAICHUNG/.test(GST.upk(o.wp||''))) os += 2;
+    return os > kr ? '해외' : (kr > os ? '국내' : '');
+  },
+  /* 값 → 국가. 설치현황 Country 열에 'GST HEFEI SCRUBBER' 같은 사업부명이 섞여 들어와
+     («국가» 축에 사업부명이 뜬다) 여기서 국가로 되돌린다. 모르면 ''. */
+  country: function(s){
+    const u = GST.upk(s || '');
+    if(!u.trim()) return '';
+    if(/KOREA|한국|이천|청주|^SEC|^SDC/.test(u)) return 'KOREA';
+    if(/TAIWAN|대만|TONGL|TAINAN|TAICHUNG|PSMC|POWERCHIP|WINBOND|TASC/.test(u)) return 'TAIWAN';
+    if(/CHINA|WUHAN|HEFEI|XIAN|WUXI|중국/.test(u)) return 'CHINA';
+    if(/AMERICA|USA|AUSTIN|미국/.test(u)) return 'USA';
+    if(/JAPAN|일본/.test(u)) return 'JAPAN';
+    if(/SINGAPORE|싱가포르/.test(u)) return 'SINGAPORE';
+    /* FAB 코드도 국가를 가리킨다 — 인원현황 Work Place 는 'F16'·'F11' 처럼 FAB 만 적혀 있어
+       법인명이 없다. 이 줄이 없으면 대만 인원이 «국가 미상»으로 떨어진다(실측 101명 중 6명만 잡혔다).
+       F10=싱가포르 · F15=일본은 GST.ORG.fab 주석과 같은 대응이다. */
+    if(/F1[016]N?S?/.test(u)){
+      if(/F10/.test(u)) return 'SINGAPORE';
+      if(/F15/.test(u)) return 'JAPAN';
+      return 'TAIWAN';
+    }
+    if(/F15/.test(u)) return 'JAPAN';
+    if(/EUROPE|유럽/.test(u)) return 'EUROPE';
+    return '';
+  },
+
   /* 법인명 → 고객사. 수선·자재 시트의 고객사 열은 법인명 안에 FAB이 박혀 있다
      ('Micron Memory Taiwan Co., Ltd.(F16)'). Micron은 대만 F16·대만 F11·일본·싱가포르
      네 법인으로 흩어져 있으나 전부 한 고객사다. */
