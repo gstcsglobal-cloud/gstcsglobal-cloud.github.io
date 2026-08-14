@@ -1304,6 +1304,11 @@ function render(){
     if(F.campus && GST.ORG.country(F.campus)!=='TAIWAN') return false;
     return true;
   };
+  /* 교육 과정이 구분마다 다르다 — 사용자 확정: 국내는 Scrubber Lv.2/Lv.3 가 대상이고
+     해외(대만)는 Basic/Veteran 이다. 한 벌로 보면 국내 완료율이 늘 0% 로 나온다
+     (국내 인원은 Basic·Veteran 완료일 자체가 없다). 신입/기존 구분은 그대로 둔다. */
+  const eduKey=(p,lv)=> (p&&p.region===GST.ORG.REGION_KR)
+    ? (lv===1?'lv2date':'lv3date') : (lv===1?'bdate':'vdate');
   const okP=p=>opPerson(p)&&(!F.customer||p.custB===F.customer)
     &&(!F.campus||p.campus===F.campus)&&lineOk(p.wp)
     &&(!F.team||p.team===F.team)
@@ -1408,7 +1413,7 @@ function render(){
     const lv1=base.filter(x=>!sixP(x)), lv2=base.filter(sixP);
     // 인별 상태 분류 — 시트의 상태 열(이수완료/진행중)을 존중한다.
     // done: 이수일<=기준일 · ing: 상태 '진행중'(미완료) · no: 그 외 미이수(사유 보관)
-    const clsP=(x,dk,sk)=>{const e=eduOf(x);
+    const clsP=(x,dkIn,sk)=>{const e=eduOf(x); const dk=(typeof dkIn==='function')?dkIn(x):dkIn;
       if(e&&e[dk]&&e[dk]<=asOf)return {c:'done'};
       if(e&&String(e[sk]||'').trim()==='진행중')return {c:'ing'};
       if(!e)return {c:'no',why:'매칭없음'};
@@ -1419,7 +1424,7 @@ function render(){
         if(c.c==='done')r.done++; else if(c.c==='ing')r.ing++;
         else {r.no++; r.noList.push(x.name+'('+c.why+')');}});
       return r;};
-    const B=tally(lv1,'bdate','basic'), V=tally(lv2,'vdate','vet');
+    const B=tally(lv1,x=>eduKey(x,1),'basic'), V=tally(lv2,x=>eduKey(x,2),'vet');
     const pctP=(d,n)=>n?Math.round(d/n*100)+'%':'-';
     window._PPT.eduPlan={site:selv,
       b:{tgt:B.t,no:B.no,ing:B.ing,done:B.done,rate:pctP(B.done,B.t)},
@@ -1508,8 +1513,8 @@ function render(){
       const six=x=>((p.end-x.join)/MS)>=182;
       const lv1=a.filter(x=>!six(x)), lv2=a.filter(six);
       const dOf=(x,k)=>{const e=eduOf(x);return e&&e[k]&&e[k]<=p.end;};
-      const d1=lv1.filter(x=>dOf(x,'bdate')).length;
-      const d2=lv2.filter(x=>dOf(x,'vdate')).length;
+      const d1=lv1.filter(x=>dOf(x,eduKey(x,1))).length;
+      const d2=lv2.filter(x=>dOf(x,eduKey(x,2))).length;
       const T=lv1.length+lv2.length, D=d1+d2;
       tgt.push(T); don.push(D); rate.push(T?Math.round(D/T*100):null);
     });
@@ -2018,8 +2023,8 @@ function render(){
   try{ const SP=periods(12,asOf,PERIOD), wdv=(PERIOD==='m')?21:5;
     drawSpark('sp1',SP.map(p=>headOn(p.end)),'#3B82F6');
     drawSpark('sp3',SP.map(p=>{const a=fHR.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join),six=x=>((p.end-x.join)/MS)>=182;
-      const D=a.filter(x=>!six(x)).filter(x=>{const e=eduOf(x);return e&&e.bdate&&e.bdate<=p.end;}).length
-             +a.filter(six).filter(x=>{const e=eduOf(x);return e&&e.vdate&&e.vdate<=p.end;}).length;
+      const D=a.filter(x=>!six(x)).filter(x=>{const e=eduOf(x),k=eduKey(x,1);return e&&e[k]&&e[k]<=p.end;}).length
+             +a.filter(six).filter(x=>{const e=eduOf(x),k=eduKey(x,2);return e&&e[k]&&e[k]<=p.end;}).length;
       return a.length?Math.round(D/a.length*100):null;}),'#34D399');
     drawSpark('sp4',SP.map(p=>fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&x.stage==='BM').length),'#E03131');
     drawSpark('sp5',SP.map(p=>{const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
@@ -2049,7 +2054,7 @@ function render(){
     const eduAgg=pp=>{const a=fHR.filter(x=>x.onsite&&activeAt(x,pp.end)&&x.join);
       const six=x=>((pp.end-x.join)/MS)>=182; const lv1=a.filter(x=>!six(x)),lv2=a.filter(six);
       const dOf=(x,k)=>{const e=eduOf(x);return e&&e[k]&&e[k]<=pp.end;};
-      return {T:a.length,D:lv1.filter(x=>dOf(x,'bdate')).length+lv2.filter(x=>dOf(x,'vdate')).length};};
+      return {T:a.length,D:lv1.filter(x=>dOf(x,eduKey(x,1))).length+lv2.filter(x=>dOf(x,eduKey(x,2))).length};};
     const fCIPq=CIP.filter(okCIP);
     const cipT=MP.map(p=>fCIPq.filter(x=>!x.ap||x.ap<=p.end).length);
     const cipD=MP.map(p=>fCIPq.filter(x=>(!x.ap||x.ap<=p.end)&&x.done&&x.done<=p.end).length);
