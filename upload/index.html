@@ -37,7 +37,17 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 <div class="card">
   <h3>1. 어느 표에 올리나</h3>
   <select id="tsel"></select>
+  <!-- 구간 교체 — 10만행 제한으로 기간을 나눠 뽑을 때 앞 파일을 지우지 않게.
+       그냥 이어붙이면 겹치는 구간이 이중 계산된다(실측 6,266건) → 창 단위로 갈아끼운다. -->
+  <div id="modeBox" style="margin-top:12px;display:none">
+    <label style="display:flex;gap:7px;align-items:center;font-size:13px;cursor:pointer">
+      <input type="checkbox" id="modeMerge" onchange="onMode()" style="width:auto">
+      <b>겹치는 구간만 교체</b> — 이 파일이 덮는 <b>사업부 × 기간</b>만 갈아끼우고 나머지는 그대로 둡니다
+    </label>
+    <div class="sub" style="margin:6px 0 0 24px">체크 안 하면 표를 통째로 이 파일로 바꿉니다(기존 전량 삭제).</div>
+  </div>
 </div>
+
 <div class="card">
   <h3>2. CSV 파일</h3>
   <input type="file" id="fsel" accept=".csv,text/csv">
@@ -53,9 +63,11 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
    mirror  — 컬럼이 snake_case 인 미러 표. 시트 머리글 CSV 를 GST.SM.SPEC 으로 해석해
              sheet-sync 의 toRows 와 «똑같은 규칙»으로 변환한다(t-mirror 가 지키는 그 규칙).
    import  — 컬럼이 시트 머리글 그대로인 표. CSV 헤더가 표 컬럼과 (정규화 후) 일치해야 한다. */
+/* win — 구간 교체를 지원하는 표와 그 날짜 필드(SPEC 키). 설치현황은 «그 시점의 전체 명부»라
+   구간이라는 개념이 없다 → 통째 교체만. SQL 쪽 _csv_datecol 과 짝이다. */
 const TABLES = [
-  { key:'wk',   label:'수선실적 (시트 머리글 CSV)',  table:'sheet_wk',   kind:'mirror' },
-  { key:'mat',  label:'자재실적 (시트 머리글 CSV)',  table:'sheet_mat',  kind:'mirror' },
+  { key:'wk',   label:'수선실적 (시트 머리글 CSV)',  table:'sheet_wk',   kind:'mirror', win:'dStart' },
+  { key:'mat',  label:'자재실적 (시트 머리글 CSV)',  table:'sheet_mat',  kind:'mirror', win:'workDate' },
   { key:'inst', label:'설치현황 (시트 머리글 CSV)',  table:'sheet_inst', kind:'mirror' },
   { label:'교육현황 (edu.csv 형식)',      table:'sheet_edu',     kind:'import' },
   { label:'인원현황 (roster.csv 형식)',   table:'sheet_roster',  kind:'import' },
@@ -165,29 +177,70 @@ $('fsel').onchange=async function(){
           +' (되살리려면: alter table public.'+t.table+' add column if not exists extra jsonb;)</span>');
       }
     }
+    /* 구간 교체 — 파일이 덮는 «날짜 범위 × 운영단위 집합»을 계산한다.
+       이 두 값이 곧 삭제 조건이라, 파일에서 뽑아야 화면 표시와 실제 삭제가 어긋나지 않는다. */
+    let win=null;
+    if(t.win && merging()){
+      const dc=GST._snake(t.win);
+      const ds=out.map(o=>String(o[dc]||'').slice(0,10)).filter(v=>/^\d{4}-\d{2}-\d{2}$/.test(v));
+      if(!ds.length)throw new Error('날짜('+t.win+') 값을 못 읽어 구간을 정할 수 없습니다 — 통째 교체로 올리세요');
+      const ops=[...new Set(out.map(o=>String(o.op==null?'':o.op)))];
+      win={from:ds.reduce((a,b)=>a<b?a:b), to:ds.reduce((a,b)=>a>b?a:b), ops:ops};
+      const pv=await c.rpc('csv_window',{p_tbl:t.table,p_from:win.from,p_to:win.to,p_ops:win.ops,p_dry:true});
+      if(pv.error)throw new Error('구간 확인 실패: '+pv.error.message
+        +(/function|does not exist/i.test(pv.error.message)?' — setup-9-merge-upload.sql 을 Run 했는지 확인':''));
+      win.hit=pv.data.hit; win.keep=pv.data.rows-pv.data.hit;
+      msgs.push('<span class="ok">🔁 구간 교체: '+win.from+' ~ '+win.to+' · 사업부 '+ops.length+'개</span>');
+      msgs.push('기존 <b>'+win.hit.toLocaleString()+'행</b>을 지우고 <b>'+win.keep.toLocaleString()+'행</b>은 그대로 둡니다'
+        +' → 적재 후 <b>'+(win.keep+out.length).toLocaleString()+'행</b>');
+    }
     msgs.push('파일 <b>'+out.length.toLocaleString()+'행</b> ↔ 표의 현재 <b>'+oldCount.toLocaleString()+'행</b>');
-    const shrink=oldCount>100&&out.length<oldCount/2;
+    const shrink=!win&&oldCount>100&&out.length<oldCount/2;
     if(shrink)msgs.push('<span class="bad big">⚠ 파일이 기존의 절반도 안 됩니다 — 잘린 파일이 아닌지 확인하세요. 그래도 진행하면 기존 데이터가 이 파일로 줄어듭니다.</span>');
     chkShow(msgs.join('<br>'));
-    PREP={t,rows:out,oldCount,shrink};
+    PREP={t,rows:out,oldCount,shrink,win};
     $('goBtn').disabled=false;
     $('goBtn').className='btn'+(shrink?' danger':'');
   }catch(e){ chkShow('<span class="bad">❌ '+String(e.message||e).replace(/\n/g,'<br>')+'</span>'); }
 };
-document.getElementById('tsel').onchange=function(){ $('fsel').value=''; $('chk').innerHTML=''; $('goBtn').disabled=true; PREP=null; };
+document.getElementById('tsel').onchange=function(){ $('fsel').value=''; $('chk').innerHTML=''; $('goBtn').disabled=true; PREP=null; syncMode(); };
+// 구간 교체를 지원하는 표에서만 선택지를 보인다 — 설치현황엔 «구간»이 없다
+function merging(){ const el=$('modeMerge'); return !!(el&&el.checked&&!el.disabled); }
+function syncMode(){
+  const t=TABLES[+$('tsel').value], box=$('modeBox');
+  if(box)box.style.display=t&&t.win?'block':'none';
+}
+window.onMode=function(){ $('fsel').value=''; $('chk').innerHTML=''; $('goBtn').disabled=true; PREP=null; };
+syncMode();
 
 /* ---------- 업로드 — 비우기 → 배치 적재 → 행수 대조 ---------- */
 window.doUpload=async function(){
   if(!PREP)return;
+  const W=PREP.win;
   if(PREP.shrink&&!confirm('파일('+PREP.rows.length+'행)이 기존('+PREP.oldCount+'행)보다 훨씬 작습니다.\n정말 이 파일로 교체합니까?'))return;
-  if(!confirm(PREP.t.table+' 의 기존 '+PREP.oldCount.toLocaleString()+'행을 지우고\n이 파일의 '+PREP.rows.length.toLocaleString()+'행으로 교체합니다. 진행할까요?'))return;
+  if(!confirm(W
+      ? (W.from+' ~ '+W.to+' 구간의 기존 '+W.hit.toLocaleString()+'행을 지우고\n'
+         +'이 파일의 '+PREP.rows.length.toLocaleString()+'행을 넣습니다.\n'
+         +'구간 밖 '+W.keep.toLocaleString()+'행은 그대로 둡니다. 진행할까요?')
+      : (PREP.t.table+' 의 기존 '+PREP.oldCount.toLocaleString()+'행을 지우고\n이 파일의 '
+         +PREP.rows.length.toLocaleString()+'행으로 교체합니다. 진행할까요?')))return;
   $('goBtn').disabled=true; $('log').textContent='';
   const c=await GST.db();
   try{
-    logLine('','① 표 비우는 중…');
-    const b=await c.rpc('csv_upload_begin',{p_tbl:PREP.t.table});
-    if(b.error)throw new Error('비우기 실패: '+b.error.message+(/(function|does not exist)/i.test(b.error.message)?' — setup-8-csv-upload.sql 을 Run 했는지 확인':''));
-    logLine('ok','   비움 완료');
+    let off=0;
+    if(W){
+      logLine('','① 구간 '+W.from+' ~ '+W.to+' 비우는 중…');
+      const d=await c.rpc('csv_window',{p_tbl:PREP.t.table,p_from:W.from,p_to:W.to,p_ops:W.ops,p_dry:false});
+      if(d.error)throw new Error('구간 삭제 실패: '+d.error.message);
+      off=d.data.next_src;          // 남은 행과 PK(src_row)가 겹치지 않게 이어서 매긴다
+      logLine('ok','   '+Number(d.data.hit).toLocaleString()+'행 삭제 · '+Number(d.data.rows).toLocaleString()+'행 보존');
+      PREP.rows.forEach((o,i)=>{ o.src_row=off+i; });
+    }else{
+      logLine('','① 표 비우는 중…');
+      const b=await c.rpc('csv_upload_begin',{p_tbl:PREP.t.table});
+      if(b.error)throw new Error('비우기 실패: '+b.error.message+(/(function|does not exist)/i.test(b.error.message)?' — setup-8-csv-upload.sql 을 Run 했는지 확인':''));
+      logLine('ok','   비움 완료');
+    }
 
     const BATCH=500, N=PREP.rows.length;
     for(let i=0;i<N;i+=BATCH){
@@ -201,12 +254,15 @@ window.doUpload=async function(){
     if(fin.error)throw new Error('마무리 실패: '+fin.error.message);
 
     const now=await tableCount(c,PREP.t.table);
-    if(now!==N)throw new Error('행수 불일치: 표 '+now+' ≠ 파일 '+N+' — 다시 업로드하세요');
-    logLine('ok big','③ 완료 ✅ '+PREP.t.table+' = '+now.toLocaleString()+'행 (파일과 일치)');
+    const want=W?(W.keep+N):N;
+    if(now!==want)throw new Error('행수 불일치: 표 '+now+' ≠ 기대 '+want+' — 다시 업로드하세요');
+    logLine('ok big','③ 완료 ✅ '+PREP.t.table+' = '+now.toLocaleString()+'행'
+      +(W?' (보존 '+W.keep.toLocaleString()+' + 신규 '+N.toLocaleString()+')':' (파일과 일치)'));
     logLine('','대시보드를 새로고침하면 새 데이터가 보입니다.');
   }catch(e){
     logLine('bad big','❌ '+String(e.message||e));
-    logLine('bad','표가 비워진 상태일 수 있습니다 — 같은 파일로 다시 업로드하면 복구됩니다.');
+    logLine('bad', W ? '구간이 지워진 상태일 수 있습니다 — 같은 파일로 다시 업로드하면 복구됩니다.'
+                     : '표가 비워진 상태일 수 있습니다 — 같은 파일로 다시 업로드하면 복구됩니다.');
     $('goBtn').disabled=false;
   }
 };
