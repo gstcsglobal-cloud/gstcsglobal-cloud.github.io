@@ -273,21 +273,9 @@ canvas{cursor:pointer}
 <div class="status" id="status">Loading...</div>
 
 <div class="slicers">
-  <div class="slicer"><div class="lbl" data-i="sl_customer">Customer</div><select id="sl-customer" onchange="onSlicer()"></select></div>
-  <div class="slicer" style="position:relative"><div class="lbl" data-i="sl_fab">FAB</div>
-    <button id="fabBtn" type="button" class="mselbtn" onclick="GST.mselToggle('fab',event)">전체 ▾</button>
-    <div id="fabBox" class="mselbox"></div></div>
-  <div class="slicer"><div class="lbl" data-i="sl_floor">Line</div><select id="sl-floor" onchange="onSlicer()"></select></div>
+  <div class="slicer"><div class="lbl">층(Floor)</div><select id="sl-floor" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_process">공정</div><select id="sl-process" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_detail">세부공정</div><select id="sl-detail" onchange="onSlicer()"></select></div>
-  <div class="slicer">
-    <div class="lbl" data-i="sl_period">기간</div>
-    <div style="display:flex;gap:4px;align-items:center;">
-      <input type="date" id="dtFrom" onchange="onSlicer()" style="flex:1;min-width:0;">
-      <span style="color:var(--txt-muted);font-size:11px;">~</span>
-      <input type="date" id="dtTo" onchange="onSlicer()" style="flex:1;min-width:0;">
-    </div>
-  </div>
   <div class="slicer-div" data-i="sl_more">자재현황 전용</div>
   <!-- 소모성 교체가 전체의 51%다 — 정기 소모품을 걷어내야 이상 신호가 보인다 -->
   <div class="slicer" style="grid-column:span 2;display:flex;align-items:center;gap:7px">
@@ -802,9 +790,9 @@ let CROSS_MATRIX = null;
 let EQ_SEL = '';
 /* line(문자열) → fab(Set) + floor. 'F16'은 FAB, 그 안의 'A3 M2 4F'가 Floor(화면 표기 Line).
    FAB만 다중선택 — 여러 공장을 합쳐 보는 일은 흔해도 층을 합쳐 보는 일은 드물다. */
-const F={customer:'',fab:new Set(),floor:'',process:'',detail:'',
-         country:'',eq:'',model:'',mat:'',reason:'',dtFrom:'',dtTo:'',pf:'',q:''};
-const fabOk=v=>!F.fab.size||F.fab.has(v);
+/* 기본 필터(구분·고객사·단지·라인·기간)는 GST.filters 가 갖는다 — 아래는 이 페이지 «고유»뿐(v90) */
+const F={floor:'',process:'',detail:'',
+         country:'',eq:'',model:'',mat:'',reason:'',pf:'',q:''};
 
 // 제외 목록 — localStorage에 저장되어 새로고침 후에도 유지됨
 const EXCL = (function(){
@@ -944,6 +932,8 @@ async function loadData(){ GST.skeleton(true);
         // 안 하면 축 하나가 여러 조각으로 쪼개져 순위 자체가 틀린다.
         customer: GST.ORG.customer(cv(r,'customer')),
         line: GST.nfw(cv(r,'line')),
+        campus: GST.nfw(cv(r,'campus')),
+        region: GST.ORG.region(cv(r,'op')),
         // '라인' 열이 담고 있던 건 사실 FAB이다. Floor는 이 시트에 없어 설치현황에서 끌어온다.
         fab: GST.ORG.fab(cv(r,'line')),
         floor: instFloor(cv(r,'eq')||cv(r,'mainEq'), cv(r,'sn')),
@@ -981,8 +971,6 @@ async function loadData(){ GST.skeleton(true);
 const _st=GST.readState();
     if(_st){
       GST.applyState(F,_st); syncSlicerUI();
-      if(F.dtFrom)document.getElementById('dtFrom').value=F.dtFrom;
-      if(F.dtTo)document.getElementById('dtTo').value=F.dtTo;
       if(F.q)document.getElementById('search').value=F.q;
     }
         // 저장된 테마 유지 (기존: 로드 때마다 default로 리셋되던 버그 수정)
@@ -997,19 +985,20 @@ const _st=GST.readState();
 function uniq(key,base){return GST.uniq(base||DATA,key);}
 function fillSelect(id,fkey,vals){GST.fillSelect(id,fkey,vals,F,t('all'));}
 function rebuildFilters(){
-  fillSelect('sl-country','country',uniq('country')); fillSelect('sl-customer','customer',uniq('customer'));
+  GST.filters.mount({ page:'material', rows:()=>DATA, onChange:render,
+    get:{ region:x=>x.region, customer:x=>x.customer,
+          campus:x=>x.campus, line:x=>x.line, date:x=>x.workDate } });
+  fillSelect('sl-country','country',uniq('country'));
   // FAB 목록은 데이터에 실제로 나온 것만 — 하드코딩 7키가 F10·F15를 빠뜨리던 문제
-  GST.mselFill('fab', uniq('fab'), F.fab, function(){ render(); });
   fillSelect('sl-floor','floor',uniq('floor')); fillSelect('sl-process','process',uniq('process'));
   fillSelect('sl-detail','detail',uniq('detail')); fillSelect('sl-eq','eq',uniq('eq'));
   fillSelect('sl-mat','mat',uniq('matName'));
 }
 function onSlicer(){
-  F.country=document.getElementById('sl-country').value; F.customer=document.getElementById('sl-customer').value;
+  F.country=document.getElementById('sl-country').value;
   F.floor=document.getElementById('sl-floor').value; F.process=document.getElementById('sl-process').value;
   F.detail=document.getElementById('sl-detail').value; F.eq=document.getElementById('sl-eq').value;
-  F.mat=document.getElementById('sl-mat').value; F.dtFrom=document.getElementById('dtFrom').value;
-  F.dtTo=document.getElementById('dtTo').value; render();
+  F.mat=document.getElementById('sl-mat').value; render();
 }
 document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
 function setCycleBasis(b){ CYCLE_BASIS=b; document.querySelectorAll('.ct-btn').forEach(x=>x.classList.toggle('active',x.dataset.c===b)); render(); }
@@ -1065,9 +1054,8 @@ function chartClick(chartId,label){
   render();
 }
 function syncSlicerUI(){
-  const map={country:'sl-country',customer:'sl-customer',floor:'sl-floor',process:'sl-process',
+  const map={country:'sl-country',floor:'sl-floor',process:'sl-process',
              detail:'sl-detail',eq:'sl-eq',mat:'sl-mat'};
-  GST.mselSync('fab', uniq('fab'), F.fab);
   Object.entries(map).forEach(([k,id])=>{
     const el=document.getElementById(id);
     if(el)el.value=F[k]||'';
@@ -1082,9 +1070,9 @@ function clearFilter(k){
   syncSlicerUI(); render();
 }
 function clearAllFilters(){
-  // Set을 ''로 덮으면 fabOk가 .has를 못 찾아 터진다 — 타입을 지켜 비운다
-  Object.keys(F).forEach(k=>{ if(F[k] instanceof Set)F[k].clear(); else F[k]=''; });
-  ['dtFrom','dtTo','search'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  Object.keys(F).forEach(k=>{ F[k]=''; });
+  GST.filters.clear();
+  ['search'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   syncSlicerUI(); render();
 }
 
@@ -1096,16 +1084,15 @@ window.onNoCons=function(v){ NOCONS=!!v; try{ localStorage.setItem('gst_mat_noco
 function filt(){
   return DATA.filter(x=>{
     if(NOCONS&&/^소모성/.test(x.reason||''))return false;
-    if(F.country&&x.country!==F.country)return false; if(F.customer&&x.customer!==F.customer)return false;
-    if(!fabOk(x.fab))return false; if(F.floor&&x.floor!==F.floor)return false;
+    if(!GST.filters.pass(x))return false;
+    if(F.country&&x.country!==F.country)return false;
+    if(F.floor&&x.floor!==F.floor)return false;
     if(F.process&&x.process!==F.process)return false;
     if(F.detail&&x.detail!==F.detail)return false; if(F.eq&&x.eq!==F.eq)return false;
     if(F.mat&&x.matName!==F.mat)return false; if(F.pf&&x.pf!==F.pf)return false;
     if(F.reason&&x.reason!==F.reason)return false;
     // 모델은 슬라이서가 없고 심층분석 드릴로만 걸린다 — 그래도 걸리면 반드시 좁혀야 한다
     if(F.model&&x.model!==F.model)return false;
-    if(F.dtFrom&&(!x.workDate||fmtDate(x.workDate)<F.dtFrom))return false;
-    if(F.dtTo&&(!x.workDate||fmtDate(x.workDate)>F.dtTo))return false;
     if(F.q){const s=`${x.matName} ${x.reason} ${x.eq} ${x.process} ${x.freeReason||''}`.toLowerCase(); if(!s.includes(F.q))return false;}
     return true;
   });
@@ -1338,7 +1325,7 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   // 교체 추이 — 상단 공통바 주/월 토글, 최근 12구간. 앵커=종료일(마감 포함) 또는 오늘
   {
     const PU=GST.period();
-    const anch=F.dtTo?new Date(F.dtTo+'T00:00:00Z'):new Date();
+    const anch=GST.filters.F.dtTo?new Date(GST.filters.F.dtTo+'T00:00:00Z'):new Date();
     const PB=GST.periods(12,anch,PU,t('mon_u'));
     const key=d=>PU==='w'?GST.isoW(d):d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');
     const mm={};
@@ -1537,7 +1524,7 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   // 🔔 자동 브리핑 — 최근 12구간 교체 건수·수량
   try{
     // 앵커 = 마감 종료일(dtTo) 또는 오늘 — 교체 추이 차트(:997)와 같은 규칙 (마감 시 화면·브리핑 정합)
-    const _u=GST.period(), _P=GST.periods(12,(F.dtTo?new Date(F.dtTo+'T00:00:00Z'):new Date()),_u);
+    const _u=GST.period(), _P=GST.periods(12,(GST.filters.F.dtTo?new Date(GST.filters.F.dtTo+'T00:00:00Z'):new Date()),_u);
     const _in=(x,p)=>x.workDate&&x.workDate>=p.st&&x.workDate<=p.end;
     GST.watch([
       {k:'cnt', label:t('cyc_cnt'), labels:_P.map(p=>p.label), data:_P.map(p=>f.filter(x=>_in(x,p)).length), unit:'', goodWhenDown:true,
@@ -1776,12 +1763,11 @@ window.cxDrill=function(i){
   const lbl=CX_LAST.top[i].lbl, UNK=t('dp_unk');
   const setF=function(ax,val){
     if(!val||val===UNK)return;
-    if(ax==='fab'){ F.fab=(F.fab&&F.fab.has(val)&&F.fab.size===1)?new Set():new Set([val]); return; }
+    if(ax==='fab'){ GST.filters.F.line=(GST.filters.F.line===val)?'':val; GST.filters.refresh(); return; }
     if(ax==='matName'){ F.mat=val; return; }
     if(ax==='ym'){ const pp=val.split('-'), last=new Date(Date.UTC(+pp[0],+pp[1],0)).getUTCDate();
-      F.dtFrom=val+'-01'; F.dtTo=val+'-'+String(last).padStart(2,'0');
-      const a=document.getElementById('dtFrom'), b=document.getElementById('dtTo');
-      if(a)a.value=F.dtFrom; if(b)b.value=F.dtTo; return; }
+      GST.filters.F.dtFrom=val+'-01'; GST.filters.F.dtTo=val+'-'+String(last).padStart(2,'0'); GST.filters.refresh();
+      return; }
     const map={detail:'detail',process:'process',eq:'eq',model:'model',reason:'reason'};
     if(map[ax])F[map[ax]]=val;
   };
@@ -1898,8 +1884,8 @@ window.deepDrill=function(axis,a,m,axis2){
   const UNK=t('dp_unk');
   const setF=function(ax,val){
     if(!val||val===UNK)return;               // (미상)은 걸 필터가 없다 — 자재만 좁힌다
-    if(ax==='fab'){                          // FAB 필터는 사이드바 다중선택(Set)
-      F.fab=(F.fab&&F.fab.has(val)&&F.fab.size===1)?new Set():new Set([val]);
+    if(ax==='fab'){                          // FAB 축은 라인 필터로 흡수됐다(v90)
+      GST.filters.F.line=(GST.filters.F.line===val)?'':val; GST.filters.refresh();
       return;
     }
     const map={detail:'detail',process:'process',eq:'eq',model:'model',reason:'reason'};
