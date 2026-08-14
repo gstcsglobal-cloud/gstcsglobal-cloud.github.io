@@ -250,8 +250,8 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <!-- 슬라이서 -->
 <div class="slicers">
-  <div class="slicer"><div class="lbl">Country</div><div class="chips" id="sl-country"></div></div>
-  <div class="slicer"><div class="lbl">Customer</div><div class="chips" id="sl-customer"></div></div>
+  <!-- Country·Customer 칩은 GST.filters 의 구분·운영단위·고객사로 흡수됐다.
+       Country 열에는 국가가 아니라 사업부명이 섞여 오므로(실측) 그대로 두면 두 축이 갈라진다. -->
   <div class="slicer"><div class="lbl">Model</div><div class="chips" id="sl-model"></div></div>
   <div class="slicer"><div class="lbl">Warranty</div><div class="chips" id="sl-warr"></div></div>
   <div class="slicer search-sl">
@@ -557,7 +557,7 @@ const T={
 
 let LANG='ko', GRAN='month', RAW=[], CHARTS={}, sortK=null, sortAsc=true;
 let DATE_FROM=null, DATE_TO=null, USER_PICKED_GRAN=false;
-const F={country:'ALL',customer:'ALL',model:'ALL',warr:'ALL',q:''};
+const F={model:'ALL',warr:'ALL',q:''};
 
 GST.chartDefaults();
 // 테마 전환 시 차트를 새 잉크로 재생성 (initSync가 호출)
@@ -750,10 +750,18 @@ function buildWarrChips(){
   });
 }
 function rebuildFilters(){
-  F.country='ALL';F.customer='ALL';F.model='ALL';F.warr='ALL';F.q='';
+  F.model='ALL';F.warr='ALL';F.q='';
   document.getElementById('search').value='';
-  buildChips('sl-country','country',CI.country);
-  buildChips('sl-customer','customer',CI.customer);
+  /* 기본 필터는 GST.filters 가 갖는다. 기간 칸은 접근자를 주지 않아 잠긴다 —
+     이 화면의 시간축은 위쪽 Turn On 날짜 범위 패널이고, 둘을 함께 두면 어느 쪽이
+     이겼는지 알 수 없다(그래서 잠근다 · 보이되 거짓말은 안 한다). */
+  GST.filters.mount({ page:'scrubber', rows:()=>RAW, onChange:render,
+    get:{ region:r=>GST.ORG.region(r[CI.country]),
+          op:r=>String(r[CI.country]||'').trim(),
+          customer:r=>GST.ORG.customer(r[CI.customer]),
+          campus:r=>GST.ORG.campus(r[CI.location], r[CI.fab], r[CI.country]),
+          line:r=>String(r[CI.fab]||'').trim() },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
   buildChips('sl-model','model',CI.model);
   buildWarrChips();
 }
@@ -762,8 +770,7 @@ document.getElementById('search').addEventListener('input',e=>{F.q=e.target.valu
 function filt(skipDate){
   const now=new Date();
   return RAW.filter(r=>{
-    if(F.country!=='ALL'&&(r[CI.country]||'').trim()!==F.country)return false;
-    if(F.customer!=='ALL'&&(r[CI.customer]||'').trim()!==F.customer)return false;
+    if(!GST.filters.pass(r))return false;
     if(F.model!=='ALL'&&(r[CI.model]||'').trim()!==F.model)return false;
     if(F.warr!=='ALL'){const l=wLbl(r);
       if(F.warr==='active'&&l!=='IN')return false;
@@ -783,6 +790,22 @@ function countBy(rows,idx){
   const m={};
   rows.forEach(r=>{const k=(r[idx]||'N/A').toString().trim()||'N/A';m[k]=(m[k]||0)+chW(r);});
   return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+}
+/* 축을 화면에 내주면 필터도 같은 값으로 걸려야 한다. 운영단위·고객사는 GST.filters 가
+   갖고 있으므로 그쪽 상태를 토글한다 — 페이지의 F 를 건드리면 막대를 눌러도 아무 일이
+   안 일어난다(예전 고장분석에서 모델 축이 그렇게 조용히 버려졌다).
+   ⚠ 고객사 막대는 «정규화된 값»으로 세야 한다. 원문으로 세면 라벨과 필터 값이 달라
+   눌러도 0건이 된다 — countByFn 을 쓰는 이유다. */
+function countByFn(rows,fn){
+  const m={};
+  rows.forEach(r=>{const k=(fn(r)||'N/A').toString().trim()||'N/A';m[k]=(m[k]||0)+chW(r);});
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+}
+function drillGF(key,label){
+  const K = key==='country' ? 'op' : (key==='customer' ? 'customer' : '');
+  if(!K)return false;
+  GST.filters.F[K] = (GST.filters.F[K]===label) ? '' : label;
+  GST.filters.refresh(); render(); return true;
 }
 
 // 집계 단위별 키 생성
@@ -962,6 +985,7 @@ function mkHBar(id,entries,total,drillKey,color,topN){
     if(!drillKey||!els.length)return;
     const label=labels[els[0].index];
     if(label===t('etc'))return;
+    if(drillGF(drillKey,label))return;
     if(F[drillKey]===label) F[drillKey]='ALL'; else F[drillKey]=label;
     syncSlicerUI(drillKey); render();
   };
@@ -1013,6 +1037,7 @@ function mkDonut(id,entries,drillKey,topN){
     if(!drillKey||!els.length)return;
     const label=labels[els[0].index];
     if(label===t('etc'))return;
+    if(drillGF(drillKey,label))return;
     if(F[drillKey]===label) F[drillKey]='ALL'; else F[drillKey]=label;
     syncSlicerUI(drillKey); render();
   };
@@ -1037,7 +1062,7 @@ function mkDonut(id,entries,drillKey,topN){
 
 // 슬라이서 UI 동기화 (차트 클릭 시 칩 active 갱신)
 function syncSlicerUI(key){
-  const map={country:'sl-country',customer:'sl-customer',model:'sl-model'};
+  const map={model:'sl-model'};   // 운영단위·고객사는 GST.filters 가 자기 select 를 갱신한다
   const id=map[key];
   if(!id)return; // group1, fab은 슬라이서 없음 - 필터만 적용
   const box=document.getElementById(id);
@@ -1048,11 +1073,13 @@ function syncSlicerUI(key){
 }
 
 // 교차 분석 stacked 차트
-const crossF={country:CI.country,customer:CI.customer,model:CI.model,group1:CI.group1,fab:CI.fab,type:CI.type};
+/* ⚠ 함수여야 한다. 객체 리터럴로 두면 스크립트 로드 시점에 평가되는데 그때 CI 는 아직
+   빈 객체라 전 축이 undefined 가 된다 — 교차분석이 조용히 «N/A» 한 칸으로 뭉개진다. */
+const crossF=()=>({country:CI.country,customer:CI.customer,model:CI.model,group1:CI.group1,fab:CI.fab,type:CI.type});
 function mkCross(rows){
   const xKey=document.getElementById('crossX').value;
   const cKey=document.getElementById('crossColor').value;
-  const xIdx=crossF[xKey], cIdx=crossF[cKey];
+  const CX=crossF(); const xIdx=CX[xKey], cIdx=CX[cKey];
 
   // X축 카테고리 (상위 10)
   const xCats=countBy(rows,xIdx).slice(0,10).map(x=>x[0]);
@@ -1202,7 +1229,7 @@ function render(){ GST.skeleton(false);
   mkCross(f);
 
   mkHBar('cCountry',ctryAll,chN,'country',TH.pal[0],5);
-  mkHBar('cCustomer',countBy(f,CI.customer),chN,'customer',TH.pal[0],8);
+  mkHBar('cCustomer',countByFn(f,r=>GST.ORG.customer(r[CI.customer])),chN,'customer',TH.pal[0],8);
   mkDonut('cModel',countBy(f,CI.model),'model',4);
   mkDonut('cGroup',countBy(f,CI.group1),'group1',5);
 
