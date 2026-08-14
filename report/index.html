@@ -1280,9 +1280,15 @@ function render(){
       GST.ORG.campus(r[CI.location], r[CI.fab], r[CI.country]), String(r[CI.fab]||'').trim()));
     return m;
   })();
+  /* ⚠ 단지·라인 이름만으로 이으면 «동음이의어»에 걸린다 — 실측: 대만 PSMC 의 FAB 이
+     P1·P2·P3 인데 국내 삼성 평택의 단지도 P1·P2·P3 다(인원 75명). 그래서 운영단위를
+     GST TAIWAN SCRUBBER 로 걸었더니 국내 평택 인원이 딸려 왔다.
+     → 구분(국내/해외)을 함께 맞춘다. 이름이 같아도 구분이 다르면 다른 곳이다. */
   const opPerson=p=>{
     if(!F.op)return true;
     const e=OP_SETS[F.op]; if(!e)return false;
+    const rg=GST.ORG.region(F.op);
+    if(rg && p.region && p.region!==rg) return false;
     return !!((p.campus&&e.ca.has(p.campus))||(p.wp&&e.li.has(p.wp)));
   };
   const okP=p=>opPerson(p)&&(!F.customer||p.custB===F.customer)&&lineOk(p.wp)
