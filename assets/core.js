@@ -1131,19 +1131,33 @@ GST.ORG = {
   /* 법인명 → 고객사. 수선·자재 시트의 고객사 열은 법인명 안에 FAB이 박혀 있다
      ('Micron Memory Taiwan Co., Ltd.(F16)'). Micron은 대만 F16·대만 F11·일본·싱가포르
      네 법인으로 흩어져 있으나 전부 한 고객사다. */
+  /* 법인격·구두점을 걷어낸 회사 이름. 브랜드가 여러 법인으로 흩어진 것만 규칙으로 모은다.
+     ⚠ 예전 폴백은 «첫 단어»를 잘랐다. 대만 4개사만 있을 때는 안 드러났는데 고객사가 50개를
+       넘자 그대로 튀어나왔다 — 실측: '주식회사 X' 꼴 네 회사가 전부 `주식회사` 한 칸에
+       뭉쳤고(서로 다른 고객사가 합쳐지는 것이 가장 나쁜 실패다), 'Global Foundries' 는
+       `GLOBAL`, 'Semiconductor Global Solutions' 는 `SEMICONDUCTOR` 가 됐다.
+       그래서 첫 단어가 아니라 «걷어낸 이름 전체»를 쓴다. 길어도 갈라지지 않는 편이 낫다. */
+  _CUST_KR: /\(주\)|（주）|주식회사|유한회사|株式会社|有限公司|股份有限公司/g,
+  _CUST_EN: /\b(CO|LTD|INC|CORP|CORPORATION|COMPANY|LIMITED|GMBH|PTE|PTY|PLC)\b\.?/g,
   customer: function(s){
     const u = GST.upk(s || '');
-    if(!u) return '';
+    if(!u.trim()) return '';
     if(/PSMC|POWERCHIP/.test(u)) return 'PSMC';
     if(/TASC|TAIWAN-ASIA|ASIA\s*SEMI/.test(u)) return 'TASC';
     if(/WINBOND/.test(u)) return 'WINBOND';
     if(/MICRON/.test(u)) return 'MICRON';
     if(/TSMC/.test(u)) return 'TSMC';
-    if(/SAMSUNG/.test(u)) return 'SAMSUNG';
-    if(/HYNIX/.test(u)) return 'SK HYNIX';
+    /* 한 회사가 한글·영문 두 이름으로 들어온다 — 합치지 않으면 사이드바에 같은 회사가
+       두 번 뜨고(실측 삼성 6,315+1,205 · 하이닉스 336+258) 필터를 걸면 절반만 잡힌다.
+       디스플레이를 먼저 본다 — '삼성디스플레이' 는 아래 삼성 규칙에도 걸리기 때문이다. */
+    if(/삼성디스플레이|SAMSUNG\s*DISPLAY/.test(u)) return 'SAMSUNG DISPLAY';
+    if(/삼성|SAMSUNG/.test(u)) return 'SAMSUNG';
+    if(/하이닉스|HYNIX/.test(u)) return 'SK HYNIX';
     // FAB 표기만 있고 법인명이 없는 행 — F1x대는 Micron 사이트다
     if(/(^|[^A-Z])F1[0156]/.test(u)) return 'MICRON';
-    return u.split(/[\s,.(]/)[0] || '';
+    const t = u.replace(GST.ORG._CUST_KR,' ').replace(GST.ORG._CUST_EN,' ')
+               .replace(/[.,()·]/g,' ').replace(/\s+/g,' ').trim();
+    return t || u.trim();
   },
 
   /* 값 → FAB. 실적 시트는 '라인' 열, 설치·CIP는 'FAB' 열에서 온다.

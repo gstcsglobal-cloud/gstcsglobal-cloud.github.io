@@ -67,9 +67,17 @@ export function normCust(name) {
   else if (up.includes('POWERCHIP')) base = 'POWERCHIP';
   else if (up.includes('WINBOND')) base = 'WINBOND';
   else if (up.includes('TSMC')) base = 'TSMC';
-  else if (up.includes('SAMSUNG')) base = 'SAMSUNG';
-  else if (up.includes('HYNIX')) base = 'SK HYNIX';
-  else base = up.split(/[\s,.(]/)[0];
+  else if (/삼성디스플레이|SAMSUNG\s*DISPLAY/.test(up)) base = 'SAMSUNG DISPLAY';
+  else if (/삼성|SAMSUNG/.test(up)) base = 'SAMSUNG';
+  else if (/하이닉스|HYNIX/.test(up)) base = 'SK HYNIX';
+  /* SPEC-SYNC: core.js GST.ORG.customer 와 같은 규약.
+     예전에는 «첫 단어»를 잘랐는데, 고객사가 50개를 넘자 '주식회사 X' 꼴 네 회사가
+     전부 `주식회사` 한 칸에 뭉치고 'Global Foundries' 가 `GLOBAL` 이 됐다.
+     서로 다른 고객사가 합쳐지는 것이 가장 나쁜 실패라, 첫 단어가 아니라
+     «법인격을 걷어낸 이름 전체»를 쓴다. */
+  else base = (up.replace(/\(주\)|（주）|주식회사|유한회사|株式会社|有限公司|股份有限公司/g, ' ')
+                 .replace(/\b(CO|LTD|INC|CORP|CORPORATION|COMPANY|LIMITED|GMBH|PTE|PTY|PLC)\b\.?/g, ' ')
+                 .replace(/[.,()·]/g, ' ').replace(/\s+/g, ' ').trim()) || up;
   const m = up.match(/\(([A-Z0-9-]+)\)/) || up.match(/\b(F\d{1,2}N?)\b/);
   return m ? base + ' ' + m[1] : base;
 }

@@ -192,5 +192,40 @@ console.log('[8] dbRows 페이지네이션 (서버 한 페이지 1,000행 가정
   }catch(e){ ok(false, 'dbRows 실패: '+e.message); }
 }
 
+/* [9] 고객사 분류 — 사이드바 목록이 뒤죽박죽이던 원인.
+   폴백이 «첫 단어»라, 고객사가 50개를 넘자 서로 다른 회사가 한 칸에 뭉치고
+   일반명사가 고객사로 떴다. 합쳐지는 쪽이 갈라지는 쪽보다 나쁘다 — 필터가 거짓말을 한다. */
+console.log('[9] 고객사 분류');
+{
+  const cu = s => GST.ORG.customer(s);
+  // 법인격이 «앞»에 붙는 한국식 이름 — 예전에는 전부 '주식회사' 한 칸이 됐다
+  ok(cu('주식회사 가나') === '가나', "'주식회사 가나' → 가나 : "+cu('주식회사 가나'));
+  ok(cu('주식회사 가나') !== cu('주식회사 다라'), '서로 다른 회사가 한 칸에 뭉치면 안 된다');
+  ok(cu('(주)마바') === '마바', "'(주)마바' → 마바 : "+cu('(주)마바'));
+  // 법인격이 «뒤»에 붙는 영문 이름
+  ok(cu('Sample Tech Co., Ltd.') === 'SAMPLE TECH', "뒤 법인격 제거 : "+cu('Sample Tech Co., Ltd.'));
+  ok(cu('Sample Systems INC') === 'SAMPLE SYSTEMS', "INC 제거 : "+cu('Sample Systems INC'));
+  // 첫 단어가 일반명사여도 뭉개지 않는다
+  ok(cu('Global Widgets') === 'GLOBAL WIDGETS', "일반명사 머리 : "+cu('Global Widgets'));
+  ok(cu('Semiconductor Alpha Solutions') !== 'SEMICONDUCTOR', '일반명사 한 칸으로 뭉침');
+  // 한글·영문 두 이름으로 들어오는 회사는 하나로 (안 합치면 필터가 절반만 잡는다)
+  ok(cu('삼성전자(주)') === 'SAMSUNG' && cu('SAMSUNG (CHINA) SEMICONDUCTOR CO.,L') === 'SAMSUNG',
+     '삼성 한글·영문 통합: '+cu('삼성전자(주)')+' / '+cu('SAMSUNG (CHINA) SEMICONDUCTOR CO.,L'));
+  ok(cu('에스케이하이닉스 (주)') === 'SK HYNIX' && cu('SK Hynix Semiconductor(China)Ltd.') === 'SK HYNIX',
+     '하이닉스 통합');
+  // 디스플레이는 별개 법인 — 삼성 규칙보다 먼저 봐야 한다
+  ok(cu('삼성디스플레이(주)') === 'SAMSUNG DISPLAY', '삼성디스플레이가 SAMSUNG 으로 흡수됨');
+  // 대만 4개사는 예전과 같아야 한다(무변경 증명)
+  ok(cu('Micron Memory Taiwan Co., Ltd.(F16)') === 'MICRON', 'MICRON 무변경');
+  ok(cu('Powerchip Semiconductor Manufacturing') === 'PSMC', 'PSMC 무변경');
+  ok(cu('WINBOND(GX)') === 'WINBOND', 'WINBOND 무변경');
+  ok(cu('Taiwan-Asia Semiconductor') === 'TASC', 'TASC 무변경');
+  ok(cu('') === '' && cu('   ') === '', '빈 값은 빈 값');
+  // 챗봇도 같은 답을 내야 한다(제2원칙) — 소스에 같은 규약이 들어갔는지
+  const HR = fs.readFileSync(ROOT+'/supabase/functions/kakao-bot/hr.js','utf8');
+  ok(/삼성디스플레이/.test(HR) && /주식회사\|유한회사/.test(HR),
+     'kakao-bot/hr.js 의 normCust 가 core.js 와 갈라졌다');
+}
+
 console.log('\n'+(fail?'❌':'✅')+' t-region '+pass+'/'+(pass+fail));
 process.exit(fail?1:0);
