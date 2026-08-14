@@ -205,6 +205,24 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 <div class="status" id="status">Loading...</div>
 
+<!-- 기본 필터(구분·운영단위·고객사·단지·라인·팀·기간)는 GST.filters 가 이 블록 앞에 끼운다.
+     여기 있는 것은 이 페이지 전용이다 — SITE·LINE 은 고객사·라인으로 흡수돼 빠졌다.
+     표 안에 있던 것을 사이드바로 올렸다: 다른 페이지와 필터가 있는 자리가 같아야 한다. -->
+<div class="slicers">
+  <div class="slicer search"><div class="lbl" data-i="sl_search">검색</div>
+    <input id="q" placeholder="Search S/N, Model, Line..."></div>
+  <div class="slicer"><div class="lbl" data-i="f_model">전체 모델</div>
+    <select id="fModel"><option value="">Model</option></select></div>
+  <div class="slicer"><div class="lbl" data-i="f_stat">전체 상태</div>
+    <select id="fStat">
+      <option value="">All Status</option>
+      <option value="overdue">Overdue</option>
+      <option value="soon">Due Soon</option>
+      <option value="ok">Normal</option>
+      <option value="na">No Cycle</option>
+    </select></div>
+</div>
+
 
 <div class="kpis">
   <div class="kpi k1 sel" data-s=""><div class="krow"><span class="val" id="kp1">0</span><span class="kd" id="kd1"></span></div>
@@ -334,19 +352,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
 <div data-sec="data">
 <div class="tablecard">
   <h3 data-i="tbl_title">🗓️ PM Schedule (by urgency)</h3>
-  <div class="filters">
-    <input id="q" placeholder="Search S/N, Model, Line...">
-    <select id="fSite"><option value="">SITE</option></select>
-    <select id="fLine"><option value="">LINE</option></select>
-    <select id="fModel"><option value="">Model</option></select>
-    <select id="fStat">
-      <option value="">All Status</option>
-      <option value="overdue">Overdue</option>
-      <option value="soon">Due Soon</option>
-      <option value="ok">Normal</option>
-      <option value="na">No Cycle</option>
-    </select>
-  </div>
   <div class="tbl-wrap">
     <table id="tbl">
       <thead><tr>
@@ -431,10 +436,10 @@ let DONE_HIST=[]; // 완료 이력 [{date, sn, ch, line, model, site, group}]
 let VS=[], VD=[];
 function gFilt(){
   const g=id=>{const e=document.getElementById(id);return e?e.value:'';};
-  const fs=g('fSite'), fl=g('fLine'), fm=g('fModel');
-  VS=SCHED.filter(x=>(!fs||x.site===fs)&&(!fl||x.line===fl)&&(!fm||x.model===fm));
-  VD=DONE_HIST.filter(h=>(!fs||h.site===fs)&&(!fl||h.line===fl)&&(!fm||h.model===fm));
-  return {fs,fl,fm};
+  const fm=g('fModel');
+  VS=SCHED.filter(x=>GST.filters.pass(x)&&(!fm||x.model===fm));
+  VD=DONE_HIST.filter(h=>GST.filters.pass(h)&&(!fm||h.model===fm));
+  return {fm};
 }
 try{ if(window.name && T[window.name]) LANG=window.name; }catch(e){}
 
@@ -464,7 +469,7 @@ function applyLang(){
   document.getElementById('q').placeholder=t('search_ph');
   // 필터 첫 옵션
   const setOpt0=(id,k)=>{const s=document.getElementById(id);if(s&&s.options[0])s.options[0].textContent=t(k);};
-  setOpt0('fSite','f_site');setOpt0('fLine','f_line');setOpt0('fModel','f_model');
+  setOpt0('fModel','f_model');
   const fst=document.getElementById('fStat');
   if(fst){fst.options[0].textContent=t('f_stat');fst.options[1].textContent=t('st_overdue');
     fst.options[2].textContent=t('st_soon');fst.options[3].textContent=t('st_ok');fst.options[4].textContent=t('st_na');}
@@ -508,6 +513,16 @@ async function loadData(){ GST.skeleton(true);
   btn.disabled=false;
 }
 
+/* 기본 필터가 보는 축을 시트 행에서 뽑는다. SCHED·DONE_HIST·원본행 셋이 «같은 규칙»으로
+   같은 이름을 달아야 한다 — 한 곳만 빠지면 그 카드만 다른 모집단을 보여준다(에러는 안 난다). */
+function rowOrg(r){
+  return { region:GST.ORG.region(r[C.op]||''), op:String(r[C.op]||'').trim(),
+           customer:GST.ORG.customer(r[C.customer]||''),
+           campus:GST.nfw(r[C.campus]||'').trim(), line:GST.nfw(r[C.line]||'').trim(),
+           // 기간 축은 «그 행의 TBM 작업일». 세 배열이 각자 다른 이름(last·date)을 쓰므로
+           // 필터 전용 키를 따로 둔다 — 한쪽 이름으로 맞추면 다른 쪽이 조용히 전부 탈락한다.
+           _d: toDate(r[C.work]) };
+}
 function buildSchedule(rows){
   // TBM 행을 S/N+Chamber로 그룹핑 → 최근 점검일
   const g={};
@@ -523,9 +538,9 @@ function buildSchedule(rows){
     g[k].dates.push(wd);
     g[k].rows++; if(!g[k].last||wd>g[k].last){g[k].last=wd;g[k].meta=r;}
     // 완료 이력 기록 (모든 TBM 점검이력)
-    DONE_HIST.push({date:wd,sn,ch,
+    DONE_HIST.push(Object.assign({date:wd,sn,ch,
       site:GST.nfw(r[C.site]||'')||'—',line:GST.nfw(r[C.line]||'')||'—',
-      model:GST.nfw(r[C.model]||'')||'—',group:GST.nfw(r[C.group1]||'')||'—'});
+      model:GST.nfw(r[C.model]||'')||'—',group:GST.nfw(r[C.group1]||'')||'—'}, rowOrg(r)));
   });
   const today=new Date(); today.setUTCHours(0,0,0,0);
   // 새 시트에는 점검주기 컬럼이 없으므로, 설비별 TBM 방문 간격의 중앙값으로 주기를 추정한다.
@@ -558,9 +573,9 @@ function buildSchedule(rows){
     }
     // DONE_HIST와 같은 규칙으로 정규화해야 한다. 한쪽만 반각화하면 슬라이서에 PSMC와 ＰＳＭＣ가
     // 따로 떠서, 어느 쪽을 골라도 표(SCHED)와 추이·준수율(DONE_HIST)의 모집단이 어긋난다.
-    return {sn:o.sn,ch:o.ch,site:GST.nfw(o.meta[C.site]||'')||'—',line:GST.nfw(o.meta[C.line]||'')||'—',
+    return Object.assign({sn:o.sn,ch:o.ch,site:GST.nfw(o.meta[C.site]||'')||'—',line:GST.nfw(o.meta[C.line]||'')||'—',
       model:GST.nfw(o.meta[C.model]||'')||'—',group:GST.nfw(o.meta[C.group1]||'')||'—',
-      last:o.last,cycle,next,origNext,dl,st,cnt:o.rows,key,adjusted,memo};
+      last:o.last,cycle,next,origNext,dl,st,cnt:o.rows,key,adjusted,memo}, rowOrg(o.meta));
   });
 }
 
@@ -832,8 +847,7 @@ function render(){ GST.skeleton(false);
     const manByM={}, perWorker={}, lineMin={}, WL=[];   // WL: 세부내역용 원본행 수집(집계와 같은 필터를 이미 통과한 행)
     RAW.forEach(r=>{
       if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;
-      if(GF.fs&&(r[C.site]||'—')!==GF.fs)return;
-      if(GF.fl&&(r[C.line]||'—')!==GF.fl)return;
+      if(!GST.filters.pass(rowOrg(r)))return;
       if(GF.fm&&(r[C.model]||'—')!==GF.fm)return;
       const wd=toDate(r[C.work]); if(!wd)return;
       const man=Number(r[C.manMin])||0, wmin=Number(r[C.workMin])||0;
@@ -890,9 +904,11 @@ function render(){ GST.skeleton(false);
     GST.insights(SCHED.length?ins:[]);
   }
 
-  // 필터 옵션 채우기
-  fillSelect('fSite',x=>x.site);
-  fillSelect('fLine',x=>x.line);
+  // 필터 옵션 채우기 — 기본 필터는 GST.filters 가, 모델만 이 페이지가 채운다
+  GST.filters.mount({ page:'pm', rows:()=>SCHED, onChange:render,
+    get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer,
+          campus:x=>x.campus, line:x=>x.line, date:x=>x._d },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
   fillSelect('fModel',x=>x.model);
 
   // KPI 클릭
@@ -947,11 +963,9 @@ function fillSelect(id,f){
 
 function draw(){
   const q=document.getElementById('q').value.toLowerCase();
-  const fs=document.getElementById('fSite').value,fl=document.getElementById('fLine').value,
-        fm=document.getElementById('fModel').value,fst=document.getElementById('fStat').value;
+  const fst=document.getElementById('fStat').value;
   let d=VS.filter(x=>{
-    if(fs&&x.site!==fs)return false; if(fl&&x.line!==fl)return false;
-    if(fm&&x.model!==fm)return false; if(fst&&x.st!==fst)return false;
+    if(fst&&x.st!==fst)return false;
     if(q&&!`${x.sn} ${x.model} ${x.line} ${x.site} ${x.ch} ${x.group}`.toLowerCase().includes(q))return false;
     return true;
   });
@@ -977,7 +991,7 @@ function draw(){
 
 document.addEventListener('input',e=>{
   const id=e.target&&e.target.id;
-  if(id==='fSite'||id==='fLine'||id==='fModel')render();   // 페이지 전체(KPI·차트·캘린더) 재계산
+  if(id==='fModel')render();   // 페이지 전체(KPI·차트·캘린더) 재계산
   else if(id==='q'||id==='fStat')draw();                   // 표만
 });
 document.addEventListener('click',e=>{
