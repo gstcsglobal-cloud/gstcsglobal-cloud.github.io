@@ -132,9 +132,8 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
 <div class="status" id="status">Loading...</div>
 
 <div class="slicers">
+  <!-- 고객사·라인은 GST.filters 의 공통 필터로 흡수됐다. 여기 남은 것은 이 페이지 전용이다. -->
   <div class="slicer"><div class="lbl" data-i="sl_month">기준 월</div><select id="sl-month" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_cust">고객사</div><select id="sl-cust" onchange="onSlicer()"></select></div>
-  <div class="slicer"><div class="lbl" data-i="sl_line">라인</div><select id="sl-line" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_proc">공정</div><select id="sl-proc" onchange="onSlicer()"></select></div>
 </div>
 
@@ -409,7 +408,7 @@ ja:{title:'TCO 分析',sub:'Total Cost of Ownership — ユーティリティ·�
 
 let LANG='ko', CHARTS={}, sortK='total', sortAsc=false;
 let EQUIP=[], WK=[], PARTS=[], MONTHS=[], MODEL=null;
-const F={cust:'',line:'',proc:''};
+const F={proc:''};
 let SEL_M='';
 
 GST.chartDefaults();
@@ -501,6 +500,11 @@ async function loadData(){ GST.skeleton(true);
       const ton=toDate(r[CI.turnOn]);
       if(!sn||!ton)return null;
       return {sn,snKey:normSN(sn),cust:custBase(r[CI.customer]),fab:lineKey(r[CI.fab]),
+        // 공통 필터가 보는 축 — PARTS 와 «같은 이름»이어야 한 술어로 둘 다 걸린다
+        region:GST.ORG.region(r[CI.country]), op:String(r[CI.country]||'').trim(),
+        customer:GST.ORG.customer(r[CI.customer]),
+        campus:GST.ORG.campus(r[CI.location], r[CI.fab], r[CI.country]),
+        line:String(r[CI.fab]||'').trim(),
         proc:procOf(r[CI.group1]),chambers:String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1,
         type:String(r[CI.type]||'').toUpperCase().includes('DUAL')?'DUAL':'SINGLE',turnOn:ton};
     }).filter(Boolean);
@@ -534,7 +538,12 @@ async function loadData(){ GST.skeleton(true);
       const rawQty=Number(r[CM.qty])||1;
       // sn(원문)·matName·reason은 차트 세부내역($rows) 표기용 —
       // 세부내역 목록에 자재명이 없으면 목록이 무의미하다(snKey는 정규화라 읽기도 불편).
-      return {t:+d,cust:custBase(r[CM.customer]),line:lineKey(r[CM.line]),proc:procOf(r[CM.proc])||'ETC',
+      return {t:+d,cust:custBase(r[CM.customer]),
+        region:GST.ORG.region(r[CM.op]), op:String(r[CM.op]||'').trim(),
+        customer:GST.ORG.customer(r[CM.customer]),
+        campus:GST.nfw(String(r[CM.campus]||'')).trim(),
+        line:GST.nfw(String(r[CM.line]||'')).trim(),
+        fab:lineKey(r[CM.line]),proc:procOf(r[CM.proc])||'ETC',
         snKey:normSN(r[CM.sn]),sn:String(r[CM.sn]||'').trim(),
         matName:String(r[CM.matName]||'').trim(),reason:String(r[CM.reason]||'').trim(),
         qty:rawQty>9999?1:Math.max(1,rawQty),qtyBad:rawQty>9999};
@@ -568,8 +577,13 @@ function fillSlicers(){
   const sm=document.getElementById('sl-month');
   sm.innerHTML=MONTHS.map(m=>'<option value="'+m.key+'">'+m.key+(m.key===MONTHS[MONTHS.length-1].key?' '+t('cur'):'')+'</option>').join('');
   sm.value=SEL_M;
-  GST.fillSelect('sl-cust','cust',Array.from(new Set(EQUIP.map(e=>e.cust).concat(PARTS.map(p=>p.cust)).filter(Boolean))).sort(),F,t('all'));
-  GST.fillSelect('sl-line','line',Array.from(new Set(EQUIP.map(e=>e.fab).concat(PARTS.map(p=>p.line)).filter(Boolean))).sort(),F,t('all'));
+  /* 기본 필터는 GST.filters. 설비(EQUIP)와 파츠(PARTS) 두 배열을 같은 술어로 걸어야 하므로
+     둘 다 같은 이름(region·op·customer·campus·line)을 달아 둔다 — 한쪽만 달면 그 카드만
+     다른 모집단을 보여준다. 기간 칸은 잠근다: 이 화면의 시간축은 위의 «기준 월»이다. */
+  GST.filters.mount({ page:'tco', rows:()=>EQUIP.concat(PARTS), onChange:render,
+    get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer,
+          campus:x=>x.campus, line:x=>x.line },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
   const ps=PROCS.filter(p=>EQUIP.some(e=>e.proc===p)||PARTS.some(x=>x.proc===p));
   GST.fillSelect('sl-proc','proc',ps,F,t('all'));
   document.getElementById('sl-proc').querySelectorAll('option').forEach(o=>{if(o.value==='ETC')o.textContent=procLabel('ETC');});
@@ -586,13 +600,15 @@ GST.pageBar({
 });
 function onSlicer(){
   SEL_M=document.getElementById('sl-month').value;
-  F.cust=document.getElementById('sl-cust').value;
-  F.line=document.getElementById('sl-line').value;
   F.proc=document.getElementById('sl-proc').value;
   render();
 }
-function clearAllFilters(){F.cust='';F.line='';F.proc='';fillSlicers();render();}
-window.clearF=function(k){F[k]='';fillSlicers();render();};
+function clearAllFilters(){F.proc='';GST.filters.clear();fillSlicers();render();}
+window.clearF=function(k){
+  if(k.indexOf('gf_')===0){ const kk=k.slice(3);
+    if(kk==='period'){GST.filters.F.dtFrom='';GST.filters.F.dtTo='';} else GST.filters.F[kk]='';
+    GST.filters.refresh(); render(); return; }
+  F[k]='';fillSlicers();render();};
 
 // ===== TCO 계산 =====
 // 챔버-시간당 비용 요소 (원/챔버·시간)
@@ -623,8 +639,8 @@ function addParts(b,cost,cnt){b.cost.parts+=cost;b.usage.parts+=cnt;b.parts+=cos
 
 function compute(){
   const NOW=Date.now();
-  const eqs=EQUIP.filter(e=>(!F.cust||e.cust===F.cust)&&(!F.line||e.fab===F.line)&&(!F.proc||e.proc===F.proc));
-  const parts=PARTS.filter(p=>(!F.cust||p.cust===F.cust)&&(!F.line||p.line===F.line)&&(!F.proc||p.proc===F.proc));
+  const eqs=EQUIP.filter(e=>GST.filters.pass(e)&&(!F.proc||e.proc===F.proc));
+  const parts=PARTS.filter(p=>GST.filters.pass(p)&&(!F.proc||p.proc===F.proc));
   const byMonth={},byProcSel={},byLineSel={},eqSel=[],selChambers={n:0,units:0},selJobs={n:0};
   MONTHS.forEach(m=>{byMonth[m.key]=emptyBucket();});
   // 추이용 12구간(주/월) — 앵커는 기준월 말일(최신월이면 오늘). GST.periods.end는 '마지막 날 자정(포함)'
@@ -685,7 +701,7 @@ function compute(){
     if(m.key===SEL_M){
       if(p.qtyBad)qtyBadSel++;
       addParts(byProcSel[p.proc]||byProcSel.ETC,cost,p.qty);
-      const lb=byLineSel[p.line]=byLineSel[p.line]||emptyBucket();
+      const lb=byLineSel[p.fab]=byLineSel[p.fab]||emptyBucket();   // 설비(e.fab)와 «같은 정규화»여야 한 축에 모인다
       addParts(lb,cost,p.qty);
       const eq=eqIdx[p.snKey];
       if(eq){eq.parts+=cost;eq.partsCnt+=p.qty;}
@@ -704,7 +720,11 @@ function render(){
   MODEL=compute();
   const TH=GST.chartTheme(), PAL=TH.pal8;
   const sel=MODEL.sel, prev=MODEL.prev;
-  GST.renderChips(F,{cust:t('sl_cust'),line:t('sl_line'),proc:t('sl_proc')},'clearF');
+  // 기본 필터도 같은 칩 줄에 — 걸린 조건이 안 보이면 모집단을 오해한다
+  const _c=Object.assign({},F);
+  GST.filters.active().forEach(x=>{ _c['gf_'+x.k]=x.value; });
+  GST.renderChips(_c,{proc:t('sl_proc'),gf_region:'구분',gf_op:'운영단위',gf_customer:'고객사',
+    gf_campus:'단지',gf_line:'라인',gf_team:'팀',gf_period:'기간'},'clearF');
 
   // --- KPI ---
   const put=(id,v)=>{document.getElementById(id).textContent=v;};
@@ -737,7 +757,7 @@ function render(){
   const selMR=MONTHS.find(m=>m.key===SEL_M);
   const pCols=t('rd_tco_p').split('|'), eCols=t('rd_tco_e').split('|');
   const pRows=list=>list.map(p=>[new Date(p.t).toISOString().slice(0,10),p.sn||p.snKey||'—',
-    p.line||'—',procLabel(p.proc),p.matName||'—',p.qty.toLocaleString(),p.reason||'—']);
+    p.fab||'—',procLabel(p.proc),p.matName||'—',p.qty.toLocaleString(),p.reason||'—']);
   const eRows=list=>list.map(x=>[x.sn,x.fab||'—',procLabel(x.proc),x.type,x.chambers,
     Math.round(x.run).toLocaleString(),Math.round(x.util).toLocaleString(),
     Math.round(x.parts).toLocaleString(),Math.round(x.total).toLocaleString()]);
