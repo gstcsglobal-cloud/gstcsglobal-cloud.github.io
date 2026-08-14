@@ -188,6 +188,14 @@ $('fsel').onchange=async function(){
       const dc=GST._snake(t.win);
       const ds=out.map(o=>String(o[dc]||'').slice(0,10)).filter(v=>/^\d{4}-\d{2}-\d{2}$/.test(v));
       if(!ds.length)throw new Error('날짜('+t.win+') 값을 못 읽어 구간을 정할 수 없습니다 — 통째 교체로 올리세요');
+      /* 일부만 날짜 형식이 다른 경우가 가장 위험하다. 그 행들은 구간 계산에서 빠지므로
+         «생각보다 좁은 창»이 잡히는데, 넣기는 다 넣는다 → 창 밖에 든 파일 행이 기존 행과
+         겹쳐 이중 계산된다. 조용히 넘기지 말고 세어서 막는다(엑셀 저장 때 실제로 잘 바뀐다). */
+      const bad=out.length-ds.length;
+      if(bad)throw new Error('날짜('+t.win+')가 YYYY-MM-DD 가 아닌 행이 '+bad.toLocaleString()+'건 있습니다'
+        +' (예: "'+String((out.find(o=>!/^\d{4}-\d{2}-\d{2}$/.test(String(o[dc]||'').slice(0,10)))||{})[dc]||'(빈칸)')+'")'
+        +'\n그 행은 구간 계산에서 빠져 «창 밖»이 되고, 넣기는 다 넣으므로 이중 계산됩니다.'
+        +'\n날짜 서식을 YYYY-MM-DD 로 맞춰 다시 저장하세요.');
       const ops=[...new Set(out.map(o=>String(o.op==null?'':o.op)))];
       win={from:ds.reduce((a,b)=>a<b?a:b), to:ds.reduce((a,b)=>a>b?a:b), ops:ops};
       const pv=await c.rpc('csv_window',{p_tbl:t.table,p_from:win.from,p_to:win.to,p_ops:win.ops,p_dry:true});
