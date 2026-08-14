@@ -1441,19 +1441,42 @@ GST.dbRows = async function(table){
   /* 페이지네이션. PostgREST는 한 번에 돌려주는 행수에 상한이 있고 그 값은 프로젝트 설정이다.
      그래서 "요청한 만큼 안 왔으면 끝"으로 판정하면 안 된다 — 상한에 걸린 것을 완료로 착각해
      조용히 잘린 데이터를 그린다. **받은 만큼만 전진하고 0행일 때 멈춘다.** */
-  const STEP = 5000; let from = 0; const out = [];
-  for(let guard=0; guard<200; guard++){
-    const r = await c.from('sheet_'+table).select(cols.join(',') + ',src_row')
-                     .order('src_row', {ascending:true}).range(from, from+STEP-1);
+  const SEL = cols.join(',') + ',src_row';
+  const page = async function(from, n){
+    const r = await c.from('sheet_'+table).select(SEL)
+                     .order('src_row', {ascending:true}).range(from, from+n-1);
     if(r.error) throw new Error('READ '+r.error.message);
-    const n = (r.data||[]).length; if(!n) break;
-    for(let i=0;i<n;i++) out.push(r.data[i]);
-    from += n;
-    if(out.length >= want) break;
+    return r.data || [];
+  };
+  /* 첫 페이지로 «서버가 실제로 돌려주는 한 장의 크기»를 알아낸다.
+     PostgREST 의 max-rows 는 프로젝트 설정이라 클라이언트가 못 정한다 — 5,000을 달라고 해도
+     1,000만 오는 것이 기본값이다. 그래서 요청한 수를 페이지 크기로 가정하면 안 된다.
+     ⚠ 예전에는 여기에 «200회» 라는 루프 상한이 있었다. 1,000행씩 200번 = 200,000행에서
+       끊겨, 25만 행을 올리자 MIRROR_SHORT 200000/257606 으로 화면이 통째로 막혔다.
+       상한은 데이터 크기가 아니라 «폭주 방지»여야 하므로 want 에서 유도한다. */
+  const out = await page(0, 5000);
+  const size = out.length;
+  if(size && out.length < want){
+    /* 순차로 받으면 257,606행이 258번 왕복이라 몇 분씩 걸린다 — 페이지끼리는 서로
+       의존하지 않으므로(범위가 겹치지 않는다) 묶어서 동시에 받는다. 순서는 배치 순서로
+       보존된다: 각 페이지가 src_row 오름차순의 «겹치지 않는 구간»이라 이어 붙이면 정렬이 유지된다. */
+    const total = Math.ceil((want - size) / size), CONC = 6;
+    for(let p = 0; p < total; p += CONC){
+      const batch = [];
+      for(let k = 0; k < CONC && p + k < total; k++) batch.push(page(size * (p + k + 1), size));
+      const res = await Promise.all(batch);
+      let empty = false;
+      for(let i = 0; i < res.length; i++){
+        if(!res[i].length){ empty = true; break; }
+        for(let j = 0; j < res[i].length; j++) out.push(res[i][j]);
+      }
+      if(empty || out.length >= want) break;
+    }
   }
   /* 적재 기록과 실제로 받은 행수가 다르면 그 자리에서 멈춘다.
      모자란 채로 그리면 KPI가 조용히 작아진다. */
-  if(out.length !== want) throw new Error('MIRROR_SHORT '+out.length+'/'+want);
+  if(out.length !== want) throw new Error('MIRROR_SHORT '+out.length+'/'+want
+    +' (한 페이지 '+size+'행)');
 
   const rows = new Array(out.length+1); rows[0] = head;
   for(let i=0;i<out.length;i++){

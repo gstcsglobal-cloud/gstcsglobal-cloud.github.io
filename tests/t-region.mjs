@@ -150,5 +150,47 @@ console.log('[7] CP949 CSV 자동 인식');
   ok(/function peek\(/.test(UP), '헤더 못 찾았을 때 파일 내용을 보여주는 peek 가 없다');
 }
 
+/* [8] dbRows 페이지네이션 — 25만 행에서 조용히 잘리지 않는지.
+   PostgREST 의 max-rows 는 프로젝트 설정이라 «5,000 달라고 했는데 1,000만 오는» 것이 기본이다.
+   예전 코드는 루프 상한이 200회라 1,000×200 = 200,000행에서 끊겼고, 25만 행을 올리자
+   MIRROR_SHORT 200000/257606 으로 화면이 통째로 막혔다. 실제로 돌려서 확인한다. */
+console.log('[8] dbRows 페이지네이션 (서버 한 페이지 1,000행 가정)');
+{
+  const SRC = fs.readFileSync(ROOT+'/assets/core.js','utf8');
+  ok(!/for\s*\(\s*let\s+guard\s*=\s*0\s*;\s*guard\s*<\s*200\s*;/.test(SRC),
+     '200회 루프 상한이 되살아났다 — 20만 행에서 잘린다');
+
+  // dbRows 를 실제로 돌린다. 서버는 한 번에 1,000행만 준다고 가정한 가짜 클라이언트.
+  const WANT = 257606, PAGE = 1000;
+  let calls = 0;
+  const rowOf = i => { const o = { src_row: i }; return o; };
+  GST.db = async () => ({
+    from(t){
+      const q = {
+        _t: t, _from: 0, _to: 0,
+        select(){ return q; }, order(){ return q; },
+        eq(){ return q; },
+        maybeSingle: async () => ({ data:{ rows: WANT, err:null, ms:-1,
+                                           synced_at:new Date().toISOString() }, error:null }),
+        range(a,b){ q._from=a; q._to=b; return q; },
+        then(res){                              // await 되는 순간 응답을 만든다
+          calls++;
+          const n = Math.min(PAGE, q._to-q._from+1, Math.max(0, WANT-q._from));
+          const data = new Array(n);
+          for(let i=0;i<n;i++) data[i]=rowOf(q._from+i);
+          res({ data, error:null });
+        }
+      };
+      return q;
+    }
+  });
+  try{
+    const rows = await GST.dbRows('wk');
+    ok(rows.length === WANT+1, '헤더 1행 + 데이터 '+WANT+'행이어야 한다: '+rows.length);
+    ok(calls < 400, '왕복이 너무 많다('+calls+'회) — 병렬 수신이 빠졌다');
+    console.log('   '+WANT.toLocaleString()+'행 · 왕복 '+calls+'회 · 결과 '+(rows.length-1).toLocaleString()+'행');
+  }catch(e){ ok(false, 'dbRows 실패: '+e.message); }
+}
+
 console.log('\n'+(fail?'❌':'✅')+' t-region '+pass+'/'+(pass+fail));
 process.exit(fail?1:0);
