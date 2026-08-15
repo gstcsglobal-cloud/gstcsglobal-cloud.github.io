@@ -2516,7 +2516,9 @@ GST.filters = (function(){
     },
     refresh: refresh,
     /* 기본 필터 술어. 페이지의 filt() 맨 앞에 한 줄로 넣는다. */
-    pass: function(x){
+    /* opt.noDate — 기간 조건만 건너뛴다. 설치현황의 «미가동 목록»처럼 «그 기간에 가동을
+       시작하지 않은» 설비를 봐야 하는 카드가 있다. 축 조건은 그대로 걸린다 — 기간만 뺀다. */
+    pass: function(x, opt){
       if(!CFG) return true;
       const g = CFG.get || {};
       if(F.region   && val(g.region,x)   !== F.region)   return false;
@@ -2525,7 +2527,7 @@ GST.filters = (function(){
       if(F.campus   && val(g.campus,x)   !== F.campus)   return false;
       if(F.line     && val(g.line,x)     !== F.line)     return false;
       if(F.team     && val(g.team,x)     !== F.team)     return false;
-      if((F.dtFrom || F.dtTo) && g.date){
+      if((F.dtFrom || F.dtTo) && g.date && !(opt && opt.noDate)){
         const d = dstr(g.date(x));
         if(!d) return false;                       // 날짜가 없으면 기간 조건을 만족할 수 없다
         if(F.dtFrom && d < F.dtFrom) return false;
@@ -2554,10 +2556,13 @@ GST.filters = (function(){
 
 GST.autoSidebar = function(){
   if(document.getElementById('gstSidebar')) return;
+  /* 순서가 곧 «같은 대시보드로 보이는가»다. 공통 필터(.slicers)가 늘 맨 위에 와야
+     페이지를 옮겨도 사이드바 앞부분이 똑같다. 예전에는 .date-panel 을 먼저 밀어 넣어
+     설치현황만 「기간·DATE RANGE」가 머리에 붙어 혼자 다르게 보였다. */
   const sections=[];
-  if(document.querySelector('.date-panel')) sections.push({selector:'.date-panel', label:'기간 · Date Range'});
   if(document.querySelector('.slicers'))    sections.push({selector:'.slicers',    label:'필터 · Filters'});
-  if(document.querySelector('.filters'))    sections.push({selector:'.filters',    label:'필터 · Filters'});
+  if(document.querySelector('.date-panel')) sections.push({selector:'.date-panel', label:'이 페이지 전용 · 기간'});
+  if(document.querySelector('.filters'))    sections.push({selector:'.filters',    label:'이 페이지 전용'});
   if(!sections.length) return;
   GST.initSidebar({
     sections,

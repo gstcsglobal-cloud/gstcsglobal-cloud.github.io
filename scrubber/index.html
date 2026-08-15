@@ -207,18 +207,10 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <!-- 기간 설정 패널 -->
 <div class="date-panel">
-  <!-- 직접 날짜 입력 -->
-  <div class="date-panel-top">
-    <span class="lbl" data-i="date_range">Date Range</span>
-    <div class="date-inputs">
-      <input type="date" id="dateFrom">
-      <span class="date-sep">~</span>
-      <input type="date" id="dateTo">
-      <button class="apply-btn" onclick="applyDateRange()" data-i="apply">Apply</button>
-      <button class="reset-btn" onclick="resetDateRange()" data-i="reset">Reset</button>
-    </div>
-    <div class="range-display" id="rangeDisplay"></div>
-  </div>
+  <!-- 기간 자체는 위쪽 «공통 필터»의 기간 칸이 갖는다. 여기 있던 직접 입력 줄은
+       기간이 두 벌이 되어 «어느 쪽이 이겼는지» 알 수 없게 만들어서 걷어냈다.
+       남긴 것은 이 페이지에만 뜻이 있는 둘 — 빠른 선택과 집계 단위다. -->
+  <div class="range-display" id="rangeDisplay"></div>
 
   <!-- 빠른 기간 선택 -->
   <div class="preset-row">
@@ -635,48 +627,40 @@ function syncGranButtons(){
 }
 
 // 날짜 직접 설정
-function applyDateRange(){
-  const from=document.getElementById('dateFrom').value;
-  const to=document.getElementById('dateTo').value;
-  if(from) DATE_FROM=new Date(from);
-  if(to){ DATE_TO=new Date(to); DATE_TO.setHours(23,59,59,999); }
-  // 프리셋 해제
-  document.querySelectorAll('[data-q]').forEach(c=>c.classList.remove('active'));
+/* 기간의 «정본»은 공통 필터(GST.filters.F.dtFrom/dtTo)다.
+   DATE_FROM/DATE_TO 는 거기서 파생된 값 — 집계 단위 자동 선택과 표시에만 쓴다.
+   두 벌로 두면 «위 칸으로 걸었는데 차트는 안 바뀐다»가 된다. */
+function syncRange(){
+  const G=GST.filters.F;
+  DATE_FROM = G.dtFrom ? new Date(G.dtFrom+'T00:00:00') : null;
+  DATE_TO   = G.dtTo   ? new Date(G.dtTo  +'T23:59:59') : null;
   updateRangeDisplay();
-  if(RAW.length)render();
 }
-
 function resetDateRange(){
-  initDefaultRange();
+  GST.filters.F.dtFrom=''; GST.filters.F.dtTo=''; GST.filters.refresh();
+  document.querySelectorAll('[data-q]').forEach(c=>c.classList.remove('active'));
   if(RAW.length)render();
 }
-
-// 빠른 프리셋
+// 빠른 프리셋 — 공통 기간 칸에 값을 써 넣는다(그쪽이 정본이므로)
 function setPreset(q){
-  const now=new Date();
-  DATE_TO=new Date(now); DATE_TO.setHours(23,59,59,999);
-  if(q==='all'){ DATE_FROM=null; DATE_TO=null; }
-  else{
-    DATE_FROM=new Date();
-    if(q==='1w') DATE_FROM.setDate(now.getDate()-7);
-    else if(q==='1m') DATE_FROM.setMonth(now.getMonth()-1);
-    else if(q==='3m') DATE_FROM.setMonth(now.getMonth()-3);
-    else if(q==='6m') DATE_FROM.setMonth(now.getMonth()-6);
-    else if(q==='1y') DATE_FROM.setFullYear(now.getFullYear()-1);
+  const now=new Date(), ymd=d=>d.toISOString().slice(0,10);
+  let from='', to='';
+  if(q!=='all'){
+    to=ymd(now);
+    const f=new Date(now);
+    if(q==='1w') f.setDate(now.getDate()-7);
+    else if(q==='1m') f.setMonth(now.getMonth()-1);
+    else if(q==='3m') f.setMonth(now.getMonth()-3);
+    else if(q==='6m') f.setMonth(now.getMonth()-6);
+    else if(q==='1y') f.setFullYear(now.getFullYear()-1);
+    from=ymd(f);
   }
-  // input 동기화
-  if(DATE_FROM) document.getElementById('dateFrom').value=DATE_FROM.toISOString().slice(0,10);
-  else document.getElementById('dateFrom').value='';
-  if(DATE_TO && q!=='all') document.getElementById('dateTo').value=DATE_TO.toISOString().slice(0,10);
-  else document.getElementById('dateTo').value='';
-
+  GST.filters.F.dtFrom=from; GST.filters.F.dtTo=to; GST.filters.refresh();
   document.querySelectorAll('[data-q]').forEach(c=>c.classList.toggle('active',c.dataset.q===q));
-  updateRangeDisplay();
   if(RAW.length)render();
 }
-
 function updateRangeDisplay(){
-  const el=document.getElementById('rangeDisplay');
+  const el=document.getElementById('rangeDisplay'); if(!el)return;
   if(!DATE_FROM&&!DATE_TO){ el.textContent=t('range_all'); return; }
   const f=DATE_FROM?DATE_FROM.toISOString().slice(0,10):'...';
   const t2=DATE_TO?DATE_TO.toISOString().slice(0,10):'...';
@@ -691,13 +675,10 @@ const rdRow=r=>[cell(r,'code'),cell(r,'sn'),cell(r,'country'),cell(r,'customer')
 
 // 초기 기본 기간: 현재로부터 20년 전 ~ 오늘
 function initDefaultRange(){
-  const now=new Date();
-  DATE_TO=new Date(now); DATE_TO.setHours(23,59,59,999);
-  DATE_FROM=new Date(); DATE_FROM.setFullYear(now.getFullYear()-20);
-  document.getElementById('dateFrom').value=DATE_FROM.toISOString().slice(0,10);
-  document.getElementById('dateTo').value=DATE_TO.toISOString().slice(0,10);
-  // 빠른선택은 전체 해제 (직접 20년 범위니까)
-  document.querySelectorAll('[data-q]').forEach(c=>c.classList.remove('active'));
+  /* 기본은 «전체»다. 예전에는 20년 창을 조용히 걸어 뒀는데, 공통 기간 칸이 비어 있는데
+     화면은 걸린 상태 — 「왜 안 나오지」의 전형이다. 이제 칸과 화면이 늘 같은 말을 한다. */
+  syncRange();
+  document.querySelectorAll('[data-q]').forEach(c=>c.classList.toggle('active',c.dataset.q==='all'));
   updateRangeDisplay();
 }
 
@@ -755,13 +736,15 @@ function rebuildFilters(){
   /* 기본 필터는 GST.filters 가 갖는다. 기간 칸은 접근자를 주지 않아 잠긴다 —
      이 화면의 시간축은 위쪽 Turn On 날짜 범위 패널이고, 둘을 함께 두면 어느 쪽이
      이겼는지 알 수 없다(그래서 잠근다 · 보이되 거짓말은 안 한다). */
-  GST.filters.mount({ page:'scrubber', rows:()=>RAW, onChange:render,
+  GST.filters.mount({ page:'scrubber', rows:()=>RAW,
     get:{ region:r=>GST.ORG.region(r[CI.country]),
           op:r=>String(r[CI.country]||'').trim(),
           customer:r=>GST.ORG.customer(r[CI.customer]),
           campus:r=>GST.ORG.campus(r[CI.location], r[CI.fab], r[CI.country]),
-          line:r=>String(r[CI.fab]||'').trim() },
-    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
+          line:r=>String(r[CI.fab]||'').trim(),
+          date:r=>toDate(r[CI.turnOn]) },   // 이 화면의 시간축은 Turn On 이다
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG },
+    onChange:function(){ syncRange(); render(); } });
   // 전용 칸은 사라졌지만 F.model 은 남는다 — 모델 도넛을 눌러 거는 «드릴»이 그 값을 쓴다.
   buildChips('sl-model','model',CI.model);
   buildWarrChips();
@@ -771,19 +754,15 @@ function rebuildFilters(){
 
 function filt(skipDate){
   const now=new Date();
+  // 기간(Turn On)은 공통 필터가 건다. skipDate 는 그 조건«만» 빼고 축은 그대로 —
+  // 미가동 목록처럼 «그 기간에 가동을 시작하지 않은» 설비를 봐야 하는 카드가 있다.
   return RAW.filter(r=>{
-    if(!GST.filters.pass(r))return false;
+    if(!GST.filters.pass(r, skipDate?{noDate:1}:null))return false;
     if(F.model!=='ALL'&&(r[CI.model]||'').trim()!==F.model)return false;
     if(F.warr!=='ALL'){const l=wLbl(r);
       if(F.warr==='active'&&l!=='IN')return false;
       if(F.warr==='expired'&&l!=='OUT')return false;}
     if(F.q&&!r.join(' ').toLowerCase().includes(F.q))return false;
-    if(!skipDate){
-      // 날짜 범위 필터 (Turn On 기준) — 미가동 목록 등은 skipDate로 우회
-      const d=toDate(r[CI.turnOn]);
-      if(DATE_FROM&&(!d||d<DATE_FROM))return false;
-      if(DATE_TO&&(!d||d>DATE_TO))return false;
-    }
     return true;
   });
 }
@@ -1137,15 +1116,17 @@ const animVal=GST.animVal;
 let CUT_M='';
 function cutEnd(v){ const p=String(v).split('-'); return new Date(Date.UTC(+p[0],+p[1],0)).toISOString().slice(0,10); }
 function applyCut(v){
+  /* 상단바의 «마감(월)»도 기간의 정본인 공통 필터에 써 넣는다 — 예전처럼 페이지의
+     DATE_FROM/DATE_TO 만 고치면 사이드바 기간 칸은 비어 있는데 화면만 걸린 상태가 된다. */
   CUT_M=v||'';
-  const el=document.getElementById('dateTo'), fe=document.getElementById('dateFrom');
-  if(CUT_M){ const s=cutEnd(CUT_M); if(el)el.value=s; DATE_TO=new Date(s); DATE_TO.setHours(23,59,59,999); }
-  else { if(el)el.value=''; DATE_TO=null; }
-  // 구간 토글 OFF면 시작일도 그 달 1일로 — KPI·표가 그 달만 집계된다
-  if(CUT_M && !GST.span12()){ const s0=CUT_M+'-01'; if(fe)fe.value=s0; DATE_FROM=new Date(s0); DATE_FROM.setHours(0,0,0,0); }
-  else if(CUT_M){ if(fe)fe.value=''; DATE_FROM=null; }
+  const G=GST.filters.F;
+  if(CUT_M){
+    G.dtTo = cutEnd(CUT_M);
+    // 구간 토글 OFF면 시작일도 그 달 1일로 — KPI·표가 그 달만 집계된다
+    G.dtFrom = GST.span12() ? '' : (CUT_M+'-01');
+  } else { G.dtFrom=''; G.dtTo=''; }
+  GST.filters.refresh(); syncRange();
   document.querySelectorAll('[data-q]').forEach(c=>c.classList.remove('active'));
-  updateRangeDisplay();
   if(RAW.length)render(); else GST.barSync();
 }
 // 마감이 없을 때 "그 달"의 기준 — 데이터 최신일이 속한 달

@@ -61,7 +61,9 @@ Object.entries(GONE).forEach(([p, ids]) => {
 
 console.log('\n[5] core.js — 「날짜 축이 없는 페이지는 기간 칸을 잠근다」');
 is(/const hasD\s*=\s*!!\(CFG\.get\|\|\{\}\)\.date/.test(CORE), 'refresh 가 date 접근자 유무를 본다');
-is(/if\(\(F\.dtFrom \|\| F\.dtTo\) && g\.date\)/.test(CORE), 'pass 가 접근자 없으면 기간 조건을 건너뛴다');
+is(/if\(\(F\.dtFrom \|\| F\.dtTo\) && g\.date/.test(CORE), 'pass 가 접근자 없으면 기간 조건을 건너뛴다');
+// pass(x,{noDate:1}) — 기간만 빼고 축은 그대로. 설치현황의 «미가동 목록»이 이걸 쓴다.
+is(/!\(opt && opt\.noDate\)/.test(CORE), 'pass 가 기간만 건너뛰는 opt.noDate 를 받는다');
 // 음성 대조 — 접근자가 없는데 기간 조건을 걸면 화면이 통째로 빈다(예전 동작)
 {
   const oldStyle = /if\(F\.dtFrom \|\| F\.dtTo\)\{\s*\n\s*const d = dstr\(g\.date \? g\.date\(x\) : ''\);/.test(CORE);
