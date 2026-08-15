@@ -250,14 +250,12 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <!-- 슬라이서 -->
 <div class="slicers">
-  <!-- Country·Customer 칩은 GST.filters 의 구분·운영단위·고객사로 흡수됐다.
-       Country 열에는 국가가 아니라 사업부명이 섞여 오므로(실측) 그대로 두면 두 축이 갈라진다. -->
-  <div class="slicer"><div class="lbl">Model</div><div class="chips" id="sl-model"></div></div>
+  <!-- 사용자 요청(v92): 이 페이지 전용 칸에서 Model·검색을 걷어내고 Warranty 만 남겼다.
+       사이드바 앞부분은 GST.filters 의 공통 한 벌이고, 여기 아래가 이 페이지 전용이다.
+       ⚠ .slicers 블록 자체는 지우지 말 것 — GST.filters.mount 가 여기 안에 공통 필터를
+         끼우고 autoSidebar 가 그것을 <aside> 로 옮긴다. 지우면 사이드바가 통째로 사라진다.
+       Model 은 칸이 없어도 «도넛을 눌러 거는 드릴»로 여전히 걸린다(F.model 은 남겼다). -->
   <div class="slicer"><div class="lbl">Warranty</div><div class="chips" id="sl-warr"></div></div>
-  <div class="slicer search-sl">
-    <div class="lbl" data-i="search_lbl">Search</div>
-    <input id="search" placeholder="S/N, Location, Tool Maker...">
-  </div>
 </div>
 
 <!-- KPI -->
@@ -582,7 +580,7 @@ function applyLang(){
   document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
   buildSecNav();
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
-  document.getElementById('search').placeholder='S/N, Location, Tool Maker...';
+  {const e=document.getElementById('search'); if(e)e.placeholder='S/N, Location, Tool Maker...';}
   updateRangeDisplay();
   if(RAW.length){buildWarrChips();render();}
 }
@@ -731,7 +729,8 @@ async function loadData(){ GST.skeleton(true);
 function uniqCol(idx){return Array.from(new Set(RAW.map(r=>(r[idx]||'').trim()).filter(Boolean))).sort();}
 
 function buildChips(id,key,idx){
-  const box=document.getElementById(id); box.innerHTML='';
+  const box=document.getElementById(id); if(!box)return;   // 그 칸을 걷어냈으면 조용히 넘어간다
+  box.innerHTML='';
   ['ALL',...uniqCol(idx)].forEach(v=>{
     const c=document.createElement('div');
     c.className='chip'+(F[key]===v?' active':'');
@@ -741,7 +740,8 @@ function buildChips(id,key,idx){
   });
 }
 function buildWarrChips(){
-  const box=document.getElementById('sl-warr'); box.innerHTML='';
+  const box=document.getElementById('sl-warr'); if(!box)return;
+  box.innerHTML='';
   [{v:'ALL',l:'ALL'},{v:'active',l:t('warr_ok')},{v:'expired',l:t('warr_exp')}].forEach(({v,l})=>{
     const c=document.createElement('div');
     c.className='chip'+(F.warr===v?' active':''); c.textContent=l;
@@ -751,7 +751,7 @@ function buildWarrChips(){
 }
 function rebuildFilters(){
   F.model='ALL';F.warr='ALL';F.q='';
-  document.getElementById('search').value='';
+  {const e=document.getElementById('search'); if(e)e.value='';}
   /* 기본 필터는 GST.filters 가 갖는다. 기간 칸은 접근자를 주지 않아 잠긴다 —
      이 화면의 시간축은 위쪽 Turn On 날짜 범위 패널이고, 둘을 함께 두면 어느 쪽이
      이겼는지 알 수 없다(그래서 잠근다 · 보이되 거짓말은 안 한다). */
@@ -762,10 +762,12 @@ function rebuildFilters(){
           campus:r=>GST.ORG.campus(r[CI.location], r[CI.fab], r[CI.country]),
           line:r=>String(r[CI.fab]||'').trim() },
     drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
+  // 전용 칸은 사라졌지만 F.model 은 남는다 — 모델 도넛을 눌러 거는 «드릴»이 그 값을 쓴다.
   buildChips('sl-model','model',CI.model);
   buildWarrChips();
 }
-document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
+{const e=document.getElementById('search');
+ if(e)e.addEventListener('input',ev=>{F.q=ev.target.value.toLowerCase();render();});}
 
 function filt(skipDate){
   const now=new Date();
@@ -1065,7 +1067,7 @@ function syncSlicerUI(key){
   const map={model:'sl-model'};   // 운영단위·고객사는 GST.filters 가 자기 select 를 갱신한다
   const id=map[key];
   if(!id)return; // group1, fab은 슬라이서 없음 - 필터만 적용
-  const box=document.getElementById(id);
+  const box=document.getElementById(id); if(!box)return;
   [...box.children].forEach(c=>{
     const v=c.textContent==='ALL'?'ALL':c.textContent;
     c.classList.toggle('active',v===F[key]);

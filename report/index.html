@@ -200,6 +200,14 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <div class="slicers">
   <div class="slicer-div" data-i="sl_more">주간현황 전용</div>
   <div class="slicer"><div class="lbl" data-i="sl_country">국가</div><select id="sl-country" onchange="onFilt('country',this.value)"></select></div>
+  <!-- 국내 알람 원장 전용. 기본은 «집계 대상»(내부·내적)이고, 필요할 때 외부까지 본다.
+       원문 inout·incl 을 DB 에 그대로 담아 두었기에 화면에서 바꿔 볼 수 있다. -->
+  <div class="slicer"><div class="lbl">내/외 (국내 알람)</div>
+    <select id="sl-inout" onchange="onFilt('inout',this.value)">
+      <option value="">집계 대상만 (내부·내적)</option>
+      <option value="out">외부·외적만</option>
+      <option value="all">전체 (내+외)</option>
+    </select></div>
 </div>
 
 <!-- 기간·마감·차트 디자인·PPT 컨트롤은 셸 상단 공통바(#gbar)로 이동 — GST.pageBar 등록부 참조 -->
@@ -504,7 +512,7 @@ let LANG='ko', CHARTS={}, HR=[], WK=[], INST=[], ROSTER=[], LEAVE=[], CIP=[], AB
 /* 기본 필터(구분·고객사·단지·라인·기간)의 «원본»은 GST.filters 다(v90).
    여기 F 는 그 값을 복사해 두는 곳 — 이 페이지의 술어 네 벌(entOk·fINST·okCF·okP)과
    QBR 표·PPT 수집기가 전부 F 를 보고 있어, 원본을 옮기되 읽는 쪽은 그대로 뒀다. */
-const F={region:'',op:'',country:'',customer:'',campus:'',lineRaw:'',team:'',dtFrom:'',dtTo:''};
+const F={region:'',op:'',country:'',customer:'',campus:'',lineRaw:'',team:'',dtFrom:'',dtTo:'',inout:''};
 function syncCommon(){ const G=GST.filters.F;
   F.region=G.region; F.op=G.op; F.customer=G.customer; F.campus=G.campus; F.lineRaw=G.line; F.team=G.team;
   F.dtFrom=G.dtFrom; F.dtTo=G.dtTo; }
@@ -561,6 +569,7 @@ function updateFiltBadge(){
   if(F.region)P.push(t('sl_region')+': '+F.region);
   if(F.op)P.push('운영단위: '+F.op);
   if(F.country)P.push(t('sl_country')+': '+F.country);
+  if(F.inout)P.push('내/외: '+(F.inout==='out'?'외부·외적만':'전체(내+외)'));
   if(F.customer)P.push(t('sl_customer')+': '+F.customer);
   if(F.campus)P.push('단지: '+F.campus);
   if(F.lineRaw)P.push('라인: '+F.lineRaw);
@@ -570,11 +579,12 @@ function updateFiltBadge(){
   b.style.display='flex';
   b.innerHTML='🔎 '+P.map(x=>'<span class="fchip">'+x+'</span>').join('')+'<button class="fclr" onclick="clearFilt()">✕ 필터 해제</button>';
 }
-window.clearFilt=function(){ F.country='';GST.filters.clear();syncCommon();
-  ['sl-country','dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+window.clearFilt=function(){ F.country='';F.inout='';GST.filters.clear();syncCommon();
+  ['sl-country','sl-inout','dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render(); };
 window.clearAllFilters=function(){
-  F.country='';GST.filters.clear();syncCommon();
+  F.country='';F.inout='';GST.filters.clear();syncCommon();
+  {const e=document.getElementById('sl-inout'); if(e)e.value='';}
   ['dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render();
 };
@@ -703,6 +713,8 @@ function krParse(rows){
              fm:g(r,'fmonth'), fw:g(r,'fweek'),
              // boolean 은 csvTableRows 가 문자열로 돌려준다 — 'false' 가 참이 되지 않게 명시 비교
              cnt:/^(true|t|1)$/i.test(g(r,'cnt')),
+             // 화면에서 「내/외」를 바꿔 보려면 원문이 필요하다 — cnt 는 «기본 집계»의 답일 뿐이다
+             seq:g(r,'seq'), inout:g(r,'inout'), incl:g(r,'incl'),
              srcSite:g(r,'site'), srcLine:g(r,'line'),
              atype:g(r,'atype'), ctype:g(r,'ctype'), alarm:g(r,'alarm'),
              cause:g(r,'cause'), op0:g(r,'op') };
@@ -1314,8 +1326,16 @@ function render(){
      이중 계산된다. 이 원장은 국내용이라는 약속이므로, 해외로 판정된 행만 뺀다
      (조인이 안 된 «미상» 은 남긴다 — 국내 설비인데 설치현황에 없을 수 있다). */
   const krDom=x=>x.region!==GST.ORG.REGION_OS;
-  const KRAf=KRA.filter(x=>x.cnt&&krDom(x)&&krOk(x)), KRBf=KRB.filter(x=>x.cnt&&krDom(x)&&krOk(x));
-  const _krOS=KRA.filter(x=>x.cnt&&!krDom(x)).length+KRB.filter(x=>x.cnt&&!krDom(x)).length;
+  /* 「내/외」 필터. ⚠ Seq 중복 제거(dedup)는 어느 모드에서도 건다 — 「전체」를 고른 순간
+     H 올바이패스가 3배로 부푸는 것을 막는 것이 이 한 줄이다. */
+  const krPick=x=>{
+    if(!GST.ALARM.dedup(x)) return false;
+    if(F.inout==='all') return true;
+    if(F.inout==='out') return !GST.ALARM.inner(x);
+    return GST.ALARM.inner(x);
+  };
+  const KRAf=KRA.filter(x=>krPick(x)&&krDom(x)&&krOk(x)), KRBf=KRB.filter(x=>krPick(x)&&krDom(x)&&krOk(x));
+  const _krOS=KRA.filter(x=>krPick(x)&&!krDom(x)).length+KRB.filter(x=>krPick(x)&&!krDom(x)).length;
   const _krBk={};
   const krBk=(list,tag,u)=>{ const id=tag+u; let m=_krBk[id]; if(m)return m;
     m=_krBk[id]=new Map();
@@ -1998,7 +2018,8 @@ function render(){
       /* «막대가 전부 0» 은 두 가지 뜻이다 — 정말 고장이 없었거나, 이 조건의 행에 BM 단계가
          아예 없거나. 둘은 완전히 다른 사실인데 화면은 똑같이 0으로만 보인다(가장 설명하기
          어려운 실패). 그래서 후자면 «어떤 단계가 있는지» 를 그대로 적어 준다. */
-      if(KR_ON) _note += ' · 국내는 알람 원장 기준 (수선실적 BM 제외)'
+      if(KR_ON) _note += ' · 국내는 알람 원장 기준 (수선실적 BM 제외'
+        + (F.inout==='out'?' · 외부·외적만':F.inout==='all'?' · 내+외 전체':'')+')'
         + (_krOS? ' · 원장의 해외 설비 '+_krOS.toLocaleString()+'행은 이중 계산을 막으려 뺐습니다':'');
       if(!tot.some(v=>v>0)){
         const _st={}; let _n=0;

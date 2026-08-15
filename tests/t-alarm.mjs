@@ -158,14 +158,18 @@ eq(B.alarmK.rows.filter(r=>r.cnt).length, 1, 'K 알람 — 「내부」만 (2행
 eq(B.alarmP.rows.filter(r=>r.cnt).length, 1, 'P 알람 — 「포함」만 (2행 중 1 · 중복행 제외)');
 eq(B.alarmH.rows.filter(r=>r.cnt).length, 1, 'H 알람 — 「내적」만 (2행 중 1)');
 eq(B.abp2H.rows.length, 3,                    'H 올바 — 원본은 한 사건이 3줄');
-eq(B.abp2H.rows.filter(r=>r.cnt).length, 1,   'H 올바 — Seq=1 만 한 사건 (3줄 → 1건)');
+eq(B.abp2H.rows.filter(r=>r.cnt).length, 0,   'H 올바 — Seq=1 이어도 외적이면 안 센다 (3줄 → 0건)');
 eq(B.abp2P.rows.filter(r=>r.cnt).length, 1,   'P 올바 — 「포함」만');
-eq(B.abp2K.rows.filter(r=>r.cnt).length, 2,   'K 올바 — 포함/제외 열이 없어 전부 (외적도 발생 건수다)');
+eq(B.abp2K.rows.filter(r=>r.cnt).length, 1,   'K 올바 — 「내부」만 (2행 중 1 · 외부는 뺀다)');
+// 알람과 올바이패스가 «같은» 규칙을 쓰는지 — 갈리면 설명 불가능한 표가 된다
+is(B.abp2H.rows.filter(r=>r.cnt&&r.inout==='외적').length===0 &&
+   B.alarmH.rows.filter(r=>r.cnt&&r.inout==='외적').length===0,
+   '알람·올바 둘 다 외적을 안 센다 (규칙이 하나다)');
 // 음성 대조 — Seq 규칙을 빼면 H 올바가 정확히 3배가 된다
 {
   const naive = B.abp2H.rows.filter(r => !r.incl || r.incl === '포함').length;
-  is(naive === 3 && B.abp2H.rows.filter(r=>r.cnt).length === 1,
-     'Seq 규칙을 빼면 3건으로 부푼다 — 이 검사가 그걸 잡는다');
+  is(naive === 3 && B.abp2H.rows.filter(r=>r.cnt).length === 0,
+     'Seq 규칙을 빼면 3건으로 부푼다 — 이 검사가 그걸 잡는다 (여기 픽스처는 전부 외적이라 0)');
 }
 
 console.log('\n[7] 설비 S/N 조인 키 — 표기가 사이트마다 다르다');
@@ -215,6 +219,31 @@ console.log('\n[10] 업로드 화면이 이 파서를 «그대로» 쓰는가 (�
                  .filter(x => up.indexOf(x) >= 0);
   is(!dupLit.length, 'upload 페이지에 사이트별 열 이름 리터럴이 없다 (정본은 core.js SPEC)'
      + (dupLit.length ? ' — ' + dupLit.join(' ') : ''));
+}
+
+console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, Seq 중복 제거는 항상 걸리는가');
+{
+  /* dedup 과 inner 가 한 함수에 묶여 있으면 「전체」를 고른 순간 H 올바이패스가
+     정확히 3배로 부푼다. 쪼개져 있는지, 그리고 화면이 dedup 을 «무조건» 거는지 본다. */
+  is(typeof G.ALARM.dedup === 'function' && typeof G.ALARM.inner === 'function',
+     'core — dedup(중복 줄) · inner(내부·내적) 가 따로 있다');
+  const seq2 = {seq:'2', inout:'내적'};
+  is(G.ALARM.dedup(seq2) === false && G.ALARM.inner(seq2) === true,
+     'Seq=2 는 내적이어도 «같은 사건의 둘째 줄» 이라 dedup 이 막는다');
+  eq(G.ALARM.counts({seq:'1', inout:'내적'}), true,  'Seq=1 + 내적 → 집계');
+  eq(G.ALARM.counts({seq:'1', inout:'외적'}), false, 'Seq=1 + 외적 → 제외');
+  eq(G.ALARM.counts({incl:'포함', inout:'외적'}), true,
+     '시트가 「포함」이라 적었으면 그 답이 먼저다 (P 는 내적/제외 열이 정본)');
+
+  const RP = fs.readFileSync(ROOT+'/report/index.html','utf8');
+  { const kp = RP.indexOf('const krPick=x=>');
+    const head = kp<0 ? '' : RP.slice(kp, kp+140).replace(/\s+/g,' ');
+    is(head.replace(/ /g,'').indexOf('constkrPick=x=>{if(!GST.ALARM.dedup(x))returnfalse;')===0,
+       'report — 어느 모드든 dedup 을 «먼저» 건다 (전체에서 3배 부풀기 차단)'); }
+  is(/id="sl-inout"/.test(RP) && /외부·외적만/.test(RP) && /전체 \(내\+외\)/.test(RP),
+     'report — 「내/외」 칸이 세 선택지로 있다');
+  is(/F\.inout===''/.test(RP) || /return GST\.ALARM\.inner\(x\);/.test(RP),
+     'report — 기본값은 내부·내적 (집계 대상)');
 }
 
 console.log('\n' + (fail ? '❌ t-alarm ' + fail + ' 실패 / ' + (pass+fail) : '✅ t-alarm ' + pass + '/' + pass));

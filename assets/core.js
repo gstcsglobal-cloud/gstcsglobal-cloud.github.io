@@ -1146,8 +1146,12 @@ GST.ALARM = {
        ① Seq 가 있고 1이 아니면 같은 사건의 2·3차 줄이다 → 제외 (H 올바이패스)
        ② 「내적 / 제외」·「발생 구분2」 같은 포함/제외 열이 있으면 그 답을 따른다
        ③ 그 열이 없는 사이트는 「내부·내적」만 센다 (K·H 알람)
-     올바이패스는 ③을 적용하지 않는다 — 외적 사유로 난 올바이패스도 «발생 건수»다.
-     그래서 kind 를 받는다. 판정을 바꾸려면 여기 한 곳만 고친다. */
+     알람·올바이패스에 «같은» 규칙을 쓴다(사용자 확정 v92: 내부·내적만 센다).
+     예전에는 올바이패스만 ③을 건너뛰어 외적 사유까지 셌는데, 두 지표가 다른 규율로
+     갈리면 «Alarm 은 내적만인데 올바는 전부» 라는 설명 불가능한 표가 된다.
+     판정을 바꾸려면 여기 한 곳만 고친다 — kind 는 앞으로 갈릴 때를 위해 남겨 둔다.
+     ⚠ 원문(inout·incl·seq)을 전부 컬럼에 남겨 두므로, 「내/외」 필터로 화면에서
+       외부까지 보는 것은 언제든 된다 — cnt 는 «기본 집계»의 답일 뿐이다. */
   // ISO 주차 — 시트에 주차 열이 없는 사이트(P 알람)의 폴백. 화면이 «주차 미상»으로 비지 않게.
   isoWeek: function(ymd){
     if(!ymd) return '';
@@ -1158,16 +1162,23 @@ GST.ALARM = {
     const w=Math.ceil(((t-y0)/86400000+1)/7);
     return t.getUTCFullYear()+'-W'+String(w).padStart(2,'0');
   },
-  counts: function(row, kind){
+  /* ⚠ 판정을 «둘»로 쪼개 둔다. 화면에서 「내/외」를 바꿔 볼 수 있어야 하는데,
+     Seq 중복 제거는 «어느 모드에서도» 걸려야 하기 때문이다 — 안 걸면 「전체」를 고른
+     순간 H 올바이패스가 정확히 3배로 부푼다. 둘을 한 함수에 묶어 두면 그 사고가 난다. */
+  dedup: function(row){                    // 한 사건의 첫 줄인가 (H 올바 Seq 1·2·3)
+    const seq=String(row&&row.seq!=null?row.seq:'').trim();
+    return !seq || seq==='1';
+  },
+  inner: function(row){                    // 우리 책임 — 내부·내적인가
     const g=k=>String(row&&row[k]!=null?row[k]:'').trim();
-    const seq=g('seq');
-    if(seq && seq!=='1') return false;
     const incl=g('incl');
-    if(incl) return incl==='포함';
-    if(kind==='abp2') return true;
+    if(incl) return incl==='포함';         // P 는 시트가 「포함/제외」로 이미 답해 놨다
     const io=g('inout');
     if(io) return io==='내부'||io==='내적';
-    return true;
+    return true;                            // 그 열 자체가 없는 시트는 «전부» 가 그 시트의 답이다
+  },
+  counts: function(row, kind){
+    return GST.ALARM.dedup(row) && GST.ALARM.inner(row);
   },
 
   /* 시트 한 장 → DB 행. 업로드 화면과 검증 스크립트가 «같은 함수»를 쓴다 —
