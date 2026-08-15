@@ -511,6 +511,10 @@ GST.filters.mount({ page:'fault', rows:()=>ROWS, onChange:render,
     `GST.filters.set(k,v)` · `.toggle(k,v)` 를 쓴다.
   · 저장은 배열로 눕히고 복원할 때 Set 으로 되돌린다 — `JSON.stringify(new Set)` 은 `'{}'` 다.
   · `tests/t-filters.mjs` 의 [7-3]이 여덟 페이지 소스에서 위 두 금지를 막는다.
+  · **박스가 «열리는지»는 소스로 못 본다.** `.slicer` 에 `position` 이 없으면 박스가
+    `position:fixed` 인 사이드바를 기준 삼아 `top:100%` = 사이드바 «바닥» 에 열려
+    화면 밖으로 나간다 — JS 에러도 경고도 없이 «눌러도 아무 일이 없는 필터» 가 된다.
+    `t-smoke` 가 실제로 눌러 좌표로 확인한다(음성 대조로 잡히는 것을 확인했다).
 - **비율 지표의 «분모» 배열에도 같은 축을 실어라.** 고장분석 `ALLW_ROWS`에 구분·운영단위·
   단지가 안 실려 있어, 구분을 고르면 설비 BM율·좌우 편중의 분모가 0이 됐다(에러 없음).
   PM은 `SCHED`·`DONE_HIST`·원본행 셋이라 `rowOrg` 하나로 같은 이름을 단다.

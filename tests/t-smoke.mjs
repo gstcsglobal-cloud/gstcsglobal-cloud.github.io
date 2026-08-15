@@ -81,9 +81,35 @@ for(const P of PAGES){
     return out.slice(0,8);
   });
 
+  /* 단지 다중선택이 «실제로 열리는지». 소스만 봐서는 절대 못 잡는 실패가 있다 —
+     .slicer 에 position 이 없으면 박스가 position:fixed 인 사이드바를 기준 삼아
+     top:100% = 사이드바 바닥에 열려 화면 밖으로 나간다. JS 에러도, 콘솔 경고도
+     없이 «눌러도 아무 일이 없는 필터»가 된다. 그래서 좌표로 확인한다. */
+  let msel = null;
+  if(await page.$('#gf-campusBtn')){
+    const tg = await page.$('.gst-sb-toggle');
+    if(tg && !(await page.evaluate(()=>document.body.classList.contains('gst-sb-open')))) await tg.click();
+    await page.waitForTimeout(400);
+    const dis = await page.$eval('#gf-campusBtn', b=>b.disabled);
+    if(dis) msel = {skip:'목록 비어 잠김'};
+    else {
+      await page.click('#gf-campusBtn');
+      await page.waitForTimeout(250);
+      msel = await page.evaluate(()=>{
+        const box=document.getElementById('gf-campusBox');
+        const r=box.getBoundingClientRect();
+        return { shown: getComputedStyle(box).display!=='none',
+                 w:Math.round(r.width), h:Math.round(r.height),
+                 inView: r.top < innerHeight && r.bottom > 0 && r.left < innerWidth && r.right > 0,
+                 n: box.querySelectorAll('input[data-v]').length };
+      });
+      msel.ok = msel.shown && msel.w>0 && msel.h>0 && msel.inView && msel.n>0;
+    }
+  }
+
   const mapOK = Array.isArray(sm) && sm.length>0 && sm.every(s=>!s.miss.length);
   const hasNum = kpi.some(v=>/[1-9]/.test(v));
-  const ok = mapOK && !errs.length && hasNum;
+  const ok = mapOK && !errs.length && hasNum && !(msel && msel.ok===false);
   if(!ok) fails++;
 
   console.log(`\n${ok?'✓':'❌'} ${P.name}  (${P.f})`);
@@ -93,6 +119,8 @@ for(const P of PAGES){
       + (s.dup?`  (이름중복 ${s.dup})`:''));
   }); else console.log('   ', sm);
   console.log(`    KPI 표시값: ${kpi.join(' | ')||'(없음)'}`);
+  if(msel) console.log('    단지 다중선택: ' + (msel.skip ? msel.skip
+    : (msel.ok?'열림':'❌ 안 열림') + ` (${msel.w}×${msel.h}px · 항목 ${msel.n} · 화면안 ${msel.inView})`));
   if(errs.length) console.log('    에러:', errs.slice(0,4).join(' // '));
   await ctx.close();
 }

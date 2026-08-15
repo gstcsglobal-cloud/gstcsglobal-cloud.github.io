@@ -463,8 +463,15 @@ body.gst-sb-open .gst-sb-toggle{left:300px}
 .mselbox .ms-all button{flex:1;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;
   padding:4px 0;color:var(--txt-main);font-size:11px;cursor:pointer}
 body.theme-light .mselbox{background:#fff}
+/* 박스는 «자기 칸»을 기준으로 떠야 한다. 기준(positioned ancestor)이 없으면
+   position:fixed 인 사이드바가 기준이 되어 top:100% 가 사이드바 «바닥»이 된다 —
+   박스는 화면 밖에 열리고, 사용자에게는 «눌러도 아무 일이 없는» 필터로 보인다. */
+.slicer{position:relative}
 /* 사이드바 안에서는 카드 외형을 벗으므로 버튼도 폭을 채운다 */
 .gst-sidebar .mselbtn{width:100% !important;min-width:0 !important}
+/* 사이드바 본문은 overflow-y:auto 라 떠 있는 박스가 잘린다. 안에서는 «펼쳐지는» 목록으로
+   바꿔 아래 칸을 밀어낸다 — 잘리지 않고 사이드바 스크롤을 그대로 탄다. */
+.gst-sidebar .mselbox{position:static;width:100%;margin-top:6px;box-shadow:none;max-height:220px}
 
 /* 공통 필터와 페이지 고유 필터를 가르는 선 — 어디까지가 공통인지 눈에 보이게 */
 .slicer-div{border-top:1px solid var(--glass-border);margin:2px 0 0;padding-top:10px;
