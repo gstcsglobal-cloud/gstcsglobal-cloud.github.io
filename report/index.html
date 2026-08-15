@@ -208,6 +208,14 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <option value="out">외부·외적만</option>
       <option value="all">전체 (내+외)</option>
     </select></div>
+  <!-- 국내 원장의 «월·주차를 무엇으로 셀 것인가». 기본은 발생일(달력)이다 —
+       시트의 정산월은 삼성 정산 기준이라 달력과 다르고(실측 H 알람 173행이 어긋난다),
+       «8월에 몇 건» 을 물을 때 사람이 뜻하는 것은 발생일이다. 정산 대조용으로만 남긴다. -->
+  <div class="slicer"><div class="lbl">월·주차 기준 (국내 알람)</div>
+    <select id="sl-krbasis" onchange="onFilt('krBasis',this.value)">
+      <option value="occur">발생일 (달력 기준)</option>
+      <option value="fiscal">시트의 정산월·주차 (정산 기준)</option>
+    </select></div>
 </div>
 
 <!-- 기간·마감·차트 디자인·PPT 컨트롤은 셸 상단 공통바(#gbar)로 이동 — GST.pageBar 등록부 참조 -->
@@ -512,7 +520,7 @@ let LANG='ko', CHARTS={}, HR=[], WK=[], INST=[], ROSTER=[], LEAVE=[], CIP=[], AB
 /* 기본 필터(구분·고객사·단지·라인·기간)의 «원본»은 GST.filters 다(v90).
    여기 F 는 그 값을 복사해 두는 곳 — 이 페이지의 술어 네 벌(entOk·fINST·okCF·okP)과
    QBR 표·PPT 수집기가 전부 F 를 보고 있어, 원본을 옮기되 읽는 쪽은 그대로 뒀다. */
-const F={region:'',op:'',country:'',customer:'',campus:'',lineRaw:'',team:'',dtFrom:'',dtTo:'',inout:''};
+const F={region:'',op:'',country:'',customer:'',campus:'',lineRaw:'',team:'',dtFrom:'',dtTo:'',inout:'',krBasis:'occur'};
 function syncCommon(){ const G=GST.filters.F;
   F.region=G.region; F.op=G.op; F.customer=G.customer; F.campus=G.campus; F.lineRaw=G.line; F.team=G.team;
   F.dtFrom=G.dtFrom; F.dtTo=G.dtTo; }
@@ -570,7 +578,7 @@ function updateFiltBadge(){
   if(F.op)P.push('운영단위: '+F.op);
   if(F.country)P.push(t('sl_country')+': '+F.country);
   if(F.inout)P.push('내/외: '+(F.inout==='out'?'외부·외적만':'전체(내+외)'));
-  if(F.krBasis==='occur')P.push('월 기준: 발생일');
+  if(F.krBasis==='fiscal')P.push('월 기준: 시트 정산월');
   if(F.customer)P.push(t('sl_customer')+': '+F.customer);
   if(F.campus)P.push('단지: '+F.campus);
   if(F.lineRaw)P.push('라인: '+F.lineRaw);
@@ -580,14 +588,14 @@ function updateFiltBadge(){
   b.style.display='flex';
   b.innerHTML='🔎 '+P.map(x=>'<span class="fchip">'+x+'</span>').join('')+'<button class="fclr" onclick="clearFilt()">✕ 필터 해제</button>';
 }
-window.clearFilt=function(){ F.country='';F.inout='';F.krBasis='fiscal';GST.filters.clear();syncCommon();
-  {const e=document.getElementById('sl-krbasis'); if(e)e.value='fiscal';}
+window.clearFilt=function(){ F.country='';F.inout='';F.krBasis='occur';GST.filters.clear();syncCommon();
+  {const e=document.getElementById('sl-krbasis'); if(e)e.value='occur';}
   ['sl-country','sl-inout','dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render(); };
 window.clearAllFilters=function(){
-  F.country='';F.inout='';F.krBasis='fiscal';GST.filters.clear();syncCommon();
+  F.country='';F.inout='';F.krBasis='occur';GST.filters.clear();syncCommon();
   {const e=document.getElementById('sl-inout'); if(e)e.value='';}
-  {const e=document.getElementById('sl-krbasis'); if(e)e.value='fiscal';}
+  {const e=document.getElementById('sl-krbasis'); if(e)e.value='occur';}
   ['dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render();
 };
@@ -1320,9 +1328,11 @@ function render(){
   const wkInX=(st,en)=>_SWK.slice(_lbW(st), _lbW(en));   // en 미포함(직전 구간 비교용)
 
   /* ---- 국내 알람·올바이패스 원장 (v92) ----
-     구간 키는 «시트가 적어 둔 정산월·주차»를 쓴다(fm·fw). 국내는 삼성 기준 월이
-     달력과 달라서(실측: 발생일 2/18 인데 시트의 발생월은 3월) 달력으로 다시 세면
-     현장이 보고하는 숫자와 어긋난다. 그 열이 없는 사이트만 발생일에서 채워져 있다. */
+     구간 키는 «발생일»이 기본이다. 시트에도 정산월·주차 열이 있지만 그것은 삼성 정산
+     기준이라 달력과 다르다(실측 H 알람 173행이 어긋나고, H3 8월만 봐도 정산월 96 ↔
+     발생일 31). «8월에 몇 건» 을 물을 때 사람이 뜻하는 것은 발생일이고, 대만 막대도
+     발생일로 서 있으므로 정산월로 세면 한 차트 안에서 두 축이 섞인다.
+     정산 대조가 필요할 때만 sl-krbasis 로 시트 값(fm·fw)으로 바꾼다. */
   const _fromS=from?fmtD(from):'', _toS=F.dtTo?fmtD(anchor):'';
   const krOk=x=>(!F.region||x.region===F.region)&&(!F.op||x.op===F.op)
     &&(!F.country||GST.ORG.country(x.op)===F.country)
@@ -1342,10 +1352,18 @@ function render(){
   };
   const KRAf=KRA.filter(x=>krPick(x)&&krDom(x)&&krOk(x)), KRBf=KRB.filter(x=>krPick(x)&&krDom(x)&&krOk(x));
   const _krOS=KRA.filter(x=>krPick(x)&&!krDom(x)).length+KRB.filter(x=>krPick(x)&&!krDom(x)).length;
+  /* 한 행이 어느 구간에 들어가나. 발생일 모드에서는 «화면의 주차 규약»(isoW = 엑셀
+     WEEKNUM)으로 다시 센다 — 원장만 ISO 주차를 쓰면 같은 막대에서 대만과 한 주가
+     어긋난다. 발생일이 없는 행은 어느 구간에도 못 들어간다(조용히 다른 달로 보내지 않는다). */
+  const krKeyOf=(x,u)=>{
+    if(F.krBasis==='fiscal') return (u==='w')?x.fw:x.fm;
+    if(!x.d) return '';
+    return keyOfDate(new Date(x.d+'T00:00:00Z'),u);
+  };
   const _krBk={};
   const krBk=(list,tag,u)=>{ const id=tag+u; let m=_krBk[id]; if(m)return m;
     m=_krBk[id]=new Map();
-    list.forEach(function(x){ const k=(u==='w')?x.fw:x.fm; if(!k)return;
+    list.forEach(function(x){ const k=krKeyOf(x,u); if(!k)return;
       m.set(k,(m.get(k)||0)+1); });
     return m; };
   const krN=(list,tag,u,key)=>krBk(list,tag,u).get(key)||0;
@@ -2015,7 +2033,7 @@ function render(){
              parts:i=>{const m={};
                        bk(u,P[i].key).forEach(x=>{ if(x.stage==='BM'&&!(KR_ON&&x.region===_KR)){
                          const g=grpKey(x); m[g]=(m[g]||0)+1; } });
-                       if(KR_ON)KRAf.forEach(x=>{ if(((u==='w')?x.fw:x.fm)===P[i].key){
+                       if(KR_ON)KRAf.forEach(x=>{ if(krKeyOf(x,u)===P[i].key){
                          const g=x.campus||x.srcSite||'미상'; m[g]=(m[g]||0)+1; } });
                        return Object.keys(m).map(g=>({name:g,v:m[g]}));}});
     const hasABP=abp.some(v=>v>0);
@@ -2039,8 +2057,14 @@ function render(){
          아예 없거나. 둘은 완전히 다른 사실인데 화면은 똑같이 0으로만 보인다(가장 설명하기
          어려운 실패). 그래서 후자면 «어떤 단계가 있는지» 를 그대로 적어 준다. */
       if(KR_ON) _note += ' · 국내는 알람 원장 기준 (수선실적 BM 제외'
-        + (F.inout==='out'?' · 외부·외적만':F.inout==='all'?' · 내+외 전체':'')+')'
-        + (_krOS? ' · 원장의 해외 설비 '+_krOS.toLocaleString()+'행은 이중 계산을 막으려 뺐습니다':'');
+        + (F.inout==='out'?' · 외부·외적만':F.inout==='all'?' · 내+외 전체':'')
+        + ' · '+(F.krBasis==='fiscal'?'시트 정산월·주차':'발생일')+')'
+        + (_krOS? ' · 원장의 해외 설비 '+_krOS.toLocaleString()+'행은 이중 계산을 막으려 뺐습니다':'')
+        /* 「왜 내 손계산과 다르지」의 답이 이 숫자다. 시트 Site 와 설치현황 Location 이
+           갈리는 행이 실제로 있다(H3 96건 중 39건이 설치현황상 H4). 조직 축의 정본은
+           설치현황이므로 그대로 따르되, 몇 건을 옮겼는지는 조용히 두지 않는다. */
+        + (function(){ const n=KRAf.filter(x=>x.srcSite&&x.campus&&x.srcSite!==x.campus).length;
+            return n? ' · 시트 Site 와 설치현황 단지가 다른 '+n.toLocaleString()+'건은 설치현황을 따랐습니다':''; })();
       if(!tot.some(v=>v>0)){
         const _st={}; let _n=0;
         P.forEach(p=>bk(u,p.key).forEach(x=>{ _st[x.stage||'(공란)']=(_st[x.stage||'(공란)']||0)+1; _n++; }));

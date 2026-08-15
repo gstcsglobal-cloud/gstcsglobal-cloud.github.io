@@ -122,6 +122,29 @@ console.log('\n[7-1] 설치현황 — 「집계 기준」(챔버/대수)이 한 
   is(/id="sl-basis"/.test(SC), 'scrubber — 「집계 기준」 칸이 있다');
 }
 
+console.log('\n[7-2] 국내 알람의 월·주차는 «발생일»이 기본이다');
+{
+  /* 시트의 정산월은 삼성 정산 기준이라 달력과 다르다(실측 H 알람 173행 · H3 8월만 봐도
+     정산월 96 ↔ 발생일 31). 대만 막대는 발생일로 서 있으므로 원장만 정산월로 세면
+     한 차트 안에서 두 축이 섞인다. 기본이 조용히 정산월로 되돌아가는 것을 막는다. */
+  const R = SRC.report;
+  is(/krBasis:'occur'/.test(R), 'report — F.krBasis 기본값이 occur');
+  is(/id="sl-krbasis"/.test(R), 'report — 「월·주차 기준」 칸이 있다');
+  {
+    const i = R.indexOf('id="sl-krbasis"');
+    const blk = i < 0 ? '' : R.slice(i, i + 400);
+    is(blk.indexOf('value="occur"') >= 0 && blk.indexOf('value="occur"') < blk.indexOf('value="fiscal"'),
+       'report — 첫 옵션(=기본 선택)이 발생일이다');
+  }
+  is(/const krKeyOf=\(x,u\)=>\{/.test(R) && /keyOfDate\(new Date\(x\.d\+'T00:00:00Z'\),u\)/.test(R),
+     'report — 발생일 모드가 화면의 주차 규약(keyOfDate/isoW)을 쓴다');
+  // 음성 대조 — 정산월을 직접 읽는 옛 구간 키가 남아 있으면 두 벌이 갈라진다
+  is(!/\(\(u==='w'\)\?x\.fw:x\.fm\)===P\[i\]\.key/.test(R),
+     'report — 라인별 분해도 krKeyOf 를 지난다 (fm·fw 직접 읽기 없음)');
+  is(/if\(F\.krBasis==='fiscal'\) return \(u==='w'\)\?x\.fw:x\.fm;/.test(R),
+     'report — 정산 대조용 시트 기준도 남아 있다');
+}
+
 console.log('\n[8] 비율 지표의 «분모» 배열에도 조직 축이 실려 있는지');
 /* 고장분석의 ALLW_ROWS 는 설비 BM율·좌우 편중의 분모다. 여기에 구분·운영단위·단지가
    안 실려 있으면 구분을 고르는 순간 분모가 0이 되어 표가 조용히 빈다(실제로 그랬다). */
