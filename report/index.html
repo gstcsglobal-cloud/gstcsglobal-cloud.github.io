@@ -570,6 +570,7 @@ function updateFiltBadge(){
   if(F.op)P.push('운영단위: '+F.op);
   if(F.country)P.push(t('sl_country')+': '+F.country);
   if(F.inout)P.push('내/외: '+(F.inout==='out'?'외부·외적만':'전체(내+외)'));
+  if(F.krBasis==='occur')P.push('월 기준: 발생일');
   if(F.customer)P.push(t('sl_customer')+': '+F.customer);
   if(F.campus)P.push('단지: '+F.campus);
   if(F.lineRaw)P.push('라인: '+F.lineRaw);
@@ -579,12 +580,14 @@ function updateFiltBadge(){
   b.style.display='flex';
   b.innerHTML='🔎 '+P.map(x=>'<span class="fchip">'+x+'</span>').join('')+'<button class="fclr" onclick="clearFilt()">✕ 필터 해제</button>';
 }
-window.clearFilt=function(){ F.country='';F.inout='';GST.filters.clear();syncCommon();
+window.clearFilt=function(){ F.country='';F.inout='';F.krBasis='fiscal';GST.filters.clear();syncCommon();
+  {const e=document.getElementById('sl-krbasis'); if(e)e.value='fiscal';}
   ['sl-country','sl-inout','dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render(); };
 window.clearAllFilters=function(){
-  F.country='';F.inout='';GST.filters.clear();syncCommon();
+  F.country='';F.inout='';F.krBasis='fiscal';GST.filters.clear();syncCommon();
   {const e=document.getElementById('sl-inout'); if(e)e.value='';}
+  {const e=document.getElementById('sl-krbasis'); if(e)e.value='fiscal';}
   ['dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render();
 };
