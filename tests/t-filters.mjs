@@ -145,6 +145,33 @@ console.log('\n[7-2] 국내 알람의 월·주차는 «발생일»이 기본이�
      'report — 정산 대조용 시트 기준도 남아 있다');
 }
 
+console.log('\n[7-3] 단지는 여러 개를 동시에 고를 수 있다 (Set) — 직접 비교가 되살아나지 않았는지');
+{
+  /* 같은 설비의 단지가 자료마다 갈린다(알람 시트 H3 ↔ 설치현황 H4, 실측 39건). 그래서
+     단지만 다중선택이다. 위험은 조용하다 — Set 을 `===` 로 비교하면 언제나 false 라
+     «필터를 걸면 화면이 통째로 빈다». 페이지가 다시 그렇게 쓰는 것을 여기서 막는다. */
+  is(/const MULTI = \{ campus:1 \}/.test(CORE), 'core — 다중선택 축 목록(MULTI)이 한 곳에 있다');
+  is(/campus:new Set\(\)/.test(CORE), 'core — F.campus 가 Set 이다');
+  is(/const hitK = \(k, v\) => MULTI\[k\]/.test(CORE),
+     'core — 「걸리나」 판정이 hitK 한 곳만 지난다');
+  is(/o\[k\]=MULTI\[k\]\?Array\.from\(F\[k\]\):F\[k\]/.test(CORE) && /if\(Array\.isArray\(o\[k\]\)\) F\[k\]=new Set\(o\[k\]\)/.test(CORE),
+     'core — 저장은 배열로 눕히고 복원은 Set 으로 되돌린다 (JSON.stringify(Set)==="{}")');
+  is(/set: function\(k, v\)\{/.test(CORE) && /toggle: function\(k, v\)\{/.test(CORE) && /hit: function\(k, v\)\{/.test(CORE),
+     'core — 페이지가 쓸 안전한 API(set·toggle·hit)가 있다');
+  // 음성 대조 — 페이지가 campus 를 문자열처럼 다루면 조용히 전부 false 가 된다
+  // 주석은 뺀다 — 「이렇게 쓰지 말 것」이라 적어 둔 설명이 검사에 걸리면 안 된다
+  const nocom = t => t.replace(/\/\*[\s\S]*?\*\//g, '');
+  PAGES.forEach(p => {
+    const src = nocom(SRC[p]);
+    const bad = /[=!]==\s*F\.campus|F\.campus\s*[=!]==/.test(src)
+             || /GST\.filters\.F\.campus\s*=[^=]/.test(src)
+             || /GST\.filters\.F\[(kk|k|K)\]\s*=[^=]/.test(src);
+    is(!bad, p + ' — 단지를 문자열로 직접 비교·대입하지 않는다');
+  });
+  is(/const campOk=\(v\)=>GST\.filters\.hit\('campus',v\)/.test(SRC.report),
+     'report — 단지 판정이 campOk 한 곳만 지난다');
+}
+
 console.log('\n[8] 비율 지표의 «분모» 배열에도 조직 축이 실려 있는지');
 /* 고장분석의 ALLW_ROWS 는 설비 BM율·좌우 편중의 분모다. 여기에 구분·운영단위·단지가
    안 실려 있으면 구분을 고르는 순간 분모가 0이 되어 표가 조용히 빈다(실제로 그랬다). */

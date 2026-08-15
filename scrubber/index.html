@@ -818,8 +818,8 @@ function countByFn(rows,fn){
 function drillGF(key,label){
   const K = key==='country' ? 'op' : (key==='customer' ? 'customer' : '');
   if(!K)return false;
-  GST.filters.F[K] = (GST.filters.F[K]===label) ? '' : label;
-  GST.filters.refresh(); render(); return true;
+  GST.filters.toggle(K, label);   // 다중 축이면 Set 을 토글한다 — 직접 대입하면 .has 가 사라진다
+  return true;
 }
 
 // 집계 단위별 키 생성

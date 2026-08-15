@@ -359,7 +359,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(89);
+GST.needVer&&GST.needVer(93);
 const PUB='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub';
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -554,6 +554,12 @@ function rebuildFabKeys(){
 /* FAB 다중선택(7키)은 라인 필터에 흡수됐다(v90). 라인은 시트의 원본값을 그대로 쓴다 —
    대만은 F16·F11 이고 국내는 U2·15B·P3-D 라, 정규화하면 국내가 통째로 빠졌다. */
 const lineOk=(raw)=>!F.lineRaw||String(raw||'').trim()===F.lineRaw;
+/* 단지는 여러 개를 동시에 고를 수 있다(v93) — 같은 설비의 단지가 자료마다 갈리기 때문이다
+   (알람 시트 H3 ↔ 설치현황 H4, 실측 39건). 판정은 GST.filters 한 곳만 지난다:
+   `x.campus===F.campus` 로 직접 비교하면 Set 이 된 순간 조용히 전부 false 가 된다. */
+const campOk=(v)=>GST.filters.hit('campus',v);
+const campOn=()=>GST.filters.has('campus');
+const campList=()=>GST.filters.chosen('campus');
 window.onFilt=function(k,v){F[k]=v;render();};
 // 적정 챔버 — 사이트(구분)별 값. 미설정 사이트는 40. 표의 적정챔버 셀 클릭으로 수정.
 let FITCH={};
@@ -580,7 +586,7 @@ function updateFiltBadge(){
   if(F.inout)P.push('내/외: '+(F.inout==='out'?'외부·외적만':'전체(내+외)'));
   if(F.krBasis==='fiscal')P.push('월 기준: 시트 정산월');
   if(F.customer)P.push(t('sl_customer')+': '+F.customer);
-  if(F.campus)P.push('단지: '+F.campus);
+  if(campOn())P.push('단지: '+campList().join(' · '));
   if(F.lineRaw)P.push('라인: '+F.lineRaw);
   if(F.team)P.push('팀: '+F.team);
   if(F.dtFrom||F.dtTo)P.push((F.dtFrom||'…')+' ~ '+(F.dtTo||'…'));
@@ -1286,7 +1292,7 @@ function render(){
   const entOk=x=>(!F.region||(x.region||GST.ORG.region(x.op||''))===F.region)
     &&(!F.op||String(x.op||'').trim()===F.op)
     &&(!F.country||x.country===F.country)&&(!F.customer||x.custB===F.customer)
-    &&(!F.campus||x.campus===F.campus)&&lineOk(x.line);
+    &&campOk(x.campus)&&lineOk(x.line);
   // QBR 매크로 정합: 작업내역은 사이트 키 행만 집계(라인 미기재·기타 행 제외) — 매크로 NarrowUp과 동일
   // 라인 열만으로 판정하면 PSMC처럼 라인 표기가 다른 사이트 행이 누락된다 → 라인+고객사 통합 판정
   /* 예전에는 대만 사이트 어휘만 통과시켰다(F16·PSMC·WINBOND…). 국내·중국·미국 실적이
@@ -1336,7 +1342,7 @@ function render(){
   const _fromS=from?fmtD(from):'', _toS=F.dtTo?fmtD(anchor):'';
   const krOk=x=>(!F.region||x.region===F.region)&&(!F.op||x.op===F.op)
     &&(!F.country||GST.ORG.country(x.op)===F.country)
-    &&(!F.customer||x.custB===F.customer)&&(!F.campus||x.campus===F.campus)&&lineOk(x.lineN)
+    &&(!F.customer||x.custB===F.customer)&&campOk(x.campus)&&lineOk(x.lineN)
     &&(!_fromS||(x.d&&x.d>=_fromS))&&(!_toS||(x.d&&x.d<=_toS));
   /* 원장에 해외 설비로 조인되는 행이 섞여 들어오면 대만은 «수선실적 BM + 원장» 으로
      이중 계산된다. 이 원장은 국내용이라는 약속이므로, 해외로 판정된 행만 뺀다
@@ -1395,7 +1401,7 @@ function render(){
     if(F.op&&String(r[CI.country]||'').trim()!==F.op)return false;
     if(F.country&&c!==F.country)return false;
     if(F.customer&&custBase(r[CI.customer])!==F.customer)return false;
-    if(F.campus&&GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country])!==F.campus)return false;
+    if(!campOk(GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country])))return false;
     if(!lineOk(r[CI.fab]))return false;
     return true;
   });
@@ -1466,7 +1472,7 @@ function render(){
     const f=String(x.fab||'').trim();
     if(F.op){ const st=LINE2OP[f]; if(!st||!st.has(F.op))return false; }
     if(F.region && GST.ORG.region(GST.ORG.country(f)||'')!==F.region) return false;
-    if(F.campus && f!==F.campus) return false;
+    if(!campOk(f)) return false;
     if(F.lineRaw && f!==F.lineRaw) return false;
     return okCF(x.custB,x.fab);
   };
@@ -1474,7 +1480,8 @@ function render(){
   const abpOn=()=>{
     if(F.op && GST.ORG.country(F.op)!=='TAIWAN') return false;
     if(F.region && F.region!==GST.ORG.REGION_OS) return false;
-    if(F.campus && GST.ORG.country(F.campus)!=='TAIWAN') return false;
+    // 여러 단지를 골랐으면 «그중 하나라도 대만이면» 본다 — 전부 국내일 때만 해당 없음
+    if(campOn() && !campList().some(c=>GST.ORG.country(c)==='TAIWAN')) return false;
     return true;
   };
   /* 교육 과정이 구분마다 다르다 — 사용자 확정: 국내는 Scrubber Lv.2/Lv.3 가 대상이고
@@ -1483,7 +1490,7 @@ function render(){
   const eduKey=(p,lv)=> (p&&p.region===GST.ORG.REGION_KR)
     ? (lv===1?'lv2date':'lv3date') : (lv===1?'bdate':'vdate');
   const okP=p=>opPerson(p)&&(!F.customer||p.custB===F.customer)
-    &&(!F.campus||p.campus===F.campus)&&lineOk(p.wp)
+    &&campOk(p.campus)&&lineOk(p.wp)
     &&(!F.team||p.team===F.team)
     &&(!F.region||p.region===F.region)
     &&(!F.country||(p.country||siteCountry(p.fab||p.custB))===F.country);

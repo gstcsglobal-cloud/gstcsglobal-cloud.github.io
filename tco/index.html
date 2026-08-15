@@ -606,7 +606,7 @@ function onSlicer(){
 function clearAllFilters(){F.proc='';GST.filters.clear();fillSlicers();render();}
 window.clearF=function(k){
   if(k.indexOf('gf_')===0){ const kk=k.slice(3);
-    if(kk==='period'){GST.filters.F.dtFrom='';GST.filters.F.dtTo='';} else GST.filters.F[kk]='';
+    if(kk==='period'){GST.filters.F.dtFrom='';GST.filters.F.dtTo='';GST.filters.refresh();} else GST.filters.set(kk,'');
     GST.filters.refresh(); render(); return; }
   F[k]='';fillSlicers();render();};
 

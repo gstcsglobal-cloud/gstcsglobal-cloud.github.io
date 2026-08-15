@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 92;
+GST.VER = 93;
 GST.needVer = function(n){
   if(GST.VER >= n) return true;
   try{
@@ -2384,7 +2384,17 @@ GST.FILT_DROP_CUST = /^(본사|칠러|CHILLER|OFFICE|통합|미정|기타|해당
 GST.FILT_DROP_ORG = /^(라인장|단지장|운영관리|세정|정산|주재원|국내|해외|기타|미정|TRANSLATOR|CHILLER|SCRUBBER|OFFICE|통합|REPAIR CENTER|서비스자재)$/i;
 
 GST.filters = (function(){
-  const F = { region:'', op:'', customer:'', campus:'', line:'', team:'', dtFrom:'', dtTo:'' };
+  /* 단지만 «여러 개 동시 선택»이다(Set). 왜 이 축만인가 — 같은 설비의 단지가 자료마다
+     갈리는 일이 실제로 있다(알람 시트는 H3, 설치현황은 H4. 실측 39건, 전부 한 방향).
+     정본은 설치현황이지만 사람이 볼 때는 두 단지를 한 번에 봐야 하는 자리가 생긴다.
+     다른 축을 다중으로 바꾸려면 MULTI 에 이름만 더하면 된다 — 나머지 코드는 그대로다. */
+  const MULTI = { campus:1 };
+  const F = { region:'', op:'', customer:'', campus:new Set(), line:'', team:'', dtFrom:'', dtTo:'' };
+  /* 술어에서 «고른 것에 걸리나»를 묻는 유일한 자리. 단일·다중을 여기서만 가른다 —
+     페이지가 `x.campus===F.campus` 를 직접 쓰면 Set 이 된 순간 조용히 전부 false 가 된다. */
+  const hitK = (k, v) => MULTI[k] ? (!F[k].size || F[k].has(v)) : (!F[k] || v === F[k]);
+  const hasK = (k) => MULTI[k] ? F[k].size > 0 : !!F[k];
+  const listK = (k) => MULTI[k] ? Array.from(F[k]) : (F[k] ? [F[k]] : []);
   let CFG = null, KEY = '';
   const L = { region:'구분', op:'운영단위', customer:'고객사', campus:'단지', line:'라인', team:'팀', period:'기간' };
   const val = (g, x) => { try{ const v = g ? g(x) : ''; return v==null?'':String(v).trim(); }catch(e){ return ''; } };
@@ -2421,15 +2431,16 @@ GST.filters = (function(){
     const chk = ['region','op','customer','campus','line','team'];
     for(let i=0;i<chk.length;i++){
       const k = chk[i];
-      if(k===skip || !F[k]) continue;
+      if(k===skip || !hasK(k)) continue;
       const v = val(g[k], x);
       if(!v){ if(CFG.loose && CFG.loose[k]) continue; return false; }
-      if(v !== F[k]) return false;
+      if(!hitK(k, v)) return false;
     }
     return true;
   }
 
   function fill(id, key, list){
+    if(MULTI[key]) return fillMulti(id, key, list);
     const el = document.getElementById(id); if(!el) return;
     /* 사용자 확정: 기본 필터는 «구현 안 돼도 공통으로» 다섯 칸 그대로 보인다.
        페이지마다 칸이 나타났다 사라지면 그것 자체가 «페이지마다 필터가 다르다» 로 읽힌다.
@@ -2443,6 +2454,21 @@ GST.filters = (function(){
     // 목록에서 사라진 선택값은 버린다 — 남겨두면 «아무것도 안 나오는» 화면이 된다
     if(list.indexOf(cur) < 0) F[key] = '';
     el.value = F[key];
+  }
+
+  /* 다중선택 칸. 목록이 바뀔 때만 다시 만든다(GST.mselFill 의 규약) — 매번 갈아끼우면
+     체크 직후 노드가 분리돼 목록이 닫힌다. 목록에서 사라진 선택값은 여기서 버린다.
+     안 버리면 «아무것도 안 나오는» 화면이 되고, 그 이유가 화면에 남지 않는다. */
+  function fillMulti(id, key, list){
+    const btn = document.getElementById(id+'Btn'), box = document.getElementById(id+'Box');
+    if(!btn || !box) return;
+    const wrap = btn.closest('.slicer'); if(wrap) wrap.style.display = '';
+    Array.from(F[key]).forEach(function(v){ if(list.indexOf(v) < 0) F[key].delete(v); });
+    btn.disabled = !list.length;
+    if(!list.length){ btn.textContent = '전체 (자료 없음) \u25be'; box.innerHTML=''; box.style.display='none';
+      box.dataset.built=''; box.dataset.keys=''; return; }
+    GST.mselFill(id, list, F[key], function(){ save(); refresh();
+      if(CFG && CFG.onChange) CFG.onChange(); });
   }
 
   function refresh(){
@@ -2464,6 +2490,7 @@ GST.filters = (function(){
 
   function read(changed){
     ['region','op','customer','campus','line','team'].forEach(function(k){
+      if(MULTI[k]) return;                       // 다중선택은 mselFill 이 Set 을 직접 고친다
       const el=document.getElementById('gf-'+k); if(el) F[k]=el.value;
     });
     const a=document.getElementById('gf-from'), b=document.getElementById('gf-to');
@@ -2475,19 +2502,33 @@ GST.filters = (function(){
     if(CFG && CFG.onChange) CFG.onChange();
   }
 
-  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(F)); }catch(e){} }
+  /* ⚠ JSON.stringify(new Set) 은 '{}' 다 — 배열로 눕혀 저장하고 되살릴 때 Set 으로 되돌린다.
+     그냥 Object.assign 으로 복원하면 F.campus 가 빈 객체가 되어 .has 가 사라진다(실제로 죽었다). */
+  function save(){ try{
+    const o={}; Object.keys(F).forEach(function(k){ o[k]=MULTI[k]?Array.from(F[k]):F[k]; });
+    localStorage.setItem(KEY, JSON.stringify(o));
+  }catch(e){} }
   function load(){
     try{ const o=JSON.parse(localStorage.getItem(KEY)||'{}');
-      Object.keys(F).forEach(function(k){ if(typeof o[k]==='string') F[k]=o[k]; });
+      Object.keys(F).forEach(function(k){
+        if(MULTI[k]){ if(Array.isArray(o[k])) F[k]=new Set(o[k]); return; }
+        if(typeof o[k]==='string') F[k]=o[k];
+      });
     }catch(e){}
   }
 
   function markup(){
     const sel = (id,label) => '<div class="slicer"><div class="lbl">'+label+'</div>'
       + '<select id="'+id+'" onchange="GST.filters._on(\''+id.slice(3)+'\')"></select></div>';
+    /* 다중선택 칸은 select 가 아니라 버튼+체크박스다(GST.mselFill 규약). position:relative
+       가 없으면 박스가 사이드바 밖으로 나간다 — .slicer 가 이미 relative 다. */
+    const msel = (id,label) => '<div class="slicer"><div class="lbl">'+label+'</div>'
+      + '<button type="button" id="'+id+'Btn" class="mselbtn" '
+      + 'onclick="GST.mselToggle(\''+id+'\',event)">\uc804\uccb4 \u25be</button>'
+      + '<div id="'+id+'Box" class="mselbox"></div></div>';
     return '<div class="gf-base">'
       + sel('gf-region', L.region) + sel('gf-op', L.op) + sel('gf-customer', L.customer)
-      + sel('gf-campus', L.campus) + sel('gf-line', L.line) + sel('gf-team', L.team)
+      + msel('gf-campus', L.campus) + sel('gf-line', L.line) + sel('gf-team', L.team)
       + '<div class="slicer"><div class="lbl">'+L.period+'</div>'
       + '<input type="date" id="gf-from" class="dt-input" onchange="GST.filters._on()"> ~ '
       + '<input type="date" id="gf-to" class="dt-input" onchange="GST.filters._on()"></div>'
@@ -2503,7 +2544,7 @@ GST.filters = (function(){
     const g = CFG.get || {};
     const v = val(g[key], x);
     if(!v) return !!(CFG.loose && CFG.loose[key]);
-    return v === F[key];
+    return hitK(key, v);
   }
 
   return {
@@ -2536,7 +2577,7 @@ GST.filters = (function(){
       if(F.region   && val(g.region,x)   !== F.region)   return false;
       if(F.op       && !axOk('op', x))                   return false;
       if(F.customer && val(g.customer,x) !== F.customer) return false;
-      if(F.campus   && val(g.campus,x)   !== F.campus)   return false;
+      if(hasK('campus') && !hitK('campus', val(g.campus,x))) return false;
       if(F.line     && val(g.line,x)     !== F.line)     return false;
       if(F.team     && val(g.team,x)     !== F.team)     return false;
       if((F.dtFrom || F.dtTo) && g.date && !(opt && opt.noDate)){
@@ -2548,16 +2589,35 @@ GST.filters = (function(){
       return true;
     },
     clear: function(){
-      Object.keys(F).forEach(function(k){ F[k]=''; });
+      Object.keys(F).forEach(function(k){ if(MULTI[k]) F[k].clear(); else F[k]=''; });
       save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
     },
+    /* 축 하나만 끄거나 켠다. 페이지가 `GST.filters.F[k]=''` 를 직접 쓰면 다중 축에서
+       Set 이 문자열로 바뀌어 그다음 `.has` 가 TypeError 로 죽는다 — 여기로만 지나가게 한다. */
+    set: function(k, v){
+      if(!(k in F)) return;
+      if(MULTI[k]){ F[k].clear(); (Array.isArray(v)?v:(v?[v]:[])).forEach(function(x){ F[k].add(x); }); }
+      else F[k] = v || '';
+      save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
+    },
+    // 차트 드릴용 — 같은 값을 다시 누르면 해제. 다중 축은 «그 값만» 토글한다.
+    toggle: function(k, v){
+      if(!(k in F)) return;
+      if(MULTI[k]){ if(F[k].has(v)) F[k].delete(v); else F[k].add(v); }
+      else F[k] = (F[k]===v) ? '' : v;
+      save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
+    },
+    // 술어 헬퍼 — 페이지가 자기 F 를 따로 들고 있어도 «걸리나» 판정은 여기 하나를 쓴다
+    hit: function(k, v){ return hitK(k, v==null?'':String(v).trim()); },
+    has: function(k){ return hasK(k); },
+    chosen: function(k){ return listK(k); },
     // 활성 필터 칩용 — [{k,label,value}]
     active: function(){
       const out=[];
       if(F.region)   out.push({k:'region',   label:L.region,   value:F.region});
       if(F.op)       out.push({k:'op',       label:L.op,       value:F.op});
       if(F.customer) out.push({k:'customer', label:L.customer, value:F.customer});
-      if(F.campus)   out.push({k:'campus',   label:L.campus,   value:F.campus});
+      if(hasK('campus')) out.push({k:'campus', label:L.campus, value:listK('campus').join(' · ')});
       if(F.line)     out.push({k:'line',     label:L.line,     value:F.line});
       if(F.team)     out.push({k:'team',     label:L.team,     value:F.team});
       if(F.dtFrom||F.dtTo) out.push({k:'period', label:L.period, value:(F.dtFrom||'…')+' ~ '+(F.dtTo||'…')});
