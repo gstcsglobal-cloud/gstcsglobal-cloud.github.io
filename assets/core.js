@@ -1082,6 +1082,11 @@ GST.SM.SPEC.abp2 = { name:'국내 올바이패스', scan:8,
     checker:'확인자'
   }};
 
+/* 주간현황이 국내 알람·올바이패스에서 실제로 쓰는 열. 두 표가 같은 이름을 쓰므로 한 벌이면 된다.
+   ⚠ checker(담당자·확인자)는 «일부러» 뺐다 — 실명이고 화면이 안 쓴다. */
+GST._KR_COLS = ['src_row','sn_key','sn','occur_date','fmonth','fweek','cnt',
+                'site','line','atype','ctype','alarm','cause','action','op','seq','inout','incl'];
+
 GST.ALARM = {
   /* 설비 S/N 조인 키. 표기가 사이트마다 다르다 — SBW0527 · DBW-1177S · GBWS-3738L.
      영숫자만 남기면 설치현황(GBWS-7561)과 붙는다. 그래도 안 붙으면 채널 접미(L/R/S)를
@@ -1796,12 +1801,19 @@ GST._csvOrderCol = function(keys){
   return safe[0] || null;
 };
 
-GST.csvTableRows = async function(table){
+/* cols 를 주면 그 열«만» 받는다. 안 주면 전 열(옛 동작).
+   왜 필요한가. 국내 알람 원장은 44열 × 2만 행이라 통째로 받으면 화면이 뜨기 전에 몇 MB 를
+   내려받는다. 그리고 그 안에는 **작업자 실명(checker)** 이 들어 있다 — 화면이 안 쓰는 값을
+   브라우저까지 보낼 이유가 없다. 열을 추리면 전송량도 줄고 실명도 안 나간다. */
+GST.csvTableRows = async function(table, cols){
   const c = await GST.db(); if(!c) throw new Error('DB_OFF');
+  const sel = (cols && cols.length) ? cols.join(',') : '*';
 
-  const probe = await c.from(table).select('*').limit(1);
+  const probe = await c.from(table).select(sel).limit(1);
   if(probe.error) throw new Error('READ '+probe.error.message);
   if(!probe.data || !probe.data.length) throw new Error('EMPTY — '+table+' 에 행이 없다 (Import 했는가)');
+  /* ⚠ 열을 추렸으면 정렬 후보(src_row·id)가 안 올 수 있다. 정렬이 없으면 range() 로
+     나눠 받을 때 행이 겹치거나 빠진다 — 5,000행을 넘는 표는 반드시 정렬 열을 함께 받는다. */
   const ordCol = GST._csvOrderCol(Object.keys(probe.data[0]));
 
   /* 페이지네이션은 미러와 같은 규약 — 「요청한 만큼 안 오면 끝」으로 판정하지 않는다.
@@ -1810,7 +1822,7 @@ GST.csvTableRows = async function(table){
      정렬이 없으면 range() 로 나눠 받을 때 행이 겹치거나 빠질 수 있으므로 반드시 건다. */
   const STEP = 5000; let from = 0; const out = [];
   for(let guard=0; guard<400; guard++){
-    let q = c.from(table).select('*');
+    let q = c.from(table).select(sel);
     if(ordCol) q = q.order(ordCol, {ascending:true});
     const r = await q.range(from, from+STEP-1);
     if(r.error) throw new Error('READ '+r.error.message);

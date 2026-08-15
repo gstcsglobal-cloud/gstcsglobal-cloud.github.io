@@ -1139,8 +1139,11 @@ async function loadData(){
       gidOk(GID_ABP)?GST.fetchCSVCached(URLS.abp,'abp'):Promise.reject('gid 미설정'),
       /* 국내 알람·올바이패스 원장 (v92). 아직 안 올렸으면 EMPTY 로 떨어지고,
          그때는 지금까지대로 수선실적 BM 에서 센다 — 대만 숫자가 한 자리도 안 움직여야 한다. */
-      GST.csvTableRows('sheet_alarm'),
-      GST.csvTableRows('sheet_allbypass')
+      /* 화면이 쓰는 열«만» 받는다 — 44열 × 2만 행을 통째로 받을 이유가 없고,
+         원장에 든 작업자 실명(checker)을 브라우저까지 보내지 않는다.
+         src_row 는 정렬용이라 반드시 포함한다(없으면 페이지 경계에서 행이 겹친다). */
+      GST.csvTableRows('sheet_alarm',     GST._KR_COLS),
+      GST.csvTableRows('sheet_allbypass', GST._KR_COLS)
     ]);
     KRA = kra.status==='fulfilled'?krParse(kra.value):[];
     KRB = krb.status==='fulfilled'?krParse(krb.value):[];
