@@ -717,7 +717,7 @@ function krParse(rows){
              seq:g(r,'seq'), inout:g(r,'inout'), incl:g(r,'incl'),
              srcSite:g(r,'site'), srcLine:g(r,'line'),
              atype:g(r,'atype'), ctype:g(r,'ctype'), alarm:g(r,'alarm'),
-             cause:g(r,'cause'), op0:g(r,'op') };
+             cause:g(r,'cause'), action:g(r,'action'), op0:g(r,'op') };
   });
 }
 /* 조직 축은 설비 S/N 으로 설치현황에서 가져온다 — 원장에 담아 두면 설치현황이
@@ -1350,6 +1350,21 @@ function render(){
   const alarmAt=(u,key)=>bk(u,key).filter(x=>x.stage==='BM'&&ftLineOk(x)
                             &&!(KR_ON&&x.region===_KR)).length
                        + (KR_ON?krN(KRAf,'a',u,key):0);
+  /* 「국내는 원장 · 해외는 실적」을 여기 한 곳에서만 만든다.
+     차트만 고치고 KPI·표·스파크라인을 두면 국내가 한쪽에선 빠지고 한쪽엔 남아
+     같은 화면의 카드끼리 숫자가 갈린다 — 실제로 그 상태였다. */
+  const wkBM =(st,en)=>wkIn (st,en).filter(x=>x.stage==='BM'&&!(KR_ON&&x.region===_KR));
+  const wkBMx=(st,en)=>wkInX(st,en).filter(x=>x.stage==='BM'&&!(KR_ON&&x.region===_KR));
+  const krIn =(st,en)=>{ if(!KR_ON)return []; const a=fmtD(st), b=fmtD(en);
+    return KRAf.filter(x=>x.d&&x.d>=a&&x.d<=b); };
+  const krInX=(st,en)=>{ if(!KR_ON)return []; const a=fmtD(st), b=fmtD(en);
+    return KRAf.filter(x=>x.d&&x.d>=a&&x.d<b); };
+  const bmN =(st,en)=>wkBM (st,en).length + krIn (st,en).length;
+  const bmNx=(st,en)=>wkBMx(st,en).length + krInX(st,en).length;
+  /* 원장 행을 실적 행의 «모양»으로 맞춘다 — TOP3 표가 알람유형·원인·조치 세 열을 그대로 쓴다.
+     원장의 atype(PRESSURE·FLAME…)이 실적의 알람유형과 같은 자리다. */
+  const krAsWk=x=>({alarm:x.atype, phenom:'', cause:x.cause||x.ctype, action:x.action,
+                    sn:x.sn, line:x.lineN, wd:x.d?new Date(x.d+'T00:00:00Z'):null});
   const fINST=INST.filter(r=>{
     const c=GST.ORG.country(r[CI.country])||guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();
     if(F.region&&GST.ORG.region(r[CI.country])!==F.region)return false;
@@ -1868,8 +1883,7 @@ function render(){
   const man30=_w30.reduce((a,x)=>a+x.manMin,0);
   const manPM30=_w30.reduce((a,x)=>a+(isPM(x.stage)?x.manMin:0),0);
   // kp4: BM 고장 건수(최근 30일) — 줄어들면 좋은 지표
-  const bm30=_w30.filter(x=>x.stage==='BM').length;
-  const bmPrev=wkInX(d60,d30).filter(x=>x.stage==='BM').length;
+  const bm30=bmN(d30,asOf), bmPrev=bmNx(d60,d30);
   setTxt('kp4',bm30.toLocaleString()); setTxt('kd4',GST.deltaBadge(bm30,bmPrev,true));
   setTxt('kf4',t('kf4').replace('{n}',bmPrev.toLocaleString()));
   // kp5: 인당 일평균 공수(h) = 총공수 ÷ 출근 연인원 · 출근 연인원 = 현장(O)×근무일(21) − 휴가일수
@@ -2050,7 +2064,7 @@ function render(){
       _tSt=new Date(Date.UTC(_yy,0,1));
       let _ye=new Date(Date.UTC(_yy,11,31)); if(_ye>_rt)_ye=_rt;   // 과거연도=연말까지·올해=오늘까지
       _tEn=_ye; _tLab=t('ytd').replace('{y}',_yy); }
-    const f30=wkIn(_tSt,_tEn).filter(x=>isFault(x.stage));
+    const f30=wkBM(_tSt,_tEn).concat(krIn(_tSt,_tEn).map(krAsWk));
     // 대분류 = 알람유형(Z열). 기재가 없으면 현상(AA열)으로 대체 표기한다.
     const _alOf=x=>GST.nfw((x.alarm||'').trim())||GST.nfw((x.phenom||'').trim());
     const byAl={}; let noAl=0;
@@ -2182,8 +2196,7 @@ function render(){
       ins.push({sev:p<70?'warn':'ok',text:t('ins_pm').replace('{p}','<b>'+p+'</b>')
         .replace('{a}',scPlan.toLocaleString()).replace('{b}',scDone.toLocaleString())});
     }
-    const f30n=_w30.filter(x=>isFault(x.stage)).length;
-    const fPrev=wkInX(d60,d30).filter(x=>isFault(x.stage)).length;
+    const f30n=bmN(d30,asOf), fPrev=bmNx(d60,d30);
     const fd=GST.pctDelta(f30n,fPrev);
     if(f30n||fPrev)ins.push({sev:(fd!=null&&fd>=30)?'bad':(fd!=null&&fd<=-20)?'ok':'info',
       text:t('ins_ft').replace('{n}','<b>'+f30n+'</b>').replace('{p}',fd==null?'—':(fd>0?'+':'')+fd+'%')});
@@ -2200,7 +2213,7 @@ function render(){
       const D=a.filter(x=>!six(x)).filter(x=>{const e=eduOf(x),k=eduKey(x,1);return e&&e[k]&&e[k]<=p.end;}).length
              +a.filter(six).filter(x=>{const e=eduOf(x),k=eduKey(x,2);return e&&e[k]&&e[k]<=p.end;}).length;
       return a.length?Math.round(D/a.length*100):null;}),'#34D399');
-    drawSpark('sp4',SP.map(p=>wkIn(p.st,p.end).filter(x=>x.stage==='BM').length),'#E03131');
+    drawSpark('sp4',SP.map(p=>bmN(p.st,p.end)),'#E03131');
     drawSpark('sp5',SP.map(p=>{const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
       const den=Math.max(1,Math.max(1,headOn(p.end))*wdv-ls);
       const mm=wkIn(p.st,p.end).reduce((a,x)=>a+((isPM(x.stage)||isSvc(x.stage))?x.manMin:0),0);

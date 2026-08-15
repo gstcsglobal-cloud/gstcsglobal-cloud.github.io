@@ -102,6 +102,26 @@ is(/tg:\(p,E\)=>hasCorp\(p\)&&!sixAt\(p,E\)/.test(HR),
 is(/eduPlanH1/.test(SRC.report) && /Scrubber Lv\.2','Scrubber Lv\.3'/.test(SRC.report),
    'report — 교육 계획 머리글이 잡힌 인원을 따라간다');
 
+console.log('\n[7-1] 설치현황 — 「집계 기준」(챔버/대수)이 한 곳(chW)만 지나는지');
+{
+  /* KPI·막대·표·교차분석이 전부 chW 를 지나야 «KPI 는 챔버인데 막대는 대수» 가 안 된다.
+     그리고 단위 글자가 기준을 따라가야 «1,490 ch» 같은 거짓말이 안 나온다. */
+  const SC = SRC.scrubber;
+  is(/let BASIS='ch'/.test(SC), 'scrubber — 집계 기준 상태(BASIS)가 있다');
+  is(/const chW=r=>BASIS==='unit'\?1:/.test(SC),
+     'scrubber — 기준이 chW 한 곳에서만 갈린다 (두 벌이면 카드끼리 합이 안 맞는다)');
+  {
+    // applyLang 안에서 data-i 재적용 «뒤에» applyBasisUnit 이 불려야 한다
+    const li = SC.indexOf('function applyLang()');
+    const blk = li<0 ? '' : SC.slice(li, li+700);
+    const di = blk.indexOf("querySelectorAll('[data-i]')");
+    const bu = blk.indexOf('applyBasisUnit()');
+    is(/function applyBasisUnit\(\)/.test(SC) && di>=0 && bu>di,
+       'scrubber — 언어 전환 뒤에도 단위 글자를 다시 씌운다 (data-i 가 되돌려 놓는다)');
+  }
+  is(/id="sl-basis"/.test(SC), 'scrubber — 「집계 기준」 칸이 있다');
+}
+
 console.log('\n[8] 비율 지표의 «분모» 배열에도 조직 축이 실려 있는지');
 /* 고장분석의 ALLW_ROWS 는 설비 BM율·좌우 편중의 분모다. 여기에 구분·운영단위·단지가
    안 실려 있으면 구분을 고르는 순간 분모가 0이 되어 표가 조용히 빈다(실제로 그랬다). */

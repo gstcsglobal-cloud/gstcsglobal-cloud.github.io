@@ -248,6 +248,11 @@ tr:hover td{background:rgba(255,255,255,.04)}
          끼우고 autoSidebar 가 그것을 <aside> 로 옮긴다. 지우면 사이드바가 통째로 사라진다.
        Model 은 칸이 없어도 «도넛을 눌러 거는 드릴»로 여전히 걸린다(F.model 은 남겼다). -->
   <div class="slicer"><div class="lbl">Warranty</div><div class="chips" id="sl-warr"></div></div>
+  <!-- 집계 기준 — 이 화면의 «한 건»이 무엇인지. DUAL 설비는 챔버가 둘이라 두 기준의
+       숫자가 다르다(실측 픽스처: 챔버 2,596 ↔ 대수 1,462). 어느 쪽으로 세는지가
+       화면 어디에도 안 적혀 있었고, 라벨은 「설치 대수」인데 실제로는 챔버를 세고
+       있었다 — 골라 쓰게 하고 단위도 따라가게 한다. -->
+  <div class="slicer"><div class="lbl">집계 기준</div><div class="chips" id="sl-basis"></div></div>
 </div>
 
 <!-- KPI -->
@@ -466,8 +471,14 @@ const wLbl=r=>{const w=GST.nfw(r[CI.warranty]||'').toUpperCase();
   return w.includes('OUT')?'OUT':(w.includes('IN')?'IN':'');};
 // 이 페이지의 모든 수량은 설비 대수가 아니라 **챔버 수**로 센다 (BX열 DUAL=2 · SINGLE=1).
 // 주간현황(report)·TCO와 같은 규칙이라 페이지 간 숫자가 어긋나지 않는다.
-const chW=r=>String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1;
+/* 집계 기준 — 'ch'(챔버) | 'unit'(설비 대수). 이 화면의 모든 수(KPI·막대·표·교차분석)가
+   chW 한 곳을 지나므로 여기만 바꾸면 전부 같이 따라간다. 두 벌로 세면 «KPI 는 챔버인데
+   막대는 대수» 가 되어 합이 안 맞는다. */
+let BASIS='ch';
+try{ BASIS=localStorage.getItem('gst_sc_basis')||'ch'; }catch(e){}
+const chW=r=>BASIS==='unit'?1:(String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1);
 const chSum=rows=>(rows||[]).reduce((a,r)=>a+chW(r),0);
+const basisUnit=()=>BASIS==='unit'?'대':'ch';
 const PAL=GST.PAL8; // 공통 검증 팔레트 (고정 순서)
 
 const T={
@@ -573,8 +584,9 @@ function applyLang(){
   buildSecNav();
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
   {const e=document.getElementById('search'); if(e)e.placeholder='S/N, Location, Tool Maker...';}
+  applyBasisUnit();   // data-i 재적용이 단위를 되돌려 놓으므로 마지막에 다시 씌운다
   updateRangeDisplay();
-  if(RAW.length){buildWarrChips();render();}
+  if(RAW.length){buildWarrChips();buildBasisChips();render();}
 }
 function setLang(l){LANG=l;applyLang();document.getElementById('langMenu').classList.remove('open');}
 function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
@@ -720,6 +732,26 @@ function buildChips(id,key,idx){
     box.appendChild(c);
   });
 }
+function buildBasisChips(){
+  const box=document.getElementById('sl-basis'); if(!box)return;
+  box.innerHTML='';
+  [{v:'ch',l:'챔버 (ch)'},{v:'unit',l:'설비 대수 (대)'}].forEach(({v,l})=>{
+    const c=document.createElement('div');
+    c.className='chip'+(BASIS===v?' active':''); c.textContent=l;
+    c.onclick=()=>{ BASIS=v; try{localStorage.setItem('gst_sc_basis',v);}catch(e){}
+      [...box.children].forEach(x=>x.classList.remove('active')); c.classList.add('active');
+      applyBasisUnit(); render(); };
+    box.appendChild(c);
+  });
+  applyBasisUnit();
+}
+/* 단위 글자도 기준을 따라간다. 안 따라가면 «1,462 ch» 처럼 숫자와 단위가 서로 다른
+   말을 한다 — 그게 지금까지 「설치 대수」 라벨에 챔버 수가 붙어 있던 형태다. */
+function applyBasisUnit(){
+  document.querySelectorAll('[data-i="unit_ea"]').forEach(e=>{ e.textContent=basisUnit(); });
+  const cap=document.querySelector('[data-i="kp1"]');
+  if(cap)cap.textContent=(BASIS==='unit'?'설치 대수':'설치 챔버');
+}
 function buildWarrChips(){
   const box=document.getElementById('sl-warr'); if(!box)return;
   box.innerHTML='';
@@ -748,6 +780,7 @@ function rebuildFilters(){
   // 전용 칸은 사라졌지만 F.model 은 남는다 — 모델 도넛을 눌러 거는 «드릴»이 그 값을 쓴다.
   buildChips('sl-model','model',CI.model);
   buildWarrChips();
+  buildBasisChips();
 }
 {const e=document.getElementById('search');
  if(e)e.addEventListener('input',ev=>{F.q=ev.target.value.toLowerCase();render();});}
