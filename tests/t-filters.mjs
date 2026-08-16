@@ -154,8 +154,17 @@ console.log('\n[7-3] 단지는 여러 개를 동시에 고를 수 있다 (Set) �
   is(/campus:new Set\(\)/.test(CORE), 'core — F.campus 가 Set 이다');
   is(/const hitK = \(k, v\) => MULTI\[k\]/.test(CORE),
      'core — 「걸리나」 판정이 hitK 한 곳만 지난다');
-  is(/o\[k\]=MULTI\[k\]\?Array\.from\(F\[k\]\):F\[k\]/.test(CORE) && /if\(Array\.isArray\(o\[k\]\)\) F\[k\]=new Set\(o\[k\]\)/.test(CORE),
-     'core — 저장은 배열로 눕히고 복원은 Set 으로 되돌린다 (JSON.stringify(Set)==="{}")');
+  is(/o\[k\]=MULTI\[k\]\?Array\.from\(F\[k\]\):F\[k\]/.test(CORE),
+     'core — 저장은 배열로 눕힌다 (JSON.stringify(Set)==="{}")');
+  /* 복원은 «비우고 다시 채운다». `F[k]=new Set(...)` 로 갈아끼우면 다중선택 박스의
+     핸들러가 옛 Set 을 든 채로 남아 첫 항목만 체크되고 두 번째부터 안 먹는다 —
+     에러 없이. 주간현황은 mount 를 5번 부르므로 반드시 그 상태가 된다. */
+  is(/F\[k\]\.clear\(\); o\[k\]\.forEach\(function\(v\)\{ F\[k\]\.add\(v\); \}\)/.test(CORE),
+     'core — 복원이 Set 을 갈아끼우지 않고 제자리에서 채운다');
+  is(!/F\[k\]=new Set\(o\[k\]\)/.test(CORE),
+     'core — 옛 복원(F[k]=new Set)이 되살아나지 않았다');
+  is(/const st = \(GST\._msel && GST\._msel\[id\]\) \|\| \{ sel: sel, cb: onChange \}/.test(CORE),
+     'core — 클릭 핸들러가 「지금의」 Set 을 GST._msel 에서 꺼낸다');
   is(/set: function\(k, v\)\{/.test(CORE) && /toggle: function\(k, v\)\{/.test(CORE) && /hit: function\(k, v\)\{/.test(CORE),
      'core — 페이지가 쓸 안전한 API(set·toggle·hit)가 있다');
   // 음성 대조 — 페이지가 campus 를 문자열처럼 다루면 조용히 전부 false 가 된다
