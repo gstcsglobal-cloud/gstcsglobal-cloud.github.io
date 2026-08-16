@@ -262,6 +262,16 @@ console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, 
   /* 「관리담당 기준」(v94) — 단지·라인을 설치현황/알람시트 어느 쪽으로 셀지 전환.
      접근자 두 개(krCampusOf·krLineOf) 말고 srcSite·campus 를 직접 고르는 코드가
      생기면 필터·분해·드릴이 서로 다른 단지를 보여준다. */
+  /* 원장이 비면 옛 경로(수선실적 BM)로 돌아가는 것은 «의도»다 — 올리기 전에 0 이 되면 안 된다.
+     문제는 그것이 조용했다는 것이다. 실측: sheet_alarm 0행인데 화면은 26건을 보여줬고,
+     그 26건은 수선실적이라 알람유형 입력률 0.3% 탓에 「미기재」가 15건이었다.
+     사용자는 원장을 보고 있다고 믿었고, 원인을 찾는 데 몇 시간이 들었다. */
+  is(/window\._KRWHY\s*=\s*KRA\.length \? '' :/.test(RP),
+     'report — 원장이 «왜» 비었는지(안 올림 / 못 읽음)를 구분해 남긴다');
+  is(/if\(!KR_ON && window\._KRWHY\) _note = '⚠ 국내 알람 원장이 '/.test(RP),
+     'report — 원장이 비면 「수선실적으로 세는 중」이라고 차트에 밝힌다');
+  is(/\/upload\/ 에서 알람 시트를 올리면/.test(RP),
+     'report — 무엇을 하면 되는지까지 적는다 (증상만 알리면 사용자가 코드를 의심한다)');
   is(/id="sl-krorg"/.test(RP), 'report — 「관리담당 기준」 칸이 있다');
   is(/krOrg:'inst'/.test(RP), 'report — 기본은 설치현황 기준 (정본)');
   is(/const krCampusOf=x=>F\.krOrg==='sheet'/.test(RP) && /const krLineOf\s*=x=>F\.krOrg==='sheet'/.test(RP),

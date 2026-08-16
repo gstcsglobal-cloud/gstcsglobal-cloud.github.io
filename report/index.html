@@ -1174,8 +1174,19 @@ async function loadData(){
       GST.csvTableRows('sheet_alarm',     GST._KR_COLS),
       GST.csvTableRows('sheet_allbypass', GST._KR_COLS)
     ]);
+    /* ⚠ 원장이 비면 옛 경로(수선실적 BM)로 조용히 돌아간다 — 그래야 올리기 전에도 화면이
+       0 이 되지 않는다. 그런데 «조용히» 가 문제였다: 사용자는 원장 기준으로 보고 있다고
+       믿는데 실제로는 수선실적을 보고 있었고, 수선실적은 알람유형 입력률이 0.3% 라
+       「미기재」가 잔뜩 뜬다. 그 상태를 코드 버그로 오해하는 데 몇 시간이 들었다.
+       그래서 «왜 비었는지»를 남겨 화면에 그대로 적는다. */
     KRA = kra.status==='fulfilled'?krParse(kra.value):[];
     KRB = krb.status==='fulfilled'?krParse(krb.value):[];
+    window._KRWHY = KRA.length ? '' :
+      (kra.status==='rejected'
+        ? (/EMPTY/.test(String(kra.reason&&kra.reason.message||kra.reason))
+            ? '표가 비어 있습니다 (아직 업로드 전)'
+            : '읽지 못했습니다 — '+String(kra.reason&&kra.reason.message||kra.reason).slice(0,80))
+        : '행이 없습니다');
     ROSTER = ro.status==='fulfilled'?parseRoster(ro.value.rows):[];
     LEAVE  = lv.status==='fulfilled'?parseLeave(lv.value.rows):[];
     CIP = [].concat(
@@ -2094,6 +2105,12 @@ function render(){
       /* «막대가 전부 0» 은 두 가지 뜻이다 — 정말 고장이 없었거나, 이 조건의 행에 BM 단계가
          아예 없거나. 둘은 완전히 다른 사실인데 화면은 똑같이 0으로만 보인다(가장 설명하기
          어려운 실패). 그래서 후자면 «어떤 단계가 있는지» 를 그대로 적어 준다. */
+      /* 원장이 비어 국내를 수선실적으로 세고 있으면 그 사실을 맨 앞에 적는다.
+         수선실적은 알람유형 입력률 0.3% 라 「미기재」가 잔뜩 뜨는 것이 정상이다 —
+         그것을 «데이터가 안 나온다»로 읽지 않게 하려면 출처를 밝히는 수밖에 없다. */
+      if(!KR_ON && window._KRWHY) _note = '⚠ 국내 알람 원장이 ' + window._KRWHY
+        + ' → 국내도 수선실적 BM 으로 세는 중입니다 (/upload/ 에서 알람 시트를 올리면 원장 기준으로 바뀝니다) · '
+        + _note;
       if(KR_ON) _note += ' · 국내는 알람 원장 기준 (수선실적 BM 제외'
         + (F.inout==='out'?' · 외부·외적만':F.inout==='all'?' · 내+외 전체':'')
         + ' · '+(F.krBasis==='fiscal'?'시트 정산월·주차':'발생일')+')'
