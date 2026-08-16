@@ -16,7 +16,20 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 93;
+GST.VER = 94;
+
+/* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
+   그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
+   사라지고 있었다(빈칸과 구별이 안 된다). xlsx 로 올리면 쉼표가 없어 정상인데, 그러면
+   같은 자료가 올린 방식에 따라 다른 숫자를 낸다 — 그게 더 나쁘다. 여기 한 곳에서 흡수한다.
+   ⚠ 빈칸은 0 이 아니라 NaN 으로 낸다. 호출부가 `|| null` `|| 0` 으로 뜻을 정하게 두어야
+   «값이 0» 과 «값이 없음» 을 구별할 수 있다. */
+GST.numv = function(v){
+  if(v==null) return NaN;
+  if(typeof v==='number') return v;
+  const s = String(v).replace(/[\s\u00a0,]/g,'');
+  return s==='' ? NaN : Number(s);
+};
 GST.needVer = function(n){
   if(GST.VER >= n) return true;
   try{

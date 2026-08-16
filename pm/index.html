@@ -368,6 +368,8 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 
 <script>
+GST.needVer&&GST.needVer(94);   // GST.numv 를 쓴다 — 옛 core.js 면 붉은 배너
+
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
 let ADJUST={}; // 조정 내역 {key: {newDate, memo, updatedAt}} — Supabase pm_adjust 테이블(로그인 필요)
@@ -596,7 +598,7 @@ function renderCompliance(){
   const overU=VS.filter(x=>x.st==='overdue');
   const H=56, due8=VS.filter(x=>x.dl!=null&&x.dl>=0&&x.dl<=H);
   // 평균 점검 공수(분) — TBM manMin 중앙값
-  const mm=[]; RAW.forEach(r=>{if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;const v=Number(r[C.manMin]);if(v>0&&v<14400)mm.push(v);});
+  const mm=[]; RAW.forEach(r=>{if((r[C.maint]||'').toString().trim().toUpperCase()!=='TBM')return;const v=GST.numv(r[C.manMin]);if(v>0&&v<14400)mm.push(v);});
   mm.sort((a,b)=>a-b); const manH=mm.length?mm[Math.floor(mm.length/2)]/60:0;
   setV('ck1',comp); setV('ck2',overU.length); setV('ck3',due8.length); setV('ck4',Math.round(due8.length*manH));
   {const e1=document.getElementById('ck1'); if(e1)e1.style.color=GST.ragColor(comp,GST.conf('rag_pm',[90,80])[0],GST.conf('rag_pm',[90,80])[1],true);}   // 준수율 RAG
@@ -850,7 +852,7 @@ function render(){ GST.skeleton(false);
       if(!GST.filters.pass(rowOrg(r)))return;
       if(GF.fm&&(r[C.model]||'—')!==GF.fm)return;
       const wd=toDate(r[C.work]); if(!wd)return;
-      const man=Number(r[C.manMin])||0, wmin=Number(r[C.workMin])||0;
+      const man=GST.numv(r[C.manMin])||0, wmin=GST.numv(r[C.workMin])||0;
       const names=(r[C.workers]||'').toString().split(',').map(x=>x.trim()).filter(Boolean);
       if(man>0&&man<14400){
         const k=perKey(wd);

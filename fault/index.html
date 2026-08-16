@@ -628,6 +628,8 @@ canvas{cursor:pointer}
 </div>
 
 <script>
+GST.needVer&&GST.needVer(94);   // GST.numv 를 쓴다 — 옛 core.js 면 붉은 배너
+
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
 
@@ -975,8 +977,8 @@ async function loadData(){ GST.skeleton(true);
         detail:(r[C.actionDetail]||'').toString().trim().slice(0,300),
         customer:(r[C.customer]||'').toString().trim(),
         work:toDate(r[C.dStart]),
-        workMin:Number(r[C.workMin])||null, manMin:Number(r[C.manMin])||null,
-        workers:(r[C.workers]||'').toString().trim(), workerCnt:Number(r[C.workerCnt])||null,
+        workMin:GST.numv(r[C.workMin])||null, manMin:GST.numv(r[C.manMin])||null,
+        workers:(r[C.workers]||'').toString().trim(), workerCnt:GST.numv(r[C.workerCnt])||null,
         // 작업자는 "홍길동,LI.LO"처럼 한 칸에 여러 명이 들어 있다. 축으로 쓰려면 먼저 쪼개야 한다.
         workerList:(r[C.workers]||'').toString().split(',').map(s=>s.trim()).filter(Boolean)
       }))

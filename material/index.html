@@ -748,6 +748,8 @@ canvas{cursor:pointer}
 </div>
 
 <script>
+GST.needVer&&GST.needVer(94);   // GST.numv 를 쓴다 — 옛 core.js 면 붉은 배너
+
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
 
@@ -924,7 +926,7 @@ async function loadData(){ GST.skeleton(true);
 
     const mappedData = rows.map(r => {
       const wd = toDate(r[C.workDate]);
-      const rawQty = Number(r[C.qty]) || 1;
+      const rawQty = GST.numv(r[C.qty]) || 1;
       return {
         country: guessCountry(cv(r,'op')),
         // 분류 축은 전각(Ｆ１６ 등) 반각화 — 같은 라인·설비가 두 그룹으로 갈라지지 않게.
@@ -950,8 +952,8 @@ async function loadData(){ GST.skeleton(true);
         qtyBad: rawQty>9999,  // 단위 오입력 의심(예: 호스 mm) — 수량 합산에서 제외
         reason: cv(r,'reason'),
         workDate: wd,
-        daysPaid: Number(r[C.daysPaid]) || null,
-        daysPrev: Number(r[C.daysPrev]) || null,
+        daysPaid: GST.numv(r[C.daysPaid]) || null,
+        daysPrev: GST.numv(r[C.daysPrev]) || null,
         pf: cv(r,'pf'),
         freeReason: cv(r,'freeReason'),
         year: wd ? wd.getUTCFullYear() : null,
