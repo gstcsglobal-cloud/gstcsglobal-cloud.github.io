@@ -216,6 +216,14 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <option value="occur">발생일 (달력 기준)</option>
       <option value="fiscal">시트의 정산월·주차 (정산 기준)</option>
     </select></div>
+  <!-- 단지·라인을 무엇으로 셀 것인가. 시트의 Site 와 설치현황의 단지가 갈리는 행이
+       실제로 있다(사용자가 설비 대조로 확인 — 시트 H3, 설치현황·실물 H4). 정본은
+       설치현황이지만, 현장 손계산(시트 필터)과 맞춰 볼 때는 시트 기준이 필요하다. -->
+  <div class="slicer"><div class="lbl">관리담당 기준 (국내 알람)</div>
+    <select id="sl-krorg" onchange="onFilt('krOrg',this.value)">
+      <option value="inst">설치현황 기준 (정본)</option>
+      <option value="sheet">알람시트 Site 기준</option>
+    </select></div>
 </div>
 
 <!-- 기간·마감·차트 디자인·PPT 컨트롤은 셸 상단 공통바(#gbar)로 이동 — GST.pageBar 등록부 참조 -->
@@ -520,7 +528,7 @@ let LANG='ko', CHARTS={}, HR=[], WK=[], INST=[], ROSTER=[], LEAVE=[], CIP=[], AB
 /* 기본 필터(구분·고객사·단지·라인·기간)의 «원본»은 GST.filters 다(v90).
    여기 F 는 그 값을 복사해 두는 곳 — 이 페이지의 술어 네 벌(entOk·fINST·okCF·okP)과
    QBR 표·PPT 수집기가 전부 F 를 보고 있어, 원본을 옮기되 읽는 쪽은 그대로 뒀다. */
-const F={region:'',op:'',country:'',customer:'',campus:'',lineRaw:'',team:'',dtFrom:'',dtTo:'',inout:'',krBasis:'occur'};
+const F={region:'',op:'',country:'',customer:'',campus:'',lineRaw:'',team:'',dtFrom:'',dtTo:'',inout:'',krBasis:'occur',krOrg:'inst'};
 function syncCommon(){ const G=GST.filters.F;
   F.region=G.region; F.op=G.op; F.customer=G.customer; F.campus=G.campus; F.lineRaw=G.line; F.team=G.team;
   F.dtFrom=G.dtFrom; F.dtTo=G.dtTo; }
@@ -585,6 +593,7 @@ function updateFiltBadge(){
   if(F.country)P.push(t('sl_country')+': '+F.country);
   if(F.inout)P.push('내/외: '+(F.inout==='out'?'외부·외적만':'전체(내+외)'));
   if(F.krBasis==='fiscal')P.push('월 기준: 시트 정산월');
+  if(F.krOrg==='sheet')P.push('관리담당: 알람시트 기준');
   if(F.customer)P.push(t('sl_customer')+': '+F.customer);
   if(campOn())P.push('단지: '+campList().join(' · '));
   if(F.lineRaw)P.push('라인: '+F.lineRaw);
@@ -594,14 +603,16 @@ function updateFiltBadge(){
   b.style.display='flex';
   b.innerHTML='🔎 '+P.map(x=>'<span class="fchip">'+x+'</span>').join('')+'<button class="fclr" onclick="clearFilt()">✕ 필터 해제</button>';
 }
-window.clearFilt=function(){ F.country='';F.inout='';F.krBasis='occur';GST.filters.clear();syncCommon();
+window.clearFilt=function(){ F.country='';F.inout='';F.krBasis='occur';F.krOrg='inst';GST.filters.clear();syncCommon();
   {const e=document.getElementById('sl-krbasis'); if(e)e.value='occur';}
+  {const e=document.getElementById('sl-krorg'); if(e)e.value='inst';}
   ['sl-country','sl-inout','dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render(); };
 window.clearAllFilters=function(){
-  F.country='';F.inout='';F.krBasis='occur';GST.filters.clear();syncCommon();
+  F.country='';F.inout='';F.krBasis='occur';F.krOrg='inst';GST.filters.clear();syncCommon();
   {const e=document.getElementById('sl-inout'); if(e)e.value='';}
   {const e=document.getElementById('sl-krbasis'); if(e)e.value='occur';}
+  {const e=document.getElementById('sl-krorg'); if(e)e.value='inst';}
   ['dtFrom','dtTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   render();
 };
@@ -1340,9 +1351,15 @@ function render(){
      발생일로 서 있으므로 정산월로 세면 한 차트 안에서 두 축이 섞인다.
      정산 대조가 필요할 때만 sl-krbasis 로 시트 값(fm·fw)으로 바꾼다. */
   const _fromS=from?fmtD(from):'', _toS=F.dtTo?fmtD(anchor):'';
+  /* 「관리담당 기준」 — 단지·라인을 어느 자료에서 읽나. 접근자 두 개 말고는 어디서도
+     srcSite/campus 를 직접 고르지 않는다 — 필터·분해·드릴이 각자 고르면 세 카드가
+     서로 다른 단지를 보여준다. 시트 모드에서도 조인 자체(구분·운영단위·고객사)는
+     설치현황을 쓴다 — 원장에는 그 축이 아예 없다. */
+  const krCampusOf=x=>F.krOrg==='sheet' ? (x.srcSite||x.campus||'') : (x.campus||x.srcSite||'');
+  const krLineOf  =x=>F.krOrg==='sheet' ? (x.srcLine||x.lineN ||'') : (x.lineN ||x.srcLine||'');
   const krOk=x=>(!F.region||x.region===F.region)&&(!F.op||x.op===F.op)
     &&(!F.country||GST.ORG.country(x.op)===F.country)
-    &&(!F.customer||x.custB===F.customer)&&campOk(x.campus)&&lineOk(x.lineN)
+    &&(!F.customer||x.custB===F.customer)&&campOk(krCampusOf(x))&&lineOk(krLineOf(x))
     &&(!_fromS||(x.d&&x.d>=_fromS))&&(!_toS||(x.d&&x.d<=_toS));
   /* 원장에 해외 설비로 조인되는 행이 섞여 들어오면 대만은 «수선실적 BM + 원장» 으로
      이중 계산된다. 이 원장은 국내용이라는 약속이므로, 해외로 판정된 행만 뺀다
@@ -1397,7 +1414,7 @@ function render(){
      분류 열(atype·ctype)로 갈음하지 않는다 — 비면 빈 대로 둔다(빈 칸이 곧 자료가 없다는 사실).
      stage·region 은 드릴 리스트가 실적 행과 한 술어로 거르기 위해 붙인다. */
   const krAsWk=x=>({alarm:x.alarm, phenom:x.phenom, cause:x.cause, action:x.action,
-                    sn:x.sn, line:x.lineN, fab:x.lineN, custB:x.custB, stage:'BM', region:x.region,
+                    sn:x.sn, line:krLineOf(x), fab:krLineOf(x), custB:x.custB, stage:'BM', region:x.region,
                     wd:x.d?new Date(x.d+'T00:00:00Z'):null});
   const fINST=INST.filter(r=>{
     const c=GST.ORG.country(r[CI.country])||guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();
@@ -2045,7 +2062,7 @@ function render(){
                        bk(u,P[i].key).forEach(x=>{ if(x.stage==='BM'&&!(KR_ON&&x.region===_KR)){
                          const g=grpKey(x); m[g]=(m[g]||0)+1; } });
                        if(KR_ON)KRAf.forEach(x=>{ if(krKeyOf(x,u)===P[i].key){
-                         const g=x.campus||x.srcSite||'미상'; m[g]=(m[g]||0)+1; } });
+                         const g=krCampusOf(x)||'미상'; m[g]=(m[g]||0)+1; } });
                        return Object.keys(m).map(g=>({name:g,v:m[g]}));}});
     const hasABP=abp.some(v=>v>0);
     destroyMk('cFt');
@@ -2072,9 +2089,10 @@ function render(){
         + ' · '+(F.krBasis==='fiscal'?'시트 정산월·주차':'발생일')+')'
         + (_krOS? ' · 원장의 해외 설비 '+_krOS.toLocaleString()+'행은 이중 계산을 막으려 뺐습니다':'')
         /* 「왜 내 손계산과 다르지」의 답이 이 숫자다. 시트 Site 와 설치현황 Location 이
-           갈리는 행이 실제로 있다(H3 96건 중 39건이 설치현황상 H4). 조직 축의 정본은
-           설치현황이므로 그대로 따르되, 몇 건을 옮겼는지는 조용히 두지 않는다. */
+           갈리는 행이 실제로 있다(H3 96건 중 39건이 설치현황상 H4). 어느 쪽을 따랐는지와
+           몇 건이 갈리는지를 조용히 두지 않는다 — 기준은 sl-krorg 로 바꿀 수 있다. */
         + (function(){ const n=KRAf.filter(x=>x.srcSite&&x.campus&&x.srcSite!==x.campus).length;
+            if(F.krOrg==='sheet') return ' · 단지·라인은 알람시트 Site 기준'+(n?' (설치현황과 다른 '+n.toLocaleString()+'건 포함)':'');
             return n? ' · 시트 Site 와 설치현황 단지가 다른 '+n.toLocaleString()+'건은 설치현황을 따랐습니다':''; })();
       if(!tot.some(v=>v>0)){
         const _st={}; let _n=0;

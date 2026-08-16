@@ -253,6 +253,19 @@ console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, 
      'report — 분류 열로 갈음하던 옛 매핑이 없다');
   is(/x\.stage==='BM'&&!\(D\.krOn&&x\.region==='국내'\)/.test(RP) && /D\.krBM\|\|\[\]/.test(RP),
      'report — 막대 클릭 리스트가 차트와 같은 모집단(국내=원장·수선실적 국내 BM 제외)');
+  /* 「관리담당 기준」(v94) — 단지·라인을 설치현황/알람시트 어느 쪽으로 셀지 전환.
+     접근자 두 개(krCampusOf·krLineOf) 말고 srcSite·campus 를 직접 고르는 코드가
+     생기면 필터·분해·드릴이 서로 다른 단지를 보여준다. */
+  is(/id="sl-krorg"/.test(RP), 'report — 「관리담당 기준」 칸이 있다');
+  is(/krOrg:'inst'/.test(RP), 'report — 기본은 설치현황 기준 (정본)');
+  is(/const krCampusOf=x=>F\.krOrg==='sheet'/.test(RP) && /const krLineOf\s*=x=>F\.krOrg==='sheet'/.test(RP),
+     'report — 기준 전환이 접근자 두 개 한 곳에서만 갈린다');
+  is(/campOk\(krCampusOf\(x\)\)&&lineOk\(krLineOf\(x\)\)/.test(RP),
+     'report — 원장 필터가 접근자를 지난다');
+  is(/const g=krCampusOf\(x\)\|\|'미상'/.test(RP),
+     'report — 라인별 분해도 같은 접근자를 지난다 (직접 고르면 카드끼리 갈린다)');
+  is(!/const g=x\.campus\|\|x\.srcSite\|\|'미상'/.test(RP),
+     'report — 옛 직접 선택이 되살아나지 않았다');
   { const i=RP.indexOf('GST._KR_COLS');
     is(/'phenom'/.test(fs.readFileSync(ROOT+'/assets/core.js','utf8').match(/GST\._KR_COLS[\s\S]{0,300}?\];/)[0]),
        'core — 조회 열에 phenom(현상)이 있다 (빼면 드릴의 현상 칸만 조용히 빈다)'); }
