@@ -247,8 +247,14 @@ console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, 
   /* 사용자 확정(v94): 표시는 분류(atype·ctype)가 아니라 시트 원문 열 —
      Alarm Message=«Alarm Comment» · 원인=«알람 실제원인» · 조치=«조치내용».
      분류로 갈음하는 코드가 되살아나면 TOP3 가 ROD·TEMP SENSOR 대신 PART·POWDER 를 보여준다. */
-  is(/const krAsWk=x=>\(\{alarm:x\.alarm, phenom:x\.phenom, cause:x\.cause, action:x\.action,/.test(RP),
-     'report — 원장 표시가 원문 열(alarm·cause·action) 그대로다');
+  is(/const krAsWk=x=>\(\{alarm:krMsg\(x\), phenom:x\.phenom, cause:x\.cause, action:x\.action,/.test(RP),
+     'report — 원장 표시가 원문 열(Comment·실제원인·조치내용) 그대로다');
+  /* Alarm Message 는 시트에 반드시 값이 있는 자리다(실측 P·H 공란 0 · K 는 249행이
+     Comment 대신 「알람」 열에만 있다). 셋 다 비면 그건 시트가 아니라 적재 문제다. */
+  is(/const krMsg=x=>\(x\.alarm\|\|''\)\.trim\(\)\|\|\(x\.alarmName\|\|''\)\.trim\(\)\|\|\(x\.atype\|\|''\)\.trim\(\)/.test(RP),
+     'report — Comment → 알람 → 대분류 순으로 내려간다 (미기재가 나오면 적재 문제다)');
+  is(/'alarm_name'/.test(fs.readFileSync(ROOT+'/assets/core.js','utf8').match(/GST\._KR_COLS[\s\S]{0,400}?\];/)[0]),
+     'core — 조회 열에 alarm_name 이 있다 (없으면 K 249행이 미기재로 보인다)');
   is(!/alarm:x\.atype/.test(RP) && !/cause:x\.cause\|\|x\.ctype/.test(RP),
      'report — 분류 열로 갈음하던 옛 매핑이 없다');
   is(/x\.stage==='BM'&&!\(D\.krOn&&x\.region==='국내'\)/.test(RP) && /D\.krBM\|\|\[\]/.test(RP),
