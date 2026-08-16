@@ -272,6 +272,15 @@ console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, 
      'report — 원장이 비면 「수선실적으로 세는 중」이라고 차트에 밝힌다');
   is(/\/upload\/ 에서 알람 시트를 올리면/.test(RP),
      'report — 무엇을 하면 되는지까지 적는다 (증상만 알리면 사용자가 코드를 의심한다)');
+  /* 업로드가 «두 반쪽»이라는 사실을 사용자가 알아서 기억하게 두지 않는다.
+     실측 사고: 올바만 5,068행 올라가고 sheet_alarm 은 0행인 채로 지냈다. */
+  { const UP = fs.readFileSync(ROOT+'/upload/index.html','utf8');
+    is(/pair:'sheet_allbypass'/.test(UP) && /pair:'sheet_alarm'/.test(UP),
+       'upload — 알람·올바가 서로를 짝으로 선언한다');
+    is(/짝 표 「'\+t\.pairLabel\+'」 가 <b>0행<\/b>/.test(UP),
+       'upload — 검사 화면이 짝 표가 비었음을 붉게 알린다');
+    is(/⚠ 아직 반쪽입니다/.test(UP),
+       'upload — 완료 뒤에도 남은 반쪽을 알린다 (끝난 줄 알고 돌아가지 않게)'); }
   is(/id="sl-krorg"/.test(RP), 'report — 「관리담당 기준」 칸이 있다');
   is(/krOrg:'inst'/.test(RP), 'report — 기본은 설치현황 기준 (정본)');
   is(/const krCampusOf=x=>F\.krOrg==='sheet'/.test(RP) && /const krLineOf\s*=x=>F\.krOrg==='sheet'/.test(RP),
