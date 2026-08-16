@@ -469,9 +469,20 @@ body.theme-light .mselbox{background:#fff}
 .slicer{position:relative}
 /* 사이드바 안에서는 카드 외형을 벗으므로 버튼도 폭을 채운다 */
 .gst-sidebar .mselbtn{width:100% !important;min-width:0 !important}
+.mselbtn{display:flex;align-items:center;justify-content:space-between;gap:8px}
 /* 사이드바 본문은 overflow-y:auto 라 떠 있는 박스가 잘린다. 안에서는 «펼쳐지는» 목록으로
    바꿔 아래 칸을 밀어낸다 — 잘리지 않고 사이드바 스크롤을 그대로 탄다. */
 .gst-sidebar .mselbox{position:static;width:100%;margin-top:6px;box-shadow:none;max-height:220px}
+
+/* ⚠ 사이드바는 「.slicer input {width:100% !important}」 로 날짜·검색 칸을 늘린다.
+   그 규칙이 체크박스까지 잡아 **체크박스 하나가 182px** 이 되고, 글자가 반대편 끝으로
+   밀려 «줄마다 네모 하나, 저 멀리 글자 하나» 인 표가 됐다. 여기서 되돌린다. */
+.mselbox input[type=checkbox]{width:14px !important;height:14px;min-width:0 !important;
+  flex:0 0 auto;margin:0;accent-color:var(--accent,#22d3a6);cursor:pointer}
+/* 줄 전체가 누르는 자리다 — 좁은 네모만 겨냥하지 않게. 셀렉트 칸과 같은 리듬으로 맞춘다. */
+.mselbox label{justify-content:flex-start;padding:6px 8px;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mselbox label:has(input:checked){background:var(--glass);font-weight:600}
 
 /* 공통 필터와 페이지 고유 필터를 가르는 선 — 어디까지가 공통인지 눈에 보이게 */
 .slicer-div{border-top:1px solid var(--glass-border);margin:2px 0 0;padding-top:10px;

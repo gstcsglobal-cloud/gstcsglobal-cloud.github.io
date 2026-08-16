@@ -1562,22 +1562,30 @@ GST.mselFill = function(id, values, sel, onChange){
   if(!box.dataset.built || box.dataset.keys !== values.join('\u001f')){
     box.dataset.built = '1'; box.dataset.keys = values.join('\u001f');
     GST._msel = GST._msel || {};
-    GST._msel[id] = { sel: sel, cb: onChange };
+    GST._msel[id] = { sel: sel, cb: onChange, values: values };
     box.innerHTML =
       '<div class="ms-all"><button type="button" data-all="1">' + (GST._lang()==='ko'?'전체 선택':'All')
       + '</button><button type="button" data-all="0">' + (GST._lang()==='ko'?'전체 해제':'None') + '</button></div>'
       + values.map(function(v){
           return '<label><input type="checkbox" data-v="' + GST._esc(v) + '">' + GST._esc(v) + '</label>';
         }).join('');
+    /* ⚠ 핸들러는 «지금의» Set·콜백을 GST._msel 에서 꺼내 쓴다. 클로저로 붙들면
+       호출자가 Set 을 새로 만든 순간(예: 저장본 복원) 클릭이 옛 Set 으로 들어가
+       **화면이 아무 반응도 안 한다** — 에러도 경고도 없다. 실제로 겪었다:
+       주간현황은 mount 를 5번 부르는데 그때마다 Set 이 새로 만들어져,
+       첫 항목만 체크되고 두 번째부터 먹지 않았다. */
     box.onclick = function(e){
+      const st = (GST._msel && GST._msel[id]) || { sel: sel, cb: onChange };
+      const cur = st.sel, cb = st.cb, vs = st.values || values;
       const a = e.target.closest('[data-all]');
-      if(a){ sel.clear(); if(a.dataset.all === '1') values.forEach(function(v){ sel.add(v); });
-             GST.mselSync(id, values, sel); onChange && onChange(); return; }
+      if(a){ cur.clear(); if(a.dataset.all === '1') vs.forEach(function(v){ cur.add(v); });
+             GST.mselSync(id, vs, cur); cb && cb(); return; }
       const c = e.target.closest('input[data-v]');
-      if(c){ if(c.checked) sel.add(c.dataset.v); else sel.delete(c.dataset.v);
-             GST.mselSync(id, values, sel); onChange && onChange(); }
+      if(c){ if(c.checked) cur.add(c.dataset.v); else cur.delete(c.dataset.v);
+             GST.mselSync(id, vs, cur); cb && cb(); }
     };
-  } else if(GST._msel && GST._msel[id]) { GST._msel[id].sel = sel; GST._msel[id].cb = onChange; }
+  } else if(GST._msel && GST._msel[id]) { GST._msel[id].sel = sel; GST._msel[id].cb = onChange;
+    GST._msel[id].values = values; }
   GST.mselSync(id, values, sel);
 };
 GST.mselSync = function(id, values, sel){
@@ -2511,7 +2519,10 @@ GST.filters = (function(){
   function load(){
     try{ const o=JSON.parse(localStorage.getItem(KEY)||'{}');
       Object.keys(F).forEach(function(k){
-        if(MULTI[k]){ if(Array.isArray(o[k])) F[k]=new Set(o[k]); return; }
+        /* Set 을 새로 만들지 않는다 — 다중선택 박스가 이 객체를 들고 있어서,
+           갈아끼우면 그때부터 체크가 옛 Set 으로 들어가 화면이 안 움직인다.
+           페이지가 mount 를 여러 번 부르면(주간현황은 5번) 반드시 그 상태가 된다. */
+        if(MULTI[k]){ if(Array.isArray(o[k])){ F[k].clear(); o[k].forEach(function(v){ F[k].add(v); }); } return; }
         if(typeof o[k]==='string') F[k]=o[k];
       });
     }catch(e){}

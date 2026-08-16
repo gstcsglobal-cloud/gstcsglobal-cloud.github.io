@@ -12,6 +12,10 @@ const CSV={ '646668307':'csv_wk.csv', '31302669':'csv_mat.csv', '891608329':'csv
   '2123129719':'csv_cip11.csv', '1999732389':'csv_cip16.csv' };
 
 const PAGES=[
+  /* 주간현황은 픽스처가 다 없어도(교육·인원·휴가·ABP·알람) 실적+설치만으로 뜬다.
+     빠져 있던 동안 «단지 다중선택이 두 번째부터 안 먹는» 결함이 여기서만 났고
+     아무 검사도 그걸 못 봤다 — 이 페이지는 mount 를 5번 부른다. */
+  {f:'report/index.html',   name:'주간현황'},
   {f:'fault/index.html',    name:'고장현황'},
   {f:'material/index.html', name:'자재현황'},
   {f:'pm/index.html',       name:'PM점검'},
@@ -98,12 +102,29 @@ for(const P of PAGES){
       msel = await page.evaluate(()=>{
         const box=document.getElementById('gf-campusBox');
         const r=box.getBoundingClientRect();
+        const cb=box.querySelector('input[data-v]');
         return { shown: getComputedStyle(box).display!=='none',
                  w:Math.round(r.width), h:Math.round(r.height),
                  inView: r.top < innerHeight && r.bottom > 0 && r.left < innerWidth && r.right > 0,
-                 n: box.querySelectorAll('input[data-v]').length };
+                 n: box.querySelectorAll('input[data-v]').length,
+                 // 체크박스가 폭을 다 먹으면 글자가 반대편 끝으로 밀린다(사이드바의 input{width:100%})
+                 cbw: cb?Math.round(cb.getBoundingClientRect().width):0 };
       });
-      msel.ok = msel.shown && msel.w>0 && msel.h>0 && msel.inView && msel.n>0;
+      /* ⚠ 「열리는지」만 보면 안 된다. 실제로 겪은 결함은 «첫 항목은 체크되는데 두 번째가
+         안 먹는» 것이었다 — 박스를 만든 뒤 페이지가 mount 를 다시 부르면서 Set 이 새
+         객체로 바뀌어, 클릭이 옛 Set 으로 들어가고 있었다. 에러는 하나도 안 났다.
+         그래서 «두 개를 눌러 둘 다 남는지»까지 본다. */
+      const vs = await page.$$eval('#gf-campusBox input[data-v]', a=>a.map(i=>i.dataset.v));
+      if(vs.length>=2){
+        for(const v of [vs[0], vs[1]]){
+          await page.click(`#gf-campusBox input[data-v="${v}"]`).catch(()=>{});
+          await page.waitForTimeout(350);
+        }
+        msel.picked = await page.evaluate(()=>[...GST.filters.F.campus]);
+        msel.multi = msel.picked.length===2 && msel.picked.includes(vs[0]) && msel.picked.includes(vs[1]);
+      } else msel.multi = null;     // 값이 하나뿐인 자료는 다중선택을 확인할 수 없다
+      msel.ok = msel.shown && msel.w>0 && msel.h>0 && msel.inView && msel.n>0
+                && msel.cbw>0 && msel.cbw<40 && msel.multi!==false;
     }
   }
 
@@ -120,7 +141,9 @@ for(const P of PAGES){
   }); else console.log('   ', sm);
   console.log(`    KPI 표시값: ${kpi.join(' | ')||'(없음)'}`);
   if(msel) console.log('    단지 다중선택: ' + (msel.skip ? msel.skip
-    : (msel.ok?'열림':'❌ 안 열림') + ` (${msel.w}×${msel.h}px · 항목 ${msel.n} · 화면안 ${msel.inView})`));
+    : (msel.ok?'정상':'❌ 결함') + ` (박스 ${msel.w}×${msel.h}px · 화면안 ${msel.inView}`
+      + ` · 체크박스 ${msel.cbw}px · 항목 ${msel.n}`
+      + ` · 둘 고르기 ${msel.multi===null?'해당없음':(msel.multi?'됨 ['+msel.picked.join(',')+']':'❌ 안 됨 ['+(msel.picked||[]).join(',')+']')})`));
   if(errs.length) console.log('    에러:', errs.slice(0,4).join(' // '));
   await ctx.close();
 }
