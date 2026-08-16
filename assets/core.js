@@ -1082,11 +1082,24 @@ GST.SM.SPEC.abp2 = { name:'국내 올바이패스', scan:8,
     checker:'확인자'
   }};
 
-/* 주간현황이 국내 알람·올바이패스에서 실제로 쓰는 열. 두 표가 같은 이름을 쓰므로 한 벌이면 된다.
-   ⚠ checker(담당자·확인자)는 «일부러» 뺐다 — 실명이고 화면이 안 쓴다. */
-GST._KR_COLS = ['src_row','sn_key','sn','occur_date','fmonth','fweek','cnt',
-                'site','line','atype','ctype','alarm','alarm_name','cause','action','phenom',
-                'op','seq','inout','incl'];
+/* 주간현황이 국내 알람·올바이패스에서 실제로 쓰는 열.
+   ⚠ checker(담당자·확인자)는 «일부러» 뺐다 — 실명이고 화면이 안 쓴다.
+
+   ⚠⚠ **두 표는 열이 다르다 — 한 벌로 공유하면 안 된다.** 실제로 그랬고, 그래서
+   `sheet_alarm` 읽기가 «column sheet_alarm.seq does not exist» 로 매번 통째로 실패했다.
+   PostgREST 는 select 목록에 없는 열이 하나라도 있으면 **전체를 거부한다** — 그 열만
+   비는 게 아니다. 그 실패가 KRA=[] 로 떨어지고, 원장이 «비었다»고 판정돼 국내가 조용히
+   수선실적 BM 으로 계산됐다. 표에 있는 열만 요청한다:
+     seq        — 올바이패스에만 (한 사건이 Seq 1·2·3 세 줄인 H 때문에 필요하다)
+     alarm_name — 알람에만 (K 249행이 Alarm Comment 대신 「알람」 열에 적혀 있다)
+   `tests/t-alarm.mjs` 가 setup-10-alarm.sql 의 실제 컬럼과 대조해 다시 어긋나는 것을 막는다. */
+GST._KR_COLS_BASE = ['src_row','sn_key','sn','occur_date','fmonth','fweek','cnt',
+                     'site','line','atype','ctype','alarm','cause','action','phenom',
+                     'op','inout','incl'];
+GST._KR_COLS_A = GST._KR_COLS_BASE.concat(['alarm_name']);   // sheet_alarm
+GST._KR_COLS_B = GST._KR_COLS_BASE.concat(['seq']);          // sheet_allbypass
+// 옛 이름 — 남은 호출자가 있어도 «둘 다에 있는 열»만 받아 안전하게 동작한다
+GST._KR_COLS = GST._KR_COLS_BASE;
 
 GST.ALARM = {
   /* 설비 S/N 조인 키. 표기가 사이트마다 다르다 — SBW0527 · DBW-1177S · GBWS-3738L.

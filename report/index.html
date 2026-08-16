@@ -1171,8 +1171,8 @@ async function loadData(){
       /* 화면이 쓰는 열«만» 받는다 — 44열 × 2만 행을 통째로 받을 이유가 없고,
          원장에 든 작업자 실명(checker)을 브라우저까지 보내지 않는다.
          src_row 는 정렬용이라 반드시 포함한다(없으면 페이지 경계에서 행이 겹친다). */
-      GST.csvTableRows('sheet_alarm',     GST._KR_COLS),
-      GST.csvTableRows('sheet_allbypass', GST._KR_COLS)
+      GST.csvTableRows('sheet_alarm',     GST._KR_COLS_A),
+      GST.csvTableRows('sheet_allbypass', GST._KR_COLS_B)
     ]);
     /* ⚠ 원장이 비면 옛 경로(수선실적 BM)로 조용히 돌아간다 — 그래야 올리기 전에도 화면이
        0 이 되지 않는다. 그런데 «조용히» 가 문제였다: 사용자는 원장 기준으로 보고 있다고

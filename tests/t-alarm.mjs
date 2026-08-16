@@ -253,8 +253,8 @@ console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, 
      Comment 대신 「알람」 열에만 있다). 셋 다 비면 그건 시트가 아니라 적재 문제다. */
   is(/const krMsg=x=>\(x\.alarm\|\|''\)\.trim\(\)\|\|\(x\.alarmName\|\|''\)\.trim\(\)\|\|\(x\.atype\|\|''\)\.trim\(\)/.test(RP),
      'report — Comment → 알람 → 대분류 순으로 내려간다 (미기재가 나오면 적재 문제다)');
-  is(/'alarm_name'/.test(fs.readFileSync(ROOT+'/assets/core.js','utf8').match(/GST\._KR_COLS[\s\S]{0,400}?\];/)[0]),
-     'core — 조회 열에 alarm_name 이 있다 (없으면 K 249행이 미기재로 보인다)');
+  is(/GST\._KR_COLS_A = GST\._KR_COLS_BASE\.concat\(\['alarm_name'\]\)/.test(fs.readFileSync(ROOT+'/assets/core.js','utf8')),
+     'core — 알람 표만 alarm_name 을 받는다 (없으면 K 249행이 미기재로 보인다)');
   is(!/alarm:x\.atype/.test(RP) && !/cause:x\.cause\|\|x\.ctype/.test(RP),
      'report — 분류 열로 갈음하던 옛 매핑이 없다');
   is(/x\.stage==='BM'&&!\(D\.krOn&&x\.region==='국내'\)/.test(RP) && /D\.krBM\|\|\[\]/.test(RP),
@@ -272,6 +272,46 @@ console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, 
      'report — 원장이 비면 「수선실적으로 세는 중」이라고 차트에 밝힌다');
   is(/\/upload\/ 에서 알람 시트를 올리면/.test(RP),
      'report — 무엇을 하면 되는지까지 적는다 (증상만 알리면 사용자가 코드를 의심한다)');
+  /* ⚠⚠ 조회 열 목록 ↔ 실제 표 컬럼 대조. PostgREST 는 select 에 없는 열이 하나라도 있으면
+     **전체를 거부한다** — 그 열만 비는 게 아니다. 실제 사고: 두 표가 조회 열을 한 벌로
+     공유해 sheet_alarm 이 «column sheet_alarm.seq does not exist» 로 매번 통째로 실패했고,
+     원장이 «비었다»고 판정돼 국내가 조용히 수선실적 BM 으로 계산됐다.
+     여기서 DDL 을 직접 읽어 대조하므로, 열이 갈리면 즉시 실패한다. */
+  { const SQL = fs.readFileSync(ROOT+'/supabase/setup-10-alarm.sql','utf8');
+    const CORE2 = fs.readFileSync(ROOT+'/assets/core.js','utf8');
+    const colsOf = (t) => {
+      const m = new RegExp('create table if not exists public\\.'+t+'\\s*\\(([\\s\\S]*?)\\n\\);').exec(SQL);
+      if(!m) return null;
+      const out = new Set();
+      m[1].split('\n').forEach(line => {
+        line.replace(/--.*$/,'').split(',').forEach(part => {
+          const nm = part.trim().split(/\s+/)[0];
+          if(/^[a-z_][a-z0-9_]*$/.test(nm)) out.add(nm);
+        });
+      });
+      return out;
+    };
+    const listOf = (name) => {
+      const m = new RegExp('GST\\.'+name+'\\s*=\\s*GST\\._KR_COLS_BASE\\.concat\\(\\[([^\\]]*)\\]\\)').exec(CORE2);
+      const base = /GST\._KR_COLS_BASE\s*=\s*\[([\s\S]*?)\];/.exec(CORE2);
+      const parse = t => t.split(',').map(x=>x.trim().replace(/^'|'$/g,'')).filter(Boolean);
+      return parse(base?base[1]:'').concat(m?parse(m[1]):[]);
+    };
+    const A = colsOf('sheet_alarm'), B = colsOf('sheet_allbypass');
+    is(!!A && !!B, 'setup-10 에서 두 표의 컬럼 목록을 읽었다');
+    [['_KR_COLS_A','sheet_alarm',A],['_KR_COLS_B','sheet_allbypass',B]].forEach(([n,t,set])=>{
+      const want = listOf(n);
+      const bad = want.filter(c => set && !set.has(c));
+      is(want.length>10 && !bad.length,
+         n+' 의 열이 전부 '+t+' 에 있다'+(bad.length?' — 없는 열: '+bad.join(', '):''));
+    });
+    // 음성 대조 — 옛 «한 벌 공유»가 되살아나면 이 둘 중 하나는 반드시 깨진다
+    is(/GST\._KR_COLS_A\)/.test(fs.readFileSync(ROOT+'/report/index.html','utf8')) &&
+       /GST\._KR_COLS_B\)/.test(fs.readFileSync(ROOT+'/report/index.html','utf8')),
+       'report — 표마다 자기 열 목록으로 읽는다 (한 벌 공유가 아니다)');
+    is(/seq\s+— 올바이패스에만/.test(CORE2) && /alarm_name\s+— 알람에만/.test(CORE2),
+       'core — 왜 갈라야 하는지가 주석에 남아 있다'); }
+
   /* 업로드가 «두 반쪽»이라는 사실을 사용자가 알아서 기억하게 두지 않는다.
      실측 사고: 올바만 5,068행 올라가고 sheet_alarm 은 0행인 채로 지냈다. */
   { const UP = fs.readFileSync(ROOT+'/upload/index.html','utf8');
