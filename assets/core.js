@@ -1085,7 +1085,7 @@ GST.SM.SPEC.abp2 = { name:'국내 올바이패스', scan:8,
 /* 주간현황이 국내 알람·올바이패스에서 실제로 쓰는 열. 두 표가 같은 이름을 쓰므로 한 벌이면 된다.
    ⚠ checker(담당자·확인자)는 «일부러» 뺐다 — 실명이고 화면이 안 쓴다. */
 GST._KR_COLS = ['src_row','sn_key','sn','occur_date','fmonth','fweek','cnt',
-                'site','line','atype','ctype','alarm','cause','action','op','seq','inout','incl'];
+                'site','line','atype','ctype','alarm','cause','action','phenom','op','seq','inout','incl'];
 
 GST.ALARM = {
   /* 설비 S/N 조인 키. 표기가 사이트마다 다르다 — SBW0527 · DBW-1177S · GBWS-3738L.

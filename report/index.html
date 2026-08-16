@@ -282,7 +282,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   <h3 data-i="tbl_top">고장 원인 TOP 3</h3><div class="mini-per" data-ch="top3" style="top:16px"></div>
   <div class="tbl-wrap">
   <table>
-    <thead><tr><th>#</th><th data-i="th_al">주요 알람유형</th><th data-i="th_cnt" style="white-space:nowrap">건수</th><th data-i="th_cause">원인</th><th data-i="th_act">조치</th></tr></thead>
+    <thead><tr><th>#</th><th data-i="th_al">Alarm Message</th><th data-i="th_cnt" style="white-space:nowrap">건수</th><th data-i="th_cause">원인</th><th data-i="th_act">조치</th></tr></thead>
     <tbody id="top3Body"><tr><td colspan="5" class="empty">—</td></tr></tbody>
   </table>
   </div>
@@ -452,7 +452,7 @@ ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 �
  ch_pc:'인당 작업 건수',note_pc:'구간 내 실제 투입 인원 기준',
  ch_sc:'PM 계획 대비 완료 (올해 누적)',note_sc:'계획 = 설비별 주기 기반 도래 건수 · 진행율은 툴팁',sc_plan:'계획(누적)',sc_done:'완료(누적)',
  ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',pv_stage:'작업단계',pv_sn:'설비 S/N',pv_s_ft:'고장 (BM·수리)',pv_s_wk:'작업 실적 (전체)',pv_s_hr:'인원',pv_s_io:'입·퇴사',pv_join:'입사',pv_quit:'퇴사',pv_active:'재직',ft_total:'건수',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
- tbl_top:'고장 원인 TOP 3',th_cause:'원인',th_cnt:'건수',th_al:'주요 알람유형',th_act:'조치',top_more:'외 {n}종',top_etc:'기타 {n}건 · 알람유형 미기재 {m}건',top_var:'(표기 {n}종 묶음)',
+ tbl_top:'고장 원인 TOP 3',th_cause:'원인',th_cnt:'건수',th_al:'Alarm Message',th_act:'조치',top_more:'외 {n}종',top_etc:'기타 {n}건 · 알람유형 미기재 {m}건',top_var:'(표기 {n}종 묶음)',
  top_alfb:'* 알람유형(Z열) 미기재 — 현상(AA열)으로 표기',
  tbl_op:'Scrubber 가동 현황',note_op:'가동 = Turn-On 완료 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 = 사이트별 설정(셀 ✎ 클릭 · 기본 40) · PM = 해당 구간 TBM · 마감일 기준',op_corp:'법인',op_div:'구분',op_run_u:'가동 장비 대수',op_run_c:'가동 챔버수',op_idle:'미가동',op_staff:'담당 인원(명)',op_to:'목표 TO',op_gap:'증감(명)',op_hire:'모집계획',op_chp:'인당 챔버',op_pm:'PM(건)',op_unit:'장비',op_ch:'챔버',op_expat:'주재원',op_local:'현채인',op_fit:'적정 챔버',op_need:'인원(명)',
  ins_pm:'올해 PM 진행율 {p}% (계획 {a} · 완료 {b})',ins_ft:'최근 30일 고장 {n}건 · 직전 30일 대비 {p}',ins_hc:'재직 {n}명 · 이번 달 입사 {a} · 퇴사 {b}',
@@ -470,7 +470,7 @@ en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, traini
  ch_pc:'Jobs per Person',note_pc:'based on workers actually deployed in period',
  ch_sc:'PM Plan vs Done (YTD cumulative)',note_sc:'plan = due events from per-tool cycles · progress in tooltip',sc_plan:'Plan (cum)',sc_done:'Done (cum)',
  ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',pv_stage:'Stage',pv_sn:'Equipment S/N',pv_s_ft:'Faults (BM)',pv_s_wk:'All work records',pv_s_hr:'Headcount',pv_s_io:'Join / Leave',pv_join:'Join',pv_quit:'Leave',pv_active:'Active',ft_total:'Count',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
- tbl_top:'Top 3 Fault Causes',th_cause:'Cause',th_cnt:'Count',th_al:'Main Alarm Type',th_act:'Action',top_more:'+{n} more',top_etc:'others {n} · alarm blank {m}',top_var:'({n} variants)',
+ tbl_top:'Top 3 Fault Causes',th_cause:'Cause',th_cnt:'Count',th_al:'Alarm Message',th_act:'Action',top_more:'+{n} more',top_etc:'others {n} · alarm blank {m}',top_var:'({n} variants)',
  top_alfb:'* alarm type blank (col Z) — showing symptom (col AA)',
  tbl_op:'Scrubber Operation Status',note_op:'running = Turn-On done · chamber DUAL=2·SINGLE=1 · fit chambers/person editable per site (click ✎ · default 40) · PM = TBM in period · as of cutoff',op_corp:'Entity',op_div:'Site',op_run_u:'Running Units',op_run_c:'Running Chambers',op_idle:'Idle',op_staff:'Staff',op_to:'Target TO',op_gap:'Gap',op_hire:'Hiring',op_chp:'Ch/person',op_pm:'PM',op_unit:'Units',op_ch:'Chambers',op_expat:'Expat',op_local:'Local',op_fit:'Fit ch.',op_need:'Headcount',
  ins_pm:'YTD PM progress {p}% (plan {a} · done {b})',ins_ft:'{n} faults in 30d · {p} vs prev 30d',ins_hc:'{n} active · joined {a} · left {b} this month',
@@ -488,7 +488,7 @@ zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇
  ch_pc:'人均作业件数',note_pc:'按区间内实际投入人员',
  ch_sc:'PM计划 vs 完成(今年累计)',note_sc:'计划=按设备周期到期件数 · 进度见提示框',sc_plan:'计划(累计)',sc_done:'完成(累计)',
  ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',pv_stage:'作业阶段',pv_sn:'设备S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全部作业记录',pv_s_hr:'人员',pv_s_io:'入职·离职',pv_join:'入职',pv_quit:'离职',pv_active:'在职',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
- tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'主要报警类型',th_act:'措施',top_more:'其他{n}种',top_etc:'其他 {n}件 · 报警类型未填 {m}件',top_var:'({n}种写法合并)',
+ tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'Alarm Message',th_act:'措施',top_more:'其他{n}种',top_etc:'其他 {n}件 · 报警类型未填 {m}件',top_var:'({n}种写法合并)',
  top_alfb:'* 报警类型(Z列)未填 — 显示现象(AA列)',
  tbl_op:'Scrubber 运行现况',note_op:'运行=Turn-On完成 · 腔体 DUAL=2·SINGLE=1 · 人均适定腔体可按站点修改(点✎ · 默认40) · PM=该区间TBM · 截止日基准',op_corp:'法人',op_div:'区分',op_run_u:'运行设备台数',op_run_c:'运行腔体数',op_idle:'未运行',op_staff:'负责人员(名)',op_to:'目标 TO',op_gap:'增减(名)',op_hire:'招聘计划',op_chp:'人均腔体',op_pm:'PM(件)',op_unit:'设备',op_ch:'腔体',op_expat:'驻在员',op_local:'当地雇员',op_fit:'适定腔体',op_need:'人员(名)',
  ins_pm:'今年PM进度 {p}% (计划 {a} · 完成 {b})',ins_ft:'近30天故障 {n}件 · 环比 {p}',ins_hc:'在职 {n}名 · 本月入职 {a} · 离职 {b}',
@@ -506,7 +506,7 @@ ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サ
  ch_pc:'一人当たり作業件数',note_pc:'区間内の実投入人員基準',
  ch_sc:'PM計画対完了(今年累計)',note_sc:'計画=設備別周期の到来件数 · 進捗はツールチップ',sc_plan:'計画(累計)',sc_done:'完了(累計)',
  ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',pv_stage:'作業段階',pv_sn:'設備S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全作業記録',pv_s_hr:'人員',pv_s_io:'入社·退社',pv_join:'入社',pv_quit:'退社',pv_active:'在籍',ft_total:'件数',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
- tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'主なアラーム種別',th_act:'対応',top_more:'他{n}種',top_etc:'その他 {n}件 · アラーム種別未記入 {m}件',top_var:'({n}表記まとめ)',
+ tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'Alarm Message',th_act:'対応',top_more:'他{n}種',top_etc:'その他 {n}件 · アラーム種別未記入 {m}件',top_var:'({n}表記まとめ)',
  top_alfb:'* アラーム種別(Z列)未記入 — 現象(AA列)で表示',
  tbl_op:'Scrubber 稼働現況',note_op:'稼働=Turn-On完了 · チャンバー DUAL=2·SINGLE=1 · 適正チャンバーはサイト別に編集可(✎クリック · 既定40) · PM=当該区間TBM · 締め日基準',op_corp:'法人',op_div:'区分',op_run_u:'稼働設備台数',op_run_c:'稼働チャンバー数',op_idle:'未稼働',op_staff:'担当人員(名)',op_to:'目標 TO',op_gap:'増減(名)',op_hire:'採用計画',op_chp:'一人当たり',op_pm:'PM(件)',op_unit:'設備',op_ch:'チャンバー',op_expat:'駐在員',op_local:'現地採用',op_fit:'適正チャンバー',op_need:'人員(名)',
  ins_pm:'今年PM進捗 {p}% (計画 {a} · 完了 {b})',ins_ft:'直近30日故障 {n}件 · 前30日比 {p}',ins_hc:'在籍 {n}名 · 今月入社 {a} · 退社 {b}',
@@ -734,7 +734,7 @@ function krParse(rows){
              seq:g(r,'seq'), inout:g(r,'inout'), incl:g(r,'incl'),
              srcSite:g(r,'site'), srcLine:g(r,'line'),
              atype:g(r,'atype'), ctype:g(r,'ctype'), alarm:g(r,'alarm'),
-             cause:g(r,'cause'), action:g(r,'action'), op0:g(r,'op') };
+             cause:g(r,'cause'), action:g(r,'action'), phenom:g(r,'phenom'), op0:g(r,'op') };
   });
 }
 /* 조직 축은 설비 S/N 으로 설치현황에서 가져온다 — 원장에 담아 두면 설치현황이
@@ -1391,10 +1391,14 @@ function render(){
     return KRAf.filter(x=>x.d&&x.d>=a&&x.d<b); };
   const bmN =(st,en)=>wkBM (st,en).length + krIn (st,en).length;
   const bmNx=(st,en)=>wkBMx(st,en).length + krInX(st,en).length;
-  /* 원장 행을 실적 행의 «모양»으로 맞춘다 — TOP3 표가 알람유형·원인·조치 세 열을 그대로 쓴다.
-     원장의 atype(PRESSURE·FLAME…)이 실적의 알람유형과 같은 자리다. */
-  const krAsWk=x=>({alarm:x.atype, phenom:'', cause:x.cause||x.ctype, action:x.action,
-                    sn:x.sn, line:x.lineN, wd:x.d?new Date(x.d+'T00:00:00Z'):null});
+  /* 원장 행을 실적 행의 «모양»으로 맞춘다 — TOP3 표·막대 클릭 리스트가 이 모양을 쓴다.
+     사용자 확정(v94): 표시는 분류가 아니라 시트의 원문 열 그대로 —
+     Alarm Message = «Alarm Comment» · 원인 = «알람 실제원인» · 조치 = «조치내용».
+     분류 열(atype·ctype)로 갈음하지 않는다 — 비면 빈 대로 둔다(빈 칸이 곧 자료가 없다는 사실).
+     stage·region 은 드릴 리스트가 실적 행과 한 술어로 거르기 위해 붙인다. */
+  const krAsWk=x=>({alarm:x.alarm, phenom:x.phenom, cause:x.cause, action:x.action,
+                    sn:x.sn, line:x.lineN, fab:x.lineN, custB:x.custB, stage:'BM', region:x.region,
+                    wd:x.d?new Date(x.d+'T00:00:00Z'):null});
   const fINST=INST.filter(r=>{
     const c=GST.ORG.country(r[CI.country])||guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();
     if(F.region&&GST.ORG.region(r[CI.country])!==F.region)return false;
@@ -2242,7 +2246,8 @@ function render(){
   }
   // 드릴다운용 데이터·구간 스냅샷 (표시 계층 전용, 계산 무관)
   {const per={}; ['cFt','cMan','cAtt','cHc','cCareer','cIo'].forEach(id=>{try{per[id]=PU(id).P;}catch(e){}});
-   window._DRILL={fWK,fHR,fLV,headOn,SITES,grpKey,per,activeAt};}
+   window._DRILL={fWK,fHR,fLV,headOn,SITES,grpKey,per,activeAt,
+     krOn:KR_ON, krBM:KR_ON?KRAf.map(krAsWk):[]};}
   // KPI 스파크라인 (최근 12구간 추세 · 계산 무관 표시용)
   try{ const SP=periods(12,asOf,PERIOD), wdv=(PERIOD==='m')?21:5;
     drawSpark('sp1',SP.map(p=>headOn(p.end)),'#3B82F6');
@@ -2423,7 +2428,11 @@ function onDrill(evt,els,chart){
   if(id==='cIo')return drillIo(p);
 }
 function drillFault(p){ const D=window._DRILL;
-  const rows=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&x.stage==='BM').sort((a,b)=>b.wd-a.wd);
+  /* 차트 막대(alarmAt)와 «같은 모집단»이어야 한다 — 국내는 원장(krBM), 국내 수선실적 BM 은
+     이중 계산이라 뺀다. 이 리스트만 fWK 전체를 보면 막대 높이와 목록 건수가 갈린다(실제로 그랬다). */
+  const rows=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&x.stage==='BM'&&!(D.krOn&&x.region==='국내'))
+    .concat((D.krBM||[]).filter(x=>x.wd&&x.wd>=p.st&&x.wd<=p.end))
+    .sort((a,b)=>b.wd-a.wd);
   const _dk=x=>x.cause||x.alarm||x.phenom;   // TOP3 표와 동일한 대체 순서
   const _dm=GST.causeMap(rows.map(_dk), LANG);
   const by={}; rows.forEach(x=>{const raw=(_dk(x)||'').trim();
@@ -2432,7 +2441,7 @@ function drillFault(p){ const D=window._DRILL;
   let h='<div class="dsum"><div class="b"><span class="n">'+rows.length+'</span><span class="l">BM 고장 건수</span></div></div>';
   if(top.length)h+='<table><thead><tr><th>원인/알람</th><th class="num">건수</th></tr></thead><tbody>'+top.map(e=>'<tr><td>'+esc(e[0])+'</td><td class="num">'+e[1]+'</td></tr>').join('')+'</tbody></table>';
   // 상세 열 순서 = 시트 열 순서(Z 알람유형 · AA 현상 · AB 원인 · AC 조치)
-  h+='<div class="dhint">최근순 상세 (최대 40건)</div><table><thead><tr><th>일자</th><th>라인</th><th>알람유형</th><th>현상</th><th>원인</th><th>조치</th></tr></thead><tbody>'
+  h+='<div class="dhint">최근순 상세 (최대 40건)</div><table><thead><tr><th>일자</th><th>라인</th><th>Alarm Message</th><th>현상</th><th>원인</th><th>조치</th></tr></thead><tbody>'
     +(rows.length?rows.slice(0,40).map(x=>'<tr><td>'+_md(x.wd)+'</td><td>'+esc(x.fab||x.custB)+'</td><td>'+esc(x.alarm)+'</td><td>'+esc(x.phenom)+'</td><td>'+esc(x.cause)+'</td><td>'+esc(x.action)+'</td></tr>').join(''):'<tr><td colspan="6" style="text-align:center;color:var(--txt-muted)">고장 없음</td></tr>')+'</tbody></table>';
   showDrill('고장 상세 · '+p.label,h);
 }

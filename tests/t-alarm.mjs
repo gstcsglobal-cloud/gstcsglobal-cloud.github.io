@@ -244,6 +244,18 @@ console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, 
      'report — 「내/외」 칸이 세 선택지로 있다');
   is(/F\.inout===''/.test(RP) || /return GST\.ALARM\.inner\(x\);/.test(RP),
      'report — 기본값은 내부·내적 (집계 대상)');
+  /* 사용자 확정(v94): 표시는 분류(atype·ctype)가 아니라 시트 원문 열 —
+     Alarm Message=«Alarm Comment» · 원인=«알람 실제원인» · 조치=«조치내용».
+     분류로 갈음하는 코드가 되살아나면 TOP3 가 ROD·TEMP SENSOR 대신 PART·POWDER 를 보여준다. */
+  is(/const krAsWk=x=>\(\{alarm:x\.alarm, phenom:x\.phenom, cause:x\.cause, action:x\.action,/.test(RP),
+     'report — 원장 표시가 원문 열(alarm·cause·action) 그대로다');
+  is(!/alarm:x\.atype/.test(RP) && !/cause:x\.cause\|\|x\.ctype/.test(RP),
+     'report — 분류 열로 갈음하던 옛 매핑이 없다');
+  is(/x\.stage==='BM'&&!\(D\.krOn&&x\.region==='국내'\)/.test(RP) && /D\.krBM\|\|\[\]/.test(RP),
+     'report — 막대 클릭 리스트가 차트와 같은 모집단(국내=원장·수선실적 국내 BM 제외)');
+  { const i=RP.indexOf('GST._KR_COLS');
+    is(/'phenom'/.test(fs.readFileSync(ROOT+'/assets/core.js','utf8').match(/GST\._KR_COLS[\s\S]{0,300}?\];/)[0]),
+       'core — 조회 열에 phenom(현상)이 있다 (빼면 드릴의 현상 칸만 조용히 빈다)'); }
 }
 
 console.log('\n' + (fail ? '❌ t-alarm ' + fail + ' 실패 / ' + (pass+fail) : '✅ t-alarm ' + pass + '/' + pass));
