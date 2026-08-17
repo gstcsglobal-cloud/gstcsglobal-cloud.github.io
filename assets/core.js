@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 97;
+GST.VER = 98;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1760,13 +1760,63 @@ GST.SM.panel = function(){
   document.body.appendChild(wrap);
 };
 
-// 오프라인 캐시: 마지막 정상 데이터를 localStorage에 보관
+/* 오프라인 캐시: 마지막 정상 데이터를 보관 (localStorage — 작은 표 전용)
+
+   ⚠ 여기는 «큰 표에서는 항상 실패»한다. localStorage 한도가 5~10MB 인데 수선실적은
+     JSON 으로 374MB 다(실측 257,606행). setItem 이 QuotaExceededError 를 던지고
+     아래 catch 가 그걸 삼킨다 — 캐시가 없는 것과 같은데 아무 흔적이 없다.
+     큰 표는 GST.idb(IndexedDB) 로 간다. 이 함수는 시트 경로 폴백용으로 남는다. */
 GST.cacheSave=function(key,rows){
-  try{ localStorage.setItem('gstc_'+key, JSON.stringify({t:Date.now(),rows})); }catch(e){}
+  try{ localStorage.setItem('gstc_'+key, JSON.stringify({t:Date.now(),rows})); }
+  catch(e){ GST._cacheQuota=(GST._cacheQuota||0)+1; }   // 조용히 버리지 않고 세어 둔다
 };
 GST.cacheLoad=function(key){
   try{ return JSON.parse(localStorage.getItem('gstc_'+key)||'null'); }catch(e){ return null; }
 };
+
+/* ---------- 9-a. IndexedDB 행 캐시 (v101) ----------
+   왜 필요한가. 미러 경로는 캐시를 «아예 안 봤다» — cacheLoad 는 시트 경로가 실패했을
+   때만 불린다. 그래서 새로고침할 때마다 수선 257,606행을 다시 받아 다시 파싱했다
+   (전송은 gzip 으로 17MB 지만 푼 JSON 은 374MB 다 — 느림의 실체는 이쪽이다).
+
+   무효화는 «시각»이 아니라 **미러의 synced_at + 행수**로 한다. 나이로 자르면
+   ① 안 바뀐 데이터를 버리거나 ② 바뀐 데이터를 계속 쓴다. 적재 시각이 같으면 내용도
+   같다는 것은 sheet_sync_log 가 보증하는 사실이다.
+
+   ⚠ 실패해도 «조용히» 넘어가지 않는다. IndexedDB 가 막힌 환경(시크릿 창 등)에서는
+     그냥 매번 받게 되는데, 그 사실을 _srcNote 에 남겨 「왜 느린지」를 알 수 있게 한다. */
+GST.idb=(function(){
+  const NAME='gst_rows', STORE='rows'; let dbp=null;
+  function open(){
+    if(dbp) return dbp;
+    dbp=new Promise(function(res,rej){
+      if(typeof indexedDB==='undefined') return rej(new Error('NO_IDB'));
+      const rq=indexedDB.open(NAME,1);
+      rq.onupgradeneeded=function(){ const d=rq.result;
+        if(!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE); };
+      rq.onsuccess=function(){ res(rq.result); };
+      rq.onerror=function(){ rej(rq.error||new Error('IDB_OPEN')); };
+    });
+    return dbp;
+  }
+  function tx(mode,fn){
+    return open().then(function(d){ return new Promise(function(res,rej){
+      const t=d.transaction(STORE,mode), s=t.objectStore(STORE);
+      let out; const r=fn(s); if(r) r.onsuccess=function(){ out=r.result; };
+      t.oncomplete=function(){ res(out); };
+      t.onerror=function(){ rej(t.error||new Error('IDB_TX')); };
+      t.onabort =function(){ rej(t.error||new Error('IDB_ABORT')); };
+    }); });
+  }
+  return {
+    get:function(k){ return tx('readonly', function(s){ return s.get(k); })
+                       .catch(function(){ return null; }); },
+    set:function(k,v){ return tx('readwrite', function(s){ return s.put(v,k); })
+                         .then(function(){ return true; })
+                         .catch(function(e){ GST._idbErr=String(e&&e.message||e).slice(0,80); return false; }); },
+    del:function(k){ return tx('readwrite', function(s){ return s.delete(k); }).catch(function(){}); }
+  };
+})();
 /* ---------- 9-b. Supabase 미러 읽기 (v77) ----------
    구글시트 셀 한도에 걸려 조회를 DB로 옮긴다. 페이지는 한 곳도 고치지 않는다 —
    `fetchCSVCached(url, key)`의 시그니처와 **2차원 배열 반환**을 그대로 지키고
@@ -1830,6 +1880,18 @@ GST.dbRows = async function(table){
   else if(ageMin > 180 && lg.data.ms !== -1) GST._dbWarn(table, '미러가 '+Math.round(ageMin/60)+'시간째 갱신되지 않았습니다');
   GST._dbAge = Math.max(GST._dbAge||0, ageMin);
 
+  /* ── 행 캐시 (v101) ────────────────────────────────────────────────────
+     적재 시각과 행수가 같으면 내용도 같다 — sheet_sync_log 가 보증하는 사실이다.
+     그러면 한 바이트도 받지 않는다. 예전에는 이 자리가 없어서, 새로고침할 때마다
+     25만 행을 다시 받아 다시 파싱했다(푼 JSON 374MB). 캐시는 «시트 경로가 실패했을
+     때»만 읽히고 있었고, 게다가 localStorage 한도를 넘어 저장 자체가 늘 실패했다. */
+  const stamp = table+'|'+lg.data.synced_at+'|'+want;
+  const hit = await GST.idb.get('rows:'+table);
+  if(hit && hit.stamp === stamp && Array.isArray(hit.rows) && hit.rows.length === want+1){
+    GST._idbHit = (GST._idbHit||0)+1;
+    return hit.rows;
+  }
+
   /* 페이지네이션. PostgREST는 한 번에 돌려주는 행수에 상한이 있고 그 값은 프로젝트 설정이다.
      그래서 "요청한 만큼 안 왔으면 끝"으로 판정하면 안 된다 — 상한에 걸린 것을 완료로 착각해
      조용히 잘린 데이터를 그린다. **받은 만큼만 전진하고 0행일 때 멈춘다.** */
@@ -1876,6 +1938,9 @@ GST.dbRows = async function(table){
     for(let j=0;j<cols.length;j++){ const v=o[cols[j]]; r[j] = (v==null?'':String(v)); }
     rows[i+1] = r;
   }
+  /* 다음 로드를 위해 담아 둔다. 저장 실패(용량·시크릿 창)는 «느려질 뿐» 틀리지 않으므로
+     막지 않는다 — 다만 왜 느린지 알 수 있게 흔적은 남긴다(GST._idbErr). */
+  GST.idb.set('rows:'+table, {stamp:stamp, rows:rows, t:Date.now()});
   return rows;
 };
 
@@ -2050,7 +2115,11 @@ GST._srcChip = function(){
   const bad = sh + ca;
   el.style.background = bad ? '#78350f' : '#064e3b';
   el.style.color      = bad ? '#fde68a' : '#a7f3d0';
-  el.textContent = '출처 DB '+db + (sh?' · 시트 '+sh:'') + (ca?' · 캐시 '+ca:'');
+  /* 캐시가 실제로 먹었는지 보이게 한다. 안 보이면 «왜 느린지»를 아무도 못 묻는다. */
+  el.textContent = '출처 DB '+db + (sh?' · 시트 '+sh:'') + (ca?' · 캐시 '+ca:'')
+    + (GST._idbHit?' · 재사용 '+GST._idbHit:'')
+    + (GST._idbErr?' · ⚠ 캐시 저장 실패':'');
+  if(GST._idbErr) el.title = 'IndexedDB: '+GST._idbErr+' — 매번 다시 받습니다';
 };
 
 // 캐시 폴백 로드: 성공 시 저장, 실패 시 캐시로 대체 (cached/ageMin 플래그 반환)
