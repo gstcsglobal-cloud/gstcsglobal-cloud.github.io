@@ -146,7 +146,7 @@ const lc = (s) => String(s ?? '').trim().toLowerCase();
    줄바꿈을 품고 있어 lc()로는 정확일치가 아예 불가능하다.
    값 정규화(nfw/upk)와는 별개다 — 데이터 값에까지 이 규칙을 쓰면 필터가 깨진다.
    SPEC-SYNC: 정본은 assets/core.js GST.SM.norm — 셋(core.js·hr.js·sheet-write)이 같아야 한다. */
-const hnorm = (s) =>
+export const hnorm = (s) =>
   String(s ?? '').replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
     .replace(/　/g, ' ').replace(/[\s.·()[\]{}/\\_-]/g, '').toLowerCase();
 // 이름 하나 이상과 정규화 정확일치. 부분일치를 쓰지 않아 '입사일'이 '재입사일'을 잡지 않는다.
@@ -471,7 +471,7 @@ export function findEquip(installRows, query) {
    통과한 뒤 엉뚱한 열을 읽는 가장 위험한 조합이었다 — 이제 찾은 헤더에서 이름으로 해석한다.
    수선실적은 헤더 67개·정규화 후 중복 0이라 평면 매칭으로 충분하다(실측 확인).
    SPEC-SYNC: assets/core.js GST.SM.SPEC.wk 와 같은 이름을 써야 한다. */
-const FAULT_SPEC = {
+export const FAULT_SPEC = {
   customer: '고객사', campus: '단지', line: '라인', bay: 'BAY', proc: '공정',
   model: 'MODEL(자사)', rsCode: '실적코드', stage: '작업단계', sn: 'S/N(IN)',
   pf: '유/무상', alarm: '알람유형', phenom: '현상', cause: '원인', action: '조치',

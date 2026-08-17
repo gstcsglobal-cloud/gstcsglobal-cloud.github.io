@@ -18,7 +18,7 @@ import {
   isoW, buildEduIndex, eduPlan, parseRoster, parseEdu, parseFaultRecords,
   parseCIP, cipProgress, parseLeave, parseInstall, parsePeriod, reviveDates, SITE_KEYS,
   filterEquipment, filterFaults, filterPeople, filterLeave, filterPeopleByEdu,
-  groupCount, groupAccessor, grpKey,
+  groupCount, groupAccessor, grpKey, FAULT_SPEC, hnorm,
 } from "./hr.js";
 
 const CORS = {
@@ -169,11 +169,9 @@ const DIGEST: Record<string, (csv: string, now: Date) => unknown> = {
   roster: (csv) => parseRoster(csv),
   edu: (csv) => parseEdu(csv),
   equipment: (csv) => parseInstall(csv),
-  faults: (csv, now) => {
-    // ★ v9: 180일 → 730일(2년)로 확대
-    const cut = new Date(now); cut.setUTCDate(cut.getUTCDate() - 730);
-    return parseFaultRecords(csv).filter((r: any) => r.start && r.start >= cut);
-  },
+  /* faults 는 여기 없다 — v97 부터 캐시하지 않고 질문할 때 queryFaults 로 직접 읽는다.
+     되살리지 말 것: 수선실적 257,606행을 통째로 담다가 워커가 메모리 한도로 죽었고,
+     sync 순서상 뒤였던 leave·cip 까지 3일간 같이 멈췄다. */
   leave: (csv) => parseLeave(csv),  // 전체 저장 — 날짜 필터는 조회 시 Claude가 판단
 };
 
@@ -209,7 +207,10 @@ async function syncOne(svc: any, key: string, now: Date) {
 }
 
 async function syncAll(svc: any, now: Date, only?: string[]) {
-  const keys = only?.length ? only : ["roster", "edu", "equipment", "faults", "leave", "cip"];
+  /* faults 를 빼는 것이 핵심이다(v97). 넣어 두면 워커가 거기서 죽고, 뒤에 오는
+     leave·cip 은 «시도조차 안 된 채» 옛 시각으로 남는다 — 에러도 안 남는다. */
+  const keys = (only?.length ? only : ["roster", "edu", "equipment", "leave", "cip"])
+    .filter((k) => k !== "faults");
   const out = [];
   for (const k of keys) out.push(await syncOne(svc, k, now));
   return out;
@@ -233,6 +234,122 @@ const rowsOf = (c: Record<string, Cache>, key: string) =>
 
 const stalest = (c: Record<string, Cache>) =>
   Object.values(c).map((x) => x.fetched_at).sort()[0] ?? null;
+
+/* ============================================================
+   2-b. 고장 실적은 «캐시하지 않는다» — 질문할 때 표에서 필요한 행만 읽는다 (v97)
+
+   왜. bot_cache 는 «표 전체를 JSON 덩어리로» 담는 구조다. 수선실적이 17,091행에서
+   257,606행으로 늘자(2025 156,297 · 2026 100,806) 워커가 메모리 한도에 걸려 죽었다 —
+   실측 응답코드 546. 그리고 faults 는 sync 순서상 leave·cip «앞»이라, 죽으면 뒤의 둘도
+   같이 안 갱신된다. 워커가 죽으면 catch 가 못 도니 bot_cache.error 는 비어 있고,
+   fetched_at 만 3일 전에 멈춘다 — 화면에는 아무 단서가 없다(실제로 그렇게 지냈다).
+
+   기간을 자르는 것으로는 못 막는다: 올해만 100,806건이다. 규모가 또 늘면 같은 벽이다.
+
+   ⚠ 컬럼 이름을 여기 적지 않는다 — 스펙의 «네 번째 사본»이 된다(CLAUDE.md 제2원칙).
+      sheet_colmap 이 «시트 머리글 → DB 컬럼»을 주고, 어떤 머리글이 필요한지는
+      hr.js 의 FAULT_SPEC 이 정한다.
+   ⚠ 레코드를 여기서 다시 만들지도 않는다 — 받은 행을 «시트 모양 CSV»로 되살려
+      parseFaultRecords 에 그대로 먹인다. 두 벌이면 캐시 시절과 숫자가 갈린다.
+   ============================================================ */
+const FAULT_CAP = 40000;        // 이 이상은 자르고 «잘랐다»고 답변에 밝힌다
+const FAULT_DEFAULT_DAYS = 90;  // 질문이 기간을 안 밝혔을 때의 기본 창
+
+type FaultQ = {
+  rows: any[]; total: number; used: number; truncated: boolean;
+  from: string; to: string; spoken: boolean; ms: number;
+};
+
+async function queryFaults(svc: any, filters: any, now: Date): Promise<FaultQ> {
+  const t = Date.now();
+  const cm = await svc.from("sheet_colmap").select("col,headers").eq("tbl", "wk");
+  if (cm.error) throw new Error("COLMAP " + cm.error.message);
+  if (!cm.data?.length) throw new Error("COLMAP_MISSING wk");
+  const colOf = new Map<string, string>();
+  for (const r of cm.data) for (const h of (r.headers ?? [])) colOf.set(hnorm(h), r.col);
+
+  const heads: string[] = [], cols: string[] = [], miss: string[] = [];
+  for (const head of Object.values(FAULT_SPEC) as string[]) {
+    const c = colOf.get(hnorm(head));
+    if (!c) { miss.push(head); continue; }
+    heads.push(head); cols.push(c);
+  }
+  /* 못 찾은 열을 조용히 넘기지 않는다. parseFaultRecords 의 행 게이트(작업단계·작업시작일)에
+     걸려 «0건»이 되는데, 그것은 화면에서 «고장이 없다»로 읽힌다. */
+  if (miss.length) throw new Error("NO_COL wk: " + miss.join(","));
+
+  const dCol = colOf.get(hnorm(FAULT_SPEC.dStart))!;
+  const stCol = colOf.get(hnorm(FAULT_SPEC.stage))!;
+  const snCol = colOf.get(hnorm(FAULT_SPEC.sn))!;
+
+  let from: Date, to: Date, spoken = false;
+  const p = filters?.periodText ? parsePeriod(filters.periodText, now) : null;
+  if (p) { from = p.from; to = p.to; spoken = true; }
+  else { to = now; from = new Date(now.getTime() - FAULT_DEFAULT_DAYS * 86400000); }
+  const d10 = (d: Date) => d.toISOString().slice(0, 10);
+
+  /* 날짜 컬럼은 text 다(미러는 전부 text 로 시작한다 — 값 하나가 이상해도 적재가 안 죽게).
+     값이 'YYYY-MM-DD' 로 시작하므로 사전순 비교가 곧 날짜 비교다. to 쪽에 '~' 를 붙이는 것은
+     시각이 붙은 행('2026-08-14 13:28:32')도 그 날에 포함시키기 위해서다 — '~' 는 아스키에서
+     숫자·공백·콜론보다 크다. */
+  const cond = (q: any) => {
+    q = q.gte(dCol, d10(from)).lte(dCol, d10(to) + "~");
+    if (filters?.category) q = q.eq(stCol, filters.category);
+    if (filters?.sn) q = q.ilike(snCol, "%" + filters.sn + "%");
+    return q;
+  };
+
+  const cnt = await cond(svc.from("sheet_wk").select(dCol, { count: "exact", head: true }));
+  if (cnt.error) throw new Error("COUNT " + cnt.error.message);
+  const total = cnt.count ?? 0;
+  const take = Math.min(total, FAULT_CAP);
+
+  const all: Record<string, unknown>[] = [];
+  const STEP = 5000;
+  for (let f = 0; f < take; f += STEP) {
+    const r = await cond(svc.from("sheet_wk").select(cols.join(",")))
+      .order(dCol, { ascending: false })            // 잘릴 때 «최근»이 남아야 한다
+      .range(f, Math.min(f + STEP, take) - 1);
+    if (r.error) throw new Error("READ " + r.error.message);
+    if (!r.data?.length) break;
+    for (const o of r.data) all.push(o);
+  }
+  const rows = parseFaultRecords(rowsToCsv(heads, cols, all));
+  return { rows, total, used: rows.length, truncated: total > FAULT_CAP,
+           from: d10(from), to: d10(to), spoken, ms: Date.now() - t };
+}
+
+/* 조회 범위를 «답변이 서는 근거»로 남긴다. 조용히 자르면 그 답은 거짓말이 된다 —
+   그리고 무엇을 하면 되는지(기간을 좁혀라)까지 적는다. */
+function faultNote(f: FaultQ | null, err: string | null) {
+  if (err) return `[고장 실적] 조회 실패: ${err}\n이 답에 고장 데이터는 반영되지 않았습니다.`;
+  if (!f) return "";
+  const win = `[고장 실적 조회 범위] ${f.from} ~ ${f.to}`
+    + (f.spoken ? "" : ` (질문에 기간이 없어 최근 ${FAULT_DEFAULT_DAYS}일)`);
+  return f.truncated
+    ? `${win} · 조건에 맞는 ${f.total.toLocaleString()}건 중 최근 ${f.used.toLocaleString()}건만 사용했습니다.`
+      + ` 이 답의 건수는 실제보다 적습니다 — 기간을 좁혀 다시 물어봐 주세요.`
+    : `${win} · ${f.used.toLocaleString()}건 전부 사용`;
+}
+
+/* loadCache 를 감싼다 — faults 만 표에서 직접 읽어 끼워 넣는다.
+   두 입구(카톡·웹)와 메뉴가 «같은 함수»를 쓰게 해 둔다. 한쪽만 고치면
+   「카톡은 되는데 웹은 옛 데이터」가 된다(제2원칙). */
+async function loadCacheLive(svc: any, keys: string[], filters: any, now: Date) {
+  const want = keys.includes("faults");
+  const cache = await loadCache(svc, keys.filter((k) => k !== "faults"));
+  if (!want) return cache;
+  try {
+    const f = await queryFaults(svc, filters ?? {}, now);
+    cache["faults"] = { data: f.rows, fetched_at: new Date().toISOString(), note: faultNote(f, null) } as any;
+  } catch (e) {
+    const msg = String((e as Error).message).slice(0, 200);
+    console.error("queryFaults", msg);
+    cache["faults"] = { data: [], fetched_at: new Date().toISOString(), note: faultNote(null, msg) } as any;
+  }
+  return cache;
+}
+const faultsNoteOf = (c: Record<string, Cache>) => (c["faults"] as any)?.note ?? "";
 
 /* ============================================================
    3. 인증
@@ -847,7 +964,10 @@ ${stamp}`;
     }
     const topLines = Object.entries(lineCount).sort((a,b) => b[1]-a[1]).slice(0, 10).map(([k,v]) => `${k}: ${v}건`).join("\n");
     const stamp = stamp_fn(cache);
-    const text = `${site || "전체"} BM 현황 (전체기간) · 총 ${bm.length}건\n\n라인별:\n${topLines || "데이터 없음"}\n${stamp}`;
+    /* 예전 라벨은 «전체기간»이었다. v97 부터 고장은 캐시가 아니라 조회라 그 말이
+       사실이 아니게 됐다 — 실제 범위를 그대로 적는다(조용히 좁아지는 것이 가장 나쁘다). */
+    const span = faultsNoteOf(cache).replace(/^\[고장 실적 조회 범위\]\s*/, "") || "전체기간";
+    const text = `${site || "전체"} BM 현황 · 총 ${bm.length}건\n(${span})\n\n라인별:\n${topLines || "데이터 없음"}\n${stamp}`;
     return { payload: quickReply(text, ["이번주", "이번달", "올해", "메뉴"]) };
   }
 
@@ -917,7 +1037,11 @@ Deno.serve(async (req) => {
         return new Response("forbidden", { status: 403, headers: CORS });
       const only = (url.searchParams.get("key") || "").split(",").map((s) => s.trim()).filter(Boolean);
       const result = await syncAll(svc, new Date(), only);
-      return json({ ok: true, took_ms: Date.now() - t0, result });
+      /* key=faults 로 불렀는데 조용히 빈 결과를 주면 «돌았는데 안 들어갔다»로 읽힌다.
+         왜 안 도는지를 응답에 적는다(v97 — 고장은 캐시하지 않는다). */
+      const note = only.includes("faults")
+        ? "faults 는 캐시하지 않습니다(v97) — 질문할 때 sheet_wk 를 직접 읽습니다." : undefined;
+      return json({ ok: true, took_ms: Date.now() - t0, result, note });
     }
 
     // ── 웹 대시보드 챗봇 ─────────────────────────────────────────────
@@ -955,7 +1079,7 @@ Deno.serve(async (req) => {
         ...(datasets.includes("faults") ? ["equipment"] : []),
       ])];
 
-      const cache = await loadCache(svc, cacheKeys);
+      const cache = await loadCacheLive(svc, cacheKeys, route?.filters ?? {}, now);
       if (!Object.keys(cache).length || Object.values(cache).every((c) => !c.data)) {
         (globalThis as any).EdgeRuntime?.waitUntil?.(syncAll(svc, now));
         return json({ answer: "데이터를 처음 불러오는 중입니다. 30초쯤 뒤에 다시 물어봐 주세요." });
@@ -964,7 +1088,9 @@ Deno.serve(async (req) => {
       if (at && Date.now() - new Date(at).getTime() > FRESH_MS)
         (globalThis as any).EdgeRuntime?.waitUntil?.(syncAll(svc, now, cacheKeys));
 
-      const dataContext = serializeData(datasets, cache, route?.filters ?? {}, now);
+      // 고장 조회 범위(또는 잘림·실패)를 맨 앞에 붙인다 — 근거 없는 숫자를 만들지 않게
+      const _fn = faultsNoteOf(cache);
+      const dataContext = (_fn ? _fn + "\n\n" : "") + serializeData(datasets, cache, route?.filters ?? {}, now);
       const answer = await analyzeForWeb(q, dataContext, screen, cacheStampStr(cache), history);
 
       try {
@@ -1029,7 +1155,10 @@ Deno.serve(async (req) => {
       const menuState = menuEnabled && convState?.phase === "menu" ? convState : null;
       const menuResult = await handleMenu(
         svc, botUserKey, utterance, menuState,
-        (keys) => loadCache(svc, keys),
+        /* 메뉴도 같은 경로를 쓴다 — 여기만 loadCache 로 두면 「BM 사이트별」 만 옛 캐시를
+           보게 되고, 그 캐시는 v97 부터 아예 갱신되지 않는다. 메뉴에는 기간 개념이 없어
+           기본 창(최근 90일)으로 조회되며, 그 사실은 답변 머리에 붙는다. */
+        (keys) => loadCacheLive(svc, keys, {}, now),
         now, cacheStampStr
       );
       if (menuResult) return menuResult;
@@ -1072,7 +1201,7 @@ Deno.serve(async (req) => {
         ...(datasets.includes("faults") ? ["equipment"] : []),
       ])];
 
-      const cache = await loadCache(svc, cacheKeys);
+      const cache = await loadCacheLive(svc, cacheKeys, route.filters ?? {}, now);
 
       if (!Object.keys(cache).length || Object.values(cache).every((c) => !c.data)) {
         (globalThis as any).EdgeRuntime?.waitUntil?.(syncAll(svc, now));
@@ -1084,8 +1213,9 @@ Deno.serve(async (req) => {
       if (at && Date.now() - new Date(at).getTime() > FRESH_MS)
         (globalThis as any).EdgeRuntime?.waitUntil?.(syncAll(svc, now, cacheKeys));
 
-      // Step 3: 데이터 직렬화
-      const dataContext = serializeData(datasets, cache, route.filters ?? {}, now);
+      // Step 3: 데이터 직렬화 (고장 조회 범위를 맨 앞에)
+      const _fn = faultsNoteOf(cache);
+      const dataContext = (_fn ? _fn + "\n\n" : "") + serializeData(datasets, cache, route.filters ?? {}, now);
       const stamp = cacheStampStr(cache);
 
       // Step 4: Claude가 직접 분석+답변
