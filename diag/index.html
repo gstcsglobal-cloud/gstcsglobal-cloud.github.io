@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S/N 조인 진단 · GST CS Global</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{color:var(--txt,#e6edf7);background:var(--bg-gradient,linear-gradient(-45deg,#16163a,#1e1d4d,#232057,#131230));
+  background-size:400% 400%;min-height:100vh;padding:24px 28px;font-family:Pretendard,system-ui,sans-serif}
+h1{font-size:20px;font-weight:800;margin-bottom:4px}
+.sub{font-size:12px;color:var(--mut,#8a97a5);margin-bottom:20px;line-height:1.7;max-width:900px}
+.card{background:var(--glass,rgba(255,255,255,.05));border:1px solid var(--glassb,rgba(255,255,255,.1));
+  border-radius:16px;padding:18px 20px;margin-bottom:14px;max-width:980px}
+.card h3{font-size:14px;margin-bottom:6px}
+.card .note{font-size:11.5px;color:var(--mut,#8a97a5);margin-bottom:12px;line-height:1.7}
+.btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:10px 22px;
+  background:linear-gradient(90deg,var(--a1,#38bdf8),var(--a2,#34d399));color:#fff}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+a.back{color:var(--mut,#8a97a5);font-size:12px;text-decoration:none}
+a.back:hover{color:var(--txt,#e6edf7)}
+#log{font-size:12.5px;line-height:1.9;white-space:pre-wrap;word-break:break-all}
+.ok{color:#34d399}.warn{color:#fbbf24}.bad{color:#fb7185}.mut{color:var(--mut,#8a97a5)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+th{text-align:left;padding:9px 10px;color:var(--mut,#8a97a5);font-size:10px;text-transform:uppercase;
+  letter-spacing:1px;border-bottom:1px solid var(--glassb,rgba(255,255,255,.1));white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.05);white-space:nowrap}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.tot td{border-top:1px solid var(--glassb,rgba(255,255,255,.16));font-weight:700}
+.shape{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--mut,#8a97a5)}
+.big{font-size:15px;font-weight:800}
+</style>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
+</head>
+<body>
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
+
+<h1>S/N 조인 진단</h1>
+<div class="sub">
+  실적(수선·자재)을 설치현황에 붙일 때 <b>표기 차이 때문에 몇 건이나 놓치고 있는지</b> 셉니다.<br>
+  현장 표기가 기본 꼴에서 두 방향으로 벗어납니다 — ① 하이픈을 빼고 적는 사이트가 있고(<span class="shape">SBW-0000</span> ↔ <span class="shape">SBW0000</span>),
+  ② 꼬리에 챔버 문자가 붙습니다(<span class="shape">-S</span> 싱글 · <span class="shape">-L</span>/<span class="shape">-R</span> 듀얼 좌·우).<br>
+  <b>이 화면은 읽기만 합니다.</b> 아무것도 바꾸지 않고, 화면의 다른 숫자에도 영향을 주지 않습니다.
+  <a class="back" href="https://gstcsglobal-cloud.github.io">← 대시보드로</a>
+</div>
+
+<div class="card">
+  <h3>진행</h3>
+  <div id="log">불러오는 중…</div>
+  <button class="btn" id="goBtn" onclick="runDiag()" disabled style="margin-top:12px">다시 검사</button>
+</div>
+
+<div class="card" id="resCard" style="display:none">
+  <h3>표기 규칙별 조인 결과</h3>
+  <div class="note">
+    「현재 규칙」은 지금 화면들이 쓰는 방식입니다(공백만 지우고 대문자로).
+    ①·②는 <b>규칙만 바꿨을 때 새로 붙는</b> 행입니다 — 데이터를 고치는 게 아니라 맞추는 방식을 바꾸는 것입니다.
+  </div>
+  <div id="res"></div>
+</div>
+
+<div class="card" id="shapeCard" style="display:none">
+  <h3>어떤 꼴이 안 붙었나</h3>
+  <div class="note">
+    실제 번호는 찍지 않습니다 — 숫자를 <span class="shape">#</span> 로 가려 «꼴»만 보여 줍니다.
+    이 화면을 그대로 캡처해 공유해도 설비 번호가 새지 않습니다.
+  </div>
+  <div id="shapes"></div>
+</div>
+
+<div class="card" id="floorCard" style="display:none">
+  <h3>조인은 됐는데 층(Floor)을 못 얻은 경우</h3>
+  <div class="note">
+    화면의 「미상」에는 <b>세 가지가 섞여</b> 있습니다 — ⑴ 설치현황에 그 설비가 아예 없음,
+    ⑵ 표기가 달라 못 붙음(위 표), ⑶ <b>붙긴 했는데 설치현황의 층 칸이 비었거나 층 표기가 아님</b>.
+    ⑶은 S/N 문제가 아니라 <b>설치현황의 빈칸 문제</b>라 대응이 다릅니다.
+  </div>
+  <div id="floors"></div>
+</div>
+
+<script>
+if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — 경로를 확인하세요</div>');throw new Error('GST core missing');}
+/* 이 화면은 GST.ORG.instIndex · GST.ALARM.key/keyBase · GST.SM.map 에 기댄다(전부 v98 이전 API).
+   99 를 박지 않는 이유 — 근거 없는 배너는 «또 뭐가 잘못됐나»로 읽힌다. */
+GST.needVer && GST.needVer(98);
+
+/* gid 를 실어 나르는 URL. GST.fetchCSVCached 가 gid 를 보고 미러 표(sheet_wk·mat·inst)로 가고,
+   실패하면 이 시트 주소로 폴백한다 — 그래서 «지금 화면들이 보는 것과 같은 데이터»다. */
+const WK_URL  ='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
+const MAT_URL ='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
+const INST_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
+
+const $=id=>document.getElementById(id);
+function logLine(cls,msg){ const el=$('log'); if(el.textContent==='불러오는 중…')el.textContent='';
+  el.insertAdjacentHTML('beforeend','<div class="'+(cls||'')+'">'+msg+'</div>'); }
+
+/* 세 규칙. 이름을 앱과 같게 두어 «어느 규칙이 무엇을 흡수하는지»가 눈으로 보이게 한다.
+   cur 는 GST.ORG.instIndex 가 지금 쓰는 것과 «같은 식»이어야 한다 — 여기만 다르면
+   이 화면이 «현재 조인율»을 틀리게 말한다(그게 가장 나쁜 실패다). */
+const cur =s=>String(s==null?'':s).replace(/\s+/g,'').toUpperCase();
+const key =s=>GST.ALARM.key(s);        // 영숫자만 — 하이픈 유무를 흡수
+const base=s=>GST.ALARM.keyBase(s);    // 거기에 꼬리 문자(L/R/S)까지 제거
+// 숫자를 가려 꼴만 남긴다. 이 화면을 캡처해 공유해도 설비 번호가 새지 않는다.
+const mask=s=>String(s==null?'':s).replace(/\d/g,'#');
+
+async function grab(url,cacheKey,label){
+  const r=await GST.fetchCSVCached(url,cacheKey);
+  if(!r||!r.rows||!r.rows.length) throw new Error(label+' 데이터를 받지 못했습니다');
+  if(r.cached) logLine('warn','• '+label+' — 캐시본입니다('+(r.ageMin||'?')+'분 전). 최신이 아닐 수 있습니다.');
+  return r.rows;
+}
+
+/* 설치현황 색인 — 같은 시트를 세 규칙으로 각각 담는다. 시트를 바꾸는 게 아니라
+   «맞추는 방식»만 바꿔 견주는 것이므로, 이 대조가 곧 답이다.
+   ⚠ 첫 행 우선(instIndex 와 같은 규율). 뒤 행으로 덮으면 같은 키에 다른 답이 나온다. */
+function buildIX(rows){
+  const m=GST.SM.map(rows, GST.SM.SPEC.inst), C=m.C, hi=m.hi>=0?m.hi:0;
+  const IX={cur:{code:new Set(),sn:new Set()},key:{code:new Set(),sn:new Set()},base:{code:new Set(),sn:new Set()}};
+  const flo={cur:new Map(),key:new Map(),base:new Map()};
+  let n=0, noFloor=0;
+  rows.slice(hi+1).forEach(r=>{
+    const sn=r[C.sn], cd=C.code>=0?r[C.code]:'';
+    if(!String(sn||'').trim() && !String(cd||'').trim()) return;
+    n++;
+    // 층은 GST.ORG.floor 가 «층 표기»가 아니면 떨어뜨린다 — 붙어도 미상이 되는 경로다
+    const fl=C.floor>=0?GST.ORG.floor(r[C.floor]):'';
+    if(!fl) noFloor++;
+    [['cur',cur],['key',key],['base',base]].forEach(([k,f])=>{
+      const s=f(sn), c=f(cd);
+      if(s){ IX[k].sn.add(s);   if(!flo[k].has('S'+s)) flo[k].set('S'+s,fl); }
+      if(c){ IX[k].code.add(c); if(!flo[k].has('C'+c)) flo[k].set('C'+c,fl); }
+    });
+  });
+  return {IX,flo,n,noFloor,collapse:IX.key.sn.size-IX.base.sn.size};
+}
+
+/* 실적 한 벌을 세 규칙으로 훑는다.
+   ⚠ code/sn 접근자는 화면과 «같은 열·같은 폴백»이어야 한다:
+     수선 = 설비호기(eqNo) → S/N(IN)(snIn)              [fault]
+     자재 = 설비호기(eq) 없으면 메인설비호기(mainEq) → S/N(sn)  [material]
+   폴백을 빼거나 순서를 뒤집으면 이 화면이 실제보다 나쁜(또는 좋은) 숫자를 낸다. */
+function probe(rows, spec, pick){
+  const m=GST.SM.map(rows, spec), C=m.C, hi=m.hi>=0?m.hi:0;
+  const n={total:0,hit:0,byKey:0,byBase:0,miss:0,hitNoFloor:0};
+  const ex={byKey:new Map(),byBase:new Map(),miss:new Map()};
+  const bump=(mp,v)=>{const k=mask(v); if(k) mp.set(k,(mp.get(k)||0)+1);};
+  const G=IXG;
+  rows.slice(hi+1).forEach(r=>{
+    const {code,sn}=pick(r,C);
+    if(!String(code||'').trim() && !String(sn||'').trim()) return;   // 둘 다 빈 행은 안 센다
+    n.total++;
+    // 현재 규칙 — instIndex.find 와 같은 순서(설비호기 먼저, 미스면 S/N)
+    const hasC=G.IX.cur.code.has(cur(code));
+    if(hasC||G.IX.cur.sn.has(cur(sn))){
+      n.hit++;
+      /* ⚠ 설비호기로 «찾아졌으면» 그 행의 층을 쓴다 — 층이 비었다고 S/N 쪽으로 넘어가면 안 된다.
+         instIndex.find 는 `byCode.get() || bySN.get()` 로 «레코드»를 고르므로, 코드가 맞은 순간
+         그 레코드가 이긴다. 여기서 넘어가면 이 화면만 실제보다 층을 잘 찾는 것처럼 말한다. */
+      const fl=hasC ? (G.flo.cur.get('C'+cur(code))||'') : (G.flo.cur.get('S'+cur(sn))||'');
+      if(!fl) n.hitNoFloor++;
+      return;
+    }
+    if(G.IX.key.code.has(key(code))  ||G.IX.key.sn.has(key(sn)))  { n.byKey++;  bump(ex.byKey, sn||code); return; }
+    if(G.IX.base.code.has(base(code))||G.IX.base.sn.has(base(sn))){ n.byBase++; bump(ex.byBase,sn||code); return; }
+    n.miss++; bump(ex.miss, sn||code);
+  });
+  return {n,ex};
+}
+
+let IXG=null, RES=null;
+
+function pctOf(v,t){ return t?(v/t*100).toFixed(1)+'%':'—'; }
+function row(label,v,tot,cls){
+  return '<tr><td>'+label+'</td><td class="n '+(cls||'')+'">'+v.toLocaleString()+'</td>'
+        +'<td class="n mut">'+pctOf(v,tot)+'</td></tr>';
+}
+
+function renderRes(){
+  const parts=[];
+  RES.forEach(x=>{
+    const n=x.r.n;
+    parts.push('<div style="margin-bottom:18px"><div class="big" style="margin-bottom:6px">'+x.label
+      +' <span class="mut" style="font-weight:400;font-size:12px">'+n.total.toLocaleString()+'행</span></div>'
+      +'<table><thead><tr><th>구분</th><th style="text-align:right">행</th><th style="text-align:right">비중</th></tr></thead><tbody>'
+      +row('현재 규칙으로 붙음', n.hit, n.total, 'ok')
+      +row('① 하이픈만 무시하면 붙음', n.byKey, n.total, n.byKey?'warn':'mut')
+      +row('② 꼬리 L/R/S 까지 떼면 붙음', n.byBase, n.total, n.byBase?'warn':'mut')
+      +row('그래도 못 붙음 (설치현황에 없는 설비)', n.miss, n.total, 'mut')
+      +'</tbody></table></div>');
+  });
+  const gain=RES.reduce((a,x)=>a+x.r.n.byKey+x.r.n.byBase,0);
+  parts.push('<div class="'+(gain?'warn':'ok')+' big" style="margin-top:6px">'
+    +(gain
+      ? '표기 규칙만 바꾸면 더 붙는 행: '+gain.toLocaleString()+'건'
+      : '표기 때문에 놓치는 행은 없습니다 — 못 붙은 것은 설치현황에 그 설비가 없는 것입니다')+'</div>');
+  if(gain) parts.push('<div class="note" style="margin-top:8px">규칙을 국내 알람 조인과 같은 한 벌'
+    +'(<span class="shape">GST.ALARM.key/keyBase</span>)로 모으면 이만큼이 「미상」에서 벗어납니다. '
+    +'다만 <b>화면 숫자가 그만큼 움직입니다</b> — 고치기 전에 전후 대조를 뜨는 것이 안전합니다.</div>');
+  $('res').innerHTML=parts.join('');
+  $('resCard').style.display='';
+}
+
+function renderShapes(){
+  const box=[];
+  RES.forEach(x=>{
+    const top=(m,t,cls)=>{
+      const e=[...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6);
+      if(!e.length) return '';
+      return '<div style="margin:6px 0"><span class="'+cls+'">'+t+'</span> '
+        +e.map(([k,v])=>'<span class="shape">'+GST._esc(k)+'</span><span class="mut">×'+v.toLocaleString()+'</span>').join(' · ')+'</div>';
+    };
+    const s=top(x.r.ex.byKey,'① 하이픈','warn')+top(x.r.ex.byBase,'② 꼬리 문자','warn')+top(x.r.ex.miss,'못 붙음','mut');
+    if(s) box.push('<div style="margin-bottom:14px"><div class="big">'+x.label+'</div>'+s+'</div>');
+  });
+  if(box.length){ $('shapes').innerHTML=box.join(''); $('shapeCard').style.display=''; }
+}
+
+function renderFloors(){
+  const rows=RES.filter(x=>x.r.n.hitNoFloor>0);
+  if(!rows.length && !IXG.noFloor) return;
+  const parts=['<table><thead><tr><th>구분</th><th style="text-align:right">행</th><th style="text-align:right">비중</th></tr></thead><tbody>'];
+  rows.forEach(x=>parts.push('<tr><td>'+x.label+' — 붙었으나 층 칸이 비었/층 표기가 아님</td>'
+    +'<td class="n warn">'+x.r.n.hitNoFloor.toLocaleString()+'</td>'
+    +'<td class="n mut">'+pctOf(x.r.n.hitNoFloor,x.r.n.total)+'</td></tr>'));
+  parts.push('<tr class="tot"><td>설치현황에서 층을 못 얻는 설비</td><td class="n">'
+    +IXG.noFloor.toLocaleString()+'</td><td class="n mut">'+pctOf(IXG.noFloor,IXG.n)+'</td></tr>');
+  parts.push('</tbody></table>');
+  $('floors').innerHTML=parts.join('');
+  $('floorCard').style.display='';
+}
+
+async function runDiag(){
+  $('goBtn').disabled=true; $('log').textContent='';
+  ['resCard','shapeCard','floorCard'].forEach(i=>$(i).style.display='none');
+  try{
+    logLine('mut','• 설치현황 · 수선실적 · 자재실적을 받는 중…');
+    const [inst,wk,mat]=await Promise.all([
+      grab(INST_URL,'diag_inst','설치현황'),
+      grab(WK_URL,  'diag_wk',  '수선실적'),
+      grab(MAT_URL, 'diag_mat', '자재실적')
+    ]);
+    IXG=buildIX(inst);
+    logLine('ok','• 설치현황 '+IXG.n.toLocaleString()+'행 — S/N '+IXG.IX.cur.sn.size.toLocaleString()+'종 · CODE '+IXG.IX.cur.code.size.toLocaleString()+'종');
+    /* 접미를 떼면 서로 다른 설비가 한 키로 접힐 수 있다. 접힌 수를 밝힌다 —
+       조인율만 오르고 «남의 설비를 물었다»면 그건 개선이 아니라 사고다. */
+    logLine(IXG.collapse?'warn':'mut','• 꼬리 문자를 뗐을 때 한 키로 접히는 S/N: '+IXG.collapse.toLocaleString()+'종'
+      +(IXG.collapse?' — 이만큼은 «좌·우 챔버가 한 설비로 합쳐지는» 것입니다(조직 축을 찾는 데는 맞습니다)':''));
+
+    RES=[
+      {label:'수선실적', r:probe(wk, GST.SM.SPEC.wk,
+        (r,C)=>({code:r[C.eqNo], sn:C.snIn>=0?r[C.snIn]:''}))},
+      {label:'자재실적', r:probe(mat, GST.SM.SPEC.mat, (r,C)=>{
+        // 자재는 설비호기가 비면 «메인설비호기»로 폴백한다 — material 화면과 같은 순서다.
+        // 순서를 뒤집으면 설비호기가 채워진 행조차 메인설비호기로 붙어 남의 층을 문다.
+        const eq=String(C.eq>=0?(r[C.eq]||''):'').trim();
+        const me=String(C.mainEq>=0?(r[C.mainEq]||''):'').trim();
+        return {code:eq||me, sn:C.sn>=0?r[C.sn]:''};
+      })}
+    ];
+    logLine('ok','• 검사 완료');
+    renderRes(); renderShapes(); renderFloors();
+  }catch(e){
+    logLine('bad','❌ '+(e&&e.message?e.message:e));
+    logLine('mut','로그인이 안 돼 있으면 위 창에서 먼저 로그인하세요. 그래도 안 되면 Ctrl+Shift+R 로 새로고침해 보세요.');
+  }
+  $('goBtn').disabled=false;
+}
+/* ⚠ 이 함수를 loadData 로 이름 짓지 말 것 — core.js 의 startAutoRefresh(30) 이 window.loadData 를
+   찾아 30분마다 부른다. 진단은 사람이 누를 때만 도는 것이 맞다. */
+window.runDiag=runDiag;
+
+/* DB 를 읽으므로 «인증이 끝난 뒤» 시작해야 한다. GST.dbRows 는 세션이 없으면 DB_OFF 를 던지고,
+   fetchCSVCached 는 조용히 시트 폴백으로 내려간다 — 둘 다 «틀린 진단»으로 이어진다. */
+GST.authGate().then(runDiag);
+</script>
+<script>GST.initSync();</script>
+</body>
+</html>
