@@ -434,6 +434,21 @@ tr:hover td{background:rgba(255,255,255,.04)}
         </table>
       </div>
     </div>
+    <!-- 날짜 결측 — «누구에게 말해야 하는지»를 아는 표.
+         개수는 설비상태로 세지만(v99) 추이·리드타임·TCO 는 원리적으로 날짜가 있어야 한다.
+         총계 한 숫자만 보여 주면 채울 사람을 못 찾는다. -->
+    <div class="tablecard" id="mdCard" style="display:none">
+      <h3 data-i="md_title">🗓️ 날짜 미기재 (법인별)</h3>
+      <div class="card-note" data-i="md_note">개수는 설비상태로 세므로 영향 없습니다 · 추이·리드타임·TCO 만 이 칸을 씁니다</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th data-i="md_corp">법인</th><th data-i="md_fabin">반입일 없음</th>
+            <th data-i="md_setup">Setup 없음</th><th data-i="md_ton">Turn-On 없음</th>
+            <th data-i="md_tot">대수</th></tr></thead>
+          <tbody id="mdBody"><tr><td colspan="5" class="empty">—</td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -495,7 +510,7 @@ const T={
     trend_fabin:'누적 FAB In 추이 (반입 기준)',trend_turnon:'⚡ 누적 Turn On 추이 (가동 기준)',
     note_rate:'Bar: 대수 · Line: 비중(%)',note_warr:'유효/만료 비율',
     note_model:'모델별 분포',note_group:'공정 그룹별 분포',note_yoy:'대수 막대 · 전년비(%)는 툴팁',note_drill:'대수 막대 · 비중(%)은 툴팁 · 🖱️ 클릭 시 필터',note_drill2:'분포 · 🖱️ 클릭 시 필터',cross_title:'🔀 교차 분석',cross_x:'가로축',cross_color:'쌓기 기준',
-    ins_warr90:'90일 내 Warranty OUT 전환 {n}ch — 무상 지원 종료',ins_idle:'반입 후 미가동 {n}대 — Turn On 확인 필요',sec_ov:'개요',sec_tr:'기간별 현황',sec_di:'분포 분석',sec_wr:'Warranty·관리',sec_dt:'상세 목록',ch_lead:'고객사별 셋업 리드타임',note_lead:'FAB In → Turn On 평균 소요일 · 상위 10',ch_age:'장비 나이 분포',note_age:'Turn On 기준 경과 연수',age_1:'1년 미만',age_13:'1–3년',age_35:'3–5년',age_5:'5년 이상',ch_toolmaker:'Tool Maker별 설치',note_tm:'대수 · 비중은 툴팁',ch_wpipe:'라인별 Warranty IN / OUT',note_wpipe:'라인별 IN/OUT 챔버 구성',ch_renew:'고객사별 Warranty OUT 예정 (180일 내)',note_renew:'Warranty OUT 전환 예정 챔버 · 값은 막대 끝',wp_exp:'Warranty OUT',wt_title:'Warranty OUT 설비 (무상 지원 종료)',idle_title:'📦 반입 후 미가동 장비',days_unit:'일',ins_topctry:'최다 국가 {v} — 점유 {p}% ({n}대)',ins_turnon:'최근 12개월 신규 Turn On {n}대 · 이전 12개월 대비 {p}',
+    ins_warr90:'90일 내 Warranty OUT 전환 {n}ch — 무상 지원 종료',ins_idle:'반입 후 미가동 {n}대 — Turn On 확인 필요',md_title:'🗓️ 날짜 미기재 (법인별)',md_note:'개수는 설비상태로 세므로 영향 없습니다 · 추이·리드타임·TCO 만 이 칸을 씁니다',md_corp:'법인',md_fabin:'반입일 없음',md_setup:'Setup 없음',md_ton:'Turn-On 없음',md_tot:'대수',ins_md:'날짜 미기재 {n}대 — {top} (추이·TCO 에서 빠집니다)',sec_ov:'개요',sec_tr:'기간별 현황',sec_di:'분포 분석',sec_wr:'Warranty·관리',sec_dt:'상세 목록',ch_lead:'고객사별 셋업 리드타임',note_lead:'FAB In → Turn On 평균 소요일 · 상위 10',ch_age:'장비 나이 분포',note_age:'Turn On 기준 경과 연수',age_1:'1년 미만',age_13:'1–3년',age_35:'3–5년',age_5:'5년 이상',ch_toolmaker:'Tool Maker별 설치',note_tm:'대수 · 비중은 툴팁',ch_wpipe:'라인별 Warranty IN / OUT',note_wpipe:'라인별 IN/OUT 챔버 구성',ch_renew:'고객사별 Warranty OUT 예정 (180일 내)',note_renew:'Warranty OUT 전환 예정 챔버 · 값은 막대 끝',wp_exp:'Warranty OUT',wt_title:'Warranty OUT 설비 (무상 지원 종료)',idle_title:'📦 반입 후 미가동 장비',days_unit:'일',ins_topctry:'최다 국가 {v} — 점유 {p}% ({n}대)',ins_turnon:'최근 12개월 신규 Turn On {n}대 · 이전 12개월 대비 {p}',
     tbl_title:'상세 목록',loading:'데이터 불러오는 중...',
     warr_all:'전체',warr_ok:'유효',warr_exp:'만료',no_data:'조건에 맞는 데이터가 없습니다',
     legend_cum:'누적',legend_new:'신규',range_all:'전체 기간',
@@ -513,7 +528,7 @@ const T={
     trend_fabin:'Cumulative FAB In Trend',trend_turnon:'⚡ Cumulative Turn On Trend',
     note_rate:'Bar: count · Line: rate(%)',note_warr:'Active vs Expired ratio',
     note_model:'By model',note_group:'By process group',note_yoy:'Count bars · YoY(%) in tooltip',note_drill:'Count bars · rate(%) in tooltip · 🖱️ click to filter',note_drill2:'Distribution · 🖱️ click to filter',cross_title:'🔀 Cross Analysis',cross_x:'X-Axis',cross_color:'Stack By',
-    ins_warr90:'{n} ch turning Warranty OUT within 90 days — free support ends',ins_idle:'{n} units FAB-In but not turned on',sec_ov:'Overview',sec_tr:'Trends',sec_di:'Breakdown',sec_wr:'Warranty',sec_dt:'Data',ch_lead:'Setup Lead Time by Customer',note_lead:'FAB In → Turn On avg days · TOP 10',ch_age:'Fleet Age',note_age:'Years since Turn On',age_1:'<1y',age_13:'1–3y',age_35:'3–5y',age_5:'5y+',ch_toolmaker:'Installed base by Tool Maker',note_tm:'Count · share in tooltip',ch_wpipe:'Warranty IN / OUT by Line',note_wpipe:'IN/OUT chambers by line',ch_renew:'Warranty OUT pipeline by Customer (<180d)',note_renew:'chambers turning Warranty OUT · value at bar end',wp_exp:'Warranty OUT',wt_title:'Warranty OUT units (free support ended)',idle_title:'📦 FAB-In but not Turned On',days_unit:'d',ins_topctry:'Top country {v} — {p}% share ({n} units)',ins_turnon:'{n} new Turn-Ons in last 12mo · {p} vs prior 12mo',
+    ins_warr90:'{n} ch turning Warranty OUT within 90 days — free support ends',ins_idle:'{n} units FAB-In but not turned on',md_title:'🗓️ Missing dates by entity',md_note:'Counts use equipment status · only trends/lead time/TCO need these cells',md_corp:'Entity',md_fabin:'No FAB In',md_setup:'No Setup',md_ton:'No Turn-On',md_tot:'Units',ins_md:'{n} units with missing dates — {top} (excluded from trends/TCO)',sec_ov:'Overview',sec_tr:'Trends',sec_di:'Breakdown',sec_wr:'Warranty',sec_dt:'Data',ch_lead:'Setup Lead Time by Customer',note_lead:'FAB In → Turn On avg days · TOP 10',ch_age:'Fleet Age',note_age:'Years since Turn On',age_1:'<1y',age_13:'1–3y',age_35:'3–5y',age_5:'5y+',ch_toolmaker:'Installed base by Tool Maker',note_tm:'Count · share in tooltip',ch_wpipe:'Warranty IN / OUT by Line',note_wpipe:'IN/OUT chambers by line',ch_renew:'Warranty OUT pipeline by Customer (<180d)',note_renew:'chambers turning Warranty OUT · value at bar end',wp_exp:'Warranty OUT',wt_title:'Warranty OUT units (free support ended)',idle_title:'📦 FAB-In but not Turned On',days_unit:'d',ins_topctry:'Top country {v} — {p}% share ({n} units)',ins_turnon:'{n} new Turn-Ons in last 12mo · {p} vs prior 12mo',
     tbl_title:'Detail List',loading:'Loading...',
     warr_all:'All',warr_ok:'Active',warr_exp:'Expired',no_data:'No data found',
     legend_cum:'Cumulative',legend_new:'New',range_all:'All time',
@@ -531,7 +546,7 @@ const T={
     trend_fabin:'累计FAB In趋势（搬入）',trend_turnon:'⚡ 累计Turn On趋势（运行）',
     note_rate:'柱:台数·线:占比%',note_warr:'有效/到期比率',
     note_model:'按型号',note_group:'按工艺组',note_yoy:'台数柱状 · 同比%见提示框',note_drill:'台数柱状 · 占比%见提示框 · 🖱️点击筛选',note_drill2:'分布 · 🖱️点击筛选',cross_title:'🔀 交叉分析',cross_x:'横轴',cross_color:'堆叠依据',
-    ins_warr90:'90天内转为Warranty OUT {n}腔 — 免费支持结束',ins_idle:'搬入后未运行 {n}台 — 需确认Turn On',sec_ov:'概览',sec_tr:'趋势',sec_di:'分布分析',sec_wr:'保修·管理',sec_dt:'明细',ch_lead:'客户安装周期',note_lead:'FAB In → Turn On 平均天数 · TOP 10',ch_age:'设备年龄分布',note_age:'自Turn On经过年数',age_1:'不满1年',age_13:'1–3年',age_35:'3–5年',age_5:'5年以上',ch_toolmaker:'按Tool Maker',note_tm:'台数 · 占比见提示框',ch_wpipe:'按线 Warranty IN / OUT',note_wpipe:'按线IN/OUT腔体构成',ch_renew:'按客户 Warranty OUT 预定 (180天内)',note_renew:'即将转为Warranty OUT的腔体 · 数值在柱端',wp_exp:'Warranty OUT',wt_title:'Warranty OUT 设备 (免费支持已结束)',idle_title:'📦 搬入后未运行设备',days_unit:'天',ins_topctry:'最多国家 {v} — 占 {p}% ({n}台)',ins_turnon:'近12个月新增Turn On {n}台 · 环比前12个月 {p}',
+    ins_warr90:'90天内转为Warranty OUT {n}腔 — 免费支持结束',ins_idle:'搬入后未运行 {n}台 — 需确认Turn On',md_title:'🗓️ 日期缺失(法人)',md_note:'台数按设备状态统计 · 仅趋势·前置期·TCO 使用这些日期',md_corp:'法人',md_fabin:'无入库日',md_setup:'无Setup',md_ton:'无Turn-On',md_tot:'台数',ins_md:'日期缺失 {n}台 — {top}',sec_ov:'概览',sec_tr:'趋势',sec_di:'分布分析',sec_wr:'保修·管理',sec_dt:'明细',ch_lead:'客户安装周期',note_lead:'FAB In → Turn On 平均天数 · TOP 10',ch_age:'设备年龄分布',note_age:'自Turn On经过年数',age_1:'不满1年',age_13:'1–3年',age_35:'3–5年',age_5:'5年以上',ch_toolmaker:'按Tool Maker',note_tm:'台数 · 占比见提示框',ch_wpipe:'按线 Warranty IN / OUT',note_wpipe:'按线IN/OUT腔体构成',ch_renew:'按客户 Warranty OUT 预定 (180天内)',note_renew:'即将转为Warranty OUT的腔体 · 数值在柱端',wp_exp:'Warranty OUT',wt_title:'Warranty OUT 设备 (免费支持已结束)',idle_title:'📦 搬入后未运行设备',days_unit:'天',ins_topctry:'最多国家 {v} — 占 {p}% ({n}台)',ins_turnon:'近12个月新增Turn On {n}台 · 环比前12个月 {p}',
     tbl_title:'详细列表',loading:'加载中...',
     warr_all:'全部',warr_ok:'有效',warr_exp:'到期',no_data:'无数据',
     legend_cum:'累计',legend_new:'新增',range_all:'全部时间',
@@ -549,7 +564,7 @@ const T={
     trend_fabin:'累積FAB In推移（搬入）',trend_turnon:'⚡ 累積Turn On推移（稼働）',
     note_rate:'棒:台数·線:構成比%',note_warr:'有効/切れ比率',
     note_model:'モデル別',note_group:'工程グループ別',note_yoy:'台数棒 · 前年比%はツールチップ',note_drill:'台数棒 · 構成比%はツールチップ · 🖱️クリックで絞込',note_drill2:'分布 · 🖱️クリックで絞込',cross_title:'🔀 クロス分析',cross_x:'横軸',cross_color:'積み上げ基準',
-    ins_warr90:'90日以内にWarranty OUT {n}ch — 無償サポート終了',ins_idle:'搬入後未稼働 {n}台 — Turn On要確認',sec_ov:'概要',sec_tr:'期間別',sec_di:'分布分析',sec_wr:'保証·管理',sec_dt:'詳細',ch_lead:'顧客別セットアップLT',note_lead:'FAB In → Turn On 平均日数 · TOP10',ch_age:'設備年齢分布',note_age:'Turn On基準経過年数',age_1:'1年未満',age_13:'1–3年',age_35:'3–5年',age_5:'5年以上',ch_toolmaker:'Tool Maker別設置',note_tm:'台数 · 構成比はツールチップ',ch_wpipe:'ライン別 Warranty IN / OUT',note_wpipe:'ライン別IN/OUTチャンバー構成',ch_renew:'顧客別 Warranty OUT 予定 (180日以内)',note_renew:'Warranty OUTに切替わるチャンバー · 値は棒の先',wp_exp:'Warranty OUT',wt_title:'Warranty OUT 設備 (無償サポート終了)',idle_title:'📦 搬入後未稼働設備',days_unit:'日',ins_topctry:'最多国 {v} — 占有 {p}% ({n}台)',ins_turnon:'直近12ヶ月新規Turn On {n}台 · 前12ヶ月比 {p}',
+    ins_warr90:'90日以内にWarranty OUT {n}ch — 無償サポート終了',ins_idle:'搬入後未稼働 {n}台 — Turn On要確認',md_title:'🗓️ 日付未記入(法人別)',md_note:'台数は設備状態で数えます · 推移·リードタイム·TCO のみこの日付を使います',md_corp:'法人',md_fabin:'搬入日なし',md_setup:'Setupなし',md_ton:'Turn-Onなし',md_tot:'台数',ins_md:'日付未記入 {n}台 — {top}',md_title:'🗓️ 日付未記入(法人別)',md_note:'台数は設備状態で数えます · 推移·リードタイム·TCO のみこの日付を使います',md_corp:'法人',md_fabin:'搬入日なし',md_setup:'Setupなし',md_ton:'Turn-Onなし',md_tot:'台数',ins_md:'日付未記入 {n}台 — {top}',sec_ov:'概要',sec_tr:'期間別',sec_di:'分布分析',sec_wr:'保証·管理',sec_dt:'詳細',ch_lead:'顧客別セットアップLT',note_lead:'FAB In → Turn On 平均日数 · TOP10',ch_age:'設備年齢分布',note_age:'Turn On基準経過年数',age_1:'1年未満',age_13:'1–3年',age_35:'3–5年',age_5:'5年以上',ch_toolmaker:'Tool Maker別設置',note_tm:'台数 · 構成比はツールチップ',ch_wpipe:'ライン別 Warranty IN / OUT',note_wpipe:'ライン別IN/OUTチャンバー構成',ch_renew:'顧客別 Warranty OUT 予定 (180日以内)',note_renew:'Warranty OUTに切替わるチャンバー · 値は棒の先',wp_exp:'Warranty OUT',wt_title:'Warranty OUT 設備 (無償サポート終了)',idle_title:'📦 搬入後未稼働設備',days_unit:'日',ins_topctry:'最多国 {v} — 占有 {p}% ({n}台)',ins_turnon:'直近12ヶ月新規Turn On {n}台 · 前12ヶ月比 {p}',
     tbl_title:'詳細リスト',loading:'読込中...',
     warr_all:'全体',warr_ok:'有効',warr_exp:'期限切れ',no_data:'データなし',
     legend_cum:'累積',legend_new:'新規',range_all:'全期間',
@@ -818,6 +833,37 @@ function eqUnknown(){
   RAW.forEach(r=>{ if(GST.EQ.cls(r[CI.state])!=='?')return;
     const v=String(r[CI.state]||'').trim(); m[v]=(m[v]||0)+1; });
   return m;
+}
+/* 날짜 미기재 — «어느 법인의 어느 칸»이 비었는지. (v99 ②)
+   개수는 설비상태로 세므로 이 칸이 비어도 대수는 정확하다. 다만 추이·리드타임·TCO 는
+   원리적으로 날짜가 있어야 해서 그 설비들이 빠진다 — 그 사실을 사람이 가져갈 수 있는
+   모양으로 낸다. 제외 상태(반납·반출·출하대기)는 우리 설비가 아니므로 세지 않는다. */
+function missingDates(){
+  const m={};
+  RAW.forEach(r=>{
+    if(CI.state>=0){ const c=GST.EQ.cls(r[CI.state]); if(c==='out'||c==='?')return; }
+    const k=String(r[CI.country]||'').trim()||'(법인 미기재)';
+    const o=m[k]||(m[k]={k:k,fabIn:0,setup:0,ton:0,n:0});
+    o.n++;
+    if(!toDate(r[CI.fabIn]))o.fabIn++;
+    if(CI.start>=0&&!toDate(r[CI.start]))o.setup++;
+    if(!toDate(r[CI.turnOn]))o.ton++;
+  });
+  const rows=Object.values(m).filter(o=>o.fabIn||o.setup||o.ton)
+    .sort((a,b)=>(b.ton-a.ton)||(b.fabIn-a.fabIn)||(b.n-a.n));
+  return {rows:rows, hasSetup:CI.start>=0};
+}
+function renderMissingDates(){
+  const card=document.getElementById('mdCard'), body=document.getElementById('mdBody');
+  if(!card||!body)return;
+  const md=missingDates();
+  /* 빈 카드를 띄우지 않는다 — 0 짜리 표는 «못 채운 것»으로 읽힌다. */
+  if(!md.rows.length){ card.style.display='none'; return; }
+  card.style.display='';
+  const c=(v)=>v?('<b>'+v.toLocaleString()+'</b>'):'<span class="mut">-</span>';
+  body.innerHTML=md.rows.slice(0,15).map(r=>'<tr><td>'+GST._esc(r.k)+'</td>'
+    +'<td>'+c(r.fabIn)+'</td><td>'+(md.hasSetup?c(r.setup):'<span class="mut">열 없음</span>')+'</td>'
+    +'<td>'+c(r.ton)+'</td><td>'+r.n.toLocaleString()+'</td></tr>').join('');
 }
 function countBy(rows,idx){
   const m={};
@@ -1425,12 +1471,23 @@ function render(){ GST.skeleton(false);
     if(idleCount>0)ins.push({sev:'warn',text:t('ins_idle').replace('{n}','<b>'+idleCount+'</b>')});
     /* 허용목록 밖의 설비상태는 filt() 에서 통째로 빠진다. 조용히 빼면 「합계가 왜 안 맞지」로
        돌아오므로, 무엇이 몇 대인지와 «어떻게 하면 되는지»를 같이 적는다. */
+    /* ① 날짜 미기재를 «법인별»로 인사이트 한 줄. 총계만 알려 주면 채울 사람을 못 찾는다.
+       ⚠ 필터를 건 f 가 아니라 RAW 를 센다 — 「지금 화면에 보이는 것」이 아니라
+         「시트에 채워야 할 칸」의 사실이기 때문이다. 필터에 따라 숫자가 흔들리면
+         담당자에게 넘길 목록이 안 된다. */
+    /* ⚠ GST.insights 는 4개까지만 보여 준다. 데이터 품질 경고를 뒤에 붙이면 정보성
+       인사이트에 밀려 «영영 안 보이는 경고»가 된다(TCO 도 같은 이유로 앞에 둔다).
+       그래서 push 가 아니라 unshift 다. */
+    {const md=missingDates(), tot=md.rows.reduce((a,r)=>a+r.ton,0);
+     if(tot>0)ins.unshift({sev:'warn',text:t('ins_md').replace('{n}','<b>'+tot+'</b>')
+       .replace('{top}', md.rows.slice(0,3).map(r=>r.k+' '+r.ton).join(' · '))});}
     {const uk=eqUnknown(), ks=Object.keys(uk);
-     if(ks.length)ins.push({sev:'warn',text:'처음 보는 설비상태 '
+     if(ks.length)ins.unshift({sev:'warn',text:'처음 보는 설비상태 '
        +ks.map(k=>'<b>'+k+'</b> '+uk[k]+'대').join(' · ')
        +' — 어느 집계에도 안 들어갑니다. 시트 표기를 확인하거나 알려 주시면 규칙에 넣겠습니다.'});}
     GST.insights(f.length?ins:[]);
   }
+  renderMissingDates();
 
   // 🔔 자동 브리핑 — 신규 Turn On(챔버) · Warranty 만료 임박
   try{
