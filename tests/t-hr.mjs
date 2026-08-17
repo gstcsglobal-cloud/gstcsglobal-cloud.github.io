@@ -93,5 +93,44 @@ try { m.parseFaultRecords(renamed); } catch (e) { threw = /NO_HEADER/.test(e.mes
 ok(threw, '힌트 열 이름이 바뀌었는데 NO_HEADER를 던지지 않았다 (조용히 통과)');
 console.log('  ✓ 힌트 열 이름 변경 시 NO_HEADER');
 
+/* ── 인원명단 양식 세 벌을 다 읽는가 (v96) ─────────────────────────────────
+   봇의 parseRoster 가 «영문 양식 전용»이라 한글 양식을 통째로 못 읽고 있었다.
+   'date of entry' 를 못 찾으면 join 이 undefined 라 전 행이 continue 되어 0명이 되고,
+   봇은 「인원 데이터가 없습니다」라고 답한다 — 에러는 하나도 안 난다.
+   대시보드(report·hr)는 진작 두 양식을 받는데 이 사본만 안 따라왔다(제2원칙).
+   값은 전부 지어낸 것이다. */
+{
+  const q = (v) => /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  const csv = (rows) => rows.map(r => r.map(q).join(',')).join('\n');
+
+  // ① 옛 영문 양식
+  const EN = csv([
+    ['No.','ID','Name(영문)','Work Place','Date of entry','Resignation','직급','조직도','현장 인원여부'],
+    ['1','90000001','AA','F16','2024-01-02','','과장','Scrubber','O'],
+    ['2','90000002','BB','F11','2023-05-01','','대리','Chiller','O'],
+  ]);
+  // ② 한글 양식 (ID 가 사번을 담던 판)
+  const KO1 = csv([
+    ['No.','인사','ID','이름(영문)','직급(한글)','담당구분','단지','라인','입사일','퇴사일','현장 인원여부'],
+    ['1','재직','90000003','CC','과장','Scrubber','F16','','2024-01-02','','O'],
+    ['2','재직','90000004','DD','대리','Chiller','F11','','2023-05-01','','O'],
+  ]);
+  // ③ 새 양식 — 사번 열이 «맨 뒤»이고 옛 ID 열은 빈 채로 남아 있다(ALTER 로 열을 뒤에 붙였다)
+  const KO2 = csv([
+    ['No.','인사','ID','이름(영문)','직급(한글)','담당구분','단지','라인','입사일','퇴사일','현장 인원여부','구분','운영단위','사원번호'],
+    ['1','재직','','EE','과장','Scrubber','F16','','2024-01-02','','O','해외','GST TAIWAN SCRUBBER','90000005'],
+    ['2','재직','','FF','대리','Chiller','F11','','2023-05-01','','O','해외','GST TAIWAN CHILLER','90000006'],
+  ]);
+  [['옛 영문', EN, '90000001'], ['한글(ID)', KO1, '90000003'], ['새 양식(사원번호)', KO2, '90000005']]
+    .forEach(([nm, text, wantId]) => {
+      const r = m.parseRoster(text);
+      // 칠러 1명은 규약대로 빠지므로 언제나 1명이어야 한다
+      ok(r.length === 1, `parseRoster ${nm} — 1명 (칠러 제외)`);
+      ok(r[0] && r[0].id === wantId, `parseRoster ${nm} — 사번을 «채워진» 열에서 집는다`);
+      ok(r[0] && r[0].fab === 'F16', `parseRoster ${nm} — 근무지(단지/라인/Work Place)를 읽는다`);
+      ok(r[0] && r[0].onsite === true, `parseRoster ${nm} — 현장 여부`);
+    });
+}
+
 console.log(`\n결과: ${pass} 통과 / ${fail} 실패`);
 process.exit(fail ? 1 : 0);

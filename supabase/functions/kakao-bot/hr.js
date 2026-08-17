@@ -198,14 +198,22 @@ export function parseRoster(csvText) {
       });
       return best;
     })(),
-    name: colIdx(header, (h) => h.includes('name') && h.includes('영문')),
+    /* ⚠⚠ 여기가 영문 양식 전용이라 **한글 양식을 통째로 못 읽고 있었다.**
+       'date of entry' 를 못 찾으면 join 이 undefined 라 아래 루프가 전 행을 continue 해
+       인원이 0명이 되고, 봇은 «인원 데이터가 없습니다» 라고 답한다 — 에러는 하나도 안 난다.
+       대시보드(report·hr)의 parseRoster 는 진작 두 양식을 다 받는데 이 사본만 안 따라왔다.
+       SPEC-SYNC — 세 곳의 별칭을 같이 고친다(제2원칙). */
+    name: colIdx(header, (h) => h === '이름(영문)' || (h.includes('name') && h.includes('영문'))),
     dept: colIdx(header, (h) => h.startsWith('dept')),
     wp: colIdx(header, (h) => h === 'work place'),
-    role: colIdx(header, (h) => h.includes('position role')),
-    join: colIdx(header, (h) => h.startsWith('date of entry')),
-    quit: colIdx(header, (h) => h.startsWith('resignation')),
-    org: colIdx(header, (h) => h.includes('조직도')),
-    posKo: colIdx(header, (h) => h === '직급'),
+    camp: colIdx(header, (h) => h === '단지'),
+    line: colIdx(header, (h) => h === '라인'),
+    role: colIdx(header, (h) => h === '업무/직책' || h.includes('position role')),
+    join: colIdx(header, (h) => h === '입사일' || h.startsWith('date of entry')),
+    quit: colIdx(header, (h) => h === '퇴사일' || h.startsWith('resignation')),
+    // 칠러 제외 판정 자리 — 옛 양식은 '조직도' 문자열, 새 양식은 '담당구분'(Scrubber·Chiller)
+    org: colIdx(header, (h) => h.includes('조직도') || h === '담당구분'),
+    posKo: colIdx(header, (h) => h === '직급(한글)' || h === '직급'),
     onsite: colIdx(header, (h) => h.includes('현장')),
   };
   const out = [];
@@ -214,7 +222,9 @@ export function parseRoster(csvText) {
     if (!r || !r[ci.id]) continue;
     const id = normKey(r[ci.id]);
     if (!id) continue;
-    const wp = (r[ci.wp] ?? '').trim();
+    /* 새 양식은 근무지가 «단지·라인» 두 칸으로 갈라졌다(옛 양식은 Work Place 한 칸).
+       대시보드와 같은 순서로 합친다 — 안 그러면 site·fab·custB 가 전부 빈값이 된다. */
+    const wp = (r[ci.camp] ?? '').trim() || (r[ci.line] ?? '').trim() || (r[ci.wp] ?? '').trim();
     const org = (r[ci.org] ?? '').trim();
     const join = pd(r[ci.join]);
     // 대시보드(report:790)와 동일: 입사일 없는 행과 조직도상 Chiller 인원은 전 지표에서 제외
