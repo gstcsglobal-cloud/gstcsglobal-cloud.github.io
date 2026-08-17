@@ -91,6 +91,38 @@ if(r4.C.daysPaid === 30 && r4.C.workDate === 29){
   pass++; console.log('  ✓ "재사용일"에 걸리지 않고 정확일치 유지');
 } else { fail++; console.log('  ❌ 오매칭:', {daysPaid:r4.C.daysPaid, workDate:r4.C.workDate}); }
 
+/* --- 설비 대수 판정 (GST.EQ · v99) ---------------------------------------
+   사용자 확정: 반입 = 반입완료·Set-up·Turn-off·Operation · 가동 = Operation ·
+   나머지(반납·반출대기·반출완료·출하대기)는 아예 세지 않는다.
+   피벗 실측으로 검산했다 — AMERICA 365/364 · WUHAN 1803/1780 · XIAN 566/464 ·
+   JAPAN 311/280, 넷 다 각 법인 총대수와 정확히 맞는다.
+   ⚠ 허용목록이라 «모르는 상태»가 조용히 사라질 수 있다 → '?' 를 내는지까지 본다. */
+console.log('\n설비 대수 판정 — 설비상태(GST.EQ)');
+{
+  const E = GST.EQ, chk = (v, want, why) => {
+    const got = E.cls(v);
+    if (got === want) { pass++; console.log(`  ✓ ${JSON.stringify(v)} → ${want}  ${why||''}`); }
+    else { fail++; console.log(`  ❌ ${JSON.stringify(v)} → ${got} (기대 ${want})`); }
+  };
+  chk('Operation','run'); chk('Set-up','in'); chk('Turn-off','in'); chk('반입완료','in');
+  chk('반납','out'); chk('반출대기','out'); chk('반출완료','out','사용자 목록엔 없었지만 JAPAN 1대를 빼야 합계가 맞는다');
+  chk('출하대기','out');
+  chk('OPERATION','run','대소문자'); chk(' set up ','in','공백·하이픈 표기 흔들림');
+  chk('','','값 없음 → 날짜 폴백');
+  chk('이설대기','?','모르는 상태는 조용히 삼키지 않는다');
+
+  const D = (s) => new Date(s + 'T00:00:00Z'), asOf = D('2026-08-31');
+  const t = (c, why) => { if (c) { pass++; console.log('  ✓ ' + why); } else { fail++; console.log('  ❌ ' + why); } };
+  t(E.isIn('Operation', null, asOf), '날짜가 없어도 상태로 반입을 센다 (이번 개편의 이유)');
+  t(!E.isIn('Operation', D('2026-09-10'), asOf), '날짜가 마감을 넘으면 안 센다 (과거 마감 스냅샷)');
+  t(!E.isIn('출하대기', D('2026-01-01'), asOf), '제외 상태는 날짜가 있어도 안 센다');
+  t(E.isIn('', D('2026-01-01'), asOf), '상태 열이 없는 옛 추출본은 옛 날짜 판정 그대로');
+  t(!E.isIn('', null, asOf), '상태도 날짜도 없으면 안 센다 (옛 동작)');
+  t(E.isRun('Operation', null, asOf) && !E.isRun('Set-up', null, asOf)
+    && !E.isRun('Turn-off', null, asOf), '가동은 Operation 하나뿐이다');
+  t(!E.isIn('이설대기', D('2026-01-01'), asOf), '모르는 상태는 어느 쪽에도 안 들어간다');
+}
+
 console.log('\n' + '='.repeat(64));
 console.log(`결과: ${pass} 통과 / ${fail} 실패`);
 process.exit(fail?1:0);

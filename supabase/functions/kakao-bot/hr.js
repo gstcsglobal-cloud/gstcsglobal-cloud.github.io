@@ -417,6 +417,8 @@ const INSTALL_SPEC = {
   detail1: ['Detail_1', 'Detail Process(Customer)'], detail2: 'Detail_2',
   fabIn: ['FAB In', 'Receipt date'], turnOn: ['Turn On', 'Turn-on date'],
   warranty: 'Warranty In/Out', type: ['Scrubber type', 'Type2'],
+  // 설비 대수 판정의 정본 (v99) — 대시보드 GST.EQ 와 같은 열을 본다
+  state: ['설비상태', 'Equipment Status', 'Status'],
 };
 export function parseInstall(csvText) {
   const rows = parseCSV(csvText);

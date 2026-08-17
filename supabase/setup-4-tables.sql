@@ -150,7 +150,7 @@ create index if not exists sheet_mat_detail_idx on public.sheet_mat (detail);
 create index if not exists sheet_mat_mat_name_idx on public.sheet_mat (mat_name);
 create index if not exists sheet_mat_model_idx on public.sheet_mat (model);
 
-/* ---------- inst — 설치현황 (gid 891608329 · 26열) ---------- */
+/* ---------- inst — 설치현황 (gid 891608329 · 27열) ---------- */
 create table if not exists public.sheet_inst (
   src_row    int primary key,      -- 시트 데이터 행번호(0부터). 파일 상단 주석 참조
   pjt                        text,   -- PJT.
@@ -179,6 +179,7 @@ create table if not exists public.sheet_inst (
   warranty                   text,   -- Warranty In/Out
   pm_cycle                   text,   -- Target PM Cycle
   type                       text,   -- Scrubber type
+  state                      text,   -- 설비상태
   extra      jsonb,                 -- SPEC 밖의 열 전부(헤더 이름을 키로). 시트를 지워도 안 잃게
   synced_at  timestamptz not null default now()
 );
@@ -300,6 +301,7 @@ alter table public.sheet_inst
   add column if not exists warranty text,
   add column if not exists pm_cycle text,
   add column if not exists type text,
+  add column if not exists state text,
   add column if not exists extra jsonb;
 commit;
 
@@ -485,4 +487,5 @@ insert into public.sheet_colmap(tbl, col, headers, optional, ord) values
   ('inst', 'warranty_date', array['Warranty date'], true, 22),
   ('inst', 'warranty', array['Warranty In/Out'], true, 23),
   ('inst', 'pm_cycle', array['Target PM Cycle','PM CYCLE'], true, 24),
-  ('inst', 'type', array['Scrubber type','Type2'], false, 25);
+  ('inst', 'type', array['Scrubber type','Type2'], false, 25),
+  ('inst', 'state', array['설비상태','Equipment Status','Status'], true, 26);

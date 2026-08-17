@@ -113,6 +113,18 @@ const resolve = (header, name) => {
      둘 다 같은 열을 내므로 통과해 버리는데, 국내 양식과 DB 복원본에서는 갈린다 —
      `fab:['FAB','Line 1']` 로 뒤집으면 국내 라인 축이 통째로 FSF/R/P 가 되고,
      봇이 읽는 미러 표에는 'FAB' 이라는 머리글 자체가 없어 열을 못 찾는다. */
+  /* 설비상태(state)는 옛 추출본에 없는 열이라 same 맵에 넣으면 «둘 다 -1» 로 실패한다.
+     그래도 두 곳이 «같은 이름»을 보는지는 지켜야 한다 — 한쪽만 별칭을 늘리면 봇과 화면이
+     다른 열을 세게 되고, 설비 대수가 갈린다(v99). 별칭 목록만 대조한다. */
+  {
+    const a = [].concat(GST.SM.SPEC.inst.fields.state).map(hnorm).join('|');
+    const b = [].concat(HR.install.state).map(hnorm).join('|');
+    ok(a === b && !!a, `설치현황 state 별칭: core.js [${a}] ↔ hr.js [${b}]`);
+    ok((GST.SM.SPEC.inst.opt || []).indexOf('state') >= 0,
+       '설치현황 state 가 opt 에 있다 (그 열이 없는 옛 추출본이 거부되지 않게)');
+    ok(cm.C.state === resolve(H, GST.SM.SPEC.inst.fields.state),
+       `설치현황 state 열 번호가 같다 (${cm.C.state})`);
+  }
   let ord = 0;
   for (const [ck, hk] of Object.entries(same)) {
     const a = [].concat(GST.SM.SPEC.inst.fields[ck]).map(hnorm).join('|');

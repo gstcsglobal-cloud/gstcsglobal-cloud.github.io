@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 96;
+GST.VER = 97;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1013,8 +1013,10 @@ GST.SM.SPEC = {
      · div(사업부)는 국내에만 있다 → opt. 해외는 빈 값이고 필터에서 그렇게 보인다.
      · location(단지)·start 는 해외 양식에 없다 → opt. */
   inst: { name:'설치현황', gid:'891608329', hints:['Scrubber S/N'],
+    /* ⚠ 새 열은 반드시 opt 에도 넣는다 — 그 열이 없는 옛 추출본이 통째로 «열을 못 찾았습니다»
+       로 거부되고 픽스처·테스트까지 같이 죽는다(CLAUDE.md v89 의 승격 순서 2번). */
     opt:['pjt','toolId','pmCycle','warrantyDate','start','group2','detail2',
-         'div','location','burner','bay','warranty','floor','fabIn','turnOn'],
+         'div','location','burner','bay','warranty','floor','fabIn','turnOn','state'],
     fields:{
       pjt:['PJT.','Product code'],
       country:['Country','운영단위'], customer:['Customer','고객사'], div:'사업부',
@@ -1026,8 +1028,62 @@ GST.SM.SPEC = {
       toolId:'Main Tool ID', toolMaker:'Main Tool Maker', toolModel:'Main Tool Model',
       fabIn:['FAB In','Receipt date'], start:['Start','Setup date'], turnOn:['Turn On','Turn-on date'],
       warrantyDate:'Warranty date', warranty:'Warranty In/Out',
-      pmCycle:['Target PM Cycle','PM CYCLE'], type:['Scrubber type','Type2']
+      pmCycle:['Target PM Cycle','PM CYCLE'], type:['Scrubber type','Type2'],
+      /* 설비 대수 판정의 정본 (v99). opt 에 넣어야 «이 열이 없는 옛 추출본»이 거부되지 않는다. */
+      state:['설비상태','Equipment Status','Status']
     }}
+};
+
+/* ============================================================
+   설비 대수 판정 — 「설비상태」 열이 정본이다 (v99 · 사용자 확정)
+
+   왜 바꾸나. 예전에는 반입일(FAB In)·Turn On 날짜로 셌다. 그런데 그 칸이 비어 있는
+   설비가 있고, 그러면 «아직 반입 안 됨»으로 읽혀 합계에서 조용히 빠진다. 시트는
+   상태를 따로 적고 있으므로 그것을 믿는 것이 맞다.
+
+   실측 검산(2026-08 워크북 피벗) — 네 법인 모두 총대수와 정확히 맞는다:
+     AMERICA 반입 365 · 가동 364 · 제외 171 = 536
+     CHINA(WUHAN) 1803 · 1780 · 78 = 1,881
+     CHINA(XIAN) 566 · 464 · 104 = 670
+     JAPAN 311 · 280 · 15 = 326
+   ⚠ 「반출완료」는 사용자가 든 제외 목록에 없었지만 JAPAN 1대를 빼야 합계가 맞는다.
+     그래서 제외목록이 아니라 «반입 상태 넷» 허용목록으로 짠다 — 새 상태가 생기면
+     자동으로 제외 쪽에 붙는다.
+
+   ⚠ 허용목록은 CLAUDE.md 가 경고하는 형태다(목록에 없으면 합계에서 조용히 사라진다).
+     그래서 cls() 가 모르는 값에 '?' 를 내고, 화면은 그 건수를 밝힌다.
+   ============================================================ */
+GST.EQ = {
+  IN : ['반입완료', 'Set-up', 'Turn-off', 'Operation'],   // 반입된 것 (분모)
+  RUN: ['Operation'],                                      // 가동 중
+  OUT: ['반납', '반출대기', '반출완료', '출하대기'],        // 나갔거나 아직 안 온 것
+  /* 표기 흔들림만 흡수한다 — 대소문자·공백·하이픈. 뜻은 짐작하지 않는다. */
+  norm: function(v){ return GST.upk(String(v == null ? '' : v)).replace(/[\s\-_]/g, ''); },
+  cls: function(v){
+    const s = GST.EQ.norm(v);
+    if(!s) return '';                                      // 값 없음 → 날짜 폴백
+    const has = function(a){ return a.some(function(x){ return GST.EQ.norm(x) === s; }); };
+    if(has(GST.EQ.RUN)) return 'run';
+    if(has(GST.EQ.IN))  return 'in';
+    if(has(GST.EQ.OUT)) return 'out';
+    return '?';                                            // 모르는 상태 — 화면에 밝힌다
+  },
+  /* 마감일 기준 판정.
+     ① 상태가 정본이다.
+     ② 날짜가 «있으면» 마감일을 넘었는지 한 번 더 본다 — 과거 마감으로 돌려 보는 화면이
+        아직 안 온 설비를 세면 안 된다.
+     ③ 날짜가 비어 있으면 상태만 믿는다. 그게 이 개편의 이유다.
+     ④ 상태 열 자체가 없으면(옛 추출본) 옛 날짜 판정 그대로 — 업로드 전후로 화면이
+        죽는 구간을 만들지 않는다. */
+  ok: function(kind, st, d, asOf){
+    const c = GST.EQ.cls(st);
+    if(c === 'out' || c === '?') return false;
+    if(c === '')  return !!(d && (!asOf || d <= asOf));     // 상태 없음 → 옛 판정
+    if(kind === 'run' && c !== 'run') return false;
+    return !(d && asOf && d > asOf);
+  },
+  isIn : function(st, d, asOf){ return GST.EQ.ok('in',  st, d, asOf); },
+  isRun: function(st, d, asOf){ return GST.EQ.ok('run', st, d, asOf); }
 };
 /* CIP 시트(F11 gid 2123129719 · F16 gid 1999732389)는 점검 '항목'이 열로 늘어난다.
    F11과 F16은 열 위치가 다르지만 머리글 이름은 같아서 스펙 하나로 둘 다 처리된다.

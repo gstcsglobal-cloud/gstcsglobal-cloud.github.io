@@ -494,10 +494,17 @@ async function loadData(){ GST.skeleton(true);
     CM=mMt.C; HI_MAT =mMt.hi>=0?mMt.hi:0;
     CW.sn=CW.snIn; CW.work=CW.dStart;   // 이 페이지에서 쓰는 별명
 
-    // 설치현황 → 설비 목록 (Turn-On만)
+    /* 설치현황 → 설비 목록.
+       ⚠ TCO 는 «언제부터 돌았나»가 있어야 계산된다(가동기간 × 비용). 그래서 여기만은
+          Turn-On 날짜가 필수다 — 상태만으로는 기간을 못 만든다. 대신 날짜가 없어 빠진
+          대수를 세어 화면에 밝힌다(조용히 빠지면 TCO 가 실제보다 작게 나온다).
+       ⚠ 반납·반출·출하대기 상태는 우리 설비가 아니므로 아예 뺀다(v99 · 사용자 확정). */
+    let _tcoNoDate=0;
     EQUIP=inst.rows.slice(HI_INST+1).map(r=>{
       const sn=String(r[CI.sn]||'').trim();
       const ton=toDate(r[CI.turnOn]);
+      if(CI.state>=0){ const c=GST.EQ.cls(r[CI.state]); if(c==='out'||c==='?')return null; }
+      if(sn&&!ton)_tcoNoDate++;
       if(!sn||!ton)return null;
       return {sn,snKey:normSN(sn),cust:custBase(r[CI.customer]),fab:lineKey(r[CI.fab]),
         // 공통 필터가 보는 축 — PARTS 와 «같은 이름»이어야 한 술어로 둘 다 걸린다
@@ -508,6 +515,7 @@ async function loadData(){ GST.skeleton(true);
         proc:procOf(r[CI.group1]),chambers:String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1,
         type:String(r[CI.type]||'').toUpperCase().includes('DUAL')?'DUAL':'SINGLE',turnOn:ton};
     }).filter(Boolean);
+    window._TCO_NODATE=_tcoNoDate;
 
     // 실적현황 → 정지시간 + S/N→공정 추정 맵
     const snProc={};
@@ -934,6 +942,10 @@ function renderInsights(sel,prev){
   }
   // 경고(데이터 품질)를 정보성 인사이트보다 앞에 — GST.insights는 4개까지만 표시한다
   if(MODEL.qtyBadSel>0)ins.push({sev:'warn',text:t('ins_qty').replace('{n}','<b>'+MODEL.qtyBadSel+'</b>')});
+  /* TCO 는 가동기간이 있어야 계산되므로 Turn-On 날짜가 없는 설비는 원리적으로 빠진다.
+     조용히 빠지면 TCO 가 실제보다 «작게» 나오고, 그 사실을 아무도 모른다. */
+  if(window._TCO_NODATE>0)ins.push({sev:'warn',
+    text:'Turn-On 날짜가 없는 <b>'+window._TCO_NODATE+'</b>대는 TCO 계산에서 빠졌습니다 — 실제보다 적게 나옵니다(설치현황의 날짜 칸을 채우면 반영됩니다).'});
   const topU=UKEYS.slice().sort((a,b)=>sel.cost[b]-sel.cost[a])[0];
   if(sel.total>0)ins.push({sev:'info',text:t('ins_top_u').replace('{u}','<b>'+uLabel(topU)+'</b>').replace('{p}','<b>'+Math.round(sel.cost[topU]/sel.total*100)+'</b>')});
   const te=MODEL.eqSel.slice().sort((a,b)=>b.total-a.total)[0];
