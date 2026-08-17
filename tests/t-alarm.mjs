@@ -305,6 +305,13 @@ console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, 
       is(want.length>10 && !bad.length,
          n+' 의 열이 전부 '+t+' 에 있다'+(bad.length?' — 없는 열: '+bad.join(', '):''));
     });
+    /* «없는 열을 안 넣는다» 만으로는 부족하다 — seq 를 «빼기만» 하면 H 올바이패스가
+       정확히 3배로 부푼다(한 사건이 Seq 1·2·3 세 줄이고 dedup 이 그 열을 본다).
+       그래서 «올바 목록에 seq 가 있는지» 를 따로 단정한다. */
+    is(listOf('_KR_COLS_B').indexOf('seq')>=0,
+       '_KR_COLS_B 에 seq 가 있다 (없으면 H 올바이패스가 3배가 된다)');
+    is(listOf('_KR_COLS_A').indexOf('alarm_name')>=0,
+       '_KR_COLS_A 에 alarm_name 이 있다 (없으면 K 249행이 미기재)');
     // 음성 대조 — 옛 «한 벌 공유»가 되살아나면 이 둘 중 하나는 반드시 깨진다
     is(/GST\._KR_COLS_A\)/.test(fs.readFileSync(ROOT+'/report/index.html','utf8')) &&
        /GST\._KR_COLS_B\)/.test(fs.readFileSync(ROOT+'/report/index.html','utf8')),
