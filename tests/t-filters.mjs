@@ -136,6 +136,45 @@ console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96
   is(/loose:\{ div:1 \}/.test(SRC.scrubber), 'scrubber — 사업부를 loose 로 선언했다');
   is(/div:r=>String\(\(CI\.div>=0\?r\[CI\.div\]:''\)\|\|''\)\.trim\(\)/.test(SRC.scrubber),
      'scrubber — 사업부 접근자가 열이 없을 때도 안 죽는다');
+  is(/div:x=>x\.div/.test(SRC.report), 'report — 사업부 접근자가 있다');
+  is(/loose:\{ div:1 \}/.test(SRC.report), 'report — 사업부를 loose 로 선언했다');
+}
+
+console.log('\n[7-6] rows() 가 실어 보낸 축을 get: 이 «꺼내 보는가» (v96)');
+{
+  /* 실제로 겪은 결함: report 의 rows() 는 사업부를 실어 보내는데 get: 에 div 가 없어
+     목록이 언제나 비었다 — 화면에는 「전체 (자료 없음)」이라 적히고, 표에는 7,172행이
+     들어 있었다(실측). 빈 칸은 «자료가 없다»로 읽히므로 사용자는 업로드를 의심한다.
+     소스만 봐서 잡을 수 있는 결함인데, 여덟 페이지 중 scrubber 만 검사하고 있었다.
+
+     판정: mount 블록 안에서 rows() 가 `<축>:` 을 담아 보내면 get: 에도 `<축>:` 이 있어야 한다.
+     반대(get 에만 있고 rows 에 없는 것)는 정상이다 — 페이지가 직접 행을 넘기는 꼴이 있다. */
+  const AX = ['region', 'op', 'customer', 'div', 'campus', 'line', 'team'];
+  PAGES.forEach((p) => {
+    const i = SRC[p].indexOf('GST.filters.mount(');
+    if (i < 0) { is(false, `${p} — GST.filters.mount 를 찾지 못했다`); return; }
+    // mount( … ) 한 덩어리를 괄호 균형으로 떼어 낸다
+    let d = 0, end = i;
+    for (let k = SRC[p].indexOf('(', i); k < SRC[p].length; k++) {
+      if (SRC[p][k] === '(') d++;
+      else if (SRC[p][k] === ')') { d--; if (!d) { end = k; break; } }
+    }
+    const blk = SRC[p].slice(i, end + 1);
+    const gi = blk.indexOf('get:');
+    if (gi < 0) { is(false, `${p} — mount 에 get: 이 없다`); return; }
+    /* get:{…} «한 덩어리»만 떼어 낸다. 뒤에 오는 loose:{div:1}·drop:{…} 까지 포함하면
+       접근자가 없어도 있는 것으로 세어 검사가 통과해 버린다(음성 대조로 실제로 겪었다). */
+    let gd = 0, gEnd = gi;
+    for (let k = blk.indexOf('{', gi); k < blk.length; k++) {
+      if (blk[k] === '{') gd++;
+      else if (blk[k] === '}') { gd--; if (!gd) { gEnd = k; break; } }
+    }
+    const rowsPart = blk.slice(0, gi), getPart = blk.slice(gi, gEnd + 1);
+    const missed = AX.filter((a) => new RegExp('[{,]\\s*' + a + '\\s*:').test(rowsPart)
+                                 && !new RegExp('[{,]\\s*' + a + '\\s*:').test(getPart));
+    is(!missed.length, `${p} — rows() 가 보낸 축을 get: 이 전부 읽는다`
+       + (missed.length ? `  ⚠ 빠짐: ${missed.join(', ')}` : ''));
+  });
 }
 
 console.log('\n[7-4] 단지 축에 고객사 이름이 섞이지 않는지 (v96)');

@@ -1301,7 +1301,14 @@ function fillFilters(){
       ROSTER.forEach(function(p){ out.push({region:p.region,op:p.op,customer:'',campus:'',line:'',team:p.team}); });
       return out;
     }, onChange:function(){ syncCommon(); render(); },
-    get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer, campus:x=>x.campus, line:x=>x.line, team:x=>x.team },
+    /* ⚠ rows() 가 실어 보낸 축은 여기서 «꺼내 주지 않으면 없는 것과 같다». div 를 빠뜨려
+       사업부 칸이 늘 「전체 (자료 없음)」이었다 — 표에는 7,172행이 들어 있는데도(실측).
+       빈 칸은 «자료가 없다»로 읽히므로 사용자는 업로드를 의심하게 된다. */
+    get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer, div:x=>x.div,
+          campus:x=>x.campus, line:x=>x.line, team:x=>x.team },
+    /* 사업부는 국내 설치현황에만 있다 — loose 가 아니면 사업부를 고르는 순간
+       실적·인원·해외 설비가 통째로 사라진다(scrubber 와 같은 규약). */
+    loose:{ div:1 },
     drop:{ customer:GST.FILT_DROP_CUST, line:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
   syncCommon();
 }

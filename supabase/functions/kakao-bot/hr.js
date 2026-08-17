@@ -183,38 +183,49 @@ export function parseRoster(csvText) {
   const hIdx = headerRowOf(rows, [(h) => h === 'id' || h === '사원번호',
                                   (h) => h.includes('work place') || h === '입사일' || h === '라인']);
   const header = rows[hIdx].map(lc);
+  /* ⚠⚠ Import 표에는 «옛 열(빈)» 과 «새 열(채움)» 이 **둘 다** 남아 있다 — ALTER 로 열을
+     맨 뒤에 붙였지 옛 열을 지우지 않았기 때문이다. 실측(2026-08-17, 584행):
+       ID 0 · Date of entry 0 · Resignation 0 · 조직도 0 · 직급 0 · Name(영문) 0
+       ↔ 사원번호 584 · 입사일 584 · 퇴사일 45 · 담당구분 584 · 직급(한글) 584 · 이름(영문) 187
+     그리고 빈 옛 열이 «앞»에 있다. 왼쪽부터 첫 매치를 집으면 전부 빈 열을 문다.
+     입사일이 그렇게 잡히면 아래 루프가 `if (!join) continue` 로 **전 행을 버려 0명**이 되고,
+     퇴사일이 그렇게 잡히면 **퇴사자가 재직자로 되살아난다** — 둘 다 에러가 하나도 안 난다.
+     실제로 그 상태로 지냈다(bot_cache.roster 가 0행이었다).
+     v96 에서 이 규칙을 «사번에만» 넣은 것이 잘못이었다. 전 필드에 같이 적용한다.
+
+     고르는 규칙 셋:
+       ① 별칭 «순서»가 우선이다 — 같은 낱말이 자리마다 다른 뜻인 곳이 있어(제1원칙)
+          「채워진 게 임자」로 뒤집으면 안 된다.
+       ② 단, 값이 한 칸도 없는 후보는 건너뛴다. 옛 잔재 열이 정확히 그 꼴이다.
+       ③ 후보가 전부 비었으면 첫 후보를 쓴다 — 표가 비어 있을 때 동작을 바꾸지 않는다. */
+  const pick = (...names) => {
+    const cand = [];
+    names.forEach((nm) => {
+      const m = typeof nm === 'function' ? nm : (h) => h === nm;
+      header.forEach((h, i) => { if (m(h) && cand.indexOf(i) < 0) cand.push(i); });
+    });
+    if (!cand.length) return -1;
+    for (const i of cand)
+      for (let k = hIdx + 1; k < rows.length; k++)
+        if (String((rows[k] || [])[i] ?? '').trim()) return i;
+    return cand[0];
+  };
+  /* SPEC-SYNC — report/index.html · hr/index.html 의 parseRoster 와 같은 별칭·같은 순서.
+     새 한글 양식이 앞, 옛 영문 양식이 뒤다(둘 다 있으면 ②가 빈 쪽을 버린다). */
   const ci = {
-    /* ⚠ 표에 옛 'ID'(빈)와 새 '사원번호'(채움)가 둘 다 있을 수 있다 — Import 표에 열을
-       더했지 지우지 않았기 때문이다. 이름 순서로 고르면 빈 열을 집어 사번이 통째로 비고,
-       교육 매칭이 조용히 끊긴다. **실제로 채워진 열**을 고른다. */
-    id: (function(){
-      let best = -1, bn = -1;
-      ['사원번호', 'id'].forEach((nm) => {
-        const i = colIdx(header, (h) => h === nm);
-        if (i < 0) return;
-        let c = 0;
-        for (let k = hIdx + 1; k < rows.length; k++) if (String((rows[k] || [])[i] || '').trim()) c++;
-        if (c > bn) { bn = c; best = i; }
-      });
-      return best;
-    })(),
-    /* ⚠⚠ 여기가 영문 양식 전용이라 **한글 양식을 통째로 못 읽고 있었다.**
-       'date of entry' 를 못 찾으면 join 이 undefined 라 아래 루프가 전 행을 continue 해
-       인원이 0명이 되고, 봇은 «인원 데이터가 없습니다» 라고 답한다 — 에러는 하나도 안 난다.
-       대시보드(report·hr)의 parseRoster 는 진작 두 양식을 다 받는데 이 사본만 안 따라왔다.
-       SPEC-SYNC — 세 곳의 별칭을 같이 고친다(제2원칙). */
-    name: colIdx(header, (h) => h === '이름(영문)' || (h.includes('name') && h.includes('영문'))),
-    dept: colIdx(header, (h) => h.startsWith('dept')),
-    wp: colIdx(header, (h) => h === 'work place'),
-    camp: colIdx(header, (h) => h === '단지'),
-    line: colIdx(header, (h) => h === '라인'),
-    role: colIdx(header, (h) => h === '업무/직책' || h.includes('position role')),
-    join: colIdx(header, (h) => h === '입사일' || h.startsWith('date of entry')),
-    quit: colIdx(header, (h) => h === '퇴사일' || h.startsWith('resignation')),
-    // 칠러 제외 판정 자리 — 옛 양식은 '조직도' 문자열, 새 양식은 '담당구분'(Scrubber·Chiller)
-    org: colIdx(header, (h) => h.includes('조직도') || h === '담당구분'),
-    posKo: colIdx(header, (h) => h === '직급(한글)' || h === '직급'),
-    onsite: colIdx(header, (h) => h.includes('현장')),
+    id:     pick('사원번호', 'id'),
+    name:   pick('이름(영문)', (h) => h.includes('name') && h.includes('영문')),
+    dept:   pick((h) => h.startsWith('dept')),
+    wp:     pick('work place'),
+    camp:   pick('단지'),
+    line:   pick('라인'),
+    role:   pick('업무/직책', (h) => h.includes('position role')),
+    join:   pick('입사일', (h) => h.startsWith('date of entry')),
+    quit:   pick('퇴사일', (h) => h.startsWith('resignation')),
+    // 칠러 제외 판정 자리 — 새 양식은 '담당구분'(Scrubber·Chiller), 옛 양식은 '조직도' 문자열
+    org:    pick('담당구분', (h) => h.includes('조직도')),
+    posKo:  pick('직급(한글)', '직급'),
+    onsite: pick((h) => h.includes('현장')),
   };
   const out = [];
   for (let i = hIdx + 1; i < rows.length; i++) {
