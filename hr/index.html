@@ -238,7 +238,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
       <th data-k="no">#</th><th data-k="name" data-i="th_name">이름</th><th data-k="site" data-i="th_site">사이트</th>
       <th data-k="org" data-i="th_org">소속</th><th data-k="role" data-i="th_role">직무</th><th data-k="posKo" data-i="th_pos">직급</th>
       <th data-k="exp" data-i="th_exp">경력</th><th data-k="join" data-i="th_join">입사일</th>
-      <th data-k="basic">Basic</th><th data-k="vet">Veteran</th><th data-k="status" data-i="th_status">상태</th>
+      <th data-k="basic" id="thEdu1">Basic</th><th data-k="vet" id="thEdu2">Veteran</th><th data-k="status" data-i="th_status">상태</th>
       <th class="edcol">✎</th>
     </tr></thead>
     <tbody id="tbody"><tr><td colspan="12" class="empty">⏳ 데이터 불러오는 중...</td></tr></tbody>
@@ -694,6 +694,21 @@ function hasCorp(p){ return p.region!=='국내'; }          // 법인 과정(Bas
 function clsB(p){ return hasCorp(p)?(eduDoneAt(p.bdate)?'이수완료':'미이수'):'비대상'; }
 function clsV(p){ return hasCorp(p)?(eduDoneAt(p.vdate)?'이수완료':'미이수'):'비대상'; }
 function clsL2(p){ return eduDoneAt(p.lv2date)?'이수완료':'미이수'; }
+function clsL3(p){ return eduDoneAt(p.lv3date)?'이수완료':'미이수'; }
+/* 사용자 확정: **국내는 Basic·Veteran 이 아니라 Scrubber Lv.2 · Lv.3 이다.**
+   표·드릴·KPI 가 각자 clsB/clsV 를 직접 부르면 국내 화면이 「비대상」으로만 가득 찬다 —
+   실제로 상세 명단이 그 상태였다(399명 전원 비대상). 「그 사람의 1·2단계」를 묻는 접근자
+   두 개만 두고, 이름표는 잡힌 인원을 따라가게 한다. 세는 것과 부르는 이름이 어긋나면
+   그 표는 거짓말을 하는 것이다. */
+function eduCls1(p){ return hasCorp(p)?clsB(p):clsL2(p); }
+function eduCls2(p){ return hasCorp(p)?clsV(p):clsL3(p); }
+function eduNames(list){
+  const a=(list||[]).filter(p=>p&&p.join);
+  const kr=a.filter(p=>!hasCorp(p)).length, ov=a.length-kr;
+  if(!a.length || (ov&&!kr)) return ['Basic','Veteran'];
+  if(kr&&!ov)               return ['Scrubber Lv.2','Scrubber Lv.3'];
+  return ['LV1 (Basic·Lv.2)','LV2 (Veteran·Lv.3)'];
+}
 // 명단·칩의 «교육» 한 칸은 그 사람에게 실제로 적용되는 과정으로 판정한다
 function eduStatusOf(p){ return !p.edu?'미등록':(hasCorp(p)?clsB(p):clsL2(p)); }
 
@@ -1303,9 +1318,11 @@ function renderTable(f){
   const tb=document.getElementById('tbody'); document.getElementById('tblCnt').textContent=f.length;
   if(!f.length){tb.innerHTML='<tr><td colspan="12" class="empty">조건에 맞는 인원이 없습니다</td></tr>';return;}
   const rows=f.slice().sort((a,b)=>{const va=sortVal(a,SORT.k),vb=sortVal(b,SORT.k);return (va<vb?-1:va>vb?1:0)*SORT.dir;});
+  { const N=eduNames(f), h1=document.getElementById('thEdu1'), h2=document.getElementById('thEdu2');
+    if(h1)h1.textContent=N[0]; if(h2)h2.textContent=N[1]; }
   tb.innerHTML=rows.map((d,i)=>{
-    const bTag=d.edu?'<span class="tag '+tagB(clsB(d))+'">'+clsB(d)+'</span>':'<span style="color:var(--muted)">-</span>';
-    const vTag=d.edu?'<span class="tag '+tagB(clsV(d))+'">'+clsV(d)+'</span>':'<span style="color:var(--muted)">-</span>';
+    const bTag=d.edu?'<span class="tag '+tagB(eduCls1(d))+'">'+eduCls1(d)+'</span>':'<span style="color:var(--muted)">-</span>';
+    const vTag=d.edu?'<span class="tag '+tagB(eduCls2(d))+'">'+eduCls2(d)+'</span>':'<span style="color:var(--muted)">-</span>';
     const act=isActive(d);
     const sTag=act?'<span class="tag t-act">'+tr('s_act')+'</span>':'<span class="tag t-quit">'+tr('s_quit')+(d.quit?' '+ymd(d.quit).slice(2):'')+'</span>';
     return '<tr><td>'+(i+1)+'</td><td><b>'+esc(d.name)+'</b>'+(d.cn?' <span style="color:var(--muted);font-size:11px">'+esc(d.cn)+'</span>':'')+'</td>'
@@ -1339,12 +1356,15 @@ function hrDrill(evt,els,chart){ if(!els||!els.length)return; const id=chart.can
 function peopleTable(people){
   if(!people||!people.length)return '<div class="dhint">'+tr('st_na')+'</div>';
   const rows=people.slice().sort((a,b)=>(b.join?b.join.getTime():0)-(a.join?a.join.getTime():0));
-  return '<table><thead><tr><th>'+tr('th_name')+'</th><th>'+tr('th_site')+'</th><th>'+tr('th_role')+'</th><th>'+tr('th_join')+'</th><th>Basic</th><th>Veteran</th></tr></thead><tbody>'
+  const _EN=eduNames(people);
+  return '<table><thead><tr><th>'+tr('th_name')+'</th><th>'+tr('th_site')+'</th><th>'+tr('th_role')+'</th><th>'+tr('th_join')+'</th><th>'+esc(_EN[0])+'</th><th>'+esc(_EN[1])+'</th></tr></thead><tbody>'
     +rows.map(d=>'<tr><td>'+esc(d.name)+'</td><td>'+esc(shortSite(d.site))+'</td><td>'+esc(d.role||'-')+'</td><td>'+(d.join?ymd(d.join):'-')+'</td>'
-      +'<td>'+(d.edu?clsB(d):'-')+'</td><td>'+(d.edu?clsV(d):'-')+'</td></tr>').join('')+'</tbody></table>';
+      +'<td>'+(d.edu?eduCls1(d):'-')+'</td><td>'+(d.edu?eduCls2(d):'-')+'</td></tr>').join('')+'</tbody></table>';
 }
 function peopleDrill(title,people){
-  const on=people.filter(p=>p.onsite).length, ed=people.filter(p=>p.edu&&clsB(p)!=='비대상').length, dn=people.filter(p=>p.edu&&clsB(p)==='이수완료').length;
+  const on=people.filter(p=>p.onsite).length,
+        ed=people.filter(p=>p.edu&&eduCls1(p)!=='비대상').length,
+        dn=people.filter(p=>p.edu&&eduCls1(p)==='이수완료').length;
   let h='<div class="dsum"><div class="b"><span class="n">'+people.length+'</span><span class="l">'+tr('d_total')+'</span></div>'
     +'<div class="b"><span class="n">'+on+'</span><span class="l">'+tr('d_on')+'</span></div>'
     +'<div class="b"><span class="n">'+dn+'/'+ed+'</span><span class="l">Basic '+tr('d_done')+'</span></div></div>';

@@ -1477,7 +1477,12 @@ function render(){
      사용자 결정(v94): 해외는 고객사명이 곧 FAB(F16·F11) 이라 고객사로 갈라도 보이지만,
      국내는 전부 «삼성» 한 덩어리라 H1~H4·P1~P4 가 통째로 안 보였다.
      단지가 비면 예전대로 FAB → 고객사로 내려간다 — 버리지 않는다(빈 축은 합계에서 사라진다). */
-  const _grpRaw=x=>x.campus||x.fab||x.custB||'ETC';
+  /* 인원 계열의 구분 축은 «단지»다. 단지가 비면 FAB 로 내려가되, **거기서 멈춘다.**
+     예전에는 고객사(custB)까지 내려갔는데, 그러면 단지 축에 「SAMSUNG」 같은 «고객사 이름»이
+     막대로 서서 한 축에 두 차원이 섞인다(실측 14명). 사용자가 바로 «인원현황에 삼성이라는
+     단지는 없다»고 짚은 자리다. 그렇다고 버리지도 않는다 — 버리면 합계에서 조용히 사라진다.
+     → 「미배치」로 세운다. 빈 칸이 곧 «단지가 안 적혀 있다»는 사실이다. */
+  const _grpRaw=x=>x.campus||x.fab||'미배치';
   // 단일 막대: 마지막 인덱스만 강조색
   const barHi=n=>Array.from({length:n},(_,i)=>i===n-1?BAR_LAST:BAR_BASE);
   // 꺾은선: 마지막 포인트만 크게 강조 (설치현황 트렌드 스타일)
@@ -1590,7 +1595,7 @@ function render(){
                   'H1','H2','H3','H4','P1','P2','P3','P4','K1','K2'], SITE_MAX=11;
   const SITES=(function(){
     const cnt={}; fHR.forEach(x=>{ const k=_grpRaw(x); if(k)cnt[k]=(cnt[k]||0)+1; });
-    const rank=k=>k==='ETC'?98:(SITE_ORD.indexOf(k)<0?50:SITE_ORD.indexOf(k));   // ETC(근무지 미기재)는 맨 뒤
+    const rank=k=>(k==='미배치'||k==='ETC')?98:(SITE_ORD.indexOf(k)<0?50:SITE_ORD.indexOf(k));   // 미기재는 맨 뒤
     const keys=Object.keys(cnt).sort(function(a,b){
       return (rank(a)-rank(b)) || (cnt[b]-cnt[a]) || (a<b?-1:1);
     });

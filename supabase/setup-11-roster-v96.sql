@@ -1,4 +1,4 @@
-/* v96 — 인원현황 양식 변경 (2026-08-17)
+/* v96 — 인원현황·교육현황 양식 변경 (2026-08-17)
  *
  * 새 양식이 네 군데 달라졌다. `sheet_roster` 는 «컬럼 이름 = 시트 머리글» 인 Import 표라,
  * 시트에 열이 늘면 업로드가 «표에 없는 헤더» 로 막힌다(데이터는 안전하지만 일이 멈춘다).
@@ -21,6 +21,12 @@ alter table public.sheet_roster add column if not exists "구분"     text;
 alter table public.sheet_roster add column if not exists "운영단위" text;
 alter table public.sheet_roster add column if not exists "사원번호" text;
 
+/* ---------- 교육현황 — 「구분」 한 열만 늘었다 ----------
+ * 파서는 이름으로 찾으므로 열이 한 칸 밀려도 그대로 따라간다(실측 대조: site 1→2 ·
+ * 사번 3→4 · Basic 4→5 로 정확히 이동). 고칠 코드가 없고 표에 열만 있으면 된다.
+ * 나머지 8열(No·Site·인원·사원번호·Basic/Veteran/Lv.2/Lv.3 교육완료일)은 이름·순서 그대로다. */
+alter table public.sheet_edu add column if not exists "구분" text;
+
 /* ---------- 확인 ---------- */
 select '① 새 열 3개가 생겼는지 (기대 3)' as 항목,
        count(*)::text as 값
@@ -34,4 +40,10 @@ select '② 옛 열이 남아 있는지 (기대 2 — ID·사업부)',
  where table_schema='public' and table_name='sheet_roster'
    and column_name in ('ID','사업부')
 union all
-select '③ 현재 행수', count(*)::text from public.sheet_roster;
+select '③ 인원현황 행수', count(*)::text from public.sheet_roster
+union all
+select '④ 교육현황에 「구분」 (기대 1)', count(*)::text
+  from information_schema.columns
+ where table_schema='public' and table_name='sheet_edu' and column_name='구분'
+union all
+select '⑤ 교육현황 행수', count(*)::text from public.sheet_edu;

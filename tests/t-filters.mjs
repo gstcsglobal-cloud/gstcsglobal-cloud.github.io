@@ -99,6 +99,17 @@ is(/const c=d\.cols\[course\]/.test(HR),
    'hr — 드릴다운이 열 번호가 아니라 그 열 목록을 따라간다');
 is(/tg:\(p,E\)=>hasCorp\(p\)&&!sixAt\(p,E\)/.test(HR),
    'hr — 이수 추이의 법인 대상에도 같은 규칙');
+/* 상세 명단·드릴 표가 clsB/clsV 를 직접 부르면 국내가 「비대상」으로만 가득 찬다
+   (실측 399명 전원). 「그 사람의 1·2단계」를 묻는 접근자만 쓰고 머리글도 따라간다. */
+is(/function eduCls1\(p\)\{ return hasCorp\(p\)\?clsB\(p\):clsL2\(p\); \}/.test(HR) &&
+   /function eduCls2\(p\)\{ return hasCorp\(p\)\?clsV\(p\):clsL3\(p\); \}/.test(HR),
+   'hr — 사람마다 적용되는 두 과정을 접근자 두 개가 정한다');
+is(/function eduNames\(list\)/.test(HR) && /'Scrubber Lv\.2','Scrubber Lv\.3'/.test(HR),
+   'hr — 표 머리글이 잡힌 인원을 따라간다');
+is(/id="thEdu1"/.test(HR) && /id="thEdu2"/.test(HR),
+   'hr — 상세 명단 머리글에 갈아끼울 자리가 있다');
+is(!/const bTag=d\.edu\?'<span class="tag '\+tagB\(clsB\(d\)\)/.test(HR),
+   'hr — 상세 명단이 clsB 를 직접 부르던 옛 코드가 없다');
 is(/eduPlanH1/.test(SRC.report) && /Scrubber Lv\.2','Scrubber Lv\.3'/.test(SRC.report),
    'report — 교육 계획 머리글이 잡힌 인원을 따라간다');
 /* KPI 카드도 같은 규칙을 지나야 한다. 'bdate'·'vdate' 를 박아 두었더니 국내만 걸면
@@ -111,6 +122,17 @@ is(!/_dOf\(x,'bdate'\)/.test(SRC.report) && !/_dOf\(x,'vdate'\)/.test(SRC.report
    'report — 과정 이름을 박아 둔 옛 판정이 없다');
 is(/_eCourse/.test(SRC.report) && /'Scrubber Lv\.3'/.test(SRC.report),
    'report — KPI 이름표도 잡힌 인원을 따라간다 (Lv.3 을 세면서 Veteran 이라 하지 않는다)');
+
+console.log('\n[7-4] 단지 축에 고객사 이름이 섞이지 않는지 (v96)');
+{
+  /* 인원 계열의 구분 축은 단지다. 단지·FAB 이 둘 다 비면 예전에는 고객사까지 내려가
+     「SAMSUNG」 이 단지 막대로 섰다(실측 14명) — 한 축에 두 차원이 섞인 것이다.
+     버리지도 않는다(합계에서 조용히 사라진다) → 「미배치」로 세운다. */
+  is(/const _grpRaw=x=>x\.campus\|\|x\.fab\|\|'미배치';/.test(SRC.report),
+     'report — 단지 축이 FAB 까지만 내려가고 그다음은 미배치다');
+  is(!/_grpRaw=x=>x\.campus\|\|x\.fab\|\|x\.custB/.test(SRC.report),
+     'report — 고객사까지 내려가던 옛 폴백이 없다');
+}
 
 console.log('\n[7-1] 설치현황 — 「집계 기준」(챔버/대수)이 한 곳(chW)만 지나는지');
 {
