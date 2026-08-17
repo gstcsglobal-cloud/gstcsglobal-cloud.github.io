@@ -93,6 +93,33 @@ try { m.parseFaultRecords(renamed); } catch (e) { threw = /NO_HEADER/.test(e.mes
 ok(threw, '힌트 열 이름이 바뀌었는데 NO_HEADER를 던지지 않았다 (조용히 통과)');
 console.log('  ✓ 힌트 열 이름 변경 시 NO_HEADER');
 
+/* ── 봇이 실제로 보는 머리글로 설치현황을 읽는가 (v96) ──────────────────────
+   봇은 이제 시트가 아니라 미러 표를 읽고, 머리글을 sheet_colmap 의 «첫 별칭»으로
+   되살린다(v82 `fetchCsv`). 그래서 봇이 보는 이름은 시트 머리글이 아니라 **colmap
+   첫 별칭**이다 — 이 둘이 갈리면 파서가 죽는데 화면에는 아무 흔적이 없다.
+   실측: 2026-08-17 bot_cache 의 equipment 가 `NO_HEADER` 였다. 원인은 colmap 의
+   inst.fab 이 v96 에서 `Line 1` 로 바뀌었는데 hr.js 는 여전히 'FAB' 을 헤더 힌트로
+   쓰고 있던 것. 그래서 여기서는 «시트 CSV» 가 아니라 **colmap 시드에서 머리글을
+   재구성해** 먹인다 — 그래야 다음에 별칭 순서를 바꿔도 여기서 먼저 걸린다. */
+{
+  const SQL = fs.readFileSync(path.join(HERE, '../supabase/setup-4-tables.sql'), 'utf8');
+  const head = [];
+  for (const g of SQL.matchAll(/\(\s*'inst',\s*'[a-z_0-9]+',\s*array\[([^\]]+)\]/g))
+    head.push(g[1].split(',')[0].trim().replace(/'/g, ''));
+  ok(head.length > 20, `colmap 시드에서 inst 머리글을 뽑았다 → ${head.length}열`);
+  ok(head.includes('Line 1'), `colmap 의 fab 첫 별칭이 'Line 1' 이다 (국내 라인 축의 규약)`);
+
+  const cell = (h) => h === 'Scrubber S/N' ? 'ZZZ-0001' : h === 'Scrubber CODE' ? 'ZCODE1'
+    : h === 'Scrubber type' ? 'DUAL' : h === 'Line 1' ? 'H1' : h === 'Floor' ? '1F' : 'x';
+  const dbCsv = head.join(',') + '\n' + head.map(cell).join(',') + '\n';
+  let rec = null, err = '';
+  try { rec = m.parseInstall(dbCsv)[0]; } catch (e) { err = e.message; }
+  ok(rec, `DB 복원 머리글로 parseInstall 이 돈다 ${err ? '→ ' + err : ''}`);
+  ok(rec && rec.fab === 'H1', `그 경로에서 fab 을 'Line 1' 열에서 읽는다 → ${rec && rec.fab}`);
+  ok(rec && rec.chambers === 2, `챔버 판정이 산다 (Scrubber type=DUAL) → ${rec && rec.chambers}`);
+  ok(rec && rec.floor === '1F', `floor 도 잡힌다 → ${rec && rec.floor}`);
+}
+
 /* ── 인원명단 양식 세 벌을 다 읽는가 (v96) ─────────────────────────────────
    봇의 parseRoster 가 «영문 양식 전용»이라 한글 양식을 통째로 못 읽고 있었다.
    'date of entry' 를 못 찾으면 join 이 undefined 라 전 행이 continue 되어 0명이 되고,

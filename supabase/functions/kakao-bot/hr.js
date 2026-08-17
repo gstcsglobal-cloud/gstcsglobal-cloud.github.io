@@ -389,17 +389,29 @@ export function eduPlan(roster, eduIndex, asOf, opts = {}) {
    'Main Tool ID'(17·30) · 'Type'(44·79·96) · 'N2 Purge (slm)'(22·25·49·53).
    그래서 챔버 판정은 'Type'이 아니라 'Scrubber type'으로만 잡는다(Type으로 잡으면
    44열을 물어 전 설비가 SINGLE로 계산된다).
-   SPEC-SYNC: assets/core.js GST.SM.SPEC.inst 와 같은 이름을 써야 한다. */
+   SPEC-SYNC: assets/core.js GST.SM.SPEC.inst 와 같은 이름·같은 별칭 순서를 써야 한다.
+
+   ⚠ 별칭 «순서»가 규약이다(v96). 국내 양식에서 `FAB` 은 공장 구역(FSF·R/P·CSF)이고
+   화면의 라인은 `Line 1` 이다 — 뒤집으면 국내 라인 축이 통째로 FSF/R/P 가 된다.
+   그리고 봇은 이제 미러 표에서 «시트 모양 CSV»를 되살려 읽으므로(v82) 머리글이
+   sheet_colmap 의 **첫 별칭**으로 온다. 즉 봇이 실제로 보는 이름은 `Line 1` 이다 —
+   여기에 'FAB' 만 적어 두면 열을 못 찾고, 헤더 힌트로 쓰면 NO_HEADER 로 죽는다
+   (실측: 2026-08-17 bot_cache equipment 가 정확히 이 이유로 NO_HEADER 였다). */
 const INSTALL_SPEC = {
-  country: 'Country', customer: 'Customer', location: 'Location',
+  country: ['Country', '운영단위'], customer: ['Customer', '고객사'],
+  location: ['Location', 'Site'],
   code: 'Scrubber CODE', sn: 'Scrubber S/N', model: 'Scrubber Model', burner: 'Burner Type',
-  fab: 'FAB', floor: 'Floor', bay: 'Bay',
-  group1: 'Group_1', group2: 'Group_2', detail1: 'Detail_1', detail2: 'Detail_2',
-  fabIn: 'FAB In', turnOn: 'Turn On', warranty: 'Warranty In/Out', type: 'Scrubber type',
+  fab: ['Line 1', 'FAB'], floor: ['Floor', 'Line'], bay: 'Bay',
+  group1: ['Group_1', 'Process'], group2: ['Group_2', 'Detail Process(HQ)'],
+  detail1: ['Detail_1', 'Detail Process(Customer)'], detail2: 'Detail_2',
+  fabIn: ['FAB In', 'Receipt date'], turnOn: ['Turn On', 'Turn-on date'],
+  warranty: 'Warranty In/Out', type: ['Scrubber type', 'Type2'],
 };
 export function parseInstall(csvText) {
   const rows = parseCSV(csvText);
-  const hIdx = headerRowOf(rows, [hEq('Scrubber CODE'), hEq('FAB')]);
+  /* 힌트는 «두 양식과 DB 복원본 셋 모두에 있는» 이름만 쓴다. 예전에는 'FAB' 을 썼는데
+     그 이름은 국내 양식에서 뜻이 다르고 DB 복원본에는 아예 없다. */
+  const hIdx = headerRowOf(rows, [hEq('Scrubber CODE'), hEq('Scrubber S/N')]);
   const { C: IC } = mapCols(rows[hIdx], INSTALL_SPEC);
   const out = [];
   for (let i = hIdx + 1; i < rows.length; i++) {

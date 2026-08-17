@@ -62,7 +62,15 @@ const PapaMod = await import('papaparse');
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : (fail++, console.log('  ❌ ' + m)); };
-const resolve = (header, name) => header.map(hnorm).indexOf(hnorm(name));
+/* 별칭 배열도 받는다 — core.js SPEC 과 같은 규약(앞에서부터 찾아 첫 적중).
+   hr.js 쪽도 국내·해외 두 양식을 흡수하느라 배열을 쓰게 됐다(v96). 문자열만 받던
+   시절의 이 함수는 배열을 통째로 이름 하나로 보고 -1 을 내, 「갈라졌다」는 거짓
+   경보를 냈다 — 거짓 경보를 내는 검사는 곧 무시당한다. */
+const resolve = (header, name) => {
+  const H = header.map(hnorm);
+  for (const n of [].concat(name)) { const i = H.indexOf(hnorm(n)); if (i >= 0) return i; }
+  return -1;
+};
 
 /* ── 1. 수선실적: core.js SPEC.wk ↔ hr.js FAULT_SPEC ── */
 {
@@ -100,6 +108,19 @@ const resolve = (header, name) => header.map(hnorm).indexOf(hnorm(name));
   }
   // 'Type'(44·79·96 중복)을 잘못 잡으면 챔버 수가 전부 1이 된다 — 양쪽 모두 75열이어야 한다
   ok(cm.C.type === 75, `설치현황 type이 75열이 아니다 → ${cm.C.type} ('Scrubber type' 아닌 'Type'을 잡았을 가능성)`);
+
+  /* 별칭 «순서»까지 같아야 한다 (v96). 열 번호만 대조하면 이 픽스처(해외 양식)에서는
+     둘 다 같은 열을 내므로 통과해 버리는데, 국내 양식과 DB 복원본에서는 갈린다 —
+     `fab:['FAB','Line 1']` 로 뒤집으면 국내 라인 축이 통째로 FSF/R/P 가 되고,
+     봇이 읽는 미러 표에는 'FAB' 이라는 머리글 자체가 없어 열을 못 찾는다. */
+  let ord = 0;
+  for (const [ck, hk] of Object.entries(same)) {
+    const a = [].concat(GST.SM.SPEC.inst.fields[ck]).map(hnorm).join('|');
+    const b = [].concat(HR.install[hk]).map(hnorm).join('|');
+    ok(a === b, `설치현황 ${ck} 별칭 순서: core.js [${a}] ↔ hr.js [${b}]`);
+    ord++;
+  }
+  console.log(`설치현황 별칭 순서 ${ord}개 대조`);
   console.log(`설치현황 ${n}개 개념 대조 (헤더 ${cm.hi + 1}행) · type=${cm.C.type}`);
 }
 
