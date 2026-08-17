@@ -81,6 +81,12 @@ console.log('\n[3] 조용한 자르기가 없는가');
   is(/조회 실패/.test(fn), '조회가 실패했을 때도 답변에 밝힌다 (0건을 «고장 없음»으로 읽지 않게)');
   is(/order\(dCol, \{ ascending: false \}\)/.test(IDX),
      '잘릴 때 «최근»이 남도록 내림차순으로 받는다');
+  /* 모델에게만 주면 «안 적으면 사라지는» 문장이 된다. 실제로 첫 답변에서 사라졌다 —
+     서버가 답변 문자열에 직접 붙여야 한다(두 입구 모두). */
+  is(/function withFaultNote/.test(IDX), '조회 범위를 서버가 답변에 직접 붙인다');
+  is((IDX.match(/withFaultNote\(/g) || []).length >= 3, '카톡·웹 두 입구 모두에 붙는다');
+  is(/room = limit - tail\.length/.test(IDX),
+     '카톡 950자 제한에서 꼬리말을 먼저 확보한다 (본문에 밀려 잘리지 않게)');
   is(/전체기간/.test(IDX) === false || /span/.test(IDX),
      'BM 메뉴가 더 이상 «전체기간»이라고 잘못 말하지 않는다');
 }

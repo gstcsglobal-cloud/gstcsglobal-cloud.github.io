@@ -350,6 +350,17 @@ async function loadCacheLive(svc: any, keys: string[], filters: any, now: Date) 
   return cache;
 }
 const faultsNoteOf = (c: Record<string, Cache>) => (c["faults"] as any)?.note ?? "";
+/* 조회 범위를 «답변에» 직접 붙인다. 모델에게만 주면 안 적을 수 있고, 그러면 잘렸다는
+   사실이 사라진다 — 조용한 자르기를 막으려고 만든 문장인데 조용히 없어지는 셈이다.
+   카톡은 950자 제한이 있어 꼬리말을 먼저 확보하고 본문을 줄인다. */
+function withFaultNote(answer: string, cache: Record<string, Cache>, limit?: number) {
+  const n = faultsNoteOf(cache);
+  if (!n) return answer;
+  const tail = "\n\n" + n;
+  if (!limit) return answer + tail;
+  const room = limit - tail.length;
+  return (answer.length > room ? answer.slice(0, Math.max(0, room - 1)) + "…" : answer) + tail;
+}
 
 /* ============================================================
    3. 인증
@@ -1099,7 +1110,7 @@ Deno.serve(async (req) => {
         });
       } catch (_) { /* 로그 실패는 무시 */ }
 
-      return json({ answer, datasets, took_ms: Date.now() - t0 });
+      return json({ answer: withFaultNote(answer, cache), datasets, took_ms: Date.now() - t0 });
     }
 
     // 카카오 웹훅
@@ -1233,7 +1244,7 @@ Deno.serve(async (req) => {
         });
       } catch (_) { /* 로그 실패는 무시 */ }
 
-      return { payload: simpleText(answer) };
+      return { payload: simpleText(withFaultNote(answer, cache, KAKAO_MAX)) };
     };
 
     const pending = respond();

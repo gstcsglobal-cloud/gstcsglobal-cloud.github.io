@@ -2339,23 +2339,29 @@ function render(){
       return {k:R.k,lbl:R.lbl,hasP,ru,wiU,woU:ru-wiU,rc,wiC,woC:rc-wiC,iu,ic,exp,loc,fit,need,gap,pm};
     });
     const S=D.reduce((a,d)=>{Object.keys(d).forEach(k=>{if(k!=='lbl'&&k!=='k'&&k!=='fit'&&k!=='hasP')a[k]=(a[k]||0)+d[k];});return a;},{});
-    /* 합계도 «아는 것»만 더한다. 자료 없는 법인의 need 까지 넣으면 TOTAL 증감이
-       실제보다 크게 부족한 것처럼 나온다. */
-    S.hasP=true;
-    S.need=D.filter(d=>d.hasP).reduce((a,d)=>a+d.need,0);
-    S.gap=S.loc-S.need;   // need는 행별 합(사이트별 적정 챔버가 다를 수 있어 총합에서 재나눗셈하지 않는다)
     const _noP=D.filter(d=>!d.hasP);
+    /* TOTAL 은 두 종류로 갈린다.
+       ① «아는 것의 합»(가동·챔버·목표 TO 인원·현채인)은 그대로 더한다 — 목표 TO 인원은
+          챔버에서 나오므로 자료 없는 법인도 계산된다. 여기서 빼면 **열이 안 더해져서**
+          79+82+56+… 인데 TOTAL 만 56 이 된다(실제로 그렇게 냈다가 잡았다).
+       ② «완전해야 성립하는 값»(증감·모집계획·인당 챔버)은 비운다. 인원을 9개 법인에서
+          모르는데 전체 챔버를 TAIWAN 49명으로 나누면 인당 222챔버가 나온다 — 숫자가
+          있다는 것 자체가 거짓말이다. */
+    S.hasP=true; S.partial=_noP.length>0;
+    S.gap=S.loc-S.need;   // need는 행별 합(사이트별 적정 챔버가 다를 수 있어 총합에서 재나눗셈하지 않는다)
     const fm=v=>v?v.toLocaleString():'<span class="mut">-</span>';
     /* «0명»이 아니라 «아직 모른다»는 표시. 같은 '-' 로 두면 둘이 구별되지 않는다. */
     const _nd='<span class="mut" title="'+t('op_nodata_t')+'" style="font-size:11px;white-space:nowrap">'+t('op_nodata')+'</span>';
+    /* 「비교로 나오는 값」이 성립하는가 — 그 행(또는 합계)의 인원을 «전부» 알아야 한다. */
+    const _pOK=d=>d.hasP&&!d.partial;
     const cell=d=>'<td class="gl">'+fm(d.ru)+'</td><td>'+fm(d.wiU)+'</td><td>'+fm(d.woU)+'</td>'
       +'<td class="gl">'+fm(d.rc)+'</td><td>'+fm(d.wiC)+'</td><td>'+fm(d.woC)+'</td>'
       +'<td class="gl">'+fm(d.iu)+'</td><td>'+fm(d.ic)+'</td>'
       +'<td class="gl">'+(d.hasP?fm(d.exp):_nd)+'</td><td>'+(d.hasP?fm(d.loc):_nd)+'</td>'
       +'<td class="gl">'+(d.k?('<span class="fitcell" title="클릭해서 수정" onclick="editFit(\''+d.k+'\')">'+fitOf(d.k)+(FITCH[d.k]?'':'')+' ✎</span>'):(d.rc?'—':'<span class="mut">-</span>'))+'</td><td>'+fm(d.need)+'</td>'
-      +'<td class="gl '+(d.hasP&&d.gap<0?'neg':d.hasP&&d.gap>0?'pos':'')+'">'+(!d.hasP?_nd:(d.rc||d.loc?(d.gap>0?'+':'')+d.gap:'<span class="mut">-</span>'))+'</td>'
-      +'<td>'+(!d.hasP?_nd:(d.gap<0?(-d.gap):'<span class="mut">-</span>'))+'</td>'
-      +'<td class="gl">'+((d.hasP&&d.loc&&d.rc)?Math.round(d.rc/d.loc):(d.hasP?'<span class="mut">-</span>':_nd))+'</td>'
+      +'<td class="gl '+(_pOK(d)&&d.gap<0?'neg':_pOK(d)&&d.gap>0?'pos':'')+'">'+(!_pOK(d)?_nd:(d.rc||d.loc?(d.gap>0?'+':'')+d.gap:'<span class="mut">-</span>'))+'</td>'
+      +'<td>'+(!_pOK(d)?_nd:(d.gap<0?(-d.gap):'<span class="mut">-</span>'))+'</td>'
+      +'<td class="gl">'+((_pOK(d)&&d.loc&&d.rc)?Math.round(d.rc/d.loc):(_pOK(d)?'<span class="mut">-</span>':_nd))+'</td>'
       +'<td class="gl">'+fm(d.pm)+'</td>';
     /* 첫 칸은 «한 단계 위»다. 법인을 고르지 않았으면 구분(GST Overseas·GST Korea),
        고르면 그 법인 이름 그대로. 머리글도 따라 움직인다 — 안 그러면 「법인」 칸에
