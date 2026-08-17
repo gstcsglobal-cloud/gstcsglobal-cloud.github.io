@@ -177,10 +177,14 @@ function mapCols(headerRow, spec) {
 /* ---------- 인원명단 (gid 1213453343) ---------- */
 export function parseRoster(csvText) {
   const rows = parseCSV(csvText);
-  const hIdx = headerRowOf(rows, [(h) => h === 'id', (h) => h.includes('work place')]);
+  /* SPEC-SYNC — report/index.html · hr/index.html 의 parseRoster 와 같은 규약.
+     사번 열이 옛 'ID' · 새 '사원번호'(v96) 로 갈리고, 근무지도 옛 'work place' ·
+     새 '단지/라인' 으로 갈린다. 한쪽만 보면 헤더행을 못 찾아 인원이 0명이 된다. */
+  const hIdx = headerRowOf(rows, [(h) => h === 'id' || h === '사원번호',
+                                  (h) => h.includes('work place') || h === '입사일' || h === '라인']);
   const header = rows[hIdx].map(lc);
   const ci = {
-    id: colIdx(header, (h) => h === 'id'),
+    id: colIdx(header, (h) => h === 'id' || h === '사원번호'),
     name: colIdx(header, (h) => h.includes('name') && h.includes('영문')),
     dept: colIdx(header, (h) => h.startsWith('dept')),
     wp: colIdx(header, (h) => h === 'work place'),

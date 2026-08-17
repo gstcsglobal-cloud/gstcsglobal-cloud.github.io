@@ -942,11 +942,14 @@ function parseRoster(rows){
   for(let i=0;i<Math.min(rows.length,8);i++){
     const h=(rows[i]||[]).map(x=>String(x||'').trim().toLowerCase());
     // 두 양식 공통으로 ID 가 있고, 그 옆에 근무지(옛) 또는 입사일/라인(새)이 있다
-    if(h.includes('id')&&(h.some(x=>x.includes('work place'))||h.includes('입사일')||h.includes('라인'))){hi=i;break;}
+    /* ⚠ 사번 열 이름이 양식마다 다르다 — 옛 'ID' · 새 '사원번호'(v96). 'id' 만 보면
+       헤더행을 못 찾아 인원이 통째로 0명이 된다(이미 한 번 겪었다). */
+    if((h.includes('id')||h.includes('사원번호'))
+       &&(h.some(x=>x.includes('work place'))||h.includes('입사일')||h.includes('라인'))){hi=i;break;}
   }
   if(hi<0)return [];
   const h=rows[hi].map(x=>String(x||'').trim().toLowerCase());
-  const iId=idx(h,['id']);
+  const iId=idx(h,['id','사원번호']);
   const iNm=idx(h,['이름(영문)'])>=0?idx(h,['이름(영문)']):h.findIndex(x=>x.includes('name')&&x.includes('영문'));
   const iCn=idx(h,['이름(중문)'])>=0?idx(h,['이름(중문)']):h.findIndex(x=>x.includes('name')&&x.includes('중문'));
   const iIn=idx(h,['입사일'])>=0?idx(h,['입사일']):pre(h,['date of entry']);
@@ -954,10 +957,11 @@ function parseRoster(rows){
   const iOn=h.findIndex(x=>x.includes('현장'));
   const iHr=idx(h,['인사']);                 // 새 양식: 재직·퇴직·해외출장·휴직
   const iDuty=idx(h,['담당구분']);           // 새 양식: Scrubber·Chiller (옛 조직도 문자열 대체)
-  const iCust=idx(h,['고객사','사업부']);
+  const iCust=idx(h,['고객사']);
+  const iRegion=idx(h,['구분']);   // v96 신설 — 국내/해외를 시트가 직접 적어 준다
   const iArea=idx(h,['지역']);
   const iTeam=idx(h,['팀']);
-  const iOp=idx(h,['운영단위']);   // 새 양식(v2). 없으면 빈 값 → 운영단위 필터에서 제외된다
+  const iOp=idx(h,['운영단위','사업부']);   // v96: 「사업부」→「운영단위」 개명 + 값도 진짜가 됐다
   const iCamp=idx(h,['단지']);
   const iLine=idx(h,['라인']);
   const iWp=h.findIndex(x=>x==='work place');
@@ -969,7 +973,10 @@ function parseRoster(rows){
     const cust=g(r,iCust), area=g(r,iArea), line=g(r,iLine), camp=g(r,iCamp), wpOld=g(r,iWp);
     /* 구분은 새 양식이면 고객사·지역이 바로 말해 준다(SEC=국내 · Taichung=해외).
        옛 양식에는 그 열이 없어 중문명·Dept·사번 다수결로 갈랐다 — 그 길도 남긴다. */
-    const region=GST.ORG.region(cust)||GST.ORG.region(area)
+    /* 시트가 「구분」을 직접 적어 주면 그게 정본이다(v96). 없으면 옛 길 — 고객사·지역,
+       그것도 없으면 중문명·Dept·사번 다수결. 짐작보다 적힌 값이 언제나 낫다. */
+    const region=GST.ORG.region(g(r,iRegion))||GST.ORG.region(g(r,iOp))
+      ||GST.ORG.region(cust)||GST.ORG.region(area)
       ||GST.ORG.emp({cn:g(r,iCn),dept:g(r,iDept),id:g(r,iId),wp:wpOld||line});
     // 근무지 — 옛 양식은 Work Place 한 칸이 라인 노릇을 했다. 새 양식은 라인 열이 따로 있다.
     const wp=line||wpOld;

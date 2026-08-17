@@ -486,13 +486,16 @@ function parseRoster(rows){
   let hi=-1;
   for(let i=0;i<Math.min(rows.length,8);i++){
     const h=(rows[i]||[]).map(nz);
-    if(h.includes('id')&&(h.some(x=>x.includes('work place'))||h.includes('입사일')||h.includes('라인'))){hi=i;break;}
+    /* ⚠ 사번 열 이름이 양식마다 다르다 — 옛 'ID' · 새 '사원번호'(v96).
+       'id' 만 보다가 헤더행을 못 찾아 **인원이 통째로 0명**이 된 적이 있다(에러 없음). */
+    if((h.includes('id')||h.includes('사원번호'))
+       &&(h.some(x=>x.includes('work place'))||h.includes('입사일')||h.includes('라인'))){hi=i;break;}
   }
   if(hi<0)return [];
   const h=rows[hi].map(nz);
   const idx=(names)=>{ for(const n of names){ const i=h.indexOf(n); if(i>=0)return i; } return -1; };
   const pre=(names)=>{ for(const n of names){ const i=h.findIndex(x=>x.startsWith(n)); if(i>=0)return i; } return -1; };
-  const iId=h.indexOf('id'),
+  const iId=idx(['id','사원번호']),
     iNm=idx(['이름(영문)'])>=0?idx(['이름(영문)']):h.findIndex(x=>x.includes('name')&&x.includes('영문')),
     iCn=idx(['이름(중문)'])>=0?idx(['이름(중문)']):h.findIndex(x=>x.includes('name')&&x.includes('중문')),
     iTeam=idx(['팀']),
@@ -505,7 +508,9 @@ function parseRoster(rows){
     iOrg=h.findIndex(x=>x.includes('조직도')),
     iDuty2=idx(['담당구분']),                 // 새 양식: Scrubber · Chiller (옛 조직도 문자열 대체)
     iHr=idx(['인사']),                        // 새 양식: 재직 · 퇴직 · 해외출장 · 휴직
-    iOp=idx(['운영단위']), iCust=idx(['고객사','사업부']), iArea=idx(['지역']),
+    iOp=idx(['운영단위','사업부']),          // v96: 「사업부」가 「운영단위」로 이름이 바뀌고 값도 진짜가 됐다
+    iRegion=idx(['구분']),                    // v96 신설 — 국내/해외를 시트가 직접 적어 준다
+    iCust=idx(['고객사']), iArea=idx(['지역']),
     iCamp=idx(['단지']), iLine=idx(['라인']),
     iPos=idx(['직급(한글)'])>=0?idx(['직급(한글)']):h.indexOf('직급'),
     iDuty=h.findIndex(x=>x.includes('업무')),
