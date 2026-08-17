@@ -116,6 +116,23 @@ ok(GST.ORG.region('')==='', '빈 값은 모름 — 국내로 치면 합계가 �
 ok(GST.ORG.country('F16')==='TAIWAN', 'F16 → TAIWAN');
 ok(GST.ORG.country('F10A')==='SINGAPORE', 'F10A → SINGAPORE');
 ok(GST.ORG.country('청주')==='KOREA', '청주 → KOREA');
+/* region 과 country 는 «같은 국내 어휘»를 봐야 한다 (v99).
+   예전에는 region 만 ^SK·화성·평택·기흥·탕정·천안을 알고 country 는 몰랐다. 그래서 같은 값이
+   «구분=국내 · 국가=미상» 으로 갈렸고, 설치현황의 「설치 국가」 카드에서 SK·삼성 설비가
+   통째로 국가 미상으로 떨어졌다. 한쪽만 고치면 다시 갈라지므로 여기서 대칭을 못 박는다. */
+['SK Scrubber','PSEC','KSEC','화성','평택','기흥','탕정','천안','청주','이천','국내기타 SCRUBBER']
+  .forEach(v=>ok(GST.ORG.region(v)==='국내' && GST.ORG.country(v)==='KOREA',
+                 `region↔country 대칭: ${v}`));
+// 「Country」 열의 법인명은 국가로 되돌아와야 한다 — 안 그러면 카드가 법인을 국가라고 말한다
+ok(GST.ORG.country('GST HEFEI SCRUBBER')==='CHINA', 'GST HEFEI → CHINA (법인명이 아니라 국가)');
+ok(GST.ORG.country('GST CHINA(XIAN) SCRUBBER')==='CHINA', 'GST XIAN → CHINA');
+ok(GST.ORG.country('GST AMERICA SCRUBBER')==='USA', 'GST AMERICA → USA');
+// 공유 정규식에 /g 가 붙으면 test() 가 lastIndex 를 들고 다녀 한 번 걸러 false 를 낸다
+ok(GST.ORG.country('SK Scrubber')===GST.ORG.country('SK Scrubber'),
+   '같은 값을 두 번 물어도 같은 답 (공유 정규식에 /g 가 붙으면 깨진다)');
+// 설치현황 페이지도 버전을 선언해야 한다 — 옛 core.js 면 국가가 조용히 미상이 된다
+ok(/GST\.needVer\s*&&\s*GST\.needVer\(/.test(fs.readFileSync(ROOT+'/scrubber/index.html','utf8')),
+   'scrubber 페이지가 needVer 를 부르지 않는다');
 // 인원 다수결: 중문명·Dept 가 있으면 해외, 없고 사번이 20xx 면 국내
 ok(GST.ORG.emp({cn:'',dept:'',id:'20240101',wp:'P1'})==='국내', '국내 인원 판정');
 ok(GST.ORG.emp({cn:'王',dept:'CS',id:'1120001',wp:'F16'})==='해외', '대만 인원 판정');

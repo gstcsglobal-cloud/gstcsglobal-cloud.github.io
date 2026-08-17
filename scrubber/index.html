@@ -515,6 +515,10 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
+/* 이 화면의 「설치 국가」 카드는 GST.ORG.country 가 국내 법인(SK·삼성 도시명)을 국가로
+   푸는 것에 기댄다(core v99). 옛 core.js 가 캐시에 남으면 그 설비가 통째로 「국가 미상」이
+   되는데 에러는 안 난다 — 숫자만 조용히 틀린다. 그래서 버전을 선언해 배너로 드러낸다. */
+GST.needVer && GST.needVer(99);
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
 // 설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
 // 이 시트는 128열이라 위치 고정이 특히 위험했다(type이 75열째). 이제 이름으로 따라간다.
@@ -558,7 +562,7 @@ const T={
     gran_lbl:'집계 단위',gran_note:'↑ 추이 차트 적용',
     g_week:'주 단위',g_month:'월 단위',g_quarter:'분기 단위',g_half:'반기 단위',g_year:'연 단위',
     search_lbl:'검색',
-    kp1:'설치 챔버',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty IN',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'개국',unit_co:'사',kf1:'전년 동기 {n}ch',kf2:'최다 {v} · {n}대',kf3:'신규 {n}개사 (12개월)',kf4:'전체의 {p}%',kf5:'전체의 {p}%',w_ratio:'Warranty IN 비율',ch_newm:'신규 Turn On 추이 (주/월)',note_newm:'최근 12구간(주/월) · 신규 가동',note_hbar:'🖱️ 클릭 시 필터 · 비중은 툴팁',mon_unit:'월',
+    kp1:'설치 챔버',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty IN',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'개국',unit_co:'사',kf1:'전년 동기 {n}ch',kf2:'최다 {v} · {n}ch',kf2_unk:'국가 미상 {n}ch',kf3:'신규 {n}개사 (12개월)',kf4:'전체의 {p}%',kf5:'전체의 {p}%',w_ratio:'Warranty IN 비율',ch_newm:'신규 Turn On 추이 (주/월)',note_newm:'최근 12구간(주/월) · 신규 가동',note_hbar:'🖱️ 클릭 시 필터 · 비중은 툴팁',mon_unit:'월',
     note_ax:'🖱️ 막대를 눌러 필터 · 축을 바꿔 다른 분포로',etc_n:'기타 ({n}종)',
     by_ax:'{v}별 설치',ax_corp:'법인',ax_cust:'고객사',ax_camp:'단지',ax_line:'라인',ax_model:'모델',ax_tm:'Tool Maker',ax_grp:'공정 그룹',
     dr_on:'차트 드릴',
@@ -579,7 +583,7 @@ const T={
     gran_lbl:'View By',gran_note:'↑ Trend chart unit',
     g_week:'Week',g_month:'Month',g_quarter:'Quarter',g_half:'Half-Year',g_year:'Year',
     search_lbl:'Search',
-    kp1:'Installed Chambers',kp2:'Countries',kp3:'Customers',kp4:'Warranty IN',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'countries',unit_co:'cos.',kf1:'A year ago: {n}',kf2:'Top {v} · {n}',kf3:'{n} new customers (12mo)',kf4:'{p}% of total',kf5:'{p}% of total',w_ratio:'Warranty IN ratio',ch_newm:'New Turn On Trend (W/M)',note_newm:'Last 12 periods (W/M)',note_hbar:'🖱️ click to filter · share in tooltip',mon_unit:'',
+    kp1:'Installed Chambers',kp2:'Countries',kp3:'Customers',kp4:'Warranty IN',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'countries',unit_co:'cos.',kf1:'A year ago: {n}',kf2:'Top {v} · {n}',kf2_unk:'{n} unresolved',kf3:'{n} new customers (12mo)',kf4:'{p}% of total',kf5:'{p}% of total',w_ratio:'Warranty IN ratio',ch_newm:'New Turn On Trend (W/M)',note_newm:'Last 12 periods (W/M)',note_hbar:'🖱️ click to filter · share in tooltip',mon_unit:'',
     note_ax:'🖱️ click a bar to filter · switch the axis for another breakdown',etc_n:'Others ({n})',
     by_ax:'Installed by {v}',ax_corp:'Entity',ax_cust:'Customer',ax_camp:'Campus',ax_line:'Line',ax_model:'Model',ax_tm:'Tool Maker',ax_grp:'Process Group',
     dr_on:'Chart drill',
@@ -600,7 +604,7 @@ const T={
     gran_lbl:'聚合单位',gran_note:'↑ 趋势图适用',
     g_week:'按周',g_month:'按月',g_quarter:'按季度',g_half:'按半年',g_year:'按年',
     search_lbl:'搜索',
-    kp1:'安装腔体',kp2:'国家',kp3:'客户',kp4:'保修有效',kp5:'Warranty OUT',unit_ea:'腔',unit_cty:'国',unit_co:'家',kf1:'去年同期 {n}腔',kf2:'最多 {v} · {n}台',kf3:'新客户 {n}家 (12个月)',kf4:'占总数{p}%',kf5:'占总数 {p}%',w_ratio:'有效比率',ch_newm:'新增Turn On趋势 (周/月)',note_newm:'近12期(周/月)',note_hbar:'🖱️点击筛选 · 占比见提示框',mon_unit:'月',
+    kp1:'安装腔体',kp2:'国家',kp3:'客户',kp4:'保修有效',kp5:'Warranty OUT',unit_ea:'腔',unit_cty:'国',unit_co:'家',kf1:'去年同期 {n}腔',kf2:'最多 {v} · {n}腔',kf2_unk:'国家不明 {n}腔',kf3:'新客户 {n}家 (12个月)',kf4:'占总数{p}%',kf5:'占总数 {p}%',w_ratio:'有效比率',ch_newm:'新增Turn On趋势 (周/月)',note_newm:'近12期(周/月)',note_hbar:'🖱️点击筛选 · 占比见提示框',mon_unit:'月',
     note_ax:'🖱️点击柱状筛选 · 切换轴查看其他分布',etc_n:'其他 ({n}种)',
     by_ax:'按{v}安装',ax_corp:'法人',ax_cust:'客户',ax_camp:'园区',ax_line:'线',ax_model:'型号',ax_tm:'Tool Maker',ax_grp:'工艺组',
     dr_on:'图表筛选',
@@ -621,7 +625,7 @@ const T={
     gran_lbl:'集計単位',gran_note:'↑ 推移チャート適用',
     g_week:'週単位',g_month:'月単位',g_quarter:'四半期',g_half:'半期',g_year:'年単位',
     search_lbl:'検索',
-    kp1:'設置チャンバー',kp2:'設置国',kp3:'顧客',kp4:'保証有効',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'カ国',unit_co:'社',kf1:'前年同期 {n}ch',kf2:'最多 {v} · {n}台',kf3:'新規 {n}社 (12ヶ月)',kf4:'全体の{p}%',kf5:'全体の {p}%',w_ratio:'有効比率',ch_newm:'新規Turn On推移 (週/月)',note_newm:'直近12区間(週/月)',note_hbar:'🖱️クリックで絞込 · 構成比はツールチップ',mon_unit:'月',
+    kp1:'設置チャンバー',kp2:'設置国',kp3:'顧客',kp4:'保証有効',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'カ国',unit_co:'社',kf1:'前年同期 {n}ch',kf2:'最多 {v} · {n}ch',kf2_unk:'国不明 {n}ch',kf3:'新規 {n}社 (12ヶ月)',kf4:'全体の{p}%',kf5:'全体の {p}%',w_ratio:'有効比率',ch_newm:'新規Turn On推移 (週/月)',note_newm:'直近12区間(週/月)',note_hbar:'🖱️クリックで絞込 · 構成比はツールチップ',mon_unit:'月',
     note_ax:'🖱️棒をクリックで絞込 · 軸を変えて別の分布へ',etc_n:'その他 ({n}種)',
     by_ax:'{v}別設置',ax_corp:'法人',ax_cust:'顧客',ax_camp:'団地',ax_line:'ライン',ax_model:'モデル',ax_tm:'Tool Maker',ax_grp:'工程グループ',
     dr_on:'チャート絞込',
@@ -1417,14 +1421,24 @@ function render(){ GST.skeleton(false);
   animVal(document.getElementById('kp1'),chN);
   setTxt('kd1',GST.deltaBadge(chN,prevCnt,false));
   setTxt('kf1',t('kf1').replace('{n}',prevCnt.toLocaleString()));
-  // ② 설치 국가: 최다 국가 표기
-  const ctrySet=new Set(f.map(r=>(r[CI.country]||'').trim()).filter(Boolean));
+  /* ② 설치 국가 — 「국가」라고 적었으면 국가를 세야 한다.
+     ⚠ 설치현황 `Country` 열에는 국가가 아니라 **법인명**이 들어 있다(`GST HEFEI SCRUBBER`).
+       그대로 세면 카드가 「10개국 · 최다 GST HEFEI SCRUBBER」라고 말한다 — 중국 세 법인이
+       세 나라로 잡히고, 최다 칸에는 나라 이름이 아니라 법인 이름이 선다(실측 화면).
+       GST.ORG.country 가 그 열을 국가로 되돌린다(CLAUDE.md 의 같은 경고). 법인을 보고
+       싶으면 아래 축 선택 카드에서 「법인」을 고르면 된다 — 두 축을 한 카드에 섞지 않는다. */
+  const ctryOf=r=>GST.ORG.country(r[CI.country]);
+  const ctrySet=new Set(f.map(ctryOf).filter(Boolean));
   const prevCty=new Set(f.filter(r=>{const d=toDate(r[CI.turnOn]);return d&&d<=yearAgo;})
-    .map(r=>(r[CI.country]||'').trim()).filter(Boolean));
-  const ctryAll=countBy(f,CI.country);
+    .map(ctryOf).filter(Boolean));
+  /* 국가로 못 푼 행은 «국가 0개»가 아니라 «모르는 것»이다 — 조용히 빼면 합이 안 맞는다.
+     ins_topctry 인사이트도 이 배열을 쓰므로 거기서도 같은 축(국가)으로 말하게 된다. */
+  const ctryAll=countByFn(f,ctryOf).filter(e=>e[0]!=='N/A');
+  const ctryUnk=chSum(f.filter(r=>!ctryOf(r)));
   animVal(document.getElementById('kp2'),ctrySet.size);
   setTxt('kd2',GST.deltaBadge(ctrySet.size,prevCty.size,false));
-  setTxt('kf2',ctryAll.length?t('kf2').replace('{v}',ctryAll[0][0]).replace('{n}',ctryAll[0][1]):'—');
+  setTxt('kf2',(ctryAll.length?t('kf2').replace('{v}',ctryAll[0][0]).replace('{n}',ctryAll[0][1].toLocaleString()):'—')
+    +(ctryUnk?' · '+t('kf2_unk').replace('{n}',ctryUnk.toLocaleString()):''));
   // ③ 고객사: 최근 12개월 첫 가동 신규 고객
   const custFirst={};
   f.forEach(r=>{const c=(r[CI.customer]||'').trim();const d=toDate(r[CI.turnOn]);

@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 98;
+GST.VER = 99;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1405,6 +1405,14 @@ GST.ORG = {
      반환값은 '국내' / '해외' / ''(모름). 빈 문자열을 국내로 치지 않는다 —
      모르는 것을 아는 척하면 합계가 조용히 틀어진다. */
   REGION_KR: '국내', REGION_OS: '해외',
+  /* 국내 어휘 한 벌. region() 과 country() 가 **같은 목록**을 봐야 한다 —
+     예전에는 region 만 `^SK`·화성·평택·기흥·탕정·천안을 알고 country 는 몰랐다. 그래서
+     같은 값이 «구분=국내» 인데 «국가=미상» 으로 갈렸고, 국가를 세는 카드에서 SK·삼성
+     설비가 통째로 「국가 미상」으로 떨어졌다(제2원칙 그대로의 자리 — 한쪽만 고치면 갈라진다).
+     ⚠ /g 를 붙이지 말 것. 공유 정규식에 g 를 붙이면 test() 가 lastIndex 를 들고 다녀
+       한 번 걸러 한 번씩 false 를 낸다 — 값의 절반이 조용히 미상이 된다. */
+  _KR: /^SEC|^PSEC|^KSEC|^SDC|^SK\b|KOREA|한국|국내|이천|청주|화성|평택|기흥|탕정|천안/,
+
   region: function(s){
     const u = GST.upk(s || '');
     if(!u.trim()) return '';
@@ -1412,7 +1420,7 @@ GST.ORG = {
        반대편 '해외 기타 SCRUBBER' 는 «해외» 글자로 잡히는데 국내만 안 잡혀,
        그 행이 «구분 미상»이 되어 국내 필터에서 조용히 빠졌다. 두 어휘를 대칭으로 둔다. */
     /* 인원현황 새 양식의 「지역」·「고객사」 어휘. 국내 사업장은 도시명으로 들어온다. */
-    if(/^SEC|^PSEC|^KSEC|^SDC|^SK\b|KOREA|한국|국내|이천|청주|화성|평택|기흥|탕정|천안/.test(u)) return '국내';
+    if(GST.ORG._KR.test(u)) return '국내';
     if(/TAICHUNG|LINKOU|TAINAN|TONGLUO|HSINCHU|SINCHU|KAOHSIUNG/.test(u)) return '해외';
     if(/^GST|해외/.test(u)) return '해외';
     /* 사업부명이 아니라 «국가»가 그대로 들어오는 자료가 있다(옛 설치현황 Country = 'TAIWAN').
@@ -1467,7 +1475,7 @@ GST.ORG = {
   country: function(s){
     const u = GST.upk(s || '');
     if(!u.trim()) return '';
-    if(/KOREA|한국|이천|청주|^SEC|^SDC/.test(u)) return 'KOREA';
+    if(GST.ORG._KR.test(u)) return 'KOREA';   // region() 과 같은 목록을 본다 (_KR 주석)
     if(/TAIWAN|대만|TONGL|TAINAN|TAICHUNG|PSMC|POWERCHIP|WINBOND|TASC/.test(u)) return 'TAIWAN';
     if(/CHINA|WUHAN|HEFEI|XIAN|WUXI|중국/.test(u)) return 'CHINA';
     if(/AMERICA|USA|AUSTIN|미국/.test(u)) return 'USA';
