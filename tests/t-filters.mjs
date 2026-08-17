@@ -126,9 +126,13 @@ is(/_eCourse/.test(SRC.report) && /'Scrubber Lv\.3'/.test(SRC.report),
 console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96)');
 {
   is(/div:'', /.test(CORE) || /div:''/.test(CORE), 'core — F 에 div 축이 있다');
-  is(/customer:'고객사', div:'사업부'/.test(CORE), 'core — 축 순서가 피벗과 같다 (고객사 다음 사업부)');
-  is(/const chk = \['region','op','customer','div','campus','line','team'\]/.test(CORE),
-     'core — 종속(cascading)이 사업부도 좁힌다');
+  /* 계층은 사용자가 확정했다(v98): 구분 → 운영단위 → 사업부 → 고객사 → 단지 → 라인.
+     칸이 놓인 순서가 곧 사람이 읽는 계층이라, 종속만 맞고 순서가 틀리면 화면이 거짓말을 한다. */
+  is(/div:'사업부', customer:'고객사'/.test(CORE), 'core — 축 순서가 계층과 같다 (사업부 다음 고객사)');
+  is(/const chk = \['region','op','div','customer','campus','line','team'\]/.test(CORE),
+     'core — 종속(cascading)이 같은 순서로 좁힌다');
+  is(/sel\('gf-op', L\.op\) \+ sel\('gf-div', L\.div\)/.test(CORE),
+     'core — 사이드바 칸도 운영단위 다음이 사업부다');
   is(/if\(F\.div      && !axOk\('div', x\)\)/.test(CORE),
      'core — 사업부 술어가 axOk 를 지난다 (loose 를 받을 수 있게)');
   /* ⚠ 해외 설치현황에는 사업부 열이 아예 없다. loose 가 없으면 사업부를 고르는 순간

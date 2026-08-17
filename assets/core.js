@@ -2446,7 +2446,7 @@ GST.filters = (function(){
      정본은 설치현황이지만 사람이 볼 때는 두 단지를 한 번에 봐야 하는 자리가 생긴다.
      다른 축을 다중으로 바꾸려면 MULTI 에 이름만 더하면 된다 — 나머지 코드는 그대로다. */
   const MULTI = { campus:1 };
-  const F = { region:'', op:'', customer:'', div:'', campus:new Set(), line:'', team:'', dtFrom:'', dtTo:'' };
+  const F = { region:'', op:'', div:'', customer:'', campus:new Set(), line:'', team:'', dtFrom:'', dtTo:'' };
   /* 술어에서 «고른 것에 걸리나»를 묻는 유일한 자리. 단일·다중을 여기서만 가른다 —
      페이지가 `x.campus===F.campus` 를 직접 쓰면 Set 이 된 순간 조용히 전부 false 가 된다. */
   const hitK = (k, v) => MULTI[k] ? (!F[k].size || F[k].has(v)) : (!F[k] || v === F[k]);
@@ -2456,7 +2456,7 @@ GST.filters = (function(){
   /* 축 순서는 설치현황 피벗과 같다 — 운영단위 → 고객사 → 사업부 → 단지 → 라인.
      사업부는 국내 자료에만 있다(해외 설치현황에는 그 열이 없다). 값이 없는 화면에서는
      「전체 (자료 없음)」으로 잠긴다 — 칸이 나타났다 사라지면 그게 더 헷갈린다. */
-  const L = { region:'구분', op:'운영단위', customer:'고객사', div:'사업부', campus:'단지', line:'라인', team:'팀', period:'기간' };
+  const L = { region:'구분', op:'운영단위', div:'사업부', customer:'고객사', campus:'단지', line:'라인', team:'팀', period:'기간' };
   const val = (g, x) => { try{ const v = g ? g(x) : ''; return v==null?'':String(v).trim(); }catch(e){ return ''; } };
   const dstr = v => {
     if(!v) return '';
@@ -2488,7 +2488,7 @@ GST.filters = (function(){
      자기 자신은 빼고 본다 — 안 그러면 한 번 고른 값 말고는 목록에서 사라져 되돌릴 수 없다. */
   function passExcept(x, skip){
     const g = CFG.get || {};
-    const chk = ['region','op','customer','div','campus','line','team'];
+    const chk = ['region','op','div','customer','campus','line','team'];
     for(let i=0;i<chk.length;i++){
       const k = chk[i];
       if(k===skip || !hasK(k)) continue;
@@ -2533,7 +2533,7 @@ GST.filters = (function(){
 
   function refresh(){
     if(!CFG) return;
-    ['region','op','customer','div','campus','line','team'].forEach(function(k){
+    ['region','op','div','customer','campus','line','team'].forEach(function(k){
       fill('gf-'+k, k, opts(k, function(x){ return passExcept(x, k); }));
     });
     /* 기간은 «그 자료에 날짜 축이 있을 때만» 걸 수 있다. tco 의 기준 월, hr 의 기준일처럼
@@ -2549,7 +2549,7 @@ GST.filters = (function(){
   }
 
   function read(changed){
-    ['region','op','customer','div','campus','line','team'].forEach(function(k){
+    ['region','op','div','customer','campus','line','team'].forEach(function(k){
       if(MULTI[k]) return;                       // 다중선택은 mselFill 이 Set 을 직접 고친다
       const el=document.getElementById('gf-'+k); if(el) F[k]=el.value;
     });
@@ -2590,8 +2590,8 @@ GST.filters = (function(){
       + 'onclick="GST.mselToggle(\''+id+'\',event)">\uc804\uccb4 \u25be</button>'
       + '<div id="'+id+'Box" class="mselbox"></div></div>';
     return '<div class="gf-base">'
-      + sel('gf-region', L.region) + sel('gf-op', L.op) + sel('gf-customer', L.customer)
-      + sel('gf-div', L.div)
+      + sel('gf-region', L.region) + sel('gf-op', L.op) + sel('gf-div', L.div)
+      + sel('gf-customer', L.customer)
       + msel('gf-campus', L.campus) + sel('gf-line', L.line) + sel('gf-team', L.team)
       + '<div class="slicer"><div class="lbl">'+L.period+'</div>'
       + '<input type="date" id="gf-from" class="dt-input" onchange="GST.filters._on()"> ~ '
