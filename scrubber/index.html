@@ -120,6 +120,12 @@ body{color:var(--txt);
 .grid2-trend{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .grid2-trend .trend-card{margin-bottom:20px}
 @media(max-width:900px){.grid2-trend{grid-template-columns:1fr}}
+/* 개요 첫 줄 — 추이 카드 셋(반입·가동·신규)이 나란히 선다. 아래 grid3 와 칸 수가 같아야
+   두 줄이 «3+3» 으로 읽힌다. 칸이 어긋나면 같은 개요 안에서 두 격자가 따로 논다. */
+.grid3-trend{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid3-trend .trend-card{margin-bottom:20px}
+@media(max-width:1200px){.grid3-trend{grid-template-columns:1fr 1fr}}
+@media(max-width:820px){.grid3-trend{grid-template-columns:1fr}}
 .trend-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
 .trend-header h3{font-size:14px;font-weight:700;color:#dfe6ff}
 .trend-meta{font-size:11px;color:var(--mut);background:rgba(255,255,255,.05);padding:4px 12px;border-radius:20px}
@@ -147,6 +153,26 @@ body{color:var(--txt);
 .card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
 .card-note{font-size:10px;color:var(--mut);margin-bottom:10px;font-style:italic}
 .card .cw{position:relative;height:var(--ch-std,240px)}
+/* 축 선택 — 카드 오른쪽 위는 복사·저장 버튼(.capbtns)이 hover 로 덮으므로 비워 둔다.
+   그 자리에 놓으면 마우스를 올리는 순간 버튼에 가려 «눌리지 않는 select» 가 된다. */
+.card-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;padding-right:104px}
+.card-head h3{margin-bottom:0}
+.ax-sel{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:9px;
+  padding:4px 8px;color:var(--txt);font-size:11px;font-weight:700;outline:none;cursor:pointer;
+  color-scheme:dark;max-width:100%}
+.ax-sel:focus{border-color:var(--a1)}
+
+/* 차트를 눌러 건 «이 페이지 전용» 필터(모델·Tool Maker·공정 그룹)를 세워 두는 줄.
+   사이드바에 그 칸이 없어서(v92 사용자 요청) 걸린 조건이 화면 어디에도 안 보였다 —
+   숫자만 줄고 이유가 없으면 사람은 데이터를 의심한다. */
+.drillrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.drillrow .dlbl{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--mut);font-weight:700}
+.dchip{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11.5px;font-weight:700;
+  background:rgba(56,189,248,.14);border:1px solid rgba(56,189,248,.35);border-radius:20px;padding:4px 11px;color:var(--txt)}
+.dchip:hover{border-color:var(--a1)}
+.dchip b{color:var(--a1)}
+.dchip i{font-style:normal;color:var(--mut);font-weight:800}
+.dchip:hover i{color:var(--bad)}
 
 /* TABLE */
 .tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px)}
@@ -255,6 +281,11 @@ tr:hover td{background:rgba(255,255,255,.04)}
   <div class="slicer"><div class="lbl">집계 기준</div><div class="chips" id="sl-basis"></div></div>
 </div>
 
+<!-- 차트를 눌러 건 «이 페이지 전용» 조건. 모델·Tool Maker·공정 그룹은 사이드바에 칸이
+     없으므로(v92 사용자 요청) 걸린 것이 여기 말고는 보이지 않는다. 눌러서 푼다.
+     ⚠ .slicers 안에 두면 autoSidebar 가 사이드바로 가져가 버린다 — 바깥에 둔다. -->
+<div class="drillrow" id="pgDrill" style="display:none"></div>
+
 <!-- KPI -->
 <div class="kpis">
   <div class="kpi k1"><div class="krow"><span class="val" id="kp1">0</span><span class="unit" data-i="unit_ea">대</span><span class="kd" id="kd1"></span></div>
@@ -275,8 +306,18 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 
 <!-- ═══ 섹션: 개요 ═══ -->
+<!-- 3+3 — 위 줄은 «시간축»(반입·가동·신규), 아래 줄은 «지금의 분포»(축 선택·모델·Warranty).
+     반입 추이는 기간별 현황에 혼자 떨어져 있었다. 반입 → 가동 → 신규는 한 흐름이라
+     개요에서 나란히 봐야 «반입은 늘었는데 가동이 안 따라온다» 가 한눈에 보인다. -->
 <div data-sec="overview">
-  <div class="grid2-trend">
+  <div class="grid3-trend">
+    <div class="trend-card">
+      <div class="trend-header">
+        <h3 data-i="trend_fabin">Cumulative FAB In Trend</h3>
+        <div class="trend-meta" id="trendMetaFab"></div>
+      </div>
+      <div class="trend-wrap"><canvas id="cTrendFab"></canvas></div>
+    </div>
     <div class="trend-card">
       <div class="trend-header">
         <h3 data-i="trend_turnon">⚡ Cumulative Turn On Trend</h3>
@@ -293,9 +334,14 @@ tr:hover td{background:rgba(255,255,255,.04)}
     </div>
   </div>
   <div class="grid3">
+    <!-- 축을 고르는 카드. 머리글(h3)도 고른 축을 따라간다 — 「법인」이라 적어 놓고
+         모델을 세면 그 카드는 거짓말을 하는 것이고, PPT 내보내기도 h3 를 제목으로 쓴다. -->
     <div class="card">
-      <h3>Country</h3>
-      <div class="card-note" data-i="note_hbar">🖱️ 클릭 시 필터 · 비중은 툴팁</div>
+      <div class="card-head">
+        <h3 id="axTitle">법인별 설치</h3>
+        <select id="axSel" class="ax-sel" onchange="setAxis(this.value)"></select>
+      </div>
+      <div class="card-note" data-i="note_ax">🖱️ 막대를 눌러 필터 · 축을 바꿔 다른 분포로</div>
       <div class="cw"><canvas id="cCountry"></canvas></div>
     </div>
     <div class="card">
@@ -321,14 +367,8 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 
 <!-- ═══ 섹션: 기간별 현황 ═══ -->
+<!-- 반입 추이(cTrendFab)는 개요 첫 줄로 옮겼다 — 여기 남은 셋은 «기간을 잘라 본 결과»다. -->
 <div data-sec="trends">
-  <div class="trend-card">
-    <div class="trend-header">
-      <h3 data-i="trend_fabin">Cumulative FAB In Trend</h3>
-      <div class="trend-meta" id="trendMetaFab"></div>
-    </div>
-    <div class="trend-wrap"><canvas id="cTrendFab"></canvas></div>
-  </div>
   <div class="grid3">
     <div class="card">
       <h3>Turn On by Year</h3>
@@ -518,7 +558,10 @@ const T={
     gran_lbl:'집계 단위',gran_note:'↑ 추이 차트 적용',
     g_week:'주 단위',g_month:'월 단위',g_quarter:'분기 단위',g_half:'반기 단위',g_year:'연 단위',
     search_lbl:'검색',
-    kp1:'설치 챔버',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty IN',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'개국',unit_co:'사',kf1:'전년 동기 {n}ch',kf2:'최다 {v} · {n}대',kf3:'신규 {n}개사 (12개월)',kf4:'전체의 {p}%',kf5:'전체의 {p}%',w_ratio:'Warranty IN 비율',ch_newm:'신규 Turn On 추이 (주/월)',note_newm:'최근 12구간(주/월) · 신규 가동',note_hbar:'🖱️ 클릭 시 필터 · 비중은 툴팁',etc:'기타',mon_unit:'월',
+    kp1:'설치 챔버',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty IN',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'개국',unit_co:'사',kf1:'전년 동기 {n}ch',kf2:'최다 {v} · {n}대',kf3:'신규 {n}개사 (12개월)',kf4:'전체의 {p}%',kf5:'전체의 {p}%',w_ratio:'Warranty IN 비율',ch_newm:'신규 Turn On 추이 (주/월)',note_newm:'최근 12구간(주/월) · 신규 가동',note_hbar:'🖱️ 클릭 시 필터 · 비중은 툴팁',mon_unit:'월',
+    note_ax:'🖱️ 막대를 눌러 필터 · 축을 바꿔 다른 분포로',etc_n:'기타 ({n}종)',
+    by_ax:'{v}별 설치',ax_corp:'법인',ax_cust:'고객사',ax_camp:'단지',ax_line:'라인',ax_model:'모델',ax_tm:'Tool Maker',ax_grp:'공정 그룹',
+    dr_on:'차트 드릴',
     trend_fabin:'누적 FAB In 추이 (반입 기준)',trend_turnon:'⚡ 누적 Turn On 추이 (가동 기준)',
     note_rate:'Bar: 대수 · Line: 비중(%)',note_warr:'유효/만료 비율',
     note_model:'모델별 분포',note_group:'공정 그룹별 분포',note_yoy:'대수 막대 · 전년비(%)는 툴팁',note_drill:'대수 막대 · 비중(%)은 툴팁 · 🖱️ 클릭 시 필터',note_drill2:'분포 · 🖱️ 클릭 시 필터',cross_title:'🔀 교차 분석',cross_x:'가로축',cross_color:'쌓기 기준',
@@ -536,7 +579,10 @@ const T={
     gran_lbl:'View By',gran_note:'↑ Trend chart unit',
     g_week:'Week',g_month:'Month',g_quarter:'Quarter',g_half:'Half-Year',g_year:'Year',
     search_lbl:'Search',
-    kp1:'Installed Chambers',kp2:'Countries',kp3:'Customers',kp4:'Warranty IN',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'countries',unit_co:'cos.',kf1:'A year ago: {n}',kf2:'Top {v} · {n}',kf3:'{n} new customers (12mo)',kf4:'{p}% of total',kf5:'{p}% of total',w_ratio:'Warranty IN ratio',ch_newm:'New Turn On Trend (W/M)',note_newm:'Last 12 periods (W/M)',note_hbar:'🖱️ click to filter · share in tooltip',etc:'Others',mon_unit:'',
+    kp1:'Installed Chambers',kp2:'Countries',kp3:'Customers',kp4:'Warranty IN',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'countries',unit_co:'cos.',kf1:'A year ago: {n}',kf2:'Top {v} · {n}',kf3:'{n} new customers (12mo)',kf4:'{p}% of total',kf5:'{p}% of total',w_ratio:'Warranty IN ratio',ch_newm:'New Turn On Trend (W/M)',note_newm:'Last 12 periods (W/M)',note_hbar:'🖱️ click to filter · share in tooltip',mon_unit:'',
+    note_ax:'🖱️ click a bar to filter · switch the axis for another breakdown',etc_n:'Others ({n})',
+    by_ax:'Installed by {v}',ax_corp:'Entity',ax_cust:'Customer',ax_camp:'Campus',ax_line:'Line',ax_model:'Model',ax_tm:'Tool Maker',ax_grp:'Process Group',
+    dr_on:'Chart drill',
     trend_fabin:'Cumulative FAB In Trend',trend_turnon:'⚡ Cumulative Turn On Trend',
     note_rate:'Bar: count · Line: rate(%)',note_warr:'Active vs Expired ratio',
     note_model:'By model',note_group:'By process group',note_yoy:'Count bars · YoY(%) in tooltip',note_drill:'Count bars · rate(%) in tooltip · 🖱️ click to filter',note_drill2:'Distribution · 🖱️ click to filter',cross_title:'🔀 Cross Analysis',cross_x:'X-Axis',cross_color:'Stack By',
@@ -554,7 +600,10 @@ const T={
     gran_lbl:'聚合单位',gran_note:'↑ 趋势图适用',
     g_week:'按周',g_month:'按月',g_quarter:'按季度',g_half:'按半年',g_year:'按年',
     search_lbl:'搜索',
-    kp1:'安装腔体',kp2:'国家',kp3:'客户',kp4:'保修有效',kp5:'Warranty OUT',unit_ea:'腔',unit_cty:'国',unit_co:'家',kf1:'去年同期 {n}腔',kf2:'最多 {v} · {n}台',kf3:'新客户 {n}家 (12个月)',kf4:'占总数{p}%',kf5:'占总数 {p}%',w_ratio:'有效比率',ch_newm:'新增Turn On趋势 (周/月)',note_newm:'近12期(周/月)',note_hbar:'🖱️点击筛选 · 占比见提示框',etc:'其他',mon_unit:'月',
+    kp1:'安装腔体',kp2:'国家',kp3:'客户',kp4:'保修有效',kp5:'Warranty OUT',unit_ea:'腔',unit_cty:'国',unit_co:'家',kf1:'去年同期 {n}腔',kf2:'最多 {v} · {n}台',kf3:'新客户 {n}家 (12个月)',kf4:'占总数{p}%',kf5:'占总数 {p}%',w_ratio:'有效比率',ch_newm:'新增Turn On趋势 (周/月)',note_newm:'近12期(周/月)',note_hbar:'🖱️点击筛选 · 占比见提示框',mon_unit:'月',
+    note_ax:'🖱️点击柱状筛选 · 切换轴查看其他分布',etc_n:'其他 ({n}种)',
+    by_ax:'按{v}安装',ax_corp:'法人',ax_cust:'客户',ax_camp:'园区',ax_line:'线',ax_model:'型号',ax_tm:'Tool Maker',ax_grp:'工艺组',
+    dr_on:'图表筛选',
     trend_fabin:'累计FAB In趋势（搬入）',trend_turnon:'⚡ 累计Turn On趋势（运行）',
     note_rate:'柱:台数·线:占比%',note_warr:'有效/到期比率',
     note_model:'按型号',note_group:'按工艺组',note_yoy:'台数柱状 · 同比%见提示框',note_drill:'台数柱状 · 占比%见提示框 · 🖱️点击筛选',note_drill2:'分布 · 🖱️点击筛选',cross_title:'🔀 交叉分析',cross_x:'横轴',cross_color:'堆叠依据',
@@ -572,7 +621,10 @@ const T={
     gran_lbl:'集計単位',gran_note:'↑ 推移チャート適用',
     g_week:'週単位',g_month:'月単位',g_quarter:'四半期',g_half:'半期',g_year:'年単位',
     search_lbl:'検索',
-    kp1:'設置チャンバー',kp2:'設置国',kp3:'顧客',kp4:'保証有効',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'カ国',unit_co:'社',kf1:'前年同期 {n}ch',kf2:'最多 {v} · {n}台',kf3:'新規 {n}社 (12ヶ月)',kf4:'全体の{p}%',kf5:'全体の {p}%',w_ratio:'有効比率',ch_newm:'新規Turn On推移 (週/月)',note_newm:'直近12区間(週/月)',note_hbar:'🖱️クリックで絞込 · 構成比はツールチップ',etc:'その他',mon_unit:'月',
+    kp1:'設置チャンバー',kp2:'設置国',kp3:'顧客',kp4:'保証有効',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'カ国',unit_co:'社',kf1:'前年同期 {n}ch',kf2:'最多 {v} · {n}台',kf3:'新規 {n}社 (12ヶ月)',kf4:'全体の{p}%',kf5:'全体の {p}%',w_ratio:'有効比率',ch_newm:'新規Turn On推移 (週/月)',note_newm:'直近12区間(週/月)',note_hbar:'🖱️クリックで絞込 · 構成比はツールチップ',mon_unit:'月',
+    note_ax:'🖱️棒をクリックで絞込 · 軸を変えて別の分布へ',etc_n:'その他 ({n}種)',
+    by_ax:'{v}別設置',ax_corp:'法人',ax_cust:'顧客',ax_camp:'団地',ax_line:'ライン',ax_model:'モデル',ax_tm:'Tool Maker',ax_grp:'工程グループ',
+    dr_on:'チャート絞込',
     trend_fabin:'累積FAB In推移（搬入）',trend_turnon:'⚡ 累積Turn On推移（稼働）',
     note_rate:'棒:台数·線:構成比%',note_warr:'有効/切れ比率',
     note_model:'モデル別',note_group:'工程グループ別',note_yoy:'台数棒 · 前年比%はツールチップ',note_drill:'台数棒 · 構成比%はツールチップ · 🖱️クリックで絞込',note_drill2:'分布 · 🖱️クリックで絞込',cross_title:'🔀 クロス分析',cross_x:'横軸',cross_color:'積み上げ基準',
@@ -585,7 +637,35 @@ const T={
 
 let LANG='ko', GRAN='month', RAW=[], CHARTS={}, sortK=null, sortAsc=true;
 let DATE_FROM=null, DATE_TO=null, USER_PICKED_GRAN=false;
-const F={model:'ALL',warr:'ALL',q:''};
+const F={model:'ALL',toolMaker:'ALL',group1:'ALL',warr:'ALL',q:''};
+
+/* 개요 첫 카드의 축 — 「법인」 하나만 보던 자리를 골라 볼 수 있게 했다.
+
+   ⚠ 막대에 찍히는 라벨과 «필터가 비교하는 값»이 반드시 같은 접근자에서 나와야 한다.
+     v() 하나로 세고 그 값을 그대로 필터에 넘기는 이유가 그것이다 — 두 벌로 두면
+     원문으로 세고 정규화한 값으로 걸게 되어 «눌러도 0건» 이 된다(설치현황 고객사 막대가
+     실제로 그랬다). 그래서 고객사·단지는 GST.ORG 의 정규화를 그대로 지난다.
+   ⚠ gf 는 사이드바(GST.filters)가 갖는 축, pf 는 이 페이지가 혼자 갖는 축이다.
+     둘 중 «하나만» 있다 — 페이지의 F 를 건드리면 사이드바가 모르고, 그 반대도 마찬가지다.
+   ⚠ CI 를 함수 «안»에서 읽는다. 객체 리터럴에 CI.country 를 바로 적으면 스크립트 로드
+     시점에 평가되는데 그때 CI 는 빈 객체다 — 교차분석이 겪은 것과 같은 자리(crossF 주석). */
+const AX={
+  corp:     {t:'ax_corp', gf:'op',        v:r=>String(r[CI.country]||'').trim()},
+  customer: {t:'ax_cust', gf:'customer',  v:r=>GST.ORG.customer(r[CI.customer])},
+  campus:   {t:'ax_camp', gf:'campus',    v:r=>GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country])},
+  line:     {t:'ax_line', gf:'line',      v:r=>String(r[CI.fab]||'').trim()},
+  model:    {t:'ax_model',pf:'model',     v:r=>String(r[CI.model]||'').trim()},
+  toolMaker:{t:'ax_tm',   pf:'toolMaker', v:r=>String(r[CI.toolMaker]||'').trim()}
+};
+/* 사이드바에 칸이 없는 축들 — 걸린 것을 칩으로 세워 두는 대상이다.
+   공정 그룹(group1)은 축 선택에는 없지만 Group 도넛을 눌러 걸 수 있으므로 여기 있다. */
+const PGF={model:'ax_model', toolMaker:'ax_tm', group1:'ax_grp'};
+let AXK='corp';
+try{ AXK=localStorage.getItem('gst_sc_ax')||'corp'; }catch(e){}
+if(!AX[AXK]) AXK='corp';
+function setAxis(k){ if(!AX[k])return; AXK=k;
+  try{localStorage.setItem('gst_sc_ax',k);}catch(e){}
+  render(); }
 
 GST.chartDefaults();
 // 테마 전환 시 차트를 새 잉크로 재생성 (initSync가 호출)
@@ -611,6 +691,8 @@ function applyLang(){
   buildSecNav();
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
   {const e=document.getElementById('search'); if(e)e.placeholder='S/N, Location, Tool Maker...';}
+  buildAxisSel();     // 축 이름표는 data-i 가 아니라 축을 따라간다 — 여기서 다시 씌운다
+  renderDrillRow();
   applyBasisUnit();   // data-i 재적용이 단위를 되돌려 놓으므로 마지막에 다시 씌운다
   updateRangeDisplay();
   if(RAW.length){buildWarrChips();buildBasisChips();render();}
@@ -746,19 +828,6 @@ async function loadData(){ GST.skeleton(true);
   btn.disabled=false;
 }
 
-function uniqCol(idx){return Array.from(new Set(RAW.map(r=>(r[idx]||'').trim()).filter(Boolean))).sort();}
-
-function buildChips(id,key,idx){
-  const box=document.getElementById(id); if(!box)return;   // 그 칸을 걷어냈으면 조용히 넘어간다
-  box.innerHTML='';
-  ['ALL',...uniqCol(idx)].forEach(v=>{
-    const c=document.createElement('div');
-    c.className='chip'+(F[key]===v?' active':'');
-    c.textContent=v==='ALL'?'ALL':v;
-    c.onclick=()=>{F[key]=v;[...box.children].forEach(x=>x.classList.remove('active'));c.classList.add('active');render();};
-    box.appendChild(c);
-  });
-}
 function buildBasisChips(){
   const box=document.getElementById('sl-basis'); if(!box)return;
   box.innerHTML='';
@@ -790,7 +859,7 @@ function buildWarrChips(){
   });
 }
 function rebuildFilters(){
-  F.model='ALL';F.warr='ALL';F.q='';
+  F.model='ALL';F.toolMaker='ALL';F.group1='ALL';F.warr='ALL';F.q='';
   {const e=document.getElementById('search'); if(e)e.value='';}
   /* 기본 필터는 GST.filters 가 갖는다. 기간 칸은 접근자를 주지 않아 잠긴다 —
      이 화면의 시간축은 위쪽 Turn On 날짜 범위 패널이고, 둘을 함께 두면 어느 쪽이
@@ -809,8 +878,8 @@ function rebuildFilters(){
        해외 설비가 통째로 사라진다 — «모르는 것»과 «아닌 것»은 다르다(운영단위와 같은 규약). */
     loose:{ div:1 },
     onChange:function(){ syncRange(); render(); } });
-  // 전용 칸은 사라졌지만 F.model 은 남는다 — 모델 도넛을 눌러 거는 «드릴»이 그 값을 쓴다.
-  buildChips('sl-model','model',CI.model);
+  /* 모델·Tool Maker·공정 그룹은 사이드바에 칸이 없다(v92 사용자 요청). 차트를 눌러 걸리고
+     pgDrill 칩 줄에 세워져 거기서 풀린다 — 칸을 되살리면 사이드바가 다시 페이지마다 달라진다. */
   buildWarrChips();
   buildBasisChips();
 }
@@ -829,7 +898,13 @@ function filt(skipDate){
        ⚠ 모르는 상태('?')도 여기서 빠진다 — 조용히 빼지 않도록 아래 _EQUNK 가 센다. */
     if(CI.state>=0){ const c=GST.EQ.cls(r[CI.state]); if(c==='out'||c==='?')return false; }
     if(!GST.filters.pass(r, skipDate?{noDate:1}:null))return false;
-    if(F.model!=='ALL'&&(r[CI.model]||'').trim()!==F.model)return false;
+    /* 이 페이지가 혼자 갖는 축 셋. 차트를 눌러 걸리고 pgDrill 칩으로 풀린다.
+       ⚠ 여기 조건을 빠뜨리면 «막대를 눌러도 아무 일이 없는» 축이 된다 — 예전 Group 도넛이
+         그랬다(F.group1 에 값은 들어가는데 아무도 안 봤다. 에러는 하나도 안 난다).
+       비교하는 식은 AX[*].v 와 같은 모양이어야 한다 — 갈라지면 눌러도 0건이 된다. */
+    if(F.model!=='ALL'&&String(r[CI.model]||'').trim()!==F.model)return false;
+    if(F.toolMaker!=='ALL'&&String(r[CI.toolMaker]||'').trim()!==F.toolMaker)return false;
+    if(F.group1!=='ALL'&&String(r[CI.group1]||'').trim()!==F.group1)return false;
     if(F.warr!=='ALL'){const l=wLbl(r);
       if(F.warr==='active'&&l!=='IN')return false;
       if(F.warr==='expired'&&l!=='OUT')return false;}
@@ -892,12 +967,52 @@ function countByFn(rows,fn){
   rows.forEach(r=>{const k=(fn(r)||'N/A').toString().trim()||'N/A';m[k]=(m[k]||0)+chW(r);});
   return Object.entries(m).sort((a,b)=>b[1]-a[1]);
 }
-function drillGF(key,label){
-  const K = key==='country' ? 'op' : (key==='customer' ? 'customer' : '');
-  if(!K)return false;
-  GST.filters.toggle(K, label);   // 다중 축이면 Set 을 토글한다 — 직접 대입하면 .has 가 사라진다
-  return true;
+/* 차트를 눌러 거는 드릴. 같은 값을 다시 누르면 해제된다.
+   ⚠ 사이드바가 갖는 축은 GST.filters.toggle 로만 지난다 — 페이지의 F 를 건드리면
+     막대를 눌러도 아무 일이 안 일어나고(사이드바가 정본이다), 다중 축(단지)은
+     Set 이 문자열로 바뀌어 그다음 .has 가 TypeError 로 죽는다. */
+function drillPF(pf,label){
+  if(!label||label==='N/A')return;   // 미상 칸은 걸 값이 없다 — 걸면 화면이 통째로 빈다
+  F[pf]=(F[pf]===label)?'ALL':label;
+  render();
 }
+function drillAxis(k,label){
+  const a=AX[k]; if(!a||!label||label==='N/A')return;
+  if(a.gf){ GST.filters.toggle(a.gf,label); return; }   // onChange 가 render 까지 부른다
+  drillPF(a.pf,label);
+}
+/* 축 선택 상자 + 카드 머리글. 머리글이 축을 안 따라가면 「법인」이라 적어 놓고 모델을
+   세는 카드가 된다 — PPT 내보내기도 이 h3 를 슬라이드 제목으로 쓴다. */
+/* ⚠ 목록은 «언어가 바뀔 때만» 다시 만든다. 매 렌더 innerHTML 을 갈면 자동 새로고침
+   (initSync 10분)이 도는 순간 열려 있던 목록이 닫힌다 — 다중선택 박스가 겪은 것과 같다. */
+function buildAxisSel(){
+  const s=document.getElementById('axSel');
+  if(s){
+    if(s.dataset.lang!==LANG){
+      s.dataset.lang=LANG;
+      s.innerHTML=Object.keys(AX).map(k=>'<option value="'+k+'">'+GST._esc(t(AX[k].t))+'</option>').join('');
+    }
+    s.value=AXK;
+  }
+  const h=document.getElementById('axTitle');
+  if(h)h.textContent=t('by_ax').replace('{v}',t(AX[AXK].t));
+}
+/* 걸린 «이 페이지 전용» 조건을 세워 둔다. 사이드바에 칸이 없어(v92) 여기 말고는
+   보이는 곳이 없다 — 안 세우면 숫자만 줄고 이유가 사라져 사람이 데이터를 의심한다. */
+function renderDrillRow(){
+  const box=document.getElementById('pgDrill'); if(!box)return;
+  const on=Object.keys(PGF).filter(k=>F[k]&&F[k]!=='ALL');
+  if(!on.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='flex';
+  box.innerHTML='<span class="dlbl">'+GST._esc(t('dr_on'))+'</span>'
+    +on.map(k=>'<span class="dchip" data-pf="'+k+'">'+GST._esc(t(PGF[k]))
+      +' <b>'+GST._esc(F[k])+'</b> <i>✕</i></span>').join('');
+}
+{const box=document.getElementById('pgDrill');
+ if(box)box.addEventListener('click',e=>{
+   const c=e.target.closest('.dchip'); if(!c)return;
+   F[c.dataset.pf]='ALL'; render();
+ });}
 
 // 집계 단위별 키 생성
 function granKey(d){
@@ -1080,25 +1195,55 @@ function mkNewMonthly(id,f){
   };
 }
 
+/* 「상위 N + 기타」 한 곳. 막대·도넛이 같은 규칙을 쓴다 — 두 벌이면 같은 자료인데
+   카드마다 다른 개수로 잘려 «어느 쪽이 맞나»가 된다.
+
+   지킨 것 둘:
+   - **기타가 몇 종을 안고 있는지 라벨에 적는다.** 그냥 「기타」라고만 쓰면 한 종이 뭉친
+     것인지 서른 종이 뭉친 것인지 알 수 없다. 모델은 꼬리가 길어(실측 합성: 상위 4 밖에
+     13종) 이 숫자가 곧 «안 보고 있는 것»의 크기다.
+   - **기타가 «한 종»뿐이면 그 이름을 그대로 보여 준다.** 「기타 (1종)」은 숨긴 게 아니라
+     이름만 지운 것이다 — 실제로 법인 막대가 그 꼴이었다(6번째 법인이 「기타」로 섰다).
+   ⚠ N 은 팔레트 색 수(PAL8=8)를 넘기지 않는다. 넘으면 색이 한 바퀴 돌아 서로 다른
+     조각이 같은 색이 되고, 그때부터 범례와 그림이 다른 말을 한다.
+   ⚠ N 을 «자료에 따라» 늘리지 않는다. 필터를 걸 때마다 조각 수가 변하면 카드끼리·
+     시점끼리 견줄 수 없다(늘려 봤더니 꼬리가 긴 모델 축이 매번 상한까지 갔다). */
+function topRest(entries,topN,maxN){
+  if(!entries.length)return {top:[],rest:0,restN:0};
+  const cap=Math.min(maxN||PAL.length,PAL.length);
+  let n=Math.min(Math.max(1,topN||4),entries.length);
+  if(entries.length===n+1 && n<cap) n++;
+  const rest=entries.slice(n).reduce((a,b)=>a+b[1],0);
+  return {top:entries.slice(0,n), rest:rest, restN:entries.length-n};
+}
+// 범례에서만 줄인다 — 툴팁·드릴·세부내역은 원문 그대로다(값이 달라지면 필터가 안 걸린다)
+const legLbl=s=>{s=String(s);return s.length>17?s.slice(0,16)+'…':s;};
+
 // 가로 막대 (상위 N + 기타) — 값을 막대 끝에 직접 표기, 비중은 툴팁
-function mkHBar(id,entries,total,drillKey,color,topN){
-  const top=entries.slice(0,topN||5);
-  const rest=entries.slice(topN||5).reduce((a,b)=>a+b[1],0);
-  const labels=top.map(e=>e[0]); const data=top.map(e=>e[1]);
-  if(rest>0){labels.push(t('etc'));data.push(rest);}
+/* drill 은 «라벨 하나를 받는 함수»다. 예전에는 필터 이름(문자열)을 받아 여기서 갈랐는데,
+   축이 여섯으로 늘면서 그 분기가 두 벌(여기 + drillGF)로 갈라졌다 — 부르는 쪽이
+   자기 축을 알고 있으므로 콜백 하나로 받는 편이 갈라지지 않는다. */
+function mkHBar(id,entries,total,drill,color,topN,maxN){
+  const g=topRest(entries,topN||5,maxN||(topN||5));
+  const labels=g.top.map(e=>e[0]); const data=g.top.map(e=>e[1]);
+  const restIdx=g.rest>0?labels.length:-1;
+  if(restIdx>=0){labels.push(t('etc_n').replace('{n}',g.restN));data.push(g.rest);}
   const ctx=document.getElementById(id);
   const TH=GST.chartTheme();
+  /* 기타 칸은 여러 값의 «합»이라 걸 값이 없다 — 라벨이 아니라 «자리»로 판정한다.
+     라벨 문자열로 견주면 언어를 바꾸는 순간 판정이 어긋난다.
+     ⚠ 다시 그리는 일은 «클릭 이벤트가 끝난 뒤»로 미룬다. onClick 안에서 곧장 render 를
+       부르면 그 안에서 이 차트를 destroy 하는데, Chart.js 는 아직 그 차트로 이벤트 처리를
+       이어 가다 undefined 에서 handleEvent 를 읽어 예외를 던진다 — 드릴을 누를 때마다
+       콘솔 에러 1건. 화면은 멀쩡해 보여서 지금까지 아무도 못 봤다. */
   const onClick=(evt,els)=>{
-    if(!drillKey||!els.length)return;
-    const label=labels[els[0].index];
-    if(label===t('etc'))return;
-    if(drillGF(drillKey,label))return;
-    if(F[drillKey]===label) F[drillKey]='ALL'; else F[drillKey]=label;
-    syncSlicerUI(drillKey); render();
+    if(!drill||!els.length)return;
+    const i=els[0].index; if(i===restIdx)return;
+    const lb=labels[i]; setTimeout(()=>drill(lb),0);
   };
   const cfg={type:'bar',data:{labels,datasets:[{
       data,
-      backgroundColor:labels.map(l=>l===t('etc')?'rgba(151,170,196,.35)':(color||TH.pal[0])),
+      backgroundColor:labels.map((l,i)=>i===restIdx?'rgba(151,170,196,.35)':(color||TH.pal[0])),
       barPercentage:.72
     }]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,onClick,
@@ -1130,23 +1275,20 @@ function mkYoY(id,labels,data){
   CHARTS[id]=new Chart(ctx,cfg);
 }
 
-function mkDonut(id,entries,drillKey,topN){
-  // entries=[[라벨,값],...] → 상위 N + 기타, 중앙 합계, 수치 포함 범례
-  const top=entries.slice(0,topN||4);
-  const rest=entries.slice(topN||4).reduce((a,b)=>a+b[1],0);
-  const labels=top.map(e=>e[0]); const data=top.map(e=>e[1]);
-  if(rest>0){labels.push(t('etc'));data.push(rest);}
+function mkDonut(id,entries,drill,topN,maxN){
+  // entries=[[라벨,값],...] → 상위 N + 기타(topRest 규칙), 중앙 합계, 수치 포함 범례
+  const g=topRest(entries,topN||4,maxN);
+  const labels=g.top.map(e=>e[0]); const data=g.top.map(e=>e[1]);
+  const restIdx=g.rest>0?labels.length:-1;
+  if(restIdx>=0){labels.push(t('etc_n').replace('{n}',g.restN));data.push(g.rest);}
   const TH=GST.chartTheme();
-  const colors=labels.map((l,i)=>l===t('etc')?'rgba(151,170,196,.4)':PAL[i%PAL.length]);
+  const colors=labels.map((l,i)=>i===restIdx?'rgba(151,170,196,.4)':PAL[i%PAL.length]);
   const total=data.reduce((a,b)=>a+b,0)||1;
   const ctx=document.getElementById(id);
   const onClick=(evt,els)=>{
-    if(!drillKey||!els.length)return;
-    const label=labels[els[0].index];
-    if(label===t('etc'))return;
-    if(drillGF(drillKey,label))return;
-    if(F[drillKey]===label) F[drillKey]='ALL'; else F[drillKey]=label;
-    syncSlicerUI(drillKey); render();
+    if(!drill||!els.length)return;
+    const i=els[0].index; if(i===restIdx)return;   // 기타는 여러 값의 합이라 걸 값이 없다
+    const lb=labels[i]; setTimeout(()=>drill(lb),0);   // 다시 그리기는 이벤트 뒤로 (mkHBar 주석)
   };
   const cfg={type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderColor:'rgba(0,0,0,.15)',borderWidth:2,hoverOffset:8}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'62%',onClick,
@@ -1156,7 +1298,7 @@ function mkDonut(id,entries,drillKey,topN){
           generateLabels:function(chart){
             const d=chart.data;
             return d.labels.map(function(l,i){
-              return {text:l+'  '+d.datasets[0].data[i].toLocaleString()+' · '+Math.round(d.datasets[0].data[i]/total*100)+'%',
+              return {text:legLbl(l)+'  '+d.datasets[0].data[i].toLocaleString()+' · '+Math.round(d.datasets[0].data[i]/total*100)+'%',
                 fillStyle:d.datasets[0].backgroundColor[i],strokeStyle:'transparent',
                 fontColor:TH.txt,pointStyle:'circle',index:i};
             });
@@ -1165,18 +1307,6 @@ function mkDonut(id,entries,drillKey,topN){
     plugins:[donutCenterPlugin]};
   if(CHARTS[id])CHARTS[id].destroy();
   CHARTS[id]=new Chart(ctx,cfg);
-}
-
-// 슬라이서 UI 동기화 (차트 클릭 시 칩 active 갱신)
-function syncSlicerUI(key){
-  const map={model:'sl-model'};   // 운영단위·고객사는 GST.filters 가 자기 select 를 갱신한다
-  const id=map[key];
-  if(!id)return; // group1, fab은 슬라이서 없음 - 필터만 적용
-  const box=document.getElementById(id); if(!box)return;
-  [...box.children].forEach(c=>{
-    const v=c.textContent==='ALL'?'ALL':c.textContent;
-    c.classList.toggle('active',v===F[key]);
-  });
 }
 
 // 교차 분석 stacked 차트
@@ -1337,10 +1467,17 @@ function render(){ GST.skeleton(false);
   // 교차 분석
   mkCross(f);
 
-  mkHBar('cCountry',ctryAll,chN,'country',TH.pal[0],5);
-  mkHBar('cCustomer',countByFn(f,r=>GST.ORG.customer(r[CI.customer])),chN,'customer',TH.pal[0],8);
-  mkDonut('cModel',countBy(f,CI.model),'model',4);
-  mkDonut('cGroup',countBy(f,CI.group1),'group1',5);
+  /* 축 선택 카드 — 세는 값과 필터에 넘기는 값이 같은 접근자(AX[AXK].v)를 지난다.
+     머리글·선택 상자도 여기서 축을 따라간다(안 그러면 「법인」이라 적고 모델을 센다). */
+  buildAxisSel();
+  mkHBar('cCountry',countByFn(f,AX[AXK].v),chN,l=>drillAxis(AXK,l),TH.pal[0],6,8);
+  mkHBar('cCustomer',countByFn(f,r=>GST.ORG.customer(r[CI.customer])),chN,
+         l=>GST.filters.toggle('customer',l),TH.pal[0],8);
+  mkDonut('cModel',countBy(f,CI.model),l=>drillPF('model',l),6,8);
+  /* Group 도넛은 「클릭 시 필터」라 적혀 있으면서 아무 일도 안 했다 — F.group1 에 값은
+     들어가는데 filt() 가 그 열을 안 봤다(에러 없음). 이제 filt() 가 같이 본다. */
+  mkDonut('cGroup',countBy(f,CI.group1),l=>drillPF('group1',l),6,8);
+  renderDrillRow();
 
   // Warranty 현황 카드 (분할 바)
   {
@@ -1460,9 +1597,12 @@ function render(){ GST.skeleton(false);
         return {title:fb+' · Warranty '+lbl,cols:t('rd_sc').split('|'),rows:rows.map(rdRow)};
       }; }
     // 고객사별 Warranty OUT (현재)
-    { const rc={}; soonL.forEach(x=>{const c=(GST.nfw(x.r[CI.customer]||'').trim())||'ETC'; rc[c]=(rc[c]||0)+chW(x.r);});
+    /* ⚠ 라벨을 원문(GST.nfw)으로 세고 있었다. 필터의 고객사 축은 정규화된 값이라
+       (GST.ORG.customer) 막대를 눌러도 걸리는 값이 없어 화면이 통째로 비었다 —
+       아래 「Customer」 막대와 같은 정규화를 지나게 해서 라벨과 필터를 한 벌로 만든다. */
+    { const rc={}; soonL.forEach(x=>{const c=GST.ORG.customer(x.r[CI.customer])||'N/A'; rc[c]=(rc[c]||0)+chW(x.r);});
       const rcE=Object.entries(rc).sort((a,b)=>b[1]-a[1]);
-      if(typeof mkHBar==='function') mkHBar('cRenewCust',rcE,chSum(soonL.map(x=>x.r)),'customer',TH.pal[0],8); }
+      mkHBar('cRenewCust',rcE,chSum(soonL.map(x=>x.r)),l=>GST.filters.toggle('customer',l),TH.pal[0],8); }
     const wb=document.getElementById('warrSoonBody');
     if(wb)wb.innerHTML=soonL.length?soonL.slice(0,15).map(x=>
       `<tr><td>${cell(x.r,'code')}</td><td>${cell(x.r,'sn')}</td><td>${cell(x.r,'country')}</td><td>${cell(x.r,'customer')}</td><td>${cell(x.r,'model')}</td><td>Warranty OUT</td><td>${fmtDate(toDate(x.r[CI.turnOn]))}</td></tr>`

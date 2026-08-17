@@ -53,13 +53,32 @@ function values(file, names, split){
   return out;
 }
 
-const REAL_SN   = new Set([...values('csv_inst.csv', ['Scrubber S/N']),
-                           ...values('csv_mat.csv',  ['S/N'])]);
+/* 대조·판정에 쓰는 두 꼴 — 앱(GST.ALARM.key/keyBase)과 «같은 규칙»이어야 한다.
+   여기만 다르게 정규화하면 명단에 있는 설비를 «없다»고 판정해 검사가 조용히 통과한다. */
+const snKey  = v => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const snBase = v => snKey(v).replace(/[A-Z]+$/, '');
+// 자리표시자 판정 — 숫자가 전부 0 이면 지어낸 값이다(GBWS-0000 · SBW0000 · DBW-0000S)
+const isPlaceholder = v => /^0+$/.test(String(v).replace(/[^0-9]/g, ''));
+
+/* 명단은 «두 꼴 다» 담는다. 시트가 GBWS-3738 로 적혀 있어도 소스에 GBWS-3738L 로
+   새어 나갈 수 있고, 그 반대도 마찬가지다 — 한 꼴만 담으면 그 절반을 못 잡는다. */
+const REAL_SN = new Set();
+[...values('csv_inst.csv', ['Scrubber S/N']), ...values('csv_mat.csv', ['S/N'])]
+  .forEach(v => { const k = snKey(v); if (k) { REAL_SN.add(k); REAL_SN.add(snBase(v)); } });
 // 작업자 열은 "홍길동,LI.LO"처럼 여러 명이 묶여 있어 쪼개서 담는다
 const REAL_NAME = new Set([...values('csv_wk.csv', ['작업자'], true)]
                     .filter(v => /^[가-힣]{2,4}$/.test(v)));
 
-const PATTERNS = [{ re: /\b(?:GBWS|DBW)-\d{4}\b/g, what: '설비 S/N' }];
+/* 현장 표기는 «기본 꼴»에서 두 방향으로 벗어난다 (사용자 확인, 2026-08):
+     ① 하이픈을 빼고 적는 사이트가 있다      SBW0527
+     ② 꼬리에 채널 문자가 붙는다              -S 싱글 · -L/-R 듀얼 좌/우
+   예전 정규식은 `GBWS-\d{4}` 로 «숫자로 끝나는 것»만 봤다. 그래서 실제로 새어 나간
+   주석 한 줄에서 `GBWS-7561` 하나만 잡히고 그 옆의 `SBW0527`·`DBW-1177S`·`GBWS-3738L`
+   **셋은 그대로 통과했다.** 그물이 현장 표기를 모르면 검사는 통과 도장만 찍어 준다.
+
+   ⚠ SBW 를 접두에 넣었다 — 사이트마다 쓰는 접두가 다르고, 목록에 없으면 그 사이트 값은
+     통째로 안 보인다(허용목록의 전형적인 실패). 새 접두가 나오면 여기에 더한다. */
+const PATTERNS = [{ re: /\b(?:GBWS|DBW|SBW)-?\d{4}[LRS]?\b/gi, what: '설비 S/N' }];
 
 let bad = 0, checked = 0;
 for (const f of files) {
@@ -71,7 +90,10 @@ for (const f of files) {
     let m;
     while ((m = P.re.exec(txt))) {
       const v = m[0].toUpperCase();
-      const isReal = REAL_SN.size ? REAL_SN.has(v) : !/-0+$/.test(v);
+      /* 자리표시자는 명단 유무와 상관없이 통과시킨다 — 명단이 있을 때만 봐주면
+         픽스처가 없는 환경(CI·새 클론)에서 멀쩡한 예시가 전부 실패로 뜬다. */
+      const isReal = isPlaceholder(v) ? false
+        : (REAL_SN.size ? (REAL_SN.has(snKey(v)) || REAL_SN.has(snBase(v))) : true);
       if (isReal) { bad++; console.log(`  ❌ ${f}: 실제 ${P.what} ${v}`); }
     }
   }
