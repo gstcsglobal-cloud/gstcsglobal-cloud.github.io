@@ -184,7 +184,20 @@ export function parseRoster(csvText) {
                                   (h) => h.includes('work place') || h === '입사일' || h === '라인']);
   const header = rows[hIdx].map(lc);
   const ci = {
-    id: colIdx(header, (h) => h === 'id' || h === '사원번호'),
+    /* ⚠ 표에 옛 'ID'(빈)와 새 '사원번호'(채움)가 둘 다 있을 수 있다 — Import 표에 열을
+       더했지 지우지 않았기 때문이다. 이름 순서로 고르면 빈 열을 집어 사번이 통째로 비고,
+       교육 매칭이 조용히 끊긴다. **실제로 채워진 열**을 고른다. */
+    id: (function(){
+      let best = -1, bn = -1;
+      ['사원번호', 'id'].forEach((nm) => {
+        const i = colIdx(header, (h) => h === nm);
+        if (i < 0) return;
+        let c = 0;
+        for (let k = hIdx + 1; k < rows.length; k++) if (String((rows[k] || [])[i] || '').trim()) c++;
+        if (c > bn) { bn = c; best = i; }
+      });
+      return best;
+    })(),
     name: colIdx(header, (h) => h.includes('name') && h.includes('영문')),
     dept: colIdx(header, (h) => h.startsWith('dept')),
     wp: colIdx(header, (h) => h === 'work place'),

@@ -150,18 +150,19 @@ create index if not exists sheet_mat_detail_idx on public.sheet_mat (detail);
 create index if not exists sheet_mat_mat_name_idx on public.sheet_mat (mat_name);
 create index if not exists sheet_mat_model_idx on public.sheet_mat (model);
 
-/* ---------- inst — 설치현황 (gid 891608329 · 25열) ---------- */
+/* ---------- inst — 설치현황 (gid 891608329 · 26열) ---------- */
 create table if not exists public.sheet_inst (
   src_row    int primary key,      -- 시트 데이터 행번호(0부터). 파일 상단 주석 참조
   pjt                        text,   -- PJT.
   country                    text,   -- Country
   customer                   text,   -- Customer
+  div                        text,   -- 사업부
   location                   text,   -- Location
   code                       text,   -- Scrubber CODE
   sn                         text,   -- Scrubber S/N
   model                      text,   -- Scrubber Model
   burner                     text,   -- Burner Type
-  fab                        text,   -- FAB
+  fab                        text,   -- Line 1
   floor                      text,   -- Floor
   bay                        text,   -- Bay
   group1                     text,   -- Group_1
@@ -276,6 +277,7 @@ alter table public.sheet_inst
   add column if not exists pjt text,
   add column if not exists country text,
   add column if not exists customer text,
+  add column if not exists div text,
   add column if not exists location text,
   add column if not exists code text,
   add column if not exists sn text,
@@ -456,30 +458,31 @@ insert into public.sheet_colmap(tbl, col, headers, optional, ord) values
   ('mat', 'store', array['자재창고'], false, 38);
 
 insert into public.sheet_spec(tbl, gid, hints, scan) values
-  ('inst', '891608329', '[["Scrubber CODE"],["FAB"]]'::jsonb, 6);
+  ('inst', '891608329', '[["Scrubber S/N"]]'::jsonb, 6);
 insert into public.sheet_colmap(tbl, col, headers, optional, ord) values
-  ('inst', 'pjt', array['PJT.'], false, 0),
-  ('inst', 'country', array['Country'], false, 1),
-  ('inst', 'customer', array['Customer'], false, 2),
-  ('inst', 'location', array['Location'], false, 3),
-  ('inst', 'code', array['Scrubber CODE'], false, 4),
-  ('inst', 'sn', array['Scrubber S/N'], false, 5),
-  ('inst', 'model', array['Scrubber Model'], false, 6),
-  ('inst', 'burner', array['Burner Type'], false, 7),
-  ('inst', 'fab', array['FAB'], false, 8),
-  ('inst', 'floor', array['Floor'], false, 9),
-  ('inst', 'bay', array['Bay'], false, 10),
-  ('inst', 'group1', array['Group_1'], false, 11),
-  ('inst', 'group2', array['Group_2'], true, 12),
-  ('inst', 'detail1', array['Detail_1'], false, 13),
-  ('inst', 'detail2', array['Detail_2'], true, 14),
-  ('inst', 'tool_id', array['Main Tool ID'], true, 15),
-  ('inst', 'tool_maker', array['Main Tool Maker'], false, 16),
-  ('inst', 'tool_model', array['Main Tool Model'], false, 17),
-  ('inst', 'fab_in', array['FAB In'], false, 18),
-  ('inst', 'start', array['Start'], true, 19),
-  ('inst', 'turn_on', array['Turn On'], false, 20),
-  ('inst', 'warranty_date', array['Warranty date'], true, 21),
-  ('inst', 'warranty', array['Warranty In/Out'], false, 22),
-  ('inst', 'pm_cycle', array['Target PM Cycle'], true, 23),
-  ('inst', 'type', array['Scrubber type'], false, 24);
+  ('inst', 'pjt', array['PJT.','Product code'], true, 0),
+  ('inst', 'country', array['Country','운영단위'], false, 1),
+  ('inst', 'customer', array['Customer','고객사'], false, 2),
+  ('inst', 'div', array['사업부'], true, 3),
+  ('inst', 'location', array['Location','Site'], true, 4),
+  ('inst', 'code', array['Scrubber CODE'], false, 5),
+  ('inst', 'sn', array['Scrubber S/N'], false, 6),
+  ('inst', 'model', array['Scrubber Model'], false, 7),
+  ('inst', 'burner', array['Burner Type'], true, 8),
+  ('inst', 'fab', array['Line 1','FAB'], false, 9),
+  ('inst', 'floor', array['Floor','Line'], true, 10),
+  ('inst', 'bay', array['Bay'], true, 11),
+  ('inst', 'group1', array['Group_1','Process'], false, 12),
+  ('inst', 'group2', array['Group_2','Detail Process(HQ)'], true, 13),
+  ('inst', 'detail1', array['Detail_1','Detail Process(Customer)'], false, 14),
+  ('inst', 'detail2', array['Detail_2'], true, 15),
+  ('inst', 'tool_id', array['Main Tool ID'], true, 16),
+  ('inst', 'tool_maker', array['Main Tool Maker'], false, 17),
+  ('inst', 'tool_model', array['Main Tool Model'], false, 18),
+  ('inst', 'fab_in', array['FAB In','Receipt date'], true, 19),
+  ('inst', 'start', array['Start','Setup date'], true, 20),
+  ('inst', 'turn_on', array['Turn On','Turn-on date'], true, 21),
+  ('inst', 'warranty_date', array['Warranty date'], true, 22),
+  ('inst', 'warranty', array['Warranty In/Out'], true, 23),
+  ('inst', 'pm_cycle', array['Target PM Cycle','PM CYCLE'], true, 24),
+  ('inst', 'type', array['Scrubber type','Type2'], false, 25);

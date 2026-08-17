@@ -123,6 +123,21 @@ is(!/_dOf\(x,'bdate'\)/.test(SRC.report) && !/_dOf\(x,'vdate'\)/.test(SRC.report
 is(/_eCourse/.test(SRC.report) && /'Scrubber Lv\.3'/.test(SRC.report),
    'report — KPI 이름표도 잡힌 인원을 따라간다 (Lv.3 을 세면서 Veteran 이라 하지 않는다)');
 
+console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96)');
+{
+  is(/div:'', /.test(CORE) || /div:''/.test(CORE), 'core — F 에 div 축이 있다');
+  is(/customer:'고객사', div:'사업부'/.test(CORE), 'core — 축 순서가 피벗과 같다 (고객사 다음 사업부)');
+  is(/const chk = \['region','op','customer','div','campus','line','team'\]/.test(CORE),
+     'core — 종속(cascading)이 사업부도 좁힌다');
+  is(/if\(F\.div      && !axOk\('div', x\)\)/.test(CORE),
+     'core — 사업부 술어가 axOk 를 지난다 (loose 를 받을 수 있게)');
+  /* ⚠ 해외 설치현황에는 사업부 열이 아예 없다. loose 가 없으면 사업부를 고르는 순간
+     해외 설비가 통째로 사라진다 — 운영단위가 인원현황에서 겪은 것과 같은 자리다. */
+  is(/loose:\{ div:1 \}/.test(SRC.scrubber), 'scrubber — 사업부를 loose 로 선언했다');
+  is(/div:r=>String\(\(CI\.div>=0\?r\[CI\.div\]:''\)\|\|''\)\.trim\(\)/.test(SRC.scrubber),
+     'scrubber — 사업부 접근자가 열이 없을 때도 안 죽는다');
+}
+
 console.log('\n[7-4] 단지 축에 고객사 이름이 섞이지 않는지 (v96)');
 {
   /* 인원 계열의 구분 축은 단지다. 단지·FAB 이 둘 다 비면 예전에는 고객사까지 내려가

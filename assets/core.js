@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 94;
+GST.VER = 96;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -992,19 +992,41 @@ GST.SM.SPEC = {
       pf:'유/무상', freeReason:'무상사유', warrantyTerm:'자재보증기간', price:'단가',
       kitSn:'KIT S/N', snIn:'IN SN', snOut:'OUT SN', stockChk:'재고체크여부', store:'자재창고'
     }},
-  // 설치현황 gid 891608329 — 128열. 'Type'은 44·79·96열에 중복이라 절대 쓰지 않고,
-  // 챔버 판정에는 'Scrubber type'(75열)만 쓴다. 'Main Tool ID'도 17·30 중복(첫 번째 사용).
-  inst: { name:'설치현황', gid:'891608329', hints:['Scrubber CODE','FAB'],
-    opt:['toolId','pmCycle','warrantyDate','start','group2','detail2'],
+  /* 설치현황 — **국내·해외 양식이 완전히 다르다** (v96). 국내 74열(한글 머리글) ·
+     해외 118열(영문 머리글). 통합할 수 없다는 것이 사용자 확정이라, 세 벌로 파싱하는
+     대신 **별칭 배열 한 곳으로 흡수한다**(알람 K·P·H 와 같은 방식 — 제2원칙).
+
+     ⚠⚠ **`FAB` 은 두 양식에서 «다른 뜻»이다.** 해외 FAB = F16·FAB1·201A(화면의 라인).
+     국내 FAB = FSF·R/P·CSF·MAIN(공장 구역). 국내에서 화면의 라인에 해당하는 것은
+     `Line 1` 이다. 그래서 별칭 **순서가 규약이다** — 'Line 1' 을 먼저 둔다.
+     뒤집으면 국내 라인 축이 통째로 FSF/R/P 로 바뀐다(에러 없이).
+     실측 대조로 확정했다: 국내 `Line 1` = P3-D 485 · P2-D 390 · P1-3 300 으로
+     현재 표의 FAB 분포와 건수까지 일치한다.
+
+     ⚠ 챔버 판정도 이름이 다르다 — 해외 `Scrubber type`, 국내 `Type2`(SINGLE 5,294 ·
+     DUAL 1,955). 국내 `Type1` 은 버너 방식(BURN-WET·PLASMA)이지 챔버 수가 아니다.
+     여기를 잘못 잡으면 전 설비가 챔버 1로 계산된다.
+
+     ⚠ 옛 주석의 «'Type'이 44·79·96열 중복» 경고는 그대로 유효하다 — 맨 이름 'Type' 은
+     어느 별칭에도 쓰지 않는다.
+
+     · div(사업부)는 국내에만 있다 → opt. 해외는 빈 값이고 필터에서 그렇게 보인다.
+     · location(단지)·start 는 해외 양식에 없다 → opt. */
+  inst: { name:'설치현황', gid:'891608329', hints:['Scrubber S/N'],
+    opt:['pjt','toolId','pmCycle','warrantyDate','start','group2','detail2',
+         'div','location','burner','bay','warranty','floor','fabIn','turnOn'],
     fields:{
-      pjt:'PJT.', country:'Country', customer:'Customer', location:'Location',
+      pjt:['PJT.','Product code'],
+      country:['Country','운영단위'], customer:['Customer','고객사'], div:'사업부',
+      location:['Location','Site'],
       code:'Scrubber CODE', sn:'Scrubber S/N', model:'Scrubber Model', burner:'Burner Type',
-      fab:'FAB', floor:'Floor', bay:'Bay', group1:'Group_1', group2:'Group_2',
-      detail1:'Detail_1', detail2:'Detail_2', toolId:'Main Tool ID',
-      toolMaker:'Main Tool Maker', toolModel:'Main Tool Model',
-      fabIn:'FAB In', start:'Start', turnOn:'Turn On',
+      fab:['Line 1','FAB'], floor:['Floor','Line'], bay:'Bay',
+      group1:['Group_1','Process'], group2:['Group_2','Detail Process(HQ)'],
+      detail1:['Detail_1','Detail Process(Customer)'], detail2:'Detail_2',
+      toolId:'Main Tool ID', toolMaker:'Main Tool Maker', toolModel:'Main Tool Model',
+      fabIn:['FAB In','Receipt date'], start:['Start','Setup date'], turnOn:['Turn On','Turn-on date'],
       warrantyDate:'Warranty date', warranty:'Warranty In/Out',
-      pmCycle:'Target PM Cycle', type:'Scrubber type'
+      pmCycle:['Target PM Cycle','PM CYCLE'], type:['Scrubber type','Type2']
     }}
 };
 /* CIP 시트(F11 gid 2123129719 · F16 gid 1999732389)는 점검 '항목'이 열로 늘어난다.
@@ -2424,14 +2446,17 @@ GST.filters = (function(){
      정본은 설치현황이지만 사람이 볼 때는 두 단지를 한 번에 봐야 하는 자리가 생긴다.
      다른 축을 다중으로 바꾸려면 MULTI 에 이름만 더하면 된다 — 나머지 코드는 그대로다. */
   const MULTI = { campus:1 };
-  const F = { region:'', op:'', customer:'', campus:new Set(), line:'', team:'', dtFrom:'', dtTo:'' };
+  const F = { region:'', op:'', customer:'', div:'', campus:new Set(), line:'', team:'', dtFrom:'', dtTo:'' };
   /* 술어에서 «고른 것에 걸리나»를 묻는 유일한 자리. 단일·다중을 여기서만 가른다 —
      페이지가 `x.campus===F.campus` 를 직접 쓰면 Set 이 된 순간 조용히 전부 false 가 된다. */
   const hitK = (k, v) => MULTI[k] ? (!F[k].size || F[k].has(v)) : (!F[k] || v === F[k]);
   const hasK = (k) => MULTI[k] ? F[k].size > 0 : !!F[k];
   const listK = (k) => MULTI[k] ? Array.from(F[k]) : (F[k] ? [F[k]] : []);
   let CFG = null, KEY = '';
-  const L = { region:'구분', op:'운영단위', customer:'고객사', campus:'단지', line:'라인', team:'팀', period:'기간' };
+  /* 축 순서는 설치현황 피벗과 같다 — 운영단위 → 고객사 → 사업부 → 단지 → 라인.
+     사업부는 국내 자료에만 있다(해외 설치현황에는 그 열이 없다). 값이 없는 화면에서는
+     「전체 (자료 없음)」으로 잠긴다 — 칸이 나타났다 사라지면 그게 더 헷갈린다. */
+  const L = { region:'구분', op:'운영단위', customer:'고객사', div:'사업부', campus:'단지', line:'라인', team:'팀', period:'기간' };
   const val = (g, x) => { try{ const v = g ? g(x) : ''; return v==null?'':String(v).trim(); }catch(e){ return ''; } };
   const dstr = v => {
     if(!v) return '';
@@ -2463,7 +2488,7 @@ GST.filters = (function(){
      자기 자신은 빼고 본다 — 안 그러면 한 번 고른 값 말고는 목록에서 사라져 되돌릴 수 없다. */
   function passExcept(x, skip){
     const g = CFG.get || {};
-    const chk = ['region','op','customer','campus','line','team'];
+    const chk = ['region','op','customer','div','campus','line','team'];
     for(let i=0;i<chk.length;i++){
       const k = chk[i];
       if(k===skip || !hasK(k)) continue;
@@ -2508,7 +2533,7 @@ GST.filters = (function(){
 
   function refresh(){
     if(!CFG) return;
-    ['region','op','customer','campus','line','team'].forEach(function(k){
+    ['region','op','customer','div','campus','line','team'].forEach(function(k){
       fill('gf-'+k, k, opts(k, function(x){ return passExcept(x, k); }));
     });
     /* 기간은 «그 자료에 날짜 축이 있을 때만» 걸 수 있다. tco 의 기준 월, hr 의 기준일처럼
@@ -2524,7 +2549,7 @@ GST.filters = (function(){
   }
 
   function read(changed){
-    ['region','op','customer','campus','line','team'].forEach(function(k){
+    ['region','op','customer','div','campus','line','team'].forEach(function(k){
       if(MULTI[k]) return;                       // 다중선택은 mselFill 이 Set 을 직접 고친다
       const el=document.getElementById('gf-'+k); if(el) F[k]=el.value;
     });
@@ -2566,6 +2591,7 @@ GST.filters = (function(){
       + '<div id="'+id+'Box" class="mselbox"></div></div>';
     return '<div class="gf-base">'
       + sel('gf-region', L.region) + sel('gf-op', L.op) + sel('gf-customer', L.customer)
+      + sel('gf-div', L.div)
       + msel('gf-campus', L.campus) + sel('gf-line', L.line) + sel('gf-team', L.team)
       + '<div class="slicer"><div class="lbl">'+L.period+'</div>'
       + '<input type="date" id="gf-from" class="dt-input" onchange="GST.filters._on()"> ~ '
@@ -2615,6 +2641,7 @@ GST.filters = (function(){
       if(F.region   && val(g.region,x)   !== F.region)   return false;
       if(F.op       && !axOk('op', x))                   return false;
       if(F.customer && val(g.customer,x) !== F.customer) return false;
+      if(F.div      && !axOk('div', x))                  return false;   // 해외 행은 값이 없다 → loose 로 통과시킬 수 있게
       if(hasK('campus') && !hitK('campus', val(g.campus,x))) return false;
       if(F.line     && val(g.line,x)     !== F.line)     return false;
       if(F.team     && val(g.team,x)     !== F.team)     return false;
@@ -2655,6 +2682,7 @@ GST.filters = (function(){
       if(F.region)   out.push({k:'region',   label:L.region,   value:F.region});
       if(F.op)       out.push({k:'op',       label:L.op,       value:F.op});
       if(F.customer) out.push({k:'customer', label:L.customer, value:F.customer});
+      if(F.div)      out.push({k:'div',      label:L.div,      value:F.div});
       if(hasK('campus')) out.push({k:'campus', label:L.campus, value:listK('campus').join(' · ')});
       if(F.line)     out.push({k:'line',     label:L.line,     value:F.line});
       if(F.team)     out.push({k:'team',     label:L.team,     value:F.team});

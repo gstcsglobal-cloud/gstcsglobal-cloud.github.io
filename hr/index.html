@@ -495,7 +495,14 @@ function parseRoster(rows){
   const h=rows[hi].map(nz);
   const idx=(names)=>{ for(const n of names){ const i=h.indexOf(n); if(i>=0)return i; } return -1; };
   const pre=(names)=>{ for(const n of names){ const i=h.findIndex(x=>x.startsWith(n)); if(i>=0)return i; } return -1; };
-  const iId=idx(['id','사원번호']),
+  /* ⚠ 옛 'ID' 와 새 '사원번호' 가 표에 둘 다 있을 수 있다(열을 더하고 지우지 않았다).
+     앞의 빈 열을 집으면 사번이 통째로 비어 교육 매칭이 조용히 끊긴다 → 채워진 열을 고른다. */
+  const filled=(cands)=>{ let best=-1,bn=-1;
+    cands.forEach(function(n){ const i=h.indexOf(n); if(i<0)return;
+      let c=0; for(let k=hi+1;k<rows.length;k++){ if(String((rows[k]||[])[i]||'').trim())c++; }
+      if(c>bn){bn=c;best=i;} });
+    return best; };
+  const iId=filled(['사원번호','id']),
     iNm=idx(['이름(영문)'])>=0?idx(['이름(영문)']):h.findIndex(x=>x.includes('name')&&x.includes('영문')),
     iCn=idx(['이름(중문)'])>=0?idx(['이름(중문)']):h.findIndex(x=>x.includes('name')&&x.includes('중문')),
     iTeam=idx(['팀']),

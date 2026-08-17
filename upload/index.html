@@ -78,7 +78,12 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 const TABLES = [
   { key:'wk',   label:'수선실적 (엑셀 또는 CSV)',  table:'sheet_wk',   kind:'mirror', win:'dStart' },
   { key:'mat',  label:'자재실적 (엑셀 또는 CSV)',  table:'sheet_mat',  kind:'mirror', win:'workDate' },
-  { key:'inst', label:'설치현황 (엑셀 또는 CSV)',  table:'sheet_inst', kind:'mirror' },
+  /* 설치현황은 **국내·해외 양식이 서로 다른 파일**로 온다(국내 74열 한글 · 해외 118열 영문).
+     통합할 수 없다는 것이 사용자 확정이라, SPEC 의 별칭 배열이 둘 다 흡수한다 — 대상은 하나다.
+     ⚠ 두 파일을 다 넣어야 하므로 **첫 파일은 「통째 교체」, 두 번째는 「이어붙이기」** 다.
+        둘 다 통째 교체로 올리면 먼저 올린 쪽이 사라진다. */
+  { key:'inst', label:'설치현황 (국내·해외 양식 모두)',  table:'sheet_inst', kind:'mirror',
+    note:'국내·해외 두 파일을 각각 올립니다 — 첫 파일은 「통째 교체」, 두 번째는 「이어붙이기」로.' },
   { label:'교육현황 (엑셀 또는 CSV)',      table:'sheet_edu',     kind:'import' },
   { label:'인원현황 (엑셀 또는 CSV)',   table:'sheet_roster',  kind:'import' },
   { label:'휴가현황 (엑셀 또는 CSV)',    table:'sheet_leave',   kind:'import' },
@@ -402,6 +407,7 @@ window.checkFile=async function(){
         }
       }
     }
+    if(t.note) msgs.push('<span class="warn">ℹ '+t.note+'</span>');
     msgs.push('파일 <b>'+out.length.toLocaleString()+'행</b> ↔ 표의 현재 <b>'+oldCount.toLocaleString()+'행</b>'
       +(add?' → 적재 후 <b>'+(oldCount+out.length).toLocaleString()+'행</b>':''));
     /* 짝 표의 상태를 «묻지 않아도» 보여준다. 이 한 줄이 없어서 «올바만 올리고 끝났다고

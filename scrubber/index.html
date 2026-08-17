@@ -772,10 +772,15 @@ function rebuildFilters(){
     get:{ region:r=>GST.ORG.region(r[CI.country]),
           op:r=>String(r[CI.country]||'').trim(),
           customer:r=>GST.ORG.customer(r[CI.customer]),
+          // 사업부는 국내 양식에만 있는 열이다 — 해외 행은 빈 값이라 loose 로 통과시킨다
+          div:r=>String((CI.div>=0?r[CI.div]:'')||'').trim(),
           campus:r=>GST.ORG.campus(r[CI.location], r[CI.fab], r[CI.country]),
           line:r=>String(r[CI.fab]||'').trim(),
           date:r=>toDate(r[CI.turnOn]) },   // 이 화면의 시간축은 Turn On 이다
     drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG },
+    /* 사업부는 해외 설치현황에 열이 아예 없다. loose 가 없으면 사업부를 고르는 순간
+       해외 설비가 통째로 사라진다 — «모르는 것»과 «아닌 것»은 다르다(운영단위와 같은 규약). */
+    loose:{ div:1 },
     onChange:function(){ syncRange(); render(); } });
   // 전용 칸은 사라졌지만 F.model 은 남는다 — 모델 도넛을 눌러 거는 «드릴»이 그 값을 쓴다.
   buildChips('sl-model','model',CI.model);

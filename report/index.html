@@ -949,7 +949,15 @@ function parseRoster(rows){
   }
   if(hi<0)return [];
   const h=rows[hi].map(x=>String(x||'').trim().toLowerCase());
-  const iId=idx(h,['id','사원번호']);
+  /* ⚠ 표에 옛 열(ID)과 새 열(사원번호)이 «둘 다» 있을 수 있다 — Import 표에 열을 더했지
+     지우지 않았기 때문이다. 그때 앞에 있는 빈 열을 집으면 사번이 통째로 비고, 교육 매칭이
+     조용히 끊긴다. 이름으로 고르지 말고 **실제로 채워진 열**을 고른다. */
+  const filled=(cands)=>{ let best=-1,bn=-1;
+    cands.forEach(function(n){ const i=h.indexOf(n); if(i<0)return;
+      let c=0; for(let k=hi+1;k<rows.length;k++){ if(String((rows[k]||[])[i]||'').trim())c++; }
+      if(c>bn){bn=c;best=i;} });
+    return best; };
+  const iId=filled(['사원번호','id']);
   const iNm=idx(h,['이름(영문)'])>=0?idx(h,['이름(영문)']):h.findIndex(x=>x.includes('name')&&x.includes('영문'));
   const iCn=idx(h,['이름(중문)'])>=0?idx(h,['이름(중문)']):h.findIndex(x=>x.includes('name')&&x.includes('중문'));
   const iIn=idx(h,['입사일'])>=0?idx(h,['입사일']):pre(h,['date of entry']);
@@ -1280,9 +1288,11 @@ function fillFilters(){
      실적과 설치 두 자료를 합쳐 넘긴다 — 한쪽만 주면 그쪽에 없는 값이 목록에서 조용히 빠진다. */
   GST.filters.mount({ page:'report', rows:function(){
       const out=[];
-      WK.forEach(function(x){ out.push({region:x.region,op:x.op,customer:x.custB,campus:x.campus,line:x.line}); });
+      /* 실적에는 사업부 열이 없다 — 빈 값으로 넘겨 목록에 안 뜨게 한다(짐작해 채우지 않는다). */
+      WK.forEach(function(x){ out.push({region:x.region,op:x.op,customer:x.custB,div:'',campus:x.campus,line:x.line}); });
       INST.slice(HI_INST+1).forEach(function(r){
         out.push({ region:GST.ORG.region(r[CI.country]), op:String(r[CI.country]||'').trim(), customer:custBase(r[CI.customer]),
+                   div:String((CI.div>=0?r[CI.div]:'')||'').trim(),
                    campus:GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country]), line:String(r[CI.fab]||'').trim() });
       });
       /* 인원은 «구분»만 보탠다. 고객사·단지·라인 칸은 비워서 넘긴다 —
@@ -2322,7 +2332,7 @@ function render(){
   }
   // 드릴다운용 데이터·구간 스냅샷 (표시 계층 전용, 계산 무관)
   {const per={}; ['cFt','cMan','cAtt','cHc','cCareer','cIo'].forEach(id=>{try{per[id]=PU(id).P;}catch(e){}});
-   window._DRILL={fWK,fHR,fLV,headOn,SITES,grpKey,per,activeAt,
+   window._DRILL={fWK,fHR,fLV,headOn,SITES,grpKey,grpRaw:_grpRaw,per,activeAt,
      krOn:KR_ON, krBM:KR_ON?KRAf.map(krAsWk):[]};}
   // KPI 스파크라인 (최근 12구간 추세 · 계산 무관 표시용)
   try{ const SP=periods(12,asOf,PERIOD), wdv=(PERIOD==='m')?21:5;
@@ -2553,7 +2563,12 @@ function drillHead(p){ const D=window._DRILL;
 function drillIo(p){ const D=window._DRILL;
   const R=IO_ONSITE?D.fHR.filter(x=>x.onsite):D.fHR;   // 차트와 동일 모집단
   const ins=R.filter(x=>x.join&&x.join>=p.st&&x.join<=p.end), outs=R.filter(x=>x.quit&&x.quit>=p.st&&x.quit<=p.end);
-  const mk=(arr,dk)=>arr.length?('<table><thead><tr><th>이름</th><th>라인</th><th>일자</th></tr></thead><tbody>'+arr.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.fab||x.custB)+'</td><td>'+_md(x[dk])+'</td></tr>').join('')+'</tbody></table>'):'<div class="dhint">없음</div>';
+  /* ⚠ 차트는 «단지별»인데 이 표만 FAB→고객사로 내려가고 있었다. 그래서 대만 인원이
+     단지 F16 대신 고객사 MICRON 으로, 국내가 SAMSUNG 으로 찍혔다 — 한 축에 두 차원이
+     섞인 것이고, 머리글은 「라인」이라 세 번째 낱말까지 끼어 있었다.
+     차트가 쓰는 키(D.grpRaw = 단지 → FAB → 미배치)를 그대로 쓴다. */
+  const _k=x=>(D.grpRaw?D.grpRaw(x):(x.campus||x.fab||'미배치'));
+  const mk=(arr,dk)=>arr.length?('<table><thead><tr><th>이름</th><th>단지</th><th>일자</th></tr></thead><tbody>'+arr.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(_k(x))+'</td><td>'+_md(x[dk])+'</td></tr>').join('')+'</tbody></table>'):'<div class="dhint">없음</div>';
   let h='<div class="dsum"><div class="b"><span class="n">+'+ins.length+'</span><span class="l">입사</span></div><div class="b"><span class="n">−'+outs.length+'</span><span class="l">퇴사</span></div></div>';
   h+='<div class="dhint">입사</div>'+mk(ins,'join')+'<div class="dhint" style="margin-top:12px">퇴사</div>'+mk(outs,'quit');
   showDrill('입사·퇴사 상세 · '+p.label,h);
