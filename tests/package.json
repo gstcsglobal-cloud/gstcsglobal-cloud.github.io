@@ -17,14 +17,14 @@
     "region": "node t-region.mjs",
     "filters": "node t-filters.mjs",
     "alarm": "node t-alarm.mjs",
-    "all": "npm run map && npm run keys && npm run hr && npm run edu && npm run sync && npm run smoke && npm run shift && npm run deep && npm run leak && npm run mirror && npm run csvdb && npm run dbw && npm run region && npm run filters && npm run alarm  && npm run xlsx && npm run snap",
+    "all": "npm run map && npm run keys && npm run hr && npm run edu && npm run sync && npm run smoke && npm run shift && npm run deep && npm run leak && npm run mirror && npm run csvdb && npm run dbw && npm run region && npm run filters && npm run alarm  && npm run xlsx && npm run snjoin && npm run snap",
     "edu": "node t-edu.mjs",
     "csvdb": "node t-csvdb.mjs",
     "dbw": "node t-dbw.mjs",
     "upload": "node --experimental-strip-types t-upload.mjs",
     "botdb": "node --experimental-strip-types t-botdb.mjs",
     "xlsx": "node t-xlsx.mjs",
-    "snjoin": "node t-snjoin.mjs"
+    "snjoin": "node t-snjoin-page.mjs"
   },
   "devDependencies": {
     "chart.js": "4.4.1",
