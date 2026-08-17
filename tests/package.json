@@ -23,7 +23,8 @@
     "dbw": "node t-dbw.mjs",
     "upload": "node --experimental-strip-types t-upload.mjs",
     "botdb": "node --experimental-strip-types t-botdb.mjs",
-    "xlsx": "node t-xlsx.mjs"
+    "xlsx": "node t-xlsx.mjs",
+    "snjoin": "node t-snjoin.mjs"
   },
   "devDependencies": {
     "chart.js": "4.4.1",
