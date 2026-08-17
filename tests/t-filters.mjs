@@ -101,6 +101,16 @@ is(/tg:\(p,E\)=>hasCorp\(p\)&&!sixAt\(p,E\)/.test(HR),
    'hr — 이수 추이의 법인 대상에도 같은 규칙');
 is(/eduPlanH1/.test(SRC.report) && /Scrubber Lv\.2','Scrubber Lv\.3'/.test(SRC.report),
    'report — 교육 계획 머리글이 잡힌 인원을 따라간다');
+/* KPI 카드도 같은 규칙을 지나야 한다. 'bdate'·'vdate' 를 박아 두었더니 국내만 걸면
+   완료율이 늘 0% 였다 — 바로 아래 계획 표·cEdu 차트는 eduKey 를 지나고 있어서
+   같은 화면의 카드끼리 다른 답을 냈다. */
+is(/const d1=eLv1\.filter\(x=>_dOf\(x,eduKey\(x,1\)\)\)\.length,/.test(SRC.report) &&
+   /d2=eLv2\.filter\(x=>_dOf\(x,eduKey\(x,2\)\)\)\.length;/.test(SRC.report),
+   'report — 교육 완료율 KPI 도 eduKey 를 지난다');
+is(!/_dOf\(x,'bdate'\)/.test(SRC.report) && !/_dOf\(x,'vdate'\)/.test(SRC.report),
+   'report — 과정 이름을 박아 둔 옛 판정이 없다');
+is(/_eCourse/.test(SRC.report) && /'Scrubber Lv\.3'/.test(SRC.report),
+   'report — KPI 이름표도 잡힌 인원을 따라간다 (Lv.3 을 세면서 Veteran 이라 하지 않는다)');
 
 console.log('\n[7-1] 설치현황 — 「집계 기준」(챔버/대수)이 한 곳(chW)만 지나는지');
 {

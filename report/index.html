@@ -1624,8 +1624,19 @@ function render(){
   const _six=x=>((asOf-x.join)/MS)>=182;
   const eLv1=eA.filter(x=>!_six(x)), eLv2=eA.filter(_six);
   const _dOf=(x,k)=>{const e=eduOf(x);return !!(e&&e[k]&&e[k]<=asOf);};
-  const d1=eLv1.filter(x=>_dOf(x,'bdate')).length, d2=eLv2.filter(x=>_dOf(x,'vdate')).length;
+  /* ⚠ 과정은 사람마다 다르다 — 국내는 Scrubber Lv.2·Lv.3, 해외는 Basic·Veteran.
+     여기서 'bdate'·'vdate' 를 박아 두었더니 **국내만 걸면 완료율이 늘 0%** 였다
+     (국내 인원에게는 Basic·Veteran 완료일이라는 것이 아예 없다). 바로 아래 교육 계획 표와
+     cEdu 차트는 eduKey 를 지나고 있어서, 같은 화면의 카드끼리 서로 다른 답을 내고 있었다.
+     판정은 eduKey 한 곳만 지난다. */
+  const d1=eLv1.filter(x=>_dOf(x,eduKey(x,1))).length,
+        d2=eLv2.filter(x=>_dOf(x,eduKey(x,2))).length;
   const eT=eLv1.length+eLv2.length, eD=d1+d2;
+  /* 이름표도 잡힌 인원을 따라간다 — 교육 계획 표 머리글과 같은 규약.
+     안 그러면 Lv.3 숫자를 세면서 «Veteran» 이라고 말하는 카드가 된다. */
+  const _eKr=eA.filter(x=>x.region===GST.ORG.REGION_KR).length, _eOv=eA.length-_eKr;
+  const _eCourse = (!eA.length||(_eOv&&!_eKr)) ? 'Veteran'
+                 : (_eKr&&!_eOv) ? 'Scrubber Lv.3' : 'LV2 (Veteran · Lv.3)';
   window._PPT.edu={b:eLv1.length,bD:d1,v:eLv2.length,vD:d2};   // PPT 교육 표용
   // ===== 교육 계획 카드 — 라인 선택 가능 · 이 표의 값이 PPT 슬라이드1 교육계획 표에 그대로 들어간다 =====
   {
@@ -1684,7 +1695,8 @@ function render(){
     }
   }
   setTxt('kp3',eT?Math.round(eD/eT*100)+'%':'—');
-  setTxt('kf3',t('kf3').replace('{p}',eLv2.length?Math.round(d2/eLv2.length*100):0).replace('{n}',eLv2.length));
+  setTxt('kf3',t('kf3').replace('Veteran',_eCourse)
+    .replace('{p}',eLv2.length?Math.round(d2/eLv2.length*100):0).replace('{n}',eLv2.length));
 
   // 인원 추이 — 경력구간(1년미만/1~2년/2년+) 스택
   {
