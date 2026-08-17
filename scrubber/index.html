@@ -482,8 +482,20 @@ const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XA
 let CI={}, HI_INST=0;
 // Warranty는 AR열(43)의 'Warranty In / Warranty Out' **라벨**이다 — 만료일 열은 시트에 없다.
 // (기존 코드는 42열을 날짜로 읽어 관련 KPI·차트가 전부 0이었다)
-const wLbl=r=>{const w=GST.nfw(r[CI.warranty]||'').toUpperCase();
-  return w.includes('OUT')?'OUT':(w.includes('IN')?'IN':'');};
+/* 워런티 표기가 양식마다 다르다 (v102).
+   해외: `Warranty In/Out` = IN / OUT · 국내(및 새 양식): 같은 열에 **무상 / 유상**.
+   ⚠ 뜻이 뒤집혀 보이니 주의 — **무상 = 아직 보증 안(IN)** · **유상 = 보증 끝(OUT)**.
+     실측으로 확인했다: `Warranty date 2026-08-28`(미래) 행이 무상, `2025-07-30`(과거) 행이 유상.
+   예전에는 'IN'/'OUT' 만 봐서 한글 표기가 통째로 ''(빈 라벨)이 됐고, 그러면 아래 집계가
+   `if(!l)return` 으로 전 행을 건너뛴다 — 화면에 «Warranty IN 0% · 유효 0 · 만료 0» 이
+   떴는데 시트에는 값이 다 들어 있었다. 에러는 하나도 안 난다. */
+const wLbl=r=>{const w=GST.nfw(r[CI.warranty]||'').toUpperCase().replace(/\s/g,'');
+  if(!w)return '';
+  if(w.includes('OUT'))return 'OUT';
+  if(w.includes('IN')) return 'IN';
+  if(w.includes('유상'))return 'OUT';   // 유상 = 고객 부담 = 보증 종료
+  if(w.includes('무상'))return 'IN';    // 무상 = 우리 부담 = 보증 유효
+  return '';};
 // 이 페이지의 모든 수량은 설비 대수가 아니라 **챔버 수**로 센다 (BX열 DUAL=2 · SINGLE=1).
 // 주간현황(report)·TCO와 같은 규칙이라 페이지 간 숫자가 어긋나지 않는다.
 /* 집계 기준 — 'ch'(챔버) | 'unit'(설비 대수). 이 화면의 모든 수(KPI·막대·표·교차분석)가
@@ -936,8 +948,18 @@ function getCumulativeTrend(filtered, dateCol, metaId){
   // 추이 메타 정보
   const meta=document.getElementById(metaId);
   const granNames={week:t('g_week'),month:t('g_month'),quarter:t('g_quarter'),half:t('g_half'),year:t('g_year')};
-  if(meta)meta.textContent=`${granNames[GRAN]} | ${labels[0]||''} ~ ${labels[labels.length-1]||''}`
-    + (_noDate?` · ⚠ 날짜 없는 ${_noDate}대는 추이에 없습니다`:'');
+  /* 알약(trend-meta)은 제목·버튼과 같은 flex 줄에 있다. 여기에 경고를 이어 붙였더니
+     줄이 넘쳐 버튼 위로 올라탔다 — 경고는 «자기 줄»에 둔다. */
+  if(meta){
+    meta.textContent=`${granNames[GRAN]} | ${labels[0]||''} ~ ${labels[labels.length-1]||''}`;
+    const hdr=meta.parentNode;
+    let w=document.getElementById(metaId+'Warn');
+    if(!w && hdr && hdr.parentNode){ w=document.createElement('div'); w.id=metaId+'Warn';
+      w.className='card-note'; w.style.cssText='margin:-6px 0 10px;font-size:11px';
+      hdr.parentNode.insertBefore(w, hdr.nextSibling); }
+    if(w){ w.textContent=_noDate?`⚠ 날짜 없는 ${_noDate.toLocaleString()}대는 추이에 없습니다 — 설치현황의 날짜 칸을 채우면 반영됩니다`:'';
+           w.style.display=_noDate?'':'none'; }
+  }
 
   return{labels,cumData,newData};
 }
