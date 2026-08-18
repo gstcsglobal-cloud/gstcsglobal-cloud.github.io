@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 100;
+GST.VER = 101;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -2793,6 +2793,10 @@ GST.filters = (function(){
       refresh();
     },
     refresh: refresh,
+    /* 한 축의 «자료에 실제로 있는» 값 목록. 자동순회(키오스크)가 단지 목록을 얻는 통로다.
+       ⚠ 목록을 셸에 박지 말 것 — 대만 전용 목록으로 국내가 통째로 사라졌던 v89 그대로다.
+       종속(narrow)을 걸지 않는다: 지금 걸린 필터와 무관하게 «이 자료에 있는 전부»를 돌아야 한다. */
+    options: function(k){ return opts(k); },
     /* 기본 필터 술어. 페이지의 filt() 맨 앞에 한 줄로 넣는다. */
     /* opt.noDate — 기간 조건만 건너뛴다. 설치현황의 «미가동 목록»처럼 «그 기간에 가동을
        시작하지 않은» 설비를 봐야 하는 카드가 있다. 축 조건은 그대로 걸린다 — 기간만 뺀다. */
@@ -3255,7 +3259,26 @@ window.addEventListener('message', function(e){
     const o = d.f ? GST.decodeState(d.f) : null;
     if(o){ let n=0; const tick=setInterval(function(){       // 데이터 로딩 중이면 될 때까지 재시도
       if(GST.applyState(o)||++n>40) clearInterval(tick); },250); }
-  }
+    return; }
+
+  /* ── 자동순회(키오스크) ── 셸이 단지를 바꿔 가며 페이지를 넘긴다.
+     ⚠ 사람이 걸어 둔 필터를 «돌려주지 않으면» 순회 한 번에 화면이 딴 데를 보게 된다.
+       페이지는 늦게 뜨기도 하므로(탭 지연 로딩), 셸의 «시작» 신호를 못 받는 경우가 있다.
+       그래서 저장은 신호가 아니라 «처음 건드릴 때» 한다 — 그 순간이 곧 손대기 직전이다. */
+  if(d.type==='gst-kiosk-q'){                   // 이 페이지가 아는 단지 목록을 알려 준다
+    let list=[]; try{ list=GST.filters.options('campus')||[]; }catch(x){}
+    try{ (e.source||window.parent).postMessage({type:'gst-kiosk-a', list:list}, '*'); }catch(x){}
+    return; }
+  if(d.type==='gst-kiosk-set'){
+    try{
+      if(!GST._kioskSaved) GST._kioskSaved = GST.filters.chosen('campus');   // 배열로 눕힌다(Set 은 JSON 이 '{}')
+      /* set() 을 지나야 한다 — F.campus 는 Set 이라 직접 대입하면 그다음 .has 가 TypeError 다. */
+      GST.filters.set('campus', d.campus ? [d.campus] : []);
+    }catch(x){}
+    return; }
+  if(d.type==='gst-kiosk-restore'){
+    try{ if(GST._kioskSaved){ GST.filters.set('campus', GST._kioskSaved); GST._kioskSaved=null; } }catch(x){}
+    return; }
 });
 
 /* ============================================================
