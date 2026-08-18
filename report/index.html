@@ -2181,31 +2181,11 @@ function render(){
          TBM 표기가 드물다는 지적을 받았고, 실제로 그렇다면 이 막대는 «한 일»이 아니라
          «적힌 것»을 그린 것이다. 숫자만 보면 그 차이를 알 방법이 없으므로 건수를 같이 적는다.
        판정을 여기서 새로 만들지 않는다 — 차트가 쓴 isPM 그대로 센다(두 벌이면 갈라진다). */
-    const _lastP=P[_mi], _lastRows=_lastP?bk(u,_lastP.key):[];
-    const _pmN=_lastRows.filter(isPM).length;
-    const _allN=_lastRows.filter(isMaint).length;
-    const _pmPct=_allN?Math.round(_pmN/_allN*1000)/10:0;
-    /* 근거를 «구분별로» 적는다 — 판정이 국내와 해외가 다르기 때문이다(v113).
-       해외는 작업단계 TBM, 국내는 조치 컬럼. 한 줄로 뭉뚱그리면 어느 규칙으로 잡힌
-       숫자인지 알 수 없고, 그게 곧 「PM 공수 어떻게 뽑았냐」는 질문으로 돌아온다. */
-    const _krRows=_lastRows.filter(x=>x.region===GST.ORG.REGION_KR);
-    const _osRows=_lastRows.filter(x=>x.region!==GST.ORG.REGION_KR);
-    const _basis=[];
-    if(_osRows.length)_basis.push('해외 작업단계 TBM '+_osRows.filter(isPM).length.toLocaleString()+'건');
-    if(_krRows.length)_basis.push('국내 조치 「설비 PM·SWAP」 '+_krRows.filter(isPM).length.toLocaleString()+'건');
-    let _mNote=t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0)
-      +' · PM 근거 = '+(_basis.join(' · ')||'0건')
-      +(_allN?' (작업 '+_allN.toLocaleString()+'건의 '+_pmPct+'%)':'');
-    /* ⚠ 어휘가 운영단위마다 다르다(사용자 지적). 무엇이 잡혔는지를 보여 줘야 빠진 낱말을
-       사람이 알려 줄 수 있다 — 안 보여 주면 「덜 잡힌다」는 것을 아무도 모른다. */
-    const _mm=GST.PM.matched(_krRows);
-    if(_mm.length)_mNote+=' · 국내 잡힌 조치: '+_mm.slice(0,5).map(a=>a[0]+' '+a[1]).join(' · ')
-      +(_mm.length>5?' 외 '+(_mm.length-5)+'종':'');
-    /* 「PM 을 안 했다」와 「그렇게 안 적었다」는 다른 사실이다 — 화면이 구별해 준다.
-       기준(10%)은 눈금이 아니라 «이 정도면 시트를 의심해 볼 만하다»는 선이다. */
-    if(_allN>=20&&_pmPct<10)
-      _mNote+=' · ⚠ PM 표기가 드뭅니다 — 이 막대는 «한 PM»이 아니라 «그렇게 적힌 것»입니다';
-    setNote('cMan',_mNote+perWarn());
+    /* PM 근거(구분별 건수·잡힌 조치 값)는 화면에 안 적는다 — 사용자 요청.
+       계산은 GST.PM 한 곳에 그대로 있고, 궁금하면 물어서 확인한다.
+       ⚠ 인당 왜곡 안내(perWarn)는 남긴다. 그건 «근거»가 아니라 «이 숫자를 그대로 읽으면
+         안 된다»는 경고다 — 분자와 분모가 서로 다른 축으로 좁혀지는 자리를 알린다. */
+    setNote('cMan',t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0)+perWarn());
   }
   // ===== PM S-커브 (올해, 월 고정) =====
   let scPlan=0, scDone=0;
