@@ -158,7 +158,10 @@ console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96
   is(/div:r=>String\(\(CI\.div>=0\?r\[CI\.div\]:''\)\|\|''\)\.trim\(\)/.test(SRC.scrubber),
      'scrubber — 사업부 접근자가 열이 없을 때도 안 죽는다');
   is(/div:x=>x\.div/.test(SRC.report), 'report — 사업부 접근자가 있다');
-  is(/loose:\{ div:1 \}/.test(SRC.report), 'report — 사업부를 loose 로 선언했다');
+  /* ⚠ 문자열 통째로 견주지 않는다 — 주간현황은 loose 축이 다섯이다(v110: rows() 가
+     실적·설치·인원 세 패밀리를 섞어 넘기므로 패밀리마다 없는 축이 여럿이다).
+     통째 비교로 두면 축이 하나 늘 때마다 «고쳐야 통과하는» 검사가 된다. */
+  is(/loose:\{[^}]*\bdiv:1\b/.test(SRC.report), 'report — 사업부를 loose 로 선언했다');
 }
 
 console.log('\n[7-6] rows() 가 실어 보낸 축을 get: 이 «꺼내 보는가» (v96)');
@@ -269,6 +272,13 @@ console.log('\n[7-7] 축을 목록에 «내주면» 거르기까지 해야 한�
   is(/x\.div=\(o&&o\.div\)\|\|''/.test(R),
      'report — 조인이 안 된 행은 빈 값 그대로 둔다 (버리면 건수가 반으로 준다)');
   is(/axHas\('div'\)/.test(R), 'report — 활성 필터 칩에도 사업부가 뜬다');
+  /* 실적의 사업부는 S/N 조인으로 얻은 값이라, 못 붙은 행은 loose 로 통과한다.
+     조인이 낮으면 「사업부를 바꿔도 실적이 별로 안 준다」가 되는데 그 이유가 화면에
+     없으면 필터가 고장 난 것으로 읽힌다 — 주석은 「밝힌다」였는데 실제로는 기록만 했다. */
+  is(/window\._DIVJOIN\.hit < window\._DIVJOIN\.n/.test(R),
+     'report — 사업부 조인율을 화면에 적는다 (기록만 하고 안 보여주면 안 된다)');
+  is(/사업부조인 '\+window\._DIVJOIN\.hit/.test(R),
+     'report — 몇 행이 붙었는지 숫자로 적는다');
 }
 
 console.log('\n[7-4] 단지 축에 고객사 이름이 섞이지 않는지 (v96)');
@@ -512,6 +522,78 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
     is(inserted === 1, 'mount 를 세 번 불러도 공통 블록은 한 벌 (실제 '+inserted+'벌)');
     is(/gf-base/.test(CORE) && /box\.querySelector\('\.gf-base'\)/.test(CORE),
        'core — 중복 방지는 축 id 가 아니라 markup 의 껍데기(.gf-base)로 확인한다');
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     [9-2] rows() 에 «패밀리»가 섞여 있을 때 (v110 · 사용자 보고)
+     주간현황의 rows() 는 실적(WK)·설치(INST)·인원(ROSTER) 셋을 합쳐 넘긴다.
+     패밀리마다 있는 축이 다르다 — 팀은 인원에만, 고객사·사업부·단지·라인은 설비에만.
+     loose 로 선언하지 않으면 그 축을 고르는 순간 «그 축이 없는 패밀리»가 통째로 탈락해,
+     **다른 축의 목록이 전부 비고 「자료 없음」이라고 적힌다.**
+     실제로 팀 하나를 고르자 고객사·단지·라인·사업부가 전부 「자료 없음」이 됐고,
+     사용자는 설치현황 엑셀을 열어 사업부 열이 있는 것을 확인하고 물어 왔다.
+     ⚠ 소스로는 못 본다 — 목록을 실제로 만들어 봐야 안다.
+     ══════════════════════════════════════════════════════════════ */
+  console.log('\n[9-2] 자료가 섞여 있어도 다른 축 목록이 살아남는지 (v110)');
+  {
+    const EQ = (div, camp) => ({rg:'국내', op:'SEC Scrubber', cu:'삼성전자',
+                                dv:div, ca:camp, li:'NRD', tm:undefined});
+    const PERSON = tm => ({rg:'국내', op:'SEC Scrubber', cu:'', dv:'', ca:'', li:'', tm:tm});
+    const MIX = [ EQ('MEMORY','P3'), EQ('FOUNDRY','P4'), EQ('반도체 연구소','P3'),
+                  PERSON('K운영팀'), PERSON('P운영팀') ];
+
+    const mountMix = (loose) => G.filters.mount({ page:'mix', rows:()=>MIX, onChange:()=>{},
+      get:{ region:x=>x.rg, op:x=>x.op, customer:x=>x.cu, div:x=>x.dv,
+            campus:x=>x.ca, line:x=>x.li, team:x=>x.tm },
+      loose: loose });
+    const L = k => G.filters.lists(k);
+
+    // ① 주간현황이 실제로 선언한 그대로
+    mountMix({ customer:1, div:1, campus:1, line:1, team:1 });
+    clr(); G.filters.set('op','SEC Scrubber'); G.filters.set('team','K운영팀');
+    is(L('div').list.length === 3,
+       '팀을 골라도 사업부 목록이 살아 있다 (실제 ' + (L('div').list.join(' · ')||'빈칸') + ')');
+    is(L('customer').list.length === 1 && L('campus').list.length === 2 && L('line').list.length === 1,
+       '고객사·단지·라인도 같이 살아 있다');
+    // ② 반대 방향 — 설비 전용 축을 고르면 팀이 사라지던 자리
+    clr(); G.filters.set('op','SEC Scrubber'); G.filters.set('campus','P3');
+    is(L('team').list.length === 2, '단지를 골라도 팀 목록이 살아 있다 (실제 '
+       + (L('team').list.join(' · ')||'빈칸') + ')');
+    // ③ 같은 패밀리 안의 좁힘은 그대로여야 한다 — loose 가 «전부 통과»가 되면 안 된다
+    clr(); G.filters.set('op','SEC Scrubber'); G.filters.set('div','FOUNDRY');
+    is(L('campus').list.join() === 'P4',
+       '사업부를 고르면 단지는 그 사업부 것만 (실제 ' + L('campus').list.join(' · ') + ')');
+
+    /* ④ 음성 대조 — loose 를 예전처럼 div 만 두면 그 자리가 되살아나는지.
+       되살아나지 않으면 이 검사는 아무것도 지키지 않는 것이다. */
+    mountMix({ div:1 });
+    clr(); G.filters.set('op','SEC Scrubber'); G.filters.set('team','K운영팀');
+    is(L('div').list.length === 0,
+       '(음성 대조) loose 를 안 걸면 실제로 목록이 빈다 — 검사가 무의미하지 않다');
+    /* ⑤ 그때조차 화면이 «자료 없음»이라고 거짓말하면 안 된다. 자료는 있고 필터가 지운 것이다 —
+       사람이 할 일이 완전히 다르다(올릴 자료가 없다 vs 필터를 풀면 된다). */
+    is(L('div').hasAny === true,
+       '비어도 «값은 있다»를 구분해 남긴다 → 「현재 필터에 해당 없음」');
+
+    // ⑥ 진짜로 그 축 자료가 없을 때만 「자료 없음」이다
+    G.filters.mount({ page:'mix2', rows:()=>[{rg:'국내', op:'SEC Scrubber'}], onChange:()=>{},
+      get:{ region:x=>x.rg, op:x=>x.op, div:x=>x.div } });
+    clr();
+    is(G.filters.lists('div').hasAny === false, '축 자료가 아예 없으면 hasAny=false → 「자료 없음」');
+
+    is(/const EMPTY_NONE = '전체 \(자료 없음\)', EMPTY_FILT = '전체 \(현재 필터에 해당 없음\)'/.test(CORE),
+       'core — 두 문구를 구분해 둔다');
+    is(/hasAny \? EMPTY_FILT : EMPTY_NONE/.test(CORE), 'core — 단일 칸이 그 구분을 쓴다');
+    is(/\(hasAny \? EMPTY_FILT : EMPTY_NONE\) \+ ' \\u25be'/.test(CORE), 'core — 다중선택 칸도 같이 쓴다');
+
+    /* 주간현황이 «세 패밀리 전부»를 덮는 loose 를 선언했는지 — 하나만 빠져도 그 축에서 재발한다. */
+    const lm = /loose:\{([^}]*)\}/.exec(SRC.report.replace(/\/\*[\s\S]*?\*\//g,' '));
+    const declared = lm ? (lm[1].match(/(\w+)\s*:/g)||[]).map(x=>x.replace(/\s*:/,'')) : [];
+    const need = ['customer','div','campus','line','team'];
+    const miss = need.filter(k => declared.indexOf(k) < 0);
+    is(!miss.length, 'report — 패밀리마다 없는 축을 전부 loose 로 선언했다'
+       + (miss.length ? '  ⚠ 빠짐: ' + miss.join(', ') : ''));
+    clr();
   }
 
   /* 저장·복원이 Set 을 지키는지 */

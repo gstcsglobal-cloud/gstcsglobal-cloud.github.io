@@ -1301,6 +1301,13 @@ async function loadData(){
     if(_hrWarn)st.className='status err';
     st.textContent=(cached?'📡 ':'✅ ')+new Date().toLocaleString('ko-KR')+' · HR '+HR.length+_hrWarn+' · 실적 '+WK.length.toLocaleString()
       +(_wkDrop?' (제외 '+_wkDrop.toLocaleString()+'·단계/일자 공란)':'')+' · 설치 '+INST.length.toLocaleString()
+      /* 실적에 실린 사업부는 «설비 S/N 으로 설치현황을 조인해» 얻은 것이다(사용자 지적).
+         못 붙은 행은 loose 로 통과하므로 사업부를 걸어도 안 걸러진다 — 조인이 낮으면
+         「사업부를 바꿔도 실적이 별로 안 준다」가 되는데, 그 이유가 화면에 없으면
+         필터가 고장 난 것으로 읽힌다. 전부 붙었으면 적지 않는다(늘 적으면 소음이다). */
+      +(window._DIVJOIN && window._DIVJOIN.hit < window._DIVJOIN.n
+          ? ' · 사업부조인 '+window._DIVJOIN.hit.toLocaleString()+'/'+window._DIVJOIN.n.toLocaleString()
+            +' ('+Math.round(window._DIVJOIN.hit/Math.max(1,window._DIVJOIN.n)*100)+'%)' : '')
       +(KRA.length||KRB.length ? ' · 국내알람 '+KRA.filter(x=>x.cnt).length.toLocaleString()
           +'/'+KRA.length.toLocaleString()+' · 국내올바 '+KRB.filter(x=>x.cnt).length.toLocaleString()
           +'/'+KRB.length.toLocaleString() : '')
@@ -1369,9 +1376,19 @@ function fillFilters(){
        빈 칸은 «자료가 없다»로 읽히므로 사용자는 업로드를 의심하게 된다. */
     get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer, div:x=>x.div,
           campus:x=>x.campus, line:x=>x.line, team:x=>x.team },
-    /* 사업부는 국내 설치현황에만 있다 — loose 가 아니면 사업부를 고르는 순간
-       실적·인원·해외 설비가 통째로 사라진다(scrubber 와 같은 규약). */
-    loose:{ div:1 },
+    /* ⚠ rows() 가 «세 패밀리»를 섞어 넘긴다 — 실적(WK)·설치(INST)·인원(ROSTER).
+       패밀리마다 있는 축이 다르다:
+         · 팀            → 인원에만 있다
+         · 고객사·사업부·단지·라인 → 설비(실적·설치)에만 있다 (인원은 빈 값으로 넘긴다)
+       loose 로 선언하지 않으면, 그 축을 고르는 순간 «그 축이 없는 패밀리»의 행이 전부
+       탈락한다. 그러면 **다른 축의 목록이 통째로 비고 「자료 없음」이라고 적힌다.**
+       실제로 팀 하나를 고르자 고객사·단지·라인·사업부가 전부 「자료 없음」이 됐고,
+       사용자는 설치현황 엑셀을 열어 사업부 열이 있는 것을 확인하고 물어 왔다.
+       «모르는 것»과 «아닌 것»은 다르다 — 그 축이 아예 없는 자료는 그 축으로 거르지 않는다.
+       ⚠ 이 페이지는 GST.filters.pass() 를 쓰지 않는다(술어를 손으로 짠다). 그래서 loose 는
+         «목록 만들기»에만 영향을 준다 — 숫자는 entOk·krOk·fINST·okP 가 그대로 정한다.
+         사업부만 divOk(=hitL)로 loose 를 지키고, 나머지는 원래대로 axOkF(=hit)다. */
+    loose:{ customer:1, div:1, campus:1, line:1, team:1 },
     drop:{ customer:GST.FILT_DROP_CUST, line:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
   syncCommon();
 }

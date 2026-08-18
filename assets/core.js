@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 109;
+GST.VER = 110;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -2818,8 +2818,15 @@ GST.filters = (function(){
     return true;
   }
 
-  function fill(id, key, list){
-    if(MULTI[key]) return fillMulti(id, key, list);
+  /* 목록이 빈 이유는 둘이고, 사람이 할 일이 «완전히 다르다».
+       ① 이 자료에 그 축이 아예 없다        → 「전체 (자료 없음)」. 올릴 자료가 없는 것이다.
+       ② 값은 있는데 «다른 필터»가 다 떨어뜨렸다 → 「전체 (현재 필터에 해당 없음)」. 필터를 풀면 된다.
+     예전에는 둘 다 「자료 없음」이라고 적었다. 그래서 팀을 하나 고른 순간 고객사·단지·라인·
+     사업부가 통째로 「자료 없음」이 됐고, 사용자는 **설치현황 엑셀을 열어 사업부 열이 있는 것을
+     확인하고** 「왜 자료없음이라고 나오나」고 물었다 — 화면이 원인을 거짓으로 말한 것이다. */
+  const EMPTY_NONE = '전체 (자료 없음)', EMPTY_FILT = '전체 (현재 필터에 해당 없음)';
+  function fill(id, key, list, hasAny){
+    if(MULTI[key]) return fillMulti(id, key, list, hasAny);
     const el = document.getElementById(id); if(!el) return;
     /* 사용자 확정: 기본 필터는 «구현 안 돼도 공통으로» 다섯 칸 그대로 보인다.
        페이지마다 칸이 나타났다 사라지면 그것 자체가 «페이지마다 필터가 다르다» 로 읽힌다.
@@ -2827,7 +2834,7 @@ GST.filters = (function(){
     const box = el.closest('.slicer'); if(box) box.style.display = '';
     el.disabled = !list.length;
     const cur = F[key];
-    el.innerHTML = '<option value="">' + (list.length ? '전체' : '전체 (자료 없음)') + '</option>' + list.map(function(v){
+    el.innerHTML = '<option value="">' + (list.length ? '전체' : (hasAny ? EMPTY_FILT : EMPTY_NONE)) + '</option>' + list.map(function(v){
       return '<option value="'+String(v).replace(/"/g,'&quot;')+'">'+v+'</option>';
     }).join('');
     // 목록에서 사라진 선택값은 버린다 — 남겨두면 «아무것도 안 나오는» 화면이 된다
@@ -2838,18 +2845,21 @@ GST.filters = (function(){
   /* 다중선택 칸. 목록이 바뀔 때만 다시 만든다(GST.mselFill 의 규약) — 매번 갈아끼우면
      체크 직후 노드가 분리돼 목록이 닫힌다. 목록에서 사라진 선택값은 여기서 버린다.
      안 버리면 «아무것도 안 나오는» 화면이 되고, 그 이유가 화면에 남지 않는다. */
-  function fillMulti(id, key, list){
+  function fillMulti(id, key, list, hasAny){
     const btn = document.getElementById(id+'Btn'), box = document.getElementById(id+'Box');
     if(!btn || !box) return;
     const wrap = btn.closest('.slicer'); if(wrap) wrap.style.display = '';
     Array.from(F[key]).forEach(function(v){ if(list.indexOf(v) < 0) F[key].delete(v); });
     btn.disabled = !list.length;
-    if(!list.length){ btn.textContent = '전체 (자료 없음) \u25be'; box.innerHTML=''; box.style.display='none';
+    if(!list.length){ btn.textContent = (hasAny ? EMPTY_FILT : EMPTY_NONE) + ' \u25be'; box.innerHTML=''; box.style.display='none';
       box.dataset.built=''; box.dataset.keys=''; return; }
     GST.mselFill(id, list, F[key], function(){ save(); refresh();
       if(CFG && CFG.onChange) CFG.onChange(); });
   }
 
+  /* 마지막으로 그린 목록 — «왜 비었나»를 사람이 물을 수 있게 남긴다(검사도 이걸 본다).
+     DOM 을 읽어 확인하면 사이드바가 없는 상황에서 못 본다. */
+  const LAST = {};
   function refresh(){
     if(!CFG) return;
     /* ── 목록 만들기 (성능) ──
@@ -2891,7 +2901,13 @@ GST.filters = (function(){
         }
         if(ok) seen.add(v);
       }
-      fill('gf-'+k, k, [...seen].sort(function(a,b){ return a.localeCompare(b,'ko'); }));
+      const list = [...seen].sort(function(a,b){ return a.localeCompare(b,'ko'); });
+      /* 비었을 때만 «값이 있기는 한가»를 한 번 더 훑는다. 늘 세면 25만 행 × 7축을 한 벌
+         더 도는 셈이라 v107 에서 줄인 비용이 되돌아온다 — 빈 경우는 드물다. */
+      let hasAny = list.length > 0;
+      if(!hasAny){ for(let i=0;i<n;i++){ const v=col[i]; if(v && !(dr && dr.test(v))){ hasAny=true; break; } } }
+      LAST[k] = { list: list, hasAny: hasAny };
+      fill('gf-'+k, k, list, hasAny);
     });
     /* 기간은 «그 자료에 날짜 축이 있을 때만» 걸 수 있다. tco 의 기준 월, hr 의 기준일처럼
        페이지가 자기 시간축을 따로 갖는 곳은 date 접근자를 주지 않는다. 그때 칸을 그냥
@@ -3037,6 +3053,8 @@ GST.filters = (function(){
        ⚠ 목록을 셸에 박지 말 것 — 대만 전용 목록으로 국내가 통째로 사라졌던 v89 그대로다.
        종속(narrow)을 걸지 않는다: 지금 걸린 필터와 무관하게 «이 자료에 있는 전부»를 돌아야 한다. */
     options: function(k){ return opts(k); },
+    // 마지막 목록과 «왜 비었나» — {list, hasAny}. hasAny=true 인데 list 가 비면 필터 탓이다.
+    lists: function(k){ return k ? (LAST[k]||{list:[],hasAny:false}) : LAST; },
     ready: function(){ return !!CFG; },
     kioskSet: kioskSet, kioskRestore: kioskRestore,
     kioskOn: kioskOn, kioskReapply: kioskReapply,
