@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 118;
+GST.VER = 119;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1146,12 +1146,18 @@ GST.PM = {
     return !!x && x.region === GST.ORG.REGION_KR && GST.PM.stg(x.stage) !== 'TBM'
            && GST.PM.KR_ACT_RE.test(GST.PM.norm(x.action));
   },
-  /* 정비성 작업 — 공수 차트의 «전체»다. 설치(반입·SET-UP·TURN-ON)는 뺀다.
-     국내에서 조치로 PM 이 잡힌 행은 작업단계가 무엇이든 여기 들어온다 — 안 그러면
-     그 행의 공수가 PM 에도 非PM 에도 없이 «조용히» 사라진다. */
+  /* 공수 차트의 «전체»(= PM + 非PM). 여기서 국내와 해외가 갈린다 (v119 · 사용자 확정):
+       해외 — PM(작업단계 TBM) + 서비스 4단계(BM·CBM·CM·CRM). 설치(반입·SET-UP·TURN-ON)는 뺀다.
+              **별도 지시가 있을 때까지 이 기준을 유지한다.**
+       국내 — PM 을 뺀 «작업건 전부»가 非PM 이다. 단계 목록으로 거르지 않는다.
+     ⚠ 국내에 단계 허용목록을 쓰면 목록에 없는 단계의 공수가 «조용히» 사라진다 —
+       국내 작업단계 어휘가 해외와 같다는 근거가 없으므로 목록을 쓰지 않는 것이 맞다.
+     ⚠ 이 함수는 «인당 작업건»의 분자이기도 하다. 국내는 그 건수도 전부가 된다 —
+       공수와 건수가 같은 모집단을 보는 것이 맞다(두 벌이면 카드끼리 갈린다). */
   maint: function(x){
     if(!x) return false;
     if(GST.PM.is(x)) return true;
+    if(x.region === GST.ORG.REGION_KR) return true;   // 국내: PM 아닌 작업건 전부가 非PM
     const st = GST.PM.stg(x.stage);
     return st === 'TBM' || GST.PM.SVC.indexOf(st) >= 0;
   },

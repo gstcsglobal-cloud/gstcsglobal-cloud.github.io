@@ -367,7 +367,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(118);   // GST.corpLabel · filters.hitL · GST.PM(국내 조치 기준 PM) 을 쓴다
+GST.needVer&&GST.needVer(119);   // GST.corpLabel · filters.hitL · GST.PM(국내 조치 기준 PM) 을 쓴다
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
