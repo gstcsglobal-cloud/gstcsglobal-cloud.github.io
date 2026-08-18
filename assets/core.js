@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 112;
+GST.VER = 113;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1106,6 +1106,55 @@ GST.SM.SPEC = {
    ⚠ 허용목록은 CLAUDE.md 가 경고하는 형태다(목록에 없으면 합계에서 조용히 사라진다).
      그래서 cls() 가 모르는 값에 '?' 를 내고, 화면은 그 건수를 밝힌다.
    ============================================================ */
+/* ── PM 판정 — 구분에 따라 «다른 열»을 본다 (v113 · 사용자 확정) ──
+   · 해외: 작업단계 TBM
+   · 국내: 「조치」 컬럼에 «설비 PM» 또는 «SWAP»
+     국내는 TBM 작업단계로만 PM 을 하지 않는다(사용자 지적) — TBM 으로만 세면 국내 PM 이
+     통째로 빠진다. 그래서 국내는 «조치 컬럼에서만» 센다(작업단계는 보지 않는다).
+   ⚠ 그러면 PM 과 非PM 이 겹칠 수 있다. 실제로 BM 행의 조치가 「SWAP PM」인 경우가 있고,
+     그것도 PM 공수다(사용자 확정). 겹친 채로 두면 공수가 «두 번» 세어져 총합이 부푼다 —
+     그래서 非PM 은 반드시 «정비성 작업 중 PM 이 아닌 것»으로 정의한다(svc).
+     국내 BM «건수»는 어차피 수선실적이 아니라 알람 원장으로 세므로(v92) 충돌하지 않는다.
+   ⚠ 판정을 페이지마다 적지 말 것. 주간현황(공수·PM건수·S커브)과 PM 점검이 같은 물음에
+     답하는데 두 벌이면 반드시 갈라진다(제2원칙).
+   ⚠ 어휘는 운영단위마다 다를 수 있다(사용자 지적). 그래서 «무엇이 잡혔는지»를 셀 수 있게
+     matched() 를 둔다 — 화면이 그 목록을 보여 주면 사람이 규칙을 고쳐 줄 수 있다. */
+GST.PM = {
+  KR_RE: /설비PM|SWAP/,
+  SVC: ['BM', 'CBM', 'CM', 'CRM'],
+  norm: function(v){ return GST.upk(String(v == null ? '' : v)).replace(/\s/g, ''); },
+  stg:  function(v){ return String(v == null ? '' : v).trim().toUpperCase().replace(/\s/g, ''); },
+  /* x = {region, stage, action}. 국내는 action, 그 외는 stage 를 본다. */
+  is: function(x){
+    if(!x) return false;
+    if(x.region === GST.ORG.REGION_KR) return GST.PM.KR_RE.test(GST.PM.norm(x.action));
+    return GST.PM.stg(x.stage) === 'TBM';
+  },
+  /* 정비성 작업 — 공수 차트의 «전체»다. 설치(반입·SET-UP·TURN-ON)는 뺀다.
+     국내에서 조치로 PM 이 잡힌 행은 작업단계가 무엇이든 여기 들어온다 — 안 그러면
+     그 행의 공수가 PM 에도 非PM 에도 없이 «조용히» 사라진다. */
+  maint: function(x){
+    if(!x) return false;
+    if(GST.PM.is(x)) return true;
+    const st = GST.PM.stg(x.stage);
+    return st === 'TBM' || GST.PM.SVC.indexOf(st) >= 0;
+  },
+  // 非PM — «PM 이 아닌 정비성 작업». 겹침이 생기지 않는 유일한 정의다.
+  svc: function(x){ return GST.PM.maint(x) && !GST.PM.is(x); },
+  /* 국내에서 «어떤 조치 값이 PM 으로 잡혔나» — 값별 건수. 운영단위마다 어휘가 다르므로
+     화면이 이것을 보여 줘야 사람이 빠진 낱말을 알려 줄 수 있다. */
+  matched: function(rows){
+    const m = {};
+    (rows || []).forEach(function(x){
+      if(!x || x.region !== GST.ORG.REGION_KR || !GST.PM.is(x)) return;
+      const k = String(x.action || '').trim() || '(공란)';
+      m[k] = (m[k] || 0) + 1;
+    });
+    return Object.keys(m).map(function(k){ return [k, m[k]]; })
+             .sort(function(a, b){ return b[1] - a[1]; });
+  }
+};
+
 GST.EQ = {
   IN : ['반입완료', 'Set-up', 'Turn-off', 'Operation'],   // 반입된 것 (분모)
   RUN: ['Operation'],                                      // 가동 중
