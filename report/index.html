@@ -2809,14 +2809,30 @@ function drillFault(p){ const D=window._DRILL;
     +(rows.length?rows.slice(0,40).map(x=>'<tr><td>'+_md(x.wd)+'</td><td>'+esc(x.fab||x.custB)+'</td><td>'+esc(x.alarm)+'</td><td>'+esc(x.phenom)+'</td><td>'+esc(x.cause)+'</td><td>'+esc(x.action)+'</td></tr>').join(''):'<tr><td colspan="6" style="text-align:center;color:var(--txt-muted)">고장 없음</td></tr>')+'</tbody></table>';
   showDrill('고장 상세 · '+p.label,h);
 }
+/* 공수 세부내역 — 이 표가 «시트와 맞대어 보는» 유일한 자리다. 화면 막대는 인당 일평균(h)
+   이라 시트 합계와 직접 못 견준다. 여기서 총 분(min)과 시간(h)을 같이 낸다.
+   ⚠ 행 키가 «단지»여야 한다. 예전에는 대만이면 FAB, 아니면 고객사였는데 국내는 고객사가
+     「삼성전자(주)」 하나뿐이라 H3·H4 가 한 줄로 뭉쳤다 — 사용자가 시트에서 H3/H4 로
+     확인한 값을 화면에서 쪼개 볼 수가 없었다(v96 의 「단지로 찍는다」 규약과 같은 자리).
+   ⚠ 라벨을 「PM(TBM)」이라고 적으면 안 된다 — 국내는 조치 기준도 PM 이라 그 말이 거짓이다. */
 function drillMan(p){ const D=window._DRILL;
   const rows=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&isMaint(x));
-  const g={}; rows.forEach(x=>{const k=(/^F1[016]/.test(x.fab)?x.fab:x.custB)||'ETC';(g[k]=g[k]||{pm:0,np:0});if(isPM(x))g[k].pm+=x.manMin;else g[k].np+=x.manMin;});
-  const H=m=>Math.round(m/60*10)/10; let tp=0,tn=0;
-  const ents=Object.entries(g).sort((a,b)=>(b[1].pm+b[1].np)-(a[1].pm+a[1].np)); ents.forEach(e=>{tp+=e[1].pm;tn+=e[1].np;});
-  let h='<div class="dsum"><div class="b"><span class="n">'+H(tp+tn)+'h</span><span class="l">총 공수</span></div><div class="b"><span class="n">'+H(tp)+'h</span><span class="l">PM(TBM)</span></div><div class="b"><span class="n">'+H(tn)+'h</span><span class="l">비PM</span></div></div>';
-  h+='<table><thead><tr><th>라인</th><th class="num">PM(h)</th><th class="num">비PM(h)</th><th class="num">계(h)</th></tr></thead><tbody>'
-    +(ents.length?ents.map(e=>'<tr><td>'+esc(e[0])+'</td><td class="num">'+H(e[1].pm)+'</td><td class="num">'+H(e[1].np)+'</td><td class="num">'+H(e[1].pm+e[1].np)+'</td></tr>').join(''):'<tr><td colspan="4" style="text-align:center;color:var(--txt-muted)">데이터 없음</td></tr>')+'</tbody></table>';
+  const g={}; rows.forEach(x=>{const k=x.campus||x.fab||x.custB||'미배치';
+    (g[k]=g[k]||{pm:0,np:0,pn:0,nn:0});
+    if(isPM(x)){g[k].pm+=x.manMin;g[k].pn++;} else {g[k].np+=x.manMin;g[k].nn++;}});
+  const H=m=>Math.round(m/60*100)/100;   // 시트와 맞대므로 소수 2자리까지 — 694.16h 를 그대로 견줄 수 있게
+  const M=m=>Math.round(m).toLocaleString();
+  let tp=0,tn=0,cp=0,cn=0;
+  const ents=Object.entries(g).sort((a,b)=>(b[1].pm+b[1].np)-(a[1].pm+a[1].np));
+  ents.forEach(e=>{tp+=e[1].pm;tn+=e[1].np;cp+=e[1].pn;cn+=e[1].nn;});
+  let h='<div class="dsum"><div class="b"><span class="n">'+H(tp+tn)+'h</span><span class="l">총 공수</span></div>'
+    +'<div class="b"><span class="n">'+H(tp)+'h</span><span class="l">PM</span></div>'
+    +'<div class="b"><span class="n">'+H(tn)+'h</span><span class="l">비PM</span></div></div>'
+    +'<div class="dhint">PM '+M(tp)+'분 · 비PM '+M(tn)+'분 (시트 「작업공수」 합) · PM '+cp+'건 · 비PM '+cn+'건</div>';
+  h+='<table><thead><tr><th>단지</th><th class="num">PM(h)</th><th class="num">PM(분)</th><th class="num">비PM(h)</th><th class="num">계(h)</th></tr></thead><tbody>'
+    +(ents.length?ents.map(e=>'<tr><td>'+esc(e[0])+'</td><td class="num">'+H(e[1].pm)+'</td><td class="num">'+M(e[1].pm)
+       +'</td><td class="num">'+H(e[1].np)+'</td><td class="num">'+H(e[1].pm+e[1].np)+'</td></tr>').join('')
+      :'<tr><td colspan="5" style="text-align:center;color:var(--txt-muted)">데이터 없음</td></tr>')+'</tbody></table>';
   showDrill('작업공수 상세 · '+p.label,h);
 }
 function drillAtt(p){ const D=window._DRILL;
