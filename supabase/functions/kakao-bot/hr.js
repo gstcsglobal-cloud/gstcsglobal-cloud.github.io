@@ -420,6 +420,27 @@ const INSTALL_SPEC = {
   // 설비 대수 판정의 정본 (v99) — 대시보드 GST.EQ 와 같은 열을 본다
   state: ['설비상태', 'Equipment Status', 'Status'],
 };
+/* 설비 대수 판정 — assets/core.js 의 GST.EQ 와 «같은 낱말»을 쓴다(v99).
+   목록에 없는 값은 '?' 로 낸다 — 조용히 분모에 넣지 않는다. */
+export const EQ = {
+  IN : ['반입완료', 'Set-up', 'Turn-off', 'Operation'],
+  RUN: ['Operation'],
+  OUT: ['반납', '반출대기', '반출완료', '출하대기'],
+  norm: (v) => String(v == null ? '' : v).toUpperCase().replace(/[\s\-_]/g, ''),
+  cls(v) {
+    const s = EQ.norm(v);
+    if (!s) return '';
+    const has = (a) => a.some((x) => EQ.norm(x) === s);
+    if (has(EQ.RUN)) return 'run';
+    if (has(EQ.IN)) return 'in';
+    if (has(EQ.OUT)) return 'out';
+    return '?';
+  },
+  /* 반입(분모)으로 셀 것인가. 상태가 없으면 옛 날짜 판정으로 되돌린다(호출부가 판단). */
+  isIn: (st) => { const c = EQ.cls(st); return c === 'in' || c === 'run'; },
+  isRun: (st) => EQ.cls(st) === 'run',
+};
+
 export function parseInstall(csvText) {
   const rows = parseCSV(csvText);
   /* 힌트는 «두 양식과 DB 복원본 셋 모두에 있는» 이름만 쓴다. 예전에는 'FAB' 을 썼는데
@@ -451,6 +472,12 @@ export function parseInstall(csvText) {
       detail2: g('detail2'),
       turnOn: dateCell(r[IC.turnOn]),
       warranty: g('warranty'),
+      /* 설비상태 — SPEC 에 매핑해 놓고 «버리고» 있었다. 그래서 챗봇은 반납·반출완료 설비까지
+         대수에 세고, 같은 질문에 대시보드와 다른 숫자를 답했다(v99 가 화면에만 적용됐다).
+         판정 규칙은 assets/core.js 의 GST.EQ 와 «같은 낱말»이어야 한다 — 여기서 새로
+         발명하면 네 번째 사본이 된다(제2원칙). 상태 열이 없는 옛 추출본은 '' 이라
+         호출부가 옛 날짜 판정으로 되돌아간다. */
+      state: IC.state >= 0 ? g('state') : '',
       chambers: String(r[IC.type] ?? '').toUpperCase().includes('DUAL') ? 2 : 1,
     });
   }

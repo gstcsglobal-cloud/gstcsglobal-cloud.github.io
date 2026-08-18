@@ -753,9 +753,9 @@ GST.needVer&&GST.needVer(94);   // GST.numv 를 쓴다 — 옛 core.js 면 붉�
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
 
-const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
+const SHEET_URL=GST.sheetUrl('31302669');
 // 설치현황 — Floor는 자재실적 시트에 열 자체가 없어 설비호기/S/N으로 여기서 끌어온다
-const INST_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
+const INST_URL=GST.sheetUrl('891608329');
 let INSTIX=null;
 /* Floor 조회. 못 붙으면 '미상'으로 세운다 — 빈칸으로 두면 축에서 조용히 사라진다.
    일본(F15_*)·싱가포르(F10*) 설비는 설치현황에 아예 없어 원리적으로 못 붙는다(실측 4,027행). */

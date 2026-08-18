@@ -82,7 +82,7 @@ const MIRROR = [
 for (const M of MIRROR) {
   console.log(`\n[${M.key}] mirror — 원본 CSV 파싱 == 표 복원 CSV 파싱`);
   const p = path.join(HERE, M.file);
-  if (!fs.existsSync(p)) { console.log('  … 픽스처 없음 — 건너뜀'); continue; }
+  if (!fs.existsSync(p)) { globalThis.__skipped = (globalThis.__skipped||0)+1; console.log('  … 픽스처 없음 — 건너뜀'); continue; }
   const text = fs.readFileSync(p, 'utf8');
 
   const orig = M.parse(text);
@@ -112,7 +112,7 @@ for (const M of MIRROR) {
 for (const [file, site, wantItems] of [['csv_cip11.csv', 'F11', 6], ['csv_cip16.csv', 'F16', 24]]) {
   console.log(`\n[cip ${site}] import — 표 복원 CSV 가 원본과 같은 레코드를 내는지`);
   const p = path.join(HERE, file);
-  if (!fs.existsSync(p)) { console.log('  … 픽스처 없음 — 건너뜀'); continue; }
+  if (!fs.existsSync(p)) { globalThis.__skipped = (globalThis.__skipped||0)+1; console.log('  … 픽스처 없음 — 건너뜀'); continue; }
   const text = fs.readFileSync(p, 'utf8');
   const Papa = (await import('papaparse')).default;
   const rows = Papa.parse(text, { skipEmptyLines: false }).data;
@@ -165,5 +165,14 @@ console.log('\n[3] importOrderCol — core.js _csvOrderCol 과 같은 답인지'
   }
 }
 
-console.log(`\n${bad ? '❌' : '✅'} ${n - bad}/${n} 통과`);
+/* ⚠ 픽스처가 없으면 핵심 대조를 «건너뛰고도» ✅ 로 끝났다 — 초록불이 거짓말을 한다.
+   실제로 그 초록불을 믿고 여러 번 작업했다. 건너뛴 것이 있으면 다른 말을 한다.
+   종료코드는 0 으로 둔다(픽스처 없는 환경에서 npm run all 이 멈추면 나머지도 못 돈다).
+   진짜 CI 에서는 STRICT_FIXTURES=1 로 실패시킬 수 있다. */
+const _skip = globalThis.__skipped || 0;
+if (bad) console.log(`\n❌ ${n - bad}/${n} 통과`);
+else if (_skip) console.log(`\n⚠️  부분 검사 — 픽스처가 없어 ${_skip}개 항목을 건너뛰었다 (핵심 대조 미실행) · 통과 ${n}/${n}`);
+else console.log(`\n✅ ${n}/${n} 통과`);
+if (_skip && process.env.STRICT_FIXTURES) process.exit(2);
 process.exit(bad ? 1 : 0);
+

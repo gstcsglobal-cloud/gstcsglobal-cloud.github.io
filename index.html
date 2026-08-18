@@ -61,6 +61,8 @@ body.theme-slate .spinner{border-color:rgba(151,170,196,.16);border-top-color:#2
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
 .brand .tag{font-size:12px;color:var(--mut)}
 .topbar-right{display:flex;align-items:center;gap:10px}
+/* 툴바 버튼이 여섯 개다 — 좁은 화면에서 줄바꿈이 안 되면 로그아웃이 화면 밖으로 잘린다 */
+.topbar-right{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
 .tb-btn{display:inline-flex;align-items:center;gap:6px;background:var(--glass);border:1px solid var(--glassb);color:var(--txt);
   padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-decoration:none}
 .tb-btn:hover{background:rgba(255,255,255,.12)}
@@ -359,8 +361,22 @@ function kioskAsk(){
   clearTimeout(KIOSK.askT);
   KIOSK.askT=setTimeout(()=>kioskFillCamps(true), 2500);   // 답이 안 오면 그때 진단을 적는다
 }
+/* 페이지가 «오래 걸리는 일»을 시작하면 셸의 그 버튼을 잠근다 — 버튼은 셸에 있고
+   클릭만 iframe 으로 가므로 페이지가 직접 못 만진다. 60초 안전장치를 둔다:
+   페이지가 죽거나 메시지를 못 보내면 버튼이 영영 잠긴 채로 남기 때문이다. */
+let _barBusyT=null;
 window.addEventListener('message',e=>{
   const d=e.data||{};
+  if(d.type==='gst-bar-busy'){
+    const b=document.querySelector('[data-gb="'+d.key+'"]'); if(!b) return;
+    clearTimeout(_barBusyT);
+    if(d.on){ if(!b.dataset.old) b.dataset.old=b.textContent;
+              b.disabled=true; b.textContent='⏳ 만드는 중…';
+              _barBusyT=setTimeout(()=>{ b.disabled=false;
+                if(b.dataset.old){ b.textContent=b.dataset.old; delete b.dataset.old; } }, 60000); }
+    else    { b.disabled=false; if(b.dataset.old){ b.textContent=b.dataset.old; delete b.dataset.old; } }
+    return;
+  }
   if(d.type==='gst-kiosk-ack'){ kioskAck(d); return; }
   if(d.type!=='gst-kiosk-a' || d.axis!==KIOSK.axis) return;
   KIOSK.replies++; KIOSK.askedVer=d.ver||0;
@@ -408,7 +424,13 @@ function kioskFillCamps(timedOut){
   const nm=document.getElementById('kkAxName'); if(nm) nm.textContent=axName;
   if(KIOSK.vals.length){
     warn.style.display='none';
-    box.innerHTML = KIOSK.vals.map(c=>'<label><input type="checkbox" value="'+c+'" checked> '+c+'</label>').join('');
+    /* ⚠ 느린 탭의 답이 늦게 오면 목록을 «다시» 그리는데, 그때 사용자가 방금 푼 체크가
+       전부 되살아난다 — 고르는 중에 화면이 제멋대로 움직이는 것으로 보인다.
+       이미 화면에 있던 선택 상태를 그대로 물려준다(새로 들어온 값만 기본 체크). */
+    const was={}; let had=false;
+    box.querySelectorAll('input').forEach(i=>{ was[i.value]=i.checked; had=true; });
+    box.innerHTML = KIOSK.vals.map(c=>'<label><input type="checkbox" value="'+c+'"'
+      +((!had || was[c]===undefined || was[c])?' checked':'')+'> '+c+'</label>').join('');
     box.onchange=kioskEst; kioskEst(); return;
   }
   box.innerHTML='<div style="color:#8B98A9;font-size:11px;padding:4px">'+axName+' 목록을 읽는 중…</div>';

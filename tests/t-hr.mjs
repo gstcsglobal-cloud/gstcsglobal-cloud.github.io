@@ -7,10 +7,42 @@ const HR = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../sup
 const m = await import(HR);
 
 const read = (f) => fs.readFileSync(path.join(HERE, f), 'utf8');
-let pass = 0, fail = 0;
+const has = (f) => fs.existsSync(path.join(HERE, f));
+let pass = 0, fail = 0, skipped = 0;
 const ok = (c, msg) => { if (c) { pass++; } else { fail++; console.log('  ❌ ' + msg); } };
 
+/* ── 설비상태 판정 (v99) — 픽스처 없이 도는 검사 ────────────────
+   챗봇이 설비상태를 «매핑해 놓고 버려서» 반납·반출완료 설비까지 대수에 셌다.
+   같은 질문에 대시보드와 다른 숫자를 답하는데 에러는 하나도 안 난다.
+   ⚠ 낱말은 assets/core.js 의 GST.EQ 와 «같아야» 한다 — 여기서 새로 지으면 네 번째 사본이다. */
+console.log('[0] 설비상태 판정이 대시보드와 같은 낱말인지');
+{
+  const CORE = fs.readFileSync(path.resolve(HERE, '../assets/core.js'), 'utf8');
+  const lists = {};
+  for (const k of ['IN', 'RUN', 'OUT']) {
+    const mm = CORE.match(new RegExp('\\b' + k + '\\s*:\\s*\\[([^\\]]*)\\]'));
+    lists[k] = mm ? mm[1].match(/'[^']*'/g).map(x => x.slice(1, -1)) : [];
+    ok(lists[k].length > 0, 'core.js 에서 GST.EQ.' + k + ' 를 읽지 못했다');
+    ok(JSON.stringify(m.EQ[k]) === JSON.stringify(lists[k]),
+       'GST.EQ.' + k + ' 와 봇의 EQ.' + k + ' 가 다르다 — core=' + JSON.stringify(lists[k]) + ' bot=' + JSON.stringify(m.EQ[k]));
+  }
+  ok(m.EQ.cls('Operation') === 'run', 'Operation → run');
+  ok(m.EQ.cls('반입완료') === 'in', '반입완료 → in');
+  ok(m.EQ.cls('반출완료') === 'out', '반출완료 → out (분모에서 빠져야 한다)');
+  ok(m.EQ.cls('turn-off') === 'in', '표기 흔들림(대소문자·하이픈)을 흡수한다');
+  ok(m.EQ.cls('') === '', '값이 없으면 「모름」이 아니라 「날짜 폴백」이다');
+  ok(m.EQ.cls('알수없는상태') === '?', '모르는 값은 조용히 넣지 않고 ? 로 낸다');
+  ok(m.EQ.isIn('반출완료') === false && m.EQ.isIn('Operation') === true, 'isIn 판정');
+}
+
 /* ── 설치현황 ───────────────────────────────────────── */
+if (!has('csv_inst.csv')) {
+  skipped++;
+  console.log('  … 설치현황 픽스처 없음 — 아래 실데이터 대조를 건너뛴다');
+  console.log(`\n${fail ? '❌' : '⚠️ '} 부분 검사 — 픽스처가 없어 파서 대조를 못 했다 · 통과 ${pass}/${pass + fail}`);
+  if (process.env.STRICT_FIXTURES) process.exit(2);
+  process.exit(fail ? 1 : 0);
+}
 const inst = m.parseInstall(read('csv_inst.csv'));
 console.log(`설치현황: ${inst.length}대`);
 const s0 = inst[0];

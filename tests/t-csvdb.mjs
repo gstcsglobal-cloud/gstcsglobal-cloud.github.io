@@ -40,7 +40,7 @@ if (!G || !G._cipBand || !G._abpWide) { console.log('❌ core.js 에서 어댑�
 console.log('\n[1] CIP — 적용일자 띠를 열별 최초 완료일로 되살리는지');
 for (const [file, site, wantItems] of [['csv_cip11.csv', 'F11', 6], ['csv_cip16.csv', 'F16', 24]]) {
   const p = path.join(HERE, file);
-  if (!fs.existsSync(p)) { console.log(`  … ${site} 픽스처 없음 — 건너뜀`); continue; }
+  if (!fs.existsSync(p)) { globalThis.__skipped = (globalThis.__skipped||0)+1; console.log(`  … ${site} 픽스처 없음 — 건너뜀`); continue; }
   const sheet = Papa.parse(fs.readFileSync(p, 'utf8'), { skipEmptyLines: false }).data;
   const imported = sheet.slice(1);                        // Import 표 = 띠가 없는 상태
   const restored = [G._cipBand(imported)].concat(imported);
@@ -211,5 +211,14 @@ console.log('\n[4] 읽기 — 표에 id 가 없어도 읽는지');
   G.db = realDb;
 }
 
-console.log(`\n${bad ? '❌' : '✅'} ${n - bad}/${n} 통과`);
+/* ⚠ 픽스처가 없으면 핵심 대조를 «건너뛰고도» ✅ 로 끝났다 — 초록불이 거짓말을 한다.
+   실제로 그 초록불을 믿고 여러 번 작업했다. 건너뛴 것이 있으면 다른 말을 한다.
+   종료코드는 0 으로 둔다(픽스처 없는 환경에서 npm run all 이 멈추면 나머지도 못 돈다).
+   진짜 CI 에서는 STRICT_FIXTURES=1 로 실패시킬 수 있다. */
+const _skip = globalThis.__skipped || 0;
+if (bad) console.log(`\n❌ ${n - bad}/${n} 통과`);
+else if (_skip) console.log(`\n⚠️  부분 검사 — 픽스처가 없어 ${_skip}개 항목을 건너뛰었다 (핵심 대조 미실행) · 통과 ${n}/${n}`);
+else console.log(`\n✅ ${n}/${n} 통과`);
+if (_skip && process.env.STRICT_FIXTURES) process.exit(2);
 process.exit(bad ? 1 : 0);
+

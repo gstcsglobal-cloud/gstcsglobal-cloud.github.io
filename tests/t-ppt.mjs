@@ -203,7 +203,7 @@ function mkEnv(nCharts, insights){
     : el();
   global.document.querySelector = sel => sel==='.header h1' ? {textContent:'설치 현황'} : null;
   global.document.querySelectorAll = sel => {
-    if(sel==='.cw canvas') return canvases;
+    if(/canvas/.test(sel)) return canvases;   // 선택자가 넓어져도(.card/.mcard) 같은 목록을 준다
     if(sel==='#gstInsights .gst-ins') return (insights||[]).map(t=>({innerText:t}));
     return [];
   };
@@ -314,11 +314,73 @@ console.log('[3-2] 흰 종이용으로 바꿀 때 밝은 글자색이 따라오�
   reset();
 }
 
+/* ── [3-3] «눌러도 아무 반응이 없다»가 안 나오는지 ──
+   실제로 그 증상으로 돌아왔다. 원인이 둘이었고 둘 다 조용하다:
+   ① CDN 로드에 시간 제한이 없어, 사내망이 «거부»가 아니라 «묵살»하면 await 가 영영 멈춘다.
+   ② 버튼은 셸에 있고 클릭만 iframe 으로 오므로, 몇 초 동안 아무 표시가 없다. */
+console.log('[3-3] 라이브러리를 못 받아도 «멈춰 있지» 않는지');
+{
+  mkEnv(1, []);
+  delete global.window.PptxGenJS; delete global.PptxGenJS; GST._pptP = null;
+  GST.PPT_CDN_MS = 120;                      // 검사에서는 짧게
+  /* 스크립트 태그가 «영영 응답하지 않는» 상황을 만든다 — onload/onerror 둘 다 안 온다. */
+  const prevCreate = global.document.createElement;
+  global.document.createElement = tag => tag==='script'
+    ? { set src(v){}, get src(){return '';}, onload:null, onerror:null }
+    : prevCreate(tag);
+  global.document.head = { appendChild(){}, };
+  let said='';
+  global.window.capToast = m => { said = m; };
+  let busy=[];
+  GST._barBusy = (k,on)=>busy.push(on);
+  /* ⚠ 그냥 await 하면 «시간 제한이 없을 때» 검사 자체가 멈춰 버려 실패로 안 잡힌다.
+     경주(race)를 붙여 «끝났는가»를 값으로 확인한다 — 멈춤도 실패로 드러난다. */
+  let finished = false;
+  const t0 = Date.now();
+  await Promise.race([
+    GST.pptAuto({asOf:'2026-08-18'}).then(()=>{ finished = true; }),
+    new Promise(r => setTimeout(r, 3000))
+  ]);
+  const ms = Date.now() - t0;
+  global.document.createElement = prevCreate;
+  ok(finished, '응답 없는 CDN 에서 «영영 대기»하면 안 된다 — 3초 안에 끝나야 한다 (실제 '+ms+'ms)');
+  ok(/15초|cdn\.jsdelivr\.net|막고/.test(said), '무엇이 막혔고 무엇을 하면 되는지 알려야 한다 (실제: '+said.slice(0,60)+'…)');
+  ok(/복사/.test(said), '대안(차트별 복사)을 알려야 한다 — 막다른 길로 두지 않는다');
+  GST.PPT_CDN_MS = 15000; GST._pptP = null; delete global.window.capToast;
+  reset();
+}
+
+/* 버튼 잠금 — 페이지가 셸에 알려야 한다(버튼이 iframe 밖에 있다) */
+console.log('[3-4] 만드는 동안 버튼이 잠기는지');
+{
+  const slides = mkEnv(2, []);
+  const seq=[]; GST._barBusy = (k,on)=>seq.push(k+':'+on);
+  /* _barDo 는 GST._bar(등록된 spec)에서 on 을 꺼낸다 — pageBar 를 흉내내 등록해 둔다. */
+  let ran=0;
+  GST._bar = { caps:{ppt:'auto'}, on:{ ppt: ()=>{ ran++; return Promise.resolve(); } }, state:()=>({}) };
+  await new Promise(r=>{ GST._barDo('ppt', null); setTimeout(r, 30); });
+  ok(ran===1, '페이지의 ppt 핸들러가 한 번 불려야 한다 (실제 '+ran+')');
+  ok(seq[0]==='ppt:true' && seq[seq.length-1]==='ppt:false',
+     '시작에 잠그고 끝나면 풀어야 한다 (실제 '+seq.join(' → ')+')');
+  reset();
+}
+
 /* ══════════════════════════════════════════════════════════════
    [4] 규율 — 페이지가 자기 PPT 를 새로 만들지 않는지
    ══════════════════════════════════════════════════════════════ */
 console.log('[4] 여섯 페이지가 공용 한 벌을 그대로 쓰는지');
 const SHARED = ['scrubber','pm','fault','material','cip','tco'];
+/* ⚠ hr 은 자기 PPT 덱을 따로 만든다(downloadHrPPT). 그 자체는 사용자 결정이지만,
+   «한 양식» 검사가 hr 을 목록에서 빼 두면 그 사실이 검사에서 사라진다 — 나중에 다른
+   페이지가 같은 이유로 빠져나가도 아무도 모른다. 예외를 «명시»해 눈에 보이게 둔다. */
+{
+  const HR = fs.readFileSync(ROOT+'/hr/index.html','utf8');
+  ok(/new PptxGenJS\(/.test(HR),
+     'hr 이 자기 덱을 만드는 것은 «알려진 예외»다 — 없어졌으면 SHARED 에 넣고 이 줄을 지울 것');
+  const bar = (HR.match(/GST\.pageBar\(\{[\s\S]*?\n\}\);/)||[''])[0];
+  ok(/ppt:\s*\(\)\s*=>\s*downloadHrPPT\(\)/.test(bar),
+     'hr 의 예외는 pageBar 에 «명시»돼 있어야 한다(몰래 갈라지지 않게)');
+}
 for(const pg of SHARED){
   const src = fs.readFileSync(ROOT+'/'+pg+'/index.html','utf8');
   const bar = (src.match(/GST\.pageBar\(\{[\s\S]*?\n\}\);/)||[''])[0];
@@ -328,6 +390,12 @@ for(const pg of SHARED){
 }
 const CORE = fs.readFileSync(ROOT+'/assets/core.js','utf8');
 ok(/GST\.PPT_MAX_PER_SLIDE\s*=\s*6/.test(CORE), '한 장 최대 개수가 상수로 있어야 한다(숫자를 코드에 흩지 않는다)');
+/* `.cw canvas` 만 보면 추이(.trend-wrap)·크로스(.cross-wrap) 카드의 차트가 통째로 빠진다
+   (실측: 설치현황 14개 중 5개 · 고장분석 32개 중 7개). 가짜 DOM 으로는 못 잡히므로 소스로 본다. */
+ok(/querySelectorAll\('\.card canvas, \.mcard canvas'\)/.test(CORE),
+   '카드 «안의 모든» 캔버스를 봐야 한다 — .cw 만 보면 추이·크로스 차트가 빠진다');
+ok(/GST\.PPT_CDN_MS/.test(CORE) && /setTimeout\(function\(\)\{ fin\(false, new Error\('TIMEOUT'\)\); \}/.test(CORE),
+   'CDN 로드에 시간 제한이 있어야 한다 — 없으면 「눌러도 반응 없음」이 된다');
 ok(/GST\.corpLabel\s*=\s*function/.test(CORE), 'corpLabel 정본이 core.js 에 있어야 한다');
 /* 음성 대조: 다른 페이지에 corpLabel 이 «다시» 정의되면 두 벌이 된다 */
 for(const pg of SHARED.concat(['hr'])){

@@ -7,6 +7,18 @@
 import fs from 'fs';
 import path from 'path';
 const HERE = path.dirname(new URL(import.meta.url).pathname);
+
+/* 픽스처가 없으면 «크래시»한다 — npm run all 이 여기서 죽어 나머지가 안 돈다.
+   조용히 견디되 초록불은 안 준다. 실제 CI 는 STRICT_FIXTURES=1 로 실패시킨다. */
+{
+  const _need = ["csv_wk.csv", "csv_inst.csv"];
+  const _miss = _need.filter((f) => !fs.existsSync(path.join(HERE, f)));
+  if (_miss.length) {
+    console.log('⚠️  픽스처가 없어 이 검사를 못 했다: ' + _miss.join(', ') + ' (tests/README.md 로 생성)');
+    process.exit(process.env.STRICT_FIXTURES ? 2 : 0);
+  }
+}
+
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 
 // ── core.js (브라우저) 로드 ──────────────────────────────

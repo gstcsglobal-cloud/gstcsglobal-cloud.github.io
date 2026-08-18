@@ -8,6 +8,18 @@ import path from 'path';
 
 const ROOT=path.resolve(path.dirname(new URL(import.meta.url).pathname),'..');
 const HERE=path.dirname(new URL(import.meta.url).pathname);
+
+/* 픽스처가 없으면 라우트 핸들러 «안에서» 크래시한다 — 스택만 남고 «검사가 안 됐다»는
+   사실은 안 남는다. 미리 끊고 그 사실을 적는다. */
+{
+  const _need = ["csv_wk.csv", "csv_inst.csv"];
+  const _miss = _need.filter((f) => !fs.existsSync(path.join(HERE, f)));
+  if (_miss.length) {
+    console.log('⚠️  픽스처가 없어 이 검사를 못 했다: ' + _miss.join(', ') + ' (tests/README.md 로 생성)');
+    process.exit(process.env.STRICT_FIXTURES ? 2 : 0);
+  }
+}
+
 const CSV={ '646668307':'csv_wk.csv', '31302669':'csv_mat.csv', '891608329':'csv_inst.csv',
   '2123129719':'csv_cip11.csv', '1999732389':'csv_cip16.csv' };
 
@@ -21,7 +33,11 @@ const PAGES=[
   {f:'pm/index.html',       name:'PM점검'},
   {f:'scrubber/index.html', name:'설치현황'},
   {f:'tco/index.html',      name:'TCO'},
-  {f:'cip/index.html',      name:'CIP현황'}
+  {f:'cip/index.html',      name:'CIP현황'},
+  /* ⚠ 인원현황이 빠져 있었다 — 손이 가장 많이 간 페이지(교육 축·피벗·편집·자체 PPT)가
+     렌더·JS에러 검사를 아예 안 받고 있었다. 여덟 탭 중 유일하게 빠진 것이라
+     «왜 여기만 빠졌지»의 답이 없다면 그것 자체가 위험 신호다. */
+  {f:'hr/index.html',       name:'인원현황'}
 ];
 
 const browser=await chromium.launch(PW_OPTS);

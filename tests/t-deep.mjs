@@ -7,6 +7,19 @@ import path from 'path';
 
 const ROOT=path.resolve(path.dirname(new URL(import.meta.url).pathname),'..');
 const HERE=path.dirname(new URL(import.meta.url).pathname);
+
+/* 픽스처가 없으면 «크래시»한다 — npm run all 이 1번에서 죽어 나머지 검사가 아예 안 돈다.
+   그리고 크래시는 «검사가 안 됐다»는 사실을 남기지 않는다. 조용히 견디되 초록불은 안 준다.
+   실제 CI 에서는 STRICT_FIXTURES=1 로 실패시킨다. */
+{
+  const _need = ["csv_wk.csv", "csv_mat.csv", "csv_inst.csv", "csv_cip11.csv", "csv_cip16.csv"];
+  const _miss = _need.filter((f) => !fs.existsSync(path.join(HERE, f)));
+  if (_miss.length) {
+    console.log('⚠️  픽스처가 없어 이 검사를 못 했다: ' + _miss.join(', ') + ' (tests/README.md 로 생성)');
+    process.exit(process.env.STRICT_FIXTURES ? 2 : 0);
+  }
+}
+
 const CSV={ '646668307':'csv_wk.csv', '31302669':'csv_mat.csv', '891608329':'csv_inst.csv',
   '2123129719':'csv_cip11.csv', '1999732389':'csv_cip16.csv' };
 

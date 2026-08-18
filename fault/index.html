@@ -633,11 +633,11 @@ GST.needVer&&GST.needVer(94);   // GST.numv 를 쓴다 — 옛 core.js 면 붉�
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
 
-const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
+const SHEET_URL=GST.sheetUrl('646668307');
 // 설치현황 시트 — 설비 S/N별 Turn-On(가동개시일) 조인용 (MTBF 가동기간 정밀화). 미연동 시 최초 서비스일로 대체.
-const INST_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
+const INST_URL=GST.sheetUrl('891608329');
 // 자재실적 — 설비 일대기에서 "이 설비가 뭘 갈았나"를 잇기 위해 함께 읽는다
-const MAT_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
+const MAT_URL=GST.sheetUrl('31302669');
 let INSTMAP={};  // normSN → Turn-On Date
 let INSTIX=null; // 설비호기·S/N → 설치 제원(Floor 등). GST.ORG.instIndex가 만든다
 let INSTROW={};  // normSN → 설치 제원 (일대기 기본정보용)
