@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 106;
+GST.VER = 107;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -2685,6 +2685,13 @@ GST.filters = (function(){
        hasK/hitK 를 지나야 한다 — `if(F.op)` 는 빈 Set 도 truthy 라 언제나 참이 된다. */
   const MULTI = { region:1, op:1, div:1, customer:1, campus:1, line:1, team:1 };
   const AXES = ['region','op','div','customer','campus','line','team'];
+  /* 사이드바에 «보여 주는» 묶음. 위 AXES 는 집계 계층(구분→운영단위→사업부→고객사→단지
+     →라인→팀)이라 그대로 두고, 화면은 «어느 자료에 걸리는 필터인지»로 나눈다. */
+  const GROUPS = [
+    { t:'', ks:['region','op','customer','campus','line'] },
+    { t:'설비 기준', note:'설치·실적', ks:['div'] },
+    { t:'인원 기준', note:'인원현황', ks:['team'] },
+  ];
   const F = { region:new Set(), op:new Set(), div:new Set(), customer:new Set(),
               campus:new Set(), line:new Set(), team:new Set(), dtFrom:'', dtTo:'' };
   /* 술어에서 «고른 것에 걸리나»를 묻는 유일한 자리. 단일·다중을 여기서만 가른다 —
@@ -2747,11 +2754,15 @@ GST.filters = (function(){
     const sv = KSAVED; KSAVED = null; setK(sv.k, sv.v);
   }
 
-  function opts(key, narrow){
+  function opts(key, narrow, rowsIn){
     /* mount 전에도 불릴 수 있다 — options() 가 공개 API 라 셸이 언제든 물어본다.
        CFG 가 null 이면 예외가 아니라 «아직 아는 값이 없다»(빈 배열)가 맞다. */
     if(!CFG) return [];
-    const g = (CFG.get||{})[key], rows = (CFG.rows && CFG.rows()) || [];
+    /* ⚠ rows 를 «받아» 쓴다. CFG.rows() 는 페이지가 매번 새 배열을 «만든다» —
+       주간현황은 실적 25만 + 설치 + 인원을 합쳐 새로 짓는다. 축마다 부르면 한 번
+       새로고침에 그 일이 일곱 번 일어나고, 체크박스를 누를 때마다 화면이 멈춘다
+       (사용자 보고: «필터 누를 때마다 로딩이 엄청 길다»). refresh 가 한 번만 만들어 넘긴다. */
+    const g = (CFG.get||{})[key], rows = rowsIn || (CFG.rows && CFG.rows()) || [];
     if(!g) return [];
     const dr = (CFG.drop||{})[key];
     const s = new Set();
@@ -2815,8 +2826,46 @@ GST.filters = (function(){
 
   function refresh(){
     if(!CFG) return;
-    AXES.forEach(function(k){
-      fill('gf-'+k, k, opts(k, function(x){ return passExcept(x, k); }));
+    /* ── 목록 만들기 (성능) ──
+       예전에는 축마다 rows() 를 새로 만들고, 행마다 접근자를 다시 불렀다:
+       7축 × N행 × 7축 = 49N 번. 주간현황은 N 이 25만이라 체크박스를 누를 때마다
+       화면이 멈췄다(사용자 보고). 축 값을 «행당 한 번» 뽑아 두고 그 위에서 센다 — 7N 번.
+       ⚠ 여기서 뽑는 값과 pass() 가 보는 값이 «같은 val()» 이어야 한다. 두 벌이 되면
+         목록에는 있는데 골라도 0건인 값이 생긴다. */
+    const rows = (CFG.rows && CFG.rows()) || [];
+    const g = CFG.get || {}, drop = CFG.drop || {}, loose = CFG.loose || {};
+    const n = rows.length;
+    /* 축별 «평면 배열» 로 뽑는다. 행마다 객체를 만들면(7키 × 25만) 할당 비용이 더 커서
+       오히려 느려진다 — 실측으로 확인했다. 문자열 배열 일곱이면 헤더가 없다. */
+    const AV = new Array(AXES.length);
+    for(let a=0;a<AXES.length;a++){
+      const acc = g[AXES[a]], col = new Array(n);
+      if(acc){ for(let i=0;i<n;i++){ let v; try{ v = acc(rows[i]); }catch(e){ v=''; }
+                 col[i] = v==null ? '' : String(v).replace(/\s+/g,' ').trim(); } }
+      else { for(let i=0;i<n;i++) col[i] = ''; }
+      AV[a] = col;
+    }
+    /* 어느 축이 «걸려 있나»를 미리 뽑아 둔다 — 안 걸린 축은 루프에서 아예 건너뛴다.
+       대개 한두 축만 걸려 있으므로 이것만으로 대부분의 비용이 사라진다. */
+    const ON = [];
+    for(let a=0;a<AXES.length;a++) if(hasK(AXES[a])) ON.push(a);
+    AXES.forEach(function(k, ai){
+      const dr = drop[k], col = AV[ai], seen = new Set();
+      for(let i=0;i<n;i++){
+        const v = col[i];
+        if(!v || (dr && dr.test(v))) continue;
+        /* 자기 축은 빼고 나머지로 좁힌다(passExcept 와 같은 규칙) — 자기까지 보면
+           한 번 고른 값 말고는 목록에서 사라져 되돌릴 수 없다. */
+        let ok = true;
+        for(let z=0; z<ON.length; z++){
+          const a = ON[z]; if(a === ai) continue;
+          const w = AV[a][i];
+          if(!w){ if(loose[AXES[a]]) continue; ok = false; break; }
+          if(!hitK(AXES[a], w)){ ok = false; break; }
+        }
+        if(ok) seen.add(v);
+      }
+      fill('gf-'+k, k, [...seen].sort(function(a,b){ return a.localeCompare(b,'ko'); }));
     });
     /* 기간은 «그 자료에 날짜 축이 있을 때만» 걸 수 있다. tco 의 기준 월, hr 의 기준일처럼
        페이지가 자기 시간축을 따로 갖는 곳은 date 접근자를 주지 않는다. 그때 칸을 그냥
@@ -2841,7 +2890,10 @@ GST.filters = (function(){
     F.dtFrom=a?a.value:''; F.dtTo=b?b.value:'';
     /* 단지를 바꾸면 그 아래 라인은 대개 유효하지 않다 — 명시적으로 비운다.
        (나머지 칸은 refresh 의 fill 이 «목록에 없으면 버린다»로 스스로 정리한다.) */
-    if(changed==='campus') F.line='';
+    /* ⚠ v106 에서 라인도 Set 이 됐다. 여기서 `F.line=''` 로 대입하면 Set 이 문자열로
+       바뀌어 그다음 .has 가 TypeError 로 죽는다 — 단지를 바꾸는 순간 화면이 통째로 빈다.
+       CLAUDE.md 가 금지한 그 패턴이 «core 안»에 남아 있던 자리다. */
+    if(changed==='campus') MULTI.line ? F.line.clear() : (F.line='');
     save(); refresh();
     if(CFG && CFG.onChange) CFG.onChange();
   }
@@ -2861,7 +2913,13 @@ GST.filters = (function(){
         /* Set 을 새로 만들지 않는다 — 다중선택 박스가 이 객체를 들고 있어서,
            갈아끼우면 그때부터 체크가 옛 Set 으로 들어가 화면이 안 움직인다.
            페이지가 mount 를 여러 번 부르면(주간현황은 5번) 반드시 그 상태가 된다. */
-        if(MULTI[k]){ if(Array.isArray(o[k])){ F[k].clear(); o[k].forEach(function(v){ F[k].add(v); }); } return; }
+        if(MULTI[k]){
+          /* v106 이전 저장본은 이 축이 «문자열»이다. 배열만 받으면 그 값이 조용히 사라져
+             «어제 걸어 둔 필터가 오늘 풀려 있다»가 된다 — 옛 모양도 받아 Set 에 넣는다. */
+          if(Array.isArray(o[k])){ F[k].clear(); o[k].forEach(function(v){ F[k].add(v); }); }
+          else if(typeof o[k]==='string' && o[k]){ F[k].clear(); F[k].add(o[k]); }
+          return;
+        }
         if(typeof o[k]==='string') F[k]=o[k];
       });
     }catch(e){}
@@ -2877,9 +2935,21 @@ GST.filters = (function(){
       + 'onclick="GST.mselToggle(\''+id+'\',event)">\uc804\uccb4 \u25be</button>'
       + '<div id="'+id+'Box" class="mselbox"></div></div>';
     /* 어느 칸이 다중인지는 MULTI 가 정한다 — 여기 목록을 따로 두면 둘이 갈라져
-       «Set 인데 select 를 그리는» 상태가 되고, 그러면 고른 값이 화면에 안 보인다. */
+       «Set 인데 select 를 그리는» 상태가 되고, 그러면 고른 값이 화면에 안 보인다.
+       ── 묶음 (v107 · 사용자 요청) ──
+       축마다 «어느 자료에 있는지»가 다르다. 사업부는 설비 쪽에만 있고(인원현황은 열은
+       있으나 584행 전부 공란 — 실측), 팀은 인원 쪽에만 있다. 한 줄로 늘어놓으면
+       「사업부를 바꿨는데 인원 숫자가 안 변한다」가 «고장»으로 읽힌다. 어디에 걸리는
+       필터인지를 묶음 이름으로 적어 둔다.
+       ⚠ 이 순서는 «보여 주는» 순서다. 종속·술어가 쓰는 계층 순서(AXES)는 그대로 둔다 —
+         둘을 같은 배열로 묶으면 화면을 정리하려다 집계 계층이 바뀐다. */
+    const grp = (t,note) => '<div class="slicer-div"></div><div class="lbl gf-grp">'+t
+      + (note?'<span class="gf-note">'+note+'</span>':'') + '</div>';
     return '<div class="gf-base">'
-      + AXES.map(function(k){ return (MULTI[k]?msel:sel)('gf-'+k, L[k]); }).join('')
+      + GROUPS.map(function(g){
+          return (g.t ? grp(g.t, g.note) : '')
+            + g.ks.map(function(k){ return (MULTI[k]?msel:sel)('gf-'+k, L[k]); }).join('');
+        }).join('')
       + '<div class="slicer"><div class="lbl">'+L.period+'</div>'
       + '<input type="date" id="gf-from" class="dt-input" onchange="GST.filters._on()"> ~ '
       + '<input type="date" id="gf-to" class="dt-input" onchange="GST.filters._on()"></div>'
@@ -2909,6 +2979,15 @@ GST.filters = (function(){
       /* 순회가 로딩 중에 보낸 값이 있으면 지금 적용한다 — 기준선도 여기서 잡혀야
          «사람이 걸어 둔 값»이 기준이 된다(위 kioskSet 주석 ②). */
       if(KPEND){ const kp = KPEND; KPEND = null; kioskSet(kp.k, kp.v); }
+      /* 묶음 머리글 스타일은 여기서 한 번만 넣는다 — 여덟 페이지의 <style> 을 각각
+         고치면 한 곳이 빠져 그 페이지만 다르게 보인다(제2원칙). */
+      if(!document.getElementById('gf-css')){
+        const st=document.createElement('style'); st.id='gf-css';
+        st.textContent='.gf-grp{margin-top:4px;color:var(--a1,#38bdf8);font-weight:800;'
+          +'display:flex;align-items:baseline;gap:6px}'
+          +'.gf-grp .gf-note{font-weight:500;font-size:10px;opacity:.65}';
+        document.head.appendChild(st);
+      }
       const box = document.querySelector('.slicers'); if(!box) return;
       /* ⚠ «이미 만들었나»를 축의 select id 로 확인하면 안 된다. v106 에서 구분이 다중선택이
          되면서 그 id 가 `gf-region` → `gf-regionBtn` 으로 바뀌었고, 검사가 못 찾아

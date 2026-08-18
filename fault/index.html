@@ -651,6 +651,16 @@ function instFloor(code,sn){
   const rec=INSTIX.find(code,sn);
   return (rec&&rec.floor)?rec.floor:FLOOR_NA;
 }
+/* 사업부(관리주체)는 «설치현황에만» 있는 열이다 — 실적에는 없다. 그래서 사업부를 골라도
+   이 화면 건수가 하나도 안 움직였다(사용자 보고). Floor 와 같은 규약으로 조인해 얻는다.
+   ⚠ 못 붙은 행은 빈 값으로 둔다(FLOOR 처럼 '미상' 으로 세우지 않는다) — 사업부는 loose
+     축이라 빈 값이 통과한다. '미상' 으로 만들면 그 값이 목록에 떠서 «미상» 을 고를 수
+     있게 되는데, 그건 «자료가 없다»를 «하나의 사업부»로 둔갑시키는 것이다. */
+function instDiv(code,sn){
+  if(!INSTIX) return '';
+  const rec=INSTIX.find(code,sn);
+  return (rec&&rec.div)?rec.div:'';
+}
 // 실적현황·설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
 // 시트에 열이 끼어들거나 순서가 바뀌어도 따라가고, 이름이 바뀌면 배너로 알린다.
 // 정의는 core.js의 GST.SM.SPEC 한 곳에만 있어 다른 페이지와 갈라지지 않는다.
@@ -964,6 +974,7 @@ async function loadData(){ GST.skeleton(true);
         // 구분(국내/해외)은 운영단위에서 온다 — 판정은 GST.ORG 가 정본이다
         region:GST.ORG.region(r[C.op]||''), op:String(r[C.op]||'').trim(),
         campus:GST.nfw(r[C.campus]||'').trim(),
+        div:instDiv(r[C.eqNo],r[C.snIn]),
         pf:(r[C.pf]||'').toString().trim(), cause:(r[C.cause]||'').toString().trim(),
         // 모델·공정은 표기가 갈라져 있다(GAIA-I-D / GAIA_I_D, DIFF / DIFFUSION).
         // 그대로 두면 1등이 여러 조각으로 쪼개져 순위 자체가 거짓말이 되므로 읽는 쪽에서 흡수한다.
@@ -1001,6 +1012,7 @@ async function loadData(){ GST.skeleton(true);
         customer:(r[C.customer]||'').toString().trim(),
         customerN:GST.ORG.customer(r[C.customer]||''),
         campus:GST.nfw(r[C.campus]||'').trim(),
+        div:instDiv(r[C.eqNo],r[C.snIn]),
         line:GST.nfw(r[C.line]||'').trim(),
         region:GST.ORG.region(r[C.op]||''), op:String(r[C.op]||'').trim(),
         country:(String(r[C.op]||'').match(/GST\s+([A-Za-z]+)/i)||[])[1]?String(r[C.op]).match(/GST\s+([A-Za-z]+)/i)[1].toUpperCase():'',
@@ -1025,6 +1037,7 @@ async function loadData(){ GST.skeleton(true);
       // 설비 BM율·좌우 편중의 «분모»가 0이 된다 — 에러 없이 표가 빈다.
       region:GST.ORG.region(r[C.op]||''), op:String(r[C.op]||'').trim(),
       campus:GST.nfw(r[C.campus]||'').trim(),
+        div:instDiv(r[C.eqNo],r[C.snIn]),
       work:toDate(r[C.dStart])
       // subproc까지 실어야 하는 이유: filtAxis가 F.subproc으로도 거르고,
       // 세부공정 BM율 표가 이 배열을 그룹핑한다. 빠지면 표가 통째로 비고,
@@ -1045,8 +1058,11 @@ const fillSelect=(id,fkey,vals)=>GST.fillSelect(id,fkey,vals,F,t('all'));
 function buildSlicers(){
   GST.filters.mount({ page:'fault', rows:()=>ROWS, onChange:render,
     get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customerN,
-          campus:x=>x.campus, line:x=>x.line, date:x=>x.work },
-    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
+          campus:x=>x.campus, line:x=>x.line, div:x=>x.div, date:x=>x.work },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG },
+    /* 조인이 안 되는 행(설치현황에 없는 설비)은 빈 값이다 — loose 로 통과시킨다.
+       버리면 «사업부를 고르면 건수가 반으로 준다»가 된다(CLAUDE.md 규약). */
+    loose:{ div:1 } });
   fillSelect('sl-floor','floor',uniq('floor'));
   fillSelect('sl-proc','proc',uniq('proc'));
   fillSelect('sl-subproc','subproc',uniq('subproc'));

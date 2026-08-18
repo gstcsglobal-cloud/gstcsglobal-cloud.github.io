@@ -647,7 +647,10 @@ function buildInstIndex(rows){
     const o={ region:GST.ORG.region(r[C.country]), op:String(r[C.country]||'').trim(),
               customer:GST.ORG.customer(r[C.customer]),
               campus:GST.ORG.campus(r[C.location], r[C.fab], r[C.country]),
-              line:String(r[C.fab]||'').trim() };
+              line:String(r[C.fab]||'').trim(),
+              /* 사업부(관리주체)도 같이 물려받는다 — CIP 원본에는 없는 축이다.
+                 없으면 사업부를 골라도 이 화면 숫자가 하나도 안 움직인다. */
+              div:String((C.div>=0?r[C.div]:'')||'').trim() };
     const s=key(r[C.sn]), c=key(r[C.code]);
     if(s&&!INSTIX.sn[s])INSTIX.sn[s]=o;
     if(c&&!INSTIX.code[c])INSTIX.code[c]=o;
@@ -661,6 +664,7 @@ function attachOrg(x){
   x.customer= o?o.customer:'';
   x.campus  = (o&&o.campus)||x.site;
   x.orgLine = (o&&o.line)||x.site;
+  x.div     = (o&&o.div)||'';   // 못 붙으면 빈 값 — loose 로 통과시킨다(버리면 표가 반으로 준다)
   return x;
 }
 function parseCIP(rows,site){
@@ -743,8 +747,9 @@ function fillSlicers(){
      행을 잘라내면 대상(Not yet)이 통째로 사라져 진행율이 100% 가 된다. */
   GST.filters.mount({ page:'cip', rows:()=>CIP, onChange:render,
     get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer,
-          campus:x=>x.campus, line:x=>x.orgLine },
-    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
+          campus:x=>x.campus, line:x=>x.orgLine, div:x=>x.div },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG },
+    loose:{ div:1 } });
   GST.fillSelect('sl-group','group',uq('group'),F,t('all'));
   GST.fillSelect('sl-floor','floor',uq('floor'),F,t('all'));
   GST.fillSelect('sl-model','model',uq('model'),F,t('all'));
