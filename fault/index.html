@@ -628,7 +628,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(114);   // GST.numv · GST.EQ(설비상태 판정) 를 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(121);   // GST.numv · GST.EQ · 라인2 축을 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -661,6 +661,14 @@ function instDiv(code,sn){
   if(!INSTIX) return '';
   const rec=INSTIX.find(code,sn);
   return (rec&&rec.div)?rec.div:'';
+}
+/* 라인2 — 국내 설치현황의 `Line 1` 아래 단(`Line 2`). 사업부와 완전히 같은 규약이다:
+   실적에는 열이 없어 S/N 으로 조인하고, 못 붙은 행은 빈 값으로 두어 loose 로 통과시킨다.
+   ⚠ '미상' 으로 세우지 않는다 — 그러면 «자료가 없다»가 하나의 라인으로 둔갑한다. */
+function instLine2(code,sn){
+  if(!INSTIX) return '';
+  const rec=INSTIX.find(code,sn);
+  return (rec&&rec.line2)?rec.line2:'';
 }
 // 실적현황·설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
 // 시트에 열이 끼어들거나 순서가 바뀌어도 따라가고, 이름이 바뀌면 배너로 알린다.
@@ -982,6 +990,7 @@ async function loadData(){ GST.skeleton(true);
         region:GST.ORG.region(r[C.op]||''), op:String(r[C.op]||'').trim(),
         campus:GST.nfw(r[C.campus]||'').trim(),
         div:instDiv(r[C.eqNo],r[C.snIn]),
+        line2:instLine2(r[C.eqNo],r[C.snIn]),
         pf:(r[C.pf]||'').toString().trim(), cause:(r[C.cause]||'').toString().trim(),
         // 모델·공정은 표기가 갈라져 있다(GAIA-I-D / GAIA_I_D, DIFF / DIFFUSION).
         // 그대로 두면 1등이 여러 조각으로 쪼개져 순위 자체가 거짓말이 되므로 읽는 쪽에서 흡수한다.
@@ -1020,6 +1029,7 @@ async function loadData(){ GST.skeleton(true);
         customerN:GST.ORG.customer(r[C.customer]||''),
         campus:GST.nfw(r[C.campus]||'').trim(),
         div:instDiv(r[C.eqNo],r[C.snIn]),
+        line2:instLine2(r[C.eqNo],r[C.snIn]),
         line:GST.nfw(r[C.line]||'').trim(),
         region:GST.ORG.region(r[C.op]||''), op:String(r[C.op]||'').trim(),
         country:(String(r[C.op]||'').match(/GST\s+([A-Za-z]+)/i)||[])[1]?String(r[C.op]).match(/GST\s+([A-Za-z]+)/i)[1].toUpperCase():'',
@@ -1044,7 +1054,8 @@ async function loadData(){ GST.skeleton(true);
       // 설비 BM율·좌우 편중의 «분모»가 0이 된다 — 에러 없이 표가 빈다.
       region:GST.ORG.region(r[C.op]||''), op:String(r[C.op]||'').trim(),
       campus:GST.nfw(r[C.campus]||'').trim(),
-        div:instDiv(r[C.eqNo],r[C.snIn]),
+      div:instDiv(r[C.eqNo],r[C.snIn]),
+      line2:instLine2(r[C.eqNo],r[C.snIn]),
       work:toDate(r[C.dStart])
       // subproc까지 실어야 하는 이유: filtAxis가 F.subproc으로도 거르고,
       // 세부공정 BM율 표가 이 배열을 그룹핑한다. 빠지면 표가 통째로 비고,
@@ -1065,11 +1076,13 @@ const fillSelect=(id,fkey,vals)=>GST.fillSelect(id,fkey,vals,F,t('all'));
 function buildSlicers(){
   GST.filters.mount({ page:'fault', rows:()=>ROWS, onChange:render,
     get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customerN,
-          campus:x=>x.campus, line:x=>x.line, div:x=>x.div, date:x=>x.work },
-    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG },
+          campus:x=>x.campus, line:x=>x.line, line2:x=>x.line2, div:x=>x.div, date:x=>x.work },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG,
+           line:GST.FILT_DROP_ORG, line2:GST.FILT_DROP_ORG },
     /* 조인이 안 되는 행(설치현황에 없는 설비)은 빈 값이다 — loose 로 통과시킨다.
-       버리면 «사업부를 고르면 건수가 반으로 준다»가 된다(CLAUDE.md 규약). */
-    loose:{ div:1 } });
+       버리면 «사업부를 고르면 건수가 반으로 준다»가 된다(CLAUDE.md 규약).
+       라인2 는 해외 양식에 열 자체가 없어 더더욱 그렇다 — 해외 행이 통째로 사라진다. */
+    loose:{ div:1, line2:1 } });
   fillSelect('sl-floor','floor',uniq('floor'));
   fillSelect('sl-proc','proc',uniq('proc'));
   fillSelect('sl-subproc','subproc',uniq('subproc'));
