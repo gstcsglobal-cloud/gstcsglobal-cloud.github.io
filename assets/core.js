@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 113;
+GST.VER = 114;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -2739,10 +2739,24 @@ GST.FILT_DROP_CUST = /^(본사|칠러|CHILLER|OFFICE|통합|미정|기타|해당
 GST.FILT_DROP_ORG = /^(라인장|단지장|운영관리|세정|정산|주재원|국내|해외|기타|미정|TRANSLATOR|CHILLER|SCRUBBER|OFFICE|통합|REPAIR CENTER|서비스자재)$/i;
 
 GST.filters = (function(){
-  /* 단지만 «여러 개 동시 선택»이다(Set). 왜 이 축만인가 — 같은 설비의 단지가 자료마다
-     갈리는 일이 실제로 있다(알람 시트는 H3, 설치현황은 H4. 실측 39건, 전부 한 방향).
-     정본은 설치현황이지만 사람이 볼 때는 두 단지를 한 번에 봐야 하는 자리가 생긴다.
-     다른 축을 다중으로 바꾸려면 MULTI 에 이름만 더하면 된다 — 나머지 코드는 그대로다. */
+  /* ══════════════════════════════════════════════════════════════════════
+     필터가 «두 벌»이다 — 설비 기준 / 인원 기준 (v114 · 사용자 지시)
+
+     왜. 인당 지표는 분자(실적·설비)와 분모(인원)가 다른 자료에서 온다. 한 벌로 두면
+     한쪽에만 있는 축을 걸 때 «한쪽만» 좁아진다 — 팀을 고르면 분모만 줄어 인당 일평균
+     공수가 10.8h 로 뜨고(사람이 하루 10.8시간을 일할 수 없다), 사업부를 고르면 분자만
+     줄어 인당이 실제보다 낮게 나온다. 둘 다 에러 없이 조용히 틀린다.
+     → 같은 일곱 축을 «두 벌» 둔다. 위는 설비 기준, 아래는 인원 기준. 사람이 어느 쪽을
+       좁혔는지 보고 고를 수 있어야 그 숫자를 믿을 수 있다.
+
+     지킬 것:
+     · 규칙은 여전히 «한 벌»이다. 두 그룹이 같은 함수를 그룹 인자로 나눠 쓴다 —
+       복사하면 반드시 갈라진다(제2원칙).
+     · 기간은 «하나»다. 실적의 기간과 인원의 기준일은 다른 개념이라 두 벌로 두면
+       무엇을 물었는지 사람이 못 세운다. 맨 아래에 한 칸만 둔다.
+     · 인원 블록은 페이지가 rowsH/getH 를 줄 때만 살아난다. 안 주면 전 칸이
+       「이 화면 미적용」으로 잠긴다 — 칸을 숨기지는 않는다(v91 사용자 확정).
+     ══════════════════════════════════════════════════════════════════════ */
   /* 일곱 축이 «전부» 다중선택이다 (v106 · 사용자 요청).
      왜. 국내 설비는 물리적 위치와 «관리주체(사업부)»가 따로 논다 — 같은 11라인 설비라도
      메모리냐 연구소냐 파운드리냐에 따라 소속 단지가 H3·H2·K1 로 갈린다. 하나씩만 고를 수
@@ -2751,25 +2765,35 @@ GST.filters = (function(){
        hasK/hitK 를 지나야 한다 — `if(F.op)` 는 빈 Set 도 truthy 라 언제나 참이 된다. */
   const MULTI = { region:1, op:1, div:1, customer:1, campus:1, line:1, team:1 };
   /* 축 순서 — 사용자 확정(v111): 구분 → 팀 → 운영단위 → 고객사 → 사업부 → 단지 → 라인.
-     여덟 페이지가 «한 줄로, 같은 순서»를 쓴다. 묶음 머리글(설비 기준/인원 기준)은 없앴다 —
-     페이지마다 칸의 «생김새»가 달라지는 것 자체가 「필터가 페이지마다 다르다」로 읽힌다.
+     두 블록이 «같은 폼»이다 — 순서가 다르면 두 벌이라는 것 자체가 헷갈린다.
      ⚠ 이 배열은 순서에 의미가 «없는» 자리에서도 쓰인다(pass 의 AND 루프 · 종속 계산 ·
-       AV 열 인덱스). 그래서 순서를 바꿔도 숫자는 한 자리도 안 움직인다 — 화면 순서만 바뀐다.
-       v98 의 «엑셀 피벗 계층»과 다르다는 것을 알고 바꾼 것이다(사용자 지시).
-     어느 축이 이 화면 자료에 없는지는 «묶음»이 아니라 그 칸 자신이 말한다(EMPTY_NONE). */
+       AV 열 인덱스). 그래서 순서를 바꿔도 숫자는 한 자리도 안 움직인다 — 화면 순서만 바뀐다. */
   const AXES = ['region','team','op','customer','div','campus','line'];
-  const F = { region:new Set(), op:new Set(), div:new Set(), customer:new Set(),
-              campus:new Set(), line:new Set(), team:new Set(), dtFrom:'', dtTo:'' };
+  const L = { region:'구분', op:'운영단위', div:'사업부', customer:'고객사', campus:'단지', line:'라인', team:'팀', period:'기간' };
+
+  const mkF = () => ({ region:new Set(), op:new Set(), div:new Set(), customer:new Set(),
+                       campus:new Set(), line:new Set(), team:new Set() });
+  /* 그룹 서술자. «어느 CFG 키를 보는가»만 다르고 나머지 규칙은 전부 같다.
+     여기 한 곳만 보면 두 벌이 무엇으로 갈리는지 알 수 있다. */
+  const GRP = {
+    eq: { k:'eq', pre:'gf-', title:'설비 기준', note:'설치·실적', F:mkF(), LAST:{},
+          cGet:'get',  cRows:'rows',  cDrop:'drop',  cLoose:'loose' },
+    hr: { k:'hr', pre:'gh-', title:'인원 기준', note:'인원현황',   F:mkF(), LAST:{},
+          cGet:'getH', cRows:'rowsH', cDrop:'dropH', cLoose:'looseH' }
+  };
+  const EQ = GRP.eq, HR = GRP.hr;
+  const F = EQ.F;                       // 옛 이름 — 여덟 페이지가 이걸 본다(설비 기준)
+  F.dtFrom = ''; F.dtTo = '';           // 기간은 «하나»다. 설비 쪽 객체에 담아 옛 코드를 지킨다.
+
+  let CFG = null, KEY = '';
+  const cfgOf = (G, key) => (CFG && CFG[G[key]]) || null;
+
   /* 술어에서 «고른 것에 걸리나»를 묻는 유일한 자리. 단일·다중을 여기서만 가른다 —
      페이지가 `x.campus===F.campus` 를 직접 쓰면 Set 이 된 순간 조용히 전부 false 가 된다. */
-  const hitK = (k, v) => MULTI[k] ? (!F[k].size || F[k].has(v)) : (!F[k] || v === F[k]);
-  const hasK = (k) => MULTI[k] ? F[k].size > 0 : !!F[k];
-  const listK = (k) => MULTI[k] ? Array.from(F[k]) : (F[k] ? [F[k]] : []);
-  let CFG = null, KEY = '';
-  /* 축 순서는 설치현황 피벗과 같다 — 운영단위 → 고객사 → 사업부 → 단지 → 라인.
-     사업부는 국내 자료에만 있다(해외 설치현황에는 그 열이 없다). 값이 없는 화면에서는
-     「전체 (자료 없음)」으로 잠긴다 — 칸이 나타났다 사라지면 그게 더 헷갈린다. */
-  const L = { region:'구분', op:'운영단위', div:'사업부', customer:'고객사', campus:'단지', line:'라인', team:'팀', period:'기간' };
+  const hitK  = (G, k, v) => MULTI[k] ? (!G.F[k].size || G.F[k].has(v)) : (!G.F[k] || v === G.F[k]);
+  const hasK  = (G, k) => MULTI[k] ? G.F[k].size > 0 : !!G.F[k];
+  const listK = (G, k) => MULTI[k] ? Array.from(G.F[k]) : (G.F[k] ? [G.F[k]] : []);
+
   /* 같은 표 안에서 연속 공백이 흔들린다(실측: `GST CHINA(WUHAN)··SCRUBBER`). 그대로 두면
      한 법인이 목록에 두 줄로 뜨고, 어느 쪽을 고르느냐에 따라 설비가 반씩 갈린다 —
      v98 이 「남은 문제 ③」으로 적어 둔 자리다. 공백만 눕힌다(낱말은 시트 값 그대로). */
@@ -2780,14 +2804,10 @@ GST.filters = (function(){
     return String(v).slice(0,10);
   };
 
-  /* 값 목록은 «데이터에 실제로 나온 것»만 올린다. 고정 목록을 두면 새 사이트가
-     생겼을 때 목록에 없는 행이 필터에서 통째로 사라진다 — 에러 없이.
-     drop: 값이긴 한데 그 축의 값이 아닌 것(라인 칸에 든 '라인장'·'주재원' 같은 직무).
-     걸러도 그 행이 사라지지는 않는다 — 목록에서만 안 보인다. */
-  function setK(k, v){
-    if(!(k in F)) return;
-    if(MULTI[k]){ F[k].clear(); (Array.isArray(v)?v:(v?[v]:[])).forEach(function(x){ F[k].add(x); }); }
-    else F[k] = v || '';
+  function setK(G, k, v){
+    if(!(k in G.F)) return;
+    if(MULTI[k]){ G.F[k].clear(); (Array.isArray(v)?v:(v?[v]:[])).forEach(function(x){ G.F[k].add(x); }); }
+    else G.F[k] = v || '';
     save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
   }
 
@@ -2800,25 +2820,46 @@ GST.filters = (function(){
         순회를 끄는 순간 사람이 걸어 둔 필터가 사라진다(복원이 오히려 지운다).
      ③ **정말로 걸렸는지 돌려준다.** 그 페이지 자료에 없는 값은 fill/fillMulti 가 버리는데
         (빈 Set·빈 문자열), 그 상태가 곧 «전체»다. 알려주지 않으면 벽 화면이 「H1」이라 적고
-        전사 합계를 보여준다 — 지나가는 사람은 그걸 H1 숫자로 읽는다. */
+        전사 합계를 보여준다 — 지나가는 사람은 그걸 H1 숫자로 읽는다.
+     ⚠ v114 부터 필터가 두 벌이다. 순회는 «두 벌 모두»에 건다 — 한쪽만 걸면 벽 화면에
+        설비는 H1 인데 인원은 전사인 표가 뜬다(그 표는 거짓말을 하는 것이다). */
   let KPEND = null, KSAVED = null, KCUR = null;
   function kioskSet(k, v){
-    if(!(k in F)) return { applied:false, why:'noaxis' };
+    if(!(k in EQ.F)) return { applied:false, why:'noaxis' };
     KCUR = { k:k, v:v };   // 자동 새로고침이 끝난 뒤 «지금 걸린 값»을 다시 걸기 위해
     if(!CFG){ KPEND = { k:k, v:v }; return { applied:false, why:'loading' }; }
-    if(!KSAVED){ const cur = F[k]; KSAVED = { k:k, v:(cur instanceof Set) ? Array.from(cur) : cur }; }
+    if(!KSAVED){
+      const cp = cur => (cur instanceof Set) ? Array.from(cur) : cur;
+      KSAVED = { k:k, eq:cp(EQ.F[k]), hr:cp(HR.F[k]) };
+    }
     /* «걸렸나»를 F 로 확인하면 안 된다 — 목록에서 버리는 일은 fill/fillMulti(=DOM)가 하므로
        사이드바가 아직 없거나 접힌 상황에서는 F 에 값이 남아 «걸린 척»이 된다.
-       물어야 할 것은 하나다: 이 페이지 자료에 그 값이 있는가. */
-    const known = opts(k).indexOf(String(v)) >= 0;
-    setK(k, v);
+       물어야 할 것은 하나다: 이 페이지 자료에 그 값이 있는가.
+       두 벌 중 «어느 한쪽에라도» 있으면 걸린 것이다 — 설비만 있는 화면도 많다. */
+    const inEq = opts(EQ, k).indexOf(String(v)) >= 0;
+    const inHr = opts(HR, k).indexOf(String(v)) >= 0;
+    setBoth(k, v);
     if(!v) return { applied:true, why:'' };
-    return { applied:known, why: known ? '' : 'nodata' };
+    return { applied:(inEq||inHr), why:(inEq||inHr) ? '' : 'nodata' };
+  }
+  // 두 벌에 같은 값을 건다. 한 번만 저장·렌더한다(setK 를 두 번 부르면 화면이 두 번 그려진다).
+  function setBoth(k, v){
+    [EQ,HR].forEach(function(G){
+      if(!(k in G.F)) return;
+      if(MULTI[k]){ G.F[k].clear(); (Array.isArray(v)?v:(v?[v]:[])).forEach(function(x){ G.F[k].add(x); }); }
+      else G.F[k] = v || '';
+    });
+    save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
   }
   function kioskRestore(){
     KPEND = null; KCUR = null;
     if(!KSAVED || !CFG) { KSAVED = null; return; }
-    const sv = KSAVED; KSAVED = null; setK(sv.k, sv.v);
+    const sv = KSAVED; KSAVED = null;
+    const put = (G, v) => { if(!(sv.k in G.F)) return;
+      if(MULTI[sv.k]){ G.F[sv.k].clear(); (Array.isArray(v)?v:(v?[v]:[])).forEach(x=>G.F[sv.k].add(x)); }
+      else G.F[sv.k] = v || ''; };
+    put(EQ, sv.eq); put(HR, sv.hr);
+    save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
   }
   /* 순회가 지금 이 페이지의 필터를 빌리고 있나. 30분 자동 새로고침이 이것을 물어야 한다 —
      ⚠ 그 새로고침은 «갱신 시작 시점»의 사이드바 값을 스냅샷으로 떠 두었다가 300ms 뒤에
@@ -2827,9 +2868,9 @@ GST.filters = (function(){
        H1 자료가 된다. 벽에 걸린 화면이라 아무도 안 보고 있을 때 어긋난다. */
   function kioskOn(){ return !!(KSAVED || KPEND); }
   // 새로고침으로 화면이 다시 그려진 뒤, 순회가 걸어 둔 «지금» 값을 다시 건다
-  function kioskReapply(){ if(KCUR && CFG) setK(KCUR.k, KCUR.v); }
+  function kioskReapply(){ if(KCUR && CFG) setBoth(KCUR.k, KCUR.v); }
 
-  function opts(key, narrow, rowsIn){
+  function opts(G, key, narrow, rowsIn){
     /* mount 전에도 불릴 수 있다 — options() 가 공개 API 라 셸이 언제든 물어본다.
        CFG 가 null 이면 예외가 아니라 «아직 아는 값이 없다»(빈 배열)가 맞다. */
     if(!CFG) return [];
@@ -2837,9 +2878,11 @@ GST.filters = (function(){
        주간현황은 실적 25만 + 설치 + 인원을 합쳐 새로 짓는다. 축마다 부르면 한 번
        새로고침에 그 일이 일곱 번 일어나고, 체크박스를 누를 때마다 화면이 멈춘다
        (사용자 보고: «필터 누를 때마다 로딩이 엄청 길다»). refresh 가 한 번만 만들어 넘긴다. */
-    const g = (CFG.get||{})[key], rows = rowsIn || (CFG.rows && CFG.rows()) || [];
+    const gg = cfgOf(G,'cGet') || {}, g = gg[key];
+    const rf = CFG[G.cRows];
+    const rows = rowsIn || (rf && rf()) || [];
     if(!g) return [];
-    const dr = (CFG.drop||{})[key];
+    const dp = cfgOf(G,'cDrop') || {}, dr = dp[key];
     const s = new Set();
     for(let i=0;i<rows.length;i++){
       const x = rows[i];
@@ -2851,84 +2894,65 @@ GST.filters = (function(){
     return [...s].sort((a,b)=>a.localeCompare(b,'ko'));
   }
 
-  /* 종속(cascading) — 각 칸의 목록은 «나머지 칸이 이미 고른 것»을 통과한 행에서만 만든다.
-     그래야 단지를 고르면 그 단지의 라인만, 고객사를 고르면 그 고객사의 단지만 남는다.
-     자기 자신은 빼고 본다 — 안 그러면 한 번 고른 값 말고는 목록에서 사라져 되돌릴 수 없다. */
-  function passExcept(x, skip){
-    const g = CFG.get || {};
-    const chk = AXES;
-    for(let i=0;i<chk.length;i++){
-      const k = chk[i];
-      if(k===skip || !hasK(k)) continue;
-      const v = val(g[k], x);
-      if(!v){ if(CFG.loose && CFG.loose[k]) continue; return false; }
-      if(!hitK(k, v)) return false;
-    }
-    return true;
-  }
-
   /* 목록이 빈 이유는 둘이고, 사람이 할 일이 «완전히 다르다».
-       ① 이 자료에 그 축이 아예 없다        → 「전체 (자료 없음)」. 올릴 자료가 없는 것이다.
-       ② 값은 있는데 «다른 필터»가 다 떨어뜨렸다 → 「전체 (현재 필터에 해당 없음)」. 필터를 풀면 된다.
-     예전에는 둘 다 「자료 없음」이라고 적었다. 그래서 팀을 하나 고른 순간 고객사·단지·라인·
-     사업부가 통째로 「자료 없음」이 됐고, 사용자는 **설치현황 엑셀을 열어 사업부 열이 있는 것을
-     확인하고** 「왜 자료없음이라고 나오나」고 물었다 — 화면이 원인을 거짓으로 말한 것이다. */
-  /* ⚠ 「자료 없음」이라고 적으면 «자료를 안 올렸다»로 읽힌다(사용자 지적). 실제 뜻은
-     «이 화면이 보는 자료에는 그 축이 없다»다 — PM 은 설치현황을 안 읽어 사업부가 없고,
-     인원현황에는 사업부 열이 있어도 전 행이 공란이다. 올릴 것이 없는 게 아니라 그 화면에
-     안 걸리는 축인 것이다. 둘을 구분해 적되, 어느 쪽도 «자료가 없다»고 말하지 않는다. */
+       ① 이 자료에 그 축이 아예 없다        → 「전체 (이 화면 미적용)」
+       ② 값은 있는데 «다른 필터»가 다 떨어뜨렸다 → 「전체 (필터에 해당 없음)」
+     ⚠ 「자료 없음」이라고 적으면 «자료를 안 올렸다»로 읽힌다(사용자 지적). 실제 뜻은
+       «이 화면이 보는 자료에는 그 축이 없다»다 — 어느 쪽도 «자료가 없다»고 말하지 않는다. */
   const EMPTY_NONE = '전체 (이 화면 미적용)', EMPTY_FILT = '전체 (필터에 해당 없음)';
-  function fill(id, key, list, hasAny){
-    if(MULTI[key]) return fillMulti(id, key, list, hasAny);
+  function fill(G, key, list, hasAny){
+    const id = G.pre + key;
+    if(MULTI[key]) return fillMulti(G, id, key, list, hasAny);
     const el = document.getElementById(id); if(!el) return;
-    /* 사용자 확정: 기본 필터는 «구현 안 돼도 공통으로» 다섯 칸 그대로 보인다.
-       페이지마다 칸이 나타났다 사라지면 그것 자체가 «페이지마다 필터가 다르다» 로 읽힌다.
-       대신 그 자료에 값이 없으면 «자료 없음» 이라고 적고 잠근다 — 보이되 거짓말은 안 한다. */
     const box = el.closest('.slicer'); if(box) box.style.display = '';
     el.disabled = !list.length;
-    const cur = F[key];
+    const cur = G.F[key];
     el.innerHTML = '<option value="">' + (list.length ? '전체' : (hasAny ? EMPTY_FILT : EMPTY_NONE)) + '</option>' + list.map(function(v){
       return '<option value="'+String(v).replace(/"/g,'&quot;')+'">'+v+'</option>';
     }).join('');
     // 목록에서 사라진 선택값은 버린다 — 남겨두면 «아무것도 안 나오는» 화면이 된다
-    if(list.indexOf(cur) < 0) F[key] = '';
-    el.value = F[key];
+    if(list.indexOf(cur) < 0) G.F[key] = '';
+    el.value = G.F[key];
   }
 
   /* 다중선택 칸. 목록이 바뀔 때만 다시 만든다(GST.mselFill 의 규약) — 매번 갈아끼우면
      체크 직후 노드가 분리돼 목록이 닫힌다. 목록에서 사라진 선택값은 여기서 버린다.
      안 버리면 «아무것도 안 나오는» 화면이 되고, 그 이유가 화면에 남지 않는다. */
-  function fillMulti(id, key, list, hasAny){
+  function fillMulti(G, id, key, list, hasAny){
     const btn = document.getElementById(id+'Btn'), box = document.getElementById(id+'Box');
     if(!btn || !box) return;
     const wrap = btn.closest('.slicer'); if(wrap) wrap.style.display = '';
-    Array.from(F[key]).forEach(function(v){ if(list.indexOf(v) < 0) F[key].delete(v); });
+    Array.from(G.F[key]).forEach(function(v){ if(list.indexOf(v) < 0) G.F[key].delete(v); });
     btn.disabled = !list.length;
-    if(!list.length){ btn.textContent = (hasAny ? EMPTY_FILT : EMPTY_NONE) + ' \u25be'; box.innerHTML=''; box.style.display='none';
+    if(!list.length){ btn.textContent = (hasAny ? EMPTY_FILT : EMPTY_NONE) + ' ▾'; box.innerHTML=''; box.style.display='none';
       box.dataset.built=''; box.dataset.keys=''; return; }
-    GST.mselFill(id, list, F[key], function(){ save(); refresh();
+    GST.mselFill(id, list, G.F[key], function(){ save(); refresh();
       if(CFG && CFG.onChange) CFG.onChange(); });
   }
 
-  /* 마지막으로 그린 목록 — «왜 비었나»를 사람이 물을 수 있게 남긴다(검사도 이걸 본다).
-     DOM 을 읽어 확인하면 사이드바가 없는 상황에서 못 본다. */
-  const LAST = {};
-  function refresh(){
-    if(!CFG) return;
-    /* ── 목록 만들기 (성능) ──
-       예전에는 축마다 rows() 를 새로 만들고, 행마다 접근자를 다시 불렀다:
-       7축 × N행 × 7축 = 49N 번. 주간현황은 N 이 25만이라 체크박스를 누를 때마다
-       화면이 멈췄다(사용자 보고). 축 값을 «행당 한 번» 뽑아 두고 그 위에서 센다 — 7N 번.
-       ⚠ 여기서 뽑는 값과 pass() 가 보는 값이 «같은 val()» 이어야 한다. 두 벌이 되면
-         목록에는 있는데 골라도 0건인 값이 생긴다. */
-    const rows = (CFG.rows && CFG.rows()) || [];
-    const g = CFG.get || {}, drop = CFG.drop || {}, loose = CFG.loose || {};
+  /* 한 그룹의 목록을 만든다.
+     ⚠ 성능 — 예전에는 축마다 rows() 를 새로 만들고 행마다 접근자를 다시 불렀다:
+       7축 × N행 × 7축 = 49N 번. 주간현황은 N 이 25만이라 체크박스를 누를 때마다 화면이
+       멈췄다(사용자 보고). 축 값을 «행당 한 번» 뽑아 두고 그 위에서 센다 — 7N 번.
+     ⚠ 여기서 뽑는 값과 pass() 가 보는 값이 «같은 val()» 이어야 한다. 두 벌이 되면
+       목록에는 있는데 골라도 0건인 값이 생긴다. */
+  function refreshGroup(G){
+    const gg = cfgOf(G,'cGet');
+    const rf = CFG[G.cRows];
+    /* 이 화면이 그 자료를 아예 안 보면(접근자·행 공급이 없으면) 전 칸을 잠근다.
+       숨기지 않는다 — 칸이 나타났다 사라지면 그것 자체가 「페이지마다 필터가 다르다」다. */
+    if(!gg || !rf){
+      AXES.forEach(function(k){ G.LAST[k]={list:[],hasAny:false}; fill(G, k, [], false); });
+      return;
+    }
+    const rows = rf() || [];
+    const drop = cfgOf(G,'cDrop') || {}, loose = cfgOf(G,'cLoose') || {};
     const n = rows.length;
     /* 축별 «평면 배열» 로 뽑는다. 행마다 객체를 만들면(7키 × 25만) 할당 비용이 더 커서
        오히려 느려진다 — 실측으로 확인했다. 문자열 배열 일곱이면 헤더가 없다. */
     const AV = new Array(AXES.length);
     for(let a=0;a<AXES.length;a++){
-      const acc = g[AXES[a]], col = new Array(n);
+      const acc = gg[AXES[a]], col = new Array(n);
       if(acc){ for(let i=0;i<n;i++){ let v; try{ v = acc(rows[i]); }catch(e){ v=''; }
                  col[i] = v==null ? '' : String(v).replace(/\s+/g,' ').trim(); } }
       else { for(let i=0;i<n;i++) col[i] = ''; }
@@ -2937,20 +2961,20 @@ GST.filters = (function(){
     /* 어느 축이 «걸려 있나»를 미리 뽑아 둔다 — 안 걸린 축은 루프에서 아예 건너뛴다.
        대개 한두 축만 걸려 있으므로 이것만으로 대부분의 비용이 사라진다. */
     const ON = [];
-    for(let a=0;a<AXES.length;a++) if(hasK(AXES[a])) ON.push(a);
+    for(let a=0;a<AXES.length;a++) if(hasK(G, AXES[a])) ON.push(a);
     AXES.forEach(function(k, ai){
       const dr = drop[k], col = AV[ai], seen = new Set();
       for(let i=0;i<n;i++){
         const v = col[i];
         if(!v || (dr && dr.test(v))) continue;
-        /* 자기 축은 빼고 나머지로 좁힌다(passExcept 와 같은 규칙) — 자기까지 보면
-           한 번 고른 값 말고는 목록에서 사라져 되돌릴 수 없다. */
+        /* 자기 축은 빼고 나머지로 좁힌다 — 자기까지 보면 한 번 고른 값 말고는
+           목록에서 사라져 되돌릴 수 없다. */
         let ok = true;
         for(let z=0; z<ON.length; z++){
           const a = ON[z]; if(a === ai) continue;
           const w = AV[a][i];
           if(!w){ if(loose[AXES[a]]) continue; ok = false; break; }
-          if(!hitK(AXES[a], w)){ ok = false; break; }
+          if(!hitK(G, AXES[a], w)){ ok = false; break; }
         }
         if(ok) seen.add(v);
       }
@@ -2959,14 +2983,20 @@ GST.filters = (function(){
          더 도는 셈이라 v107 에서 줄인 비용이 되돌아온다 — 빈 경우는 드물다. */
       let hasAny = list.length > 0;
       if(!hasAny){ for(let i=0;i<n;i++){ const v=col[i]; if(v && !(dr && dr.test(v))){ hasAny=true; break; } } }
-      LAST[k] = { list: list, hasAny: hasAny };
-      fill('gf-'+k, k, list, hasAny);
+      G.LAST[k] = { list: list, hasAny: hasAny };
+      fill(G, k, list, hasAny);
     });
+  }
+
+  function refresh(){
+    if(!CFG) return;
+    refreshGroup(EQ); refreshGroup(HR);
     /* 기간은 «그 자료에 날짜 축이 있을 때만» 걸 수 있다. tco 의 기준 월, hr 의 기준일처럼
        페이지가 자기 시간축을 따로 갖는 곳은 date 접근자를 주지 않는다. 그때 칸을 그냥
        두면 날짜를 넣는 순간 조건을 만족할 수 없어 화면이 통째로 빈다 — 목록이 빈 select
-       를 잠그는 것과 같은 이유로 잠근다(보이되 거짓말은 안 한다). */
-    const hasD = !!(CFG.get||{}).date;
+       를 잠그는 것과 같은 이유로 잠근다(보이되 거짓말은 안 한다).
+       ⚠ 기간은 두 벌이 아니다(위 머리말) — 설비·인원 어느 쪽이든 date 접근자가 있으면 연다. */
+    const hasD = !!((CFG.get||{}).date || (CFG.getH||{}).date);
     const a=document.getElementById('gf-from'), b=document.getElementById('gf-to');
     [a,b].forEach(function(el){ if(!el)return; el.disabled=!hasD;
       el.title = hasD ? '' : '이 화면은 자체 기준일을 씁니다'; });
@@ -2974,21 +3004,20 @@ GST.filters = (function(){
     if(a) a.value=F.dtFrom; if(b) b.value=F.dtTo;
   }
 
-  function read(changed){
+  function read(gk, changed){
+    const G = GRP[gk] || EQ;
     /* 이제 일곱 축이 전부 다중선택이라 여기서 읽을 select 가 없다 — mselFill 이 Set 을
        직접 고친다. 단일 축이 다시 생기면 이 루프가 그것만 읽는다. */
     AXES.forEach(function(k){
       if(MULTI[k]) return;
-      const el=document.getElementById('gf-'+k); if(el) F[k]=el.value;
+      const el=document.getElementById(G.pre+k); if(el) G.F[k]=el.value;
     });
     const a=document.getElementById('gf-from'), b=document.getElementById('gf-to');
     F.dtFrom=a?a.value:''; F.dtTo=b?b.value:'';
     /* 단지를 바꾸면 그 아래 라인은 대개 유효하지 않다 — 명시적으로 비운다.
-       (나머지 칸은 refresh 의 fill 이 «목록에 없으면 버린다»로 스스로 정리한다.) */
-    /* ⚠ v106 에서 라인도 Set 이 됐다. 여기서 `F.line=''` 로 대입하면 Set 이 문자열로
-       바뀌어 그다음 .has 가 TypeError 로 죽는다 — 단지를 바꾸는 순간 화면이 통째로 빈다.
-       CLAUDE.md 가 금지한 그 패턴이 «core 안»에 남아 있던 자리다. */
-    if(changed==='campus') MULTI.line ? F.line.clear() : (F.line='');
+       ⚠ v106 에서 라인도 Set 이 됐다. `G.F.line=''` 로 대입하면 Set 이 문자열로 바뀌어
+         그다음 .has 가 TypeError 로 죽는다 — 단지를 바꾸는 순간 화면이 통째로 빈다. */
+    if(changed==='campus') MULTI.line ? G.F.line.clear() : (G.F.line='');
     save(); refresh();
     if(CFG && CFG.onChange) CFG.onChange();
   }
@@ -2999,66 +3028,100 @@ GST.filters = (function(){
     /* mount 전에는 KEY 가 '' 다. 그대로 쓰면 «빈 이름» 키에 남의 페이지 값이 섞여 들어가고,
        정작 이 페이지 저장본은 안 바뀐다 — 저장한 줄 알았는데 안 된 상태가 된다. */
     if(!KEY) return;
-    const o={}; Object.keys(F).forEach(function(k){ o[k]=MULTI[k]?Array.from(F[k]):F[k]; });
-    localStorage.setItem(KEY, JSON.stringify(o));
+    const dump = G => { const o={}; AXES.forEach(function(k){ o[k]=MULTI[k]?Array.from(G.F[k]):G.F[k]; }); return o; };
+    localStorage.setItem(KEY, JSON.stringify({ v:2, eq:dump(EQ), hr:dump(HR),
+                                               dtFrom:F.dtFrom, dtTo:F.dtTo }));
   }catch(e){} }
   function load(){
     try{ const o=JSON.parse(localStorage.getItem(KEY)||'{}');
-      Object.keys(F).forEach(function(k){
-        /* Set 을 새로 만들지 않는다 — 다중선택 박스가 이 객체를 들고 있어서,
-           갈아끼우면 그때부터 체크가 옛 Set 으로 들어가 화면이 안 움직인다.
-           페이지가 mount 를 여러 번 부르면(주간현황은 5번) 반드시 그 상태가 된다. */
-        if(MULTI[k]){
-          /* v106 이전 저장본은 이 축이 «문자열»이다. 배열만 받으면 그 값이 조용히 사라져
-             «어제 걸어 둔 필터가 오늘 풀려 있다»가 된다 — 옛 모양도 받아 Set 에 넣는다. */
-          if(Array.isArray(o[k])){ F[k].clear(); o[k].forEach(function(v){ F[k].add(v); }); }
-          else if(typeof o[k]==='string' && o[k]){ F[k].clear(); F[k].add(o[k]); }
-          return;
-        }
-        if(typeof o[k]==='string') F[k]=o[k];
+      /* v113 이전 저장본은 «한 벌»이다(축이 최상위에 있다). 그때 값은 설비 기준으로 읽는다 —
+         버리면 «어제 걸어 둔 필터가 오늘 풀려 있다»가 된다. */
+      const src = { eq: (o && o.v===2) ? (o.eq||{}) : (o||{}),
+                    hr: (o && o.v===2) ? (o.hr||{}) : {} };
+      [['eq',EQ],['hr',HR]].forEach(function(pair){
+        const d = src[pair[0]], G = pair[1];
+        AXES.forEach(function(k){
+          /* Set 을 새로 만들지 않는다 — 다중선택 박스가 이 객체를 들고 있어서,
+             갈아끼우면 그때부터 체크가 옛 Set 으로 들어가 화면이 안 움직인다.
+             페이지가 mount 를 여러 번 부르면(주간현황은 5번) 반드시 그 상태가 된다. */
+          if(MULTI[k]){
+            if(Array.isArray(d[k])){ G.F[k].clear(); d[k].forEach(function(v){ G.F[k].add(v); }); }
+            else if(typeof d[k]==='string' && d[k]){ G.F[k].clear(); G.F[k].add(d[k]); }
+            else G.F[k].clear();
+            return;
+          }
+          if(typeof d[k]==='string') G.F[k]=d[k];
+        });
       });
+      if(typeof o.dtFrom==='string') F.dtFrom=o.dtFrom;
+      if(typeof o.dtTo==='string')   F.dtTo=o.dtTo;
     }catch(e){}
   }
 
   function markup(){
-    const sel = (id,label) => '<div class="slicer"><div class="lbl">'+label+'</div>'
-      + '<select id="'+id+'" onchange="GST.filters._on(\''+id.slice(3)+'\')"></select></div>';
+    const sel = (G,k) => '<div class="slicer"><div class="lbl">'+L[k]+'</div>'
+      + '<select id="'+G.pre+k+'" onchange="GST.filters._on(\''+G.k+'\',\''+k+'\')"></select></div>';
     /* 다중선택 칸은 select 가 아니라 버튼+체크박스다(GST.mselFill 규약). position:relative
        가 없으면 박스가 사이드바 밖으로 나간다 — .slicer 가 이미 relative 다. */
-    const msel = (id,label) => '<div class="slicer"><div class="lbl">'+label+'</div>'
-      + '<button type="button" id="'+id+'Btn" class="mselbtn" '
-      + 'onclick="GST.mselToggle(\''+id+'\',event)">\uc804\uccb4 \u25be</button>'
-      + '<div id="'+id+'Box" class="mselbox"></div></div>';
-    /* 어느 칸이 다중인지는 MULTI 가 정한다 — 여기 목록을 따로 두면 둘이 갈라져
-       «Set 인데 select 를 그리는» 상태가 되고, 그러면 고른 값이 화면에 안 보인다.
-       ── 한 줄 · 한 순서 (v111 · 사용자 지시) ──
-       v107 에는 「설비 기준 / 인원 기준」 묶음 머리글이 있었다. 축마다 걸리는 자료가
-       다르다는 것을 알리려던 것인데, 페이지마다 칸의 생김새가 달라져 오히려 「필터가
-       페이지마다 다르다」로 읽혔다. 이제 AXES 순서 그대로 한 줄이고, «이 화면에 없는 축»
-       은 그 칸 자신이 잠기며 말한다(fill 의 EMPTY_NONE). 목록도 AXES 한 곳에서 나온다 —
-       따로 두면 축이 늘 때 한쪽만 고쳐져 그 칸이 조용히 사라진다. */
+    const msel = (G,k) => '<div class="slicer"><div class="lbl">'+L[k]+'</div>'
+      + '<button type="button" id="'+G.pre+k+'Btn" class="mselbtn" '
+      + 'onclick="GST.mselToggle(\''+G.pre+k+'\',event)">전체 ▾</button>'
+      + '<div id="'+G.pre+k+'Box" class="mselbox"></div></div>';
+    const head = G => '<div class="lbl gf-grp">'+G.title+'<span class="gf-note">'+G.note+'</span></div>';
+    /* 두 블록이 «같은 폼»이다 — 축 목록도 AXES 한 곳에서 나온다. 따로 두면 축이 늘 때
+       한쪽만 고쳐져 그 칸이 조용히 사라진다. */
+    const block = G => head(G) + AXES.map(function(k){ return (MULTI[k]?msel:sel)(G,k); }).join('');
     return '<div class="gf-base">'
-      + AXES.map(function(k){ return (MULTI[k]?msel:sel)('gf-'+k, L[k]); }).join('')
+      + block(EQ)
+      + '<div class="slicer-div"></div>'
+      + block(HR)
+      + '<div class="slicer-div"></div>'
       + '<div class="slicer"><div class="lbl">'+L.period+'</div>'
       + '<input type="date" id="gf-from" class="dt-input" onchange="GST.filters._on()"> ~ '
       + '<input type="date" id="gf-to" class="dt-input" onchange="GST.filters._on()"></div>'
       + '</div>';
   }
 
-  /* «그 축이 아예 없는 자료»는 그 축으로 거르지 않는다. 예: 운영단위는 실적·설치에만 있고
-     인원현황에는 없다(사업부 열이 있으나 값이 고객사와 같다). 그대로 거르면 운영단위를
-     고르는 순간 인원이 통째로 0 이 된다 — «모르는 것»과 «아닌 것»은 다르다.
-     CFG.loose 에 적은 축만 이렇게 다룬다. 아무 축에나 적용하면 미상 행이 전 필터를 통과해
-     숫자가 부풀어 오른다. */
-  function axOk(key, x){
-    const g = CFG.get || {};
-    const v = val(g[key], x);
-    if(!v) return !!(CFG.loose && CFG.loose[key]);
-    return hitK(key, v);
+  /* «그 축이 아예 없는 자료»는 그 축으로 거르지 않는다. 예: 사업부는 설치현황에만 있어,
+     조인이 안 된 실적 행을 그대로 거르면 「사업부를 고르면 실적이 반으로 준다」가 된다.
+     CFG.loose 에 적은 축만 이렇게 다룬다 — 아무 축에나 적용하면 미상 행이 전 필터를
+     통과해 숫자가 부풀어 오른다. «모르는 것»과 «아닌 것»은 다르다. */
+  function axOk(G, key, x){
+    const gg = cfgOf(G,'cGet') || {};
+    const v = val(gg[key], x);
+    if(!v){ const lo = cfgOf(G,'cLoose'); return !!(lo && lo[key]); }
+    return hitK(G, key, v);
+  }
+
+  function passG(G, x, opt){
+    if(!CFG) return true;
+    /* 축마다 손으로 쓴 조건을 없앴다 — 하나만 빠뜨려도 그 축이 조용히 «전체»가 되고,
+       다중선택으로 바꿀 때 `if(F.x)` 가 빈 Set 에도 참이 되어 통째로 틀린다.
+       고른 게 있을 때만(hasK) 축 판정(axOk)을 지난다. loose 는 axOk 안에 있다. */
+    for(let i=0;i<AXES.length;i++){
+      const k = AXES[i];
+      if(hasK(G, k) && !axOk(G, k, x)) return false;
+    }
+    const gg = cfgOf(G,'cGet') || {};
+    if((F.dtFrom || F.dtTo) && gg.date && !(opt && opt.noDate)){
+      const d = dstr(gg.date(x));
+      if(!d) return false;                       // 날짜가 없으면 기간 조건을 만족할 수 없다
+      if(F.dtFrom && d < F.dtFrom) return false;
+      if(F.dtTo   && d > F.dtTo)   return false;
+    }
+    return true;
+  }
+
+  function hitLG(G, k, v){
+    if(!hasK(G, k)) return true;              // 고른 게 없으면 전체 — pass() 와 같은 순서
+    const s = v==null ? '' : String(v).trim();
+    if(!s){ const lo = cfgOf(G,'cLoose'); return !!(lo && lo[k]); }
+    return hitK(G, k, s);
   }
 
   return {
-    F: F,
+    F: F,          // 설비 기준 (옛 이름 — 여덟 페이지가 이걸 본다)
+    H: HR.F,       // 인원 기준
     _on: read,
     /* 공통 블록을 페이지의 .slicers 맨 앞에 끼우고, 원래 있던 항목들은 구분선 아래
        «이 페이지 전용»으로 밀어낸다. 사이드바 이동(autoSidebar)은 그대로 동작한다. */
@@ -3068,14 +3131,16 @@ GST.filters = (function(){
       /* 순회가 로딩 중에 보낸 값이 있으면 지금 적용한다 — 기준선도 여기서 잡혀야
          «사람이 걸어 둔 값»이 기준이 된다(위 kioskSet 주석 ②). */
       if(KPEND){ const kp = KPEND; KPEND = null; kioskSet(kp.k, kp.v); }
-      /* 묶음 머리글 스타일은 여기서 한 번만 넣는다 — 여덟 페이지의 <style> 을 각각
-         고치면 한 곳이 빠져 그 페이지만 다르게 보인다(제2원칙). */
       if(!document.getElementById('gf-css')){
         const st=document.createElement('style'); st.id='gf-css';
         /* 이 화면에 안 걸리는 축은 «잠긴 칸»으로 보인다 — 흐리게 해서 눌러 볼 것이
-           아님을 알린다. 칸을 숨기지는 않는다(칸이 나타났다 사라지면 그것 자체가
-           「페이지마다 필터가 다르다」로 읽힌다 — 사용자 확정 v91). */
-        st.textContent='.slicer .mselbtn:disabled,.slicer select:disabled{opacity:.45;cursor:not-allowed}';
+           아님을 알린다. 칸을 숨기지는 않는다(v91 사용자 확정).
+           묶음 머리글은 여기서 한 번만 넣는다 — 여덟 페이지의 <style> 을 각각 고치면
+           한 곳이 빠져 그 페이지만 다르게 보인다(제2원칙). */
+        st.textContent='.slicer .mselbtn:disabled,.slicer select:disabled{opacity:.45;cursor:not-allowed}'
+          +'.gf-grp{margin-top:6px;color:var(--a1,#38bdf8);font-weight:800;'
+          +'display:flex;align-items:baseline;gap:6px}'
+          +'.gf-grp .gf-note{font-weight:500;font-size:10px;opacity:.65}';
         document.head.appendChild(st);
       }
       const box = document.querySelector('.slicers'); if(!box) return;
@@ -3083,8 +3148,7 @@ GST.filters = (function(){
          되면서 그 id 가 `gf-region` → `gf-regionBtn` 으로 바뀌었고, 검사가 못 찾아
          **mount 를 부를 때마다 공통 블록이 새로 끼워졌다** — 주간현황은 mount 를 5번
          부르므로 사이드바에 「이 페이지 전용」 묶음이 다섯 벌 생겼다.
-         markup() 이 «언제나» 내는 껍데기(.gf-base)로 확인한다 — 축 모양이 또 바뀌어도
-         이 검사는 안 깨진다. */
+         markup() 이 «언제나» 내는 껍데기(.gf-base)로 확인한다. */
       if(!box.querySelector('.gf-base')){
         const own = [].slice.call(box.children);
         box.insertAdjacentHTML('afterbegin', markup());
@@ -3099,74 +3163,67 @@ GST.filters = (function(){
     refresh: refresh,
     /* 한 축의 «자료에 실제로 있는» 값 목록. 자동순회(키오스크)가 단지 목록을 얻는 통로다.
        ⚠ 목록을 셸에 박지 말 것 — 대만 전용 목록으로 국내가 통째로 사라졌던 v89 그대로다.
-       종속(narrow)을 걸지 않는다: 지금 걸린 필터와 무관하게 «이 자료에 있는 전부»를 돌아야 한다. */
-    options: function(k){ return opts(k); },
+       종속(narrow)을 걸지 않는다: 지금 걸린 필터와 무관하게 «이 자료에 있는 전부»를 돌아야 한다.
+       두 벌을 합쳐 준다 — 순회는 «이 화면에 그 값이 있나»만 알면 된다. */
+    options: function(k){
+      const a = opts(EQ, k), b = opts(HR, k);
+      return [...new Set(a.concat(b))].sort((x,y)=>x.localeCompare(y,'ko'));
+    },
+    optionsH: function(k){ return opts(HR, k); },
     // 마지막 목록과 «왜 비었나» — {list, hasAny}. hasAny=true 인데 list 가 비면 필터 탓이다.
-    lists: function(k){ return k ? (LAST[k]||{list:[],hasAny:false}) : LAST; },
+    lists:  function(k){ return k ? (EQ.LAST[k]||{list:[],hasAny:false}) : EQ.LAST; },
+    listsH: function(k){ return k ? (HR.LAST[k]||{list:[],hasAny:false}) : HR.LAST; },
     ready: function(){ return !!CFG; },
     kioskSet: kioskSet, kioskRestore: kioskRestore,
     kioskOn: kioskOn, kioskReapply: kioskReapply,
-    /* 기본 필터 술어. 페이지의 filt() 맨 앞에 한 줄로 넣는다. */
-    /* opt.noDate — 기간 조건만 건너뛴다. 설치현황의 «미가동 목록»처럼 «그 기간에 가동을
-       시작하지 않은» 설비를 봐야 하는 카드가 있다. 축 조건은 그대로 걸린다 — 기간만 뺀다. */
-    pass: function(x, opt){
-      if(!CFG) return true;
-      const g = CFG.get || {};
-      /* 축마다 손으로 쓴 조건을 없앴다 — 하나만 빠뜨려도 그 축이 조용히 «전체»가 되고,
-         다중선택으로 바꿀 때 `if(F.x)` 가 빈 Set 에도 참이 되어 통째로 틀린다.
-         고른 게 있을 때만(hasK) 축 판정(axOk)을 지난다. loose 는 axOk 안에 있다. */
-      for(let i=0;i<AXES.length;i++){
-        const k = AXES[i];
-        if(hasK(k) && !axOk(k, x)) return false;
-      }
-      if((F.dtFrom || F.dtTo) && g.date && !(opt && opt.noDate)){
-        const d = dstr(g.date(x));
-        if(!d) return false;                       // 날짜가 없으면 기간 조건을 만족할 수 없다
-        if(F.dtFrom && d < F.dtFrom) return false;
-        if(F.dtTo   && d > F.dtTo)   return false;
-      }
-      return true;
-    },
+    /* 기본 필터 술어. 페이지의 filt() 맨 앞에 한 줄로 넣는다.
+       pass = 설비 기준 · passH = 인원 기준. 어느 쪽 자료인지에 맞는 것을 쓴다 —
+       인원 행을 pass() 로 거르면 설비 축이 걸려 인원이 통째로 사라진다.
+       opt.noDate — 기간 조건만 건너뛴다(설치현황의 «미가동 목록» 같은 카드). */
+    pass:  function(x, opt){ return passG(EQ, x, opt); },
+    passH: function(x, opt){ return passG(HR, x, opt); },
     clear: function(){
-      Object.keys(F).forEach(function(k){ if(MULTI[k]) F[k].clear(); else F[k]=''; });
+      [EQ,HR].forEach(function(G){
+        AXES.forEach(function(k){ if(MULTI[k]) G.F[k].clear(); else G.F[k]=''; });
+      });
+      F.dtFrom=''; F.dtTo='';
       save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
     },
     /* 축 하나만 끄거나 켠다. 페이지가 `GST.filters.F[k]=''` 를 직접 쓰면 다중 축에서
        Set 이 문자열로 바뀌어 그다음 `.has` 가 TypeError 로 죽는다 — 여기로만 지나가게 한다. */
-    set: setK,
+    set:  function(k, v){ setK(EQ, k, v); },
+    setH: function(k, v){ setK(HR, k, v); },
     // 차트 드릴용 — 같은 값을 다시 누르면 해제. 다중 축은 «그 값만» 토글한다.
-    toggle: function(k, v){
-      if(!(k in F)) return;
-      if(MULTI[k]){ if(F[k].has(v)) F[k].delete(v); else F[k].add(v); }
-      else F[k] = (F[k]===v) ? '' : v;
-      save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
-    },
+    toggle:  function(k, v){ tog(EQ, k, v); },
+    toggleH: function(k, v){ tog(HR, k, v); },
     // 술어 헬퍼 — 페이지가 자기 F 를 따로 들고 있어도 «걸리나» 판정은 여기 하나를 쓴다
-    hit: function(k, v){ return hitK(k, v==null?'':String(v).trim()); },
+    hit:  function(k, v){ return hitK(EQ, k, v==null?'':String(v).trim()); },
+    hitH: function(k, v){ return hitK(HR, k, v==null?'':String(v).trim()); },
     /* loose 축까지 지키는 판정 — pass() 안의 axOk 와 «같은 답»을 낸다.
        ⚠ hit() 만으로는 안 된다. loose 축(사업부)은 «값이 빈 행은 통과»가 규칙인데
          hit('div','') 는 고른 값이 있으면 언제나 false 라, 조인이 안 된 행이 통째로
-         사라진다 — 「사업부를 고르면 실적이 반으로 준다」가 바로 그것이다.
-       주간현황처럼 술어를 손으로 짜는 페이지가 이 규칙을 자기 식으로 다시 적으면
-         pass() 를 쓰는 일곱 페이지와 답이 갈린다(제2원칙). 규칙은 여기 한 곳이다. */
-    hitL: function(k, v){
-      if(!hasK(k)) return true;              // 고른 게 없으면 전체 — pass() 와 같은 순서
-      const s = v==null ? '' : String(v).trim();
-      if(!s) return !!(CFG && CFG.loose && CFG.loose[k]);
-      return hitK(k, s);
-    },
-    has: function(k){ return hasK(k); },
-    chosen: function(k){ return listK(k); },
-    // 활성 필터 칩용 — [{k,label,value}]
+         사라진다 — 「사업부를 고르면 실적이 반으로 준다」가 바로 그것이다. */
+    hitL:  function(k, v){ return hitLG(EQ, k, v); },
+    hitLH: function(k, v){ return hitLG(HR, k, v); },
+    has:  function(k){ return hasK(EQ, k); },
+    hasH: function(k){ return hasK(HR, k); },
+    chosen:  function(k){ return listK(EQ, k); },
+    chosenH: function(k){ return listK(HR, k); },
+    // 활성 필터 칩용 — [{k,label,value}]. 두 벌이므로 인원 쪽은 이름에 «인원» 을 붙인다.
     active: function(){
       const out=[];
-      AXES.forEach(function(k){
-        if(hasK(k)) out.push({k:k, label:L[k], value:listK(k).join(' · ')});
-      });
-      if(F.dtFrom||F.dtTo) out.push({k:'period', label:L.period, value:(F.dtFrom||'…')+' ~ '+(F.dtTo||'…')});
+      AXES.forEach(function(k){ if(hasK(EQ,k)) out.push({k:k, grp:'eq', label:L[k], value:listK(EQ,k).join(' · ')}); });
+      AXES.forEach(function(k){ if(hasK(HR,k)) out.push({k:k, grp:'hr', label:'인원 '+L[k], value:listK(HR,k).join(' · ')}); });
+      if(F.dtFrom||F.dtTo) out.push({k:'period', grp:'eq', label:L.period, value:(F.dtFrom||'…')+' ~ '+(F.dtTo||'…')});
       return out;
     }
   };
+  function tog(G, k, v){
+    if(!(k in G.F)) return;
+    if(MULTI[k]){ if(G.F[k].has(v)) G.F[k].delete(v); else G.F[k].add(v); }
+    else G.F[k] = (G.F[k]===v) ? '' : v;
+    save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
+  }
 })();
 
 GST.autoSidebar = function(){

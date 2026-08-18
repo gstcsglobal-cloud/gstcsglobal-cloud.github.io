@@ -110,7 +110,11 @@ console.log('\n[2] 같은 물음에 두 함수가 답하지 않는지');
   is(/GST\.SURGE = \{ minN: 5, x: 2 \}/.test(CORE), 'core — 문턱값이 한 곳에 있다');
 
   /* loose 축 판정도 마찬가지다 — 주간현황이 자기 식으로 다시 적으면 pass() 와 갈린다. */
-  is(/hitL: function\(k, v\)/.test(CORE), 'core — loose 판정이 GST.filters.hitL 한 곳이다');
+  /* v114 — 필터가 두 벌이라 hitL 도 두 벌이지만, 규칙 본문은 hitLG 한 곳뿐이다.
+     둘이 각자 규칙을 적으면 설비와 인원이 «다른 답»을 내는 loose 축이 생긴다. */
+  is(/function hitLG\(G, k, v\)\{/.test(CORE) && /hitL:  function\(k, v\)\{ return hitLG\(EQ, k, v\); \}/.test(CORE)
+     && /hitLH: function\(k, v\)\{ return hitLG\(HR, k, v\); \}/.test(CORE),
+     'core — loose 판정 본문이 hitLG 한 곳이고 두 벌이 그것만 부른다');
   is(/const divOk=\(v\)=>GST\.filters\.hitL\('div', v\);/.test(SRC.report),
      'report — 사업부 판정을 다시 적지 않고 core 를 부른다');
 }
