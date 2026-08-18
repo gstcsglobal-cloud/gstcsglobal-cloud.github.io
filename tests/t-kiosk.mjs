@@ -108,16 +108,29 @@ ok(GST.filters.chosen('campus').length===0, '원래 비어 있었으면 비워�
 /* 문자열 축(운영단위)도 같은 통로로 — 그릇이 달라도(Set/문자열) 원래 모양으로 돌려줘야 한다 */
 GST.filters.mount({page:'t2', rows:()=>[{c:'H1',o:'GST TAIWAN SCRUBBER'},{c:'P1',o:'SEC Scrubber'}],
   onChange:()=>{}, get:{campus:x=>x.c, op:x=>x.o}});
-GST.filters.set('op','SEC Scrubber');
+GST.filters.set('op','SEC Scrubber');   // 문자열 하나를 줘도 다중 축이면 Set 에 들어간다
 MSG.length=0; fire({type:'gst-kiosk-q', axis:'op'});
 const aop=MSG.find(m=>m.type==='gst-kiosk-a');
 ok(aop && aop.axis==='op' && aop.list.length===2, '운영단위 목록도 자료에서 나와야 한다');
 ok(aop && aop.ver>=102, '답에 core.js 버전을 실어야 한다 — 셸이 «옛 버전»을 짚어 줄 수 있게');
 fire({type:'gst-kiosk-set', axis:'op', value:'GST TAIWAN SCRUBBER'});
-ok(GST.filters.F.op==='GST TAIWAN SCRUBBER', '운영단위는 문자열로 걸려야 한다 (실제 '+JSON.stringify(GST.filters.F.op)+')');
+ok(GST.filters.chosen('op').join()==='GST TAIWAN SCRUBBER',
+   '순회가 건 운영단위 하나만 걸려야 한다 (실제 '+JSON.stringify(GST.filters.chosen('op'))+')');
+/* ⚠ v106 에서 일곱 축이 전부 Set 이 됐다. 그릇이 바뀌어도 «순회가 하나만 걸고, 끝나면
+   사람이 걸어 둔 것을 돌려준다»는 규율은 그대로여야 한다 — 그것을 여기서 못 박는다. */
+ok(GST.filters.F.op instanceof Set, '운영단위도 Set 이어야 한다(v106 — 전 축 다중선택)');
 fire({type:'gst-kiosk-restore'});
-ok(GST.filters.F.op==='SEC Scrubber', '문자열 축도 원래 값으로 돌아와야 한다 (실제 '+JSON.stringify(GST.filters.F.op)+')');
-ok(typeof GST.filters.F.op==='string', '문자열 축이 배열로 바뀌면 안 된다');
+ok(GST.filters.chosen('op').join()==='SEC Scrubber',
+   '끝나면 사람이 걸어 둔 값으로 돌아와야 한다 (실제 '+JSON.stringify(GST.filters.chosen('op'))+')');
+ok(GST.filters.F.op instanceof Set, '복원 뒤에도 Set 이어야 한다');
+
+/* 사람이 «여러 개» 걸어 둔 것도 그대로 돌려줘야 한다 — 다중선택이 된 뒤의 진짜 시험이다. */
+GST.filters.set('op', ['SEC Scrubber','GST TAIWAN SCRUBBER']);
+fire({type:'gst-kiosk-set', axis:'op', value:'SEC Scrubber'});
+ok(GST.filters.chosen('op').length===1, '순회 중에는 하나만 걸린다');
+fire({type:'gst-kiosk-restore'});
+ok(GST.filters.chosen('op').sort().join()==='GST TAIWAN SCRUBBER,SEC Scrubber',
+   '여러 개 걸어 둔 것도 «전부» 돌아와야 한다 (실제 '+JSON.stringify(GST.filters.chosen('op'))+')');
 
 /* ── [1-3] 그 페이지 자료에 없는 값은 «걸린 척» 하지 않는지 ──
    목록에 없는 선택값은 fill/fillMulti 가 버리고, 빈 Set 은 pass() 에서 «전체»다.

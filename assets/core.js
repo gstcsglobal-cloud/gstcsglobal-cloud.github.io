@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 105;
+GST.VER = 106;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1637,7 +1637,16 @@ GST.ORG = {
         fab:      GST.ORG.fab(GST.SM.val(r, C, 'fab')),
         floor:    GST.ORG.floor(GST.SM.val(r, C, 'floor')),
         location: GST.upk(GST.SM.val(r, C, 'location') || '').trim(),
-        bay:      GST.nfw(GST.SM.val(r, C, 'bay') || '').trim()
+        bay:      GST.nfw(GST.SM.val(r, C, 'bay') || '').trim(),
+        /* 사업부(관리주체)·단지는 «설치현황에만» 있는 열이다 — 수선·자재 실적에는 없다.
+           그래서 사업부를 골라도 실적 기반 카드가 하나도 안 바뀌었다(loose 라 전부 통과).
+           국내는 같은 라인에 있는 설비라도 관리주체가 메모리냐 연구소냐 파운드리냐에 따라
+           소속 단지가 갈리므로, 사업부로 좁히는 것이 «실제로 설비가 있는 곳»을 보는 길이다.
+           Floor 와 같은 규약으로 S/N 조인해 얻는다 — 원본에 담아 두면 설치현황이 갱신될 때
+           두 벌이 갈라진다(CIP·인원과 같은 규약). */
+        div:      String(GST.SM.val(r, C, 'div') || '').trim(),
+        campus:   GST.ORG.campus(GST.SM.val(r, C, 'location'), GST.SM.val(r, C, 'fab'),
+                                 GST.SM.val(r, C, 'country'))
       };
       const c = key(GST.SM.val(r, C, 'code')), s = key(GST.SM.val(r, C, 'sn'));
       if(c && !byCode.has(c)) byCode.set(c, rec);
@@ -1666,12 +1675,24 @@ GST.ORG = {
    인자 f 를 주면 그 필터 객체를 본다 — 페이지가 자기 F 를 갖고 있어도 같은 규칙을 쓰게. */
 GST.corpLabel = function(f){
   const F = f || (GST.filters && GST.filters.F) || {};
-  const op = String(F.op||'').trim();
-  if(op) return op.replace(/[\s·]*(SCRUBBER|CHILLER)\s*$/i,'').trim() || op;
-  const ctry = String(F.country||'').trim();
-  if(ctry) return 'GST ' + ctry.charAt(0).toUpperCase() + ctry.slice(1).toLowerCase();
-  if(F.region === GST.ORG.REGION_KR) return 'GST Korea';
-  if(F.region === GST.ORG.REGION_OS) return 'GST Overseas';
+  /* ⚠ 축이 다중선택(Set)이 됐다(v106). String(Set) 은 '[object Set]' 이라 그대로 쓰면
+     법인 상자에 그 글자가 찍힌다 — 눈에 띄지만, 조용히 틀리는 것보다 낫자고 둘 수는 없다.
+     Set·배열·문자열 어느 그릇으로 와도 «고른 값 목록»으로 눕혀 본다. */
+  const list = v => v instanceof Set ? Array.from(v) : Array.isArray(v) ? v : (v ? [String(v)] : []);
+  const strip = n => String(n).replace(/[\s·]*(SCRUBBER|CHILLER)\s*$/i,'').trim() || String(n);
+  const ops = list(F.op);
+  /* 여럿 고르면 이름을 하나로 지어낼 수 없다 — 개수를 밝힌다(v98: 이름을 짐작하지 않는다).
+     둘까지는 이어 붙여 준다. 그 이상은 «N개 법인». */
+  if(ops.length === 1) return strip(ops[0]);
+  if(ops.length === 2) return ops.map(strip).join(' · ');
+  if(ops.length > 2)   return ops.length + '개 법인';
+  const ctry = list(F.country);
+  if(ctry.length === 1){ const c = String(ctry[0]).trim();
+    return 'GST ' + c.charAt(0).toUpperCase() + c.slice(1).toLowerCase(); }
+  if(ctry.length > 1) return ctry.length + '개 국가';
+  const rg = list(F.region);
+  if(rg.length === 1) return rg[0] === GST.ORG.REGION_KR ? 'GST Korea'
+                    : rg[0] === GST.ORG.REGION_OS ? 'GST Overseas' : 'GST Global';
   return 'GST Global';
 };
 
@@ -2656,8 +2677,16 @@ GST.filters = (function(){
      갈리는 일이 실제로 있다(알람 시트는 H3, 설치현황은 H4. 실측 39건, 전부 한 방향).
      정본은 설치현황이지만 사람이 볼 때는 두 단지를 한 번에 봐야 하는 자리가 생긴다.
      다른 축을 다중으로 바꾸려면 MULTI 에 이름만 더하면 된다 — 나머지 코드는 그대로다. */
-  const MULTI = { campus:1 };
-  const F = { region:'', op:'', div:'', customer:'', campus:new Set(), line:'', team:'', dtFrom:'', dtTo:'' };
+  /* 일곱 축이 «전부» 다중선택이다 (v106 · 사용자 요청).
+     왜. 국내 설비는 물리적 위치와 «관리주체(사업부)»가 따로 논다 — 같은 11라인 설비라도
+     메모리냐 연구소냐 파운드리냐에 따라 소속 단지가 H3·H2·K1 로 갈린다. 하나씩만 고를 수
+     있으면 «그 사업부의 설비가 실제로 어디에 있나»를 볼 수가 없다.
+     ⚠ 값이 없을 때 «전체»인 것은 그대로다(빈 Set = 전체). 그래서 축 검사는 반드시
+       hasK/hitK 를 지나야 한다 — `if(F.op)` 는 빈 Set 도 truthy 라 언제나 참이 된다. */
+  const MULTI = { region:1, op:1, div:1, customer:1, campus:1, line:1, team:1 };
+  const AXES = ['region','op','div','customer','campus','line','team'];
+  const F = { region:new Set(), op:new Set(), div:new Set(), customer:new Set(),
+              campus:new Set(), line:new Set(), team:new Set(), dtFrom:'', dtTo:'' };
   /* 술어에서 «고른 것에 걸리나»를 묻는 유일한 자리. 단일·다중을 여기서만 가른다 —
      페이지가 `x.campus===F.campus` 를 직접 쓰면 Set 이 된 순간 조용히 전부 false 가 된다. */
   const hitK = (k, v) => MULTI[k] ? (!F[k].size || F[k].has(v)) : (!F[k] || v === F[k]);
@@ -2741,7 +2770,7 @@ GST.filters = (function(){
      자기 자신은 빼고 본다 — 안 그러면 한 번 고른 값 말고는 목록에서 사라져 되돌릴 수 없다. */
   function passExcept(x, skip){
     const g = CFG.get || {};
-    const chk = ['region','op','div','customer','campus','line','team'];
+    const chk = AXES;
     for(let i=0;i<chk.length;i++){
       const k = chk[i];
       if(k===skip || !hasK(k)) continue;
@@ -2786,7 +2815,7 @@ GST.filters = (function(){
 
   function refresh(){
     if(!CFG) return;
-    ['region','op','div','customer','campus','line','team'].forEach(function(k){
+    AXES.forEach(function(k){
       fill('gf-'+k, k, opts(k, function(x){ return passExcept(x, k); }));
     });
     /* 기간은 «그 자료에 날짜 축이 있을 때만» 걸 수 있다. tco 의 기준 월, hr 의 기준일처럼
@@ -2802,8 +2831,10 @@ GST.filters = (function(){
   }
 
   function read(changed){
-    ['region','op','div','customer','campus','line','team'].forEach(function(k){
-      if(MULTI[k]) return;                       // 다중선택은 mselFill 이 Set 을 직접 고친다
+    /* 이제 일곱 축이 전부 다중선택이라 여기서 읽을 select 가 없다 — mselFill 이 Set 을
+       직접 고친다. 단일 축이 다시 생기면 이 루프가 그것만 읽는다. */
+    AXES.forEach(function(k){
+      if(MULTI[k]) return;
       const el=document.getElementById('gf-'+k); if(el) F[k]=el.value;
     });
     const a=document.getElementById('gf-from'), b=document.getElementById('gf-to');
@@ -2845,10 +2876,10 @@ GST.filters = (function(){
       + '<button type="button" id="'+id+'Btn" class="mselbtn" '
       + 'onclick="GST.mselToggle(\''+id+'\',event)">\uc804\uccb4 \u25be</button>'
       + '<div id="'+id+'Box" class="mselbox"></div></div>';
+    /* 어느 칸이 다중인지는 MULTI 가 정한다 — 여기 목록을 따로 두면 둘이 갈라져
+       «Set 인데 select 를 그리는» 상태가 되고, 그러면 고른 값이 화면에 안 보인다. */
     return '<div class="gf-base">'
-      + sel('gf-region', L.region) + sel('gf-op', L.op) + sel('gf-div', L.div)
-      + sel('gf-customer', L.customer)
-      + msel('gf-campus', L.campus) + sel('gf-line', L.line) + sel('gf-team', L.team)
+      + AXES.map(function(k){ return (MULTI[k]?msel:sel)('gf-'+k, L[k]); }).join('')
       + '<div class="slicer"><div class="lbl">'+L.period+'</div>'
       + '<input type="date" id="gf-from" class="dt-input" onchange="GST.filters._on()"> ~ '
       + '<input type="date" id="gf-to" class="dt-input" onchange="GST.filters._on()"></div>'
@@ -2903,13 +2934,13 @@ GST.filters = (function(){
     pass: function(x, opt){
       if(!CFG) return true;
       const g = CFG.get || {};
-      if(F.region   && val(g.region,x)   !== F.region)   return false;
-      if(F.op       && !axOk('op', x))                   return false;
-      if(F.customer && val(g.customer,x) !== F.customer) return false;
-      if(F.div      && !axOk('div', x))                  return false;   // 해외 행은 값이 없다 → loose 로 통과시킬 수 있게
-      if(hasK('campus') && !hitK('campus', val(g.campus,x))) return false;
-      if(F.line     && val(g.line,x)     !== F.line)     return false;
-      if(F.team     && val(g.team,x)     !== F.team)     return false;
+      /* 축마다 손으로 쓴 조건을 없앴다 — 하나만 빠뜨려도 그 축이 조용히 «전체»가 되고,
+         다중선택으로 바꿀 때 `if(F.x)` 가 빈 Set 에도 참이 되어 통째로 틀린다.
+         고른 게 있을 때만(hasK) 축 판정(axOk)을 지난다. loose 는 axOk 안에 있다. */
+      for(let i=0;i<AXES.length;i++){
+        const k = AXES[i];
+        if(hasK(k) && !axOk(k, x)) return false;
+      }
       if((F.dtFrom || F.dtTo) && g.date && !(opt && opt.noDate)){
         const d = dstr(g.date(x));
         if(!d) return false;                       // 날짜가 없으면 기간 조건을 만족할 수 없다
@@ -2939,13 +2970,9 @@ GST.filters = (function(){
     // 활성 필터 칩용 — [{k,label,value}]
     active: function(){
       const out=[];
-      if(F.region)   out.push({k:'region',   label:L.region,   value:F.region});
-      if(F.op)       out.push({k:'op',       label:L.op,       value:F.op});
-      if(F.customer) out.push({k:'customer', label:L.customer, value:F.customer});
-      if(F.div)      out.push({k:'div',      label:L.div,      value:F.div});
-      if(hasK('campus')) out.push({k:'campus', label:L.campus, value:listK('campus').join(' · ')});
-      if(F.line)     out.push({k:'line',     label:L.line,     value:F.line});
-      if(F.team)     out.push({k:'team',     label:L.team,     value:F.team});
+      AXES.forEach(function(k){
+        if(hasK(k)) out.push({k:k, label:L[k], value:listK(k).join(' · ')});
+      });
       if(F.dtFrom||F.dtTo) out.push({k:'period', label:L.period, value:(F.dtFrom||'…')+' ~ '+(F.dtTo||'…')});
       return out;
     }
@@ -3464,7 +3491,9 @@ GST.filtSummary = function(){
   const out = [];
   Object.keys(L).forEach(function(k){
     const v = F[k];
-    if(v instanceof Set){ if(v.size) out.push(L[k]+' '+Array.from(v).join('/')); }
+    /* 축이 전부 Set 이 됐다(v106). 셋을 넘으면 이름을 다 적는 대신 개수로 줄인다 —
+       장표 머리가 한 줄을 넘으면 그 줄 자체가 안 읽힌다. */
+    if(v instanceof Set){ if(v.size) out.push(L[k]+' '+(v.size>3 ? v.size+'개' : Array.from(v).join('/'))); }
     else if(v) out.push(L[k]+' '+v);
   });
   if(F.dtFrom || F.dtTo) out.push('기간 '+(F.dtFrom||'')+'~'+(F.dtTo||''));

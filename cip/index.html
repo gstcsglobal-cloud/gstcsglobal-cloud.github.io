@@ -928,7 +928,7 @@ function render(){
         options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
           onClick:(e,els,ch)=>{if(els.length){const v=keys[els[0].index];
             // 사이트 축은 GST.filters 의 라인으로 옮겼다 — 페이지의 F 를 건드리면 눌러도 아무 일이 없다
-            GST.filters.F.line=(GST.filters.F.line===v)?'':v; GST.filters.refresh(); render();}},
+            GST.filters.toggle('line', v); GST.filters.refresh(); render();}},
           plugins:{legend:{position:'bottom',labels:{padding:8}}},
           scales:{x:{stacked:true,beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
                   y:{stacked:true,ticks:{color:TH.txt},grid:{display:false}}}}});

@@ -1766,7 +1766,7 @@ window.cxDrill=function(i){
   const lbl=CX_LAST.top[i].lbl, UNK=t('dp_unk');
   const setF=function(ax,val){
     if(!val||val===UNK)return;
-    if(ax==='fab'){ GST.filters.F.line=(GST.filters.F.line===val)?'':val; GST.filters.refresh(); return; }
+    if(ax==='fab'){ GST.filters.toggle('line', val); GST.filters.refresh(); return; }
     if(ax==='matName'){ F.mat=val; return; }
     if(ax==='ym'){ const pp=val.split('-'), last=new Date(Date.UTC(+pp[0],+pp[1],0)).getUTCDate();
       GST.filters.F.dtFrom=val+'-01'; GST.filters.F.dtTo=val+'-'+String(last).padStart(2,'0'); GST.filters.refresh();
@@ -1888,7 +1888,7 @@ window.deepDrill=function(axis,a,m,axis2){
   const setF=function(ax,val){
     if(!val||val===UNK)return;               // (미상)은 걸 필터가 없다 — 자재만 좁힌다
     if(ax==='fab'){                          // FAB 축은 라인 필터로 흡수됐다(v90)
-      GST.filters.F.line=(GST.filters.F.line===val)?'':val; GST.filters.refresh();
+      GST.filters.toggle('line', val); GST.filters.refresh();
       return;
     }
     const map={detail:'detail',process:'process',eq:'eq',model:'model',reason:'reason'};

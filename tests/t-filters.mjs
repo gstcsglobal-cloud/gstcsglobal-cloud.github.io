@@ -125,16 +125,23 @@ is(/_eCourse/.test(SRC.report) && /'Scrubber Lv\.3'/.test(SRC.report),
 
 console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96)');
 {
-  is(/div:'', /.test(CORE) || /div:''/.test(CORE), 'core — F 에 div 축이 있다');
+  is(/div:new Set\(\)/.test(CORE) || /div:''/.test(CORE), 'core — F 에 div 축이 있다');
   /* 계층은 사용자가 확정했다(v98): 구분 → 운영단위 → 사업부 → 고객사 → 단지 → 라인.
      칸이 놓인 순서가 곧 사람이 읽는 계층이라, 종속만 맞고 순서가 틀리면 화면이 거짓말을 한다. */
   is(/div:'사업부', customer:'고객사'/.test(CORE), 'core — 축 순서가 계층과 같다 (사업부 다음 고객사)');
-  is(/const chk = \['region','op','div','customer','campus','line','team'\]/.test(CORE),
-     'core — 종속(cascading)이 같은 순서로 좁힌다');
-  is(/sel\('gf-op', L\.op\) \+ sel\('gf-div', L\.div\)/.test(CORE),
-     'core — 사이드바 칸도 운영단위 다음이 사업부다');
-  is(/if\(F\.div      && !axOk\('div', x\)\)/.test(CORE),
-     'core — 사업부 술어가 axOk 를 지난다 (loose 를 받을 수 있게)');
+  /* 축 목록이 «한 곳»(AXES)에서 나와야 종속·사이드바·술어가 같은 순서를 본다.
+     예전에는 세 곳에 손으로 적혀 있어, 하나만 고치면 조용히 갈라졌다. */
+  is(/const AXES = \['region','op','div','customer','campus','line','team'\]/.test(CORE),
+     'core — 축 순서가 AXES 한 곳에 있다 (계층: 구분→운영단위→사업부→고객사→단지→라인→팀)');
+  is(/const chk = AXES;/.test(CORE), 'core — 종속(cascading)이 같은 목록을 쓴다');
+  is(/AXES\.map\(function\(k\)\{ return \(MULTI\[k\]\?msel:sel\)/.test(CORE),
+     'core — 사이드바 칸도 같은 목록·같은 순서로 그린다');
+  /* 축별 조건을 손으로 쓰면 하나만 빠뜨려도 그 축이 조용히 «전체»가 된다.
+     그리고 다중선택에서는 `if(F.x)` 가 빈 Set 에도 참이라 반드시 hasK 를 지나야 한다. */
+  is(/if\(hasK\(k\) && !axOk\(k, x\)\) return false;/.test(CORE),
+     'core — 모든 축이 hasK+axOk 한 벌을 지난다 (loose 도 axOk 안에 있다)');
+  is(!/if\(F\.(region|op|div|customer|line|team)\s+&&/.test(CORE),
+     'core — 축을 문자열처럼 진위 검사하면 안 된다 (빈 Set 은 truthy 다)');
   /* ⚠ 해외 설치현황에는 사업부 열이 아예 없다. loose 가 없으면 사업부를 고르는 순간
      해외 설비가 통째로 사라진다 — 운영단위가 인원현황에서 겪은 것과 같은 자리다. */
   is(/loose:\{ div:1 \}/.test(SRC.scrubber), 'scrubber — 사업부를 loose 로 선언했다');
@@ -240,7 +247,12 @@ console.log('\n[7-3] 단지는 여러 개를 동시에 고를 수 있다 (Set) �
   /* 같은 설비의 단지가 자료마다 갈린다(알람 시트 H3 ↔ 설치현황 H4, 실측 39건). 그래서
      단지만 다중선택이다. 위험은 조용하다 — Set 을 `===` 로 비교하면 언제나 false 라
      «필터를 걸면 화면이 통째로 빈다». 페이지가 다시 그렇게 쓰는 것을 여기서 막는다. */
-  is(/const MULTI = \{ campus:1 \}/.test(CORE), 'core — 다중선택 축 목록(MULTI)이 한 곳에 있다');
+  /* v106 — 일곱 축이 전부 다중선택이다. 국내 설비는 «관리주체(사업부)»에 따라 소속 단지가
+     갈려서, 하나씩만 고를 수 있으면 «그 사업부 설비가 실제로 어디 있나»를 볼 수가 없다. */
+  is(/const MULTI = \{ region:1, op:1, div:1, customer:1, campus:1, line:1, team:1 \}/.test(CORE),
+     'core — 일곱 축이 전부 다중선택이다');
+  is(/const F = \{ region:new Set\(\), op:new Set\(\), div:new Set\(\), customer:new Set\(\),/.test(CORE),
+     'core — F 의 축이 전부 Set 이다');
   is(/campus:new Set\(\)/.test(CORE), 'core — F.campus 가 Set 이다');
   is(/const hitK = \(k, v\) => MULTI\[k\]/.test(CORE),
      'core — 「걸리나」 판정이 hitK 한 곳만 지난다');
@@ -275,12 +287,18 @@ console.log('\n[7-3] 단지는 여러 개를 동시에 고를 수 있다 (Set) �
   // 음성 대조 — 페이지가 campus 를 문자열처럼 다루면 조용히 전부 false 가 된다
   // 주석은 뺀다 — 「이렇게 쓰지 말 것」이라 적어 둔 설명이 검사에 걸리면 안 된다
   const nocom = t => t.replace(/\/\*[\s\S]*?\*\//g, '');
+  /* ⚠ v106 에서 «일곱 축 전부» 다중선택이 됐다. 예전에는 이 검사가 campus 만 봤고,
+     그 사이 fault·material·cip 이 `GST.filters.F.line=(F.line===v)?'':v` 로 라인 드릴을
+     짜 두었다 — 검사가 못 보는 축이라 통과했고, 다중이 되는 순간 Set 이 문자열로 바뀌어
+     그다음 .has 가 TypeError 로 죽는다(화면이 통째로 빈다). 이제 전 축을 본다. */
+  const AXES7 = ['region','op','div','customer','campus','line','team'];
   PAGES.forEach(p => {
     const src = nocom(SRC[p]);
-    const bad = /[=!]==\s*F\.campus|F\.campus\s*[=!]==/.test(src)
-             || /GST\.filters\.F\.campus\s*=[^=]/.test(src)
-             || /GST\.filters\.F\[(kk|k|K)\]\s*=[^=]/.test(src);
-    is(!bad, p + ' — 단지를 문자열로 직접 비교·대입하지 않는다');
+    const hits = AXES7.filter(k =>
+         new RegExp('[=!]==\\s*F\\.'+k+'\\b|F\\.'+k+'\\s*[=!]==').test(src)
+      || new RegExp('GST\\.filters\\.F\\.'+k+'\\s*=[^=]').test(src));
+    const bad = hits.length || /GST\.filters\.F\[(kk|k|K)\]\s*=[^=]/.test(src);
+    is(!bad, p + ' — 축을 문자열로 직접 비교·대입하지 않는다' + (hits.length?(' ('+hits.join(',')+')'):''));
   });
   is(/const campOk=\(v\)=>GST\.filters\.hit\('campus',v\)/.test(SRC.report),
      'report — 단지 판정이 campOk 한 곳만 지난다');
@@ -305,6 +323,91 @@ console.log('\n[8] 비율 지표의 «분모» 배열에도 조직 축이 실려
   is(/function buildInstIndex\(rows\)/.test(SRC.cip), 'cip — 설치현황 색인을 만든다');
   is(/x\.campus\s*=\s*\(o&&o\.campus\)\|\|x\.site/.test(SRC.cip),
      'cip — 조인 실패 행을 버리지 않고 자기 사이트로 폴백한다');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   [9] 전 축 다중선택 — 소스가 아니라 «동작»으로 (v106)
+   국내 설비는 관리주체(사업부)에 따라 소속 단지가 갈린다. 하나씩만 고를 수 있으면
+   «그 사업부 설비가 실제로 어디 있나»를 볼 수가 없다 — 그래서 일곱 축 전부 다중이다.
+   ⚠ 소스 검사로는 «정말로 두 개가 동시에 걸리는지»를 못 본다. 실제로 돌려 본다.
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (실제 동작)');
+{
+  const el = () => ({ style:{}, appendChild(){}, insertBefore(){}, remove(){}, removeAttribute(){},
+    setAttribute(){}, addEventListener(){}, classList:{add(){},remove(){},toggle(){}},
+    querySelector:()=>null, querySelectorAll:()=>[], insertAdjacentHTML(){}, insertAdjacentElement(){},
+    parentNode:{insertBefore(){}}, firstElementChild:null, textContent:'', innerHTML:'', closest:()=>null });
+  global.document = { createElement:el, getElementById:()=>null, querySelector:()=>null,
+    querySelectorAll:()=>[], body:el(), documentElement:el(), addEventListener(){},
+    head:el(), readyState:'complete' };
+  global.window = { addEventListener(){}, location:{href:'',search:''}, self:{}, top:{},
+    localStorage:(function(){ const M=new Map(); return { getItem:k=>M.has(k)?M.get(k):null,
+      setItem:(k,v)=>M.set(k,String(v)), removeItem:k=>M.delete(k) }; })(),
+    matchMedia:()=>({matches:false,addEventListener(){}}) };
+  global.window.self = global.window.top = global.window;
+  global.localStorage = global.window.localStorage;
+  try { new Function(CORE)(); } catch(e){ console.log('  core.js 로드 경고: '+e.message); }
+  const G = global.window.GST;
+
+  const ROWS = [
+    {rg:'국내', op:'SEC Scrubber',  div:'메모리',    cu:'삼성전자', ca:'H3', li:'11', tm:'A'},
+    {rg:'국내', op:'SEC Scrubber',  div:'파운드리',  cu:'삼성전자', ca:'H2', li:'11', tm:'B'},
+    {rg:'국내', op:'SDC Scrubber',  div:'연구소',    cu:'삼성D',    ca:'K1', li:'11', tm:'A'},
+    {rg:'해외', op:'GST TAIWAN SCRUBBER', div:'',   cu:'MICRON',   ca:'F16', li:'F16', tm:'C'},
+  ];
+  G.filters.mount({ page:'t9', rows:()=>ROWS, onChange:()=>{},
+    get:{ region:x=>x.rg, op:x=>x.op, div:x=>x.div, customer:x=>x.cu,
+          campus:x=>x.ca, line:x=>x.li, team:x=>x.tm },
+    loose:{ div:1 } });
+  const cnt = () => ROWS.filter(r => G.filters.pass(r)).length;
+  const clr = () => G.filters.clear();
+
+  clr(); is(cnt()===4, '아무것도 안 고르면 전체 (실제 '+cnt()+')');
+
+  /* 핵심: 사업부 두 개를 동시에 — 이것이 사용자가 못 하던 일이다 */
+  clr(); G.filters.toggle('div','메모리'); G.filters.toggle('div','파운드리');
+  is(cnt()===3, '사업부 둘 + loose(빈 값) = 3행이어야 (실제 '+cnt()+')');
+  is(G.filters.chosen('div').length===2, '사업부가 두 개 걸려 있어야 한다');
+
+  /* loose 확인 — 해외 행은 사업부 값이 없어 통과한다(그 축이 아예 없는 자료를 안 버린다) */
+  clr(); G.filters.toggle('div','메모리');
+  is(cnt()===2, '사업부 하나 + 값 없는 해외 1행 = 2행 (실제 '+cnt()+')');
+
+  /* 나머지 여섯 축도 «둘 고르면 둘 다» */
+  const CASES = [
+    ['region', ['국내','해외'], 4], ['op', ['SEC Scrubber','SDC Scrubber'], 3],
+    ['customer', ['삼성전자','MICRON'], 3], ['campus', ['H3','K1'], 2],
+    ['line', ['11','F16'], 4], ['team', ['A','C'], 3],
+  ];
+  CASES.forEach(([k, vals, want]) => {
+    clr(); vals.forEach(v => G.filters.toggle(k, v));
+    is(cnt()===want, k+' 두 개를 고르면 '+want+'행 (실제 '+cnt()+')');
+    is(G.filters.F[k] instanceof Set, k+' 가 Set 으로 남아야 한다');
+  });
+
+  /* 축을 섞어 걸기 — 사용자의 실제 시나리오: 사업부로 좁힌 뒤 단지를 본다 */
+  clr(); G.filters.toggle('div','메모리'); G.filters.toggle('div','연구소');
+  const camps = G.filters.options('campus');
+  is(camps.length===4, '사업부를 걸어도 단지 «목록»은 전체에서 만든다(되돌릴 수 있게)');
+  G.filters.toggle('campus','H3'); G.filters.toggle('campus','K1');
+  is(cnt()===2, '사업부 2 × 단지 2 교차 = 2행 (실제 '+cnt()+')');
+
+  /* 저장·복원이 Set 을 지키는지 */
+  G.filters.set('op', ['SEC Scrubber','SDC Scrubber']);
+  is(G.filters.chosen('op').length===2 && G.filters.F.op instanceof Set,
+     '배열로 넣어도 Set 으로 들어간다');
+  is(G.filters.hit('op','SEC Scrubber') && !G.filters.hit('op','GST TAIWAN SCRUBBER'),
+     'hit 이 두 값 모두를 안다');
+
+  /* corpLabel — 여럿 고르면 이름을 지어내지 않는다 */
+  clr(); G.filters.toggle('op','GST TAIWAN SCRUBBER');
+  is(G.corpLabel()==='GST TAIWAN', '하나 고르면 그 법인 (실제 '+G.corpLabel()+')');
+  G.filters.toggle('op','SEC Scrubber');
+  is(G.corpLabel()==='GST TAIWAN · SEC', '둘이면 이어 붙인다 (실제 '+G.corpLabel()+')');
+  G.filters.toggle('op','SDC Scrubber');
+  is(G.corpLabel()==='3개 법인', '셋 이상이면 개수로 (실제 '+G.corpLabel()+')');
+  is(!/object Set/.test(G.corpLabel()), 'Set 이 그대로 문자열이 되면 안 된다');
+  clr();
 }
 
 console.log('\n' + (fail ? '❌ t-filters ' + fail + ' 실패 / ' + (pass + fail)
