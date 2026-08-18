@@ -40,7 +40,13 @@ ok(!/QBR_SITE\s*=\s*new Set/.test(RPT), 'QBR_SITE 허용목록이 되살아났�
 ok(!/const SITES\s*=\s*\['F16'/.test(RPT), 'SITES 고정 6키가 되살아났다 — 스택 차트에서 국내가 사라진다');
 ok(!/\/F1\[016\]\|PSMC\|TASC\|WINBOND\/\.test\(GST\.upk\(String\(r\[CI\.fab\]/.test(RPT),
    '설치 FAB 대만 정규식이 되살아났다 — 국내 설비가 TO 산식에서 빠진다');
-ok(/const OROWS=\(function\(\)/.test(RPT), 'OROWS 가 다시 고정 목록이다 — 국내에서 가동현황이 전부 -');
+/* ⚠ «어떻게 생겼나»가 아니라 «무엇에서 나오나»를 본다. 예전에는 IIFE 꼴(`=(function()`)
+   을 요구했는데, 그건 지켜야 할 규칙이 아니라 그때의 생김새였다 — 행 목록을 고치자마자
+   붉게 떴다. 지켜야 할 것은 하나다: 행 목록이 «설비 자료에서» 나오고 낱말을 박아 두지 않는다. */
+ok(!/const OROWS\s*=\s*\[\s*['"]/.test(RPT),
+   'OROWS 가 다시 고정 목록이다 — 목록에 없는 값은 합계에서 조용히 사라진다');
+ok(/fINST\.forEach\(r=>\{ if\(!_isIn\(r\)\)return;[\s\S]{0,120}w\[k\]=/.test(RPT),
+   'OROWS 의 행 목록이 «설비가 실제로 있는 값»에서 만들어진다');
 ok(/corpLabel\(\)/.test(RPT) && !/:'Taiwan'\)/.test(RPT), "법인 표기 기본값이 다시 'Taiwan' 이다");
 
 /* [2] qbrOk — 허용목록이 아니라 제외목록. 새 사이트는 통과, TSMC·미기재는 탈락. */
