@@ -561,7 +561,15 @@ function rebuildFabKeys(){
 }
 /* FAB 다중선택(7키)은 라인 필터에 흡수됐다(v90). 라인은 시트의 원본값을 그대로 쓴다 —
    대만은 F16·F11 이고 국내는 U2·15B·P3-D 라, 정규화하면 국내가 통째로 빠졌다. */
-const lineOk=(raw)=>!F.lineRaw||String(raw||'').trim()===F.lineRaw;
+/* ⚠ v106 — 공용 축 일곱이 «전부» 다중선택(Set)이 됐다. syncCommon 이 그 Set 을 이 페이지의
+   F 로 그대로 옮기므로, 예전처럼 `x.op===F.op` 로 비교하면 언제나 false 라 화면이 통째로
+   빈다(에러는 하나도 안 난다 — CLAUDE.md 가 campus 에서 경고한 그 자리다).
+   판정은 campus 와 똑같이 GST.filters 한 곳만 지난다. 「고른 게 없으면 전체」도 그쪽 규칙이다. */
+const axOkF  = (k,v)=>GST.filters.hit(k, v);
+const axHas  = (k)=>GST.filters.has(k);
+const axList = (k)=>GST.filters.chosen(k);
+const axTxt  = (k)=>axList(k).join(' · ');
+const lineOk=(raw)=>axOkF('line', String(raw||'').trim());
 /* 단지는 여러 개를 동시에 고를 수 있다(v93) — 같은 설비의 단지가 자료마다 갈리기 때문이다
    (알람 시트 H3 ↔ 설치현황 H4, 실측 39건). 판정은 GST.filters 한 곳만 지난다:
    `x.campus===F.campus` 로 직접 비교하면 Set 이 된 순간 조용히 전부 false 가 된다. */
@@ -588,16 +596,16 @@ window.editFit=function(k){
 function updateFiltBadge(){
   const b=document.getElementById('filtBadge'); if(!b)return;
   const P=[];
-  if(F.region)P.push(t('sl_region')+': '+F.region);
-  if(F.op)P.push('운영단위: '+F.op);
+  if(axHas('region'))P.push(t('sl_region')+': '+axTxt('region'));
+  if(axHas('op'))P.push('운영단위: '+axTxt('op'));
   if(F.country)P.push(t('sl_country')+': '+F.country);
   if(F.inout)P.push('내/외: '+(F.inout==='out'?'외부·외적만':'전체(내+외)'));
   if(F.krBasis==='fiscal')P.push('월 기준: 시트 정산월');
   if(F.krOrg==='sheet')P.push('관리담당: 알람시트 기준');
-  if(F.customer)P.push(t('sl_customer')+': '+F.customer);
+  if(axHas('customer'))P.push(t('sl_customer')+': '+axTxt('customer'));
   if(campOn())P.push('단지: '+campList().join(' · '));
-  if(F.lineRaw)P.push('라인: '+F.lineRaw);
-  if(F.team)P.push('팀: '+F.team);
+  if(axHas('line'))P.push('라인: '+axTxt('line'));
+  if(axHas('team'))P.push('팀: '+axTxt('team'));
   if(F.dtFrom||F.dtTo)P.push((F.dtFrom||'…')+' ~ '+(F.dtTo||'…'));
   if(!P.length){b.style.display='none';b.innerHTML='';return;}
   b.style.display='flex';
@@ -1247,9 +1255,23 @@ async function loadData(){
         phenom:String(r[CW.phenom]||'').trim(),action:String(r[CW.action]||'').trim(),
         manMin:manMin,   // 값 그대로 합산 — 상한/이상치 제거 없음(엑셀 매크로와 동일)
         workMin:workMin,
+        eqNo:String(r[CW.eqNo]||'').trim(),
         workers:String(r[CW.workers]||'').split(/[,、;/]+/).map(s=>s.trim()).filter(Boolean)};
     }).filter(Boolean):[];
     INST = inst.status==='fulfilled'?inst.value.rows.slice(HI_INST+1).filter(r=>String(r[CI.sn]||'').trim()):[];
+    /* 실적에 «사업부»를 실어 준다 — 설치현황에만 있는 열이라 조인해야 얻는다.
+       설비호기 → S/N 순으로 찾는 것은 Floor 조인과 같은 규약(GST.ORG.instIndex).
+       ⚠ 한 번만 만든다. rows() 는 필터를 만질 때마다 불리므로 거기서 조인하면
+         25만 행 × 매 조작이 된다. */
+    if(INST.length){
+      const _ix = GST.ORG.instIndex(inst.value.rows, CI, HI_INST);
+      let _hit = 0;
+      WK.forEach(function(x){
+        const r = _ix.find(x.eqNo, x.sn);
+        if(r && r.div){ x.div = r.div; _hit++; }
+      });
+      window._DIVJOIN = { n: WK.length, hit: _hit };   // 조인율은 화면에 밝힌다(조용히 빼지 않는다)
+    }
     krJoin(KRA, INST, CI); krJoin(KRB, INST, CI);   // 조직 축은 설치현황에서 — CI 가 확정된 뒤여야 한다
     const cached=(hr.status==='fulfilled'&&hr.value.cached)||(wk.status==='fulfilled'&&wk.value.cached);
     const _wkDrop=Math.max(0,_wkRaw-WK.length);   // 작업단계·작업일 공란으로 집계 제외된 행
@@ -1299,7 +1321,13 @@ function fillFilters(){
   GST.filters.mount({ page:'report', rows:function(){
       const out=[];
       /* 실적에는 사업부 열이 없다 — 빈 값으로 넘겨 목록에 안 뜨게 한다(짐작해 채우지 않는다). */
-      WK.forEach(function(x){ out.push({region:x.region,op:x.op,customer:x.custB,div:'',campus:x.campus,line:x.line}); });
+      /* ⚠ 사업부는 «설치현황에만» 있는 열이다. 예전에는 실적 행에 `div:''` 를 넣었는데,
+         사업부가 loose 축이라 빈 값은 전부 통과한다 — 그래서 **사업부를 바꿔도 실적 기반
+         건수가 하나도 안 움직였다**(사용자 보고). 설비 S/N 으로 설치현황을 조인해 얻는다
+         (Floor·CIP 와 같은 규약). 못 붙는 행은 빈 값 그대로 두어 loose 로 통과시킨다 —
+         버리면 «사업부를 고르면 실적이 반으로 준다»가 된다. */
+      WK.forEach(function(x){ out.push({region:x.region,op:x.op,customer:x.custB,
+        div:x.div||'', campus:x.campus,line:x.line}); });
       INST.slice(HI_INST+1).forEach(function(r){
         out.push({ region:GST.ORG.region(r[CI.country]), op:String(r[CI.country]||'').trim(), customer:custBase(r[CI.customer]),
                    div:String((CI.div>=0?r[CI.div]:'')||'').trim(),
@@ -1346,9 +1374,9 @@ function render(){
   // PPT 내보내기용 스냅샷(표시 전용) — 각 블록이 렌더 값 그대로 채움
   window._PPT={asOf:asOf.toISOString().slice(0,10),wk:'W'+isoW(asOf).slice(-2)};
   const from=F.dtFrom?pd(F.dtFrom):null;
-  const entOk=x=>(!F.region||(x.region||GST.ORG.region(x.op||''))===F.region)
-    &&(!F.op||String(x.op||'').trim()===F.op)
-    &&(!F.country||x.country===F.country)&&(!F.customer||x.custB===F.customer)
+  const entOk=x=>axOkF('region',(x.region||GST.ORG.region(x.op||'')))
+    &&axOkF('op',String(x.op||'').trim())
+    &&(!F.country||x.country===F.country)&&axOkF('customer',x.custB)
     &&campOk(x.campus)&&lineOk(x.line);
   // QBR 매크로 정합: 작업내역은 사이트 키 행만 집계(라인 미기재·기타 행 제외) — 매크로 NarrowUp과 동일
   // 라인 열만으로 판정하면 PSMC처럼 라인 표기가 다른 사이트 행이 누락된다 → 라인+고객사 통합 판정
@@ -1403,9 +1431,9 @@ function render(){
      설치현황을 쓴다 — 원장에는 그 축이 아예 없다. */
   const krCampusOf=x=>F.krOrg==='sheet' ? (x.srcSite||x.campus||'') : (x.campus||x.srcSite||'');
   const krLineOf  =x=>F.krOrg==='sheet' ? (x.srcLine||x.lineN ||'') : (x.lineN ||x.srcLine||'');
-  const krOk=x=>(!F.region||x.region===F.region)&&(!F.op||x.op===F.op)
+  const krOk=x=>axOkF('region',x.region)&&axOkF('op',x.op)
     &&(!F.country||GST.ORG.country(x.op)===F.country)
-    &&(!F.customer||x.custB===F.customer)&&campOk(krCampusOf(x))&&lineOk(krLineOf(x))
+    &&axOkF('customer',x.custB)&&campOk(krCampusOf(x))&&lineOk(krLineOf(x))
     &&(!_fromS||(x.d&&x.d>=_fromS))&&(!_toS||(x.d&&x.d<=_toS));
   /* 원장에 해외 설비로 조인되는 행이 섞여 들어오면 대만은 «수선실적 BM + 원장» 으로
      이중 계산된다. 이 원장은 국내용이라는 약속이므로, 해외로 판정된 행만 뺀다
@@ -1468,10 +1496,10 @@ function render(){
                     wd:x.d?new Date(x.d+'T00:00:00Z'):null});
   const fINST=INST.filter(r=>{
     const c=GST.ORG.country(r[CI.country])||guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();
-    if(F.region&&GST.ORG.region(r[CI.country])!==F.region)return false;
-    if(F.op&&String(r[CI.country]||'').trim()!==F.op)return false;
+    if(!axOkF('region',GST.ORG.region(r[CI.country])))return false;
+    if(!axOkF('op',String(r[CI.country]||'').trim()))return false;
     if(F.country&&c!==F.country)return false;
-    if(F.customer&&custBase(r[CI.customer])!==F.customer)return false;
+    if(!axOkF('customer',custBase(r[CI.customer])))return false;
     if(!campOk(GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country])))return false;
     if(!lineOk(r[CI.fab]))return false;
     return true;
@@ -1520,7 +1548,7 @@ function render(){
   INST.forEach(r=>{const cu=normCust(r[CI.customer]);
     if(cu&&!C2C[cu])C2C[cu]=guessCountry(r[CI.country])||String(r[CI.country]||'').trim().toUpperCase();});
   const siteCountry=siteCountryStatic;
-  const okCF=(cb,fb)=>(!F.customer||cb===F.customer)&&(!F.country||siteCountry(fb||cb)===F.country);
+  const okCF=(cb,fb)=>axOkF('customer',cb)&&(!F.country||siteCountry(fb||cb)===F.country);
   /* 인원은 근무지 어휘로 국가를 못 맞힌다(국내 Work Place 는 'P1'·'A3'·'청주' 처럼 사이트 코드다).
      그래서 행에 실어둔 region(중문명·Dept·사번 다수결)을 쓴다. */
   /* 인원현황에는 운영단위 열이 없다. 그래서 «운영단위 → 그 운영단위가 쓰는 단지·라인 집합»을
@@ -1534,7 +1562,7 @@ function render(){
      평택의 단지도 P1·P2·P3 라, 대만을 걸면 국내 평택 인원이 딸려 왔다.
      운영단위가 빈 사람은 운영단위를 고를 때 빠진다 — 사용자 확정이고, 실측상 그 85명은
      거의 전부 현장(O)이 아니라 운영지표 분모에도 안 들어간다. */
-  const opPerson=p=>!F.op || String(p.op||'').trim()===F.op;
+  const opPerson=p=>axOkF('op',String(p.op||'').trim());
   /* 단지 조건이 여기 빠져 있었다 — 실적(entOk)·설치(fINST)에는 넣고 인원만 안 넣어서,
      단지를 골라도 인원이 안 줄었다(단지=PSMC 인데 재직 47명). 같은 모집단을 서로 다른
      술어로 거르면 카드끼리 숫자가 갈린다. */
@@ -1550,16 +1578,19 @@ function render(){
      통과시키면 필터를 걸어도 안 줄어 카드끼리 모집단이 갈린다. */
   const okCIP=x=>{
     const f=String(x.fab||'').trim();
-    if(F.op){ const st=LINE2OP[f]; if(!st||!st.has(F.op))return false; }
-    if(F.region && GST.ORG.region(GST.ORG.country(f)||'')!==F.region) return false;
+    /* 여럿 고르면 «그중 하나라도» 그 FAB 을 관장하면 본다 — 교집합이 비면 해당 없음. */
+    if(axHas('op')){ const st=LINE2OP[f]; if(!st||!axList('op').some(o=>st.has(o)))return false; }
+    if(!axOkF('region', GST.ORG.region(GST.ORG.country(f)||''))) return false;
     if(!campOk(f)) return false;
-    if(F.lineRaw && f!==F.lineRaw) return false;
+    if(!axOkF('line', f)) return false;
     return okCF(x.custB,x.fab);
   };
   // ABP 는 대만 전용 집계다 — 대만이 아닌 운영단위·구분을 고르면 해당 없음
   const abpOn=()=>{
-    if(F.op && GST.ORG.country(F.op)!=='TAIWAN') return false;
-    if(F.region && F.region!==GST.ORG.REGION_OS) return false;
+    /* 여럿 고르면 «하나라도 대만이면» 본다 — 전부 대만이 아닐 때만 해당 없음.
+       (단지 판정이 바로 아래에서 이미 그 규율이다 — 두 축이 다른 규율을 쓰면 설명이 안 된다.) */
+    if(axHas('op') && !axList('op').some(o=>GST.ORG.country(o)==='TAIWAN')) return false;
+    if(axHas('region') && !axList('region').includes(GST.ORG.REGION_OS)) return false;
     // 여러 단지를 골랐으면 «그중 하나라도 대만이면» 본다 — 전부 국내일 때만 해당 없음
     if(campOn() && !campList().some(c=>GST.ORG.country(c)==='TAIWAN')) return false;
     return true;
@@ -1569,10 +1600,10 @@ function render(){
      (국내 인원은 Basic·Veteran 완료일 자체가 없다). 신입/기존 구분은 그대로 둔다. */
   const eduKey=(p,lv)=> (p&&p.region===GST.ORG.REGION_KR)
     ? (lv===1?'lv2date':'lv3date') : (lv===1?'bdate':'vdate');
-  const okP=p=>opPerson(p)&&(!F.customer||p.custB===F.customer)
+  const okP=p=>opPerson(p)&&axOkF('customer',p.custB)
     &&campOk(p.campus)&&lineOk(p.wp)
-    &&(!F.team||p.team===F.team)
-    &&(!F.region||p.region===F.region)
+    &&axOkF('team',p.team)
+    &&axOkF('region',p.region)
     &&(!F.country||(p.country||siteCountry(p.fab||p.custB))===F.country);
   // Alarm·고장 차트 전용 라인 필터 — 체크박스 선택(비면 전체) · PPT Alarm 차트도 동일 적용
   /* Alarm·고장 차트도 좌측 라인 필터를 그대로 따른다. FAB 다중선택이 라인 단일 선택으로
@@ -1582,13 +1613,13 @@ function render(){
   const abpSel=bkt=>{ if(!bkt||!abpOn())return 0;
     /* ABP 는 라인 원본값이 아니라 7키(F16·PSMC…)로 집계돼 있다. 라인을 고르면 그 키로
        환산해 고르되, 환산이 안 되는 국내 라인은 0 이 아니라 «해당 없음»으로 둔다. */
-    if(F.lineRaw){ const k=lineKeyOf(F.lineRaw,F.lineRaw);
-      if(!k) return 0;
-      if(k==='PSMC')return (bkt.byC.POWERCHIP||bkt.byC.PSMC||0);
-      if(k==='TASC')return (bkt.byC.TASC||0);
-      if(k==='WINBOND')return (bkt.byC.WINBOND||0);
-      return (bkt.byF[k]||0); }
-    if(F.customer)return bkt.byC[F.customer]||0;
+    /* 라인을 여럿 고르면 «환산되는 것들의 합»이다. 환산이 안 되는 국내 라인은 0 으로
+       더해진다(해당 없음) — 여기서 버리면 고른 대만 라인까지 같이 사라진다. */
+    const one=k=> k==='PSMC' ? (bkt.byC.POWERCHIP||bkt.byC.PSMC||0)
+               : k==='TASC' ? (bkt.byC.TASC||0)
+               : k==='WINBOND' ? (bkt.byC.WINBOND||0) : (bkt.byF[k]||0);
+    if(axHas('line')) return axList('line').reduce((a,raw)=>{ const k=lineKeyOf(raw,raw); return a+(k?one(k):0); },0);
+    if(axHas('customer')) return axList('customer').reduce((a,c)=>a+(bkt.byC[c]||0),0);
     return bkt.ALL||0; };
   // 인력 기준: 인원현황(입·퇴사일 보유) 우선, 없으면 교육현황 · 고객사/국가 필터 연동
   // 폴백(교육현황) 레코드에는 onsite가 없고 quit이 boolean이라, 그대로 쓰면
@@ -1607,7 +1638,7 @@ function render(){
     if(!okP(p))return null;               // 구분·국가 필터를 인원 기준으로 그대로 적용
     return {date:x.date,days:x.days,custB:p.custB,fab:p.fab};
   }).filter(Boolean);
-  const fEDU=HR.filter(p=>okCF(p.custB,p.fab)&&(!F.region||!p.region||p.region===F.region));
+  const fEDU=HR.filter(p=>okCF(p.custB,p.fab)&&(!p.region||axOkF('region',p.region)));
   /* QBR 매크로 정합: 운영지표(출근·공수·인당) 분모는 «사이트 소속» 인원만 — 근무지 미기재·TSMC 제외.
      ⚠ 예전에는 대만 사이트 8개를 적어 둔 «허용목록»이었다. 국내(P1·A3·청주…) 인원이 들어오자
        그 목록에 하나도 없어 통째로 빠졌고, 국내 필터를 걸면 재직 인원·공수·인당챔버가 전부 0 이 됐다.
@@ -1837,7 +1868,6 @@ function render(){
     const wait=document.getElementById('opsWait');
     if(wait)wait.style.display=ready?'none':'block';
     if(ready){
-      const cust=F.customer;
       // 목록 버전(headL·chRows)을 따로 두는 이유: 세부내역($rows)이 술어를 복제하면
       // 한쪽만 고쳐질 때 막대 수와 클릭 목록 수가 조용히 어긋난다 — 술어는 한 벌만 둔다.
       /* okCF 가 아니라 okP 를 쓴다 — okCF 에는 구분(국내/해외) 조건이 없어서, 국내를 걸어도

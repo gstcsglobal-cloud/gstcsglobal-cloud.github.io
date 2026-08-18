@@ -1742,7 +1742,7 @@ function render(){ GST.skeleton(false); GST.pushState(F);
   mkBarV('cLine',lines.slice(0,10).map(x=>x[0]),lines.slice(0,10).map(x=>x[1]),TH.pal[0],
     {onClick:(evt,els)=>{if(!els.length)return;const l=lines[els[0].index][0];
       // 막대 클릭 = 그 라인으로 좁히기(같은 값을 다시 누르면 해제) — 공통 필터와 같은 상태를 쓴다
-      GST.filters.F.line=(GST.filters.F.line===l)?'':l; GST.filters.refresh();
+      GST.filters.toggle('line', l); GST.filters.refresh();
       syncSlicerUI();render();}});
 
   const pfB=document.getElementById('pfBar'); if(pfB)pfB.style.width=pfp+'%';
@@ -2171,7 +2171,7 @@ window.setSubAxis=function(k){
 window.drillSub=function(v){
   if(SUB_AXIS==='fab'){
     // FAB 축은 라인 필터로 흡수됐다(v90) — 같은 값을 다시 누르면 해제
-    GST.filters.F.line=(GST.filters.F.line===v)?'':v; GST.filters.refresh();
+    GST.filters.toggle('line', v); GST.filters.refresh();
   }else{
     const key={subproc:'subproc',proc:'proc',model:'model'}[SUB_AXIS];
     if(!key)return;
