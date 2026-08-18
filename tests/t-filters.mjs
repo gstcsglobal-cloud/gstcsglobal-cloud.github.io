@@ -255,8 +255,12 @@ console.log('\n[7-3] 단지는 여러 개를 동시에 고를 수 있다 (Set) �
      'core — 옛 복원(F[k]=new Set)이 되살아나지 않았다');
   is(/const st = \(GST\._msel && GST\._msel\[id\]\) \|\| \{ sel: sel, cb: onChange \}/.test(CORE),
      'core — 클릭 핸들러가 「지금의」 Set 을 GST._msel 에서 꺼낸다');
-  is(/set: function\(k, v\)\{/.test(CORE) && /toggle: function\(k, v\)\{/.test(CORE) && /hit: function\(k, v\)\{/.test(CORE),
+  /* 이름만 보고 «있다»고 하지 않는다 — set 은 본문이 setK 로 빠져도 되지만,
+     그 본문이 MULTI 축을 Set 으로 다루는 것은 그대로여야 한다(문자열이 되면 .has 가 죽는다). */
+  is(/(set: function\(k, v\)\{|set: setK,)/.test(CORE) && /toggle: function\(k, v\)\{/.test(CORE) && /hit: function\(k, v\)\{/.test(CORE),
      'core — 페이지가 쓸 안전한 API(set·toggle·hit)가 있다');
+  is(/if\(MULTI\[k\]\)\{ F\[k\]\.clear\(\); \(Array\.isArray\(v\)\?v:\(v\?\[v\]:\[\]\)\)\.forEach/.test(CORE),
+     'core — set 본문이 다중 축을 여전히 Set 으로 채운다');
   // 음성 대조 — 페이지가 campus 를 문자열처럼 다루면 조용히 전부 false 가 된다
   // 주석은 뺀다 — 「이렇게 쓰지 말 것」이라 적어 둔 설명이 검사에 걸리면 안 된다
   const nocom = t => t.replace(/\/\*[\s\S]*?\*\//g, '');

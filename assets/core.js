@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 102;
+GST.VER = 103;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -2629,7 +2629,46 @@ GST.filters = (function(){
      생겼을 때 목록에 없는 행이 필터에서 통째로 사라진다 — 에러 없이.
      drop: 값이긴 한데 그 축의 값이 아닌 것(라인 칸에 든 '라인장'·'주재원' 같은 직무).
      걸러도 그 행이 사라지지는 않는다 — 목록에서만 안 보인다. */
+  function setK(k, v){
+    if(!(k in F)) return;
+    if(MULTI[k]){ F[k].clear(); (Array.isArray(v)?v:(v?[v]:[])).forEach(function(x){ F[k].add(x); }); }
+    else F[k] = v || '';
+    save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
+  }
+
+  /* ── 자동순회(키오스크)가 이 페이지의 필터를 «빌려 쓴다» ──
+     세 가지가 한 곳에 있어야 한다. 흩어 두면 각각이 조용히 틀린다:
+     ① **mount 전에 온 값은 보류한다.** 탭은 지연 로딩이고 mount 는 25만행을 다 받은 뒤에
+        불린다. 그 전에 값을 넣으면 뒤늦은 load() 가 저장본으로 덮어써서 «하단바는 H1,
+        화면은 남의 단지»가 된다. 셸이 1.2초 뒤 한 번 더 보내는 것으로는 원리적으로 못 맞춘다.
+     ② **사람 필터 기준선은 load() «다음»에 잡는다.** mount 전 빈 값을 기준선으로 잡으면,
+        순회를 끄는 순간 사람이 걸어 둔 필터가 사라진다(복원이 오히려 지운다).
+     ③ **정말로 걸렸는지 돌려준다.** 그 페이지 자료에 없는 값은 fill/fillMulti 가 버리는데
+        (빈 Set·빈 문자열), 그 상태가 곧 «전체»다. 알려주지 않으면 벽 화면이 「H1」이라 적고
+        전사 합계를 보여준다 — 지나가는 사람은 그걸 H1 숫자로 읽는다. */
+  let KPEND = null, KSAVED = null;
+  function kioskSet(k, v){
+    if(!(k in F)) return { applied:false, why:'noaxis' };
+    if(!CFG){ KPEND = { k:k, v:v }; return { applied:false, why:'loading' }; }
+    if(!KSAVED){ const cur = F[k]; KSAVED = { k:k, v:(cur instanceof Set) ? Array.from(cur) : cur }; }
+    /* «걸렸나»를 F 로 확인하면 안 된다 — 목록에서 버리는 일은 fill/fillMulti(=DOM)가 하므로
+       사이드바가 아직 없거나 접힌 상황에서는 F 에 값이 남아 «걸린 척»이 된다.
+       물어야 할 것은 하나다: 이 페이지 자료에 그 값이 있는가. */
+    const known = opts(k).indexOf(String(v)) >= 0;
+    setK(k, v);
+    if(!v) return { applied:true, why:'' };
+    return { applied:known, why: known ? '' : 'nodata' };
+  }
+  function kioskRestore(){
+    KPEND = null;
+    if(!KSAVED || !CFG) { KSAVED = null; return; }
+    const sv = KSAVED; KSAVED = null; setK(sv.k, sv.v);
+  }
+
   function opts(key, narrow){
+    /* mount 전에도 불릴 수 있다 — options() 가 공개 API 라 셸이 언제든 물어본다.
+       CFG 가 null 이면 예외가 아니라 «아직 아는 값이 없다»(빈 배열)가 맞다. */
+    if(!CFG) return [];
     const g = (CFG.get||{})[key], rows = (CFG.rows && CFG.rows()) || [];
     if(!g) return [];
     const dr = (CFG.drop||{})[key];
@@ -2726,6 +2765,9 @@ GST.filters = (function(){
   /* ⚠ JSON.stringify(new Set) 은 '{}' 다 — 배열로 눕혀 저장하고 되살릴 때 Set 으로 되돌린다.
      그냥 Object.assign 으로 복원하면 F.campus 가 빈 객체가 되어 .has 가 사라진다(실제로 죽었다). */
   function save(){ try{
+    /* mount 전에는 KEY 가 '' 다. 그대로 쓰면 «빈 이름» 키에 남의 페이지 값이 섞여 들어가고,
+       정작 이 페이지 저장본은 안 바뀐다 — 저장한 줄 알았는데 안 된 상태가 된다. */
+    if(!KEY) return;
     const o={}; Object.keys(F).forEach(function(k){ o[k]=MULTI[k]?Array.from(F[k]):F[k]; });
     localStorage.setItem(KEY, JSON.stringify(o));
   }catch(e){} }
@@ -2780,6 +2822,9 @@ GST.filters = (function(){
     mount: function(cfg){
       CFG = cfg || {}; KEY = 'gst_bf_' + (CFG.page||'x');
       load();
+      /* 순회가 로딩 중에 보낸 값이 있으면 지금 적용한다 — 기준선도 여기서 잡혀야
+         «사람이 걸어 둔 값»이 기준이 된다(위 kioskSet 주석 ②). */
+      if(KPEND){ const kp = KPEND; KPEND = null; kioskSet(kp.k, kp.v); }
       const box = document.querySelector('.slicers'); if(!box) return;
       if(!document.getElementById('gf-region')){
         const own = [].slice.call(box.children);
@@ -2797,6 +2842,8 @@ GST.filters = (function(){
        ⚠ 목록을 셸에 박지 말 것 — 대만 전용 목록으로 국내가 통째로 사라졌던 v89 그대로다.
        종속(narrow)을 걸지 않는다: 지금 걸린 필터와 무관하게 «이 자료에 있는 전부»를 돌아야 한다. */
     options: function(k){ return opts(k); },
+    ready: function(){ return !!CFG; },
+    kioskSet: kioskSet, kioskRestore: kioskRestore,
     /* 기본 필터 술어. 페이지의 filt() 맨 앞에 한 줄로 넣는다. */
     /* opt.noDate — 기간 조건만 건너뛴다. 설치현황의 «미가동 목록»처럼 «그 기간에 가동을
        시작하지 않은» 설비를 봐야 하는 카드가 있다. 축 조건은 그대로 걸린다 — 기간만 뺀다. */
@@ -2824,12 +2871,7 @@ GST.filters = (function(){
     },
     /* 축 하나만 끄거나 켠다. 페이지가 `GST.filters.F[k]=''` 를 직접 쓰면 다중 축에서
        Set 이 문자열로 바뀌어 그다음 `.has` 가 TypeError 로 죽는다 — 여기로만 지나가게 한다. */
-    set: function(k, v){
-      if(!(k in F)) return;
-      if(MULTI[k]){ F[k].clear(); (Array.isArray(v)?v:(v?[v]:[])).forEach(function(x){ F[k].add(x); }); }
-      else F[k] = v || '';
-      save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
-    },
+    set: setK,
     // 차트 드릴용 — 같은 값을 다시 누르면 해제. 다중 축은 «그 값만» 토글한다.
     toggle: function(k, v){
       if(!(k in F)) return;
@@ -3275,20 +3317,16 @@ window.addEventListener('message', function(e){
       {type:'gst-kiosk-a', axis:ax, list:list, ver:GST.VER, page:(GST._pageId||location.pathname)}, '*'); }catch(x){}
     return; }
   if(d.type==='gst-kiosk-set'){
-    try{
-      const k=d.axis||'campus';
-      if(!GST._kioskSaved){
-        /* 축마다 그릇이 다르다 — 단지는 Set, 나머지는 문자열. 원래 «생김새 그대로» 담아야
-           복원할 때 되돌려 놓을 수 있다(Set 을 문자열로 되돌리면 그다음 .has 가 TypeError). */
-        const cur=GST.filters.F[k];
-        GST._kioskSaved={k:k, v:(cur instanceof Set)?Array.from(cur):cur};
-      }
-      /* set() 을 지나야 한다 — 문자열 하나를 줘도 다중 축이면 알아서 Set 에 넣는다. */
-      GST.filters.set(k, d.value||'');
-    }catch(x){}
+    /* 걸었는지를 «반드시» 돌려준다. 그 페이지 자료에 없는 값은 조용히 버려져 «전체»가
+       되는데, 셸이 그걸 모르면 하단바가 틀린 사이트 이름을 적극적으로 주장하게 된다. */
+    let r = { applied:false, why:'err' };
+    try{ r = GST.filters.kioskSet(d.axis||'campus', d.value||''); }catch(x){}
+    try{ (e.source||window.parent).postMessage(
+      {type:'gst-kiosk-ack', axis:d.axis||'campus', value:d.value||'',
+       applied:!!r.applied, why:r.why||''}, '*'); }catch(x){}
     return; }
   if(d.type==='gst-kiosk-restore'){
-    try{ if(GST._kioskSaved){ GST.filters.set(GST._kioskSaved.k, GST._kioskSaved.v); GST._kioskSaved=null; } }catch(x){}
+    try{ GST.filters.kioskRestore(); }catch(x){}
     return; }
 });
 

@@ -33,12 +33,34 @@ global.document = { createElement:el, getElementById:()=>null, querySelector:()=
 const LISTEN=[];
 global.window = { addEventListener:(t,fn)=>{ if(t==='message') LISTEN.push(fn); },
   location:{href:'',search:''}, self:{}, top:{}, parent:{postMessage:(m)=>MSG.push(m)},
-  localStorage:{getItem:()=>null,setItem(){},removeItem(){}}, matchMedia:()=>({matches:false,addEventListener(){}}) };
+  localStorage:(function(){ const M=new Map(); return {
+    getItem:k=>M.has(k)?M.get(k):null, setItem:(k,v)=>M.set(k,String(v)), removeItem:k=>M.delete(k),
+    _map:M }; })(), matchMedia:()=>({matches:false,addEventListener(){}}) };
 global.window.self = global.window.top = global.window;
 global.localStorage = global.window.localStorage;
 global.location = global.window.location;
 try { new Function(fs.readFileSync(ROOT+'/assets/core.js','utf8'))(); } catch(e){ console.log('core.js 로드 경고:', e.message); }
 const GST = global.window.GST || global.GST;
+
+/* ── [1-2] 자료 로딩 중인 탭에 값이 도착해도 «사람 필터»를 지우지 않는지 ──
+   실제 결함이었다: mount 전에 값이 오면 ① 기준선이 «빈 값»으로 잡히고 ② 뒤늦은 load() 가
+   순회 값을 덮고 ③ 순회를 끄면 사람 필터가 사라졌다. 벽 화면은 첫 바퀴 내내 라벨과 다른
+   단지를 보여줬다. */
+console.log('[1-2] 로딩 중인 탭에 값이 와도 사람 필터가 살아남는지');
+{
+  // 사람이 이 페이지에서 H3 를 골라 저장해 둔 상태
+  global.localStorage.setItem('gst_bf_t3', JSON.stringify({campus:['H3']}));
+  // 아직 mount 전 — 순회가 F16 을 보낸다
+  const r = GST.filters.kioskSet('campus','F16');
+  ok(r.applied===false && r.why==='loading', 'mount 전에는 «아직 못 걸었다»고 답해야 한다 (실제 '+JSON.stringify(r)+')');
+  ok(global.localStorage.getItem('')===null, 'mount 전에는 «빈 이름» 키로 저장하면 안 된다');
+  GST.filters.mount({page:'t3', rows:()=>[{c:'H3'},{c:'F16'},{c:'H1'}], onChange:()=>{}, get:{campus:x=>x.c}});
+  ok(GST.filters.chosen('campus').join()==='F16', 'mount 되면 보류해 둔 값이 적용돼야 한다 (실제 '+GST.filters.chosen('campus').join()+')');
+  GST.filters.kioskRestore();
+  ok(GST.filters.chosen('campus').join()==='H3',
+     '복원은 «사람이 걸어 둔 H3» 여야 한다 — 빈 값으로 돌리면 필터가 사라진다 (실제 '+GST.filters.chosen('campus').join()+')');
+}
+
 
 /* 지어낸 행 — 단지가 다섯. 국내(H·P)와 해외(F16)를 섞어 «목록을 박으면 걸리게» 한다. */
 const ROWS=[{c:'H1'},{c:'H2'},{c:'H3'},{c:'P1'},{c:'F16'},{c:'H1'},{c:''}];
@@ -96,6 +118,33 @@ ok(GST.filters.F.op==='GST TAIWAN SCRUBBER', '운영단위는 문자열로 걸�
 fire({type:'gst-kiosk-restore'});
 ok(GST.filters.F.op==='SEC Scrubber', '문자열 축도 원래 값으로 돌아와야 한다 (실제 '+JSON.stringify(GST.filters.F.op)+')');
 ok(typeof GST.filters.F.op==='string', '문자열 축이 배열로 바뀌면 안 된다');
+
+/* ── [1-3] 그 페이지 자료에 없는 값은 «걸린 척» 하지 않는지 ──
+   목록에 없는 선택값은 fill/fillMulti 가 버리고, 빈 Set 은 pass() 에서 «전체»다.
+   알려주지 않으면 벽 화면이 「H1」이라 적고 전사 합계를 보여준다. */
+console.log('[1-3] 자료에 없는 값을 «걸렸다»고 하지 않는지');
+{
+  GST.filters.mount({page:'t4', rows:()=>[{c:'F11'},{c:'F16'}], onChange:()=>{}, get:{campus:x=>x.c}});
+  GST.filters.set('campus', []);
+  const r = GST.filters.kioskSet('campus','H1');    // 이 페이지에는 H1 자료가 없다
+  ok(r.applied===false && r.why==='nodata',
+     '자료에 없는 값은 applied=false 여야 한다 (실제 '+JSON.stringify(r)+')');
+  const r2 = GST.filters.kioskSet('campus','F16');
+  ok(r2.applied===true, '자료에 있는 값은 applied=true 여야 한다 (실제 '+JSON.stringify(r2)+')');
+  fire({type:'gst-kiosk-restore'});
+}
+
+/* 메시지 경로로도 ack 가 나가는지 */
+{
+  GST.filters.mount({page:'t5', rows:()=>[{c:'F11'}], onChange:()=>{}, get:{campus:x=>x.c}});
+  MSG.length=0; fire({type:'gst-kiosk-set', axis:'campus', value:'H9'});
+  const ack=MSG.find(m=>m.type==='gst-kiosk-ack');
+  ok(ack && ack.applied===false && ack.why==='nodata', '셸에 ack 를 돌려줘야 한다 (실제 '+JSON.stringify(ack)+')');
+  MSG.length=0; fire({type:'gst-kiosk-set', axis:'campus', value:'F11'});
+  const ack2=MSG.find(m=>m.type==='gst-kiosk-ack');
+  ok(ack2 && ack2.applied===true, '걸렸으면 applied=true 로 답해야 한다');
+  fire({type:'gst-kiosk-restore'});
+}
 
 /* ══════════════════════════════════════════════════════════════
    [2] 셸 엔진 — 실제 브라우저로 돌린다
@@ -283,7 +332,8 @@ ok(/kioskFillCamps\(true\)/.test(SHELL) && /setTimeout\(\(\)=>kioskFillCamps\(tr
 
 ok(/fullscreenchange/.test(SHELL), 'F11 로 전체화면만 빠져나가도 머리가 돌아와야 한다');
 const CORE=fs.readFileSync(ROOT+'/assets/core.js','utf8');
-ok(/GST\.filters\.set\(k,/.test(CORE), '축 값은 filters.set 을 지나야 한다(Set 안전)');
+ok(/GST\.filters\.kioskSet\(/.test(CORE), '순회 값은 filters 의 전용 통로를 지나야 한다(보류·기준선·적용여부가 한 곳)');
+ok(/if\(!KEY\) return;/.test(CORE), 'mount 전에는 저장하지 않아야 한다 — 빈 이름 키로 새면 저장본이 섞인다');
 ok(/cur instanceof Set/.test(CORE), '축마다 그릇이 다르다 — Set/문자열을 «생긴 대로» 저장해야 복원된다');
 ok(!/F\.campus\s*=\s*[^=]/.test(CORE.split('const F = {')[1]||''), 'F.campus 에 직접 대입하면 안 된다');
 

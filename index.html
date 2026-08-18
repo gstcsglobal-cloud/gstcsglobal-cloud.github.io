@@ -152,6 +152,7 @@ body.kiosk-on .kiosk-bar{display:flex}
 .kiosk-bar .kk-now{font-size:19px;font-weight:800;letter-spacing:-.01em}
 .kiosk-bar .kk-camp{color:var(--accent,#2DD4BF)}
 .kiosk-bar .kk-next{color:#8B98A9;font-weight:500;font-size:12px}
+.kiosk-bar .kk-why{color:#fbbf24;font-weight:700;font-size:12px}
 .kiosk-bar .kk-pos{margin-left:auto;color:#8B98A9;font-weight:500;font-size:12px}
 .kiosk-bar .kk-hint{color:#5E6D80;font-weight:500;font-size:11px}
 .kiosk-prog{position:absolute;left:0;top:0;height:2px;background:var(--accent,#2DD4BF);width:0}
@@ -246,6 +247,7 @@ body.kiosk-full .kiosk-panel{display:none}
 <div class="kiosk-bar" id="kioskBar">
   <div class="kiosk-prog" id="kkProg"></div>
   <div class="kk-now"><span class="kk-camp" id="kkCamp">—</span> <span id="kkPage"></span></div>
+  <span class="kk-why" id="kkWhy" style="display:none"></span>
   <div class="kk-next" id="kkNext"></div>
   <div class="kk-pos" id="kkPos"></div>
   <div class="kk-hint" id="kkHint">Esc 종료</div>
@@ -330,7 +332,7 @@ function lt(k){return (L[LANG]||L.ko)[k]||k;}
    자료 갱신은 따로 안 한다 — 페이지가 이미 GST.startAutoRefresh(30) 으로 30분마다 받는다.
    ============================================================ */
 const KIOSK = {on:false, sec:15, axis:'campus', list:[], i:0, timer:null, raf:0, wake:null,
-               vals:[], pages:[], full:true, wentFull:false, askT:null, replies:0};
+               vals:[], byTab:{}, pages:[], full:true, wentFull:false, askT:null, replies:0, step:0};
 const KK_SECS = [10,15,30,60];
 /* 순회 기준 축. «사이트별» 을 사람마다 다르게 뜻한다 — 국내는 단지(H1·P2), 해외는
    법인(GST TAIWAN)이 곧 그 단위다. 그래서 고르게 한다. 값 목록은 어느 축이든
@@ -359,12 +361,28 @@ function kioskAsk(){
 }
 window.addEventListener('message',e=>{
   const d=e.data||{};
+  if(d.type==='gst-kiosk-ack'){ kioskAck(d); return; }
   if(d.type!=='gst-kiosk-a' || d.axis!==KIOSK.axis) return;
   KIOSK.replies++; KIOSK.askedVer=d.ver||0;
+  /* 어느 탭이 답했는지는 e.source 로 «정확히» 안다(경로 문자열로 맞추면 갈린다).
+     탭별로 보관해 두면, 그 탭이 모르는 값은 순회 목록에서 아예 뺄 수 있다 —
+     넣어 두면 그 칸에서 필터가 조용히 «전체»로 풀려 하단바만 거짓말을 한다. */
+  Object.keys(frames).forEach(k=>{ try{ if(frames[k].contentWindow===e.source) KIOSK.byTab[k]=(d.list||[]).slice(); }catch(x){} });
   (d.list||[]).forEach(v=>{ if(KIOSK.vals.indexOf(v)<0) KIOSK.vals.push(v); });
   KIOSK.vals.sort((a,b)=>String(a).localeCompare(String(b),'ko'));
   kioskFillCamps();
 });
+
+/* 페이지가 «못 걸었다»고 답하면 하단바가 그것을 밝힌다. 벽 화면에서 가장 나쁜 실패는
+   틀린 사이트 이름을 붙인 전사 합계다 — 지나가는 사람은 그것을 그 사이트 숫자로 읽는다. */
+function kioskAck(d){
+  if(!KIOSK.on) return;
+  const it=KIOSK.list[KIOSK.i]; if(!it || d.value!==it.val || d.axis!==KIOSK.axis) return;
+  const el=document.getElementById('kkWhy'); if(!el) return;
+  if(d.applied){ el.textContent=''; el.style.display='none'; return; }
+  el.style.display='';
+  el.textContent = d.why==='loading' ? '· 자료 불러오는 중' : '· 이 화면에 자료 없음 → 전체 기준';
+}
 
 function kioskBuildPanel(){
   // 순회 기준 축
@@ -435,7 +453,19 @@ function kioskStart(){
   KIOSK.full=document.getElementById('kkFull').checked;
   /* 순서: 기준값이 «바깥», 페이지가 «안». 한 사이트의 이야기를 끝까지 보여 준 뒤 다음으로
      넘어간다 — 페이지를 바깥에 두면 같은 화면만 사이트를 바꿔 가며 반복해 맥락이 끊긴다. */
-  KIOSK.list=[]; vals.forEach(c=>pages.forEach(p=>KIOSK.list.push({val:c,page:p})));
+  /* 그 탭이 «모른다»고 이미 답한 값은 넣지 않는다. 넣으면 그 칸에서 필터가 조용히
+     전체로 풀린다(core.js 의 fill/fillMulti 가 목록에 없는 선택값을 버린다).
+     아직 안 열린 탭은 답한 적이 없으므로 그대로 넣고, 그때는 ack 가 화면에 밝힌다. */
+  KIOSK.list=[]; let dropped=0;
+  vals.forEach(c=>pages.forEach(p=>{
+    const known=KIOSK.byTab[p];
+    if(known && known.indexOf(c)<0){ dropped++; return; }
+    KIOSK.list.push({val:c,page:p});
+  }));
+  if(!KIOSK.list.length){
+    const w=document.getElementById('kkWarn');
+    w.style.display='block'; w.textContent='고른 조합에 자료가 있는 화면이 없습니다 — 기준이나 페이지를 바꿔 보세요.'; return; }
+  if(dropped) log_kiosk_drop(dropped);
   KIOSK.i=-1; KIOSK.on=true;
   document.getElementById('kioskPanel').classList.remove('open');
   document.body.classList.add('kiosk-on');
@@ -466,7 +496,8 @@ document.addEventListener('fullscreenchange',()=>{
 
 function kioskNext(){
   if(!KIOSK.on) return;
-  KIOSK.i = (KIOSK.i+1) % KIOSK.list.length;
+  KIOSK.i = (KIOSK.i+1) % KIOSK.list.length; KIOSK.step++;
+  { const w=document.getElementById('kkWhy'); if(w){ w.textContent=''; w.style.display='none'; } }
   const it = KIOSK.list[KIOSK.i], nx = KIOSK.list[(KIOSK.i+1)%KIOSK.list.length];
   const nm = id => { const t=TABS.find(x=>x.id===id); return t?(t[LANG]||t.ko):id; };
 
@@ -477,14 +508,19 @@ function kioskNext(){
     /* 탭이 이제 막 만들어졌으면 아직 로드 전이다 — 잠깐 뒤 한 번 더 보낸다.
        («한 번만» 보내면 첫 바퀴에서 그 탭만 필터가 안 걸린 채 지나간다.) */
     kioskSend(it.page, it.val);
-    setTimeout(()=>kioskSend(it.page, it.val), 1200);
+    /* 지연 재전송은 «그 단계가 아직 살아 있을 때»만 — 정지한 뒤에 도착하면 방금 돌려준
+       사람 필터를 다시 순회 값으로 덮는다(그리고 그 상태가 localStorage 에 굳는다). */
+    const tok=KIOSK.step;
+    setTimeout(()=>{ if(KIOSK.on && KIOSK.step===tok) kioskSend(it.page, it.val); }, 1200);
     wrap.classList.remove('kk-fade');
   }, 180);
 
   document.getElementById('kkCamp').textContent = it.val;
   document.getElementById('kkPage').textContent = nm(it.page);
   document.getElementById('kkNext').textContent = '다음 · '+nx.val+' '+nm(nx.page);
-  document.getElementById('kkPos').textContent  = (KIOSK.i+1)+' / '+KIOSK.list.length;
+  { const el=document.getElementById('kkPos');
+    const dr=+(el.dataset.drop||0);
+    el.textContent = (KIOSK.i+1)+' / '+KIOSK.list.length + (dr?('  · 자료 없는 '+dr+'개 건너뜀'):''); }
 
   const t0=Date.now(), ms=KIOSK.sec*1000, bar=document.getElementById('kkProg');
   cancelAnimationFrame(KIOSK.raf);
@@ -493,6 +529,12 @@ function kioskNext(){
     KIOSK.raf=requestAnimationFrame(tick); })();
   clearTimeout(KIOSK.timer); KIOSK.timer=setTimeout(kioskNext, ms);
 }
+/* 몇 조합을 뺐는지 밝힌다 — 조용히 빼면 «왜 12분이라더니 8분 만에 돌아오나»가 된다. */
+function log_kiosk_drop(n){
+  const el=document.getElementById('kkPos'); if(!el) return;
+  el.dataset.drop=String(n);
+}
+
 function kioskSend(page, val){
   const f=frames[page]; if(!f) return;
   try{ f.contentWindow.postMessage({type:'gst-kiosk-set', axis:KIOSK.axis, value:val},'*'); }catch(e){}
@@ -509,6 +551,10 @@ function kioskStop(){
   Object.values(frames).forEach(f=>{ try{ f.contentWindow.postMessage({type:'gst-kiosk-restore'},'*'); }catch(e){} });
   kioskWake(false);
 }
+
+/* 순회 중에 셸을 새로고침하거나 닫으면 복원이 영영 안 간다 — 빌린 필터가 각 페이지
+   localStorage 에 그대로 굳는다. 다음에 그 탭을 열면 «내가 안 건 필터»가 걸려 있다. */
+window.addEventListener('beforeunload',()=>{ if(KIOSK.on) try{ kioskStop(); }catch(e){} });
 
 /* 화면이 잠들면 순회를 켜 둔 뜻이 없다. 지원 안 하는 브라우저면 조용히 넘어간다 —
    되지도 않는 것을 경고로 띄우면 매번 닫아야 한다. */
