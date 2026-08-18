@@ -2910,7 +2910,13 @@ GST.filters = (function(){
          «사람이 걸어 둔 값»이 기준이 된다(위 kioskSet 주석 ②). */
       if(KPEND){ const kp = KPEND; KPEND = null; kioskSet(kp.k, kp.v); }
       const box = document.querySelector('.slicers'); if(!box) return;
-      if(!document.getElementById('gf-region')){
+      /* ⚠ «이미 만들었나»를 축의 select id 로 확인하면 안 된다. v106 에서 구분이 다중선택이
+         되면서 그 id 가 `gf-region` → `gf-regionBtn` 으로 바뀌었고, 검사가 못 찾아
+         **mount 를 부를 때마다 공통 블록이 새로 끼워졌다** — 주간현황은 mount 를 5번
+         부르므로 사이드바에 「이 페이지 전용」 묶음이 다섯 벌 생겼다.
+         markup() 이 «언제나» 내는 껍데기(.gf-base)로 확인한다 — 축 모양이 또 바뀌어도
+         이 검사는 안 깨진다. */
+      if(!box.querySelector('.gf-base')){
         const own = [].slice.call(box.children);
         box.insertAdjacentHTML('afterbegin', markup());
         if(own.length){

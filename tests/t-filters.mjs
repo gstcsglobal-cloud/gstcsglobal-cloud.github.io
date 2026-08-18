@@ -392,6 +392,27 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
   G.filters.toggle('campus','H3'); G.filters.toggle('campus','K1');
   is(cnt()===2, '사업부 2 × 단지 2 교차 = 2행 (실제 '+cnt()+')');
 
+  /* mount 를 여러 번 불러도 공통 블록은 «한 벌»이어야 한다.
+     ⚠ v106 에서 구분이 다중선택이 되며 id 가 gf-region → gf-regionBtn 으로 바뀌었는데
+       중복 방지 검사가 옛 id 를 보고 있어, 주간현황(mount 5회)에서 사이드바에
+       「이 페이지 전용」 묶음이 다섯 벌 생겼다. 실제로 사용자가 그 화면을 봤다. */
+  {
+    let inserted = 0, kids = [];
+    const slicers = { children: kids,
+      insertAdjacentHTML(pos, html){ inserted++; kids.push({html:html}); },
+      insertBefore(){}, querySelector(sel){ return inserted ? {} : null; },
+      querySelectorAll:()=>[] };
+    const prevQ = global.document.querySelector;
+    global.document.querySelector = sel => sel === '.slicers' ? slicers : null;
+    G.filters.mount({page:'dup', rows:()=>ROWS, onChange:()=>{}, get:{region:x=>x.rg}});
+    G.filters.mount({page:'dup', rows:()=>ROWS, onChange:()=>{}, get:{region:x=>x.rg}});
+    G.filters.mount({page:'dup', rows:()=>ROWS, onChange:()=>{}, get:{region:x=>x.rg}});
+    global.document.querySelector = prevQ;
+    is(inserted === 1, 'mount 를 세 번 불러도 공통 블록은 한 벌 (실제 '+inserted+'벌)');
+    is(/gf-base/.test(CORE) && /box\.querySelector\('\.gf-base'\)/.test(CORE),
+       'core — 중복 방지는 축 id 가 아니라 markup 의 껍데기(.gf-base)로 확인한다');
+  }
+
   /* 저장·복원이 Set 을 지키는지 */
   G.filters.set('op', ['SEC Scrubber','SDC Scrubber']);
   is(G.filters.chosen('op').length===2 && G.filters.F.op instanceof Set,
