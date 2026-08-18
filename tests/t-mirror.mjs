@@ -103,7 +103,7 @@ console.log('\n[3] 시트 경로 ↔ 미러 경로 (열별 체크섬)');
 const md5 = a => crypto.createHash('md5').update(a.join('\n')).digest('hex');
 for (const [k, file] of Object.entries(FIX)) {
   const p = path.join(HERE, file);
-  if (!fs.existsSync(p)) { console.log(`  … ${k}: 픽스처 없음 — tests/README.md 참조`); continue; }
+  if (!fs.existsSync(p)) { globalThis.__skipped = (globalThis.__skipped||0)+1; console.log(`  … ${k}: 픽스처 없음 — tests/README.md 참조`); continue; }
   const text = fs.readFileSync(p, 'utf8');
 
   // ① 대시보드 경로
@@ -139,7 +139,7 @@ for (const [k, file] of Object.entries(FIX)) {
 console.log('\n[4] 시트에 열을 끼워 넣어도 같은 값을 잡는지');
 {
   const text = fs.existsSync(path.join(HERE, FIX.inst)) ? fs.readFileSync(path.join(HERE, FIX.inst), 'utf8') : '';
-  if (!text) console.log('  … 픽스처 없음 — 건너뜀');
+  if (!text) { globalThis.__skipped = (globalThis.__skipped||0)+1; console.log('  … 픽스처 없음 — 건너뜀'); }
   else {
     const rows = Papa.parse(text, { skipEmptyLines: false }).data;
     const base = planSync(SPEC.inst, CMAP.inst.map(c => ({ ...c })), text);
@@ -168,7 +168,7 @@ console.log('\n[4] 시트에 열을 끼워 넣어도 같은 값을 잡는지');
 console.log('\n[5] 필수 열 이름이 바뀌면 멈추는지');
 {
   const text = fs.existsSync(path.join(HERE, FIX.inst)) ? fs.readFileSync(path.join(HERE, FIX.inst), 'utf8') : '';
-  if (!text) console.log('  … 픽스처 없음 — 건너뜀');
+  if (!text) { globalThis.__skipped = (globalThis.__skipped||0)+1; console.log('  … 픽스처 없음 — 건너뜀'); }
   else {
     const rows = Papa.parse(text, { skipEmptyLines: false }).data;
     const req = CMAP.inst.find(c => !c.optional && c.col === 'sn');
@@ -237,7 +237,7 @@ console.log('\n[6] sheet-proxy 허용목록이 모든 소비자를 덮는지');
 console.log('\n[7] 시트의 모든 열이 미러에 담기는지 (extra 포함)');
 for (const k of ['wk', 'mat', 'inst']) {
   const f = path.join(HERE, FIX[k]);
-  if (!fs.existsSync(f)) { console.log(`  … ${k} 픽스처 없음 — 건너뜀`); continue; }
+  if (!fs.existsSync(f)) { globalThis.__skipped = (globalThis.__skipped||0)+1; console.log(`  … ${k} 픽스처 없음 — 건너뜀`); continue; }
   const plan = planSync(SPEC[k], CMAP[k].map(c => ({ ...c })), fs.readFileSync(f, 'utf8'));
   // 전 행을 돌린다. 일부만 떼어 담아놓고 «전체»에서 값을 찾으면, 뒤쪽에만 값이 있는 열이
   // 유실로 오진된다(실제로 wk 의 '스크러버 설비구분'이 그렇게 잡혔다). 양쪽 범위를 맞춘다.
@@ -260,5 +260,14 @@ for (const k of ['wk', 'mat', 'inst']) {
 }
 
 fs.unlinkSync(tmp);
-console.log(`\n${bad ? '❌' : '✅'} ${n - bad}/${n} 통과`);
+/* ⚠ 픽스처가 없으면 핵심 대조를 «건너뛰고도» ✅ 로 끝났다 — 초록불이 거짓말을 한다.
+   실제로 그 초록불을 믿고 여러 번 작업했다. 건너뛴 것이 있으면 다른 말을 한다.
+   종료코드는 0 으로 둔다(픽스처 없는 환경에서 npm run all 이 멈추면 나머지도 못 돈다).
+   진짜 CI 에서는 STRICT_FIXTURES=1 로 실패시킬 수 있다. */
+const _skip = globalThis.__skipped || 0;
+if (bad) console.log(`\n❌ ${n - bad}/${n} 통과`);
+else if (_skip) console.log(`\n⚠️  부분 검사 — 픽스처가 없어 ${_skip}개 항목을 건너뛰었다 (핵심 대조 미실행) · 통과 ${n}/${n}`);
+else console.log(`\n✅ ${n}/${n} 통과`);
+if (_skip && process.env.STRICT_FIXTURES) process.exit(2);
 process.exit(bad ? 1 : 0);
+

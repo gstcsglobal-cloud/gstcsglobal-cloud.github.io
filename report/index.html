@@ -2513,7 +2513,14 @@ function render(){
       chart2:{cats:catsM,series:{'총인원':hdM,'TO':chsM.map(v=>r1q(v/GST.conf('to_divisor',30)))}},   // 가. 인력현황(상단) = 총인원 vs TO 유지
       chart3:{cats:catsM,series:{'대상인원':MP.map(p=>eduAgg(p).T),'완료율':MP.map(p=>{const e=eduAgg(p);return e.T?r2q(e.D/e.T):0;})}},
       chart4:{cats:catsW,series:{'출근평균':attW,'휴가평균':lvW,'총 인원':hdW,'인당작업':pjW}},
-      chart5:{cats:catsM,series:{'GST Taiwan':chsM,'전체 인당 관리':chsM.map((c,i)=>hdM[i]?r1q(c/hdM[i]):0)}},
+      /* 계열 이름도 법인을 따라간다 — 'GST Taiwan' 으로 박아 두면 국내를 걸어도 범례만
+         대만이라 말한다(v100 에서 법인 «상자»만 고쳤고 이 자리는 남아 있었다). */
+      /* ⚠ 계열 «키»는 양식의 이름이어야 한다 — patchChart 가 그 이름으로 양식 계열을 찾는다.
+         표시 이름만 rename 으로 바꾼다. 키까지 바꾸면 매칭이 안 돼 그 계열이 통째로
+         갱신되지 않는다(양식의 옛 숫자가 그대로 남는 것과 같은 사고).
+         v100 은 법인 «상자»만 고쳤고, 범례는 'GST Taiwan' 으로 남아 있었다. */
+      chart5:{cats:catsM,series:{'GST Taiwan':chsM,'전체 인당 관리':chsM.map((c,i)=>hdM[i]?r1q(c/hdM[i]):0)},
+              rename:{'GST Taiwan':corpLabel()}},
       chart6:{cats:catsW,series:{'PM':pmW,'非 PM':npW,'공수(h)':htW}},
       chart7:{cats:catsM,                 // 가. Alarm & All By Pass [월/단위]
         series:{'Micron F11':alarmM,'Micron F16':abpM,'Micron_Total':alarmM.map((v,i)=>v+abpM[i])},

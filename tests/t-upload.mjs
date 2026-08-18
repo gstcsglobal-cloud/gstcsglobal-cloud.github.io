@@ -50,7 +50,12 @@ const cmapOf = key => Object.entries(G.SM.SPEC[key].fields)
 
 const FIX = { wk: 'csv_wk.csv', inst: 'csv_inst.csv' };   // mat 는 wk 와 같은 경로 — 시간 절약
 const avail = Object.entries(FIX).filter(([, f]) => fs.existsSync(path.join(HERE, f)));
-if (!avail.length) { console.log('… 픽스처 없음 — 건너뜀 (tests/README.md 로 생성)'); process.exit(0); }
+if (!avail.length) {
+  /* «건너뜀» 을 ✅ 처럼 보이게 두면 안 된다 — 실제로 그 초록불을 믿고 작업했다. */
+  console.log('⚠️  픽스처가 없어 업로드 대조를 하나도 못 했다 (tests/README.md 로 생성)');
+  if (process.env.STRICT_FIXTURES) process.exit(2);
+  process.exit(0);
+}
 
 /* ---------- 페이지를 띄우고 모의 Supabase 로 insert 를 가로챈다 ---------- */
 const browser = await chromium.launch(PW_OPTS);

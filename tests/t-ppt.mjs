@@ -370,6 +370,17 @@ console.log('[3-4] 만드는 동안 버튼이 잠기는지');
    ══════════════════════════════════════════════════════════════ */
 console.log('[4] 여섯 페이지가 공용 한 벌을 그대로 쓰는지');
 const SHARED = ['scrubber','pm','fault','material','cip','tco'];
+/* ⚠ hr 은 자기 PPT 덱을 따로 만든다(downloadHrPPT). 그 자체는 사용자 결정이지만,
+   «한 양식» 검사가 hr 을 목록에서 빼 두면 그 사실이 검사에서 사라진다 — 나중에 다른
+   페이지가 같은 이유로 빠져나가도 아무도 모른다. 예외를 «명시»해 눈에 보이게 둔다. */
+{
+  const HR = fs.readFileSync(ROOT+'/hr/index.html','utf8');
+  ok(/new PptxGenJS\(/.test(HR),
+     'hr 이 자기 덱을 만드는 것은 «알려진 예외»다 — 없어졌으면 SHARED 에 넣고 이 줄을 지울 것');
+  const bar = (HR.match(/GST\.pageBar\(\{[\s\S]*?\n\}\);/)||[''])[0];
+  ok(/ppt:\s*\(\)\s*=>\s*downloadHrPPT\(\)/.test(bar),
+     'hr 의 예외는 pageBar 에 «명시»돼 있어야 한다(몰래 갈라지지 않게)');
+}
 for(const pg of SHARED){
   const src = fs.readFileSync(ROOT+'/'+pg+'/index.html','utf8');
   const bar = (src.match(/GST\.pageBar\(\{[\s\S]*?\n\}\);/)||[''])[0];

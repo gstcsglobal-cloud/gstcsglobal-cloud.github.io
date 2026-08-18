@@ -3468,6 +3468,15 @@ GST.filtSummary = function(){
     else if(v) out.push(L[k]+' '+v);
   });
   if(F.dtFrom || F.dtTo) out.push('기간 '+(F.dtFrom||'')+'~'+(F.dtTo||''));
+  /* ⚠ 공통 필터만 보면 «페이지 전용» 필터(모델·공정·설비 등)가 빠진다 — 모델 하나만 걸어
+     놓고 뽑은 장표에 「전체」라고 적히면 받아 본 사람은 전사 숫자로 읽는다.
+     화면의 필터 칩이 그 페이지의 «진짜» 상태이므로, 있으면 그것을 보탠다. */
+  try{
+    const own = [].slice.call(document.querySelectorAll('#fchips .fchip, #fchipList .fchip'))
+      .map(function(c){ return (c.innerText||'').replace(/\s*✕\s*$/,'').trim(); })
+      .filter(function(t){ return t && out.indexOf(t)<0 && !out.some(function(o){ return o.indexOf(t)>=0; }); });
+    own.forEach(function(t){ out.push(t); });
+  }catch(e){}
   return out.length ? out.join(' · ') : '전체';
 };
 

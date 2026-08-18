@@ -19,6 +19,7 @@ import {
   parseCIP, cipProgress, parseLeave, parseInstall, parsePeriod, reviveDates, SITE_KEYS,
   filterEquipment, filterFaults, filterPeople, filterLeave, filterPeopleByEdu,
   groupCount, groupAccessor, grpKey, FAULT_SPEC, hnorm,
+  EQ,
 } from "./hr.js";
 
 const CORS = {
@@ -648,13 +649,22 @@ function serializeData(
   for (const ds of datasets) {
     if (ds === "equipment") {
       let rows = rowsOf(cache, "equipment");
+      /* 설비 대수는 「설비상태」로 센다 (v99 · assets/core.js 의 GST.EQ 와 같은 낱말).
+         반납·반출대기·반출완료·출하대기는 «아예 안 센다» — 예전에는 그 설비까지 세어
+         같은 질문에 챗봇과 대시보드가 다른 숫자를 답했다.
+         상태 열이 없는 옛 추출본은 그대로 둔다(업로드 전후로 답이 죽는 구간을 안 만든다). */
+      const _hasState = rows.some((r: any) => r.state);
+      const _before = rows.length;
+      if (_hasState) rows = rows.filter((r: any) => EQ.cls(r.state) !== "out");
+      const _dropped = _before - rows.length;
       if (filters?.site) rows = rows.filter((r: any) => grpKey(r) === filters.site || r.fab?.includes(filters.site));
       if (filters?.sn) { const snQ = (filters.sn||'').toUpperCase().replace(/[\s-]/g,''); rows = rows.filter((r: any) => (r.sn||'').toUpperCase().replace(/[\s-]/g,'').includes(snQ) || (r.code||'').toUpperCase().replace(/[\s-]/g,'').includes(snQ)); }
       // 너무 많으면 관련된 것만
       const sample = rows.slice(0, 200);
-      parts.push(`[설비 데이터 - ${sample.length}대${rows.length > 200 ? ` (전체 ${rows.length}대 중 200대)` : ""}]\n` +
+      parts.push(`[설비 데이터 - ${sample.length}대${rows.length > 200 ? ` (전체 ${rows.length}대 중 200대)` : ""}` +
+        (_dropped ? ` · 반출·반납 ${_dropped}대 제외(설비상태 기준)` : _hasState ? "" : " · 설비상태 열 없음(옛 추출본)") + `]\n` +
         sample.map((e: any) =>
-          `S/N:${e.sn} CODE:${e.code||"-"} 고객:${e.customer||"-"} FAB:${e.fab||"-"} 층:${e.floor||"-"} Bay:${e.bay||"-"} 공정:${[e.group1,e.group2].filter(Boolean).join("/")||"-"} 모델:${e.model||"-"} Burner:${e.burner||"-"} TurnOn:${fmtDate(e.turnOn)} 워런티:${e.warranty||"-"}`
+          `S/N:${e.sn} CODE:${e.code||"-"} 고객:${e.customer||"-"} FAB:${e.fab||"-"} 층:${e.floor||"-"} Bay:${e.bay||"-"} 공정:${[e.group1,e.group2].filter(Boolean).join("/")||"-"} 상태:${e.state||"-"} 모델:${e.model||"-"} Burner:${e.burner||"-"} TurnOn:${fmtDate(e.turnOn)} 워런티:${e.warranty||"-"}`
         ).join("\n"));
     }
 
