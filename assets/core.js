@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 101;
+GST.VER = 102;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -3265,19 +3265,30 @@ window.addEventListener('message', function(e){
      ⚠ 사람이 걸어 둔 필터를 «돌려주지 않으면» 순회 한 번에 화면이 딴 데를 보게 된다.
        페이지는 늦게 뜨기도 하므로(탭 지연 로딩), 셸의 «시작» 신호를 못 받는 경우가 있다.
        그래서 저장은 신호가 아니라 «처음 건드릴 때» 한다 — 그 순간이 곧 손대기 직전이다. */
-  if(d.type==='gst-kiosk-q'){                   // 이 페이지가 아는 단지 목록을 알려 준다
-    let list=[]; try{ list=GST.filters.options('campus')||[]; }catch(x){}
-    try{ (e.source||window.parent).postMessage({type:'gst-kiosk-a', list:list}, '*'); }catch(x){}
+  if(d.type==='gst-kiosk-q'){                   // 이 페이지가 아는 그 축의 값 목록을 알려 준다
+    /* 답에 ver 와 page 를 실어 보낸다 — 셸이 «답이 없다»와 «답은 왔는데 목록이 비었다»를
+       구분해 사람에게 다른 말을 해줄 수 있어야 한다. 그 둘은 할 일이 완전히 다르다
+       (앞은 새로고침, 뒤는 다른 축 고르기). 예전에는 둘 다 «읽는 중…»으로 멈춰 있었다. */
+    let list=[]; const ax=d.axis||'campus';
+    try{ list=GST.filters.options(ax)||[]; }catch(x){}
+    try{ (e.source||window.parent).postMessage(
+      {type:'gst-kiosk-a', axis:ax, list:list, ver:GST.VER, page:(GST._pageId||location.pathname)}, '*'); }catch(x){}
     return; }
   if(d.type==='gst-kiosk-set'){
     try{
-      if(!GST._kioskSaved) GST._kioskSaved = GST.filters.chosen('campus');   // 배열로 눕힌다(Set 은 JSON 이 '{}')
-      /* set() 을 지나야 한다 — F.campus 는 Set 이라 직접 대입하면 그다음 .has 가 TypeError 다. */
-      GST.filters.set('campus', d.campus ? [d.campus] : []);
+      const k=d.axis||'campus';
+      if(!GST._kioskSaved){
+        /* 축마다 그릇이 다르다 — 단지는 Set, 나머지는 문자열. 원래 «생김새 그대로» 담아야
+           복원할 때 되돌려 놓을 수 있다(Set 을 문자열로 되돌리면 그다음 .has 가 TypeError). */
+        const cur=GST.filters.F[k];
+        GST._kioskSaved={k:k, v:(cur instanceof Set)?Array.from(cur):cur};
+      }
+      /* set() 을 지나야 한다 — 문자열 하나를 줘도 다중 축이면 알아서 Set 에 넣는다. */
+      GST.filters.set(k, d.value||'');
     }catch(x){}
     return; }
   if(d.type==='gst-kiosk-restore'){
-    try{ if(GST._kioskSaved){ GST.filters.set('campus', GST._kioskSaved); GST._kioskSaved=null; } }catch(x){}
+    try{ if(GST._kioskSaved){ GST.filters.set(GST._kioskSaved.k, GST._kioskSaved.v); GST._kioskSaved=null; } }catch(x){}
     return; }
 });
 
