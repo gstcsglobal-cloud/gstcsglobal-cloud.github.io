@@ -1,0 +1,284 @@
+/* t-ppt — PPT 내보내기가 «주간현황 양식» 한 벌로 나오는지, 그리고 법인 상자가
+ * 운영단위를 따라가는지.
+ *
+ * 왜 이 파일이 있나. 두 가지가 실제로 화면에서 거짓말을 하고 있었다.
+ *  ① 양식 파일(qbr-template.pptx)에 'GST TAIWAN' 이 세 장 모두 «박제»돼 있었다.
+ *     운영단위로 다른 법인을 골라도 PPT 는 언제나 대만이라고 말했다. 숫자는 필터를
+ *     따라 바뀌는데 머리만 안 바뀌므로, 받아 본 사람은 대만 실적으로 읽는다.
+ *  ② 나머지 6개 페이지(설치·PM·고장·자재·CIP·TCO)는 공용 pptAuto 를 썼는데 그것이
+ *     «어두운 바탕에 차트 한 장씩»이라 같은 대시보드인데 장표 얼굴이 둘로 갈렸다.
+ *
+ * 실데이터를 쓰지 않는다(공개 저장소) — 전부 지어낸 값이다.
+ *   실행: node t-ppt.mjs
+ */
+import fs from 'fs';
+import path from 'path';
+import JSZip from 'jszip';
+
+const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+let pass=0, fail=0;
+const ok=(c,m)=>{ if(c){pass++;} else {fail++; console.log('  ❌ '+m);} };
+
+/* ── core.js 를 노드에서 돌리기 위한 최소 DOM (t-region 과 같은 방식) ── */
+const el = () => ({ style:{}, appendChild(){}, insertBefore(){}, remove(){}, removeAttribute(){},
+  setAttribute(){}, addEventListener(){}, classList:{add(){},remove(){},toggle(){}},
+  querySelector:()=>null, querySelectorAll:()=>[], insertAdjacentHTML(){}, insertAdjacentElement(){},
+  parentNode:{insertBefore(){}}, firstElementChild:null, textContent:'', innerHTML:'' });
+global.document = { createElement:el, getElementById:()=>null, querySelector:()=>null,
+  querySelectorAll:()=>[], body:el(), documentElement:el(), addEventListener(){},
+  head:el(), readyState:'complete' };
+global.window = { addEventListener(){}, location:{href:'',search:''}, self:{}, top:{},
+  localStorage:{getItem:()=>null,setItem(){},removeItem(){}}, matchMedia:()=>({matches:false,addEventListener(){}}) };
+global.window.self = global.window.top = global.window;
+global.localStorage = global.window.localStorage;
+global.location = global.window.location;
+try { new Function(fs.readFileSync(ROOT+'/assets/core.js','utf8'))(); } catch(e){ console.log('core.js 로드 경고:', e.message); }
+const GST = global.window.GST || global.GST;
+
+/* ══════════════════════════════════════════════════════════════
+   [1] GST.corpLabel — 운영단위가 최우선, 꼬리 담당구분만 뗀다
+   ══════════════════════════════════════════════════════════════ */
+console.log('[1] 법인 표기가 운영단위를 따라가는지');
+const F = GST.filters.F;
+const reset = () => { F.region=''; F.op=''; F.div=''; F.customer=''; F.campus.clear(); F.line=''; F.team=''; F.country=''; };
+
+reset(); F.op='GST TAIWAN SCRUBBER';
+ok(GST.corpLabel()==='GST TAIWAN', "운영단위 'GST TAIWAN SCRUBBER' → 'GST TAIWAN' 이어야 (실제=" + GST.corpLabel() + ')');
+
+/* 괄호가 든 법인. 여기서 정규식이 욕심을 부리면 'GST CHINA' 로 잘려 세 중국 법인이 한 덩어리가 된다. */
+reset(); F.op='GST CHINA(WUHAN) SCRUBBER';
+ok(GST.corpLabel()==='GST CHINA(WUHAN)', "'GST CHINA(WUHAN) SCRUBBER' → 'GST CHINA(WUHAN)' (실제=" + GST.corpLabel() + ')');
+
+reset(); F.op='SEC Scrubber';
+ok(GST.corpLabel()==='SEC', "소문자 'Scrubber' 꼬리도 떼야 (실제=" + GST.corpLabel() + ')');
+
+reset(); F.op='SK Scrubber';
+ok(GST.corpLabel()==='SK', "'SK Scrubber' → 'SK' (실제=" + GST.corpLabel() + ')');
+
+/* 이름을 «지어내지» 않는다 — 앞부분은 시트 값 그대로다(v98 규약). */
+reset(); F.op='GST HEFEI SCRUBBER';
+ok(GST.corpLabel()==='GST HEFEI', '앞부분을 손대면 안 된다 (실제=' + GST.corpLabel() + ')');
+
+/* 꼬리를 떼면 빈 문자열이 되는 극단 — 빈 상자를 내느니 원문을 그대로 낸다. */
+reset(); F.op='SCRUBBER';
+ok(GST.corpLabel()==='SCRUBBER', '꼬리만 있는 값에서 빈 문자열이 되면 안 된다 (실제=' + GST.corpLabel() + ')');
+
+/* 운영단위가 없을 때의 폴백 사슬 */
+reset(); F.country='TAIWAN';
+ok(GST.corpLabel()==='GST Taiwan', "국가 폴백 (실제=" + GST.corpLabel() + ')');
+reset(); F.region=GST.ORG.REGION_KR;
+ok(GST.corpLabel()==='GST Korea', '구분 국내 폴백 (실제=' + GST.corpLabel() + ')');
+reset(); F.region=GST.ORG.REGION_OS;
+ok(GST.corpLabel()==='GST Overseas', '구분 해외 폴백 (실제=' + GST.corpLabel() + ')');
+reset();
+ok(GST.corpLabel()==='GST Global', '아무것도 안 골랐으면 GST Global (실제=' + GST.corpLabel() + ')');
+
+/* 운영단위가 국가·구분을 «이긴다». 이 순서가 뒤집히면 법인을 골라도 'GST Korea' 가 뜬다. */
+reset(); F.op='SDC Scrubber'; F.region=GST.ORG.REGION_KR; F.country='KOREA';
+ok(GST.corpLabel()==='SDC', '운영단위가 국가·구분보다 우선이어야 (실제=' + GST.corpLabel() + ')');
+
+/* 페이지가 자기 F 를 넘겨도 같은 규칙 */
+ok(GST.corpLabel({op:'GST TAIWAN SCRUBBER'})==='GST TAIWAN', '인자로 준 F 도 같은 규칙이어야');
+reset();
+
+/* ══════════════════════════════════════════════════════════════
+   [2] 양식(.pptx) 법인 상자 — 실제 파일로, 세 장 모두
+   ══════════════════════════════════════════════════════════════ */
+console.log('[2] 양식 파일의 법인 상자가 실제로 바뀌는지');
+const tplPath = ROOT+'/report/qbr-template.pptx';
+ok(fs.existsSync(tplPath), '양식 파일이 있어야 한다');
+
+const QBR = (new Function(fs.readFileSync(ROOT+'/assets/qbr-ppt.js','utf8')+';return (typeof window!=="undefined"&&window.QBRPPT)||globalThis.QBRPPT;'))();
+
+/* qbr-ppt.js 의 build 는 «브라우저면 Blob, 노드면 Buffer»를 낸다. 이 검사는 core.js 를
+   돌리려고 가짜 window 를 세워 뒀으므로, build 를 부르는 동안만 치워 노드 경로로 태운다. */
+const asNode = async (fn) => { const w=global.window; delete global.window;
+  try{ return await fn(); } finally { global.window=w; } };
+
+const slidesOf = async (buf) => {
+  const z = await JSZip.loadAsync(buf);
+  const out = {};
+  for(const n of Object.keys(z.files)) if(/^ppt\/slides\/slide\d+\.xml$/.test(n)) out[n] = await z.file(n).async('string');
+  return out;
+};
+const tplBuf = fs.readFileSync(tplPath);
+const before = await slidesOf(tplBuf);
+const nTaiwan = Object.values(before).filter(x=>x.includes('<a:t>GST TAIWAN</a:t>')).length;
+ok(nTaiwan===3, '양식 세 장 모두에 GST TAIWAN 이 박혀 있어야 한다(전제) — 실제 '+nTaiwan+'장');
+
+/* corp 를 주면 세 장 모두 바뀐다 */
+const out1 = await asNode(()=>QBR.build(JSZip, tplBuf, {corp:'GST CHINA(WUHAN)'}));
+const after1 = await slidesOf(out1);
+const stillTaiwan = Object.entries(after1).filter(([,x])=>x.includes('<a:t>GST TAIWAN</a:t>')).map(([n])=>n);
+ok(stillTaiwan.length===0, '법인을 바꿨는데 GST TAIWAN 이 남은 장이 있다: '+stillTaiwan.join(','));
+const gotWuhan = Object.values(after1).filter(x=>x.includes('GST CHINA(WUHAN)')).length;
+ok(gotWuhan===3, '세 장 모두 새 법인이 들어가야 한다 — 실제 '+gotWuhan+'장');
+
+/* XML 이스케이프 — 법인명에 &·< 가 들어와도 파일이 깨지면 안 된다 */
+const out2 = await asNode(()=>QBR.build(JSZip, tplBuf, {corp:'A&B <TEST>'}));
+const after2 = await slidesOf(out2);
+ok(Object.values(after2).every(x=>x.includes('A&amp;B &lt;TEST&gt;')), '법인명의 &·< 가 XML 로 이스케이프돼야 한다');
+ok(Object.values(after2).every(x=>!x.includes('A&B <TEST>')), '이스케이프 안 된 원문이 남으면 안 된다(파일이 깨진다)');
+
+/* corp 를 «안 주면» 양식 그대로 — 이 파일만 먼저 배포됐을 때 빈 상자가 되지 않게 */
+const out3 = await asNode(()=>QBR.build(JSZip, tplBuf, {}));
+const after3 = await slidesOf(out3);
+ok(Object.values(after3).filter(x=>x.includes('<a:t>GST TAIWAN</a:t>')).length===3,
+   'data.corp 가 없으면 양식 원문을 그대로 둬야 한다');
+
+/* 호출부가 실제로 corp 를 넘기는지 — 넘기지 않으면 위 기능이 죽은 코드가 된다 */
+const RPT = fs.readFileSync(ROOT+'/report/index.html','utf8');
+ok(/data\.corp\s*=\s*corpLabel\(\)/.test(RPT), 'report 가 data.corp 를 넘겨야 한다(안 넘기면 양식은 영원히 TAIWAN)');
+ok(/function corpLabel\(\)\{\s*return GST\.corpLabel\(F\);\s*\}/.test(RPT),
+   'report 의 corpLabel 은 core 의 것을 그대로 써야 한다(두 벌이면 갈라진다 — 제2원칙)');
+
+/* ══════════════════════════════════════════════════════════════
+   [3] pptAuto — 양식 얼굴 · 한 장에 최대 6개
+   가짜 DOM·가짜 PptxGenJS 로 «무엇을 그렸는지» 그대로 받아 본다.
+   ══════════════════════════════════════════════════════════════ */
+console.log('[3] 공용 PPT 가 양식 얼굴로, 한 장에 6개씩 나오는지');
+
+function mkEnv(nCharts, insights){
+  const canvases = [];
+  for(let i=0;i<nCharts;i++){
+    const card = { querySelector:()=> ({ innerText:'차트 '+(i+1) }) };
+    canvases.push({ id:'c'+i, clientWidth:400, clientHeight:300, closest:()=>card });
+  }
+  const chart = () => ({ options:{ devicePixelRatio:1, scales:{x:{},y:{}}, plugins:{legend:{}} },
+                         resize(){}, render(){} });
+  const charts = {}; canvases.forEach(c=>charts[c.id]=chart());
+  global.window.CHARTS = charts;
+  global.window.Chart = { getChart:cv=>charts[cv.id], defaults:{color:'#fff'} };
+  global.Chart = global.window.Chart;          // 브라우저에서는 window.Chart 가 곧 전역 Chart 다
+  global.document.getElementById = id => canvases.find(c=>c.id===id) || null;
+  global.document.createElement = tag => tag==='canvas'
+    ? { width:0, height:0, getContext:()=>({fillStyle:'',fillRect(){},drawImage(){}}), toDataURL:()=>'data:image/png;base64,AA' }
+    : el();
+  global.document.querySelector = sel => sel==='.header h1' ? {textContent:'설치 현황'} : null;
+  global.document.querySelectorAll = sel => {
+    if(sel==='.cw canvas') return canvases;
+    if(sel==='#gstInsights .gst-ins') return (insights||[]).map(t=>({innerText:t}));
+    return [];
+  };
+
+  const slides = [];
+  global.window.PptxGenJS = function(){
+    this.ShapeType = {rect:'rect', line:'line'};
+    this.addSlide = () => { const s={texts:[],shapes:[],images:[],background:null,
+      addText:(t,o)=>s.texts.push({t,o}), addShape:(k,o)=>s.shapes.push({k,o}),
+      addImage:o=>s.images.push(o)}; slides.push(s); return s; };
+    this.writeFile = async()=>{};
+  };
+  global.PptxGenJS = global.window.PptxGenJS;   // 위와 같은 이유
+  return slides;
+}
+
+// 7개 차트 → 2장 (6 + 1)
+{
+  const slides = mkEnv(7, []);
+  F.op = 'GST TAIWAN SCRUBBER';
+  await GST.pptAuto({asOf:'2026-08-18'});
+  ok(slides.length===2, '차트 7개면 슬라이드 2장이어야 (실제 '+slides.length+')');
+  const imgs = slides.map(s=>s.images.length);
+  ok(imgs[0]===6 && imgs[1]===1, '한 장에 최대 6개여야 (실제 '+imgs.join('+')+')');
+  ok(slides.every(s=>s.background && s.background.color==='FFFFFF'), '양식은 흰 바탕이어야 한다');
+  const t0 = slides[0].texts.map(x=>String(x.t));
+  ok(t0.some(x=>x==='GST TAIWAN'), '법인 상자가 운영단위를 따라야 한다 — 실제: '+t0.slice(0,3).join(' | '));
+  ok(t0.some(x=>/설치 현황\s+\(1\/2\)/.test(x)), '여러 장이면 제목에 (1/2) 가 붙어야 한다');
+  ok(t0.some(x=>/2026-08-18 기준/.test(x)), '기준일이 머리에 있어야 한다');
+  ok(t0.some(x=>/운영단위 GST TAIWAN SCRUBBER/.test(x)), '어떤 필터로 뽑은 장표인지 머리에 남아야 한다');
+  ok(t0.filter(x=>/^차트 \d+$/.test(x)).length===6, '칸 머리띠에 차트 제목이 들어가야 한다');
+  ok(slides[0].shapes.some(s=>s.k==='line' && s.o.line && s.o.line.width===2.25), '머리 아래 굵은 검정 줄(양식 특징)');
+  reset();
+}
+
+// 정확히 6개 → 1장, 빈 칸 없음
+{
+  const slides = mkEnv(6, []);
+  await GST.pptAuto({asOf:'2026-08-18'});
+  ok(slides.length===1, '차트 6개면 한 장 (실제 '+slides.length+')');
+  ok(!slides[0].texts.some(x=>String(x.t)==='INSIGHT'), '빈 칸이 없으면 INSIGHT 칸도 없어야 한다');
+  reset();
+}
+
+// 빈 칸이 남으면 인사이트를 거기 담는다 (버리지도, 새 장을 만들지도 않는다)
+{
+  const slides = mkEnv(4, ['재고 부족 3건','BM 급증 라인 F16']);
+  await GST.pptAuto({asOf:'2026-08-18'});
+  ok(slides.length===1, '차트 4개 + 인사이트는 한 장이어야 (실제 '+slides.length+')');
+  const t = slides[0].texts.map(x=>String(x.t));
+  ok(t.some(x=>x==='INSIGHT'), '남은 칸에 INSIGHT 머리띠가 있어야 한다');
+  ok(t.some(x=>/재고 부족 3건/.test(x) && /BM 급증 라인 F16/.test(x)), '인사이트 문구가 담겨야 한다(버리지 않는다)');
+  reset();
+}
+
+// 차트가 하나도 없으면 파일을 만들지 않는다
+{
+  const slides = mkEnv(0, []);
+  let alerted=''; global.alert = m => { alerted=m; };
+  await GST.pptAuto({asOf:'2026-08-18'});
+  ok(slides.length===0 && /차트가 없/.test(alerted), '차트가 없으면 빈 파일 대신 안내여야 한다');
+  reset();
+}
+
+/* 차트 색을 «흰 종이용»으로 바꿨다가 반드시 되돌리는지 —
+   안 되돌리면 내보낸 뒤 화면 차트의 글자색이 검정으로 굳는다(어두운 테마에서 안 보인다). */
+{
+  mkEnv(1, []);
+  const ch = global.window.CHARTS.c0;
+  ch.options.scales.x.ticks = {color:'#E6EDF3'};
+  ch.options.plugins.legend.labels = {color:'#E6EDF3'};
+  await GST.pptAuto({asOf:'2026-08-18'});
+  ok(ch.options.scales.x.ticks.color==='#E6EDF3', '캡처 뒤 축 글자색을 되돌려야 한다 (실제 '+ch.options.scales.x.ticks.color+')');
+  ok(ch.options.plugins.legend.labels.color==='#E6EDF3', '캡처 뒤 범례 색을 되돌려야 한다');
+  ok(ch.options.devicePixelRatio===1, '캡처 뒤 devicePixelRatio 를 되돌려야 한다');
+  reset();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   [4] 규율 — 페이지가 자기 PPT 를 새로 만들지 않는지
+   ══════════════════════════════════════════════════════════════ */
+console.log('[4] 여섯 페이지가 공용 한 벌을 그대로 쓰는지');
+const SHARED = ['scrubber','pm','fault','material','cip','tco'];
+for(const pg of SHARED){
+  const src = fs.readFileSync(ROOT+'/'+pg+'/index.html','utf8');
+  const bar = (src.match(/GST\.pageBar\(\{[\s\S]*?\n\}\);/)||[''])[0];
+  ok(/ppt:\s*'auto'/.test(bar), pg+': caps.ppt 가 auto 여야 공용 양식을 쓴다');
+  ok(!/ppt:\s*\(\)\s*=>/.test(bar), pg+': 자기 PPT 핸들러를 만들면 장표 얼굴이 또 갈라진다(제2원칙)');
+  ok(!/new PptxGenJS\(/.test(src), pg+': 페이지가 직접 PPT 를 조립하고 있다 — 공용 pptAuto 로 모아야 한다');
+}
+const CORE = fs.readFileSync(ROOT+'/assets/core.js','utf8');
+ok(/GST\.PPT_MAX_PER_SLIDE\s*=\s*6/.test(CORE), '한 장 최대 개수가 상수로 있어야 한다(숫자를 코드에 흩지 않는다)');
+ok(/GST\.corpLabel\s*=\s*function/.test(CORE), 'corpLabel 정본이 core.js 에 있어야 한다');
+/* 음성 대조: 다른 페이지에 corpLabel 이 «다시» 정의되면 두 벌이 된다 */
+for(const pg of SHARED.concat(['hr'])){
+  const src = fs.readFileSync(ROOT+'/'+pg+'/index.html','utf8');
+  ok(!/function corpLabel\(\)\s*\{[^}]*REGION_KR/.test(src), pg+': corpLabel 을 다시 구현했다(제2원칙)');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   [5] 셸 툴바의 업로드 버튼
+   업로드는 탭이 아니다(관리용 화면을 매일 보는 탭 줄에 섞지 않는다). 그래서 링크가
+   어디에도 없으면 사람이 못 찾는다 — 툴바에 «있는지»를 여기서 못 박는다.
+   ══════════════════════════════════════════════════════════════ */
+console.log('[5] 셸 툴바에 업로드 버튼이 있는지');
+const SHELL = fs.readFileSync(ROOT+'/index.html','utf8');
+const bar = (SHELL.match(/<div class="topbar-right">[\s\S]*?<\/div>/)||[''])[0];
+ok(/id="uploadBtn"/.test(bar), '툴바에 업로드 버튼이 있어야 한다');
+ok(bar.indexOf('id="refreshBtn"') < bar.indexOf('id="uploadBtn"')
+   && bar.indexOf('id="uploadBtn"') < bar.indexOf('id="shareBtn"'),
+   '업로드 버튼은 새로고침 «바로 옆»이어야 한다');
+ok(/function openUpload\(\)\s*\{[^}]*window\.open\('\/upload\/'/.test(SHELL),
+   'openUpload 가 /upload/ 를 새 창으로 열어야 한다');
+/* iframe 에 띄우면 탭 줄에서 아무 탭도 활성이 아니게 되고, 업로드 중에 탭을 누르면
+   진행 중이던 적재 화면이 날아간다. 그래서 «새 창»이 규약이다. */
+ok(!/openUpload[\s\S]{0,120}frames\[|openUpload[\s\S]{0,120}iframe/.test(SHELL),
+   '업로드를 탭 iframe 에 띄우면 안 된다(적재 도중 화면이 날아간다)');
+for(const [lang,word] of [['ko','업로드'],['en','Upload'],['zh','上传'],['ja','アップロード']]){
+  ok(new RegExp("\\b"+lang+":\\{[^}]*upload:'"+word+"'").test(SHELL), '셸 i18n '+lang+' 에 업로드 문구가 있어야 한다');
+}
+ok(/getElementById\('uploadLabel'\)\.textContent=lt\('upload'\)/.test(SHELL),
+   '언어를 바꾸면 업로드 라벨도 따라가야 한다(applyLang 에 배선)');
+
+console.log('\n'+(fail? '❌ 실패 '+fail+' / ':'✅ ')+'통과 '+pass+'/'+(pass+fail));
+process.exit(fail?1:0);

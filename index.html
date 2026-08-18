@@ -167,6 +167,11 @@ select.gb-inp{width:104px}
   </div>
   <div class="topbar-right">
     <button class="tb-btn" onclick="refreshActive()" id="refreshBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg> <span id="refreshLabel">새로고침</span></button>
+    <!-- 업로드는 탭이 아니다 — 매일 보는 탭 줄에 관리용 화면을 섞지 않는다(diag 와 같은 규율).
+         대신 여기 툴바에 두어 «데이터를 넣는 곳»을 한 번에 찾을 수 있게 한다.
+         새 창으로 여는 이유: 탭 iframe 에 띄우면 탭 줄에서 아무 탭도 활성이 아니게 되고,
+         업로드 도중에 탭을 누르면 진행 중이던 적재 화면이 그대로 날아간다. -->
+    <button class="tb-btn" onclick="openUpload()" id="uploadBtn" title="데이터 업로드 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg> <span id="uploadLabel">업로드</span></button>
     <button class="tb-btn" onclick="shareLink()" id="shareBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> <span id="shareLabel">공유</span></button>
     <button class="tb-btn" onclick="cycleTheme()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9c0-.5-.4-1-1-1h-2a3 3 0 0 1-3-3V6c0-.6-.4-1-1-1z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="6.5" r="1"/><circle cx="15" cy="15.5" r="1"/></svg> <span id="themeLabel">Dark</span></button>
     <button class="tb-btn" onclick="cycleLang()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> <span id="langLabel">KO</span></button>
@@ -224,10 +229,10 @@ const TABS=[
 ];
 
 const L={
-  ko:{tag:'By CS Global Team',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!'},
-  en:{tag:'By CS Global Team',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!'},
-  zh:{tag:'By CS Global Team',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!'},
-  ja:{tag:'By CS Global Team',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!'}
+  ko:{tag:'By CS Global Team',upload:'업로드',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!'},
+  en:{tag:'By CS Global Team',upload:'Upload',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!'},
+  zh:{tag:'By CS Global Team',upload:'上传',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!'},
+  ja:{tag:'By CS Global Team',upload:'アップロード',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!'}
 };
 let LANG='ko';
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&L[sl])LANG=sl; else if(window.name && L[window.name]) LANG=window.name; }catch(e){}
@@ -237,11 +242,15 @@ let activeTab=null;
 
 function lt(k){return (L[LANG]||L.ko)[k]||k;}
 
+/* 업로드 화면은 별도 창. 셸의 iframe 에 띄우지 않는다 — 위 버튼 주석 참조. */
+function openUpload(){ window.open('/upload/','gstUpload'); }
+
 function applyLang(){
   {const _bt=document.getElementById('brandTag'); if(_bt&&!_bt.hasAttribute('data-lock'))_bt.textContent=lt('tag');}
   document.getElementById('logoutBtn').textContent=lt('logout');
   document.getElementById('refreshLabel').textContent=lt('refresh');
   document.getElementById('shareLabel').textContent=lt('share');
+  document.getElementById('uploadLabel').textContent=lt('upload');
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
   // 탭 이름 갱신
   document.querySelectorAll('.tab').forEach(el=>{
