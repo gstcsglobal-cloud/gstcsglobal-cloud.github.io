@@ -764,7 +764,15 @@ function instFloor(code,sn){
   if(!INSTIX) return '';
   const rec=INSTIX.find(code,sn);
   return (rec&&rec.floor)?rec.floor:FLOOR_NA;
+}/* 사업부(관리주체)는 «설치현황에만» 있다 — 자재실적에는 열이 없어, 사업부를 골라도
+   이 화면 건수가 안 움직였다. Floor 와 같은 규약으로 조인해 얻는다.
+   못 붙은 행은 빈 값(loose 로 통과) — '미상' 으로 세우면 «자료 없음»이 하나의 사업부가 된다. */
+function instDiv(code,sn){
+  if(!INSTIX) return '';
+  const rec=INSTIX.find(code,sn);
+  return (rec&&rec.div)?rec.div:'';
 }
+
 // 자재실적 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
 // 열이 끼어들거나 순서가 바뀌어도 따라가고, 이름이 바뀌면 배너로 알린다.
 let C={}, HI_MAT=0;
@@ -939,6 +947,7 @@ async function loadData(){ GST.skeleton(true);
         // '라인' 열이 담고 있던 건 사실 FAB이다. Floor는 이 시트에 없어 설치현황에서 끌어온다.
         fab: GST.ORG.fab(cv(r,'line')),
         floor: instFloor(cv(r,'eq')||cv(r,'mainEq'), cv(r,'sn')),
+        div:   instDiv(cv(r,'eq')||cv(r,'mainEq'), cv(r,'sn')),
         process: GST.canon.proc(cv(r,'process')),
         detail: GST.nfw(cv(r,'detail')).toUpperCase(),
         eq: GST.canon.eq(cv(r,'eq') || cv(r,'mainEq')),
@@ -989,8 +998,9 @@ function fillSelect(id,fkey,vals){GST.fillSelect(id,fkey,vals,F,t('all'));}
 function rebuildFilters(){
   GST.filters.mount({ page:'material', rows:()=>DATA, onChange:render,
     get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer,
-          campus:x=>x.campus, line:x=>x.line, date:x=>x.workDate },
-    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
+          campus:x=>x.campus, line:x=>x.line, div:x=>x.div, date:x=>x.workDate },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG },
+    loose:{ div:1 } });   // 조인 안 되는 행은 빼지 않는다(버리면 건수가 반으로 준다)
   fillSelect('sl-country','country',uniq('country'));
   // FAB 목록은 데이터에 실제로 나온 것만 — 하드코딩 7키가 F10·F15를 빠뜨리던 문제
   fillSelect('sl-floor','floor',uniq('floor')); fillSelect('sl-process','process',uniq('process'));

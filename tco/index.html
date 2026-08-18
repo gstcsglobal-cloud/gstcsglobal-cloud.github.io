@@ -515,6 +515,7 @@ async function loadData(){ GST.skeleton(true);
         customer:GST.ORG.customer(r[CI.customer]),
         campus:GST.ORG.campus(r[CI.location], r[CI.fab], r[CI.country]),
         line:String(r[CI.fab]||'').trim(),
+        div:String((CI.div>=0?r[CI.div]:'')||'').trim(),   // 사업부(관리주체) — 설치현황에만 있는 열
         proc:procOf(r[CI.group1]),chambers:String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1,
         type:String(r[CI.type]||'').toUpperCase().includes('DUAL')?'DUAL':'SINGLE',turnOn:ton};
     }).filter(Boolean);
@@ -563,6 +564,12 @@ async function loadData(){ GST.skeleton(true);
         matName:String(r[CM.matName]||'').trim(),reason:String(r[CM.reason]||'').trim(),
         qty:rawQty>9999?1:Math.max(1,rawQty),qtyBad:rawQty>9999};
     }).filter(Boolean);
+    /* 사업부는 설치현황에만 있는 열이라 자재 행에는 없다 — 그래서 사업부를 골라도
+       파츠 기반 숫자가 안 움직였다. 설비(EQUIP)에서 S/N 으로 물려받는다.
+       ⚠ 한 번만 돈다. 필터를 만질 때마다 하면 수만 행 × 매 조작이 된다.
+       못 붙은 행은 빈 값 그대로 — loose 로 통과시킨다(버리면 파츠가 반으로 준다). */
+    { const dvOf={}; EQUIP.forEach(e=>{ if(e.snKey && e.div && !dvOf[e.snKey]) dvOf[e.snKey]=e.div; });
+      PARTS.forEach(x=>{ x.div = dvOf[x.snKey] || ''; }); }
 
     buildMonths();
     fillSlicers();
@@ -597,8 +604,9 @@ function fillSlicers(){
      다른 모집단을 보여준다. 기간 칸은 잠근다: 이 화면의 시간축은 위의 «기준 월»이다. */
   GST.filters.mount({ page:'tco', rows:()=>EQUIP.concat(PARTS), onChange:render,
     get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer,
-          campus:x=>x.campus, line:x=>x.line },
-    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
+          campus:x=>x.campus, line:x=>x.line, div:x=>x.div },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG },
+    loose:{ div:1 } });   // 조인 안 되는 행은 빼지 않는다
   const ps=PROCS.filter(p=>EQUIP.some(e=>e.proc===p)||PARTS.some(x=>x.proc===p));
   GST.fillSelect('sl-proc','proc',ps,F,t('all'));
   document.getElementById('sl-proc').querySelectorAll('option').forEach(o=>{if(o.value==='ETC')o.textContent=procLabel('ETC');});

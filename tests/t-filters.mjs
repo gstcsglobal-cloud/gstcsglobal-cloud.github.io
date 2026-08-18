@@ -123,6 +123,7 @@ is(!/_dOf\(x,'bdate'\)/.test(SRC.report) && !/_dOf\(x,'vdate'\)/.test(SRC.report
 is(/_eCourse/.test(SRC.report) && /'Scrubber Lv\.3'/.test(SRC.report),
    'report — KPI 이름표도 잡힌 인원을 따라간다 (Lv.3 을 세면서 Veteran 이라 하지 않는다)');
 
+const AXES7 = ['region','op','div','customer','campus','line','team'];
 console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96)');
 {
   is(/div:new Set\(\)/.test(CORE) || /div:''/.test(CORE), 'core — F 에 div 축이 있다');
@@ -134,8 +135,17 @@ console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96
   is(/const AXES = \['region','op','div','customer','campus','line','team'\]/.test(CORE),
      'core — 축 순서가 AXES 한 곳에 있다 (계층: 구분→운영단위→사업부→고객사→단지→라인→팀)');
   is(/const chk = AXES;/.test(CORE), 'core — 종속(cascading)이 같은 목록을 쓴다');
-  is(/AXES\.map\(function\(k\)\{ return \(MULTI\[k\]\?msel:sel\)/.test(CORE),
-     'core — 사이드바 칸도 같은 목록·같은 순서로 그린다');
+  /* v107 — 사이드바는 «어느 자료에 걸리는 필터인지»로 묶어 보여준다(GROUPS).
+     집계 계층(AXES)은 그대로 두고 화면만 나눈다 — 둘을 한 배열로 묶으면 화면을
+     정리하려다 집계 계층이 바뀐다. 그래서 두 목록이 «같은 축 집합»인지를 본다. */
+  is(/const GROUPS = \[/.test(CORE) && /g\.ks\.map\(function\(k\)\{ return \(MULTI\[k\]\?msel:sel\)/.test(CORE),
+     'core — 사이드바는 GROUPS 로 그리고, 다중 여부는 MULTI 가 정한다');
+  {
+    const gm = CORE.match(/const GROUPS = \[([\s\S]*?)\n  \];/);
+    const ks = gm ? (gm[1].match(/'(\w+)'/g)||[]).map(x=>x.slice(1,-1)).filter(k=>AXES7.includes(k)) : [];
+    is(ks.slice().sort().join()===AXES7.slice().sort().join(),
+       'core — GROUPS 가 일곱 축을 «빠짐없이» 담는다 (빠지면 그 칸이 사라진다) — 실제 '+ks.join(','));
+  }
   /* 축별 조건을 손으로 쓰면 하나만 빠뜨려도 그 축이 조용히 «전체»가 된다.
      그리고 다중선택에서는 `if(F.x)` 가 빈 Set 에도 참이라 반드시 hasK 를 지나야 한다. */
   is(/if\(hasK\(k\) && !axOk\(k, x\)\) return false;/.test(CORE),
@@ -291,7 +301,7 @@ console.log('\n[7-3] 단지는 여러 개를 동시에 고를 수 있다 (Set) �
      그 사이 fault·material·cip 이 `GST.filters.F.line=(F.line===v)?'':v` 로 라인 드릴을
      짜 두었다 — 검사가 못 보는 축이라 통과했고, 다중이 되는 순간 Set 이 문자열로 바뀌어
      그다음 .has 가 TypeError 로 죽는다(화면이 통째로 빈다). 이제 전 축을 본다. */
-  const AXES7 = ['region','op','div','customer','campus','line','team'];
+
   PAGES.forEach(p => {
     const src = nocom(SRC[p]);
     const hits = AXES7.filter(k =>
