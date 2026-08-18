@@ -944,7 +944,10 @@ async function loadData(){ GST.skeleton(true);
         rs:String(v(r,'rsCode')||'').replace(/\.0+$/,''),
         reason:v(r,'reason'), pf:v(r,'pf'), spec:v(r,'spec'),
         // 사용주기는 시트가 이미 계산해 둔 값을 쓴다(전교체일 기준 / 유상 기준)
-        daysPrev:Number(v(r,'daysPrev'))||null, daysPaid:Number(v(r,'daysPaid'))||null,
+        /* Number('1,204') 는 NaN 이다 — CSV 로 올린 «1,000일 이상» 교체 이력이 통째로
+           null 이 되어 사용주기 중앙값이 실제보다 짧게 나온다(같은 파일의 다른 칸은 이미
+           GST.numv 를 쓰고 있어 한 화면 안에서 규칙이 갈려 있었다). */
+        daysPrev:GST.numv(v(r,'daysPrev'))||null, daysPaid:GST.numv(v(r,'daysPaid'))||null,
         proc:v(r,'proc'), model:v(r,'model')
       })).filter(x=>x.sn&&x.name);
     }

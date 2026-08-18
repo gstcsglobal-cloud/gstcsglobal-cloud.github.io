@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 102;
+GST.VER = 104;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -307,11 +307,16 @@ GST.sheetWrite = async function(op, gid, body, params){
    2행이면 dup_key. 낙관적 잠금은 행 전체를 직렬화한 지문(baseHash)으로 유지한다. */
 GST.DBW = {
   '1213453343': {
-    table:'sheet_roster', keyField:'id', keyCol:'ID', nameField:'name', cascadeTo:'0',
+    table:'sheet_roster', keyField:'id', keyCol:['사원번호','ID'], nameField:'name', cascadeTo:'0',
     required:['id','name','join'],
-    cols:{ id:'ID', name:'Name((영문)', cn:'Name(중문)', dept:'Dept.', level:'Position Level',
-           wp:'Work Place', role:'2025 Position Role', join:'Date of entry', quit:'Resignation',
-           org:'조직도 위치', posKo:'직급', duty:'업무/직책', onsite:'현장 인원여부' }
+    /* 양식이 세 벌이라 별칭으로 받는다 — 새 한글 · 한글 · 옛 영문 순. 읽기(hr·report·
+       kakao-bot)가 이미 이 순서를 쓰고 있고, 쓰기만 옛 영문에 묶여 있었다. */
+    cols:{ id:['사원번호','ID'], name:['이름(영문)','Name((영문)'], cn:['이름(중문)','Name(중문)'],
+           dept:['부서','Dept.'], level:['직급(레벨)','Position Level'],
+           wp:['근무지','Work Place'], role:['담당업무','2025 Position Role'],
+           join:['입사일','Date of entry'], quit:['퇴사일','Resignation'],
+           org:['담당구분','조직도 위치'], posKo:['직급(한글)','직급'],
+           duty:['업무/직책'], onsite:['현장 인원여부'] }
   },
   '0': {
     table:'sheet_edu', keyField:'id', keyCol:'사원번호', nameField:'name',
@@ -347,9 +352,20 @@ GST._dbwColMap = function(rowObj){
   Object.keys(rowObj||{}).forEach(function(k){ if(!GST._CSV_SKIP[k]) m[GST.SM.norm(k)] = k; });
   return m;
 };
+/* 컬럼 이름을 «별칭 배열»로 받는다 — 인원명단 양식이 세 벌이라(옛 영문 · 한글 · 새 한글)
+   읽기 세 곳은 이미 별칭으로 흡수하는데 **쓰기만 단일 문자열이었다**(제2원칙 그대로의 자리).
+   그래서 v96 새 양식 이후 hr 의 인원 편집이 아무에게도 안 열렸고(빈 `ID` 열로 찾아 0행),
+   신규 등록은 «저장됨»이라 답하고 옛 열에 값을 넣어 어느 화면에도 안 보였다.
+   ⚠ 순서가 규약이다 — «새 양식 먼저». Import 표는 ALTER 로 열을 맨 뒤에 붙이므로
+     빈 `ID` 가 앞, 채워진 `사원번호` 가 뒤에 온다. 이름 순서로 고르면 빈 열을 집는다. */
+GST._dbwPick = function(cmap, want){
+  var list = Array.isArray(want) ? want : [want];
+  for(var i=0;i<list.length;i++){ var k = cmap[GST.SM.norm(list[i])]; if(k) return k; }
+  return null;
+};
 GST._dbwCol = function(cmap, want){
-  var k = cmap[GST.SM.norm(want)];
-  if(!k) throw GST._dbwErr('no_col', 500, {col:want});
+  var k = GST._dbwPick(cmap, want);
+  if(!k) throw GST._dbwErr('no_col', 500, {col:Array.isArray(want)?want.join('/'):want});
   return k;
 };
 /* 낙관적 잠금 지문 — 열이름순 직렬화의 FNV+djb2. sheet-write 의 SHA-256 과 형식은 다르지만
@@ -365,7 +381,7 @@ GST._dbwHash = function(rowObj){
 GST._dbwFields = function(W, rowObj){          // 표 행 → 페이지가 아는 논리 필드
   var cmap = GST._dbwColMap(rowObj), out = {};
   Object.keys(W.cols).forEach(function(f){
-    var k = cmap[GST.SM.norm(W.cols[f])];
+    var k = GST._dbwPick(cmap, W.cols[f]);
     if(k!=null) out[f] = rowObj[k]==null?'':String(rowObj[k]);
   });
   return out;
@@ -468,11 +484,25 @@ GST.dbWrite = async function(op, gid, body, params){
       try{ await GST._dbwFind(c, W, flds[W.keyField], null); throw GST._dbwErr('dup_key', 409); }
       catch(e){ if(e && e.data && e.data.error !== 'not_found') throw e; }
     }
+    /* ⚠ 별칭의 «첫 이름»을 그대로 쓰면 안 된다 — 표에 없는 옛 열에 값을 넣게 되고,
+       insert 는 성공하는데(그 열이 남아 있으면) 파서는 «채워진 열»을 보므로 어느 화면에도
+       안 뜬다. «저장됨»이라 답하고 아무 데도 없는, 가장 설명하기 어려운 실패다.
+       그래서 표의 실제 열 목록을 한 번 읽어 거기서 고른다. */
+    var probeA = await c.from(W.table).select('*').limit(1);
+    if(probeA.error) throw GST._dbwErr('sheets_error', 500, {detail:probeA.error.message});
+    /* ⚠ «한 행 받아 키 보기»는 표가 비어 있으면 못 쓴다 — 그런데 첫 등록이 바로 그 순간이다.
+       행이 없으면 별칭의 «첫 이름»(=새 양식의 정본 이름)으로 넣는다. 행이 있으면 그 행의
+       실제 열에서 고른다 — 옛 열이 남아 있는 표에서 빈 열을 집지 않기 위해서다. */
+    var hasRowsA = !!(probeA.data && probeA.data.length);
+    var cmapA = GST._dbwColMap((probeA.data && probeA.data[0]) || {});
     var ins = {};
     Object.keys(flds).forEach(function(k){
       /* 시트 시절 잔재 필드(join·role·posKo 등 교육 표에서 없어진 열)는 버린다 —
          페이지가 아직 보내지만 담을 열이 없다. 여기 한정으로 의도된 무시다. */
-      if(W.cols[k]) ins[W.cols[k]] = String(flds[k]);
+      var want = W.cols[k]; if(!want) return;
+      var col = hasRowsA ? GST._dbwPick(cmapA, want)
+                         : (Array.isArray(want) ? want[0] : want);
+      if(col) ins[col] = String(flds[k]);
     });
     if(!Object.keys(ins).length) throw GST._dbwErr('bad_value', 400);
     var ri = await c.from(W.table).insert(ins).select('*');
@@ -1802,7 +1832,13 @@ GST.SM.panel = function(){
      JSON 으로 374MB 다(실측 257,606행). setItem 이 QuotaExceededError 를 던지고
      아래 catch 가 그걸 삼킨다 — 캐시가 없는 것과 같은데 아무 흔적이 없다.
      큰 표는 GST.idb(IndexedDB) 로 간다. 이 함수는 시트 경로 폴백용으로 남는다. */
+/* localStorage 한도는 5~10MB 다. 수선실적은 푼 JSON 이 374MB 라(실측) stringify 자체가
+   수백 MB 를 만들었다 버리는 헛돈이고, setItem 은 «반드시» QuotaExceeded 로 던진다 —
+   캐시가 없는 것과 결과는 같은데 매 로드마다 그 비용만 낸다. 큰 표는 IndexedDB(GST.idb)가
+   맡으므로 여기서는 아예 시도하지 않는다. 경계는 넉넉히 잡았다(한 행 38열 기준 약 5MB). */
+GST.CACHE_MAX_ROWS = 20000;
 GST.cacheSave=function(key,rows){
+  if(!rows || rows.length > GST.CACHE_MAX_ROWS){ GST._cacheSkip=(GST._cacheSkip||0)+1; return; }
   try{ localStorage.setItem('gstc_'+key, JSON.stringify({t:Date.now(),rows})); }
   catch(e){ GST._cacheQuota=(GST._cacheQuota||0)+1; }   // 조용히 버리지 않고 세어 둔다
 };
@@ -2429,7 +2465,7 @@ GST.initSidebar = function(opts){
     const ab=document.createElement('button'); ab.className='gst-sb-tool'; ab.type='button';
     ab.title='10분마다 데이터만 다시 불러옵니다. 필터는 유지됩니다.';
     function arOn(){ try{ return localStorage.getItem('gst_auto_refresh')!=='0'; }catch(e){ return true; } }
-    function syncAr(){ ab.textContent='⟳ 자동 10분 · '+(arOn()?'ON':'OFF'); ab.classList.toggle('on',arOn()); }
+    function syncAr(){ ab.textContent='⟳ 자동 '+GST.AR_MIN+'분 · '+(arOn()?'ON':'OFF'); ab.classList.toggle('on',arOn()); }
     ab.onclick=function(){ try{ localStorage.setItem('gst_auto_refresh', arOn()?'0':'1'); }catch(e){} syncAr(); };
     syncAr();
     tools.appendChild(ab);
@@ -2550,6 +2586,9 @@ GST._restoreFilters = function(snap){
   // 날짜 입력을 복원한 뒤 적용 버튼이 있으면 마지막에 눌러 기간을 재적용 (설치 현황)
   const ap=sb.querySelector('.apply-btn'); if(ap) ap.click();
 };
+/* 사이드바 버튼이 «자동 10분» 이라고 적혀 있는데 실제 주기는 30분이었다. 화면이 사실과
+   다른 말을 하면 사용자는 «안 도는 것»으로 읽는다. 주기를 한 곳에 두고 라벨이 따라간다. */
+GST.AR_MIN = 30;
 GST.startAutoRefresh = function(min){
   if(GST._arTimer) return;
   const fn = window.loadData || window.loadAll;
@@ -2618,7 +2657,10 @@ GST.filters = (function(){
      사업부는 국내 자료에만 있다(해외 설치현황에는 그 열이 없다). 값이 없는 화면에서는
      「전체 (자료 없음)」으로 잠긴다 — 칸이 나타났다 사라지면 그게 더 헷갈린다. */
   const L = { region:'구분', op:'운영단위', div:'사업부', customer:'고객사', campus:'단지', line:'라인', team:'팀', period:'기간' };
-  const val = (g, x) => { try{ const v = g ? g(x) : ''; return v==null?'':String(v).trim(); }catch(e){ return ''; } };
+  /* 같은 표 안에서 연속 공백이 흔들린다(실측: `GST CHINA(WUHAN)··SCRUBBER`). 그대로 두면
+     한 법인이 목록에 두 줄로 뜨고, 어느 쪽을 고르느냐에 따라 설비가 반씩 갈린다 —
+     v98 이 「남은 문제 ③」으로 적어 둔 자리다. 공백만 눕힌다(낱말은 시트 값 그대로). */
+  const val = (g, x) => { try{ const v = g ? g(x) : ''; return v==null?'':String(v).replace(/\s+/g,' ').trim(); }catch(e){ return ''; } };
   const dstr = v => {
     if(!v) return '';
     if(v instanceof Date) return isNaN(v)?'':v.toISOString().slice(0,10);
@@ -2629,7 +2671,46 @@ GST.filters = (function(){
      생겼을 때 목록에 없는 행이 필터에서 통째로 사라진다 — 에러 없이.
      drop: 값이긴 한데 그 축의 값이 아닌 것(라인 칸에 든 '라인장'·'주재원' 같은 직무).
      걸러도 그 행이 사라지지는 않는다 — 목록에서만 안 보인다. */
+  function setK(k, v){
+    if(!(k in F)) return;
+    if(MULTI[k]){ F[k].clear(); (Array.isArray(v)?v:(v?[v]:[])).forEach(function(x){ F[k].add(x); }); }
+    else F[k] = v || '';
+    save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
+  }
+
+  /* ── 자동순회(키오스크)가 이 페이지의 필터를 «빌려 쓴다» ──
+     세 가지가 한 곳에 있어야 한다. 흩어 두면 각각이 조용히 틀린다:
+     ① **mount 전에 온 값은 보류한다.** 탭은 지연 로딩이고 mount 는 25만행을 다 받은 뒤에
+        불린다. 그 전에 값을 넣으면 뒤늦은 load() 가 저장본으로 덮어써서 «하단바는 H1,
+        화면은 남의 단지»가 된다. 셸이 1.2초 뒤 한 번 더 보내는 것으로는 원리적으로 못 맞춘다.
+     ② **사람 필터 기준선은 load() «다음»에 잡는다.** mount 전 빈 값을 기준선으로 잡으면,
+        순회를 끄는 순간 사람이 걸어 둔 필터가 사라진다(복원이 오히려 지운다).
+     ③ **정말로 걸렸는지 돌려준다.** 그 페이지 자료에 없는 값은 fill/fillMulti 가 버리는데
+        (빈 Set·빈 문자열), 그 상태가 곧 «전체»다. 알려주지 않으면 벽 화면이 「H1」이라 적고
+        전사 합계를 보여준다 — 지나가는 사람은 그걸 H1 숫자로 읽는다. */
+  let KPEND = null, KSAVED = null;
+  function kioskSet(k, v){
+    if(!(k in F)) return { applied:false, why:'noaxis' };
+    if(!CFG){ KPEND = { k:k, v:v }; return { applied:false, why:'loading' }; }
+    if(!KSAVED){ const cur = F[k]; KSAVED = { k:k, v:(cur instanceof Set) ? Array.from(cur) : cur }; }
+    /* «걸렸나»를 F 로 확인하면 안 된다 — 목록에서 버리는 일은 fill/fillMulti(=DOM)가 하므로
+       사이드바가 아직 없거나 접힌 상황에서는 F 에 값이 남아 «걸린 척»이 된다.
+       물어야 할 것은 하나다: 이 페이지 자료에 그 값이 있는가. */
+    const known = opts(k).indexOf(String(v)) >= 0;
+    setK(k, v);
+    if(!v) return { applied:true, why:'' };
+    return { applied:known, why: known ? '' : 'nodata' };
+  }
+  function kioskRestore(){
+    KPEND = null;
+    if(!KSAVED || !CFG) { KSAVED = null; return; }
+    const sv = KSAVED; KSAVED = null; setK(sv.k, sv.v);
+  }
+
   function opts(key, narrow){
+    /* mount 전에도 불릴 수 있다 — options() 가 공개 API 라 셸이 언제든 물어본다.
+       CFG 가 null 이면 예외가 아니라 «아직 아는 값이 없다»(빈 배열)가 맞다. */
+    if(!CFG) return [];
     const g = (CFG.get||{})[key], rows = (CFG.rows && CFG.rows()) || [];
     if(!g) return [];
     const dr = (CFG.drop||{})[key];
@@ -2726,6 +2807,9 @@ GST.filters = (function(){
   /* ⚠ JSON.stringify(new Set) 은 '{}' 다 — 배열로 눕혀 저장하고 되살릴 때 Set 으로 되돌린다.
      그냥 Object.assign 으로 복원하면 F.campus 가 빈 객체가 되어 .has 가 사라진다(실제로 죽었다). */
   function save(){ try{
+    /* mount 전에는 KEY 가 '' 다. 그대로 쓰면 «빈 이름» 키에 남의 페이지 값이 섞여 들어가고,
+       정작 이 페이지 저장본은 안 바뀐다 — 저장한 줄 알았는데 안 된 상태가 된다. */
+    if(!KEY) return;
     const o={}; Object.keys(F).forEach(function(k){ o[k]=MULTI[k]?Array.from(F[k]):F[k]; });
     localStorage.setItem(KEY, JSON.stringify(o));
   }catch(e){} }
@@ -2780,6 +2864,9 @@ GST.filters = (function(){
     mount: function(cfg){
       CFG = cfg || {}; KEY = 'gst_bf_' + (CFG.page||'x');
       load();
+      /* 순회가 로딩 중에 보낸 값이 있으면 지금 적용한다 — 기준선도 여기서 잡혀야
+         «사람이 걸어 둔 값»이 기준이 된다(위 kioskSet 주석 ②). */
+      if(KPEND){ const kp = KPEND; KPEND = null; kioskSet(kp.k, kp.v); }
       const box = document.querySelector('.slicers'); if(!box) return;
       if(!document.getElementById('gf-region')){
         const own = [].slice.call(box.children);
@@ -2797,6 +2884,8 @@ GST.filters = (function(){
        ⚠ 목록을 셸에 박지 말 것 — 대만 전용 목록으로 국내가 통째로 사라졌던 v89 그대로다.
        종속(narrow)을 걸지 않는다: 지금 걸린 필터와 무관하게 «이 자료에 있는 전부»를 돌아야 한다. */
     options: function(k){ return opts(k); },
+    ready: function(){ return !!CFG; },
+    kioskSet: kioskSet, kioskRestore: kioskRestore,
     /* 기본 필터 술어. 페이지의 filt() 맨 앞에 한 줄로 넣는다. */
     /* opt.noDate — 기간 조건만 건너뛴다. 설치현황의 «미가동 목록»처럼 «그 기간에 가동을
        시작하지 않은» 설비를 봐야 하는 카드가 있다. 축 조건은 그대로 걸린다 — 기간만 뺀다. */
@@ -2824,12 +2913,7 @@ GST.filters = (function(){
     },
     /* 축 하나만 끄거나 켠다. 페이지가 `GST.filters.F[k]=''` 를 직접 쓰면 다중 축에서
        Set 이 문자열로 바뀌어 그다음 `.has` 가 TypeError 로 죽는다 — 여기로만 지나가게 한다. */
-    set: function(k, v){
-      if(!(k in F)) return;
-      if(MULTI[k]){ F[k].clear(); (Array.isArray(v)?v:(v?[v]:[])).forEach(function(x){ F[k].add(x); }); }
-      else F[k] = v || '';
-      save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
-    },
+    set: setK,
     // 차트 드릴용 — 같은 값을 다시 누르면 해제. 다중 축은 «그 값만» 토글한다.
     toggle: function(k, v){
       if(!(k in F)) return;
@@ -3275,20 +3359,16 @@ window.addEventListener('message', function(e){
       {type:'gst-kiosk-a', axis:ax, list:list, ver:GST.VER, page:(GST._pageId||location.pathname)}, '*'); }catch(x){}
     return; }
   if(d.type==='gst-kiosk-set'){
-    try{
-      const k=d.axis||'campus';
-      if(!GST._kioskSaved){
-        /* 축마다 그릇이 다르다 — 단지는 Set, 나머지는 문자열. 원래 «생김새 그대로» 담아야
-           복원할 때 되돌려 놓을 수 있다(Set 을 문자열로 되돌리면 그다음 .has 가 TypeError). */
-        const cur=GST.filters.F[k];
-        GST._kioskSaved={k:k, v:(cur instanceof Set)?Array.from(cur):cur};
-      }
-      /* set() 을 지나야 한다 — 문자열 하나를 줘도 다중 축이면 알아서 Set 에 넣는다. */
-      GST.filters.set(k, d.value||'');
-    }catch(x){}
+    /* 걸었는지를 «반드시» 돌려준다. 그 페이지 자료에 없는 값은 조용히 버려져 «전체»가
+       되는데, 셸이 그걸 모르면 하단바가 틀린 사이트 이름을 적극적으로 주장하게 된다. */
+    let r = { applied:false, why:'err' };
+    try{ r = GST.filters.kioskSet(d.axis||'campus', d.value||''); }catch(x){}
+    try{ (e.source||window.parent).postMessage(
+      {type:'gst-kiosk-ack', axis:d.axis||'campus', value:d.value||'',
+       applied:!!r.applied, why:r.why||''}, '*'); }catch(x){}
     return; }
   if(d.type==='gst-kiosk-restore'){
-    try{ if(GST._kioskSaved){ GST.filters.set(GST._kioskSaved.k, GST._kioskSaved.v); GST._kioskSaved=null; } }catch(x){}
+    try{ GST.filters.kioskRestore(); }catch(x){}
     return; }
 });
 
@@ -3348,9 +3428,23 @@ GST.filtSummary = function(){
      복제 방식을 쓰면 x축이 타임스탬프 숫자로 찍힌다. devicePixelRatio 를 바꿨다 되돌리는
      기존 방식과 같은 규율이다.
    되돌리기는 반드시 finally 로 — 중간에 던지면 화면 차트가 «흰 글자 없는» 상태로 굳는다. */
+/* 흰 종이(#FFF)에 얹었을 때 «안 보일 만큼» 밝은 색인가. 상대 광도 0.55 를 경계로 둔다 —
+   #E6EDF3(0.85)·흰색은 걸리고, 회색 보조글자 #8B98A9(0.32)·빨강 표식 #fb7185(0.33)는 남는다. */
+GST._tooLight = function(c){
+  if(typeof c !== 'string') return false;
+  let r,g,b;
+  const h = c.trim().replace(/^#/,'');
+  if(/^[0-9a-f]{6}$/i.test(h)){ r=parseInt(h.slice(0,2),16); g=parseInt(h.slice(2,4),16); b=parseInt(h.slice(4,6),16); }
+  else if(/^[0-9a-f]{3}$/i.test(h)){ r=parseInt(h[0]+h[0],16); g=parseInt(h[1]+h[1],16); b=parseInt(h[2]+h[2],16); }
+  else { const m=c.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i); if(!m) return false; r=+m[1]; g=+m[2]; b=+m[3]; }
+  const lin = v => { v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); };
+  return (0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b)) > 0.55;
+};
 GST._chartLight = function(ch){
   const undo = [];
-  const set = function(o,k,v){ if(!o) return; undo.push([o,k,o[k]]); o[k]=v; };
+  /* «없던 키»는 undefined 로 되돌리지 말고 지운다. 값은 같아 보여도 `'color' in o` 가
+     달라지고, 그걸로 «넘겼는지»를 판단하는 코드가 생기면 그때부터 조용히 갈린다. */
+  const set = function(o,k,v){ if(!o) return; undo.push([o,k,o[k],(k in o)]); o[k]=v; };
   const sc = ch.options.scales || {};
   Object.keys(sc).forEach(function(k){
     const ax = sc[k]; if(!ax || typeof ax !== 'object') return;
@@ -3362,9 +3456,25 @@ GST._chartLight = function(ch){
   const pl = ch.options.plugins || {};
   if(pl.legend){ pl.legend.labels = pl.legend.labels || {}; set(pl.legend.labels,'color','#333333'); }
   if(pl.title) set(pl.title,'color','#111111');
-  if(pl.datalabels) set(pl.datalabels,'color','#333333');
+  /* 자체 플러그인이 캔버스에 «직접» 찍는 글자(막대 위 값·도넛 가운데 TOTAL)는 색을
+     자기 옵션에 들고 있다(valLabel.color · dCenter.color/mut). 어두운 테마 기본값이
+     밝은 색이라 흰 종이에 그대로 찍으면 **글자가 통째로 사라진다** — 렌더는 성공하므로
+     에러도 경고도 없고, 「숫자 없는 막대」를 받은 사람은 값을 못 읽는다.
+     ⚠ 플러그인 이름을 나열하지 않는다. 나열하면 새 플러그인이 생길 때마다 같은 사고가
+       난다. 물어야 할 것은 하나다 — «이 색이 흰 종이에서 안 보일 만큼 밝은가».
+       그래서 빨강 이상치 표식(#fb7185, 광도 0.33) 같은 «의미 있는 색»은 건드리지 않는다. */
+  Object.keys(pl).forEach(function(k){
+    const o = pl[k]; if(!o || typeof o !== 'object') return;
+    /* 색을 «안 넘긴» 차트도 있다(hr 의 원형 차트 등). 그때는 플러그인이 자기 기본값을
+       쓰는데, 이 프로젝트의 플러그인 기본색은 전부 어두운 테마용(#E6EDF3)이다 —
+       즉 «없음»도 «밝음»과 같은 뜻이다. 되돌릴 때 undefined 로 돌아가므로 안전하다. */
+    ['color','mut','textColor'].forEach(function(f){
+      if(!(f in o) || GST._tooLight(o[f])) set(o, f, f === 'mut' ? '#666666' : '#333333');
+    });
+  });
   if(window.Chart && Chart.defaults) set(Chart.defaults,'color','#333333');
-  return function(){ for(let i=undo.length-1;i>=0;i--){ undo[i][0][undo[i][1]] = undo[i][2]; } };
+  return function(){ for(let i=undo.length-1;i>=0;i--){
+    const u=undo[i]; if(u[3]) u[0][u[1]] = u[2]; else delete u[0][u[1]]; } };
 };
 /* 차트를 고배율로 다시 그려 캔버스로. light=true 면 흰 종이용(위 _chartLight). */
 GST.chartHiResLight = function(id, scale){
@@ -4761,7 +4871,7 @@ function gstAutoStart(){
   /* 10분 → 30분. 한 번의 새로고침이 시트 8개를 통째로 다시 받는다(주간현황 기준).
      10분이면 한 사람이 하루 8시간 열어두는 것만으로 하루 768MB — 무료 5GB가 일주일에 사라진다.
      시트는 그렇게 자주 바뀌지 않고, 미러 자체도 30분 주기로 돈다(sheet-sync/DEPLOY.md). */
-  try{ GST.startAutoRefresh(30); }catch(e){}
+  try{ GST.startAutoRefresh(GST.AR_MIN); }catch(e){}
   try{ gstSnStart(); }catch(e){}
 }
 if(document.readyState==='loading'){

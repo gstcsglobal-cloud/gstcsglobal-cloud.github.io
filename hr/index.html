@@ -1184,6 +1184,9 @@ function render(){ GST.skeleton(false);
     {k:'in',   label:tr('io_in'),  labels:IO.map(p=>p.label), data:ins.map(a=>a.length),  unit:tr('tbl_unit')},
     {k:'out',  label:tr('io_out'), labels:IO.map(p=>p.label), data:outs.map(a=>a.length), unit:tr('tbl_unit'), goodWhenDown:true}
   ]);
+  /* 피벗의 교육 축 이름 — «지금 잡힌 인원»을 따라간다. dims 의 t 는 문자열로 쓰이므로
+     (core 의 GST._esc(d.t||d.k)) 함수를 넘길 수 없다. 여기서 한 번 계산해 둔다. */
+  const PVEN = eduNames(f);
   GST.pivotReg({sets:[
    { k:'ppl', t:tr('kp1'),
     rows:()=>f,
@@ -1191,14 +1194,17 @@ function render(){ GST.skeleton(false);
           {k:'org',  t:tr('sl_org')},
           {k:'role', t:tr('sl_role')},
           {k:p=>p.onsite?tr('st_on'):tr('st_off'), t:tr('f_onsite')},
-          {k:p=>clsB(p), t:tr('f_basic')},
-          {k:p=>clsV(p), t:tr('f_vet')},
+          /* ⚠ clsB/clsV 를 직접 부르면 국내 인원이 전원 「비대상」으로만 잡힌다 —
+             국내에는 법인 교육과정(Basic·Veteran)이 아예 없기 때문이다(v96 규약).
+             「그 사람의 1·2단계」를 묻는 접근자만 쓰고, 축 이름도 잡힌 인원을 따라간다. */
+          {k:p=>eduCls1(p), t:PVEN[0]},
+          {k:p=>eduCls2(p), t:PVEN[1]},
           {k:p=>{const y=tenureYr(p); return y==null?'—':(y<1?tr('cr1'):(y<2?tr('cr2'):tr('cr3')));}, t:tr('kp5')}],
     measures:[{k:'cnt', t:tr('tbl_unit'), agg:'count'},
               {k:'ten', t:tr('kp5'), agg:'avg', f:p=>tenureYr(p)}],
     detailCols:[{k:'name',t:tr('f_name')},{k:'id',t:tr('f_id')},{k:p=>shortSite(p.site),t:tr('sl_site')},
                 {k:'role',t:tr('sl_role')},{k:'join',t:tr('th_join')},
-                {k:p=>clsB(p),t:tr('f_basic')},{k:p=>clsV(p),t:tr('f_vet')}] },
+                {k:p=>eduCls1(p),t:PVEN[0]},{k:p=>eduCls2(p),t:PVEN[1]}] },
    { k:'lv', t:tr('ch_lv'), date:x=>x.rec.date,
     // LVJ = 명단 매칭이 끝난 휴가 레코드(현재 슬라이서 승계). 사람·항목·라인·월 어느 축으로든 판다.
     rows:()=>LVJ,

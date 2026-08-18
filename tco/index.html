@@ -262,6 +262,9 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
+/* GST.numv(천 단위 쉼표)·GST.EQ(설비상태)를 쓴다 — 옛 core.js 가 캐시에 남으면
+   숫자만 조용히 틀리므로 배너로 드러낸다. */
+GST.needVer && GST.needVer(99);
 GST.authGate();
 const VER='v49';
 const PUB='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub';
@@ -525,7 +528,11 @@ async function loadData(){ GST.skeleton(true);
       const p=procOf(r[CW.proc]);
       if(p){ (snProc[snKey]=snProc[snKey]||{})[p]=(snProc[snKey][p]||0)+1; }
       if(!d)return null;
-      return {snKey,t:+d,min:Math.max(0,parseFloat(r[CW.workMin])||0)};
+      /* ⚠ parseFloat('2,093') 은 2 다 — CSV 로 올린 행은 정지시간 2,093분이 «2분»이 되어
+         다운타임 기회비용이 사실상 0 이 된다. 빈칸도 에러도 아니라 화면에서 구별할 방법이
+         없고, 같은 시트를 보는 고장분석(GST.numv)과 다른 숫자가 나온다.
+         xlsx 로 올린 행은 쉼표가 없어 정상이므로 «올린 방식에 따라 답이 달라지는» 상태였다. */
+      return {snKey,t:+d,min:Math.max(0,GST.numv(r[CW.workMin])||0)};
     }).filter(Boolean);
     // 설치 Group에 공정이 없으면 작업이력 최빈 공정으로 보정
     EQUIP.forEach(e=>{
@@ -543,7 +550,7 @@ async function loadData(){ GST.skeleton(true);
     PARTS=mat.rows.slice(HI_MAT+1).map(r=>{
       const d=toDate(r[CM.workDate]);
       if(!d)return null;
-      const rawQty=Number(r[CM.qty])||1;
+      const rawQty=GST.numv(r[CM.qty])||1;   // 위와 같은 이유 — 1,200개가 조용히 1개가 됐다
       // sn(원문)·matName·reason은 차트 세부내역($rows) 표기용 —
       // 세부내역 목록에 자재명이 없으면 목록이 무의미하다(snKey는 정규화라 읽기도 불편).
       return {t:+d,cust:custBase(r[CM.customer]),

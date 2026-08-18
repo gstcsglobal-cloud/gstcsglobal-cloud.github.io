@@ -132,6 +132,53 @@ ok(/data\.corp\s*=\s*corpLabel\(\)/.test(RPT), 'report 가 data.corp 를 넘겨�
 ok(/function corpLabel\(\)\{\s*return GST\.corpLabel\(F\);\s*\}/.test(RPT),
    'report 의 corpLabel 은 core 의 것을 그대로 써야 한다(두 벌이면 갈라진다 — 제2원칙)');
 
+/* ── [2-2] 양식 표에 «대만 표본 숫자»가 남지 않는지 ──
+   예전에는 양식 행 라벨(Micron F16·Tong luo·PSMC…)과 대시보드 행 라벨(법인/고객사)을
+   대만 전용 정규식으로 맞췄다. 어느 모드에서도 안 맞아 **못 맞춘 행에 양식의 대만 표본
+   숫자가 그대로 남았고**, 법인 상자에는 'SEC' 가 찍혔다 — 받아 본 사람은 삼성 실적이
+   961대라고 읽는다. TOTAL 만 갱신되니 합계와 위 행의 합도 안 맞았다. */
+console.log('[2-2] 국내 법인으로 뽑아도 양식의 대만 숫자가 남지 않는지');
+{
+  const KR = [
+    ['SEC Scrubber','120','60','60','240','120','120','5','9','3','40','12'],
+    ['SDC Scrubber','80','40','40','160','80','80','2','4','1','25','7'],
+    ['TOTAL','200','100','100','400','200','200','7','13','4','65','19'],
+  ];
+  const notes=[];
+  const out = await asNode(()=>QBR.build(JSZip, tplBuf, {corp:'SEC', opRows:KR, notes:notes}));
+  const after = await slidesOf(out);
+  const s2 = after['ppt/slides/slide2.xml']||'';
+  const txt = [...s2.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map(m=>m[1]);
+  ok(txt.includes('SEC Scrubber') && txt.includes('SDC Scrubber'),
+     '대시보드 행 이름이 양식 표에 들어가야 한다 (실제 앞부분: '+txt.slice(0,14).join('|')+')');
+  for(const stale of ['Micron F16','Tong luo','Winbond','961','1,878']){
+    ok(!txt.includes(stale), '양식의 대만 표본 「'+stale+'」이 남으면 안 된다');
+  }
+  ok(txt.includes('200') && txt.includes('400'), 'TOTAL 행이 대시보드 합계로 바뀌어야 한다');
+  ok(notes.length===0, '3행이면 양식 슬롯에 다 들어가므로 경고가 없어야 한다 (실제 '+JSON.stringify(notes)+')');
+
+  const many=[]; for(let i=0;i<12;i++) many.push(['법인'+i,'1','1','1','1','1','1','1','1','1','1','1']);
+  many.push(['TOTAL','12','12','12','12','12','12','12','12','12','12','12']);
+  const n2=[]; await asNode(()=>QBR.build(JSZip, tplBuf, {opRows:many, notes:n2}));
+  ok(n2.length===1 && /빠졌습니다/.test(n2[0]), '슬롯을 넘치면 몇 행이 빠졌는지 알려야 한다 (실제 '+JSON.stringify(n2)+')');
+}
+
+/* ── [2-3] 교육 표 머리글이 «잡힌 인원»을 따라가는지 ── */
+console.log('[2-3] 교육 표 머리글이 국내에서 Lv.2/Lv.3 로 바뀌는지');
+{
+  const ed = { h:['Scrubber Lv.2','Scrubber Lv.3'],
+               b:{no:3,ing:0,done:7,rate:'70%'}, v:{no:1,ing:0,done:9,rate:'90%'} };
+  const out = await asNode(()=>QBR.build(JSZip, tplBuf, {eduTable:ed}));
+  const s1 = (await slidesOf(out))['ppt/slides/slide1.xml']||'';
+  const txt = [...s1.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map(m=>m[1]);
+  ok(txt.includes('Scrubber Lv.2') && txt.includes('Scrubber Lv.3'),
+     '머리글이 잡힌 인원을 따라가야 한다 (실제 후보: '+txt.filter(x=>/Lv|Basic|Veteran/.test(x)).join('|')+')');
+  ok(!txt.some(x=>/^Basic/.test(x)), '「Basic」이 남으면 국내에 법인 과정이 있는 줄 안다');
+  const out2 = await asNode(()=>QBR.build(JSZip, tplBuf, {eduTable:{b:ed.b,v:ed.v}}));
+  const t2 = [...((await slidesOf(out2))['ppt/slides/slide1.xml']||'').matchAll(/<a:t>([^<]*)<\/a:t>/g)].map(m=>m[1]);
+  ok(t2.some(x=>/Basic/.test(x)), '머리글을 안 주면 양식 원문을 그대로 둬야 한다');
+}
+
 /* ══════════════════════════════════════════════════════════════
    [3] pptAuto — 양식 얼굴 · 한 장에 최대 6개
    가짜 DOM·가짜 PptxGenJS 로 «무엇을 그렸는지» 그대로 받아 본다.
@@ -232,6 +279,38 @@ function mkEnv(nCharts, insights){
   ok(ch.options.scales.x.ticks.color==='#E6EDF3', '캡처 뒤 축 글자색을 되돌려야 한다 (실제 '+ch.options.scales.x.ticks.color+')');
   ok(ch.options.plugins.legend.labels.color==='#E6EDF3', '캡처 뒤 범례 색을 되돌려야 한다');
   ok(ch.options.devicePixelRatio===1, '캡처 뒤 devicePixelRatio 를 되돌려야 한다');
+  reset();
+}
+
+/* ── [3-2] 흰 종이에서 «글자가 사라지지» 않는지 ──
+   막대 위 값·도넛 가운데 TOTAL 은 자체 플러그인이 캔버스에 직접 찍고, 색을 자기 옵션에
+   들고 있다. 어두운 테마 기본값이 밝은 색이라 그대로 흰 종이에 찍으면 통째로 안 보인다 —
+   렌더는 성공하므로 에러도 경고도 없고, 「숫자 없는 막대」를 받은 사람은 값을 못 읽는다. */
+console.log('[3-2] 흰 종이용으로 바꿀 때 밝은 글자색이 따라오는지');
+{
+  /* ⚠ render 는 두 번 불린다 — 캡처용(어둡게 바꾼 뒤)과 되돌린 뒤. 마지막 것만 보면
+     «안 바뀌었다»로 잘못 읽는다. 그래서 매 렌더의 색을 순서대로 기록해 [0]=캡처 시점을 본다. */
+  const shots = [];
+  mkEnv(1, []);
+  const ch = global.window.CHARTS.c0;
+  ch.options.plugins.valLabel = { mode:'peaks', color:'#E6EDF3' };   // 어두운 테마 기본
+  ch.options.plugins.dCenter  = { on:true, color:'#E6EDF3', mut:'#8B98A9' };
+  ch.options.plugins.pieText  = { mode:'pie' };                      // 색을 «안» 넘긴 경우
+  ch.options.plugins.trendAnno= { anomaly:true, color:'#fb7185' };   // 의미 있는 색
+  ch.render = function(){ const p=ch.options.plugins;
+    shots.push({ val:p.valLabel.color, dc:p.dCenter.color, mut:p.dCenter.mut,
+                 pie:p.pieText.color, anno:p.trendAnno.color }); };
+  await GST.pptAuto({asOf:'2026-08-18'});
+  const cap = shots[0] || {}, back = shots[shots.length-1] || {};
+  ok(cap.val && !GST._tooLight(cap.val), '막대 값 라벨이 어두워져야 한다 (캡처 중 '+cap.val+')');
+  ok(cap.dc && !GST._tooLight(cap.dc), '도넛 가운데 숫자가 어두워져야 한다 (캡처 중 '+cap.dc+')');
+  ok(cap.pie && !GST._tooLight(cap.pie), '색을 «안 넘긴» 차트도 어두워져야 한다 (캡처 중 '+cap.pie+')');
+  /* 의미 있는 색까지 뭉개면 안 된다 — 빨강 이상치 표식은 흰 종이에서도 잘 보인다. */
+  ok(cap.anno==='#fb7185', '흰 종이에서도 보이는 «의미 있는 색»은 건드리면 안 된다 (실제 '+cap.anno+')');
+  ok(cap.mut==='#8B98A9', '읽히는 회색 보조글자는 그대로 둔다 (실제 '+cap.mut+')');
+  ok(back.val==='#E6EDF3', '캡처가 끝나면 화면 색을 되돌려야 한다 (실제 '+back.val+')');
+  ok(ch.options.plugins.valLabel.color==='#E6EDF3', '끝난 뒤 옵션이 원래대로여야 한다');
+  ok(!('color' in ch.options.plugins.pieText), '안 넘겼던 키는 다시 없는 상태로 돌아가야 한다');
   reset();
 }
 
