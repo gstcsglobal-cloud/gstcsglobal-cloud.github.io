@@ -367,7 +367,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(100);   // GST.corpLabel 을 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(108);   // GST.corpLabel · GST.filters.hitL(사업부 loose 판정) 을 쓴다
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -574,6 +574,18 @@ const lineOk=(raw)=>axOkF('line', String(raw||'').trim());
    (알람 시트 H3 ↔ 설치현황 H4, 실측 39건). 판정은 GST.filters 한 곳만 지난다:
    `x.campus===F.campus` 로 직접 비교하면 Set 이 된 순간 조용히 전부 false 가 된다. */
 const campOk=(v)=>GST.filters.hit('campus',v);
+/* 사업부(관리주체)는 «설치현황에만» 있는 열이라 loose 축이다 — 값이 빈 행은 통과시킨다.
+   ⚠ 다른 일곱 페이지는 GST.filters.pass() 한 줄로 일곱 축을 다 거르는데, 주간현황만
+     술어를 손으로 짜고 있어 **사업부가 어느 술어에도 없었다**. 그래서 사업부를 골라도
+     KPI·차트·표가 한 자리도 안 움직였다(에러는 하나도 안 났다 — 사용자 보고).
+     loose 규칙까지 GST.filters.hitL 한 곳을 지난다: 여기서 다시 적으면 pass() 와 갈린다. */
+const divOk=(v)=>GST.filters.hitL('div', v);
+/* 사업부는 «설비 기준» 축이다 — 인원현황에는 그 열이 아예 없다(사용자가 짚은 그대로).
+   그래서 사업부를 걸면 분자(챔버·설비·작업)는 좁아지는데 분모(인원)는 그대로 남아
+   인당 지표가 실제보다 낮게 나온다. 조용히 낮아지면 아무도 못 알아채고,
+   「사업부를 걸었더니 인당이 반이 됐다」로 코드를 의심하게 된다 — 그 자리에 적는다. */
+const divWarn=()=>GST.filters.has('div')
+  ? ' · ⚠ 사업부는 설비에만 걸립니다 — 인원(분모)은 안 좁혀지므로 인당 지표를 그대로 읽지 마세요' : '';
 const campOn=()=>GST.filters.has('campus');
 const campList=()=>GST.filters.chosen('campus');
 window.onFilt=function(k,v){F[k]=v;render();};
@@ -605,6 +617,7 @@ function updateFiltBadge(){
   if(axHas('customer'))P.push(t('sl_customer')+': '+axTxt('customer'));
   if(campOn())P.push('단지: '+campList().join(' · '));
   if(axHas('line'))P.push('라인: '+axTxt('line'));
+  if(axHas('div'))P.push('사업부: '+axTxt('div'));   // 사이드바 묶음 순서(설비 기준)와 같게
   if(axHas('team'))P.push('팀: '+axTxt('team'));
   if(F.dtFrom||F.dtTo)P.push((F.dtFrom||'…')+' ~ '+(F.dtTo||'…'));
   if(!P.length){b.style.display='none';b.innerHTML='';return;}
@@ -766,6 +779,11 @@ function krJoin(list, inst, CI){
     const o={ region:GST.ORG.region(r[CI.country]), op:String(r[CI.country]||'').trim(),
               custB:custBase(r[CI.customer]),
               campus:GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country]),
+              /* 사업부(관리주체)도 여기서 얻는다 — 알람·올바 원장에는 그 열이 없지만
+                 설비 S/N 은 양쪽에 다 있다(사용자 지적). 같은 라인에 있는 국내 설비라도
+                 관리주체가 메모리냐 연구소냐에 따라 소속 단지가 갈리므로, 사업부로
+                 좁히지 못하면 Alarm 카드만 늘 전사 숫자를 보여준다. */
+              div:String((CI.div>=0?r[CI.div]:'')||'').trim(),
               line:String(r[CI.fab]||'').trim() };
     if(!ix[k])ix[k]=o;
     const b=GST.ALARM.keyBase(r[CI.sn]); if(!ix[b])ix[b]=o;
@@ -774,6 +792,7 @@ function krJoin(list, inst, CI){
     const o=ix[x.snk]||ix[GST.ALARM.keyBase(x.snk)]||null;
     x.region=o?o.region:''; x.op=o?o.op:''; x.custB=o?o.custB:'';
     x.campus=o?o.campus:''; x.lineN=(o&&o.line)||x.srcLine;
+    x.div=(o&&o.div)||'';   // 못 붙은 행은 빈 값 그대로 — loose 로 통과시킨다(버리지 않는다)
   });
   return list;
 }
@@ -1377,7 +1396,7 @@ function render(){
   const entOk=x=>axOkF('region',(x.region||GST.ORG.region(x.op||'')))
     &&axOkF('op',String(x.op||'').trim())
     &&(!F.country||x.country===F.country)&&axOkF('customer',x.custB)
-    &&campOk(x.campus)&&lineOk(x.line);
+    &&divOk(x.div)&&campOk(x.campus)&&lineOk(x.line);
   // QBR 매크로 정합: 작업내역은 사이트 키 행만 집계(라인 미기재·기타 행 제외) — 매크로 NarrowUp과 동일
   // 라인 열만으로 판정하면 PSMC처럼 라인 표기가 다른 사이트 행이 누락된다 → 라인+고객사 통합 판정
   /* 예전에는 대만 사이트 어휘만 통과시켰다(F16·PSMC·WINBOND…). 국내·중국·미국 실적이
@@ -1433,7 +1452,7 @@ function render(){
   const krLineOf  =x=>F.krOrg==='sheet' ? (x.srcLine||x.lineN ||'') : (x.lineN ||x.srcLine||'');
   const krOk=x=>axOkF('region',x.region)&&axOkF('op',x.op)
     &&(!F.country||GST.ORG.country(x.op)===F.country)
-    &&axOkF('customer',x.custB)&&campOk(krCampusOf(x))&&lineOk(krLineOf(x))
+    &&axOkF('customer',x.custB)&&divOk(x.div)&&campOk(krCampusOf(x))&&lineOk(krLineOf(x))
     &&(!_fromS||(x.d&&x.d>=_fromS))&&(!_toS||(x.d&&x.d<=_toS));
   /* 원장에 해외 설비로 조인되는 행이 섞여 들어오면 대만은 «수선실적 BM + 원장» 으로
      이중 계산된다. 이 원장은 국내용이라는 약속이므로, 해외로 판정된 행만 뺀다
@@ -1500,6 +1519,7 @@ function render(){
     if(!axOkF('op',String(r[CI.country]||'').trim()))return false;
     if(F.country&&c!==F.country)return false;
     if(!axOkF('customer',custBase(r[CI.customer])))return false;
+    if(!divOk(CI.div>=0?r[CI.div]:''))return false;
     if(!campOk(GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country])))return false;
     if(!lineOk(r[CI.fab]))return false;
     return true;
@@ -1921,7 +1941,7 @@ function render(){
           plugins:[valLabelPlugin]});
         const _ai=att.length-1;
         setNote('cAtt',t('nAtt').replace('{a}',att[_ai]??0).replace('{l}',lv[_ai]??0)
-          .replace('{j}',(jb[_ai]??0).toLocaleString()).replace('{p}',pj[_ai]??0));
+          .replace('{j}',(jb[_ai]??0).toLocaleString()).replace('{p}',pj[_ai]??0)+divWarn());
       }
       // 총인원 vs TO (둘 다 '명' — 단일축)
       {
@@ -1954,7 +1974,7 @@ function render(){
         };
         const _ti=hv.length-1, _gap=Math.round((hv[_ti]-to[_ti])*10)/10;
         setNote('cTo',t('nTo').replace('{p}',to[_ti]?Math.round(hv[_ti]/to[_ti]*100):'—')
-          .replace('{d}',(_gap>=0?'+':'')+_gap));
+          .replace('{d}',(_gap>=0?'+':'')+_gap)+divWarn());
       }
       // 관리 챔버 + 인당 관리 (QBR: 챔버 바 + 인당 라인)
       {
@@ -1986,7 +2006,7 @@ function render(){
             rows:rs.map(r=>[String(r[CI.customer]||''),String(r[CI.fab]||''),String(r[CI.type]||''),fmtD(pd(r[CI.fabIn]))])};
         };
         const _ci=per.length-1;
-        setNote('cChp',t('nChp').replace('{v}',per[_ci]??0).replace('{c}',(chs[_ci]||0).toLocaleString()).replace('{h}',hv[_ci]||0));
+        setNote('cChp',t('nChp').replace('{v}',per[_ci]??0).replace('{c}',(chs[_ci]||0).toLocaleString()).replace('{h}',hv[_ci]||0)+divWarn());
       }
     } else { ['cAtt','cTo','cChp'].forEach(destroyMk); }
   }
@@ -2095,7 +2115,7 @@ function render(){
         scales:baseScales(TH,true)},
       plugins:[valLabelPlugin]});
     const _mi=hPM.length-1, _tot=hTot[_mi]??0;
-    setNote('cMan',t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0));
+    setNote('cMan',t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0)+divWarn());
   }
   // ===== PM S-커브 (올해, 월 고정) =====
   let scPlan=0, scDone=0;
@@ -2439,6 +2459,9 @@ function render(){
          .replace('{list}',_noP.slice(0,6).map(v=>v.lbl).join(' · ')
            +(_noP.length>6?' 외 '+(_noP.length-6):'')));
        if(CI.state<0)parts.push('⚠ 설비상태 열이 없어 옛 날짜 기준으로 셉니다');
+       /* 표의 「담당 인원·인당 챔버·목표 TO」 칸은 설비와 인원을 나눈 값이다.
+          사업부를 걸면 설비만 좁아지므로 그 칸들을 그대로 읽으면 안 된다. */
+       if(GST.filters.has('div'))parts.push('⚠ 사업부는 설비에만 걸립니다 — 「담당 인원·인당 챔버」 칸의 인원은 안 좁혀집니다');
        if(uk.length)parts.push('⚠ 처음 보는 설비상태 '+uk.map(k=>k+' '+_unk[k]+'대').join(' · ')
          +' — 반입·가동 어디에도 안 들어갔습니다');
        x.textContent=parts.join(' · ');

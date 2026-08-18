@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 107;
+GST.VER = 108;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -3050,6 +3050,18 @@ GST.filters = (function(){
     },
     // 술어 헬퍼 — 페이지가 자기 F 를 따로 들고 있어도 «걸리나» 판정은 여기 하나를 쓴다
     hit: function(k, v){ return hitK(k, v==null?'':String(v).trim()); },
+    /* loose 축까지 지키는 판정 — pass() 안의 axOk 와 «같은 답»을 낸다.
+       ⚠ hit() 만으로는 안 된다. loose 축(사업부)은 «값이 빈 행은 통과»가 규칙인데
+         hit('div','') 는 고른 값이 있으면 언제나 false 라, 조인이 안 된 행이 통째로
+         사라진다 — 「사업부를 고르면 실적이 반으로 준다」가 바로 그것이다.
+       주간현황처럼 술어를 손으로 짜는 페이지가 이 규칙을 자기 식으로 다시 적으면
+         pass() 를 쓰는 일곱 페이지와 답이 갈린다(제2원칙). 규칙은 여기 한 곳이다. */
+    hitL: function(k, v){
+      if(!hasK(k)) return true;              // 고른 게 없으면 전체 — pass() 와 같은 순서
+      const s = v==null ? '' : String(v).trim();
+      if(!s) return !!(CFG && CFG.loose && CFG.loose[k]);
+      return hitK(k, s);
+    },
     has: function(k){ return hasK(k); },
     chosen: function(k){ return listK(k); },
     // 활성 필터 칩용 — [{k,label,value}]
