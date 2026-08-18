@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 119;
+GST.VER = 120;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -2074,17 +2074,52 @@ GST.dbRows = async function(table){
      그러면 한 바이트도 받지 않는다. 예전에는 이 자리가 없어서, 새로고침할 때마다
      25만 행을 다시 받아 다시 파싱했다(푼 JSON 374MB). 캐시는 «시트 경로가 실패했을
      때»만 읽히고 있었고, 게다가 localStorage 한도를 넘어 저장 자체가 늘 실패했다. */
-  const stamp = table+'|'+lg.data.synced_at+'|'+want;
+  /* ⚠ 캐시 열쇠에 «고른 컬럼»도 넣는다. 안 넣으면 DB 에 열을 더한 뒤에도 옛 캐시가
+     맞는 것으로 판정돼, 새 열이 영영 빈 채로 남는다(적재 시각이 안 바뀌므로).
+     열 목록은 아래에서 정해지므로 stamp 도 그때 만든다. */
+
+  /* 페이지네이션. PostgREST는 한 번에 돌려주는 행수에 상한이 있고 그 값은 프로젝트 설정이다.
+     그래서 "요청한 만큼 안 왔으면 끝"으로 판정하면 안 된다 — 상한에 걸린 것을 완료로 착각해
+     조용히 잘린 데이터를 그린다. **받은 만큼만 전진하고 0행일 때 멈춘다.** */
+  /* ── 표에 «실제로 있는» 컬럼만 고른다 (v120) ──
+     ⚠ PostgREST 는 select 에 없는 열이 하나라도 있으면 그 열만 비우는 게 아니라
+       **전체를 거부한다**(v92 에 국내 알람이 그렇게 통째로 실패했다). 그래서 SPEC 에 새
+       열을 더하는 순간, DB alter 를 아직 안 했으면 **그 시트가 전 페이지에서 안 뜬다.**
+       CLAUDE.md v89 의 「승격 순서 — DB 가 먼저다」가 그래서 있었는데, 순서를 사람이
+       기억해야 하는 규약은 언젠가 깨진다.
+     표의 실제 컬럼을 한 번 물어 교집합만 고른다 — 이제 코드가 먼저 나가도 안 죽고,
+     새 열은 DB 에 생기는 순간 저절로 살아난다(그때까지는 「이 화면 미적용」).
+     RPC 가 없는 환경(setup-8 미실행)은 옛 동작 그대로 — 전부 고른다. */
+  let use = cols, miss = [];
+  try{
+    const pc = await c.rpc('csv_table_cols', {p_tbl:'sheet_'+table});
+    if(!pc.error && Array.isArray(pc.data) && pc.data.length){
+      const have = new Set(pc.data);
+      use  = cols.filter(function(x){ return have.has(x); });
+      miss = cols.filter(function(x){ return !have.has(x); });
+    }
+  }catch(e){}
+  /* ⚠ 여기는 «경고»가 아니다 — 승격 대기 중인 열은 정상 상태이고, 그 사실은 이미
+     필터 칸이 「전체 (이 화면 미적용)」으로 말한다. 붉은 배너를 매번 띄우면 진짜 위험한
+     배너(적재 실패·미러 정지)가 그 속에 묻힌다.
+     ⚠ 그렇다고 «조용히» 넘기지도 않는다(제1원칙). GST._dbCols 에 남겨, 「왜 그 축이
+       미적용인가」를 물으면 곧바로 답할 수 있게 한다. _dbMiss 에 넣으면 안 된다 —
+       그 배열은 {t,m} 객체를 담고 _dbBanner 가 x.t·x.m 을 읽으므로 문자열을 섞으면
+       배너가 «undefined — undefined» 를 찍는다. */
+  if(miss.length) GST._dbCols = (GST._dbCols||[]).concat(miss.map(function(x){ return table+'.'+x; }));
+  const SEL = use.join(',') + ',src_row';
+
+  /* ── 행 캐시 (v101) ────────────────────────────────────────────────────
+     적재 시각과 행수가 같으면 내용도 같다 — sheet_sync_log 가 보증하는 사실이다.
+     ⚠ 열쇠에 «고른 컬럼»도 넣는다(v120). 안 넣으면 DB 에 열을 더한 뒤에도 옛 캐시가
+       맞는 것으로 판정돼, 새 열이 영영 빈 채로 남는다(적재 시각이 안 바뀌므로). */
+  const stamp = table+'|'+lg.data.synced_at+'|'+want+'|'+use.length;
   const hit = await GST.idb.get('rows:'+table);
   if(hit && hit.stamp === stamp && Array.isArray(hit.rows) && hit.rows.length === want+1){
     GST._idbHit = (GST._idbHit||0)+1;
     return hit.rows;
   }
 
-  /* 페이지네이션. PostgREST는 한 번에 돌려주는 행수에 상한이 있고 그 값은 프로젝트 설정이다.
-     그래서 "요청한 만큼 안 왔으면 끝"으로 판정하면 안 된다 — 상한에 걸린 것을 완료로 착각해
-     조용히 잘린 데이터를 그린다. **받은 만큼만 전진하고 0행일 때 멈춘다.** */
-  const SEL = cols.join(',') + ',src_row';
   const page = async function(from, n){
     const r = await c.from('sheet_'+table).select(SEL)
                      .order('src_row', {ascending:true}).range(from, from+n-1);
@@ -2124,6 +2159,8 @@ GST.dbRows = async function(table){
   const rows = new Array(out.length+1); rows[0] = head;
   for(let i=0;i<out.length;i++){
     const o = out[i], r = new Array(cols.length);
+    /* 표에 없는 열은 빈 값이다 — 헤더 자리는 그대로 두어야 SPEC 이 열을 «이름으로»
+       찾는 규약(제1원칙)이 유지된다. 자리를 지우면 그 뒤 열이 통째로 밀린다. */
     for(let j=0;j<cols.length;j++){ const v=o[cols[j]]; r[j] = (v==null?'':String(v)); }
     rows[i+1] = r;
   }
@@ -2172,11 +2209,28 @@ GST._csvOrderCol = function(keys){
    왜 필요한가. 국내 알람 원장은 44열 × 2만 행이라 통째로 받으면 화면이 뜨기 전에 몇 MB 를
    내려받는다. 그리고 그 안에는 **작업자 실명(checker)** 이 들어 있다 — 화면이 안 쓰는 값을
    브라우저까지 보낼 이유가 없다. 열을 추리면 전송량도 줄고 실명도 안 나간다. */
+/* 일시적인 «인증» 실패인가 — 자료 문제가 아니라 다시 해 보면 되는 것.
+   ⚠ 실제로 겪었다: 국내 알람 원장이 «READ JWT issued at future» 로 실패해 화면이
+     수선실적 BM 으로 폴백했고, 사용자는 「알람 건수를 또 바꿨냐」고 물었다(잠시 뒤 저절로
+     돌아왔다). 브라우저 시계가 Supabase 보다 앞서면 토큰의 iat 가 «미래»로 보인다.
+   자료가 없는 것과 «지금 못 읽은 것»은 다른 사실이다 — 후자를 폴백으로 삼으면 화면이
+   조용히 다른 기준으로 갈아탄다. 한 번은 다시 해 본다. */
+GST._authGlitch = function(msg){
+  return /JWT|issued at future|expired|token|401|403/i.test(String(msg||''));
+};
 GST.csvTableRows = async function(table, cols){
   const c = await GST.db(); if(!c) throw new Error('DB_OFF');
   const sel = (cols && cols.length) ? cols.join(',') : '*';
 
-  const probe = await c.from(table).select(sel).limit(1);
+  let probe = await c.from(table).select(sel).limit(1);
+  /* 시계 어긋남은 몇 초면 지나간다. 세션을 새로 받아 한 번만 다시 해 본다 —
+     여기서 포기하면 그 화면은 «다른 기준»으로 그려지고, 그 사실이 숫자에는 안 보인다. */
+  if(probe.error && GST._authGlitch(probe.error.message)){
+    GST._authRetry = (GST._authRetry||0)+1;
+    try{ if(c.auth && c.auth.refreshSession) await c.auth.refreshSession(); }catch(e){}
+    await new Promise(function(r){ setTimeout(r, 1200); });
+    probe = await c.from(table).select(sel).limit(1);
+  }
   if(probe.error) throw new Error('READ '+probe.error.message);
   if(!probe.data || !probe.data.length) throw new Error('EMPTY — '+table+' 에 행이 없다 (Import 했는가)');
   /* ⚠ 열을 추렸으면 정렬 후보(src_row·id)가 안 올 수 있다. 정렬이 없으면 range() 로
