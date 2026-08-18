@@ -3386,9 +3386,23 @@ GST.filtSummary = function(){
      복제 방식을 쓰면 x축이 타임스탬프 숫자로 찍힌다. devicePixelRatio 를 바꿨다 되돌리는
      기존 방식과 같은 규율이다.
    되돌리기는 반드시 finally 로 — 중간에 던지면 화면 차트가 «흰 글자 없는» 상태로 굳는다. */
+/* 흰 종이(#FFF)에 얹었을 때 «안 보일 만큼» 밝은 색인가. 상대 광도 0.55 를 경계로 둔다 —
+   #E6EDF3(0.85)·흰색은 걸리고, 회색 보조글자 #8B98A9(0.32)·빨강 표식 #fb7185(0.33)는 남는다. */
+GST._tooLight = function(c){
+  if(typeof c !== 'string') return false;
+  let r,g,b;
+  const h = c.trim().replace(/^#/,'');
+  if(/^[0-9a-f]{6}$/i.test(h)){ r=parseInt(h.slice(0,2),16); g=parseInt(h.slice(2,4),16); b=parseInt(h.slice(4,6),16); }
+  else if(/^[0-9a-f]{3}$/i.test(h)){ r=parseInt(h[0]+h[0],16); g=parseInt(h[1]+h[1],16); b=parseInt(h[2]+h[2],16); }
+  else { const m=c.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i); if(!m) return false; r=+m[1]; g=+m[2]; b=+m[3]; }
+  const lin = v => { v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); };
+  return (0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b)) > 0.55;
+};
 GST._chartLight = function(ch){
   const undo = [];
-  const set = function(o,k,v){ if(!o) return; undo.push([o,k,o[k]]); o[k]=v; };
+  /* «없던 키»는 undefined 로 되돌리지 말고 지운다. 값은 같아 보여도 `'color' in o` 가
+     달라지고, 그걸로 «넘겼는지»를 판단하는 코드가 생기면 그때부터 조용히 갈린다. */
+  const set = function(o,k,v){ if(!o) return; undo.push([o,k,o[k],(k in o)]); o[k]=v; };
   const sc = ch.options.scales || {};
   Object.keys(sc).forEach(function(k){
     const ax = sc[k]; if(!ax || typeof ax !== 'object') return;
@@ -3400,9 +3414,25 @@ GST._chartLight = function(ch){
   const pl = ch.options.plugins || {};
   if(pl.legend){ pl.legend.labels = pl.legend.labels || {}; set(pl.legend.labels,'color','#333333'); }
   if(pl.title) set(pl.title,'color','#111111');
-  if(pl.datalabels) set(pl.datalabels,'color','#333333');
+  /* 자체 플러그인이 캔버스에 «직접» 찍는 글자(막대 위 값·도넛 가운데 TOTAL)는 색을
+     자기 옵션에 들고 있다(valLabel.color · dCenter.color/mut). 어두운 테마 기본값이
+     밝은 색이라 흰 종이에 그대로 찍으면 **글자가 통째로 사라진다** — 렌더는 성공하므로
+     에러도 경고도 없고, 「숫자 없는 막대」를 받은 사람은 값을 못 읽는다.
+     ⚠ 플러그인 이름을 나열하지 않는다. 나열하면 새 플러그인이 생길 때마다 같은 사고가
+       난다. 물어야 할 것은 하나다 — «이 색이 흰 종이에서 안 보일 만큼 밝은가».
+       그래서 빨강 이상치 표식(#fb7185, 광도 0.33) 같은 «의미 있는 색»은 건드리지 않는다. */
+  Object.keys(pl).forEach(function(k){
+    const o = pl[k]; if(!o || typeof o !== 'object') return;
+    /* 색을 «안 넘긴» 차트도 있다(hr 의 원형 차트 등). 그때는 플러그인이 자기 기본값을
+       쓰는데, 이 프로젝트의 플러그인 기본색은 전부 어두운 테마용(#E6EDF3)이다 —
+       즉 «없음»도 «밝음»과 같은 뜻이다. 되돌릴 때 undefined 로 돌아가므로 안전하다. */
+    ['color','mut','textColor'].forEach(function(f){
+      if(!(f in o) || GST._tooLight(o[f])) set(o, f, f === 'mut' ? '#666666' : '#333333');
+    });
+  });
   if(window.Chart && Chart.defaults) set(Chart.defaults,'color','#333333');
-  return function(){ for(let i=undo.length-1;i>=0;i--){ undo[i][0][undo[i][1]] = undo[i][2]; } };
+  return function(){ for(let i=undo.length-1;i>=0;i--){
+    const u=undo[i]; if(u[3]) u[0][u[1]] = u[2]; else delete u[0][u[1]]; } };
 };
 /* 차트를 고배율로 다시 그려 캔버스로. light=true 면 흰 종이용(위 _chartLight). */
 GST.chartHiResLight = function(id, scale){

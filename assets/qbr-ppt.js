@@ -149,6 +149,19 @@ function patchTable(slideXml,signature,edits){
 // ---- 텍스트 치환 (주차 라벨 등) ---------------------------------------------
 function patchText(slideXml,re,repl){ return slideXml.replace(re,repl); }
 
+/* 교육 표 머리 행의 2·3번째 칸 글자를 갈아끼운다. 이름으로 찾지 않고 «머리 행의 자리»로
+   잡는다 — 양식의 'Basic' 은 서식 때문에 여러 런으로 갈라져 있어 문자열 검색이 못 미친다. */
+function setEduHead(slideXml, heads){
+  const tbls=slideXml.match(/<a:tbl>[\s\S]*?<\/a:tbl>/g)||[];
+  const target=tbls.find(tb=>tb.indexOf('교육과정')>=0);
+  if(!target) return slideXml;
+  const trs=target.match(/<a:tr[\s\S]*?<\/a:tr>/g)||[];
+  if(!trs.length) return slideXml;
+  const edits=[];
+  for(let c=1;c<=2;c++) if(heads[c-1]) edits.push({r:0,c:c,v:String(heads[c-1])});
+  return edits.length ? patchTable(slideXml,'교육과정',edits) : slideXml;
+}
+
 /* 오른쪽 위 «법인» 상자. 양식에는 'GST TAIWAN' 이 세 장 모두에 박제돼 있었다 —
    어느 법인을 골라 보고 있든 PPT 는 대만이라고 말했다(사용자가 화면 캡처로 짚은 자리).
    값은 GST.corpLabel(운영단위를 따라간다). data.corp 가 없으면 양식 그대로 둔다 —
@@ -163,9 +176,10 @@ data = {
  week:'W31',
  corp:'GST TAIWAN',                                                   // 오른쪽 위 법인 상자 (운영단위 필터를 따라간다)
  charts:{ 'chart1':{cats:[...],series:{...}}, ... 'chart8':{...} },
- eduTable:{b:{no,ing,done,rate}, v:{no,ing,done,rate}},              // 교육과정 표
+ eduTable:{h:['Basic (Level 1)','Veteran (Level 2)'], b:{...}, v:{...}},  // 교육과정 표 (h = 머리글 — 잡힌 인원을 따라간다)
  opRows:[[구분, 가동TOT,WI,WO, 챔버TOT,WI,WO, 미가동대,미가동ch, 주재원,현채인, PM], ...],
- top3:[[no,원인,건수,현상,조치] x3]
+ top3:[[no,원인,건수,현상,조치] x3],
+ notes:[]                                                            // build 가 «못 채운 것»을 여기에 적는다
 } */
 function build(JSZipRef,tplBuf,data){
   return JSZipRef.loadAsync(tplBuf).then(zip=>{
@@ -185,6 +199,11 @@ function build(JSZipRef,tplBuf,data){
     jobs.push(zip.file('ppt/slides/slide1.xml').async('string').then(xml=>{
       xml=patchCorp(xml,data.corp);
       if(data.eduTable){ const e=data.eduTable;
+        /* 머리글은 «잡힌 인원»을 따라간다(v96 규약). 국내에는 법인 교육과정이 없어
+           숫자는 Scrubber Lv.2·Lv.3 인데, 양식에는 'Basic (Level 1)'·'Veteran (Level 2)'
+           가 박혀 있었다 — 화면 표는 이미 Lv.2/Lv.3 로 바뀌는데 PPT 만 안 바뀌어
+           둘이 서로 다른 말을 했고, 받아 본 사람은 국내에 법인 과정이 있는 줄 안다. */
+        if(e.h && e.h.length>=2) xml=setEduHead(xml, e.h);
         xml=setRowNums(xml,'교육과정',{
           '미이수':[e.b.no,e.v.no],'진행중':[e.b.ing,e.v.ing],
           '이수완료':[e.b.done,e.v.done],'완료율':[e.b.rate,e.v.rate]});
@@ -194,29 +213,36 @@ function build(JSZipRef,tplBuf,data){
     jobs.push(zip.file('ppt/slides/slide2.xml').async('string').then(xml=>{
       xml=patchCorp(xml,data.corp);
       if(data.opRows){
+        /* ⚠ 예전에는 «양식 행 라벨 ↔ 대시보드 행 라벨»을 대만 전용 정규식 사슬로 맞췄다
+           (Micron F16 · Tong luo · PSMC …). 그런데 대시보드의 행 축은 법인(운영단위) 또는
+           고객사라 어느 모드에서도 안 맞았고, **못 맞춘 행은 양식에 박힌 대만 표본 숫자가
+           그대로 남았다.** 법인 상자에는 'SEC' 라고 적히므로 받아 본 사람은 삼성 실적이
+           961대라고 읽는다. TOTAL 만 갱신되니 합계와 위 행들의 합도 안 맞는다.
+           → 이름을 맞추려 들지 않는다. **화면 표의 순서 그대로** 양식 행에 채우고
+             라벨까지 갈아끼운다(PPT 가 화면과 같은 말을 한다). 남는 양식 행은 비운다 —
+             옛 숫자를 내보내느니 빈 칸이 낫다. 넘치는 행수는 notes 로 알린다. */
+        const isTot=v=>/TOTAL|합계/i.test(String(v||'').replace(/\s+/g,''));
+        const body=data.opRows.filter(r=>!isTot(r[0]));
+        const tot =data.opRows.find(r=>isTot(r[0]));
         const rows=xml.match(/<a:tbl>[\s\S]*?<\/a:tbl>/g)||[];
         const tb=rows.find(tb0=>tb0.indexOf('가동 장비 대수')>=0);
         if(tb){
           const trs=tb.match(/<a:tr[\s\S]*?<\/a:tr>/g)||[];
-          // 데이터 행은 3행(idx 2)부터: 행 라벨을 읽어 opRows에서 매칭
-          const edits=[];
+          const cols=((trs[2]||'').match(/<a:tc[ >]/g)||[]).length||12;
+          let totIdx=-1;
           for(let r=2;r<trs.length;r++){
-            const lbl=(trs[r].match(/<a:t>([\s\S]*?)<\/a:t>/)||[])[1]||'';
-            const key=unesc(lbl).replace(/\s+/g,'').toUpperCase();
-            const src=data.opRows.find(rr=>{
-              const k=String(rr[0]).replace(/\s+/g,'').toUpperCase();
-              if(key.indexOf('TOTAL')>=0||key.indexOf('합계')>=0)return /TOTAL|합계/.test(k);
-              if(/TONG|F16N/.test(key))return /TONG|F16N/.test(k);
-              if(/TAINAN|F16S/.test(key))return /TAINAN|F16S/.test(k);
-              if(/F16(?!N|S)/.test(key))return /F16(?!N|S)/.test(k)&&!/TONG|TAINAN/.test(k);
-              if(/F11/.test(key))return /F11/.test(k);
-              if(/PSMC/.test(key))return /PSMC/.test(k)&&!/TASC/.test(k);
-              if(/TASC/.test(key))return /TASC/.test(k)&&!/PSMC/.test(k);
-              if(/WINBOND/.test(key))return /WINBOND/.test(k);
-              return false;
-            });
-            if(src)for(let c=1;c<Math.min(src.length,12);c++)edits.push({r,c,v:src[c]});
+            const lbl=unesc((trs[r].match(/<a:t>([\s\S]*?)<\/a:t>/)||[])[1]||'');
+            if(isTot(lbl)) totIdx=r;
           }
+          const slots=[];
+          for(let r=2;r<trs.length;r++) if(r!==totIdx) slots.push(r);
+          const edits=[];
+          const put=(r,src)=>{ for(let c=0;c<cols;c++) edits.push({r:r,c:c,v:src[c]==null?'':String(src[c])}); };
+          const blank=r=>{ for(let c=0;c<cols;c++) edits.push({r:r,c:c,v:''}); };
+          slots.forEach((r,i)=>{ if(i<body.length) put(r,body[i]); else blank(r); });
+          if(totIdx>=0){ if(tot) put(totIdx,tot); else blank(totIdx); }
+          if(body.length>slots.length && data.notes)
+            data.notes.push('가동현황 표: 양식 행이 '+slots.length+'개뿐이라 '+(body.length-slots.length)+'개 행이 빠졌습니다');
           xml=patchTable(xml,'가동 장비 대수',edits);
         }
       }

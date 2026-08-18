@@ -2956,10 +2956,19 @@ window.downloadPPT=async function(btn){
     /* 양식 오른쪽 위 법인 상자 — 양식 파일에는 'GST TAIWAN' 이 박제돼 있다.
        필터를 따라 바꿔 주지 않으면 어느 법인을 보고 있든 대만이라고 말한다. */
     data.corp=corpLabel().toUpperCase();
+    data.notes=[];   // build 가 «못 채운 것»을 적어 온다 — 조용히 빠지면 아무도 모른다
     if(P.eduPlan){ data.eduTable={b:P.eduPlan.b,v:P.eduPlan.v}; }   // 교육 계획 카드(라인 선택) 그대로
     else if(P.edu){const e=P.edu,pct=(d,n)=>n?Math.round(d/n*100)+'%':'-';
       data.eduTable={b:{no:e.b-e.bD,ing:0,done:e.bD,rate:pct(e.bD,e.b)},
                      v:{no:e.v-e.vD,ing:0,done:e.vD,rate:pct(e.vD,e.v)}};}
+    /* 교육 표 머리글은 «화면에 지금 떠 있는 그 글자»를 그대로 보낸다. 국내를 걸면 화면은
+       Scrubber Lv.2/Lv.3 로 바뀌는데 PPT 양식에는 Basic/Veteran 이 박혀 있어, 같은 표가
+       화면과 장표에서 서로 다른 말을 했다(v96 규약 — 머리글은 잡힌 인원을 따라간다). */
+    if(data.eduTable){
+      const h1=(document.getElementById('eduPlanH1')||{}).textContent,
+            h2=(document.getElementById('eduPlanH2')||{}).textContent;
+      if(h1&&h2) data.eduTable.h=[h1.trim(),h2.trim()];
+    }
     { const tb=document.getElementById('opTblBody');
       if(tb&&!tb.querySelector('.empty')){
         const rows=pptRowsFromDom(tb).map(r=>r.map(c=>(c&&typeof c==='object')?(c.text||''):String(c==null?'':c)));
@@ -3012,7 +3021,8 @@ window.downloadPPT=async function(btn){
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
     a.download='GST_주간보고_'+(data.week||P.wk||P.asOf)+'.pptx'; a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-    capToast('⤓ 주간보고 PPT 저장됨 — '+(data.week||P.wk||'')+' · 원본 서식 유지');
+    capToast('⤓ 주간보고 PPT 저장됨 — '+(data.week||P.wk||'')+' · 원본 서식 유지'
+      +((data.notes&&data.notes.length)?('  ⚠ '+data.notes.join(' · ')):''));
   }catch(e){ console.error('PPT 생성 오류',e); capToast('PPT 생성 실패: '+((e&&e.message)||e)); }
   finally{ if(btn){btn.disabled=false;btn.textContent=old;} }
 };
