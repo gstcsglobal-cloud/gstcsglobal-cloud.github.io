@@ -1307,7 +1307,13 @@ async function loadData(){
       +' · v45';
     render();
   }catch(e){
-    st.className='status err'; st.textContent='❌ '+t('loading');
+    /* ⚠ 예전에는 «❌ 불러오는 중…» 한 줄만 찍고 e 를 버렸다. 화면에는 실패했다는 것만
+       남고 «무엇이» 실패했는지가 어디에도 없어, 사용자가 물어도 되짚을 근거가 없었다
+       (표가 없어서인지·권한인지·열 인식인지 전부 같은 글자로 보인다).
+       콘솔에는 스택째 남기고, 화면에는 한 줄로 이유를 적는다. */
+    console.error('[report] loadData 실패', e);
+    st.className='status err';
+    st.textContent='❌ '+t('loading')+' — '+String((e&&e.message)||e);
   }
 }
 

@@ -628,7 +628,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(94);   // GST.numv 를 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(99);   // GST.numv · GST.EQ(설비상태 판정) 를 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -639,6 +639,7 @@ const INST_URL=GST.sheetUrl('891608329');
 // 자재실적 — 설비 일대기에서 "이 설비가 뭘 갈았나"를 잇기 위해 함께 읽는다
 const MAT_URL=GST.sheetUrl('31302669');
 let INSTMAP={};  // normSN → Turn-On Date
+let INSTSTATE={};   // normSN → 설비상태 원문 (v99 — 나간 설비를 분모에서 뺀다)
 let INSTIX=null; // 설비호기·S/N → 설치 제원(Floor 등). GST.ORG.instIndex가 만든다
 let INSTROW={};  // normSN → 설치 제원 (일대기 기본정보용)
 let MAT_ROWS=[]; // 자재 교체 이력
@@ -921,7 +922,7 @@ async function loadData(){ GST.skeleton(true);
     const mWk=GST.SM.map(fetched.rows, GST.SM.SPEC.wk);
     C=mWk.C; HI_WK=mWk.hi>=0?mWk.hi:0;
     // 설치 시트 → S/N별 Turn-On 맵 (실패해도 무시하고 최초 서비스일로 대체)
-    INSTMAP={};
+    INSTMAP={}; INSTSTATE={};
     if(instR.status==='fulfilled'&&instR.value.rows){
       const mIn=GST.SM.map(instR.value.rows, GST.SM.SPEC.inst);
       CINST=mIn.C; HI_INST=mIn.hi>=0?mIn.hi:0;
@@ -932,6 +933,12 @@ async function loadData(){ GST.skeleton(true);
         const sn=normSN(v(r,'sn')); const to=toDate(v(r,'turnOn'));
         if(!sn)return;
         if(to&&(!INSTMAP[sn]||to<INSTMAP[sn]))INSTMAP[sn]=to;
+        /* 설비상태(v99) — 신뢰성 지표의 «모집단»을 여기서 정한다.
+           ⚠ 이 페이지는 수선실적에 있는 S/N 을 그대로 설비로 셌다. 그래서 이미 나간
+             설비(반납·반출완료…)가 계속 분모에 남아, 떠난 뒤로도 가동일수가 매일 쌓였다 —
+             MTBF 는 실제보다 길게, 연간 고장률은 낮게 나온다(조용히 좋아 보인다).
+           상태 열이 없는 옛 추출본은 빈 값으로 둔다 → 옛 판정 그대로 간다. */
+        if(INSTSTATE[sn]==null) INSTSTATE[sn]=CINST.state>=0?String(v(r,'state')||''):'';
         // 일대기 기본정보 — 같은 S/N이 여러 행이면 먼저 나온 것을 쓴다
         if(!INSTROW[sn]) INSTROW[sn]={
           code:v(r,'code'), model:v(r,'model'), fab:v(r,'fab'), floor:v(r,'floor'), bay:v(r,'bay'),
@@ -1513,8 +1520,15 @@ function buildReliability(rows){
     g[sn]=e;
   });
   const units=[];
+  /* 나간 설비(반납·반출대기·반출완료·출하대기)는 세지 않는다 — v99 판정은 GST.EQ 한 곳이다.
+     ⚠ 조용히 빼면 안 된다. 몇 대를 뺐는지 카드 노트에 적는다(CLAUDE.md 의 허용목록 규약).
+       상태를 모르는 설비('?')도 같이 세어 밝힌다 — 새 상태값이 생기면 그 수로 드러난다. */
+  let _outN=0, _unkN=0;
   Object.keys(g).forEach(k=>{
     const e=g[k]; const inst=INSTMAP[k]; let since=inst||e.first; if(!since)return;
+    const _c=GST.EQ.cls(INSTSTATE[k]||'');
+    if(_c==='out'){ _outN++; return; }
+    if(_c==='?')  { _unkN++; return; }
     if(winFrom&&winFrom>since)since=winFrom;   // 관측 창 시작 = max(가동 시작, 기간 필터 시작)
     const opDays=Math.max(1,Math.round((asOf-since)/864e5));
     e.since=since; e.linked=!!inst; e.opDays=opDays;
@@ -1523,11 +1537,11 @@ function buildReliability(rows){
     e.frate=e.bm/(opDays/365);   // 연간 환산 고장건수/대
     units.push(e);
   });
-  return {units,asOf};
+  return {units,asOf,outN:_outN,unkN:_unkN,hasState:CINST&&CINST.state>=0};
 }
 function renderReliability(f){
   const TH=GST.chartTheme();
-  const {units}=buildReliability(f);
+  const {units,outN,unkN,hasState}=buildReliability(f);
   const withBM=units.filter(u=>u.bm>=1);
   const rankable=units.filter(u=>u.bm>=2&&u.opDays>=14);   // 노이즈 제거
   // Fleet 집계
@@ -1548,7 +1562,16 @@ function renderReliability(f){
   set('rk3',(Math.round(fleetFrate*10)/10).toFixed(1));
   seth('rf3',t('rf_frate'));
   animVal(document.getElementById('rk4'),rankable.length);
-  seth('rf4',t('rf_units').replace('{p}',linkPct));
+  /* 모집단에서 뺀 설비를 «그 자리»에 적는다. 조용히 빼면 MTBF 가 길어진 것을 개선으로
+     읽게 된다 — 실제로는 나간 설비가 분모에서 사라진 것뿐이다.
+     상태 열이 없는 옛 추출본이면 옛 판정으로 돌아갔다는 것도 밝힌다(v99 규약). */
+  let _u4=t('rf_units').replace('{p}',linkPct);
+  if(!hasState) _u4+=' · ⚠ 설비상태 열 없음 — 옛 날짜 기준';
+  else{
+    if(outN) _u4+=' · 반출·반납 '+outN.toLocaleString()+'대 제외';
+    if(unkN) _u4+=' · ⚠ 처음 보는 설비상태 '+unkN.toLocaleString()+'대 제외';
+  }
+  seth('rf4',_u4);
 
   // 이상 집중 설비 TOP — 연간 고장률 내림차순
   const rank=rankable.slice().sort((a,b)=>b.frate-a.frate).slice(0,10);

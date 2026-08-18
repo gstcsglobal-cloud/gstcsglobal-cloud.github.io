@@ -1664,30 +1664,11 @@ function renderDeep(){
       기준선도 '직전 6개월'이 아니라 '자료가 있는 직전 6개 항목'이 되어 배수가 부풀려진다.
    ② 기준선 분모를 6으로 고정한다. 앞이 6개월 확보되지 않는 달은 아예 판정하지 않는다 —
       기준선이라 부를 수 없는 것으로 배수를 만들면 안 된다. */
-const SURGE_MIN_N = 5;    // 1건이 3건 되는 것을 급증이라 부르지 않는다
-const SURGE_X     = 2;    // 직전 6개월 평균의 몇 배부터 급증인가
-
-function monthSeq(counts){                       // {'2026-04':n} → 빈 달을 0으로 채운 연속 배열
-  const ks=Object.keys(counts).sort();
-  if(!ks.length) return [];
-  const idx=function(k){ const p=k.split('-'); return (+p[0])*12+(+p[1]-1); };
-  const lab=function(i){ return Math.floor(i/12)+'-'+String(i%12+1).padStart(2,'0'); };
-  const out=[];
-  for(let i=idx(ks[0]); i<=idx(ks[ks.length-1]); i++){ const k=lab(i); out.push({k:k,n:counts[k]||0}); }
-  return out;
-}
-function monthSurges(counts){                    // 연속 축 위에서 급증 달만 골라낸다
-  const seq=monthSeq(counts), hits=[];
-  for(let i=6;i<seq.length;i++){
-    const cur=seq[i].n;
-    if(cur<SURGE_MIN_N) continue;
-    let sum=0; for(let j=i-6;j<i;j++) sum+=seq[j].n;
-    const base=sum/6;                            // 빈 달도 0으로 세는 고정 분모
-    if(base<=0) continue;                        // 기준선 0이면 배수가 무한대다 — 판정하지 않는다
-    if(cur/base>=SURGE_X) hits.push({k:seq[i].k,n:cur,base:base,x:cur/base});
-  }
-  return {seq:seq,hits:hits};
-}
+/* 판정은 GST.monthSurges 한 곳이다 — 고장분석도 같은 함수를 쓴다.
+   ⚠ 여기에 «같은 내용»의 사본이 남아 있었다. 지금은 두 벌이 글자까지 같아 답이 갈리지
+     않았지만, 그것은 우연이지 규율이 아니다. v75 에 막대와 표가 각자 판정해 같은 문구를
+     달고 서로 반대 결론을 낸 조합이 110건 나왔다 — 그 사고를 되풀이할 자리를 없앤다.
+   문턱값도 core 의 GST.SURGE 한 곳에서 온다(minN 5 · x 2). */
 
 
 /* ── 교차분석 (인라인) — 축·값을 고르면 차트와 표가 즉시 따라온다 ─────────
@@ -1799,7 +1780,7 @@ function renderDeepSurge(f){
     (mrows[k]=mrows[k]||[]).push(x); });
   const TH=GST.chartTheme();
   const note=document.getElementById('surgeNote');
-  const R=monthSurges(mm);
+  const R=GST.monthSurges(mm);
   if(!R.seq.length){
     if(CHARTS.cSurge){ CHARTS.cSurge.destroy(); delete CHARTS.cSurge; }
     if(note) note.textContent=t('no_data');
@@ -1962,7 +1943,7 @@ function renderDeepSpike(f){
   // 위 막대와 **같은 판정 함수**를 쓴다. 규칙이 갈리면 같은 (자재,달)에 두 카드가 반대 답을 낸다.
   const out=[];
   Object.keys(by).forEach(function(m){
-    monthSurges(by[m]).hits.forEach(function(h){
+    GST.monthSurges(by[m]).hits.forEach(function(h){
       const w=where[m+SEP+h.k]||[];
       const cnt={}; w.forEach(function(v){cnt[v]=(cnt[v]||0)+1;});
       const top=Object.keys(cnt).sort(function(p,q){return cnt[q]-cnt[p];})[0]||'—';
