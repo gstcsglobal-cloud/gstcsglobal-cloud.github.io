@@ -141,6 +141,46 @@ select.gb-inp{width:104px}
 .spinner{width:36px;height:36px;border:3px solid var(--glassb);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ===== 자동순회(키오스크) — 단지 × 페이지를 돌며 보여준다 =====
+   화면에 «지금 무엇을 보고 있는지»를 반드시 띄운다. 벽에 걸어 두면 지나가는 사람은
+   맥락 없이 숫자만 본다 — 어느 단지인지 안 적히면 그 숫자를 자기 단지로 읽는다. */
+.kiosk-bar{position:fixed;left:0;right:0;bottom:0;z-index:9000;display:none;
+  background:linear-gradient(0deg,rgba(4,10,18,.96),rgba(4,10,18,.80));
+  border-top:1px solid var(--glassb);padding:10px 18px 12px;
+  font:600 14px/1.3 system-ui,sans-serif;color:#E6EDF3;align-items:center;gap:16px}
+body.kiosk-on .kiosk-bar{display:flex}
+.kiosk-bar .kk-now{font-size:19px;font-weight:800;letter-spacing:-.01em}
+.kiosk-bar .kk-camp{color:var(--accent,#2DD4BF)}
+.kiosk-bar .kk-next{color:#8B98A9;font-weight:500;font-size:12px}
+.kiosk-bar .kk-pos{margin-left:auto;color:#8B98A9;font-weight:500;font-size:12px}
+.kiosk-bar .kk-hint{color:#5E6D80;font-weight:500;font-size:11px}
+.kiosk-prog{position:absolute;left:0;top:0;height:2px;background:var(--accent,#2DD4BF);width:0}
+/* 전환은 «같은 탭에서 단지만 바뀔 때»도 걸려야 한다 — .active 애니메이션은 탭이 바뀔 때만 돈다 */
+.frame-wrap.kk-fade iframe.active{opacity:.15;transition:opacity .18s ease}
+/* 하단바는 덮는 게 아니라 «자리를 차지»해야 한다 — 겹치면 표 마지막 줄·범례가 가려진다 */
+body.kiosk-on .frame-wrap{margin-bottom:46px}
+
+.kiosk-panel{position:absolute;right:12px;top:52px;z-index:9500;display:none;width:330px;
+  background:var(--card,#0E141C);border:1px solid var(--glassb);border-radius:12px;
+  padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.5);font:13px system-ui,sans-serif;color:var(--txt)}
+.kiosk-panel.open{display:block}
+.kiosk-panel h4{margin:0 0 4px;font-size:14px}
+.kiosk-panel .kp-sub{color:#8B98A9;font-size:11px;margin-bottom:12px;line-height:1.5}
+.kiosk-panel .kp-lbl{font-size:11px;color:#8B98A9;margin:12px 0 6px;font-weight:700;letter-spacing:.04em}
+.kiosk-panel .kp-lbl .kp-all{float:right;font-weight:600;letter-spacing:0;color:var(--accent,#2DD4BF);cursor:pointer;font-size:11px}
+.kiosk-panel .kp-est{margin-top:12px;font-size:11px;color:#8B98A9;text-align:center}
+.kiosk-panel .kp-row{display:flex;flex-wrap:wrap;gap:6px}
+.kiosk-panel .kp-chip{padding:5px 10px;border:1px solid var(--glassb);border-radius:7px;
+  background:transparent;color:var(--txt);cursor:pointer;font-size:12px}
+.kiosk-panel .kp-chip.on{background:var(--accent,#2DD4BF);color:#04211C;border-color:var(--accent,#2DD4BF);font-weight:700}
+.kiosk-panel .kp-box{max-height:132px;overflow:auto;border:1px solid var(--glassb);border-radius:8px;padding:8px}
+.kiosk-panel .kp-box label{display:flex;align-items:center;gap:7px;padding:3px 2px;cursor:pointer;font-size:12px}
+.kiosk-panel .kp-box input{width:auto;margin:0}
+.kiosk-panel .kp-go{margin-top:14px;width:100%;padding:9px;border:none;border-radius:8px;
+  background:var(--accent,#2DD4BF);color:#04211C;font-weight:800;font-size:13px;cursor:pointer}
+.kiosk-panel .kp-go:disabled{opacity:.45;cursor:default}
+.kiosk-panel .kp-warn{margin-top:10px;color:#fbbf24;font-size:11px;line-height:1.5}
+
 @media(max-width:768px){
   .brand .tag{display:none}
   .brand .logo{font-size:17px}
@@ -172,11 +212,35 @@ select.gb-inp{width:104px}
          새 창으로 여는 이유: 탭 iframe 에 띄우면 탭 줄에서 아무 탭도 활성이 아니게 되고,
          업로드 도중에 탭을 누르면 진행 중이던 적재 화면이 그대로 날아간다. -->
     <button class="tb-btn" onclick="openUpload()" id="uploadBtn" title="데이터 업로드 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg> <span id="uploadLabel">업로드</span></button>
+    <button class="tb-btn" onclick="kioskBtn()" id="kioskBtn" title="자동순회 — 단지별로 화면이 바뀌며 돌아갑니다"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 8 4 2.5-4 2.5z" fill="currentColor"/></svg> <span id="kioskLabel">자동순회</span></button>
     <button class="tb-btn" onclick="shareLink()" id="shareBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> <span id="shareLabel">공유</span></button>
     <button class="tb-btn" onclick="cycleTheme()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9c0-.5-.4-1-1-1h-2a3 3 0 0 1-3-3V6c0-.6-.4-1-1-1z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="6.5" r="1"/><circle cx="15" cy="15.5" r="1"/></svg> <span id="themeLabel">Dark</span></button>
     <button class="tb-btn" onclick="cycleLang()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> <span id="langLabel">KO</span></button>
     <button class="tb-btn logout" onclick="doLogout()" id="logoutBtn">로그아웃</button>
   </div>
+</div>
+
+<!-- 자동순회 설정 패널 -->
+<div class="kiosk-panel" id="kioskPanel">
+  <h4 id="kkTitle">자동순회</h4>
+  <div class="kp-sub" id="kkSub">고른 단지마다 고른 페이지를 차례로 보여줍니다. Esc 로 멈춥니다.</div>
+  <div class="kp-lbl" id="kkLblSec">전환 간격</div>
+  <div class="kp-row" id="kkSec"></div>
+  <div class="kp-lbl" id="kkLblPage">페이지<span class="kp-all" onclick="kioskAll('kkPages')">전체 / 해제</span></div>
+  <div class="kp-box" id="kkPages"></div>
+  <div class="kp-lbl" id="kkLblCamp">단지<span class="kp-all" onclick="kioskAll('kkCamps')">전체 / 해제</span></div>
+  <div class="kp-box" id="kkCamps"></div>
+  <div class="kp-est" id="kkEst"></div>
+  <div class="kp-warn" id="kkWarn" style="display:none"></div>
+  <button class="kp-go" id="kkGo" onclick="kioskStart()">▶ 시작</button>
+</div>
+<!-- 순회 중 하단 표시 -->
+<div class="kiosk-bar" id="kioskBar">
+  <div class="kiosk-prog" id="kkProg"></div>
+  <div class="kk-now"><span class="kk-camp" id="kkCamp">—</span> <span id="kkPage"></span></div>
+  <div class="kk-next" id="kkNext"></div>
+  <div class="kk-pos" id="kkPos"></div>
+  <div class="kk-hint" id="kkHint">Esc 종료</div>
 </div>
 
 <!-- 탭 바 -->
@@ -229,10 +293,10 @@ const TABS=[
 ];
 
 const L={
-  ko:{tag:'By CS Global Team',upload:'업로드',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!'},
-  en:{tag:'By CS Global Team',upload:'Upload',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!'},
-  zh:{tag:'By CS Global Team',upload:'上传',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!'},
-  ja:{tag:'By CS Global Team',upload:'アップロード',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!'}
+  ko:{tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!'},
+  en:{tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!'},
+  zh:{tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!'},
+  ja:{tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!'}
 };
 let LANG='ko';
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&L[sl])LANG=sl; else if(window.name && L[window.name]) LANG=window.name; }catch(e){}
@@ -241,6 +305,173 @@ const frames={}; // id -> iframe element
 let activeTab=null;
 
 function lt(k){return (L[LANG]||L.ko)[k]||k;}
+
+/* ============================================================
+   자동순회(키오스크) — 단지 × 페이지를 돌며 보여준다
+   벽 화면·회의실 상시 표시용. «그냥 켜두면 알아서 넘어간다»가 전부다.
+
+   지킬 것 넷:
+   - **단지 목록을 여기 박지 말 것.** 지금 보고 있는 페이지에 물어서 받는다
+     (`gst-kiosk-q`). 목록을 박으면 국내가 들어왔을 때 통째로 빠졌던 v89 가 그대로 재현된다.
+   - **사람이 걸어 둔 필터를 돌려준다.** 순회는 남의 화면을 빌려 쓰는 것이다 —
+     끝내고 나서 «내가 보던 단지»가 아니면 다음부터 아무도 안 켠다.
+   - **지금 무엇을 보는지 화면에 적는다.** 벽에 걸면 지나가는 사람은 맥락 없이 숫자만
+     본다. 단지 이름이 없으면 그 숫자를 자기 단지로 읽는다.
+   - **마우스가 움직였다고 멈추지 않는다.** TV 앞은 사람이 지나다니는 곳이다.
+     멈추는 것은 Esc 와 버튼뿐이다.
+   자료 갱신은 따로 안 한다 — 페이지가 이미 GST.startAutoRefresh(30) 으로 30분마다 받는다.
+   ============================================================ */
+const KIOSK = {on:false, sec:15, list:[], i:0, timer:null, raf:0, wake:null, camps:[], pages:[]};
+const KK_SECS = [10,15,30,60];
+
+function kioskBtn(){
+  if(KIOSK.on){ kioskStop(); return; }
+  const pn=document.getElementById('kioskPanel');
+  if(pn.classList.contains('open')){ pn.classList.remove('open'); return; }
+  kioskBuildPanel(); pn.classList.add('open');
+}
+
+/* 단지 목록은 «지금 열려 있는 탭»에 묻는다. 탭마다 자료가 달라 목록도 다르다 —
+   그래서 어느 탭에 물었는지를 패널에 적는다(빈 목록일 때 원인을 짚을 수 있게). */
+function kioskAskCampus(){
+  const f = activeTab && frames[activeTab];
+  if(!f) return;
+  try{ f.contentWindow.postMessage({type:'gst-kiosk-q'},'*'); }catch(e){}
+}
+window.addEventListener('message',e=>{
+  const d=e.data||{};
+  if(d.type!=='gst-kiosk-a') return;
+  KIOSK.camps = (d.list||[]).slice();
+  kioskFillCamps();
+});
+
+function kioskBuildPanel(){
+  // 전환 간격
+  const sec=document.getElementById('kkSec');
+  sec.innerHTML = KK_SECS.map(v=>'<button class="kp-chip'+(v===KIOSK.sec?' on':'')+'" data-s="'+v+'">'+v+'초</button>').join('');
+  sec.querySelectorAll('.kp-chip').forEach(b=>b.onclick=()=>{ KIOSK.sec=+b.dataset.s;
+    sec.querySelectorAll('.kp-chip').forEach(x=>x.classList.toggle('on',x===b)); kioskEst(); });
+  // 페이지 — 탭 정의에서 만든다(탭이 늘면 여기도 자동으로 는다)
+  const pg=document.getElementById('kkPages');
+  pg.innerHTML = TABS.map(t=>'<label><input type="checkbox" value="'+t.id+'"'
+    +((!KIOSK.pages.length||KIOSK.pages.indexOf(t.id)>=0)?' checked':'')+'> '+(t[LANG]||t.ko)+'</label>').join('');
+  pg.onchange=kioskEst;
+  KIOSK.camps=[]; kioskFillCamps(); kioskAskCampus();
+}
+function kioskFillCamps(){
+  const box=document.getElementById('kkCamps'), warn=document.getElementById('kkWarn'), go=document.getElementById('kkGo');
+  if(!KIOSK.camps.length){
+    box.innerHTML='<div style="color:#8B98A9;font-size:11px;padding:4px">단지 목록을 읽는 중…</div>';
+    /* 조용히 비워 두면 «왜 시작이 안 되나»가 된다 — 무엇을 하면 되는지까지 적는다. */
+    warn.style.display='block';
+    warn.textContent='단지 목록이 비어 있습니다. 화면의 자료가 다 뜬 뒤에 다시 눌러 주세요 (지금 탭: '
+      +((TABS.find(t=>t.id===activeTab)||{}).ko||'—')+').';
+    go.disabled=true; return;
+  }
+  warn.style.display='none'; go.disabled=false;
+  box.innerHTML = KIOSK.camps.map(c=>'<label><input type="checkbox" value="'+c+'" checked> '+c+'</label>').join('');
+  box.onchange=kioskEst; kioskEst();
+}
+
+/* 여덟 페이지 × 단지 여럿이면 손으로 다 끄기가 번거롭다 — 한 번에 뒤집는다. */
+function kioskAll(id){
+  const xs=[...document.querySelectorAll('#'+id+' input')];
+  const on=xs.some(x=>!x.checked);
+  xs.forEach(x=>x.checked=on); kioskEst();
+}
+/* «15초» 만 보면 한 바퀴가 얼마인지 아무도 모른다 — 8페이지 × 6단지면 12분이다.
+   그 숫자를 안 적으면 «왜 아까 그 화면이 다시 안 오나» 로 돌아온다. */
+function kioskEst(){
+  const np=document.querySelectorAll('#kkPages input:checked').length;
+  const nc=document.querySelectorAll('#kkCamps input:checked').length;
+  const n=np*nc, sec=n*KIOSK.sec;
+  const est=document.getElementById('kkEst');
+  est.textContent = n ? (n+'단계 · 한 바퀴 '+(sec>=60?Math.round(sec/60)+'분':sec+'초')) : '';
+  const go=document.getElementById('kkGo'); if(go) go.disabled = !n;
+}
+
+function kioskStart(){
+  const pages=[...document.querySelectorAll('#kkPages input:checked')].map(x=>x.value);
+  const camps=[...document.querySelectorAll('#kkCamps input:checked')].map(x=>x.value);
+  if(!pages.length || !camps.length){
+    const w=document.getElementById('kkWarn');
+    w.style.display='block'; w.textContent='페이지와 단지를 하나씩은 골라 주세요.'; return; }
+  KIOSK.pages=pages;
+  /* 순서: 단지가 «바깥», 페이지가 «안». 한 단지의 이야기를 끝까지 보여 준 뒤 다음 단지로
+     넘어간다 — 페이지를 바깥에 두면 같은 화면만 단지를 바꿔 가며 반복해 맥락이 끊긴다. */
+  KIOSK.list=[]; camps.forEach(c=>pages.forEach(p=>KIOSK.list.push({camp:c,page:p})));
+  KIOSK.i=-1; KIOSK.on=true;
+  document.getElementById('kioskPanel').classList.remove('open');
+  document.body.classList.add('kiosk-on');
+  document.getElementById('kioskLabel').textContent=lt('kioskStop');
+  kioskWake(true);
+  kioskNext();
+}
+
+function kioskNext(){
+  if(!KIOSK.on) return;
+  KIOSK.i = (KIOSK.i+1) % KIOSK.list.length;
+  const it = KIOSK.list[KIOSK.i], nx = KIOSK.list[(KIOSK.i+1)%KIOSK.list.length];
+  const nm = id => { const t=TABS.find(x=>x.id===id); return t?(t[LANG]||t.ko):id; };
+
+  const wrap=document.getElementById('frameWrap');
+  wrap.classList.add('kk-fade');
+  setTimeout(()=>{
+    switchTab(it.page);
+    /* 탭이 이제 막 만들어졌으면 아직 로드 전이다 — 잠깐 뒤 한 번 더 보낸다.
+       («한 번만» 보내면 첫 바퀴에서 그 탭만 필터가 안 걸린 채 지나간다.) */
+    kioskSend(it.page, it.camp);
+    setTimeout(()=>kioskSend(it.page, it.camp), 1200);
+    wrap.classList.remove('kk-fade');
+  }, 180);
+
+  document.getElementById('kkCamp').textContent = it.camp;
+  document.getElementById('kkPage').textContent = nm(it.page);
+  document.getElementById('kkNext').textContent = '다음 · '+nx.camp+' '+nm(nx.page);
+  document.getElementById('kkPos').textContent  = (KIOSK.i+1)+' / '+KIOSK.list.length;
+
+  const t0=Date.now(), ms=KIOSK.sec*1000, bar=document.getElementById('kkProg');
+  cancelAnimationFrame(KIOSK.raf);
+  (function tick(){ if(!KIOSK.on) return;
+    bar.style.width = Math.min(100,(Date.now()-t0)/ms*100)+'%';
+    KIOSK.raf=requestAnimationFrame(tick); })();
+  clearTimeout(KIOSK.timer); KIOSK.timer=setTimeout(kioskNext, ms);
+}
+function kioskSend(page, camp){
+  const f=frames[page]; if(!f) return;
+  try{ f.contentWindow.postMessage({type:'gst-kiosk-set', campus:camp},'*'); }catch(e){}
+}
+
+function kioskStop(){
+  KIOSK.on=false;
+  clearTimeout(KIOSK.timer); cancelAnimationFrame(KIOSK.raf);
+  document.body.classList.remove('kiosk-on');
+  document.getElementById('frameWrap').classList.remove('kk-fade');
+  document.getElementById('kioskLabel').textContent=lt('kiosk');
+  /* 빌려 쓴 필터를 돌려준다 — 열린 «모든» 탭에 보낸다. 순회 도중 만들어진 탭도 있다. */
+  Object.values(frames).forEach(f=>{ try{ f.contentWindow.postMessage({type:'gst-kiosk-restore'},'*'); }catch(e){} });
+  kioskWake(false);
+}
+
+/* 화면이 잠들면 순회를 켜 둔 뜻이 없다. 지원 안 하는 브라우저면 조용히 넘어간다 —
+   되지도 않는 것을 경고로 띄우면 매번 닫아야 한다. */
+function kioskWake(on){
+  try{
+    if(on && navigator.wakeLock && !KIOSK.wake){
+      navigator.wakeLock.request('screen').then(w=>{ KIOSK.wake=w;
+        w.addEventListener('release',()=>{ KIOSK.wake=null; }); }).catch(()=>{});
+    } else if(!on && KIOSK.wake){ KIOSK.wake.release().catch(()=>{}); KIOSK.wake=null; }
+  }catch(e){}
+}
+/* 탭을 숨겼다 돌아오면 wakeLock 이 풀려 있다(브라우저 규약) — 다시 잡는다. */
+document.addEventListener('visibilitychange',()=>{
+  if(KIOSK.on && document.visibilityState==='visible') kioskWake(true);
+});
+/* 멈추는 것은 Esc 와 버튼뿐이다. 마우스 움직임으로 멈추면 TV 앞을 지나가기만 해도 꺼진다. */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ if(KIOSK.on) kioskStop();
+    else document.getElementById('kioskPanel').classList.remove('open'); }
+});
 
 /* 업로드 화면은 별도 창. 셸의 iframe 에 띄우지 않는다 — 위 버튼 주석 참조. */
 function openUpload(){ window.open('/upload/','gstUpload'); }
@@ -251,6 +482,7 @@ function applyLang(){
   document.getElementById('refreshLabel').textContent=lt('refresh');
   document.getElementById('shareLabel').textContent=lt('share');
   document.getElementById('uploadLabel').textContent=lt('upload');
+  document.getElementById('kioskLabel').textContent=KIOSK.on?lt('kioskStop'):lt('kiosk');
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
   // 탭 이름 갱신
   document.querySelectorAll('.tab').forEach(el=>{
