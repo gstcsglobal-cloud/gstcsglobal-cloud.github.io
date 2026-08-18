@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 99;
+GST.VER = 100;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1610,6 +1610,28 @@ GST.ORG = {
       }
     };
   }
+};
+
+/* 표·PPT 머리의 «법인 표기» — 정본은 여기 하나다.
+   ⚠ 예전에는 report 안에만 있었고 국가(F.country)·구분만 봤다. 그래서 운영단위로
+     «GST CHINA(WUHAN) SCRUBBER» 를 골라도 머리에는 'GST Global' 이 그대로 붙어 있었고,
+     PPT 양식(qbr-template.pptx)은 아예 'GST TAIWAN' 이 박제돼 있어 어느 법인을 보고 있든
+     대만이라고 말했다 — 화면이 거짓말을 하는 자리다.
+   축 우선순위는 «구체적인 것부터»다: 운영단위 → 국가 → 구분 → 전체.
+   운영단위가 가장 좁으므로 그것을 고른 사람에게는 그 이름을 그대로 보여준다.
+   ⚠ 이름을 지어내지 않는다(v98 규약 — 조직 축은 시트에 적힌 값 그대로).
+     떼는 것은 꼬리의 담당구분(SCRUBBER·CHILLER)뿐이다. 'GST TAIWAN SCRUBBER' → 'GST TAIWAN',
+     'GST CHINA(WUHAN) SCRUBBER' → 'GST CHINA(WUHAN)'. 그 앞은 한 글자도 손대지 않는다.
+   인자 f 를 주면 그 필터 객체를 본다 — 페이지가 자기 F 를 갖고 있어도 같은 규칙을 쓰게. */
+GST.corpLabel = function(f){
+  const F = f || (GST.filters && GST.filters.F) || {};
+  const op = String(F.op||'').trim();
+  if(op) return op.replace(/[\s·]*(SCRUBBER|CHILLER)\s*$/i,'').trim() || op;
+  const ctry = String(F.country||'').trim();
+  if(ctry) return 'GST ' + ctry.charAt(0).toUpperCase() + ctry.slice(1).toLowerCase();
+  if(F.region === GST.ORG.REGION_KR) return 'GST Korea';
+  if(F.region === GST.ORG.REGION_OS) return 'GST Overseas';
+  return 'GST Global';
 };
 
 /* 배수 표기 — '×'는 곱하기로 읽힌다. 4.5배라고 쓴다.
@@ -3271,52 +3293,159 @@ GST.chartHiRes = function(id, scale){
   ch.options.devicePixelRatio=prev; ch.resize(); ch.render();
   return oc;
 };
+/* 필터 요약 한 줄 — PPT 머리·표 캡션이 «지금 무엇을 걸러 본 숫자인지» 말하게 한다.
+   조직 축 이름은 GST.filters 의 L 과 같은 낱말을 쓴다(사람이 사이드바에서 본 그 말). */
+GST.filtSummary = function(){
+  const F = (GST.filters && GST.filters.F) || {};
+  const L = {region:'구분', op:'운영단위', div:'사업부', customer:'고객사', campus:'단지', line:'라인', team:'팀'};
+  const out = [];
+  Object.keys(L).forEach(function(k){
+    const v = F[k];
+    if(v instanceof Set){ if(v.size) out.push(L[k]+' '+Array.from(v).join('/')); }
+    else if(v) out.push(L[k]+' '+v);
+  });
+  if(F.dtFrom || F.dtTo) out.push('기간 '+(F.dtFrom||'')+'~'+(F.dtTo||''));
+  return out.length ? out.join(' · ') : '전체';
+};
+
+/* 차트를 «흰 바탕 · 어두운 글자»로 잠깐 바꿔 캡처한다 (PPT 양식은 흰 종이다).
+   ⚠ 왜 옵션을 복제하지 않고 «제자리에서 바꿨다 되돌리나» — 축 눈금 콜백(날짜 포맷)·
+     커스텀 플러그인이 옵션에 함수로 들어 있어 JSON 복제로는 통째로 날아간다. 실제로
+     복제 방식을 쓰면 x축이 타임스탬프 숫자로 찍힌다. devicePixelRatio 를 바꿨다 되돌리는
+     기존 방식과 같은 규율이다.
+   되돌리기는 반드시 finally 로 — 중간에 던지면 화면 차트가 «흰 글자 없는» 상태로 굳는다. */
+GST._chartLight = function(ch){
+  const undo = [];
+  const set = function(o,k,v){ if(!o) return; undo.push([o,k,o[k]]); o[k]=v; };
+  const sc = ch.options.scales || {};
+  Object.keys(sc).forEach(function(k){
+    const ax = sc[k]; if(!ax || typeof ax !== 'object') return;
+    ax.ticks = ax.ticks || {}; set(ax.ticks,'color','#333333');
+    ax.grid  = ax.grid  || {}; set(ax.grid,'color','#E3E3E3'); set(ax.grid,'borderColor','#C9CDD3');
+    if(ax.title) set(ax.title,'color','#333333');
+    if(ax.pointLabels) set(ax.pointLabels,'color','#333333');
+  });
+  const pl = ch.options.plugins || {};
+  if(pl.legend){ pl.legend.labels = pl.legend.labels || {}; set(pl.legend.labels,'color','#333333'); }
+  if(pl.title) set(pl.title,'color','#111111');
+  if(pl.datalabels) set(pl.datalabels,'color','#333333');
+  if(window.Chart && Chart.defaults) set(Chart.defaults,'color','#333333');
+  return function(){ for(let i=undo.length-1;i>=0;i--){ undo[i][0][undo[i][1]] = undo[i][2]; } };
+};
+/* 차트를 고배율로 다시 그려 캔버스로. light=true 면 흰 종이용(위 _chartLight). */
+GST.chartHiResLight = function(id, scale){
+  const cv = document.getElementById(id); if(!cv) return null;
+  let ch = null;
+  try{ ch = (window.Chart && Chart.getChart) ? Chart.getChart(cv) : null; }catch(e){}
+  if(!ch && window.CHARTS) ch = window.CHARTS[id];
+  if(!ch) return null;
+  const w = cv.clientWidth||400, h = cv.clientHeight||300;
+  if(!scale) scale = Math.min(6, Math.max(3, Math.round(2400/w)));
+  const prev = ch.options.devicePixelRatio;
+  const restore = GST._chartLight(ch);
+  let oc = null;
+  try{
+    ch.options.devicePixelRatio = scale; ch.resize(); ch.render();
+    oc = document.createElement('canvas');
+    oc.width = Math.round(w*scale); oc.height = Math.round(h*scale);
+    const g = oc.getContext('2d');
+    g.fillStyle = '#FFFFFF'; g.fillRect(0,0,oc.width,oc.height);
+    g.drawImage(cv,0,0,oc.width,oc.height);
+  } finally {
+    restore();
+    ch.options.devicePixelRatio = prev; ch.resize(); ch.render();
+  }
+  return oc;
+};
+
+/* 범용 PPT — 주간현황(QBR) 양식과 같은 얼굴로 낸다.
+   흰 종이 · 왼쪽 섹션 제목 · 오른쪽 법인 상자 · 굵은 검정 가로줄 · 검정 머리띠를 인 칸.
+   한 장에 최대 6개(3×2). 그 이상이면 슬라이드가 늘고 제목에 (2/3)이 붙는다.
+   ⚠ 페이지마다 만들지 말 것 — 여기 하나를 6개 페이지(설치·PM·고장·자재·CIP·TCO)가 쓴다.
+     예전에는 이 함수가 «어두운 바탕에 차트 한 장씩»이라 양식과 전혀 달랐다. */
+GST.PPT_MAX_PER_SLIDE = 6;
 GST.pptAuto = async function(opt){
-  opt=opt||{};
+  opt = opt || {};
   try{ await GST.pptLoad(); }catch(e){ alert('PPT 라이브러리를 불러오지 못했습니다. 네트워크를 확인하세요.'); return; }
-  // 숨겨진 섹션의 차트도 담기 위해 잠시 전부 보이게 한다
-  const secs=[].slice.call(document.querySelectorAll('[data-sec]'));
-  const hid=secs.filter(function(s){ return s.style.display==='none'; });
+
+  /* 숨겨진 섹션의 차트도 담는다 — 접어 둔 채 내보내면 «있는 줄 알았던» 장표가 조용히 빠진다. */
+  const secs = [].slice.call(document.querySelectorAll('[data-sec]'));
+  const hid = secs.filter(function(s){ return s.style.display==='none'; });
   hid.forEach(function(s){ s.style.display=''; });
   if(hid.length){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} await new Promise(function(r){ setTimeout(r,350); }); }
 
-  const dark = (getComputedStyle(document.body).backgroundColor||'').indexOf('255, 255, 255')<0;
-  const BG = dark ? '0B0F14' : 'FFFFFF', FG = dark ? 'E6EDF3' : '1A2230', MUT = dark ? '8B98A9' : '64748B';
-  const p=new PptxGenJS(); p.layout='LAYOUT_16x9';
-  const title = opt.title || (document.querySelector('.header h1')||{}).textContent || document.title || 'Dashboard';
-  const stamp = new Date().toLocaleString('ko-KR');
-  const chips = ([].slice.call(document.querySelectorAll('#fchips .fchip, #fchipList .fchip'))
-                  .map(function(c){ return (c.innerText||'').replace(/\s*✕\s*$/,'').trim(); })
-                  .filter(Boolean).join('  ·  ')) || '전체';
-  const ins = [].slice.call(document.querySelectorAll('#gstInsights .gst-ins'))
-                .map(function(x){ return (x.innerText||'').trim(); }).filter(Boolean);
+  const FONT='맑은 고딕', INK='111111', MUT='808080', LINE='8C8C8C';
+  const X=0.76, W=11.83, COLS=3, GAP=0.16;
+  const CW=(W-GAP*(COLS-1))/COLS, BAND=0.30, BODY=2.62, ROWY=[0.98, 4.06];
 
-  const cover=p.addSlide(); cover.background={color:BG};
-  cover.addText(title.trim(), {x:0.6,y:1.5,w:12,h:0.9,fontSize:34,bold:true,color:FG});
-  cover.addText(stamp+'   |   필터: '+chips, {x:0.6,y:2.5,w:12,h:0.4,fontSize:12,color:MUT});
-  if(ins.length) cover.addText(ins.map(function(s){ return {text:'• '+s, options:{breakLine:true}}; }),
-                               {x:0.6,y:3.1,w:12,h:2.4,fontSize:12,color:FG});
+  const p = new PptxGenJS(); p.layout='LAYOUT_16x9';
+  const title = (opt.title || (document.querySelector('.header h1')||{}).textContent || document.title || 'Dashboard').trim();
+  const corp  = (opt.corp || GST.corpLabel()).toUpperCase();
+  const asOf  = opt.asOf || new Date().toISOString().slice(0,10);
+  const meta  = asOf + ' 기준 · ' + GST.filtSummary();
 
-  const cvs=[].slice.call(document.querySelectorAll('.cw canvas'))
-              .filter(function(c){ return c.id && c.clientWidth>0; });
-  let n=0;
+  const header = function(s, sec){
+    s.background = {color:'FFFFFF'};
+    s.addText(sec, {x:X, y:0.22, w:7.6, h:0.40, fontFace:FONT, fontSize:14, bold:true, color:INK, margin:0, valign:'middle'});
+    /* 법인 상자 — 양식의 오른쪽 위 그 상자다. 값은 GST.corpLabel(운영단위를 따라간다). */
+    s.addShape(p.ShapeType.rect, {x:9.62, y:0.14, w:2.97, h:0.40, fill:{color:'FFFFFF'}, line:{color:'000000', width:1}});
+    s.addText(corp, {x:9.62, y:0.14, w:2.97, h:0.40, fontFace:FONT, fontSize:13, bold:true, color:INK, align:'center', valign:'middle', margin:0});
+    s.addText(meta, {x:5.0, y:0.58, w:7.59, h:0.22, fontFace:FONT, fontSize:8, color:MUT, align:'right', margin:0});
+    s.addShape(p.ShapeType.line, {x:X, y:0.86, w:W, h:0, line:{color:'000000', width:2.25}});
+  };
+  /* 칸 하나 — 검정 머리띠 + 흰 몸통. 양식의 «가. 인력현황» 칸과 같은 꼴이다. */
+  const slot = function(s, i, cap, oc){
+    const c=i%COLS, r=Math.floor(i/COLS);
+    const x=X+(CW+GAP)*c, y=ROWY[r];
+    s.addText(cap, {x:x, y:y, w:CW, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
+                    fontSize:10, bold:true, valign:'middle', align:'center', margin:4,
+                    line:{color:'000000', width:0.75}});
+    s.addShape(p.ShapeType.rect, {x:x, y:y+BAND, w:CW, h:BODY, fill:{color:'FFFFFF'}, line:{color:LINE, width:0.75}});
+    if(!oc) return;
+    /* 비율 유지로 칸 안에 «중앙 정렬». 늘려 채우면 막대 굵기가 칸마다 달라 보인다. */
+    const mw=CW-0.20, mh=BODY-0.16, ar=oc.width/oc.height;
+    let w=mw, h=w/ar; if(h>mh){ h=mh; w=h*ar; }
+    s.addImage({data:oc.toDataURL('image/png'), x:x+(CW-w)/2, y:y+BAND+(BODY-h)/2, w:w, h:h});
+  };
+
+  /* 화면에 실제로 그려진 차트만. clientWidth 0 은 접힌 카드라 캡처하면 빈 그림이 된다. */
+  const cvs = [].slice.call(document.querySelectorAll('.cw canvas'))
+                .filter(function(c){ return c.id && c.clientWidth>0; });
+  const items = [];
   for(const cv of cvs){
-    const oc=GST.chartHiRes(cv.id); if(!oc) continue;
-    const card=cv.closest('.card')||cv.closest('.mcard');
-    const h3=card?card.querySelector('h3'):null;
-    const cap=h3?(h3.innerText||'').trim():cv.id;
-    const sl=p.addSlide(); sl.background={color:BG};
-    sl.addText(cap, {x:0.5,y:0.3,w:12.3,h:0.5,fontSize:18,bold:true,color:FG});
-    // 16:9 슬라이드(13.33×7.5in) 안에 비율 유지로 배치
-    const availW=12.3, availH=5.9, r=oc.width/oc.height;
-    let w=availW, h=w/r; if(h>availH){ h=availH; w=h*r; }
-    sl.addImage({data:oc.toDataURL('image/png'), x:(13.33-w)/2, y:1.0+(availH-h)/2, w:w, h:h});
-    n++;
+    const oc = GST.chartHiResLight(cv.id); if(!oc) continue;
+    const card = cv.closest('.card') || cv.closest('.mcard');
+    const h3 = card ? card.querySelector('h3') : null;
+    items.push({cap:(h3 ? (h3.innerText||'').trim() : cv.id) || cv.id, oc:oc});
   }
   hid.forEach(function(s){ s.style.display='none'; });
   if(hid.length){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }
-  if(!n){ alert('내보낼 차트가 없습니다.'); return; }
-  const fn=title.trim().replace(/[\\/:*?"<>|]/g,'').slice(0,40)+'_'+new Date().toISOString().slice(0,10)+'.pptx';
+  if(!items.length){ alert('내보낼 차트가 없습니다.'); return; }
+
+  const per = GST.PPT_MAX_PER_SLIDE, pages = Math.ceil(items.length/per);
+  for(let pg=0; pg<pages; pg++){
+    const s = p.addSlide();
+    header(s, title + (pages>1 ? '  ('+(pg+1)+'/'+pages+')' : ''));
+    const part = items.slice(pg*per, pg*per+per);
+    part.forEach(function(it,i){ slot(s, i, it.cap, it.oc); });
+    /* 마지막 장에 빈 칸이 남으면 인사이트를 거기 담는다 — 버리지 않고, 새 장도 만들지 않는다. */
+    if(pg===pages-1 && part.length<per){
+      const ins = [].slice.call(document.querySelectorAll('#gstInsights .gst-ins'))
+                    .map(function(x){ return (x.innerText||'').trim(); }).filter(Boolean);
+      if(ins.length){
+        const i0=part.length, c=i0%COLS, r=Math.floor(i0/COLS);
+        const x=X+(CW+GAP)*c, y=ROWY[r], span=COLS-c, w=CW*span+GAP*(span-1);
+        s.addText('INSIGHT', {x:x, y:y, w:w, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
+                              fontSize:10, bold:true, valign:'middle', align:'center', margin:4,
+                              line:{color:'000000', width:0.75}});
+        s.addShape(p.ShapeType.rect, {x:x, y:y+BAND, w:w, h:BODY, fill:{color:'FFFFFF'}, line:{color:LINE, width:0.75}});
+        s.addText(ins.map(function(t){ return '· '+t; }).join('\n'),
+          {x:x+0.12, y:y+BAND+0.10, w:w-0.24, h:BODY-0.20, fontFace:FONT, fontSize:9, color:'333333',
+           valign:'top', margin:0, lineSpacingMultiple:1.3});
+      }
+    }
+  }
+  const fn = title.replace(/[\\/:*?"<>|]/g,'').slice(0,40)+'_'+asOf+'.pptx';
   await p.writeFile({fileName:fn});
 };
 

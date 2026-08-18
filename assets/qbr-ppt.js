@@ -149,9 +149,19 @@ function patchTable(slideXml,signature,edits){
 // ---- 텍스트 치환 (주차 라벨 등) ---------------------------------------------
 function patchText(slideXml,re,repl){ return slideXml.replace(re,repl); }
 
+/* 오른쪽 위 «법인» 상자. 양식에는 'GST TAIWAN' 이 세 장 모두에 박제돼 있었다 —
+   어느 법인을 골라 보고 있든 PPT 는 대만이라고 말했다(사용자가 화면 캡처로 짚은 자리).
+   값은 GST.corpLabel(운영단위를 따라간다). data.corp 가 없으면 양식 그대로 둔다 —
+   옛 호출부가 이 파일만 새로 배포됐을 때 «빈 상자»가 되지 않게. */
+function patchCorp(xml,corp){
+  if(!corp) return xml;
+  return xml.replace(/<a:t>GST TAIWAN<\/a:t>/g,'<a:t>'+esc(corp)+'</a:t>');
+}
+
 /* ---- 메인: build(JSZipRef, tplBuf, data) -> Promise<Blob|Buffer> ------------
 data = {
  week:'W31',
+ corp:'GST TAIWAN',                                                   // 오른쪽 위 법인 상자 (운영단위 필터를 따라간다)
  charts:{ 'chart1':{cats:[...],series:{...}}, ... 'chart8':{...} },
  eduTable:{b:{no,ing,done,rate}, v:{no,ing,done,rate}},              // 교육과정 표
  opRows:[[구분, 가동TOT,WI,WO, 챔버TOT,WI,WO, 미가동대,미가동ch, 주재원,현채인, PM], ...],
@@ -173,6 +183,7 @@ function build(JSZipRef,tplBuf,data){
     });
     // 2) 슬라이드 표·텍스트
     jobs.push(zip.file('ppt/slides/slide1.xml').async('string').then(xml=>{
+      xml=patchCorp(xml,data.corp);
       if(data.eduTable){ const e=data.eduTable;
         xml=setRowNums(xml,'교육과정',{
           '미이수':[e.b.no,e.v.no],'진행중':[e.b.ing,e.v.ing],
@@ -181,6 +192,7 @@ function build(JSZipRef,tplBuf,data){
       zip.file('ppt/slides/slide1.xml',xml);
     }));
     jobs.push(zip.file('ppt/slides/slide2.xml').async('string').then(xml=>{
+      xml=patchCorp(xml,data.corp);
       if(data.opRows){
         const rows=xml.match(/<a:tbl>[\s\S]*?<\/a:tbl>/g)||[];
         const tb=rows.find(tb0=>tb0.indexOf('가동 장비 대수')>=0);
@@ -211,6 +223,7 @@ function build(JSZipRef,tplBuf,data){
       zip.file('ppt/slides/slide2.xml',xml);
     }));
     jobs.push(zip.file('ppt/slides/slide3.xml').async('string').then(xml=>{
+      xml=patchCorp(xml,data.corp);
       if(data.week)xml=patchText(xml,/TOP\s*3\s*\(W\d+\)/,'TOP 3 ('+data.week+')');
       // 슬롯 제목: 'Alarm & All By Pass'로 통일 — (Micron)/(Micron 外) 꼬리 제거 (단위는 기존 [월/단위]·[주/단위] 라벨)
       xml=xml.replace('By Pass(Micron)','By Pass');

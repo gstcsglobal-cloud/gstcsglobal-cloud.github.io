@@ -367,7 +367,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(94);
+GST.needVer&&GST.needVer(100);   // GST.corpLabel 을 쓴다 — 옛 core.js 면 붉은 배너
 const PUB='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub';
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -418,12 +418,12 @@ const fabOf    = s => GST.ORG.fab(s);
 function siteCountryStatic(s){ return GST.ORG.country(s); }
 /* 표·PPT 머리의 법인 표기. 예전 기본값이 'GST Taiwan' 이라, 국내를 걸어도 표 왼쪽에
    'GST Taiwan' 이 그대로 붙어 있었다 — 화면이 거짓말을 하는 자리다. 필터를 따라간다. */
-function corpLabel(){
-  if(F.country)return 'GST '+F.country.charAt(0)+F.country.slice(1).toLowerCase();
-  if(F.region===GST.ORG.REGION_KR)return 'GST Korea';
-  if(F.region===GST.ORG.REGION_OS)return 'GST Overseas';
-  return 'GST Global';
-}
+/* 정본은 core.js 의 GST.corpLabel 이다 — 여기서 다시 짜지 않는다(제2원칙).
+   자기 F 를 넘겨 주는 이유: 이 페이지는 GST.filters 와 별도로 F.country 를 갖고 있고,
+   그 축까지 같은 규칙으로 읽혀야 표 왼쪽 칸과 PPT 머리가 같은 말을 한다.
+   ⚠ 운영단위(F.op)가 최우선이다 — 예전에는 그 축이 아예 없어서, 법인을 골라도
+     머리에는 'GST Global' 이 그대로 남아 있었다. */
+function corpLabel(){ return GST.corpLabel(F); }
 // 소속/사이트 표기 통일 (인원현황 Work Place · 휴가현황 소속 → normCust 어휘)
 function siteKey(sv){
   const up=GST.upk(sv);
@@ -2953,6 +2953,9 @@ window.downloadPPT=async function(btn){
       s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';s.onload=res;s.onerror=()=>rej(new Error('JSZip 로드 실패'));document.head.appendChild(s);});
     const tpl=await fetch('qbr-template.pptx').then(r=>{if(!r.ok)throw new Error('양식 파일 로드 실패('+r.status+')');return r.arrayBuffer();});
     const data=Object.assign({},P.qbr);
+    /* 양식 오른쪽 위 법인 상자 — 양식 파일에는 'GST TAIWAN' 이 박제돼 있다.
+       필터를 따라 바꿔 주지 않으면 어느 법인을 보고 있든 대만이라고 말한다. */
+    data.corp=corpLabel().toUpperCase();
     if(P.eduPlan){ data.eduTable={b:P.eduPlan.b,v:P.eduPlan.v}; }   // 교육 계획 카드(라인 선택) 그대로
     else if(P.edu){const e=P.edu,pct=(d,n)=>n?Math.round(d/n*100)+'%':'-';
       data.eduTable={b:{no:e.b-e.bD,ing:0,done:e.bD,rate:pct(e.bD,e.b)},
