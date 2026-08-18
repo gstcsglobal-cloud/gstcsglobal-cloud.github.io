@@ -367,7 +367,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(113);   // GST.corpLabel · filters.hitL · GST.PM(국내 조치 기준 PM) 을 쓴다
+GST.needVer&&GST.needVer(114);   // GST.corpLabel · filters.hitL · GST.PM(국내 조치 기준 PM) 을 쓴다
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -583,6 +583,7 @@ const campOk=(v)=>GST.filters.hit('campus',v);
      KPI·차트·표가 한 자리도 안 움직였다(에러는 하나도 안 났다 — 사용자 보고).
      loose 규칙까지 GST.filters.hitL 한 곳을 지난다: 여기서 다시 적으면 pass() 와 갈린다. */
 const divOk=(v)=>GST.filters.hitL('div', v);
+const axOkH=(k,v)=>GST.filters.hitH(k, v);   // 인원 기준 블록 판정 (v114)
 /* 인당 지표는 «분자와 분모가 서로 다른 자료»에서 온다 — 분자는 실적·설비, 분모는 인원현황.
    그래서 한쪽에만 있는 축을 걸면 한쪽만 좁아진다. ⚠ 방향이 둘이고 «둘 다 조용하다»:
      · 사업부(설비에만 있는 축) → 분자(챔버·설비·작업)만 좁아진다 → 인당이 실제보다 «낮게»
@@ -1368,7 +1369,12 @@ function fillFilters(){
   });
   /* 공통 기본 필터(구분·고객사·단지·라인·기간)는 core.js 가 만든다. 목록 재료는
      실적과 설치 두 자료를 합쳐 넘긴다 — 한쪽만 주면 그쪽에 없는 값이 목록에서 조용히 빠진다. */
-  GST.filters.mount({ page:'report', rows:function(){
+  GST.filters.mount({ page:'report',
+    /* 필터가 두 벌이다(v114) — 설비 기준은 실적·설치, 인원 기준은 인원현황을 본다.
+       예전에는 셋을 한 배열로 섞어 넘겼고, 그래서 «팀을 고르면 설비 축 목록이 통째로
+       빈다» 같은 일이 났다(패밀리마다 없는 축을 loose 로 일일이 선언해야 했다).
+       이제 각 블록이 «자기 자료»만 보므로 그런 교차 오염이 원리적으로 없다. */
+    rows:function(){
       const out=[];
       /* 실적에는 사업부 열이 없다 — 빈 값으로 넘겨 목록에 안 뜨게 한다(짐작해 채우지 않는다). */
       /* ⚠ 사업부는 «설치현황에만» 있는 열이다. 예전에는 실적 행에 `div:''` 를 넣었는데,
@@ -1383,12 +1389,16 @@ function fillFilters(){
                    div:String((CI.div>=0?r[CI.div]:'')||'').trim(),
                    campus:GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country]), line:String(r[CI.fab]||'').trim() });
       });
-      /* 인원은 «구분»만 보탠다. 고객사·단지·라인 칸은 비워서 넘긴다 —
-         인원현황에는 그 열이 없어 근무지가 대신 들어가면, 고객사 목록에 A3·P1·라인장이
-         뜨던 그 사고가 그대로 재현된다(빈 값은 목록에 안 오른다). */
-      ROSTER.forEach(function(p){ out.push({region:p.region,op:p.op,customer:'',campus:'',line:'',team:p.team}); });
       return out;
-    }, onChange:function(){ syncCommon(); render(); },
+    },
+    /* 인원 기준 블록의 자료 — 인원현황 그대로. 시트에 팀·단지·라인이 다 있으므로
+       「팀 → 단지」로 좁혀 내려갈 수 있다(사용자 확정). 사업부 열은 없어 그 칸은 잠긴다. */
+    rowsH:function(){ return ROSTER; },
+    getH:{ region:p=>p.region, op:p=>p.op, customer:p=>p.custB, div:p=>p.div,
+           campus:p=>p.campus, line:p=>p.wp, team:p=>p.team },
+    looseH:{ div:1 },
+    dropH:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG },
+    onChange:function(){ syncCommon(); render(); },
     /* ⚠ rows() 가 실어 보낸 축은 여기서 «꺼내 주지 않으면 없는 것과 같다». div 를 빠뜨려
        사업부 칸이 늘 「전체 (자료 없음)」이었다 — 표에는 7,172행이 들어 있는데도(실측).
        빈 칸은 «자료가 없다»로 읽히므로 사용자는 업로드를 의심하게 된다. */
@@ -1406,7 +1416,10 @@ function fillFilters(){
        ⚠ 이 페이지는 GST.filters.pass() 를 쓰지 않는다(술어를 손으로 짠다). 그래서 loose 는
          «목록 만들기»에만 영향을 준다 — 숫자는 entOk·krOk·fINST·okP 가 그대로 정한다.
          사업부만 divOk(=hitL)로 loose 를 지키고, 나머지는 원래대로 axOkF(=hit)다. */
-    loose:{ customer:1, div:1, campus:1, line:1, team:1 },
+    /* 이제 이 블록은 «설비 자료»만 본다(실적+설치) — 패밀리가 하나라 교차 오염이 없다.
+       사업부만 loose 다: 설치현황에만 있는 열이라 S/N 조인이 안 된 실적 행은 빈 값인데,
+       그걸 거르면 「사업부를 고르면 실적이 반으로 준다」가 된다. */
+    loose:{ div:1 },
     drop:{ customer:GST.FILT_DROP_CUST, line:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
   syncCommon();
 }
@@ -1623,7 +1636,6 @@ function render(){
      평택의 단지도 P1·P2·P3 라, 대만을 걸면 국내 평택 인원이 딸려 왔다.
      운영단위가 빈 사람은 운영단위를 고를 때 빠진다 — 사용자 확정이고, 실측상 그 85명은
      거의 전부 현장(O)이 아니라 운영지표 분모에도 안 들어간다. */
-  const opPerson=p=>axOkF('op',String(p.op||'').trim());
   /* 단지 조건이 여기 빠져 있었다 — 실적(entOk)·설치(fINST)에는 넣고 인원만 안 넣어서,
      단지를 골라도 인원이 안 줄었다(단지=PSMC 인데 재직 47명). 같은 모집단을 서로 다른
      술어로 거르면 카드끼리 숫자가 갈린다. */
@@ -1661,10 +1673,13 @@ function render(){
      (국내 인원은 Basic·Veteran 완료일 자체가 없다). 신입/기존 구분은 그대로 둔다. */
   const eduKey=(p,lv)=> (p&&p.region===GST.ORG.REGION_KR)
     ? (lv===1?'lv2date':'lv3date') : (lv===1?'bdate':'vdate');
-  const okP=p=>opPerson(p)&&axOkF('customer',p.custB)
-    &&campOk(p.campus)&&lineOk(p.wp)
-    &&axOkF('team',p.team)
-    &&axOkF('region',p.region)
+  /* 인원은 «인원 기준» 블록으로 거른다 (v114). 설비 블록으로 거르면 설비 축을 고르는
+     순간 인원이 통째로 사라지고, 그 반대(팀)로는 인당 지표의 «분모만» 좁아진다 —
+     사용자가 「PM 공수 정합성이 의심스럽다」고 물은 것이 그 자리다. */
+  const okP=p=>axOkH('op',String(p.op||'').trim())&&axOkH('customer',p.custB)
+    &&axOkH('campus',p.campus)&&axOkH('line',p.wp)
+    &&axOkH('team',p.team)&&axOkH('region',p.region)
+    &&GST.filters.hitLH('div',p.div||'')
     &&(!F.country||(p.country||siteCountry(p.fab||p.custB))===F.country);
   // Alarm·고장 차트 전용 라인 필터 — 체크박스 선택(비면 전체) · PPT Alarm 차트도 동일 적용
   /* Alarm·고장 차트도 좌측 라인 필터를 그대로 따른다. FAB 다중선택이 라인 단일 선택으로

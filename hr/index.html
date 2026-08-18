@@ -247,7 +247,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(109);   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
+GST.needVer&&GST.needVer(114);   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
 const PUB=GST.SHEET_PUB;
 const URL_ROSTER=PUB+'?gid=1213453343&single=true&output=csv';  // 인원명단
 const URL_EDU   =PUB+'?gid=0&single=true&output=csv';            // 교육현황
@@ -862,16 +862,20 @@ function rebuildFilters(){
   /* 기본 필터(구분·운영단위·고객사·단지·라인·팀)는 GST.filters 가 갖는다 — 여기 있는 것은
      이 페이지 전용(직무·교육·검색)뿐이다. 기간 칸은 접근자를 주지 않아 잠긴다:
      이 화면의 시간축은 상단 마감(기준일)이고, 두 개를 함께 두면 어느 쪽이 이겼는지 알 수 없다. */
-  GST.filters.mount({ page:'hr', rows:()=>actPop(), onChange:render,
-    get:{ region:p=>p.region, op:p=>p.op, customer:p=>p.custB,
-          campus:p=>p.campus, line:p=>p.line, team:p=>p.team },
-    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
+  /* 이 화면의 자료는 «사람»뿐이다 — 인원 기준 블록에 물린다(v114).
+     설비 기준 블록은 볼 자료가 없어 전 칸이 「이 화면 미적용」으로 잠긴다.
+     칸을 숨기지 않는 이유는 v91 그대로 — 페이지마다 필터가 나타났다 사라지면
+     그것 자체가 「필터가 페이지마다 다르다」로 읽힌다. */
+  GST.filters.mount({ page:'hr', rowsH:()=>actPop(), onChange:render,
+    getH:{ region:p=>p.region, op:p=>p.op, customer:p=>p.custB,
+           campus:p=>p.campus, line:p=>p.line, team:p=>p.team },
+    dropH:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
   buildChips('sl-role','role',uniqActive('role').sort());
   buildChips('sl-edu','edu',['이수완료','진행중','미이수','비대상','미등록'].filter(v=>actPop().some(p=>eduStatusOf(p)===v)));
 }
 document.getElementById('search').addEventListener('input',e=>{F.q=e.target.value.toLowerCase();render();});
 function matchQ(p){ if(!F.q)return true; return (p.name||'').toLowerCase().includes(F.q)||(p.id||'').toLowerCase().includes(F.q)||(p.cn||'').toLowerCase().includes(F.q); }
-function slFilt(arr){ return arr.filter(p=> GST.filters.pass(p)&&
+function slFilt(arr){ return arr.filter(p=> GST.filters.passH(p)&&
   (F.role==='전체'||p.role===F.role)&&(F.edu==='전체'||eduStatusOf(p)===F.edu)&&matchQ(p)); }
 function updateFiltBadge(){
   const b=document.getElementById('filtBadge'); const P=[];

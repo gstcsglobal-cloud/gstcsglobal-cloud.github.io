@@ -27,8 +27,10 @@ PAGES.forEach(p => is(/GST\.filters\.mount\(/.test(SRC[p]), p + ' — GST.filter
 
 console.log('\n[2] 마운트마다 조직 축 접근자가 붙어 있는지 (없으면 그 칸이 「자료 없음」으로 굳는다)');
 PAGES.forEach(p => {
-  const m = SRC[p].match(/GST\.filters\.mount\(\{[\s\S]{0,900}?\}\s*\)\s*;/);
+  const m = SRC[p].match(/GST\.filters\.mount\(\{[\s\S]{0,1400}?\}\s*\)\s*;/);
   const blk = m ? m[0] : '';
+  /* v114 — 필터가 두 벌이다(설비 기준 get: · 인원 기준 getH:). 페이지는 «자기 자료»가
+     있는 쪽만 선언한다 — hr 은 사람뿐이라 getH 만 있다. 어느 쪽이든 축은 다 있어야 한다. */
   const need = ['region:', 'op:', 'customer:', 'campus:', 'line:'];
   const miss = need.filter(k => blk.indexOf(k) < 0);
   is(!miss.length, p + ' — 축 ' + (miss.length ? '없음: ' + miss.join(' ') : '전부 선언'));
@@ -38,7 +40,7 @@ console.log('\n[3] 페이지가 기본 필터를 자기 술어로 다시 걸지 
 /* report 만 예외다 — 술어 네 벌(entOk·fINST·okCF·okP)과 QBR 표·PPT 수집기가 전부 페이지의 F 를
    보고 있어, 원본은 GST.filters 로 옮기되 읽는 쪽은 그대로 두고 syncCommon 이 값을 복사한다.
    pass 를 쓰든 syncCommon 을 쓰든 «정본이 GST.filters 하나» 라는 점은 같다. */
-PAGES.forEach(p => is(/GST\.filters\.pass\(/.test(SRC[p]) ||
+PAGES.forEach(p => is(/GST\.filters\.pass[H]?\(/.test(SRC[p]) ||
   (p === 'report' && /function syncCommon\(\)\{ const G=GST\.filters\.F;/.test(SRC[p])),
   p + ' — 기본 필터의 정본이 GST.filters 다'));
 
@@ -60,8 +62,10 @@ Object.entries(GONE).forEach(([p, ids]) => {
 });
 
 console.log('\n[5] core.js — 「날짜 축이 없는 페이지는 기간 칸을 잠근다」');
-is(/const hasD\s*=\s*!!\(CFG\.get\|\|\{\}\)\.date/.test(CORE), 'refresh 가 date 접근자 유무를 본다');
-is(/if\(\(F\.dtFrom \|\| F\.dtTo\) && g\.date/.test(CORE), 'pass 가 접근자 없으면 기간 조건을 건너뛴다');
+/* v114 — 기간은 «두 벌이 아니다»(한 칸). 설비·인원 어느 쪽이든 date 접근자가 있으면 연다. */
+is(/const hasD = !!\(\(CFG\.get\|\|\{\}\)\.date \|\| \(CFG\.getH\|\|\{\}\)\.date\)/.test(CORE),
+   'refresh 가 date 접근자 유무를 본다 (두 벌 중 어느 쪽이든)');
+is(/if\(\(F\.dtFrom \|\| F\.dtTo\) && gg\.date/.test(CORE), 'pass 가 접근자 없으면 기간 조건을 건너뛴다');
 // pass(x,{noDate:1}) — 기간만 빼고 축은 그대로. 설치현황의 «미가동 목록»이 이걸 쓴다.
 is(/!\(opt && opt\.noDate\)/.test(CORE), 'pass 가 기간만 건너뛰는 opt.noDate 를 받는다');
 // 음성 대조 — 접근자가 없는데 기간 조건을 걸면 화면이 통째로 빈다(예전 동작)
@@ -79,8 +83,9 @@ is(/GST\.FILT_DROP_ORG\s*=/.test(CORE), 'core 에 FILT_DROP_ORG 가 있다');
   ['본사', '칠러', 'CHILLER'].forEach(v =>
     is(body.split('|').indexOf(v) >= 0, 'FILT_DROP_CUST 에 ' + v));
 }
+/* v114 — 두 벌이라 drop 도 두 벌이다(drop: 설비 · dropH: 인원). 자기 자료가 있는 쪽에 걸면 된다. */
 PAGES.filter(p => p !== 'fault' && p !== 'material').forEach(p =>
-  is(/drop:\{[^}]*customer:\s*GST\.FILT_DROP_CUST/.test(SRC[p]) || !/GST\.filters\.mount/.test(SRC[p]),
+  is(/drop[H]?:\{[^}]*customer:\s*GST\.FILT_DROP_CUST/.test(SRC[p]) || !/GST\.filters\.mount/.test(SRC[p]),
      p + ' — 고객사 목록에 drop 을 걸었다'));
 
 console.log('\n[7] 국내에는 Basic·Veteran 과정이 없다 — 미이수가 아니라 비대상');
@@ -136,7 +141,8 @@ console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96
      예전에는 세 곳에 손으로 적혀 있어, 하나만 고치면 조용히 갈라졌다. */
   is(/const AXES = \['region','team','op','customer','div','campus','line'\]/.test(CORE),
      'core — 축 순서가 AXES 한 곳에 있다 (구분→팀→운영단위→고객사→사업부→단지→라인)');
-  is(/const chk = AXES;/.test(CORE), 'core — 종속(cascading)이 같은 목록을 쓴다');
+  is(/for\(let a=0;a<AXES\.length;a\+\+\) if\(hasK\(G, AXES\[a\]\)\) ON\.push\(a\);/.test(CORE),
+     'core — 종속(cascading)이 같은 목록(AXES)을 쓴다');
   /* 사이드바 «목록»도 AXES 한 곳에서 나와야 한다. 따로 두면 축이 늘 때 한쪽만 고쳐져
      그 칸이 조용히 사라진다 — v107 의 GROUPS 가 그 위험을 안고 있었다. */
   is(/AXES\.map\(function\(k\)\{ return \(MULTI\[k\]\?msel:sel\)/.test(CORE),
@@ -144,7 +150,7 @@ console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96
   is(!/GROUPS/.test(CORE), 'core — 묶음 머리글(설비/인원 기준)은 없앴다 — 한 줄 한 순서');
   /* 축별 조건을 손으로 쓰면 하나만 빠뜨려도 그 축이 조용히 «전체»가 된다.
      그리고 다중선택에서는 `if(F.x)` 가 빈 Set 에도 참이라 반드시 hasK 를 지나야 한다. */
-  is(/if\(hasK\(k\) && !axOk\(k, x\)\) return false;/.test(CORE),
+  is(/if\(hasK\(G, k\) && !axOk\(G, k, x\)\) return false;/.test(CORE),
      'core — 모든 축이 hasK+axOk 한 벌을 지난다 (loose 도 axOk 안에 있다)');
   is(!/if\(F\.(region|op|div|customer|line|team)\s+&&/.test(CORE),
      'core — 축을 문자열처럼 진위 검사하면 안 된다 (빈 Set 은 truthy 다)');
@@ -180,8 +186,10 @@ console.log('\n[7-6] rows() 가 실어 보낸 축을 get: 이 «꺼내 보는가
       else if (SRC[p][k] === ')') { d--; if (!d) { end = k; break; } }
     }
     const blk = SRC[p].slice(i, end + 1);
-    const gi = blk.indexOf('get:');
-    if (gi < 0) { is(false, `${p} — mount 에 get: 이 없다`); return; }
+    /* v114 — 두 벌이다. 자기 자료가 있는 쪽만 선언한다(hr 은 getH: 만). */
+    const gi0 = blk.indexOf('get:'), gih = blk.indexOf('getH:');
+    const gi = gi0 >= 0 ? gi0 : gih;
+    if (gi < 0) { is(false, `${p} — mount 에 get:/getH: 가 없다`); return; }
     /* get:{…} «한 덩어리»만 떼어 낸다. 뒤에 오는 loose:{div:1}·drop:{…} 까지 포함하면
        접근자가 없어도 있는 것으로 세어 검사가 통과해 버린다(음성 대조로 실제로 겪었다). */
     let gd = 0, gEnd = gi;
@@ -216,8 +224,9 @@ console.log('\n[7-7] 축을 목록에 «내주면» 거르기까지 해야 한�
   const noCmt = (t) => t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
   const CODE = {}; PAGES.forEach(p => { CODE[p] = noCmt(SRC[p]); });
   PAGES.forEach((p) => {
-    if (/GST\.filters\.pass\(/.test(CODE[p])) {
-      ok(p + ' — pass() 로 일곱 축을 한 루프로 거른다');
+    /* v114 — pass(설비) · passH(인원) 둘 다 «한 루프로 거르는» 같은 함수다. */
+    if (/GST\.filters\.pass[H]?\(/.test(CODE[p])) {
+      ok(p + ' — pass()/passH() 로 일곱 축을 한 루프로 거른다');
       return;
     }
     const i = CODE[p].indexOf('GST.filters.mount(');
@@ -227,7 +236,8 @@ console.log('\n[7-7] 축을 목록에 «내주면» 거르기까지 해야 한�
       else if (CODE[p][k] === ')') { d--; if (!d) { end = k; break; } }
     }
     const blk = CODE[p].slice(i, end + 1);
-    const gi = blk.indexOf('get:');
+    const gi0 = blk.indexOf('get:'), gih = blk.indexOf('getH:');
+    const gi = gi0 >= 0 ? gi0 : gih;
     let gd = 0, gEnd = gi;
     for (let k = blk.indexOf('{', gi); k < blk.length; k++) {
       if (blk[k] === '{') gd++;
@@ -237,8 +247,10 @@ console.log('\n[7-7] 축을 목록에 «내주면» 거르기까지 해야 한�
     const offered = AX.filter(a => new RegExp('[{,]\\s*' + a + '\\s*:').test(getPart));
     /* 축 이름이 «판정 호출»에 실려 있는가. axOkF·campOk·divOk 처럼 이름이 달라도
        결국 GST.filters.hit/hitL 에 축 이름을 넘기므로 거기서 잡힌다. */
+    /* v114 — 인원 축은 인원 기준 헬퍼(axOkH·hitLH)를 지난다. 어느 쪽이든 «판정 호출»에
+       실려 있으면 된다 — 지켜야 할 것은 «내준 축을 어디선가 거르는가»다. */
     const miss = offered.filter(a =>
-      !new RegExp("(GST\\.filters\\.hitL?|axOkF)\\(\\s*'" + a + "'").test(CODE[p]));
+      !new RegExp("(GST\\.filters\\.hitL?H?|axOkF|axOkH)\\(\\s*'" + a + "'").test(CODE[p]));
     is(!miss.length, p + ' — 내준 축을 술어가 전부 본다'
        + (miss.length ? '  ⚠ 안 거르는 축: ' + miss.join(', ') : ''));
 
@@ -340,17 +352,18 @@ console.log('\n[7-3] 단지는 여러 개를 동시에 고를 수 있다 (Set) �
      갈려서, 하나씩만 고를 수 있으면 «그 사업부 설비가 실제로 어디 있나»를 볼 수가 없다. */
   is(/const MULTI = \{ region:1, op:1, div:1, customer:1, campus:1, line:1, team:1 \}/.test(CORE),
      'core — 일곱 축이 전부 다중선택이다');
-  is(/const F = \{ region:new Set\(\), op:new Set\(\), div:new Set\(\), customer:new Set\(\),/.test(CORE),
+  /* v114 — 두 벌이라 F 를 팩토리(mkF)로 만든다. 그래도 축이 전부 Set 인 것은 그대로다. */
+  is(/const mkF = \(\) => \(\{ region:new Set\(\), op:new Set\(\), div:new Set\(\), customer:new Set\(\),/.test(CORE),
      'core — F 의 축이 전부 Set 이다');
   is(/campus:new Set\(\)/.test(CORE), 'core — F.campus 가 Set 이다');
-  is(/const hitK = \(k, v\) => MULTI\[k\]/.test(CORE),
+  is(/const hitK  = \(G, k, v\) => MULTI\[k\]/.test(CORE),
      'core — 「걸리나」 판정이 hitK 한 곳만 지난다');
-  is(/o\[k\]=MULTI\[k\]\?Array\.from\(F\[k\]\):F\[k\]/.test(CORE),
+  is(/o\[k\]=MULTI\[k\]\?Array\.from\(G\.F\[k\]\):G\.F\[k\]/.test(CORE),
      'core — 저장은 배열로 눕힌다 (JSON.stringify(Set)==="{}")');
   /* 복원은 «비우고 다시 채운다». `F[k]=new Set(...)` 로 갈아끼우면 다중선택 박스의
      핸들러가 옛 Set 을 든 채로 남아 첫 항목만 체크되고 두 번째부터 안 먹는다 —
      에러 없이. 주간현황은 mount 를 5번 부르므로 반드시 그 상태가 된다. */
-  is(/F\[k\]\.clear\(\); o\[k\]\.forEach\(function\(v\)\{ F\[k\]\.add\(v\); \}\)/.test(CORE),
+  is(/G\.F\[k\]\.clear\(\); d\[k\]\.forEach\(function\(v\)\{ G\.F\[k\]\.add\(v\); \}\)/.test(CORE),
      'core — 복원이 Set 을 갈아끼우지 않고 제자리에서 채운다');
   is(!/F\[k\]=new Set\(o\[k\]\)/.test(CORE),
      'core — 옛 복원(F[k]=new Set)이 되살아나지 않았다');
@@ -358,9 +371,14 @@ console.log('\n[7-3] 단지는 여러 개를 동시에 고를 수 있다 (Set) �
      'core — 클릭 핸들러가 「지금의」 Set 을 GST._msel 에서 꺼낸다');
   /* 이름만 보고 «있다»고 하지 않는다 — set 은 본문이 setK 로 빠져도 되지만,
      그 본문이 MULTI 축을 Set 으로 다루는 것은 그대로여야 한다(문자열이 되면 .has 가 죽는다). */
-  is(/(set: function\(k, v\)\{|set: setK,)/.test(CORE) && /toggle: function\(k, v\)\{/.test(CORE) && /hit: function\(k, v\)\{/.test(CORE),
+  is(/set:  function\(k, v\)\{ setK\(EQ, k, v\); \}/.test(CORE) && /toggle:  function\(k, v\)\{ tog\(EQ, k, v\); \}/.test(CORE)
+     && /hit:  function\(k, v\)\{/.test(CORE),
      'core — 페이지가 쓸 안전한 API(set·toggle·hit)가 있다');
-  is(/if\(MULTI\[k\]\)\{ F\[k\]\.clear\(\); \(Array\.isArray\(v\)\?v:\(v\?\[v\]:\[\]\)\)\.forEach/.test(CORE),
+  /* 두 벌이 됐으니 인원 쪽 API 도 같이 있어야 한다 — 없으면 페이지가 H 를 직접 만진다. */
+  is(/setH: function\(k, v\)\{ setK\(HR, k, v\); \}/.test(CORE) && /toggleH: function\(k, v\)\{ tog\(HR, k, v\); \}/.test(CORE)
+     && /hitH: function\(k, v\)\{/.test(CORE) && /passH: function\(x, opt\)\{/.test(CORE),
+     'core — 인원 기준에도 같은 API 한 벌이 있다 (setH·toggleH·hitH·passH)');
+  is(/if\(MULTI\[k\]\)\{ G\.F\[k\]\.clear\(\); \(Array\.isArray\(v\)\?v:\(v\?\[v\]:\[\]\)\)\.forEach/.test(CORE),
      'core — set 본문이 다중 축을 여전히 Set 으로 채운다');
   /* 같은 표 안에서 연속 공백이 흔들린다(실측 `GST CHINA(WUHAN)··SCRUBBER`). 안 눕히면
      한 법인이 목록에 두 줄로 떠서, 어느 쪽을 고르느냐에 따라 설비가 반씩 갈린다. */
@@ -586,15 +604,28 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
     is(!/자료 없음/.test(CORE.replace(/\/\*[\s\S]*?\*\//g,' ').replace(/(^|[^:])\/\/[^\n]*/g,'$1')),
        'core — 화면 문구에 「자료 없음」을 쓰지 않는다 (안 올린 것처럼 읽힌다)');
     is(/hasAny \? EMPTY_FILT : EMPTY_NONE/.test(CORE), 'core — 단일 칸이 그 구분을 쓴다');
-    is(/\(hasAny \? EMPTY_FILT : EMPTY_NONE\) \+ ' \\u25be'/.test(CORE), 'core — 다중선택 칸도 같이 쓴다');
+    is(/\(hasAny \? EMPTY_FILT : EMPTY_NONE\) \+ ' ▾'/.test(CORE), 'core — 다중선택 칸도 같이 쓴다');
 
     /* 주간현황이 «세 패밀리 전부»를 덮는 loose 를 선언했는지 — 하나만 빠져도 그 축에서 재발한다. */
     const lm = /loose:\{([^}]*)\}/.exec(SRC.report.replace(/\/\*[\s\S]*?\*\//g,' '));
     const declared = lm ? (lm[1].match(/(\w+)\s*:/g)||[]).map(x=>x.replace(/\s*:/,'')) : [];
-    const need = ['customer','div','campus','line','team'];
-    const miss = need.filter(k => declared.indexOf(k) < 0);
-    is(!miss.length, 'report — 패밀리마다 없는 축을 전부 loose 로 선언했다'
-       + (miss.length ? '  ⚠ 빠짐: ' + miss.join(', ') : ''));
+    /* v114 — rows() 가 «설비 자료»만 넘긴다(인원은 rowsH 로 갈라졌다). 패밀리가 하나라
+       교차 오염이 원리적으로 없고, loose 는 사업부 하나면 된다(S/N 조인 실패 행). */
+    is(declared.indexOf('div') >= 0, 'report — 설비 블록이 사업부를 loose 로 선언했다');
+    is(/rowsH:function\(\)\{ return ROSTER; \}/.test(SRC.report),
+       'report — 인원은 rowsH 로 갈라 넘긴다 (한 배열에 섞지 않는다)');
+    is(/getH:\{ region:p=>p\.region/.test(SRC.report), 'report — 인원 기준 접근자를 준다');
+    is(/const okP=p=>axOkH\('op'/.test(SRC.report),
+       'report — 인원 술어가 인원 기준 블록으로 거른다 (설비 축으로 거르면 인원이 사라진다)');
+    /* ⚠ 음성 대조에서 잡히지 않던 자리 — axOkH 가 hit(설비)로 연결돼 있어도 이름은 그대로라
+       위 검사를 통과한다. 「어느 벌에 묻는가」를 직접 본다. */
+    is(/const axOkH=\(k,v\)=>GST\.filters\.hitH\(k, v\);/.test(SRC.report),
+       'report — axOkH 가 «인원 기준»(hitH)에 묻는다');
+    is(/GST\.filters\.hitLH\('div',p\.div\|\|''\)/.test(SRC.report),
+       'report — 인원의 loose 축도 인원 기준(hitLH)으로 본다');
+    /* 반대편 — 설비 술어가 인원 벌에 묻으면 설비가 조용히 안 좁혀진다. */
+    is(/const axOkF  = \(k,v\)=>GST\.filters\.hit\(k, v\);/.test(SRC.report),
+       'report — axOkF 는 «설비 기준»(hit)에 묻는다');
     clr();
   }
 
@@ -618,12 +649,16 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
     const L = ['구분','팀','운영단위','고객사','사업부','단지','라인'];
     const got = [...html.matchAll(/class="lbl">([^<]+)</g)].map(m => m[1].trim())
                   .filter(x => L.indexOf(x) >= 0);
-    is(got.join(' > ') === L.join(' > '),
-       '사이드바가 구분 > 팀 > 운영단위 > 고객사 > 사업부 > 단지 > 라인 순 (실제 ' + got.join(' > ') + ')');
-    is(!/gf-grp/.test(html), '묶음 머리글이 없다 — 여덟 페이지가 같은 한 줄을 본다');
-    is(/id="gf-from"/.test(html) && /id="gf-to"/.test(html), '기간 칸은 맨 뒤에 그대로 있다');
+    /* v114 — 두 벌이다. «똑같은 폼»이어야 하므로 같은 순서가 두 번 나온다. */
+    is(got.join(' > ') === L.concat(L).join(' > '),
+       '두 블록이 같은 순서로 두 번 (실제 ' + got.length + '칸)');
+    is(/gf-region/.test(html) && /gh-region/.test(html),
+       'core — 두 블록의 id 가 갈린다 (gf- 설비 · gh- 인원)');
+    is(/설비 기준/.test(html) && /인원 기준/.test(html), '두 블록에 이름이 붙어 있다');
+    is(/id="gf-from"/.test(html) && /id="gf-to"/.test(html) && !/id="gh-from"/.test(html),
+       '기간 칸은 «하나»다 (두 벌로 두면 무엇을 물었는지 못 세운다)');
     /* 칸을 «숨기지» 않는다(v91 사용자 확정) — 나타났다 사라지면 그게 더 헷갈린다. */
-    is(got.length === 7, '축이 하나도 빠지지 않는다 (안 걸리는 축도 칸은 남는다)');
+    is(got.length === 14, '축이 하나도 빠지지 않는다 (안 걸리는 축도 칸은 남는다)');
   }
 
   /* 안 걸리는 축의 칸이 «무슨 말»을 하는지 — 사용자가 문제 삼은 그 문구다.
@@ -724,6 +759,67 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
     is(/:_campOf\(r\)\)\|\|''\)\.trim\(\)/.test(RC), 'report — 설비 행 키가 단지로 내려간다');
     is(/:\(p\.campus\|\|p\.fab\|\|'미배치'\)/.test(RC),
        'report — 인원 행 키도 단지 (둘 다 비면 «미배치» — 고객사로 안 내려간다)');
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     [9-5] 필터가 «두 벌»이고 서로 독립인지 (v114 · 사용자 지시)
+     인당 지표는 분자(실적·설비)와 분모(인원)가 다른 자료에서 온다. 한 벌로 두면
+     한쪽에만 있는 축을 걸 때 «한쪽만» 좁아진다 — 팀을 고르면 분모만 줄어 인당 일평균
+     공수가 10.8h 로 뜨고(사람이 하루 10.8시간을 일할 수 없다), 사업부를 고르면 분자만
+     줄어 인당이 낮게 나온다. 둘 다 에러 없이 조용히 틀린다.
+     ⚠ «두 벌이 정말 독립인가»는 소스로 못 본다 — 실제로 걸어 보고 양쪽 건수를 센다.
+     ══════════════════════════════════════════════════════════════ */
+  console.log('\n[9-5] 설비 기준 / 인원 기준이 서로 독립인지 (v114)');
+  {
+    const EQR = [ {rg:'국내', op:'SEC Scrubber', cu:'삼성전자', dv:'MEMORY',  ca:'H1', li:'11'},
+                  {rg:'국내', op:'SEC Scrubber', cu:'삼성전자', dv:'FOUNDRY', ca:'K2', li:'13'} ];
+    const HRR = [ {rg:'국내', op:'SEC Scrubber', cu:'삼성전자', ca:'H1', li:'11', tm:'H운영팀'},
+                  {rg:'국내', op:'SEC Scrubber', cu:'삼성전자', ca:'K2', li:'13', tm:'K운영팀'},
+                  {rg:'국내', op:'SEC Scrubber', cu:'삼성전자', ca:'H1', li:'12', tm:'H운영팀'} ];
+    G.filters.mount({ page:'two', onChange:()=>{},
+      rows:()=>EQR, get:{region:x=>x.rg, op:x=>x.op, customer:x=>x.cu, div:x=>x.dv, campus:x=>x.ca, line:x=>x.li},
+      loose:{div:1},
+      rowsH:()=>HRR, getH:{region:p=>p.rg, op:p=>p.op, customer:p=>p.cu, campus:p=>p.ca, line:p=>p.li, team:p=>p.tm} });
+    const nEq = () => EQR.filter(x => G.filters.pass(x)).length;
+    const nHr = () => HRR.filter(x => G.filters.passH(x)).length;
+    G.filters.clear();
+    is(nEq()===2 && nHr()===3, '아무것도 안 고르면 양쪽 전체 (실제 설비 '+nEq()+' · 인원 '+nHr()+')');
+
+    /* ① 인원 축(팀)을 걸어도 설비는 그대로여야 한다 — 예전에는 분모만 줄어 인당이 폭등했다. */
+    G.filters.setH('team','H운영팀');
+    is(nEq()===2, '팀(인원)을 걸어도 설비 건수는 그대로 (실제 '+nEq()+')');
+    is(nHr()===2, '팀은 인원만 좁힌다 (실제 '+nHr()+'명)');
+
+    /* ② 설비 축(사업부)을 걸어도 인원은 그대로여야 한다. */
+    G.filters.set('div','MEMORY');
+    is(nEq()===1, '사업부는 설비만 좁힌다 (실제 '+nEq()+')');
+    is(nHr()===2, '사업부를 걸어도 인원 건수는 그대로 (실제 '+nHr()+'명)');
+
+    /* ③ 같은 이름의 축이 두 벌이다 — 한쪽만 걸리는지. */
+    G.filters.clear(); G.filters.set('campus','H1');
+    is(nEq()===1 && nHr()===3, '설비 단지만 걸면 인원은 안 좁혀진다 (설비 '+nEq()+' · 인원 '+nHr()+')');
+    G.filters.clear(); G.filters.setH('campus','H1');
+    is(nEq()===2 && nHr()===2, '인원 단지만 걸면 설비는 안 좁혀진다 (설비 '+nEq()+' · 인원 '+nHr()+')');
+
+    /* ④ 팀 → 단지 종속 (사용자 요청: 「팀 > 단지 필터 하면 되」).
+       인원 블록 안에서는 종속이 그대로 돌아야 한다 — 팀을 고르면 그 팀의 단지만 남는다. */
+    G.filters.clear(); G.filters.setH('team','H운영팀');
+    is(G.filters.listsH('campus').list.join()==='H1',
+       '팀을 고르면 인원 단지 목록이 그 팀 것만 (실제 '+G.filters.listsH('campus').list.join(' · ')+')');
+    is(G.filters.lists('campus').list.length===2,
+       '그때 설비 단지 목록은 그대로 (실제 '+G.filters.lists('campus').list.join(' · ')+')');
+
+    /* ⑤ 자기 자료에 없는 축은 «이 화면 미적용» — 설비에 팀, 인원에 사업부. */
+    G.filters.clear();
+    is(G.filters.lists('team').hasAny===false, '설비 블록의 팀은 이 화면 미적용');
+    is(G.filters.listsH('div').hasAny===false, '인원 블록의 사업부는 이 화면 미적용');
+
+    /* ⑥ 칩이 어느 벌인지 말해야 한다 — 「팀」이 두 곳에 있으므로 이름이 같으면 못 가린다. */
+    G.filters.setH('team','K운영팀'); G.filters.set('div','MEMORY');
+    const chips = G.filters.active().map(a=>a.label);
+    is(chips.indexOf('인원 팀')>=0 && chips.indexOf('사업부')>=0,
+       '활성 칩이 설비/인원을 구분해 적는다 (실제 '+chips.join(' · ')+')');
+    G.filters.clear();
   }
 
   /* 저장·복원이 Set 을 지키는지 */

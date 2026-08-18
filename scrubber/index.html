@@ -518,7 +518,7 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 /* 이 화면의 「설치 국가」 카드는 GST.ORG.country 가 국내 법인(SK·삼성 도시명)을 국가로
    푸는 것에 기댄다(core v99). 옛 core.js 가 캐시에 남으면 그 설비가 통째로 「국가 미상」이
    되는데 에러는 안 난다 — 숫자만 조용히 틀린다. 그래서 버전을 선언해 배너로 드러낸다. */
-GST.needVer && GST.needVer(109);   // GST.ymdL(로컬 날짜 표기) 을 쓴다
+GST.needVer && GST.needVer(114);   // GST.ymdL(로컬 날짜 표기) 을 쓴다
 const SHEET_URL=GST.sheetUrl('891608329');
 // 설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
 // 이 시트는 128열이라 위치 고정이 특히 위험했다(type이 75열째). 이제 이름으로 따라간다.
