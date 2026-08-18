@@ -412,7 +412,9 @@ const INSTALL_SPEC = {
   country: ['Country', '운영단위'], customer: ['Customer', '고객사'],
   location: ['Location', 'Site'],
   code: 'Scrubber CODE', sn: 'Scrubber S/N', model: 'Scrubber Model', burner: 'Burner Type',
-  fab: ['Line 1', 'FAB'], floor: ['Floor', 'Line'], bay: 'Bay',
+  // 국내 양식은 라인이 두 단이다 — `Line 1` 아래 `Line 2`. 해외 118열에는 그 열이 없다.
+  // ⚠ 별칭을 하나만 둔다. 해외의 `Line`(=Floor)을 끌어오면 한 축에 두 차원이 섞인다.
+  fab: ['Line 1', 'FAB'], line2: 'Line 2', floor: ['Floor', 'Line'], bay: 'Bay',
   group1: ['Group_1', 'Process'], group2: ['Group_2', 'Detail Process(HQ)'],
   detail1: ['Detail_1', 'Detail Process(Customer)'], detail2: 'Detail_2',
   fabIn: ['FAB In', 'Receipt date'], turnOn: ['Turn On', 'Turn-on date'],
@@ -465,6 +467,7 @@ export function parseInstall(csvText) {
       burner: g('burner'),
       fab: g('fab'),
       floor: g('floor'),
+      line2: g('line2'),      // 라인 2 (국내 전용 · 해외 양식에는 열 자체가 없다)
       bay: g('bay'),            // 기둥번호 (예: J-21 · H.5-20 · 暫存區 f9/P6-K)
       group1: g('group1'),
       group2: g('group2'),

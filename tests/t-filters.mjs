@@ -139,8 +139,16 @@ console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96
        인덱스). 그래서 순서를 바꿔도 숫자는 한 자리도 안 움직인다 — 화면 순서만 바뀐다. */
   /* 축 목록이 «한 곳»(AXES)에서 나와야 종속·사이드바·술어가 같은 순서를 본다.
      예전에는 세 곳에 손으로 적혀 있어, 하나만 고치면 조용히 갈라졌다. */
-  is(/const AXES = \['region','team','op','customer','div','campus','line'\]/.test(CORE),
-     'core — 축 순서가 AXES 한 곳에 있다 (구분→팀→운영단위→고객사→사업부→단지→라인)');
+  /* ⚠ 배열 «문자열»을 통째로 견주면 축이 하나 늘 때마다 «고쳐야 통과하는» 검사가 된다.
+     지켜야 할 것은 두 가지다 — ① 축 목록이 AXES 한 곳에서 나온다 ② 순서가 사용자 확정과 같다.
+     라인2(v121)는 라인(`Line 1`) «아래» 단이므로 라인 바로 뒤다. */
+  {
+    const m = /const AXES = \[([^\]]*)\]/.exec(CORE);
+    const got = m ? m[1].split(',').map(x => x.trim().replace(/'/g, '')) : [];
+    const want = ['region','team','op','customer','div','campus','line','line2'];
+    is(got.join('>') === want.join('>'),
+       `core — 축 순서가 AXES 한 곳에 있다 (${want.join('→')}) · 실제 ${got.join('→')||'(못 찾음)'}`);
+  }
   is(/for\(let a=0;a<AXES\.length;a\+\+\) if\(hasK\(G, AXES\[a\]\)\) ON\.push\(a\);/.test(CORE),
      'core — 종속(cascading)이 같은 목록(AXES)을 쓴다');
   /* 사이드바 «목록»도 AXES 한 곳에서 나와야 한다. 따로 두면 축이 늘 때 한쪽만 고쳐져
@@ -156,7 +164,9 @@ console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96
      'core — 축을 문자열처럼 진위 검사하면 안 된다 (빈 Set 은 truthy 다)');
   /* ⚠ 해외 설치현황에는 사업부 열이 아예 없다. loose 가 없으면 사업부를 고르는 순간
      해외 설비가 통째로 사라진다 — 운영단위가 인원현황에서 겪은 것과 같은 자리다. */
-  is(/loose:\{ div:1 \}/.test(SRC.scrubber), 'scrubber — 사업부를 loose 로 선언했다');
+  /* ⚠ 통째 비교로 두지 않는다 — loose 축이 늘 때마다 «고쳐야 통과하는» 검사가 된다.
+     (report 쪽은 진작 이 방식이다.) */
+  is(/loose:\{[^}]*\bdiv:1\b/.test(SRC.scrubber), 'scrubber — 사업부를 loose 로 선언했다');
   is(/div:r=>String\(\(CI\.div>=0\?r\[CI\.div\]:''\)\|\|''\)\.trim\(\)/.test(SRC.scrubber),
      'scrubber — 사업부 접근자가 열이 없을 때도 안 죽는다');
   is(/div:x=>x\.div/.test(SRC.report), 'report — 사업부 접근자가 있다');
@@ -175,7 +185,14 @@ console.log('\n[7-6] rows() 가 실어 보낸 축을 get: 이 «꺼내 보는가
 
      판정: mount 블록 안에서 rows() 가 `<축>:` 을 담아 보내면 get: 에도 `<축>:` 이 있어야 한다.
      반대(get 에만 있고 rows 에 없는 것)는 정상이다 — 페이지가 직접 행을 넘기는 꼴이 있다. */
-  const AX = ['region', 'op', 'customer', 'div', 'campus', 'line', 'team'];
+  /* ⚠ 축 목록을 여기 손으로 적으면, 축이 늘었을 때 «검사만 옛 목록»이 되어 새 축은
+     내주고도 안 거르는 상태를 통과시킨다 — 이 검사가 막으려는 바로 그 결함이다.
+     core.js 의 AXES 한 곳에서 받아 온다(라인2 가 그렇게 자동으로 덮인다). */
+  const AX = (() => {
+    const m = /const AXES = \[([^\]]*)\]/.exec(CORE);
+    return m ? m[1].split(',').map(x => x.trim().replace(/'/g, '')) : [];
+  })();
+  is(AX.length >= 8, `[7-7] 검사가 보는 축 ${AX.length}개 — core.js 의 AXES 에서 받아 온다`);
   PAGES.forEach((p) => {
     const i = SRC[p].indexOf('GST.filters.mount(');
     if (i < 0) { is(false, `${p} — GST.filters.mount 를 찾지 못했다`); return; }
@@ -350,8 +367,18 @@ console.log('\n[7-3] 단지는 여러 개를 동시에 고를 수 있다 (Set) �
      «필터를 걸면 화면이 통째로 빈다». 페이지가 다시 그렇게 쓰는 것을 여기서 막는다. */
   /* v106 — 일곱 축이 전부 다중선택이다. 국내 설비는 «관리주체(사업부)»에 따라 소속 단지가
      갈려서, 하나씩만 고를 수 있으면 «그 사업부 설비가 실제로 어디 있나»를 볼 수가 없다. */
-  is(/const MULTI = \{ region:1, op:1, div:1, customer:1, campus:1, line:1, team:1 \}/.test(CORE),
-     'core — 일곱 축이 전부 다중선택이다');
+  /* ⚠ 리터럴을 통째로 견주면 축이 늘 때마다 검사를 고쳐야 한다. 물어야 할 것은
+     «AXES 의 축이 «전부» MULTI 에 있나» 다 — 하나라도 빠지면 그 칸만 단일선택이 되고,
+     그 사실이 화면에서는 「그 축만 여러 개를 못 고른다」로 나타난다. */
+  {
+    const am = /const AXES = \[([^\]]*)\]/.exec(CORE);
+    const mm = /const MULTI = \{([^}]*)\}/.exec(CORE);
+    const ax = am ? am[1].split(',').map(x => x.trim().replace(/'/g, '')) : [];
+    const mu = mm ? (mm[1].match(/(\w+)\s*:/g) || []).map(x => x.replace(/\s*:/, '')) : [];
+    const gone = ax.filter(k => mu.indexOf(k) < 0);
+    is(ax.length > 0 && !gone.length,
+       `core — 축 ${ax.length}개가 전부 다중선택이다${gone.length ? ' — 빠진 축: ' + gone.join(', ') : ''}`);
+  }
   /* v114 — 두 벌이라 F 를 팩토리(mkF)로 만든다. 그래도 축이 전부 Set 인 것은 그대로다. */
   is(/const mkF = \(\) => \(\{ region:new Set\(\), op:new Set\(\), div:new Set\(\), customer:new Set\(\),/.test(CORE),
      'core — F 의 축이 전부 Set 이다');
@@ -820,6 +847,125 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
     is(chips.indexOf('인원 팀')>=0 && chips.indexOf('사업부')>=0,
        '활성 칩이 설비/인원을 구분해 적는다 (실제 '+chips.join(' · ')+')');
     G.filters.clear();
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     [9-6] 라인2 (`Line 2`) — 국내 설치현황의 «라인 아래 단» (v121 · 사용자 요청)
+
+     국내 양식은 `Site → Line 1 → Line 2 → Bay` 로 내려간다. 해외 118열 양식에는
+     `Line 2` 라는 열 자체가 없다. 그래서 라인2 는 사업부와 «완전히 같은 처지»다:
+       · 설치현황에만 있다 → 실적·CIP 는 설비 S/N 으로 조인해 온다
+       · 해외·조인 실패 행은 빈 값 → loose 가 아니면 그 행이 통째로 사라진다
+     ⚠ 이름이 셋 다 비슷하다 — `Line`(해외 Floor) · `Line 1`(라인) · `Line 2`(라인2).
+       정규화가 공백·마침표를 지우므로 line / line1 / line2 로 갈리는데, 부분일치를
+       쓰는 순간 셋이 뒤엉킨다(제1원칙의 «재입사일» 사고와 같은 자리다).
+     ══════════════════════════════════════════════════════════════ */
+  console.log('\n[9-6] 라인2 — 국내 설치현황의 라인 아래 단 (v121)');
+  {
+    /* ① 헤더 매핑 — 국내/해외 두 양식을 각각 먹인다. 값은 전부 지어낸 것이다
+       (실데이터를 저장소에 넣지 않는다 — t-leak 규약). */
+    const KR = [['운영단위','고객사','Scrubber CODE','Scrubber S/N','Scrubber Model',
+                 '사업부','Site','Line 1','Line 2','Bay','Process','Detail Process(Customer)','Type2'],
+                ['SEC Scrubber','삼성전자','C-1','SN-1','MODEL-A',
+                 '반도체 연구소','반도체 연구소','NRD-V','NRD-V2','J39','ETCH','ETCH-1','SINGLE']];
+    const OS = [['Country','Customer','Scrubber CODE','Scrubber S/N','Scrubber Model',
+                 'FAB','Line','Bay','Group_1','Detail_1','Scrubber type'],
+                ['GST TAIWAN SCRUBBER','MICRON','C-2','SN-2','MODEL-B',
+                 'F16','A3 M2 4F','B-1','ETCH','ETCH-2','DUAL']];
+    const mKR = G.SM.map(KR, G.SM.SPEC.inst), mOS = G.SM.map(OS, G.SM.SPEC.inst);
+
+    is(mKR.C.line2 === 8, `국내 양식에서 Line 2 를 잡는다 (${mKR.C.line2}열)`);
+    is(mKR.C.fab === 7, `그때 라인(Line 1)은 그대로 (${mKR.C.fab}열)`);
+    /* ⚠ 부분일치였다면 `Line 1` 이 `Line` 을 물거나 `Line 2` 가 `Line 1` 을 물었을 것이다.
+       셋이 서로 다른 열이어야 한다 — 이것이 이 축의 유일한 함정이다. */
+    is(mKR.C.floor !== mKR.C.fab && mKR.C.floor !== mKR.C.line2 && mKR.C.fab !== mKR.C.line2,
+       `Line · Line 1 · Line 2 가 서로 다른 열이다 (floor ${mKR.C.floor} · fab ${mKR.C.fab} · line2 ${mKR.C.line2})`);
+    /* 해외 양식에는 그 열이 «없다». -1 이어야 하고, «열을 못 찾았습니다» 로 거부되면 안 된다
+       (opt 에 들어 있어야 한다 — 안 넣으면 옛 추출본·픽스처가 통째로 죽는다). */
+    is(mOS.C.line2 === -1, `해외 양식에는 Line 2 가 없다 (${mOS.C.line2})`);
+    is(mOS.miss.indexOf('line2') < 0 && !/line2/.test(mOS.miss.join(' ')),
+       `해외 양식이 거부되지 않는다 — line2 가 opt 다 (miss: ${mOS.miss.join(', ')||'없음'})`);
+    is(mOS.C.floor === 6 && mOS.C.fab === 5,
+       `해외의 Line 은 여전히 Floor 다 (floor ${mOS.C.floor} · fab=FAB ${mOS.C.fab})`);
+
+    /* ② instIndex 가 라인2 를 실어 주는지 — 실적·CIP 는 이 조인으로만 얻는다 */
+    {
+      const ix = G.ORG.instIndex(KR, mKR.C, mKR.hi);
+      const rec = ix.find('C-1', 'SN-1');
+      is(!!rec && rec.line2 === 'NRD-V2', `instIndex 가 라인2 를 싣는다 (${rec ? rec.line2 : '못 찾음'})`);
+      const ixO = G.ORG.instIndex(OS, mOS.C, mOS.hi);
+      const recO = ixO.find('C-2', 'SN-2');
+      is(!!recO && recO.line2 === '', '해외 행의 라인2 는 빈 값이다 (짐작해 채우지 않는다)');
+    }
+
+    /* ③ 동작 — loose 가 없으면 해외가 사라진다. 이것이 이 축의 실제 위험이다. */
+    {
+      const R2 = [
+        {rg:'국내', op:'SEC Scrubber', cu:'삼성전자', ca:'H1', li:'11',  l2:'11-1'},
+        {rg:'국내', op:'SEC Scrubber', cu:'삼성전자', ca:'H1', li:'11',  l2:'11-2'},
+        {rg:'해외', op:'GST TAIWAN SCRUBBER', cu:'MICRON', ca:'F16', li:'F16', l2:''},
+      ];
+      const mnt = loose => G.filters.mount({ page:'l2', rows:()=>R2, onChange:()=>{},
+        get:{ region:x=>x.rg, op:x=>x.op, customer:x=>x.cu,
+              campus:x=>x.ca, line:x=>x.li, line2:x=>x.l2 }, loose: loose });
+      const n = () => R2.filter(r => G.filters.pass(r)).length;
+
+      mnt({ line2:1 });
+      G.filters.clear();
+      is(G.filters.lists('line2').list.join(' · ') === '11-1 · 11-2',
+         `라인2 목록이 국내 값만 뜬다 (${G.filters.lists('line2').list.join(' · ')})`);
+      G.filters.set('line2','11-1');
+      is(n() === 2, `라인2 하나 + 값 없는 해외 1행 = 2행 (실제 ${n()})`);
+      is(G.filters.hitL('line2','') === true, 'loose — 라인2 가 빈 행은 통과(해외·조인 실패)');
+
+      /* 음성 대조 — loose 를 안 걸면 실제로 해외가 사라지는지. 안 사라지면 이 검사는
+         아무것도 지키지 않는 것이다. */
+      mnt({});
+      G.filters.clear(); G.filters.set('line2','11-1');
+      is(n() === 1, `(음성 대조) loose 를 안 걸면 해외가 사라진다 (실제 ${n()}행)`);
+      G.filters.clear();
+
+      /* ④ 종속 — 라인2 목록은 위 축(단지·라인)을 따라 좁아진다 */
+      mnt({ line2:1 });
+      G.filters.clear(); G.filters.set('campus','F16');
+      is(G.filters.lists('line2').list.length === 0 && G.filters.lists('line2').hasAny === true,
+         '해외 단지를 고르면 라인2 는 「현재 필터에 해당 없음」 (자료가 없는 게 아니다)');
+      G.filters.clear();
+
+      /* ⑤ 인원 블록은 «미적용»으로 잠긴다 — 사용자 요청 그대로(통일성을 위해 칸은 둔다).
+         인원현황에는 Line 2 열이 없으므로 접근자를 주지 않는다. */
+      G.filters.mount({ page:'l2h', rows:()=>R2, onChange:()=>{},
+        get:{ region:x=>x.rg, line2:x=>x.l2 }, loose:{ line2:1 },
+        rowsH:()=>[{rg:'국내', tm:'H운영팀'}], getH:{ region:p=>p.rg, team:p=>p.tm } });
+      is(G.filters.listsH('line2').hasAny === false,
+         '인원 블록의 라인2 는 「이 화면 미적용」으로 잠긴다 (칸은 남긴다)');
+      is(G.filters.lists('line2').hasAny === true,
+         '같은 화면의 설비 블록에서는 살아 있다 (두 벌이 서로 독립이다)');
+      G.filters.clear();
+    }
+
+    /* ⑥ 소스 — 라인2 를 내준 페이지가 loose 로도 선언했는지.
+       하나만 빠져도 그 페이지에서만 해외 설비가 사라진다(에러는 하나도 안 난다). */
+    {
+      const noC = (t) => t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+      PAGES.forEach(p => {
+        const src = noC(SRC[p]);
+        const offers = /[{,]\s*line2\s*:/.test(src);
+        if (!offers) return;                       // 안 내준 페이지는 잠긴 칸 — 그것이 맞다
+        const lm = /loose:\{([^}]*)\}/.exec(src);
+        const declared = lm ? (lm[1].match(/(\w+)\s*:/g)||[]).map(x=>x.replace(/\s*:/,'')) : [];
+        is(declared.indexOf('line2') >= 0,
+           `${p} — 라인2 를 내줬으면 loose 로도 선언한다${declared.indexOf('line2')<0 ? '  ⚠ 해외 설비가 사라진다' : ''}`);
+      });
+      /* CIP 는 라인(orgLine)을 못 찾으면 «자기 사이트»(F11·F16)로 폴백한다. 라인2 는
+         그러면 안 된다 — F11·F16 은 라인2 가 아니라 해외 사이트 이름이라, 「라인2」
+         목록에 해외 사이트가 뜬다(한 축에 두 차원). */
+      is(/x\.line2\s*=\s*\(o&&o\.line2\)\|\|''/.test(noC(SRC.cip)),
+         'cip — 라인2 는 사이트로 폴백하지 않는다 (한 축에 두 차원이 섞인다)');
+      /* 챗봇 사본도 같은 이름을 봐야 한다(제2원칙 · SPEC-SYNC). */
+      const BOT = fs.readFileSync(path.join(ROOT, 'supabase/functions/kakao-bot/hr.js'), 'utf8');
+      is(/line2:\s*'Line 2'/.test(BOT), 'kakao-bot — INSTALL_SPEC 도 Line 2 를 본다');
+    }
   }
 
   /* 저장·복원이 Set 을 지키는지 */

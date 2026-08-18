@@ -5,9 +5,67 @@ import { chromium } from 'playwright';
 const PW_OPTS = process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {};
 import fs from 'fs';
 import path from 'path';
+import http from 'http';
 
 const ROOT=path.resolve(path.dirname(new URL(import.meta.url).pathname),'..');
 const HERE=path.dirname(new URL(import.meta.url).pathname);
+
+let fails=0;
+
+/* ── [0] 사이드바 — 픽스처가 없어도 도는 검사 ─────────────────────────────
+   ⚠ 이 파일은 픽스처가 없으면 «통째로» 건너뛴다. 그런데 사이드바가 실제로 그려지고
+     박스가 열리는지는 **소스로는 원리적으로 못 본다** — .slicer 에 position 이 없으면
+     박스가 사이드바 «바닥»에 열려 화면 밖으로 나가는데, JS 에러도 경고도 안 난다
+     (「눌러도 아무 일이 없는 필터」). 그 검사가 픽스처 유무에 매여 있으면 안 된다.
+   core.js 만으로 도는 최소 페이지를 띄워 먼저 본다. 자료는 지어낸 값이다. */
+{
+  const CORE = fs.readFileSync(ROOT + '/assets/core.js', 'utf8');
+  const HTML = '<!doctype html><meta charset="utf-8"><body><aside></aside>'
+             + '<div class="slicers"></div><script>' + CORE + '<\/script>';
+  const srv = http.createServer((rq, rs) => { rs.setHeader('content-type', 'text/html'); rs.end(HTML); });
+  await new Promise(r => srv.listen(0, r));
+  const b0 = await chromium.launch(PW_OPTS);
+  const pg = await b0.newPage();
+  const errs0 = []; pg.on('pageerror', e => errs0.push(e.message));
+  await pg.goto('http://127.0.0.1:' + srv.address().port + '/');
+  const out = await pg.evaluate(() => {
+    const R = [
+      { rg:'국내', op:'SEC', cu:'삼성', ca:'H1', li:'11', l2:'11-1', tm:'H운영팀' },
+      { rg:'국내', op:'SEC', cu:'삼성', ca:'H1', li:'11', l2:'11-2', tm:'H운영팀' },
+    ];
+    /* 페이지가 «자기 자료가 있는 쪽»만 선언하는 실제 모양 그대로 — 설비는 일곱 축,
+       인원은 구분·팀만. 그래서 인원 쪽 라인2 는 잠긴 칸이 되어야 한다. */
+    GST.filters.mount({ page:'smoke0', rows:()=>R, onChange:()=>{},
+      get:{ region:x=>x.rg, op:x=>x.op, customer:x=>x.cu, campus:x=>x.ca,
+            line:x=>x.li, line2:x=>x.l2 },
+      loose:{ line2:1 },
+      rowsH:()=>R, getH:{ region:x=>x.rg, team:x=>x.tm } });
+    const lbls = [...document.querySelectorAll('.gf-base .slicer .lbl')].map(e => e.textContent.trim());
+    const eqBtn = document.getElementById('gf-line2Btn');
+    const hrBtn = document.getElementById('gh-line2Btn');
+    GST.mselToggle('gf-line2', { stopPropagation(){} });      // 실제로 눌러 본다
+    const box = document.getElementById('gf-line2Box');
+    const br = box.getBoundingClientRect(), sr = eqBtn.getBoundingClientRect();
+    return { lbls, eqDis: eqBtn.disabled, eqTxt: eqBtn.textContent.trim(),
+             hrDis: hrBtn.disabled, hrTxt: hrBtn.textContent.trim(),
+             open: getComputedStyle(box).display !== 'none'
+                   && br.top >= sr.top && Math.abs(br.top - sr.bottom) < 40,
+             opts: [...box.querySelectorAll('label')].map(l => l.textContent.trim()) };
+  });
+  const s0 = (c, m) => { if (c) console.log('  ✓ ' + m); else { fails++; console.log('  ❌ ' + m); } };
+  console.log('[0] 사이드바 (픽스처 불필요)');
+  /* 두 블록이 «같은 폼»이다 — 축 하나가 한쪽에만 있으면 그것 자체가 「필터가 다르다」로 읽힌다 */
+  const EIGHT = '구분>팀>운영단위>고객사>사업부>단지>라인>라인2';
+  s0(out.lbls.slice(0, 8).join('>') === EIGHT, '설비 블록 순서 ' + EIGHT + ' (실제 ' + out.lbls.slice(0,8).join('>') + ')');
+  s0(out.lbls.slice(8, 16).join('>') === EIGHT, '인원 블록도 «같은 폼·같은 순서»');
+  s0(!out.eqDis, '설비 라인2 는 열린다 ("' + out.eqTxt + '")');
+  /* 사용자 요청: 인원 필터에도 칸은 두되 «우선 미적용». 칸을 숨기지 않는다(v91). */
+  s0(out.hrDis && /이 화면 미적용/.test(out.hrTxt), '인원 라인2 는 잠긴다 ("' + out.hrTxt + '")');
+  s0(out.open, '눌렀을 때 박스가 버튼 «바로 아래»에 열린다 (사이드바 바닥이 아니라)');
+  s0(out.opts.join(' · ') === '11-1 · 11-2', '목록에 라인2 값이 뜬다 (' + out.opts.join(' · ') + ')');
+  s0(!errs0.length, 'JS 에러 0건' + (errs0.length ? ' — ' + errs0[0] : ''));
+  await b0.close(); srv.close();
+}
 
 /* 픽스처가 없으면 라우트 핸들러 «안에서» 크래시한다 — 스택만 남고 «검사가 안 됐다»는
    사실은 안 남는다. 미리 끊고 그 사실을 적는다. */
@@ -15,8 +73,10 @@ const HERE=path.dirname(new URL(import.meta.url).pathname);
   const _need = ["csv_wk.csv", "csv_inst.csv"];
   const _miss = _need.filter((f) => !fs.existsSync(path.join(HERE, f)));
   if (_miss.length) {
-    console.log('⚠️  픽스처가 없어 이 검사를 못 했다: ' + _miss.join(', ') + ' (tests/README.md 로 생성)');
-    process.exit(process.env.STRICT_FIXTURES ? 2 : 0);
+    console.log('⚠️  픽스처가 없어 «페이지 렌더» 검사를 못 했다: ' + _miss.join(', ') + ' (tests/README.md 로 생성)');
+    /* ⚠ 위 [0] 이 실패했으면 여기서 0 을 내면 안 된다 — 픽스처가 없다는 이유로 실제
+       실패가 초록불로 덮인다. 그것이 이 파일이 경계하는 «거짓 초록불»이다. */
+    process.exit(fails ? 1 : (process.env.STRICT_FIXTURES ? 2 : 0));
   }
 }
 
@@ -41,7 +101,6 @@ const PAGES=[
 ];
 
 const browser=await chromium.launch(PW_OPTS);
-let fails=0;
 
 for(const P of PAGES){
   const ctx=await browser.newContext();

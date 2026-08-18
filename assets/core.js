@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 119;
+GST.VER = 121;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1069,13 +1069,18 @@ GST.SM.SPEC = {
     /* ⚠ 새 열은 반드시 opt 에도 넣는다 — 그 열이 없는 옛 추출본이 통째로 «열을 못 찾았습니다»
        로 거부되고 픽스처·테스트까지 같이 죽는다(CLAUDE.md v89 의 승격 순서 2번). */
     opt:['pjt','toolId','pmCycle','warrantyDate','start','group2','detail2',
-         'div','location','burner','bay','warranty','floor','fabIn','turnOn','state'],
+         'div','location','burner','bay','warranty','floor','fabIn','turnOn','state','line2'],
     fields:{
       pjt:['PJT.','Product code'],
       country:['Country','운영단위'], customer:['Customer','고객사'], div:'사업부',
       location:['Location','Site'],
       code:'Scrubber CODE', sn:'Scrubber S/N', model:'Scrubber Model', burner:'Burner Type',
-      fab:['Line 1','FAB'], floor:['Floor','Line'], bay:'Bay',
+      /* 국내 양식은 라인이 «두 단」이다 — `Line 1` 아래에 `Line 2` 가 있고 그 아래가 Bay 다.
+         해외 118열 양식에는 `Line 2` 라는 열 자체가 없다(그래서 opt). 별칭을 하나만 두는
+         이유가 그것이다 — 해외의 `Line`(=Floor)을 여기에 끌어오면 한 축에 두 차원이 섞인다.
+         ⚠ 정규화는 공백·마침표를 지우므로 `Line 1`→line1 · `Line 2`→line2 · `Line`→line 으로
+           셋이 서로 다른 이름이다. 부분일치를 쓰면 그 순간 셋이 뒤엉킨다(제1원칙). */
+      fab:['Line 1','FAB'], line2:'Line 2', floor:['Floor','Line'], bay:'Bay',
       group1:['Group_1','Process'], group2:['Group_2','Detail Process(HQ)'],
       detail1:['Detail_1','Detail Process(Customer)'], detail2:'Detail_2',
       toolId:'Main Tool ID', toolMaker:'Main Tool Maker', toolModel:'Main Tool Model',
@@ -1723,6 +1728,10 @@ GST.ORG = {
         floor:    GST.ORG.floor(GST.SM.val(r, C, 'floor')),
         location: GST.upk(GST.SM.val(r, C, 'location') || '').trim(),
         bay:      GST.nfw(GST.SM.val(r, C, 'bay') || '').trim(),
+        /* 라인 2 (국내 전용). 실적·CIP 에는 열 자체가 없어 Floor·사업부와 같은 규약으로
+           S/N 조인해 얻는다. 해외 행은 빈 값이고, 필터에서 loose 로 통과한다 —
+           버리면 「라인2 를 고르면 해외 설비가 통째로 사라진다」가 된다. */
+        line2:    GST.nfw(GST.SM.val(r, C, 'line2') || '').trim(),
         /* 사업부(관리주체)·단지는 «설치현황에만» 있는 열이다 — 수선·자재 실적에는 없다.
            그래서 사업부를 골라도 실적 기반 카드가 하나도 안 바뀌었다(loose 라 전부 통과).
            국내는 같은 라인에 있는 설비라도 관리주체가 메모리냐 연구소냐 파운드리냐에 따라
@@ -2074,17 +2083,52 @@ GST.dbRows = async function(table){
      그러면 한 바이트도 받지 않는다. 예전에는 이 자리가 없어서, 새로고침할 때마다
      25만 행을 다시 받아 다시 파싱했다(푼 JSON 374MB). 캐시는 «시트 경로가 실패했을
      때»만 읽히고 있었고, 게다가 localStorage 한도를 넘어 저장 자체가 늘 실패했다. */
-  const stamp = table+'|'+lg.data.synced_at+'|'+want;
+  /* ⚠ 캐시 열쇠에 «고른 컬럼»도 넣는다. 안 넣으면 DB 에 열을 더한 뒤에도 옛 캐시가
+     맞는 것으로 판정돼, 새 열이 영영 빈 채로 남는다(적재 시각이 안 바뀌므로).
+     열 목록은 아래에서 정해지므로 stamp 도 그때 만든다. */
+
+  /* 페이지네이션. PostgREST는 한 번에 돌려주는 행수에 상한이 있고 그 값은 프로젝트 설정이다.
+     그래서 "요청한 만큼 안 왔으면 끝"으로 판정하면 안 된다 — 상한에 걸린 것을 완료로 착각해
+     조용히 잘린 데이터를 그린다. **받은 만큼만 전진하고 0행일 때 멈춘다.** */
+  /* ── 표에 «실제로 있는» 컬럼만 고른다 (v120) ──
+     ⚠ PostgREST 는 select 에 없는 열이 하나라도 있으면 그 열만 비우는 게 아니라
+       **전체를 거부한다**(v92 에 국내 알람이 그렇게 통째로 실패했다). 그래서 SPEC 에 새
+       열을 더하는 순간, DB alter 를 아직 안 했으면 **그 시트가 전 페이지에서 안 뜬다.**
+       CLAUDE.md v89 의 「승격 순서 — DB 가 먼저다」가 그래서 있었는데, 순서를 사람이
+       기억해야 하는 규약은 언젠가 깨진다.
+     표의 실제 컬럼을 한 번 물어 교집합만 고른다 — 이제 코드가 먼저 나가도 안 죽고,
+     새 열은 DB 에 생기는 순간 저절로 살아난다(그때까지는 「이 화면 미적용」).
+     RPC 가 없는 환경(setup-8 미실행)은 옛 동작 그대로 — 전부 고른다. */
+  let use = cols, miss = [];
+  try{
+    const pc = await c.rpc('csv_table_cols', {p_tbl:'sheet_'+table});
+    if(!pc.error && Array.isArray(pc.data) && pc.data.length){
+      const have = new Set(pc.data);
+      use  = cols.filter(function(x){ return have.has(x); });
+      miss = cols.filter(function(x){ return !have.has(x); });
+    }
+  }catch(e){}
+  /* ⚠ 여기는 «경고»가 아니다 — 승격 대기 중인 열은 정상 상태이고, 그 사실은 이미
+     필터 칸이 「전체 (이 화면 미적용)」으로 말한다. 붉은 배너를 매번 띄우면 진짜 위험한
+     배너(적재 실패·미러 정지)가 그 속에 묻힌다.
+     ⚠ 그렇다고 «조용히» 넘기지도 않는다(제1원칙). GST._dbCols 에 남겨, 「왜 그 축이
+       미적용인가」를 물으면 곧바로 답할 수 있게 한다. _dbMiss 에 넣으면 안 된다 —
+       그 배열은 {t,m} 객체를 담고 _dbBanner 가 x.t·x.m 을 읽으므로 문자열을 섞으면
+       배너가 «undefined — undefined» 를 찍는다. */
+  if(miss.length) GST._dbCols = (GST._dbCols||[]).concat(miss.map(function(x){ return table+'.'+x; }));
+  const SEL = use.join(',') + ',src_row';
+
+  /* ── 행 캐시 (v101) ────────────────────────────────────────────────────
+     적재 시각과 행수가 같으면 내용도 같다 — sheet_sync_log 가 보증하는 사실이다.
+     ⚠ 열쇠에 «고른 컬럼»도 넣는다(v120). 안 넣으면 DB 에 열을 더한 뒤에도 옛 캐시가
+       맞는 것으로 판정돼, 새 열이 영영 빈 채로 남는다(적재 시각이 안 바뀌므로). */
+  const stamp = table+'|'+lg.data.synced_at+'|'+want+'|'+use.length;
   const hit = await GST.idb.get('rows:'+table);
   if(hit && hit.stamp === stamp && Array.isArray(hit.rows) && hit.rows.length === want+1){
     GST._idbHit = (GST._idbHit||0)+1;
     return hit.rows;
   }
 
-  /* 페이지네이션. PostgREST는 한 번에 돌려주는 행수에 상한이 있고 그 값은 프로젝트 설정이다.
-     그래서 "요청한 만큼 안 왔으면 끝"으로 판정하면 안 된다 — 상한에 걸린 것을 완료로 착각해
-     조용히 잘린 데이터를 그린다. **받은 만큼만 전진하고 0행일 때 멈춘다.** */
-  const SEL = cols.join(',') + ',src_row';
   const page = async function(from, n){
     const r = await c.from('sheet_'+table).select(SEL)
                      .order('src_row', {ascending:true}).range(from, from+n-1);
@@ -2124,6 +2168,8 @@ GST.dbRows = async function(table){
   const rows = new Array(out.length+1); rows[0] = head;
   for(let i=0;i<out.length;i++){
     const o = out[i], r = new Array(cols.length);
+    /* 표에 없는 열은 빈 값이다 — 헤더 자리는 그대로 두어야 SPEC 이 열을 «이름으로»
+       찾는 규약(제1원칙)이 유지된다. 자리를 지우면 그 뒤 열이 통째로 밀린다. */
     for(let j=0;j<cols.length;j++){ const v=o[cols[j]]; r[j] = (v==null?'':String(v)); }
     rows[i+1] = r;
   }
@@ -2172,11 +2218,28 @@ GST._csvOrderCol = function(keys){
    왜 필요한가. 국내 알람 원장은 44열 × 2만 행이라 통째로 받으면 화면이 뜨기 전에 몇 MB 를
    내려받는다. 그리고 그 안에는 **작업자 실명(checker)** 이 들어 있다 — 화면이 안 쓰는 값을
    브라우저까지 보낼 이유가 없다. 열을 추리면 전송량도 줄고 실명도 안 나간다. */
+/* 일시적인 «인증» 실패인가 — 자료 문제가 아니라 다시 해 보면 되는 것.
+   ⚠ 실제로 겪었다: 국내 알람 원장이 «READ JWT issued at future» 로 실패해 화면이
+     수선실적 BM 으로 폴백했고, 사용자는 「알람 건수를 또 바꿨냐」고 물었다(잠시 뒤 저절로
+     돌아왔다). 브라우저 시계가 Supabase 보다 앞서면 토큰의 iat 가 «미래»로 보인다.
+   자료가 없는 것과 «지금 못 읽은 것»은 다른 사실이다 — 후자를 폴백으로 삼으면 화면이
+   조용히 다른 기준으로 갈아탄다. 한 번은 다시 해 본다. */
+GST._authGlitch = function(msg){
+  return /JWT|issued at future|expired|token|401|403/i.test(String(msg||''));
+};
 GST.csvTableRows = async function(table, cols){
   const c = await GST.db(); if(!c) throw new Error('DB_OFF');
   const sel = (cols && cols.length) ? cols.join(',') : '*';
 
-  const probe = await c.from(table).select(sel).limit(1);
+  let probe = await c.from(table).select(sel).limit(1);
+  /* 시계 어긋남은 몇 초면 지나간다. 세션을 새로 받아 한 번만 다시 해 본다 —
+     여기서 포기하면 그 화면은 «다른 기준»으로 그려지고, 그 사실이 숫자에는 안 보인다. */
+  if(probe.error && GST._authGlitch(probe.error.message)){
+    GST._authRetry = (GST._authRetry||0)+1;
+    try{ if(c.auth && c.auth.refreshSession) await c.auth.refreshSession(); }catch(e){}
+    await new Promise(function(r){ setTimeout(r, 1200); });
+    probe = await c.from(table).select(sel).limit(1);
+  }
   if(probe.error) throw new Error('READ '+probe.error.message);
   if(!probe.data || !probe.data.length) throw new Error('EMPTY — '+table+' 에 행이 없다 (Import 했는가)');
   /* ⚠ 열을 추렸으면 정렬 후보(src_row·id)가 안 올 수 있다. 정렬이 없으면 range() 로
@@ -2787,16 +2850,20 @@ GST.filters = (function(){
      있으면 «그 사업부의 설비가 실제로 어디에 있나»를 볼 수가 없다.
      ⚠ 값이 없을 때 «전체»인 것은 그대로다(빈 Set = 전체). 그래서 축 검사는 반드시
        hasK/hitK 를 지나야 한다 — `if(F.op)` 는 빈 Set 도 truthy 라 언제나 참이 된다. */
-  const MULTI = { region:1, op:1, div:1, customer:1, campus:1, line:1, team:1 };
+  const MULTI = { region:1, op:1, div:1, customer:1, campus:1, line:1, line2:1, team:1 };
   /* 축 순서 — 사용자 확정(v111): 구분 → 팀 → 운영단위 → 고객사 → 사업부 → 단지 → 라인.
      두 블록이 «같은 폼»이다 — 순서가 다르면 두 벌이라는 것 자체가 헷갈린다.
      ⚠ 이 배열은 순서에 의미가 «없는» 자리에서도 쓰인다(pass 의 AND 루프 · 종속 계산 ·
        AV 열 인덱스). 그래서 순서를 바꿔도 숫자는 한 자리도 안 움직인다 — 화면 순서만 바뀐다. */
-  const AXES = ['region','team','op','customer','div','campus','line'];
-  const L = { region:'구분', op:'운영단위', div:'사업부', customer:'고객사', campus:'단지', line:'라인', team:'팀', period:'기간' };
+  const AXES = ['region','team','op','customer','div','campus','line','line2'];
+  /* 라인2 는 국내 설치현황의 `Line 2` 다 — 라인(`Line 1`) «아래» 단이라 바로 뒤에 둔다.
+     ⚠ 이름을 지어내지 않는다(v98) — 시트 머리글이 「Line 2」이므로 「라인2」다.
+       라인 칸을 「라인1」로 바꾸지는 않는다. 해외 양식에는 `Line 1` 이라는 열이 없고
+       그 칸이 잡는 것은 `FAB` 이라, 해외 사용자에게는 없는 이름이 된다. */
+  const L = { region:'구분', op:'운영단위', div:'사업부', customer:'고객사', campus:'단지', line:'라인', line2:'라인2', team:'팀', period:'기간' };
 
   const mkF = () => ({ region:new Set(), op:new Set(), div:new Set(), customer:new Set(),
-                       campus:new Set(), line:new Set(), team:new Set() });
+                       campus:new Set(), line:new Set(), line2:new Set(), team:new Set() });
   /* 그룹 서술자. «어느 CFG 키를 보는가»만 다르고 나머지 규칙은 전부 같다.
      여기 한 곳만 보면 두 벌이 무엇으로 갈리는지 알 수 있다. */
   const GRP = {
@@ -3041,7 +3108,14 @@ GST.filters = (function(){
     /* 단지를 바꾸면 그 아래 라인은 대개 유효하지 않다 — 명시적으로 비운다.
        ⚠ v106 에서 라인도 Set 이 됐다. `G.F.line=''` 로 대입하면 Set 이 문자열로 바뀌어
          그다음 .has 가 TypeError 로 죽는다 — 단지를 바꾸는 순간 화면이 통째로 빈다. */
-    if(changed==='campus') MULTI.line ? G.F.line.clear() : (G.F.line='');
+    /* 위 축을 바꾸면 그 «아래» 단은 대개 무효다 — 단지 → 라인(Line 1) → 라인2(Line 2).
+       ⚠ 지금은 여덟 축이 «전부» 다중선택이라 이 줄을 타는 축이 하나도 없다. 다중 축은
+         mselFill 의 콜백이 changed 를 안 넘기고, 대신 refresh() 의 fill() 이 «목록에
+         없어진 선택값을 지운다» — 그것이 실제로 도는 종속 장치다. 단일 축이 다시 생길
+         때를 위해 남겨 둔다(그때 이 줄이 없으면 옛 하위 값이 걸린 채 남아 화면이 빈다). */
+    if(changed==='campus'){ if(!MULTI.line)  G.F.line  = '';
+                            if(!MULTI.line2) G.F.line2 = ''; }
+    if(changed==='line'){   if(!MULTI.line2) G.F.line2 = ''; }
     save(); refresh();
     if(CFG && CFG.onChange) CFG.onChange();
   }
@@ -3233,6 +3307,10 @@ GST.filters = (function(){
     hasH: function(k){ return hasK(HR, k); },
     chosen:  function(k){ return listK(EQ, k); },
     chosenH: function(k){ return listK(HR, k); },
+    /* 축 목록과 이름표를 내준다 — 손으로 다시 적으면 축이 늘 때 한쪽만 고쳐져 조용히
+       갈라진다(filtSummary 가 실제로 자기 사본을 들고 있었다). 배열은 복사해 내보낸다. */
+    AXES: AXES.slice(),
+    L: L,
     // 활성 필터 칩용 — [{k,label,value}]. 두 벌이므로 인원 쪽은 이름에 «인원» 을 붙인다.
     active: function(){
       const out=[];
@@ -3758,7 +3836,13 @@ GST.chartHiRes = function(id, scale){
    조직 축 이름은 GST.filters 의 L 과 같은 낱말을 쓴다(사람이 사이드바에서 본 그 말). */
 GST.filtSummary = function(){
   const F = (GST.filters && GST.filters.F) || {};
-  const L = {region:'구분', op:'운영단위', div:'사업부', customer:'고객사', campus:'단지', line:'라인', team:'팀'};
+  /* ⚠ 여기에 이름표 사본을 두면 축이 늘 때 한쪽만 고쳐진다 — 실제로 라인2 를 더할 때
+     사이드바에는 뜨는데 장표 머리에는 안 적히는 상태가 될 뻔했다(제2원칙).
+     정본은 GST.filters 다. 옛 배포본(내주기 전 core.js)만 사본으로 되돌아간다. */
+  const FL = (GST.filters && GST.filters.L) || {};
+  const AX = (GST.filters && GST.filters.AXES)
+          || ['region','team','op','customer','div','campus','line','line2'];
+  const L = {}; AX.forEach(function(k){ L[k] = FL[k] || k; });
   const out = [];
   Object.keys(L).forEach(function(k){
     const v = F[k];

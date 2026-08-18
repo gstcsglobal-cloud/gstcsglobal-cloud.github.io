@@ -264,7 +264,7 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 /* GST.numv(천 단위 쉼표)·GST.EQ(설비상태)를 쓴다 — 옛 core.js 가 캐시에 남으면
    숫자만 조용히 틀리므로 배너로 드러낸다. */
-GST.needVer && GST.needVer(114);
+GST.needVer && GST.needVer(121);   // 라인2 축을 쓴다
 GST.authGate();
 const VER='v49';
 const PUB=GST.SHEET_PUB;
@@ -516,6 +516,7 @@ async function loadData(){ GST.skeleton(true);
         campus:GST.ORG.campus(r[CI.location], r[CI.fab], r[CI.country]),
         line:String(r[CI.fab]||'').trim(),
         div:String((CI.div>=0?r[CI.div]:'')||'').trim(),   // 사업부(관리주체) — 설치현황에만 있는 열
+        line2:String((CI.line2>=0?r[CI.line2]:'')||'').trim(), // 라인2 — 국내 양식에만 있는 `Line 2`
         proc:procOf(r[CI.group1]),chambers:String(r[CI.type]||'').toUpperCase().includes('DUAL')?2:1,
         type:String(r[CI.type]||'').toUpperCase().includes('DUAL')?'DUAL':'SINGLE',turnOn:ton};
     }).filter(Boolean);
@@ -568,8 +569,11 @@ async function loadData(){ GST.skeleton(true);
        파츠 기반 숫자가 안 움직였다. 설비(EQUIP)에서 S/N 으로 물려받는다.
        ⚠ 한 번만 돈다. 필터를 만질 때마다 하면 수만 행 × 매 조작이 된다.
        못 붙은 행은 빈 값 그대로 — loose 로 통과시킨다(버리면 파츠가 반으로 준다). */
-    { const dvOf={}; EQUIP.forEach(e=>{ if(e.snKey && e.div && !dvOf[e.snKey]) dvOf[e.snKey]=e.div; });
-      PARTS.forEach(x=>{ x.div = dvOf[x.snKey] || ''; }); }
+    { const dvOf={}, l2Of={};
+      EQUIP.forEach(e=>{ if(!e.snKey) return;
+        if(e.div   && !dvOf[e.snKey]) dvOf[e.snKey]=e.div;
+        if(e.line2 && !l2Of[e.snKey]) l2Of[e.snKey]=e.line2; });
+      PARTS.forEach(x=>{ x.div = dvOf[x.snKey] || ''; x.line2 = l2Of[x.snKey] || ''; }); }
 
     buildMonths();
     fillSlicers();
@@ -604,9 +608,10 @@ function fillSlicers(){
      다른 모집단을 보여준다. 기간 칸은 잠근다: 이 화면의 시간축은 위의 «기준 월»이다. */
   GST.filters.mount({ page:'tco', rows:()=>EQUIP.concat(PARTS), onChange:render,
     get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer,
-          campus:x=>x.campus, line:x=>x.line, div:x=>x.div },
-    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG },
-    loose:{ div:1 } });   // 조인 안 되는 행은 빼지 않는다
+          campus:x=>x.campus, line:x=>x.line, line2:x=>x.line2, div:x=>x.div },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG,
+           line:GST.FILT_DROP_ORG, line2:GST.FILT_DROP_ORG },
+    loose:{ div:1, line2:1 } });   // 조인 안 되는 행은 빼지 않는다
   const ps=PROCS.filter(p=>EQUIP.some(e=>e.proc===p)||PARTS.some(x=>x.proc===p));
   GST.fillSelect('sl-proc','proc',ps,F,t('all'));
   document.getElementById('sl-proc').querySelectorAll('option').forEach(o=>{if(o.value==='ETC')o.textContent=procLabel('ETC');});

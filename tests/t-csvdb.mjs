@@ -211,6 +211,166 @@ console.log('\n[4] 읽기 — 표에 id 가 없어도 읽는지');
   G.db = realDb;
 }
 
+/* ---------- 5. dbRows — 표에 «아직 없는» 열을 SPEC 이 갖고 있어도 읽히는지 ----------
+   ⚠ PostgREST 는 select 에 없는 열이 하나라도 있으면 그 열만 비우는 게 아니라 **전체를
+     거부한다**(v92 에 국내 알람이 그렇게 통째로 실패했다). 그래서 예전에는 SPEC 에 새 열을
+     더하는 순간, DB alter 를 아직 안 했으면 **그 시트가 여덟 페이지 전부에서 안 떴다.**
+     「승격 순서 — DB 가 먼저다」라는 규약으로 막고 있었는데, 사람이 기억해야 하는 순서는
+     언젠가 깨진다. 이제 표의 실제 컬럼을 물어 «교집합»만 고른다. */
+console.log('\n[5] dbRows — 표에 없는 열이 SPEC 에 있어도 시트가 뜨는지');
+{
+  const SPEC = G.SM.SPEC.inst;
+  const keys = Object.keys(SPEC.fields);
+  const all  = keys.map(G._snake);
+  const gi   = all.length - 1;                        // 표에 «아직 없는» 열 (맨 뒤 = 승격 직후 모양)
+  const gone = all[gi];
+  const have = all.filter((x, i) => i !== gi);
+
+  let lastSel = '';
+  const mk = (withRpc) => ({
+    rpc(fn) {
+      if (!withRpc) return Promise.resolve({ data: null, error: { message: `function public.${fn} does not exist` } });
+      return Promise.resolve({ data: have.slice(), error: null });
+    },
+    from(t) {
+      const api = {
+        _sel: '',
+        select(s) { api._sel = s; if (t !== 'sheet_sync_log') lastSel = s; return api; },
+        eq() { return api; },
+        maybeSingle() {
+          return Promise.resolve({ data: { rows: 1, err: null, synced_at: '2026-08-18T00:00:00Z', ms: -1 }, error: null });
+        },
+        order() { return api; },
+        range(a) {
+          // PostgREST 그대로 — 없는 열이 하나라도 섞이면 «그 열만»이 아니라 전체를 거부한다
+          const asked = api._sel.split(',').map(x => x.trim());
+          const bad = asked.filter(x => x !== 'src_row' && have.indexOf(x) < 0);
+          if (bad.length)
+            return Promise.resolve({ data: null, error: { message: `column sheet_inst.${bad[0]} does not exist` } });
+          if (a > 0) return Promise.resolve({ data: [], error: null });
+          const row = { src_row: 0 };
+          have.forEach((cname, i) => { row[cname] = 'v' + i; });
+          return Promise.resolve({ data: [row], error: null });
+        },
+      };
+      return api;
+    },
+  });
+
+  const realDb = G.db, realIdb = G.idb;
+  G.idb = { get: async () => null, set: async () => {} };   // 캐시가 결과를 가리지 않게
+
+  // (a) RPC 가 있는 환경 — 없는 열을 빼고 읽는다
+  G._dbCols = null;
+  G.db = async () => mk(true);
+  try {
+    const out = await G.dbRows('inst');
+    ok(`RPC 있음: 표에 없는 열(${gone}) 이 하나 있어도 ${out.length - 1}행을 읽었다`);
+    lastSel.split(',').indexOf(gone) < 0 ? ok(`select 에서 ${gone} 가 빠졌다`)
+                                         : err(`select 에 ${gone} 가 그대로 남았다 — PostgREST 가 전체를 거부한다`);
+    // 헤더 자리는 유지돼야 한다 — 지우면 그 뒤 열이 통째로 밀려 제1원칙이 깨진다
+    out[0].length === keys.length ? ok(`헤더 ${out[0].length}칸 — SPEC 과 같다 (자리를 안 지웠다)`)
+                                  : err(`헤더 ${out[0].length}칸 (기대 ${keys.length}) — 열이 밀린다`);
+    out[1][gi] === '' ? ok('없는 열의 값은 빈 칸')
+                      : err(`없는 열에 값이 들어왔다: ${JSON.stringify(out[1][gi])}`);
+    (G._dbCols || []).indexOf('inst.' + gone) >= 0
+      ? ok('GST._dbCols 에 남겼다 — 「왜 그 축이 미적용인가」에 답할 수 있다')
+      : err('GST._dbCols 에 안 남았다 — 조용히 넘어갔다');
+    // ⚠ 경고 배열에 섞으면 배너가 «undefined — undefined» 를 찍는다 ({t,m} 객체를 담는 배열이다)
+    (G._dbMiss || []).some(x => typeof x !== 'object')
+      ? err('_dbMiss 에 문자열이 섞였다 — _dbBanner 가 undefined 를 찍는다')
+      : ok('_dbMiss 는 안 건드린다 — 승격 대기는 경고가 아니다');
+  } catch (e) { err(`RPC 있음: 읽기 실패 — ${e.message}`); }
+
+  /* 음성 대조 — 교집합을 안 고르면 실제로 죽는지. 잡는지 확인 안 된 검사는 검사가 아니다.
+     RPC 가 없는 환경은 옛 동작(전부 고르기) 그대로이므로 그것이 곧 음성 대조가 된다. */
+  {
+    G.db = async () => mk(false);
+    G._dbCols = null;
+    try {
+      await G.dbRows('inst');
+      err('음성 대조: 전부 골랐는데도 읽혔다 — 모의가 PostgREST 를 재현하지 못한다');
+    } catch (e) {
+      /does not exist/.test(e.message)
+        ? ok(`음성 대조: 교집합을 안 고르면 → ${e.message.slice(0, 52)}…`)
+        : err(`음성 대조: 예상과 다른 에러 — ${e.message}`);
+    }
+  }
+
+  // (b) 캐시 열쇠에 «고른 컬럼 수»가 들어가는지 — 안 들어가면 alter 뒤에도 옛 캐시를 쓴다
+  {
+    const src = fs.readFileSync(ROOT + '/assets/core.js', 'utf8');
+    const m = /const stamp = table\+'\|'\+lg\.data\.synced_at\+'\|'\+want([^;]*);/.exec(src);
+    m && /use\.length/.test(m[1])
+      ? ok('캐시 열쇠에 고른 컬럼 수가 들어간다 (alter 뒤 옛 캐시가 무효가 된다)')
+      : err('캐시 열쇠에 컬럼 수가 없다 — DB 에 열을 더해도 옛 캐시가 계속 맞는 것으로 판정된다');
+  }
+
+  G.db = realDb; G.idb = realIdb; G._dbCols = null;
+}
+
+/* ---------- 6. csvTableRows — 일시적인 인증 실패는 «자료 없음»이 아니다 ----------
+   실제로 겪었다. 국내 알람 원장이 «READ JWT issued at future» 로 실패해 화면이 조용히
+   수선실적 BM 으로 폴백했고, 사용자는 「알람 건수를 또 바꿨냐」고 물었다(잠시 뒤 저절로
+   돌아왔다). 브라우저 시계가 Supabase 보다 앞서면 토큰의 iat 가 «미래»로 보인다.
+   «자료가 없다»와 «지금 못 읽었다»는 다른 사실이다 — 후자를 폴백으로 삼으면 화면이
+   기준을 갈아타면서 그 사실을 숫자로는 말하지 않는다. */
+console.log('\n[6] csvTableRows — 시계 어긋남(JWT)은 한 번 다시 해 보는지');
+{
+  for (const [label, msg, want] of [
+    ['미래 iat',   'JWT issued at future',        true],
+    ['만료',       'JWT expired',                 true],
+    ['권한 없음',  '401 Unauthorized',            true],
+    ['없는 열',    'column t.seq does not exist', false],   // 자료 문제 — 다시 해도 같다
+    ['빈 표',      'relation "t" does not exist', false],
+  ]) {
+    G._authGlitch(msg) === want
+      ? ok(`${label}: ${want ? '다시 해 본다' : '그대로 던진다'}`)
+      : err(`${label}: 판정이 ${!want} 다 — «${msg}»`);
+  }
+
+  const realDb = G.db;
+  let tries = 0, refreshed = 0;
+  G.db = async () => ({
+    auth: { refreshSession: async () => { refreshed++; } },
+    from() {
+      const api = {
+        select() { return api; },
+        order() { return api; },
+        limit() {
+          tries++;
+          if (tries === 1) return Promise.resolve({ data: null, error: { message: 'JWT issued at future' } });
+          return Promise.resolve({ data: [{ id: 1, '알람': 'x' }], error: null });
+        },
+        range(a) { return Promise.resolve({ data: a > 0 ? [] : [{ id: 1, '알람': 'x' }], error: null }); },
+      };
+      return api;
+    },
+  });
+  try {
+    const out = await G.csvTableRows('t');
+    ok(`시계 어긋남 뒤 재시도로 ${out.length - 1}행을 읽었다 (시도 ${tries}회 · 세션 갱신 ${refreshed}회)`);
+    tries === 2 ? ok('재시도는 «한 번»뿐이다 (무한 재시도는 화면을 멈춘다)')
+                : err(`시도가 ${tries}회다 — 한 번만 다시 해야 한다`);
+  } catch (e) { err(`재시도가 안 걸렸다 — ${e.message}`); }
+
+  // 자료 문제는 재시도하지 않고 그대로 던진다 — 안 그러면 모든 실패가 1.2초씩 늦어진다
+  let t2 = 0;
+  G.db = async () => ({
+    from() {
+      const api = { select(){return api;}, order(){return api;},
+        limit() { t2++; return Promise.resolve({ data: null, error: { message: 'column t.seq does not exist' } }); } };
+      return api;
+    },
+  });
+  try { await G.csvTableRows('t'); err('없는 열인데 에러를 안 던졌다'); }
+  catch (e) {
+    t2 === 1 ? ok('자료 문제는 재시도 없이 곧바로 던진다')
+             : err(`자료 문제인데 ${t2}회 시도했다`);
+  }
+  G.db = realDb;
+}
+
 /* ⚠ 픽스처가 없으면 핵심 대조를 «건너뛰고도» ✅ 로 끝났다 — 초록불이 거짓말을 한다.
    실제로 그 초록불을 믿고 여러 번 작업했다. 건너뛴 것이 있으면 다른 말을 한다.
    종료코드는 0 으로 둔다(픽스처 없는 환경에서 npm run all 이 멈추면 나머지도 못 돈다).

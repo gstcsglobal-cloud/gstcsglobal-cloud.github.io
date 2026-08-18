@@ -518,7 +518,7 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 /* 이 화면의 「설치 국가」 카드는 GST.ORG.country 가 국내 법인(SK·삼성 도시명)을 국가로
    푸는 것에 기댄다(core v99). 옛 core.js 가 캐시에 남으면 그 설비가 통째로 「국가 미상」이
    되는데 에러는 안 난다 — 숫자만 조용히 틀린다. 그래서 버전을 선언해 배너로 드러낸다. */
-GST.needVer && GST.needVer(114);   // GST.ymdL(로컬 날짜 표기) 을 쓴다
+GST.needVer && GST.needVer(121);   // GST.ymdL(로컬 날짜 표기) · 라인2 축을 쓴다
 const SHEET_URL=GST.sheetUrl('891608329');
 // 설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
 // 이 시트는 128열이라 위치 고정이 특히 위험했다(type이 75열째). 이제 이름으로 따라간다.
@@ -882,11 +882,14 @@ function rebuildFilters(){
           div:r=>String((CI.div>=0?r[CI.div]:'')||'').trim(),
           campus:r=>GST.ORG.campus(r[CI.location], r[CI.fab], r[CI.country]),
           line:r=>String(r[CI.fab]||'').trim(),
+          // 라인2 — 국내 양식에만 있는 `Line 2`. 사업부와 같은 규약으로 loose 다.
+          line2:r=>String((CI.line2>=0?r[CI.line2]:'')||'').trim(),
           date:r=>toDate(r[CI.turnOn]) },   // 이 화면의 시간축은 Turn On 이다
-    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG },
-    /* 사업부는 해외 설치현황에 열이 아예 없다. loose 가 없으면 사업부를 고르는 순간
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG,
+           line:GST.FILT_DROP_ORG, line2:GST.FILT_DROP_ORG },
+    /* 사업부·라인2 는 해외 설치현황에 열이 아예 없다. loose 가 없으면 그 축을 고르는 순간
        해외 설비가 통째로 사라진다 — «모르는 것»과 «아닌 것»은 다르다(운영단위와 같은 규약). */
-    loose:{ div:1 },
+    loose:{ div:1, line2:1 },
     onChange:function(){ syncRange(); render(); } });
   /* 모델·Tool Maker·공정 그룹은 사이드바에 칸이 없다(v92 사용자 요청). 차트를 눌러 걸리고
      pgDrill 칩 줄에 세워져 거기서 풀린다 — 칸을 되살리면 사이드바가 다시 페이지마다 달라진다. */

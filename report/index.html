@@ -367,7 +367,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(119);   // GST.corpLabel · filters.hitL · GST.PM(국내 조치 기준 PM) 을 쓴다
+GST.needVer&&GST.needVer(121);   // GST.corpLabel · filters.hitL · GST.PM · 라인2 축을 쓴다
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -583,6 +583,12 @@ const campOk=(v)=>GST.filters.hit('campus',v);
      KPI·차트·표가 한 자리도 안 움직였다(에러는 하나도 안 났다 — 사용자 보고).
      loose 규칙까지 GST.filters.hitL 한 곳을 지난다: 여기서 다시 적으면 pass() 와 갈린다. */
 const divOk=(v)=>GST.filters.hitL('div', v);
+/* 라인2 도 사업부와 완전히 같은 처지다 — 설치현황(국내 양식)에만 있는 열이라
+   조인이 안 된 행·해외 행은 빈 값이다. hit() 로 거르면 그 행이 통째로 사라져
+   「라인2 를 고르면 해외 설비가 없어진다」가 된다. 반드시 hitL(loose) 를 지난다.
+   ⚠ 축을 사이드바에 «내주기만» 하고 술어에서 안 보면, 칩은 뜨는데 숫자가 한 자리도
+     안 움직인다 — 사업부에서 실제로 겪은 자리다(v108). */
+const line2Ok=(v)=>GST.filters.hitL('line2', v);
 const axOkH=(k,v)=>GST.filters.hitH(k, v);   // 인원 기준 블록 판정 (v114)
 /* v118 — 인당 왜곡 안내는 없앴다. 필터가 두 벌이 된 뒤로는 «사실이 아니다»:
    사업부(설비)를 걸면서 인원 기준 필터로 그 사업부 담당 인원을 같이 좁히면 분모도 함께
@@ -788,6 +794,7 @@ function krJoin(list, inst, CI){
                  관리주체가 메모리냐 연구소냐에 따라 소속 단지가 갈리므로, 사업부로
                  좁히지 못하면 Alarm 카드만 늘 전사 숫자를 보여준다. */
               div:String((CI.div>=0?r[CI.div]:'')||'').trim(),
+              line2:String((CI.line2>=0?r[CI.line2]:'')||'').trim(),
               line:String(r[CI.fab]||'').trim() };
     if(!ix[k])ix[k]=o;
     const b=GST.ALARM.keyBase(r[CI.sn]); if(!ix[b])ix[b]=o;
@@ -797,6 +804,7 @@ function krJoin(list, inst, CI){
     x.region=o?o.region:''; x.op=o?o.op:''; x.custB=o?o.custB:'';
     x.campus=o?o.campus:''; x.lineN=(o&&o.line)||x.srcLine;
     x.div=(o&&o.div)||'';   // 못 붙은 행은 빈 값 그대로 — loose 로 통과시킨다(버리지 않는다)
+    x.line2=(o&&o.line2)||'';
   });
   return list;
 }
@@ -1291,7 +1299,11 @@ async function loadData(){
       let _hit = 0;
       WK.forEach(function(x){
         const r = _ix.find(x.eqNo, x.sn);
-        if(r && r.div){ x.div = r.div; _hit++; }
+        if(!r) return;
+        if(r.div){ x.div = r.div; _hit++; }
+        /* 라인2 도 같은 조인에서 얻는다 — 실적 시트에는 `Line 2` 열이 없다.
+           같은 find() 결과를 쓰므로 조인을 한 번 더 돌지 않는다. */
+        if(r.line2) x.line2 = r.line2;
       });
       window._DIVJOIN = { n: WK.length, hit: _hit };   // 조인율은 화면에 밝힌다(조용히 빼지 않는다)
     }
@@ -1375,10 +1387,11 @@ function fillFilters(){
          (Floor·CIP 와 같은 규약). 못 붙는 행은 빈 값 그대로 두어 loose 로 통과시킨다 —
          버리면 «사업부를 고르면 실적이 반으로 준다»가 된다. */
       WK.forEach(function(x){ out.push({region:x.region,op:x.op,customer:x.custB,
-        div:x.div||'', campus:x.campus,line:x.line}); });
+        div:x.div||'', line2:x.line2||'', campus:x.campus,line:x.line}); });
       INST.slice(HI_INST+1).forEach(function(r){
         out.push({ region:GST.ORG.region(r[CI.country]), op:String(r[CI.country]||'').trim(), customer:custBase(r[CI.customer]),
                    div:String((CI.div>=0?r[CI.div]:'')||'').trim(),
+                   line2:String((CI.line2>=0?r[CI.line2]:'')||'').trim(),
                    campus:GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country]), line:String(r[CI.fab]||'').trim() });
       });
       return out;
@@ -1395,7 +1408,7 @@ function fillFilters(){
        사업부 칸이 늘 「전체 (자료 없음)」이었다 — 표에는 7,172행이 들어 있는데도(실측).
        빈 칸은 «자료가 없다»로 읽히므로 사용자는 업로드를 의심하게 된다. */
     get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer, div:x=>x.div,
-          campus:x=>x.campus, line:x=>x.line, team:x=>x.team },
+          campus:x=>x.campus, line:x=>x.line, line2:x=>x.line2, team:x=>x.team },
     /* ⚠ rows() 가 «세 패밀리»를 섞어 넘긴다 — 실적(WK)·설치(INST)·인원(ROSTER).
        패밀리마다 있는 축이 다르다:
          · 팀            → 인원에만 있다
@@ -1411,8 +1424,9 @@ function fillFilters(){
     /* 이제 이 블록은 «설비 자료»만 본다(실적+설치) — 패밀리가 하나라 교차 오염이 없다.
        사업부만 loose 다: 설치현황에만 있는 열이라 S/N 조인이 안 된 실적 행은 빈 값인데,
        그걸 거르면 「사업부를 고르면 실적이 반으로 준다」가 된다. */
-    loose:{ div:1 },
-    drop:{ customer:GST.FILT_DROP_CUST, line:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
+    loose:{ div:1, line2:1 },
+    drop:{ customer:GST.FILT_DROP_CUST, line:GST.FILT_DROP_ORG,
+           line2:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
   syncCommon();
 }
 function render(){
@@ -1442,7 +1456,7 @@ function render(){
   const entOk=x=>axOkF('region',(x.region||GST.ORG.region(x.op||'')))
     &&axOkF('op',String(x.op||'').trim())
     &&(!F.country||x.country===F.country)&&axOkF('customer',x.custB)
-    &&divOk(x.div)&&campOk(x.campus)&&lineOk(x.line);
+    &&divOk(x.div)&&line2Ok(x.line2)&&campOk(x.campus)&&lineOk(x.line);
   // QBR 매크로 정합: 작업내역은 사이트 키 행만 집계(라인 미기재·기타 행 제외) — 매크로 NarrowUp과 동일
   // 라인 열만으로 판정하면 PSMC처럼 라인 표기가 다른 사이트 행이 누락된다 → 라인+고객사 통합 판정
   /* 예전에는 대만 사이트 어휘만 통과시켰다(F16·PSMC·WINBOND…). 국내·중국·미국 실적이
@@ -1498,7 +1512,7 @@ function render(){
   const krLineOf  =x=>F.krOrg==='sheet' ? (x.srcLine||x.lineN ||'') : (x.lineN ||x.srcLine||'');
   const krOk=x=>axOkF('region',x.region)&&axOkF('op',x.op)
     &&(!F.country||GST.ORG.country(x.op)===F.country)
-    &&axOkF('customer',x.custB)&&divOk(x.div)&&campOk(krCampusOf(x))&&lineOk(krLineOf(x))
+    &&axOkF('customer',x.custB)&&divOk(x.div)&&line2Ok(x.line2)&&campOk(krCampusOf(x))&&lineOk(krLineOf(x))
     &&(!_fromS||(x.d&&x.d>=_fromS))&&(!_toS||(x.d&&x.d<=_toS));
   /* 원장에 해외 설비로 조인되는 행이 섞여 들어오면 대만은 «수선실적 BM + 원장» 으로
      이중 계산된다. 이 원장은 국내용이라는 약속이므로, 해외로 판정된 행만 뺀다
@@ -1566,6 +1580,7 @@ function render(){
     if(F.country&&c!==F.country)return false;
     if(!axOkF('customer',custBase(r[CI.customer])))return false;
     if(!divOk(CI.div>=0?r[CI.div]:''))return false;
+    if(!line2Ok(CI.line2>=0?r[CI.line2]:''))return false;
     if(!campOk(GST.ORG.campus(r[CI.location],r[CI.fab],r[CI.country])))return false;
     if(!lineOk(r[CI.fab]))return false;
     return true;

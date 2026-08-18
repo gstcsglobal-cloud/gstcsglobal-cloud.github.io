@@ -748,7 +748,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(114);   // GST.numv 를 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(121);   // GST.numv · 라인2 축을 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -771,6 +771,13 @@ function instDiv(code,sn){
   if(!INSTIX) return '';
   const rec=INSTIX.find(code,sn);
   return (rec&&rec.div)?rec.div:'';
+}
+/* 라인2 — 국내 설치현황의 `Line 1` 아래 단(`Line 2`). 사업부와 같은 규약(조인 · loose).
+   못 붙은 행은 빈 값 — '미상' 으로 세우면 «자료 없음»이 하나의 라인이 된다. */
+function instLine2(code,sn){
+  if(!INSTIX) return '';
+  const rec=INSTIX.find(code,sn);
+  return (rec&&rec.line2)?rec.line2:'';
 }
 
 // 자재실적 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
@@ -948,6 +955,7 @@ async function loadData(){ GST.skeleton(true);
         fab: GST.ORG.fab(cv(r,'line')),
         floor: instFloor(cv(r,'eq')||cv(r,'mainEq'), cv(r,'sn')),
         div:   instDiv(cv(r,'eq')||cv(r,'mainEq'), cv(r,'sn')),
+        line2: instLine2(cv(r,'eq')||cv(r,'mainEq'), cv(r,'sn')),
         process: GST.canon.proc(cv(r,'process')),
         detail: GST.nfw(cv(r,'detail')).toUpperCase(),
         eq: GST.canon.eq(cv(r,'eq') || cv(r,'mainEq')),
@@ -998,9 +1006,11 @@ function fillSelect(id,fkey,vals){GST.fillSelect(id,fkey,vals,F,t('all'));}
 function rebuildFilters(){
   GST.filters.mount({ page:'material', rows:()=>DATA, onChange:render,
     get:{ region:x=>x.region, op:x=>x.op, customer:x=>x.customer,
-          campus:x=>x.campus, line:x=>x.line, div:x=>x.div, date:x=>x.workDate },
-    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG },
-    loose:{ div:1 } });   // 조인 안 되는 행은 빼지 않는다(버리면 건수가 반으로 준다)
+          campus:x=>x.campus, line:x=>x.line, line2:x=>x.line2,
+          div:x=>x.div, date:x=>x.workDate },
+    drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG,
+           line:GST.FILT_DROP_ORG, line2:GST.FILT_DROP_ORG },
+    loose:{ div:1, line2:1 } });   // 조인 안 되는 행은 빼지 않는다(버리면 건수가 반으로 준다)
   fillSelect('sl-country','country',uniq('country'));
   // FAB 목록은 데이터에 실제로 나온 것만 — 하드코딩 7키가 F10·F15를 빠뜨리던 문제
   fillSelect('sl-floor','floor',uniq('floor')); fillSelect('sl-process','process',uniq('process'));

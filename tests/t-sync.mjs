@@ -137,6 +137,21 @@ const resolve = (header, name) => {
     ok(cm.C.state === resolve(H, GST.SM.SPEC.inst.fields.state),
        `설치현황 state 열 번호가 같다 (${cm.C.state})`);
   }
+  /* 라인2(`Line 2`) 도 같은 처지다 — 국내 양식에만 있는 열이라 이 픽스처(해외)에서는
+     둘 다 -1 이다. 그래도 «같은 이름»을 보는지는 지켜야 한다: 한쪽만 별칭을 늘리면
+     봇과 화면이 다른 열을 세게 되고, 봇이 읽는 미러 표에서 그 축이 통째로 빈다.
+     ⚠ 별칭을 하나로 못박는 것도 규약이다 — 해외의 `Line`(=Floor)을 여기 끌어오면
+       한 축에 두 차원이 섞인다(제1원칙: `Line`·`Line 1`·`Line 2` 는 서로 다른 열이다). */
+  {
+    const a = [].concat(GST.SM.SPEC.inst.fields.line2).map(hnorm).join('|');
+    const b = [].concat(HR.install.line2).map(hnorm).join('|');
+    ok(a === b && !!a, `설치현황 line2 별칭: core.js [${a}] ↔ hr.js [${b}]`);
+    ok((GST.SM.SPEC.inst.opt || []).indexOf('line2') >= 0,
+       '설치현황 line2 가 opt 에 있다 (그 열이 없는 해외 양식이 거부되지 않게)');
+    ok(a === 'line2', `line2 별칭은 «Line 2» 하나뿐이다 — Line/Line 1 과 섞으면 안 된다 (${a})`);
+    ok(cm.C.line2 === resolve(H, GST.SM.SPEC.inst.fields.line2),
+       `설치현황 line2 열 번호가 같다 (${cm.C.line2})`);
+  }
   let ord = 0;
   for (const [ck, hk] of Object.entries(same)) {
     const a = [].concat(GST.SM.SPEC.inst.fields[ck]).map(hnorm).join('|');
