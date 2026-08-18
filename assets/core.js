@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 116;
+GST.VER = 118;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1120,26 +1120,31 @@ GST.SM.SPEC = {
    ⚠ 어휘는 운영단위마다 다를 수 있다(사용자 지적). 그래서 «무엇이 잡혔는지»를 셀 수 있게
      matched() 를 둔다 — 화면이 그 목록을 보여 주면 사람이 규칙을 고쳐 줄 수 있다. */
 GST.PM = {
-  KR_RE: /설비PM|SWAP/,
+  /* 국내 조치 어휘. 빠진 낱말이 있으면 여기 한 곳만 고친다.
+     ⚠ 이 경로는 «국내 전용»이다(v118 · 사용자 확정: 「해외는 기존 로직 그대로」).
+       한때 구분을 안 가리게 합쳤다가 되돌렸다 — 해외는 예전처럼 작업단계 TBM 만 본다. */
+  KR_ACT_RE: /설비PM|SWAP/,
   SVC: ['BM', 'CBM', 'CM', 'CRM'],
   norm: function(v){ return GST.upk(String(v == null ? '' : v)).replace(/\s/g, ''); },
   stg:  function(v){ return String(v == null ? '' : v).trim().toUpperCase().replace(/\s/g, ''); },
-  /* x = {region, stage, action}.
-     · 작업단계 TBM 은 «어느 구분이든» PM 이다 — 단계가 이미 그렇게 적혀 있으면 PM 이다.
-     · 국내는 거기에 「조치」 경로가 «더» 붙는다: 조치에 «설비 PM»·«SWAP» 이면 작업단계가
-       무엇이든(BM 이라도) PM 이다(사용자 확정). 국내는 TBM 으로만 PM 을 하지 않기 때문이다.
-     ⚠ 「국내는 조치만 본다」로 두면 조치가 빈 국내 TBM 행이 PM 에서 빠진다 — 단계가 이미
-       TBM 인데 안 세는 셈이라 사용자가 바로 짚었다. 두 경로는 «또는»이다. */
+  /* x = {region, stage, action}. 사용자 확정(v118):
+       · 작업단계 TBM 이면 PM — 어느 구분이든. 단계가 이미 그렇게 적혀 있으면 PM 이다.
+       · 국내는 «거기에 더해» 「조치」에 «설비 PM»·«SWAP» 이면 작업단계가 무엇이든(BM 이라도) PM.
+       · 해외는 예전 로직 그대로 — 작업단계만 본다.
+     ⚠ 두 경로는 «또는»이다. 「국내는 조치만 본다」로 두면 조치가 빈 국내 TBM 행이 PM 에서
+       빠지고(v116 에 사용자가 짚었다), 「TBM 만 본다」로 두면 국내 PM 이 통째로 빠진다(v113).
+     ⚠ 조치 경로를 해외까지 넓혔다가 되돌렸다(v117→v118) — 국내가 별도 계통이라는 것이
+       사용자 확정이다. 해외 시트의 조치 어휘가 같은 뜻이라는 근거가 없다. */
   is: function(x){
     if(!x) return false;
     if(GST.PM.stg(x.stage) === 'TBM') return true;
-    if(x.region === GST.ORG.REGION_KR) return GST.PM.KR_RE.test(GST.PM.norm(x.action));
-    return false;
+    if(x.region !== GST.ORG.REGION_KR) return false;
+    return GST.PM.KR_ACT_RE.test(GST.PM.norm(x.action));
   },
   // 국내에서 «조치 때문에» 잡힌 행인가 — 어휘를 보여 줄 때 TBM 행과 섞이지 않게 가른다
   byAction: function(x){
     return !!x && x.region === GST.ORG.REGION_KR && GST.PM.stg(x.stage) !== 'TBM'
-           && GST.PM.KR_RE.test(GST.PM.norm(x.action));
+           && GST.PM.KR_ACT_RE.test(GST.PM.norm(x.action));
   },
   /* 정비성 작업 — 공수 차트의 «전체»다. 설치(반입·SET-UP·TURN-ON)는 뺀다.
      국내에서 조치로 PM 이 잡힌 행은 작업단계가 무엇이든 여기 들어온다 — 안 그러면
@@ -1153,7 +1158,7 @@ GST.PM = {
   // 非PM — «PM 이 아닌 정비성 작업». 겹침이 생기지 않는 유일한 정의다.
   svc: function(x){ return GST.PM.maint(x) && !GST.PM.is(x); },
   /* 국내에서 «어떤 조치 값이 PM 으로 잡혔나» — 값별 건수. 운영단위마다 어휘가 다르므로
-     화면이 이것을 보여 줘야 사람이 빠진 낱말을 알려 줄 수 있다.
+     이 목록이 있어야 빠진 낱말을 사람이 알려 줄 수 있다(화면에는 안 적는다 — 물으면 답한다).
      ⚠ TBM 으로 잡힌 행은 빼고 센다. 그 행들은 조치가 비어 있어도 PM 이라 «(공란) 120건»
        같은 줄이 목록을 덮어 버린다 — 이 목록의 쓸모는 «어떤 낱말이 잡히나»다. */
   matched: function(rows){
