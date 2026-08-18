@@ -454,6 +454,53 @@ console.log('\n[11] 공수 세부내역이 시트와 견줄 수 있는 꼴인지
      'report — 건수도 적는다 (합계가 다르면 «몇 건이 다른가»가 첫 단서다)');
 }
 
+/* ══════════════════════════════════════════════════════════════
+   [12] 제3원칙 — 국내 전용 분기가 «사라지지» 않았는지 (v119)
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[12] 국내 전용 규칙이 해외와 합쳐지지 않았는지 (제3원칙)');
+{
+  /* 사용자 확정 — 「국내는 지금부터 내가 말하는 게 다 해외와 별도의 기준이라고 생각하면 된다.」
+     ⚠ «통일»이 개선처럼 보일 때가 위험하다. 실제로 한 번 합쳤다가 되돌렸다(v117→v118) —
+       조치 경로를 해외까지 넓혔는데 사용자 뜻은 정반대였다.
+     판정 «함수»를 하나로 모으는 것(제2원칙)과 규칙을 한 벌로 «만드는» 것은 다른 일이다.
+     함수는 하나여야 하지만, 그 안의 구분 분기는 남아 있어야 한다. */
+  const KRB = [
+    [CORE, /if\(x\.region !== GST\.ORG\.REGION_KR\) return false;/,
+     'PM 판정 — 조치 경로는 국내 전용 (해외는 작업단계만)'],
+    [CORE, /if\(x\.region === GST\.ORG\.REGION_KR\) return true;/,
+     '非PM 범위 — 국내는 PM 을 뺀 작업건 전부 (해외는 4단계만)'],
+    [CORE, /SVC: \['BM', 'CBM', 'CM', 'CRM'\]/,
+     '해외 4단계 목록이 그대로 남아 있다 (별도 지시 전까지 유지)'],
+    [CORE, /byAction: function\(x\)\{\s*return !!x && x\.region === GST\.ORG\.REGION_KR/,
+     '조치 어휘 집계도 국내만 센다'],
+    [noCmt(rd('report/index.html')), /const KR_ON\s*=|KR_ON/,
+     '국내 알람 원장 분기(KR_ON)가 살아 있다 (v92)'],
+  ];
+  KRB.forEach(function(t){ is(t[1].test(t[0]), '남아 있다 — ' + t[2]); });
+
+  /* 해외 기준이 «움직이지 않았는지» — 국내를 고치다 해외가 따라 움직이면 그것이 사고다. */
+  const m = CORE.match(/GST\.PM = \{[\s\S]*?\n\};/);
+  if (m) {
+    const G = { upk: v => String(v == null ? '' : v).toUpperCase(), ORG: { REGION_KR: '국내' } };
+    new Function('GST', m[0])(G);
+    const PM = G.PM, R = (rg, st, ac) => ({ region: rg, stage: st, action: ac });
+    /* 해외의 답은 v112 이전과 «한 자리도» 달라지면 안 된다. 그때 기준을 그대로 적어 둔다:
+       PM = TBM · 非PM = BM·CBM·CM·CRM · 그 밖은 아무것도 아니다. */
+    const OLD = [
+      ['TBM', true, false], ['BM', false, true], ['CBM', false, true],
+      ['CM', false, true], ['CRM', false, true],
+      ['반입', false, false], ['SET-UP', false, false], ['TURN-ON', false, false],
+      ['처음보는단계', false, false], ['', false, false],
+    ];
+    let same = true, bad = '';
+    OLD.forEach(function(c){
+      const x = R('해외', c[0], 'SWAP PM');   // 조치를 채워 둬도 해외는 안 봐야 한다
+      if(PM.is(x) !== c[1] || PM.svc(x) !== c[2]){ same = false; bad += ' ' + (c[0]||'(공란)'); }
+    });
+    is(same, '해외 판정이 옛 기준과 한 자리도 다르지 않다' + (same ? '' : ' ⚠ 어긋난 단계:' + bad));
+  }
+}
+
 console.log('\n' + (fail ? '❌ t-quiet ' + fail + ' 실패 / ' + (pass + fail)
                          : '✅ t-quiet ' + pass + '/' + pass));
 process.exit(fail ? 1 : 0);
