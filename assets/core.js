@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 103;
+GST.VER = 104;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -307,11 +307,16 @@ GST.sheetWrite = async function(op, gid, body, params){
    2행이면 dup_key. 낙관적 잠금은 행 전체를 직렬화한 지문(baseHash)으로 유지한다. */
 GST.DBW = {
   '1213453343': {
-    table:'sheet_roster', keyField:'id', keyCol:'ID', nameField:'name', cascadeTo:'0',
+    table:'sheet_roster', keyField:'id', keyCol:['사원번호','ID'], nameField:'name', cascadeTo:'0',
     required:['id','name','join'],
-    cols:{ id:'ID', name:'Name((영문)', cn:'Name(중문)', dept:'Dept.', level:'Position Level',
-           wp:'Work Place', role:'2025 Position Role', join:'Date of entry', quit:'Resignation',
-           org:'조직도 위치', posKo:'직급', duty:'업무/직책', onsite:'현장 인원여부' }
+    /* 양식이 세 벌이라 별칭으로 받는다 — 새 한글 · 한글 · 옛 영문 순. 읽기(hr·report·
+       kakao-bot)가 이미 이 순서를 쓰고 있고, 쓰기만 옛 영문에 묶여 있었다. */
+    cols:{ id:['사원번호','ID'], name:['이름(영문)','Name((영문)'], cn:['이름(중문)','Name(중문)'],
+           dept:['부서','Dept.'], level:['직급(레벨)','Position Level'],
+           wp:['근무지','Work Place'], role:['담당업무','2025 Position Role'],
+           join:['입사일','Date of entry'], quit:['퇴사일','Resignation'],
+           org:['담당구분','조직도 위치'], posKo:['직급(한글)','직급'],
+           duty:['업무/직책'], onsite:['현장 인원여부'] }
   },
   '0': {
     table:'sheet_edu', keyField:'id', keyCol:'사원번호', nameField:'name',
@@ -347,9 +352,20 @@ GST._dbwColMap = function(rowObj){
   Object.keys(rowObj||{}).forEach(function(k){ if(!GST._CSV_SKIP[k]) m[GST.SM.norm(k)] = k; });
   return m;
 };
+/* 컬럼 이름을 «별칭 배열»로 받는다 — 인원명단 양식이 세 벌이라(옛 영문 · 한글 · 새 한글)
+   읽기 세 곳은 이미 별칭으로 흡수하는데 **쓰기만 단일 문자열이었다**(제2원칙 그대로의 자리).
+   그래서 v96 새 양식 이후 hr 의 인원 편집이 아무에게도 안 열렸고(빈 `ID` 열로 찾아 0행),
+   신규 등록은 «저장됨»이라 답하고 옛 열에 값을 넣어 어느 화면에도 안 보였다.
+   ⚠ 순서가 규약이다 — «새 양식 먼저». Import 표는 ALTER 로 열을 맨 뒤에 붙이므로
+     빈 `ID` 가 앞, 채워진 `사원번호` 가 뒤에 온다. 이름 순서로 고르면 빈 열을 집는다. */
+GST._dbwPick = function(cmap, want){
+  var list = Array.isArray(want) ? want : [want];
+  for(var i=0;i<list.length;i++){ var k = cmap[GST.SM.norm(list[i])]; if(k) return k; }
+  return null;
+};
 GST._dbwCol = function(cmap, want){
-  var k = cmap[GST.SM.norm(want)];
-  if(!k) throw GST._dbwErr('no_col', 500, {col:want});
+  var k = GST._dbwPick(cmap, want);
+  if(!k) throw GST._dbwErr('no_col', 500, {col:Array.isArray(want)?want.join('/'):want});
   return k;
 };
 /* 낙관적 잠금 지문 — 열이름순 직렬화의 FNV+djb2. sheet-write 의 SHA-256 과 형식은 다르지만
@@ -365,7 +381,7 @@ GST._dbwHash = function(rowObj){
 GST._dbwFields = function(W, rowObj){          // 표 행 → 페이지가 아는 논리 필드
   var cmap = GST._dbwColMap(rowObj), out = {};
   Object.keys(W.cols).forEach(function(f){
-    var k = cmap[GST.SM.norm(W.cols[f])];
+    var k = GST._dbwPick(cmap, W.cols[f]);
     if(k!=null) out[f] = rowObj[k]==null?'':String(rowObj[k]);
   });
   return out;
@@ -468,11 +484,25 @@ GST.dbWrite = async function(op, gid, body, params){
       try{ await GST._dbwFind(c, W, flds[W.keyField], null); throw GST._dbwErr('dup_key', 409); }
       catch(e){ if(e && e.data && e.data.error !== 'not_found') throw e; }
     }
+    /* ⚠ 별칭의 «첫 이름»을 그대로 쓰면 안 된다 — 표에 없는 옛 열에 값을 넣게 되고,
+       insert 는 성공하는데(그 열이 남아 있으면) 파서는 «채워진 열»을 보므로 어느 화면에도
+       안 뜬다. «저장됨»이라 답하고 아무 데도 없는, 가장 설명하기 어려운 실패다.
+       그래서 표의 실제 열 목록을 한 번 읽어 거기서 고른다. */
+    var probeA = await c.from(W.table).select('*').limit(1);
+    if(probeA.error) throw GST._dbwErr('sheets_error', 500, {detail:probeA.error.message});
+    /* ⚠ «한 행 받아 키 보기»는 표가 비어 있으면 못 쓴다 — 그런데 첫 등록이 바로 그 순간이다.
+       행이 없으면 별칭의 «첫 이름»(=새 양식의 정본 이름)으로 넣는다. 행이 있으면 그 행의
+       실제 열에서 고른다 — 옛 열이 남아 있는 표에서 빈 열을 집지 않기 위해서다. */
+    var hasRowsA = !!(probeA.data && probeA.data.length);
+    var cmapA = GST._dbwColMap((probeA.data && probeA.data[0]) || {});
     var ins = {};
     Object.keys(flds).forEach(function(k){
       /* 시트 시절 잔재 필드(join·role·posKo 등 교육 표에서 없어진 열)는 버린다 —
          페이지가 아직 보내지만 담을 열이 없다. 여기 한정으로 의도된 무시다. */
-      if(W.cols[k]) ins[W.cols[k]] = String(flds[k]);
+      var want = W.cols[k]; if(!want) return;
+      var col = hasRowsA ? GST._dbwPick(cmapA, want)
+                         : (Array.isArray(want) ? want[0] : want);
+      if(col) ins[col] = String(flds[k]);
     });
     if(!Object.keys(ins).length) throw GST._dbwErr('bad_value', 400);
     var ri = await c.from(W.table).insert(ins).select('*');
@@ -1802,7 +1832,13 @@ GST.SM.panel = function(){
      JSON 으로 374MB 다(실측 257,606행). setItem 이 QuotaExceededError 를 던지고
      아래 catch 가 그걸 삼킨다 — 캐시가 없는 것과 같은데 아무 흔적이 없다.
      큰 표는 GST.idb(IndexedDB) 로 간다. 이 함수는 시트 경로 폴백용으로 남는다. */
+/* localStorage 한도는 5~10MB 다. 수선실적은 푼 JSON 이 374MB 라(실측) stringify 자체가
+   수백 MB 를 만들었다 버리는 헛돈이고, setItem 은 «반드시» QuotaExceeded 로 던진다 —
+   캐시가 없는 것과 결과는 같은데 매 로드마다 그 비용만 낸다. 큰 표는 IndexedDB(GST.idb)가
+   맡으므로 여기서는 아예 시도하지 않는다. 경계는 넉넉히 잡았다(한 행 38열 기준 약 5MB). */
+GST.CACHE_MAX_ROWS = 20000;
 GST.cacheSave=function(key,rows){
+  if(!rows || rows.length > GST.CACHE_MAX_ROWS){ GST._cacheSkip=(GST._cacheSkip||0)+1; return; }
   try{ localStorage.setItem('gstc_'+key, JSON.stringify({t:Date.now(),rows})); }
   catch(e){ GST._cacheQuota=(GST._cacheQuota||0)+1; }   // 조용히 버리지 않고 세어 둔다
 };
@@ -2429,7 +2465,7 @@ GST.initSidebar = function(opts){
     const ab=document.createElement('button'); ab.className='gst-sb-tool'; ab.type='button';
     ab.title='10분마다 데이터만 다시 불러옵니다. 필터는 유지됩니다.';
     function arOn(){ try{ return localStorage.getItem('gst_auto_refresh')!=='0'; }catch(e){ return true; } }
-    function syncAr(){ ab.textContent='⟳ 자동 10분 · '+(arOn()?'ON':'OFF'); ab.classList.toggle('on',arOn()); }
+    function syncAr(){ ab.textContent='⟳ 자동 '+GST.AR_MIN+'분 · '+(arOn()?'ON':'OFF'); ab.classList.toggle('on',arOn()); }
     ab.onclick=function(){ try{ localStorage.setItem('gst_auto_refresh', arOn()?'0':'1'); }catch(e){} syncAr(); };
     syncAr();
     tools.appendChild(ab);
@@ -2550,6 +2586,9 @@ GST._restoreFilters = function(snap){
   // 날짜 입력을 복원한 뒤 적용 버튼이 있으면 마지막에 눌러 기간을 재적용 (설치 현황)
   const ap=sb.querySelector('.apply-btn'); if(ap) ap.click();
 };
+/* 사이드바 버튼이 «자동 10분» 이라고 적혀 있는데 실제 주기는 30분이었다. 화면이 사실과
+   다른 말을 하면 사용자는 «안 도는 것»으로 읽는다. 주기를 한 곳에 두고 라벨이 따라간다. */
+GST.AR_MIN = 30;
 GST.startAutoRefresh = function(min){
   if(GST._arTimer) return;
   const fn = window.loadData || window.loadAll;
@@ -2618,7 +2657,10 @@ GST.filters = (function(){
      사업부는 국내 자료에만 있다(해외 설치현황에는 그 열이 없다). 값이 없는 화면에서는
      「전체 (자료 없음)」으로 잠긴다 — 칸이 나타났다 사라지면 그게 더 헷갈린다. */
   const L = { region:'구분', op:'운영단위', div:'사업부', customer:'고객사', campus:'단지', line:'라인', team:'팀', period:'기간' };
-  const val = (g, x) => { try{ const v = g ? g(x) : ''; return v==null?'':String(v).trim(); }catch(e){ return ''; } };
+  /* 같은 표 안에서 연속 공백이 흔들린다(실측: `GST CHINA(WUHAN)··SCRUBBER`). 그대로 두면
+     한 법인이 목록에 두 줄로 뜨고, 어느 쪽을 고르느냐에 따라 설비가 반씩 갈린다 —
+     v98 이 「남은 문제 ③」으로 적어 둔 자리다. 공백만 눕힌다(낱말은 시트 값 그대로). */
+  const val = (g, x) => { try{ const v = g ? g(x) : ''; return v==null?'':String(v).replace(/\s+/g,' ').trim(); }catch(e){ return ''; } };
   const dstr = v => {
     if(!v) return '';
     if(v instanceof Date) return isNaN(v)?'':v.toISOString().slice(0,10);
@@ -4829,7 +4871,7 @@ function gstAutoStart(){
   /* 10분 → 30분. 한 번의 새로고침이 시트 8개를 통째로 다시 받는다(주간현황 기준).
      10분이면 한 사람이 하루 8시간 열어두는 것만으로 하루 768MB — 무료 5GB가 일주일에 사라진다.
      시트는 그렇게 자주 바뀌지 않고, 미러 자체도 30분 주기로 돈다(sheet-sync/DEPLOY.md). */
-  try{ GST.startAutoRefresh(30); }catch(e){}
+  try{ GST.startAutoRefresh(GST.AR_MIN); }catch(e){}
   try{ gstSnStart(); }catch(e){}
 }
 if(document.readyState==='loading'){

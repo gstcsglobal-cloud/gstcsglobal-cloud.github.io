@@ -270,5 +270,64 @@ console.log('\n[9] RLS 거부 — 0행 반환을 «저장됨»으로 오인하�
   catch (e) { codeOf(e) === 'read_only' ? ok('0행 반환 → read_only 로 표면화') : err('read_only 대신 ' + codeOf(e)); }
 }
 
+console.log('\n[10] 인원명단 새 양식(v96) — 빈 ID 옆에 채워진 사원번호가 있을 때');
+{
+  /* 실측 상태: ALTER 로 새 한글 열이 «맨 뒤»에 붙어, 옛 ID·Date of entry 는 빈 채 남아 있다.
+     이름 순서로 고르면 빈 열을 집어 편집이 아무에게도 안 열렸고(0행 → not_found),
+     신규 등록은 옛 열에 값을 넣어 «저장됨»이라 하고 어느 화면에도 안 보였다. */
+  const t = {
+    allowed_users: { cols: AU_COLS, rows: [{ email:'tester@x.com', can_write:true }] },
+    sheet_roster: {
+      cols: ['ID','Name((영문)','Date of entry','Resignation','조직도 위치','직급',
+             '사원번호','이름(영문)','입사일','퇴사일','담당구분','직급(한글)'],
+      rows: [{ 'ID':'', 'Name((영문)':'', 'Date of entry':'', 'Resignation':'', '조직도 위치':'', '직급':'',
+               '사원번호':'E9', '이름(영문)':'HONG', '입사일':'2024-03-02', '퇴사일':'',
+               '담당구분':'Scrubber', '직급(한글)':'사원' }]
+    },
+    sheet_edu: { cols:['사원번호','Site','인원','Basic 교육완료일','Veteran 교육완료일',
+                       'Scrubber Lv.2 교육완료일','Scrubber Lv.3 교육완료일'], rows: [] }
+  };
+  useDb(t);
+  // ① 편집이 열린다 — 채워진 «사원번호» 로 찾아야 한다
+  try {
+    const r = await G.dbWrite('row', GID_R, null, { key:'E9' });
+    (r && r.fields && r.fields.id === 'E9' && r.fields.name === 'HONG')
+      ? ok('새 양식에서 편집이 열린다 (사번·이름을 채워진 열에서 읽는다)')
+      : err('행은 찾았는데 필드가 비었다: ' + JSON.stringify(r && r.fields));
+  } catch (e) { err('새 양식에서 편집이 안 열린다 → ' + codeOf(e)); }
+
+  // ② 저장이 «채워진» 열에 들어간다 — 옛 열에 쓰면 어느 화면에도 안 보인다
+  try {
+    await G.dbWrite('update', GID_R, { key:'E9', changes:{ posKo:'대리', quit:'2026-08-01' } }, {});
+    const row = t.sheet_roster.rows[0];
+    (row['직급(한글)'] === '대리' && row['퇴사일'] === '2026-08-01' && row['직급'] === '' && row['Resignation'] === '')
+      ? ok('저장이 새 한글 열에 들어간다 (옛 영문 열은 그대로 빈 채)')
+      : err('옛 열에 썼다: 직급=' + row['직급'] + ' / Resignation=' + row['Resignation']);
+  } catch (e) { err('저장 실패 → ' + codeOf(e)); }
+
+  // ③ 신규 등록도 새 열로
+  try {
+    await G.dbWrite('append', GID_R, { fields:{ id:'E10', name:'KIM', join:'2026-08-18', org:'Scrubber' } }, {});
+    const row = t.sheet_roster.rows.find(r => r['사원번호'] === 'E10');
+    (row && row['입사일'] === '2026-08-18' && row['담당구분'] === 'Scrubber' && !row['ID'] && !row['Date of entry'])
+      ? ok('신규 등록이 새 한글 열에 들어간다')
+      : err('신규 등록이 옛 열로 갔다: ' + JSON.stringify(row));
+  } catch (e) { err('신규 등록 실패 → ' + codeOf(e)); }
+
+  // ④ 옛 영문 양식만 있는 표도 그대로 동작해야 한다(회귀)
+  const t2 = {
+    allowed_users: { cols: AU_COLS, rows: [{ email:'tester@x.com', can_write:true }] },
+    sheet_roster: { cols:['ID','Name((영문)','Date of entry','Resignation','조직도 위치','직급'],
+      rows:[{ 'ID':'E1','Name((영문)':'LEE','Date of entry':'2020-01-01','Resignation':'','조직도 위치':'Scrubber','직급':'사원' }] },
+    sheet_edu: { cols:['사원번호','Site','인원'], rows: [] }
+  };
+  useDb(t2);
+  try {
+    const r = await G.dbWrite('row', GID_R, null, { key:'E1' });
+    (r && r.fields && r.fields.name === 'LEE') ? ok('옛 영문 양식도 그대로 열린다(회귀 없음)')
+      : err('옛 양식이 깨졌다: ' + JSON.stringify(r && r.fields));
+  } catch (e) { err('옛 양식이 깨졌다 → ' + codeOf(e)); }
+}
+
 console.log(`\n${bad ? '❌' : '✅'} ${n - bad}/${n} 통과`);
 process.exit(bad ? 1 : 0);

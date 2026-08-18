@@ -261,6 +261,17 @@ console.log('\n[7-3] 단지는 여러 개를 동시에 고를 수 있다 (Set) �
      'core — 페이지가 쓸 안전한 API(set·toggle·hit)가 있다');
   is(/if\(MULTI\[k\]\)\{ F\[k\]\.clear\(\); \(Array\.isArray\(v\)\?v:\(v\?\[v\]:\[\]\)\)\.forEach/.test(CORE),
      'core — set 본문이 다중 축을 여전히 Set 으로 채운다');
+  /* 같은 표 안에서 연속 공백이 흔들린다(실측 `GST CHINA(WUHAN)··SCRUBBER`). 안 눕히면
+     한 법인이 목록에 두 줄로 떠서, 어느 쪽을 고르느냐에 따라 설비가 반씩 갈린다. */
+  is(/String\(v\)\.replace\(\/\\s\+\/g,' '\)\.trim\(\)/.test(CORE),
+     'core — 축 값의 연속 공백을 눕힌다 (v98 「남은 문제 ③」)');
+  /* localStorage 한도는 5~10MB 인데 수선실적은 푼 JSON 이 374MB 다 — stringify 자체가
+     헛돈이고 setItem 은 반드시 던진다. 큰 표는 시도조차 하지 않아야 한다. */
+  is(/GST\.CACHE_MAX_ROWS/.test(CORE) && /rows\.length > GST\.CACHE_MAX_ROWS/.test(CORE),
+     'core — 큰 표는 localStorage 캐시를 시도하지 않는다');
+  /* 사이드바 버튼이 «자동 10분» 이라고 적혀 있는데 실제 주기는 30분이었다. */
+  is(!/⟳ 자동 10분/.test(CORE) && /자동 '\+GST\.AR_MIN\+'분/.test(CORE),
+     'core — 자동 새로고침 라벨이 실제 주기를 말한다');
   // 음성 대조 — 페이지가 campus 를 문자열처럼 다루면 조용히 전부 false 가 된다
   // 주석은 뺀다 — 「이렇게 쓰지 말 것」이라 적어 둔 설명이 검사에 걸리면 안 된다
   const nocom = t => t.replace(/\/\*[\s\S]*?\*\//g, '');
