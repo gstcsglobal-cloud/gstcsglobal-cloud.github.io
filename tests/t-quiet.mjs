@@ -154,6 +154,62 @@ console.log('\n[4] 분모에서 뺀 설비를 화면이 밝히는지 (v99)');
   is(/outN:_outN,unkN:_unkN/.test(SRC.fault), 'fault — 제외 사유를 둘로 나눠 돌려준다');
 }
 
+/* ══════════════════════════════════════════════════════════════
+   [5] 검사가 «자기가 검사할 것»을 기준으로 삼지 않는지
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[5] src_row 규칙이 세 곳에서 같은지 (픽스처 없이)');
+{
+  /* src_row 는 미러 표의 PK 다. 배포된 sheet-sync 는 `for(off=0; …) toRows(slice,cmap,off)`
+     라 «빈 행을 걸러낸 뒤의 0부터의 순번»인데, 업로드 화면의 미러 경로만 hi+1 을 더하고
+     있었다(주석에는 「sheet-sync 와 동일」이라 적혀 있었다).
+     같은 표에 두 경로가 닿으면 PK 가 어긋나 upsert 가 매칭에 실패한다 — 옛 행이 안 지워지고
+     새 행이 얹혀 표가 조용히 두 배가 된다. 실적 3종 cron 은 멈춰 있을 뿐 코드는 남아 있다.
+     ⚠ 그런데 t-upload 는 이것을 못 잡았다. 기준을 만들 때 «페이지가 쓰는 오프셋»을
+       그대로 먹이고 있어서, 페이지가 무엇을 쓰든 기준이 따라 움직였다.
+       검사가 검사 대상을 기준으로 삼으면 언제나 초록불이다. */
+  const SYNC = noCmt(rd('supabase/functions/sheet-sync/index.ts'));
+  const UP   = noCmt(rd('upload/index.html'));
+  const TU   = noCmt(rd('tests/t-upload.mjs'));
+
+  is(/for \(let off = 0; off < data\.length; off \+= BATCH\)[\s\S]{0,200}?toRows\(data\.slice\(off, off \+ BATCH\), cmap, off, header\)/.test(SYNC),
+     'sheet-sync — src_row 는 0 부터의 순번이다 (배포 코드가 정본)');
+  is(/const o=\{src_row:i\};/.test(UP),  '업로드 화면(미러 경로) — 같은 규칙(0 부터)');
+  is(/o\.src_row=i;/.test(UP),           '업로드 화면(알람·올바 경로) — 같은 규칙(0 부터)');
+  is(!/src_row:m\.hi\+1\+i/.test(UP),   '업로드 화면이 hi+1 을 더하지 않는다');
+  is(!/toRows\(plan\.data, plan\.cmap, plan\.hi \+ 1, plan\.header\)/.test(TU),
+     't-upload — 기준에 «페이지의 오프셋»을 먹이지 않는다');
+  is(/for \(let off = 0; off < plan\.data\.length; off \+= BATCH\)/.test(TU),
+     't-upload — 배포 sheet-sync 가 부르는 방식 그대로(배치 · off 0 부터) 기준을 만든다');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   [6] 챗봇이 대시보드와 «다른 기준»으로 답하면서 말은 안 하는지
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[6] 챗봇 BM 이 자기 기준을 밝히는지 (v92)');
+{
+  /* 사용자 결정(v92): 국내는 수선실적 BM 정합성이 안 맞아 「CS 알람관리」 원장으로 센다.
+     대만은 지금까지대로 수선실적 BM 이다 — 두 계통이 공존한다.
+     챗봇은 그 개편을 못 따라가 수선실적 stage 로만 센다. 그래서 «같은 질문에 대시보드와
+     다른 숫자»를 답하는데, 어느 쪽도 자기 기준을 말하지 않아 받아 본 사람은 둘 중 하나가
+     고장 난 줄로 읽는다.
+     ⚠ 원장을 챗봇에서 «파싱»하게 만들면 안 된다 — GST.ALARM(세 사이트 양식을 한 스키마로
+       눕히는 별칭 배열)을 Deno 로 옮기는 것이고, 그게 스펙의 네 번째 사본이다(제2원칙).
+       대시보드가 판정에 쓰는 조건(원장에 행이 있나)만 묻는다. 자료 질문이라 사본이 안 생긴다. */
+  const BOT = noCmt(rd('supabase/functions/kakao-bot/index.ts'));
+  is(/async function krLedgerNote\(/.test(BOT), 'kakao-bot — 원장이 실려 있는지 확인하는 자리가 있다');
+  is(/from\("sheet_alarm"\)\.select\("src_row", \{ count: "exact", head: true \}\)/.test(BOT),
+     'kakao-bot — 행수만 센다 (원장을 파싱하지 않는다 — 네 번째 사본을 안 만든다)');
+  is(/if \(!n\) return "";/.test(BOT),
+     'kakao-bot — 원장이 비었으면 아무 말도 안 한다 (그때는 대시보드도 수선실적 BM 이라 숫자가 같다)');
+  is(/대시보드 주간현황을 보세요/.test(BOT),
+     'kakao-bot — 증상만 알리지 않고 «무엇을 보면 되는지»까지 적는다');
+  is(/const krNote = await krLedgerNote\(svc\);/.test(BOT), 'kakao-bot — BM 사이트별 답변이 실제로 그것을 붙인다');
+  /* 메뉴 경로만 고치면 자유 질문(Claude 경로)이 여전히 조용히 다른 숫자를 답한다.
+     세 프롬프트 블록에 같은 말이 들어가야 한다 — 한 곳만 빠지면 그 경로로 물은 사람만 모른다. */
+  const n = (BOT.match(/국내 BM 은 대시보드가 수선실적이 아니라/g)||[]).length;
+  is(n === 3, '카톡·대시보드 챗봇 프롬프트 세 곳에 모두 적혀 있다 (실제 ' + n + '곳)');
+}
+
 console.log('\n' + (fail ? '❌ t-quiet ' + fail + ' 실패 / ' + (pass + fail)
                          : '✅ t-quiet ' + pass + '/' + pass));
 process.exit(fail ? 1 : 0);

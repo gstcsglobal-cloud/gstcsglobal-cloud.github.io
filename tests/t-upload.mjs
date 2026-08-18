@@ -99,7 +99,16 @@ for (const [key, file] of avail) {
 
   // ① 기준 — 배포 sync 코드의 결과
   const plan = planSync(G.SM.SPEC[key], cmapOf(key), csvText);
-  const want = toRows(plan.data, plan.cmap, plan.hi + 1, plan.header);
+  /* ⚠ 배포 sheet-sync 가 «부르는 방식» 그대로 부른다 — 배치로 자르고 off 는 0 부터.
+     예전에는 `toRows(plan.data, …, plan.hi + 1, …)` 로 «페이지가 쓰는 오프셋»을
+     기준에 그대로 먹였다. 그러면 src_row 규칙 자체가 검사 대상에서 빠진다 —
+     페이지가 오프셋을 바꿔도 기준이 따라 움직여 언제나 통과한다.
+     실제로 그 사이에 둘이 갈라져 있었고(페이지 hi+1 ↔ 배포 0) 검사는 초록불이었다. */
+  const BATCH = 2000;
+  const want = [];
+  for (let off = 0; off < plan.data.length; off += BATCH) {
+    want.push(...toRows(plan.data.slice(off, off + BATCH), plan.cmap, off, plan.header));
+  }
 
   // ② 실제 페이지 — 표 선택 + 파일 주입 + 업로드
   await page.evaluate(() => { window.__INS = []; window.__RPC = []; });

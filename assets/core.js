@@ -3741,7 +3741,7 @@ GST.pptAuto = async function(opt){
   const p = new PptxGenJS(); p.layout='LAYOUT_16x9';
   const title = (opt.title || (document.querySelector('.header h1')||{}).textContent || document.title || 'Dashboard').trim();
   const corp  = (opt.corp || GST.corpLabel()).toUpperCase();
-  const asOf  = opt.asOf || new Date().toISOString().slice(0,10);
+  const asOf  = opt.asOf || GST.ymdL();   // ⚠ toISOString 은 UTC — 오전 9시 이전에 어제가 찍힌다
   const meta  = asOf + ' 기준 · ' + GST.filtSummary();
 
   const header = function(s, sec){
@@ -3754,18 +3754,26 @@ GST.pptAuto = async function(opt){
     s.addShape(p.ShapeType.line, {x:X, y:0.86, w:W, h:0, line:{color:'000000', width:2.25}});
   };
   /* 칸 하나 — 검정 머리띠 + 흰 몸통. 양식의 «가. 인력현황» 칸과 같은 꼴이다. */
-  const slot = function(s, i, cap, oc){
+  const slot = function(s, i, it, span){
+    const cap=it.cap, oc=it.oc, tb=it.table;
     const c=i%COLS, r=Math.floor(i/COLS);
-    const x=X+(CW+GAP)*c, y=ROWY[r];
-    s.addText(cap, {x:x, y:y, w:CW, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
+    const x=X+(CW+GAP)*c, y=ROWY[r], w=CW*span+GAP*(span-1);
+    s.addText(cap, {x:x, y:y, w:w, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
                     fontSize:10, bold:true, valign:'middle', align:'center', margin:4,
                     line:{color:'000000', width:0.75}});
-    s.addShape(p.ShapeType.rect, {x:x, y:y+BAND, w:CW, h:BODY, fill:{color:'FFFFFF'}, line:{color:LINE, width:0.75}});
+    s.addShape(p.ShapeType.rect, {x:x, y:y+BAND, w:w, h:BODY, fill:{color:'FFFFFF'}, line:{color:LINE, width:0.75}});
+    if(tb){
+      s.addTable(tb.rows, {x:x+0.06, y:y+BAND+0.06, w:w-0.12, colW:tb.colW, fontFace:FONT,
+                           fontSize:tb.fontSize||8.5, color:INK, align:'center', valign:'middle',
+                           border:{type:'solid', color:LINE, pt:0.5},
+                           rowH:Math.max(0.20,(BODY-0.12)/tb.rows.length)});
+      return;
+    }
     if(!oc) return;
     /* 비율 유지로 칸 안에 «중앙 정렬». 늘려 채우면 막대 굵기가 칸마다 달라 보인다. */
-    const mw=CW-0.20, mh=BODY-0.16, ar=oc.width/oc.height;
-    let w=mw, h=w/ar; if(h>mh){ h=mh; w=h*ar; }
-    s.addImage({data:oc.toDataURL('image/png'), x:x+(CW-w)/2, y:y+BAND+(BODY-h)/2, w:w, h:h});
+    const mw=w-0.20, mh=BODY-0.16, ar=oc.width/oc.height;
+    let iw=mw, ih=iw/ar; if(ih>mh){ ih=mh; iw=ih*ar; }
+    s.addImage({data:oc.toDataURL('image/png'), x:x+(w-iw)/2, y:y+BAND+(BODY-ih)/2, w:iw, h:ih});
   };
 
   /* ⚠ `.cw canvas` 만 보면 안 된다 — 추이(.trend-wrap)·크로스(.cross-wrap) 카드의 차트가
@@ -3781,22 +3789,45 @@ GST.pptAuto = async function(opt){
     const h3 = card ? card.querySelector('h3') : null;
     items.push({cap:(h3 ? (h3.innerText||'').trim() : cv.id) || cv.id, oc:oc});
   }
+  /* 표도 «같은 칸»에 담는다. 차트만 담을 수 있으면, 표가 있는 페이지는 자기 덱을 따로
+     짤 수밖에 없고 그러면 장표 얼굴이 또 갈라진다(v100 에 hr 이 그랬다).
+     opt.tables = [{cap, rows:[[셀…]…], colW?, span?}] — span 은 가로로 차지할 칸 수. */
+  (opt.tables||[]).forEach(function(tb){
+    if(tb && tb.rows && tb.rows.length) items.push({cap:tb.cap||'', table:tb});
+  });
   hid.forEach(function(s){ s.style.display='none'; });
   if(hid.length){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }
   if(!items.length){ GST._pptSay('내보낼 차트가 없습니다 — 자료가 다 뜬 뒤에 다시 눌러 주세요.'); return; }
 
-  const per = GST.PPT_MAX_PER_SLIDE, pages = Math.ceil(items.length/per);
+  const per = GST.PPT_MAX_PER_SLIDE;
+  /* 자리를 «개수»가 아니라 «칸 수»로 센다 — 표가 두 칸을 쓰면 그만큼 자리를 먹는다.
+     개수로 세면 인사이트 칸이 표 «위에 겹쳐» 그려지고, 겹친 장표는 아무도 못 읽는다.
+     한 줄에 안 들어가는 폭이면 다음 줄로 내린다(줄을 걸쳐 그리면 칸 밖으로 나간다). */
+  const span1 = function(it){ return Math.max(1, Math.min((it.table && it.table.span)||1, COLS)); };
+  const pagesArr = []; let cur = [], cellIdx = 0;
+  items.forEach(function(it){
+    const n = span1(it);
+    let ci = cellIdx;
+    if(ci % COLS + n > COLS) ci += COLS - (ci % COLS);   // 그 줄에 안 들어가면 다음 줄
+    if(ci + n > per){ pagesArr.push(cur); cur = []; ci = 0; }
+    cur.push({it:it, cell:ci, n:n});
+    cellIdx = ci + n;
+  });
+  if(cur.length) pagesArr.push(cur);
+
+  const pages = pagesArr.length;
   for(let pg=0; pg<pages; pg++){
     const s = p.addSlide();
     header(s, title + (pages>1 ? '  ('+(pg+1)+'/'+pages+')' : ''));
-    const part = items.slice(pg*per, pg*per+per);
-    part.forEach(function(it,i){ slot(s, i, it.cap, it.oc); });
+    const part = pagesArr[pg];
+    part.forEach(function(e){ slot(s, e.cell, e.it, e.n); });
     /* 마지막 장에 빈 칸이 남으면 인사이트를 거기 담는다 — 버리지 않고, 새 장도 만들지 않는다. */
-    if(pg===pages-1 && part.length<per){
+    const usedCells = part.length ? part[part.length-1].cell + part[part.length-1].n : 0;
+    if(pg===pages-1 && usedCells<per){
       const ins = [].slice.call(document.querySelectorAll('#gstInsights .gst-ins'))
                     .map(function(x){ return (x.innerText||'').trim(); }).filter(Boolean);
       if(ins.length){
-        const i0=part.length, c=i0%COLS, r=Math.floor(i0/COLS);
+        const i0=usedCells, c=i0%COLS, r=Math.floor(i0/COLS);
         const x=X+(CW+GAP)*c, y=ROWY[r], span=COLS-c, w=CW*span+GAP*(span-1);
         s.addText('INSIGHT', {x:x, y:y, w:w, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
                               fontSize:10, bold:true, valign:'middle', align:'center', margin:4,
