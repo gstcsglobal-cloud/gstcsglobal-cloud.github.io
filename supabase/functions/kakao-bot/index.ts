@@ -351,6 +351,31 @@ async function loadCacheLive(svc: any, keys: string[], filters: any, now: Date) 
   return cache;
 }
 const faultsNoteOf = (c: Record<string, Cache>) => (c["faults"] as any)?.note ?? "";
+
+/* ── 국내 BM 은 대시보드와 «다른 원장»으로 센다 (v92) ──
+   사용자 결정: 국내는 수선실적의 BM 정합성이 아직 안 맞아, 현장이 실제로 쓰는
+   「CS 알람관리」 워크북(sheet_alarm)을 원장으로 삼는다. 대만은 지금까지대로
+   수선실적 BM 이다 — 두 계통이 공존한다.
+
+   ⚠ 챗봇은 그 개편을 못 따라갔다. 수선실적 stage 로만 세므로 **같은 질문에 대시보드와
+     다른 숫자를 답한다.** 그런데 어느 쪽도 「내 숫자는 이 기준이다」라고 말하지 않아,
+     받아 본 사람은 둘 중 하나가 고장 난 줄로 읽는다.
+
+   여기서 원장을 «파싱»하지는 않는다. 그러려면 GST.ALARM(세 사이트 양식을 한 스키마로
+   눕히는 별칭 배열)을 Deno 로 옮겨야 하는데, 그것이 곧 스펙의 네 번째 사본이다(제2원칙).
+   대신 대시보드가 판정에 쓰는 «바로 그 조건»만 묻는다 — 원장에 행이 있나(KR_ON).
+   그건 스펙 질문이 아니라 자료 질문이라 사본이 생기지 않는다. */
+async function krLedgerNote(svc: any): Promise<string> {
+  try{
+    const r = await svc.from("sheet_alarm").select("src_row", { count: "exact", head: true });
+    if (r.error) return "";                     // 표가 없으면 대시보드도 옛 경로다 — 숫자가 같다
+    const n = r.count ?? 0;
+    if (!n) return "";                          // 원장이 비었으면 대시보드도 수선실적 BM 으로 센다
+    return "※ 이 숫자는 «수선실적 작업단계 BM» 기준입니다. 국내는 대시보드가 "
+      + "「CS 알람관리」 원장(" + n.toLocaleString() + "행)으로 세므로 국내 건수는 다를 수 있습니다 "
+      + "— 국내 숫자는 대시보드 주간현황을 보세요.";
+  }catch(_e){ return ""; }
+}
 /* 조회 범위를 «답변에» 직접 붙인다. 모델에게만 주면 안 적을 수 있고, 그러면 잘렸다는
    사실이 사라진다 — 조용한 자르기를 막으려고 만든 문장인데 조용히 없어지는 셈이다.
    카톡은 950자 제한이 있어 꼬리말을 먼저 확보하고 본문을 줄인다. */
@@ -491,6 +516,7 @@ async function routeQuery(
 
 업무 용어 정의:
 - BM = Break/Maintenance = 고장수리. faults에서 stage에 "BM"/"고장"/"긴급" 포함된 것
+  ⚠ 국내 BM 은 대시보드가 수선실적이 아니라 「CS 알람관리」 원장으로 센다(v92) — 여기 숫자는 수선실적 기준이라 국내는 다를 수 있다. 국내 건수를 물으면 그 사실을 밝히고 대시보드 주간현황을 보라고 안내하라.
 - PM = Preventive Maintenance = 예방점검. stage에 "PM"/"점검" 포함
 - TBM = Time Based Maintenance = 정기점검
 - ALARM = 알람 유형 (alarm 필드). BM 실적의 발생 원인 코드
@@ -543,6 +569,7 @@ async function analyzeAndAnswer(
 - BM/고장 현황 질문 → 알람유형(alarm 필드) TOP3 우선 표시, 그 다음 라인별 건수
 - 원인 질문 → 알람유형으로 서머리 (alarm 필드 기준)
 업무 용어: BM=고장수리(stage에 BM/고장/긴급), PM=예방점검, TBM=정기점검, ALARM=alarm 필드값, W30등=주차.
+⚠ 국내 BM 은 대시보드가 수선실적이 아니라 「CS 알람관리」 원장으로 센다(v92) — 여기 숫자는 수선실적 기준이라 국내는 다를 수 있다. 국내 건수를 물으면 그 사실을 밝히고 대시보드 주간현황을 보라고 안내하라.
 마지막 줄: "${cacheStamp}"`;
 
   const model = allowSlow && !smartBroken ? MODEL_SMART : MODEL_FAST;
@@ -590,6 +617,7 @@ async function analyzeForWeb(
 - S/N을 길게 나열하지 말고 건수·순위로 요약하라. 단, 특정 설비 1~2대를 물으면 상세히 답하라.
 - 근거가 된 기간·사이트 조건을 한 줄로 밝혀라.
 업무 용어: BM=고장수리(작업단계 BM), PM=예방점검, TBM=정기점검, ALARM=알람유형, W30 등=주차.
+⚠ 국내 BM 은 대시보드가 수선실적이 아니라 「CS 알람관리」 원장으로 센다(v92) — 여기 숫자는 수선실적 기준이라 국내는 다를 수 있다. 국내 건수를 물으면 그 사실을 밝히고 대시보드 주간현황을 보라고 안내하라.
 마지막 줄에 "${cacheStamp}"를 붙여라.`;
 
   const msgs = [
@@ -988,7 +1016,11 @@ ${stamp}`;
     /* 예전 라벨은 «전체기간»이었다. v97 부터 고장은 캐시가 아니라 조회라 그 말이
        사실이 아니게 됐다 — 실제 범위를 그대로 적는다(조용히 좁아지는 것이 가장 나쁘다). */
     const span = faultsNoteOf(cache).replace(/^\[고장 실적 조회 범위\]\s*/, "") || "전체기간";
-    const text = `${site || "전체"} BM 현황 · 총 ${bm.length}건\n(${span})\n\n라인별:\n${topLines || "데이터 없음"}\n${stamp}`;
+    /* 기준을 밝힌다. 밝히지 않으면 국내 건수가 대시보드와 달라도 «둘 중 하나가 고장»
+       으로 읽힌다 — 무엇을 보면 되는지까지 적는다(v92 규약). */
+    const krNote = await krLedgerNote(svc);   // handleMenu 의 첫 인자가 서비스 클라이언트다
+    const text = `${site || "전체"} BM 현황 · 총 ${bm.length}건\n(${span})\n\n라인별:\n${topLines || "데이터 없음"}\n${stamp}`
+      + (krNote ? "\n\n" + krNote : "");
     return { payload: quickReply(text, ["이번주", "이번달", "올해", "메뉴"]) };
   }
 

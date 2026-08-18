@@ -211,9 +211,9 @@ function mkEnv(nCharts, insights){
   const slides = [];
   global.window.PptxGenJS = function(){
     this.ShapeType = {rect:'rect', line:'line'};
-    this.addSlide = () => { const s={texts:[],shapes:[],images:[],background:null,
+    this.addSlide = () => { const s={texts:[],shapes:[],images:[],tables:[],background:null,
       addText:(t,o)=>s.texts.push({t,o}), addShape:(k,o)=>s.shapes.push({k,o}),
-      addImage:o=>s.images.push(o)}; slides.push(s); return s; };
+      addImage:o=>s.images.push(o), addTable:(rows,o)=>s.tables.push({rows,o})}; slides.push(s); return s; };
     this.writeFile = async()=>{};
   };
   global.PptxGenJS = global.window.PptxGenJS;   // 위와 같은 이유
@@ -236,6 +236,41 @@ function mkEnv(nCharts, insights){
   ok(t0.some(x=>/운영단위 GST TAIWAN SCRUBBER/.test(x)), '어떤 필터로 뽑은 장표인지 머리에 남아야 한다');
   ok(t0.filter(x=>/^차트 \d+$/.test(x)).length===6, '칸 머리띠에 차트 제목이 들어가야 한다');
   ok(slides[0].shapes.some(s=>s.k==='line' && s.o.line && s.o.line.width===2.25), '머리 아래 굵은 검정 줄(양식 특징)');
+  reset();
+}
+
+/* 표도 «같은 칸»에 담긴다 (v109 — hr 의 교육 요약 표).
+   ⚠ 자리를 «개수»가 아니라 «칸 수»로 세야 한다. 표가 두 칸을 쓰는데 개수로 세면
+     인사이트 칸이 표 «위에 겹쳐» 그려진다 — 겹친 장표는 아무도 못 읽는다. */
+{
+  const slides = mkEnv(3, ['인사이트 하나']);
+  const TB = [['구분','대상','이수'],['본사','10','4']];
+  await GST.pptAuto({asOf:'2026-08-18', tables:[{cap:'교육과정 요약', rows:TB, span:2}]});
+  ok(slides.length===1, '차트 3 + 표 1 = 한 장 (실제 '+slides.length+')');
+  const tbl = slides[0].tables||[];
+  ok(tbl.length===1 && tbl[0].rows===TB, '표가 addTable 로 들어가야 한다 (그림이 아니라 글자로)');
+  ok(slides[0].texts.some(x=>String(x.t)==='교육과정 요약'), '표에도 검정 머리띠가 붙어야 한다');
+  /* 겹침 판정 — 표 머리띠와 INSIGHT 머리띠가 같은 x 를 쓰면 안 된다.
+     표는 2열(칸 0~1), 인사이트는 칸 2 에서 시작해야 한다. */
+  const capBand = slides[0].texts.find(x=>String(x.t)==='교육과정 요약');
+  const insBand = slides[0].texts.find(x=>String(x.t)==='INSIGHT');
+  ok(!!insBand, '남은 칸이 있으면 인사이트를 담는다');
+  ok(capBand && insBand && insBand.o.x >= capBand.o.x + capBand.o.w - 0.001,
+     'INSIGHT 칸이 표 오른쪽에서 시작해야 한다 (겹치면 장표가 못 읽게 된다) — 표 x='
+     +(capBand&&capBand.o.x)+' w='+(capBand&&capBand.o.w)+' · INSIGHT x='+(insBand&&insBand.o.x));
+  ok(capBand && Math.abs(capBand.o.w - (3.89*2+0.16)) < 0.25,
+     'span:2 면 칸 폭이 두 칸이어야 한다 (실제 '+(capBand&&Math.round(capBand.o.w*100)/100)+')');
+  reset();
+}
+
+/* 표가 줄 끝에 걸리면 다음 줄로 내린다 — 걸쳐 그리면 칸 밖으로 나간다 */
+{
+  const slides = mkEnv(2, []);
+  await GST.pptAuto({asOf:'2026-08-18', tables:[{cap:'표', rows:[['a']], span:2}]});
+  const band = slides[0].texts.find(x=>String(x.t)==='표');
+  const first = slides[0].texts.find(x=>String(x.t)==='차트 1');
+  ok(band && first && band.o.y > first.o.y,
+     '차트 2개 뒤 span:2 표는 «다음 줄»로 내려가야 한다 (실제 y '+(band&&band.o.y)+' vs '+(first&&first.o.y)+')');
   reset();
 }
 
@@ -368,24 +403,32 @@ console.log('[3-4] 만드는 동안 버튼이 잠기는지');
 /* ══════════════════════════════════════════════════════════════
    [4] 규율 — 페이지가 자기 PPT 를 새로 만들지 않는지
    ══════════════════════════════════════════════════════════════ */
-console.log('[4] 여섯 페이지가 공용 한 벌을 그대로 쓰는지');
-const SHARED = ['scrubber','pm','fault','material','cip','tco'];
-/* ⚠ hr 은 자기 PPT 덱을 따로 만든다(downloadHrPPT). 그 자체는 사용자 결정이지만,
-   «한 양식» 검사가 hr 을 목록에서 빼 두면 그 사실이 검사에서 사라진다 — 나중에 다른
-   페이지가 같은 이유로 빠져나가도 아무도 모른다. 예외를 «명시»해 눈에 보이게 둔다. */
+console.log('[4] 일곱 페이지가 공용 한 벌을 그대로 쓰는지');
+/* v109 — hr 이 마지막 예외였다. 그 덱에는 세 가지가 없었다: 오른쪽 위 «법인» 상자
+   (받아 본 사람이 어느 법인 숫자인지 모른다 — v100 이 양식 PPT 에서 고친 그 결함),
+   활성 필터 요약, 흰 종이용 색 변환(chartHiRes 로 캡처해 어두운 테마 글자가 흰 바탕에
+   그대로 얹혔다). 셋 다 pptAuto 가 이미 하는 일이라 예외를 없애고 목록에 넣었다. */
+const SHARED = ['scrubber','pm','fault','material','cip','tco','hr'];
 {
   const HR = fs.readFileSync(ROOT+'/hr/index.html','utf8');
-  ok(/new PptxGenJS\(/.test(HR),
-     'hr 이 자기 덱을 만드는 것은 «알려진 예외»다 — 없어졌으면 SHARED 에 넣고 이 줄을 지울 것');
-  const bar = (HR.match(/GST\.pageBar\(\{[\s\S]*?\n\}\);/)||[''])[0];
-  ok(/ppt:\s*\(\)\s*=>\s*downloadHrPPT\(\)/.test(bar),
-     'hr 의 예외는 pageBar 에 «명시»돼 있어야 한다(몰래 갈라지지 않게)');
+  /* hr 은 교육 요약 표를 차트 말고 따로 갖고 있다 — 공용으로 옮기면서 그 내용이
+     조용히 빠지면 «양식은 같아졌는데 숫자가 줄었다»가 된다. 넘기는지 확인한다. */
+  ok(/GST\.pptAuto\(\{/.test(HR), 'hr 이 공용 pptAuto 를 부른다');
+  ok(/tables:\[\{cap:'교육과정 요약'/.test(HR),
+     'hr — 교육 요약 표를 공용 양식에 넘긴다 (차트에 없는 숫자라 빠지면 내용이 준다)');
+  ok(/if\(cp\.length\)\{/.test(HR),
+     'hr — 법인 과정 대상이 없으면(국내) 그 줄을 아예 안 넣는다 (0 은 «못 채운 것»으로 읽힌다)');
 }
 for(const pg of SHARED){
   const src = fs.readFileSync(ROOT+'/'+pg+'/index.html','utf8');
   const bar = (src.match(/GST\.pageBar\(\{[\s\S]*?\n\}\);/)||[''])[0];
   ok(/ppt:\s*'auto'/.test(bar), pg+': caps.ppt 가 auto 여야 공용 양식을 쓴다');
-  ok(!/ppt:\s*\(\)\s*=>/.test(bar), pg+': 자기 PPT 핸들러를 만들면 장표 얼굴이 또 갈라진다(제2원칙)');
+  /* 핸들러를 두는 것 «자체»는 괜찮다 — hr 은 교육 요약 표를 넘기려고 감싼다.
+     지켜야 할 것은 «얼굴이 하나인가»이므로, 감싸더라도 결국 pptAuto 로 가야 한다.
+     핸들러를 금지하면 표 하나 넘기려고 덱을 통째로 다시 짜는 쪽으로 몰린다. */
+  const wrap = /ppt:\s*\(\)\s*=>\s*(\w+)\(\)/.exec(bar);
+  ok(!wrap || new RegExp('async function '+wrap[1]+'\\([\\s\\S]*?GST\\.pptAuto\\(').test(src),
+     pg+': PPT 핸들러를 감싸더라도 결국 GST.pptAuto 로 가야 한다(제2원칙)');
   ok(!/new PptxGenJS\(/.test(src), pg+': 페이지가 직접 PPT 를 조립하고 있다 — 공용 pptAuto 로 모아야 한다');
 }
 const CORE = fs.readFileSync(ROOT+'/assets/core.js','utf8');
@@ -398,7 +441,7 @@ ok(/GST\.PPT_CDN_MS/.test(CORE) && /setTimeout\(function\(\)\{ fin\(false, new E
    'CDN 로드에 시간 제한이 있어야 한다 — 없으면 「눌러도 반응 없음」이 된다');
 ok(/GST\.corpLabel\s*=\s*function/.test(CORE), 'corpLabel 정본이 core.js 에 있어야 한다');
 /* 음성 대조: 다른 페이지에 corpLabel 이 «다시» 정의되면 두 벌이 된다 */
-for(const pg of SHARED.concat(['hr'])){
+for(const pg of SHARED){
   const src = fs.readFileSync(ROOT+'/'+pg+'/index.html','utf8');
   ok(!/function corpLabel\(\)\s*\{[^}]*REGION_KR/.test(src), pg+': corpLabel 을 다시 구현했다(제2원칙)');
 }

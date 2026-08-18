@@ -147,6 +147,50 @@ console.log('[1-3] 자료에 없는 값을 «걸렸다»고 하지 않는지');
   fire({type:'gst-kiosk-restore'});
 }
 
+/* ── [1-4] 30분 자동 새로고침이 순회의 필터를 되돌려 놓지 않는지 (v109) ──
+   자동 새로고침은 «갱신 시작 시점»의 사이드바 값을 스냅샷으로 떠 두었다가 300ms 뒤에
+   되돌린다. 순회는 15초마다 축을 바꾸므로, 25만 행을 다시 받는 동안 이미 다음 단지로
+   넘어가 있다 — 그러면 복원이 «옛 단지»를 다시 걸고, 하단바는 H2 라고 적는데 화면은
+   H1 자료가 된다. 벽에 걸린 화면이라 아무도 안 보고 있을 때 어긋난다. */
+console.log('[1-4] 자동 새로고침이 순회 중인 필터를 되돌리지 않는지');
+{
+  GST.filters.mount({page:'t6', rows:()=>[{c:'H1'},{c:'H2'}], onChange:()=>{}, get:{campus:x=>x.c}});
+  GST.filters.set('campus','H1');                   // 사람이 걸어 둔 값
+  ok(GST.filters.kioskOn()===false, '순회 전에는 kioskOn=false 여야 한다');
+
+  GST.filters.kioskSet('campus','H2');              // 순회가 빌려 간다
+  ok(GST.filters.kioskOn()===true, '순회 중에는 kioskOn=true — 자동 새로고침이 이걸 보고 비켜선다');
+
+  /* 새로고침이 화면을 다시 그리면서 필터를 초기화했다고 치자(설치·인원이 그런다). */
+  GST.filters.set('campus', []);
+  GST.filters.kioskReapply();
+  ok(GST.filters.chosen('campus').join()==='H2',
+     '새로고침 뒤 순회가 «지금» 걸어 둔 값을 다시 건다 (실제 '+GST.filters.chosen('campus').join()+')');
+
+  /* 그리고 순회를 끄면 사람이 걸어 둔 값으로 돌아와야 한다 — 기준선은 새로고침이
+     건드리면 안 되는 것이었다. */
+  GST.filters.kioskRestore();
+  ok(GST.filters.chosen('campus').join()==='H1',
+     '순회를 끄면 사람이 걸어 둔 H1 로 돌아온다 (실제 '+GST.filters.chosen('campus').join()+')');
+  ok(GST.filters.kioskOn()===false, '되돌린 뒤에는 kioskOn=false');
+  GST.filters.kioskReapply();
+  ok(GST.filters.chosen('campus').join()==='H1',
+     '되돌린 뒤 reapply 는 아무 일도 안 한다 (늦게 온 신호가 사람 필터를 덮지 않게)');
+}
+
+/* 소스로만 볼 수 있는 것 — 자동 새로고침이 정말 kioskOn 을 물어보는가.
+   위 [1-4]는 API 가 «옳게 동작하는지»만 본다. 부르는 쪽이 안 부르면 소용이 없다. */
+{
+  const CORE_S = fs.readFileSync(path.join(ROOT,'assets/core.js'),'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g,' ');
+  ok(/const kiosk = !!\(GST\.filters && GST\.filters\.kioskOn && GST\.filters\.kioskOn\(\)\);/.test(CORE_S),
+     'startAutoRefresh 가 순회 중인지 확인한다');
+  ok(/const snap = kiosk \? null : GST\._snapFilters\(\);/.test(CORE_S),
+     '순회 중에는 스냅샷을 아예 뜨지 않는다');
+  ok(/kiosk \? GST\.filters\.kioskReapply\(\) : GST\._restoreFilters\(snap\)/.test(CORE_S),
+     '순회 중에는 복원 대신 «지금» 값을 다시 건다');
+}
+
 /* 메시지 경로로도 ack 가 나가는지 */
 {
   GST.filters.mount({page:'t5', rows:()=>[{c:'F11'}], onChange:()=>{}, get:{campus:x=>x.c}});

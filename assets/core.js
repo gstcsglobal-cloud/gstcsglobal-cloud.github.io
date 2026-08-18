@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 108;
+GST.VER = 109;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -66,6 +66,18 @@ GST.toDate = function(v){
 };
 GST.fmtDate = function(d){ return d ? d.toISOString().slice(0,10) : '—'; };
 GST.fmtD    = function(d){ return d ? d.toISOString().slice(0,10) : ''; };
+/* 「사람이 보는 날짜」는 그 사람의 시계로 찍는다.
+   ⚠ toISOString() 은 UTC 다. KST(+9)에서 «로컬 자정»으로 만든 Date 를 그걸로 찍으면
+     하루 앞 날짜가 나온다 — 사용자가 08-01 을 넣었는데 화면에는 07-31 이 뜬다.
+     오전 9시 이전에는 «오늘»조차 어제로 찍힌다(빠른 프리셋이 오늘 자료를 잘라 먹는다).
+   위 두 함수는 그대로 둔다 — 그쪽은 Date.UTC(…) 로 만든 «UTC 자정» 값을 찍는 자리라
+     UTC 로 찍는 것이 맞다. 두 시계가 섞이는 것이 문제이지 어느 한쪽이 틀린 게 아니다.
+     그래서 합치지 않고 이름을 나눠 둔다 — 부르는 쪽이 어느 시계인지 고르게. */
+GST.ymdL = function(d){
+  const x = (d instanceof Date && !isNaN(d)) ? d : new Date();
+  return x.getFullYear() + '-' + String(x.getMonth()+1).padStart(2,'0')
+                         + '-' + String(x.getDate()).padStart(2,'0');
+};
 
 /* ---------- 1.5 Supabase 인증 ----------
    이메일 OTP 로그인이 유일한 인증 수단이다. 설정 절차는 SETUP-SUPABASE.md 참고. */
@@ -2628,9 +2640,14 @@ GST.startAutoRefresh = function(min){
   GST._arTimer = setInterval(async function(){
     let on=true; try{ on = localStorage.getItem('gst_auto_refresh')!=='0'; }catch(e){}
     if(!on || document.hidden) return;   // 꺼짐/백그라운드 탭이면 건너뜀
-    const snap = GST._snapFilters();
+    /* 순회 중에는 스냅샷/복원을 하지 않는다 — 빌린 필터의 주인은 순회다.
+       사람이 걸어 둔 기준선(KSAVED)은 순회가 따로 들고 있으므로 여기서 손대면 안 된다. */
+    const kiosk = !!(GST.filters && GST.filters.kioskOn && GST.filters.kioskOn());
+    const snap = kiosk ? null : GST._snapFilters();
     try{ await fn(); }catch(e){ return; } // 로드 실패 시 상태 유지
-    setTimeout(function(){ try{ GST._restoreFilters(snap); }catch(e){} }, 300);
+    setTimeout(function(){
+      try{ kiosk ? GST.filters.kioskReapply() : GST._restoreFilters(snap); }catch(e){}
+    }, 300);
   }, (min||10)*60000);
 };
 
@@ -2735,9 +2752,10 @@ GST.filters = (function(){
      ③ **정말로 걸렸는지 돌려준다.** 그 페이지 자료에 없는 값은 fill/fillMulti 가 버리는데
         (빈 Set·빈 문자열), 그 상태가 곧 «전체»다. 알려주지 않으면 벽 화면이 「H1」이라 적고
         전사 합계를 보여준다 — 지나가는 사람은 그걸 H1 숫자로 읽는다. */
-  let KPEND = null, KSAVED = null;
+  let KPEND = null, KSAVED = null, KCUR = null;
   function kioskSet(k, v){
     if(!(k in F)) return { applied:false, why:'noaxis' };
+    KCUR = { k:k, v:v };   // 자동 새로고침이 끝난 뒤 «지금 걸린 값»을 다시 걸기 위해
     if(!CFG){ KPEND = { k:k, v:v }; return { applied:false, why:'loading' }; }
     if(!KSAVED){ const cur = F[k]; KSAVED = { k:k, v:(cur instanceof Set) ? Array.from(cur) : cur }; }
     /* «걸렸나»를 F 로 확인하면 안 된다 — 목록에서 버리는 일은 fill/fillMulti(=DOM)가 하므로
@@ -2749,10 +2767,18 @@ GST.filters = (function(){
     return { applied:known, why: known ? '' : 'nodata' };
   }
   function kioskRestore(){
-    KPEND = null;
+    KPEND = null; KCUR = null;
     if(!KSAVED || !CFG) { KSAVED = null; return; }
     const sv = KSAVED; KSAVED = null; setK(sv.k, sv.v);
   }
+  /* 순회가 지금 이 페이지의 필터를 빌리고 있나. 30분 자동 새로고침이 이것을 물어야 한다 —
+     ⚠ 그 새로고침은 «갱신 시작 시점»의 사이드바 값을 스냅샷으로 떠 두었다가 300ms 뒤에
+       되돌린다. 순회는 15초마다 축을 바꾸므로, 25만 행을 다시 받는 동안 이미 다음 단지로
+       넘어가 있다 — 그러면 복원이 «옛 단지»를 다시 걸고, 하단바는 H2 라고 적는데 화면은
+       H1 자료가 된다. 벽에 걸린 화면이라 아무도 안 보고 있을 때 어긋난다. */
+  function kioskOn(){ return !!(KSAVED || KPEND); }
+  // 새로고침으로 화면이 다시 그려진 뒤, 순회가 걸어 둔 «지금» 값을 다시 건다
+  function kioskReapply(){ if(KCUR && CFG) setK(KCUR.k, KCUR.v); }
 
   function opts(key, narrow, rowsIn){
     /* mount 전에도 불릴 수 있다 — options() 가 공개 API 라 셸이 언제든 물어본다.
@@ -3013,6 +3039,7 @@ GST.filters = (function(){
     options: function(k){ return opts(k); },
     ready: function(){ return !!CFG; },
     kioskSet: kioskSet, kioskRestore: kioskRestore,
+    kioskOn: kioskOn, kioskReapply: kioskReapply,
     /* 기본 필터 술어. 페이지의 filt() 맨 앞에 한 줄로 넣는다. */
     /* opt.noDate — 기간 조건만 건너뛴다. 설치현황의 «미가동 목록»처럼 «그 기간에 가동을
        시작하지 않은» 설비를 봐야 하는 카드가 있다. 축 조건은 그대로 걸린다 — 기간만 뺀다. */
@@ -3714,7 +3741,7 @@ GST.pptAuto = async function(opt){
   const p = new PptxGenJS(); p.layout='LAYOUT_16x9';
   const title = (opt.title || (document.querySelector('.header h1')||{}).textContent || document.title || 'Dashboard').trim();
   const corp  = (opt.corp || GST.corpLabel()).toUpperCase();
-  const asOf  = opt.asOf || new Date().toISOString().slice(0,10);
+  const asOf  = opt.asOf || GST.ymdL();   // ⚠ toISOString 은 UTC — 오전 9시 이전에 어제가 찍힌다
   const meta  = asOf + ' 기준 · ' + GST.filtSummary();
 
   const header = function(s, sec){
@@ -3727,18 +3754,26 @@ GST.pptAuto = async function(opt){
     s.addShape(p.ShapeType.line, {x:X, y:0.86, w:W, h:0, line:{color:'000000', width:2.25}});
   };
   /* 칸 하나 — 검정 머리띠 + 흰 몸통. 양식의 «가. 인력현황» 칸과 같은 꼴이다. */
-  const slot = function(s, i, cap, oc){
+  const slot = function(s, i, it, span){
+    const cap=it.cap, oc=it.oc, tb=it.table;
     const c=i%COLS, r=Math.floor(i/COLS);
-    const x=X+(CW+GAP)*c, y=ROWY[r];
-    s.addText(cap, {x:x, y:y, w:CW, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
+    const x=X+(CW+GAP)*c, y=ROWY[r], w=CW*span+GAP*(span-1);
+    s.addText(cap, {x:x, y:y, w:w, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
                     fontSize:10, bold:true, valign:'middle', align:'center', margin:4,
                     line:{color:'000000', width:0.75}});
-    s.addShape(p.ShapeType.rect, {x:x, y:y+BAND, w:CW, h:BODY, fill:{color:'FFFFFF'}, line:{color:LINE, width:0.75}});
+    s.addShape(p.ShapeType.rect, {x:x, y:y+BAND, w:w, h:BODY, fill:{color:'FFFFFF'}, line:{color:LINE, width:0.75}});
+    if(tb){
+      s.addTable(tb.rows, {x:x+0.06, y:y+BAND+0.06, w:w-0.12, colW:tb.colW, fontFace:FONT,
+                           fontSize:tb.fontSize||8.5, color:INK, align:'center', valign:'middle',
+                           border:{type:'solid', color:LINE, pt:0.5},
+                           rowH:Math.max(0.20,(BODY-0.12)/tb.rows.length)});
+      return;
+    }
     if(!oc) return;
     /* 비율 유지로 칸 안에 «중앙 정렬». 늘려 채우면 막대 굵기가 칸마다 달라 보인다. */
-    const mw=CW-0.20, mh=BODY-0.16, ar=oc.width/oc.height;
-    let w=mw, h=w/ar; if(h>mh){ h=mh; w=h*ar; }
-    s.addImage({data:oc.toDataURL('image/png'), x:x+(CW-w)/2, y:y+BAND+(BODY-h)/2, w:w, h:h});
+    const mw=w-0.20, mh=BODY-0.16, ar=oc.width/oc.height;
+    let iw=mw, ih=iw/ar; if(ih>mh){ ih=mh; iw=ih*ar; }
+    s.addImage({data:oc.toDataURL('image/png'), x:x+(w-iw)/2, y:y+BAND+(BODY-ih)/2, w:iw, h:ih});
   };
 
   /* ⚠ `.cw canvas` 만 보면 안 된다 — 추이(.trend-wrap)·크로스(.cross-wrap) 카드의 차트가
@@ -3754,22 +3789,45 @@ GST.pptAuto = async function(opt){
     const h3 = card ? card.querySelector('h3') : null;
     items.push({cap:(h3 ? (h3.innerText||'').trim() : cv.id) || cv.id, oc:oc});
   }
+  /* 표도 «같은 칸»에 담는다. 차트만 담을 수 있으면, 표가 있는 페이지는 자기 덱을 따로
+     짤 수밖에 없고 그러면 장표 얼굴이 또 갈라진다(v100 에 hr 이 그랬다).
+     opt.tables = [{cap, rows:[[셀…]…], colW?, span?}] — span 은 가로로 차지할 칸 수. */
+  (opt.tables||[]).forEach(function(tb){
+    if(tb && tb.rows && tb.rows.length) items.push({cap:tb.cap||'', table:tb});
+  });
   hid.forEach(function(s){ s.style.display='none'; });
   if(hid.length){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }
   if(!items.length){ GST._pptSay('내보낼 차트가 없습니다 — 자료가 다 뜬 뒤에 다시 눌러 주세요.'); return; }
 
-  const per = GST.PPT_MAX_PER_SLIDE, pages = Math.ceil(items.length/per);
+  const per = GST.PPT_MAX_PER_SLIDE;
+  /* 자리를 «개수»가 아니라 «칸 수»로 센다 — 표가 두 칸을 쓰면 그만큼 자리를 먹는다.
+     개수로 세면 인사이트 칸이 표 «위에 겹쳐» 그려지고, 겹친 장표는 아무도 못 읽는다.
+     한 줄에 안 들어가는 폭이면 다음 줄로 내린다(줄을 걸쳐 그리면 칸 밖으로 나간다). */
+  const span1 = function(it){ return Math.max(1, Math.min((it.table && it.table.span)||1, COLS)); };
+  const pagesArr = []; let cur = [], cellIdx = 0;
+  items.forEach(function(it){
+    const n = span1(it);
+    let ci = cellIdx;
+    if(ci % COLS + n > COLS) ci += COLS - (ci % COLS);   // 그 줄에 안 들어가면 다음 줄
+    if(ci + n > per){ pagesArr.push(cur); cur = []; ci = 0; }
+    cur.push({it:it, cell:ci, n:n});
+    cellIdx = ci + n;
+  });
+  if(cur.length) pagesArr.push(cur);
+
+  const pages = pagesArr.length;
   for(let pg=0; pg<pages; pg++){
     const s = p.addSlide();
     header(s, title + (pages>1 ? '  ('+(pg+1)+'/'+pages+')' : ''));
-    const part = items.slice(pg*per, pg*per+per);
-    part.forEach(function(it,i){ slot(s, i, it.cap, it.oc); });
+    const part = pagesArr[pg];
+    part.forEach(function(e){ slot(s, e.cell, e.it, e.n); });
     /* 마지막 장에 빈 칸이 남으면 인사이트를 거기 담는다 — 버리지 않고, 새 장도 만들지 않는다. */
-    if(pg===pages-1 && part.length<per){
+    const usedCells = part.length ? part[part.length-1].cell + part[part.length-1].n : 0;
+    if(pg===pages-1 && usedCells<per){
       const ins = [].slice.call(document.querySelectorAll('#gstInsights .gst-ins'))
                     .map(function(x){ return (x.innerText||'').trim(); }).filter(Boolean);
       if(ins.length){
-        const i0=part.length, c=i0%COLS, r=Math.floor(i0/COLS);
+        const i0=usedCells, c=i0%COLS, r=Math.floor(i0/COLS);
         const x=X+(CW+GAP)*c, y=ROWY[r], span=COLS-c, w=CW*span+GAP*(span-1);
         s.addText('INSIGHT', {x:x, y:y, w:w, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
                               fontSize:10, bold:true, valign:'middle', align:'center', margin:4,
