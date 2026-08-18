@@ -198,6 +198,79 @@ console.log('\n[7-6] rows() 가 실어 보낸 축을 get: 이 «꺼내 보는가
   });
 }
 
+console.log('\n[7-7] 축을 목록에 «내주면» 거르기까지 해야 한다 (v108)');
+{
+  /* 실제로 겪은 결함(사용자 보고). 사업부를 사이드바에 내주고 목록도 제대로 떴는데,
+     골라도 KPI·차트·표가 한 자리도 안 움직였다. 원인은 단순하다 — 주간현황만
+     술어를 «손으로» 짜는데(pass() 를 안 쓴다) 어느 술어에도 div 가 없었다.
+     칩에는 「사업부: MEMORY」가 뜨니 사용자는 걸린 줄 알고 숫자를 읽는다.
+     이것은 CLAUDE.md 가 경고하는 그 자리다 — 「새 축을 추가하면 전부 손댄다.
+     한 곳만 빠져도 화면의 카드들이 서로 다른 모집단을 보여준다.」
+
+     판정 둘:
+       ① pass() 를 안 쓰는 페이지는, get: 이 내준 축이 술어 쪽에 «호출»로 나와야 한다.
+       ② 축 판정 헬퍼를 정의만 하고 안 부르면 ①을 통과해 버린다 → 호출 여부도 본다. */
+  const AX = ['region', 'op', 'customer', 'div', 'campus', 'line', 'team'];
+  /* ⚠ 주석을 먼저 걷어낸다. 처음 이 검사를 쓸 때 주간현황의 «GST.filters.pass() 한 줄로»
+     라는 설명 주석이 그대로 걸려, 정작 pass() 를 안 쓰는 페이지가 「쓴다」로 통과했다 —
+     검사가 초록불을 거짓말한 것이다. 판정은 «코드에 무엇이 있나»여야 한다. */
+  const noCmt = (t) => t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  const CODE = {}; PAGES.forEach(p => { CODE[p] = noCmt(SRC[p]); });
+  PAGES.forEach((p) => {
+    if (/GST\.filters\.pass\(/.test(CODE[p])) {
+      ok(p + ' — pass() 로 일곱 축을 한 루프로 거른다');
+      return;
+    }
+    const i = CODE[p].indexOf('GST.filters.mount(');
+    let d = 0, end = i;
+    for (let k = CODE[p].indexOf('(', i); k < CODE[p].length; k++) {
+      if (CODE[p][k] === '(') d++;
+      else if (CODE[p][k] === ')') { d--; if (!d) { end = k; break; } }
+    }
+    const blk = CODE[p].slice(i, end + 1);
+    const gi = blk.indexOf('get:');
+    let gd = 0, gEnd = gi;
+    for (let k = blk.indexOf('{', gi); k < blk.length; k++) {
+      if (blk[k] === '{') gd++;
+      else if (blk[k] === '}') { gd--; if (!gd) { gEnd = k; break; } }
+    }
+    const getPart = blk.slice(gi, gEnd + 1);
+    const offered = AX.filter(a => new RegExp('[{,]\\s*' + a + '\\s*:').test(getPart));
+    /* 축 이름이 «판정 호출»에 실려 있는가. axOkF·campOk·divOk 처럼 이름이 달라도
+       결국 GST.filters.hit/hitL 에 축 이름을 넘기므로 거기서 잡힌다. */
+    const miss = offered.filter(a =>
+      !new RegExp("(GST\\.filters\\.hitL?|axOkF)\\(\\s*'" + a + "'").test(CODE[p]));
+    is(!miss.length, p + ' — 내준 축을 술어가 전부 본다'
+       + (miss.length ? '  ⚠ 안 거르는 축: ' + miss.join(', ') : ''));
+
+    /* ② 정의만 하고 안 부르면 위 검사를 통과한다 — 실제 호출 수를 센다. */
+    const helpers = [...CODE[p].matchAll(/const (\w+)\s*=\s*\(?[^=]*\)?\s*=>\s*(?:GST\.filters\.hitL?|axOkF)\(\s*'(\w+)'/g)];
+    helpers.forEach(([, name, ax]) => {
+      const calls = (CODE[p].match(new RegExp('\\b' + name + '\\(', 'g')) || []).length;
+      is(calls >= 1, p + ' — ' + name + '() 를 정의만 하지 않고 실제로 부른다 ('
+         + ax + ' · 호출 ' + calls + '곳)');
+    });
+  });
+
+  /* 사업부의 세 자료 계통 — 실적(entOk) · 국내 원장(krOk) · 설치현황(fINST).
+     하나만 빠져도 그 카드만 전사 숫자를 그린다. 어느 것이 빠졌는지 이름으로 말한다. */
+  const R = CODE.report;
+  const body = (name, re) => { const m = R.match(re); return m ? m[0] : ''; };
+  is(/const entOk=[\s\S]{0,400}?divOk\(x\.div\)/.test(R),
+     'report — 실적(entOk)이 사업부를 본다');
+  is(/const krOk=[\s\S]{0,400}?divOk\(x\.div\)/.test(R),
+     'report — 국내 알람·올바 원장(krOk)이 사업부를 본다');
+  is(/const fINST=INST\.filter\([\s\S]{0,700}?divOk\(/.test(R),
+     'report — 설치현황(fINST)이 사업부를 본다');
+  /* 원장에는 사업부 열이 없다 — 설비 S/N 으로 설치현황에서 끌어온다(사용자 지적).
+     조인이 없으면 krOk 가 늘 빈 값을 보고 loose 로 전부 통과한다. */
+  is(/function krJoin\([\s\S]{0,900}?div:String\(\(CI\.div>=0/.test(R),
+     'report — krJoin 이 설치현황에서 사업부를 조인해 온다 (원장에는 없는 열)');
+  is(/x\.div=\(o&&o\.div\)\|\|''/.test(R),
+     'report — 조인이 안 된 행은 빈 값 그대로 둔다 (버리면 건수가 반으로 준다)');
+  is(/axHas\('div'\)/.test(R), 'report — 활성 필터 칩에도 사업부가 뜬다');
+}
+
 console.log('\n[7-4] 단지 축에 고객사 이름이 섞이지 않는지 (v96)');
 {
   /* 인원 계열의 구분 축은 단지다. 단지·FAB 이 둘 다 비면 예전에는 고객사까지 내려가
@@ -382,6 +455,24 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
   /* loose 확인 — 해외 행은 사업부 값이 없어 통과한다(그 축이 아예 없는 자료를 안 버린다) */
   clr(); G.filters.toggle('div','메모리');
   is(cnt()===2, '사업부 하나 + 값 없는 해외 1행 = 2행 (실제 '+cnt()+')');
+
+  /* hitL — 술어를 손으로 짜는 페이지(주간현황)가 pass() 와 «같은 답»을 내는지.
+     ⚠ hit() 만으로는 안 된다. 고른 값이 있을 때 hit('div','') 는 false 라, 조인이 안 된
+       행이 통째로 사라진다 — 「사업부를 고르면 실적이 반으로 준다」가 그것이다.
+     행 단위로 pass() 와 hitL() 을 맞대어 «한 행도 안 갈리는지» 본다. */
+  {
+    const same = ROWS.every(r => G.filters.pass(r) === G.filters.hitL('div', r.div));
+    is(same, 'hitL(div) 이 pass() 와 행 단위로 같은 답을 낸다 (사업부 1개 선택)');
+    is(G.filters.hitL('div','') === true,  'loose 축의 빈 값은 통과 (조인 실패 행을 버리지 않는다)');
+    is(G.filters.hitL('div','파운드리') === false, '고르지 않은 사업부는 탈락');
+    /* loose 가 아닌 축의 빈 값은 «모르는 것»이 아니라 «아닌 것»이다 — 통과시키면 부푼다 */
+    clr(); G.filters.toggle('campus','H3');
+    is(G.filters.hitL('campus','') === false, 'loose 가 아닌 축의 빈 값은 탈락');
+    is(G.filters.hitL('campus','H3') === true, '고른 단지는 통과');
+    clr();
+    is(G.filters.hitL('div','') === true && G.filters.hitL('campus','') === true,
+       '아무것도 안 고르면 어느 축이든 전체 (pass() 의 hasK 와 같은 순서)');
+  }
 
   /* 나머지 여섯 축도 «둘 고르면 둘 다» */
   const CASES = [
