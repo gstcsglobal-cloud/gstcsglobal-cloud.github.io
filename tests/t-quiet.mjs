@@ -210,6 +210,78 @@ console.log('\n[6] 챗봇 BM 이 자기 기준을 밝히는지 (v92)');
   is(n === 3, '카톡·대시보드 챗봇 프롬프트 세 곳에 모두 적혀 있다 (실제 ' + n + '곳)');
 }
 
+/* ══════════════════════════════════════════════════════════════
+   [7] 눌린 «조각»을 버리고 다른 질문에 답하지 않는지
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[7] 스택 막대의 세부내역이 «누른 그 칸»을 보는지 (v111)');
+{
+  /* 사용자 보고 — 인원 차트 막대를 눌러도 명단이 안 나오고 인원수 요약만 떴다.
+     원인 둘: ① onDrill 이 datasetIndex 를 버려서 「1년 미만 5명」 조각을 눌러도
+     구간 전체(43명) 요약이 떴다 ② drillHead 가 애초에 명단을 안 냈다.
+     같은 화면의 입·퇴사 드릴은 진작 이름을 내고 있었다 — 카드끼리 답이 달랐다.
+     ⚠ 소스만 봐서는 «정말 좁혀지는지»를 못 본다. 함수를 떼어 실제로 돌린다.
+       이름은 전부 지어낸 값이다(공개 저장소 — 실데이터 금지). */
+  const R = rd('report/index.html'), RC = noCmt(R);
+  is(/const p=P\[i\], di=els\[0\]\.datasetIndex;/.test(RC),
+     'report — onDrill 이 눌린 조각 번호를 버리지 않는다');
+  is(/drillHead\(p,id,di,seg\)/.test(RC), 'report — 그 번호를 세부내역에 넘긴다');
+  /* 경계를 드릴이 자기 숫자로 다시 적으면 막대는 5명인데 명단은 6명이 되는 날이 온다. */
+  is(/hcBand:HC_BANDS/.test(RC) && /HC_BANDS=\[\{lo:0,hi:1\}/.test(RC),
+     'report — 경력구간 경계가 차트와 세부내역 «한 곳»에서 나온다');
+
+  const cut = (name) => {
+    const i = R.indexOf('function ' + name + '(');
+    let d = 0, on = false;
+    for (let k = i; k < R.length; k++) {
+      if (R[k] === '{') { d++; on = true; }
+      else if (R[k] === '}') { d--; if (on && !d) return R.slice(i, k + 1); }
+    }
+    return '';
+  };
+  const MS = 86400000;
+  let shown = null;
+  const ctx = { MS, esc: v => String(v == null ? '' : v),
+    _md: d => d ? d.toISOString().slice(0, 10) : '—',
+    activeAt: (x, e) => !x.quit || x.quit > e,
+    showDrill: (t, h) => { shown = { t, h }; }, window: {} };
+  let drillHead = null;
+  try { drillHead = new Function(...Object.keys(ctx), cut('drillHead') + '; return drillHead;')
+                      (...Object.values(ctx)); } catch (e) { /* 아래에서 잡는다 */ }
+  is(!!drillHead, 'report — drillHead 를 떼어 돌릴 수 있다');
+
+  if (drillHead) {
+    const P = (n, camp, team, yrs) => ({ name: n, campus: camp, team,
+      join: new Date(Date.UTC(2026, 7, 1) - yrs * 365.25 * MS), quit: null, onsite: true });
+    ctx.window._DRILL = {
+      fHR: [P('가나다', 'H1', 'K운영팀', 0.5), P('라마바', 'H1', 'K운영팀', 0.2),
+            P('사아자', 'H2', 'P운영팀', 1.4), P('차카타', 'H2', 'P운영팀', 3.0),
+            P('파하가', 'H3', 'K운영팀', 5.0)],
+      grpKey: x => x.campus, SITES: ['H1', 'H2', 'H3'],
+      hcBand: [{ lo: 0, hi: 1 }, { lo: 1, hi: 2 }, { lo: 2, hi: null }] };
+    const per = { label: 'W33', end: new Date(Date.UTC(2026, 7, 15)) };
+    const names = h => [...h.matchAll(/<td>([가-힣]{3})<\/td>/g)].map(m => m[1]);
+    const run = (id, di, seg) => { drillHead(per, id, di, seg); return { n: names(shown.h), t: shown.t, h: shown.h }; };
+
+    let r = run('cHc', 0, '1년 미만');
+    is(r.n.join() === '라마바,가나다', '1년 미만 조각 → 그 2명만 (실제 ' + (r.n.join(' · ') || '없음') + ')');
+    is(/1년 미만/.test(r.t), '제목에 누른 조각 이름을 적는다 (실제 ' + r.t + ')');
+    is(/<th>이름<\/th>/.test(r.h), '명단 표를 낸다 — 인원수 요약만 내지 않는다');
+    const nums = [...r.h.matchAll(/class="n">(\d+)</g)].map(m => +m[1]);
+    is(nums[0] === 2 && nums[1] === 5,
+       '조각 인원과 «구간 전체»를 같이 적는다 (실제 ' + nums.join(' / ') + ')');
+
+    r = run('cHc', 2, '2년 이상');
+    is(r.n.join() === '차카타,파하가', '2년 이상 조각 → 그 2명만 (실제 ' + (r.n.join(' · ') || '없음') + ')');
+    r = run('cCareer', 0, 'H2');
+    is(r.n.join() === '사아자,차카타', '단지 조각 → 그 단지 사람만 (실제 ' + (r.n.join(' · ') || '없음') + ')');
+    /* 옛 배포본처럼 경계를 못 받으면 «좁히지 않고 전체»를 낸다 — 틀린 명단을 내느니 낫다. */
+    const keep = ctx.window._DRILL.hcBand; ctx.window._DRILL.hcBand = null;
+    r = run('cHc', 0, '1년 미만');
+    is(r.n.length === 5, '경계를 못 받으면 좁히지 않고 전체를 낸다 (실제 ' + r.n.length + '명)');
+    ctx.window._DRILL.hcBand = keep;
+  }
+}
+
 console.log('\n' + (fail ? '❌ t-quiet ' + fail + ' 실패 / ' + (pass + fail)
                          : '✅ t-quiet ' + pass + '/' + pass));
 process.exit(fail ? 1 : 0);

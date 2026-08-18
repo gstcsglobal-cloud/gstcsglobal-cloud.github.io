@@ -127,25 +127,21 @@ const AXES7 = ['region','op','div','customer','campus','line','team'];
 console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96)');
 {
   is(/div:new Set\(\)/.test(CORE) || /div:''/.test(CORE), 'core — F 에 div 축이 있다');
-  /* 계층은 사용자가 확정했다(v98): 구분 → 운영단위 → 사업부 → 고객사 → 단지 → 라인.
-     칸이 놓인 순서가 곧 사람이 읽는 계층이라, 종속만 맞고 순서가 틀리면 화면이 거짓말을 한다. */
-  is(/div:'사업부', customer:'고객사'/.test(CORE), 'core — 축 순서가 계층과 같다 (사업부 다음 고객사)');
+  /* 축 순서는 사용자가 확정한다(v111): 구분 → 팀 → 운영단위 → 고객사 → 사업부 → 단지 → 라인.
+     여덟 페이지가 «한 줄로, 같은 순서»를 쓴다 — 페이지마다 칸의 생김새가 달라지는 것 자체가
+     「필터가 페이지마다 다르다」로 읽힌다.
+     ⚠ 이 배열은 순서에 의미가 «없는» 자리에서도 쓰인다(pass 의 AND 루프 · 종속 · AV 열
+       인덱스). 그래서 순서를 바꿔도 숫자는 한 자리도 안 움직인다 — 화면 순서만 바뀐다. */
   /* 축 목록이 «한 곳»(AXES)에서 나와야 종속·사이드바·술어가 같은 순서를 본다.
      예전에는 세 곳에 손으로 적혀 있어, 하나만 고치면 조용히 갈라졌다. */
-  is(/const AXES = \['region','op','div','customer','campus','line','team'\]/.test(CORE),
-     'core — 축 순서가 AXES 한 곳에 있다 (계층: 구분→운영단위→사업부→고객사→단지→라인→팀)');
+  is(/const AXES = \['region','team','op','customer','div','campus','line'\]/.test(CORE),
+     'core — 축 순서가 AXES 한 곳에 있다 (구분→팀→운영단위→고객사→사업부→단지→라인)');
   is(/const chk = AXES;/.test(CORE), 'core — 종속(cascading)이 같은 목록을 쓴다');
-  /* v107 — 사이드바는 «어느 자료에 걸리는 필터인지»로 묶어 보여준다(GROUPS).
-     집계 계층(AXES)은 그대로 두고 화면만 나눈다 — 둘을 한 배열로 묶으면 화면을
-     정리하려다 집계 계층이 바뀐다. 그래서 두 목록이 «같은 축 집합»인지를 본다. */
-  is(/const GROUPS = \[/.test(CORE) && /g\.ks\.map\(function\(k\)\{ return \(MULTI\[k\]\?msel:sel\)/.test(CORE),
-     'core — 사이드바는 GROUPS 로 그리고, 다중 여부는 MULTI 가 정한다');
-  {
-    const gm = CORE.match(/const GROUPS = \[([\s\S]*?)\n  \];/);
-    const ks = gm ? (gm[1].match(/'(\w+)'/g)||[]).map(x=>x.slice(1,-1)).filter(k=>AXES7.includes(k)) : [];
-    is(ks.slice().sort().join()===AXES7.slice().sort().join(),
-       'core — GROUPS 가 일곱 축을 «빠짐없이» 담는다 (빠지면 그 칸이 사라진다) — 실제 '+ks.join(','));
-  }
+  /* 사이드바 «목록»도 AXES 한 곳에서 나와야 한다. 따로 두면 축이 늘 때 한쪽만 고쳐져
+     그 칸이 조용히 사라진다 — v107 의 GROUPS 가 그 위험을 안고 있었다. */
+  is(/AXES\.map\(function\(k\)\{ return \(MULTI\[k\]\?msel:sel\)/.test(CORE),
+     'core — 사이드바를 AXES 로 그린다 (목록이 두 벌이 아니다)');
+  is(!/GROUPS/.test(CORE), 'core — 묶음 머리글(설비/인원 기준)은 없앴다 — 한 줄 한 순서');
   /* 축별 조건을 손으로 쓰면 하나만 빠뜨려도 그 축이 조용히 «전체»가 된다.
      그리고 다중선택에서는 `if(F.x)` 가 빈 Set 에도 참이라 반드시 hasK 를 지나야 한다. */
   is(/if\(hasK\(k\) && !axOk\(k, x\)\) return false;/.test(CORE),
@@ -581,8 +577,14 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
     clr();
     is(G.filters.lists('div').hasAny === false, '축 자료가 아예 없으면 hasAny=false → 「자료 없음」');
 
-    is(/const EMPTY_NONE = '전체 \(자료 없음\)', EMPTY_FILT = '전체 \(현재 필터에 해당 없음\)'/.test(CORE),
+    /* ⚠ 「자료 없음」은 «자료를 안 올렸다»로 읽힌다(사용자 지적). 실제 뜻은 «이 화면이 보는
+       자료에는 그 축이 없다»다 — 어느 쪽 문구도 «자료가 없다»고 말하면 안 된다. */
+    is(/const EMPTY_NONE = '전체 \(이 화면 미적용\)', EMPTY_FILT = '전체 \(필터에 해당 없음\)'/.test(CORE),
        'core — 두 문구를 구분해 둔다');
+    /* ⚠ 주석은 걷어내고 본다. 「예전에는 자료 없음이라고 적었다」는 이력 설명까지 걸리면
+       고칠 수 없는 검사가 된다 — 판정 대상은 «화면에 나가는 문구»다. */
+    is(!/자료 없음/.test(CORE.replace(/\/\*[\s\S]*?\*\//g,' ').replace(/(^|[^:])\/\/[^\n]*/g,'$1')),
+       'core — 화면 문구에 「자료 없음」을 쓰지 않는다 (안 올린 것처럼 읽힌다)');
     is(/hasAny \? EMPTY_FILT : EMPTY_NONE/.test(CORE), 'core — 단일 칸이 그 구분을 쓴다');
     is(/\(hasAny \? EMPTY_FILT : EMPTY_NONE\) \+ ' \\u25be'/.test(CORE), 'core — 다중선택 칸도 같이 쓴다');
 
@@ -594,6 +596,134 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
     is(!miss.length, 'report — 패밀리마다 없는 축을 전부 loose 로 선언했다'
        + (miss.length ? '  ⚠ 빠짐: ' + miss.join(', ') : ''));
     clr();
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     [9-3] 사이드바가 «그 순서로, 한 줄로» 그려지는지 (v111 · 사용자 지시)
+     구분 → 팀 → 운영단위 → 고객사 → 사업부 → 단지 → 라인.
+     소스의 AXES 만 보면 «정말 그 순서로 그려지는지»는 못 본다 — 만들어진 마크업을 본다.
+     ══════════════════════════════════════════════════════════════ */
+  console.log('\n[9-3] 사이드바 순서와 «미적용» 문구 (v111)');
+  {
+    let html = '';
+    const kids = [];
+    const slicers = { children: kids,
+      insertAdjacentHTML(pos, h){ html += h; kids.push({html:h}); },
+      insertBefore(){}, querySelector(sel){ return html ? {} : null; }, querySelectorAll:()=>[] };
+    const prevQ = global.document.querySelector;
+    global.document.querySelector = sel => sel === '.slicers' ? slicers : null;
+    G.filters.mount({ page:'ord', rows:()=>[{rg:'국내'}], onChange:()=>{}, get:{ region:x=>x.rg } });
+    global.document.querySelector = prevQ;
+
+    const L = ['구분','팀','운영단위','고객사','사업부','단지','라인'];
+    const got = [...html.matchAll(/class="lbl">([^<]+)</g)].map(m => m[1].trim())
+                  .filter(x => L.indexOf(x) >= 0);
+    is(got.join(' > ') === L.join(' > '),
+       '사이드바가 구분 > 팀 > 운영단위 > 고객사 > 사업부 > 단지 > 라인 순 (실제 ' + got.join(' > ') + ')');
+    is(!/gf-grp/.test(html), '묶음 머리글이 없다 — 여덟 페이지가 같은 한 줄을 본다');
+    is(/id="gf-from"/.test(html) && /id="gf-to"/.test(html), '기간 칸은 맨 뒤에 그대로 있다');
+    /* 칸을 «숨기지» 않는다(v91 사용자 확정) — 나타났다 사라지면 그게 더 헷갈린다. */
+    is(got.length === 7, '축이 하나도 빠지지 않는다 (안 걸리는 축도 칸은 남는다)');
+  }
+
+  /* 안 걸리는 축의 칸이 «무슨 말»을 하는지 — 사용자가 문제 삼은 그 문구다.
+     「자료 없음」은 «자료를 안 올렸다»로 읽혀, 사용자가 설치현황 엑셀을 열어 보게 만들었다.
+     ⚠ mount 는 .slicers 가 없으면 refresh() 전에 빠져나간다 — 칸을 그리게 하려면
+       refresh 를 직접 불러야 한다(이걸 놓치면 검사가 «아무것도 안 보고» 통과한다). */
+  {
+    const btns = {};
+    const stub = (id) => btns[id] || (btns[id] = { id, textContent:'', innerHTML:'', disabled:false,
+      dataset:{}, style:{}, closest:()=>({style:{}}), querySelectorAll:()=>[], addEventListener(){},
+      appendChild(){}, options:[] });
+    const prevG = global.document.getElementById;
+    global.document.getElementById = stub;
+
+    // ① 사업부 자료가 아예 없는 화면 (pm 이 그렇다 — 설치현황을 안 읽는다)
+    G.filters.mount({ page:'lbl', rows:()=>[{rg:'국내'}], onChange:()=>{},
+      get:{ region:x=>x.rg, div:x=>x.dv } });
+    G.filters.clear(); G.filters.refresh();
+    const noneTxt = (btns['gf-divBtn']||{}).textContent || '';
+    const noneDis = (btns['gf-divBtn']||{}).disabled;
+
+    // ② 값은 있는데 다른 필터가 다 떨어뜨린 경우
+    G.filters.mount({ page:'lbl2', rows:()=>[{rg:'국내'},{rg:'해외',dv:'FOUNDRY'}], onChange:()=>{},
+      get:{ region:x=>x.rg, div:x=>x.dv } });
+    G.filters.clear(); G.filters.set('region','국내');
+    const filtTxt = (btns['gf-divBtn']||{}).textContent || '';
+    global.document.getElementById = prevG;
+
+    is(/이 화면 미적용/.test(noneTxt),
+       '축 자료가 없으면 「이 화면 미적용」 (실제 ' + JSON.stringify(noneTxt) + ')');
+    is(noneDis === true, '그 칸은 잠근다 — 눌러도 아무 일이 없는 칸을 열어 두지 않는다');
+    is(/필터에 해당 없음/.test(filtTxt),
+       '필터가 지운 것이면 「필터에 해당 없음」 (실제 ' + JSON.stringify(filtTxt) + ')');
+    is(!/자료 없음/.test(noneTxt) && !/자료 없음/.test(filtTxt),
+       '어느 쪽도 「자료 없음」이라고 하지 않는다 — 안 올린 것처럼 읽힌다');
+    G.filters.clear();
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     [9-4] 가동현황 표가 «단지까지» 내려가는지 (v111 · 사용자 지시)
+     국내는 고객사가 「삼성전자(주)」 하나뿐이라, 법인을 고르면 고객사 한 줄짜리 표가 된다 —
+     그 한 줄은 TOTAL 과 똑같아서 아무것도 안 알려 준다. 실제 소분류는 단지까지 있다.
+     사이드바 필터의 종속과 같은 개념을 표에도 적용한다.
+     ⚠ 판정을 소스에서 떼어 실제로 돌린다 — 정규식으로 «있나»만 보면 조건이 틀려도 통과한다.
+     ══════════════════════════════════════════════════════════════ */
+  console.log('\n[9-4] 가동현황 표의 단계 판정 (v111)');
+  {
+    const R = SRC.report;
+    const i = R.indexOf('const _lvl=(function(){'), j = R.indexOf('})();', i) + 5;
+    const body = i >= 0 ? R.slice(i, j) : '';
+    is(!!body, 'report — 단계 판정(_lvl)이 한 곳에 있다');
+
+    const CI = { customer:0, location:1, fab:2, country:3 };
+    const run = (opPick, cuPick, rows) => {
+      const fINST = rows.map(r => { const a=[]; a[0]=r[0]; a[1]=r[1]; a[2]=r[2]; a[3]=r[3]||'TAIWAN'; return a; });
+      const _campOf = r => G.ORG.campus(r[CI.location], r[CI.fab], r[CI.country]);
+      return new Function('GST','CI','fINST','_opPick','_cuPick','_campOf', body + '; return _lvl;')
+               (G, CI, fINST, opPick, cuPick, _campOf);
+    };
+    /* ⚠ fINST 는 «사이드바 필터가 이미 걸린» 설비 목록이다. 고객사를 골랐으면 여기 오는
+       행도 그 고객사 것뿐이다 — 검사도 그렇게 먹여야 «실제와 같은» 판정을 본다. */
+    const KR = [['삼성전자(주)','P1','','KOREA'],['삼성전자(주)','P2','','KOREA'],
+                ['삼성전자(주)','P3','','KOREA'],['삼성전자(주)','P4','','KOREA']];
+    is(run('', '', KR) === 'corp',        '법인을 안 고르면 법인 단계 (실제 ' + run('','',KR) + ')');
+    is(run('SEC Scrubber','', KR) === 'camp',
+       '법인만 골라도 고객사가 하나뿐이면 단지까지 내려간다 (실제 ' + run('SEC Scrubber','',KR) + ')');
+    is(run('SEC Scrubber','삼성전자(주)', KR) === 'camp', '고객사까지 고르면 당연히 단지');
+
+    const OS = [['MICRON','TONGLUO','F16N'],['PSMC','','P1'],['WINBOND','','F10']];
+    is(run('GST TAIWAN SCRUBBER','', OS) === 'cust',
+       '고객사가 여럿이면 고객사 단계에서 멈춘다 (실제 ' + run('GST TAIWAN SCRUBBER','',OS) + ')');
+    /* 내려가 봐야 한 줄인 경우는 내려가지 않는다 — 한 줄짜리 표를 또 만들지 않는다. */
+    is(run('GST TAIWAN SCRUBBER','PSMC', [['PSMC','','P1'],['PSMC','','P1']]) === 'cust',
+       '고른 고객사의 단지가 하나뿐이면 안 내려간다');
+    is(run('GST TAIWAN SCRUBBER','MICRON', [['MICRON','TONGLUO','F16N'],['MICRON','','F16']]) === 'camp',
+       '고른 고객사의 단지가 여럿이면 내려간다');
+    is(run('SEC Scrubber','', [['삼성전자(주)','P3','','KOREA'],['삼성전자(주)','P3','','KOREA']]) === 'cust',
+       '단지가 하나뿐이면 내려가 봐야 한 줄이라 안 내려간다');
+
+    /* 같은 고객사인데 표기가 갈린 자료. 원문으로 세면 둘로 잡혀 «고객사가 여럿»이 되어
+       안 내려간다 — 고객사 축은 정규화해 견주는 것이 v98 규약이다. */
+    const DUP = [['Micron Memory Taiwan Co., Ltd.(F16)','','F16'],['MICRON','TONGLUO','F16N'],
+                 ['micron','','F16S']];
+    is(run('GST TAIWAN SCRUBBER','', DUP) === 'camp',
+       '표기가 갈려도 정규화해 «하나»로 세고 내려간다 (실제 ' + run('GST TAIWAN SCRUBBER','',DUP) + ')');
+
+    /* 머리글·행 키가 세 단계를 따라가는지 — 한 곳만 빠지면 「법인」 칸에 단지가 선다. */
+    const RC = SRC.report.replace(/\/\*[\s\S]*?\*\//g,' ');
+    is(/const K1=_lvl==='camp'\?'op_cust2':_lvl==='cust'\?'op_corp2':'op_div';/.test(RC),
+       'report — 머리글 첫 칸이 «한 단계 위»를 따라간다');
+    is(/const K2=_lvl==='camp'\?'op_camp2':_lvl==='cust'\?'op_cust2':'op_corp2';/.test(RC),
+       'report — 머리글 둘째 칸이 «행 단계»를 따라간다');
+    is(/op_camp2:'단지'/.test(SRC.report) && /op_camp2:'Campus'/.test(SRC.report)
+       && /op_camp2:'园区'/.test(SRC.report) && /op_camp2:'キャンパス'/.test(SRC.report),
+       'report — 새 머리글을 네 언어 다 채웠다');
+    /* 단지 축은 정규화하지 않는다 — 설치·인원·실적이 이미 같은 낱말(P1·H2)을 쓴다.
+       고객사처럼 접으면 서로 다른 원문 둘이 한 행이 되어 인원이 두 번 잡힌다(v98). */
+    is(/:_campOf\(r\)\)\|\|''\)\.trim\(\)/.test(RC), 'report — 설비 행 키가 단지로 내려간다');
+    is(/:\(p\.campus\|\|p\.fab\|\|'미배치'\)/.test(RC),
+       'report — 인원 행 키도 단지 (둘 다 비면 «미배치» — 고객사로 안 내려간다)');
   }
 
   /* 저장·복원이 Set 을 지키는지 */

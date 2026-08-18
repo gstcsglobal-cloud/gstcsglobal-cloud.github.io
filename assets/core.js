@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 110;
+GST.VER = 111;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -2701,14 +2701,14 @@ GST.filters = (function(){
      ⚠ 값이 없을 때 «전체»인 것은 그대로다(빈 Set = 전체). 그래서 축 검사는 반드시
        hasK/hitK 를 지나야 한다 — `if(F.op)` 는 빈 Set 도 truthy 라 언제나 참이 된다. */
   const MULTI = { region:1, op:1, div:1, customer:1, campus:1, line:1, team:1 };
-  const AXES = ['region','op','div','customer','campus','line','team'];
-  /* 사이드바에 «보여 주는» 묶음. 위 AXES 는 집계 계층(구분→운영단위→사업부→고객사→단지
-     →라인→팀)이라 그대로 두고, 화면은 «어느 자료에 걸리는 필터인지»로 나눈다. */
-  const GROUPS = [
-    { t:'', ks:['region','op','customer','campus','line'] },
-    { t:'설비 기준', note:'설치·실적', ks:['div'] },
-    { t:'인원 기준', note:'인원현황', ks:['team'] },
-  ];
+  /* 축 순서 — 사용자 확정(v111): 구분 → 팀 → 운영단위 → 고객사 → 사업부 → 단지 → 라인.
+     여덟 페이지가 «한 줄로, 같은 순서»를 쓴다. 묶음 머리글(설비 기준/인원 기준)은 없앴다 —
+     페이지마다 칸의 «생김새»가 달라지는 것 자체가 「필터가 페이지마다 다르다」로 읽힌다.
+     ⚠ 이 배열은 순서에 의미가 «없는» 자리에서도 쓰인다(pass 의 AND 루프 · 종속 계산 ·
+       AV 열 인덱스). 그래서 순서를 바꿔도 숫자는 한 자리도 안 움직인다 — 화면 순서만 바뀐다.
+       v98 의 «엑셀 피벗 계층»과 다르다는 것을 알고 바꾼 것이다(사용자 지시).
+     어느 축이 이 화면 자료에 없는지는 «묶음»이 아니라 그 칸 자신이 말한다(EMPTY_NONE). */
+  const AXES = ['region','team','op','customer','div','campus','line'];
   const F = { region:new Set(), op:new Set(), div:new Set(), customer:new Set(),
               campus:new Set(), line:new Set(), team:new Set(), dtFrom:'', dtTo:'' };
   /* 술어에서 «고른 것에 걸리나»를 묻는 유일한 자리. 단일·다중을 여기서만 가른다 —
@@ -2824,7 +2824,11 @@ GST.filters = (function(){
      예전에는 둘 다 「자료 없음」이라고 적었다. 그래서 팀을 하나 고른 순간 고객사·단지·라인·
      사업부가 통째로 「자료 없음」이 됐고, 사용자는 **설치현황 엑셀을 열어 사업부 열이 있는 것을
      확인하고** 「왜 자료없음이라고 나오나」고 물었다 — 화면이 원인을 거짓으로 말한 것이다. */
-  const EMPTY_NONE = '전체 (자료 없음)', EMPTY_FILT = '전체 (현재 필터에 해당 없음)';
+  /* ⚠ 「자료 없음」이라고 적으면 «자료를 안 올렸다»로 읽힌다(사용자 지적). 실제 뜻은
+     «이 화면이 보는 자료에는 그 축이 없다»다 — PM 은 설치현황을 안 읽어 사업부가 없고,
+     인원현황에는 사업부 열이 있어도 전 행이 공란이다. 올릴 것이 없는 게 아니라 그 화면에
+     안 걸리는 축인 것이다. 둘을 구분해 적되, 어느 쪽도 «자료가 없다»고 말하지 않는다. */
+  const EMPTY_NONE = '전체 (이 화면 미적용)', EMPTY_FILT = '전체 (필터에 해당 없음)';
   function fill(id, key, list, hasAny){
     if(MULTI[key]) return fillMulti(id, key, list, hasAny);
     const el = document.getElementById(id); if(!el) return;
@@ -2978,20 +2982,14 @@ GST.filters = (function(){
       + '<div id="'+id+'Box" class="mselbox"></div></div>';
     /* 어느 칸이 다중인지는 MULTI 가 정한다 — 여기 목록을 따로 두면 둘이 갈라져
        «Set 인데 select 를 그리는» 상태가 되고, 그러면 고른 값이 화면에 안 보인다.
-       ── 묶음 (v107 · 사용자 요청) ──
-       축마다 «어느 자료에 있는지»가 다르다. 사업부는 설비 쪽에만 있고(인원현황은 열은
-       있으나 584행 전부 공란 — 실측), 팀은 인원 쪽에만 있다. 한 줄로 늘어놓으면
-       「사업부를 바꿨는데 인원 숫자가 안 변한다」가 «고장»으로 읽힌다. 어디에 걸리는
-       필터인지를 묶음 이름으로 적어 둔다.
-       ⚠ 이 순서는 «보여 주는» 순서다. 종속·술어가 쓰는 계층 순서(AXES)는 그대로 둔다 —
-         둘을 같은 배열로 묶으면 화면을 정리하려다 집계 계층이 바뀐다. */
-    const grp = (t,note) => '<div class="slicer-div"></div><div class="lbl gf-grp">'+t
-      + (note?'<span class="gf-note">'+note+'</span>':'') + '</div>';
+       ── 한 줄 · 한 순서 (v111 · 사용자 지시) ──
+       v107 에는 「설비 기준 / 인원 기준」 묶음 머리글이 있었다. 축마다 걸리는 자료가
+       다르다는 것을 알리려던 것인데, 페이지마다 칸의 생김새가 달라져 오히려 「필터가
+       페이지마다 다르다」로 읽혔다. 이제 AXES 순서 그대로 한 줄이고, «이 화면에 없는 축»
+       은 그 칸 자신이 잠기며 말한다(fill 의 EMPTY_NONE). 목록도 AXES 한 곳에서 나온다 —
+       따로 두면 축이 늘 때 한쪽만 고쳐져 그 칸이 조용히 사라진다. */
     return '<div class="gf-base">'
-      + GROUPS.map(function(g){
-          return (g.t ? grp(g.t, g.note) : '')
-            + g.ks.map(function(k){ return (MULTI[k]?msel:sel)('gf-'+k, L[k]); }).join('');
-        }).join('')
+      + AXES.map(function(k){ return (MULTI[k]?msel:sel)('gf-'+k, L[k]); }).join('')
       + '<div class="slicer"><div class="lbl">'+L.period+'</div>'
       + '<input type="date" id="gf-from" class="dt-input" onchange="GST.filters._on()"> ~ '
       + '<input type="date" id="gf-to" class="dt-input" onchange="GST.filters._on()"></div>'
@@ -3025,9 +3023,10 @@ GST.filters = (function(){
          고치면 한 곳이 빠져 그 페이지만 다르게 보인다(제2원칙). */
       if(!document.getElementById('gf-css')){
         const st=document.createElement('style'); st.id='gf-css';
-        st.textContent='.gf-grp{margin-top:4px;color:var(--a1,#38bdf8);font-weight:800;'
-          +'display:flex;align-items:baseline;gap:6px}'
-          +'.gf-grp .gf-note{font-weight:500;font-size:10px;opacity:.65}';
+        /* 이 화면에 안 걸리는 축은 «잠긴 칸»으로 보인다 — 흐리게 해서 눌러 볼 것이
+           아님을 알린다. 칸을 숨기지는 않는다(칸이 나타났다 사라지면 그것 자체가
+           「페이지마다 필터가 다르다」로 읽힌다 — 사용자 확정 v91). */
+        st.textContent='.slicer .mselbtn:disabled,.slicer select:disabled{opacity:.45;cursor:not-allowed}';
         document.head.appendChild(st);
       }
       const box = document.querySelector('.slicers'); if(!box) return;
