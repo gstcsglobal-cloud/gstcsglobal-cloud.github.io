@@ -367,7 +367,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(114);   // GST.corpLabel · filters.hitL · GST.PM(국내 조치 기준 PM) 을 쓴다
+GST.needVer&&GST.needVer(118);   // GST.corpLabel · filters.hitL · GST.PM(국내 조치 기준 PM) 을 쓴다
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -584,20 +584,12 @@ const campOk=(v)=>GST.filters.hit('campus',v);
      loose 규칙까지 GST.filters.hitL 한 곳을 지난다: 여기서 다시 적으면 pass() 와 갈린다. */
 const divOk=(v)=>GST.filters.hitL('div', v);
 const axOkH=(k,v)=>GST.filters.hitH(k, v);   // 인원 기준 블록 판정 (v114)
-/* 인당 지표는 «분자와 분모가 서로 다른 자료»에서 온다 — 분자는 실적·설비, 분모는 인원현황.
-   그래서 한쪽에만 있는 축을 걸면 한쪽만 좁아진다. ⚠ 방향이 둘이고 «둘 다 조용하다»:
-     · 사업부(설비에만 있는 축) → 분자(챔버·설비·작업)만 좁아진다 → 인당이 실제보다 «낮게»
-     · 팀   (인원에만 있는 축) → 분모(인원)만 좁아진다           → 인당이 실제보다 «높게»
-   높아지는 쪽이 더 위험하다. 낮아지면 「왜 줄었지」로 의심이라도 하는데, 높아지면
-   「우리 팀이 이만큼 일한다」로 그냥 읽힌다 — 사람이 하루 10.8시간을 일할 수는 없는데도.
-   실적 시트에는 팀 열이 아예 없다(인원현황에만 있다). 그래서 분자를 팀으로 좁힐 방법이
-   지금은 없다 — 억지로 잇지 않고, 무엇이 안 좁혀졌는지 그 자리에 적는다(v98 규약). */
-const perWarn=()=>{
-  const w=[];
-  if(GST.filters.has('div'))  w.push('사업부는 설비에만 걸려 분자만 좁아집니다 — 인당이 실제보다 낮게 나옵니다');
-  if(GST.filters.has('team')) w.push('팀은 인원에만 걸려 분모(인원)만 좁아집니다 — 인당 지표가 실제보다 높게 나옵니다');
-  return w.length ? ' · ⚠ ' + w.join(' · ') : '';
-};
+/* v118 — 인당 왜곡 안내는 없앴다. 필터가 두 벌이 된 뒤로는 «사실이 아니다»:
+   사업부(설비)를 걸면서 인원 기준 필터로 그 사업부 담당 인원을 같이 좁히면 분모도 함께
+   좁혀지므로, 인당이 「실제보다 낮게」 나오지 않는다(사용자 지적).
+   한 벌이던 시절에는 분모를 좁힐 방법이 아예 없어서 그 경고가 맞았다 — 두 벌이 그 문제를
+   해결했으니 경고도 같이 사라지는 것이 맞다. 안 맞는 경고를 남겨 두면 화면이 거짓말을 한다. */
+
 const campOn=()=>GST.filters.has('campus');
 const campList=()=>GST.filters.chosen('campus');
 window.onFilt=function(k,v){F[k]=v;render();};
@@ -1336,10 +1328,10 @@ async function loadData(){
   }
 }
 
-/* PM 판정은 GST.PM 한 곳이다 (v113 · 사용자 확정).
-   해외는 작업단계 TBM, 국내는 「조치」에 «설비 PM»·«SWAP» — 국내는 TBM 작업단계로만
-   PM 을 하지 않아서, TBM 으로만 세면 국내 PM 이 통째로 빠진다(사용자 지적).
-   ⚠ 인자가 «작업단계»가 아니라 «행»이다. 국내는 조치 열을 봐야 하므로 stage 만으로는
+/* PM 판정은 GST.PM 한 곳이다 (v118 · 사용자 확정):
+     작업단계 TBM 이면 PM(어느 구분이든) · 국내는 «거기에 더해» 조치에 «설비 PM»·«SWAP».
+     해외는 예전 로직 그대로 — 작업단계만 본다.
+   ⚠ 인자가 «작업단계»가 아니라 «행»이다. 국내는 조치 열과 구분을 봐야 하므로 stage 만으로는
      판정할 수 없다 — 옛 호출부(isPM(x.stage))가 남으면 국내가 조용히 전부 false 가 된다. */
 const isPM=x=>GST.PM.is(x);
 /* 非PM = «PM 이 아닌 정비성 작업». PM 과 겹치면 공수가 두 번 세어져 총합이 부푼다 —
@@ -2000,7 +1992,7 @@ function render(){
           plugins:[valLabelPlugin]});
         const _ai=att.length-1;
         setNote('cAtt',t('nAtt').replace('{a}',att[_ai]??0).replace('{l}',lv[_ai]??0)
-          .replace('{j}',(jb[_ai]??0).toLocaleString()).replace('{p}',pj[_ai]??0)+perWarn());
+          .replace('{j}',(jb[_ai]??0).toLocaleString()).replace('{p}',pj[_ai]??0));
       }
       // 총인원 vs TO (둘 다 '명' — 단일축)
       {
@@ -2033,7 +2025,7 @@ function render(){
         };
         const _ti=hv.length-1, _gap=Math.round((hv[_ti]-to[_ti])*10)/10;
         setNote('cTo',t('nTo').replace('{p}',to[_ti]?Math.round(hv[_ti]/to[_ti]*100):'—')
-          .replace('{d}',(_gap>=0?'+':'')+_gap)+perWarn());
+          .replace('{d}',(_gap>=0?'+':'')+_gap));
       }
       // 관리 챔버 + 인당 관리 (QBR: 챔버 바 + 인당 라인)
       {
@@ -2065,7 +2057,7 @@ function render(){
             rows:rs.map(r=>[String(r[CI.customer]||''),String(r[CI.fab]||''),String(r[CI.type]||''),fmtD(pd(r[CI.fabIn]))])};
         };
         const _ci=per.length-1;
-        setNote('cChp',t('nChp').replace('{v}',per[_ci]??0).replace('{c}',(chs[_ci]||0).toLocaleString()).replace('{h}',hv[_ci]||0)+perWarn());
+        setNote('cChp',t('nChp').replace('{v}',per[_ci]??0).replace('{c}',(chs[_ci]||0).toLocaleString()).replace('{h}',hv[_ci]||0));
       }
     } else { ['cAtt','cTo','cChp'].forEach(destroyMk); }
   }
@@ -2183,9 +2175,9 @@ function render(){
        판정을 여기서 새로 만들지 않는다 — 차트가 쓴 isPM 그대로 센다(두 벌이면 갈라진다). */
     /* PM 근거(구분별 건수·잡힌 조치 값)는 화면에 안 적는다 — 사용자 요청.
        계산은 GST.PM 한 곳에 그대로 있고, 궁금하면 물어서 확인한다.
-       ⚠ 인당 왜곡 안내(perWarn)는 남긴다. 그건 «근거»가 아니라 «이 숫자를 그대로 읽으면
-         안 된다»는 경고다 — 분자와 분모가 서로 다른 축으로 좁혀지는 자리를 알린다. */
-    setNote('cMan',t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0)+perWarn());
+       인당 왜곡 안내도 없앴다(v118) — 두 벌 필터로 분모를 같이 좁힐 수 있게 된 뒤로는
+       그 경고가 사실이 아니다. */
+    setNote('cMan',t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0));
   }
   // ===== PM S-커브 (올해, 월 고정) =====
   let scPlan=0, scDone=0;
@@ -2570,12 +2562,6 @@ function render(){
          .replace('{list}',_noP.slice(0,6).map(v=>v.lbl).join(' · ')
            +(_noP.length>6?' 외 '+(_noP.length-6):'')));
        if(CI.state<0)parts.push('⚠ 설비상태 열이 없어 옛 날짜 기준으로 셉니다');
-       /* 표의 「담당 인원·인당 챔버·목표 TO」 칸은 설비와 인원을 나눈 값이다.
-          사업부를 걸면 설비만 좁아지므로 그 칸들을 그대로 읽으면 안 된다. */
-       if(GST.filters.has('div'))parts.push('⚠ 사업부는 설비에만 걸립니다 — 「담당 인원·인당 챔버」 칸의 인원은 안 좁혀집니다');
-       /* 반대 방향 — 팀은 인원에만 있어 «분모만» 좁아진다. 설비·PM 칸은 그대로라
-          「담당 인원」 대비 숫자가 전부 부풀어 보인다. */
-       if(GST.filters.has('team'))parts.push('⚠ 팀은 인원에만 걸립니다 — 설비·챔버·PM 칸은 안 좁혀지므로 「인당 챔버」가 실제보다 높게 나옵니다');
        if(uk.length)parts.push('⚠ 처음 보는 설비상태 '+uk.map(k=>k+' '+_unk[k]+'대').join(' · ')
          +' — 반입·가동 어디에도 안 들어갔습니다');
        x.textContent=parts.join(' · ');
