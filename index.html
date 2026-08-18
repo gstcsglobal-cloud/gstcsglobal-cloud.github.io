@@ -359,8 +359,22 @@ function kioskAsk(){
   clearTimeout(KIOSK.askT);
   KIOSK.askT=setTimeout(()=>kioskFillCamps(true), 2500);   // 답이 안 오면 그때 진단을 적는다
 }
+/* 페이지가 «오래 걸리는 일»을 시작하면 셸의 그 버튼을 잠근다 — 버튼은 셸에 있고
+   클릭만 iframe 으로 가므로 페이지가 직접 못 만진다. 60초 안전장치를 둔다:
+   페이지가 죽거나 메시지를 못 보내면 버튼이 영영 잠긴 채로 남기 때문이다. */
+let _barBusyT=null;
 window.addEventListener('message',e=>{
   const d=e.data||{};
+  if(d.type==='gst-bar-busy'){
+    const b=document.querySelector('[data-gb="'+d.key+'"]'); if(!b) return;
+    clearTimeout(_barBusyT);
+    if(d.on){ if(!b.dataset.old) b.dataset.old=b.textContent;
+              b.disabled=true; b.textContent='⏳ 만드는 중…';
+              _barBusyT=setTimeout(()=>{ b.disabled=false;
+                if(b.dataset.old){ b.textContent=b.dataset.old; delete b.dataset.old; } }, 60000); }
+    else    { b.disabled=false; if(b.dataset.old){ b.textContent=b.dataset.old; delete b.dataset.old; } }
+    return;
+  }
   if(d.type==='gst-kiosk-ack'){ kioskAck(d); return; }
   if(d.type!=='gst-kiosk-a' || d.axis!==KIOSK.axis) return;
   KIOSK.replies++; KIOSK.askedVer=d.ver||0;

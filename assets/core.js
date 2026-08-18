@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 104;
+GST.VER = 105;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -568,6 +568,17 @@ GST.fetchCSVFresh = async function(gid){
 
 // PapaParse 필요. 캐시 무효화 포함. 반환: 헤더 포함 2차원 배열
 // Supabase 인증 활성 시: 시트 직접 URL → 프록시(Edge Function)로 자동 치환 + JWT 첨부
+/* 시트 «주소»가 아니라 «gid» 만 코드에 둔다.
+   ⚠ 공개 저장소에 웹게시 토큰(/d/e/2PACX-…)이 9개 파일에 평문으로 박혀 있었다. 웹게시에는
+     인증이 없어, URL 만 알면 로그인 없이 전량을 받을 수 있었다(v78 이 경고한 바로 그것).
+     사용자가 2026-08 에 웹게시를 해제해 통로 자체는 닫혔지만, 문자열을 남겨 두면 새 파일이
+     그대로 복사해 간다 — 실제로 /diag/ 를 만들 때 그렇게 됐다.
+   실제로 필요한 정보는 gid 뿐이다: 읽기는 gid 로 미러·Import 표를 고르고(fetchCSVCached),
+   폴백도 gid 로 sheet-proxy 를 부른다(서비스 계정). 이 URL 은 «gid 를 실어 나르는 껍데기»다.
+   tests/t-leak.mjs 가 2PACX 토큰의 부활을 막는다. */
+GST.SHEET_PUB = 'https://docs.google.com/spreadsheets/d/e/PUBLISH-DISABLED/pub';
+GST.sheetUrl = function(gid){ return GST.SHEET_PUB + '?gid=' + gid + '&single=true&output=csv'; };
+
 GST.fetchCSV = async function(url){
   if(GST.authOn() && /docs\.google\.com/.test(url)){
     var gm=url.match(/[?&]gid=(\d+)/); var gid=gm?gm[1]:'0';
@@ -3232,6 +3243,19 @@ GST.barSync = function(){
   if(window.self!==window.top){ try{ window.parent.postMessage(reg,'*'); }catch(e){} }
   else GST._localBar(reg);
 };
+/* 공통바 버튼 잠금 — 페이지 안에서도, 셸 안에서도 같은 이름으로 부른다.
+   iframe 안이면 셸에 알리고, 셸이면 자기 버튼을 직접 잠근다. */
+GST._barBusy = function(key, on){
+  const b = document.querySelector('[data-gb="'+key+'"]');
+  if(b){
+    if(on){ if(!b.dataset.old) b.dataset.old = b.textContent;
+            b.disabled = true; b.textContent = '⏳ 만드는 중…'; }
+    else  { b.disabled = false; if(b.dataset.old){ b.textContent = b.dataset.old; delete b.dataset.old; } }
+  }
+  if(window.self !== window.top){
+    try{ window.parent.postMessage({type:'gst-bar-busy', key:key, on:!!on}, '*'); }catch(e){}
+  }
+};
 GST._barDo = function(key, val){
   if(key==='brief'){ GST.briefOpen(); return; }
   if(key==='pivot'){ GST.pivotOpen(); return; }
@@ -3247,7 +3271,17 @@ GST._barDo = function(key, val){
     return;
   }
   if(key==='style'){ if(on.style) on.style(); else GST.nextStyle(); return; }
-  if(key==='ppt'){  if(on.ppt) on.ppt(); else GST.pptAuto(); return; }
+  if(key==='ppt'){
+    /* 만드는 데 몇 초가 걸린다(차트 30장을 고배율로 다시 그린다). 그동안 아무 표시가 없으면
+       «눌러도 반응이 없다»로 읽히고, 사람은 계속 누른다 — 그러면 동시에 여러 벌이 돈다.
+       ⚠ 버튼은 «셸»에 있고 클릭만 이 iframe 으로 전달된다. 여기서 DOM 을 찾아도 없다 —
+         그래서 셸에 상태를 알려 셸이 잠근다. */
+    GST._barBusy('ppt', true);
+    let r; try{ r = on.ppt ? on.ppt() : GST.pptAuto(); }
+    catch(e){ GST._barBusy('ppt', false); throw e; }
+    Promise.resolve(r).then(function(){ GST._barBusy('ppt', false); },
+                           function(e){ GST._barBusy('ppt', false); try{ console.error(e); }catch(x){} });
+    return; }
   if(typeof on[key]==='function'){ try{ on[key](val); }catch(e){} }
 };
 // 직접 접속(셸 밖)일 때 페이지 안에 같은 바를 렌더
@@ -3377,16 +3411,31 @@ window.addEventListener('message', function(e){
    주간현황은 자체 QBR 양식(downloadPPT)을 쓰고, 나머지 페이지가 이걸 쓴다.
    ============================================================ */
 GST._pptP = null;
+/* ⚠ 시간 제한이 «반드시» 있어야 한다. 사내망이 CDN 을 «거부»하지 않고 «묵살»하면
+   onerror 가 영영 안 오고, await 가 그대로 멈춘다 — 버튼을 눌러도 아무 반응이 없다.
+   실제로 그 증상으로 돌아왔다. 에러보다 나쁜 것이 «아무 일도 안 일어나는 것»이다. */
+GST.PPT_CDN_MS = 15000;
 GST.pptLoad = function(){
   if(window.PptxGenJS) return Promise.resolve();
   if(GST._pptP) return GST._pptP;
   GST._pptP = new Promise(function(res,rej){
+    let done=false;
+    const fin=function(ok,err){ if(done) return; done=true; clearTimeout(tm);
+      if(ok) return res(); GST._pptP=null; rej(err); };
+    const tm=setTimeout(function(){ fin(false, new Error('TIMEOUT')); }, GST.PPT_CDN_MS);
     const s=document.createElement('script');
+    s.onload=function(){ window.PptxGenJS ? fin(true) : fin(false, new Error('BLOCKED')); };
+    s.onerror=function(){ fin(false, new Error('BLOCKED')); };
     s.src='https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
-    s.onload=res; s.onerror=function(){ GST._pptP=null; rej(new Error('PptxGenJS CDN 로드 실패')); };
     document.head.appendChild(s);
   });
   return GST._pptP;
+};
+/* 실패를 «보이게» 알린다. alert 는 브라우저·확장에 따라 안 뜨는 자리가 있어 토스트를 먼저 쓴다. */
+GST._pptSay = function(msg){
+  try{ if(typeof window.capToast==='function'){ window.capToast(msg); return; } }catch(e){}
+  try{ alert(msg); }catch(e){}
+  try{ console.warn('[PPT] '+msg); }catch(e){}
 };
 // 차트를 고배율로 다시 그려 배경 채운 캔버스 반환 (PPT 확대에도 선명)
 GST.chartHiRes = function(id, scale){
@@ -3510,7 +3559,12 @@ GST.chartHiResLight = function(id, scale){
 GST.PPT_MAX_PER_SLIDE = 6;
 GST.pptAuto = async function(opt){
   opt = opt || {};
-  try{ await GST.pptLoad(); }catch(e){ alert('PPT 라이브러리를 불러오지 못했습니다. 네트워크를 확인하세요.'); return; }
+  try{ await GST.pptLoad(); }
+  catch(e){
+    GST._pptSay(String(e&&e.message)==='TIMEOUT'
+      ? 'PPT 라이브러리를 15초 안에 못 받았습니다 — 사내망이 cdn.jsdelivr.net 을 막고 있을 수 있습니다. 전산팀에 그 주소 허용을 요청하거나, 차트별 「📋 복사」로 PPT 에 직접 붙여넣으세요.'
+      : 'PPT 라이브러리를 불러오지 못했습니다 (cdn.jsdelivr.net 차단). 차트별 「📋 복사」로 PPT 에 직접 붙여넣을 수 있습니다.');
+    return; }
 
   /* 숨겨진 섹션의 차트도 담는다 — 접어 둔 채 내보내면 «있는 줄 알았던» 장표가 조용히 빠진다. */
   const secs = [].slice.call(document.querySelectorAll('[data-sec]'));
@@ -3552,8 +3606,11 @@ GST.pptAuto = async function(opt){
     s.addImage({data:oc.toDataURL('image/png'), x:x+(CW-w)/2, y:y+BAND+(BODY-h)/2, w:w, h:h});
   };
 
-  /* 화면에 실제로 그려진 차트만. clientWidth 0 은 접힌 카드라 캡처하면 빈 그림이 된다. */
-  const cvs = [].slice.call(document.querySelectorAll('.cw canvas'))
+  /* ⚠ `.cw canvas` 만 보면 안 된다 — 추이(.trend-wrap)·크로스(.cross-wrap) 카드의 차트가
+     통째로 빠진다(실측: 설치현황 14개 중 5개 · 고장분석 32개 중 7개가 그 바깥이다).
+     카드 안의 캔버스를 전부 보되, Chart 인스턴스가 없는 것은 아래에서 자연히 걸러진다.
+     clientWidth 0 은 접힌 카드라 캡처하면 빈 그림이 된다. */
+  const cvs = [].slice.call(document.querySelectorAll('.card canvas, .mcard canvas'))
                 .filter(function(c){ return c.id && c.clientWidth>0; });
   const items = [];
   for(const cv of cvs){
@@ -3564,7 +3621,7 @@ GST.pptAuto = async function(opt){
   }
   hid.forEach(function(s){ s.style.display='none'; });
   if(hid.length){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }
-  if(!items.length){ alert('내보낼 차트가 없습니다.'); return; }
+  if(!items.length){ GST._pptSay('내보낼 차트가 없습니다 — 자료가 다 뜬 뒤에 다시 눌러 주세요.'); return; }
 
   const per = GST.PPT_MAX_PER_SLIDE, pages = Math.ceil(items.length/per);
   for(let pg=0; pg<pages; pg++){

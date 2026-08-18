@@ -89,9 +89,9 @@ GST.needVer && GST.needVer(98);
 
 /* gid 를 실어 나르는 URL. GST.fetchCSVCached 가 gid 를 보고 미러 표(sheet_wk·mat·inst)로 가고,
    실패하면 이 시트 주소로 폴백한다 — 그래서 «지금 화면들이 보는 것과 같은 데이터»다. */
-const WK_URL  ='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=646668307&single=true&output=csv';
-const MAT_URL ='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=31302669&single=true&output=csv';
-const INST_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
+const WK_URL  =GST.sheetUrl('646668307');
+const MAT_URL =GST.sheetUrl('31302669');
+const INST_URL=GST.sheetUrl('891608329');
 
 const $=id=>document.getElementById(id);
 function logLine(cls,msg){ const el=$('log'); if(el.textContent==='불러오는 중…')el.textContent='';

@@ -519,7 +519,7 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
    푸는 것에 기댄다(core v99). 옛 core.js 가 캐시에 남으면 그 설비가 통째로 「국가 미상」이
    되는데 에러는 안 난다 — 숫자만 조용히 틀린다. 그래서 버전을 선언해 배너로 드러낸다. */
 GST.needVer && GST.needVer(99);
-const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTr_0-rtwnz47XAWsHUJT7acg5vgrVPe4Gk17ArnsWfnV_30Y4BJXIBRZZ1bAw33TUsqDmoz0LgzbOP/pub?gid=891608329&single=true&output=csv';
+const SHEET_URL=GST.sheetUrl('891608329');
 // 설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
 // 이 시트는 128열이라 위치 고정이 특히 위험했다(type이 75열째). 이제 이름으로 따라간다.
 // 'Type'은 44·79·96열에 중복이라 쓰지 않고, 챔버 판정은 'Scrubber type'만 본다.

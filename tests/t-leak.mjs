@@ -97,7 +97,15 @@ for (const f of files) {
       if (isReal) { bad++; console.log(`  ❌ ${f}: 실제 ${P.what} ${v}`); }
     }
   }
-  // ② 작업자 실명 — 실제 명단에 있는 이름만 잡는다(UI 단어는 명단에 없다)
+  /* ② 구글시트 «웹게시» 토큰 — 가장 큰 유출 통로였는데 검사 밖에 있었다.
+     웹게시에는 인증이 없어, URL 만 알면 로그인 없이 전량(작업자 실명·고객사·설비 S/N)을
+     받는다. 사용자가 2026-08 에 게시를 해제해 통로는 닫혔지만, 문자열을 남겨 두면
+     새 파일이 그대로 복사해 간다 — 실제로 /diag/ 를 만들 때 그렇게 됐다.
+     대조본이 필요 없는 «형태» 검사라 어느 환경에서도 돈다. */
+  { const re=/\/d\/e\/2PACX-[A-Za-z0-9_-]{10,}/g; let m;
+    while((m=re.exec(txt))) { bad++; console.log(`  ❌ ${f}: 구글시트 웹게시 토큰 (gid 만 두고 GST.sheetUrl 을 쓸 것)`); } }
+
+  // ③ 작업자 실명 — 실제 명단에 있는 이름만 잡는다(UI 단어는 명단에 없다)
   if (REAL_NAME.size) {
     for (const n of REAL_NAME) {
       if (txt.includes(n)) { bad++; console.log(`  ❌ ${f}: 실제 작업자 실명 "${n}"`); }
@@ -105,7 +113,7 @@ for (const f of files) {
   }
 }
 
-console.log(`\n검사 ${checked}개 파일 · 대조본: 설비 S/N ${REAL_SN.size}건 · 작업자 ${REAL_NAME.size}명`);
+console.log(`\n검사 ${checked}개 파일 · 대조본: 설비 S/N ${REAL_SN.size}건 · 작업자 ${REAL_NAME.size}명 · 웹게시 토큰 형태 검사 포함`);
 console.log(bad ? `❌ 실데이터 ${bad}건이 커밋 대상에 들어 있다 — 가공값으로 바꿀 것`
                 : '✅ 커밋 대상에 실데이터 없음');
 process.exit(bad ? 1 : 0);
