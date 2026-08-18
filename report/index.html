@@ -367,7 +367,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(108);   // GST.corpLabel · GST.filters.hitL(사업부 loose 판정) 을 쓴다
+GST.needVer&&GST.needVer(113);   // GST.corpLabel · filters.hitL · GST.PM(국내 조치 기준 PM) 을 쓴다
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -1335,11 +1335,18 @@ async function loadData(){
   }
 }
 
-const isPM=s=>s==='TBM';
-const isSvc=s=>['BM','CBM','CM','CRM'].includes(s);
+/* PM 판정은 GST.PM 한 곳이다 (v113 · 사용자 확정).
+   해외는 작업단계 TBM, 국내는 「조치」에 «설비 PM»·«SWAP» — 국내는 TBM 작업단계로만
+   PM 을 하지 않아서, TBM 으로만 세면 국내 PM 이 통째로 빠진다(사용자 지적).
+   ⚠ 인자가 «작업단계»가 아니라 «행»이다. 국내는 조치 열을 봐야 하므로 stage 만으로는
+     판정할 수 없다 — 옛 호출부(isPM(x.stage))가 남으면 국내가 조용히 전부 false 가 된다. */
+const isPM=x=>GST.PM.is(x);
+/* 非PM = «PM 이 아닌 정비성 작업». PM 과 겹치면 공수가 두 번 세어져 총합이 부푼다 —
+   국내는 BM 행의 조치가 「SWAP PM」인 경우가 실제로 있다. */
+const isSvc=x=>GST.PM.svc(x);
 const isInst=s=>['반입','SET-UP','SETUP','TURN-ON','TURNON'].includes(s);
 const isFault=s=>s==='BM';   // 고장(TOP3·인사이트) = Alarm 차트와 동일하게 BM만
-const isMaint=s=>isPM(s)||isSvc(s);   // TBM+CBM+BM+CRM+CM — 인당 작업건 분자 (설치 제외)
+const isMaint=x=>GST.PM.maint(x);   // PM + 서비스 4단계 + TBM — 인당 작업건 분자 (설치 제외)
 
 function fillFilters(){
   const cSet=new Set(), uSet=new Set();
@@ -1949,7 +1956,7 @@ function render(){
           const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
           const la=Math.round(ls/wd*10)/10;
           const hv=head(p.end);
-          const jobs=bk(u,p.key).filter(x=>isMaint(x.stage)).length;
+          const jobs=bk(u,p.key).filter(isMaint).length;
           const attV=Math.max(0,Math.round((hv-la)*10)/10);
           lv.push(la);
           att.push(attV);
@@ -2092,7 +2099,7 @@ function render(){
   const w30=x=>x.wd>=d30&&x.wd<=asOf;
   const _w30=wkIn(d30,asOf);
   const man30=_w30.reduce((a,x)=>a+x.manMin,0);
-  const manPM30=_w30.reduce((a,x)=>a+(isPM(x.stage)?x.manMin:0),0);
+  const manPM30=_w30.reduce((a,x)=>a+(isPM(x)?x.manMin:0),0);
   // kp4: BM 고장 건수(최근 30일) — 줄어들면 좋은 지표
   const bm30=bmN(d30,asOf), bmPrev=bmNx(d60,d30);
   setTxt('kp4',bm30.toLocaleString()); setTxt('kd4',GST.deltaBadge(bm30,bmPrev,true));
@@ -2131,8 +2138,8 @@ function render(){
       const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
       return Math.max(1,Math.max(1,headOn(p.end))*wd-ls);};
     // 구간별 원시 분(minute) 합 → 총합은 원시합에서 한 번만 반올림(이중 반올림 방지)
-    const pmMin=P.map(p=>bk(u,p.key).reduce((a,x)=>a+(isPM(x.stage)?x.manMin:0),0));
-    const npMin=P.map(p=>bk(u,p.key).reduce((a,x)=>a+(isSvc(x.stage)?x.manMin:0),0));   // 非PM = CBM·CRM·CM·BM
+    const pmMin=P.map(p=>bk(u,p.key).reduce((a,x)=>a+(isPM(x)?x.manMin:0),0));
+    const npMin=P.map(p=>bk(u,p.key).reduce((a,x)=>a+(isSvc(x)?x.manMin:0),0));   // 非PM = 정비성 작업 중 PM 이 아닌 것
     const hPM=P.map((p,i)=>r1(pmMin[i]/60/denom(p)));
     const hNp=P.map((p,i)=>r1(npMin[i]/60/denom(p)));
     const hTot=P.map((p,i)=>r1((pmMin[i]+npMin[i])/60/denom(p)));   // 엑셀 매크로와 동일: PM분+비PM분 원시합에서 단일 반올림
@@ -2160,23 +2167,36 @@ function render(){
          «적힌 것»을 그린 것이다. 숫자만 보면 그 차이를 알 방법이 없으므로 건수를 같이 적는다.
        판정을 여기서 새로 만들지 않는다 — 차트가 쓴 isPM 그대로 센다(두 벌이면 갈라진다). */
     const _lastP=P[_mi], _lastRows=_lastP?bk(u,_lastP.key):[];
-    const _pmN=_lastRows.filter(x=>isPM(x.stage)).length;
-    const _allN=_lastRows.filter(x=>isMaint(x.stage)).length;
+    const _pmN=_lastRows.filter(isPM).length;
+    const _allN=_lastRows.filter(isMaint).length;
     const _pmPct=_allN?Math.round(_pmN/_allN*1000)/10:0;
+    /* 근거를 «구분별로» 적는다 — 판정이 국내와 해외가 다르기 때문이다(v113).
+       해외는 작업단계 TBM, 국내는 조치 컬럼. 한 줄로 뭉뚱그리면 어느 규칙으로 잡힌
+       숫자인지 알 수 없고, 그게 곧 「PM 공수 어떻게 뽑았냐」는 질문으로 돌아온다. */
+    const _krRows=_lastRows.filter(x=>x.region===GST.ORG.REGION_KR);
+    const _osRows=_lastRows.filter(x=>x.region!==GST.ORG.REGION_KR);
+    const _basis=[];
+    if(_osRows.length)_basis.push('해외 작업단계 TBM '+_osRows.filter(isPM).length.toLocaleString()+'건');
+    if(_krRows.length)_basis.push('국내 조치 「설비 PM·SWAP」 '+_krRows.filter(isPM).length.toLocaleString()+'건');
     let _mNote=t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0)
-      +' · PM 근거 = 작업단계 TBM '+_pmN.toLocaleString()+'건'
+      +' · PM 근거 = '+(_basis.join(' · ')||'0건')
       +(_allN?' (작업 '+_allN.toLocaleString()+'건의 '+_pmPct+'%)':'');
-    /* 「PM 을 안 했다」와 「TBM 이라고 안 적었다」는 다른 사실이다 — 화면이 구별해 준다.
+    /* ⚠ 어휘가 운영단위마다 다르다(사용자 지적). 무엇이 잡혔는지를 보여 줘야 빠진 낱말을
+       사람이 알려 줄 수 있다 — 안 보여 주면 「덜 잡힌다」는 것을 아무도 모른다. */
+    const _mm=GST.PM.matched(_krRows);
+    if(_mm.length)_mNote+=' · 국내 잡힌 조치: '+_mm.slice(0,5).map(a=>a[0]+' '+a[1]).join(' · ')
+      +(_mm.length>5?' 외 '+(_mm.length-5)+'종':'');
+    /* 「PM 을 안 했다」와 「그렇게 안 적었다」는 다른 사실이다 — 화면이 구별해 준다.
        기준(10%)은 눈금이 아니라 «이 정도면 시트를 의심해 볼 만하다»는 선이다. */
     if(_allN>=20&&_pmPct<10)
-      _mNote+=' · ⚠ TBM 표기가 드뭅니다 — 이 막대는 «한 PM»이 아니라 «TBM 이라 적힌 것»입니다';
+      _mNote+=' · ⚠ PM 표기가 드뭅니다 — 이 막대는 «한 PM»이 아니라 «그렇게 적힌 것»입니다';
     setNote('cMan',_mNote+perWarn());
   }
   // ===== PM S-커브 (올해, 월 고정) =====
   let scPlan=0, scDone=0;
   {
     const aY=asOf.getUTCFullYear(), aM=asOf.getUTCMonth();
-    const tbm=sWK.filter(x=>isPM(x.stage)&&x.sn);
+    const tbm=sWK.filter(x=>isPM(x)&&x.sn);
     const g={};
     tbm.forEach(x=>{
       const k=x.sn+'||'+(x.chamber||'-');
@@ -2465,7 +2485,7 @@ function render(){
     fINST.forEach(r=>{ if(!_isIn(r))return;
       const k=rkI(r); if(!k)return; (_gI[k]||(_gI[k]=[])).push(r); });
     fHR.forEach(p=>{ if(!activeAt(p,_oe))return; const k=bucket(rkP(p)); if(!k)return; (_gP[k]||(_gP[k]=[])).push(p); });
-    wkIn(_ost,_oe).forEach(x=>{ if(!isPM(x.stage))return; const k=bucket(rkW(x)); if(k)_pmN[k]=(_pmN[k]||0)+1; });
+    wkIn(_ost,_oe).forEach(x=>{ if(!isPM(x))return; const k=bucket(rkW(x)); if(k)_pmN[k]=(_pmN[k]||0)+1; });
     const D=OROWS.map(R=>{
       const ins=_gI[R.k]||[];
       const run=ins.filter(_isRun);
@@ -2605,7 +2625,7 @@ function render(){
     drawSpark('sp4',SP.map(p=>bmN(p.st,p.end)),'#E03131');
     drawSpark('sp5',SP.map(p=>{const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
       const den=Math.max(1,Math.max(1,headOn(p.end))*wdv-ls);
-      const mm=wkIn(p.st,p.end).reduce((a,x)=>a+((isPM(x.stage)||isSvc(x.stage))?x.manMin:0),0);
+      const mm=wkIn(p.st,p.end).reduce((a,x)=>a+(isMaint(x)?x.manMin:0),0);
       return Math.round(mm/60/den*10)/10;}),'#5EC2FF');
     ['sp2','sp6'].forEach(id=>{const e=document.getElementById(id);if(e){e.style.display='none';}});
   }catch(e){}
@@ -2637,12 +2657,12 @@ function render(){
     const lsOf=p=>fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
     const attW=[],lvW=[],hdW=[],pjW=[],pmW=[],npW=[],htW=[];
     WPq.forEach(p=>{const ls=lsOf(p),hv=headOn(p.end),la=r1q(ls/5);
-      const jobs=bk('w',p.key).filter(x=>isMaint(x.stage)).length;
+      const jobs=bk('w',p.key).filter(isMaint).length;
       const av=Math.max(0,r1q(hv-la));
       attW.push(av);lvW.push(la);hdW.push(hv);pjW.push(av?r1q(jobs/av):0);
       const den=Math.max(1,Math.max(1,hv)*5-ls);
-      const pm=bk('w',p.key).reduce((a,x)=>a+(isPM(x.stage)?x.manMin:0),0);
-      const np=bk('w',p.key).reduce((a,x)=>a+(isSvc(x.stage)?x.manMin:0),0);
+      const pm=bk('w',p.key).reduce((a,x)=>a+(isPM(x)?x.manMin:0),0);
+      const np=bk('w',p.key).reduce((a,x)=>a+(isSvc(x)?x.manMin:0),0);
       pmW.push(r2q(pm/60/den));npW.push(r2q(np/60/den));htW.push(r2q((pm+np)/60/den));});
     // Alarm(BM)·All By-Pass — 슬라이드3: 가=주간, 나=월간 (cFt 차트와 동일 산식)
     const abpOf=(uu,p)=>{const src=ABP[uu]||{};const key=(uu==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
@@ -2809,8 +2829,8 @@ function drillFault(p){ const D=window._DRILL;
   showDrill('고장 상세 · '+p.label,h);
 }
 function drillMan(p){ const D=window._DRILL;
-  const rows=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&(isPM(x.stage)||isSvc(x.stage)));
-  const g={}; rows.forEach(x=>{const k=(/^F1[016]/.test(x.fab)?x.fab:x.custB)||'ETC';(g[k]=g[k]||{pm:0,np:0});if(isPM(x.stage))g[k].pm+=x.manMin;else g[k].np+=x.manMin;});
+  const rows=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&isMaint(x));
+  const g={}; rows.forEach(x=>{const k=(/^F1[016]/.test(x.fab)?x.fab:x.custB)||'ETC';(g[k]=g[k]||{pm:0,np:0});if(isPM(x))g[k].pm+=x.manMin;else g[k].np+=x.manMin;});
   const H=m=>Math.round(m/60*10)/10; let tp=0,tn=0;
   const ents=Object.entries(g).sort((a,b)=>(b[1].pm+b[1].np)-(a[1].pm+a[1].np)); ents.forEach(e=>{tp+=e[1].pm;tn+=e[1].np;});
   let h='<div class="dsum"><div class="b"><span class="n">'+H(tp+tn)+'h</span><span class="l">총 공수</span></div><div class="b"><span class="n">'+H(tp)+'h</span><span class="l">PM(TBM)</span></div><div class="b"><span class="n">'+H(tn)+'h</span><span class="l">비PM</span></div></div>';
@@ -2820,7 +2840,7 @@ function drillMan(p){ const D=window._DRILL;
 }
 function drillAtt(p){ const D=window._DRILL;
   const head=D.headOn(p.end), ls=D.fLV.filter(x=>x.date>=p.st&&x.date<=p.end).reduce((a,x)=>a+x.days,0);
-  const jobs=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&isMaint(x.stage)).length;
+  const jobs=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&isMaint(x)).length;
   const h='<div class="dsum"><div class="b"><span class="n">'+head+'</span><span class="l">현장 재직</span></div><div class="b"><span class="n">'+(Math.round(ls*10)/10)+'</span><span class="l">휴가(평일 합)</span></div><div class="b"><span class="n">'+jobs.toLocaleString()+'</span><span class="l">작업 건수</span></div></div><div class="dhint">작업 = TBM·BM·CBM·CRM·CM 합계</div>';
   showDrill('출근·작업 상세 · '+p.label,h);
 }

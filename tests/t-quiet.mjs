@@ -307,17 +307,88 @@ console.log('\n[8] 인당 지표가 한쪽만 좁아진 것을 밝히는지 (v11
      'report — 가동현황 표에도 같은 말을 적는다');
 
   /* PM 의 «근거»를 화면이 말하는지. TBM 을 안 적은 것과 PM 을 안 한 것은 다른 사실이다. */
-  is(/PM 근거 = 작업단계 TBM '\+_pmN/.test(R), 'report — PM 공수의 근거(TBM 건수)를 적는다');
-  is(/_pmN=_lastRows\.filter\(x=>isPM\(x\.stage\)\)\.length/.test(R),
+  is(/PM 근거 = '\+\(_basis/.test(R), 'report — PM 공수의 근거(건수)를 적는다');
+  is(/_pmN=_lastRows\.filter\(isPM\)\.length/.test(R),
      'report — 건수를 차트가 쓴 isPM 그대로 센다 (판정을 두 벌로 만들지 않는다)');
-  is(/TBM 표기가 드뭅니다 — 이 막대는 «한 PM»이 아니라 «TBM 이라 적힌 것»입니다/.test(R),
+  is(/PM 표기가 드뭅니다 — 이 막대는 «한 PM»이 아니라 «그렇게 적힌 것»입니다/.test(R),
      'report — 입력률이 낮으면 «적힌 것»을 그린 것이라고 밝힌다');
   /* 표본이 적을 때 경고하면 「1건 중 0건」으로 늘 붉어진다 — 그러면 아무도 안 본다. */
   is(/_allN>=20&&_pmPct<10/.test(R), 'report — 표본이 적으면 경고하지 않는다 (늘 붉으면 무시된다)');
 
-  /* PM 판정은 «작업단계가 정확히 TBM» 하나다. 다른 낱말을 끌어오면 시트가 뜻하지 않은
-     것을 세게 된다 — 그 순간 이 숫자는 검증 불가능해진다. */
-  is(/const isPM=s=>s==='TBM';/.test(R), 'report — PM 판정은 TBM 한 낱말뿐이다 (추론하지 않는다)');
+  /* 판정 자체는 [9] 가 본다. 여기서는 «페이지가 자기 판정을 다시 적지 않는가»만 본다 —
+     v113 부터 규칙이 국내/해외로 갈리므로 낱말을 페이지에 박으면 반드시 갈라진다. */
+  is(/const isPM=x=>GST\.PM\.is\(x\);/.test(R),
+     'report — PM 판정을 페이지에 적지 않고 GST.PM 을 부른다');
+  is(!/const isPM=s=>s==='TBM';/.test(R),
+     'report — 「TBM 한 낱말」로 굳어 있지 않다 (국내는 조치 컬럼으로 센다)');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   [9] PM 판정 — 국내와 해외가 «다른 열»을 본다 (v113 · 사용자 확정)
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[9] 국내 PM 은 「조치」 컬럼으로 센다 (v113)');
+{
+  /* 사용자 확정 — 국내는 TBM 작업단계로만 PM 을 하지 않는다. 「조치」 컬럼에 «설비 PM»
+     또는 «SWAP» 이라고 적힌 것이 PM 공수다. 그래서 국내는 «조치 컬럼에서만» 센다
+     (작업단계는 보지 않는다). TBM 으로만 세면 국내 PM 이 통째로 빠진다.
+     ⚠ 그러면 PM 과 非PM 이 겹칠 수 있다 — 실제로 BM 행의 조치가 「SWAP PM」인 경우가 있다.
+       겹친 채로 두면 공수가 두 번 세어져 총합이 부푼다. */
+  const m = CORE.match(/GST\.PM = \{[\s\S]*?\n\};/);
+  is(!!m, 'core — PM 판정이 GST.PM 한 곳에 있다');
+  if (m) {
+    const G = { upk: v => String(v == null ? '' : v).toUpperCase(),
+                ORG: { REGION_KR: '국내' } };
+    new Function('GST', m[0])(G);
+    const PM = G.PM;
+    const R = (region, stage, action) => ({ region, stage, action });
+
+    // 해외 — 작업단계 TBM
+    is(PM.is(R('해외','TBM','')) === true,  '해외: 작업단계 TBM 이면 PM');
+    is(PM.is(R('해외','BM','SWAP PM')) === false,
+       '해외: 조치에 SWAP 이 있어도 PM 이 아니다 (해외는 작업단계로만 센다)');
+    is(PM.is(R('해외','tbm','')) === true, '해외: 대소문자·공백이 흔들려도 잡는다');
+
+    // 국내 — 조치 컬럼
+    is(PM.is(R('국내','TBM','')) === false,
+       '국내: 작업단계가 TBM 이어도 조치가 비면 PM 이 아니다 (조치 컬럼에서만 센다)');
+    is(PM.is(R('국내','BM','SWAP PM')) === true, '국내: 조치에 SWAP 이면 작업단계와 무관하게 PM');
+    is(PM.is(R('국내','','설비 PM')) === true,   '국내: 조치에 «설비 PM» 이면 PM');
+    is(PM.is(R('국내','BM','파츠교체 후 가동')) === false, '국내: 그 밖의 조치는 PM 이 아니다');
+    is(PM.is(R('국내','BM','설비PM 실시')) === true, '국내: 공백이 없어도 잡는다');
+
+    /* ⚠ 겹침 — 같은 행이 PM 과 非PM 에 «둘 다» 들어가면 공수가 두 번 세어진다.
+       非PM 은 반드시 «PM 이 아닌 정비성 작업»으로 정의해야 한다. */
+    const dual = R('국내','BM','SWAP PM');
+    is(PM.is(dual) && !PM.svc(dual), '겹치는 행은 PM 쪽에만 들어간다 (공수 이중 계산 차단)');
+    is(PM.maint(dual) === true, '그래도 «정비성 작업» 총합에는 들어간다');
+    /* 국내 TBM 인데 조치가 안 잡힌 행 — PM 도 非PM 도 아니면 공수가 조용히 사라진다. */
+    const orphan = R('국내','TBM','');
+    is(PM.maint(orphan) === true && PM.svc(orphan) === true,
+       '국내 TBM 이 조치로 안 잡혀도 공수가 사라지지 않는다 (非PM 으로 남는다)');
+    is(PM.svc(R('해외','BM','')) === true && PM.is(R('해외','BM','')) === false, '해외 BM 은 非PM');
+    is(PM.maint(R('해외','반입','')) === false, '설치(반입)는 정비성 작업이 아니다');
+
+    /* 어휘가 운영단위마다 다르다 — 무엇이 잡혔는지 셀 수 있어야 사람이 알려 줄 수 있다. */
+    const got = PM.matched([R('국내','BM','SWAP PM'), R('국내','BM','SWAP PM'),
+                            R('국내','','설비 PM'), R('국내','BM','파츠교체'), R('해외','TBM','')]);
+    is(got.length === 2 && got[0][0] === 'SWAP PM' && got[0][1] === 2,
+       'matched() 가 «국내에서 잡힌 조치 값»을 건수 순으로 준다 (실제 ' + JSON.stringify(got) + ')');
+  }
+
+  /* 부르는 쪽 — 인자가 «작업단계»가 아니라 «행»이어야 한다.
+     옛 호출부(isPM(x.stage))가 하나라도 남으면 국내가 조용히 전부 false 가 된다. */
+  const RS = noCmt(rd('report/index.html'));
+  is(/const isPM=x=>GST\.PM\.is\(x\);/.test(RS), 'report — isPM 이 행을 받는다');
+  is(/const isSvc=x=>GST\.PM\.svc\(x\);/.test(RS), 'report — 非PM 도 GST.PM 을 지난다');
+  is(!/isPM\(x\.stage\)|isSvc\(x\.stage\)|isMaint\(x\.stage\)/.test(RS),
+     'report — 작업단계만 넘기는 옛 호출부가 남아 있지 않다 (남으면 국내가 조용히 0 이 된다)');
+  is(!/const isSvcS=/.test(RS), 'report — 안 쓰는 판정 헬퍼를 남겨 두지 않는다');
+  /* 근거를 구분별로 적는다 — 규칙이 국내·해외가 다르므로 한 줄로 뭉치면 어느 규칙으로
+     잡힌 숫자인지 알 수 없고, 그게 곧 「PM 공수 어떻게 뽑았냐」로 돌아온다. */
+  is(/해외 작업단계 TBM/.test(RS) && /국내 조치 「설비 PM·SWAP」/.test(RS),
+     'report — PM 근거를 국내·해외로 나눠 적는다');
+  is(/GST\.PM\.matched\(_krRows\)/.test(RS),
+     'report — 국내에서 «어떤 조치 값»이 잡혔는지 보여 준다 (빠진 낱말을 알려줄 수 있게)');
 }
 
 console.log('\n' + (fail ? '❌ t-quiet ' + fail + ' 실패 / ' + (pass + fail)
