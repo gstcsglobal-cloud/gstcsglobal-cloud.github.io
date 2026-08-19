@@ -30,6 +30,25 @@ const rd  = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const noCmt = (t) => t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 
 const CORE = rd('assets/core.js');
+/* [14] 는 판정을 «돌려» 봐야 한다 — 소스만 보면 낱말이 맞는지 알 수 없다.
+   브라우저 없이 core.js 를 통째로 실행하려면 DOM 흉내가 필요하다(t-region 과 같은 방식). */
+function loadCore(){
+  if(loadCore._g) return loadCore._g;
+  const el = () => ({ style:{}, appendChild(){}, insertBefore(){}, remove(){}, removeAttribute(){},
+    setAttribute(){}, addEventListener(){}, classList:{add(){},remove(){},toggle(){}},
+    querySelector:()=>null, querySelectorAll:()=>[], insertAdjacentHTML(){}, insertAdjacentElement(){},
+    parentNode:{insertBefore(){}}, firstElementChild:null, textContent:'', innerHTML:'' });
+  global.document = { createElement:el, getElementById:()=>null, querySelector:()=>null,
+    querySelectorAll:()=>[], body:el(), documentElement:el(), addEventListener(){},
+    head:el(), readyState:'complete' };
+  global.window = { addEventListener(){}, location:{href:'',search:''}, self:{}, top:{},
+    localStorage:{getItem:()=>null,setItem(){},removeItem(){}},
+    matchMedia:()=>({matches:false,addEventListener(){}}) };
+  global.window.self = global.window.top = global.window;
+  global.localStorage = global.window.localStorage; global.location = global.window.location;
+  try{ new Function(CORE)(); }catch(e){ console.log('  core.js 로드 경고: '+e.message); }
+  return (loadCore._g = global.window.GST || global.GST);
+}
 const SRC  = {}; ['report','fault','material','scrubber','hr']
   .forEach(p => { SRC[p] = noCmt(rd(p + '/index.html')); });
 
@@ -541,6 +560,82 @@ console.log('\n[13] 가동현황 표 — 행에 못 담은 설비를 버리지 �
      'report — 두 행이 무엇인지 노트에 적는다');
   /* 문구는 네 언어를 다 채운다(코드 관례) */
   ['op_na','op_na_t','op_etc','op_etc_t'].forEach(k => {
+    const n = (rd('report/index.html').match(new RegExp('\\b' + k + ':', 'g')) || []).length;
+    is(n === 4, `report — ${k} 가 네 언어에 다 있다 (실제 ${n})`);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   [14] 가동·미가동·워런티가 사용자 정의대로인지 (v123 · 사용자 확정)
+
+     가동 장비 대수 = 설비상태 Operation «만»
+     미가동         = 「반납」과 Operation 을 뺀 «나머지 상태 전부»
+     Warranty In/Out = 무상 → IN · 유상 → OUT
+
+   세 가지가 다 «조용히» 틀리고 있었다:
+     · 미가동 = 반입(4종) − 가동 이라, 반출대기·반출완료·출하대기가 어느 쪽에도 안 잡혀
+       사라졌다(실측 SEC 561대).
+     · 워런티 판정이 두 곳에 복제돼 있었고 설치현황만 v102 에 한글 표기를 받았다.
+       주간현황은 영문만 봐서 국내 자료에서 **W/I 열이 전부 «-»** 로 떴다(사용자 보고).
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[14] 가동·미가동·워런티 (v123)');
+{
+  /* ── 판정을 실제로 돌린다 — 소스만 보면 «낱말이 맞나»를 못 본다 ── */
+  const G = loadCore();
+  const S = (v) => [G.EQ.isRun(v, null, null), G.EQ.isIdle(v, null, null)];
+  const T = [
+    ['Operation', true,  false, '가동 — 이것만 가동이다'],
+    ['Set-up',    false, true,  ''],
+    ['Turn-off',  false, true,  ''],
+    ['반입완료',   false, true,  ''],
+    /* 예전에는 이 셋이 어느 쪽에도 안 들어갔다 — 미가동을 «반입 − 가동»으로 구했기 때문 */
+    ['반출대기',   false, true,  '예전에는 통째로 빠졌다'],
+    ['반출완료',   false, true,  '예전에는 통째로 빠졌다'],
+    ['출하대기',   false, true,  '예전에는 통째로 빠졌다'],
+    ['반납',      false, false, '나간 설비 — 어느 쪽에도 안 든다(유일한 제외)'],
+    /* 「반납도 Operation 도 아닌 것」이 규칙이므로 모르는 상태도 미가동이다.
+       조용히 사라지지 않는 것이 이 규칙의 이점이다(그래도 건수는 따로 밝힌다). */
+    ['이설대기',   false, true,  '모르는 상태도 규칙대로 미가동'],
+  ];
+  T.forEach(([v, wr, wi, why]) => {
+    const [r, i] = S(v);
+    is(r === wr && i === wi, `EQ ${JSON.stringify(v)} → 가동 ${r} · 미가동 ${i}${why ? '  (' + why + ')' : ''}`);
+  });
+  /* 마감일은 그대로 지킨다 — 아직 안 온 설비를 과거 마감 화면이 세면 안 된다.
+     실측: Receipt date 2026-08-21 인 6대가 8/19 마감에서 빠진다. */
+  const D = (s) => new Date(s + 'T00:00:00Z');
+  is(!G.EQ.isIdle('반입완료', D('2026-08-21'), D('2026-08-19')),
+     '미가동도 마감일을 지킨다 (아직 안 온 설비를 과거 마감이 세면 안 된다)');
+  is(G.EQ.isIdle('반입완료', D('2026-08-01'), D('2026-08-19')), '마감 안쪽이면 센다');
+  is(G.EQ.isIdle('출하대기', null, D('2026-08-19')), '날짜가 없으면 상태만 믿는다 (v99 규약 그대로)');
+  /* 반입 4종(IN)은 손대지 않았다 — 설치현황·고장분석·TCO 의 «설비 대수» 정본이라,
+     이 표를 고치려다 네 화면의 대수가 한꺼번에 움직이면 안 된다. */
+  is(G.EQ.IN.join('|') === '반입완료|Set-up|Turn-off|Operation',
+     'EQ.IN(반입 4종)은 그대로다 — 다른 세 화면의 설비 대수가 움직이지 않는다');
+
+  /* ── 워런티 ── */
+  [['무상','IN'],['유상','OUT'],['IN','IN'],['OUT','OUT'],
+   ['Warranty In','IN'],['Warranty Out','OUT'],['','' ],['  ','']].forEach(([v,want]) => {
+    is(G.WARR(v) === want, `WARR(${JSON.stringify(v)}) = ${JSON.stringify(G.WARR(v))} (기대 ${JSON.stringify(want)})`);
+  });
+  /* 뜻이 뒤집혀 보이는 자리 — 실측으로 확인했다(무상 행의 Warranty date 가 미래다).
+     여기를 뒤집으면 W/I 와 W/O 가 통째로 바뀌는데 에러는 하나도 안 난다. */
+  is(G.WARR('무상') === 'IN' && G.WARR('유상') === 'OUT',
+     '무상 = 보증 안(IN) · 유상 = 보증 끝(OUT) — 뒤집으면 두 칸이 통째로 바뀐다');
+
+  /* ── 판정이 다시 복제되지 않았는지 (제2원칙) ── */
+  const R = SRC.report, SC = SRC.scrubber;
+  is(/const isWI=r=>GST\.WARR\(/.test(R), 'report — 워런티 판정이 GST.WARR 한 곳을 지난다');
+  is(/const wLbl=r=>GST\.WARR\(/.test(SC), 'scrubber — 같은 곳을 지난다 (두 화면이 같은 답을 낸다)');
+  ['report','scrubber'].forEach(p => is(!/includes\('유상'\)/.test(SRC[p]),
+    `${p} — 워런티 낱말을 페이지가 다시 적지 않는다`));
+  /* 미가동을 «빼기»로 구하면 그 술어에 안 든 상태가 조용히 사라진다 — 옛 줄을 막는다 */
+  is(!/const iu=ins\.length-ru/.test(R),
+     'report — 미가동을 «반입 − 가동»으로 구하지 않는다 (그러면 세 상태가 사라진다)');
+  is(/const idle=ins\.filter\(_isIdle\)/.test(R), 'report — 미가동을 자기 술어로 센다');
+  /* W/O 는 TOTAL − W/I 라 워런티 미기재가 유상 쪽에 섞인다 — 몇 대인지 밝힌다 */
+  is(/op_wna/.test(R), 'report — 워런티 미기재 대수를 노트에 밝힌다');
+  ['op_wna'].forEach(k => {
     const n = (rd('report/index.html').match(new RegExp('\\b' + k + ':', 'g')) || []).length;
     is(n === 4, `report — ${k} 가 네 언어에 다 있다 (실제 ${n})`);
   });
