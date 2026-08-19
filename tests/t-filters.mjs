@@ -83,10 +83,30 @@ is(/GST\.FILT_DROP_ORG\s*=/.test(CORE), 'core 에 FILT_DROP_ORG 가 있다');
   ['본사', '칠러', 'CHILLER'].forEach(v =>
     is(body.split('|').indexOf(v) >= 0, 'FILT_DROP_CUST 에 ' + v));
 }
-/* v114 — 두 벌이라 drop 도 두 벌이다(drop: 설비 · dropH: 인원). 자기 자료가 있는 쪽에 걸면 된다. */
-PAGES.filter(p => p !== 'fault' && p !== 'material').forEach(p =>
-  is(/drop[H]?:\{[^}]*customer:\s*GST\.FILT_DROP_CUST/.test(SRC[p]) || !/GST\.filters\.mount/.test(SRC[p]),
-     p + ' — 고객사 목록에 drop 을 걸었다'));
+/* 드롭은 «설비 블록에만» 건다 (v124).
+   설비 자료(설치현황)에는 고객사 칸에 «GST CHINA» 같은 값이 한 행씩 섞여 들어와, 목록에
+   뜨면 고르는 순간 화면이 통째로 비었다 — 그 자리를 막는 것이 이 목록의 본래 일이다.
+   ⚠ 인원 블록에는 걸지 않는다. 인원현황의 조직 축은 시트에 적힌 값 그대로여야 하고
+     (v98), 두 벌 필터(v114) 이후로는 목록의 값을 고르면 반드시 사람이 나오므로 감출
+     이유 자체가 없다. 실제로 걸어 뒀다가 OFFICE·통합·Repair Center 가 통째로 사라졌다. */
+/* ⚠ 판정은 «mount 블록 안»에서 해야 한다. 페이지에는 PPT 표·피벗 설정에도 rows: 가
+   있어서, 파일 전체에서 찾으면 인원 전용 페이지(hr)가 «설비 블록이 있다»로 잡힌다. */
+const mountBlk = (src) => {
+  const i = src.indexOf('GST.filters.mount(');
+  if (i < 0) return '';
+  let d = 0, k = src.indexOf('(', i);
+  for (; k < src.length; k++) {
+    if (src[k] === '(') d++;
+    else if (src[k] === ')') { d--; if (!d) break; }
+  }
+  return src.slice(i, k + 1);
+};
+PAGES.filter(p => p !== 'fault' && p !== 'material').forEach(p => {
+  const blk = mountBlk(SRC[p]);
+  if (/\bget\s*:/.test(blk)) is(/\bdrop:\{[^}]*customer:\s*GST\.FILT_DROP_CUST/.test(blk),
+    p + ' — 설비 고객사 목록에 drop 을 걸었다');
+  is(!/dropH\s*:/.test(blk), p + ' — 인원 블록에는 drop 을 걸지 않는다');
+});
 
 console.log('\n[7] 국내에는 Basic·Veteran 과정이 없다 — 미이수가 아니라 비대상');
 const HR = SRC.hr;
@@ -966,6 +986,73 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
       const BOT = fs.readFileSync(path.join(ROOT, 'supabase/functions/kakao-bot/hr.js'), 'utf8');
       is(/line2:\s*'Line 2'/.test(BOT), 'kakao-bot — INSTALL_SPEC 도 Line 2 를 본다');
     }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     [9-7] 인원 자료의 조직 축은 «시트에 적힌 값 그대로» (v124 · 사용자 보고)
+
+     사용자가 인원현황을 다시 올린 뒤 「단지, 라인 목록이 좀 비네」라고 했다.
+     두 겹이 값을 먹고 있었다 — 둘 다 조용하다:
+       ① GST.ORG.campus 가 GST.FILT_DROP_ORG 로 단지 값을 «지웠다». 그 목록은 사이드바
+          목록을 정리하려고 만든 것이라 OFFICE·통합·Repair Center 같은 **실재하는 조직명**이
+          들어 있다. 실측 통합 69명 · OFFICE 48명 · Repair Center 16명 = 133명(26%)이
+          «미배치»로 떨어졌다.
+       ② dropH 가 같은 목록으로 단지·라인 «목록»에서도 지웠다 — 라인은 55개 값 중 9개
+          (라인장·단지장·세정·운영관리·국내·해외·정산·Translator·Repair Center).
+     v114 로 필터가 두 벌이 된 뒤로는 인원 목록이 «인원 자료»에서만 만들어지므로,
+     목록에 뜬 값을 고르면 반드시 사람이 나온다 — 감출 이유 자체가 없어졌다(v91 의 근거 소멸).
+     ══════════════════════════════════════════════════════════════ */
+  console.log('\n[9-7] 인원의 단지·라인 목록이 시트 값을 감추지 않는지 (v124)');
+  {
+    /* ① 값 판정 — 조직명은 살고 «모른다»는 낱말만 미상이 된다 */
+    [['OFFICE','OFFICE'], ['통합','통합'], ['Repair Center','Repair Center'],
+     ['H1','H1'], ['P3','P3'], ['기흥Foundry','기흥Foundry'],
+     ['기타',''], ['미정',''], ['해당없음',''], ['',''],
+    ].forEach(([v, want]) => {
+      const got = G.ORG.campus(v, v, 'SEC Scrubber');
+      is(got === want, `ORG.campus(${JSON.stringify(v)}) = ${JSON.stringify(got)} (기대 ${JSON.stringify(want)})`);
+    });
+    /* 대만 분기는 그대로여야 한다 — 실적의 단지 '기타' 는 «비어 있는 것과 같다»라
+       라인(F16)으로 대체된다. 이 대체가 없으면 설비는 있는데 실적이 0 이 된다. */
+    is(G.ORG.campus('기타', 'F16', 'GST TAIWAN SCRUBBER') === 'F16',
+       '대만 — 단지가 «기타»면 라인으로 대체한다 (실적↔인원이 맞물리게)');
+    is(G.ORG.campus('F16', 'F16', 'GST TAIWAN SCRUBBER') === 'F16', '대만 — 실제 단지는 그대로');
+    is(G.ORG.campus('TAICHUNG', 'F16', 'GST TAIWAN SCRUBBER') === 'F16',
+       '대만 — 도시명은 단지가 아니다 (설치현황 Location)');
+
+    /* ② 동작 — 인원 목록에 그 값들이 실제로 뜨는지. 소스로는 «목록이 비었나»를 못 본다. */
+    const P = [
+      {rg:'국내', op:'SEC Scrubber', ca:'통합',        li:'국내',   tm:'CS관리팀'},
+      {rg:'국내', op:'SEC Scrubber', ca:'OFFICE',      li:'운영관리', tm:'CS관리팀'},
+      {rg:'국내', op:'SEC Scrubber', ca:'Repair Center', li:'세정',  tm:'K운영팀'},
+      {rg:'국내', op:'SEC Scrubber', ca:'H1',          li:'라인장',  tm:'H운영팀'},
+      {rg:'국내', op:'SEC Scrubber', ca:'H1',          li:'11',     tm:'H운영팀'},
+    ];
+    G.filters.mount({ page:'v124', rowsH:()=>P, onChange:()=>{},
+      getH:{ region:p=>p.rg, op:p=>p.op, campus:p=>p.ca, line:p=>p.li, team:p=>p.tm } });
+    G.filters.clear();
+    const cl = G.filters.listsH('campus').list, ll = G.filters.listsH('line').list;
+    is(cl.length === 4, `인원 단지 목록 ${cl.length}개 — 전부 뜬다 (${cl.join(' · ')})`);
+    ['통합','OFFICE','Repair Center'].forEach(v => is(cl.indexOf(v) >= 0, `단지 목록에 «${v}» 가 있다`));
+    is(ll.length === 5, `인원 라인 목록 ${ll.length}개 — 전부 뜬다 (${ll.join(' · ')})`);
+    ['국내','운영관리','세정','라인장'].forEach(v => is(ll.indexOf(v) >= 0, `라인 목록에 «${v}» 가 있다`));
+    /* 고르면 반드시 사람이 나온다 — 그것이 «감출 이유가 없다»의 근거다 */
+    G.filters.setH('line','라인장');
+    is(P.filter(p => G.filters.passH(p)).length === 1, '«라인장» 을 고르면 그 사람이 나온다 (빈 화면이 아니다)');
+    G.filters.clear();
+
+    /* ③ 소스 — 드롭이 인원 블록에 되살아나지 않았는지. 되살아나면 그날부터 조용히 빈다. */
+    const noC = (t) => t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    ['report','hr'].forEach(p => is(!/dropH\s*:/.test(noC(SRC[p])),
+      `${p} — 인원 블록에 드롭 목록을 걸지 않는다 (걸면 조직명이 목록에서 사라진다)`));
+    is(!/GST\.FILT_DROP_ORG/.test(noC(CORE).slice(0, noC(CORE).indexOf('GST.FILT_DROP_CUST'))),
+       'core — ORG.campus 가 사이드바용 드롭 목록으로 값을 지우지 않는다');
+    is(/_NOCAMP:\s*\/\^\(기타\|/.test(CORE),
+       'core — 지우는 것은 «모른다»는 낱말뿐이다 (_NOCAMP)');
+    /* 같은 축을 두 페이지가 다르게 파싱하면 같은 사람이 두 화면에서 다른 단지로 잡힌다 */
+    is(/campus:GST\.ORG\.campus\(camp, camp\|\|line, area\|\|cust\)/.test(noC(SRC.hr))
+       && /campus:GST\.ORG\.campus\(camp, camp\|\|line, area\|\|cust\)/.test(noC(SRC.report)),
+       'report·hr 이 «같은 함수·같은 인자»로 단지를 만든다 (제2원칙)');
   }
 
   /* 저장·복원이 Set 을 지키는지 */

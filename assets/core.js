@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 123;
+GST.VER = 124;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1622,10 +1622,19 @@ GST.ORG = {
      그 상태로 단지를 고르면 «설비는 나오는데 작업 실적이 0» 이 된다.
      → 대만은 단지 자리에 라인을 넣는다(F16 의 단지는 F16). 두 자료가 같은 값이 된다.
      ctx 는 국가를 알 수 있는 값이면 무엇이든 된다(운영단위·Country·FAB). */
+  /* «이 값은 단지 이름이 아니라 «모른다»는 뜻이다» — 그것만 걸러낸다 (v124).
+     ⚠ 예전에는 여기서 GST.FILT_DROP_ORG 를 썼다. 그 목록은 «사이드바 목록을 정리하려고»
+       만든 것이라 OFFICE·통합·Repair Center·라인장 같은 **실재하는 조직명**이 들어 있다.
+       그걸 값 판정에 쓰는 바람에 인원현황의 단지가 통째로 지워졌다 — 실측 통합 69명 ·
+       OFFICE 48명 · Repair Center 16명, 합 133명(전체의 26%)이 «미배치»로 떨어졌고
+       단지 목록에서도 사라졌다. 사용자가 「단지·라인 목록이 좀 비네」라고 한 자리다.
+     v98 규약 그대로다 — 조직 축은 추론하지 않는다. 시트에 적힌 값을 코드가 «단지답지
+     않다»는 이유로 지우면 안 된다. 지우는 것은 «모른다»는 낱말뿐이다. */
+  _NOCAMP: /^(기타|미정|미상|해당없음|없음|N\/A|-)$/i,
   campus: function(campus, line, ctx){
     const ln = String(line == null ? '' : line).trim();
     const c  = String(campus == null ? '' : campus).trim();
-    const bad = c && GST.FILT_DROP_ORG && GST.FILT_DROP_ORG.test(c);
+    const bad = c && GST.ORG._NOCAMP.test(c);
     if(GST.ORG.country(ctx || '') === 'TAIWAN'){
       /* 대만의 단지 어휘는 F16·F11·F16N·PSMC 다(사용자가 인원현황을 그렇게 맞췄다).
          세 자료가 채워 넣은 것이 서로 다르다:
@@ -1636,7 +1645,8 @@ GST.ORG = {
       if(c && !bad && !/TAICHUNG|LINKOU|TAINAN|TONGLUO|HSINCHU|SINCHU|KAOHSIUNG|台/i.test(c)) return c;
       return ln;
     }
-    // 단지 칸에 든 «단지가 아닌 것»(OFFICE·통합·Repair Center…)은 값으로 쓰지 않는다 — 미상으로
+    /* 「기타」처럼 «모른다»는 낱말만 미상으로 돌린다(실측 설치현황 Site=기타 28대).
+       조직명(OFFICE·통합·Repair Center…)은 시트가 적어 둔 «그 단지»이므로 그대로 쓴다. */
     if(!c || bad) return '';
     return c;
   },
