@@ -462,7 +462,7 @@ console.log('\n[11] 공수 세부내역이 시트와 견줄 수 있는 꼴인지
        ② 시간만 있고 «분»이 없어 41,650 과 맞댈 수 없다
        ③ 라벨이 「PM(TBM)」 — 국내는 조치 기준도 PM 이라 그 말이 거짓이다 */
   const R = noCmt(rd('report/index.html'));
-  is(/const k=x\.campus\|\|x\.fab\|\|x\.custB\|\|'미배치';/.test(R),
+  is(/const k=x\.campus\|\|x\.fab\|\|x\.custB\|\|t\('op_na'\);/.test(R),
      'report — 공수 세부내역이 «단지»로 쪼갠다 (국내 H3·H4 가 한 줄로 뭉치지 않게)');
   is(/<th>단지<\/th>/.test(R), 'report — 머리글도 단지로 (한 축에 두 낱말이 섞이지 않게)');
   is(/PM '\+M\(tp\)\+'분/.test(R), 'report — 총 «분»을 같이 적는다 (시트 합계와 그대로 견주게)');
@@ -540,7 +540,7 @@ console.log('\n[13] 가동현황 표 — 행에 못 담은 설비를 버리지 �
   /* 예전 코드가 되살아나는 것을 막는다 — `if(!k)return;` 한 줄이 곧 조용한 손실이었다. */
   is(!/fINST\.forEach\(r=>\{ if\(!_isIn\(r\)\)return;\s*const k=rkI\(r\); if\(!k\)return;/.test(R),
      'report — 키 없는 설비를 통에서 빼는 옛 줄이 없다');
-  is(/_ordAll\.slice\(0,12\)[\s\S]{0,220}_cut\.length\?\[\{k:_ETC[\s\S]{0,120}_naN\?\[\{k:_NA/.test(R),
+  is(/_ordAll\.slice\(0,12\)[\s\S]{0,220}_cut\.length\?\[\{k:_ETC[\s\S]{0,160}\?\[\{k:_NA/.test(R),
      'report — 「기타」·「미배치」 행을 실제로 세운다');
   /* 미배치가 상위 12 자리를 다투면 진짜 단지(K1 31대)가 «기타»로 접힌다 —
      조용히 사라지는 것은 고쳤는데 읽기가 나빠지는 셈이다. 순위에서 빼 둔다. */
@@ -555,6 +555,23 @@ console.log('\n[13] 가동현황 표 — 행에 못 담은 설비를 버리지 �
      «자료가 없다»는 사실이다(v98 · 억지로 잇지 않는다). */
   is(/_ALLK\.has\(k\)/.test(R),
      'report — 설비 축에 아예 없는 값은 기타로 몰지 않는다 (v98 · 억지로 잇지 않는다)');
+  /* ── 「비어 있는 사람은 미배치」 (v124 · 사용자 확정) ──────────────────────
+     단지가 안 적힌 인원도 버리지 않는다. 그런데 미배치 «행»이 설비 기준으로만 서고
+     있어서, 설비 미배치가 0 인 필터에서는 그 사람들이 어느 행에도 안 담겼다. */
+  is(/const _naP=fHR\.filter\(p=>activeAt\(p,_oe\)&&rkP\(p\)===_NA\)\.length/.test(R),
+     'report — 인원 쪽 미배치도 센다');
+  is(/\.concat\(\(_naN\|\|_naP\)\?\[\{k:_NA/.test(R),
+     'report — 미배치 행은 «설비 또는 인원» 어느 쪽에든 있으면 선다');
+  /* ⚠ 같은 개념을 두 벌로 적으면 언젠가 갈라진다. 실제로 갈라져 있었다 — 차트는
+     '미배치' 리터럴, 표는 t('op_na'). 한국어에서는 우연히 같지만 en/zh/ja 에서는 서로
+     다른 낱말이 되어, 표의 bucket() 이 그 사람들을 어느 행에도 못 담는다. */
+  is(!/\|\|'미배치'/.test(R), 'report — «미배치» 리터럴을 다시 적지 않는다 (en/zh/ja 에서 갈린다)');
+  is(/const _NA_L=t\('op_na'\), _ETC_L=t\('op_etc'\)/.test(R), 'report — 이름표가 한 곳에서 나온다');
+  is(/const _grpRaw=x=>x\.campus\|\|x\.fab\|\|_NA_L/.test(R), 'report — 차트도 그 이름표를 쓴다');
+  is(/const _NA=_NA_L, _ETC=_ETC_L/.test(R), 'report — 표도 «같은» 이름표를 쓴다');
+  /* 드릴은 render 밖이라 _NA_L 을 못 본다 — 그럴 때도 리터럴이 아니라 t() 를 쓴다. */
+  /* 정의(op_na:'미배치')는 있어야 한다 — 막아야 할 것은 «폴백으로 다시 적는 것»이다. */
+  is(!/\|\|\s*'미배치'/.test(R), 'report — 드릴에도 «미배치» 리터럴 폴백이 없다');
   /* 행 이름만 서면 사람이 「왜 이런 게 있지」로 읽는다. 무엇인지 한 줄로 밝힌다. */
   is(/op_na_t/.test(R) && /op_etc_t/.test(R),
      'report — 두 행이 무엇인지 노트에 적는다');
