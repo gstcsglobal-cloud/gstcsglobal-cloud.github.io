@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 121;
+GST.VER = 123;
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1214,7 +1214,47 @@ GST.EQ = {
     return !(d && asOf && d > asOf);
   },
   isIn : function(st, d, asOf){ return GST.EQ.ok('in',  st, d, asOf); },
-  isRun: function(st, d, asOf){ return GST.EQ.ok('run', st, d, asOf); }
+  isRun: function(st, d, asOf){ return GST.EQ.ok('run', st, d, asOf); },
+
+  /* ── 가동현황 표의 «미가동» — 사용자 확정 (v123) ──────────────────────────
+     「가동 장비 대수는 Operation 만, 미가동은 «반납과 Operation 을 제외한 상태» 전부」.
+
+     ⚠ 반입 4종(IN)과 «다른 모집단»이다. 예전에는 미가동 = 반입 − 가동 이라
+       반출대기·반출완료·출하대기가 통째로 빠져 있었다(실측 SEC 561대). 그 세 상태는
+       «지금 안 돌고 있는 설비»가 맞으므로 미가동에 든다. 나가 버린 «반납»만 뺀다.
+     ⚠ 그래서 IN 목록은 손대지 않는다 — 그 목록은 설치현황·고장분석·TCO 의 «설비 대수»
+       정본이고 v99 에 법인별 피벗으로 검산해 둔 값이다. 여기서 같이 바꾸면 이 표를
+       고치려다 네 화면의 대수가 한꺼번에 움직인다(제3원칙과 같은 규율 — 규칙을 한 벌로
+       만드는 것과 판정을 한 곳에 두는 것은 다른 일이다).
+     ⚠ 모르는 상태('?')도 미가동에 든다. «반납도 Operation 도 아닌 것»이 규칙이므로
+       그게 규칙에 충실하고, 조용히 사라지지도 않는다. 그 건수는 화면이 따로 밝힌다. */
+  GONE: ['반납'],
+  isIdle: function(st, d, asOf){
+    const c = GST.EQ.cls(st);
+    if(c === 'run') return false;                          // 돌고 있으면 미가동이 아니다
+    if(c === '')    return !!(d && (!asOf || d <= asOf));   // 상태 열이 없는 옛 추출본 — 옛 날짜 판정
+    const n = GST.EQ.norm(st);
+    if(GST.EQ.GONE.some(function(x){ return GST.EQ.norm(x) === n; })) return false;
+    return !(d && asOf && d > asOf);
+  }
+};
+
+/* 워런티 라벨 — 「Warranty In/Out」 열 하나를 두 어휘가 쓴다 (v102 → v123 에 정본화).
+   해외: `IN` / `OUT` · 국내(및 새 양식): 같은 열에 **무상 / 유상**.
+   ⚠ 뜻이 뒤집혀 보이니 주의 — **무상 = 아직 보증 안(IN)** · **유상 = 보증 끝(OUT)**.
+     실측으로 확인했다: `Warranty date 2026-08-28`(미래) 행이 무상, `2025-07-30`(과거)이 유상.
+   ⚠ 이 판정이 두 곳에 복제돼 있었고 한 곳만 고쳐져 있었다(제2원칙 그대로) — 설치현황은
+     v102 에 한글 표기를 받았는데 주간현황은 안 따라와서, 국내 자료에서 **W/I 열이 전부
+     «-» 로 뜨고 W/O 가 TOTAL 과 같아졌다.** 에러는 하나도 안 난다.
+   빈 칸은 '' 다 — IN 도 OUT 도 아니다(모르는 것을 아는 것처럼 세지 않는다). */
+GST.WARR = function(v){
+  const w = GST.upk(String(v == null ? '' : v)).replace(/\s/g, '');
+  if(!w) return '';
+  if(w.indexOf('OUT') >= 0) return 'OUT';
+  if(w.indexOf('IN')  >= 0) return 'IN';
+  if(w.indexOf('유상') >= 0) return 'OUT';   // 유상 = 고객 부담 = 보증 종료
+  if(w.indexOf('무상') >= 0) return 'IN';    // 무상 = 우리 부담 = 보증 유효
+  return '';
 };
 /* CIP 시트(F11 gid 2123129719 · F16 gid 1999732389)는 점검 '항목'이 열로 늘어난다.
    F11과 F16은 열 위치가 다르지만 머리글 이름은 같아서 스펙 하나로 둘 다 처리된다.
