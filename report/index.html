@@ -367,7 +367,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(123);   // GST.corpLabel · filters.hitL · GST.PM · 라인2 · GST.WARR · EQ.isIdle 을 쓴다
+GST.needVer&&GST.needVer(124);   // GST.corpLabel · filters.hitL · GST.PM · 라인2 · GST.WARR · EQ.isIdle 을 쓴다
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -1402,7 +1402,14 @@ function fillFilters(){
     getH:{ region:p=>p.region, op:p=>p.op, customer:p=>p.custB, div:p=>p.div,
            campus:p=>p.campus, line:p=>p.wp, team:p=>p.team },
     looseH:{ div:1 },
-    dropH:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG },
+    /* ⚠ 인원 블록에는 드롭 목록을 걸지 않는다 (v124 · 사용자 보고).
+       그 목록(FILT_DROP_ORG)은 v91 에 «한 벌 필터»가 뒤섞인 자료를 받던 시절, 고르면
+       화면이 통째로 비는 값을 목록에서 감추려고 만든 것이다. 그런데 거기에는
+       OFFICE·통합·Repair Center·라인장·단지장·세정·운영관리 처럼 **인원현황이 실제로
+       쓰는 조직명**이 들어 있어, 단지 3개·라인 9개가 목록에서 사라졌다.
+       v114 로 필터가 두 벌이 된 뒤로는 인원 목록이 «인원 자료»에서만 만들어지므로,
+       목록에 뜬 값을 고르면 반드시 사람이 나온다 — 감출 이유 자체가 없어졌다.
+       조직 축은 추론하지 않는다, 시트에 적힌 값 그대로(v98). */
     onChange:function(){ syncCommon(); render(); },
     /* ⚠ rows() 가 실어 보낸 축은 여기서 «꺼내 주지 않으면 없는 것과 같다». div 를 빠뜨려
        사업부 칸이 늘 「전체 (자료 없음)」이었다 — 표에는 7,172행이 들어 있는데도(실측).

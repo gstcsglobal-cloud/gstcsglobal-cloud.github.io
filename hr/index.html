@@ -247,7 +247,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(121);   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
+GST.needVer&&GST.needVer(124);   // GST.ORG.campus(단지 정본) 을 쓴다   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
 const PUB=GST.SHEET_PUB;
 const URL_ROSTER=PUB+'?gid=1213453343&single=true&output=csv';  // 인원명단
 const URL_EDU   =PUB+'?gid=0&single=true&output=csv';            // 교육현황
@@ -505,7 +505,10 @@ function parseRoster(rows){
       // 그 열이 없는 옛 양식은 중문명·Dept·사번 다수결로 가른다(GST.ORG.emp).
       region:GST.ORG.region(cust)||GST.ORG.region(area)
              ||GST.ORG.emp({cn:g(r,iCn),dept:g(r,iDept),id:normId(iId>=0?r[iId]:''),wp:wpOld||line}),
-      op:g(r,iOp), campus:camp, line:line, team:g(r,iTeam),
+      /* 단지는 주간현황과 «같은 함수»를 지난다 (v124 · 제2원칙). 예전에는 여기만 시트
+         원문을 그대로 쓰고 주간현황은 GST.ORG.campus 를 지나서, 같은 사람이 두 화면에서
+         다른 단지로 잡힐 수 있었다. 대만은 인원 단지가 곧 FAB(F16)이라 그대로 통과한다. */
+      op:g(r,iOp), campus:GST.ORG.campus(camp, camp||line, area||cust), line:line, team:g(r,iTeam),
       role:g(r,iRole)||g(r,iDuty),
       join:iIn>=0?pd(r[iIn]):null,
       // 퇴사 판정: 퇴사일이 있거나, 새 양식의 「인사」가 퇴직이면 퇴사다
@@ -868,8 +871,9 @@ function rebuildFilters(){
      그것 자체가 「필터가 페이지마다 다르다」로 읽힌다. */
   GST.filters.mount({ page:'hr', rowsH:()=>actPop(), onChange:render,
     getH:{ region:p=>p.region, op:p=>p.op, customer:p=>p.custB,
-           campus:p=>p.campus, line:p=>p.line, team:p=>p.team },
-    dropH:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
+           campus:p=>p.campus, line:p=>p.line, team:p=>p.team } });
+    /* ⚠ 드롭 목록은 안 건다 (v124) — 그 목록에는 OFFICE·통합·라인장·세정 처럼 인원현황이
+       실제로 쓰는 조직명이 들어 있어 단지·라인 목록이 통째로 비었다. 주간현황과 같은 규율. */
   buildChips('sl-role','role',uniqActive('role').sort());
   buildChips('sl-edu','edu',['이수완료','진행중','미이수','비대상','미등록'].filter(v=>actPop().some(p=>eduStatusOf(p)===v)));
 }
