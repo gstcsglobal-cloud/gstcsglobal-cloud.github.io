@@ -331,8 +331,12 @@ console.log('\n[7-4] 단지 축에 고객사 이름이 섞이지 않는지 (v96)
   /* 인원 계열의 구분 축은 단지다. 단지·FAB 이 둘 다 비면 예전에는 고객사까지 내려가
      「SAMSUNG」 이 단지 막대로 섰다(실측 14명) — 한 축에 두 차원이 섞인 것이다.
      버리지도 않는다(합계에서 조용히 사라진다) → 「미배치」로 세운다. */
-  is(/const _grpRaw=x=>x\.campus\|\|x\.fab\|\|'미배치';/.test(SRC.report),
+  /* 이름표는 t('op_na') 한 곳에서 온다(v124) — 리터럴로 적으면 en/zh/ja 에서 표와 갈린다.
+     지켜야 할 것은 «어디까지 내려가나»(단지 → FAB → 미배치)이지 낱말의 생김새가 아니다. */
+  is(/const _grpRaw=x=>x\.campus\|\|x\.fab\|\|_NA_L;/.test(SRC.report),
      'report — 단지 축이 FAB 까지만 내려가고 그다음은 미배치다');
+  is(!/const _grpRaw=x=>x\.campus\|\|x\.fab\|\|x\.custB/.test(SRC.report),
+     'report — 고객사까지 내려가지 않는다 (한 축에 두 차원이 섞인다)');
   is(!/_grpRaw=x=>x\.campus\|\|x\.fab\|\|x\.custB/.test(SRC.report),
      'report — 고객사까지 내려가던 옛 폴백이 없다');
 }
@@ -804,7 +808,7 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
     /* 단지 축은 정규화하지 않는다 — 설치·인원·실적이 이미 같은 낱말(P1·H2)을 쓴다.
        고객사처럼 접으면 서로 다른 원문 둘이 한 행이 되어 인원이 두 번 잡힌다(v98). */
     is(/:_campOf\(r\)\)\|\|''\)\.trim\(\)/.test(RC), 'report — 설비 행 키가 단지로 내려간다');
-    is(/:\(p\.campus\|\|p\.fab\|\|'미배치'\)/.test(RC),
+    is(/:\(p\.campus\|\|p\.fab\|\|_NA_L\)/.test(RC),
        'report — 인원 행 키도 단지 (둘 다 비면 «미배치» — 고객사로 안 내려간다)');
   }
 
