@@ -102,13 +102,21 @@ let fails=0;
     const st = D(2026,4,4), en = D(2026,4,10);
     const wk = (m,dd) => ({wd:D(2026,4,dd), stage:'BM', region:'해외', alarm:m, phenom:'',
                            cause:'유량(Flow)', action:'', fab:'F16', custB:'MICRON'});
-    const ab = (m,dd) => ({wd:D(2026,4,dd), stage:'BM', region:'국내', alarm:m, phenom:'',
+    /* 국내 원장 행은 «차트가 쓴 버킷 열쇠»(bkey)로 골라야 한다 — 화면이 시트 정산월
+       기준이면 발생일로 자른 목록과 막대가 갈린다(실측 H3 8월 정산월 96 ↔ 발생일 31).
+       그래서 «발생일은 구간 밖인데 정산월로는 이 주차인» 행을 일부러 섞어 둔다. */
+    const ab = (m,dd,bk) => ({wd:D(2026,4,dd), bkey:bk===undefined?'2026-W19':bk,
+                           stage:'BM', region:'국내', alarm:m, phenom:'',
                            cause:'레벨', action:'', fab:'15A', custB:'삼성'});
     window._DRILL = {
       fWK:[wk('BM-1',5), wk('BM-2',6), wk('BM-3',7)], fHR:[], fLV:[],
       per:{ cFt:[{st, end:en, key:'2026-W19', label:'W19'}] },
       lbl:{alarm:'Alarm(BM)', abp:'All By-Pass', tot:'Total'},
-      krOn:false, krBM:[], krABP:[ab('ABP-1',8), ab('ABP-2',9)], abpTW:{'2026-W19':4}
+      krOn:false, krBM:[],
+      krABP:[ab('ABP-1',8), ab('ABP-2',9),
+             ab('ABP-3',25),              // 발생일은 구간 밖 · 정산월(bkey)로는 이 주차 → 세야 한다
+             ab('ABP-X',6,'2026-W20')],   // 발생일은 구간 «안» · 버킷은 다른 주차 → 세면 안 된다
+      abpTW:{'2026-W19':4}
     };
     const chart = { canvas:{id:'cFt'},
       data:{ datasets:['Alarm(BM)','All By-Pass','Total'].map(l => ({label:l})) } };
@@ -124,13 +132,18 @@ let fails=0;
   console.log('[0b] 고장 차트 세부내역 — 누른 칸만 (픽스처 불필요)');
   s1(/3\s*BM 고장 건수/.test(out.alarm) && !/ABP-1/.test(out.alarm),
      'Alarm(BM) → BM 3건만 (올바이패스 안 섞임)');
-  s1(/6\s*All By-Pass/.test(out.abp), 'All By-Pass → 6건 (국내 행 2 + 해외 집계 4)');
+  s1(/7\s*All By-Pass/.test(out.abp), 'All By-Pass → 7건 (국내 행 3 + 해외 집계 4)');
   s1(/ABP-1/.test(out.abp) && !/BM-1/.test(out.abp), '  올바이패스 행만 나온다 (BM 행 없음)');
+  /* 국내는 원장이 «행 단위»라 목록이 나온다 — 해외와 다른 점이고, 사용자가 물은 자리다 */
+  s1(/ABP-1/.test(out.abp) && /ABP-2/.test(out.abp) && /ABP-3/.test(out.abp),
+     '  국내 원장 행은 «전부» 나온다 (별도 올바이패스 시트가 있으므로)');
+  s1(/ABP-3/.test(out.abp), '  차트가 쓴 버킷 열쇠로 고른다 (발생일이 구간 밖이어도 정산월이 맞으면 센다)');
+  s1(!/ABP-X/.test(out.abp), '  버킷이 다른 행은 발생일이 구간 안이어도 안 센다 (막대와 갈리지 않게)');
   /* 해외 ABP 는 크로스탭이라 행이 없다 — 건수만 맞고 목록이 짧으면 «잘렸나»로 읽힌다 */
   s1(/크로스탭/.test(out.abp), '  해외분은 행이 없다는 사실을 적는다');
   s1(/All By-Pass 상세/.test(out.abp), '  창 제목도 그 칸을 따라간다');
-  s1(/9\s*Total/.test(out.tot) && /BM-1/.test(out.tot) && /ABP-1/.test(out.tot),
-     '합계 선 → 9건 · 두 계통이 다 나온다');
+  s1(/10\s*Total/.test(out.tot) && /BM-1/.test(out.tot) && /ABP-1/.test(out.tot),
+     '합계 선 → 10건 · 두 계통이 다 나온다');
   s1(!e1.length, 'JS 에러 0건' + (e1.length ? ' — ' + e1[0] : ''));
   await b1.close(); srv.close();
 }
