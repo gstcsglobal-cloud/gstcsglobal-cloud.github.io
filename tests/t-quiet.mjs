@@ -658,6 +658,43 @@ console.log('\n[14] 가동·미가동·워런티 (v123)');
   });
 }
 
+/* ══════════════════════════════════════════════════════════════
+   [15] 고장 차트의 세부내역도 «누른 그 칸»을 본다 (v125 · 사용자 보고)
+
+   Alarm·고장 차트는 스택 두 단(Alarm(BM) · All By-Pass)에 합계 선이 얹혀 있다.
+   그런데 어느 칸을 눌러도 Alarm(BM) 세부내역만 떴다 — All By-Pass 막대를 누른 사람은
+   「왜 그거에 대한 것만 안 나오고 전체가 다 나오냐」고 읽는다.
+   v111 에 인원 스택에서 겪은 것과 «같은 자리»다(onDrill 이 datasetIndex 를 버렸다).
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[15] 고장 차트 세부내역이 누른 데이터셋을 따르는지 (v125)');
+{
+  const R = SRC.report;
+  is(/if\(id==='cFt'\)return drillFault\(p,seg\);/.test(R),
+     'report — onDrill 이 «누른 칸»을 drillFault 로 넘긴다');
+  is(/function drillFault\(p,seg\)/.test(R), 'report — drillFault 가 그것을 받는다');
+  /* ⚠ 인덱스가 아니라 «이름»으로 갈라야 한다 — All By-Pass 데이터셋은 값이 있을 때만
+     생기므로(hasABP) 인덱스가 상황에 따라 달라진다. */
+  is(/seg===L\.abp \? 'abp' : seg===L\.tot \? 'tot' : 'alarm'/.test(R),
+     'report — 데이터셋 «이름»으로 가른다 (인덱스는 ABP 유무에 따라 달라진다)');
+  is(/lbl:\{alarm:t\('ft_alarm'\),abp:t\('ft_abp'\),tot:t\('ft_tot'\)\}/.test(R),
+     'report — 이름표는 차트가 실제로 그린 그 글자를 넘긴다 (여기서 다시 만들지 않는다)');
+  /* 올바이패스 자료를 안 실으면 보여줄 것이 없어 알람으로 되돌아간다 */
+  is(/krABP:KRBf\.map\(krAsWk\)/.test(R), 'report — 국내 올바이패스 행을 드릴에 싣는다');
+  is(/abpTW:_abpTW/.test(R), 'report — 해외 올바이패스 건수도 싣는다');
+  /* ⚠ 대만 ABP 는 크로스탭이라 «행이 없다». 건수만 맞고 목록이 비면 «잘렸나»로 읽힌다 —
+     없는 것을 알람 행으로 채우면 그게 거짓말이므로, 왜 없는지를 적는다. */
+  is(/크로스탭\)라 행 목록이 없습니다/.test(R),
+     'report — 해외 올바는 행이 없다는 사실을 적는다 (없는 것을 채우지 않는다)');
+  /* 제목·요약 라벨도 따라가야 한다 — 「고장 상세」라고 적으면 그 창이 거짓말을 한다 */
+  is(/showDrill\(\(pick==='abp'\?L\.abp:pick==='tot'\?L\.tot:'고장'\)\+' 상세 · '/.test(R),
+     'report — 창 제목이 누른 칸을 따라간다');
+  is(/const sumL=pick==='abp'\?L\.abp:pick==='tot'\?L\.tot:'BM 고장 건수'/.test(R),
+     'report — 요약 숫자의 이름표도 따라간다');
+  /* 옛 줄이 되살아나는 것을 막는다 — 그 한 줄이 곧 이 결함이었다 */
+  is(!/if\(id==='cFt'\)return drillFault\(p\);/.test(R),
+     'report — seg 를 버리는 옛 줄이 없다');
+}
+
 console.log('\n' + (fail ? '❌ t-quiet ' + fail + ' 실패 / ' + (pass + fail)
                          : '✅ t-quiet ' + pass + '/' + pass));
 process.exit(fail ? 1 : 0);

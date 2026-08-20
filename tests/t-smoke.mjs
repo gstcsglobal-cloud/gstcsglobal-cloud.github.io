@@ -67,6 +67,74 @@ let fails=0;
   await b0.close(); srv.close();
 }
 
+/* ── [0b] 고장 차트 세부내역 — 누른 «그 칸»만 나오는지 (픽스처 불필요) ─────────
+   사용자 보고: All By-Pass 막대를 눌렀는데 「그거에 대한 것만 안 나오고 전체가 다 나온다」.
+   onDrill 이 datasetIndex 를 버려서 어느 칸을 눌러도 Alarm(BM) 세부내역만 떴다
+   (v111 에 인원 스택에서 겪은 것과 같은 자리).
+   ⚠ 소스 검사로는 «숫자가 맞는지»를 원리적으로 못 본다 — 실제로 눌러 본다.
+   자료는 지어낸 값이라 픽스처가 필요 없다(_DRILL 을 직접 세운다). */
+{
+  const srv = http.createServer((rq, rs) => {
+    let u = decodeURIComponent(rq.url.split('?')[0]); if (u.endsWith('/')) u += 'index.html';
+    const f = path.join(ROOT, u);
+    if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) { rs.statusCode = 404; rs.end('nf'); return; }
+    rs.setHeader('content-type', u.endsWith('.js') ? 'text/javascript'
+      : u.endsWith('.css') ? 'text/css' : 'text/html');
+    rs.end(fs.readFileSync(f));
+  });
+  await new Promise(r => srv.listen(0, r));
+  const b1 = await chromium.launch(PW_OPTS);
+  const pg = await b1.newPage();
+  const e1 = []; pg.on('pageerror', e => e1.push(e.message));
+  await pg.route('**/assets/core.js', r => r.fulfill({ status:200, contentType:'application/javascript',
+    body: fs.readFileSync(ROOT + '/assets/core.js','utf8') + '\n;GST.authGate=async function(){return true;};' }));
+  await pg.route('**/cdn.jsdelivr.net/**', r => {
+    const u = r.request().url();
+    if (u.includes('chart.umd')) return r.fulfill({ status:200, contentType:'application/javascript',
+      body: fs.readFileSync(HERE + '/node_modules/chart.js/dist/chart.umd.js','utf8') });
+    if (u.endsWith('.css')) return r.fulfill({ status:200, contentType:'text/css', body:'' });
+    return r.fulfill({ status:200, contentType:'application/javascript', body:'' });
+  });
+  await pg.goto('http://127.0.0.1:' + srv.address().port + '/report/', { waitUntil:'domcontentloaded' });
+  await pg.waitForTimeout(1200);
+  const out = await pg.evaluate(() => {
+    const D = (a,b,c) => new Date(Date.UTC(a,b,c));
+    const st = D(2026,4,4), en = D(2026,4,10);
+    const wk = (m,dd) => ({wd:D(2026,4,dd), stage:'BM', region:'해외', alarm:m, phenom:'',
+                           cause:'유량(Flow)', action:'', fab:'F16', custB:'MICRON'});
+    const ab = (m,dd) => ({wd:D(2026,4,dd), stage:'BM', region:'국내', alarm:m, phenom:'',
+                           cause:'레벨', action:'', fab:'15A', custB:'삼성'});
+    window._DRILL = {
+      fWK:[wk('BM-1',5), wk('BM-2',6), wk('BM-3',7)], fHR:[], fLV:[],
+      per:{ cFt:[{st, end:en, key:'2026-W19', label:'W19'}] },
+      lbl:{alarm:'Alarm(BM)', abp:'All By-Pass', tot:'Total'},
+      krOn:false, krBM:[], krABP:[ab('ABP-1',8), ab('ABP-2',9)], abpTW:{'2026-W19':4}
+    };
+    const chart = { canvas:{id:'cFt'},
+      data:{ datasets:['Alarm(BM)','All By-Pass','Total'].map(l => ({label:l})) } };
+    const read = () => { const m = document.getElementById('drillModal');
+      return m.textContent.replace(/\s+/g,' ').trim(); };
+    const res = {};
+    ['alarm','abp','tot'].forEach((k,di) => {
+      window.onDrill({}, [{index:0, datasetIndex:di}], chart); res[k] = read();
+    });
+    return res;
+  });
+  const s1 = (c, m) => { if (c) console.log('  ✓ ' + m); else { fails++; console.log('  ❌ ' + m); } };
+  console.log('[0b] 고장 차트 세부내역 — 누른 칸만 (픽스처 불필요)');
+  s1(/3\s*BM 고장 건수/.test(out.alarm) && !/ABP-1/.test(out.alarm),
+     'Alarm(BM) → BM 3건만 (올바이패스 안 섞임)');
+  s1(/6\s*All By-Pass/.test(out.abp), 'All By-Pass → 6건 (국내 행 2 + 해외 집계 4)');
+  s1(/ABP-1/.test(out.abp) && !/BM-1/.test(out.abp), '  올바이패스 행만 나온다 (BM 행 없음)');
+  /* 해외 ABP 는 크로스탭이라 행이 없다 — 건수만 맞고 목록이 짧으면 «잘렸나»로 읽힌다 */
+  s1(/크로스탭/.test(out.abp), '  해외분은 행이 없다는 사실을 적는다');
+  s1(/All By-Pass 상세/.test(out.abp), '  창 제목도 그 칸을 따라간다');
+  s1(/9\s*Total/.test(out.tot) && /BM-1/.test(out.tot) && /ABP-1/.test(out.tot),
+     '합계 선 → 9건 · 두 계통이 다 나온다');
+  s1(!e1.length, 'JS 에러 0건' + (e1.length ? ' — ' + e1[0] : ''));
+  await b1.close(); srv.close();
+}
+
 /* 픽스처가 없으면 라우트 핸들러 «안에서» 크래시한다 — 스택만 남고 «검사가 안 됐다»는
    사실은 안 남는다. 미리 끊고 그 사실을 적는다. */
 {
