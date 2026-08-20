@@ -2676,9 +2676,19 @@ function render(){
   {const per={}; ['cFt','cMan','cAtt','cHc','cCareer','cIo'].forEach(id=>{try{per[id]=PU(id).P;}catch(e){}});
    /* 경력구간 경계는 차트를 만든 자리(cHc)와 «같은 값»이어야 한다. 드릴이 자기 숫자를
       들고 있으면 막대는 1년 미만 5명인데 명단은 6명이 되는 날이 온다(제2원칙). */
+   /* 올바이패스도 «알람과 대칭»으로 싣는다. 안 실으면 그 막대를 눌렀을 때 보여줄 것이
+      없어 세부내역이 알람으로 되돌아간다 — 사용자가 「All By-Pass 를 눌렀는데 왜 전체가
+      나오냐」고 물은 자리다.
+      ⚠ 대만 ABP 는 크로스탭(집계)이라 «행이 없다». 건수만 넘기고, 목록에는 그 사실을 적는다 —
+        없는 것을 알람 행으로 채우면 그게 거짓말이다. */
+   const _abpTW={}; try{ PU('cFt').P.forEach(function(pp){
+     const uu=PU('cFt').u, src=ABP[uu]||{};
+     const key=(uu==='m')?String(parseInt((pp.key||'').slice(5),10)):pp.label;
+     _abpTW[pp.key]=abpSel(src[key]); }); }catch(e){}
    window._DRILL={fWK,fHR,fLV,headOn,SITES,grpKey,grpRaw:_grpRaw,per,activeAt,
-     hcBand:HC_BANDS,
-     krOn:KR_ON, krBM:KR_ON?KRAf.map(krAsWk):[]};}
+     hcBand:HC_BANDS, lbl:{alarm:t('ft_alarm'),abp:t('ft_abp'),tot:t('ft_tot')},
+     krOn:KR_ON, krBM:KR_ON?KRAf.map(krAsWk):[],
+     krABP:KRBf.map(krAsWk), abpTW:_abpTW};}
   // KPI 스파크라인 (최근 12구간 추세 · 계산 무관 표시용)
   try{ const SP=periods(12,asOf,PERIOD), wdv=(PERIOD==='m')?21:5;
     drawSpark('sp1',SP.map(p=>headOn(p.end)),'#3B82F6');
@@ -2863,18 +2873,33 @@ function onDrill(evt,els,chart){
      「1년 미만 5명」 막대를 눌렀는데 43명짜리 요약이 나오는 셈이다. */
   const p=P[i], di=els[0].datasetIndex;
   const seg=(chart.data.datasets[di]||{}).label||'';
-  if(id==='cFt')return drillFault(p);
+  if(id==='cFt')return drillFault(p,seg);
   if(id==='cMan')return drillMan(p);
   if(id==='cAtt')return drillAtt(p);
   if(id==='cHc'||id==='cCareer')return drillHead(p,id,di,seg);
   if(id==='cIo')return drillIo(p);
 }
-function drillFault(p){ const D=window._DRILL;
+/* seg = 누른 «데이터셋의 이름». 이 차트는 스택 두 단(Alarm(BM) · All By-Pass)에 합계 선이
+   얹혀 있는데, 예전에는 어느 칸을 눌러도 Alarm(BM) 세부내역만 떴다 — All By-Pass 막대를
+   누른 사람은 «전체가 나온다»고 읽는다(사용자 보고). v111 에 인원 스택에서 겪은 것과
+   같은 자리이고, 답도 같다: 누른 칸을 보고 그 칸의 모집단만 낸다.
+   ⚠ 인덱스가 아니라 «이름»으로 가른다 — All By-Pass 데이터셋은 값이 있을 때만 생기므로
+     인덱스가 상황에 따라 달라진다. */
+function drillFault(p,seg){ const D=window._DRILL;
+  const L=D.lbl||{};
+  const pick = seg===L.abp ? 'abp' : seg===L.tot ? 'tot' : 'alarm';
   /* 차트 막대(alarmAt)와 «같은 모집단»이어야 한다 — 국내는 원장(krBM), 국내 수선실적 BM 은
      이중 계산이라 뺀다. 이 리스트만 fWK 전체를 보면 막대 높이와 목록 건수가 갈린다(실제로 그랬다). */
-  const rows=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&x.stage==='BM'&&!(D.krOn&&x.region==='국내'))
-    .concat((D.krBM||[]).filter(x=>x.wd&&x.wd>=p.st&&x.wd<=p.end))
+  const inP=x=>x.wd&&x.wd>=p.st&&x.wd<=p.end;
+  const bmRows=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&x.stage==='BM'&&!(D.krOn&&x.region==='국내'))
+    .concat((D.krBM||[]).filter(inP));
+  const abpRows=(D.krABP||[]).filter(inP);
+  const abpTW=(D.abpTW||{})[p.key]||0;          // 대만 ABP — 크로스탭이라 행이 없다
+  const rows=(pick==='abp'?abpRows:pick==='tot'?bmRows.concat(abpRows):bmRows)
     .sort((a,b)=>b.wd-a.wd);
+  const twN=(pick==='alarm')?0:abpTW;
+  const sumN=rows.length+twN;
+  const sumL=pick==='abp'?L.abp:pick==='tot'?L.tot:'BM 고장 건수';
   /* ⚠ 이 요약은 TOP3 와 «다른 질문»에 답한다 — 머리글이 「원인/알람」인 이유다.
      TOP3 는 사용자 확정(v94)대로 Alarm Message 로 묶고, 여기는 원인이 있으면 원인으로 묶는다
      (국내 K·H 는 실제원인이 차 있고, 대만 실적은 10%뿐이라 알람·현상으로 내려간다).
@@ -2885,12 +2910,18 @@ function drillFault(p){ const D=window._DRILL;
   const by={}; rows.forEach(x=>{const raw=(_dk(x)||'').trim();
     const k=raw?(_dm.get(raw)||{label:raw}).label:'미기재'; by[k]=(by[k]||0)+1;});
   const top=Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  let h='<div class="dsum"><div class="b"><span class="n">'+rows.length+'</span><span class="l">BM 고장 건수</span></div></div>';
+  let h='<div class="dsum"><div class="b"><span class="n">'+sumN+'</span><span class="l">'+esc(sumL)+'</span></div>'
+    +(pick==='tot'?'<div class="b"><span class="n">'+bmRows.length+'</span><span class="l">'+esc(L.alarm||'')+'</span></div>'
+                  +'<div class="b"><span class="n">'+(abpRows.length+abpTW)+'</span><span class="l">'+esc(L.abp||'')+'</span></div>':'')
+    +'</div>';
+  /* ⚠ 대만 All By-Pass 는 ABP 시트가 «크로스탭»이라 행 단위 자료가 없다. 건수는 맞는데
+     목록이 짧으면 사람은 «목록이 잘렸나»로 읽는다 — 왜 없는지를 적는다. */
+  if(twN)h+='<div class="dhint">해외 '+twN+'건은 ABP 시트가 집계표(크로스탭)라 행 목록이 없습니다 — 건수만 셉니다</div>';
   if(top.length)h+='<table><thead><tr><th>원인/알람</th><th class="num">건수</th></tr></thead><tbody>'+top.map(e=>'<tr><td>'+esc(e[0])+'</td><td class="num">'+e[1]+'</td></tr>').join('')+'</tbody></table>';
   // 상세 열 순서 = 시트 열 순서(Z 알람유형 · AA 현상 · AB 원인 · AC 조치)
   h+='<div class="dhint">최근순 상세 (최대 40건)</div><table><thead><tr><th>일자</th><th>라인</th><th>Alarm Message</th><th>현상</th><th>원인</th><th>조치</th></tr></thead><tbody>'
     +(rows.length?rows.slice(0,40).map(x=>'<tr><td>'+_md(x.wd)+'</td><td>'+esc(x.fab||x.custB)+'</td><td>'+esc(x.alarm)+'</td><td>'+esc(x.phenom)+'</td><td>'+esc(x.cause)+'</td><td>'+esc(x.action)+'</td></tr>').join(''):'<tr><td colspan="6" style="text-align:center;color:var(--txt-muted)">고장 없음</td></tr>')+'</tbody></table>';
-  showDrill('고장 상세 · '+p.label,h);
+  showDrill((pick==='abp'?L.abp:pick==='tot'?L.tot:'고장')+' 상세 · '+p.label,h);
 }
 /* 공수 세부내역 — 이 표가 «시트와 맞대어 보는» 유일한 자리다. 화면 막대는 인당 일평균(h)
    이라 시트 합계와 직접 못 견준다. 여기서 총 분(min)과 시간(h)을 같이 낸다.
