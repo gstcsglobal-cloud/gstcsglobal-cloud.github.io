@@ -2681,14 +2681,18 @@ function render(){
       나오냐」고 물은 자리다.
       ⚠ 대만 ABP 는 크로스탭(집계)이라 «행이 없다». 건수만 넘기고, 목록에는 그 사실을 적는다 —
         없는 것을 알람 행으로 채우면 그게 거짓말이다. */
-   const _abpTW={}; try{ PU('cFt').P.forEach(function(pp){
-     const uu=PU('cFt').u, src=ABP[uu]||{};
-     const key=(uu==='m')?String(parseInt((pp.key||'').slice(5),10)):pp.label;
+   const _abpTW={}; let _ftU=PERIOD; try{ _ftU=PU('cFt').u; PU('cFt').P.forEach(function(pp){
+     const src=ABP[_ftU]||{};
+     const key=(_ftU==='m')?String(parseInt((pp.key||'').slice(5),10)):pp.label;
      _abpTW[pp.key]=abpSel(src[key]); }); }catch(e){}
+   /* ⚠ 원장 행은 «차트가 쓰는 그 열쇠»로 골라야 한다. 드릴이 발생일(wd)로만 자르면,
+      화면이 «시트 정산월» 기준일 때 막대와 목록이 갈린다 — 실측 H3 8월은 정산월 96 ↔
+      발생일 31 로 세 배 차이다(CLAUDE.md v92). 그래서 행마다 버킷 열쇠를 미리 달아 둔다. */
+   const _asW=list=>list.map(function(x){ const o=krAsWk(x); o.bkey=krKeyOf(x,_ftU); return o; });
    window._DRILL={fWK,fHR,fLV,headOn,SITES,grpKey,grpRaw:_grpRaw,per,activeAt,
      hcBand:HC_BANDS, lbl:{alarm:t('ft_alarm'),abp:t('ft_abp'),tot:t('ft_tot')},
-     krOn:KR_ON, krBM:KR_ON?KRAf.map(krAsWk):[],
-     krABP:KRBf.map(krAsWk), abpTW:_abpTW};}
+     krOn:KR_ON, krBM:KR_ON?_asW(KRAf):[],
+     krABP:_asW(KRBf), abpTW:_abpTW};}
   // KPI 스파크라인 (최근 12구간 추세 · 계산 무관 표시용)
   try{ const SP=periods(12,asOf,PERIOD), wdv=(PERIOD==='m')?21:5;
     drawSpark('sp1',SP.map(p=>headOn(p.end)),'#3B82F6');
@@ -2891,9 +2895,12 @@ function drillFault(p,seg){ const D=window._DRILL;
   /* 차트 막대(alarmAt)와 «같은 모집단»이어야 한다 — 국내는 원장(krBM), 국내 수선실적 BM 은
      이중 계산이라 뺀다. 이 리스트만 fWK 전체를 보면 막대 높이와 목록 건수가 갈린다(실제로 그랬다). */
   const inP=x=>x.wd&&x.wd>=p.st&&x.wd<=p.end;
+  /* 국내 원장은 «차트가 쓴 버킷 열쇠»로 고른다 — 화면이 시트 정산월 기준이면 발생일로
+     자른 목록과 막대가 갈린다(실측 3배). 옛 배포본(bkey 없음)은 발생일로 되돌아간다. */
+  const inKR=x=>(x.bkey!=null&&p.key!=null)?(x.bkey===p.key):inP(x);
   const bmRows=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&x.stage==='BM'&&!(D.krOn&&x.region==='국내'))
-    .concat((D.krBM||[]).filter(inP));
-  const abpRows=(D.krABP||[]).filter(inP);
+    .concat((D.krBM||[]).filter(inKR));
+  const abpRows=(D.krABP||[]).filter(inKR);
   const abpTW=(D.abpTW||{})[p.key]||0;          // 대만 ABP — 크로스탭이라 행이 없다
   const rows=(pick==='abp'?abpRows:pick==='tot'?bmRows.concat(abpRows):bmRows)
     .sort((a,b)=>b.wd-a.wd);

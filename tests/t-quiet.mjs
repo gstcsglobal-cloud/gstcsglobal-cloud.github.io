@@ -679,7 +679,12 @@ console.log('\n[15] 고장 차트 세부내역이 누른 데이터셋을 따르�
   is(/lbl:\{alarm:t\('ft_alarm'\),abp:t\('ft_abp'\),tot:t\('ft_tot'\)\}/.test(R),
      'report — 이름표는 차트가 실제로 그린 그 글자를 넘긴다 (여기서 다시 만들지 않는다)');
   /* 올바이패스 자료를 안 실으면 보여줄 것이 없어 알람으로 되돌아간다 */
-  is(/krABP:KRBf\.map\(krAsWk\)/.test(R), 'report — 국내 올바이패스 행을 드릴에 싣는다');
+  is(/krABP:_asW\(KRBf\)/.test(R), 'report — 국내 올바이패스 행을 드릴에 싣는다');
+  /* ⚠ 원장 행은 «차트가 쓴 버킷 열쇠»로 골라야 한다. 발생일로만 자르면 화면이 시트
+     정산월 기준일 때 막대와 목록이 갈린다 — 실측 H3 8월 정산월 96 ↔ 발생일 31(3배). */
+  is(/o\.bkey=krKeyOf\(x,_ftU\)/.test(R), 'report — 행마다 차트의 버킷 열쇠를 달아 둔다');
+  is(/const inKR=x=>\(x\.bkey!=null&&p\.key!=null\)\?\(x\.bkey===p\.key\):inP\(x\)/.test(R),
+     'report — 드릴이 그 열쇠로 고른다 (정산월 기준에서 막대와 안 갈리게)');
   is(/abpTW:_abpTW/.test(R), 'report — 해외 올바이패스 건수도 싣는다');
   /* ⚠ 대만 ABP 는 크로스탭이라 «행이 없다». 건수만 맞고 목록이 비면 «잘렸나»로 읽힌다 —
      없는 것을 알람 행으로 채우면 그게 거짓말이므로, 왜 없는지를 적는다. */
