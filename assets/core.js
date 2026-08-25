@@ -2074,6 +2074,17 @@ GST.idb=(function(){
    (CIP·인원명단·교육현황은 아직 시트다 — 행이 100개 안팎이라 급하지 않다). */
 GST.TABLE_OF_GID = { '646668307':'wk', '31302669':'mat', '891608329':'inst' };
 GST.USE_DB = true;                       // 되돌리려면 이 한 줄을 false로
+
+/* ── 기간 기본창 (v127) ── 콜드 로드에서 «최근 것 먼저». 값은 대상 표의 날짜 컬럼(snake).
+   창 크기 12 = 이번 달 1일 기준 12개월 전 1일부터 — 13개월치라, 화면 기본값
+   «최근 12개 구간»(주별·월별 모두)이 첫 그림에서 이미 완전하다.
+   ⚠ 최종 숫자는 창과 무관하다. 나머지 이력을 뒤에서 마저 받아 «전부 오면» 자동
+     새로고침과 같은 경로로 한 번 다시 그리고, 부분본은 캐시에 절대 담지 않는다 —
+     창은 첫 화면을 앞당길 뿐이다. 되돌리려면 이 맵을 비우면 된다({}).
+   inst 는 «지금의 명부»라 날짜 축이 없다 — 창을 걸 수 없고(작기도 하다) 걸면 안 된다. */
+GST.DB_WINDOW = { wk:'d_start', mat:'work_date' };
+GST.DB_WINDOW_MONTHS = 12;
+GST.DB_WINDOW_MIN = 20000;               // 이보다 작은 표는 두 번에 나눠 받을 이유가 없다
 GST._snake = function(s){ return String(s).replace(/([a-z0-9])([A-Z])/g,'$1_$2').toLowerCase(); };
 
 /* 미러에서 못 읽었을 때 조용히 넘어가지 않는다. 시트로 되돌아가는 것 자체는 안전하지만,
@@ -2173,15 +2184,30 @@ GST.dbRows = async function(table){
      ⚠ 열쇠에 «고른 컬럼»도 넣는다(v120). 안 넣으면 DB 에 열을 더한 뒤에도 옛 캐시가
        맞는 것으로 판정돼, 새 열이 영영 빈 채로 남는다(적재 시각이 안 바뀌므로). */
   const stamp = table+'|'+lg.data.synced_at+'|'+want+'|'+use.length;
+
+  /* 직전 백필이 완성해 둔 전체본이 있으면 그것부터 소비한다 (v127 — 기간 기본창).
+     IndexedDB «저장»이 실패하는 환경(시크릿 창·용량)에서 이 다리가 없으면
+     재렌더 → 콜드 → 또 창+백필 → 또 재렌더 … 로 같은 데이터를 영원히 다시 받는다.
+     한 번 쓰면 지운다 — 붙들고 있으면 탭마다 수백 MB 가 눌러앉는다. */
+  const mem = GST._bfFull && GST._bfFull[table];
+  if(mem){ delete GST._bfFull[table];
+    if(mem.stamp === stamp){
+      GST._idbHit = (GST._idbHit||0)+1;                 // 배지의 «재사용» — 뜻이 같다
+      GST.idb.set('rows:'+table, {stamp:stamp, rows:mem.rows, t:Date.now()});   // 저장 재시도(실패해도 무해)
+      return mem.rows;
+    }
+  }
+
   const hit = await GST.idb.get('rows:'+table);
   if(hit && hit.stamp === stamp && Array.isArray(hit.rows) && hit.rows.length === want+1){
     GST._idbHit = (GST._idbHit||0)+1;
     return hit.rows;
   }
 
-  const page = async function(from, n){
-    const r = await c.from('sheet_'+table).select(SEL)
-                     .order('src_row', {ascending:true}).range(from, from+n-1);
+  const page = async function(from, n, mod){
+    let q = c.from('sheet_'+table).select(SEL);
+    if(mod) q = mod(q);                                 // 창·백필의 날짜 조건이 여기 끼워진다
+    const r = await q.order('src_row', {ascending:true}).range(from, from+n-1);
     if(r.error) throw new Error('READ '+r.error.message);
     return r.data || [];
   };
@@ -2196,45 +2222,111 @@ GST.dbRows = async function(table){
        왕복이 된다(왕복 60ms 가정 실측: 콜드 7.3s → 4.5s. 남는 ~3s 는 JSON 파싱+물질화라
        네트워크가 느릴수록 격차는 더 커진다). 설정을 안 올려도 서버가 제 상한만큼만
        돌려주므로 아무것도 나빠지지 않는다 — 여기 숫자를 줄이면 설정을 올려도 못 쓴다. */
-  const out = await page(0, 10000);
-  const size = out.length;
-  if(size && out.length < want){
-    /* 순차로 받으면 257,606행이 258번 왕복이라 몇 분씩 걸린다 — 페이지끼리는 서로
-       의존하지 않으므로(범위가 겹치지 않는다) 묶어서 동시에 받는다. 순서는 배치 순서로
-       보존된다: 각 페이지가 src_row 오름차순의 «겹치지 않는 구간»이라 이어 붙이면 정렬이 유지된다.
-       동시 10은 HTTP/2(Supabase) 기준이다 — 다중화라 브라우저의 «호스트당 연결 6개» 제한이
-       없고, 각 요청은 PK(src_row) 범위 스캔이라 서버가 가볍다.
-       ⚠ HTTP/1.1 환경에서는 브라우저가 어차피 6개로 조이므로 이득도 손해도 없다
-       (로컬 실측 동일) — 수치로 확인된 이득은 h2 에서의 대기 파동 수 감소다(26→3파동). */
-    const total = Math.ceil((want - size) / size), CONC = 10;
-    for(let p = 0; p < total; p += CONC){
-      const batch = [];
-      for(let k = 0; k < CONC && p + k < total; k++) batch.push(page(size * (p + k + 1), size));
-      const res = await Promise.all(batch);
-      let empty = false;
-      for(let i = 0; i < res.length; i++){
-        if(!res[i].length){ empty = true; break; }
-        for(let j = 0; j < res[i].length; j++) out.push(res[i][j]);
-      }
-      if(empty || out.length >= want) break;
+  /* pump — «size 보다 짧은 장이 나올 때까지» 받는 공용 펌프. 전체·창·백필 세 호출이
+     이 하나를 쓴다(나눠 짜면 세 벌이 갈라진다 — 제2원칙). 날짜 조건(mod)이 붙으면
+     몇 행이 올지 미리 알 수 없어 want 로 끝을 판정할 수 없다 — 대신 짧은 장이 끝이다.
+     표는 업로드 사이에 정적이므로(cron 은퇴 · v81) 장 사이에 행이 끼어들 걱정이 없다.
+     순차로 받으면 257,606행이 258번 왕복이라 몇 분씩 걸린다 — 페이지끼리는 서로
+     의존하지 않으므로(범위가 겹치지 않는다) 묶어서 동시에 받는다. 순서는 배치 순서로
+     보존된다: 각 장이 src_row 오름차순의 «겹치지 않는 구간»이라 이어 붙이면 정렬이 유지된다.
+     동시 10은 HTTP/2(Supabase) 기준이다 — 다중화라 브라우저의 «호스트당 연결 6개» 제한이
+     없고, 각 요청은 PK(src_row) 범위 스캔이라 서버가 가볍다.
+     ⚠ HTTP/1.1 환경에서는 브라우저가 어차피 6개로 조이므로 이득도 손해도 없다
+       (로컬 실측 동일) — 수치로 확인된 이득은 h2 에서의 대기 파동 수 감소다(26→3파동).
+     ⚠ 첫 장이 10,000보다 짧으면 «끝»인지 «서버 상한»인지 구별이 안 된다(둘 다 짧게 온다).
+       한 장을 더 물어 0행이면 끝, 행이 오면 상한이었다는 뜻이다 — 모호할 때만 요청 1회다. */
+  const pump = async function(mod){
+    const out = await page(0, 10000, mod);
+    const size = out.length; if(size) GST._pgSize = size;
+    if(!size) return out;
+    if(size < 10000){
+      const nx = await page(size, size, mod);
+      if(!nx.length) return out;
+      for(let i=0;i<nx.length;i++) out.push(nx[i]);
+      if(nx.length < size) return out;
     }
+    const CONC = 10, capPages = Math.ceil(want/size) + 2;   // want 는 전체 행수라 어느 호출에도 상한(폭주 방지)이다
+    let p = out.length / size, short = false;
+    while(!short && p < capPages){
+      const batch = [];
+      for(let k = 0; k < CONC && p + k < capPages; k++) batch.push(page(size*(p+k), size, mod));
+      if(!batch.length) break;
+      const res = await Promise.all(batch);
+      for(let i = 0; i < res.length; i++){
+        for(let j = 0; j < res[i].length; j++) out.push(res[i][j]);
+        if(res[i].length < size){ short = true; break; }
+      }
+      p += batch.length;
+    }
+    return out;
+  };
+  const materialize = function(out){
+    const rows = new Array(out.length+1); rows[0] = head;
+    for(let i=0;i<out.length;i++){
+      const o = out[i], r = new Array(cols.length);
+      /* 표에 없는 열은 빈 값이다 — 헤더 자리는 그대로 두어야 SPEC 이 열을 «이름으로»
+         찾는 규약(제1원칙)이 유지된다. 자리를 지우면 그 뒤 열이 통째로 밀린다. */
+      for(let j=0;j<cols.length;j++){ const v=o[cols[j]]; r[j] = (v==null?'':String(v)); }
+      rows[i+1] = r;
+    }
+    return rows;
+  };
+  /* 다음 로드를 위해 담아 둔다. 저장 실패(용량·시크릿 창)는 «느려질 뿐» 틀리지 않으므로
+     막지 않는다 — 다만 왜 느린지 알 수 있게 흔적은 남긴다(GST._idbErr). */
+  const keep = function(rows){ GST.idb.set('rows:'+table, {stamp:stamp, rows:rows, t:Date.now()}); };
+
+  /* ── 기간 기본창 (v127) — 최근 13개월을 먼저 그리고, 나머지는 뒤에서 받는다 ──
+     gte(cutoff) 와 or(lt.cutoff, is.null) 은 어떤 값이든 «정확히 한쪽»에 들어간다
+     (텍스트 비교의 삼분법 + null). 그래서 날짜 표기가 섞여 있어도 행이 겹치거나 빠질 수
+     없고, 합친 행수가 want 와 다르면 그 자리에서 멈춘다 — 이상한 표기는 어느 반쪽에
+     실리는지만 달라질 뿐이다(첫 그림의 구성이 조금 달라질 뿐 최종본은 같다).
+     ⚠ 부분본(rowsW)은 keep() 하지 않는다 — 캐시 적중 조건이 want+1 행이라 담아도
+       안 맞지만, 애초에 담지 않는 것이 규율이다. 전체가 확인된 것만 캐시에 간다. */
+  const winCol = (GST.DB_WINDOW||{})[table];
+  if(winCol && use.indexOf(winCol) >= 0 && want >= GST.DB_WINDOW_MIN){
+    const now = new Date();                                       // 로컬 달력 (v109 — UTC 왕복 금지)
+    const mAbs = now.getFullYear()*12 + now.getMonth() - GST.DB_WINDOW_MONTHS;
+    const cutoff = Math.floor(mAbs/12) + '-' + String(mAbs%12+1).padStart(2,'0') + '-01';
+    let recent = null;
+    try{ recent = await pump(function(q){ return q.gte(winCol, cutoff); }); }
+    catch(e){ recent = null; }               // 창이 실패하면 전체 경로로 — 창은 최적화일 뿐이다
+    if(recent && recent.length === want){    // 전부 창 안 — 이미 전체본이다
+      const rowsF = materialize(recent); keep(rowsF); return rowsF;
+    }
+    if(recent && recent.length && recent.length < want){
+      const rowsW = materialize(recent);
+      GST._bfNote(table, true);
+      (async function(){
+        try{
+          const rest = await pump(function(q){ return q.or(winCol+'.lt.'+cutoff+','+winCol+'.is.null'); });
+          const all = recent.concat(rest);
+          if(all.length !== want) throw new Error('BACKFILL_SHORT '+all.length+'/'+want);
+          all.sort(function(a,b){ return (a.src_row||0) - (b.src_row||0); });   // 시트 순서 복원 — 전체 경로와 같은 출력
+          const rowsF = materialize(all);
+          (GST._bfFull = GST._bfFull || {})[table] = { stamp: stamp, rows: rowsF };
+          keep(rowsF);
+          GST._bfNote(table, false);
+          GST._bfKick();                     // 전 표의 백필이 끝났으면 한 번 다시 그린다
+        }catch(e){
+          /* 부분인 채로 조용히 두면 «누적 지표가 작은» 화면이 완성본처럼 보인다 —
+             경고를 남기고 캐시에는 아무것도 안 담는다(다음 로드가 처음부터 다시). */
+          GST._bfNote(table, false);
+          GST._dbWarn(table, '전체 이력 뒷부분을 못 받았습니다 — 새로고침하면 처음부터 다시 받습니다 ('
+            + String(e && e.message || e).slice(0, 60) + ')');
+        }
+      })();
+      return rowsW;
+    }
+    /* recent 0행(최근 13개월 자료가 없음) → 창이 무의미 — 전체 경로로 내려간다 */
   }
+
+  const out = await pump(null);
   /* 적재 기록과 실제로 받은 행수가 다르면 그 자리에서 멈춘다.
      모자란 채로 그리면 KPI가 조용히 작아진다. */
   if(out.length !== want) throw new Error('MIRROR_SHORT '+out.length+'/'+want
-    +' (한 페이지 '+size+'행)');
-
-  const rows = new Array(out.length+1); rows[0] = head;
-  for(let i=0;i<out.length;i++){
-    const o = out[i], r = new Array(cols.length);
-    /* 표에 없는 열은 빈 값이다 — 헤더 자리는 그대로 두어야 SPEC 이 열을 «이름으로»
-       찾는 규약(제1원칙)이 유지된다. 자리를 지우면 그 뒤 열이 통째로 밀린다. */
-    for(let j=0;j<cols.length;j++){ const v=o[cols[j]]; r[j] = (v==null?'':String(v)); }
-    rows[i+1] = r;
-  }
-  /* 다음 로드를 위해 담아 둔다. 저장 실패(용량·시크릿 창)는 «느려질 뿐» 틀리지 않으므로
-     막지 않는다 — 다만 왜 느린지 알 수 있게 흔적은 남긴다(GST._idbErr). */
-  GST.idb.set('rows:'+table, {stamp:stamp, rows:rows, t:Date.now()});
+    +' (한 페이지 '+(GST._pgSize||'?')+'행)');
+  const rows = materialize(out);
+  keep(rows);
   return rows;
 };
 
@@ -2828,22 +2920,56 @@ GST._restoreFilters = function(snap){
 /* 사이드바 버튼이 «자동 10분» 이라고 적혀 있는데 실제 주기는 30분이었다. 화면이 사실과
    다른 말을 하면 사용자는 «안 도는 것»으로 읽는다. 주기를 한 곳에 두고 라벨이 따라간다. */
 GST.AR_MIN = 30;
-GST.startAutoRefresh = function(min){
-  if(GST._arTimer) return;
+/* 필터를 지키며 페이지를 다시 그린다 — 자동 새로고침과 백필 완료(v127)가 «같은 경로»를
+   쓴다. 두 벌로 짜면 한쪽만 순회 규칙을 잊는 날이 온다(제2원칙). */
+GST._softReload = async function(){
   const fn = window.loadData || window.loadAll;
   if(typeof fn!=='function') return;
+  /* 순회 중에는 스냅샷/복원을 하지 않는다 — 빌린 필터의 주인은 순회다.
+     사람이 걸어 둔 기준선(KSAVED)은 순회가 따로 들고 있으므로 여기서 손대면 안 된다. */
+  const kiosk = !!(GST.filters && GST.filters.kioskOn && GST.filters.kioskOn());
+  const snap = kiosk ? null : GST._snapFilters();
+  try{ await fn(); }catch(e){ return; } // 로드 실패 시 상태 유지
+  setTimeout(function(){
+    try{ kiosk ? GST.filters.kioskReapply() : GST._restoreFilters(snap); }catch(e){}
+  }, 300);
+};
+GST.startAutoRefresh = function(min){
+  if(GST._arTimer) return;
+  if(typeof (window.loadData || window.loadAll)!=='function') return;
   GST._arTimer = setInterval(async function(){
     let on=true; try{ on = localStorage.getItem('gst_auto_refresh')!=='0'; }catch(e){}
     if(!on || document.hidden) return;   // 꺼짐/백그라운드 탭이면 건너뜀
-    /* 순회 중에는 스냅샷/복원을 하지 않는다 — 빌린 필터의 주인은 순회다.
-       사람이 걸어 둔 기준선(KSAVED)은 순회가 따로 들고 있으므로 여기서 손대면 안 된다. */
-    const kiosk = !!(GST.filters && GST.filters.kioskOn && GST.filters.kioskOn());
-    const snap = kiosk ? null : GST._snapFilters();
-    try{ await fn(); }catch(e){ return; } // 로드 실패 시 상태 유지
-    setTimeout(function(){
-      try{ kiosk ? GST.filters.kioskReapply() : GST._restoreFilters(snap); }catch(e){}
-    }, 300);
+    await GST._softReload();
   }, (min||10)*60000);
+};
+
+/* ── 백필 배지 + 완료 재렌더 (v127) ── 창으로 먼저 그린 화면은 누적·연간 지표가
+   일시적으로 작다. 조용히 두면 사용자가 자기 자료나 코드를 의심한다(v92 의 교훈) —
+   받는 중임을 밝히고, 다 받으면 위의 _softReload 로 한 번 다시 그린다.
+   ⚠ 자동 새로고침의 on/off 스위치를 «안 본다» — 이건 새 데이터를 받는 것이 아니라
+     지금 로드를 완성하는 일이라, 꺼 두었어도 마저 그려야 한다. */
+GST._bfOn = {};
+GST._bfNote = function(table, on){
+  if(on) GST._bfOn[table] = 1; else delete GST._bfOn[table];
+  if(!document.body) return;
+  var el = document.getElementById('gstBackfill');
+  if(!Object.keys(GST._bfOn).length){ if(el) el.remove(); return; }
+  if(!el){
+    el = document.createElement('div'); el.id = 'gstBackfill';
+    el.style.cssText = 'position:fixed;left:10px;bottom:40px;z-index:999998;padding:5px 11px;'+
+      'border-radius:999px;background:#1e3a8a;color:#bfdbfe;font:11px/1.5 system-ui,-apple-system,sans-serif;'+
+      'font-weight:700;opacity:.92;pointer-events:none';
+    document.body.appendChild(el);
+  }
+  el.textContent = '⏳ 최근 '+((GST.DB_WINDOW_MONTHS||12)+1)+'개월 먼저 표시 — 전체 이력 받는 중 (누적·연간 지표는 곧 갱신)';
+};
+GST._bfKick = function(){
+  /* 아직 받는 중인 표가 있으면 기다린다 — 여기서 그리면 그 표가 «부분»인 채로 다시
+     그려지고, 그 로드가 또 창+백필을 새로 시작해 같은 데이터를 두 번 받는다. */
+  if(Object.keys(GST._bfOn).length) return;
+  clearTimeout(GST._bfT);
+  GST._bfT = setTimeout(function(){ GST._softReload(); }, 800);   // 표 둘이 잇달아 끝나면 한 번만
 };
 
 // 자동 초기화: 페이지가 initSidebar를 직접 호출하지 않아도,
