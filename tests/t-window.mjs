@@ -191,6 +191,32 @@ const out = await page.evaluate(async () => {
   R.gapPlain = g3.length - 1;
   R.gapEqual = flat(g2) === flat(g3);
   DATA.forEach((o, i) => { o.src_row = i; });            // 원상 복구
+
+  /* [6] 일시 오류는 «한 번» 다시 해 보고 지나간다 — statement timeout 사고(v128) 때
+     옛 코드를 문 브라우저들이 인스턴스를 붙들면 가벼운 질의도 순간 밀릴 수 있었다.
+     자료 오류([3]의 «주입한 실패»)는 재시도 없이 즉시 던지는 것과 대비된다. */
+  await wipe();
+  GST.DB_WINDOW_MIN = 5000;                              // 전체 경로만 — 재시도 판정에 집중
+  let flaky = 1;                                         // 첫 표 질의 한 번만 타임아웃
+  const base = mkClient({ stamp: '2026-08-25T00:00:00Z' });
+  GST.db = async () => ({
+    rpc: base.rpc,
+    from: (tbl) => {
+      const q = base.from(tbl);
+      if (tbl !== 'sheet_sync_log' && q.then) {
+        const orig = q.then;
+        q.then = (res) => {
+          if (flaky) { flaky = 0; return res({ error: { message: 'canceling statement due to statement timeout' } }); }
+          return orig(res);
+        };
+      }
+      return q;
+    }
+  });
+  GST._dbMiss = [];
+  const rt = await GST.dbRows('wk');
+  R.retryLen = rt.length - 1;
+  R.retryNoWarn = !(GST._dbMiss || []).some(x => x.t === 'wk');
   return R;
 });
 
@@ -224,6 +250,10 @@ console.log('\n[5] src_row 비연속 (구간 교체 뒤의 정상 상태)');
 is(out.gapPlain === out.fullLen, `전체 경로가 빈 구간을 건너 전량을 받는다 (${out.gapPlain}행)`);
 is(out.gapFull === out.fullLen, `창+백필도 전량을 받는다 (${out.gapFull}행)`);
 is(out.gapEqual, '두 경로의 출력이 같다 — «짧은 장 = 끝» 판정이 되살아나면 여기가 붉는다');
+
+console.log('\n[6] 일시 오류 1회 재시도');
+is(out.retryLen === out.fullLen, `타임아웃 한 번은 재시도로 지나간다 (${out.retryLen}행)`);
+is(out.retryNoWarn, '성공했으므로 경고도 남지 않는다');
 
 is(!errs.length, 'JS 에러 0건' + (errs.length ? ' — ' + errs[0] : ''));
 await browser.close();
