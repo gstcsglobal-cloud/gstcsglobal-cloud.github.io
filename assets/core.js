@@ -2204,59 +2204,61 @@ GST.dbRows = async function(table){
     return hit.rows;
   }
 
-  const page = async function(from, n, mod){
-    let q = c.from('sheet_'+table).select(SEL);
+  /* ⚠ 범위는 OFFSET 이 아니라 «src_row 값»으로 자른다 (v128 · 실사고 2026-08-25).
+     PostgREST 의 range() 헤더는 LIMIT/OFFSET 이 되는데, OFFSET N 은 서버가 앞 N 행을
+     매번 읽고 버린다 — 뒤쪽 장일수록 무거워져 전체 비용이 O(N²)다. Max Rows 를
+     1,000→10,000 으로 올리자 장당 스캔+직렬화가 커지면서 Supabase 의 statement
+     timeout(수 초)에 걸렸고, 수선실적 읽기가 «READ canceling statement due to
+     statement timeout» 으로 통째로 실패해 옛 시트 보관본으로 폴백했다.
+     src_row 는 PK 라 `src_row >= a AND src_row < a+폭` 은 어떤 깊이에서도 폭만큼의
+     인덱스 범위 스캔이다 — 장당 비용이 상수가 되어 타임아웃이 원리적으로 사라진다.
+     ⚠ src_row 는 연속이 아니다 — 구간 교체(v87)가 지운 자리는 비고 새 행은 max+1 부터
+       붙는다. 그래서 «짧은 장 = 끝» 판정을 쓸 수 없고(중간에 빈 구간이 정상이다),
+       마지막 번호까지 전 구간을 훑은 뒤 총합을 want 와 대조한다. */
+  const page = async function(a, b, mod){               // src_row ∈ [a, b)
+    let q = c.from('sheet_'+table).select(SEL).gte('src_row', a).lt('src_row', b);
     if(mod) q = mod(q);                                 // 창·백필의 날짜 조건이 여기 끼워진다
-    const r = await q.order('src_row', {ascending:true}).range(from, from+n-1);
+    const r = await q.order('src_row', {ascending:true});
     if(r.error) throw new Error('READ '+r.error.message);
     return r.data || [];
   };
-  /* 첫 페이지로 «서버가 실제로 돌려주는 한 장의 크기»를 알아낸다.
-     PostgREST 의 max-rows 는 프로젝트 설정이라 클라이언트가 못 정한다 — 10,000을 달라고 해도
-     1,000만 오는 것이 기본값이다. 그래서 요청한 수를 페이지 크기로 가정하면 안 된다.
-     ⚠ 예전에는 여기에 «200회» 라는 루프 상한이 있었다. 1,000행씩 200번 = 200,000행에서
-       끊겨, 25만 행을 올리자 MIRROR_SHORT 200000/257606 으로 화면이 통째로 막혔다.
-       상한은 데이터 크기가 아니라 «폭주 방지»여야 하므로 want 에서 유도한다.
-     ⚠ 요청 크기(10,000)는 «위로 열어 두는» 값이다 — Supabase 대시보드에서
-       Settings → API → Max Rows 를 10,000 으로 올리면 수선 257,606행이 258회 → 26회
-       왕복이 된다(왕복 60ms 가정 실측: 콜드 7.3s → 4.5s. 남는 ~3s 는 JSON 파싱+물질화라
-       네트워크가 느릴수록 격차는 더 커진다). 설정을 안 올려도 서버가 제 상한만큼만
-       돌려주므로 아무것도 나빠지지 않는다 — 여기 숫자를 줄이면 설정을 올려도 못 쓴다. */
-  /* pump — «size 보다 짧은 장이 나올 때까지» 받는 공용 펌프. 전체·창·백필 세 호출이
-     이 하나를 쓴다(나눠 짜면 세 벌이 갈라진다 — 제2원칙). 날짜 조건(mod)이 붙으면
-     몇 행이 올지 미리 알 수 없어 want 로 끝을 판정할 수 없다 — 대신 짧은 장이 끝이다.
-     표는 업로드 사이에 정적이므로(cron 은퇴 · v81) 장 사이에 행이 끼어들 걱정이 없다.
-     순차로 받으면 257,606행이 258번 왕복이라 몇 분씩 걸린다 — 페이지끼리는 서로
-     의존하지 않으므로(범위가 겹치지 않는다) 묶어서 동시에 받는다. 순서는 배치 순서로
-     보존된다: 각 장이 src_row 오름차순의 «겹치지 않는 구간»이라 이어 붙이면 정렬이 유지된다.
-     동시 10은 HTTP/2(Supabase) 기준이다 — 다중화라 브라우저의 «호스트당 연결 6개» 제한이
-     없고, 각 요청은 PK(src_row) 범위 스캔이라 서버가 가볍다.
-     ⚠ HTTP/1.1 환경에서는 브라우저가 어차피 6개로 조이므로 이득도 손해도 없다
-       (로컬 실측 동일) — 수치로 확인된 이득은 h2 에서의 대기 파동 수 감소다(26→3파동).
-     ⚠ 첫 장이 10,000보다 짧으면 «끝»인지 «서버 상한»인지 구별이 안 된다(둘 다 짧게 온다).
-       한 장을 더 물어 0행이면 끝, 행이 오면 상한이었다는 뜻이다 — 모호할 때만 요청 1회다. */
+  /* 장 «폭»은 서버 상한에서 배운다. PostgREST max-rows 는 프로젝트 설정이라 클라이언트가
+     못 정한다 — 10,000을 달라고 해도 1,000만 오는 것이 기본값이다. src_row 만 골라 첫
+     10,000개를 받아 보면(오프셋 0 이라 깊이 비용이 없다) 그 길이가 곧 min(상한, 전체)이고,
+     폭을 그 값으로 잡으면 PK 유일성 때문에 어떤 범위 질의도 폭을 넘지 못해 «상한에 잘려
+     조용히 모자라는» 일이 원리적으로 없다. Supabase Settings → API → Max Rows 를
+     10,000 으로 올리면 수선 257,606행이 왕복 ~26회가 된다(1,000이면 ~258회).
+     ⚠ 요청 크기(10,000)는 «위로 열어 두는» 값이다 — 줄이면 설정을 올려도 못 쓴다. */
+  const cap = await c.from('sheet_'+table).select('src_row')
+                     .order('src_row', {ascending:true}).range(0, 9999);
+  if(cap.error) throw new Error('READ '+cap.error.message);
+  const width = (cap.data||[]).length;
+  if(!width) throw new Error('MIRROR_SHORT 0/'+want);
+  const mx = await c.from('sheet_'+table).select('src_row')
+                    .order('src_row', {ascending:false}).limit(1);
+  if(mx.error) throw new Error('READ '+mx.error.message);
+  const maxSr = mx.data && mx.data[0] ? +mx.data[0].src_row : -1;
+  const nR = Math.ceil((maxSr+1)/width);
+  /* 폭주 방지 — 번호 인플레이션(구간 교체 반복)이 비정상적으로 커졌다면 밝히고 멈춘다.
+     조용히 일부만 받으면 want 대조가 어차피 막지만, 원인 없는 MIRROR_SHORT 보다
+     원인 있는 실패가 낫다. 1,000행 폭 기준으로도 수백 구간이면 넉넉하다. */
+  if(nR > 2000) throw new Error('SRC_ROW_INFLATED max='+maxSr+' width='+width);
+  GST._pgSize = width;
+
+  /* pump — 전 구간을 값 범위로 나눠 받는 공용 펌프. 전체·창·백필 세 호출이 이 하나를
+     쓴다(나눠 짜면 세 벌이 갈라진다 — 제2원칙). 동시 10은 HTTP/2(Supabase) 기준이다 —
+     다중화라 브라우저의 «호스트당 연결 6개» 제한이 없고, 각 질의는 인덱스 범위 스캔이라
+     서버가 가볍다(HTTP/1.1 에서는 6으로 조여져 이득도 손해도 없음을 실측 확인).
+     각 장이 src_row 오름차순의 겹치지 않는 구간이라 이어 붙이면 정렬이 유지된다. */
   const pump = async function(mod){
-    const out = await page(0, 10000, mod);
-    const size = out.length; if(size) GST._pgSize = size;
-    if(!size) return out;
-    if(size < 10000){
-      const nx = await page(size, size, mod);
-      if(!nx.length) return out;
-      for(let i=0;i<nx.length;i++) out.push(nx[i]);
-      if(nx.length < size) return out;
-    }
-    const CONC = 10, capPages = Math.ceil(want/size) + 2;   // want 는 전체 행수라 어느 호출에도 상한(폭주 방지)이다
-    let p = out.length / size, short = false;
-    while(!short && p < capPages){
+    const out = [];
+    for(let p = 0; p < nR; p += 10){
       const batch = [];
-      for(let k = 0; k < CONC && p + k < capPages; k++) batch.push(page(size*(p+k), size, mod));
-      if(!batch.length) break;
+      for(let k = 0; k < 10 && p + k < nR; k++)
+        batch.push(page(width*(p+k), width*(p+k+1), mod));
       const res = await Promise.all(batch);
-      for(let i = 0; i < res.length; i++){
+      for(let i = 0; i < res.length; i++)
         for(let j = 0; j < res[i].length; j++) out.push(res[i][j]);
-        if(res[i].length < size){ short = true; break; }
-      }
-      p += batch.length;
     }
     return out;
   };

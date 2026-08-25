@@ -51,6 +51,28 @@ const out = await page.evaluate(async () => {
     rowsOnce.push(o);
   }
   const stampNow = '2026-08-17T00:00:00Z';
+  /* PostgREST 빌더 흉내 — v128 부터 dbRows 는 OFFSET 대신 src_row «값 범위»로 자르고
+     (gte/lt), 폭 탐침(range)·최대 번호(order desc + limit)도 쓴다. 빌더는 체이너블이면서
+     스스로 await 가능해야 한다(실물과 같게 then 을 구현). */
+  const CAP = 1000;                                   // 서버 상한 흉내
+  const mkQuery = function (src) {
+    const st = { flt: [], dir: 'asc', a: null, b: null };
+    const q = {
+      select: () => q,
+      gte: (col, v) => { st.flt.push((o) => o[col] >= v); return q; },
+      lt:  (col, v) => { st.flt.push((o) => o[col] <  v); return q; },
+      order: (col, opt) => { st.dir = (opt && opt.ascending === false) ? 'desc' : 'asc'; return q; },
+      range: (x, y) => { st.a = x; st.b = y; return q; },
+      limit: (n) => { st.a = 0; st.b = n - 1; return q; },
+      then: (res) => {
+        let d = src.filter((o) => st.flt.every((f) => f(o)));
+        d = d.slice().sort((x, y) => st.dir === 'desc' ? y.src_row - x.src_row : x.src_row - y.src_row);
+        if (st.a != null) d = d.slice(st.a, st.b + 1);
+        res({ data: d.slice(0, CAP), error: null });  // 상한은 마지막에 자른다 — 실서버와 같다
+      }
+    };
+    return q;
+  };
   GST.db = async function () {
     return {
       from: function (tbl) {
@@ -59,8 +81,7 @@ const out = await page.evaluate(async () => {
           select: () => ({ eq: () => ({ maybeSingle: async () =>
             ({ data: { rows: WANT, err: null, synced_at: stampNow, ms: -1 } }) }) })
         };
-        return { select: () => ({ order: () => ({ range: async (a, b) =>
-          ({ data: rowsOnce.slice(a, b + 1) }) }) }) };
+        return mkQuery(rowsOnce);
       }
     };
   };

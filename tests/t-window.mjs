@@ -56,10 +56,13 @@ const out = await page.evaluate(async () => {
               : (i % 5 === 0) ? '' : '20' + (20 + (i % 3)) + '. 1. ' + (1 + i % 9);
     DATA.push(o);
   }
-  const CAP = 130;                        // 서버 상한 흉내 — «첫 장이 짧을 때»의 모호성 판정도 지나게 한다
+  const CAP = 130;                        // 서버 상한 흉내 — 폭 탐침이 이 값을 배워야 한다
   const stampNow = '2026-08-20T09:00:00Z';
 
-  const mkClient = function (opt) {       // opt.failTail → 백필 두 번째 장부터 실패
+  /* PostgREST 빌더 흉내 — v128 부터 dbRows 는 OFFSET 대신 src_row «값 범위»(gte/lt)로
+     자르고, 폭 탐침(range)·최대 번호(order desc + limit)도 쓴다. 빌더는 체이너블이면서
+     스스로 await 가능해야 한다(실물과 같게 then 구현). 날짜 조건은 텍스트 비교다. */
+  const mkClient = function (opt) {       // opt.failTail → 백필의 첫 구간 뒤부터 실패
     return {
       rpc: async () => ({ data: snake.concat(['src_row']), error: null }),
       from: function (tbl) {
@@ -67,23 +70,33 @@ const out = await page.evaluate(async () => {
           select: () => ({ eq: () => ({ maybeSingle: async () =>
             ({ data: { rows: WANT, err: null, synced_at: opt.stamp, ms: -1 } }) }) })
         };
-        /* PostgREST 필터 흉내 — gte 는 텍스트 비교, or 는 lt+is.null 형태만 받는다 */
-        let flt = null, isBackfill = false;
-        const b = {
-          select: () => b,
-          gte: (col, v) => { flt = (x) => x >= v; return b; },
+        const st = { flt: [], dir: 'asc', a: null, b: null, kind: 'full', lo: 0 };
+        const q = {
+          select: () => q,
+          gte: (col, v) => {
+            if (col === 'src_row') { st.lo = v; st.flt.push(o => o.src_row >= v); }
+            else { st.kind = 'win'; st.flt.push(o => String(o[col] == null ? '' : o[col]) >= v); }
+            return q; },
+          lt: (col, v) => { st.flt.push(o => o.src_row < v); return q; },
           or: (expr) => { const m = expr.match(/^(\w+)\.lt\.([^,]+),\1\.is\.null$/);
             if (!m) throw new Error('or 형식이 다르다: ' + expr);
-            isBackfill = true; flt = (x) => x < m[2]; return b; },   // 빈 문자열은 lt 에 걸린다
-          order: () => b,
-          range: async (a, z) => {
-            const src = flt ? DATA.filter(o => flt(String(o.d_start == null ? '' : o.d_start))) : DATA;
-            if (opt.failTail && isBackfill && a > 0) return { error: { message: '주입한 실패' } };
-            R.reqs.push((flt ? (isBackfill ? 'tail' : 'win') : 'full') + ':' + a);
-            return { data: src.slice(a, a + Math.min(z - a + 1, CAP)) };
+            st.kind = 'tail';
+            st.flt.push(o => String(o[m[1]] == null ? '' : o[m[1]]) < m[2]);   // 빈 문자열은 lt 에 걸린다
+            return q; },
+          order: (col, o2) => { st.dir = (o2 && o2.ascending === false) ? 'desc' : 'asc'; return q; },
+          range: (x, y) => { st.a = x; st.b = y; return q; },
+          limit: (n) => { st.a = 0; st.b = n - 1; return q; },
+          then: (res) => {
+            if (opt.failTail && st.kind === 'tail' && st.lo > 0)
+              return res({ error: { message: '주입한 실패' } });
+            R.reqs.push(st.kind + ':' + st.lo);
+            let d = DATA.filter(o => st.flt.every(f => f(o)));
+            d = d.slice().sort((x, y) => st.dir === 'desc' ? y.src_row - x.src_row : x.src_row - y.src_row);
+            if (st.a != null) d = d.slice(st.a, st.b + 1);
+            res({ data: d.slice(0, CAP), error: null });   // 상한은 마지막에 — 실서버와 같다
           }
         };
-        return b;
+        return q;
       }
     };
   };
@@ -156,6 +169,28 @@ const out = await page.evaluate(async () => {
   GST.db = async () => mkClient({ stamp: '2026-08-22T00:00:00Z' });
   await GST.dbRows('wk');
   R.smallNoWin = R.reqs.length > 0 && R.reqs.every(s => s.indexOf('full:') === 0);
+
+  /* [5] src_row 가 «비연속»이어도 전량이 온다 — 구간 교체(v87)가 지운 자리는 비고
+     새 행은 max+1 부터 붙으므로, 실서버의 정상 상태다. v128 이 OFFSET 을 값 범위로
+     바꾸면서 «짧은 장 = 끝» 판정을 버린 이유가 이것이다 — 그 판정이 되살아나면
+     빈 구간에서 멈춰 뒷행이 조용히 사라진다. 여기가 그 부활을 막는 자리다. */
+  const hole = 900;                                      // 400~1299 를 지운 셈 — 한 구간이 통째로 빈다
+  DATA.forEach((o, i) => { o.src_row = i < 400 ? i : i + hole; });
+  await wipe();
+  GST.DB_WINDOW_MIN = 1000;                              // 창 켠 채로 — 두 경로 다 본다
+  GST.db = async () => mkClient({ stamp: '2026-08-23T00:00:00Z' });
+  const g1 = await GST.dbRows('wk');                     // 창 → 백필
+  await waitBf(); await new Promise(r => setTimeout(r, 1200));
+  const g2 = await GST.dbRows('wk');
+  const winSave2 = GST.DB_WINDOW; GST.DB_WINDOW = {};
+  await wipe();
+  GST.db = async () => mkClient({ stamp: '2026-08-24T00:00:00Z' });
+  const g3 = await GST.dbRows('wk');                     // 전체 경로
+  GST.DB_WINDOW = winSave2;
+  R.gapWin = g1.length - 1; R.gapFull = g2.length - 1;
+  R.gapPlain = g3.length - 1;
+  R.gapEqual = flat(g2) === flat(g3);
+  DATA.forEach((o, i) => { o.src_row = i; });            // 원상 복구
   return R;
 });
 
@@ -184,6 +219,11 @@ is(out.failBadgeOff, '배지는 내려간다 (영원한 «받는 중»으로 남
 
 console.log('\n[4] 창을 안 거는 조건');
 is(out.smallNoWin, 'DB_WINDOW_MIN 미만의 표는 한 번에 받는다 (창 요청이 없다)');
+
+console.log('\n[5] src_row 비연속 (구간 교체 뒤의 정상 상태)');
+is(out.gapPlain === out.fullLen, `전체 경로가 빈 구간을 건너 전량을 받는다 (${out.gapPlain}행)`);
+is(out.gapFull === out.fullLen, `창+백필도 전량을 받는다 (${out.gapFull}행)`);
+is(out.gapEqual, '두 경로의 출력이 같다 — «짧은 장 = 끝» 판정이 되살아나면 여기가 붉는다');
 
 is(!errs.length, 'JS 에러 0건' + (errs.length ? ' — ' + errs[0] : ''));
 await browser.close();
