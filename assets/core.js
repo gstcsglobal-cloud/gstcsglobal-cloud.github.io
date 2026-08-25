@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 128;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 129;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -2085,6 +2085,13 @@ GST.USE_DB = true;                       // 되돌리려면 이 한 줄을 false
 GST.DB_WINDOW = { wk:'d_start', mat:'work_date' };
 GST.DB_WINDOW_MONTHS = 12;
 GST.DB_WINDOW_MIN = 20000;               // 이보다 작은 표는 두 번에 나눠 받을 이유가 없다
+/* ⚠ 장 «폭»의 상한 (v129 · 실사고 2건의 결론). 한 장의 행수는 왕복 횟수만 정하는 게
+   아니라 서버가 한 질의에서 직렬화(json_agg)하는 양을 정한다 — 10,000행(≈7MB)짜리
+   장을 동시 여러 개 물리자 소형 인스턴스가 statement timeout 으로 죽거나(기본 한도),
+   한도를 60s 로 올린 뒤에는 «에러도 없이 수 분간 갈리는» 상태가 됐다. 몇 달간 검증된
+   프로파일은 1,000행짜리 가벼운 질의다 — 폭을 여기서 자르므로 Supabase Max Rows
+   설정이 무엇이든 안전하다. 올리려면 실측(EXPLAIN·질의 시간)부터 다시 할 것. */
+GST.DB_PAGE_MAX = 1000;
 GST._snake = function(s){ return String(s).replace(/([a-z0-9])([A-Z])/g,'$1_$2').toLowerCase(); };
 
 /* 미러에서 못 읽었을 때 조용히 넘어가지 않는다. 시트로 되돌아가는 것 자체는 안전하지만,
@@ -2237,18 +2244,17 @@ GST.dbRows = async function(table){
       return q.order('src_row', {ascending:true});
     });
   };
-  /* 장 «폭»은 서버 상한에서 배운다. PostgREST max-rows 는 프로젝트 설정이라 클라이언트가
-     못 정한다 — 10,000을 달라고 해도 1,000만 오는 것이 기본값이다. src_row 만 골라 첫
-     10,000개를 받아 보면(오프셋 0 이라 깊이 비용이 없다) 그 길이가 곧 min(상한, 전체)이고,
-     폭을 그 값으로 잡으면 PK 유일성 때문에 어떤 범위 질의도 폭을 넘지 못해 «상한에 잘려
-     조용히 모자라는» 일이 원리적으로 없다. Supabase Settings → API → Max Rows 를
-     10,000 으로 올리면 수선 257,606행이 왕복 ~26회가 된다(1,000이면 ~258회).
-     ⚠ 요청 크기(10,000)는 «위로 열어 두는» 값이다 — 줄이면 설정을 올려도 못 쓴다. */
+  /* 장 «폭»은 min(서버 상한, DB_PAGE_MAX)로 정한다. src_row 만 골라 첫 10,000개를
+     받아 보면(정수 하나짜리 행이라 가볍고, 오프셋 0 이라 깊이 비용도 없다) 그 길이가
+     min(상한, 전체)이고, 거기에 DB_PAGE_MAX(1,000)를 덧씌운다 — 큰 장은 서버 직렬화를
+     누른다는 것이 실사고로 확인됐기 때문이다(v129 · DB_PAGE_MAX 주석 참조).
+     폭이 min(상한, 1,000) 이하이므로 PK 유일성 때문에 어떤 범위 질의도 상한에 잘리지
+     않는다 — «조용히 모자라는» 일이 원리적으로 없다. */
   const capD = await runQ('폭탐침', function(){
     return c.from('sheet_'+table).select('src_row')
             .order('src_row', {ascending:true}).range(0, 9999);
   });
-  const width = capD.length;
+  const width = Math.min(capD.length, GST.DB_PAGE_MAX || 1000);   // 폭 상한 — 주석은 DB_PAGE_MAX 정의부
   if(!width) throw new Error('MIRROR_SHORT 0/'+want);
   const mxD = await runQ('최대번호', function(){
     return c.from('sheet_'+table).select('src_row')
@@ -2263,15 +2269,14 @@ GST.dbRows = async function(table){
   GST._pgSize = width;
 
   /* pump — 전 구간을 값 범위로 나눠 받는 공용 펌프. 전체·창·백필 세 호출이 이 하나를
-     쓴다(나눠 짜면 세 벌이 갈라진다 — 제2원칙). 동시 10은 HTTP/2(Supabase) 기준이다 —
-     다중화라 브라우저의 «호스트당 연결 6개» 제한이 없고, 각 질의는 인덱스 범위 스캔이라
-     서버가 가볍다(HTTP/1.1 에서는 6으로 조여져 이득도 손해도 없음을 실측 확인).
+     쓴다(나눠 짜면 세 벌이 갈라진다 — 제2원칙). 동시 6 × 폭 1,000 은 몇 달간 서버가
+     견딘 것이 실증된 부하 프로파일이다 — 동시성·폭을 올리려면 서버 실측부터(v129).
      각 장이 src_row 오름차순의 겹치지 않는 구간이라 이어 붙이면 정렬이 유지된다. */
   const pump = async function(mod){
     const out = [];
-    for(let p = 0; p < nR; p += 10){
+    for(let p = 0; p < nR; p += 6){
       const batch = [];
-      for(let k = 0; k < 10 && p + k < nR; k++)
+      for(let k = 0; k < 6 && p + k < nR; k++)
         batch.push(page(width*(p+k), width*(p+k+1), mod));
       const res = await Promise.all(batch);
       for(let i = 0; i < res.length; i++)
