@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 124;
+GST.VER = 128;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -2215,12 +2215,27 @@ GST.dbRows = async function(table){
      ⚠ src_row 는 연속이 아니다 — 구간 교체(v87)가 지운 자리는 비고 새 행은 max+1 부터
        붙는다. 그래서 «짧은 장 = 끝» 판정을 쓸 수 없고(중간에 빈 구간이 정상이다),
        마지막 번호까지 전 구간을 훑은 뒤 총합을 want 와 대조한다. */
-  const page = async function(a, b, mod){               // src_row ∈ [a, b)
-    let q = c.from('sheet_'+table).select(SEL).gte('src_row', a).lt('src_row', b);
-    if(mod) q = mod(q);                                 // 창·백필의 날짜 조건이 여기 끼워진다
-    const r = await q.order('src_row', {ascending:true});
-    if(r.error) throw new Error('READ '+r.error.message);
+  /* 일시 오류(타임아웃·순간 과부하·네트워크)만 1.2초 뒤 «한 번» 다시 해 본다.
+     옛 core 를 문 브라우저들이 무거운 OFFSET 질의로 인스턴스를 붙들고 있는 동안에는
+     가벼운 질의도 순간적으로 같이 밀릴 수 있다 — 한 번이면 대개 지나간다.
+     자료 문제(없는 열 등)는 재시도해도 같으므로 그대로 던진다(v121 의 규율).
+     오류에는 «어느 단계»인지 적는다 — 배너의 READ[단계]가 곧 진단이다. */
+  const TRANSIENT = /timeout|timed out|canceling|fetch|network|50[234]/i;
+  const runQ = async function(tag, fn){
+    let r = await fn();
+    if(r.error && TRANSIENT.test(String(r.error.message||''))){
+      await new Promise(function(x){ setTimeout(x, 1200); });
+      r = await fn();
+    }
+    if(r.error) throw new Error('READ['+tag+'] '+r.error.message);
     return r.data || [];
+  };
+  const page = function(a, b, mod){                     // src_row ∈ [a, b)
+    return runQ('범위 '+a+'~'+b, function(){
+      let q = c.from('sheet_'+table).select(SEL).gte('src_row', a).lt('src_row', b);
+      if(mod) q = mod(q);                               // 창·백필의 날짜 조건이 여기 끼워진다
+      return q.order('src_row', {ascending:true});
+    });
   };
   /* 장 «폭»은 서버 상한에서 배운다. PostgREST max-rows 는 프로젝트 설정이라 클라이언트가
      못 정한다 — 10,000을 달라고 해도 1,000만 오는 것이 기본값이다. src_row 만 골라 첫
@@ -2229,15 +2244,17 @@ GST.dbRows = async function(table){
      조용히 모자라는» 일이 원리적으로 없다. Supabase Settings → API → Max Rows 를
      10,000 으로 올리면 수선 257,606행이 왕복 ~26회가 된다(1,000이면 ~258회).
      ⚠ 요청 크기(10,000)는 «위로 열어 두는» 값이다 — 줄이면 설정을 올려도 못 쓴다. */
-  const cap = await c.from('sheet_'+table).select('src_row')
-                     .order('src_row', {ascending:true}).range(0, 9999);
-  if(cap.error) throw new Error('READ '+cap.error.message);
-  const width = (cap.data||[]).length;
+  const capD = await runQ('폭탐침', function(){
+    return c.from('sheet_'+table).select('src_row')
+            .order('src_row', {ascending:true}).range(0, 9999);
+  });
+  const width = capD.length;
   if(!width) throw new Error('MIRROR_SHORT 0/'+want);
-  const mx = await c.from('sheet_'+table).select('src_row')
-                    .order('src_row', {ascending:false}).limit(1);
-  if(mx.error) throw new Error('READ '+mx.error.message);
-  const maxSr = mx.data && mx.data[0] ? +mx.data[0].src_row : -1;
+  const mxD = await runQ('최대번호', function(){
+    return c.from('sheet_'+table).select('src_row')
+            .order('src_row', {ascending:false}).limit(1);
+  });
+  const maxSr = mxD[0] ? +mxD[0].src_row : -1;
   const nR = Math.ceil((maxSr+1)/width);
   /* 폭주 방지 — 번호 인플레이션(구간 교체 반복)이 비정상적으로 커졌다면 밝히고 멈춘다.
      조용히 일부만 받으면 want 대조가 어차피 막지만, 원인 없는 MIRROR_SHORT 보다
@@ -2522,6 +2539,7 @@ GST._srcChip = function(){
   el.style.color      = bad ? '#fde68a' : '#a7f3d0';
   /* 캐시가 실제로 먹었는지 보이게 한다. 안 보이면 «왜 느린지»를 아무도 못 묻는다. */
   el.textContent = '출처 DB '+db + (sh?' · 시트 '+sh:'') + (ca?' · 캐시 '+ca:'')
+    + ' · core '+GST.VER
     + (GST._idbHit?' · 재사용 '+GST._idbHit:'')
     + (GST._idbErr?' · ⚠ 캐시 저장 실패':'');
   if(GST._idbErr) el.title = 'IndexedDB: '+GST._idbErr+' — 매번 다시 받습니다';
