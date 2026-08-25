@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 129;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 130;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1259,21 +1259,47 @@ GST.WARR = function(v){
 /* CIP 시트(F11 gid 2123129719 · F16 gid 1999732389)는 점검 '항목'이 열로 늘어난다.
    F11과 F16은 열 위치가 다르지만 머리글 이름은 같아서 스펙 하나로 둘 다 처리된다.
    헤더는 0행이 아니라 1행이다(0행은 항목별 적용일자 띠). */
+/* SPEC-SYNC · CIP — kakao-bot/hr.js 의 parseCIP 과 «같은 이름 목록»이어야 한다.
+   여기 이름을 더하면 그쪽도 더한다(제2원칙). t-cip 가 두 곳을 대조한다. */
 GST.SM.SPEC.cip = { name:'CIP현황', hints:['Scrubber S/N','FAB In'], scan:6,
-  opt:['area','mtype'],   // F11에는 없는 열 — 못 찾아도 정상이다
+  /* 양식마다 있는 열이 다르다 — F11 에는 area·Model Type 이 없고, 옛 추출본에는
+     NO·Country·Customer·FAB 이 없다. 못 찾아도 정상이므로 전부 opt 다. */
+  opt:['area','mtype','no','country','customer','fab','remark'],
   fields:{
+    no:'NO', country:'Country', customer:'Customer', fab:'FAB',
     floor:'Floor', area:'area', type:'Type', model:'Model', mtype:'Model Type', pjt:'PJT.',
-    sn:'Scrubber S/N', code:'Scrubber Code', group:'Group', detail:'Detail', fabIn:'FAB In'
+    sn:'Scrubber S/N', code:'Scrubber Code', group:'Group', detail:'Detail', fabIn:'FAB In',
+    remark:'Remark'
   }};
-/* 점검 항목 구간을 이름으로 유도한다: 'FAB In' 다음 ~ 'Remark' 직전.
-   예전에는 F11 13~18 · F16 15~38을 코드에 박아, 항목이 늘 때마다 손으로 고쳐야 했다.
-   이제 항목이 추가되면 그대로 잡힌다. Remark가 없으면 헤더 끝까지 본다. */
+/* 점검 항목을 이름으로 유도한다 — 예전에는 F11 13~18 · F16 15~38 을 코드에 박아
+   항목이 늘 때마다 손으로 고쳐야 했다.
+
+   ⚠ 「FAB In 다음 ~ Remark 직전」이라는 «구간»으로 잡으면 안 된다 (v130 · 실사고).
+     화면은 구글시트가 아니라 Supabase Import 표를 읽는데, 열을 추가하면 Postgres 는
+     **언제나 표의 맨 뒤**에 붙인다(열 순서를 바꿀 수 없다). 그래서 시트에서는 Remark
+     앞에 얌전히 붙은 새 항목이, 표에서는 Remark «뒤»로 가고 구간 밖이 된다 —
+     실측: F16 신규 12항목(대상 1,363건)이 통째로 빠져 분모가 4,700→4,456 으로 줄었다.
+     에러도 배너도 없이 «분모만 작아지는» 실패라 알아채기 어렵다.
+
+   그래서 위치가 아니라 «이름»으로 가린다: FAB In 뒤의 열 중 SPEC 이 아는 이름
+   (메타데이터·Remark)이 아닌 것이 항목이다. 시트든 표든, 순서가 어떻든 같은 답이 나온다.
+   FAB In 을 하한으로 남겨 두는 이유는, 앞으로 «SPEC 에 없는 메타데이터»가 앞쪽에
+   생겨도 항목으로 오해하지 않게 하기 위해서다. */
 GST.SM.cipRange = function(headerRow){
   const H=(headerRow||[]).map(GST.SM.norm);
   const c0=H.indexOf(GST.SM.norm('FAB In'))+1;
-  const rmk=H.indexOf(GST.SM.norm('Remark'));
-  const c1=(rmk>c0?rmk:H.length)-1;
-  return (c0>0&&c1>=c0) ? {c0:c0,c1:c1} : null;
+  if(c0<=0) return null;
+  const F=GST.SM.SPEC.cip.fields;
+  const known={};
+  Object.keys(F).forEach(function(k){
+    [].concat(F[k]).forEach(function(n){ known[GST.SM.norm(n)]=1; });
+  });
+  const cols=[];
+  for(let c=c0;c<H.length;c++){ if(H[c] && !known[H[c]]) cols.push(c); }
+  if(!cols.length) return null;
+  /* c0·c1 은 옛 호출부(구버전 페이지가 캐시에 남았을 때)를 위해 남긴다 — 새 코드는
+     반드시 cols 를 돈다. 구간으로 돌면 위 사고가 그대로 재현된다. */
+  return {c0:cols[0], c1:cols[cols.length-1], cols:cols};
 };
 
 /* ============================================================

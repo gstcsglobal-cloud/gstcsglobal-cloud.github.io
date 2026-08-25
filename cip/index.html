@@ -329,7 +329,7 @@ tr:hover td{background:var(--glass-hover)}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(121);   // 필터 두 벌(설비/인원) · 라인2 축 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(130);   // 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
 const VER='v50';
@@ -684,7 +684,9 @@ function parseCIP(rows,site){
   const dataFrom=m.hi+1;
   const recs=[]; let bad=0, cols=0;
   const apByBase={};   // 병합셀 대응: 같은 논리 항목의 직전 적용일을 승계
-  for(let c=C.c0;c<=C.c1;c++){
+  /* ⚠ c0~c1 «구간»으로 돌지 않는다 (v130). DB 표는 열을 뒤에만 붙일 수 있어
+     새 항목이 Remark 뒤로 가고, 구간으로 돌면 그것들이 통째로 빠진다(분모가 조용히 준다). */
+  for(const c of rg.cols){
     const item=normItem(hdr[c]); if(!item)continue;
     cols++;
     const sp=stripSide(item);

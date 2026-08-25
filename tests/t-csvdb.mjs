@@ -240,18 +240,27 @@ console.log('\n[5] dbRows — 표에 없는 열이 SPEC 에 있어도 시트가 
         maybeSingle() {
           return Promise.resolve({ data: { rows: 1, err: null, synced_at: '2026-08-18T00:00:00Z', ms: -1 }, error: null });
         },
-        order() { return api; },
-        range(a) {
+        /* v128 부터 dbRows 는 src_row «값 범위»(gte/lt)로 자르고, 폭 탐침(range)·
+           최대 번호(order desc + limit)도 쓴다. 빌더는 체이너블이면서 스스로
+           await 가능해야 한다(실물과 같게 then 을 둔다). */
+        _lo: 0, _hi: Infinity, _desc: false,
+        gte(c, v) { if (c === 'src_row') api._lo = v; return api; },
+        lt(c, v) { if (c === 'src_row') api._hi = v; return api; },
+        order(c, o) { api._desc = !!(o && o.ascending === false); return api; },
+        limit() { return api; },
+        range() { return api; },
+        _run() {
           // PostgREST 그대로 — 없는 열이 하나라도 섞이면 «그 열만»이 아니라 전체를 거부한다
           const asked = api._sel.split(',').map(x => x.trim());
           const bad = asked.filter(x => x !== 'src_row' && have.indexOf(x) < 0);
           if (bad.length)
-            return Promise.resolve({ data: null, error: { message: `column sheet_inst.${bad[0]} does not exist` } });
-          if (a > 0) return Promise.resolve({ data: [], error: null });
+            return { data: null, error: { message: `column sheet_inst.${bad[0]} does not exist` } };
+          if (!(0 >= api._lo && 0 < api._hi)) return { data: [], error: null };   // 행은 src_row=0 하나뿐
           const row = { src_row: 0 };
           have.forEach((cname, i) => { row[cname] = 'v' + i; });
-          return Promise.resolve({ data: [row], error: null });
+          return { data: [row], error: null };
         },
+        then(res) { res(api._run()); },
       };
       return api;
     },

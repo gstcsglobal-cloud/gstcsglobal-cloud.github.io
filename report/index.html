@@ -367,7 +367,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(124);   // GST.corpLabel · filters.hitL · GST.PM · 라인2 · GST.WARR · EQ.isIdle 을 쓴다
+GST.needVer&&GST.needVer(130);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -1188,9 +1188,10 @@ function parseCIP(rows,site){
   if(hi<0)return [];
   const hdr=rows[hi]||[], r1=rows[hi-1]||[];   // 헤더 바로 윗줄이 항목별 적용일자 띠
   const rg=GST.SM.cipRange(hdr); if(!rg)return [];
-  const c0=rg.c0, c1=rg.c1;
   const out=[];
-  for(let c=c0;c<=c1;c++){
+  /* ⚠ 구간(c0~c1)이 아니라 «항목 열 목록»을 돈다 (v130) — DB 표는 새 열을 맨 뒤에만
+     붙이므로 새 항목이 Remark 뒤로 간다. 구간으로 돌면 그것들이 조용히 빠진다. */
+  for(const c of rg.cols){
     const item=String(hdr[c]||'').trim(); if(!item)continue;
     const ap=pd(r1[c]);
     for(let i=hi+1;i<rows.length;i++){

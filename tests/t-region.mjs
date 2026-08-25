@@ -189,18 +189,26 @@ console.log('[8] dbRows 페이지네이션 (서버 한 페이지 1,000행 가정
   const rowOf = i => { const o = { src_row: i }; return o; };
   GST.db = async () => ({
     from(t){
+      /* v128 부터 dbRows 는 OFFSET 이 아니라 src_row «값 범위»(gte/lt)로 자른다.
+         폭 탐침(select src_row + range)과 최대 번호(order desc + limit)도 쓴다. */
       const q = {
-        _t: t, _from: 0, _to: 0,
-        select(){ return q; }, order(){ return q; },
+        _t: t, _lo: 0, _hi: Infinity, _desc: false, _n: Infinity,
+        select(){ return q; },
+        gte(c,v){ if(c==='src_row') q._lo=v; return q; },
+        lt(c,v){ if(c==='src_row') q._hi=v; return q; },
+        order(c,o){ q._desc = !!(o && o.ascending===false); return q; },
+        limit(n){ q._n=n; return q; },
         eq(){ return q; },
         maybeSingle: async () => ({ data:{ rows: WANT, err:null, ms:-1,
                                            synced_at:new Date().toISOString() }, error:null }),
-        range(a,b){ q._from=a; q._to=b; return q; },
+        range(a,b){ q._lo=Math.max(q._lo,a); q._n=b-a+1; return q; },
         then(res){                              // await 되는 순간 응답을 만든다
           calls++;
-          const n = Math.min(PAGE, q._to-q._from+1, Math.max(0, WANT-q._from));
+          if(q._desc){ res({ data:[rowOf(WANT-1)], error:null }); return; }   // 최대 src_row
+          const hi = Math.min(q._hi, WANT);
+          const n  = Math.min(PAGE, q._n, Math.max(0, hi-q._lo));
           const data = new Array(n);
-          for(let i=0;i<n;i++) data[i]=rowOf(q._from+i);
+          for(let i=0;i<n;i++) data[i]=rowOf(q._lo+i);
           res({ data, error:null });
         }
       };
