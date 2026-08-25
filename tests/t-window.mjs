@@ -217,6 +217,20 @@ const out = await page.evaluate(async () => {
   const rt = await GST.dbRows('wk');
   R.retryLen = rt.length - 1;
   R.retryNoWarn = !(GST._dbMiss || []).some(x => x.t === 'wk');
+
+  /* [7] 폭 상한(DB_PAGE_MAX) — 서버 상한이 커도 장은 이 폭을 넘지 않는다 (v129).
+     큰 장이 소형 인스턴스의 직렬화를 눌러 timeout·수 분 그라인딩을 냈다 —
+     상한을 지워도 결과가 같아야 하고(완전성), 요청 폭만 잘게 갈라져야 한다. */
+  await wipe();
+  const pmSave = GST.DB_PAGE_MAX; GST.DB_PAGE_MAX = 40;   // 서버 상한(130)보다 작게
+  GST.db = async () => mkClient({ stamp: '2026-08-26T00:00:00Z' });
+  R.reqs = [];
+  const cw = await GST.dbRows('wk');
+  GST.DB_PAGE_MAX = pmSave;
+  R.capLen = cw.length - 1;
+  R.capEqual = flat(cw) === flat(full);
+  R.capMoreReqs = R.reqs.filter(s => s.indexOf('full:') === 0).length
+                > Math.ceil(WANT / 130);                  // 폭 40 이면 130 짜리보다 잘게 간다
   return R;
 });
 
@@ -254,6 +268,10 @@ is(out.gapEqual, '두 경로의 출력이 같다 — «짧은 장 = 끝» 판정
 console.log('\n[6] 일시 오류 1회 재시도');
 is(out.retryLen === out.fullLen, `타임아웃 한 번은 재시도로 지나간다 (${out.retryLen}행)`);
 is(out.retryNoWarn, '성공했으므로 경고도 남지 않는다');
+
+console.log('\n[7] 폭 상한 (DB_PAGE_MAX)');
+is(out.capLen === out.fullLen && out.capEqual, `폭을 조여도 전량·동일 출력 (${out.capLen}행)`);
+is(out.capMoreReqs, '장이 실제로 잘게 갈라진다 (서버 상한 대신 폭 상한이 이긴다)');
 
 is(!errs.length, 'JS 에러 0건' + (errs.length ? ' — ' + errs[0] : ''));
 await browser.close();
