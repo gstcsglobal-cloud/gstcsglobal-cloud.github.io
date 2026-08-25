@@ -584,11 +584,20 @@ export function parseCIP(csvText, site) {
   const H = hdr.map(hnorm);
   const snC = H.indexOf(hnorm('Scrubber S/N'));
   const c0 = H.indexOf(hnorm('FAB In')) + 1;
-  const rmk = H.indexOf(hnorm('Remark'));
-  const c1 = (rmk > c0 ? rmk : hdr.length) - 1;   // Remark가 없으면 헤더 끝까지
-  if (snC < 0 || c0 <= 0 || c1 < c0) return [];
+  if (snC < 0 || c0 <= 0) return [];
+  /* SPEC-SYNC · CIP — core.js 의 GST.SM.SPEC.cip.fields 와 «같은 이름 목록»이어야 한다.
+     ⚠ 「FAB In 다음 ~ Remark 직전」이라는 구간으로 잡으면 안 된다 (v130 · 실사고).
+       봇도 이제 시트가 아니라 Supabase 표를 읽는데(v82), Postgres 는 새 열을 언제나
+       표의 «맨 뒤»에 붙인다 — 시트에서 Remark 앞이던 새 항목이 표에서는 뒤로 가고
+       구간 밖이 된다(실측: F16 신규 12항목이 통째로 빠졌다). 위치가 아니라 이름으로 가린다. */
+  const KNOWN = ['NO','Country','Customer','FAB','Floor','area','Type','Model','Model Type',
+                 'PJT.','Scrubber S/N','Scrubber Code','Group','Detail','FAB In','Remark']
+                .map(hnorm);
+  const cols = [];
+  for (let c = c0; c < hdr.length; c++) { if (H[c] && KNOWN.indexOf(H[c]) < 0) cols.push(c); }
+  if (!cols.length) return [];
   const recs = [];
-  for (let c = c0; c <= c1; c++) {
+  for (const c of cols) {
     const item = normItem(hdr[c]);
     if (!item) continue;
     for (let i = hIdx + 1; i < rows.length; i++) {
