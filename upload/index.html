@@ -105,10 +105,11 @@ const TABLES = [
      중간에 실패하면 한 표만 빈 채로 남는데, 그게 지금 상태보다 나쁘다. */
   { key:'alarm', label:'국내 알람 (CS 알람관리 .xlsx) — 두 반쪽 중 ①', table:'sheet_alarm',
     kind:'xlsx', win:'occurDate', sheets:/^([KPH])운영[_\s]*ALARM$/i,     hint:'○운영_ALARM',
-    pair:'sheet_allbypass', pairLabel:'국내 올바이패스' },
+    pair:'sheet_allbypass', pairLabel:'국내 올바이패스', ddl:'setup-10-alarm.sql' },
   { key:'abp2',  label:'국내 올바이패스 (CS 알람관리 .xlsx) — 두 반쪽 중 ②', table:'sheet_allbypass',
     kind:'xlsx', win:'occurDate', sheets:/^([KPH])운영[_\s]*ALL[_\s]*BYPASS$/i, hint:'○운영_ALLBYPASS',
-    pair:'sheet_alarm', pairLabel:'국내 알람' },
+    pair:'sheet_alarm', pairLabel:'국내 알람', ddl:'setup-10-alarm.sql',
+    defMode:'win', shared:{ label:'해외 올바이패스', others:q=>q.eq('src_sheet','OS') } },
   /* 해외(대만) All By-Pass — 행 단위 원장 (v133 · 사용자 제공 양식).
      지금까지 해외는 ABP 크로스탭 시트로만 셌다. 크로스탭은 «건수»만 있고 «행»이 없어서
      막대를 눌러도 세부내역이 안 나온다(CLAUDE.md v125). 이 리스트가 그 통로를 연다.
@@ -122,7 +123,12 @@ const TABLES = [
        «올바이패스 양식으로 읽히는 시트»를 고른다 — SPEC 의 힌트가 그 판정을 한다. */
   { key:'abp2', label:'해외 올바이패스 리스트 (엑셀 · 행 단위)', table:'sheet_allbypass',
     kind:'xlsx', win:'occurDate', tag:'OS', defMode:'win',
+    ddl:'setup-14-abp-overseas.sql',
     hint:'올바이패스 양식(Group·S/N·Work Date …)으로 읽히는 시트',
+    /* «같은 표를 나눠 쓴다»는 사실을 선언한다. 기본 모드만으로는 부족하다 — 뒤로 가기·
+       새로고침으로 브라우저가 옛 선택을 되살릴 수도 있고, 사람이 바꿔 놓고 잊을 수도 있다.
+       검사 화면이 «지금 무엇이 지워지는지»를 세어 보여 주는 것이 마지막 안전장치다. */
+    shared:{ label:'국내 올바이패스', others:q=>q.neq('src_sheet','OS') },
     note:'국내 올바이패스와 같은 표를 씁니다 — <b>「통째 교체」로 올리면 국내 자료가 사라집니다.</b> '
         +'기본값 「겹치는 구간만 교체」를 그대로 쓰세요(해외 행만 갈아끼웁니다).' },
 ];
@@ -444,13 +450,33 @@ window.checkFile=async function(){
       const vital=need.filter(k=>k!=='extra');
       /* ⚠ 미러 경로는 여기 걸릴 일이 없다 — SPEC 열 중 표에 없는 것은 위에서 extra 로
            돌렸다. 여기 걸리는 것은 src_row 같은 «구조» 열이고, 그건 표가 잘못 만들어진 것이다. */
+      /* ⚠ 어느 SQL 을 돌려야 하는지 «그 표의» 파일을 가리킨다. 예전에는 어느 표든
+         setup-4-tables.sql 이라고 적었는데, 알람·올바 원장은 거기 없다(setup-10·14) —
+         엉뚱한 파일을 열게 만드는 안내는 없느니만 못하다. */
       if(vital.length)throw new Error('표 '+t.table+' 에 없는 컬럼: '+vital.join(', ')
-        +'\n(setup-4-tables.sql 로 표를 다시 만들거나 컬럼을 추가하세요 — 지금 진행하면 표만 비워집니다)');
+        +'\n(supabase/'+(t.ddl||'setup-4-tables.sql')+' 을 SQL Editor 에서 Run 해 컬럼을 만든 뒤 다시 오세요'
+        +' — 지금 진행하면 표만 비워집니다)');
       if(need.length){        // extra 만 없는 경우: 담을 곳이 없다고 밝히고 빼고 진행
         out.forEach(o=>{ need.forEach(k=>{ delete o[k]; }); });
         msgs.push('<span class="warn">⚠ 표에 '+need.join(', ')+' 컬럼이 없어 그 값은 넣지 않습니다'
           +' (되살리려면: alter table public.'+t.table+' add column if not exists extra jsonb;)</span>');
       }
+    }
+    /* ⚠ 한 표를 두 계통이 나눠 쓰는 경우 — 「통째 교체」는 «남의 자료»를 지운다.
+       기본 모드(defMode)만으로는 못 막는다: 뒤로 가기·새로고침으로 브라우저가 옛 선택을
+       되살릴 수 있고, 사람이 바꿔 놓고 잊을 수도 있다(실제로 그 화면을 봤다).
+       그래서 검사 화면이 «지금 무엇이 몇 행 지워지는지»를 세어 붉게 적는다 — 사람이
+       마지막으로 보는 곳이 여기다. 조용히 넘기지 않되, 막지도 않는다(일부러 그럴 수도 있다). */
+    let killOther=0;
+    if(t.shared && !merging() && !appending()){
+      try{
+        const r=await t.shared.others(c.from(t.table).select('*',{count:'exact',head:true}));
+        killOther=r.count||0;
+      }catch(e){ killOther=-1; }        // 못 세었으면 «모른다»로 두고 그렇게 적는다
+      if(killOther!==0) msgs.push('<span class="bad big">⛔ 「통째 교체」는 같은 표에 든 '
+        +'<b>'+t.shared.label+' '+(killOther<0?'(행수 확인 실패)':killOther.toLocaleString()+'행')+'</b>도 함께 지웁니다.'
+        +'<br>이 파일만 갈아끼우려면 위 「넣는 방식」을 <b>「겹치는 구간만 교체」</b>로 바꾸세요 '
+        +'— 그러면 이 파일이 덮는 기간·운영단위의 행만 지웁니다.</span>');
     }
     /* 구간 교체 — 파일이 덮는 «날짜 범위 × 운영단위 집합»을 계산한다.
        이 두 값이 곧 삭제 조건이라, 파일에서 뽑아야 화면 표시와 실제 삭제가 어긋나지 않는다. */
@@ -512,7 +538,7 @@ window.checkFile=async function(){
     const shrink=!win&&!add&&oldCount>100&&out.length<oldCount/2;
     if(shrink)msgs.push('<span class="bad big">⚠ 파일이 기존의 절반도 안 됩니다 — 잘린 파일이 아닌지 확인하세요. 그래도 진행하면 기존 데이터가 이 파일로 줄어듭니다.</span>');
     chkShow(msgs.join('<br>'));
-    PREP={t,rows:out,oldCount,shrink,win,add,missing};
+    PREP={t,rows:out,oldCount,shrink,win,add,missing,killOther};
     $('goBtn').disabled=false;
     $('goBtn').className='btn'+(shrink?' danger':'');
   }catch(e){ chkShow('<span class="bad">❌ '+String(e.message||e).replace(/\n/g,'<br>')+'</span>'); }
@@ -571,6 +597,12 @@ window.doUpload=async function(){
       +'이대로 올리면 이 컬럼은 표에서 전 행이 빈 값이 됩니다.\n'
       +'열을 빠뜨린 게 아니라면 계속 진행하세요.'))return;
   if(PREP.shrink&&!confirm('파일('+PREP.rows.length+'행)이 기존('+PREP.oldCount+'행)보다 훨씬 작습니다.\n정말 이 파일로 교체합니까?'))return;
+  /* 같은 표를 나눠 쓰는 계통을 통째로 지우려는 순간 — 검사 화면에 이미 붉게 띄웠지만
+     스크롤해서 안 볼 수 있다. 여기서 «그 이름과 행수»를 대고 한 번 더 묻는다. */
+  if(PREP.killOther && !W && !ADD && !confirm(
+      '⛔ 「통째 교체」입니다.\n\n같은 표에 든 '+PREP.t.shared.label+' '
+      +(PREP.killOther<0?'(행수 확인 실패)':PREP.killOther.toLocaleString()+'행')+' 도 함께 지워집니다.\n\n'
+      +'이 파일만 갈아끼우려면 취소하고 「겹치는 구간만 교체」를 고르세요.\n정말 진행합니까?'))return;
   if(!confirm(ADD
       ? ('아무것도 지우지 않고 '+PREP.rows.length.toLocaleString()+'행을 이어붙입니다.\n'
          +PREP.t.table+' : '+PREP.oldCount.toLocaleString()+'행 → '

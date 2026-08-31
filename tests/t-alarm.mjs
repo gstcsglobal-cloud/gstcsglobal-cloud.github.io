@@ -244,11 +244,18 @@ console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, 
      'report — 「내/외」 칸이 세 선택지로 있다');
   is(/F\.inout===''/.test(RP) || /return GST\.ALARM\.inner\(x\);/.test(RP),
      'report — 기본값은 내부·내적 (집계 대상)');
-  /* 사용자 확정(v94): 표시는 분류(atype·ctype)가 아니라 시트 원문 열 —
+  /* 사용자 확정(v94): 국내 원장의 표시는 «분류»(유형)가 아니라 시트 원문 열 —
      Alarm Message=«Alarm Comment» · 원인=«알람 실제원인» · 조치=«조치내용».
-     분류로 갈음하는 코드가 되살아나면 TOP3 가 ROD·TEMP SENSOR 대신 PART·POWDER 를 보여준다. */
-  is(/const krAsWk=x=>\(\{alarm:krMsg\(x\), phenom:x\.phenom, cause:x\.cause, action:x\.action,/.test(RP),
-     'report — 원장 표시가 원문 열(Comment·실제원인·조치내용) 그대로다');
+     분류로 갈음하는 코드가 되살아나면 TOP3 가 ROD·TEMP SENSOR 대신 PART·POWDER 를 보여준다.
+     ⚠ v133 에 «해외» 는 반대가 됐다(사용자 지시) — 해외 시트는 원인·조치를 이미 코드로
+       분류해 두므로 그 코드를 쓴다. 두 규칙이 공존하는 것이고, 가르는 것은 구분이 아니라
+       «그 시트가 조치 코드 열을 갖고 있는가»다(국내에는 그 열이 없어 늘 자유 서술이다).
+     숫자로 맞는지는 소스로 못 본다 — tests/t-abp.mjs [10] 이 실제로 그려서 본다. */
+  is(/const krAsWk=x=>\{ const coded=!!\(x\.ctype2\|\|''\)\.trim\(\);/.test(RP),
+     'report — 코드를 쓸지 원문을 쓸지 «조치 코드 열의 유무»로 가른다 (구분으로 가르지 않는다)');
+  is(/cause:coded\?\(\(x\.ctype\|\|''\)\.trim\(\)\|\|x\.cause\):x\.cause/.test(RP)
+     && /action:coded\?\(\(x\.ctype2\|\|''\)\.trim\(\)\|\|x\.action\):x\.action/.test(RP),
+     'report — 코드가 없으면 지금까지대로 원문 열이다 (v94 사용자 확정 유지)');
   /* Alarm Message 는 시트에 반드시 값이 있는 자리다(실측 P·H 공란 0 · K 는 249행이
      Comment 대신 「알람」 열에만 있다). 셋 다 비면 그건 시트가 아니라 적재 문제다. */
   is(/const krMsg=x=>\(x\.alarm\|\|''\)\.trim\(\)\|\|\(x\.alarmName\|\|''\)\.trim\(\)\|\|\(x\.atype\|\|''\)\.trim\(\)/.test(RP),
