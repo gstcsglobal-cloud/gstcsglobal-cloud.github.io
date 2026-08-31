@@ -748,7 +748,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(121);   // GST.numv · 라인2 축을 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(132);   // GST.numv · 라인2 축을 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -2302,7 +2302,7 @@ function chartHiRes(id,scale){const ch=CHARTS[id];if(!ch||!ch.canvas)return null
 window.copyChart=async function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}try{await new Promise((res,rej)=>oc.toBlob(async b=>{if(!b)return rej();try{await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);res();}catch(e){rej(e);}},'image/png'));capToast('📋 차트 복사됨 — PPT에 붙여넣기(Ctrl+V)');}catch(e){capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요');}};
 window.saveChart=function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}oc.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ '+id+'.png 저장됨');},'image/png');};
 window.saveAllCharts=async function(){const ids=Object.keys(CHARTS).filter(id=>CHARTS[id]&&CHARTS[id].canvas);if(!ids.length){capToast('저장할 차트가 없습니다');return;}capToast('🖼 '+ids.length+'개 차트 저장 중…');for(const id of ids){const oc=chartHiRes(id);if(!oc)continue;await new Promise(res=>oc.toBlob(b=>{if(b){const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}setTimeout(res,250);},'image/png'));}capToast('🖼 전체 '+ids.length+'개 차트 저장 완료');};
-function addCapBtns(){document.querySelectorAll('.card canvas').forEach(cv=>{const id=cv.id,card=cv.closest('.card');if(!id||!card||card.querySelector('.capbtns'))return;const box=document.createElement('div');box.className='capbtns';box.innerHTML='<button class="capbtn" title="고해상도 복사(PPT 붙여넣기)" onclick="copyChart(\''+id+'\')">📋 복사</button><button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>';card.appendChild(box);});}
+function addCapBtns(){document.querySelectorAll('.card canvas').forEach(cv=>{const id=cv.id,card=cv.closest('.card');if(!id||!card||card.querySelector('.capbtns'))return;const box=document.createElement('div');box.className='capbtns';box.innerHTML=GST.pptCardBtn(id)+'<button class="capbtn" title="그림으로 복사(고해상도 PNG)" onclick="copyChart(\''+id+'\')">📋 그림</button><button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>';card.appendChild(box);});}
 
 applyLang(); loadData(); addCapBtns();
 </script>

@@ -380,7 +380,21 @@ console.log('[3-3] 라이브러리를 못 받아도 «멈춰 있지» 않는지'
   global.document.createElement = prevCreate;
   ok(finished, '응답 없는 CDN 에서 «영영 대기»하면 안 된다 — 3초 안에 끝나야 한다 (실제 '+ms+'ms)');
   ok(/15초|cdn\.jsdelivr\.net|막고/.test(said), '무엇이 막혔고 무엇을 하면 되는지 알려야 한다 (실제: '+said.slice(0,60)+'…)');
-  ok(/복사/.test(said), '대안(차트별 복사)을 알려야 한다 — 막다른 길로 두지 않는다');
+  /* ⚠ «생김새»가 아니라 «지킬 것»을 본다(v122 의 교훈). 예전에는 낱말 '복사' 를 요구했는데,
+     버튼 이름이 「📋 복사」 → 「📋 그림」·「📊 데이터」로 갈리자 규칙은 그대로인데 검사만
+     붉게 떴다. 지킬 것은 하나다 — **막다른 길로 두지 않고 지금 있는 대안을 이름으로 댄다.** */
+  ok(/그림|데이터|복사/.test(said), '대안(차트별 그림·데이터)을 알려야 한다 — 막다른 길로 두지 않는다');
+  /* 자체 사본을 먼저 본다는 사실도 지킨다 — 사내망이 CDN 을 막아도 도는 유일한 길이다. */
+  {
+    const C = fs.readFileSync(ROOT + '/assets/core.js', 'utf8');
+    ok(/GST\.PPT_VENDOR\s*=\s*'\/assets\/vendor\/pptxgen\.bundle\.js'/.test(C),
+       'core — PPT 라이브러리 자체 사본 경로가 있다');
+    ok(/GST\._loadScript\(\[GST\.PPT_VENDOR, GST\.PPT_CDN\]/.test(C),
+       'core — 자체 사본을 «먼저» 보고 CDN 은 폴백이다');
+    ok(/GST\.zipLoad/.test(C) && !/jszip@3\.10\.1\/dist\/jszip\.min\.js';s\.onload=res/.test(
+         fs.readFileSync(ROOT + '/report/index.html', 'utf8')),
+       'report — 시간 제한 없던 JSZip 로더가 사라지고 GST.zipLoad 를 쓴다');
+  }
   GST.PPT_CDN_MS = 15000; GST._pptP = null; delete global.window.capToast;
   reset();
 }
