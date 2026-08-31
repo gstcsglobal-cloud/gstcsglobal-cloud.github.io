@@ -700,6 +700,38 @@ console.log('\n[15] 고장 차트 세부내역이 누른 데이터셋을 따르�
      'report — seg 를 버리는 옛 줄이 없다');
 }
 
+/* ── [16] 고장 차트 표시 계통 전환 (v131) ─────────────────────────────
+   드롭다운으로 「Alarm만 / 올바만」을 고를 수 있게 되면서, 화면에 «없는» 데이터셋이
+   생겼다. 그 상태에서 이름으로 못 찾았을 때 «아무 데이터셋이나» 집으면 조용히 틀린다 —
+   브리핑이 올바이패스 값을 「Alarm(BM)」이라고 적어 내보내게 된다. */
+{
+  const R = fs.readFileSync(ROOT + '/report/index.html', 'utf8');
+  console.log('\n[16] 고장 차트 표시 계통 (all / alarm / abp)');
+  /* 값 계산은 한 벌이어야 한다 — 모드별로 계산을 나누면 같은 막대를 눌렀는데
+     모드마다 드릴다운 건수가 달라진다(제2원칙). 그리는 것만 고른다. */
+  is(/const shown=FV==='alarm'\?alarm:FV==='abp'\?abp:tot;/.test(R),
+     'report — 값은 한 벌(alarm·abp·tot)이고 «그릴 것»만 고른다');
+  is(/if\(FV!=='abp'\)ds\.push\(\{label:t\('ft_alarm'\)/.test(R)
+     && /if\(FV==='abp'\|\|\(FV==='all'&&hasABP\)\)ds\.push\(\{label:t\('ft_abp'\)/.test(R),
+     '  「올바만」에서는 값이 0 이어도 막대를 세운다 (빈 차트는 «고장 났나»로 읽힌다)');
+  is(/if\(FV==='all'\)ds\.push\(lineDs\(t\('ft_tot'\)/.test(R),
+     '  합계 선은 두 계통을 같이 볼 때만 그린다');
+  /* 노트의 건수가 tot 로 굳어 있으면, 「올바만」을 골라 놓고 합계를 읽게 된다 */
+  is(/const _fi=shown\.length-1/.test(R) && /replace\('\{n\}',shown\[_fi\]\|\|0\)/.test(R),
+     '  노트 건수도 «그려진 계통»을 따라간다');
+  /* ⚠ 이것이 이 절의 핵심이다 — 이름으로 못 찾았을 때의 폴백을 되살리면 안 된다 */
+  is(!/x\.label===lbl\('ft_alarm'\);\}\)\|\|ds\[0\]/.test(R),
+     '  브리핑이 Alarm 데이터셋을 못 찾으면 «아무거나» 집지 않는다 (ds[0] 폴백 금지)');
+  /* select 는 data-i 로 못 덮는다(자식이 option 이다) — 언어 전환에서 굳지 않는지 */
+  is(/function renderFtView\(\)/.test(R) && /renderFtView\(\);\s*\}catch\(e\)\{\}/.test(R),
+     '  언어를 바꾸면 드롭다운 글자도 따라간다 (applyLang 에서 다시 그린다)');
+  const T4 = ['ko','en','zh','ja'].every(() => true);
+  is(T4 && (R.match(/ftv_all:/g) || []).length === 4
+        && (R.match(/ftv_alarm:/g) || []).length === 4
+        && (R.match(/ftv_abp:/g) || []).length === 4,
+     '  문구가 네 언어에 다 있다');
+}
+
 console.log('\n' + (fail ? '❌ t-quiet ' + fail + ' 실패 / ' + (pass + fail)
                          : '✅ t-quiet ' + pass + '/' + pass));
 process.exit(fail ? 1 : 0);
