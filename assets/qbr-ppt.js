@@ -43,6 +43,111 @@ function autoAxes(chartXml){
   return chartXml.replace(/<c:(catAx|valAx|dateAx)>[\s\S]*?<\/c:\1>/g,ax=>
     ax.replace(/<c:max val="[^"]*"\/>/g,'').replace(/<c:min val="[^"]*"\/>/g,''));
 }
+/* ---- 임베드 워크북 (v134) --------------------------------------------------
+   양식의 차트 8개는 원래 «외부» 워크북을 가리키고 있었다 —
+   `file:///I:\...\QBR ... .xlsm`. 그래서 받아 본 사람이 「데이터 편집」을 누르면
+   남의 PC 경로를 열려고 하고, 당연히 안 열린다. 그 경로가 공개 저장소의 양식 파일에
+   평문으로 박혀 있기도 했다(사내 폴더 구조 노출).
+
+   그래서 양식에서는 그 링크를 걷어냈고(1회 수술), 여기서 «내보낼 때» 진짜 워크북을
+   만들어 넣는다. 워크북은 **패치가 끝난 차트의 캐시에서** 만든다 — 그래야 「데이터 편집」이
+   화면과 같은 숫자를 연다. 양식의 옛 숫자로 만들면 편집을 누르는 순간 차트가 그 값으로
+   되돌아간다(고치려다 더 나쁘게 만드는 자리다).
+
+   ⚠ 캐시가 정본이다. 워크북은 캐시를 따라간다 — 반대가 아니다. */
+function colName(n){                    // 1→A · 26→Z · 27→AA
+  let s=''; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=(n-r-1)/26; }
+  return s;
+}
+function xmlEsc(v){ return String(v==null?'':v)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+/* 차트 XML 에서 «지금 캐시에 들어 있는» 카테고리와 계열을 읽는다. */
+function readCache(chartXml){
+  const pts=function(cache){
+    const out=[];
+    (cache.match(/<c:pt idx="(\d+)"[^>]*>\s*<c:v>([\s\S]*?)<\/c:v>/g)||[]).forEach(function(m){
+      const g=/<c:pt idx="(\d+)"[^>]*>\s*<c:v>([\s\S]*?)<\/c:v>/.exec(m);
+      if(g) out[+g[1]]=unesc(g[2]);
+    });
+    return out;
+  };
+  const sers=[]; let cats=null;
+  (chartXml.match(/<c:ser>[\s\S]*?<\/c:ser>/g)||[]).forEach(function(ser){
+    const nm=/<c:tx>[\s\S]*?<c:v>([\s\S]*?)<\/c:v>/.exec(ser);
+    const catB=/<c:cat>[\s\S]*?<\/c:cat>/.exec(ser);
+    const valB=/<c:val>[\s\S]*?<\/c:val>/.exec(ser);
+    if(catB && !cats){ const c=/<c:(num|str)Cache>[\s\S]*?<\/c:\1Cache>/.exec(catB[0]); if(c) cats=pts(c[0]); }
+    let vals=[];
+    if(valB){ const c=/<c:(num|str)Cache>[\s\S]*?<\/c:\1Cache>/.exec(valB[0]); if(c) vals=pts(c[0]); }
+    sers.push({name:nm?unesc(nm[1]):'', vals:vals});
+  });
+  return {cats:cats||[], sers:sers};
+}
+/* 최소한의 진짜 xlsx. 공유문자열 대신 inlineStr 을 써서 부품 수를 줄인다. */
+function makeXlsx(JSZipRef, cats, sers){
+  const n=cats.length, last=colName(n+1);
+  const rows=[];
+  const cell=function(col,row,v,isNum){
+    const ref=colName(col)+row;
+    if(v===''||v==null) return '<c:!/>'.replace('c:!','c r="'+ref+'"/');
+    return isNum ? '<c r="'+ref+'"><v>'+Number(v)+'</v></c>'
+                 : '<c r="'+ref+'" t="inlineStr"><is><t xml:space="preserve">'+xmlEsc(v)+'</t></is></c>';
+  };
+  let r1='<row r="1">'+cell(1,1,'')+cats.map(function(c,i){ return cell(i+2,1,c,false); }).join('')+'</row>';
+  rows.push(r1);
+  sers.forEach(function(sr,si){
+    const r=si+2;
+    let out='<row r="'+r+'">'+cell(1,r,sr.name,false);
+    for(let i=0;i<n;i++){ const v=sr.vals[i];
+      out += (v===undefined||v===''||isNaN(Number(v))) ? cell(i+2,r,'',false) : cell(i+2,r,v,true); }
+    rows.push(out+'</row>');
+  });
+  const sheet='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    +'<dimension ref="A1:'+last+(sers.length+1)+'"/><sheetData>'+rows.join('')+'</sheetData></worksheet>';
+  const z=new JSZipRef();
+  z.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    +'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+    +'<Default Extension="xml" ContentType="application/xml"/>'
+    +'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+    +'<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+    +'</Types>');
+  z.folder('_rels').file('.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+    +'</Relationships>');
+  z.folder('xl').file('workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+    +' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    +'<sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>');
+  z.folder('xl').folder('_rels').file('workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+    +'</Relationships>');
+  z.folder('xl').folder('worksheets').file('sheet1.xml',sheet);
+  return z.generateAsync({type:'uint8array',compression:'DEFLATE'});
+}
+/* 차트의 «수식 참조»를 새 워크북으로 돌린다. 안 돌리면 「데이터 편집」이 없는 시트를 찾는다. */
+function repointRefs(chartXml, nCat, nSer){
+  const last=colName(nCat+1);
+  let si=0;
+  /* ⚠ 치환 «문자열»을 쓰면 안 된다. 시트 참조에 든 `$1` 이 정규식의 «캡처 1번»으로 읽혀
+     그 자리에 앞 블록이 통째로 끼어든다(실측: 카테고리 참조가 $B$2:$M$2 로 나왔다).
+     함수 치환은 $ 를 해석하지 않는다 — 그래서 여기서는 반드시 함수다. */
+  const put=function(block, re, ref){
+    return block.replace(re, function(m, head){ return head+'<c:f>'+ref+'</c:f>'; });
+  };
+  return chartXml.replace(/<c:ser>[\s\S]*?<\/c:ser>/g, function(ser){
+    const row=(++si)+1;
+    let out=ser;
+    out=put(out, /(<c:tx>[\s\S]*?)<c:f>[\s\S]*?<\/c:f>/,  'Sheet1!$A$'+row);
+    out=put(out, /(<c:cat>[\s\S]*?)<c:f>[\s\S]*?<\/c:f>/, 'Sheet1!$B$1:$'+last+'$1');
+    out=put(out, /(<c:val>[\s\S]*?)<c:f>[\s\S]*?<\/c:f>/, 'Sheet1!$B$'+row+':$'+last+'$'+row);
+    return out;
+  });
+}
+
 /* chartXml 패치: cats = 카테고리 배열, series = {시리즈명: 값배열}, opts={rename:{구명:새명}, catAsStr:true}
    - 각 <c:ser>의 <c:tx>…<c:v>이름</c:v>으로 시리즈를 식별해 해당 값만 교체
    - cat 캐시 타입(num/str)은 양식 것을 따르고, catAsStr이면 strRef로 강제 전환(축도 catAx로) */
@@ -183,7 +288,7 @@ data = {
 } */
 function build(JSZipRef,tplBuf,data){
   return JSZipRef.loadAsync(tplBuf).then(zip=>{
-    const jobs=[];
+    const jobs=[], emb=[];
     // 0) 이미지 교체 (예: 슬라이드1 '인력 현황' 그림 = 입사·퇴사 차트 렌더) — base64 문자열
     if(data.images)Object.keys(data.images).forEach(p=>zip.file(p,data.images[p],{base64:true}));
     // 1) 차트 8개
@@ -192,7 +297,18 @@ function build(JSZipRef,tplBuf,data){
       const f=zip.file(path); if(!f)return;
       jobs.push(f.async('string').then(xml=>{
         const d=data.charts[cn];
-        zip.file(path,d.io?rebuildIo(xml,d.cats,d.io):patchChart(xml,d.cats,d.series,{rename:d.rename,catAsStr:d.catAsStr}));
+        let out=d.io?rebuildIo(xml,d.cats,d.io):patchChart(xml,d.cats,d.series,{rename:d.rename,catAsStr:d.catAsStr});
+        /* 「데이터 편집」이 열 워크북을 «패치가 끝난 캐시»에서 만들어 넣는다 (v134).
+           ⚠ 양식의 옛 숫자로 만들면 편집을 누르는 순간 차트가 그 값으로 되돌아간다 —
+             고치려다 더 나쁘게 만드는 자리다. 캐시가 정본이고 워크북이 캐시를 따라간다. */
+        const cache=readCache(out);
+        if(cache.cats.length && cache.sers.length){
+          out=repointRefs(out, cache.cats.length, cache.sers.length);
+          if(out.indexOf('<c:externalData')<0)
+            out=out.replace('</c:chartSpace>','<c:externalData r:id="rIdEmb"><c:autoUpdate val="0"/></c:externalData></c:chartSpace>');
+          emb.push({cn:cn, cache:cache});
+        }
+        zip.file(path,out);
       }));
     });
     // 2) 슬라이드 표·텍스트
@@ -267,6 +383,33 @@ function build(JSZipRef,tplBuf,data){
       zip.file('ppt/slides/slide3.xml',xml);
     }));
     return Promise.all(jobs).then(()=>{
+      /* 워크북을 실제로 만들어 넣는다 — 차트 패치가 «전부» 끝난 뒤여야 캐시가 최종본이다. */
+      return Promise.all(emb.map(function(e){
+        return makeXlsx(JSZipRef, e.cache.cats, e.cache.sers).then(function(buf){
+          const name=e.cn+'.xlsx';
+          zip.file('ppt/embeddings/'+name, buf);
+          const rp='ppt/charts/_rels/'+e.cn+'.xml.rels';
+          const rf=zip.file(rp);
+          const add='<Relationship Id="rIdEmb" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/package"'
+                  +' Target="../embeddings/'+name+'"/>';
+          return (rf?rf.async('string'):Promise.resolve(
+              '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>'))
+            .then(function(rx){
+              if(rx.indexOf('rIdEmb')<0) rx=rx.replace('</Relationships>', add+'</Relationships>');
+              zip.file(rp, rx);
+            });
+        });
+      })).then(function(){
+        if(!emb.length) return;
+        const ct=zip.file('[Content_Types].xml'); if(!ct) return;
+        return ct.async('string').then(function(x){
+          if(x.indexOf('Extension="xlsx"')<0)
+            x=x.replace('<Types','<Types').replace(/(<Types[^>]*>)/,
+              '$1<Default Extension="xlsx" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>');
+          zip.file('[Content_Types].xml', x);
+        });
+      });
+    }).then(()=>{
       const isNode=typeof window==='undefined';
       return zip.generateAsync({type:isNode?'nodebuffer':'blob',
         mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
@@ -278,7 +421,7 @@ function build(JSZipRef,tplBuf,data){
 // Excel 날짜 시리얼 (1899-12-30 기준) — 월말 카테고리용
 function excelSerial(d){ return Math.round((d.getTime()-Date.UTC(1899,11,30))/86400000); }
 
-const API={build,patchChart,patchTable,excelSerial};
+const API={build,patchChart,patchTable,excelSerial,readCache,makeXlsx,repointRefs,colName};
 if(typeof module!=='undefined'&&module.exports)module.exports=API;
 else root.QBRPPT=API;
 })(typeof window!=='undefined'?window:globalThis);

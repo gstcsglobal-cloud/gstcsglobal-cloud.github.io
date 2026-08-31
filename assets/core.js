@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 131;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 132;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -4136,21 +4136,67 @@ GST._pptP = null;
    onerror 가 영영 안 오고, await 가 그대로 멈춘다 — 버튼을 눌러도 아무 반응이 없다.
    실제로 그 증상으로 돌아왔다. 에러보다 나쁜 것이 «아무 일도 안 일어나는 것»이다. */
 GST.PPT_CDN_MS = 15000;
+/* 자체 호스팅 사본 (v134). 사내망이 cdn.jsdelivr.net 을 «묵살»하면 onerror 가 영영 안 오고,
+   시간 제한으로 막다른 길은 없앴지만 그 환경에서는 기능 자체를 못 쓴다. 그래서 저장소에 둔다.
+   ⚠ 버전을 CDN 폴백과 어긋나게 두지 말 것 — 로더가 둘 중 아무거나 잡으므로, 다르면
+     «어떤 사람은 되고 어떤 사람은 안 되는» 상태가 된다(assets/vendor/README.md). */
+GST.PPT_VENDOR = '/assets/vendor/pptxgen.bundle.js';                                   // 3.12.0
+GST.PPT_CDN    = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
+GST.ZIP_VENDOR = '/assets/vendor/jszip.min.js';                                        // 3.10.1
+GST.ZIP_CDN    = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+
+/* 스크립트 하나를 «시간 제한을 걸고» 싣는다. 자체 사본 → CDN 순으로 본다.
+   ⚠ 시간 제한이 이 함수의 존재 이유다. CDN 을 막는 사내망이 «거부»가 아니라 «묵살»을 하면
+     onerror 가 안 와서 await 가 영영 멈추고, 버튼을 눌러도 아무 일이 안 일어난다(v105).
+   ⚠ ok() 로 «정말 실렸는지»를 본다. 어떤 프록시는 200 에 안내 HTML 을 돌려주는데,
+     그때 onload 는 오지만 전역은 없다 — 그걸 성공으로 치면 다음 줄에서 죽는다. */
+GST._loadScript = function(urls, ok, ms){
+  const list=[].concat(urls).filter(Boolean);
+  const one=function(u){
+    return new Promise(function(res,rej){
+      let done=false;
+      const fin=function(good,err){ if(done)return; done=true; clearTimeout(tm);
+        good?res():rej(err||new Error('BLOCKED')); };
+      const tm=setTimeout(function(){ fin(false, new Error('TIMEOUT')); }, ms||GST.PPT_CDN_MS);
+      const s=document.createElement('script');
+      s.onload =function(){ ok() ? fin(true) : fin(false, new Error('BLOCKED')); };
+      s.onerror=function(){ fin(false, new Error('BLOCKED')); };
+      s.src=u; document.head.appendChild(s);
+    });
+  };
+  /* 후보를 차례로 시도한다. ⚠ «어디서 왜» 실패했는지 전부 모아 둔다 —
+     자체 사본이 404 인지 CDN 이 막힌 것인지 구별되어야 사람이 무엇을 할지 안다. */
+  const errs=[];
+  const next=function(i){
+    if(ok()) return Promise.resolve();
+    if(i>=list.length){
+      const e=new Error(errs.join(' ')/*아래 tried 로 본다*/.indexOf('TIMEOUT')>=0?'TIMEOUT':'BLOCKED');
+      e.tried=errs.join(' · ');
+      return Promise.reject(e);
+    }
+    return one(list[i]).catch(function(err){
+      const host=/^https?:/.test(list[i]) ? list[i].replace(/^https?:\/\/([^/]+).*$/,'$1') : '자체 사본';
+      errs.push(host+' '+(err&&err.message||'?'));
+      return next(i+1);
+    });
+  };
+  return next(0);
+};
 GST.pptLoad = function(){
   if(window.PptxGenJS) return Promise.resolve();
   if(GST._pptP) return GST._pptP;
-  GST._pptP = new Promise(function(res,rej){
-    let done=false;
-    const fin=function(ok,err){ if(done) return; done=true; clearTimeout(tm);
-      if(ok) return res(); GST._pptP=null; rej(err); };
-    const tm=setTimeout(function(){ fin(false, new Error('TIMEOUT')); }, GST.PPT_CDN_MS);
-    const s=document.createElement('script');
-    s.onload=function(){ window.PptxGenJS ? fin(true) : fin(false, new Error('BLOCKED')); };
-    s.onerror=function(){ fin(false, new Error('BLOCKED')); };
-    s.src='https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
-    document.head.appendChild(s);
-  });
+  GST._pptP = GST._loadScript([GST.PPT_VENDOR, GST.PPT_CDN], function(){ return !!window.PptxGenJS; })
+    .catch(function(e){ GST._pptP=null; throw e; });
   return GST._pptP;
+};
+/* JSZip — 양식 수술(주간현황 PPT)이 쓴다. 예전에는 report 안에 시간 제한 «없는» 로더가
+   따로 있었다(v105 규율이 그 파일만 안 지켜졌다). 여기 한 곳으로 모은다. */
+GST.zipLoad = function(){
+  if(window.JSZip) return Promise.resolve();
+  if(GST._zipP) return GST._zipP;
+  GST._zipP = GST._loadScript([GST.ZIP_VENDOR, GST.ZIP_CDN], function(){ return !!window.JSZip; })
+    .catch(function(e){ GST._zipP=null; throw e; });
+  return GST._zipP;
 };
 /* 실패를 «보이게» 알린다. alert 는 브라우저·확장에 따라 안 뜨는 자리가 있어 토스트를 먼저 쓴다. */
 GST._pptSay = function(msg){
@@ -4232,16 +4278,22 @@ GST._chartLight = function(ch){
   /* «없던 키»는 undefined 로 되돌리지 말고 지운다. 값은 같아 보여도 `'color' in o` 가
      달라지고, 그걸로 «넘겼는지»를 판단하는 코드가 생기면 그때부터 조용히 갈린다. */
   const set = function(o,k,v){ if(!o) return; undo.push([o,k,o[k],(k in o)]); o[k]=v; };
+  /* ⚠ «읽은 것을 도로 써 넣지» 말 것. Chart.js v4 의 옵션은 프록시라
+     `ax.ticks = ax.ticks || {}` 가 프록시를 자기 자신에게 대입하고, 그 뒤 접근이
+     무한 재귀로 들어간다(RangeError: Maximum call stack size exceeded).
+     그러면 이 함수가 던지고 → chartHiResLight 가 죽고 → **PPT 내보내기가 통째로
+     안 된다.** 실측으로 잡았다(고장분석 x·y 축 둘 다). 없을 때만 만든다. */
+  const ensure = function(o,k){ if(o && !o[k]) o[k] = {}; return o ? o[k] : null; };
   const sc = ch.options.scales || {};
   Object.keys(sc).forEach(function(k){
     const ax = sc[k]; if(!ax || typeof ax !== 'object') return;
-    ax.ticks = ax.ticks || {}; set(ax.ticks,'color','#333333');
-    ax.grid  = ax.grid  || {}; set(ax.grid,'color','#E3E3E3'); set(ax.grid,'borderColor','#C9CDD3');
+    set(ensure(ax,'ticks'),'color','#333333');
+    const g = ensure(ax,'grid'); set(g,'color','#E3E3E3'); set(g,'borderColor','#C9CDD3');
     if(ax.title) set(ax.title,'color','#333333');
     if(ax.pointLabels) set(ax.pointLabels,'color','#333333');
   });
   const pl = ch.options.plugins || {};
-  if(pl.legend){ pl.legend.labels = pl.legend.labels || {}; set(pl.legend.labels,'color','#333333'); }
+  if(pl.legend){ set(ensure(pl.legend,'labels'),'color','#333333'); }
   if(pl.title) set(pl.title,'color','#111111');
   /* 자체 플러그인이 캔버스에 «직접» 찍는 글자(막대 위 값·도넛 가운데 TOTAL)는 색을
      자기 옵션에 들고 있다(valLabel.color · dCenter.color/mut). 어두운 테마 기본값이
@@ -4294,14 +4346,221 @@ GST.chartHiResLight = function(id, scale){
    한 장에 최대 6개(3×2). 그 이상이면 슬라이드가 늘고 제목에 (2/3)이 붙는다.
    ⚠ 페이지마다 만들지 말 것 — 여기 하나를 6개 페이지(설치·PM·고장·자재·CIP·TCO)가 쓴다.
      예전에는 이 함수가 «어두운 바탕에 차트 한 장씩»이라 양식과 전혀 달랐다. */
+
+/* ============================================================
+   Chart.js 차트 → PowerPoint «네이티브» 차트 (v134)
+
+   왜 되살렸나. 이 세 함수는 2026-08-04 에 양식 수술 방식(주간현황 downloadPPT)이
+   들어오면서 `_downloadPPT_legacy` 안에 갇혀 «정의만 되고 아무도 안 부르는» 코드가 됐다.
+   그 뒤로 나머지 일곱 페이지의 PPT 는 전부 «그림»이었다 — 받아 본 사람이 PPT 안에서
+   값을 못 고치고, 색·축·글꼴도 못 바꾼다. 사용자가 「예전에 차트로 나왔던 것 같은데」라고
+   한 것이 이것이다.
+
+   ⚠ 브라우저는 클립보드에 파워포인트 «차트 개체»를 올릴 수 없다(형식이 명세로 닫혀 있다).
+     그래서 «복사»가 아니라 «파일»이 답이다 — 내려받아 열고 그 차트를 복사해 자기 덱에
+     붙이면 편집 가능한 차트가 된다.
+
+   ⚠ 모든 차트가 넘어가지는 않는다. 넘어가는 것은 «막대·꺾은선 + 범주축» 뿐이다.
+     도넛(가운데 TOTAL 을 플러그인이 그린다)·산점도·수치축 차트는 네이티브로 옮기면
+     화면과 다른 그림이 되므로 **그림으로 남긴다.** 그리고 어느 카드가 그림인지 밝힌다 —
+     조용히 떨어뜨리면 「왜 이 차트만 편집이 안 되지」가 된다.
+   ============================================================ */
+GST.pptHex = function(c){ // Chart.js 색 → PPT 6자리 HEX ('#' 금지) · 알파는 흰 배경 블렌딩(반투명 막대 구분 유지)
+  if(Array.isArray(c))c=c.find(v=>typeof v==='string')||c[0];
+  if(typeof c!=='string')return '5B9BD5';
+  const bl=(r,g,b,a)=>[r,g,b].map(v=>Math.round(v*a+255*(1-a)).toString(16).padStart(2,'0')).join('').toUpperCase();
+  if(c[0]==='#'){
+    let h=c.slice(1); if(h.length===3||h.length===4)h=h.split('').map(x=>x+x).join('');
+    const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+    if([r,g,b].some(isNaN))return '5B9BD5';
+    const a=h.length>=8?parseInt(h.slice(6,8),16)/255:1;
+    return bl(r,g,b,isNaN(a)?1:a);
+  }
+  const m=c.match(/rgba?\s*\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s\/]+([\d.]+))?/i);
+  if(m)return bl(+m[1],+m[2],+m[3],m[4]!==undefined?+m[4]:1);
+  return '5B9BD5';
+};
+GST.pptSrc = function(ch){ // Chart.js 인스턴스 → {labels,bars,lines,stacked} (숨긴 시리즈 제외)
+  if(!ch||!ch.data)return null;
+  const labels=GST.pptLabels(ch), bars=[], lines=[];
+  ch.data.datasets.forEach((ds,i)=>{
+    try{ const mt=ch.getDatasetMeta(i); if(mt&&mt.hidden)return; }catch(e){}
+    if(ds.hidden)return;
+    const isLn=(ds.type||ch.config.type)==='line';
+    const vals=(ds.data||[]).map(v=>v==null?0:(typeof v==='object'?+(v.y||0):(+v||0)));
+    (isLn?lines:bars).push({name:String(ds.label||''),values:vals,
+      color:GST.pptHex(isLn?(ds.borderColor||ds.backgroundColor):(ds.backgroundColor||ds.borderColor)),
+      y2:ds.yAxisID==='y2'});
+  });
+  const sc=(ch.options&&ch.options.scales)||{};
+  // 렌더된 실제 축 경계 캡처 → PPT 축이 대시보드와 동일 스케일
+  /* ⚠ 가로 막대는 «값축이 x» 다. y 를 읽으면 범주 개수(0~N)가 값 범위로 들어가
+     막대가 통째로 찌그러진다. 값축을 골라 읽되 키는 'y'(=값축)로 통일한다. */
+  const horiz=GST.pptCatAxis(ch)==='y';
+  const bounds={};
+  [[horiz?'x':'y','y'],['y2','y2']].forEach(pr=>{const s=ch.scales&&ch.scales[pr[0]];
+    if(s&&isFinite(s.min)&&isFinite(s.max))bounds[pr[1]]={min:s.min,max:s.max};});
+  /* 화면이 막대 위에 값을 찍고 있으면 PPT 에서도 찍는다 — 안 그러면 같은 차트가
+     내보낸 순간 «숫자 없는 그림»이 되어 카드와 다른 말을 한다. */
+  const vl=(ch.options&&ch.options.plugins&&ch.options.plugins.valLabel)||null;
+  return {labels,bars,lines,stacked:!!((sc.y&&sc.y.stacked)||(sc.x&&sc.x.stacked)),bounds,
+          horiz:horiz, showValue:!!(vl&&vl.mode)};
+};
+GST.pptCombo = function(pres,slide,src,x,y,w,h){ // 막대+꺾은선 네이티브 콤보 차트
+  if(!src||(!src.bars.length&&!src.lines.length))return;
+  const ln1=src.lines.filter(l=>!l.y2), ln2=src.lines.filter(l=>l.y2);
+  const useY2=ln2.length>0&&(src.bars.length>0||ln1.length>0);
+  const types=[];
+  if(src.bars.length)types.push({type:'bar',
+    data:src.bars.map(b=>({name:b.name,labels:src.labels,values:b.values})),
+    /* barDir: 'bar' = 가로 · 'col' = 세로. 화면이 가로 막대면 PPT 도 가로여야 한다 —
+       세로로 내보내면 라벨이 겹쳐 읽을 수 없는 장표가 된다. */
+    options:{chartColors:src.bars.map(b=>b.color),barDir:src.horiz?'bar':'col',
+             barGrouping:src.stacked?'stacked':'clustered'}});
+  const lnOpt=ls=>({chartColors:ls.map(l=>l.color),lineSize:1.5,lineSmooth:false,
+    lineDataSymbol:'circle',lineDataSymbolSize:4});
+  if(ln1.length)types.push({type:'line',
+    data:ln1.map(l=>({name:l.name,labels:src.labels,values:l.values})),options:lnOpt(ln1)});
+  if(ln2.length){const o=lnOpt(ln2); if(useY2){o.secondaryValAxis=true;o.secondaryCatAxis=true;}
+    types.push({type:'line',data:ln2.map(l=>({name:l.name,labels:src.labels,values:l.values})),options:o});}
+  const o={x,y,w,h,chartArea:{fill:{color:'FFFFFF'}},barGapWidthPct:60,
+    catAxisLabelColor:'333333',catAxisLabelFontSize:7.5,catAxisLineColor:'BFBFBF',
+    valAxisLabelColor:'333333',valAxisLabelFontSize:7.5,valAxisLineColor:'BFBFBF',
+    valGridLine:{color:'E8E8E8',size:0.5},catGridLine:{style:'none'},
+    /* 이름 없는 계열만 있으면 범례를 끈다. 켜 두면 pptxgenjs 가 «Series1» 이라고 적는데,
+       화면에는 없는 글자다 — 장표가 화면과 다른 말을 하게 된다. */
+    showLegend:src.bars.concat(src.lines).some(function(d){ return String(d.name||'').trim()!==''; }),
+    legendPos:'b',legendFontSize:7.5,legendColor:'333333',showTitle:false,
+    showValue:!!src.showValue,dataLabelFontSize:7,dataLabelColor:'333333',dataLabelFormatCode:'#,##0.##'};
+  const bd=src.bounds||{};
+  if(bd.y){ if(isFinite(bd.y.min))o.valAxisMinVal=bd.y.min; if(isFinite(bd.y.max))o.valAxisMaxVal=bd.y.max; }
+  if(useY2){ // 보조축 사용 시 valAxes+catAxes 2쌍 필수 (미지정 시 PPT가 차트 폐기)
+    const a1={showValAxisTitle:false,valGridLine:{color:'E8E8E8',size:0.5}};
+    const a2={showValAxisTitle:false,valGridLine:{style:'none'}};
+    if(bd.y){ if(isFinite(bd.y.min))a1.valAxisMinVal=bd.y.min; if(isFinite(bd.y.max))a1.valAxisMaxVal=bd.y.max; }
+    if(bd.y2){ if(isFinite(bd.y2.min))a2.valAxisMinVal=bd.y2.min; if(isFinite(bd.y2.max))a2.valAxisMaxVal=bd.y2.max; }
+    o.valAxes=[a1,a2];
+    o.catAxes=[{catAxisLabelFontSize:7.5},{catAxisHidden:true}];
+  }
+  slide.addChart(types,o);
+};
+
+/* «이 차트를 네이티브로 옮겨도 화면과 같은 그림인가». 아니면 그림으로 남긴다.
+   ⚠ 여기서 «된다»고 잘못 말하면 그 카드는 조용히 다른 그림이 되어 나간다 —
+     받아 본 사람은 그것이 화면과 다르다는 것을 알 방법이 없다. 의심스러우면 false 다. */
+GST.pptNativeOK = function(ch){
+  if(!ch||!ch.data) return '';
+  const t=(ch.config&&ch.config.type)||'';
+  if(t!=='bar'&&t!=='line') return '도넛·산점도 등은 그림';
+  /* ⚠ 가로 막대(indexAxis:'y')는 «범주축이 y» 다. x 만 보면 그 차트들이 전부
+     「수치축」으로 잘못 떨어진다 — 실측 설치현황·인원 화면의 막대 상당수가 가로 막대다. */
+  const cax=GST.pptCatAxis(ch);
+  /* 범주축이 아니면 «칸 하나에 값 하나»가 성립하지 않는다. 이 프로젝트는 날짜 어댑터를
+     안 싣고 타임스탬프를 linear 축에 넣어 눈금 콜백으로 날짜를 찍는 차트가 있다
+     (CLAUDE.md 코드 관례) — 그런 차트의 labels 를 그대로 쓰면 축에 숫자가 찍힌다. */
+  const xs=ch.scales&&ch.scales[cax];
+  if(xs&&xs.type&&xs.type!=='category') return '수치축(범주축이 아님)';
+  /* 가로 막대에 «꺾은선»이 섞이면 콤보 배치가 성립하지 않는다(값축이 가로다).
+     흔치 않으므로 억지로 옮기지 않고 그림으로 남긴다 — 잘못 옮기면 축이 뒤집힌다. */
+  if(cax==='y' && (ch.data.datasets||[]).some(function(d){ return (d.type||t)==='line'; }))
+    return '가로 막대 + 꺾은선 조합';
+  const n=(ch.data.labels||[]).length;
+  if(!n) return '범주 라벨 없음';
+  /* 데이터셋 길이가 라벨 수와 다르면(꼬리 예측 막대 등) 칸이 어긋난다. */
+  const ds=ch.data.datasets||[];
+  if(!ds.length) return '데이터 없음';
+  for(let i=0;i<ds.length;i++){ const d=ds[i].data||[];
+    if(d.length && d.length!==n) return '계열 길이가 라벨 수와 다름';
+    if(d.length && typeof d[0]==='object' && d[0]!==null && !('y' in d[0])) return '좌표형 데이터';
+  }
+  return '';                                   // 빈 문자열 = 넘어간다
+};
+
+/* 축에 «화면이 실제로 찍은 글자»를 쓴다. 눈금 콜백이 붙은 축은 data.labels 와 다를 수
+   있고(예: 25-08 → '8월'), 그때 labels 를 그대로 쓰면 PPT 만 다른 말을 한다(v125 규약). */
+/* 범주축이 어느 쪽인가. 가로 막대(indexAxis:'y')는 y 가 범주축이다.
+   ⚠ 이 판정을 함수마다 다시 적으면 「어떤 차트는 축이 뒤집혀 나간다」가 온다. */
+GST.pptCatAxis = function(ch){
+  return ((ch&&ch.options&&ch.options.indexAxis)==='y') ? 'y' : 'x';
+};
+GST.pptLabels = function(ch){
+  const raw=(ch.data.labels||[]).map(function(v){ return String(v==null?'':v); });
+  try{
+    const ax=ch.scales&&ch.scales[GST.pptCatAxis(ch)];
+    const tk=ax&&ax.ticks;
+    if(tk&&tk.length===raw.length){
+      const out=tk.map(function(t){ return String(t&&t.label!=null?t.label:''); });
+      if(out.every(function(v){ return v!==''; })) return out;
+    }
+  }catch(e){}
+  return raw;
+};
+
+/* ============================================================
+   카드 하나 → 한 장짜리 PPT (v134 · 사용자 요청)
+
+   「차트에서 바로 PPT 로 따고 싶다」의 답이다. 클립보드로는 «차트 개체»를 못 올리므로
+   (브라우저가 쓸 수 있는 형식이 명세로 닫혀 있다) 파일로 준다 —
+   내려받아 열고, 그 차트를 복사해 자기 덱에 붙이면 «편집 가능한 차트»가 된다.
+
+   ⚠ 판정·매핑을 여기서 새로 짜지 않는다. pptAuto 와 «같은» pptNativeOK·pptSrc·pptCombo 를
+     쓴다(제2원칙). 두 벌이면 「전체 내보내기와 이 버튼이 다른 그림을 낸다」가 온다.
+   ⚠ 못 옮기는 차트에는 그림을 내보내지 않는다 — 그러면 「📋 그림」과 똑같아져 버튼이
+     둘 있을 이유가 없어진다. 대신 «왜 안 되는지와 무엇을 쓰면 되는지»를 말한다.
+   ============================================================ */
+GST.pptCard = async function(id){
+  const cv=document.getElementById(id);
+  const ch=(cv && window.Chart && Chart.getChart) ? Chart.getChart(cv) : null;
+  if(!ch){ GST._pptSay('차트를 찾을 수 없습니다'); return; }
+  const why=GST.pptNativeOK(ch);
+  if(why){ GST._pptSay('이 차트는 PPT «차트»로 못 옮깁니다 ('+why+') — 「📋 그림」 또는 「📊 데이터」를 쓰세요.'); return; }
+  try{ await GST.pptLoad(); }
+  catch(e){
+    GST._pptSay('PPT 라이브러리를 불러오지 못했습니다 ('+(e&&e.tried||e&&e.message||'?')+')'
+      + ' — assets/vendor/pptxgen.bundle.js 가 배포됐는지 확인하고, 그래도 안 되면 「📊 데이터」를 쓰세요.');
+    return; }
+  /* 흰 종이용 색으로 바꿨다 되돌린다 — pptAuto 와 같은 규율(v103).
+     ⚠ 되돌리기는 finally 에 둔다. 중간에 던지면 화면 차트 색이 굳어, 내보내기를 한 번
+       눌렀을 뿐인데 어두운 테마에서 글자가 안 보이게 된다. */
+  const restore=GST._chartLight(ch);
+  let src=null;
+  try{ src=GST.pptSrc(ch); }
+  finally{ try{ restore&&restore(); }catch(e){} }
+  if(!src){ GST._pptSay('차트 데이터를 못 읽었습니다'); return; }
+  const card=cv.closest('.card')||cv.closest('.mcard');
+  const h3=card?card.querySelector('h3'):null;
+  const cap=((h3&&(h3.innerText||'').trim())||id).replace(/\s+/g,' ');
+  const FONT='맑은 고딕';
+  const p=new PptxGenJS(); p.layout='LAYOUT_WIDE';   // 13.33 × 7.5 in — 아래 좌표가 그 전제다
+  const s=p.addSlide(); s.background={color:'FFFFFF'};
+  s.addText(cap, {x:0.5, y:0.30, w:9.2, h:0.42, fontFace:FONT, fontSize:15, bold:true, color:'111111', margin:0, valign:'middle'});
+  s.addText(GST.ymdL()+' 기준 · '+GST.filtSummary(),
+    {x:0.5, y:0.72, w:12.3, h:0.24, fontFace:FONT, fontSize:8, color:'808080', margin:0});
+  s.addShape(p.ShapeType.rect, {x:9.9, y:0.24, w:2.9, h:0.40, fill:{color:'FFFFFF'}, line:{color:'000000', width:1}});
+  s.addText(String(GST.corpLabel()||'').toUpperCase(),
+    {x:9.9, y:0.24, w:2.9, h:0.40, fontFace:FONT, fontSize:12, bold:true, color:'111111', align:'center', valign:'middle', margin:0});
+  GST.pptCombo(p, s, src, 0.5, 1.10, 12.3, 5.60);
+  const fn=cap.replace(/[\\/:*?"<>|]/g,'').slice(0,40)+'_'+GST.ymdL()+'.pptx';
+  await p.writeFile({fileName:fn});
+  GST._pptSay('⤓ '+fn+' — 열어서 차트를 복사(Ctrl+C)해 보고서에 붙이면 편집 가능한 차트가 됩니다');
+};
+/* 카드 버튼 한 벌. 여덟 페이지가 «같은 문자열»을 쓰게 여기서 만든다 —
+   페이지마다 적으면 한 곳이 빠져 그 화면만 버튼이 없다(v100 이 겪은 자리). */
+GST.pptCardBtn = function(id){
+  return '<button class="capbtn" title="이 차트만 한 장짜리 PPT 로 — 열어서 차트를 복사하면 편집 가능한 차트로 붙습니다"'
+       + ' onclick="GST.pptCard(\''+id+'\')">📈 PPT</button>';
+};
+
 GST.PPT_MAX_PER_SLIDE = 6;
 GST.pptAuto = async function(opt){
   opt = opt || {};
   try{ await GST.pptLoad(); }
   catch(e){
-    GST._pptSay(String(e&&e.message)==='TIMEOUT'
-      ? 'PPT 라이브러리를 15초 안에 못 받았습니다 — 사내망이 cdn.jsdelivr.net 을 막고 있을 수 있습니다. 전산팀에 그 주소 허용을 요청하거나, 차트별 「📋 복사」로 PPT 에 직접 붙여넣으세요.'
-      : 'PPT 라이브러리를 불러오지 못했습니다 (cdn.jsdelivr.net 차단). 차트별 「📋 복사」로 PPT 에 직접 붙여넣을 수 있습니다.');
+    /* «무엇을 해 보았고 무엇이 막혔는지»를 적는다. 자체 사본이 404 인지(배포 누락)
+       CDN 이 막힌 것인지(사내망)에 따라 사람이 할 일이 완전히 다르다. */
+    GST._pptSay('PPT 라이브러리를 불러오지 못했습니다 ('+(e&&e.tried||e&&e.message||'?')+')'
+      + ' — assets/vendor/pptxgen.bundle.js 가 배포됐는지 확인하고, 그래도 안 되면'
+      + ' 차트별 「📋 그림」·「📊 데이터」로 PPT 에 붙여넣으세요.');
     return; }
 
   /* 숨겨진 섹션의 차트도 담는다 — 접어 둔 채 내보내면 «있는 줄 알았던» 장표가 조용히 빠진다. */
@@ -4314,7 +4573,11 @@ GST.pptAuto = async function(opt){
   const X=0.76, W=11.83, COLS=3, GAP=0.16;
   const CW=(W-GAP*(COLS-1))/COLS, BAND=0.30, BODY=2.62, ROWY=[0.98, 4.06];
 
-  const p = new PptxGenJS(); p.layout='LAYOUT_16x9';
+  /* ⚠ LAYOUT_16x9 는 10 × 5.625 in 이다. 아래 배치(X=0.76 · W=11.83 · ROWY[1]=4.06)는
+     13.33 × 7.5 in 을 전제로 잡혀 있어, 16x9 로 두면 오른쪽 칸과 아랫줄이 통째로
+     장표 «밖»에 그려진다. 예전 네이티브 내보내기는 LAYOUT_WIDE 를 썼다 — 그 배치가
+     여기로 옮겨 오면서 레이아웃만 안 따라온 것이다. 실측(LibreOffice 렌더)으로 잡았다. */
+  const p = new PptxGenJS(); p.layout='LAYOUT_WIDE';
   const title = (opt.title || (document.querySelector('.header h1')||{}).textContent || document.title || 'Dashboard').trim();
   const corp  = (opt.corp || GST.corpLabel()).toUpperCase();
   const asOf  = opt.asOf || GST.ymdL();   // ⚠ toISOString 은 UTC — 오전 9시 이전에 어제가 찍힌다
@@ -4345,6 +4608,14 @@ GST.pptAuto = async function(opt){
                            rowH:Math.max(0.20,(BODY-0.12)/tb.rows.length)});
       return;
     }
+    /* 네이티브 차트로 넣을 수 있으면 그렇게 한다 — 받아 본 사람이 PPT 안에서 값·색·축을
+       고칠 수 있다. 못 넣는 차트(도넛·산점도·수치축)는 그림으로 남기고, 어느 카드가
+       그림인지는 items 를 만들 때 이미 기록해 두었다(아래 notes). */
+    if(it.src){
+      try{ GST.pptCombo(p, s, it.src, x+0.10, y+BAND+0.08, w-0.20, BODY-0.16); return; }
+      catch(e){ /* 네이티브가 실패하면 그림으로 내려간다 — 빈 칸을 내보내지 않는다 */
+        it.nativeErr=(e&&e.message)||'실패'; }
+    }
     if(!oc) return;
     /* 비율 유지로 칸 안에 «중앙 정렬». 늘려 채우면 막대 굵기가 칸마다 달라 보인다. */
     const mw=w-0.20, mh=BODY-0.16, ar=oc.width/oc.height;
@@ -4358,12 +4629,29 @@ GST.pptAuto = async function(opt){
      clientWidth 0 은 접힌 카드라 캡처하면 빈 그림이 된다. */
   const cvs = [].slice.call(document.querySelectorAll('.card canvas, .mcard canvas'))
                 .filter(function(c){ return c.id && c.clientWidth>0; });
-  const items = [];
+  const items = [], imgOnly = [];
   for(const cv of cvs){
-    const oc = GST.chartHiResLight(cv.id); if(!oc) continue;
+    /* 그림은 «언제나» 만들어 둔다 — 네이티브가 도중에 실패해도 빈 칸이 나가지 않게.
+       ⚠ 여기서 던지면 내보내기가 통째로 죽는다. 실제로 그랬다 — _chartLight 의 프록시
+         자기대입 재귀 하나로 PPT 버튼 전체가 안 됐다. 한 차트의 실패가 전 장표를
+         죽이지 않게 감싼다(네이티브만으로도 나갈 수 있다). */
+    let oc = null;
+    try{ oc = GST.chartHiResLight(cv.id); }catch(e){ oc = null; }
     const card = cv.closest('.card') || cv.closest('.mcard');
     const h3 = card ? card.querySelector('h3') : null;
-    items.push({cap:(h3 ? (h3.innerText||'').trim() : cv.id) || cv.id, oc:oc});
+    const cap = (h3 ? (h3.innerText||'').trim() : cv.id) || cv.id;
+    const it = {cap:cap, oc:oc, id:cv.id};
+    /* 네이티브로 옮겨도 «화면과 같은 그림»인 차트만 옮긴다(GST.pptNativeOK).
+       ⚠ 판정을 여기서 새로 짜지 말 것 — 카드별 버튼(GST.pptCard)도 같은 함수를 본다. */
+    try{
+      const ch = (window.Chart && Chart.getChart) ? Chart.getChart(cv) : null;
+      const why = ch ? GST.pptNativeOK(ch) : '차트 인스턴스 없음';
+      if(ch && !why){ it.src = GST.pptSrc(ch); if(!it.src) it.why='데이터를 못 읽음'; }
+      else it.why = why;
+    }catch(e){ it.why = (e&&e.message)||'판정 실패'; }
+    if(!it.src) imgOnly.push(cap + (it.why ? ' ('+it.why+')' : ''));
+    if(!it.src && !it.oc) continue;          // 네이티브도 그림도 없으면 담을 것이 없다
+    items.push(it);
   }
   /* 표도 «같은 칸»에 담는다. 차트만 담을 수 있으면, 표가 있는 페이지는 자기 덱을 따로
      짤 수밖에 없고 그러면 장표 얼굴이 또 갈라진다(v100 에 hr 이 그랬다).
@@ -4412,6 +4700,19 @@ GST.pptAuto = async function(opt){
         s.addText(ins.map(function(t){ return '· '+t; }).join('\n'),
           {x:x+0.12, y:y+BAND+0.10, w:w-0.24, h:BODY-0.20, fontFace:FONT, fontSize:9, color:'333333',
            valign:'top', margin:0, lineSpacingMultiple:1.3});
+      }
+    }
+    /* ⚠ «어느 카드가 그림인지»를 마지막 장에 한 줄로 밝힌다. 조용히 두면 받아 본 사람은
+       「왜 이 차트만 편집이 안 되지」로 읽고, 우리는 그걸 결함으로 오해한다.
+       장을 새로 만들지 않는다 — 빈 장은 그 자체로 노이즈다. */
+    if(pg===pages-1){
+      const late = items.filter(function(x){ return x.nativeErr; })
+                        .map(function(x){ return x.cap+' ('+x.nativeErr+')'; });
+      GST._pptImgOnly = imgOnly.concat(late);          // 검사·진단이 본다
+      if(GST._pptImgOnly.length){
+        s.addText('※ 다음 차트는 PPT 안에서 편집할 수 없는 «그림»입니다 (그 형태는 네이티브 차트로 옮기면 화면과 달라집니다): '
+                  + GST._pptImgOnly.join(' · '),
+          {x:X, y:6.86, w:W, h:0.30, fontFace:FONT, fontSize:7.5, color:MUT, valign:'top', margin:0});
       }
     }
   }

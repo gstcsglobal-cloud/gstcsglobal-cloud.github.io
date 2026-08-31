@@ -628,7 +628,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(121);   // GST.numv · GST.EQ · 라인2 축을 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(132);   // GST.numv · GST.EQ · 라인2 축을 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -2010,7 +2010,7 @@ window.saveAllCharts=async function(){ const ids=Object.keys(CHARTS).filter(id=>
 function addCapBtns(){ document.querySelectorAll('.card canvas,.trend-card canvas').forEach(cv=>{
     const id=cv.id, card=cv.closest('.card,.trend-card'); if(!id||!card||card.querySelector('.capbtns'))return;
     const box=document.createElement('div'); box.className='capbtns';
-    box.innerHTML='<button class="capbtn" title="고해상도 복사(PPT 붙여넣기)" onclick="copyChart(\''+id+'\')">📋 복사</button><button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>';
+    box.innerHTML=GST.pptCardBtn(id)+'<button class="capbtn" title="그림으로 복사(고해상도 PNG)" onclick="copyChart(\''+id+'\')">📋 그림</button><button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>';
     card.appendChild(box); }); }
 
 /* ══════ 급상승 감지 ══════════════════════════════════════════════
