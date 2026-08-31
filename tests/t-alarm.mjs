@@ -292,7 +292,10 @@ console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, 
       return out;
     };
     const listOf = (name) => {
-      const m = new RegExp('GST\\.'+name+'\\s*=\\s*GST\\._KR_COLS_BASE\\.concat\\(\\[([^\\]]*)\\]\\)').exec(CORE2);
+      /* ⚠ 줄바꿈에 걸리지 않게 «공백»을 허용한다. 목록이 길어져 여러 줄이 되는 것은
+         지켜야 할 규칙이 아니라 그때의 생김새다(v122 의 교훈 — t-region 이 IIFE 꼴을
+         요구하다 거짓 실패를 낸 자리와 같다). 지킬 것은 «어떤 열을 고르나» 뿐이다. */
+      const m = new RegExp('GST\\.'+name+'\\s*=\\s*GST\\._KR_COLS_BASE\\.concat\\(\\s*\\[([^\\]]*)\\]').exec(CORE2);
       const base = /GST\._KR_COLS_BASE\s*=\s*\[([\s\S]*?)\];/.exec(CORE2);
       const parse = t => t.split(',').map(x=>x.trim().replace(/^'|'$/g,'')).filter(Boolean);
       return parse(base?base[1]:'').concat(m?parse(m[1]):[]);

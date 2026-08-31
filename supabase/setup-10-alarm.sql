@@ -53,10 +53,13 @@ create table if not exists public.sheet_allbypass (
   occur_date date,
   alarm text,
   seq text,                            -- All-ByPass Seq. H 는 한 사건이 1·2·3 세 줄이다
+  grp text,                            -- v133 해외: A열 Group. 한 사건(두 챔버)이 한 번호다
   real text,                           -- 진성/가성
   inout text, incl text,
   cnt boolean,
   atype text, ctype text,
+  atype2 text, ctype2 text,            -- v133 해외: 고장 유형(한글 분류) · 조치 유형(코드)
+  proc text, subproc text,             -- v133 해외: Process · Detail
   cause text, action text, phenom text,
   src_month text, src_week text, src_year text,
   fmonth text, fweek text,
@@ -69,6 +72,8 @@ create index if not exists sheet_alarm_date_idx      on public.sheet_alarm(occur
 create index if not exists sheet_alarm_sn_idx        on public.sheet_alarm(sn_key);
 create index if not exists sheet_allbypass_date_idx  on public.sheet_allbypass(occur_date);
 create index if not exists sheet_allbypass_sn_idx    on public.sheet_allbypass(sn_key);
+/* 한 사건의 줄을 모아 보는 질의(세부내역·검산)가 흔하다 — v133 */
+create index if not exists sheet_allbypass_grp_idx   on public.sheet_allbypass(src_sheet, grp);
 
 /* ---------- 2. RLS — setup-7·8 과 같은 규약 (can_write 만 쓴다) ---------- */
 do $$
