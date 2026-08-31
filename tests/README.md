@@ -36,6 +36,7 @@ npm run mirror   # 미러(Supabase) 경로가 시트 경로와 같은 값을 내
 npm run csvdb    # CSV Import 표에서 되살린 모양이 시트와 같은 값을 내는지
 npm run dbw      # DB 쓰기 어댑터가 sheet-write 규약대로 동작하는지
 npm run snjoin   # 진단 화면 /diag/ 가 손계산과 같은 숫자를 내는지 (픽스처 불필요)
+npm run optbl    # 가동현황 표가 행마다 «자기» 인원·실적을 받는지 (픽스처 불필요·실제 브라우저)
 node t-snap.mjs --save   # 큰 이행 '전'에 기준을 뜬다
 node t-snap.mjs          # 이행 '후' 대조
 ```
@@ -62,6 +63,7 @@ node t-snap.mjs          # 이행 '후' 대조
 | `t-botdb` | **챗봇 DB 이관** — kakao-bot 이 표에서 되살린 CSV 가 원본 CSV 와 같은 파싱 레코드를 내는지 | 14/14 |
 | `t-snap` | 큰 이행 전후 8페이지 KPI·차트 87개·표 27개 대조 (`--save`로 기준 저장) | 동일 |
 | `t-snjoin` | **진단 화면(`/diag/`)이 손계산과 같은 숫자를 내는지** · 자재의 메인설비호기 폴백 · 설비번호가 화면에 원문으로 새지 않는지 | 15/15 |
+| `t-optbl` | **가동현황 표** — 한 고객사가 여러 법인(Micron F16·F11·F16N)으로 갈려도 행마다 «자기» 인원·실적을 받는지 · 「기타」·미배치를 버리지 않는지 · PSMC & TASC 합치기 (지어낸 자료 · 실제 브라우저) | 19/19 |
 
 `t-deep`이 대조하는 실측 기준값: `STR × DRAIN PIPE-E` **집중지수 230배** ·
 `HARPXT × VCR GASKET` **축내 59.5%** · O-RING 재교체 **중앙값 82일** ·
