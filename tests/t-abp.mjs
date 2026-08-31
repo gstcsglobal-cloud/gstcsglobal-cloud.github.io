@@ -55,12 +55,17 @@ const ser = (ymd, hh, mm) => {
   return String((d - Date.UTC(1899,11,30)) / 86400000);
 };
 /* [그룹, 날짜, Right담당, Left담당] */
+/* 8월에 «같은 알람 · 다른 원인 코드» 두 사건을 둔다 — 그래야 [10]이 «두 코드가 한 줄로
+   접히지 않는가»를 실제로 볼 수 있다(i 가 3 차이면 알람이 같고 홀짝이 다르면 코드가 다르다). */
 const SETS = [
-  [1, '2026-06-03', 'GST',      'GST'],       // 보통 — 한 건
-  [2, '2026-06-11', 'External', 'External'],  // 둘 다 외부 → 안 센다
-  [3, '2026-06-24', 'External', 'GST'],       // 혼재 — 외부가 «먼저» 적혀 있다
-  [4, '2026-07-08', 'GST',      'External'],  // 혼재 — GST 가 먼저
-  [5, '2026-08-05', 'GST',      'GST'],
+  [1, '2026-06-03', 'GST',      'GST'],       // i=0  보통 — 한 건
+  [2, '2026-06-11', 'External', 'External'],  // i=1  둘 다 외부 → 안 센다
+  [3, '2026-06-24', 'External', 'GST'],       // i=2  혼재 — 외부가 «먼저» 적혀 있다
+  [4, '2026-07-08', 'GST',      'External'],  // i=3  혼재 — GST 가 먼저
+  [5, '2026-08-05', 'GST',      'GST'],       // i=4  알람1 · 원인 C6
+  [6, '2026-08-06', 'GST',      'GST'],       // i=5  알람2 · 원인 C8
+  [7, '2026-08-07', 'GST',      'GST'],       // i=6  알람0 · 원인 C6
+  [8, '2026-08-08', 'GST',      'GST'],       // i=7  알람1 · 원인 C8  ← i=4 와 같은 알람
 ];
 const rows = [H];
 SETS.forEach(([g, d, rR, rL], i) => {
@@ -68,7 +73,12 @@ SETS.forEach(([g, d, rR, rL], i) => {
     rows.push([String(g), 'GST TAIWAN SCRUBBER', 'Customer A(F16)', 'F16', 'F16',
       ser(d), ser(d, 20, 44), ser(d, 23, 30), '166.0000000001',
       'AAA' + String(100 + i), 'ETCH', 'METAL', 'CODE' + i, ch, who,
-      'Alarm-Sample ' + (i % 3), 'Fail' + (i % 3), '원인유형 (C' + (i % 3) + ')', '부품 교체 (A1)',
+      /* ⚠ 이 두 코드는 GST.causeMap 이 «고객사 관련» 한 덩어리로 접는다(실측 확인).
+         서로 다른 원인이 한 줄이 되는 것은 순위표에서 가장 나쁜 실패라, 그것이
+         일어나지 않는지를 [10]이 본다. */
+      'Alarm-Sample ' + (i % 3), 'Fail' + (i % 3),
+      (i % 2 ? '고객 요청(비고장성 교체) (C8)' : '고객(호스트) 설비 조작 영향 (C6)'),
+      (i % 2 ? '파우더 청소(Clean Powder) (A2)' : '부품 교체 (A1)'),
       '고장분류 ' + (i % 3), 'Symptom ' + i, '깊은원인 ' + i, '조치 ' + i, 'By Pass', String(1000 + i)]);
   });
 });
@@ -101,11 +111,11 @@ console.log('\n[3] 한 사건이 두 줄이다 — Group 으로 묶어 한 건�
 const B = GST.ALARM.build(rows, 'abp2', 'OS');
 {
   is(!B.err, 'build 가 성공한다' + (B.err ? ' → ' + B.err : ''));
-  is(B.rows.length === 10, `행 10 (실제 ${B.rows.length})`);
+  is(B.rows.length === 16, `행 16 (실제 ${B.rows.length})`);
   const seq1 = B.rows.filter(o => o.seq === '1').length;
-  is(seq1 === 5, `대표 줄(seq=1)이 사건 수와 같다 — 5 (실제 ${seq1})`);
+  is(seq1 === 8, `대표 줄(seq=1)이 사건 수와 같다 — 8 (실제 ${seq1})`);
   const cnt = B.rows.filter(o => o.cnt).length;
-  is(cnt === 4, `집계 대상 4건 — 둘 다 External 인 한 세트만 빠진다 (실제 ${cnt})`);
+  is(cnt === 7, `집계 대상 7건 — 둘 다 External 인 한 세트만 빠진다 (실제 ${cnt})`);
   /* ⚠ 파일 순서가 자료가 되면 안 된다. 혼재 세트에서 외부가 먼저 적혔든 GST 가 먼저
      적혔든 «그 사건은 GST 책임이 있다» — 대표 줄이 GST 여야 한다. */
   const mixed = B.rows.filter(o => (o.grp === '3' || o.grp === '4') && o.seq === '1');
@@ -114,8 +124,8 @@ const B = GST.ALARM.build(rows, 'abp2', 'OS');
   is(B.rows.filter(o => o.grp === '2' && o.cnt).length === 0, '둘 다 External 인 세트는 한 건도 안 센다');
   const byM = {}; B.rows.filter(o => o.cnt).forEach(o => byM[o.fmonth] = (byM[o.fmonth] || 0) + 1);
   /* 6월 2건 — 세트1(둘 다 GST)과 세트3(혼재·GST 대표). 세트2 는 둘 다 External 이라 0. */
-  is(JSON.stringify(byM) === JSON.stringify({'2026-06':2,'2026-07':1,'2026-08':1}),
-     `월별 2·1·1 (실제 ${JSON.stringify(byM)})`);
+  is(JSON.stringify(byM) === JSON.stringify({'2026-06':2,'2026-07':1,'2026-08':4}),
+     `월별 2·1·4 (실제 ${JSON.stringify(byM)})`);
 }
 
 console.log('\n[4] 국내 H 의 Seq 는 손대지 않는다 (제3원칙 — 국내 숫자가 움직이면 사고다)');
@@ -201,14 +211,14 @@ console.log('\n[8] 주간현황 — 원장이 켜지면 크로스탭은 꺼진�
 
   /* 원장 표 모양 — csvTableRows 의 계약(머리글 첫 행인 2차원 배열) */
   const LED_H = ['src_row','sn_key','sn','occur_date','fmonth','fweek','cnt','site','line',
-                 'atype','ctype','alarm','cause','action','phenom','op','inout','incl','seq','grp'];
+                 'atype','ctype','ctype2','alarm','cause','action','phenom','op','inout','incl','seq','grp'];
   const ledger = (which) => {
     const out = [LED_H]; let sr = 0;
     if (which !== 'kr') B.rows.forEach(o => out.push([sr++, o.sn_key, o.sn, o.occur_date, o.fmonth,
-      o.fweek, String(o.cnt), o.site||'', o.line||'', o.atype||'', o.ctype||'', o.alarm||'',
+      o.fweek, String(o.cnt), o.site||'', o.line||'', o.atype||'', o.ctype||'', o.ctype2||'', o.alarm||'',
       o.cause||'', o.action||'', o.phenom||'', o.op, o.inout||'', '', o.seq||'', o.grp||'']));
     if (which !== 'os') ['2026-06-05','2026-07-06','2026-08-07'].forEach((d,i) => out.push([sr++,
-      'ZZZ'+i, 'ZZZ-'+i, d, d.slice(0,7), '', 'true', 'H1', '11', 'P', 'C', '국내알람'+i,
+      'ZZZ'+i, 'ZZZ-'+i, d, d.slice(0,7), '', 'true', 'H1', '11', 'P', 'C', '', '국내알람'+i,
       '국내원인'+i, '국내조치'+i, '국내현상'+i, 'H운영', '내부', '', '', '']));
     return out;
   };
@@ -262,6 +272,8 @@ console.log('\n[8] 주간현황 — 원장이 켜지면 크로스탭은 꺼진�
         etc: (document.getElementById('top3Etc')||{}).textContent || '' };
     });
     const base = await get();
+    const grid = await fr.evaluate(() => { const g = chartToGrid('cFt');
+      return { tsv: gridToTSV(g), html: gridToRichHTML(g, '제목') }; });
     const tops = {};
     for (const tv of ['all','alarm','abp']) {
       await fr.evaluate(v => setTopView(v), tv);
@@ -272,7 +284,7 @@ console.log('\n[8] 주간현황 — 원장이 켜지면 크로스탭은 꺼진�
         etc: (document.getElementById('top3Etc')||{}).textContent || '' }));
     }
     await browser.close();
-    return { base, tops, errs };
+    return { base, tops, grid, errs };
   };
 
   const OS  = await run('os');     // 해외만 올라간 상태
@@ -282,8 +294,8 @@ console.log('\n[8] 주간현황 — 원장이 켜지면 크로스탭은 꺼진�
   const abpOf = r => (r.base.ds['All By-Pass'] || []).map(Number);
   is(JSON.stringify(abpOf(NONE)) === JSON.stringify([9,9,9]),
      `원장이 없으면 크로스탭 그대로 9·9·9 (실제 ${JSON.stringify(abpOf(NONE))})`);
-  is(JSON.stringify(abpOf(OS)) === JSON.stringify([2,1,1]),
-     `해외 원장이 켜지면 원장 기준 2·1·1 — 크로스탭 9 를 «더하지» 않는다 (실제 ${JSON.stringify(abpOf(OS))})`);
+  is(JSON.stringify(abpOf(OS)) === JSON.stringify([2,1,4]),
+     `해외 원장이 켜지면 원장 기준 2·1·4 — 크로스탭 9 를 «더하지» 않는다 (실제 ${JSON.stringify(abpOf(OS))})`);
   is(JSON.stringify(abpOf(KR)) === JSON.stringify([10,10,10]),
      `국내만 올라가면 해외는 크로스탭(9) 그대로 + 국내 원장(1) = 10 (실제 ${JSON.stringify(abpOf(KR))})`);
   const alOf = r => (r.base.ds['Alarm(BM)'] || []).map(Number);
@@ -295,7 +307,7 @@ console.log('\n[8] 주간현황 — 원장이 켜지면 크로스탭은 꺼진�
   const nOf = o => rowsOf(o).reduce((a,r) => a + (+r[2] || 0), 0);
   is(rowsOf(OS.tops.abp).every(r => /Alarm-Sample/.test(r[1])),
      `「올바만」은 올바 원장 행만 낸다 (실제 ${rowsOf(OS.tops.abp).map(r=>r[1]).join(' · ')||'없음'})`);
-  is(nOf(OS.tops.abp) === 1, `8월 올바 1건 (실제 ${nOf(OS.tops.abp)})`);
+  is(nOf(OS.tops.abp) === 4, `8월 올바 4건 (실제 ${nOf(OS.tops.abp)})`);
   is(/All By-Pass 만 기준/.test(OS.tops.abp.etc), '어느 계통을 보고 있는지 노트가 적는다');
   is(!rowsOf(OS.tops.alarm).some(r => /Alarm-Sample/.test(r[1])),
      '「Alarm만」에는 올바 행이 안 섞인다');
@@ -309,9 +321,77 @@ console.log('\n[8] 주간현황 — 원장이 켜지면 크로스탭은 꺼진�
   is(!/집계표\(크로스탭\)/.test(NONE.tops.alarm.etc),
      '「Alarm만」에는 그 안내를 적지 않는다 — 그 화면은 올바를 안 센다');
 
+  /* ══════════════════════════════════════════════════════════════
+     [10] 원인·조치는 «코드 열»을 쓴다 (사용자 지시) — 그리고 다시 분류하지 않는다
+     해외 시트는 원인·조치를 이미 코드로 분류해 뒀다(원인 유형(코드)·조치 유형(코드)).
+     ⚠ 그 값을 GST.causeMap 에 다시 태우면 «이미 된 분류»를 또 분류한다. 실측으로
+       확인했다 — 아홉 코드 중 여덟이 이름을 잃고, 「고객 조작(C6)」과 「고객 요청(C8)」이
+       한 덩어리(§customer)로 접힌다. 서로 다른 원인이 한 줄이 되는 것은 순위표에서
+       가장 나쁜 실패다.
+     ══════════════════════════════════════════════════════════════ */
+  console.log('\n[10] TOP3 의 원인·조치가 «코드 열» 그대로인가 (사용자 지시)');
+  {
+    const R = rowsOf(OS.tops.abp);
+    const causes = R.map(r => r[3]), acts = R.map(r => r[4]);
+    is(causes.some(v => /\(C6\)/.test(v)) || causes.some(v => /\(C8\)/.test(v)),
+       `원인 칸에 코드가 그대로 뜬다 (실제 ${causes.join(' / ') || '없음'})`);
+    is(acts.some(v => /\(A1\)|\(A2\)/.test(v)),
+       `조치 칸도 코드 열이다 (실제 ${acts.join(' / ') || '없음'})`);
+    /* 두 코드가 «한 줄»로 접히지 않았는가 — causeMap 을 태우면 둘 다 「고객사 관련」이 된다. */
+    is(!causes.some(v => /고객사 관련/.test(v)),
+       'C6·C8 이 causeMap 으로 한 덩어리(「고객사 관련」)가 되지 않는다');
+    const flat = causes.join(' ');
+    is(/\(C6\)/.test(flat) && /\(C8\)/.test(flat),
+       `서로 다른 두 코드가 «따로» 남는다 (실제 ${flat})`);
+    /* 국내는 지금까지대로 «자유 서술»이다(v94 사용자 확정: 분류 열로 갈음하지 않는다).
+       ⚠ 「코드 꼴이 아니다」만 보면 부족하다 — 국내에도 분류 열(유형)이 있어서, 그것으로
+         갈음해 버려도 코드 «꼴»은 아니기 때문에 통과해 버린다. 실제로 그렇게 한 번
+         빠져나갔다. 그래서 «서술 원문이 그대로 있는가»를 본다. */
+    const krCause = rowsOf(KR.tops.abp).map(r => r[3]).join(' ');
+    is(/국내원인/.test(krCause),
+       `국내 원장은 지금까지대로 서술 원문 그대로다 (실제 ${krCause || '없음'})`);
+    is(!/\([A-Z]\d\)/.test(krCause), '국내 원인 칸에 코드가 끼어들지 않는다');
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     [11] 차트 «데이터» 복사 — 그림이 아니라 표 (사용자 요청)
+     ⚠ 웹 페이지는 클립보드에 파워포인트 «차트 개체»를 올릴 수 없다(브라우저가 내주는
+       형식이 text/plain·text/html·image/png 뿐이다). 그래서 할 수 있는 것을 한다 —
+       PPT 에 붙이면 편집 가능한 표, 엑셀에 붙이면 표(→ 삽입·차트)가 되는 값을 낸다.
+     ══════════════════════════════════════════════════════════════ */
+  console.log('\n[11] 차트 데이터가 «표»로 복사되는가 (그림이 아니라)');
+  {
+    const g = OS.grid || {};
+    const lines = String(g.tsv || '').split('\n');
+    is(lines.length >= 2, `머리글 + 시리즈 행이 있다 (실제 ${lines.length}줄)`);
+    is(lines[0].startsWith('\t'), '첫 칸은 비우고 그 뒤가 구간 라벨이다 (엑셀이 그대로 표로 받는다)');
+    is(/Alarm\(BM\)/.test(g.tsv || ''), '시리즈 이름이 행 머리로 들어간다');
+    is(/All By-Pass/.test(g.tsv || ''), '올바이패스 계열도 실린다');
+    const cols = lines[0].split('\t').length;
+    is(lines.slice(1).every(l => l.split('\t').length === cols),
+       `모든 행의 칸 수가 같다 — 어긋나면 엑셀에서 열이 밀린다 (머리 ${cols}칸)`);
+    is(/<table/.test(g.html || '') && /border-collapse/.test(g.html || ''),
+       'text/html 도 같이 낸다 (PPT 는 이걸 «편집 가능한 표»로 받는다)');
+    is(!/<script|javascript:/i.test(g.html || ''), '복사되는 HTML 에 스크립트가 섞이지 않는다');
+  }
+
   const allErrs = [].concat(OS.errs, NONE.errs, KR.errs);
   is(!allErrs.length, 'JS 에러 0건' + (allErrs.length ? ' → ' + allErrs[0] : ''));
   srv.close();
+}
+
+console.log('\n[12] 자유 서술을 «버리지» 않는다 — 코드는 어디에 몰리나, 서술은 무슨 일이 있었나');
+{
+  const R = fs.readFileSync(ROOT + '/report/index.html', 'utf8');
+  is(/causeRaw:coded\?x\.cause:''/.test(R) && /actionRaw:coded\?x\.action:''/.test(R),
+     '코드로 바꾼 자리의 원문을 causeRaw·actionRaw 로 남긴다');
+  is(/two\(x\.cause,x\.causeRaw\)/.test(R) && /two\(x\.action,x\.actionRaw\)/.test(R),
+     '드릴 상세가 «코드 + 서술»을 같이 보여준다 (코드만 남기면 정비 기록이 사라진다)');
+  /* 코드를 다시 분류하지 않는 규율이 두 자리에 다 있어야 한다 — TOP3 와 드릴 요약. */
+  is(/pairs\.filter\(p=>!p\.c\)\.map\(p=>p\.v\)/.test(R),
+     'TOP3 는 코드가 아닌 값만 causeMap 에 태운다');
+  is(/rows\.filter\(x=>!x\.coded\)\.map\(_dk\)/.test(R),
+     '드릴 요약도 같은 규율이다 (한쪽만 고치면 같은 화면의 두 표가 갈린다)');
 }
 
 console.log(fail ? `\n❌ t-abp ${pass}/${pass + fail}` : `\n✅ t-abp ${pass}/${pass + fail}`);
