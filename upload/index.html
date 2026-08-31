@@ -109,6 +109,22 @@ const TABLES = [
   { key:'abp2',  label:'국내 올바이패스 (CS 알람관리 .xlsx) — 두 반쪽 중 ②', table:'sheet_allbypass',
     kind:'xlsx', win:'occurDate', sheets:/^([KPH])운영[_\s]*ALL[_\s]*BYPASS$/i, hint:'○운영_ALLBYPASS',
     pair:'sheet_alarm', pairLabel:'국내 알람' },
+  /* 해외(대만) All By-Pass — 행 단위 원장 (v133 · 사용자 제공 양식).
+     지금까지 해외는 ABP 크로스탭 시트로만 셌다. 크로스탭은 «건수»만 있고 «행»이 없어서
+     막대를 눌러도 세부내역이 안 나온다(CLAUDE.md v125). 이 리스트가 그 통로를 연다.
+
+     ⚠ 국내 올바이패스와 «같은 표»에 들어간다. 스키마가 그대로 맞물리고 집계 판정이
+       한 곳이 되기 때문이다(제2원칙). 규칙은 합치지 않는다 — 구분은 op 로 갈린다.
+     ⚠ 그래서 **「통째 교체」로 올리면 국내 올바이패스가 통째로 사라진다.**
+       기본을 「겹치는 구간만 교체」로 둔다 — 그 조건은 날짜 × op 이고, 해외 파일의 op 는
+       'GST TAIWAN SCRUBBER' 라 국내 행(K·P·H운영)은 한 줄도 안 지워진다.
+     ⚠ 시트 이름이 정해져 있지 않다(사용자 파일은 'Sheet1'). 그래서 이름으로 고르지 않고
+       «올바이패스 양식으로 읽히는 시트»를 고른다 — SPEC 의 힌트가 그 판정을 한다. */
+  { key:'abp2', label:'해외 올바이패스 리스트 (엑셀 · 행 단위)', table:'sheet_allbypass',
+    kind:'xlsx', win:'occurDate', tag:'OS', defMode:'win',
+    hint:'올바이패스 양식(Group·S/N·Work Date …)으로 읽히는 시트',
+    note:'국내 올바이패스와 같은 표를 씁니다 — <b>「통째 교체」로 올리면 국내 자료가 사라집니다.</b> '
+        +'기본값 「겹치는 구간만 교체」를 그대로 쓰세요(해외 행만 갈아끼웁니다).' },
 ];
 const $=id=>document.getElementById(id);
 TABLES.forEach((t,i)=>{ $('tsel').insertAdjacentHTML('beforeend','<option value="'+i+'">'+t.label+'</option>'); });
@@ -279,8 +295,20 @@ window.checkFile=async function(){
       const XLSX=await xlsxLib();
       const wb=XLSX.read(new Uint8Array(await f.arrayBuffer()),{type:'array',cellDates:true});
       const hit=[];
-      wb.SheetNames.forEach(function(n){ const mm=t.sheets.exec(String(n).trim()); if(mm)hit.push([n,mm[1].toUpperCase()]); });
-      if(!hit.length)throw new Error('워크북에 «'+t.hint+'» 이름의 시트가 없습니다'
+      if(t.sheets){
+        wb.SheetNames.forEach(function(n){ const mm=t.sheets.exec(String(n).trim()); if(mm)hit.push([n,mm[1].toUpperCase()]); });
+      }else{
+        /* 이름 규칙이 없는 파일(해외 올바이패스는 시트가 'Sheet1' 이다) — 이름 대신
+           «그 양식으로 읽히는가»로 고른다. SPEC 의 힌트가 헤더 행을 찾으면 그 시트다.
+           ⚠ 이름으로 못 고른다고 «첫 시트»를 집으면 안 된다 — 설명 시트가 앞에 있는
+             워크북에서 조용히 0행이 올라간다. 판정은 SPEC 이 한다(제1원칙). */
+        const S=GST.SM.SPEC[t.key==='abp2'?'abp2':'alarm'];
+        wb.SheetNames.forEach(function(n){
+          const rr=sheetRows(XLSX, wb.Sheets[n]);
+          if(GST.SM.headerRow(rr, S.hints, S.scan)>=0) hit.push([n, t.tag||'OS']);
+        });
+      }
+      if(!hit.length)throw new Error('워크북에 «'+t.hint+'» 시트가 없습니다'
         +'\n(이 파일에 있는 시트: '+wb.SheetNames.join(', ')+')');
       out=[]; const per=[]; let skipTot=0;
       for(const pair of hit){
@@ -297,8 +325,17 @@ window.checkFile=async function(){
         +'줄은 건너뛰었습니다 (합계·메모 줄)</span>');
       const cn=out.filter(function(o){return o.cnt;}).length;
       const nd=out.filter(function(o){return !o.occur_date;}).length;
-      msgs.push('집계 대상 <b>'+cn.toLocaleString()+'</b>행 / 전체 '+out.length.toLocaleString()
-        +' — 판정은 시트가 적어 둔 내/외·포함 열을 그대로 따르고, 한 사건이 여러 줄인 것은 첫 줄만 셉니다'
+      /* 「한 사건이 여러 줄」인 파일은 «행 수»만 보면 사람이 두 배로 읽는다. Group 이 있으면
+         사건 수도 같이 적는다 — 화면의 막대와 견줄 수 있는 숫자가 그쪽이다.
+         ⚠ 대표 줄은 «파일의 첫 줄»이 아니라 «우리 책임(GST·내부)인 첫 줄»이다. 파일 순서는
+           자료가 아니므로, 한쪽 챔버가 외부·다른 쪽이 GST 인 사건도 세어진다. */
+      const gset={}; out.forEach(function(o){ const g=String(o.grp==null?'':o.grp).trim(); if(g)gset[g]=1; });
+      const gN=Object.keys(gset).length;
+      msgs.push('집계 대상 <b>'+cn.toLocaleString()+'</b>'+(gN?'건':'행')
+        +' / 전체 '+out.length.toLocaleString()+'행'
+        +(gN?' (사건 '+gN.toLocaleString()+'개 — 한 사건이 두 챔버 두 줄입니다)':'')
+        +' — 판정은 시트가 적어 둔 내/외·담당 열을 그대로 따르고, 한 사건이 여러 줄이면'
+        +' «우리 책임인 줄»을 대표로 한 번만 셉니다'
         +(nd?' · <span class="warn">발생일을 못 읽은 '+nd.toLocaleString()+'행은 시계열에서 빠집니다</span>':''));
       const nj=out.filter(function(o){return !o.sn_key;}).length;
       if(nj)msgs.push('<span class="warn">ℹ 설비 S/N 이 없는 '+nj.toLocaleString()
@@ -496,6 +533,12 @@ function syncMode(){
     winOpt.textContent=t.win?'겹치는 구간만 교체 — 이 파일이 덮는 사업부 × 기간만 갈아끼웁니다'
                             :'겹치는 구간만 교체 — (이 표는 날짜 구간이 없어 불가)'; }
   if(!t.win&&sel.value==='win')sel.value='full';
+  /* 기본 모드를 표가 정한다. 해외 올바이패스는 국내와 «같은 표»를 쓰므로 통째 교체가
+     남의 자료를 지운다 — 사람이 매번 기억해야 하는 규약은 언젠가 깨진다(v121 의 교훈).
+     대상을 바꿀 때 한 번만 맞춰 준다(그 뒤 사람이 고르면 그 선택을 존중한다). */
+  if(t.defMode && sel.dataset.forT!==String($('tsel').value)){
+    sel.value=t.defMode; sel.dataset.forT=String($('tsel').value); }
+  else if(!t.defMode){ sel.dataset.forT=String($('tsel').value); }
   const H={ full:'표를 통째로 비우고 이 파일로 바꿉니다. «파일이 곧 전체 상태»입니다.',
             win:'파일의 날짜 범위 × 파일에 든 사업부에 해당하는 기존 행만 지우고 파일을 넣습니다. 중복이 생기지 않습니다.',
             add:'⚠ 아무것도 지우지 않습니다. 기존 표에 이미 있는 실적이 파일에도 있으면 <b>그만큼 이중 계산</b>됩니다.' };

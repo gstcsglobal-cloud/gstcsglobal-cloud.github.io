@@ -296,6 +296,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   </div>
   <div class="tablecard" style="position:relative">
   <h3 data-i="tbl_top">고장 원인 TOP 3</h3><div class="mini-per" data-ch="top3" style="top:16px"></div>
+  <!-- ⚠ h3·card-note «안»에 두면 안 된다: applyLang 과 setNote 가 textContent 로 덮는다(v131). -->
+  <div class="ft-view"><select id="topView" onchange="setTopView(this.value)"></select></div>
   <div class="tbl-wrap">
   <table>
     <thead><tr><th>#</th><th data-i="th_al">Alarm Message</th><th data-i="th_cnt" style="white-space:nowrap">건수</th><th data-i="th_cause">원인</th><th data-i="th_act">조치</th></tr></thead>
@@ -375,7 +377,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(130);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols
+GST.needVer&&GST.needVer(131);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -696,13 +698,25 @@ let FTVIEW='all';
 try{const fv=localStorage.getItem('gst_rpt_ftview'); if(fv==='alarm'||fv==='abp'||fv==='all')FTVIEW=fv;}catch(e){}
 window.setFtView=function(v){ FTVIEW=(v==='alarm'||v==='abp')?v:'all';
   try{localStorage.setItem('gst_rpt_ftview',FTVIEW);}catch(e){} render(); };
+/* 고장 원인 TOP3 도 같은 세 계통을 고른다 (v133 · 사용자 요청).
+   ⚠ 상태를 FTVIEW 와 «공유하지 않는다». 차트는 추이를, 표는 원인을 보는 자리라
+     사람이 서로 다른 계통을 놓고 견주고 싶어 한다(차트는 전체, 표는 올바만처럼).
+     한 변수로 묶으면 한쪽을 바꿀 때마다 다른 쪽이 따라 움직여 그게 «고장»으로 읽힌다.
+   ⚠ 값을 만드는 «판정»은 그대로 한 벌이다 — 아래 rowsOf 가 계통마다 무엇을 담을지만
+     고르고, 무엇이 Alarm 이고 무엇이 올바인가는 차트가 쓰는 그 배열들 그대로다. */
+let TOPVIEW='all';
+try{const tv=localStorage.getItem('gst_rpt_topview'); if(tv==='alarm'||tv==='abp'||tv==='all')TOPVIEW=tv;}catch(e){}
+window.setTopView=function(v){ TOPVIEW=(v==='alarm'||v==='abp')?v:'all';
+  try{localStorage.setItem('gst_rpt_topview',TOPVIEW);}catch(e){} render(); };
 /* 옵션 글자는 언어를 따라간다 — select 는 data-i 로 못 덮으므로(자식이 option 이다) 직접 그린다. */
-function renderFtView(){
-  const s=document.getElementById('ftView'); if(!s)return;
+function fillView(id,cur){
+  const s=document.getElementById(id); if(!s)return;
   s.innerHTML=[['all',t('ftv_all')],['alarm',t('ftv_alarm')],['abp',t('ftv_abp')]]
     .map(o=>'<option value="'+o[0]+'">'+o[1]+'</option>').join('');
-  s.value=FTVIEW;
+  s.value=cur;
 }
+function renderFtView(){ fillView('ftView',FTVIEW); }
+function renderTopView(){ fillView('topView',TOPVIEW); }
 // 설치현황 트렌드풍 꺾은선 (부드러운 곡선 + 링 포인트)
 function lineDs(label,data,color,extra){
   const n=data.length, q=!!(GST.sty()||{}).qbr;   // QBR 양식 스타일: 직선 + 균일 원형 마커(엑셀 차트와 동일)
@@ -729,7 +743,7 @@ function t(k){const d=T[LANG]||T.ko; return (k in d)?d[k]:k;}
 function applyLang(){
   document.querySelectorAll('[data-i]').forEach(el=>{if(el.hasAttribute('data-lock'))return;el.textContent=t(el.getAttribute('data-i'));});
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
-  try{ renderFtView(); }catch(e){}
+  try{ renderFtView(); renderTopView(); }catch(e){}
 }
 function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(WK.length||HR.length)render();document.getElementById('langMenu').classList.remove('open');}
 function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
@@ -1558,7 +1572,28 @@ function render(){
     return GST.ALARM.inner(x);
   };
   const KRAf=KRA.filter(x=>krPick(x)&&krDom(x)&&krOk(x)), KRBf=KRB.filter(x=>krPick(x)&&krDom(x)&&krOk(x));
-  const _krOS=KRA.filter(x=>krPick(x)&&!krDom(x)).length+KRB.filter(x=>krPick(x)&&!krDom(x)).length;
+  /* 해외 올바이패스 원장 (v133 · 사용자 제공 양식).
+     지금까지 이 행들은 «국내 원장에 섞여 들어온 해외 설비»로 보고 버렸다 — ABP 크로스탭과
+     이중 계산이 되기 때문이다. 사용자가 해외 리스트를 따로 만들면서 뜻이 뒤집혔다:
+     이제 이 행들이 «해외의 정본»이다. 그래도 크로스탭과 «동시에» 세면 안 된다 —
+     아래 OS_ABP_ON 이 둘 중 하나만 고른다. */
+  const OSBf=KRB.filter(x=>krPick(x)&&!krDom(x)&&krOk(x));
+  /* 원장이 켜졌는지는 «필터 전»으로 판정한다. 필터로 해외가 다 빠진 상태에서 «원장이
+     비었다»고 읽으면 크로스탭으로 되돌아가, 국내만 고른 화면에 대만 숫자가 선다. */
+  const OS_ABP_ON=KRB.some(x=>!krDom(x));
+  /* 해외 «알람»은 아직 원장이 없다(올바이패스만 받았다). 알람 원장에 해외 설비 행이
+     섞여 들어오면 그것은 여전히 이중 계산이므로 빼고, 몇 건을 뺐는지 밝힌다. */
+  const _krOS=KRA.filter(x=>krPick(x)&&!krDom(x)).length;
+  /* All By-Pass 건수 — 차트·브리핑·PPT 가 «이 함수 하나»를 쓴다.
+     예전에는 같은 식이 세 곳에 복사돼 있었다. 해외가 크로스탭에서 원장으로 갈아타는
+     지금 같은 변화에서, 세 벌이면 반드시 한 곳이 남아 화면과 PPT 가 다른 말을 한다
+     (제2원칙 — v100 의 법인 상자와 같은 자리). */
+  const abpOf=(uu,key,label)=>{
+    const src=ABP[uu]||{};
+    const ck=(uu==='m')?String(parseInt((key||'').slice(5),10)):label;
+    return (OS_ABP_ON ? krN(OSBf,'ob',uu,key) : abpSel(src[ck]))
+         + krN(KRBf,'b',uu,key);
+  };
   /* 한 행이 어느 구간에 들어가나. 발생일 모드에서는 «화면의 주차 규약»(isoW = 엑셀
      WEEKNUM)으로 다시 센다 — 원장만 ISO 주차를 쓰면 같은 막대에서 대만과 한 주가
      어긋난다. 발생일이 없는 행은 어느 구간에도 못 들어간다(조용히 다른 달로 보내지 않는다). */
@@ -2285,10 +2320,7 @@ function render(){
     const {P,labels,u}=PU('cFt');
     // Alarm = BM 건수만 (CBM 제외) · All By-Pass = 별도 시트 · Total = Alarm + All By-Pass
     const alarm=P.map(p=>alarmAt(u,p.key));
-    const abpAt=p=>{ const src=ABP[u]||{};
-      const key=(u==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
-      return abpSel(src[key]) + krN(KRBf,'b',u,p.key);   // 대만 ABP 시트 + 국내 올바이패스 원장
-    };
+    const abpAt=p=>abpOf(u,p.key,p.label);
     const abp=P.map(abpAt);
     const tot=alarm.map((v,i)=>v+abp[i]);
     // 고장은 줄어드는 게 좋은 지표 · 라인별로 어디서 늘었는지 분해
@@ -2372,9 +2404,7 @@ function render(){
     ['w','m'].forEach(uu=>{
       const _pp={P:periods(12,asOf,uu)}; _pp.labels=_pp.P.map(x=>x.label);
       const _al=_pp.P.map(p=>alarmAt(uu,p.key));
-      const _ab=_pp.P.map(p=>{const src=ABP[uu]||{};
-        const key=(uu==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
-        return abpSel(src[key]) + krN(KRBf,'b',uu,p.key);});
+      const _ab=_pp.P.map(p=>abpOf(uu,p.key,p.label));
       window._PPT.ft[uu]={labels:_pp.labels,alarm:_al,abp:_ab,tot:_al.map((v,i)=>v+_ab[i])};
     });
     // TOP3 표
@@ -2387,14 +2417,34 @@ function render(){
       _tSt=new Date(Date.UTC(_yy,0,1));
       let _ye=new Date(Date.UTC(_yy,11,31)); if(_ye>_rt)_ye=_rt;   // 과거연도=연말까지·올해=오늘까지
       _tEn=_ye; _tLab=t('ytd').replace('{y}',_yy); }
-    const f30=wkBM(_tSt,_tEn).concat(krIn(_tSt,_tEn).map(krAsWk));
+    /* 표시 계통 (v133 · 사용자 요청) — Alarm 차트의 드롭다운과 «같은 세 계통»이다.
+       Alarm 행은 지금까지대로 수선실적 BM + 국내 알람 원장,
+       올바 행은 올바이패스 원장(국내 + 해외)이다.
+       ⚠ 「무엇이 Alarm 이고 무엇이 올바인가」를 여기서 새로 정하지 않는다 —
+         차트가 쓰는 그 배열(KRAf·KRBf·OSBf)을 그대로 기간으로 자른다(제2원칙). */
+    const TV=(TOPVIEW==='alarm'||TOPVIEW==='abp')?TOPVIEW:'all';
+    const _tA=_tSt, _tB=_tEn, _fa=fmtD(_tA), _fb=fmtD(_tB);
+    const _inRange=x=>x.d&&x.d>=_fa&&x.d<=_fb;
+    const _alRows=wkBM(_tSt,_tEn).concat(krIn(_tSt,_tEn).map(krAsWk));
+    const _abRows=KRBf.filter(_inRange).concat(OS_ABP_ON?OSBf.filter(_inRange):[]).map(krAsWk);
+    const f30=TV==='alarm'?_alRows:TV==='abp'?_abRows:_alRows.concat(_abRows);
+    /* ⚠ 해외 All By-Pass 는 원장을 올리기 전까지 «행이 없다»(ABP 시트가 크로스탭이다).
+       그때 「올바만」을 고르면 국내만 나오는데, 그 사실을 안 적으면 사람은 «목록이 잘렸나»로
+       읽는다 — v125 에 드릴다운에서 겪은 것과 같은 자리다.
+       ⚠ 여기서는 «몇 건인지»를 못 적는다. 크로스탭의 열쇠에는 연도가 없어서(월 1~12 ·
+         주 W01~W53) 임의 구간의 합을 낼 수 없다 — 억지로 세면 다른 해의 값이 섞인다.
+         모르는 것을 아는 척하지 않고, 무엇이 빠졌는지와 무엇을 하면 되는지만 적는다. */
+    const _abpTwGap=(TV!=='alarm') && !OS_ABP_ON;
     /* 국내 원장에는 Alarm Message 가 반드시 있다(실측 P·H 공란 0 · K 는 「알람」 열로 폴백).
        그런데도 공란이 나오면 시트가 덜 채워진 게 아니라 **적재가 덜 된 것**이다 —
        그 두 가지를 화면이 구분해 주지 않으면 사용자가 시트를 헛되이 다시 뒤진다. */
     const _krBlank=KR_ON?krIn(_tSt,_tEn).filter(x=>!krMsg(x)).length:0;
     const _krN=KR_ON?krIn(_tSt,_tEn).length:0;
-    const _krWarn=_krBlank? ' · ⚠ 국내 원장 '+_krN.toLocaleString()+'건 중 '+_krBlank.toLocaleString()
+    let _krWarn=_krBlank? ' · ⚠ 국내 원장 '+_krN.toLocaleString()+'건 중 '+_krBlank.toLocaleString()
       +'건에 Alarm Message 가 없습니다 — 시트가 아니라 적재 문제입니다(/upload/ 재업로드 · core.js 버전 확인)':'';
+    if(TV!=='all')_krWarn=' · '+(TV==='alarm'?t('ftv_alarm'):t('ftv_abp'))+' 기준'+_krWarn;
+    if(_abpTwGap)_krWarn+=' · ⚠ 해외 All By-Pass 는 ABP 시트가 집계표(크로스탭)라 이 표에 안 잡힙니다'
+      +' — /upload/ 에서 「해외 올바이패스 리스트」를 올리면 원인별로 나옵니다';
     // 대분류 = 알람유형(Z열). 기재가 없으면 현상(AA열)으로 대체 표기한다.
     const _alOf=x=>GST.nfw((x.alarm||'').trim())||GST.nfw((x.phenom||'').trim());
     const byAl={}; let noAl=0;
@@ -2402,6 +2452,7 @@ function render(){
       (byAl[k]=byAl[k]||{label:k,arr:[]}).arr.push(x); });
     const top=Object.values(byAl).sort((a,b)=>b.arr.length-a.arr.length);
     { const _th=document.querySelector('[data-i="tbl_top"]'); if(_th)_th.textContent=t('tbl_top')+' ('+_tLab+')'; }
+    renderTopView();
     const body=document.getElementById('top3Body');
     // 알람유형 그룹 안에서 한 열(원인 AB / 조치 AC)의 값 분포를 "값 (건수)"로 요약한다.
     // 원인은 표기가 제각각이라 GST.causeMap으로 핵심 키워드 묶음을 만들고, 조치는 원문 그대로 센다.
@@ -2793,11 +2844,14 @@ function render(){
       없어 세부내역이 알람으로 되돌아간다 — 사용자가 「All By-Pass 를 눌렀는데 왜 전체가
       나오냐」고 물은 자리다.
       ⚠ 대만 ABP 는 크로스탭(집계)이라 «행이 없다». 건수만 넘기고, 목록에는 그 사실을 적는다 —
-        없는 것을 알람 행으로 채우면 그게 거짓말이다. */
+        없는 것을 알람 행으로 채우면 그게 거짓말이다.
+      ⚠ v133 부터 해외 원장이 올라와 있으면 이 자리가 «비는 것이 맞다» — 그때는 진짜 행이
+        krABP 로 간다. 둘을 동시에 넘기면 목록은 원장인데 「행 목록이 없습니다」 안내가
+        같이 떠서, 화면이 자기 자신과 다른 말을 한다. */
    const _abpTW={}; let _ftU=PERIOD; try{ _ftU=PU('cFt').u; PU('cFt').P.forEach(function(pp){
      const src=ABP[_ftU]||{};
      const key=(_ftU==='m')?String(parseInt((pp.key||'').slice(5),10)):pp.label;
-     _abpTW[pp.key]=abpSel(src[key]); }); }catch(e){}
+     _abpTW[pp.key]=OS_ABP_ON?0:abpSel(src[key]); }); }catch(e){}
    /* ⚠ 원장 행은 «차트가 쓰는 그 열쇠»로 골라야 한다. 드릴이 발생일(wd)로만 자르면,
       화면이 «시트 정산월» 기준일 때 막대와 목록이 갈린다 — 실측 H3 8월은 정산월 96 ↔
       발생일 31 로 세 배 차이다(CLAUDE.md v92). 그래서 행마다 버킷 열쇠를 미리 달아 둔다. */
@@ -2805,7 +2859,9 @@ function render(){
    window._DRILL={fWK,fHR,fLV,headOn,SITES,grpKey,grpRaw:_grpRaw,per,activeAt,
      hcBand:HC_BANDS, lbl:{alarm:t('ft_alarm'),abp:t('ft_abp'),tot:t('ft_tot')},
      krOn:KR_ON, krBM:KR_ON?_asW(KRAf):[],
-     krABP:_asW(KRBf), abpTW:_abpTW};}
+     /* 국내 + 해외 원장을 한 배열로 넘긴다 — 드릴은 «그 막대의 모집단»만 알면 되고,
+        구분은 이미 각 행의 region 에 실려 있다. 해외 원장이 없으면 국내만 실린다. */
+     krABP:_asW(KRBf).concat(OS_ABP_ON?_asW(OSBf):[]), abpTW:_abpTW};}
   // KPI 스파크라인 (최근 12구간 추세 · 계산 무관 표시용)
   try{ const SP=periods(12,asOf,PERIOD), wdv=(PERIOD==='m')?21:5;
     drawSpark('sp1',SP.map(p=>headOn(p.end)),'#3B82F6');
@@ -2856,12 +2912,10 @@ function render(){
       const np=bk('w',p.key).reduce((a,x)=>a+(isSvc(x)?x.manMin:0),0);
       pmW.push(r2q(pm/60/den));npW.push(r2q(np/60/den));htW.push(r2q((pm+np)/60/den));});
     // Alarm(BM)·All By-Pass — 슬라이드3: 가=주간, 나=월간 (cFt 차트와 동일 산식)
-    const abpOf=(uu,p)=>{const src=ABP[uu]||{};const key=(uu==='m')?String(parseInt((p.key||'').slice(5),10)):p.label;
-      return abpSel(src[key]) + krN(KRBf,'b',uu,p.key);};
     const alarmW=WPq.map(p=>alarmAt('w',p.key));
-    const abpW=WPq.map(p=>abpOf('w',p));
+    const abpW=WPq.map(p=>abpOf('w',p.key,p.label));
     const alarmM=MP.map(p=>alarmAt('m',p.key));
-    const abpM=MP.map(p=>abpOf('m',p));
+    const abpM=MP.map(p=>abpOf('m',p.key,p.label));
     // 입사·퇴사(라인별) — 슬라이드1 인력현황: 주간·사이트별 다이버징 스택 (0은 비워 라벨 생략)
     const GRAYS=['404040','595959','7F7F7F','A6A6A6','BFBFBF','D9D9D9'];   // 보고서 그림과 동일한 회색조
     const ioRq=fHR.filter(x=>x.onsite), nzq=a=>a.map(v=>v||null);

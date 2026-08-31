@@ -739,8 +739,15 @@ console.log('\n[15] 고장 차트 세부내역이 누른 데이터셋을 따르�
   is(!/x\.label===lbl\('ft_alarm'\);\}\)\|\|ds\[0\]/.test(R),
      '  브리핑이 Alarm 데이터셋을 못 찾으면 «아무거나» 집지 않는다 (ds[0] 폴백 금지)');
   /* select 는 data-i 로 못 덮는다(자식이 option 이다) — 언어 전환에서 굳지 않는지 */
-  is(/function renderFtView\(\)/.test(R) && /renderFtView\(\);\s*\}catch\(e\)\{\}/.test(R),
-     '  언어를 바꾸면 드롭다운 글자도 따라간다 (applyLang 에서 다시 그린다)');
+  /* v133 에 TOP3 표에도 같은 드롭다운이 생겼다 — 둘 다 다시 그려야 한다.
+     한쪽만 그리면 언어를 바꿨을 때 그 칸만 옛 글자로 굳는다. */
+  {
+    const fn = /function applyLang\(\)\{[\s\S]*?\n\}/.exec(R);
+    const body = fn ? fn[0] : '';
+    is(/function renderFtView\(\)/.test(R) && /function renderTopView\(\)/.test(R)
+       && /renderFtView\(\)/.test(body) && /renderTopView\(\)/.test(body),
+       '  언어를 바꾸면 드롭다운 «둘 다» 글자가 따라간다 (applyLang 에서 다시 그린다)');
+  }
   const T4 = ['ko','en','zh','ja'].every(() => true);
   is(T4 && (R.match(/ftv_all:/g) || []).length === 4
         && (R.match(/ftv_alarm:/g) || []).length === 4

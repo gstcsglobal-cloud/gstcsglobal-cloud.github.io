@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 130;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 131;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1346,26 +1346,55 @@ GST.SM.SPEC.alarm = { name:'국내 알람', scan:8,
     checker:['담당자','확인자']
   }};
 
-GST.SM.SPEC.abp2 = { name:'국내 올바이패스', scan:8,
+/* ⚠ 이 SPEC 은 이제 «국내 + 해외» 올바이패스를 함께 눕힌다 (v133 · 사용자 제공 양식).
+   해외(대만)는 지금까지 ABP 크로스탭 시트로만 셌는데, 그러면 «건수만 있고 행이 없어»
+   막대를 눌러도 세부내역이 안 나온다(CLAUDE.md v125 의 그 자리). 사용자가 행 단위
+   리스트를 만들어 주면서 그 통로가 열렸다.
+
+   ⚠ «합치는 것»은 스키마뿐이다 — 규칙이 아니다(제3원칙). 국내는 시트가 「내적/외적」을,
+     해외는 「담당(Responsible) = GST / External」을 적는다. 별칭 배열 한 곳에서 흡수하고
+     판정은 GST.ALARM.inner 한 곳이 한다. 사이트별·구분별 코드를 만들지 말 것(제2원칙).
+
+   ⚠ 해외 양식은 «한 사건이 두 줄»이다 — 올바이패스는 두 챔버가 모두 내려간 것이라
+     Left·Right 가 각각 한 줄이고, A열 Group 번호가 같으면 한 세트다(사용자 설명).
+     국내 H 의 All-ByPass Seq 1·2·3 과 같은 문제이고, 답도 같다 — 대표 줄 하나만 센다.
+     그 대표를 고르는 방법은 아래 build 의 주석을 볼 것. */
+GST.SM.SPEC.abp2 = { name:'올바이패스', scan:8,
   /* K 시트는 손으로 관리하는 별개 양식이라 P·H 와 공통 머리글이 하나도 없다.
-     그래서 힌트도 별칭으로 준다(둘 중 하나만 있으면 통과). */
-  hints:[['SEQP S/N','SEQP ID','S/N'], ['Occur Date','발생날짜','주차']],
+     그래서 힌트도 별칭으로 준다(둘 중 하나만 있으면 통과).
+     ⚠ 'Work Date' 를 빼면 해외 양식이 «헤더 행을 못 찾음»으로 통째로 거부된다. */
+  hints:[['SEQP S/N','SEQP ID','S/N'], ['Occur Date','발생날짜','주차','Work Date']],
   opt:['site','line','area','eqpId','chamber','model','maker','occurT','relTime','hold',
        'alarm','seq','real','inout','incl','atype','ctype','cause','action','phenom',
-       'srcMonth','srcWeek','srcYear','checker'],
+       'srcMonth','srcWeek','srcYear','checker',
+       /* 해외 양식에만 있는 열 — 국내 시트에는 없으므로 반드시 opt 다(v89 승격 규약).
+          안 넣으면 국내 워크북이 통째로 「열을 못 찾았습니다」로 거부된다. */
+       'grp','proc','subproc','ctype2','atype2','opRaw'],
   fields:{
-    site:'Site', line:['Line','라인'], area:'Area',
-    eqpId:['EQP ID','호기'], chamber:'Chamber ID',
+    site:['Site','단지'], line:['Line','라인'], area:'Area',
+    eqpId:['EQP ID','호기'], chamber:['Chamber ID','Chamber'],
     sn:['SEQP S/N','SEQP ID','S/N'],
     model:'SEQP Model', maker:'Maker',
-    occur:['Occur Date','발생날짜'], occurT:'Occur Time', relTime:'Release Time',
-    hold:['Holding Time','By pass 유지시간','유지시간'],
-    alarm:['ALARM COMMENT','Alarm Comment','All Bypass 발생 Alarm명'],
-    seq:'All-ByPass Seq', real:'진성/가성',
-    inout:['내/외','내적/외적','발생 구분'], incl:'발생 구분2',
-    atype:'알람구분', ctype:'유형',
-    cause:['발생사유','All Bypass 발생사유','알람 발생 사유','실제원인'],
-    action:'조치내용', phenom:'현상',
+    occur:['Occur Date','발생날짜','Work Date'],
+    occurT:['Occur Time','정지 시작(AV)'], relTime:['Release Time','정지 종료(AW)'],
+    hold:['Holding Time','By pass 유지시간','유지시간','유지시간(분, MTTR)'],
+    alarm:['ALARM COMMENT','Alarm Comment','All Bypass 발생 Alarm명','Alarm/Warning Msg'],
+    /* 한 사건의 여러 줄을 묶는 열. 국내 H 는 «몇 번째 줄인가»(Seq), 해외는 «어느 세트인가»
+       (Group) 로 적는다 — 뜻이 달라 한 필드에 합칠 수 없다. build 가 grp → seq 로 눕힌다. */
+    seq:'All-ByPass Seq', grp:'Group', real:'진성/가성',
+    /* 「우리 책임인가」를 적는 열. 국내는 내적/외적, 해외는 GST/External — 낱말만 다르고
+       묻는 것이 같다. 판정은 GST.ALARM.inner 한 곳(제2원칙). */
+    inout:['내/외','내적/외적','발생 구분','담당(Responsible)'], incl:'발생 구분2',
+    atype:['알람구분','New Fail Code'], atype2:'고장 유형(한글 분류)',
+    ctype:['유형','원인 유형(코드)'], ctype2:'조치 유형(코드)',
+    cause:['발생사유','All Bypass 발생사유','알람 발생 사유','실제원인','원인 (Deep rooted cause)'],
+    action:['조치내용','조치 (Corrective action)'], phenom:['현상','Symptom'],
+    proc:'Process', subproc:'Detail',
+    /* 조직 축의 «정본»은 설치현황이다(S/N 조인 · CIP·국내 원장과 같은 규약) —
+       고객사·단지는 화면 축으로 쓰지 않는다. 「고객사」는 SPEC 에 두지 않아 extra 로
+       자동 보존된다(쓰지도 않을 컬럼을 표에 만들 이유가 없다).
+       운영단위만 받는 이유는 하나 — 아래 build 가 op 를 그것으로 채운다. */
+    opRaw:'운영단위',
     srcMonth:['정산월','발생월 삼성기준','월'], srcWeek:'주차', srcYear:['년도','연도'],
     checker:'확인자'
   }};
@@ -1385,7 +1414,11 @@ GST._KR_COLS_BASE = ['src_row','sn_key','sn','occur_date','fmonth','fweek','cnt'
                      'site','line','atype','ctype','alarm','cause','action','phenom',
                      'op','inout','incl'];
 GST._KR_COLS_A = GST._KR_COLS_BASE.concat(['alarm_name']);   // sheet_alarm
-GST._KR_COLS_B = GST._KR_COLS_BASE.concat(['seq']);          // sheet_allbypass
+/* 올바이패스에만 있는 열. grp·proc·subproc·ctype2 는 해외 양식(v133)이 들여온 것이다.
+   ⚠ 표에 아직 없어도 안전하다 — GST.dbRows·csvTableRows 가 «표의 실제 컬럼과 교집합»만
+     select 한다(v121). 없는 열을 요청하면 PostgREST 가 «전체»를 거부하기 때문이다. */
+GST._KR_COLS_B = GST._KR_COLS_BASE.concat(
+  ['seq','grp','chamber','hold','proc','subproc','ctype2','atype2']);   // sheet_allbypass
 // 옛 이름 — 남은 호출자가 있어도 «둘 다에 있는 열»만 받아 안전하게 동작한다
 GST._KR_COLS = GST._KR_COLS_BASE;
 
@@ -1455,6 +1488,24 @@ GST.ALARM = {
     if(mo<1||mo>12||d<1||d>31) return '';
     return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');
   },
+  /* 엑셀 시리얼 → 사람이 읽는 시각. 「정지 시작(AV)」·「정지 종료(AW)」 자리에 쓴다.
+     ⚠ 왜 여기냐. 이 변환은 «셀 서식»으로는 알 수 없다 — 사용자 파일의 그 칸들은
+       서식이 General 이라 XLSX 가 그냥 숫자(45672.86)로 준다(실측 z:"General").
+       upload 의 cellStr 은 «셀이 날짜라고 말할 때»만 날짜로 찍으므로 여기서 못 고친다.
+       무엇이 시각 열인지 아는 것은 SPEC 뿐이라 판정을 여기 둔다.
+     ⚠ 국내 시트는 이 칸에 문자열('2020-12-21 00:15:54')을 쓴다 — 숫자가 아니면 손대지
+       않는다. 안 그러면 국내 원문이 조용히 다른 표기로 바뀐다. */
+  stamp: function(v){
+    const t=String(v==null?'':v).trim(); if(!t) return '';
+    const n=Number(t);
+    if(!t || isNaN(n) || n<=20000 || n>=80000) return t;      // day() 와 같은 시리얼 범위
+    const ms=Math.round(n*86400)*1000 + Date.UTC(1899,11,30);
+    const d=new Date(ms); if(isNaN(d)) return t;
+    const p2=x=>String(x).padStart(2,'0');
+    const ymd=d.getUTCFullYear()+'-'+p2(d.getUTCMonth()+1)+'-'+p2(d.getUTCDate());
+    const hh=d.getUTCHours(), mm=d.getUTCMinutes(), ss=d.getUTCSeconds();
+    return (hh||mm||ss) ? ymd+' '+p2(hh)+':'+p2(mm) : ymd;    // 자정 정각이면 날짜만 (v95 규약)
+  },
   /* 집계 대상인가. 새로 발명하지 않고 «시트가 이미 적어 둔 답»을 읽는다.
        ① Seq 가 있고 1이 아니면 같은 사건의 2·3차 줄이다 → 제외 (H 올바이패스)
        ② 「내적 / 제외」·「발생 구분2」 같은 포함/제외 열이 있으면 그 답을 따른다
@@ -1482,12 +1533,20 @@ GST.ALARM = {
     const seq=String(row&&row.seq!=null?row.seq:'').trim();
     return !seq || seq==='1';
   },
-  inner: function(row){                    // 우리 책임 — 내부·내적인가
+  /* 「우리 책임인가」를 적는 낱말이 자료마다 다르다 — 한 곳에서 흡수한다(제2원칙).
+       국내  내부 · 내적  (P 는 「포함/제외」로 이미 답해 놨다)
+       해외  GST          (사용자 확정 v133: 「GST 만 카운트, External 은 안 센다」)
+     ⚠ 모르는 낱말을 «내부»로 치지 않는다. 예전에는 열이 있기만 하면 내부/내적 두 낱말만
+       보고 나머지를 전부 false 로 떨어뜨렸는데, 그러면 해외 원장이 통째로 0 이 된다 —
+       에러 없이. 반대로 아무거나 참으로 두면 External 이 섞여 든다. 아는 낱말만 참이다. */
+  _IN_RE: /^(내부|내적|GST)$/i,
+  _OUT_RE: /^(외부|외적|EXTERNAL|고객|CUSTOMER)$/i,
+  inner: function(row){                    // 우리 책임 — 내부·내적·GST 인가
     const g=k=>String(row&&row[k]!=null?row[k]:'').trim();
     const incl=g('incl');
     if(incl) return incl==='포함';         // P 는 시트가 「포함/제외」로 이미 답해 놨다
     const io=g('inout');
-    if(io) return io==='내부'||io==='내적';
+    if(io) return GST.ALARM._IN_RE.test(io);
     return true;                            // 그 열 자체가 없는 시트는 «전부» 가 그 시트의 답이다
   },
   counts: function(row, kind){
@@ -1524,19 +1583,69 @@ GST.ALARM = {
          조용히 버리지 않고 몇 줄을 건너뛰었는지 화면에 돌려준다. */
       if(!v.sn && !day){ skipped++; continue; }
       const o={};
+      /* 시각 열은 «사람이 읽는 꼴»로 눕혀 담는다 — 시리얼 그대로 두면 화면에
+         45672.86 이 찍힌다. 숫자가 아니면 그대로다(국내 문자열 보존). */
+      ['occur','occurT','relTime'].forEach(function(k){ v[k]=GST.ALARM.stamp(v[k]); });
+      /* 유지시간(MTTR)은 엑셀 부동소수 찌꺼기를 달고 온다(실측 165.9999999963분).
+         숫자로 읽히는 값만 소수 첫째자리로 정리한다 — 국내의 '3시간' 같은 문자열은 그대로. */
+      if(v.hold!=='' && !isNaN(Number(v.hold))) v.hold=String(Math.round(Number(v.hold)*10)/10);
       keys.forEach(function(k){ o[GST._snake(k)] = v[k]===''?null:v[k]; });
-      o.src_sheet=tag; o.op=tag+'운영';
+      o.src_sheet=tag;
+      /* op — 화면의 조직 축은 어차피 설비 S/N 조인으로 얻는다(krJoin). 그런데 이 값에는
+         다른 일이 하나 더 걸려 있다: 구간 교체(csv_window)가 «어느 행을 갈아끼울지»를
+         날짜 × op 로 정한다. 그래서 이미 표에 든 행과 «같은 규칙»으로 만들어야 한다 —
+         규칙이 바뀌면 옛 행이 안 지워지고 새 행이 얹혀 표가 조용히 두 배가 된다(v109 의 자리).
+           K·P·H (국내 워크북)  지금까지대로 tag+'운영' — 손대지 않는다
+           그 밖 (해외 리스트)   시트가 운영단위를 직접 적어 준다 → 그 값
+         두 계통이 서로 다른 op 를 쓰므로, 해외 파일을 구간 교체로 올려도 국내 행은
+         한 줄도 안 지워진다. 한 표에 두 계통을 담을 수 있는 이유가 이것이다. */
+      o.op=/^[KPH]$/.test(String(tag||'')) ? (tag+'운영')
+         : ((v.opRaw||'').trim() || (tag+'운영'));
+      delete o.op_raw;                          // op 가 이미 그 값이다 — 컬럼을 둘 만들지 않는다
       o.sn_key=GST.ALARM.key(v.sn)||null;
       o.occur_date=day||null;
       // 시트의 «정산월·주차»를 우선 쓴다(국내는 삼성 기준 월이 달력과 다르다). 없으면 달력.
       o.fmonth=GST.ALARM.ym(v.srcMonth, v.srcYear) || (day?day.slice(0,7):null);
       o.fweek =GST.ALARM.yw(v.srcWeek,  v.srcYear) || (day?GST.ALARM.isoWeek(day):null);
       o.cnt=GST.ALARM.counts(v, kind);
+      o._v=v;                                   // 아래 Group 눕히기에서만 쓰고 지운다
       const ex={};
       extraCols.forEach(function(x){ const t=String(r[x.i]==null?'':r[x.i]).trim(); if(t) ex[x.h]=t; });
       o.extra=Object.keys(ex).length?ex:null;
       out.push(o);
     }
+    /* ── Group → seq (v133 · 해외 올바이패스) ──────────────────────────────
+       올바이패스는 «두 챔버가 모두 내려간 것»이라 한 사건이 Left·Right 두 줄이고,
+       A열 Group 번호가 같으면 한 세트다(사용자 설명). 그냥 세면 건수가 정확히 두 배다 —
+       국내 H 의 All-ByPass Seq 1·2·3 과 «같은 문제»이므로 답도 같게 둔다:
+       한 사건의 대표 줄에만 seq='1' 을 주고, dedup 은 지금 쓰던 그 함수를 그대로 쓴다.
+       판정 함수를 새로 만들지 않는다(제2원칙).
+
+       ⚠ 시트가 Seq 를 직접 적어 주면(국내 H) 손대지 않는다. 국내 숫자가 한 자리라도
+         움직이면 그것은 사고다(제3원칙).
+
+       ⚠ 대표 줄은 «파일 순서의 첫 줄»이 아니라 «GST 책임인 첫 줄»이다. 실측 25세트 중
+         2세트가 한쪽 챔버 External · 다른 쪽 GST 인데, 파일 순서로 대표를 고르면 어느
+         줄이 먼저 적혔느냐에 따라 그 사건이 세어지기도 하고 안 세어지기도 한다 —
+         파일 순서는 자료가 아니다. GST 줄이 하나라도 있으면 그 사건은 GST 책임이 있다.
+         (전부 External 인 사건은 대표도 External 이라 cnt=false 로 떨어진다.) */
+    if(C.grp>=0 && C.seq<0){
+      const first={}, firstIn={};
+      out.forEach(function(o,i){ const g=String(o.grp==null?'':o.grp).trim(); if(!g)return;
+        if(first[g]==null) first[g]=i;
+        if(firstIn[g]==null && GST.ALARM.inner(o._v)) firstIn[g]=i; });
+      const rep={};
+      Object.keys(first).forEach(function(g){ rep[firstIn[g]!=null?firstIn[g]:first[g]]=1; });
+      const nth={};
+      out.forEach(function(o,i){ const g=String(o.grp==null?'':o.grp).trim();
+        if(!g){ o.seq=null; return; }                 // 그룹이 없는 줄은 그 자체로 한 사건이다
+        if(rep[i]){ o.seq='1'; return; }
+        nth[g]=(nth[g]||1)+1; o.seq=String(nth[g]); });
+      /* seq 가 바뀌었으니 집계 대상 판정도 다시 한다 — 판정 «함수»는 그대로 쓴다. */
+      out.forEach(function(o){
+        o.cnt=GST.ALARM.counts(Object.assign({}, o._v, {seq:o.seq||''}), kind); });
+    }
+    out.forEach(function(o){ delete o._v; });
     return {rows:out, skipped:skipped, hi:m.hi, extra:extraCols.length,
             found:keys.filter(function(k){return C[k]>=0;}).length, total:keys.length};
   }
