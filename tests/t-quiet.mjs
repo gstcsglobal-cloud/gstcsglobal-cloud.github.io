@@ -687,7 +687,10 @@ console.log('\n[15] 고장 차트 세부내역이 누른 데이터셋을 따르�
   const R = SRC.report;
   is(/if\(id==='cFt'\)return drillFault\(p,seg\);/.test(R),
      'report — onDrill 이 «누른 칸»을 drillFault 로 넘긴다');
-  is(/function drillFault\(p,seg\)/.test(R), 'report — drillFault 가 그것을 받는다');
+  /* ⚠ «인자가 정확히 둘인가»를 묻지 않는다 — 그건 그때의 «생김새»이지 지킬 규칙이 아니다
+     (v122 가 OROWS 에서 겪은 자리). 지킬 것은 하나 — 누른 칸(seg)을 받는가.
+     v133 에 KPI 카드가 «자기가 센 배열»을 넘기는 셋째 인자(rowsIn)가 붙었다. */
+  is(/function drillFault\(p,\s*seg\b/.test(R), 'report — drillFault 가 그것을 받는다');
   /* ⚠ 인덱스가 아니라 «이름»으로 갈라야 한다 — All By-Pass 데이터셋은 값이 있을 때만
      생기므로(hasABP) 인덱스가 상황에 따라 달라진다. */
   is(/seg===L\.abp \? 'abp' : seg===L\.tot \? 'tot' : 'alarm'/.test(R),

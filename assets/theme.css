@@ -198,8 +198,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{
   box-shadow:0 12px 40px rgba(0,0,0,.45), 0 0 0 1px var(--accent-2) inset !important}
 body.theme-light .card:hover,body.theme-light .mcard:hover{
   box-shadow:0 12px 40px rgba(31,38,135,.12), 0 0 0 1px var(--accent-2) inset !important}
-.kpi{cursor:pointer}
-.kpi:active{transform:translateY(-1px) scale(.99) !important}
+/* ⚠ «동작이 붙은 카드»만 손가락 커서를 준다 (v133).
+   예전에는 .kpi 전부에 걸려 있어, 실측 56장 중 48장이 «눌리는 것처럼 보이는데 아무 일도
+   안 하는» 카드였다 — 사용자가 「KPI 카드 팝업 기능을 지웠냐」고 물은 것이 이 자리다.
+   세 표식은 각각: data-kdrill = GST.kpiDrill 이 새긴다 ·
+   data-stage(fault) · data-s(pm) = 필터 클릭이 이미 쓰던 표식.
+   마크업은 한 줄도 안 고친다. 되돌리기는 셀렉터를 .kpi 로 되돌리는 한 줄. */
+.kpi[data-kdrill],.kpi[data-stage],.kpi[data-s]{cursor:pointer}
+.kpi[data-kdrill]:active,.kpi[data-stage]:active,.kpi[data-s]:active{transform:translateY(-1px) scale(.99) !important}
 tr{transition:background .15s var(--ease)}
 select,input[type="date"],input[type="text"],input[type="password"]{transition:border-color .2s var(--ease), box-shadow .2s var(--ease)}
 select:hover,input:hover{border-color:var(--txt-muted) !important}

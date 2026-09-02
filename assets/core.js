@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 132;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 133;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -787,6 +787,46 @@ GST.rowsModal = function(title, cols, rows, note){
     }
   });
   return ov;
+};
+
+/* ---------- KPI 카드 클릭 → 세부내역 (v133) ----------
+   ⚠ 이 기능은 «있었다가 지워진» 것이 아니라 한 번도 없었다. 그런데 theme.css 가 모든
+     .kpi 에 cursor:pointer 를 걸어 두어, 실측 56장 중 48장이 «손가락 커서가 뜨고 눌리는
+     느낌까지 나는데 아무 일도 안 하는» 카드였다 — 화면이 없는 기능을 있다고 말한 것이다.
+     그래서 여기서 «동작»을 만들고, theme.css 는 «동작이 붙은 카드»만 pointer 로 바꾼다.
+
+   열쇠는 카드가 아니라 «값 element 의 id»(kp1·ck2·rk3)다. 그 id 가 숫자를 쓴 유일한
+   자리(setTxt('kp4', …))라, 카드를 옮기거나 KPI 블록이 하나 더 생겨도 팝업이 «그 숫자»를
+   따라간다. .kpi 를 위치(querySelectorAll 순서)로 잡으면 pm 이 겪던 결함
+   (data-s 없는 카드까지 잡혀 activeStatus=undefined)이 여덟 페이지로 퍼진다.
+
+   spec 은 «열 때» 부른다 — mount 때 계산하면 필터를 바꾼 뒤 옛 숫자가 열린다.
+     () => ({title, cols, rows, note})   → GST.rowsModal 이 연다 (표 하나 · 500행 · 복사)
+     () => ({open:fn})                   → 페이지 자기 모달 (요약 + 표 여럿 + 안내)
+   두 반환형을 두는 이유: 페이지 모달이 내는 것은 «행 목록»이 아니라 요약·복수 표·
+   「해외 n건은 크로스탭이라 목록이 없습니다」 같은 안내다. rowsModal 로 통일하면 그것이
+   통째로 사라진다(= 조용히 빼는 것). */
+GST.kpiDrill = function(map){
+  if(!map) return;
+  Object.keys(map).forEach(function(id){
+    const el=document.getElementById(id); if(!el) return;
+    const card=el.closest('.kpi')||el.parentElement; if(!card) return;
+    /* 표식을 남긴다 — theme.css 의 커서 셀렉터와 검사가 «동작이 붙은 카드»를 이것으로 안다. */
+    card.setAttribute('data-kdrill', id);
+    /* render 가 여러 번 도는 페이지(report·pm)에서 핸들러가 겹쳐 붙지 않게 한 번만 단다.
+       spec 은 클릭 시점에 map 에서 다시 꺼내므로, 다시 mount 해도 새 spec 이 쓰인다. */
+    card._kdMap = map;
+    if(card._kd) return;
+    card._kd = true;
+    card.addEventListener('click', function(){
+      const fn=(card._kdMap||{})[id]; if(typeof fn!=='function') return;
+      let spec=null;
+      try{ spec=fn(); }catch(e){ console.error('kpiDrill '+id, e); return; }
+      if(!spec) return;
+      if(typeof spec.open==='function'){ spec.open(); return; }
+      if(spec.rows) GST.rowsModal(spec.title, spec.cols, spec.rows, spec.note);
+    });
+  });
 };
 
 // 테마 전환 시 차트 전체 파기 — update()로는 축/범례 잉크가 갱신되지 않으므로

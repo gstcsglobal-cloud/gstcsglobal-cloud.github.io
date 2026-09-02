@@ -263,12 +263,27 @@ console.log('\n[8] 주간현황 — 원장이 켜지면 크로스탭은 꺼진�
     await page.goto(BASE + '/', { waitUntil:'domcontentloaded' });
     await page.waitForTimeout(12000);
     const fr = page.frames().find(f => /\/report\//.test(f.url()));
-    await fr.evaluate(() => { setChartPer('cFt','m'); setChartPer('top3','m'); });
+    /* ⚠ TOP3 를 «연» 으로 본다. 월 모드에서 이 표가 보는 것은 «마지막 구간» 하나뿐인데,
+       그것은 픽스처의 달이 아니라 «오늘»의 달이다 — 달이 바뀌자 빈 9월을 보게 되어
+       표가 통째로 비었고 검사가 붉게 떴다(제품은 멀쩡한데 달력이 흐른 것이다).
+       연 모드는 1/1~마감일 누적이라 픽스처(6·7·8월)를 전부 덮는다. */
+    await fr.evaluate(() => { setChartPer('cFt','m'); setChartPer('top3','y'); });
     await page.waitForTimeout(2600);
+    /* ⚠ 막대를 «위치»(slice(-3))로 고르면 안 된다. 이 픽스처는 2026-06·07·08 을 쓰는데
+       차트의 마지막 세 칸은 «오늘» 기준으로 정해진다 — 달이 바뀌자 그 셋이
+       [7월, 8월, 9월] 이 되어 6월이 빠지고 빈 9월이 끼어들었고, 검사가 [9,9,0] 으로
+       붉게 떴다(제품은 멀쩡한데 달력이 흐른 것이다). 이름으로 고른다 — v122 가
+       OROWS 에서 배운 것과 같다: «생김새»가 아니라 «무엇에서 나오나»를 본다. */
     const get = () => fr.evaluate(() => {
       const ch = Chart.getChart(document.getElementById('cFt'));
-      const ds = {}; (ch ? ch.data.datasets : []).forEach(d => ds[d.label] = d.data.slice(-3));
-      return { labels: ch ? ch.data.labels.slice(-3) : [], ds,
+      const L = ch ? ch.data.labels.map(String) : [];
+      /* 라벨 표기가 '26-06'·'2026-06'·'6월' 중 무엇이든 그 달을 집는다. */
+      const at = mm => { const re = new RegExp('(^|[^0-9])0?' + mm + '($|[^0-9])');
+        for (let i = L.length - 1; i >= 0; i--) if (re.test(L[i])) return i; return -1; };
+      const IX = ['6','7','8'].map(at);   // 라벨은 '6월' 꼴이라 앞의 0 을 붙이면 안 맞는다
+      const pick = arr => IX.map(i => (i >= 0 && arr ? arr[i] : null));
+      const ds = {}; (ch ? ch.data.datasets : []).forEach(d => ds[d.label] = pick(d.data));
+      return { labels: pick(L), ix: IX, ds,
         etc: (document.getElementById('top3Etc')||{}).textContent || '' };
     });
     const base = await get();
@@ -291,6 +306,8 @@ console.log('\n[8] 주간현황 — 원장이 켜지면 크로스탭은 꺼진�
   const NONE= await run('none');   // 아직 아무것도 안 올린 상태 (옛 경로)
   const KR  = await run('kr');     // 국내만 올라간 상태
 
+  is(NONE.base.ix.every(i => i >= 0),
+     `차트에서 6·7·8월 칸을 이름으로 찾았다 (실제 ${JSON.stringify(NONE.base.labels)})`);
   const abpOf = r => (r.base.ds['All By-Pass'] || []).map(Number);
   is(JSON.stringify(abpOf(NONE)) === JSON.stringify([9,9,9]),
      `원장이 없으면 크로스탭 그대로 9·9·9 (실제 ${JSON.stringify(abpOf(NONE))})`);
@@ -307,7 +324,8 @@ console.log('\n[8] 주간현황 — 원장이 켜지면 크로스탭은 꺼진�
   const nOf = o => rowsOf(o).reduce((a,r) => a + (+r[2] || 0), 0);
   is(rowsOf(OS.tops.abp).every(r => /Alarm-Sample/.test(r[1])),
      `「올바만」은 올바 원장 행만 낸다 (실제 ${rowsOf(OS.tops.abp).map(r=>r[1]).join(' · ')||'없음'})`);
-  is(nOf(OS.tops.abp) === 4, `8월 올바 4건 (실제 ${nOf(OS.tops.abp)})`);
+  /* 연 누적이라 6·7·8월 합이다 — 차트 막대의 [2,1,4] 와 «같은 수»여야 한다. */
+  is(nOf(OS.tops.abp) === 7, `올해 올바 7건 = 6월 2 + 7월 1 + 8월 4 (실제 ${nOf(OS.tops.abp)})`);
   is(/All By-Pass 만 기준/.test(OS.tops.abp.etc), '어느 계통을 보고 있는지 노트가 적는다');
   is(!rowsOf(OS.tops.alarm).some(r => /Alarm-Sample/.test(r[1])),
      '「Alarm만」에는 올바 행이 안 섞인다');

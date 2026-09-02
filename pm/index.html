@@ -35,8 +35,11 @@ body{color:var(--txt);
 .status{font-size:12px;color:var(--mut);margin-bottom:16px;text-align:right}
 .status.ok{color:var(--a5)}.status.err{color:var(--bad)}
 
+/* ⚠ cursor 는 여기서 주지 않는다 — theme.css 가 «동작이 붙은 카드»(data-kdrill·data-stage·data-s)에만 준다.
+     세 페이지가 각자 cursor:pointer 를 들고 있어서, theme.css 만 고쳤을 때
+     이 화면들만 «눌리는 것처럼 보이는데 아무 일도 안 하는» 상태로 남았다(제2원칙). */
 .kpi{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;
-  backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s;cursor:pointer}
+  backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:transform .3s;}
 .kpi:hover{transform:translateY(-4px)}
 .kpi.sel{border-color:var(--a1);box-shadow:0 0 0 1px var(--a1)}
 
@@ -368,7 +371,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(132);   // GST.PM(국내 조치 기준 PM) · GST.numv 를 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(133);   // GST.PM(국내 조치 기준 PM) · GST.numv 를 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 const SHEET_URL=GST.sheetUrl('646668307');
@@ -928,11 +931,16 @@ function render(){ GST.skeleton(false);
     drop:{ customer:GST.FILT_DROP_CUST, campus:GST.FILT_DROP_ORG, line:GST.FILT_DROP_ORG } });
   fillSelect('fModel',x=>x.model);
 
-  // KPI 클릭
-  document.querySelectorAll('.kpi').forEach(k=>{
+  /* KPI 클릭 → 상태 필터.
+     ⚠ 셀렉터가 '.kpi' 였다 — 이 페이지의 KPI 10장 중 data-s 가 있는 것은 5장뿐이라
+       (kp6 · 준수율 블록 ck1~ck4), 나머지를 누르면 activeStatus=undefined 가 되어
+       필터가 «전체»도 아닌 상태에 빠졌다. 에러는 하나도 안 난다.
+       표식은 theme.css 의 커서 셀렉터가 쓰는 것과 «같은 것»이어야 한다 — 따로 두면
+       CSS 와 JS 가 서로 다른 «눌리는 카드» 집합을 갖는다. */
+  document.querySelectorAll('.kpi[data-s]').forEach(k=>{
     k.onclick=()=>{
       activeStatus=k.dataset.s; document.getElementById('fStat').value=activeStatus;
-      document.querySelectorAll('.kpi').forEach(x=>x.classList.remove('sel')); k.classList.add('sel');
+      document.querySelectorAll('.kpi[data-s]').forEach(x=>x.classList.remove('sel')); k.classList.add('sel');
       draw();
     };
   });

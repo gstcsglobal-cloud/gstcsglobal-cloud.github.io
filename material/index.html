@@ -123,7 +123,10 @@ body.theme-light .slicer select, body.theme-light .slicer input { color-scheme: 
 .ct-btn.active{background:var(--glass-hover);color:var(--accent-1)}
 .tb-label{font-size:11px;color:var(--txt-muted);font-weight:700}
 
-.kpi{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:16px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:all .3s;cursor:pointer;box-shadow:var(--card-shadow);}
+/* ⚠ cursor 는 여기서 주지 않는다 — theme.css 가 «동작이 붙은 카드»(data-kdrill·data-stage·data-s)에만 준다.
+     세 페이지가 각자 cursor:pointer 를 들고 있어서, theme.css 만 고쳤을 때
+     이 화면들만 «눌리는 것처럼 보이는데 아무 일도 안 하는» 상태로 남았다(제2원칙). */
+.kpi{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:16px;backdrop-filter:blur(14px);position:relative;overflow:hidden;transition:all .3s;box-shadow:var(--card-shadow);}
 .kpi:hover{transform:translateY(-4px);border-color:var(--accent-1);}
 .kpi.sel{border-color:var(--accent-1);box-shadow:0 0 15px 0 var(--accent-1);}
 
@@ -748,7 +751,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(132);   // GST.numv · 라인2 축을 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(133);   // GST.numv · 라인2 축을 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
