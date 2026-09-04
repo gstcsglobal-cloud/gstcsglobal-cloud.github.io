@@ -377,7 +377,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(133);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
+GST.needVer&&GST.needVer(134);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -460,7 +460,7 @@ function guessCountry(op){
 const T={
 ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 주간/월간 요약',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_region:'구분',sl_customer:'고객사',sl_line:'라인',sl_fab:'FAB',sl_period:'기간',all:'전체',hr_note:'고객사 필터 연동 · 국가/라인 미적용',hr_note2:'',sec_ops:'운영',ops_note:'가용인력 = 인원현황의 현장(O) 재직자 · 고객사 필터 연동',ops_wait:'인원현황·휴가현황 시트 연결 대기 — report/index.html 상단의 GID_ROSTER / GID_LEAVE 값을 시트 gid 숫자로 바꿔주세요',ch_att:'출근 · 휴가',note_att:'평일 기준 일평균 · 출근 = 가용인력 − 휴가',att_a:'출근',att_l:'휴가',ch_to:'총인원 vs TO',note_to:'TO = 반입 챔버 ÷ 30 (DUAL=2·SINGLE=1) · 총인원 = 현장 가용인력',head_l:'총인원',ch_chp:'인당 관리 챔버',note_chp:'반입 챔버(누적) ÷ 가용인력 · 챔버/인원 수는 툴팁',cutoff:'마감',att_pj:'인당작업',man_tot:'공수(h)',grp_t:'경력',grp_s:'소속',cr_u1:'1년 미만',cr_u1:'1년 미만',cr_u2:'1~2년',cr_u3:'2년 이상',ch_career:'단지별 인원 추이',note_career:'각 구간 말 기준 현장(O) 재직 · 단지별 스택 (단지가 없으면 FAB·고객사)',nCareer:'1년미만 {a} · 1~2년 {b} · 2년+ {c}명',edu_tg:'대상인원',edu_tg:'대상인원',edu_rt:'완료율',edu_goal:'목표 90%',edu_ttf:'완료 {d} / 대상 {t}',man_sum:'합계',chp_c:'챔버(반입)',chp_p:'인당 관리',nTo:'충원율 {p}% · TO 대비 {d}명',nEdu:'완료율 {p}% · 완료 {d}/{t}명 (LV1+LV2)',nCip:'진행율 {p}% · 잔여 {n}건',nAtt:'일평균 출근 {a}명 · 휴가 {l}명 · 작업 {j}건 (인당 {p}건)',nChp:'인당 {v}챔버 (챔버 {c} · 인원 {h}명)',nMan:'인당 일평균 {v}h · PM {pm}h',nFt:'최근 구간 {n}건 · 직전 대비 {d}',per_ws:'주',per_ms:'월',per_ys:'연',ytd:'{y} 누적',top_allblank:'고장 {m}건 · 알람유형 미기재 — 시트 Z열 입력 필요',per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',print:'🖨 인쇄',wk_narr:'📋 이번 주 요약',wk_narr_w:'📋 이번 주 요약',wk_narr_m:'📋 이번 달 요약',
  kp1:'재직 인원',kp2:'이번 달 입사 · 퇴사',kp3:'교육 완료율',kp4:'BM 건수 · 최근 30일',kp5:'인당 공수(h) · 최근 30일',kp6:'PM 진행율 · 올해',
- kd_30d:'최근 30일',kd_edu:'교육 이수 현황',kd_educ:'이름|단지|과정|완료일|상태',kd_edun:'이수 {a} / 대상 {b}',kd_pm:'PM 스케줄 진행 (올해 누적)',kd_pmc:'월|계획(누적)|완료(누적)|진행율',kd_pmn:'계획 {a} · 완료 {b}',kd_ioh:'카드는 인원 전원을 셉니다 — 같은 화면의 입·퇴사 차트는 현장(O)만 셉니다',kd_asof:'기준일',
+  kf3b:'대상 {a} {m}명 · {b} {n}명',kd_edun2:'{a} {p}% (이수 {d}/{m}) · {b} {q}% (이수 {e}/{n})',kd_30d:'최근 30일',kd_edu:'교육 이수 현황',kd_educ:'이름|단지|과정|완료일|상태',kd_edun:'이수 {a} / 대상 {b}',kd_pm:'PM 스케줄 진행 (올해 누적)',kd_pmc:'월|계획(누적)|완료(누적)|진행율',kd_pmn:'계획 {a} · 완료 {b}',kd_ioh:'카드는 인원 전원을 셉니다 — 같은 화면의 입·퇴사 차트는 현장(O)만 셉니다',kd_asof:'기준일',
  kf1:'경력 2년+ {n}명 · 1년 미만 {m}명',kf2:'최근 12개월 입사 {n}명',kf3:'Veteran {p}% (대상 {n}명)',kf4:'이전 30일 {n}건',kf5:'PM 비중 {p}%',kf6:'계획 {a} · 완료 {b}',
  sec1:'핵심 지표',sec2:'상세 분석',sec3:'Alarm · 고장',sec4:'설비',
  ch_hc:'인원 추이 (경력구간)',note_hc:'각 구간 말 기준 재직 인원 · 입사일/퇴사일 반영',hc_u1:'1년 미만',hc_u2:'1–2년',hc_u3:'2년 이상',
@@ -479,7 +479,7 @@ ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 �
  rd_ppl:'이름|사이트|입사일|퇴사일',rd_inst:'고객사|FAB|Type|반입일',rd_chp_n:'챔버 가중 합계(DUAL=2)라 행 수와 다릅니다',rd_edu:'이름|사이트|Basic|Veteran|Lv.2|Lv.3',rd_cip:'사이트|항목|적용일|완료일',ax_min:'최소',ax_max:'최대',ax_apply:'적용',ax_reset:'초기화',loading:'데이터 불러오는 중...',loaded:'로드 완료',mon_u:'월',u_p:'명',u_c:'건'},
 en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, training, work, PM, faults',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_region:'Region',sl_customer:'Customer',sl_line:'Line',sl_fab:'FAB',sl_period:'Period',all:'All',hr_note:'follows customer filter · country/line N/A',hr_note2:'',sec_ops:'Operations',ops_note:'available = on-site(O) active staff from roster · follows customer filter',ops_wait:'Roster/Leave sheets not linked — set GID_ROSTER / GID_LEAVE at the top of report/index.html',ch_att:'Attendance · Leave',note_att:'weekday daily avg · attendance = available − leave',att_a:'Attend',att_l:'Leave',ch_to:'Headcount vs TO',note_to:'TO = fab-in chambers ÷ 30 (DUAL=2·SINGLE=1)',head_l:'Headcount',ch_chp:'Chambers per Person',note_chp:'cumulative fab-in chambers ÷ available staff · detail in tooltip',cutoff:'As of',att_pj:'Jobs/person',man_tot:'Hours',grp_t:'Tenure',grp_s:'Site',cr_u1:'<1yr',cr_u1:'<1yr',cr_u2:'1-2yr',cr_u3:'2yr+',ch_career:'Headcount by Campus',note_career:'active on-site(O) at each period end · by campus',nCareer:'<1y {a} · 1-2y {b} · 2y+ {c}',edu_tg:'Targets',edu_tg:'Targets',edu_rt:'Rate',edu_goal:'Goal 90%',edu_ttf:'done {d} / target {t}',man_sum:'Total',chp_c:'Chambers',chp_p:'per person',nTo:'fill rate {p}% · {d} vs TO',nEdu:'rate {p}% · {d}/{t} done (LV1+LV2)',nCip:'progress {p}% · {n} remaining',nAtt:'daily avg attend {a} · leave {l} · {j} jobs ({p}/person)',nChp:'{v} chambers/person ({c}ch · {h} staff)',nMan:'{v}h per person·day · PM {pm}h',nFt:'{n} in latest period · {d} vs prev',per_ws:'W',per_ms:'M',per_ys:'Y',ytd:'{y} YTD',top_allblank:'{m} faults · alarm type blank — fill column Z in the sheet',per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',print:'🖨 Print',wk_narr:'📋 Summary',wk_narr_w:'📋 This Week',wk_narr_m:'📋 This Month',
  kp1:'Headcount',kp2:'Joined · Left (this month)',kp3:'Training Rate',kp4:'BM count · last 30d',kp5:'Hours/person · last 30d',kp6:'PM Progress · YTD',
- kd_30d:'last 30 days',kd_edu:'Training completion',kd_educ:'Name|Campus|Course|Completed|Status',kd_edun:'done {a} / target {b}',kd_pm:'PM schedule progress (YTD)',kd_pmc:'Month|Plan (cum.)|Done (cum.)|Progress',kd_pmn:'plan {a} · done {b}',kd_ioh:'The card counts all staff — the join/leave chart on this page counts on-site (O) only',kd_asof:'as of',
+  kf3b:'targets {a} {m} · {b} {n}',kd_edun2:'{a} {p}% ({d}/{m} done) · {b} {q}% ({e}/{n} done)',kd_30d:'last 30 days',kd_edu:'Training completion',kd_educ:'Name|Campus|Course|Completed|Status',kd_edun:'done {a} / target {b}',kd_pm:'PM schedule progress (YTD)',kd_pmc:'Month|Plan (cum.)|Done (cum.)|Progress',kd_pmn:'plan {a} · done {b}',kd_ioh:'The card counts all staff — the join/leave chart on this page counts on-site (O) only',kd_asof:'as of',
  kf1:'2y+ {n} · under 1y {m}',kf2:'{n} joined in 12mo',kf3:'Veteran {p}% ({n} targets)',kf4:'prev 30d {n}',kf5:'PM share {p}%',kf6:'plan {a} · done {b}',
  sec1:'Key Metrics',sec2:'Details',sec3:'Alarm · Faults',sec4:'Equipment',
  ch_hc:'Headcount by Tenure',note_hc:'active at each period end (join/leave applied)',hc_u1:'<1y',hc_u2:'1–2y',hc_u3:'2y+',
@@ -498,7 +498,7 @@ en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, traini
  rd_ppl:'Name|Site|Joined|Left',rd_inst:'Customer|FAB|Type|Fab-in',rd_chp_n:'Chamber-weighted total (DUAL=2), so it differs from the row count',rd_edu:'Name|Site|Basic|Veteran|Lv.2|Lv.3',rd_cip:'Site|Item|Applied|Done',ax_min:'Min',ax_max:'Max',ax_apply:'Apply',ax_reset:'Reset',loading:'Loading...',loaded:'Loaded',mon_u:'',u_p:'',u_c:''},
 zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇总',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_region:'区分',sl_customer:'客户',sl_line:'线',sl_fab:'FAB',sl_period:'期间',all:'全部',hr_note:'联动客户筛选 · 国家/线不适用',hr_note2:'',sec_ops:'运营',ops_note:'可用人力=人员现况中现场(O)在职者·联动客户筛选',ops_wait:'人员现况/休假现况表未连接 — 请在 report/index.html 顶部填入 GID_ROSTER / GID_LEAVE',ch_att:'出勤 · 休假',note_att:'工作日日均 · 出勤=可用人力−休假',att_a:'出勤',att_l:'休假',ch_to:'总人员 vs TO',note_to:'TO=搬入腔体÷30 (DUAL=2·SINGLE=1)',head_l:'总人员',ch_chp:'人均管理腔体',note_chp:'累计搬入腔体÷可用人力·明细见提示框',cutoff:'截止',att_pj:'人均作业',man_tot:'工时(h)',grp_t:'工龄',grp_s:'所属',cr_u1:'1年内',cr_u1:'1年内',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'按园区人员趋势',note_career:'各区间末现场(O)在职·按线堆叠',nCareer:'1年内 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'对象人员',edu_tg:'对象人员',edu_rt:'完成率',edu_goal:'目标90%',edu_ttf:'完成 {d} / 对象 {t}',man_sum:'合计',chp_c:'腔体(搬入)',chp_p:'人均管理',nTo:'满编率 {p}% · 较TO {d}名',nEdu:'完成率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'进度 {p}% · 剩余 {n}件',nAtt:'日均出勤 {a}名 · 休假 {l}名 · 作业 {j}件 (人均 {p}件)',nChp:'人均 {v}腔体 ({c}ch · {h}名)',nMan:'人均日 {v}h · PM {pm}h',nFt:'最近区间 {n}件 · 环比 {d}',per_ws:'周',per_ms:'月',per_ys:'年',ytd:'{y} 累计',top_allblank:'故障{m}件 · 报警类型未填 — 需填写表格Z列',per_w:'按周',per_m:'按月',per_note:'最近12个区间',print:'🖨 打印',wk_narr:'📋 本期摘要',wk_narr_w:'📋 本周摘要',wk_narr_m:'📋 本月摘要',
  kp1:'在职人员',kp2:'本月入职·离职',kp3:'教育完成率',kp4:'BM件数·近30天',kp5:'人均工时(h)·近30天',kp6:'PM进度·今年',
- kd_30d:'最近30天',kd_edu:'培训完成情况',kd_educ:'姓名|园区|课程|完成日|状态',kd_edun:'完成 {a} / 对象 {b}',kd_pm:'PM 计划进度 (本年累计)',kd_pmc:'月|计划(累计)|完成(累计)|进度',kd_pmn:'计划 {a} · 完成 {b}',kd_ioh:'卡片统计全体人员 — 本页入职·离职图表仅统计现场(O)',kd_asof:'基准日',
+  kf3b:'对象 {a} {m}名 · {b} {n}名',kd_edun2:'{a} {p}% (完成 {d}/{m}) · {b} {q}% (完成 {e}/{n})',kd_30d:'最近30天',kd_edu:'培训完成情况',kd_educ:'姓名|园区|课程|完成日|状态',kd_edun:'完成 {a} / 对象 {b}',kd_pm:'PM 计划进度 (本年累计)',kd_pmc:'月|计划(累计)|完成(累计)|进度',kd_pmn:'计划 {a} · 完成 {b}',kd_ioh:'卡片统计全体人员 — 本页入职·离职图表仅统计现场(O)',kd_asof:'基准日',
  kf1:'2年+ {n}名 · 1年内 {m}名',kf2:'近12个月入职 {n}名',kf3:'Veteran {p}% (对象 {n}名)',kf4:'前30天 {n}件',kf5:'PM占比 {p}%',kf6:'计划 {a} · 完成 {b}',
  sec1:'核心指标',sec2:'详细分析',sec3:'Alarm · 故障',sec4:'设备',
  ch_hc:'人员趋势(工龄区间)',note_hc:'各区间末在职 · 反映入职/离职日',hc_u1:'1年内',hc_u2:'1–2年',hc_u3:'2年以上',
@@ -517,7 +517,7 @@ zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇
  rd_ppl:'姓名|站点|入职日|离职日',rd_inst:'客户|FAB|Type|搬入日',rd_chp_n:'腔体加权合计(DUAL=2)，与行数不同',rd_edu:'姓名|站点|Basic|Veteran|Lv.2|Lv.3',rd_cip:'站点|项目|适用日|完成日',ax_min:'最小',ax_max:'最大',ax_apply:'应用',ax_reset:'重置',loading:'加载中...',loaded:'已加载',mon_u:'月',u_p:'名',u_c:'件'},
 ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サマリー',back:'← メイン',refresh:'更新',sl_country:'国',sl_region:'区分',sl_customer:'顧客',sl_line:'ライン',sl_fab:'FAB',sl_period:'期間',all:'全体',hr_note:'顧客フィルタ連動 · 国/ライン非適用',hr_note2:'',sec_ops:'運営',ops_note:'可用人員=人員現況の現場(O)在籍者·顧客フィルタ連動',ops_wait:'人員現況/休暇現況シート未接続 — report/index.html 上部の GID_ROSTER / GID_LEAVE を設定してください',ch_att:'出勤 · 休暇',note_att:'平日の日平均 · 出勤=可用人員−休暇',att_a:'出勤',att_l:'休暇',ch_to:'総人員 vs TO',note_to:'TO=搬入チャンバー÷30 (DUAL=2·SINGLE=1)',head_l:'総人員',ch_chp:'一人当たり管理チャンバー',note_chp:'累計搬入チャンバー÷可用人員·詳細はツールチップ',cutoff:'締め',att_pj:'一人当たり作業',man_tot:'工数(h)',grp_t:'経歴',grp_s:'所属',cr_u1:'1年未満',cr_u1:'1年未満',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'キャンパス別人員推移',note_career:'各区間末の現場(O)在籍·ライン別スタック',nCareer:'1年未満 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'対象人員',edu_tg:'対象人員',edu_rt:'完了率',edu_goal:'目標90%',edu_ttf:'完了 {d} / 対象 {t}',man_sum:'合計',chp_c:'チャンバー(搬入)',chp_p:'一人当たり',nTo:'充足率 {p}% · TO比 {d}名',nEdu:'完了率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'進捗 {p}% · 残り {n}件',nAtt:'日平均出勤 {a}名 · 休暇 {l}名 · 作業 {j}件 (一人 {p}件)',nChp:'一人 {v}チャンバー ({c}ch · {h}名)',nMan:'一人日平均 {v}h · PM {pm}h',nFt:'直近 {n}件 · 前比 {d}',per_ws:'週',per_ms:'月',per_ys:'年',ytd:'{y} 累計',top_allblank:'故障{m}件 · アラーム種別未記入 — シートZ列の入力が必要',per_w:'週別',per_m:'月別',per_note:'直近12区間',print:'🖨 印刷',wk_narr:'📋 今週サマリー',wk_narr_w:'📋 今週サマリー',wk_narr_m:'📋 今月サマリー',
  kp1:'在籍人員',kp2:'今月 入社·退社',kp3:'教育完了率',kp4:'BM件数·直近30日',kp5:'一人工数(h)·直近30日',kp6:'PM進捗·今年',
- kd_30d:'直近30日',kd_edu:'教育修了状況',kd_educ:'氏名|拠点|コース|修了日|状態',kd_edun:'修了 {a} / 対象 {b}',kd_pm:'PM スケジュール進捗 (年初来)',kd_pmc:'月|計画(累計)|完了(累計)|進捗',kd_pmn:'計画 {a} · 完了 {b}',kd_ioh:'カードは全人員を数えます — 同じ画面の入社・退社チャートは現場(O)のみです',kd_asof:'基準日',
+  kf3b:'対象 {a} {m}名 · {b} {n}名',kd_edun2:'{a} {p}% (修了 {d}/{m}) · {b} {q}% (修了 {e}/{n})',kd_30d:'直近30日',kd_edu:'教育修了状況',kd_educ:'氏名|拠点|コース|修了日|状態',kd_edun:'修了 {a} / 対象 {b}',kd_pm:'PM スケジュール進捗 (年初来)',kd_pmc:'月|計画(累計)|完了(累計)|進捗',kd_pmn:'計画 {a} · 完了 {b}',kd_ioh:'カードは全人員を数えます — 同じ画面の入社・退社チャートは現場(O)のみです',kd_asof:'基準日',
  kf1:'2年+ {n}名 · 1年未満 {m}名',kf2:'直近12ヶ月入社 {n}名',kf3:'Veteran {p}% (対象 {n}名)',kf4:'前30日 {n}件',kf5:'PM比率 {p}%',kf6:'計画 {a} · 完了 {b}',
  sec1:'主要指標',sec2:'詳細分析',sec3:'Alarm · 故障',sec4:'設備',
  ch_hc:'人員推移(経歴区分)',note_hc:'各区間末の在籍 · 入社/退社日反映',hc_u1:'1年未満',hc_u2:'1–2年',hc_u3:'2年以上',
@@ -848,9 +848,22 @@ function krJoin(list, inst, CI){
   list.forEach(function(x){
     const o=ix[x.snk]||ix[GST.ALARM.keyBase(x.snk)]||null;
     x.region=o?o.region:''; x.op=o?o.op:''; x.custB=o?o.custB:'';
-    x.campus=o?o.campus:''; x.lineN=(o&&o.line)||x.srcLine;
     x.div=(o&&o.div)||'';   // 못 붙은 행은 빈 값 그대로 — loose 로 통과시킨다(버리지 않는다)
     x.line2=(o&&o.line2)||'';
+    /* 「라인 = 설치현황 상 라인2 기준」 (2026-09 CS관리팀 회신 · 사용자 확정 «국내만»).
+       ⚠ 갈림은 이 «한 줄»이다 — 소비부(krLineOf·krCampusOf·필터·드릴·표)가 각자 고르면
+         같은 화면의 카드끼리 다른 라인을 보여준다(v94 가 단지에서 겪은 자리).
+       ⚠ 해외는 한 자리도 안 움직인다(제3원칙) — 118열 양식에는 Line 2 열 자체가 없다.
+       line2 가 비면 지금까지대로 FAB(Line 1)으로 폴백한다. 버리지 않는다. */
+    const _kr = o && o.region === GST.ORG.REGION_KR;
+    x.lineN = (_kr ? ((o && o.line2) || (o && o.line)) : (o && o.line)) || x.srcLine;
+    /* 국내에서는 Line 2 가 «라인» 이 됐으므로 원장의 라인2 값은 비운다 — 안 그러면
+       라인·라인2 두 칸이 «같은 차원»을 두 번 거르게 되어, 라인2 를 고르는 순간
+       설명할 수 없는 교집합이 된다. line2 는 loose 축이라 빈 값은 통과한다. */
+    if(_kr) x.line2='';
+    /* 단지는 «해결된 라인»을 보고 다시 판정한다 — 연구소 라인은 단지가 연구소다.
+       위에서 campus 를 먼저 넣어 두면 P3·P4 가 그대로 남는다(사용자 확정 · v134). */
+    x.campus = o ? (GST.ORG.campus(o.campus, x.lineN, o.op, o.line2) || o.campus) : '';
   });
   return list;
 }
@@ -1087,6 +1100,10 @@ function parseRoster(rows){
       // 퇴사 판정: 퇴사일이 있거나, 새 양식의 「인사」가 퇴직이면 퇴사다
       quit:quitD||(/퇴직|퇴사/.test(hrst)?new Date(0):null),
       onsite:g(r,iOn).toUpperCase()==='O',
+      /* 업무/직책 — 공수 분모에서 팀장·단지장을 빼려면 이 값이 필요하다(GST.HEAD_EX).
+         예전에는 지역 변수로 expat 판정에만 쓰고 내보내지 않아, 화면에서는 그 열이
+         «없는 것과 같았다». 인원 필터 축으로는 쓰지 않는다 — 축을 늘리는 일이 아니다. */
+      role:role,
       expat:/주재원/.test(org+' '+role+' '+line),
       // 대시보드는 스크러버 전용 — Chiller 인원은 전 지표에서 제외
       chiller:duty?/CHILLER/i.test(duty):/CHILLER/i.test(org)
@@ -1837,7 +1854,17 @@ function render(){
        실측(인원현황 585행): 현장(O) 인원 중 대만 쪽에서 이 규칙이 떨구는 것은 TSMC 1명뿐이라
        대만 숫자는 한 자리도 움직이지 않는다. */
   const QBR_EX=/TSMC/;
-  const qbrOk=p=>{ const s=String(p.site||'').trim(); return !!s && !QBR_EX.test(GST.upk(s)); };
+  /* 「공수 산정 시 인력 제외 기준 — 팀장, OFFICE인원, 단지장」
+     (2026-09 CS관리팀 회신 · 사용자 확정).
+     ⚠ 여기는 «공수/출근 분모» 전용이다(headOn 이 이것만 쓴다). kp1 재직 인원(act)은
+       qbrOk 를 안 지나므로 **카드 숫자는 안 움직인다** — 메일이 말한 범위와 정확히 같다.
+     ⚠ 분모가 줄면 인당 지표는 **높아진다**. 높아지는 쪽이 더 위험하다(v112 — 사람이
+       하루 10.8시간을 일할 수 없는데 그냥 읽힌다). 그래서 몇 명을 왜 뺐는지 적는다. */
+  const qbrOk=p=>{ const s=String(p.site||'').trim();
+    if(!s || QBR_EX.test(GST.upk(s))) return false;
+    return !GST.HEAD_EX.hit(p); };
+  const _headEx=GST.HEAD_EX.scan(fHR.filter(x=>x.onsite&&String(x.site||'').trim()
+    &&!QBR_EX.test(GST.upk(String(x.site||'')))));
   /* 소속(라인) 구분 목록 — 데이터에서 만든다. 스택 막대라 목록에서 빠진 사람은 합계에서
      조용히 사라지므로, 상위 N 밖은 '기타'로 모아 반드시 포함시킨다(버리지 않는다). */
   const SITE_ORD=['F16','F11','F16N','F16S','PSMC','TASC','WINBOND',
@@ -1889,9 +1916,31 @@ function render(){
   setTxt('kf2',t('kf2').replace('{n}',join12));
   // 교육 완료율 — cEdu 차트와 동일 로직(버그 수정): 현장(O) 재직자 · 6개월 미만 LV1(Basic)·이상 LV2(Veteran) · 이수일 ≤ 기준일(이름 매칭)
   const eA=fHR.filter(x=>x.onsite&&activeAt(x,asOf)&&x.join);
-  const _six=x=>((asOf-x.join)/MS)>=182;
-  const eLv1=eA.filter(x=>!_six(x)), eLv2=eA.filter(_six);
   const _dOf=(x,k)=>{const e=eduOf(x);return !!(e&&e[k]&&e[k]<=asOf);};
+  /* ───── 교육 대상 — 판정은 이 «한 곳»만 지난다 (v134) ─────
+     국내와 해외가 «다른 규칙»이다(제3원칙).
+
+       해외 (Basic · Veteran)  — 지금까지 그대로: 6개월 미만 → LV1 · 이상 → LV2.
+                                 두 집단이 «안 겹친다».
+       국내 (Scrubber Lv.2·Lv.3, 2026-09 CS관리팀 회신 · 사용자 확정)
+           Lv2 대상 = Scrubber 담당 CS인력 «전원» (근속 무관)
+           Lv3 대상 = «Lv2 를 이수한» 인력
+
+     ⚠ 국내는 두 집단이 «겹친다»(Lv3 ⊂ Lv2). 예전처럼 (이수합)÷(대상합) 한 분수로 누르면
+       한 사람이 분모에 두 번 들어가 설명할 수 없는 수가 된다 → 카드를 두 수로 낸다.
+     ⚠ Chiller 는 parseRoster 가 이미 걸러낸다(대시보드는 스크러버 전용 · 사용자 확정).
+       메일이 준 Chiller 기준(Lv2 = 입사 6개월 이상 · Lv3 = Lv2 이수자)은 그때를 위해
+       여기 적어만 둔다 — 담당구분을 화면에 들일 때 이 함수에 분기 한 줄이면 된다.
+     ⚠ 세 소비부(KPI 카드 · 교육 계획 표 · cEdu 추이)가 각자 6개월을 세고 있었다.
+       한 곳으로 모으지 않으면 v96 처럼 «같은 화면의 카드끼리 다른 답»이 된다. */
+  const eduDone=(x,at,lv)=>{const e=eduOf(x), k=eduKey(x,lv); return !!(e&&e[k]&&e[k]<=at);};
+  const eduTgt=(list,at)=>{
+    const kr=x=>x.region===GST.ORG.REGION_KR;
+    const six=x=>((at-x.join)/MS)>=182;
+    return { lv1:(list||[]).filter(x=>kr(x)?true:!six(x)),
+             lv2:(list||[]).filter(x=>kr(x)?eduDone(x,at,1):six(x)) };
+  };
+  const _eT=eduTgt(eA,asOf), eLv1=_eT.lv1, eLv2=_eT.lv2;
   /* ⚠ 과정은 사람마다 다르다 — 국내는 Scrubber Lv.2·Lv.3, 해외는 Basic·Veteran.
      여기서 'bdate'·'vdate' 를 박아 두었더니 **국내만 걸면 완료율이 늘 0%** 였다
      (국내 인원에게는 Basic·Veteran 완료일이라는 것이 아예 없다). 바로 아래 교육 계획 표와
@@ -1900,18 +1949,20 @@ function render(){
   const d1=eLv1.filter(x=>_dOf(x,eduKey(x,1))).length,
         d2=eLv2.filter(x=>_dOf(x,eduKey(x,2))).length;
   const eT=eLv1.length+eLv2.length, eD=d1+d2;
-  /* 이름표도 잡힌 인원을 따라간다 — 교육 계획 표 머리글과 같은 규약.
+  const _eR1=eLv1.length?Math.round(d1/eLv1.length*100):null,
+        _eR2=eLv2.length?Math.round(d2/eLv2.length*100):null;
+  /* 이름표도 잡힌 인원을 따라간다 — 교육 계획 표 머리글과 같은 규약(v96).
      안 그러면 Lv.3 숫자를 세면서 «Veteran» 이라고 말하는 카드가 된다. */
   const _eKr=eA.filter(x=>x.region===GST.ORG.REGION_KR).length, _eOv=eA.length-_eKr;
-  const _eCourse = (!eA.length||(_eOv&&!_eKr)) ? 'Veteran'
-                 : (_eKr&&!_eOv) ? 'Scrubber Lv.3' : 'LV2 (Veteran · Lv.3)';
+  const _eN = (!eA.length||(_eOv&&!_eKr)) ? ['Basic','Veteran']
+            : (_eKr&&!_eOv) ? ['Lv.2','Lv.3'] : ['LV1','LV2'];
   window._PPT.edu={b:eLv1.length,bD:d1,v:eLv2.length,vD:d2};   // PPT 교육 표용
   // ===== 교육 계획 카드 — 라인 선택 가능 · 이 표의 값이 PPT 슬라이드1 교육계획 표에 그대로 들어간다 =====
   {
     const selv=window._EDUPLAN||'';
     const base=fHR.filter(x=>x.onsite&&activeAt(x,asOf)&&x.join&&(!selv||grpKey(x)===selv));
-    const sixP=x=>((asOf-x.join)/MS)>=182;
-    const lv1=base.filter(x=>!sixP(x)), lv2=base.filter(sixP);
+    /* 판정은 eduTgt 한 곳이다 — 예전에는 여기서 6개월을 다시 세고 있었다(v134). */
+    const _bt=eduTgt(base,asOf), lv1=_bt.lv1, lv2=_bt.lv2;
     // 인별 상태 분류 — 시트의 상태 열(이수완료/진행중)을 존중한다.
     // done: 이수일<=기준일 · ing: 상태 '진행중'(미완료) · no: 그 외 미이수(사유 보관)
     const clsP=(x,dkIn,sk)=>{const e=eduOf(x); const dk=(typeof dkIn==='function')?dkIn(x):dkIn;
@@ -1972,11 +2023,18 @@ function render(){
         dv?fmtD(dv):'', _dOf(x,k)?'이수':(dv?'기준일 후':(e?'미이수':'교육현황 매칭없음'))]}; });
     // 미이수를 먼저 — 「누가 안 했나」가 이 표를 여는 이유다
     const all=mk(eLv1,1).concat(mk(eLv2,2)).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
-    return {rows:all.map(o=>o.r), done:eD, tgt:eT};
+    /* 카드가 두 수이므로 팝업도 두 수를 그대로 적는다 — 한 분수로 다시 누르면
+       그 수가 카드와 달라지고, 사람은 어느 쪽이 맞는지 알 수 없게 된다. */
+    return {rows:all.map(o=>o.r), done:eD, tgt:eT,
+            n1:eLv1.length, d1:d1, r1:_eR1, n2:eLv2.length, d2:d2, r2:_eR2,
+            c1:_eN[0], c2:_eN[1]};
   })();
-  setTxt('kp3',eT?Math.round(eD/eT*100)+'%':'—');
-  setTxt('kf3',t('kf3').replace('Veteran',_eCourse)
-    .replace('{p}',eLv2.length?Math.round(d2/eLv2.length*100):0).replace('{n}',eLv2.length));
+  /* 두 수로 낸다 — 국내는 Lv3 대상이 Lv2 대상의 부분집합이라 한 분수로 못 누른다.
+     해외도 같은 모양으로 낸다: 카드가 구분마다 «다른 뜻»이 되면 그게 더 나쁘다. */
+  const _pc=v=>v==null?'—':v+'%';
+  setTxt('kp3', (eLv1.length||eLv2.length) ? (_pc(_eR1)+' · '+_pc(_eR2)) : '—');
+  setTxt('kf3', t('kf3b').replace('{a}',_eN[0]).replace('{m}',eLv1.length)
+                         .replace('{b}',_eN[1]).replace('{n}',eLv2.length));
 
   // 인원 추이 — 경력구간(1년미만/1~2년/2년+) 스택
   {
@@ -2038,8 +2096,7 @@ function render(){
     const tgt=[],don=[],rate=[];
     P.forEach(p=>{
       const a=fHR.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join);
-      const six=x=>((p.end-x.join)/MS)>=182;
-      const lv1=a.filter(x=>!six(x)), lv2=a.filter(six);
+      const _t=eduTgt(a,p.end), lv1=_t.lv1, lv2=_t.lv2;   // 판정은 eduTgt 한 곳 (v134)
       const dOf=(x,k)=>{const e=eduOf(x);return e&&e[k]&&e[k]<=p.end;};
       const d1=lv1.filter(x=>dOf(x,eduKey(x,1))).length;
       const d2=lv2.filter(x=>dOf(x,eduKey(x,2))).length;
@@ -2325,7 +2382,12 @@ function render(){
        계산은 GST.PM 한 곳에 그대로 있고, 궁금하면 물어서 확인한다.
        인당 왜곡 안내도 없앴다(v118) — 두 벌 필터로 분모를 같이 좁힐 수 있게 된 뒤로는
        그 경고가 사실이 아니다. */
-    setNote('cMan',t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0));
+    /* 분모에서 뺀 인원을 «몇 명을 왜» 까지 적는다 (v134 · CS관리팀 확정 기준).
+       ⚠ 분모가 줄면 인당 공수는 **높아진다**. 낮아지면 「왜 줄었지」로 의심이라도 하는데
+         높아지면 「우리가 이만큼 일한다」로 그냥 읽힌다 — v112 가 겪은 그 방향이다. */
+    setNote('cMan',t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0)
+      + (_headEx.n ? ' · 공수 분모 제외 '+_headEx.n+'명 ('
+          + _headEx.vals.map(e=>e.v+' '+e.n).join(' · ')+')' : ''));
   }
   // ===== PM S-커브 (올해, 월 고정) =====
   let scPlan=0, scDone=0;
@@ -2460,6 +2522,20 @@ function render(){
         if(_n) _note += ' · 이 조건에는 BM 행이 없습니다 (있는 단계: '
           + Object.entries(_st).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>e[0]+' '+e[1]).join(' · ')+')';
       }
+      /* «내적이 아니라서 빠진» 행을 값별로 밝힌다 (v134 · 사용자 확정).
+         P운영 통합 양식에는 「내적/외적」에 제3의 값 «자켓» 이 168건 있다 — 규칙대로
+         빠지는 것이 맞지만, 아무 말 없이 빠지면 「시트는 4,532건인데 화면은 2,398건」이
+         되어 사람이 자기 자료를 의심한다(v92 의 교훈).
+         ⚠ 낱말을 판정에 박지 않는다 — 여기서 하는 일은 «세어서 보여주는 것»뿐이라
+           시트에 새 낱말이 생겨도 저절로 뜬다. */
+      { const _dr=GST.ALARM.dropReasons(KRA.concat(KRB));
+        if(_dr.length) _note += ' · 집계 제외 '
+          + _dr.map(e=>e.v+' '+e.n.toLocaleString()).join(' · '); }
+      /* 연구소로 잡힌 «낱말»을 적는다 — 코드에 박은 규칙이므로, 시트에 새 표기가
+         생기면 사람이 보고 알려 줄 수 있어야 한다(GST.PM.matched 와 같은 규약). */
+      { const _rn=GST.ORG.rndScan(KRA.concat(KRB).map(x=>x.lineN||x.srcLine));
+        if(_rn.length) _note += ' · '+GST.ORG.RND+' 로 잡힌 라인 '
+          + _rn.map(e=>e.v+' '+e.n.toLocaleString()).join(' · '); }
       /* 모드 표시는 «맨 앞»에 둔다 — 위의 ⚠ 경고들이 앞에 덧붙으므로, 여기서 얹어야
          「지금 무엇을 보고 있는지」가 문장 첫머리에 온다. 노트의 건수도 그 계통 값이다. */
       if(FV!=='all')_note='【'+t(FV==='alarm'?'ftv_alarm':'ftv_abp')+'】 '+_note;
@@ -2952,7 +3028,10 @@ function render(){
          IO_ONSITE?t('kd_ioh'):''); }}; },
      kp3:function(){ _kShut(); const K=_KPI.edu; if(!K)return null;
        return {title:t('kd_edu')+' · '+_kAsOf, cols:_kCols('kd_educ'), rows:K.rows,
-         note:t('kd_edun').replace('{a}',K.done).replace('{b}',K.tgt)}; },
+         note:t('kd_edun2').replace('{a}',K.c1).replace('{p}',K.r1==null?'—':K.r1)
+              .replace('{d}',K.d1).replace('{m}',K.n1)
+              .replace('{b}',K.c2).replace('{q}',K.r2==null?'—':K.r2)
+              .replace('{e}',K.d2).replace('{n}',K.n2)}; },
      kp4:function(){ _kShut(); const K=_KPI.bm; if(!K)return null;
        const L=(window._DRILL||{}).lbl||{};
        /* key 를 주지 않는다 — 이건 «막대 한 칸»이 아니라 30일 창이다.
@@ -2969,10 +3048,11 @@ function render(){
   // KPI 스파크라인 (최근 12구간 추세 · 계산 무관 표시용)
   try{ const SP=periods(12,asOf,PERIOD), wdv=(PERIOD==='m')?21:5;
     drawSpark('sp1',SP.map(p=>headOn(p.end)),'#3B82F6');
-    drawSpark('sp3',SP.map(p=>{const a=fHR.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join),six=x=>((p.end-x.join)/MS)>=182;
-      const D=a.filter(x=>!six(x)).filter(x=>{const e=eduOf(x),k=eduKey(x,1);return e&&e[k]&&e[k]<=p.end;}).length
-             +a.filter(six).filter(x=>{const e=eduOf(x),k=eduKey(x,2);return e&&e[k]&&e[k]<=p.end;}).length;
-      return a.length?Math.round(D/a.length*100):null;}),'#34D399');
+    /* 스파크라인도 eduTgt 를 지난다 — 여기서 6개월을 다시 세면 카드와 추세가 갈린다(v134). */
+    drawSpark('sp3',SP.map(p=>{const a=fHR.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join);
+      const _t=eduTgt(a,p.end), T=_t.lv1.length+_t.lv2.length;
+      const D=_t.lv1.filter(x=>eduDone(x,p.end,1)).length+_t.lv2.filter(x=>eduDone(x,p.end,2)).length;
+      return T?Math.round(D/T*100):null;}),'#34D399');
     drawSpark('sp4',SP.map(p=>bmN(p.st,p.end)),'#E03131');
     drawSpark('sp5',SP.map(p=>{const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
       const den=Math.max(1,Math.max(1,headOn(p.end))*wdv-ls);
@@ -2998,10 +3078,13 @@ function render(){
       return a+(ty.includes('DUAL')?2:(ty.includes('SINGLE')?1:0));},0);
     const hdM=MP.map(p=>headOn(p.end));
     const chsM=MP.map(p=>chInQ(p.end));
+    /* PPT 로 나가는 값도 화면과 «같은 판정»을 지난다 — 갈리면 받아 본 사람만 그 사실을
+       모른다. 대상 T 는 두 단계의 «합»이다(국내는 겹치므로 인원 수와 다를 수 있다). */
     const eduAgg=pp=>{const a=fHR.filter(x=>x.onsite&&activeAt(x,pp.end)&&x.join);
-      const six=x=>((pp.end-x.join)/MS)>=182; const lv1=a.filter(x=>!six(x)),lv2=a.filter(six);
-      const dOf=(x,k)=>{const e=eduOf(x);return e&&e[k]&&e[k]<=pp.end;};
-      return {T:a.length,D:lv1.filter(x=>dOf(x,eduKey(x,1))).length+lv2.filter(x=>dOf(x,eduKey(x,2))).length};};
+      const _t=eduTgt(a,pp.end);
+      return {T:_t.lv1.length+_t.lv2.length,
+              D:_t.lv1.filter(x=>eduDone(x,pp.end,1)).length
+               +_t.lv2.filter(x=>eduDone(x,pp.end,2)).length};};
     const fCIPq=CIP.filter(okCIP);
     const cipT=MP.map(p=>fCIPq.filter(x=>!x.ap||x.ap<=p.end).length);
     const cipD=MP.map(p=>fCIPq.filter(x=>(!x.ap||x.ap<=p.end)&&x.done&&x.done<=p.end).length);

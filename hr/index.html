@@ -247,7 +247,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(133);   // GST.ORG.campus(단지 정본) 을 쓴다   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
+GST.needVer&&GST.needVer(134);   // GST.ORG.campus(단지 정본) 을 쓴다   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
 const PUB=GST.SHEET_PUB;
 const URL_ROSTER=PUB+'?gid=1213453343&single=true&output=csv';  // 인원명단
 const URL_EDU   =PUB+'?gid=0&single=true&output=csv';            // 교육현황
@@ -668,8 +668,15 @@ const eduDoneAt=(d,E)=>!!(d&&d<=(E||TODAY));
 function hasCorp(p){ return p.region!=='국내'; }          // 법인 과정(Basic·Veteran) 대상인가
 function clsB(p){ return hasCorp(p)?(eduDoneAt(p.bdate)?'이수완료':'미이수'):'비대상'; }
 function clsV(p){ return hasCorp(p)?(eduDoneAt(p.vdate)?'이수완료':'미이수'):'비대상'; }
+/* 국내 Scrubber — 2026-09 CS관리팀 회신 · 사용자 확정
+     Lv2 대상 = Scrubber 담당 CS인력 «전원» (근속 무관)  → 모두가 대상이다
+     Lv3 대상 = «Lv2 를 이수한» 인력                     → 그 전에는 «비대상» 이다
+   ⚠ Lv2 를 안 받은 사람을 Lv3 «미이수» 로 찍으면 명단에 틀린 사실이 적힌다 —
+     아직 받을 차례가 아닌 것이지 안 받은 것이 아니다. 국내에 Basic·Veteran 이 없어
+     «비대상» 으로 적는 것과 정확히 같은 이유다(위 주석). */
 function clsL2(p){ return eduDoneAt(p.lv2date)?'이수완료':'미이수'; }
-function clsL3(p){ return eduDoneAt(p.lv3date)?'이수완료':'미이수'; }
+function clsL3(p){ return eduDoneAt(p.lv2date) ? (eduDoneAt(p.lv3date)?'이수완료':'미이수')
+                                               : '비대상'; }
 /* 사용자 확정: **국내는 Basic·Veteran 이 아니라 Scrubber Lv.2 · Lv.3 이다.**
    표·드릴·KPI 가 각자 clsB/clsV 를 직접 부르면 국내 화면이 「비대상」으로만 가득 찬다 —
    실제로 상세 명단이 그 상태였다(399명 전원 비대상). 「그 사람의 1·2단계」를 묻는 접근자

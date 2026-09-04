@@ -382,16 +382,53 @@ export function tally(people, eduIndex, dateKey, statusKey, asOf) {
   return r;
 }
 
-// LV1(Basic, 재직 6개월 미만) / LV2(Veteran, 6개월 이상) — report:1117~1118과 동일 임계값.
+/* 교육 대상 — 국내와 해외가 «다른 규칙»이다 (제3원칙). 대시보드 report 의 eduTgt 와 한 벌.
+
+     해외 (Basic·Veteran) — 지금까지대로: 6개월 미만 → LV1 · 이상 → LV2. 안 겹친다.
+     국내 (Scrubber Lv.2·Lv.3 · 2026-09 CS관리팀 회신 · 사용자 확정)
+         LV1 = Lv.2 대상 = Scrubber 담당 CS인력 «전원» (근속 무관)
+         LV2 = Lv.3 대상 = «Lv.2 를 이수한» 인력      → 국내는 두 집단이 «겹친다»
+
+   ⚠ 예전에는 여기서 'bdate'/'vdate' 를 박고 6개월만 봤다. 국내 인원에게는 그 완료일이
+     아예 없어 **봇이 국내 교육을 늘 0 으로 답했다** — 대시보드는 v96 에 고쳤는데 이
+     사본만 안 따라온 자리다(제2원칙 그대로). 판정은 eduKeyOf·eduTargets 만 지난다. */
+export const eduKeyOf = (p, lv) =>
+  (p && p.region === '국내') ? (lv === 1 ? 'lv2date' : 'lv3date') : (lv === 1 ? 'bdate' : 'vdate');
+export const eduStatKeyOf = (p, lv) =>
+  (p && p.region === '국내') ? (lv === 1 ? 'lv2' : 'lv3') : (lv === 1 ? 'basic' : 'vet');
+export function eduTargets(list, eduIndex, asOf) {
+  const six = (p) => ((asOf - p.join) / MS) >= 182;
+  const done = (p, lv) => {
+    const e = eduIndex.of(p), k = eduKeyOf(p, lv);
+    return !!(e && e[k] && e[k] <= asOf);
+  };
+  const kr = (p) => p && p.region === '국내';
+  return {
+    lv1: (list || []).filter((p) => (kr(p) ? true : !six(p))),
+    lv2: (list || []).filter((p) => (kr(p) ? done(p, 1) : six(p))),
+  };
+}
 // 사이트 비교는 반드시 grpKey 기준(report:1116) — 원문 Work Place로 비교하면 영원히 0건.
 export function eduPlan(roster, eduIndex, asOf, opts = {}) {
   const site = opts.site || '';
   const base = roster.filter((p) => p.onsite && activeAt(p, asOf) && p.join && (!site || grpKey(p) === site));
-  const sixP = (p) => ((asOf - p.join) / MS) >= 182;
+  const T = eduTargets(base, eduIndex, asOf);
+  /* 사람마다 과정이 다르므로 tally 에 «한 벌의 키»를 넘길 수 없다 — 사람별로 고른다. */
   return {
-    b: tally(base.filter((p) => !sixP(p)), eduIndex, 'bdate', 'basic', asOf),
-    v: tally(base.filter(sixP), eduIndex, 'vdate', 'vet', asOf),
+    b: tallyLv(T.lv1, eduIndex, 1, asOf),
+    v: tallyLv(T.lv2, eduIndex, 2, asOf),
   };
+}
+// tally 와 같은 모양을 내되, 날짜·상태 키를 «사람마다» 고른다(국내/해외가 다르다).
+export function tallyLv(people, eduIndex, lv, asOf) {
+  const r = { t: people.length, done: 0, ing: 0, no: 0, noList: [] };
+  people.forEach((p) => {
+    const c = clsP(p, eduIndex, eduKeyOf(p, lv), eduStatKeyOf(p, lv), asOf);
+    if (c.c === 'done') r.done++;
+    else if (c.c === 'ing') r.ing++;
+    else { r.no++; r.noList.push(p.name + '(' + (c.why || '') + ')'); }
+  });
+  return r;
 }
 
 /* ---------- 설치현황 (gid 891608329) ---------- */
@@ -780,13 +817,16 @@ export function filterLeave(rows, f = {}) {
 // 교육 상태로 사람을 거르기 — LV 미지정 시 재직 6개월 기준으로 각자 해당 레벨을 판정
 export function filterPeopleByEdu(people, eduIndex, asOf, level, status) {
   const sixP = (p) => ((asOf - p.join) / MS) >= 182;
+  const T = eduTargets(people, eduIndex, asOf);   // 판정은 eduTargets 한 곳 (제2원칙)
   let list = people;
-  if (level === 'LV1') list = list.filter((p) => !sixP(p));
-  else if (level === 'LV2') list = list.filter(sixP);
+  if (level === 'LV1') list = T.lv1;
+  else if (level === 'LV2') list = T.lv2;
   if (!has(status)) return list;
   return list.filter((p) => {
-    const useVet = level === 'LV2' || (!has(level) && sixP(p));
-    const c = clsP(p, eduIndex, useVet ? 'vdate' : 'bdate', useVet ? 'vet' : 'basic', asOf);
+    // 국내는 근속이 아니라 «Lv.2 이수 여부»로 단계가 갈린다 → eduTargets 가 답을 갖고 있다
+    const useVet = level === 'LV2'
+      || (!has(level) && (p.region === '국내' ? T.lv2.indexOf(p) >= 0 : sixP(p)));
+    const c = clsP(p, eduIndex, eduKeyOf(p, useVet ? 2 : 1), eduStatKeyOf(p, useVet ? 2 : 1), asOf);
     if (status === '미이수') return c.c === 'no';
     if (status === '진행중') return c.c === 'ing';
     if (status === '이수완료') return c.c === 'done';

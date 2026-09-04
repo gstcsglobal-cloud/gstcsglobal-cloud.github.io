@@ -243,11 +243,18 @@ console.log('\n[1] 카드 숫자 = 팝업이 세는 수 (같은 모집단)');
 
   const c3 = await cardText('kp3'), m3 = await clickKpi('kp3');
   is(m3.kind === 'rows', 'kp3 은 표 하나짜리 목록으로 연다 (실제 ' + m3.kind + ')');
-  const mm = m3.sub.match(/(\d+)\s*\/\s*대상\s*(\d+)/);
-  is(!!mm, 'kp3 팝업이 «이수 a / 대상 b» 를 적는다 (실제 ' + m3.sub + ')');
-  if (mm) is(Math.round(+mm[1] / +mm[2] * 100) + '%' === c3.trim(),
-     `kp3 완료율: 카드 ${c3.trim()} = 이수 ${mm[1]} ÷ 대상 ${mm[2]}`);
-  if (mm) is(m3.rows === +mm[2], `목록 행수 = 대상 ${mm[2]}명 (실제 ${m3.rows}) — 분자·분모가 한 배열에서 나온다`);
+  /* v134 — 카드가 «두 수»가 됐다. 국내는 Lv3 대상이 Lv2 대상의 부분집합이라 한 분수로
+     누를 수 없기 때문이다(사용자 확정). 팝업도 두 수를 그대로 적어야 카드와 맞출 수 있다. */
+  const mm = [...m3.sub.matchAll(/(\d+)%\s*\(이수\s*(\d+)\/(\d+)\)/g)];
+  is(mm.length === 2, 'kp3 팝업이 «두 단계»를 각각 적는다 (실제 ' + m3.sub + ')');
+  if (mm.length === 2) {
+    is(mm.map(x => x[1] + '%').join(' · ') === c3.trim(),
+       `kp3 완료율: 카드 ${c3.trim()} = 팝업 ${mm.map(x => x[1] + '%').join(' · ')}`);
+    mm.forEach((x, i) => is(Math.round(+x[2] / +x[3] * 100) === +x[1],
+       `${i ? 'Lv3' : 'Lv2'} 비율이 이수 ${x[2]} ÷ 대상 ${x[3]} 와 맞는다`));
+    const want = +mm[0][3] + +mm[1][3];
+    is(m3.rows === want, `목록 행수 = 두 단계 대상 합 ${want} (실제 ${m3.rows}) — 카드가 센 그 배열이다`);
+  }
 
   const c4 = num(await cardText('kp4')), m4 = await clickKpi('kp4');
   is(m4.kind === 'drill' && num(m4.sums[0].n) === c4,

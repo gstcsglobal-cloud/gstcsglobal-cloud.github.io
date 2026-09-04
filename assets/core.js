@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 133;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 134;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -1592,6 +1592,29 @@ GST.ALARM = {
   counts: function(row, kind){
     return GST.ALARM.dedup(row) && GST.ALARM.inner(row);
   },
+  /* «내적이 아니라서 빠진» 행을 값별로 센다 (v134 · 사용자 확정).
+
+     왜. P운영 통합 양식의 「내적/외적」 열에는 제3의 값 «자켓» 이 168건 있다
+     (전부 유형1=가성 · 알람분류=JACKET). 규칙은 「내적만 센다」 하나이므로 그 168건이
+     빠지는 것은 맞는데, **아무 말 없이 빠지는 것**이 문제다 — 시트는 4,532건인데
+     화면은 2,398건이라, 나중에 「내 자료가 안 나온다」로 돌아온다(v92 의 교훈).
+
+     ⚠ 낱말을 판정에 박지 않는다. 여기서 하는 일은 «세어서 보여주는 것»뿐이라,
+       시트에 새 낱말이 생겨도 저절로 목록에 뜬다.
+     ⚠ dedup 에 걸린 줄(한 사건의 2·3번째 줄)은 «빠진 것»이 아니다 — 같은 사건을
+       두 번 세지 않으려고 접은 것이므로 이 목록에 넣으면 사람을 헷갈리게 한다. */
+  dropReasons: function(rows){
+    const m = new Map();
+    (rows || []).forEach(function(x){
+      if(!GST.ALARM.dedup(x)) return;
+      if(GST.ALARM.inner(x)) return;
+      const g = function(k){ return String(x && x[k] != null ? x[k] : '').trim(); };
+      const v = g('incl') || g('inout') || '(공란)';
+      m.set(v, (m.get(v) || 0) + 1);
+    });
+    return Array.from(m.entries()).map(function(e){ return {v:e[0], n:e[1]}; })
+           .sort(function(a, b){ return b.n - a.n; });
+  },
 
   /* 시트 한 장 → DB 행. 업로드 화면과 검증 스크립트가 «같은 함수»를 쓴다 —
      화면에만 두면 테스트가 흉내를 내게 되고, 흉내는 반드시 본체와 갈라진다
@@ -1806,7 +1829,29 @@ GST.ORG = {
      v98 규약 그대로다 — 조직 축은 추론하지 않는다. 시트에 적힌 값을 코드가 «단지답지
      않다»는 이유로 지우면 안 된다. 지우는 것은 «모른다»는 낱말뿐이다. */
   _NOCAMP: /^(기타|미정|미상|해당없음|없음|N\/A|-)$/i,
-  campus: function(campus, line, ctx){
+  /* 반도체연구소 — 「반도체연구소는 별도로 분리 (H1,H2,H3,H4,반도체연구소)」
+     (2026-09 CS관리팀 회신 · 사용자 확정).
+     ⚠ 이것은 «낱말을 코드에 박는» 일이다. 실측 표기가 다섯 가지라(P운영 알람 시트:
+       NRD(P3F) 82 · NRD-P 42 · P3-3RND 22 · P4-3RND 6 · P3ANRD·P3CNRD 3 = 155건)
+       목록으로는 못 잡고 «NRD 또는 RND 를 품었는가»로 본다.
+     ⚠ 그래서 «잡힌 값»을 화면이 밝힌다(GST.ORG.rndScan). 시트에 새 표기가 생기면
+       사람이 그것을 보고 알려 줄 수 있어야 한다 — GST.PM.matched() 와 같은 규약이다.
+     ⚠ 해외에는 안 건다. 대만 분기는 아래에서 먼저 돌아 여기까지 오지 않는다(제3원칙). */
+  RND: '반도체연구소',
+  _RND_RE: /NRD|RND/i,
+  rndHit: function(v){ return GST.ORG._RND_RE.test(String(v == null ? '' : v)); },
+  /* 어떤 낱말이 연구소로 잡혔나 — 화면 주석용. 순수 함수라 렌더마다 다시 세도 안전하다. */
+  rndScan: function(vals){
+    const m = new Map();
+    (vals || []).forEach(function(v){
+      const s = String(v == null ? '' : v).trim();
+      if(s && GST.ORG.rndHit(s)) m.set(s, (m.get(s) || 0) + 1);
+    });
+    return Array.from(m.entries()).map(function(e){ return {v:e[0], n:e[1]}; })
+           .sort(function(a, b){ return b.n - a.n; });
+  },
+  /* line2 = 국내 라인(설치현황 Line 2). 안 주면 line 만 본다 — 옛 호출부 보호. */
+  campus: function(campus, line, ctx, line2){
     const ln = String(line == null ? '' : line).trim();
     const c  = String(campus == null ? '' : campus).trim();
     const bad = c && GST.ORG._NOCAMP.test(c);
@@ -1820,6 +1865,10 @@ GST.ORG = {
       if(c && !bad && !/TAICHUNG|LINKOU|TAINAN|TONGLUO|HSINCHU|SINCHU|KAOHSIUNG|台/i.test(c)) return c;
       return ln;
     }
+    /* 연구소 판정은 «단지 이름»보다 앞선다 — 시트의 단지 칸이 P3·P4 로 적혀 있어도
+       그 라인이 연구소면 연구소다(사용자 확정). 단지 칸이 이미 연구소면 아래에서
+       그대로 살아 나가므로 여기서 한 번만 본다. */
+    if(GST.ORG.rndHit(ln) || GST.ORG.rndHit(line2) || GST.ORG.rndHit(c)) return GST.ORG.RND;
     /* 「기타」처럼 «모른다»는 낱말만 미상으로 돌린다(실측 설치현황 Site=기타 28대).
        조직명(OFFICE·통합·Repair Center…)은 시트가 적어 둔 «그 단지»이므로 그대로 쓴다. */
     if(!c || bad) return '';
@@ -3209,6 +3258,47 @@ GST._bfKick = function(){
 GST.FILT_DROP_CUST = /^(본사|칠러|CHILLER|OFFICE|통합|미정|기타|해당없음|N\/A)$/i;
 
 GST.FILT_DROP_ORG = /^(라인장|단지장|운영관리|세정|정산|주재원|국내|해외|기타|미정|TRANSLATOR|CHILLER|SCRUBBER|OFFICE|통합|REPAIR CENTER|서비스자재)$/i;
+
+/* 공수 산정에서 빼는 인력 — 「팀장, OFFICE인원, 단지장 제외」
+   (2026-09 CS관리팀 회신 · 사용자 확정).
+
+   ⚠ 이 낱말들은 «직책 열»에만 있지 않다. 실측(v124) — OFFICE·통합·Repair Center 는
+     인원현황의 **단지 칸**에, 단지장·라인장은 **라인 칸**에 실재한다. 한 칸만 보면
+     그 사람이 안 잡힌다 → role(업무/직책)·campus(단지)·wp(라인)를 함께 본다.
+
+   ⚠ GST.FILT_DROP_ORG 를 재사용하지 말 것. 그 목록은 «사이드바 목록 정리»용이고,
+     라인장·세정·운영관리처럼 **여기서 빼면 안 되는** 값이 들어 있다(고객사가 말한 것은
+     팀장·OFFICE·단지장 셋뿐이다). v124 는 그 목록을 값 판정에 썼다가 133명(26%)을
+     미배치로 떨어뜨린 자리다 — 목적이 다르면 목록도 따로 둔다.
+
+   ⚠ 이것은 «분모»를 줄이는 일이라 인당 지표가 **높아진다**. 낮아지면 「왜 줄었지」로
+     의심이라도 하는데 높아지면 그냥 읽힌다(v112) — 그래서 scan() 이 «몇 명을 왜 뺐는지»
+     를 돌려주고, 화면이 그것을 적는다. */
+GST.HEAD_EX = {
+  RE:  /팀장|단지장/,                    // 값 «안»에 들어 있어도 잡는다 (P1팀장 등)
+  OFF: /^(OFFICE|오피스)$/i,             // 단지 칸의 값 자체가 OFFICE 인 경우
+  /* 잡혔으면 «잡힌 그 값»을, 아니면 '' 를 돌려준다 — 순수 함수라 렌더마다 다시 세도 된다. */
+  why: function(p){
+    if(!p) return '';
+    const f = [p.role, p.campus, p.wp, p.site];
+    for(let i = 0; i < f.length; i++){
+      const v = String(f[i] == null ? '' : f[i]).trim();
+      if(!v) continue;
+      if(GST.HEAD_EX.RE.test(v) || GST.HEAD_EX.OFF.test(v)) return v;
+    }
+    return '';
+  },
+  hit: function(p){ return !!GST.HEAD_EX.why(p); },
+  scan: function(list){
+    const m = new Map(); let n = 0;
+    (list || []).forEach(function(p){
+      const v = GST.HEAD_EX.why(p);
+      if(v){ n++; m.set(v, (m.get(v) || 0) + 1); }
+    });
+    return { n:n, vals:Array.from(m.entries()).map(function(e){ return {v:e[0], n:e[1]}; })
+                        .sort(function(a, b){ return b.n - a.n; }) };
+  }
+};
 
 GST.filters = (function(){
   /* ══════════════════════════════════════════════════════════════════════

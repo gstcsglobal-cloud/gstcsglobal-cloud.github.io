@@ -353,5 +353,134 @@ console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, 
        'core — 조회 열에 phenom(현상)이 있다 (빼면 드릴의 현상 칸만 조용히 빈다)'); }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   [12] P운영 «통합 양식» 과 2026-09 CS관리팀 확정 기준 (v134)
+
+   고객사가 K·P·H 세 벌 양식을 하나로 합친 «통합 양식»을 보내왔다. 같은 메일로 기준
+   셋을 확정했다 — 자켓 처리 · 라인=Line 2 · 반도체연구소 분리.
+
+   ⚠ 픽스처는 전부 지어낸 값이다. 머리글 «이름»만 실물과 같다(t-leak · 저장소가 공개다).
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[12] P운영 통합 양식 — 새 머리글이 그대로 읽히는가');
+const P2_ALARM = [
+  ['Site','Line','Area','Bay','SDWT','EQP ID','세부공정','Chamber ID','Chamber Position','Position',
+   'SEQP Type','SEQP S/N','SEQP ID','Status','Maker','SEQP Model','SEQP CH','Alarm Level',
+   'Alarm Comment','Occur Time','Release Time','Holding Time','날짜1','내적/외적','유형1','알람분류',
+   '알람 실제원인','현상','1차 확인','조치내용','2차 확인','추적완료여부','건수','연도','정산월',
+   '주차','스크러버코드','단지분류','PCS카운팅'],
+  // ① 내적 — 센다
+  ['P1','P1-3','CVD','S36','','EQ701','CU','C_A','NOR','PRO','ALARM','DBW-1001R','EQ701_SC01','ALARM',
+   'GST','MODEL X','2','ALARM','INLET1 TROUBLE CH2','46023.304','46023.308','0.004','46023',
+   '내적','VALVE','INLET TROUBLE','3WAY V/V','누적','서술 원인','V/V 점검','-','-','1','26년',
+   '26년 01월','26_01','EQ701','P1','O'],
+  // ② 외적 — 안 센다
+  ['P2','P2-D','METAL','S013','','EQ702','-','DIVERT','NOR','PRO','ALARM','DBW-1002S','EQ702_SC01','ALARM',
+   'GST','MODEL Y','1','ALARM','ALARM EXHAUST PRES','46024.368','46024.378','0.009','46024',
+   '외적','POWDER','EXHAUST','EXHAUST','누적','서술 원인','CLEANING','-','-','1','26년',
+   '26년 01월','26_01','EQ702','P2','O'],
+  // ③ 자켓 — 내적도 외적도 아닌 제3의 값 (실물 168건). 안 세되 «밝혀야» 한다
+  ['P1','P1-1','DIFF','38','','EQ703','SIN','EQ703','NOR','PRO','ALARM','DBW-1003S','EQ703_SC01','ALARM',
+   'GST','MODEL X','1','ALARM','HEATING JACKET ERROR CH1','46025.414','46025.512','0.098','46025',
+   '자켓','가성','JACKET','JACKET','누적','서술 원인','RESET','-','-','1','26년',
+   '26년 01월','26_01','EQ703','P1','O'],
+];
+const P2_ABP = [
+  ['Type','Occur Date','Holding Time','Division','Site','Line','EQP ID','PRC GRP CODE','Chamber ID',
+   'SEQP S/N','SEQP ID','SEQP CH','Area','Area(Middle)','Area(Small)','Maker','SEQP Model',
+   'Occur Time','Release Time','ALARM COMMENT','Alarm Level','All-ByPass Seq','진성/가성','유지시간',
+   '방향','내적/외적','유형','알람구분','실제원인','현상','원인','조치내용','건수','연도','정산월','주차'],
+  ['ALLBYPASS_LNG','46024','0.005','MEMORY','P1','P1C','EQ801','ALD_X','3','GBWS1001','EQ801','0',
+   'METAL','ALD','TIN','GST','MODEL Z','46024.447','46024.451','ALL_BYPASS_LNG','-','1','내적','0.005',
+   '내적','내적','INLET','-','-','-','서술','-','1','26년','26년 01월','26년 01주'],
+  ['ALLBYPASS_LNG','46025','0','MEMORY','P3','P3A','EQ802','PE_Y','E','GBWS1002','EQ802','0',
+   'CVD','PE','HT','GST','MODEL Z','46025.756','46025.756','ALL_BYPASS_LNG','-','1','외적','0',
+   '외적','외적','-','-','-','-','서술','-','1','26년','26년 01월','26년 01주'],
+];
+{
+  const a = G.ALARM.build(P2_ALARM, 'alarm', 'P');
+  const b = G.ALARM.build(P2_ABP,  'abp2',  'P');
+  is(!a.err, '통합 ALARM — 해석 ' + (a.err || '성공 (헤더 r'+a.hi+' · '+a.rows.length+'행)'));
+  is(!b.err, '통합 ALLBYPASS — 해석 ' + (b.err || '성공 (헤더 r'+b.hi+' · '+b.rows.length+'행)'));
+  if (!a.err) {
+    eq(a.rows[0].inout, '내적',  '「내적/외적」 → inout (옛 P 의 「내적 / 제외」가 없어졌다)');
+    eq(a.rows[0].ctype, 'VALVE', '「유형1」 → ctype (원인 계열)');
+    eq(a.rows[0].atype, 'INLET TROUBLE', '「알람분류」 → atype (현상 계열)');
+    eq(a.rows[0].action, 'V/V 점검', '「조치내용」 → action');
+    eq(a.rows.filter(r=>r.cnt).length, 1, '내적 1건만 센다 (외적·자켓은 뺀다)');
+    eq(b.rows.filter(r=>r.cnt).length, 1, '올바도 내적 1건만');
+    // Seq 가 전부 1 이라 dedup 이 아무것도 접지 않는다 — H 처럼 3배로 부풀지 않는다
+    eq(b.rows.length, 2, '올바 두 줄이 그대로 두 사건이다 (All-ByPass Seq 가 전부 1)');
+  }
+
+  console.log('\n[12-b] 「자켓」은 빠지되 «조용히» 빠지지 않는다 (사용자 확정)');
+  const dr = G.ALARM.dropReasons(a.rows);
+  const jk = dr.filter(e => e.v === '자켓')[0];
+  is(!!jk && jk.n === 1, '자켓이 «제외 목록»에 건수와 함께 뜬다 (실제 ' +
+     (dr.map(e=>e.v+' '+e.n).join(' · ') || '없음') + ')');
+  is(dr.some(e => e.v === '외적'), '외적도 같은 목록에 뜬다 — 낱말을 박지 않고 «세어서» 보여준다');
+  is(!/자켓/.test(fs.readFileSync(ROOT+'/assets/core.js','utf8').match(/_IN_RE:[\s\S]{0,200}/)[0]),
+     '판정 정규식에 「자켓」을 박지 않았다 — 새 낱말이 생겨도 저절로 목록에 뜬다');
+  /* ⚠ 함수가 있어도 «화면이 안 부르면» 사용자는 여전히 아무것도 못 본다.
+     v92 가 겪은 것이 정확히 그것이다 — 값은 다 있는데 화면이 말을 안 했다. */
+  { const R = fs.readFileSync(ROOT+'/report/index.html','utf8').replace(/\/\*[\s\S]*?\*\//g,'');
+    is(/GST\.ALARM\.dropReasons\(/.test(R) && /집계 제외/.test(R),
+       'report — 고장 차트 주석이 그 제외 목록을 실제로 적는다');
+    is(/GST\.ORG\.rndScan\(/.test(R),
+       'report — 연구소로 «잡힌 낱말»도 주석에 적는다 (코드에 박은 규칙이므로 밝혀야 한다)');
+    is(/_headEx\.n/.test(R) && /공수 분모 제외/.test(R),
+       'report — 공수 분모에서 «몇 명을 왜» 뺐는지 적는다'); }
+}
+
+console.log('\n[12-c] 반도체연구소 — 라인 표기 다섯 가지를 한 단지로 (사용자 확정 · NRD·RND 둘 다)');
+{
+  const camp = (line, c) => G.ORG.campus(c || 'P3', line, 'SEC Scrubber');
+  ['NRD(P3F)','NRD-P','P3-3RND','P4-3RND','P3ANRD','P3CNRD'].forEach(v =>
+    eq(camp(v), G.ORG.RND, '「' + v + '」 → ' + G.ORG.RND));
+  eq(camp('P1-3'), 'P3', '평범한 라인은 시트의 단지 그대로 (P3)');
+  eq(camp('P2-D', 'P2'), 'P2', '연구소가 아니면 한 자리도 안 움직인다');
+  // line2 로 와도 잡는다 — 국내 라인의 정본이 설치현황 Line 2 다
+  eq(G.ORG.campus('P3', 'P3-D', 'SEC Scrubber', 'NRD-P'), G.ORG.RND, 'Line 2 로 와도 잡는다');
+  // 해외는 안 건드린다(제3원칙) — 대만 분기가 먼저 돌아 여기까지 오지 않는다
+  eq(G.ORG.campus('F16', 'F16', 'GST TAIWAN SCRUBBER'), 'F16', '해외는 한 자리도 안 움직인다');
+  const seen = G.ORG.rndScan(['NRD-P','NRD-P','P3-3RND','P1-3']);
+  is(seen.length === 2 && seen[0].v === 'NRD-P' && seen[0].n === 2,
+     '어떤 낱말이 잡혔는지 세어 돌려준다 (화면이 그것을 적는다)');
+}
+
+console.log('\n[12-e] 라인 = 설치현황 Line 2 — «국내만» (사용자 확정)');
+{
+  /* 주석을 먼저 걷어낸다 — 설명 문장이 정규식에 걸려 «거짓 초록불»이 난 적이 있다
+     (t-filters [7-7] 이 겪은 자리). 판정은 «코드»만 보고 한다. */
+  const R = fs.readFileSync(ROOT + '/report/index.html', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const m = R.match(/const\s+_kr\s*=\s*o\s*&&\s*o\.region[\s\S]{0,400}?x\.campus\s*=/);
+  is(!!m, 'report — krJoin 이 국내/해외를 갈라 라인을 정한다');
+  if (m) {
+    is(/o\.line2/.test(m[0]) && /o\.line/.test(m[0]),
+       '  국내는 Line 2 를 먼저 보고, 비면 Line 1(FAB)으로 폴백한다 (버리지 않는다)');
+    is(/_kr\s*\?/.test(m[0]),
+       '  해외는 지금까지대로 Line 1 이다 — 118열 양식에는 Line 2 열 자체가 없다(제3원칙)');
+    is(/if\(_kr\)\s*x\.line2\s*=\s*''/.test(R),
+       '  국내 원장의 라인2 는 비운다 — 같은 차원을 두 칸이 두 번 거르지 않게');
+  }
+  /* 갈림은 «한 줄» 이어야 한다. 소비부(krLineOf 등)가 각자 line2 를 고르면
+     같은 화면의 카드끼리 다른 라인을 본다(v94 가 단지에서 겪은 자리). */
+  const picks = (R.match(/o\.line2/g) || []).length;
+  is(picks <= 3, '라인2 를 고르는 자리가 늘어나지 않았다 (실제 ' + picks + '곳 · 전부 krJoin 안)');
+}
+
+console.log('\n[12-d] 공수 분모 제외 — 팀장 · OFFICE인원 · 단지장 (사용자 확정)');
+{
+  const P = (o) => Object.assign({role:'',campus:'',wp:'',site:'P1'}, o);
+  is(G.HEAD_EX.hit(P({role:'P1팀장'})),   '직책이 팀장이면 뺀다');
+  is(G.HEAD_EX.hit(P({wp:'단지장'})),      '라인 칸의 단지장도 뺀다 (그 낱말은 라인에 산다)');
+  is(G.HEAD_EX.hit(P({campus:'OFFICE'})), '단지 칸의 OFFICE 도 뺀다');
+  is(!G.HEAD_EX.hit(P({wp:'라인장'})),     '라인장은 «안» 뺀다 — 고객사가 말한 것은 셋뿐이다');
+  is(!G.HEAD_EX.hit(P({campus:'통합'})),   '통합도 «안» 뺀다 (FILT_DROP_ORG 를 재사용하면 여기서 틀린다)');
+  is(!G.HEAD_EX.hit(P({wp:'P1C'})),        '평범한 인원은 그대로 센다');
+  const sc = G.HEAD_EX.scan([P({role:'P1팀장'}), P({role:'P2팀장'}), P({campus:'OFFICE'}), P({wp:'P1C'})]);
+  is(sc.n === 3, '몇 명을 뺐는지 센다 (실제 ' + sc.n + ')');
+  is(sc.vals.length === 3, '잡힌 «값»도 돌려준다 — 화면이 그것을 적는다 (분모가 조용히 작아지면 인당이 조용히 높아진다)');
+}
+
 console.log('\n' + (fail ? '❌ t-alarm ' + fail + ' 실패 / ' + (pass+fail) : '✅ t-alarm ' + pass + '/' + pass));
 process.exit(fail ? 1 : 0);

@@ -145,8 +145,50 @@ is(/const d1=eLv1\.filter\(x=>_dOf\(x,eduKey\(x,1\)\)\)\.length,/.test(SRC.repor
    'report — 교육 완료율 KPI 도 eduKey 를 지난다');
 is(!/_dOf\(x,'bdate'\)/.test(SRC.report) && !/_dOf\(x,'vdate'\)/.test(SRC.report),
    'report — 과정 이름을 박아 둔 옛 판정이 없다');
-is(/_eCourse/.test(SRC.report) && /'Scrubber Lv\.3'/.test(SRC.report),
-   'report — KPI 이름표도 잡힌 인원을 따라간다 (Lv.3 을 세면서 Veteran 이라 하지 않는다)');
+/* ⚠ «변수 이름»을 요구하지 않는다 — 예전에는 `_eCourse` 라는 낱말과 'Scrubber Lv.3'
+   리터럴을 그대로 찾았는데, 그건 그때의 «생김새»이지 지킬 규칙이 아니다(v122 의 교훈).
+   지킬 것은 하나 — 이름표를 «잡힌 인원»(_eKr·_eOv)에서 고르고, 국내·해외 어휘를 둘 다
+   갖고 있는가. v134 에 카드가 두 수가 되면서 그 변수가 _eN 으로 바뀌었을 뿐이다. */
+{
+  const m = SRC.report.match(/const\s+(?:_eN|_eCourse)\s*=([\s\S]{0,320}?);/);
+  is(!!m && /_eKr/.test(m[1]) && /_eOv/.test(m[1]) && /Lv\.3/.test(m[1]) && /Veteran/.test(m[1]),
+     'report — KPI 이름표도 잡힌 인원을 따라간다 (Lv.3 을 세면서 Veteran 이라 하지 않는다)');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   [7-b] 교육 대상 규칙 — 2026-09 CS관리팀 확정 (v134)
+
+     해외 (Basic·Veteran)  : 6개월 미만 → LV1 · 이상 → LV2   (안 겹친다)
+     국내 (Scrubber Lv.2·3): Lv2 = «전원» · Lv3 = «Lv2 이수자» (겹친다)
+
+   ⚠ 판정이 세 곳(KPI 카드·교육 계획 표·cEdu 추이)에 흩어져 있으면 v96 처럼 «같은
+     화면의 카드끼리 다른 답»이 된다. 한 곳(eduTgt)만 지나는지를 소스로 지킨다.
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[7-b] 교육 대상 — 국내와 해외가 다른 규칙이고, 판정은 한 곳이다 (v134)');
+{
+  const m = SRC.report.match(/const\s+eduTgt\s*=([\s\S]{0,600}?)\n  \};/);
+  is(!!m, 'report — 교육 대상 판정 eduTgt 가 있다');
+  if (m) {
+    const b = m[1];
+    is(/REGION_KR/.test(b), '  국내/해외를 가른다 (제3원칙 — 한 규칙으로 합치지 않는다)');
+    is(/kr\(x\)\s*\?\s*true\s*:/.test(b),
+       '  국내 Lv2 대상은 «전원» 이다 (근속 조건이 없다)');
+    is(/kr\(x\)\s*\?\s*eduDone\(x\s*,\s*at\s*,\s*1\)/.test(b),
+       '  국내 Lv3 대상은 «Lv2 를 이수한» 인력이다');
+    is(/six\(x\)/.test(b), '  해외는 지금까지대로 6개월 기준이다');
+  }
+  /* 소비부가 각자 6개월을 세면 안 된다 — 그 자리가 v96 이 겪은 자리다.
+     주석을 걷어낸 뒤 본다(주석 안의 설명이 정규식에 걸려 거짓 초록불이 난 적이 있다). */
+  const bare = SRC.report.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  const six = (bare.match(/\)\/MS\)>=182/g) || []).length;
+  is(six === 1, '교육 6개월 판정이 소스에 «한 번»만 있다 — eduTgt 안 (실제 ' + six + '곳)');
+  is((bare.match(/eduTgt\(/g) || []).length >= 3,
+     'KPI 카드 · 교육 계획 표 · cEdu 추이가 모두 그 한 곳을 부른다');
+}
+console.log('\n[7-c] hr — Lv2 를 안 받은 사람은 Lv3 «비대상» 이다 (미이수가 아니다)');
+is(/function clsL3\(p\)\{ return eduDoneAt\(p\.lv2date\)/.test(HR.replace(/\s+/g, ' ').replace(/function clsL3\(p\)\s*\{\s*return\s*eduDoneAt\(p\.lv2date\)/, 'function clsL3(p){ return eduDoneAt(p.lv2date)')) ||
+   /clsL3[\s\S]{0,160}?eduDoneAt\(p\.lv2date\)[\s\S]{0,160}?'비대상'/.test(HR),
+   'hr — clsL3 가 Lv2 미이수자를 「비대상」으로 낸다 (아직 받을 차례가 아닌 것을 «안 받았다»로 적지 않는다)');
 
 const AXES7 = ['region','op','div','customer','campus','line','team'];
 console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96)');
