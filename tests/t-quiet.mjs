@@ -170,6 +170,13 @@ console.log('\n[2] 같은 물음에 두 함수가 답하지 않는지');
         .forEach(([i, w]) => is(G.ORG.site(i) === w, `GST.ORG.site(${JSON.stringify(i)}) = ${JSON.stringify(G.ORG.site(i))} (기대 ${JSON.stringify(w)})`));
     } else bad('core — GST.ORG.site 가 없다');
   }
+  /* v135 5단계 — 카드 노트(setNote · report·cip 이 byte 까지 같았다)와 applyLang 의 data-i 루프(일곱 벌) */
+  const CIP = noCmt(rd('cip/index.html')), PM = noCmt(rd('pm/index.html'));
+  is(/function setNote\(canvasId,txt,sev\)\{ GST\.setNote\(canvasId,txt,sev\); \}/.test(SRC.report), 'report — setNote 가 core 위임');
+  is(/function setNote\(canvasId,txt,sev\)\{ GST\.setNote\(canvasId,txt,sev\); \}/.test(CIP), 'cip — setNote 가 core 위임');
+  [['report',SRC.report],['fault',SRC.fault],['material',SRC.material],['scrubber',SRC.scrubber],['hr',SRC.hr],['pm',PM],['tco',TCO],['cip',CIP]]
+    .forEach(([p, s]) => is(/GST\.applyI18n\(/.test(s) && !/querySelectorAll\('\[data-i\]'\)/.test(s),
+      p + ' — applyLang 이 GST.applyI18n 한 벌을 쓴다 (자기 data-i 루프 없음)'));
   /* v75 에 막대와 표가 각자 급증을 판정해, 같은 문구를 달고 서로 반대 결론을 낸
      조합이 110건 나왔다. 그 뒤로 GST.monthSurges 하나로 모았는데 자재 페이지에
      사본이 그대로 남아 있었다 — 지금은 글자까지 같아 답이 안 갈렸지만
@@ -204,7 +211,7 @@ console.log('\n[3] 실패했을 때 «무엇이» 실패했는지 남기는지')
   const cat = SRC.report.match(/\}catch\(e\)\{[\s\S]{0,400}?\n  \}/);
   const body = cat ? cat[0] : '';
   is(/console\.error\(/.test(body), 'report — loadData 실패를 콘솔에 스택째 남긴다');
-  is(/\(e&&e\.message\)\|\|e/.test(body), 'report — 화면에도 실패 이유를 한 줄 적는다');
+  is(/GST\.failNote\(e\)|\(e&&e\.message\)\|\|e/.test(body), 'report — 화면에도 실패 이유를 한 줄 적는다 (v135 부터 GST.failNote 부류별 문구)');
   is(!/textContent='❌ '\+t\('loading'\);/.test(SRC.report),
      'report — 「불러오는 중」만 찍고 끝내지 않는다');
 }

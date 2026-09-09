@@ -514,3 +514,34 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #gstSrcDetail{display:no
 .gexp-menu button:hover{background:var(--glass-hover,rgba(255,255,255,.08))}
 .gexp-menu button[disabled]{opacity:.45;cursor:default}
 .gexp-menu .gexp-hint{font-size:10.5px;line-height:1.45;color:var(--txt-muted,#8b98a9);padding:4px 10px 2px;white-space:normal;max-width:260px}
+
+/* ---------- 9. v135 · 5단계 — 한 제품으로 보이게 ---------- */
+/* 라이트 테마에서 안 보이던 하드코딩 색 — 추이·교차 카드 제목(fault·scrubber)과 pm 드릴 모달 제목은 #dfe6ff·#fff 였다.
+   theme.css 는 .card h3 만 알았다. */
+.trend-header h3,.cross-header h3,.dm-title{color:var(--txt-main) !important}
+body.theme-light .dm-box{background:#fff}
+/* 카드 노트 — 줄바꿈이 든 문장(GST.setNote 가 .ml 을 단다)만 pre-line. 전부에 걸면 정적 HTML 의 들여쓰기 줄바꿈이 빈 줄로 뜬다.
+   .warn 은 «화면 전체의 숫자 뜻이 바뀌는 경고»(원장이 비어 수선실적으로 세는 중 등)를 보조 설명과 가른다. */
+.card-note.ml{white-space:pre-line}
+.card-note.warn{color:var(--warn) !important;font-weight:600}
+/* 카드 격자 중간 단(2열) — 페이지마다 1200/1250 으로 갈려 창 폭에 따라 다른 폭에서 열이 줄었다. 1열(768)은 위 5절에 있다. */
+@media(max-width:1250px){.grid3{grid-template-columns:repeat(2,1fr) !important}}
+/* core 가 끼워 넣는 활성 필터 칩 줄(#fchips[data-gst] · pm·scrubber). 페이지 소유 칩 줄은 자기 CSS 를 쓴다. */
+.gst-fchips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;
+  background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:9px 14px}
+.gst-fchips .fchips-label{font-size:11px;font-weight:700;color:var(--accent-2,var(--accent-1))}
+.gst-fchips .fchip{display:inline-flex;align-items:center;gap:5px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4);
+  color:var(--txt-main);padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer}
+.gst-fchips .fchip .fx{opacity:.7;font-size:9px}
+.gst-fchips .fchip:hover{border-color:var(--bad)}
+.gst-fchips .fchip-clear{margin-left:auto;background:none;border:1px solid var(--glass-border);color:var(--txt-muted);
+  border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer}
+/* 빈 표 안의 「필터 해제」 */
+.gst-empty-clear{margin-left:8px;background:var(--glass);border:1px solid var(--glass-border);color:var(--txt-main);
+  border-radius:14px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer}
+/* 앵커 목차(주간현황) — 세로로 이어 읽는 페이지라 «숨기는 탭»(.gst-secnav)이 아니라 스크롤 링크다 */
+.gst-anchors{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.gst-anchors a{font-size:11px;font-weight:700;color:var(--txt-muted);text-decoration:none;padding:4px 11px;border-radius:20px;
+  border:1px solid var(--glass-border);background:var(--glass)}
+.gst-anchors a:hover{color:var(--txt-main);border-color:var(--accent-1)}
+@media print{.gst-anchors,.gst-fchips,.gst-empty-clear{display:none !important}}

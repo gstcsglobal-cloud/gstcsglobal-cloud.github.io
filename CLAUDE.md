@@ -1854,6 +1854,62 @@ hr 의 `fabOf` 는 `\bF10\b` 라 F10A 를 놓쳤고(core 가 자재 4,027건 실
 돌려줬는데, 셸이 이제 자체 supabase-js 를 먼저 보므로 그 HTML 이 스크립트 자리에서 `SyntaxError: Unexpected token '<'` 로
 떴다. 저장소에 실제로 있는 파일은 그대로 주게 고쳤다 — 가짜 서버는 실제 배포와 같은 모양이어야 검사가 뜻을 가진다.
 
+## 여덟 페이지를 «한 제품»으로 — 언어·상태·안내 (v135 · 5단계)
+
+T 객체의 키는 여덟 페이지 네 언어가 정확히 일치했다(t-i18n). 문제는 전부 **«T 를 안 지나는 곳»**에 있었다.
+
+**core.js 의 문구는 `GST.XXX_T` + `GST._lang()` 한 규율이다.** 사이드바 열여덟 칸(축 이름·설비/인원 기준·「전체」·
+「이 화면 미적용」·프리셋·초기화·자동 새로고침)·다중선택의 「전체 선택/해제」·출처 배지·상태줄이 core.js 에 한국어로 박혀
+있어 언어를 바꿔도 그대로였다. `GST.FLT_T`(필터)·`SRC_T`(출처 배지)·`STA_T`(상태줄) 셋을 두고 `t-i18n` 이 **core 사전도
+페이지 T 와 같은 규율**(네 언어 키 일치 · en/zh/ja 에 한글 잔류 없음)로 본다.
+- **`GST.applyI18n(t, LANG)` 한 벌** — 여덟 페이지의 `applyLang` 이 `data-i` 루프를 각자 들고 있었고(일곱 벌), `data-i-th` 는 넷·
+  `data-i-ph` 는 hr 만 알았다. 그래서 검색 placeholder 가 fault·material·cip 한국어 · pm 영어로 갈렸다. 이제 `data-i`·`-th`·`-ph`·
+  `-title` 넷을 core 가 보고, 끝에 사이드바(`GST.filters.relabel`)·껍데기(`relabelChrome`)·출처 배지를 다시 이름표한다.
+  ⚠ **`LANG` 을 같이 넘긴다** — core 사전은 `sessionStorage.gst_lang` 을 보는데 여섯 페이지는 `window.name` 에만 적고 있어,
+  페이지 메뉴로 바꾼 언어를 core 가 몰랐다. `t-quiet` [2] 가 페이지에 자기 `data-i` 루프가 되살아나는 것을 막는다.
+- **사이드바 마크업은 mount 가 한 번만 만든다**(`.gf-base` 가드 · 주간현황은 mount 를 5번 부른다). 그래서 이름표 div 에
+  `data-fk`(축)·`data-fg`(블록)를 달아 `relabel()` 이 «글자만» 갈아 끼우고, 값 목록(refresh)을 다시 내 「전체」·「미적용」
+  문구까지 새 언어로 낸다. 축 이름표 객체 `L` 은 그대로 두고 값만 바꾼다 — `filtSummary`·`active()` 가 `L[k]` 로 본다.
+
+**활성 필터 칩은 `GST.renderChips` 한 벌이 공통 축까지 낸다.** 예전에는 tco·cip 만 손으로 합쳤고(한국어 이름표를 다시 박아서)
+fault·material 은 공통 축이 걸려도 칩이 안 떴으며, pm·scrubber 는 칩 줄 자체가 없었다 — **어제 걸어 둔 구분·단지가 오늘 화면을
+좁히는데 아무 표시가 없었다.**
+- 자기 칩 줄(`#fchips`·`#filtBadge`)이 없는 페이지에는 `mount` 가 `#fchips[data-gst]` 를 끼워 넣고 `refresh()` 끝에서 그린다
+  (F 만 보므로 목록과 무관하다). 페이지 소유 칩 줄은 페이지의 `render()` 가 그린다 — 두 줄이 되면 어느 쪽을 믿을지 모른다.
+- 칩의 ✕ 는 `GST.filters.unset(k, grp)` 한 축만, 「전체 해제」는 `GST.clearFilters()`(페이지의 `clearAllFilters` 를 먼저 — 페이지
+  전용 필터까지 지운다). 기간은 두 날짜 칸이 한 칩이다(`clear()` 와 같은 규칙).
+- ⚠ **숨길 때 옛 칩도 지운다.** `display:none` 만 하면 다음에 보일 때 한 박자 옛 조건이 보인다(`t-chips` 가 잡았다).
+- report·hr 의 `filtBadge` 는 이미 공통 축을 적고 있어 그대로다. tco·cip 의 손 합치기는 걷어냈다(두 번 뜬다).
+
+**상태줄 문구 셋 — `GST.staleText`·`failNote`·`emptyHTML`.**
+- 「📡 시트 접속 실패 — 캐시 표시 중」이 일곱 문장·전부 한국어였고, report 는 이모지만 바뀌어 «캐시»라는 말도 경과 분도 없었다
+  (조용히 옛 숫자). `GST.staleText(ageMin)` 하나로.
+- 로드 실패는 여섯 페이지가 raw exception(`Failed to fetch`·`READ PGRST…`)을 그대로 상태줄에 찍었다. 사람이 할 일이 부류마다
+  다르다 — 인증(재로그인) · 네트워크(확인·새로고침) · 표 미적재(관리자) · 읽기 실패 · 그 밖. `GST.failNote(e)` 가 부류별 한 줄을
+  내고 **원문은 관리자에게만** 붙인다(A-4). 콘솔에는 늘 스택째 남긴다(`t-quiet` [3]).
+- 빈 표는 `GST.emptyHTML(total)` — `total>0` 이면 «현재 필터에 맞는 행이 없습니다 — 필터를 지우면 N건» + 「필터 해제」 버튼,
+  `total==0` 이면 «이 화면이 보는 표에 행이 없습니다 — 관리자에게». ⚠ **「자료 없음」이라고 적지 않는다** — «자료를 안 올렸다»로
+  읽혀 사용자가 엑셀을 열어 확인한 자리다(v110). 여덟 페이지의 상세 표 한 곳씩 바꿨다(작은 차트 노트의 `no_data` 는 그대로).
+
+**나머지 넷.**
+- report 만 스켈레톤이 없었다 — 열 개 자료를 받는 몇 초 동안 빈 카드만 보였다. `loadData` 첫머리 `skeleton(true)`, `render()` 첫 줄과
+  **catch** 에 `skeleton(false)`(catch 를 빼면 실패 시 영영 반짝인다 — material 이 4단계까지 그 상태였다).
+- 라이트 테마에서 안 보이던 색 — 추이·교차 카드 제목(fault·scrubber `#dfe6ff`)·pm 드릴 모달 제목(`#fff`). theme.css 는 `.card h3`
+  만 알았다. `.trend-header h3,.cross-header h3,.dm-title` 을 `--txt-main` 으로, 모달 바탕은 라이트에서 흰색.
+- 카드 노트는 `GST.setNote(id, txt, sev)` 한 곳(report·cip 이 byte 까지 같은 사본이었다). `sev='warn'` 이면 색·굵기로 «화면 전체의
+  숫자 뜻이 바뀌는 경고»(원장이 비어 수선실적으로 세는 중)를 보조 설명과 가른다 — 자리는 v92 규약대로 맨 앞 그대로.
+  줄바꿈이 든 문장에만 `.ml{white-space:pre-line}` 을 단다. ⚠ 전부에 걸면 정적 HTML 의 들여쓰기 줄바꿈이 빈 줄로 뜬다.
+  마크업을 넣지 않는 이유는 `applyLang`·`setNote` 가 `textContent` 로 덮기 때문이다(v131).
+- 주간현황(25장)에 앵커 목차(`GST.anchorNav('.sec-h')`). `GST.sectionNav` 는 «숨기는 탭»이라 세로로 이어 읽는 주간 보고에는
+  맞지 않는다. tco·hr 은 섹션 머리글 자체가 없어 만들 것이 없었다 — 머리글을 두는 일은 다음.
+- **죽은 CSS** — 여덟 페이지의 `.slicers{…}` 격자·flex 규칙은 `GST.autoSidebar` 가 블록을 사이드바로 옮긴 뒤 theme.css 가
+  `!important` 로 덮으므로 런타임에 죽어 있었다(그 규칙만 든 미디어 쿼리도). `.grid3` 의 중간 단(2열)은 페이지마다 1200/1250 으로
+  갈려 창 폭에 따라 다른 폭에서 열이 줄었다 → theme.css 한 벌(1250 · 1열은 768). `.slicer{…}` 자체는 남겼다 — box-shadow 등
+  theme.css 가 안 덮는 속성이 있어 «죽었다»고 증명되지 않는다.
+
+`tests/t-chips.mjs`(실제 브라우저 · 34건)가 칩 주입·✕·전체 해제·기간 칩·언어 전환(이름표·「전체」·칩 줄·`data-i-ph`·`-title`)·
+빈 표·실패 문구 부류·관리자 원문·노트 등급을 본다. `t-filters` [9-3] 은 `data-fk` 가 붙은 이름표를 «lbl 한 클래스»로 잡게 고쳤다.
+
 ## 검증
 
 `tests/`에 31종이 있다.

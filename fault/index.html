@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=137"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=138"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -34,7 +34,6 @@ body{color:var(--txt);
 .lang-item:hover{background:rgba(255,255,255,.08)}
 .status{font-size:12px;color:var(--mut);margin-bottom:16px;text-align:right}
 .status.ok{color:var(--a5)}.status.err{color:var(--bad)}
-.slicers{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
 .slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:16px;padding:12px 16px;backdrop-filter:blur(12px)}
 .slicer .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--mut);margin-bottom:8px;font-weight:700}
 .slicer select,.dt-input{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 12px;color:var(--txt);font-size:12px;outline:none;min-width:120px;color-scheme:dark}
@@ -132,8 +131,6 @@ canvas{cursor:pointer}
 .dp-recs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
 .dp-tab.active{border-color:var(--acc,#6366f1);color:var(--acc,#818cf8);font-weight:800}
 .dp-row:hover td{background:rgba(99,102,241,.13)}
-@media(max-width:1200px){.grid3{grid-template-columns:1fr 1fr}}
-@media(max-width:768px){.grid3{grid-template-columns:1fr}}
 /* 차트 복사·저장(PPT/PNG) 버튼 */
 .card,.trend-card,.tablecard{position:relative}
 .capbtns{position:absolute;top:12px;right:14px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
@@ -143,7 +140,7 @@ canvas{cursor:pointer}
 #capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1,#2dd4bf);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
 @media print{.capbtns,.header-right,.slicers,.fchips{display:none!important}.card,.trend-card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=137">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=138">
 </head>
 <body>
 
@@ -179,7 +176,7 @@ canvas{cursor:pointer}
   <div class="slicer"><div class="lbl" data-i="sl_cause">원인</div><select id="sl-cause" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_model">모델</div><select id="sl-model" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_sn">설비 S/N</div><select id="sl-sn" onchange="onSlicer()"></select></div>
-  <div class="slicer search-sl"><div class="lbl" data-i="sl_search">검색</div><input id="search" placeholder="S/N, 현상, 조치, 작업자..."></div>
+  <div class="slicer search-sl"><div class="lbl" data-i="sl_search">검색</div><input id="search" data-i-ph="search_ph" placeholder="S/N, 현상, 조치, 작업자..."></div>
 </div>
 
 <div class="fchips" id="fchips" style="display:none">
@@ -548,7 +545,7 @@ canvas{cursor:pointer}
   <h3><span data-i="life_pick">설비 선택</span></h3>
   <div class="note" data-i="note_lifepick">S/N 또는 설비호기로 검색하세요. 아무 표에서나 S/N을 클릭하면 뜨는 메뉴의 「설비 이력」로도 열립니다.</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
-    <input id="lifeQ" type="search" placeholder="S/N 또는 설비호기" autocomplete="off"
+    <input id="lifeQ" type="search" data-i-ph="life_ph" placeholder="S/N 또는 설비호기" autocomplete="off"
       style="flex:1;min-width:220px;max-width:380px;padding:9px 12px;border-radius:10px;
              border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);
              color:inherit;font-size:13.5px">
@@ -631,7 +628,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(136);   // GST.numv · GST.EQ · 라인2 축을 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(138);   // GST.numv · GST.EQ · 라인2 축을 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -712,7 +709,7 @@ const T={
     rel_tbl:'설비 신뢰성 상세',th_bm:'BM건',th_mtbf:'MTBF(일)',th_mttr:'MTTR(분)',th_lastbm:'최근 BM',th_since:'가동기준',u_day:'일',age_b:['<1년','1~2년','2~3년','3년+'],
     r_ftfr:'초기 수리 성공률 (FTFR)',rf_ftfr:'{w}일 내 재방문 {n}건',ch_ftfrtrend:'FTFR 추이 (주/월)',note_ftfrtrend:'초기 수리 성공률(%) · 목표 90%',ch_ftfrmodel:'모델별 FTFR',note_ftfrmodel:'낮을수록 재작업 잦음(%)',
     sl_stage:'작업단계',sl_pf:'유/무상',sl_cause:'원인',sl_model:'모델',sl_sn:'설비 S/N',sl_period:'기간',sl_search:'검색',
-    all:'전체',f_active:'활성 필터',f_clear:'전체 해제',no_data:'조건에 맞는 데이터가 없습니다',
+    all:'전체',f_active:'활성 필터',f_clear:'전체 해제',no_data:'조건에 맞는 데이터가 없습니다',search_ph:'S/N, 현상, 조치, 작업자...',life_ph:'S/N 또는 설비호기',
     kp1:'서비스 대응 건수',kp2:'BM · 고장정비',kp6:'CBM · 계획 외 정비(UPM)',kp3:'평균 작업시간',kp4:'총 작업공수',kp5:'유상 비율',
     u_cnt:'건',u_min:'분',u_mh:'인·시',
     kf1:'최근 30일 {n}건',kf6:'UPM율 {p}% · 전체 PM {t}+{u}',kf2:'전체의 {p}%',kf3:'중앙값 {n}분',kf4:'공수 기록 {n}건 기준',kf5:'유상 {a} · 무상 {b}',
@@ -757,7 +754,7 @@ const T={
     rel_tbl:'Equipment Reliability',th_bm:'BM',th_mtbf:'MTBF(d)',th_mttr:'MTTR(m)',th_lastbm:'Last BM',th_since:'Since',u_day:'d',age_b:['<1y','1–2y','2–3y','3y+'],
     r_ftfr:'First-Time-Fix Rate',rf_ftfr:'{n} revisits within {w}d',ch_ftfrtrend:'FTFR Trend (W/M)',note_ftfrtrend:'first-time-fix rate(%) · goal 90%',ch_ftfrmodel:'FTFR by Model',note_ftfrmodel:'lower = more rework(%)',
     sl_stage:'Stage',sl_pf:'Paid/Free',sl_cause:'Cause',sl_model:'Model',sl_sn:'Equipment S/N',sl_period:'Period',sl_search:'Search',
-    all:'All',f_active:'Active Filters',f_clear:'Clear All',no_data:'No data found',
+    all:'All',f_active:'Active Filters',f_clear:'Clear All',no_data:'No data found',search_ph:'S/N, symptom, action, worker...',life_ph:'S/N or equipment no.',
     kp1:'Service Cases',kp2:'BM · Breakdown',kp6:'CBM · Unscheduled PM',kp3:'Avg Work Time',kp4:'Total Man-hours',kp5:'Paid Ratio',
     u_cnt:'',u_min:'min',u_mh:'m·h',
     kf1:'{n} in last 30 days',kf6:'UPM rate {p}% · total PM {t}+{u}',kf2:'{p}% of all',kf3:'median {n} min',kf4:'based on {n} records',kf5:'paid {a} · free {b}',
@@ -802,7 +799,7 @@ const T={
     rel_tbl:'设备可靠性明细',th_bm:'BM件',th_mtbf:'MTBF(天)',th_mttr:'MTTR(分)',th_lastbm:'最近BM',th_since:'运行起始',u_day:'天',age_b:['<1年','1~2年','2~3年','3年+'],
     r_ftfr:'首次修复成功率(FTFR)',rf_ftfr:'{w}天内返修 {n}件',ch_ftfrtrend:'FTFR趋势 (周/月)',note_ftfrtrend:'首次修复成功率(%) · 目标90%',ch_ftfrmodel:'按型号FTFR',note_ftfrmodel:'越低返工越多(%)',
     sl_stage:'作业阶段',sl_pf:'有/无偿',sl_cause:'原因',sl_model:'型号',sl_sn:'设备S/N',sl_period:'期间',sl_search:'搜索',
-    all:'全部',f_active:'活动筛选',f_clear:'全部清除',no_data:'无数据',
+    all:'全部',f_active:'活动筛选',f_clear:'全部清除',no_data:'无数据',search_ph:'S/N、现象、措施、作业者...',life_ph:'S/N 或设备号机',
     kp1:'服务对应件数',kp2:'BM · 故障维修',kp6:'CBM · 计划外维护(UPM)',kp3:'平均作业时间',kp4:'总作业工时',kp5:'有偿比率',
     u_cnt:'件',u_min:'分',u_mh:'人·时',
     kf1:'近30天 {n}件',kf6:'UPM率 {p}% · 全部PM {t}+{u}',kf2:'占全部{p}%',kf3:'中位数 {n}分',kf4:'基于{n}条工时记录',kf5:'有偿 {a} · 无偿 {b}',
@@ -847,7 +844,7 @@ const T={
     rel_tbl:'設備信頼性詳細',th_bm:'BM件',th_mtbf:'MTBF(日)',th_mttr:'MTTR(分)',th_lastbm:'直近BM',th_since:'稼働基準',u_day:'日',age_b:['<1年','1~2年','2~3年','3年+'],
     r_ftfr:'初回修理成功率(FTFR)',rf_ftfr:'{w}日以内 再訪問 {n}件',ch_ftfrtrend:'FTFR推移 (週/月)',note_ftfrtrend:'初回修理成功率(%) · 目標90%',ch_ftfrmodel:'モデル別FTFR',note_ftfrmodel:'低いほど再作業多い(%)',
     sl_stage:'作業段階',sl_pf:'有/無償',sl_cause:'原因',sl_model:'モデル',sl_sn:'設備S/N',sl_period:'期間',sl_search:'検索',
-    all:'全体',f_active:'有効フィルタ',f_clear:'全解除',no_data:'データなし',
+    all:'全体',f_active:'有効フィルタ',f_clear:'全解除',no_data:'データなし',search_ph:'S/N・現象・処置・作業者...',life_ph:'S/N または設備号機',
     kp1:'サービス対応件数',kp2:'BM · 故障整備',kp6:'CBM · 計画外整備(UPM)',kp3:'平均作業時間',kp4:'総作業工数',kp5:'有償比率',
     u_cnt:'件',u_min:'分',u_mh:'人·時',
     kf1:'直近30日 {n}件',kf6:'UPM率 {p}% · 全PM {t}+{u}',kf2:'全体の{p}%',kf3:'中央値 {n}分',kf4:'工数記録{n}件基準',kf5:'有償 {a} · 無償 {b}',
@@ -900,8 +897,7 @@ function buildSecNav(){
 }
 function applyLang(){
   buildFieldLabel();
-  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
-  document.querySelectorAll('[data-i-th]').forEach(el=>{el.textContent=t(el.getAttribute('data-i-th'));});
+  GST.applyI18n(t, LANG);   // data-i·-th·-ph·-title 한 벌(v135)
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
   buildSecNav();
   if(ROWS.length){buildSlicers();render();}
@@ -1068,9 +1064,9 @@ async function loadData(){ GST.skeleton(true);
     /* ✅ 는 render() «뒤»에 찍는다 — 앞에 찍으면 렌더가 던져도 상태줄은 초록이다(v135) */
     status.className='status ok';
     status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+ROWS.length;
-    if(fetched.cached){status.textContent='📡 시트 접속 실패 — 캐시('+fetched.ageMin+'분 전) 표시 중';status.style.color='#fbbf24';}
+    if(fetched.cached){status.textContent=GST.staleText(fetched.ageMin);status.style.color='#fbbf24';}
   }catch(e){ GST.skeleton(false);
-    status.className='status err'; status.textContent='❌ '+e.message;
+    status.className='status err'; status.textContent='❌ '+GST.failNote(e);   // 부류별 한 줄 · 원문은 관리자에게만(v135)
   }
   btn.disabled=false;
 }
@@ -1967,7 +1963,7 @@ function render(){ GST.skeleton(false); GST.pushState(F);
     return sortAsc?(''+(x||'')).localeCompare(''+(y||''),'ko',{numeric:true}):(''+(y||'')).localeCompare(''+(x||''),'ko',{numeric:true});
   });
   const tbody=document.getElementById('tbody');
-  if(!d.length){tbody.innerHTML=`<tr><td colspan="12" class="empty">${t('no_data')}</td></tr>`;return;}
+  if(!d.length){tbody.innerHTML=`<tr><td colspan="12" class="empty">${GST.emptyHTML(ROWS.length)}</td></tr>`;return;}   // «필터 때문»이면 해제까지(v135)
   const stCls={BM:'bm',CBM:'cbm',CM:'cm',CRM:'crm'};
   { const tc=document.getElementById('tblCnt');
     if(tc) tc.textContent = d.length>800 ? ('800 / '+d.length.toLocaleString()) : d.length.toLocaleString(); }

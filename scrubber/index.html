@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=137"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=138"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -75,7 +75,6 @@ body{color:var(--txt);
 .range-display{font-size:12px;color:var(--a2);font-weight:600;margin-left:auto;white-space:nowrap}
 
 /* SLICERS */
-.slicers{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
 .slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:16px;padding:12px 16px;backdrop-filter:blur(12px)}
 .slicer .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--mut);margin-bottom:8px;font-weight:700}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
@@ -190,8 +189,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
 .pill.bad{background:rgba(251,113,133,.18);color:var(--bad)}
 .empty{text-align:center;padding:40px;color:var(--mut)}
 .loading{text-align:center;padding:60px;color:var(--mut);font-size:15px}
-@media(max-width:1200px){.grid3{grid-template-columns:1fr 1fr}}
-@media(max-width:768px){.grid3{grid-template-columns:1fr}}
 
 /* 차트 복사·저장(PPT/PNG) 버튼 */
 .card,.trend-card,.cross-card,.tablecard{position:relative}
@@ -202,7 +199,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 #capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1,#2dd4bf);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
 @media print{.capbtns,.header-right,.date-panel,.slicers,.slicer{display:none!important}.card,.trend-card,.cross-card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=137">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=138">
 </head>
 <body>
 
@@ -518,7 +515,7 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 /* 이 화면의 「설치 국가」 카드는 GST.ORG.country 가 국내 법인(SK·삼성 도시명)을 국가로
    푸는 것에 기댄다(core v99). 옛 core.js 가 캐시에 남으면 그 설비가 통째로 「국가 미상」이
    되는데 에러는 안 난다 — 숫자만 조용히 틀린다. 그래서 버전을 선언해 배너로 드러낸다. */
-GST.needVer && GST.needVer(136);   // GST.ymdL · 라인2 축 · GST.WARR · GST.pptCardBtn 을 쓴다
+GST.needVer && GST.needVer(138);   // GST.ymdL · 라인2 축 · GST.WARR · GST.pptCardBtn 을 쓴다
 const SHEET_URL=GST.sheetUrl('891608329');
 // 설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
 // 이 시트는 128열이라 위치 고정이 특히 위험했다(type이 75열째). 이제 이름으로 따라간다.
@@ -688,10 +685,9 @@ function buildSecNav(){
   ]);
 }
 function applyLang(){
-  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
+  GST.applyI18n(t, LANG);   // data-i·-th·-ph·-title 한 벌(v135) — 예전의 #search placeholder 줄은 그 칸이 없는 죽은 코드였다
   buildSecNav();
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
-  {const e=document.getElementById('search'); if(e)e.placeholder='S/N, Location, Tool Maker...';}
   buildAxisSel();     // 축 이름표는 data-i 가 아니라 축을 따라간다 — 여기서 다시 씌운다
   renderDrillRow();
   applyBasisUnit();   // data-i 재적용이 단위를 되돌려 놓으므로 마지막에 다시 씌운다
@@ -828,9 +824,9 @@ async function loadData(){ GST.skeleton(true);
     status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+RAW.length+' '+t('units');
     initDefaultRange();
     rebuildFilters(); render();
-    if(fetched.cached){status.textContent='📡 시트 접속 실패 — 캐시('+fetched.ageMin+'분 전) 표시 중';status.style.color='#fbbf24';}
+    if(fetched.cached){status.textContent=GST.staleText(fetched.ageMin);status.style.color='#fbbf24';}
   }catch(e){ GST.skeleton(false);
-    status.className='status err'; status.textContent='❌ '+e.message;
+    status.className='status err'; status.textContent='❌ '+GST.failNote(e);   // 부류별 한 줄 · 원문은 관리자에게만(v135)
   }
   btn.disabled=false;
 }
@@ -1714,7 +1710,7 @@ function render(){ GST.skeleton(false);
   if(sortK)d.sort((a,b)=>{const x=(a[CI[sortK]]||'')+'',y2=(b[CI[sortK]]||'')+'';
     return sortAsc?x.localeCompare(y2,'ko',{numeric:true}):y2.localeCompare(x,'ko',{numeric:true});});
   const tbody=document.getElementById('tbody');
-  if(!d.length){tbody.innerHTML=`<tr><td colspan="13" class="empty">${t('no_data')}</td></tr>`;return;}
+  if(!d.length){tbody.innerHTML=`<tr><td colspan="13" class="empty">${GST.emptyHTML(RAW.length)}</td></tr>`;return;}   // «필터 때문»이면 해제까지(v135)
   tbody.innerHTML=d.map(r=>{
     const l=wLbl(r);const ok=l==='IN';
     const wp=l?`<span class="pill ${ok?'ok':'bad'}">Warranty ${ok?'In':'Out'}</span>`:'—';

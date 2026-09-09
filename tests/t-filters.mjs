@@ -395,7 +395,7 @@ console.log('\n[7-1] 설치현황 — 「집계 기준」(챔버/대수)이 한 
     // applyLang 안에서 data-i 재적용 «뒤에» applyBasisUnit 이 불려야 한다
     const li = SC.indexOf('function applyLang()');
     const blk = li<0 ? '' : SC.slice(li, li+700);
-    const di = blk.indexOf("querySelectorAll('[data-i]')");
+    const di = blk.indexOf("GST.applyI18n(");   // v135 — data-i 루프는 core 한 벌이다
     const bu = blk.indexOf('applyBasisUnit()');
     is(/function applyBasisUnit\(\)/.test(SC) && di>=0 && bu>di,
        'scrubber — 언어 전환 뒤에도 단위 글자를 다시 씌운다 (data-i 가 되돌려 놓는다)');
@@ -482,7 +482,7 @@ console.log('\n[7-3] 단지는 여러 개를 동시에 고를 수 있다 (Set) �
   is(/GST\.CACHE_MAX_ROWS/.test(CORE) && /rows\.length > GST\.CACHE_MAX_ROWS/.test(CORE),
      'core — 큰 표는 localStorage 캐시를 시도하지 않는다');
   /* 사이드바 버튼이 «자동 10분» 이라고 적혀 있는데 실제 주기는 30분이었다. */
-  is(!/⟳ 자동 10분/.test(CORE) && /자동 '\+GST\.AR_MIN\+'분/.test(CORE),
+  is(!/⟳ 자동 10분/.test(CORE) && /auto\.replace\('\{n\}',GST\.AR_MIN\)/.test(CORE) && /auto:'⟳ 자동 \{n\}분'/.test(CORE),
      'core — 자동 새로고침 라벨이 실제 주기를 말한다');
   // 음성 대조 — 페이지가 campus 를 문자열처럼 다루면 조용히 전부 false 가 된다
   // 주석은 뺀다 — 「이렇게 쓰지 말 것」이라 적어 둔 설명이 검사에 걸리면 안 된다
@@ -690,14 +690,14 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
 
     /* ⚠ 「자료 없음」은 «자료를 안 올렸다»로 읽힌다(사용자 지적). 실제 뜻은 «이 화면이 보는
        자료에는 그 축이 없다»다 — 어느 쪽 문구도 «자료가 없다»고 말하면 안 된다. */
-    is(/const EMPTY_NONE = '전체 \(이 화면 미적용\)', EMPTY_FILT = '전체 \(필터에 해당 없음\)'/.test(CORE),
+    is(/emptyNone:'전체 \(이 화면 미적용\)', emptyFilt:'전체 \(필터에 해당 없음\)'/.test(CORE),   // v135 — GST.FLT_T(네 언어)
        'core — 두 문구를 구분해 둔다');
     /* ⚠ 주석은 걷어내고 본다. 「예전에는 자료 없음이라고 적었다」는 이력 설명까지 걸리면
        고칠 수 없는 검사가 된다 — 판정 대상은 «화면에 나가는 문구»다. */
     is(!/자료 없음/.test(CORE.replace(/\/\*[\s\S]*?\*\//g,' ').replace(/(^|[^:])\/\/[^\n]*/g,'$1')),
        'core — 화면 문구에 「자료 없음」을 쓰지 않는다 (안 올린 것처럼 읽힌다)');
-    is(/hasAny \? EMPTY_FILT : EMPTY_NONE/.test(CORE), 'core — 단일 칸이 그 구분을 쓴다');
-    is(/\(hasAny \? EMPTY_FILT : EMPTY_NONE\) \+ ' ▾'/.test(CORE), 'core — 다중선택 칸도 같이 쓴다');
+    is(/hasAny \? _T\(\)\.emptyFilt : _T\(\)\.emptyNone/.test(CORE), 'core — 단일 칸이 그 구분을 쓴다');
+    is(/\(hasAny \? _T\(\)\.emptyFilt : _T\(\)\.emptyNone\) \+ ' ▾'/.test(CORE), 'core — 다중선택 칸도 같이 쓴다');
 
     /* 주간현황이 «세 패밀리 전부»를 덮는 loose 를 선언했는지 — 하나만 빠져도 그 축에서 재발한다. */
     const lm = /loose:\{([^}]*)\}/.exec(SRC.report.replace(/\/\*[\s\S]*?\*\//g,' '));
@@ -740,7 +740,8 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
     global.document.querySelector = prevQ;
 
     const L = ['구분','팀','운영단위','고객사','사업부','단지','라인'];
-    const got = [...html.matchAll(/class="lbl">([^<]+)</g)].map(m => m[1].trim())
+    /* v135 — 이름표 div 에 data-fk 가 붙었다(언어 전환용). 속성이 있어도 «lbl 한 클래스»만 잡는다 */
+    const got = [...html.matchAll(/class="lbl"[^>]*>([^<]+)</g)].map(m => m[1].trim())
                   .filter(x => L.indexOf(x) >= 0);
     /* v114 — 두 벌이다. «똑같은 폼»이어야 하므로 같은 순서가 두 번 나온다. */
     is(got.join(' > ') === L.concat(L).join(' > '),

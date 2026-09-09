@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=137"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=138"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -72,7 +72,6 @@ body{color:var(--txt);
 .wk-table .wk-zero{color:var(--mut);opacity:.5}
 .wk-week-sub{font-size:9px;color:var(--mut);font-weight:400;display:block;margin-top:2px}
 .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px}
-.cal-title{font-size:18px;font-weight:800;color:#fff;min-width:160px;text-align:center}
 .cal-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .cal-btn{background:rgba(255,255,255,.07);border:1px solid var(--glassb);border-radius:10px;
   width:36px;height:36px;color:var(--txt);font-size:16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
@@ -146,7 +145,6 @@ body{color:var(--txt);
 .card .cw{position:relative;height:var(--ch-std,240px)}
 .tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px)}
 .tablecard h3{font-size:14px;font-weight:700;margin-bottom:12px}
-.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .filters input,.filters select{background:rgba(255,255,255,.07);border:1px solid var(--glassb);color:var(--txt);
   padding:9px 12px;border-radius:10px;font-size:13px;outline:none;color-scheme:dark}
 .filters input{flex:1;min-width:200px}
@@ -167,8 +165,6 @@ tr:hover td{background:rgba(255,255,255,.04)}
 .dl{font-weight:700}.dl.bad{color:var(--bad)}.dl.warn{color:var(--warn)}.dl.ok{color:var(--ok)}
 .empty{text-align:center;padding:40px;color:var(--mut)}
 .loading{text-align:center;padding:60px;color:var(--mut);font-size:15px}
-@media(max-width:1200px){.grid3{grid-template-columns:1fr 1fr}}
-@media(max-width:768px){.grid3{grid-template-columns:1fr}}
 
 /* 리치 KPI (설치현황과 동일 스타일) */
 
@@ -182,7 +178,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 #capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--a1,#2dd4bf);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
 @media print{.capbtns,.header-right,.filters,.slicers{display:none!important}.card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=137">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=138">
 </head>
 <body>
 
@@ -213,7 +209,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
      표 안에 있던 것을 사이드바로 올렸다: 다른 페이지와 필터가 있는 자리가 같아야 한다. -->
 <div class="slicers">
   <div class="slicer search"><div class="lbl" data-i="sl_search">검색</div>
-    <input id="q" placeholder="Search S/N, Model, Line..."></div>
+    <input id="q" data-i-ph="search_ph" placeholder="S/N, 모델, Line 검색..."></div>
   <div class="slicer"><div class="lbl" data-i="f_model">전체 모델</div>
     <select id="fModel"><option value="">Model</option></select></div>
   <div class="slicer"><div class="lbl" data-i="f_stat">전체 상태</div>
@@ -371,7 +367,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(136);   // GST.PM(국내 조치 기준 PM) · GST.numv 를 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(138);   // GST.PM(국내 조치 기준 PM) · GST.numv 를 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 const SHEET_URL=GST.sheetUrl('646668307');
@@ -468,10 +464,8 @@ function buildSecNav(){
 }
 function applyLang(){
   buildSecNav();
-  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
-  document.querySelectorAll('[data-i-th]').forEach(el=>{el.textContent=t(el.getAttribute('data-i-th'));});
+  GST.applyI18n(t, LANG);   // data-i·-th·-ph·-title 한 벌(v135) — #q 의 placeholder 도 data-i-ph 로 간다
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
-  document.getElementById('q').placeholder=t('search_ph');
   // 필터 첫 옵션
   const setOpt0=(id,k)=>{const s=document.getElementById(id);if(s&&s.options[0])s.options[0].textContent=t(k);};
   setOpt0('fModel','f_model');
@@ -512,10 +506,10 @@ async function loadData(){ GST.skeleton(true);
     /* PM 근거는 화면에 안 적는다 — 사용자 요청. 판정은 GST.PM 한 곳에 그대로 있다. */
     status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+SCHED.length
       +(adjCnt?' · '+t('adj_loaded').replace('N',adjCnt):'');
-    if(csvRes.status==='fulfilled'&&csvRes.value.cached){status.textContent='📡 시트 접속 실패 — 캐시('+csvRes.value.ageMin+'분 전) 표시 중';status.style.color='#fbbf24';}
+    if(csvRes.status==='fulfilled'&&csvRes.value.cached){status.textContent=GST.staleText(csvRes.value.ageMin);status.style.color='#fbbf24';}
     render();
   }catch(e){ GST.skeleton(false);
-    status.className='status err'; status.textContent='❌ '+e.message;
+    status.className='status err'; status.textContent='❌ '+GST.failNote(e);   // 부류별 한 줄 · 원문은 관리자에게만(v135)
   }
   btn.disabled=false;
 }
@@ -1004,7 +998,7 @@ function draw(){
   const pill={overdue:`<span class="pill bad">${t('st_overdue')}</span>`,soon:`<span class="pill warn">${t('st_soon')}</span>`,
     ok:`<span class="pill ok">${t('st_ok')}</span>`,na:`<span class="pill na">${t('st_na')}</span>`};
   const tbody=document.getElementById('tbody');
-  if(!d.length){tbody.innerHTML=`<tr><td colspan="12" class="empty">${t('no_data')}</td></tr>`;return;}
+  if(!d.length){tbody.innerHTML=`<tr><td colspan="12" class="empty">${GST.emptyHTML(SCHED.length)}</td></tr>`;return;}   // «필터 때문»이면 해제까지(v135)
   tbody.innerHTML=d.map(x=>{
     const dlc=x.st==='overdue'?'bad':x.st==='soon'?'warn':x.st==='ok'?'ok':'';
     const dlt=x.dl==null?'—':(x.dl<0?`D+${-x.dl}`:`D-${x.dl}`);

@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=137"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=138"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -34,7 +34,6 @@ body{
 .status{font-size:12px;color:var(--txt-muted);margin-bottom:14px;text-align:right}
 .status.ok{color:var(--accent-2)} .status.err{color:#fb7185}
 
-.slicers{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
 .slicer{background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:12px 16px;backdrop-filter:blur(12px)}
 .slicer .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--txt-muted);margin-bottom:8px;font-weight:700}
 .slicer select,.slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;min-width:150px;color-scheme:dark}
@@ -163,8 +162,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .op-tbl td.neg{color:#fb7185}
 .op-tbl td.pos{color:#4ade80}
 .op-tbl td.mut{color:var(--txt-muted)}
-@media(max-width:1250px){.grid3{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
-@media(max-width:800px){.grid3{grid-template-columns:1fr}}
+@media(max-width:1250px){.grid2{grid-template-columns:1fr}}
 @media print{
   body{padding:10px;background:#fff !important;animation:none}
   .header-right,.status,.mini-per{display:none !important}
@@ -173,7 +171,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=137">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=138">
 </head>
 <body>
 
@@ -377,7 +375,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(137);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
+GST.needVer&&GST.needVer(138);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -718,9 +716,10 @@ function renderMiniToggles(){
 // 키가 있으면 그 값을 그대로 쓴다 — 빈 문자열 번역(영문 단위 생략 등)이 키 이름으로 새는 것 방지
 function t(k){const d=T[LANG]||T.ko; return (k in d)?d[k]:k;}
 function applyLang(){
-  document.querySelectorAll('[data-i]').forEach(el=>{if(el.hasAttribute('data-lock'))return;el.textContent=t(el.getAttribute('data-i'));});
+  GST.applyI18n(t, LANG);   // data-i·-th·-ph·-title 한 벌 + 사이드바·칩·출처 배지 이름표(v135)
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
   try{ renderFtView(); renderTopView(); }catch(e){ console.warn('[report] 계통 드롭다운 렌더 실패', e); }
+  try{ GST.anchorNav('.sec-h'); }catch(e){ console.warn('[report] 섹션 목차', e); }   // 25장짜리 페이지의 앵커 목차(v135)
 }
 function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(WK.length||HR.length)render();document.getElementById('langMenu').classList.remove('open');}
 function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
@@ -966,12 +965,8 @@ const valLabelPlugin={id:'valLabel',
     });
     ctx.restore();
   }};
-// 카드 노트에 자동 인사이트 문구
-function setNote(canvasId,txt){
-  const c=document.getElementById(canvasId); if(!c)return;
-  const card=c.closest('.card'); if(!card)return;
-  const n=card.querySelector('.card-note'); if(n)n.textContent=txt;
-}
+// 카드 노트에 자동 인사이트 문구 — 정본은 core.js GST.setNote (v135 · cip 과 byte 까지 같은 사본이었다)
+function setNote(canvasId,txt,sev){ GST.setNote(canvasId,txt,sev); }
 // % 보조축 (오른쪽, 그리드 없음)
 function pctAxis(TH,max){return {position:'right',min:0,max:max||100,grid:{drawOnChartArea:false},ticks:{color:TH.txt,callback:v=>v+'%',maxTicksLimit:5,font:{size:9}}};}
 function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
@@ -1239,6 +1234,7 @@ function activeAt(p,E){return p.join&&p.join<=E&&(!p.quit||p.quit>=E);}  // 퇴�
 async function loadData(){
   const st=document.getElementById('status');
   st.className='status'; st.textContent=t('loading');
+  GST.skeleton(true);   // 여덟 중 이 페이지만 없었다 — 열 개 자료를 받는 몇 초 동안 빈 카드만 보였다(v135)
   try{
     const gidOk=g=>/^\d+$/.test(g);
     const [hr,wk,inst,ro,lv,c11,c16,abp,kra,krb]=await Promise.allSettled([
@@ -1346,7 +1342,7 @@ async function loadData(){
     const _hrRaw=hr.status==='fulfilled'?hr.value.rows.length:-1;
     const _hrWarn=!HR.length&&_hrRaw>3?' ⚠ 교육시트 열 인식 실패(원본 '+_hrRaw+'행)':(!HR.length&&_hrRaw<0?' ⚠ 교육시트 로드 실패':'');
     if(_hrWarn)st.className='status err';
-    st.textContent=(cached?'📡 ':'✅ ')+new Date().toLocaleString('ko-KR')+' · HR '+HR.length+_hrWarn+' · 실적 '+WK.length.toLocaleString()
+    st.textContent=(cached?GST.staleText()+' · ':'✅ ')+new Date().toLocaleString('ko-KR')+' · HR '+HR.length+_hrWarn+' · 실적 '+WK.length.toLocaleString()
       +(_wkDrop?' (제외 '+_wkDrop.toLocaleString()+'·단계/일자 공란)':'')+' · 설치 '+INST.length.toLocaleString()
       /* 실적에 실린 사업부는 «설비 S/N 으로 설치현황을 조인해» 얻은 것이다(사용자 지적).
          못 붙은 행은 loose 로 통과하므로 사업부를 걸어도 안 걸러진다 — 조인이 낮으면
@@ -1366,8 +1362,9 @@ async function loadData(){
        (표가 없어서인지·권한인지·열 인식인지 전부 같은 글자로 보인다).
        콘솔에는 스택째 남기고, 화면에는 한 줄로 이유를 적는다. */
     console.error('[report] loadData 실패', e);
+    GST.skeleton(false);   // 빼면 실패 시 영영 반짝인다(material 이 그 상태였다)
     st.className='status err';
-    st.textContent='❌ '+t('loading')+' — '+String((e&&e.message)||e);
+    st.textContent='❌ '+GST.failNote(e);   // 부류별 한 줄 · 원문은 관리자에게만(v135)
   }
 }
 
@@ -1468,6 +1465,7 @@ function fillFilters(){
   syncCommon();
 }
 function render(){
+  GST.skeleton(false);
   const TH=GST.chartTheme(); GST.chartDefaults();
   Chart.defaults.onClick=onDrill;   // 막대/라인 클릭 → 구간 상세 드릴다운
   const ink=inkStrong(TH);
@@ -2464,13 +2462,13 @@ function render(){
          수선실적은 알람유형 입력률 0.3% 라 「미기재」가 잔뜩 뜨는 것이 정상이다 —
          그것을 «데이터가 안 나온다»로 읽지 않게 하려면 출처를 밝히는 수밖에 없다. */
       if(!KR_ON && window._KRWHY) _note = '⚠ 국내 알람 원장이 ' + window._KRWHY
-        + ' → 국내도 수선실적 BM 으로 세는 중입니다' + (GST.isAdmin&&GST.isAdmin()?' (/upload/ 에서 알람 시트를 올리면 원장 기준으로 바뀝니다)':'') + ' · '   // 사실은 모두에게, 조치는 관리자에게(v135)
+        + ' → 국내도 수선실적 BM 으로 세는 중입니다' + (GST.isAdmin&&GST.isAdmin()?' (/upload/ 에서 알람 시트를 올리면 원장 기준으로 바뀝니다)':'') + '\n'   // 사실은 모두에게, 조치는 관리자에게(v135) · 경고는 제 줄에
         + _note;
       /* 알람은 올라왔는데 올바이패스만 비면 그 지표만 0 이 된다 — 같은 화면에서 한쪽만
          조용히 비는 것이 가장 헷갈린다. 짝 표의 상태도 같이 적는다. */
-      if(window._KRWHYB) _note += ' · ⚠ 국내 All By-Pass 원장이 ' + window._KRWHYB
+      if(window._KRWHYB) _note += '\n⚠ 국내 All By-Pass 원장이 ' + window._KRWHYB
         + (GST.isAdmin&&GST.isAdmin()?' (/upload/ 에서 같은 워크북을 「올바이패스」 대상으로 한 번 더 올려야 합니다)':'');
-      if(KR_ON) _note += ' · 국내는 알람 원장 기준 (수선실적 BM 제외'
+      if(KR_ON) _note += '\n국내는 알람 원장 기준 (수선실적 BM 제외'
         + (F.inout==='out'?' · 외부·외적만':F.inout==='all'?' · 내+외 전체':'')
         + ' · '+(F.krBasis==='fiscal'?'시트 정산월·주차':'발생일')+')'
         + (_krOS? ' · 원장의 해외 설비 '+_krOS.toLocaleString()+'행은 이중 계산을 막으려 뺐습니다':'')
@@ -2500,7 +2498,7 @@ function render(){
          ⚠ 낱말을 판정에 박지 않는다 — 여기서 하는 일은 «세어서 보여주는 것»뿐이라
            시트에 새 낱말이 생겨도 저절로 뜬다. */
       { const _dr=GST.ALARM.dropReasons(KRA.concat(KRB));
-        if(_dr.length) _note += ' · 집계 제외 '
+        if(_dr.length) _note += '\n집계 제외 '
           + _dr.map(e=>e.v+' '+e.n.toLocaleString()).join(' · '); }
       /* 연구소로 잡힌 «낱말»을 적는다 — 코드에 박은 규칙이므로, 시트에 새 표기가
          생기면 사람이 보고 알려 줄 수 있어야 한다(GST.PM.matched 와 같은 규약). */
@@ -2510,7 +2508,7 @@ function render(){
       /* 모드 표시는 «맨 앞»에 둔다 — 위의 ⚠ 경고들이 앞에 덧붙으므로, 여기서 얹어야
          「지금 무엇을 보고 있는지」가 문장 첫머리에 온다. 노트의 건수도 그 계통 값이다. */
       if(FV!=='all')_note='【'+t(FV==='alarm'?'ftv_alarm':'ftv_abp')+'】 '+_note;
-      setNote('cFt',_note);
+      setNote('cFt',_note, ((!KR_ON&&window._KRWHY)||window._KRWHYB)?'warn':'');   // 원장 문제는 «숫자의 뜻이 바뀌는» 경고 — 색으로 가른다(v135)
     }
     // PPT 내보내기용 — 주/월 양단위 Alarm·ABP 시리즈 스냅샷 (표시 전용 · 위 차트 계산과 동일 식)
     // 앵커는 KPI와 동일한 asOf(마감 통합 기준일) — 월 마감만 잡아도 주간 시리즈가 그 시점으로 정렬
@@ -3313,7 +3311,7 @@ function drillMan(p,rowsIn,den){ const D=window._DRILL;
     +(ents.length?ents.map(e=>'<tr><td>'+esc(e[0])+'</td><td class="num">'+H(e[1].pm)+'</td><td class="num">'+M(e[1].pm)
        +'</td><td class="num">'+H(e[1].np)+'</td>'+(to?'<td class="num">'+H(e[1].ot)+'</td>':'')
        +'<td class="num">'+H(_tot(e[1]))+'</td></tr>').join('')
-      :'<tr><td colspan="'+(to?6:5)+'" style="text-align:center;color:var(--txt-muted)">데이터 없음</td></tr>')+'</tbody></table>';
+      :'<tr><td colspan="'+(to?6:5)+'" style="text-align:center;color:var(--txt-muted)">'+GST._esc(GST.emptyRowsText())+'</td></tr>')+'</tbody></table>';
   showDrill('작업공수 상세 · '+p.label,h);
 }
 function drillAtt(p){ const D=window._DRILL;

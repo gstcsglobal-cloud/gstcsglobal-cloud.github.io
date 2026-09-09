@@ -86,5 +86,32 @@ for (const [pg, name] of Object.entries(PAGES)) {
   const noCall = [...calls].filter(k => !ko.has(k));
   ok(!noCall.length, pg + ': ' + fn + "('…') 가 부르는데 ko 에 없는 키 " + noCall.slice(0, 12).join(','));
 }
+/* core.js 의 공용 사전(GST.XXX_T) — 네 언어의 키가 같고 en/zh/ja 값에 한글이 남지 않았는지 (v135 · 5단계).
+   사이드바·칩·출처 배지·상태줄 문구가 core 로 올라오면서 «페이지 T 와 같은 규율»이 필요해졌다. */
+{
+  const core = fs.readFileSync(ROOT + '/assets/core.js', 'utf8');
+  const names = [...core.matchAll(/^GST\.(_?[A-Za-z]+_T|XMUL)\s*=\s*\{/gm)].map(m => m[1]);
+  console.log('[core] 사전 ' + names.length + '개: ' + names.join(','));
+  ['FLT_T', 'SRC_T', 'STA_T', 'EXP_T', 'INS_T'].forEach(n => ok(names.includes(n), 'core 에 GST.' + n + ' 가 있다'));
+  const flat = (o, p = '') => (o && typeof o === 'object') ? Object.assign({}, ...Object.entries(o).map(([k, v]) => flat(v, p ? p + '.' + k : k))) : { [p]: String(o) };
+  for (const n of names) {
+    const at = core.search(new RegExp('^GST\\.' + n + '\\s*=\\s*\\{', 'm'));
+    const st = core.indexOf('{', at);
+    const [inner] = block(core, st);
+    let obj = null;
+    try { obj = new Function('return ({' + inner + '})')(); } catch (e) { ok(false, 'core.' + n + ' 을 평가하지 못했다: ' + e.message); continue; }
+    const missing = LANGS.filter(l => !(l in obj));
+    ok(!missing.length, 'core.' + n + ': 언어 블록 누락 ' + missing.join(','));
+    if (missing.length) continue;
+    const K = {}; for (const l of LANGS) K[l] = flat(obj[l]);
+    const koK = Object.keys(K.ko);
+    for (const l of ['en', 'zh', 'ja']) {
+      const miss = koK.filter(k => !(k in K[l])), extra = Object.keys(K[l]).filter(k => !(k in K.ko));
+      ok(!miss.length && !extra.length, 'core.' + n + ' ' + l + ': 키가 ko 와 다르다 ' + miss.concat(extra).slice(0, 6).join(','));
+      const bad = Object.entries(K[l]).filter(([k, v]) => { let t = v.replace(/「[^」]*」/g, ''); for (const a of ALLOW) t = t.split(a).join(''); return /[가-힣]/.test(t); }).map(([k]) => k);
+      ok(!bad.length, 'core.' + n + ' ' + l + ': 값에 한글 잔류 ' + bad.slice(0, 6).join(','));
+    }
+  }
+}
 console.log((fail ? '❌' : '✅') + ' t-i18n: ' + pass + ' 통과 · ' + fail + ' 실패');
 process.exit(fail ? 1 : 0);
