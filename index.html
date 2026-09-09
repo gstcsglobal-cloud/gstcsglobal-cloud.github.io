@@ -9,6 +9,8 @@
 <script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=135"></script>
 <title>CS Global Team</title>
 <style>
+/* 업로드 버튼은 editor(can_write)·admin 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB */
+body:not([data-role="admin"]):not([data-role="legacy"]):not([data-role="editor"]) #uploadBtn{display:none}
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
   --bg1:#14142f;--bg2:#1e1d4d;--line:#3b3a6b;--txt:#e2e8f0;--mut:#94a3b8;

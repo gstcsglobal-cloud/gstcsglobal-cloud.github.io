@@ -494,3 +494,8 @@ body.theme-light .mselbox{background:#fff}
 .slicer-div{border-top:1px solid var(--glass-border);margin:2px 0 0;padding-top:10px;
   font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--txt-muted);font-weight:700}
 .slicers .slicer-div{flex-basis:100%}
+
+/* ---------- 7. 화면 등급 (v135) ---------- */
+/* 출처 배지의 상세(표 이름·행수)는 관리자만. JS 가드와 이중 — 등급이 도착하기 전 깜빡임을 CSS 가 막는다.
+   legacy = role 열이 아직 없는 DB(setup-15 실행 전) — 지금까지처럼 전원이 본다. */
+body:not([data-role="admin"]):not([data-role="legacy"]) #gstSrcDetail{display:none !important}

@@ -274,7 +274,14 @@ window.runDiag=runDiag;
 
 /* DB 를 읽으므로 «인증이 끝난 뒤» 시작해야 한다. GST.dbRows 는 세션이 없으면 DB_OFF 를 던지고,
    fetchCSVCached 는 조용히 시트 폴백으로 내려간다 — 둘 다 «틀린 진단»으로 이어진다. */
-GST.authGate().then(runDiag);
+/* 관리자 전용(v135) — 표 이름·행수·조인 실패 목록을 조회 계정이 볼 이유가 없다. 등급은 core 가 로그인 직후 읽는다. */
+GST.authGate().then(function(){ return GST.loadMe ? GST.loadMe() : null; }).then(function(){
+  if(GST.isAdmin && !GST.isAdmin()){
+    document.body.innerHTML='<div style="padding:40px;font:15px/1.7 sans-serif;color:#e6edf3">관리자 전용 화면입니다.</div>';
+    return;
+  }
+  runDiag();
+});
 </script>
 <script>GST.initSync();</script>
 </body>

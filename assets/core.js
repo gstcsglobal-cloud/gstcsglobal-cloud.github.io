@@ -22,6 +22,39 @@ GST.VER = 135;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 
 GST.INS_T = {ko:'요약', en:'Summary', zh:'摘要', ja:'要約'};
 GST.insHead = function(){ var l=(GST._lang && GST._lang()) || 'ko'; return GST.INS_T[l] || GST.INS_T.ko; };
 
+/* ---------- 화면 등급 (v135) ----------
+   권한은 «두 축»이다 — 쓰기(allowed_users.can_write · RLS 가 최종 판정)와 메타정보 표시(allowed_users.role).
+   viewer 는 지표만 · editor 는 + 편집·업로드 버튼 · admin 은 + 출처 배지 상세·미러 배너 원문·열 인식 패널·/diag/.
+   ⚠ 이것은 보안이 아니라 «화면 정리»다 — 지표 값 자체는 네트워크 탭·IndexedDB 에 그대로 있다(사용자 확정: 메타만).
+   ⚠ 두 축을 억지로 잇지 않는다 — role='admin' 이면서 can_write=false 도 가능한 조합이고, 쓰기는 계속 can_write 가 정한다.
+   role 열이 아직 없으면(setup-15 실행 전) 'legacy' — 지금까지처럼 전원이 다 본다(잠그면 관리자도 업로드 버튼을 잃는다).
+   인증이 꺼진 환경(로컬 파일·검증 스크립트)도 legacy 다 — 그 환경은 애초에 로그인 게이트가 안 열린다. */
+GST._me = null; GST._meP = null;
+GST.isAdmin = function(){
+  if(!GST._me) return !GST.authOn();
+  var r = GST._me.role; return r==='admin' || r==='legacy';
+};
+GST.canWrite = function(){ return !!(GST._me && GST._me.can_write); };
+GST._meApply = function(me){
+  GST._me = me;
+  try{ if(document.body) document.body.dataset.role = me && me.role ? me.role : 'viewer'; }catch(e){}
+  /* 등급이 «나중에» 도착하므로, 이미 그려진 메타 요소를 다시 그린다 — 등급을 모를 때는 가려 두었다가 연다 */
+  try{ GST._srcChip(); }catch(e){}
+  try{ GST._dbBanner(); }catch(e){}
+  try{ var bad=(GST.SM&&GST.SM._reg||[]).filter(function(r){ return r.miss.length; }); if(bad.length) GST.SM.banner(bad); }catch(e){}
+  try{ window.dispatchEvent(new CustomEvent('gst-role', {detail:me})); }catch(e){}
+};
+GST.loadMe = function(){
+  if(GST._meP) return GST._meP;
+  GST._meP = (async function(){
+    if(!GST.authOn()){ GST._meApply({email:'', can_write:false, role:'legacy'}); return GST._me; }
+    try{ await GST.dbWrite('perm', 'perm'); }                         // perm 경로가 자기 행을 읽어 _meApply 를 부른다 — 두 번째 읽기를 만들지 않는다
+    catch(e){ if(!GST._me) GST._meApply({email:'', can_write:false, role:'viewer'}); }   // 모르면 viewer(fail-closed)
+    return GST._me;
+  })();
+  return GST._meP;
+};
+
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
    사라지고 있었다(빈칸과 구별이 안 된다). xlsx 로 올리면 쉼표가 없어 정상인데, 그러면
@@ -39,9 +72,10 @@ GST.needVer = function(n){
   try{
     var d = document.createElement('div');
     d.style.cssText='background:#7f1d1d;color:#fff;padding:10px 16px;font:13px/1.5 sans-serif;position:relative;z-index:99999';
-    d.textContent='⚠️ core.js 가 구버전입니다 (실행 v'+GST.VER+' · 이 페이지는 v'+n+' 필요). '
-      +'브라우저 캐시 탓입니다 — Ctrl+Shift+R (Mac ⌘⇧R) 로 강력 새로고침하세요. '
-      +'그래도 같으면 assets/core.js 배포가 페이지보다 늦은 것입니다.';
+    /* 숫자·배포 이야기는 title(관리자용)로 — 사용자가 할 일은 강력 새로고침 하나뿐이다(v135) */
+    d.textContent='⚠️ 화면 코드가 최신이 아닙니다 — Ctrl+Shift+R (Mac ⌘⇧R) 로 강력 새로고침하세요. 그래도 같으면 관리자에게 알려 주세요.';
+    d.title='core v'+GST.VER+' 실행 · 이 페이지는 v'+n+' 필요 — 브라우저 캐시이거나 assets/core.js 배포가 페이지보다 늦은 것';
+    try{ console.warn('[needVer] 실행 v'+GST.VER+' · 필요 v'+n); }catch(e){}
     (document.body||document.documentElement).insertAdjacentElement('afterbegin', d);
   }catch(e){}
   return false;
@@ -163,7 +197,7 @@ GST.db = async function(){ if(!GST.authOn())return null;
 // 로그인 완료 신호 — fetchCSV가 이 Promise를 기다리므로 loadData()를 먼저 불러도 안전
 GST._readyP=null; GST._readyRes=null;
 GST.authReady=function(){ if(!GST._readyP)GST._readyP=new Promise(function(r){GST._readyRes=r;}); return GST._readyP; };
-GST._authOk=function(){ GST.authReady(); GST._readyRes&&GST._readyRes(); };
+GST._authOk=function(){ GST.authReady(); GST._readyRes&&GST._readyRes(); try{ GST.loadMe(); }catch(e){} };
 // 로그인 게이트: #loginOverlay를 이메일 OTP UI로 교체(없으면 생성). 성공 시 resolve.
 GST.authGate = async function(){
   var ov=document.getElementById('loginOverlay');
@@ -435,11 +469,18 @@ GST.dbWrite = async function(op, gid, body, params){
   /* 권한 — allowed_users.can_write. RLS 가 최종 결정하므로 이 검사는 UI·메시지용이다
      (검사를 우회해도 정책이 막는다). 자기 행 조회는 setup-7 의 self read 정책이 연다. */
   // ilike = 대소문자 무시 일치. %·_ 는 와일드카드라 이메일에 든 _ 를 이스케이프한다
-  var au = await c.from('allowed_users').select('email,can_write')
-                  .ilike('email', email.replace(/[%_\\]/g, '\\$&')).maybeSingle();
+  var like = email.replace(/[%_\\]/g, '\\$&'), legacy = false;
+  var au = await c.from('allowed_users').select('email,can_write,role').ilike('email', like).maybeSingle();
+  /* role 열이 아직 없으면(setup-15 실행 전) 옛 두 열만 다시 읽는다 — 그 상태에서 쓰기·업로드가 멈추면 안 된다(v135) */
+  if(au.error && /role/i.test(String(au.error.message||''))){
+    legacy = true;
+    au = await c.from('allowed_users').select('email,can_write').ilike('email', like).maybeSingle();
+  }
   if(au.error) throw GST._dbwErr('sheets_error', 500, {detail:au.error.message});
   if(!au.data){ GST.authDenied && GST.authDenied(403); throw GST._dbwErr('forbidden', 403); }
-  if(op === 'perm') return { ok:true, email:email, can_write:!!au.data.can_write };
+  var me = { ok:true, email:email, can_write:!!au.data.can_write, role: legacy ? 'legacy' : (au.data.role || 'viewer') };
+  GST._meApply(me);
+  if(op === 'perm') return me;
   if(!au.data.can_write) throw GST._dbwErr('read_only', 403);
   if(W.ops && W.ops.indexOf(op) < 0) throw GST._dbwErr('op_disabled', 400, {op:op});
 
@@ -2199,11 +2240,18 @@ GST.SM.banner = function(bad){
     if(anchor&&anchor.parentNode) anchor.parentNode.insertBefore(el, anchor.nextSibling);
     else document.body.insertAdjacentElement('afterbegin', el);
   }
-  el.textContent='⚠️ 시트에서 찾지 못한 열이 있습니다 — 해당 항목은 비어 보입니다. ('+lines.join(' | ')+') 클릭하면 상세';
+  if(GST.isAdmin()){
+    el.textContent='⚠️ 시트에서 찾지 못한 열이 있습니다 — 해당 항목은 비어 보입니다. ('+lines.join(' | ')+') 클릭하면 상세';
+    el.style.cursor='pointer';
+  }else{   // 배너는 «보이되» 시트 이름·열 이름은 관리자만(v135) — 가리면 조회자만 경고 없이 빈 숫자를 본다
+    el.textContent='⚠️ 시트에서 찾지 못한 열이 있어 일부 항목이 비어 보입니다 — 관리자에게 알려 주세요';
+    el.style.cursor='default';
+  }
 };
 /* 열 인식 상태 진단 — 어떤 항목이 몇 번 열로 잡혔는지, 못 찾은 건 무엇인지 한눈에.
    시트를 바꾼 뒤 여기만 보면 30초 안에 확인이 끝난다. 콘솔에서 GST.SM.panel()로도 연다. */
 GST.SM.panel = function(){
+  if(!GST.isAdmin()) return;   // 시트 이름·헤더 행·열 번호 전량 — 관리자만(v135)
   const old=document.getElementById('gstColPanel'); if(old){ old.remove(); return; }
   const wrap=document.createElement('div'); wrap.id='gstColPanel';
   wrap.style.cssText='position:fixed;inset:0;z-index:999998;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:24px';
@@ -2345,7 +2393,10 @@ GST._dbBanner = function(){
     if(a&&a.parentNode) a.parentNode.insertBefore(el, a.nextSibling);
     else document.body.insertAdjacentElement('afterbegin', el);
   }
-  el.textContent='ℹ️ '+bad.map(function(x){ return x.t+' — '+x.m; }).join(' | ');
+  el.textContent = GST.isAdmin()
+    ? 'ℹ️ '+bad.map(function(x){ return x.t+' — '+x.m; }).join(' | ')
+    /* 숨기지 않는다 — 조용히 옛 값을 보여주는 것이 가장 나쁘다(v128). 표 이름·에러 원문만 관리자에게(v135) */
+    : 'ℹ️ 일부 자료를 예정된 곳(미러)에서 불러오지 못해 대체 경로로 표시 중입니다 — 값이 옛것일 수 있습니다. 관리자에게 알려 주세요';
 };
 
 /* 한 표를 통째로 읽어 [헤더행, ...데이터행] 2차원 배열로 되돌린다. */
@@ -2739,7 +2790,7 @@ GST._srcSeen = {};
 GST._srcLabel = { db:'Supabase', sheet:'구글시트', cache:'브라우저 캐시' };
 GST._srcNote = function(key, src, n){
   GST._srcSeen[key] = { src:src, n:n };
-  try{ console.info('[출처] '+key+' ← '+(GST._srcLabel[src]||src)+' '+n+'행'); }catch(_){}
+  try{ if(GST.isAdmin()) console.info('[출처] '+key+' ← '+(GST._srcLabel[src]||src)+' '+n+'행'); }catch(_){}
   GST._srcChip();
 };
 GST._srcChip = function(){
@@ -2753,6 +2804,7 @@ GST._srcChip = function(){
       'font:11px/1.5 system-ui,-apple-system,sans-serif;font-weight:700;cursor:pointer;opacity:.8;user-select:none';
     el.title = '데이터를 어디서 읽었는지 — 누르면 자세히';
     el.onclick = function(){
+      if(!GST.isAdmin()) return;   // 표 이름·행수·캐시 상태는 관리자만(v135) — «core N» 은 누구나 본다(v128 규약)
       let d = document.getElementById('gstSrcDetail');
       if(d){ d.remove(); return; }
       d = document.createElement('div'); d.id='gstSrcDetail';
@@ -2771,11 +2823,21 @@ GST._srcChip = function(){
   el.style.background = bad ? '#78350f' : '#064e3b';
   el.style.color      = bad ? '#fde68a' : '#a7f3d0';
   /* 캐시가 실제로 먹었는지 보이게 한다. 안 보이면 «왜 느린지»를 아무도 못 묻는다. */
-  el.textContent = '출처 DB '+db + (sh?' · 시트 '+sh:'') + (ca?' · 캐시 '+ca:'')
-    + ' · core '+GST.VER
-    + (GST._idbHit?' · 재사용 '+GST._idbHit:'')
-    + (GST._idbErr?' · ⚠ 캐시 저장 실패':'');
-  if(GST._idbErr) el.title = 'IndexedDB: '+GST._idbErr+' — 매번 다시 받습니다';
+  if(GST.isAdmin()){
+    el.textContent = '출처 DB '+db + (sh?' · 시트 '+sh:'') + (ca?' · 캐시 '+ca:'')
+      + ' · core '+GST.VER
+      + (GST._idbHit?' · 재사용 '+GST._idbHit:'')
+      + (GST._idbErr?' · ⚠ 캐시 저장 실패':'');
+    el.style.cursor='pointer';
+    el.title = GST._idbErr ? 'IndexedDB: '+GST._idbErr+' — 매번 다시 받습니다' : '데이터를 어디서 읽었는지 — 누르면 자세히';
+  }else{
+    /* 조회 계정에는 «core N» 만 — v128 규약(옛 코드를 물고 있는지 눈으로 판정)은 지키고,
+       표 이름·행수·캐시 상태는 가린다(v135 · 사용자 확정 «메타정보만»). 색은 그대로라 이상은 보인다. */
+    el.textContent = 'core '+GST.VER + (bad||GST._idbErr ? ' · ⚠' : '');
+    el.style.cursor='default';
+    el.title = '화면 코드 버전' + (bad||GST._idbErr ? ' · 자료 출처에 이상이 있습니다 — 관리자에게 알려 주세요' : '');
+    const dd = document.getElementById('gstSrcDetail'); if(dd) dd.remove();
+  }
 };
 
 // 캐시 폴백 로드: 성공 시 저장, 실패 시 캐시로 대체 (cached/ageMin 플래그 반환)
