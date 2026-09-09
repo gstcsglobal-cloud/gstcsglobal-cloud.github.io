@@ -149,7 +149,7 @@ ok(typeof GST.VER==='number' && GST.VER>=89, 'GST.VER 가 없거나 낮다: '+GS
 ok(typeof GST.needVer==='function', 'GST.needVer 가 없다');
 ok(GST.needVer(GST.VER)===true, '같은 버전은 통과해야 한다');
 ok(GST.needVer(GST.VER+1)===false, '더 높은 요구 버전은 실패로 알려야 한다');
-[['report','report/index.html'],['hr','hr/index.html']].forEach(([n,f])=>
+[['report','report/index.html'],['hr','hr/index.html'],['fault','fault/index.html'],['material','material/index.html'],['pm','pm/index.html'],['scrubber','scrubber/index.html'],['tco','tco/index.html'],['cip','cip/index.html'],['shell','index.html'],['upload','upload/index.html']].forEach(([n,f])=>
   ok(/GST\.needVer\s*&&\s*GST\.needVer\(/.test(fs.readFileSync(ROOT+'/'+f,'utf8')),
      n+' 페이지가 needVer 를 부르지 않는다'));
 

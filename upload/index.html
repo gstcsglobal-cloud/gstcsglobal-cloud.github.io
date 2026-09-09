@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CSV 업로드 — GST CS Dashboard</title>
+<title>업로드 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=135"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:var(--txt,#e6edf3);background:var(--bg-gradient,#0b1118);background-size:400% 400%;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
@@ -28,6 +28,7 @@ a{color:var(--a1,#38bdf8)}
 <body>
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
+window.GST && GST.needVer && GST.needVer(121);   // csv_table_cols 대조(v121) 이전 core 면 배너 — «숫자가 0» 대신(v135)
 </script>
 
 <h1>📤 CSV 업로드</h1>

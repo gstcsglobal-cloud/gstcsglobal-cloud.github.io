@@ -157,7 +157,7 @@ async function makeCtx() {
     if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.fulfill({ status:404, body:'nf' }); return; }
     r.fulfill({ status:200, contentType:MIME[path.extname(f)] || 'application/octet-stream', body:fs.readFileSync(f) });
   });
-  await ctx.route('**/assets/core.js', r => r.fulfill({ status:200, contentType:'application/javascript',
+  await ctx.route('**/assets/core.js*', r => r.fulfill({ status:200, contentType:'application/javascript',
     body: fs.readFileSync(ROOT + '/assets/core.js', 'utf8') + STUB }));
   await ctx.route('**/cdn.jsdelivr.net/**', r => {
     const u = r.request().url();

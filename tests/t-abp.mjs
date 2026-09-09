@@ -239,7 +239,7 @@ console.log('\n[8] 주간현황 — 원장이 켜지면 크로스탭은 꺼진�
       + 'GST._LED=' + JSON.stringify(which === 'none' ? [] : ledger(which)) + ';'
       + 'GST.csvTableRows=async function(t){ if(t==="sheet_allbypass"&&GST._LED.length)return GST._LED;'
       + '  throw new Error("EMPTY — "+t); };';
-    await ctx.route('**/assets/core.js', r => r.fulfill({ status:200, contentType:'application/javascript',
+    await ctx.route('**/assets/core.js*', r => r.fulfill({ status:200, contentType:'application/javascript',
       body: fs.readFileSync(ROOT + '/assets/core.js', 'utf8') + STUB }));
     const NM = ROOT + '/tests/node_modules/';
     await ctx.route('**/cdn.jsdelivr.net/**', r => {

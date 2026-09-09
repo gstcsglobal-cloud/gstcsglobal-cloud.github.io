@@ -106,7 +106,7 @@ const STUB = '\n;GST.USE_DB=false;GST.authOn=function(){return false;};'
   + 'GST.getSession=async function(){return {user:{email:"t@t"}};};GST.token=async function(){return "t";};'
   + 'GST.authGate=async function(){var o=document.getElementById("loginOverlay");if(o)o.remove();'
   + 'if(GST._authOk)GST._authOk();return true;};';
-await ctx.route('**/assets/core.js', r => r.fulfill({ status:200, contentType:'application/javascript',
+await ctx.route('**/assets/core.js*', r => r.fulfill({ status:200, contentType:'application/javascript',
   body: fs.readFileSync(ROOT + '/assets/core.js', 'utf8') + STUB }));
 const NM = ROOT + '/tests/node_modules/';
 await ctx.route('**/cdn.jsdelivr.net/**', r => {

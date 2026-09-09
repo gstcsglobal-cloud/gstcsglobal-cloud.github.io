@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TCO — Total Cost of Ownership</title>
+<title>TCO · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=135"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -95,7 +95,7 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
 @media(max-width:1200px){.grid2,.grid2e{grid-template-columns:1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
 @media(max-width:768px){.slicers{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=135">
 </head>
 <body>
 
@@ -111,10 +111,10 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
     <div class="theme-wrap">
       <button class="theme-btn" onclick="toggleThemeMenu()"><span id="themeLabel">Slate</span> ▾</button>
       <div class="theme-dropdown" id="themeMenu">
-        <div class="theme-item" onclick="changeDashboardTheme('slate','Slate')">🖤 Slate</div>
-        <div class="theme-item" onclick="changeDashboardTheme('default','Cyber Turquoise')">🌌 Cyber Turquoise</div>
-        <div class="theme-item" onclick="changeDashboardTheme('burgundy','Royal Burgundy')">🍷 Royal Burgundy</div>
-        <div class="theme-item" onclick="changeDashboardTheme('light','Aurora Light')">🧊 Aurora Light</div>
+        <div class="theme-item" onclick="changeDashboardTheme('slate','Slate')">Slate</div>
+        <div class="theme-item" onclick="changeDashboardTheme('default','Navy')">Navy</div>
+        <div class="theme-item" onclick="changeDashboardTheme('burgundy','Burgundy')">Burgundy</div>
+        <div class="theme-item" onclick="changeDashboardTheme('light','Light')">Light</div>
       </div>
     </div>
     <div class="lang-wrap">
@@ -418,7 +418,7 @@ GST.chartDefaults();
 window.changeDashboardTheme=function(themeClass,label){
   document.body.className='';
   if(themeClass!=='default')document.body.classList.add('theme-'+themeClass);
-  const THEME_LABELS={slate:'Slate',default:'Cyber Turquoise',burgundy:'Royal Burgundy',light:'Aurora Light'};
+  const THEME_LABELS={slate:'Slate',default:'Navy',burgundy:'Burgundy',light:'Light'};
   const lb=document.getElementById('themeLabel');
   if(lb)lb.textContent=THEME_LABELS[themeClass]||label||themeClass;
   const menu=document.getElementById('themeMenu');

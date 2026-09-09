@@ -16,7 +16,11 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 134;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 135;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+/* 인사이트 띠의 머리글. 예전에는 «INSIGHT» 영문 대문자가 core 에 박혀 있어 네 언어 어디서도 안 바뀌고
+   PPT 장표까지 그대로 나갔다(v135). core 의 공용 문자열 관례(GST._lang + 사전) 그대로다. */
+GST.INS_T = {ko:'요약', en:'Summary', zh:'摘要', ja:'要約'};
+GST.insHead = function(){ var l=(GST._lang && GST._lang()) || 'ko'; return GST.INS_T[l] || GST.INS_T.ko; };
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -384,7 +388,7 @@ GST._dbwCol = function(cmap, want){
    역할이 같다: 폼을 연 뒤 누가 같은 행을 고쳤으면 저장이 409 로 막힌다. */
 GST._dbwHash = function(rowObj){
   var ks = Object.keys(rowObj||{}).filter(function(k){ return !GST._CSV_SKIP[k]; }).sort();
-  var s = ks.map(function(k){ return k+''+String(rowObj[k]==null?'':rowObj[k]); }).join('');
+  var s = ks.map(function(k){ return k+'\x01'+String(rowObj[k]==null?'':rowObj[k]); }).join('\x02');
   var h1=0x811c9dc5, h2=0x1505;
   for(var i=0;i<s.length;i++){ var c=s.charCodeAt(i);
     h1=((h1^c)*0x01000193)>>>0; h2=(((h2<<5)+h2)^c)>>>0; }
@@ -2710,7 +2714,7 @@ GST._abpWide = function(rows){
     if(b.keys.indexOf(k)<0) b.keys.push(k);
     if(b.sites.indexOf(s)<0) b.sites.push(s);
     b.ends[k] = iE!=null ? String(r[iE]||'') : '';
-    b.v[s+' '+k] = String(r[iV]||'');
+    b.v[s+'\0'+k] = String(r[iV]||'');
   }
   const out = [];
   ['month','week'].forEach(function(t){
@@ -2720,7 +2724,7 @@ GST._abpWide = function(rows){
     out.push([t==='month'?'Month':'Week'].concat(b.keys.map(label)));
     out.push(['Site'].concat(b.keys.map(function(k){ return b.ends[k]||''; })));
     b.sites.forEach(function(s){
-      out.push([s].concat(b.keys.map(function(k){ return b.v[s+' '+k] || '0'; })));
+      out.push([s].concat(b.keys.map(function(k){ return b.v[s+'\0'+k] || '0'; })));
     });
     out.push([]);                                   // 블록 사이 빈 줄 — 시트와 같다
   });
@@ -2906,7 +2910,7 @@ GST.insights = function(items){
     box.id='gstInsights'; box.className='gst-insights';
     anchor.parentNode.insertBefore(box, anchor);
   }
-  box.innerHTML = '<span class="gst-ins-head">INSIGHT</span>' +
+  box.innerHTML = '<span class="gst-ins-head">'+GST.insHead()+'</span>' +
     items.slice(0,4).map(function(it){
       return '<span class="gst-ins '+(it.sev||'info')+'"><span class="gst-ins-dot"></span>'+it.text+'</span>';
     }).join('');
@@ -4823,7 +4827,7 @@ GST.pptAuto = async function(opt){
       if(ins.length){
         const i0=usedCells, c=i0%COLS, r=Math.floor(i0/COLS);
         const x=X+(CW+GAP)*c, y=ROWY[r], span=COLS-c, w=CW*span+GAP*(span-1);
-        s.addText('INSIGHT', {x:x, y:y, w:w, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
+        s.addText(GST.insHead(), {x:x, y:y, w:w, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
                               fontSize:10, bold:true, valign:'middle', align:'center', margin:4,
                               line:{color:'000000', width:0.75}});
         s.addShape(p.ShapeType.rect, {x:x, y:y+BAND, w:w, h:BODY, fill:{color:'FFFFFF'}, line:{color:LINE, width:0.75}});
@@ -5626,7 +5630,7 @@ GST.PIV_T={
 };
 GST._pivot=null;
 GST.PIV_LV=3;                 // 행 축 중첩 단계 수
-GST._PIV_SEP='';
+GST._PIV_SEP='\x01';
 GST.pivotReg=function(spec){
   if(spec && !spec.sets) spec={sets:[Object.assign({k:'d0'},spec)]};
   if(spec && spec.sets) spec.sets=spec.sets.filter(function(s){ return s&&s.rows&&(s.dims||[]).length&&(s.measures||[]).length; });

@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Service & Fault Dashboard</title>
+<title>고장 분석 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=135"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -143,15 +143,15 @@ canvas{cursor:pointer}
 #capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1,#2dd4bf);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
 @media print{.capbtns,.header-right,.slicers,.fchips{display:none!important}.card,.trend-card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=135">
 </head>
 <body>
 
 <div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
-    <h1 data-i="title">Service & Fault Dashboard</h1>
-    <div class="sub" data-i="sub">BM·CBM·CM·CRM service records & workload</div>
+    <h1 data-i="title">서비스·고장 대응 대시보드</h1>
+    <div class="sub" data-i="sub">BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석</div>
   </div>
   <div class="header-right">
     <a href="https://gstcsglobal-cloud.github.io" class="btn btn-glass" data-i="back">← Main</a>
@@ -471,7 +471,7 @@ canvas{cursor:pointer}
   </div>
 
   <div class="tablecard" style="margin-bottom:16px">
-    <h3><span data-i="dp_bw">Best of Best / Worst of Worst</span></h3>
+    <h3><span data-i="dp_bw">고장 쏠림 · 무고장 설비</span></h3>
     <div class="dp-note" id="bwNote">—</div>
     <div class="cw" style="height:220px;margin:6px 0"><canvas id="cWorstBm"></canvas></div>
     <div class="bw2">
@@ -546,7 +546,7 @@ canvas{cursor:pointer}
 <div data-sec="life">
 <div class="card" style="margin-bottom:16px">
   <h3><span data-i="life_pick">설비 선택</span></h3>
-  <div class="note" data-i="note_lifepick">S/N 또는 설비호기로 검색하세요. 아무 표에서나 S/N을 클릭하면 뜨는 메뉴의 「설비 일대기」로도 열립니다.</div>
+  <div class="note" data-i="note_lifepick">S/N 또는 설비호기로 검색하세요. 아무 표에서나 S/N을 클릭하면 뜨는 메뉴의 「설비 이력」로도 열립니다.</div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
     <input id="lifeQ" type="search" placeholder="S/N 또는 설비호기" autocomplete="off"
       style="flex:1;min-width:220px;max-width:380px;padding:9px 12px;border-radius:10px;
@@ -605,7 +605,7 @@ canvas{cursor:pointer}
   </div>
 </div>
 <div id="lifeEmpty" class="card" style="text-align:center;padding:44px 20px;opacity:.65">
-  <div data-i="life_empty">설비를 검색하면 그 설비의 일대기가 표시됩니다</div>
+  <div data-i="life_empty">설비를 검색하면 그 설비의 이력이 표시됩니다</div>
 </div>
 </div>
 
@@ -692,7 +692,7 @@ const T={
     dp_t1:'세부공정 × 모델 · 집중지수 — 1을 크게 넘는 칸이 「유독 여기서만」 나는 조합입니다',
     dp_t2:'설비호기 × 월 — 한 줄을 가로로 읽으면 그 설비가 언제 몰렸는지 보입니다',
     dp_t3:'작업자 × 작업단계 — 쉼표로 묶인 담당자를 사람 수만큼 펼친 데이터입니다',
-    dp_bw:'Best of Best / Worst of Worst',
+    dp_bw:'고장 쏠림 · 무고장 설비',
     dp_bw_n:'BM율 = 고장(BM) ÷ 그 설비에 들어간 모든 작업 · 작업 {n}건 이상 {u}대 대상 · 전체 평균 {p}%',
     dp_worst:'Worst — 고장이 몰리는 설비',dp_best:'Best — 무고장 설비',
     dp_th_eq:'설비호기',dp_th_n:'작업',dp_th_bm:'BM',dp_th_rate:'BM율',dp_th_x:'집중지수',
@@ -704,7 +704,7 @@ const T={
     dp_ch_none:'좌우 합 {m}건 이상인 설비가 없습니다',dp_unit:'대',dp_th_sh:'BM 점유율',dp_sub_sh:'BM 점유율 = 그 구분의 BM ÷ 전체 BM {b}건',rd_wk:'일자|설비호기|S/N|단계|라인|공정|세부공정|모델',rd_share:'공수는 인원수로 안분한 값입니다',rd_mean:'막대는 평균값입니다 — 목록은 원본 전체',
     pv_set1:'서비스 실적',pv_set2:'작업자별 (펼침)',pv_subproc:'세부공정',pv_bay:'BAY',
     pv_chpos:'채널위치',pv_maineq:'메인설비호기',pv_worker:'작업자',pv_bm:'BM건수',pv_wkrn:'작업자수',
-    ch_alarmmat:'알람이 뜨면 무슨 자재를 가나',sec_life:'설비 일대기',life_pick:'설비 선택',note_lifepick:'S/N 또는 설비호기로 검색하세요. 아무 표에서나 S/N을 클릭하면 뜨는 메뉴의 「설비 일대기」로도 열립니다.',ch_lifetl:'이력 타임라인',note_lifetl:'설치·Turn On·고장/정비·자재교체를 시간순으로 · 점에 커서를 올리면 상세',ch_lifestage:'작업단계 구성',note_lifestage:'이 설비에 어떤 작업이 얼마나 있었나',ch_lifepart:'교체 자재 TOP',note_lifepart:'이 설비에서 제일 많이 간 자재 · 건수',ch_lifecycle:'자재별 평균 사용주기',note_lifecycle:'교체 시점의 사용일(전교체일 기준) 평균 · 2회 이상 교체된 자재',life_tbl:'전체 이력',life_kind:'구분',life_what:'내용',th_worker:'작업자',th_pf2:'유/무상',life_empty:'설비를 검색하면 그 설비의 일대기가 표시됩니다',ch_tbmw:'작업자별 TBM 사후 재고장률',note_tbmw:'TBM 후 30일 내 같은 설비 BM 발생 비율 · 낮을수록 좋음 · TBM 10건 이상',ch_tbmgap:'TBM → 다음 고장 경과일',note_tbmgap:'재고장이 난 건만 · 짧을수록 정비 품질 문제',ch_tbmline:'LINE별 TBM 사후 재고장률',note_tbmline:'TBM 5건 이상 · 값은 막대 끝',title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
+    ch_alarmmat:'알람이 뜨면 무슨 자재를 가나',sec_life:'설비 이력',life_pick:'설비 선택',note_lifepick:'S/N 또는 설비호기로 검색하세요. 아무 표에서나 S/N을 클릭하면 뜨는 메뉴의 「설비 이력」로도 열립니다.',ch_lifetl:'이력 타임라인',note_lifetl:'설치·Turn On·고장/정비·자재교체를 시간순으로 · 점에 커서를 올리면 상세',ch_lifestage:'작업단계 구성',note_lifestage:'이 설비에 어떤 작업이 얼마나 있었나',ch_lifepart:'교체 자재 TOP',note_lifepart:'이 설비에서 제일 많이 간 자재 · 건수',ch_lifecycle:'자재별 평균 사용주기',note_lifecycle:'교체 시점의 사용일(전교체일 기준) 평균 · 2회 이상 교체된 자재',life_tbl:'전체 이력',life_kind:'구분',life_what:'내용',th_pf2:'유/무상',life_empty:'설비를 검색하면 그 설비의 이력이 표시됩니다',ch_tbmw:'작업자별 TBM 사후 재고장률',note_tbmw:'TBM 후 30일 내 같은 설비 BM 발생 비율 · 낮을수록 좋음 · TBM 10건 이상',ch_tbmgap:'TBM → 다음 고장 경과일',note_tbmgap:'재고장이 난 건만 · 짧을수록 정비 품질 문제',ch_tbmline:'LINE별 TBM 사후 재고장률',note_tbmline:'TBM 5건 이상 · 값은 막대 끝',title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
     sec_ov:'개요',sec_ca:'원인·조치',sec_ld:'작업 부하',sec_rel:'신뢰성',sec_dt:'상세 목록',
     r_mtbf:'MTBF · 평균 고장간격',r_mttr:'MTTR · 평균 수리시간',r_frate:'연간 고장률 (건/대)',r_units:'분석 설비',
     rf_mtbf:'중앙값 {n}일',rf_mttr:'BM {n}건 평균',rf_frate:'가동기간 환산',rf_units:'BM 2건↑ · 설치연동 {p}%',
@@ -737,7 +737,7 @@ const T={
     dp_t1:'Sub-process × Model, Lift — cells far above 1 are the "only happens here" combinations',
     dp_t2:'Unit × Month — read a row across to see when that unit piled up',
     dp_t3:'Worker × Stage — comma-joined crews expanded into one row per person',
-    dp_bw:'Best of Best / Worst of Worst',
+    dp_bw:'Failure-prone · Failure-free Units',
     dp_bw_n:'BM rate = breakdowns ÷ all work done on that unit · {u} units with {n}+ jobs · fleet average {p}%',
     dp_worst:'Worst — failures pile up here',dp_best:'Best — zero breakdowns',
     dp_th_eq:'Unit',dp_th_n:'Jobs',dp_th_bm:'BM',dp_th_rate:'BM rate',dp_th_x:'Lift',
@@ -749,7 +749,7 @@ const T={
     dp_ch_none:'No unit reaches L+R ≥ {m}',dp_unit:'',dp_th_sh:'BM share',dp_sub_sh:'BM share = its BM ÷ all BM ({b})',rd_wk:'Date|Equip|S/N|Stage|FAB|Process|Detail|Model',rd_share:'Man-hours are prorated by crew size',rd_mean:'Bar shows the mean — list is all source rows',
     pv_set1:'Service records',pv_set2:'By worker (expanded)',pv_subproc:'Sub-process',pv_bay:'BAY',
     pv_chpos:'Channel',pv_maineq:'Main equipment',pv_worker:'Worker',pv_bm:'BM count',pv_wkrn:'Workers',
-    ch_alarmmat:'Which Parts Follow Each Alarm',sec_life:'Equipment Life',life_pick:'Select Equipment',note_lifepick:'Search by S/N or equipment code. Or click any S/N cell and pick Equipment Life from the menu.',ch_lifetl:'Life Timeline',note_lifetl:'install · Turn On · faults/PM · part swaps in time order · hover a point for detail',ch_lifestage:'Work Stage Mix',note_lifestage:'what happened on this unit, and how often',ch_lifepart:'Top Replaced Parts',note_lifepart:'most frequently replaced on this unit · count',ch_lifecycle:'Mean Service Life by Part',note_lifecycle:'mean days-in-use at replacement (prev-replace basis) · parts replaced 2+ times',life_tbl:'Full History',life_kind:'Type',life_what:'Detail',th_worker:'Worker',th_pf2:'Paid/Free',life_empty:'Search for an equipment to see its life story',ch_tbmw:'Post-TBM Failure Rate by Worker',note_tbmw:'BM within 30d after TBM on same unit · lower is better · ≥10 TBMs',ch_tbmgap:'Days from TBM to Next Failure',note_tbmgap:'only recurring cases · shorter means poorer PM quality',ch_tbmline:'Post-TBM Failure Rate by LINE',note_tbmline:'≥5 TBMs · value at bar end',title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
+    ch_alarmmat:'Which Parts Follow Each Alarm',sec_life:'Equipment History',life_pick:'Select Equipment',note_lifepick:'Search by S/N or equipment code. Or click any S/N cell and pick Equipment History from the menu.',ch_lifetl:'Life Timeline',note_lifetl:'install · Turn On · faults/PM · part swaps in time order · hover a point for detail',ch_lifestage:'Work Stage Mix',note_lifestage:'what happened on this unit, and how often',ch_lifepart:'Top Replaced Parts',note_lifepart:'most frequently replaced on this unit · count',ch_lifecycle:'Mean Service Life by Part',note_lifecycle:'mean days-in-use at replacement (prev-replace basis) · parts replaced 2+ times',life_tbl:'Full History',life_kind:'Type',life_what:'Detail',th_pf2:'Paid/Free',life_empty:'Search for an equipment to see its life story',ch_tbmw:'Post-TBM Failure Rate by Worker',note_tbmw:'BM within 30d after TBM on same unit · lower is better · ≥10 TBMs',ch_tbmgap:'Days from TBM to Next Failure',note_tbmgap:'only recurring cases · shorter means poorer PM quality',ch_tbmline:'Post-TBM Failure Rate by LINE',note_tbmline:'≥5 TBMs · value at bar end',title:'Service & Fault Dashboard',sub:'BM·CBM·CM·CRM service records & workload',back:'← Main',refresh:'Refresh',loading:'Loading...',
     sec_ov:'Overview',sec_ca:'Cause & Action',sec_ld:'Workload',sec_rel:'Reliability',sec_dt:'Data',
     r_mtbf:'MTBF · mean time btw failures',r_mttr:'MTTR · mean time to repair',r_frate:'Annual failures / unit',r_units:'Units analyzed',
     rf_mtbf:'median {n} d',rf_mttr:'avg of {n} BM',rf_frate:'annualized',rf_units:'BM≥2 · install-linked {p}%',
@@ -782,7 +782,7 @@ const T={
     dp_t1:'细分工序 × 型号 · 集中指数 — 远大于1的格子就是「只在这里发生」的组合',
     dp_t2:'设备号机 × 月 — 横向读一行，就能看出该设备在何时集中',
     dp_t3:'作业者 × 作业阶段 — 已按人数把逗号分隔的负责人展开为每人一行',
-    dp_bw:'Best of Best / Worst of Worst',
+    dp_bw:'故障集中 · 无故障设备',
     dp_bw_n:'BM率 = 故障(BM) ÷ 该设备的全部作业 · 作业{n}件以上共{u}台 · 整体平均{p}%',
     dp_worst:'Worst — 故障集中的设备',dp_best:'Best — 零故障设备',
     dp_th_eq:'设备号机',dp_th_n:'作业',dp_th_bm:'BM',dp_th_rate:'BM率',dp_th_x:'集中指数',
@@ -794,7 +794,7 @@ const T={
     dp_ch_none:'没有左右合计{m}件以上的设备',dp_unit:'台',dp_th_sh:'BM占比',dp_sub_sh:'BM占比 = 该类BM ÷ 全部BM {b}件',rd_wk:'日期|设备|S/N|阶段|FAB|工艺|细分工艺|型号',rd_share:'工时按人数分摊',rd_mean:'柱为平均值 — 列表为全部原始行',
     pv_set1:'服务实绩',pv_set2:'按作业者 (展开)',pv_subproc:'细分工序',pv_bay:'BAY',
     pv_chpos:'通道位置',pv_maineq:'主设备号机',pv_worker:'作业者',pv_bm:'BM件数',pv_wkrn:'作业者数',
-    ch_alarmmat:'报警发生时更换了哪些材料',sec_life:'设备履历',life_pick:'选择设备',note_lifepick:'按 S/N 或设备号搜索。也可点击任意表中的 S/N，在弹出菜单中选择「设备履历」。',ch_lifetl:'履历时间轴',note_lifetl:'安装·Turn On·故障/保养·材料更换按时间顺序 · 悬停查看详情',ch_lifestage:'作业阶段构成',note_lifestage:'这台设备发生过哪些作业，各多少次',ch_lifepart:'更换材料 TOP',note_lifepart:'该设备更换最多的材料 · 件数',ch_lifecycle:'各材料平均使用周期',note_lifecycle:'更换时使用天数(前次更换基准)平均 · 更换2次以上的材料',life_tbl:'全部履历',life_kind:'类别',life_what:'内容',th_worker:'作业者',th_pf2:'有偿/无偿',life_empty:'搜索设备后显示该设备的履历',ch_tbmw:'按作业者 TBM 后再故障率',note_tbmw:'TBM 后30天内同设备发生BM的比例 · 越低越好 · TBM 10件以上',ch_tbmgap:'TBM → 下次故障间隔天数',note_tbmgap:'仅统计再故障件 · 越短表示保养质量越差',ch_tbmline:'按LINE TBM 后再故障率',note_tbmline:'TBM 5件以上 · 数值在条形末端',title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
+    ch_alarmmat:'报警发生时更换了哪些材料',sec_life:'设备履历',life_pick:'选择设备',note_lifepick:'按 S/N 或设备号搜索。也可点击任意表中的 S/N，在弹出菜单中选择「设备履历」。',ch_lifetl:'履历时间轴',note_lifetl:'安装·Turn On·故障/保养·材料更换按时间顺序 · 悬停查看详情',ch_lifestage:'作业阶段构成',note_lifestage:'这台设备发生过哪些作业，各多少次',ch_lifepart:'更换材料 TOP',note_lifepart:'该设备更换最多的材料 · 件数',ch_lifecycle:'各材料平均使用周期',note_lifecycle:'更换时使用天数(前次更换基准)平均 · 更换2次以上的材料',life_tbl:'全部履历',life_kind:'类别',life_what:'内容',th_pf2:'有偿/无偿',life_empty:'搜索设备后显示该设备的履历',ch_tbmw:'按作业者 TBM 后再故障率',note_tbmw:'TBM 后30天内同设备发生BM的比例 · 越低越好 · TBM 10件以上',ch_tbmgap:'TBM → 下次故障间隔天数',note_tbmgap:'仅统计再故障件 · 越短表示保养质量越差',ch_tbmline:'按LINE TBM 后再故障率',note_tbmline:'TBM 5件以上 · 数值在条形末端',title:'服务·故障对应仪表板',sub:'BM·CBM·CM·CRM 对应实绩与工时分析',back:'← 主页',refresh:'刷新',loading:'加载中...',
     sec_ov:'概览',sec_ca:'原因·措施',sec_ld:'工时负荷',sec_rel:'可靠性',sec_dt:'明细',
     r_mtbf:'MTBF · 平均故障间隔',r_mttr:'MTTR · 平均修复时间',r_frate:'年故障率 (件/台)',r_units:'分析设备',
     rf_mtbf:'中位数 {n}天',rf_mttr:'BM {n}件均值',rf_frate:'按运行期折算',rf_units:'BM≥2 · 安装关联 {p}%',
@@ -827,7 +827,7 @@ const T={
     dp_t1:'詳細工程 × モデル · 集中指数 — 1を大きく超えるセルが「ここでだけ起きる」組み合わせです',
     dp_t2:'設備号機 × 月 — 一行を横に読むと、その設備がいつ集中したか分かります',
     dp_t3:'作業者 × 作業段階 — カンマで束ねられた担当者を人数分に展開したデータです',
-    dp_bw:'Best of Best / Worst of Worst',
+    dp_bw:'故障集中 · 無故障設備',
     dp_bw_n:'BM率 = 故障(BM) ÷ その設備に入った全作業 · 作業{n}件以上の{u}台が対象 · 全体平均{p}%',
     dp_worst:'Worst — 故障が集中する設備',dp_best:'Best — 無故障設備',
     dp_th_eq:'設備号機',dp_th_n:'作業',dp_th_bm:'BM',dp_th_rate:'BM率',dp_th_x:'集中指数',
@@ -839,7 +839,7 @@ const T={
     dp_ch_none:'左右合計{m}件以上の設備がありません',dp_unit:'台',dp_th_sh:'BM構成比',dp_sub_sh:'BM構成比 = 区分のBM ÷ 全BM {b}件',rd_wk:'日付|設備|S/N|段階|FAB|工程|詳細工程|モデル',rd_share:'工数は人数で按分した値です',rd_mean:'棒は平均値 — 一覧は元データ全件',
     pv_set1:'サービス実績',pv_set2:'作業者別 (展開)',pv_subproc:'詳細工程',pv_bay:'BAY',
     pv_chpos:'チャンネル位置',pv_maineq:'メイン設備号機',pv_worker:'作業者',pv_bm:'BM件数',pv_wkrn:'作業者数',
-    ch_alarmmat:'アラーム発生時に交換される部材',sec_life:'設備一代記',life_pick:'設備選択',note_lifepick:'S/Nまたは設備号機で検索してください。任意の表のS/Nをクリックし、メニューの「設備一代記」からも開けます。',ch_lifetl:'履歴タイムライン',note_lifetl:'設置·Turn On·故障/整備·部材交換を時系列で · 点にカーソルを合わせると詳細',ch_lifestage:'作業段階構成',note_lifestage:'この設備にどんな作業がどれだけあったか',ch_lifepart:'交換部材TOP',note_lifepart:'この設備で最も多く交換された部材 · 件数',ch_lifecycle:'部材別平均使用周期',note_lifecycle:'交換時点の使用日数(前回交換基準)平均 · 2回以上交換された部材',life_tbl:'全履歴',life_kind:'区分',life_what:'内容',th_worker:'作業者',th_pf2:'有償/無償',life_empty:'設備を検索するとその設備の履歴が表示されます',ch_tbmw:'作業者別TBM後再故障率',note_tbmw:'TBM後30日以内に同一設備でBM発生した割合 · 低いほど良い · TBM10件以上',ch_tbmgap:'TBM → 次故障までの日数',note_tbmgap:'再故障した件のみ · 短いほど整備品質の問題',ch_tbmline:'LINE別TBM後再故障率',note_tbmline:'TBM5件以上 · 値は棒の末端',title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
+    ch_alarmmat:'アラーム発生時に交換される部材',sec_life:'設備履歴',life_pick:'設備選択',note_lifepick:'S/Nまたは設備号機で検索してください。任意の表のS/Nをクリックし、メニューの「設備履歴」からも開けます。',ch_lifetl:'履歴タイムライン',note_lifetl:'設置·Turn On·故障/整備·部材交換を時系列で · 点にカーソルを合わせると詳細',ch_lifestage:'作業段階構成',note_lifestage:'この設備にどんな作業がどれだけあったか',ch_lifepart:'交換部材TOP',note_lifepart:'この設備で最も多く交換された部材 · 件数',ch_lifecycle:'部材別平均使用周期',note_lifecycle:'交換時点の使用日数(前回交換基準)平均 · 2回以上交換された部材',life_tbl:'全履歴',life_kind:'区分',life_what:'内容',th_pf2:'有償/無償',life_empty:'設備を検索するとその設備の履歴が表示されます',ch_tbmw:'作業者別TBM後再故障率',note_tbmw:'TBM後30日以内に同一設備でBM発生した割合 · 低いほど良い · TBM10件以上',ch_tbmgap:'TBM → 次故障までの日数',note_tbmgap:'再故障した件のみ · 短いほど整備品質の問題',ch_tbmline:'LINE別TBM後再故障率',note_tbmline:'TBM5件以上 · 値は棒の末端',title:'サービス·故障対応ダッシュボード',sub:'BM·CBM·CM·CRM 対応実績と工数分析',back:'← メイン',refresh:'更新',loading:'読込中...',
     sec_ov:'概要',sec_ca:'原因·処置',sec_ld:'工数負荷',sec_rel:'信頼性',sec_dt:'詳細',
     r_mtbf:'MTBF · 平均故障間隔',r_mttr:'MTTR · 平均修理時間',r_frate:'年間故障率 (件/台)',r_units:'分析設備',
     rf_mtbf:'中央値 {n}日',rf_mttr:'BM {n}件平均',rf_frate:'稼働期間換算',rf_units:'BM2件↑ · 設置連動 {p}%',
