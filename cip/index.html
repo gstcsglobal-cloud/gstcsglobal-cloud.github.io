@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=135"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=136"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -131,7 +131,7 @@ tr:hover td{background:var(--glass-hover)}
 @media(max-width:820px){.grid3{grid-template-columns:1fr}}
 @media(max-width:768px){.slicers{grid-template-columns:1fr}.card h3{padding-right:0}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=135">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=136">
 </head>
 <body>
 
@@ -329,7 +329,7 @@ tr:hover td{background:var(--glass-hover)}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(134);   // 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(136);   // 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
 const VER='v50';
@@ -1270,16 +1270,8 @@ function chartHiRes(id,scale){const ch=CHARTS[id];if(!ch||!ch.canvas)return null
 window.copyChart=async function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}try{await new Promise((res,rej)=>oc.toBlob(async b=>{if(!b)return rej();try{await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);res();}catch(e){rej(e);}},'image/png'));capToast('📋 차트 복사됨 — PPT에 붙여넣기(Ctrl+V)');}catch(e){capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요');}};
 window.saveChart=function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}oc.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ '+id+'.png 저장됨');},'image/png');};
 function addCapBtns(){
-  document.querySelectorAll('.cw canvas').forEach(cv=>{
-    const id=cv.id,card=cv.closest('.card');
-    if(!id||!card||card.querySelector('.capbtns'))return;
-    const box=document.createElement('div'); box.className='capbtns';
-    box.innerHTML=GST.pptCardBtn(id)+'<button class="capbtn" title="그림으로 복사(고해상도 PNG)" onclick="copyChart(\''+id+'\')">📋 그림</button>'
-                 +'<button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>'
-                 +'<button class="capbtn" title="축 범위 설정 (min/max)" onclick="axOpen(\''+id+'\')">⚙</button>';
-    card.appendChild(box);
-    const mp=card.querySelector('.mini-per'); if(mp)box.style.right=(mp.offsetWidth+24)+'px';
-  });
+  /* 카드 버튼 한 벌은 core(v135). ⚙ 축 편집은 이 페이지 고유라 뒤에 붙인다. */
+  GST.capBtns({extra:id=>'<button class="capbtn" title="축 범위 설정 (min/max)" onclick="axOpen(\''+id+'\')">⚙</button>'});
 }
 // 차트별 축 범위(min/max) 편집 — 표시 전용, render 후 applyAXB가 주입
 window.axOpen=function(id){

@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=135"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=136"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -182,7 +182,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 #capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--a1,#2dd4bf);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
 @media print{.capbtns,.header-right,.filters,.slicers{display:none!important}.card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=135">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=136">
 </head>
 <body>
 
@@ -371,7 +371,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(134);   // GST.PM(국내 조치 기준 PM) · GST.numv 를 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(136);   // GST.PM(국내 조치 기준 PM) · GST.numv 를 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 const SHEET_URL=GST.sheetUrl('646668307');
@@ -1428,7 +1428,7 @@ function chartHiRes(id,scale){const ch=CHARTS[id];if(!ch||!ch.canvas)return null
 window.copyChart=async function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}try{await new Promise((res,rej)=>oc.toBlob(async b=>{if(!b)return rej();try{await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);res();}catch(e){rej(e);}},'image/png'));capToast('📋 차트 복사됨 — PPT에 붙여넣기(Ctrl+V)');}catch(e){capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요');}};
 window.saveChart=function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}oc.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ '+id+'.png 저장됨');},'image/png');};
 window.saveAllCharts=async function(){const ids=Object.keys(CHARTS).filter(id=>CHARTS[id]&&CHARTS[id].canvas);if(!ids.length){capToast('저장할 차트가 없습니다');return;}capToast('🖼 '+ids.length+'개 차트 저장 중…');for(const id of ids){const oc=chartHiRes(id);if(!oc)continue;await new Promise(res=>oc.toBlob(b=>{if(b){const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}setTimeout(res,250);},'image/png'));}capToast('🖼 전체 '+ids.length+'개 차트 저장 완료');};
-function addCapBtns(){document.querySelectorAll('.card canvas').forEach(cv=>{const id=cv.id,card=cv.closest('.card');if(!id||!card||card.querySelector('.capbtns'))return;const box=document.createElement('div');box.className='capbtns';box.innerHTML=GST.pptCardBtn(id)+'<button class="capbtn" title="그림으로 복사(고해상도 PNG)" onclick="copyChart(\''+id+'\')">📋 그림</button><button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>';card.appendChild(box);});}
+function addCapBtns(){GST.capBtns();}   // 카드 버튼 한 벌은 core(v135) — 그림 복사 버튼은 없앴다(사용자 확정)
 
 applyLang();
 loadData();

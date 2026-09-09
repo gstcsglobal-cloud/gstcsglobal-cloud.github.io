@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 135;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 136;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* 인사이트 띠의 머리글. 예전에는 «INSIGHT» 영문 대문자가 core 에 박혀 있어 네 언어 어디서도 안 바뀌고
    PPT 장표까지 그대로 나갔다(v135). core 의 공용 문자열 관례(GST._lang + 사전) 그대로다. */
 GST.INS_T = {ko:'요약', en:'Summary', zh:'摘要', ja:'要約'};
@@ -2880,7 +2880,7 @@ GST.fetchCSVCached = async function(url, key){
 
 /* ---------- 10. 스켈레톤 로딩 (Stage 3) ---------- */
 GST.skeleton=function(on){
-  document.querySelectorAll('.kpi,.card,.mcard,.tablecard,.alert').forEach(el=>el.classList.toggle('skeleton',!!on));
+  document.querySelectorAll('.kpi,.card,.trend-card,.cross-card,.tablecard,.alert').forEach(el=>el.classList.toggle('skeleton',!!on));
 };
 
 /* ---------- 11. 필터 상태 URL 공유 (Stage 4) ---------- */
@@ -4340,6 +4340,8 @@ GST.PPT_VENDOR = '/assets/vendor/pptxgen.bundle.js';                            
 GST.PPT_CDN    = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
 GST.ZIP_VENDOR = '/assets/vendor/jszip.min.js';                                        // 3.10.1
 GST.ZIP_CDN    = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+GST.XLSX_VENDOR = '/assets/vendor/xlsx.full.min.js';                                   // 0.18.5 (SheetJS · /upload/)
+GST.XLSX_CDN    = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
 
 /* 스크립트 하나를 «시간 제한을 걸고» 싣는다. 자체 사본 → CDN 순으로 본다.
    ⚠ 시간 제한이 이 함수의 존재 이유다. CDN 을 막는 사내망이 «거부»가 아니라 «묵살»을 하면
@@ -4578,6 +4580,16 @@ GST.pptHex = function(c){ // Chart.js 색 → PPT 6자리 HEX ('#' 금지) · �
 };
 GST.pptSrc = function(ch){ // Chart.js 인스턴스 → {labels,bars,lines,stacked} (숨긴 시리즈 제외)
   if(!ch||!ch.data)return null;
+  const t0=(ch.config&&ch.config.type)||'';
+  if(t0==='doughnut'||t0==='pie'){   // 도넛·파이 — 계열 하나 · 조각마다 색 (v135)
+    const ds0=ch.data.datasets[0]||{}; const labels0=(ch.data.labels||[]).map(function(v){ return String(v==null?'':v); });
+    const vals=(ds0.data||[]).map(function(v){ return +v||0; });
+    const bg=ds0.backgroundColor;
+    const cols=labels0.map(function(_,i){ return GST.pptHex(Array.isArray(bg)?bg[i]:bg); });
+    /* 가운데 합계는 화면 플러그인(dCenter)과 «같은 식» — datasets[0].data 의 합. 두 벌이면 화면과 다른 숫자가 나간다. */
+    return {pie:true, hole:t0==='doughnut', labels:labels0, values:vals, colors:cols, name:String(ds0.label||''),
+            total:vals.reduce(function(a,b){ return a+b; },0), bars:[], lines:[]};
+  }
   const labels=GST.pptLabels(ch), bars=[], lines=[];
   ch.data.datasets.forEach((ds,i)=>{
     try{ const mt=ch.getDatasetMeta(i); if(mt&&mt.hidden)return; }catch(e){}
@@ -4602,8 +4614,21 @@ GST.pptSrc = function(ch){ // Chart.js 인스턴스 → {labels,bars,lines,stack
   return {labels,bars,lines,stacked:!!((sc.y&&sc.y.stacked)||(sc.x&&sc.x.stacked)),bounds,
           horiz:horiz, showValue:!!(vl&&vl.mode)};
 };
-GST.pptCombo = function(pres,slide,src,x,y,w,h){ // 막대+꺾은선 네이티브 콤보 차트
-  if(!src||(!src.bars.length&&!src.lines.length))return;
+GST.pptCombo = function(pres,slide,src,x,y,w,h){ // 막대+꺾은선 네이티브 콤보 차트 (도넛·파이도 여기서 · v135)
+  if(!src) return;
+  if(src.pie){
+    slide.addChart(pres.ChartType[src.hole?'doughnut':'pie'], [{name:src.name||'', labels:src.labels, values:src.values}],
+      {x:x,y:y,w:w,h:h, chartColors:src.colors, holeSize:src.hole?58:0, showLegend:true, legendPos:'b', legendFontSize:7.5,
+       legendColor:'333333', showTitle:false, showValue:true, showPercent:false, dataLabelColor:'333333', dataLabelFontSize:7.5,
+       dataLabelPosition:'bestFit', dataLabelFormatCode:'#,##0'});
+    if(src.hole){   // 화면의 가운데 TOTAL 과 같은 숫자를 구멍에 얹는다 — 범례(아래) 높이만큼 위로
+      const cx=x+w/2, cy=y+(h-0.35)*0.5;
+      slide.addText(String(src.total.toLocaleString()), {x:cx-0.9, y:cy-0.24, w:1.8, h:0.30, align:'center', valign:'middle', fontSize:14, bold:true, color:'111111', margin:0});
+      slide.addText('TOTAL', {x:cx-0.9, y:cy+0.06, w:1.8, h:0.20, align:'center', valign:'top', fontSize:7, color:'808080', margin:0});
+    }
+    return;
+  }
+  if(!src.bars.length&&!src.lines.length)return;
   const ln1=src.lines.filter(l=>!l.y2), ln2=src.lines.filter(l=>l.y2);
   const useY2=ln2.length>0&&(src.bars.length>0||ln1.length>0);
   const types=[];
@@ -4647,7 +4672,15 @@ GST.pptCombo = function(pres,slide,src,x,y,w,h){ // 막대+꺾은선 네이티�
 GST.pptNativeOK = function(ch){
   if(!ch||!ch.data) return '';
   const t=(ch.config&&ch.config.type)||'';
-  if(t!=='bar'&&t!=='line') return '도넛·산점도 등은 그림';
+  /* 도넛·파이는 네이티브로 간다(v135) — 가운데 TOTAL 은 pptCombo 가 같은 식(datasets[0] 합)으로 글자로 얹는다.
+     v134 가 「도넛은 그림」으로 둔 것은 그 합계 글자 때문이었는데, 글자를 따로 얹으면 화면과 같은 그림이다. */
+  if(t==='doughnut'||t==='pie'){
+    const ds0=(ch.data.datasets||[])[0]; const n0=(ch.data.labels||[]).length;
+    if(!ds0||!n0) return '데이터 없음';
+    if((ds0.data||[]).length!==n0) return '계열 길이가 라벨 수와 다름';
+    return '';
+  }
+  if(t!=='bar'&&t!=='line') return '산점도 등은 그림';
   /* ⚠ 가로 막대(indexAxis:'y')는 «범주축이 y» 다. x 만 보면 그 차트들이 전부
      「수치축」으로 잘못 떨어진다 — 실측 설치현황·인원 화면의 막대 상당수가 가로 막대다. */
   const cax=GST.pptCatAxis(ch);
@@ -4709,11 +4742,11 @@ GST.pptCard = async function(id){
   const ch=(cv && window.Chart && Chart.getChart) ? Chart.getChart(cv) : null;
   if(!ch){ GST._pptSay('차트를 찾을 수 없습니다'); return; }
   const why=GST.pptNativeOK(ch);
-  if(why){ GST._pptSay('이 차트는 PPT «차트»로 못 옮깁니다 ('+why+') — 「📋 그림」 또는 「📊 데이터」를 쓰세요.'); return; }
+  if(why){ const T=GST._expT(); GST._pptSay(T.img+' ('+why+') — '+T.data+' / '+T.png); return; }
   try{ await GST.pptLoad(); }
   catch(e){
     GST._pptSay('PPT 라이브러리를 불러오지 못했습니다 ('+(e&&e.tried||e&&e.message||'?')+')'
-      + ' — assets/vendor/pptxgen.bundle.js 가 배포됐는지 확인하고, 그래도 안 되면 「📊 데이터」를 쓰세요.');
+      + ' — assets/vendor/pptxgen.bundle.js 가 배포됐는지 확인하고, 그래도 안 되면 「'+GST._expT().data+'」를 쓰세요.');
     return; }
   /* 흰 종이용 색으로 바꿨다 되돌린다 — pptAuto 와 같은 규율(v103).
      ⚠ 되돌리기는 finally 에 둔다. 중간에 던지면 화면 차트 색이 굳어, 내보내기를 한 번
@@ -4723,9 +4756,7 @@ GST.pptCard = async function(id){
   try{ src=GST.pptSrc(ch); }
   finally{ try{ restore&&restore(); }catch(e){} }
   if(!src){ GST._pptSay('차트 데이터를 못 읽었습니다'); return; }
-  const card=cv.closest('.card')||cv.closest('.mcard');
-  const h3=card?card.querySelector('h3'):null;
-  const cap=((h3&&(h3.innerText||'').trim())||id).replace(/\s+/g,' ');
+  const cap=GST.cardTitle(id);
   const FONT='맑은 고딕';
   const p=new PptxGenJS(); p.layout='LAYOUT_WIDE';   // 13.33 × 7.5 in — 아래 좌표가 그 전제다
   const s=p.addSlide(); s.background={color:'FFFFFF'};
@@ -4738,13 +4769,303 @@ GST.pptCard = async function(id){
   GST.pptCombo(p, s, src, 0.5, 1.10, 12.3, 5.60);
   const fn=cap.replace(/[\\/:*?"<>|]/g,'').slice(0,40)+'_'+GST.ymdL()+'.pptx';
   await p.writeFile({fileName:fn});
-  GST._pptSay('⤓ '+fn+' — 열어서 차트를 복사(Ctrl+C)해 보고서에 붙이면 편집 가능한 차트가 됩니다');
+  GST._pptSay('⤓ '+fn+' — '+GST._expT().hint);
 };
-/* 카드 버튼 한 벌. 여덟 페이지가 «같은 문자열»을 쓰게 여기서 만든다 —
-   페이지마다 적으면 한 곳이 빠져 그 화면만 버튼이 없다(v100 이 겪은 자리). */
-GST.pptCardBtn = function(id){
-  return '<button class="capbtn" title="이 차트만 한 장짜리 PPT 로 — 열어서 차트를 복사하면 편집 가능한 차트로 붙습니다"'
-       + ' onclick="GST.pptCard(\''+id+'\')">📈 PPT</button>';
+/* ============================================================
+   카드 내보내기 한 벌 — 「내보내기 ▾」 (v135 · 3단계 · 사용자 요청)
+
+   사용자: 「이미지로 복사하는 건 필요없고, 개별로 필요할 때 차트를 (수정 가능한) 복사해서 PPT 나
+   엑셀에 바로 붙여넣기 할 수 있으면」. 클립보드로 «차트 개체»는 못 올리므로(v133 확정) 답은 파일이다 —
+   한 카드에서 «PPT 차트(.pptx)» · «엑셀 차트(.xlsx)» · «데이터 복사(표)» 를 고른다.
+   「📋 그림」은 없앴다(사용자 확정). 그림이 유일한 답인 차트(산점도 등)에서만 「PNG 저장」이 뜬다.
+
+   ⚠ 버튼·메뉴·판정은 여기 한 곳이다. 예전에는 여덟 페이지가 addCapBtns 를 각자 짜서 선택자가 넷으로
+     갈렸고, fault 3·hr 1·material 1 차트에는 버튼이 아예 안 붙었다(감사 실측). 카드 선택자도
+     GST.CARD_SEL 한 벌 — pptAuto·축 편집(axBtns)·스켈레톤이 같은 목록을 본다.
+   ⚠ 표 복사 기계(chartGrid·gridHTML·gridTSV·copyChartData)는 report 안에 갇혀 있던 것을 올린 것이다.
+     report 는 같은 이름의 얇은 위임만 남긴다(t-abp 가 그 전역 이름을 부른다).
+   ============================================================ */
+GST.CARD_SEL = '.card,.trend-card,.cross-card,.tablecard';
+GST.cardOf = function(el){ return (el && el.closest) ? el.closest(GST.CARD_SEL) : null; };
+GST.chartCanvases = function(){
+  const sel = GST.CARD_SEL.split(',').map(function(s){ return s+' canvas'; }).join(',');
+  return [].slice.call(document.querySelectorAll(sel));
+};
+GST.chartOf = function(id){
+  const cv = (typeof id==='string') ? document.getElementById(id) : id;
+  if(!cv) return null;
+  try{ const ch = (window.Chart && Chart.getChart) ? Chart.getChart(cv) : null; if(ch) return ch; }catch(e){}
+  return (window.CHARTS && cv.id && window.CHARTS[cv.id]) || null;
+};
+GST.EXP_T = {
+  ko:{btn:'내보내기 ▾', ppt:'PPT 차트 (.pptx)', xlsx:'엑셀 차트 (.xlsx)', data:'데이터 복사 (표)', png:'PNG 저장',
+      hint:'파일을 열어 차트를 복사(Ctrl+C)하면 PPT·엑셀 어디든 편집 가능한 차트로 붙습니다',
+      img:'이 차트는 그림으로만 내보낼 수 있습니다', nochart:'차트를 찾을 수 없습니다',
+      copied:'데이터 복사됨 — PPT·엑셀에 붙여넣기(Ctrl+V)', copiedTxt:'데이터(텍스트) 복사됨 — 붙여넣기(Ctrl+V)',
+      copyFail:'복사 미지원 브라우저 — 「엑셀 차트」로 내려받으세요', saved:'저장됨', xlsxFail:'엑셀 파일을 만들지 못했습니다'},
+  en:{btn:'Export ▾', ppt:'PPT chart (.pptx)', xlsx:'Excel chart (.xlsx)', data:'Copy data (table)', png:'Save PNG',
+      hint:'Open the file and copy the chart (Ctrl+C) — it pastes into PPT or Excel as an editable chart',
+      img:'This chart can only be exported as a picture', nochart:'Chart not found',
+      copied:'Data copied — paste into PPT/Excel (Ctrl+V)', copiedTxt:'Data copied as text — paste (Ctrl+V)',
+      copyFail:'Clipboard not supported — download the Excel chart instead', saved:'saved', xlsxFail:'Could not build the Excel file'},
+  zh:{btn:'导出 ▾', ppt:'PPT 图表 (.pptx)', xlsx:'Excel 图表 (.xlsx)', data:'复制数据 (表)', png:'保存 PNG',
+      hint:'打开文件后复制图表(Ctrl+C)，粘贴到 PPT 或 Excel 即为可编辑图表',
+      img:'此图表只能导出为图片', nochart:'找不到图表',
+      copied:'数据已复制 — 粘贴到 PPT/Excel (Ctrl+V)', copiedTxt:'数据已复制为文本 — 粘贴 (Ctrl+V)',
+      copyFail:'浏览器不支持剪贴板 — 请下载 Excel 图表', saved:'已保存', xlsxFail:'无法生成 Excel 文件'},
+  ja:{btn:'エクスポート ▾', ppt:'PPT グラフ (.pptx)', xlsx:'Excel グラフ (.xlsx)', data:'データをコピー (表)', png:'PNG 保存',
+      hint:'ファイルを開いてグラフをコピー(Ctrl+C)すれば PPT・Excel に編集可能なグラフとして貼れます',
+      img:'このグラフは画像でのみ出力できます', nochart:'グラフが見つかりません',
+      copied:'データをコピーしました — PPT/Excel に貼り付け(Ctrl+V)', copiedTxt:'データをテキストでコピーしました — 貼り付け(Ctrl+V)',
+      copyFail:'クリップボード非対応 — Excel グラフをダウンロードしてください', saved:'保存しました', xlsxFail:'Excel ファイルを作れませんでした'}
+};
+GST._expT = function(){ const l=(GST._lang && GST._lang()) || 'ko'; return GST.EXP_T[l] || GST.EXP_T.ko; };
+GST.exportBtn = function(id){
+  const T=GST._expT();
+  return '<button class="capbtn gexp-btn" type="button" data-gexp="'+id+'" title="'+T.hint+'"'
+       + ' onclick="GST.exportMenu(this,\''+id+'\')">'+T.btn+'</button>';
+};
+GST.pptCardBtn = GST.exportBtn;   // 옛 이름 — v134 호출부·검사 보호. 새 코드는 exportBtn/capBtns 를 쓴다.
+/* 메뉴는 «열 때» 만든다 — 차트는 자료가 온 뒤에야 생기므로 버튼을 붙일 때는 그림인지 아닌지 모른다. */
+GST.exportMenu = function(btn, id){
+  const T=GST._expT();
+  const card=GST.cardOf(btn); if(!card) return;
+  const old=card.querySelector('.gexp-menu');
+  document.querySelectorAll('.gexp-menu').forEach(function(m){ m.remove(); });
+  if(old) return;                                   // 같은 버튼을 다시 누르면 닫기
+  const ch=GST.chartOf(id);
+  const why = ch ? GST.pptNativeOK(ch) : T.nochart;
+  const items=[];
+  const it=function(act,label,dis,title){ items.push('<button type="button" data-act="'+act+'"'+(dis?' disabled':'')+(title?' title="'+title+'"':'')+'>'+label+'</button>'); };
+  it('ppt', T.ppt, !!why, why||'');
+  it('xlsx', T.xlsx, !!why, why||'');
+  it('data', T.data, !ch, ch?'':T.nochart);
+  if(why && ch) it('png', T.png, false, T.img);      // 그림이 «유일한» 답일 때만
+  const m=document.createElement('div'); m.className='gexp-menu';
+  m.innerHTML=items.join('')+'<div class="gexp-hint">'+(why&&ch ? T.img+' — '+why : T.hint)+'</div>';
+  const box=btn.closest('.capbtns');
+  m.style.top=((box?box.offsetTop+box.offsetHeight:36)+4)+'px';
+  m.style.right=(box&&box.style.right)||'14px';
+  card.appendChild(m);
+  m.addEventListener('click', function(e){
+    const b=e.target.closest('[data-act]'); if(!b||b.disabled) return;
+    m.remove();
+    const act=b.dataset.act;
+    if(act==='ppt') GST.pptCard(id);
+    else if(act==='xlsx') GST.xlsxCard(id);
+    else if(act==='data') GST.copyChartData(id);
+    else if(act==='png') GST.savePng(id);
+  });
+  const off=function(e){ if(!m.isConnected){ document.removeEventListener('click',off,true); return; }
+    if(m.contains(e.target)||e.target===btn) return; m.remove(); document.removeEventListener('click',off,true); };
+  setTimeout(function(){ document.addEventListener('click',off,true); },0);
+  document.addEventListener('keydown', function esc(e){ if(e.key==='Escape'){ m.remove(); document.removeEventListener('keydown',esc); } });
+};
+/* 카드마다 버튼 한 벌 — 여덟 페이지의 addCapBtns 가 전부 여기로 온다.
+   opts.extra(id) 로 페이지 고유 버튼(report 의 ⚙ 축 편집)을 뒤에 붙인다.
+   ⚠ 표 카드의 «표 복사·CSV» 버튼은 페이지가 그대로 둔다 — 그건 캔버스가 아니다. */
+GST.capBtns = function(opts){
+  opts=opts||{};
+  GST.chartCanvases().forEach(function(cv){
+    const id=cv.id, card=GST.cardOf(cv);
+    if(!id||!card||card.querySelector('.capbtns')) return;
+    const box=document.createElement('div'); box.className='capbtns';
+    box.innerHTML=GST.exportBtn(id)+(opts.extra?(opts.extra(id)||''):'');
+    card.appendChild(box);
+    /* 주/월 토글(.mini-per)이 같은 구석을 쓰는 카드에서는 그만큼 왼쪽으로 — report 가 손으로 하던 규칙 */
+    const mp=card.querySelector('.mini-per'); if(mp) box.style.right=(mp.offsetWidth+24)+'px';
+  });
+};
+/* ---- 표 복사 (report 에서 올렸다) ---- */
+GST.chartGrid = function(ch){
+  if(!ch||!ch.data) return null;
+  const labs=(ch.data.labels||[]).map(function(v){ return String(v==null?'':v); });
+  /* hline·예측 같은 «보조» 데이터셋도 값이므로 그대로 낸다 — 화면에 보이는 것이 곧 자료다. */
+  const sers=(ch.data.datasets||[]).map(function(d){ return {name:String(d.label==null?'':d.label),
+    vals:labs.map(function(_,i){ const v=(d.data||[])[i];
+      return (v==null||v==='')?'':(typeof v==='object'?(v.y!=null?v.y:''):v); })}; });
+  return {labs:labs, sers:sers};
+};
+GST.gridHTML = function(g,title){
+  const esc2=function(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;'); };
+  const th='border:1px solid #b8c0cc;padding:3px 8px;background:#eef1f5;font-weight:700;text-align:center;white-space:nowrap;';
+  const td='border:1px solid #b8c0cc;padding:3px 8px;text-align:right;white-space:nowrap;';
+  let h='<table style="border-collapse:collapse;font-family:\'Malgun Gothic\',sans-serif;font-size:11px;color:#1a2230">';
+  h+='<tr><td style="'+th+'"></td>'+g.labs.map(function(l){ return '<td style="'+th+'">'+esc2(l)+'</td>'; }).join('')+'</tr>';
+  g.sers.forEach(function(sr){ h+='<tr><td style="'+th+'text-align:left">'+esc2(sr.name)+'</td>'
+    +sr.vals.map(function(v){ return '<td style="'+td+'">'+esc2(v)+'</td>'; }).join('')+'</tr>'; });
+  h+='</table>';
+  return (title?'<div style="font-weight:800;font-family:\'Malgun Gothic\';font-size:13px;margin:0 0 5px">'+esc2(title)+'</div>':'')+h;
+};
+GST.gridTSV = function(g){
+  return [''].concat(g.labs).join('\t')+'\n'
+    + g.sers.map(function(sr){ return [sr.name].concat(sr.vals).join('\t'); }).join('\n');
+};
+GST.cardTitle = function(id){
+  const cv=document.getElementById(id), card=cv?GST.cardOf(cv):null;
+  const h3=card?card.querySelector('h3'):null;
+  return ((h3&&(h3.innerText||h3.textContent)||'').trim()||id).replace(/\s+/g,' ');
+};
+GST.copyChartData = async function(id){
+  const T=GST._expT();
+  const g=GST.chartGrid(GST.chartOf(id)); if(!g){ GST._pptSay(T.nochart); return; }
+  const html=GST.gridHTML(g, GST.cardTitle(id)), tsv=GST.gridTSV(g);
+  try{
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':new Blob([html],{type:'text/html'}),
+      'text/plain':new Blob([tsv],{type:'text/plain'})})]);
+    GST._pptSay('📊 '+T.copied);
+  }catch(e){
+    /* HTML 형식을 못 쓰는 브라우저에서도 «아무 일도 안 일어나는» 상태로 두지 않는다 — 탭 구분 텍스트라도 준다 */
+    try{ await navigator.clipboard.writeText(tsv); GST._pptSay('📊 '+T.copiedTxt); }
+    catch(e2){ GST._pptSay(T.copyFail); }
+  }
+};
+GST._download = function(bytes, name, mime){
+  const b=new Blob([bytes],{type:mime||'application/octet-stream'});
+  const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=name; a.click();
+  setTimeout(function(){ URL.revokeObjectURL(u); },2000);
+};
+GST.savePng = function(id){
+  const T=GST._expT();
+  const oc=GST.chartHiResLight(id); if(!oc){ GST._pptSay(T.nochart); return; }
+  oc.toBlob(function(b){ if(!b) return; GST._download(b, id+'.png', 'image/png'); GST._pptSay('⤓ '+id+'.png '+T.saved); });
+};
+/* ---- 엑셀 «차트 개체» (.xlsx) ----
+   재료는 PPT 와 같다 — pptSrc 가 낸 계열·라벨을 시트에 적고, 그 시트를 참조하는 DrawingML 차트를 얹는다.
+   xlsx 의 차트 XML 은 pptx 와 같은 c:chartSpace 라 «같은 그림»이 나온다. 엑셀에서 그 차트를 복사하면
+   PPT 에도 편집 가능한 차트로 붙는다 — 사용자가 원한 «PPT 나 엑셀에 바로»의 엑셀 쪽 답이다.
+   ⚠ 부품이 다섯이다: 시트 rels · sheet1 의 <drawing> · [Content_Types] Override 둘 · drawing1 · chart1.
+     하나라도 빠지면 엑셀이 «복구» 대화상자를 띄우고 차트를 버린다. t-export 가 다섯을 다 센다. */
+GST.xlsxLibLoad = function(){                 // SheetJS — /upload/ 가 쓴다(v135 에 자체 사본 규율로 편입)
+  if(window.XLSX) return Promise.resolve();
+  if(GST._xlsxP) return GST._xlsxP;
+  GST._xlsxP = GST._loadScript([GST.XLSX_VENDOR, GST.XLSX_CDN], function(){ return !!window.XLSX; })
+    .catch(function(e){ GST._xlsxP=null; throw e; });
+  return GST._xlsxP;
+};
+GST._xml = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+GST._colName = function(n){ let s=''; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); } return s; };
+GST.xlsxChart = async function(src, cap){
+  await GST.zipLoad();
+  const X=GST._xml, col=GST._colName;
+  const pie=!!(src&&src.pie);
+  const labels=(src.labels||[]).map(String);
+  const sers = pie ? [{name:src.name||cap||'', values:src.values, color:'', kind:'bar'}]
+                   : [].concat((src.bars||[]).map(function(b){ return {name:b.name, values:b.values, color:b.color, kind:'bar'}; }),
+                               (src.lines||[]).map(function(l){ return {name:l.name, values:l.values, color:l.color, kind:'line', y2:!!l.y2}; }));
+  const n=labels.length, last=col(n+1), nS=sers.length;
+  /* 시트 — A1 빈칸 · 1행 라벨 · 2행부터 계열. inlineStr 이라 공유문자열 부품이 없다. */
+  const cell=function(c,r,v,num){ const ref=col(c)+r;
+    if(v===''||v==null) return '<c r="'+ref+'"/>';
+    return num ? '<c r="'+ref+'"><v>'+Number(v)+'</v></c>'
+               : '<c r="'+ref+'" t="inlineStr"><is><t xml:space="preserve">'+X(v)+'</t></is></c>'; };
+  const rows=['<row r="1">'+cell(1,1,'')+labels.map(function(c,i){ return cell(i+2,1,c,false); }).join('')+'</row>'];
+  sers.forEach(function(sr,si){ const r=si+2; let out='<row r="'+r+'">'+cell(1,r,sr.name,false);
+    for(let i=0;i<n;i++){ const v=sr.values[i]; out+=(v==null||v===''||isNaN(Number(v)))?cell(i+2,r,'',false):cell(i+2,r,v,true); }
+    rows.push(out+'</row>'); });
+  const sheet='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    +'<dimension ref="A1:'+last+(nS+1)+'"/><sheetData>'+rows.join('')+'</sheetData><drawing r:id="rId1"/></worksheet>';
+  /* 차트 — 계열은 시트 «참조»와 캐시를 둘 다 가진다(캐시가 없으면 열자마자 빈 차트로 뜨는 뷰어가 있다) */
+  const catRef='Sheet1!$B$1:$'+last+'$1';
+  const catXml='<c:cat><c:strRef><c:f>'+catRef+'</c:f><c:strCache><c:ptCount val="'+n+'"/>'
+    +labels.map(function(l,i){ return '<c:pt idx="'+i+'"><c:v>'+X(l)+'</c:v></c:pt>'; }).join('')+'</c:strCache></c:strRef></c:cat>';
+  const valXml=function(sr,si){ const r=si+2;
+    return '<c:val><c:numRef><c:f>Sheet1!$B$'+r+':$'+last+'$'+r+'</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="'+n+'"/>'
+      +sr.values.map(function(v,i){ const x=Number(v); return isFinite(x)?'<c:pt idx="'+i+'"><c:v>'+x+'</c:v></c:pt>':''; }).join('')
+      +'</c:numCache></c:numRef></c:val>'; };
+  const txXml=function(sr,si){ return '<c:tx><c:strRef><c:f>Sheet1!$A$'+(si+2)+'</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>'+X(sr.name)+'</c:v></c:pt></c:strCache></c:strRef></c:tx>'; };
+  const fill=function(hex){ return '<a:solidFill><a:srgbClr val="'+(hex||'5B9BD5')+'"/></a:solidFill>'; };
+  const dl = src.showValue||pie ? '<c:dLbls><c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>' : '';
+  let plot='';
+  if(pie){
+    const cols=src.colors||[];
+    plot='<c:'+(src.hole?'doughnut':'pie')+'Chart><c:varyColors val="1"/>'
+      +'<c:ser><c:idx val="0"/><c:order val="0"/>'+txXml(sers[0],0)
+      +labels.map(function(_,i){ return '<c:dPt><c:idx val="'+i+'"/><c:bubble3D val="0"/><c:spPr>'+fill(cols[i])+'</c:spPr></c:dPt>'; }).join('')
+      +dl+catXml+valXml(sers[0],0)+'</c:ser>'
+      +'<c:firstSliceAng val="0"/>'+(src.hole?'<c:holeSize val="55"/>':'')+'</c:'+(src.hole?'doughnut':'pie')+'Chart>';
+  }else{
+    const bars=sers.map(function(s,i){ return [s,i]; }).filter(function(p){ return p[0].kind==='bar'; });
+    const ln1=sers.map(function(s,i){ return [s,i]; }).filter(function(p){ return p[0].kind==='line'&&!p[0].y2; });
+    const ln2=sers.map(function(s,i){ return [s,i]; }).filter(function(p){ return p[0].kind==='line'&&p[0].y2; });
+    const useY2 = ln2.length>0 && (bars.length>0||ln1.length>0);
+    if(bars.length){
+      plot+='<c:barChart><c:barDir val="'+(src.horiz?'bar':'col')+'"/><c:grouping val="'+(src.stacked?'stacked':'clustered')+'"/><c:varyColors val="0"/>'
+        +bars.map(function(p){ const sr=p[0], si=p[1];
+          return '<c:ser><c:idx val="'+si+'"/><c:order val="'+si+'"/>'+txXml(sr,si)+'<c:spPr>'+fill(sr.color)+'</c:spPr><c:invertIfNegative val="0"/>'+dl+catXml+valXml(sr,si)+'</c:ser>'; }).join('')
+        +'<c:gapWidth val="60"/>'+(src.stacked?'<c:overlap val="100"/>':'')+'<c:axId val="10"/><c:axId val="20"/></c:barChart>';
+    }
+    const lineChart=function(list, ax1, ax2){ if(!list.length) return '';
+      return '<c:lineChart><c:grouping val="standard"/><c:varyColors val="0"/>'
+        +list.map(function(p){ const sr=p[0], si=p[1];
+          return '<c:ser><c:idx val="'+si+'"/><c:order val="'+si+'"/>'+txXml(sr,si)
+            +'<c:spPr><a:ln w="19050" cap="rnd">'+fill(sr.color)+'<a:round/></a:ln></c:spPr>'
+            +'<c:marker><c:symbol val="circle"/><c:size val="4"/><c:spPr>'+fill(sr.color)+'</c:spPr></c:marker>'
+            +dl+catXml+valXml(sr,si)+'<c:smooth val="0"/></c:ser>'; }).join('')
+        +'<c:marker val="1"/><c:axId val="'+ax1+'"/><c:axId val="'+ax2+'"/></c:lineChart>'; };
+    plot+=lineChart(ln1.concat(useY2?[]:ln2), 10, 20);
+    if(useY2) plot+=lineChart(ln2, 30, 40);
+    const b=(src.bounds&&src.bounds.y)||null, b2=(src.bounds&&src.bounds.y2)||null;
+    const scal=function(bd){ return '<c:scaling><c:orientation val="minMax"/>'+(bd&&isFinite(bd.max)?'<c:max val="'+bd.max+'"/>':'')+(bd&&isFinite(bd.min)?'<c:min val="'+bd.min+'"/>':'')+'</c:scaling>'; };
+    const catPos=src.horiz?'l':'b', valPos=src.horiz?'b':'l';
+    plot+='<c:catAx><c:axId val="10"/>'+scal(null)+'<c:delete val="0"/><c:axPos val="'+catPos+'"/><c:numFmt formatCode="General" sourceLinked="1"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="20"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>'
+      +'<c:valAx><c:axId val="20"/>'+scal(b)+'<c:delete val="0"/><c:axPos val="'+valPos+'"/><c:majorGridlines/><c:numFmt formatCode="General" sourceLinked="1"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="10"/><c:crosses val="autoZero"/><c:crossBetween val="between"/></c:valAx>';
+    if(useY2) plot+='<c:catAx><c:axId val="30"/>'+scal(null)+'<c:delete val="1"/><c:axPos val="'+catPos+'"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="40"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>'
+      +'<c:valAx><c:axId val="40"/>'+scal(b2)+'<c:delete val="0"/><c:axPos val="'+(src.horiz?'t':'r')+'"/><c:numFmt formatCode="General" sourceLinked="1"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="30"/><c:crosses val="max"/><c:crossBetween val="between"/></c:valAx>';
+  }
+  const chart='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    +'<c:roundedCorners val="0"/><c:chart>'
+    +(cap?'<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1200" b="1"/></a:pPr><a:r><a:rPr lang="ko-KR" sz="1200" b="1"/><a:t>'+X(cap)+'</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/>':'<c:autoTitleDeleted val="1"/>')
+    +'<c:plotArea><c:layout/>'+plot+'</c:plotArea>'
+    +'<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/>'
+    +'</c:chart></c:chartSpace>';
+  const r0=nS+3;
+  const drawing='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+    +'<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>'+r0+'</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>'
+    +'<xdr:to><xdr:col>12</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>'+(r0+22)+'</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>'
+    +'<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Chart 1"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>'
+    +'<xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>'
+    +'<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId1"/></a:graphicData></a:graphic>'
+    +'</xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor></xdr:wsDr>';
+  const REL='http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+  const rels=function(list){ return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +list.map(function(r){ return '<Relationship Id="'+r[0]+'" Type="'+REL+r[1]+'" Target="'+r[2]+'"/>'; }).join('')+'</Relationships>'; };
+  const z=new JSZip();
+  z.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    +'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+    +'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+    +'<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+    +'<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>'
+    +'<Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>');
+  z.file('_rels/.rels', rels([['rId1','officeDocument','xl/workbook.xml']]));
+  z.file('xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>');
+  z.file('xl/_rels/workbook.xml.rels', rels([['rId1','worksheet','worksheets/sheet1.xml']]));
+  z.file('xl/worksheets/sheet1.xml', sheet);
+  z.file('xl/worksheets/_rels/sheet1.xml.rels', rels([['rId1','drawing','../drawings/drawing1.xml']]));
+  z.file('xl/drawings/drawing1.xml', drawing);
+  z.file('xl/drawings/_rels/drawing1.xml.rels', rels([['rId1','chart','../charts/chart1.xml']]));
+  z.file('xl/charts/chart1.xml', chart);
+  return z.generateAsync({type:'uint8array', compression:'DEFLATE'});
+};
+GST.xlsxCard = async function(id){
+  const T=GST._expT();
+  const ch=GST.chartOf(id); if(!ch){ GST._pptSay(T.nochart); return; }
+  const why=GST.pptNativeOK(ch);
+  if(why){ GST._pptSay(T.img+' ('+why+') — '+T.data+' / '+T.png); return; }
+  const restore=GST._chartLight(ch); let src=null;
+  try{ src=GST.pptSrc(ch); } finally{ try{ restore&&restore(); }catch(e){} }
+  if(!src){ GST._pptSay(T.nochart); return; }
+  const cap=GST.cardTitle(id);
+  let bytes=null;
+  try{ bytes=await GST.xlsxChart(src, cap); }
+  catch(e){ GST._pptSay(T.xlsxFail+' ('+(e&&e.tried||e&&e.message||'?')+')'); return; }
+  const fn=cap.replace(/[\\/:*?"<>|]/g,'').slice(0,40)+'_'+GST.ymdL()+'.xlsx';
+  GST._download(bytes, fn, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  GST._pptSay('⤓ '+fn+' — '+T.hint);
 };
 
 GST.PPT_MAX_PER_SLIDE = 6;
@@ -4823,8 +5144,7 @@ GST.pptAuto = async function(opt){
      통째로 빠진다(실측: 설치현황 14개 중 5개 · 고장분석 32개 중 7개가 그 바깥이다).
      카드 안의 캔버스를 전부 보되, Chart 인스턴스가 없는 것은 아래에서 자연히 걸러진다.
      clientWidth 0 은 접힌 카드라 캡처하면 빈 그림이 된다. */
-  const cvs = [].slice.call(document.querySelectorAll('.card canvas, .mcard canvas'))
-                .filter(function(c){ return c.id && c.clientWidth>0; });
+  const cvs = GST.chartCanvases().filter(function(c){ return c.id && c.clientWidth>0; });   // 카드 선택자는 GST.CARD_SEL 한 벌(v135)
   const items = [], imgOnly = [];
   for(const cv of cvs){
     /* 그림은 «언제나» 만들어 둔다 — 네이티브가 도중에 실패해도 빈 칸이 나가지 않게.
@@ -4833,9 +5153,7 @@ GST.pptAuto = async function(opt){
          죽이지 않게 감싼다(네이티브만으로도 나갈 수 있다). */
     let oc = null;
     try{ oc = GST.chartHiResLight(cv.id); }catch(e){ oc = null; }
-    const card = cv.closest('.card') || cv.closest('.mcard');
-    const h3 = card ? card.querySelector('h3') : null;
-    const cap = (h3 ? (h3.innerText||'').trim() : cv.id) || cv.id;
+    const cap = GST.cardTitle(cv.id);
     const it = {cap:cap, oc:oc, id:cv.id};
     /* 네이티브로 옮겨도 «화면과 같은 그림»인 차트만 옮긴다(GST.pptNativeOK).
        ⚠ 판정을 여기서 새로 짜지 말 것 — 카드별 버튼(GST.pptCard)도 같은 함수를 본다. */
@@ -5047,7 +5365,7 @@ GST.axOpen = function(id){
   GST._axCss();
   const cv=document.getElementById(id); const ch=cv&&Chart.getChart(cv); if(!ch) return;
   const info=GST._axInfo(ch); if(!info) return;
-  const card=cv.closest('.card,.mcard,.trend-card,.cross-card'); if(!card) return;
+  const card=GST.cardOf(cv); if(!card) return;
   const old=card.querySelector('.gaxpop');
   document.querySelectorAll('.gaxpop').forEach(function(p){ p.remove(); });
   if(old) return;   // 같은 카드에서 다시 누르면 토글 닫기
@@ -5088,8 +5406,8 @@ GST.axOpen = function(id){
 // 스케일 없는 차트(도넛)는 편집이 무의미하므로 붙이지 않는다.
 GST.axBtns = function(){
   if(!window.Chart||!Chart.getChart) return;
-  document.querySelectorAll('.card canvas,.mcard canvas,.trend-card canvas,.cross-card canvas').forEach(function(cv){
-    const id=cv.id, card=cv.closest('.card,.mcard,.trend-card,.cross-card');
+  GST.chartCanvases().forEach(function(cv){
+    const id=cv.id, card=GST.cardOf(cv);
     if(!id||!card) return;
     if(card.querySelector('[data-gax]')||card.querySelector('.capbtn[onclick^="axOpen"]')) return;
     const ch=Chart.getChart(cv); if(!ch||!GST._axInfo(ch)) return;

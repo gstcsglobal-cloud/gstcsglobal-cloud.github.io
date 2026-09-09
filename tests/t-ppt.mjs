@@ -450,8 +450,8 @@ const CORE = fs.readFileSync(ROOT+'/assets/core.js','utf8');
 ok(/GST\.PPT_MAX_PER_SLIDE\s*=\s*6/.test(CORE), '한 장 최대 개수가 상수로 있어야 한다(숫자를 코드에 흩지 않는다)');
 /* `.cw canvas` 만 보면 추이(.trend-wrap)·크로스(.cross-wrap) 카드의 차트가 통째로 빠진다
    (실측: 설치현황 14개 중 5개 · 고장분석 32개 중 7개). 가짜 DOM 으로는 못 잡히므로 소스로 본다. */
-ok(/querySelectorAll\('\.card canvas, \.mcard canvas'\)/.test(CORE),
-   '카드 «안의 모든» 캔버스를 봐야 한다 — .cw 만 보면 추이·크로스 차트가 빠진다');
+ok(/GST\.CARD_SEL\s*=\s*'\.card,\.trend-card,\.cross-card,\.tablecard'/.test(CORE) && /const cvs = GST\.chartCanvases\(\)/.test(CORE),
+   '카드 «안의 모든» 캔버스를 한 선택자(GST.CARD_SEL)로 본다 — .cw 만 보면 추이·크로스·표 카드의 차트가 빠진다');
 ok(/GST\.PPT_CDN_MS/.test(CORE) && /setTimeout\(function\(\)\{ fin\(false, new Error\('TIMEOUT'\)\); \}/.test(CORE),
    'CDN 로드에 시간 제한이 있어야 한다 — 없으면 「눌러도 반응 없음」이 된다');
 ok(/GST\.corpLabel\s*=\s*function/.test(CORE), 'corpLabel 정본이 core.js 에 있어야 한다');

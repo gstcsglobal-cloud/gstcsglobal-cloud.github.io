@@ -181,22 +181,22 @@ button:focus-visible,input:focus-visible,select:focus-visible{
 
 /* ---------- 진입 애니메이션 (카드가 순차적으로 떠오름) ---------- */
 @keyframes fadeInUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-.kpi,.card,.mcard,.tablecard,.alert,.slicer{animation:fadeInUp .5s var(--ease) backwards}
+.kpi,.card,.tablecard,.alert,.slicer{animation:fadeInUp .5s var(--ease) backwards}
 .kpi:nth-child(1),.alert:nth-child(1){animation-delay:.02s}
 .kpi:nth-child(2),.alert:nth-child(2){animation-delay:.06s}
 .kpi:nth-child(3),.alert:nth-child(3){animation-delay:.10s}
 .kpi:nth-child(4),.alert:nth-child(4){animation-delay:.14s}
 .kpi:nth-child(5){animation-delay:.18s}
 .kpi:nth-child(6){animation-delay:.22s}
-.card:nth-child(1),.mcard:nth-child(1){animation-delay:.08s}
-.card:nth-child(2),.mcard:nth-child(2){animation-delay:.14s}
-.card:nth-child(3),.mcard:nth-child(3){animation-delay:.20s}
-.card:nth-child(4),.mcard:nth-child(4){animation-delay:.26s}
+.card:nth-child(1){animation-delay:.08s}
+.card:nth-child(2){animation-delay:.14s}
+.card:nth-child(3){animation-delay:.20s}
+.card:nth-child(4){animation-delay:.26s}
 
 /* ---------- 호버 마이크로 인터랙션 ---------- */
-.card:hover,.mcard:hover{border-color:var(--accent-2) !important;
+.card:hover{border-color:var(--accent-2) !important;
   box-shadow:0 12px 40px rgba(0,0,0,.45), 0 0 0 1px var(--accent-2) inset !important}
-body.theme-light .card:hover,body.theme-light .mcard:hover{
+body.theme-light .card:hover{
   box-shadow:0 12px 40px rgba(31,38,135,.12), 0 0 0 1px var(--accent-2) inset !important}
 /* ⚠ «동작이 붙은 카드»만 손가락 커서를 준다 (v133).
    예전에는 .kpi 전부에 걸려 있어, 실측 56장 중 48장이 «눌리는 것처럼 보이는데 아무 일도
@@ -289,7 +289,7 @@ body.theme-slate{
   animation:none !important;
 }
 /* 카드류: 유리효과·그림자 제거, 헤어라인 보더의 플랫 카드 */
-body.theme-slate .kpi,body.theme-slate .card,body.theme-slate .mcard,
+body.theme-slate .kpi,body.theme-slate .card,
 body.theme-slate .tablecard,body.theme-slate .alert,body.theme-slate .trend-card,
 body.theme-slate .cross-card,body.theme-slate .date-panel,
 body.theme-slate .gst-insights,
@@ -299,7 +299,7 @@ body.theme-slate .slicer{
 }
 body.theme-slate .kpi::before{display:none}       /* KPI 원형 블롭 제거 */
 body.theme-slate .kpi .val{letter-spacing:-.5px}
-body.theme-slate .card:hover,body.theme-slate .mcard:hover{
+body.theme-slate .card:hover{
   border-color:rgba(151,170,196,.24) !important;box-shadow:none !important}
 body.theme-slate .kpi:hover{transform:none !important;border-color:rgba(151,170,196,.24) !important}
 /* 상단 경고 배너(홈)는 시맨틱 톤 유지하되 채도만 절제 */
@@ -343,7 +343,7 @@ body.theme-slate .gst-sb-sec{background:#111823;border-color:rgba(151,170,196,.1
 body.theme-slate .gst-sb-toggle{background:#2DD4BF;color:#04211C}
 body.theme-slate .gst-sb-title svg{color:#2DD4BF}
 /* 진입 애니메이션도 절제 */
-body.theme-slate .kpi,body.theme-slate .card,body.theme-slate .mcard,
+body.theme-slate .kpi,body.theme-slate .card,
 body.theme-slate .tablecard,body.theme-slate .alert,body.theme-slate .slicer{animation:none !important}
 
 /* ============================================================
@@ -446,9 +446,9 @@ body.gst-sb-open .gst-sb-toggle{left:300px}
   .header-right,.slicers,.toolbar,.lang-wrap,.theme-wrap,button,.fchips,.excl-box,.navtabs,.m-link{display:none !important}
   .header h1{-webkit-text-fill-color:#000 !important;background:none !important;font-size:22px !important}
   .header .sub{color:#555 !important}
-  .card,.kpi,.mcard,.tablecard,.alert{box-shadow:none !important;border:1px solid #ddd !important;
+  .card,.kpi,.tablecard,.alert{box-shadow:none !important;border:1px solid #ddd !important;
     break-inside:avoid;background:#fff !important;animation:none !important}
-  .card h3,.mcard h3,.kpi .cap,.kpi .val,td,th,.mrow .lbl,.mrow .v{color:#000 !important}
+  .card h3,.kpi .cap,.kpi .val,td,th,.mrow .lbl,.mrow .v{color:#000 !important}
   th{background:#f0f0f0 !important}
   .status{display:none !important}
 }
@@ -499,3 +499,18 @@ body.theme-light .mselbox{background:#fff}
 /* 출처 배지의 상세(표 이름·행수)는 관리자만. JS 가드와 이중 — 등급이 도착하기 전 깜빡임을 CSS 가 막는다.
    legacy = role 열이 아직 없는 DB(setup-15 실행 전) — 지금까지처럼 전원이 본다. */
 body:not([data-role="admin"]):not([data-role="legacy"]) #gstSrcDetail{display:none !important}
+
+/* ---------- 8. 카드 내보내기 (v135) ---------- */
+/* 버튼 상자는 여덟 페이지가 같은 자리·같은 규칙 — 페이지 <style> 에 남은 사본은 여기가 이긴다(theme.css 가 뒤에 실린다).
+   ⚠ hover 가 없는 기기(태블릿·터치)에서는 버튼이 영영 안 보였다 — 저장소 전체에 hover:none 이 0건이었다. */
+.capbtns{position:absolute;top:12px;right:14px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
+.card:hover .capbtns,.trend-card:hover .capbtns,.cross-card:hover .capbtns,.tablecard:hover .capbtns,
+.card:focus-within .capbtns,.trend-card:focus-within .capbtns,.cross-card:focus-within .capbtns,.tablecard:focus-within .capbtns{opacity:1}
+@media (hover:none){.capbtns{opacity:.55}}
+.gexp-menu{position:absolute;z-index:40;min-width:200px;background:var(--card,#161b22);border:1px solid var(--glass-border,rgba(151,170,196,.25));
+  border-radius:10px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-family:inherit}
+.gexp-menu button{display:block;width:100%;text-align:left;background:transparent;border:0;color:var(--txt-main,#e6edf3);
+  font:600 12px/1.6 inherit;padding:6px 10px;border-radius:7px;cursor:pointer}
+.gexp-menu button:hover{background:var(--glass-hover,rgba(255,255,255,.08))}
+.gexp-menu button[disabled]{opacity:.45;cursor:default}
+.gexp-menu .gexp-hint{font-size:10.5px;line-height:1.45;color:var(--txt-muted,#8b98a9);padding:4px 10px 2px;white-space:normal;max-width:260px}

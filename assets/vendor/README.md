@@ -10,10 +10,11 @@ CDN 이 «거부»하지 않고 «묵살»하면 `onerror` 가 영영 안 오기
 |---|---|---|---|
 | `pptxgen.bundle.js` | 3.12.0 | MIT | `npm pptxgenjs@3.12.0` → `dist/pptxgen.bundle.js` |
 | `jszip.min.js` | 3.10.1 | MIT / GPLv3 (dual) | `npm jszip@3.10.1` → `dist/jszip.min.js` |
+| `xlsx.full.min.js` | 0.18.5 | Apache-2.0 | `npm xlsx@0.18.5` → `dist/xlsx.full.min.js` (v135 · `/upload/` 리더) |
 
 **두 파일 다 원본 그대로다 — 한 바이트도 고치지 않았다.** 고치면 다음 사람이
 「왜 CDN 판과 다르지」로 돌아온다. 올릴 일이 생기면 npm 에서 받아 그대로 덮어쓰고
-`GST.PPT_VENDOR`·`GST.ZIP_VENDOR` 의 버전 주석도 같이 고친다.
+`GST.PPT_VENDOR`·`GST.ZIP_VENDOR`·`GST.XLSX_VENDOR` 의 버전 주석도 같이 고친다.
 
 ⚠ **버전을 CDN 폴백과 어긋나게 두지 말 것.** 로더가 둘 중 아무거나 잡으므로,
 버전이 다르면 «어떤 사람은 되고 어떤 사람은 안 되는» 상태가 된다.

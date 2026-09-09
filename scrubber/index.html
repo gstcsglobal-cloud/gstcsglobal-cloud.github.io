@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=135"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=136"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -202,7 +202,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 #capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1,#2dd4bf);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
 @media print{.capbtns,.header-right,.date-panel,.slicers,.slicer{display:none!important}.card,.trend-card,.cross-card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=135">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=136">
 </head>
 <body>
 
@@ -518,7 +518,7 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 /* 이 화면의 「설치 국가」 카드는 GST.ORG.country 가 국내 법인(SK·삼성 도시명)을 국가로
    푸는 것에 기댄다(core v99). 옛 core.js 가 캐시에 남으면 그 설비가 통째로 「국가 미상」이
    되는데 에러는 안 난다 — 숫자만 조용히 틀린다. 그래서 버전을 선언해 배너로 드러낸다. */
-GST.needVer && GST.needVer(134);   // GST.ymdL · 라인2 축 · GST.WARR · GST.pptCardBtn 을 쓴다
+GST.needVer && GST.needVer(136);   // GST.ymdL · 라인2 축 · GST.WARR · GST.pptCardBtn 을 쓴다
 const SHEET_URL=GST.sheetUrl('891608329');
 // 설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
 // 이 시트는 128열이라 위치 고정이 특히 위험했다(type이 75열째). 이제 이름으로 따라간다.
@@ -1753,11 +1753,7 @@ window.saveAllCharts=async function(){ const ids=Object.keys(CHARTS).filter(id=>
   for(const id of ids){ const oc=chartHiRes(id); if(!oc)continue;
     await new Promise(res=>oc.toBlob(b=>{if(b){const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}setTimeout(res,250);},'image/png')); }
   capToast('🖼 전체 '+ids.length+'개 차트 저장 완료'); };
-function addCapBtns(){ document.querySelectorAll('.card canvas,.trend-card canvas,.cross-card canvas').forEach(cv=>{
-    const id=cv.id, card=cv.closest('.card,.trend-card,.cross-card'); if(!id||!card||card.querySelector('.capbtns'))return;
-    const box=document.createElement('div'); box.className='capbtns';
-    box.innerHTML=GST.pptCardBtn(id)+'<button class="capbtn" title="그림으로 복사(고해상도 PNG)" onclick="copyChart(\''+id+'\')">📋 그림</button><button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>';
-    card.appendChild(box); }); }
+function addCapBtns(){ GST.capBtns(); }   // 카드 버튼 한 벌은 core(v135)
 
 applyLang();
 loadData();

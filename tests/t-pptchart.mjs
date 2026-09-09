@@ -33,6 +33,12 @@ console.log('[1] 자체 호스팅 — 사내망이 CDN 을 막아도 도는 길�
   const cdn = (C.match(/pptxgenjs@([\d.]+)/) || [])[1];
   is(ver && ver === cdn, `자체 사본(${ver}) 과 CDN 폴백(${cdn}) 버전이 같다`);
   is(/GST\._loadScript\(\[GST\.PPT_VENDOR, GST\.PPT_CDN\]/.test(C), '자체 사본을 «먼저» 본다 (CDN 은 폴백)');
+  /* v135 — /upload/ 의 xlsx 리더도 같은 규율. 버전이 폴백과 어긋나면 «어떤 사람은 되고 어떤 사람은 안 되는» 상태 */
+  is(fs.existsSync(ROOT + '/assets/vendor/xlsx.full.min.js'), 'assets/vendor/xlsx.full.min.js 가 저장소에 있다');
+  const xv = (fs.readFileSync(ROOT + '/assets/vendor/xlsx.full.min.js', 'utf8').match(/\.version="([\d.]+)"/) || [])[1];
+  const xc = (C.match(/npm\/xlsx@([\d.]+)/) || [])[1];
+  is(xv && xv === xc, `xlsx 자체 사본(${xv}) 과 CDN 폴백(${xc}) 버전이 같다`);
+  is(/GST\._loadScript\(\[GST\.XLSX_VENDOR, GST\.XLSX_CDN\]/.test(fs.readFileSync(ROOT + '/upload/index.html', 'utf8')), '/upload/ 가 공용 로더로 xlsx 를 받는다 (자체 사본 먼저)');
   /* v105 규율 — CDN 이 «거부»가 아니라 «묵살»하면 onerror 가 안 온다. 시간 제한이 그 답이다. */
   is(/setTimeout\(function\(\)\{ fin\(false, new Error\('TIMEOUT'\)\); \}, ms\|\|GST\.PPT_CDN_MS\)/.test(C),
      '모든 후보에 시간 제한이 걸린다 (묵살하는 프록시에서 영영 멈추지 않는다)');
@@ -57,8 +63,8 @@ console.log('\n[2] 죽어 있던 네이티브 차트 코드가 살아났는가')
      'pptAuto 가 네이티브를 먼저 넣는다 (그림은 폴백)');
   /* 여덟 페이지가 «같은» 버튼을 쓴다 — 한 곳이 빠지면 그 화면만 버튼이 없다. */
   ['report','fault','material','pm','scrubber','tco','cip','hr'].forEach(f =>
-    is(/GST\.pptCardBtn\(id\)/.test(fs.readFileSync(ROOT + '/' + f + '/index.html', 'utf8')),
-       `${f} — 카드 PPT 버튼이 공용 한 벌이다`));
+    is(/GST\.capBtns\(/.test(fs.readFileSync(ROOT + '/' + f + '/index.html', 'utf8')),
+       `${f} — 카드 버튼이 공용 한 벌(GST.capBtns)이다`));
 }
 
 console.log('\n[3] Chart.js 옵션 프록시에 «읽은 것을 도로 써 넣지» 않는가 (실사고)');

@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=135"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=136"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -148,7 +148,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 @media print{.capbtns,.slicers,.header-right,#filtBadge{display:none!important}.card,.tablecard{break-inside:avoid;page-break-inside:avoid}.grid3{grid-template-columns:1fr 1fr}}
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=135">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=136">
 </head>
 <body>
 
@@ -247,7 +247,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(134);   // GST.ORG.campus(단지 정본) 을 쓴다   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
+GST.needVer&&GST.needVer(136);   // GST.ORG.campus(단지 정본) 을 쓴다   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
 const PUB=GST.SHEET_PUB;
 const URL_ROSTER=PUB+'?gid=1213453343&single=true&output=csv';  // 인원명단
 const URL_EDU   =PUB+'?gid=0&single=true&output=csv';            // 교육현황
@@ -1781,10 +1781,7 @@ window.saveCsv=function(){ const tbl=document.getElementById('detTbl');
   const rows=[...tbl.rows].map(r=>expCells(r).map(c=>{let t=(c.textContent||'').trim().replace(/"/g,'""');return /[",\n]/.test(t)?'"'+t+'"':t;}).join(','));
   const b=new Blob(['﻿'+rows.join('\r\n')],{type:'text/csv'}); const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='workforce_roster.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ workforce_roster.csv 저장됨'); };
 function addCapBtns(){
-  document.querySelectorAll('.cw canvas').forEach(cv=>{ const id=cv.id,card=cv.closest('.card'); if(!id||!card||card.querySelector('.capbtns'))return;
-    const box=document.createElement('div'); box.className='capbtns';
-    box.innerHTML=GST.pptCardBtn(id)+'<button class="capbtn" title="그림으로 복사(고해상도 PNG)" onclick="copyChart(\''+id+'\')">📋 그림</button><button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>';
-    card.appendChild(box); });
+  GST.capBtns();   // 차트 카드 버튼 한 벌은 core(v135) — tablecard 안의 시뮬레이션 차트에도 붙는다
   const tc=document.getElementById('detTbl'); const card=tc?tc.closest('.tablecard'):null;
   if(card&&!card.querySelector('.capbtns')){ const box=document.createElement('div'); box.className='capbtns';
     box.innerHTML='<button class="capbtn" title="명단을 엑셀에 붙여넣기" onclick="copyTable()">📋 표 복사</button><button class="capbtn" title="CSV 저장" onclick="saveCsv()">⤓</button>';
