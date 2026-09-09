@@ -29,3 +29,9 @@ Thumbs.db
 
 # 이행 전 KPI 스냅샷 — 실데이터 기반이라 커밋하지 않는다
 .snap.json
+
+# 숏폼 제작 산출물 — 폰트·프레임·중간 파일은 로컬에서 만든다(shortform/README.md)
+shortform/fonts/
+shortform/frames*/
+shortform/bgm.wav
+shortform/video_only.mp4
