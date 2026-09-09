@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=136"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=137"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -173,7 +173,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=136">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=137">
 </head>
 <body>
 
@@ -377,7 +377,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(136);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
+GST.needVer&&GST.needVer(137);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -400,22 +400,7 @@ const URLS={
 // 정의는 core.js GST.SM.SPEC 한 곳에만 있어 다른 페이지와 갈라지지 않는다.
 let CW={}, CI={}, HI_WK=0, HI_INST=0;
 // 고객사 표기 통일 (시트마다 공식명/축약명이 섞여 있음) — 예: Micron Memory Taiwan Co., Ltd.(F16) → MICRON F16
-function normCust(name){
-  if(!name)return '';
-  const up=GST.upk(name).trim();
-  if(!up)return '';
-  let base='';
-  if(up.includes('MICRON'))base='MICRON';
-  else if(up.includes('TAIWAN-ASIA')||up.includes('ASIA SEMICON'))base='TASC';
-  else if(up.includes('POWERCHIP'))base='POWERCHIP';
-  else if(up.includes('WINBOND'))base='WINBOND';
-  else if(up.includes('TSMC'))base='TSMC';
-  else if(up.includes('SAMSUNG'))base='SAMSUNG';
-  else if(up.includes('HYNIX'))base='SK HYNIX';
-  else base=up.split(/[\s,\.(]/)[0];
-  const m=up.match(/\(([A-Z0-9\-]+)\)/) || up.match(/\b(F\d{1,2}N?)\b/);
-  return m?base+' '+m[1]:base;
-}
+function normCust(name){ return GST.ORG.custRaw(name); }   // 정본은 core.js GST.ORG.custRaw (v135 — hr 과 같은 사본이었다)
 // 고객사 기준(그룹): MICRON / PSMC / TASC / WINBOND
 /* 고객사·FAB 분류는 core.js의 GST.ORG가 정본이다(SPEC-SYNC).
    여기 있던 custBase/fabOf가 이미 옳게 2축 분리하고 있었는데, 아래 lineKeyOf가 그 둘을
@@ -435,20 +420,8 @@ function siteCountryStatic(s){ return GST.ORG.country(s); }
      머리에는 'GST Global' 이 그대로 남아 있었다. */
 function corpLabel(){ return GST.corpLabel(F); }
 // 소속/사이트 표기 통일 (인원현황 Work Place · 휴가현황 소속 → normCust 어휘)
-function siteKey(sv){
-  const up=GST.upk(sv);
-  if(!up.trim())return '';
-  if(up.includes('F16N')||/TONG\s*L/.test(up))return 'MICRON F16N';
-  if(up.includes('F16S')||up.includes('TAINAN'))return 'MICRON F16S';
-  if(up.includes('F16'))return 'MICRON F16';
-  if(up.includes('F11'))return 'MICRON F11';
-  if(up.includes('F10'))return 'MICRON F10';
-  if(up.includes('PSMC')||up.includes('POWERCHIP'))return 'POWERCHIP';
-  if(up.includes('WINBOND'))return 'WINBOND';
-  if(up.includes('TSMC'))return 'TSMC';
-  if(up.includes('TASC')||up.includes('ASIA SEMI'))return 'TASC';
-  return normCust(up);
-}
+/* 정본은 core.js GST.ORG.site (v135). hr 과 사본이 둘이었고 PSMC 를 'POWERCHIP' 이라 적어 고객사 축과 갈렸다. */
+function siteKey(sv){ return GST.ORG.site(sv); }
 // 법인명 → 국가 (예: GST TAIWAN → TAIWAN)
 function guessCountry(op){
   if(!op)return '';
@@ -747,7 +720,7 @@ function t(k){const d=T[LANG]||T.ko; return (k in d)?d[k]:k;}
 function applyLang(){
   document.querySelectorAll('[data-i]').forEach(el=>{if(el.hasAttribute('data-lock'))return;el.textContent=t(el.getAttribute('data-i'));});
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
-  try{ renderFtView(); renderTopView(); }catch(e){}
+  try{ renderFtView(); renderTopView(); }catch(e){ console.warn('[report] 계통 드롭다운 렌더 실패', e); }
 }
 function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(WK.length||HR.length)render();document.getElementById('langMenu').classList.remove('open');}
 function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
@@ -766,22 +739,10 @@ const MS=86400000;
 // 숫자 파싱 — 콤마/공백/단위 등 서식이 섞여도 값 그대로 읽기(값 누락 방지). 빈칸·비숫자는 0.
 function numv(s){ if(s==null)return 0; if(typeof s==='number')return isFinite(s)?s:0;
   const v=parseFloat(String(s).replace(/[^0-9.\-]/g,'')); return isFinite(v)?v:0; }
-function pd(s){ // '2022. 8. 1' / '2025-07-10' / 엑셀 시리얼(46153) / Date
-  if(!s)return null;
-  if(s instanceof Date) return isNaN(s)?null:s;
-  s=String(s).trim(); if(!s)return null;
-  /* 엑셀 시리얼 날짜. 국내 실적 CSV 가 날짜 서식을 잃은 채 숫자로 들어온다(실측 46153·45765).
-     이걸 못 읽어 25만 행 중 24만 행이 «일자 공란»으로 통째로 버려졌고, 화면에는
-     인당작업·공수·알람이 0 으로만 보였다 — 필터 문제로 오해하기 딱 좋은 실패였다.
-     core.js GST.toDate 와 «같은 규칙»을 쓴다. 두 벌이면 또 갈라진다. */
-  const _n=Number(s);
-  if(!isNaN(_n) && _n>20000 && _n<80000) return new Date(Date.UTC(1899,11,30)+_n*86400000);
-  s=s.replace(/\.\s*/g,'-').replace(/\/-?/g,'-').replace(/-$/,'').replace(/\s/g,'');
-  const m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if(!m)return null;
-  const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));
-  return isNaN(d)?null:d;
-}
+/* '2022. 8. 1' / '2025-07-10' / 엑셀 시리얼(46153) / Date — 정본은 core.js GST.toDate 다 (v135).
+   예전에는 여기 사본이 '2022. 8. 1' 을 UTC 자정으로 읽고 core 는 로컬 자정으로 읽어, 같은 문자열에
+   하루 다른 날짜를 냈다(두 시계). 사본을 지우고 core 를 넓혔다 — t-quiet [1b] 가 옛 표기 전부를 대조한다. */
+function pd(s){ return GST.toDate(s); }
 function fmtYM(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}
 // 세부내역(rowsModal) 날짜 표기 — pd()가 UTC 자정으로 만들므로 ISO 앞 10자가 그대로 시트 날짜다.
 // toLocaleDateString 등 로컬 변환을 쓰면 시간대에 따라 하루 밀린다.
@@ -844,8 +805,10 @@ function krJoin(list, inst, CI){
     if(!ix[k])ix[k]=o;
     const b=GST.ALARM.keyBase(r[CI.sn]); if(!ix[b])ix[b]=o;
   });
+  let _hit=0;
   list.forEach(function(x){
     const o=ix[x.snk]||ix[GST.ALARM.keyBase(x.snk)]||null;
+    if(o)_hit++;
     x.region=o?o.region:''; x.op=o?o.op:''; x.custB=o?o.custB:'';
     x.div=(o&&o.div)||'';   // 못 붙은 행은 빈 값 그대로 — loose 로 통과시킨다(버리지 않는다)
     x.line2=(o&&o.line2)||'';
@@ -864,6 +827,10 @@ function krJoin(list, inst, CI){
        위에서 campus 를 먼저 넣어 두면 P3·P4 가 그대로 남는다(사용자 확정 · v134). */
     x.campus = o ? (GST.ORG.campus(o.campus, x.lineN, o.op, o.line2) || o.campus) : '';
   });
+  /* 조인율을 남긴다 (v135). 낮으면 단지·라인·사업부가 «조용히» 비는데 화면에는 필터 고장으로 보인다 —
+     CLAUDE.md v134 「남은 확인」이 «올린 뒤 화면으로 확인하라»고 했는데 그 표시가 없었다. 관리자에게만 적는다(A-4). */
+  window._KRJOIN = window._KRJOIN || {n:0, hit:0};
+  window._KRJOIN.n += list.length; window._KRJOIN.hit += _hit;
   return list;
 }
 function periods(n,anchor,unit){
@@ -1370,6 +1337,7 @@ async function loadData(){
       });
       window._DIVJOIN = { n: WK.length, hit: _hit };   // 조인율은 화면에 밝힌다(조용히 빼지 않는다)
     }
+    window._KRJOIN = {n:0, hit:0};   // 로드마다 새로 센다 — 누적하면 재로드 뒤 조인율이 부푼다
     krJoin(KRA, INST, CI); krJoin(KRB, INST, CI);   // 조직 축은 설치현황에서 — CI 가 확정된 뒤여야 한다
     const cached=(hr.status==='fulfilled'&&hr.value.cached)||(wk.status==='fulfilled'&&wk.value.cached);
     const _wkDrop=Math.max(0,_wkRaw-WK.length);   // 작업단계·작업일 공란으로 집계 제외된 행
@@ -2512,6 +2480,10 @@ function render(){
         + (function(){ const n=KRAf.filter(x=>x.srcSite&&x.campus&&x.srcSite!==x.campus).length;
             if(F.krOrg==='sheet') return ' · 단지·라인은 알람시트 Site 기준'+(n?' (설치현황과 다른 '+n.toLocaleString()+'건 포함)':'');
             return n? ' · 시트 Site 와 설치현황 단지가 다른 '+n.toLocaleString()+'건은 설치현황을 따랐습니다':''; })();
+      /* 원장 ↔ 설치현황 S/N 조인율 — 내부 품질 수치라 관리자에게만(v135 · A-4). 낮으면 단지·라인이 비는 원인이 이것이다. */
+      if(KR_ON && GST.isAdmin&&GST.isAdmin() && window._KRJOIN && window._KRJOIN.n)
+        _note += ' · S/N 조인 '+window._KRJOIN.hit.toLocaleString()+'/'+window._KRJOIN.n.toLocaleString()
+          +' ('+Math.round(window._KRJOIN.hit/window._KRJOIN.n*100)+'%)';
       /* 올바만 보는 중이면 «BM 행이 없다»는 설명이 엉뚱하다 — 그 화면은 BM 을 안 센다. */
       if(!shown.some(v=>v>0) && FV==='abp'){
         _note += ' · '+t('ftv_abp')+' 값이 이 조건에는 0 입니다';

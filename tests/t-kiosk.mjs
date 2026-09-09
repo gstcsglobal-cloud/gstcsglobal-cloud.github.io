@@ -229,8 +229,8 @@ await pg.route('https://gstcsglobal-cloud.github.io/**', route=>{
   const u=new URL(route.request().url()).pathname;
   const body = u==='/assets/core.js' ? fs.readFileSync(ROOT+'/assets/core.js','utf8')
              : (u==='/'||u==='/index.html') ? fs.readFileSync(ROOT+'/index.html','utf8')
-             : STUB;
-  route.fulfill({status:200, contentType:u.endsWith('.js')?'text/javascript':'text/html', body});
+             : (fs.existsSync(ROOT+u)&&fs.statSync(ROOT+u).isFile()) ? fs.readFileSync(ROOT+u,'utf8') : STUB;   // 저장소에 «있는» 파일(vendor 등)은 그대로 준다 — 없는 길에 HTML 을 주면 스크립트 자리에서 SyntaxError 가 난다(v135)
+  route.fulfill({status:200, contentType:u.endsWith('.js')?'text/javascript':u.endsWith('.css')?'text/css':'text/html', body});
 });
 await pg.route('**/*.supabase.co/**', r=>r.abort());
 await pg.goto('https://gstcsglobal-cloud.github.io/index.html',{waitUntil:'domcontentloaded'});
@@ -304,8 +304,8 @@ pg2.on('pageerror',e=>errs2.push(String(e)));
 await pg2.route('https://gstcsglobal-cloud.github.io/**', route=>{
   const u=new URL(route.request().url()).pathname;
   const body = u==='/assets/core.js' ? fs.readFileSync(ROOT+'/assets/core.js','utf8')
-             : (u==='/'||u==='/index.html') ? fs.readFileSync(ROOT+'/index.html','utf8') : STUB;
-  route.fulfill({status:200, contentType:u.endsWith('.js')?'text/javascript':'text/html', body});
+             : (u==='/'||u==='/index.html') ? fs.readFileSync(ROOT+'/index.html','utf8') : (fs.existsSync(ROOT+u)&&fs.statSync(ROOT+u).isFile()) ? fs.readFileSync(ROOT+u,'utf8') : STUB;   // 저장소에 «있는» 파일(vendor 등)은 그대로 준다 — 없는 길에 HTML 을 주면 스크립트 자리에서 SyntaxError 가 난다(v135)
+  route.fulfill({status:200, contentType:u.endsWith('.js')?'text/javascript':u.endsWith('.css')?'text/css':'text/html', body});
 });
 await pg2.route('**/*.supabase.co/**', r=>r.abort());
 await pg2.goto('https://gstcsglobal-cloud.github.io/index.html',{waitUntil:'domcontentloaded'});

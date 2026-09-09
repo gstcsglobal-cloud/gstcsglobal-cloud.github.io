@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 136;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 137;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* 인사이트 띠의 머리글. 예전에는 «INSIGHT» 영문 대문자가 core 에 박혀 있어 네 언어 어디서도 안 바뀌고
    PPT 장표까지 그대로 나갔다(v135). core 의 공용 문자열 관례(GST._lang + 사전) 그대로다. */
 GST.INS_T = {ko:'요약', en:'Summary', zh:'摘要', ja:'要約'};
@@ -80,24 +80,64 @@ GST.needVer = function(n){
   }catch(e){}
   return false;
 };
+/* 코드가 던지는 실패를 «보이게» 한다 (v135). 자료 실패는 배너·배지로 촘촘한데 코드 예외만 아무 데도 안 떴다 —
+   iframe 안의 예외는 셸 콘솔에도 안 뜨고 사용자는 F12 를 열지 않는다. 같은 메시지는 한 번만 띄운다.
+   ⚠ 관리자에게만 메시지·위치를 적는다(A-4 · 메타정보). 조회자에게는 «무엇을 하면 되는지» 한 줄. */
+GST._errSeen = {};
+GST._errBand = function(msg, where){
+  try{
+    const key = String(msg||'').trim().slice(0,160);
+    if(!key || GST._errSeen[key]) return;
+    if(/ResizeObserver loop|^Script error\.?$/.test(key)) return;      // 브라우저 잡음 · 교차출처 스크립트의 빈 메시지
+    GST._errSeen[key] = 1;
+    const detail = key + (where ? ' @ ' + where : '') + ' (core ' + GST.VER + ')';
+    try{ console.error('[gst] ' + detail); }catch(e){}
+    if(typeof document==='undefined') return;
+    let d = document.getElementById('gstErrBand');
+    if(!d){
+      d = document.createElement('div'); d.id = 'gstErrBand';
+      d.style.cssText = 'background:#4c1d95;color:#ede9fe;padding:8px 14px;font:12px/1.5 system-ui,-apple-system,sans-serif;position:relative;z-index:99999';
+      (document.body||document.documentElement).insertAdjacentElement('afterbegin', d);
+    }
+    d.textContent = '⚠️ 화면 일부가 그려지지 않았을 수 있습니다 — 새로고침해 보고, 계속되면 관리자에게 알려 주세요'
+      + ((GST.isAdmin && GST.isAdmin()) ? ' · ' + detail : '');
+    d.title = detail;
+    try{ if(window.self!==window.top) window.parent.postMessage({type:'gst-error', msg:key}, '*'); }catch(e){}
+  }catch(e){}
+};
+if(typeof window!=='undefined' && window.addEventListener){
+  window.addEventListener('error', function(ev){
+    if(!ev || !ev.message) return;                                    // 리소스 로드 실패는 여기로 안 온다(버블링 없음) — 로더가 따로 알린다
+    GST._errBand(ev.message, (ev.filename||'').replace(/^.*\//,'') + (ev.lineno ? ':' + ev.lineno : ''));
+  });
+  window.addEventListener('unhandledrejection', function(ev){
+    const r = ev && ev.reason;
+    GST._errBand(r && r.message ? r.message : String(r), r && r.stack ? String(r.stack).split('\n')[1] || '' : '');
+  });
+}
 GST.FONT_STACK = '"Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
 GST.font = function(px, weight){ return (weight||400)+' '+px+'px '+GST.FONT_STACK; };
 // 웹폰트는 첫 렌더보다 늦게 도착할 수 있다 — 캔버스는 스스로 다시 그리지 않으므로
 // 폰트 준비가 끝나면 한 번 재렌더해서 폴백 메트릭으로 그려진 차트를 교정한다.
 if (typeof document!=='undefined' && document.fonts && document.fonts.ready){
   document.fonts.ready.then(function(){
-    try{ if(typeof window!=='undefined' && typeof window.render==='function') window.render(); }catch(e){}
+    try{ if(typeof window!=='undefined' && typeof window.render==='function') window.render(); }catch(e){ console.warn('[gst] 폰트 준비 후 재렌더 실패', e); }
   });
 }
 
 /* ---------- 1. 날짜 유틸 ---------- */
 // 구글시트의 다양한 날짜 표현(시리얼 숫자, YYYY-MM-DD, Date 문자열)을 UTC Date로 통일
 GST.toDate = function(v){
-  if(!v || v==='') return null;
+  if(!v) return null;
+  if(v instanceof Date) return isNaN(v) ? null : v;
   const n = Number(v);
   if(!isNaN(n) && n>20000 && n<80000) return new Date(Date.UTC(1899,11,30) + n*86400000);
   const s = String(v).trim();
-  const m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  /* 구분자 둘레의 공백을 허용한다 — '2022. 8. 1'(구글시트 한국 서식)·'2022/8/1'·'2022-08-01 10:00'.
+     ⚠ 예전 정규식은 공백을 몰라 그 표기가 아래 new Date(s) 폴백으로 떨어졌고, 그것은 «로컬 자정»이라
+       KST 에서 UTC 로 찍으면 하루가 밀렸다. report·hr 은 그래서 자기 pd() 를 따로 들고 있었고 같은
+       문자열에 core 와 다른 날짜를 냈다 — v135 에 사본을 지우고 여기로 모았다(t-quiet [1b] 가 대조한다). */
+  const m = s.match(/^(\d{4})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})(?!\d)/);
   if(m) return new Date(Date.UTC(+m[1], +m[2]-1, +m[3]));
   const d = new Date(s);
   return isNaN(d) ? null : d;
@@ -129,14 +169,21 @@ GST._storage={
   setItem:function(k,v){ try{ sessionStorage.setItem(k,v); localStorage.removeItem(k); }catch(e){} },
   removeItem:function(k){ try{ sessionStorage.removeItem(k); localStorage.removeItem(k); }catch(e){} }
 };
+/* supabase-js — 대시보드의 «현관문». v105 규율(CDN 을 기다리는 곳에는 반드시 시간 제한)이 PPT·xlsx 버튼에는
+   있었는데 여기에는 없었다 — 사내망이 cdn.jsdelivr.net 을 «묵살»하면 onerror 가 영영 안 와 로그인 오버레이가
+   글자 없는 검은 화면으로 남았다(v135). 자체 사본 → CDN 순 · 15초. 버전은 사본과 CDN 이 같아야 한다 —
+   `@2` 처럼 열어 두면 «어느 날 바뀌는» 유일한 의존성이 되고 롤백 손잡이도 없다(assets/vendor/README.md ·
+   t-pptchart [1] 이 둘을 대조한다). */
+GST.SB_VER    = '2.116.0';
+GST.SB_VENDOR = '/assets/vendor/supabase.min.js';                                      // 2.116.0
+GST.SB_CDN    = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js';
+GST._sbFail   = '로그인 모듈을 불러오지 못했습니다 — 새로고침하거나 잠시 뒤 다시 시도하세요 (cdn.jsdelivr.net 이 막혀 있을 수 있습니다)';
 GST.sb = async function(){
   if(GST._sb) return GST._sb;
   if(!global.supabase){
-    if(!GST._sbLoad) GST._sbLoad=new Promise(function(res,rej){
-      var s=document.createElement('script');
-      s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-      s.onload=res; s.onerror=function(){GST._sbLoad=null;rej(new Error('supabase-js CDN 로드 실패'));};
-      document.head.appendChild(s); });
+    if(!GST._sbLoad) GST._sbLoad = GST._loadScript([GST.SB_VENDOR, GST.SB_CDN], function(){ return !!global.supabase; }, 15000)
+      .catch(function(e){ GST._sbLoad=null;
+        var err=new Error('supabase-js 로드 실패 ('+(e&&e.message||'?')+')'); err.tried=e&&e.tried; throw err; });
     await GST._sbLoad;
   }
   // 이전 버전이 localStorage에 남긴 세션 청소 (브라우저 종료 시 로그아웃 정책 전환)
@@ -153,25 +200,29 @@ GST.getSession = async function(){
 GST.token   = async function(){ var s=await GST.getSession(); return s?s.access_token:null; };
 // shouldCreateUser:false — 관리자가 Supabase 콘솔(Authentication → Users → Invite user)로
 // 미리 초대한 이메일만 인증코드를 받을 수 있다. 승인 안 된 이메일은 코드 발급 자체가 거부된다.
-GST.sendOtp = async function(email){ var c=await GST.sb();
-  var r=await c.auth.signInWithOtp({email:email,options:{shouldCreateUser:false}});
+GST.sendOtp = async function(email){ var c, r;
+  /* 로더가 던지면 await 가 다시 던져 버튼이 「전송 중…」에 잠긴 채 굳었다(v135) — 여기서 받아 한 줄로 돌려준다 */
+  try{ c=await GST.sb(); r=await c.auth.signInWithOtp({email:email,options:{shouldCreateUser:false}}); }
+  catch(e){ return GST._sbFail; }
   if(!r.error)return null;
   var m=String(r.error.message||'');
   if(/signup|not allowed|not found|does not exist/i.test(m))
     return '등록되지 않은 이메일입니다. 관리자에게 이메일 등록을 요청하세요.';
   return m||'전송 실패';
 };
-GST.verifyOtp = async function(email,code){ var c=await GST.sb();
-  var r=await c.auth.verifyOtp({email:email,token:code,type:'email'});
+GST.verifyOtp = async function(email,code){ var c, r;
+  try{ c=await GST.sb(); r=await c.auth.verifyOtp({email:email,token:code,type:'email'}); }
+  catch(e){ return GST._sbFail; }
   return r.error?(r.error.message||'코드 확인 실패'):null; };
 /* 아이디+비밀번호 로그인 (조회 전용 계정용).
    Supabase 는 이메일 형태만 받으므로, @ 없는 아이디에는 아래 도메인을 붙여 계정 이메일로 만든다.
    계정은 관리자가 콘솔(Authentication → Add user, Auto Confirm)에서 만들고 allowed_users 에
    can_write=false 로 넣는다 — 쓰기 권한은 RLS 가 막으므로 화면 조회만 된다. */
 GST.PW_DOMAIN='gstcs.view';
-GST.pwLogin = async function(id,pw){ var c=await GST.sb();
+GST.pwLogin = async function(id,pw){ var c, r;
   var em=(id.indexOf('@')>=0?id:(id+'@'+GST.PW_DOMAIN)).toLowerCase();
-  var r=await c.auth.signInWithPassword({email:em,password:pw});
+  try{ c=await GST.sb(); r=await c.auth.signInWithPassword({email:em,password:pw}); }
+  catch(e){ return GST._sbFail; }
   if(!r.error)return null;
   var m=String(r.error.message||'');
   if(/invalid login credentials|invalid_credentials/i.test(m))return '아이디 또는 비밀번호가 올바르지 않습니다';
@@ -198,6 +249,11 @@ GST.db = async function(){ if(!GST.authOn())return null;
 GST._readyP=null; GST._readyRes=null;
 GST.authReady=function(){ if(!GST._readyP)GST._readyP=new Promise(function(r){GST._readyRes=r;}); return GST._readyP; };
 GST._authOk=function(){ GST.authReady(); GST._readyRes&&GST._readyRes(); try{ GST.loadMe(); }catch(e){} };
+GST._loginCard=function(title, sub, extra, color){
+  return '<div class="login-card" style="max-width:360px;width:90%;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
+    +'<div style="font-size:17px;font-weight:800;color:'+(color||'#e6edf3')+';margin-bottom:8px">'+title+'</div>'
+    +(sub?'<div style="font-size:12px;color:#8a97a5;line-height:1.6">'+sub+'</div>':'')+(extra||'')+'</div>';
+};
 // 로그인 게이트: #loginOverlay를 이메일 OTP UI로 교체(없으면 생성). 성공 시 resolve.
 GST.authGate = async function(){
   var ov=document.getElementById('loginOverlay');
@@ -212,6 +268,22 @@ GST.authGate = async function(){
       +'<div style="font-size:12px;color:#8a97a5">관리자에게 문의하세요</div></div>';
     return new Promise(function(){});   // 절대 resolve하지 않음 → 페이지가 열리지 않는다
   }
+  /* 로그인 모듈부터 확보한다 (v135). 예전에는 getSession() 안에서 CDN 을 기다렸고 그 대기에 시간 제한이 없어,
+     사내망이 묵살하면 오버레이가 «글자 없는 검은 화면»으로 영영 남았다. 이제 15초 뒤 실패로 오고 그때
+     무엇을 하면 되는지를 적는다 — 막다른 길로 두지 않는다(v105 규율). 0.6초 넘게 걸리면 «준비 중»이라도 적는다. */
+  var slow=setTimeout(function(){ if(!global.supabase && !ov.querySelector('.login-card')){
+    ov.classList.remove('hidden'); ov.style.display='flex'; ov.innerHTML=GST._loginCard('로그인 준비 중…','',''); } }, 600);
+  try{ await GST.sb(); }
+  catch(e){
+    clearTimeout(slow);
+    ov.classList.remove('hidden'); ov.style.display='flex';
+    ov.innerHTML=GST._loginCard('로그인 모듈을 불러오지 못했습니다',
+      'cdn.jsdelivr.net 을 막고 있을 수 있습니다 — 전산팀에 허용을 요청하거나 잠시 뒤 다시 시도하세요',
+      '<button onclick="location.reload()" title="'+String(e&&e.tried||e&&e.message||'').replace(/"/g,'&quot;')+'" style="margin-top:14px;padding:9px 22px;border-radius:10px;border:0;background:#2C5FAE;color:#fff;font-weight:700;cursor:pointer">다시 시도</button>',
+      '#ffb4b4');
+    return new Promise(function(){});   // 모듈 없이는 인증도 자료도 없다 — 열지 않는다
+  }
+  clearTimeout(slow);
   var s=await GST.getSession();
   if(s){ ov.classList.add('hidden'); ov.style.display='none'; GST._authOk(); return true; }
   ov.classList.remove('hidden'); ov.style.display='flex';
@@ -2023,6 +2095,42 @@ GST.ORG = {
     return c || f || '';
   },
 
+  /* 고객사 «원문 정리» — customer() 가 브랜드로 접기 전의 이름(옛 report·hr 의 normCust · v135 에 core 로).
+     『Micron Memory Taiwan Co., Ltd.(F16)』 → 'MICRON F16' 처럼 괄호·FAB 꼬리를 살린다.
+     customer() 가 빈 값을 낼 때(자사 GST 행 등)의 폴백과 원문 표기용이다 — 축 판정에는 쓰지 않는다. */
+  custRaw: function(name){
+    if(!name) return '';
+    const up = GST.upk(name).trim();
+    if(!up) return '';
+    let base = '';
+    if(up.includes('MICRON')) base = 'MICRON';
+    else if(up.includes('TAIWAN-ASIA') || up.includes('ASIA SEMICON')) base = 'TASC';
+    else if(up.includes('POWERCHIP')) base = 'POWERCHIP';
+    else if(up.includes('WINBOND')) base = 'WINBOND';
+    else if(up.includes('TSMC')) base = 'TSMC';
+    else if(up.includes('SAMSUNG')) base = 'SAMSUNG';
+    else if(up.includes('HYNIX')) base = 'SK HYNIX';
+    else base = up.split(/[\s,\.(]/)[0];
+    const m = up.match(/\(([A-Z0-9\-]+)\)/) || up.match(/\b(F\d{1,2}N?)\b/);
+    return m ? base + ' ' + m[1] : base;
+  },
+
+  /* 사이트 키 (v135) — 인원현황 근무지·휴가 소속·교육 Site 를 한 어휘로. 옛 report·hr 의 siteKey 사본 둘을
+     여기로 모았다. 둘은 PSMC 를 'POWERCHIP' 이라 적어 고객사 축(customer)의 'PSMC' 와 «같은 회사가 다른
+     이름»이었고, FAB 판정을 includes('F16')·\bF10\b 로 각자 해서 F15·F10A 를 놓쳤다(core 가 4,027건으로
+     고친 자리를 hr 이 되돌린 판이었다) — fab() 하나로 본다. */
+  site: function(s){
+    const u = GST.upk(s || '').trim();
+    if(!u) return '';
+    const f = GST.ORG.fab(u);
+    if(f) return 'MICRON ' + f;                          // Micron 만 FAB 이 여럿이다 — 사이트 = 고객사 + FAB
+    if(/PSMC|POWERCHIP/.test(u)) return 'PSMC';
+    if(/WINBOND/.test(u)) return 'WINBOND';
+    if(/TSMC/.test(u)) return 'TSMC';
+    if(/TASC|TAIWAN-ASIA|ASIA\s*SEMI/.test(u)) return 'TASC';
+    return GST.ORG.custRaw(u);
+  },
+
   /* Floor 값 정리. 설치현황 Floor는 'A3 M2 4F'·'B 2F' 형식인데 오염값이 섞여 있다
      (F16N에 도시명 '台中' 1건). 층 표기가 아닌 것은 받지 않는다 — 조용히 통과시키면
      Floor 축에 도시가 한 칸 끼어 축 자체를 의심하게 만든다. */
@@ -2681,40 +2789,88 @@ GST._csvOrderCol = function(keys){
 GST._authGlitch = function(msg){
   return /JWT|issued at future|expired|token|401|403/i.test(String(msg||''));
 };
+/* Import 표는 미러와 두 가지가 다르다 — sheet_sync_log 가 없고(csv_upload_finish 는 실적 3종만 기록한다),
+   src_row 가 아닌 id 로만 정렬되는 표가 있다(Table Editor 로 만든 표 · truncate 로도 id 가 되돌아가지 않아
+   희소해진다). 그래서 dbRows 의 «값 범위 분할»을 그대로 못 쓴다 — 희소한 id 를 폭 1,000 으로 자르면 빈 구간이
+   수백 개다. 대신 «마지막 값 다음»(keyset · gt + order + limit)으로 이어 받는다. OFFSET 은 쓰지 않는다 —
+   뒤쪽 장일수록 서버가 앞 N 행을 읽고 버리는 O(N²) 이고, 그것이 v128 의 statement timeout 이었다(v135 이전에는
+   이 경로만 range(5,000) 로 남아 있었다). 장은 순차이지만 페이지가 여러 표를 동시에 읽으므로 전체는 병렬이다. */
+GST._CSV_KEYS = ['src_row', 'id'];      // 키셋에 쓸 유일·정수 열 — 앞의 것을 우선한다
 GST.csvTableRows = async function(table, cols){
   const c = await GST.db(); if(!c) throw new Error('DB_OFF');
   const sel = (cols && cols.length) ? cols.join(',') : '*';
 
-  let probe = await c.from(table).select(sel).limit(1);
+  /* count 를 같이 받는다(exact 는 응답 헤더 한 줄이다) — 캐시 열쇠와 «다 받았나» 대조에 쓴다 */
+  let probe = await c.from(table).select(sel, {count:'exact'}).limit(1);
   /* 시계 어긋남은 몇 초면 지나간다. 세션을 새로 받아 한 번만 다시 해 본다 —
      여기서 포기하면 그 화면은 «다른 기준»으로 그려지고, 그 사실이 숫자에는 안 보인다. */
   if(probe.error && GST._authGlitch(probe.error.message)){
     GST._authRetry = (GST._authRetry||0)+1;
     try{ if(c.auth && c.auth.refreshSession) await c.auth.refreshSession(); }catch(e){}
     await new Promise(function(r){ setTimeout(r, 1200); });
-    probe = await c.from(table).select(sel).limit(1);
+    probe = await c.from(table).select(sel, {count:'exact'}).limit(1);
   }
   if(probe.error) throw new Error('READ '+probe.error.message);
   if(!probe.data || !probe.data.length) throw new Error('EMPTY — '+table+' 에 행이 없다 (Import 했는가)');
-  /* ⚠ 열을 추렸으면 정렬 후보(src_row·id)가 안 올 수 있다. 정렬이 없으면 range() 로
-     나눠 받을 때 행이 겹치거나 빠진다 — 5,000행을 넘는 표는 반드시 정렬 열을 함께 받는다. */
-  const ordCol = GST._csvOrderCol(Object.keys(probe.data[0]));
+  const keys0 = Object.keys(probe.data[0]);
+  const total = (typeof probe.count==='number') ? probe.count : null;
+  /* ⚠ 열을 추렸으면 정렬 후보(src_row·id)가 안 올 수 있다 — 5,000행을 넘는 표는 반드시 정렬 열을 함께 받는다. */
+  const ordCol = GST._csvOrderCol(keys0);
+  const kcol = GST._CSV_KEYS.filter(function(k){ return keys0.indexOf(k)>=0; })[0] || null;
 
-  /* 페이지네이션은 미러와 같은 규약 — 「요청한 만큼 안 오면 끝」으로 판정하지 않는다.
-     PostgREST 의 행수 상한은 프로젝트 설정이라, 상한에 걸린 것을 완료로 착각하면
-     잘린 데이터를 조용히 그린다. **0행일 때만 멈춘다.**
-     정렬이 없으면 range() 로 나눠 받을 때 행이 겹치거나 빠질 수 있으므로 반드시 건다. */
-  const STEP = 5000; let from = 0; const out = [];
-  for(let guard=0; guard<400; guard++){
-    let q = c.from(table).select(sel);
-    if(ordCol) q = q.order(ordCol, {ascending:true});
-    const r = await q.range(from, from+STEP-1);
-    if(r.error) throw new Error('READ '+r.error.message);
-    const n = (r.data||[]).length; if(!n) break;
-    for(let i=0;i<n;i++) out.push(r.data[i]);
-    from += n;
+  /* ── 행 캐시 (v135) — 열쇠는 «행수 + 마지막 적재 시각 + 고른 열». imported_at 이 있는 표(알람·올바)만 담는다.
+     hr 이 브라우저에서 직접 고치는 표(GST.DBW · 인원·교육·휴가)는 적재 시각이 안 바뀌므로 담지 않는다 —
+     담으면 «저장했는데 새로고침하면 옛 값»이 된다(v80 의 그 실패). 열쇠를 못 만들면 담지 않는다(느릴 뿐 틀리지 않는다). */
+  const writable = Object.keys(GST.DBW||{}).map(function(g){ return (GST.DBW[g]||{}).table; });
+  let stamp = null;
+  if(total!=null && keys0.indexOf('imported_at')>=0 && writable.indexOf(table)<0){
+    const mx = await c.from(table).select('imported_at').order('imported_at', {ascending:false}).limit(1);
+    if(!mx.error && mx.data && mx.data[0]) stamp = table+'|'+total+'|'+mx.data[0].imported_at+'|'+sel;
+  }
+  if(stamp){
+    const hit = await GST.idb.get('csv:'+table);
+    if(hit && hit.stamp===stamp && Array.isArray(hit.rows) && hit.rows.length===total+1){
+      GST._idbHit = (GST._idbHit||0)+1;
+      return hit.rows;
+    }
+  }
+
+  const out = [];
+  if(kcol){
+    /* keyset — «0행일 때만» 멈춘다. 서버 상한(max-rows)이 폭보다 작으면 장이 짧게 오는데, 그것을 끝으로 읽으면
+       조용히 잘린다(CLAUDE.md 「요청한 만큼 안 오면 끝으로 판정하지 말 것」). 마지막 값 다음을 다시 묻는 것이
+       상한이 얼마든 옳다 — 끝에 빈 장 한 번이 비용의 전부다. */
+    const width = GST.DB_PAGE_MAX || 1000;
+    let last = null;
+    for(let guard=0; guard<5000; guard++){
+      let q = c.from(table).select(sel);
+      if(last!=null) q = q.gt(kcol, last);
+      const r = await q.order(kcol, {ascending:true}).limit(width);
+      if(r.error) throw new Error('READ '+r.error.message);
+      const n = (r.data||[]).length; if(!n) break;
+      for(let i=0;i<n;i++) out.push(r.data[i]);
+      const nl = r.data[n-1][kcol];
+      if(nl==null || nl===last) throw new Error('READ keyset '+table+'.'+kcol+' 값이 없거나 늘지 않는다');   // 조용한 무한 루프 대신
+      last = nl;
+    }
+  }else{
+    /* 유일 열이 없는 표(옛 Table Editor 표) — 안전한 열로 정렬해 range 로 받는다(옛 경로 그대로).
+       「요청한 만큼 안 오면 끝」으로 판정하지 않는다 — 0행일 때만 멈춘다. */
+    const STEP = 5000; let from = 0;
+    for(let guard=0; guard<400; guard++){
+      let q = c.from(table).select(sel);
+      if(ordCol) q = q.order(ordCol, {ascending:true});
+      const r = await q.range(from, from+STEP-1);
+      if(r.error) throw new Error('READ '+r.error.message);
+      const n = (r.data||[]).length; if(!n) break;
+      for(let i=0;i<n;i++) out.push(r.data[i]);
+      from += n;
+    }
   }
   if(!out.length) throw new Error('EMPTY — '+table+' 에 행이 없다 (Import 했는가)');
+  /* count 와 실제로 받은 행수가 다르면 멈춘다 — 받는 도중 업로드가 표를 비웠거나 정렬 열에 중복이 있는 것이다.
+     모자란 채로 그리면 그 지표만 조용히 작아진다(미러의 MIRROR_SHORT 와 같은 규율). */
+  if(total!=null && out.length!==total) throw new Error('CSV_SHORT '+table+' '+out.length+'/'+total);
 
   const head = Object.keys(out[0]).filter(function(k){ return !GST._CSV_SKIP[k]; });
   const rows = new Array(out.length+1); rows[0] = head;
@@ -2723,6 +2879,7 @@ GST.csvTableRows = async function(table, cols){
     for(let j=0;j<head.length;j++){ const v=o[head[j]]; r[j] = (v==null?'':String(v)); }
     rows[i+1] = r;
   }
+  if(stamp) GST.idb.set('csv:'+table, {stamp:stamp, rows:rows, t:Date.now()});   // 저장 실패는 느릴 뿐 틀리지 않는다(GST._idbErr 에 남는다)
   return rows;
 };
 
@@ -3249,12 +3406,36 @@ GST._softReload = async function(){
     try{ kiosk ? GST.filters.kioskReapply() : GST._restoreFilters(snap); }catch(e){}
   }, 300);
 };
+/* «안 보이는 화면»인가 — 자동 새로고침이 건너뛸 자리 (v135).
+   ⚠ document.hidden 은 «최상위 브라우저 탭» 기준이다. 셸이 display:none 으로 감춘 iframe 안에서도 false 라,
+     안 보이는 일곱 탭이 30분마다 전량을 다시 받고 있었다(gstAutoStart 의 「하루 768MB」는 한 페이지 몫이었다).
+     셸은 보이는 iframe 에만 .active 를 준다 — 그것을 본다(교차 출처면 frameElement 접근이 던지므로 try). */
+GST._arHidden = function(){
+  if(document.hidden) return true;
+  try{ const fe = window.frameElement; if(fe && fe.classList && !fe.classList.contains('active')) return true; }catch(e){}
+  return false;
+};
+/* 건너뛴 새로고침을 «다시 보일 때» 한 번 한다 — 셸의 gst-shown 신호와 requestAnimationFrame(안 보이는 iframe 에서는
+   보일 때까지 안 돈다) 둘이 같은 곳으로 온다. 아직 안 보이면 표식만 남긴다. */
+GST._arCatchUp = function(){
+  if(!GST._arMissed) return;
+  if(GST._arHidden()) return;
+  GST._arMissed = false;
+  GST._softReload();
+};
 GST.startAutoRefresh = function(min){
   if(GST._arTimer) return;
   if(typeof (window.loadData || window.loadAll)!=='function') return;
   GST._arTimer = setInterval(async function(){
     let on=true; try{ on = localStorage.getItem('gst_auto_refresh')!=='0'; }catch(e){}
-    if(!on || document.hidden) return;   // 꺼짐/백그라운드 탭이면 건너뜀
+    if(!on) return;
+    /* 순회(키오스크) 중에는 가드를 끈다 — 곧 보일 화면이라 미리 받아 두는 것이 맞다 */
+    const kiosk = !!(GST.filters && GST.filters.kioskOn && GST.filters.kioskOn());
+    if(!kiosk && GST._arHidden()){
+      GST._arMissed = true;
+      try{ requestAnimationFrame(function(){ GST._arCatchUp(); }); }catch(e){}
+      return;
+    }
     await GST._softReload();
   }, (min||10)*60000);
 };
@@ -4031,14 +4212,14 @@ GST.setStyle = function(key, silent, fromShell){
   if(silent) return;
   // 이미 열려 있는 다른 탭도 같이 바뀌도록 셸을 통해 전파 (테마·언어와 같은 경로)
   if(!fromShell && window.self!==window.top){
-    try{ window.parent.postMessage({type:'gst-style', style:key}, '*'); }catch(e){}
+    try{ window.parent.postMessage({type:'gst-style', style:key}, '*'); }catch(e){ console.warn('[gst] 셸에 style 전파 실패', e); }
   }
   // 차트 색은 생성 시점에 굳으므로 파기 후 재렌더가 필요하다 (테마 전환과 같은 경로)
   const b = document.body ? document.body.className : '';
   const cur = b.indexOf('theme-slate')>-1?'slate' : b.indexOf('theme-light')>-1?'light'
             : b.indexOf('theme-burgundy')>-1?'burgundy' : 'default';
   if(typeof global.changeDashboardTheme==='function'){ try{ global.changeDashboardTheme(cur,cur); }catch(e){} }
-  else if(typeof global.render==='function'){ try{ global.render(); }catch(e){} }
+  else if(typeof global.render==='function'){ try{ global.render(); }catch(e){ console.warn('[gst] 재렌더 실패', e); } }
   GST.barSync();
 };
 GST.nextStyle = function(){
@@ -4157,7 +4338,7 @@ GST.barSync = function(){
   if(GST._pivot) caps.pivot=true;
   const reg={type:'gst-bar-reg', caps:caps, state:st,
              weeks:(typeof s.weeks==='function')?s.weeks():null};
-  if(window.self!==window.top){ try{ window.parent.postMessage(reg,'*'); }catch(e){} }
+  if(window.self!==window.top){ try{ window.parent.postMessage(reg,'*'); }catch(e){ console.warn('[gst] 셸에 공통바 등록 실패', e); } }
   else GST._localBar(reg);
 };
 /* 공통바 버튼 잠금 — 페이지 안에서도, 셸 안에서도 같은 이름으로 부른다.
@@ -4170,7 +4351,7 @@ GST._barBusy = function(key, on){
     else  { b.disabled = false; if(b.dataset.old){ b.textContent = b.dataset.old; delete b.dataset.old; } }
   }
   if(window.self !== window.top){
-    try{ window.parent.postMessage({type:'gst-bar-busy', key:key, on:!!on}, '*'); }catch(e){}
+    try{ window.parent.postMessage({type:'gst-bar-busy', key:key, on:!!on}, '*'); }catch(e){ console.warn('[gst] 셸에 busy 전파 실패', e); }
   }
 };
 GST._barDo = function(key, val){
@@ -4183,7 +4364,7 @@ GST._barDo = function(key, val){
     // val이 오면 그 값으로 확정(브로드캐스트 안전), 없으면 뒤집기
     GST.setSpan12(val===null||val===undefined ? !GST.span12() : (val===true||val==='true'));
     if(typeof on.span==='function'){ try{ on.span(GST.span12()); }catch(e){} }
-    else if(typeof global.render==='function'){ try{ global.render(); }catch(e){} }
+    else if(typeof global.render==='function'){ try{ global.render(); }catch(e){ console.warn('[gst] 재렌더 실패', e); } }
     else GST.barSync();
     return;
   }
@@ -4300,6 +4481,7 @@ window.addEventListener('message', function(e){
      ⚠ 사람이 걸어 둔 필터를 «돌려주지 않으면» 순회 한 번에 화면이 딴 데를 보게 된다.
        페이지는 늦게 뜨기도 하므로(탭 지연 로딩), 셸의 «시작» 신호를 못 받는 경우가 있다.
        그래서 저장은 신호가 아니라 «처음 건드릴 때» 한다 — 그 순간이 곧 손대기 직전이다. */
+  if(d.type==='gst-shown'){ try{ GST._arCatchUp(); }catch(x){} return; }   // 셸이 이 iframe 을 보이게 했다 — 건너뛴 자동 새로고침을 이제 한다(v135)
   if(d.type==='gst-kiosk-q'){                   // 이 페이지가 아는 그 축의 값 목록을 알려 준다
     /* 답에 ver 와 page 를 실어 보낸다 — 셸이 «답이 없다»와 «답은 왔는데 목록이 비었다»를
        구분해 사람에게 다른 말을 해줄 수 있어야 한다. 그 둘은 할 일이 완전히 다르다
@@ -6511,7 +6693,9 @@ function gstAutoStart(){
   try{ GST.autoSidebar(); }catch(e){}
   /* 10분 → 30분. 한 번의 새로고침이 시트 8개를 통째로 다시 받는다(주간현황 기준).
      10분이면 한 사람이 하루 8시간 열어두는 것만으로 하루 768MB — 무료 5GB가 일주일에 사라진다.
-     시트는 그렇게 자주 바뀌지 않고, 미러 자체도 30분 주기로 돈다(sheet-sync/DEPLOY.md). */
+     시트는 그렇게 자주 바뀌지 않고, 미러 자체도 30분 주기로 돈다(sheet-sync/DEPLOY.md).
+     ⚠ 위 계산은 «한 페이지» 몫이다. 셸은 여덟 페이지를 iframe 으로 띄우고 한 번 만든 것을 버리지 않으므로,
+        안 보이는 iframe 은 startAutoRefresh 가 건너뛴다(v135 · window.frameElement 의 .active). */
   try{ GST.startAutoRefresh(GST.AR_MIN); }catch(e){}
   try{ gstSnStart(); }catch(e){}
 }

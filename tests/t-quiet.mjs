@@ -111,10 +111,65 @@ console.log('\n[1] 로컬 날짜 표기 — KST 에서 하루가 밀리지 않�
 }
 
 /* ══════════════════════════════════════════════════════════════
+   [1b] GST.toDate — 옛 pd() 의 표기 전부를 UTC 자정으로 읽는다 (v135 · report·hr 사본을 지운 근거)
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[1b] GST.toDate 가 옛 pd() 표기를 전부 같은 날짜로 읽는지');
+{
+  const G = loadCore();
+  is(!!(G && typeof G.toDate === 'function'), 'core — GST.toDate 가 있다');
+  /* 옛 report/hr 의 pd() 규칙을 그대로 옮겨 «기준»으로 삼는다 — 검사가 검사 대상을 기준으로 삼으면
+     언제나 초록불이다(t-upload 이 겪은 그 자리). */
+  const oldPd = s => { if(!s) return null; if(s instanceof Date) return isNaN(s)?null:s;
+    s = String(s).trim(); if(!s) return null;
+    const n = Number(s); if(!isNaN(n) && n>20000 && n<80000) return new Date(Date.UTC(1899,11,30)+n*86400000);
+    s = s.replace(/\.\s*/g,'-').replace(/\/-?/g,'-').replace(/-$/,'').replace(/\s/g,'');
+    const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(!m) return null;
+    const d = new Date(Date.UTC(+m[1],+m[2]-1,+m[3])); return isNaN(d)?null:d; };
+  const iso = d => d ? d.toISOString().slice(0,10) : null;
+  const cases = ['2022. 8. 1', '2022.8.1', '2022. 8. 1.', '2022/8/1', '2022-08-01', '2022-8-1', '2022-08-01 10:00:00',
+                 '2026-01-05T00:00:00', '46153', 46153, new Date(Date.UTC(2026,7,14)), '', null, undefined, '미정', '-'];
+  if (G && G.toDate) {
+    cases.forEach(c => {
+      const a = iso(G.toDate(c)), b = iso(oldPd(c));
+      is(a === b, `toDate(${c instanceof Date ? 'Date' : JSON.stringify(c)}) = ${a} (옛 pd ${b})`);
+    });
+    /* 사용자가 겪은 그 자리 — '2022. 8. 1' 을 로컬 자정으로 읽으면 KST 에서 UTC 표기가 07-31 이 된다 */
+    is(iso(G.toDate('2022. 8. 1')) === '2022-08-01', "'2022. 8. 1' → 2022-08-01 (하루 밀리지 않는다)");
+    /* 옛 pd 는 공백을 «지워» '2022-8-110:00' 이 되고 11일로 읽었다 — 그 결함은 따라가지 않는다 */
+    is(iso(G.toDate('2022-8-1 10:00')) === '2022-08-01', "'2022-8-1 10:00' → 2022-08-01 (옛 pd 는 11일로 읽었다)");
+  }
+  ['report','hr'].forEach(p => is(/function pd\(s\)\{ return GST\.toDate\(s\); \}/.test(SRC[p]), p + ' — pd 가 core 위임 한 줄이다 (사본 없음)'));
+  is(/const pd=GST\.toDate;/.test(noCmt(rd('cip/index.html'))), 'cip — pd 가 core 위임이다');
+}
+
+/* ══════════════════════════════════════════════════════════════
    [2] 판정의 두 번째 사본
    ══════════════════════════════════════════════════════════════ */
 console.log('\n[2] 같은 물음에 두 함수가 답하지 않는지');
 {
+  /* v135 — 날짜·고객사·FAB·사이트 판정의 페이지 사본. hr 의 fabOf 는 \bF10\b 라 F10A 를 놓쳤고(core 가
+     4,027건 실측으로 고친 자리를 되돌린 판), siteKey 둘은 PSMC 를 'POWERCHIP' 이라 적어 고객사 축과
+     같은 회사가 다른 이름이었다. 되살아나면 report 와 hr 이 같은 사람을 다른 단지로 본다. */
+  const TCO = noCmt(rd('tco/index.html'));
+  [ ['report', /function siteKey\(sv\)\{ return GST\.ORG\.site\(sv\); \}/, 'siteKey 가 core 위임'],
+    ['report', /function normCust\(name\)\{ return GST\.ORG\.custRaw\(name\); \}/, 'normCust 가 core 위임'],
+    ['hr',     /function siteKey\(sv\)\{ return GST\.ORG\.site\(sv\); \}/, 'siteKey 가 core 위임'],
+    ['hr',     /function custBase\(s\)\{ return GST\.ORG\.customer\(s\) \|\| GST\.ORG\.custRaw\(s\); \}/, 'custBase 가 core 위임'],
+    ['hr',     /function fabOf\(s\)\{ return GST\.ORG\.fab\(s\); \}/, 'fabOf 가 core 위임'],
+  ].forEach(([p, re, m]) => is(re.test(SRC[p]), p + ' — ' + m));
+  is(/function custBase\(s\)\{ return GST\.ORG\.customer\(s\) \|\| GST\.ORG\.custRaw\(s\); \}/.test(TCO), 'tco — custBase 가 core 위임');
+  ['report','hr','tco'].forEach(p => is(!/includes\('POWERCHIP'\)/.test(p==='tco'?TCO:SRC[p]), p + ' — 고객사 판정 사본(POWERCHIP includes)이 없다'));
+  is(!/\\bF\(16N\|16S\|16\|11\|10\)\\b/.test(SRC.hr), 'hr — 단어경계 FAB 정규식(F10A 를 놓치던 판)이 없다');
+  is(/getUTCFullYear\(\)\+'-'\+String\(d\.getUTCMonth\(\)\+1\)/.test(SRC.scrubber), 'scrubber — cutFallbackM 이 UTC 게터로 찍는다 (toDate 는 UTC 자정)');
+  is(/SITE_ORDER=\[[^\]]*'PSMC'/.test(SRC.hr) && !/SITE_ORDER=\[[^\]]*'POWERCHIP'/.test(SRC.hr), 'hr — SITE_ORDER 가 core 어휘(PSMC)를 쓴다');
+  {
+    const G = loadCore();
+    if (G && G.ORG && G.ORG.site) {
+      [['Micron Memory Taiwan Co., Ltd.(F16)', 'MICRON F16'], ['Tong luo', 'MICRON F16N'], ['F10A', 'MICRON F10'],
+       ['F15_E', 'MICRON F15'], ['Powerchip', 'PSMC'], ['PSMC', 'PSMC'], ['WINBOND(GX)', 'WINBOND'], ['P1', 'P1'], ['', '']]
+        .forEach(([i, w]) => is(G.ORG.site(i) === w, `GST.ORG.site(${JSON.stringify(i)}) = ${JSON.stringify(G.ORG.site(i))} (기대 ${JSON.stringify(w)})`));
+    } else bad('core — GST.ORG.site 가 없다');
+  }
   /* v75 에 막대와 표가 각자 급증을 판정해, 같은 문구를 달고 서로 반대 결론을 낸
      조합이 110건 나왔다. 그 뒤로 GST.monthSurges 하나로 모았는데 자재 페이지에
      사본이 그대로 남아 있었다 — 지금은 글자까지 같아 답이 안 갈렸지만

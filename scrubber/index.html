@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=136"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=137"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -202,7 +202,7 @@ tr:hover td{background:rgba(255,255,255,.04)}
 #capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1,#2dd4bf);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
 @media print{.capbtns,.header-right,.date-panel,.slicers,.slicer{display:none!important}.card,.trend-card,.cross-card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=136">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=137">
 </head>
 <body>
 
@@ -1397,8 +1397,10 @@ function applyCut(v){
 }
 // 마감이 없을 때 "그 달"의 기준 — 데이터 최신일이 속한 달
 function cutFallbackM(){
-  const d=RAW.reduce((a,r)=>{const v=toDate(r[CI.turnOn]); return v&&(!a||v>a)?v:a;},null)||new Date();
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  const d=RAW.reduce((a,r)=>{const v=toDate(r[CI.turnOn]); return v&&(!a||v>a)?v:a;},null);
+  /* toDate 는 UTC 자정이다 — 로컬 게터로 찍으면 KST 에서 월초 자정에 한 달이 밀린다(v135 · 두 시계).
+     자료가 없을 때의 «오늘»만 사람의 시계(GST.ymdL)로 찍는다. */
+  return d ? d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0') : GST.ymdL().slice(0,7);
 }
 function applySpan(on){ applyCut(!on && !CUT_M ? cutFallbackM() : CUT_M); }
 GST.pageBar({

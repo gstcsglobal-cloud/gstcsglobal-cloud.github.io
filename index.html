@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=136"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=137"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write)·admin 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB */
@@ -135,6 +135,7 @@ select.gb-inp{width:104px}
   border:none;background:transparent;border-bottom:3px solid transparent;transition:color .2s,border-color .25s cubic-bezier(.4,0,.2,1);white-space:nowrap;position:relative;top:2px}
 .tab:hover{color:var(--txt)}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab.err::after{content:' ⚠';font-size:11px}   /* 그 화면에서 잡히지 않은 예외가 났다(v135) */
 .tab .ic{margin-right:7px;display:inline-flex;vertical-align:-2px}
 
 /* iframe 영역 */
@@ -649,6 +650,13 @@ window.addEventListener('message',e=>{
     if(id===activeTab) renderGBar();
     return;
   }
+  // 페이지 안에서 잡히지 않은 예외 — iframe 안이라 셸 콘솔에도 안 뜬다. 그 탭에 표식만 남긴다(v135)
+  if(d.type==='gst-error'){
+    const id=frameIdOf(e.source); if(!id)return;
+    const b=document.querySelector('.tab[data-id="'+id+'"]');
+    if(b){ b.classList.add('err'); b.title='이 화면에서 오류가 났습니다: '+String(d.msg||'').slice(0,160); }
+    return;
+  }
   // 차트 디자인은 전 페이지 공통 — 이미 열려 있는 다른 탭에도 전파
   if(d.type==='gst-style' && d.style){
     Object.values(frames).forEach(f=>{ try{f.contentWindow.postMessage({type:'gst-style',style:d.style},'*');}catch(err){} });
@@ -833,13 +841,14 @@ function switchTab(id){
     const f=document.createElement('iframe');
     f.src=BASE+tab.path+((PENDING_STATE&&PENDING_STATE.tab===id&&PENDING_STATE.f)?('?f='+PENDING_STATE.f):'');
     f.dataset.id=id;
-    f.addEventListener('load',()=>{try{f.contentWindow.postMessage({type:'gst-theme',theme:THEME},'*');f.contentWindow.postMessage({type:'gst-lang',lang:LANG},'*');}catch(e){}});
+    f.addEventListener('load',()=>{try{f.contentWindow.postMessage({type:'gst-theme',theme:THEME},'*');f.contentWindow.postMessage({type:'gst-lang',lang:LANG},'*');}catch(e){ console.warn('[shell] iframe 초기 전파 실패', id, e); }});
     document.getElementById('frameWrap').appendChild(f);
     frames[id]=f;
   }
   // 표시 전환
   Object.values(frames).forEach(f=>f.classList.remove('active'));
   frames[id].classList.add('active');
+  try{ frames[id].contentWindow.postMessage({type:'gst-shown'},'*'); }catch(e){}   // 건너뛴 자동 새로고침을 이제 하라는 신호 — 안 보이는 iframe 은 30분 갱신을 쉰다(v135)
   document.getElementById('frameLoading').style.display='none';
   renderGBar();
   // 현재 탭 기억

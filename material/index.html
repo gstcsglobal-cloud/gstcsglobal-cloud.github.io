@@ -8,7 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=136"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=137"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -239,7 +239,7 @@ canvas{cursor:pointer}
 .wleg i.pa{background:var(--accent-2)}
 .wleg b{color:var(--txt-main);font-variant-numeric:tabular-nums}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=136">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=137">
 </head>
 <body>
 
@@ -1002,6 +1002,8 @@ const _st=GST.readState();
   }catch(e){
     status.textContent='❌ '+e.message;
     console.error('[ERROR]', e);
+  }finally{
+    GST.skeleton(false);   // 실패해도 «영원히 로딩 중»으로 남지 않게 — 다른 일곱 페이지는 catch 에서 껐다(v135)
   }
 }
 
@@ -1540,7 +1542,7 @@ function render(){ GST.skeleton(false); GST.pushState(F);
         ins.push({sev:sp>=10?'warn':'info',text:t('ins_short').replace('{n}','<b>'+shortLife.toLocaleString()+'</b>').replace('{p}',sp)});
       }
       const nBad=f.filter(x=>x.qtyBad).length;
-      if(nBad>0)ins.push({sev:'warn',text:t('ins_qty').replace('{n}','<b>'+nBad+'</b>')});
+      if(nBad>0)ins.unshift({sev:'warn',text:t('ins_qty').replace('{n}','<b>'+nBad+'</b>')});   // 인사이트 4칸 상한에 밀려 사라지지 않게 맨 앞에(tco·scrubber 와 같은 규율 · v135)
     }
     GST.insights(f.length?ins:[]);
   }

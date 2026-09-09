@@ -151,11 +151,20 @@ console.log('\n[4] 읽기 — 표에 id 가 없어도 읽는지');
   const mkClient = rowsByTable => ({
     from(t) {
       const rows = rowsByTable[t] || [];
-      const st = { ord: null };
+      const st = { ord: null, gt: null };
       const api = {
         select() { return api; },
         order(col) { st.ord = col; return api; },
-        limit(k) { return Promise.resolve({ data: rows.slice(0, k), error: null }); },
+        gt(col, v) { st.gt = { col, v }; return api; },
+        limit(k) {
+          /* keyset(v135) — 정렬·gt 를 존중한다. 옛 모의는 앞 k 행만 돌려줘 keyset 에서는 같은 장이 영원히 온다 */
+          if (st.ord && !(rows[0] && st.ord in rows[0]))
+            return Promise.resolve({ data: null, error: { message: `column ${t}.${st.ord} does not exist` } });
+          let s = rows;
+          if (st.gt) s = s.filter(o => o[st.gt.col] > st.gt.v);
+          if (st.ord) s = s.slice().sort((x, y) => (x[st.ord] > y[st.ord]) - (x[st.ord] < y[st.ord]));
+          return Promise.resolve({ data: s.slice(0, k), error: null });
+        },
         range(a, b) {
           // PostgREST 는 order= 에서 점(.)을 «컬럼.방향» 구분자로 파싱한다 —
           // 이름에 점이 든 열을 넘기면 실제로 이렇게 죽는다(인원현황 «No.» 실사고).
@@ -343,11 +352,15 @@ console.log('\n[6] csvTableRows — 시계 어긋남(JWT)은 한 번 다시 해 
   G.db = async () => ({
     auth: { refreshSession: async () => { refreshed++; } },
     from() {
+      const st = { ord: null, gt: null };
       const api = {
         select() { return api; },
-        order() { return api; },
+        order(c) { st.ord = c; return api; },
+        gt(c, v) { st.gt = v; return api; },
         limit() {
-          tries++;
+          if (st.ord || st.gt != null)               // keyset 장(v135) — 첫 장은 한 행, 그다음은 끝
+            return Promise.resolve({ data: st.gt != null ? [] : [{ id: 1, '알람': 'x' }], error: null });
+          tries++;                                    // 탐침(probe)만 센다 — «재시도는 한 번뿐»의 대상
           if (tries === 1) return Promise.resolve({ data: null, error: { message: 'JWT issued at future' } });
           return Promise.resolve({ data: [{ id: 1, '알람': 'x' }], error: null });
         },
@@ -376,6 +389,89 @@ console.log('\n[6] csvTableRows — 시계 어긋남(JWT)은 한 번 다시 해 
   catch (e) {
     t2 === 1 ? ok('자료 문제는 재시도 없이 곧바로 던진다')
              : err(`자료 문제인데 ${t2}회 시도했다`);
+  }
+  G.db = realDb;
+}
+
+/* ---------- 7. csvTableRows — OFFSET 이 아니라 keyset 이다 (v135) ----------
+   dbRows 는 v128 에 OFFSET 을 버렸는데(뒤쪽 장일수록 서버가 앞 N 행을 읽고 버리는 O(N²) → statement timeout)
+   이 경로만 range(5,000) 으로 남아 있었다. 국내 원장이 커지는 순간 같은 모양으로 죽고, 그때의 폴백은
+   «수선실적 BM 으로 조용히 갈아타기»라 숫자로는 안 보인다. 모의 서버로 셋을 본다:
+     · 서버 상한이 폭보다 작아 장이 짧게 와도 «0행일 때만» 멈춘다(짧은 장=끝 판정 금지)
+     · id 가 희소해도(1·500·90000) 빈 구간을 훑지 않는다
+     · range(OFFSET) 를 한 번도 부르지 않는다 */
+console.log('\n[7] csvTableRows — keyset 페이지네이션');
+{
+  const realDb = G.db, realMax = G.DB_PAGE_MAX;
+  const mk = (rows, cap) => {
+    const calls = { limit: 0, range: 0, gt: 0, count: 0 };
+    const client = { from(t) {
+      const st = { ord: null, gt: null, sel: null };
+      const api = {
+        select(sel, opt) { st.sel = sel; if (opt && opt.count) calls.count++; return api; },
+        order(c) { st.ord = c; return api; },
+        gt(c, v) { st.gt = { c, v }; calls.gt++; return api; },
+        limit(k) {
+          calls.limit++;
+          let s = rows;
+          if (st.gt) s = s.filter(o => o[st.gt.c] > st.gt.v);
+          if (st.ord) s = s.slice().sort((x, y) => x[st.ord] - y[st.ord]);
+          const out = s.slice(0, Math.min(k, cap));           // 서버 상한(max-rows)이 폭을 자른다
+          return Promise.resolve({ data: out, error: null, count: (st.sel && /\*/.test(st.sel) && !st.ord) ? rows.length : undefined });
+        },
+        range(a, b) { calls.range++; return Promise.resolve({ data: rows.slice(a, b + 1), error: null }); },
+      };
+      return api;
+    } };
+    return { client, calls };
+  };
+  const rows = [1, 500, 90000, 90001, 123456, 200000, 200001].map(id => ({ id, '알람': 'r' + id }));
+  // (a) 상한 3 < 폭 1000 — 장이 3행씩 와도 7행을 다 받는다
+  {
+    const { client, calls } = mk(rows, 3);
+    G.db = async () => client;
+    try {
+      const out = await G.csvTableRows('t');
+      out.length - 1 === 7 ? ok(`상한 3행/장에서도 7행 전부 (limit ${calls.limit}회 · range ${calls.range}회)`)
+                           : err(`상한 3행/장에서 ${out.length - 1}행만 받았다 — «짧은 장=끝» 판정이 되살아났다`);
+      calls.range === 0 ? ok('range(OFFSET) 를 한 번도 안 부른다') : err(`range 를 ${calls.range}회 불렀다 — OFFSET 경로가 남아 있다`);
+      calls.gt >= 2 ? ok(`«마지막 값 다음»(gt) 으로 이어 받는다 (gt ${calls.gt}회)`) : err('gt 를 안 쓴다 — keyset 이 아니다');
+      /* 헤더에 관리용 열(id)이 섞이면 파서가 시트 열로 착각한다 */
+      out[0].indexOf('id') < 0 ? ok('헤더에서 id 가 빠진다') : err('헤더에 id 가 섞였다');
+    } catch (e) { err(`keyset 읽기 실패 — ${e.message}`); }
+  }
+  // (b) 희소한 id — 빈 구간을 훑지 않는다 (값 범위 분할이면 200001/1000 = 200장이다)
+  {
+    const { client, calls } = mk(rows, 1000);
+    G.db = async () => client;
+    try {
+      const out = await G.csvTableRows('t');
+      const pages = calls.limit - 1;                       // 탐침 1 을 뺀 장 수
+      out.length - 1 === 7 && pages <= 2 ? ok(`희소한 id 7행을 ${pages}장으로 받는다 (빈 구간을 훑지 않는다)`)
+                                          : err(`희소한 id 에서 ${out.length - 1}행 · ${pages}장 — 빈 구간을 훑거나 모자란다`);
+    } catch (e) { err(`희소 id 읽기 실패 — ${e.message}`); }
+  }
+  // (c) count 와 받은 행수가 다르면 멈춘다 — 받는 도중 표가 바뀐 것을 조용히 그리지 않는다
+  {
+    const { client } = mk(rows, 1000);
+    const orig = client.from;
+    let firstPage = true;
+    client.from = t => { const api = orig.call(client, t); const lim = api.limit;
+      api.limit = k => lim(k).then(r => { if (r.count != null) r.count = 9; return r; }); return api; };
+    G.db = async () => client;
+    try { await G.csvTableRows('t'); err('count(9) ≠ 받은 행(7) 인데 에러를 안 던졌다'); }
+    catch (e) { /CSV_SHORT/.test(e.message) ? ok(`행수가 안 맞으면 멈춘다 — ${e.message}`) : err(`예상과 다른 에러 — ${e.message}`); }
+  }
+  // (d) 음성 대조 — 폭을 2 로 조이면 장이 늘 뿐 결과는 같다 (t-window [7] 과 같은 규율)
+  {
+    G.DB_PAGE_MAX = 2;
+    const { client, calls } = mk(rows, 1000);
+    G.db = async () => client;
+    try {
+      const out = await G.csvTableRows('t');
+      out.length - 1 === 7 && calls.limit - 1 >= 4 ? ok(`폭 2 에서도 7행 전부 (${calls.limit - 1}장)`) : err(`폭 2 에서 ${out.length - 1}행 · ${calls.limit - 1}장`);
+    } catch (e) { err(`폭 2 읽기 실패 — ${e.message}`); }
+    G.DB_PAGE_MAX = realMax;
   }
   G.db = realDb;
 }

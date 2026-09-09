@@ -46,6 +46,18 @@ console.log('[1] 자체 호스팅 — 사내망이 CDN 을 막아도 도는 길�
   is(!/jszip@3\.10\.1\/dist\/jszip\.min\.js';s\.onload=res/.test(R),
      'report 의 «시간 제한 없던» JSZip 로더가 사라졌다');
   is(/GST\.zipLoad\(\)/.test(R), 'report 가 공용 GST.zipLoad 를 쓴다 (로더가 한 벌이다)');
+  /* v135 — supabase-js 도 같은 규율. 인증과 모든 읽기의 «현관문»인데 CDN `@2` 로 열려 있어 버전이
+     어느 날 바뀌는 유일한 의존성이었고, 로더에 시간 제한이 없어 사내망이 묵살하면 검은 화면이 영영 남았다. */
+  is(fs.existsSync(ROOT + '/assets/vendor/supabase.min.js'), 'assets/vendor/supabase.min.js 가 저장소에 있다');
+  const sv = (fs.readFileSync(ROOT + '/assets/vendor/supabase.min.js', 'utf8').match(/supabase-js\/([\d.]+)/) || [])[1];
+  const sc = (C.match(/@supabase\/supabase-js@([\d.]+)\//) || [])[1];
+  const sk = (C.match(/GST\.SB_VER\s*=\s*'([\d.]+)'/) || [])[1];
+  is(sv && sv === sc && sv === sk, `supabase-js 자체 사본(${sv}) · CDN 폴백(${sc}) · GST.SB_VER(${sk}) 이 같다`);
+  is(/GST\._loadScript\(\[GST\.SB_VENDOR, GST\.SB_CDN\], function\(\)\{ return !!global\.supabase; \}, 15000\)/.test(C),
+     'GST.sb 가 공용 로더(자체 사본 먼저 · 15초)로 supabase-js 를 받는다');
+  is(!/supabase-js@2\/dist/.test(C), "core 에 열린 버전(@2)의 CDN 주소가 없다");
+  is(/catch\(e\)\{ return GST\._sbFail; \}/.test(C) && (C.match(/return GST\._sbFail;/g)||[]).length >= 3,
+     '로그인 세 함수가 로더 실패를 받아 문구로 돌려준다 (버튼이 「전송 중…」에 굳지 않는다)');
 }
 
 console.log('\n[2] 죽어 있던 네이티브 차트 코드가 살아났는가');
