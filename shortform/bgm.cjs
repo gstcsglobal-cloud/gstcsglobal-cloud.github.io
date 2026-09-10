@@ -13,14 +13,15 @@ const MODE = (process.argv[2] === 'short') ? 'short' : 'full';
 const P = TL.build(MODE);
 const OUT = MODE === 'short' ? 'bgm-short.wav' : 'bgm.wav';
 
-function Mc(tb) {                     // 빠진 장면이면 그 앞 장면 끝으로 접는다
-  let a0 = 0, a = 0;
+function Mc(tCue) {                   // 빠진 장면이면 표시 순서상 그 자리로 접는다(여러 장면에 걸친 패드용)
+  const r = TL.toOut(tCue, P);
+  if (r !== null) return r;
+  let a = 0;
   for (const s of TL.SCENES) {
-    const d = MODE === 'short' ? s.short : s.full;
-    if (tb < a0 + s.base) return d > 0 ? a + (tb - a0) * (d / s.base) : a;
-    a0 += s.base; if (d > 0) a += d;
+    if (tCue >= s.cue0 && tCue < s.cue0 + s.base) return a;
+    const d = MODE === 'short' ? s.short : s.full; if (d > 0) a += d;
   }
-  return a;
+  return P.DUR;
 }
 const M = tb => TL.toOut(tb, P);      // null = 그 장면이 빠졌다
 
@@ -45,6 +46,12 @@ const M = tb => TL.toOut(tb, P);      // null = 그 장면이 빠졌다
   at(15.5, 'thud'); at(15.6, 'bwomp');                                                  // 칠러
   for (let t = 17.8; t < 18.85; t += 0.167) at(t, 'beep');
   at(18.95, 'thud'); at(19.05, 'bwomp');                                                // 라인 정지
+  // ── 우리 기계의 이름(큐 축 62.2~65.2) — 표시 위치는 반전 바로 뒤다
+  span(62.3, 65.1, 'pad', { notes: [55, 59, 62, 67], g: 0.17, lp: 820, a: 0.8, r: 0.9 });
+  span(62.6, 65.0, 'strings', { notes: [74, 79], g: 0.05 });
+  [79, 83, 86, 91].forEach((n, i) => at(62.9 + i * 0.22, 'bell', { n, g: 0.15, d: 1.2 }));
+  at(64.1, 'bell', { n: 72, g: 0.13, d: 1.5 }); at(64.18, 'bell', { n: 76, g: 0.10, d: 1.3 });
+
   // ── 20~26.8 스크러버·칠러 등장
   span(20.2, 27.3, 'pad', { notes: [57, 60, 64, 69], g: 0.16, lp: 650, a: 1.5, r: 0.6 });
   span(20.4, 24.6, 'hum', { f: 60, g: 0.05 });
