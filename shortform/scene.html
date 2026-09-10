@@ -38,6 +38,11 @@ section{position:absolute;inset:0;display:none;opacity:0}
 .slot img{width:100%;height:100%;object-fit:contain;display:block}
 .mkl{position:relative;height:58px}
 .mkl img{width:auto;height:100%;max-width:100%;margin:0 auto}
+/* 사진 슬롯 — photos/ 에 파일이 있으면 사진, 없으면 바로 뒤의 일러스트가 선다 */
+.photo{border-radius:20px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.16)}
+.photo img{object-fit:cover}
+.photo.noimg{display:none!important}
+#fd-photo:not(.noimg) ~ #fd-svg,#rv-photo:not(.noimg) ~ #rv-svg,#fu-photo:not(.noimg) ~ #fu-svg{display:none}
 .slot .fb{display:none}
 .slot.noimg img{display:none}
 .slot.noimg .fb{display:block}
@@ -151,6 +156,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <div class="txt abs" id="rv1" style="left:130px;top:300px;font-size:58px">이 모든 «아무 일»의 뒤에는</div>
   <div class="txt abs" id="rv2" style="left:130px;top:390px;font-size:76px"><b>스크러버</b>와 <b>칠러</b>가<br>있었습니다.</div>
   <div class="sub abs" id="rv3" style="left:130px;top:600px;font-size:42px;color:#8fb3ff">365일 24시간 × 25년 = 약 <b style="color:#ffd36b">219,000시간</b>.</div>
+  <div class="slot photo abs" id="rv-photo" style="left:1010px;top:210px;width:860px;height:620px"><img src="photos/scrubber.jpg" alt="" onerror="this.closest('.slot').classList.add('noimg')"></div>
   <svg class="abs" id="rv-svg" style="left:1000px;top:150px" width="900" height="800" viewBox="0 0 900 800">
     <defs><radialGradient id="glow"><stop offset="0" stop-color="#ffd36b" stop-opacity=".5"/><stop offset="1" stop-color="#ffd36b" stop-opacity="0"/></radialGradient>
     <radialGradient id="cglow"><stop offset="0" stop-color="#7fd0ff" stop-opacity=".42"/><stop offset="1" stop-color="#7fd0ff" stop-opacity="0"/></radialGradient>
@@ -194,6 +200,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <div class="date abs" id="fd-date" style="left:140px;top:170px">2001. 10. 01</div>
   <div class="txt abs" id="fd-t1" style="left:140px;top:380px">퇴직금 <b class="num" id="fd-won">₩0</b>으로 시작했습니다.</div>
   <div class="txt abs" id="fd-t2" style="left:140px;top:500px;font-size:54px;color:rgba(255,255,255,.9)">일본이 독점하던 스크러버를, <b>우리 손으로.</b></div>
+  <div class="slot photo abs" id="fd-photo" style="left:1230px;top:450px;width:600px;height:420px"><img src="photos/founding.jpg" alt="" onerror="this.closest('.slot').classList.add('noimg')"></div>
   <svg class="abs" id="fd-svg" style="left:1380px;top:560px" width="420" height="330" viewBox="0 0 420 330">
     <rect x="30" y="150" width="360" height="150" rx="10" fill="#1a2447" stroke="#33427a" stroke-width="4"/>
     <path d="M30 150 L110 90 L110 150 L190 90 L190 150 L270 90 L270 150 Z" fill="#22305e" stroke="#33427a" stroke-width="4"/>
@@ -250,6 +257,29 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <div class="en">To those who set the course — and to everyone who walked it.</div>
 </section>
 
+<!-- S12b FUTURE (큐 기준 43.8–47.0) -->
+<section id="s-future">
+  <div class="kicker" id="fu-k" style="color:#7fd0ff">그리고</div>
+  <div class="txt abs" id="fu-t" style="left:140px;top:250px;font-size:62px">다음 25년은,<br><b>이미 시작됐습니다.</b></div>
+  <div class="sub abs" id="fu-s" style="left:140px;top:470px;font-size:40px;color:#7fd0ff">이번엔 AI 데이터센터의 열을 — <b style="color:#fff">액침냉각</b></div>
+  <div class="abs" id="fu-n" style="left:140px;top:552px;font-weight:700;font-size:31px;color:rgba(255,255,255,.55)">2025년 첫 상업 납품 · 2026년 실증 운영</div>
+  <div class="slot photo abs" id="fu-photo" style="left:1060px;top:230px;width:780px;height:560px">
+    <img src="photos/immersion.jpg" alt="" onerror="this.closest('.slot').classList.add('noimg')"></div>
+  <svg class="abs" id="fu-svg" style="left:1060px;top:230px" width="780" height="560" viewBox="0 0 780 560">
+    <defs><linearGradient id="liq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f8fd8" stop-opacity=".30"/><stop offset="1" stop-color="#1b3f78" stop-opacity=".45"/></linearGradient>
+      <radialGradient id="fglow"><stop offset="0" stop-color="#7fd0ff" stop-opacity=".45"/><stop offset="1" stop-color="#7fd0ff" stop-opacity="0"/></radialGradient></defs>
+    <circle id="fu-glow" cx="390" cy="300" r="300" fill="url(#fglow)"/>
+    <rect x="40" y="100" width="700" height="400" rx="22" fill="url(#liq)" stroke="#4d86c8" stroke-width="5"/>
+    <path id="fu-surf" d="M45 140 h690" stroke="#8fd6ff" stroke-width="3" opacity=".75" fill="none"/>
+    <!-- 서버 랙이 액체에 잠겨 있다 -->
+    <rect x="140" y="180" width="500" height="280" rx="12" fill="#0c1630" stroke="#4d86c8" stroke-width="4"/>
+    <g id="fu-units"></g>
+    <text x="390" y="530" text-anchor="middle" font-size="27" font-weight="900" fill="#7fd0ff" font-family="NotoKR" letter-spacing="3">IMMERSION COOLING</text>
+    <g id="fu-bub"></g>
+  </svg>
+  <div class="en">And the next 25 years have already begun — immersion cooling for AI data centers.</div>
+</section>
+
 <!-- S13 CLOSE 49.0–53.6 -->
 <section id="s-close">
   <svg class="abs" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080">
@@ -302,15 +332,14 @@ section{position:absolute;inset:0;display:none;opacity:0}
 <div id="vig" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 78% at 50% 48%,rgba(0,0,0,0) 52%,rgba(0,0,0,.45) 100%)"></div>
 <div id="fade" style="position:absolute;inset:0;pointer-events:none;background:#000"></div>
 </div>
+<script src="timeline.js"></script>
 <script src="mapdots.js"></script>
 <script>
-// ── 타임라인(초). 모든 움직임은 t 의 순수함수다 — seek(t) 를 몇 번 불러도 같은 그림.
-//    ⚠ 여기를 고치면 bgm.cjs 의 큐 시각도 같이 고쳐야 소리와 그림이 안 갈린다.
-const T = {
-  hook:[0,4.0], nothing:[4.0,6.4], silane:[6.4,9.8], sf6:[9.8,13.2], chill:[13.2,16.6], stop:[16.6,20.0],
-  reveal:[20.0,24.8], pivot:[24.8,26.8], found:[26.8,30.8], kosdaq:[30.8,34.4], map:[34.4,39.6],
-  stairs:[39.6,43.8], lead:[43.8,49.0], close:[49.0,53.6], end:[53.6,59.0] };
-const DUR = 59.0;
+// ── 타임라인은 timeline.js 한 곳에서 온다 — 그림과 소리가 갈리지 않게.
+//    주소에 ?mode=short 를 붙이면 45초 짧은 버전이 된다(장면 셋을 빼고 나머지를 조금씩 줄인다).
+const MODE = (new URLSearchParams(location.search).get('mode') === 'short') ? 'short' : 'full';
+const P = TL.build(MODE);
+const T = P.T, DUR = P.DUR, KEYS = TL.SCENES.map(s => s.k);
 const $ = id => document.getElementById(id);
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 const p = (t,a,b) => clamp((t-a)/(b-a),0,1);
@@ -367,6 +396,15 @@ const LEADERS = [
     const g = svgEl('g',{class:'pin'},pg); svgEl('circle',{class:'ring',cx:px,cy:py,r:8,fill:'none',stroke:'#ffd36b','stroke-width':3},g); svgEl('circle',{class:'dot',cx:px,cy:py,r: i===0?11:8,fill: i===0?'#fff':'#ffd36b',stroke:'#0b1020','stroke-width':3},g);
     const d = document.createElement('div'); d.className = 'co-line'; d.innerHTML = `<span class="y">${y}</span>${name}`; co.appendChild(d); });
 
+  // 액침냉각 탱크 — 서버 유닛과 기포
+  const fu = $('fu-units'); const rf = rng(41);
+  for (let i = 0; i < 5; i++){ const y = 196 + i*54; const g = svgEl('g',{},fu);
+    svgEl('rect',{x:160,y,width:460,height:42,rx:7,fill:'#16224a',stroke:'#2f4a86','stroke-width':2},g);
+    for (let d = 0; d < 7; d++) svgEl('circle',{class:'led',cx:190+d*62,cy:y+21,r:5,fill:'#5cff8a'},g);
+    svgEl('rect',{x:566,y:y+10,width:44,height:22,rx:4,fill:'#0d1730',stroke:'#2f4a86','stroke-width':2},g); }
+  const fb2 = $('fu-bub');
+  for (let i = 0; i < 22; i++){ const c = svgEl('circle',{class:'bu',r:3+rf()*6,fill:'#bfe6ff',opacity:.7},fb2); c.dataset.x = 160+rf()*470; c.dataset.ph = rf()*3; c.dataset.sp = .6+rf()*.7; }
+
   // 경영진 초상 — 이미지가 없으면 «닮은꼴을 지어내지 않는» 실루엣이 선다
   const HAIR = { a:'M-52 -6 q4 -60 52 -60 q48 0 52 60 q-16 -26 -52 -26 q-36 0 -52 26 Z',
                  b:'M-54 -4 q2 -62 54 -62 q52 0 54 62 q-18 -34 -30 -22 q-16 12 -48 6 q-22 -4 -30 16 Z',
@@ -396,31 +434,25 @@ const LEADERS = [
     const ti = document.createElement('div'); ti.className = 'pt'; ti.id = 'pt'+i; ti.style.left = (cx-140)+'px'; ti.style.top = '614px'; ti.textContent = L.title; wrap.appendChild(ti); });
 })();
 
-const SEC = Object.fromEntries(Object.keys(T).map(k => [k, $('s-'+k)]));
+const SEC = Object.fromEntries(KEYS.map(k => [k, $('s-'+k)]));
 function sceneOp(t, k){ const [a,b] = T[k]; const f = 0.22; if (t < a || t >= b) return -1; return Math.min(p(t,a,a+f), 1-p(t,b-f,b)); }
 
-window.seek = function(t){
-  t = clamp(t, 0, DUR);
-  // 시작 0.35초 페이드인 · 끝 0.35초 페이드아웃
-  $('fade').style.opacity = Math.max(1 - p(t, 0, 0.35), p(t, DUR - 0.35, DUR));
-  for (const k in T){ const o = sceneOp(t,k); const el = SEC[k]; if (o < 0){ el.style.display='none'; continue; } el.style.display='block'; el.style.opacity = o; }
-
-  // ── S0 HOOK
-  if (SEC.hook.style.display !== 'none'){
+// ── 장면별 그림. 인자 t 는 «큐 기준» 시각이다(timeline.js 의 base 축).
+//    장면 길이를 바꿔도 아래 숫자는 손대지 않는다 — toFull 이 맞춰 준다.
+const SCN = {};
+SCN.hook = function(t){
     pop($('h1'), t, 0.4);
     const done = typeTo($('h2t'), 'GST에는 아무 일도 안 일어났습니다.', t, 1.3, 12);
     $('h2c').style.opacity = (t < 1.3 || (done && Math.floor(t*2.5)%2)) ? 0 : 1;
     pop($('h-en'), t, 3.0, 0.4, 10);
-  }
-  // ── S1 NOTHING
-  if (SEC.nothing.style.display !== 'none'){
+};
+SCN.nothing = function(t){
     pop($('n1'), t, 4.15, 0.4);
     const x = p(t, 4.2, 6.5); const tb = $('tumble'); tb.style.left = lerp(-220, 2000, x) + 'px'; tb.style.top = (770 - 40*Math.abs(Math.sin((t-4.2)*5))) + 'px'; tb.style.transform = `rotate(${(t-4.2)*420}deg)`;
     typeTo($('cricket-t'), '귀뚤… 귀뚤…', t, 4.7, 9);
     op($('cactus'), p(t,4.3,4.7));
-  }
-  // ── S2 SILANE
-  if (SEC.silane.style.display !== 'none'){
+};
+SCN.silane = function(t){
     pop($('si-t'), t, 6.6, 0.4);
     const fire = $('si-fire'), blob = $('si-blob'), sk = $('si-skull');
     let bx, by, bs = 1, bo = 1;
@@ -431,9 +463,8 @@ window.seek = function(t){
     fire.style.transform = `scale(${fs})`; op(fire, fs > 0 ? 1 : 0);
     $('si-led').setAttribute('fill', Math.floor(t*4)%2 ? '#5cff8a' : '#2f8a4a');
     stamp($('si-stamp'), t, 9.15, -6); op($('si-en2'), t >= 9.2 ? 1 : 0);
-  }
-  // ── S3 SF6
-  if (SEC.sf6.style.display !== 'none'){
+};
+SCN.sf6 = function(t){
     const yr = $('sf-year'), earth = $('sf-earth');
     let y = 2026, heat = 0;
     if (t >= 10.4 && t < 12.15){ const x = ei(p(t,10.4,12.1)); y = Math.round(lerp(2026, 5226, x)); heat = x; }
@@ -443,9 +474,8 @@ window.seek = function(t){
     earth.style.filter = `hue-rotate(${-heat*90}deg) saturate(${1+heat*1.5})`; earth.style.transform = `scale(${1 + 0.04*Math.sin(t*6)})`;
     $('sf-lbl').textContent = t < 10.4 ? '지금' : (t < 12.15 ? `+${fmt(y-2026)}년` : '다시, 지금');
     stamp($('sf-stamp'), t, 12.5, 4.5); op($('sf-en2'), t >= 12.55 ? 1 : 0);
-  }
-  // ── S4 CHILLER — 바늘이 흔들리다 목표대(±0.1℃)에 «딱» 잡힌다
-  if (SEC.chill.style.display !== 'none'){
+};
+SCN.chill = function(t){
     const nd = $('ch-needle'), tp = $('ch-temp');
     let x0, temp, locked = t >= 15.05;
     if (!locked){ const a = p(t,13.5,15.05); const amp = lerp(430, 40, eo(a));               // 진폭이 점점 줄며 중앙으로
@@ -459,9 +489,8 @@ window.seek = function(t){
     $('ch-led').setAttribute('opacity', 0.55 + 0.45*Math.sin(t*7));
     $('ch-loop').setAttribute('stroke-dashoffset', -(t*90) % 28);
     stamp($('ch-stamp'), t, 15.5, -7); op($('ch-en2'), t >= 15.55 ? 1 : 0);
-  }
-  // ── S5 STOP
-  if (SEC.stop.style.display !== 'none'){
+};
+SCN.stop = function(t){
     const stopping = t >= 17.8 && t < 18.85;
     const speed = 300;
     document.querySelectorAll('#wafers .wf').forEach((w,i) => { const x = 120 + ((i*130 + t*speed) % 1820) - 60; w.setAttribute('transform', `translate(${x},200)`); });
@@ -472,9 +501,8 @@ window.seek = function(t){
     else { lamp.setAttribute('fill','#5cff8a'); lt.textContent = 'RUN'; op(warn,0); }
     op($('st-247'), p(t,19.0,19.35));
     stamp($('st-stamp'), t, 18.95, 3.5); op($('st-en2'), t >= 19.0 ? 1 : 0);
-  }
-  // ── S6 REVEAL
-  if (SEC.reveal.style.display !== 'none'){
+};
+SCN.reveal = function(t){
     pop($('rv1'), t, 20.35); pop($('rv2'), t, 21.3); pop($('rv3'), t, 22.7);
     $('rv-glow').setAttribute('opacity', 0.6 + 0.4*Math.sin(t*2.2));
     $('rv-cglow').setAttribute('opacity', 0.55 + 0.45*Math.sin(t*2.2 + 2));
@@ -484,25 +512,22 @@ window.seek = function(t){
     $('rv-cloop').setAttribute('stroke-dashoffset', -(t*70) % 32);
     document.querySelectorAll('#rv-gas .gs').forEach((g,i) => { const cyc = 2.2, ph = ((t - 20.4 + i*0.31) % cyc + cyc) % cyc; const x = ph / cyc; const px = lerp(0, 200, x), py = 500 + 16*Math.sin(x*12+i); const s = x > 0.85 ? (1-x)/0.15 : 1; g.setAttribute('transform', `translate(${px},${py}) scale(${s})`); g.setAttribute('opacity', t < 20.4 ? 0 : 1); });
     document.querySelectorAll('#rv-bubbles .bb').forEach((b,i) => { const cyc = 2.8, ph = ((t - 20.9 + i*0.28) % cyc + cyc) % cyc; const x = ph/cyc; b.setAttribute('cx', 320 + 20*Math.sin(x*9+i)); b.setAttribute('cy', lerp(80, -110, x)); b.setAttribute('opacity', t < 20.9 ? 0 : (x < 0.1 ? x*8 : 0.8*(1-x))); });
-  }
-  // ── S7 PIVOT
-  if (SEC.pivot.style.display !== 'none'){ pop($('pv1'), t, 25.05, 0.5); }
-  // ── S8 FOUNDING
-  if (SEC.found.style.display !== 'none'){
+};
+SCN.pivot = function(t){ pop($('pv1'), t, 25.05, 0.5);
+};
+SCN.found = function(t){
     pop($('fd-date'), t, 27.0, 0.45, 40); pop($('fd-t1'), t, 27.6, 0.45);
     const won = Math.round(lerp(0, 5000000, eo(p(t, 27.8, 29.2)))); $('fd-won').textContent = '₩' + fmt(won);
     pop($('fd-t2'), t, 29.3, 0.45); pop($('fd-svg'), t, 28.2, 0.55, 40);
     const sp = $('fd-spark'); const sx = p(t,29.45,29.85); sp.style.transform = `scale(${sx>0?eb(sx):0}) rotate(${t*60}deg)`; op(sp, sx>0?1:0);
-  }
-  // ── S9 KOSDAQ
-  if (SEC.kosdaq.style.display !== 'none'){
+};
+SCN.kosdaq = function(t){
     const num = Math.round(lerp(5800, 7800, eo(p(t, 31.7, 32.8)))); $('kq-num').textContent = fmt(num);
     popIn($('kq-up'), t, 32.85);
     pop($('kq-card'), t, 31.2, 0.45, 30);
     const ln = $('kq-line'); const L = 520; ln.setAttribute('stroke-dasharray', L); ln.setAttribute('stroke-dashoffset', L*(1-eo(p(t,31.4,33.1)))); op($('kq-dot'), p(t,33.0,33.3) > 0 ? 1 : 0); $('kq-dot').setAttribute('r', 12 + 6*Math.abs(Math.sin(t*5)));
-  }
-  // ── S10 MAP
-  if (SEC.map.style.display !== 'none'){
+};
+SCN.map = function(t){
     const t0 = 34.7, step = 0.45;
     document.querySelectorAll('#map-pins .pin').forEach((g,i) => { const ts = t0 + i*step; const x = p(t, ts, ts+0.35); g.style.opacity = x > 0 ? 1 : 0; const dot = g.querySelector('.dot'); dot.setAttribute('transform', `translate(${dot.getAttribute('cx')*(1-eb(x))},${dot.getAttribute('cy')*(1-eb(x))}) scale(${eb(x)})`);
       const ring = g.querySelector('.ring'); const rx = p(t, ts, ts+0.9); ring.setAttribute('r', 8 + 40*rx); ring.setAttribute('opacity', 1-rx); });
@@ -510,38 +535,61 @@ window.seek = function(t){
     op($('co'), p(t,34.7,35.0));
     document.querySelectorAll('#co .co-line').forEach((d,i) => { const ts = t0 + i*step + 0.08; const x = p(t, ts, ts+0.25); d.style.opacity = x; d.style.display = x > 0 ? 'block' : 'none'; d.style.transform = `translateX(${(1-eo(x))*-24}px)`; });
     pop($('map-t'), t, 38.85, 0.4); pop(document.querySelector('#s-map .en'), t, 39.0, 0.35, 10);
-  }
-  // ── S11 STAIRS
-  if (SEC.stairs.style.display !== 'none'){
+};
+SCN.stairs = function(t){
     document.querySelectorAll('#stairs .stp').forEach((g,i) => { const ts = 39.9 + i*0.5; const x = eo(p(t, ts, ts+0.4)); g.setAttribute('transform', `translate(0,${900*(1-x)}) scale(1,${x})`); g.style.opacity = x>0?1:0; g.querySelectorAll('text').forEach(tx => tx.setAttribute('opacity', p(t, ts+0.25, ts+0.45))); });
     popIn($('tr-trophy'), t, 42.4); pop($('tr-t'), t, 42.6, 0.45);
-  }
-  // ── S12 LEADERS
-  if (SEC.lead.style.display !== 'none'){
-    pop($('ld-t'), t, 44.05, 0.5);
-    LEADERS.forEach((L,i) => { const ts = 44.6 + i*0.55; const x = p(t, ts, ts+0.45);
+};
+SCN.lead = function(t){
+    pop($('ld-t'), t, 47.25, 0.5);
+    LEADERS.forEach((L,i) => { const ts = 47.8 + i*0.55; const x = p(t, ts, ts+0.45);
       const f = $('pf'+i); f.style.opacity = x; f.style.transform = `translateY(${(1-eo(x))*34}px) scale(${x>0?lerp(0.86,1,eo(x)):0.86})`;
       const n = $('pn'+i), ti = $('pt'+i); const nx = p(t, ts+0.2, ts+0.55);
       n.style.opacity = nx; ti.style.opacity = nx; n.style.transform = ti.style.transform = `translateY(${(1-eo(nx))*14}px)`; });
-    pop($('ld-all'), t, 47.4, 0.5);
-  }
-  // ── S13 CLOSE
-  if (SEC.close.style.display !== 'none'){
-    const a1 = Math.min(p(t,49.25,49.8), 1-p(t,51.15,51.5)); $('cl1').style.opacity = a1; $('cl1').style.transform = `translateY(${(1-eo(p(t,49.25,49.8)))*24}px)`;
-    const a2 = p(t,51.6,52.2); $('cl2').style.opacity = a2; $('cl2').style.transform = `translateY(${(1-eo(a2))*24}px)`;
+    pop($('ld-all'), t, 50.6, 0.5);
+};
+SCN.close = function(t){
+    const a1 = Math.min(p(t,52.45,53.0), 1-p(t,54.35,54.7)); $('cl1').style.opacity = a1; $('cl1').style.transform = `translateY(${(1-eo(p(t,52.45,53.0)))*24}px)`;
+    const a2 = p(t,54.8,55.4); $('cl2').style.opacity = a2; $('cl2').style.transform = `translateY(${(1-eo(a2))*24}px)`;
     $('cl-en1').style.opacity = a1; $('cl-en2').style.opacity = a2;
     $('cl-glow').setAttribute('r', 90 + 30*Math.sin(t*1.6)); $('cl-glow').setAttribute('opacity', 0.14 + 0.1*Math.sin(t*1.6));
     document.querySelectorAll('#stars .st').forEach((s,i) => s.setAttribute('opacity', 0.3 + 0.5*Math.abs(Math.sin(t*0.8 + i*1.7))));
-  }
-  // ── S14 END — 25주년 → GST GROUP → 계열 3사 → 마지막 한 줄
-  if (SEC.end.style.display !== 'none'){
-    pop($('end-t'), t, 53.95, 0.55, 30); pop($('end-d'), t, 54.5, 0.45, 20);
-    const ru = p(t,54.95,55.45); $('end-rule').style.opacity = ru; $('end-rule').style.transform = `scaleX(${eo(ru)})`;
-    pop($('end-logo'), t, 55.05, 0.5, 20); pop($('end-grp'), t, 55.5, 0.4, 12);
-    [1,2,3].forEach(i => pop($('mk'+i), t, 55.75 + (i-1)*0.2, 0.45, 22));
-    pop($('end-l'), t, 56.8, 0.5, 20); pop(document.querySelector('#s-end .en'), t, 57.3, 0.4, 10);
+};
+SCN.end = function(t){
+    pop($('end-t'), t, 57.15, 0.55, 30); pop($('end-d'), t, 57.7, 0.45, 20);
+    const ru = p(t,58.15,58.65); $('end-rule').style.opacity = ru; $('end-rule').style.transform = `scaleX(${eo(ru)})`;
+    pop($('end-logo'), t, 58.25, 0.5, 20); pop($('end-grp'), t, 58.7, 0.4, 12);
+    [1,2,3].forEach(i => pop($('mk'+i), t, 58.95 + (i-1)*0.2, 0.45, 22));
+    pop($('end-l'), t, 60.0, 0.5, 20); pop(document.querySelector('#s-end .en'), t, 60.5, 0.4, 10);
     $('end-ring').setAttribute('r', 80 + 8*Math.sin(t*2));
-    const tt = t - 53.7; document.querySelectorAll('#confetti .cf').forEach((r,i) => { const y = -40 + (+r.dataset.v)*tt, x = (+r.dataset.x) + 40*Math.sin(tt*2 + +r.dataset.ph); r.setAttribute('transform', `translate(${x},${y}) rotate(${+r.dataset.rot + tt*180})`); r.setAttribute('opacity', tt < 0 ? 0 : (y > 1080 ? 0 : 0.9)); });
+    const tt = t - 56.9; document.querySelectorAll('#confetti .cf').forEach((r,i) => { const y = -40 + (+r.dataset.v)*tt, x = (+r.dataset.x) + 40*Math.sin(tt*2 + +r.dataset.ph); r.setAttribute('transform', `translate(${x},${y}) rotate(${+r.dataset.rot + tt*180})`); r.setAttribute('opacity', tt < 0 ? 0 : (y > 1080 ? 0 : 0.9)); });
+};
+
+SCN.future = function(t){
+    pop($('fu-k'), t, 44.0, 0.35, 14); pop($('fu-t'), t, 44.15, 0.5);
+    pop($('fu-s'), t, 45.0, 0.45); pop($('fu-n'), t, 45.6, 0.4, 16);
+    const ph = $('fu-photo'), sv = $('fu-svg'); pop(ph, t, 44.3, 0.6, 34); pop(sv, t, 44.3, 0.6, 34);
+    $('fu-glow').setAttribute('opacity', 0.55 + 0.45*Math.sin(t*2.4));
+    $('fu-surf').setAttribute('d', 'M45 ' + (140 + 3*Math.sin(t*3)) + ' h690');
+    // LED 는 랙마다 다른 박자로 — 한꺼번에 깜빡이면 «전광판»이 된다
+    document.querySelectorAll('#fu-units .led').forEach((c,i) => c.setAttribute('opacity', 0.35 + 0.65*Math.abs(Math.sin(t*4 + i*0.7))));
+    document.querySelectorAll('#fu-bub .bu').forEach(b => { const cyc = 2.6/(+b.dataset.sp);
+      const x = (((t - 43.9 + (+b.dataset.ph)) % cyc) + cyc) % cyc / cyc;
+      b.setAttribute('cx', (+b.dataset.x) + 10*Math.sin(x*8)); b.setAttribute('cy', lerp(470, 145, x));
+      b.setAttribute('opacity', t < 43.9 ? 0 : (x < 0.08 ? x*8 : 0.7*(1-x))); });
+};
+
+window.seek = function(tOut){
+  tOut = clamp(tOut, 0, DUR);
+  // 시작·끝 0.35초 페이드 — 출력 시각 기준이다(장면 시각이 아니다)
+  $('fade').style.opacity = Math.max(1 - p(tOut, 0, 0.35), p(tOut, DUR - 0.35, DUR));
+  for (const k of KEYS){
+    const el = SEC[k];
+    if (!T[k]){ el.style.display = 'none'; continue; }   // 짧은 버전에서 뺀 장면
+    const o = sceneOp(tOut, k);
+    if (o < 0){ el.style.display = 'none'; continue; }
+    el.style.display = 'block'; el.style.opacity = o;
+    SCN[k](TL.toFull(tOut, k, P));
   }
 };
 window.seek(0);

@@ -3,7 +3,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
 const EXE = process.env.EXE || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', K = +(process.env.K || 2), OUT = process.env.OUT || 'frames', FPS = +(process.env.FPS || 30), N = +(process.env.FRAMES || 90);
 (async () => {
   const browser = await chromium.launch({ executablePath: EXE });
-  const url = 'file://' + path.resolve(process.env.HTML || 'scene.html');
+  const url = 'file://' + path.resolve(process.env.HTML || 'scene.html') + (process.env.QUERY || '');
   fs.rmSync(OUT, { recursive: true, force: true }); fs.mkdirSync(OUT);
   const pages = [];
   for (let k = 0; k < K; k++) { const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }); await page.goto(url); await page.evaluate(() => document.fonts.ready);
