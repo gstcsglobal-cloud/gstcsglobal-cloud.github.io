@@ -2,7 +2,7 @@
 # 숏폼 렌더: scene.html(window.seek) → PNG 1,680장 → libx264 MP4 → BGM mux
 # 사용: ./render.sh [out.mp4]   (필요: node + playwright + chromium, ffmpeg(libx264·aac), fonts/ = ./fetch-fonts.sh)
 set -euo pipefail; cd "$(dirname "$0")"
-OUT=${1:-GST_25th_nothing_happened.mp4}; FPS=30; DUR=56; N=$((FPS*DUR))
+OUT=${1:-GST_25th_nothing_happened.mp4}; FPS=30; DUR=59; N=$((FPS*DUR))
 FF=${FFMPEG:-$(command -v ffmpeg || python3 -c "import imageio_ffmpeg as f; print(f.get_ffmpeg_exe())")}
 EXE=${CHROME:-$(ls -d /opt/pw-browsers/chromium-*/chrome-linux/chrome 2>/dev/null | head -1)}
 [ -f fonts/NotoSansKR-900.ttf ] || ./fetch-fonts.sh
