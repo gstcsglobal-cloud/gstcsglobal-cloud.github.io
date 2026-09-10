@@ -14,7 +14,7 @@ const EXE = process.env.EXE || '/opt/pw-browsers/chromium-1194/chrome-linux/chro
     for (let i = k; i < N; i += K) {
       await page.evaluate(t => window.seek(t), i / FPS);
       const r = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true, optimizeForSpeed: true });
-      fs.writeFileSync(path.join(OUT, `frame_${String(i).padStart(4, '0')}.png`), Buffer.from(r.data, 'base64'));
+      fs.writeFileSync(path.join(OUT, `frame_${String(i).padStart(5, '0')}.png`), Buffer.from(r.data, 'base64'));
     }
   }));
   const ms = Date.now() - t0;

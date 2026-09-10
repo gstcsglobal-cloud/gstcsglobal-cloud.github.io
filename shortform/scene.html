@@ -14,12 +14,12 @@ body{font-family:'NotoKR','Noto Color Emoji',sans-serif;color:#fff;-webkit-font-
 #grain{position:absolute;inset:0;pointer-events:none;opacity:.35;
   background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:6px 6px}
 section{position:absolute;inset:0;display:none;opacity:0}
-.big{font-weight:900;font-size:78px;line-height:1.25;letter-spacing:-1.5px}
-.txt{font-weight:900;font-size:64px;line-height:1.3;letter-spacing:-1px}
+.big{font-weight:900;font-size:78px;line-height:1.25;letter-spacing:-1.5px;text-shadow:0 3px 20px rgba(0,0,0,.55)}
+.txt{font-weight:900;font-size:64px;line-height:1.3;letter-spacing:-1px;text-shadow:0 3px 20px rgba(0,0,0,.55)}
 .txt b,.big b{color:#ffd36b;font-weight:900}
 .sub{font-weight:700;font-size:40px;color:rgba(255,255,255,.85)}
 .kicker{position:absolute;left:140px;top:150px;font-weight:700;font-size:34px;color:#8fb3ff;letter-spacing:2px}
-.en{position:absolute;left:0;right:0;bottom:52px;text-align:center;font-weight:400;font-size:27px;color:rgba(255,255,255,.58);letter-spacing:.2px}
+.en{position:absolute;left:0;right:0;bottom:50px;text-align:center;font-weight:400;font-size:30px;color:rgba(255,255,255,.58);letter-spacing:.2px}
 .abs{position:absolute}
 .center{left:0;right:0;text-align:center}
 .stamp{position:absolute;display:inline-block;background:#ffd36b;color:#0b1020;font-weight:900;font-size:62px;
@@ -35,7 +35,9 @@ section{position:absolute;inset:0;display:none;opacity:0}
 .date{font-family:'BlackHan','NotoKR';font-size:150px;line-height:1;letter-spacing:2px;color:#fff}
 .preload{position:absolute;left:-9999px;top:-9999px;opacity:0}
 /* 인물·로고 슬롯 — portraits/·logos/ 에 파일이 있으면 그 이미지를, 없으면 기본 그래픽을 쓴다 */
-.slot img{width:100%;height:100%;object-fit:cover;display:block}
+.slot img{width:100%;height:100%;object-fit:contain;display:block}
+.mkl{position:relative;height:58px}
+.mkl img{width:auto;height:100%;max-width:100%;margin:0 auto}
 .slot .fb{display:none}
 .slot.noimg img{display:none}
 .slot.noimg .fb{display:block}
@@ -148,7 +150,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 <section id="s-reveal">
   <div class="txt abs" id="rv1" style="left:130px;top:300px;font-size:58px">이 모든 «아무 일»의 뒤에는</div>
   <div class="txt abs" id="rv2" style="left:130px;top:390px;font-size:76px"><b>스크러버</b>와 <b>칠러</b>가<br>있었습니다.</div>
-  <div class="sub abs" id="rv3" style="left:130px;top:600px;font-size:42px;color:#8fb3ff">365일 24시간. 25년째.</div>
+  <div class="sub abs" id="rv3" style="left:130px;top:600px;font-size:42px;color:#8fb3ff">365일 24시간 × 25년 = 약 <b style="color:#ffd36b">219,000시간</b>.</div>
   <svg class="abs" id="rv-svg" style="left:1000px;top:150px" width="900" height="800" viewBox="0 0 900 800">
     <defs><radialGradient id="glow"><stop offset="0" stop-color="#ffd36b" stop-opacity=".5"/><stop offset="1" stop-color="#ffd36b" stop-opacity="0"/></radialGradient>
     <radialGradient id="cglow"><stop offset="0" stop-color="#7fd0ff" stop-opacity=".42"/><stop offset="1" stop-color="#7fd0ff" stop-opacity="0"/></radialGradient>
@@ -178,7 +180,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
     <text x="620" y="258" text-anchor="middle" font-size="22" font-weight="700" fill="#7fd0ff" font-family="NotoKR">CHAMBER</text>
     <rect x="600" y="640" width="180" height="22" rx="8" fill="#101736"/>
   </svg>
-  <div class="en">Behind every "nothing" — a scrubber and a chiller. 24/7, for 25 years.</div>
+  <div class="en">Behind every "nothing" — a scrubber and a chiller. 24/7 for 25 years: about 219,000 hours.</div>
 </section>
 
 <!-- S7 PIVOT 24.8–26.8 -->
@@ -265,30 +267,40 @@ section{position:absolute;inset:0;display:none;opacity:0}
 <!-- S14 END 53.6–59.0 -->
 <section id="s-end">
   <svg class="abs" id="confetti" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080"></svg>
-  <svg class="abs" style="left:850px;top:90px" width="220" height="220" viewBox="-110 -110 220 220">
-    <circle id="end-ring" r="98" fill="none" stroke="#ffd36b" stroke-width="3" opacity=".5"/>
-    <circle r="80" fill="#1e6fd9" opacity=".92"/>
-    <g fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.5"><ellipse rx="80" ry="30"/><ellipse rx="30" ry="80"/><circle r="80"/><line x1="-80" y1="0" x2="80" y2="0"/></g>
-    <text y="20" text-anchor="middle" font-family="BlackHan" font-size="58" fill="#fff">25</text>
+  <svg class="abs" style="left:870px;top:56px" width="180" height="180" viewBox="-90 -90 180 180">
+    <circle id="end-ring" r="80" fill="none" stroke="#ffd36b" stroke-width="3" opacity=".5"/>
+    <circle r="65" fill="#1e6fd9" opacity=".92"/>
+    <g fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.2"><ellipse rx="65" ry="24"/><ellipse rx="24" ry="65"/><circle r="65"/><line x1="-65" y1="0" x2="65" y2="0"/></g>
+    <text y="17" text-anchor="middle" font-family="BlackHan" font-size="48" fill="#fff">25</text>
   </svg>
-  <div class="big center abs" id="end-t" style="top:340px;font-size:88px">GST 창립 <b>25</b>주년</div>
-  <div class="center abs num" id="end-d" style="top:456px;font-weight:700;font-size:36px;color:rgba(255,255,255,.72);letter-spacing:3px">2001. 10. 01 — 2026. 10. 01</div>
-  <div class="abs" id="end-rule" style="left:560px;top:540px;width:800px;height:1px;background:rgba(255,255,255,.22)"></div>
-  <div class="slot abs" id="end-logo" style="left:760px;top:572px;width:400px;height:74px">
-    <img src="logos/gst-group.png" alt="" onerror="this.closest('.slot').classList.add('noimg')">
-    <div class="fb" style="text-align:center">
+  <div class="big center abs" id="end-t" style="top:262px;font-size:84px">GST 창립 <b>25</b>주년</div>
+  <div class="center abs num" id="end-d" style="top:372px;font-weight:700;font-size:34px;color:rgba(255,255,255,.72);letter-spacing:3px">2001. 10. 01 — 2026. 10. 01</div>
+  <div class="abs" id="end-rule" style="left:610px;top:444px;width:700px;height:1px;background:rgba(255,255,255,.22)"></div>
+  <!-- 실제 CI — report/qbr-template.pptx 안의 회사 로고를 어두운 배경용으로 반전한 것 -->
+  <div class="slot abs" id="end-logo" style="left:730px;top:480px;width:460px;height:153px">
+    <img src="logos/gst-white.png" alt="" onerror="this.closest('.slot').classList.add('noimg')">
+    <div class="fb" style="text-align:center;padding-top:44px">
       <span style="font-family:'BlackHan','NotoKR';font-size:56px;color:#fff;letter-spacing:1px">GST</span>
       <span style="font-weight:700;font-size:36px;color:#ffd36b;letter-spacing:9px;margin-left:12px">GROUP</span>
     </div>
   </div>
-  <div class="mark" id="mk1" style="left:330px;top:690px;width:400px"><div class="nm" style="color:#7fb0ff">GST</div><div class="ds">스크러버 · 칠러 · 액침냉각</div></div>
-  <div class="mark" id="mk2" style="left:760px;top:690px;width:400px"><div class="nm" style="color:#6fe3c4">EST</div><div class="ds">반도체 설비부품 · 콜드체인</div></div>
-  <div class="mark" id="mk3" style="left:1190px;top:690px;width:400px"><div class="nm" style="color:#ffb27a">ROBOCARE</div><div class="ds">돌봄로봇</div></div>
-  <div class="center abs" id="end-l" style="top:840px;font-weight:900;font-size:50px;color:#ffd36b">다음 25년도, 아무 일 없이.</div>
+  <div class="center abs" id="end-grp" style="top:666px;font-weight:700;font-size:24px;color:rgba(255,255,255,.5);letter-spacing:11px">GST GROUP</div>
+  <div class="mark" id="mk1" style="left:330px;top:726px;width:400px">
+    <div class="slot mkl"><img src="logos/gst-mark.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#7fb0ff">GST</div></div>
+    <div class="ds">스크러버 · 칠러 · 액침냉각</div></div>
+  <div class="mark" id="mk2" style="left:760px;top:726px;width:400px">
+    <div class="slot mkl"><img src="logos/est.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#6fe3c4">EST</div></div>
+    <div class="ds">반도체 설비부품 · 콜드체인</div></div>
+  <div class="mark" id="mk3" style="left:1190px;top:726px;width:400px">
+    <div class="slot mkl"><img src="logos/robocare.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#ffb27a">ROBOCARE</div></div>
+    <div class="ds">돌봄로봇</div></div>
+  <div class="center abs" id="end-l" style="top:876px;font-weight:900;font-size:50px;color:#ffd36b">다음 25년도, 아무 일 없이.</div>
   <div class="en">GST GROUP — GST · EST · ROBOCARE. Here's to 25 more uneventful years.</div>
 </section>
 
 <div id="grain"></div>
+<div id="vig" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 78% at 50% 48%,rgba(0,0,0,0) 52%,rgba(0,0,0,.45) 100%)"></div>
+<div id="fade" style="position:absolute;inset:0;pointer-events:none;background:#000"></div>
 </div>
 <script src="mapdots.js"></script>
 <script>
@@ -314,7 +326,7 @@ const svgEl = (tag, attrs, parent) => { const e = document.createElementNS(NS, t
 function op(el, v){ el.style.opacity = clamp(v,0,1); }
 function pop(el, t, t0, dur=0.5, dy=26){ const x = p(t,t0,t0+dur); op(el, x); el.style.transform = `translateY(${(1-eo(x))*dy}px)`; }
 function popIn(el, t, t0, dur=0.45){ const x = p(t,t0,t0+dur); op(el, x>0?1:0); el.style.transform = `scale(${x>0?eb(x):0})`; }
-function stamp(el, t, t0){ if (t < t0) { op(el,0); return; } const x = p(t,t0,t0+0.3); op(el,1); el.style.transform = `rotate(-6deg) scale(${lerp(1.7,1,eo(x))})`; }
+function stamp(el, t, t0, deg=-6){ if (t < t0) { op(el,0); return; } const x = p(t,t0,t0+0.3); op(el,1); el.style.transform = `rotate(${deg}deg) scale(${lerp(1.7,1,eo(x))})`; }
 function typeTo(el, str, t, t0, cps=13){ const n = t < t0 ? 0 : Math.min(str.length, Math.floor((t-t0)*cps)); el.textContent = str.slice(0,n); return n >= str.length; }
 
 // ── 경영진 — 이름·직함은 공개 자료 기준이다. 사내 확인 후 이 배열만 고치면 화면·순서가 따라온다.
@@ -389,6 +401,8 @@ function sceneOp(t, k){ const [a,b] = T[k]; const f = 0.22; if (t < a || t >= b)
 
 window.seek = function(t){
   t = clamp(t, 0, DUR);
+  // 시작 0.35초 페이드인 · 끝 0.35초 페이드아웃
+  $('fade').style.opacity = Math.max(1 - p(t, 0, 0.35), p(t, DUR - 0.35, DUR));
   for (const k in T){ const o = sceneOp(t,k); const el = SEC[k]; if (o < 0){ el.style.display='none'; continue; } el.style.display='block'; el.style.opacity = o; }
 
   // ── S0 HOOK
@@ -416,7 +430,7 @@ window.seek = function(t){
     let fs = 0; if (t >= 8.2 && t < 8.8) fs = lerp(0, 1.15, eo(p(t,8.2,8.7))) * (1 + 0.08*Math.sin(t*40)); else if (t >= 8.8) fs = Math.max(0, 1.15 * (1 - p(t,8.8,8.95)));
     fire.style.transform = `scale(${fs})`; op(fire, fs > 0 ? 1 : 0);
     $('si-led').setAttribute('fill', Math.floor(t*4)%2 ? '#5cff8a' : '#2f8a4a');
-    stamp($('si-stamp'), t, 9.15); op($('si-en2'), t >= 9.2 ? 1 : 0);
+    stamp($('si-stamp'), t, 9.15, -6); op($('si-en2'), t >= 9.2 ? 1 : 0);
   }
   // ── S3 SF6
   if (SEC.sf6.style.display !== 'none'){
@@ -428,7 +442,7 @@ window.seek = function(t){
     yr.style.transform = (t >= 12.15 && t < 12.3) ? 'scaleX(-1)' : 'none';
     earth.style.filter = `hue-rotate(${-heat*90}deg) saturate(${1+heat*1.5})`; earth.style.transform = `scale(${1 + 0.04*Math.sin(t*6)})`;
     $('sf-lbl').textContent = t < 10.4 ? '지금' : (t < 12.15 ? `+${fmt(y-2026)}년` : '다시, 지금');
-    stamp($('sf-stamp'), t, 12.5); op($('sf-en2'), t >= 12.55 ? 1 : 0);
+    stamp($('sf-stamp'), t, 12.5, 4.5); op($('sf-en2'), t >= 12.55 ? 1 : 0);
   }
   // ── S4 CHILLER — 바늘이 흔들리다 목표대(±0.1℃)에 «딱» 잡힌다
   if (SEC.chill.style.display !== 'none'){
@@ -444,7 +458,7 @@ window.seek = function(t){
     $('ch-flake').style.transform = `rotate(${t*40}deg) scale(${1+0.06*Math.sin(t*5)})`;
     $('ch-led').setAttribute('opacity', 0.55 + 0.45*Math.sin(t*7));
     $('ch-loop').setAttribute('stroke-dashoffset', -(t*90) % 28);
-    stamp($('ch-stamp'), t, 15.5); op($('ch-en2'), t >= 15.55 ? 1 : 0);
+    stamp($('ch-stamp'), t, 15.5, -7); op($('ch-en2'), t >= 15.55 ? 1 : 0);
   }
   // ── S5 STOP
   if (SEC.stop.style.display !== 'none'){
@@ -457,7 +471,7 @@ window.seek = function(t){
     else if (stopping){ const on = Math.floor(t*6)%2; lamp.setAttribute('fill', on ? '#ff3b3b' : '#7a1c1c'); lt.textContent = 'STOP'; op(warn, on ? 1 : .3); }
     else { lamp.setAttribute('fill','#5cff8a'); lt.textContent = 'RUN'; op(warn,0); }
     op($('st-247'), p(t,19.0,19.35));
-    stamp($('st-stamp'), t, 18.95); op($('st-en2'), t >= 19.0 ? 1 : 0);
+    stamp($('st-stamp'), t, 18.95, 3.5); op($('st-en2'), t >= 19.0 ? 1 : 0);
   }
   // ── S6 REVEAL
   if (SEC.reveal.style.display !== 'none'){
@@ -522,11 +536,11 @@ window.seek = function(t){
   // ── S14 END — 25주년 → GST GROUP → 계열 3사 → 마지막 한 줄
   if (SEC.end.style.display !== 'none'){
     pop($('end-t'), t, 53.95, 0.55, 30); pop($('end-d'), t, 54.5, 0.45, 20);
-    const ru = p(t,55.0,55.5); $('end-rule').style.opacity = ru; $('end-rule').style.transform = `scaleX(${eo(ru)})`;
-    pop($('end-logo'), t, 55.1, 0.5, 20);
-    [1,2,3].forEach(i => pop($('mk'+i), t, 55.6 + (i-1)*0.22, 0.45, 22));
-    pop($('end-l'), t, 56.7, 0.5, 20); pop(document.querySelector('#s-end .en'), t, 57.2, 0.4, 10);
-    $('end-ring').setAttribute('r', 98 + 9*Math.sin(t*2));
+    const ru = p(t,54.95,55.45); $('end-rule').style.opacity = ru; $('end-rule').style.transform = `scaleX(${eo(ru)})`;
+    pop($('end-logo'), t, 55.05, 0.5, 20); pop($('end-grp'), t, 55.5, 0.4, 12);
+    [1,2,3].forEach(i => pop($('mk'+i), t, 55.75 + (i-1)*0.2, 0.45, 22));
+    pop($('end-l'), t, 56.8, 0.5, 20); pop(document.querySelector('#s-end .en'), t, 57.3, 0.4, 10);
+    $('end-ring').setAttribute('r', 80 + 8*Math.sin(t*2));
     const tt = t - 53.7; document.querySelectorAll('#confetti .cf').forEach((r,i) => { const y = -40 + (+r.dataset.v)*tt, x = (+r.dataset.x) + 40*Math.sin(tt*2 + +r.dataset.ph); r.setAttribute('transform', `translate(${x},${y}) rotate(${+r.dataset.rot + tt*180})`); r.setAttribute('opacity', tt < 0 ? 0 : (y > 1080 ? 0 : 0.9)); });
   }
 };
