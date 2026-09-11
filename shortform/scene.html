@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<title>GST 25 — 아무 일도 안 일어난 25년</title>
+<style>
+@font-face{font-family:'NotoKR';font-weight:400;src:url('fonts/NotoSansKR-400.ttf') format('truetype')}
+@font-face{font-family:'NotoKR';font-weight:700;src:url('fonts/NotoSansKR-700.ttf') format('truetype')}
+@font-face{font-family:'NotoKR';font-weight:900;src:url('fonts/NotoSansKR-900.ttf') format('truetype')}
+@font-face{font-family:'BlackHan';font-weight:400;src:url('fonts/BlackHanSans.ttf') format('truetype')}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#070d1f}
+body{font-family:'NotoKR','Noto Color Emoji',sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden;
+  background:radial-gradient(ellipse 1400px 900px at 50% 45%,#0f1d3f 0%,#070d1f 60%,#04081a 100%)}
+#grain{position:absolute;inset:0;pointer-events:none;opacity:.35;
+  background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:6px 6px}
+section{position:absolute;inset:0;display:none;opacity:0}
+.big{font-weight:900;font-size:78px;line-height:1.25;letter-spacing:-1.5px;text-shadow:0 3px 20px rgba(0,0,0,.55)}
+.txt{font-weight:900;font-size:64px;line-height:1.3;letter-spacing:-1px;text-shadow:0 3px 20px rgba(0,0,0,.55)}
+.txt b,.big b{color:#8fc0ff;font-weight:900}
+.sub{font-weight:700;font-size:40px;color:rgba(255,255,255,.85)}
+.kicker{position:absolute;left:140px;top:150px;font-weight:700;font-size:34px;color:#8fb3ff;letter-spacing:2px}
+.en{position:absolute;left:0;right:0;bottom:50px;text-align:center;font-weight:400;font-size:30px;color:rgba(255,255,255,.58);letter-spacing:.2px}
+.abs{position:absolute}
+.center{left:0;right:0;text-align:center}
+.stamp{position:absolute;display:inline-block;background:#ffd36b;color:#0b1020;font-weight:900;font-size:84px;
+  padding:12px 36px;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.45);white-space:nowrap;transform-origin:50% 50%}
+.num{font-variant-numeric:tabular-nums}
+.cursor{display:inline-block;width:8px;height:70px;background:#8fc0ff;vertical-align:-8px;margin-left:6px}
+.card{position:absolute;background:rgba(7,13,31,.78);border:1px solid rgba(255,255,255,.12);border-radius:20px;backdrop-filter:blur(4px)}
+.co-line{font-weight:700;font-size:34px;line-height:46px;white-space:nowrap}
+.co-line .y{color:#8fc0ff;display:inline-block;width:110px;font-variant-numeric:tabular-nums}
+.led{font-family:'NotoKR';font-weight:900;font-size:56px;letter-spacing:1px;color:#ff4d4d;white-space:nowrap;text-shadow:0 0 18px rgba(255,77,77,.8),0 0 40px rgba(255,77,77,.4)}
+.led span{display:inline-block}
+.led .g{color:#5cff8a;text-shadow:0 0 18px rgba(92,255,138,.8),0 0 40px rgba(92,255,138,.4)}
+.date{font-family:'BlackHan','NotoKR';font-size:150px;line-height:1;letter-spacing:2px;color:#fff}
+.preload{position:absolute;left:-9999px;top:-9999px;opacity:0}
+/* 인물·로고 슬롯 — portraits/·logos/ 에 파일이 있으면 그 이미지를, 없으면 기본 그래픽을 쓴다 */
+.slot img{width:100%;height:100%;object-fit:contain;display:block}
+.mkl{position:relative;height:58px}
+.mkl img{width:auto;height:100%;max-width:100%;margin:0 auto}
+/* 사진 슬롯 — photos/ 에 파일이 있으면 사진, 없으면 바로 뒤의 일러스트가 선다 */
+.photo{border-radius:20px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.16)}
+.photo img{object-fit:cover}
+.photo.noimg{display:none!important}
+#fd-photo:not(.noimg) ~ #fd-svg,#rv-photo:not(.noimg) ~ #rv-svg,#fu-photo:not(.noimg) ~ #fu-svg{display:none}
+.slot .fb{display:none}
+.slot.noimg img{display:none}
+.slot.noimg .fb{display:block}
+.pf{position:absolute;width:190px;height:190px;border-radius:50%;overflow:hidden;
+  border:4px solid #ffd36b;background:linear-gradient(180deg,#1d2b56,#121b3a);box-shadow:0 14px 40px rgba(0,0,0,.5)}
+.pn{position:absolute;width:280px;text-align:center;font-weight:900;font-size:34px;letter-spacing:-.5px}
+.pt{position:absolute;width:280px;text-align:center;font-weight:700;font-size:26px;color:#8fb3ff;margin-top:4px}
+.mark{position:absolute;text-align:center}
+.mark .nm{font-family:'BlackHan','NotoKR';font-size:52px;letter-spacing:1px;line-height:1}
+.mark .ds{font-weight:700;font-size:24px;color:rgba(255,255,255,.62);margin-top:10px;letter-spacing:-.3px}
+</style></head><body>
+<div id="stage">
+<div class="preload"><span style="font:400 20px NotoKR">가</span><span style="font:700 20px NotoKR">가</span><span style="font:900 20px NotoKR">가</span><span style="font:400 20px BlackHan">가1</span><span>🔥🌍🌵🦗🏆☠️✨🎉❄️</span></div>
+
+<!-- S0 HOOK 0–4.0 -->
+<section id="s-hook">
+  <div class="big center abs" id="h1" style="top:400px">지난 25년,</div>
+  <div class="big center abs" id="h2" style="top:500px"><span id="h2t"></span><span class="cursor" id="h2c"></span></div>
+  <div class="en" id="h-en">For 25 years, nothing happened at GST.</div>
+</section>
+
+<!-- S1 NOTHING 4.0–6.4 -->
+<section id="s-nothing">
+  <div class="big center abs" id="n1" style="top:420px">정말, 아무 일도.</div>
+  <div class="abs" id="cactus" style="left:1560px;top:700px;font-size:150px;line-height:1">🌵</div>
+  <div class="abs" id="cricket" style="left:180px;top:820px;font-size:34px;color:rgba(255,255,255,.6);font-weight:700">🦗 <span id="cricket-t"></span></div>
+  <svg class="abs" id="tumble" width="180" height="180" viewBox="-90 -90 180 180" style="left:0;top:760px">
+    <g fill="none" stroke="#c9a96e" stroke-width="3" stroke-linecap="round">
+      <ellipse rx="70" ry="60"/><ellipse rx="60" ry="70" transform="rotate(30)"/><ellipse rx="55" ry="72" transform="rotate(75)"/>
+      <ellipse rx="66" ry="50" transform="rotate(110)"/><ellipse rx="40" ry="72" transform="rotate(150)"/><circle r="72" stroke-dasharray="6 14"/>
+    </g></svg>
+  <div class="en">Really. Nothing.</div>
+</section>
+
+<!-- S2 SILANE 6.4–9.8 -->
+<section id="s-silane">
+  <div class="kicker">예를 들면,</div>
+  <div class="txt abs" id="si-t" style="left:140px;top:230px">실란(SiH₄) 가스는 공기와 닿는 순간<br><b>스스로 불이 붙습니다.</b></div>
+  <div class="abs" id="si-blob" style="left:0;top:0;width:220px;height:170px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#c084fc,#7c3aed 60%,rgba(124,58,237,0) 75%);filter:blur(6px)"></div>
+  <div class="abs" id="si-skull" style="left:0;top:0;font-size:54px;line-height:1">☠️</div>
+  <div class="abs" id="si-fire" style="left:1230px;top:520px;font-size:230px;line-height:1;transform-origin:50% 90%">🔥</div>
+  <svg class="abs" style="left:1080px;top:690px" width="700" height="300" viewBox="0 0 700 300">
+    <rect x="60" y="120" width="440" height="60" rx="30" fill="#1f2a4d" stroke="#3b4a7a" stroke-width="4"/>
+    <rect x="470" y="40" width="200" height="230" rx="28" fill="#182346" stroke="#3b4a7a" stroke-width="4"/>
+    <rect x="510" y="80" width="120" height="50" rx="10" fill="#0b1020"/>
+    <text x="570" y="116" text-anchor="middle" font-size="26" font-weight="900" fill="#8fb3ff" font-family="NotoKR">SCRUBBER</text>
+    <circle id="si-led" cx="570" cy="190" r="14" fill="#5cff8a"/>
+    <path d="M60 150 L20 150" stroke="#3b4a7a" stroke-width="16" stroke-linecap="round"/>
+  </svg>
+  <div class="stamp" id="si-stamp" style="left:1180px;top:400px">없었습니다.</div>
+  <div class="en"><span>Silane ignites on contact with air.</span> <span id="si-en2" style="color:#8fc0ff">— It didn't happen.</span></div>
+</section>
+
+<!-- S3 SF6 9.8–13.2 -->
+<section id="s-sf6">
+  <div class="kicker">그리고,</div>
+  <div class="txt abs" style="left:140px;top:230px">SF₆ 한 번 새면 <b>3,200년</b>을 갑니다.<br><span class="sub" style="font-size:44px">이산화탄소의 23,500배 — 손자의 손자까지.</span></div>
+  <div class="abs num" id="sf-year" style="left:0;right:0;top:560px;text-align:center;font-family:'BlackHan';font-size:260px;line-height:1;color:#fff;letter-spacing:4px">2026</div>
+  <div class="abs" id="sf-earth" style="left:1500px;top:600px;font-size:170px;line-height:1">🌍</div>
+  <div class="abs" id="sf-lbl" style="left:0;right:0;top:830px;text-align:center;font-weight:700;font-size:34px;color:rgba(255,255,255,.6)">…년</div>
+  <div class="stamp" id="sf-stamp" style="left:1180px;top:400px">없었습니다.</div>
+  <div class="en"><span>One SF₆ leak lasts up to 3,200 years — 23,500× CO₂.</span> <span id="sf-en2" style="color:#8fc0ff">— It didn't happen.</span></div>
+</section>
+
+<!-- S4 CHILLER 13.2–16.6 -->
+<section id="s-chill">
+  <div class="kicker">그리고,</div>
+  <div class="txt abs" style="left:140px;top:230px">식각 공정은 온도가 <b>0.1℃</b>만 흔들려도<br>웨이퍼가 상합니다.</div>
+  <svg class="abs" style="left:140px;top:560px" width="1100" height="300" viewBox="0 0 1100 300">
+    <rect x="0" y="120" width="1080" height="60" rx="30" fill="#141e3f" stroke="#2b3a6a" stroke-width="0"/>
+    <rect x="470" y="112" width="140" height="76" rx="12" fill="rgba(92,255,138,.16)" stroke="#5cff8a" stroke-width="2" stroke-dasharray="8 8"/>
+    <text x="540" y="230" text-anchor="middle" font-size="26" font-weight="700" fill="#5cff8a" font-family="NotoKR">목표 ±0.1℃</text>
+    <line x1="20" y1="150" x2="1060" y2="150" stroke="#2b3a6a" stroke-width="4"/>
+    <g id="ch-needle"><rect x="-5" y="96" width="10" height="108" rx="5" fill="#ffd36b"/><circle cy="150" r="16" fill="#ffd36b"/></g>
+  </svg>
+  <div class="abs num" id="ch-temp" style="left:1430px;top:170px;font-family:'BlackHan';font-size:126px;line-height:1;color:#fff">25.0</div>
+  <div class="abs" id="ch-flake" style="left:1740px;top:186px;font-size:84px;line-height:1">❄️</div>
+  <svg class="abs" style="left:1420px;top:560px" width="420" height="300" viewBox="0 0 420 300">
+    <rect x="60" y="40" width="240" height="200" rx="24" fill="#152447" stroke="#3f6fae" stroke-width="5"/>
+    <rect x="100" y="76" width="160" height="46" rx="10" fill="#0b1020"/>
+    <text x="180" y="110" text-anchor="middle" font-size="26" font-weight="900" fill="#7fd0ff" font-family="NotoKR">CHILLER</text>
+    <circle id="ch-led" cx="180" cy="180" r="14" fill="#7fd0ff"/>
+    <path id="ch-loop" d="M300 120 h60 v100 h-60" fill="none" stroke="#7fd0ff" stroke-width="8" stroke-linecap="round" stroke-dasharray="14 14"/>
+  </svg>
+  <div class="stamp" id="ch-stamp" style="left:1180px;top:400px">없었습니다.</div>
+  <div class="en"><span>Etch demands ±0.1℃. A drift ruins the wafer.</span> <span id="ch-en2" style="color:#8fc0ff">— It didn't happen.</span></div>
+</section>
+
+<!-- S5 STOP 16.6–20.0 -->
+<section id="s-stop">
+  <div class="kicker">그리고,</div>
+  <div class="txt abs" style="left:140px;top:230px">반도체 공장이 멈추면,<br><b>웨이퍼 수만 장</b>을 버립니다.</div>
+  <svg class="abs" style="left:0;top:560px" width="1920" height="420" viewBox="0 0 1920 420">
+    <defs><clipPath id="beltclip"><rect x="120" y="120" width="1680" height="160"/></clipPath></defs>
+    <rect x="120" y="180" width="1680" height="70" rx="35" fill="#1a2447" stroke="#33427a" stroke-width="4"/>
+    <g id="belt-dots" clip-path="url(#beltclip)"></g>
+    <g id="wafers" clip-path="url(#beltclip)"></g>
+    <g transform="translate(1700,60)">
+      <circle id="st-lamp" r="46" fill="#ff3b3b"/>
+      <text id="st-lamp-t" y="12" text-anchor="middle" font-size="30" font-weight="900" fill="#fff" font-family="NotoKR">STOP</text>
+    </g>
+  </svg>
+  <div class="abs" id="st-warn" style="left:1250px;top:520px;font-weight:900;font-size:44px;color:#ff5c5c">⚠ LINE STOP</div>
+  <div class="stamp" id="st-stamp" style="left:1180px;top:400px">없었습니다.</div>
+  <div class="abs" id="st-247" style="left:140px;top:480px;font-weight:700;font-size:36px;color:#8fb3ff">365일 24시간 가동</div>
+  <div class="en"><span>When a fab stops, tens of thousands of wafers are scrapped.</span> <span id="st-en2" style="color:#8fc0ff">— It didn't happen.</span></div>
+</section>
+
+<!-- S6 REVEAL 20.0–24.8 -->
+<section id="s-reveal">
+  <div class="txt abs" id="rv1" style="left:130px;top:300px;font-size:58px">이 모든 «아무 일»의 뒤에는</div>
+  <div class="txt abs" id="rv2" style="left:130px;top:390px;font-size:76px"><b>스크러버</b>와 <b>칠러</b>가<br>있었습니다.</div>
+  <div class="sub abs" id="rv3" style="left:130px;top:600px;font-size:42px;color:#8fb3ff">365일 24시간 × 25년 = 약 <b style="color:#8fc0ff">219,000시간</b>.</div>
+  <div class="slot photo abs" id="rv-photo" style="left:1010px;top:210px;width:860px;height:620px"><img src="photos/scrubber.jpg" alt="" onerror="this.closest('.slot').classList.add('noimg')"></div>
+  <svg class="abs" id="rv-svg" style="left:1000px;top:150px" width="900" height="800" viewBox="0 0 900 800">
+    <defs><radialGradient id="glow"><stop offset="0" stop-color="#ffd36b" stop-opacity=".5"/><stop offset="1" stop-color="#ffd36b" stop-opacity="0"/></radialGradient>
+    <radialGradient id="cglow"><stop offset="0" stop-color="#7fd0ff" stop-opacity=".42"/><stop offset="1" stop-color="#7fd0ff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3a6a"/><stop offset="1" stop-color="#141e3f"/></linearGradient></defs>
+    <circle id="rv-glow" cx="330" cy="450" r="300" fill="url(#glow)"/>
+    <circle id="rv-cglow" cx="690" cy="500" r="200" fill="url(#cglow)"/>
+    <g id="rv-bubbles"></g>
+    <rect x="285" y="90" width="70" height="130" rx="12" fill="#1c2750" stroke="#3b4a7a" stroke-width="4"/>
+    <rect x="180" y="210" width="300" height="430" rx="30" fill="url(#body)" stroke="#4a5b8f" stroke-width="5"/>
+    <rect x="212" y="248" width="236" height="54" rx="10" fill="#0b1020"/>
+    <text x="330" y="288" text-anchor="middle" font-size="27" font-weight="900" fill="#8fb3ff" font-family="NotoKR" letter-spacing="3">SCRUBBER</text>
+    <circle cx="278" cy="424" r="48" fill="#0b1020" stroke="#4a5b8f" stroke-width="4"/><circle id="rv-ch1" cx="278" cy="424" r="33" fill="#ff8a3d"/>
+    <circle cx="382" cy="424" r="48" fill="#0b1020" stroke="#4a5b8f" stroke-width="4"/><circle id="rv-ch2" cx="382" cy="424" r="33" fill="#ff8a3d"/>
+    <circle id="rv-led" cx="330" cy="560" r="15" fill="#5cff8a"/>
+    <text x="330" y="606" text-anchor="middle" font-size="23" font-weight="700" fill="#8fb3ff" font-family="NotoKR">RUNNING</text>
+    <path d="M20 500 L180 500" stroke="#3b4a7a" stroke-width="28" stroke-linecap="round" fill="none"/>
+    <g id="rv-gas"></g>
+    <rect x="155" y="650" width="350" height="24" rx="8" fill="#101736"/>
+    <!-- 칠러 -->
+    <rect x="590" y="330" width="200" height="290" rx="26" fill="#152447" stroke="#3f6fae" stroke-width="5"/>
+    <rect x="618" y="364" width="144" height="46" rx="10" fill="#0b1020"/>
+    <text x="690" y="398" text-anchor="middle" font-size="24" font-weight="900" fill="#7fd0ff" font-family="NotoKR" letter-spacing="2">CHILLER</text>
+    <circle id="rv-cled" cx="690" cy="470" r="13" fill="#7fd0ff"/>
+    <text x="690" y="520" text-anchor="middle" font-size="26" font-weight="700" fill="#7fd0ff" font-family="NotoKR">± 0.1℃</text>
+    <path id="rv-cloop" d="M590 560 H520 V250 H560" fill="none" stroke="#7fd0ff" stroke-width="7" stroke-linecap="round" stroke-dasharray="16 16"/>
+    <rect x="560" y="222" width="120" height="56" rx="12" fill="#101c3c" stroke="#3f6fae" stroke-width="4"/>
+    <text x="620" y="258" text-anchor="middle" font-size="22" font-weight="700" fill="#7fd0ff" font-family="NotoKR">CHAMBER</text>
+    <rect x="600" y="640" width="180" height="22" rx="8" fill="#101736"/>
+  </svg>
+  <div class="en">Behind every "nothing" — a scrubber and a chiller. 24/7 for 25 years: about 219,000 hours.</div>
+</section>
+
+<!-- S6b NAMES (큐 축 62.2–65.2) — 제품명이 전부 «자연»이라는 사실 하나로 회사의 이유를 말한다 -->
+<section id="s-names">
+  <div class="center abs" id="nm-t" style="top:250px;font-weight:700;font-size:52px;line-height:1.35;color:rgba(255,255,255,.92);text-shadow:0 3px 20px rgba(0,0,0,.55)">독가스를 태우는 기계에,<br>우리는 이런 이름을 붙였습니다.</div>
+  <div class="abs" id="nm-row" style="left:0;right:0;top:470px;text-align:center;white-space:nowrap"></div>
+  <div class="abs" id="nm-mean" style="left:0;right:0;top:640px;text-align:center;font-weight:700;font-size:46px;letter-spacing:6px;color:#8fb3ff">대지 · 강 · 숲 · 물</div>
+  <div class="en">We named the machines that burn poison gas: Earth, River, Forest, Water.</div>
+</section>
+
+<!-- S7 PIVOT 24.8–26.8 -->
+<section id="s-pivot">
+  <div class="txt center abs" id="pv1" style="top:420px;font-size:70px">아무 일도 안 일어나게 하려고,<br>우리는 <b>꽤 많은 일</b>을 했습니다.</div>
+  <div class="en">To make nothing happen, we did quite a lot.</div>
+</section>
+
+<!-- S8 FOUNDING 26.8–30.8 -->
+<section id="s-found">
+  <div class="date abs" id="fd-date" style="left:140px;top:170px">2001. 10. 01</div>
+  <div class="txt abs" id="fd-t1" style="left:140px;top:380px">퇴직금 <b class="num" id="fd-won">₩0</b>으로 시작했습니다.</div>
+  <div class="txt abs" id="fd-t2" style="left:140px;top:500px;font-size:54px;color:rgba(255,255,255,.9)">일본이 독점하던 스크러버를, <b>우리 손으로.</b></div>
+  <div class="slot photo abs" id="fd-photo" style="left:1230px;top:450px;width:600px;height:420px"><img src="photos/founding.jpg" alt="" onerror="this.closest('.slot').classList.add('noimg')"></div>
+  <svg class="abs" id="fd-svg" style="left:1380px;top:560px" width="420" height="330" viewBox="0 0 420 330">
+    <rect x="30" y="150" width="360" height="150" rx="10" fill="#1a2447" stroke="#33427a" stroke-width="4"/>
+    <path d="M30 150 L110 90 L110 150 L190 90 L190 150 L270 90 L270 150 Z" fill="#22305e" stroke="#33427a" stroke-width="4"/>
+    <rect x="300" y="40" width="40" height="120" fill="#22305e" stroke="#33427a" stroke-width="4"/>
+    <rect x="70" y="200" width="60" height="60" fill="#ffd36b" opacity=".9"/><rect x="170" y="200" width="60" height="60" fill="#ffd36b" opacity=".6"/><rect x="270" y="200" width="60" height="60" fill="#ffd36b" opacity=".8"/>
+    <text x="210" y="325" text-anchor="middle" font-size="26" font-weight="700" fill="#8fb3ff" font-family="NotoKR">경기 화성</text>
+  </svg>
+  <div class="abs" id="fd-spark" style="left:1660px;top:520px;font-size:80px;line-height:1">✨</div>
+  <div class="en">Oct 1, 2001 — started with ₩5,000,000 in severance pay, and localized the scrubber Japan had monopolized.</div>
+</section>
+
+<!-- S9 KOSDAQ 30.8–34.4 -->
+<section id="s-kosdaq">
+  <div class="date abs" style="left:140px;top:170px">2006. 02. 01</div>
+  <div class="txt abs" style="left:140px;top:370px">코스닥 상장.</div>
+  <div class="card abs" id="kq-card" style="left:140px;top:500px;width:1240px;height:160px;padding:30px 46px">
+    <div class="led num">공모가 5,800 → 시초가 <span id="kq-num">5,800</span> <span class="g" id="kq-up">▲ 34.5%</span></div>
+  </div>
+  <svg class="abs" style="left:1400px;top:420px" width="420" height="360" viewBox="0 0 420 360">
+    <polyline id="kq-line" points="20,300 90,280 150,290 210,220 270,200 330,120 400,60" fill="none" stroke="#5cff8a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle id="kq-dot" cx="400" cy="60" r="12" fill="#5cff8a"/>
+  </svg>
+  <div class="en">Feb 1, 2006 — listed on KOSDAQ. Up 34.5% on day one.</div>
+</section>
+
+<!-- S10 MAP 34.4–39.6 -->
+<section id="s-map">
+  <svg id="map" class="abs" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080">
+    <g id="map-dots" fill="#2b3f7a"></g>
+    <g id="map-arcs" fill="none" stroke="#ffd36b" stroke-width="3" stroke-linecap="round" opacity=".9"></g>
+    <g id="map-pins"></g>
+  </svg>
+  <div class="card abs" id="co" style="left:90px;top:440px;width:640px;padding:26px 36px"></div>
+  <div class="txt center abs" id="map-t" style="top:930px;font-size:56px">화성에서, <b>여섯 나라</b>로.</div>
+  <div class="en">From Hwaseong to six countries.</div>
+</section>
+
+<!-- S11 STAIRS 39.6–43.8 -->
+<section id="s-stairs">
+  <div class="kicker">수출의 탑</div>
+  <svg class="abs" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080">
+    <g id="stairs"></g>
+  </svg>
+  <div class="abs" id="tr-trophy" style="left:1510px;top:36px;font-size:120px;line-height:1;transform-origin:50% 100%">🏆</div>
+  <div class="txt abs" id="tr-t" style="left:140px;top:250px;font-size:56px">그리고 창립 20주년,<br><b>1억불 수출의 탑.</b></div>
+  <div class="en">Export Tower awards: $5M (2007) → $10M → $20M → $30M → $100M (2021).</div>
+</section>
+
+<!-- S12 LEADERS 43.8–49.0 -->
+<section id="s-lead">
+  <div class="txt center abs" id="ld-t" style="top:196px;font-size:60px">그 길을 정하고, 먼저 걸어 주신 분들.</div>
+  <div id="ld-wrap"></div>
+  <div class="sub center abs" id="ld-all" style="top:770px;font-size:42px;color:#ffd36b;font-weight:900">그리고, 함께 걸어온 <b>모든 임직원</b>.</div>
+  <div class="en">To those who set the course — and to everyone who walked it.</div>
+</section>
+
+<!-- S12b FUTURE (큐 기준 43.8–47.0) -->
+<section id="s-future">
+  <div class="kicker" id="fu-k" style="color:#7fd0ff">그리고</div>
+  <div class="txt abs" id="fu-t" style="left:140px;top:250px;font-size:62px">다음 25년은,<br><b>이미 시작됐습니다.</b></div>
+  <div class="sub abs" id="fu-s" style="left:140px;top:470px;font-size:40px;color:#7fd0ff">이번엔 AI 데이터센터의 열을 — <b style="color:#fff">액침냉각</b></div>
+  <div class="abs" id="fu-n" style="left:140px;top:552px;font-weight:700;font-size:31px;color:rgba(255,255,255,.55)">2025년 첫 상업 납품 · 2026년 실증 운영</div>
+  <div class="slot photo abs" id="fu-photo" style="left:1060px;top:230px;width:780px;height:560px">
+    <img src="photos/immersion.jpg" alt="" onerror="this.closest('.slot').classList.add('noimg')"></div>
+  <svg class="abs" id="fu-svg" style="left:1060px;top:230px" width="780" height="560" viewBox="0 0 780 560">
+    <defs><linearGradient id="liq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f8fd8" stop-opacity=".30"/><stop offset="1" stop-color="#1b3f78" stop-opacity=".45"/></linearGradient>
+      <radialGradient id="fglow"><stop offset="0" stop-color="#7fd0ff" stop-opacity=".45"/><stop offset="1" stop-color="#7fd0ff" stop-opacity="0"/></radialGradient></defs>
+    <circle id="fu-glow" cx="390" cy="300" r="300" fill="url(#fglow)"/>
+    <rect x="40" y="100" width="700" height="400" rx="22" fill="url(#liq)" stroke="#4d86c8" stroke-width="5"/>
+    <path id="fu-surf" d="M45 140 h690" stroke="#8fd6ff" stroke-width="3" opacity=".75" fill="none"/>
+    <!-- 서버 랙이 액체에 잠겨 있다 -->
+    <rect x="140" y="180" width="500" height="280" rx="12" fill="#0c1630" stroke="#4d86c8" stroke-width="4"/>
+    <g id="fu-units"></g>
+    <text x="390" y="530" text-anchor="middle" font-size="27" font-weight="900" fill="#7fd0ff" font-family="NotoKR" letter-spacing="3">IMMERSION COOLING</text>
+    <g id="fu-bub"></g>
+  </svg>
+  <div class="en">And the next 25 years have already begun — immersion cooling for AI data centers.</div>
+</section>
+
+<!-- S13 CLOSE 49.0–53.6 -->
+<section id="s-close">
+  <svg class="abs" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080">
+    <g id="stars" fill="#fff"></g>
+    <g id="skyline"></g>
+    <circle id="cl-glow" cx="1500" cy="700" r="90" fill="#ffd36b" opacity=".18"/>
+    <circle cx="1500" cy="700" r="14" fill="#ffd36b"/>
+  </svg>
+  <div class="txt center abs" id="cl1" style="top:330px;font-size:72px">그래서 오늘도,<br>아무 일도 없습니다.</div>
+  <div class="txt center abs" id="cl2" style="top:300px;font-size:66px">아무 일도 없게 하는 것.<br>그게 우리가 <b>25년</b> 동안 한 일입니다.</div>
+  <div class="en" id="cl-en1">So today, again — nothing happens.</div>
+  <div class="en" id="cl-en2">Making sure nothing happens. That's what we've done for 25 years.</div>
+</section>
+
+<!-- S14 END 53.6–59.0 -->
+<section id="s-end">
+  <svg class="abs" id="confetti" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080"></svg>
+  <svg class="abs" style="left:870px;top:56px" width="180" height="180" viewBox="-90 -90 180 180">
+    <circle id="end-ring" r="80" fill="none" stroke="#ffd36b" stroke-width="3" opacity=".5"/>
+    <circle r="65" fill="#1e6fd9" opacity=".92"/>
+    <g fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.2"><ellipse rx="65" ry="24"/><ellipse rx="24" ry="65"/><circle r="65"/><line x1="-65" y1="0" x2="65" y2="0"/></g>
+    <text y="17" text-anchor="middle" font-family="BlackHan" font-size="48" fill="#fff">25</text>
+  </svg>
+  <div class="big center abs" id="end-t" style="top:262px;font-size:84px">GST 창립 <b>25</b>주년</div>
+  <div class="center abs num" id="end-d" style="top:372px;font-weight:700;font-size:34px;color:rgba(255,255,255,.72);letter-spacing:3px">2001. 10. 01 — 2026. 10. 01</div>
+  <div class="abs" id="end-rule" style="left:610px;top:444px;width:700px;height:1px;background:rgba(255,255,255,.22)"></div>
+  <!-- 실제 CI — report/qbr-template.pptx 안의 회사 로고를 어두운 배경용으로 반전한 것 -->
+  <div class="slot abs" id="end-logo" style="left:730px;top:480px;width:460px;height:153px">
+    <img src="logos/gst-white.png" alt="" onerror="this.closest('.slot').classList.add('noimg')">
+    <div class="fb" style="text-align:center;padding-top:44px">
+      <span style="font-family:'BlackHan','NotoKR';font-size:56px;color:#fff;letter-spacing:1px">GST</span>
+      <span style="font-weight:700;font-size:36px;color:#8fc0ff;letter-spacing:9px;margin-left:12px">GROUP</span>
+    </div>
+  </div>
+  <div class="center abs" id="end-grp" style="top:666px;font-weight:700;font-size:24px;color:rgba(255,255,255,.5);letter-spacing:11px">GST GROUP</div>
+  <div class="mark" id="mk1" style="left:330px;top:726px;width:400px">
+    <div class="slot mkl"><img src="logos/gst-mark.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#7fb0ff">GST</div></div>
+    <div class="ds">스크러버 · 칠러 · 액침냉각</div></div>
+  <div class="mark" id="mk2" style="left:760px;top:726px;width:400px">
+    <div class="slot mkl"><img src="logos/est.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#6fe3c4">EST</div></div>
+    <div class="ds">반도체 설비부품 · 콜드체인</div></div>
+  <div class="mark" id="mk3" style="left:1190px;top:726px;width:400px">
+    <div class="slot mkl"><img src="logos/robocare.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#ffb27a">ROBOCARE</div></div>
+    <div class="ds">돌봄로봇</div></div>
+  <div class="center abs" id="end-l" style="top:876px;font-weight:900;font-size:50px;color:#8fc0ff">다음 25년도, 아무 일 없이.</div>
+  <div class="en">GST GROUP — GST · EST · ROBOCARE. Here's to 25 more uneventful years.</div>
+</section>
+
+<div id="grain"></div>
+<div id="vig" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 78% at 50% 48%,rgba(0,0,0,0) 52%,rgba(0,0,0,.45) 100%)"></div>
+<div id="fade" style="position:absolute;inset:0;pointer-events:none;background:#000"></div>
+</div>
+<script src="timeline.js"></script>
+<script src="mapdots.js"></script>
+<script>
+// ── 타임라인은 timeline.js 한 곳에서 온다 — 그림과 소리가 갈리지 않게.
+//    주소에 ?mode=short 를 붙이면 45초 짧은 버전이 된다(장면 셋을 빼고 나머지를 조금씩 줄인다).
+const MODE = (new URLSearchParams(location.search).get('mode') === 'short') ? 'short' : 'full';
+const P = TL.build(MODE);
+const T = P.T, DUR = P.DUR, KEYS = TL.SCENES.map(s => s.k);
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+const p = (t,a,b) => clamp((t-a)/(b-a),0,1);
+const eo = x => 1-Math.pow(1-x,3);
+const ei = x => x*x*x;
+const eio = x => x<.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2;
+const eb = x => { const c=1.70158, c3=c+1; return 1+c3*Math.pow(x-1,3)+c*Math.pow(x-1,2); };
+const lerp = (a,b,x) => a+(b-a)*x;
+const fmt = n => Math.round(n).toLocaleString('en-US');
+function rng(seed){ let s = seed>>>0; return () => { s += 0x6D2B79F5; let r = Math.imul(s ^ (s>>>15), 1|s); r ^= r + Math.imul(r ^ (r>>>7), 61|r); return ((r ^ (r>>>14))>>>0)/4294967296; }; }
+const NS = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+function op(el, v){ el.style.opacity = clamp(v,0,1); }
+function pop(el, t, t0, dur=0.5, dy=26){ const x = p(t,t0,t0+dur); op(el, x); el.style.transform = `translateY(${(1-eo(x))*dy}px)`; }
+function popIn(el, t, t0, dur=0.45){ const x = p(t,t0,t0+dur); op(el, x>0?1:0); el.style.transform = `scale(${x>0?eb(x):0})`; }
+function stamp(el, t, t0, deg=-6){ if (t < t0) { op(el,0); return; } const x = p(t,t0,t0+0.3); op(el,1); el.style.transform = `rotate(${deg}deg) scale(${lerp(1.7,1,eo(x))})`; }
+function typeTo(el, str, t, t0, cps=13){ const n = t < t0 ? 0 : Math.min(str.length, Math.floor((t-t0)*cps)); el.textContent = str.slice(0,n); return n >= str.length; }
+
+// ── 경영진 — 이름·직함은 공개 자료 기준이다. 사내 확인 후 이 배열만 고치면 화면·순서가 따라온다.
+//    portraits/p1.png … p4.png 를 넣으면 그 이미지가 쓰이고, 없으면 기본 실루엣이 선다(닮은꼴을 지어내지 않는다).
+const LEADERS = [
+  { file:'portraits/p1.png', name:'김덕준', title:'회장', hair:'a', glasses:true },
+  { file:'portraits/p2.png', name:'장광수', title:'부회장', hair:'b' },
+  { file:'portraits/p3.png', name:'석종욱', title:'대표이사', hair:'c', glasses:true },
+  { file:'portraits/p4.png', name:'문승보', title:'대표이사', hair:'d' },
+];
+
+// ── 정적 요소 생성(한 번만)
+(function build(){
+  const g = $('wafers');
+  for (let i=0;i<14;i++){ const w = svgEl('g',{class:'wf'},g); svgEl('circle',{r:48,fill:'#cfdcff',stroke:'#8fa6e0','stroke-width':3},w); svgEl('circle',{r:30,fill:'none',stroke:'#aebdf0','stroke-width':1.2},w); svgEl('rect',{x:-6,y:-50,width:12,height:6,rx:2,fill:'#1a2447'},w); }
+  const bd = $('belt-dots'); for (let i=0;i<60;i++) svgEl('rect',{class:'bd',y:206,width:16,height:18,rx:4,fill:'#33427a'},bd);
+  const gas = $('rv-gas'); const rg = rng(7);
+  for (let i=0;i<7;i++){ const gg = svgEl('g',{class:'gs'},gas); const col = ['#c084fc','#7ee787','#ff8a5b','#60a5fa','#f472b6','#facc15','#c084fc'][i]; svgEl('circle',{r:22+rg()*12,fill:col,opacity:.85,filter:'blur(2px)'},gg); const tx = svgEl('text',{'font-size':22,y:8,'text-anchor':'middle'},gg); tx.textContent = i%2?'☠️':'💀'; }
+  const bub = $('rv-bubbles'); for (let i=0;i<10;i++) svgEl('circle',{class:'bb',r:9+(i%3)*4,fill:'#bfe3ff',opacity:.8},bub);
+  const md = $('map-dots'); for (const [x,y] of MAP_DOTS) svgEl('circle',{cx:x,cy:y,r:3.6},md);
+  const st = $('stairs'); const H = [190,290,390,490,600]; const L = [['5백만불','2007'],['1천만불','2011'],['2천만불','2014'],['3천만불','2019'],['1억불','2021']];
+  for (let i=0;i<5;i++){ const x = 250 + i*300; const gg = svgEl('g',{class:'stp'},st); svgEl('rect',{x,y:900-H[i],width:240,height:H[i],rx:14,fill: i===4?'#ffd36b':'#2f4380',stroke: i===4?'#ffe6a3':'#4a5b8f','stroke-width':4},gg);
+    const t1 = svgEl('text',{x:x+120,y:900-H[i]-58,'text-anchor':'middle','font-size':44,'font-weight':900,fill:'#fff','font-family':'NotoKR'},gg); t1.textContent = L[i][0];
+    const t2 = svgEl('text',{x:x+120,y:900-H[i]-16,'text-anchor':'middle','font-size':30,'font-weight':700,fill:'#8fb3ff','font-family':'NotoKR'},gg); t2.textContent = L[i][1]; }
+  svgEl('rect',{x:120,y:900,width:1680,height:6,fill:'#33427a'},st);
+  const sky = $('skyline'); const rs = rng(21); let x = 0;
+  while (x < 1920){ const w = 90+rs()*160, h = 120+rs()*260; const b = svgEl('g',{},sky); svgEl('rect',{x,y:1000-h,width:w,height:h,fill:'#0c1430'},b);
+    for (let wy = 1000-h+24; wy < 980; wy += 34) for (let wx = x+16; wx < x+w-20; wx += 30) svgEl('rect',{class:'win',x:wx,y:wy,width:14,height:16,rx:2,fill:'#ffd36b',opacity: rs()<.35 ? .5+rs()*.5 : 0.06},b);
+    x += w + 18; }
+  svgEl('rect',{x:0,y:1000,width:1920,height:80,fill:'#060b1c'},sky);
+  const stars = $('stars'); for (let i=0;i<140;i++) svgEl('circle',{class:'st',cx:rs()*1920,cy:rs()*560,r:1+rs()*1.8,opacity:.3+rs()*.7},stars);
+  const cf = $('confetti'); const rc = rng(99); const cols = ['#ffd36b','#5cff8a','#60a5fa','#f472b6','#fff'];
+  for (let i=0;i<70;i++){ const r = svgEl('rect',{class:'cf',width:14,height:22,rx:3,fill:cols[i%5]},cf); r.dataset.x = rc()*1920; r.dataset.v = 140+rc()*160; r.dataset.ph = rc()*6.28; r.dataset.rot = rc()*360; }
+  const PINS = [['hwaseong','2001','화성 본사'],['austin','2006','미국 오스틴'],['xian','2013','중국 시안'],['taiwan','2016','대만'],['wuxi','2016','중국 우시'],['hefei','2017','중국 허페이'],['wuhan','2019','중국 우한'],['singapore','2020','싱가포르'],['europe','2024','유럽'],['japan','2024','일본']];
+  const pg = $('map-pins'), ag = $('map-arcs'), co = $('co'); const [hx,hy] = MAP_PINS.hwaseong;
+  PINS.forEach(([k,y,name],i) => { const [px,py] = MAP_PINS[k];
+    if (i>0){ const mx = (hx+px)/2, my = Math.min(hy,py) - Math.abs(px-hx)*0.28 - 30; const path = svgEl('path',{class:'arc',d:`M${hx} ${hy} Q${mx} ${my} ${px} ${py}`},ag); const len = path.getTotalLength(); path.dataset.len = len; path.setAttribute('stroke-dasharray', len); }
+    const g = svgEl('g',{class:'pin'},pg); svgEl('circle',{class:'ring',cx:px,cy:py,r:8,fill:'none',stroke:'#ffd36b','stroke-width':3},g); svgEl('circle',{class:'dot',cx:px,cy:py,r: i===0?11:8,fill: i===0?'#fff':'#ffd36b',stroke:'#0b1020','stroke-width':3},g);
+    const d = document.createElement('div'); d.className = 'co-line'; d.innerHTML = `<span class="y">${y}</span>${name}`; co.appendChild(d); });
+
+  // 제품명 — GST 스크러버 라인업에서 «자연»에 해당하는 넷만 고른다(제품 목록 기준, 사내 확인 필요)
+  const NAMES = ['GAIA', 'GARAM', 'SOOPIA', 'AQUA'];
+  const row = $('nm-row');
+  NAMES.forEach((n, i) => {
+    if (i) { const dot = document.createElement('span'); dot.className = 'nmd'; dot.id = 'nmd' + i;
+      dot.style.cssText = 'font-weight:700;font-size:56px;color:rgba(255,255,255,.32);margin:0 26px;vertical-align:14px'; dot.textContent = '·'; row.appendChild(dot); }
+    const e = document.createElement('span'); e.id = 'nm' + i;
+    e.style.cssText = 'display:inline-block;font-weight:900;font-size:84px;letter-spacing:5px;color:#fff;text-shadow:0 4px 30px rgba(143,192,255,.45)';
+    e.textContent = n; row.appendChild(e); });
+
+  // 액침냉각 탱크 — 서버 유닛과 기포
+  const fu = $('fu-units'); const rf = rng(41);
+  for (let i = 0; i < 5; i++){ const y = 196 + i*54; const g = svgEl('g',{},fu);
+    svgEl('rect',{x:160,y,width:460,height:42,rx:7,fill:'#16224a',stroke:'#2f4a86','stroke-width':2},g);
+    for (let d = 0; d < 7; d++) svgEl('circle',{class:'led',cx:190+d*62,cy:y+21,r:5,fill:'#5cff8a'},g);
+    svgEl('rect',{x:566,y:y+10,width:44,height:22,rx:4,fill:'#0d1730',stroke:'#2f4a86','stroke-width':2},g); }
+  const fb2 = $('fu-bub');
+  for (let i = 0; i < 22; i++){ const c = svgEl('circle',{class:'bu',r:3+rf()*6,fill:'#bfe6ff',opacity:.7},fb2); c.dataset.x = 160+rf()*470; c.dataset.ph = rf()*3; c.dataset.sp = .6+rf()*.7; }
+
+  // 경영진 초상 — 이미지가 없으면 «닮은꼴을 지어내지 않는» 실루엣이 선다
+  const HAIR = { a:'M-52 -6 q4 -60 52 -60 q48 0 52 60 q-16 -26 -52 -26 q-36 0 -52 26 Z',
+                 b:'M-54 -4 q2 -62 54 -62 q52 0 54 62 q-18 -34 -30 -22 q-16 12 -48 6 q-22 -4 -30 16 Z',
+                 c:'M-52 -8 q6 -58 52 -58 q46 0 52 58 q-24 -18 -52 -18 q-28 0 -52 18 Z',
+                 d:'M-53 -6 q2 -60 53 -60 q51 0 53 60 q-14 -30 -53 -30 q-39 0 -53 30 Z' };
+  const GLASSES = '<g fill="none" stroke="#0f1836" stroke-width="5" opacity=".5">' +
+    '<rect x="-42" y="-44" width="30" height="24" rx="8"/><rect x="12" y="-44" width="30" height="24" rx="8"/>' +
+    '<path d="M-12 -33 h24"/><path d="M-42 -36 l-8 -3"/><path d="M42 -36 l8 -3"/></g>';
+  const SUIT = '<g fill="#0f1836" opacity=".5">' +
+    '<path d="M-27 33 L-4 60 L-32 78 Z"/><path d="M27 33 L4 60 L32 78 Z"/>' +      // 라펠
+    '<path d="M-4 60 L0 50 L4 60 L3 91 L-3 91 Z"/></g>';                            // 넥타이
+  const wrap = $('ld-wrap');
+  LEADERS.forEach((L,i) => { const cx = 400 + i*380;                          // 4명 · 가로 균등 배치
+    const f = document.createElement('div'); f.className = 'slot pf'; f.id = 'pf'+i; f.style.left = (cx-95)+'px'; f.style.top = '344px';
+    f.innerHTML = `<img src="${L.file}" alt="" onerror="this.closest('.slot').classList.add('noimg')">` +
+      `<svg class="fb" width="182" height="182" viewBox="-91 -91 182 182">` +
+      `<rect x="-91" y="-91" width="182" height="182" fill="#16224a"/>` +
+      `<path d="M-70 91 q0 -54 70 -54 q70 0 70 54 Z" fill="#ffd36b" opacity=".92"/>` +      // 어깨
+      `<path d="M-26 4 h52 v34 h-52 Z" fill="#ffd36b" opacity=".92"/>` +                      // 목
+      SUIT +                                                                                  // 라펠·넥타이
+      `<ellipse rx="46" ry="52" cy="-24" fill="#ffd36b" opacity=".92"/>` +                    // 머리
+      `<path d="${HAIR[L.hair]}" transform="translate(0,-24)" fill="#0f1836" opacity=".55"/>` + // 머리 모양
+      (L.glasses ? GLASSES : '') +
+      `</svg>`;
+    wrap.appendChild(f);
+    const n = document.createElement('div'); n.className = 'pn'; n.id = 'pn'+i; n.style.left = (cx-140)+'px'; n.style.top = '570px'; n.textContent = L.name; wrap.appendChild(n);
+    const ti = document.createElement('div'); ti.className = 'pt'; ti.id = 'pt'+i; ti.style.left = (cx-140)+'px'; ti.style.top = '614px'; ti.textContent = L.title; wrap.appendChild(ti); });
+})();
+
+const SEC = Object.fromEntries(KEYS.map(k => [k, $('s-'+k)]));
+function sceneOp(t, k){ const [a,b] = T[k]; const f = 0.22; if (t < a || t >= b) return -1; return Math.min(p(t,a,a+f), 1-p(t,b-f,b)); }
+
+// ── 장면별 그림. 인자 t 는 «큐 기준» 시각이다(timeline.js 의 base 축).
+//    장면 길이를 바꿔도 아래 숫자는 손대지 않는다 — toFull 이 맞춰 준다.
+const SCN = {};
+SCN.hook = function(t){
+    pop($('h1'), t, 0.4);
+    const done = typeTo($('h2t'), 'GST에는 아무 일도 안 일어났습니다.', t, 1.3, 12);
+    $('h2c').style.opacity = (t < 1.3 || (done && Math.floor(t*2.5)%2)) ? 0 : 1;
+    pop($('h-en'), t, 3.0, 0.4, 10);
+};
+SCN.nothing = function(t){
+    pop($('n1'), t, 4.15, 0.4);
+    const x = p(t, 4.2, 6.5); const tb = $('tumble'); tb.style.left = lerp(-220, 2000, x) + 'px'; tb.style.top = (770 - 40*Math.abs(Math.sin((t-4.2)*5))) + 'px'; tb.style.transform = `rotate(${(t-4.2)*420}deg)`;
+    typeTo($('cricket-t'), '귀뚤… 귀뚤…', t, 4.7, 9);
+    op($('cactus'), p(t,4.3,4.7));
+};
+SCN.silane = function(t){
+    pop($('si-t'), t, 6.6, 0.4);
+    const fire = $('si-fire'), blob = $('si-blob'), sk = $('si-skull');
+    let bx, by, bs = 1, bo = 1;
+    if (t < 8.8){ const x = eio(p(t, 7.0, 8.8)); bx = lerp(-260, 1090, x); by = 560 + 30*Math.sin(t*4); }
+    else { const x = eo(p(t, 8.8, 9.15)); bx = lerp(1090, 1110, x); by = lerp(560, 800, x); bs = 1 - x; bo = 1 - x; }
+    blob.style.transform = `translate(${bx}px,${by}px) scale(${bs})`; op(blob, bo * p(t,7.0,7.3)); sk.style.transform = `translate(${bx+85}px,${by+56}px) scale(${bs})`; op(sk, bo * p(t,7.0,7.3));
+    let fs = 0; if (t >= 8.2 && t < 8.8) fs = lerp(0, 1.15, eo(p(t,8.2,8.7))) * (1 + 0.08*Math.sin(t*40)); else if (t >= 8.8) fs = Math.max(0, 1.15 * (1 - p(t,8.8,8.95)));
+    fire.style.transform = `scale(${fs})`; op(fire, fs > 0 ? 1 : 0);
+    $('si-led').setAttribute('fill', Math.floor(t*4)%2 ? '#5cff8a' : '#2f8a4a');
+    stamp($('si-stamp'), t, 9.15, -6); op($('si-en2'), t >= 9.2 ? 1 : 0);
+};
+SCN.sf6 = function(t){
+    const yr = $('sf-year'), earth = $('sf-earth');
+    let y = 2026, heat = 0;
+    if (t >= 10.4 && t < 12.15){ const x = ei(p(t,10.4,12.1)); y = Math.round(lerp(2026, 5226, x)); heat = x; }
+    else if (t >= 12.15){ y = 2026; heat = Math.max(0, 1 - p(t,12.15,12.45)); }
+    yr.textContent = y; yr.style.color = heat > 0 ? `rgb(255,${Math.round(255-140*heat)},${Math.round(255-200*heat)})` : '#fff';
+    yr.style.transform = (t >= 12.15 && t < 12.3) ? 'scaleX(-1)' : 'none';
+    earth.style.filter = `hue-rotate(${-heat*90}deg) saturate(${1+heat*1.5})`; earth.style.transform = `scale(${1 + 0.04*Math.sin(t*6)})`;
+    $('sf-lbl').textContent = t < 10.4 ? '지금' : (t < 12.15 ? `+${fmt(y-2026)}년` : '다시, 지금');
+    stamp($('sf-stamp'), t, 12.5, 4.5); op($('sf-en2'), t >= 12.55 ? 1 : 0);
+};
+SCN.chill = function(t){
+    const nd = $('ch-needle'), tp = $('ch-temp');
+    let x0, temp, locked = t >= 15.05;
+    if (!locked){ const a = p(t,13.5,15.05); const amp = lerp(430, 40, eo(a));               // 진폭이 점점 줄며 중앙으로
+      x0 = 540 + amp*Math.sin((t-13.5)*11.5); temp = 25 + (x0-540)/430*4.2; }
+    else { const s = p(t,15.05,15.2); x0 = lerp(540 + 40*Math.sin(1.55*11.5), 540, eo(s)); temp = 25 + (x0-540)/430*4.2; }
+    nd.setAttribute('transform', `translate(${x0},0)`);
+    const inBand = Math.abs(temp-25) <= 0.1;
+    tp.textContent = temp.toFixed(1); tp.style.color = inBand ? '#5cff8a' : (Math.abs(temp-25) > 2 ? '#ff8a8a' : '#fff');
+    nd.querySelectorAll('rect,circle').forEach(e => e.setAttribute('fill', inBand ? '#5cff8a' : '#ffd36b'));
+    $('ch-flake').style.transform = `rotate(${t*40}deg) scale(${1+0.06*Math.sin(t*5)})`;
+    $('ch-led').setAttribute('opacity', 0.55 + 0.45*Math.sin(t*7));
+    $('ch-loop').setAttribute('stroke-dashoffset', -(t*90) % 28);
+    stamp($('ch-stamp'), t, 15.5, -7); op($('ch-en2'), t >= 15.55 ? 1 : 0);
+};
+SCN.stop = function(t){
+    const stopping = t >= 17.8 && t < 18.85;
+    const speed = 300;
+    document.querySelectorAll('#wafers .wf').forEach((w,i) => { const x = 120 + ((i*130 + t*speed) % 1820) - 60; w.setAttribute('transform', `translate(${x},200)`); });
+    document.querySelectorAll('#belt-dots .bd').forEach((r,i) => r.setAttribute('x', 100 + ((i*32 + t*speed) % 1720)));
+    const lamp = $('st-lamp'), lt = $('st-lamp-t'), warn = $('st-warn');
+    if (t < 17.8){ lamp.setAttribute('fill','#5cff8a'); lt.textContent = 'RUN'; op(warn,0); }
+    else if (stopping){ const on = Math.floor(t*6)%2; lamp.setAttribute('fill', on ? '#ff3b3b' : '#7a1c1c'); lt.textContent = 'STOP'; op(warn, on ? 1 : .3); }
+    else { lamp.setAttribute('fill','#5cff8a'); lt.textContent = 'RUN'; op(warn,0); }
+    op($('st-247'), p(t,19.0,19.35));
+    stamp($('st-stamp'), t, 18.95, 3.5); op($('st-en2'), t >= 19.0 ? 1 : 0);
+};
+SCN.reveal = function(t){
+    pop($('rv1'), t, 20.35); pop($('rv2'), t, 21.3); pop($('rv3'), t, 22.7);
+    $('rv-glow').setAttribute('opacity', 0.6 + 0.4*Math.sin(t*2.2));
+    $('rv-cglow').setAttribute('opacity', 0.55 + 0.45*Math.sin(t*2.2 + 2));
+    ['rv-ch1','rv-ch2'].forEach((id,i) => $(id).setAttribute('r', 31 + 4*Math.sin(t*9 + i)));
+    $('rv-led').setAttribute('fill', Math.floor(t*3)%2 ? '#5cff8a' : '#2f8a4a');
+    $('rv-cled').setAttribute('opacity', 0.5 + 0.5*Math.sin(t*6));
+    $('rv-cloop').setAttribute('stroke-dashoffset', -(t*70) % 32);
+    document.querySelectorAll('#rv-gas .gs').forEach((g,i) => { const cyc = 2.2, ph = ((t - 20.4 + i*0.31) % cyc + cyc) % cyc; const x = ph / cyc; const px = lerp(0, 200, x), py = 500 + 16*Math.sin(x*12+i); const s = x > 0.85 ? (1-x)/0.15 : 1; g.setAttribute('transform', `translate(${px},${py}) scale(${s})`); g.setAttribute('opacity', t < 20.4 ? 0 : 1); });
+    document.querySelectorAll('#rv-bubbles .bb').forEach((b,i) => { const cyc = 2.8, ph = ((t - 20.9 + i*0.28) % cyc + cyc) % cyc; const x = ph/cyc; b.setAttribute('cx', 320 + 20*Math.sin(x*9+i)); b.setAttribute('cy', lerp(80, -110, x)); b.setAttribute('opacity', t < 20.9 ? 0 : (x < 0.1 ? x*8 : 0.8*(1-x))); });
+};
+SCN.pivot = function(t){ pop($('pv1'), t, 25.05, 0.5);
+};
+SCN.found = function(t){
+    pop($('fd-date'), t, 27.0, 0.45, 40); pop($('fd-t1'), t, 27.6, 0.45);
+    const won = Math.round(lerp(0, 5000000, eo(p(t, 27.8, 29.2)))); $('fd-won').textContent = '₩' + fmt(won);
+    pop($('fd-t2'), t, 29.3, 0.45); pop($('fd-svg'), t, 28.2, 0.55, 40);
+    const sp = $('fd-spark'); const sx = p(t,29.45,29.85); sp.style.transform = `scale(${sx>0?eb(sx):0}) rotate(${t*60}deg)`; op(sp, sx>0?1:0);
+};
+SCN.kosdaq = function(t){
+    const num = Math.round(lerp(5800, 7800, eo(p(t, 31.7, 32.8)))); $('kq-num').textContent = fmt(num);
+    popIn($('kq-up'), t, 32.85);
+    pop($('kq-card'), t, 31.2, 0.45, 30);
+    const ln = $('kq-line'); const L = 520; ln.setAttribute('stroke-dasharray', L); ln.setAttribute('stroke-dashoffset', L*(1-eo(p(t,31.4,33.1)))); op($('kq-dot'), p(t,33.0,33.3) > 0 ? 1 : 0); $('kq-dot').setAttribute('r', 12 + 6*Math.abs(Math.sin(t*5)));
+};
+SCN.map = function(t){
+    const t0 = 34.7, step = 0.45;
+    document.querySelectorAll('#map-pins .pin').forEach((g,i) => { const ts = t0 + i*step; const x = p(t, ts, ts+0.35); g.style.opacity = x > 0 ? 1 : 0; const dot = g.querySelector('.dot'); dot.setAttribute('transform', `translate(${dot.getAttribute('cx')*(1-eb(x))},${dot.getAttribute('cy')*(1-eb(x))}) scale(${eb(x)})`);
+      const ring = g.querySelector('.ring'); const rx = p(t, ts, ts+0.9); ring.setAttribute('r', 8 + 40*rx); ring.setAttribute('opacity', 1-rx); });
+    document.querySelectorAll('#map-arcs .arc').forEach((a,i) => { const ts = t0 + (i+1)*step - 0.2; const x = eo(p(t, ts, ts+0.45)); a.setAttribute('stroke-dashoffset', a.dataset.len*(1-x)); });
+    op($('co'), p(t,34.7,35.0));
+    document.querySelectorAll('#co .co-line').forEach((d,i) => { const ts = t0 + i*step + 0.08; const x = p(t, ts, ts+0.25); d.style.opacity = x; d.style.display = x > 0 ? 'block' : 'none'; d.style.transform = `translateX(${(1-eo(x))*-24}px)`; });
+    pop($('map-t'), t, 38.85, 0.4); pop(document.querySelector('#s-map .en'), t, 39.0, 0.35, 10);
+};
+SCN.stairs = function(t){
+    document.querySelectorAll('#stairs .stp').forEach((g,i) => { const ts = 39.9 + i*0.5; const x = eo(p(t, ts, ts+0.4)); g.setAttribute('transform', `translate(0,${900*(1-x)}) scale(1,${x})`); g.style.opacity = x>0?1:0; g.querySelectorAll('text').forEach(tx => tx.setAttribute('opacity', p(t, ts+0.25, ts+0.45))); });
+    popIn($('tr-trophy'), t, 42.4); pop($('tr-t'), t, 42.6, 0.45);
+};
+SCN.lead = function(t){
+    pop($('ld-t'), t, 47.25, 0.5);
+    LEADERS.forEach((L,i) => { const ts = 47.8 + i*0.55; const x = p(t, ts, ts+0.45);
+      const f = $('pf'+i); f.style.opacity = x; f.style.transform = `translateY(${(1-eo(x))*34}px) scale(${x>0?lerp(0.86,1,eo(x)):0.86})`;
+      const n = $('pn'+i), ti = $('pt'+i); const nx = p(t, ts+0.2, ts+0.55);
+      n.style.opacity = nx; ti.style.opacity = nx; n.style.transform = ti.style.transform = `translateY(${(1-eo(nx))*14}px)`; });
+    pop($('ld-all'), t, 50.6, 0.5);
+};
+SCN.close = function(t){
+    const a1 = Math.min(p(t,52.45,53.0), 1-p(t,54.35,54.7)); $('cl1').style.opacity = a1; $('cl1').style.transform = `translateY(${(1-eo(p(t,52.45,53.0)))*24}px)`;
+    const a2 = p(t,54.8,55.4); $('cl2').style.opacity = a2; $('cl2').style.transform = `translateY(${(1-eo(a2))*24}px)`;
+    $('cl-en1').style.opacity = a1; $('cl-en2').style.opacity = a2;
+    $('cl-glow').setAttribute('r', 90 + 30*Math.sin(t*1.6)); $('cl-glow').setAttribute('opacity', 0.14 + 0.1*Math.sin(t*1.6));
+    document.querySelectorAll('#stars .st').forEach((s,i) => s.setAttribute('opacity', 0.3 + 0.5*Math.abs(Math.sin(t*0.8 + i*1.7))));
+};
+SCN.end = function(t){
+    pop($('end-t'), t, 57.15, 0.55, 30); pop($('end-d'), t, 57.7, 0.45, 20);
+    const ru = p(t,58.15,58.65); $('end-rule').style.opacity = ru; $('end-rule').style.transform = `scaleX(${eo(ru)})`;
+    pop($('end-logo'), t, 58.25, 0.5, 20); pop($('end-grp'), t, 58.7, 0.4, 12);
+    [1,2,3].forEach(i => pop($('mk'+i), t, 58.95 + (i-1)*0.2, 0.45, 22));
+    pop($('end-l'), t, 60.0, 0.5, 20); pop(document.querySelector('#s-end .en'), t, 60.5, 0.4, 10);
+    $('end-ring').setAttribute('r', 80 + 8*Math.sin(t*2));
+    const tt = t - 56.9; document.querySelectorAll('#confetti .cf').forEach((r,i) => { const y = -40 + (+r.dataset.v)*tt, x = (+r.dataset.x) + 40*Math.sin(tt*2 + +r.dataset.ph); r.setAttribute('transform', `translate(${x},${y}) rotate(${+r.dataset.rot + tt*180})`); r.setAttribute('opacity', tt < 0 ? 0 : (y > 1080 ? 0 : 0.9)); });
+};
+
+SCN.names = function(t){
+    pop($('nm-t'), t, 62.45, 0.5);
+    for (let i = 0; i < 4; i++){ const ts = 62.9 + i*0.22, x = p(t, ts, ts+0.4);
+      const e = $('nm'+i); e.style.opacity = x; e.style.transform = `translateY(${(1-eo(x))*22}px) scale(${x>0?lerp(0.9,1,eo(x)):0.9})`;
+      if (i){ const d = $('nmd'+i); d.style.opacity = x*0.9; } }
+    pop($('nm-mean'), t, 64.1, 0.5, 18);
+    pop(document.querySelector('#s-names .en'), t, 64.4, 0.4, 10);
+};
+
+SCN.future = function(t){
+    pop($('fu-k'), t, 44.0, 0.35, 14); pop($('fu-t'), t, 44.15, 0.5);
+    pop($('fu-s'), t, 45.0, 0.45); pop($('fu-n'), t, 45.6, 0.4, 16);
+    const ph = $('fu-photo'), sv = $('fu-svg'); pop(ph, t, 44.3, 0.6, 34); pop(sv, t, 44.3, 0.6, 34);
+    $('fu-glow').setAttribute('opacity', 0.55 + 0.45*Math.sin(t*2.4));
+    $('fu-surf').setAttribute('d', 'M45 ' + (140 + 3*Math.sin(t*3)) + ' h690');
+    // LED 는 랙마다 다른 박자로 — 한꺼번에 깜빡이면 «전광판»이 된다
+    document.querySelectorAll('#fu-units .led').forEach((c,i) => c.setAttribute('opacity', 0.35 + 0.65*Math.abs(Math.sin(t*4 + i*0.7))));
+    document.querySelectorAll('#fu-bub .bu').forEach(b => { const cyc = 2.6/(+b.dataset.sp);
+      const x = (((t - 43.9 + (+b.dataset.ph)) % cyc) + cyc) % cyc / cyc;
+      b.setAttribute('cx', (+b.dataset.x) + 10*Math.sin(x*8)); b.setAttribute('cy', lerp(470, 145, x));
+      b.setAttribute('opacity', t < 43.9 ? 0 : (x < 0.08 ? x*8 : 0.7*(1-x))); });
+};
+
+window.seek = function(tOut){
+  tOut = clamp(tOut, 0, DUR);
+  // 시작·끝 0.35초 페이드 — 출력 시각 기준이다(장면 시각이 아니다)
+  $('fade').style.opacity = Math.max(1 - p(tOut, 0, 0.35), p(tOut, DUR - 0.35, DUR));
+  for (const k of KEYS){
+    const el = SEC[k];
+    if (!T[k]){ el.style.display = 'none'; continue; }   // 짧은 버전에서 뺀 장면
+    const o = sceneOp(tOut, k);
+    if (o < 0){ el.style.display = 'none'; continue; }
+    el.style.display = 'block'; el.style.opacity = o;
+    SCN[k](TL.toFull(tOut, k, P));
+  }
+};
+window.seek(0);
+</script>
+</body></html>
