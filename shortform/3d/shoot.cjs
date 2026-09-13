@@ -6,7 +6,7 @@ const OUT=process.env.OUT||'f3d', FPS=+(process.env.FPS||30), TIMES=process.env.
     args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
   const p=await b.newPage({viewport:{width:1920,height:1080},deviceScaleFactor:1});
   const errs=[]; p.on('pageerror',e=>errs.push(e.message)); p.on('console',m=>{if(m.type()==='error')errs.push('c:'+m.text());});
-  await p.goto('http://127.0.0.1:8742/3d/scene3d.html');
+  await p.goto('http://127.0.0.1:8742/3d/' + (process.env.PAGE || 'scene3d.html'));
   try{ await p.waitForFunction(()=>window.__ready===true,null,{timeout:60000}); }
   catch(e){ console.error('NOT READY', errs); process.exit(2); }
   const DUR=await p.evaluate(()=>window.DUR3D);

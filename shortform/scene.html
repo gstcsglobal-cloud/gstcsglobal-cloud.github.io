@@ -55,6 +55,15 @@ section{position:absolute;inset:0;display:none;opacity:0}
 .mark .ds{font-weight:700;font-size:20px;line-height:28px;color:rgba(255,255,255,.62);margin-top:10px;letter-spacing:-.3px}
 /* 실사 — 브라우저(오픈소스 Chromium)가 H.264 를 못 읽어 «webm(VP9)» 을 쓴다. mp4 는 편집용 원본으로만 남긴다 */
 .vwrap{position:absolute;overflow:hidden}
+/* 밋밋한 장면의 흐린 배경. ⚠ blur 는 «작은 판»(480×270)에 걸고 4배로 키운다 —
+   1920 폭에 직접 걸면 프레임당 비용이 커져 렌더가 눈에 띄게 느려진다. 흐린 그림이라 화질 손해가 없다. */
+.bgv{position:absolute;inset:0;overflow:hidden;opacity:0}
+.bgv .bgi{position:absolute;left:50%;top:50%;width:480px;height:270px;margin:-135px 0 0 -240px;
+  transform-origin:50% 50%;filter:blur(5px) saturate(.45) brightness(.62)}
+.bgv .bgi video{width:100%;height:100%;object-fit:cover;display:block}
+/* 글자가 앉는 가운데 띠를 한 겹 더 눌러 둔다 — 안 그러면 밝은 부분에서 카피가 읽히지 않는다 */
+.bgv .bgs{position:absolute;inset:0;background:
+  linear-gradient(180deg,rgba(5,9,20,.35) 0%,rgba(5,9,20,.62) 45%,rgba(5,9,20,.62) 65%,rgba(5,9,20,.35) 100%)}
 .vwrap video{width:100%;height:100%;object-fit:cover;display:block}
 .vscrim{position:absolute;inset:0}
 /* 엔딩 마이크로 타이포 — 참고본의 «모노·대문자·넓은 자간» 어휘.
@@ -75,6 +84,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 
 <!-- S0 HOOK 0–4.0 -->
 <section id="s-hook">
+  <div class="bgv" id="hk-bg"><div class="bgi"><video id="hk-bgv" src="footage/scrubber3d.webm" preload="auto" muted playsinline></video></div><div class="bgs"></div></div>
   <div class="big center abs" id="h1" style="top:400px">지난 25년,</div>
   <div class="big center abs" id="h2" style="top:500px"><span id="h2t"></span><span class="cursor" id="h2c"></span></div>
   <div class="en" id="h-en">For 25 years, nothing happened at GST.</div>
@@ -254,6 +264,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 
 <!-- S9 KOSDAQ 30.8–34.4 -->
 <section id="s-kosdaq">
+  <div class="bgv" id="kq2-bg"><div class="bgi"><video id="kq2-bgv" src="footage/hq_aerial.webm" preload="auto" muted playsinline></video></div><div class="bgs"></div></div>
   <div class="date abs" style="left:140px;top:170px">2006. 02. 01</div>
   <div class="txt abs" style="left:140px;top:370px">코스닥 상장.</div>
   <div class="card abs" id="kq-card" style="left:140px;top:500px;width:1240px;height:160px;padding:30px 46px">
@@ -280,6 +291,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 
 <!-- S11 STAIRS 39.6–43.8 -->
 <section id="s-stairs">
+  <div class="bgv" id="tr-bg"><div class="bgi"><video id="tr-bgv" src="footage/hq_aerial.webm" preload="auto" muted playsinline></video></div><div class="bgs"></div></div>
   <div class="kicker">수출의 탑</div>
   <svg class="abs" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080">
     <g id="stairs"></g>
@@ -317,6 +329,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 
 <!-- S13 CLOSE 49.0–53.6 -->
 <section id="s-close">
+  <div class="bgv" id="cl-bg"><div class="bgi"><video id="cl-bgv" src="footage/hq_lowangle.webm" preload="auto" muted playsinline></video></div><div class="bgs"></div></div>
   <svg class="abs" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080">
     <g id="stars" fill="#fff"></g>
     <g id="skyline"></g>
@@ -401,13 +414,6 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <div id="s6-old"><div class="en">GST 25th Anniversary.</div></div>
 </section>
 
-<!-- s5 — 사용자가 만든 컷. 카피·자막이 이미 구워져 있다 -->
-<section id="s-s5">
-  <div class="vwrap abs" id="s5-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
-    <video id="s5-v" src="footage/s5_interview.webm" preload="auto" muted playsinline></video>
-  </div>
-  <div id="s5-old"><div class="en">GST 25th Anniversary.</div></div>
-</section>
 <div id="grain"></div>
 <div id="vig" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 78% at 50% 48%,rgba(0,0,0,0) 52%,rgba(0,0,0,.45) 100%)"></div>
 <div id="fade" style="position:absolute;inset:0;pointer-events:none;background:#000"></div>
@@ -494,6 +500,18 @@ let PEND = [];
 // 컷이 읽히면 기존 그림·글자를 «통째로» 숨긴다 — 컷에 카피와 스탬프가 이미 들어 있어 겹치면 두 벌이 된다.
 // 못 읽으면 컷을 감추고 예전 그림이 그대로 선다(빈 화면으로 두지 않는다).
 // vt 는 «장면 큐 진행률 × 컷 길이» 다 — full 이 컷 길이와 같으면 정확히 1배속이 된다.
+// 밋밋한 장면 뒤에 흐린 배경을 깐다. 이미 가진 실사·3D 컷을 재사용한다(새 소재를 만들지 않는다).
+// ⚠ 못 읽으면 opacity 0 으로 남는다 — 검은 칸이 생기지 않는 것이 이 프로젝트의 슬롯 규약이다.
+// ⚠ 딱 떨어지게 켜고 끄면 «깜빡» 하고 보인다. 장면 안에서 서서히 들고 나야 배경으로 읽힌다.
+function bgSeek(pre, t, cue0, base, clipDur, peak){
+  const w = $(pre + '-bg'); if (!w) return;
+  const v = $(pre + '-bgv');
+  if (!vok(v)){ w.style.opacity = 0; return; }
+  const x = clamp((t - cue0) / base, 0, 1);
+  w.style.opacity = peak * Math.min(p(x, 0, 0.22), 1 - p(x, 0.82, 1));
+  w.firstElementChild.style.transform = 'scale(' + (4.00 + 0.16 * x) + ')';   // 아주 느린 밀기
+  vseek(v, x * clipDur);
+}
 function cutScene(pre, t, cue0, base, clipDur){
   const v = $(pre + '-v'), ok = vok(v);
   $(pre + '-vid').style.opacity = ok ? 1 : 0;
@@ -516,6 +534,7 @@ function sceneOp(t, k){ const [a,b] = T[k]; const f = 0.22; if (t < a || t >= b)
 //    장면 길이를 바꿔도 아래 숫자는 손대지 않는다 — toFull 이 맞춰 준다.
 const SCN = {};
 SCN.hook = function(t){
+    bgSeek('hk', t, 0.0, 4.0, 4.60, 0.34);
     pop($('h1'), t, 0.4);
     const done = typeTo($('h2t'), 'GST에는 아무 일도 안 일어났습니다.', t, 1.3, 12);
     $('h2c').style.opacity = (t < 1.3 || (done && Math.floor(t*2.5)%2)) ? 0 : 1;
@@ -610,6 +629,7 @@ SCN.found = function(t){
       vseek($('fd-v'), 0.30 + (t - 28.95) * 1.0); }
 };
 SCN.kosdaq = function(t){
+    bgSeek('kq2', t, 30.8, 3.6, 4.63, 0.30);
     const num = Math.round(lerp(5800, 7800, eo(p(t, 31.7, 32.8)))); $('kq-num').textContent = fmt(num);
     popIn($('kq-up'), t, 32.85);
     pop($('kq-card'), t, 31.2, 0.45, 30);
@@ -625,10 +645,12 @@ SCN.map = function(t){
     pop($('map-t'), t, 38.85, 0.4); pop(document.querySelector('#s-map .en'), t, 39.0, 0.35, 10);
 };
 SCN.stairs = function(t){
+    bgSeek('tr', t, 39.6, 4.2, 4.63, 0.26);
     document.querySelectorAll('#stairs .stp').forEach((g,i) => { const ts = 39.9 + i*0.5; const x = eo(p(t, ts, ts+0.4)); g.setAttribute('transform', `translate(0,${900*(1-x)}) scale(1,${x})`); g.style.opacity = x>0?1:0; g.querySelectorAll('text').forEach(tx => tx.setAttribute('opacity', p(t, ts+0.25, ts+0.45))); });
     popIn($('tr-trophy'), t, 42.4); pop($('tr-t'), t, 42.6, 0.45);
 };
 SCN.close = function(t){
+    bgSeek('cl', t, 52.2, 4.6, 4.73, 0.32);
     const a1 = Math.min(p(t,52.45,53.0), 1-p(t,54.35,54.7)); $('cl1').style.opacity = a1; $('cl1').style.transform = `translateY(${(1-eo(p(t,52.45,53.0)))*24}px)`;
     const a2 = p(t,54.8,55.4); $('cl2').style.opacity = a2; $('cl2').style.transform = `translateY(${(1-eo(a2))*24}px)`;
     $('cl-en1').style.opacity = a1; $('cl-en2').style.opacity = a2;
@@ -845,13 +867,10 @@ SCN.future = function(t){
 };
 
 SCN.intro = function(t){
-    cutScene('in', t, 66.0, 3.0, 3.0);
+    cutScene('in', t, 66.0, 4.0, 4.0);
 };
 SCN.s6 = function(t){
-    cutScene('s6', t, 69.0, 5.2, 5.2);
-};
-SCN.s5 = function(t){
-    cutScene('s5', t, 74.2, 4.3, 4.3);
+    cutScene('s6', t, 70.0, 6.4, 6.4);
 };
 
 window.seek = function(tOut){
