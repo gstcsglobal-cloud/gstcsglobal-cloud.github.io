@@ -38,14 +38,14 @@ const M = tb => TL.toOut(tb, P);      // null = 그 장면이 빠졌다
   span(0.0, 24.9, 'pad', { notes: [33, 40], g: 0.10, lp: 160, a: 2.0, r: 2.5 });
   for (let i = 0; i < 19; i++) at(1.3 + i / 12, 'tick', { g: 0.08, f: 3200 + (i % 3) * 300 });
   [4.5, 5.4, 6.0].forEach(t => at(t, 'cricket'));
-  at(8.2, 'whoosh'); at(8.8, 'pop'); at(9.15, 'thud'); at(9.25, 'bwomp');              // 실란
+  at(8.2, 'whoosh'); at(8.8, 'pop'); at(9.15, 'thud'); at(9.15, 'slam'); at(9.25, 'bwomp');   // 실란
   for (let x = 0, i = 0; x < 1.7; i++) { at(10.4 + x, 'tick', { g: 0.09, f: 1800 + i * 12 }); x += Math.max(0.035, 0.13 - i * 0.005); }
-  at(12.15, 'zip'); at(12.5, 'thud'); at(12.6, 'bwomp');                                // SF6
+  at(12.15, 'zip'); at(12.5, 'thud'); at(12.5, 'slam'); at(12.6, 'bwomp');              // SF6
   for (let i = 0; i < 11; i++) at(13.5 + i * 0.14, 'wob', { f: 620 + (i % 2 ? 140 : -110) });
   at(14.3, 'cold'); at(15.05, 'bell', { n: 88, g: 0.16, d: 0.8 }); at(15.12, 'bell', { n: 93, g: 0.1, d: 0.6 });
-  at(15.5, 'thud'); at(15.6, 'bwomp');                                                  // 칠러
+  at(15.5, 'thud'); at(15.5, 'slam'); at(15.6, 'bwomp');                                // 칠러
   for (let t = 17.8; t < 18.85; t += 0.167) at(t, 'beep');
-  at(18.95, 'thud'); at(19.05, 'bwomp');                                                // 라인 정지
+  at(18.95, 'thud'); at(18.95, 'slam'); at(19.05, 'bwomp');                             // 라인 정지
   // ── 우리 기계의 이름(큐 축 62.2~65.2) — 표시 위치는 반전 바로 뒤다
   span(62.3, 65.1, 'pad', { notes: [55, 59, 62, 67], g: 0.17, lp: 820, a: 0.8, r: 0.9 });
   span(62.6, 65.0, 'strings', { notes: [74, 79], g: 0.05 });
@@ -176,6 +176,8 @@ const M = tb => TL.toOut(tb, P);      // null = 그 장면이 빠졌다
       whoosh:  c => noise({ t: c.t, dur: 0.62, g: 0.16, type: 'lowpass', f: 300, f1: 3500 }),
       pop:     c => tone({ f0: 700, f1: 90, t: c.t, dur: 0.1, g: 0.5, a: 0.002, d: 0.08 }),
       thud:    c => thud(c.t),
+      // v21 T2-5: 스탬프 착지 전용 — thud 아래에 깔리는 서브(90→34Hz). 화면 흔들림과 같은 시각에 온다
+      slam:    c => { tone({ f0: 90, f1: 34, t: c.t, dur: 0.34, g: 0.5, a: 0.002, d: 0.30 }); noise({ t: c.t, dur: 0.10, g: 0.20, type: 'lowpass', f: 700 }); },
       bwomp:   c => tone({ type: 'sawtooth', f0: 240, f1: 95, t: c.t, dur: 0.55, g: 0.16, a: 0.02, d: 0.35, lp: 900 }),
       zip:     c => tone({ f0: 2200, f1: 180, t: c.t, dur: 0.26, g: 0.2, a: 0.003, d: 0.2 }),
       wob:     c => tone({ f0: c.f, t: c.t, dur: 0.09, g: 0.07, a: 0.002, d: 0.08, lp: 4000 }),
