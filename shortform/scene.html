@@ -36,7 +36,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 .preload{position:absolute;left:-9999px;top:-9999px;opacity:0}
 /* 인물·로고 슬롯 — portraits/·logos/ 에 파일이 있으면 그 이미지를, 없으면 기본 그래픽을 쓴다 */
 .slot img{width:100%;height:100%;object-fit:contain;display:block}
-.mkl{position:relative;height:58px}
+.mkl{position:relative;height:44px}
 .mkl img{width:auto;height:100%;max-width:100%;margin:0 auto}
 /* 사진 슬롯 — photos/ 에 파일이 있으면 사진, 없으면 바로 뒤의 일러스트가 선다 */
 .photo{border-radius:20px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.16)}
@@ -51,18 +51,24 @@ section{position:absolute;inset:0;display:none;opacity:0}
 .pn{position:absolute;width:280px;text-align:center;font-weight:900;font-size:34px;letter-spacing:-.5px}
 .pt{position:absolute;width:280px;text-align:center;font-weight:700;font-size:26px;color:#8fb3ff;margin-top:4px}
 .mark{position:absolute;text-align:center}
-.mark .nm{font-family:'BlackHan','NotoKR';font-size:52px;letter-spacing:1px;line-height:1}
-.mark .ds{font-weight:700;font-size:22px;line-height:30px;color:rgba(255,255,255,.62);margin-top:10px;letter-spacing:-.3px}
+.mark .nm{font-family:'BlackHan','NotoKR';font-size:36px;letter-spacing:2px;line-height:1}
+.mark .ds{font-weight:700;font-size:20px;line-height:28px;color:rgba(255,255,255,.62);margin-top:10px;letter-spacing:-.3px}
 /* 실사 — 브라우저(오픈소스 Chromium)가 H.264 를 못 읽어 «webm(VP9)» 을 쓴다. mp4 는 편집용 원본으로만 남긴다 */
 .vwrap{position:absolute;overflow:hidden}
 .vwrap video{width:100%;height:100%;object-fit:cover;display:block}
 .vscrim{position:absolute;inset:0}
-/* 로고 리빌 — 어둠 → 빛줄기 2줄 교차 → 파티클 → 로고 (UNITECH 브랜드 영상 참고) */
-.streak{position:absolute;left:-700px;top:540px;width:3320px;height:6px;transform-origin:50% 50%;opacity:0;
-  background:linear-gradient(90deg,rgba(143,192,255,0) 12%,rgba(143,192,255,.55) 38%,#dcecff 50%,rgba(143,192,255,.55) 62%,rgba(143,192,255,0) 88%);
-  filter:blur(1.2px);box-shadow:0 0 40px rgba(143,192,255,.7),0 0 110px rgba(90,150,255,.45)}
-.pt2{position:absolute;width:5px;height:5px;border-radius:50%;background:#cfe4ff;opacity:0;
-  box-shadow:0 0 10px rgba(143,192,255,.95)}
+/* 엔딩 마이크로 타이포 — 참고본의 «모노·대문자·넓은 자간» 어휘.
+   ⚠ 컨테이너에 모노 폰트가 없다. 낱말이 아니라 «생김새»가 핵심이라 NotoKR 에 자간을 크게 줘서 흉내낸다 */
+.mono{font-weight:700;font-size:20px;letter-spacing:.42em;color:#7d92b8;text-transform:uppercase;
+  font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center;gap:14px}
+.mono i{display:block;width:38px;height:1px;background:linear-gradient(90deg,transparent,#7d92b8)}
+.mono i.r{background:linear-gradient(90deg,#7d92b8,transparent)}
+#end-tl .cell{font-weight:700;font-size:19px;letter-spacing:.30em;color:#7d92b8;opacity:0;
+  font-variant-numeric:tabular-nums}
+#end-flash{left:0;top:0;width:1920px;height:1080px;background:#dff1ff;opacity:0;mix-blend-mode:screen;pointer-events:none}
+#end-anam{left:0;top:47%;width:1920px;height:3px;transform:translateY(-50%) scaleX(0);opacity:0;pointer-events:none;
+  background:linear-gradient(90deg,transparent 0%,rgba(120,200,255,.5) 18%,rgba(235,250,255,1) 50%,rgba(120,200,255,.5) 82%,transparent 100%);
+  filter:blur(1.5px);mix-blend-mode:screen}
 </style></head><body>
 <div id="stage">
 <div class="preload"><span style="font:400 20px NotoKR">가</span><span style="font:700 20px NotoKR">가</span><span style="font:900 20px NotoKR">가</span><span style="font:400 20px BlackHan">가1</span><span>🔥🌍🌵🦗🏆☠️✨🎉❄️</span></div>
@@ -323,60 +329,57 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <div class="en" id="cl-en2">Making sure nothing happens. That's what we've done for 25 years.</div>
 </section>
 
-<!-- S14 END — «컨셉의 끝(펀치라인) → 브랜드 서명(로고 리빌)» 순서다.
-     슬로건이 펀치라인을 밀어내면 영상 전체의 농담이 죽는다. -->
+<!-- S14 END — 워프 → 임팩트 → «파티클이 실제 로고 모양으로 조립» → 브랜드 서명.
+     ⚠ 순서가 규약이다: 「다음 25년도, 아무 일 없이.」(컨셉의 펀치라인)가 브랜드 서명보다 «먼저» 온다.
+        슬로건이 펀치라인을 밀어내면 영상 전체의 농담이 죽는다. -->
 <section id="s-end">
-  <!-- (1) 실제 본사 로우앵글 — 옥상 GST 로고가 하늘을 배경으로 선다 -->
+  <!-- (1) 실제 본사 로우앵글 -->
   <div class="vwrap abs" id="ed-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
     <video id="ed-v" src="footage/hq_lowangle.webm" preload="auto" muted playsinline></video>
     <div class="vscrim" style="background:radial-gradient(ellipse 90% 70% at 50% 46%,rgba(4,8,26,.20) 0%,rgba(4,8,26,.66) 68%,rgba(4,8,26,.92) 100%)"></div>
   </div>
   <div class="txt center abs" id="end-l" style="top:452px;font-size:66px;font-weight:900;color:#fff;text-shadow:0 4px 34px rgba(0,0,0,.85)">다음 25년도, <b>아무 일 없이.</b></div>
 
-  <!-- (2) 빛줄기 2줄이 교차하고, 그 자리에서 파티클이 로고로 모인다 -->
-  <div class="streak" id="st1"></div>
-  <div class="streak" id="st2"></div>
-  <div class="abs" id="flash" style="left:660px;top:180px;width:600px;height:600px;border-radius:50%;opacity:0;
-    background:radial-gradient(circle,rgba(255,255,255,.95) 0%,rgba(143,192,255,.55) 26%,rgba(143,192,255,0) 68%)"></div>
-  <div class="abs" id="parts" style="left:0;top:0;width:1920px;height:1080px"></div>
+  <!-- (2) 워프 터널 · 임팩트 · 로고 조립 — 전부 이 캔버스 한 장에 그린다 -->
+  <canvas class="abs" id="end-fx" width="1920" height="1080" style="left:0;top:0"></canvas>
+  <div class="abs" id="end-anam"></div>
+  <div class="abs" id="end-flash"></div>
 
   <!-- (3) 브랜드 서명 -->
-  <svg class="abs" id="end-badge" style="left:885px;top:56px;opacity:0" width="150" height="150" viewBox="-90 -90 180 180">
-    <circle id="end-ring" r="80" fill="none" stroke="#ffd36b" stroke-width="3" opacity=".5"/>
-    <circle r="65" fill="#1e6fd9" opacity=".92"/>
-    <g fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.2"><ellipse rx="65" ry="24"/><ellipse rx="24" ry="65"/><circle r="65"/><line x1="-65" y1="0" x2="65" y2="0"/></g>
-    <text y="17" text-anchor="middle" font-family="BlackHan" font-size="48" fill="#fff">25</text>
-  </svg>
-  <div class="big center abs" id="end-t" style="top:252px;font-size:50px">GST 창립 <b>25</b>주년</div>
-  <div class="center abs num" id="end-d" style="top:318px;font-weight:700;font-size:29px;color:rgba(255,255,255,.66);letter-spacing:3px">2001. 10. 01 — 2026. 10. 01</div>
-  <div class="abs" id="end-rule" style="left:660px;top:374px;width:600px;height:1px;background:rgba(255,255,255,.22)"></div>
-  <!-- 로고 뒤 블룸 — 리빌 순간에만 부풀었다 가라앉는다 -->
-  <div class="abs" id="lg-glow" style="left:560px;top:300px;width:800px;height:420px;opacity:0;pointer-events:none;
-    background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(143,192,255,.5) 0%,rgba(143,192,255,0) 70%)"></div>
-  <!-- 실제 CI — report/qbr-template.pptx 안의 회사 로고를 어두운 배경용으로 반전한 것 -->
-  <div class="slot abs" id="end-logo" style="left:705px;top:398px;width:510px;height:170px;overflow:hidden;opacity:0">
-    <img src="logos/gst-white.png" alt="" onerror="this.closest('.slot').classList.add('noimg')">
-    <div class="fb" style="text-align:center;padding-top:44px">
-      <span style="font-family:'BlackHan','NotoKR';font-size:56px;color:#fff;letter-spacing:1px">GST</span>
-      <span style="font-weight:700;font-size:36px;color:#8fc0ff;letter-spacing:9px;margin-left:12px">GROUP</span>
+  <div class="abs" id="end-stack" style="left:0;top:0;width:1920px;height:1080px;transform-origin:50% 47%">
+    <div class="center abs mono" id="end-eye" style="top:250px;opacity:0"><i></i>GST GROUP<i class="r"></i></div>
+    <!-- 실제 CI — report/qbr-template.pptx 안의 회사 로고를 어두운 배경용으로 반전한 것 -->
+    <div class="slot abs" id="end-logo" style="left:705px;top:318px;width:510px;height:170px;overflow:hidden;opacity:0">
+      <img src="logos/gst-white.png" alt="" onerror="this.closest('.slot').classList.add('noimg')">
+      <div class="fb" style="text-align:center;padding-top:48px">
+        <span style="font-family:'BlackHan','NotoKR';font-size:62px;color:#fff;letter-spacing:1px">GST</span>
+      </div>
+      <div class="abs" id="lg-flare" style="left:0;top:0;width:340px;height:100%;opacity:0;pointer-events:none;mix-blend-mode:screen;filter:blur(22px);
+        background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.08) 30%,rgba(255,255,255,.26) 50%,rgba(255,255,255,.08) 70%,rgba(255,255,255,0) 100%)"></div>
     </div>
-    <div class="abs" id="lg-flare" style="left:0;top:0;width:210px;height:100%;opacity:0;pointer-events:none;mix-blend-mode:screen;filter:blur(7px);
-      background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.55) 32%,#fff 50%,rgba(255,255,255,.55) 68%,rgba(255,255,255,0) 100%)"></div>
+    <div class="abs" id="end-rule" style="left:560px;top:536px;width:800px;height:1px;transform:scaleX(0);transform-origin:50% 50%;
+      background:linear-gradient(90deg,transparent,rgba(125,146,184,.5) 18%,rgba(125,146,184,.5) 82%,transparent)">
+      <div class="abs" id="end-dot" style="left:50%;top:50%;width:5px;height:5px;border-radius:50%;background:#22d3ee;box-shadow:0 0 14px #22d3ee;transform:translate(-50%,-50%) scale(0)"></div>
+    </div>
+    <!-- ⚠ 창립은 2001.10.01 이다. 참고본의 1999 는 GST 의 해가 아니다 -->
+    <div class="abs mono" id="end-tl" style="left:560px;top:566px;width:800px;display:flex;justify-content:space-between">
+      <span class="cell" id="tl0">2001</span><span class="cell" id="tl1">창립 25주년</span><span class="cell" id="tl2" style="color:#22d3ee">2026</span>
+    </div>
+    <div class="abs" id="end-fwd" style="left:560px;top:632px;width:800px;display:flex;align-items:center;gap:18px;opacity:0">
+      <div id="fwd-bar" style="height:1px;width:0;background:linear-gradient(90deg,#22d3ee,rgba(47,125,255,.15));box-shadow:0 0 10px rgba(34,211,238,.5)"></div>
+      <div id="fwd-txt" style="font-weight:700;font-size:30px;letter-spacing:.30em;color:#eaf1ff;white-space:nowrap">BUILD UP <em style="font-style:normal;color:#22d3ee">GST</em></div>
+      <div id="fwd-trail" style="height:1px;flex:1 1 auto;transform:scaleX(0);transform-origin:0 50%;background:linear-gradient(90deg,rgba(34,211,238,.55),rgba(47,125,255,.18) 45%,transparent)"></div>
+    </div>
+    <div class="mark" id="mk1" style="left:330px;top:766px;width:400px">
+      <div class="slot mkl"><img src="logos/gst-mark.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#7fb0ff">GST</div></div>
+      <div class="ds">스크러버 · 칠러<br>액침냉각</div></div>
+    <div class="mark" id="mk2" style="left:760px;top:766px;width:400px">
+      <div class="slot mkl"><img src="logos/est.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#45d6c9">EST</div></div>
+      <div class="ds">반도체 부품 · 배관보온<br>무전력 냉장냉동</div></div>
+    <div class="mark" id="mk3" style="left:1190px;top:766px;width:400px">
+      <div class="slot mkl"><img src="logos/robocare.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#f2f6ff">ROBOCARE</div></div>
+      <div class="ds">시니어 · 발달장애인을 위한<br>로봇과 AI</div></div>
   </div>
-  <!-- 현행 슬로건 (사용자 확정) — 건물 캐노피의 옛 문구는 화면에 쓰지 않는다 -->
-  <div class="center abs" id="end-slg" style="top:602px;font-weight:900;font-size:44px;color:#8fc0ff;letter-spacing:6px;opacity:0;text-shadow:0 0 34px rgba(143,192,255,.45)">Build Up GST</div>
-  <div class="abs" id="end-rule2" style="left:560px;top:678px;width:800px;height:1px;background:rgba(255,255,255,.14)"></div>
-  <div class="center abs" id="end-grp" style="top:700px;font-weight:700;font-size:23px;color:rgba(255,255,255,.5);letter-spacing:11px">GST GROUP</div>
-  <div class="mark" id="mk1" style="left:330px;top:756px;width:400px">
-    <div class="slot mkl"><img src="logos/gst-mark.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#7fb0ff">GST</div></div>
-    <div class="ds">스크러버 · 칠러<br>액침냉각</div></div>
-  <div class="mark" id="mk2" style="left:760px;top:756px;width:400px">
-    <div class="slot mkl"><img src="logos/est.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#45d6c9">EST</div></div>
-    <div class="ds">반도체 부품 · 배관보온<br>무전력 냉장냉동</div></div>
-  <div class="mark" id="mk3" style="left:1190px;top:756px;width:400px">
-    <div class="slot mkl"><img src="logos/robocare.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#f2f6ff">ROBOCARE</div></div>
-    <div class="ds">시니어 · 발달장애인을 위한<br>로봇과 AI</div></div>
-  <svg class="abs" id="confetti" style="left:0;top:0;pointer-events:none" width="1920" height="1080" viewBox="0 0 1920 1080"></svg>
   <div class="en" id="end-en1">Here’s to 25 more uneventful years.</div>
   <div class="en" id="end-en2">GST GROUP — GST · EST · ROBOCARE.</div>
 </section>
@@ -406,7 +409,6 @@ function rng(seed){ let s = seed>>>0; return () => { s += 0x6D2B79F5; let r = Ma
 const NS = 'http://www.w3.org/2000/svg';
 const svgEl = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
 function op(el, v){ el.style.opacity = clamp(v,0,1); }
-const PARTS = [];   // 로고 리빌 파티클 — 빌더가 채우고 SCN.end 가 읽는다(스코프를 나누면 장면이 죽는다)
 function pop(el, t, t0, dur=0.5, dy=26){ const x = p(t,t0,t0+dur); op(el, x); el.style.transform = `translateY(${(1-eo(x))*dy}px)`; }
 function popIn(el, t, t0, dur=0.45){ const x = p(t,t0,t0+dur); op(el, x>0?1:0); el.style.transform = `scale(${x>0?eb(x):0})`; }
 function stamp(el, t, t0, deg=-6){ if (t < t0) { op(el,0); return; } const x = p(t,t0,t0+0.3); op(el,1); el.style.transform = `rotate(${deg}deg) scale(${lerp(1.7,1,eo(x))})`; }
@@ -441,19 +443,6 @@ const LEADERS = [
     x += w + 18; }
   svgEl('rect',{x:0,y:1000,width:1920,height:80,fill:'#060b1c'},sky);
   const stars = $('stars'); for (let i=0;i<140;i++) svgEl('circle',{class:'st',cx:rs()*1920,cy:rs()*560,r:1+rs()*1.8,opacity:.3+rs()*.7},stars);
-  // 로고 리빌 파티클 — 고리에서 로고 상자 안으로 모인다. 시작·도착 자리는 seed 고정이라 프레임마다 같다
-  const rp = rng(7); const LGX = 960, LGY = 480;
-  for (let i = 0; i < 72; i++){
-    const ang = (i / 72) * 6.28318 + rp() * 0.09, rad = 430 + rp() * 210;
-    const e = document.createElement('div'); e.className = 'pt2';
-    const sc = 0.6 + rp() * 1.5; e.style.width = e.style.height = (3.2 * sc).toFixed(1) + 'px';
-    $('parts').appendChild(e);
-    PARTS.push({ e, x0: LGX + Math.cos(ang) * rad * 1.25, y0: LGY + Math.sin(ang) * rad * 0.62,
-                 x1: LGX + (rp() - 0.5) * 430, y1: LGY + (rp() - 0.5) * 132,
-                 d: rp() * 0.30, sp: 0.55 + rp() * 0.5 });
-  }
-  const cf = $('confetti'); const rc = rng(99); const cols = ['#ffd36b','#5cff8a','#60a5fa','#f472b6','#fff'];
-  for (let i=0;i<70;i++){ const r = svgEl('rect',{class:'cf',width:14,height:22,rx:3,fill:cols[i%5]},cf); r.dataset.x = rc() < 0.5 ? rc()*520 : 1400 + rc()*520; r.dataset.v = 140+rc()*160; r.dataset.ph = rc()*6.28; r.dataset.rot = rc()*360; }
   const PINS = [['hwaseong','2001','화성 본사'],['austin','2006','미국 오스틴'],['xian','2013','중국 시안'],['taiwan','2016','대만'],['wuxi','2016','중국 우시'],['hefei','2017','중국 허페이'],['wuhan','2019','중국 우한'],['singapore','2020','싱가포르'],['europe','2024','유럽'],['japan','2024','일본']];
   const pg = $('map-pins'), ag = $('map-arcs'), co = $('co'); const [hx,hy] = MAP_PINS.hwaseong;
   PINS.forEach(([k,y,name],i) => { const [px,py] = MAP_PINS[k];
@@ -665,62 +654,198 @@ SCN.close = function(t){
     $('cl-glow').setAttribute('r', 90 + 30*Math.sin(t*1.6)); $('cl-glow').setAttribute('opacity', 0.14 + 0.1*Math.sin(t*1.6));
     document.querySelectorAll('#stars .st').forEach((s,i) => s.setAttribute('opacity', 0.3 + 0.5*Math.abs(Math.sin(t*0.8 + i*1.7))));
 };
+// ════════ 엔딩 FX — 워프 터널 · 임팩트 · 로고 조립 ════════
+// ⚠ 전부 «t 의 순수함수»여야 한다. 참고본은 프레임마다 z 를 적분하고 Math.random() 으로 흔드는데,
+//    그러면 같은 t 를 두 번 찍었을 때 다른 그림이 나와 이 파이프라인의 전제가 깨진다.
+//    → 속도의 «누적 거리»를 표로 미리 구해 두고(S(t)), 흔들림은 씨앗 위상의 sin 으로 만든다.
+const FXC = $('end-fx'), FX = FXC.getContext('2d');
+const FW = 1920, FH = 1080, HORI = FH * 0.545, FOV = FH * 0.78;
+const T_WARP = 58.35, T_HIT = 59.30, T_ASM = 59.40, T_ASM_D = 0.66, T_FXEND = 60.55;
+// 속도 곡선: 감아올리기 → 워프 → 급정거. 임팩트에서 «벽에 부딪히듯» 서야 한다
+function warpSpeed(u){                       // u = T_WARP 부터의 경과(큐 축)
+  if (u < 0.32) return 0.4 + u * 5.0;
+  if (u < 0.78) return 2.0 + Math.pow((u - 0.32) / 0.46, 2.2) * 12.0;
+  if (u < 0.95) return 14.0 + (u - 0.78) * 16;
+  return Math.max(0.3, 16.7 - (u - 0.95) * 22);
+}
+const SSTEP = 1 / 240, SMAX = 3.4;
+const SCUM = (() => { const n = Math.ceil(SMAX / SSTEP) + 1, a = new Float64Array(n); let acc = 0;
+  for (let i = 1; i < n; i++){ acc += warpSpeed((i - 0.5) * SSTEP) * SSTEP; a[i] = acc; } return a; })();
+const dist = u => { if (u <= 0) return 0; const x = Math.min(u, SMAX) / SSTEP, i = Math.floor(x);
+  return i + 1 < SCUM.length ? SCUM[i] + (SCUM[i + 1] - SCUM[i]) * (x - i) : SCUM[SCUM.length - 1]; };
+const wrap = (v, lo, hi) => { const s = hi - lo; return lo + ((v - lo) % s + s) % s; };
+
+const rF = rng(1207);
+const STREAMS = Array.from({length: 190}, () => ({
+  x: (rF() - 0.5) * 3.6, y: (rF() - 0.5) * 1.6, z0: 0.25 + rF() * 7.5,
+  w: 0.4 + rF() * 1.0, cyan: rF() < 0.3 }));
+const NODES = Array.from({length: 46}, () => ({
+  x: (rF() - 0.5) * 3.0, y: 0.16 + rF() * 0.5, z0: 1.2 + rF() * 6.5, ph: rF() * 6.283 }));
+const EMB = Array.from({length: 96}, () => { const a = rF() * 6.283, sp = 2 + rF() * 9;
+  return { vx: Math.cos(a) * sp * 60, vy: Math.sin(a) * sp * 0.7 * 60, dec: 0.72 + rF() * 1.3, sz: 0.6 + rF() * 1.5 }; });
+
+// ── 파티클의 «도착점»은 실제 로고의 알파에서 뽑는다. 지어낸 도형이 아니라 진짜 CI 모양으로 모인다.
+let LOGO_PTS = [];
+function buildLogoPts(){
+  const box = $('end-logo'), im = box.querySelector('img');
+  if (!im || !im.naturalWidth) return;                       // 로고 파일이 없으면 조립을 안 한다(글자 폴백이 선다)
+  const bx = parseFloat(box.style.left), by = parseFloat(box.style.top);
+  const bw = parseFloat(box.style.width), bh = parseFloat(box.style.height);
+  const k = Math.min(bw / im.naturalWidth, bh / im.naturalHeight);   // object-fit: contain
+  const dw = im.naturalWidth * k, dh = im.naturalHeight * k;
+  const dx = bx + (bw - dw) / 2, dy = by + (bh - dh) / 2;
+  const oc = document.createElement('canvas'); oc.width = FW; oc.height = FH;
+  const o = oc.getContext('2d'); o.drawImage(im, dx, dy, dw, dh);
+  const d = o.getImageData(0, 0, FW, FH).data, r2 = rng(88), step = 4;
+  for (let y = Math.floor(dy); y < dy + dh; y += step)
+    for (let x = Math.floor(dx); x < dx + dw; x += step){
+      if (d[(y * FW + x) * 4 + 3] < 130) continue;
+      const ang = r2() * 6.283, rad = FW * (0.45 + r2() * 0.85);
+      LOGO_PTS.push({ tx: x, ty: y, sx: FW / 2 + Math.cos(ang) * rad, sy: HORI + Math.sin(ang) * rad * 0.55,
+        d: r2() * 0.20, jit: 0.6 + r2() * 1.4, ph: r2() * 6.283,
+        c: r2() < 0.26 ? '34,211,238' : (r2() < 0.5 ? '190,220,255' : '110,170,255') });
+    }
+}
+const eoExpo = x => x >= 1 ? 1 : 1 - Math.pow(2, -10 * x);
+const proj = (x, y, z) => { const s = FOV / z; return { x: FW / 2 + x * s, y: HORI + y * s, s }; };
+
+function drawFX(t){
+  FX.clearRect(0, 0, FW, FH);
+  if (t < T_WARP - 0.05 || t > T_FXEND) return;
+  const u = t - T_WARP, D = dist(u);
+  const charge = t < T_HIT ? Math.pow(clamp(u / (T_HIT - T_WARP), 0, 1), 3) : Math.max(0, 1 - (t - T_HIT) * 2.6);
+  const alive = 1 - p(t, T_FXEND - 0.35, T_FXEND);
+
+  // 지평선 글로우 — 임팩트 전에 «차오른다»
+  const g = FX.createLinearGradient(0, HORI - FH * 0.22, 0, HORI + FH * 0.08);
+  g.addColorStop(0, 'rgba(20,70,150,0)');
+  g.addColorStop(0.7, `rgba(40,130,220,${(0.06 + charge * 0.22) * alive})`);
+  g.addColorStop(1, `rgba(140,210,255,${(0.10 + charge * 0.40) * alive})`);
+  FX.fillStyle = g; FX.fillRect(0, HORI - FH * 0.22, FW, FH * 0.30);
+  const cr = FH * (0.02 + charge * 0.16);
+  const co = FX.createRadialGradient(FW / 2, HORI, 0, FW / 2, HORI, cr);
+  co.addColorStop(0, `rgba(235,250,255,${(0.22 + charge * 0.7) * alive})`);
+  co.addColorStop(0.35, `rgba(120,200,255,${(0.12 + charge * 0.4) * alive})`);
+  co.addColorStop(1, 'rgba(60,140,255,0)');
+  FX.fillStyle = co; FX.beginPath(); FX.arc(FW / 2, HORI, cr, 0, 6.283); FX.fill();
+
+  // 원근 격자 + 임팩트에서 퍼지는 밝기 파동
+  const waveY = t > T_HIT ? HORI + (t - T_HIT) * FH * 1.5 : -9999;
+  FX.lineWidth = 1;
+  for (let i = 0; i < 36; i++){
+    const z = wrap(i + D * 0.30, 0, 36) + 0.45, y = HORI + FOV / (z * 1.35);
+    if (y > FH + 2) continue;
+    let a = Math.max(0, Math.min(0.16, 0.2 / (z * 0.55)));
+    if (waveY > -9998){ const dd = Math.abs(y - waveY);
+      a += Math.exp(-(dd * dd) / (2 * Math.pow(FH * 0.055, 2))) * 0.55 * Math.max(0, 1 - (t - T_HIT) * 1.1); }
+    FX.strokeStyle = `rgba(120,180,255,${Math.min(0.8, a) * alive})`;
+    FX.beginPath(); FX.moveTo(0, y); FX.lineTo(FW, y); FX.stroke();
+  }
+  for (let k = -14; k <= 14; k++){
+    if (!k) continue;
+    const a2 = (Math.max(0, 0.13 - Math.abs(k) * 0.006) + charge * 0.05) * alive;
+    FX.strokeStyle = `rgba(90,150,235,${a2})`;
+    FX.beginPath(); FX.moveTo(FW / 2 + k * 2.2, HORI); FX.lineTo(FW / 2 + k * (FW * 0.085) * 3.1, FH + 40); FX.stroke();
+  }
+
+  // 노드 · 빛줄기 (z 는 누적 거리에서 «되감아» 구한다 — 상태를 안 들고 있다)
+  for (const n of NODES){
+    const z = wrap(n.z0 - D * 0.5, 0.35, 7.85), q = proj(n.x, n.y, z);
+    if (q.y > FH || q.y < HORI - 4) continue;
+    const a = Math.max(0, Math.min(0.5, 0.42 / (z * 0.9))) * (0.55 + 0.45 * Math.sin(t * 1.6 + n.ph)) * alive;
+    FX.fillStyle = `rgba(150,200,255,${a})`;
+    FX.beginPath(); FX.arc(q.x, q.y, Math.max(0.5, q.s * 0.0022), 0, 6.283); FX.fill();
+  }
+  const sp = warpSpeed(u), dz = Math.max(0.02, sp * (1 / 60) * 1.9);
+  for (const st of STREAMS){
+    const z = wrap(st.z0 - D * 1.9, 0.22, 9.0), za = Math.min(9.0, z + dz);
+    const A = proj(st.x, st.y, za), B = proj(st.x, st.y, z);
+    const fade = Math.max(0, Math.min(0.85, 0.78 / (z * 0.7))) * alive, near = Math.min(1, 1.1 / z);
+    const gr = FX.createLinearGradient(A.x, A.y, B.x, B.y), c = st.cyan ? '34,211,238' : '130,180,255';
+    gr.addColorStop(0, `rgba(${c},0)`); gr.addColorStop(1, `rgba(${c},${fade})`);
+    FX.strokeStyle = gr; FX.lineWidth = st.w * (0.5 + near * 1.6);
+    FX.beginPath(); FX.moveTo(A.x, A.y); FX.lineTo(B.x, B.y); FX.stroke();
+  }
+
+  // 임팩트: 소나 링 + 불티 (둘 다 닫힌 식이다)
+  const ht = t - T_HIT;
+  if (ht > 0){
+    for (const dly of [0, 0.09, 0.20]){
+      const rt = ht - dly; if (rt <= 0) continue;
+      const x = Math.min(1, rt / 0.95), rad = eoExpo(x) * FW * 0.75, al = (1 - x) * 0.55 * alive;
+      if (al <= 0) continue;
+      FX.strokeStyle = `rgba(150,220,255,${al})`; FX.lineWidth = 1.6 * (1 - x) + 0.4;
+      FX.beginPath(); FX.ellipse(FW / 2, FH * 0.47, rad, rad * 0.82, 0, 0, 6.283); FX.stroke();
+    }
+    for (const e of EMB){
+      const l = 1 - ht / 1.15; if (l <= 0) break;
+      const k = (1 - Math.exp(-e.dec * 3.7 * ht)) / (e.dec * 3.7);
+      const x = FW / 2 + e.vx * k, y = FH * 0.47 + e.vy * k + 110 * ht * ht;
+      FX.fillStyle = `rgba(190,225,255,${l * 0.75 * alive})`;
+      FX.beginPath(); FX.arc(x, y, e.sz, 0, 6.283); FX.fill();
+    }
+  }
+
+  // 로고 조립 — 고리에서 날아와 «실제 CI 픽셀»에 꽂힌다
+  if (t > T_ASM && LOGO_PTS.length){
+    const gf = 1 - p(t, T_ASM + T_ASM_D + 0.12, T_ASM + T_ASM_D + 0.42);
+    if (gf > 0) for (const lp of LOGO_PTS){
+      const lt = (t - T_ASM - lp.d) / T_ASM_D; if (lt <= 0) continue;
+      const q = eoExpo(Math.min(1, lt));
+      const j = q < 1 ? (1 - q) * lp.jit * 5 : 0;
+      const X = lp.sx + (lp.tx - lp.sx) * q + Math.sin(t * 47 + lp.ph) * j;
+      const Y = lp.sy + (lp.ty - lp.sy) * q + Math.cos(t * 41 + lp.ph * 1.7) * j;
+      FX.fillStyle = `rgba(${lp.c},${Math.min(1, lt * 2.4) * gf})`;
+      FX.beginPath(); FX.arc(X, Y, q < 1 ? 1.5 : 1.15, 0, 6.283); FX.fill();
+    }
+  }
+}
+
 SCN.end = function(t){
-    // ── (1) 실사 본사 + 펀치라인 (56.80–58.60) — 컨셉의 끝. 슬로건보다 «먼저» 온다
-    const bv = vok($('ed-v')) ? Math.min(p(t,56.80,57.25), 1 - p(t,58.25,58.60)) : 0;
+    // ── (1) 실사 본사 + 펀치라인 — 컨셉의 끝. 브랜드 서명보다 «먼저» 온다
+    const bv = vok($('ed-v')) ? Math.min(p(t,56.80,57.25), 1 - p(t,58.20,58.55)) : 0;
     const vw = $('ed-vid'); vw.style.opacity = bv;
-    vw.style.transform = `scale(${lerp(1.0, 1.055, p(t,56.80,58.60))})`;
+    vw.style.transform = `scale(${lerp(1.0, 1.055, p(t,56.80,58.55))})`;
     if (bv > 0) vseek($('ed-v'), 0.15 + (t - 56.80) * 1.0);
-    const pl = $('end-l'), plx = Math.min(p(t,57.05,57.45), 1 - p(t,58.20,58.50));
+    const pl = $('end-l'), plx = Math.min(p(t,57.05,57.45), 1 - p(t,58.15,58.45));
     pl.style.opacity = plx;
-    pl.style.transform = `translateY(${(1-eo(p(t,57.05,57.45)))*26}px) scale(${lerp(1,1.035,p(t,57.05,58.60))})`;
+    pl.style.transform = `translateY(${(1-eo(p(t,57.05,57.45)))*26}px) scale(${lerp(1,1.035,p(t,56.80,58.55))})`;
     op($('end-en1'), plx);
 
-    // ── (2) 빛줄기 2줄 교차 (58.45–59.10) → 섬광 → 파티클이 로고로 모인다
-    const s1 = p(t,58.45,59.10), s2 = p(t,58.52,59.14);
-    const stk = (el, x, deg, from) => {
-      if (x <= 0 || x >= 1){ el.style.opacity = 0; return; }
-      const e = eo(x);
-      el.style.opacity = Math.min(x*4.5, 1) * (1 - p(x,0.78,1));
-      el.style.transform = `translate(0,${lerp(from,0,e)}px) rotate(${deg}deg) scaleY(${lerp(1.9,0.4,e)}) scaleX(${lerp(0.55,1,e)})`;
-    };
-    stk($('st1'), s1, -27, -880); stk($('st2'), s2, 25, 880);
-    const fl = $('flash'), fx = p(t,58.92,59.46);
-    fl.style.opacity = fx > 0 ? Math.min(fx*9, 1) * (1 - p(fx,0.18,1)) : 0;
-    fl.style.transform = `scale(${lerp(0.10, 2.3, eo(fx))})`;
+    // ── (2) 워프 → 임팩트
+    drawFX(t);
+    const fu = (t - 59.30) / 0.50;                                  // 흰 섬광 — «짧고 세게»가 전부다
+    $('end-flash').style.opacity = (fu <= 0 || fu >= 1) ? 0
+      : fu < 0.06 ? fu / 0.06 * 0.88
+      : fu < 0.30 ? lerp(0.88, 0.20, (fu - 0.06) / 0.24)
+      : lerp(0.20, 0, (fu - 0.30) / 0.70);
+    const an = p(t,59.30,60.30), anEl = $('end-anam');             // 아나모픽 바
+    anEl.style.opacity = an > 0 && an < 1 ? (an < 0.08 ? an/0.08 : Math.max(0, 1 - (an-0.08)/0.92)) : 0;
+    anEl.style.transform = `translateY(-50%) scaleX(${an>0?Math.min(1,an/0.08):0}) scaleY(${lerp(2.6,0.4,an)})`;
 
-    const pc = p(t,59.05,59.72);
-    for (const q of PARTS){
-      const x = clamp((pc - q.d) / (1 - q.d) * q.sp * 1.5, 0, 1), e = eo(x);
-      if (pc <= 0 || x >= 1){ q.e.style.opacity = 0; continue; }
-      q.e.style.opacity = Math.min(x*5, 1) * (1 - p(x,0.72,1));
-      q.e.style.transform = `translate(${lerp(q.x0,q.x1,e)}px,${lerp(q.y0,q.y1,e)}px)`;
-    }
+    // 카메라 펀치 — 임팩트 순간 락업이 살짝 밀려 들어온다
+    const pu = p(t,59.30,59.92);
+    $('end-stack').style.transform = pu > 0 && pu < 1 ? `scale(${lerp(1.055,1,eb(pu))})` : 'scale(1)';
 
-    // ── (3) 로고가 맺힌다 — 블룸이 부풀었다 가라앉고, 플레어가 한 번 지나간다
-    const lg = $('end-logo'), lx = p(t,59.55,60.02);
-    lg.style.opacity = lx;
-    lg.style.transform = `scale(${lerp(1.10,1,eo(lx))})`;
-    lg.style.filter = lx > 0 && lx < 1 ? `blur(${(1-lx)*9}px)` : 'none';
-    const gw = p(t,59.50,59.92);
-    $('lg-glow').style.opacity = gw * (1 - p(t,60.10,60.95)) * 0.95;
-    const fr = p(t,59.95,60.48), frEl = $('lg-flare');
+    // ── (3) 로고가 «조립된 자리»에 그대로 맺힌다
+    const lg = $('end-logo'), lx = p(t,60.02,60.30);
+    lg.style.opacity = LOGO_PTS.length ? lx : p(t,59.80,60.25);    // 로고 파일이 없으면 글자 폴백을 그냥 띄운다
+    const fr = p(t,60.20,60.72), frEl = $('lg-flare');             // 샤인 스윕
     frEl.style.opacity = fr > 0 && fr < 1 ? 1 : 0;
-    frEl.style.transform = `translateX(${lerp(-250, 530, eo(fr))}px) skewX(-14deg)`;
+    frEl.style.transform = `translateX(${lerp(-300, 570, eo(fr))}px) skewX(-14deg)`;
 
-    // ── (4) 브랜드 서명이 차례로 앉는다
-    pop($('end-slg'), t, 60.15, 0.45, 16);
-    pop($('end-badge'), t, 60.30, 0.45, -14);
-    pop($('end-t'), t, 60.40, 0.42, 18);
-    pop($('end-d'), t, 60.55, 0.38, 12);
-    const ru = p(t,60.48,60.88); $('end-rule').style.opacity = ru; $('end-rule').style.transform = `scaleX(${eo(ru)})`;
-    const ru2 = p(t,60.62,61.02); $('end-rule2').style.opacity = ru2; $('end-rule2').style.transform = `scaleX(${eo(ru2)})`;
-    pop($('end-grp'), t, 60.72, 0.38, 10);
-    [1,2,3].forEach(i => pop($('mk'+i), t, 60.82 + (i-1)*0.16, 0.42, 20));
-    pop($('end-en2'), t, 61.10, 0.4, 10);
-    $('end-ring').setAttribute('r', 80 + 8*Math.sin(t*2));
-
-    const tt = t - 59.50; document.querySelectorAll('#confetti .cf').forEach((r,i) => { const y = -40 + (+r.dataset.v)*tt, x = (+r.dataset.x) + 40*Math.sin(tt*2 + +r.dataset.ph); r.setAttribute('transform', `translate(${x},${y}) rotate(${+r.dataset.rot + tt*180})`); r.setAttribute('opacity', tt < 0 ? 0 : (y > 1080 ? 0 : 0.85)); });
+    // ── (4) 마이크로 타이포 — eyebrow · rule · 타임라인 · 슬로건 · 계열 3사
+    pop($('end-eye'), t, 60.30, 0.38, 8);
+    const ru = p(t,60.38,60.84); $('end-rule').style.opacity = ru; $('end-rule').style.transform = `scaleX(${eo(ru)})`;
+    const dt = p(t,60.44,60.74); $('end-dot').style.transform = `translate(-50%,-50%) scale(${eb(dt)})`;
+    ['tl0','tl1','tl2'].forEach((id,i) => pop($(id), t, 60.52 + i*0.08, 0.34, 6));
+    const fw = p(t,60.74,61.10); $('end-fwd').style.opacity = fw;
+    $('fwd-bar').style.width = lerp(0,110,eo(p(t,60.80,61.40))) + 'px';
+    $('fwd-trail').style.transform = `scaleX(${eo(p(t,60.92,61.90))})`;
+    // ⚠ 마지막 마크가 «완전히 선 뒤»에 0.3초는 남아야 한다. 안 그러면 끝 페이드가 그 위를 덮어
+    //    ROBOCARE 만 제 색으로 서지 못한 채 영상이 끝난다(실제로 그렇게 나왔다).
+    [1,2,3].forEach(i => pop($('mk'+i), t, 60.96 + (i-1)*0.12, 0.38, 16));
+    pop($('end-en2'), t, 61.18, 0.38, 10);
 };
 
 SCN.names = function(t){
@@ -761,6 +886,13 @@ window.seek = function(tOut){
   }
   return PEND.length ? Promise.all(PEND) : null;   // 실사가 있는 프레임만 기다린다
 };
+// 로고 알파 샘플링은 «이미지가 로드된 뒤»에만 된다. par.cjs·preview.cjs 가 window.ready 를 기다리므로
+// 여기 붙여 두면 첫 프레임부터 조립할 점이 서 있다. 못 읽으면 LOGO_PTS 가 비고, 그때는 글자 폴백이 그냥 뜬다.
+window.ready = Promise.resolve(window.ready).then(async v => {
+  await Promise.all(Array.from(document.images).map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r; })));
+  try { buildLogoPts(); } catch(e){ console.error('buildLogoPts', e); }
+  return v;
+});
 window.seek(0);
 </script>
 </body></html>

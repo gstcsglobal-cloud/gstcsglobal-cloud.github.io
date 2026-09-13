@@ -27,6 +27,6 @@ FADE=$(python3 -c "print(round($DUR-0.5,2))")
 "$FF" -y -loglevel error -i video_only.mp4 -i "$BGM" -c:v copy \
   -af "loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=out:st=$FADE:d=0.5" -c:a aac -b:a 192k -ar 48000 -shortest -movflags +faststart "$OUT"
 # 제출·상영 목록용 대표 이미지(첫 프레임은 페이드인이라 검다)
-"$FF" -y -loglevel error -ss $(python3 -c "print(round($DUR-0.75,2))") -i "$OUT" -frames:v 1 "${OUT%.mp4}_poster.png"
+"$FF" -y -loglevel error -ss $(python3 -c "print(round($DUR-0.5,2))") -i "$OUT" -frames:v 1 "${OUT%.mp4}_poster.png"
 rm -rf frames video_only.mp4
 "$FF" -hide_banner -i "$OUT" 2>&1 | grep -E "Duration|Stream" || true
