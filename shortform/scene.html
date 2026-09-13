@@ -84,7 +84,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 
 <!-- S0 HOOK 0–4.0 -->
 <section id="s-hook">
-  <div class="bgv" id="hk-bg"><div class="bgi"><video id="hk-bgv" src="footage/scrubber3d.webm" preload="auto" muted playsinline></video></div><div class="bgs"></div></div>
+  <!-- v20: 배경 실루엣(scrubber3d 흐림)을 뺐다 — 펀치라인을 읽는 자리에 형체가 어른거린다(사용자 지적). 맨 바탕(#070d1f)이 맞다. -->
   <div class="big center abs" id="h1" style="top:400px">지난 25년,</div>
   <div class="big center abs" id="h2" style="top:500px"><span id="h2t"></span><span class="cursor" id="h2c"></span></div>
   <div class="en" id="h-en">For 25 years, nothing happened at GST.</div>
@@ -249,7 +249,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
   </div>
   <div class="date abs" id="fd-date" style="left:140px;top:170px">2001. 10. 01</div>
   <div class="txt abs" id="fd-t1" style="left:140px;top:380px">퇴직금 <b class="num" id="fd-won">₩0</b>으로 시작했습니다.</div>
-  <div class="txt abs" id="fd-t2" style="left:140px;top:500px;font-size:54px;color:rgba(255,255,255,.9)">일본이 독점하던 스크러버를, <b>우리 손으로.</b></div>
+  <div class="txt abs" id="fd-t2" style="left:140px;top:500px;font-size:54px;color:rgba(255,255,255,.9)">해외에서 독점하던 스크러버를, <b>우리 손으로.</b></div>
   <div class="slot photo abs" id="fd-photo" style="left:1230px;top:450px;width:600px;height:420px"><img src="photos/founding.jpg" alt="" onerror="this.closest('.slot').classList.add('noimg')"></div>
   <svg class="abs" id="fd-svg" style="left:1380px;top:560px" width="420" height="330" viewBox="0 0 420 330">
     <rect x="30" y="150" width="360" height="150" rx="10" fill="#1a2447" stroke="#33427a" stroke-width="4"/>
@@ -259,7 +259,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
     <text x="210" y="325" text-anchor="middle" font-size="26" font-weight="700" fill="#8fb3ff" font-family="NotoKR">경기 화성</text>
   </svg>
   <div class="abs" id="fd-spark" style="left:1660px;top:520px;font-size:80px;line-height:1">✨</div>
-  <div class="en">Oct 1, 2001 — started with ₩5,000,000 in severance pay, and localized the scrubber Japan had monopolized.</div>
+  <div class="en">Oct 1, 2001 — started with ₩5,000,000 in severance pay, and localized the scrubber technology once dominated from overseas.</div>
 </section>
 
 <!-- S9 KOSDAQ 30.8–34.4 -->
@@ -298,8 +298,8 @@ section{position:absolute;inset:0;display:none;opacity:0}
     <g id="map-pins"></g>
   </svg>
   <div class="card abs" id="co" style="left:90px;top:440px;width:640px;padding:26px 36px"></div>
-  <div class="txt center abs" id="map-t" style="top:930px;font-size:56px">화성에서, <b>여섯 나라</b>로.</div>
-  <div class="en">From Hwaseong to six countries.</div>
+  <div class="txt center abs" id="map-t" style="top:930px;font-size:56px">대한민국의 기술, <b>세계의 현장으로.</b></div>
+  <div class="en">Korean technology, on the world stage.</div>
 </section>
 
 <!-- S11 STAIRS 39.6–43.8 -->
@@ -329,6 +329,8 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <!-- 액침냉각 3D 컷. 카피·스탬프가 이미 구워져 있다 — 못 읽으면 아래 일러스트가 그대로 선다 -->
   <div class="vwrap abs" id="fu-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
     <video id="fu-v" src="footage/immersion3d.webm" preload="auto" muted playsinline></video>
+    <!-- v20: 구운 소형 키커를 영상에서 지우고 여기서 크게 얹는다 — «앞으로도»가 이 씬의 선언이다(사용자 지시) -->
+    <div class="abs" id="fu-k2" style="left:150px;top:112px;font-size:46px;font-weight:900;letter-spacing:-0.5px;color:#eaf3ff;text-shadow:0 0 22px rgba(127,208,255,.5),0 2px 10px rgba(0,0,0,.6);opacity:0">그리고, <span style="color:#7fd0ff">앞으로도</span></div>
   </div>
   <div id="fu-old">
   <div class="bgv" id="fu-bg"><div class="bgi"><img src="photos/bg-lab.jpg" alt=""></div><div class="bgs"></div></div>
@@ -501,7 +503,7 @@ const TR_TOT = TR_CUM[TR_CUM.length-1];
     x += w + 18; }
   svgEl('rect',{x:0,y:1000,width:1920,height:80,fill:'#060b1c'},sky);
   const stars = $('stars'); for (let i=0;i<140;i++) svgEl('circle',{class:'st',cx:rs()*1920,cy:rs()*560,r:1+rs()*1.8,opacity:.3+rs()*.7},stars);
-  const PINS = [['hwaseong','2001','화성 본사'],['austin','2006','미국 오스틴'],['xian','2013','중국 시안'],['taiwan','2016','대만'],['wuxi','2016','중국 우시'],['hefei','2017','중국 허페이'],['wuhan','2019','중국 우한'],['singapore','2020','싱가포르'],['europe','2024','유럽'],['japan','2024','일본']];
+  const PINS = [['hwaseong','2001','대한민국 본사'],['austin','2006','미국 오스틴'],['xian','2013','중국 시안'],['taiwan','2016','대만'],['wuxi','2016','중국 우시'],['hefei','2017','중국 허페이'],['wuhan','2019','중국 우한'],['singapore','2020','싱가포르'],['europe','2024','유럽'],['japan','2024','일본']];
   const pg = $('map-pins'), ag = $('map-arcs'), co = $('co'); const [hx,hy] = MAP_PINS.hwaseong;
   PINS.forEach(([k,y,name],i) => { const [px,py] = MAP_PINS[k];
     if (i>0){ const mx = (hx+px)/2, my = Math.min(hy,py) - Math.abs(px-hx)*0.28 - 30; const path = svgEl('path',{class:'arc',d:`M${hx} ${hy} Q${mx} ${my} ${px} ${py}`},ag); const len = path.getTotalLength(); path.dataset.len = len; path.setAttribute('stroke-dasharray', len); }
@@ -566,13 +568,13 @@ function vseek(v, tv){
     const f = () => { if (done) return; done = true; v.removeEventListener('seeked', f); res(); };
     v.addEventListener('seeked', f); v.currentTime = tv; setTimeout(f, 800); }));
 }
-function sceneOp(t, k){ const [a,b] = T[k]; const f = 0.32; if (t < a || t >= b) return -1; return Math.min(p(t,a,a+f), 1-p(t,b-f,b)); }
+// 엔딩만 꼬리가 길다(0.9s) — 로고가 선 뒤 «여운» 없이 뚝 꺼진다는 사용자 지적(v20).
+function sceneOp(t, k){ const [a,b] = T[k]; const f = 0.32, fo = (k === 'end' ? 0.9 : f); if (t < a || t >= b) return -1; return Math.min(p(t,a,a+f), 1-p(t,b-fo,b)); }
 
 // ── 장면별 그림. 인자 t 는 «큐 기준» 시각이다(timeline.js 의 base 축).
 //    장면 길이를 바꿔도 아래 숫자는 손대지 않는다 — toFull 이 맞춰 준다.
 const SCN = {};
 SCN.hook = function(t){
-    bgSeek('hk', t, 0.0, 4.0, 4.60, 0.40);
     pop($('h1'), t, 0.4);
     const done = typeTo($('h2t'), 'GST에는 아무 일도 안 일어났습니다.', t, 1.3, 12);
     $('h2c').style.opacity = (t < 1.3 || (done && Math.floor(t*2.5)%2)) ? 0 : 1;
@@ -917,6 +919,8 @@ SCN.end = function(t){
 
 
 SCN.future = function(t){
+    // 키커는 cutScene «앞»에서 — return 뒤에 두면 영상 경로에서 영영 안 뜬다
+    const k2 = $('fu-k2'); if (k2) pop(k2, t, 44.0, 0.5, 16);
     if (cutScene('fu', t, 43.8, 3.9, 4.7)) return;  // 3.9s 재생 + 0.8s 라벨·STABLE 홀드
     bgSeek('fu', t, 43.8, 3.9, 0, 0.42);
     pop($('fu-k'), t, 44.0, 0.35, 14); pop($('fu-t'), t, 44.15, 0.5);
