@@ -81,17 +81,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 </section>
 
 <!-- S1 NOTHING 4.0–6.4 -->
-<section id="s-nothing">
-  <div class="big center abs" id="n1" style="top:420px">정말, 아무 일도.</div>
-  <div class="abs" id="cactus" style="left:1560px;top:700px;font-size:150px;line-height:1">🌵</div>
-  <div class="abs" id="cricket" style="left:180px;top:820px;font-size:34px;color:rgba(255,255,255,.6);font-weight:700">🦗 <span id="cricket-t"></span></div>
-  <svg class="abs" id="tumble" width="180" height="180" viewBox="-90 -90 180 180" style="left:0;top:760px">
-    <g fill="none" stroke="#c9a96e" stroke-width="3" stroke-linecap="round">
-      <ellipse rx="70" ry="60"/><ellipse rx="60" ry="70" transform="rotate(30)"/><ellipse rx="55" ry="72" transform="rotate(75)"/>
-      <ellipse rx="66" ry="50" transform="rotate(110)"/><ellipse rx="40" ry="72" transform="rotate(150)"/><circle r="72" stroke-dasharray="6 14"/>
-    </g></svg>
-  <div class="en">Really. Nothing.</div>
-</section>
+
 
 <!-- S2 SILANE 6.4–9.8 -->
 <section id="s-silane">
@@ -231,12 +221,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 </section>
 
 <!-- S6b NAMES (큐 축 62.2–65.2) — 제품명이 전부 «자연»이라는 사실 하나로 회사의 이유를 말한다 -->
-<section id="s-names">
-  <div class="center abs" id="nm-t" style="top:250px;font-weight:700;font-size:52px;line-height:1.35;color:rgba(255,255,255,.92);text-shadow:0 3px 20px rgba(0,0,0,.55)">독가스를 태우는 기계에,<br>우리는 이런 이름을 붙였습니다.</div>
-  <div class="abs" id="nm-row" style="left:0;right:0;top:470px;text-align:center;white-space:nowrap"></div>
-  <div class="abs" id="nm-mean" style="left:0;right:0;top:640px;text-align:center;font-weight:700;font-size:46px;letter-spacing:6px;color:#8fb3ff">대지 · 강 · 숲 · 물</div>
-  <div class="en">We named the machines that burn poison gas: Earth, River, Forest, Water.</div>
-</section>
+
 
 <!-- S7 PIVOT 24.8–26.8 -->
 <section id="s-pivot">
@@ -305,12 +290,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 </section>
 
 <!-- S12 LEADERS 43.8–49.0 -->
-<section id="s-lead">
-  <div class="txt center abs" id="ld-t" style="top:196px;font-size:60px">그 길을 정하고, 먼저 걸어 주신 분들.</div>
-  <div id="ld-wrap"></div>
-  <div class="sub center abs" id="ld-all" style="top:770px;font-size:42px;color:#ffd36b;font-weight:900">그리고, 함께 걸어온 <b>모든 임직원</b>.</div>
-  <div class="en">To those who set the course — and to everyone who walked it.</div>
-</section>
+
 
 <!-- S12b FUTURE (큐 기준 43.8–47.0) -->
 <section id="s-future">
@@ -404,6 +384,30 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <div class="en" id="end-en2">GST GROUP — GST · EST · ROBOCARE.</div>
 </section>
 
+
+<!-- intro — 사용자가 만든 컷. 카피·자막이 이미 구워져 있다 -->
+<section id="s-intro">
+  <div class="vwrap abs" id="in-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
+    <video id="in-v" src="footage/intro.webm" preload="auto" muted playsinline></video>
+  </div>
+  <div id="in-old"><div class="en">GST 25th Anniversary.</div></div>
+</section>
+
+<!-- s6 — 사용자가 만든 컷. 카피·자막이 이미 구워져 있다 -->
+<section id="s-s6">
+  <div class="vwrap abs" id="s6-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
+    <video id="s6-v" src="footage/s6_banter.webm" preload="auto" muted playsinline></video>
+  </div>
+  <div id="s6-old"><div class="en">GST 25th Anniversary.</div></div>
+</section>
+
+<!-- s5 — 사용자가 만든 컷. 카피·자막이 이미 구워져 있다 -->
+<section id="s-s5">
+  <div class="vwrap abs" id="s5-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
+    <video id="s5-v" src="footage/s5_interview.webm" preload="auto" muted playsinline></video>
+  </div>
+  <div id="s5-old"><div class="en">GST 25th Anniversary.</div></div>
+</section>
 <div id="grain"></div>
 <div id="vig" style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 78% at 50% 48%,rgba(0,0,0,0) 52%,rgba(0,0,0,.45) 100%)"></div>
 <div id="fade" style="position:absolute;inset:0;pointer-events:none;background:#000"></div>
@@ -434,14 +438,7 @@ function popIn(el, t, t0, dur=0.45){ const x = p(t,t0,t0+dur); op(el, x>0?1:0); 
 function stamp(el, t, t0, deg=-6){ if (t < t0) { op(el,0); return; } const x = p(t,t0,t0+0.3); op(el,1); el.style.transform = `rotate(${deg}deg) scale(${lerp(1.7,1,eo(x))})`; }
 function typeTo(el, str, t, t0, cps=13){ const n = t < t0 ? 0 : Math.min(str.length, Math.floor((t-t0)*cps)); el.textContent = str.slice(0,n); return n >= str.length; }
 
-// ── 경영진 — 이름·직함은 공개 자료 기준이다. 사내 확인 후 이 배열만 고치면 화면·순서가 따라온다.
-//    portraits/p1.png … p4.png 를 넣으면 그 이미지가 쓰이고, 없으면 기본 실루엣이 선다(닮은꼴을 지어내지 않는다).
-const LEADERS = [
-  { file:'portraits/p1.png', name:'김덕준', title:'회장', hair:'a', glasses:true },
-  { file:'portraits/p2.png', name:'장광수', title:'부회장', hair:'b' },
-  { file:'portraits/p3.png', name:'석종욱', title:'대표이사', hair:'c', glasses:true },
-  { file:'portraits/p4.png', name:'문승보', title:'대표이사', hair:'d' },
-];
+
 
 // ── 정적 요소 생성(한 번만)
 (function build(){
@@ -470,16 +467,6 @@ const LEADERS = [
     const g = svgEl('g',{class:'pin'},pg); svgEl('circle',{class:'ring',cx:px,cy:py,r:8,fill:'none',stroke:'#ffd36b','stroke-width':3},g); svgEl('circle',{class:'dot',cx:px,cy:py,r: i===0?11:8,fill: i===0?'#fff':'#ffd36b',stroke:'#0b1020','stroke-width':3},g);
     const d = document.createElement('div'); d.className = 'co-line'; d.innerHTML = `<span class="y">${y}</span>${name}`; co.appendChild(d); });
 
-  // 제품명 — GST 스크러버 라인업에서 «자연»에 해당하는 넷만 고른다(제품 목록 기준, 사내 확인 필요)
-  const NAMES = ['GAIA', 'GARAM', 'SOOPIA', 'AQUA'];
-  const row = $('nm-row');
-  NAMES.forEach((n, i) => {
-    if (i) { const dot = document.createElement('span'); dot.className = 'nmd'; dot.id = 'nmd' + i;
-      dot.style.cssText = 'font-weight:700;font-size:56px;color:rgba(255,255,255,.32);margin:0 26px;vertical-align:14px'; dot.textContent = '·'; row.appendChild(dot); }
-    const e = document.createElement('span'); e.id = 'nm' + i;
-    e.style.cssText = 'display:inline-block;font-weight:900;font-size:84px;letter-spacing:5px;color:#fff;text-shadow:0 4px 30px rgba(143,192,255,.45)';
-    e.textContent = n; row.appendChild(e); });
-
   // 액침냉각 탱크 — 서버 유닛과 기포
   const fu = $('fu-units'); const rf = rng(41);
   for (let i = 0; i < 5; i++){ const y = 196 + i*54; const g = svgEl('g',{},fu);
@@ -489,33 +476,6 @@ const LEADERS = [
   const fb2 = $('fu-bub');
   for (let i = 0; i < 22; i++){ const c = svgEl('circle',{class:'bu',r:3+rf()*6,fill:'#bfe6ff',opacity:.7},fb2); c.dataset.x = 160+rf()*470; c.dataset.ph = rf()*3; c.dataset.sp = .6+rf()*.7; }
 
-  // 경영진 초상 — 이미지가 없으면 «닮은꼴을 지어내지 않는» 실루엣이 선다
-  const HAIR = { a:'M-52 -6 q4 -60 52 -60 q48 0 52 60 q-16 -26 -52 -26 q-36 0 -52 26 Z',
-                 b:'M-54 -4 q2 -62 54 -62 q52 0 54 62 q-18 -34 -30 -22 q-16 12 -48 6 q-22 -4 -30 16 Z',
-                 c:'M-52 -8 q6 -58 52 -58 q46 0 52 58 q-24 -18 -52 -18 q-28 0 -52 18 Z',
-                 d:'M-53 -6 q2 -60 53 -60 q51 0 53 60 q-14 -30 -53 -30 q-39 0 -53 30 Z' };
-  const GLASSES = '<g fill="none" stroke="#0f1836" stroke-width="5" opacity=".5">' +
-    '<rect x="-42" y="-44" width="30" height="24" rx="8"/><rect x="12" y="-44" width="30" height="24" rx="8"/>' +
-    '<path d="M-12 -33 h24"/><path d="M-42 -36 l-8 -3"/><path d="M42 -36 l8 -3"/></g>';
-  const SUIT = '<g fill="#0f1836" opacity=".5">' +
-    '<path d="M-27 33 L-4 60 L-32 78 Z"/><path d="M27 33 L4 60 L32 78 Z"/>' +      // 라펠
-    '<path d="M-4 60 L0 50 L4 60 L3 91 L-3 91 Z"/></g>';                            // 넥타이
-  const wrap = $('ld-wrap');
-  LEADERS.forEach((L,i) => { const cx = 400 + i*380;                          // 4명 · 가로 균등 배치
-    const f = document.createElement('div'); f.className = 'slot pf'; f.id = 'pf'+i; f.style.left = (cx-95)+'px'; f.style.top = '344px';
-    f.innerHTML = `<img src="${L.file}" alt="" onerror="this.closest('.slot').classList.add('noimg')">` +
-      `<svg class="fb" width="182" height="182" viewBox="-91 -91 182 182">` +
-      `<rect x="-91" y="-91" width="182" height="182" fill="#16224a"/>` +
-      `<path d="M-70 91 q0 -54 70 -54 q70 0 70 54 Z" fill="#ffd36b" opacity=".92"/>` +      // 어깨
-      `<path d="M-26 4 h52 v34 h-52 Z" fill="#ffd36b" opacity=".92"/>` +                      // 목
-      SUIT +                                                                                  // 라펠·넥타이
-      `<ellipse rx="46" ry="52" cy="-24" fill="#ffd36b" opacity=".92"/>` +                    // 머리
-      `<path d="${HAIR[L.hair]}" transform="translate(0,-24)" fill="#0f1836" opacity=".55"/>` + // 머리 모양
-      (L.glasses ? GLASSES : '') +
-      `</svg>`;
-    wrap.appendChild(f);
-    const n = document.createElement('div'); n.className = 'pn'; n.id = 'pn'+i; n.style.left = (cx-140)+'px'; n.style.top = '570px'; n.textContent = L.name; wrap.appendChild(n);
-    const ti = document.createElement('div'); ti.className = 'pt'; ti.id = 'pt'+i; ti.style.left = (cx-140)+'px'; ti.style.top = '614px'; ti.textContent = L.title; wrap.appendChild(ti); });
 })();
 
 const SEC = Object.fromEntries(KEYS.map(k => [k, $('s-'+k)]));
@@ -560,12 +520,6 @@ SCN.hook = function(t){
     const done = typeTo($('h2t'), 'GST에는 아무 일도 안 일어났습니다.', t, 1.3, 12);
     $('h2c').style.opacity = (t < 1.3 || (done && Math.floor(t*2.5)%2)) ? 0 : 1;
     pop($('h-en'), t, 3.0, 0.4, 10);
-};
-SCN.nothing = function(t){
-    pop($('n1'), t, 4.15, 0.4);
-    const x = p(t, 4.2, 6.5); const tb = $('tumble'); tb.style.left = lerp(-220, 2000, x) + 'px'; tb.style.top = (770 - 40*Math.abs(Math.sin((t-4.2)*5))) + 'px'; tb.style.transform = `rotate(${(t-4.2)*420}deg)`;
-    typeTo($('cricket-t'), '귀뚤… 귀뚤…', t, 4.7, 9);
-    op($('cactus'), p(t,4.3,4.7));
 };
 SCN.silane = function(t){
     if (cutScene('si', t, 6.4, 3.4, 3.6)) return;
@@ -673,14 +627,6 @@ SCN.map = function(t){
 SCN.stairs = function(t){
     document.querySelectorAll('#stairs .stp').forEach((g,i) => { const ts = 39.9 + i*0.5; const x = eo(p(t, ts, ts+0.4)); g.setAttribute('transform', `translate(0,${900*(1-x)}) scale(1,${x})`); g.style.opacity = x>0?1:0; g.querySelectorAll('text').forEach(tx => tx.setAttribute('opacity', p(t, ts+0.25, ts+0.45))); });
     popIn($('tr-trophy'), t, 42.4); pop($('tr-t'), t, 42.6, 0.45);
-};
-SCN.lead = function(t){
-    pop($('ld-t'), t, 47.25, 0.5);
-    LEADERS.forEach((L,i) => { const ts = 47.8 + i*0.55; const x = p(t, ts, ts+0.45);
-      const f = $('pf'+i); f.style.opacity = x; f.style.transform = `translateY(${(1-eo(x))*34}px) scale(${x>0?lerp(0.86,1,eo(x)):0.86})`;
-      const n = $('pn'+i), ti = $('pt'+i); const nx = p(t, ts+0.2, ts+0.55);
-      n.style.opacity = nx; ti.style.opacity = nx; n.style.transform = ti.style.transform = `translateY(${(1-eo(nx))*14}px)`; });
-    pop($('ld-all'), t, 50.6, 0.5);
 };
 SCN.close = function(t){
     const a1 = Math.min(p(t,52.45,53.0), 1-p(t,54.35,54.7)); $('cl1').style.opacity = a1; $('cl1').style.transform = `translateY(${(1-eo(p(t,52.45,53.0)))*24}px)`;
@@ -883,14 +829,6 @@ SCN.end = function(t){
     pop($('end-en2'), t, 61.18, 0.38, 10);
 };
 
-SCN.names = function(t){
-    pop($('nm-t'), t, 62.45, 0.5);
-    for (let i = 0; i < 4; i++){ const ts = 62.9 + i*0.22, x = p(t, ts, ts+0.4);
-      const e = $('nm'+i); e.style.opacity = x; e.style.transform = `translateY(${(1-eo(x))*22}px) scale(${x>0?lerp(0.9,1,eo(x)):0.9})`;
-      if (i){ const d = $('nmd'+i); d.style.opacity = x*0.9; } }
-    pop($('nm-mean'), t, 64.1, 0.5, 18);
-    pop(document.querySelector('#s-names .en'), t, 64.4, 0.4, 10);
-};
 
 SCN.future = function(t){
     pop($('fu-k'), t, 44.0, 0.35, 14); pop($('fu-t'), t, 44.15, 0.5);
@@ -904,6 +842,16 @@ SCN.future = function(t){
       const x = (((t - 43.9 + (+b.dataset.ph)) % cyc) + cyc) % cyc / cyc;
       b.setAttribute('cx', (+b.dataset.x) + 10*Math.sin(x*8)); b.setAttribute('cy', lerp(470, 145, x));
       b.setAttribute('opacity', t < 43.9 ? 0 : (x < 0.08 ? x*8 : 0.7*(1-x))); });
+};
+
+SCN.intro = function(t){
+    cutScene('in', t, 66.0, 3.0, 3.0);
+};
+SCN.s6 = function(t){
+    cutScene('s6', t, 69.0, 5.2, 5.2);
+};
+SCN.s5 = function(t){
+    cutScene('s5', t, 74.2, 4.3, 4.3);
 };
 
 window.seek = function(tOut){
