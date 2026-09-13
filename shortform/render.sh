@@ -23,10 +23,15 @@ VF="fps=$FPS"; [ "$SS" -gt 1 ] && VF="tmix=frames=$SS,fps=$FPS"
 # v21 통일 그레이드 — 완만한 S커브 + 미세 틸 시프트 + 비네트 + 필름 그레인.
 #   씬(scene.html)은 손대지 않고 «인코딩 단계»에만 얹는다 — 되돌리기는 GRADE=0 ./render.sh 한 번.
 #   그레인은 비트레이트를 키우므로 용량이 한도(30MiB)에 닿으면 아래 crf 를 19~20 으로.
-GRADEF="curves=master='0/0 0.22/0.202 0.78/0.79 1/1',colorbalance=rs=-0.02:bs=0.015:rm=-0.008:bm=0.006,vignette=a=PI/7,noise=alls=6:allf=t+u"
+GRADEF="curves=master='0/0 0.22/0.202 0.78/0.79 1/1',colorbalance=rs=-0.02:bs=0.015:rm=-0.008:bm=0.006,vignette=a=PI/7,noise=alls=4:allf=t+u"
 [ "${GRADE:-1}" = 1 ] && VF="$VF,$GRADEF"
+# ⚠ 그레인은 crf 고정과 상극이다 — crf 18 로 82MiB 가 나왔다(실측). 2-pass 로 «용량»을 고정한다:
+#   목표 28.5MiB 에서 오디오(192k)를 빼고 남는 예산을 영상 비트레이트로.
+VBIT=$(python3 -c "print(int((28.5*8*1048576 - 192000*$DUR)/$DUR/1000))")
 "$FF" -y -loglevel error -framerate $((FPS*SS)) -i frames/frame_%05d.png -vf "$VF" \
-  -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -movflags +faststart video_only.mp4
+  -c:v libx264 -preset medium -b:v ${VBIT}k -pass 1 -passlogfile /tmp/x264pass -an -f null /dev/null
+"$FF" -y -loglevel error -framerate $((FPS*SS)) -i frames/frame_%05d.png -vf "$VF" \
+  -c:v libx264 -preset medium -b:v ${VBIT}k -pass 2 -passlogfile /tmp/x264pass -pix_fmt yuv420p -movflags +faststart video_only.mp4
 # 리와인드 효과음 — 컷의 «흰 섬광»(리와인드 순간)이 각 컷 0.6초 지점이다.
 # 컷 자체의 오디오는 webm 변환에서 뺐다(-an) — 안 그러면 BGM 위에 다른 곡이 겹친다.
 # ⚠ 45초본은 sf6 를 통째로 빼므로 그 효과음도 같이 빠져야 한다. 시각은 timeline.js 가 정본이다.
