@@ -55,6 +55,7 @@ shortform/cframes/
 # 구간 확인용 클립 — 검토가 끝나면 버린다(최종본만 저장소에 둔다)
 shortform/s6_new.mp4
 shortform/clip.mp4
+shortform/chk_*.mp4
 # 실사 원본(마스터) — 업스케일·그레이딩 «전»의 큰 파일은 저장소에 두지 않는다.
 # 렌더에 실제로 쓰이는 것은 webm 쪽이고 그건 커밋한다(없으면 아무도 렌더를 못 한다)
 shortform/footage/*.mp4
