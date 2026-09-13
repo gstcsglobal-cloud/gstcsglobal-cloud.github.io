@@ -18,11 +18,11 @@
     { k: 'stop',    cue0: 16.6, base: 3.4, full: 1.8, short: 1.8 },   // S4 ctx 길이
     { k: 'reveal',  cue0: 20.0, base: 4.8, full: 4.4, short: 3.8 },
     { k: 'pivot',   cue0: 24.8, base: 2.0, full: 1.8, short: 1.2 },
-    { k: 'found',   cue0: 26.8, base: 4.0, full: 3.8, short: 2.6 },
-    { k: 'kosdaq',  cue0: 30.8, base: 3.6, full: 2.8, short: 0   },
-    { k: 'map',     cue0: 34.4, base: 5.2, full: 4.2, short: 3.3 },
-    { k: 'stairs',  cue0: 39.6, base: 4.2, full: 3.4, short: 2.6 },
-    { k: 'future',  cue0: 43.8, base: 3.2, full: 3.2, short: 2.3 },
+    { k: 'found',   cue0: 26.8, base: 4.0, full: 3.8, short: 2.4 },
+    { k: 'kosdaq',  cue0: 30.8, base: 3.6, full: 2.6, short: 0   },
+    { k: 'map',     cue0: 34.4, base: 5.2, full: 3.9, short: 3.0 },
+    { k: 'stairs',  cue0: 39.6, base: 4.2, full: 3.2, short: 2.4 },
+    { k: 'future',  cue0: 43.8, base: 3.9, full: 3.9, short: 3.0 },   // 액침냉각 3D 컷 길이
     { k: 'close',   cue0: 52.2, base: 4.6, full: 4.5, short: 3.7 },
     { k: 'end',     cue0: 56.8, base: 5.4, full: 5.8, short: 5.0 },   // 로고 리빌: base 보다 길다(느려질 뿐 안 깨진다)
   ];

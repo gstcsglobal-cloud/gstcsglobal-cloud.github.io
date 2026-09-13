@@ -306,6 +306,11 @@ section{position:absolute;inset:0;display:none;opacity:0}
 
 <!-- S12b FUTURE (큐 기준 43.8–47.0) -->
 <section id="s-future">
+  <!-- 액침냉각 3D 컷. 카피·스탬프가 이미 구워져 있다 — 못 읽으면 아래 일러스트가 그대로 선다 -->
+  <div class="vwrap abs" id="fu-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
+    <video id="fu-v" src="footage/immersion3d.webm" preload="auto" muted playsinline></video>
+  </div>
+  <div id="fu-old">
   <div class="bgv" id="fu-bg"><div class="bgi"><img src="photos/bg-lab.jpg" alt=""></div><div class="bgs"></div></div>
   <div class="kicker" id="fu-k" style="color:#7fd0ff">그리고</div>
   <div class="txt abs" id="fu-t" style="left:140px;top:250px;font-size:62px">다음 25년은,<br><b>이미 시작됐습니다.</b></div>
@@ -326,6 +331,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
     <g id="fu-bub"></g>
   </svg>
   <div class="en">And the next 25 years have already begun — immersion cooling for AI data centers.</div>
+</div>
 </section>
 
 <!-- S13 CLOSE 49.0–53.6 -->
@@ -857,7 +863,8 @@ SCN.end = function(t){
 
 
 SCN.future = function(t){
-    bgSeek('fu', t, 43.8, 3.2, 0, 0.42);
+    if (cutScene('fu', t, 43.8, 3.9, 3.90)) return;
+    bgSeek('fu', t, 43.8, 3.9, 0, 0.42);
     pop($('fu-k'), t, 44.0, 0.35, 14); pop($('fu-t'), t, 44.15, 0.5);
     pop($('fu-s'), t, 45.0, 0.45); pop($('fu-n'), t, 45.6, 0.4, 16);
     const ph = $('fu-photo'), sv = $('fu-svg'); pop(ph, t, 44.3, 0.6, 34); pop(sv, t, 44.3, 0.6, 34);
