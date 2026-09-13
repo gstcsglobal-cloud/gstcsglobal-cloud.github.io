@@ -22,10 +22,24 @@ HTML=scene.html QUERY="$QUERY" K=2 OUT=frames FPS=$((FPS*SS)) FRAMES=$N EXE="$EX
 VF="fps=$FPS"; [ "$SS" -gt 1 ] && VF="tmix=frames=$SS,fps=$FPS"
 "$FF" -y -loglevel error -framerate $((FPS*SS)) -i frames/frame_%05d.png -vf "$VF" \
   -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -movflags +faststart video_only.mp4
-# 라우드니스 정규화(-16 LUFS) — 행사장 PA 에서 «소리가 작다» 소리를 안 듣기 위해서다
+# 리와인드 효과음 — 컷의 «흰 섬광»(리와인드 순간)이 각 컷 0.6초 지점이다.
+# 컷 자체의 오디오는 webm 변환에서 뺐다(-an) — 안 그러면 BGM 위에 다른 곡이 겹친다.
+# ⚠ 45초본은 sf6 를 통째로 빼므로 그 효과음도 같이 빠져야 한다. 시각은 timeline.js 가 정본이다.
+SFX=$(node -e "
+const P=require('./timeline.js').build('$MODE');
+const out=[];
+if(P.T.sf6)  out.push(['sfx/rewind_sf6.wav',      (P.T.sf6[0] +0.6).toFixed(3)]);
+if(P.T.stop) out.push(['sfx/rewind_linestop.wav', (P.T.stop[0]+0.6).toFixed(3)]);
+console.log(out.map(x=>x.join(':')).join(' '));")
+IN=(-i video_only.mp4 -i "$BGM"); FC=""; MIX="[1:a]"; N=2
+for e in $SFX; do F=${e%%:*}; T=${e##*:}; MS=$(python3 -c "print(int(float('$T')*1000))")
+  IN+=(-i "$F"); FC="${FC}[${N}:a]adelay=delays=${MS}:all=1[s${N}];"; MIX="${MIX}[s${N}]"; N=$((N+1)); done
+# 라우드니스 정규화(-16 LUFS)는 «섞은 뒤»에 건다 — 행사장 PA 에서 «소리가 작다» 소리를 안 듣기 위해서다
 FADE=$(python3 -c "print(round($DUR-0.5,2))")
-"$FF" -y -loglevel error -i video_only.mp4 -i "$BGM" -c:v copy \
-  -af "loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=out:st=$FADE:d=0.5" -c:a aac -b:a 192k -ar 48000 -shortest -movflags +faststart "$OUT"
+if [ "$N" -gt 2 ]; then AF="${FC}${MIX}amix=inputs=$((N-1)):duration=first:normalize=0[m];[m]loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=out:st=$FADE:d=0.5[aout]"
+else AF="[1:a]loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=out:st=$FADE:d=0.5[aout]"; fi
+"$FF" -y -loglevel error "${IN[@]}" -filter_complex "$AF" -map 0:v -map "[aout]" -c:v copy \
+  -c:a aac -b:a 192k -ar 48000 -shortest -movflags +faststart "$OUT"
 # 제출·상영 목록용 대표 이미지(첫 프레임은 페이드인이라 검다)
 "$FF" -y -loglevel error -ss $(python3 -c "print(round($DUR-0.5,2))") -i "$OUT" -frames:v 1 "${OUT%.mp4}_poster.png"
 rm -rf frames video_only.mp4

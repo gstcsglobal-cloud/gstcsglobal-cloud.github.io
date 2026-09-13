@@ -11,20 +11,20 @@
   const SCENES = [
     { k: 'hook',    cue0:  0.0, base: 4.0, full: 3.2, short: 2.8 },
     { k: 'nothing', cue0:  4.0, base: 2.4, full: 1.6, short: 0   },
-    { k: 'silane',  cue0:  6.4, base: 3.4, full: 3.35, short: 3.2 },
-    { k: 'sf6',     cue0:  9.8, base: 3.4, full: 3.35, short: 0   },
-    { k: 'chill',   cue0: 13.2, base: 3.4, full: 3.35, short: 3.2 },
-    { k: 'stop',    cue0: 16.6, base: 3.4, full: 3.35, short: 3.2 },
-    { k: 'reveal',  cue0: 20.0, base: 4.8, full: 4.1, short: 3.8 },
+    { k: 'silane',  cue0:  6.4, base: 3.4, full: 3.6, short: 3.6 },   // S1 컷 길이
+    { k: 'sf6',     cue0:  9.8, base: 3.4, full: 1.8, short: 0   },   // S3 ctx 길이
+    { k: 'chill',   cue0: 13.2, base: 3.4, full: 3.9, short: 3.9 },   // S2 컷 길이
+    { k: 'stop',    cue0: 16.6, base: 3.4, full: 1.8, short: 1.8 },   // S4 ctx 길이
+    { k: 'reveal',  cue0: 20.0, base: 4.8, full: 4.4, short: 3.8 },
     { k: 'names',   cue0: 62.2, base: 3.0, full: 3.0, short: 2.6 },   // ← 새 장면(큐는 축 끝에)
     { k: 'pivot',   cue0: 24.8, base: 2.0, full: 1.8, short: 1.4 },
-    { k: 'found',   cue0: 26.8, base: 4.0, full: 3.5, short: 3.0 },
-    { k: 'kosdaq',  cue0: 30.8, base: 3.6, full: 3.0, short: 0   },
-    { k: 'map',     cue0: 34.4, base: 5.2, full: 3.9, short: 2.8 },
-    { k: 'stairs',  cue0: 39.6, base: 4.2, full: 3.3, short: 2.5 },
+    { k: 'found',   cue0: 26.8, base: 4.0, full: 3.8, short: 3.0 },
+    { k: 'kosdaq',  cue0: 30.8, base: 3.6, full: 3.4, short: 0   },
+    { k: 'map',     cue0: 34.4, base: 5.2, full: 4.4, short: 3.1 },
+    { k: 'stairs',  cue0: 39.6, base: 4.2, full: 3.7, short: 2.5 },
     { k: 'future',  cue0: 43.8, base: 3.2, full: 3.2, short: 2.7 },
-    { k: 'lead',    cue0: 47.0, base: 5.2, full: 5.0, short: 4.6 },
-    { k: 'close',   cue0: 52.2, base: 4.6, full: 4.2, short: 3.8 },
+    { k: 'lead',    cue0: 47.0, base: 5.2, full: 5.2, short: 4.6 },
+    { k: 'close',   cue0: 52.2, base: 4.6, full: 4.4, short: 3.8 },
     { k: 'end',     cue0: 56.8, base: 5.4, full: 5.8, short: 5.4 },   // 로고 리빌: base 보다 길다(느려질 뿐 안 깨진다)
   ];
 
