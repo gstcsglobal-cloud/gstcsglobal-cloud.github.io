@@ -270,17 +270,24 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <div class="card abs" id="kq-card" style="left:140px;top:500px;width:1240px;height:160px;padding:30px 46px">
     <div class="led num">공모가 5,800 → 시초가 <span id="kq-num">5,800</span> <span class="g" id="kq-up">▲ 34.5%</span></div>
   </div>
-  <!-- 2박자: 초록(2006 상장) → 금색(2026 시총 1조). 한 선이 «계속 올라온 20년»으로 읽힌다 -->
+  <!-- 성장 3박: 상장(초록) → 수출 1억불(금·2021·수출의 탑을 여기로 접었다) → 시총 1조(금·2026 정점).
+       한 선이 «계속 올라온 25년»으로 읽히고, 정점이 오늘(2026)이라 다음 장면(향후 25년)으로 이어진다 -->
   <svg class="abs" style="left:1240px;top:200px" width="660" height="660" viewBox="0 0 660 660">
-    <polyline id="kq-line" points="20,580 80,560 140,570 200,500 255,480 310,400 360,350" fill="none" stroke="#5cff8a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-    <polyline id="kq-line2" points="360,350 420,330 470,290 515,240 560,170 615,75" fill="none" stroke="#ffd36b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline id="kq-line"  points="20,580 80,560 140,570 200,500 255,480 310,400 360,350" fill="none" stroke="#5cff8a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline id="kq-line2" points="360,350 415,325 475,285" fill="none" stroke="#ffd36b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline id="kq-line3" points="475,285 520,235 560,170 615,75" fill="none" stroke="#ffd36b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
     <circle id="kq-dot" cx="360" cy="350" r="9" fill="#5cff8a"/>
+    <circle id="kq-dotm" cx="475" cy="285" r="10" fill="#ffd36b"/>
     <circle id="kq-dot2" cx="615" cy="75" r="13" fill="#ffd36b"/>
+    <g id="kq-ms" opacity="0">
+      <text x="455" y="258" text-anchor="end" font-size="31" font-weight="900" fill="#ffd36b" font-family="NotoKR">🏆 수출 1억불</text>
+      <text x="475" y="324" text-anchor="middle" font-size="22" font-weight="700" fill="#8fb3ff" font-family="NotoKR">2021</text>
+    </g>
     <text id="kq-cap" x="630" y="38" text-anchor="end" font-size="46" font-weight="900" fill="#ffd36b" font-family="NotoKR" opacity="0">시가총액 1조</text>
     <text id="kq-yr" x="615" y="122" text-anchor="middle" font-size="27" font-weight="700" fill="#8fb3ff" font-family="NotoKR" opacity="0">2026</text>
   </svg>
   <div class="txt abs" id="kq-tril" style="left:140px;top:700px;font-size:48px;color:#ffd36b">그리고 2026, <b>시가총액 1조.</b></div>
-  <div class="en">Feb 1, 2006 — listed on KOSDAQ, up 34.5% on day one. In 2026 — ₩1T market cap.</div>
+  <div class="en">KOSDAQ 2006 · $100M exports 2021 · ₩1T market cap 2026.</div>
 </section>
 
 <!-- S10 MAP 34.4–39.6 -->
@@ -661,19 +668,23 @@ SCN.found = function(t){
 };
 SCN.kosdaq = function(t){
     bgSeek('kq2', t, 30.8, 3.6, 0, 0.46);
-    pop($('kq-card'), t, 31.2, 0.45, 30);
-    const num = Math.round(lerp(5800, 7800, eo(p(t, 31.6, 32.5)))); $('kq-num').textContent = fmt(num);
-    popIn($('kq-up'), t, 32.55);
-    // 초록(2006) → 금색(2026). 길이는 실측 폴리라인 길이(450·390)다 — 짧으면 끝이 «톡» 끊긴다.
-    const g1 = $('kq-line');  g1.setAttribute('stroke-dasharray', 450); g1.setAttribute('stroke-dashoffset', 450*(1-eo(p(t,31.3,32.3))));
-    const g2 = $('kq-line2'); g2.setAttribute('stroke-dasharray', 390); g2.setAttribute('stroke-dashoffset', 390*(1-eo(p(t,32.7,33.6))));
-    op($('kq-dot'),  p(t,32.25,32.4) > 0 ? 1 : 0);
-    const d2 = p(t,33.5,33.65) > 0; op($('kq-dot2'), d2 ? 1 : 0);
+    pop($('kq-card'), t, 31.1, 0.45, 30);
+    const num = Math.round(lerp(5800, 7800, eo(p(t, 31.5, 32.3)))); $('kq-num').textContent = fmt(num);
+    popIn($('kq-up'), t, 32.35);
+    // 초록(상장) → 금1(수출 1억불) → 금2(시총 1조). 길이는 실측(450·135·255) — 짧으면 끝이 «톡» 끊긴다.
+    const g1 = $('kq-line');  g1.setAttribute('stroke-dasharray', 450); g1.setAttribute('stroke-dashoffset', 450*(1-eo(p(t,31.2,32.1))));
+    const g2 = $('kq-line2'); g2.setAttribute('stroke-dasharray', 135); g2.setAttribute('stroke-dashoffset', 135*(1-eo(p(t,32.45,32.95))));
+    const g3 = $('kq-line3'); g3.setAttribute('stroke-dasharray', 255); g3.setAttribute('stroke-dashoffset', 255*(1-eo(p(t,33.15,33.75))));
+    op($('kq-dot'),  p(t,32.05,32.2) > 0 ? 1 : 0);
+    op($('kq-dotm'), p(t,32.9,33.05) > 0 ? 1 : 0);
+    $('kq-ms').setAttribute('opacity', eo(p(t,32.95,33.25)));
+    op($('kq-dot2'), p(t,33.7,33.85) > 0 ? 1 : 0);
     $('kq-dot2').setAttribute('r', 13 + 6*Math.abs(Math.sin(t*5)));
-    $('kq-cap').setAttribute('opacity', eo(p(t,33.55,33.9)));
-    $('kq-yr').setAttribute('opacity', eo(p(t,33.6,33.95)));
-    pop($('kq-tril'), t, 32.9, 0.45);
-};SCN.map = function(t){
+    $('kq-cap').setAttribute('opacity', eo(p(t,33.75,34.05)));
+    $('kq-yr').setAttribute('opacity', eo(p(t,33.8,34.1)));
+    pop($('kq-tril'), t, 33.1, 0.45);
+};
+SCN.map = function(t){
     const t0 = 34.7, step = 0.45;
     document.querySelectorAll('#map-pins .pin').forEach((g,i) => { const ts = t0 + i*step; const x = p(t, ts, ts+0.35); g.style.opacity = x > 0 ? 1 : 0; const dot = g.querySelector('.dot'); dot.setAttribute('transform', `translate(${dot.getAttribute('cx')*(1-eb(x))},${dot.getAttribute('cy')*(1-eb(x))}) scale(${eb(x)})`);
       const ring = g.querySelector('.ring'); const rx = p(t, ts, ts+0.9); ring.setAttribute('r', 8 + 40*rx); ring.setAttribute('opacity', 1-rx); });
@@ -701,7 +712,8 @@ SCN.stairs = function(t){
     ar.setAttribute('opacity', x > 0.04 ? 1 : 0);
     document.querySelectorAll('#tr-ms .trm').forEach((g,i) => g.setAttribute('opacity', clamp((L - TR_CUM[i]) / 70, 0, 1)));
     popIn($('tr-trophy'), t, 41.85); pop($('tr-t'), t, 42.0, 0.4);
-};SCN.close = function(t){
+};
+SCN.close = function(t){
     bgSeek('cl', t, 52.2, 4.6, 4.73, 0.38);
     const a1 = Math.min(p(t,52.45,53.0), 1-p(t,54.35,54.7)); $('cl1').style.opacity = a1; $('cl1').style.transform = `translateY(${(1-eo(p(t,52.45,53.0)))*24}px)`;
     const a2 = p(t,54.8,55.4); $('cl2').style.opacity = a2; $('cl2').style.transform = `translateY(${(1-eo(a2))*24}px)`;
@@ -905,7 +917,7 @@ SCN.end = function(t){
 
 
 SCN.future = function(t){
-    if (cutScene('fu', t, 43.8, 3.9, 4.3)) return;  // 3.9s 재생 + 0.4s 라벨·STABLE 홀드
+    if (cutScene('fu', t, 43.8, 3.9, 4.7)) return;  // 3.9s 재생 + 0.8s 라벨·STABLE 홀드
     bgSeek('fu', t, 43.8, 3.9, 0, 0.42);
     pop($('fu-k'), t, 44.0, 0.35, 14); pop($('fu-t'), t, 44.15, 0.5);
     pop($('fu-s'), t, 45.0, 0.45); pop($('fu-n'), t, 45.6, 0.4, 16);
