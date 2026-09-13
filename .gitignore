@@ -46,3 +46,11 @@ shortform/e2/
 shortform/e3/
 shortform/mb*/
 shortform/*.png
+shortform/chk2/
+# 3D 컷어웨이 — three.js 는 npm 으로 받고(3d/README), 프레임은 중간 산출물이다
+shortform/3d/node_modules/
+shortform/3d/f3d/
+shortform/3d/probe/
+# 실사 원본(마스터) — 업스케일·그레이딩 «전»의 큰 파일은 저장소에 두지 않는다.
+# 렌더에 실제로 쓰이는 것은 webm 쪽이고 그건 커밋한다(없으면 아무도 렌더를 못 한다)
+shortform/footage/*.mp4

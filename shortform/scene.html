@@ -52,7 +52,17 @@ section{position:absolute;inset:0;display:none;opacity:0}
 .pt{position:absolute;width:280px;text-align:center;font-weight:700;font-size:26px;color:#8fb3ff;margin-top:4px}
 .mark{position:absolute;text-align:center}
 .mark .nm{font-family:'BlackHan','NotoKR';font-size:52px;letter-spacing:1px;line-height:1}
-.mark .ds{font-weight:700;font-size:24px;color:rgba(255,255,255,.62);margin-top:10px;letter-spacing:-.3px}
+.mark .ds{font-weight:700;font-size:22px;line-height:30px;color:rgba(255,255,255,.62);margin-top:10px;letter-spacing:-.3px}
+/* 실사 — 브라우저(오픈소스 Chromium)가 H.264 를 못 읽어 «webm(VP9)» 을 쓴다. mp4 는 편집용 원본으로만 남긴다 */
+.vwrap{position:absolute;overflow:hidden}
+.vwrap video{width:100%;height:100%;object-fit:cover;display:block}
+.vscrim{position:absolute;inset:0}
+/* 로고 리빌 — 어둠 → 빛줄기 2줄 교차 → 파티클 → 로고 (UNITECH 브랜드 영상 참고) */
+.streak{position:absolute;left:-700px;top:540px;width:3320px;height:6px;transform-origin:50% 50%;opacity:0;
+  background:linear-gradient(90deg,rgba(143,192,255,0) 12%,rgba(143,192,255,.55) 38%,#dcecff 50%,rgba(143,192,255,.55) 62%,rgba(143,192,255,0) 88%);
+  filter:blur(1.2px);box-shadow:0 0 40px rgba(143,192,255,.7),0 0 110px rgba(90,150,255,.45)}
+.pt2{position:absolute;width:5px;height:5px;border-radius:50%;background:#cfe4ff;opacity:0;
+  box-shadow:0 0 10px rgba(143,192,255,.95)}
 </style></head><body>
 <div id="stage">
 <div class="preload"><span style="font:400 20px NotoKR">가</span><span style="font:700 20px NotoKR">가</span><span style="font:900 20px NotoKR">가</span><span style="font:400 20px BlackHan">가1</span><span>🔥🌍🌵🦗🏆☠️✨🎉❄️</span></div>
@@ -153,6 +163,11 @@ section{position:absolute;inset:0;display:none;opacity:0}
 
 <!-- S6 REVEAL 20.0–24.8 -->
 <section id="s-reveal">
+  <!-- 3D 컷어웨이(3d/scene3d.html → footage/scrubber3d.webm). 못 읽으면 opacity 가 0 으로 남아 아래 SVG 가 그대로 선다 -->
+  <div class="vwrap abs" id="rv-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
+    <video id="rv-v" src="footage/scrubber3d.webm" preload="auto" muted playsinline></video>
+    <div class="vscrim" style="background:linear-gradient(90deg,rgba(6,11,28,.92) 0%,rgba(6,11,28,.74) 26%,rgba(6,11,28,.10) 48%,rgba(6,11,28,0) 100%)"></div>
+  </div>
   <div class="txt abs" id="rv1" style="left:130px;top:300px;font-size:58px">이 모든 «아무 일»의 뒤에는</div>
   <div class="txt abs" id="rv2" style="left:130px;top:390px;font-size:76px"><b>스크러버</b>와 <b>칠러</b>가<br>있었습니다.</div>
   <div class="sub abs" id="rv3" style="left:130px;top:600px;font-size:42px;color:#8fb3ff">365일 24시간 × 25년 = 약 <b style="color:#8fc0ff">219,000시간</b>.</div>
@@ -205,6 +220,12 @@ section{position:absolute;inset:0;display:none;opacity:0}
 
 <!-- S8 FOUNDING 26.8–30.8 -->
 <section id="s-found">
+  <!-- 실사는 «지금의 우리»다 — 2001 일러스트에서 이쪽으로 넘어간다 -->
+  <div class="vwrap abs" id="fd-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
+    <video id="fd-v" src="footage/hq_aerial.webm" preload="auto" muted playsinline></video>
+    <div class="vscrim" style="background:linear-gradient(90deg,rgba(4,8,26,.94) 0%,rgba(4,8,26,.86) 38%,rgba(4,8,26,.44) 72%,rgba(4,8,26,.58) 100%)"></div>
+    <div class="vscrim" style="background:linear-gradient(180deg,rgba(4,8,26,.45) 0%,rgba(4,8,26,0) 26%,rgba(4,8,26,0) 70%,rgba(4,8,26,.6) 100%)"></div>
+  </div>
   <div class="date abs" id="fd-date" style="left:140px;top:170px">2001. 10. 01</div>
   <div class="txt abs" id="fd-t1" style="left:140px;top:380px">퇴직금 <b class="num" id="fd-won">₩0</b>으로 시작했습니다.</div>
   <div class="txt abs" id="fd-t2" style="left:140px;top:500px;font-size:54px;color:rgba(255,255,255,.9)">일본이 독점하던 스크러버를, <b>우리 손으로.</b></div>
@@ -302,38 +323,62 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <div class="en" id="cl-en2">Making sure nothing happens. That's what we've done for 25 years.</div>
 </section>
 
-<!-- S14 END 53.6–59.0 -->
+<!-- S14 END — «컨셉의 끝(펀치라인) → 브랜드 서명(로고 리빌)» 순서다.
+     슬로건이 펀치라인을 밀어내면 영상 전체의 농담이 죽는다. -->
 <section id="s-end">
-  <svg class="abs" id="confetti" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080"></svg>
-  <svg class="abs" style="left:870px;top:56px" width="180" height="180" viewBox="-90 -90 180 180">
+  <!-- (1) 실제 본사 로우앵글 — 옥상 GST 로고가 하늘을 배경으로 선다 -->
+  <div class="vwrap abs" id="ed-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
+    <video id="ed-v" src="footage/hq_lowangle.webm" preload="auto" muted playsinline></video>
+    <div class="vscrim" style="background:radial-gradient(ellipse 90% 70% at 50% 46%,rgba(4,8,26,.20) 0%,rgba(4,8,26,.66) 68%,rgba(4,8,26,.92) 100%)"></div>
+  </div>
+  <div class="txt center abs" id="end-l" style="top:452px;font-size:66px;font-weight:900;color:#fff;text-shadow:0 4px 34px rgba(0,0,0,.85)">다음 25년도, <b>아무 일 없이.</b></div>
+
+  <!-- (2) 빛줄기 2줄이 교차하고, 그 자리에서 파티클이 로고로 모인다 -->
+  <div class="streak" id="st1"></div>
+  <div class="streak" id="st2"></div>
+  <div class="abs" id="flash" style="left:660px;top:180px;width:600px;height:600px;border-radius:50%;opacity:0;
+    background:radial-gradient(circle,rgba(255,255,255,.95) 0%,rgba(143,192,255,.55) 26%,rgba(143,192,255,0) 68%)"></div>
+  <div class="abs" id="parts" style="left:0;top:0;width:1920px;height:1080px"></div>
+
+  <!-- (3) 브랜드 서명 -->
+  <svg class="abs" id="end-badge" style="left:885px;top:56px;opacity:0" width="150" height="150" viewBox="-90 -90 180 180">
     <circle id="end-ring" r="80" fill="none" stroke="#ffd36b" stroke-width="3" opacity=".5"/>
     <circle r="65" fill="#1e6fd9" opacity=".92"/>
     <g fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.2"><ellipse rx="65" ry="24"/><ellipse rx="24" ry="65"/><circle r="65"/><line x1="-65" y1="0" x2="65" y2="0"/></g>
     <text y="17" text-anchor="middle" font-family="BlackHan" font-size="48" fill="#fff">25</text>
   </svg>
-  <div class="big center abs" id="end-t" style="top:262px;font-size:84px">GST 창립 <b>25</b>주년</div>
-  <div class="center abs num" id="end-d" style="top:372px;font-weight:700;font-size:34px;color:rgba(255,255,255,.72);letter-spacing:3px">2001. 10. 01 — 2026. 10. 01</div>
-  <div class="abs" id="end-rule" style="left:610px;top:444px;width:700px;height:1px;background:rgba(255,255,255,.22)"></div>
+  <div class="big center abs" id="end-t" style="top:252px;font-size:50px">GST 창립 <b>25</b>주년</div>
+  <div class="center abs num" id="end-d" style="top:318px;font-weight:700;font-size:29px;color:rgba(255,255,255,.66);letter-spacing:3px">2001. 10. 01 — 2026. 10. 01</div>
+  <div class="abs" id="end-rule" style="left:660px;top:374px;width:600px;height:1px;background:rgba(255,255,255,.22)"></div>
+  <!-- 로고 뒤 블룸 — 리빌 순간에만 부풀었다 가라앉는다 -->
+  <div class="abs" id="lg-glow" style="left:560px;top:300px;width:800px;height:420px;opacity:0;pointer-events:none;
+    background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(143,192,255,.5) 0%,rgba(143,192,255,0) 70%)"></div>
   <!-- 실제 CI — report/qbr-template.pptx 안의 회사 로고를 어두운 배경용으로 반전한 것 -->
-  <div class="slot abs" id="end-logo" style="left:730px;top:480px;width:460px;height:153px">
+  <div class="slot abs" id="end-logo" style="left:705px;top:398px;width:510px;height:170px;overflow:hidden;opacity:0">
     <img src="logos/gst-white.png" alt="" onerror="this.closest('.slot').classList.add('noimg')">
     <div class="fb" style="text-align:center;padding-top:44px">
       <span style="font-family:'BlackHan','NotoKR';font-size:56px;color:#fff;letter-spacing:1px">GST</span>
       <span style="font-weight:700;font-size:36px;color:#8fc0ff;letter-spacing:9px;margin-left:12px">GROUP</span>
     </div>
+    <div class="abs" id="lg-flare" style="left:0;top:0;width:210px;height:100%;opacity:0;pointer-events:none;mix-blend-mode:screen;filter:blur(7px);
+      background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.55) 32%,#fff 50%,rgba(255,255,255,.55) 68%,rgba(255,255,255,0) 100%)"></div>
   </div>
-  <div class="center abs" id="end-grp" style="top:666px;font-weight:700;font-size:24px;color:rgba(255,255,255,.5);letter-spacing:11px">GST GROUP</div>
-  <div class="mark" id="mk1" style="left:330px;top:726px;width:400px">
+  <!-- 현행 슬로건 (사용자 확정) — 건물 캐노피의 옛 문구는 화면에 쓰지 않는다 -->
+  <div class="center abs" id="end-slg" style="top:602px;font-weight:900;font-size:44px;color:#8fc0ff;letter-spacing:6px;opacity:0;text-shadow:0 0 34px rgba(143,192,255,.45)">Build Up GST</div>
+  <div class="abs" id="end-rule2" style="left:560px;top:678px;width:800px;height:1px;background:rgba(255,255,255,.14)"></div>
+  <div class="center abs" id="end-grp" style="top:700px;font-weight:700;font-size:23px;color:rgba(255,255,255,.5);letter-spacing:11px">GST GROUP</div>
+  <div class="mark" id="mk1" style="left:330px;top:756px;width:400px">
     <div class="slot mkl"><img src="logos/gst-mark.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#7fb0ff">GST</div></div>
-    <div class="ds">스크러버 · 칠러 · 액침냉각</div></div>
-  <div class="mark" id="mk2" style="left:760px;top:726px;width:400px">
+    <div class="ds">스크러버 · 칠러<br>액침냉각</div></div>
+  <div class="mark" id="mk2" style="left:760px;top:756px;width:400px">
     <div class="slot mkl"><img src="logos/est.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#6fe3c4">EST</div></div>
-    <div class="ds">반도체 설비부품 · 콜드체인</div></div>
-  <div class="mark" id="mk3" style="left:1190px;top:726px;width:400px">
+    <div class="ds">반도체 부품 · 배관보온<br>무전력 냉장냉동</div></div>
+  <div class="mark" id="mk3" style="left:1190px;top:756px;width:400px">
     <div class="slot mkl"><img src="logos/robocare.png" alt="" onerror="this.closest('.slot').classList.add('noimg')"><div class="fb nm" style="color:#ffb27a">ROBOCARE</div></div>
-    <div class="ds">돌봄로봇</div></div>
-  <div class="center abs" id="end-l" style="top:876px;font-weight:900;font-size:50px;color:#8fc0ff">다음 25년도, 아무 일 없이.</div>
-  <div class="en">GST GROUP — GST · EST · ROBOCARE. Here's to 25 more uneventful years.</div>
+    <div class="ds">시니어 · 발달장애인을 위한<br>로봇과 AI</div></div>
+  <svg class="abs" id="confetti" style="left:0;top:0;pointer-events:none" width="1920" height="1080" viewBox="0 0 1920 1080"></svg>
+  <div class="en" id="end-en1">Here’s to 25 more uneventful years.</div>
+  <div class="en" id="end-en2">GST GROUP — GST · EST · ROBOCARE.</div>
 </section>
 
 <div id="grain"></div>
@@ -361,6 +406,7 @@ function rng(seed){ let s = seed>>>0; return () => { s += 0x6D2B79F5; let r = Ma
 const NS = 'http://www.w3.org/2000/svg';
 const svgEl = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
 function op(el, v){ el.style.opacity = clamp(v,0,1); }
+const PARTS = [];   // 로고 리빌 파티클 — 빌더가 채우고 SCN.end 가 읽는다(스코프를 나누면 장면이 죽는다)
 function pop(el, t, t0, dur=0.5, dy=26){ const x = p(t,t0,t0+dur); op(el, x); el.style.transform = `translateY(${(1-eo(x))*dy}px)`; }
 function popIn(el, t, t0, dur=0.45){ const x = p(t,t0,t0+dur); op(el, x>0?1:0); el.style.transform = `scale(${x>0?eb(x):0})`; }
 function stamp(el, t, t0, deg=-6){ if (t < t0) { op(el,0); return; } const x = p(t,t0,t0+0.3); op(el,1); el.style.transform = `rotate(${deg}deg) scale(${lerp(1.7,1,eo(x))})`; }
@@ -395,8 +441,19 @@ const LEADERS = [
     x += w + 18; }
   svgEl('rect',{x:0,y:1000,width:1920,height:80,fill:'#060b1c'},sky);
   const stars = $('stars'); for (let i=0;i<140;i++) svgEl('circle',{class:'st',cx:rs()*1920,cy:rs()*560,r:1+rs()*1.8,opacity:.3+rs()*.7},stars);
+  // 로고 리빌 파티클 — 고리에서 로고 상자 안으로 모인다. 시작·도착 자리는 seed 고정이라 프레임마다 같다
+  const rp = rng(7); const LGX = 960, LGY = 480;
+  for (let i = 0; i < 72; i++){
+    const ang = (i / 72) * 6.28318 + rp() * 0.09, rad = 430 + rp() * 210;
+    const e = document.createElement('div'); e.className = 'pt2';
+    const sc = 0.6 + rp() * 1.5; e.style.width = e.style.height = (3.2 * sc).toFixed(1) + 'px';
+    $('parts').appendChild(e);
+    PARTS.push({ e, x0: LGX + Math.cos(ang) * rad * 1.25, y0: LGY + Math.sin(ang) * rad * 0.62,
+                 x1: LGX + (rp() - 0.5) * 430, y1: LGY + (rp() - 0.5) * 132,
+                 d: rp() * 0.30, sp: 0.55 + rp() * 0.5 });
+  }
   const cf = $('confetti'); const rc = rng(99); const cols = ['#ffd36b','#5cff8a','#60a5fa','#f472b6','#fff'];
-  for (let i=0;i<70;i++){ const r = svgEl('rect',{class:'cf',width:14,height:22,rx:3,fill:cols[i%5]},cf); r.dataset.x = rc()*1920; r.dataset.v = 140+rc()*160; r.dataset.ph = rc()*6.28; r.dataset.rot = rc()*360; }
+  for (let i=0;i<70;i++){ const r = svgEl('rect',{class:'cf',width:14,height:22,rx:3,fill:cols[i%5]},cf); r.dataset.x = rc() < 0.5 ? rc()*520 : 1400 + rc()*520; r.dataset.v = 140+rc()*160; r.dataset.ph = rc()*6.28; r.dataset.rot = rc()*360; }
   const PINS = [['hwaseong','2001','화성 본사'],['austin','2006','미국 오스틴'],['xian','2013','중국 시안'],['taiwan','2016','대만'],['wuxi','2016','중국 우시'],['hefei','2017','중국 허페이'],['wuhan','2019','중국 우한'],['singapore','2020','싱가포르'],['europe','2024','유럽'],['japan','2024','일본']];
   const pg = $('map-pins'), ag = $('map-arcs'), co = $('co'); const [hx,hy] = MAP_PINS.hwaseong;
   PINS.forEach(([k,y,name],i) => { const [px,py] = MAP_PINS[k];
@@ -453,6 +510,26 @@ const LEADERS = [
 })();
 
 const SEC = Object.fromEntries(KEYS.map(k => [k, $('s-'+k)]));
+
+// ── 실사 프레임 — «t 의 순수함수»를 지키려면 seek 가 끝날 때까지 기다려야 한다.
+//    안 기다리면 캡처가 직전 프레임을 찍어, 같은 t 를 두 번 찍었을 때 다른 그림이 나온다.
+//    ⚠ 오픈소스 Chromium 은 H.264 를 못 읽는다 — footage 는 webm(VP9) 이어야 한다.
+const VIDS = Array.from(document.querySelectorAll('video'));
+VIDS.forEach(v => { try { v.pause(); } catch(e){} });
+window.ready = Promise.all(VIDS.map(v => v.readyState >= 2 ? null : new Promise(r => {
+  const f = () => r(v.error ? ('video ' + v.currentSrc.split('/').pop() + ': ' + v.error.code) : null);
+  v.addEventListener('loadeddata', f, { once: true }); v.addEventListener('error', f, { once: true }); setTimeout(f, 15000);
+}))).then(x => x.filter(Boolean));
+let PEND = [];
+function vok(v){ return !!v && v.readyState >= 2 && !v.error; }
+function vseek(v, tv){
+  if (!v || v.readyState < 2) return;
+  const d = v.duration || 0; tv = clamp(tv, 0, Math.max(0, d - 0.05));
+  if (Math.abs(v.currentTime - tv) < 0.008) return;                       // 같은 프레임이면 seeked 가 안 온다
+  PEND.push(new Promise(res => { let done = false;
+    const f = () => { if (done) return; done = true; v.removeEventListener('seeked', f); res(); };
+    v.addEventListener('seeked', f); v.currentTime = tv; setTimeout(f, 800); }));
+}
 function sceneOp(t, k){ const [a,b] = T[k]; const f = 0.22; if (t < a || t >= b) return -1; return Math.min(p(t,a,a+f), 1-p(t,b-f,b)); }
 
 // ── 장면별 그림. 인자 t 는 «큐 기준» 시각이다(timeline.js 의 base 축).
@@ -522,6 +599,14 @@ SCN.stop = function(t){
 };
 SCN.reveal = function(t){
     pop($('rv1'), t, 20.35); pop($('rv2'), t, 21.3); pop($('rv3'), t, 22.7);
+    // 3D 컷어웨이 — 장면 시작과 «같이» 뜬다. 못 읽히면 vok 이 0 을 내어 아래 SVG 가 그대로 선다
+    const rvx = vok($('rv-v')) ? 1 : 0;   // 크로스페이드를 겹치면 장면 페이드인과 이중이 되어 탁해진다
+    $('rv-vid').style.opacity = rvx;
+    if (rvx > 0){
+      const fade = 1 - rvx;
+      $('rv-svg').style.opacity = fade; $('rv-photo').style.opacity = fade;
+      vseek($('rv-v'), 0.05 + (t - 20.0) * 0.94);
+    }
     $('rv-glow').setAttribute('opacity', 0.6 + 0.4*Math.sin(t*2.2));
     $('rv-cglow').setAttribute('opacity', 0.55 + 0.45*Math.sin(t*2.2 + 2));
     ['rv-ch1','rv-ch2'].forEach((id,i) => $(id).setAttribute('r', 31 + 4*Math.sin(t*9 + i)));
@@ -538,6 +623,13 @@ SCN.found = function(t){
     const won = Math.round(lerp(0, 5000000, eo(p(t, 27.8, 29.2)))); $('fd-won').textContent = '₩' + fmt(won);
     pop($('fd-t2'), t, 29.3, 0.45); pop($('fd-svg'), t, 28.2, 0.55, 40);
     const sp = $('fd-spark'); const sx = p(t,29.45,29.85); sp.style.transform = `scale(${sx>0?eb(sx):0}) rotate(${t*60}deg)`; op(sp, sx>0?1:0);
+    // «그때(일러스트) → 지금(실물)». 실사가 들어오면 일러스트·반짝이는 물러난다
+    const vx = vok($('fd-v')) ? p(t, 28.95, 29.80) : 0, vw = $('fd-vid');
+    vw.style.opacity = vx;
+    vw.style.transform = `scale(${lerp(1.055, 1.0, eo(vx))})`;
+    if (vx > 0){ const fade = 1 - vx;
+      $('fd-svg').style.opacity = fade; $('fd-photo').style.opacity = fade; sp.style.opacity = (+sp.style.opacity) * fade;
+      vseek($('fd-v'), 0.30 + (t - 28.95) * 1.0); }
 };
 SCN.kosdaq = function(t){
     const num = Math.round(lerp(5800, 7800, eo(p(t, 31.7, 32.8)))); $('kq-num').textContent = fmt(num);
@@ -574,13 +666,61 @@ SCN.close = function(t){
     document.querySelectorAll('#stars .st').forEach((s,i) => s.setAttribute('opacity', 0.3 + 0.5*Math.abs(Math.sin(t*0.8 + i*1.7))));
 };
 SCN.end = function(t){
-    pop($('end-t'), t, 57.15, 0.55, 30); pop($('end-d'), t, 57.7, 0.45, 20);
-    const ru = p(t,58.15,58.65); $('end-rule').style.opacity = ru; $('end-rule').style.transform = `scaleX(${eo(ru)})`;
-    pop($('end-logo'), t, 58.25, 0.5, 20); pop($('end-grp'), t, 58.7, 0.4, 12);
-    [1,2,3].forEach(i => pop($('mk'+i), t, 58.95 + (i-1)*0.2, 0.45, 22));
-    pop($('end-l'), t, 60.0, 0.5, 20); pop(document.querySelector('#s-end .en'), t, 60.5, 0.4, 10);
+    // ── (1) 실사 본사 + 펀치라인 (56.80–58.60) — 컨셉의 끝. 슬로건보다 «먼저» 온다
+    const bv = vok($('ed-v')) ? Math.min(p(t,56.80,57.25), 1 - p(t,58.25,58.60)) : 0;
+    const vw = $('ed-vid'); vw.style.opacity = bv;
+    vw.style.transform = `scale(${lerp(1.0, 1.055, p(t,56.80,58.60))})`;
+    if (bv > 0) vseek($('ed-v'), 0.15 + (t - 56.80) * 1.0);
+    const pl = $('end-l'), plx = Math.min(p(t,57.05,57.45), 1 - p(t,58.20,58.50));
+    pl.style.opacity = plx;
+    pl.style.transform = `translateY(${(1-eo(p(t,57.05,57.45)))*26}px) scale(${lerp(1,1.035,p(t,57.05,58.60))})`;
+    op($('end-en1'), plx);
+
+    // ── (2) 빛줄기 2줄 교차 (58.45–59.10) → 섬광 → 파티클이 로고로 모인다
+    const s1 = p(t,58.45,59.10), s2 = p(t,58.52,59.14);
+    const stk = (el, x, deg, from) => {
+      if (x <= 0 || x >= 1){ el.style.opacity = 0; return; }
+      const e = eo(x);
+      el.style.opacity = Math.min(x*4.5, 1) * (1 - p(x,0.78,1));
+      el.style.transform = `translate(0,${lerp(from,0,e)}px) rotate(${deg}deg) scaleY(${lerp(1.9,0.4,e)}) scaleX(${lerp(0.55,1,e)})`;
+    };
+    stk($('st1'), s1, -27, -880); stk($('st2'), s2, 25, 880);
+    const fl = $('flash'), fx = p(t,58.92,59.46);
+    fl.style.opacity = fx > 0 ? Math.min(fx*9, 1) * (1 - p(fx,0.18,1)) : 0;
+    fl.style.transform = `scale(${lerp(0.10, 2.3, eo(fx))})`;
+
+    const pc = p(t,59.05,59.72);
+    for (const q of PARTS){
+      const x = clamp((pc - q.d) / (1 - q.d) * q.sp * 1.5, 0, 1), e = eo(x);
+      if (pc <= 0 || x >= 1){ q.e.style.opacity = 0; continue; }
+      q.e.style.opacity = Math.min(x*5, 1) * (1 - p(x,0.72,1));
+      q.e.style.transform = `translate(${lerp(q.x0,q.x1,e)}px,${lerp(q.y0,q.y1,e)}px)`;
+    }
+
+    // ── (3) 로고가 맺힌다 — 블룸이 부풀었다 가라앉고, 플레어가 한 번 지나간다
+    const lg = $('end-logo'), lx = p(t,59.55,60.02);
+    lg.style.opacity = lx;
+    lg.style.transform = `scale(${lerp(1.10,1,eo(lx))})`;
+    lg.style.filter = lx > 0 && lx < 1 ? `blur(${(1-lx)*9}px)` : 'none';
+    const gw = p(t,59.50,59.92);
+    $('lg-glow').style.opacity = gw * (1 - p(t,60.10,60.95)) * 0.95;
+    const fr = p(t,59.95,60.48), frEl = $('lg-flare');
+    frEl.style.opacity = fr > 0 && fr < 1 ? 1 : 0;
+    frEl.style.transform = `translateX(${lerp(-250, 530, eo(fr))}px) skewX(-14deg)`;
+
+    // ── (4) 브랜드 서명이 차례로 앉는다
+    pop($('end-slg'), t, 60.15, 0.45, 16);
+    pop($('end-badge'), t, 60.30, 0.45, -14);
+    pop($('end-t'), t, 60.40, 0.42, 18);
+    pop($('end-d'), t, 60.55, 0.38, 12);
+    const ru = p(t,60.48,60.88); $('end-rule').style.opacity = ru; $('end-rule').style.transform = `scaleX(${eo(ru)})`;
+    const ru2 = p(t,60.62,61.02); $('end-rule2').style.opacity = ru2; $('end-rule2').style.transform = `scaleX(${eo(ru2)})`;
+    pop($('end-grp'), t, 60.72, 0.38, 10);
+    [1,2,3].forEach(i => pop($('mk'+i), t, 60.82 + (i-1)*0.16, 0.42, 20));
+    pop($('end-en2'), t, 61.10, 0.4, 10);
     $('end-ring').setAttribute('r', 80 + 8*Math.sin(t*2));
-    const tt = t - 56.9; document.querySelectorAll('#confetti .cf').forEach((r,i) => { const y = -40 + (+r.dataset.v)*tt, x = (+r.dataset.x) + 40*Math.sin(tt*2 + +r.dataset.ph); r.setAttribute('transform', `translate(${x},${y}) rotate(${+r.dataset.rot + tt*180})`); r.setAttribute('opacity', tt < 0 ? 0 : (y > 1080 ? 0 : 0.9)); });
+
+    const tt = t - 59.50; document.querySelectorAll('#confetti .cf').forEach((r,i) => { const y = -40 + (+r.dataset.v)*tt, x = (+r.dataset.x) + 40*Math.sin(tt*2 + +r.dataset.ph); r.setAttribute('transform', `translate(${x},${y}) rotate(${+r.dataset.rot + tt*180})`); r.setAttribute('opacity', tt < 0 ? 0 : (y > 1080 ? 0 : 0.85)); });
 };
 
 SCN.names = function(t){
@@ -607,6 +747,7 @@ SCN.future = function(t){
 };
 
 window.seek = function(tOut){
+  PEND = [];
   tOut = clamp(tOut, 0, DUR);
   // 시작·끝 0.35초 페이드 — 출력 시각 기준이다(장면 시각이 아니다)
   $('fade').style.opacity = Math.max(1 - p(tOut, 0, 0.35), p(tOut, DUR - 0.35, DUR));
@@ -618,6 +759,7 @@ window.seek = function(tOut){
     el.style.display = 'block'; el.style.opacity = o;
     SCN[k](TL.toFull(tOut, k, P));
   }
+  return PEND.length ? Promise.all(PEND) : null;   // 실사가 있는 프레임만 기다린다
 };
 window.seek(0);
 </script>

@@ -1,0 +1,6 @@
+{
+  "name": "gst-shortform-3d",
+  "private": true,
+  "description": "GST 25주년 숏폼 — reveal 장면의 3D 컷어웨이. 결과물은 ../footage/scrubber3d.webm 하나다.",
+  "dependencies": { "three": "^0.186.0" }
+}

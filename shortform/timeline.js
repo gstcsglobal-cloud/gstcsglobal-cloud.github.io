@@ -19,13 +19,13 @@
     { k: 'names',   cue0: 62.2, base: 3.0, full: 3.0, short: 2.6 },   // ← 새 장면(큐는 축 끝에)
     { k: 'pivot',   cue0: 24.8, base: 2.0, full: 1.8, short: 1.4 },
     { k: 'found',   cue0: 26.8, base: 4.0, full: 3.5, short: 3.0 },
-    { k: 'kosdaq',  cue0: 30.8, base: 3.6, full: 3.2, short: 0   },
-    { k: 'map',     cue0: 34.4, base: 5.2, full: 4.2, short: 3.0 },
-    { k: 'stairs',  cue0: 39.6, base: 4.2, full: 3.5, short: 2.7 },
+    { k: 'kosdaq',  cue0: 30.8, base: 3.6, full: 3.0, short: 0   },
+    { k: 'map',     cue0: 34.4, base: 5.2, full: 3.9, short: 2.8 },
+    { k: 'stairs',  cue0: 39.6, base: 4.2, full: 3.3, short: 2.5 },
     { k: 'future',  cue0: 43.8, base: 3.2, full: 3.2, short: 2.7 },
     { k: 'lead',    cue0: 47.0, base: 5.2, full: 5.0, short: 4.6 },
     { k: 'close',   cue0: 52.2, base: 4.6, full: 4.2, short: 3.8 },
-    { k: 'end',     cue0: 56.8, base: 5.4, full: 5.1, short: 5.0 },
+    { k: 'end',     cue0: 56.8, base: 5.4, full: 5.8, short: 5.4 },   // 로고 리빌: base 보다 길다(느려질 뿐 안 깨진다)
   ];
 
   function build(mode) {
