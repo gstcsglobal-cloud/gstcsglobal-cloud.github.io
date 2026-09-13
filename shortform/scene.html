@@ -270,11 +270,17 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <div class="card abs" id="kq-card" style="left:140px;top:500px;width:1240px;height:160px;padding:30px 46px">
     <div class="led num">공모가 5,800 → 시초가 <span id="kq-num">5,800</span> <span class="g" id="kq-up">▲ 34.5%</span></div>
   </div>
-  <svg class="abs" style="left:1400px;top:420px" width="420" height="360" viewBox="0 0 420 360">
-    <polyline id="kq-line" points="20,300 90,280 150,290 210,220 270,200 330,120 400,60" fill="none" stroke="#5cff8a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle id="kq-dot" cx="400" cy="60" r="12" fill="#5cff8a"/>
+  <!-- 2박자: 초록(2006 상장) → 금색(2026 시총 1조). 한 선이 «계속 올라온 20년»으로 읽힌다 -->
+  <svg class="abs" style="left:1240px;top:200px" width="660" height="660" viewBox="0 0 660 660">
+    <polyline id="kq-line" points="20,580 80,560 140,570 200,500 255,480 310,400 360,350" fill="none" stroke="#5cff8a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline id="kq-line2" points="360,350 420,330 470,290 515,240 560,170 615,75" fill="none" stroke="#ffd36b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle id="kq-dot" cx="360" cy="350" r="9" fill="#5cff8a"/>
+    <circle id="kq-dot2" cx="615" cy="75" r="13" fill="#ffd36b"/>
+    <text id="kq-cap" x="630" y="38" text-anchor="end" font-size="46" font-weight="900" fill="#ffd36b" font-family="NotoKR" opacity="0">시가총액 1조</text>
+    <text id="kq-yr" x="615" y="122" text-anchor="middle" font-size="27" font-weight="700" fill="#8fb3ff" font-family="NotoKR" opacity="0">2026</text>
   </svg>
-  <div class="en">Feb 1, 2006 — listed on KOSDAQ. Up 34.5% on day one.</div>
+  <div class="txt abs" id="kq-tril" style="left:140px;top:700px;font-size:48px;color:#ffd36b">그리고 2026, <b>시가총액 1조.</b></div>
+  <div class="en">Feb 1, 2006 — listed on KOSDAQ, up 34.5% on day one. In 2026 — ₩1T market cap.</div>
 </section>
 
 <!-- S10 MAP 34.4–39.6 -->
@@ -579,7 +585,7 @@ SCN.silane = function(t){
     stamp($('si-stamp'), t, 9.15, -6); op($('si-en2'), t >= 9.2 ? 1 : 0);
 };
 SCN.sf6 = function(t){
-    if (cutScene('sf', t, 9.8, 3.4, 2.1)) return;   // 1.8s 재생 + 0.3s 스탬프 홀드
+    if (cutScene('sf', t, 9.8, 3.4, 2.4)) return;   // 1.8s 재생 + 0.6s 스탬프 홀드(디졸브가 0.32s 먹는다)
     const yr = $('sf-year'), earth = $('sf-earth');
     let y = 2026, heat = 0;
     if (t >= 10.4 && t < 12.15){ const x = ei(p(t,10.4,12.1)); y = Math.round(lerp(2026, 5226, x)); heat = x; }
@@ -607,7 +613,7 @@ SCN.chill = function(t){
     stamp($('ch-stamp'), t, 15.5, -7); op($('ch-en2'), t >= 15.55 ? 1 : 0);
 };
 SCN.stop = function(t){
-    if (cutScene('st', t, 16.6, 3.4, 2.2)) return;  // 1.8s 재생 + 0.4s 스탬프 홀드
+    if (cutScene('st', t, 16.6, 3.4, 2.6)) return;  // 컷 2.2(착지 연장본) + 홀드 0.4
     const stopping = t >= 17.8 && t < 18.85;
     const speed = 300;
     document.querySelectorAll('#wafers .wf').forEach((w,i) => { const x = 120 + ((i*130 + t*speed) % 1820) - 60; w.setAttribute('transform', `translate(${x},200)`); });
@@ -655,12 +661,19 @@ SCN.found = function(t){
 };
 SCN.kosdaq = function(t){
     bgSeek('kq2', t, 30.8, 3.6, 0, 0.46);
-    const num = Math.round(lerp(5800, 7800, eo(p(t, 31.7, 32.8)))); $('kq-num').textContent = fmt(num);
-    popIn($('kq-up'), t, 32.85);
     pop($('kq-card'), t, 31.2, 0.45, 30);
-    const ln = $('kq-line'); const L = 520; ln.setAttribute('stroke-dasharray', L); ln.setAttribute('stroke-dashoffset', L*(1-eo(p(t,31.4,33.1)))); op($('kq-dot'), p(t,33.0,33.3) > 0 ? 1 : 0); $('kq-dot').setAttribute('r', 12 + 6*Math.abs(Math.sin(t*5)));
-};
-SCN.map = function(t){
+    const num = Math.round(lerp(5800, 7800, eo(p(t, 31.6, 32.5)))); $('kq-num').textContent = fmt(num);
+    popIn($('kq-up'), t, 32.55);
+    // 초록(2006) → 금색(2026). 길이는 실측 폴리라인 길이(450·390)다 — 짧으면 끝이 «톡» 끊긴다.
+    const g1 = $('kq-line');  g1.setAttribute('stroke-dasharray', 450); g1.setAttribute('stroke-dashoffset', 450*(1-eo(p(t,31.3,32.3))));
+    const g2 = $('kq-line2'); g2.setAttribute('stroke-dasharray', 390); g2.setAttribute('stroke-dashoffset', 390*(1-eo(p(t,32.7,33.6))));
+    op($('kq-dot'),  p(t,32.25,32.4) > 0 ? 1 : 0);
+    const d2 = p(t,33.5,33.65) > 0; op($('kq-dot2'), d2 ? 1 : 0);
+    $('kq-dot2').setAttribute('r', 13 + 6*Math.abs(Math.sin(t*5)));
+    $('kq-cap').setAttribute('opacity', eo(p(t,33.55,33.9)));
+    $('kq-yr').setAttribute('opacity', eo(p(t,33.6,33.95)));
+    pop($('kq-tril'), t, 32.9, 0.45);
+};SCN.map = function(t){
     const t0 = 34.7, step = 0.45;
     document.querySelectorAll('#map-pins .pin').forEach((g,i) => { const ts = t0 + i*step; const x = p(t, ts, ts+0.35); g.style.opacity = x > 0 ? 1 : 0; const dot = g.querySelector('.dot'); dot.setAttribute('transform', `translate(${dot.getAttribute('cx')*(1-eb(x))},${dot.getAttribute('cy')*(1-eb(x))}) scale(${eb(x)})`);
       const ring = g.querySelector('.ring'); const rx = p(t, ts, ts+0.9); ring.setAttribute('r', 8 + 40*rx); ring.setAttribute('opacity', 1-rx); });
