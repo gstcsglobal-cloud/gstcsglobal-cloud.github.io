@@ -20,6 +20,11 @@ echo "▶ $MODE · ${DUR}초 · ${N}프레임(SS=$SS) → $OUT"
 HTML=scene.html QUERY="$QUERY" K=2 OUT=frames FPS=$((FPS*SS)) FRAMES=$N EXE="$EXE" node par.cjs
 # SS 배로 찍은 프레임을 tmix 로 평균해 «셔터»를 만든다 — 굴러가는 풀·웨이퍼·색종이가 끊겨 보이지 않는다
 VF="fps=$FPS"; [ "$SS" -gt 1 ] && VF="tmix=frames=$SS,fps=$FPS"
+# v21 통일 그레이드 — 완만한 S커브 + 미세 틸 시프트 + 비네트 + 필름 그레인.
+#   씬(scene.html)은 손대지 않고 «인코딩 단계»에만 얹는다 — 되돌리기는 GRADE=0 ./render.sh 한 번.
+#   그레인은 비트레이트를 키우므로 용량이 한도(30MiB)에 닿으면 아래 crf 를 19~20 으로.
+GRADEF="curves=master='0/0 0.22/0.202 0.78/0.79 1/1',colorbalance=rs=-0.02:bs=0.015:rm=-0.008:bm=0.006,vignette=a=PI/7,noise=alls=6:allf=t+u"
+[ "${GRADE:-1}" = 1 ] && VF="$VF,$GRADEF"
 "$FF" -y -loglevel error -framerate $((FPS*SS)) -i frames/frame_%05d.png -vf "$VF" \
   -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -movflags +faststart video_only.mp4
 # 리와인드 효과음 — 컷의 «흰 섬광»(리와인드 순간)이 각 컷 0.6초 지점이다.
