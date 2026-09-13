@@ -72,20 +72,35 @@ def row_bands(mask, gap):
 if a_.drop_last_band:
     ink = A > a_.ink
     gap = max(2, int(ink.shape[0] * 0.03))
-    col = ink.any(axis=0)
+    # ⚠ 세로 빈 칸은 «윗부분에서만» 찾는다. 전 높이로 보면 «태그라인»이 그 빈 칸을 메워 버린다 —
+    #   GST 는 심볼 오른쪽 끝(x≈80)과 태그라인 시작(x≈85) 사이가 5px 라 문턱(7px)에 못 미쳐
+    #   split=0 이 나왔고, 그러면 태그라인을 못 떼서 44px 슬롯에 읽을 수 없는 글자가 남는다.
+    #   태그라인은 정의상 «맨 아래»에 있으므로 위쪽 60% 만 보면 심볼/글자 경계가 그대로 드러난다.
+    col = ink[:max(1, int(ink.shape[0] * 0.6))].any(axis=0)
     # 심볼과 글자를 가르는 «세로 빈 칸» — 왼쪽 1/2 안에서 충분히 넓은 빈 칸을 찾는다
-    split, run0 = 0, None
+    split, sym_end, run0 = 0, 0, None
     for i in range(min(len(col), int(len(col) * 0.5))):
         if not col[i] and run0 is None: run0 = i
         if col[i] and run0 is not None:
-            if i - run0 >= max(3, int(len(col) * 0.02)): split = i
+            if i - run0 >= max(3, int(len(col) * 0.02)): split, sym_end = i, run0
             run0 = None
     region = ink[:, split:] if split else ink
     bands = row_bands(region, gap)
     if len(bands) >= 2:
         b0, b1 = bands[-1]
         A = A.copy()
-        A[b0:b1, split:] = 0.0                                    # 글자 영역의 마지막 띠만 지운다
+        # ⚠ 지우는 경계는 «그 띠 안에서» 찾는다. 위쪽 행에서 잰 경계(split·sym_end)를 쓰면
+        #   태그라인 앞부분이 살아남는다 — GST 는 심볼의 «아래쪽 꼭지»가 x 46~80 까지 내려오는데
+        #   태그라인은 x 100 부터라, 위에서 잰 경계(135)로 지우면 「Globa」 가 그대로 남았다.
+        #   띠 안에서 보면 «심볼 꼬리 → 빈 칸 → 태그라인» 이 그대로 드러난다.
+        bcol = ink[b0:b1].any(axis=0)
+        cut, r0 = 0, None
+        for i in range(len(bcol)):
+            if not bcol[i] and r0 is None: r0 = i
+            if bcol[i] and r0 is not None:
+                if i - r0 >= max(3, int(len(bcol) * 0.02)) and r0 > 0: cut = i; break
+                r0 = None
+        A[b0:b1, (cut or sym_end or split):] = 0.0
         ys2, xs2 = np.where(A > a_.ink)                           # 여백 다시 조이기
         A = A[ys2.min():ys2.max() + 1, xs2.min():xs2.max() + 1]
         F = F[ys2.min():ys2.max() + 1, xs2.min():xs2.max() + 1]
