@@ -1,6 +1,8 @@
 // 최종 후보: K 페이지 샤딩 + CDP PNG → 디스크. EXE·K·OUT 인자.
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs');
 const EXE = process.env.EXE || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', K = +(process.env.K || 2), OUT = process.env.OUT || 'frames', FPS = +(process.env.FPS || 30), N = +(process.env.FRAMES || 90);
+// START = 잘라낼 구간의 시작 시각(초). 한 장면만 고칠 때 59초를 통째로 다시 찍지 않으려고 둔다.
+const START = +(process.env.START || 0);
 (async () => {
   const browser = await chromium.launch({ executablePath: EXE });
   const srv = await require('./serve.cjs')();
@@ -17,7 +19,7 @@ const EXE = process.env.EXE || '/opt/pw-browsers/chromium-1194/chrome-linux/chro
   const t0 = Date.now();
   await Promise.all(pages.map(async ({ page, cdp }, k) => {
     for (let i = k; i < N; i += K) {
-      await page.evaluate(t => window.seek(t), i / FPS);
+      await page.evaluate(t => window.seek(t), START + i / FPS);
       const r = await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true, optimizeForSpeed: true });
       fs.writeFileSync(path.join(OUT, `frame_${String(i).padStart(5, '0')}.png`), Buffer.from(r.data, 'base64'));
     }
