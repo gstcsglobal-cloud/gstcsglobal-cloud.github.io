@@ -559,7 +559,11 @@ function cutScene(pre, t, cue0, base, clipDur){
   if (ok) vseek(v, (t - cue0) * clipDur / base);
   return ok;
 }
-function vok(v){ return !!v && v.readyState >= 2 && !v.error; }
+// ⚠ readyState 는 «시킹 중» 스펙상 2 밑으로 떨어질 수 있다. 매 프레임 그대로 믿으면
+//    무거운 클립에서 영상↔폴백이 프레임마다 튀어 화면이 떨린다(v20 실사고 — 액침냉각씬).
+//    par.cjs 가 window.ready(loadeddata)를 기다린 뒤 캡처하므로, 한 번 성공한 영상은
+//    래치(_ok)로 붙잡는다. 진짜 실패(error)는 여전히 폴백으로 간다.
+function vok(v){ if (v && v.readyState >= 2 && !v.error) v._ok = true; return !!(v && v._ok && !v.error); }
 function vseek(v, tv){
   if (!v || v.readyState < 2) return;
   const d = v.duration || 0; tv = clamp(tv, 0, Math.max(0, d - 0.05));
