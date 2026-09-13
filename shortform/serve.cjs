@@ -12,8 +12,25 @@ module.exports = function serve(root = __dirname){
       const u = decodeURIComponent(req.url.split('?')[0]);
       const f = path.join(root, path.normalize(u).replace(/^(\.\.[/\\])+/, ''));
       if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { rq.writeHead(404); return rq.end(); }
-      rq.writeHead(200, { 'Content-Type': MIME[path.extname(f).toLowerCase()] || 'application/octet-stream',
-                          'Cache-Control': 'no-store' });
+      // ⚠ Range 를 지원하지 않으면 브라우저가 «탐색 불가»로 판정해 video.seekable 이 [0,0] 이 된다.
+      //    그러면 currentTime 대입이 «조용히 무시»되고 모든 영상이 첫 프레임에 얼어붙는다 —
+      //    에러도 경고도 없다. file:// 에서는 되던 것이 http 로 옮기면서 깨졌다(v7 사고).
+      const type = MIME[path.extname(f).toLowerCase()] || 'application/octet-stream';
+      const size = fs.statSync(f).size, range = req.headers.range;
+      if (range){
+        const m = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
+        if (m){
+          let a = m[1] === '' ? null : +m[1], b = m[2] === '' ? null : +m[2];
+          if (a === null){ a = Math.max(0, size - (b || 0)); b = size - 1; }
+          else if (b === null || b >= size) b = size - 1;
+          if (a > b || a >= size){ rq.writeHead(416, { 'Content-Range': `bytes */${size}` }); return rq.end(); }
+          rq.writeHead(206, { 'Content-Type': type, 'Accept-Ranges': 'bytes',
+            'Content-Range': `bytes ${a}-${b}/${size}`, 'Content-Length': b - a + 1, 'Cache-Control': 'no-store' });
+          return fs.createReadStream(f, { start: a, end: b }).pipe(rq);
+        }
+      }
+      rq.writeHead(200, { 'Content-Type': type, 'Accept-Ranges': 'bytes',
+                          'Content-Length': size, 'Cache-Control': 'no-store' });
       fs.createReadStream(f).pipe(rq);
     });
     srv.listen(0, '127.0.0.1', () => res({ url: `http://127.0.0.1:${srv.address().port}`, close: () => srv.close() }));
