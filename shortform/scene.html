@@ -480,7 +480,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
        파일이 없으면 3D 도열이 그대로 선다(슬롯 규약: 검은 칸을 만들지 않는다).
        ⚠ 실사는 그대로 깔면 밝아서 영상 팔레트와 갈라진다 — 어둡게·푸르게 눌러 «같은 밤»으로 만든다. -->
   <div class="vwrap abs" id="s6real-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
-    <video id="s6real-v" src="footage/fab_work.webm" preload="auto" muted playsinline></video>
+    <video id="s6real-v" src="footage/fab_work.webm" data-opt preload="auto" muted playsinline></video>
   </div>
   <div class="abs" id="s6real-tint" style="left:0;top:0;width:1920px;height:1080px;opacity:0;
        background:linear-gradient(90deg,rgba(5,9,26,.92) 0%,rgba(5,9,26,.72) 34%,rgba(5,9,26,.30) 70%,rgba(5,9,26,.42) 100%);
@@ -640,7 +640,8 @@ const SEC = Object.fromEntries(KEYS.map(k => [k, $('s-'+k)]));
 const VIDS = Array.from(document.querySelectorAll('video'));
 VIDS.forEach(v => { try { v.pause(); } catch(e){} });
 window.ready = Promise.all(VIDS.map(v => v.readyState >= 2 ? null : new Promise(r => {
-  const f = () => r(v.error ? ('video ' + v.currentSrc.split('/').pop() + ': ' + v.error.code) : null);
+  const f = () => r(v.error && !v.hasAttribute('data-opt')
+    ? ('video ' + v.currentSrc.split('/').pop() + ': ' + v.error.code) : null);
   v.addEventListener('loadeddata', f, { once: true }); v.addEventListener('error', f, { once: true }); setTimeout(f, 15000);
 }))).then(x => x.filter(Boolean));
 let PEND = [];
