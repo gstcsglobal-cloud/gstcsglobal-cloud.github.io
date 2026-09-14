@@ -35,7 +35,7 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 RectAreaLightUniformsLib.init();
 const HQ = new URLSearchParams(location.search).get('hq') !== '0';
 const W=1920,H=1080;
-const DUR = (sh=>sh==='pipe'?4.0:sh==='macro'?3.0:sh==='studio'?5.0:sh==='alarm'?2.4:sh==='burner'?4.0:sh==='chiller'?4.0:sh==='stack'?4.0:6.4)(new URLSearchParams(location.search).get('shot'));
+const DUR = (sh=>sh==='pipe'?4.0:sh==='macro'?3.0:sh==='studio'?5.0:sh==='alarm'?2.4:sh==='burner'?4.0:sh==='chiller'?4.0:sh==='stack'?4.0:sh==='wafer'?2.0:sh==='stop'?2.0:6.4)(new URLSearchParams(location.search).get('shot'));
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const p=(t,a,b)=>clamp((t-a)/(b-a),0,1);
 const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
@@ -86,7 +86,17 @@ const CHILL = SHOT === 'chiller';
 //   ⚠ 이 컷의 내용은 «없음»이다. 그래서 아무것도 더하지 않는 것이 연출이다 — 연기를 옅게라도
 //     넣으면 주장이 뒤집힌다(「조금은 나온다」로 읽힌다).
 const STACK = SHOT === 'stack';
-const SOLO = STUDIO || BURNER || CHILL || STACK;   // 도열이 필요 없는 등록 — 씬을 비우고 피사체만 세운다
+//   ?shot=wafer  **1막 CUT03 «웨이퍼 폐기»** — 카세트 랙이 어둠 속으로 이어진다.
+//   ⚠ 여기서도 GST 설비는 안 나온다(1막 규약). 보이는 것은 «잃은 것»뿐이다.
+//   ⚠ 웨이퍼의 무지개빛은 색을 칠해 흉내내지 않는다 — three 의 박막간섭(iridescence)이
+//     각도에 따라 색이 도는 «진짜» 현상을 낸다. 칠하면 각도가 바뀌는 순간 거짓이 드러난다.
+const WAFER = SHOT === 'wafer';
+//   ?shot=stop  **1막 CUT02 «위층이 선다»** — 공정 장비 표시등이 «줄줄이» 꺼진다.
+//   ⚠ 여기 서 있는 것은 고객 공정 장비지 GST 설비가 아니다(1막 규약). 그래서 형태를 만들지
+//     않고 «표시등 기둥»만 어둠에서 세운다 — 무엇의 장비인지 읽히지 않는 것이 요건이다.
+//   ⚠ 이 컷의 내용은 «순서»다. 한꺼번에 꺼지면 스위치를 내린 것이고, 하나씩 꺼져야 «번진다».
+const STOP = SHOT === 'stop';
+const SOLO = STUDIO || BURNER || CHILL || STACK || WAFER || STOP;   // 도열이 필요 없는 등록 — 씬을 비우고 피사체만 세운다
 const TEX = new THREE.TextureLoader();
 const GAIA_TEX = TEX.load('tex/gaia.png');
 GAIA_TEX.colorSpace = THREE.SRGBColorSpace; GAIA_TEX.anisotropy = 8;
@@ -128,10 +138,19 @@ function makeEnv(){
     const g=c.getContext('2d'), gr=g.createLinearGradient(0,0,0,size);
     // v24c 밝은 팹: 천장은 형광등 면광원이라 «가장 밝고», 바닥은 밝은 에폭시라 반사가 살아 있다.
     // 밤 큐브맵(바닥 #05091a)을 그대로 두면 반사만 밤이라 제품 아랫부분이 검게 죽는다.
-    if(EMG||BURNER||CHILL||STACK){   // 어두운 씬: 반사원도 어두워야 한다(주광 큐브맵이면 금속만 빛난다)
+    // ⚠ 어두운 씬은 반사원도 어두워야 한다(주광 큐브맵이면 금속만 혼자 빛난다).
+    //   ⚠ 그런데 «어둡다»고 다 같은 색이 아니다 — 거울 같은 표면은 환경맵을 «그대로» 비춘다.
+    //     웨이퍼(거울)를 붉은 비상용 환경맵에 두었더니 통째로 분홍 원판이 됐다(실측).
+    //     불이 있는 씬은 따뜻하게, 찬 씬은 차갑게 갈라야 한다.
+    if(EMG||BURNER){                             // 불·경보 — 적색 잔광
       if(i===2){ gr.addColorStop(0,'#2a1512'); gr.addColorStop(1,'#3c1d16'); }
       else if(i===3){ gr.addColorStop(0,'#241618'); gr.addColorStop(1,'#160e10'); }
       else { gr.addColorStop(0,'#4a2118'); gr.addColorStop(.55,'#331814'); gr.addColorStop(1,'#1a0f10'); }
+    }
+    else if(CHILL||STACK||WAFER||STOP){          // 냉각·새벽·웨이퍼·정지 — 찬 어둠
+      if(i===2){ gr.addColorStop(0,'#28374b'); gr.addColorStop(1,'#16202e'); }
+      else if(i===3){ gr.addColorStop(0,'#0c1018'); gr.addColorStop(1,'#070a0f'); }
+      else { gr.addColorStop(0,'#1e2b3d'); gr.addColorStop(.55,'#131b27'); gr.addColorStop(1,'#080b11'); }
     }
     else if(i===2){ gr.addColorStop(0,'#ffffff'); gr.addColorStop(1,'#d7e0ee'); }
     else if(i===3){ gr.addColorStop(0,'#9aa5b6'); gr.addColorStop(1,'#79849a'); }
@@ -939,6 +958,101 @@ const FROSTEX=(()=>{
   t2.wrapS=t2.wrapT=THREE.RepeatWrapping; t2.repeat.set(4,2); t2.colorSpace=THREE.SRGBColorSpace;
   return t2;
 })();
+const STOPL=[];
+if(STOP){
+  for(let i=S.children.length-1;i>=0;i--) S.remove(S.children[i]);
+  S.background=new THREE.Color(0x06080d); S.fog=new THREE.Fog(0x06080d,1.6,11.0);
+  // ⚠ 패널 색을 «어둠»으로 칠하면 안 된다 — 어둡게 보이게 하는 것은 조명의 일이다.
+  //   0x161b23 은 선형값이 0.01 이라 어떤 빛을 줘도 검게 남는다(실측: 표시등만 떠 있었다).
+  //   실제 장비 외판은 밝은 회백색이고, 어두운 팹에서 «형태만» 드러나는 것이 맞다.
+  const panel=new THREE.MeshStandardMaterial({color:0x8d97a4,roughness:0.62,metalness:0.30});
+  const dark2=new THREE.MeshStandardMaterial({color:0x0c1016,roughness:0.9,metalness:0.1});
+  // 통로는 «양쪽»에 장비가 선다. 한 줄만 세우면 화면 절반이 빈 검정으로 남고,
+  // 그 검정이 «어두운 연출»이 아니라 «덜 만든 것»으로 읽힌다.
+  for(let n=0;n<14;n++){
+    const i=n%7, sd=n<7?1:-1;
+    const z=-0.9-i*1.35-(sd<0?0.62:0), x=sd*(1.05+((i*37)%5-2)*0.03);
+    // 한 대를 «그룹»으로 세워야 seamH/seamV(로컬 +z 기준)를 그대로 쓸 수 있다.
+    // 민짜 판은 어떤 조명으로도 골판지로 읽힌다 — 분할선이 곧 «장비»라는 신호다.
+    const g=new THREE.Group(); g.position.set(x+sd*0.62,0,z); g.rotation.y=-sd*Math.PI/2; S.add(g);
+    const face=new THREE.Mesh(new THREE.BoxGeometry(1.5,2.3,0.12),panel);
+    face.position.set(0,1.15,0); g.add(face);
+    for(const yy of [0.34,1.15,1.96]) seamH(g,1.42,0,yy,0.062);
+    for(const xx of [-0.70,-0.22,0.22,0.70]) seamV(g,2.18,xx,1.15,0.062);
+    const vis=new THREE.Mesh(new THREE.BoxGeometry(0.44,0.30,0.03),dark2);
+    vis.position.set(-0.07,1.62,0.065); g.add(vis);
+    // 손잡이·포트 커버 — 작은 어두운 악센트가 «크기»를 알려준다
+    for(const hy of [0.62,1.15]){
+      const hd=new THREE.Mesh(new THREE.BoxGeometry(0.20,0.028,0.05),dark2);
+      hd.position.set(0.46,hy,0.072); g.add(hd);
+    }
+    const col=[];
+    [[0x3bff6a,0.0],[0xffd23b,0.062],[0xff3b3b,0.124]].forEach(([c,dy])=>{
+      const m=new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:0,roughness:0.4});
+      const l=new THREE.Mesh(new THREE.CylinderGeometry(0.034,0.034,0.056,14),m);
+      l.position.set(x+sd*0.50,2.02+dy,z); S.add(l); col.push(m);
+    });
+    STOPL.push({col,i});
+  }
+  // 바닥 — 적색이 떨어질 면이 없으면 «공간»이 아니라 허공에 뜬 판이 된다
+  const flr=new THREE.Mesh(new THREE.PlaneGeometry(26,26),
+    new THREE.MeshStandardMaterial({color:0x2a3038,roughness:0.34,metalness:0.12}));
+  flr.rotation.x=-Math.PI/2; S.add(flr);
+  // 키는 «비상등» 쪽(적색·통로 반대편), 림은 찬색으로 외판 모서리만 긋는다 —
+  // 채우지 않는다. 채우면 어두운 팹이 아니라 그냥 어두운 사진이 된다(참고본의 방식).
+  const r1=new THREE.DirectionalLight(0xff6a44,0.95); r1.position.set(-3.4,2.4,2.2); S.add(r1);
+  // 두 줄이 서로 «마주 보므로» 빛도 두 방향이어야 한다 — 한쪽에서만 주면 반대 줄이 통째로 검다.
+  // 적색(비상)은 오른쪽 줄에, 찬 림은 왼쪽 줄에 — 통로를 사이에 두고 색이 갈린다.
+  const r2=new THREE.DirectionalLight(0x8fb4e8,0.85); r2.position.set(4.0,2.4,-2.2); S.add(r2);
+  S.add(new THREE.HemisphereLight(0x2a3340,0x080b11,0.30));
+}
+if(WAFER){
+  for(let i=S.children.length-1;i>=0;i--) S.remove(S.children[i]);
+  S.background=new THREE.Color(0x05070c); S.fog=new THREE.Fog(0x05070c,1.2,7.5);
+  // ⚠ 박막간섭을 «세게» 걸면 구릿빛 원판이 된다(실측). 실리콘 웨이퍼는 거울에 가까운
+  //   은회색이고 무지개는 스치는 각도에서만 «살짝» 돈다 — 간섭은 0.6 언저리, 두께 범위도 좁게.
+  const wm=new THREE.MeshPhysicalMaterial({color:0x9aa3b0,roughness:0.045,metalness:0.92,
+    iridescence:0.55, iridescenceIOR:1.35, iridescenceThicknessRange:[220,420],
+    envMap:ENV, envMapIntensity:1.15, clearcoat:0.5, clearcoatRoughness:0.04});
+  const rail=new THREE.MeshStandardMaterial({color:0x12171f,roughness:0.85,metalness:0.25});
+  const shellM=new THREE.MeshPhysicalMaterial({color:0x1b2028,roughness:0.45,metalness:0.1,
+    transmission:0.35, thickness:0.02, envMap:ENV, envMapIntensity:0.5});
+  function cassette(){
+    const g=new THREE.Group();
+    for(const sx of [-1,1]){                       // 슬롯 레일 — 이가 있어야 «카세트»다
+      const rl=new THREE.Mesh(new THREE.BoxGeometry(0.022,0.40,0.34),rail);
+      rl.position.set(sx*0.163,0.20,0); g.add(rl);
+      for(let i=0;i<13;i++){
+        const th=new THREE.Mesh(new THREE.BoxGeometry(0.030,0.006,0.30),rail);
+        th.position.set(sx*0.150,0.035+i*0.028,0); g.add(th);
+      }
+    }
+    const top=new THREE.Mesh(new THREE.BoxGeometry(0.36,0.030,0.34),rail); top.position.y=0.415; g.add(top);
+    const bot=new THREE.Mesh(new THREE.BoxGeometry(0.36,0.026,0.34),rail); bot.position.y=0.013; g.add(bot);
+    const bk=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.40,0.014),shellM);
+    bk.position.set(0,0.20,-0.168); g.add(bk);
+    for(let i=0;i<13;i++){                          // 웨이퍼 — 눕혀 꽂혀 있다
+      const w=new THREE.Mesh(new THREE.CylinderGeometry(0.150,0.150,0.0009,56),wm);
+      w.position.y=0.045+i*0.028; g.add(w);
+    }
+    return g;
+  }
+  // 랙 — 어둠 속으로 이어진다. 개수가 아니라 «끝이 안 보이는 것»이 이 컷의 내용이다.
+  for(let i=0;i<9;i++){
+    const c2=cassette();
+    c2.position.set(0.02+(i%2)*0.015, 0, -i*0.62);
+    c2.rotation.y=((i*31)%5-2)*0.014;
+    S.add(c2);
+  }
+  const shelf=new THREE.Mesh(new THREE.BoxGeometry(1.4,0.035,7.0),
+    new THREE.MeshStandardMaterial({color:0x0d1118,roughness:0.8,metalness:0.3}));
+  shelf.position.set(0.02,-0.018,-2.6); S.add(shelf);
+  // 조명 — 옆에서 스치는 한 줄기. 웨이퍼 «면»이 빛을 물어야 무지개가 돈다.
+  const wk1=new THREE.DirectionalLight(0xd6e6ff,3.6); wk1.position.set(-2.6,3.0,1.9); S.add(wk1);
+  const wk2=new THREE.DirectionalLight(0x35507a,0.55); wk2.position.set(3.0,1.0,-2.0); S.add(wk2);
+  S.add(new THREE.HemisphereLight(0x2b3c54,0x05080e,0.46));
+  FLAME.push(wk1);
+}
 if(STACK){
   for(let i=S.children.length-1;i>=0;i--) S.remove(S.children[i]);
   S.fog=null;
@@ -1088,7 +1202,30 @@ function seek(t){
   t=clamp(t,0,DUR);
   // ── 카메라: 통로를 따라 «아주 천천히» 전진 + 미세 상승. 손맛 없는 기계적 이동이라야 진중하다.
   const k=eio(t/DUR);
-  if(STACK){
+  if(STOP){
+    // ⚠ 순서가 이 컷의 내용이다 — 가까운 것부터 차례로 꺼지고 마지막에 적색만 남는다.
+    //   한꺼번에 끄면 «스위치를 내렸다»가 되고 «번지는 사고»로 안 읽힌다.
+    for(const {col,i} of STOPL){
+      const off=p(t, 0.18+i*0.20, 0.46+i*0.20);
+      col[0].emissiveIntensity = 0.95*(1-off);
+      col[1].emissiveIntensity = 0.85*Math.max(0, Math.sin(off*Math.PI));
+      col[2].emissiveIntensity = 1.35*off*(0.75+0.25*Math.sin(t*9+i));
+    }
+    // ⚠ 이 카메라의 화면 오른쪽은 -x/+z 다. 열이 x≈+1 에 서 있으므로 조준점을 열 쪽으로
+    //   붙여야 화면 «가운데»를 지나 비스듬히 물러난다 — 0.70 이면 오른쪽 끝에 몰린다(실측).
+    const r=lerp(2.10,1.72,k);
+    C.position.set(lerp(-0.06,0.06,k), lerp(1.62,1.56,k), r);
+    C.lookAt(0.10, lerp(1.74,1.72,k), lerp(-4.0,-4.6,k));
+    C.fov=46; C.updateProjectionMatrix();
+    if(BOKEH) BOKEH.uniforms.focus.value = 3.2;   // 앞쪽 두 대만 또렷하고 뒤는 녹는다
+  } else if(WAFER){
+    // 2초짜리 컷이라 카메라가 «한 동작»만 한다 — 랙을 따라 미끄러진다.
+    const r=lerp(0.86,0.70,k);
+    C.position.set(lerp(-0.46,-0.30,k), lerp(0.32,0.27,k), r);
+    C.lookAt(lerp(0.06,0.04,k), lerp(0.21,0.19,k), lerp(-0.9,-1.4,k));
+    C.fov=38; C.updateProjectionMatrix();
+    if(BOKEH) BOKEH.uniforms.focus.value = 1.05;
+  } else if(STACK){
     // ⚠ 아무것도 «나오지 않는» 것이 내용이라, 카메라도 거의 멈춘다. 굴뚝 위의 빈 하늘을
     //   충분히 오래 비워 두어야 그 빈 곳이 «보인다».
     FLAME[0].material.color.setRGB(1, 0.23+0.10*Math.sin(t*2.0), 0.18);   // 항공장애등 맥박
@@ -1207,13 +1344,13 @@ if(HQ){
   ao.updateGtaoMaterial({radius:0.28, distanceExponent:1.4, thickness:0.6, scale:1.0,
                          samples:16, distanceFallOff:1.0, screenSpaceRadius:false});
   COMP.addPass(ao);
-  if(MACRO||ALARM||BURNER||CHILL||STACK){
+  if(MACRO||ALARM||BURNER||CHILL||STACK||WAFER||STOP){
     // 얕은 심도 — 이 등록의 핵심이다. 초점 밖이 녹으면서 «디테일이 없다»가 안 보이게 된다.
     const bk=new BokehPass(S,C,{focus:0.6, aperture:0.0062, maxblur:0.016});
     BOKEH=bk; COMP.addPass(bk);
   }
   // 블룸 — 경광·등기구·금속 하이라이트가 «번져야» 카메라로 찍은 것처럼 보인다.
-  COMP.addPass(new UnrealBloomPass(new THREE.Vector2(W,H), (BURNER||CHILL||STACK)?0.30:(MACRO||ALARM)?0.42:0.26, 0.62, (BURNER||CHILL||STACK)?1.05:(MACRO||ALARM)?0.90:1.30));
+  COMP.addPass(new UnrealBloomPass(new THREE.Vector2(W,H), (BURNER||CHILL||STACK||WAFER||STOP)?0.34:(MACRO||ALARM)?0.42:0.26, 0.62, (BURNER||CHILL||STACK||WAFER||STOP)?1.00:(MACRO||ALARM)?0.90:1.30));
   const op=new OutputPass(); op.toneMapping=THREE.ACESFilmicToneMapping; COMP.addPass(op);
 }
 window.seek=seek; window.DUR3D=DUR;
