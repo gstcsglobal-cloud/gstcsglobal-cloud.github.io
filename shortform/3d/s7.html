@@ -28,15 +28,47 @@ const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
 const lerp=(a,b,x)=>a+(b-a)*x;
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 
+// v24b: 사용자 지적 「실사에 비해 3D 가 짜친다」 — 프리미티브는 제품 사진을 못 이긴다.
+//   그래서 «제품 사진 자체»를 씬에 세우는 길을 연다(2.5D 빌보드). ?bb=0 이면 옛 3D 로 비교.
+const BB = new URLSearchParams(location.search).get('bb') !== '0';
+// v25 «없었던 하루» 구조 — 같은 씬 파일이 두 컷을 낸다.
+//   ?emg=1  1막 CUT02 «팹 비상»  — 백색 조명이 꺼지고 열 전체가 적색 경광 아래 선다
+//   기본     2막 CUT06 «정상 팹»  — 아무 일도 없이 돌아가는 같은 열
+//   ⚠ 두 컷은 «같은 카메라·같은 배치»여야 반전이 작동한다. 그래서 씬을 복제하지 않고
+//     조명만 갈아끼운다 — 복제하면 한쪽만 고쳐져 두 컷의 설비 배치가 갈린다(제2원칙).
+const EMG = new URLSearchParams(location.search).get('emg') === '1';
+const TEX = new THREE.TextureLoader();
+const GAIA_TEX = TEX.load('tex/gaia.png');
+GAIA_TEX.colorSpace = THREE.SRGBColorSpace; GAIA_TEX.anisotropy = 8;
+// ── 톤. v24c: 밤을 버리고 «밝은 서브팹»으로 간다.
+//   ⚠ 어둡게 간 것이 «사진이 겉돈다»의 원인이었다 — 제품 사진은 중앙값 213/255 에 사분위 폭이
+//     8단계뿐인 «평평하고 밝은» 판인데, 씬 배경은 휘도 10 이었다. 그 차이를 색 곱셈으로 메우니
+//     빛을 받은 것이 아니라 «칠한 것»으로 읽혔다.
+//   ⚠ 훅 씬(scene3d.html)이 노출 1.15 다 — s7 만 0.70 으로 두 단계 어두웠다. 품질 기준과도 어긋났다.
+//   ⚠ 실제 서브팹은 형광등 확산광이라 평평하고 밝다. 즉 사진의 «평평함»은 여기서는 맞는 것이 된다.
+const EXPO=EMG?0.84:1.10, FOGC=EMG?0x3b1c18:0x8c96a6;
+// 배경색은 톤매핑을 «안» 거치는데 안개색은 거친다 — 같은 값을 넣으면 원경이 배경과 «다른 색»으로 뜬다.
+// 그래서 안개색을 같은 ACES 곡선으로 손수 눌러 배경에 넣는다(노출을 바꾸면 배경도 저절로 따라온다).
+function acesHex(hex,ex){
+  const c=new THREE.Color(hex);                       // 작업공간(선형)으로 들어온다
+  const M1=[[0.59719,0.35458,0.04823],[0.07600,0.90834,0.01566],[0.02840,0.13383,0.83777]];
+  const M2=[[1.60475,-0.53108,-0.07367],[-0.10208,1.10813,-0.00605],[-0.00327,-0.07276,1.07602]];
+  const mul=(M,v)=>M.map(r=>r[0]*v[0]+r[1]*v[1]+r[2]*v[2]);
+  const fit=v=>v.map(x=>(x*(x+0.0245786)-0.000090537)/(x*(0.983729*x+0.4329510)+0.238081));
+  let v=[c.r,c.g,c.b].map(x=>x*ex/0.6);
+  v=mul(M2,fit(mul(M1,v))).map(x=>Math.min(1,Math.max(0,x)));
+  const o=new THREE.Color(); o.setRGB(v[0],v[1],v[2],THREE.LinearSRGBColorSpace); return o;
+}
 const S=new THREE.Scene();
-S.background=new THREE.Color('#05091a');
-// 안개가 이 장면의 «규모»를 만든다 — 줄의 끝을 감춰야 «끝이 안 보인다»로 읽힌다
-S.fog=new THREE.Fog(0x05091a,7,34);
+S.background=acesHex(FOGC,EXPO);
+// 안개가 이 장면의 «규모»를 만든다. 밝은 팹에서는 «검게 삼키는 것»이 아니라 «희게 녹이는 것»이다 —
+// 그래야 반복되는 열의 끝이 자연스럽게 사라지고 텍스처 해상도 한계도 같이 묻힌다.
+S.fog=new THREE.Fog(FOGC,6,30);
 const C=new THREE.PerspectiveCamera(34,W/H,0.1,140);
 const R=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
 R.setSize(W,H); R.setPixelRatio(1);
 R.shadowMap.enabled=true; R.shadowMap.type=THREE.PCFShadowMap;
-R.toneMapping=THREE.ACESFilmicToneMapping; R.toneMappingExposure=0.70;   // ⚠ 어둠은 «도장»이 아니라 «조명»으로 — 실물 제품은 오프화이트다(사진)
+R.toneMapping=THREE.ACESFilmicToneMapping; R.toneMappingExposure=EXPO;
 document.body.appendChild(R.domElement);
 
 function makeEnv(){
@@ -44,9 +76,16 @@ function makeEnv(){
   for(let i=0;i<6;i++){
     const c=document.createElement('canvas'); c.width=c.height=size;
     const g=c.getContext('2d'), gr=g.createLinearGradient(0,0,0,size);
-    if(i===2){ gr.addColorStop(0,'#dce6f8'); gr.addColorStop(1,'#8fa5c8'); }
-    else if(i===3){ gr.addColorStop(0,'#111726'); gr.addColorStop(1,'#05091a'); }
-    else { gr.addColorStop(0,'#b3c4e2'); gr.addColorStop(.5,'#5e7092'); gr.addColorStop(1,'#171e2e'); }
+    // v24c 밝은 팹: 천장은 형광등 면광원이라 «가장 밝고», 바닥은 밝은 에폭시라 반사가 살아 있다.
+    // 밤 큐브맵(바닥 #05091a)을 그대로 두면 반사만 밤이라 제품 아랫부분이 검게 죽는다.
+    if(EMG){   // 비상: 천장 등이 꺼져 있으므로 반사원도 적색 잔광뿐이다
+      if(i===2){ gr.addColorStop(0,'#2a1512'); gr.addColorStop(1,'#3c1d16'); }
+      else if(i===3){ gr.addColorStop(0,'#241618'); gr.addColorStop(1,'#160e10'); }
+      else { gr.addColorStop(0,'#4a2118'); gr.addColorStop(.55,'#331814'); gr.addColorStop(1,'#1a0f10'); }
+    }
+    else if(i===2){ gr.addColorStop(0,'#ffffff'); gr.addColorStop(1,'#d7e0ee'); }
+    else if(i===3){ gr.addColorStop(0,'#9aa5b6'); gr.addColorStop(1,'#79849a'); }
+    else { gr.addColorStop(0,'#eaf1fb'); gr.addColorStop(.55,'#c3cee0'); gr.addColorStop(1,'#96a2b6'); }
     g.fillStyle=gr; g.fillRect(0,0,size,size); faces.push(c);
   }
   const t=new THREE.CubeTexture(faces); t.needsUpdate=true; return t;
@@ -57,27 +96,44 @@ const bodyMat=(color,o={})=>new THREE.MeshPhysicalMaterial({color,
   envMap:ENV, envMapIntensity:0.7});
 const metalMat=(color,r=0.3,m=0.75)=>new THREE.MeshStandardMaterial({color,roughness:r,metalness:m,envMap:ENV,envMapIntensity:0.9});
 
-// ── 조명 (s6 v24 와 같은 온도 — 새벽 관제)
-S.add(new THREE.HemisphereLight(0xbcd2ff,0x0b1224,0.32));
-const key=new THREE.DirectionalLight(0xcfe0ff,0.88); key.position.set(7,12,9); key.castShadow=true;
+// ── 조명. v24c: 밝은 팹의 주역은 «림»이 아니라 «천장 확산광»이다.
+//    ⚠ 밤 세팅의 강한 청색 림(1.55)을 그대로 두면 밝은 방인데 윤곽만 파랗게 타 «합성»으로 보인다.
+//      림은 형태를 겨우 떼어 놓을 만큼만 남기고, 반구광을 주역으로 올린다.
+//    ⚠ 세기는 «눈»이 아니라 «측정»으로 맞춘다 — 제품 사진(중앙값 213/255)과 3D 부속이 같은 밝기로
+//      서야 붙는다. LK 한 값만 돌려 스틸의 제품 휘도를 재고 맞췄다(아래 seek 주석의 실측값 참조).
+const LK=1.45;
+// ⚠ 비상은 «빨간 필터»가 아니라 «백색 조명이 꺼진 상태»다. 세기를 그대로 두고 색만 붉히면
+//   그냥 붉게 물든 밝은 방이 되어 «전원이 살아 있는» 것으로 읽힌다 — 세기부터 떨어뜨린다.
+S.add(new THREE.HemisphereLight(EMG?0x6b2a20:0xe8f1ff, EMG?0x180c0c:0x9aa5b6, (EMG?0.34:0.80)*LK));
+const key=new THREE.DirectionalLight(EMG?0xff8a5e:0xf2f7ff,(EMG?0.16:0.58)*LK); key.position.set(4,16,7); key.castShadow=true;
 key.shadow.mapSize.set(2048,2048);
 { const s=key.shadow.camera; s.left=-14;s.right=14;s.top=12;s.bottom=-4;s.near=1;s.far=60; key.shadow.bias=-0.0018; }
 S.add(key);
-const fill=new THREE.DirectionalLight(0x9fc4ff,0.26); fill.position.set(-9,6,4); S.add(fill);
-// 림 둘 — 어두운 복도에서 «윤곽»이 사는 것이 이 장면 퀄리티의 절반이다
-const rim =new THREE.DirectionalLight(0x5c8cff,1.55); rim.position.set(-6,7,-12); S.add(rim);
-const rim2=new THREE.DirectionalLight(0x6fa8ff,0.95); rim2.position.set(9,5,-10); S.add(rim2);
+const fill=new THREE.DirectionalLight(EMG?0x9a3324:0xdce7fa,(EMG?0.30:0.42)*LK); fill.position.set(-9,6,4); S.add(fill);
+// 림 둘 — 밝은 방에서는 «분리선» 역할만 한다(밤 세팅의 1/4).
+const rim =new THREE.DirectionalLight(EMG?0xff6a45:0x8fb4ff,(EMG?0.55:0.34)*LK); rim.position.set(-6,7,-12); S.add(rim);
+const rim2=new THREE.DirectionalLight(EMG?0xff7d52:0x9cc0ff,(EMG?0.38:0.22)*LK); rim2.position.set(9,5,-10); S.add(rim2);
 
 // ── 바닥 · 통로
+// v24c: 바닥은 «밝은 에폭시». 검은 바닥은 밤에만 맞다 — 밝은 방에서 바닥만 검으면
+//   설비 아랫부분이 반사를 못 받아 «떠 있는» 것처럼 보인다(그림자도 안 읽힌다).
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),
-  new THREE.MeshStandardMaterial({color:0x070d1c,roughness:0.34,metalness:0.52,envMap:ENV,envMapIntensity:0.45}));
+  new THREE.MeshStandardMaterial({color:EMG?0x2a2226:0x9aa4b2,roughness:0.30,metalness:0.25,envMap:ENV,envMapIntensity:EMG?0.35:0.60}));
 floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; S.add(floor);
-const grid=new THREE.GridHelper(200,200,0x1b2a55,0x111c3a); grid.position.y=0.003;
-grid.material.transparent=true; grid.material.opacity=0.30; S.add(grid);
+// 천장 — v24c. 없으면 위쪽이 통째로 «흰 허공»이라 방이 아니라 배경지가 된다(실측: 배관이 떠 보였다).
+//   아래에서 오는 빛만 받으므로 저절로 어두워져, 밝은 방에 필요한 «위아래 대비»를 공짜로 만든다.
+const CEILY=4.20;   // ⚠ 높이면 설비 위로 «맨 수직관»만 길어져 파이프 숲이 된다(실측)
+const ceil=new THREE.Mesh(new THREE.PlaneGeometry(200,200),
+  new THREE.MeshStandardMaterial({color:EMG?0x2e2024:0xc6ccd6,roughness:0.92,metalness:0.0}));
+ceil.rotation.x=Math.PI/2; ceil.position.y=CEILY; S.add(ceil);
+// 바닥 타일 눈금 — 밝은 바닥에서는 «어두운» 선이라야 보인다(명도를 뒤집었다)
+const grid=new THREE.GridHelper(200,200,0x6d7a8e,0x808d9f); grid.position.y=0.003;
+grid.material.transparent=true; grid.material.opacity=0.38; S.add(grid);
 // 통로 유도선 — 바닥에 «공장»의 기호를 하나만 둔다(많으면 어수선하다)
 for(const x of [0.55,1.05]){
   const ln=new THREE.Mesh(new THREE.PlaneGeometry(0.05,120),
-    new THREE.MeshBasicMaterial({color:0x2c4a86,transparent:true,opacity:0.30}));
+    // ⚠ 유도선은 MeshBasic(빛을 안 받는다) 이라 비상에서도 혼자 파랗게 남는다 — 손으로 꺼 준다
+    new THREE.MeshBasicMaterial({color:EMG?0x3a1e22:0x3f5f9c,transparent:true,opacity:EMG?0.30:0.55}));
   ln.rotation.x=-Math.PI/2; ln.position.set(x,0.006,-48); S.add(ln);
 }
 
@@ -149,7 +205,15 @@ function louvered(w,h,color){
   }
   return g;
 }
-const LAMPS=[], REDS=[];
+const LAMPS=[], REDS=[], GLOWS=[];
+// 경광 헤일로용 방사 그라디언트. ⚠ 구/원판을 단색으로 그리면 «빨간 스티커»가 된다(실측).
+const GLOWTEX=(()=>{
+  const c=document.createElement('canvas'); c.width=c.height=128; const q=c.getContext('2d');
+  const gr=q.createRadialGradient(64,64,1,64,64,63);
+  gr.addColorStop(0,'rgba(255,150,120,1)'); gr.addColorStop(0.16,'rgba(255,60,38,0.85)');
+  gr.addColorStop(0.45,'rgba(255,42,26,0.26)'); gr.addColorStop(1,'rgba(255,34,20,0)');
+  q.fillStyle=gr; q.fillRect(0,0,128,128); return new THREE.CanvasTexture(c);
+})();
 function signalTower(idx, alarm){
   const g=new THREE.Group();
   g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.05,0.03,10),metalMat(0x1c2230)));
@@ -210,12 +274,93 @@ function screen(w,h){
 }
 
 // ── 설비 한 대 (스크러버 / 칠러)
+// ── 실사 빌보드 스크러버. 사진 한 장을 판에 붙여 세운다.
+//    ⚠ «카메라를 향해» 돌리지 않는다 — 열을 이루므로 설비와 같은 방향(통로를 향해)으로 세워야
+//      옆의 3D 부속(펌프·배관)과 어긋나지 않는다. 대신 카메라 이동이 아주 느려야 판이 안 들킨다.
+//    ⚠ 조명을 받지 않는 MeshBasic 이면 밤 팔레트에서 혼자 밝다 — 색을 곱해 «같은 밤»으로 눌러야 한다.
+const GAIA_W=1.10, GAIA_H=GAIA_W*442/244;      // 실물 폭 기준(사진 비율 유지)
+const GAIA_D=0.55;                             // 캐비닛 깊이 — 실루엣에 «두께»를 준다
+// ⚠ v24c 핵심: 재질을 MeshBasic → MeshStandard 로 바꾼다.
+//    Basic 은 «빛을 안 받는다». 화면의 모든 것이 조명을 받는데 제품만 안 받으니 그 하나가
+//    «붙여 넣은 것»으로 읽혔다(사용자 지적). 이제 키·확산광·안개·경광이 제품에도 닿는다.
+//    색 곱셈(0x94a3c0)은 지웠다 — 밤이 아니므로 누를 이유가 없고, 제품 색을 바꾸면 제품이 아니다.
+//    재질은 «한 벌»을 모두가 나눠 쓴다(설비 26대 × 셰이더 컴파일을 피한다).
+const BBMAT=new THREE.MeshStandardMaterial({map:GAIA_TEX,transparent:true,alphaTest:0.35,
+  roughness:0.55,metalness:0.0,envMap:ENV,envMapIntensity:0.35});
+// 사진 평균색(실측 RGB 207,206,202)의 무광 — 상자의 옆·윗면이 앞면 사진과 같은 물건으로 보이게.
+// ⚠ 평균색 그대로 두면 옆면이 앞면만큼 밝아 «빈 흰 슬래브»로 읽힌다(실측). 실제 옆판은 그늘이다.
+const BBSIDE=new THREE.MeshStandardMaterial({color:0xb9b8b3,roughness:0.68,metalness:0.05,
+  envMap:ENV,envMapIntensity:0.25});
+function buildScrubberBB(i, alarm){
+  const g=new THREE.Group();
+  const jz=1+((i*37)%7-3)*0.012;      // 반복을 줄이는 미세 배율. 경광 위치도 이 값을 탄다.
+  // 두께 상자 — 사진 뒤에 선다. 실측으로 «몸통»(가로 90% 이상) 구간이 사진 높이의 0.098~0.922 라
+  // 그 구간만 채운다(위의 신호탑·덕트 같은 가는 부분까지 상자로 채우면 각진 덩어리가 비어져 나온다).
+  const bg=new THREE.Group(); g.add(bg);
+  const bh=GAIA_H*(0.922-0.098), by=GAIA_H*0.098+bh/2;
+  const bx=new THREE.Mesh(new THREE.BoxGeometry(GAIA_W*0.94,bh,GAIA_D),BBSIDE);
+  bx.position.set(0,by,-GAIA_D/2-0.004); bx.castShadow=bx.receiveShadow=true; bg.add(bx);
+  // 옆판 — ⚠ 실물 GAIA 의 옆면은 «민짜»다(사용자 확정). 루버·통기구를 지어 넣지 않는다.
+  //   한때 «빈 판이 백지로 보인다»고 통기구를 붙였는데, 없는 것을 그려 넣는 것은 제품을 틀리게
+  //   만드는 일이다 — 빈 판이 허전하면 조명·값으로 풀지, 부품을 발명해서 풀지 않는다.
+  //   ⚠ 보이는 면은 로컬 +x 다 — 열이 -90° 돌아 서 있어 로컬 +x 가 카메라 쪽(월드 +z)을 향한다.
+  const sd=GAIA_W*0.94/2;
+  // 하단 띠만 남긴다 — 사진 앞면의 짙은 베이스가 옆으로 «이어지는» 것이라 지어낸 것이 아니다.
+  const kick=new THREE.Mesh(new THREE.BoxGeometry(0.024,0.15,GAIA_D*0.96),plateMat);
+  kick.position.set(sd+0.006, GAIA_H*0.098+0.085, -GAIA_D/2-0.004); bg.add(kick);
+  const pl=new THREE.Mesh(new THREE.PlaneGeometry(GAIA_W,GAIA_H),BBMAT);
+  pl.position.y=GAIA_H/2;
+  // ⚠ 좌우 반전으로 반복을 감추면 안 된다 — 사진에 GAIA·GST 글자가 박혀 있어 «거울 글씨»가 된다(실측).
+  //    반복은 크기·각도를 아주 조금 흔드는 것으로만 줄인다.
+  pl.scale.set(jz,jz,1); pl.position.y=GAIA_H*jz/2;
+  bg.scale.set(jz,jz,1);                               // ⚠ 두께 상자·옆판도 같이 흔들어야 앞면과 안 어긋난다
+  g.rotation.y=((i*53)%5-2)*0.012;
+  g.add(pl);
+  // 접지 그림자 — 판이 바닥에 «닿아» 보이게
+  const sh=new THREE.Mesh(new THREE.PlaneGeometry(GAIA_W*1.05,0.75),CONTACT);
+  sh.rotation.x=-Math.PI/2; sh.position.set(0,0.008,0.06); g.add(sh);
+  // ⚠ 신호탑을 3D 로 또 얹지 않는다 — 사진에 이미 있다(두 개가 겹쳐 보인다).
+  //    경보 설비만 그 «자리»에 적색 등을 겹쳐 켠다.
+  if(alarm){
+    // ⚠ 자리를 «눈대중»으로 잡으면 램프가 설비 위 허공에 뜬다. 사진에서 적색 렌즈 화소를 찾아
+    //   비율로 박았다(실측 x 0.760 · 위에서 y 0.101, 렌즈 크기 17×13px ≈ 38×29mm).
+    const LX=GAIA_W*(0.760-0.5)*jz, LY=GAIA_H*(1-0.101)*jz;
+    const m2=new THREE.MeshStandardMaterial({color:0xff3b2e,emissive:0xff3b2e,emissiveIntensity:0.3,roughness:0.4});
+    const l=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.040,12),m2);
+    l.position.set(LX,LY,0.03); g.add(l); REDS.push(m2);
+    // ⚠ 밝은 방에서는 램프 «알»만으로 경보가 안 읽힌다 — 노출이 높아 적색 발광이 흰색으로 타고,
+    //   어두운 방과 달리 주변 번짐도 눈에 안 띈다(실측: 설비가 그냥 «분홍»으로만 보였다).
+    //   그래서 램프를 감싸는 헤일로를 따로 둔다. toneMapped:false 라 노출과 무관하게 «빨강»으로 남는다.
+    const gm=new THREE.SpriteMaterial({map:GLOWTEX,transparent:true,opacity:0,
+      depthWrite:false,toneMapped:false});
+    const gl=new THREE.Sprite(gm); gl.scale.setScalar(0.24);
+    gl.position.set(LX,LY,0.05); g.add(gl); GLOWS.push(gm);
+  }
+  // 배출 덕트 — 규약상 «위는 배출구»다. 사진의 상판에서 천장까지 «끝까지» 올린다.
+  // ⚠ 중간에서 끊으면 굴뚝 여러 개가 허공에 선 그림이 된다(실측: 첫 렌더가 그랬다).
+  //   배관은 «어디로 가는지»가 보여야 배관이다 — 천장 덱에 물려야 서브팹으로 읽힌다.
+  const dy0=GAIA_H*0.87, dlen=CEILY-dy0;
+  const duct=new THREE.Mesh(new THREE.CylinderGeometry(0.046,0.046,dlen,10),metalMat(0x8d95a4,0.35,0.55));
+  duct.position.set(-GAIA_W*0.16, dy0+dlen/2, 0.02); g.add(duct);
+  const dfl=new THREE.Mesh(new THREE.CylinderGeometry(0.075,0.075,0.026,12),plateMat);
+  dfl.position.set(-GAIA_W*0.16, dy0+0.02, 0.02); g.add(dfl);
+  g.userData.H=GAIA_H;
+  return g;
+}
+const CONTACT=(()=>{
+  const c=document.createElement('canvas'); c.width=c.height=64; const g2=c.getContext('2d');
+  const gr=g2.createRadialGradient(32,32,2,32,32,31);
+  gr.addColorStop(0,'rgba(0,0,0,0.55)'); gr.addColorStop(0.55,'rgba(0,0,0,0.20)'); gr.addColorStop(1,'rgba(0,0,0,0)');
+  g2.fillStyle=gr; g2.fillRect(0,0,64,64);
+  return new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false});
+})();
 // ── 진공펌프. 규약은 scene3d.html(사용자가 준 정본)과 같다 — 배기 라인 «위»에 인라인으로 선다.
 //    README 배관 규약: 공정 장비 → 데크 틈으로 라이저 하강 → «진공펌프» → 스크러버 «옆구리» 유입.
 //    ⚠ 배기를 스크러버 «위»로 넣지 않는다 — 위는 배출구다(아는 사람이 바로 안다).
-// ⚠ 정본 색(0x9aa35e)은 이 밤 팔레트에서 너무 튄다 — 같은 계열의 «탁한» 값으로 낮춘다.
-//    색상을 바꾸는 게 아니라 채도만 내린 것이다(공정 배기 = 연두 계열이라는 규약은 지킨다).
-const EXC=0x6f7550;
+// ⚠ 이 씬에서 «채도가 있는 것»은 적색 경광 하나여야 한다(그래야 눈이 거기로 간다).
+//   정본 색(README 0x9aa35e)의 연두 «계열»은 지키되 채도만 내린다 — 원색 그대로 두면
+//   배기관 26줄이 화면에서 가장 강한 색이 되어 정작 경보가 묻힌다(실측).
+const EXC=0x969a78;
 function buildPump(){
   const g=new THREE.Group();
   const base=new THREE.Mesh(new THREE.BoxGeometry(0.52,0.30,0.36),metalMat(0x323a4c,0.45,0.55));
@@ -354,82 +499,93 @@ function buildChiller(i){
 //    ⚠ 간격을 일정하게 두면 «렌더»로 보인다. 결정적 난수로 아주 조금씩 흔든다.
 const rnd=mulberry(20260914);
 // ⚠ 경보는 «한 대만». 여러 대가 울면 재난 영상이 된다 — 이 영상의 주제는 «한 건이 번지지 않았다»다.
-const ALARM_I=3, ALARM_Z=-7.65, ALARM_X=2.35;
+const ALARM_I=2, ALARM_Z=-5.30, ALARM_X=2.35;   // v24c: 한 자리 당겼다 — 멀면 «무슨 일이 났는지»가 안 읽힌다
 for(let i=0;i<14;i++){
-  const alarm = (i===ALARM_I);
-  const m = alarm ? buildScrubber(i,true) : ((i%2===0) ? buildScrubber(i,false) : buildChiller(i));
-  const mz = alarm?ALARM_Z:(-0.6-i*2.35+(rnd()-0.5)*0.14);
-  m.position.set(ALARM_X+(alarm?0:(rnd()-0.5)*0.10), 0, mz);
-  m.rotation.y = -Math.PI/2 + (alarm?0:(rnd()-0.5)*0.035);   // 통로를 향해 선다
+  const isUnit = (i===ALARM_I);          // «그 설비»인가 — 자리를 정한다
+  const alarm  = EMG || isUnit;          // «경광을 켜나» — 그림만 정한다
+  // ⚠ 둘을 한 변수로 쓰면 안 된다: 비상 모드에서 열 전체가 경보 설비의 좌표로 몰린다(실측 14대 겹침)
+  // ⚠ 서브팹에는 스크러버와 진공펌프만 선다 — 칠러는 클린룸에서 공정 장비를 식힌다(README 규약).
+  //    섞어 두면 그림이 틀리고, 사진 빌보드 옆에 프리미티브 칠러가 서면 화풍도 갈린다.
+  const mk = BB ? buildScrubberBB : buildScrubber;
+  const m = mk(i, alarm);
+  const mz = isUnit?ALARM_Z:(-0.6-i*2.35+(rnd()-0.5)*0.14);
+  m.position.set(ALARM_X+(isUnit?0:(rnd()-0.5)*0.10), 0, mz);
+  m.rotation.y = -Math.PI/2 + (isUnit?0:(rnd()-0.5)*0.035);   // 통로를 향해 선다
   S.add(m);
   // 스크러버마다 진공펌프. 배기는 «위에서 내려와 → 펌프 → 스크러버 옆구리»로 들어간다(README 규약).
-  if(i%2===0 || alarm){
-    const px=ALARM_X-1.05, pz=mz+0.58;
+  {
+    const px=ALARM_X-1.02, pz=mz+0.66;
     const pump=buildPump(); pump.position.set(px,0,pz); pump.rotation.y=-Math.PI/2+0.28; S.add(pump);
     const th=pump.rotation.y;
     const inP =new THREE.Vector3(px-0.33*Math.cos(th),0.56,pz+0.33*Math.sin(th));
     const outP=new THREE.Vector3(px+0.33*Math.cos(th),0.56,pz-0.33*Math.sin(th));
-    const riser=new THREE.Mesh(new THREE.CylinderGeometry(0.042,0.042,3.05,10),metalMat(EXC,0.40,0.45));
-    riser.position.set(inP.x,2.40,inP.z); riser.castShadow=true; S.add(riser);   // 데크 틈에서 내려온다
-    S.add(pipeTo(new THREE.Vector3(inP.x,0.92,inP.z),inP,0.040,EXC));
-    S.add(pipeTo(outP,new THREE.Vector3(ALARM_X-0.50,0.60,mz-0.18),0.040,EXC));  // 스크러버 «옆구리»
+    // 데크 틈에서 내려온다 — 천장까지 이어야 «위층 공정 장비에서 온 배기»로 읽힌다(허공에서 시작하면 안 된다)
+    const rl=CEILY-0.95;
+    const riser=new THREE.Mesh(new THREE.CylinderGeometry(0.036,0.036,rl,10),metalMat(EXC,0.45,0.40));
+    riser.position.set(inP.x+0.62,0.95+rl/2,inP.z-0.42); riser.castShadow=true; S.add(riser);
+    S.add(pipeTo(new THREE.Vector3(inP.x+0.62,0.98,inP.z-0.42),inP,0.034,EXC));
+    S.add(pipeTo(outP,new THREE.Vector3(ALARM_X-0.52,0.58,mz-0.16),0.034,EXC));  // 스크러버 «옆구리»
     const fl=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.03,12),plateMat);
     fl.rotation.z=Math.PI/2; fl.position.set(ALARM_X-0.51,0.60,mz-0.18); S.add(fl);
   }
 }
 // 경광 조명 — «빛이 주변에 번져야» 경보로 읽힌다. 램프만 빨개지면 스티커처럼 보인다.
-const beacon=new THREE.PointLight(0xff3b2e, 0, 7.0, 2.0);
-beacon.position.set(ALARM_X-0.50, 2.32, ALARM_Z+0.10); S.add(beacon);
+const beacon=new THREE.PointLight(0xff3b2e, 0, 5.2, 2.0);
+beacon.position.set(ALARM_X-0.04, GAIA_H*0.899, ALARM_Z+GAIA_W*0.26); S.add(beacon);   // 사진 속 렌즈 자리
 const beaconFar=new THREE.PointLight(0xff5a3a, 0, 13, 2.0);
-beaconFar.position.set(ALARM_X-1.10, 1.55, ALARM_Z+0.05); S.add(beaconFar);
+beaconFar.position.set(ALARM_X-0.95, 1.90, ALARM_Z+0.30); S.add(beaconFar);
 for(let i=0;i<12;i++){
-  const m = (i%2===0) ? buildChiller(i+40) : buildScrubber(i+40);
+  const m = (BB ? buildScrubberBB : buildScrubber)(i+40, EMG);
   m.position.set(6.6+(rnd()-0.5)*0.12, 0, -1.4-i*2.6+(rnd()-0.5)*0.2);
   m.rotation.y = -Math.PI/2 + (rnd()-0.5)*0.05;
   S.add(m);
 }
 // 통로 «반대편»(왼쪽)은 비워 둔다 — 자막 자리다. 멀리 원경 실루엣만 옅게.
+// ⚠ 밝은 팹에서 검은 덩어리(0x0e1524)를 두면 «구멍»으로 보인다 — 안개에 녹는 밝은 회청색으로.
 for(let i=0;i<9;i++){
   const h=1.1+rnd()*1.5;
   const b=new THREE.Mesh(new THREE.BoxGeometry(0.7+rnd()*0.6,h,0.7),
-    new THREE.MeshStandardMaterial({color:0x0e1524,roughness:0.8,metalness:0.2}));
+    new THREE.MeshStandardMaterial({color:0x79849a,roughness:0.75,metalness:0.15}));
   b.position.set(-6.5-rnd()*3.5, h/2, -3-i*3.1); S.add(b);
 }
 
 // ── 천장 배관 — 통로를 따라 달린다. «지하 서브팹»의 서명이다.
 {
   const G=new THREE.Group(); S.add(G);
-  for(const [x,y,r] of [[2.2,4.02,0.10],[2.7,4.02,0.075],[3.15,4.02,0.055],[6.4,4.25,0.09]]){
-    const pipe=new THREE.Mesh(new THREE.CylinderGeometry(r,r,70,10),metalMat(0x232b3c,0.55,0.45));
+  // ⚠ 밤 세팅의 거의-검정(0x232b3c)을 밝은 방에 그대로 두면 천장만 밤이다. 회청 금속으로 올린다.
+  for(const [x,y,r] of [[2.2,3.52,0.10],[2.7,3.52,0.075],[3.15,3.52,0.055],[6.4,3.74,0.09]]){
+    const pipe=new THREE.Mesh(new THREE.CylinderGeometry(r,r,70,10),metalMat(0x707c90,0.5,0.55));
     pipe.rotation.x=Math.PI/2; pipe.position.set(x,y,-32); G.add(pipe);
   }
   // 케이블 트레이
-  const tray=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.09,70),metalMat(0x2a3245,0.6,0.45));
-  tray.position.set(1.55,4.30,-32); G.add(tray);
+  const tray=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.09,70),metalMat(0x6a7589,0.55,0.5));
+  tray.position.set(1.55,3.80,-32); G.add(tray);
   for(let i=0;i<3;i++){
-    const c=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,70,6),metalMat(0x18202e,0.85,0.15));
-    c.rotation.x=Math.PI/2; c.position.set(1.4+i*0.13,4.38,-32); G.add(c);
+    const c=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,70,6),metalMat(0x39414f,0.8,0.15));
+    c.rotation.x=Math.PI/2; c.position.set(1.4+i*0.13,3.88,-32); G.add(c);
   }
   // 행거 — 배관이 «떠 있지» 않게
   for(let i=0;i<16;i++){
-    const hg=new THREE.Mesh(new THREE.BoxGeometry(2.1,0.05,0.05),metalMat(0x1e2634,0.6,0.4));
-    hg.position.set(2.4,4.19,-1-i*2.4); G.add(hg);
+    const hg=new THREE.Mesh(new THREE.BoxGeometry(2.1,0.05,0.05),metalMat(0x5d6779,0.6,0.4));
+    hg.position.set(2.4,3.69,-1-i*2.4); G.add(hg);
   }
 }
-// 광선 — 통로 위 조명. 이 장면의 «공기»이자 리듬(일정 간격으로 지나간다).
+// 천장 형광등 — v24c. 밝은 방에는 «광선»이 안 보인다(공기 중 산란을 볼 만큼 어둡지 않다).
+//   대신 천장 라인 조명이 리듬을 만들고, 바닥·상판 반사에 길게 늘어져 «실내»를 만든다.
+//   ⚠ 실제 광원으로 세우지 않는다 — 26대 × 점광원이면 렌더가 몇 배로 느려진다.
+//     밝기는 이미 반구광이 만들고, 여기 등기구는 «보이는 것»만 담당한다.
 const SHAFTS=[];
 for(let i=0;i<7;i++){
-  const m=new THREE.Mesh(new THREE.CylinderGeometry(0.10,2.20,7.0,20,1,true),
-    new THREE.MeshBasicMaterial({color:0x7fb0ff,transparent:true,opacity:0.012,depthWrite:false,
-      side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));
-  m.position.set(1.5,3.2,-1.8-i*4.3); S.add(m); SHAFTS.push(m);
+  const m=new THREE.Mesh(new THREE.BoxGeometry(1.9,0.05,0.34),
+    new THREE.MeshBasicMaterial({color:EMG?0x3a2f33:0xf4f8ff,transparent:true,opacity:EMG?0.5:0.95,toneMapped:false}));
+  m.position.set(1.9,4.02,-1.8-i*4.3); S.add(m); SHAFTS.push(m);
 }
-// 먼지
+// 먼지 — 밝은 배경에서는 밝은 점이 안 보인다. 어둡게 바꾸고 아주 옅게만 남긴다(공기감).
 const DN=220, DBASE=[], dgeo=new THREE.BufferGeometry(), dpos=new Float32Array(DN*3);
 for(let i=0;i<DN;i++) DBASE.push({x:(rnd()-.3)*14,y:rnd()*4.2+0.2,z:-rnd()*30,s:0.25+rnd()*0.5,ph:rnd()*6.283});
 dgeo.setAttribute('position',new THREE.BufferAttribute(dpos,3));
-S.add(new THREE.Points(dgeo,new THREE.PointsMaterial({color:0xa7c6ff,size:0.032,transparent:true,
-  opacity:0.26,depthWrite:false,sizeAttenuation:true})));
+S.add(new THREE.Points(dgeo,new THREE.PointsMaterial({color:0x5d6a80,size:0.030,transparent:true,
+  opacity:0.16,depthWrite:false,sizeAttenuation:true})));
 
 function seek(t){
   t=clamp(t,0,DUR);
@@ -445,15 +601,19 @@ function seek(t){
   LAMPS.forEach(l=>{ l.m.emissiveIntensity = 0.34+0.20*Math.sin(t*1.4 - l.idx*0.55); });
   // 경광등: «회전»이라 한 바퀴마다 정면을 스친다. 1.15Hz 고정 — 2Hz 를 넘기면 파티 조명이 된다.
   const ph=(t*1.15)%1, sweep=Math.pow(Math.max(0,Math.sin(ph*Math.PI)),2.6);
-  REDS.forEach(m=>{ m.emissive.setHex(0xff3b2e); m.emissiveIntensity=0.25+2.6*sweep; });
-  beacon.intensity    = 1.0+6.8*sweep;
-  beaconFar.intensity = 0.45+2.4*sweep;
+  // ⚠ 밝은 방에서는 «빛 번짐»이 잘 안 보인다 — 대신 이 씬에서 채도가 있는 것은 이 빨강뿐이라
+  //   눈이 저절로 간다. 램프 자체를 더 태우고(emissive), 주변 번짐은 밝기에 맞춰 올린다.
+  REDS.forEach(m=>{ m.emissive.setHex(0xff3b2e); m.emissiveIntensity=0.35+4.2*sweep; });
+  GLOWS.forEach(m=>{ m.opacity=0.10+0.68*sweep; });
+  beacon.intensity    = 1.0+8.5*sweep;
+  beaconFar.intensity = 0.5+3.6*sweep;
   for(let i=0;i<DN;i++){ const d=DBASE[i];
     dpos[i*3  ]=d.x+Math.sin(t*d.s*0.7+d.ph)*0.08;
     dpos[i*3+1]=d.y+Math.sin(t*d.s    +d.ph)*0.12;
     dpos[i*3+2]=d.z+Math.cos(t*d.s*0.6+d.ph)*0.06; }
   dgeo.attributes.position.needsUpdate=true;
-  SHAFTS.forEach((m,i)=>{ m.material.opacity=0.011+0.004*Math.sin(t*0.8+i*1.7); });
+  // 등기구는 «켜져 있다»가 전부다 — 흔들면 형광등이 나가기 직전으로 보인다. 아주 미세하게만.
+  SHAFTS.forEach((m,i)=>{ m.material.opacity=0.94+0.02*Math.sin(t*0.8+i*1.7); });
   R.render(S,C);
 }
 window.seek=seek; window.DUR3D=DUR;
