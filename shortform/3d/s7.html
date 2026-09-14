@@ -81,32 +81,76 @@ for(const x of [0.55,1.05]){
   ln.rotation.x=-Math.PI/2; ln.position.set(x,0.006,-48); S.add(ln);
 }
 
-// ── 부품 (scene3d.html · s6.html 과 같은 규약)
+// ── 부품. ⚠ «흰 상자 + 이음매 한 줄»은 제조물로 안 읽힌다(사용자 지적 「생김새 퀄리티가 떨어진다」).
+//    실물 스크러버·칠러가 «만든 물건»으로 보이는 단서는 폴리 수가 아니라 넷이다:
+//      ① 섀시 프레임 — 모서리에 어두운 기둥이 서고 패널이 그 «안쪽»에 들어간다.
+//      ② 파인 도어 — 문이 면과 같은 높이면 그림이 평평하다. 홈이 그림자를 만든다.
+//      ③ 손잡이·경첩 — 크기는 작지만 «열리는 물건»이라는 신호는 이것뿐이다.
+//      ④ 킥플레이트·레벨링 발 — 바닥에 닿는 부분이 다른 재질이어야 설비가 «놓인» 것으로 보인다.
+const frameMat=metalMat(0x2b3446,0.45,0.62);
+const darkMat =new THREE.MeshStandardMaterial({color:0x0a0f1a,roughness:0.85,metalness:0.2});
+const plateMat=metalMat(0x39445c,0.4,0.7);
 function cabinet(w,h,d,color,o={}){
   const g=new THREE.Group();
-  const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),bodyMat(color,o));
+  // 섀시 — 모서리 기둥 넷. 이것이 설비의 «뼈대»로 읽힌다.
+  const P=0.048;
+  for(const sx of [-1,1]) for(const sz of [-1,1]){
+    const c=new THREE.Mesh(new THREE.BoxGeometry(P,h,P),frameMat);
+    c.position.set(sx*(w/2-P/2), h/2, sz*(d/2-P/2)); c.castShadow=true; g.add(c);
+  }
+  // 몸통 — 프레임보다 살짝 안쪽. 실루엣에 «턱»이 생긴다.
+  const b=new THREE.Mesh(new THREE.BoxGeometry(w-0.03,h-0.04,d-0.03),bodyMat(color,o));
   b.castShadow=b.receiveShadow=true; b.position.y=h/2; g.add(b);
-  const seam=new THREE.Mesh(new THREE.BoxGeometry(0.008,h*0.92,0.008),new THREE.MeshStandardMaterial({color:0x7d8699,roughness:0.6}));
-  seam.position.set(0,h/2,d/2+0.005); g.add(seam);
-  const foot=new THREE.Mesh(new THREE.BoxGeometry(w*1.03,0.07,d*1.03),metalMat(0x161b28,0.55,0.35));
-  foot.position.y=0.035; foot.receiveShadow=true; g.add(foot);
-  const cap=new THREE.Mesh(new THREE.BoxGeometry(w*1.01,0.03,d*1.01),bodyMat(0xb4bfd2,{roughness:0.35}));
-  cap.position.y=h+0.015; g.add(cap);
+  // 앞면 — 파인 홈(어두움) 위에 도어 두 장
+  const rw=w-0.16, rh=h-0.40, ry=h*0.50;
+  const rec=new THREE.Mesh(new THREE.BoxGeometry(rw,rh,0.02),darkMat);
+  rec.position.set(0,ry,d/2-0.004); g.add(rec);
+  const dw=(rw-0.035)/2, dh=rh-0.03;
+  for(const sx of [-1,1]){
+    const dr=new THREE.Mesh(new THREE.BoxGeometry(dw,dh,0.022),bodyMat(color,{roughness:(o.roughness??0.42)+0.04}));
+    dr.position.set(sx*(dw/2+0.0175), ry, d/2+0.006); dr.castShadow=true; g.add(dr);
+    // 손잡이 — 문 안쪽 모서리에 세로로
+    const hd=new THREE.Mesh(new THREE.CylinderGeometry(0.011,0.011,Math.min(0.34,dh*0.42),8),plateMat);
+    hd.position.set(sx*0.055, ry, d/2+0.030); g.add(hd);
+    for(const hy of [-0.5,0.5]){
+      const br2=new THREE.Mesh(new THREE.BoxGeometry(0.016,0.016,0.026),plateMat);
+      br2.position.set(sx*0.055, ry+hy*Math.min(0.34,dh*0.42), d/2+0.019); g.add(br2);
+    }
+    // 경첩 — 문 바깥쪽
+    for(const hy of [-0.36,0,0.36]){
+      const hg=new THREE.Mesh(new THREE.CylinderGeometry(0.014,0.014,0.05,8),plateMat);
+      hg.position.set(sx*(rw/2-0.012), ry+hy*dh*0.5, d/2+0.004); g.add(hg);
+    }
+  }
+  // 킥플레이트 — 바닥에 닿는 띠는 다른 재질이어야 «놓인» 것으로 보인다
+  const kick=new THREE.Mesh(new THREE.BoxGeometry(w-0.02,0.17,d-0.02),plateMat);
+  kick.position.y=0.085; kick.castShadow=kick.receiveShadow=true; g.add(kick);
+  const foot=new THREE.Mesh(new THREE.BoxGeometry(w*1.02,0.05,d*1.02),darkMat);
+  foot.position.y=0.025; foot.receiveShadow=true; g.add(foot);
+  // 상단 캡 + 챔퍼 한 줄 — 위 모서리가 빛을 물어야 «금속»이다
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(w+0.015,0.035,d+0.015),bodyMat(0xb4bfd2,{roughness:0.33}));
+  cap.position.y=h+0.017; cap.castShadow=true; g.add(cap);
+  const chm=new THREE.Mesh(new THREE.BoxGeometry(w+0.02,0.012,d+0.02),plateMat);
+  chm.position.y=h-0.006; g.add(chm);
+  // 명판 — 글자는 넣지 않는다(공개 저장소 규약). 판만 있어도 «제품»으로 읽힌다.
+  const np=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.055,0.006),plateMat);
+  np.position.set(-w*0.24, h*0.82, d/2+0.020); g.add(np);
   return g;
 }
 function louvered(w,h,color){
   const g=new THREE.Group();
+  const fr=new THREE.Mesh(new THREE.BoxGeometry(w+0.035,h+0.035,0.028),plateMat); g.add(fr);   // 테두리
   g.add(new THREE.Mesh(new THREE.BoxGeometry(w,h,0.03),bodyMat(color,{roughness:0.55})));
-  const cav=new THREE.Mesh(new THREE.BoxGeometry(w*0.92,h*0.92,0.01),new THREE.MeshStandardMaterial({color:0x0c101a,roughness:0.9}));
-  cav.position.z=0.012; g.add(cav);
+  const cav=new THREE.Mesh(new THREE.BoxGeometry(w*0.92,h*0.92,0.01),darkMat);
+  cav.position.z=0.014; g.add(cav);
   for(let i=0,n=Math.floor(h*0.9/0.05);i<n;i++){
     const bar=new THREE.Mesh(new THREE.BoxGeometry(w*0.86,0.012,0.035),metalMat(0x2a3040,0.5,0.4));
-    bar.position.set(0,-h*0.44+i*0.05,0.02); g.add(bar);
+    bar.position.set(0,-h*0.44+i*0.05,0.022); g.add(bar);
   }
   return g;
 }
-const LAMPS=[];
-function signalTower(idx){
+const LAMPS=[], REDS=[];
+function signalTower(idx, alarm){
   const g=new THREE.Group();
   g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.05,0.03,10),metalMat(0x1c2230)));
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.018,0.20,8),metalMat(0x242b3a)); pole.position.y=0.12; g.add(pole);
@@ -115,7 +159,8 @@ function signalTower(idx){
     const m=new THREE.MeshStandardMaterial({color:i===2?on:off,emissive:i===2?on:0x000000,emissiveIntensity:0.1,roughness:0.45});
     const l=new THREE.Mesh(new THREE.CylinderGeometry(0.048,0.048,0.055,12),m);
     l.position.y=0.065+i*0.062; g.add(l);
-    if(i===2) LAMPS.push({m,idx});      // 초록만 살아 있다 — «정상»의 맥박
+    if(alarm){ if(i===0) REDS.push(m); if(i===2){ m.emissive.setHex(0x0a1a0f); m.emissiveIntensity=0.05; } }
+    else if(i===2) LAMPS.push({m,idx});   // 초록만 살아 있다 — «정상»의 맥박
   });
   return g;
 }
@@ -146,48 +191,92 @@ const HMI=(()=>{
   }
   return {mat,draw};
 })();
+// ⚠ 화면을 도어 «면»에 붙이면 1mm 차이로 가려져 검게 나온다(실측). 실물 HMI 도 함체가 돌출돼 있다 —
+//   케이스를 만들어 앞으로 빼면 가림도 사라지고 «조작반»으로 읽힌다.
 function screen(w,h){
+  const g=new THREE.Group();
+  const box=new THREE.Mesh(new THREE.BoxGeometry(w*1.20,h*1.32,0.07),plateMat);
+  box.castShadow=true; g.add(box);
+  const bz=new THREE.Mesh(new THREE.BoxGeometry(w*1.08,h*1.16,0.02),darkMat);
+  bz.position.z=0.035; g.add(bz);
   const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),HMI.mat);
-  const bz=new THREE.Mesh(new THREE.BoxGeometry(w*1.12,h*1.20,0.02),metalMat(0x141a26,0.5,0.35));
-  bz.position.z=-0.013; m.add(bz);
-  return m;
+  m.position.z=0.047; g.add(m);
+  // 조작 버튼 두 개 — 작지만 «사람이 만지는 물건»이라는 신호다
+  for(const bx of [-0.30,-0.16]){
+    const bt=new THREE.Mesh(new THREE.CylinderGeometry(0.013,0.013,0.012,10),plateMat);
+    bt.rotation.x=Math.PI/2; bt.position.set(w*bx,-h*0.60,0.040); g.add(bt);
+  }
+  return g;
 }
 
 // ── 설비 한 대 (스크러버 / 칠러)
-function buildScrubber(i){
+function buildScrubber(i, alarm){
   const g=new THREE.Group();
   g.add(cabinet(1.02,1.86,0.82,0xaab6c9,{roughness:0.4}));
-  const bb=new THREE.Mesh(new THREE.BoxGeometry(0.52,0.26,0.46),bodyMat(0x96a2b6,{roughness:0.5}));
-  bb.position.set(0.08,2.01,0.03); bb.castShadow=true; g.add(bb);
-  [[-0.14,0.1],[0.05,0.1],[0.23,0.1],[-0.03,-0.09],[0.18,-0.09]].forEach(([a,b])=>{
-    const pi=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.2,10),metalMat(0x99a3b4,0.28,0.65));
-    pi.position.set(0.08+a,2.24,0.03+b); pi.castShadow=true; g.add(pi);
+  // 버너 뭉치 + 배기 스택
+  const bb=new THREE.Mesh(new THREE.BoxGeometry(0.54,0.28,0.48),bodyMat(0x96a2b6,{roughness:0.5}));
+  bb.position.set(0.08,2.02,0.03); bb.castShadow=true; g.add(bb);
+  const bbc=new THREE.Mesh(new THREE.BoxGeometry(0.57,0.02,0.51),plateMat); bbc.position.set(0.08,2.17,0.03); g.add(bbc);
+  // ⚠ 배관이 «어디로도 가지 않으면» 장식으로 보인다 — 천장 랙(y≈4.3)까지 올려 연결한다.
+  // ⚠ 굵은 관 세 줄을 세우면 «오르간 파이프»가 된다(실측) — 가늘게 두 줄이면 배관으로 읽힌다.
+  [[-0.13,0.10,0.034],[0.09,0.06,0.028]].forEach(([ax,az,r])=>{
+    const up=new THREE.Mesh(new THREE.CylinderGeometry(r,r,1.80,10),metalMat(0x99a3b4,0.30,0.62));
+    up.position.set(0.08+ax,3.08,0.03+az); up.castShadow=true; g.add(up);
+    for(const fy of [2.22,3.94]){                       // 플랜지 — 이음매가 있어야 «배관»이다
+      const fl=new THREE.Mesh(new THREE.CylinderGeometry(r*1.6,r*1.6,0.026,12),plateMat);
+      fl.position.set(0.08+ax,fy,0.03+az); g.add(fl);
+    }
   });
-  const lv=louvered(0.62,0.5,0xb6c0d1); lv.rotation.y=Math.PI/2; lv.position.set(-0.515,0.42,-0.05); g.add(lv);
-  const f=screen(0.60,0.38); f.position.set(0,1.46,0.416); g.add(f);
-  const tw=signalTower(i); tw.position.set(-0.40,1.86,0.28); g.add(tw);
+  const lv=louvered(0.62,0.5,0xb6c0d1); lv.rotation.y=Math.PI/2; lv.position.set(-0.522,0.42,-0.05); g.add(lv);
+  // 유틸리티 박스 + 케이블 글랜드 — 옆구리가 비면 «상자»로 보인다
+  const ub=new THREE.Mesh(new THREE.BoxGeometry(0.10,0.34,0.26),plateMat);
+  ub.position.set(0.535,1.10,-0.14); ub.castShadow=true; g.add(ub);
+  for(const cy of [0.90,0.82]){
+    const cg=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.08,8),darkMat);
+    cg.rotation.z=Math.PI/2; cg.position.set(0.575,cy,-0.14); g.add(cg);
+  }
+  const f=screen(0.56,0.36); f.position.set(0.02,1.44,0.452); g.add(f);
+  const tw=signalTower(i, alarm); tw.position.set(-0.40,1.90,0.28); g.add(tw);
   return g;
 }
 function buildChiller(i){
   const g=new THREE.Group();
   g.add(cabinet(0.70,1.52,0.58,0xa3afc3,{roughness:0.4}));
   const top=new THREE.Mesh(new THREE.BoxGeometry(0.70,0.20,0.58),bodyMat(0xaeb9cd,{roughness:0.38}));
-  top.position.y=1.62; top.castShadow=true; g.add(top);
-  const lv=louvered(0.80,0.60,0xacb7c9); lv.rotation.y=Math.PI/2; lv.position.set(0.355,0.46,0); g.add(lv);
-  const f=screen(0.46,0.29); f.position.set(0,1.20,0.296); g.add(f);
-  const tw=signalTower(i); tw.position.set(-0.24,1.55,0.18); tw.scale.setScalar(0.8); g.add(tw);
+  top.position.y=1.64; top.castShadow=true; g.add(top);
+  const tc=new THREE.Mesh(new THREE.BoxGeometry(0.73,0.02,0.61),plateMat); tc.position.y=1.75; g.add(tc);
+  const lv=louvered(0.80,0.60,0xacb7c9); lv.rotation.y=Math.PI/2; lv.position.set(0.362,0.46,0); g.add(lv);
+  // 냉각수 배관 — 왕복 두 줄이 천장으로. 칠러는 «물이 드나드는 기계»다.
+  for(const [ax,r] of [[-0.19,0.030],[-0.07,0.030]]){
+    const up=new THREE.Mesh(new THREE.CylinderGeometry(r,r,2.15,10),metalMat(0x8e99ab,0.32,0.6));
+    up.position.set(ax,2.88,-0.12); up.castShadow=true; g.add(up);
+    for(const fy of [1.82,3.93]){
+      const fl=new THREE.Mesh(new THREE.CylinderGeometry(r*1.5,r*1.5,0.026,12),plateMat);
+      fl.position.set(ax,fy,-0.12); g.add(fl);
+    }
+  }
+  const f=screen(0.42,0.27); f.position.set(0.02,1.18,0.332); g.add(f);
+  const tw=signalTower(i, false); tw.position.set(-0.24,1.76,0.18); tw.scale.setScalar(0.8); g.add(tw);
   return g;
 }
 
 // ── 도열. 앞줄(주인공)과 뒷줄(밀도) 두 벌 — 뒷줄은 안개에 묻혀 «끝이 없다»를 만든다.
 //    ⚠ 간격을 일정하게 두면 «렌더»로 보인다. 결정적 난수로 아주 조금씩 흔든다.
 const rnd=mulberry(20260914);
+// ⚠ 경보는 «한 대만». 여러 대가 울면 재난 영상이 된다 — 이 영상의 주제는 «한 건이 번지지 않았다»다.
+const ALARM_I=3, ALARM_Z=-7.65, ALARM_X=2.35;
 for(let i=0;i<14;i++){
-  const m = (i%2===0) ? buildScrubber(i) : buildChiller(i);
-  m.position.set(2.35+(rnd()-0.5)*0.10, 0, -0.6-i*2.35+(rnd()-0.5)*0.14);
-  m.rotation.y = -Math.PI/2 + (rnd()-0.5)*0.035;      // 통로를 향해 선다
+  const alarm = (i===ALARM_I);
+  const m = alarm ? buildScrubber(i,true) : ((i%2===0) ? buildScrubber(i,false) : buildChiller(i));
+  m.position.set(ALARM_X+(alarm?0:(rnd()-0.5)*0.10), 0, alarm?ALARM_Z:(-0.6-i*2.35+(rnd()-0.5)*0.14));
+  m.rotation.y = -Math.PI/2 + (alarm?0:(rnd()-0.5)*0.035);   // 통로를 향해 선다
   S.add(m);
 }
+// 경광 조명 — «빛이 주변에 번져야» 경보로 읽힌다. 램프만 빨개지면 스티커처럼 보인다.
+const beacon=new THREE.PointLight(0xff3b2e, 0, 7.0, 2.0);
+beacon.position.set(ALARM_X-0.50, 2.32, ALARM_Z+0.10); S.add(beacon);
+const beaconFar=new THREE.PointLight(0xff5a3a, 0, 13, 2.0);
+beaconFar.position.set(ALARM_X-1.10, 1.55, ALARM_Z+0.05); S.add(beaconFar);
 for(let i=0;i<12;i++){
   const m = (i%2===0) ? buildChiller(i+40) : buildScrubber(i+40);
   m.position.set(6.6+(rnd()-0.5)*0.12, 0, -1.4-i*2.6+(rnd()-0.5)*0.2);
@@ -205,21 +294,21 @@ for(let i=0;i<9;i++){
 // ── 천장 배관 — 통로를 따라 달린다. «지하 서브팹»의 서명이다.
 {
   const G=new THREE.Group(); S.add(G);
-  for(const [x,y,r] of [[2.2,4.35,0.10],[2.7,4.35,0.075],[3.15,4.35,0.055],[6.4,4.6,0.09]]){
+  for(const [x,y,r] of [[2.2,4.02,0.10],[2.7,4.02,0.075],[3.15,4.02,0.055],[6.4,4.25,0.09]]){
     const pipe=new THREE.Mesh(new THREE.CylinderGeometry(r,r,70,10),metalMat(0x232b3c,0.55,0.45));
     pipe.rotation.x=Math.PI/2; pipe.position.set(x,y,-32); G.add(pipe);
   }
   // 케이블 트레이
   const tray=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.09,70),metalMat(0x2a3245,0.6,0.45));
-  tray.position.set(1.55,4.62,-32); G.add(tray);
+  tray.position.set(1.55,4.30,-32); G.add(tray);
   for(let i=0;i<3;i++){
     const c=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,70,6),metalMat(0x18202e,0.85,0.15));
-    c.rotation.x=Math.PI/2; c.position.set(1.4+i*0.13,4.70,-32); G.add(c);
+    c.rotation.x=Math.PI/2; c.position.set(1.4+i*0.13,4.38,-32); G.add(c);
   }
   // 행거 — 배관이 «떠 있지» 않게
   for(let i=0;i<16;i++){
     const hg=new THREE.Mesh(new THREE.BoxGeometry(2.1,0.05,0.05),metalMat(0x1e2634,0.6,0.4));
-    hg.position.set(2.4,4.52,-1-i*2.4); G.add(hg);
+    hg.position.set(2.4,4.19,-1-i*2.4); G.add(hg);
   }
 }
 // 광선 — 통로 위 조명. 이 장면의 «공기»이자 리듬(일정 간격으로 지나간다).
@@ -241,12 +330,19 @@ function seek(t){
   t=clamp(t,0,DUR);
   // ── 카메라: 통로를 따라 «아주 천천히» 전진 + 미세 상승. 손맛 없는 기계적 이동이라야 진중하다.
   const k=eio(t/DUR);
-  C.position.set(lerp(0.50,0.86,k), lerp(1.64,1.54,k), lerp(7.10,5.35,k));
-  C.lookAt(lerp(2.20,2.10,k), lerp(1.32,1.36,k), lerp(-5.0,-7.4,k));
+  // ⚠ 통로 «안»에서 열을 따라 보면 앞 설비는 옆면만 보인다 — 조작반이 왼쪽(-x)을 향하기 때문이다(실측:
+  //   가까운 설비의 HMI 가 통째로 안 보였다). 통로 «바깥»에서 비스듬히 봐야 정면이 선다.
+  C.position.set(lerp(-2.15,-1.60,k), lerp(1.80,1.70,k), lerp(5.10,3.75,k));
+  C.lookAt(lerp(1.95,2.05,k), lerp(1.26,1.22,k), lerp(-4.6,-5.4,k));
 
   HMI.draw(t);
   // 신호탑 — 줄을 따라 위상이 조금씩 밀린다. «각자 살아 있다»로 읽히되 깜빡이지는 않는다.
   LAMPS.forEach(l=>{ l.m.emissiveIntensity = 0.34+0.20*Math.sin(t*1.4 - l.idx*0.55); });
+  // 경광등: «회전»이라 한 바퀴마다 정면을 스친다. 1.15Hz 고정 — 2Hz 를 넘기면 파티 조명이 된다.
+  const ph=(t*1.15)%1, sweep=Math.pow(Math.max(0,Math.sin(ph*Math.PI)),2.6);
+  REDS.forEach(m=>{ m.emissive.setHex(0xff3b2e); m.emissiveIntensity=0.25+2.6*sweep; });
+  beacon.intensity    = 1.0+6.8*sweep;
+  beaconFar.intensity = 0.45+2.4*sweep;
   for(let i=0;i<DN;i++){ const d=DBASE[i];
     dpos[i*3  ]=d.x+Math.sin(t*d.s*0.7+d.ph)*0.08;
     dpos[i*3+1]=d.y+Math.sin(t*d.s    +d.ph)*0.12;
