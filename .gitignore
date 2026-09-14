@@ -51,6 +51,12 @@ shortform/chk2/
 shortform/3d/node_modules/
 shortform/3d/f3d*/
 shortform/3d/probe*/
+# 제품 실물 사진 텍스처 — «반입 가부를 확인받기 전까지» 올리지 않는다.
+#   도열 씬(s7.html)의 설비는 GAIA 실물 사진을 판에 붙인 2.5D 빌보드다. 제품 마케팅
+#   이미지로 보이지만 이 저장소는 공개이므로, 확인 없이 올리면 되돌릴 수 없다(지워도 이력에 남는다).
+#   ⚠ 이 파일이 없으면 설비가 흰 판으로 렌더된다 — 그때는 ?bb=0 으로 순수 3D 경로를 쓴다.
+#   승인이 나면 이 줄을 지우고 커밋한다.
+shortform/3d/tex/
 shortform/cframes/
 shortform/_cv.mp4
 # 구간 확인용 클립 — 검토가 끝나면 버린다(최종본만 저장소에 둔다)
