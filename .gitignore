@@ -34,7 +34,7 @@ Thumbs.db
 shortform/fonts/
 shortform/frames*/
 shortform/bgm.wav
-shortform/bgm-short.wav
+shortform/bgm-*.wav
 shortform/video_only.mp4
 # 인물 사진은 공개 저장소에 올리지 않는다(얼굴 사진)
 shortform/portraits/
