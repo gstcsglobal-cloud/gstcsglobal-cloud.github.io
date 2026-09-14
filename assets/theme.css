@@ -216,6 +216,31 @@ body.theme-light .card:hover{
 .kpi .kdb:hover{opacity:1;color:var(--txt-main);border-color:var(--accent-2)}
 @media (hover:none){.kpi .kdb{opacity:.6}}
 @media print{.kpi .kdb{display:none}}
+
+/* 데이터 품질 카드 (v135 · 7단계) — 페이지 맨 아래 한 벌.
+   ⚠ 색으로만 등급을 말하지 않는다. 왼쪽 띠 + 글자색 둘 다 준다(인쇄·색각 대비). */
+.gst-dq{margin:18px 0 8px}
+.gst-dq-ok{padding:10px 2px;font-size:12.5px;color:var(--txt-muted)}
+.gst-dq-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.gst-dq-t th{text-align:left;padding:7px 10px;color:var(--txt-muted);font-weight:600;
+  border-bottom:1px solid var(--bd,rgba(255,255,255,.12));white-space:nowrap}
+.gst-dq-t td{padding:8px 10px;border-bottom:1px solid var(--bd,rgba(255,255,255,.07));vertical-align:top}
+.gst-dq-t td.dq-n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.gst-dq-t tr.dq-bad  td:first-child{border-left:3px solid var(--bad);padding-left:8px;color:var(--bad)}
+.gst-dq-t tr.dq-warn td:first-child{border-left:3px solid var(--warn);padding-left:8px;color:var(--warn)}
+.gst-dq-t tr.dq-info td:first-child{border-left:3px solid var(--txt-muted);padding-left:8px}
+
+/* 입력률 안내 — fault 안의 인라인 스타일을 core 로 올리면서 한 벌로 (v135 · 7단계) */
+/* 인사이트 줄 안의 «그 탭으로 보내는» 버튼 (v135 · 7단계) — 사실만 적고 길을 안 주면
+   사람이 그 탭을 찾아 헤맨다. 인사이트는 innerHTML 로 그려지므로 여기 한 벌이면 된다. */
+.gst-ins .gst-go{margin-left:6px;padding:1px 7px;border:1px solid var(--accent-2);border-radius:6px;
+  background:transparent;color:inherit;font:inherit;font-size:11px;cursor:pointer}
+.gst-ins .gst-go:hover{background:var(--glass-hover)}
+@media print{.gst-ins .gst-go{display:none}}
+
+.fill-hint{margin:6px 0 2px;padding:7px 10px;border-radius:8px;
+  background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.35);
+  font-size:11.5px;line-height:1.45;color:var(--txt-main);opacity:.9}
 tr{transition:background .15s var(--ease)}
 select,input[type="date"],input[type="text"],input[type="password"]{transition:border-color .2s var(--ease), box-shadow .2s var(--ease)}
 select:hover,input:hover{border-color:var(--txt-muted) !important}

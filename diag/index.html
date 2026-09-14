@@ -6,7 +6,7 @@
 <title>S/N 조인 진단 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=139"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=140"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:var(--txt,#e6edf7);background:var(--bg-gradient,linear-gradient(-45deg,#16163a,#1e1d4d,#232057,#131230));
@@ -33,7 +33,7 @@ tr.tot td{border-top:1px solid var(--glassb,rgba(255,255,255,.16));font-weight:7
 .shape{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--mut,#8a97a5)}
 .big{font-size:15px;font-weight:800}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=139">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=140">
 </head>
 <body>
 <div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
@@ -51,6 +51,16 @@ tr.tot td{border-top:1px solid var(--glassb,rgba(255,255,255,.16));font-weight:7
   <h3>진행</h3>
   <div id="log">불러오는 중…</div>
   <button class="btn" id="goBtn" onclick="runDiag()" disabled style="margin-top:12px">다시 검사</button>
+</div>
+
+<div class="card" id="dqCard">
+  <h3>데이터 품질 — 여덟 화면 종합</h3>
+  <div class="note">
+    각 화면이 <b>마지막으로 그려질 때</b> 남긴 것을 모읍니다 — 이 브라우저 안에만 있고,
+    그 화면을 한 번도 안 열었으면 비어 있습니다. <b>이 수치는 그때 걸려 있던 필터 기준</b>이라
+    잰 시각과 필터를 같이 적습니다. 오래됐으면 그 화면을 다시 열고 여기로 돌아오세요.
+  </div>
+  <div id="dqAll">—</div>
 </div>
 
 <div class="card" id="resCard" style="display:none">
@@ -94,6 +104,35 @@ const MAT_URL =GST.sheetUrl('31302669');
 const INST_URL=GST.sheetUrl('891608329');
 
 const $=id=>document.getElementById(id);
+
+/* 여덟 화면의 데이터 품질 스냅샷을 한 표로. 페이지를 여덟 개 띄우지 않으려고 각 화면이
+   GST.dq.render() 에서 localStorage 에 남긴 것을 읽는다.
+   ⚠ «언제·어떤 필터로» 잰 것인지를 반드시 같이 적는다 — 안 적으면 어제 잰 수치를 지금
+     것으로 읽는다. 그게 이 저장소가 v128 에서 겪은 «조용한 폴백»과 같은 종류의 실패다. */
+const DQ_PAGES=[['report','주간현황'],['fault','고장분석'],['material','자재실적'],['pm','PM 점검'],
+                ['scrubber','설치현황'],['tco','TCO'],['cip','CIP'],['hr','인원현황']];
+function renderDqAll(){
+  const box=$('dqAll'); if(!box) return;
+  const esc=GST._esc, now=Date.now();
+  const parts=[];
+  DQ_PAGES.forEach(function(pg){
+    let o=null; try{ o=JSON.parse(localStorage.getItem('gst_dq_'+pg[0])||'null'); }catch(e){}
+    if(!o){ parts.push('<div class="note" style="margin:6px 0">— <b>'+esc(pg[1])+'</b> : 아직 한 번도 안 열었습니다</div>'); return; }
+    const mins=Math.round((now-(o.at||0))/60000);
+    const age = mins<60 ? (mins+'분 전') : (Math.round(mins/60)+'시간 전');
+    const head='<div style="margin:12px 0 4px"><b>'+esc(pg[1])+'</b> '
+      +'<span class="note" style="display:inline">· '+esc(age)+' · 필터 '+esc(o.filter||'전체')+'</span></div>';
+    if(!o.items || !o.items.length){ parts.push(head+'<div class="note">문제 없음</div>'); return; }
+    parts.push(head+'<table style="width:100%;border-collapse:collapse;font-size:12.5px">'
+      +o.items.map(function(d){
+        const cnt=d.n==null?'':(Number(d.n).toLocaleString()+(d.of==null?'':' / '+Number(d.of).toLocaleString()));
+        return '<tr><td style="padding:4px 8px 4px 0">'+esc(d.label)+'</td>'
+             + '<td style="padding:4px 8px;text-align:right;white-space:nowrap">'+esc(cnt)+'</td>'
+             + '<td style="padding:4px 0;color:var(--muted,#94a3b8)">'+esc(d.act)+'</td></tr>';
+      }).join('')+'</table>');
+  });
+  box.innerHTML=parts.join('');
+}
 function logLine(cls,msg){ const el=$('log'); if(el.textContent==='불러오는 중…')el.textContent='';
   el.insertAdjacentHTML('beforeend','<div class="'+(cls||'')+'">'+msg+'</div>'); }
 
@@ -280,6 +319,7 @@ GST.authGate().then(function(){ return GST.loadMe ? GST.loadMe() : null; }).then
     document.body.innerHTML='<div style="padding:40px;font:15px/1.7 sans-serif;color:#e6edf3">관리자 전용 화면입니다.</div>';
     return;
   }
+  renderDqAll();     // 스냅샷은 네트워크가 필요 없다 — S/N 진단보다 «먼저» 보여 준다
   runDiag();
 });
 </script>

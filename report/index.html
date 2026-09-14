@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=139"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=140"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -171,7 +171,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=139">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=140">
 </head>
 <body>
 
@@ -375,7 +375,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(138);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
+GST.needVer&&GST.needVer(140);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -441,7 +441,7 @@ ko:{sl_more:'주간현황 전용',title:'주간 현황',sub:'인력 · 교육 ·
  ch_man:'작업 공수 (h)',note_man:'PM · 서비스 · 설치 구분 (이상치 제외)',man_pm:'PM',man_np:'非PM',man_svc:'서비스',man_inst:'설치',
  ch_pc:'인당 작업 건수',note_pc:'구간 내 실제 투입 인원 기준',
  ch_sc:'PM 계획 대비 완료 (올해 누적)',note_sc:'계획 = 설비별 주기 기반 도래 건수 · 진행율은 툴팁',sc_plan:'계획(누적)',sc_done:'완료(누적)',
- ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',pv_stage:'작업단계',pv_sn:'설비 S/N',pv_s_ft:'고장 (BM·수리)',pv_s_wk:'작업 실적 (전체)',pv_s_hr:'인원',pv_s_io:'입·퇴사',pv_join:'입사',pv_quit:'퇴사',pv_active:'재직',ft_total:'건수',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) 만',ftv_abp:'All By-Pass 만',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
+ ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',pv_stage:'작업단계',pv_sn:'설비 S/N',pv_s_ft:'고장 (BM·수리)',pv_s_wk:'작업 실적 (전체)',pv_s_hr:'인원',pv_s_io:'입·퇴사',pv_join:'입사',pv_quit:'퇴사',pv_active:'재직',ft_total:'건수',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) 만',ftv_abp:'All By-Pass 만',dq_kra:'국내 알람 원장이 비어 수선실적 BM 으로 세는 중',dq_kra_a:'/upload/ 에서 「CS 알람관리」 워크북을 «알람» 대상으로 올리세요',dq_krb:'국내 All By-Pass 원장이 비어 그 지표가 0 입니다',dq_krb_a:'같은 워크북을 «올바이패스» 대상으로 한 번 더 올리세요',dq_divj:'실적 행에 사업부가 안 붙었습니다 — 사업부 필터에서 그 행은 그냥 통과합니다',dq_divj_a:'설치현황의 S/N 표기를 확인하세요 — 실적의 설비호기와 이어져야 합니다',dq_krj:'국내 원장 행이 설치현황과 안 이어졌습니다 — 단지·라인이 「미상」으로 몰립니다',dq_krj_a:'원장의 SEQP S/N 표기를 설치현황 S/N 과 맞추세요',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
  tbl_top:'고장 원인 TOP 3',th_cause:'원인',th_cnt:'건수',th_al:'Alarm Message',th_act:'조치',top_more:'외 {n}종',top_etc:'기타 {n}건 · 알람유형 미기재 {m}건',top_var:'(표기 {n}종 묶음)',
  top_alfb:'* 알람유형(Z열) 미기재 — 현상(AA열)으로 표기',
  tbl_op:'Scrubber 가동 현황',note_op:'가동 = 설비상태 Operation · 미가동 = 반납·Operation 을 뺀 나머지 상태 전부 · W/I = 무상(보증 안) · W/O = 유상 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 = 사이트별 설정(셀 ✎ 클릭 · 기본 40) · PM = 해당 구간 TBM · 마감일 기준',op_corp:'법인',op_corp2:'법인',op_cust2:'고객사',op_camp2:'단지',op_na:'미배치',op_na_t:'단지가 안 적힌 설비·인원 — 합계에서 빼지 않고 여기 담습니다',op_etc:'기타',op_etc_t:'상위 12개 밖 {n}개 — 합계가 맞게 여기 담습니다',op_wna:'⚠ 워런티 미기재 {n}대는 W/O 에 섞여 있습니다',op_nodata:'자료없음',op_nodata_t:'인원 자료를 아직 못 받았습니다 — 0명이 아닙니다',op_nop:'인원 자료 미수신 {n}개 법인: {list}',op_mrg:'{lbl} 는 한 팀이 담당해 한 행으로 셉니다 ({list})',op_amb:'⚠ 담당 FAB 을 알 수 없는 {n}명은 그 고객사의 가장 큰 행에 담았습니다',op_div:'구분',op_run_u:'가동 장비 대수',op_run_c:'가동 챔버수',op_idle:'미가동',op_staff:'담당 인원(명)',op_to:'목표 TO',op_gap:'증감(명)',op_hire:'모집계획',op_chp:'인당 챔버',op_pm:'PM(건)',op_unit:'장비',op_ch:'챔버',op_expat:'주재원',op_local:'현채인',op_fit:'적정 챔버',op_need:'인원(명)',
@@ -460,7 +460,7 @@ en:{sl_more:'Weekly only',title:'Weekly Status',sub:'Weekly/monthly summary — 
  ch_man:'Man-hours (h)',note_man:'PM · Service · Install (outliers excluded)',man_pm:'PM',man_np:'Non-PM',man_svc:'Service',man_inst:'Install',
  ch_pc:'Jobs per Person',note_pc:'based on workers actually deployed in period',
  ch_sc:'PM Plan vs Done (YTD cumulative)',note_sc:'plan = due events from per-tool cycles · progress in tooltip',sc_plan:'Plan (cum)',sc_done:'Done (cum)',
- ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',pv_stage:'Stage',pv_sn:'Equipment S/N',pv_s_ft:'Faults (BM)',pv_s_wk:'All work records',pv_s_hr:'Headcount',pv_s_io:'Join / Leave',pv_join:'Join',pv_quit:'Leave',pv_active:'Active',ft_total:'Count',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) only',ftv_abp:'All By-Pass only',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
+ ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',pv_stage:'Stage',pv_sn:'Equipment S/N',pv_s_ft:'Faults (BM)',pv_s_wk:'All work records',pv_s_hr:'Headcount',pv_s_io:'Join / Leave',pv_join:'Join',pv_quit:'Leave',pv_active:'Active',ft_total:'Count',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) only',ftv_abp:'All By-Pass only',dq_kra:'Domestic alarm ledger is empty — counting BM from the repair sheet instead',dq_kra_a:'Upload the CS alarm workbook as the «alarm» target via /upload/',dq_krb:'Domestic All By-Pass ledger is empty — that metric reads 0',dq_krb_a:'Upload the same workbook again as the «All By-Pass» target',dq_divj:'Some job rows have no division attached — they pass the division filter unfiltered',dq_divj_a:'Check the S/N wording in the install sheet against the job sheet',dq_krj:'Ledger rows did not join the install sheet — site/line fall into “unknown”',dq_krj_a:'Align the SEQP S/N wording in the ledger with the install sheet S/N',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
  tbl_top:'Top 3 Fault Causes',th_cause:'Cause',th_cnt:'Count',th_al:'Alarm Message',th_act:'Action',top_more:'+{n} more',top_etc:'others {n} · alarm blank {m}',top_var:'({n} variants)',
  top_alfb:'* alarm type blank (col Z) — showing symptom (col AA)',
  tbl_op:'Scrubber Operation Status',note_op:'running = status Operation · idle = every status except 반납 and Operation · W/I = 무상 (in warranty) · W/O = 유상 · chamber DUAL=2·SINGLE=1 · fit chambers/person editable per site (click ✎ · default 40) · PM = TBM in period · as of cutoff',op_corp:'Entity',op_corp2:'Entity',op_cust2:'Customer',op_camp2:'Campus',op_na:'Unassigned',op_na_t:'No campus on the sheet (units and people) — kept here so the total still adds up',op_etc:'Other',op_etc_t:'{n} beyond the top 12 — kept here so the total still adds up',op_wna:'⚠ {n} units have no warranty label — counted in W/O',op_nodata:'no data',op_nodata_t:'Headcount not received yet — not zero',op_nop:'Headcount not received for {n} entities: {list}',op_mrg:'{lbl} is one row — one team covers both ({list})',op_amb:'⚠ {n} people with no known FAB were placed in that customer\u2019s largest row',op_div:'Site',op_run_u:'Running Units',op_run_c:'Running Chambers',op_idle:'Idle',op_staff:'Staff',op_to:'Target TO',op_gap:'Gap',op_hire:'Hiring',op_chp:'Ch/person',op_pm:'PM',op_unit:'Units',op_ch:'Chambers',op_expat:'Expat',op_local:'Local',op_fit:'Fit ch.',op_need:'Headcount',
@@ -479,7 +479,7 @@ zh:{sl_more:'仅周现况',title:'周间现况',sub:'人力·教育·作业·PM�
  ch_man:'作业工时(h)',note_man:'PM·服务·安装区分(除异常值)',man_pm:'PM',man_np:'非PM',man_svc:'服务',man_inst:'安装',
  ch_pc:'人均作业件数',note_pc:'按区间内实际投入人员',
  ch_sc:'PM计划 vs 完成(今年累计)',note_sc:'计划=按设备周期到期件数 · 进度见提示框',sc_plan:'计划(累计)',sc_done:'完成(累计)',
- ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',pv_stage:'作业阶段',pv_sn:'设备S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全部作业记录',pv_s_hr:'人员',pv_s_io:'入职·离职',pv_join:'入职',pv_quit:'离职',pv_active:'在职',ft_total:'件数',ftv_all:'Alarm + All By-Pass',ftv_alarm:'仅 Alarm(BM)',ftv_abp:'仅 All By-Pass',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
+ ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',pv_stage:'作业阶段',pv_sn:'设备S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全部作业记录',pv_s_hr:'人员',pv_s_io:'入职·离职',pv_join:'入职',pv_quit:'离职',pv_active:'在职',ft_total:'件数',ftv_all:'Alarm + All By-Pass',ftv_alarm:'仅 Alarm(BM)',ftv_abp:'仅 All By-Pass',dq_kra:'国内报警台账为空 — 正以维修实绩 BM 计算',dq_kra_a:'请在 /upload/ 将「CS 报警管理」工作簿作为«报警»对象上传',dq_krb:'国内 All By-Pass 台账为空 — 该指标为 0',dq_krb_a:'请将同一工作簿再作为«All By-Pass»对象上传一次',dq_divj:'部分实绩行未关联事业部 — 这些行会直接通过事业部筛选',dq_divj_a:'请确认安装现况的 S/N 写法与实绩的设备号一致',dq_krj:'台账行未与安装现况关联 — 园区·线别会归入「未知」',dq_krj_a:'请使台账的 SEQP S/N 写法与安装现况 S/N 一致',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
  tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'Alarm Message',th_act:'措施',top_more:'其他{n}种',top_etc:'其他 {n}件 · 报警类型未填 {m}件',top_var:'({n}种写法合并)',
  top_alfb:'* 报警类型(Z列)未填 — 显示现象(AA列)',
  tbl_op:'Scrubber 运行现况',note_op:'运行 = 设备状态 Operation · 未运行 = 除「반납」与 Operation 以外的全部状态 · W/I=무상(保修内) · W/O=유상 · 腔体 DUAL=2·SINGLE=1 · 人均适定腔体可按站点修改(点✎ · 默认40) · PM=该区间TBM · 截止日基准',op_corp:'法人',op_corp2:'法人',op_cust2:'客户',op_camp2:'园区',op_na:'未分配',op_na_t:'表中未填园区的设备·人员 — 不从合计中剔除，归入此行',op_etc:'其他',op_etc_t:'前12名以外 {n} 个 — 归入此行以保证合计一致',op_wna:'⚠ 未填保修标记 {n} 台，计入 W/O',op_nodata:'无数据',op_nodata_t:'尚未收到人员数据 — 并非0人',op_nop:'{n}个法人未收到人员数据: {list}',op_mrg:'{lbl} 由同一团队负责，合并为一行 ({list})',op_amb:'⚠ 无法确定所属 FAB 的 {n} 人，已计入该客户最大的一行',op_div:'区分',op_run_u:'运行设备台数',op_run_c:'运行腔体数',op_idle:'未运行',op_staff:'负责人员(名)',op_to:'目标 TO',op_gap:'增减(名)',op_hire:'招聘计划',op_chp:'人均腔体',op_pm:'PM(件)',op_unit:'设备',op_ch:'腔体',op_expat:'驻在员',op_local:'当地雇员',op_fit:'适定腔体',op_need:'人员(名)',
@@ -498,7 +498,7 @@ ja:{sl_more:'週間現況専用',title:'週間現況',sub:'人員·教育·作�
  ch_man:'作業工数(h)',note_man:'PM·サービス·設置区分(異常値除外)',man_pm:'PM',man_np:'非PM',man_svc:'サービス',man_inst:'設置',
  ch_pc:'一人当たり作業件数',note_pc:'区間内の実投入人員基準',
  ch_sc:'PM計画対完了(今年累計)',note_sc:'計画=設備別周期の到来件数 · 進捗はツールチップ',sc_plan:'計画(累計)',sc_done:'完了(累計)',
- ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',pv_stage:'作業段階',pv_sn:'設備S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全作業記録',pv_s_hr:'人員',pv_s_io:'入社·退社',pv_join:'入社',pv_quit:'退社',pv_active:'在籍',ft_total:'件数',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) のみ',ftv_abp:'All By-Pass のみ',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
+ ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',pv_stage:'作業段階',pv_sn:'設備S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全作業記録',pv_s_hr:'人員',pv_s_io:'入社·退社',pv_join:'入社',pv_quit:'退社',pv_active:'在籍',ft_total:'件数',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) のみ',ftv_abp:'All By-Pass のみ',dq_kra:'国内アラーム元帳が空で、修繕実績 BM で数えています',dq_kra_a:'/upload/ で「CS アラーム管理」ワークブックを«アラーム»対象としてアップロードしてください',dq_krb:'国内 All By-Pass 元帳が空で、その指標が 0 です',dq_krb_a:'同じワークブックを«All By-Pass»対象としてもう一度アップロードしてください',dq_divj:'一部の実績行に事業部が付いていません — その行は事業部フィルタを素通りします',dq_divj_a:'設置現況の S/N 表記が実績の設備号と合っているか確認してください',dq_krj:'元帳の行が設置現況と結びつきませんでした — 団地·ラインが「不明」に寄ります',dq_krj_a:'元帳の SEQP S/N 表記を設置現況の S/N に合わせてください',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
  tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'Alarm Message',th_act:'対応',top_more:'他{n}種',top_etc:'その他 {n}件 · アラーム種別未記入 {m}件',top_var:'({n}表記まとめ)',
  top_alfb:'* アラーム種別(Z列)未記入 — 現象(AA列)で表示',
  tbl_op:'Scrubber 稼働現況',note_op:'稼働 = 設備状態 Operation · 未稼働 = 「반납」と Operation を除く全状態 · W/I=무상(保証内) · W/O=유상 · チャンバー DUAL=2·SINGLE=1 · 適正チャンバーはサイト別に編集可(✎クリック · 既定40) · PM=当該区間TBM · 締め日基準',op_corp:'法人',op_corp2:'法人',op_cust2:'顧客',op_camp2:'キャンパス',op_na:'未配置',op_na_t:'シートにキャンパス記載なしの設備・人員 — 合計から外さずここに入れます',op_etc:'その他',op_etc_t:'上位12以外 {n} 件 — 合計が合うようここに入れます',op_wna:'⚠ 保証区分未記入 {n} 台は W/O に含まれます',op_nodata:'データなし',op_nodata_t:'人員データ未受領 — 0名ではありません',op_nop:'人員データ未受領 {n}法人: {list}',op_mrg:'{lbl} は同一チームが担当のため1行にまとめています ({list})',op_amb:'⚠ 担当FABが不明な {n} 名は、その顧客の最大行に入れています',op_div:'区分',op_run_u:'稼働設備台数',op_run_c:'稼働チャンバー数',op_idle:'未稼働',op_staff:'担当人員(名)',op_to:'目標 TO',op_gap:'増減(名)',op_hire:'採用計画',op_chp:'一人当たり',op_pm:'PM(件)',op_unit:'設備',op_ch:'チャンバー',op_expat:'駐在員',op_local:'現地採用',op_fit:'適正チャンバー',op_need:'人員(名)',
@@ -1464,7 +1464,7 @@ function fillFilters(){
            line2:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
   syncCommon();
 }
-function render(){
+function render(){ GST.dq&&GST.dq.reset('report');
   GST.skeleton(false);
   const TH=GST.chartTheme(); GST.chartDefaults();
   Chart.defaults.onClick=onDrill;   // 막대/라인 클릭 → 구간 상세 드릴다운
@@ -2585,9 +2585,24 @@ function render(){
       const tip=rk.slice(0,10).map(r=>r.label+' ('+r.n+')').join('\n')+(rk.length>10?'\n…':'');
       return {html:html, tip:tip};
     };
+    /* 줄바꿈이 든 문장에만 .ml 을 단다 — 전부에 걸면 정적 HTML 의 들여쓰기 줄바꿈이
+       빈 줄로 뜬다(v135 · 5단계 규약). 마크업은 넣지 않는다(textContent 로 덮이므로). */
+    const _setEtc=txt=>{ const el=document.getElementById('top3Etc'); if(!el)return;
+      el.textContent=txt; el.classList.toggle('ml', txt.indexOf('\n')>=0); };
+    /* 입력률 안내 — 고장분석의 네 차트에는 있는데 «주간보고로 나가는 이 표»에는 없었다
+       (실측 알람유형 입력률 0.3%). 30% 를 넘으면 스스로 사라진다(GST.FILL_MIN).
+       ⚠ 툴팁이 아니라 노트에 적는다 — 툴팁은 인쇄·PPT 에 안 따라간다(v135 · 7단계). */
+    const _fillNote=(function(){
+      const n=f30.length; if(!n) return '';
+      const got=f30.filter(x=>String(x.alarm||'').trim()||String(x.phenom||'').trim()).length;
+      const pct=Math.round(got/n*100);
+      if(pct>=(GST.FILL_MIN||30)) return '';
+      const F=(GST.FILL_T&&(GST.FILL_T[LANG]||GST.FILL_T.ko))||'';
+      return F? '\n'+F.replace('{p}',pct).replace('{g}',got.toLocaleString()).replace('{n}',n.toLocaleString()) : '';
+    })();
     if(!top.length){ const _msg=noAl?t('top_allblank').replace('{m}',noAl):'—';
       body.innerHTML='<tr><td colspan="5" class="empty">'+_msg+'</td></tr>';
-      document.getElementById('top3Etc').textContent=(noAl?t('top_etc').replace('{n}',0).replace('{m}',noAl):'')+_krWarn; }
+      _setEtc((noAl?t('top_etc').replace('{n}',0).replace('{m}',noAl):'')+_krWarn+_fillNote); }
     else{
       body.innerHTML=top.slice(0,3).map((e,i)=>{
         const arr=e.arr;
@@ -2602,7 +2617,10 @@ function render(){
           +'<td'+(ac.tip?' title="'+esc(ac.tip)+'"':'')+'>'+ac.html+'</td></tr>';
       }).join('');
       const etcN=top.slice(3).reduce((a,e)=>a+e.arr.length,0);
-      document.getElementById('top3Etc').textContent=((etcN||noAl)?t('top_etc').replace('{n}',etcN).replace('{m}',noAl):'')+_krWarn;
+      /* «* 는 알람유형이 비어 현상으로 표기» 가 툴팁에만 있어 인쇄·PPT 에서 사라졌다 —
+         실제로 별표가 붙은 줄이 있을 때만 노트에도 적는다(v135 · 7단계). */
+      const _fb=top.slice(0,3).some(e=>e.arr.every(x=>!(x.alarm||'').trim())) ? ' · '+t('top_alfb') : '';
+      _setEtc(((etcN||noAl)?t('top_etc').replace('{n}',etcN).replace('{m}',noAl):'')+_fb+_krWarn+_fillNote);
     }
   }
 
@@ -2949,6 +2967,22 @@ function render(){
       text:t('ins_ft').replace('{n}','<b>'+f30n+'</b>').replace('{p}',fd==null?'—':(fd>0?'+':'')+fd+'%')});
     if(act.length)ins.push({sev:'info',text:t('ins_hc').replace('{n}','<b>'+act.length+'</b>').replace('{a}',joinM).replace('{b}',quitM)});
     GST.insights((HR.length||WK.length)?ins:[]);
+    /* 데이터 품질 카드 — 노트에 흩어진 «사실»을 한 자리에 모으고 «무엇을 하면 되는지»를 붙인다.
+       ⚠ 노트의 문장은 그대로 둔다(v92 규약 — Alarm 차트 주석 맨 앞이 그 자리다).
+         여기는 «모으는 자리»이지 옮기는 자리가 아니다. */
+    if(GST.dq){
+      if(!KR_ON && window._KRWHY)
+        GST.dq.push({key:'kr_alarm', sev:'warn', label:t('dq_kra')+' — '+window._KRWHY, act:t('dq_kra_a')});
+      if(window._KRWHYB)
+        GST.dq.push({key:'kr_abp', sev:'warn', label:t('dq_krb')+' — '+window._KRWHYB, act:t('dq_krb_a')});
+      const dj=window._DIVJOIN;
+      if(dj && dj.n && dj.hit<dj.n)
+        GST.dq.push({key:'div_join', sev:'info', label:t('dq_divj'), n:dj.n-dj.hit, of:dj.n, act:t('dq_divj_a')});
+      const kj=window._KRJOIN;
+      if(kj && kj.n && kj.hit<kj.n)
+        GST.dq.push({key:'kr_join', sev:'info', label:t('dq_krj'), n:kj.n-kj.hit, of:kj.n, act:t('dq_krj_a')});
+      GST.dq.render(GST.filtSummary?GST.filtSummary():'');
+    }
   }
   // 드릴다운용 데이터·구간 스냅샷 (표시 계층 전용, 계산 무관)
   {const per={}; ['cFt','cMan','cAtt','cHc','cCareer','cIo'].forEach(id=>{try{per[id]=PU(id).P;}catch(e){}});

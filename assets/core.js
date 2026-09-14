@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 139;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 140;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* 인사이트 띠의 머리글. 예전에는 «INSIGHT» 영문 대문자가 core 에 박혀 있어 네 언어 어디서도 안 바뀌고
    PPT 장표까지 그대로 나갔다(v135). core 의 공용 문자열 관례(GST._lang + 사전) 그대로다. */
 GST.INS_T = {ko:'요약', en:'Summary', zh:'摘要', ja:'要約'};
@@ -3369,6 +3369,111 @@ GST.insights = function(items){
     items.slice(0,4).map(function(it){
       return '<span class="gst-ins '+(it.sev||'info')+'"><span class="gst-ins-dot"></span>'+it.text+'</span>';
     }).join('');
+};
+
+/* ---------- 데이터 품질 레지스트리 (v135 · 7단계) ----------
+   무엇을 고치려는 것인가. 자료 결함 신호가 여덟 페이지에 마흔 곳 가까이 흩어져 있고
+   **모으는 자리가 없었다.** 게다가 절반은 «사실»만 말한다 — 「날짜 이상 데이터 12건」
+   을 본 사람이 무엇을 해야 하는지 화면 어디에도 없다. 그래서 레지스트리 하나를 두고
+   **`act`(무엇을 하면 되나)를 필수로** 받는다.
+
+   ⚠ 문구를 새로 짜지 않는다 — 각 페이지가 «이미 쓰고 있는 그 문장»이 정본이다.
+     여기서 다시 만들면 같은 결함을 화면과 카드가 다른 말로 적게 된다(제2원칙).
+   ⚠ 사실은 모두에게, 조치는 관리자에게 (A-4 · v135 2단계).
+     숫자의 뜻이 바뀌는 사실을 조회자에게서 지우면 그 사람만 경고 없이 빈 숫자를 본다
+     (core 의 「조용히 틀린 숫자를 보여주지 않는다」와 정면 충돌). 가리는 것은 «조치»뿐이고,
+     그 자리에는 「관리자에게 알려 주세요」가 들어간다.
+   ⚠ 이 수치는 «지금 걸린 필터» 기준이다 — 카드 머리에 기준 시각과 필터를 함께 적는다.
+     안 적으면 필터를 걸어 둔 사람이 전사 수치로 읽는다.                                */
+GST.DQ_T = {
+  ko:{title:'데이터 품질', none:'이 화면에서 발견된 자료 문제가 없습니다',
+      what:'무엇이', n:'건수', act:'무엇을 하면 되나',
+      tell:'관리자에게 알려 주세요', basis:'기준 {t} · 필터 {f}', all:'전체'},
+  en:{title:'Data quality', none:'No data problems found on this page',
+      what:'Finding', n:'Count', act:'What to do',
+      tell:'Let an administrator know', basis:'as of {t} · filter {f}', all:'all'},
+  zh:{title:'数据质量', none:'本页未发现数据问题',
+      what:'问题', n:'件数', act:'该怎么做',
+      tell:'请告知管理员', basis:'基准 {t} · 筛选 {f}', all:'全部'},
+  ja:{title:'データ品質', none:'この画面で見つかった資料の問題はありません',
+      what:'内容', n:'件数', act:'何をすればよいか',
+      tell:'管理者にお知らせください', basis:'基準 {t} · フィルタ {f}', all:'全体'}
+};
+GST._dqT = function(){ return GST.DQ_T[(GST._lang && GST._lang()) || 'ko'] || GST.DQ_T.ko; };
+GST.dq = {
+  _page:'', _l:[],
+  /* render() 첫머리에서 부른다 — 다시 그릴 때마다 새로 센다.
+     누적하면 필터를 두 번 바꿨을 때 같은 결함이 두 줄로 뜬다. */
+  reset:function(page){ this._page=page||this._page||''; this._l=[]; return this; },
+  /* o = {key, sev:'bad'|'warn'|'info', label, n, of, act}
+     - label 은 «이미 화면에 쓰는 그 문장»을 그대로 넘긴다(번역 완료된 문자열).
+     - act 가 없으면 담지 않는다. «무엇을 하면 되는지»가 이 레지스트리의 존재 이유다. */
+  push:function(o){
+    if(!o || !o.label) return this;
+    if(!o.act){ console.warn('[gst.dq] act 없는 신호는 담지 않는다 —', o.key||o.label); return this; }
+    this._l.push({key:o.key||'', sev:o.sev||'warn', label:String(o.label),
+                  n:(o.n==null?null:o.n), of:(o.of==null?null:o.of), act:String(o.act)});
+    return this;
+  },
+  list:function(){ return this._l.slice(); },
+  /* 페이지 하단에 카드 한 벌. render() 끝에서 부른다(신호를 다 담은 뒤). */
+  render:function(filterLabel){
+    const T=GST._dqT(), esc=GST._esc, adm=!!(GST.isAdmin && GST.isAdmin());
+    let box=document.getElementById('gstDq');
+    if(!box){
+      box=document.createElement('div'); box.id='gstDq'; box.className='card gst-dq';
+      document.body.appendChild(box);
+    }
+    const ts=new Date(), p2=function(v){ return String(v).padStart(2,'0'); };
+    const basis=T.basis.replace('{t}', ts.getFullYear()+'-'+p2(ts.getMonth()+1)+'-'+p2(ts.getDate())
+                 +' '+p2(ts.getHours())+':'+p2(ts.getMinutes()))
+                .replace('{f}', filterLabel || T.all);
+    const head='<h3>'+esc(T.title)+'</h3><div class="card-note">'+esc(basis)+'</div>';
+    if(!this._l.length){ box.innerHTML=head+'<div class="gst-dq-ok">'+esc(T.none)+'</div>'; }
+    else {
+      const rows=this._l.map(function(d){
+        const cnt=d.n==null ? '' : (d.n.toLocaleString()+(d.of==null?'':' / '+d.of.toLocaleString()));
+        return '<tr class="dq-'+d.sev+'"><td>'+esc(d.label)+'</td><td class="dq-n">'+esc(cnt)+'</td>'
+             + '<td>'+esc(adm ? d.act : T.tell)+'</td></tr>';
+      }).join('');
+      box.innerHTML=head+'<div style="overflow-x:auto"><table class="gst-dq-t"><thead><tr><th>'+esc(T.what)
+        +'</th><th>'+esc(T.n)+'</th><th>'+esc(T.act)+'</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    }
+    /* /diag/ 가 여덟 페이지를 한 표로 모을 수 있게 스냅샷을 남긴다.
+       ⚠ 진단 화면이 페이지를 여덟 개 띄우지 않아도 되게 하려는 것뿐이다 —
+         그래서 «언제·어떤 필터로 잰 것인지»를 같이 담는다. 없으면 오래된 수치를
+         지금 것으로 읽는다. localStorage 는 그 브라우저 안에만 산다(공유되지 않는다). */
+    try{ localStorage.setItem('gst_dq_'+(this._page||'page'),
+      JSON.stringify({at:ts.getTime(), filter:filterLabel||'', items:this._l})); }catch(e){}
+    return this;
+  }
+};
+
+/* 입력률이 낮은 열의 차트에 «왜 비어 보이는지»를 적는다 (v135 · 7단계에 core 로).
+   예전에는 fault 안에만 있어 입력률 0.3% 인 주간현황 TOP3 에는 없었다 —
+   주간보고로 나가는 표가 그 사실을 말하지 않으면 받아 본 사람이 결함으로 읽는다.
+   30% 를 넘으면 스스로 사라진다(현장이 채워 나가는 중이라 임계를 넘으면 안내가 방해다). */
+GST.FILL_T = {
+  ko:'ⓘ 이 항목은 시트 입력률이 {p}% ({g}/{n}건)입니다. 입력이 쌓이면 이 차트가 자동으로 채워집니다.',
+  en:'ⓘ This field is {p}% filled in the sheet ({g}/{n}). The chart fills in as entries accumulate.',
+  zh:'ⓘ 该项目表格填写率为 {p}% ({g}/{n}件)。随着录入增加，图表会自动补全。',
+  ja:'ⓘ この項目のシート入力率は {p}% ({g}/{n}件) です。入力が溜まればこのチャートは自動的に埋まります。'
+};
+GST.FILL_MIN = 30;
+GST.fillHint = function(canvasId, rows, key, altKey){
+  const cv=document.getElementById(canvasId); if(!cv || !cv.closest) return null;
+  const card=cv.closest(GST.CARD_SEL || '.card'); if(!card) return null;
+  let el=card.querySelector('.fill-hint');
+  const n=rows.length;
+  const got=rows.filter(function(r){
+    return String(r[key]||'').trim() || (altKey && String(r[altKey]||'').trim()); }).length;
+  const pct=n?Math.round(got/n*100):0;
+  if(!n || pct>=GST.FILL_MIN){ if(el) el.remove(); return null; }
+  if(!el){ el=document.createElement('div'); el.className='fill-hint';
+    card.insertBefore(el, card.querySelector('.cw')||null); }
+  const T=GST.FILL_T[(GST._lang && GST._lang()) || 'ko'] || GST.FILL_T.ko;
+  el.textContent=T.replace('{p}',pct).replace('{g}',got.toLocaleString()).replace('{n}',n.toLocaleString());
+  return {n:n, got:got, pct:pct};
 };
 
 // 페이지 내 소분류 탭 (섹션 내비게이션).

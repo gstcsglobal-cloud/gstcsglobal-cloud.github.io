@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=139"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=140"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -129,7 +129,7 @@ tr:hover td{background:var(--glass-hover)}
 @media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}}
 @media(max-width:768px){.card h3{padding-right:0}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=139">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=140">
 </head>
 <body>
 
@@ -327,7 +327,7 @@ tr:hover td{background:var(--glass-hover)}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(138);   // 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(140);   // 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
 const VER='v50';
@@ -372,7 +372,7 @@ ko:{title:'CIP 현황',sub:'스크러버 개조·점검(CIP) 항목별 진행 �
   etc:'기타',unk:'미상',days:'일',
   ins_rate:'진행율 {p}% · 잔여 {n}건',ins_proc:'{g} 공정 잔여 최다 {n}건 ({p}%)',
   ins_item:'항목 {v} — 잔여 {n}건으로 최다',ins_old:'180일 넘게 미착수 {n}건 — 우선 처리 필요',
-  ins_new:'{lab} 신규 완료 {n}건',ins_bad:'날짜 이상 데이터 {n}건 — 시트 확인 필요',
+  ins_new:'{lab} 신규 완료 {n}건',ins_bad:'날짜 이상 데이터 {n}건 — 시트 확인 필요',dq_bad_a:'CIP 시트에서 적용일·완료일이 1901년 같은 값인 행을 고치세요',dq_old:'180일 넘게 미착수',dq_old_a:'담당 공정에 일정을 잡으세요 — 항목·설비 탭에서 그 설비를 볼 수 있습니다',
   no_data:'조건에 맞는 데이터가 없습니다',search_ph:'S/N, Code, 세부공정...',rd_cip:'S/N|Floor|구분|항목|적용일|완료일',rd_cip_sn:'S/N|사이트|Floor|잔여 항목|항목',loading:'데이터 불러오는 중...',
   sec_ov:'개요',sec_proc:'공정',sec_item:'항목·설비',sec_dt:'상세',
   warn_cols:'CIP 항목 열 수가 예상과 다릅니다 ({s}: 예상 {e}개 · 실제 {a}개) — 시트에 열이 추가·삭제되었는지 확인하세요'},
@@ -401,7 +401,7 @@ en:{title:'CIP Status',sub:'Scrubber retrofit/inspection (CIP) progress by item'
   etc:'Others',unk:'N/A',days:'d',
   ins_rate:'progress {p}% · {n} remaining',ins_proc:'{g} has most remaining: {n} ({p}%)',
   ins_item:'Item {v} — most remaining at {n}',ins_old:'{n} items pending over 180 days — prioritize',
-  ins_new:'{lab}: {n} newly completed',ins_bad:'{n} rows with invalid dates — check the sheet',
+  ins_new:'{lab}: {n} newly completed',ins_bad:'{n} rows with invalid dates — check the sheet',dq_bad_a:'Fix rows whose applied/done date is something like 1901 in the CIP sheet',dq_old:'Pending over 180 days',dq_old_a:'Schedule them with the owning process — see the Item & Unit tab',
   no_data:'No data found',search_ph:'S/N, Code, sub-process...',rd_cip:'S/N|Floor|Group|Item|Applied|Done',rd_cip_sn:'S/N|Site|Floor|Remaining|Items',loading:'Loading...',
   sec_ov:'Overview',sec_proc:'Process',sec_item:'Item & Unit',sec_dt:'Detail',
   warn_cols:'CIP item column count differs ({s}: expected {e}, found {a}) — check for added/removed columns'},
@@ -430,7 +430,7 @@ zh:{title:'CIP 现况',sub:'洗涤器改造·点检(CIP)按项目进度管理',b
   etc:'其他',unk:'不明',days:'天',
   ins_rate:'进度 {p}% · 剩余 {n}件',ins_proc:'{g} 工艺剩余最多 {n}件 ({p}%)',
   ins_item:'项目 {v} — 剩余 {n}件最多',ins_old:'超180天未着手 {n}件 — 需优先处理',
-  ins_new:'{lab} 新增完成 {n}件',ins_bad:'日期异常数据 {n}件 — 请确认表格',
+  ins_new:'{lab} 新增完成 {n}件',ins_bad:'日期异常数据 {n}件 — 请确认表格',dq_bad_a:'请在 CIP 表中修正适用日·完成日为1901年之类的行',dq_old:'超180天未着手',dq_old_a:'请与负责工艺安排日程 — 可在项目·设备标签页查看该设备',
   no_data:'无数据',search_ph:'S/N、Code、细分工艺...',rd_cip:'S/N|楼层|分组|项目|适用日|完成日',rd_cip_sn:'S/N|站点|楼层|剩余项目|项目',loading:'加载中...',
   sec_ov:'概览',sec_proc:'工艺',sec_item:'项目·设备',sec_dt:'明细',
   warn_cols:'CIP项目列数与预期不符 ({s}: 预期{e}个 · 实际{a}个) — 请确认是否增删了列'},
@@ -459,7 +459,7 @@ ja:{title:'CIP 状況',sub:'スクラバー改造·点検(CIP)の項目別進捗
   etc:'その他',unk:'不明',days:'日',
   ins_rate:'進捗 {p}% · 残り {n}件',ins_proc:'{g} 工程の残りが最多 {n}件 ({p}%)',
   ins_item:'項目 {v} — 残り {n}件で最多',ins_old:'180日超の未着手 {n}件 — 優先処理が必要',
-  ins_new:'{lab} 新規完了 {n}件',ins_bad:'日付異常データ {n}件 — シート確認要',
+  ins_new:'{lab} 新規完了 {n}件',ins_bad:'日付異常データ {n}件 — シート確認要',dq_bad_a:'CIP シートで適用日·完了日が1901年のような行を修正してください',dq_old:'180日超の未着手',dq_old_a:'担当工程と日程を組んでください — 項目·設備タブでその設備を確認できます',
   no_data:'データなし',search_ph:'S/N・Code・詳細工程...',rd_cip:'S/N|フロア|区分|項目|適用日|完了日',rd_cip_sn:'S/N|サイト|フロア|残項目|項目',loading:'読込中...',
   sec_ov:'概要',sec_proc:'工程',sec_item:'項目·設備',sec_dt:'詳細',
   warn_cols:'CIP項目の列数が想定と異なります ({s}: 想定{e}個 · 実際{a}個) — 列の追加·削除を確認してください'}
@@ -785,7 +785,7 @@ function match(x){
 }
 
 // ── 렌더 ──
-function render(){
+function render(){ GST.dq&&GST.dq.reset('cip');
   const TH=GST.chartTheme();
   const _sty=GST.sty();   // 차트 색상 스타일 6종은 core.js(GST.STY) 공통
   const BAR_C=_sty.bar, BAR_LAST=_sty.last, DONE_C=_sty.bar, REM_C=TH.status.warn, LINE_C=_sty.line;
@@ -1165,9 +1165,15 @@ function render(){
   // ── 인사이트 (경고를 앞에 — 4개만 표시된다) ──
   const ins=[];
   if(BADN>0)ins.push({sev:'warn',text:t('ins_bad').replace('{n}','<b>'+BADN+'</b>')});
+  if(GST.dq&&BADN>0) GST.dq.push({key:'cip_baddate', sev:'warn',
+    label:t('ins_bad').replace('{n}',BADN.toLocaleString()), n:BADN, act:t('dq_bad_a')});
   {
     const oldN=snap.filter(x=>!isDone(x)&&x.ap&&(asOf-x.ap)/MS>180).length;
     if(oldN>0)ins.push({sev:'bad',text:t('ins_old').replace('{n}','<b>'+oldN.toLocaleString()+'</b>')});
+    /* «미착수 180일 초과» 는 자료 결함은 아니지만 사람이 조치해야 하는 것이라 같은 카드에 담는다 —
+       품질 카드는 «무엇을 하면 되는지»를 모으는 자리다. */
+    if(GST.dq&&oldN>0) GST.dq.push({key:'cip_old', sev:'bad', label:t('dq_old'),
+      n:oldN, of:nR, act:t('dq_old_a')});
   }
   ins.push({sev:rate>=80?'ok':rate>=50?'info':'warn',
     text:t('ins_rate').replace('{p}','<b>'+rate+'</b>').replace('{n}','<b>'+nR.toLocaleString()+'</b>')});
@@ -1185,6 +1191,7 @@ function render(){
   }
   if(newLast>0)ins.push({sev:'ok',text:t('ins_new').replace('{lab}','<b>'+lastP.label+'</b>').replace('{n}','<b>'+newLast+'</b>')});
   GST.insights(CIP.length?ins:[]);
+  GST.dq&&GST.dq.render(GST.filtSummary?GST.filtSummary():'');
 
   // 🔔 자동 브리핑 — 추이 차트가 쓰는 시계열을 그대로 넘긴다
   try{
