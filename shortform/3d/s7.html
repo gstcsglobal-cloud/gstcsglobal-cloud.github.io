@@ -31,9 +31,11 @@ import { OutputPass }     from 'three/addons/postprocessing/OutputPass.js';
 import { Reflector }      from 'three/addons/objects/Reflector.js';
 import { BokehPass }      from 'three/addons/postprocessing/BokehPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+RectAreaLightUniformsLib.init();
 const HQ = new URLSearchParams(location.search).get('hq') !== '0';
 const W=1920,H=1080;
-const DUR = (sh=>sh==='pipe'?4.0:sh==='macro'?3.0:6.4)(new URLSearchParams(location.search).get('shot'));
+const DUR = (sh=>sh==='pipe'?4.0:sh==='macro'?3.0:sh==='studio'?5.0:6.4)(new URLSearchParams(location.search).get('shot'));
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const p=(t,a,b)=>clamp((t-a)/(b-a),0,1);
 const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
@@ -58,6 +60,10 @@ const PIPE = SHOT === 'pipe';
 //     보이지만, 어둡고 얕은 심도에서는 초점 밖이 전부 녹아 디테일을 만들 필요가 없어진다.
 //     공간 컷(도열)은 규모를 말하므로 계속 밝게 간다 — 두 등록이 각자 다른 일을 한다.
 const MACRO = SHOT === 'macro';
+//   ?shot=studio  «제품» 등록 — 흰 사이클로라마에 설비만 세운다(LAM 참고본 방식).
+//   ⚠ 팹 실내를 사진처럼 만드는 것보다 «훨씬» 쉽고, 결과는 더 비싸 보인다. 배경이 없으므로
+//     빛과 면 분할만 남고, 그 둘은 우리가 통제할 수 있는 것들이다. 제품이 주인공인 컷은 이쪽이다.
+const STUDIO = SHOT === 'studio';
 const TEX = new THREE.TextureLoader();
 const GAIA_TEX = TEX.load('tex/gaia.png');
 GAIA_TEX.colorSpace = THREE.SRGBColorSpace; GAIA_TEX.anisotropy = 8;
@@ -112,6 +118,23 @@ function makeEnv(){
   const t=new THREE.CubeTexture(faces); t.needsUpdate=true; return t;
 }
 const ENV=makeEnv();
+// 흰 스튜디오 — 배경이 «무한 흰 면»이라 바닥선이 안 보인다. 원통 벽 + 바닥을 같은 값으로 두면
+// 접합부가 사라지고, 그 위에 제품의 접지 그림자만 남는다(참고본이 정확히 그 구성이다).
+function buildCyc(){
+  // ⚠ 원통 + 원판으로 만들면 바닥에 «각»이 생겨 배경이 그냥 방이 된다. 실제 촬영 호리존트는
+  //   바닥이 벽으로 «말려 올라간다» — 그 곡면이 있어야 배경에서 선이 사라진다.
+  const pts=[new THREE.Vector2(0,0), new THREE.Vector2(5.2,0)];
+  for(let i=1;i<=12;i++){                    // 1/4 원 필렛 — 바닥에서 벽으로
+    const a=i/12*Math.PI/2;
+    pts.push(new THREE.Vector2(5.2+Math.sin(a)*2.6, (1-Math.cos(a))*2.6));
+  }
+  pts.push(new THREE.Vector2(7.8,9.0));
+  const G=new THREE.Mesh(new THREE.LatheGeometry(pts,72),
+    new THREE.MeshStandardMaterial({color:0xdadde2,roughness:0.86,metalness:0.03,
+      side:THREE.BackSide}));
+  G.receiveShadow=true;
+  return G;
+}
 // 도장 판금 — 클리어코트를 올려 «칠한 금속»의 얕은 반사를 만든다. 이것이 없으면 플라스틱으로 보인다.
 const bodyMat=(color,o={})=>new THREE.MeshPhysicalMaterial({color,
   roughness:o.roughness??0.42, metalness:o.metalness??0.2, clearcoat:0.62, clearcoatRoughness:0.16,
@@ -190,7 +213,7 @@ for(const x of [0.55,1.05]){
 //      ② 파인 도어 — 문이 면과 같은 높이면 그림이 평평하다. 홈이 그림자를 만든다.
 //      ③ 손잡이·경첩 — 크기는 작지만 «열리는 물건»이라는 신호는 이것뿐이다.
 //      ④ 킥플레이트·레벨링 발 — 바닥에 닿는 부분이 다른 재질이어야 설비가 «놓인» 것으로 보인다.
-const frameMat=metalMat(0x1c222c,0.42,0.70);
+const frameMat=metalMat(0x3d434c,0.44,0.62);
 const darkMat =new THREE.MeshStandardMaterial({color:0x0a0f1a,roughness:0.85,metalness:0.2});
 const plateMat=metalMat(0x2a323f,0.34,0.78);
 function cabinet(w,h,d,color,o={}){
@@ -389,7 +412,7 @@ function buildScrubberBB(i, alarm){
   // 배출 덕트 — 규약상 «위는 배출구»다. 사진의 상판에서 천장까지 «끝까지» 올린다.
   // ⚠ 중간에서 끊으면 굴뚝 여러 개가 허공에 선 그림이 된다(실측: 첫 렌더가 그랬다).
   //   배관은 «어디로 가는지»가 보여야 배관이다 — 천장 덱에 물려야 서브팹으로 읽힌다.
-  const dy0=GAIA_H*0.87, dlen=CEILY-dy0;
+  const dy0=GAIA_H*0.87, dlen=STUDIO?0.42:(CEILY-dy0);
   const duct=new THREE.Mesh(new THREE.CylinderGeometry(0.046,0.046,dlen,10),metalMat(0x8d95a4,0.35,0.55));
   duct.position.set(-GAIA_W*0.16, dy0+dlen/2, 0.02); g.add(duct);
   const dfl=new THREE.Mesh(new THREE.CylinderGeometry(0.075,0.075,0.026,12),plateMat);
@@ -519,6 +542,13 @@ function pipeTo(p1,p2,rad,color){
 // ── 스크러버 (GAIA) — 사용자가 준 실물 사진을 따른다.
 //    ⚠ 옛 판이 실물과 달랐던 곳: 문이 두 짝이었고, 위에 «관 5개»가 서 있었고, 바닥이 플린스였다.
 //      실물은 «단문 + 상단 타공판 블록 + 상단 제어함 + 캐스터»다. 이 넷이 GAIA 의 얼굴이다.
+// 패널 이음선 — 얇게 «파인» 어두운 띠. 실물 판금은 한 장으로 만들지 않으므로 반드시 선이 있다.
+//   ⚠ 이 선들이 없으면 아무리 재질을 올려도 «큰 흰 상자»로 보인다(참고본 대비 가장 큰 차이였다).
+const SEAMM=new THREE.MeshStandardMaterial({color:0x6d6f72,roughness:0.85,metalness:0.1});
+function seamH(g,w,x,y,z){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,0.006,0.004),SEAMM);
+  m.position.set(x,y,z); g.add(m); }
+function seamV(g,h,x,y,z){ const m=new THREE.Mesh(new THREE.BoxGeometry(0.006,h,0.004),SEAMM);
+  m.position.set(x,y,z); g.add(m); }
 function buildScrubber(i, alarm){
   const g=new THREE.Group();
   const W=1.00,H=1.95,D=0.90, body=0xefeee9;
@@ -546,7 +576,8 @@ function buildScrubber(i, alarm){
 
   // ── 단문 도어 — 실물은 한 짝이다. 경첩 오른쪽 · 손잡이 왼쪽.
   const DZ=D/2+0.006, dw=W-0.15, dh=H-0.30, dy=Y0+H*0.50;
-  const rec=new THREE.Mesh(new THREE.BoxGeometry(dw+0.03,dh+0.03,0.02),darkMat);
+  const recM=new THREE.MeshStandardMaterial({color:0x4e535b,roughness:0.88,metalness:0.12});
+  const rec=new THREE.Mesh(new THREE.BoxGeometry(dw+0.03,dh+0.03,0.02),recM);
   rec.position.set(0,dy,D/2-0.004); g.add(rec);
   const door=new THREE.Mesh(new THREE.BoxGeometry(dw,dh,0.024),bodyMat(body,{roughness:0.48}));
   door.position.set(0,dy,DZ+0.006); door.castShadow=true; g.add(door);
@@ -557,10 +588,13 @@ function buildScrubber(i, alarm){
     hg.position.set(dw/2-0.012,dy+hy*dh*0.5,DZ+0.004); g.add(hg);
   }
   // 도어 루버 슬롯 — 사진의 «가로 슬롯 무리». 아래 세 무리 + 위 두 무리.
+  // ⚠ 새까만 슬롯을 촘촘히 두면 «바코드»가 된다(실측: 스튜디오 컷에서 가장 시끄러웠다).
+  //   실물 루버는 안쪽이 그늘일 뿐 검지 않다 — 중간 회색에 간격을 넓혀 «환기구»로 읽히게 한다.
+  const louvM=new THREE.MeshStandardMaterial({color:0x555a62,roughness:0.9,metalness:0.1});
   function slots(cx,cy,n,w2){
     for(let k=0;k<n;k++){
-      const sl=new THREE.Mesh(new THREE.BoxGeometry(w2,0.012,0.012),darkMat);
-      sl.position.set(cx,cy-k*0.028,DZ+0.020); g.add(sl);
+      const sl=new THREE.Mesh(new THREE.BoxGeometry(w2,0.009,0.010),louvM);
+      sl.position.set(cx,cy-k*0.034,DZ+0.018); g.add(sl);
     }
   }
   for(const cx of [-0.26,0,0.26]) slots(cx, dy-0.30, 7, 0.20);
@@ -575,6 +609,18 @@ function buildScrubber(i, alarm){
     new THREE.MeshStandardMaterial({color:0xc02a20,roughness:0.45,metalness:0.1}));
   es.rotation.x=Math.PI/2; es.position.set(-W/2+0.055,Y0+H-0.22,DZ+0.012); g.add(es);
 
+  // ── 판금 이음선. 참고본처럼 «판이 여러 장»으로 보여야 제품이 된다.
+  for(const y of [Y0+0.34, Y0+H-0.30]) seamH(g, W-0.10, 0, y, DZ+0.002);          // 앞면 상·하 띠
+  for(const x of [-W/2+0.055, W/2-0.055]) seamV(g, H-0.12, x, Y0+H/2, DZ+0.002);  // 앞면 좌·우 기둥선
+  for(const z of [-D*0.28, D*0.10]) {                                              // 옆면 세로 분할
+    seamV(g, H-0.14, -W/2-0.002, Y0+H/2, z);
+    seamV(g,  H-0.14,  W/2+0.002, Y0+H/2, z);
+  }
+  for(const y of [Y0+0.30, Y0+H*0.62]) {                                           // 옆면 가로 분할
+    const a=new THREE.Mesh(new THREE.BoxGeometry(0.004,0.006,D-0.10),SEAMM);
+    a.position.set(-W/2-0.002,y,0); g.add(a);
+    const b2=a.clone(); b2.position.x=W/2+0.002; g.add(b2);
+  }
   // ── 상단: 좌측 «타공판» 블록 + 우측 «제어함»(더 높다) + 좌상단 원통(블로워)
   const tb=new THREE.Mesh(new THREE.BoxGeometry(0.54,0.24,0.62),bodyMat(0xe6e4de,{roughness:0.5}));
   tb.position.set(-W/2+0.30,Y0+H+0.135,0.02); tb.castShadow=true; g.add(tb);
@@ -598,9 +644,10 @@ function buildScrubber(i, alarm){
   const ub=new THREE.Mesh(new THREE.BoxGeometry(0.09,0.30,0.24),plateMat);
   ub.position.set(W/2+0.02,Y0+0.95,-0.16); ub.castShadow=true; g.add(ub);
   // 배출 덕트 — 타공 상판에서 천장 하우스 배기로. «위는 배출구»(README 규약)
-  const duct=new THREE.Mesh(new THREE.CylinderGeometry(0.068,0.068,1.55,16),metalMat(0x9aa1aa,0.26,0.88));
-  duct.position.set(-W/2+0.30,Y0+H+1.05,0.02); duct.castShadow=true; g.add(duct);
-  for(const fy of [Y0+H+0.30, Y0+H+1.80]){
+  const DL=STUDIO?0.40:1.55;   // 스튜디오에서는 건물 덕트가 프레임을 뚫는다 — 제품만 남긴다
+  const duct=new THREE.Mesh(new THREE.CylinderGeometry(0.068,0.068,DL,16),metalMat(0x9aa1aa,0.26,0.88));
+  duct.position.set(-W/2+0.30,Y0+H+0.28+DL/2,0.02); duct.castShadow=true; g.add(duct);
+  for(const fy of [Y0+H+0.30, Y0+H+0.28+DL]){
     const fl=new THREE.Mesh(new THREE.CylinderGeometry(0.095,0.095,0.026,12),plateMat);
     fl.position.set(-W/2+0.30,fy,0.02); g.add(fl);
   }
@@ -740,11 +787,54 @@ dgeo.setAttribute('position',new THREE.BufferAttribute(dpos,3));
 S.add(new THREE.Points(dgeo,new THREE.PointsMaterial({color:0x5d6a80,size:0.030,transparent:true,
   opacity:0.16,depthWrite:false,sizeAttenuation:true})));
 
+if(STUDIO){
+  // 팹을 걷어낸다. ⚠ 설비를 새로 만들지 않고 «같은 빌더»를 쓴다 — 두 벌이면 도열 컷과
+  //   스튜디오 컷의 제품이 다른 물건이 된다(제2원칙).
+  for(let i=S.children.length-1;i>=0;i--) S.remove(S.children[i]);
+  S.background=new THREE.Color(0xe3e6ea); S.fog=null;
+  S.add(buildCyc());
+  const sc=buildScrubber(0,false); sc.position.set(0.34,0,0); sc.rotation.y=-0.62; S.add(sc);
+  // ⚠ 펌프를 같이 세우니 앞에서 잘리고 스크러버를 가렸다. 제품 컷은 «한 대»가 규칙이다 —
+  //    같이 보여줄 것은 배관 컷(shot=pipe)이 따로 한다.
+  if(new URLSearchParams(location.search).get('with')==='pump'){
+    const pm=buildPump(); pm.position.set(-2.25,0,1.35); pm.rotation.y=0.46; S.add(pm);
+  }
+  // ⚠ 면광원(RectAreaLight)이 이 등록의 전부다. 점광원·평행광으로는 판금 위의 «넓고 부드러운
+  //   그라데이션»이 안 나온다 — 참고본의 고급스러움은 그 그라데이션 하나에서 온다.
+  //   three 의 RectAreaLight 는 그림자를 못 만들므로, 접지 그림자만 약한 평행광이 따로 맡는다.
+  const panels=[
+    {c:0xffffff, i:3.20, w:6.0, h:5.5, p:[-5.6, 3.0,  1.2]},   // 키 — «옆»에서 스친다(정면 금지)
+    {c:0xe6eeff, i:0.62, w:4.5, h:4.0, p:[ 4.6, 1.7,  3.6]},   // 필 — 약하게, 그림자를 열어만 준다
+    {c:0xffffff, i:0.30, w:9.0, h:9.0, p:[ 0.0, 7.0, -0.4]},   // 톱 — 상판에 넓은 하이라이트
+    {c:0xdfe7f2, i:0.90, w:5.0, h:4.0, p:[ 1.2, 2.2, -5.4]},   // 백 — 실루엣을 배경에서 떼어 놓는다
+  ];
+  for(const q of panels){
+    const L2=new THREE.RectAreaLight(q.c, q.i, q.w, q.h);
+    L2.position.set(q.p[0],q.p[1],q.p[2]); L2.lookAt(0.2,1.0,0); S.add(L2);
+  }
+  S.add(new THREE.HemisphereLight(0xffffff,0xdfe3e9,0.48));
+  const sh=new THREE.DirectionalLight(0xffffff,0.62);
+  sh.position.set(-3.4,6.0,3.2); sh.castShadow=true;
+  sh.shadow.mapSize.set(2048,2048);
+  { const c2=sh.shadow.camera; c2.left=-4;c2.right=4;c2.top=4;c2.bottom=-2;c2.near=1;c2.far=18;
+    sh.shadow.bias=-0.0012; sh.shadow.radius=4; }
+  S.add(sh);
+}
 function seek(t){
   t=clamp(t,0,DUR);
   // ── 카메라: 통로를 따라 «아주 천천히» 전진 + 미세 상승. 손맛 없는 기계적 이동이라야 진중하다.
   const k=eio(t/DUR);
-  if(MACRO){
+  if(STUDIO){
+    // ⚠ 정면에 가깝게 서면 한 면만 보여 «판»이 된다. 3/4 로 서야 두 면의 계조 차이가 보이고
+    //   그 차이가 곧 «입체»다. 제품 컷은 잘리면 안 되므로 전체가 들어오는 거리까지 물러난다.
+    // ⚠ 설비의 «윗부분»(타공 블록·제어함·덕트)이 2.6m 까지 올라간다 — 조준점을 몸통 중앙에
+    //   두면 위가 잘린다. 실측으로 조준 1.45m · 거리 7.6m 에서 전체가 여유 있게 들어온다.
+    const a=lerp(-1.00,-0.66,k), r=lerp(7.8,7.3,k);
+    C.position.set(0.34+Math.sin(a)*r, lerp(2.05,1.86,k), Math.cos(a)*r);
+    C.lookAt(0.30, lerp(1.48,1.40,k), 0);
+    C.fov=22; C.updateProjectionMatrix();
+    if(BOKEH) BOKEH.uniforms.focus.value = C.position.length();
+  } else if(MACRO){
     // 펌프 냉각핀을 «축에 거의 나란히» 스친다 — 핀이 겹쳐 보이며 깊이가 생기는 각이다.
     const P=new THREE.Vector3(ALARM_X-1.02, 0.42, ALARM_Z+0.66);
     // ⚠ 매크로라고 «붙이면» 안 된다. 0.6m 까지 붙였더니 화면이 통째로 냉각핀 하나로 차서
