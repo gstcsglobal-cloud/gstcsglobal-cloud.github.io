@@ -245,7 +245,9 @@ section{position:absolute;inset:0;display:none;opacity:0}
 
 <!-- S8 FOUNDING 26.8–30.8 -->
 <section id="s-found">
-  <!-- 실사는 «지금의 우리»다 — 2001 일러스트에서 이쪽으로 넘어간다 -->
+  <!-- v21.1(사용자 지시): 구사옥 실사를 카드가 아니라 «흐린 배경»으로 깐다 — 실란·코스닥과 같은 문법.
+       희미한 과거 사진 위에 카피가 서고, 항공 실사가 덮으며 «그 자리가 오늘의 본사»로 이어진다 -->
+  <div class="bgv" id="fd2-bg"><div class="bgi"><img src="photos/founding.jpg" alt=""></div><div class="bgs"></div></div>
   <div class="vwrap abs" id="fd-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
     <video id="fd-v" src="footage/hq_aerial.webm" preload="auto" muted playsinline></video>
     <div class="vscrim" style="background:linear-gradient(90deg,rgba(4,8,26,.94) 0%,rgba(4,8,26,.86) 38%,rgba(4,8,26,.44) 72%,rgba(4,8,26,.58) 100%)"></div>
@@ -254,16 +256,6 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <div class="date abs" id="fd-date" style="left:140px;top:170px">2001. 10. 01</div>
   <div class="txt abs" id="fd-t1" style="left:140px;top:380px">퇴직금 <b class="num" id="fd-won">₩0</b>으로 시작했습니다.</div>
   <div class="txt abs" id="fd-t2" style="left:140px;top:500px;font-size:54px;color:rgba(255,255,255,.9)">해외에서 독점하던 스크러버를, <b>우리 손으로.</b></div>
-  <!-- v21 T2-8: 도면(청사진) → 실물 사진 크로스페이드 — «그림이 실물이 됐다»를 사진 자산으로 말한다 -->
-  <div class="slot photo abs" id="fd-photo" style="left:1230px;top:450px;width:600px;height:420px"><img src="photos/founding.jpg" alt="" onerror="this.closest('.slot').classList.add('noimg')"><img id="fd-bp" src="photos/founding-bp.jpg" alt="" style="position:absolute;left:0;top:0;width:100%;height:100%" onerror="this.style.display='none'"></div>
-  <svg class="abs" id="fd-svg" style="left:1380px;top:560px" width="420" height="330" viewBox="0 0 420 330">
-    <rect x="30" y="150" width="360" height="150" rx="10" fill="#1a2447" stroke="#33427a" stroke-width="4"/>
-    <path d="M30 150 L110 90 L110 150 L190 90 L190 150 L270 90 L270 150 Z" fill="#22305e" stroke="#33427a" stroke-width="4"/>
-    <rect x="300" y="40" width="40" height="120" fill="#22305e" stroke="#33427a" stroke-width="4"/>
-    <rect x="70" y="200" width="60" height="60" fill="#ffd36b" opacity=".9"/><rect x="170" y="200" width="60" height="60" fill="#ffd36b" opacity=".6"/><rect x="270" y="200" width="60" height="60" fill="#ffd36b" opacity=".8"/>
-    <text x="210" y="325" text-anchor="middle" font-size="26" font-weight="700" fill="#8fb3ff" font-family="NotoKR">경기 화성</text>
-  </svg>
-  <div class="abs" id="fd-spark" style="left:1660px;top:520px;font-size:80px;line-height:1">✨</div>
   <div class="en">Oct 1, 2001 — started with ₩5,000,000 in severance pay, and localized the scrubber technology once dominated from overseas.</div>
 </section>
 
@@ -697,18 +689,16 @@ SCN.reveal = function(t){
 SCN.pivot = function(t){ pop($('pv1'), t, 25.05, 0.5);
 };
 SCN.found = function(t){
+    // 흐린 구사옥이 바탕에 깔린다(v21.1) — 항공 실사가 덮기 전까지의 «과거»
+    bgSeek('fd2', t, 26.8, 4.0, 0, 0.55);
     pop($('fd-date'), t, 27.0, 0.45, 40); pop($('fd-t1'), t, 27.6, 0.45);
     const won = Math.round(lerp(0, 5000000, eo(p(t, 27.8, 29.2)))); $('fd-won').textContent = '₩' + fmt(won);
-    pop($('fd-t2'), t, 29.3, 0.45); pop($('fd-svg'), t, 28.2, 0.55, 40);
-    const bp = $('fd-bp'); if (bp) bp.style.opacity = 1 - eo(p(t, 28.2, 29.0));   // 도면 → 실물
-    const sp = $('fd-spark'); const sx = p(t,29.45,29.85); sp.style.transform = `scale(${sx>0?eb(sx):0}) rotate(${t*60}deg)`; op(sp, sx>0?1:0);
-    // «그때(일러스트) → 지금(실물)». 실사가 들어오면 일러스트·반짝이는 물러난다
+    pop($('fd-t2'), t, 29.3, 0.45);
+    // «그때(흐린 사진) → 지금(항공 실사)»
     const vx = vok($('fd-v')) ? p(t, 28.95, 29.80) : 0, vw = $('fd-vid');
     vw.style.opacity = vx;
     vw.style.transform = `scale(${lerp(1.055, 1.0, eo(vx))})`;
-    if (vx > 0){ const fade = 1 - vx;
-      $('fd-svg').style.opacity = fade; $('fd-photo').style.opacity = fade; sp.style.opacity = (+sp.style.opacity) * fade;
-      vseek($('fd-v'), 0.30 + (t - 28.95) * 1.0); }
+    if (vx > 0) vseek($('fd-v'), 0.30 + (t - 28.95) * 1.0);
 };
 SCN.kosdaq = function(t){
     bgSeek('kq2', t, 30.8, 3.6, 0, 0.46);
