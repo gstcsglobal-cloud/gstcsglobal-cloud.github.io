@@ -201,11 +201,17 @@ beacon.position.set(ALARM_X-0.52, 2.28, ALARM_Z+0.10); S.add(beacon);
 const beaconFar=new THREE.PointLight(0xff5a3a, 0, 14, 2.0);
 beaconFar.position.set(ALARM_X-1.15, 1.50, ALARM_Z+0.1); S.add(beaconFar);
 
-// ── 작업자 2인 — 한 사람은 HMI 를 보고, 한 사람은 단말을 든 채 뒤에 선다.
-//    ⚠ 규약은 scene3d.html 과 같다(저폴리 실루엣). 여기서만 자세히 만들면 한 영상에서 두 화풍이 된다.
-// ⚠ 가까이 선 인물은 «어두워야» 실루엣으로 읽힌다 — 밝게 두면 저폴리가 장난감이 된다(실측).
-const skin=new THREE.MeshStandardMaterial({color:0x2b3752,roughness:0.8,metalness:0.05});
-const helmet=new THREE.MeshStandardMaterial({color:0x46567e,roughness:0.6,metalness:0.1});
+// ── 작업자 2인 (v24b — 「레고 같다」 지적 반영해 전면 재작성)
+//    ⚠ 저폴리가 «장난감»으로 읽히는 원인은 폴리 수가 아니라 세 가지다(실측):
+//       ① 비율 — 옛 인물은 머리가 키의 1/5.7 이었다(사람은 1/7.5). 이것 하나가 절반이다.
+//       ② 꺾이지 않는 팔다리 — 곧은 막대는 무조건 인형이다. 팔꿈치·무릎을 넣는다.
+//       ③ 자세 — 두 발을 모으고 차렷으로 서면 인형이다. 무게를 한쪽에 싣고 발을 벌린다.
+//    몸통은 Lathe 로 «작업복»의 부드러운 실루엣을 만든다 — 서브팹 작업자는 방진복이 아니라
+//    작업복·안전모다(방진복은 위층 클린룸이다). 어두운 작업복이라 실루엣으로도 맞다.
+const suit  =new THREE.MeshStandardMaterial({color:0x2a3450,roughness:0.85,metalness:0.03});
+const suitD =new THREE.MeshStandardMaterial({color:0x1d2539,roughness:0.9,metalness:0.03});
+const hatMat=new THREE.MeshStandardMaterial({color:0x54658f,roughness:0.5,metalness:0.12});
+const skinM =new THREE.MeshStandardMaterial({color:0x6b7490,roughness:0.7,metalness:0.03});
 const WORKERS=[];
 // ⚠ 접지 그림자가 없으면 사람이 «떠 보인다». 키라이트가 카메라 반대쪽이라 진짜 그림자는 안 보인다 —
 //   발밑에 부드러운 원반을 하나 깔아 «닿아 있다»를 만든다(실측: 이것 하나로 부유감이 사라진다).
@@ -217,30 +223,69 @@ const CONTACT=(()=>{
   const t=new THREE.CanvasTexture(c);
   return new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false});
 })();
+function limb(mat,r0,r1,len,seg=10){           // 끝으로 갈수록 가늘어지는 팔다리 — 원통은 «파이프»로 보인다
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r0,len,seg),mat);
+  m.position.y=-len/2; m.castShadow=true;
+  const cap=new THREE.Mesh(new THREE.SphereGeometry(r1,seg,8),mat); cap.position.y=-len; m.add(cap);
+  return m;
+}
+// 키 1.74m · 머리 0.225m(1/7.7). 관절은 «피벗 그룹»이라 각도만 주면 꺾인다.
 function worker(x,z,ry,pose){
   const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=ry; S.add(g);
-  const sh=new THREE.Mesh(new THREE.PlaneGeometry(0.62,0.62),CONTACT);
+  const sh=new THREE.Mesh(new THREE.PlaneGeometry(0.78,0.60),CONTACT);
   sh.rotation.x=-Math.PI/2; sh.position.y=0.012; g.add(sh);
-  const b=new THREE.Mesh(new THREE.CapsuleGeometry(0.16,0.56,6,14),skin); b.position.y=0.82; b.castShadow=true; g.add(b);
-  const h=new THREE.Mesh(new THREE.SphereGeometry(0.125,18,14),skin); h.position.y=1.30; h.castShadow=true; g.add(h);
-  const hm=new THREE.Mesh(new THREE.SphereGeometry(0.137,18,12,0,6.283,0,1.25),helmet); hm.position.y=1.31; hm.castShadow=true; g.add(hm);
-  const br=new THREE.Mesh(new THREE.CylinderGeometry(0.165,0.165,0.016,16),helmet); br.position.set(0,1.285,0.03); g.add(br);
-  for(const lx of [-0.09,0.09]){ const l=new THREE.Mesh(new THREE.CapsuleGeometry(0.068,0.38,5,10),skin);
-    l.position.set(lx,0.29,0); l.castShadow=true; g.add(l); }
-  // 팔 — 어깨에 매달아 «자세»를 각도로 준다(점검 동작이 이것 하나로 읽힌다)
+
+  // 몸통 — 골반 0.90 → 어깨 1.40. 허리가 잘록해야 «옷 입은 사람»이다.
+  const prof=[[0.010,0.86],[0.170,0.88],[0.158,1.00],[0.150,1.10],[0.168,1.22],[0.196,1.34],
+              [0.165,1.41],[0.075,1.45],[0.010,1.46]].map(([r,y])=>new THREE.Vector2(r,y));
+  const torso=new THREE.Mesh(new THREE.LatheGeometry(prof,22),suit);
+  torso.castShadow=true; torso.scale.z=0.72; g.add(torso);      // 앞뒤로 눌러야 «판자»가 아니다
+  const belt=new THREE.Mesh(new THREE.CylinderGeometry(0.163,0.163,0.035,20),suitD);
+  belt.position.y=1.02; belt.scale.z=0.74; g.add(belt);
+  // 목 · 머리 · 안전모
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.052,0.058,0.07,12),skinM); neck.position.y=1.475; g.add(neck);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.108,20,16),skinM);
+  head.position.y=1.60; head.scale.set(0.88,1.06,0.94); head.castShadow=true; g.add(head);
+  const hat=new THREE.Mesh(new THREE.SphereGeometry(0.122,20,12,0,6.283,0,1.15),hatMat);
+  hat.position.y=1.615; hat.scale.set(1,0.92,1.04); hat.castShadow=true; g.add(hat);
+  const brim=new THREE.Mesh(new THREE.CylinderGeometry(0.152,0.152,0.014,20),hatMat);
+  brim.position.set(0,1.598,0.022); brim.scale.z=1.12; g.add(brim);
+
+  // 다리 — 골반에서 허벅지, 무릎에서 종아리. 한쪽에 무게를 싣는다(짝다리).
+  const legs=[];
+  [[-0.082,0.10,0.0],[0.082,-0.14,0.06]].forEach(([lx,rot,zoff],i)=>{
+    const hip=new THREE.Group(); hip.position.set(lx,0.90,zoff); g.add(hip);
+    hip.rotation.x=rot*0.5;
+    const thigh=limb(suit,0.082,0.067,0.44); hip.add(thigh);
+    const knee=new THREE.Group(); knee.position.y=-0.44; hip.add(knee);
+    knee.rotation.x=(i===0?0.14:0.05);
+    const shin=limb(suit,0.066,0.052,0.42); knee.add(shin);
+    const shoe=new THREE.Mesh(new THREE.BoxGeometry(0.105,0.062,0.235),suitD);
+    shoe.position.set(0,-0.445,0.045); shoe.castShadow=true; knee.add(shoe);
+    legs.push({hip,knee});
+  });
+
+  // 팔 — 어깨 피벗 + 팔꿈치 피벗. 꺾여야 사람이다.
   const arms=[];
   for(const s2 of [-1,1]){
-    const pv=new THREE.Group(); pv.position.set(s2*0.175,1.06,0); g.add(pv);
-    const a=new THREE.Mesh(new THREE.CapsuleGeometry(0.055,0.34,5,10),skin);
-    a.position.y=-0.22; a.castShadow=true; pv.add(a); arms.push(pv);
+    const sho=new THREE.Group(); sho.position.set(s2*0.185,1.365,0); g.add(sho);
+    const up=limb(suit,0.062,0.050,0.30); sho.add(up);
+    const elb=new THREE.Group(); elb.position.y=-0.30; sho.add(elb);
+    const fore=limb(suit,0.050,0.040,0.26); elb.add(fore);
+    const hand=new THREE.Mesh(new THREE.SphereGeometry(0.046,10,8),skinM); hand.position.y=-0.27; elb.add(hand);
+    arms.push({sho,elb});
   }
   let pad=null;
-  if(pose==='pad'){                                   // 단말을 든 손
-    pad=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.30,0.02),
-      new THREE.MeshStandardMaterial({color:0x0e1626,emissive:0x2b6ea8,emissiveIntensity:0.5,roughness:0.3}));
-    pad.position.set(0.16,1.00,0.20); pad.rotation.set(-0.9,0.2,0); g.add(pad);
+  if(pose==='pad'){
+    // ⚠ 너무 눕히면 옆에서 «선»으로 보인다(실측). 세워 들어야 화면이 읽힌다.
+    pad=new THREE.Mesh(new THREE.BoxGeometry(0.235,0.315,0.016),
+      new THREE.MeshStandardMaterial({color:0x0c1422,emissive:0x2f7ab8,emissiveIntensity:0.75,roughness:0.3}));
+    pad.position.set(0.02,1.10,0.36); pad.rotation.set(-0.62,0.34,0.05); g.add(pad);
+    const pf=new THREE.Mesh(new THREE.BoxGeometry(0.255,0.335,0.010),
+      new THREE.MeshStandardMaterial({color:0x2c3a52,roughness:0.5,metalness:0.3}));
+    pf.position.z=-0.010; pad.add(pf);
   }
-  const w={g,arms,pose,pad}; WORKERS.push(w); return w;
+  const w={g,arms,legs,pose,pad}; WORKERS.push(w); return w;
 }
 worker(1.38, ALARM_Z+0.70, Math.PI/2+0.30, 'point');   // 앞사람 — HMI 를 가리킨다
 worker(0.86, ALARM_Z-1.05, Math.PI/2-0.34, 'pad');     // 뒷사람 — 한 걸음 뒤에서 단말 확인
@@ -312,16 +357,23 @@ function seek(t){
   beaconFar.intensity = 0.5+2.6*sweep;
   // ── 작업자: 큰 동작은 넣지 않는다. 숨쉬기 + 점검 자세만 — 6.4초에 «상황»이 읽히면 충분하다.
   WORKERS.forEach((w,i)=>{
-    w.g.position.y = Math.sin(t*1.25+i*2.1)*0.006;
-    w.g.rotation.z = Math.sin(t*0.9+i*1.4)*0.006;
+    w.g.position.y = Math.sin(t*1.25+i*2.1)*0.005;
+    w.g.rotation.z = Math.sin(t*0.9+i*1.4)*0.005;
+    const br=Math.sin(t*1.25+i*2.1);                    // 숨 — 어깨가 아주 조금 오르내린다
     if(w.pose==='point'){
-      // 오른팔을 들어 HMI 를 가리킨다(0.6~1.5초). 그 뒤로는 유지 — 왔다갔다 하면 산만하다.
+      // 설비 쪽 팔을 들어 HMI 를 가리킨다(0.6~1.5초). 팔꿈치가 «펴지며» 올라가야 사람의 동작이다.
+      // ⚠ 팔은 -y 로 뻗으므로 rotation.x «양수»가 앞(+z=설비 쪽)이다. 음수면 손이 등 뒤로 간다(실측).
       const up=eo(p(t,0.6,1.5));
-      w.arms[1].rotation.x = -0.92*up;  w.arms[1].rotation.z = -0.42*up;
-      w.arms[0].rotation.x = 0.06*Math.sin(t*1.1);
+      w.arms[1].sho.rotation.set(0.32+1.02*up, 0, -0.10-0.16*up);
+      w.arms[1].elb.rotation.x = 0.85 - 0.66*up;        // 접혀 있다가 펴진다
+      w.arms[0].sho.rotation.set(0.06+0.02*br, 0, 0.10);
+      w.arms[0].elb.rotation.x = 0.28;
     }else{
-      w.arms[0].rotation.x = -0.95 + 0.03*Math.sin(t*1.3);   // 단말을 든 팔
-      w.arms[1].rotation.x = -0.55 + 0.03*Math.sin(t*1.3+1);
+      // 단말을 두 손으로 받쳐 든다 — 팔꿈치 90도 부근
+      w.arms[0].sho.rotation.set(0.34+0.015*br, 0, 0.17);
+      w.arms[0].elb.rotation.x = 1.24;
+      w.arms[1].sho.rotation.set(0.30+0.015*br, 0, -0.19);
+      w.arms[1].elb.rotation.x = 1.28;
       if(w.pad) w.pad.material.emissiveIntensity = 0.42+0.10*Math.sin(t*3.1);
     }
   });
