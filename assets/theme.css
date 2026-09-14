@@ -181,25 +181,66 @@ button:focus-visible,input:focus-visible,select:focus-visible{
 
 /* ---------- 진입 애니메이션 (카드가 순차적으로 떠오름) ---------- */
 @keyframes fadeInUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-.kpi,.card,.mcard,.tablecard,.alert,.slicer{animation:fadeInUp .5s var(--ease) backwards}
+.kpi,.card,.tablecard,.alert,.slicer{animation:fadeInUp .5s var(--ease) backwards}
 .kpi:nth-child(1),.alert:nth-child(1){animation-delay:.02s}
 .kpi:nth-child(2),.alert:nth-child(2){animation-delay:.06s}
 .kpi:nth-child(3),.alert:nth-child(3){animation-delay:.10s}
 .kpi:nth-child(4),.alert:nth-child(4){animation-delay:.14s}
 .kpi:nth-child(5){animation-delay:.18s}
 .kpi:nth-child(6){animation-delay:.22s}
-.card:nth-child(1),.mcard:nth-child(1){animation-delay:.08s}
-.card:nth-child(2),.mcard:nth-child(2){animation-delay:.14s}
-.card:nth-child(3),.mcard:nth-child(3){animation-delay:.20s}
-.card:nth-child(4),.mcard:nth-child(4){animation-delay:.26s}
+.card:nth-child(1){animation-delay:.08s}
+.card:nth-child(2){animation-delay:.14s}
+.card:nth-child(3){animation-delay:.20s}
+.card:nth-child(4){animation-delay:.26s}
 
 /* ---------- 호버 마이크로 인터랙션 ---------- */
-.card:hover,.mcard:hover{border-color:var(--accent-2) !important;
+.card:hover{border-color:var(--accent-2) !important;
   box-shadow:0 12px 40px rgba(0,0,0,.45), 0 0 0 1px var(--accent-2) inset !important}
-body.theme-light .card:hover,body.theme-light .mcard:hover{
+body.theme-light .card:hover{
   box-shadow:0 12px 40px rgba(31,38,135,.12), 0 0 0 1px var(--accent-2) inset !important}
-.kpi{cursor:pointer}
-.kpi:active{transform:translateY(-1px) scale(.99) !important}
+/* ⚠ «동작이 붙은 카드»만 손가락 커서를 준다 (v133).
+   예전에는 .kpi 전부에 걸려 있어, 실측 56장 중 48장이 «눌리는 것처럼 보이는데 아무 일도
+   안 하는» 카드였다 — 사용자가 「KPI 카드 팝업 기능을 지웠냐」고 물은 것이 이 자리다.
+   세 표식은 각각: data-kdrill = GST.kpiDrill 이 새긴다 ·
+   data-stage(fault) · data-s(pm) = 필터 클릭이 이미 쓰던 표식.
+   마크업은 한 줄도 안 고친다. 되돌리기는 셀렉터를 .kpi 로 되돌리는 한 줄. */
+.kpi[data-kdrill],.kpi[data-stage],.kpi[data-s]{cursor:pointer}
+.kpi[data-kdrill]:active,.kpi[data-stage]:active,.kpi[data-s]:active{transform:translateY(-1px) scale(.99) !important}
+/* 카드 클릭이 «이미 자기 일»(필터)을 하는 카드의 세부내역 배지 (v135 · 6단계).
+   카드에 팝업까지 달면 한 번 눌러 둘이 동시에 터지고 팝업이 방금 사라진 숫자를 보여준다.
+   ⚠ hover 로만 뜨면 태블릿에서 영영 안 보인다 — .capbtns 와 같은 규율(v135 · 3단계). */
+.kpi .kdb{margin-left:6px;padding:0 5px;border:1px solid var(--bd,rgba(255,255,255,.18));
+  border-radius:5px;background:transparent;color:var(--txt-muted);font-size:11px;line-height:16px;
+  cursor:pointer;opacity:0;transition:opacity .15s var(--ease)}
+.kpi:hover .kdb,.kpi .kdb:focus-visible{opacity:.85}
+.kpi .kdb:hover{opacity:1;color:var(--txt-main);border-color:var(--accent-2)}
+@media (hover:none){.kpi .kdb{opacity:.6}}
+@media print{.kpi .kdb{display:none}}
+
+/* 데이터 품질 카드 (v135 · 7단계) — 페이지 맨 아래 한 벌.
+   ⚠ 색으로만 등급을 말하지 않는다. 왼쪽 띠 + 글자색 둘 다 준다(인쇄·색각 대비). */
+.gst-dq{margin:18px 0 8px}
+.gst-dq-ok{padding:10px 2px;font-size:12.5px;color:var(--txt-muted)}
+.gst-dq-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.gst-dq-t th{text-align:left;padding:7px 10px;color:var(--txt-muted);font-weight:600;
+  border-bottom:1px solid var(--bd,rgba(255,255,255,.12));white-space:nowrap}
+.gst-dq-t td{padding:8px 10px;border-bottom:1px solid var(--bd,rgba(255,255,255,.07));vertical-align:top}
+.gst-dq-t td.dq-n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.gst-dq-t tr.dq-bad  td:first-child{border-left:3px solid var(--bad);padding-left:8px;color:var(--bad)}
+.gst-dq-t tr.dq-warn td:first-child{border-left:3px solid var(--warn);padding-left:8px;color:var(--warn)}
+.gst-dq-t tr.dq-info td:first-child{border-left:3px solid var(--txt-muted);padding-left:8px}
+
+/* 입력률 안내 — fault 안의 인라인 스타일을 core 로 올리면서 한 벌로 (v135 · 7단계) */
+/* 인사이트 줄 안의 «그 탭으로 보내는» 버튼 (v135 · 7단계) — 사실만 적고 길을 안 주면
+   사람이 그 탭을 찾아 헤맨다. 인사이트는 innerHTML 로 그려지므로 여기 한 벌이면 된다. */
+.gst-ins .gst-go{margin-left:6px;padding:1px 7px;border:1px solid var(--accent-2);border-radius:6px;
+  background:transparent;color:inherit;font:inherit;font-size:11px;cursor:pointer}
+.gst-ins .gst-go:hover{background:var(--glass-hover)}
+@media print{.gst-ins .gst-go{display:none}}
+
+.fill-hint{margin:6px 0 2px;padding:7px 10px;border-radius:8px;
+  background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.35);
+  font-size:11.5px;line-height:1.45;color:var(--txt-main);opacity:.9}
 tr{transition:background .15s var(--ease)}
 select,input[type="date"],input[type="text"],input[type="password"]{transition:border-color .2s var(--ease), box-shadow .2s var(--ease)}
 select:hover,input:hover{border-color:var(--txt-muted) !important}
@@ -283,7 +324,7 @@ body.theme-slate{
   animation:none !important;
 }
 /* 카드류: 유리효과·그림자 제거, 헤어라인 보더의 플랫 카드 */
-body.theme-slate .kpi,body.theme-slate .card,body.theme-slate .mcard,
+body.theme-slate .kpi,body.theme-slate .card,
 body.theme-slate .tablecard,body.theme-slate .alert,body.theme-slate .trend-card,
 body.theme-slate .cross-card,body.theme-slate .date-panel,
 body.theme-slate .gst-insights,
@@ -293,7 +334,7 @@ body.theme-slate .slicer{
 }
 body.theme-slate .kpi::before{display:none}       /* KPI 원형 블롭 제거 */
 body.theme-slate .kpi .val{letter-spacing:-.5px}
-body.theme-slate .card:hover,body.theme-slate .mcard:hover{
+body.theme-slate .card:hover{
   border-color:rgba(151,170,196,.24) !important;box-shadow:none !important}
 body.theme-slate .kpi:hover{transform:none !important;border-color:rgba(151,170,196,.24) !important}
 /* 상단 경고 배너(홈)는 시맨틱 톤 유지하되 채도만 절제 */
@@ -337,7 +378,7 @@ body.theme-slate .gst-sb-sec{background:#111823;border-color:rgba(151,170,196,.1
 body.theme-slate .gst-sb-toggle{background:#2DD4BF;color:#04211C}
 body.theme-slate .gst-sb-title svg{color:#2DD4BF}
 /* 진입 애니메이션도 절제 */
-body.theme-slate .kpi,body.theme-slate .card,body.theme-slate .mcard,
+body.theme-slate .kpi,body.theme-slate .card,
 body.theme-slate .tablecard,body.theme-slate .alert,body.theme-slate .slicer{animation:none !important}
 
 /* ============================================================
@@ -440,9 +481,9 @@ body.gst-sb-open .gst-sb-toggle{left:300px}
   .header-right,.slicers,.toolbar,.lang-wrap,.theme-wrap,button,.fchips,.excl-box,.navtabs,.m-link{display:none !important}
   .header h1{-webkit-text-fill-color:#000 !important;background:none !important;font-size:22px !important}
   .header .sub{color:#555 !important}
-  .card,.kpi,.mcard,.tablecard,.alert{box-shadow:none !important;border:1px solid #ddd !important;
+  .card,.kpi,.tablecard,.alert{box-shadow:none !important;border:1px solid #ddd !important;
     break-inside:avoid;background:#fff !important;animation:none !important}
-  .card h3,.mcard h3,.kpi .cap,.kpi .val,td,th,.mrow .lbl,.mrow .v{color:#000 !important}
+  .card h3,.kpi .cap,.kpi .val,td,th,.mrow .lbl,.mrow .v{color:#000 !important}
   th{background:#f0f0f0 !important}
   .status{display:none !important}
 }
@@ -488,3 +529,54 @@ body.theme-light .mselbox{background:#fff}
 .slicer-div{border-top:1px solid var(--glass-border);margin:2px 0 0;padding-top:10px;
   font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--txt-muted);font-weight:700}
 .slicers .slicer-div{flex-basis:100%}
+
+/* ---------- 7. 화면 등급 (v135) ---------- */
+/* 출처 배지의 상세(표 이름·행수)는 관리자만. JS 가드와 이중 — 등급이 도착하기 전 깜빡임을 CSS 가 막는다.
+   legacy = role 열이 아직 없는 DB(setup-15 실행 전) — 지금까지처럼 전원이 본다. */
+body:not([data-role="admin"]):not([data-role="legacy"]) #gstSrcDetail{display:none !important}
+
+/* ---------- 8. 카드 내보내기 (v135) ---------- */
+/* 버튼 상자는 여덟 페이지가 같은 자리·같은 규칙 — 페이지 <style> 에 남은 사본은 여기가 이긴다(theme.css 가 뒤에 실린다).
+   ⚠ hover 가 없는 기기(태블릿·터치)에서는 버튼이 영영 안 보였다 — 저장소 전체에 hover:none 이 0건이었다. */
+.capbtns{position:absolute;top:12px;right:14px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
+.card:hover .capbtns,.trend-card:hover .capbtns,.cross-card:hover .capbtns,.tablecard:hover .capbtns,
+.card:focus-within .capbtns,.trend-card:focus-within .capbtns,.cross-card:focus-within .capbtns,.tablecard:focus-within .capbtns{opacity:1}
+@media (hover:none){.capbtns{opacity:.55}}
+.gexp-menu{position:absolute;z-index:40;min-width:200px;background:var(--card,#161b22);border:1px solid var(--glass-border,rgba(151,170,196,.25));
+  border-radius:10px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-family:inherit}
+.gexp-menu button{display:block;width:100%;text-align:left;background:transparent;border:0;color:var(--txt-main,#e6edf3);
+  font:600 12px/1.6 inherit;padding:6px 10px;border-radius:7px;cursor:pointer}
+.gexp-menu button:hover{background:var(--glass-hover,rgba(255,255,255,.08))}
+.gexp-menu button[disabled]{opacity:.45;cursor:default}
+.gexp-menu .gexp-hint{font-size:10.5px;line-height:1.45;color:var(--txt-muted,#8b98a9);padding:4px 10px 2px;white-space:normal;max-width:260px}
+
+/* ---------- 9. v135 · 5단계 — 한 제품으로 보이게 ---------- */
+/* 라이트 테마에서 안 보이던 하드코딩 색 — 추이·교차 카드 제목(fault·scrubber)과 pm 드릴 모달 제목은 #dfe6ff·#fff 였다.
+   theme.css 는 .card h3 만 알았다. */
+.trend-header h3,.cross-header h3,.dm-title{color:var(--txt-main) !important}
+body.theme-light .dm-box{background:#fff}
+/* 카드 노트 — 줄바꿈이 든 문장(GST.setNote 가 .ml 을 단다)만 pre-line. 전부에 걸면 정적 HTML 의 들여쓰기 줄바꿈이 빈 줄로 뜬다.
+   .warn 은 «화면 전체의 숫자 뜻이 바뀌는 경고»(원장이 비어 수선실적으로 세는 중 등)를 보조 설명과 가른다. */
+.card-note.ml{white-space:pre-line}
+.card-note.warn{color:var(--warn) !important;font-weight:600}
+/* 카드 격자 중간 단(2열) — 페이지마다 1200/1250 으로 갈려 창 폭에 따라 다른 폭에서 열이 줄었다. 1열(768)은 위 5절에 있다. */
+@media(max-width:1250px){.grid3{grid-template-columns:repeat(2,1fr) !important}}
+/* core 가 끼워 넣는 활성 필터 칩 줄(#fchips[data-gst] · pm·scrubber). 페이지 소유 칩 줄은 자기 CSS 를 쓴다. */
+.gst-fchips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;
+  background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:9px 14px}
+.gst-fchips .fchips-label{font-size:11px;font-weight:700;color:var(--accent-2,var(--accent-1))}
+.gst-fchips .fchip{display:inline-flex;align-items:center;gap:5px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4);
+  color:var(--txt-main);padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer}
+.gst-fchips .fchip .fx{opacity:.7;font-size:9px}
+.gst-fchips .fchip:hover{border-color:var(--bad)}
+.gst-fchips .fchip-clear{margin-left:auto;background:none;border:1px solid var(--glass-border);color:var(--txt-muted);
+  border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer}
+/* 빈 표 안의 「필터 해제」 */
+.gst-empty-clear{margin-left:8px;background:var(--glass);border:1px solid var(--glass-border);color:var(--txt-main);
+  border-radius:14px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer}
+/* 앵커 목차(주간현황) — 세로로 이어 읽는 페이지라 «숨기는 탭»(.gst-secnav)이 아니라 스크롤 링크다 */
+.gst-anchors{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.gst-anchors a{font-size:11px;font-weight:700;color:var(--txt-muted);text-decoration:none;padding:4px 11px;border-radius:20px;
+  border:1px solid var(--glass-border);background:var(--glass)}
+.gst-anchors a:hover{color:var(--txt-main);border-color:var(--accent-1)}
+@media print{.gst-anchors,.gst-fchips,.gst-empty-clear{display:none !important}}

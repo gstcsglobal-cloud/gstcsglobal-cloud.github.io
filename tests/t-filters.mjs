@@ -145,8 +145,50 @@ is(/const d1=eLv1\.filter\(x=>_dOf\(x,eduKey\(x,1\)\)\)\.length,/.test(SRC.repor
    'report — 교육 완료율 KPI 도 eduKey 를 지난다');
 is(!/_dOf\(x,'bdate'\)/.test(SRC.report) && !/_dOf\(x,'vdate'\)/.test(SRC.report),
    'report — 과정 이름을 박아 둔 옛 판정이 없다');
-is(/_eCourse/.test(SRC.report) && /'Scrubber Lv\.3'/.test(SRC.report),
-   'report — KPI 이름표도 잡힌 인원을 따라간다 (Lv.3 을 세면서 Veteran 이라 하지 않는다)');
+/* ⚠ «변수 이름»을 요구하지 않는다 — 예전에는 `_eCourse` 라는 낱말과 'Scrubber Lv.3'
+   리터럴을 그대로 찾았는데, 그건 그때의 «생김새»이지 지킬 규칙이 아니다(v122 의 교훈).
+   지킬 것은 하나 — 이름표를 «잡힌 인원»(_eKr·_eOv)에서 고르고, 국내·해외 어휘를 둘 다
+   갖고 있는가. v134 에 카드가 두 수가 되면서 그 변수가 _eN 으로 바뀌었을 뿐이다. */
+{
+  const m = SRC.report.match(/const\s+(?:_eN|_eCourse)\s*=([\s\S]{0,320}?);/);
+  is(!!m && /_eKr/.test(m[1]) && /_eOv/.test(m[1]) && /Lv\.3/.test(m[1]) && /Veteran/.test(m[1]),
+     'report — KPI 이름표도 잡힌 인원을 따라간다 (Lv.3 을 세면서 Veteran 이라 하지 않는다)');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   [7-b] 교육 대상 규칙 — 2026-09 CS관리팀 확정 (v134)
+
+     해외 (Basic·Veteran)  : 6개월 미만 → LV1 · 이상 → LV2   (안 겹친다)
+     국내 (Scrubber Lv.2·3): Lv2 = «전원» · Lv3 = «Lv2 이수자» (겹친다)
+
+   ⚠ 판정이 세 곳(KPI 카드·교육 계획 표·cEdu 추이)에 흩어져 있으면 v96 처럼 «같은
+     화면의 카드끼리 다른 답»이 된다. 한 곳(eduTgt)만 지나는지를 소스로 지킨다.
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[7-b] 교육 대상 — 국내와 해외가 다른 규칙이고, 판정은 한 곳이다 (v134)');
+{
+  const m = SRC.report.match(/const\s+eduTgt\s*=([\s\S]{0,600}?)\n  \};/);
+  is(!!m, 'report — 교육 대상 판정 eduTgt 가 있다');
+  if (m) {
+    const b = m[1];
+    is(/REGION_KR/.test(b), '  국내/해외를 가른다 (제3원칙 — 한 규칙으로 합치지 않는다)');
+    is(/kr\(x\)\s*\?\s*true\s*:/.test(b),
+       '  국내 Lv2 대상은 «전원» 이다 (근속 조건이 없다)');
+    is(/kr\(x\)\s*\?\s*eduDone\(x\s*,\s*at\s*,\s*1\)/.test(b),
+       '  국내 Lv3 대상은 «Lv2 를 이수한» 인력이다');
+    is(/six\(x\)/.test(b), '  해외는 지금까지대로 6개월 기준이다');
+  }
+  /* 소비부가 각자 6개월을 세면 안 된다 — 그 자리가 v96 이 겪은 자리다.
+     주석을 걷어낸 뒤 본다(주석 안의 설명이 정규식에 걸려 거짓 초록불이 난 적이 있다). */
+  const bare = SRC.report.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  const six = (bare.match(/\)\/MS\)>=182/g) || []).length;
+  is(six === 1, '교육 6개월 판정이 소스에 «한 번»만 있다 — eduTgt 안 (실제 ' + six + '곳)');
+  is((bare.match(/eduTgt\(/g) || []).length >= 3,
+     'KPI 카드 · 교육 계획 표 · cEdu 추이가 모두 그 한 곳을 부른다');
+}
+console.log('\n[7-c] hr — Lv2 를 안 받은 사람은 Lv3 «비대상» 이다 (미이수가 아니다)');
+is(/function clsL3\(p\)\{ return eduDoneAt\(p\.lv2date\)/.test(HR.replace(/\s+/g, ' ').replace(/function clsL3\(p\)\s*\{\s*return\s*eduDoneAt\(p\.lv2date\)/, 'function clsL3(p){ return eduDoneAt(p.lv2date)')) ||
+   /clsL3[\s\S]{0,160}?eduDoneAt\(p\.lv2date\)[\s\S]{0,160}?'비대상'/.test(HR),
+   'hr — clsL3 가 Lv2 미이수자를 「비대상」으로 낸다 (아직 받을 차례가 아닌 것을 «안 받았다»로 적지 않는다)');
 
 const AXES7 = ['region','op','div','customer','campus','line','team'];
 console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96)');
@@ -353,7 +395,7 @@ console.log('\n[7-1] 설치현황 — 「집계 기준」(챔버/대수)이 한 
     // applyLang 안에서 data-i 재적용 «뒤에» applyBasisUnit 이 불려야 한다
     const li = SC.indexOf('function applyLang()');
     const blk = li<0 ? '' : SC.slice(li, li+700);
-    const di = blk.indexOf("querySelectorAll('[data-i]')");
+    const di = blk.indexOf("GST.applyI18n(");   // v135 — data-i 루프는 core 한 벌이다
     const bu = blk.indexOf('applyBasisUnit()');
     is(/function applyBasisUnit\(\)/.test(SC) && di>=0 && bu>di,
        'scrubber — 언어 전환 뒤에도 단위 글자를 다시 씌운다 (data-i 가 되돌려 놓는다)');
@@ -440,7 +482,7 @@ console.log('\n[7-3] 단지는 여러 개를 동시에 고를 수 있다 (Set) �
   is(/GST\.CACHE_MAX_ROWS/.test(CORE) && /rows\.length > GST\.CACHE_MAX_ROWS/.test(CORE),
      'core — 큰 표는 localStorage 캐시를 시도하지 않는다');
   /* 사이드바 버튼이 «자동 10분» 이라고 적혀 있는데 실제 주기는 30분이었다. */
-  is(!/⟳ 자동 10분/.test(CORE) && /자동 '\+GST\.AR_MIN\+'분/.test(CORE),
+  is(!/⟳ 자동 10분/.test(CORE) && /auto\.replace\('\{n\}',GST\.AR_MIN\)/.test(CORE) && /auto:'⟳ 자동 \{n\}분'/.test(CORE),
      'core — 자동 새로고침 라벨이 실제 주기를 말한다');
   // 음성 대조 — 페이지가 campus 를 문자열처럼 다루면 조용히 전부 false 가 된다
   // 주석은 뺀다 — 「이렇게 쓰지 말 것」이라 적어 둔 설명이 검사에 걸리면 안 된다
@@ -648,14 +690,14 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
 
     /* ⚠ 「자료 없음」은 «자료를 안 올렸다»로 읽힌다(사용자 지적). 실제 뜻은 «이 화면이 보는
        자료에는 그 축이 없다»다 — 어느 쪽 문구도 «자료가 없다»고 말하면 안 된다. */
-    is(/const EMPTY_NONE = '전체 \(이 화면 미적용\)', EMPTY_FILT = '전체 \(필터에 해당 없음\)'/.test(CORE),
+    is(/emptyNone:'전체 \(이 화면 미적용\)', emptyFilt:'전체 \(필터에 해당 없음\)'/.test(CORE),   // v135 — GST.FLT_T(네 언어)
        'core — 두 문구를 구분해 둔다');
     /* ⚠ 주석은 걷어내고 본다. 「예전에는 자료 없음이라고 적었다」는 이력 설명까지 걸리면
        고칠 수 없는 검사가 된다 — 판정 대상은 «화면에 나가는 문구»다. */
     is(!/자료 없음/.test(CORE.replace(/\/\*[\s\S]*?\*\//g,' ').replace(/(^|[^:])\/\/[^\n]*/g,'$1')),
        'core — 화면 문구에 「자료 없음」을 쓰지 않는다 (안 올린 것처럼 읽힌다)');
-    is(/hasAny \? EMPTY_FILT : EMPTY_NONE/.test(CORE), 'core — 단일 칸이 그 구분을 쓴다');
-    is(/\(hasAny \? EMPTY_FILT : EMPTY_NONE\) \+ ' ▾'/.test(CORE), 'core — 다중선택 칸도 같이 쓴다');
+    is(/hasAny \? _T\(\)\.emptyFilt : _T\(\)\.emptyNone/.test(CORE), 'core — 단일 칸이 그 구분을 쓴다');
+    is(/\(hasAny \? _T\(\)\.emptyFilt : _T\(\)\.emptyNone\) \+ ' ▾'/.test(CORE), 'core — 다중선택 칸도 같이 쓴다');
 
     /* 주간현황이 «세 패밀리 전부»를 덮는 loose 를 선언했는지 — 하나만 빠져도 그 축에서 재발한다. */
     const lm = /loose:\{([^}]*)\}/.exec(SRC.report.replace(/\/\*[\s\S]*?\*\//g,' '));
@@ -698,7 +740,8 @@ console.log('\n[9] 여러 개를 동시에 골라도 둘 다 통과하는지 (�
     global.document.querySelector = prevQ;
 
     const L = ['구분','팀','운영단위','고객사','사업부','단지','라인'];
-    const got = [...html.matchAll(/class="lbl">([^<]+)</g)].map(m => m[1].trim())
+    /* v135 — 이름표 div 에 data-fk 가 붙었다(언어 전환용). 속성이 있어도 «lbl 한 클래스»만 잡는다 */
+    const got = [...html.matchAll(/class="lbl"[^>]*>([^<]+)</g)].map(m => m[1].trim())
                   .filter(x => L.indexOf(x) >= 0);
     /* v114 — 두 벌이다. «똑같은 폼»이어야 하므로 같은 순서가 두 번 나온다. */
     is(got.join(' > ') === L.concat(L).join(' > '),

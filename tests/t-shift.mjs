@@ -38,12 +38,12 @@ async function run(shift){
   const out={};
   for(const P of ['fault','material','pm','scrubber','tco']){
     const ctx=await browser.newContext(); const page=await ctx.newPage();
-    await page.route('**/assets/core.js',r=>r.fulfill({status:200,contentType:'application/javascript',
+    await page.route('**/assets/core.js*',r=>r.fulfill({status:200,contentType:'application/javascript',
       body:fs.readFileSync(ROOT+'/assets/core.js','utf8')
         +'\n;GST.authOn=function(){return false;};GST.getSession=async function(){return {user:{email:"s@t"}};};'
         +'GST.authGate=async function(){var o=document.getElementById("loginOverlay");if(o)o.style.display="none";'
         +'if(GST._authOk)GST._authOk();return true;};GST.token=async function(){return "s";};'}));
-    await page.route('**/assets/*.css',r=>r.fulfill({status:200,contentType:'text/css',body:''}));
+    await page.route('**/assets/*.css*',r=>r.fulfill({status:200,contentType:'text/css',body:''}));
     await page.route('**/cdn.jsdelivr.net/**',r=>{const u=r.request().url();
       if(u.includes('chart.umd'))return r.fulfill({status:200,contentType:'application/javascript',body:fs.readFileSync(HERE+'/node_modules/chart.js/dist/chart.umd.js','utf8')});
       if(u.includes('papaparse'))return r.fulfill({status:200,contentType:'application/javascript',body:fs.readFileSync(HERE+'/node_modules/papaparse/papaparse.min.js','utf8')});

@@ -1,0 +1,35 @@
+# 검사를 «사람이 기억해서 돌리는» 것에서 «푸시마다 저절로 도는» 것으로 (v135 · 2'단계).
+# pd↔GST.toDate 가 하루 다른 날짜를 내는 채로 들어온 경로가 이것이었다 — 아무도 t-quiet 를 안 돌렸다.
+#
+# ⚠ 픽스처(실데이터 CSV)는 공개 저장소에 없다. 픽스처가 필요한 검사는 «⚠️ 부분 검사»로 건너뛰고 종료코드 0 이다
+#   (STRICT_FIXTURES 를 켜지 않는다 — 켜면 여기서는 언제나 붉다). 픽스처 없이 도는 것만으로도
+#   t-ver·t-i18n·t-quiet·t-filters·t-region·t-alarm·t-ppt·t-pptchart·t-abp·t-kpi·t-role·t-kiosk·t-optbl·t-cache·t-window 가 돈다.
+# ⚠ TZ 는 Asia/Seoul — UTC 상자에서는 «하루 밀림»이 원리적으로 재현되지 않아 옛 코드도 초록불이 뜬다(t-quiet 규약).
+name: tests
+on:
+  push:
+    branches: ['**']
+  pull_request:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TZ: Asia/Seoul
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'          # t-sync·t-mirror·t-upload 가 --experimental-strip-types 를 쓴다(22.6+)
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - run: npm ci
+        working-directory: tests
+      - run: npx playwright install --with-deps chromium   # PW_CHROMIUM 을 안 주면 검사가 이 브라우저를 쓴다
+        working-directory: tests
+      # t-export 가 «엑셀이 정말 차트로 읽는가»를 openpyxl 로 확인한다. 없으면 그 검사만 건너뛰므로
+      # CI 는 붉어지지 않지만, 여기서 넣어 «실제로 확인»하게 한다 — 구조 검사만으로는 엑셀이
+      # 「복구」 대화상자를 띄우는 파일도 통과한다(v135 · 3단계).
+      - run: python3 -m pip install --quiet --break-system-packages openpyxl || pip3 install --quiet openpyxl
+      - run: npm run all
+        working-directory: tests

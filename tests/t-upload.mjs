@@ -81,7 +81,7 @@ const cmapOf = key => Object.entries(G.SM.SPEC[key].fields)
   const ctx0 = await b0.newContext();
   const pg = await ctx0.newPage();
   const e0 = []; pg.on('pageerror', e => e0.push('JS: ' + e.message));
-  await pg.route('**/assets/core.js', r => r.fulfill({ status: 200, contentType: 'application/javascript',
+  await pg.route('**/assets/core.js*', r => r.fulfill({ status: 200, contentType: 'application/javascript',
     body: fs.readFileSync(ROOT + '/assets/core.js', 'utf8')
       + '\n;GST.authGate=async function(){return true;};'
       + 'GST.getSession=async function(){return {user:{email:"t@x.com"}};};'
@@ -211,7 +211,7 @@ const page = await ctx.newPage();
 const errs = [];
 page.on('pageerror', e => errs.push('JS: ' + e.message));
 
-await page.route('**/assets/core.js', r => r.fulfill({ status: 200, contentType: 'application/javascript',
+await page.route('**/assets/core.js*', r => r.fulfill({ status: 200, contentType: 'application/javascript',
   body: fs.readFileSync(ROOT + '/assets/core.js', 'utf8')
     + '\n;GST.authGate=async function(){return true;};'
     + 'GST.getSession=async function(){return {user:{email:"t@x.com"}};};'

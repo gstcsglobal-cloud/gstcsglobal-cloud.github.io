@@ -57,12 +57,12 @@ async function shot(browser, page_){
   page.on('pageerror', e => errs.push('JS: ' + e.message));
   page.on('console', m => { if (m.type() === 'error') errs.push('con: ' + m.text().slice(0,140)); });
 
-  await page.route('**/assets/core.js', r => r.fulfill({ status:200, contentType:'application/javascript',
+  await page.route('**/assets/core.js*', r => r.fulfill({ status:200, contentType:'application/javascript',
     body: fs.readFileSync(ROOT + '/assets/core.js','utf8')
       + '\n;GST.authOn=function(){return false;};GST.getSession=async function(){return {user:{email:"t@t"}};};'
       + 'GST.authGate=async function(){var o=document.getElementById("loginOverlay");if(o)o.style.display="none";'
       + 'if(GST._authOk)GST._authOk();return true;};GST.token=async function(){return "t";};' }));
-  await page.route('**/assets/*.css', r => {
+  await page.route('**/assets/*.css*', r => {
     const n = r.request().url().split('/').pop().split('?')[0];
     try { r.fulfill({ status:200, contentType:'text/css', body: fs.readFileSync(ROOT+'/assets/'+n,'utf8') }); }
     catch { r.fulfill({ status:200, contentType:'text/css', body:'' }); }

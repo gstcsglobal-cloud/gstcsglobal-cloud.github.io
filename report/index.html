@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>주간 현황</title>
+<title>주간 현황 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/chart.umd.min.js"></script>
+<script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
+<script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=141"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -34,7 +36,6 @@ body{
 .status{font-size:12px;color:var(--txt-muted);margin-bottom:14px;text-align:right}
 .status.ok{color:var(--accent-2)} .status.err{color:#fb7185}
 
-.slicers{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
 .slicer{background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:12px 16px;backdrop-filter:blur(12px)}
 .slicer .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--txt-muted);margin-bottom:8px;font-weight:700}
 .slicer select,.slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;min-width:150px;color-scheme:dark}
@@ -163,8 +164,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .op-tbl td.neg{color:#fb7185}
 .op-tbl td.pos{color:#4ade80}
 .op-tbl td.mut{color:var(--txt-muted)}
-@media(max-width:1250px){.grid3{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
-@media(max-width:800px){.grid3{grid-template-columns:1fr}}
+@media(max-width:1250px){.grid2{grid-template-columns:1fr}}
 @media print{
   body{padding:10px;background:#fff !important;animation:none}
   .header-right,.status,.mini-per{display:none !important}
@@ -173,14 +173,14 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=141">
 </head>
 <body>
 
 <div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
-    <h1 data-i="title" data-lock>📊 주간 현황</h1>
+    <h1 data-i="title" data-lock>주간 현황</h1>
     <div class="sub" data-i="sub">인력 · 교육 · 작업 · PM · 고장 주간/월간 요약</div>
   </div>
   <div class="header-right">
@@ -377,7 +377,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(132);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC
+GST.needVer&&GST.needVer(141);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -400,22 +400,7 @@ const URLS={
 // 정의는 core.js GST.SM.SPEC 한 곳에만 있어 다른 페이지와 갈라지지 않는다.
 let CW={}, CI={}, HI_WK=0, HI_INST=0;
 // 고객사 표기 통일 (시트마다 공식명/축약명이 섞여 있음) — 예: Micron Memory Taiwan Co., Ltd.(F16) → MICRON F16
-function normCust(name){
-  if(!name)return '';
-  const up=GST.upk(name).trim();
-  if(!up)return '';
-  let base='';
-  if(up.includes('MICRON'))base='MICRON';
-  else if(up.includes('TAIWAN-ASIA')||up.includes('ASIA SEMICON'))base='TASC';
-  else if(up.includes('POWERCHIP'))base='POWERCHIP';
-  else if(up.includes('WINBOND'))base='WINBOND';
-  else if(up.includes('TSMC'))base='TSMC';
-  else if(up.includes('SAMSUNG'))base='SAMSUNG';
-  else if(up.includes('HYNIX'))base='SK HYNIX';
-  else base=up.split(/[\s,\.(]/)[0];
-  const m=up.match(/\(([A-Z0-9\-]+)\)/) || up.match(/\b(F\d{1,2}N?)\b/);
-  return m?base+' '+m[1]:base;
-}
+function normCust(name){ return GST.ORG.custRaw(name); }   // 정본은 core.js GST.ORG.custRaw (v135 — hr 과 같은 사본이었다)
 // 고객사 기준(그룹): MICRON / PSMC / TASC / WINBOND
 /* 고객사·FAB 분류는 core.js의 GST.ORG가 정본이다(SPEC-SYNC).
    여기 있던 custBase/fabOf가 이미 옳게 2축 분리하고 있었는데, 아래 lineKeyOf가 그 둘을
@@ -435,20 +420,8 @@ function siteCountryStatic(s){ return GST.ORG.country(s); }
      머리에는 'GST Global' 이 그대로 남아 있었다. */
 function corpLabel(){ return GST.corpLabel(F); }
 // 소속/사이트 표기 통일 (인원현황 Work Place · 휴가현황 소속 → normCust 어휘)
-function siteKey(sv){
-  const up=GST.upk(sv);
-  if(!up.trim())return '';
-  if(up.includes('F16N')||/TONG\s*L/.test(up))return 'MICRON F16N';
-  if(up.includes('F16S')||up.includes('TAINAN'))return 'MICRON F16S';
-  if(up.includes('F16'))return 'MICRON F16';
-  if(up.includes('F11'))return 'MICRON F11';
-  if(up.includes('F10'))return 'MICRON F10';
-  if(up.includes('PSMC')||up.includes('POWERCHIP'))return 'POWERCHIP';
-  if(up.includes('WINBOND'))return 'WINBOND';
-  if(up.includes('TSMC'))return 'TSMC';
-  if(up.includes('TASC')||up.includes('ASIA SEMI'))return 'TASC';
-  return normCust(up);
-}
+/* 정본은 core.js GST.ORG.site (v135). hr 과 사본이 둘이었고 PSMC 를 'POWERCHIP' 이라 적어 고객사 축과 갈렸다. */
+function siteKey(sv){ return GST.ORG.site(sv); }
 // 법인명 → 국가 (예: GST TAIWAN → TAIWAN)
 function guessCountry(op){
   if(!op)return '';
@@ -458,8 +431,9 @@ function guessCountry(op){
 }
 
 const T={
-ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 주간/월간 요약',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_region:'구분',sl_customer:'고객사',sl_line:'라인',sl_fab:'FAB',sl_period:'기간',all:'전체',hr_note:'고객사 필터 연동 · 국가/라인 미적용',hr_note2:'',sec_ops:'운영',ops_note:'가용인력 = 인원현황의 현장(O) 재직자 · 고객사 필터 연동',ops_wait:'인원현황·휴가현황 시트 연결 대기 — report/index.html 상단의 GID_ROSTER / GID_LEAVE 값을 시트 gid 숫자로 바꿔주세요',ch_att:'출근 · 휴가',note_att:'평일 기준 일평균 · 출근 = 가용인력 − 휴가',att_a:'출근',att_l:'휴가',ch_to:'총인원 vs TO',note_to:'TO = 반입 챔버 ÷ 30 (DUAL=2·SINGLE=1) · 총인원 = 현장 가용인력',head_l:'총인원',ch_chp:'인당 관리 챔버',note_chp:'반입 챔버(누적) ÷ 가용인력 · 챔버/인원 수는 툴팁',cutoff:'마감',att_pj:'인당작업',man_tot:'공수(h)',grp_t:'경력',grp_s:'소속',cr_u1:'1년 미만',cr_u1:'1년 미만',cr_u2:'1~2년',cr_u3:'2년 이상',ch_career:'단지별 인원 추이',note_career:'각 구간 말 기준 현장(O) 재직 · 단지별 스택 (단지가 없으면 FAB·고객사)',nCareer:'1년미만 {a} · 1~2년 {b} · 2년+ {c}명',edu_tg:'대상인원',edu_tg:'대상인원',edu_rt:'완료율',edu_goal:'목표 90%',edu_ttf:'완료 {d} / 대상 {t}',man_sum:'합계',chp_c:'챔버(반입)',chp_p:'인당 관리',nTo:'충원율 {p}% · TO 대비 {d}명',nEdu:'완료율 {p}% · 완료 {d}/{t}명 (LV1+LV2)',nCip:'진행율 {p}% · 잔여 {n}건',nAtt:'일평균 출근 {a}명 · 휴가 {l}명 · 작업 {j}건 (인당 {p}건)',nChp:'인당 {v}챔버 (챔버 {c} · 인원 {h}명)',nMan:'인당 일평균 {v}h · PM {pm}h',nFt:'최근 구간 {n}건 · 직전 대비 {d}',per_ws:'주',per_ms:'월',per_ys:'연',ytd:'{y} 누적',top_allblank:'고장 {m}건 · 알람유형 미기재 — 시트 Z열 입력 필요',per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',print:'🖨 인쇄',wk_narr:'📋 이번 주 요약',wk_narr_w:'📋 이번 주 요약',wk_narr_m:'📋 이번 달 요약',
+ko:{sl_more:'주간현황 전용',title:'주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 주간/월간 요약',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_region:'구분',sl_customer:'고객사',sl_line:'라인',sl_fab:'FAB',sl_period:'기간',all:'전체',hr_note:'고객사 필터 연동 · 국가/라인 미적용',hr_note2:'',sec_ops:'운영',ops_note:'가용인력 = 인원현황의 현장(O) 재직자 · 고객사 필터 연동',ops_wait:'인원현황·휴가현황 시트 연결 대기 — report/index.html 상단의 GID_ROSTER / GID_LEAVE 값을 시트 gid 숫자로 바꿔주세요',ch_att:'출근 · 휴가',note_att:'평일 기준 일평균 · 출근 = 가용인력 − 휴가',att_a:'출근',att_l:'휴가',ch_to:'총인원 vs TO',note_to:'TO = 반입 챔버 ÷ 30 (DUAL=2·SINGLE=1) · 총인원 = 현장 가용인력',head_l:'총인원',ch_chp:'인당 관리 챔버',note_chp:'반입 챔버(누적) ÷ 가용인력 · 챔버/인원 수는 툴팁',cutoff:'마감',att_pj:'인당작업',man_tot:'공수(h)',grp_t:'경력',grp_s:'소속',cr_u1:'1년 미만',cr_u2:'1~2년',cr_u3:'2년 이상',ch_career:'단지별 인원 추이',note_career:'각 구간 말 기준 현장(O) 재직 · 단지별 스택 (단지가 없으면 FAB·고객사)',nCareer:'1년미만 {a} · 1~2년 {b} · 2년+ {c}명',edu_tg:'대상인원',edu_rt:'완료율',edu_goal:'목표 90%',edu_ttf:'완료 {d} / 대상 {t}',man_sum:'합계',chp_c:'챔버(반입)',chp_p:'인당 관리',nTo:'충원율 {p}% · TO 대비 {d}명',nEdu:'완료율 {p}% · 완료 {d}/{t}명 (LV1+LV2)',nCip:'진행율 {p}% · 잔여 {n}건',nAtt:'일평균 출근 {a}명 · 휴가 {l}명 · 작업 {j}건 (인당 {p}건)',nChp:'인당 {v}챔버 (챔버 {c} · 인원 {h}명)',nMan:'인당 일평균 {v}h · PM {pm}h',nFt:'최근 구간 {n}건 · 직전 대비 {d}',per_ws:'주',per_ms:'월',per_ys:'연',ytd:'{y} 누적',top_allblank:'고장 {m}건 · 알람유형 미기재 — 시트 Z열 입력 필요',per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',print:'🖨 인쇄',wk_narr:'📋 이번 주 요약',wk_narr_w:'📋 이번 주 요약',wk_narr_m:'📋 이번 달 요약',
  kp1:'재직 인원',kp2:'이번 달 입사 · 퇴사',kp3:'교육 완료율',kp4:'BM 건수 · 최근 30일',kp5:'인당 공수(h) · 최근 30일',kp6:'PM 진행율 · 올해',
+  kf3b:'대상 {a} {m}명 · {b} {n}명',kd_edun2:'{a} {p}% (이수 {d}/{m}) · {b} {q}% (이수 {e}/{n})',kd_30d:'최근 30일',kd_edu:'교육 이수 현황',kd_educ:'이름|단지|과정|완료일|상태',kd_edun:'이수 {a} / 대상 {b}',kd_pm:'PM 스케줄 진행 (올해 누적)',kd_pmc:'월|계획(누적)|완료(누적)|진행율',kd_pmn:'계획 {a} · 완료 {b}',kd_ioh:'카드는 인원 전원을 셉니다 — 같은 화면의 입·퇴사 차트는 현장(O)만 셉니다',kd_asof:'기준일',
  kf1:'경력 2년+ {n}명 · 1년 미만 {m}명',kf2:'최근 12개월 입사 {n}명',kf3:'Veteran {p}% (대상 {n}명)',kf4:'이전 30일 {n}건',kf5:'PM 비중 {p}%',kf6:'계획 {a} · 완료 {b}',
  sec1:'핵심 지표',sec2:'상세 분석',sec3:'Alarm · 고장',sec4:'설비',
  ch_hc:'인원 추이 (경력구간)',note_hc:'각 구간 말 기준 재직 인원 · 입사일/퇴사일 반영',hc_u1:'1년 미만',hc_u2:'1–2년',hc_u3:'2년 이상',
@@ -469,15 +443,16 @@ ko:{title:'📊 주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 �
  ch_man:'작업 공수 (h)',note_man:'PM · 서비스 · 설치 구분 (이상치 제외)',man_pm:'PM',man_np:'非PM',man_svc:'서비스',man_inst:'설치',
  ch_pc:'인당 작업 건수',note_pc:'구간 내 실제 투입 인원 기준',
  ch_sc:'PM 계획 대비 완료 (올해 누적)',note_sc:'계획 = 설비별 주기 기반 도래 건수 · 진행율은 툴팁',sc_plan:'계획(누적)',sc_done:'완료(누적)',
- ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',pv_stage:'작업단계',pv_sn:'설비 S/N',pv_s_ft:'고장 (BM·수리)',pv_s_wk:'작업 실적 (전체)',pv_s_hr:'인원',pv_s_io:'입·퇴사',pv_join:'입사',pv_quit:'퇴사',pv_active:'재직',ft_total:'건수',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) 만',ftv_abp:'All By-Pass 만',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
+ ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',pv_stage:'작업단계',pv_sn:'설비 S/N',pv_s_ft:'고장 (BM·수리)',pv_s_wk:'작업 실적 (전체)',pv_s_hr:'인원',pv_s_io:'입·퇴사',pv_join:'입사',pv_quit:'퇴사',pv_active:'재직',ft_total:'건수',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) 만',ftv_abp:'All By-Pass 만',dq_kra:'국내 알람 원장이 비어 수선실적 BM 으로 세는 중',dq_kra_a:'/upload/ 에서 「CS 알람관리」 워크북을 «알람» 대상으로 올리세요',dq_krb:'국내 All By-Pass 원장이 비어 그 지표가 0 입니다',dq_krb_a:'같은 워크북을 «올바이패스» 대상으로 한 번 더 올리세요',dq_divj:'실적 행에 사업부가 안 붙었습니다 — 사업부 필터에서 그 행은 그냥 통과합니다',dq_divj_a:'설치현황의 S/N 표기를 확인하세요 — 실적의 설비호기와 이어져야 합니다',dq_krj:'국내 원장 행이 설치현황과 안 이어졌습니다 — 단지·라인이 「미상」으로 몰립니다',dq_krj_a:'원장의 SEQP S/N 표기를 설치현황 S/N 과 맞추세요',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
  tbl_top:'고장 원인 TOP 3',th_cause:'원인',th_cnt:'건수',th_al:'Alarm Message',th_act:'조치',top_more:'외 {n}종',top_etc:'기타 {n}건 · 알람유형 미기재 {m}건',top_var:'(표기 {n}종 묶음)',
  top_alfb:'* 알람유형(Z열) 미기재 — 현상(AA열)으로 표기',
  tbl_op:'Scrubber 가동 현황',note_op:'가동 = 설비상태 Operation · 미가동 = 반납·Operation 을 뺀 나머지 상태 전부 · W/I = 무상(보증 안) · W/O = 유상 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 = 사이트별 설정(셀 ✎ 클릭 · 기본 40) · PM = 해당 구간 TBM · 마감일 기준',op_corp:'법인',op_corp2:'법인',op_cust2:'고객사',op_camp2:'단지',op_na:'미배치',op_na_t:'단지가 안 적힌 설비·인원 — 합계에서 빼지 않고 여기 담습니다',op_etc:'기타',op_etc_t:'상위 12개 밖 {n}개 — 합계가 맞게 여기 담습니다',op_wna:'⚠ 워런티 미기재 {n}대는 W/O 에 섞여 있습니다',op_nodata:'자료없음',op_nodata_t:'인원 자료를 아직 못 받았습니다 — 0명이 아닙니다',op_nop:'인원 자료 미수신 {n}개 법인: {list}',op_mrg:'{lbl} 는 한 팀이 담당해 한 행으로 셉니다 ({list})',op_amb:'⚠ 담당 FAB 을 알 수 없는 {n}명은 그 고객사의 가장 큰 행에 담았습니다',op_div:'구분',op_run_u:'가동 장비 대수',op_run_c:'가동 챔버수',op_idle:'미가동',op_staff:'담당 인원(명)',op_to:'목표 TO',op_gap:'증감(명)',op_hire:'모집계획',op_chp:'인당 챔버',op_pm:'PM(건)',op_unit:'장비',op_ch:'챔버',op_expat:'주재원',op_local:'현채인',op_fit:'적정 챔버',op_need:'인원(명)',
  ins_pm:'올해 PM 진행율 {p}% (계획 {a} · 완료 {b})',ins_ft:'최근 30일 고장 {n}건 · 직전 30일 대비 {p}',ins_hc:'재직 {n}명 · 이번 달 입사 {a} · 퇴사 {b}',
  ax_t:'축 범위 (빈칸=자동)',
  rd_ppl:'이름|사이트|입사일|퇴사일',rd_inst:'고객사|FAB|Type|반입일',rd_chp_n:'챔버 가중 합계(DUAL=2)라 행 수와 다릅니다',rd_edu:'이름|사이트|Basic|Veteran|Lv.2|Lv.3',rd_cip:'사이트|항목|적용일|완료일',ax_min:'최소',ax_max:'최대',ax_apply:'적용',ax_reset:'초기화',loading:'데이터 불러오는 중...',loaded:'로드 완료',mon_u:'월',u_p:'명',u_c:'건'},
-en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, training, work, PM, faults',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_region:'Region',sl_customer:'Customer',sl_line:'Line',sl_fab:'FAB',sl_period:'Period',all:'All',hr_note:'follows customer filter · country/line N/A',hr_note2:'',sec_ops:'Operations',ops_note:'available = on-site(O) active staff from roster · follows customer filter',ops_wait:'Roster/Leave sheets not linked — set GID_ROSTER / GID_LEAVE at the top of report/index.html',ch_att:'Attendance · Leave',note_att:'weekday daily avg · attendance = available − leave',att_a:'Attend',att_l:'Leave',ch_to:'Headcount vs TO',note_to:'TO = fab-in chambers ÷ 30 (DUAL=2·SINGLE=1)',head_l:'Headcount',ch_chp:'Chambers per Person',note_chp:'cumulative fab-in chambers ÷ available staff · detail in tooltip',cutoff:'As of',att_pj:'Jobs/person',man_tot:'Hours',grp_t:'Tenure',grp_s:'Site',cr_u1:'<1yr',cr_u1:'<1yr',cr_u2:'1-2yr',cr_u3:'2yr+',ch_career:'Headcount by Campus',note_career:'active on-site(O) at each period end · by campus',nCareer:'<1y {a} · 1-2y {b} · 2y+ {c}',edu_tg:'Targets',edu_tg:'Targets',edu_rt:'Rate',edu_goal:'Goal 90%',edu_ttf:'done {d} / target {t}',man_sum:'Total',chp_c:'Chambers',chp_p:'per person',nTo:'fill rate {p}% · {d} vs TO',nEdu:'rate {p}% · {d}/{t} done (LV1+LV2)',nCip:'progress {p}% · {n} remaining',nAtt:'daily avg attend {a} · leave {l} · {j} jobs ({p}/person)',nChp:'{v} chambers/person ({c}ch · {h} staff)',nMan:'{v}h per person·day · PM {pm}h',nFt:'{n} in latest period · {d} vs prev',per_ws:'W',per_ms:'M',per_ys:'Y',ytd:'{y} YTD',top_allblank:'{m} faults · alarm type blank — fill column Z in the sheet',per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',print:'🖨 Print',wk_narr:'📋 Summary',wk_narr_w:'📋 This Week',wk_narr_m:'📋 This Month',
+en:{sl_more:'Weekly only',title:'Weekly Status',sub:'Weekly/monthly summary — workforce, training, work, PM, faults',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_region:'Region',sl_customer:'Customer',sl_line:'Line',sl_fab:'FAB',sl_period:'Period',all:'All',hr_note:'follows customer filter · country/line N/A',hr_note2:'',sec_ops:'Operations',ops_note:'available = on-site(O) active staff from roster · follows customer filter',ops_wait:'Roster/Leave sheets not linked — set GID_ROSTER / GID_LEAVE at the top of report/index.html',ch_att:'Attendance · Leave',note_att:'weekday daily avg · attendance = available − leave',att_a:'Attend',att_l:'Leave',ch_to:'Headcount vs TO',note_to:'TO = fab-in chambers ÷ 30 (DUAL=2·SINGLE=1)',head_l:'Headcount',ch_chp:'Chambers per Person',note_chp:'cumulative fab-in chambers ÷ available staff · detail in tooltip',cutoff:'As of',att_pj:'Jobs/person',man_tot:'Hours',grp_t:'Tenure',grp_s:'Site',cr_u1:'<1yr',cr_u2:'1-2yr',cr_u3:'2yr+',ch_career:'Headcount by Campus',note_career:'active on-site(O) at each period end · by campus',nCareer:'<1y {a} · 1-2y {b} · 2y+ {c}',edu_tg:'Targets',edu_rt:'Rate',edu_goal:'Goal 90%',edu_ttf:'done {d} / target {t}',man_sum:'Total',chp_c:'Chambers',chp_p:'per person',nTo:'fill rate {p}% · {d} vs TO',nEdu:'rate {p}% · {d}/{t} done (LV1+LV2)',nCip:'progress {p}% · {n} remaining',nAtt:'daily avg attend {a} · leave {l} · {j} jobs ({p}/person)',nChp:'{v} chambers/person ({c}ch · {h} staff)',nMan:'{v}h per person·day · PM {pm}h',nFt:'{n} in latest period · {d} vs prev',per_ws:'W',per_ms:'M',per_ys:'Y',ytd:'{y} YTD',top_allblank:'{m} faults · alarm type blank — fill column Z in the sheet',per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',print:'🖨 Print',wk_narr:'📋 Summary',wk_narr_w:'📋 This Week',wk_narr_m:'📋 This Month',
  kp1:'Headcount',kp2:'Joined · Left (this month)',kp3:'Training Rate',kp4:'BM count · last 30d',kp5:'Hours/person · last 30d',kp6:'PM Progress · YTD',
+  kf3b:'targets {a} {m} · {b} {n}',kd_edun2:'{a} {p}% ({d}/{m} done) · {b} {q}% ({e}/{n} done)',kd_30d:'last 30 days',kd_edu:'Training completion',kd_educ:'Name|Campus|Course|Completed|Status',kd_edun:'done {a} / target {b}',kd_pm:'PM schedule progress (YTD)',kd_pmc:'Month|Plan (cum.)|Done (cum.)|Progress',kd_pmn:'plan {a} · done {b}',kd_ioh:'The card counts all staff — the join/leave chart on this page counts on-site (O) only',kd_asof:'as of',
  kf1:'2y+ {n} · under 1y {m}',kf2:'{n} joined in 12mo',kf3:'Veteran {p}% ({n} targets)',kf4:'prev 30d {n}',kf5:'PM share {p}%',kf6:'plan {a} · done {b}',
  sec1:'Key Metrics',sec2:'Details',sec3:'Alarm · Faults',sec4:'Equipment',
  ch_hc:'Headcount by Tenure',note_hc:'active at each period end (join/leave applied)',hc_u1:'<1y',hc_u2:'1–2y',hc_u3:'2y+',
@@ -487,15 +462,16 @@ en:{title:'📊 Weekly Status',sub:'Weekly/monthly summary — workforce, traini
  ch_man:'Man-hours (h)',note_man:'PM · Service · Install (outliers excluded)',man_pm:'PM',man_np:'Non-PM',man_svc:'Service',man_inst:'Install',
  ch_pc:'Jobs per Person',note_pc:'based on workers actually deployed in period',
  ch_sc:'PM Plan vs Done (YTD cumulative)',note_sc:'plan = due events from per-tool cycles · progress in tooltip',sc_plan:'Plan (cum)',sc_done:'Done (cum)',
- ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',pv_stage:'Stage',pv_sn:'Equipment S/N',pv_s_ft:'Faults (BM)',pv_s_wk:'All work records',pv_s_hr:'Headcount',pv_s_io:'Join / Leave',pv_join:'Join',pv_quit:'Leave',pv_active:'Active',ft_total:'Count',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) only',ftv_abp:'All By-Pass only',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
+ ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',pv_stage:'Stage',pv_sn:'Equipment S/N',pv_s_ft:'Faults (BM)',pv_s_wk:'All work records',pv_s_hr:'Headcount',pv_s_io:'Join / Leave',pv_join:'Join',pv_quit:'Leave',pv_active:'Active',ft_total:'Count',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) only',ftv_abp:'All By-Pass only',dq_kra:'Domestic alarm ledger is empty — counting BM from the repair sheet instead',dq_kra_a:'Upload the CS alarm workbook as the «alarm» target via /upload/',dq_krb:'Domestic All By-Pass ledger is empty — that metric reads 0',dq_krb_a:'Upload the same workbook again as the «All By-Pass» target',dq_divj:'Some job rows have no division attached — they pass the division filter unfiltered',dq_divj_a:'Check the S/N wording in the install sheet against the job sheet',dq_krj:'Ledger rows did not join the install sheet — site/line fall into “unknown”',dq_krj_a:'Align the SEQP S/N wording in the ledger with the install sheet S/N',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
  tbl_top:'Top 3 Fault Causes',th_cause:'Cause',th_cnt:'Count',th_al:'Alarm Message',th_act:'Action',top_more:'+{n} more',top_etc:'others {n} · alarm blank {m}',top_var:'({n} variants)',
  top_alfb:'* alarm type blank (col Z) — showing symptom (col AA)',
  tbl_op:'Scrubber Operation Status',note_op:'running = status Operation · idle = every status except 반납 and Operation · W/I = 무상 (in warranty) · W/O = 유상 · chamber DUAL=2·SINGLE=1 · fit chambers/person editable per site (click ✎ · default 40) · PM = TBM in period · as of cutoff',op_corp:'Entity',op_corp2:'Entity',op_cust2:'Customer',op_camp2:'Campus',op_na:'Unassigned',op_na_t:'No campus on the sheet (units and people) — kept here so the total still adds up',op_etc:'Other',op_etc_t:'{n} beyond the top 12 — kept here so the total still adds up',op_wna:'⚠ {n} units have no warranty label — counted in W/O',op_nodata:'no data',op_nodata_t:'Headcount not received yet — not zero',op_nop:'Headcount not received for {n} entities: {list}',op_mrg:'{lbl} is one row — one team covers both ({list})',op_amb:'⚠ {n} people with no known FAB were placed in that customer\u2019s largest row',op_div:'Site',op_run_u:'Running Units',op_run_c:'Running Chambers',op_idle:'Idle',op_staff:'Staff',op_to:'Target TO',op_gap:'Gap',op_hire:'Hiring',op_chp:'Ch/person',op_pm:'PM',op_unit:'Units',op_ch:'Chambers',op_expat:'Expat',op_local:'Local',op_fit:'Fit ch.',op_need:'Headcount',
  ins_pm:'YTD PM progress {p}% (plan {a} · done {b})',ins_ft:'{n} faults in 30d · {p} vs prev 30d',ins_hc:'{n} active · joined {a} · left {b} this month',
  ax_t:'Axis range (blank=auto)',
  rd_ppl:'Name|Site|Joined|Left',rd_inst:'Customer|FAB|Type|Fab-in',rd_chp_n:'Chamber-weighted total (DUAL=2), so it differs from the row count',rd_edu:'Name|Site|Basic|Veteran|Lv.2|Lv.3',rd_cip:'Site|Item|Applied|Done',ax_min:'Min',ax_max:'Max',ax_apply:'Apply',ax_reset:'Reset',loading:'Loading...',loaded:'Loaded',mon_u:'',u_p:'',u_c:''},
-zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇总',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_region:'区分',sl_customer:'客户',sl_line:'线',sl_fab:'FAB',sl_period:'期间',all:'全部',hr_note:'联动客户筛选 · 国家/线不适用',hr_note2:'',sec_ops:'运营',ops_note:'可用人力=人员现况中现场(O)在职者·联动客户筛选',ops_wait:'人员现况/休假现况表未连接 — 请在 report/index.html 顶部填入 GID_ROSTER / GID_LEAVE',ch_att:'出勤 · 休假',note_att:'工作日日均 · 出勤=可用人力−休假',att_a:'出勤',att_l:'休假',ch_to:'总人员 vs TO',note_to:'TO=搬入腔体÷30 (DUAL=2·SINGLE=1)',head_l:'总人员',ch_chp:'人均管理腔体',note_chp:'累计搬入腔体÷可用人力·明细见提示框',cutoff:'截止',att_pj:'人均作业',man_tot:'工时(h)',grp_t:'工龄',grp_s:'所属',cr_u1:'1年内',cr_u1:'1年内',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'按园区人员趋势',note_career:'各区间末现场(O)在职·按线堆叠',nCareer:'1年内 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'对象人员',edu_tg:'对象人员',edu_rt:'完成率',edu_goal:'目标90%',edu_ttf:'完成 {d} / 对象 {t}',man_sum:'合计',chp_c:'腔体(搬入)',chp_p:'人均管理',nTo:'满编率 {p}% · 较TO {d}名',nEdu:'完成率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'进度 {p}% · 剩余 {n}件',nAtt:'日均出勤 {a}名 · 休假 {l}名 · 作业 {j}件 (人均 {p}件)',nChp:'人均 {v}腔体 ({c}ch · {h}名)',nMan:'人均日 {v}h · PM {pm}h',nFt:'最近区间 {n}件 · 环比 {d}',per_ws:'周',per_ms:'月',per_ys:'年',ytd:'{y} 累计',top_allblank:'故障{m}件 · 报警类型未填 — 需填写表格Z列',per_w:'按周',per_m:'按月',per_note:'最近12个区间',print:'🖨 打印',wk_narr:'📋 本期摘要',wk_narr_w:'📋 本周摘要',wk_narr_m:'📋 本月摘要',
+zh:{sl_more:'仅周现况',title:'周间现况',sub:'人力·教育·作业·PM·故障 周/月汇总',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_region:'区分',sl_customer:'客户',sl_line:'线',sl_fab:'FAB',sl_period:'期间',all:'全部',hr_note:'联动客户筛选 · 国家/线不适用',hr_note2:'',sec_ops:'运营',ops_note:'可用人力=人员现况中现场(O)在职者·联动客户筛选',ops_wait:'人员现况/休假现况表未连接 — 请在 report/index.html 顶部填入 GID_ROSTER / GID_LEAVE',ch_att:'出勤 · 休假',note_att:'工作日日均 · 出勤=可用人力−休假',att_a:'出勤',att_l:'休假',ch_to:'总人员 vs TO',note_to:'TO=搬入腔体÷30 (DUAL=2·SINGLE=1)',head_l:'总人员',ch_chp:'人均管理腔体',note_chp:'累计搬入腔体÷可用人力·明细见提示框',cutoff:'截止',att_pj:'人均作业',man_tot:'工时(h)',grp_t:'工龄',grp_s:'所属',cr_u1:'1年内',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'按园区人员趋势',note_career:'各区间末现场(O)在职·按线堆叠',nCareer:'1年内 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'对象人员',edu_rt:'完成率',edu_goal:'目标90%',edu_ttf:'完成 {d} / 对象 {t}',man_sum:'合计',chp_c:'腔体(搬入)',chp_p:'人均管理',nTo:'满编率 {p}% · 较TO {d}名',nEdu:'完成率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'进度 {p}% · 剩余 {n}件',nAtt:'日均出勤 {a}名 · 休假 {l}名 · 作业 {j}件 (人均 {p}件)',nChp:'人均 {v}腔体 ({c}ch · {h}名)',nMan:'人均日 {v}h · PM {pm}h',nFt:'最近区间 {n}件 · 环比 {d}',per_ws:'周',per_ms:'月',per_ys:'年',ytd:'{y} 累计',top_allblank:'故障{m}件 · 报警类型未填 — 需填写表格Z列',per_w:'按周',per_m:'按月',per_note:'最近12个区间',print:'🖨 打印',wk_narr:'📋 本期摘要',wk_narr_w:'📋 本周摘要',wk_narr_m:'📋 本月摘要',
  kp1:'在职人员',kp2:'本月入职·离职',kp3:'教育完成率',kp4:'BM件数·近30天',kp5:'人均工时(h)·近30天',kp6:'PM进度·今年',
+  kf3b:'对象 {a} {m}名 · {b} {n}名',kd_edun2:'{a} {p}% (完成 {d}/{m}) · {b} {q}% (完成 {e}/{n})',kd_30d:'最近30天',kd_edu:'培训完成情况',kd_educ:'姓名|园区|课程|完成日|状态',kd_edun:'完成 {a} / 对象 {b}',kd_pm:'PM 计划进度 (本年累计)',kd_pmc:'月|计划(累计)|完成(累计)|进度',kd_pmn:'计划 {a} · 完成 {b}',kd_ioh:'卡片统计全体人员 — 本页入职·离职图表仅统计现场(O)',kd_asof:'基准日',
  kf1:'2年+ {n}名 · 1年内 {m}名',kf2:'近12个月入职 {n}名',kf3:'Veteran {p}% (对象 {n}名)',kf4:'前30天 {n}件',kf5:'PM占比 {p}%',kf6:'计划 {a} · 完成 {b}',
  sec1:'核心指标',sec2:'详细分析',sec3:'Alarm · 故障',sec4:'设备',
  ch_hc:'人员趋势(工龄区间)',note_hc:'各区间末在职 · 反映入职/离职日',hc_u1:'1年内',hc_u2:'1–2年',hc_u3:'2年以上',
@@ -505,15 +481,16 @@ zh:{title:'📊 周间现况',sub:'人力·教育·作业·PM·故障 周/月汇
  ch_man:'作业工时(h)',note_man:'PM·服务·安装区分(除异常值)',man_pm:'PM',man_np:'非PM',man_svc:'服务',man_inst:'安装',
  ch_pc:'人均作业件数',note_pc:'按区间内实际投入人员',
  ch_sc:'PM计划 vs 完成(今年累计)',note_sc:'计划=按设备周期到期件数 · 进度见提示框',sc_plan:'计划(累计)',sc_done:'完成(累计)',
- ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',pv_stage:'作业阶段',pv_sn:'设备S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全部作业记录',pv_s_hr:'人员',pv_s_io:'入职·离职',pv_join:'入职',pv_quit:'离职',pv_active:'在职',ft_total:'件数',ftv_all:'Alarm + All By-Pass',ftv_alarm:'仅 Alarm(BM)',ftv_abp:'仅 All By-Pass',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
+ ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',pv_stage:'作业阶段',pv_sn:'设备S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全部作业记录',pv_s_hr:'人员',pv_s_io:'入职·离职',pv_join:'入职',pv_quit:'离职',pv_active:'在职',ft_total:'件数',ftv_all:'Alarm + All By-Pass',ftv_alarm:'仅 Alarm(BM)',ftv_abp:'仅 All By-Pass',dq_kra:'国内报警台账为空 — 正以维修实绩 BM 计算',dq_kra_a:'请在 /upload/ 将「CS 报警管理」工作簿作为«报警»对象上传',dq_krb:'国内 All By-Pass 台账为空 — 该指标为 0',dq_krb_a:'请将同一工作簿再作为«All By-Pass»对象上传一次',dq_divj:'部分实绩行未关联事业部 — 这些行会直接通过事业部筛选',dq_divj_a:'请确认安装现况的 S/N 写法与实绩的设备号一致',dq_krj:'台账行未与安装现况关联 — 园区·线别会归入「未知」',dq_krj_a:'请使台账的 SEQP S/N 写法与安装现况 S/N 一致',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
  tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'Alarm Message',th_act:'措施',top_more:'其他{n}种',top_etc:'其他 {n}件 · 报警类型未填 {m}件',top_var:'({n}种写法合并)',
  top_alfb:'* 报警类型(Z列)未填 — 显示现象(AA列)',
  tbl_op:'Scrubber 运行现况',note_op:'运行 = 设备状态 Operation · 未运行 = 除「반납」与 Operation 以外的全部状态 · W/I=무상(保修内) · W/O=유상 · 腔体 DUAL=2·SINGLE=1 · 人均适定腔体可按站点修改(点✎ · 默认40) · PM=该区间TBM · 截止日基准',op_corp:'法人',op_corp2:'法人',op_cust2:'客户',op_camp2:'园区',op_na:'未分配',op_na_t:'表中未填园区的设备·人员 — 不从合计中剔除，归入此行',op_etc:'其他',op_etc_t:'前12名以外 {n} 个 — 归入此行以保证合计一致',op_wna:'⚠ 未填保修标记 {n} 台，计入 W/O',op_nodata:'无数据',op_nodata_t:'尚未收到人员数据 — 并非0人',op_nop:'{n}个法人未收到人员数据: {list}',op_mrg:'{lbl} 由同一团队负责，合并为一行 ({list})',op_amb:'⚠ 无法确定所属 FAB 的 {n} 人，已计入该客户最大的一行',op_div:'区分',op_run_u:'运行设备台数',op_run_c:'运行腔体数',op_idle:'未运行',op_staff:'负责人员(名)',op_to:'目标 TO',op_gap:'增减(名)',op_hire:'招聘计划',op_chp:'人均腔体',op_pm:'PM(件)',op_unit:'设备',op_ch:'腔体',op_expat:'驻在员',op_local:'当地雇员',op_fit:'适定腔体',op_need:'人员(名)',
  ins_pm:'今年PM进度 {p}% (计划 {a} · 完成 {b})',ins_ft:'近30天故障 {n}件 · 环比 {p}',ins_hc:'在职 {n}名 · 本月入职 {a} · 离职 {b}',
  ax_t:'轴范围 (空=自动)',
  rd_ppl:'姓名|站点|入职日|离职日',rd_inst:'客户|FAB|Type|搬入日',rd_chp_n:'腔体加权合计(DUAL=2)，与行数不同',rd_edu:'姓名|站点|Basic|Veteran|Lv.2|Lv.3',rd_cip:'站点|项目|适用日|完成日',ax_min:'最小',ax_max:'最大',ax_apply:'应用',ax_reset:'重置',loading:'加载中...',loaded:'已加载',mon_u:'月',u_p:'名',u_c:'件'},
-ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サマリー',back:'← メイン',refresh:'更新',sl_country:'国',sl_region:'区分',sl_customer:'顧客',sl_line:'ライン',sl_fab:'FAB',sl_period:'期間',all:'全体',hr_note:'顧客フィルタ連動 · 国/ライン非適用',hr_note2:'',sec_ops:'運営',ops_note:'可用人員=人員現況の現場(O)在籍者·顧客フィルタ連動',ops_wait:'人員現況/休暇現況シート未接続 — report/index.html 上部の GID_ROSTER / GID_LEAVE を設定してください',ch_att:'出勤 · 休暇',note_att:'平日の日平均 · 出勤=可用人員−休暇',att_a:'出勤',att_l:'休暇',ch_to:'総人員 vs TO',note_to:'TO=搬入チャンバー÷30 (DUAL=2·SINGLE=1)',head_l:'総人員',ch_chp:'一人当たり管理チャンバー',note_chp:'累計搬入チャンバー÷可用人員·詳細はツールチップ',cutoff:'締め',att_pj:'一人当たり作業',man_tot:'工数(h)',grp_t:'経歴',grp_s:'所属',cr_u1:'1年未満',cr_u1:'1年未満',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'キャンパス別人員推移',note_career:'各区間末の現場(O)在籍·ライン別スタック',nCareer:'1年未満 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'対象人員',edu_tg:'対象人員',edu_rt:'完了率',edu_goal:'目標90%',edu_ttf:'完了 {d} / 対象 {t}',man_sum:'合計',chp_c:'チャンバー(搬入)',chp_p:'一人当たり',nTo:'充足率 {p}% · TO比 {d}名',nEdu:'完了率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'進捗 {p}% · 残り {n}件',nAtt:'日平均出勤 {a}名 · 休暇 {l}名 · 作業 {j}件 (一人 {p}件)',nChp:'一人 {v}チャンバー ({c}ch · {h}名)',nMan:'一人日平均 {v}h · PM {pm}h',nFt:'直近 {n}件 · 前比 {d}',per_ws:'週',per_ms:'月',per_ys:'年',ytd:'{y} 累計',top_allblank:'故障{m}件 · アラーム種別未記入 — シートZ列の入力が必要',per_w:'週別',per_m:'月別',per_note:'直近12区間',print:'🖨 印刷',wk_narr:'📋 今週サマリー',wk_narr_w:'📋 今週サマリー',wk_narr_m:'📋 今月サマリー',
+ja:{sl_more:'週間現況専用',title:'週間現況',sub:'人員·教育·作業·PM·故障 週/月サマリー',back:'← メイン',refresh:'更新',sl_country:'国',sl_region:'区分',sl_customer:'顧客',sl_line:'ライン',sl_fab:'FAB',sl_period:'期間',all:'全体',hr_note:'顧客フィルタ連動 · 国/ライン非適用',hr_note2:'',sec_ops:'運営',ops_note:'可用人員=人員現況の現場(O)在籍者·顧客フィルタ連動',ops_wait:'人員現況/休暇現況シート未接続 — report/index.html 上部の GID_ROSTER / GID_LEAVE を設定してください',ch_att:'出勤 · 休暇',note_att:'平日の日平均 · 出勤=可用人員−休暇',att_a:'出勤',att_l:'休暇',ch_to:'総人員 vs TO',note_to:'TO=搬入チャンバー÷30 (DUAL=2·SINGLE=1)',head_l:'総人員',ch_chp:'一人当たり管理チャンバー',note_chp:'累計搬入チャンバー÷可用人員·詳細はツールチップ',cutoff:'締め',att_pj:'一人当たり作業',man_tot:'工数(h)',grp_t:'経歴',grp_s:'所属',cr_u1:'1年未満',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'キャンパス別人員推移',note_career:'各区間末の現場(O)在籍·ライン別スタック',nCareer:'1年未満 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'対象人員',edu_rt:'完了率',edu_goal:'目標90%',edu_ttf:'完了 {d} / 対象 {t}',man_sum:'合計',chp_c:'チャンバー(搬入)',chp_p:'一人当たり',nTo:'充足率 {p}% · TO比 {d}名',nEdu:'完了率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'進捗 {p}% · 残り {n}件',nAtt:'日平均出勤 {a}名 · 休暇 {l}名 · 作業 {j}件 (一人 {p}件)',nChp:'一人 {v}チャンバー ({c}ch · {h}名)',nMan:'一人日平均 {v}h · PM {pm}h',nFt:'直近 {n}件 · 前比 {d}',per_ws:'週',per_ms:'月',per_ys:'年',ytd:'{y} 累計',top_allblank:'故障{m}件 · アラーム種別未記入 — シートZ列の入力が必要',per_w:'週別',per_m:'月別',per_note:'直近12区間',print:'🖨 印刷',wk_narr:'📋 今週サマリー',wk_narr_w:'📋 今週サマリー',wk_narr_m:'📋 今月サマリー',
  kp1:'在籍人員',kp2:'今月 入社·退社',kp3:'教育完了率',kp4:'BM件数·直近30日',kp5:'一人工数(h)·直近30日',kp6:'PM進捗·今年',
+  kf3b:'対象 {a} {m}名 · {b} {n}名',kd_edun2:'{a} {p}% (修了 {d}/{m}) · {b} {q}% (修了 {e}/{n})',kd_30d:'直近30日',kd_edu:'教育修了状況',kd_educ:'氏名|拠点|コース|修了日|状態',kd_edun:'修了 {a} / 対象 {b}',kd_pm:'PM スケジュール進捗 (年初来)',kd_pmc:'月|計画(累計)|完了(累計)|進捗',kd_pmn:'計画 {a} · 完了 {b}',kd_ioh:'カードは全人員を数えます — 同じ画面の入社・退社チャートは現場(O)のみです',kd_asof:'基準日',
  kf1:'2年+ {n}名 · 1年未満 {m}名',kf2:'直近12ヶ月入社 {n}名',kf3:'Veteran {p}% (対象 {n}名)',kf4:'前30日 {n}件',kf5:'PM比率 {p}%',kf6:'計画 {a} · 完了 {b}',
  sec1:'主要指標',sec2:'詳細分析',sec3:'Alarm · 故障',sec4:'設備',
  ch_hc:'人員推移(経歴区分)',note_hc:'各区間末の在籍 · 入社/退社日反映',hc_u1:'1年未満',hc_u2:'1–2年',hc_u3:'2年以上',
@@ -523,7 +500,7 @@ ja:{title:'📊 週間現況',sub:'人員·教育·作業·PM·故障 週/月サ
  ch_man:'作業工数(h)',note_man:'PM·サービス·設置区分(異常値除外)',man_pm:'PM',man_np:'非PM',man_svc:'サービス',man_inst:'設置',
  ch_pc:'一人当たり作業件数',note_pc:'区間内の実投入人員基準',
  ch_sc:'PM計画対完了(今年累計)',note_sc:'計画=設備別周期の到来件数 · 進捗はツールチップ',sc_plan:'計画(累計)',sc_done:'完了(累計)',
- ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',pv_stage:'作業段階',pv_sn:'設備S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全作業記録',pv_s_hr:'人員',pv_s_io:'入社·退社',pv_join:'入社',pv_quit:'退社',pv_active:'在籍',ft_total:'件数',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) のみ',ftv_abp:'All By-Pass のみ',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
+ ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',pv_stage:'作業段階',pv_sn:'設備S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全作業記録',pv_s_hr:'人員',pv_s_io:'入社·退社',pv_join:'入社',pv_quit:'退社',pv_active:'在籍',ft_total:'件数',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) のみ',ftv_abp:'All By-Pass のみ',dq_kra:'国内アラーム元帳が空で、修繕実績 BM で数えています',dq_kra_a:'/upload/ で「CS アラーム管理」ワークブックを«アラーム»対象としてアップロードしてください',dq_krb:'国内 All By-Pass 元帳が空で、その指標が 0 です',dq_krb_a:'同じワークブックを«All By-Pass»対象としてもう一度アップロードしてください',dq_divj:'一部の実績行に事業部が付いていません — その行は事業部フィルタを素通りします',dq_divj_a:'設置現況の S/N 表記が実績の設備号と合っているか確認してください',dq_krj:'元帳の行が設置現況と結びつきませんでした — 団地·ラインが「不明」に寄ります',dq_krj_a:'元帳の SEQP S/N 表記を設置現況の S/N に合わせてください',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
  tbl_top:'故障原因TOP3',th_cause:'原因',th_cnt:'件数',th_al:'Alarm Message',th_act:'対応',top_more:'他{n}種',top_etc:'その他 {n}件 · アラーム種別未記入 {m}件',top_var:'({n}表記まとめ)',
  top_alfb:'* アラーム種別(Z列)未記入 — 現象(AA列)で表示',
  tbl_op:'Scrubber 稼働現況',note_op:'稼働 = 設備状態 Operation · 未稼働 = 「반납」と Operation を除く全状態 · W/I=무상(保証内) · W/O=유상 · チャンバー DUAL=2·SINGLE=1 · 適正チャンバーはサイト別に編集可(✎クリック · 既定40) · PM=当該区間TBM · 締め日基準',op_corp:'法人',op_corp2:'法人',op_cust2:'顧客',op_camp2:'キャンパス',op_na:'未配置',op_na_t:'シートにキャンパス記載なしの設備・人員 — 合計から外さずここに入れます',op_etc:'その他',op_etc_t:'上位12以外 {n} 件 — 合計が合うようここに入れます',op_wna:'⚠ 保証区分未記入 {n} 台は W/O に含まれます',op_nodata:'データなし',op_nodata_t:'人員データ未受領 — 0名ではありません',op_nop:'人員データ未受領 {n}法人: {list}',op_mrg:'{lbl} は同一チームが担当のため1行にまとめています ({list})',op_amb:'⚠ 担当FABが不明な {n} 名は、その顧客の最大行に入れています',op_div:'区分',op_run_u:'稼働設備台数',op_run_c:'稼働チャンバー数',op_idle:'未稼働',op_staff:'担当人員(名)',op_to:'目標 TO',op_gap:'増減(名)',op_hire:'採用計画',op_chp:'一人当たり',op_pm:'PM(件)',op_unit:'設備',op_ch:'チャンバー',op_expat:'駐在員',op_local:'現地採用',op_fit:'適正チャンバー',op_need:'人員(名)',
@@ -741,16 +718,16 @@ function renderMiniToggles(){
 // 키가 있으면 그 값을 그대로 쓴다 — 빈 문자열 번역(영문 단위 생략 등)이 키 이름으로 새는 것 방지
 function t(k){const d=T[LANG]||T.ko; return (k in d)?d[k]:k;}
 function applyLang(){
-  document.querySelectorAll('[data-i]').forEach(el=>{if(el.hasAttribute('data-lock'))return;el.textContent=t(el.getAttribute('data-i'));});
+  GST.applyI18n(t, LANG);   // data-i·-th·-ph·-title 한 벌 + 사이드바·칩·출처 배지 이름표(v135)
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
-  try{ renderFtView(); renderTopView(); }catch(e){}
+  try{ renderFtView(); renderTopView(); }catch(e){ console.warn('[report] 계통 드롭다운 렌더 실패', e); }
+  try{ GST.anchorNav('.sec-h'); }catch(e){ console.warn('[report] 섹션 목차', e); }   // 25장짜리 페이지의 앵커 목차(v135)
 }
 function setLang(l){LANG=l;try{window.name=l;}catch(e){}applyLang();if(WK.length||HR.length)render();document.getElementById('langMenu').classList.remove('open');}
 function toggleLang(){document.getElementById('langMenu').classList.toggle('open');}
 document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))document.getElementById('langMenu').classList.remove('open');});
 
 GST.chartDefaults();
-const THEME_LABELS={slate:'Slate',default:'Cyber Turquoise',burgundy:'Royal Burgundy',light:'Aurora Light'};
 function changeDashboardTheme(themeClass,label){
   document.body.className='';
   if(themeClass!=='default')document.body.classList.add('theme-'+themeClass);
@@ -763,33 +740,17 @@ const MS=86400000;
 // 숫자 파싱 — 콤마/공백/단위 등 서식이 섞여도 값 그대로 읽기(값 누락 방지). 빈칸·비숫자는 0.
 function numv(s){ if(s==null)return 0; if(typeof s==='number')return isFinite(s)?s:0;
   const v=parseFloat(String(s).replace(/[^0-9.\-]/g,'')); return isFinite(v)?v:0; }
-function pd(s){ // '2022. 8. 1' / '2025-07-10' / 엑셀 시리얼(46153) / Date
-  if(!s)return null;
-  if(s instanceof Date) return isNaN(s)?null:s;
-  s=String(s).trim(); if(!s)return null;
-  /* 엑셀 시리얼 날짜. 국내 실적 CSV 가 날짜 서식을 잃은 채 숫자로 들어온다(실측 46153·45765).
-     이걸 못 읽어 25만 행 중 24만 행이 «일자 공란»으로 통째로 버려졌고, 화면에는
-     인당작업·공수·알람이 0 으로만 보였다 — 필터 문제로 오해하기 딱 좋은 실패였다.
-     core.js GST.toDate 와 «같은 규칙»을 쓴다. 두 벌이면 또 갈라진다. */
-  const _n=Number(s);
-  if(!isNaN(_n) && _n>20000 && _n<80000) return new Date(Date.UTC(1899,11,30)+_n*86400000);
-  s=s.replace(/\.\s*/g,'-').replace(/\/-?/g,'-').replace(/-$/,'').replace(/\s/g,'');
-  const m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if(!m)return null;
-  const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));
-  return isNaN(d)?null:d;
-}
+/* '2022. 8. 1' / '2025-07-10' / 엑셀 시리얼(46153) / Date — 정본은 core.js GST.toDate 다 (v135).
+   예전에는 여기 사본이 '2022. 8. 1' 을 UTC 자정으로 읽고 core 는 로컬 자정으로 읽어, 같은 문자열에
+   하루 다른 날짜를 냈다(두 시계). 사본을 지우고 core 를 넓혔다 — t-quiet [1b] 가 옛 표기 전부를 대조한다. */
+function pd(s){ return GST.toDate(s); }
 function fmtYM(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}
 // 세부내역(rowsModal) 날짜 표기 — pd()가 UTC 자정으로 만들므로 ISO 앞 10자가 그대로 시트 날짜다.
 // toLocaleDateString 등 로컬 변환을 쓰면 시간대에 따라 하루 밀린다.
 const fmtD=d=>(d instanceof Date&&!isNaN(d))?d.toISOString().slice(0,10):'';
-function isoW(d){ // 엑셀 WEEKNUM(일~토, 1/1 포함 주=W1) — 시트 주차와 일치. 같은 주(일~토)는 같은 키(일요일 기준 계산)
-  const sun=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));
-  sun.setUTCDate(sun.getUTCDate()-sun.getUTCDay());
-  const jan1=new Date(Date.UTC(sun.getUTCFullYear(),0,1));
-  const w=Math.ceil((((sun-jan1)/MS)+jan1.getUTCDay()+1)/7);
-  return sun.getUTCFullYear()+'-W'+String(w).padStart(2,'0');
-}
+// 주차 규약은 GST.isoW 가 정본이다 (엑셀 WEEKNUM · 일~토 · 1/1 포함 주=W1) — v135 8단계에 위임으로.
+// 사본을 두면 한쪽만 고쳐져 같은 막대에서 한 주가 어긋난다(CLAUDE.md 의 「isoW 네 벌」).
+function isoW(d){ return GST.isoW(d); }
 function keyOfDate(d,u){return (u||PERIOD)==='w'?isoW(d):fmtYM(d);}
 
 /* ===== 국내 알람·올바이패스 원장 (v92) =====
@@ -841,13 +802,32 @@ function krJoin(list, inst, CI){
     if(!ix[k])ix[k]=o;
     const b=GST.ALARM.keyBase(r[CI.sn]); if(!ix[b])ix[b]=o;
   });
+  let _hit=0;
   list.forEach(function(x){
     const o=ix[x.snk]||ix[GST.ALARM.keyBase(x.snk)]||null;
+    if(o)_hit++;
     x.region=o?o.region:''; x.op=o?o.op:''; x.custB=o?o.custB:'';
-    x.campus=o?o.campus:''; x.lineN=(o&&o.line)||x.srcLine;
     x.div=(o&&o.div)||'';   // 못 붙은 행은 빈 값 그대로 — loose 로 통과시킨다(버리지 않는다)
     x.line2=(o&&o.line2)||'';
+    /* 「라인 = 설치현황 상 라인2 기준」 (2026-09 CS관리팀 회신 · 사용자 확정 «국내만»).
+       ⚠ 갈림은 이 «한 줄»이다 — 소비부(krLineOf·krCampusOf·필터·드릴·표)가 각자 고르면
+         같은 화면의 카드끼리 다른 라인을 보여준다(v94 가 단지에서 겪은 자리).
+       ⚠ 해외는 한 자리도 안 움직인다(제3원칙) — 118열 양식에는 Line 2 열 자체가 없다.
+       line2 가 비면 지금까지대로 FAB(Line 1)으로 폴백한다. 버리지 않는다. */
+    const _kr = o && o.region === GST.ORG.REGION_KR;
+    x.lineN = (_kr ? ((o && o.line2) || (o && o.line)) : (o && o.line)) || x.srcLine;
+    /* 국내에서는 Line 2 가 «라인» 이 됐으므로 원장의 라인2 값은 비운다 — 안 그러면
+       라인·라인2 두 칸이 «같은 차원»을 두 번 거르게 되어, 라인2 를 고르는 순간
+       설명할 수 없는 교집합이 된다. line2 는 loose 축이라 빈 값은 통과한다. */
+    if(_kr) x.line2='';
+    /* 단지는 «해결된 라인»을 보고 다시 판정한다 — 연구소 라인은 단지가 연구소다.
+       위에서 campus 를 먼저 넣어 두면 P3·P4 가 그대로 남는다(사용자 확정 · v134). */
+    x.campus = o ? (GST.ORG.campus(o.campus, x.lineN, o.op, o.line2) || o.campus) : '';
   });
+  /* 조인율을 남긴다 (v135). 낮으면 단지·라인·사업부가 «조용히» 비는데 화면에는 필터 고장으로 보인다 —
+     CLAUDE.md v134 「남은 확인」이 «올린 뒤 화면으로 확인하라»고 했는데 그 표시가 없었다. 관리자에게만 적는다(A-4). */
+  window._KRJOIN = window._KRJOIN || {n:0, hit:0};
+  window._KRJOIN.n += list.length; window._KRJOIN.hit += _hit;
   return list;
 }
 function periods(n,anchor,unit){
@@ -983,12 +963,8 @@ const valLabelPlugin={id:'valLabel',
     });
     ctx.restore();
   }};
-// 카드 노트에 자동 인사이트 문구
-function setNote(canvasId,txt){
-  const c=document.getElementById(canvasId); if(!c)return;
-  const card=c.closest('.card'); if(!card)return;
-  const n=card.querySelector('.card-note'); if(n)n.textContent=txt;
-}
+// 카드 노트에 자동 인사이트 문구 — 정본은 core.js GST.setNote (v135 · cip 과 byte 까지 같은 사본이었다)
+function setNote(canvasId,txt,sev){ GST.setNote(canvasId,txt,sev); }
 // % 보조축 (오른쪽, 그리드 없음)
 function pctAxis(TH,max){return {position:'right',min:0,max:max||100,grid:{drawOnChartArea:false},ticks:{color:TH.txt,callback:v=>v+'%',maxTicksLimit:5,font:{size:9}}};}
 function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
@@ -1083,6 +1059,10 @@ function parseRoster(rows){
       // 퇴사 판정: 퇴사일이 있거나, 새 양식의 「인사」가 퇴직이면 퇴사다
       quit:quitD||(/퇴직|퇴사/.test(hrst)?new Date(0):null),
       onsite:g(r,iOn).toUpperCase()==='O',
+      /* 업무/직책 — 공수 분모에서 팀장·단지장을 빼려면 이 값이 필요하다(GST.HEAD_EX).
+         예전에는 지역 변수로 expat 판정에만 쓰고 내보내지 않아, 화면에서는 그 열이
+         «없는 것과 같았다». 인원 필터 축으로는 쓰지 않는다 — 축을 늘리는 일이 아니다. */
+      role:role,
       expat:/주재원/.test(org+' '+role+' '+line),
       // 대시보드는 스크러버 전용 — Chiller 인원은 전 지표에서 제외
       chiller:duty?/CHILLER/i.test(duty):/CHILLER/i.test(org)
@@ -1252,6 +1232,7 @@ function activeAt(p,E){return p.join&&p.join<=E&&(!p.quit||p.quit>=E);}  // 퇴�
 async function loadData(){
   const st=document.getElementById('status');
   st.className='status'; st.textContent=t('loading');
+  GST.skeleton(true);   // 여덟 중 이 페이지만 없었다 — 열 개 자료를 받는 몇 초 동안 빈 카드만 보였다(v135)
   try{
     const gidOk=g=>/^\d+$/.test(g);
     const [hr,wk,inst,ro,lv,c11,c16,abp,kra,krb]=await Promise.allSettled([
@@ -1350,6 +1331,7 @@ async function loadData(){
       });
       window._DIVJOIN = { n: WK.length, hit: _hit };   // 조인율은 화면에 밝힌다(조용히 빼지 않는다)
     }
+    window._KRJOIN = {n:0, hit:0};   // 로드마다 새로 센다 — 누적하면 재로드 뒤 조인율이 부푼다
     krJoin(KRA, INST, CI); krJoin(KRB, INST, CI);   // 조직 축은 설치현황에서 — CI 가 확정된 뒤여야 한다
     const cached=(hr.status==='fulfilled'&&hr.value.cached)||(wk.status==='fulfilled'&&wk.value.cached);
     const _wkDrop=Math.max(0,_wkRaw-WK.length);   // 작업단계·작업일 공란으로 집계 제외된 행
@@ -1358,19 +1340,19 @@ async function loadData(){
     const _hrRaw=hr.status==='fulfilled'?hr.value.rows.length:-1;
     const _hrWarn=!HR.length&&_hrRaw>3?' ⚠ 교육시트 열 인식 실패(원본 '+_hrRaw+'행)':(!HR.length&&_hrRaw<0?' ⚠ 교육시트 로드 실패':'');
     if(_hrWarn)st.className='status err';
-    st.textContent=(cached?'📡 ':'✅ ')+new Date().toLocaleString('ko-KR')+' · HR '+HR.length+_hrWarn+' · 실적 '+WK.length.toLocaleString()
+    st.textContent=(cached?GST.staleText()+' · ':'✅ ')+new Date().toLocaleString('ko-KR')+' · HR '+HR.length+_hrWarn+' · 실적 '+WK.length.toLocaleString()
       +(_wkDrop?' (제외 '+_wkDrop.toLocaleString()+'·단계/일자 공란)':'')+' · 설치 '+INST.length.toLocaleString()
       /* 실적에 실린 사업부는 «설비 S/N 으로 설치현황을 조인해» 얻은 것이다(사용자 지적).
          못 붙은 행은 loose 로 통과하므로 사업부를 걸어도 안 걸러진다 — 조인이 낮으면
          「사업부를 바꿔도 실적이 별로 안 준다」가 되는데, 그 이유가 화면에 없으면
          필터가 고장 난 것으로 읽힌다. 전부 붙었으면 적지 않는다(늘 적으면 소음이다). */
-      +(window._DIVJOIN && window._DIVJOIN.hit < window._DIVJOIN.n
+      +(GST.isAdmin&&GST.isAdmin() && window._DIVJOIN && window._DIVJOIN.hit < window._DIVJOIN.n   // 조인율은 내부 품질 수치 — 관리자만(v135)
           ? ' · 사업부조인 '+window._DIVJOIN.hit.toLocaleString()+'/'+window._DIVJOIN.n.toLocaleString()
             +' ('+Math.round(window._DIVJOIN.hit/Math.max(1,window._DIVJOIN.n)*100)+'%)' : '')
-      +(KRA.length||KRB.length ? ' · 국내알람 '+KRA.filter(x=>x.cnt).length.toLocaleString()
+      +(GST.isAdmin&&GST.isAdmin()&&(KRA.length||KRB.length) ? ' · 국내알람 '+KRA.filter(x=>x.cnt).length.toLocaleString()
           +'/'+KRA.length.toLocaleString()+' · 국내올바 '+KRB.filter(x=>x.cnt).length.toLocaleString()
           +'/'+KRB.length.toLocaleString() : '')
-      +' · v45';
+      +(GST.isAdmin&&GST.isAdmin()?' · v45':'');
     render();
   }catch(e){
     /* ⚠ 예전에는 «❌ 불러오는 중…» 한 줄만 찍고 e 를 버렸다. 화면에는 실패했다는 것만
@@ -1378,8 +1360,9 @@ async function loadData(){
        (표가 없어서인지·권한인지·열 인식인지 전부 같은 글자로 보인다).
        콘솔에는 스택째 남기고, 화면에는 한 줄로 이유를 적는다. */
     console.error('[report] loadData 실패', e);
+    GST.skeleton(false);   // 빼면 실패 시 영영 반짝인다(material 이 그 상태였다)
     st.className='status err';
-    st.textContent='❌ '+t('loading')+' — '+String((e&&e.message)||e);
+    st.textContent='❌ '+GST.failNote(e);   // 부류별 한 줄 · 원문은 관리자에게만(v135)
   }
 }
 
@@ -1479,7 +1462,8 @@ function fillFilters(){
            line2:GST.FILT_DROP_ORG, campus:GST.FILT_DROP_ORG } });
   syncCommon();
 }
-function render(){
+function render(){ GST.dq&&GST.dq.reset('report');
+  GST.skeleton(false);
   const TH=GST.chartTheme(); GST.chartDefaults();
   Chart.defaults.onClick=onDrill;   // 막대/라인 클릭 → 구간 상세 드릴다운
   const ink=inkStrong(TH);
@@ -1500,6 +1484,10 @@ function render(){
   if(!asOf)asOf=(PERIOD==='w') ? (_endWDate()||_endMDate()) : (_endMDate()||_endWDate());
   if(!asOf)asOf=today; if(asOf>today)asOf=today;
   const asOfY=asOf.getUTCFullYear(), asOfM=asOf.getUTCMonth();
+  /* KPI 카드가 «자기가 센 그 배열»을 담아 둔다 (v133). 카드를 누르면 이 배열이 그대로
+     세부내역이 되므로, 숫자와 목록이 원리적으로 갈릴 수 없다 — 두 식을 따로 두면
+     반드시 갈라진다(제2원칙). 채우는 자리는 각 setTxt('kpN', …) 바로 옆이다. */
+  const _KPI={};
   // PPT 내보내기용 스냅샷(표시 전용) — 각 블록이 렌더 값 그대로 채움
   window._PPT={asOf:asOf.toISOString().slice(0,10),wk:'W'+isoW(asOf).slice(-2)};
   const from=F.dtFrom?pd(F.dtFrom):null;
@@ -1630,7 +1618,15 @@ function render(){
     return KRAf.filter(x=>x.d&&x.d>=a&&x.d<=b); };
   const krInX=(st,en)=>{ if(!KR_ON)return []; const a=fmtD(st), b=fmtD(en);
     return KRAf.filter(x=>x.d&&x.d>=a&&x.d<b); };
-  const bmN =(st,en)=>wkBM (st,en).length + krIn (st,en).length;
+  /* 건수와 «그 건들의 행»이 한 식에서 나온다 (v133).
+     예전에는 셋이 따로였다 — bmN(KPI 카드) · _alRows(고장원인 TOP3) ·
+     drillFault 의 bmRows(막대 클릭). 지금은 우연히 같은 수를 냈지만, 국내 쪽이
+     문자열 비교(krIn: x.d>=fmtD(st))와 Date 비교(drillFault 의 inP: x.wd>=p.st)로
+     갈려 있어 경계 날짜·시각이 붙은 자료에서 카드 숫자와 팝업 목록이 달라질 수 있었다.
+     국내 규칙이 다음에 또 바뀔 때(v92 에서 실제로 겪었다) 한 곳만 따라가는 것을 막는다.
+     ⚠ krAsWk 는 아래에서 정의되지만 여기서는 «부를 때» 참조하므로 문제없다. */
+  const bmRowsIn=(st,en)=>wkBM(st,en).concat(krIn(st,en).map(krAsWk));
+  const bmN =(st,en)=>bmRowsIn(st,en).length;
   const bmNx=(st,en)=>wkBMx(st,en).length + krInX(st,en).length;
   /* 원장 행을 실적 행의 «모양»으로 맞춘다 — TOP3 표·막대 클릭 리스트가 이 모양을 쓴다.
      사용자 확정(v94): 표시는 분류가 아니라 시트의 원문 열 그대로 —
@@ -1821,7 +1817,17 @@ function render(){
        실측(인원현황 585행): 현장(O) 인원 중 대만 쪽에서 이 규칙이 떨구는 것은 TSMC 1명뿐이라
        대만 숫자는 한 자리도 움직이지 않는다. */
   const QBR_EX=/TSMC/;
-  const qbrOk=p=>{ const s=String(p.site||'').trim(); return !!s && !QBR_EX.test(GST.upk(s)); };
+  /* 「공수 산정 시 인력 제외 기준 — 팀장, OFFICE인원, 단지장」
+     (2026-09 CS관리팀 회신 · 사용자 확정).
+     ⚠ 여기는 «공수/출근 분모» 전용이다(headOn 이 이것만 쓴다). kp1 재직 인원(act)은
+       qbrOk 를 안 지나므로 **카드 숫자는 안 움직인다** — 메일이 말한 범위와 정확히 같다.
+     ⚠ 분모가 줄면 인당 지표는 **높아진다**. 높아지는 쪽이 더 위험하다(v112 — 사람이
+       하루 10.8시간을 일할 수 없는데 그냥 읽힌다). 그래서 몇 명을 왜 뺐는지 적는다. */
+  const qbrOk=p=>{ const s=String(p.site||'').trim();
+    if(!s || QBR_EX.test(GST.upk(s))) return false;
+    return !GST.HEAD_EX.hit(p); };
+  const _headEx=GST.HEAD_EX.scan(fHR.filter(x=>x.onsite&&String(x.site||'').trim()
+    &&!QBR_EX.test(GST.upk(String(x.site||'')))));
   /* 소속(라인) 구분 목록 — 데이터에서 만든다. 스택 막대라 목록에서 빠진 사람은 합계에서
      조용히 사라지므로, 상위 N 밖은 '기타'로 모아 반드시 포함시킨다(버리지 않는다). */
   const SITE_ORD=['F16','F11','F16N','F16S','PSMC','TASC','WINBOND',
@@ -1862,13 +1868,42 @@ function render(){
   const setTxt=(id,v)=>{const e=document.getElementById(id);if(e)e.innerHTML=v;};
   setTxt('kp1',act.length.toLocaleString());
   setTxt('kf1',t('kf1').replace('{n}',u3).replace('{m}',u1));
+  _KPI.act=act;                                   // 그대로 drillHead 의 명단이 된다
+  /* ⚠ kp2 는 fHR «전원»을 그 달로 세는데, 같은 화면의 입·퇴사 차트(cIo)는 IO_ONSITE 가
+     켜져 있으면 현장(O)만 센다. 카드 숫자는 건드리지 않고(숫자가 움직이면 그 자체가
+     사고다) 카드의 모집단을 드릴에 넘긴 뒤, 차이를 화면에 적는다.
+     구간은 «그 달 전체»다 — 카드가 월로 세므로 asOf 로 자르면 목록이 더 짧아진다. */
+  _KPI.io={rows:fHR, st:new Date(Date.UTC(asOfY,asOfM,1)), end:new Date(Date.UTC(asOfY,asOfM+1,0)),
+           label:(asOfY+'-'+String(asOfM+1).padStart(2,'0')), n:joinM+quitM};
   setTxt('kp2','+'+joinM+' / -'+quitM);
   setTxt('kf2',t('kf2').replace('{n}',join12));
   // 교육 완료율 — cEdu 차트와 동일 로직(버그 수정): 현장(O) 재직자 · 6개월 미만 LV1(Basic)·이상 LV2(Veteran) · 이수일 ≤ 기준일(이름 매칭)
   const eA=fHR.filter(x=>x.onsite&&activeAt(x,asOf)&&x.join);
-  const _six=x=>((asOf-x.join)/MS)>=182;
-  const eLv1=eA.filter(x=>!_six(x)), eLv2=eA.filter(_six);
   const _dOf=(x,k)=>{const e=eduOf(x);return !!(e&&e[k]&&e[k]<=asOf);};
+  /* ───── 교육 대상 — 판정은 이 «한 곳»만 지난다 (v134) ─────
+     국내와 해외가 «다른 규칙»이다(제3원칙).
+
+       해외 (Basic · Veteran)  — 지금까지 그대로: 6개월 미만 → LV1 · 이상 → LV2.
+                                 두 집단이 «안 겹친다».
+       국내 (Scrubber Lv.2·Lv.3, 2026-09 CS관리팀 회신 · 사용자 확정)
+           Lv2 대상 = Scrubber 담당 CS인력 «전원» (근속 무관)
+           Lv3 대상 = «Lv2 를 이수한» 인력
+
+     ⚠ 국내는 두 집단이 «겹친다»(Lv3 ⊂ Lv2). 예전처럼 (이수합)÷(대상합) 한 분수로 누르면
+       한 사람이 분모에 두 번 들어가 설명할 수 없는 수가 된다 → 카드를 두 수로 낸다.
+     ⚠ Chiller 는 parseRoster 가 이미 걸러낸다(대시보드는 스크러버 전용 · 사용자 확정).
+       메일이 준 Chiller 기준(Lv2 = 입사 6개월 이상 · Lv3 = Lv2 이수자)은 그때를 위해
+       여기 적어만 둔다 — 담당구분을 화면에 들일 때 이 함수에 분기 한 줄이면 된다.
+     ⚠ 세 소비부(KPI 카드 · 교육 계획 표 · cEdu 추이)가 각자 6개월을 세고 있었다.
+       한 곳으로 모으지 않으면 v96 처럼 «같은 화면의 카드끼리 다른 답»이 된다. */
+  const eduDone=(x,at,lv)=>{const e=eduOf(x), k=eduKey(x,lv); return !!(e&&e[k]&&e[k]<=at);};
+  const eduTgt=(list,at)=>{
+    const kr=x=>x.region===GST.ORG.REGION_KR;
+    const six=x=>((at-x.join)/MS)>=182;
+    return { lv1:(list||[]).filter(x=>kr(x)?true:!six(x)),
+             lv2:(list||[]).filter(x=>kr(x)?eduDone(x,at,1):six(x)) };
+  };
+  const _eT=eduTgt(eA,asOf), eLv1=_eT.lv1, eLv2=_eT.lv2;
   /* ⚠ 과정은 사람마다 다르다 — 국내는 Scrubber Lv.2·Lv.3, 해외는 Basic·Veteran.
      여기서 'bdate'·'vdate' 를 박아 두었더니 **국내만 걸면 완료율이 늘 0%** 였다
      (국내 인원에게는 Basic·Veteran 완료일이라는 것이 아예 없다). 바로 아래 교육 계획 표와
@@ -1877,18 +1912,20 @@ function render(){
   const d1=eLv1.filter(x=>_dOf(x,eduKey(x,1))).length,
         d2=eLv2.filter(x=>_dOf(x,eduKey(x,2))).length;
   const eT=eLv1.length+eLv2.length, eD=d1+d2;
-  /* 이름표도 잡힌 인원을 따라간다 — 교육 계획 표 머리글과 같은 규약.
+  const _eR1=eLv1.length?Math.round(d1/eLv1.length*100):null,
+        _eR2=eLv2.length?Math.round(d2/eLv2.length*100):null;
+  /* 이름표도 잡힌 인원을 따라간다 — 교육 계획 표 머리글과 같은 규약(v96).
      안 그러면 Lv.3 숫자를 세면서 «Veteran» 이라고 말하는 카드가 된다. */
   const _eKr=eA.filter(x=>x.region===GST.ORG.REGION_KR).length, _eOv=eA.length-_eKr;
-  const _eCourse = (!eA.length||(_eOv&&!_eKr)) ? 'Veteran'
-                 : (_eKr&&!_eOv) ? 'Scrubber Lv.3' : 'LV2 (Veteran · Lv.3)';
+  const _eN = (!eA.length||(_eOv&&!_eKr)) ? ['Basic','Veteran']
+            : (_eKr&&!_eOv) ? ['Lv.2','Lv.3'] : ['LV1','LV2'];
   window._PPT.edu={b:eLv1.length,bD:d1,v:eLv2.length,vD:d2};   // PPT 교육 표용
   // ===== 교육 계획 카드 — 라인 선택 가능 · 이 표의 값이 PPT 슬라이드1 교육계획 표에 그대로 들어간다 =====
   {
     const selv=window._EDUPLAN||'';
     const base=fHR.filter(x=>x.onsite&&activeAt(x,asOf)&&x.join&&(!selv||grpKey(x)===selv));
-    const sixP=x=>((asOf-x.join)/MS)>=182;
-    const lv1=base.filter(x=>!sixP(x)), lv2=base.filter(sixP);
+    /* 판정은 eduTgt 한 곳이다 — 예전에는 여기서 6개월을 다시 세고 있었다(v134). */
+    const _bt=eduTgt(base,asOf), lv1=_bt.lv1, lv2=_bt.lv2;
     // 인별 상태 분류 — 시트의 상태 열(이수완료/진행중)을 존중한다.
     // done: 이수일<=기준일 · ing: 상태 '진행중'(미완료) · no: 그 외 미이수(사유 보관)
     const clsP=(x,dkIn,sk)=>{const e=eduOf(x); const dk=(typeof dkIn==='function')?dkIn(x):dkIn;
@@ -1939,9 +1976,28 @@ function render(){
         } else { mEl.style.display='none'; mEl.textContent=''; mEl.title=''; } }
     }
   }
-  setTxt('kp3',eT?Math.round(eD/eT*100)+'%':'—');
-  setTxt('kf3',t('kf3').replace('Veteran',_eCourse)
-    .replace('{p}',eLv2.length?Math.round(d2/eLv2.length*100):0).replace('{n}',eLv2.length));
+  /* ⚠ 과정 키는 반드시 eduKey 를 지난다 — 'bdate'/'vdate' 를 다시 박으면 국내 인원에게는
+     그 완료일이라는 것이 아예 없어 완료율이 통째로 0% 가 된다(CLAUDE.md v96 · 이미 겪었다).
+     이름표도 잡힌 과정을 따라간다 — Lv.2 를 세면서 Basic 이라고 적으면 표가 거짓말을 한다. */
+  _KPI.edu=(function(){
+    const NM={bdate:'Basic (LV1)', vdate:'Veteran (LV2)', lv2date:'Scrubber Lv.2', lv3date:'Scrubber Lv.3'};
+    const mk=(arr,lv)=>arr.map(x=>{ const k=eduKey(x,lv), e=eduOf(x), dv=e&&e[k];
+      return {done:_dOf(x,k), r:[x.name||'', grpKey(x)||t('op_na'), NM[k]||k,
+        dv?fmtD(dv):'', _dOf(x,k)?'이수':(dv?'기준일 후':(e?'미이수':'교육현황 매칭없음'))]}; });
+    // 미이수를 먼저 — 「누가 안 했나」가 이 표를 여는 이유다
+    const all=mk(eLv1,1).concat(mk(eLv2,2)).sort((a,b)=>(a.done?1:0)-(b.done?1:0));
+    /* 카드가 두 수이므로 팝업도 두 수를 그대로 적는다 — 한 분수로 다시 누르면
+       그 수가 카드와 달라지고, 사람은 어느 쪽이 맞는지 알 수 없게 된다. */
+    return {rows:all.map(o=>o.r), done:eD, tgt:eT,
+            n1:eLv1.length, d1:d1, r1:_eR1, n2:eLv2.length, d2:d2, r2:_eR2,
+            c1:_eN[0], c2:_eN[1]};
+  })();
+  /* 두 수로 낸다 — 국내는 Lv3 대상이 Lv2 대상의 부분집합이라 한 분수로 못 누른다.
+     해외도 같은 모양으로 낸다: 카드가 구분마다 «다른 뜻»이 되면 그게 더 나쁘다. */
+  const _pc=v=>v==null?'—':v+'%';
+  setTxt('kp3', (eLv1.length||eLv2.length) ? (_pc(_eR1)+' · '+_pc(_eR2)) : '—');
+  setTxt('kf3', t('kf3b').replace('{a}',_eN[0]).replace('{m}',eLv1.length)
+                         .replace('{b}',_eN[1]).replace('{n}',eLv2.length));
 
   // 인원 추이 — 경력구간(1년미만/1~2년/2년+) 스택
   {
@@ -2003,8 +2059,7 @@ function render(){
     const tgt=[],don=[],rate=[];
     P.forEach(p=>{
       const a=fHR.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join);
-      const six=x=>((p.end-x.join)/MS)>=182;
-      const lv1=a.filter(x=>!six(x)), lv2=a.filter(six);
+      const _t=eduTgt(a,p.end), lv1=_t.lv1, lv2=_t.lv2;   // 판정은 eduTgt 한 곳 (v134)
       const dOf=(x,k)=>{const e=eduOf(x);return e&&e[k]&&e[k]<=p.end;};
       const d1=lv1.filter(x=>dOf(x,eduKey(x,1))).length;
       const d2=lv2.filter(x=>dOf(x,eduKey(x,2))).length;
@@ -2215,12 +2270,18 @@ function render(){
   const man30=_w30.reduce((a,x)=>a+x.manMin,0);
   const manPM30=_w30.reduce((a,x)=>a+(isPM(x)?x.manMin:0),0);
   // kp4: BM 고장 건수(최근 30일) — 줄어들면 좋은 지표
-  const bm30=bmN(d30,asOf), bmPrev=bmNx(d60,d30);
+  /* 카드 숫자와 팝업 목록이 «같은 배열»에서 나온다 — bmN 도 이 함수를 부른다. */
+  const _bm30R=bmRowsIn(d30,asOf), bm30=_bm30R.length, bmPrev=bmNx(d60,d30);
+  _KPI.bm={rows:_bm30R, st:d30, end:asOf};
   setTxt('kp4',bm30.toLocaleString()); setTxt('kd4',GST.deltaBadge(bm30,bmPrev,true));
   setTxt('kf4',t('kf4').replace('{n}',bmPrev.toLocaleString()));
   // kp5: 인당 일평균 공수(h) = 총공수 ÷ 출근 연인원 · 출근 연인원 = 현장(O)×근무일(21) − 휴가일수
   const _ls30=fLV.reduce((a,x)=>a+((x.date>=d30&&x.date<=asOf&&okCF(x.custB,x.fab))?x.days:0),0);
   const _attPD=Math.max(1,Math.max(1,headOn(asOf))*21-_ls30);
+  /* 비율이므로 분자 배열과 «분모»를 같이 넘긴다. 분자는 _w30 «전 행»이다 —
+     드릴이 isMaint 만 세면 해외 설치 행이 빠져 목록 합이 카드와 안 맞는다. */
+  _KPI.man={rows:_w30, st:d30, end:asOf,
+            den:{pd:_attPD, head:Math.max(1,headOn(asOf)), leave:_ls30}};
   setTxt('kp5',(Math.round(man30/60/_attPD*10)/10).toLocaleString());
   setTxt('kf5',t('kf5').replace('{p}',man30?Math.round(manPM30/man30*100):0));
   {
@@ -2284,7 +2345,12 @@ function render(){
        계산은 GST.PM 한 곳에 그대로 있고, 궁금하면 물어서 확인한다.
        인당 왜곡 안내도 없앴다(v118) — 두 벌 필터로 분모를 같이 좁힐 수 있게 된 뒤로는
        그 경고가 사실이 아니다. */
-    setNote('cMan',t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0));
+    /* 분모에서 뺀 인원을 «몇 명을 왜» 까지 적는다 (v134 · CS관리팀 확정 기준).
+       ⚠ 분모가 줄면 인당 공수는 **높아진다**. 낮아지면 「왜 줄었지」로 의심이라도 하는데
+         높아지면 「우리가 이만큼 일한다」로 그냥 읽힌다 — v112 가 겪은 그 방향이다. */
+    setNote('cMan',t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0)
+      + (_headEx.n ? ' · 공수 분모 제외 '+_headEx.n+'명 ('
+          + _headEx.vals.map(e=>e.v+' '+e.n).join(' · ')+')' : ''));
   }
   // ===== PM S-커브 (올해, 월 고정) =====
   let scPlan=0, scDone=0;
@@ -2331,6 +2397,11 @@ function render(){
     scPlan=pc; scDone=dc;
     const scLabels=planC.map((_,i)=>(i+1)+t('mon_u'));
     const prog=pc?Math.round(dc/pc*100):0;
+    /* 누적 계획·완료를 월별로 그대로 낸다 — «표 마지막 행이 곧 카드 숫자»다.
+       설비 명단까지 내려가면 앵커 규칙(주기 계산)을 두 벌 짜게 된다 — 하지 않는다. */
+    _KPI.pmSc={rows:planC.map(function(v,i){
+        return [(i+1)+t('mon_u'), v.toLocaleString(), doneC[i].toLocaleString(),
+                v?Math.round(doneC[i]/v*100)+'%':'—']; }), plan:pc, done:dc};
     setTxt('kp6',prog+'%');
     setTxt('kf6',t('kf6').replace('{a}',pc.toLocaleString()).replace('{b}',dc.toLocaleString()));
     void scLabels; // cSc 차트는 제거됨 — kp6/인사이트용 scPlan·scDone만 유지
@@ -2389,13 +2460,13 @@ function render(){
          수선실적은 알람유형 입력률 0.3% 라 「미기재」가 잔뜩 뜨는 것이 정상이다 —
          그것을 «데이터가 안 나온다»로 읽지 않게 하려면 출처를 밝히는 수밖에 없다. */
       if(!KR_ON && window._KRWHY) _note = '⚠ 국내 알람 원장이 ' + window._KRWHY
-        + ' → 국내도 수선실적 BM 으로 세는 중입니다 (/upload/ 에서 알람 시트를 올리면 원장 기준으로 바뀝니다) · '
+        + ' → 국내도 수선실적 BM 으로 세는 중입니다' + (GST.isAdmin&&GST.isAdmin()?' (/upload/ 에서 알람 시트를 올리면 원장 기준으로 바뀝니다)':'') + '\n'   // 사실은 모두에게, 조치는 관리자에게(v135) · 경고는 제 줄에
         + _note;
       /* 알람은 올라왔는데 올바이패스만 비면 그 지표만 0 이 된다 — 같은 화면에서 한쪽만
          조용히 비는 것이 가장 헷갈린다. 짝 표의 상태도 같이 적는다. */
-      if(window._KRWHYB) _note += ' · ⚠ 국내 All By-Pass 원장이 ' + window._KRWHYB
-        + ' (/upload/ 에서 같은 워크북을 「올바이패스」 대상으로 한 번 더 올려야 합니다)';
-      if(KR_ON) _note += ' · 국내는 알람 원장 기준 (수선실적 BM 제외'
+      if(window._KRWHYB) _note += '\n⚠ 국내 All By-Pass 원장이 ' + window._KRWHYB
+        + (GST.isAdmin&&GST.isAdmin()?' (/upload/ 에서 같은 워크북을 「올바이패스」 대상으로 한 번 더 올려야 합니다)':'');
+      if(KR_ON) _note += '\n국내는 알람 원장 기준 (수선실적 BM 제외'
         + (F.inout==='out'?' · 외부·외적만':F.inout==='all'?' · 내+외 전체':'')
         + ' · '+(F.krBasis==='fiscal'?'시트 정산월·주차':'발생일')+')'
         + (_krOS? ' · 원장의 해외 설비 '+_krOS.toLocaleString()+'행은 이중 계산을 막으려 뺐습니다':'')
@@ -2405,6 +2476,10 @@ function render(){
         + (function(){ const n=KRAf.filter(x=>x.srcSite&&x.campus&&x.srcSite!==x.campus).length;
             if(F.krOrg==='sheet') return ' · 단지·라인은 알람시트 Site 기준'+(n?' (설치현황과 다른 '+n.toLocaleString()+'건 포함)':'');
             return n? ' · 시트 Site 와 설치현황 단지가 다른 '+n.toLocaleString()+'건은 설치현황을 따랐습니다':''; })();
+      /* 원장 ↔ 설치현황 S/N 조인율 — 내부 품질 수치라 관리자에게만(v135 · A-4). 낮으면 단지·라인이 비는 원인이 이것이다. */
+      if(KR_ON && GST.isAdmin&&GST.isAdmin() && window._KRJOIN && window._KRJOIN.n)
+        _note += ' · S/N 조인 '+window._KRJOIN.hit.toLocaleString()+'/'+window._KRJOIN.n.toLocaleString()
+          +' ('+Math.round(window._KRJOIN.hit/window._KRJOIN.n*100)+'%)';
       /* 올바만 보는 중이면 «BM 행이 없다»는 설명이 엉뚱하다 — 그 화면은 BM 을 안 센다. */
       if(!shown.some(v=>v>0) && FV==='abp'){
         _note += ' · '+t('ftv_abp')+' 값이 이 조건에는 0 입니다';
@@ -2414,10 +2489,24 @@ function render(){
         if(_n) _note += ' · 이 조건에는 BM 행이 없습니다 (있는 단계: '
           + Object.entries(_st).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>e[0]+' '+e[1]).join(' · ')+')';
       }
+      /* «내적이 아니라서 빠진» 행을 값별로 밝힌다 (v134 · 사용자 확정).
+         P운영 통합 양식에는 「내적/외적」에 제3의 값 «자켓» 이 168건 있다 — 규칙대로
+         빠지는 것이 맞지만, 아무 말 없이 빠지면 「시트는 4,532건인데 화면은 2,398건」이
+         되어 사람이 자기 자료를 의심한다(v92 의 교훈).
+         ⚠ 낱말을 판정에 박지 않는다 — 여기서 하는 일은 «세어서 보여주는 것»뿐이라
+           시트에 새 낱말이 생겨도 저절로 뜬다. */
+      { const _dr=GST.ALARM.dropReasons(KRA.concat(KRB));
+        if(_dr.length) _note += '\n집계 제외 '
+          + _dr.map(e=>e.v+' '+e.n.toLocaleString()).join(' · '); }
+      /* 연구소로 잡힌 «낱말»을 적는다 — 코드에 박은 규칙이므로, 시트에 새 표기가
+         생기면 사람이 보고 알려 줄 수 있어야 한다(GST.PM.matched 와 같은 규약). */
+      { const _rn=GST.ORG.rndScan(KRA.concat(KRB).map(x=>x.lineN||x.srcLine));
+        if(_rn.length) _note += ' · '+GST.ORG.RND+' 로 잡힌 라인 '
+          + _rn.map(e=>e.v+' '+e.n.toLocaleString()).join(' · '); }
       /* 모드 표시는 «맨 앞»에 둔다 — 위의 ⚠ 경고들이 앞에 덧붙으므로, 여기서 얹어야
          「지금 무엇을 보고 있는지」가 문장 첫머리에 온다. 노트의 건수도 그 계통 값이다. */
       if(FV!=='all')_note='【'+t(FV==='alarm'?'ftv_alarm':'ftv_abp')+'】 '+_note;
-      setNote('cFt',_note);
+      setNote('cFt',_note, ((!KR_ON&&window._KRWHY)||window._KRWHYB)?'warn':'');   // 원장 문제는 «숫자의 뜻이 바뀌는» 경고 — 색으로 가른다(v135)
     }
     // PPT 내보내기용 — 주/월 양단위 Alarm·ABP 시리즈 스냅샷 (표시 전용 · 위 차트 계산과 동일 식)
     // 앵커는 KPI와 동일한 asOf(마감 통합 기준일) — 월 마감만 잡아도 주간 시리즈가 그 시점으로 정렬
@@ -2446,7 +2535,7 @@ function render(){
     const TV=(TOPVIEW==='alarm'||TOPVIEW==='abp')?TOPVIEW:'all';
     const _tA=_tSt, _tB=_tEn, _fa=fmtD(_tA), _fb=fmtD(_tB);
     const _inRange=x=>x.d&&x.d>=_fa&&x.d<=_fb;
-    const _alRows=wkBM(_tSt,_tEn).concat(krIn(_tSt,_tEn).map(krAsWk));
+    const _alRows=bmRowsIn(_tSt,_tEn);   // = bmN 이 센 그 행들 (v133 · 한 식)
     const _abRows=KRBf.filter(_inRange).concat(OS_ABP_ON?OSBf.filter(_inRange):[]).map(krAsWk);
     const f30=TV==='alarm'?_alRows:TV==='abp'?_abRows:_alRows.concat(_abRows);
     /* ⚠ 해외 All By-Pass 는 원장을 올리기 전까지 «행이 없다»(ABP 시트가 크로스탭이다).
@@ -2462,10 +2551,10 @@ function render(){
     const _krBlank=KR_ON?krIn(_tSt,_tEn).filter(x=>!krMsg(x)).length:0;
     const _krN=KR_ON?krIn(_tSt,_tEn).length:0;
     let _krWarn=_krBlank? ' · ⚠ 국내 원장 '+_krN.toLocaleString()+'건 중 '+_krBlank.toLocaleString()
-      +'건에 Alarm Message 가 없습니다 — 시트가 아니라 적재 문제입니다(/upload/ 재업로드 · core.js 버전 확인)':'';
+      +'건에 Alarm Message 가 없습니다 — 시트가 아니라 적재 문제입니다'+(GST.isAdmin&&GST.isAdmin()?'(/upload/ 재업로드 · core.js 버전 확인)':''):'';
     if(TV!=='all')_krWarn=' · '+(TV==='alarm'?t('ftv_alarm'):t('ftv_abp'))+' 기준'+_krWarn;
     if(_abpTwGap)_krWarn+=' · ⚠ 해외 All By-Pass 는 ABP 시트가 집계표(크로스탭)라 이 표에 안 잡힙니다'
-      +' — /upload/ 에서 「해외 올바이패스 리스트」를 올리면 원인별로 나옵니다';
+      +(GST.isAdmin&&GST.isAdmin()?' — /upload/ 에서 「해외 올바이패스 리스트」를 올리면 원인별로 나옵니다':'');
     // 대분류 = 알람유형(Z열). 기재가 없으면 현상(AA열)으로 대체 표기한다.
     const _alOf=x=>GST.nfw((x.alarm||'').trim())||GST.nfw((x.phenom||'').trim());
     const byAl={}; let noAl=0;
@@ -2494,9 +2583,24 @@ function render(){
       const tip=rk.slice(0,10).map(r=>r.label+' ('+r.n+')').join('\n')+(rk.length>10?'\n…':'');
       return {html:html, tip:tip};
     };
+    /* 줄바꿈이 든 문장에만 .ml 을 단다 — 전부에 걸면 정적 HTML 의 들여쓰기 줄바꿈이
+       빈 줄로 뜬다(v135 · 5단계 규약). 마크업은 넣지 않는다(textContent 로 덮이므로). */
+    const _setEtc=txt=>{ const el=document.getElementById('top3Etc'); if(!el)return;
+      el.textContent=txt; el.classList.toggle('ml', txt.indexOf('\n')>=0); };
+    /* 입력률 안내 — 고장분석의 네 차트에는 있는데 «주간보고로 나가는 이 표»에는 없었다
+       (실측 알람유형 입력률 0.3%). 30% 를 넘으면 스스로 사라진다(GST.FILL_MIN).
+       ⚠ 툴팁이 아니라 노트에 적는다 — 툴팁은 인쇄·PPT 에 안 따라간다(v135 · 7단계). */
+    const _fillNote=(function(){
+      const n=f30.length; if(!n) return '';
+      const got=f30.filter(x=>String(x.alarm||'').trim()||String(x.phenom||'').trim()).length;
+      const pct=Math.round(got/n*100);
+      if(pct>=(GST.FILL_MIN||30)) return '';
+      const F=(GST.FILL_T&&(GST.FILL_T[LANG]||GST.FILL_T.ko))||'';
+      return F? '\n'+F.replace('{p}',pct).replace('{g}',got.toLocaleString()).replace('{n}',n.toLocaleString()) : '';
+    })();
     if(!top.length){ const _msg=noAl?t('top_allblank').replace('{m}',noAl):'—';
       body.innerHTML='<tr><td colspan="5" class="empty">'+_msg+'</td></tr>';
-      document.getElementById('top3Etc').textContent=(noAl?t('top_etc').replace('{n}',0).replace('{m}',noAl):'')+_krWarn; }
+      _setEtc((noAl?t('top_etc').replace('{n}',0).replace('{m}',noAl):'')+_krWarn+_fillNote); }
     else{
       body.innerHTML=top.slice(0,3).map((e,i)=>{
         const arr=e.arr;
@@ -2511,7 +2615,10 @@ function render(){
           +'<td'+(ac.tip?' title="'+esc(ac.tip)+'"':'')+'>'+ac.html+'</td></tr>';
       }).join('');
       const etcN=top.slice(3).reduce((a,e)=>a+e.arr.length,0);
-      document.getElementById('top3Etc').textContent=((etcN||noAl)?t('top_etc').replace('{n}',etcN).replace('{m}',noAl):'')+_krWarn;
+      /* «* 는 알람유형이 비어 현상으로 표기» 가 툴팁에만 있어 인쇄·PPT 에서 사라졌다 —
+         실제로 별표가 붙은 줄이 있을 때만 노트에도 적는다(v135 · 7단계). */
+      const _fb=top.slice(0,3).some(e=>e.arr.every(x=>!(x.alarm||'').trim())) ? ' · '+t('top_alfb') : '';
+      _setEtc(((etcN||noAl)?t('top_etc').replace('{n}',etcN).replace('{m}',noAl):'')+_fb+_krWarn+_fillNote);
     }
   }
 
@@ -2858,6 +2965,22 @@ function render(){
       text:t('ins_ft').replace('{n}','<b>'+f30n+'</b>').replace('{p}',fd==null?'—':(fd>0?'+':'')+fd+'%')});
     if(act.length)ins.push({sev:'info',text:t('ins_hc').replace('{n}','<b>'+act.length+'</b>').replace('{a}',joinM).replace('{b}',quitM)});
     GST.insights((HR.length||WK.length)?ins:[]);
+    /* 데이터 품질 카드 — 노트에 흩어진 «사실»을 한 자리에 모으고 «무엇을 하면 되는지»를 붙인다.
+       ⚠ 노트의 문장은 그대로 둔다(v92 규약 — Alarm 차트 주석 맨 앞이 그 자리다).
+         여기는 «모으는 자리»이지 옮기는 자리가 아니다. */
+    if(GST.dq){
+      if(!KR_ON && window._KRWHY)
+        GST.dq.push({key:'kr_alarm', sev:'warn', label:t('dq_kra')+' — '+window._KRWHY, act:t('dq_kra_a')});
+      if(window._KRWHYB)
+        GST.dq.push({key:'kr_abp', sev:'warn', label:t('dq_krb')+' — '+window._KRWHYB, act:t('dq_krb_a')});
+      const dj=window._DIVJOIN;
+      if(dj && dj.n && dj.hit<dj.n)
+        GST.dq.push({key:'div_join', sev:'info', label:t('dq_divj'), n:dj.n-dj.hit, of:dj.n, act:t('dq_divj_a')});
+      const kj=window._KRJOIN;
+      if(kj && kj.n && kj.hit<kj.n)
+        GST.dq.push({key:'kr_join', sev:'info', label:t('dq_krj'), n:kj.n-kj.hit, of:kj.n, act:t('dq_krj_a')});
+      GST.dq.render(GST.filtSummary?GST.filtSummary():'');
+    }
   }
   // 드릴다운용 데이터·구간 스냅샷 (표시 계층 전용, 계산 무관)
   {const per={}; ['cFt','cMan','cAtt','cHc','cCareer','cIo'].forEach(id=>{try{per[id]=PU(id).P;}catch(e){}});
@@ -2884,14 +3007,53 @@ function render(){
      krOn:KR_ON, krBM:KR_ON?_asW(KRAf):[],
      /* 국내 + 해외 원장을 한 배열로 넘긴다 — 드릴은 «그 막대의 모집단»만 알면 되고,
         구분은 이미 각 행의 region 에 실려 있다. 해외 원장이 없으면 국내만 실린다. */
-     krABP:_asW(KRBf).concat(OS_ABP_ON?_asW(OSBf):[]), abpTW:_abpTW};}
+     krABP:_asW(KRBf).concat(OS_ABP_ON?_asW(OSBf):[]), abpTW:_abpTW};
+   /* ---------- KPI 카드 클릭 → 세부내역 (v133) ----------
+      «지워진» 기능이 아니라 없던 기능이다. theme.css 가 모든 .kpi 에 cursor:pointer 를
+      걸어 두어 있는 것처럼 보였을 뿐이고, 실측 56장 중 48장이 눌러도 아무 일이 없었다.
+
+      규칙 하나: **카드가 센 그 배열이 그대로 목록이 된다.** 아래 spec 은 전부
+      _KPI 에 담긴 배열만 넘긴다 — 목록을 여기서 다시 고르면 두 식이 되고, 두 식은
+      반드시 갈라진다(제2원칙). spec 은 «열 때» 부른다(mount 때 만들면 필터를 바꾼 뒤
+      옛 숫자가 열린다).
+      ⚠ 모달이 둘이다 — rowsModal 의 .gov 오버레이와 이 페이지의 #drillModal.
+        core.js 는 페이지 모달을 모르므로, 여는 쪽이 여기서 둘 다 먼저 닫는다. */
+   const _kShut=function(){ try{closeDrill();}catch(e){} try{GST._ovClose&&GST._ovClose();}catch(e){} };
+   const _kCols=function(k){ return t(k).split('|'); };
+   const _kAsOf=t('kd_asof')+' '+fmtD(asOf);
+   GST.kpiDrill && GST.kpiDrill({
+     kp1:function(){ _kShut(); const K=_KPI.act||[];
+       return {open:function(){ drillHead({st:asOf,end:asOf,label:_kAsOf},'',-1,'',K); }}; },
+     kp2:function(){ _kShut(); const K=_KPI.io; if(!K)return null;
+       return {open:function(){ drillIo({st:K.st,end:K.end,label:K.label},K.rows,
+         IO_ONSITE?t('kd_ioh'):''); }}; },
+     kp3:function(){ _kShut(); const K=_KPI.edu; if(!K)return null;
+       return {title:t('kd_edu')+' · '+_kAsOf, cols:_kCols('kd_educ'), rows:K.rows,
+         note:t('kd_edun2').replace('{a}',K.c1).replace('{p}',K.r1==null?'—':K.r1)
+              .replace('{d}',K.d1).replace('{m}',K.n1)
+              .replace('{b}',K.c2).replace('{q}',K.r2==null?'—':K.r2)
+              .replace('{e}',K.d2).replace('{n}',K.n2)}; },
+     kp4:function(){ _kShut(); const K=_KPI.bm; if(!K)return null;
+       const L=(window._DRILL||{}).lbl||{};
+       /* key 를 주지 않는다 — 이건 «막대 한 칸»이 아니라 30일 창이다.
+          seg 는 반드시 Alarm 이다(abp·tot 를 주면 카드가 안 센 행이 섞인다). */
+       return {open:function(){ drillFault({st:K.st,end:K.end,label:t('kd_30d')},
+         L.alarm,K.rows); }}; },
+     kp5:function(){ _kShut(); const K=_KPI.man; if(!K)return null;
+       return {open:function(){ drillMan({st:K.st,end:K.end,label:t('kd_30d')},
+         K.rows,K.den); }}; },
+     kp6:function(){ _kShut(); const K=_KPI.pmSc; if(!K)return null;
+       return {title:t('kd_pm'), cols:_kCols('kd_pmc'), rows:K.rows,
+         note:t('kd_pmn').replace('{a}',K.plan.toLocaleString()).replace('{b}',K.done.toLocaleString())}; }
+   });}
   // KPI 스파크라인 (최근 12구간 추세 · 계산 무관 표시용)
   try{ const SP=periods(12,asOf,PERIOD), wdv=(PERIOD==='m')?21:5;
     drawSpark('sp1',SP.map(p=>headOn(p.end)),'#3B82F6');
-    drawSpark('sp3',SP.map(p=>{const a=fHR.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join),six=x=>((p.end-x.join)/MS)>=182;
-      const D=a.filter(x=>!six(x)).filter(x=>{const e=eduOf(x),k=eduKey(x,1);return e&&e[k]&&e[k]<=p.end;}).length
-             +a.filter(six).filter(x=>{const e=eduOf(x),k=eduKey(x,2);return e&&e[k]&&e[k]<=p.end;}).length;
-      return a.length?Math.round(D/a.length*100):null;}),'#34D399');
+    /* 스파크라인도 eduTgt 를 지난다 — 여기서 6개월을 다시 세면 카드와 추세가 갈린다(v134). */
+    drawSpark('sp3',SP.map(p=>{const a=fHR.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join);
+      const _t=eduTgt(a,p.end), T=_t.lv1.length+_t.lv2.length;
+      const D=_t.lv1.filter(x=>eduDone(x,p.end,1)).length+_t.lv2.filter(x=>eduDone(x,p.end,2)).length;
+      return T?Math.round(D/T*100):null;}),'#34D399');
     drawSpark('sp4',SP.map(p=>bmN(p.st,p.end)),'#E03131');
     drawSpark('sp5',SP.map(p=>{const ls=fLV.reduce((a,x)=>a+((x.date>=p.st&&x.date<=p.end&&okCF(x.custB,x.fab))?x.days:0),0);
       const den=Math.max(1,Math.max(1,headOn(p.end))*wdv-ls);
@@ -2917,10 +3079,13 @@ function render(){
       return a+(ty.includes('DUAL')?2:(ty.includes('SINGLE')?1:0));},0);
     const hdM=MP.map(p=>headOn(p.end));
     const chsM=MP.map(p=>chInQ(p.end));
+    /* PPT 로 나가는 값도 화면과 «같은 판정»을 지난다 — 갈리면 받아 본 사람만 그 사실을
+       모른다. 대상 T 는 두 단계의 «합»이다(국내는 겹치므로 인원 수와 다를 수 있다). */
     const eduAgg=pp=>{const a=fHR.filter(x=>x.onsite&&activeAt(x,pp.end)&&x.join);
-      const six=x=>((pp.end-x.join)/MS)>=182; const lv1=a.filter(x=>!six(x)),lv2=a.filter(six);
-      const dOf=(x,k)=>{const e=eduOf(x);return e&&e[k]&&e[k]<=pp.end;};
-      return {T:a.length,D:lv1.filter(x=>dOf(x,eduKey(x,1))).length+lv2.filter(x=>dOf(x,eduKey(x,2))).length};};
+      const _t=eduTgt(a,pp.end);
+      return {T:_t.lv1.length+_t.lv2.length,
+              D:_t.lv1.filter(x=>eduDone(x,pp.end,1)).length
+               +_t.lv2.filter(x=>eduDone(x,pp.end,2)).length};};
     const fCIPq=CIP.filter(okCIP);
     const cipT=MP.map(p=>fCIPq.filter(x=>!x.ap||x.ap<=p.end).length);
     const cipD=MP.map(p=>fCIPq.filter(x=>(!x.ap||x.ap<=p.end)&&x.done&&x.done<=p.end).length);
@@ -3027,9 +3192,6 @@ function render(){
 }
 
 // ===== 차트 고해상도 복사·저장 (PPT용) =====
-function capToast(msg){ let t=document.getElementById('capToast');
-  if(!t){t=document.createElement('div');t.id='capToast';document.body.appendChild(t);}
-  t.textContent=msg; t.style.opacity='1'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.opacity='0',1600); }
 // ===== 드릴다운 모달 (막대/라인 클릭 → 구간 상세) =====
 function showDrill(title,html){
   let m=document.getElementById('drillModal');
@@ -3079,7 +3241,10 @@ function onDrill(evt,els,chart){
    같은 자리이고, 답도 같다: 누른 칸을 보고 그 칸의 모집단만 낸다.
    ⚠ 인덱스가 아니라 «이름»으로 가른다 — All By-Pass 데이터셋은 값이 있을 때만 생기므로
      인덱스가 상황에 따라 달라진다. */
-function drillFault(p,seg){ const D=window._DRILL;
+/* rowsIn = «그 숫자를 센 바로 그 배열». KPI 카드 클릭이 넘긴다 — 카드와 목록이
+   원리적으로 갈릴 수 없게 하려는 것이다(제2원칙). 안 주면 지금까지대로 기간·버킷
+   열쇠로 다시 고른다(차트 막대 클릭 · 동작 무변). 렌더러는 계속 한 벌이다. */
+function drillFault(p,seg,rowsIn){ const D=window._DRILL;
   const L=D.lbl||{};
   const pick = seg===L.abp ? 'abp' : seg===L.tot ? 'tot' : 'alarm';
   /* 차트 막대(alarmAt)와 «같은 모집단»이어야 한다 — 국내는 원장(krBM), 국내 수선실적 BM 은
@@ -3092,8 +3257,8 @@ function drillFault(p,seg){ const D=window._DRILL;
     .concat((D.krBM||[]).filter(inKR));
   const abpRows=(D.krABP||[]).filter(inKR);
   const abpTW=(D.abpTW||{})[p.key]||0;          // 대만 ABP — 크로스탭이라 행이 없다
-  const rows=(pick==='abp'?abpRows:pick==='tot'?bmRows.concat(abpRows):bmRows)
-    .sort((a,b)=>b.wd-a.wd);
+  const rows=(rowsIn||(pick==='abp'?abpRows:pick==='tot'?bmRows.concat(abpRows):bmRows))
+    .slice().sort((a,b)=>b.wd-a.wd);
   const twN=(pick==='alarm')?0:abpTW;
   const sumN=rows.length+twN;
   const sumL=pick==='abp'?L.abp:pick==='tot'?L.tot:'BM 고장 건수';
@@ -3135,26 +3300,47 @@ function drillFault(p,seg){ const D=window._DRILL;
      「삼성전자(주)」 하나뿐이라 H3·H4 가 한 줄로 뭉쳤다 — 사용자가 시트에서 H3/H4 로
      확인한 값을 화면에서 쪼개 볼 수가 없었다(v96 의 「단지로 찍는다」 규약과 같은 자리).
    ⚠ 라벨을 「PM(TBM)」이라고 적으면 안 된다 — 국내는 조치 기준도 PM 이라 그 말이 거짓이다. */
-function drillMan(p){ const D=window._DRILL;
-  const rows=D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&isMaint(x));
+/* rowsIn·den = KPI 카드(kp5)가 넘기는 «자기 분자 배열»과 «자기 분모».
+   ⚠ kp5 의 분자는 wkIn(d30,asOf) «전 행»의 작업공수 합인데 이 함수는 isMaint 만 센다
+     (해외 설치 행이 빠진다). 카드 배열을 그대로 받아 세 칸으로 갈라 합이 카드 분자와
+     같게 만든다 — 안 그러면 「목록 합은 694h 인데 카드는 3.2」가 되어 사람이 못 맞춘다.
+   ⚠ isPM 을 넓혀 설치를 非PM 에 넣으면 안 된다(v119 — 해외 非PM 은 서비스 4단계뿐).
+     차트 클릭 경로는 rows 가 전부 isMaint 라 «그 외» 칸이 0 이고, 화면이 그대로다. */
+function drillMan(p,rowsIn,den){ const D=window._DRILL;
+  const rows=rowsIn||D.fWK.filter(x=>x.wd>=p.st&&x.wd<=p.end&&isMaint(x));
   /* 이름표는 t('op_na') 한 곳에서 온다 — 리터럴로 적으면 en/zh/ja 화면에서 차트·표와
      다른 낱말이 되어, 같은 사람이 화면마다 다른 행에 선다(제2원칙). */
   const g={}; rows.forEach(x=>{const k=x.campus||x.fab||x.custB||t('op_na');
-    (g[k]=g[k]||{pm:0,np:0,pn:0,nn:0});
-    if(isPM(x)){g[k].pm+=x.manMin;g[k].pn++;} else {g[k].np+=x.manMin;g[k].nn++;}});
+    (g[k]=g[k]||{pm:0,np:0,ot:0,pn:0,nn:0,on:0});
+    /* isPM ⊆ isMaint 이므로(core.js GST.PM.maint 가 is(x) 를 먼저 본다) 이 순서로
+       세면 한 행이 정확히 한 칸에만 들어간다 — 겹침도 누락도 없다. */
+    if(isPM(x)){g[k].pm+=x.manMin;g[k].pn++;}
+    else if(isMaint(x)){g[k].np+=x.manMin;g[k].nn++;}
+    else {g[k].ot+=x.manMin;g[k].on++;}});
   const H=m=>Math.round(m/60*100)/100;   // 시트와 맞대므로 소수 2자리까지 — 694.16h 를 그대로 견줄 수 있게
   const M=m=>Math.round(m).toLocaleString();
-  let tp=0,tn=0,cp=0,cn=0;
-  const ents=Object.entries(g).sort((a,b)=>(b[1].pm+b[1].np)-(a[1].pm+a[1].np));
-  ents.forEach(e=>{tp+=e[1].pm;tn+=e[1].np;cp+=e[1].pn;cn+=e[1].nn;});
-  let h='<div class="dsum"><div class="b"><span class="n">'+H(tp+tn)+'h</span><span class="l">총 공수</span></div>'
+  let tp=0,tn=0,to=0,cp=0,cn=0,co=0;
+  const _tot=r=>r.pm+r.np+r.ot;
+  const ents=Object.entries(g).sort((a,b)=>_tot(b[1])-_tot(a[1]));
+  ents.forEach(e=>{tp+=e[1].pm;tn+=e[1].np;to+=e[1].ot;cp+=e[1].pn;cn+=e[1].nn;co+=e[1].on;});
+  let h='<div class="dsum"><div class="b"><span class="n">'+H(tp+tn+to)+'h</span><span class="l">총 공수</span></div>'
     +'<div class="b"><span class="n">'+H(tp)+'h</span><span class="l">PM</span></div>'
-    +'<div class="b"><span class="n">'+H(tn)+'h</span><span class="l">비PM</span></div></div>'
-    +'<div class="dhint">PM '+M(tp)+'분 · 비PM '+M(tn)+'분 (시트 「작업공수」 합) · PM '+cp+'건 · 비PM '+cn+'건</div>';
-  h+='<table><thead><tr><th>단지</th><th class="num">PM(h)</th><th class="num">PM(분)</th><th class="num">비PM(h)</th><th class="num">계(h)</th></tr></thead><tbody>'
+    +'<div class="b"><span class="n">'+H(tn)+'h</span><span class="l">비PM</span></div>'
+    +(to?'<div class="b"><span class="n">'+H(to)+'h</span><span class="l">그 외(설치 등)</span></div>':'')
+    +(den?'<div class="b"><span class="n">'+GST._num((tp+tn+to)/60/den.pd)+'</span><span class="l">인당 일평균(h)</span></div>':'')
+    +'</div>'
+    +'<div class="dhint">PM '+M(tp)+'분 · 비PM '+M(tn)+'분'+(to?' · 그 외 '+M(to)+'분':'')
+      +' (시트 「작업공수」 합) · PM '+cp+'건 · 비PM '+cn+'건'+(co?' · 그 외 '+co+'건':'')+'</div>';
+  /* 비율 카드는 «분모»를 같이 내야 사람이 카드와 목록을 맞출 수 있다.
+     출근 연인원 = 현장 재직 × 근무일(21) − 휴가(평일 합) — kp5 가 쓴 그 식 그대로. */
+  if(den)h+='<div class="dhint">인당 일평균 = 총 '+H(tp+tn+to)+'h ÷ 출근 연인원 '+GST._num(den.pd)
+    +' (현장 재직 '+den.head+'명 × 21일 − 휴가 '+(Math.round(den.leave*10)/10)+'일)</div>';
+  h+='<table><thead><tr><th>단지</th><th class="num">PM(h)</th><th class="num">PM(분)</th><th class="num">비PM(h)</th>'
+    +(to?'<th class="num">그 외(h)</th>':'')+'<th class="num">계(h)</th></tr></thead><tbody>'
     +(ents.length?ents.map(e=>'<tr><td>'+esc(e[0])+'</td><td class="num">'+H(e[1].pm)+'</td><td class="num">'+M(e[1].pm)
-       +'</td><td class="num">'+H(e[1].np)+'</td><td class="num">'+H(e[1].pm+e[1].np)+'</td></tr>').join('')
-      :'<tr><td colspan="5" style="text-align:center;color:var(--txt-muted)">데이터 없음</td></tr>')+'</tbody></table>';
+       +'</td><td class="num">'+H(e[1].np)+'</td>'+(to?'<td class="num">'+H(e[1].ot)+'</td>':'')
+       +'<td class="num">'+H(_tot(e[1]))+'</td></tr>').join('')
+      :'<tr><td colspan="'+(to?6:5)+'" style="text-align:center;color:var(--txt-muted)">'+GST._esc(GST.emptyRowsText())+'</td></tr>')+'</tbody></table>';
   showDrill('작업공수 상세 · '+p.label,h);
 }
 function drillAtt(p){ const D=window._DRILL;
@@ -3169,8 +3355,11 @@ function drillAtt(p){ const D=window._DRILL;
      같은 화면의 입·퇴사 드릴은 진작 이름을 내고 있었다 — 카드끼리 답이 달랐다.
    눌린 조각으로 좁히고 명단을 낸다. 조각 라벨은 차트가 실제로 그린 그 글자를 쓴다
    (여기서 다시 만들면 국내/해외 어휘가 갈릴 때 막대와 표가 다른 말을 한다). */
-function drillHead(p,id,di,seg){ const D=window._DRILL;
-  let act=D.fHR.filter(x=>x.onsite&&activeAt(x,p.end));
+function drillHead(p,id,di,seg,rowsIn){ const D=window._DRILL;
+  /* rowsIn = KPI 카드(kp1)가 넘기는 «자기가 센 그 배열». 안 주면 지금까지대로 다시
+     고른다 — 이 식은 kp1 의 act 와 «글자 그대로» 같지만, 두 곳에 같은 식이 있으면
+     언젠가 한쪽만 고쳐진다. 카드는 배열을 넘겨 그 가능성을 없앤다. */
+  let act=rowsIn||D.fHR.filter(x=>x.onsite&&activeAt(x,p.end));
   const all=act.length;
   /* 조각으로 좁힌다. cHc 는 경력구간(dataset 0·1·2), cCareer 는 단지(라벨이 곧 키)다.
      판정을 여기서 새로 짜지 않고 «차트가 쓴 것»을 그대로 받는다 — D.hcBand 는 차트를
@@ -3199,8 +3388,11 @@ function drillHead(p,id,di,seg){ const D=window._DRILL;
   if(list.length>CAP)h+='<div class="dhint">… 외 '+(list.length-CAP)+'명</div>';
   showDrill('인원 상세 · '+ttl,h);
 }
-function drillIo(p){ const D=window._DRILL;
-  const R=IO_ONSITE?D.fHR.filter(x=>x.onsite):D.fHR;   // 차트와 동일 모집단
+function drillIo(p,rowsIn,hint){ const D=window._DRILL;
+  /* ⚠ 카드(kp2)와 차트(cIo)의 모집단이 «다르다» — 카드는 인원 전원을 세고, 차트는
+     IO_ONSITE 가 켜져 있으면 현장(O)만 센다. 카드 클릭은 자기 배열을 넘기고,
+     그 차이를 아래 hint 로 화면에 적는다. 조용히 두면 「+3 인데 명단은 2명」이 된다. */
+  const R=rowsIn||(IO_ONSITE?D.fHR.filter(x=>x.onsite):D.fHR);   // 차트와 동일 모집단
   const ins=R.filter(x=>x.join&&x.join>=p.st&&x.join<=p.end), outs=R.filter(x=>x.quit&&x.quit>=p.st&&x.quit<=p.end);
   /* ⚠ 차트는 «단지별»인데 이 표만 FAB→고객사로 내려가고 있었다. 그래서 대만 인원이
      단지 F16 대신 고객사 MICRON 으로, 국내가 SAMSUNG 으로 찍혔다 — 한 축에 두 차원이
@@ -3209,33 +3401,11 @@ function drillIo(p){ const D=window._DRILL;
   const _k=x=>(D.grpRaw?D.grpRaw(x):(x.campus||x.fab||t('op_na')));
   const mk=(arr,dk)=>arr.length?('<table><thead><tr><th>이름</th><th>단지</th><th>일자</th></tr></thead><tbody>'+arr.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(_k(x))+'</td><td>'+_md(x[dk])+'</td></tr>').join('')+'</tbody></table>'):'<div class="dhint">없음</div>';
   let h='<div class="dsum"><div class="b"><span class="n">+'+ins.length+'</span><span class="l">입사</span></div><div class="b"><span class="n">−'+outs.length+'</span><span class="l">퇴사</span></div></div>';
+  if(hint)h+='<div class="dhint">'+esc(hint)+'</div>';
   h+='<div class="dhint">입사</div>'+mk(ins,'join')+'<div class="dhint" style="margin-top:12px">퇴사</div>'+mk(outs,'quit');
   showDrill('입사·퇴사 상세 · '+p.label,h);
 }
 // 차트를 지정 배율로 다시 그려 배경 채운 캔버스 반환
-function chartHiRes(id,scale){
-  const ch=CHARTS[id]; if(!ch||!ch.canvas)return null;
-  const cv=ch.canvas, w=cv.clientWidth||400, h=cv.clientHeight||300;
-  // 배율 미지정 시: 결과물이 약 2400px 폭이 되도록 자동(3~6배) — PPT 확대에도 선명
-  if(!scale) scale=Math.min(6,Math.max(3,Math.round(2400/w)));
-  const prev=ch.options.devicePixelRatio;
-  ch.options.devicePixelRatio=scale; ch.resize(); ch.render();
-  const oc=document.createElement('canvas'); oc.width=Math.round(w*scale); oc.height=Math.round(h*scale);
-  const g=oc.getContext('2d');
-  g.fillStyle=getComputedStyle(document.body).backgroundColor||'#0B0F14';
-  g.fillRect(0,0,oc.width,oc.height);
-  g.drawImage(cv,0,0,oc.width,oc.height);
-  ch.options.devicePixelRatio=prev; ch.resize(); ch.render();
-  return oc;
-}
-window.copyChart=async function(id){
-  const oc=chartHiRes(id); if(!oc){capToast('차트를 찾을 수 없습니다');return;}
-  try{
-    await new Promise((res,rej)=>oc.toBlob(async b=>{ if(!b)return rej();
-      try{ await navigator.clipboard.write([new ClipboardItem({'image/png':b})]); res(); }catch(e){ rej(e); } },'image/png'));
-    capToast('📋 차트 복사됨 — PPT에 붙여넣기(Ctrl+V)');
-  }catch(e){ capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요'); }
-};
 /* ===== 차트 «데이터» 복사 — 그림이 아니라 표로 붙는다 (v133 · 사용자 요청) =====
    ⚠ 웹 페이지는 클립보드에 «파워포인트 차트 개체»를 올릴 수 없다. 브라우저가 내주는
      클립보드 형식은 text/plain · text/html · image/png 뿐이고, PPT 가 「차트로 붙여넣기」를
@@ -3246,53 +3416,10 @@ window.copyChart=async function(id){
      ② 지금 이 카드의 «데이터»가 필요하면 → 이 버튼. PPT 에 붙이면 편집 가능한 표가 되고,
         엑셀에 붙이면 그대로 표가 되어 「삽입 → 차트」 두 번이면 차트가 된다.
    표 카드(가동현황·TOP3)는 진작 이 방식이었다 — 차트 카드에도 같은 것을 준다. */
-function chartToGrid(id){
-  const ch=CHARTS[id]; if(!ch)return null;
-  const labs=(ch.data.labels||[]).map(v=>String(v==null?'':v));
-  /* hline·예측 같은 «보조» 데이터셋도 값이므로 그대로 낸다 — 화면에 보이는 것이 곧 자료다. */
-  const sers=(ch.data.datasets||[]).map(d=>({name:String(d.label==null?'':d.label),
-    vals:labs.map((_,i)=>{ const v=(d.data||[])[i];
-      return (v==null||v==='')?'':(typeof v==='object'?(v.y!=null?v.y:''):v); })}));
-  return {labs:labs, sers:sers};
-}
-function gridToRichHTML(g,title){
-  const esc2=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;');
-  const th='border:1px solid #b8c0cc;padding:3px 8px;background:#eef1f5;font-weight:700;text-align:center;white-space:nowrap;';
-  const td='border:1px solid #b8c0cc;padding:3px 8px;text-align:right;white-space:nowrap;';
-  let h='<table style="border-collapse:collapse;font-family:\'Malgun Gothic\',sans-serif;font-size:11px;color:#1a2230">';
-  h+='<tr><td style="'+th+'"></td>'+g.labs.map(l=>'<td style="'+th+'">'+esc2(l)+'</td>').join('')+'</tr>';
-  g.sers.forEach(sr=>{ h+='<tr><td style="'+th+'text-align:left">'+esc2(sr.name)+'</td>'
-    +sr.vals.map(v=>'<td style="'+td+'">'+esc2(v)+'</td>').join('')+'</tr>'; });
-  h+='</table>';
-  return (title?'<div style="font-weight:800;font-family:\'Malgun Gothic\';font-size:13px;margin:0 0 5px">'+esc2(title)+'</div>':'')+h;
-}
-function gridToTSV(g){
-  return [''].concat(g.labs).join('\t')+'\n'
-    + g.sers.map(sr=>[sr.name].concat(sr.vals).join('\t')).join('\n');
-}
-window.copyChartData=async function(id){
-  const g=chartToGrid(id); if(!g){capToast('차트를 찾을 수 없습니다');return;}
-  const cv=document.getElementById(id), card=cv?cv.closest('.card'):null;
-  const h3=card?card.querySelector('h3'):null;
-  const html=gridToRichHTML(g,(h3&&h3.textContent||'').trim()), tsv=gridToTSV(g);
-  try{
-    await navigator.clipboard.write([new ClipboardItem({
-      'text/html':new Blob([html],{type:'text/html'}),
-      'text/plain':new Blob([tsv],{type:'text/plain'})})]);
-    capToast('📊 데이터 복사됨 — PPT·엑셀에 붙여넣기(Ctrl+V)');
-  }catch(e){
-    /* HTML 형식을 못 쓰는 브라우저에서도 «아무 일도 안 일어나는» 상태로 두지 않는다 —
-       그때는 최소한 탭 구분 텍스트라도 준다(엑셀은 그대로 표로 받는다). */
-    try{ await navigator.clipboard.writeText(tsv); capToast('📊 데이터(텍스트) 복사됨 — 붙여넣기(Ctrl+V)'); }
-    catch(e2){ capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요'); }
-  }
-};
-window.saveChart=function(id){
-  const oc=chartHiRes(id); if(!oc){capToast('차트를 찾을 수 없습니다');return;}
-  oc.toBlob(b=>{ const u=URL.createObjectURL(b); const a=document.createElement('a');
-    a.href=u; a.download=id+'.png'; a.click(); setTimeout(()=>URL.revokeObjectURL(u),2000);
-    capToast('⤓ '+id+'.png 저장됨'); },'image/png');
-};
+/* 표 복사 기계는 core 로 올렸다(v135 — 일곱 페이지가 같이 쓴다). 여기는 검사(t-abp)가 부르는 전역 이름만 남긴다. */
+function chartToGrid(id){ return GST.chartGrid(GST.chartOf(id)); }
+const gridToRichHTML=GST.gridHTML, gridToTSV=GST.gridTSV;
+window.copyChartData=function(id){ return GST.copyChartData(id); };
 // ===== 표(Scrubber 가동 현황) 복사·저장 — PPT/엑셀에 '진짜 표'로 붙여넣기 =====
 function opTableEl(){ const b=document.getElementById('opTblBody'); return b?b.closest('table'):null; }
 function tableToRichHTML(tbl,title){
@@ -3358,6 +3485,11 @@ window.saveTop3Csv=function(){
   const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='fault_top_causes.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);
   capToast('⤓ fault_top_causes.csv 저장됨');
 };
+/* 토스트·고배율 캡처는 core 가 정본이다 (v135 · 8단계). 여덟 페이지가 바이트까지 같은
+   사본을 들고 있었고, copyChart·saveChart·saveAllCharts 는 v135 3단계에 「내보내기 ▾」가
+   들어오면서 «정의만 되고 아무도 안 부르는» 코드가 됐다(호출부 0건 · grep 으로 확인). */
+function capToast(msg){ return GST.capToast(msg); }
+function chartHiRes(id,scale){ return GST.chartHiRes(id,scale); }
 function addCapBtns(){
   // Scrubber 가동 현황 표 — 복사(PPT/엑셀)·CSV 버튼
   const opCard=document.getElementById('opTblBody')?document.getElementById('opTblBody').closest('.tablecard'):null;
@@ -3377,20 +3509,8 @@ function addCapBtns(){
     t3Card.appendChild(box);
     { const mp=t3Card.querySelector('.mini-per'); if(mp)box.style.right=(mp.offsetWidth+24)+'px'; }  // 주/월/연 토글과 겹침 방지
   }
-  document.querySelectorAll('.cw canvas').forEach(cv=>{
-    const id=cv.id, card=cv.closest('.card'); if(!id||!card||card.querySelector('.capbtns'))return;
-    const box=document.createElement('div'); box.className='capbtns';
-    /* 📊 데이터 — 그림이 아니라 «표»로 붙는다. PPT 에 붙이면 편집 가능한 표,
-       엑셀에 붙이면 그대로 표라 「삽입 → 차트」로 차트가 된다.
-       편집 가능한 «차트»가 그대로 필요하면 상단바 「PPT」(양식 내보내기)를 쓴다 —
-       거기서는 양식 파일의 진짜 차트를 값만 갈아끼운다. */
-    box.innerHTML=GST.pptCardBtn(id)
-                 +'<button class="capbtn" title="이 차트의 데이터를 표로 복사 — PPT 는 편집 가능한 표, 엑셀은 표(→ 삽입·차트)" onclick="copyChartData(\''+id+'\')">📊 데이터</button>'
-                 +'<button class="capbtn" title="그림으로 복사(고해상도 PNG)" onclick="copyChart(\''+id+'\')">📋 그림</button>'
-                 +'<button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>'
-                 +'<button class="capbtn" title="축 범위 설정 (min/max)" onclick="axOpen(\''+id+'\')">⚙</button>';
-    card.appendChild(box);
-  });
+  /* 차트 카드 버튼 한 벌은 core(v135). ⚙ 축 편집은 이 페이지 고유라 뒤에 붙인다. 주/월 토글 겹침 회피도 core 가 한다. */
+  GST.capBtns({extra:id=>'<button class="capbtn" title="축 범위 설정 (min/max)" onclick="axOpen(\''+id+'\')">⚙</button>'});
 }
 // ===== 차트별 축 범위(min/max) 편집 — 표시 전용 (AXB → axb 플러그인이 렌더 시 주입) =====
 window.axOpen=function(id){
@@ -3427,16 +3547,10 @@ window.axReset=function(id){
 
 // ===== PPT 주간보고 내보내기 — 주간보고 양식(3슬라이드) 자동 생성 =====
 // 표시 전용 계층: 화면에 렌더된 차트(CHARTS)·표(DOM)·스냅샷(_PPT)의 값을 그대로 옮긴다. 지표 계산 로직 무관.
-let _pptLoading=null;
-function pptLoad(){
-  if(window.PptxGenJS)return Promise.resolve();
-  if(_pptLoading)return _pptLoading;
-  _pptLoading=new Promise((res,rej)=>{const s=document.createElement('script');
-    s.src='https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
-    s.onload=res; s.onerror=()=>{_pptLoading=null;rej(new Error('PptxGenJS CDN 로드 실패'));};
-    document.head.appendChild(s);});
-  return _pptLoading;
-}
+/* ⚠ 옛 pptLoad 사본을 지웠다 (v135 · 8단계). 호출자가 0건이었고, 시간 제한도 자체 사본
+   폴백도 없는 판이라 «사내망이 CDN 을 묵살하면 영영 안 끝나는» v105 규율 위반이었다 —
+   저장소에서 pptxgenjs CDN 을 직접 script.src 로 쓰는 유일한 자리이기도 했다.
+   정본은 GST.pptLoad(자체 사본 → CDN · 15초)다. */
 const PPT_FONT='맑은 고딕';
 function pptCell(txt,o){return {text:String(txt==null?'':txt),options:Object.assign({fontFace:PPT_FONT,fontSize:8,align:'center',valign:'middle',color:'1A1A1A',fill:{color:'FFFFFF'},border:{pt:0.5,color:'9AA3AD'}},o||{})};}
 function pptHead(txt,o){return pptCell(txt,Object.assign({bold:true,fill:{color:'000000'},color:'FFFFFF'},o||{}));}

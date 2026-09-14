@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CSV 업로드 — GST CS Dashboard</title>
+<title>업로드 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
+<script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=141"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:var(--txt,#e6edf3);background:var(--bg-gradient,#0b1118);background-size:400% 400%;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
@@ -28,6 +29,7 @@ a{color:var(--a1,#38bdf8)}
 <body>
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
+window.GST && GST.needVer && GST.needVer(121);   // csv_table_cols 대조(v121) 이전 core 면 배너 — «숫자가 0» 대신(v135)
 </script>
 
 <h1>📤 CSV 업로드</h1>
@@ -80,20 +82,31 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 /* win — 구간 교체를 지원하는 표와 그 날짜 필드(SPEC 키). 설치현황은 «그 시점의 전체 명부»라
    구간이라는 개념이 없다 → 통째 교체만. SQL 쪽 _csv_datecol 과 짝이다. */
 const TABLES = [
-  { key:'wk',   label:'수선실적 (엑셀 또는 CSV)',  table:'sheet_wk',   kind:'mirror', win:'dStart' },
-  { key:'mat',  label:'자재실적 (엑셀 또는 CSV)',  table:'sheet_mat',  kind:'mirror', win:'workDate' },
+  { key:'wk',   label:'수선실적 (엑셀 또는 CSV)',  table:'sheet_wk',   kind:'mirror', win:'dStart',
+    after:'고장분석 → 데이터 품질 카드에서 「미기재」 건수를, 주간현황에서 BM 추이를 확인하세요.' },
+  { key:'mat',  label:'자재실적 (엑셀 또는 CSV)',  table:'sheet_mat',  kind:'mirror', win:'workDate',
+    after:'자재실적 → 데이터 품질 카드에서 「수량 단위 오입력 의심」 건수를 확인하세요.' },
   /* 설치현황은 **국내·해외 양식이 서로 다른 파일**로 온다(국내 74열 한글 · 해외 118열 영문).
      통합할 수 없다는 것이 사용자 확정이라, SPEC 의 별칭 배열이 둘 다 흡수한다 — 대상은 하나다.
      ⚠ 두 파일을 다 넣어야 하므로 **첫 파일은 「통째 교체」, 두 번째는 「이어붙이기」** 다.
         둘 다 통째 교체로 올리면 먼저 올린 쪽이 사라진다. */
   { key:'inst', label:'설치현황 (국내·해외 양식 모두)',  table:'sheet_inst', kind:'mirror',
-    note:'국내·해외 두 파일을 각각 올립니다 — 첫 파일은 「통째 교체」, 두 번째는 「이어붙이기」로.' },
-  { label:'교육현황 (엑셀 또는 CSV)',      table:'sheet_edu',     kind:'import' },
-  { label:'인원현황 (엑셀 또는 CSV)',   table:'sheet_roster',  kind:'import' },
-  { label:'휴가현황 (엑셀 또는 CSV)',    table:'sheet_leave',   kind:'import' },
-  { label:'CIP F11 (엑셀 또는 CSV)',  table:'sheet_cip_f11', kind:'import' },
-  { label:'CIP F16 (엑셀 또는 CSV)',  table:'sheet_cip_f16', kind:'import' },
-  { label:'All By-Pass (엑셀 또는 CSV · 세로형)', table:'sheet_abp',     kind:'import' },
+    note:'국내·해외 두 파일을 각각 올립니다 — 첫 파일은 「통째 교체」, 두 번째는 「이어붙이기」로.',
+    /* 설치현황은 «조직 축의 정본»이라, 올린 뒤 조인이 얼마나 붙었는지가 가장 중요하다 —
+       안 붙으면 사업부·단지·라인이 조용히 「미상」으로 몰린다(v135 · 7단계). */
+    after:'주간현황·설치현황의 데이터 품질 카드에서 S/N 조인율과 「설비상태」 인식을 확인하세요 — 낮으면 단지·라인이 미상으로 몰립니다.' },
+  { label:'교육현황 (엑셀 또는 CSV)',      table:'sheet_edu',     kind:'import',
+    after:'인원 현황 → 데이터 품질 카드에서 「교육현황과 못 이은 재직 인원」이 0 인지 확인하세요.' },
+  { label:'인원현황 (엑셀 또는 CSV)',   table:'sheet_roster',  kind:'import',
+    after:'인원 현황에서 단지·라인 목록이 비지 않았는지, 재직 인원 수가 맞는지 확인하세요.' },
+  { label:'휴가현황 (엑셀 또는 CSV)',    table:'sheet_leave',   kind:'import',
+    after:'주간현황의 인당 공수(출근 연인원에서 휴가를 뺀 값)가 상식적인지 확인하세요.' },
+  { label:'CIP F11 (엑셀 또는 CSV)',  table:'sheet_cip_f11', kind:'import',
+    after:'CIP 현황에서 분모(대상 건수)가 줄지 않았는지 확인하세요 — 줄었다면 새 항목 열이 빠진 것입니다.' },
+  { label:'CIP F16 (엑셀 또는 CSV)',  table:'sheet_cip_f16', kind:'import',
+    after:'CIP 현황에서 분모(대상 건수)가 줄지 않았는지 확인하세요 — 줄었다면 새 항목 열이 빠진 것입니다.' },
+  { label:'All By-Pass (엑셀 또는 CSV · 세로형)', table:'sheet_abp',     kind:'import',
+    after:'주간현황 Alarm 차트에서 해외 All By-Pass 막대가 서는지 확인하세요.' },
   /* 국내 알람 원장 — 한 워크북(.xlsx)에 K·P·H 세 운영단위 시트가 «각자 다른 양식»으로 들어 있다.
      CSV 여섯 개로 쪼개 올리게 하면 어느 시트를 어느 표에 넣는지 사람이 틀린다 →
      워크북 하나를 받아 이름으로 시트를 골라 한 번에 넣는다. */
@@ -105,11 +118,13 @@ const TABLES = [
      중간에 실패하면 한 표만 빈 채로 남는데, 그게 지금 상태보다 나쁘다. */
   { key:'alarm', label:'국내 알람 (CS 알람관리 .xlsx) — 두 반쪽 중 ①', table:'sheet_alarm',
     kind:'xlsx', win:'occurDate', sheets:/^([KPH])운영[_\s]*ALARM$/i,     hint:'○운영_ALARM',
-    pair:'sheet_allbypass', pairLabel:'국내 올바이패스', ddl:'setup-10-alarm.sql' },
+    pair:'sheet_allbypass', pairLabel:'국내 올바이패스', ddl:'setup-10-alarm.sql',
+    after:'주간현황의 데이터 품질 카드에서 「국내 알람 원장이 비어…」 줄이 사라졌는지, S/N 조인율이 높은지 확인하세요.' },
   { key:'abp2',  label:'국내 올바이패스 (CS 알람관리 .xlsx) — 두 반쪽 중 ②', table:'sheet_allbypass',
     kind:'xlsx', win:'occurDate', sheets:/^([KPH])운영[_\s]*ALL[_\s]*BYPASS$/i, hint:'○운영_ALLBYPASS',
     pair:'sheet_alarm', pairLabel:'국내 알람', ddl:'setup-10-alarm.sql',
-    defMode:'win', shared:{ label:'해외 올바이패스', others:q=>q.eq('src_sheet','OS') } },
+    defMode:'win', shared:{ label:'해외 올바이패스', others:q=>q.eq('src_sheet','OS') },
+    after:'주간현황의 데이터 품질 카드에서 「국내 All By-Pass 원장이 비어…」 줄이 사라졌는지 확인하세요.' },
   /* 해외(대만) All By-Pass — 행 단위 원장 (v133 · 사용자 제공 양식).
      지금까지 해외는 ABP 크로스탭 시트로만 셌다. 크로스탭은 «건수»만 있고 «행»이 없어서
      막대를 눌러도 세부내역이 안 나온다(CLAUDE.md v125). 이 리스트가 그 통로를 연다.
@@ -130,7 +145,8 @@ const TABLES = [
        검사 화면이 «지금 무엇이 지워지는지»를 세어 보여 주는 것이 마지막 안전장치다. */
     shared:{ label:'국내 올바이패스', others:q=>q.neq('src_sheet','OS') },
     note:'국내 올바이패스와 같은 표를 씁니다 — <b>「통째 교체」로 올리면 국내 자료가 사라집니다.</b> '
-        +'기본값 「겹치는 구간만 교체」를 그대로 쓰세요(해외 행만 갈아끼웁니다).' },
+        +'기본값 「겹치는 구간만 교체」를 그대로 쓰세요(해외 행만 갈아끼웁니다).',
+    after:'주간현황 고장 차트에서 All By-Pass 막대를 눌러 세부내역이 나오는지, 국내 행이 그대로 있는지 확인하세요.' },
 ];
 const $=id=>document.getElementById(id);
 TABLES.forEach((t,i)=>{ $('tsel').insertAdjacentHTML('beforeend','<option value="'+i+'">'+t.label+'</option>'); });
@@ -194,15 +210,14 @@ const XLSX_CDN_MS=15000;
 async function xlsxLib(){
   if(_XLSX)return _XLSX;
   if(!window.XLSX){
-    await new Promise((ok,ng)=>{
-      let done=false;
-      const fin=(good,err)=>{ if(done)return; done=true; clearTimeout(tm); good?ok():ng(err); };
-      const tm=setTimeout(()=>fin(false,new Error('xlsx 라이브러리를 15초 안에 못 받았습니다 — 사내망이 cdn.jsdelivr.net 을 막고 있을 수 있습니다. 전산팀에 그 주소 허용을 요청하거나, 시트를 CSV 로 저장해 올리세요')),XLSX_CDN_MS);
-      const el=document.createElement('script');
-      el.onload=()=>window.XLSX?fin(true):fin(false,new Error('xlsx 라이브러리가 로드됐는데 비어 있습니다 — 다시 시도해 주세요'));
-      el.onerror=()=>fin(false,new Error('xlsx 라이브러리를 받지 못했습니다 (CDN 차단) — 시트를 CSV 로 저장해 올리세요'));
-      el.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-      document.head.appendChild(el); });
+    /* 자체 사본 → CDN 순 · 15초 제한 — PPT·JSZip 과 같은 로더(v135). 예전엔 이 페이지만 CDN 전용 로더를 따로 짰다. */
+    try{ await GST._loadScript([GST.XLSX_VENDOR, GST.XLSX_CDN], ()=>!!window.XLSX, XLSX_CDN_MS); }
+    catch(e){
+      const tried=(e&&e.tried)||(e&&e.message)||'?';
+      throw new Error((e&&e.message==='TIMEOUT')
+        ? 'xlsx 라이브러리를 15초 안에 못 받았습니다 — 사내망이 cdn.jsdelivr.net 을 막고 있을 수 있습니다. 전산팀에 허용을 요청하거나 시트를 CSV 로 저장해 올리세요 ('+tried+')'
+        : 'xlsx 라이브러리를 받지 못했습니다 ('+tried+') — assets/vendor/xlsx.full.min.js 배포를 확인하거나 시트를 CSV 로 저장해 올리세요');
+    }
   }
   _XLSX=window.XLSX; if(!_XLSX)throw new Error('xlsx 라이브러리 로드 실패');
   return _XLSX;
@@ -523,6 +538,9 @@ window.checkFile=async function(){
       }
     }
     if(t.note) msgs.push('<span class="warn">ℹ '+t.note+'</span>');
+    /* 「올린 뒤 무엇을 확인하라」 — 업로드는 끝이 아니라 시작이다. 이 줄이 없어서
+       설치현황을 올리고도 조인율을 아무도 안 봤다(CLAUDE.md v134 「남은 확인」). */
+    if(t.after) msgs.push('<span class="warn">✔ 올린 뒤: '+t.after+'</span>');
     msgs.push('파일 <b>'+out.length.toLocaleString()+'행</b> ↔ 표의 현재 <b>'+oldCount.toLocaleString()+'행</b>'
       +(add?' → 적재 후 <b>'+(oldCount+out.length).toLocaleString()+'행</b>':''));
     /* 짝 표의 상태를 «묻지 않아도» 보여준다. 이 한 줄이 없어서 «올바만 올리고 끝났다고
@@ -666,6 +684,7 @@ window.doUpload=async function(){
       else     logLine('bad big','⚠ 아직 반쪽입니다 — 대상을 「'+PREP.t.pairLabel
                  +'」 로 바꿔 **같은 파일로 한 번 더** 올리세요. 그때까지 국내 지표의 그 절반은 수선실적으로 계산됩니다.');
     }
+    if(PREP.t.after) logLine('ok','✔ 올린 뒤 확인: '+PREP.t.after);
     logLine('','대시보드를 새로고침하면 새 데이터가 보입니다.');
   }catch(e){
     logLine('bad big','❌ '+String(e.message||e));

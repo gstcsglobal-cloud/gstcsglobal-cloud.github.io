@@ -16,7 +16,160 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 132;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 141;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+/* 인사이트 띠의 머리글. 예전에는 «INSIGHT» 영문 대문자가 core 에 박혀 있어 네 언어 어디서도 안 바뀌고
+   PPT 장표까지 그대로 나갔다(v135). core 의 공용 문자열 관례(GST._lang + 사전) 그대로다. */
+GST.INS_T = {ko:'요약', en:'Summary', zh:'摘要', ja:'要約'};
+GST.insHead = function(){ var l=(GST._lang && GST._lang()) || 'ko'; return GST.INS_T[l] || GST.INS_T.ko; };
+
+/* 사이드바·칩·출처 배지·상태줄의 공용 문구 (v135 · 5단계). 예전에는 core.js 에 한국어로 박혀 있어
+   페이지 언어를 바꿔도 그 열여덟 칸은 그대로였다. 규약은 GST.XXX_T + GST._lang() 한 벌. */
+GST.FLT_T = {
+  ko:{ axes:{region:'구분', op:'운영단위', div:'사업부', customer:'고객사', campus:'단지', line:'라인', line2:'라인2', team:'팀', period:'기간'},
+       grpEq:'설비 기준', grpEqNote:'설치·실적', grpHr:'인원 기준', grpHrNote:'인원현황', hrPrefix:'인원 ',
+       all:'전체', emptyNone:'전체 (이 화면 미적용)', emptyFilt:'전체 (필터에 해당 없음)',
+       own:'이 페이지 전용', ownPeriod:'이 페이지 전용 · 기간', filters:'필터 · Filters', dtOwn:'이 화면은 자체 기준일을 씁니다',
+       selAll:'전체 선택', selNone:'전체 해제', reset:'↺ 초기화', csvTitle:'현재 필터가 적용된 표를 CSV 로 내려받습니다',
+       autoTitle:'{n}분마다 데이터만 다시 불러옵니다. 필터는 유지됩니다.', auto:'⟳ 자동 {n}분',
+       p1m:'1개월', p3m:'3개월', p6m:'6개월', p1y:'1년', pall:'전체', chipsActive:'활성 필터', chipsClear:'전체 해제' },
+  en:{ axes:{region:'Region', op:'Entity', div:'Division', customer:'Customer', campus:'Site', line:'Line', line2:'Line 2', team:'Team', period:'Period'},
+       grpEq:'Equipment', grpEqNote:'install · records', grpHr:'People', grpHrNote:'roster', hrPrefix:'People ',
+       all:'All', emptyNone:'All (not applicable here)', emptyFilt:'All (none under current filters)',
+       own:'This page only', ownPeriod:'This page only · period', filters:'Filters', dtOwn:'This page uses its own reference date',
+       selAll:'Select all', selNone:'Clear', reset:'↺ Reset all', csvTitle:'Download the filtered table as CSV',
+       autoTitle:'Reloads data every {n} min. Filters are kept.', auto:'⟳ Auto {n} min',
+       p1m:'1 mo', p3m:'3 mo', p6m:'6 mo', p1y:'1 yr', pall:'All', chipsActive:'Active filters', chipsClear:'Clear all' },
+  zh:{ axes:{region:'区分', op:'运营单位', div:'事业部', customer:'客户', campus:'园区', line:'线', line2:'线2', team:'团队', period:'期间'},
+       grpEq:'设备基准', grpEqNote:'安装·实绩', grpHr:'人员基准', grpHrNote:'人员现况', hrPrefix:'人员 ',
+       all:'全部', emptyNone:'全部 (此页面不适用)', emptyFilt:'全部 (当前筛选无匹配)',
+       own:'仅此页面', ownPeriod:'仅此页面 · 期间', filters:'筛选 · Filters', dtOwn:'此页面使用自己的基准日',
+       selAll:'全选', selNone:'全部取消', reset:'↺ 重置', csvTitle:'下载当前筛选的表格 (CSV)',
+       autoTitle:'每{n}分钟仅重新加载数据，筛选保持不变。', auto:'⟳ 自动 {n}分',
+       p1m:'1个月', p3m:'3个月', p6m:'6个月', p1y:'1年', pall:'全部', chipsActive:'活动筛选', chipsClear:'全部清除' },
+  ja:{ axes:{region:'区分', op:'運営単位', div:'事業部', customer:'顧客', campus:'団地', line:'ライン', line2:'ライン2', team:'チーム', period:'期間'},
+       grpEq:'設備基準', grpEqNote:'設置·実績', grpHr:'人員基準', grpHrNote:'人員現況', hrPrefix:'人員 ',
+       all:'全体', emptyNone:'全体 (この画面は対象外)', emptyFilt:'全体 (現在のフィルタに該当なし)',
+       own:'このページ専用', ownPeriod:'このページ専用 · 期間', filters:'フィルタ · Filters', dtOwn:'この画面は独自の基準日を使います',
+       selAll:'全て選択', selNone:'全て解除', reset:'↺ リセット', csvTitle:'現在のフィルタ適用表を CSV で保存',
+       autoTitle:'{n}分ごとにデータだけ再読み込みします。フィルタは維持されます。', auto:'⟳ 自動 {n}分',
+       p1m:'1ヶ月', p3m:'3ヶ月', p6m:'6ヶ月', p1y:'1年', pall:'全体', chipsActive:'有効フィルタ', chipsClear:'全解除' }
+};
+GST._fltT = function(){ var l=(GST._lang && GST._lang()) || 'ko'; return GST.FLT_T[l] || GST.FLT_T.ko; };
+GST.SRC_T = {
+  ko:{ db:'Supabase', sheet:'시트', cache:'캐시', dbL:'Supabase', sheetL:'구글시트', cacheL:'브라우저 캐시', src:'출처', reuse:'재사용', idbFail:'⚠ 캐시 저장 실패',
+       title:'데이터를 어디서 읽었는지 — 누르면 자세히', idbTitle:'IndexedDB: {e} — 매번 다시 받습니다',
+       verTitle:'화면 코드 버전', verBad:' · 자료 출처에 이상이 있습니다 — 관리자에게 알려 주세요', rows:'행' },
+  en:{ db:'Supabase', sheet:'sheet', cache:'cache', dbL:'Supabase', sheetL:'Google Sheet', cacheL:'browser cache', src:'Source', reuse:'reused', idbFail:'⚠ cache save failed',
+       title:'Where the data came from — click for details', idbTitle:'IndexedDB: {e} — fetching every time',
+       verTitle:'Page code version', verBad:' · a data source has a problem — tell the admin', rows:' rows' },
+  zh:{ db:'Supabase', sheet:'表格', cache:'缓存', dbL:'Supabase', sheetL:'谷歌表格', cacheL:'浏览器缓存', src:'来源', reuse:'复用', idbFail:'⚠ 缓存保存失败',
+       title:'数据来源 — 点击查看详情', idbTitle:'IndexedDB: {e} — 每次重新获取',
+       verTitle:'页面代码版本', verBad:' · 数据来源异常 — 请联系管理员', rows:'行' },
+  ja:{ db:'Supabase', sheet:'シート', cache:'キャッシュ', dbL:'Supabase', sheetL:'Googleシート', cacheL:'ブラウザキャッシュ', src:'出所', reuse:'再利用', idbFail:'⚠ キャッシュ保存失敗',
+       title:'データの読み込み元 — 押すと詳細', idbTitle:'IndexedDB: {e} — 毎回再取得します',
+       verTitle:'画面コードのバージョン', verBad:' · データ出所に異常があります — 管理者へ', rows:'行' }
+};
+GST._srcT = function(){ var l=(GST._lang && GST._lang()) || 'ko'; return GST.SRC_T[l] || GST.SRC_T.ko; };
+/* 상태줄 — 캐시 표시·로드 실패·빈 결과. 실패 «부류»별 한 줄(무엇을 하면 되는지) + 원문은 관리자에게만(A-4). */
+GST.STA_T = {
+  ko:{ stale:'📡 시트 접속 실패 — 캐시({n}분 전) 표시 중', staleNoAge:'📡 시트 접속 실패 — 캐시 표시 중',
+       failAuth:'로그인이 만료되었거나 권한이 없습니다 — 다시 로그인하세요',
+       failNet:'서버에 연결하지 못했습니다 — 네트워크를 확인하고 새로고침하세요',
+       failData:'자료 표가 비어 있거나 적재가 끝나지 않았습니다 — 관리자에게 알려 주세요',
+       failRead:'자료를 읽지 못했습니다 — 새로고침해 보고, 계속되면 관리자에게 알려 주세요',
+       failGen:'데이터를 불러오지 못했습니다 — 새로고침해 보고, 계속되면 관리자에게 알려 주세요',
+       emptyFilt:'현재 필터에 맞는 행이 없습니다 — 필터를 지우면 {n}건', emptyClear:'필터 해제',
+       emptyTable:'이 화면이 보는 표에 행이 없습니다 — 관리자에게 알려 주세요', emptyRows:'해당 행이 없습니다' },
+  en:{ stale:'📡 Sheet unreachable — showing cached data ({n} min old)', staleNoAge:'📡 Sheet unreachable — showing cached data',
+       failAuth:'Session expired or no permission — sign in again',
+       failNet:'Could not reach the server — check the network and refresh',
+       failData:'The data table is empty or still loading on the server — tell the admin',
+       failRead:'Could not read the data — refresh, and tell the admin if it persists',
+       failGen:'Failed to load data — refresh, and tell the admin if it persists',
+       emptyFilt:'No rows match the current filters — clearing them shows {n}', emptyClear:'Clear filters',
+       emptyTable:'The table this page reads has no rows — tell the admin', emptyRows:'No rows' },
+  zh:{ stale:'📡 无法连接表格 — 显示缓存({n}分钟前)', staleNoAge:'📡 无法连接表格 — 显示缓存',
+       failAuth:'登录已过期或无权限 — 请重新登录',
+       failNet:'无法连接服务器 — 请检查网络后刷新',
+       failData:'数据表为空或尚未加载完成 — 请联系管理员',
+       failRead:'无法读取数据 — 请刷新，若持续请联系管理员',
+       failGen:'数据加载失败 — 请刷新，若持续请联系管理员',
+       emptyFilt:'当前筛选无匹配行 — 清除筛选可见 {n} 行', emptyClear:'清除筛选',
+       emptyTable:'此页面读取的表没有行 — 请联系管理员', emptyRows:'无对应行' },
+  ja:{ stale:'📡 シート接続失敗 — キャッシュ表示中({n}分前)', staleNoAge:'📡 シート接続失敗 — キャッシュ表示中',
+       failAuth:'ログインが切れたか権限がありません — 再ログインしてください',
+       failNet:'サーバーに接続できません — ネットワークを確認して更新してください',
+       failData:'データ表が空か読み込みが終わっていません — 管理者へ',
+       failRead:'データを読めませんでした — 更新しても続く場合は管理者へ',
+       failGen:'データを読み込めませんでした — 更新しても続く場合は管理者へ',
+       emptyFilt:'現在のフィルタに合う行がありません — 解除すると {n} 件', emptyClear:'フィルタ解除',
+       emptyTable:'この画面が読む表に行がありません — 管理者へ', emptyRows:'該当行なし' }
+};
+GST._staT = function(){ var l=(GST._lang && GST._lang()) || 'ko'; return GST.STA_T[l] || GST.STA_T.ko; };
+GST.staleText = function(ageMin){
+  const T = GST._staT();
+  return (ageMin==null || isNaN(ageMin)) ? T.staleNoAge : T.stale.replace('{n}', String(ageMin));
+};
+/* 로드 실패 한 줄. 예전에는 여섯 페이지가 raw exception(`Failed to fetch`·`READ PGRST…`)을 그대로 상태줄에 찍었다 —
+   사람이 할 일이 부류마다 다르다(재로그인 / 네트워크 / 관리자). 원문은 관리자에게만 붙이고 콘솔에는 늘 남긴다. */
+GST.failNote = function(e){
+  const T = GST._staT(), m = String((e && e.message) || e || '');
+  let txt = T.failGen;
+  if(/DB_OFF|AUTH 40[13]|JWT|expired|forbidden|not allowed|권한/i.test(m)) txt = T.failAuth;
+  else if(/Failed to fetch|NetworkError|network|timeout|timed out|ECONN|HTTP 5\d\d|Load failed/i.test(m)) txt = T.failNet;
+  else if(/MIRROR_EMPTY|MIRROR_SHORT|CSV_SHORT|BACKFILL_SHORT|SRC_ROW|^EMPTY|no data/i.test(m)) txt = T.failData;
+  else if(/^READ|^LOG |NO_SPEC|HTTP 4\d\d|column|does not exist/i.test(m)) txt = T.failRead;
+  try{ console.error('[gst] load failed:', e); }catch(x){}
+  return txt + ((GST.isAdmin && GST.isAdmin() && m) ? ' (' + m.slice(0,120) + ')' : '');
+};
+/* 빈 표 한 칸. 「자료 없음」이라고 적지 않는다 — «자료를 안 올렸다»로 읽혀 사용자가 엑셀을 열어 확인한 자리다.
+   total>0 이면 «필터 때문»이고 무엇을 하면 되는지(필터 해제)까지 준다. total==0 이면 표가 비어 있는 것이다. */
+GST.emptyHTML = function(total){
+  const T = GST._staT();
+  if(total > 0) return GST._esc(T.emptyFilt.replace('{n}', Number(total).toLocaleString()))
+    + ' <button type="button" class="gst-empty-clear" onclick="GST.clearFilters()">' + GST._esc(T.emptyClear) + '</button>';
+  return GST._esc(T.emptyTable);
+};
+GST.emptyRowsText = function(){ return GST._staT().emptyRows; };
+/* 필터 전체 해제 — 페이지가 자기 해제 함수를 갖고 있으면(페이지 전용 필터까지 지운다) 그것을, 없으면 공통 필터만 */
+GST.clearFilters = function(){
+  if(typeof window.clearAllFilters==='function'){ try{ window.clearAllFilters(); return; }catch(e){} }
+  if(typeof window.clearFilt==='function'){ try{ window.clearFilt(); return; }catch(e){} }
+  try{ GST.filters.clear(); }catch(e){}
+};
+
+/* ---------- 화면 등급 (v135) ----------
+   권한은 «두 축»이다 — 쓰기(allowed_users.can_write · RLS 가 최종 판정)와 메타정보 표시(allowed_users.role).
+   viewer 는 지표만 · editor 는 + 편집·업로드 버튼 · admin 은 + 출처 배지 상세·미러 배너 원문·열 인식 패널·/diag/.
+   ⚠ 이것은 보안이 아니라 «화면 정리»다 — 지표 값 자체는 네트워크 탭·IndexedDB 에 그대로 있다(사용자 확정: 메타만).
+   ⚠ 두 축을 억지로 잇지 않는다 — role='admin' 이면서 can_write=false 도 가능한 조합이고, 쓰기는 계속 can_write 가 정한다.
+   role 열이 아직 없으면(setup-15 실행 전) 'legacy' — 지금까지처럼 전원이 다 본다(잠그면 관리자도 업로드 버튼을 잃는다).
+   인증이 꺼진 환경(로컬 파일·검증 스크립트)도 legacy 다 — 그 환경은 애초에 로그인 게이트가 안 열린다. */
+GST._me = null; GST._meP = null;
+GST.isAdmin = function(){
+  if(!GST._me) return !GST.authOn();
+  var r = GST._me.role; return r==='admin' || r==='legacy';
+};
+GST.canWrite = function(){ return !!(GST._me && GST._me.can_write); };
+GST._meApply = function(me){
+  GST._me = me;
+  try{ if(document.body) document.body.dataset.role = me && me.role ? me.role : 'viewer'; }catch(e){}
+  /* 등급이 «나중에» 도착하므로, 이미 그려진 메타 요소를 다시 그린다 — 등급을 모를 때는 가려 두었다가 연다 */
+  try{ GST._srcChip(); }catch(e){}
+  try{ GST._dbBanner(); }catch(e){}
+  try{ var bad=(GST.SM&&GST.SM._reg||[]).filter(function(r){ return r.miss.length; }); if(bad.length) GST.SM.banner(bad); }catch(e){}
+  try{ window.dispatchEvent(new CustomEvent('gst-role', {detail:me})); }catch(e){}
+};
+GST.loadMe = function(){
+  if(GST._meP) return GST._meP;
+  GST._meP = (async function(){
+    if(!GST.authOn()){ GST._meApply({email:'', can_write:false, role:'legacy'}); return GST._me; }
+    try{ await GST.dbWrite('perm', 'perm'); }                         // perm 경로가 자기 행을 읽어 _meApply 를 부른다 — 두 번째 읽기를 만들지 않는다
+    catch(e){ if(!GST._me) GST._meApply({email:'', can_write:false, role:'viewer'}); }   // 모르면 viewer(fail-closed)
+    return GST._me;
+  })();
+  return GST._meP;
+};
 
 /* 숫자 칸 파서. `Number('2,093')` 은 **NaN** 이다 — 시트를 CSV 로 내보내면 천 단위 쉼표가
    그대로 들어오므로, 그동안 작업시간·공수·사용일이 1,000 이상인 행은 «조용히» 값이
@@ -35,31 +188,72 @@ GST.needVer = function(n){
   try{
     var d = document.createElement('div');
     d.style.cssText='background:#7f1d1d;color:#fff;padding:10px 16px;font:13px/1.5 sans-serif;position:relative;z-index:99999';
-    d.textContent='⚠️ core.js 가 구버전입니다 (실행 v'+GST.VER+' · 이 페이지는 v'+n+' 필요). '
-      +'브라우저 캐시 탓입니다 — Ctrl+Shift+R (Mac ⌘⇧R) 로 강력 새로고침하세요. '
-      +'그래도 같으면 assets/core.js 배포가 페이지보다 늦은 것입니다.';
+    /* 숫자·배포 이야기는 title(관리자용)로 — 사용자가 할 일은 강력 새로고침 하나뿐이다(v135) */
+    d.textContent='⚠️ 화면 코드가 최신이 아닙니다 — Ctrl+Shift+R (Mac ⌘⇧R) 로 강력 새로고침하세요. 그래도 같으면 관리자에게 알려 주세요.';
+    d.title='core v'+GST.VER+' 실행 · 이 페이지는 v'+n+' 필요 — 브라우저 캐시이거나 assets/core.js 배포가 페이지보다 늦은 것';
+    try{ console.warn('[needVer] 실행 v'+GST.VER+' · 필요 v'+n); }catch(e){}
     (document.body||document.documentElement).insertAdjacentElement('afterbegin', d);
   }catch(e){}
   return false;
 };
+/* 코드가 던지는 실패를 «보이게» 한다 (v135). 자료 실패는 배너·배지로 촘촘한데 코드 예외만 아무 데도 안 떴다 —
+   iframe 안의 예외는 셸 콘솔에도 안 뜨고 사용자는 F12 를 열지 않는다. 같은 메시지는 한 번만 띄운다.
+   ⚠ 관리자에게만 메시지·위치를 적는다(A-4 · 메타정보). 조회자에게는 «무엇을 하면 되는지» 한 줄. */
+GST._errSeen = {};
+GST._errBand = function(msg, where){
+  try{
+    const key = String(msg||'').trim().slice(0,160);
+    if(!key || GST._errSeen[key]) return;
+    if(/ResizeObserver loop|^Script error\.?$/.test(key)) return;      // 브라우저 잡음 · 교차출처 스크립트의 빈 메시지
+    GST._errSeen[key] = 1;
+    const detail = key + (where ? ' @ ' + where : '') + ' (core ' + GST.VER + ')';
+    try{ console.error('[gst] ' + detail); }catch(e){}
+    if(typeof document==='undefined') return;
+    let d = document.getElementById('gstErrBand');
+    if(!d){
+      d = document.createElement('div'); d.id = 'gstErrBand';
+      d.style.cssText = 'background:#4c1d95;color:#ede9fe;padding:8px 14px;font:12px/1.5 system-ui,-apple-system,sans-serif;position:relative;z-index:99999';
+      (document.body||document.documentElement).insertAdjacentElement('afterbegin', d);
+    }
+    d.textContent = '⚠️ 화면 일부가 그려지지 않았을 수 있습니다 — 새로고침해 보고, 계속되면 관리자에게 알려 주세요'
+      + ((GST.isAdmin && GST.isAdmin()) ? ' · ' + detail : '');
+    d.title = detail;
+    try{ if(window.self!==window.top) window.parent.postMessage({type:'gst-error', msg:key}, '*'); }catch(e){}
+  }catch(e){}
+};
+if(typeof window!=='undefined' && window.addEventListener){
+  window.addEventListener('error', function(ev){
+    if(!ev || !ev.message) return;                                    // 리소스 로드 실패는 여기로 안 온다(버블링 없음) — 로더가 따로 알린다
+    GST._errBand(ev.message, (ev.filename||'').replace(/^.*\//,'') + (ev.lineno ? ':' + ev.lineno : ''));
+  });
+  window.addEventListener('unhandledrejection', function(ev){
+    const r = ev && ev.reason;
+    GST._errBand(r && r.message ? r.message : String(r), r && r.stack ? String(r.stack).split('\n')[1] || '' : '');
+  });
+}
 GST.FONT_STACK = '"Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
 GST.font = function(px, weight){ return (weight||400)+' '+px+'px '+GST.FONT_STACK; };
 // 웹폰트는 첫 렌더보다 늦게 도착할 수 있다 — 캔버스는 스스로 다시 그리지 않으므로
 // 폰트 준비가 끝나면 한 번 재렌더해서 폴백 메트릭으로 그려진 차트를 교정한다.
 if (typeof document!=='undefined' && document.fonts && document.fonts.ready){
   document.fonts.ready.then(function(){
-    try{ if(typeof window!=='undefined' && typeof window.render==='function') window.render(); }catch(e){}
+    try{ if(typeof window!=='undefined' && typeof window.render==='function') window.render(); }catch(e){ console.warn('[gst] 폰트 준비 후 재렌더 실패', e); }
   });
 }
 
 /* ---------- 1. 날짜 유틸 ---------- */
 // 구글시트의 다양한 날짜 표현(시리얼 숫자, YYYY-MM-DD, Date 문자열)을 UTC Date로 통일
 GST.toDate = function(v){
-  if(!v || v==='') return null;
+  if(!v) return null;
+  if(v instanceof Date) return isNaN(v) ? null : v;
   const n = Number(v);
   if(!isNaN(n) && n>20000 && n<80000) return new Date(Date.UTC(1899,11,30) + n*86400000);
   const s = String(v).trim();
-  const m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  /* 구분자 둘레의 공백을 허용한다 — '2022. 8. 1'(구글시트 한국 서식)·'2022/8/1'·'2022-08-01 10:00'.
+     ⚠ 예전 정규식은 공백을 몰라 그 표기가 아래 new Date(s) 폴백으로 떨어졌고, 그것은 «로컬 자정»이라
+       KST 에서 UTC 로 찍으면 하루가 밀렸다. report·hr 은 그래서 자기 pd() 를 따로 들고 있었고 같은
+       문자열에 core 와 다른 날짜를 냈다 — v135 에 사본을 지우고 여기로 모았다(t-quiet [1b] 가 대조한다). */
+  const m = s.match(/^(\d{4})\s*[-/.]\s*(\d{1,2})\s*[-/.]\s*(\d{1,2})(?!\d)/);
   if(m) return new Date(Date.UTC(+m[1], +m[2]-1, +m[3]));
   const d = new Date(s);
   return isNaN(d) ? null : d;
@@ -91,14 +285,21 @@ GST._storage={
   setItem:function(k,v){ try{ sessionStorage.setItem(k,v); localStorage.removeItem(k); }catch(e){} },
   removeItem:function(k){ try{ sessionStorage.removeItem(k); localStorage.removeItem(k); }catch(e){} }
 };
+/* supabase-js — 대시보드의 «현관문». v105 규율(CDN 을 기다리는 곳에는 반드시 시간 제한)이 PPT·xlsx 버튼에는
+   있었는데 여기에는 없었다 — 사내망이 cdn.jsdelivr.net 을 «묵살»하면 onerror 가 영영 안 와 로그인 오버레이가
+   글자 없는 검은 화면으로 남았다(v135). 자체 사본 → CDN 순 · 15초. 버전은 사본과 CDN 이 같아야 한다 —
+   `@2` 처럼 열어 두면 «어느 날 바뀌는» 유일한 의존성이 되고 롤백 손잡이도 없다(assets/vendor/README.md ·
+   t-pptchart [1] 이 둘을 대조한다). */
+GST.SB_VER    = '2.116.0';
+GST.SB_VENDOR = '/assets/vendor/supabase.min.js';                                      // 2.116.0
+GST.SB_CDN    = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js';
+GST._sbFail   = '로그인 모듈을 불러오지 못했습니다 — 새로고침하거나 잠시 뒤 다시 시도하세요 (cdn.jsdelivr.net 이 막혀 있을 수 있습니다)';
 GST.sb = async function(){
   if(GST._sb) return GST._sb;
   if(!global.supabase){
-    if(!GST._sbLoad) GST._sbLoad=new Promise(function(res,rej){
-      var s=document.createElement('script');
-      s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-      s.onload=res; s.onerror=function(){GST._sbLoad=null;rej(new Error('supabase-js CDN 로드 실패'));};
-      document.head.appendChild(s); });
+    if(!GST._sbLoad) GST._sbLoad = GST._loadScript([GST.SB_VENDOR, GST.SB_CDN], function(){ return !!global.supabase; }, 15000)
+      .catch(function(e){ GST._sbLoad=null;
+        var err=new Error('supabase-js 로드 실패 ('+(e&&e.message||'?')+')'); err.tried=e&&e.tried; throw err; });
     await GST._sbLoad;
   }
   // 이전 버전이 localStorage에 남긴 세션 청소 (브라우저 종료 시 로그아웃 정책 전환)
@@ -115,25 +316,29 @@ GST.getSession = async function(){
 GST.token   = async function(){ var s=await GST.getSession(); return s?s.access_token:null; };
 // shouldCreateUser:false — 관리자가 Supabase 콘솔(Authentication → Users → Invite user)로
 // 미리 초대한 이메일만 인증코드를 받을 수 있다. 승인 안 된 이메일은 코드 발급 자체가 거부된다.
-GST.sendOtp = async function(email){ var c=await GST.sb();
-  var r=await c.auth.signInWithOtp({email:email,options:{shouldCreateUser:false}});
+GST.sendOtp = async function(email){ var c, r;
+  /* 로더가 던지면 await 가 다시 던져 버튼이 「전송 중…」에 잠긴 채 굳었다(v135) — 여기서 받아 한 줄로 돌려준다 */
+  try{ c=await GST.sb(); r=await c.auth.signInWithOtp({email:email,options:{shouldCreateUser:false}}); }
+  catch(e){ return GST._sbFail; }
   if(!r.error)return null;
   var m=String(r.error.message||'');
   if(/signup|not allowed|not found|does not exist/i.test(m))
     return '등록되지 않은 이메일입니다. 관리자에게 이메일 등록을 요청하세요.';
   return m||'전송 실패';
 };
-GST.verifyOtp = async function(email,code){ var c=await GST.sb();
-  var r=await c.auth.verifyOtp({email:email,token:code,type:'email'});
+GST.verifyOtp = async function(email,code){ var c, r;
+  try{ c=await GST.sb(); r=await c.auth.verifyOtp({email:email,token:code,type:'email'}); }
+  catch(e){ return GST._sbFail; }
   return r.error?(r.error.message||'코드 확인 실패'):null; };
 /* 아이디+비밀번호 로그인 (조회 전용 계정용).
    Supabase 는 이메일 형태만 받으므로, @ 없는 아이디에는 아래 도메인을 붙여 계정 이메일로 만든다.
    계정은 관리자가 콘솔(Authentication → Add user, Auto Confirm)에서 만들고 allowed_users 에
    can_write=false 로 넣는다 — 쓰기 권한은 RLS 가 막으므로 화면 조회만 된다. */
 GST.PW_DOMAIN='gstcs.view';
-GST.pwLogin = async function(id,pw){ var c=await GST.sb();
+GST.pwLogin = async function(id,pw){ var c, r;
   var em=(id.indexOf('@')>=0?id:(id+'@'+GST.PW_DOMAIN)).toLowerCase();
-  var r=await c.auth.signInWithPassword({email:em,password:pw});
+  try{ c=await GST.sb(); r=await c.auth.signInWithPassword({email:em,password:pw}); }
+  catch(e){ return GST._sbFail; }
   if(!r.error)return null;
   var m=String(r.error.message||'');
   if(/invalid login credentials|invalid_credentials/i.test(m))return '아이디 또는 비밀번호가 올바르지 않습니다';
@@ -159,7 +364,12 @@ GST.db = async function(){ if(!GST.authOn())return null;
 // 로그인 완료 신호 — fetchCSV가 이 Promise를 기다리므로 loadData()를 먼저 불러도 안전
 GST._readyP=null; GST._readyRes=null;
 GST.authReady=function(){ if(!GST._readyP)GST._readyP=new Promise(function(r){GST._readyRes=r;}); return GST._readyP; };
-GST._authOk=function(){ GST.authReady(); GST._readyRes&&GST._readyRes(); };
+GST._authOk=function(){ GST.authReady(); GST._readyRes&&GST._readyRes(); try{ GST.loadMe(); }catch(e){} };
+GST._loginCard=function(title, sub, extra, color){
+  return '<div class="login-card" style="max-width:360px;width:90%;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
+    +'<div style="font-size:17px;font-weight:800;color:'+(color||'#e6edf3')+';margin-bottom:8px">'+title+'</div>'
+    +(sub?'<div style="font-size:12px;color:#8a97a5;line-height:1.6">'+sub+'</div>':'')+(extra||'')+'</div>';
+};
 // 로그인 게이트: #loginOverlay를 이메일 OTP UI로 교체(없으면 생성). 성공 시 resolve.
 GST.authGate = async function(){
   var ov=document.getElementById('loginOverlay');
@@ -174,6 +384,22 @@ GST.authGate = async function(){
       +'<div style="font-size:12px;color:#8a97a5">관리자에게 문의하세요</div></div>';
     return new Promise(function(){});   // 절대 resolve하지 않음 → 페이지가 열리지 않는다
   }
+  /* 로그인 모듈부터 확보한다 (v135). 예전에는 getSession() 안에서 CDN 을 기다렸고 그 대기에 시간 제한이 없어,
+     사내망이 묵살하면 오버레이가 «글자 없는 검은 화면»으로 영영 남았다. 이제 15초 뒤 실패로 오고 그때
+     무엇을 하면 되는지를 적는다 — 막다른 길로 두지 않는다(v105 규율). 0.6초 넘게 걸리면 «준비 중»이라도 적는다. */
+  var slow=setTimeout(function(){ if(!global.supabase && !ov.querySelector('.login-card')){
+    ov.classList.remove('hidden'); ov.style.display='flex'; ov.innerHTML=GST._loginCard('로그인 준비 중…','',''); } }, 600);
+  try{ await GST.sb(); }
+  catch(e){
+    clearTimeout(slow);
+    ov.classList.remove('hidden'); ov.style.display='flex';
+    ov.innerHTML=GST._loginCard('로그인 모듈을 불러오지 못했습니다',
+      'cdn.jsdelivr.net 을 막고 있을 수 있습니다 — 전산팀에 허용을 요청하거나 잠시 뒤 다시 시도하세요',
+      '<button onclick="location.reload()" title="'+String(e&&e.tried||e&&e.message||'').replace(/"/g,'&quot;')+'" style="margin-top:14px;padding:9px 22px;border-radius:10px;border:0;background:#2C5FAE;color:#fff;font-weight:700;cursor:pointer">다시 시도</button>',
+      '#ffb4b4');
+    return new Promise(function(){});   // 모듈 없이는 인증도 자료도 없다 — 열지 않는다
+  }
+  clearTimeout(slow);
   var s=await GST.getSession();
   if(s){ ov.classList.add('hidden'); ov.style.display='none'; GST._authOk(); return true; }
   ov.classList.remove('hidden'); ov.style.display='flex';
@@ -384,7 +610,7 @@ GST._dbwCol = function(cmap, want){
    역할이 같다: 폼을 연 뒤 누가 같은 행을 고쳤으면 저장이 409 로 막힌다. */
 GST._dbwHash = function(rowObj){
   var ks = Object.keys(rowObj||{}).filter(function(k){ return !GST._CSV_SKIP[k]; }).sort();
-  var s = ks.map(function(k){ return k+''+String(rowObj[k]==null?'':rowObj[k]); }).join('');
+  var s = ks.map(function(k){ return k+'\x01'+String(rowObj[k]==null?'':rowObj[k]); }).join('\x02');
   var h1=0x811c9dc5, h2=0x1505;
   for(var i=0;i<s.length;i++){ var c=s.charCodeAt(i);
     h1=((h1^c)*0x01000193)>>>0; h2=(((h2<<5)+h2)^c)>>>0; }
@@ -431,11 +657,18 @@ GST.dbWrite = async function(op, gid, body, params){
   /* 권한 — allowed_users.can_write. RLS 가 최종 결정하므로 이 검사는 UI·메시지용이다
      (검사를 우회해도 정책이 막는다). 자기 행 조회는 setup-7 의 self read 정책이 연다. */
   // ilike = 대소문자 무시 일치. %·_ 는 와일드카드라 이메일에 든 _ 를 이스케이프한다
-  var au = await c.from('allowed_users').select('email,can_write')
-                  .ilike('email', email.replace(/[%_\\]/g, '\\$&')).maybeSingle();
+  var like = email.replace(/[%_\\]/g, '\\$&'), legacy = false;
+  var au = await c.from('allowed_users').select('email,can_write,role').ilike('email', like).maybeSingle();
+  /* role 열이 아직 없으면(setup-15 실행 전) 옛 두 열만 다시 읽는다 — 그 상태에서 쓰기·업로드가 멈추면 안 된다(v135) */
+  if(au.error && /role/i.test(String(au.error.message||''))){
+    legacy = true;
+    au = await c.from('allowed_users').select('email,can_write').ilike('email', like).maybeSingle();
+  }
   if(au.error) throw GST._dbwErr('sheets_error', 500, {detail:au.error.message});
   if(!au.data){ GST.authDenied && GST.authDenied(403); throw GST._dbwErr('forbidden', 403); }
-  if(op === 'perm') return { ok:true, email:email, can_write:!!au.data.can_write };
+  var me = { ok:true, email:email, can_write:!!au.data.can_write, role: legacy ? 'legacy' : (au.data.role || 'viewer') };
+  GST._meApply(me);
+  if(op === 'perm') return me;
   if(!au.data.can_write) throw GST._dbwErr('read_only', 403);
   if(W.ops && W.ops.indexOf(op) < 0) throw GST._dbwErr('op_disabled', 400, {op:op});
 
@@ -758,10 +991,10 @@ try{ GST.chartDefaults(); }catch(e){}
    rows 는 2차원 배열(값은 문자열/숫자), cols 는 헤더. 500행까지만 그린다 —
    그 이상은 브라우저가 버벅이고, 목록의 목적(어떤 건들인지 눈으로 확인)에 500이면 충분하다. */
 GST._ROWS_T = {
-  ko:{n:'건', more:'처음 {m}건만 표시', close:'닫기', copy:'⧉ 복사', copied:'복사됨'},
-  en:{n:' rows', more:'showing first {m}', close:'Close', copy:'⧉ Copy', copied:'Copied'},
-  zh:{n:'件', more:'仅显示前 {m} 件', close:'关闭', copy:'⧉ 复制', copied:'已复制'},
-  ja:{n:'件', more:'先頭 {m} 件のみ表示', close:'閉じる', copy:'⧉ コピー', copied:'コピー済み'}
+  ko:{n:'건', more:'처음 {m}건만 표시', close:'닫기', copy:'⧉ 복사', copied:'복사됨', list:'세부내역 보기'},
+  en:{n:' rows', more:'showing first {m}', close:'Close', copy:'⧉ Copy', copied:'Copied', list:'View details'},
+  zh:{n:'件', more:'仅显示前 {m} 件', close:'关闭', copy:'⧉ 复制', copied:'已复制', list:'查看明细'},
+  ja:{n:'件', more:'先頭 {m} 件のみ表示', close:'閉じる', copy:'⧉ コピー', copied:'コピー済み', list:'明細を見る'}
 };
 GST.rowsModal = function(title, cols, rows, note){
   const T=GST._ROWS_T[GST._lang()]||GST._ROWS_T.ko, esc=GST._esc, MAX=500;
@@ -787,6 +1020,75 @@ GST.rowsModal = function(title, cols, rows, note){
     }
   });
   return ov;
+};
+
+/* ---------- KPI 카드 클릭 → 세부내역 (v133) ----------
+   ⚠ 이 기능은 «있었다가 지워진» 것이 아니라 한 번도 없었다. 그런데 theme.css 가 모든
+     .kpi 에 cursor:pointer 를 걸어 두어, 실측 56장 중 48장이 «손가락 커서가 뜨고 눌리는
+     느낌까지 나는데 아무 일도 안 하는» 카드였다 — 화면이 없는 기능을 있다고 말한 것이다.
+     그래서 여기서 «동작»을 만들고, theme.css 는 «동작이 붙은 카드»만 pointer 로 바꾼다.
+
+   열쇠는 카드가 아니라 «값 element 의 id»(kp1·ck2·rk3)다. 그 id 가 숫자를 쓴 유일한
+   자리(setTxt('kp4', …))라, 카드를 옮기거나 KPI 블록이 하나 더 생겨도 팝업이 «그 숫자»를
+   따라간다. .kpi 를 위치(querySelectorAll 순서)로 잡으면 pm 이 겪던 결함
+   (data-s 없는 카드까지 잡혀 activeStatus=undefined)이 여덟 페이지로 퍼진다.
+
+   spec 은 «열 때» 부른다 — mount 때 계산하면 필터를 바꾼 뒤 옛 숫자가 열린다.
+     () => ({title, cols, rows, note})   → GST.rowsModal 이 연다 (표 하나 · 500행 · 복사)
+     () => ({open:fn})                   → 페이지 자기 모달 (요약 + 표 여럿 + 안내)
+   두 반환형을 두는 이유: 페이지 모달이 내는 것은 «행 목록»이 아니라 요약·복수 표·
+   「해외 n건은 크로스탭이라 목록이 없습니다」 같은 안내다. rowsModal 로 통일하면 그것이
+   통째로 사라진다(= 조용히 빼는 것). */
+GST.kpiDrill = function(map, opt){
+  if(!map) return;
+  const badge = !!(opt && opt.badge);
+  const run = function(id, host){
+    const fn=(host._kdMap||{})[id]; if(typeof fn!=='function') return;
+    let spec=null;
+    try{ spec=fn(); }catch(e){ console.error('kpiDrill '+id, e); return; }
+    if(!spec) return;
+    if(typeof spec.open==='function'){ spec.open(); return; }
+    if(spec.rows) GST.rowsModal(spec.title, spec.cols, spec.rows, spec.note);
+  };
+  Object.keys(map).forEach(function(id){
+    const el=document.getElementById(id); if(!el) return;
+    const card=el.closest('.kpi')||el.parentElement; if(!card) return;
+    if(badge){
+      /* ⚠ 배지 모드 — «카드 클릭이 이미 자기 일을 하는» 카드용 (v135 · 6단계).
+         fault 의 .kpi[data-stage] 3장과 pm 의 .kpi[data-s] 5장은 페이지가 k.onclick 으로
+         단계·상태 필터를 건다. kpiDrill 은 addEventListener 라 서로 지우지 않고 «둘 다»
+         돈다 — 한 번 눌러 필터가 바뀌고 팝업이 동시에 터지며, 팝업은 재렌더 때문에 방금
+         사라진 숫자를 보여준다. 그래서 팝업은 값 옆 작은 배지에 둔다.
+         ⚠ data-kdrill 은 붙이지 «않는다» — theme.css 의 커서 셀렉터가 그것으로 «동작이
+         붙은 카드»를 아는데, 이 카드들은 data-stage/data-s 로 이미 커서를 갖고 자기
+         동작이 따로 있다. 표식은 data-kdrillb 로 가른다(검사가 두 모드를 구분한다). */
+      card.setAttribute('data-kdrillb', id);
+      card._kdMap = map;
+      let b=card.querySelector('.kdb[data-kdb="'+id+'"]');
+      if(!b){
+        const row=el.closest('.krow')||el.parentElement||card;
+        b=document.createElement('button');
+        b.className='kdb'; b.type='button'; b.dataset.kdb=id;
+        b.textContent='\u2630';                       // ☰ — 목록
+        b.title=(GST._ROWS_T[GST._lang()]||GST._ROWS_T.ko).list||'';
+        row.appendChild(b);
+        b.addEventListener('click', function(ev){
+          /* 카드의 필터 클릭까지 같이 돌면 «누르자마자 숫자가 바뀐 팝업»이 된다. */
+          ev.stopPropagation(); ev.preventDefault();
+          run(id, card);
+        });
+      }
+      return;
+    }
+    /* 표식을 남긴다 — theme.css 의 커서 셀렉터와 검사가 «동작이 붙은 카드»를 이것으로 안다. */
+    card.setAttribute('data-kdrill', id);
+    /* render 가 여러 번 도는 페이지(report·pm)에서 핸들러가 겹쳐 붙지 않게 한 번만 단다.
+       spec 은 클릭 시점에 map 에서 다시 꺼내므로, 다시 mount 해도 새 spec 이 쓰인다. */
+    card._kdMap = map;
+    if(card._kd) return;
+    card._kd = true;
+    card.addEventListener('click', function(){ run(id, card); });
+  });
 };
 
 // 테마 전환 시 차트 전체 파기 — update()로는 축/범례 잉크가 갱신되지 않으므로
@@ -850,19 +1152,42 @@ GST.donut = function(store, id, o){
 };
 
 /* ---------- 7. 활성 필터 칩 렌더 ---------- */
-GST.renderChips = function(F, LABELS, onClearName){
-  try{ GST.ctxSave(F); }catch(e){}   // 사이트·공정은 다른 탭으로 승계
+GST.renderChips = function(F, LABELS, onClearName, opt){
+  if(!(opt && opt.noCtx)){ try{ GST.ctxSave(F); }catch(e){} }   // 사이트·공정은 다른 탭으로 승계
   const box=document.getElementById('fchips'), list=document.getElementById('fchipList');
   if(!box || !list) return;
   // 다중선택(Set)도 칩으로 보여야 한다 — 걸린 조건이 화면에 안 보이면 모집단을 오해한다
   const shown = v => (v instanceof Set) ? Array.from(v).join(' · ') : v;
   const has   = v => (v instanceof Set) ? v.size > 0 : !!v;
-  const active = Object.entries(F).filter(([k,v])=>has(v));
-  if(!active.length){ box.style.display='none'; return; }
+  const active = Object.entries(F||{}).filter(([k,v])=>has(v));
+  /* 공통 축(GST.filters)의 칩도 «같은 줄»에 낸다 (v135). 예전에는 tco·cip 만 손으로 합쳤고(한국어 이름표를 다시 박아서)
+     fault·material 은 공통 축이 걸려도 칩이 안 떴다 — 어제 걸어 둔 구분·단지가 오늘 화면을 좁히는데 아무 표시가 없었다. */
+  let core = [];
+  try{ core = (GST.filters && GST.filters.active) ? GST.filters.active() : []; }catch(e){}
+  if(!active.length && !core.length){ box.style.display='none'; list.innerHTML=''; return; }   // 숨길 때 옛 칩도 지운다 — 남겨 두면 다음에 보일 때 한 박자 옛 조건이 보인다
   box.style.display='flex';
   list.innerHTML = active.map(([k,v])=>
     `<span class="fchip" onclick="${onClearName}('${k}')">${LABELS[k]||k}: <b>${GST._esc(shown(v))}</b> <span class="fx">✕</span></span>`
+  ).join('') + core.map(c =>
+    `<span class="fchip gf-chip" onclick="GST.filters.unset('${c.k}','${c.grp}')">${GST._esc(c.label)}: <b>${GST._esc(c.value)}</b> <span class="fx">✕</span></span>`
   ).join('');
+};
+/* core 가 만든 칩 칸(#fchips[data-gst]) — 자기 칩 줄이 없는 페이지(pm·scrubber)에 mount 가 끼워 넣는다.
+   페이지가 자기 #fchips 나 #filtBadge 를 갖고 있으면 만들지 않는다(두 줄이 되면 어느 쪽을 믿을지 모른다). */
+GST._chipsMount = function(){
+  if(document.getElementById('fchips') || document.getElementById('filtBadge')) return;
+  const T = GST._fltT();
+  const d = document.createElement('div'); d.className='fchips gst-fchips'; d.id='fchips'; d.dataset.gst='1'; d.style.display='none';
+  d.innerHTML = '<span class="fchips-label"><span class="gst-fchips-l">'+GST._esc(T.chipsActive)+'</span>:</span>'
+    + '<span id="fchipList"></span>'
+    + '<button type="button" class="fchip-clear gst-fchips-c" onclick="GST.clearFilters()">'+GST._esc(T.chipsClear)+'</button>';
+  const anchor = document.querySelector('.kpis') || document.querySelector('[data-sec]') || document.querySelector(GST.CARD_SEL||'.card');
+  if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(d, anchor);
+};
+GST._chipsRender = function(){
+  const box = document.getElementById('fchips');
+  if(!box || !box.dataset.gst) return;               // 페이지 소유 칩 줄은 페이지의 render() 가 그린다
+  GST.renderChips({}, {}, '', {noCtx:true});
 };
 
 /* ---------- 8. 통합 셸 동기화 ---------- */
@@ -1552,6 +1877,29 @@ GST.ALARM = {
   counts: function(row, kind){
     return GST.ALARM.dedup(row) && GST.ALARM.inner(row);
   },
+  /* «내적이 아니라서 빠진» 행을 값별로 센다 (v134 · 사용자 확정).
+
+     왜. P운영 통합 양식의 「내적/외적」 열에는 제3의 값 «자켓» 이 168건 있다
+     (전부 유형1=가성 · 알람분류=JACKET). 규칙은 「내적만 센다」 하나이므로 그 168건이
+     빠지는 것은 맞는데, **아무 말 없이 빠지는 것**이 문제다 — 시트는 4,532건인데
+     화면은 2,398건이라, 나중에 「내 자료가 안 나온다」로 돌아온다(v92 의 교훈).
+
+     ⚠ 낱말을 판정에 박지 않는다. 여기서 하는 일은 «세어서 보여주는 것»뿐이라,
+       시트에 새 낱말이 생겨도 저절로 목록에 뜬다.
+     ⚠ dedup 에 걸린 줄(한 사건의 2·3번째 줄)은 «빠진 것»이 아니다 — 같은 사건을
+       두 번 세지 않으려고 접은 것이므로 이 목록에 넣으면 사람을 헷갈리게 한다. */
+  dropReasons: function(rows){
+    const m = new Map();
+    (rows || []).forEach(function(x){
+      if(!GST.ALARM.dedup(x)) return;
+      if(GST.ALARM.inner(x)) return;
+      const g = function(k){ return String(x && x[k] != null ? x[k] : '').trim(); };
+      const v = g('incl') || g('inout') || '(공란)';
+      m.set(v, (m.get(v) || 0) + 1);
+    });
+    return Array.from(m.entries()).map(function(e){ return {v:e[0], n:e[1]}; })
+           .sort(function(a, b){ return b.n - a.n; });
+  },
 
   /* 시트 한 장 → DB 행. 업로드 화면과 검증 스크립트가 «같은 함수»를 쓴다 —
      화면에만 두면 테스트가 흉내를 내게 되고, 흉내는 반드시 본체와 갈라진다
@@ -1766,7 +2114,29 @@ GST.ORG = {
      v98 규약 그대로다 — 조직 축은 추론하지 않는다. 시트에 적힌 값을 코드가 «단지답지
      않다»는 이유로 지우면 안 된다. 지우는 것은 «모른다»는 낱말뿐이다. */
   _NOCAMP: /^(기타|미정|미상|해당없음|없음|N\/A|-)$/i,
-  campus: function(campus, line, ctx){
+  /* 반도체연구소 — 「반도체연구소는 별도로 분리 (H1,H2,H3,H4,반도체연구소)」
+     (2026-09 CS관리팀 회신 · 사용자 확정).
+     ⚠ 이것은 «낱말을 코드에 박는» 일이다. 실측 표기가 다섯 가지라(P운영 알람 시트:
+       NRD(P3F) 82 · NRD-P 42 · P3-3RND 22 · P4-3RND 6 · P3ANRD·P3CNRD 3 = 155건)
+       목록으로는 못 잡고 «NRD 또는 RND 를 품었는가»로 본다.
+     ⚠ 그래서 «잡힌 값»을 화면이 밝힌다(GST.ORG.rndScan). 시트에 새 표기가 생기면
+       사람이 그것을 보고 알려 줄 수 있어야 한다 — GST.PM.matched() 와 같은 규약이다.
+     ⚠ 해외에는 안 건다. 대만 분기는 아래에서 먼저 돌아 여기까지 오지 않는다(제3원칙). */
+  RND: '반도체연구소',
+  _RND_RE: /NRD|RND/i,
+  rndHit: function(v){ return GST.ORG._RND_RE.test(String(v == null ? '' : v)); },
+  /* 어떤 낱말이 연구소로 잡혔나 — 화면 주석용. 순수 함수라 렌더마다 다시 세도 안전하다. */
+  rndScan: function(vals){
+    const m = new Map();
+    (vals || []).forEach(function(v){
+      const s = String(v == null ? '' : v).trim();
+      if(s && GST.ORG.rndHit(s)) m.set(s, (m.get(s) || 0) + 1);
+    });
+    return Array.from(m.entries()).map(function(e){ return {v:e[0], n:e[1]}; })
+           .sort(function(a, b){ return b.n - a.n; });
+  },
+  /* line2 = 국내 라인(설치현황 Line 2). 안 주면 line 만 본다 — 옛 호출부 보호. */
+  campus: function(campus, line, ctx, line2){
     const ln = String(line == null ? '' : line).trim();
     const c  = String(campus == null ? '' : campus).trim();
     const bad = c && GST.ORG._NOCAMP.test(c);
@@ -1780,6 +2150,10 @@ GST.ORG = {
       if(c && !bad && !/TAICHUNG|LINKOU|TAINAN|TONGLUO|HSINCHU|SINCHU|KAOHSIUNG|台/i.test(c)) return c;
       return ln;
     }
+    /* 연구소 판정은 «단지 이름»보다 앞선다 — 시트의 단지 칸이 P3·P4 로 적혀 있어도
+       그 라인이 연구소면 연구소다(사용자 확정). 단지 칸이 이미 연구소면 아래에서
+       그대로 살아 나가므로 여기서 한 번만 본다. */
+    if(GST.ORG.rndHit(ln) || GST.ORG.rndHit(line2) || GST.ORG.rndHit(c)) return GST.ORG.RND;
     /* 「기타」처럼 «모른다»는 낱말만 미상으로 돌린다(실측 설치현황 Site=기타 28대).
        조직명(OFFICE·통합·Repair Center…)은 시트가 적어 둔 «그 단지»이므로 그대로 쓴다. */
     if(!c || bad) return '';
@@ -1887,6 +2261,42 @@ GST.ORG = {
     const c = GST.ORG.customer(cust), f = GST.ORG.fab(fab || cust);
     if(c && f && c === 'MICRON') return c + ' ' + f;   // Micron만 FAB이 여럿이다
     return c || f || '';
+  },
+
+  /* 고객사 «원문 정리» — customer() 가 브랜드로 접기 전의 이름(옛 report·hr 의 normCust · v135 에 core 로).
+     『Micron Memory Taiwan Co., Ltd.(F16)』 → 'MICRON F16' 처럼 괄호·FAB 꼬리를 살린다.
+     customer() 가 빈 값을 낼 때(자사 GST 행 등)의 폴백과 원문 표기용이다 — 축 판정에는 쓰지 않는다. */
+  custRaw: function(name){
+    if(!name) return '';
+    const up = GST.upk(name).trim();
+    if(!up) return '';
+    let base = '';
+    if(up.includes('MICRON')) base = 'MICRON';
+    else if(up.includes('TAIWAN-ASIA') || up.includes('ASIA SEMICON')) base = 'TASC';
+    else if(up.includes('POWERCHIP')) base = 'POWERCHIP';
+    else if(up.includes('WINBOND')) base = 'WINBOND';
+    else if(up.includes('TSMC')) base = 'TSMC';
+    else if(up.includes('SAMSUNG')) base = 'SAMSUNG';
+    else if(up.includes('HYNIX')) base = 'SK HYNIX';
+    else base = up.split(/[\s,\.(]/)[0];
+    const m = up.match(/\(([A-Z0-9\-]+)\)/) || up.match(/\b(F\d{1,2}N?)\b/);
+    return m ? base + ' ' + m[1] : base;
+  },
+
+  /* 사이트 키 (v135) — 인원현황 근무지·휴가 소속·교육 Site 를 한 어휘로. 옛 report·hr 의 siteKey 사본 둘을
+     여기로 모았다. 둘은 PSMC 를 'POWERCHIP' 이라 적어 고객사 축(customer)의 'PSMC' 와 «같은 회사가 다른
+     이름»이었고, FAB 판정을 includes('F16')·\bF10\b 로 각자 해서 F15·F10A 를 놓쳤다(core 가 4,027건으로
+     고친 자리를 hr 이 되돌린 판이었다) — fab() 하나로 본다. */
+  site: function(s){
+    const u = GST.upk(s || '').trim();
+    if(!u) return '';
+    const f = GST.ORG.fab(u);
+    if(f) return 'MICRON ' + f;                          // Micron 만 FAB 이 여럿이다 — 사이트 = 고객사 + FAB
+    if(/PSMC|POWERCHIP/.test(u)) return 'PSMC';
+    if(/WINBOND/.test(u)) return 'WINBOND';
+    if(/TSMC/.test(u)) return 'TSMC';
+    if(/TASC|TAIWAN-ASIA|ASIA\s*SEMI/.test(u)) return 'TASC';
+    return GST.ORG.custRaw(u);
   },
 
   /* Floor 값 정리. 설치현황 Floor는 'A3 M2 4F'·'B 2F' 형식인데 오염값이 섞여 있다
@@ -2046,8 +2456,8 @@ GST.mselFill = function(id, values, sel, onChange){
     GST._msel = GST._msel || {};
     GST._msel[id] = { sel: sel, cb: onChange, values: values };
     box.innerHTML =
-      '<div class="ms-all"><button type="button" data-all="1">' + (GST._lang()==='ko'?'전체 선택':'All')
-      + '</button><button type="button" data-all="0">' + (GST._lang()==='ko'?'전체 해제':'None') + '</button></div>'
+      '<div class="ms-all"><button type="button" data-all="1">' + GST._fltT().selAll
+      + '</button><button type="button" data-all="0">' + GST._fltT().selNone + '</button></div>'
       + values.map(function(v){
           return '<label><input type="checkbox" data-v="' + GST._esc(v) + '">' + GST._esc(v) + '</label>';
         }).join('');
@@ -2073,8 +2483,7 @@ GST.mselFill = function(id, values, sel, onChange){
 GST.mselSync = function(id, values, sel){
   const box = document.getElementById(id + 'Box'), btn = document.getElementById(id + 'Btn');
   if(box) box.querySelectorAll('input[data-v]').forEach(function(i){ i.checked = sel.has(i.dataset.v); });
-  if(btn) btn.textContent = (sel.size ? Array.from(sel).join(' · ')
-    : (GST.PIV_T[GST._lang()] || GST.PIV_T.ko).all) + ' \u25be';
+  if(btn) btn.textContent = (sel.size ? Array.from(sel).join(' · ') : GST._fltT().all) + ' \u25be';
 };
 // 바깥을 누르면 닫는다 — 한 번만 걸어 두고 모든 박스가 공유한다
 if(typeof document !== 'undefined') document.addEventListener('click', function(e){
@@ -2106,11 +2515,18 @@ GST.SM.banner = function(bad){
     if(anchor&&anchor.parentNode) anchor.parentNode.insertBefore(el, anchor.nextSibling);
     else document.body.insertAdjacentElement('afterbegin', el);
   }
-  el.textContent='⚠️ 시트에서 찾지 못한 열이 있습니다 — 해당 항목은 비어 보입니다. ('+lines.join(' | ')+') 클릭하면 상세';
+  if(GST.isAdmin()){
+    el.textContent='⚠️ 시트에서 찾지 못한 열이 있습니다 — 해당 항목은 비어 보입니다. ('+lines.join(' | ')+') 클릭하면 상세';
+    el.style.cursor='pointer';
+  }else{   // 배너는 «보이되» 시트 이름·열 이름은 관리자만(v135) — 가리면 조회자만 경고 없이 빈 숫자를 본다
+    el.textContent='⚠️ 시트에서 찾지 못한 열이 있어 일부 항목이 비어 보입니다 — 관리자에게 알려 주세요';
+    el.style.cursor='default';
+  }
 };
 /* 열 인식 상태 진단 — 어떤 항목이 몇 번 열로 잡혔는지, 못 찾은 건 무엇인지 한눈에.
    시트를 바꾼 뒤 여기만 보면 30초 안에 확인이 끝난다. 콘솔에서 GST.SM.panel()로도 연다. */
 GST.SM.panel = function(){
+  if(!GST.isAdmin()) return;   // 시트 이름·헤더 행·열 번호 전량 — 관리자만(v135)
   const old=document.getElementById('gstColPanel'); if(old){ old.remove(); return; }
   const wrap=document.createElement('div'); wrap.id='gstColPanel';
   wrap.style.cssText='position:fixed;inset:0;z-index:999998;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:24px';
@@ -2252,7 +2668,10 @@ GST._dbBanner = function(){
     if(a&&a.parentNode) a.parentNode.insertBefore(el, a.nextSibling);
     else document.body.insertAdjacentElement('afterbegin', el);
   }
-  el.textContent='ℹ️ '+bad.map(function(x){ return x.t+' — '+x.m; }).join(' | ');
+  el.textContent = GST.isAdmin()
+    ? 'ℹ️ '+bad.map(function(x){ return x.t+' — '+x.m; }).join(' | ')
+    /* 숨기지 않는다 — 조용히 옛 값을 보여주는 것이 가장 나쁘다(v128). 표 이름·에러 원문만 관리자에게(v135) */
+    : 'ℹ️ 일부 자료를 예정된 곳(미러)에서 불러오지 못해 대체 경로로 표시 중입니다 — 값이 옛것일 수 있습니다. 관리자에게 알려 주세요';
 };
 
 /* 한 표를 통째로 읽어 [헤더행, ...데이터행] 2차원 배열로 되돌린다. */
@@ -2267,7 +2686,28 @@ GST.dbRows = async function(table){
   /* 기대 행수를 먼저 본다. 미러가 아직 안 채워졌는데 빈 배열을 돌려주면
      화면이 "데이터 0건"으로 멀쩡히 그려진다 — 그게 가장 위험한 실패다. */
   const lg = await c.from('sheet_sync_log').select('rows,err,synced_at,ms').eq('tbl', table).maybeSingle();
-  if(lg.error) throw new Error('LOG '+lg.error.message);
+  /* ⚠ 여기서 던지면 IndexedDB 에 든 25만 행을 «갖고도» 못 쓴다 (v135 · 8단계).
+     idb 조회가 이 질의가 «성공한 뒤에야» 나오기 때문이고, 폴백 cacheLoad 는
+     localStorage 라 2만 행 초과는 애초에 저장하지 않는다 — 화면에는 「❌ Failed to
+     fetch」 한 줄만 남았다.
+     그래서 «일시 오류»(네트워크·타임아웃)일 때만 스탬프 대조 없이 마지막으로 받은
+     자료를 쓴다. 자료 오류(없는 열 등)는 그대로 던진다 — 옛 값으로 덮으면 안 된다.
+     ⚠ 나이를 «반드시» 밝힌다. 조용히 그리면 v128 의 «조용한 폴백»이 그대로 재현된다 —
+       배너가 이 폴백의 절반이다. */
+  if(lg.error){
+    const m = String(lg.error.message||'');
+    const transient = /fetch|network|timeout|abort|502|503|504|Load failed/i.test(m);
+    if(transient){
+      let last=null; try{ last = await GST.idb.get('rows:'+table); }catch(e){}
+      if(last && last.rows && last.rows.length){
+        const hrs = Math.max(0, Math.round((Date.now()-(last.t||0))/3600000));
+        GST._dbWarn(table, '연결이 안 돼 마지막으로 받은 자료를 보여줍니다 ('+hrs+'시간 전)');
+        GST._srcNote(table, 'cache', last.rows.length-1);
+        return last.rows;
+      }
+    }
+    throw new Error('LOG '+m);
+  }
   const want = lg.data && lg.data.rows;
   if(!want) throw new Error('MIRROR_EMPTY — 아직 적재된 적이 없다');
 
@@ -2537,40 +2977,88 @@ GST._csvOrderCol = function(keys){
 GST._authGlitch = function(msg){
   return /JWT|issued at future|expired|token|401|403/i.test(String(msg||''));
 };
+/* Import 표는 미러와 두 가지가 다르다 — sheet_sync_log 가 없고(csv_upload_finish 는 실적 3종만 기록한다),
+   src_row 가 아닌 id 로만 정렬되는 표가 있다(Table Editor 로 만든 표 · truncate 로도 id 가 되돌아가지 않아
+   희소해진다). 그래서 dbRows 의 «값 범위 분할»을 그대로 못 쓴다 — 희소한 id 를 폭 1,000 으로 자르면 빈 구간이
+   수백 개다. 대신 «마지막 값 다음»(keyset · gt + order + limit)으로 이어 받는다. OFFSET 은 쓰지 않는다 —
+   뒤쪽 장일수록 서버가 앞 N 행을 읽고 버리는 O(N²) 이고, 그것이 v128 의 statement timeout 이었다(v135 이전에는
+   이 경로만 range(5,000) 로 남아 있었다). 장은 순차이지만 페이지가 여러 표를 동시에 읽으므로 전체는 병렬이다. */
+GST._CSV_KEYS = ['src_row', 'id'];      // 키셋에 쓸 유일·정수 열 — 앞의 것을 우선한다
 GST.csvTableRows = async function(table, cols){
   const c = await GST.db(); if(!c) throw new Error('DB_OFF');
   const sel = (cols && cols.length) ? cols.join(',') : '*';
 
-  let probe = await c.from(table).select(sel).limit(1);
+  /* count 를 같이 받는다(exact 는 응답 헤더 한 줄이다) — 캐시 열쇠와 «다 받았나» 대조에 쓴다 */
+  let probe = await c.from(table).select(sel, {count:'exact'}).limit(1);
   /* 시계 어긋남은 몇 초면 지나간다. 세션을 새로 받아 한 번만 다시 해 본다 —
      여기서 포기하면 그 화면은 «다른 기준»으로 그려지고, 그 사실이 숫자에는 안 보인다. */
   if(probe.error && GST._authGlitch(probe.error.message)){
     GST._authRetry = (GST._authRetry||0)+1;
     try{ if(c.auth && c.auth.refreshSession) await c.auth.refreshSession(); }catch(e){}
     await new Promise(function(r){ setTimeout(r, 1200); });
-    probe = await c.from(table).select(sel).limit(1);
+    probe = await c.from(table).select(sel, {count:'exact'}).limit(1);
   }
   if(probe.error) throw new Error('READ '+probe.error.message);
   if(!probe.data || !probe.data.length) throw new Error('EMPTY — '+table+' 에 행이 없다 (Import 했는가)');
-  /* ⚠ 열을 추렸으면 정렬 후보(src_row·id)가 안 올 수 있다. 정렬이 없으면 range() 로
-     나눠 받을 때 행이 겹치거나 빠진다 — 5,000행을 넘는 표는 반드시 정렬 열을 함께 받는다. */
-  const ordCol = GST._csvOrderCol(Object.keys(probe.data[0]));
+  const keys0 = Object.keys(probe.data[0]);
+  const total = (typeof probe.count==='number') ? probe.count : null;
+  /* ⚠ 열을 추렸으면 정렬 후보(src_row·id)가 안 올 수 있다 — 5,000행을 넘는 표는 반드시 정렬 열을 함께 받는다. */
+  const ordCol = GST._csvOrderCol(keys0);
+  const kcol = GST._CSV_KEYS.filter(function(k){ return keys0.indexOf(k)>=0; })[0] || null;
 
-  /* 페이지네이션은 미러와 같은 규약 — 「요청한 만큼 안 오면 끝」으로 판정하지 않는다.
-     PostgREST 의 행수 상한은 프로젝트 설정이라, 상한에 걸린 것을 완료로 착각하면
-     잘린 데이터를 조용히 그린다. **0행일 때만 멈춘다.**
-     정렬이 없으면 range() 로 나눠 받을 때 행이 겹치거나 빠질 수 있으므로 반드시 건다. */
-  const STEP = 5000; let from = 0; const out = [];
-  for(let guard=0; guard<400; guard++){
-    let q = c.from(table).select(sel);
-    if(ordCol) q = q.order(ordCol, {ascending:true});
-    const r = await q.range(from, from+STEP-1);
-    if(r.error) throw new Error('READ '+r.error.message);
-    const n = (r.data||[]).length; if(!n) break;
-    for(let i=0;i<n;i++) out.push(r.data[i]);
-    from += n;
+  /* ── 행 캐시 (v135) — 열쇠는 «행수 + 마지막 적재 시각 + 고른 열». imported_at 이 있는 표(알람·올바)만 담는다.
+     hr 이 브라우저에서 직접 고치는 표(GST.DBW · 인원·교육·휴가)는 적재 시각이 안 바뀌므로 담지 않는다 —
+     담으면 «저장했는데 새로고침하면 옛 값»이 된다(v80 의 그 실패). 열쇠를 못 만들면 담지 않는다(느릴 뿐 틀리지 않는다). */
+  const writable = Object.keys(GST.DBW||{}).map(function(g){ return (GST.DBW[g]||{}).table; });
+  let stamp = null;
+  if(total!=null && keys0.indexOf('imported_at')>=0 && writable.indexOf(table)<0){
+    const mx = await c.from(table).select('imported_at').order('imported_at', {ascending:false}).limit(1);
+    if(!mx.error && mx.data && mx.data[0]) stamp = table+'|'+total+'|'+mx.data[0].imported_at+'|'+sel;
+  }
+  if(stamp){
+    const hit = await GST.idb.get('csv:'+table);
+    if(hit && hit.stamp===stamp && Array.isArray(hit.rows) && hit.rows.length===total+1){
+      GST._idbHit = (GST._idbHit||0)+1;
+      return hit.rows;
+    }
+  }
+
+  const out = [];
+  if(kcol){
+    /* keyset — «0행일 때만» 멈춘다. 서버 상한(max-rows)이 폭보다 작으면 장이 짧게 오는데, 그것을 끝으로 읽으면
+       조용히 잘린다(CLAUDE.md 「요청한 만큼 안 오면 끝으로 판정하지 말 것」). 마지막 값 다음을 다시 묻는 것이
+       상한이 얼마든 옳다 — 끝에 빈 장 한 번이 비용의 전부다. */
+    const width = GST.DB_PAGE_MAX || 1000;
+    let last = null;
+    for(let guard=0; guard<5000; guard++){
+      let q = c.from(table).select(sel);
+      if(last!=null) q = q.gt(kcol, last);
+      const r = await q.order(kcol, {ascending:true}).limit(width);
+      if(r.error) throw new Error('READ '+r.error.message);
+      const n = (r.data||[]).length; if(!n) break;
+      for(let i=0;i<n;i++) out.push(r.data[i]);
+      const nl = r.data[n-1][kcol];
+      if(nl==null || nl===last) throw new Error('READ keyset '+table+'.'+kcol+' 값이 없거나 늘지 않는다');   // 조용한 무한 루프 대신
+      last = nl;
+    }
+  }else{
+    /* 유일 열이 없는 표(옛 Table Editor 표) — 안전한 열로 정렬해 range 로 받는다(옛 경로 그대로).
+       「요청한 만큼 안 오면 끝」으로 판정하지 않는다 — 0행일 때만 멈춘다. */
+    const STEP = 5000; let from = 0;
+    for(let guard=0; guard<400; guard++){
+      let q = c.from(table).select(sel);
+      if(ordCol) q = q.order(ordCol, {ascending:true});
+      const r = await q.range(from, from+STEP-1);
+      if(r.error) throw new Error('READ '+r.error.message);
+      const n = (r.data||[]).length; if(!n) break;
+      for(let i=0;i<n;i++) out.push(r.data[i]);
+      from += n;
+    }
   }
   if(!out.length) throw new Error('EMPTY — '+table+' 에 행이 없다 (Import 했는가)');
+  /* count 와 실제로 받은 행수가 다르면 멈춘다 — 받는 도중 업로드가 표를 비웠거나 정렬 열에 중복이 있는 것이다.
+     모자란 채로 그리면 그 지표만 조용히 작아진다(미러의 MIRROR_SHORT 와 같은 규율). */
+  if(total!=null && out.length!==total) throw new Error('CSV_SHORT '+table+' '+out.length+'/'+total);
 
   const head = Object.keys(out[0]).filter(function(k){ return !GST._CSV_SKIP[k]; });
   const rows = new Array(out.length+1); rows[0] = head;
@@ -2579,6 +3067,7 @@ GST.csvTableRows = async function(table, cols){
     for(let j=0;j<head.length;j++){ const v=o[head[j]]; r[j] = (v==null?'':String(v)); }
     rows[i+1] = r;
   }
+  if(stamp) GST.idb.set('csv:'+table, {stamp:stamp, rows:rows, t:Date.now()});   // 저장 실패는 느릴 뿐 틀리지 않는다(GST._idbErr 에 남는다)
   return rows;
 };
 
@@ -2621,7 +3110,7 @@ GST._abpWide = function(rows){
     if(b.keys.indexOf(k)<0) b.keys.push(k);
     if(b.sites.indexOf(s)<0) b.sites.push(s);
     b.ends[k] = iE!=null ? String(r[iE]||'') : '';
-    b.v[s+' '+k] = String(r[iV]||'');
+    b.v[s+'\0'+k] = String(r[iV]||'');
   }
   const out = [];
   ['month','week'].forEach(function(t){
@@ -2631,7 +3120,7 @@ GST._abpWide = function(rows){
     out.push([t==='month'?'Month':'Week'].concat(b.keys.map(label)));
     out.push(['Site'].concat(b.keys.map(function(k){ return b.ends[k]||''; })));
     b.sites.forEach(function(s){
-      out.push([s].concat(b.keys.map(function(k){ return b.v[s+' '+k] || '0'; })));
+      out.push([s].concat(b.keys.map(function(k){ return b.v[s+'\0'+k] || '0'; })));
     });
     out.push([]);                                   // 블록 사이 빈 줄 — 시트와 같다
   });
@@ -2643,10 +3132,10 @@ GST._abpWide = function(rows){
    뜨므로 «성공했는데 시트에서 읽은» 경우와 «DB 에서 읽은» 경우가 화면상 구별되지 않는다.
    그래서 성공 경로도 남긴다. 이관 중에는 이 한 줄이 추측을 없앤다. */
 GST._srcSeen = {};
-GST._srcLabel = { db:'Supabase', sheet:'구글시트', cache:'브라우저 캐시' };
+GST._srcLabel = { db:'Supabase', sheet:'구글시트', cache:'브라우저 캐시' };   // 콘솔용 — 화면 문구는 GST.SRC_T(v135)
 GST._srcNote = function(key, src, n){
   GST._srcSeen[key] = { src:src, n:n };
-  try{ console.info('[출처] '+key+' ← '+(GST._srcLabel[src]||src)+' '+n+'행'); }catch(_){}
+  try{ if(GST.isAdmin()) console.info('[출처] '+key+' ← '+(GST._srcLabel[src]||src)+' '+n+'행'); }catch(_){}
   GST._srcChip();
 };
 GST._srcChip = function(){
@@ -2658,8 +3147,9 @@ GST._srcChip = function(){
     el = document.createElement('div'); el.id='gstSrcChip';
     el.style.cssText='position:fixed;left:10px;bottom:10px;z-index:999998;padding:4px 10px;border-radius:999px;'+
       'font:11px/1.5 system-ui,-apple-system,sans-serif;font-weight:700;cursor:pointer;opacity:.8;user-select:none';
-    el.title = '데이터를 어디서 읽었는지 — 누르면 자세히';
+    el.title = GST._srcT().title;
     el.onclick = function(){
+      if(!GST.isAdmin()) return;   // 표 이름·행수·캐시 상태는 관리자만(v135) — «core N» 은 누구나 본다(v128 규약)
       let d = document.getElementById('gstSrcDetail');
       if(d){ d.remove(); return; }
       d = document.createElement('div'); d.id='gstSrcDetail';
@@ -2668,7 +3158,7 @@ GST._srcChip = function(){
         'box-shadow:0 6px 24px rgba(0,0,0,.35);white-space:pre-wrap';
       d.textContent = Object.keys(GST._srcSeen).map(function(k){
         const v = GST._srcSeen[k];
-        return (v.src==='db'?'✅ ':'⚠️ ')+k+' ← '+(GST._srcLabel[v.src]||v.src)+' · '+v.n+'행';
+        return (v.src==='db'?'✅ ':'⚠️ ')+k+' ← '+(GST._srcT()[v.src+'L']||v.src)+' · '+v.n+GST._srcT().rows;
       }).join('\n');
       document.body.appendChild(d);
     };
@@ -2678,11 +3168,22 @@ GST._srcChip = function(){
   el.style.background = bad ? '#78350f' : '#064e3b';
   el.style.color      = bad ? '#fde68a' : '#a7f3d0';
   /* 캐시가 실제로 먹었는지 보이게 한다. 안 보이면 «왜 느린지»를 아무도 못 묻는다. */
-  el.textContent = '출처 DB '+db + (sh?' · 시트 '+sh:'') + (ca?' · 캐시 '+ca:'')
-    + ' · core '+GST.VER
-    + (GST._idbHit?' · 재사용 '+GST._idbHit:'')
-    + (GST._idbErr?' · ⚠ 캐시 저장 실패':'');
-  if(GST._idbErr) el.title = 'IndexedDB: '+GST._idbErr+' — 매번 다시 받습니다';
+  const ST = GST._srcT();
+  if(GST.isAdmin()){
+    el.textContent = ST.src+' DB '+db + (sh?' · '+ST.sheet+' '+sh:'') + (ca?' · '+ST.cache+' '+ca:'')
+      + ' · core '+GST.VER
+      + (GST._idbHit?' · '+ST.reuse+' '+GST._idbHit:'')
+      + (GST._idbErr?' · '+ST.idbFail:'');
+    el.style.cursor='pointer';
+    el.title = GST._idbErr ? ST.idbTitle.replace('{e}', GST._idbErr) : ST.title;
+  }else{
+    /* 조회 계정에는 «core N» 만 — v128 규약(옛 코드를 물고 있는지 눈으로 판정)은 지키고,
+       표 이름·행수·캐시 상태는 가린다(v135 · 사용자 확정 «메타정보만»). 색은 그대로라 이상은 보인다. */
+    el.textContent = 'core '+GST.VER + (bad||GST._idbErr ? ' · ⚠' : '');
+    el.style.cursor='default';
+    el.title = ST.verTitle + (bad||GST._idbErr ? ST.verBad : '');
+    const dd = document.getElementById('gstSrcDetail'); if(dd) dd.remove();
+  }
 };
 
 // 캐시 폴백 로드: 성공 시 저장, 실패 시 캐시로 대체 (cached/ageMin 플래그 반환)
@@ -2725,7 +3226,71 @@ GST.fetchCSVCached = async function(url, key){
 
 /* ---------- 10. 스켈레톤 로딩 (Stage 3) ---------- */
 GST.skeleton=function(on){
-  document.querySelectorAll('.kpi,.card,.mcard,.tablecard,.alert').forEach(el=>el.classList.toggle('skeleton',!!on));
+  document.querySelectorAll('.kpi,.card,.trend-card,.cross-card,.tablecard,.alert').forEach(el=>el.classList.toggle('skeleton',!!on));
+};
+
+/* ---------- 10-b. i18n 적용 한 벌 (v135 · 5단계) ----------
+   여덟 페이지가 applyLang 안에서 data-i 루프를 각자 들고 있었고(일곱 벌), data-i-th 는 넷·data-i-ph 는 hr 만
+   알았다 — 그래서 검색 placeholder 가 페이지마다 한국어·영어로 갈렸다. 여기 한 벌이 넷 다 본다.
+   ⚠ lang 을 같이 받아 sessionStorage 에 남긴다 — core 의 사전(GST.XXX_T)은 GST._lang() 을 보는데, 페이지 메뉴로
+     바꾼 언어를 여섯 페이지가 window.name 에만 적고 있어 사이드바·칩·배지만 옛 언어로 남았다. */
+GST.applyI18n = function(t, lang){
+  if(lang){ try{ sessionStorage.setItem('gst_lang', lang); }catch(e){} }
+  const q = function(sel, fn){ document.querySelectorAll(sel).forEach(fn); };
+  q('[data-i]', function(el){ if(el.hasAttribute('data-lock')) return; el.textContent = t(el.getAttribute('data-i')); });
+  q('[data-i-th]', function(el){ el.textContent = t(el.getAttribute('data-i-th')); });
+  q('[data-i-ph]', function(el){ el.placeholder = t(el.getAttribute('data-i-ph')); });
+  q('[data-i-title]', function(el){ el.title = t(el.getAttribute('data-i-title')); });
+  try{ GST.filters.relabel(); }catch(e){}
+  try{ GST.relabelChrome(); }catch(e){}
+  try{ GST._srcChip(); }catch(e){}
+};
+/* 카드 노트 한 곳 (report·cip 이 byte 까지 같은 사본을 들고 있었다). sev='warn' 이면 색·굵기로 «화면 전체의 뜻이
+   바뀌는 경고»를 가른다(v92 규약대로 자리는 노트 맨 앞 그대로). 줄바꿈이 든 문장은 pre-line 으로 — 마크업을
+   넣지 않는 이유는 applyLang·setNote 가 textContent 로 덮기 때문이다(v131). */
+GST.setNote = function(canvasId, txt, sev){
+  const c = document.getElementById(canvasId); if(!c) return;
+  const card = c.closest(GST.CARD_SEL || '.card'); if(!card) return;
+  const n = card.querySelector('.card-note'); if(!n) return;
+  n.textContent = txt;
+  n.classList.toggle('warn', sev === 'warn');
+  n.classList.toggle('ml', String(txt||'').indexOf('\n') >= 0);
+};
+/* 앵커 목차 — 세로로 이어 읽는 긴 페이지(주간현황)용. GST.sectionNav 는 «숨기는 탭»이라 맞지 않는다. */
+GST.anchorNav = function(sel){
+  const hs = Array.from(document.querySelectorAll(sel || '.sec-h')); if(hs.length < 2) return;
+  let nav = document.getElementById('gstAnchors');
+  if(!nav){ nav = document.createElement('nav'); nav.id = 'gstAnchors'; nav.className = 'gst-anchors';
+    hs[0].parentNode.insertBefore(nav, hs[0]); }
+  nav.innerHTML = hs.map(function(h, i){
+    if(!h.id) h.id = 'sec-' + i;
+    const lbl = (h.firstElementChild && h.firstElementChild.textContent) || h.textContent;
+    return '<a href="#' + h.id + '" data-sec-id="' + h.id + '">' + GST._esc(String(lbl).trim()) + '</a>';
+  }).join('');
+  nav.onclick = function(ev){
+    const a = ev.target.closest('a[data-sec-id]'); if(!a) return;
+    ev.preventDefault();
+    const el = document.getElementById(a.dataset.secId);
+    if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  };
+};
+/* 사이드바 껍데기(제목·프리셋·초기화·자동 새로고침)의 이름표를 지금 언어로 — initSidebar 가 한 번 만든 뒤 언어가
+   바뀌면 여기가 다시 쓴다. 자동 새로고침 캡션은 initSidebar 가 남긴 GST._arSync 로. */
+GST.relabelChrome = function(){
+  const T = GST._fltT();
+  document.querySelectorAll('.gst-sb-ttxt').forEach(function(el){ el.textContent = T.filters; });
+  document.querySelectorAll('.gst-sb-lbl[data-lbl]').forEach(function(el){ el.textContent = T[el.dataset.lbl] || el.textContent; });
+  document.querySelectorAll('.gst-preset[data-p]').forEach(function(el){ el.textContent = T['p'+el.dataset.p] || el.textContent; });
+  document.querySelectorAll('.gst-sb-reset').forEach(function(el){ el.textContent = T.reset; });
+  document.querySelectorAll('.gst-sb-tool[data-tool="csv"]').forEach(function(el){ el.title = T.csvTitle; });
+  document.querySelectorAll('.gst-sb-toggle').forEach(function(el){ el.title = T.filters; });
+  if(typeof GST._arSync === 'function'){ try{ GST._arSync(); }catch(e){} }
+  const fc = document.getElementById('fchips');
+  if(fc && fc.dataset.gst){
+    fc.querySelectorAll('.gst-fchips-l').forEach(function(el){ el.textContent = T.chipsActive; });
+    fc.querySelectorAll('.gst-fchips-c').forEach(function(el){ el.textContent = T.chipsClear; });
+    try{ GST._chipsRender(); }catch(e){}
+  }
 };
 
 /* ---------- 11. 필터 상태 URL 공유 (Stage 4) ---------- */
@@ -2798,10 +3363,14 @@ GST.outliers=function(entries,k){
   const th=med + k*1.4826*mad;
   return new Set(entries.filter(e=>e[1]>th).map(e=>e[0]));
 };
-// 특정 연/월 건수 (dateKey는 Date 필드명)
-GST.monthCount=function(arr,dateKey,y,m){
-  return arr.filter(x=>{const d=x[dateKey];return d&&d.getUTCFullYear()===y&&d.getUTCMonth()===m;}).length;
+// 특정 연/월 행 (dateKey는 Date 필드명) — 판정은 여기 한 곳뿐이다.
+// ⚠ monthCount 가 «세기만» 해서, KPI 팝업이 같은 달을 페이지에서 다시 걸러야 했다.
+//    두 식이 되면 카드와 목록이 갈린다(제2원칙) — 그래서 «거른 배열»을 내는 형제를 둔다.
+GST.monthRows=function(arr,dateKey,y,m){
+  return arr.filter(x=>{const d=x[dateKey];return d&&d.getUTCFullYear()===y&&d.getUTCMonth()===m;});
 };
+// 특정 연/월 건수 (dateKey는 Date 필드명)
+GST.monthCount=function(arr,dateKey,y,m){ return GST.monthRows(arr,dateKey,y,m).length; };
 
 // 페이지 인사이트 스트립: .kpis 카드 위에 자동 삽입.
 // items = [{sev:'bad'|'warn'|'ok'|'info', text:'번역 완료된 문자열'}]
@@ -2817,10 +3386,115 @@ GST.insights = function(items){
     box.id='gstInsights'; box.className='gst-insights';
     anchor.parentNode.insertBefore(box, anchor);
   }
-  box.innerHTML = '<span class="gst-ins-head">INSIGHT</span>' +
+  box.innerHTML = '<span class="gst-ins-head">'+GST.insHead()+'</span>' +
     items.slice(0,4).map(function(it){
       return '<span class="gst-ins '+(it.sev||'info')+'"><span class="gst-ins-dot"></span>'+it.text+'</span>';
     }).join('');
+};
+
+/* ---------- 데이터 품질 레지스트리 (v135 · 7단계) ----------
+   무엇을 고치려는 것인가. 자료 결함 신호가 여덟 페이지에 마흔 곳 가까이 흩어져 있고
+   **모으는 자리가 없었다.** 게다가 절반은 «사실»만 말한다 — 「날짜 이상 데이터 12건」
+   을 본 사람이 무엇을 해야 하는지 화면 어디에도 없다. 그래서 레지스트리 하나를 두고
+   **`act`(무엇을 하면 되나)를 필수로** 받는다.
+
+   ⚠ 문구를 새로 짜지 않는다 — 각 페이지가 «이미 쓰고 있는 그 문장»이 정본이다.
+     여기서 다시 만들면 같은 결함을 화면과 카드가 다른 말로 적게 된다(제2원칙).
+   ⚠ 사실은 모두에게, 조치는 관리자에게 (A-4 · v135 2단계).
+     숫자의 뜻이 바뀌는 사실을 조회자에게서 지우면 그 사람만 경고 없이 빈 숫자를 본다
+     (core 의 「조용히 틀린 숫자를 보여주지 않는다」와 정면 충돌). 가리는 것은 «조치»뿐이고,
+     그 자리에는 「관리자에게 알려 주세요」가 들어간다.
+   ⚠ 이 수치는 «지금 걸린 필터» 기준이다 — 카드 머리에 기준 시각과 필터를 함께 적는다.
+     안 적으면 필터를 걸어 둔 사람이 전사 수치로 읽는다.                                */
+GST.DQ_T = {
+  ko:{title:'데이터 품질', none:'이 화면에서 발견된 자료 문제가 없습니다',
+      what:'무엇이', n:'건수', act:'무엇을 하면 되나',
+      tell:'관리자에게 알려 주세요', basis:'기준 {t} · 필터 {f}', all:'전체'},
+  en:{title:'Data quality', none:'No data problems found on this page',
+      what:'Finding', n:'Count', act:'What to do',
+      tell:'Let an administrator know', basis:'as of {t} · filter {f}', all:'all'},
+  zh:{title:'数据质量', none:'本页未发现数据问题',
+      what:'问题', n:'件数', act:'该怎么做',
+      tell:'请告知管理员', basis:'基准 {t} · 筛选 {f}', all:'全部'},
+  ja:{title:'データ品質', none:'この画面で見つかった資料の問題はありません',
+      what:'内容', n:'件数', act:'何をすればよいか',
+      tell:'管理者にお知らせください', basis:'基準 {t} · フィルタ {f}', all:'全体'}
+};
+GST._dqT = function(){ return GST.DQ_T[(GST._lang && GST._lang()) || 'ko'] || GST.DQ_T.ko; };
+GST.dq = {
+  _page:'', _l:[],
+  /* render() 첫머리에서 부른다 — 다시 그릴 때마다 새로 센다.
+     누적하면 필터를 두 번 바꿨을 때 같은 결함이 두 줄로 뜬다. */
+  reset:function(page){ this._page=page||this._page||''; this._l=[]; return this; },
+  /* o = {key, sev:'bad'|'warn'|'info', label, n, of, act}
+     - label 은 «이미 화면에 쓰는 그 문장»을 그대로 넘긴다(번역 완료된 문자열).
+     - act 가 없으면 담지 않는다. «무엇을 하면 되는지»가 이 레지스트리의 존재 이유다. */
+  push:function(o){
+    if(!o || !o.label) return this;
+    if(!o.act){ console.warn('[gst.dq] act 없는 신호는 담지 않는다 —', o.key||o.label); return this; }
+    this._l.push({key:o.key||'', sev:o.sev||'warn', label:String(o.label),
+                  n:(o.n==null?null:o.n), of:(o.of==null?null:o.of), act:String(o.act)});
+    return this;
+  },
+  list:function(){ return this._l.slice(); },
+  /* 페이지 하단에 카드 한 벌. render() 끝에서 부른다(신호를 다 담은 뒤). */
+  render:function(filterLabel){
+    const T=GST._dqT(), esc=GST._esc, adm=!!(GST.isAdmin && GST.isAdmin());
+    let box=document.getElementById('gstDq');
+    if(!box){
+      box=document.createElement('div'); box.id='gstDq'; box.className='card gst-dq';
+      document.body.appendChild(box);
+    }
+    const ts=new Date(), p2=function(v){ return String(v).padStart(2,'0'); };
+    const basis=T.basis.replace('{t}', ts.getFullYear()+'-'+p2(ts.getMonth()+1)+'-'+p2(ts.getDate())
+                 +' '+p2(ts.getHours())+':'+p2(ts.getMinutes()))
+                .replace('{f}', filterLabel || T.all);
+    const head='<h3>'+esc(T.title)+'</h3><div class="card-note">'+esc(basis)+'</div>';
+    if(!this._l.length){ box.innerHTML=head+'<div class="gst-dq-ok">'+esc(T.none)+'</div>'; }
+    else {
+      const rows=this._l.map(function(d){
+        const cnt=d.n==null ? '' : (d.n.toLocaleString()+(d.of==null?'':' / '+d.of.toLocaleString()));
+        return '<tr class="dq-'+d.sev+'"><td>'+esc(d.label)+'</td><td class="dq-n">'+esc(cnt)+'</td>'
+             + '<td>'+esc(adm ? d.act : T.tell)+'</td></tr>';
+      }).join('');
+      box.innerHTML=head+'<div style="overflow-x:auto"><table class="gst-dq-t"><thead><tr><th>'+esc(T.what)
+        +'</th><th>'+esc(T.n)+'</th><th>'+esc(T.act)+'</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    }
+    /* /diag/ 가 여덟 페이지를 한 표로 모을 수 있게 스냅샷을 남긴다.
+       ⚠ 진단 화면이 페이지를 여덟 개 띄우지 않아도 되게 하려는 것뿐이다 —
+         그래서 «언제·어떤 필터로 잰 것인지»를 같이 담는다. 없으면 오래된 수치를
+         지금 것으로 읽는다. localStorage 는 그 브라우저 안에만 산다(공유되지 않는다). */
+    try{ localStorage.setItem('gst_dq_'+(this._page||'page'),
+      JSON.stringify({at:ts.getTime(), filter:filterLabel||'', items:this._l})); }catch(e){}
+    return this;
+  }
+};
+
+/* 입력률이 낮은 열의 차트에 «왜 비어 보이는지»를 적는다 (v135 · 7단계에 core 로).
+   예전에는 fault 안에만 있어 입력률 0.3% 인 주간현황 TOP3 에는 없었다 —
+   주간보고로 나가는 표가 그 사실을 말하지 않으면 받아 본 사람이 결함으로 읽는다.
+   30% 를 넘으면 스스로 사라진다(현장이 채워 나가는 중이라 임계를 넘으면 안내가 방해다). */
+GST.FILL_T = {
+  ko:'ⓘ 이 항목은 시트 입력률이 {p}% ({g}/{n}건)입니다. 입력이 쌓이면 이 차트가 자동으로 채워집니다.',
+  en:'ⓘ This field is {p}% filled in the sheet ({g}/{n}). The chart fills in as entries accumulate.',
+  zh:'ⓘ 该项目表格填写率为 {p}% ({g}/{n}件)。随着录入增加，图表会自动补全。',
+  ja:'ⓘ この項目のシート入力率は {p}% ({g}/{n}件) です。入力が溜まればこのチャートは自動的に埋まります。'
+};
+GST.FILL_MIN = 30;
+GST.fillHint = function(canvasId, rows, key, altKey){
+  const cv=document.getElementById(canvasId); if(!cv || !cv.closest) return null;
+  const card=cv.closest(GST.CARD_SEL || '.card'); if(!card) return null;
+  let el=card.querySelector('.fill-hint');
+  const n=rows.length;
+  const got=rows.filter(function(r){
+    return String(r[key]||'').trim() || (altKey && String(r[altKey]||'').trim()); }).length;
+  const pct=n?Math.round(got/n*100):0;
+  if(!n || pct>=GST.FILL_MIN){ if(el) el.remove(); return null; }
+  if(!el){ el=document.createElement('div'); el.className='fill-hint';
+    card.insertBefore(el, card.querySelector('.cw')||null); }
+  const T=GST.FILL_T[(GST._lang && GST._lang()) || 'ko'] || GST.FILL_T.ko;
+  el.textContent=T.replace('{p}',pct).replace('{g}',got.toLocaleString()).replace('{n}',n.toLocaleString());
+  return {n:n, got:got, pct:pct};
 };
 
 // 페이지 내 소분류 탭 (섹션 내비게이션).
@@ -2881,7 +3555,7 @@ GST.initSidebar = function(opts){
   sb.id='gstSidebar'; sb.className='gst-sidebar'; sb.setAttribute('aria-label','filter sidebar');
   const head = document.createElement('div'); head.className='gst-sb-head';
   const title = document.createElement('span'); title.className='gst-sb-title';
-  title.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/></svg> ' + (opts.title || '필터 · Filters');
+  title.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/></svg> <span class="gst-sb-ttxt">' + GST._esc(opts.title || GST._fltT().filters) + '</span>';
   const closeBtn = document.createElement('button');
   closeBtn.className='gst-sb-close'; closeBtn.type='button'; closeBtn.textContent='✕';
   closeBtn.setAttribute('aria-label','close sidebar');
@@ -2896,6 +3570,7 @@ GST.initSidebar = function(opts){
       const sec=document.createElement('div'); sec.className='gst-sb-sec';
       if(typeof s!=='string' && s.label){
         const h=document.createElement('div'); h.className='gst-sb-lbl'; h.textContent=s.label;
+        if(s.lbl) h.dataset.lbl=s.lbl;   // 언어가 바뀌면 GST.relabelChrome 이 FLT_T[lbl] 로 다시 쓴다(v135)
         sec.appendChild(h);
       }
       sec.appendChild(el); body.appendChild(sec);
@@ -2909,8 +3584,9 @@ GST.initSidebar = function(opts){
     const df=body.querySelector('#dtFrom'), dt=body.querySelector('#dtTo');
     if(!df || !dt || body.querySelector('.pchip')) return;
     const row=document.createElement('div'); row.className='gst-preset-row';
-    [['1m','1개월'],['3m','3개월'],['6m','6개월'],['1y','1년'],['all','전체']].forEach(function(p){
-      const b=document.createElement('button'); b.type='button'; b.className='gst-preset'; b.textContent=p[1];
+    const PT=GST._fltT();
+    [['1m',PT.p1m],['3m',PT.p3m],['6m',PT.p6m],['1y',PT.p1y],['all',PT.pall]].forEach(function(p){
+      const b=document.createElement('button'); b.type='button'; b.className='gst-preset'; b.textContent=p[1]; b.dataset.p=p[0];
       b.onclick=function(){
         const now=new Date(); let from=null;
         if(p[0]!=='all'){
@@ -2940,23 +3616,25 @@ GST.initSidebar = function(opts){
   const foot=document.createElement('div'); foot.className='gst-sb-foot';
   if(typeof opts.onReset==='function'){
     const rb=document.createElement('button'); rb.className='gst-sb-reset'; rb.type='button';
-    rb.textContent='↺ 초기화 · Reset all';
+    rb.textContent=GST._fltT().reset;
     rb.onclick=function(){ try{ opts.onReset(); }catch(e){} };
     foot.appendChild(rb);
   }
   const tools=document.createElement('div'); tools.className='gst-sb-tools';
   if(document.querySelector('.tablecard table, table')){
     const cb=document.createElement('button'); cb.className='gst-sb-tool'; cb.type='button';
-    cb.innerHTML='⬇ CSV';
-    cb.title='현재 필터가 적용된 테이블을 CSV로 다운로드';
+    cb.innerHTML='⬇ CSV'; cb.dataset.tool='csv';
+    cb.title=GST._fltT().csvTitle;
     cb.onclick=function(){ GST.exportTableCSV(); };
     tools.appendChild(cb);
   }
   if(typeof window.loadData==='function' || typeof window.loadAll==='function'){
-    const ab=document.createElement('button'); ab.className='gst-sb-tool'; ab.type='button';
-    ab.title='10분마다 데이터만 다시 불러옵니다. 필터는 유지됩니다.';
+    const ab=document.createElement('button'); ab.className='gst-sb-tool'; ab.type='button'; ab.dataset.tool='ar';
     function arOn(){ try{ return localStorage.getItem('gst_auto_refresh')!=='0'; }catch(e){ return true; } }
-    function syncAr(){ ab.textContent='⟳ 자동 '+GST.AR_MIN+'분 · '+(arOn()?'ON':'OFF'); ab.classList.toggle('on',arOn()); }
+    function syncAr(){ const T=GST._fltT();
+      ab.title=T.autoTitle.replace('{n}',GST.AR_MIN);
+      ab.textContent=T.auto.replace('{n}',GST.AR_MIN)+' · '+(arOn()?'ON':'OFF'); ab.classList.toggle('on',arOn()); }
+    GST._arSync=syncAr;   // 언어가 바뀌면 relabelChrome 이 부른다
     ab.onclick=function(){ try{ localStorage.setItem('gst_auto_refresh', arOn()?'0':'1'); }catch(e){} syncAr(); };
     syncAr();
     tools.appendChild(ab);
@@ -2968,7 +3646,7 @@ GST.initSidebar = function(opts){
   // 모바일 오버레이 배경 + 토글 핸들
   const bd=document.createElement('div'); bd.className='gst-backdrop';
   const tg=document.createElement('button'); tg.className='gst-sb-toggle'; tg.type='button';
-  tg.title='필터 · Filters'; tg.setAttribute('aria-label','toggle filter sidebar');
+  tg.title=GST._fltT().filters; tg.setAttribute('aria-label','toggle filter sidebar');
   tg.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/></svg><span class="gst-sb-tglbl">FILTER</span>';
   document.body.appendChild(sb);
   document.body.appendChild(bd);
@@ -3094,12 +3772,36 @@ GST._softReload = async function(){
     try{ kiosk ? GST.filters.kioskReapply() : GST._restoreFilters(snap); }catch(e){}
   }, 300);
 };
+/* «안 보이는 화면»인가 — 자동 새로고침이 건너뛸 자리 (v135).
+   ⚠ document.hidden 은 «최상위 브라우저 탭» 기준이다. 셸이 display:none 으로 감춘 iframe 안에서도 false 라,
+     안 보이는 일곱 탭이 30분마다 전량을 다시 받고 있었다(gstAutoStart 의 「하루 768MB」는 한 페이지 몫이었다).
+     셸은 보이는 iframe 에만 .active 를 준다 — 그것을 본다(교차 출처면 frameElement 접근이 던지므로 try). */
+GST._arHidden = function(){
+  if(document.hidden) return true;
+  try{ const fe = window.frameElement; if(fe && fe.classList && !fe.classList.contains('active')) return true; }catch(e){}
+  return false;
+};
+/* 건너뛴 새로고침을 «다시 보일 때» 한 번 한다 — 셸의 gst-shown 신호와 requestAnimationFrame(안 보이는 iframe 에서는
+   보일 때까지 안 돈다) 둘이 같은 곳으로 온다. 아직 안 보이면 표식만 남긴다. */
+GST._arCatchUp = function(){
+  if(!GST._arMissed) return;
+  if(GST._arHidden()) return;
+  GST._arMissed = false;
+  GST._softReload();
+};
 GST.startAutoRefresh = function(min){
   if(GST._arTimer) return;
   if(typeof (window.loadData || window.loadAll)!=='function') return;
   GST._arTimer = setInterval(async function(){
     let on=true; try{ on = localStorage.getItem('gst_auto_refresh')!=='0'; }catch(e){}
-    if(!on || document.hidden) return;   // 꺼짐/백그라운드 탭이면 건너뜀
+    if(!on) return;
+    /* 순회(키오스크) 중에는 가드를 끈다 — 곧 보일 화면이라 미리 받아 두는 것이 맞다 */
+    const kiosk = !!(GST.filters && GST.filters.kioskOn && GST.filters.kioskOn());
+    if(!kiosk && GST._arHidden()){
+      GST._arMissed = true;
+      try{ requestAnimationFrame(function(){ GST._arCatchUp(); }); }catch(e){}
+      return;
+    }
     await GST._softReload();
   }, (min||10)*60000);
 };
@@ -3170,6 +3872,47 @@ GST.FILT_DROP_CUST = /^(본사|칠러|CHILLER|OFFICE|통합|미정|기타|해당
 
 GST.FILT_DROP_ORG = /^(라인장|단지장|운영관리|세정|정산|주재원|국내|해외|기타|미정|TRANSLATOR|CHILLER|SCRUBBER|OFFICE|통합|REPAIR CENTER|서비스자재)$/i;
 
+/* 공수 산정에서 빼는 인력 — 「팀장, OFFICE인원, 단지장 제외」
+   (2026-09 CS관리팀 회신 · 사용자 확정).
+
+   ⚠ 이 낱말들은 «직책 열»에만 있지 않다. 실측(v124) — OFFICE·통합·Repair Center 는
+     인원현황의 **단지 칸**에, 단지장·라인장은 **라인 칸**에 실재한다. 한 칸만 보면
+     그 사람이 안 잡힌다 → role(업무/직책)·campus(단지)·wp(라인)를 함께 본다.
+
+   ⚠ GST.FILT_DROP_ORG 를 재사용하지 말 것. 그 목록은 «사이드바 목록 정리»용이고,
+     라인장·세정·운영관리처럼 **여기서 빼면 안 되는** 값이 들어 있다(고객사가 말한 것은
+     팀장·OFFICE·단지장 셋뿐이다). v124 는 그 목록을 값 판정에 썼다가 133명(26%)을
+     미배치로 떨어뜨린 자리다 — 목적이 다르면 목록도 따로 둔다.
+
+   ⚠ 이것은 «분모»를 줄이는 일이라 인당 지표가 **높아진다**. 낮아지면 「왜 줄었지」로
+     의심이라도 하는데 높아지면 그냥 읽힌다(v112) — 그래서 scan() 이 «몇 명을 왜 뺐는지»
+     를 돌려주고, 화면이 그것을 적는다. */
+GST.HEAD_EX = {
+  RE:  /팀장|단지장/,                    // 값 «안»에 들어 있어도 잡는다 (P1팀장 등)
+  OFF: /^(OFFICE|오피스)$/i,             // 단지 칸의 값 자체가 OFFICE 인 경우
+  /* 잡혔으면 «잡힌 그 값»을, 아니면 '' 를 돌려준다 — 순수 함수라 렌더마다 다시 세도 된다. */
+  why: function(p){
+    if(!p) return '';
+    const f = [p.role, p.campus, p.wp, p.site];
+    for(let i = 0; i < f.length; i++){
+      const v = String(f[i] == null ? '' : f[i]).trim();
+      if(!v) continue;
+      if(GST.HEAD_EX.RE.test(v) || GST.HEAD_EX.OFF.test(v)) return v;
+    }
+    return '';
+  },
+  hit: function(p){ return !!GST.HEAD_EX.why(p); },
+  scan: function(list){
+    const m = new Map(); let n = 0;
+    (list || []).forEach(function(p){
+      const v = GST.HEAD_EX.why(p);
+      if(v){ n++; m.set(v, (m.get(v) || 0) + 1); }
+    });
+    return { n:n, vals:Array.from(m.entries()).map(function(e){ return {v:e[0], n:e[1]}; })
+                        .sort(function(a, b){ return b.n - a.n; }) };
+  }
+};
+
 GST.filters = (function(){
   /* ══════════════════════════════════════════════════════════════════════
      필터가 «두 벌»이다 — 설비 기준 / 인원 기준 (v114 · 사용자 지시)
@@ -3205,16 +3948,18 @@ GST.filters = (function(){
      ⚠ 이름을 지어내지 않는다(v98) — 시트 머리글이 「Line 2」이므로 「라인2」다.
        라인 칸을 「라인1」로 바꾸지는 않는다. 해외 양식에는 `Line 1` 이라는 열이 없고
        그 칸이 잡는 것은 `FAB` 이라, 해외 사용자에게는 없는 이름이 된다. */
-  const L = { region:'구분', op:'운영단위', div:'사업부', customer:'고객사', campus:'단지', line:'라인', line2:'라인2', team:'팀', period:'기간' };
+  /* 축 이름표 — 정본은 GST.FLT_T(네 언어). 객체는 그대로 두고(다른 곳이 L[k] 로 본다) relabel() 이 값을 갈아 끼운다. */
+  const L = Object.assign({}, GST._fltT().axes);
+  const _T = function(){ return GST._fltT(); };
 
   const mkF = () => ({ region:new Set(), op:new Set(), div:new Set(), customer:new Set(),
                        campus:new Set(), line:new Set(), line2:new Set(), team:new Set() });
   /* 그룹 서술자. «어느 CFG 키를 보는가»만 다르고 나머지 규칙은 전부 같다.
      여기 한 곳만 보면 두 벌이 무엇으로 갈리는지 알 수 있다. */
   const GRP = {
-    eq: { k:'eq', pre:'gf-', title:'설비 기준', note:'설치·실적', F:mkF(), LAST:{},
+    eq: { k:'eq', pre:'gf-', title:_T().grpEq, note:_T().grpEqNote, F:mkF(), LAST:{},
           cGet:'get',  cRows:'rows',  cDrop:'drop',  cLoose:'loose' },
-    hr: { k:'hr', pre:'gh-', title:'인원 기준', note:'인원현황',   F:mkF(), LAST:{},
+    hr: { k:'hr', pre:'gh-', title:_T().grpHr, note:_T().grpHrNote, F:mkF(), LAST:{},
           cGet:'getH', cRows:'rowsH', cDrop:'dropH', cLoose:'looseH' }
   };
   const EQ = GRP.eq, HR = GRP.hr;
@@ -3262,8 +4007,24 @@ GST.filters = (function(){
   let KPEND = null, KSAVED = null, KCUR = null;
   function kioskSet(k, v){
     if(!(k in EQ.F)) return { applied:false, why:'noaxis' };
+    /* ⚠ 셸은 1.2초 뒤 «같은 값»을 한 번 더 보낸다 — 탭이 지연 로딩이라 mount 전에 온 값을
+       놓치지 않으려는 것이고 그 자체는 옳다(v103). 그런데 받는 쪽에 «같은 값이면 무시»가
+       없어 refresh()+render() 가 두 번 돌았다 — 전환 직후 화면이 한 번 더 껌뻑인다.
+       ⚠ 판정을 F 로 하면 안 된다(이 함수 아래 주석의 함정 그대로) — «셸이 무엇을 걸라고
+         했나»는 KCUR 이 들고 있으므로 그것으로 본다. CFG 가 아직 없으면(mount 전) 보류가
+         먼저다 — 그때는 아무것도 그려지지 않았으므로 «같은 값»이어도 건너뛰면 안 된다. */
+    const same = CFG && KCUR && KCUR.k===k &&
+      (Array.isArray(v)&&Array.isArray(KCUR.v) ? (v.length===KCUR.v.length && v.every((x,i)=>x===KCUR.v[i]))
+                                               : KCUR.v===v);
     KCUR = { k:k, v:v };   // 자동 새로고침이 끝난 뒤 «지금 걸린 값»을 다시 걸기 위해
     if(!CFG){ KPEND = { k:k, v:v }; return { applied:false, why:'loading' }; }
+    if(same){
+      /* 이미 걸려 있다 — 다시 그리지 않고 «그때의 답»을 그대로 돌려준다.
+         applied 를 거짓으로 돌리면 셸이 그 조합을 «못 거는 것»으로 기억해 순회에서 빼 버린다. */
+      const inEq0 = opts(EQ, k).indexOf(String(v)) >= 0, inHr0 = opts(HR, k).indexOf(String(v)) >= 0;
+      if(!v) return { applied:true, why:'' };
+      return { applied:(inEq0||inHr0), why:(inEq0||inHr0) ? '' : 'nodata' };
+    }
     if(!KSAVED){
       const cp = cur => (cur instanceof Set) ? Array.from(cur) : cur;
       KSAVED = { k:k, eq:cp(EQ.F[k]), hr:cp(HR.F[k]) };
@@ -3335,7 +4096,6 @@ GST.filters = (function(){
        ② 값은 있는데 «다른 필터»가 다 떨어뜨렸다 → 「전체 (필터에 해당 없음)」
      ⚠ 「자료 없음」이라고 적으면 «자료를 안 올렸다»로 읽힌다(사용자 지적). 실제 뜻은
        «이 화면이 보는 자료에는 그 축이 없다»다 — 어느 쪽도 «자료가 없다»고 말하지 않는다. */
-  const EMPTY_NONE = '전체 (이 화면 미적용)', EMPTY_FILT = '전체 (필터에 해당 없음)';
   function fill(G, key, list, hasAny){
     const id = G.pre + key;
     if(MULTI[key]) return fillMulti(G, id, key, list, hasAny);
@@ -3343,7 +4103,7 @@ GST.filters = (function(){
     const box = el.closest('.slicer'); if(box) box.style.display = '';
     el.disabled = !list.length;
     const cur = G.F[key];
-    el.innerHTML = '<option value="">' + (list.length ? '전체' : (hasAny ? EMPTY_FILT : EMPTY_NONE)) + '</option>' + list.map(function(v){
+    el.innerHTML = '<option value="">' + (list.length ? _T().all : (hasAny ? _T().emptyFilt : _T().emptyNone)) + '</option>' + list.map(function(v){
       return '<option value="'+String(v).replace(/"/g,'&quot;')+'">'+v+'</option>';
     }).join('');
     // 목록에서 사라진 선택값은 버린다 — 남겨두면 «아무것도 안 나오는» 화면이 된다
@@ -3360,7 +4120,7 @@ GST.filters = (function(){
     const wrap = btn.closest('.slicer'); if(wrap) wrap.style.display = '';
     Array.from(G.F[key]).forEach(function(v){ if(list.indexOf(v) < 0) G.F[key].delete(v); });
     btn.disabled = !list.length;
-    if(!list.length){ btn.textContent = (hasAny ? EMPTY_FILT : EMPTY_NONE) + ' ▾'; box.innerHTML=''; box.style.display='none';
+    if(!list.length){ btn.textContent = (hasAny ? _T().emptyFilt : _T().emptyNone) + ' ▾'; box.innerHTML=''; box.style.display='none';
       box.dataset.built=''; box.dataset.keys=''; return; }
     GST.mselFill(id, list, G.F[key], function(){ save(); refresh();
       if(CFG && CFG.onChange) CFG.onChange(); });
@@ -3427,6 +4187,7 @@ GST.filters = (function(){
   function refresh(){
     if(!CFG) return;
     refreshGroup(EQ); refreshGroup(HR);
+    try{ GST._chipsRender(); }catch(e){}   // core 가 만든 칩 줄(pm·scrubber)은 여기서 그린다 — F 만 보므로 목록과 무관하다(v135)
     /* 기간은 «그 자료에 날짜 축이 있을 때만» 걸 수 있다. tco 의 기준 월, hr 의 기준일처럼
        페이지가 자기 시간축을 따로 갖는 곳은 date 접근자를 주지 않는다. 그때 칸을 그냥
        두면 날짜를 넣는 순간 조건을 만족할 수 없어 화면이 통째로 빈다 — 목록이 빈 select
@@ -3435,7 +4196,7 @@ GST.filters = (function(){
     const hasD = !!((CFG.get||{}).date || (CFG.getH||{}).date);
     const a=document.getElementById('gf-from'), b=document.getElementById('gf-to');
     [a,b].forEach(function(el){ if(!el)return; el.disabled=!hasD;
-      el.title = hasD ? '' : '이 화면은 자체 기준일을 씁니다'; });
+      el.title = hasD ? '' : _T().dtOwn; });
     if(!hasD){ F.dtFrom=''; F.dtTo=''; }
     if(a) a.value=F.dtFrom; if(b) b.value=F.dtTo;
   }
@@ -3502,15 +4263,15 @@ GST.filters = (function(){
   }
 
   function markup(){
-    const sel = (G,k) => '<div class="slicer"><div class="lbl">'+L[k]+'</div>'
+    const sel = (G,k) => '<div class="slicer"><div class="lbl" data-fk="'+k+'">'+L[k]+'</div>'
       + '<select id="'+G.pre+k+'" onchange="GST.filters._on(\''+G.k+'\',\''+k+'\')"></select></div>';
     /* 다중선택 칸은 select 가 아니라 버튼+체크박스다(GST.mselFill 규약). position:relative
        가 없으면 박스가 사이드바 밖으로 나간다 — .slicer 가 이미 relative 다. */
-    const msel = (G,k) => '<div class="slicer"><div class="lbl">'+L[k]+'</div>'
+    const msel = (G,k) => '<div class="slicer"><div class="lbl" data-fk="'+k+'">'+L[k]+'</div>'
       + '<button type="button" id="'+G.pre+k+'Btn" class="mselbtn" '
-      + 'onclick="GST.mselToggle(\''+G.pre+k+'\',event)">전체 ▾</button>'
+      + 'onclick="GST.mselToggle(\''+G.pre+k+'\',event)">'+_T().all+' ▾</button>'
       + '<div id="'+G.pre+k+'Box" class="mselbox"></div></div>';
-    const head = G => '<div class="lbl gf-grp">'+G.title+'<span class="gf-note">'+G.note+'</span></div>';
+    const head = G => '<div class="lbl gf-grp" data-fg="'+G.k+'">'+G.title+'<span class="gf-note">'+G.note+'</span></div>';
     /* 두 블록이 «같은 폼»이다 — 축 목록도 AXES 한 곳에서 나온다. 따로 두면 축이 늘 때
        한쪽만 고쳐져 그 칸이 조용히 사라진다. */
     const block = G => head(G) + AXES.map(function(k){ return (MULTI[k]?msel:sel)(G,k); }).join('');
@@ -3519,7 +4280,7 @@ GST.filters = (function(){
       + '<div class="slicer-div"></div>'
       + block(HR)
       + '<div class="slicer-div"></div>'
-      + '<div class="slicer"><div class="lbl">'+L.period+'</div>'
+      + '<div class="slicer"><div class="lbl" data-fk="period">'+L.period+'</div>'
       + '<input type="date" id="gf-from" class="dt-input" onchange="GST.filters._on()"> ~ '
       + '<input type="date" id="gf-to" class="dt-input" onchange="GST.filters._on()"></div>'
       + '</div>';
@@ -3573,7 +4334,9 @@ GST.filters = (function(){
       load();
       /* 순회가 로딩 중에 보낸 값이 있으면 지금 적용한다 — 기준선도 여기서 잡혀야
          «사람이 걸어 둔 값»이 기준이 된다(위 kioskSet 주석 ②). */
-      if(KPEND){ const kp = KPEND; KPEND = null; kioskSet(kp.k, kp.v); }
+      /* ⚠ KCUR 을 먼저 지운다 — 보류분 재생은 «아직 한 번도 안 걸린» 값이라,
+         같은-값-건너뛰기(v135 8단계)에 걸리면 그 탭만 영영 필터가 안 걸린다. */
+      if(KPEND){ const kp = KPEND; KPEND = null; KCUR = null; kioskSet(kp.k, kp.v); }
       if(!document.getElementById('gf-css')){
         const st=document.createElement('style'); st.id='gf-css';
         /* 이 화면에 안 걸리는 축은 «잠긴 칸»으로 보인다 — 흐리게 해서 눌러 볼 것이
@@ -3597,13 +4360,36 @@ GST.filters = (function(){
         box.insertAdjacentHTML('afterbegin', markup());
         if(own.length){
           const d=document.createElement('div'); d.className='slicer-div';
-          const h=document.createElement('div'); h.className='lbl gf-own'; h.textContent='이 페이지 전용';
+          const h=document.createElement('div'); h.className='lbl gf-own'; h.textContent=_T().own;
           box.insertBefore(d, own[0]); box.insertBefore(h, own[0]);
         }
       }
+      try{ GST._chipsMount(); }catch(e){}   // 자기 칩 줄이 없는 페이지에만 (v135)
       refresh();
     },
     refresh: refresh,
+    /* 언어가 바뀌면 이름표만 다시 쓴다 — 마크업은 mount 가 한 번만 만든다(.gf-base 가드).
+       값 목록(refresh)도 다시 내야 「전체」·「이 화면 미적용」 문구가 새 언어로 나온다. */
+    relabel: function(){
+      const T = _T();
+      Object.assign(L, T.axes);
+      EQ.title=T.grpEq; EQ.note=T.grpEqNote; HR.title=T.grpHr; HR.note=T.grpHrNote;
+      document.querySelectorAll('.gf-base [data-fk]').forEach(function(el){ if(L[el.dataset.fk]) el.textContent = L[el.dataset.fk]; });
+      document.querySelectorAll('.gf-base .gf-grp[data-fg]').forEach(function(el){
+        const G = el.dataset.fg==='hr' ? HR : EQ;
+        el.innerHTML = GST._esc(G.title) + '<span class="gf-note">' + GST._esc(G.note) + '</span>'; });
+      document.querySelectorAll('.slicers .gf-own').forEach(function(el){ el.textContent = T.own; });
+      if(CFG) refresh();
+    },
+    /* 칩의 ✕ — 한 축만 푼다. period 는 두 날짜 칸이 한 축이다(clear() 와 같은 규칙). */
+    unset: function(k, grp){
+      if(k==='period'){
+        F.dtFrom=''; F.dtTo='';
+        ['gf-from','gf-to'].forEach(function(id){ const el=document.getElementById(id); if(el) el.value=''; });
+        save(); refresh(); if(CFG && CFG.onChange) CFG.onChange(); return;
+      }
+      setK(grp==='hr' ? HR : EQ, k, '');
+    },
     /* 한 축의 «자료에 실제로 있는» 값 목록. 자동순회(키오스크)가 단지 목록을 얻는 통로다.
        ⚠ 목록을 셸에 박지 말 것 — 대만 전용 목록으로 국내가 통째로 사라졌던 v89 그대로다.
        종속(narrow)을 걸지 않는다: 지금 걸린 필터와 무관하게 «이 자료에 있는 전부»를 돌아야 한다.
@@ -3660,7 +4446,7 @@ GST.filters = (function(){
     active: function(){
       const out=[];
       AXES.forEach(function(k){ if(hasK(EQ,k)) out.push({k:k, grp:'eq', label:L[k], value:listK(EQ,k).join(' · ')}); });
-      AXES.forEach(function(k){ if(hasK(HR,k)) out.push({k:k, grp:'hr', label:'인원 '+L[k], value:listK(HR,k).join(' · ')}); });
+      AXES.forEach(function(k){ if(hasK(HR,k)) out.push({k:k, grp:'hr', label:_T().hrPrefix+L[k], value:listK(HR,k).join(' · ')}); });
       if(F.dtFrom||F.dtTo) out.push({k:'period', grp:'eq', label:L.period, value:(F.dtFrom||'…')+' ~ '+(F.dtTo||'…')});
       return out;
     }
@@ -3679,9 +4465,10 @@ GST.autoSidebar = function(){
      페이지를 옮겨도 사이드바 앞부분이 똑같다. 예전에는 .date-panel 을 먼저 밀어 넣어
      설치현황만 「기간·DATE RANGE」가 머리에 붙어 혼자 다르게 보였다. */
   const sections=[];
-  if(document.querySelector('.slicers'))    sections.push({selector:'.slicers',    label:'필터 · Filters'});
-  if(document.querySelector('.date-panel')) sections.push({selector:'.date-panel', label:'이 페이지 전용 · 기간'});
-  if(document.querySelector('.filters'))    sections.push({selector:'.filters',    label:'이 페이지 전용'});
+  const FT=GST._fltT();
+  if(document.querySelector('.slicers'))    sections.push({selector:'.slicers',    label:FT.filters,   lbl:'filters'});
+  if(document.querySelector('.date-panel')) sections.push({selector:'.date-panel', label:FT.ownPeriod, lbl:'ownPeriod'});
+  if(document.querySelector('.filters'))    sections.push({selector:'.filters',    label:FT.own,       lbl:'own'});
   if(!sections.length) return;
   GST.initSidebar({
     sections,
@@ -3835,14 +4622,14 @@ GST.setStyle = function(key, silent, fromShell){
   if(silent) return;
   // 이미 열려 있는 다른 탭도 같이 바뀌도록 셸을 통해 전파 (테마·언어와 같은 경로)
   if(!fromShell && window.self!==window.top){
-    try{ window.parent.postMessage({type:'gst-style', style:key}, '*'); }catch(e){}
+    try{ window.parent.postMessage({type:'gst-style', style:key}, '*'); }catch(e){ console.warn('[gst] 셸에 style 전파 실패', e); }
   }
   // 차트 색은 생성 시점에 굳으므로 파기 후 재렌더가 필요하다 (테마 전환과 같은 경로)
   const b = document.body ? document.body.className : '';
   const cur = b.indexOf('theme-slate')>-1?'slate' : b.indexOf('theme-light')>-1?'light'
             : b.indexOf('theme-burgundy')>-1?'burgundy' : 'default';
   if(typeof global.changeDashboardTheme==='function'){ try{ global.changeDashboardTheme(cur,cur); }catch(e){} }
-  else if(typeof global.render==='function'){ try{ global.render(); }catch(e){} }
+  else if(typeof global.render==='function'){ try{ global.render(); }catch(e){ console.warn('[gst] 재렌더 실패', e); } }
   GST.barSync();
 };
 GST.nextStyle = function(){
@@ -3961,7 +4748,7 @@ GST.barSync = function(){
   if(GST._pivot) caps.pivot=true;
   const reg={type:'gst-bar-reg', caps:caps, state:st,
              weeks:(typeof s.weeks==='function')?s.weeks():null};
-  if(window.self!==window.top){ try{ window.parent.postMessage(reg,'*'); }catch(e){} }
+  if(window.self!==window.top){ try{ window.parent.postMessage(reg,'*'); }catch(e){ console.warn('[gst] 셸에 공통바 등록 실패', e); } }
   else GST._localBar(reg);
 };
 /* 공통바 버튼 잠금 — 페이지 안에서도, 셸 안에서도 같은 이름으로 부른다.
@@ -3974,7 +4761,7 @@ GST._barBusy = function(key, on){
     else  { b.disabled = false; if(b.dataset.old){ b.textContent = b.dataset.old; delete b.dataset.old; } }
   }
   if(window.self !== window.top){
-    try{ window.parent.postMessage({type:'gst-bar-busy', key:key, on:!!on}, '*'); }catch(e){}
+    try{ window.parent.postMessage({type:'gst-bar-busy', key:key, on:!!on}, '*'); }catch(e){ console.warn('[gst] 셸에 busy 전파 실패', e); }
   }
 };
 GST._barDo = function(key, val){
@@ -3987,7 +4774,7 @@ GST._barDo = function(key, val){
     // val이 오면 그 값으로 확정(브로드캐스트 안전), 없으면 뒤집기
     GST.setSpan12(val===null||val===undefined ? !GST.span12() : (val===true||val==='true'));
     if(typeof on.span==='function'){ try{ on.span(GST.span12()); }catch(e){} }
-    else if(typeof global.render==='function'){ try{ global.render(); }catch(e){} }
+    else if(typeof global.render==='function'){ try{ global.render(); }catch(e){ console.warn('[gst] 재렌더 실패', e); } }
     else GST.barSync();
     return;
   }
@@ -4104,6 +4891,7 @@ window.addEventListener('message', function(e){
      ⚠ 사람이 걸어 둔 필터를 «돌려주지 않으면» 순회 한 번에 화면이 딴 데를 보게 된다.
        페이지는 늦게 뜨기도 하므로(탭 지연 로딩), 셸의 «시작» 신호를 못 받는 경우가 있다.
        그래서 저장은 신호가 아니라 «처음 건드릴 때» 한다 — 그 순간이 곧 손대기 직전이다. */
+  if(d.type==='gst-shown'){ try{ GST._arCatchUp(); }catch(x){} return; }   // 셸이 이 iframe 을 보이게 했다 — 건너뛴 자동 새로고침을 이제 한다(v135)
   if(d.type==='gst-kiosk-q'){                   // 이 페이지가 아는 그 축의 값 목록을 알려 준다
     /* 답에 ver 와 page 를 실어 보낸다 — 셸이 «답이 없다»와 «답은 왔는데 목록이 비었다»를
        구분해 사람에게 다른 말을 해줄 수 있어야 한다. 그 둘은 할 일이 완전히 다르다
@@ -4144,6 +4932,8 @@ GST.PPT_VENDOR = '/assets/vendor/pptxgen.bundle.js';                            
 GST.PPT_CDN    = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
 GST.ZIP_VENDOR = '/assets/vendor/jszip.min.js';                                        // 3.10.1
 GST.ZIP_CDN    = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+GST.XLSX_VENDOR = '/assets/vendor/xlsx.full.min.js';                                   // 0.18.5 (SheetJS · /upload/)
+GST.XLSX_CDN    = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
 
 /* 스크립트 하나를 «시간 제한을 걸고» 싣는다. 자체 사본 → CDN 순으로 본다.
    ⚠ 시간 제한이 이 함수의 존재 이유다. CDN 을 막는 사내망이 «거부»가 아니라 «묵살»을 하면
@@ -4198,9 +4988,21 @@ GST.zipLoad = function(){
     .catch(function(e){ GST._zipP=null; throw e; });
   return GST._zipP;
 };
-/* 실패를 «보이게» 알린다. alert 는 브라우저·확장에 따라 안 뜨는 자리가 있어 토스트를 먼저 쓴다. */
+/* 한 줄 토스트 — 여덟 페이지가 바이트까지 같은 사본을 들고 있었다(v135 · 8단계에 core 로).
+   ⚠ 페이지 사본은 지우지 않고 «위임»으로 남긴다 — 호출부가 55곳이라 이름을 없애면
+     그 55곳을 한꺼번에 고쳐야 하고, 한 곳만 빠지면 그 화면에서 토스트가 조용히 사라진다. */
+GST.capToast = function(msg){
+  let el=document.getElementById('capToast');
+  if(!el){ el=document.createElement('div'); el.id='capToast'; document.body.appendChild(el); }
+  el.textContent=msg; el.style.opacity='1';
+  clearTimeout(el._h); el._h=setTimeout(function(){ el.style.opacity='0'; },1600);
+};
+/* 실패를 «보이게» 알린다. alert 는 브라우저·확장에 따라 안 뜨는 자리가 있어 토스트를 먼저 쓴다.
+   ⚠ window.capToast 를 먼저 보는 이유 — 페이지가 자기 토스트(다른 자리·다른 모양)를 갖고
+     있을 수 있다. 지금은 전부 GST.capToast 로 위임하지만 그 폴백 방향은 그대로 둔다. */
 GST._pptSay = function(msg){
   try{ if(typeof window.capToast==='function'){ window.capToast(msg); return; } }catch(e){}
+  try{ GST.capToast(msg); return; }catch(e){}
   try{ alert(msg); }catch(e){}
   try{ console.warn('[PPT] '+msg); }catch(e){}
 };
@@ -4382,6 +5184,16 @@ GST.pptHex = function(c){ // Chart.js 색 → PPT 6자리 HEX ('#' 금지) · �
 };
 GST.pptSrc = function(ch){ // Chart.js 인스턴스 → {labels,bars,lines,stacked} (숨긴 시리즈 제외)
   if(!ch||!ch.data)return null;
+  const t0=(ch.config&&ch.config.type)||'';
+  if(t0==='doughnut'||t0==='pie'){   // 도넛·파이 — 계열 하나 · 조각마다 색 (v135)
+    const ds0=ch.data.datasets[0]||{}; const labels0=(ch.data.labels||[]).map(function(v){ return String(v==null?'':v); });
+    const vals=(ds0.data||[]).map(function(v){ return +v||0; });
+    const bg=ds0.backgroundColor;
+    const cols=labels0.map(function(_,i){ return GST.pptHex(Array.isArray(bg)?bg[i]:bg); });
+    /* 가운데 합계는 화면 플러그인(dCenter)과 «같은 식» — datasets[0].data 의 합. 두 벌이면 화면과 다른 숫자가 나간다. */
+    return {pie:true, hole:t0==='doughnut', labels:labels0, values:vals, colors:cols, name:String(ds0.label||''),
+            total:vals.reduce(function(a,b){ return a+b; },0), bars:[], lines:[]};
+  }
   const labels=GST.pptLabels(ch), bars=[], lines=[];
   ch.data.datasets.forEach((ds,i)=>{
     try{ const mt=ch.getDatasetMeta(i); if(mt&&mt.hidden)return; }catch(e){}
@@ -4406,8 +5218,21 @@ GST.pptSrc = function(ch){ // Chart.js 인스턴스 → {labels,bars,lines,stack
   return {labels,bars,lines,stacked:!!((sc.y&&sc.y.stacked)||(sc.x&&sc.x.stacked)),bounds,
           horiz:horiz, showValue:!!(vl&&vl.mode)};
 };
-GST.pptCombo = function(pres,slide,src,x,y,w,h){ // 막대+꺾은선 네이티브 콤보 차트
-  if(!src||(!src.bars.length&&!src.lines.length))return;
+GST.pptCombo = function(pres,slide,src,x,y,w,h){ // 막대+꺾은선 네이티브 콤보 차트 (도넛·파이도 여기서 · v135)
+  if(!src) return;
+  if(src.pie){
+    slide.addChart(pres.ChartType[src.hole?'doughnut':'pie'], [{name:src.name||'', labels:src.labels, values:src.values}],
+      {x:x,y:y,w:w,h:h, chartColors:src.colors, holeSize:src.hole?58:0, showLegend:true, legendPos:'b', legendFontSize:7.5,
+       legendColor:'333333', showTitle:false, showValue:true, showPercent:false, dataLabelColor:'333333', dataLabelFontSize:7.5,
+       dataLabelPosition:'bestFit', dataLabelFormatCode:'#,##0'});
+    if(src.hole){   // 화면의 가운데 TOTAL 과 같은 숫자를 구멍에 얹는다 — 범례(아래) 높이만큼 위로
+      const cx=x+w/2, cy=y+(h-0.35)*0.5;
+      slide.addText(String(src.total.toLocaleString()), {x:cx-0.9, y:cy-0.24, w:1.8, h:0.30, align:'center', valign:'middle', fontSize:14, bold:true, color:'111111', margin:0});
+      slide.addText('TOTAL', {x:cx-0.9, y:cy+0.06, w:1.8, h:0.20, align:'center', valign:'top', fontSize:7, color:'808080', margin:0});
+    }
+    return;
+  }
+  if(!src.bars.length&&!src.lines.length)return;
   const ln1=src.lines.filter(l=>!l.y2), ln2=src.lines.filter(l=>l.y2);
   const useY2=ln2.length>0&&(src.bars.length>0||ln1.length>0);
   const types=[];
@@ -4451,7 +5276,15 @@ GST.pptCombo = function(pres,slide,src,x,y,w,h){ // 막대+꺾은선 네이티�
 GST.pptNativeOK = function(ch){
   if(!ch||!ch.data) return '';
   const t=(ch.config&&ch.config.type)||'';
-  if(t!=='bar'&&t!=='line') return '도넛·산점도 등은 그림';
+  /* 도넛·파이는 네이티브로 간다(v135) — 가운데 TOTAL 은 pptCombo 가 같은 식(datasets[0] 합)으로 글자로 얹는다.
+     v134 가 「도넛은 그림」으로 둔 것은 그 합계 글자 때문이었는데, 글자를 따로 얹으면 화면과 같은 그림이다. */
+  if(t==='doughnut'||t==='pie'){
+    const ds0=(ch.data.datasets||[])[0]; const n0=(ch.data.labels||[]).length;
+    if(!ds0||!n0) return '데이터 없음';
+    if((ds0.data||[]).length!==n0) return '계열 길이가 라벨 수와 다름';
+    return '';
+  }
+  if(t!=='bar'&&t!=='line') return '산점도 등은 그림';
   /* ⚠ 가로 막대(indexAxis:'y')는 «범주축이 y» 다. x 만 보면 그 차트들이 전부
      「수치축」으로 잘못 떨어진다 — 실측 설치현황·인원 화면의 막대 상당수가 가로 막대다. */
   const cax=GST.pptCatAxis(ch);
@@ -4513,11 +5346,11 @@ GST.pptCard = async function(id){
   const ch=(cv && window.Chart && Chart.getChart) ? Chart.getChart(cv) : null;
   if(!ch){ GST._pptSay('차트를 찾을 수 없습니다'); return; }
   const why=GST.pptNativeOK(ch);
-  if(why){ GST._pptSay('이 차트는 PPT «차트»로 못 옮깁니다 ('+why+') — 「📋 그림」 또는 「📊 데이터」를 쓰세요.'); return; }
+  if(why){ const T=GST._expT(); GST._pptSay(T.img+' ('+why+') — '+T.data+' / '+T.png); return; }
   try{ await GST.pptLoad(); }
   catch(e){
     GST._pptSay('PPT 라이브러리를 불러오지 못했습니다 ('+(e&&e.tried||e&&e.message||'?')+')'
-      + ' — assets/vendor/pptxgen.bundle.js 가 배포됐는지 확인하고, 그래도 안 되면 「📊 데이터」를 쓰세요.');
+      + ' — assets/vendor/pptxgen.bundle.js 가 배포됐는지 확인하고, 그래도 안 되면 「'+GST._expT().data+'」를 쓰세요.');
     return; }
   /* 흰 종이용 색으로 바꿨다 되돌린다 — pptAuto 와 같은 규율(v103).
      ⚠ 되돌리기는 finally 에 둔다. 중간에 던지면 화면 차트 색이 굳어, 내보내기를 한 번
@@ -4527,9 +5360,7 @@ GST.pptCard = async function(id){
   try{ src=GST.pptSrc(ch); }
   finally{ try{ restore&&restore(); }catch(e){} }
   if(!src){ GST._pptSay('차트 데이터를 못 읽었습니다'); return; }
-  const card=cv.closest('.card')||cv.closest('.mcard');
-  const h3=card?card.querySelector('h3'):null;
-  const cap=((h3&&(h3.innerText||'').trim())||id).replace(/\s+/g,' ');
+  const cap=GST.cardTitle(id);
   const FONT='맑은 고딕';
   const p=new PptxGenJS(); p.layout='LAYOUT_WIDE';   // 13.33 × 7.5 in — 아래 좌표가 그 전제다
   const s=p.addSlide(); s.background={color:'FFFFFF'};
@@ -4542,13 +5373,303 @@ GST.pptCard = async function(id){
   GST.pptCombo(p, s, src, 0.5, 1.10, 12.3, 5.60);
   const fn=cap.replace(/[\\/:*?"<>|]/g,'').slice(0,40)+'_'+GST.ymdL()+'.pptx';
   await p.writeFile({fileName:fn});
-  GST._pptSay('⤓ '+fn+' — 열어서 차트를 복사(Ctrl+C)해 보고서에 붙이면 편집 가능한 차트가 됩니다');
+  GST._pptSay('⤓ '+fn+' — '+GST._expT().hint);
 };
-/* 카드 버튼 한 벌. 여덟 페이지가 «같은 문자열»을 쓰게 여기서 만든다 —
-   페이지마다 적으면 한 곳이 빠져 그 화면만 버튼이 없다(v100 이 겪은 자리). */
-GST.pptCardBtn = function(id){
-  return '<button class="capbtn" title="이 차트만 한 장짜리 PPT 로 — 열어서 차트를 복사하면 편집 가능한 차트로 붙습니다"'
-       + ' onclick="GST.pptCard(\''+id+'\')">📈 PPT</button>';
+/* ============================================================
+   카드 내보내기 한 벌 — 「내보내기 ▾」 (v135 · 3단계 · 사용자 요청)
+
+   사용자: 「이미지로 복사하는 건 필요없고, 개별로 필요할 때 차트를 (수정 가능한) 복사해서 PPT 나
+   엑셀에 바로 붙여넣기 할 수 있으면」. 클립보드로 «차트 개체»는 못 올리므로(v133 확정) 답은 파일이다 —
+   한 카드에서 «PPT 차트(.pptx)» · «엑셀 차트(.xlsx)» · «데이터 복사(표)» 를 고른다.
+   「📋 그림」은 없앴다(사용자 확정). 그림이 유일한 답인 차트(산점도 등)에서만 「PNG 저장」이 뜬다.
+
+   ⚠ 버튼·메뉴·판정은 여기 한 곳이다. 예전에는 여덟 페이지가 addCapBtns 를 각자 짜서 선택자가 넷으로
+     갈렸고, fault 3·hr 1·material 1 차트에는 버튼이 아예 안 붙었다(감사 실측). 카드 선택자도
+     GST.CARD_SEL 한 벌 — pptAuto·축 편집(axBtns)·스켈레톤이 같은 목록을 본다.
+   ⚠ 표 복사 기계(chartGrid·gridHTML·gridTSV·copyChartData)는 report 안에 갇혀 있던 것을 올린 것이다.
+     report 는 같은 이름의 얇은 위임만 남긴다(t-abp 가 그 전역 이름을 부른다).
+   ============================================================ */
+GST.CARD_SEL = '.card,.trend-card,.cross-card,.tablecard';
+GST.cardOf = function(el){ return (el && el.closest) ? el.closest(GST.CARD_SEL) : null; };
+GST.chartCanvases = function(){
+  const sel = GST.CARD_SEL.split(',').map(function(s){ return s+' canvas'; }).join(',');
+  return [].slice.call(document.querySelectorAll(sel));
+};
+GST.chartOf = function(id){
+  const cv = (typeof id==='string') ? document.getElementById(id) : id;
+  if(!cv) return null;
+  try{ const ch = (window.Chart && Chart.getChart) ? Chart.getChart(cv) : null; if(ch) return ch; }catch(e){}
+  return (window.CHARTS && cv.id && window.CHARTS[cv.id]) || null;
+};
+GST.EXP_T = {
+  ko:{btn:'내보내기 ▾', ppt:'PPT 차트 (.pptx)', xlsx:'엑셀 차트 (.xlsx)', data:'데이터 복사 (표)', png:'PNG 저장',
+      hint:'파일을 열어 차트를 복사(Ctrl+C)하면 PPT·엑셀 어디든 편집 가능한 차트로 붙습니다',
+      img:'이 차트는 그림으로만 내보낼 수 있습니다', nochart:'차트를 찾을 수 없습니다',
+      copied:'데이터 복사됨 — PPT·엑셀에 붙여넣기(Ctrl+V)', copiedTxt:'데이터(텍스트) 복사됨 — 붙여넣기(Ctrl+V)',
+      copyFail:'복사 미지원 브라우저 — 「엑셀 차트」로 내려받으세요', saved:'저장됨', xlsxFail:'엑셀 파일을 만들지 못했습니다'},
+  en:{btn:'Export ▾', ppt:'PPT chart (.pptx)', xlsx:'Excel chart (.xlsx)', data:'Copy data (table)', png:'Save PNG',
+      hint:'Open the file and copy the chart (Ctrl+C) — it pastes into PPT or Excel as an editable chart',
+      img:'This chart can only be exported as a picture', nochart:'Chart not found',
+      copied:'Data copied — paste into PPT/Excel (Ctrl+V)', copiedTxt:'Data copied as text — paste (Ctrl+V)',
+      copyFail:'Clipboard not supported — download the Excel chart instead', saved:'saved', xlsxFail:'Could not build the Excel file'},
+  zh:{btn:'导出 ▾', ppt:'PPT 图表 (.pptx)', xlsx:'Excel 图表 (.xlsx)', data:'复制数据 (表)', png:'保存 PNG',
+      hint:'打开文件后复制图表(Ctrl+C)，粘贴到 PPT 或 Excel 即为可编辑图表',
+      img:'此图表只能导出为图片', nochart:'找不到图表',
+      copied:'数据已复制 — 粘贴到 PPT/Excel (Ctrl+V)', copiedTxt:'数据已复制为文本 — 粘贴 (Ctrl+V)',
+      copyFail:'浏览器不支持剪贴板 — 请下载 Excel 图表', saved:'已保存', xlsxFail:'无法生成 Excel 文件'},
+  ja:{btn:'エクスポート ▾', ppt:'PPT グラフ (.pptx)', xlsx:'Excel グラフ (.xlsx)', data:'データをコピー (表)', png:'PNG 保存',
+      hint:'ファイルを開いてグラフをコピー(Ctrl+C)すれば PPT・Excel に編集可能なグラフとして貼れます',
+      img:'このグラフは画像でのみ出力できます', nochart:'グラフが見つかりません',
+      copied:'データをコピーしました — PPT/Excel に貼り付け(Ctrl+V)', copiedTxt:'データをテキストでコピーしました — 貼り付け(Ctrl+V)',
+      copyFail:'クリップボード非対応 — Excel グラフをダウンロードしてください', saved:'保存しました', xlsxFail:'Excel ファイルを作れませんでした'}
+};
+GST._expT = function(){ const l=(GST._lang && GST._lang()) || 'ko'; return GST.EXP_T[l] || GST.EXP_T.ko; };
+GST.exportBtn = function(id){
+  const T=GST._expT();
+  return '<button class="capbtn gexp-btn" type="button" data-gexp="'+id+'" title="'+T.hint+'"'
+       + ' onclick="GST.exportMenu(this,\''+id+'\')">'+T.btn+'</button>';
+};
+GST.pptCardBtn = GST.exportBtn;   // 옛 이름 — v134 호출부·검사 보호. 새 코드는 exportBtn/capBtns 를 쓴다.
+/* 메뉴는 «열 때» 만든다 — 차트는 자료가 온 뒤에야 생기므로 버튼을 붙일 때는 그림인지 아닌지 모른다. */
+GST.exportMenu = function(btn, id){
+  const T=GST._expT();
+  const card=GST.cardOf(btn); if(!card) return;
+  const old=card.querySelector('.gexp-menu');
+  document.querySelectorAll('.gexp-menu').forEach(function(m){ m.remove(); });
+  if(old) return;                                   // 같은 버튼을 다시 누르면 닫기
+  const ch=GST.chartOf(id);
+  const why = ch ? GST.pptNativeOK(ch) : T.nochart;
+  const items=[];
+  const it=function(act,label,dis,title){ items.push('<button type="button" data-act="'+act+'"'+(dis?' disabled':'')+(title?' title="'+title+'"':'')+'>'+label+'</button>'); };
+  it('ppt', T.ppt, !!why, why||'');
+  it('xlsx', T.xlsx, !!why, why||'');
+  it('data', T.data, !ch, ch?'':T.nochart);
+  if(why && ch) it('png', T.png, false, T.img);      // 그림이 «유일한» 답일 때만
+  const m=document.createElement('div'); m.className='gexp-menu';
+  m.innerHTML=items.join('')+'<div class="gexp-hint">'+(why&&ch ? T.img+' — '+why : T.hint)+'</div>';
+  const box=btn.closest('.capbtns');
+  m.style.top=((box?box.offsetTop+box.offsetHeight:36)+4)+'px';
+  m.style.right=(box&&box.style.right)||'14px';
+  card.appendChild(m);
+  m.addEventListener('click', function(e){
+    const b=e.target.closest('[data-act]'); if(!b||b.disabled) return;
+    m.remove();
+    const act=b.dataset.act;
+    if(act==='ppt') GST.pptCard(id);
+    else if(act==='xlsx') GST.xlsxCard(id);
+    else if(act==='data') GST.copyChartData(id);
+    else if(act==='png') GST.savePng(id);
+  });
+  const off=function(e){ if(!m.isConnected){ document.removeEventListener('click',off,true); return; }
+    if(m.contains(e.target)||e.target===btn) return; m.remove(); document.removeEventListener('click',off,true); };
+  setTimeout(function(){ document.addEventListener('click',off,true); },0);
+  document.addEventListener('keydown', function esc(e){ if(e.key==='Escape'){ m.remove(); document.removeEventListener('keydown',esc); } });
+};
+/* 카드마다 버튼 한 벌 — 여덟 페이지의 addCapBtns 가 전부 여기로 온다.
+   opts.extra(id) 로 페이지 고유 버튼(report 의 ⚙ 축 편집)을 뒤에 붙인다.
+   ⚠ 표 카드의 «표 복사·CSV» 버튼은 페이지가 그대로 둔다 — 그건 캔버스가 아니다. */
+GST.capBtns = function(opts){
+  opts=opts||{};
+  GST.chartCanvases().forEach(function(cv){
+    const id=cv.id, card=GST.cardOf(cv);
+    if(!id||!card||card.querySelector('.capbtns')) return;
+    const box=document.createElement('div'); box.className='capbtns';
+    box.innerHTML=GST.exportBtn(id)+(opts.extra?(opts.extra(id)||''):'');
+    card.appendChild(box);
+    /* 주/월 토글(.mini-per)이 같은 구석을 쓰는 카드에서는 그만큼 왼쪽으로 — report 가 손으로 하던 규칙 */
+    const mp=card.querySelector('.mini-per'); if(mp) box.style.right=(mp.offsetWidth+24)+'px';
+  });
+};
+/* ---- 표 복사 (report 에서 올렸다) ---- */
+GST.chartGrid = function(ch){
+  if(!ch||!ch.data) return null;
+  const labs=(ch.data.labels||[]).map(function(v){ return String(v==null?'':v); });
+  /* hline·예측 같은 «보조» 데이터셋도 값이므로 그대로 낸다 — 화면에 보이는 것이 곧 자료다. */
+  const sers=(ch.data.datasets||[]).map(function(d){ return {name:String(d.label==null?'':d.label),
+    vals:labs.map(function(_,i){ const v=(d.data||[])[i];
+      return (v==null||v==='')?'':(typeof v==='object'?(v.y!=null?v.y:''):v); })}; });
+  return {labs:labs, sers:sers};
+};
+GST.gridHTML = function(g,title){
+  const esc2=function(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;'); };
+  const th='border:1px solid #b8c0cc;padding:3px 8px;background:#eef1f5;font-weight:700;text-align:center;white-space:nowrap;';
+  const td='border:1px solid #b8c0cc;padding:3px 8px;text-align:right;white-space:nowrap;';
+  let h='<table style="border-collapse:collapse;font-family:\'Malgun Gothic\',sans-serif;font-size:11px;color:#1a2230">';
+  h+='<tr><td style="'+th+'"></td>'+g.labs.map(function(l){ return '<td style="'+th+'">'+esc2(l)+'</td>'; }).join('')+'</tr>';
+  g.sers.forEach(function(sr){ h+='<tr><td style="'+th+'text-align:left">'+esc2(sr.name)+'</td>'
+    +sr.vals.map(function(v){ return '<td style="'+td+'">'+esc2(v)+'</td>'; }).join('')+'</tr>'; });
+  h+='</table>';
+  return (title?'<div style="font-weight:800;font-family:\'Malgun Gothic\';font-size:13px;margin:0 0 5px">'+esc2(title)+'</div>':'')+h;
+};
+GST.gridTSV = function(g){
+  return [''].concat(g.labs).join('\t')+'\n'
+    + g.sers.map(function(sr){ return [sr.name].concat(sr.vals).join('\t'); }).join('\n');
+};
+GST.cardTitle = function(id){
+  const cv=document.getElementById(id), card=cv?GST.cardOf(cv):null;
+  const h3=card?card.querySelector('h3'):null;
+  return ((h3&&(h3.innerText||h3.textContent)||'').trim()||id).replace(/\s+/g,' ');
+};
+GST.copyChartData = async function(id){
+  const T=GST._expT();
+  const g=GST.chartGrid(GST.chartOf(id)); if(!g){ GST._pptSay(T.nochart); return; }
+  const html=GST.gridHTML(g, GST.cardTitle(id)), tsv=GST.gridTSV(g);
+  try{
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':new Blob([html],{type:'text/html'}),
+      'text/plain':new Blob([tsv],{type:'text/plain'})})]);
+    GST._pptSay('📊 '+T.copied);
+  }catch(e){
+    /* HTML 형식을 못 쓰는 브라우저에서도 «아무 일도 안 일어나는» 상태로 두지 않는다 — 탭 구분 텍스트라도 준다 */
+    try{ await navigator.clipboard.writeText(tsv); GST._pptSay('📊 '+T.copiedTxt); }
+    catch(e2){ GST._pptSay(T.copyFail); }
+  }
+};
+GST._download = function(bytes, name, mime){
+  const b=new Blob([bytes],{type:mime||'application/octet-stream'});
+  const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=name; a.click();
+  setTimeout(function(){ URL.revokeObjectURL(u); },2000);
+};
+GST.savePng = function(id){
+  const T=GST._expT();
+  const oc=GST.chartHiResLight(id); if(!oc){ GST._pptSay(T.nochart); return; }
+  oc.toBlob(function(b){ if(!b) return; GST._download(b, id+'.png', 'image/png'); GST._pptSay('⤓ '+id+'.png '+T.saved); });
+};
+/* ---- 엑셀 «차트 개체» (.xlsx) ----
+   재료는 PPT 와 같다 — pptSrc 가 낸 계열·라벨을 시트에 적고, 그 시트를 참조하는 DrawingML 차트를 얹는다.
+   xlsx 의 차트 XML 은 pptx 와 같은 c:chartSpace 라 «같은 그림»이 나온다. 엑셀에서 그 차트를 복사하면
+   PPT 에도 편집 가능한 차트로 붙는다 — 사용자가 원한 «PPT 나 엑셀에 바로»의 엑셀 쪽 답이다.
+   ⚠ 부품이 다섯이다: 시트 rels · sheet1 의 <drawing> · [Content_Types] Override 둘 · drawing1 · chart1.
+     하나라도 빠지면 엑셀이 «복구» 대화상자를 띄우고 차트를 버린다. t-export 가 다섯을 다 센다. */
+GST.xlsxLibLoad = function(){                 // SheetJS — /upload/ 가 쓴다(v135 에 자체 사본 규율로 편입)
+  if(window.XLSX) return Promise.resolve();
+  if(GST._xlsxP) return GST._xlsxP;
+  GST._xlsxP = GST._loadScript([GST.XLSX_VENDOR, GST.XLSX_CDN], function(){ return !!window.XLSX; })
+    .catch(function(e){ GST._xlsxP=null; throw e; });
+  return GST._xlsxP;
+};
+GST._xml = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+GST._colName = function(n){ let s=''; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); } return s; };
+GST.xlsxChart = async function(src, cap){
+  await GST.zipLoad();
+  const X=GST._xml, col=GST._colName;
+  const pie=!!(src&&src.pie);
+  const labels=(src.labels||[]).map(String);
+  const sers = pie ? [{name:src.name||cap||'', values:src.values, color:'', kind:'bar'}]
+                   : [].concat((src.bars||[]).map(function(b){ return {name:b.name, values:b.values, color:b.color, kind:'bar'}; }),
+                               (src.lines||[]).map(function(l){ return {name:l.name, values:l.values, color:l.color, kind:'line', y2:!!l.y2}; }));
+  const n=labels.length, last=col(n+1), nS=sers.length;
+  /* 시트 — A1 빈칸 · 1행 라벨 · 2행부터 계열. inlineStr 이라 공유문자열 부품이 없다. */
+  const cell=function(c,r,v,num){ const ref=col(c)+r;
+    if(v===''||v==null) return '<c r="'+ref+'"/>';
+    return num ? '<c r="'+ref+'"><v>'+Number(v)+'</v></c>'
+               : '<c r="'+ref+'" t="inlineStr"><is><t xml:space="preserve">'+X(v)+'</t></is></c>'; };
+  const rows=['<row r="1">'+cell(1,1,'')+labels.map(function(c,i){ return cell(i+2,1,c,false); }).join('')+'</row>'];
+  sers.forEach(function(sr,si){ const r=si+2; let out='<row r="'+r+'">'+cell(1,r,sr.name,false);
+    for(let i=0;i<n;i++){ const v=sr.values[i]; out+=(v==null||v===''||isNaN(Number(v)))?cell(i+2,r,'',false):cell(i+2,r,v,true); }
+    rows.push(out+'</row>'); });
+  const sheet='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    +'<dimension ref="A1:'+last+(nS+1)+'"/><sheetData>'+rows.join('')+'</sheetData><drawing r:id="rId1"/></worksheet>';
+  /* 차트 — 계열은 시트 «참조»와 캐시를 둘 다 가진다(캐시가 없으면 열자마자 빈 차트로 뜨는 뷰어가 있다) */
+  const catRef='Sheet1!$B$1:$'+last+'$1';
+  const catXml='<c:cat><c:strRef><c:f>'+catRef+'</c:f><c:strCache><c:ptCount val="'+n+'"/>'
+    +labels.map(function(l,i){ return '<c:pt idx="'+i+'"><c:v>'+X(l)+'</c:v></c:pt>'; }).join('')+'</c:strCache></c:strRef></c:cat>';
+  const valXml=function(sr,si){ const r=si+2;
+    return '<c:val><c:numRef><c:f>Sheet1!$B$'+r+':$'+last+'$'+r+'</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="'+n+'"/>'
+      +sr.values.map(function(v,i){ const x=Number(v); return isFinite(x)?'<c:pt idx="'+i+'"><c:v>'+x+'</c:v></c:pt>':''; }).join('')
+      +'</c:numCache></c:numRef></c:val>'; };
+  const txXml=function(sr,si){ return '<c:tx><c:strRef><c:f>Sheet1!$A$'+(si+2)+'</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>'+X(sr.name)+'</c:v></c:pt></c:strCache></c:strRef></c:tx>'; };
+  const fill=function(hex){ return '<a:solidFill><a:srgbClr val="'+(hex||'5B9BD5')+'"/></a:solidFill>'; };
+  const dl = src.showValue||pie ? '<c:dLbls><c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>' : '';
+  let plot='';
+  if(pie){
+    const cols=src.colors||[];
+    plot='<c:'+(src.hole?'doughnut':'pie')+'Chart><c:varyColors val="1"/>'
+      +'<c:ser><c:idx val="0"/><c:order val="0"/>'+txXml(sers[0],0)
+      +labels.map(function(_,i){ return '<c:dPt><c:idx val="'+i+'"/><c:bubble3D val="0"/><c:spPr>'+fill(cols[i])+'</c:spPr></c:dPt>'; }).join('')
+      +dl+catXml+valXml(sers[0],0)+'</c:ser>'
+      +'<c:firstSliceAng val="0"/>'+(src.hole?'<c:holeSize val="55"/>':'')+'</c:'+(src.hole?'doughnut':'pie')+'Chart>';
+  }else{
+    const bars=sers.map(function(s,i){ return [s,i]; }).filter(function(p){ return p[0].kind==='bar'; });
+    const ln1=sers.map(function(s,i){ return [s,i]; }).filter(function(p){ return p[0].kind==='line'&&!p[0].y2; });
+    const ln2=sers.map(function(s,i){ return [s,i]; }).filter(function(p){ return p[0].kind==='line'&&p[0].y2; });
+    const useY2 = ln2.length>0 && (bars.length>0||ln1.length>0);
+    if(bars.length){
+      plot+='<c:barChart><c:barDir val="'+(src.horiz?'bar':'col')+'"/><c:grouping val="'+(src.stacked?'stacked':'clustered')+'"/><c:varyColors val="0"/>'
+        +bars.map(function(p){ const sr=p[0], si=p[1];
+          return '<c:ser><c:idx val="'+si+'"/><c:order val="'+si+'"/>'+txXml(sr,si)+'<c:spPr>'+fill(sr.color)+'</c:spPr><c:invertIfNegative val="0"/>'+dl+catXml+valXml(sr,si)+'</c:ser>'; }).join('')
+        +'<c:gapWidth val="60"/>'+(src.stacked?'<c:overlap val="100"/>':'')+'<c:axId val="10"/><c:axId val="20"/></c:barChart>';
+    }
+    const lineChart=function(list, ax1, ax2){ if(!list.length) return '';
+      return '<c:lineChart><c:grouping val="standard"/><c:varyColors val="0"/>'
+        +list.map(function(p){ const sr=p[0], si=p[1];
+          return '<c:ser><c:idx val="'+si+'"/><c:order val="'+si+'"/>'+txXml(sr,si)
+            +'<c:spPr><a:ln w="19050" cap="rnd">'+fill(sr.color)+'<a:round/></a:ln></c:spPr>'
+            +'<c:marker><c:symbol val="circle"/><c:size val="4"/><c:spPr>'+fill(sr.color)+'</c:spPr></c:marker>'
+            +dl+catXml+valXml(sr,si)+'<c:smooth val="0"/></c:ser>'; }).join('')
+        +'<c:marker val="1"/><c:axId val="'+ax1+'"/><c:axId val="'+ax2+'"/></c:lineChart>'; };
+    plot+=lineChart(ln1.concat(useY2?[]:ln2), 10, 20);
+    if(useY2) plot+=lineChart(ln2, 30, 40);
+    const b=(src.bounds&&src.bounds.y)||null, b2=(src.bounds&&src.bounds.y2)||null;
+    const scal=function(bd){ return '<c:scaling><c:orientation val="minMax"/>'+(bd&&isFinite(bd.max)?'<c:max val="'+bd.max+'"/>':'')+(bd&&isFinite(bd.min)?'<c:min val="'+bd.min+'"/>':'')+'</c:scaling>'; };
+    const catPos=src.horiz?'l':'b', valPos=src.horiz?'b':'l';
+    plot+='<c:catAx><c:axId val="10"/>'+scal(null)+'<c:delete val="0"/><c:axPos val="'+catPos+'"/><c:numFmt formatCode="General" sourceLinked="1"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="20"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>'
+      +'<c:valAx><c:axId val="20"/>'+scal(b)+'<c:delete val="0"/><c:axPos val="'+valPos+'"/><c:majorGridlines/><c:numFmt formatCode="General" sourceLinked="1"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="10"/><c:crosses val="autoZero"/><c:crossBetween val="between"/></c:valAx>';
+    if(useY2) plot+='<c:catAx><c:axId val="30"/>'+scal(null)+'<c:delete val="1"/><c:axPos val="'+catPos+'"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="40"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>'
+      +'<c:valAx><c:axId val="40"/>'+scal(b2)+'<c:delete val="0"/><c:axPos val="'+(src.horiz?'t':'r')+'"/><c:numFmt formatCode="General" sourceLinked="1"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="30"/><c:crosses val="max"/><c:crossBetween val="between"/></c:valAx>';
+  }
+  const chart='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    +'<c:roundedCorners val="0"/><c:chart>'
+    +(cap?'<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1200" b="1"/></a:pPr><a:r><a:rPr lang="ko-KR" sz="1200" b="1"/><a:t>'+X(cap)+'</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/>':'<c:autoTitleDeleted val="1"/>')
+    +'<c:plotArea><c:layout/>'+plot+'</c:plotArea>'
+    +'<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/>'
+    +'</c:chart></c:chartSpace>';
+  const r0=nS+3;
+  const drawing='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    +'<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+    +'<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>'+r0+'</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>'
+    +'<xdr:to><xdr:col>12</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>'+(r0+22)+'</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>'
+    +'<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Chart 1"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>'
+    +'<xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>'
+    +'<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId1"/></a:graphicData></a:graphic>'
+    +'</xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor></xdr:wsDr>';
+  const REL='http://schemas.openxmlformats.org/officeDocument/2006/relationships/';
+  const rels=function(list){ return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    +list.map(function(r){ return '<Relationship Id="'+r[0]+'" Type="'+REL+r[1]+'" Target="'+r[2]+'"/>'; }).join('')+'</Relationships>'; };
+  const z=new JSZip();
+  z.file('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+    +'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+    +'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+    +'<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+    +'<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>'
+    +'<Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>');
+  z.file('_rels/.rels', rels([['rId1','officeDocument','xl/workbook.xml']]));
+  z.file('xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>');
+  z.file('xl/_rels/workbook.xml.rels', rels([['rId1','worksheet','worksheets/sheet1.xml']]));
+  z.file('xl/worksheets/sheet1.xml', sheet);
+  z.file('xl/worksheets/_rels/sheet1.xml.rels', rels([['rId1','drawing','../drawings/drawing1.xml']]));
+  z.file('xl/drawings/drawing1.xml', drawing);
+  z.file('xl/drawings/_rels/drawing1.xml.rels', rels([['rId1','chart','../charts/chart1.xml']]));
+  z.file('xl/charts/chart1.xml', chart);
+  return z.generateAsync({type:'uint8array', compression:'DEFLATE'});
+};
+GST.xlsxCard = async function(id){
+  const T=GST._expT();
+  const ch=GST.chartOf(id); if(!ch){ GST._pptSay(T.nochart); return; }
+  const why=GST.pptNativeOK(ch);
+  if(why){ GST._pptSay(T.img+' ('+why+') — '+T.data+' / '+T.png); return; }
+  const restore=GST._chartLight(ch); let src=null;
+  try{ src=GST.pptSrc(ch); } finally{ try{ restore&&restore(); }catch(e){} }
+  if(!src){ GST._pptSay(T.nochart); return; }
+  const cap=GST.cardTitle(id);
+  let bytes=null;
+  try{ bytes=await GST.xlsxChart(src, cap); }
+  catch(e){ GST._pptSay(T.xlsxFail+' ('+(e&&e.tried||e&&e.message||'?')+')'); return; }
+  const fn=cap.replace(/[\\/:*?"<>|]/g,'').slice(0,40)+'_'+GST.ymdL()+'.xlsx';
+  GST._download(bytes, fn, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  GST._pptSay('⤓ '+fn+' — '+T.hint);
 };
 
 GST.PPT_MAX_PER_SLIDE = 6;
@@ -4627,8 +5748,7 @@ GST.pptAuto = async function(opt){
      통째로 빠진다(실측: 설치현황 14개 중 5개 · 고장분석 32개 중 7개가 그 바깥이다).
      카드 안의 캔버스를 전부 보되, Chart 인스턴스가 없는 것은 아래에서 자연히 걸러진다.
      clientWidth 0 은 접힌 카드라 캡처하면 빈 그림이 된다. */
-  const cvs = [].slice.call(document.querySelectorAll('.card canvas, .mcard canvas'))
-                .filter(function(c){ return c.id && c.clientWidth>0; });
+  const cvs = GST.chartCanvases().filter(function(c){ return c.id && c.clientWidth>0; });   // 카드 선택자는 GST.CARD_SEL 한 벌(v135)
   const items = [], imgOnly = [];
   for(const cv of cvs){
     /* 그림은 «언제나» 만들어 둔다 — 네이티브가 도중에 실패해도 빈 칸이 나가지 않게.
@@ -4637,9 +5757,7 @@ GST.pptAuto = async function(opt){
          죽이지 않게 감싼다(네이티브만으로도 나갈 수 있다). */
     let oc = null;
     try{ oc = GST.chartHiResLight(cv.id); }catch(e){ oc = null; }
-    const card = cv.closest('.card') || cv.closest('.mcard');
-    const h3 = card ? card.querySelector('h3') : null;
-    const cap = (h3 ? (h3.innerText||'').trim() : cv.id) || cv.id;
+    const cap = GST.cardTitle(cv.id);
     const it = {cap:cap, oc:oc, id:cv.id};
     /* 네이티브로 옮겨도 «화면과 같은 그림»인 차트만 옮긴다(GST.pptNativeOK).
        ⚠ 판정을 여기서 새로 짜지 말 것 — 카드별 버튼(GST.pptCard)도 같은 함수를 본다. */
@@ -4693,7 +5811,7 @@ GST.pptAuto = async function(opt){
       if(ins.length){
         const i0=usedCells, c=i0%COLS, r=Math.floor(i0/COLS);
         const x=X+(CW+GAP)*c, y=ROWY[r], span=COLS-c, w=CW*span+GAP*(span-1);
-        s.addText('INSIGHT', {x:x, y:y, w:w, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
+        s.addText(GST.insHead(), {x:x, y:y, w:w, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
                               fontSize:10, bold:true, valign:'middle', align:'center', margin:4,
                               line:{color:'000000', width:0.75}});
         s.addShape(p.ShapeType.rect, {x:x, y:y+BAND, w:w, h:BODY, fill:{color:'FFFFFF'}, line:{color:LINE, width:0.75}});
@@ -4851,7 +5969,7 @@ GST.axOpen = function(id){
   GST._axCss();
   const cv=document.getElementById(id); const ch=cv&&Chart.getChart(cv); if(!ch) return;
   const info=GST._axInfo(ch); if(!info) return;
-  const card=cv.closest('.card,.mcard,.trend-card,.cross-card'); if(!card) return;
+  const card=GST.cardOf(cv); if(!card) return;
   const old=card.querySelector('.gaxpop');
   document.querySelectorAll('.gaxpop').forEach(function(p){ p.remove(); });
   if(old) return;   // 같은 카드에서 다시 누르면 토글 닫기
@@ -4892,8 +6010,8 @@ GST.axOpen = function(id){
 // 스케일 없는 차트(도넛)는 편집이 무의미하므로 붙이지 않는다.
 GST.axBtns = function(){
   if(!window.Chart||!Chart.getChart) return;
-  document.querySelectorAll('.card canvas,.mcard canvas,.trend-card canvas,.cross-card canvas').forEach(function(cv){
-    const id=cv.id, card=cv.closest('.card,.mcard,.trend-card,.cross-card');
+  GST.chartCanvases().forEach(function(cv){
+    const id=cv.id, card=GST.cardOf(cv);
     if(!id||!card) return;
     if(card.querySelector('[data-gax]')||card.querySelector('.capbtn[onclick^="axOpen"]')) return;
     const ch=Chart.getChart(cv); if(!ch||!GST._axInfo(ch)) return;
@@ -5496,7 +6614,7 @@ GST.PIV_T={
 };
 GST._pivot=null;
 GST.PIV_LV=3;                 // 행 축 중첩 단계 수
-GST._PIV_SEP='';
+GST._PIV_SEP='\x01';
 GST.pivotReg=function(spec){
   if(spec && !spec.sets) spec={sets:[Object.assign({k:'d0'},spec)]};
   if(spec && spec.sets) spec.sets=spec.sets.filter(function(s){ return s&&s.rows&&(s.dims||[]).length&&(s.measures||[]).length; });
@@ -5997,7 +7115,9 @@ function gstAutoStart(){
   try{ GST.autoSidebar(); }catch(e){}
   /* 10분 → 30분. 한 번의 새로고침이 시트 8개를 통째로 다시 받는다(주간현황 기준).
      10분이면 한 사람이 하루 8시간 열어두는 것만으로 하루 768MB — 무료 5GB가 일주일에 사라진다.
-     시트는 그렇게 자주 바뀌지 않고, 미러 자체도 30분 주기로 돈다(sheet-sync/DEPLOY.md). */
+     시트는 그렇게 자주 바뀌지 않고, 미러 자체도 30분 주기로 돈다(sheet-sync/DEPLOY.md).
+     ⚠ 위 계산은 «한 페이지» 몫이다. 셸은 여덟 페이지를 iframe 으로 띄우고 한 번 만든 것을 버리지 않으므로,
+        안 보이는 iframe 은 startAutoRefresh 가 건너뛴다(v135 · window.frameElement 의 .active). */
   try{ GST.startAutoRefresh(GST.AR_MIN); }catch(e){}
   try{ gstSnStart(); }catch(e){}
 }

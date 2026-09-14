@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIP 현황 — 개조·점검 진행 관리</title>
+<title>CIP 현황 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/chart.umd.min.js"></script>
+<script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
+<script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=141"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -44,7 +46,6 @@ body.theme-light .pt-btn.active{color:#fff}
 body.theme-light .pt-inp{color-scheme:light;color:#0f172a}
 .pt-cap{font-family:inherit;font-size:10px;color:var(--txt-muted);font-weight:700;margin:0 2px 0 6px;vertical-align:middle}
 
-.slicers{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:10px;margin-bottom:16px}
 .slicer{background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:10px 14px;backdrop-filter:blur(12px);box-shadow:var(--card-shadow)}
 .slicer .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--txt-muted);margin-bottom:7px;font-weight:700}
 .slicer select,.slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;width:100%;color-scheme:dark}
@@ -127,11 +128,10 @@ tr:hover td{background:var(--glass-hover)}
 .hm-wrap tr.tot td{font-weight:800;color:var(--accent-2);background:var(--glass)}
 
 @media print{.capbtns,.header-right,.slicers,.fchips,.rpt-toolbar,.mini-per{display:none!important}.card{break-inside:avoid;page-break-inside:avoid}}
-@media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr}.slicers{grid-template-columns:repeat(2,minmax(180px,1fr))}}
-@media(max-width:820px){.grid3{grid-template-columns:1fr}}
-@media(max-width:768px){.slicers{grid-template-columns:1fr}.card h3{padding-right:0}}
+@media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}}
+@media(max-width:768px){.card h3{padding-right:0}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=141">
 </head>
 <body>
 
@@ -147,10 +147,10 @@ tr:hover td{background:var(--glass-hover)}
     <div class="theme-wrap">
       <button class="theme-btn" onclick="toggleThemeMenu()"><span id="themeLabel">Slate</span> ▾</button>
       <div class="theme-dropdown" id="themeMenu">
-        <div class="theme-item" onclick="changeDashboardTheme('slate','Slate')">🖤 Slate</div>
-        <div class="theme-item" onclick="changeDashboardTheme('default','Cyber Turquoise')">🌌 Cyber Turquoise</div>
-        <div class="theme-item" onclick="changeDashboardTheme('burgundy','Royal Burgundy')">🍷 Royal Burgundy</div>
-        <div class="theme-item" onclick="changeDashboardTheme('light','Aurora Light')">🧊 Aurora Light</div>
+        <div class="theme-item" onclick="changeDashboardTheme('slate','Slate')">Slate</div>
+        <div class="theme-item" onclick="changeDashboardTheme('default','Navy')">Navy</div>
+        <div class="theme-item" onclick="changeDashboardTheme('burgundy','Burgundy')">Burgundy</div>
+        <div class="theme-item" onclick="changeDashboardTheme('light','Light')">Light</div>
       </div>
     </div>
     <div class="lang-wrap">
@@ -176,7 +176,7 @@ tr:hover td{background:var(--glass-hover)}
   <div class="slicer"><div class="lbl" data-i="sl_floor">층·구역</div><select id="sl-floor" onchange="onSlicer()"></select></div>
   <div class="slicer"><div class="lbl" data-i="sl_model">모델</div><select id="sl-model" onchange="onSlicer()"></select></div>
   <div class="slicer" style="grid-column:span 2"><div class="lbl" data-i="sl_item">CIP 항목</div><select id="sl-item" onchange="onSlicer()"></select></div>
-  <div class="slicer" style="grid-column:span 2"><div class="lbl" data-i="sl_search">검색</div><input id="sl-q" placeholder="S/N, Code, 세부공정..." oninput="onSearch()"></div>
+  <div class="slicer" style="grid-column:span 2"><div class="lbl" data-i="sl_search">검색</div><input id="sl-q" data-i-ph="search_ph" placeholder="S/N, Code, 세부공정..." oninput="onSearch()"></div>
 </div>
 
 <div class="fchips" id="fchips" style="display:none">
@@ -250,7 +250,7 @@ tr:hover td{background:var(--glass-hover)}
     <div class="cw"><canvas id="cipProc"></canvas></div>
   </div>
   <div class="tablecard">
-    <h3>🔥 <span data-i="hm_title">공정 × 항목 잔여 히트맵</span> <span class="pt-note" data-i="hm_note">— 잔여 상위 12개 항목 · 셀 클릭 시 필터</span></h3>
+    <h3><span data-i="hm_title">공정 × 항목 잔여 히트맵</span> <span class="pt-note" data-i="hm_note">— 잔여 상위 12개 항목 · 셀 클릭 시 필터</span></h3>
     <div class="hm-wrap"><table id="hmTbl"><tbody><tr><td class="loading">⏳</td></tr></tbody></table></div>
   </div>
 </div>
@@ -329,7 +329,7 @@ tr:hover td{background:var(--glass-hover)}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(132);   // 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(141);   // 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
 const VER='v50';
@@ -374,8 +374,8 @@ ko:{title:'CIP 현황',sub:'스크러버 개조·점검(CIP) 항목별 진행 �
   etc:'기타',unk:'미상',days:'일',
   ins_rate:'진행율 {p}% · 잔여 {n}건',ins_proc:'{g} 공정 잔여 최다 {n}건 ({p}%)',
   ins_item:'항목 {v} — 잔여 {n}건으로 최다',ins_old:'180일 넘게 미착수 {n}건 — 우선 처리 필요',
-  ins_new:'{lab} 신규 완료 {n}건',ins_bad:'날짜 이상 데이터 {n}건 — 시트 확인 필요',
-  no_data:'조건에 맞는 데이터가 없습니다',rd_cip:'S/N|Floor|구분|항목|적용일|완료일',loading:'데이터 불러오는 중...',
+  ins_new:'{lab} 신규 완료 {n}건',ins_bad:'날짜 이상 데이터 {n}건 — 시트 확인 필요',dq_bad_a:'CIP 시트에서 적용일·완료일이 1901년 같은 값인 행을 고치세요',dq_old:'180일 넘게 미착수',dq_old_a:'담당 공정에 일정을 잡으세요 — 항목·설비 탭에서 그 설비를 볼 수 있습니다',
+  no_data:'조건에 맞는 데이터가 없습니다',search_ph:'S/N, Code, 세부공정...',rd_cip:'S/N|Floor|구분|항목|적용일|완료일',rd_cip_sn:'S/N|사이트|Floor|잔여 항목|항목',loading:'데이터 불러오는 중...',
   sec_ov:'개요',sec_proc:'공정',sec_item:'항목·설비',sec_dt:'상세',
   warn_cols:'CIP 항목 열 수가 예상과 다릅니다 ({s}: 예상 {e}개 · 실제 {a}개) — 시트에 열이 추가·삭제되었는지 확인하세요'},
 en:{title:'CIP Status',sub:'Scrubber retrofit/inspection (CIP) progress by item',back:'← Main',refresh:'Refresh',
@@ -403,8 +403,8 @@ en:{title:'CIP Status',sub:'Scrubber retrofit/inspection (CIP) progress by item'
   etc:'Others',unk:'N/A',days:'d',
   ins_rate:'progress {p}% · {n} remaining',ins_proc:'{g} has most remaining: {n} ({p}%)',
   ins_item:'Item {v} — most remaining at {n}',ins_old:'{n} items pending over 180 days — prioritize',
-  ins_new:'{lab}: {n} newly completed',ins_bad:'{n} rows with invalid dates — check the sheet',
-  no_data:'No data found',rd_cip:'S/N|Floor|Group|Item|Applied|Done',loading:'Loading...',
+  ins_new:'{lab}: {n} newly completed',ins_bad:'{n} rows with invalid dates — check the sheet',dq_bad_a:'Fix rows whose applied/done date is something like 1901 in the CIP sheet',dq_old:'Pending over 180 days',dq_old_a:'Schedule them with the owning process — see the Item & Unit tab',
+  no_data:'No data found',search_ph:'S/N, Code, sub-process...',rd_cip:'S/N|Floor|Group|Item|Applied|Done',rd_cip_sn:'S/N|Site|Floor|Remaining|Items',loading:'Loading...',
   sec_ov:'Overview',sec_proc:'Process',sec_item:'Item & Unit',sec_dt:'Detail',
   warn_cols:'CIP item column count differs ({s}: expected {e}, found {a}) — check for added/removed columns'},
 zh:{title:'CIP 现况',sub:'洗涤器改造·点检(CIP)按项目进度管理',back:'← 主页',refresh:'刷新',
@@ -432,8 +432,8 @@ zh:{title:'CIP 现况',sub:'洗涤器改造·点检(CIP)按项目进度管理',b
   etc:'其他',unk:'不明',days:'天',
   ins_rate:'进度 {p}% · 剩余 {n}件',ins_proc:'{g} 工艺剩余最多 {n}件 ({p}%)',
   ins_item:'项目 {v} — 剩余 {n}件最多',ins_old:'超180天未着手 {n}件 — 需优先处理',
-  ins_new:'{lab} 新增完成 {n}件',ins_bad:'日期异常数据 {n}件 — 请确认表格',
-  no_data:'无数据',rd_cip:'S/N|楼层|分组|项目|适用日|完成日',loading:'加载中...',
+  ins_new:'{lab} 新增完成 {n}件',ins_bad:'日期异常数据 {n}件 — 请确认表格',dq_bad_a:'请在 CIP 表中修正适用日·完成日为1901年之类的行',dq_old:'超180天未着手',dq_old_a:'请与负责工艺安排日程 — 可在项目·设备标签页查看该设备',
+  no_data:'无数据',search_ph:'S/N、Code、细分工艺...',rd_cip:'S/N|楼层|分组|项目|适用日|完成日',rd_cip_sn:'S/N|站点|楼层|剩余项目|项目',loading:'加载中...',
   sec_ov:'概览',sec_proc:'工艺',sec_item:'项目·设备',sec_dt:'明细',
   warn_cols:'CIP项目列数与预期不符 ({s}: 预期{e}个 · 实际{a}个) — 请确认是否增删了列'},
 ja:{title:'CIP 状況',sub:'スクラバー改造·点検(CIP)の項目別進捗管理',back:'← メイン',refresh:'更新',
@@ -461,8 +461,8 @@ ja:{title:'CIP 状況',sub:'スクラバー改造·点検(CIP)の項目別進捗
   etc:'その他',unk:'不明',days:'日',
   ins_rate:'進捗 {p}% · 残り {n}件',ins_proc:'{g} 工程の残りが最多 {n}件 ({p}%)',
   ins_item:'項目 {v} — 残り {n}件で最多',ins_old:'180日超の未着手 {n}件 — 優先処理が必要',
-  ins_new:'{lab} 新規完了 {n}件',ins_bad:'日付異常データ {n}件 — シート確認要',
-  no_data:'データなし',rd_cip:'S/N|フロア|区分|項目|適用日|完了日',loading:'読込中...',
+  ins_new:'{lab} 新規完了 {n}件',ins_bad:'日付異常データ {n}件 — シート確認要',dq_bad_a:'CIP シートで適用日·完了日が1901年のような行を修正してください',dq_old:'180日超の未着手',dq_old_a:'担当工程と日程を組んでください — 項目·設備タブでその設備を確認できます',
+  no_data:'データなし',search_ph:'S/N・Code・詳細工程...',rd_cip:'S/N|フロア|区分|項目|適用日|完了日',rd_cip_sn:'S/N|サイト|フロア|残項目|項目',loading:'読込中...',
   sec_ov:'概要',sec_proc:'工程',sec_item:'項目·設備',sec_dt:'詳細',
   warn_cols:'CIP項目の列数が想定と異なります ({s}: 想定{e}個 · 実際{a}個) — 列の追加·削除を確認してください'}
 };
@@ -527,13 +527,8 @@ function renderMiniToggles(){
 // ── 날짜·구간 (주간현황과 동일 규칙: isoW = 엑셀 WEEKNUM 일~토) ──
 const pd=GST.toDate;
 function fmtYM(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}
-function isoW(d){
-  const sun=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));
-  sun.setUTCDate(sun.getUTCDate()-sun.getUTCDay());
-  const jan1=new Date(Date.UTC(sun.getUTCFullYear(),0,1));
-  const w=Math.ceil((((sun-jan1)/MS)+jan1.getUTCDay()+1)/7);
-  return sun.getUTCFullYear()+'-W'+String(w).padStart(2,'0');
-}
+// 주차 규약은 GST.isoW 가 정본이다 — v135 8단계에 위임으로(사본을 두면 한쪽만 고쳐진다).
+function isoW(d){ return GST.isoW(d); }
 function periods(n,anchor,unit){
   const U=unit||PERIOD;
   if(!GST.span12()) return GST._monthSpan(anchor,U,t('mon_u'));   // 상단바 토글 OFF = 마감 월만
@@ -559,7 +554,7 @@ GST.chartDefaults();
 window.changeDashboardTheme=function(themeClass,label){
   document.body.className='';
   if(themeClass!=='default')document.body.classList.add('theme-'+themeClass);
-  const L={slate:'Slate',default:'Cyber Turquoise',burgundy:'Royal Burgundy',light:'Aurora Light'};
+  const L={slate:'Slate',default:'Navy',burgundy:'Burgundy',light:'Light'};
   const lb=document.getElementById('themeLabel'); if(lb)lb.textContent=L[themeClass]||label||themeClass;
   const menu=document.getElementById('themeMenu'); if(menu)menu.classList.remove('open');
   GST.chartDefaults();
@@ -579,10 +574,9 @@ function buildSecNav(){
     {id:'item',label:t('sec_item')},{id:'data',label:t('sec_dt')}]);
 }
 function applyLang(){
-  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.getAttribute('data-i'));});
+  GST.applyI18n(t, LANG);   // data-i·-th·-ph·-title 한 벌(v135) — #sl-q 의 placeholder 도 data-i-ph 로 간다
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
   buildSecNav();
-  const q=document.getElementById('sl-q'); if(q)q.placeholder='S/N, Code, '+t('th_detail')+'...';
 }
 function setLang(l){LANG=l;applyLang();if(CIP.length){fillSlicers();render();}document.getElementById('langMenu').classList.remove('open');}
 
@@ -601,11 +595,7 @@ function lineDs(label,data,color,extra){
     pointBackgroundColor:data.map((_,i)=>i===n-1?color:'#0B0F14'),
     pointBorderColor:color,pointBorderWidth:2,pointHoverRadius:6,fill:false,order:1},extra||{});
 }
-function setNote(canvasId,txt){
-  const c=document.getElementById(canvasId); if(!c)return;
-  const card=c.closest('.card'); if(!card)return;
-  const n=card.querySelector('.card-note'); if(n)n.textContent=txt;
-}
+function setNote(canvasId,txt,sev){ GST.setNote(canvasId,txt,sev); }   // 정본은 core.js GST.setNote (v135 · report 와 같은 사본이었다)
 
 // ── CIP 파싱 ──
 // 0행 = 항목 적용일 · 1행 = 항목명 · 2행~ = 설비 1대. 셀: N/A·N.A 제외 / Not yet = 미완료 / 날짜 = 완료
@@ -740,11 +730,11 @@ async function loadData(){ GST.skeleton(true);
     GST.schemaBanner(issues,'CIP');
     fillSlicers();
     const cached=c11.cached||c16.cached;
-    status.textContent=(cached?'📡 캐시 표시 중 · ':'✅ ')+new Date().toLocaleString()
+    status.textContent=(cached?GST.staleText()+' · ':'✅ ')+new Date().toLocaleString()
       +' · '+t('kp2')+' '+CIP.length.toLocaleString()+' · F11 '+p11.recs.length+' · F16 '+p16.recs.length+' · '+VER;
     status.style.color=cached?'#fbbf24':'';
     render();
-  }catch(e){ status.textContent='❌ '+e.message; console.error(e); }
+  }catch(e){ status.textContent='❌ '+GST.failNote(e); console.error(e); }   // 부류별 한 줄 · 원문은 관리자에게만(v135)
   finally{ GST.skeleton(false); }
 }
 
@@ -792,7 +782,7 @@ function match(x){
 }
 
 // ── 렌더 ──
-function render(){
+function render(){ GST.dq&&GST.dq.reset('cip');
   const TH=GST.chartTheme();
   const _sty=GST.sty();   // 차트 색상 스타일 6종은 core.js(GST.STY) 공통
   const BAR_C=_sty.bar, BAR_LAST=_sty.last, DONE_C=_sty.bar, REM_C=TH.status.warn, LINE_C=_sty.line;
@@ -821,10 +811,8 @@ function render(){
   ['soRem','soRate'].forEach(id=>document.getElementById(id).classList.toggle('active',itemSort===(id==='soRem'?'rem':'rate')));
   document.getElementById('soPair').classList.toggle('active',pairMerge);
   // 기본 필터도 같은 칩 줄에 보여야 한다 — 걸린 조건이 화면에 안 보이면 모집단을 오해한다
-  const _chips=Object.assign({},F);
-  GST.filters.active().forEach(x=>{ _chips['gf_'+x.k]=x.value; });
-  GST.renderChips(_chips,Object.assign({group:t('sl_group'),floor:t('sl_floor'),model:t('sl_model'),item:t('sl_item'),q:t('sl_search')},
-    {gf_region:'구분',gf_op:'운영단위',gf_customer:'고객사',gf_campus:'단지',gf_line:'라인',gf_team:'팀',gf_period:'기간'}),'clearF');
+  // 기본 필터의 칩은 GST.renderChips 가 스스로 붙인다(v135) — 예전에는 여기서 한국어 이름표를 다시 박아 합쳤다
+  GST.renderChips(F,{group:t('sl_group'),floor:t('sl_floor'),model:t('sl_model'),item:t('sl_item'),q:t('sl_search')},'clearF');
 
   const fR=CIP.filter(match);
   // 마감 시점 스냅샷: 대상 = 적용일이 asOf 이전, 완료 = 완료일이 asOf 이전
@@ -866,6 +854,20 @@ function render(){
   put('kf4',t('kf4').replace('{n}',notStarted));
   put('kf5',t('kf5').replace('{lab}',lastP.label).replace('{n}',newPrev.toLocaleString()));
   put('kf6',t('kf6').replace('{t}',allSn.size.toLocaleString()));
+  /* KPI 카드 → 그 카드가 «센 그 배열» (v135 · 6단계). 새 식은 한 줄도 없다 — 차트 드릴이 쓰는 rdet 그대로.
+     kpiDrill 은 «열 때» spec 을 부르므로 이 render 의 지역 배열을 닫아 두면 필터를 바꾼 뒤에도 최신 숫자가 열린다. */
+  const _kpRem=snap.filter(x=>!isDone(x));
+  GST.kpiDrill && GST.kpiDrill({
+    kp1:()=>Object.assign(rdet(snap,t('kp1')+' '+rate+'%'),{note:t('kf1').replace('{d}',nD.toLocaleString()).replace('{t}',nT.toLocaleString())}),
+    kp2:()=>rdet(snap,t('kp2')+' '+nT.toLocaleString()),
+    kp3:()=>rdet(snap.filter(isDone),t('kp3')+' '+nD.toLocaleString()),
+    kp4:()=>rdet(_kpRem,t('kp4')+' '+nR.toLocaleString()),
+    kp5:()=>rdet(fR.filter(x=>inP(x,lastP)),t('kp5')+' · '+lastP.label+' · '+newLast.toLocaleString()),
+    kp6:()=>{ /* 값은 «설비 수»다 — 한 설비에 잔여 항목이 여럿이라 행을 그대로 내면 카드와 줄 수가 갈린다. 설비마다 한 줄 */
+      const by={}; _kpRem.forEach(x=>{ const k=x.site+'|'+x.sn; (by[k]=by[k]||{site:x.site,sn:x.sn,floor:x.floor,n:0,items:[]}).n++; by[k].items.push(x.item); });
+      const rows=Object.values(by).sort((a,b)=>b.n-a.n).map(o=>[o.sn,o.site,o.floor,o.n,o.items.slice(0,3).join(' · ')+(o.items.length>3?' …':'')]);
+      return {title:t('kp6')+' '+remSn.size.toLocaleString(),cols:t('rd_cip_sn').split('|'),rows,note:t('kf6').replace('{t}',allSn.size.toLocaleString())}; }
+  });
 
   // ── 추이 (누계) ──
   {
@@ -1160,9 +1162,15 @@ function render(){
   // ── 인사이트 (경고를 앞에 — 4개만 표시된다) ──
   const ins=[];
   if(BADN>0)ins.push({sev:'warn',text:t('ins_bad').replace('{n}','<b>'+BADN+'</b>')});
+  if(GST.dq&&BADN>0) GST.dq.push({key:'cip_baddate', sev:'warn',
+    label:t('ins_bad').replace('{n}',BADN.toLocaleString()), n:BADN, act:t('dq_bad_a')});
   {
     const oldN=snap.filter(x=>!isDone(x)&&x.ap&&(asOf-x.ap)/MS>180).length;
     if(oldN>0)ins.push({sev:'bad',text:t('ins_old').replace('{n}','<b>'+oldN.toLocaleString()+'</b>')});
+    /* «미착수 180일 초과» 는 자료 결함은 아니지만 사람이 조치해야 하는 것이라 같은 카드에 담는다 —
+       품질 카드는 «무엇을 하면 되는지»를 모으는 자리다. */
+    if(GST.dq&&oldN>0) GST.dq.push({key:'cip_old', sev:'bad', label:t('dq_old'),
+      n:oldN, of:nR, act:t('dq_old_a')});
   }
   ins.push({sev:rate>=80?'ok':rate>=50?'info':'warn',
     text:t('ins_rate').replace('{p}','<b>'+rate+'</b>').replace('{n}','<b>'+nR.toLocaleString()+'</b>')});
@@ -1180,6 +1188,7 @@ function render(){
   }
   if(newLast>0)ins.push({sev:'ok',text:t('ins_new').replace('{lab}','<b>'+lastP.label+'</b>').replace('{n}','<b>'+newLast+'</b>')});
   GST.insights(CIP.length?ins:[]);
+  GST.dq&&GST.dq.render(GST.filtSummary?GST.filtSummary():'');
 
   // 🔔 자동 브리핑 — 추이 차트가 쓰는 시계열을 그대로 넘긴다
   try{
@@ -1261,25 +1270,18 @@ function renderDetTable(){
     +'<td title="'+esc(x.item)+'">'+esc(x.item.length>34?x.item.slice(0,33)+'…':x.item)+'</td>'
     +'<td>'+(x.ap?GST.fmtDate(x.ap):'—')+'</td>'
     +'<td class="num"'+(x.age>180?' style="color:var(--bad);font-weight:800"':'')+'>'+(x.age>=0?x.age.toLocaleString():'—')+'</td></tr>'
-  ).join(''):'<tr><td colspan="9" class="empty">'+t('no_data')+'</td></tr>';
+  ).join(''):'<tr><td colspan="9" class="empty">'+GST.emptyHTML(CIP.length)+'</td></tr>';   // «필터 때문»이면 해제까지(v135)
 }
 
 // ── 차트 복사·저장·축설정 ──
-function capToast(msg){let el=document.getElementById('capToast');if(!el){el=document.createElement('div');el.id='capToast';document.body.appendChild(el);}el.textContent=msg;el.style.opacity='1';clearTimeout(el._h);el._h=setTimeout(()=>el.style.opacity='0',1600);}
-function chartHiRes(id,scale){const ch=CHARTS[id];if(!ch||!ch.canvas)return null;const cv=ch.canvas,w=cv.clientWidth||400,h=cv.clientHeight||300;if(!scale)scale=Math.min(6,Math.max(3,Math.round(2400/w)));const prev=ch.options.devicePixelRatio;ch.options.devicePixelRatio=scale;ch.resize();ch.render();const oc=document.createElement('canvas');oc.width=Math.round(w*scale);oc.height=Math.round(h*scale);const g=oc.getContext('2d');g.fillStyle=getComputedStyle(document.body).backgroundColor||'#0B0F14';g.fillRect(0,0,oc.width,oc.height);g.drawImage(cv,0,0,oc.width,oc.height);ch.options.devicePixelRatio=prev;ch.resize();ch.render();return oc;}
-window.copyChart=async function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}try{await new Promise((res,rej)=>oc.toBlob(async b=>{if(!b)return rej();try{await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);res();}catch(e){rej(e);}},'image/png'));capToast('📋 차트 복사됨 — PPT에 붙여넣기(Ctrl+V)');}catch(e){capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요');}};
-window.saveChart=function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}oc.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ '+id+'.png 저장됨');},'image/png');};
+/* 토스트·고배율 캡처는 core 가 정본이다 (v135 · 8단계). 여덟 페이지가 바이트까지 같은
+   사본을 들고 있었고, copyChart·saveChart·saveAllCharts 는 v135 3단계에 「내보내기 ▾」가
+   들어오면서 «정의만 되고 아무도 안 부르는» 코드가 됐다(호출부 0건 · grep 으로 확인). */
+function capToast(msg){ return GST.capToast(msg); }
+function chartHiRes(id,scale){ return GST.chartHiRes(id,scale); }
 function addCapBtns(){
-  document.querySelectorAll('.cw canvas').forEach(cv=>{
-    const id=cv.id,card=cv.closest('.card');
-    if(!id||!card||card.querySelector('.capbtns'))return;
-    const box=document.createElement('div'); box.className='capbtns';
-    box.innerHTML=GST.pptCardBtn(id)+'<button class="capbtn" title="그림으로 복사(고해상도 PNG)" onclick="copyChart(\''+id+'\')">📋 그림</button>'
-                 +'<button class="capbtn" title="PNG 저장" onclick="saveChart(\''+id+'\')">⤓</button>'
-                 +'<button class="capbtn" title="축 범위 설정 (min/max)" onclick="axOpen(\''+id+'\')">⚙</button>';
-    card.appendChild(box);
-    const mp=card.querySelector('.mini-per'); if(mp)box.style.right=(mp.offsetWidth+24)+'px';
-  });
+  /* 카드 버튼 한 벌은 core(v135). ⚙ 축 편집은 이 페이지 고유라 뒤에 붙인다. */
+  GST.capBtns({extra:id=>'<button class="capbtn" title="축 범위 설정 (min/max)" onclick="axOpen(\''+id+'\')">⚙</button>'});
 }
 // 차트별 축 범위(min/max) 편집 — 표시 전용, render 후 applyAXB가 주입
 window.axOpen=function(id){

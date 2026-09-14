@@ -33,6 +33,12 @@ console.log('[1] 자체 호스팅 — 사내망이 CDN 을 막아도 도는 길�
   const cdn = (C.match(/pptxgenjs@([\d.]+)/) || [])[1];
   is(ver && ver === cdn, `자체 사본(${ver}) 과 CDN 폴백(${cdn}) 버전이 같다`);
   is(/GST\._loadScript\(\[GST\.PPT_VENDOR, GST\.PPT_CDN\]/.test(C), '자체 사본을 «먼저» 본다 (CDN 은 폴백)');
+  /* v135 — /upload/ 의 xlsx 리더도 같은 규율. 버전이 폴백과 어긋나면 «어떤 사람은 되고 어떤 사람은 안 되는» 상태 */
+  is(fs.existsSync(ROOT + '/assets/vendor/xlsx.full.min.js'), 'assets/vendor/xlsx.full.min.js 가 저장소에 있다');
+  const xv = (fs.readFileSync(ROOT + '/assets/vendor/xlsx.full.min.js', 'utf8').match(/\.version="([\d.]+)"/) || [])[1];
+  const xc = (C.match(/npm\/xlsx@([\d.]+)/) || [])[1];
+  is(xv && xv === xc, `xlsx 자체 사본(${xv}) 과 CDN 폴백(${xc}) 버전이 같다`);
+  is(/GST\._loadScript\(\[GST\.XLSX_VENDOR, GST\.XLSX_CDN\]/.test(fs.readFileSync(ROOT + '/upload/index.html', 'utf8')), '/upload/ 가 공용 로더로 xlsx 를 받는다 (자체 사본 먼저)');
   /* v105 규율 — CDN 이 «거부»가 아니라 «묵살»하면 onerror 가 안 온다. 시간 제한이 그 답이다. */
   is(/setTimeout\(function\(\)\{ fin\(false, new Error\('TIMEOUT'\)\); \}, ms\|\|GST\.PPT_CDN_MS\)/.test(C),
      '모든 후보에 시간 제한이 걸린다 (묵살하는 프록시에서 영영 멈추지 않는다)');
@@ -40,6 +46,52 @@ console.log('[1] 자체 호스팅 — 사내망이 CDN 을 막아도 도는 길�
   is(!/jszip@3\.10\.1\/dist\/jszip\.min\.js';s\.onload=res/.test(R),
      'report 의 «시간 제한 없던» JSZip 로더가 사라졌다');
   is(/GST\.zipLoad\(\)/.test(R), 'report 가 공용 GST.zipLoad 를 쓴다 (로더가 한 벌이다)');
+  /* v135 — supabase-js 도 같은 규율. 인증과 모든 읽기의 «현관문»인데 CDN `@2` 로 열려 있어 버전이
+     어느 날 바뀌는 유일한 의존성이었고, 로더에 시간 제한이 없어 사내망이 묵살하면 검은 화면이 영영 남았다. */
+  is(fs.existsSync(ROOT + '/assets/vendor/supabase.min.js'), 'assets/vendor/supabase.min.js 가 저장소에 있다');
+  const sv = (fs.readFileSync(ROOT + '/assets/vendor/supabase.min.js', 'utf8').match(/supabase-js\/([\d.]+)/) || [])[1];
+  const sc = (C.match(/@supabase\/supabase-js@([\d.]+)\//) || [])[1];
+  const sk = (C.match(/GST\.SB_VER\s*=\s*'([\d.]+)'/) || [])[1];
+  is(sv && sv === sc && sv === sk, `supabase-js 자체 사본(${sv}) · CDN 폴백(${sc}) · GST.SB_VER(${sk}) 이 같다`);
+  is(/GST\._loadScript\(\[GST\.SB_VENDOR, GST\.SB_CDN\], function\(\)\{ return !!global\.supabase; \}, 15000\)/.test(C),
+     'GST.sb 가 공용 로더(자체 사본 먼저 · 15초)로 supabase-js 를 받는다');
+  is(!/supabase-js@2\/dist/.test(C), "core 에 열린 버전(@2)의 CDN 주소가 없다");
+  is(/catch\(e\)\{ return GST\._sbFail; \}/.test(C) && (C.match(/return GST\._sbFail;/g)||[]).length >= 3,
+     '로그인 세 함수가 로더 실패를 받아 문구로 돌려준다 (버튼이 「전송 중…」에 굳지 않는다)');
+  /* v135 8단계 — chart.js·papaparse·zoom 도 자체 사본 먼저. 이 셋은 «화면의 모든 차트»를
+     떠받치는데 여덟 페이지가 차단형 CDN 스크립트로만 받고 있었다.
+     ⚠ 여기는 비동기 로더가 아니라 document.write 폴백이다 — <head> 차단형이라 순서를
+       바꾸면 여덟 페이지의 초기화가 통째로 재배열된다. 검사도 그 모양을 그대로 본다. */
+  const HEADLIBS = [
+    ['chart.umd.min.js', 'Chart',     /chart\.js@([\d.]+)\/dist\/chart\.umd\.min\.js/],
+    ['papaparse.min.js', 'Papa',      /papaparse@([\d.]+)\/papaparse\.min\.js/],
+    ['chartjs-plugin-zoom.min.js', 'ChartZoom', /chartjs-plugin-zoom@([\d.]+)\//]
+  ];
+  const PAGES8 = ['report','fault','material','pm','scrubber','tco','cip','hr'];
+  HEADLIBS.forEach(function(L){
+    is(fs.existsSync(ROOT + '/assets/vendor/' + L[0]), 'assets/vendor/' + L[0] + ' 가 저장소에 있다');
+  });
+  PAGES8.forEach(function(pg){
+    const src = fs.readFileSync(ROOT + '/' + pg + '/index.html', 'utf8');
+    HEADLIBS.forEach(function(L){
+      const cdnM = src.match(L[2]); if(!cdnM) return;            // 그 페이지가 안 쓰는 라이브러리
+      const vend = src.indexOf('assets/vendor/' + L[0]);
+      const cdn  = src.indexOf(cdnM[0]);
+      is(vend >= 0 && vend < cdn, pg + ': ' + L[0] + ' 는 자체 사본을 «먼저» 본다 (CDN 은 폴백)');
+      is(new RegExp('window\\.' + L[1] + '\\|\\|document\\.write').test(src),
+         pg + ': ' + L[0] + ' 폴백이 파싱 중 document.write 다 (순서가 유지된다)');
+    });
+  });
+  /* ⚠ 자체 사본과 CDN 폴백의 «버전»이 어긋나면 어떤 사람은 되고 어떤 사람은 안 된다. */
+  const rep = fs.readFileSync(ROOT + '/report/index.html', 'utf8');
+  const chartCdn = (rep.match(/chart\.js@([\d.]+)/) || [])[1];
+  const chartVer = (fs.readFileSync(ROOT + '/assets/vendor/chart.umd.min.js', 'utf8').match(/VERSION\s*=\s*["']([\d.]+)["']/) || [])[1]
+                 || (fs.readFileSync(ROOT + '/assets/vendor/chart.umd.min.js', 'utf8').match(/Chart\.js v([\d.]+)/) || [])[1];
+  is(chartVer && chartVer === chartCdn, `chart.js 자체 사본(${chartVer}) 과 CDN 폴백(${chartCdn}) 버전이 같다`);
+  const papaCdn = (rep.match(/papaparse@([\d.]+)/) || [])[1];
+  const papaVer = (fs.readFileSync(ROOT + '/assets/vendor/papaparse.min.js', 'utf8').match(/Papa\.RECORD_SEP|papaparse v?([\d.]+)/) || [])[1];
+  is(papaCdn === '5.4.1', `papaparse CDN 폴백이 x.y.z 로 핀돼 있다 (${papaCdn})`);
+  void papaVer;
 }
 
 console.log('\n[2] 죽어 있던 네이티브 차트 코드가 살아났는가');
@@ -57,8 +109,8 @@ console.log('\n[2] 죽어 있던 네이티브 차트 코드가 살아났는가')
      'pptAuto 가 네이티브를 먼저 넣는다 (그림은 폴백)');
   /* 여덟 페이지가 «같은» 버튼을 쓴다 — 한 곳이 빠지면 그 화면만 버튼이 없다. */
   ['report','fault','material','pm','scrubber','tco','cip','hr'].forEach(f =>
-    is(/GST\.pptCardBtn\(id\)/.test(fs.readFileSync(ROOT + '/' + f + '/index.html', 'utf8')),
-       `${f} — 카드 PPT 버튼이 공용 한 벌이다`));
+    is(/GST\.capBtns\(/.test(fs.readFileSync(ROOT + '/' + f + '/index.html', 'utf8')),
+       `${f} — 카드 버튼이 공용 한 벌(GST.capBtns)이다`));
 }
 
 console.log('\n[3] Chart.js 옵션 프록시에 «읽은 것을 도로 써 넣지» 않는가 (실사고)');

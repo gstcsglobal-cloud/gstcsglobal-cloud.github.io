@@ -3,11 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=141"></script>
 <title>CS Global Team</title>
 <style>
+/* 업로드 버튼은 editor(can_write)·admin 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB */
+body:not([data-role="admin"]):not([data-role="legacy"]):not([data-role="editor"]) #uploadBtn{display:none}
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
   --bg1:#14142f;--bg2:#1e1d4d;--line:#3b3a6b;--txt:#e2e8f0;--mut:#94a3b8;
@@ -132,6 +135,7 @@ select.gb-inp{width:104px}
   border:none;background:transparent;border-bottom:3px solid transparent;transition:color .2s,border-color .25s cubic-bezier(.4,0,.2,1);white-space:nowrap;position:relative;top:2px}
 .tab:hover{color:var(--txt)}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab.err::after{content:' ⚠';font-size:11px}   /* 그 화면에서 잡히지 않은 예외가 났다(v135) */
 .tab .ic{margin-right:7px;display:inline-flex;vertical-align:-2px}
 
 /* iframe 영역 */
@@ -222,7 +226,7 @@ body.kiosk-full .kiosk-panel{display:none}
     <button class="tb-btn" onclick="openUpload()" id="uploadBtn" title="데이터 업로드 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg> <span id="uploadLabel">업로드</span></button>
     <button class="tb-btn" onclick="kioskBtn()" id="kioskBtn" title="자동순회 — 단지별로 화면이 바뀌며 돌아갑니다"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 8 4 2.5-4 2.5z" fill="currentColor"/></svg> <span id="kioskLabel">자동순회</span></button>
     <button class="tb-btn" onclick="shareLink()" id="shareBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> <span id="shareLabel">공유</span></button>
-    <button class="tb-btn" onclick="cycleTheme()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9c0-.5-.4-1-1-1h-2a3 3 0 0 1-3-3V6c0-.6-.4-1-1-1z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="6.5" r="1"/><circle cx="15" cy="15.5" r="1"/></svg> <span id="themeLabel">Dark</span></button>
+    <button class="tb-btn" onclick="cycleTheme()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9c0-.5-.4-1-1-1h-2a3 3 0 0 1-3-3V6c0-.6-.4-1-1-1z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="6.5" r="1"/><circle cx="15" cy="15.5" r="1"/></svg> <span id="themeLabel">Slate</span></button>
     <button class="tb-btn" onclick="cycleLang()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> <span id="langLabel">KO</span></button>
     <button class="tb-btn logout" onclick="doLogout()" id="logoutBtn">로그아웃</button>
   </div>
@@ -646,6 +650,13 @@ window.addEventListener('message',e=>{
     if(id===activeTab) renderGBar();
     return;
   }
+  // 페이지 안에서 잡히지 않은 예외 — iframe 안이라 셸 콘솔에도 안 뜬다. 그 탭에 표식만 남긴다(v135)
+  if(d.type==='gst-error'){
+    const id=frameIdOf(e.source); if(!id)return;
+    const b=document.querySelector('.tab[data-id="'+id+'"]');
+    if(b){ b.classList.add('err'); b.title='이 화면에서 오류가 났습니다: '+String(d.msg||'').slice(0,160); }
+    return;
+  }
   // 차트 디자인은 전 페이지 공통 — 이미 열려 있는 다른 탭에도 전파
   if(d.type==='gst-style' && d.style){
     Object.values(frames).forEach(f=>{ try{f.contentWindow.postMessage({type:'gst-style',style:d.style},'*');}catch(err){} });
@@ -723,11 +734,21 @@ function askFacts(ms){
   return new Promise(res=>setTimeout(()=>{ delete ASK.pend[id]; res(got); },ms||400));
 }
 // 안 연 탭은 데이터가 없다 — 백그라운드로 모두 띄워 전 탭을 답변 범위에 넣는다
+/* ⚠ 여덟을 «한꺼번에» 띄우면 수선실적 25만 행을 네 페이지가 동시에 받는다 — 아직
+   아무도 IndexedDB 에 안 썼으므로 캐시가 원리적으로 못 막는다. 코드가 정한 동시 6 이
+   탭 수만큼 곱해져 24~48 이 되고, 그것이 v128 에서 인스턴스를 죽인 방향이다.
+   → 둘씩 끊어 띄운다. 문구가 이미 「10~20초 뒤」라 사람이 느끼는 차이는 없다.
+   ⚠ frames[t.id] 는 «만들 때» 채운다 — 나중에 채우면 그 사이에 사람이 탭을 눌러
+     같은 페이지가 두 번 만들어진다. */
+const ASK_BATCH=2, ASK_GAP=2500;
 function askLoadAll(){
   const miss=TABS.filter(t=>!frames[t.id]);
   if(!miss.length)return false;
-  miss.forEach(t=>{ const f=document.createElement('iframe'); f.src=BASE+t.path; f.dataset.id=t.id;
-    document.getElementById('frameWrap').appendChild(f); frames[t.id]=f; });
+  const mk=t=>{ const f=document.createElement('iframe'); f.src=BASE+t.path; f.dataset.id=t.id;
+    document.getElementById('frameWrap').appendChild(f); frames[t.id]=f; };
+  const step=i=>{ if(i>=miss.length)return; miss.slice(i,i+ASK_BATCH).forEach(mk);
+    if(i+ASK_BATCH<miss.length) setTimeout(()=>step(i+ASK_BATCH), ASK_GAP); };
+  step(0);
   askSay('a','다른 탭 '+miss.length+'개를 백그라운드로 불러오는 중입니다. 10~20초 뒤 다시 물어보시면 전 탭에서 찾아 답합니다.');
   return true;
 }
@@ -830,13 +851,14 @@ function switchTab(id){
     const f=document.createElement('iframe');
     f.src=BASE+tab.path+((PENDING_STATE&&PENDING_STATE.tab===id&&PENDING_STATE.f)?('?f='+PENDING_STATE.f):'');
     f.dataset.id=id;
-    f.addEventListener('load',()=>{try{f.contentWindow.postMessage({type:'gst-theme',theme:THEME},'*');f.contentWindow.postMessage({type:'gst-lang',lang:LANG},'*');}catch(e){}});
+    f.addEventListener('load',()=>{try{f.contentWindow.postMessage({type:'gst-theme',theme:THEME},'*');f.contentWindow.postMessage({type:'gst-lang',lang:LANG},'*');}catch(e){ console.warn('[shell] iframe 초기 전파 실패', id, e); }});
     document.getElementById('frameWrap').appendChild(f);
     frames[id]=f;
   }
   // 표시 전환
   Object.values(frames).forEach(f=>f.classList.remove('active'));
   frames[id].classList.add('active');
+  try{ frames[id].contentWindow.postMessage({type:'gst-shown'},'*'); }catch(e){}   // 건너뛴 자동 새로고침을 이제 하라는 신호 — 안 보이는 iframe 은 30분 갱신을 쉰다(v135)
   document.getElementById('frameLoading').style.display='none';
   renderGBar();
   // 현재 탭 기억
@@ -848,6 +870,7 @@ function switchTab(id){
 function doLogout(){ GST.signOut(); }
 
 function start(){
+  GST.needVer && GST.needVer(136);   // 옛 core.js 캐시를 «숫자가 전부 0» 이 아니라 배너로(v135 — 셸도 선언한다)
   buildTabs();
   GST.barBind(document.getElementById('gbar'), barSend);
   applyLang();

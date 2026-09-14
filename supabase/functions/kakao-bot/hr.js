@@ -4,7 +4,7 @@
 
 export const MS = 86400000;
 
-// report/index.html:595 — 엑셀 WEEKNUM(일~토, 1/1 포함 주=W1)과 동일. 시트 주차 라벨과 일치해야 한다.
+// 정본: assets/core.js 의 GST.isoW — 엑셀 WEEKNUM(일~토, 1/1 포함 주=W1). 시트 주차 라벨과 일치해야 한다.
 export function isoW(d) {
   const sun = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
   sun.setUTCDate(sun.getUTCDate() - sun.getUTCDay());
@@ -13,7 +13,7 @@ export function isoW(d) {
   return sun.getUTCFullYear() + '-W' + String(w).padStart(2, '0');
 }
 
-// report/index.html:586 — '2022. 8. 1' / '2025-07-10' 등 시트에 섞여 쓰이는 날짜 표기를 흡수.
+// 정본: assets/core.js 의 GST.toDate — '2022. 8. 1' / '2025-07-10' 등 시트에 섞여 쓰이는 날짜 표기를 흡수.
 export function pd(s) {
   if (!s) return null;
   if (s instanceof Date) return s;
@@ -35,7 +35,7 @@ export function dateCell(v) {
   return pd(s);
 }
 
-// report/index.html:896 — 퇴사일=마지막 근무일 → 그 달 포함, 다음달 제외
+// 정본: report 의 재직 판정(isActive) — 퇴사일=마지막 근무일 → 그 달 포함, 다음달 제외
 export function activeAt(p, asOf) {
   return !!(p.join && p.join <= asOf && (!p.quit || p.quit >= asOf));
 }
@@ -47,7 +47,9 @@ export function normKey(s) {
 
 /* ============================================================
    사이트/고객사 표기 정규화
-   대시보드(report/index.html:356~401, assets/core.js:1005~1012)와 **완전히 동일**해야 한다.
+   대시보드의 `GST.ORG`(assets/core.js 의 `site`·`fab`·`customer`·`custRaw`)와
+   **완전히 동일**해야 한다. ⚠ 줄 번호로 적지 않는다 — 이 파일이 존재하는 이유가 그 참조인데
+   줄 번호는 한 번의 편집으로 어긋나고, 실제로 여섯 군데가 전부 틀려 있었다(v135 · 8단계).
    여기가 어긋나면 "F16" 같은 필터가 조용히 0건을 반환한다(실제로 그런 사고가 있었다).
    ============================================================ */
 export function nfw(s) {                      // 전각 ASCII → 반각 (ＰＳＭＣ와 PSMC를 같은 키로)
@@ -115,7 +117,7 @@ export function siteKey(sv) {
   if (up.includes('TASC') || up.includes('ASIA SEMI')) return 'TASC';
   return normCust(up);
 }
-// report/index.html:1031 — 대시보드가 실제로 쓰는 사이트 키. 값 예: F16 · F11 · F16N · PSMC
+// 정본: assets/core.js 의 GST.ORG.site — 대시보드가 실제로 쓰는 사이트 키. 값 예: F16 · F11 · F16N · PSMC
 export function grpKey(x) { return x.fab || x.custB || 'ETC'; }
 // 대시보드 SITES(report:1029)에 F16S·F10을 더한 것 — 봇이 생성해도 되는 사이트 어휘의 전부
 export const SITE_KEYS = ['F16', 'F11', 'F16N', 'F16S', 'F10', 'PSMC', 'TASC', 'WINBOND'];
@@ -382,16 +384,53 @@ export function tally(people, eduIndex, dateKey, statusKey, asOf) {
   return r;
 }
 
-// LV1(Basic, 재직 6개월 미만) / LV2(Veteran, 6개월 이상) — report:1117~1118과 동일 임계값.
+/* 교육 대상 — 국내와 해외가 «다른 규칙»이다 (제3원칙). 대시보드 report 의 eduTgt 와 한 벌.
+
+     해외 (Basic·Veteran) — 지금까지대로: 6개월 미만 → LV1 · 이상 → LV2. 안 겹친다.
+     국내 (Scrubber Lv.2·Lv.3 · 2026-09 CS관리팀 회신 · 사용자 확정)
+         LV1 = Lv.2 대상 = Scrubber 담당 CS인력 «전원» (근속 무관)
+         LV2 = Lv.3 대상 = «Lv.2 를 이수한» 인력      → 국내는 두 집단이 «겹친다»
+
+   ⚠ 예전에는 여기서 'bdate'/'vdate' 를 박고 6개월만 봤다. 국내 인원에게는 그 완료일이
+     아예 없어 **봇이 국내 교육을 늘 0 으로 답했다** — 대시보드는 v96 에 고쳤는데 이
+     사본만 안 따라온 자리다(제2원칙 그대로). 판정은 eduKeyOf·eduTargets 만 지난다. */
+export const eduKeyOf = (p, lv) =>
+  (p && p.region === '국내') ? (lv === 1 ? 'lv2date' : 'lv3date') : (lv === 1 ? 'bdate' : 'vdate');
+export const eduStatKeyOf = (p, lv) =>
+  (p && p.region === '국내') ? (lv === 1 ? 'lv2' : 'lv3') : (lv === 1 ? 'basic' : 'vet');
+export function eduTargets(list, eduIndex, asOf) {
+  const six = (p) => ((asOf - p.join) / MS) >= 182;
+  const done = (p, lv) => {
+    const e = eduIndex.of(p), k = eduKeyOf(p, lv);
+    return !!(e && e[k] && e[k] <= asOf);
+  };
+  const kr = (p) => p && p.region === '국내';
+  return {
+    lv1: (list || []).filter((p) => (kr(p) ? true : !six(p))),
+    lv2: (list || []).filter((p) => (kr(p) ? done(p, 1) : six(p))),
+  };
+}
 // 사이트 비교는 반드시 grpKey 기준(report:1116) — 원문 Work Place로 비교하면 영원히 0건.
 export function eduPlan(roster, eduIndex, asOf, opts = {}) {
   const site = opts.site || '';
   const base = roster.filter((p) => p.onsite && activeAt(p, asOf) && p.join && (!site || grpKey(p) === site));
-  const sixP = (p) => ((asOf - p.join) / MS) >= 182;
+  const T = eduTargets(base, eduIndex, asOf);
+  /* 사람마다 과정이 다르므로 tally 에 «한 벌의 키»를 넘길 수 없다 — 사람별로 고른다. */
   return {
-    b: tally(base.filter((p) => !sixP(p)), eduIndex, 'bdate', 'basic', asOf),
-    v: tally(base.filter(sixP), eduIndex, 'vdate', 'vet', asOf),
+    b: tallyLv(T.lv1, eduIndex, 1, asOf),
+    v: tallyLv(T.lv2, eduIndex, 2, asOf),
   };
+}
+// tally 와 같은 모양을 내되, 날짜·상태 키를 «사람마다» 고른다(국내/해외가 다르다).
+export function tallyLv(people, eduIndex, lv, asOf) {
+  const r = { t: people.length, done: 0, ing: 0, no: 0, noList: [] };
+  people.forEach((p) => {
+    const c = clsP(p, eduIndex, eduKeyOf(p, lv), eduStatKeyOf(p, lv), asOf);
+    if (c.c === 'done') r.done++;
+    else if (c.c === 'ing') r.ing++;
+    else { r.no++; r.noList.push(p.name + '(' + (c.why || '') + ')'); }
+  });
+  return r;
 }
 
 /* ---------- 설치현황 (gid 891608329) ---------- */
@@ -498,7 +537,7 @@ export function findEquip(installRows, query) {
   return installRows.filter((r) => snMatch(r.sn, query) || snMatch(r.code, query));
 }
 
-/* ---------- 실적현황 (gid 646668307) — fault/index.html:430~433 컬럼맵 ---------- */
+/* ---------- 실적현황 (gid 646668307) — 컬럼맵 정본은 assets/core.js 의 GST.SM.SPEC.wk ---------- */
 /* 예전에는 헤더를 찾아놓고도(hIdx) 열은 고정 번호로 읽었다. 시트가 밀려도 NO_HEADER 없이
    통과한 뒤 엉뚱한 열을 읽는 가장 위험한 조합이었다 — 이제 찾은 헤더에서 이름으로 해석한다.
    수선실적은 헤더 67개·정규화 후 중복 0이라 평면 매칭으로 충분하다(실측 확인).
@@ -780,13 +819,16 @@ export function filterLeave(rows, f = {}) {
 // 교육 상태로 사람을 거르기 — LV 미지정 시 재직 6개월 기준으로 각자 해당 레벨을 판정
 export function filterPeopleByEdu(people, eduIndex, asOf, level, status) {
   const sixP = (p) => ((asOf - p.join) / MS) >= 182;
+  const T = eduTargets(people, eduIndex, asOf);   // 판정은 eduTargets 한 곳 (제2원칙)
   let list = people;
-  if (level === 'LV1') list = list.filter((p) => !sixP(p));
-  else if (level === 'LV2') list = list.filter(sixP);
+  if (level === 'LV1') list = T.lv1;
+  else if (level === 'LV2') list = T.lv2;
   if (!has(status)) return list;
   return list.filter((p) => {
-    const useVet = level === 'LV2' || (!has(level) && sixP(p));
-    const c = clsP(p, eduIndex, useVet ? 'vdate' : 'bdate', useVet ? 'vet' : 'basic', asOf);
+    // 국내는 근속이 아니라 «Lv.2 이수 여부»로 단계가 갈린다 → eduTargets 가 답을 갖고 있다
+    const useVet = level === 'LV2'
+      || (!has(level) && (p.region === '국내' ? T.lv2.indexOf(p) >= 0 : sixP(p)));
+    const c = clsP(p, eduIndex, eduKeyOf(p, useVet ? 2 : 1), eduStatKeyOf(p, useVet ? 2 : 1), asOf);
     if (status === '미이수') return c.c === 'no';
     if (status === '진행중') return c.c === 'ing';
     if (status === '이수완료') return c.c === 'done';

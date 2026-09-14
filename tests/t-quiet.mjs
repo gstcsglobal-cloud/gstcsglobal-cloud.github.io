@@ -111,10 +111,72 @@ console.log('\n[1] 로컬 날짜 표기 — KST 에서 하루가 밀리지 않�
 }
 
 /* ══════════════════════════════════════════════════════════════
+   [1b] GST.toDate — 옛 pd() 의 표기 전부를 UTC 자정으로 읽는다 (v135 · report·hr 사본을 지운 근거)
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[1b] GST.toDate 가 옛 pd() 표기를 전부 같은 날짜로 읽는지');
+{
+  const G = loadCore();
+  is(!!(G && typeof G.toDate === 'function'), 'core — GST.toDate 가 있다');
+  /* 옛 report/hr 의 pd() 규칙을 그대로 옮겨 «기준»으로 삼는다 — 검사가 검사 대상을 기준으로 삼으면
+     언제나 초록불이다(t-upload 이 겪은 그 자리). */
+  const oldPd = s => { if(!s) return null; if(s instanceof Date) return isNaN(s)?null:s;
+    s = String(s).trim(); if(!s) return null;
+    const n = Number(s); if(!isNaN(n) && n>20000 && n<80000) return new Date(Date.UTC(1899,11,30)+n*86400000);
+    s = s.replace(/\.\s*/g,'-').replace(/\/-?/g,'-').replace(/-$/,'').replace(/\s/g,'');
+    const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(!m) return null;
+    const d = new Date(Date.UTC(+m[1],+m[2]-1,+m[3])); return isNaN(d)?null:d; };
+  const iso = d => d ? d.toISOString().slice(0,10) : null;
+  const cases = ['2022. 8. 1', '2022.8.1', '2022. 8. 1.', '2022/8/1', '2022-08-01', '2022-8-1', '2022-08-01 10:00:00',
+                 '2026-01-05T00:00:00', '46153', 46153, new Date(Date.UTC(2026,7,14)), '', null, undefined, '미정', '-'];
+  if (G && G.toDate) {
+    cases.forEach(c => {
+      const a = iso(G.toDate(c)), b = iso(oldPd(c));
+      is(a === b, `toDate(${c instanceof Date ? 'Date' : JSON.stringify(c)}) = ${a} (옛 pd ${b})`);
+    });
+    /* 사용자가 겪은 그 자리 — '2022. 8. 1' 을 로컬 자정으로 읽으면 KST 에서 UTC 표기가 07-31 이 된다 */
+    is(iso(G.toDate('2022. 8. 1')) === '2022-08-01', "'2022. 8. 1' → 2022-08-01 (하루 밀리지 않는다)");
+    /* 옛 pd 는 공백을 «지워» '2022-8-110:00' 이 되고 11일로 읽었다 — 그 결함은 따라가지 않는다 */
+    is(iso(G.toDate('2022-8-1 10:00')) === '2022-08-01', "'2022-8-1 10:00' → 2022-08-01 (옛 pd 는 11일로 읽었다)");
+  }
+  ['report','hr'].forEach(p => is(/function pd\(s\)\{ return GST\.toDate\(s\); \}/.test(SRC[p]), p + ' — pd 가 core 위임 한 줄이다 (사본 없음)'));
+  is(/const pd=GST\.toDate;/.test(noCmt(rd('cip/index.html'))), 'cip — pd 가 core 위임이다');
+}
+
+/* ══════════════════════════════════════════════════════════════
    [2] 판정의 두 번째 사본
    ══════════════════════════════════════════════════════════════ */
 console.log('\n[2] 같은 물음에 두 함수가 답하지 않는지');
 {
+  /* v135 — 날짜·고객사·FAB·사이트 판정의 페이지 사본. hr 의 fabOf 는 \bF10\b 라 F10A 를 놓쳤고(core 가
+     4,027건 실측으로 고친 자리를 되돌린 판), siteKey 둘은 PSMC 를 'POWERCHIP' 이라 적어 고객사 축과
+     같은 회사가 다른 이름이었다. 되살아나면 report 와 hr 이 같은 사람을 다른 단지로 본다. */
+  const TCO = noCmt(rd('tco/index.html'));
+  [ ['report', /function siteKey\(sv\)\{ return GST\.ORG\.site\(sv\); \}/, 'siteKey 가 core 위임'],
+    ['report', /function normCust\(name\)\{ return GST\.ORG\.custRaw\(name\); \}/, 'normCust 가 core 위임'],
+    ['hr',     /function siteKey\(sv\)\{ return GST\.ORG\.site\(sv\); \}/, 'siteKey 가 core 위임'],
+    ['hr',     /function custBase\(s\)\{ return GST\.ORG\.customer\(s\) \|\| GST\.ORG\.custRaw\(s\); \}/, 'custBase 가 core 위임'],
+    ['hr',     /function fabOf\(s\)\{ return GST\.ORG\.fab\(s\); \}/, 'fabOf 가 core 위임'],
+  ].forEach(([p, re, m]) => is(re.test(SRC[p]), p + ' — ' + m));
+  is(/function custBase\(s\)\{ return GST\.ORG\.customer\(s\) \|\| GST\.ORG\.custRaw\(s\); \}/.test(TCO), 'tco — custBase 가 core 위임');
+  ['report','hr','tco'].forEach(p => is(!/includes\('POWERCHIP'\)/.test(p==='tco'?TCO:SRC[p]), p + ' — 고객사 판정 사본(POWERCHIP includes)이 없다'));
+  is(!/\\bF\(16N\|16S\|16\|11\|10\)\\b/.test(SRC.hr), 'hr — 단어경계 FAB 정규식(F10A 를 놓치던 판)이 없다');
+  is(/getUTCFullYear\(\)\+'-'\+String\(d\.getUTCMonth\(\)\+1\)/.test(SRC.scrubber), 'scrubber — cutFallbackM 이 UTC 게터로 찍는다 (toDate 는 UTC 자정)');
+  is(/SITE_ORDER=\[[^\]]*'PSMC'/.test(SRC.hr) && !/SITE_ORDER=\[[^\]]*'POWERCHIP'/.test(SRC.hr), 'hr — SITE_ORDER 가 core 어휘(PSMC)를 쓴다');
+  {
+    const G = loadCore();
+    if (G && G.ORG && G.ORG.site) {
+      [['Micron Memory Taiwan Co., Ltd.(F16)', 'MICRON F16'], ['Tong luo', 'MICRON F16N'], ['F10A', 'MICRON F10'],
+       ['F15_E', 'MICRON F15'], ['Powerchip', 'PSMC'], ['PSMC', 'PSMC'], ['WINBOND(GX)', 'WINBOND'], ['P1', 'P1'], ['', '']]
+        .forEach(([i, w]) => is(G.ORG.site(i) === w, `GST.ORG.site(${JSON.stringify(i)}) = ${JSON.stringify(G.ORG.site(i))} (기대 ${JSON.stringify(w)})`));
+    } else bad('core — GST.ORG.site 가 없다');
+  }
+  /* v135 5단계 — 카드 노트(setNote · report·cip 이 byte 까지 같았다)와 applyLang 의 data-i 루프(일곱 벌) */
+  const CIP = noCmt(rd('cip/index.html')), PM = noCmt(rd('pm/index.html'));
+  is(/function setNote\(canvasId,txt,sev\)\{ GST\.setNote\(canvasId,txt,sev\); \}/.test(SRC.report), 'report — setNote 가 core 위임');
+  is(/function setNote\(canvasId,txt,sev\)\{ GST\.setNote\(canvasId,txt,sev\); \}/.test(CIP), 'cip — setNote 가 core 위임');
+  [['report',SRC.report],['fault',SRC.fault],['material',SRC.material],['scrubber',SRC.scrubber],['hr',SRC.hr],['pm',PM],['tco',TCO],['cip',CIP]]
+    .forEach(([p, s]) => is(/GST\.applyI18n\(/.test(s) && !/querySelectorAll\('\[data-i\]'\)/.test(s),
+      p + ' — applyLang 이 GST.applyI18n 한 벌을 쓴다 (자기 data-i 루프 없음)'));
   /* v75 에 막대와 표가 각자 급증을 판정해, 같은 문구를 달고 서로 반대 결론을 낸
      조합이 110건 나왔다. 그 뒤로 GST.monthSurges 하나로 모았는데 자재 페이지에
      사본이 그대로 남아 있었다 — 지금은 글자까지 같아 답이 안 갈렸지만
@@ -127,6 +189,31 @@ console.log('\n[2] 같은 물음에 두 함수가 답하지 않는지');
   is(/GST\.monthSurges\(/.test(SRC.material) && /GST\.monthSurges\(/.test(SRC.fault),
      '두 페이지가 core 의 GST.monthSurges 를 부른다');
   is(/GST\.SURGE = \{ minN: 5, x: 2 \}/.test(CORE), 'core — 문턱값이 한 곳에 있다');
+  /* v135 8단계 — «금지 목록»으로 바꾼다. 사본이 하나 생길 때마다 검사를 한 줄씩 늘리는
+     방식은 언젠가 빠뜨린다. 정본이 core 에 있는 이름은 여기 배열에 담고, 여덟 페이지에서
+     «자체 구현»이 되살아나는지 한 루프로 본다.
+     ⚠ 이름이 아니라 «무엇에서 나오나»를 본다(v122) — 위임 래퍼(`return GST.X(...)`)는 정상이다.
+       금지하는 것은 그 함수가 «자기 몸»을 갖는 것이고, 그 표식으로 각 이름의 지문을 둔다. */
+  {
+    const PAGES8=[['report',SRC.report],['fault',SRC.fault],['material',SRC.material],['scrubber',SRC.scrubber],
+                  ['hr',SRC.hr],['pm',PM],['tco',TCO],['cip',CIP]];
+    const BAN=[
+      ['isoW',       /jan1\.getUTCDay\(\)\+1\)\/7/,            'GST.isoW'],
+      ['chartHiRes', /devicePixelRatio=scale/,                  'GST.chartHiRes'],
+      ['capToast',   /getElementById\('capToast'\)[\s\S]{0,80}createElement/, 'GST.capToast'],
+      ['pd',         /new Date\(Date\.UTC\(\+m\[1\]/,          'GST.toDate'],
+      ['pptLoad',    /pptxgenjs@[\d.]+\/dist\/pptxgen/,          'GST.pptLoad'],
+      ['fillHint',   /className='fill-hint'/,                    'GST.fillHint'],
+      ['monthCount', /getUTCFullYear\(\)===y&&[^)]*getUTCMonth\(\)===m/, 'GST.monthCount/monthRows'],
+    ];
+    PAGES8.forEach(([p,src])=>BAN.forEach(([nm,re,canon])=>
+      is(!re.test(src), p + ' — ' + nm + ' 자체 구현이 없다 (정본 ' + canon + ')')));
+    /* 죽은 코드가 «되살아나는» 것도 막는다 — v135 3단계에 「내보내기 ▾」가 들어오면서
+       copyChart·saveChart·saveAllCharts 는 호출부 0건이 됐다. 남겨 두면 다음 사람이
+       «이건 왜 있지»로 읽고, 두 벌의 내보내기 경로가 생긴다. */
+    PAGES8.forEach(([p,src])=>is(!/window\.(copyChart|saveChart|saveAllCharts)\s*=/.test(src),
+      p + ' — 죽은 차트 복사·저장 사본이 되살아나지 않았다 (정본 GST.exportMenu)'));
+  }
 
   /* loose 축 판정도 마찬가지다 — 주간현황이 자기 식으로 다시 적으면 pass() 와 갈린다. */
   /* v114 — 필터가 두 벌이라 hitL 도 두 벌이지만, 규칙 본문은 hitLG 한 곳뿐이다.
@@ -149,7 +236,7 @@ console.log('\n[3] 실패했을 때 «무엇이» 실패했는지 남기는지')
   const cat = SRC.report.match(/\}catch\(e\)\{[\s\S]{0,400}?\n  \}/);
   const body = cat ? cat[0] : '';
   is(/console\.error\(/.test(body), 'report — loadData 실패를 콘솔에 스택째 남긴다');
-  is(/\(e&&e\.message\)\|\|e/.test(body), 'report — 화면에도 실패 이유를 한 줄 적는다');
+  is(/GST\.failNote\(e\)|\(e&&e\.message\)\|\|e/.test(body), 'report — 화면에도 실패 이유를 한 줄 적는다 (v135 부터 GST.failNote 부류별 문구)');
   is(!/textContent='❌ '\+t\('loading'\);/.test(SRC.report),
      'report — 「불러오는 중」만 찍고 끝내지 않는다');
 }
@@ -175,6 +262,20 @@ console.log('\n[4] 분모에서 뺀 설비를 화면이 밝히는지 (v99)');
      'fault — 상태 열이 없는 옛 추출본이면 그 사실을 밝힌다 (v99 규약)');
   /* 상태를 «모르는» 것과 «나간» 것을 한 덩어리로 세면 새 상태값이 생겨도 아무도 모른다. */
   is(/outN:_outN,unkN:_unkN/.test(SRC.fault), 'fault — 제외 사유를 둘로 나눠 돌려준다');
+  /* v135 8단계 — 이 검사가 fault 만 보고 있었다. «조용히 빠지는» 다른 넷은 아무도 안 지켰다:
+     _KRWHYB(국내 올바 원장 미적재) · _TCO_NODATE(날짜 없어 TCO 에서 빠진 대수) ·
+     ins_md(설치 날짜 미기재) · ins_qty(수량 오입력). 전부 «빠졌다는 사실»을 화면이 말해야 하고,
+     v135 7단계부터는 «무엇을 하면 되는지»까지 데이터 품질 카드가 적는다.
+     ⚠ 인사이트는 네 칸뿐이라 뒤에 붙이면 밀려 사라진다 — 경고 부류는 unshift 여야 한다. */
+  const TCOs=noCmt(rd('tco/index.html')), SCR=SRC.scrubber, MAT=SRC.material, REP=SRC.report;
+  is(/window\._KRWHYB/.test(REP) && /dq_krb/.test(REP),
+     'report — 국내 올바 원장이 비면 그 사실과 조치를 남긴다 (알람만 지키면 한쪽만 조용히 빈다)');
+  is(/window\._TCO_NODATE>0/.test(TCOs) && /tco_nodate/.test(TCOs),
+     'tco — 날짜가 없어 빠진 대수를 밝히고 품질 카드에 담는다 (조용히 빠지면 TCO 가 작게 나온다)');
+  is(/ins\.unshift\(\{sev:'warn',text:t\('ins_md'\)/.test(SCR) && /inst_nodate/.test(SCR),
+     'scrubber — 날짜 미기재를 인사이트 «맨 앞»에 세우고 품질 카드에도 담는다');
+  is(/ins\.unshift\(\{sev:'warn',text:t\('ins_qty'\)/.test(MAT) && /mat_qty/.test(MAT),
+     'material — 수량 오입력을 인사이트 맨 앞에 세우고 품질 카드에도 담는다 (네 칸 상한에 밀리지 않게)');
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -687,7 +788,10 @@ console.log('\n[15] 고장 차트 세부내역이 누른 데이터셋을 따르�
   const R = SRC.report;
   is(/if\(id==='cFt'\)return drillFault\(p,seg\);/.test(R),
      'report — onDrill 이 «누른 칸»을 drillFault 로 넘긴다');
-  is(/function drillFault\(p,seg\)/.test(R), 'report — drillFault 가 그것을 받는다');
+  /* ⚠ «인자가 정확히 둘인가»를 묻지 않는다 — 그건 그때의 «생김새»이지 지킬 규칙이 아니다
+     (v122 가 OROWS 에서 겪은 자리). 지킬 것은 하나 — 누른 칸(seg)을 받는가.
+     v133 에 KPI 카드가 «자기가 센 배열»을 넘기는 셋째 인자(rowsIn)가 붙었다. */
+  is(/function drillFault\(p,\s*seg\b/.test(R), 'report — drillFault 가 그것을 받는다');
   /* ⚠ 인덱스가 아니라 «이름»으로 갈라야 한다 — All By-Pass 데이터셋은 값이 있을 때만
      생기므로(hasABP) 인덱스가 상황에 따라 달라진다. */
   is(/seg===L\.abp \? 'abp' : seg===L\.tot \? 'tot' : 'alarm'/.test(R),

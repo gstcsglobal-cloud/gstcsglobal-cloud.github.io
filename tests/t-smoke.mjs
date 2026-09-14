@@ -86,7 +86,7 @@ let fails=0;
   const b1 = await chromium.launch(PW_OPTS);
   const pg = await b1.newPage();
   const e1 = []; pg.on('pageerror', e => e1.push(e.message));
-  await pg.route('**/assets/core.js', r => r.fulfill({ status:200, contentType:'application/javascript',
+  await pg.route('**/assets/core.js*', r => r.fulfill({ status:200, contentType:'application/javascript',
     body: fs.readFileSync(ROOT + '/assets/core.js','utf8') + '\n;GST.authGate=async function(){return true;};' }));
   await pg.route('**/cdn.jsdelivr.net/**', r => {
     const u = r.request().url();
@@ -191,13 +191,13 @@ for(const P of PAGES){
   page.on('console', m=>{ if(m.type()==='error') errs.push('console: '+m.text().slice(0,160)); else logs.push(m.text()); });
 
   // core.js → 로컬 수정본 (+ 테스트용 인증 통과 스텁. 실제 파일은 건드리지 않는다)
-  await page.route('**/assets/core.js', r=>r.fulfill({status:200,contentType:'application/javascript',
+  await page.route('**/assets/core.js*', r=>r.fulfill({status:200,contentType:'application/javascript',
     body:fs.readFileSync(ROOT+'/assets/core.js','utf8')
       // authGate는 통과시키되 authOn은 꺼서 fetchCSV가 프록시 대신 시트 URL을 직접 치게 한다
       +'\n;GST.authOn=function(){return false;};GST.getSession=async function(){return {user:{email:"smoke@test"}};};'
       +'GST.authGate=async function(){var o=document.getElementById("loginOverlay");if(o)o.style.display="none";'
       +'if(GST._authOk)GST._authOk();return true;};GST.token=async function(){return "smoke";};'}));
-  await page.route('**/assets/*.css', r=>{
+  await page.route('**/assets/*.css*', r=>{
     const n=r.request().url().split('/').pop().split('?')[0];
     try{ r.fulfill({status:200,contentType:'text/css',body:fs.readFileSync(ROOT+'/assets/'+n,'utf8')}); }
     catch{ r.fulfill({status:200,contentType:'text/css',body:''}); }

@@ -253,7 +253,8 @@ function mkEnv(nCharts, insights){
   /* 겹침 판정 — 표 머리띠와 INSIGHT 머리띠가 같은 x 를 쓰면 안 된다.
      표는 2열(칸 0~1), 인사이트는 칸 2 에서 시작해야 한다. */
   const capBand = slides[0].texts.find(x=>String(x.t)==='교육과정 요약');
-  const insBand = slides[0].texts.find(x=>String(x.t)==='INSIGHT');
+  const INS = /^(INSIGHT|요약|Summary|摘要|要約)$/;   // v135: 머리글이 언어를 따라간다(GST.insHead)
+  const insBand = slides[0].texts.find(x=>INS.test(String(x.t)));
   ok(!!insBand, '남은 칸이 있으면 인사이트를 담는다');
   ok(capBand && insBand && insBand.o.x >= capBand.o.x + capBand.o.w - 0.001,
      'INSIGHT 칸이 표 오른쪽에서 시작해야 한다 (겹치면 장표가 못 읽게 된다) — 표 x='
@@ -279,7 +280,7 @@ function mkEnv(nCharts, insights){
   const slides = mkEnv(6, []);
   await GST.pptAuto({asOf:'2026-08-18'});
   ok(slides.length===1, '차트 6개면 한 장 (실제 '+slides.length+')');
-  ok(!slides[0].texts.some(x=>String(x.t)==='INSIGHT'), '빈 칸이 없으면 INSIGHT 칸도 없어야 한다');
+  ok(!slides[0].texts.some(x=>/^(INSIGHT|요약|Summary|摘要|要約)$/.test(String(x.t))), '빈 칸이 없으면 INSIGHT 칸도 없어야 한다');
   reset();
 }
 
@@ -289,7 +290,7 @@ function mkEnv(nCharts, insights){
   await GST.pptAuto({asOf:'2026-08-18'});
   ok(slides.length===1, '차트 4개 + 인사이트는 한 장이어야 (실제 '+slides.length+')');
   const t = slides[0].texts.map(x=>String(x.t));
-  ok(t.some(x=>x==='INSIGHT'), '남은 칸에 INSIGHT 머리띠가 있어야 한다');
+  ok(t.some(x=>/^(INSIGHT|요약|Summary|摘要|要約)$/.test(String(x))), '남은 칸에 INSIGHT 머리띠가 있어야 한다');
   ok(t.some(x=>/재고 부족 3건/.test(x) && /BM 급증 라인 F16/.test(x)), '인사이트 문구가 담겨야 한다(버리지 않는다)');
   reset();
 }
@@ -297,9 +298,15 @@ function mkEnv(nCharts, insights){
 // 차트가 하나도 없으면 파일을 만들지 않는다
 {
   const slides = mkEnv(0, []);
-  let alerted=''; global.alert = m => { alerted=m; };
+  /* ⚠ «어떤 통로로» 알리는지를 박지 않는다 (v135 · 8단계). GST._pptSay 는 토스트를 먼저
+     쓰고(브라우저에서 alert 는 확장·설정에 따라 안 뜨는 자리가 있다) 그다음 alert 다 —
+     여기서 alert 만 보면, 토스트로 «잘 알리게» 고친 날 검사가 붉어진다.
+     물어야 할 것은 하나다: 사용자가 그 사실을 보는가. */
+  let said=''; global.alert = m => { said=m; };
+  const _ct = GST.capToast; GST.capToast = m => { said=m; };
   await GST.pptAuto({asOf:'2026-08-18'});
-  ok(slides.length===0 && /차트가 없/.test(alerted), '차트가 없으면 빈 파일 대신 안내여야 한다');
+  GST.capToast = _ct;
+  ok(slides.length===0 && /차트가 없/.test(said), '차트가 없으면 빈 파일 대신 안내여야 한다 (토스트든 alert 든)');
   reset();
 }
 
@@ -449,8 +456,8 @@ const CORE = fs.readFileSync(ROOT+'/assets/core.js','utf8');
 ok(/GST\.PPT_MAX_PER_SLIDE\s*=\s*6/.test(CORE), '한 장 최대 개수가 상수로 있어야 한다(숫자를 코드에 흩지 않는다)');
 /* `.cw canvas` 만 보면 추이(.trend-wrap)·크로스(.cross-wrap) 카드의 차트가 통째로 빠진다
    (실측: 설치현황 14개 중 5개 · 고장분석 32개 중 7개). 가짜 DOM 으로는 못 잡히므로 소스로 본다. */
-ok(/querySelectorAll\('\.card canvas, \.mcard canvas'\)/.test(CORE),
-   '카드 «안의 모든» 캔버스를 봐야 한다 — .cw 만 보면 추이·크로스 차트가 빠진다');
+ok(/GST\.CARD_SEL\s*=\s*'\.card,\.trend-card,\.cross-card,\.tablecard'/.test(CORE) && /const cvs = GST\.chartCanvases\(\)/.test(CORE),
+   '카드 «안의 모든» 캔버스를 한 선택자(GST.CARD_SEL)로 본다 — .cw 만 보면 추이·크로스·표 카드의 차트가 빠진다');
 ok(/GST\.PPT_CDN_MS/.test(CORE) && /setTimeout\(function\(\)\{ fin\(false, new Error\('TIMEOUT'\)\); \}/.test(CORE),
    'CDN 로드에 시간 제한이 있어야 한다 — 없으면 「눌러도 반응 없음」이 된다');
 ok(/GST\.corpLabel\s*=\s*function/.test(CORE), 'corpLabel 정본이 core.js 에 있어야 한다');
