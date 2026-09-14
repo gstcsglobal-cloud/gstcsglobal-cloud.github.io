@@ -35,7 +35,7 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 RectAreaLightUniformsLib.init();
 const HQ = new URLSearchParams(location.search).get('hq') !== '0';
 const W=1920,H=1080;
-const DUR = (sh=>sh==='pipe'?4.0:sh==='macro'?3.0:sh==='studio'?5.0:sh==='alarm'?2.4:6.4)(new URLSearchParams(location.search).get('shot'));
+const DUR = (sh=>sh==='pipe'?4.0:sh==='macro'?3.0:sh==='studio'?5.0:sh==='alarm'?2.4:sh==='burner'?4.0:6.4)(new URLSearchParams(location.search).get('shot'));
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const p=(t,a,b)=>clamp((t-a)/(b-a),0,1);
 const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
@@ -72,6 +72,12 @@ const MACRO = SHOT === 'macro';
 //   ⚠ 팹 실내를 사진처럼 만드는 것보다 «훨씬» 쉽고, 결과는 더 비싸 보인다. 배경이 없으므로
 //     빛과 면 분할만 남고, 그 둘은 우리가 통제할 수 있는 것들이다. 제품이 주인공인 컷은 이쪽이다.
 const STUDIO = SHOT === 'studio';
+//   ?shot=burner  **3막 CUT07 «1,200°C»** — 스크러버 버너 챔버 안. 화염이 «유일한 광원»이다.
+//   ⚠ 참고본(ASML)이 EUV 플라즈마로 하는 것과 같은 구조다: 어두운 기계 속, 강한 단색 광원 하나,
+//     얕은 심도. 우리는 실제로 불이 있으니 연출이 아니라 사실이다 — 그게 이 컷의 설득력이다.
+//   ⚠ 자막은 3D 에 굽지 않는다(저장소 규약) — 「1,200도」는 scene.html 이 얹는다.
+const BURNER = SHOT === 'burner';
+const SOLO = STUDIO || BURNER;   // 도열이 필요 없는 등록 — 씬을 비우고 피사체만 세운다
 const TEX = new THREE.TextureLoader();
 const GAIA_TEX = TEX.load('tex/gaia.png');
 GAIA_TEX.colorSpace = THREE.SRGBColorSpace; GAIA_TEX.anisotropy = 8;
@@ -113,7 +119,7 @@ function makeEnv(){
     const g=c.getContext('2d'), gr=g.createLinearGradient(0,0,0,size);
     // v24c 밝은 팹: 천장은 형광등 면광원이라 «가장 밝고», 바닥은 밝은 에폭시라 반사가 살아 있다.
     // 밤 큐브맵(바닥 #05091a)을 그대로 두면 반사만 밤이라 제품 아랫부분이 검게 죽는다.
-    if(EMG){   // 비상: 천장 등이 꺼져 있으므로 반사원도 적색 잔광뿐이다
+    if(EMG||BURNER){   // 어두운 씬: 반사원도 어두워야 한다(주광 큐브맵이면 금속만 빛난다)
       if(i===2){ gr.addColorStop(0,'#2a1512'); gr.addColorStop(1,'#3c1d16'); }
       else if(i===3){ gr.addColorStop(0,'#241618'); gr.addColorStop(1,'#160e10'); }
       else { gr.addColorStop(0,'#4a2118'); gr.addColorStop(.55,'#331814'); gr.addColorStop(1,'#1a0f10'); }
@@ -796,6 +802,114 @@ dgeo.setAttribute('position',new THREE.BufferAttribute(dpos,3));
 S.add(new THREE.Points(dgeo,new THREE.PointsMaterial({color:0x5d6a80,size:0.030,transparent:true,
   opacity:0.16,depthWrite:false,sizeAttenuation:true})));
 
+const FLAME=[], FLAMEP=[];
+const REFRTEX=(()=>{
+  const c=document.createElement('canvas'); c.width=c.height=512; const q=c.getContext('2d');
+  q.fillStyle='#6a6058'; q.fillRect(0,0,512,512);
+  const rr=mulberry(90210);
+  for(let i=0;i<900;i++){                       // 그을음 얼룩 — 결정적 난수라 프레임마다 같다
+    const x=rr()*512, y=rr()*512, r=6+rr()*46, v=rr();
+    const g2=q.createRadialGradient(x,y,1,x,y,r);
+    const a=0.05+rr()*0.16;
+    g2.addColorStop(0, v<0.55 ? `rgba(28,22,18,${a})` : `rgba(150,138,124,${a*0.7})`);
+    g2.addColorStop(1,'rgba(0,0,0,0)');
+    q.fillStyle=g2; q.beginPath(); q.arc(x,y,r,0,6.283); q.fill();
+  }
+  const t2=new THREE.CanvasTexture(c);
+  t2.wrapS=t2.wrapT=THREE.RepeatWrapping; t2.repeat.set(3,2); t2.colorSpace=THREE.SRGBColorSpace;
+  return t2;
+})();
+const HOTTEX=(()=>{
+  const W2=512,H2=512;
+  const c=document.createElement('canvas'); c.width=W2; c.height=H2; const q=c.getContext('2d');
+  const g2=q.createLinearGradient(0,0,0,H2);           // 캔버스 위 = UV v=1 = 원통 «윗부분»
+  g2.addColorStop(0.00,'#ffe9cd'); g2.addColorStop(0.08,'#ffc98a');
+  g2.addColorStop(0.34,'#c8681f'); g2.addColorStop(0.62,'#4a1a06'); g2.addColorStop(1,'#000000');
+  q.fillStyle=g2; q.fillRect(0,0,W2,H2);
+  // 얼룩을 «곱해» 얹는다 — 더하면 밝아지기만 하고 벽돌 자국이 안 생긴다
+  q.globalCompositeOperation='multiply';
+  const rr=mulberry(70413);
+  for(let i=0;i<1400;i++){
+    const x=rr()*W2, y=rr()*H2, r=8+rr()*54;
+    const g3=q.createRadialGradient(x,y,1,x,y,r);
+    const v=0.62+rr()*0.38;                            // 0.62~1.0 — 너무 내리면 벽에 구멍이 뚫린다
+    g3.addColorStop(0,`rgba(${(v*255)|0},${(v*255)|0},${(v*255)|0},0.55)`);
+    g3.addColorStop(1,'rgba(255,255,255,0)');
+    q.fillStyle=g3; q.beginPath(); q.arc(x,y,r,0,6.283); q.fill();
+  }
+  const t2=new THREE.CanvasTexture(c); t2.colorSpace=THREE.SRGBColorSpace;
+  t2.wrapS=THREE.RepeatWrapping; t2.repeat.set(2,1); return t2;   // ⚠ 세로는 반복 금지(그라데이션이 끊긴다)
+})();
+let REFR_MAT=null;
+function buildBurner(){
+  const g=new THREE.Group();
+  const R=0.42, H=1.55;
+  // 내화 라이닝 — 불빛을 받는 «면»이다. 거칠어야 빛이 번지고, 금속이면 반사만 튄다.
+  const refr=new THREE.MeshStandardMaterial({map:REFRTEX,color:0x8a8078,roughness:0.97,metalness:0.0,
+    side:THREE.BackSide,roughnessMap:REFRTEX,
+    emissiveMap:HOTTEX, emissive:new THREE.Color(0xffffff), emissiveIntensity:1.35});
+  REFR_MAT=refr;
+  const inner=new THREE.Mesh(new THREE.CylinderGeometry(R-0.035,R-0.035,H,96,1,true),refr);
+  inner.position.y=H/2; g.add(inner);
+  // 바깥 셸을 «잘라» 안이 보이게 한다(단면도가 아니라 실제 컷어웨이처럼).
+  const shell=new THREE.Mesh(new THREE.CylinderGeometry(R,R,H,64,1,true,-0.55,4.6),
+    metalMat(0x3f454d,0.40,0.80));
+  shell.position.y=H/2; shell.castShadow=true; g.add(shell);
+  // 잘린 단면의 «두께» — 이 한 줄이 없으면 종이처럼 보인다
+  for(const a of [-0.55, -0.55+4.6]){
+    const cut=new THREE.Mesh(new THREE.BoxGeometry(0.035,H,R-((R-0.035)) + 0.035),metalMat(0x4b5158,0.40,0.75));
+    cut.position.set(Math.sin(a)*(R-0.017),H/2,Math.cos(a)*(R-0.017));
+    cut.rotation.y=a; g.add(cut);
+  }
+  // 상·하 플랜지
+  for(const y of [0.0,H]){
+    const fl=new THREE.Mesh(new THREE.CylinderGeometry(R+0.07,R+0.07,0.05,64),metalMat(0x333940,0.44,0.72));
+    fl.position.y=y; g.add(fl);
+    for(let b=0;b<14;b++){ const a2=b/14*6.283;
+      const bo=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,0.07,10),metalMat(0x5a616a,0.32,0.85));
+      bo.position.set(Math.sin(a2)*(R+0.045),y,Math.cos(a2)*(R+0.045)); g.add(bo); }
+  }
+  // 가스 유입 노즐 — 위에서 «안쪽으로» 향한다. 불이 왜 거기서 나는지 그림이 설명해야 한다.
+  for(let i=0;i<3;i++){ const a2=i/3*6.283+0.5;
+    const nz=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.026,0.30,16),metalMat(0x9aa1aa,0.26,0.9));
+    nz.position.set(Math.sin(a2)*(R-0.10),H-0.12,Math.cos(a2)*(R-0.10));
+    nz.rotation.set(Math.cos(a2)*0.45,0,-Math.sin(a2)*0.45); g.add(nz); }
+  // 관찰창 — 실물에도 있고, 이 컷에서 «불을 들여다보는» 장치가 된다
+  const pw=new THREE.Mesh(new THREE.TorusGeometry(0.075,0.016,10,28),metalMat(0x5c636d,0.34,0.85));
+  pw.position.set(0,H*0.52,R+0.004); g.add(pw);
+  return g;
+}
+// 화염 — 겹쳐 세운 가산합성 판. ⚠ 만화 불이 되지 않으려면 «심지»가 밝고 바깥이 급히 식어야 한다.
+const FLTEX=(()=>{
+  const c=document.createElement('canvas'); c.width=c.height=128; const q=c.getContext('2d');
+  const gr=q.createRadialGradient(64,64,2,64,64,63);
+  gr.addColorStop(0,'rgba(255,246,225,1)'); gr.addColorStop(0.22,'rgba(255,178,86,0.80)');
+  gr.addColorStop(0.55,'rgba(226,88,24,0.26)'); gr.addColorStop(1,'rgba(180,50,10,0)');
+  q.fillStyle=gr; q.fillRect(0,0,128,128); return new THREE.CanvasTexture(c);
+})();
+if(BURNER){
+  for(let i=S.children.length-1;i>=0;i--) S.remove(S.children[i]);
+  S.background=new THREE.Color(0x07060a); S.fog=new THREE.Fog(0x07060a,1.6,7.0);
+  S.add(buildBurner());
+  // ⚠ 판을 겹쳐 «불 모양»을 만들려는 시도를 다섯 번 고쳤지만 계속 «구슬»로 뭉쳤다.
+  //   가산합성 판은 겹치는 곳이 곱해지므로 «형태»가 아니라 «덩어리»가 되는 것이 구조상 당연하다.
+  //   → 불을 «그리지» 않고 불«빛»을 그린다. 참고본(ASML)도 플라즈마 자체가 아니라 그 빛이
+  //     기계에 닿는 모습을 보여 준다. 관찰창으로 실제 버너를 보면 보이는 것도 그쪽이다.
+  // 연소 뿌리 — 노즐 아래의 백열점 하나. 광원이자 블룸의 씨앗이다.
+  const root=new THREE.Mesh(new THREE.SphereGeometry(0.055,20,14),
+    new THREE.MeshBasicMaterial({color:0xffe6bc,toneMapped:false}));
+  root.position.y=1.26; S.add(root); FLAME.push(root);
+  // 불빛이 «방을 물들여야» 불이다. 높이가 다른 점광원 둘이 라이닝에 계조를 만든다.
+  // ⚠ 챔버 «안»에는 점광원을 쓸 수 없다. 역제곱 감쇠라 0.4m 앞 벽에 반드시 동그란 핫스팟이
+  //   찍히고, 감쇠거리를 늘려도 그대로다(거리가 아니라 «가까움»이 원인이다). 그 점들이
+  //   불꽃처럼 보여서 불꽃 쪽을 여섯 번 고치는 동안 원인을 엉뚱한 데서 찾았다.
+  //   → 빛은 이제 벽의 emissive 가 낸다. 금속 부속은 방향광으로만 물들인다(핫스팟이 없다).
+  const warm=new THREE.DirectionalLight(0xffb070,1.25); warm.position.set(0.2,3.0,0.1); S.add(warm);
+  const warm2=new THREE.DirectionalLight(0xff8a3c,0.95); warm2.position.set(-2.2,1.2,1.4); S.add(warm2);
+  FLAMEP.push(warm, warm2);
+  S.add(new THREE.HemisphereLight(0x3a2a22,0x0a0a0e,0.30));   // 바닥 쪽이 완전히 죽지 않게
+  const rim3=new THREE.DirectionalLight(0x7fb0ff,0.42); rim3.position.set(-3,2.2,4); S.add(rim3);
+}
 if(STUDIO){
   // 팹을 걷어낸다. ⚠ 설비를 새로 만들지 않고 «같은 빌더»를 쓴다 — 두 벌이면 도열 컷과
   //   스튜디오 컷의 제품이 다른 물건이 된다(제2원칙).
@@ -833,7 +947,23 @@ function seek(t){
   t=clamp(t,0,DUR);
   // ── 카메라: 통로를 따라 «아주 천천히» 전진 + 미세 상승. 손맛 없는 기계적 이동이라야 진중하다.
   const k=eio(t/DUR);
-  if(ALARM){
+  if(BURNER){
+    // 화염 — 판을 겹쳐 세우고 t 로만 흔든다. 위로 갈수록 넓어지고 흐려진다.
+    FLAME[0].scale.setScalar(1+0.06*Math.sin(t*9.7)+0.025*Math.sin(t*3.3));
+    // 벽의 백열도 같이 맥동한다 — 광원과 벽이 따로 놀면 «조명»으로 보인다
+    REFR_MAT.emissiveIntensity = 1.35*(0.88+0.12*Math.sin(t*8.3)+0.06*Math.sin(t*3.1));
+    // ⚠ 깜빡임은 «규칙적»이면 안 된다 — 주파수를 둘 겹쳐 맥놀이를 만든다(한 주기면 형광등처럼 보인다).
+    const fk=0.86+0.09*Math.sin(t*11.3)+0.05*Math.sin(t*4.1);
+    FLAMEP[0].intensity=1.25*fk; FLAMEP[1].intensity=0.95*fk;
+    // 카메라 — 관찰창 쪽에서 아주 느리게 들어간다. 멈춰 있으면 스틸로 보인다.
+    // ⚠ 컷어웨이는 셸의 «열린 구간»에서만 보인다. 셸이 -0.55~4.05 rad 를 덮으므로 카메라는
+    //   그 밖(≈4.9 rad)에 서야 한다 — 반대편에 세웠더니 닫힌 원통 옆구리만 찍혔다(실측).
+    const A=4.92, r=lerp(2.75,2.35,k);
+    C.position.set(Math.sin(A)*r, lerp(1.15,1.02,k), Math.cos(A)*r);
+    C.lookAt(0, lerp(0.80,0.76,k), 0);
+    C.fov=32; C.updateProjectionMatrix();
+    if(BOKEH) BOKEH.uniforms.focus.value = r;
+  } else if(ALARM){
     // ⚠ 전경에 «무언가»가 초점 밖으로 걸쳐 있어야 조각으로 읽힌다. 열린 시야로 찍으면
     //   설비 전체가 보여 정체가 드러나고, 동시에 우리 모델의 단순함도 드러난다.
     //   펌프 하나를 왼쪽 앞에 물려 두고 그 너머로 열이 녹아 들어가게 한다.
@@ -917,13 +1047,13 @@ if(HQ){
   ao.updateGtaoMaterial({radius:0.28, distanceExponent:1.4, thickness:0.6, scale:1.0,
                          samples:16, distanceFallOff:1.0, screenSpaceRadius:false});
   COMP.addPass(ao);
-  if(MACRO||ALARM){
+  if(MACRO||ALARM||BURNER){
     // 얕은 심도 — 이 등록의 핵심이다. 초점 밖이 녹으면서 «디테일이 없다»가 안 보이게 된다.
     const bk=new BokehPass(S,C,{focus:0.6, aperture:0.0062, maxblur:0.016});
     BOKEH=bk; COMP.addPass(bk);
   }
   // 블룸 — 경광·등기구·금속 하이라이트가 «번져야» 카메라로 찍은 것처럼 보인다.
-  COMP.addPass(new UnrealBloomPass(new THREE.Vector2(W,H), (MACRO||ALARM)?0.42:0.26, 0.62, (MACRO||ALARM)?0.90:1.30));
+  COMP.addPass(new UnrealBloomPass(new THREE.Vector2(W,H), BURNER?0.30:(MACRO||ALARM)?0.42:0.26, 0.62, BURNER?1.05:(MACRO||ALARM)?0.90:1.30));
   const op=new OutputPass(); op.toneMapping=THREE.ACESFilmicToneMapping; COMP.addPass(op);
 }
 window.seek=seek; window.DUR3D=DUR;
