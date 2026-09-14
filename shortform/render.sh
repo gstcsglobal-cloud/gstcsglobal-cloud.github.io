@@ -8,9 +8,15 @@ set -euo pipefail; cd "$(dirname "$0")"
 export NODE_PATH=${NODE_PATH:-/opt/node22/lib/node_modules}
 MODE=${MODE:-full}; FPS=30; SS=${SS:-3}      # SS = 시간 슈퍼샘플링 배수(모션블러)
 DUR=$(node -e "console.log(require('./timeline.js').build('$MODE').DUR)")   # 길이는 timeline.js 가 정본
-OUT=${1:-GST_25th_nothing_happened$([ "$MODE" = short ] && echo _45s || echo "").mp4}
-BGM=$([ "$MODE" = short ] && echo bgm-short.wav || echo bgm.wav)
-QUERY=$([ "$MODE" = short ] && echo "?mode=short" || echo "")
+# 모드별 산출물 이름 — fullA/fullB 는 v22 비교용 두 갈래(SF6 삭제 / 만담 삭제)
+case "$MODE" in
+  short) SUF=_45s; BGM=bgm-short.wav;;
+  fullA) SUF=_A;   BGM=bgm-fullA.wav;;
+  fullB) SUF=_B;   BGM=bgm-fullB.wav;;
+  *)     SUF=;     BGM=bgm.wav;;
+esac
+OUT=${1:-GST_25th_nothing_happened$SUF.mp4}
+QUERY=$([ "$MODE" = full ] && echo "" || echo "?mode=$MODE")
 N=$(python3 -c "print(round($DUR*$FPS*$SS))")
 FF=${FFMPEG:-$(command -v ffmpeg || python3 -c "import imageio_ffmpeg as f; print(f.get_ffmpeg_exe())")}
 EXE=${CHROME:-$(ls -d /opt/pw-browsers/chromium-*/chrome-linux/chrome 2>/dev/null | head -1)}

@@ -9,9 +9,9 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const TL = require('./timeline.js');
 
-const MODE = (process.argv[2] === 'short') ? 'short' : 'full';
+const MODE = ['short', 'fullA', 'fullB'].includes(process.argv[2]) ? process.argv[2] : 'full';
 const P = TL.build(MODE);
-const OUT = MODE === 'short' ? 'bgm-short.wav' : 'bgm.wav';
+const OUT = MODE === 'full' ? 'bgm.wav' : `bgm-${MODE}.wav`;
 
 function Mc(tCue) {                   // 빠진 장면이면 표시 순서상 그 자리로 접는다(여러 장면에 걸친 패드용)
   const r = TL.toOut(tCue, P);
