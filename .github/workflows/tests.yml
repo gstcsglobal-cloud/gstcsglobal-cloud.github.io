@@ -27,5 +27,9 @@ jobs:
         working-directory: tests
       - run: npx playwright install --with-deps chromium   # PW_CHROMIUM 을 안 주면 검사가 이 브라우저를 쓴다
         working-directory: tests
+      # t-export 가 «엑셀이 정말 차트로 읽는가»를 openpyxl 로 확인한다. 없으면 그 검사만 건너뛰므로
+      # CI 는 붉어지지 않지만, 여기서 넣어 «실제로 확인»하게 한다 — 구조 검사만으로는 엑셀이
+      # 「복구」 대화상자를 띄우는 파일도 통과한다(v135 · 3단계).
+      - run: python3 -m pip install --quiet --break-system-packages openpyxl || pip3 install --quiet openpyxl
       - run: npm run all
         working-directory: tests

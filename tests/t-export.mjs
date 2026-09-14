@@ -16,6 +16,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const NM = path.join(ROOT, 'tests', 'node_modules') + '/';
 const PW = process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {};
 let pass = 0, fail = 0;
+const skipped = [];   // 외부 도구가 없어 못 한 것 — 끝에서 «다르게» 말한다
 const is = (c, m) => { c ? (pass++, console.log('  ✓ ' + m)) : (fail++, console.log('  ❌ ' + m)); };
 
 const HTML = `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/theme.css">
@@ -138,8 +139,17 @@ is(/<c:barDir val="bar"\/>/.test(chh) && /<c:grouping val="stacked"\/>/.test(chh
 const cd = parts.donut['xl/charts/chart1.xml'];
 is(/<c:doughnutChart>/.test(cd) && /<c:holeSize val="55"\/>/.test(cd) && (cd.match(/<c:dPt>/g) || []).length === 3, '도넛: doughnutChart · 조각 셋에 색');
 is(/srgbClr val="10B981"/.test(cd) && /srgbClr val="F59E0B"/.test(cd), '조각 색이 화면 색이다');
-/* openpyxl — «엑셀 차트로 읽히는가». 파일이 열리기만 하는 것과 차트가 살아 있는 것은 다르다. */
-try {
+/* openpyxl — «엑셀 차트로 읽히는가». 파일이 열리기만 하는 것과 차트가 살아 있는 것은 다르다.
+   ⚠ openpyxl 이 «없는 것»과 «있는데 차트를 못 읽는 것»을 가른다. 예전에는 둘 다 붉은 X 라,
+     파이썬 모듈이 안 깔린 CI 러너에서 제품이 멀쩡한데 붉게 떴다 — 그러면 사람이 붉은 X 를
+     읽지 않게 되고, 그게 CI 의 가치를 통째로 없앤다.
+     없을 때는 건너뛰되 «건너뛰었다»고 말한다(위 LibreOffice 와 같은 규율 · 조용한 초록불 금지). */
+let hasPy = false;
+try { execSync('python3 -c "import openpyxl"', { stdio: 'pipe' }); hasPy = true; } catch (e) { hasPy = false; }
+if (!hasPy) {
+  skipped.push('openpyxl');
+  console.log('  ⚠️  python3 openpyxl 이 없어 «엑셀이 차트로 읽는가» 확인을 건너뛰었다 (구조 검사는 했다 · pip install openpyxl)');
+} else try {
   const py = `import openpyxl,sys\nfor k in ['bar','hor','donut']:\n  wb=openpyxl.load_workbook(sys.argv[1]+'/'+k+'.xlsx'); ws=wb.active\n  print(k, len(ws._charts), ws['B1'].value, ws['B2'].value)\n`;
   const out = execSync('python3 -c "' + py.replace(/"/g, '\\"') + '" ' + tmp, { encoding: 'utf8' });
   is(/bar 1 1월 3/.test(out) && /hor 1 A 10/.test(out) && /donut 1 IN 30/.test(out), 'openpyxl 이 세 파일에서 차트 1개씩과 셀 값을 읽는다: ' + out.trim().replace(/\n/g, ' | '));
@@ -197,5 +207,9 @@ is(/const cvs = GST\.chartCanvases\(\)/.test(core), '상단바 PPT 도 같은 �
 const rep = fs.readFileSync(ROOT + '/report/index.html', 'utf8');
 is(/function chartToGrid\(id\)\{ return GST\.chartGrid\(/.test(rep) && !/function gridToRichHTML\(g,title\)\{/.test(rep), 'report 의 표 복사 기계는 core 위임만 남았다');
 is(/GST\.EXP_T = \{[\s\S]*ja:\{btn:/.test(core), '메뉴 문구가 네 언어');
-console.log((fail ? '❌' : '✅') + ' t-export: ' + pass + ' 통과 · ' + fail + ' 실패');
-process.exit(fail ? 1 : 0);
+/* 건너뛴 것이 있으면 «다르게» 말한다 — 초록불이 거짓말하지 않게(저장소 규약).
+   STRICT_FIXTURES 를 켠 진짜 CI 에서는 종료코드 2 로 실패한다. */
+if (skipped.length) console.log('⚠️  부분 검사 — ' + skipped.join(', ') + ' 가 없어 건너뛰었다');
+console.log((fail ? '❌' : '✅') + ' t-export: ' + pass + ' 통과 · ' + fail + ' 실패'
+  + (skipped.length ? ' · ' + skipped.length + '개 건너뜀' : ''));
+process.exit(fail ? 1 : (skipped.length && process.env.STRICT_FIXTURES ? 2 : 0));
