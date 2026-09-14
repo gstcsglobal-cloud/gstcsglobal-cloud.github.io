@@ -458,7 +458,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 <script>
 // ── 타임라인은 timeline.js 한 곳에서 온다 — 그림과 소리가 갈리지 않게.
 //    주소에 ?mode=short 를 붙이면 45초 짧은 버전이 된다(장면 셋을 빼고 나머지를 조금씩 줄인다).
-const MODE = (m => ['short','fullA','fullB'].includes(m) ? m : 'full')(new URLSearchParams(location.search).get('mode'));
+const MODE = (m => ['short','fullA','fullB','fullC'].includes(m) ? m : 'full')(new URLSearchParams(location.search).get('mode'));
 const P = TL.build(MODE);
 const T = P.T, DUR = P.DUR, KEYS = TL.SCENES.map(s => s.k);
 const $ = id => document.getElementById(id);

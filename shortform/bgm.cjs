@@ -9,7 +9,7 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const TL = require('./timeline.js');
 
-const MODE = ['short', 'fullA', 'fullB'].includes(process.argv[2]) ? process.argv[2] : 'full';
+const MODE = ['short', 'fullA', 'fullB', 'fullC'].includes(process.argv[2]) ? process.argv[2] : 'full';
 const P = TL.build(MODE);
 const OUT = MODE === 'full' ? 'bgm.wav' : `bgm-${MODE}.wav`;
 
@@ -125,7 +125,16 @@ const M = tb => TL.toOut(tb, P);      // null = 그 장면이 빠졌다
   at(61.75, 'bell', { n: 91, g: 0.09, d: 1.2 });
 
   // 드럼은 출력 시각에 직접 — 장면 압축률이 달라도 박자가 안 휜다
-  const beat = { from: P.T.found[0], to: P.T.kosdaq[1] };   // v19: stairs 가 접혀 성장 3박(kosdaq)이 비트의 끝이다
+  const beat = { from: (P.T.found || P.T.map)[0], to: P.T.kosdaq[1] };   // v19: stairs 가 접혀 성장 3박(kosdaq)이 비트의 끝 · v22C: found 가 빠지면 map 부터
+
+  // v22C: 만담 AI 음성(espeak-ng 합성 + 기계 보이스 가공 · voices/) — 말풍선 등장 큐(tv = cue−70)와 같은 시각.
+  //   다른 모드는 무성으로 둔다(C 전용 비교 항목). 클립 tv↔큐가 1:1(clipDur=base)이라 씬을 늘려도 입이 맞는다.
+  if (MODE === 'fullC') {
+    for (const [f, tb] of [['c1', 70.60], ['s1', 72.05], ['c2', 73.05], ['s2', 74.65]]) {
+      const t = M(tb);
+      if (t !== null) cue.push({ t, kind: 'voice', b64: fs.readFileSync(`voices/${f}.wav`).toString('base64') });
+    }
+  }
 
   const res = await page.evaluate(async ({ cue, beat, DUR }) => {
     const SR = 44100;
@@ -200,6 +209,16 @@ const M = tb => TL.toOut(tb, P);      // null = 그 장면이 빠졌다
       strings: c => strings(c.notes, c.t, c.t1, c.g || 0.06),
     };
     for (const c of cue) { const h = H[c.kind]; if (h) h(c); }
+
+    // 음성(voice) — decodeAudioData 가 비동기라 H 루프와 따로 돈다
+    for (const c of cue) if (c.kind === 'voice') {
+      const bin = atob(c.b64), ab = new ArrayBuffer(bin.length), u8 = new Uint8Array(ab);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      const buf = await ctx.decodeAudioData(ab);
+      const s = ctx.createBufferSource(); s.buffer = buf;
+      const G = ctx.createGain(); G.gain.value = 0.85;
+      s.connect(G); G.connect(bus); s.start(c.t);
+    }
 
     // ── 드럼·베이스·코드 : 출력 시각에 직접(100BPM 고정)
     const B = 60 / 100, prog = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]];

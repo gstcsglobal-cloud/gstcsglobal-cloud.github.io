@@ -13,6 +13,7 @@ case "$MODE" in
   short) SUF=_45s; BGM=bgm-short.wav;;
   fullA) SUF=_A;   BGM=bgm-fullA.wav;;
   fullB) SUF=_B;   BGM=bgm-fullB.wav;;
+  fullC) SUF=_C;   BGM=bgm-fullC.wav;;
   *)     SUF=;     BGM=bgm.wav;;
 esac
 OUT=${1:-GST_25th_nothing_happened$SUF.mp4}
