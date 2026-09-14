@@ -30,6 +30,15 @@ const stub = '\n;GST.authOn=function(){return false;};GST.getSession=async funct
   + 'GST.authGate=async function(){var o=document.getElementById("loginOverlay");if(o)o.style.display="none";return true;};'
   + 'GST.token=async function(){return "t";};';
 await page.route('**/assets/core.js*', r => r.fulfill({ status:200, contentType:'application/javascript', body: CORE + stub }));
+/* v135 8단계 — 페이지가 chart.js·papaparse 를 «자체 사본 먼저»로 받는다(사내망 대비).
+   가짜 서버가 그 길을 안 열어 두면 실제 네트워크로 나가 터널 오류가 난다 — 검사는
+   실제 배포와 «같은 모양»이어야 뜻이 있다(t-kiosk 가 v135 5단계에 겪은 그 자리). */
+await page.route('**/assets/vendor/**', r => {
+  const n = new URL(r.request().url()).pathname.split('/').pop();
+  try { r.fulfill({ status:200, contentType:'application/javascript',
+    body: fs.readFileSync(ROOT + '/assets/vendor/' + n, 'utf8') }); }
+  catch { r.fulfill({ status:200, contentType:'application/javascript', body:'' }); }
+});
 await page.route('**/assets/*.css*', r => {
   const n = r.request().url().split('/').pop().split('?')[0];
   try { r.fulfill({ status:200, contentType:'text/css', body: fs.readFileSync(ROOT + '/assets/' + n, 'utf8') }); }

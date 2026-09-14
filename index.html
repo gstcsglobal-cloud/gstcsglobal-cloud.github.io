@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=140"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=141"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write)·admin 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB */
@@ -734,11 +734,21 @@ function askFacts(ms){
   return new Promise(res=>setTimeout(()=>{ delete ASK.pend[id]; res(got); },ms||400));
 }
 // 안 연 탭은 데이터가 없다 — 백그라운드로 모두 띄워 전 탭을 답변 범위에 넣는다
+/* ⚠ 여덟을 «한꺼번에» 띄우면 수선실적 25만 행을 네 페이지가 동시에 받는다 — 아직
+   아무도 IndexedDB 에 안 썼으므로 캐시가 원리적으로 못 막는다. 코드가 정한 동시 6 이
+   탭 수만큼 곱해져 24~48 이 되고, 그것이 v128 에서 인스턴스를 죽인 방향이다.
+   → 둘씩 끊어 띄운다. 문구가 이미 「10~20초 뒤」라 사람이 느끼는 차이는 없다.
+   ⚠ frames[t.id] 는 «만들 때» 채운다 — 나중에 채우면 그 사이에 사람이 탭을 눌러
+     같은 페이지가 두 번 만들어진다. */
+const ASK_BATCH=2, ASK_GAP=2500;
 function askLoadAll(){
   const miss=TABS.filter(t=>!frames[t.id]);
   if(!miss.length)return false;
-  miss.forEach(t=>{ const f=document.createElement('iframe'); f.src=BASE+t.path; f.dataset.id=t.id;
-    document.getElementById('frameWrap').appendChild(f); frames[t.id]=f; });
+  const mk=t=>{ const f=document.createElement('iframe'); f.src=BASE+t.path; f.dataset.id=t.id;
+    document.getElementById('frameWrap').appendChild(f); frames[t.id]=f; };
+  const step=i=>{ if(i>=miss.length)return; miss.slice(i,i+ASK_BATCH).forEach(mk);
+    if(i+ASK_BATCH<miss.length) setTimeout(()=>step(i+ASK_BATCH), ASK_GAP); };
+  step(0);
   askSay('a','다른 탭 '+miss.length+'개를 백그라운드로 불러오는 중입니다. 10~20초 뒤 다시 물어보시면 전 탭에서 찾아 답합니다.');
   return true;
 }

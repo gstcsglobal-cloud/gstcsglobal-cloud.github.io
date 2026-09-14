@@ -5,10 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>자재 실적 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=140"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/chart.umd.min.js"></script>
+<script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/chartjs-plugin-zoom.min.js"></script>
+<script>window.ChartZoom||document.write('<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
+<script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=141"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -236,7 +239,7 @@ canvas{cursor:pointer}
 .wleg i.pa{background:var(--accent-2)}
 .wleg b{color:var(--txt-main);font-variant-numeric:tabular-nums}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=140">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=141">
 </head>
 <body>
 
@@ -748,7 +751,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(140);   // GST.kpiDrill 배지 모드 · GST.monthRows 를 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(141);   // GST.kpiDrill 배지 모드 · GST.monthRows 를 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -2340,11 +2343,11 @@ function renderCrossTable(){
 }
 
 // ===== 차트 복사·저장 (PPT/PNG) =====
-function capToast(msg){let el=document.getElementById('capToast');if(!el){el=document.createElement('div');el.id='capToast';document.body.appendChild(el);}el.textContent=msg;el.style.opacity='1';clearTimeout(el._h);el._h=setTimeout(()=>el.style.opacity='0',1600);}
-function chartHiRes(id,scale){const ch=CHARTS[id];if(!ch||!ch.canvas)return null;const cv=ch.canvas,w=cv.clientWidth||400,h=cv.clientHeight||300;if(!scale)scale=Math.min(6,Math.max(3,Math.round(2400/w)));const prev=ch.options.devicePixelRatio;ch.options.devicePixelRatio=scale;ch.resize();ch.render();const oc=document.createElement('canvas');oc.width=Math.round(w*scale);oc.height=Math.round(h*scale);const g=oc.getContext('2d');g.fillStyle=getComputedStyle(document.body).backgroundColor||'#0B0F14';g.fillRect(0,0,oc.width,oc.height);g.drawImage(cv,0,0,oc.width,oc.height);ch.options.devicePixelRatio=prev;ch.resize();ch.render();return oc;}
-window.copyChart=async function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}try{await new Promise((res,rej)=>oc.toBlob(async b=>{if(!b)return rej();try{await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);res();}catch(e){rej(e);}},'image/png'));capToast('📋 차트 복사됨 — PPT에 붙여넣기(Ctrl+V)');}catch(e){capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요');}};
-window.saveChart=function(id){const oc=chartHiRes(id);if(!oc){capToast('차트를 찾을 수 없습니다');return;}oc.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);capToast('⤓ '+id+'.png 저장됨');},'image/png');};
-window.saveAllCharts=async function(){const ids=Object.keys(CHARTS).filter(id=>CHARTS[id]&&CHARTS[id].canvas);if(!ids.length){capToast('저장할 차트가 없습니다');return;}capToast('🖼 '+ids.length+'개 차트 저장 중…');for(const id of ids){const oc=chartHiRes(id);if(!oc)continue;await new Promise(res=>oc.toBlob(b=>{if(b){const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=id+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);}setTimeout(res,250);},'image/png'));}capToast('🖼 전체 '+ids.length+'개 차트 저장 완료');};
+/* 토스트·고배율 캡처는 core 가 정본이다 (v135 · 8단계). 여덟 페이지가 바이트까지 같은
+   사본을 들고 있었고, copyChart·saveChart·saveAllCharts 는 v135 3단계에 「내보내기 ▾」가
+   들어오면서 «정의만 되고 아무도 안 부르는» 코드가 됐다(호출부 0건 · grep 으로 확인). */
+function capToast(msg){ return GST.capToast(msg); }
+function chartHiRes(id,scale){ return GST.chartHiRes(id,scale); }
 function addCapBtns(){GST.capBtns();}   // 카드 버튼 한 벌은 core(v135) — 그림 복사 버튼은 없앴다(사용자 확정)
 
 applyLang(); loadData(); addCapBtns();

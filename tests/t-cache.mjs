@@ -108,6 +108,27 @@ const out = await page.evaluate(async () => {
   const third = await GST.dbRows('inst');
   R.thirdCalls = R.calls.slice();
 
+  /* ── 오프라인 — 적재 기록 질의가 «일시 오류»로 실패했을 때 (v135 · 8단계) ──
+     예전에는 여기서 던져 IndexedDB 에 든 자료를 «갖고도» 못 썼다. 화면에는
+     「❌ Failed to fetch」 한 줄만 남았다. 자료 오류(없는 열 등)는 그대로 던져야 한다. */
+  const prev2 = GST.db;
+  const logErr = (msg) => async function(){ const c = await prev2(); const f = c.from;
+    c.from = function (t) { if (t === 'sheet_sync_log') return { select: () => ({ eq: () => ({
+        maybeSingle: async () => ({ data:null, error:{ message: msg } }) }) }) };
+      return f(t); };
+    return c; };
+  GST.db = logErr('TypeError: Failed to fetch');
+  R.calls.length = 0; GST._dbMiss = [];
+  try { R.off = (await GST.dbRows('inst')).length; R.offCalls = R.calls.slice(); }
+  catch(e){ R.off = 'throw: ' + e.message; }
+  R.offWarn = JSON.stringify(GST._dbMiss || []);
+  R.offSrc = (GST._srcSeen && GST._srcSeen.inst && GST._srcSeen.inst.src) || '';
+  /* 자료 오류는 옛 값으로 덮으면 안 된다 — 그대로 던져야 한다. */
+  GST.db = logErr('column sheet_inst.zzz does not exist');
+  try { await GST.dbRows('inst'); R.dataErr = 'no throw'; }
+  catch(e){ R.dataErr = e.message; }
+  GST.db = prev2;
+
   R.same = JSON.stringify(first) === JSON.stringify(second);
   R.len = first.length;
   R.headOK = first[0].join('|') === second[0].join('|');
@@ -134,6 +155,13 @@ is(out.hits >= 1, `캐시 적중이 기록된다 (_idbHit=${out.hits})`);
 console.log('\n[3] 적재가 바뀌면 캐시를 버린다');
 is(out.thirdCalls.filter((t) => t === 'sheet_inst').length >= 1,
    'synced_at 이 바뀌면 다시 받는다 (나이가 아니라 적재 시각으로 무효화)');
+
+console.log('\n[3b] 오프라인 — 갖고 있는 자료를 «쓰되 나이를 밝힌다» (v135 · 8단계)');
+is(out.off === 501, `연결이 안 돼도 마지막으로 받은 501행을 쓴다 (실제 ${out.off})`);
+is(/마지막으로 받은 자료/.test(out.offWarn), `그 사실을 배너로 밝힌다 → ${out.offWarn.slice(0, 120)}`);
+is(/시간 전/.test(out.offWarn), '나이를 적는다 — 안 적으면 v128 의 «조용한 폴백»이 재현된다');
+is(out.offSrc === 'cache', `출처 배지도 «캐시»로 바뀐다 (실제 ${out.offSrc})`);
+is(/does not exist/.test(out.dataErr), `자료 오류는 그대로 던진다 — 옛 값으로 덮지 않는다 (실제 ${out.dataErr})`);
 
 console.log('\n[4] 실패해도 조용하지 않다');
 {

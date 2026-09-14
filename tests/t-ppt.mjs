@@ -298,9 +298,15 @@ function mkEnv(nCharts, insights){
 // 차트가 하나도 없으면 파일을 만들지 않는다
 {
   const slides = mkEnv(0, []);
-  let alerted=''; global.alert = m => { alerted=m; };
+  /* ⚠ «어떤 통로로» 알리는지를 박지 않는다 (v135 · 8단계). GST._pptSay 는 토스트를 먼저
+     쓰고(브라우저에서 alert 는 확장·설정에 따라 안 뜨는 자리가 있다) 그다음 alert 다 —
+     여기서 alert 만 보면, 토스트로 «잘 알리게» 고친 날 검사가 붉어진다.
+     물어야 할 것은 하나다: 사용자가 그 사실을 보는가. */
+  let said=''; global.alert = m => { said=m; };
+  const _ct = GST.capToast; GST.capToast = m => { said=m; };
   await GST.pptAuto({asOf:'2026-08-18'});
-  ok(slides.length===0 && /차트가 없/.test(alerted), '차트가 없으면 빈 파일 대신 안내여야 한다');
+  GST.capToast = _ct;
+  ok(slides.length===0 && /차트가 없/.test(said), '차트가 없으면 빈 파일 대신 안내여야 한다 (토스트든 alert 든)');
   reset();
 }
 

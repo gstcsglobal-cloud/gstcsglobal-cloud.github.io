@@ -166,7 +166,11 @@ console.log('\n[9] 소스 — 여덟 페이지가 같은 기계를 쓰는가');
   }
   /* fillHint 는 core 가 정본이다 — 페이지가 자기 판을 되살리면 «입력률 임계가 두 벌»이 된다. */
   const fa = fs.readFileSync(path.join(ROOT, 'fault/index.html'), 'utf8');
-  is(!/function fillHint\s*\(/.test(fa), 'fault: 자기 fillHint 사본이 되살아나지 않았다 (core 가 정본)');
+  /* ⚠ 이름이 아니라 «무엇에서 나오나»를 본다(v122 규약). fault 는 위임 래퍼를 남겨 두었으므로
+     function fillHint 라는 «생김새»는 정상이다 — 되살아나면 안 되는 것은 «자체 구현»이고,
+     그 표식은 임계·문구를 자기가 들고 있다는 것이다(.fill-hint 를 직접 만들거나 30 을 박거나). */
+  is(!/className='fill-hint'/.test(fa) && !/pct>=30/.test(fa),
+     'fault: fillHint 자체 구현이 되살아나지 않았다 — 임계·문구가 두 벌이 되면 화면마다 다른 안내가 뜬다');
   is(/GST\.fillHint\(/.test(fa), 'fault: core 의 fillHint 를 부른다');
   const rp = fs.readFileSync(path.join(ROOT, 'report/index.html'), 'utf8');
   is(/GST\.FILL_T/.test(rp), 'report: TOP3 도 입력률을 적는다 (입력률 0.3% 인데 안내가 없던 자리)');

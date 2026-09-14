@@ -189,6 +189,31 @@ console.log('\n[2] 같은 물음에 두 함수가 답하지 않는지');
   is(/GST\.monthSurges\(/.test(SRC.material) && /GST\.monthSurges\(/.test(SRC.fault),
      '두 페이지가 core 의 GST.monthSurges 를 부른다');
   is(/GST\.SURGE = \{ minN: 5, x: 2 \}/.test(CORE), 'core — 문턱값이 한 곳에 있다');
+  /* v135 8단계 — «금지 목록»으로 바꾼다. 사본이 하나 생길 때마다 검사를 한 줄씩 늘리는
+     방식은 언젠가 빠뜨린다. 정본이 core 에 있는 이름은 여기 배열에 담고, 여덟 페이지에서
+     «자체 구현»이 되살아나는지 한 루프로 본다.
+     ⚠ 이름이 아니라 «무엇에서 나오나»를 본다(v122) — 위임 래퍼(`return GST.X(...)`)는 정상이다.
+       금지하는 것은 그 함수가 «자기 몸»을 갖는 것이고, 그 표식으로 각 이름의 지문을 둔다. */
+  {
+    const PAGES8=[['report',SRC.report],['fault',SRC.fault],['material',SRC.material],['scrubber',SRC.scrubber],
+                  ['hr',SRC.hr],['pm',PM],['tco',TCO],['cip',CIP]];
+    const BAN=[
+      ['isoW',       /jan1\.getUTCDay\(\)\+1\)\/7/,            'GST.isoW'],
+      ['chartHiRes', /devicePixelRatio=scale/,                  'GST.chartHiRes'],
+      ['capToast',   /getElementById\('capToast'\)[\s\S]{0,80}createElement/, 'GST.capToast'],
+      ['pd',         /new Date\(Date\.UTC\(\+m\[1\]/,          'GST.toDate'],
+      ['pptLoad',    /pptxgenjs@[\d.]+\/dist\/pptxgen/,          'GST.pptLoad'],
+      ['fillHint',   /className='fill-hint'/,                    'GST.fillHint'],
+      ['monthCount', /getUTCFullYear\(\)===y&&[^)]*getUTCMonth\(\)===m/, 'GST.monthCount/monthRows'],
+    ];
+    PAGES8.forEach(([p,src])=>BAN.forEach(([nm,re,canon])=>
+      is(!re.test(src), p + ' — ' + nm + ' 자체 구현이 없다 (정본 ' + canon + ')')));
+    /* 죽은 코드가 «되살아나는» 것도 막는다 — v135 3단계에 「내보내기 ▾」가 들어오면서
+       copyChart·saveChart·saveAllCharts 는 호출부 0건이 됐다. 남겨 두면 다음 사람이
+       «이건 왜 있지»로 읽고, 두 벌의 내보내기 경로가 생긴다. */
+    PAGES8.forEach(([p,src])=>is(!/window\.(copyChart|saveChart|saveAllCharts)\s*=/.test(src),
+      p + ' — 죽은 차트 복사·저장 사본이 되살아나지 않았다 (정본 GST.exportMenu)'));
+  }
 
   /* loose 축 판정도 마찬가지다 — 주간현황이 자기 식으로 다시 적으면 pass() 와 갈린다. */
   /* v114 — 필터가 두 벌이라 hitL 도 두 벌이지만, 규칙 본문은 hitLG 한 곳뿐이다.
@@ -237,6 +262,20 @@ console.log('\n[4] 분모에서 뺀 설비를 화면이 밝히는지 (v99)');
      'fault — 상태 열이 없는 옛 추출본이면 그 사실을 밝힌다 (v99 규약)');
   /* 상태를 «모르는» 것과 «나간» 것을 한 덩어리로 세면 새 상태값이 생겨도 아무도 모른다. */
   is(/outN:_outN,unkN:_unkN/.test(SRC.fault), 'fault — 제외 사유를 둘로 나눠 돌려준다');
+  /* v135 8단계 — 이 검사가 fault 만 보고 있었다. «조용히 빠지는» 다른 넷은 아무도 안 지켰다:
+     _KRWHYB(국내 올바 원장 미적재) · _TCO_NODATE(날짜 없어 TCO 에서 빠진 대수) ·
+     ins_md(설치 날짜 미기재) · ins_qty(수량 오입력). 전부 «빠졌다는 사실»을 화면이 말해야 하고,
+     v135 7단계부터는 «무엇을 하면 되는지»까지 데이터 품질 카드가 적는다.
+     ⚠ 인사이트는 네 칸뿐이라 뒤에 붙이면 밀려 사라진다 — 경고 부류는 unshift 여야 한다. */
+  const TCOs=noCmt(rd('tco/index.html')), SCR=SRC.scrubber, MAT=SRC.material, REP=SRC.report;
+  is(/window\._KRWHYB/.test(REP) && /dq_krb/.test(REP),
+     'report — 국내 올바 원장이 비면 그 사실과 조치를 남긴다 (알람만 지키면 한쪽만 조용히 빈다)');
+  is(/window\._TCO_NODATE>0/.test(TCOs) && /tco_nodate/.test(TCOs),
+     'tco — 날짜가 없어 빠진 대수를 밝히고 품질 카드에 담는다 (조용히 빠지면 TCO 가 작게 나온다)');
+  is(/ins\.unshift\(\{sev:'warn',text:t\('ins_md'\)/.test(SCR) && /inst_nodate/.test(SCR),
+     'scrubber — 날짜 미기재를 인사이트 «맨 앞»에 세우고 품질 카드에도 담는다');
+  is(/ins\.unshift\(\{sev:'warn',text:t\('ins_qty'\)/.test(MAT) && /mat_qty/.test(MAT),
+     'material — 수량 오입력을 인사이트 맨 앞에 세우고 품질 카드에도 담는다 (네 칸 상한에 밀리지 않게)');
 }
 
 /* ══════════════════════════════════════════════════════════════

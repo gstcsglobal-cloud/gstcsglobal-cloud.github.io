@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>주간 현황 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=140"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/chart.umd.min.js"></script>
+<script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
+<script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=141"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -171,7 +173,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=140">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=141">
 </head>
 <body>
 
@@ -375,7 +377,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(140);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
+GST.needVer&&GST.needVer(141);   // corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -746,13 +748,9 @@ function fmtYM(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padSta
 // 세부내역(rowsModal) 날짜 표기 — pd()가 UTC 자정으로 만들므로 ISO 앞 10자가 그대로 시트 날짜다.
 // toLocaleDateString 등 로컬 변환을 쓰면 시간대에 따라 하루 밀린다.
 const fmtD=d=>(d instanceof Date&&!isNaN(d))?d.toISOString().slice(0,10):'';
-function isoW(d){ // 엑셀 WEEKNUM(일~토, 1/1 포함 주=W1) — 시트 주차와 일치. 같은 주(일~토)는 같은 키(일요일 기준 계산)
-  const sun=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));
-  sun.setUTCDate(sun.getUTCDate()-sun.getUTCDay());
-  const jan1=new Date(Date.UTC(sun.getUTCFullYear(),0,1));
-  const w=Math.ceil((((sun-jan1)/MS)+jan1.getUTCDay()+1)/7);
-  return sun.getUTCFullYear()+'-W'+String(w).padStart(2,'0');
-}
+// 주차 규약은 GST.isoW 가 정본이다 (엑셀 WEEKNUM · 일~토 · 1/1 포함 주=W1) — v135 8단계에 위임으로.
+// 사본을 두면 한쪽만 고쳐져 같은 막대에서 한 주가 어긋난다(CLAUDE.md 의 「isoW 네 벌」).
+function isoW(d){ return GST.isoW(d); }
 function keyOfDate(d,u){return (u||PERIOD)==='w'?isoW(d):fmtYM(d);}
 
 /* ===== 국내 알람·올바이패스 원장 (v92) =====
@@ -3194,9 +3192,6 @@ function render(){ GST.dq&&GST.dq.reset('report');
 }
 
 // ===== 차트 고해상도 복사·저장 (PPT용) =====
-function capToast(msg){ let t=document.getElementById('capToast');
-  if(!t){t=document.createElement('div');t.id='capToast';document.body.appendChild(t);}
-  t.textContent=msg; t.style.opacity='1'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.opacity='0',1600); }
 // ===== 드릴다운 모달 (막대/라인 클릭 → 구간 상세) =====
 function showDrill(title,html){
   let m=document.getElementById('drillModal');
@@ -3411,29 +3406,6 @@ function drillIo(p,rowsIn,hint){ const D=window._DRILL;
   showDrill('입사·퇴사 상세 · '+p.label,h);
 }
 // 차트를 지정 배율로 다시 그려 배경 채운 캔버스 반환
-function chartHiRes(id,scale){
-  const ch=CHARTS[id]; if(!ch||!ch.canvas)return null;
-  const cv=ch.canvas, w=cv.clientWidth||400, h=cv.clientHeight||300;
-  // 배율 미지정 시: 결과물이 약 2400px 폭이 되도록 자동(3~6배) — PPT 확대에도 선명
-  if(!scale) scale=Math.min(6,Math.max(3,Math.round(2400/w)));
-  const prev=ch.options.devicePixelRatio;
-  ch.options.devicePixelRatio=scale; ch.resize(); ch.render();
-  const oc=document.createElement('canvas'); oc.width=Math.round(w*scale); oc.height=Math.round(h*scale);
-  const g=oc.getContext('2d');
-  g.fillStyle=getComputedStyle(document.body).backgroundColor||'#0B0F14';
-  g.fillRect(0,0,oc.width,oc.height);
-  g.drawImage(cv,0,0,oc.width,oc.height);
-  ch.options.devicePixelRatio=prev; ch.resize(); ch.render();
-  return oc;
-}
-window.copyChart=async function(id){
-  const oc=chartHiRes(id); if(!oc){capToast('차트를 찾을 수 없습니다');return;}
-  try{
-    await new Promise((res,rej)=>oc.toBlob(async b=>{ if(!b)return rej();
-      try{ await navigator.clipboard.write([new ClipboardItem({'image/png':b})]); res(); }catch(e){ rej(e); } },'image/png'));
-    capToast('📋 차트 복사됨 — PPT에 붙여넣기(Ctrl+V)');
-  }catch(e){ capToast('복사 미지원 브라우저 — ⤓ 저장을 이용하세요'); }
-};
 /* ===== 차트 «데이터» 복사 — 그림이 아니라 표로 붙는다 (v133 · 사용자 요청) =====
    ⚠ 웹 페이지는 클립보드에 «파워포인트 차트 개체»를 올릴 수 없다. 브라우저가 내주는
      클립보드 형식은 text/plain · text/html · image/png 뿐이고, PPT 가 「차트로 붙여넣기」를
@@ -3448,12 +3420,6 @@ window.copyChart=async function(id){
 function chartToGrid(id){ return GST.chartGrid(GST.chartOf(id)); }
 const gridToRichHTML=GST.gridHTML, gridToTSV=GST.gridTSV;
 window.copyChartData=function(id){ return GST.copyChartData(id); };
-window.saveChart=function(id){
-  const oc=chartHiRes(id); if(!oc){capToast('차트를 찾을 수 없습니다');return;}
-  oc.toBlob(b=>{ const u=URL.createObjectURL(b); const a=document.createElement('a');
-    a.href=u; a.download=id+'.png'; a.click(); setTimeout(()=>URL.revokeObjectURL(u),2000);
-    capToast('⤓ '+id+'.png 저장됨'); },'image/png');
-};
 // ===== 표(Scrubber 가동 현황) 복사·저장 — PPT/엑셀에 '진짜 표'로 붙여넣기 =====
 function opTableEl(){ const b=document.getElementById('opTblBody'); return b?b.closest('table'):null; }
 function tableToRichHTML(tbl,title){
@@ -3519,6 +3485,11 @@ window.saveTop3Csv=function(){
   const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='fault_top_causes.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),2000);
   capToast('⤓ fault_top_causes.csv 저장됨');
 };
+/* 토스트·고배율 캡처는 core 가 정본이다 (v135 · 8단계). 여덟 페이지가 바이트까지 같은
+   사본을 들고 있었고, copyChart·saveChart·saveAllCharts 는 v135 3단계에 「내보내기 ▾」가
+   들어오면서 «정의만 되고 아무도 안 부르는» 코드가 됐다(호출부 0건 · grep 으로 확인). */
+function capToast(msg){ return GST.capToast(msg); }
+function chartHiRes(id,scale){ return GST.chartHiRes(id,scale); }
 function addCapBtns(){
   // Scrubber 가동 현황 표 — 복사(PPT/엑셀)·CSV 버튼
   const opCard=document.getElementById('opTblBody')?document.getElementById('opTblBody').closest('.tablecard'):null;
@@ -3576,16 +3547,10 @@ window.axReset=function(id){
 
 // ===== PPT 주간보고 내보내기 — 주간보고 양식(3슬라이드) 자동 생성 =====
 // 표시 전용 계층: 화면에 렌더된 차트(CHARTS)·표(DOM)·스냅샷(_PPT)의 값을 그대로 옮긴다. 지표 계산 로직 무관.
-let _pptLoading=null;
-function pptLoad(){
-  if(window.PptxGenJS)return Promise.resolve();
-  if(_pptLoading)return _pptLoading;
-  _pptLoading=new Promise((res,rej)=>{const s=document.createElement('script');
-    s.src='https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
-    s.onload=res; s.onerror=()=>{_pptLoading=null;rej(new Error('PptxGenJS CDN 로드 실패'));};
-    document.head.appendChild(s);});
-  return _pptLoading;
-}
+/* ⚠ 옛 pptLoad 사본을 지웠다 (v135 · 8단계). 호출자가 0건이었고, 시간 제한도 자체 사본
+   폴백도 없는 판이라 «사내망이 CDN 을 묵살하면 영영 안 끝나는» v105 규율 위반이었다 —
+   저장소에서 pptxgenjs CDN 을 직접 script.src 로 쓰는 유일한 자리이기도 했다.
+   정본은 GST.pptLoad(자체 사본 → CDN · 15초)다. */
 const PPT_FONT='맑은 고딕';
 function pptCell(txt,o){return {text:String(txt==null?'':txt),options:Object.assign({fontFace:PPT_FONT,fontSize:8,align:'center',valign:'middle',color:'1A1A1A',fill:{color:'FFFFFF'},border:{pt:0.5,color:'9AA3AD'}},o||{})};}
 function pptHead(txt,o){return pptCell(txt,Object.assign({bold:true,fill:{color:'000000'},color:'FFFFFF'},o||{}));}

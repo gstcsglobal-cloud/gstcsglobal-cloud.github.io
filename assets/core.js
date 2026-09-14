@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 140;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 141;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* 인사이트 띠의 머리글. 예전에는 «INSIGHT» 영문 대문자가 core 에 박혀 있어 네 언어 어디서도 안 바뀌고
    PPT 장표까지 그대로 나갔다(v135). core 의 공용 문자열 관례(GST._lang + 사전) 그대로다. */
 GST.INS_T = {ko:'요약', en:'Summary', zh:'摘要', ja:'要約'};
@@ -2686,7 +2686,28 @@ GST.dbRows = async function(table){
   /* 기대 행수를 먼저 본다. 미러가 아직 안 채워졌는데 빈 배열을 돌려주면
      화면이 "데이터 0건"으로 멀쩡히 그려진다 — 그게 가장 위험한 실패다. */
   const lg = await c.from('sheet_sync_log').select('rows,err,synced_at,ms').eq('tbl', table).maybeSingle();
-  if(lg.error) throw new Error('LOG '+lg.error.message);
+  /* ⚠ 여기서 던지면 IndexedDB 에 든 25만 행을 «갖고도» 못 쓴다 (v135 · 8단계).
+     idb 조회가 이 질의가 «성공한 뒤에야» 나오기 때문이고, 폴백 cacheLoad 는
+     localStorage 라 2만 행 초과는 애초에 저장하지 않는다 — 화면에는 「❌ Failed to
+     fetch」 한 줄만 남았다.
+     그래서 «일시 오류»(네트워크·타임아웃)일 때만 스탬프 대조 없이 마지막으로 받은
+     자료를 쓴다. 자료 오류(없는 열 등)는 그대로 던진다 — 옛 값으로 덮으면 안 된다.
+     ⚠ 나이를 «반드시» 밝힌다. 조용히 그리면 v128 의 «조용한 폴백»이 그대로 재현된다 —
+       배너가 이 폴백의 절반이다. */
+  if(lg.error){
+    const m = String(lg.error.message||'');
+    const transient = /fetch|network|timeout|abort|502|503|504|Load failed/i.test(m);
+    if(transient){
+      let last=null; try{ last = await GST.idb.get('rows:'+table); }catch(e){}
+      if(last && last.rows && last.rows.length){
+        const hrs = Math.max(0, Math.round((Date.now()-(last.t||0))/3600000));
+        GST._dbWarn(table, '연결이 안 돼 마지막으로 받은 자료를 보여줍니다 ('+hrs+'시간 전)');
+        GST._srcNote(table, 'cache', last.rows.length-1);
+        return last.rows;
+      }
+    }
+    throw new Error('LOG '+m);
+  }
   const want = lg.data && lg.data.rows;
   if(!want) throw new Error('MIRROR_EMPTY — 아직 적재된 적이 없다');
 
@@ -3986,8 +4007,24 @@ GST.filters = (function(){
   let KPEND = null, KSAVED = null, KCUR = null;
   function kioskSet(k, v){
     if(!(k in EQ.F)) return { applied:false, why:'noaxis' };
+    /* ⚠ 셸은 1.2초 뒤 «같은 값»을 한 번 더 보낸다 — 탭이 지연 로딩이라 mount 전에 온 값을
+       놓치지 않으려는 것이고 그 자체는 옳다(v103). 그런데 받는 쪽에 «같은 값이면 무시»가
+       없어 refresh()+render() 가 두 번 돌았다 — 전환 직후 화면이 한 번 더 껌뻑인다.
+       ⚠ 판정을 F 로 하면 안 된다(이 함수 아래 주석의 함정 그대로) — «셸이 무엇을 걸라고
+         했나»는 KCUR 이 들고 있으므로 그것으로 본다. CFG 가 아직 없으면(mount 전) 보류가
+         먼저다 — 그때는 아무것도 그려지지 않았으므로 «같은 값»이어도 건너뛰면 안 된다. */
+    const same = CFG && KCUR && KCUR.k===k &&
+      (Array.isArray(v)&&Array.isArray(KCUR.v) ? (v.length===KCUR.v.length && v.every((x,i)=>x===KCUR.v[i]))
+                                               : KCUR.v===v);
     KCUR = { k:k, v:v };   // 자동 새로고침이 끝난 뒤 «지금 걸린 값»을 다시 걸기 위해
     if(!CFG){ KPEND = { k:k, v:v }; return { applied:false, why:'loading' }; }
+    if(same){
+      /* 이미 걸려 있다 — 다시 그리지 않고 «그때의 답»을 그대로 돌려준다.
+         applied 를 거짓으로 돌리면 셸이 그 조합을 «못 거는 것»으로 기억해 순회에서 빼 버린다. */
+      const inEq0 = opts(EQ, k).indexOf(String(v)) >= 0, inHr0 = opts(HR, k).indexOf(String(v)) >= 0;
+      if(!v) return { applied:true, why:'' };
+      return { applied:(inEq0||inHr0), why:(inEq0||inHr0) ? '' : 'nodata' };
+    }
     if(!KSAVED){
       const cp = cur => (cur instanceof Set) ? Array.from(cur) : cur;
       KSAVED = { k:k, eq:cp(EQ.F[k]), hr:cp(HR.F[k]) };
@@ -4297,7 +4334,9 @@ GST.filters = (function(){
       load();
       /* 순회가 로딩 중에 보낸 값이 있으면 지금 적용한다 — 기준선도 여기서 잡혀야
          «사람이 걸어 둔 값»이 기준이 된다(위 kioskSet 주석 ②). */
-      if(KPEND){ const kp = KPEND; KPEND = null; kioskSet(kp.k, kp.v); }
+      /* ⚠ KCUR 을 먼저 지운다 — 보류분 재생은 «아직 한 번도 안 걸린» 값이라,
+         같은-값-건너뛰기(v135 8단계)에 걸리면 그 탭만 영영 필터가 안 걸린다. */
+      if(KPEND){ const kp = KPEND; KPEND = null; KCUR = null; kioskSet(kp.k, kp.v); }
       if(!document.getElementById('gf-css')){
         const st=document.createElement('style'); st.id='gf-css';
         /* 이 화면에 안 걸리는 축은 «잠긴 칸»으로 보인다 — 흐리게 해서 눌러 볼 것이
@@ -4949,9 +4988,21 @@ GST.zipLoad = function(){
     .catch(function(e){ GST._zipP=null; throw e; });
   return GST._zipP;
 };
-/* 실패를 «보이게» 알린다. alert 는 브라우저·확장에 따라 안 뜨는 자리가 있어 토스트를 먼저 쓴다. */
+/* 한 줄 토스트 — 여덟 페이지가 바이트까지 같은 사본을 들고 있었다(v135 · 8단계에 core 로).
+   ⚠ 페이지 사본은 지우지 않고 «위임»으로 남긴다 — 호출부가 55곳이라 이름을 없애면
+     그 55곳을 한꺼번에 고쳐야 하고, 한 곳만 빠지면 그 화면에서 토스트가 조용히 사라진다. */
+GST.capToast = function(msg){
+  let el=document.getElementById('capToast');
+  if(!el){ el=document.createElement('div'); el.id='capToast'; document.body.appendChild(el); }
+  el.textContent=msg; el.style.opacity='1';
+  clearTimeout(el._h); el._h=setTimeout(function(){ el.style.opacity='0'; },1600);
+};
+/* 실패를 «보이게» 알린다. alert 는 브라우저·확장에 따라 안 뜨는 자리가 있어 토스트를 먼저 쓴다.
+   ⚠ window.capToast 를 먼저 보는 이유 — 페이지가 자기 토스트(다른 자리·다른 모양)를 갖고
+     있을 수 있다. 지금은 전부 GST.capToast 로 위임하지만 그 폴백 방향은 그대로 둔다. */
 GST._pptSay = function(msg){
   try{ if(typeof window.capToast==='function'){ window.capToast(msg); return; } }catch(e){}
+  try{ GST.capToast(msg); return; }catch(e){}
   try{ alert(msg); }catch(e){}
   try{ console.warn('[PPT] '+msg); }catch(e){}
 };

@@ -58,6 +58,40 @@ console.log('[1] 자체 호스팅 — 사내망이 CDN 을 막아도 도는 길�
   is(!/supabase-js@2\/dist/.test(C), "core 에 열린 버전(@2)의 CDN 주소가 없다");
   is(/catch\(e\)\{ return GST\._sbFail; \}/.test(C) && (C.match(/return GST\._sbFail;/g)||[]).length >= 3,
      '로그인 세 함수가 로더 실패를 받아 문구로 돌려준다 (버튼이 「전송 중…」에 굳지 않는다)');
+  /* v135 8단계 — chart.js·papaparse·zoom 도 자체 사본 먼저. 이 셋은 «화면의 모든 차트»를
+     떠받치는데 여덟 페이지가 차단형 CDN 스크립트로만 받고 있었다.
+     ⚠ 여기는 비동기 로더가 아니라 document.write 폴백이다 — <head> 차단형이라 순서를
+       바꾸면 여덟 페이지의 초기화가 통째로 재배열된다. 검사도 그 모양을 그대로 본다. */
+  const HEADLIBS = [
+    ['chart.umd.min.js', 'Chart',     /chart\.js@([\d.]+)\/dist\/chart\.umd\.min\.js/],
+    ['papaparse.min.js', 'Papa',      /papaparse@([\d.]+)\/papaparse\.min\.js/],
+    ['chartjs-plugin-zoom.min.js', 'ChartZoom', /chartjs-plugin-zoom@([\d.]+)\//]
+  ];
+  const PAGES8 = ['report','fault','material','pm','scrubber','tco','cip','hr'];
+  HEADLIBS.forEach(function(L){
+    is(fs.existsSync(ROOT + '/assets/vendor/' + L[0]), 'assets/vendor/' + L[0] + ' 가 저장소에 있다');
+  });
+  PAGES8.forEach(function(pg){
+    const src = fs.readFileSync(ROOT + '/' + pg + '/index.html', 'utf8');
+    HEADLIBS.forEach(function(L){
+      const cdnM = src.match(L[2]); if(!cdnM) return;            // 그 페이지가 안 쓰는 라이브러리
+      const vend = src.indexOf('assets/vendor/' + L[0]);
+      const cdn  = src.indexOf(cdnM[0]);
+      is(vend >= 0 && vend < cdn, pg + ': ' + L[0] + ' 는 자체 사본을 «먼저» 본다 (CDN 은 폴백)');
+      is(new RegExp('window\\.' + L[1] + '\\|\\|document\\.write').test(src),
+         pg + ': ' + L[0] + ' 폴백이 파싱 중 document.write 다 (순서가 유지된다)');
+    });
+  });
+  /* ⚠ 자체 사본과 CDN 폴백의 «버전»이 어긋나면 어떤 사람은 되고 어떤 사람은 안 된다. */
+  const rep = fs.readFileSync(ROOT + '/report/index.html', 'utf8');
+  const chartCdn = (rep.match(/chart\.js@([\d.]+)/) || [])[1];
+  const chartVer = (fs.readFileSync(ROOT + '/assets/vendor/chart.umd.min.js', 'utf8').match(/VERSION\s*=\s*["']([\d.]+)["']/) || [])[1]
+                 || (fs.readFileSync(ROOT + '/assets/vendor/chart.umd.min.js', 'utf8').match(/Chart\.js v([\d.]+)/) || [])[1];
+  is(chartVer && chartVer === chartCdn, `chart.js 자체 사본(${chartVer}) 과 CDN 폴백(${chartCdn}) 버전이 같다`);
+  const papaCdn = (rep.match(/papaparse@([\d.]+)/) || [])[1];
+  const papaVer = (fs.readFileSync(ROOT + '/assets/vendor/papaparse.min.js', 'utf8').match(/Papa\.RECORD_SEP|papaparse v?([\d.]+)/) || [])[1];
+  is(papaCdn === '5.4.1', `papaparse CDN 폴백이 x.y.z 로 핀돼 있다 (${papaCdn})`);
+  void papaVer;
 }
 
 console.log('\n[2] 죽어 있던 네이티브 차트 코드가 살아났는가');

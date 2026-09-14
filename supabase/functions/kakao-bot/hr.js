@@ -4,7 +4,7 @@
 
 export const MS = 86400000;
 
-// report/index.html:595 — 엑셀 WEEKNUM(일~토, 1/1 포함 주=W1)과 동일. 시트 주차 라벨과 일치해야 한다.
+// 정본: assets/core.js 의 GST.isoW — 엑셀 WEEKNUM(일~토, 1/1 포함 주=W1). 시트 주차 라벨과 일치해야 한다.
 export function isoW(d) {
   const sun = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
   sun.setUTCDate(sun.getUTCDate() - sun.getUTCDay());
@@ -13,7 +13,7 @@ export function isoW(d) {
   return sun.getUTCFullYear() + '-W' + String(w).padStart(2, '0');
 }
 
-// report/index.html:586 — '2022. 8. 1' / '2025-07-10' 등 시트에 섞여 쓰이는 날짜 표기를 흡수.
+// 정본: assets/core.js 의 GST.toDate — '2022. 8. 1' / '2025-07-10' 등 시트에 섞여 쓰이는 날짜 표기를 흡수.
 export function pd(s) {
   if (!s) return null;
   if (s instanceof Date) return s;
@@ -35,7 +35,7 @@ export function dateCell(v) {
   return pd(s);
 }
 
-// report/index.html:896 — 퇴사일=마지막 근무일 → 그 달 포함, 다음달 제외
+// 정본: report 의 재직 판정(isActive) — 퇴사일=마지막 근무일 → 그 달 포함, 다음달 제외
 export function activeAt(p, asOf) {
   return !!(p.join && p.join <= asOf && (!p.quit || p.quit >= asOf));
 }
@@ -47,7 +47,9 @@ export function normKey(s) {
 
 /* ============================================================
    사이트/고객사 표기 정규화
-   대시보드(report/index.html:356~401, assets/core.js:1005~1012)와 **완전히 동일**해야 한다.
+   대시보드의 `GST.ORG`(assets/core.js 의 `site`·`fab`·`customer`·`custRaw`)와
+   **완전히 동일**해야 한다. ⚠ 줄 번호로 적지 않는다 — 이 파일이 존재하는 이유가 그 참조인데
+   줄 번호는 한 번의 편집으로 어긋나고, 실제로 여섯 군데가 전부 틀려 있었다(v135 · 8단계).
    여기가 어긋나면 "F16" 같은 필터가 조용히 0건을 반환한다(실제로 그런 사고가 있었다).
    ============================================================ */
 export function nfw(s) {                      // 전각 ASCII → 반각 (ＰＳＭＣ와 PSMC를 같은 키로)
@@ -115,7 +117,7 @@ export function siteKey(sv) {
   if (up.includes('TASC') || up.includes('ASIA SEMI')) return 'TASC';
   return normCust(up);
 }
-// report/index.html:1031 — 대시보드가 실제로 쓰는 사이트 키. 값 예: F16 · F11 · F16N · PSMC
+// 정본: assets/core.js 의 GST.ORG.site — 대시보드가 실제로 쓰는 사이트 키. 값 예: F16 · F11 · F16N · PSMC
 export function grpKey(x) { return x.fab || x.custB || 'ETC'; }
 // 대시보드 SITES(report:1029)에 F16S·F10을 더한 것 — 봇이 생성해도 되는 사이트 어휘의 전부
 export const SITE_KEYS = ['F16', 'F11', 'F16N', 'F16S', 'F10', 'PSMC', 'TASC', 'WINBOND'];
@@ -535,7 +537,7 @@ export function findEquip(installRows, query) {
   return installRows.filter((r) => snMatch(r.sn, query) || snMatch(r.code, query));
 }
 
-/* ---------- 실적현황 (gid 646668307) — fault/index.html:430~433 컬럼맵 ---------- */
+/* ---------- 실적현황 (gid 646668307) — 컬럼맵 정본은 assets/core.js 의 GST.SM.SPEC.wk ---------- */
 /* 예전에는 헤더를 찾아놓고도(hIdx) 열은 고정 번호로 읽었다. 시트가 밀려도 NO_HEADER 없이
    통과한 뒤 엉뚱한 열을 읽는 가장 위험한 조합이었다 — 이제 찾은 헤더에서 이름으로 해석한다.
    수선실적은 헤더 67개·정규화 후 중복 0이라 평면 매칭으로 충분하다(실측 확인).

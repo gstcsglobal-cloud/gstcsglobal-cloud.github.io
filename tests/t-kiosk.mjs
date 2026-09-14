@@ -178,6 +178,30 @@ console.log('[1-4] 자동 새로고침이 순회 중인 필터를 되돌리지 �
      '되돌린 뒤 reapply 는 아무 일도 안 한다 (늦게 온 신호가 사람 필터를 덮지 않게)');
 }
 
+/* ── [1-5] 셸의 «1.2초 뒤 재전송»이 같은 화면을 두 번 그리지 않는지 (v135 · 8단계) ──
+   셸은 mount 전에 온 값을 놓치지 않으려고 같은 값을 한 번 더 보낸다(v103 · 옳은 이유).
+   받는 쪽에 «같은 값이면 무시»가 없어 refresh()+render() 가 두 번 돌았다 —
+   순회는 15초마다 축을 바꾸므로 전환 직후 화면이 한 번 더 껌뻑인다.
+   ⚠ 보류분(KPEND) 재생은 «아직 한 번도 안 걸린» 값이라 건너뛰면 안 된다 — 그것도 본다. */
+console.log('[1-5] 같은 값을 다시 받으면 다시 그리지 않는지');
+{
+  let n=0;
+  GST.filters.mount({page:'t7', rows:()=>[{c:'H1'},{c:'H2'}], onChange:()=>{n++;}, get:{campus:x=>x.c}});
+  n=0;
+  const r1=GST.filters.kioskSet('campus','H2');
+  const after1=n;
+  const r2=GST.filters.kioskSet('campus','H2');    // 셸의 재전송
+  ok(after1>0, '첫 신호는 화면을 그린다 (실제 '+after1+'회)');
+  ok(n===after1, '같은 값을 다시 받으면 «다시 안 그린다» (실제 '+n+'회 · 되돌리면 2회가 된다)');
+  ok(r2 && r2.applied===r1.applied,
+     '그래도 답은 같다 — applied 를 거짓으로 돌리면 셸이 그 조합을 순회에서 빼 버린다');
+  const r3=GST.filters.kioskSet('campus','H1');
+  ok(n>after1 && GST.filters.chosen('campus').join()==='H1',
+     '값이 «바뀌면» 그때는 그린다 (실제 '+GST.filters.chosen('campus').join()+')');
+  void r3;
+  GST.filters.kioskRestore();
+}
+
 /* 소스로만 볼 수 있는 것 — 자동 새로고침이 정말 kioskOn 을 물어보는가.
    위 [1-4]는 API 가 «옳게 동작하는지»만 본다. 부르는 쪽이 안 부르면 소용이 없다. */
 {
