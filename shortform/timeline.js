@@ -14,26 +14,49 @@
   //   재분배는 «초당 읽을 양이 많은 씬»부터: 성장곡선 > 지도 > 리빌 > 창업 > (B는 미래·클로즈·엔딩·훅까지).
   //   변형 키는 full 과 다른 값만 적는다 — 없으면 full 로 폴백. 0 은 «그 씬을 뺀다»(short 규약 그대로).
   //   ⚠ 스탬프 씬(실란·칠러·정지)은 안 늘린다 — 표시를 늘리면 클립이 슬로모가 되어 슬램이 물러진다.
+  // v25 「없었던 하루」 — 14컷 45.5초. 옛 v1(16장면)에서 «순서와 길이»만 갈아끼웠다.
+  //   ⚠ 기존 장면의 cue0 은 한 자리도 안 건드렸다. 건드리면 scene.html·bgm.cjs 에 적힌
+  //     큐 시각을 전부 다시 써야 한다 — 새 컷은 축의 «끝»(78 이후)에 자리를 잡는다.
+  //   ⚠ 표시 순서는 이 배열 순서다(큐 축 순서와 달라도 된다). 그래서 여기서 순서만 바꿔도
+  //     영상의 컷 순서가 바뀐다.
+  //   full: 0 은 «그 장면을 뺀다». v1 의 intro·hook·만담·창업·액침냉각 등이 여기서 빠진다.
   const SCENES = [
-    { k: 'intro',   cue0: 66.0, base: 4.0, full: 4.3, short: 4.3 },   // 인트로 컷(CRT 페이크아웃) — 표시는 맨 앞 · ⚠ base 를 4.3 으로 늘리면 s6 의 큐(70.0)와 겹친다
-    { k: 'hook',    cue0:  0.0, base: 4.0, full: 3.4, short: 2.5, fullA: 3.6, fullB: 3.8, fullC: 4.0 },
-    { k: 's6',      cue0: 70.0, base: 6.4, full: 6.4, short: 5.0, fullB: 0,   fullC: 7.6 },   // 스크러버·칠러 만담(3D 캐릭터) · C: AI 음성이 자연 속도로 들어가는 예산(7.2→7.6 · end 가 0.4 내줬다)
-    { k: 'silane',  cue0:  6.4, base: 3.4, full: 3.6, short: 3.2 },   // S1 컷 길이
-    { k: 'sf6',     cue0:  9.8, base: 3.4, full: 2.4, short: 0,   fullA: 0 },   // S3 ctx 1.8 + 스탬프 홀드 0.6
-    { k: 'chill',   cue0: 13.2, base: 3.4, full: 3.9, short: 3.4 },   // S2 컷 길이
-    { k: 'stop',    cue0: 16.6, base: 3.4, full: 2.6, short: 2.6 },   // S4 컷 2.2(스탬프 착지 연장본) + 홀드 0.4
-    { k: 'reveal',  cue0: 20.0, base: 4.8, full: 4.4, short: 3.4, fullA: 4.9, fullB: 5.4, fullC: 5.6 },
-    { k: 'pivot',   cue0: 24.8, base: 2.0, full: 1.8, short: 1.2, fullC: 2.4 },
-    { k: 'found',   cue0: 26.8, base: 4.0, full: 3.8, short: 2.0, fullA: 4.1, fullB: 4.6, fullC: 0 },
-    { k: 'map',     cue0: 34.4, base: 5.2, full: 3.5, short: 2.6, fullA: 4.0, fullB: 4.4, fullC: 5.2 },   // 표시 순서를 kosdaq «앞»으로 (연대 일원화 · v19) · C: 킬포인트 문구를 위해 1:1
-    { k: 'kosdaq',  cue0: 30.8, base: 3.6, full: 3.8, short: 3.0, fullA: 4.7, fullB: 5.0, fullC: 5.4 },   // 성장 3박: 상장 → 수출 1억불(2021) → 시총 1조(2026)
-    { k: 'stairs',  cue0: 39.6, base: 4.2, full: 0,   short: 0   },   // v19: 별도 씬에서 빼고 성장 곡선의 이정표로 접었다
-    { k: 'future',  cue0: 43.8, base: 3.9, full: 4.7, short: 3.2, fullB: 5.5, fullC: 0 },   // 3D 컷 3.9 + 홀드 — 성장 곡선이 2026에 닿은 뒤 받는 장면
-    { k: 'close',   cue0: 52.2, base: 4.6, full: 4.6, short: 3.6, fullB: 5.3, fullC: 5.6 },
-    { k: 'end',     cue0: 56.8, base: 6.3, full: 6.7, short: 5.9, fullB: 7.3, fullC: 7.3 },   // 로고 리빌: base 보다 길다(느려질 뿐 안 깨진다) · C: 0.4 를 s6 음성 예산으로 (7.7→7.3)
-    // v20: base·표시 함께 +0.9 — 콘텐츠(마지막 큐 ~61.9)가 다 선 뒤 «홀드»가 생긴다.
-    //      base 만 두고 표시만 늘리면 조립 자체가 느려진다 — 비율(≈1.06)을 지켜서 늘렸다.
+    // ── 1막 재난 (0:00–0:08.2) — 자막도 로고도 없다. 경보음이 8초를 묶는다.
+    { k: 'c01',    cue0: 78.0, base: 2.4, full: 2.4, short: 2.4 },   // 열 전체 적색 경보 (3d/s7 ?emg=1)
+    { k: 'c02',    cue0: 81.0, base: 2.0, full: 2.0, short: 2.0 },   // 위층 클린룸 공정 정지
+    { k: 'c03',    cue0: 84.0, base: 2.0, full: 2.0, short: 2.0 },   // 온도가 풀린다 → 웨이퍼 폐기
+    { k: 'c04',    cue0: 87.0, base: 1.8, full: 1.6, short: 1.6 },   // 팹 소등 + 완전 무음 0.4
+    // ── 2막 반전 (0:08.2–0:14)
+    { k: 'c05',    cue0: 90.0, base: 2.2, full: 2.2, short: 2.2 },   // 역재생(편집만)
+    { k: 'c06',    cue0: 93.0, base: 3.8, full: 3.8, short: 3.8 },   // 같은 열, 백색 + 「경보 다음이 없었다」
+    // ── 3막 이유 (0:14–0:30) — 네 컷 모두 기존 렌더 재활용
+    { k: 'silane', cue0:  6.4, base: 3.4, full: 4.0, short: 4.0 },   // CUT07 스크러버 1,200°C
+    { k: 'chill',  cue0: 13.2, base: 3.4, full: 4.0, short: 4.0 },   // CUT08 칠러 ±0.1°C
+    { k: 'sf6',    cue0:  9.8, base: 3.4, full: 4.0, short: 4.0 },   // CUT09 SF6 배출량 0
+    { k: 'reveal', cue0: 20.0, base: 4.8, full: 4.0, short: 4.0 },   // CUT10 219,000시간
+    // ── 4막 사람 (0:30–0:38) — 퇴직금 컷을 뺐으므로 성장 3박이 그 자리를 받는다
+    { k: 'map',    cue0: 34.4, base: 5.2, full: 4.0, short: 4.0 },   // CUT11 화성 → 여섯 나라
+    { k: 'kosdaq', cue0: 30.8, base: 3.6, full: 4.0, short: 4.0 },   // CUT12 상장·수출 1억불·시총 1조
+    // ── 5막 다음 (0:38–0:45.5)
+    { k: 'c13',    cue0: 97.0, base: 3.7, full: 3.7, short: 3.7 },   // 같은 이음부, 조용히
+    // ⚠ end 는 base 6.3 인데 full 3.8 이라 40% 빨라진다(로고 조립이 서두른다).
+    //    컷시트가 준 예산이 3.8 이라 일단 그대로 두되, 러프컷에서 «급한지»를 보고 조정한다.
+    //    규약상 글자 많은 장면은 20% 넘게 줄이지 않는다 — 여기는 알고 어긴 것이다.
+    { k: 'end',    cue0: 56.8, base: 6.3, full: 3.8, short: 3.8 },   // CUT14 로고
+
+    // ── 뺀 장면들(full: 0). 자산과 코드는 그대로 두어 언제든 되살릴 수 있게 한다.
+    //    만담(s6)은 사내 피드백으로 버렸고, 창업(found)·액침냉각(future)은 사용자 지시로 뺐다.
+    { k: 'intro',  cue0: 66.0, base: 4.0, full: 0, short: 0 },
+    { k: 'hook',   cue0:  0.0, base: 4.0, full: 0, short: 0 },
+    { k: 's6',     cue0: 70.0, base: 6.4, full: 0, short: 0 },
+    { k: 'stop',   cue0: 16.6, base: 3.4, full: 0, short: 0 },
+    { k: 'pivot',  cue0: 24.8, base: 2.0, full: 0, short: 0 },
+    { k: 'found',  cue0: 26.8, base: 4.0, full: 0, short: 0 },
+    { k: 'stairs', cue0: 39.6, base: 4.2, full: 0, short: 0 },
+    { k: 'future', cue0: 43.8, base: 3.9, full: 0, short: 0 },
+    { k: 'close',  cue0: 52.2, base: 4.6, full: 0, short: 0 },
   ];
+
 
   function build(mode) {
     const T0 = {}, T = {};
