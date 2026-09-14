@@ -34,23 +34,30 @@ section{position:absolute;inset:0;display:none;opacity:0}
 .co-line{font-weight:700;font-size:34px;line-height:46px;white-space:nowrap}
 .co-line .y{color:#8fc0ff;display:inline-block;width:110px;font-variant-numeric:tabular-nums}
 .led{font-family:'NotoKR';font-weight:900;font-size:56px;letter-spacing:1px;color:#ff4d4d;white-space:nowrap;text-shadow:0 0 18px rgba(255,77,77,.8),0 0 40px rgba(255,77,77,.4)}
-/* s6 말풍선 오버레이(v23) — 클립에 구워진 옛 말풍선(흰 사각)을 «전 생애» 덮으며 새 대사를 그린다.
-   ⚠ 배경은 «완전 불투명»이어야 한다 — 알파 .975 로도 옛 흰 말풍선이 유령처럼 비쳤다(실측).
-     유리 느낌은 투명이 아니라 그라디언트·안쪽 하이라이트로 낸다. */
-.s6bw{position:absolute;opacity:0;will-change:transform,opacity}
-.s6bub{position:relative;box-sizing:border-box;padding:26px 34px;border-radius:22px;
-  display:flex;flex-direction:column;justify-content:center;
-  background:linear-gradient(165deg,rgb(23,35,60),rgb(9,15,29));
-  border:1.5px solid rgba(143,192,255,.5);
-  box-shadow:0 14px 44px rgba(0,0,0,.5),0 0 26px rgba(90,160,255,.22),inset 0 1px 0 rgba(255,255,255,.1)}
-.s6bub .who{display:flex;align-items:flex-end;gap:4px;margin-bottom:10px;height:20px}
-.s6bub .who b{font-size:18px;font-weight:700;letter-spacing:5px;color:rgba(143,192,255,.9);margin-left:9px;line-height:20px}
-.s6bub .who i{display:block;width:5px;height:6px;border-radius:2px;background:#57b6ff;box-shadow:0 0 8px rgba(87,182,255,.75)}
-.s6bub .ko{font-size:46px;font-weight:900;line-height:1.26;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.4)}
-.s6bub .en2{margin-top:9px;font-size:22px;color:rgba(150,195,240,.72);letter-spacing:.4px}
-.s6tail{position:absolute;background:rgb(15,23,42);filter:drop-shadow(0 5px 12px rgba(0,0,0,.35))}
-.s6tail.tL{clip-path:polygon(100% 0,100% 100%,0 50%)}
-.s6tail.tB{clip-path:polygon(0 0,100% 0,50% 100%)}
+/* s6 교신 콘솔(v24) — 만담 «형태» 전면 재구성(사내 피드백 「유치」). 말풍선이 아니라
+   새벽 관제의 무전 트랜스크립트다: 대사가 발화 시각에 맞춰 로그처럼 쌓인다.
+   클립(v24 진중판)에는 이제 아무 글자도 구워져 있지 않다 — 대사는 전부 여기서 그린다. */
+.s6c{position:absolute;left:74px;top:116px;width:648px;box-sizing:border-box;opacity:0;
+  padding:24px 30px 20px;border-radius:18px;will-change:transform,opacity;
+  background:linear-gradient(168deg,rgba(13,21,38,.94),rgba(6,10,20,.96));
+  border:1px solid rgba(120,170,235,.38);
+  box-shadow:0 16px 48px rgba(0,0,0,.55),0 0 22px rgba(80,150,255,.14),inset 0 1px 0 rgba(255,255,255,.07)}
+.s6c .hd{display:flex;align-items:center;gap:10px;padding-bottom:14px;margin-bottom:6px;
+  border-bottom:1px solid rgba(120,170,235,.22)}
+.s6c .hd .dot{width:9px;height:9px;border-radius:50%;background:#3ee07c;box-shadow:0 0 10px rgba(62,224,124,.8)}
+.s6c .hd b{font-size:19px;font-weight:700;letter-spacing:3.5px;color:rgba(150,195,245,.85)}
+.s6c .hd .clk{margin-left:auto;font-size:19px;font-weight:700;letter-spacing:2px;
+  color:rgba(120,165,225,.65);font-variant-numeric:tabular-nums}
+.s6c .ln{display:flex;gap:14px;align-items:baseline;padding:11px 0;opacity:0}
+.s6c .ln .tag{flex:0 0 128px;font-size:16px;font-weight:700;letter-spacing:2.5px;text-align:right;
+  padding-top:6px;align-self:flex-start}
+.s6c .ln.tC .tag{color:#8fe9ff}
+.s6c .ln.tS .tag{color:#8ec0ff}
+.s6c .ln .tx .ko{font-size:31px;font-weight:700;line-height:1.3;color:#eef4ff}
+.s6c .ln .tx .en{font-size:17px;color:rgba(140,180,230,.6);margin-top:2px;letter-spacing:.3px}
+.s6c .ln .eq{display:flex;gap:3px;align-items:flex-end;height:16px;margin-left:10px;align-self:center}
+.s6c .ln .eq i{display:block;width:4px;height:4px;border-radius:1.5px;background:#57b6ff;
+  box-shadow:0 0 6px rgba(87,182,255,.7)}
 .led span{display:inline-block}
 .led .g{color:#5cff8a;text-shadow:0 0 18px rgba(92,255,138,.8),0 0 40px rgba(92,255,138,.4)}
 .date{font-family:'BlackHan','NotoKR';font-size:150px;line-height:1;letter-spacing:2px;color:#fff}
@@ -464,26 +471,22 @@ section{position:absolute;inset:0;display:none;opacity:0}
     <video id="s6-v" src="footage/s6_banter.webm" preload="auto" muted playsinline></video>
   </div>
   <div id="s6-old"><div class="en">GST 25th Anniversary.</div></div>
-  <!-- v23: 새 말풍선 — 위치·크기는 구워진 옛 말풍선 bbox 를 여백 포함해 덮는 값(프레임 실측). 옮기면 옛것이 비어져 나온다 -->
-  <div class="s6bw" id="s6b-c1" style="left:1385px;top:168px;width:515px;transform-origin:6% 55%">
-    <div class="s6bub" style="min-height:300px"><div class="who"><i></i><i></i><i></i><b>CHILLER</b></div>
-      <div class="ko">오늘, 무슨 일 있었어?</div><div class="en2">Anything happen today?</div></div>
-    <div class="s6tail tL" style="left:-28px;top:188px;width:34px;height:32px"></div>
-  </div>
-  <div class="s6bw" id="s6b-s1" style="left:150px;top:112px;width:340px;transform-origin:62% 100%">
-    <div class="s6bub" style="min-height:230px"><div class="who"><i></i><i></i><i></i><b>SCRUBBER</b></div>
-      <div class="ko">없었어.</div><div class="en2">Nothing.</div></div>
-    <div class="s6tail tB" style="left:240px;top:228px;width:38px;height:30px"></div>
-  </div>
-  <div class="s6bw" id="s6b-c2" style="left:1385px;top:165px;width:515px;transform-origin:6% 55%">
-    <div class="s6bub" style="min-height:300px"><div class="who"><i></i><i></i><i></i><b>CHILLER</b></div>
-      <div class="ko">25년째, 그 대답이야.</div><div class="en2">Same answer for 25 years.</div></div>
-    <div class="s6tail tL" style="left:-28px;top:188px;width:34px;height:32px"></div>
-  </div>
-  <div class="s6bw" id="s6b-s2" style="left:35px;top:58px;width:420px;transform-origin:70% 100%">
-    <div class="s6bub" style="min-height:285px"><div class="who"><i></i><i></i><i></i><b>SCRUBBER</b></div>
-      <div class="ko">그게,<br>내 일이잖아.</div><div class="en2">That's my job.</div></div>
-    <div class="s6tail tB" style="left:330px;top:283px;width:38px;height:30px"></div>
+  <!-- v24: 교신 콘솔 — 만담 «형태» 전면 재구성(사내 피드백 「유치」). 말풍선이 아니라 새벽 관제의
+       무전 트랜스크립트다. 새 클립(진중판)에는 글자가 안 구워져 있어 배치가 자유롭다 — 좌상단(기계를 안 가림) -->
+  <div class="s6c" id="s6cons">
+    <div class="hd"><div class="dot"></div><b>INTERNAL&nbsp;COMMS&nbsp;·&nbsp;SCRUBBER&nbsp;&#8596;&nbsp;CHILLER</b><span class="clk" id="s6clk">04:00:00</span></div>
+    <div class="ln tC" id="s6l-c1"><span class="tag">CHILLER</span>
+      <span class="tx"><div class="ko">오늘, 무슨 일 있었어?</div><div class="en">Anything happen today?</div></span>
+      <span class="eq"><i></i><i></i><i></i></span></div>
+    <div class="ln tS" id="s6l-s1"><span class="tag">SCRUBBER</span>
+      <span class="tx"><div class="ko">없었어.</div><div class="en">Nothing.</div></span>
+      <span class="eq"><i></i><i></i><i></i></span></div>
+    <div class="ln tC" id="s6l-c2"><span class="tag">CHILLER</span>
+      <span class="tx"><div class="ko">25년째, 그 대답이야.</div><div class="en">Same answer for 25 years.</div></span>
+      <span class="eq"><i></i><i></i><i></i></span></div>
+    <div class="ln tS" id="s6l-s2"><span class="tag">SCRUBBER</span>
+      <span class="tx"><div class="ko">그게, 내 일이잖아.</div><div class="en">That's my job.</div></span>
+      <span class="eq"><i></i><i></i><i></i></span></div>
   </div>
 </section>
 
@@ -1019,41 +1022,40 @@ SCN.future = function(t){
 SCN.intro = function(t){
     cutScene('in', t, 66.0, 4.0, 4.3);   // 표시 4.3s = 클립 그대로 1배속
 };
-// v23: s6 말풍선 구동 — a·b 는 구워진 옛 말풍선의 실측 창(프레임 밝기)을 덮는 값.
-//   a 는 옛 페이드인 «시작 0.15s 전»(팝이 먼저 차야 옛것이 뒤에서 안 비친다) ·
-//   b 는 옛것 소멸 시각(c1·c2 는 음성 꼬리까지 조금 연장 — 옛것이 이미 없어 덮을 게 없다).
-//   v 는 fullC 음성 창(큐축 환산 · s6=7.6 기준) — 이퀄라이저가 «말하는 동안»만 뛴다.
-const S6B = [
-  { id: 's6b-c1', a: 0.38, b: 2.00, v: [0.60, 2.03] },
-  { id: 's6b-s1', a: 1.82, b: 2.90, v: [2.05, 2.84] },
-  { id: 's6b-c2', a: 2.88, b: 4.55, v: [3.05, 4.69] },
-  { id: 's6b-s2', a: 4.35, b: 6.07, v: [4.65, 5.85] },
+// v24: 교신 콘솔 구동 — 각 줄은 «그 대사의 음성 큐»에 맞춰 로그처럼 나타나 남는다.
+//   말하는 동안 그 줄만 밝고(이퀄라이저 동작), 끝난 줄은 어둡게 가라앉는다.
+//   시각은 전부 클립 시각(tv = cue−70) — 음성 창은 fullC(s6=7.6) 큐축 환산값.
+const S6L = [
+  { id: 's6l-c1', v: [0.60, 2.03] },
+  { id: 's6l-s1', v: [2.05, 2.84] },
+  { id: 's6l-c2', v: [3.05, 4.69] },
+  { id: 's6l-s2', v: [4.65, 5.85] },
 ];
-function s6Bub(tv){
-  for (const B of S6B){
-    const el = $(B.id); if (!el) continue;
-    const IN = 0.15, OUT = 0.12;
-    if (tv < B.a || tv > B.b + OUT){ el.style.opacity = 0; continue; }
-    let o = 1, s = 1, y = 0;
-    if (tv < B.a + IN){
-      const k = p(tv, B.a, B.a + IN);
-      const c1 = 1.70158, f = 1 + (c1 + 1) * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);  // easeOutBack — 살짝 튀며 선다
-      o = Math.min(1, k * 2.5); s = 0.94 + 0.06 * f; y = 14 * (1 - f);
-    } else if (tv > B.b){
-      const k2 = p(tv, B.b, B.b + OUT); o = 1 - k2; y = -6 * k2;
-    }
-    el.style.opacity = o;
-    el.style.transform = `translateY(${y}px) scale(${s})`;
-    const on = MODE === 'fullC' && tv >= B.v[0] && tv <= B.v[1];
-    el.querySelectorAll('.who i').forEach((bar, i) => {
-      const h = on ? 6 + 13 * (0.5 + 0.5 * Math.sin(6.28 * (2.6 + i * 0.53) * tv + i * 2.1)) : 6;
+function s6Cons(tv){
+  const panel = $('s6cons'); if (!panel) return;
+  // 패널 자체 — 0.30s 에 스르륵, 씬 끝까지 남는다(트랜스크립트가 쌓인 채 컷)
+  const k = p(tv, 0.30, 0.55);
+  panel.style.opacity = k;
+  panel.style.transform = `translateY(${(1 - eo(k)) * 14}px)`;
+  const clk = $('s6clk');
+  if (clk) clk.textContent = '04:00:' + String(Math.floor(clamp(tv, 0, 59))).padStart(2, '0');
+  for (const Ln of S6L){
+    const el = $(Ln.id); if (!el) continue;
+    const on = p(tv, Ln.v[0] - 0.12, Ln.v[0] + 0.13);          // 발화 직전에 줄이 선다
+    const talking = tv >= Ln.v[0] && tv <= Ln.v[1];
+    el.style.opacity = on * (talking ? 1 : 0.55);              // 지난 줄은 가라앉는다
+    el.style.transform = `translateY(${(1 - eo(on)) * 10}px)`;
+    el.querySelectorAll('.eq i').forEach((bar, i) => {
+      const h = (MODE === 'fullC' && talking)
+        ? 5 + 11 * (0.5 + 0.5 * Math.sin(6.28 * (2.6 + i * 0.53) * tv + i * 2.1)) : 4;
       bar.style.height = h.toFixed(1) + 'px';
+      bar.style.opacity = talking ? 1 : 0.35;
     });
   }
 }
 SCN.s6 = function(t){
     cutScene('s6', t, 70.0, 6.4, 6.4);
-    s6Bub(t - 70.0);
+    s6Cons(t - 70.0);
 };
 
 window.seek = function(tOut){
