@@ -624,7 +624,7 @@ SCN.silane = function(t){
     stamp($('si-stamp'), t, 9.15, -6); op($('si-en2'), t >= 9.2 ? 1 : 0);
 };
 SCN.sf6 = function(t){
-    shake($('sf-vid'), t, 12.5);
+    shake($('sf-vid'), t, 11.85);   // ⚠ thud 의 옛 자리(12.5)는 클립이 멈춘 «뒤»다 — 실측 슬램 피크는 tv 1.43(f42~44)
     if (cutScene('sf', t, 9.8, 3.4, 2.4)) return;   // 1.8s 재생 + 0.6s 스탬프 홀드(디졸브가 0.32s 먹는다)
     const yr = $('sf-year'), earth = $('sf-earth');
     let y = 2026, heat = 0;

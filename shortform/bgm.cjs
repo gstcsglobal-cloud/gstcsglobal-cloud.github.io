@@ -40,7 +40,9 @@ const M = tb => TL.toOut(tb, P);      // null = 그 장면이 빠졌다
   [4.5, 5.4, 6.0].forEach(t => at(t, 'cricket'));
   at(8.2, 'whoosh'); at(8.8, 'pop'); at(9.15, 'thud'); at(9.15, 'slam'); at(9.25, 'bwomp');   // 실란
   for (let x = 0, i = 0; x < 1.7; i++) { at(10.4 + x, 'tick', { g: 0.09, f: 1800 + i * 12 }); x += Math.max(0.035, 0.13 - i * 0.005); }
-  at(12.15, 'zip'); at(12.5, 'thud'); at(12.5, 'slam'); at(12.6, 'bwomp');              // SF6
+  // ⚠ SF6 타격은 12.5 가 아니다 — 실측(프레임 diff)으로 슬램 피크가 cue 11.83~11.95.
+  //    12.5 는 클립(1.8s)이 마지막 프레임에 멈춘 «뒤»라 소리만 늦게 울리고 있었다.
+  at(12.15, 'zip'); at(11.85, 'thud'); at(11.85, 'slam'); at(11.95, 'bwomp');           // SF6
   for (let i = 0; i < 11; i++) at(13.5 + i * 0.14, 'wob', { f: 620 + (i % 2 ? 140 : -110) });
   at(14.3, 'cold'); at(15.05, 'bell', { n: 88, g: 0.16, d: 0.8 }); at(15.12, 'bell', { n: 93, g: 0.1, d: 0.6 });
   at(15.5, 'thud'); at(15.5, 'slam'); at(15.6, 'bwomp');                                // 칠러
