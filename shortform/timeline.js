@@ -25,11 +25,11 @@
     { k: 'reveal',  cue0: 20.0, base: 4.8, full: 4.4, short: 3.4, fullA: 4.9, fullB: 5.4, fullC: 5.6 },
     { k: 'pivot',   cue0: 24.8, base: 2.0, full: 1.8, short: 1.2, fullC: 2.4 },
     { k: 'found',   cue0: 26.8, base: 4.0, full: 3.8, short: 2.0, fullA: 4.1, fullB: 4.6, fullC: 0 },
-    { k: 'map',     cue0: 34.4, base: 5.2, full: 3.5, short: 2.6, fullA: 4.0, fullB: 4.4, fullC: 4.8 },   // 표시 순서를 kosdaq «앞»으로 (연대 일원화 · v19)
+    { k: 'map',     cue0: 34.4, base: 5.2, full: 3.5, short: 2.6, fullA: 4.0, fullB: 4.4, fullC: 5.2 },   // 표시 순서를 kosdaq «앞»으로 (연대 일원화 · v19) · C: 킬포인트 문구를 위해 1:1
     { k: 'kosdaq',  cue0: 30.8, base: 3.6, full: 3.8, short: 3.0, fullA: 4.7, fullB: 5.0, fullC: 5.4 },   // 성장 3박: 상장 → 수출 1억불(2021) → 시총 1조(2026)
     { k: 'stairs',  cue0: 39.6, base: 4.2, full: 0,   short: 0   },   // v19: 별도 씬에서 빼고 성장 곡선의 이정표로 접었다
     { k: 'future',  cue0: 43.8, base: 3.9, full: 4.7, short: 3.2, fullB: 5.5, fullC: 0 },   // 3D 컷 3.9 + 홀드 — 성장 곡선이 2026에 닿은 뒤 받는 장면
-    { k: 'close',   cue0: 52.2, base: 4.6, full: 4.6, short: 3.6, fullB: 5.3, fullC: 6.0 },
+    { k: 'close',   cue0: 52.2, base: 4.6, full: 4.6, short: 3.6, fullB: 5.3, fullC: 5.6 },
     { k: 'end',     cue0: 56.8, base: 6.3, full: 6.7, short: 5.9, fullB: 7.3, fullC: 7.7 },   // 로고 리빌: base 보다 길다(느려질 뿐 안 깨진다)
     // v20: base·표시 함께 +0.9 — 콘텐츠(마지막 큐 ~61.9)가 다 선 뒤 «홀드»가 생긴다.
     //      base 만 두고 표시만 늘리면 조립 자체가 느려진다 — 비율(≈1.06)을 지켜서 늘렸다.

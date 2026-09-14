@@ -304,7 +304,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
     <g id="map-pins"></g>
   </svg>
   <div class="card abs" id="co" style="left:90px;top:440px;width:640px;padding:26px 36px"></div>
-  <div class="txt center abs" id="map-t" style="top:930px;font-size:56px">대한민국의 기술, <b>세계의 현장으로.</b></div>
+  <div class="txt center abs" id="map-t" style="top:900px;font-size:60px">대한민국의 기술, <b>세계의 현장으로.</b></div>
   <div class="en">Korean technology, on the world stage.</div>
 </section>
 
@@ -734,7 +734,8 @@ SCN.map = function(t){
     document.querySelectorAll('#map-arcs .arc').forEach((a,i) => { const ts = t0 + (i+1)*step - 0.2; const x = eo(p(t, ts, ts+0.45)); a.setAttribute('stroke-dashoffset', a.dataset.len*(1-x)); });
     op($('co'), p(t,34.7,35.0));
     document.querySelectorAll('#co .co-line').forEach((d,i) => { const ts = t0 + i*step + 0.08; const x = p(t, ts, ts+0.25); d.style.opacity = x; d.style.display = x > 0 ? 'block' : 'none'; d.style.transform = `translateX(${(1-eo(x))*-24}px)`; });
-    pop($('map-t'), t, 38.85, 0.4); pop(document.querySelector('#s-map .en'), t, 39.0, 0.35, 10);
+    // v22C(부장님): 킬포인트 문구가 씬 끝 0.7초 전에야 떠서 «너무 빨리 넘어갔다» — 1.4초 당겨 핀 캐스케이드와 함께 선다
+    pop($('map-t'), t, 37.4, 0.4); pop(document.querySelector('#s-map .en'), t, 37.55, 0.35, 10);
 };
 SCN.stairs = function(t){
     bgSeek('tr', t, 39.6, 4.2, 0, 0.42);
