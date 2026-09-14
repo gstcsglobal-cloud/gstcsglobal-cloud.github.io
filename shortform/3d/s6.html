@@ -294,10 +294,14 @@ function seek(t){
   t=clamp(t,0,DUR);
 
   // ── 카메라: 투샷으로 크게 잡고 아주 천천히 민다. 펀치라인에서 한 번 «툭» 다가간다.
-  const push=eo(p(t,0,DUR))*0.22 + eo(p(t,4.40,4.80))*0.14;
-  const rad=5.28-push, ang=lerp(-0.10,0.085,eio(t/DUR)), hy=lerp(1.60,1.44,eio(t/DUR));
-  C.position.set(Math.sin(ang)*rad+0.06, hy, Math.cos(ang)*rad);
-  C.lookAt(0.04, 1.14-0.03*eo(p(t,4.40,4.90)), 0.16);
+  // v24: 피사체를 «오른쪽»으로 —  실란·칠러 씬과 같은 구도 언어(왼쪽 글자 · 오른쪽 피사체).
+  //   DX 는 «횡이동»이라 카메라와 주시점을 같이 옮긴다(한쪽만 옮기면 원근이 비틀린다).
+  //   펀치라인 푸시인(4.40~)은 뺐다 — 대사 연출이 사라졌으므로 한 벌의 느린 전진만 남는다.
+  const DX=-0.92;
+  const push=eo(p(t,0,DUR))*0.22;
+  const rad=5.62-push, ang=lerp(-0.10,0.085,eio(t/DUR)), hy=lerp(1.60,1.46,eio(t/DUR));
+  C.position.set(Math.sin(ang)*rad+0.06+DX, hy, Math.cos(ang)*rad);
+  C.lookAt(0.04+DX, 1.14, 0.16);
 
   // ── 누가 말하고 있나
   let cur=null; for(const B of BEATS) if(t>=B.on-0.10 && t<B.off-0.18) cur=B;

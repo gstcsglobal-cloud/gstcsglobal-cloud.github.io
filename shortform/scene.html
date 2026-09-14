@@ -58,7 +58,8 @@ section{position:absolute;inset:0;display:none;opacity:0}
 .s6c .ln .eq i{display:block;width:3.5px;height:3px;border-radius:1.5px;background:#57b6ff;
   box-shadow:0 0 5px rgba(87,182,255,.7)}
 .s6c .ln .ko{font-size:26px;font-weight:700;line-height:1.25;color:#eef4ff;margin-top:5px}
-.s6c .ln .en{font-size:14px;color:rgba(140,180,230,.55);margin-top:2px;letter-spacing:.3px}
+.s6c .ln .sub{  /* ⚠ .en 은 전역 하단자막 클래스(absolute) — 그 이름을 쓰면 흐름을 탈출해 겹친다(실사고) */
+  font-size:14px;color:rgba(140,180,230,.55);margin-top:2px;letter-spacing:.3px}
 .led span{display:inline-block}
 .led .g{color:#5cff8a;text-shadow:0 0 18px rgba(92,255,138,.8),0 0 40px rgba(92,255,138,.4)}
 .date{font-family:'BlackHan','NotoKR';font-size:150px;line-height:1;letter-spacing:2px;color:#fff}
@@ -474,16 +475,23 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <div id="s6-old"><div class="en">GST 25th Anniversary.</div></div>
   <!-- v24: 교신 콘솔 — 새 클립(진중판)에는 글자가 안 구워져 있어 대사는 전부 여기서 그린다.
        자리는 기계 왼쪽의 «늘 빈» 세로 컬럼. 줄은 발화 시각에 자라난다(로그) -->
+  <div class="kicker" id="s6t-k" style="top:150px;left:auto;right:140px;text-align:right">새벽 4시,</div>
   <div class="s6c" id="s6cons">
     <div class="hd"><div class="dot"></div><b>INTERNAL&nbsp;COMMS</b><span class="clk" id="s6clk">04:00:00</span></div>
     <div class="ln tC" id="s6l-c1"><div class="row1"><span class="tag">CHILLER</span><span class="eq"><i></i><i></i><i></i></span></div>
-      <div class="ko">오늘, 무슨 일 있었어?</div><div class="en">Anything happen today?</div></div>
+      <div class="ko">오늘, 무슨 일 있었어?</div><div class="sub">Anything happen today?</div></div>
     <div class="ln tS" id="s6l-s1"><div class="row1"><span class="tag">SCRUBBER</span><span class="eq"><i></i><i></i><i></i></span></div>
-      <div class="ko">없었어.</div><div class="en">Nothing.</div></div>
+      <div class="ko">없었어.</div><div class="sub">Nothing.</div></div>
     <div class="ln tC" id="s6l-c2"><div class="row1"><span class="tag">CHILLER</span><span class="eq"><i></i><i></i><i></i></span></div>
-      <div class="ko">25년째, 그 대답이야.</div><div class="en">Same answer for 25 years.</div></div>
+      <div class="ko">25년째, 그 대답이야.</div><div class="sub">Same answer for 25 years.</div></div>
     <div class="ln tS" id="s6l-s2"><div class="row1"><span class="tag">SCRUBBER</span><span class="eq"><i></i><i></i><i></i></span></div>
-      <div class="ko">그게, 내 일이잖아.</div><div class="en">That's my job.</div></div>
+      <div class="ko">그게, 내 일이잖아.</div><div class="sub">That's my job.</div></div>
+  </div>
+  <!-- v24 quiet 안: 대화를 걷어내고 «지켜보는 밤»으로. 조판·등장은 실란/칠러 씬과 같은 규약 -->
+  <div id="s6q" style="opacity:0">
+    <div class="kicker" id="s6q-k" style="top:150px">새벽 4시,</div>
+    <div class="txt abs" id="s6q-t" style="left:140px;top:230px">모두가 잠든 시간에도<br><b>둘은 깨어 있습니다.</b></div>
+    <div class="en" id="s6q-en">4 a.m. — while everyone sleeps, these two stay awake.</div>
   </div>
 </section>
 
@@ -497,6 +505,9 @@ section{position:absolute;inset:0;display:none;opacity:0}
 // ── 타임라인은 timeline.js 한 곳에서 온다 — 그림과 소리가 갈리지 않게.
 //    주소에 ?mode=short 를 붙이면 45초 짧은 버전이 된다(장면 셋을 빼고 나머지를 조금씩 줄인다).
 const MODE = (m => ['short','fullA','fullB','fullC'].includes(m) ? m : 'full')(new URLSearchParams(location.search).get('mode'));
+// v24 s6 변형: 'talk'(교신 콘솔 · 음성) · 'quiet'(무대사 — 자막 조판만, 다른 씬과 같은 규약).
+//   사내 피드백 「대화가 유치하다」의 존폐 판단용. 결정되면 진 쪽 분기를 지운다.
+const S6MODE = (new URLSearchParams(location.search).get('s6') === 'quiet') ? 'quiet' : 'talk';
 const P = TL.build(MODE);
 const T = P.T, DUR = P.DUR, KEYS = TL.SCENES.map(s => s.k);
 const $ = id => document.getElementById(id);
@@ -1052,7 +1063,18 @@ function s6Cons(tv){
 }
 SCN.s6 = function(t){
     cutScene('s6', t, 70.0, 6.4, 6.4);
-    s6Cons(t - 70.0);
+    const tv = t - 70.0;
+    const cons = $('s6cons'), q = $('s6q');
+    if (S6MODE === 'quiet'){
+      if (cons) cons.style.opacity = 0;
+      op(q, 1);
+      pop($('s6q-k'), t, 70.5, 0.5);
+      pop($('s6q-t'), t, 70.8, 0.6);
+    } else {
+      op(q, 0);
+      pop($('s6t-k'), t, 70.4, 0.5);
+      s6Cons(tv);
+    }
 };
 
 window.seek = function(tOut){

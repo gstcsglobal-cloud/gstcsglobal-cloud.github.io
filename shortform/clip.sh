@@ -7,13 +7,16 @@ export NODE_PATH=${NODE_PATH:-/opt/node22/lib/node_modules}
 A=$1; B=$2; OUT=${3:-clip.mp4}; MODE=${MODE:-full}; FPS=30; SS=${SS:-3}
 # 변형 모드(v22~)도 그대로 받는다 — render.sh 와 같은 표
 case "$MODE" in
-  short) BGM=bgm-short.wav;;
-  fullA) BGM=bgm-fullA.wav;;
-  fullB) BGM=bgm-fullB.wav;;
-  fullC) BGM=bgm-fullC.wav;;
-  *)     BGM=bgm.wav;;
+  short) DEFBGM=bgm-short.wav;;
+  fullA) DEFBGM=bgm-fullA.wav;;
+  fullB) DEFBGM=bgm-fullB.wav;;
+  fullC) DEFBGM=bgm-fullC.wav;;
+  *)     DEFBGM=bgm.wav;;
 esac
+BGM=${BGM:-$DEFBGM}      # 무음성 비교판 등으로 트랙을 갈아끼울 수 있게
 QUERY=$([ "$MODE" = full ] && echo "" || echo "?mode=$MODE")
+# 변형 질의 추가 — 같은 씬의 두 안을 나란히 뽑아 «비교»하기 위해. 예) EXTRA='s6=quiet'
+[ -n "${EXTRA:-}" ] && QUERY="${QUERY:-?}${QUERY:+&}${EXTRA}" && QUERY="${QUERY/#&/?}"
 N=$(python3 -c "print(round(($B-$A)*$FPS*$SS))")
 FF=${FFMPEG:-$(command -v ffmpeg || python3 -c "import imageio_ffmpeg as f; print(f.get_ffmpeg_exe())")}
 EXE=${CHROME:-$(ls -d /opt/pw-browsers/chromium-*/chrome-linux/chrome 2>/dev/null | head -1)}
