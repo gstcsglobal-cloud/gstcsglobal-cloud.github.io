@@ -49,8 +49,8 @@ shortform/*.png
 shortform/chk2/
 # 3D 컷어웨이 — three.js 는 npm 으로 받고(3d/README), 프레임은 중간 산출물이다
 shortform/3d/node_modules/
-shortform/3d/f3d/
-shortform/3d/probe/
+shortform/3d/f3d*/
+shortform/3d/probe*/
 shortform/cframes/
 shortform/_cv.mp4
 # 구간 확인용 클립 — 검토가 끝나면 버린다(최종본만 저장소에 둔다)
