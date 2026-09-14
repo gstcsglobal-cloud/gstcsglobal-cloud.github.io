@@ -21,7 +21,8 @@ canvas{display:block}
 <script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
 <script type="module">
 import * as THREE from 'three';
-const W=1920,H=1080, DUR=6.4;
+const W=1920,H=1080;
+const DUR = (new URLSearchParams(location.search).get('shot')==='pipe') ? 4.0 : 6.4;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const p=(t,a,b)=>clamp((t-a)/(b-a),0,1);
 const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
@@ -37,6 +38,10 @@ const BB = new URLSearchParams(location.search).get('bb') !== '0';
 //   ⚠ 두 컷은 «같은 카메라·같은 배치»여야 반전이 작동한다. 그래서 씬을 복제하지 않고
 //     조명만 갈아끼운다 — 복제하면 한쪽만 고쳐져 두 컷의 설비 배치가 갈린다(제2원칙).
 const EMG = new URLSearchParams(location.search).get('emg') === '1';
+//   ?shot=pipe  배관 이음부 클로즈업 — 1막 CUT01(파열)과 5막 CUT13(정적)이 «같은 앵글»이어야
+//               수미상관이 성립한다. 두 컷을 각자 만들면 반드시 어긋나므로 한 카메라를 나눠 쓴다.
+const SHOT = new URLSearchParams(location.search).get('shot') || 'row';
+const PIPE = SHOT === 'pipe';
 const TEX = new THREE.TextureLoader();
 const GAIA_TEX = TEX.load('tex/gaia.png');
 GAIA_TEX.colorSpace = THREE.SRGBColorSpace; GAIA_TEX.anisotropy = 8;
@@ -287,6 +292,9 @@ const GAIA_D=0.55;                             // 캐비닛 깊이 — 실루엣
 //    재질은 «한 벌»을 모두가 나눠 쓴다(설비 26대 × 셰이더 컴파일을 피한다).
 const BBMAT=new THREE.MeshStandardMaterial({map:GAIA_TEX,transparent:true,alphaTest:0.35,
   roughness:0.55,metalness:0.0,envMap:ENV,envMapIntensity:0.35});
+// ⚠ alphaTest 는 «자르거나 남기거나»라, 사진을 확대하면 실루엣에 톱니가 선다(클로즈업에서 드러났다).
+//   alphaToCoverage 는 그 경계를 MSAA 표본으로 눕힌다 — 렌더러가 antialias:true 라 공짜로 걸린다.
+BBMAT.alphaToCoverage = true;
 // 사진 평균색(실측 RGB 207,206,202)의 무광 — 상자의 옆·윗면이 앞면 사진과 같은 물건으로 보이게.
 // ⚠ 평균색 그대로 두면 옆면이 앞면만큼 밝아 «빈 흰 슬래브»로 읽힌다(실측). 실제 옆판은 그늘이다.
 const BBSIDE=new THREE.MeshStandardMaterial({color:0xb9b8b3,roughness:0.68,metalness:0.05,
@@ -365,10 +373,10 @@ function buildPump(){
   const g=new THREE.Group();
   const base=new THREE.Mesh(new THREE.BoxGeometry(0.52,0.30,0.36),metalMat(0x323a4c,0.45,0.55));
   base.position.y=0.15; base.castShadow=base.receiveShadow=true; g.add(base);
-  const mo=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,0.50,16),metalMat(0x4b5568,0.35,0.6));
+  const mo=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,0.50,PIPE?36:16),metalMat(0x4b5568,0.35,0.6));
   mo.rotation.z=Math.PI/2; mo.position.y=0.42; mo.castShadow=true; g.add(mo);
   for(let i=0;i<8;i++){                               // 냉각 핀 — 펌프를 «모터»로 읽게 하는 단서
-    const f=new THREE.Mesh(new THREE.TorusGeometry(0.155,0.008,5,14),metalMat(0x323a4c,0.5,0.5));
+    const f=new THREE.Mesh(new THREE.TorusGeometry(0.155,0.008,PIPE?10:5,PIPE?30:14),metalMat(0x323a4c,0.5,0.5));
     f.rotation.y=Math.PI/2; f.position.set(-0.2+i*0.055,0.42,0); g.add(f);
   }
   const cp=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.10,0.16,12),metalMat(0x262c38,0.4,0.5));
@@ -499,10 +507,13 @@ function buildChiller(i){
 //    ⚠ 간격을 일정하게 두면 «렌더»로 보인다. 결정적 난수로 아주 조금씩 흔든다.
 const rnd=mulberry(20260914);
 // ⚠ 경보는 «한 대만». 여러 대가 울면 재난 영상이 된다 — 이 영상의 주제는 «한 건이 번지지 않았다»다.
+const JOINT=new THREE.Vector3();   // 배관 이음부 — 클로즈업 카메라와 1막 파열이 «같은 자리»를 본다
 const ALARM_I=2, ALARM_Z=-5.30, ALARM_X=2.35;   // v24c: 한 자리 당겼다 — 멀면 «무슨 일이 났는지»가 안 읽힌다
 for(let i=0;i<14;i++){
   const isUnit = (i===ALARM_I);          // «그 설비»인가 — 자리를 정한다
-  const alarm  = EMG || isUnit;          // «경광을 켜나» — 그림만 정한다
+  const alarm  = EMG || (isUnit && !PIPE);   // «경광을 켜나» — 그림만 정한다
+  // ⚠ 배관 컷(1막 첫 컷·5막 마지막 컷)에는 아직/이미 아무 일도 없다. 경광을 켜 두면
+  //   배경에 붉은 얼룩만 남아 «무슨 일이 나긴 났나»로 읽힌다.
   // ⚠ 둘을 한 변수로 쓰면 안 된다: 비상 모드에서 열 전체가 경보 설비의 좌표로 몰린다(실측 14대 겹침)
   // ⚠ 서브팹에는 스크러버와 진공펌프만 선다 — 칠러는 클린룸에서 공정 장비를 식힌다(README 규약).
   //    섞어 두면 그림이 틀리고, 사진 빌보드 옆에 프리미티브 칠러가 서면 화풍도 갈린다.
@@ -525,8 +536,25 @@ for(let i=0;i<14;i++){
     riser.position.set(inP.x+0.62,0.95+rl/2,inP.z-0.42); riser.castShadow=true; S.add(riser);
     S.add(pipeTo(new THREE.Vector3(inP.x+0.62,0.98,inP.z-0.42),inP,0.034,EXC));
     S.add(pipeTo(outP,new THREE.Vector3(ALARM_X-0.52,0.58,mz-0.16),0.034,EXC));  // 스크러버 «옆구리»
-    const fl=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.03,12),plateMat);
+    const fl=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.03,PIPE?40:12),plateMat);
     fl.rotation.z=Math.PI/2; fl.position.set(ALARM_X-0.51,0.60,mz-0.18); S.add(fl);
+    if(isUnit){
+      JOINT.set(ALARM_X-0.51,0.60,mz-0.18);
+      // 클로즈업에서만 볼트를 단다 — 열 전체에 달면 26대분 지오메트리가 공짜가 아니고,
+      // 도열 컷 거리에서는 한 화소도 안 보인다. «보이는 곳에만 만든다».
+      if(PIPE){
+        for(let b=0;b<8;b++){
+          const a2=b/8*6.283;
+          const bo=new THREE.Mesh(new THREE.CylinderGeometry(0.009,0.009,0.042,6),plateMat);
+          bo.rotation.z=Math.PI/2;
+          bo.position.set(JOINT.x, JOINT.y+Math.cos(a2)*0.065, JOINT.z+Math.sin(a2)*0.065);
+          S.add(bo);
+        }
+        // 이음부 «틈» — 1막에서 가스가 새는 자리다. 검은 띠 한 줄이 그 자리를 만든다.
+        const gap=new THREE.Mesh(new THREE.CylinderGeometry(0.0855,0.0855,0.008,40),darkMat);
+        gap.rotation.z=Math.PI/2; gap.position.copy(JOINT); S.add(gap);
+      }
+    }
   }
 }
 // 경광 조명 — «빛이 주변에 번져야» 경보로 읽힌다. 램프만 빨개지면 스티커처럼 보인다.
@@ -591,10 +619,24 @@ function seek(t){
   t=clamp(t,0,DUR);
   // ── 카메라: 통로를 따라 «아주 천천히» 전진 + 미세 상승. 손맛 없는 기계적 이동이라야 진중하다.
   const k=eio(t/DUR);
+  if(PIPE){
+    // 배관 이음부 로우앵글. ⚠ 멈춰 세우지 않는다 — 완전 정지는 «스틸»로 보이고, 그러면
+    //   마지막 컷의 «조용함»이 «영상이 멈췄나»로 읽힌다. 아주 느린 전진만 둔다.
+    // ⚠ 넓은 화각으로 가까이 가면 통로의 펌프들이 전부 들어와 어수선하다(실측). 망원으로 «멀리서 조여»
+    //   이음부만 남긴다 — 배경이 압축되면서 열도 같이 눌려 깊이가 산다.
+    const d=lerp(1.60,1.44,k);
+    C.position.set(JOINT.x-d, 0.45+0.03*k, JOINT.z-d);
+    // 이음부를 화면 «오른쪽»에 세운다(왼쪽 40%는 자막 자리 — 이 영상의 조판 규약).
+    // ⚠ 이 카메라의 화면-오른쪽은 «-x·+z» 쪽이다. 그래서 조준점은 이음부보다 «+x·-z» 여야 한다
+    //   — 직관과 반대라 한 번 틀렸다(왼쪽으로 아무리 조준해도 피사체가 더 왼쪽으로 갔다).
+    C.lookAt(JOINT.x+0.20, JOINT.y+0.01, JOINT.z-0.20);
+    C.fov=24; C.updateProjectionMatrix();
+  } else {
   // ⚠ 통로 «안»에서 열을 따라 보면 앞 설비는 옆면만 보인다 — 조작반이 왼쪽(-x)을 향하기 때문이다(실측:
   //   가까운 설비의 HMI 가 통째로 안 보였다). 통로 «바깥»에서 비스듬히 봐야 정면이 선다.
   C.position.set(lerp(-2.15,-1.60,k), lerp(1.80,1.70,k), lerp(5.10,3.75,k));
   C.lookAt(lerp(1.95,2.05,k), lerp(1.26,1.22,k), lerp(-4.6,-5.4,k));
+  }
 
   HMI.draw(t);
   // 신호탑 — 줄을 따라 위상이 조금씩 밀린다. «각자 살아 있다»로 읽히되 깜빡이지는 않는다.
@@ -605,8 +647,9 @@ function seek(t){
   //   눈이 저절로 간다. 램프 자체를 더 태우고(emissive), 주변 번짐은 밝기에 맞춰 올린다.
   REDS.forEach(m=>{ m.emissive.setHex(0xff3b2e); m.emissiveIntensity=0.35+4.2*sweep; });
   GLOWS.forEach(m=>{ m.opacity=0.10+0.68*sweep; });
-  beacon.intensity    = 1.0+8.5*sweep;
-  beaconFar.intensity = 0.5+3.6*sweep;
+  const beaconOn = !(PIPE && !EMG);
+  beacon.intensity    = beaconOn ? 1.0+8.5*sweep : 0;
+  beaconFar.intensity = beaconOn ? 0.5+3.6*sweep : 0;
   for(let i=0;i<DN;i++){ const d=DBASE[i];
     dpos[i*3  ]=d.x+Math.sin(t*d.s*0.7+d.ph)*0.08;
     dpos[i*3+1]=d.y+Math.sin(t*d.s    +d.ph)*0.12;
