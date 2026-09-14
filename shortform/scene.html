@@ -127,7 +127,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 <section id="s-silane">
   <!-- 사용자가 만든 3D·리와인드 컷. 카피·자막·「없었습니다.」 스탬프가 이미 구워져 있다 -->
   <div class="vwrap abs" id="si-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
-    <video id="si-v" src="footage/s1_silane.webm" preload="auto" muted playsinline></video>
+    <video id="si-v" src="footage/s7_burner.webm" preload="auto" muted playsinline></video>
   </div>
   <div id="si-old">
   <div class="kicker">예를 들면,</div>
@@ -151,7 +151,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 <section id="s-sf6">
   <!-- 사용자가 만든 3D·리와인드 컷. 카피·자막·「없었습니다.」 스탬프가 이미 구워져 있다 -->
   <div class="vwrap abs" id="sf-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
-    <video id="sf-v" src="footage/s3_sf6.webm" preload="auto" muted playsinline></video>
+    <video id="sf-v" src="footage/s7_stack.webm" preload="auto" muted playsinline></video>
   </div>
   <div id="sf-old">
   <div class="kicker">그리고,</div>
@@ -167,7 +167,7 @@ section{position:absolute;inset:0;display:none;opacity:0}
 <section id="s-chill">
   <!-- 사용자가 만든 3D·리와인드 컷. 카피·자막·「없었습니다.」 스탬프가 이미 구워져 있다 -->
   <div class="vwrap abs" id="ch-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
-    <video id="ch-v" src="footage/s2_chiller.webm" preload="auto" muted playsinline></video>
+    <video id="ch-v" src="footage/s7_chiller.webm" preload="auto" muted playsinline></video>
   </div>
   <div id="ch-old">
   <div class="kicker">그리고,</div>
@@ -598,13 +598,15 @@ const TR_TOT = TR_CUM[TR_CUM.length-1];
 //    무엇이 들어올 자리인지 화면에 적어 두면, 렌더가 하나도 없어도 러프컷에서 길이·리듬·순서를
 //    그대로 판단할 수 있다. 컷이 완성되면 그 키의 SCN 을 진짜 장면으로 갈아끼우고 여기서 뺀다.
 const SLOTS = {
-  c01: {no:'CUT 01', t:'열 전체 적색 경보 · 삐— 삐— 삐—', src:'3d/s7.html?emg=1 → footage/s7_emg.webm', tone:'hz'},
-  c02: {no:'CUT 02', t:'위층이 선다 — 클린룸 공정 정지',   src:'3d/scene3d.html 비상 상태 (미제작)',      tone:'hz'},
-  c03: {no:'CUT 03', t:'온도가 풀린다 → 웨이퍼 폐기',       src:'신규 씬 (유일하게 밑바닥부터)',           tone:'hz'},
-  c04: {no:'CUT 04', t:'팹의 불이 꺼진다 · 무음 0.4초',     src:'footage/hq_aerial.webm + 소등 그레이딩',  tone:'hz'},
-  c05: {no:'CUT 05', t:'역재생 — 재난이 되감긴다',          src:'CUT 01–04 리버스 (편집만 · 렌더 없음)',   tone:'nt'},
-  c06: {no:'CUT 06', t:'같은 열, 백색으로 — 「경보 다음이 없었다」', src:'footage/s7_row.webm (옛 렌더 · 교체 예정)', tone:'nt', vid:'footage/s7_row.webm', clip:3.8},
-  c13: {no:'CUT 13', t:'같은 이음부, 조용히',               src:'3d/s7.html?shot=pipe (미제작)',           tone:'sf'},
+  c01: {no:'CUT 01', t:'열 전체 적색 경보 · 삐— 삐— 삐—', src:'3d/s7.html?shot=alarm', tone:'hz', vid:'footage/s7_alarm.webm',   clip:2.4},
+  c02: {no:'CUT 02', t:'위층이 선다 — 클린룸 공정 정지',   src:'3d/s7.html?shot=stop',  tone:'hz', vid:'footage/s7_stop.webm',    clip:2.0},
+  c03: {no:'CUT 03', t:'온도가 풀린다 → 웨이퍼 폐기',       src:'3d/s7.html?shot=wafer', tone:'hz', vid:'footage/s7_wafer.webm',   clip:2.0},
+  // ⚠ 옛 계획의 footage/hq_aerial 은 «GST 사옥»이다(로고가 읽힌다). 1막에 우리 정체가
+  //   드러나면 「GST 장비가 터졌다」로 읽혀 이 영화의 전제가 무너진다 — 3D 소등으로 바꿨다.
+  c04: {no:'CUT 04', t:'팹의 불이 꺼진다 · 무음 0.4초',     src:'3d/s7.html?shot=dark',  tone:'hz', vid:'footage/s7_dark.webm',    clip:1.6},
+  c05: {no:'CUT 05', t:'역재생 — 재난이 되감긴다',          src:'CUT 01–04 리버스 (편집만)', tone:'nt', vid:'footage/c05_rewind.webm', clip:2.2},
+  c06: {no:'CUT 06', t:'같은 열, 백색으로 — 「경보 다음이 없었다」', src:'3d/s7.html?bb=0', tone:'nt', vid:'footage/s7_rowhq.webm', clip:3.8},
+  c13: {no:'CUT 13', t:'같은 이음부, 조용히',               src:'3d/s7.html?shot=pipe',  tone:'sf', vid:'footage/s7_pipe.webm',    clip:3.7},
 };
 (function buildSlots(){
   const st = document.createElement('style');

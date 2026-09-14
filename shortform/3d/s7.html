@@ -35,7 +35,7 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 RectAreaLightUniformsLib.init();
 const HQ = new URLSearchParams(location.search).get('hq') !== '0';
 const W=1920,H=1080;
-const DUR = (sh=>sh==='pipe'?4.0:sh==='macro'?3.0:sh==='studio'?5.0:sh==='alarm'?2.4:sh==='burner'?4.0:sh==='chiller'?4.0:sh==='stack'?4.0:sh==='wafer'?2.0:sh==='stop'?2.0:6.4)(new URLSearchParams(location.search).get('shot'));
+const DUR = (sh=>sh==='pipe'?4.0:sh==='macro'?3.0:sh==='studio'?5.0:sh==='alarm'?2.4:sh==='burner'?4.0:sh==='chiller'?4.0:sh==='stack'?4.0:sh==='wafer'?2.0:sh==='stop'?2.0:sh==='dark'?1.6:6.4)(new URLSearchParams(location.search).get('shot'));
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const p=(t,a,b)=>clamp((t-a)/(b-a),0,1);
 const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
@@ -96,7 +96,10 @@ const WAFER = SHOT === 'wafer';
 //     않고 «표시등 기둥»만 어둠에서 세운다 — 무엇의 장비인지 읽히지 않는 것이 요건이다.
 //   ⚠ 이 컷의 내용은 «순서»다. 한꺼번에 꺼지면 스위치를 내린 것이고, 하나씩 꺼져야 «번진다».
 const STOP = SHOT === 'stop';
-const SOLO = STUDIO || BURNER || CHILL || STACK || WAFER || STOP;   // 도열이 필요 없는 등록 — 씬을 비우고 피사체만 세운다
+// CUT04 «팹이 꺼진다» — 통로 형상은 STOP 과 «한 벌»이다. 두 벌로 지으면 같은 팹이
+// 두 컷에서 다른 건물로 보인다(제2원칙). 카메라와 조명만 이 컷의 것이다.
+const DARK = SHOT === 'dark';
+const SOLO = STUDIO || BURNER || CHILL || STACK || WAFER || STOP || DARK;   // 도열이 필요 없는 등록 — 씬을 비우고 피사체만 세운다
 const TEX = new THREE.TextureLoader();
 const GAIA_TEX = TEX.load('tex/gaia.png');
 GAIA_TEX.colorSpace = THREE.SRGBColorSpace; GAIA_TEX.anisotropy = 8;
@@ -147,7 +150,7 @@ function makeEnv(){
       else if(i===3){ gr.addColorStop(0,'#241618'); gr.addColorStop(1,'#160e10'); }
       else { gr.addColorStop(0,'#4a2118'); gr.addColorStop(.55,'#331814'); gr.addColorStop(1,'#1a0f10'); }
     }
-    else if(CHILL||STACK||WAFER||STOP){          // 냉각·새벽·웨이퍼·정지 — 찬 어둠
+    else if(CHILL||STACK||WAFER||STOP||DARK){          // 냉각·새벽·웨이퍼·정지 — 찬 어둠
       if(i===2){ gr.addColorStop(0,'#28374b'); gr.addColorStop(1,'#16202e'); }
       else if(i===3){ gr.addColorStop(0,'#0c1018'); gr.addColorStop(1,'#070a0f'); }
       else { gr.addColorStop(0,'#1e2b3d'); gr.addColorStop(.55,'#131b27'); gr.addColorStop(1,'#080b11'); }
@@ -958,8 +961,8 @@ const FROSTEX=(()=>{
   t2.wrapS=t2.wrapT=THREE.RepeatWrapping; t2.repeat.set(4,2); t2.colorSpace=THREE.SRGBColorSpace;
   return t2;
 })();
-const STOPL=[];
-if(STOP){
+const STOPL=[], STOPLIT=[];
+if(STOP||DARK){
   for(let i=S.children.length-1;i>=0;i--) S.remove(S.children[i]);
   S.background=new THREE.Color(0x06080d); S.fog=new THREE.Fog(0x06080d,1.6,11.0);
   // ⚠ 패널 색을 «어둠»으로 칠하면 안 된다 — 어둡게 보이게 하는 것은 조명의 일이다.
@@ -1004,7 +1007,9 @@ if(STOP){
   // 두 줄이 서로 «마주 보므로» 빛도 두 방향이어야 한다 — 한쪽에서만 주면 반대 줄이 통째로 검다.
   // 적색(비상)은 오른쪽 줄에, 찬 림은 왼쪽 줄에 — 통로를 사이에 두고 색이 갈린다.
   const r2=new THREE.DirectionalLight(0x8fb4e8,0.85); r2.position.set(4.0,2.4,-2.2); S.add(r2);
-  S.add(new THREE.HemisphereLight(0x2a3340,0x080b11,0.30));
+  const hm=new THREE.HemisphereLight(0x2a3340,0x080b11,0.30); S.add(hm);
+  STOPLIT.push(r1,r2,hm);
+  for(const L of STOPLIT) L.userData.i0 = L.intensity;   // 원래 세기를 기억해 둔다 — DARK 가 여기서 0 으로 내린다
 }
 if(WAFER){
   for(let i=S.children.length-1;i>=0;i--) S.remove(S.children[i]);
@@ -1202,7 +1207,26 @@ function seek(t){
   t=clamp(t,0,DUR);
   // ── 카메라: 통로를 따라 «아주 천천히» 전진 + 미세 상승. 손맛 없는 기계적 이동이라야 진중하다.
   const k=eio(t/DUR);
-  if(STOP){
+  if(DARK){
+    // 통로 전체가 «한꺼번에» 꺼지는 것이 이 컷이다 — CUT02 가 «한 대씩»이었으므로
+    // 여기서 또 순차로 꺼지면 같은 말을 두 번 하는 셈이다. 규모가 달라야 다음 단계로 읽힌다.
+    const d=p(t,0.30,1.15);                      // 조명이 죽는다
+    for(const L of STOPLIT) L.intensity = L.userData.i0 * (1-d);
+    for(const {col,i} of STOPL){
+      col[0].emissiveIntensity=0; col[1].emissiveIntensity=0;
+      // 적색만 남아 있다가 «그것마저» 꺼진다. 마지막 0.2초는 완전한 검정이라
+      // 무음 0.4초가 그림과 함께 떨어진다(컷시트의 의도).
+      col[2].emissiveIntensity = 1.35*(1-p(t,0.62,1.32))*(0.75+0.25*Math.sin(t*9+i));
+    }
+    S.fog.near = lerp(1.6,0.6,d); S.fog.far = lerp(11.0,3.4,d);
+    const k2=eio(t/DUR);
+    // 넓게 «물러난» 그림이어야 «팹 전체»로 읽히지만, 너무 물러나면 통로가 손톱만큼 남아
+    // 무엇이 꺼지는지 안 보인다(실측). 통로가 화면을 꽉 채우는 자리에서 살짝만 뒤로 뺀다.
+    C.position.set(0, lerp(1.46,1.56,k2), lerp(2.20,2.75,k2));
+    C.lookAt(0, 1.30, -6.0);
+    C.fov=46; C.updateProjectionMatrix();
+    if(BOKEH) BOKEH.uniforms.focus.value = 4.2;
+  } else if(STOP){
     // ⚠ 순서가 이 컷의 내용이다 — 가까운 것부터 차례로 꺼지고 마지막에 적색만 남는다.
     //   한꺼번에 끄면 «스위치를 내렸다»가 되고 «번지는 사고»로 안 읽힌다.
     for(const {col,i} of STOPL){
@@ -1344,13 +1368,13 @@ if(HQ){
   ao.updateGtaoMaterial({radius:0.28, distanceExponent:1.4, thickness:0.6, scale:1.0,
                          samples:16, distanceFallOff:1.0, screenSpaceRadius:false});
   COMP.addPass(ao);
-  if(MACRO||ALARM||BURNER||CHILL||STACK||WAFER||STOP){
+  if(MACRO||ALARM||BURNER||CHILL||STACK||WAFER||STOP||DARK){
     // 얕은 심도 — 이 등록의 핵심이다. 초점 밖이 녹으면서 «디테일이 없다»가 안 보이게 된다.
     const bk=new BokehPass(S,C,{focus:0.6, aperture:0.0062, maxblur:0.016});
     BOKEH=bk; COMP.addPass(bk);
   }
   // 블룸 — 경광·등기구·금속 하이라이트가 «번져야» 카메라로 찍은 것처럼 보인다.
-  COMP.addPass(new UnrealBloomPass(new THREE.Vector2(W,H), (BURNER||CHILL||STACK||WAFER||STOP)?0.34:(MACRO||ALARM)?0.42:0.26, 0.62, (BURNER||CHILL||STACK||WAFER||STOP)?1.00:(MACRO||ALARM)?0.90:1.30));
+  COMP.addPass(new UnrealBloomPass(new THREE.Vector2(W,H), (BURNER||CHILL||STACK||WAFER||STOP||DARK)?0.34:(MACRO||ALARM)?0.42:0.26, 0.62, (BURNER||CHILL||STACK||WAFER||STOP||DARK)?1.00:(MACRO||ALARM)?0.90:1.30));
   const op=new OutputPass(); op.toneMapping=THREE.ACESFilmicToneMapping; COMP.addPass(op);
 }
 window.seek=seek; window.DUR3D=DUR;
