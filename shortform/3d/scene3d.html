@@ -1,0 +1,274 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>GST 스크러버 · 칠러 — 팹 단면</title>
+<!--
+  reveal 장면(4.1초)의 배경. 결과물은 ../footage/scrubber3d.webm 하나다.
+
+  ⚠ 구성은 «지어낸 것»이 아니라 실제 팹 배치다(사용자가 준 gst-equipment-3d.html 기준):
+      클린룸 데크(y=2.9) : 공정 장비 + 칠러
+      서브팹(y=0)        : 스크러버 + 진공펌프
+      배기  공정 장비 아래 → 데크 틈으로 라이저 하강 → 진공펌프 → 스크러버 «옆구리» 유입
+      냉각수 칠러 ↔ 공정 장비 (공급 파랑 · 회수 빨강)
+    예전 버전은 스크러버와 칠러를 같은 바닥에 나란히 뒀는데 그건 틀린 그림이었다.
+
+  ⚠ 배기는 스크러버 «위»(버너 뭉치)로 넣지 않는다. 위는 배출구다 — 거꾸로 그리면 아는 사람이 바로 안다.
+-->
+<style>
+@font-face{font-family:'NotoKR';font-weight:700;src:url('../fonts/NotoSansKR-700.ttf') format('truetype')}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#070d1f}
+canvas{display:block}
+</style></head><body>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const W=1920,H=1080, DUR=4.6, DECK_Y=2.9, DECK_T=0.14;
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const p=(t,a,b)=>clamp((t-a)/(b-a),0,1);
+const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const lerp=(a,b,x)=>a+(b-a)*x;
+
+const S=new THREE.Scene();
+S.background=new THREE.Color('#070d1f');
+S.fog=new THREE.Fog(0x070d1f,11,27);
+const C=new THREE.PerspectiveCamera(34,W/H,0.1,120);
+const R=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+R.setSize(W,H); R.setPixelRatio(1);
+R.shadowMap.enabled=true; R.shadowMap.type=THREE.PCFShadowMap;
+R.toneMapping=THREE.ACESFilmicToneMapping; R.toneMappingExposure=1.15;
+document.body.appendChild(R.domElement);
+
+// 반사용 간이 환경맵 — 금속·도장면이 «무엇인가를 비추고» 있어야 사진처럼 보인다
+function makeEnv(){
+  const size=64, faces=[];
+  for(let i=0;i<6;i++){
+    const c=document.createElement('canvas'); c.width=c.height=size;
+    const g=c.getContext('2d'), gr=g.createLinearGradient(0,0,0,size);
+    if(i===2){ gr.addColorStop(0,'#eaf1ff'); gr.addColorStop(1,'#9fb4d6'); }
+    else if(i===3){ gr.addColorStop(0,'#141a2b'); gr.addColorStop(1,'#070d1f'); }
+    else { gr.addColorStop(0,'#c4d3ee'); gr.addColorStop(.5,'#6b7d9e'); gr.addColorStop(1,'#1d2436'); }
+    g.fillStyle=gr; g.fillRect(0,0,size,size); faces.push(c);
+  }
+  const t=new THREE.CubeTexture(faces); t.needsUpdate=true; return t;
+}
+const ENV=makeEnv();
+const bodyMat=(color,o={})=>new THREE.MeshPhysicalMaterial({color,
+  roughness:o.roughness??0.42, metalness:o.metalness??0.2, clearcoat:0.35, clearcoatRoughness:0.28,
+  envMap:ENV, envMapIntensity:0.7});
+const metalMat=(color,r=0.3,m=0.75)=>new THREE.MeshStandardMaterial({color,roughness:r,metalness:m,envMap:ENV,envMapIntensity:0.9});
+
+// ── 조명: 영상 팔레트(짙은 남색 + CI 파랑 림)에 맞춘다
+S.add(new THREE.HemisphereLight(0xbcd2ff,0x0b1224,0.85));
+const key=new THREE.DirectionalLight(0xfff4e6,2.0); key.position.set(7,11,7); key.castShadow=true;
+key.shadow.mapSize.set(2048,2048);
+{ const s=key.shadow.camera; s.left=-10;s.right=10;s.top=11;s.bottom=-3;s.near=1;s.far=44; key.shadow.bias=-0.0018; }
+S.add(key);
+const fill=new THREE.DirectionalLight(0x9fc4ff,0.40); fill.position.set(-8,5,-4); S.add(fill);
+const rim=new THREE.DirectionalLight(0x5c8cff,1.05); rim.position.set(-5,6,-9); S.add(rim);
+const under=new THREE.PointLight(0x6fa8ff,2.6,5.5); under.position.set(-0.9,1.6,0.9); S.add(under);
+
+// 서브팹 바닥
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(90,90),
+  new THREE.MeshStandardMaterial({color:0x080e1e,roughness:0.42,metalness:0.40,envMap:ENV,envMapIntensity:0.35}));
+floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; S.add(floor);
+const grid=new THREE.GridHelper(90,90,0x1b2a55,0x121d3d); grid.position.y=0.003;
+grid.material.transparent=true; grid.material.opacity=0.42; S.add(grid);
+
+const ROOT=new THREE.Group(); S.add(ROOT);
+
+// ── 부품
+function cabinet(w,h,d,color,o={}){
+  const g=new THREE.Group();
+  const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),bodyMat(color,o));
+  b.castShadow=b.receiveShadow=true; b.position.y=h/2; g.add(b);
+  const seam=new THREE.Mesh(new THREE.BoxGeometry(0.008,h*0.92,0.008),new THREE.MeshStandardMaterial({color:0x9098a8,roughness:0.6}));
+  seam.position.set(0,h/2,d/2+0.005); g.add(seam);
+  const foot=new THREE.Mesh(new THREE.BoxGeometry(w*1.03,0.07,d*1.03),metalMat(0x161b28,0.55,0.35));
+  foot.position.y=0.035; foot.receiveShadow=true; g.add(foot);
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(w*1.01,0.03,d*1.01),bodyMat(0xe9eef7,{roughness:0.35}));
+  cap.position.y=h+0.015; g.add(cap);
+  return g;
+}
+function louvered(w,h,color){
+  const g=new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(w,h,0.03),bodyMat(color,{roughness:0.55})));
+  const cav=new THREE.Mesh(new THREE.BoxGeometry(w*0.92,h*0.92,0.01),new THREE.MeshStandardMaterial({color:0x0c101a,roughness:0.9}));
+  cav.position.z=0.012; g.add(cav);
+  for(let i=0,n=Math.floor(h*0.9/0.045);i<n;i++){
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(w*0.86,0.012,0.035),metalMat(0x2a3040,0.5,0.4));
+    bar.position.set(0,-h*0.44+i*0.045,0.02); g.add(bar);
+  }
+  return g;
+}
+const LAMPS=[];
+function signalTower(){
+  const g=new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.05,0.03,12),metalMat(0x1c2230)));
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.018,0.22,10),metalMat(0x242b3a)); pole.position.y=0.13; g.add(pole);
+  [0xff3b3b,0xffd23b,0x3bff6a].forEach((c,i)=>{
+    const m=new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:0.2,roughness:0.35,transparent:true,opacity:0.95});
+    const l=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.06,14),m);
+    l.position.y=0.07+i*0.068; g.add(l); LAMPS.push({m,pulse:i===2});
+  });
+  return g;
+}
+function screen(w,h){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,0.015),
+    new THREE.MeshStandardMaterial({color:0x06101c,emissive:0x0d3a5c,emissiveIntensity:0.8,roughness:0.25,envMap:ENV,envMapIntensity:0.4}));
+  const bz=new THREE.Mesh(new THREE.BoxGeometry(w*1.15,h*1.2,0.01),metalMat(0x161b26,0.5,0.3)); bz.position.z=-0.005; m.add(bz);
+  return m;
+}
+
+// ── 스크러버 (GAIA 계열 외형: 캐비닛 + 위 버너 뭉치 + 신호탑 + 측면 루버)
+function buildScrubber(){
+  const g=new THREE.Group();
+  g.add(cabinet(1.0,1.9,0.82,0xdfe6f2,{roughness:0.4}));
+  const bb=new THREE.Mesh(new THREE.BoxGeometry(0.52,0.26,0.46),bodyMat(0xc9d2e2,{roughness:0.5}));
+  bb.position.set(0.08,2.05,0.03); bb.castShadow=true; g.add(bb);
+  [[-0.14,0.1],[0.05,0.1],[0.23,0.1],[-0.03,-0.09],[0.18,-0.09]].forEach(([a,b])=>{
+    const pi=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,0.2,14),metalMat(0xb9c2d2,0.28,0.65));
+    pi.position.set(0.08+a,2.28,0.03+b); pi.castShadow=true; g.add(pi);
+  });
+  const sc=screen(0.2,0.15); sc.position.set(-0.05,1.3,0.42); g.add(sc);
+  const lv=louvered(0.62,0.55,0xd3dbe8); lv.rotation.y=Math.PI/2; lv.position.set(-0.505,0.5,-0.05); g.add(lv);
+  const tw=signalTower(); tw.position.set(-0.4,1.9,0.3); g.add(tw);
+  return g;
+}
+// ── 칠러 (EES 계열 외형)
+function buildChiller(){
+  const g=new THREE.Group();
+  g.add(cabinet(0.68,1.65,0.58,0xd8e0ee,{roughness:0.4}));
+  const top=new THREE.Mesh(new THREE.BoxGeometry(0.68,0.2,0.58),bodyMat(0xe4eaf5,{roughness:0.38}));
+  top.position.y=1.75; top.rotation.x=-0.1; top.castShadow=true; g.add(top);
+  const lv=louvered(0.82,0.86,0xc9d2e2); lv.rotation.y=Math.PI/2; lv.position.set(0.345,1.0,0); g.add(lv);
+  const sc=screen(0.15,0.11); sc.position.set(-0.14,1.2,0.295); g.add(sc);
+  g.userData.topY=1.85;
+  return g;
+}
+// ── 공정 장비 (고객 팹의 메인 툴 — 3모듈 클러스터)
+function buildMainTool(){
+  const g=new THREE.Group(); const mw=0.62;
+  [1.7,1.85,1.7].forEach((h,i)=>{
+    const b=cabinet(mw,h,0.92,i===1?0xe4eaf5:0xd8e0ee,{roughness:0.4});
+    b.position.x=(i-1)*mw*1.03; g.add(b);
+    const sc=screen(0.15,0.11); sc.position.set((i-1)*mw*1.03,1.05,0.475); g.add(sc);
+    if(i===1){ const tw=signalTower(); tw.position.set(mw*0.22,h+0.03,0.32); g.add(tw); }
+  });
+  const duct=new THREE.Mesh(new THREE.BoxGeometry(mw*3.15,0.13,0.28),bodyMat(0xc6cfe0,{roughness:0.5}));
+  duct.position.set(0,1.78,-0.32); duct.castShadow=true; g.add(duct);
+  return g;
+}
+// ── 진공펌프 (배기 라인 위에 인라인)
+function buildPump(){
+  const g=new THREE.Group();
+  const base=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.32,0.34),metalMat(0x323a4c,0.45,0.55));
+  base.position.y=0.16; base.castShadow=base.receiveShadow=true; g.add(base);
+  const mo=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,0.5,20),metalMat(0x4b5568,0.35,0.6));
+  mo.rotation.z=Math.PI/2; mo.position.y=0.42; mo.castShadow=true; g.add(mo);
+  for(let i=0;i<8;i++){ const f=new THREE.Mesh(new THREE.TorusGeometry(0.155,0.008,6,20),metalMat(0x323a4c,0.5,0.5));
+    f.rotation.y=Math.PI/2; f.position.set(-0.2+i*0.055,0.42,0); g.add(f); }
+  g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.16,16),metalMat(0x262c38,0.4,0.5)),{}).translateX(-0.32).translateY(0.42));
+  [-0.32,0.32].forEach(x=>{ const n=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.14,12),metalMat(0x7b8595,0.3,0.7));
+    n.position.set(x,0.55,0); g.add(n); });
+  return g;
+}
+// ── 클린룸 데크 (기둥 위 슬래브 · 가운데는 라이저가 지나가는 서비스 틈)
+function buildDeck(){
+  const dm=bodyMat(0xccd6e8,{roughness:0.5,metalness:0.1});
+  [{w:5.4,d:0.9,x:0,z:-1.55},{w:5.4,d:0.6,x:0,z:1.85},{w:1.2,d:1.8,x:-2.1,z:0.15},{w:1.2,d:1.8,x:2.1,z:0.15}]
+    .forEach(s=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(s.w,DECK_T,s.d),dm);
+      m.position.set(s.x,DECK_Y-DECK_T/2,s.z); m.castShadow=m.receiveShadow=true; ROOT.add(m); });
+  const cm=metalMat(0x323a4c,0.4,0.5);
+  [[-2.6,-2.9],[2.6,-2.9],[-2.6,2.5],[2.6,2.5]].forEach(([x,z])=>{
+    const c=new THREE.Mesh(new THREE.BoxGeometry(0.16,DECK_Y-DECK_T,0.16),cm);
+    c.position.set(x,(DECK_Y-DECK_T)/2,z); c.castShadow=true; ROOT.add(c); });
+  const rm=metalMat(0xffcc33,0.6,0.2), rg=new THREE.BoxGeometry(0.03,0.35,0.03);
+  [[-1.35,-0.75],[1.35,-0.75],[-1.35,1.1],[1.35,1.1]].forEach(([x,z])=>{
+    const r=new THREE.Mesh(rg,rm); r.position.set(x,DECK_Y+0.17,z); ROOT.add(r); });
+}
+function pipe(x1,y1,z1,x2,y2,z2,rad,color){
+  const cv=new THREE.CatmullRomCurve3([new THREE.Vector3(x1,y1,z1),new THREE.Vector3(x1,(y1+y2)/2,z1),
+    new THREE.Vector3(x2,(y1+y2)/2,z2),new THREE.Vector3(x2,y2,z2)]);
+  const m=new THREE.Mesh(new THREE.TubeGeometry(cv,30,rad,10,false),metalMat(color,0.32,0.55));
+  m.castShadow=true; ROOT.add(m); return m;
+}
+function flange(x,y,z,axis,color){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(0.075,0.075,0.05,16),metalMat(color,0.4,0.5));
+  m.position.set(x,y,z); if(axis==='x')m.rotation.z=Math.PI/2; if(axis==='z')m.rotation.x=Math.PI/2; ROOT.add(m);
+}
+
+buildDeck();
+const MAIN=buildMainTool(); MAIN.position.set(-1.0,DECK_Y,-0.4); ROOT.add(MAIN);
+const CHILL=buildChiller(); CHILL.position.set(1.5,DECK_Y,-0.4); ROOT.add(CHILL);
+const SCRUB=buildScrubber(); SCRUB.position.set(-2.1,0,1.9); ROOT.add(SCRUB);
+const PUMP=buildPump(); PUMP.position.set(-0.35,0,1.55); PUMP.rotation.y=0.35; ROOT.add(PUMP);
+
+// 배기: 공정 장비 아래 → 데크 틈 → 진공펌프 → 스크러버 «옆구리»
+const EX=0x9aa35e, mfX=MAIN.position.x+0.14, mfZ=MAIN.position.z+0.32;
+const th=PUMP.rotation.y;
+const inX=PUMP.position.x-0.32*Math.cos(th), inZ=PUMP.position.z+0.32*Math.sin(th);
+const outX=PUMP.position.x+0.32*Math.cos(th), outZ=PUMP.position.z-0.32*Math.sin(th);
+const sIn={x:SCRUB.position.x-0.5*0.3,y:0.55,z:SCRUB.position.z-0.41};
+pipe(mfX,DECK_Y-DECK_T,mfZ,inX,0.62,inZ,0.05,EX); flange(mfX,DECK_Y-DECK_T-0.02,mfZ,'y',EX);
+pipe(outX,0.62,outZ,sIn.x,sIn.y,sIn.z,0.05,EX); flange(sIn.x,sIn.y,sIn.z,'z',EX);
+// 냉각수: 칠러 ↔ 공정 장비 (공급 파랑 · 회수 빨강)
+const cX=CHILL.position.x-0.34, mrX=MAIN.position.x+0.62*3.09/2, midY=DECK_Y+CHILL.userData.topY*0.5;
+pipe(cX,midY+0.1,CHILL.position.z,mrX,midY+0.1,MAIN.position.z,0.045,0x3b7dff);
+flange(cX,midY+0.1,CHILL.position.z,'x',0x3b7dff); flange(mrX,midY+0.1,MAIN.position.z,'x',0x3b7dff);
+pipe(cX,midY-0.16,CHILL.position.z+0.14,mrX,midY-0.16,MAIN.position.z+0.14,0.045,0xff5a3b);
+flange(cX,midY-0.16,CHILL.position.z+0.14,'x',0xff5a3b); flange(mrX,midY-0.16,MAIN.position.z+0.14,'x',0xff5a3b);
+
+// 사람 — 서브팹에 세운다. 크기를 견줄 것이 없으면 설비가 장난감으로 보인다
+const skin=new THREE.MeshStandardMaterial({color:0x54689c,roughness:0.75,metalness:0.05});
+for(const [hx,hz] of [[-3.25,2.55],[-2.85,2.85]]){
+  const g=new THREE.Group(); g.position.set(hx,0,hz); ROOT.add(g);
+  const b=new THREE.Mesh(new THREE.CapsuleGeometry(0.16,0.56,6,14),skin); b.position.y=0.82; b.castShadow=true; g.add(b);
+  const h=new THREE.Mesh(new THREE.SphereGeometry(0.125,20,16),skin); h.position.y=1.30; h.castShadow=true; g.add(h);
+  for(const lx of [-0.09,0.09]){ const l=new THREE.Mesh(new THREE.CapsuleGeometry(0.068,0.38,5,10),skin);
+    l.position.set(lx,0.29,0); l.castShadow=true; g.add(l); }
+}
+
+// ── 라벨. ⚠ 화면 «왼쪽»은 본편 카피 자리다 — 라벨은 오른쪽에만 둔다.
+//    4.6초에 사람이 읽을 수 있는 것은 넷이 한계다.
+function labelSprite(text,accent){
+  const c=document.createElement('canvas'), s=1.5; c.width=560*s; c.height=92*s;
+  const g=c.getContext('2d'); g.scale(s,s);
+  g.font='700 34px NotoKR, sans-serif'; const tw=g.measureText(text).width;
+  const w=tw+56,h=60,x=(560-w)/2,y=16;
+  g.fillStyle='rgba(8,14,34,.86)'; g.strokeStyle=accent; g.lineWidth=2;
+  g.beginPath(); g.roundRect(x,y,w,h,30); g.fill(); g.stroke();
+  g.fillStyle='#eaf2ff'; g.textBaseline='middle'; g.textAlign='center'; g.fillText(text,280,y+h/2+1);
+  const tex=new THREE.CanvasTexture(c); tex.anisotropy=4;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false,depthWrite:false}));
+  sp.scale.set(2.35,0.386,1); sp.renderOrder=10; return sp;
+}
+const LABELS=[
+  { t:'공정 장비',        a:'#9fb8e8', pos:[-1.0, DECK_Y+2.35, -0.4], at:0.45 },
+  { t:'칠러 ±0.1℃',     a:'#7fd0ff', pos:[ 1.5, DECK_Y+2.25, -0.4], at:1.05 },
+  { t:'배기가스',         a:'#c9d67a', pos:[ 0.35, 1.72, 1.15],       at:1.75 },
+  { t:'스크러버 1,200℃', a:'#ffb46b', pos:[-0.95, 2.50, 2.75],       at:2.45 },
+];
+const SPR=LABELS.map(L=>{ const s=labelSprite(L.t,L.a); s.position.set(...L.pos); s.material.opacity=0; S.add(s); return s; });
+
+// ── 카메라: 두 층이 다 보이는 자리에서 천천히 밀고 들어간다.
+//    피사체를 잡되 «시선만» 왼쪽으로 틀어 장비를 화면 오른쪽에 세운다(글자는 왼쪽에 선다).
+function seek(t){
+  t=clamp(t,0,DUR);
+  const x=t/DUR, e=eio(x);
+  const ang=lerp(0.62,0.40,e), rad=lerp(14.6,12.2,eo(x)), hy=lerp(5.4,4.0,e);
+  const cx=-0.4, cy=lerp(2.6,2.2,e);
+  C.position.set(cx+Math.sin(ang)*rad, hy, Math.cos(ang)*rad);
+  C.lookAt(cx-3.5, cy, 0);
+  // 신호탑 초록등이 뛴다 — 「RUNNING」이 이 한 점으로 전해진다
+  LAMPS.forEach(l => { l.m.emissiveIntensity = l.pulse ? 0.45+0.4*Math.sin(t*3.2) : 0.2; });
+  SPR.forEach((s,i)=>{ const L=LABELS[i];
+    const a=Math.min(p(t,L.at,L.at+0.28), 1-p(t,DUR-0.30,DUR));
+    const k=lerp(0.86,1,eo(p(t,L.at,L.at+0.28)));
+    s.material.opacity=a; s.scale.set(2.35*k,0.386*k,1); });
+  R.render(S,C);
+}
+window.seek=seek; window.DUR3D=DUR;
+await document.fonts.ready;
+// 폰트가 늦게 오면 라벨이 «네모»로 구워진다 — 폰트 준비 뒤에 다시 그린다
+SPR.forEach((s,i)=>{ const n=labelSprite(LABELS[i].t,LABELS[i].a);
+  s.material.map.dispose(); s.material.map=n.material.map; s.material.needsUpdate=true; });
+seek(0); window.__ready=true;
+</script></body></html>
