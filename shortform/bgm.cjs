@@ -128,13 +128,22 @@ const M = tb => TL.toOut(tb, P);      // null = 그 장면이 빠졌다
   // 드럼은 출력 시각에 직접 — 장면 압축률이 달라도 박자가 안 휜다
   const beat = { from: (P.T.found || P.T.map)[0], to: P.T.kosdaq[1] };   // v19: stairs 가 접혀 성장 3박(kosdaq)이 비트의 끝 · v22C: found 가 빠지면 map 부터
 
-  // v22C: 만담 AI 음성(espeak-ng 합성 + 기계 보이스 가공 · voices/) — 말풍선 등장 큐(tv = cue−70)와 같은 시각.
-  //   다른 모드는 무성으로 둔다(C 전용 비교 항목). 클립 tv↔큐가 1:1(clipDur=base)이라 씬을 늘려도 입이 맞는다.
+  // v23: 만담 AI 음성(한국어 신경망 TTS·KSS + 빈티지 라디오 가공 · voices/) — 말풍선 등장 큐(tv = cue−70)와 같은 시각.
+  //   다른 모드는 무성으로 둔다(C 전용). 클립 tv↔큐가 1:1(clipDur=base)이라 씬을 늘려도 입이 맞는다.
+  //   ⚠ 대사 테이크는 ASR(음성인식) 검증을 거친 것만 voices/ 에 둔다 — 스펙트럼 수치로는 «치지직»을 못 잡았다(실사고).
   if (MODE === 'fullC') {
+    let v0 = Infinity, v1 = -Infinity;
     for (const [f, tb] of [['c1', 70.60], ['s1', 72.05], ['c2', 73.05], ['s2', 74.65]]) {
       const t = M(tb);
-      if (t !== null) cue.push({ t, kind: 'voice', b64: fs.readFileSync(`voices/${f}.wav`).toString('base64') });
+      if (t === null) continue;
+      const wav = fs.readFileSync(`voices/${f}.wav`);
+      cue.push({ t, kind: 'voice', b64: wav.toString('base64') });
+      // 대사 구간 덕킹 범위 — PCM s16 mono 44100 가정(생성 스크립트가 그렇게 만든다)
+      const dur = (wav.length - 44) / (44100 * 2);
+      v0 = Math.min(v0, t); v1 = Math.max(v1, t + dur);
     }
+    // 음악만 −4.5dB(0.6배) — 실측으로 BGM 이 「25년째」의 된소리를 갉아 ASR 이 «20분째»로 들었다.
+    if (v0 < v1) cue.push({ kind: 'duck', a: +(v0 - 0.12).toFixed(3), b: +(v1 + 0.15).toFixed(3) });
   }
 
   const res = await page.evaluate(async ({ cue, beat, DUR }) => {
@@ -143,7 +152,15 @@ const M = tb => TL.toOut(tb, P);      // null = 그 장면이 빠졌다
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.2;
     const master = ctx.createGain(); master.gain.value = 0.85; comp.connect(master); master.connect(ctx.destination);
-    const bus = comp;
+    // 음악은 duck 을 지나 comp 로 — 대사 동안만 음악을 내린다(음성은 comp 직결이라 안 내려간다)
+    const duck = ctx.createGain(); duck.gain.value = 1; duck.connect(comp);
+    for (const c of cue) if (c.kind === 'duck') {
+      duck.gain.setValueAtTime(1, Math.max(0, c.a));
+      duck.gain.linearRampToValueAtTime(0.6, Math.max(0, c.a) + 0.12);
+      duck.gain.setValueAtTime(0.6, c.b);
+      duck.gain.linearRampToValueAtTime(1, c.b + 0.3);
+    }
+    const bus = duck;
     const nf = n => 440 * Math.pow(2, (n - 69) / 12);
     function tone({ type = 'sine', f0, f1, t, dur, g = 0.3, a = 0.01, d, lp, q = 1 }) {
       if (t + dur > DUR) dur = Math.max(0.02, DUR - t); if (t >= DUR) return;
@@ -217,8 +234,10 @@ const M = tb => TL.toOut(tb, P);      // null = 그 장면이 빠졌다
       for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
       const buf = await ctx.decodeAudioData(ab);
       const s = ctx.createBufferSource(); s.buffer = buf;
-      const G = ctx.createGain(); G.gain.value = 0.85;
-      s.connect(G); G.connect(bus); s.start(c.t);
+      // 0.5(−6dB): 1.0 으로 두면 대사 블록이 −6dB RMS — 최고 음악 구간(−15.7)보다 12dB 떠서
+      // 프로그램 안에서 «갑자기 큰 소리»가 된다. 덕킹된 음악(−26)보다는 여전히 ~14dB 위라 또렷하다.
+      const G = ctx.createGain(); G.gain.value = 0.5;
+      s.connect(G); G.connect(comp); s.start(c.t);   // duck 을 우회해 comp 직결 — 음성은 안 내려간다
     }
 
     // ── 드럼·베이스·코드 : 출력 시각에 직접(100BPM 고정)
