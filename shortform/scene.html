@@ -472,6 +472,19 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <div class="vwrap abs" id="s6-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
     <video id="s6-v" src="footage/s6_banter.webm" preload="auto" muted playsinline></video>
   </div>
+  <!-- v24 'row' — 3D 도열(사람 없음). 대화·의인화를 걷어낸 기본안 -->
+  <div class="vwrap abs" id="s6row-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
+    <video id="s6row-v" src="footage/s7_row.webm" preload="auto" muted playsinline></video>
+  </div>
+  <!-- v24 실사 슬롯 — 반도체 팹 근무 실사(사용자 제공 · 라이선스 확인본)를 여기에 둔다.
+       파일이 없으면 3D 도열이 그대로 선다(슬롯 규약: 검은 칸을 만들지 않는다).
+       ⚠ 실사는 그대로 깔면 밝아서 영상 팔레트와 갈라진다 — 어둡게·푸르게 눌러 «같은 밤»으로 만든다. -->
+  <div class="vwrap abs" id="s6real-vid" style="left:0;top:0;width:1920px;height:1080px;opacity:0">
+    <video id="s6real-v" src="footage/fab_work.webm" preload="auto" muted playsinline></video>
+  </div>
+  <div class="abs" id="s6real-tint" style="left:0;top:0;width:1920px;height:1080px;opacity:0;
+       background:linear-gradient(90deg,rgba(5,9,26,.92) 0%,rgba(5,9,26,.72) 34%,rgba(5,9,26,.30) 70%,rgba(5,9,26,.42) 100%);
+       mix-blend-mode:normal"></div>
   <div id="s6-old"><div class="en">GST 25th Anniversary.</div></div>
   <!-- v24: 교신 콘솔 — 새 클립(진중판)에는 글자가 안 구워져 있어 대사는 전부 여기서 그린다.
        자리는 기계 왼쪽의 «늘 빈» 세로 컬럼. 줄은 발화 시각에 자라난다(로그) -->
@@ -490,8 +503,10 @@ section{position:absolute;inset:0;display:none;opacity:0}
   <!-- v24 quiet 안: 대화를 걷어내고 «지켜보는 밤»으로. 조판·등장은 실란/칠러 씬과 같은 규약 -->
   <div id="s6q" style="opacity:0">
     <div class="kicker" id="s6q-k" style="top:150px">새벽 4시,</div>
-    <div class="txt abs" id="s6q-t" style="left:140px;top:230px">모두가 잠든 시간에도<br><b>둘은 깨어 있습니다.</b></div>
-    <div class="en" id="s6q-en">4 a.m. — while everyone sleeps, these two stay awake.</div>
+    <!-- ⚠ 문안은 «3D 도열»과 «실사(사람)» 어느 쪽이 화면이 되어도 맞아야 한다 —
+         「둘은」(만담 시절 문안)처럼 대상을 못 박으면 실사로 갈아끼우는 순간 거짓말이 된다. -->
+    <div class="txt abs" id="s6q-t" style="left:140px;top:230px">모두가 잠든 시간에도<br><b>누군가는 깨어 있습니다.</b></div>
+    <div class="en" id="s6q-en">4 a.m. — while everyone sleeps, someone stays awake.</div>
   </div>
 </section>
 
@@ -505,9 +520,12 @@ section{position:absolute;inset:0;display:none;opacity:0}
 // ── 타임라인은 timeline.js 한 곳에서 온다 — 그림과 소리가 갈리지 않게.
 //    주소에 ?mode=short 를 붙이면 45초 짧은 버전이 된다(장면 셋을 빼고 나머지를 조금씩 줄인다).
 const MODE = (m => ['short','fullA','fullB','fullC'].includes(m) ? m : 'full')(new URLSearchParams(location.search).get('mode'));
-// v24 s6 변형: 'talk'(교신 콘솔 · 음성) · 'quiet'(무대사 — 자막 조판만, 다른 씬과 같은 규약).
-//   사내 피드백 「대화가 유치하다」의 존폐 판단용. 결정되면 진 쪽 분기를 지운다.
-const S6MODE = (new URLSearchParams(location.search).get('s6') === 'quiet') ? 'quiet' : 'talk';
+// v24 s6 변형 — 사내 피드백 「대화가 유치해 뒤의 3D 씬 격을 죽인다」의 존폐 판단용.
+//   'row'(기본) 3D 도열 + 자막 · 'quiet' 만담 클립에 자막만 · 'talk' 교신 콘솔 + 음성.
+//   결정되면 진 쪽 분기를 지운다.
+// ⚠ 'row' 는 실사 슬롯을 함께 본다 — footage/fab_work.webm 이 있으면 «그것»이 화면이 되고
+//   3D 도열은 뒤로 물러난다(없으면 3D 그대로). 이 저장소의 슬롯 규약 그대로: 검은 칸을 만들지 않는다.
+const S6MODE = (m => ['talk','quiet','row'].includes(m) ? m : 'row')(new URLSearchParams(location.search).get('s6'));
 const P = TL.build(MODE);
 const T = P.T, DUR = P.DUR, KEYS = TL.SCENES.map(s => s.k);
 const $ = id => document.getElementById(id);
@@ -1062,19 +1080,31 @@ function s6Cons(tv){
   }
 }
 SCN.s6 = function(t){
-    cutScene('s6', t, 70.0, 6.4, 6.4);
-    const tv = t - 70.0;
     const cons = $('s6cons'), q = $('s6q');
-    if (S6MODE === 'quiet'){
-      if (cons) cons.style.opacity = 0;
-      op(q, 1);
-      pop($('s6q-k'), t, 70.5, 0.5);
-      pop($('s6q-t'), t, 70.8, 0.6);
-    } else {
-      op(q, 0);
-      pop($('s6t-k'), t, 70.4, 0.5);
-      s6Cons(tv);
+    if (S6MODE === 'talk'){
+      $('s6row-vid').style.opacity = 0; $('s6real-vid').style.opacity = 0; $('s6real-tint').style.opacity = 0;
+      cutScene('s6', t, 70.0, 6.4, 6.4);
+      op(q, 0); pop($('s6t-k'), t, 70.4, 0.5); s6Cons(t - 70.0);
+      return;
     }
+    if (cons) cons.style.opacity = 0;
+    op($('s6t-k'), 0);
+    if (S6MODE === 'quiet'){
+      $('s6row-vid').style.opacity = 0; $('s6real-vid').style.opacity = 0; $('s6real-tint').style.opacity = 0;
+      cutScene('s6', t, 70.0, 6.4, 6.4);
+    } else {
+      // row — 실사가 있으면 실사가 화면이 된다(3D 도열은 숨긴다). 없으면 3D 도열.
+      const rv = $('s6real-v'), real = vok(rv);
+      $('s6-vid').style.opacity = 0; $('s6-old').style.display = 'none';
+      $('s6real-vid').style.opacity = real ? 1 : 0;
+      $('s6real-tint').style.opacity = real ? 1 : 0;
+      $('s6row-vid').style.opacity = real ? 0 : 1;
+      if (real) vseek(rv, (t - 70.0) * (rv.duration || 6.4) / 6.4);
+      else      vseek($('s6row-v'), t - 70.0);
+    }
+    op(q, 1);
+    pop($('s6q-k'), t, 70.5, 0.5);
+    pop($('s6q-t'), t, 70.8, 0.6);
 };
 
 window.seek = function(tOut){

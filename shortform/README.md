@@ -468,3 +468,23 @@ $FF -y -i GST_25th_nothing_happened.mp4 -i voice.wav \
   -filter_complex "[0:a][1:a]sidechaincompress=threshold=0.06:ratio=8:attack=20:release=350[d];[d][1:a]amix=inputs=2:duration=first:weights=1 1.6[a]" \
   -map 0:v -map "[a]" -c:v copy -c:a aac -b:a 192k -ar 48000 GST_25th_with_voice.mp4
 ```
+
+## 실사 슬롯 — 반도체 팹 근무 영상 (v24 · 사용자 제공 대기)
+
+`footage/fab_work.webm` 이 있으면 만담 자리(s6 슬롯)의 화면이 «실사»가 되고, 없으면 3D 도열
+(`s7_row.webm`)이 그대로 선다. 이 저장소의 슬롯 규약 그대로 — **검은 칸을 만들지 않는다.**
+
+**왜 실사인가.** 저폴리 3D 인물은 다큐 어조를 못 버틴다(사용자 지적 「레고 같다」). 사람은
+실사가 맞고, 설비·공간은 3D 가 맞다. 둘을 한 화면에 섞기보다 «사람이 필요한 컷»만 실사로 간다.
+
+**넣는 법**
+1. 라이선스가 확인된 클립을 구한다. ⚠ 이 컨테이너는 웹을 못 받는다 — 프록시가 허용목록 밖
+   호스트를 차단한다(pexels·pixabay·wikimedia 전부 CONNECT 403 · 실측). 파일로 받아야 한다.
+2. `ffmpeg -i 원본.mp4 -t 8 -an -c:v libvpx-vp9 -crf 30 -b:v 0 footage/fab_work.webm`
+   ⚠ **webm(VP9) 이어야 한다** — 오픈소스 Chromium 은 H.264 를 못 읽어 화면이 조용히 빈다.
+   ⚠ 소리는 뺀다(`-an`) — 오디오는 bgm.cjs 가 통째로 만든다.
+3. 길이는 6.4초 이상이면 된다(그보다 길면 앞부분만 쓴다).
+
+**화면이 갈라지지 않게** 실사 위에 어두운 청색 그라디언트(`#s6real-tint`)를 덮는다 —
+실사는 그대로 깔면 밝고 따뜻해서 이 영상의 밤 팔레트와 따로 논다. 왼쪽은 더 짙게 눌러
+자막 자리를 만든다(실란·칠러 씬과 같은 구도 규약).
