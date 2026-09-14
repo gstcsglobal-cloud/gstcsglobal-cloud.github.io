@@ -131,7 +131,8 @@ const M = tb => TL.toOut(tb, P);      // null = 그 장면이 빠졌다
   // v23: 만담 AI 음성(한국어 신경망 TTS·KSS + 빈티지 라디오 가공 · voices/) — 말풍선 등장 큐(tv = cue−70)와 같은 시각.
   //   다른 모드는 무성으로 둔다(C 전용). 클립 tv↔큐가 1:1(clipDur=base)이라 씬을 늘려도 입이 맞는다.
   //   ⚠ 대사 테이크는 ASR(음성인식) 검증을 거친 것만 voices/ 에 둔다 — 스펙트럼 수치로는 «치지직»을 못 잡았다(실사고).
-  if (MODE === 'fullC') {
+  // VOICES=0 — 무음성 비교판(음성·덕킹 없이 음악만). 씬 오디오 A/B 용 스위치다.
+  if (MODE === 'fullC' && process.env.VOICES !== '0') {
     let v0 = Infinity, v1 = -Infinity;
     for (const [f, tb] of [['c1', 70.60], ['s1', 72.05], ['c2', 73.05], ['s2', 74.65]]) {
       const t = M(tb);

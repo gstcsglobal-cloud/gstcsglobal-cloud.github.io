@@ -44,7 +44,7 @@ const C=new THREE.PerspectiveCamera(36,W/H,0.1,120);
 const R=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
 R.setSize(W,H); R.setPixelRatio(1);
 R.shadowMap.enabled=true; R.shadowMap.type=THREE.PCFShadowMap;
-R.toneMapping=THREE.ACESFilmicToneMapping; R.toneMappingExposure=0.92;   // v24: 1.15 → 감광
+R.toneMapping=THREE.ACESFilmicToneMapping; R.toneMappingExposure=0.88;   // v24: 1.15 → 감광(실란 씬 기준으로 한 단계 더)
 document.body.appendChild(R.domElement);
 
 // 반사용 간이 환경맵 — 금속·도장면이 «무엇인가를 비추고» 있어야 사진처럼 보인다
@@ -69,7 +69,7 @@ const metalMat=(color,r=0.3,m=0.75)=>new THREE.MeshStandardMaterial({color,rough
 // ── 조명: 영상 팔레트(짙은 남색 + CI 파랑 림)에 맞춘다.
 //    v24: 웜 키라이트가 «친근한 장난감» 인상의 절반이었다 — 쿨톤으로 바꾸고 전체를 줄인다.
 //    림은 오히려 키운다(어두운 방의 푸른 윤곽 = 시네마틱).
-S.add(new THREE.HemisphereLight(0xbcd2ff,0x0b1224,0.55));
+S.add(new THREE.HemisphereLight(0xbcd2ff,0x0b1224,0.46));
 const key=new THREE.DirectionalLight(0xcfe0ff,1.35); key.position.set(6,10,7); key.castShadow=true;
 key.shadow.mapSize.set(1536,1536);
 { const s=key.shadow.camera; s.left=-8;s.right=8;s.top=9;s.bottom=-3;s.near=1;s.far=40; key.shadow.bias=-0.0018; }

@@ -35,29 +35,30 @@ section{position:absolute;inset:0;display:none;opacity:0}
 .co-line .y{color:#8fc0ff;display:inline-block;width:110px;font-variant-numeric:tabular-nums}
 .led{font-family:'NotoKR';font-weight:900;font-size:56px;letter-spacing:1px;color:#ff4d4d;white-space:nowrap;text-shadow:0 0 18px rgba(255,77,77,.8),0 0 40px rgba(255,77,77,.4)}
 /* s6 교신 콘솔(v24) — 만담 «형태» 전면 재구성(사내 피드백 「유치」). 말풍선이 아니라
-   새벽 관제의 무전 트랜스크립트다: 대사가 발화 시각에 맞춰 로그처럼 쌓인다.
-   클립(v24 진중판)에는 이제 아무 글자도 구워져 있지 않다 — 대사는 전부 여기서 그린다. */
-.s6c{position:absolute;left:74px;top:116px;width:648px;box-sizing:border-box;opacity:0;
-  padding:24px 30px 20px;border-radius:18px;will-change:transform,opacity;
-  background:linear-gradient(168deg,rgba(13,21,38,.94),rgba(6,10,20,.96));
-  border:1px solid rgba(120,170,235,.38);
-  box-shadow:0 16px 48px rgba(0,0,0,.55),0 0 22px rgba(80,150,255,.14),inset 0 1px 0 rgba(255,255,255,.07)}
-.s6c .hd{display:flex;align-items:center;gap:10px;padding-bottom:14px;margin-bottom:6px;
-  border-bottom:1px solid rgba(120,170,235,.22)}
-.s6c .hd .dot{width:9px;height:9px;border-radius:50%;background:#3ee07c;box-shadow:0 0 10px rgba(62,224,124,.8)}
-.s6c .hd b{font-size:19px;font-weight:700;letter-spacing:3.5px;color:rgba(150,195,245,.85)}
-.s6c .hd .clk{margin-left:auto;font-size:19px;font-weight:700;letter-spacing:2px;
-  color:rgba(120,165,225,.65);font-variant-numeric:tabular-nums}
-.s6c .ln{display:flex;gap:14px;align-items:baseline;padding:11px 0;opacity:0}
-.s6c .ln .tag{flex:0 0 128px;font-size:16px;font-weight:700;letter-spacing:2.5px;text-align:right;
-  padding-top:6px;align-self:flex-start}
+   새벽 관제의 무전 트랜스크립트다: 대사가 발화 시각에 맞춰 로그처럼 «자라며» 쌓인다.
+   ⚠ 폭 362 · left 48 은 실측이다 — 스크러버 왼쪽 모서리가 푸시인 끝에 x≈420 까지 온다.
+     넓히면 기계·HMI 를 가린다(첫 판 648px 가 실제로 가렸다). */
+.s6c{position:absolute;left:48px;top:100px;width:362px;box-sizing:border-box;opacity:0;
+  padding:20px 24px 16px;border-radius:16px;overflow:hidden;will-change:transform,opacity;
+  background:linear-gradient(168deg,rgba(13,21,38,.93),rgba(6,10,20,.95));
+  border:1px solid rgba(120,170,235,.36);
+  box-shadow:0 16px 48px rgba(0,0,0,.55),0 0 22px rgba(80,150,255,.13),inset 0 1px 0 rgba(255,255,255,.07)}
+.s6c .hd{display:flex;align-items:center;gap:9px;padding-bottom:12px;
+  border-bottom:1px solid rgba(120,170,235,.20)}
+.s6c .hd .dot{width:8px;height:8px;border-radius:50%;background:#3ee07c;box-shadow:0 0 9px rgba(62,224,124,.8)}
+.s6c .hd b{font-size:16px;font-weight:700;letter-spacing:3px;color:rgba(150,195,245,.85)}
+.s6c .hd .clk{margin-left:auto;font-size:16px;font-weight:700;letter-spacing:1.5px;
+  color:rgba(120,165,225,.6);font-variant-numeric:tabular-nums}
+.s6c .ln{overflow:hidden;max-height:0;opacity:0}
+.s6c .ln .row1{display:flex;align-items:center;gap:9px;margin-top:14px}
+.s6c .ln .tag{font-size:13px;font-weight:700;letter-spacing:2.5px}
 .s6c .ln.tC .tag{color:#8fe9ff}
 .s6c .ln.tS .tag{color:#8ec0ff}
-.s6c .ln .tx .ko{font-size:31px;font-weight:700;line-height:1.3;color:#eef4ff}
-.s6c .ln .tx .en{font-size:17px;color:rgba(140,180,230,.6);margin-top:2px;letter-spacing:.3px}
-.s6c .ln .eq{display:flex;gap:3px;align-items:flex-end;height:16px;margin-left:10px;align-self:center}
-.s6c .ln .eq i{display:block;width:4px;height:4px;border-radius:1.5px;background:#57b6ff;
-  box-shadow:0 0 6px rgba(87,182,255,.7)}
+.s6c .ln .eq{display:flex;gap:2.5px;align-items:flex-end;height:12px}
+.s6c .ln .eq i{display:block;width:3.5px;height:3px;border-radius:1.5px;background:#57b6ff;
+  box-shadow:0 0 5px rgba(87,182,255,.7)}
+.s6c .ln .ko{font-size:26px;font-weight:700;line-height:1.25;color:#eef4ff;margin-top:5px}
+.s6c .ln .en{font-size:14px;color:rgba(140,180,230,.55);margin-top:2px;letter-spacing:.3px}
 .led span{display:inline-block}
 .led .g{color:#5cff8a;text-shadow:0 0 18px rgba(92,255,138,.8),0 0 40px rgba(92,255,138,.4)}
 .date{font-family:'BlackHan','NotoKR';font-size:150px;line-height:1;letter-spacing:2px;color:#fff}
@@ -471,22 +472,18 @@ section{position:absolute;inset:0;display:none;opacity:0}
     <video id="s6-v" src="footage/s6_banter.webm" preload="auto" muted playsinline></video>
   </div>
   <div id="s6-old"><div class="en">GST 25th Anniversary.</div></div>
-  <!-- v24: 교신 콘솔 — 만담 «형태» 전면 재구성(사내 피드백 「유치」). 말풍선이 아니라 새벽 관제의
-       무전 트랜스크립트다. 새 클립(진중판)에는 글자가 안 구워져 있어 배치가 자유롭다 — 좌상단(기계를 안 가림) -->
+  <!-- v24: 교신 콘솔 — 새 클립(진중판)에는 글자가 안 구워져 있어 대사는 전부 여기서 그린다.
+       자리는 기계 왼쪽의 «늘 빈» 세로 컬럼. 줄은 발화 시각에 자라난다(로그) -->
   <div class="s6c" id="s6cons">
-    <div class="hd"><div class="dot"></div><b>INTERNAL&nbsp;COMMS&nbsp;·&nbsp;SCRUBBER&nbsp;&#8596;&nbsp;CHILLER</b><span class="clk" id="s6clk">04:00:00</span></div>
-    <div class="ln tC" id="s6l-c1"><span class="tag">CHILLER</span>
-      <span class="tx"><div class="ko">오늘, 무슨 일 있었어?</div><div class="en">Anything happen today?</div></span>
-      <span class="eq"><i></i><i></i><i></i></span></div>
-    <div class="ln tS" id="s6l-s1"><span class="tag">SCRUBBER</span>
-      <span class="tx"><div class="ko">없었어.</div><div class="en">Nothing.</div></span>
-      <span class="eq"><i></i><i></i><i></i></span></div>
-    <div class="ln tC" id="s6l-c2"><span class="tag">CHILLER</span>
-      <span class="tx"><div class="ko">25년째, 그 대답이야.</div><div class="en">Same answer for 25 years.</div></span>
-      <span class="eq"><i></i><i></i><i></i></span></div>
-    <div class="ln tS" id="s6l-s2"><span class="tag">SCRUBBER</span>
-      <span class="tx"><div class="ko">그게, 내 일이잖아.</div><div class="en">That's my job.</div></span>
-      <span class="eq"><i></i><i></i><i></i></span></div>
+    <div class="hd"><div class="dot"></div><b>INTERNAL&nbsp;COMMS</b><span class="clk" id="s6clk">04:00:00</span></div>
+    <div class="ln tC" id="s6l-c1"><div class="row1"><span class="tag">CHILLER</span><span class="eq"><i></i><i></i><i></i></span></div>
+      <div class="ko">오늘, 무슨 일 있었어?</div><div class="en">Anything happen today?</div></div>
+    <div class="ln tS" id="s6l-s1"><div class="row1"><span class="tag">SCRUBBER</span><span class="eq"><i></i><i></i><i></i></span></div>
+      <div class="ko">없었어.</div><div class="en">Nothing.</div></div>
+    <div class="ln tC" id="s6l-c2"><div class="row1"><span class="tag">CHILLER</span><span class="eq"><i></i><i></i><i></i></span></div>
+      <div class="ko">25년째, 그 대답이야.</div><div class="en">Same answer for 25 years.</div></div>
+    <div class="ln tS" id="s6l-s2"><div class="row1"><span class="tag">SCRUBBER</span><span class="eq"><i></i><i></i><i></i></span></div>
+      <div class="ko">그게, 내 일이잖아.</div><div class="en">That's my job.</div></div>
   </div>
 </section>
 
@@ -1041,10 +1038,10 @@ function s6Cons(tv){
   if (clk) clk.textContent = '04:00:' + String(Math.floor(clamp(tv, 0, 59))).padStart(2, '0');
   for (const Ln of S6L){
     const el = $(Ln.id); if (!el) continue;
-    const on = p(tv, Ln.v[0] - 0.12, Ln.v[0] + 0.13);          // 발화 직전에 줄이 선다
+    const on = p(tv, Ln.v[0] - 0.16, Ln.v[0] + 0.14);          // 발화 직전에 줄이 «자라난다»
     const talking = tv >= Ln.v[0] && tv <= Ln.v[1];
+    el.style.maxHeight = (eo(on) * 104).toFixed(1) + 'px';     // 로그처럼 패널이 커진다
     el.style.opacity = on * (talking ? 1 : 0.55);              // 지난 줄은 가라앉는다
-    el.style.transform = `translateY(${(1 - eo(on)) * 10}px)`;
     el.querySelectorAll('.eq i').forEach((bar, i) => {
       const h = (MODE === 'fullC' && talking)
         ? 5 + 11 * (0.5 + 0.5 * Math.sin(6.28 * (2.6 + i * 0.53) * tv + i * 2.1)) : 4;
