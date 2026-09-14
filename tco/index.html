@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=138"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=139"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -93,7 +93,7 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
 @media print{.capbtns,.header-right,.slicers,.fchips{display:none!important}.card{break-inside:avoid;page-break-inside:avoid}}
 @media(max-width:1200px){.grid2,.grid2e{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=138">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=139">
 </head>
 <body>
 
@@ -312,7 +312,7 @@ ko:{title:'TCO 분석',sub:'Total Cost of Ownership — 유틸리티 · 전력 �
   cfg_save:'저장 후 재계산',cfg_reset:'기본값 복원',cfg_saved:'✓ 저장됨',
   rd_tco_n:'유틸리티 비용은 모델 산출값입니다 — 목록은 해당 구간에 가동된 설비입니다',
   rd_tco_p:'자재실적일자|S/N|라인|공정|자재명|수량|교체사유',
-  rd_tco_e:'S/N|FAB|공정|Type|챔버|가동(h)|유틸비용|자재비|합계',
+  rd_tco_e:'S/N|FAB|공정|Type|챔버|가동(h)|유틸비용|자재비|합계',rd_tco_d:'S/N|FAB|공정|정지(h)',
   cfg_price:'단가 (원)',cfg_lng:'LNG 유량 LPM/챔버 (공정별)',cfg_kw:'전력 kW/챔버 (공정별)',cfg_flow:'공통 유량 LPM/챔버',
   c_pLng:'LNG 원/m³',c_pO2:'O₂ 원/m³',c_pCda:'CDA 원/m³',c_pCw:'CW 원/m³',c_pPcw:'PCW 원/m³',c_pKwh:'전기 원/kWh',c_pPart:'파츠 원/개',
   as_title:'계산 기준 (가정)',
@@ -339,7 +339,7 @@ en:{title:'TCO Analysis',sub:'Total Cost of Ownership — monthly utility · pow
   cfg_save:'Save & Recalculate',cfg_reset:'Reset Defaults',cfg_saved:'✓ Saved',
   rd_tco_n:'Utility costs are model estimates — the list shows units running in this period',
   rd_tco_p:'Date|S/N|Line|Process|Material|Qty|Reason',
-  rd_tco_e:'S/N|FAB|Process|Type|Ch|Run(h)|Utility|Parts|Total',
+  rd_tco_e:'S/N|FAB|Process|Type|Ch|Run(h)|Utility|Parts|Total',rd_tco_d:'S/N|FAB|Process|Down(h)',
   cfg_price:'Unit Prices (KRW)',cfg_lng:'LNG Flow LPM/chamber (by process)',cfg_kw:'Power kW/chamber (by process)',cfg_flow:'Common Flow LPM/chamber',
   c_pLng:'LNG ₩/m³',c_pO2:'O₂ ₩/m³',c_pCda:'CDA ₩/m³',c_pCw:'CW ₩/m³',c_pPcw:'PCW ₩/m³',c_pKwh:'Power ₩/kWh',c_pPart:'Parts ₩/pc',
   as_title:'Calculation Basis (Assumptions)',
@@ -366,7 +366,7 @@ zh:{title:'TCO 分析',sub:'Total Cost of Ownership — 公用·电力·零件 �
   cfg_save:'保存并重算',cfg_reset:'恢复默认',cfg_saved:'✓ 已保存',
   rd_tco_n:'公用设施费用为模型估算值 — 列表为该期间运行的设备',
   rd_tco_p:'日期|S/N|线|工艺|材料名|数量|更换原因',
-  rd_tco_e:'S/N|FAB|工艺|类型|腔|运行(h)|公用费|零件费|合计',
+  rd_tco_e:'S/N|FAB|工艺|类型|腔|运行(h)|公用费|零件费|合计',rd_tco_d:'S/N|FAB|工艺|停机(h)',
   cfg_price:'单价 (韩元)',cfg_lng:'LNG流量 LPM/腔 (按工艺)',cfg_kw:'电力 kW/腔 (按工艺)',cfg_flow:'通用流量 LPM/腔',
   c_pLng:'LNG 元/m³',c_pO2:'O₂ 元/m³',c_pCda:'CDA 元/m³',c_pCw:'CW 元/m³',c_pPcw:'PCW 元/m³',c_pKwh:'电 元/kWh',c_pPart:'零件 元/个',
   as_title:'计算基准 (假设)',
@@ -393,7 +393,7 @@ ja:{title:'TCO 分析',sub:'Total Cost of Ownership — ユーティリティ·�
   cfg_save:'保存して再計算',cfg_reset:'既定値に戻す',cfg_saved:'✓ 保存済み',
   rd_tco_n:'ユーティリティ費はモデル算出値です — 一覧は当該区間に稼働した設備です',
   rd_tco_p:'日付|S/N|ライン|工程|部材名|数量|交換事由',
-  rd_tco_e:'S/N|FAB|工程|Type|ch|稼働(h)|ユーティリティ費|パーツ費|合計',
+  rd_tco_e:'S/N|FAB|工程|Type|ch|稼働(h)|ユーティリティ費|パーツ費|合計',rd_tco_d:'S/N|FAB|工程|停止(h)',
   cfg_price:'単価 (ウォン)',cfg_lng:'LNG流量 LPM/ch (工程別)',cfg_kw:'電力 kW/ch (工程別)',cfg_flow:'共通流量 LPM/ch',
   c_pLng:'LNG ₩/m³',c_pO2:'O₂ ₩/m³',c_pCda:'CDA ₩/m³',c_pCw:'CW ₩/m³',c_pPcw:'PCW ₩/m³',c_pKwh:'電気 ₩/kWh',c_pPart:'パーツ ₩/個',
   as_title:'計算基準 (仮定)',
@@ -784,6 +784,24 @@ function render(){
   // MODEL.parts는 compute()가 쓴 필터본 그대로 — 재필터하면 막대와 목록이 갈라진다
   const selParts=selMR?MODEL.parts.filter(p=>p.t>=selMR.start&&p.t<selMR.end):[];
   const eqTurnOn={}; EQUIP.forEach(e=>{eqTurnOn[e.snKey]=+e.turnOn;});
+  /* KPI 카드 → 그 카드가 «센 그 배열» (v135 · 6단계). 유틸리티(kp1·2·4·6)는 모델 산출값이라 원본 행이 없다 —
+     차트(cMix)와 같은 규약으로 «그 구간에 가동된 설비» 목록에 안내문(rd_tco_n)을 얹는다. 파츠(kp3)는 selParts,
+     정지시간(kp5)은 설비별 down 을 그대로(합이 곧 카드값). 새 식은 없다 — pRows/eRows/selParts 는 차트 드릴이 쓰는 그것이다. */
+  GST.kpiDrill && GST.kpiDrill({
+    kp1:()=>({title:t('kp1')+' · '+SEL_M+' · '+fmtWon(sel.total),cols:eCols,rows:eRows(MODEL.eqSel),
+      note:t('kf1').replace('{u}',fmtWon(sel.util)).replace('{p}',fmtWon(sel.parts))+' · '+t('rd_tco_n')}),
+    kp2:()=>({title:t('kp2')+' · '+SEL_M+' · '+fmtWon(sel.util),cols:eCols,rows:eRows(MODEL.eqSel),note:t('rd_tco_n')}),
+    kp3:()=>({title:t('kp3')+' · '+SEL_M+' · '+fmtWon(sel.parts),cols:pCols,rows:pRows(selParts),
+      note:t('kf3').replace('{n}',sel.partsCnt.toLocaleString())}),
+    kp4:()=>({title:t('kp4')+' · '+SEL_M+' · '+MODEL.selChambers.n.toLocaleString()+t('u_ch'),cols:eCols,rows:eRows(MODEL.eqSel),
+      note:t('kf4').replace('{n}',MODEL.selChambers.units.toLocaleString())}),
+    kp5:()=>({title:t('kp5')+' · '+SEL_M+' · '+Math.round(sel.downH).toLocaleString()+'h',cols:t('rd_tco_d').split('|'),
+      rows:MODEL.eqSel.filter(x=>x.down>0).slice().sort((a,b)=>b.down-a.down)
+        .map(x=>[x.sn,x.fab||'—',procLabel(x.proc),(Math.round(x.down*10)/10).toLocaleString()]),
+      note:t('kf5').replace('{n}',MODEL.selJobs.n.toLocaleString())}),
+    kp6:()=>({title:t('kp6')+' · '+SEL_M+' · '+(MODEL.selChambers.n?fmtWon(sel.total/MODEL.selChambers.n):'—'),cols:eCols,rows:eRows(MODEL.eqSel),
+      note:fmtWon(sel.total)+' ÷ '+MODEL.selChambers.n.toLocaleString()+t('u_ch')+' · '+t('rd_tco_n')})
+  });
 
   // --- 추이 (12구간 스택 · 상단 공통바 주/월 토글) ---
   const PERt=MODEL.PER;

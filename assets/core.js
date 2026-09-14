@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 138;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 139;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* 인사이트 띠의 머리글. 예전에는 «INSIGHT» 영문 대문자가 core 에 박혀 있어 네 언어 어디서도 안 바뀌고
    PPT 장표까지 그대로 나갔다(v135). core 의 공용 문자열 관례(GST._lang + 사전) 그대로다. */
 GST.INS_T = {ko:'요약', en:'Summary', zh:'摘要', ja:'要約'};
@@ -991,10 +991,10 @@ try{ GST.chartDefaults(); }catch(e){}
    rows 는 2차원 배열(값은 문자열/숫자), cols 는 헤더. 500행까지만 그린다 —
    그 이상은 브라우저가 버벅이고, 목록의 목적(어떤 건들인지 눈으로 확인)에 500이면 충분하다. */
 GST._ROWS_T = {
-  ko:{n:'건', more:'처음 {m}건만 표시', close:'닫기', copy:'⧉ 복사', copied:'복사됨'},
-  en:{n:' rows', more:'showing first {m}', close:'Close', copy:'⧉ Copy', copied:'Copied'},
-  zh:{n:'件', more:'仅显示前 {m} 件', close:'关闭', copy:'⧉ 复制', copied:'已复制'},
-  ja:{n:'件', more:'先頭 {m} 件のみ表示', close:'閉じる', copy:'⧉ コピー', copied:'コピー済み'}
+  ko:{n:'건', more:'처음 {m}건만 표시', close:'닫기', copy:'⧉ 복사', copied:'복사됨', list:'세부내역 보기'},
+  en:{n:' rows', more:'showing first {m}', close:'Close', copy:'⧉ Copy', copied:'Copied', list:'View details'},
+  zh:{n:'件', more:'仅显示前 {m} 件', close:'关闭', copy:'⧉ 复制', copied:'已复制', list:'查看明细'},
+  ja:{n:'件', more:'先頭 {m} 件のみ表示', close:'閉じる', copy:'⧉ コピー', copied:'コピー済み', list:'明細を見る'}
 };
 GST.rowsModal = function(title, cols, rows, note){
   const T=GST._ROWS_T[GST._lang()]||GST._ROWS_T.ko, esc=GST._esc, MAX=500;
@@ -1039,11 +1039,47 @@ GST.rowsModal = function(title, cols, rows, note){
    두 반환형을 두는 이유: 페이지 모달이 내는 것은 «행 목록»이 아니라 요약·복수 표·
    「해외 n건은 크로스탭이라 목록이 없습니다」 같은 안내다. rowsModal 로 통일하면 그것이
    통째로 사라진다(= 조용히 빼는 것). */
-GST.kpiDrill = function(map){
+GST.kpiDrill = function(map, opt){
   if(!map) return;
+  const badge = !!(opt && opt.badge);
+  const run = function(id, host){
+    const fn=(host._kdMap||{})[id]; if(typeof fn!=='function') return;
+    let spec=null;
+    try{ spec=fn(); }catch(e){ console.error('kpiDrill '+id, e); return; }
+    if(!spec) return;
+    if(typeof spec.open==='function'){ spec.open(); return; }
+    if(spec.rows) GST.rowsModal(spec.title, spec.cols, spec.rows, spec.note);
+  };
   Object.keys(map).forEach(function(id){
     const el=document.getElementById(id); if(!el) return;
     const card=el.closest('.kpi')||el.parentElement; if(!card) return;
+    if(badge){
+      /* ⚠ 배지 모드 — «카드 클릭이 이미 자기 일을 하는» 카드용 (v135 · 6단계).
+         fault 의 .kpi[data-stage] 3장과 pm 의 .kpi[data-s] 5장은 페이지가 k.onclick 으로
+         단계·상태 필터를 건다. kpiDrill 은 addEventListener 라 서로 지우지 않고 «둘 다»
+         돈다 — 한 번 눌러 필터가 바뀌고 팝업이 동시에 터지며, 팝업은 재렌더 때문에 방금
+         사라진 숫자를 보여준다. 그래서 팝업은 값 옆 작은 배지에 둔다.
+         ⚠ data-kdrill 은 붙이지 «않는다» — theme.css 의 커서 셀렉터가 그것으로 «동작이
+         붙은 카드»를 아는데, 이 카드들은 data-stage/data-s 로 이미 커서를 갖고 자기
+         동작이 따로 있다. 표식은 data-kdrillb 로 가른다(검사가 두 모드를 구분한다). */
+      card.setAttribute('data-kdrillb', id);
+      card._kdMap = map;
+      let b=card.querySelector('.kdb[data-kdb="'+id+'"]');
+      if(!b){
+        const row=el.closest('.krow')||el.parentElement||card;
+        b=document.createElement('button');
+        b.className='kdb'; b.type='button'; b.dataset.kdb=id;
+        b.textContent='\u2630';                       // ☰ — 목록
+        b.title=(GST._ROWS_T[GST._lang()]||GST._ROWS_T.ko).list||'';
+        row.appendChild(b);
+        b.addEventListener('click', function(ev){
+          /* 카드의 필터 클릭까지 같이 돌면 «누르자마자 숫자가 바뀐 팝업»이 된다. */
+          ev.stopPropagation(); ev.preventDefault();
+          run(id, card);
+        });
+      }
+      return;
+    }
     /* 표식을 남긴다 — theme.css 의 커서 셀렉터와 검사가 «동작이 붙은 카드»를 이것으로 안다. */
     card.setAttribute('data-kdrill', id);
     /* render 가 여러 번 도는 페이지(report·pm)에서 핸들러가 겹쳐 붙지 않게 한 번만 단다.
@@ -1051,14 +1087,7 @@ GST.kpiDrill = function(map){
     card._kdMap = map;
     if(card._kd) return;
     card._kd = true;
-    card.addEventListener('click', function(){
-      const fn=(card._kdMap||{})[id]; if(typeof fn!=='function') return;
-      let spec=null;
-      try{ spec=fn(); }catch(e){ console.error('kpiDrill '+id, e); return; }
-      if(!spec) return;
-      if(typeof spec.open==='function'){ spec.open(); return; }
-      if(spec.rows) GST.rowsModal(spec.title, spec.cols, spec.rows, spec.note);
-    });
+    card.addEventListener('click', function(){ run(id, card); });
   });
 };
 
@@ -3313,10 +3342,14 @@ GST.outliers=function(entries,k){
   const th=med + k*1.4826*mad;
   return new Set(entries.filter(e=>e[1]>th).map(e=>e[0]));
 };
-// 특정 연/월 건수 (dateKey는 Date 필드명)
-GST.monthCount=function(arr,dateKey,y,m){
-  return arr.filter(x=>{const d=x[dateKey];return d&&d.getUTCFullYear()===y&&d.getUTCMonth()===m;}).length;
+// 특정 연/월 행 (dateKey는 Date 필드명) — 판정은 여기 한 곳뿐이다.
+// ⚠ monthCount 가 «세기만» 해서, KPI 팝업이 같은 달을 페이지에서 다시 걸러야 했다.
+//    두 식이 되면 카드와 목록이 갈린다(제2원칙) — 그래서 «거른 배열»을 내는 형제를 둔다.
+GST.monthRows=function(arr,dateKey,y,m){
+  return arr.filter(x=>{const d=x[dateKey];return d&&d.getUTCFullYear()===y&&d.getUTCMonth()===m;});
 };
+// 특정 연/월 건수 (dateKey는 Date 필드명)
+GST.monthCount=function(arr,dateKey,y,m){ return GST.monthRows(arr,dateKey,y,m).length; };
 
 // 페이지 인사이트 스트립: .kpis 카드 위에 자동 삽입.
 // items = [{sev:'bad'|'warn'|'ok'|'info', text:'번역 완료된 문자열'}]

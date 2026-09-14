@@ -108,24 +108,73 @@ const WHF = ['제품군','운영단위','고객사','단지','라인','BAY','공
   '작업시작일','작업종료일','작업시작시간','작업종료시간','실적등록일','출하일자',
   '총 이동시간(분)','작업시간(분)','작업공수','작업자','작업자수'];
 const BM_30 = 9, TBM_30 = 4, INSTALL_30 = 3, BM_OLD = 5;
+/* ⚠ 픽스처 설계 — 없으면 «0 = 0» 으로 거짓 초록이 난다 (v135 · 6단계에 실제로 겪었다).
+   ① 신뢰성(fault rk)·PM 스케줄(pm)의 열쇠는 설비호기가 아니라 **S/N(IN)** 이다.
+      그 칸을 비우면 units 가 0 이 되어 rk1~rk5·ck1~ck4 가 전부 0 이 된다.
+   ② BM 을 소수의 설비에 몰아 준다 — rankable(bm≥2)이 0 이 아니게.
+   ③ 같은 설비에 PM 을 «두 번» 준다 — 간격이 있어야 주기가 유도된다.
+      주기가 없으면 모든 스케줄이 'na' 라 지연·도래가 전부 0 이다.
+   ④ 설비 번호를 «용도별로 갈라» 쓴다 — 겹치면 최근 PM 이 옛 PM 을 덮어 상태가 바뀐다.
+   전부 30일 창 밖이거나 다른 설비라 report 의 숫자(BM_30·MAN30)는 한 자리도 안 움직인다. */
+const EQ_BM = 5;                                  // BM·최근 PM 이 도는 설비 (1~5)
+const PM_CYC = 80;                                // 유도될 주기
+const U_OVER = [11, 12];                          // 마지막 PM 120일 전 · 주기 80 → 지연
+const U_PLAN = [13, 14];                          // 다음 예정이 «이번 달» 에 오게
+const U_DONE = 15;                                // 이번 달에 완료된 PM
+const BM_PAID = 4;                                // 유상 BM — 분자가 0 이면 비율 대조가 무의미하다
 const MAN_BM = 60, MAN_TBM = 120, MAN_INS = 90;
 const wkCsv = () => {
   const rows = [WHF]; let n = 0;
-  const one = (stage, days, man, cause) => { n++; const d = ymd(dAgo(days));
+  const one = (stage, days, man, cause, pf, u) => { n++; const d = ymd(dAgo(days));
+    const k = u == null ? (n % EQ_BM + 1) : u;
     rows.push(['SCRUBBER', 'GST TAIWAN SCRUBBER', 'Micron Memory Taiwan Co., Ltd.(F16)',
       'F16', 'F16', 'B1', 'ETCH', 'DRY', 'GST-1000', 'R' + n, '완료', '정기', stage, 'A',
-      'W' + n, 'MT' + n, 'P1', 'TWS' + ((n % N_INST) + 1), 'L', '', '', '무상',
+      'W' + n, 'MT' + n, 'P1', 'TWC' + k, 'L', 'TWS' + k, '', pf || '무상',
       '', '', cause || '', '', '', d, d, '09:00', '10:00', d, '',
       '10', '60', man, 'STAFF', '1']);
   };
-  for (let i = 0; i < BM_30; i++)      one('BM',  2 + i, MAN_BM,  'PUMP');
+  for (let i = 0; i < BM_30; i++)      one('BM',  2 + i, MAN_BM,  'PUMP', i < BM_PAID ? '유상' : '무상');
   for (let i = 0; i < TBM_30; i++)     one('TBM', 3 + i, MAN_TBM, '');
   for (let i = 0; i < INSTALL_30; i++) one('반입', 4 + i, MAN_INS, '');
   for (let i = 0; i < BM_OLD; i++)     one('BM',  60 + i, MAN_BM, 'PUMP');
+  /* 재방문(FTFR) — 같은 설비에서 30일 안에 BM 이 다시 난다. 없으면 rk5 목록이 0줄이라
+     「카드 = 목록」 대조가 또 0=0 이 된다. 관측창(30일) 확보를 위해 충분히 옛 날짜로. */
+  one('BM', 90, MAN_BM, 'PUMP', '', 1); one('BM', 82, MAN_BM, 'PUMP', '', 1);
+  /* 지연 — 마지막 PM 이 120일 전, 주기 80 → next 는 이미 지났다. */
+  U_OVER.forEach(u => { one('TBM', 200, MAN_TBM, '', '', u); one('TBM', 200 - PM_CYC, MAN_TBM, '', '', u); });
+  /* 이번 달 예정 — 마지막 PM 60일 전(기준일 8/31 기준) + 주기 80 → 다음 예정이 이번 달이다. */
+  U_PLAN.forEach(u => { one('TBM', 140, MAN_TBM, '', '', u); one('TBM', 60, MAN_TBM, '', '', u); });
+  /* 이번 달 «완료» — 기준일 이후 날짜라 dAgo 에 음수를 준다. */
+  one('TBM', 150, MAN_TBM, '', '', U_DONE);
+  one('TBM', -10, MAN_TBM, '', '', U_DONE);
   return csv(rows);
 };
 /* kp5 의 분자는 «30일 창 전 행»의 작업공수 합이다 — 설치 행도 든다. */
 const MAN30 = BM_30 * MAN_BM + TBM_30 * MAN_TBM + INSTALL_30 * MAN_INS;
+
+/* ── 자재실적 (v135 · 6단계 — material 의 KPI 카드를 대조하려고 더했다) ──
+   유상 6 · 무상 4 · 유/무상 미기재 3 → 유상 비율의 분모는 «유상+무상» 10 이다.
+   미기재를 분모에 넣던 옛 식이면 6/13 = 46% 가 되어 붉게 뜬다(음성 대조). */
+const MHF = ['운영단위','고객사','수선실적번호','단지','라인','BAY','공정','세부공정',
+  '메인설비호기','설비호기','챔버','S/N','W/O번호','모델명','자재코드','설비위치','자재위치',
+  '사용수량','자재명','규격','교체사유','전유상교체일','전교체일','자재실적일자',
+  '사용일(유상기준)','사용일(전교체일기준)','유/무상','무상사유','단가','재고체크여부','자재창고'];
+const MAT_PAID = 6, MAT_FREE = 4, MAT_NA = 3;
+const MAT_N = MAT_PAID + MAT_FREE + MAT_NA;
+const MAT_PFP = Math.round(MAT_PAID / (MAT_PAID + MAT_FREE) * 100);
+const matCsv = () => {
+  const rows = [MHF]; let n = 0;
+  const one = (pf, days, mat) => { n++; const d = ymd(dAgo(days));
+    rows.push(['GST TAIWAN SCRUBBER', 'Micron Memory Taiwan Co., Ltd.(F16)', 'R' + n,
+      'F16', 'F16', 'B1', 'ETCH', 'DRY', 'MT' + n, 'TWC' + ((n % N_INST) + 1), 'A',
+      'TWS' + ((n % N_INST) + 1), 'W' + n, 'GST-1000', 'M' + (n % 3), 'POS', 'MP',
+      '1', mat, 'SPEC', '마모', '', ymd(dAgo(days + 200)), d, '200', '200', pf, '', '0', 'Y', 'ST']);
+  };
+  for (let i = 0; i < MAT_PAID; i++) one('유상', 2 + i, 'O-RING');
+  for (let i = 0; i < MAT_FREE; i++) one('무상', 3 + i, 'PUMP');
+  for (let i = 0; i < MAT_NA;   i++) one('',    4 + i, 'FILTER');
+  return csv(rows);
+};
 
 /* ── 셸 + 페이지를 그대로 띄운다 ──────────────────────────────────────── */
 const MIME = { '.js':'text/javascript', '.css':'text/css', '.html':'text/html', '.json':'application/json',
@@ -146,7 +195,8 @@ const STUB = '\n;GST.USE_DB=false;GST.authOn=function(){return false;};'
   + 'GST.getSession=async function(){return {user:{email:"t@t"}};};GST.token=async function(){return "t";};'
   + 'GST.authGate=async function(){var o=document.getElementById("loginOverlay");if(o)o.remove();'
   + 'if(GST._authOk)GST._authOk();return true;};';
-const SHEETS = { '891608329':instCsv(), '1213453343':rosterCsv(), '646668307':wkCsv(), '0':eduCsv() };
+const SHEETS = { '891608329':instCsv(), '1213453343':rosterCsv(), '646668307':wkCsv(), '0':eduCsv(),
+  '31302669':matCsv() };
 
 async function makeCtx() {
   const ctx = await browser.newContext({ viewport:{ width:1800, height:1200 }, locale:'ko-KR' });
@@ -374,6 +424,147 @@ console.log('\n[5] pm 상태 필터 — data-s 없는 카드는 «선택»이 �
      + (r.stole.length ? ' → ' + r.stole.join(', ') : '')
      + " — 셀렉터를 '.kpi' 로 되돌리면 붉게 떠야 한다");
   await c2.close();
+}
+
+/* ── 도구: 아무 페이지나 띄워 카드(또는 배지)를 누르고 팝업을 읽는다 ── */
+async function openPage(name, ms) {
+  const c2 = await makeCtx(); const pg = await c2.newPage();
+  const pe = []; pg.on('pageerror', e => pe.push(e.message));
+  await pg.goto(BASE + '/' + name + '/', { waitUntil:'domcontentloaded' });
+  await pg.waitForTimeout(ms || 6500);
+  const readOv = () => pg.evaluate(() => {
+    const ov = document.querySelector('.gov'); if (!ov) return { kind:'none' };
+    return { kind:'rows', title:(ov.querySelector('.gov-h h4')||{}).textContent || '',
+      sub:(ov.querySelector('.gov-sub')||{}).textContent || '',
+      rows:ov.querySelectorAll('.gov-body tbody tr').length };
+  });
+  const api = {
+    pg, pe, ctx:c2,
+    close: () => c2.close(),
+    val: id => pg.evaluate(i => (document.getElementById(i)||{}).textContent || '', id),
+    shut: () => pg.evaluate(() => { try{ GST._ovClose && GST._ovClose(); }catch(e){} }),
+    card: async id => { await api.shut();
+      await pg.evaluate(i => { const e = document.getElementById(i);
+        (e.closest('.kpi')||e.parentElement).click(); }, id);
+      await pg.waitForTimeout(350); return readOv(); },
+    badge: async id => { await api.shut();
+      const hit = await pg.evaluate(i => { const b = document.querySelector('.kdb[data-kdb="'+i+'"]');
+        if (!b) return false; b.click(); return true; }, id);
+      await pg.waitForTimeout(350); return hit ? await readOv() : { kind:'nobadge' };
+    }
+  };
+  return api;
+}
+
+console.log('\n[6] 페이지마다: 카드가 «센 그 배열»이 그대로 목록이다 (v135 · 6단계)');
+{
+  /* material — kp1 은 줄 수가 곧 카드값, kp3 은 «비율»이라 분모를 note 가 적는다. */
+  const M = await openPage('material');
+  const c1 = num(await M.val('kp1')), m1 = await M.card('kp1');
+  is(c1 === MAT_N, `material kp1: 카드 ${c1} = 픽스처 ${MAT_N}건`);
+  is(m1.kind === 'rows' && m1.rows === c1, `material kp1: 팝업 ${m1.rows}줄 = 카드 ${c1}`);
+  const c3 = num(await M.val('kp3')), m3 = await M.card('kp3');
+  is(c3 === MAT_PFP,
+     `material kp3 유상 비율의 분모는 «유상+무상» ${MAT_PAID}+${MAT_FREE} → ${MAT_PFP}% (실제 ${c3}%)`
+     + ` — f.length 로 되돌리면 ${Math.round(MAT_PAID/MAT_N*100)}% 가 되어 붉게 뜬다`);
+  is(m3.rows === MAT_PAID + MAT_FREE,
+     `material kp3: 팝업이 «분모 그 배열»을 낸다 ${m3.rows}줄 = ${MAT_PAID + MAT_FREE}`);
+  is(/\b10\b/.test(m3.sub) && m3.sub.indexOf(String(MAT_PAID)) >= 0,
+     'material kp3: note 가 분자·분모를 적는다 (비율 카드는 그것이 없으면 카드와 못 맞춘다) → ' + m3.sub);
+  const c4 = num(await M.val('kp4')), m4 = await M.card('kp4');
+  is(m4.rows === c4, `material kp4 «가짓수» 카드: 명단 ${m4.rows}줄 = 카드 ${c4} (행 표를 붙이면 안 맞는다)`);
+  is(M.pe.length === 0, 'material: JS 에러 없음' + (M.pe.length ? ' → ' + M.pe[0] : ''));
+  await M.close();
+
+  /* fault — kp5(비율)·rk4(대수)·rk5(FTFR) */
+  const F = await openPage('fault');
+  const f5 = num(await F.val('kp5')), d5 = await F.card('kp5');
+  is(d5.kind === 'rows' && d5.rows > 0, `fault kp5 를 누르면 «분모(유상+무상)» 목록이 열린다 (${d5.rows}줄)`);
+  is(d5.sub.indexOf('+') >= 0, 'fault kp5: note 가 유상 + 무상 = 분모 를 적는다 → ' + d5.sub);
+  const r4 = num(await F.val('rk4')), m44 = await F.card('rk4');
+  is(m44.kind === 'rows' && m44.rows === r4,
+     `fault rk4 분석 설비: 카드 ${r4} = 목록 ${m44.rows}대 (줄 수가 곧 카드값인 유일한 신뢰성 카드다)`);
+  const m45 = await F.card('rk5');
+  const g5 = m45.sub.match(/관측\s*([\d,]+)건 중 재방문\s*([\d,]+)건\s*=\s*(\d+)/);
+  is(m45.kind === 'rows' && !!g5,
+     'fault rk5(FTFR): note 가 관측·재방문·비율을 적는다 → ' + m45.sub);
+  if (g5) { const ob = +g5[1].replace(/,/g,''), rp = +g5[2].replace(/,/g,'');
+    is(rp > 0, `fault rk5: 재방문이 0 이 아니다 (실제 ${rp}) — 0 이면 아래 대조가 거짓 초록이 된다`);
+    is(m45.rows === rp, `fault rk5: 목록 ${m45.rows}줄 = 재방문 ${rp}건 (관측 ${ob}건 전부를 내면 붉게 뜬다)`);
+    is(+g5[3] === Math.round((1 - rp / ob) * 100), `fault rk5: 카드 ${g5[3]}% = 1 − ${rp}/${ob}`); }
+  is(F.pe.length === 0, 'fault: JS 에러 없음' + (F.pe.length ? ' → ' + F.pe[0] : ''));
+  await F.close();
+
+  /* pm — ck2(전체 지연)·ck3(8주 도래). 둘 다 줄 수 = 카드값이다. */
+  const P = await openPage('pm');
+  const k2 = num(await P.val('ck2')), p2 = await P.card('ck2');
+  is(k2 > 0, `pm ck2 지연 설비가 0 이 아니다 (실제 ${k2}) — 0 이면 아래 대조가 거짓 초록이 된다`);
+  is(p2.kind === 'rows' && p2.rows === k2, `pm ck2: 카드 ${k2} = 목록 ${p2.rows}대`);
+  is(/이달|month|本月|当月/.test(p2.sub),
+     'pm ck2: «전체 스케줄 기준» 이라는 것을 note 가 적는다 — 같은 화면 위의 「이달 점검 지연」과 수가 다르다 → ' + p2.sub);
+  const k3 = num(await P.val('ck3')), p3 = await P.card('ck3');
+  is(p3.kind === 'rows' && p3.rows === k3, `pm ck3: 카드 ${k3} = 목록 ${p3.rows}건`);
+  /* kp1 은 «예정 + 완료» 두 표의 합이다 — 한쪽만 내면 나머지가 조용히 사라지고 줄 수가 안 맞는다. */
+  const k1 = num(await P.val('kp1')), p1 = await P.badge('kp1');
+  is(p1.kind === 'rows' && p1.rows === k1,
+     `pm kp1 «예정+완료»: 카드 ${k1} = 한 표 ${p1.rows}줄 (한쪽만 내면 붉게 뜬다)`);
+  is(/\+/.test(p1.sub), 'pm kp1: note 가 예정 a + 완료 b 를 적는다 → ' + p1.sub);
+  is(P.pe.length === 0, 'pm: JS 에러 없음' + (P.pe.length ? ' → ' + P.pe[0] : ''));
+  await P.close();
+}
+
+console.log('\n[7] 배지 모드 — 필터 클릭이 이미 붙은 카드는 «둘이 같이 터지지» 않는다');
+{
+  /* fault kp1·kp2·kp6(data-stage) · pm kp1~kp5(data-s) 는 카드 클릭이 «이미» 자기 일을 한다.
+     거기에 팝업까지 달면 한 번 눌러 둘이 동시에 터지고, 팝업은 재렌더 때문에 방금
+     사라진 숫자를 보여준다. 그래서 팝업은 배지로 가른다 — 두 방향을 다 본다. */
+  const F = await openPage('fault');
+  const mk = await F.pg.evaluate(() => {
+    const b = [...document.querySelectorAll('.kpi[data-kdrillb]')].map(el => el.getAttribute('data-kdrillb'));
+    return { b, both:b.filter(id => document.querySelector('.kpi[data-kdrillb="'+id+'"]').hasAttribute('data-kdrill')),
+             btn:b.filter(id => !!document.querySelector('.kdb[data-kdb="'+id+'"]')) };
+  });
+  is(mk.b.length === 3, 'fault: 배지 카드가 셋이다 (kp1·kp2·kp6) → ' + mk.b.join(','));
+  is(mk.btn.length === mk.b.length, 'fault: 셋 다 배지 버튼이 실제로 붙어 있다 (실제 ' + mk.btn.length + ')');
+  is(mk.both.length === 0,
+     'fault: 배지 카드에 data-kdrill 은 «안» 붙는다 — 붙이면 카드 클릭에도 팝업이 달려 둘이 같이 터진다'
+     + (mk.both.length ? ' → ' + mk.both.join(',') : ''));
+
+  const st0 = await F.pg.evaluate(() => String(F.stage || ''));   // ⚠ const F 는 window 속성이 아니다
+  const bd = await F.badge('kp2');
+  const st1 = await F.pg.evaluate(() => String(F.stage || ''));
+  is(bd.kind === 'rows' && bd.rows > 0, `fault: kp2 배지를 누르면 팝업이 열린다 (${bd.rows}줄)`);
+  is(st1 === st0, `fault: 배지를 눌러도 단계 필터는 안 바뀐다 (${st0 || '(전체)'} → ${st1 || '(전체)'})`);
+  await F.shut();
+  const cd = await F.card('kp2');
+  const st2 = await F.pg.evaluate(() => String(F.stage || ''));
+  is(cd.kind === 'none', 'fault: 카드를 누르면 팝업이 «안» 열린다 (실제 ' + cd.kind + ')');
+  is(st2 === 'BM', `fault: 카드 클릭은 지금까지대로 단계 필터를 건다 (실제 ${st2 || '(전체)'})`);
+  is(F.pe.length === 0, 'fault 배지: JS 에러 없음' + (F.pe.length ? ' → ' + F.pe[0] : ''));
+  await F.close();
+
+  const P = await openPage('pm');
+  const pk = await P.pg.evaluate(() => {
+    const b = [...document.querySelectorAll('.kpi[data-kdrillb]')].map(el => el.getAttribute('data-kdrillb'));
+    return { b, btn:b.filter(id => !!document.querySelector('.kdb[data-kdb="'+id+'"]')),
+             sel0:(document.querySelector('.kpi[data-s].sel')||{}).getAttribute
+                  ? document.querySelector('.kpi[data-s].sel').getAttribute('data-s') : '' };
+  });
+  is(pk.b.length === 5, 'pm: 배지 카드가 다섯이다 (kp1~kp5) → ' + pk.b.join(','));
+  is(pk.btn.length === 5, 'pm: 다섯 다 배지 버튼이 붙어 있다 (실제 ' + pk.btn.length + ')');
+  const pb = await P.badge('kp2');
+  const sel1 = await P.pg.evaluate(() => {
+    const e = document.querySelector('.kpi[data-s].sel'); return e ? e.getAttribute('data-s') : ''; });
+  is(pb.kind === 'rows', 'pm: kp2 배지를 누르면 팝업이 열린다 (실제 ' + pb.kind + ')');
+  is(sel1 === pk.sel0, `pm: 배지를 눌러도 상태 선택이 안 움직인다 (${pk.sel0 || '(전체)'} → ${sel1 || '(전체)'})`);
+  await P.shut();
+  const pc = await P.card('kp2');
+  const sel2 = await P.pg.evaluate(() => {
+    const e = document.querySelector('.kpi[data-s].sel'); return e ? e.getAttribute('data-s') : ''; });
+  is(pc.kind === 'none', 'pm: 카드를 누르면 팝업이 «안» 열린다 (실제 ' + pc.kind + ')');
+  is(sel2 === 'overdue', `pm: 카드 클릭은 지금까지대로 상태를 고른다 (실제 ${sel2 || '(전체)'})`);
+  is(P.pe.length === 0, 'pm 배지: JS 에러 없음' + (P.pe.length ? ' → ' + P.pe[0] : ''));
+  await P.close();
 }
 
 await browser.close(); srv.close();

@@ -206,6 +206,16 @@ body.theme-light .card:hover{
    마크업은 한 줄도 안 고친다. 되돌리기는 셀렉터를 .kpi 로 되돌리는 한 줄. */
 .kpi[data-kdrill],.kpi[data-stage],.kpi[data-s]{cursor:pointer}
 .kpi[data-kdrill]:active,.kpi[data-stage]:active,.kpi[data-s]:active{transform:translateY(-1px) scale(.99) !important}
+/* 카드 클릭이 «이미 자기 일»(필터)을 하는 카드의 세부내역 배지 (v135 · 6단계).
+   카드에 팝업까지 달면 한 번 눌러 둘이 동시에 터지고 팝업이 방금 사라진 숫자를 보여준다.
+   ⚠ hover 로만 뜨면 태블릿에서 영영 안 보인다 — .capbtns 와 같은 규율(v135 · 3단계). */
+.kpi .kdb{margin-left:6px;padding:0 5px;border:1px solid var(--bd,rgba(255,255,255,.18));
+  border-radius:5px;background:transparent;color:var(--txt-muted);font-size:11px;line-height:16px;
+  cursor:pointer;opacity:0;transition:opacity .15s var(--ease)}
+.kpi:hover .kdb,.kpi .kdb:focus-visible{opacity:.85}
+.kpi .kdb:hover{opacity:1;color:var(--txt-main);border-color:var(--accent-2)}
+@media (hover:none){.kpi .kdb{opacity:.6}}
+@media print{.kpi .kdb{display:none}}
 tr{transition:background .15s var(--ease)}
 select,input[type="date"],input[type="text"],input[type="password"]{transition:border-color .2s var(--ease), box-shadow .2s var(--ease)}
 select:hover,input:hover{border-color:var(--txt-muted) !important}
