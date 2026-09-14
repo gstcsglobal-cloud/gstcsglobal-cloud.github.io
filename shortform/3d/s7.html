@@ -18,11 +18,22 @@
 html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#05091a}
 canvas{display:block}
 </style></head><body>
-<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
+// v25 화질 — 실제 팹 영상에 지는 이유가 «구석의 그늘»과 «아무것도 안 비추는 바닥»이었다.
+//   ⚠ 폴리 수나 텍스처가 아니다. 사람이 CG 라고 느끼는 첫 단서는 접촉부의 어둠이 없는 것이다.
+//   비용이 크므로 ?hq=0 이면 통째로 끈다(구도·타이밍 확인용 빠른 미리보기).
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
+import { GTAOPass }       from 'three/addons/postprocessing/GTAOPass.js';
+import { OutputPass }     from 'three/addons/postprocessing/OutputPass.js';
+import { Reflector }      from 'three/addons/objects/Reflector.js';
+import { BokehPass }      from 'three/addons/postprocessing/BokehPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+const HQ = new URLSearchParams(location.search).get('hq') !== '0';
 const W=1920,H=1080;
-const DUR = (new URLSearchParams(location.search).get('shot')==='pipe') ? 4.0 : 6.4;
+const DUR = (sh=>sh==='pipe'?4.0:sh==='macro'?3.0:6.4)(new URLSearchParams(location.search).get('shot'));
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const p=(t,a,b)=>clamp((t-a)/(b-a),0,1);
 const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
@@ -42,6 +53,11 @@ const EMG = new URLSearchParams(location.search).get('emg') === '1';
 //               수미상관이 성립한다. 두 컷을 각자 만들면 반드시 어긋나므로 한 카메라를 나눠 쓴다.
 const SHOT = new URLSearchParams(location.search).get('shot') || 'row';
 const PIPE = SHOT === 'pipe';
+//   ?shot=macro  «기술» 등록 — 어둡게 · 강한 단색 키 하나 · 얕은 심도 · 매크로 거리.
+//   ⚠ 이것은 취향이 아니라 «만들 수 있는 것»의 문제다. 밝고 넓은 방은 모든 단순화가 그대로
+//     보이지만, 어둡고 얕은 심도에서는 초점 밖이 전부 녹아 디테일을 만들 필요가 없어진다.
+//     공간 컷(도열)은 규모를 말하므로 계속 밝게 간다 — 두 등록이 각자 다른 일을 한다.
+const MACRO = SHOT === 'macro';
 const TEX = new THREE.TextureLoader();
 const GAIA_TEX = TEX.load('tex/gaia.png');
 GAIA_TEX.colorSpace = THREE.SRGBColorSpace; GAIA_TEX.anisotropy = 8;
@@ -118,6 +134,18 @@ const fill=new THREE.DirectionalLight(EMG?0x9a3324:0xdce7fa,(EMG?0.30:0.42)*LK);
 // 림 둘 — 밝은 방에서는 «분리선» 역할만 한다(밤 세팅의 1/4).
 const rim =new THREE.DirectionalLight(EMG?0xff6a45:0x8fb4ff,(EMG?0.55:0.34)*LK); rim.position.set(-6,7,-12); S.add(rim);
 const rim2=new THREE.DirectionalLight(EMG?0xff7d52:0x9cc0ff,(EMG?0.38:0.22)*LK); rim2.position.set(9,5,-10); S.add(rim2);
+if(MACRO){
+  // ⚠ 확산광을 «거의» 끈다. 매크로에서 방 전체 조명이 살아 있으면 모든 면이 고르게 밝아
+  //   형태가 사라진다 — 저 참고 영상의 검정은 «어두운 색»이 아니라 «빛이 없는 것»이다.
+  S.children.filter(o=>o.isHemisphereLight).forEach(o=>{o.intensity=0.10;});
+  key.intensity=0.10; fill.intensity=0.06;
+  // 키 하나. 색은 참고본의 보라를 가져오지 않는다(그건 그 회사 것이다) —
+  // 우리 훅 씬과 같은 차가운 청록으로 간다.
+  rim.color.setHex(0x9ceaff);  rim.intensity=3.2;  rim.position.set(-1.2,2.4,-7.2);
+  rim2.color.setHex(0x2e6cff); rim2.intensity=0.9; rim2.position.set(5.0,1.2,-2.0);
+  S.fog=new THREE.Fog(0x04070e, 1.2, 9.0);
+  S.background=new THREE.Color(0x04070e);
+}
 
 // ── 바닥 · 통로
 // v24c: 바닥은 «밝은 에폭시». 검은 바닥은 밤에만 맞다 — 밝은 방에서 바닥만 검으면
@@ -125,6 +153,16 @@ const rim2=new THREE.DirectionalLight(EMG?0xff7d52:0x9cc0ff,(EMG?0.38:0.22)*LK);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),
   new THREE.MeshStandardMaterial({color:EMG?0x2a2226:0x9aa4b2,roughness:0.30,metalness:0.25,envMap:ENV,envMapIntensity:EMG?0.35:0.60}));
 floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; S.add(floor);
+// 반사면을 바닥 «아래»에 깔고, 그 위의 바닥을 반투명으로 덮어 «반광택»을 만든다.
+//   ⚠ Reflector 를 그냥 바닥으로 쓰면 완전한 거울이 되어 병원 로비처럼 보인다.
+//     실제 에폭시는 상이 비치되 흐리다 — 덮는 층의 불투명도가 그 «광택도»다.
+if(HQ){
+  const mir=new Reflector(new THREE.PlaneGeometry(200,200),
+    {clipBias:0.004, textureWidth:W, textureHeight:H, color:EMG?0x3a3036:0x7d8794});
+  mir.rotation.x=-Math.PI/2; mir.position.y=0.0006; S.add(mir);
+  floor.position.y=0.0016;
+  floor.material.transparent=true; floor.material.opacity=EMG?0.86:0.70;
+}
 // 천장 — v24c. 없으면 위쪽이 통째로 «흰 허공»이라 방이 아니라 배경지가 된다(실측: 배관이 떠 보였다).
 //   아래에서 오는 빛만 받으므로 저절로 어두워져, 밝은 방에 필요한 «위아래 대비»를 공짜로 만든다.
 const CEILY=4.20;   // ⚠ 높이면 설비 위로 «맨 수직관»만 길어져 파이프 숲이 된다(실측)
@@ -339,10 +377,10 @@ function buildScrubberBB(i, alarm){
     // ⚠ 밝은 방에서는 램프 «알»만으로 경보가 안 읽힌다 — 노출이 높아 적색 발광이 흰색으로 타고,
     //   어두운 방과 달리 주변 번짐도 눈에 안 띈다(실측: 설비가 그냥 «분홍»으로만 보였다).
     //   그래서 램프를 감싸는 헤일로를 따로 둔다. toneMapped:false 라 노출과 무관하게 «빨강»으로 남는다.
-    const gm=new THREE.SpriteMaterial({map:GLOWTEX,transparent:true,opacity:0,
-      depthWrite:false,toneMapped:false});
-    const gl=new THREE.Sprite(gm); gl.scale.setScalar(0.24);
-    gl.position.set(LX,LY,0.05); g.add(gl); GLOWS.push(gm);
+    // ⚠ 헤일로를 스프라이트로 겹치면 AO 패스가 그 판을 «완전 차폐»로 계산해 검은 사각형이
+    //   된다(실측). 후광은 그려 넣는 것이 아니라 «밝은 것이 번지는» 것이라, 램프를 세게
+    //   태우고 블룸에 맡긴다 — 물리적으로도 그쪽이 맞다.
+    GLOWS.push(m2);
   }
   // 배출 덕트 — 규약상 «위는 배출구»다. 사진의 상판에서 천장까지 «끝까지» 올린다.
   // ⚠ 중간에서 끊으면 굴뚝 여러 개가 허공에 선 그림이 된다(실측: 첫 렌더가 그랬다).
@@ -619,7 +657,18 @@ function seek(t){
   t=clamp(t,0,DUR);
   // ── 카메라: 통로를 따라 «아주 천천히» 전진 + 미세 상승. 손맛 없는 기계적 이동이라야 진중하다.
   const k=eio(t/DUR);
-  if(PIPE){
+  if(MACRO){
+    // 펌프 냉각핀을 «축에 거의 나란히» 스친다 — 핀이 겹쳐 보이며 깊이가 생기는 각이다.
+    const P=new THREE.Vector3(ALARM_X-1.02, 0.42, ALARM_Z+0.66);
+    // ⚠ 매크로라고 «붙이면» 안 된다. 0.6m 까지 붙였더니 화면이 통째로 냉각핀 하나로 차서
+    //   읽을 것이 없어졌고, 화면 전체가 같은 거리라 심도가 할 일도 없었다(실측).
+    //   얕은 심도는 «앞뒤가 있을 때»만 보인다 — 피사체 뒤로 열이 물러나는 거리를 준다.
+    const a=lerp(-0.34,0.16,k), r=lerp(1.45,1.22,k);
+    C.position.set(P.x-Math.cos(a)*r, 0.62+0.05*k, P.z+Math.sin(a)*r*0.9);
+    C.lookAt(P.x+0.10, P.y+0.02, P.z-0.10);
+    C.fov=34; C.updateProjectionMatrix();
+    if(BOKEH) BOKEH.uniforms.focus.value = C.position.distanceTo(P);
+  } else if(PIPE){
     // 배관 이음부 로우앵글. ⚠ 멈춰 세우지 않는다 — 완전 정지는 «스틸»로 보이고, 그러면
     //   마지막 컷의 «조용함»이 «영상이 멈췄나»로 읽힌다. 아주 느린 전진만 둔다.
     // ⚠ 넓은 화각으로 가까이 가면 통로의 펌프들이 전부 들어와 어수선하다(실측). 망원으로 «멀리서 조여»
@@ -646,7 +695,7 @@ function seek(t){
   // ⚠ 밝은 방에서는 «빛 번짐»이 잘 안 보인다 — 대신 이 씬에서 채도가 있는 것은 이 빨강뿐이라
   //   눈이 저절로 간다. 램프 자체를 더 태우고(emissive), 주변 번짐은 밝기에 맞춰 올린다.
   REDS.forEach(m=>{ m.emissive.setHex(0xff3b2e); m.emissiveIntensity=0.35+4.2*sweep; });
-  GLOWS.forEach(m=>{ m.opacity=0.10+0.68*sweep; });
+  GLOWS.forEach(m=>{ m.emissiveIntensity = 0.6+7.5*sweep; });   // 블룸 문턱을 넘겨 번지게 한다
   const beaconOn = !(PIPE && !EMG);
   beacon.intensity    = beaconOn ? 1.0+8.5*sweep : 0;
   beaconFar.intensity = beaconOn ? 0.5+3.6*sweep : 0;
@@ -657,7 +706,30 @@ function seek(t){
   dgeo.attributes.position.needsUpdate=true;
   // 등기구는 «켜져 있다»가 전부다 — 흔들면 형광등이 나가기 직전으로 보인다. 아주 미세하게만.
   SHAFTS.forEach((m,i)=>{ m.material.opacity=0.94+0.02*Math.sin(t*0.8+i*1.7); });
-  R.render(S,C);
+  if(COMP) COMP.render(); else R.render(S,C);
+}
+// ⚠ 후처리를 끼우면 톤매핑이 «두 번» 걸리거나 «안» 걸릴 수 있다. OutputPass 한 곳에서만
+//   걸리도록 렌더러의 톤매핑은 끄고 넘긴다 — 배경색(acesHex)은 같은 곡선을 손으로 계산한
+//   값이라 그대로 맞는다.
+let COMP=null, BOKEH=null;
+if(HQ){
+  R.toneMapping=THREE.NoToneMapping;
+  COMP=new EffectComposer(R);
+  COMP.addPass(new RenderPass(S,C));
+  const ao=new GTAOPass(S,C,W,H);
+  ao.output=GTAOPass.OUTPUT.Default;
+  // 반경은 «설비 크기»가 아니라 «틈 크기»를 따른다 — 루버 슬롯·문 홈이 이 정도다.
+  ao.updateGtaoMaterial({radius:0.28, distanceExponent:1.4, thickness:0.6, scale:1.0,
+                         samples:16, distanceFallOff:1.0, screenSpaceRadius:false});
+  COMP.addPass(ao);
+  if(MACRO){
+    // 얕은 심도 — 이 등록의 핵심이다. 초점 밖이 녹으면서 «디테일이 없다»가 안 보이게 된다.
+    const bk=new BokehPass(S,C,{focus:0.6, aperture:0.0062, maxblur:0.016});
+    BOKEH=bk; COMP.addPass(bk);
+  }
+  // 블룸 — 경광·등기구·금속 하이라이트가 «번져야» 카메라로 찍은 것처럼 보인다.
+  COMP.addPass(new UnrealBloomPass(new THREE.Vector2(W,H), MACRO?0.38:0.34, 0.62, MACRO?1.00:1.05));
+  const op=new OutputPass(); op.toneMapping=THREE.ACESFilmicToneMapping; COMP.addPass(op);
 }
 window.seek=seek; window.DUR3D=DUR;
 seek(0); window.__ready=true;
