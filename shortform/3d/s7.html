@@ -36,7 +36,7 @@ const C=new THREE.PerspectiveCamera(34,W/H,0.1,140);
 const R=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
 R.setSize(W,H); R.setPixelRatio(1);
 R.shadowMap.enabled=true; R.shadowMap.type=THREE.PCFShadowMap;
-R.toneMapping=THREE.ACESFilmicToneMapping; R.toneMappingExposure=0.88;
+R.toneMapping=THREE.ACESFilmicToneMapping; R.toneMappingExposure=0.70;   // ⚠ 어둠은 «도장»이 아니라 «조명»으로 — 실물 제품은 오프화이트다(사진)
 document.body.appendChild(R.domElement);
 
 function makeEnv(){
@@ -58,8 +58,8 @@ const bodyMat=(color,o={})=>new THREE.MeshPhysicalMaterial({color,
 const metalMat=(color,r=0.3,m=0.75)=>new THREE.MeshStandardMaterial({color,roughness:r,metalness:m,envMap:ENV,envMapIntensity:0.9});
 
 // ── 조명 (s6 v24 와 같은 온도 — 새벽 관제)
-S.add(new THREE.HemisphereLight(0xbcd2ff,0x0b1224,0.42));
-const key=new THREE.DirectionalLight(0xcfe0ff,1.15); key.position.set(7,12,9); key.castShadow=true;
+S.add(new THREE.HemisphereLight(0xbcd2ff,0x0b1224,0.32));
+const key=new THREE.DirectionalLight(0xcfe0ff,0.88); key.position.set(7,12,9); key.castShadow=true;
 key.shadow.mapSize.set(2048,2048);
 { const s=key.shadow.camera; s.left=-14;s.right=14;s.top=12;s.bottom=-4;s.near=1;s.far=60; key.shadow.bias=-0.0018; }
 S.add(key);
@@ -128,7 +128,7 @@ function cabinet(w,h,d,color,o={}){
   const foot=new THREE.Mesh(new THREE.BoxGeometry(w*1.02,0.05,d*1.02),darkMat);
   foot.position.y=0.025; foot.receiveShadow=true; g.add(foot);
   // 상단 캡 + 챔퍼 한 줄 — 위 모서리가 빛을 물어야 «금속»이다
-  const cap=new THREE.Mesh(new THREE.BoxGeometry(w+0.015,0.035,d+0.015),bodyMat(0xb4bfd2,{roughness:0.33}));
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(w+0.015,0.035,d+0.015),bodyMat(0xf2f1ec,{roughness:0.33}));
   cap.position.y=h+0.017; cap.castShadow=true; g.add(cap);
   const chm=new THREE.Mesh(new THREE.BoxGeometry(w+0.02,0.012,d+0.02),plateMat);
   chm.position.y=h-0.006; g.add(chm);
@@ -210,45 +210,135 @@ function screen(w,h){
 }
 
 // ── 설비 한 대 (스크러버 / 칠러)
+// ── 진공펌프. 규약은 scene3d.html(사용자가 준 정본)과 같다 — 배기 라인 «위»에 인라인으로 선다.
+//    README 배관 규약: 공정 장비 → 데크 틈으로 라이저 하강 → «진공펌프» → 스크러버 «옆구리» 유입.
+//    ⚠ 배기를 스크러버 «위»로 넣지 않는다 — 위는 배출구다(아는 사람이 바로 안다).
+// ⚠ 정본 색(0x9aa35e)은 이 밤 팔레트에서 너무 튄다 — 같은 계열의 «탁한» 값으로 낮춘다.
+//    색상을 바꾸는 게 아니라 채도만 내린 것이다(공정 배기 = 연두 계열이라는 규약은 지킨다).
+const EXC=0x6f7550;
+function buildPump(){
+  const g=new THREE.Group();
+  const base=new THREE.Mesh(new THREE.BoxGeometry(0.52,0.30,0.36),metalMat(0x323a4c,0.45,0.55));
+  base.position.y=0.15; base.castShadow=base.receiveShadow=true; g.add(base);
+  const mo=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,0.50,16),metalMat(0x4b5568,0.35,0.6));
+  mo.rotation.z=Math.PI/2; mo.position.y=0.42; mo.castShadow=true; g.add(mo);
+  for(let i=0;i<8;i++){                               // 냉각 핀 — 펌프를 «모터»로 읽게 하는 단서
+    const f=new THREE.Mesh(new THREE.TorusGeometry(0.155,0.008,5,14),metalMat(0x323a4c,0.5,0.5));
+    f.rotation.y=Math.PI/2; f.position.set(-0.2+i*0.055,0.42,0); g.add(f);
+  }
+  const cp=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.10,0.16,12),metalMat(0x262c38,0.4,0.5));
+  cp.rotation.z=Math.PI/2; cp.position.set(-0.32,0.42,0); g.add(cp);
+  for(const x of [-0.33,0.33]){                       // 흡입·토출 노즐
+    const n=new THREE.Mesh(new THREE.CylinderGeometry(0.038,0.038,0.16,10),metalMat(0x7b8595,0.3,0.7));
+    n.position.set(x,0.54,0); g.add(n);
+  }
+  return g;
+}
+// 두 점을 잇는 관 — 꺾임을 곡선으로. 직각으로 꺾으면 배관이 아니라 «선»이다.
+function pipeTo(p1,p2,rad,color){
+  const cv=new THREE.CatmullRomCurve3([p1,new THREE.Vector3(p1.x,(p1.y+p2.y)/2,p1.z),
+    new THREE.Vector3(p2.x,(p1.y+p2.y)/2,p2.z),p2]);
+  const m=new THREE.Mesh(new THREE.TubeGeometry(cv,20,rad,8,false),metalMat(color,0.35,0.5));
+  m.castShadow=true; return m;
+}
+// ── 스크러버 (GAIA) — 사용자가 준 실물 사진을 따른다.
+//    ⚠ 옛 판이 실물과 달랐던 곳: 문이 두 짝이었고, 위에 «관 5개»가 서 있었고, 바닥이 플린스였다.
+//      실물은 «단문 + 상단 타공판 블록 + 상단 제어함 + 캐스터»다. 이 넷이 GAIA 의 얼굴이다.
 function buildScrubber(i, alarm){
   const g=new THREE.Group();
-  g.add(cabinet(1.02,1.86,0.82,0xaab6c9,{roughness:0.4}));
-  // 버너 뭉치 + 배기 스택
-  const bb=new THREE.Mesh(new THREE.BoxGeometry(0.54,0.28,0.48),bodyMat(0x96a2b6,{roughness:0.5}));
-  bb.position.set(0.08,2.02,0.03); bb.castShadow=true; g.add(bb);
-  const bbc=new THREE.Mesh(new THREE.BoxGeometry(0.57,0.02,0.51),plateMat); bbc.position.set(0.08,2.17,0.03); g.add(bbc);
-  // ⚠ 배관이 «어디로도 가지 않으면» 장식으로 보인다 — 천장 랙(y≈4.3)까지 올려 연결한다.
-  // ⚠ 굵은 관 세 줄을 세우면 «오르간 파이프»가 된다(실측) — 가늘게 두 줄이면 배관으로 읽힌다.
-  [[-0.13,0.10,0.034],[0.09,0.06,0.028]].forEach(([ax,az,r])=>{
-    const up=new THREE.Mesh(new THREE.CylinderGeometry(r,r,1.80,10),metalMat(0x99a3b4,0.30,0.62));
-    up.position.set(0.08+ax,3.08,0.03+az); up.castShadow=true; g.add(up);
-    for(const fy of [2.22,3.94]){                       // 플랜지 — 이음매가 있어야 «배관»이다
-      const fl=new THREE.Mesh(new THREE.CylinderGeometry(r*1.6,r*1.6,0.026,12),plateMat);
-      fl.position.set(0.08+ax,fy,0.03+az); g.add(fl);
-    }
-  });
-  const lv=louvered(0.62,0.5,0xb6c0d1); lv.rotation.y=Math.PI/2; lv.position.set(-0.522,0.42,-0.05); g.add(lv);
-  // 유틸리티 박스 + 케이블 글랜드 — 옆구리가 비면 «상자»로 보인다
-  const ub=new THREE.Mesh(new THREE.BoxGeometry(0.10,0.34,0.26),plateMat);
-  ub.position.set(0.535,1.10,-0.14); ub.castShadow=true; g.add(ub);
-  for(const cy of [0.90,0.82]){
-    const cg=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.08,8),darkMat);
-    cg.rotation.z=Math.PI/2; cg.position.set(0.575,cy,-0.14); g.add(cg);
+  const W=1.00,H=1.95,D=0.90, body=0xefeee9;
+  // 캐스터 — 실물은 «바퀴 위에» 선다. 플린스로 두면 붙박이 설비로 보인다.
+  for(const sx of [-1,1]) for(const sz of [-1,1]){
+    const br=new THREE.Mesh(new THREE.BoxGeometry(0.09,0.06,0.09),metalMat(0x2a3038,0.5,0.5));
+    br.position.set(sx*(W/2-0.10),0.135,sz*(D/2-0.10)); g.add(br);
+    const wh=new THREE.Mesh(new THREE.CylinderGeometry(0.052,0.052,0.035,14),darkMat);
+    wh.rotation.z=Math.PI/2; wh.position.set(sx*(W/2-0.10),0.052,sz*(D/2-0.10)); wh.castShadow=true; g.add(wh);
   }
-  const f=screen(0.56,0.36); f.position.set(0.02,1.44,0.452); g.add(f);
-  const tw=signalTower(i, alarm); tw.position.set(-0.40,1.90,0.28); g.add(tw);
+  // 섀시 + 몸통 — 바닥에서 0.17 띄운다(바퀴 위)
+  const Y0=0.17;
+  const P=0.045;
+  for(const sx of [-1,1]) for(const sz of [-1,1]){
+    const c=new THREE.Mesh(new THREE.BoxGeometry(P,H,P),frameMat);
+    c.position.set(sx*(W/2-P/2), Y0+H/2, sz*(D/2-P/2)); c.castShadow=true; g.add(c);
+  }
+  const b=new THREE.Mesh(new THREE.BoxGeometry(W-0.03,H-0.03,D-0.03),bodyMat(body,{roughness:0.45}));
+  b.position.y=Y0+H/2; b.castShadow=b.receiveShadow=true; g.add(b);
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(W+0.012,0.03,D+0.012),bodyMat(0xf4f3ee,{roughness:0.4}));
+  cap.position.y=Y0+H+0.015; cap.castShadow=true; g.add(cap);
+
+  // ── 단문 도어 — 실물은 한 짝이다. 경첩 오른쪽 · 손잡이 왼쪽.
+  const DZ=D/2+0.006, dw=W-0.15, dh=H-0.30, dy=Y0+H*0.50;
+  const rec=new THREE.Mesh(new THREE.BoxGeometry(dw+0.03,dh+0.03,0.02),darkMat);
+  rec.position.set(0,dy,D/2-0.004); g.add(rec);
+  const door=new THREE.Mesh(new THREE.BoxGeometry(dw,dh,0.024),bodyMat(body,{roughness:0.48}));
+  door.position.set(0,dy,DZ+0.006); door.castShadow=true; g.add(door);
+  const hd=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,0.30,8),plateMat);
+  hd.position.set(-dw/2+0.055,dy-0.05,DZ+0.034); g.add(hd);
+  for(const hy of [-0.42,0,0.42]){
+    const hg=new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,0.055,8),plateMat);
+    hg.position.set(dw/2-0.012,dy+hy*dh*0.5,DZ+0.004); g.add(hg);
+  }
+  // 도어 루버 슬롯 — 사진의 «가로 슬롯 무리». 아래 세 무리 + 위 두 무리.
+  function slots(cx,cy,n,w2){
+    for(let k=0;k<n;k++){
+      const sl=new THREE.Mesh(new THREE.BoxGeometry(w2,0.012,0.012),darkMat);
+      sl.position.set(cx,cy-k*0.028,DZ+0.020); g.add(sl);
+    }
+  }
+  for(const cx of [-0.26,0,0.26]) slots(cx, dy-0.30, 7, 0.20);
+  for(const cx of [-0.30,0.30])   slots(cx, dy+0.52, 4, 0.16);
+  // HMI — 어두운 정사각 화면 + 베젤(사진: 도어 중앙 상부)
+  const f=screen(0.28,0.23); f.position.set(0.0,dy+0.30,DZ+0.028); g.add(f);
+  // 작은 조작 모듈(사진: 화면 아래 사각 장치)
+  const md=new THREE.Mesh(new THREE.BoxGeometry(0.10,0.075,0.022),darkMat);
+  md.position.set(0,dy+0.06,DZ+0.020); g.add(md);
+  // 비상정지 — 좌상단 적색. 이 씬에서 «유일한 상시 적색»이라 작게 둔다.
+  const es=new THREE.Mesh(new THREE.CylinderGeometry(0.030,0.030,0.022,12),
+    new THREE.MeshStandardMaterial({color:0xc02a20,roughness:0.45,metalness:0.1}));
+  es.rotation.x=Math.PI/2; es.position.set(-W/2+0.055,Y0+H-0.22,DZ+0.012); g.add(es);
+
+  // ── 상단: 좌측 «타공판» 블록 + 우측 «제어함»(더 높다) + 좌상단 원통(블로워)
+  const tb=new THREE.Mesh(new THREE.BoxGeometry(0.54,0.24,0.62),bodyMat(0xe6e4de,{roughness:0.5}));
+  tb.position.set(-W/2+0.30,Y0+H+0.135,0.02); tb.castShadow=true; g.add(tb);
+  const perf=new THREE.Mesh(new THREE.BoxGeometry(0.50,0.018,0.58),plateMat);
+  perf.position.set(-W/2+0.30,Y0+H+0.262,0.02); g.add(perf);
+  for(let r=0;r<3;r++) for(let c=0;c<4;c++){          // 타공 — 실물의 상판 구멍 배열
+    const ho=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,0.026,10),darkMat);
+    ho.position.set(-W/2+0.30-0.165+c*0.11, Y0+H+0.262, 0.02-0.17+r*0.17); g.add(ho);
+  }
+  const blow=new THREE.Mesh(new THREE.CylinderGeometry(0.085,0.085,0.13,14),metalMat(0xc8c6c0,0.32,0.6));
+  blow.rotation.z=Math.PI/2; blow.position.set(-W/2+0.03,Y0+H+0.20,-D/2+0.20); blow.castShadow=true; g.add(blow);
+  const ctl=new THREE.Mesh(new THREE.BoxGeometry(0.30,0.50,0.44),bodyMat(0xefeee9,{roughness:0.45}));
+  ctl.position.set(W/2-0.20,Y0+H+0.265,-0.02); ctl.castShadow=true; g.add(ctl);
+  const ctlp=new THREE.Mesh(new THREE.BoxGeometry(0.13,0.10,0.012),darkMat);
+  ctlp.position.set(W/2-0.20,Y0+H+0.34,0.205); g.add(ctlp);
+  // 신호탑 — 사진은 제어함 «위 오른쪽»이다
+  const tw=signalTower(i, alarm); tw.position.set(W/2-0.13,Y0+H+0.515,0.06); tw.scale.setScalar(0.9); g.add(tw);
+
+  // 측면 루버 + 유틸리티
+  const lv=louvered(0.56,0.44,0xe6e4de); lv.rotation.y=Math.PI/2; lv.position.set(-W/2-0.012,Y0+0.42,-0.12); g.add(lv);
+  const ub=new THREE.Mesh(new THREE.BoxGeometry(0.09,0.30,0.24),plateMat);
+  ub.position.set(W/2+0.02,Y0+0.95,-0.16); ub.castShadow=true; g.add(ub);
+  // 배출 덕트 — 타공 상판에서 천장 하우스 배기로. «위는 배출구»(README 규약)
+  const duct=new THREE.Mesh(new THREE.CylinderGeometry(0.068,0.068,1.55,12),metalMat(0xc8c6c0,0.32,0.6));
+  duct.position.set(-W/2+0.30,Y0+H+1.05,0.02); duct.castShadow=true; g.add(duct);
+  for(const fy of [Y0+H+0.30, Y0+H+1.80]){
+    const fl=new THREE.Mesh(new THREE.CylinderGeometry(0.095,0.095,0.026,12),plateMat);
+    fl.position.set(-W/2+0.30,fy,0.02); g.add(fl);
+  }
+  g.userData.H=Y0+H;
   return g;
 }
 function buildChiller(i){
   const g=new THREE.Group();
-  g.add(cabinet(0.70,1.52,0.58,0xa3afc3,{roughness:0.4}));
-  const top=new THREE.Mesh(new THREE.BoxGeometry(0.70,0.20,0.58),bodyMat(0xaeb9cd,{roughness:0.38}));
+  g.add(cabinet(0.70,1.52,0.58,0xeae9e4,{roughness:0.4}));
+  const top=new THREE.Mesh(new THREE.BoxGeometry(0.70,0.20,0.58),bodyMat(0xf0efea,{roughness:0.38}));
   top.position.y=1.64; top.castShadow=true; g.add(top);
   const tc=new THREE.Mesh(new THREE.BoxGeometry(0.73,0.02,0.61),plateMat); tc.position.y=1.75; g.add(tc);
-  const lv=louvered(0.80,0.60,0xacb7c9); lv.rotation.y=Math.PI/2; lv.position.set(0.362,0.46,0); g.add(lv);
+  const lv=louvered(0.80,0.60,0xdedcd6); lv.rotation.y=Math.PI/2; lv.position.set(0.362,0.46,0); g.add(lv);
   // 냉각수 배관 — 왕복 두 줄이 천장으로. 칠러는 «물이 드나드는 기계»다.
   for(const [ax,r] of [[-0.19,0.030],[-0.07,0.030]]){
-    const up=new THREE.Mesh(new THREE.CylinderGeometry(r,r,2.15,10),metalMat(0x8e99ab,0.32,0.6));
+    const up=new THREE.Mesh(new THREE.CylinderGeometry(r,r,2.15,10),metalMat(0xc8c6c0,0.30,0.62));
     up.position.set(ax,2.88,-0.12); up.castShadow=true; g.add(up);
     for(const fy of [1.82,3.93]){
       const fl=new THREE.Mesh(new THREE.CylinderGeometry(r*1.5,r*1.5,0.026,12),plateMat);
@@ -268,9 +358,24 @@ const ALARM_I=3, ALARM_Z=-7.65, ALARM_X=2.35;
 for(let i=0;i<14;i++){
   const alarm = (i===ALARM_I);
   const m = alarm ? buildScrubber(i,true) : ((i%2===0) ? buildScrubber(i,false) : buildChiller(i));
-  m.position.set(ALARM_X+(alarm?0:(rnd()-0.5)*0.10), 0, alarm?ALARM_Z:(-0.6-i*2.35+(rnd()-0.5)*0.14));
+  const mz = alarm?ALARM_Z:(-0.6-i*2.35+(rnd()-0.5)*0.14);
+  m.position.set(ALARM_X+(alarm?0:(rnd()-0.5)*0.10), 0, mz);
   m.rotation.y = -Math.PI/2 + (alarm?0:(rnd()-0.5)*0.035);   // 통로를 향해 선다
   S.add(m);
+  // 스크러버마다 진공펌프. 배기는 «위에서 내려와 → 펌프 → 스크러버 옆구리»로 들어간다(README 규약).
+  if(i%2===0 || alarm){
+    const px=ALARM_X-1.05, pz=mz+0.58;
+    const pump=buildPump(); pump.position.set(px,0,pz); pump.rotation.y=-Math.PI/2+0.28; S.add(pump);
+    const th=pump.rotation.y;
+    const inP =new THREE.Vector3(px-0.33*Math.cos(th),0.56,pz+0.33*Math.sin(th));
+    const outP=new THREE.Vector3(px+0.33*Math.cos(th),0.56,pz-0.33*Math.sin(th));
+    const riser=new THREE.Mesh(new THREE.CylinderGeometry(0.042,0.042,3.05,10),metalMat(EXC,0.40,0.45));
+    riser.position.set(inP.x,2.40,inP.z); riser.castShadow=true; S.add(riser);   // 데크 틈에서 내려온다
+    S.add(pipeTo(new THREE.Vector3(inP.x,0.92,inP.z),inP,0.040,EXC));
+    S.add(pipeTo(outP,new THREE.Vector3(ALARM_X-0.50,0.60,mz-0.18),0.040,EXC));  // 스크러버 «옆구리»
+    const fl=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.03,12),plateMat);
+    fl.rotation.z=Math.PI/2; fl.position.set(ALARM_X-0.51,0.60,mz-0.18); S.add(fl);
+  }
 }
 // 경광 조명 — «빛이 주변에 번져야» 경보로 읽힌다. 램프만 빨개지면 스티커처럼 보인다.
 const beacon=new THREE.PointLight(0xff3b2e, 0, 7.0, 2.0);
