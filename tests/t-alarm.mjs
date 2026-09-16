@@ -421,14 +421,45 @@ const P2_ABP = [
   is(!/자켓/.test(fs.readFileSync(ROOT+'/assets/core.js','utf8').match(/_IN_RE:[\s\S]{0,200}/)[0]),
      '판정 정규식에 「자켓」을 박지 않았다 — 새 낱말이 생겨도 저절로 목록에 뜬다');
   /* ⚠ 함수가 있어도 «화면이 안 부르면» 사용자는 여전히 아무것도 못 본다.
-     v92 가 겪은 것이 정확히 그것이다 — 값은 다 있는데 화면이 말을 안 했다. */
+     v92 가 겪은 것이 정확히 그것이다 — 값은 다 있는데 화면이 말을 안 했다.
+     ⚠ v136 에 이 검사들을 «바꿨다». 예전에는 「집계 제외」·「공수 분모 제외」라는 «낱말»이
+       소스에 있는지만 봤는데, 그 낱말을 i18n 사전으로 옮기자 **검사는 그대로 초록불**이었다 —
+       사전 값에도 같은 글자가 있기 때문이다. 검사가 «무엇에서 나오나»가 아니라 «생김새»를
+       보고 있었던 것이다(v122 규약). 이제 지키는 것은 셋이다:
+         ① 주석이 차트와 «같은 모집단»을 보는가  ② 기본(내적) 모드에서만 적는가
+         ③ 카드에서 뺀 진단 목록이 GST.dq 로 «갔는가»(조용히 사라지지 않았는가) */
   { const R = fs.readFileSync(ROOT+'/report/index.html','utf8').replace(/\/\*[\s\S]*?\*\//g,'');
-    is(/GST\.ALARM\.dropReasons\(/.test(R) && /집계 제외/.test(R),
-       'report — 고장 차트 주석이 그 제외 목록을 실제로 적는다');
-    is(/GST\.ORG\.rndScan\(/.test(R),
-       'report — 연구소로 «잡힌 낱말»도 주석에 적는다 (코드에 박은 규칙이므로 밝혀야 한다)');
-    is(/_headEx\.n/.test(R) && /공수 분모 제외/.test(R),
-       'report — 공수 분모에서 «몇 명을 왜» 뺐는지 적는다'); }
+
+    // ① 모집단 — 필터 전 원본(KRA.concat(KRB))을 세면 「올바만 3건」 옆에 「집계 제외 5,274」가 선다
+    is(!/dropReasons\(\s*KRA\.concat\(KRB\)/.test(R),
+       'report — 「집계 제외」가 «필터 안 탄 원본»을 세지 않는다 (차트는 필터 후를 그린다)');
+    is(/const\s+KRAx\s*=\s*KRA\.filter\(x=>krDom\(x\)&&krOk\(x\)\)/.test(R),
+       'report — KRAx 는 필터는 타되 krPick(내/외 판정)은 «안» 탄다 — KRAf 를 쓰면 목록이 늘 빈다');
+    is(/dropReasons\([\s\S]{0,120}KRAx[\s\S]{0,60}KRBx/.test(R),
+       'report — dropReasons 가 그려진 계통(FV)의 필터 후 모집단을 본다 (v131 규약)');
+
+    // ② 모드 — dropReasons 는 화면 필터를 모른다. 「외부만」에서는 세고 있는 그 행을 «제외»라 적는다
+    is(/F\.inout\s*\?\s*\[\]\s*:\s*GST\.ALARM\.dropReasons\(/.test(R),
+       'report — 「집계 제외」는 기본(내적) 모드에서만 적는다 — 다른 두 모드에서는 그 말이 거짓이다');
+
+    // ③ 카드에서 뺀 목록이 GST.dq 로 갔는가 — 「어떤 낱말이 잡혔나」는 진단이라 /diag/ 가 받는다
+    const dqKey = k => new RegExp("key:'"+k+"'[\\s\\S]{0,240}act:").test(R);
+    is(/GST\.ALARM\.dropReasons\(/.test(R) && dqKey('kr_drop'),
+       'report — 제외 사유 «전량»이 GST.dq 로 간다 (카드는 상위 3 만 적는다)');
+    is(/GST\.ORG\.rndScan\(/.test(R) && dqKey('kr_rnd'),
+       'report — 연구소로 «잡힌 낱말»이 GST.dq 로 간다 (코드에 박은 규칙이므로 밝혀야 한다)');
+    is(/_headEx\.n/.test(R) && /nMan_ex/.test(R) && dqKey('head_ex'),
+       'report — 공수 분모는 «몇 명»을 카드에 적고 «어떤 낱말»은 GST.dq 로 보낸다');
+    is(dqKey('op_unk'),
+       'report — 처음 보는 설비상태도 전량이 GST.dq 로 간다');
+
+    // ④ S/N 조인율은 카드에서 «뺐다» — 이미 GST.dq(kr_join) 에 있고, 정상(99.9%)일 때도 뜨던 자리다
+    is(!/S\/N 조인/.test(R) && dqKey('kr_join'),
+       'report — S/N 조인율은 카드 주석이 아니라 GST.dq 한 곳에만 있다 (두 곳이면 갈린다)');
+
+    // ⑤ 상한 — 목록을 통째로 적으면 주석 한 줄이 화면을 덮는다(실측 여덟 종)
+    is(/GST\.topN\(window\._KRDROP,\s*3,/.test(R),
+       'report — 카드의 제외 목록은 상위 3 종까지만 적는다'); }
 }
 
 console.log('\n[12-c] 반도체연구소 — 라인 표기 다섯 가지를 한 단지로 (사용자 확정 · NRD·RND 둘 다)');

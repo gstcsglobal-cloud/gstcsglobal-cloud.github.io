@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 141;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 142;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* 인사이트 띠의 머리글. 예전에는 «INSIGHT» 영문 대문자가 core 에 박혀 있어 네 언어 어디서도 안 바뀌고
    PPT 장표까지 그대로 나갔다(v135). core 의 공용 문자열 관례(GST._lang + 사전) 그대로다. */
 GST.INS_T = {ko:'요약', en:'Summary', zh:'摘要', ja:'要約'};
@@ -3495,6 +3495,31 @@ GST.fillHint = function(canvasId, rows, key, altKey){
   const T=GST.FILL_T[(GST._lang && GST._lang()) || 'ko'] || GST.FILL_T.ko;
   el.textContent=T.replace('{p}',pct).replace('{g}',got.toLocaleString()).replace('{n}',n.toLocaleString());
   return {n:n, got:got, pct:pct};
+};
+
+/* 값별 건수 목록을 «상위 N + 그 밖» 으로 줄인다 (v136).
+   카드 주석이 목록 전량을 적던 자리가 넷이었다 — 실측으로 「집계 제외」한 줄이 여덟 종을
+   늘어놓아 주석이 화면을 덮었다. 규약은 하나다:
+     «몇 건이 빠졌나» 는 사실이라 카드에 남고, «어떤 낱말이었나» 는 진단이라 GST.dq → /diag/ 로 간다.
+   ⚠ 세는 함수(dropReasons·rndScan·HEAD_EX.scan)는 그대로 전량을 센다 — 자르는 일은 부르는 쪽이 한다.
+     그래야 /diag/ 가 받는 목록이 온전하다.
+   ⚠ 단위(건·명·대)가 자리마다 달라 인자로 받는다. 한 곳에 모아 두지 않으면 같은 «그 밖» 문구가
+     네 가지 표기로 갈린다(제2원칙). */
+GST.TOPN_T = {
+  ko:'그 밖 {k}종 {n}{u}', en:'+{k} more ({n}{u})',
+  zh:'其他 {k}种 {n}{u}',  ja:'ほか {k}種 {n}{u}'
+};
+GST.topN = function(list, n, unit){
+  const L=(list||[]).slice(), u=unit||'', k=(n==null?3:n);
+  if(!L.length) return '';
+  const out=L.slice(0,k).map(function(e){ return e.v+' '+Number(e.n||0).toLocaleString()+u; });
+  const rest=L.slice(k);
+  if(rest.length){
+    const rn=rest.reduce(function(s,e){ return s+Number(e.n||0); },0);
+    const T=GST.TOPN_T[(GST._lang && GST._lang()) || 'ko'] || GST.TOPN_T.ko;
+    out.push(T.replace('{k}',rest.length).replace('{n}',rn.toLocaleString()).replace('{u}',u));
+  }
+  return out.join(' · ');
 };
 
 // 페이지 내 소분류 탭 (섹션 내비게이션).
