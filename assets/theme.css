@@ -5,126 +5,113 @@
    ============================================================ */
 
 /* ---------- 1. 디자인 토큰 ---------- */
+/* v139 — 라이트가 «기본»이다. :root 가 라이트 값이고 body.theme-slate 가 다크다.
+   body.theme-light 는 옛 저장값(sessionStorage.gst_theme) 호환용 별칭이라 아무것도 덮지 않는다.
+   글래스(블러·반투명)·그라데이션 배경·그라데이션 제목·진입 애니메이션은 뺐다 —
+   흰 종이 위의 또렷한 글자와 얇은 선 하나가 디자인이다. 옛 변수명(--glass·--bg1 …)은
+   여덟 페이지의 인라인 CSS 가 아직 쓰므로 새 토큰의 별칭으로 남겨 둔다. */
 :root{
-  /* ===== 색상 테마: Dark (기본) ===== */
-  --bg-gradient: linear-gradient(-45deg, #16163a, #1e1d4d, #232057, #131230);
-  --title-gradient: linear-gradient(90deg, #ffffff, #c7d2fe);
-  --glass: rgba(255,255,255,0.06);
-  --glass-border: rgba(255,255,255,0.14);
-  --glass-hover: rgba(255,255,255,0.11);
-  --txt-main:#f1f5f9;
-  --txt-muted:#9ba3c9;
-  --accent-1:#5eead4; --accent-2:#60a5fa; --accent-3:#c4b5fd; --accent-4:#fbbf24; --accent-5:#4ade80;
-  --ok:#34d399; --warn:#fbbf24; --bad:#fb7185;
-  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.37);
-
-  /* 구버전 변수명 별칭 (각 대시보드 호환) */
-  --bg1:#16163a; --bg2:#1e1d4d; --bg3:#232057;
+  color-scheme:light;
+  /* 표면 */
+  --bg:#F5F6F8; --surface:#FFFFFF; --surface-2:#F2F4F7; --surface-3:#E9ECF1;
+  --line:#E4E7EC; --line-2:#CDD3DC;
+  /* 글자 */
+  --txt-main:#101828; --txt-2:#344054; --txt-muted:#667085; --txt-faint:#98A2B3;
+  /* 액센트 하나 + 의미색 셋 (연한 바탕 짝 포함) */
+  --accent:#2F6FED; --accent-soft:#EAF1FE; --accent-ink:#1D4ED8;
+  --ok:#12873F; --warn:#B7670A; --bad:#D92D20;
+  --ok-soft:#ECFDF3; --warn-soft:#FFF6E5; --bad-soft:#FEF3F2;
+  --accent-1:var(--accent); --accent-2:var(--accent); --accent-3:#7A5AF8; --accent-4:#D97706; --accent-5:#16A34A;
+  /* 옛 이름 → 새 토큰 */
+  --bg-gradient:var(--bg); --title-gradient:none;
+  --glass:var(--surface); --glass-border:var(--line); --glass-hover:var(--surface-2);
+  --card-shadow:0 1px 2px rgba(16,24,40,.05);
+  --bg1:var(--bg); --bg2:var(--surface-2); --bg3:var(--surface-3);
+  --bg-card:var(--surface); --card:var(--surface); --bd:var(--line); --bg-2:var(--surface-2);
   --a1:var(--accent-1); --a2:var(--accent-2); --a3:var(--accent-3); --a4:var(--accent-4); --a5:var(--accent-5);
-  --accent:var(--accent-1); --accent2:var(--accent-2); --accent3:var(--accent-3);
+  --accent2:var(--accent-2); --accent3:var(--accent-3);
   --glassb:var(--glass-border); --txt:var(--txt-main); --mut:var(--txt-muted); --muted:var(--txt-muted);
 
   /* 차트 영역 높이 3단 — 전 페이지 공통 (카드가 자라는 게 아니라 .cw가 정한다) */
   --ch-mini:180px;
   --ch-std:240px;
   --ch-tall:300px;
-  /* 타이포그래피 스케일 */
-  --fs-display:28px;   /* 대시보드 제목 */
+  /* 타이포그래피 스케일 — 눈이 아프지 않을 만큼(본문 13 · 표 12.5 · 캡션 12) */
+  --fs-display:22px;   /* 대시보드 제목 */
   --fs-title:16px;     /* 섹션 제목 */
-  --fs-card:13px;      /* 카드 제목 */
-  --fs-body:12px;      /* 본문 */
-  --fs-table:11px;     /* 테이블 */
-  --fs-caption:10px;   /* 캡션/라벨 */
-  --fs-micro:9px;      /* 테이블 헤더 */
-  --fs-kpi:26px;       /* KPI 숫자 */
+  --fs-card:14px;      /* 카드 제목 */
+  --fs-body:13px;      /* 본문 */
+  --fs-table:12.5px;   /* 테이블 */
+  --fs-caption:12px;   /* 캡션/라벨 */
+  --fs-micro:11px;     /* 테이블 헤더 */
+  --fs-kpi:28px;       /* KPI 숫자 */
 
   /* 간격 시스템 (8px 그리드) */
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
 
-  /* 모서리 */
-  --r-sm:8px; --r-md:12px; --r-lg:18px; --r-xl:20px; --r-pill:30px;
+  /* 모서리 — 카드 12 · 컨트롤 8 */
+  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-xl:12px; --r-pill:999px;
 
-  /* 그림자 */
-  --shadow-sm:0 2px 8px rgba(0,0,0,.15);
-  --shadow-md:0 8px 32px rgba(0,0,0,.37);
+  /* 그림자 — 얇게. 깊이는 선이 말한다 */
+  --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+  --shadow-md:0 4px 12px rgba(16,24,40,.08);
 
   /* 전환 */
   --ease:cubic-bezier(.4,0,.2,1);
 }
+body.theme-light{color-scheme:light}
 
-/* ===== 색상 테마: Burgundy ===== */
-body.theme-burgundy{
-  --bg-gradient: linear-gradient(-45deg, #1a0813, #2d0b1e, #1f0822, #140511);
-  --title-gradient: linear-gradient(90deg, #fcd34d, #f472b6, #fb7185);
-  --glass:rgba(255,255,255,0.04); --glass-border:rgba(255,240,245,0.12); --glass-hover:rgba(255,240,245,0.09);
-  --txt-main:#fbeaf4; --txt-muted:#b49aa9;
-  --accent-1:#fcd34d; --accent-2:#f472b6; --accent-3:#fb7185; --accent-4:#f472b6; --accent-5:#fb7185;
-  --bg1:#1a0813; --bg2:#2d0b1e; --bg3:#1f0822;
-  --card-shadow:0 8px 32px 0 rgba(0,0,0,0.5);
-}
-
-/* ===== 색상 테마: Light ===== */
-body.theme-light{
-  --bg-gradient: linear-gradient(-45deg, #f1f5f9, #e2e8f0, #e8eef5, #f0f4f8);
-  --title-gradient: linear-gradient(90deg, #0f172a, #2563eb, #7c3aed);
-  --glass:rgba(255,255,255,0.75); --glass-border:rgba(15,23,42,0.08); --glass-hover:rgba(15,23,42,0.04);
-  --txt-main:#0f172a; --txt-muted:#64748b;
-  --accent-1:#2563eb; --accent-2:#0284c7; --accent-3:#7c3aed; --accent-4:#ea580c; --accent-5:#16a34a;
-  --bg1:#f1f5f9; --bg2:#e2e8f0; --bg3:#e8eef5;
-  --card-shadow:0 8px 32px 0 rgba(31,38,135,0.06);
-}
-
-/* 배경도 항상 통일 변수 사용 */
-body{background:var(--bg-gradient) !important;color:var(--txt-main) !important}
+body{background:var(--bg) !important;color:var(--txt-main) !important}
 
 /* ---------- 2. 공통 컴포넌트 통일 ---------- */
-body{padding:var(--sp-6) 28px !important;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif !important}
+body{padding:var(--sp-5) 28px !important;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif !important;
+  font-size:var(--fs-body);line-height:1.45;-webkit-font-smoothing:antialiased;animation:none !important}
 
-.header h1{font-size:var(--fs-display) !important;font-weight:800 !important;letter-spacing:-1px !important;
-  background:var(--title-gradient) !important;-webkit-background-clip:text !important;
-  background-clip:text !important;-webkit-text-fill-color:transparent !important}
-.header .sub{font-size:var(--fs-card) !important;margin-top:var(--sp-1) !important;color:var(--txt-muted) !important}
+/* 제목은 글자다 — 그라데이션 글자(배경 클립)는 뺐다. 페이지 인라인의 text-fill 을 되돌린다. */
+.header h1{font-size:var(--fs-display) !important;font-weight:700 !important;letter-spacing:-.3px !important;
+  background:none !important;color:var(--txt-main) !important;-webkit-text-fill-color:currentColor !important}
+.header .sub{font-size:var(--fs-caption) !important;margin-top:var(--sp-1) !important;color:var(--txt-muted) !important}
 
-.kpi{padding:var(--sp-4) !important;border-radius:var(--r-lg) !important;box-shadow:var(--shadow-md) !important;
-  transition:transform .25s var(--ease), box-shadow .25s var(--ease) !important}
-.kpi:hover{transform:translateY(-3px) !important}
-.kpi .val{font-size:var(--fs-kpi) !important;font-weight:800 !important;font-variant-numeric:tabular-nums}
+.kpi{padding:18px 20px !important;border-radius:var(--r-lg) !important;box-shadow:var(--shadow-sm) !important;
+  transition:border-color .15s var(--ease), box-shadow .15s var(--ease) !important;transform:none !important}
+.kpi:hover{border-color:var(--line-2) !important}
+.kpi .val{font-size:var(--fs-kpi) !important;font-weight:700 !important;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
 /* 숫자 열 정렬 — 표·배지·푸터의 숫자가 흔들리지 않게 (KPI val과 동일 원칙) */
 td,.kpi .kd,.kpi .kf,.gb-inp{font-variant-numeric:tabular-nums}
-.kpi .cap{font-size:var(--fs-caption) !important;margin-top:5px !important;font-weight:600 !important;letter-spacing:.3px !important}
+.kpi .cap{font-size:var(--fs-caption) !important;margin-top:6px !important;font-weight:500 !important;letter-spacing:0 !important;color:var(--txt-2) !important}
 .kpi .ic{font-size:18px !important;margin-bottom:5px !important}
 
 /* KPI 정본 레이아웃 — 주간현황 형식으로 전 페이지 통일.
    페이지별 인라인 .kpis/.kpi 규칙은 제거했고 여기만 고치면 8개 페이지가 함께 바뀐다.
    6열 고정이라 KPI가 5개인 페이지도 카드 크기가 같다. */
 .kpis{display:grid !important;grid-template-columns:repeat(6,1fr) !important;
-  gap:14px !important;margin-bottom:20px !important;align-items:stretch}
-.kpi{background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(14px)}
+  gap:12px !important;margin-bottom:20px !important;align-items:stretch}
+.kpi{background:var(--surface);border:1px solid var(--line);backdrop-filter:none}
 .kpi::before{display:none !important}          /* 일부 페이지에만 있던 원형 글로우 제거 */
 .kpi .val{line-height:1.12 !important}
 .kpi .krow{display:flex;align-items:baseline;gap:3px;flex-wrap:wrap}
-.kpi .unit{font-size:12px;font-weight:700;margin-left:1px;color:var(--txt-muted)}
-.kpi .kd{font-size:11px;font-weight:700;margin-left:4px}
-.kpi .kf{font-size:10.5px !important;font-weight:600;margin-top:3px !important;color:var(--txt-muted) !important;
-  min-height:13px;line-height:1.3}
-.kpi .spark{display:block;width:100%;height:22px;margin-top:6px}
-.kpi.sel{border-color:var(--accent-1) !important}
+.kpi .unit{font-size:13px;font-weight:600;margin-left:1px;color:var(--txt-muted)}
+.kpi .kd{font-size:12px;font-weight:600;margin-left:4px}
+.kpi .kf{font-size:11.5px !important;font-weight:500;margin-top:4px !important;color:var(--txt-muted) !important;
+  min-height:14px;line-height:1.35}
+.kpi .spark{display:block;width:100%;height:22px;margin-top:8px}
+.kpi.sel{border-color:var(--accent-1) !important;box-shadow:0 0 0 2px var(--accent-soft) !important}
 @media(max-width:1250px){.kpis{grid-template-columns:repeat(3,1fr) !important}}
 
-.card{border-radius:var(--r-xl) !important;box-shadow:var(--shadow-md) !important;
-  transition:box-shadow .25s var(--ease) !important}
+.card{border-radius:var(--r-xl) !important;box-shadow:var(--shadow-sm) !important;
+  transition:border-color .15s var(--ease) !important}
 /* 카드 표면 캔온 — 페이지 인라인에 8벌 복제돼 있던 글래스 정의의 단일 출처.
    theme.css가 마지막에 로드되므로 같은 특이도의 페이지 규칙을 이긴다. */
-.card,.trend-card,.tablecard,.cfgcard{background:var(--glass);border:1px solid var(--glass-border);
-  backdrop-filter:blur(14px);padding:18px}
-.card h3{font-size:var(--fs-card) !important;font-weight:700 !important;color:var(--txt-main) !important}
-.card-note{font-size:var(--fs-caption) !important;color:var(--txt-muted) !important}
+.card,.trend-card,.tablecard,.cfgcard{background:var(--surface);border:1px solid var(--line);
+  backdrop-filter:none;padding:18px 20px}
+.card h3{font-size:var(--fs-card) !important;font-weight:600 !important;color:var(--txt-main) !important;letter-spacing:-.1px}
+.card-note{font-size:var(--fs-caption) !important;color:var(--txt-muted) !important;line-height:1.45}
 
 table{font-size:var(--fs-table) !important}
-th{padding:var(--sp-2) 10px !important;font-size:var(--fs-micro) !important;letter-spacing:.5px !important;
-  color:var(--txt-muted) !important;text-transform:uppercase}
-td{padding:6px 10px !important;color:var(--txt-main) !important}
-tr:hover td{background:var(--glass-hover) !important}
+th{padding:var(--sp-2) 10px !important;font-size:var(--fs-micro) !important;letter-spacing:0 !important;
+  color:var(--txt-muted) !important;text-transform:none;font-weight:600}
+td{padding:7px 10px !important;color:var(--txt-main) !important}
+tr:hover td{background:var(--surface-2) !important}
 
 .status{font-size:var(--fs-body) !important}
 
@@ -179,25 +166,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{
    Stage 5 — 마감 품질 (Polish)
    ============================================================ */
 
-/* ---------- 진입 애니메이션 (카드가 순차적으로 떠오름) ---------- */
-@keyframes fadeInUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-.kpi,.card,.tablecard,.alert,.slicer{animation:fadeInUp .5s var(--ease) backwards}
-.kpi:nth-child(1),.alert:nth-child(1){animation-delay:.02s}
-.kpi:nth-child(2),.alert:nth-child(2){animation-delay:.06s}
-.kpi:nth-child(3),.alert:nth-child(3){animation-delay:.10s}
-.kpi:nth-child(4),.alert:nth-child(4){animation-delay:.14s}
-.kpi:nth-child(5){animation-delay:.18s}
-.kpi:nth-child(6){animation-delay:.22s}
-.card:nth-child(1){animation-delay:.08s}
-.card:nth-child(2){animation-delay:.14s}
-.card:nth-child(3){animation-delay:.20s}
-.card:nth-child(4){animation-delay:.26s}
+/* 진입 애니메이션(카드가 떠오르는 효과)은 뺐다 — 숫자를 읽는 화면에서는 움직임이 곧 소음이다.
+   페이지 인라인에 남은 animation 은 아래 한 줄이 끈다. */
+.kpi,.card,.tablecard,.alert,.slicer{animation:none !important}
 
-/* ---------- 호버 마이크로 인터랙션 ---------- */
-.card:hover{border-color:var(--accent-2) !important;
-  box-shadow:0 12px 40px rgba(0,0,0,.45), 0 0 0 1px var(--accent-2) inset !important}
-body.theme-light .card:hover{
-  box-shadow:0 12px 40px rgba(31,38,135,.12), 0 0 0 1px var(--accent-2) inset !important}
+/* ---------- 호버 — 선 하나만 진해진다 ---------- */
+.card:hover{border-color:var(--line-2) !important;box-shadow:var(--shadow-sm) !important}
 /* ⚠ «동작이 붙은 카드»만 손가락 커서를 준다 (v133).
    예전에는 .kpi 전부에 걸려 있어, 실측 56장 중 48장이 «눌리는 것처럼 보이는데 아무 일도
    안 하는» 카드였다 — 사용자가 「KPI 카드 팝업 기능을 지웠냐」고 물은 것이 이 자리다.
@@ -239,8 +213,8 @@ body.theme-light .card:hover{
 @media print{.gst-ins .gst-go{display:none}}
 
 .fill-hint{margin:6px 0 2px;padding:7px 10px;border-radius:8px;
-  background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.35);
-  font-size:11.5px;line-height:1.45;color:var(--txt-main);opacity:.9}
+  background:var(--warn-soft);border:1px solid rgba(183,103,10,.3);
+  font-size:12px;line-height:1.45;color:var(--txt-main)}
 tr{transition:background .15s var(--ease)}
 select,input[type="date"],input[type="text"],input[type="password"]{transition:border-color .2s var(--ease), box-shadow .2s var(--ease)}
 select:hover,input:hover{border-color:var(--txt-muted) !important}
@@ -250,17 +224,16 @@ select:hover,input:hover{border-color:var(--txt-muted) !important}
 /* 텍스트 선택 색 */
 ::selection{background:var(--accent-2);color:#fff}
 
-/* ---------- 라이트 테마 완성도 ---------- */
-body.theme-light select,body.theme-light input{color-scheme:light}
-body.theme-light select,body.theme-light input[type="date"],body.theme-light input[type="text"]{
-  background:rgba(255,255,255,.9) !important;color:var(--txt-main) !important}
-/* 테이블 고정 헤더 배경을 테마별로 */
-th{background:rgba(22,22,58,.97) !important}
-body.theme-burgundy th{background:rgba(26,8,19,.96) !important}
-body.theme-light th{background:rgba(241,245,249,.98) !important}
-/* 라이트에서 칩/배지 가독성 */
-body.theme-light .fchip{background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.35)}
-body.theme-light .status.ok{color:#16a34a}
+/* ---------- 입력 요소 · 표 머리 — 라이트 기본값 (다크는 slate 블록이 덮는다) ---------- */
+select,input{color-scheme:light}
+select,input[type="date"],input[type="text"],input[type="month"],input[type="password"],input:not([type]){
+  background:var(--surface) !important;color:var(--txt-main) !important;border:1px solid var(--line) !important;border-radius:var(--r-md) !important}
+select:focus,input:focus{border-color:var(--accent) !important;box-shadow:0 0 0 3px var(--accent-soft)}
+/* 테이블 고정 헤더 배경 — 카드보다 한 단 어두운 면 */
+th{background:var(--surface-2) !important}
+/* 칩/배지 */
+.fchip{background:var(--accent-soft);border-color:#C7D7FB}
+.status.ok{color:var(--txt-muted)}
 
 /* ---------- 접근성: 모션 최소화 설정 존중 ---------- */
 @media (prefers-reduced-motion: reduce){
@@ -286,17 +259,15 @@ body.gst-inframe .status{margin-top:2px}
   transition:color .15s var(--ease)}
 .gst-sec-tab:hover{color:var(--txt-main)}
 .gst-sec-tab.active{color:var(--accent-1);border-bottom-color:var(--accent-1)}
-body.theme-slate .gst-sec-tab.active{color:#2DD4BF;border-bottom-color:#2DD4BF}
 
 /* ============================================================
    인사이트 스트립 (GST.insights) — KPI 위에 자동 삽입되는 요약 문장
    ============================================================ */
 .gst-insights{display:flex;align-items:center;flex-wrap:wrap;gap:6px 18px;
-  background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;
-  padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--txt-main);
-  backdrop-filter:blur(10px)}
-.gst-ins-head{font-size:9px;font-weight:800;letter-spacing:2px;color:var(--accent-2);
-  border:1px solid var(--accent-2);border-radius:5px;padding:2px 7px;opacity:.85;flex:none}
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--txt-main)}
+.gst-ins-head{font-size:11px;font-weight:700;letter-spacing:.4px;color:var(--accent-ink);
+  background:var(--accent-soft);border-radius:6px;padding:2px 8px;flex:none}
 .gst-ins{display:inline-flex;align-items:center;gap:7px;font-weight:600;color:var(--txt-main)}
 .gst-ins b{font-variant-numeric:tabular-nums}
 .gst-ins-dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--accent-2)}
@@ -310,76 +281,27 @@ body.theme-slate .gst-sec-tab.active{color:#2DD4BF;border-bottom-color:#2DD4BF}
    원칙: 표면 하나(#0B0F14) · 액센트 하나(GST 틸) · 플랫 카드 ·
    장식(그라데이션 애니메이션·블롭·유리효과) 제거 = 절제된 전문가 룩
    ============================================================ */
+/* 다크(Slate) — 라이트와 같은 토큰 이름에 어두운 값만 넣는다. 컴포넌트 규칙은 공유한다. */
 body.theme-slate{
-  --bg-gradient:linear-gradient(180deg,#0B0F14,#0B0F14);
-  --title-gradient:linear-gradient(90deg,#F1F5F9,#8B98A9);
-  --glass:#111823; --glass-border:rgba(151,170,196,.10); --glass-hover:#16202C;
-  --txt-main:#E6EDF3; --txt-muted:#8B98A9;
-  --accent-1:#2DD4BF; --accent-2:#2DD4BF; --accent-3:#3987e5; --accent-4:#c98500; --accent-5:#199e70;
-  --ok:#3fbf3f; --warn:#fab219; --bad:#e66767;
-  --bg1:#0B0F14; --bg2:#0E141C; --bg3:#111823;
-  --card-shadow:none;
-  --shadow-md:none; --shadow-sm:none;
-  background:#0B0F14 !important;
-  animation:none !important;
+  color-scheme:dark;
+  --bg:#0F1419; --surface:#161C24; --surface-2:#1C2430; --surface-3:#232D3A;
+  --line:rgba(151,170,196,.14); --line-2:rgba(151,170,196,.28);
+  --txt-main:#E6EDF3; --txt-2:#C3CCD8; --txt-muted:#8B98A9; --txt-faint:#5E6D80;
+  --accent:#5B8DEF; --accent-soft:rgba(91,141,239,.16); --accent-ink:#8AB0F7;
+  --ok:#3FBF7F; --warn:#F2B134; --bad:#F0716B;
+  --ok-soft:rgba(63,191,127,.12); --warn-soft:rgba(242,177,52,.12); --bad-soft:rgba(240,113,107,.12);
+  --accent-3:#A78BFA; --accent-4:#F2B134; --accent-5:#3FBF7F;
+  --card-shadow:none; --shadow-md:0 8px 24px rgba(0,0,0,.45); --shadow-sm:none;
+  background:#0F1419 !important;
 }
-/* 카드류: 유리효과·그림자 제거, 헤어라인 보더의 플랫 카드 */
-body.theme-slate .kpi,body.theme-slate .card,
-body.theme-slate .tablecard,body.theme-slate .alert,body.theme-slate .trend-card,
-body.theme-slate .cross-card,body.theme-slate .date-panel,
-body.theme-slate .gst-insights,
-body.theme-slate .slicer{
-  background:#111823 !important;border:1px solid rgba(151,170,196,.10) !important;
-  backdrop-filter:none !important;box-shadow:none !important;border-radius:10px !important;
-}
-body.theme-slate .kpi::before{display:none}       /* KPI 원형 블롭 제거 */
-body.theme-slate .kpi .val{letter-spacing:-.5px}
-body.theme-slate .card:hover{
-  border-color:rgba(151,170,196,.24) !important;box-shadow:none !important}
-body.theme-slate .kpi:hover{transform:none !important;border-color:rgba(151,170,196,.24) !important}
-/* 상단 경고 배너(홈)는 시맨틱 톤 유지하되 채도만 절제 */
-body.theme-slate .alert.bad{background:rgba(208,59,59,.08) !important;border-color:rgba(208,59,59,.35) !important}
-body.theme-slate .alert.warn{background:rgba(250,178,25,.07) !important;border-color:rgba(250,178,25,.3) !important}
-body.theme-slate .alert.ok{background:rgba(12,163,12,.07) !important;border-color:rgba(12,163,12,.3) !important}
-/* 테이블 */
-body.theme-slate th{background:#0E141C !important;color:#8B98A9 !important}
-body.theme-slate td{border-bottom:1px solid rgba(151,170,196,.07) !important}
-body.theme-slate tr:hover td{background:#16202C !important}
-/* 칩·버튼: 무지개 그라데이션 → 단일 액센트 */
-body.theme-slate .chip,body.theme-slate .pchip{
-  border-radius:6px !important;background:transparent !important;
-  border:1px solid rgba(151,170,196,.16) !important;color:#8B98A9 !important;box-shadow:none !important}
-body.theme-slate .chip:hover,body.theme-slate .pchip:hover{
-  transform:none !important;color:#E6EDF3 !important;border-color:rgba(151,170,196,.3) !important}
-body.theme-slate .chip.active,body.theme-slate .pchip.active{
-  background:rgba(45,212,191,.10) !important;border-color:#2DD4BF !important;color:#2DD4BF !important}
-body.theme-slate .btn-grad,body.theme-slate .apply-btn{
-  background:#2DD4BF !important;color:#04211C !important;border-radius:8px !important}
-body.theme-slate .btn,body.theme-slate .lang-btn,body.theme-slate .reset-btn{border-radius:8px !important}
-body.theme-slate .btn-glass,body.theme-slate .lang-btn,body.theme-slate .reset-btn{
-  background:transparent !important;border:1px solid rgba(151,170,196,.16) !important;color:#8B98A9 !important}
-body.theme-slate .btn-glass:hover,body.theme-slate .lang-btn:hover,body.theme-slate .reset-btn:hover{
-  background:#16202C !important;color:#E6EDF3 !important}
-/* 입력 요소 */
-body.theme-slate select,body.theme-slate input[type="date"],
-body.theme-slate input[type="text"],body.theme-slate input[type="password"],
-body.theme-slate input:not([type]){
-  background:#0B0F14 !important;border:1px solid rgba(151,170,196,.16) !important;
-  border-radius:7px !important;color:#E6EDF3 !important;color-scheme:dark}
-/* 제목: 무지개 → 차분한 듀오톤 (title-gradient 변수로 자동 적용됨) */
-body.theme-slate .header h1{letter-spacing:-.4px !important}
-body.theme-slate .status.ok{color:#3fbf3f !important}
-/* 드롭다운·팝업 표면 */
+body.theme-slate select,body.theme-slate input{color-scheme:dark}
+body.theme-slate .fchip{border-color:rgba(91,141,239,.45)}
+body.theme-slate .gst-fchips .fchip{border-color:rgba(91,141,239,.45)}
+body.theme-slate .alert.bad{background:var(--bad-soft) !important;border-color:rgba(240,113,107,.35) !important}
+body.theme-slate .alert.warn{background:var(--warn-soft) !important;border-color:rgba(242,177,52,.3) !important}
+body.theme-slate .alert.ok{background:var(--ok-soft) !important;border-color:rgba(63,191,127,.3) !important}
 body.theme-slate .lang-dropdown,body.theme-slate .theme-dropdown{
-  background:#16202C !important;border-color:rgba(151,170,196,.16) !important}
-/* 사이드바 */
-body.theme-slate .gst-sidebar{background:#0E141C;border-right-color:rgba(151,170,196,.10);box-shadow:none}
-body.theme-slate .gst-sb-sec{background:#111823;border-color:rgba(151,170,196,.10)}
-body.theme-slate .gst-sb-toggle{background:#2DD4BF;color:#04211C}
-body.theme-slate .gst-sb-title svg{color:#2DD4BF}
-/* 진입 애니메이션도 절제 */
-body.theme-slate .kpi,body.theme-slate .card,
-body.theme-slate .tablecard,body.theme-slate .alert,body.theme-slate .slicer{animation:none !important}
+  background:var(--surface-2) !important;border-color:var(--line) !important}
 
 /* ============================================================
    필터 사이드바 (GST.initSidebar)
@@ -388,8 +310,8 @@ body.theme-slate .tablecard,body.theme-slate .alert,body.theme-slate .slicer{ani
    ============================================================ */
 .gst-sidebar{position:fixed;top:0;left:0;bottom:0;width:300px;z-index:6000;
   transform:translateX(-102%);transition:transform .28s var(--ease);
-  background:linear-gradient(180deg,var(--bg1),var(--bg2));
-  border-right:1px solid var(--glass-border);box-shadow:var(--shadow-md);
+  background:var(--surface);
+  border-right:1px solid var(--line);box-shadow:var(--shadow-md);
   display:flex;flex-direction:column}
 body.gst-sb-open .gst-sidebar{transform:none}
 body.gst-sb-open{padding-left:324px !important}
@@ -404,15 +326,15 @@ body.gst-sb-open{padding-left:324px !important}
 .gst-sb-close:hover{color:var(--txt-main);background:var(--glass-hover)}
 .gst-sb-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px;
   display:flex;flex-direction:column;gap:12px}
-.gst-sb-sec{background:var(--glass);border:1px solid var(--glass-border);
+.gst-sb-sec{background:var(--surface-2);border:1px solid var(--line);
   border-radius:var(--r-md);padding:12px}
-.gst-sb-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;
-  color:var(--txt-muted);font-weight:700;margin-bottom:10px}
+.gst-sb-lbl{font-size:11px;letter-spacing:.2px;
+  color:var(--txt-muted);font-weight:600;margin-bottom:10px}
 .gst-sb-foot{padding:12px 14px;border-top:1px solid var(--glass-border);flex-shrink:0;
   display:flex;flex-direction:column;gap:8px}
-.gst-sb-reset{width:100%;background:var(--glass);border:1px solid var(--glass-border);
-  color:var(--txt-main);border-radius:var(--r-pill);padding:9px;font-size:12px;
-  font-weight:700;cursor:pointer;transition:all .2s var(--ease)}
+.gst-sb-reset{width:100%;background:var(--surface);border:1px solid var(--line);
+  color:var(--txt-main);border-radius:var(--r-md);padding:9px;font-size:12.5px;
+  font-weight:600;cursor:pointer;transition:all .2s var(--ease)}
 .gst-sb-reset:hover{border-color:var(--bad);color:var(--bad)}
 /* 푸터 도구: CSV 내보내기 · 자동 새로고침 토글 */
 .gst-sb-tools{display:flex;gap:8px}
@@ -420,22 +342,22 @@ body.gst-sb-open{padding-left:324px !important}
   color:var(--txt-muted);border-radius:8px;padding:7px 4px;font-size:11px;
   font-weight:700;cursor:pointer;transition:all .2s var(--ease);white-space:nowrap}
 .gst-sb-tool:hover{color:var(--txt-main);border-color:var(--txt-muted)}
-.gst-sb-tool.on{color:var(--accent-1);border-color:var(--accent-1);
-  background:rgba(45,212,191,.07)}
+.gst-sb-tool.on{color:var(--accent-ink);border-color:var(--accent-1);
+  background:var(--accent-soft)}
 /* 기간 빠른선택 칩 (고장·자재 사이드바에 자동 주입) */
 .gst-preset-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
 .gst-preset{padding:4px 11px;border-radius:6px;border:1px solid var(--glass-border);
   background:transparent;color:var(--txt-muted);font-size:11px;font-weight:600;
   cursor:pointer;transition:all .15s var(--ease)}
 .gst-preset:hover{color:var(--txt-main);border-color:var(--txt-muted)}
-.gst-preset.active{border-color:var(--accent-1);color:var(--accent-1);
-  background:rgba(45,212,191,.08)}
+.gst-preset.active{border-color:var(--accent-1);color:var(--accent-ink);
+  background:var(--accent-soft)}
 
 /* 토글 핸들 (사이드바에 붙어 함께 이동) */
 .gst-sb-toggle{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:6001;
   display:flex;flex-direction:column;align-items:center;gap:5px;
-  background:linear-gradient(160deg,var(--accent-2),var(--accent-3));color:#fff;
-  border:none;border-radius:0 12px 12px 0;padding:13px 7px;cursor:pointer;
+  background:var(--accent);color:#fff;
+  border:none;border-radius:0 10px 10px 0;padding:13px 7px;cursor:pointer;
   box-shadow:var(--shadow-md);transition:left .28s var(--ease),filter .2s}
 .gst-sb-toggle:hover{filter:brightness(1.12)}
 body.gst-sb-open .gst-sb-toggle{left:300px}
@@ -493,17 +415,16 @@ body.gst-sb-open .gst-sb-toggle{left:300px}
    생김새로 쓴다. 페이지마다 복붙하던 다중선택 박스 스타일을 여기로 올렸다. */
 
 /* FAB 다중선택 — 엑셀 필터 박스처럼 체크박스 목록 */
-.mselbtn{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;
-  color:var(--txt-main);font-size:12px;min-width:150px;text-align:left;cursor:pointer}
+.mselbtn{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:7px 10px;
+  color:var(--txt-main);font-size:12.5px;min-width:150px;text-align:left;cursor:pointer}
 .mselbox{display:none;position:absolute;top:100%;left:0;z-index:60;min-width:170px;margin-top:4px;
-  background:var(--bg-card,#101720);border:1px solid var(--glass-border);border-radius:12px;
-  padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.45);max-height:280px;overflow-y:auto}
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:8px;box-shadow:var(--shadow-md);max-height:280px;overflow-y:auto}
 .mselbox label{display:flex;gap:7px;align-items:center;font-size:12px;padding:4px 6px;border-radius:8px;cursor:pointer}
 .mselbox label:hover{background:var(--glass)}
 .mselbox .ms-all{display:flex;gap:6px;border-bottom:1px solid var(--glass-border);padding-bottom:6px;margin-bottom:6px}
 .mselbox .ms-all button{flex:1;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;
   padding:4px 0;color:var(--txt-main);font-size:11px;cursor:pointer}
-body.theme-light .mselbox{background:#fff}
 /* 박스는 «자기 칸»을 기준으로 떠야 한다. 기준(positioned ancestor)이 없으면
    position:fixed 인 사이드바가 기준이 되어 top:100% 가 사이드바 «바닥»이 된다 —
    박스는 화면 밖에 열리고, 사용자에게는 «눌러도 아무 일이 없는» 필터로 보인다. */
@@ -519,7 +440,7 @@ body.theme-light .mselbox{background:#fff}
    그 규칙이 체크박스까지 잡아 **체크박스 하나가 182px** 이 되고, 글자가 반대편 끝으로
    밀려 «줄마다 네모 하나, 저 멀리 글자 하나» 인 표가 됐다. 여기서 되돌린다. */
 .mselbox input[type=checkbox]{width:14px !important;height:14px;min-width:0 !important;
-  flex:0 0 auto;margin:0;accent-color:var(--accent,#22d3a6);cursor:pointer}
+  flex:0 0 auto;margin:0;accent-color:var(--accent,#2F6FED);cursor:pointer;border:none !important;box-shadow:none}
 /* 줄 전체가 누르는 자리다 — 좁은 네모만 겨냥하지 않게. 셀렉트 칸과 같은 리듬으로 맞춘다. */
 .mselbox label{justify-content:flex-start;padding:6px 8px;line-height:1.3;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -542,8 +463,8 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #gstSrcDetail{display:no
 .card:hover .capbtns,.trend-card:hover .capbtns,.cross-card:hover .capbtns,.tablecard:hover .capbtns,
 .card:focus-within .capbtns,.trend-card:focus-within .capbtns,.cross-card:focus-within .capbtns,.tablecard:focus-within .capbtns{opacity:1}
 @media (hover:none){.capbtns{opacity:.55}}
-.gexp-menu{position:absolute;z-index:40;min-width:200px;background:var(--card,#161b22);border:1px solid var(--glass-border,rgba(151,170,196,.25));
-  border-radius:10px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-family:inherit}
+.gexp-menu{position:absolute;z-index:40;min-width:200px;background:var(--surface,#fff);border:1px solid var(--line,#E4E7EC);
+  border-radius:10px;padding:6px;box-shadow:var(--shadow-md);font-family:inherit}
 .gexp-menu button{display:block;width:100%;text-align:left;background:transparent;border:0;color:var(--txt-main,#e6edf3);
   font:600 12px/1.6 inherit;padding:6px 10px;border-radius:7px;cursor:pointer}
 .gexp-menu button:hover{background:var(--glass-hover,rgba(255,255,255,.08))}
@@ -554,7 +475,7 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #gstSrcDetail{display:no
 /* 라이트 테마에서 안 보이던 하드코딩 색 — 추이·교차 카드 제목(fault·scrubber)과 pm 드릴 모달 제목은 #dfe6ff·#fff 였다.
    theme.css 는 .card h3 만 알았다. */
 .trend-header h3,.cross-header h3,.dm-title{color:var(--txt-main) !important}
-body.theme-light .dm-box{background:#fff}
+.dm-box{background:var(--surface)}
 /* 카드 노트 — 줄바꿈이 든 문장(GST.setNote 가 .ml 을 단다)만 pre-line. 전부에 걸면 정적 HTML 의 들여쓰기 줄바꿈이 빈 줄로 뜬다.
    .warn 은 «화면 전체의 숫자 뜻이 바뀌는 경고»(원장이 비어 수선실적으로 세는 중 등)를 보조 설명과 가른다. */
 .card-note.ml{white-space:pre-line}
@@ -563,10 +484,10 @@ body.theme-light .dm-box{background:#fff}
 @media(max-width:1250px){.grid3{grid-template-columns:repeat(2,1fr) !important}}
 /* core 가 끼워 넣는 활성 필터 칩 줄(#fchips[data-gst] · pm·scrubber). 페이지 소유 칩 줄은 자기 CSS 를 쓴다. */
 .gst-fchips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;
-  background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:9px 14px}
-.gst-fchips .fchips-label{font-size:11px;font-weight:700;color:var(--accent-2,var(--accent-1))}
-.gst-fchips .fchip{display:inline-flex;align-items:center;gap:5px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4);
-  color:var(--txt-main);padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer}
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:9px 14px}
+.gst-fchips .fchips-label{font-size:12px;font-weight:600;color:var(--txt-muted)}
+.gst-fchips .fchip{display:inline-flex;align-items:center;gap:5px;background:var(--accent-soft);border:1px solid #C7D7FB;
+  color:var(--accent-ink);padding:4px 11px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer}
 .gst-fchips .fchip .fx{opacity:.7;font-size:9px}
 .gst-fchips .fchip:hover{border-color:var(--bad)}
 .gst-fchips .fchip-clear{margin-left:auto;background:none;border:1px solid var(--glass-border);color:var(--txt-muted);
@@ -576,7 +497,7 @@ body.theme-light .dm-box{background:#fff}
   border-radius:14px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer}
 /* 앵커 목차(주간현황) — 세로로 이어 읽는 페이지라 «숨기는 탭»(.gst-secnav)이 아니라 스크롤 링크다 */
 .gst-anchors{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
-.gst-anchors a{font-size:11px;font-weight:700;color:var(--txt-muted);text-decoration:none;padding:4px 11px;border-radius:20px;
-  border:1px solid var(--glass-border);background:var(--glass)}
-.gst-anchors a:hover{color:var(--txt-main);border-color:var(--accent-1)}
+.gst-anchors a{font-size:12px;font-weight:600;color:var(--txt-2);text-decoration:none;padding:5px 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--surface)}
+.gst-anchors a:hover{color:var(--accent-ink);border-color:var(--accent-1);background:var(--accent-soft)}
 @media print{.gst-anchors,.gst-fchips,.gst-empty-clear{display:none !important}}

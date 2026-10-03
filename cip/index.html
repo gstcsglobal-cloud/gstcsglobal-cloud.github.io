@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=143"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=144"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -42,13 +42,13 @@ body.theme-light .btn-grad{color:#fff}
 .pt-btn.active{color:#fff;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));border-color:transparent}
 body.theme-light .pt-btn.active{color:#fff}
 .pt-note{font-size:11px;color:var(--txt-muted);margin-left:4px}
-.pt-inp{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:0 8px;color:var(--txt-main);font-size:11px;height:28px;line-height:28px;outline:none;color-scheme:dark;vertical-align:middle}
+.pt-inp{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:0 8px;color:var(--txt-main);font-size:11px;height:28px;line-height:28px;outline:none;vertical-align:middle}
 body.theme-light .pt-inp{color-scheme:light;color:#0f172a}
 .pt-cap{font-family:inherit;font-size:10px;color:var(--txt-muted);font-weight:700;margin:0 2px 0 6px;vertical-align:middle}
 
 .slicer{background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:10px 14px;backdrop-filter:blur(12px);box-shadow:var(--card-shadow)}
 .slicer .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--txt-muted);margin-bottom:7px;font-weight:700}
-.slicer select,.slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;width:100%;color-scheme:dark}
+.slicer select,.slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;width:100%}
 body.theme-light .slicer select,body.theme-light .slicer input{color-scheme:light;color:#0f172a}
 .slicer select:focus,.slicer input:focus{border-color:var(--accent-1)}
 .fchips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:10px 14px;background:var(--glass);border:1px solid var(--accent-2);border-radius:12px}
@@ -78,16 +78,16 @@ body.theme-light .slicer select,body.theme-light .slicer input{color-scheme:ligh
 /* 차트별 주/월 미니 토글 */
 .mini-per{position:absolute;top:14px;right:14px;display:flex;gap:0;z-index:5;border:1px solid var(--glass-border);border-radius:12px;overflow:hidden}
 .mp-btn{background:transparent;border:none;padding:3px 10px;font-size:10px;font-weight:700;color:var(--txt-muted);cursor:pointer;font-family:inherit}
-.mp-btn.active{background:var(--accent-1);color:#04211d}
+.mp-btn.active{background:var(--accent-1);color:#fff}
 body.theme-light .mp-btn.active{color:#fff}
 /* 차트 복사·저장·축설정 */
 .capbtns{position:absolute;top:11px;right:14px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
 .card:hover .capbtns,.tablecard:hover .capbtns{opacity:1}
 .capbtn{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;padding:2px 8px;color:var(--txt-muted);font-size:11px;font-weight:700;cursor:pointer;height:22px;line-height:16px}
 .capbtn:hover{color:#fff;border-color:var(--accent-1)}
-#capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
+#capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1);color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
 /* 축 범위 편집 팝오버 */
-.axpop{position:absolute;top:42px;right:12px;z-index:60;background:var(--bg-card,#101720);border:1px solid var(--glass-border);border-radius:12px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.45);min-width:190px}
+.axpop{position:absolute;top:42px;right:12px;z-index:60;background:var(--bg-card,#101720);border:1px solid var(--glass-border);border-radius:12px;padding:12px 14px;box-shadow:0 8px 24px rgba(16,24,40,.12);min-width:190px}
 body.theme-light .axpop{background:#fff}
 .axpop .axp-t{font-size:11px;font-weight:800;color:var(--txt-main);margin-bottom:8px}
 .axpop .axp-r{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:var(--txt-muted)}
@@ -131,11 +131,11 @@ tr:hover td{background:var(--glass-hover)}
 @media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}}
 @media(max-width:768px){.card h3{padding-right:0}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=143">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=144">
 </head>
 <body>
 
-<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
     <h1 data-i="title">CIP 현황</h1>

@@ -11,7 +11,7 @@
 <script>window.ChartZoom||document.write('<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=143"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=144"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -99,7 +99,7 @@ body.theme-light .btn-grad { color: #fff; }
 .card:hover .capbtns{opacity:1}
 .capbtn{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;padding:2px 8px;color:var(--txt-muted,#94a3b8);font-size:11px;font-weight:700;cursor:pointer;height:22px;line-height:16px}
 .capbtn:hover{color:#fff;border-color:var(--accent-1,#2dd4bf)}
-#capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1,#2dd4bf);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
+#capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1,#2dd4bf);color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
 @media print{.capbtns,.header-right,.slicers,.fchips{display:none!important}.card{break-inside:avoid;page-break-inside:avoid}}
 
 .theme-wrap, .lang-wrap{position:relative}
@@ -114,7 +114,7 @@ body.theme-light .btn-grad { color: #fff; }
 
 .slicer{background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:10px 14px;backdrop-filter:blur(12px);box-shadow:var(--card-shadow);}
 .slicer .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--txt-muted);margin-bottom:7px;font-weight:700}
-.slicer select, .slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;width:100%;color-scheme:dark;}
+.slicer select, .slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;width:100%;}
 body.theme-light .slicer select, body.theme-light .slicer input { color-scheme: light; color:#0f172a; }
 .slicer select:focus, .slicer input:focus{border-color:var(--accent-1)}
 
@@ -145,7 +145,7 @@ body.theme-light .slicer select, body.theme-light .slicer input { color-scheme: 
 .cross-header h3{font-size:15px;font-weight:800;margin:0;color:var(--accent-1);cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
 .cross-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .cross-controls .ctrl-group{display:flex;align-items:center;gap:6px}
-.cross-controls .ctrl-group select{background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;padding:5px 10px;color:var(--txt-main);font-size:11px;outline:none;color-scheme:dark}
+.cross-controls .ctrl-group select{background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;padding:5px 10px;color:var(--txt-main);font-size:11px;outline:none}
 body.theme-light .cross-controls .ctrl-group select { color-scheme: light; color:#0f172a; }
 .cross-controls .ctrl-group select:focus { border-color: var(--accent-1); }
 
@@ -183,8 +183,8 @@ body.theme-light .cross-controls .ctrl-group select { color-scheme: light; color
 /* 심층분석 표 — 줄이 클릭 대상임을 손끝에 알린다 */
 .dp-row:hover td{background:rgba(99,102,241,.13)}
 @media(max-width:900px){.grid2-deep{grid-template-columns:1fr !important}}
-#crossDetailOv{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
-#crossDetailOv .cd-card{background:var(--glass);backdrop-filter:blur(28px);border:1px solid var(--glass-border);border-radius:14px;max-width:760px;width:100%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+#crossDetailOv{position:fixed;inset:0;background:rgba(16,24,40,.12);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
+#crossDetailOv .cd-card{background:var(--glass);backdrop-filter:blur(28px);border:1px solid var(--glass-border);border-radius:14px;max-width:760px;width:100%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(16,24,40,.12)}
 #crossDetailOv .cd-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--glass-border);font-weight:800;font-size:13px;color:var(--txt-main)}
 #crossDetailOv .cd-close{cursor:pointer;color:var(--txt-muted);font-size:16px;background:none;border:none}
 #crossDetailOv .cd-body{overflow:auto;padding:0 18px 16px}
@@ -239,11 +239,11 @@ canvas{cursor:pointer}
 .wleg i.pa{background:var(--accent-2)}
 .wleg b{color:var(--txt-main);font-variant-numeric:tabular-nums}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=143">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=144">
 </head>
 <body>
 
-<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
     <h1 data-i="title">자재 실적 대시보드</h1>
@@ -1188,7 +1188,7 @@ const valLabelPlugin={id:'valLabel',
     if(!meta||!meta.data||!meta.data.length)return;
     const nums=ds.data.filter(v=>v!=null&&isFinite(v));
     const max=nums.length?Math.max.apply(null,nums):null;
-    ctx.save();ctx.fillStyle=o.color||'#E6EDF3';
+    ctx.save();ctx.fillStyle=o.color||GST.chartTheme().ink;
     ctx.font='700 11px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
     meta.data.forEach(function(el,i){
       const v=ds.data[i]; if(v==null)return;
@@ -1209,14 +1209,14 @@ const donutCenterPlugin={id:'dCenter',
     const x=meta.data[0].x,y=meta.data[0].y,ctx=chart.ctx;
     const total=chart.data.datasets[0].data.reduce((a,b)=>a+(+b||0),0);
     ctx.save();ctx.textAlign='center';
-    ctx.fillStyle=o.color||'#E6EDF3';
+    ctx.fillStyle=o.color||GST.chartTheme().ink;
     ctx.font='800 16px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
     ctx.textBaseline='bottom';ctx.fillText(total.toLocaleString(),x,y+2);
     ctx.fillStyle=o.mut||'#8B98A9';
     ctx.font='700 8px "Pretendard Variable",Pretendard,"Segoe UI",sans-serif';ctx.textBaseline='top';ctx.fillText('TOTAL',x,y+5);
     ctx.restore();
   }};
-function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
+function inkStrong(TH){return TH.ink||(TH.key==='slate'?'#E6EDF3':'#101828');}
 // 가로 막대 + 값 라벨 (클릭 필터 없음 — EXCL/슬라이서로 제어)
 function mkHBarX(id,entries,total,color,topN,colorFn,onClickCb){
   const top=entries.slice(0,topN||10);

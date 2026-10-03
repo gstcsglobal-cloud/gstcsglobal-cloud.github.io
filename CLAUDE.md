@@ -2328,6 +2328,35 @@ report 의 「처음 보는 설비상태 …」. 네 언어 어디서도 한국�
 음성 대조 넷 확인 — 모드 잠금을 풀면 / op 검증을 빼면 / 짝 스코프를 빼면 / 정본 대신
 별칭[1]을 쓰면 전부 붉게 뜬다.
 
+## 디자인 — 라이트가 기본이고, 토큰은 한 벌이다 (v139 · 사용자 지적)
+
+사용자: 「다크 배경 눈도 너무 아프고 … 디자인이 너무 별로인데 … 첫인상이 핵심인데」.
+확정: **라이트 기본 + 다크 선택** · 절제된 SaaS 룩 · 첫인상(로그인·셸·주간현황)부터.
+
+- **`:root` 가 라이트 값이고 `body.theme-slate` 가 다크다.** 테마는 둘뿐이다(셸 `THEMES`).
+  옛 저장값(`default`=Navy · `burgundy`)과 `theme-light` 클래스는 라이트로 읽는다 — 지우지 않는다.
+  글래스(블러·반투명)·그라데이션 배경·그라데이션 제목·진입 애니메이션·호버 들썩임은 뺐다.
+- **토큰 이름이 규약이다** — `--bg`·`--surface`·`--surface-2`·`--line`·`--line-2`·`--txt-main`·`--txt-2`·`--txt-muted`·
+  `--accent`·`--accent-soft`·`--accent-ink`·`--ok/--warn/--bad`(+`-soft`). 옛 이름(`--glass`·`--glass-border`·`--bg1`·
+  `--bg-card`·`--card`·`--bd`)은 **새 토큰의 별칭**으로 남겼다 — 여덟 페이지의 인라인 CSS 가 아직 쓴다.
+  ⚠ 셸 `index.html` 은 theme.css 를 안 싣는다 — 같은 이름의 토큰을 셸 `<style>` 에 한 벌 더 둔다. 값을 바꾸면 둘 다.
+- ⚠ **`body.className` 을 통째로 갈지 않는다.** 셸 `applyTheme`·core `setThemeClass` 가 `theme-*` 클래스만 바꾼다 —
+  통째로 갈면 `gst-inframe`·`gst-sb-open`·`kiosk-on` 이 날아간다. 그리고 **저장값이 없을 때 1.5초 뒤 재적용이
+  셸이 메시지로 걸어 둔 다크를 라이트로 되돌렸다**(교차 출처 iframe 은 셸의 sessionStorage 를 못 본다) —
+  이제 저장값이 없으면 이미 걸린 클래스를 지킨다.
+- **차트 잉크는 `GST.chartTheme()` 한 곳** — `txt`(눈금)·`grid`·`ink`(값 라벨)·`status`. 페이지 플러그인의
+  값 라벨 기본색이 `'#E6EDF3'`(흰색)으로 박혀 있어 라이트에서 **라벨이 통째로 안 보였다** → `GST.chartTheme().ink`.
+  `inkStrong(TH)` 사본들도 `TH.ink` 를 먼저 본다.
+- **로그인 카드는 `GST._loginUI` 한 벌**(카드·입력·버튼 스타일 문자열). 넷(폼·미설정·CDN 실패·만료/거부)이 같은 모양이다.
+  오버레이 바탕은 `#F5F6F8` — 페이지 HTML 의 옛 `#070b10` 도 같이 바꿨고 `authGate` 가 한 번 더 덮는다.
+- **제목·버튼에 이모지를 두지 않는다**(v135 규약을 공통바·요약 라벨까지) — `🎨`·`📊 PPT`·`🔔`·`🧊`·`📋 이번 주 요약`·`▶ 시작`.
+- 다른 일곱 페이지는 `<style>` 블록 안의 `rgba(255,255,255,.0N)`(글래스 면·선)·`color:#04211d`·`color-scheme:dark`·
+  `#dfe6ff` 를 토큰으로 일괄 치환했다 — **JS 문자열은 손대지 않았다**(Chart.js 는 CSS 변수를 못 읽는다).
+- 지킬 것: `t-export` 의 `@media (hover:none){.capbtns{opacity:.55}}` 정확 문자열 · `t-role` 의 `#gstSrcDetail` 규칙 ·
+  `t-kpi` 의 «표식 있는 카드만 pointer» · `t-ver` 의 `?v=` (VER 144).
+- 안 한 것(다음): 여덟 페이지 인라인 CSS 의 글래스 잔재 정리(지금은 별칭으로 «보이기만» 맞다) · 차트 값 라벨 밀도 ·
+  `/upload/`·`/diag/`·`/offline/` 화면의 토큰화.
+
 ## 검증
 
 `tests/`에 33종이 있다.

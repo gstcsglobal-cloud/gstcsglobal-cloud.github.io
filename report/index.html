@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=143"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=144"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -18,28 +18,25 @@
 
 body{
    color:var(--txt-main);
-  background:var(--bg-gradient);
-  background-size:400% 400%; animation:grad 18s ease infinite; min-height:100vh; padding:28px 32px;
+  background:var(--bg); min-height:100vh; padding:28px 32px;
 }
-@keyframes grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
 .header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.btn{background:linear-gradient(90deg,var(--accent-1),var(--accent-2));border:none;border-radius:30px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;padding:9px 20px;transition:opacity .2s;text-decoration:none;display:inline-block}
-.btn:hover{opacity:.85}
-.btn-back{background:var(--glass);border:1px solid var(--glass-border);color:var(--txt-main)}
+.btn{background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;padding:9px 16px;transition:opacity .2s;text-decoration:none;display:inline-block;font-family:inherit}
+.btn:hover{opacity:.9}
+.btn-back{background:var(--surface);border:1px solid var(--line);color:var(--txt-main)}
 .lang-wrap{position:relative}
-.lang-btn{background:var(--glass);border:1px solid var(--glass-border);color:var(--txt-main);padding:9px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
-.lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:#1a2430;border:1px solid var(--glass-border);border-radius:14px;padding:6px;z-index:100;min-width:130px;display:none}
+.lang-btn{background:var(--surface);border:1px solid var(--line);color:var(--txt-main);padding:9px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit}
+.lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px;z-index:100;min-width:130px;display:none;box-shadow:var(--shadow-md)}
 .lang-dropdown.open{display:block}
-.lang-item{padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600}
-.lang-item:hover{background:rgba(255,255,255,.08)}
+.lang-item{padding:9px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600}
+.lang-item:hover{background:var(--surface-2)}
 .status{font-size:12px;color:var(--txt-muted);margin-bottom:14px;text-align:right}
-.status.ok{color:var(--accent-2)} .status.err{color:#fb7185}
+.status.ok{color:var(--txt-muted)} .status.err{color:var(--bad)}
 
-.slicer{background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:12px 16px;backdrop-filter:blur(12px)}
-.slicer .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--txt-muted);margin-bottom:8px;font-weight:700}
-.slicer select,.slicer input{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;color:var(--txt-main);font-size:12px;outline:none;min-width:150px;color-scheme:dark}
-body.theme-light .slicer select,body.theme-light .slicer input{color-scheme:light;color:#0f172a}
+.slicer{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.slicer .lbl{font-size:11.5px;letter-spacing:0;color:var(--txt-muted);margin-bottom:8px;font-weight:600}
+.slicer select,.slicer input{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;color:var(--txt-main);font-size:12.5px;outline:none;min-width:150px}
 .slicer .dts{display:flex;align-items:center;gap:6px}
 .fitcell{cursor:pointer;border-bottom:1px dashed var(--txt-muted)}
 .fitcell:hover{color:var(--accent,#2dd4bf)}
@@ -47,27 +44,25 @@ body.theme-light .slicer select,body.theme-light .slicer input{color-scheme:ligh
 .linebtn{background:var(--glass);border:1px solid var(--glass-border);border-radius:10px;padding:7px 10px;
   color:var(--txt-main);font-size:12px;min-width:150px;text-align:left;cursor:pointer}
 .linebox{display:none;position:absolute;top:100%;left:0;z-index:60;min-width:170px;margin-top:4px;
-  background:var(--bg-card,#101720);border:1px solid var(--glass-border);border-radius:12px;
-  padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:8px;box-shadow:var(--shadow-md)}
 .linebox label{display:flex;gap:7px;align-items:center;font-size:12px;padding:4px 6px;border-radius:8px;cursor:pointer}
 .linebox label:hover{background:var(--glass)}
 .linebox .lb-all{display:flex;gap:6px;border-bottom:1px solid var(--glass-border);padding-bottom:6px;margin-bottom:6px}
 .linebox .lb-all button{flex:1;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;
   padding:4px 0;color:var(--txt-main);font-size:11px;cursor:pointer}
-body.theme-light .linebox{background:#fff}
 .slicer .dts input{min-width:130px}
 .slicer .dts span{color:var(--txt-muted)}
 .sec-note{font-size:10px;color:var(--txt-muted);font-weight:600;margin-left:8px;text-transform:none;letter-spacing:0}
 .grp-tog{display:inline-flex;gap:0;margin-left:12px;border:1px solid var(--glass-border);border-radius:10px;overflow:hidden;vertical-align:middle}
 .gt-btn{font-family:inherit;background:transparent;border:none;padding:3px 12px;font-size:11px;font-weight:700;color:var(--txt-muted);cursor:pointer}
-.gt-btn.active{background:var(--accent-1);color:#04211d}
-body.theme-light .gt-btn.active{color:#fff}
+.gt-btn.active{background:var(--accent-1);color:#fff}
 
 /* KPI 레이아웃은 assets/theme.css 의 정본(.kpis/.kpi)이 담당 — 여기서는 카드 외형만 */
 .kpi{border-radius:18px;padding:16px 18px}
 
 
-.sec-h{font-size:13px;font-weight:800;color:var(--txt-muted);letter-spacing:1.5px;text-transform:uppercase;margin:22px 0 10px 2px}
+.sec-h{font-size:15px;font-weight:700;color:var(--txt-main);letter-spacing:-.2px;text-transform:none;margin:26px 0 12px 2px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
 .grid2{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;margin-bottom:16px}
 /* Alarm·고장 행 — 3카드(차트·TOP3·교육계획) 동일 높이 · 내용은 카드 안에서 미니 스크롤 */
@@ -76,24 +71,24 @@ body.theme-light .gt-btn.active{color:#fff}
 .arow>.card,.arow>.tablecard{height:328px;display:flex;flex-direction:column;margin-bottom:0;min-width:0}
 .arow .cw{flex:1;height:auto;min-height:0}
 .arow .tbl-wrap{flex:1;min-height:0;overflow:auto}
-.arow .tbl-wrap thead th{position:sticky;top:0;background:var(--bg-card,#101720);z-index:2}
+.arow .tbl-wrap thead th{position:sticky;top:0;background:var(--surface-2);z-index:2}
 @media(max-width:1250px){.arow{grid-template-columns:1fr}
   .arow>.card,.arow>.tablecard{height:auto}
   .arow .cw{height:var(--ch-std,240px);flex:none}
   .arow .tbl-wrap{max-height:260px;flex:none}}
-.card{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:18px;backdrop-filter:blur(14px);position:relative}
-.mini-per{position:absolute;top:14px;right:14px;display:flex;gap:0;z-index:5;border:1px solid var(--glass-border);border-radius:12px;overflow:hidden}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;position:relative}
+.mini-per{position:absolute;top:14px;right:14px;display:flex;gap:0;z-index:5;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface-2)}
 /* 카드 안 인라인 체크 토글 (입사·퇴사 현장 인원 필터) */
 .onsw{display:inline-flex;align-items:center;gap:4px;margin-left:8px;cursor:pointer;user-select:none;white-space:nowrap}
 .onsw input{accent-color:var(--accent-1);width:12px;height:12px;margin:0;cursor:pointer}
 /* 차트 고해상도 복사·저장 버튼 (카드 hover 시 표시) */
 .capbtns{position:absolute;top:11px;right:70px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
 .card:hover .capbtns,.tablecard:hover .capbtns{opacity:1}
-.capbtn{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;padding:2px 8px;color:var(--txt-muted);font-size:11px;font-weight:700;cursor:pointer;height:22px;line-height:16px}
-.capbtn:hover{color:#fff;border-color:var(--accent-1)}
+.capbtn{font-family:inherit;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:2px 8px;color:var(--txt-muted);font-size:11px;font-weight:600;cursor:pointer;height:22px;line-height:16px}
+.capbtn:hover{color:var(--accent-ink);border-color:var(--accent-1)}
 @media print{.capbtns{display:none!important}.card,.tablecard{break-inside:avoid;page-break-inside:avoid}.grid3,.grid2{grid-template-columns:1fr 1fr}}
-#capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none}
-.axpop{position:absolute;top:42px;right:12px;z-index:60;background:var(--bg-card,#101720);border:1px solid var(--glass-border);border-radius:12px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.45);min-width:190px}
+#capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#101828;color:#fff;font-weight:600;font-size:13px;padding:9px 18px;border-radius:10px;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;box-shadow:var(--shadow-md)}
+.axpop{position:absolute;top:42px;right:12px;z-index:60;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow-md);min-width:190px}
 .axpop .axp-t{font-size:11px;font-weight:800;color:var(--txt-main);margin-bottom:8px}
 .axpop .axp-r{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:11px;color:var(--txt-muted)}
 .axpop .axp-r b{width:16px;color:var(--txt-main)}
@@ -102,17 +97,17 @@ body.theme-light .gt-btn.active{color:#fff}
 .axpop .axp-btns button{flex:1;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;color:var(--txt-main);font-size:11px;font-weight:700;padding:5px 0;cursor:pointer}
 .axpop .axp-btns button:hover{border-color:var(--accent-1)}
 /* 활성 필터 배지 */
-#filtBadge{margin:-6px 0 14px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--accent-1)}
-#filtBadge .fchip{background:var(--glass);border:1px solid var(--accent-1);border-radius:14px;padding:3px 12px}
-#filtBadge .fclr{background:transparent;border:1px solid var(--glass-border);border-radius:14px;padding:3px 10px;color:var(--txt-muted);cursor:pointer;font-weight:700}
+#filtBadge{margin:-6px 0 14px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--txt-muted)}
+#filtBadge .fchip{background:var(--accent-soft);border:1px solid #C7D7FB;color:var(--accent-ink);border-radius:999px;padding:3px 12px}
+#filtBadge .fclr{background:transparent;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--txt-muted);cursor:pointer;font-weight:600;font-family:inherit}
 /* 드릴다운 모달 */
 #drillModal{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center}
-#drillModal .drill-bg{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px)}
-#drillModal .drill-box{position:relative;background:var(--card,#0E141C);border:1px solid var(--glass-border);border-radius:16px;padding:20px 22px;max-width:640px;width:92%;max-height:80vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+#drillModal .drill-bg{position:absolute;inset:0;background:rgba(16,24,40,.45)}
+#drillModal .drill-box{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px;max-width:640px;width:92%;max-height:80vh;overflow:auto;box-shadow:0 20px 60px rgba(16,24,40,.25)}
 #drillModal h3{font-size:15px;font-weight:800;margin:0 0 12px;padding-right:28px}
 #drillModal .drill-x{position:absolute;top:14px;right:16px;background:transparent;border:none;color:var(--txt-muted);font-size:18px;cursor:pointer;line-height:1}
 #drillModal table{width:100%;border-collapse:collapse;font-size:12px}
-#drillModal th{text-align:left;color:var(--txt-muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;border-bottom:1px solid var(--glass-border)}
+#drillModal th{text-align:left;color:var(--txt-muted);font-size:11px;padding:6px 8px;border-bottom:1px solid var(--line)}
 #drillModal td{padding:6px 8px;border-bottom:1px solid var(--glass-border)}
 #drillModal td.num{text-align:right;font-variant-numeric:tabular-nums}
 #drillModal .dsum{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px}
@@ -125,31 +120,30 @@ body.theme-light .gt-btn.active{color:#fff}
 
 /* 로딩 스켈레톤 */
 .skel{position:relative;overflow:hidden;background:var(--glass)}
-.skel::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);animation:skelmove 1.2s infinite}
+.skel::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(16,24,40,.05),transparent);animation:skelmove 1.2s infinite}
 @keyframes skelmove{100%{transform:translateX(100%)}}
 .ft-view{margin:-2px 0 8px}
 .ft-view select{background:var(--glass);color:var(--txt-main);border:1px solid var(--glass-border);border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer}
 .mp-btn{background:transparent;border:none;padding:3px 10px;font-size:10px;font-weight:700;color:var(--txt-muted);cursor:pointer}
-.mp-btn.active{background:var(--accent-1);color:#04211d}
-body.theme-light .mp-btn.active{color:#fff}
-.card h3{font-size:13.5px;font-weight:700;margin-bottom:4px;color:var(--txt-main)}
-.card .card-note{font-size:10.5px;color:var(--txt-muted);margin-bottom:10px}
+.mp-btn.active{background:var(--accent-1);color:#fff}
+.card h3{font-size:14px;font-weight:600;margin-bottom:4px;color:var(--txt-main)}
+.card .card-note{font-size:12px;color:var(--txt-muted);margin-bottom:10px}
 .card .cw{position:relative;height:var(--ch-std,240px)}
 .bignums{display:flex;flex-direction:column;gap:14px;justify-content:center;height:250px}
 .bn{display:flex;align-items:baseline;gap:10px}
 .bn .n{font-size:30px;font-weight:800;min-width:110px;text-align:right}
 .bn .l{font-size:12px;color:var(--txt-muted);font-weight:600}
-.tablecard{background:var(--glass);border:1px solid var(--glass-border);border-radius:18px;padding:18px;backdrop-filter:blur(14px);margin-bottom:16px}
-.tablecard h3{font-size:13.5px;font-weight:700;margin-bottom:10px}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{text-align:left;padding:9px 11px;color:var(--txt-muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--glass-border)}
-td{padding:8px 11px;border-bottom:1px solid var(--glass-border)}
+.tablecard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+.tablecard h3{font-size:14px;font-weight:600;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;padding:9px 11px;color:var(--txt-muted);font-size:11px;border-bottom:1px solid var(--line)}
+td{padding:8px 11px;border-bottom:1px solid var(--line)}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
 .rank{display:inline-block;width:22px;height:22px;border-radius:50%;text-align:center;line-height:22px;font-weight:800;font-size:11px;background:var(--glass-hover)}
 .tcnt{font-size:10px;font-weight:800;color:var(--txt-muted)}
 .tval{display:block;line-height:1.5;white-space:normal}
-.rank.r1{background:rgba(230,103,103,.25);color:#e66767}
-.rank.r2{background:rgba(250,178,25,.22);color:#fab219}
+.rank.r1{background:var(--bad-soft);color:var(--bad)}
+.rank.r2{background:var(--warn-soft);color:var(--warn)}
 .empty{text-align:center;padding:24px;color:var(--txt-muted)}
 /* Scrubber 가동 현황 표 */
 .tbl-wrap{overflow-x:auto}
@@ -161,8 +155,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .op-tbl td.lb{text-align:left;font-weight:700;white-space:nowrap}
 .op-tbl td.corp{text-align:center;font-weight:800;vertical-align:middle;border-right:1px solid var(--glass-border)}
 .op-tbl tr.tot td{font-weight:800;background:var(--glass-hover);border-top:2px solid var(--glass-border)}
-.op-tbl td.neg{color:#fb7185}
-.op-tbl td.pos{color:#4ade80}
+.op-tbl td.neg{color:var(--bad)}
+.op-tbl td.pos{color:var(--ok)}
 .op-tbl td.mut{color:var(--txt-muted)}
 @media(max-width:1250px){.grid2{grid-template-columns:1fr}}
 @media print{
@@ -173,11 +167,11 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=143">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=144">
 </head>
 <body>
 
-<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
     <h1 data-i="title" data-lock>주간 현황</h1>
@@ -231,8 +225,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <!-- 기간·마감·차트 디자인·PPT 컨트롤은 셸 상단 공통바(#gbar)로 이동 — GST.pageBar 등록부 참조 -->
 <div id="filtBadge" style="display:none"></div>
 
-<div id="wkNarr" style="font-size:13px;color:var(--txt-muted);margin:-2px 0 16px;padding:10px 15px;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;line-height:1.7">
-  <b id="wkNarrLabel" style="color:var(--txt-main)">📋 이번 주 요약</b> <span id="wkNarrTxt" style="margin-left:6px"></span></div>
+<div id="wkNarr" style="font-size:13px;color:var(--txt-2);margin:-2px 0 16px;padding:10px 15px;background:var(--surface);border:1px solid var(--line);border-radius:12px;line-height:1.7">
+  <b id="wkNarrLabel" style="color:var(--txt-main)">이번 주 요약</b> <span id="wkNarrTxt" style="margin-left:6px"></span></div>
 <div class="kpis">
   <div class="kpi"><div class="krow"><span class="val" id="kp1">—</span></div><div class="cap" data-i="kp1">재직 인원</div><div class="kf" id="kf1"></div><div class="spark" id="sp1"></div></div>
   <div class="kpi"><div class="krow"><span class="val" id="kp2">—</span></div><div class="cap" data-i="kp2">이번 달 입사 · 퇴사</div><div class="kf" id="kf2"></div><div class="spark" id="sp2"></div></div>
@@ -431,7 +425,7 @@ function guessCountry(op){
 }
 
 const T={
-ko:{sl_more:'주간현황 전용',title:'주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 주간/월간 요약',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_region:'구분',sl_customer:'고객사',sl_line:'라인',sl_fab:'FAB',sl_period:'기간',all:'전체',hr_note:'고객사 필터 연동 · 국가/라인 미적용',hr_note2:'',sec_ops:'운영',ops_note:'가용인력 = 인원현황의 현장(O) 재직자 · 고객사 필터 연동',ops_wait:'인원현황·휴가현황 시트 연결 대기 — report/index.html 상단의 GID_ROSTER / GID_LEAVE 값을 시트 gid 숫자로 바꿔주세요',ch_att:'출근 · 휴가',note_att:'평일 기준 일평균 · 출근 = 가용인력 − 휴가',att_a:'출근',att_l:'휴가',ch_to:'총인원 vs TO',note_to:'TO = 반입 챔버 ÷ 30 (DUAL=2·SINGLE=1) · 총인원 = 현장 가용인력',head_l:'총인원',ch_chp:'인당 관리 챔버',note_chp:'반입 챔버(누적) ÷ 가용인력 · 챔버/인원 수는 툴팁',cutoff:'마감',att_pj:'인당작업',man_tot:'공수(h)',grp_t:'경력',grp_s:'소속',cr_u1:'1년 미만',cr_u2:'1~2년',cr_u3:'2년 이상',ch_career:'단지별 인원 추이',note_career:'각 구간 말 기준 현장(O) 재직 · 단지별 스택 (단지가 없으면 FAB·고객사)',nCareer:'1년미만 {a} · 1~2년 {b} · 2년+ {c}명',edu_tg:'대상인원',edu_rt:'완료율',edu_goal:'목표 90%',edu_ttf:'완료 {d} / 대상 {t}',man_sum:'합계',chp_c:'챔버(반입)',chp_p:'인당 관리',nTo:'충원율 {p}% · TO 대비 {d}명',nEdu:'완료율 {p}% · 완료 {d}/{t}명 (LV1+LV2)',nCip:'진행율 {p}% · 잔여 {n}건',nAtt:'일평균 출근 {a}명 · 휴가 {l}명 · 작업 {j}건 (인당 {p}건)',nChp:'인당 {v}챔버 (챔버 {c} · 인원 {h}명)',nMan:'인당 일평균 {v}h · PM {pm}h',nMan_ex:'공수 분모 제외 {n}명',n_drop:'집계 제외 — {v}',u_case:'건',op_unk_u:'대',op_unk:'⚠ 처음 보는 설비상태 {n}대 — 반입·가동 어디에도 안 들어갔습니다 ({v})',dq_drop:'집계에서 빠진 행 — 「내부·내적」이 아닌 값',dq_drop_a:'시트의 「내적/외적」 값이 맞는지 확인하세요',dq_rnd:'「{v}」로 잡힌 라인 표기',dq_rnd_a:'시트에 새 라인 표기가 생겼는지 확인하세요',dq_hex:'공수 분모에서 뺀 인원 — 팀장·OFFICE·단지장',dq_hex_u:'명',dq_hex_a:'인원현황의 직책·단지·라인 값을 확인하세요',dq_unk:'처음 보는 설비상태 — 반입·가동 어디에도 안 들어갔습니다',dq_unk_a:'설치현황의 설비상태 값을 확인하세요',nFt:'최근 구간 {n}건 · 직전 대비 {d}',per_ws:'주',per_ms:'월',per_ys:'연',ytd:'{y} 누적',top_allblank:'고장 {m}건 · 알람유형 미기재 — 시트 Z열 입력 필요',per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',print:'🖨 인쇄',wk_narr:'📋 이번 주 요약',wk_narr_w:'📋 이번 주 요약',wk_narr_m:'📋 이번 달 요약',
+ko:{sl_more:'주간현황 전용',title:'주간 현황',sub:'인력 · 교육 · 작업 · PM · 고장 주간/월간 요약',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_region:'구분',sl_customer:'고객사',sl_line:'라인',sl_fab:'FAB',sl_period:'기간',all:'전체',hr_note:'고객사 필터 연동 · 국가/라인 미적용',hr_note2:'',sec_ops:'운영',ops_note:'가용인력 = 인원현황의 현장(O) 재직자 · 고객사 필터 연동',ops_wait:'인원현황·휴가현황 시트 연결 대기 — report/index.html 상단의 GID_ROSTER / GID_LEAVE 값을 시트 gid 숫자로 바꿔주세요',ch_att:'출근 · 휴가',note_att:'평일 기준 일평균 · 출근 = 가용인력 − 휴가',att_a:'출근',att_l:'휴가',ch_to:'총인원 vs TO',note_to:'TO = 반입 챔버 ÷ 30 (DUAL=2·SINGLE=1) · 총인원 = 현장 가용인력',head_l:'총인원',ch_chp:'인당 관리 챔버',note_chp:'반입 챔버(누적) ÷ 가용인력 · 챔버/인원 수는 툴팁',cutoff:'마감',att_pj:'인당작업',man_tot:'공수(h)',grp_t:'경력',grp_s:'소속',cr_u1:'1년 미만',cr_u2:'1~2년',cr_u3:'2년 이상',ch_career:'단지별 인원 추이',note_career:'각 구간 말 기준 현장(O) 재직 · 단지별 스택 (단지가 없으면 FAB·고객사)',nCareer:'1년미만 {a} · 1~2년 {b} · 2년+ {c}명',edu_tg:'대상인원',edu_rt:'완료율',edu_goal:'목표 90%',edu_ttf:'완료 {d} / 대상 {t}',man_sum:'합계',chp_c:'챔버(반입)',chp_p:'인당 관리',nTo:'충원율 {p}% · TO 대비 {d}명',nEdu:'완료율 {p}% · 완료 {d}/{t}명 (LV1+LV2)',nCip:'진행율 {p}% · 잔여 {n}건',nAtt:'일평균 출근 {a}명 · 휴가 {l}명 · 작업 {j}건 (인당 {p}건)',nChp:'인당 {v}챔버 (챔버 {c} · 인원 {h}명)',nMan:'인당 일평균 {v}h · PM {pm}h',nMan_ex:'공수 분모 제외 {n}명',n_drop:'집계 제외 — {v}',u_case:'건',op_unk_u:'대',op_unk:'⚠ 처음 보는 설비상태 {n}대 — 반입·가동 어디에도 안 들어갔습니다 ({v})',dq_drop:'집계에서 빠진 행 — 「내부·내적」이 아닌 값',dq_drop_a:'시트의 「내적/외적」 값이 맞는지 확인하세요',dq_rnd:'「{v}」로 잡힌 라인 표기',dq_rnd_a:'시트에 새 라인 표기가 생겼는지 확인하세요',dq_hex:'공수 분모에서 뺀 인원 — 팀장·OFFICE·단지장',dq_hex_u:'명',dq_hex_a:'인원현황의 직책·단지·라인 값을 확인하세요',dq_unk:'처음 보는 설비상태 — 반입·가동 어디에도 안 들어갔습니다',dq_unk_a:'설치현황의 설비상태 값을 확인하세요',nFt:'최근 구간 {n}건 · 직전 대비 {d}',per_ws:'주',per_ms:'월',per_ys:'연',ytd:'{y} 누적',top_allblank:'고장 {m}건 · 알람유형 미기재 — 시트 Z열 입력 필요',per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',print:'인쇄',wk_narr:'이번 주 요약',wk_narr_w:'이번 주 요약',wk_narr_m:'이번 달 요약',
  kp1:'재직 인원',kp2:'이번 달 입사 · 퇴사',kp3:'교육 완료율',kp4:'BM 건수 · 최근 30일',kp5:'인당 공수(h) · 최근 30일',kp6:'PM 진행율 · 올해',
   kf3b:'대상 {a} {m}명 · {b} {n}명',kd_edun2:'{a} {p}% (이수 {d}/{m}) · {b} {q}% (이수 {e}/{n})',kd_30d:'최근 30일',kd_edu:'교육 이수 현황',kd_educ:'이름|단지|과정|완료일|상태',kd_edun:'이수 {a} / 대상 {b}',kd_pm:'PM 스케줄 진행 (올해 누적)',kd_pmc:'월|계획(누적)|완료(누적)|진행율',kd_pmn:'계획 {a} · 완료 {b}',kd_ioh:'카드는 인원 전원을 셉니다 — 같은 화면의 입·퇴사 차트는 현장(O)만 셉니다',kd_asof:'기준일',
  kf1:'경력 2년+ {n}명 · 1년 미만 {m}명',kf2:'최근 12개월 입사 {n}명',kf3:'Veteran {p}% (대상 {n}명)',kf4:'이전 30일 {n}건',kf5:'PM 비중 {p}%',kf6:'계획 {a} · 완료 {b}',
@@ -450,7 +444,7 @@ ko:{sl_more:'주간현황 전용',title:'주간 현황',sub:'인력 · 교육 ·
  ins_pm:'올해 PM 진행율 {p}% (계획 {a} · 완료 {b})',ins_ft:'최근 30일 고장 {n}건 · 직전 30일 대비 {p}',ins_hc:'재직 {n}명 · 이번 달 입사 {a} · 퇴사 {b}',
  ax_t:'축 범위 (빈칸=자동)',
  rd_ppl:'이름|사이트|입사일|퇴사일',rd_inst:'고객사|FAB|Type|반입일',rd_chp_n:'챔버 가중 합계(DUAL=2)라 행 수와 다릅니다',rd_edu:'이름|사이트|Basic|Veteran|Lv.2|Lv.3',rd_cip:'사이트|항목|적용일|완료일',ax_min:'최소',ax_max:'최대',ax_apply:'적용',ax_reset:'초기화',loading:'데이터 불러오는 중...',loaded:'로드 완료',mon_u:'월',u_p:'명',u_c:'건'},
-en:{sl_more:'Weekly only',title:'Weekly Status',sub:'Weekly/monthly summary — workforce, training, work, PM, faults',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_region:'Region',sl_customer:'Customer',sl_line:'Line',sl_fab:'FAB',sl_period:'Period',all:'All',hr_note:'follows customer filter · country/line N/A',hr_note2:'',sec_ops:'Operations',ops_note:'available = on-site(O) active staff from roster · follows customer filter',ops_wait:'Roster/Leave sheets not linked — set GID_ROSTER / GID_LEAVE at the top of report/index.html',ch_att:'Attendance · Leave',note_att:'weekday daily avg · attendance = available − leave',att_a:'Attend',att_l:'Leave',ch_to:'Headcount vs TO',note_to:'TO = fab-in chambers ÷ 30 (DUAL=2·SINGLE=1)',head_l:'Headcount',ch_chp:'Chambers per Person',note_chp:'cumulative fab-in chambers ÷ available staff · detail in tooltip',cutoff:'As of',att_pj:'Jobs/person',man_tot:'Hours',grp_t:'Tenure',grp_s:'Site',cr_u1:'<1yr',cr_u2:'1-2yr',cr_u3:'2yr+',ch_career:'Headcount by Campus',note_career:'active on-site(O) at each period end · by campus',nCareer:'<1y {a} · 1-2y {b} · 2y+ {c}',edu_tg:'Targets',edu_rt:'Rate',edu_goal:'Goal 90%',edu_ttf:'done {d} / target {t}',man_sum:'Total',chp_c:'Chambers',chp_p:'per person',nTo:'fill rate {p}% · {d} vs TO',nEdu:'rate {p}% · {d}/{t} done (LV1+LV2)',nCip:'progress {p}% · {n} remaining',nAtt:'daily avg attend {a} · leave {l} · {j} jobs ({p}/person)',nChp:'{v} chambers/person ({c}ch · {h} staff)',nMan:'{v}h per person·day · PM {pm}h',nMan_ex:'{n} excluded from the hours denominator',n_drop:'Excluded from the count — {v}',u_case:'',op_unk_u:'',op_unk:'⚠ {n} units with an unrecognized status — counted in neither fab-in nor operating ({v})',dq_drop:'Rows left out of the count — values other than internal',dq_drop_a:'Check the internal/external column in the sheet',dq_rnd:'Line labels mapped to 「{v}」',dq_rnd_a:'Check whether a new line spelling appeared in the sheet',dq_hex:'People excluded from the hours denominator — leads, OFFICE, campus heads',dq_hex_u:'',dq_hex_a:'Check the role/campus/line values in the roster',dq_unk:'Unrecognized equipment status — counted in neither fab-in nor operating',dq_unk_a:'Check the equipment status values in the install sheet',nFt:'{n} in latest period · {d} vs prev',per_ws:'W',per_ms:'M',per_ys:'Y',ytd:'{y} YTD',top_allblank:'{m} faults · alarm type blank — fill column Z in the sheet',per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',print:'🖨 Print',wk_narr:'📋 Summary',wk_narr_w:'📋 This Week',wk_narr_m:'📋 This Month',
+en:{sl_more:'Weekly only',title:'Weekly Status',sub:'Weekly/monthly summary — workforce, training, work, PM, faults',back:'← Main',refresh:'Refresh',sl_country:'Country',sl_region:'Region',sl_customer:'Customer',sl_line:'Line',sl_fab:'FAB',sl_period:'Period',all:'All',hr_note:'follows customer filter · country/line N/A',hr_note2:'',sec_ops:'Operations',ops_note:'available = on-site(O) active staff from roster · follows customer filter',ops_wait:'Roster/Leave sheets not linked — set GID_ROSTER / GID_LEAVE at the top of report/index.html',ch_att:'Attendance · Leave',note_att:'weekday daily avg · attendance = available − leave',att_a:'Attend',att_l:'Leave',ch_to:'Headcount vs TO',note_to:'TO = fab-in chambers ÷ 30 (DUAL=2·SINGLE=1)',head_l:'Headcount',ch_chp:'Chambers per Person',note_chp:'cumulative fab-in chambers ÷ available staff · detail in tooltip',cutoff:'As of',att_pj:'Jobs/person',man_tot:'Hours',grp_t:'Tenure',grp_s:'Site',cr_u1:'<1yr',cr_u2:'1-2yr',cr_u3:'2yr+',ch_career:'Headcount by Campus',note_career:'active on-site(O) at each period end · by campus',nCareer:'<1y {a} · 1-2y {b} · 2y+ {c}',edu_tg:'Targets',edu_rt:'Rate',edu_goal:'Goal 90%',edu_ttf:'done {d} / target {t}',man_sum:'Total',chp_c:'Chambers',chp_p:'per person',nTo:'fill rate {p}% · {d} vs TO',nEdu:'rate {p}% · {d}/{t} done (LV1+LV2)',nCip:'progress {p}% · {n} remaining',nAtt:'daily avg attend {a} · leave {l} · {j} jobs ({p}/person)',nChp:'{v} chambers/person ({c}ch · {h} staff)',nMan:'{v}h per person·day · PM {pm}h',nMan_ex:'{n} excluded from the hours denominator',n_drop:'Excluded from the count — {v}',u_case:'',op_unk_u:'',op_unk:'⚠ {n} units with an unrecognized status — counted in neither fab-in nor operating ({v})',dq_drop:'Rows left out of the count — values other than internal',dq_drop_a:'Check the internal/external column in the sheet',dq_rnd:'Line labels mapped to 「{v}」',dq_rnd_a:'Check whether a new line spelling appeared in the sheet',dq_hex:'People excluded from the hours denominator — leads, OFFICE, campus heads',dq_hex_u:'',dq_hex_a:'Check the role/campus/line values in the roster',dq_unk:'Unrecognized equipment status — counted in neither fab-in nor operating',dq_unk_a:'Check the equipment status values in the install sheet',nFt:'{n} in latest period · {d} vs prev',per_ws:'W',per_ms:'M',per_ys:'Y',ytd:'{y} YTD',top_allblank:'{m} faults · alarm type blank — fill column Z in the sheet',per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',print:'Print',wk_narr:'Summary',wk_narr_w:'This Week',wk_narr_m:'This Month',
  kp1:'Headcount',kp2:'Joined · Left (this month)',kp3:'Training Rate',kp4:'BM count · last 30d',kp5:'Hours/person · last 30d',kp6:'PM Progress · YTD',
   kf3b:'targets {a} {m} · {b} {n}',kd_edun2:'{a} {p}% ({d}/{m} done) · {b} {q}% ({e}/{n} done)',kd_30d:'last 30 days',kd_edu:'Training completion',kd_educ:'Name|Campus|Course|Completed|Status',kd_edun:'done {a} / target {b}',kd_pm:'PM schedule progress (YTD)',kd_pmc:'Month|Plan (cum.)|Done (cum.)|Progress',kd_pmn:'plan {a} · done {b}',kd_ioh:'The card counts all staff — the join/leave chart on this page counts on-site (O) only',kd_asof:'as of',
  kf1:'2y+ {n} · under 1y {m}',kf2:'{n} joined in 12mo',kf3:'Veteran {p}% ({n} targets)',kf4:'prev 30d {n}',kf5:'PM share {p}%',kf6:'plan {a} · done {b}',
@@ -469,7 +463,7 @@ en:{sl_more:'Weekly only',title:'Weekly Status',sub:'Weekly/monthly summary — 
  ins_pm:'YTD PM progress {p}% (plan {a} · done {b})',ins_ft:'{n} faults in 30d · {p} vs prev 30d',ins_hc:'{n} active · joined {a} · left {b} this month',
  ax_t:'Axis range (blank=auto)',
  rd_ppl:'Name|Site|Joined|Left',rd_inst:'Customer|FAB|Type|Fab-in',rd_chp_n:'Chamber-weighted total (DUAL=2), so it differs from the row count',rd_edu:'Name|Site|Basic|Veteran|Lv.2|Lv.3',rd_cip:'Site|Item|Applied|Done',ax_min:'Min',ax_max:'Max',ax_apply:'Apply',ax_reset:'Reset',loading:'Loading...',loaded:'Loaded',mon_u:'',u_p:'',u_c:''},
-zh:{sl_more:'仅周现况',title:'周间现况',sub:'人力·教育·作业·PM·故障 周/月汇总',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_region:'区分',sl_customer:'客户',sl_line:'线',sl_fab:'FAB',sl_period:'期间',all:'全部',hr_note:'联动客户筛选 · 国家/线不适用',hr_note2:'',sec_ops:'运营',ops_note:'可用人力=人员现况中现场(O)在职者·联动客户筛选',ops_wait:'人员现况/休假现况表未连接 — 请在 report/index.html 顶部填入 GID_ROSTER / GID_LEAVE',ch_att:'出勤 · 休假',note_att:'工作日日均 · 出勤=可用人力−休假',att_a:'出勤',att_l:'休假',ch_to:'总人员 vs TO',note_to:'TO=搬入腔体÷30 (DUAL=2·SINGLE=1)',head_l:'总人员',ch_chp:'人均管理腔体',note_chp:'累计搬入腔体÷可用人力·明细见提示框',cutoff:'截止',att_pj:'人均作业',man_tot:'工时(h)',grp_t:'工龄',grp_s:'所属',cr_u1:'1年内',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'按园区人员趋势',note_career:'各区间末现场(O)在职·按线堆叠',nCareer:'1年内 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'对象人员',edu_rt:'完成率',edu_goal:'目标90%',edu_ttf:'完成 {d} / 对象 {t}',man_sum:'合计',chp_c:'腔体(搬入)',chp_p:'人均管理',nTo:'满编率 {p}% · 较TO {d}名',nEdu:'完成率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'进度 {p}% · 剩余 {n}件',nAtt:'日均出勤 {a}名 · 休假 {l}名 · 作业 {j}件 (人均 {p}件)',nChp:'人均 {v}腔体 ({c}ch · {h}名)',nMan:'人均日 {v}h · PM {pm}h',nMan_ex:'工时分母排除 {n}名',n_drop:'未计入 — {v}',u_case:'件',op_unk_u:'台',op_unk:'⚠ 未知设备状态 {n}台 — 搬入·运行均未计入 ({v})',dq_drop:'未计入的行 — 非内部·内因的值',dq_drop_a:'请确认表格的「内部/外部」值',dq_rnd:'被判定为「{v}」的线别写法',dq_rnd_a:'请确认表格中是否出现新的线别写法',dq_hex:'工时分母排除的人员 — 组长·OFFICE·园区长',dq_hex_u:'名',dq_hex_a:'请确认人员现况的职务·园区·线别值',dq_unk:'未知设备状态 — 搬入·运行均未计入',dq_unk_a:'请确认安装现况的设备状态值',nFt:'最近区间 {n}件 · 环比 {d}',per_ws:'周',per_ms:'月',per_ys:'年',ytd:'{y} 累计',top_allblank:'故障{m}件 · 报警类型未填 — 需填写表格Z列',per_w:'按周',per_m:'按月',per_note:'最近12个区间',print:'🖨 打印',wk_narr:'📋 本期摘要',wk_narr_w:'📋 本周摘要',wk_narr_m:'📋 本月摘要',
+zh:{sl_more:'仅周现况',title:'周间现况',sub:'人力·教育·作业·PM·故障 周/月汇总',back:'← 主页',refresh:'刷新',sl_country:'国家',sl_region:'区分',sl_customer:'客户',sl_line:'线',sl_fab:'FAB',sl_period:'期间',all:'全部',hr_note:'联动客户筛选 · 国家/线不适用',hr_note2:'',sec_ops:'运营',ops_note:'可用人力=人员现况中现场(O)在职者·联动客户筛选',ops_wait:'人员现况/休假现况表未连接 — 请在 report/index.html 顶部填入 GID_ROSTER / GID_LEAVE',ch_att:'出勤 · 休假',note_att:'工作日日均 · 出勤=可用人力−休假',att_a:'出勤',att_l:'休假',ch_to:'总人员 vs TO',note_to:'TO=搬入腔体÷30 (DUAL=2·SINGLE=1)',head_l:'总人员',ch_chp:'人均管理腔体',note_chp:'累计搬入腔体÷可用人力·明细见提示框',cutoff:'截止',att_pj:'人均作业',man_tot:'工时(h)',grp_t:'工龄',grp_s:'所属',cr_u1:'1年内',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'按园区人员趋势',note_career:'各区间末现场(O)在职·按线堆叠',nCareer:'1年内 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'对象人员',edu_rt:'完成率',edu_goal:'目标90%',edu_ttf:'完成 {d} / 对象 {t}',man_sum:'合计',chp_c:'腔体(搬入)',chp_p:'人均管理',nTo:'满编率 {p}% · 较TO {d}名',nEdu:'完成率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'进度 {p}% · 剩余 {n}件',nAtt:'日均出勤 {a}名 · 休假 {l}名 · 作业 {j}件 (人均 {p}件)',nChp:'人均 {v}腔体 ({c}ch · {h}名)',nMan:'人均日 {v}h · PM {pm}h',nMan_ex:'工时分母排除 {n}名',n_drop:'未计入 — {v}',u_case:'件',op_unk_u:'台',op_unk:'⚠ 未知设备状态 {n}台 — 搬入·运行均未计入 ({v})',dq_drop:'未计入的行 — 非内部·内因的值',dq_drop_a:'请确认表格的「内部/外部」值',dq_rnd:'被判定为「{v}」的线别写法',dq_rnd_a:'请确认表格中是否出现新的线别写法',dq_hex:'工时分母排除的人员 — 组长·OFFICE·园区长',dq_hex_u:'名',dq_hex_a:'请确认人员现况的职务·园区·线别值',dq_unk:'未知设备状态 — 搬入·运行均未计入',dq_unk_a:'请确认安装现况的设备状态值',nFt:'最近区间 {n}件 · 环比 {d}',per_ws:'周',per_ms:'月',per_ys:'年',ytd:'{y} 累计',top_allblank:'故障{m}件 · 报警类型未填 — 需填写表格Z列',per_w:'按周',per_m:'按月',per_note:'最近12个区间',print:'打印',wk_narr:'本期摘要',wk_narr_w:'本周摘要',wk_narr_m:'本月摘要',
  kp1:'在职人员',kp2:'本月入职·离职',kp3:'教育完成率',kp4:'BM件数·近30天',kp5:'人均工时(h)·近30天',kp6:'PM进度·今年',
   kf3b:'对象 {a} {m}名 · {b} {n}名',kd_edun2:'{a} {p}% (完成 {d}/{m}) · {b} {q}% (完成 {e}/{n})',kd_30d:'最近30天',kd_edu:'培训完成情况',kd_educ:'姓名|园区|课程|完成日|状态',kd_edun:'完成 {a} / 对象 {b}',kd_pm:'PM 计划进度 (本年累计)',kd_pmc:'月|计划(累计)|完成(累计)|进度',kd_pmn:'计划 {a} · 完成 {b}',kd_ioh:'卡片统计全体人员 — 本页入职·离职图表仅统计现场(O)',kd_asof:'基准日',
  kf1:'2年+ {n}名 · 1年内 {m}名',kf2:'近12个月入职 {n}名',kf3:'Veteran {p}% (对象 {n}名)',kf4:'前30天 {n}件',kf5:'PM占比 {p}%',kf6:'计划 {a} · 完成 {b}',
@@ -488,7 +482,7 @@ zh:{sl_more:'仅周现况',title:'周间现况',sub:'人力·教育·作业·PM�
  ins_pm:'今年PM进度 {p}% (计划 {a} · 完成 {b})',ins_ft:'近30天故障 {n}件 · 环比 {p}',ins_hc:'在职 {n}名 · 本月入职 {a} · 离职 {b}',
  ax_t:'轴范围 (空=自动)',
  rd_ppl:'姓名|站点|入职日|离职日',rd_inst:'客户|FAB|Type|搬入日',rd_chp_n:'腔体加权合计(DUAL=2)，与行数不同',rd_edu:'姓名|站点|Basic|Veteran|Lv.2|Lv.3',rd_cip:'站点|项目|适用日|完成日',ax_min:'最小',ax_max:'最大',ax_apply:'应用',ax_reset:'重置',loading:'加载中...',loaded:'已加载',mon_u:'月',u_p:'名',u_c:'件'},
-ja:{sl_more:'週間現況専用',title:'週間現況',sub:'人員·教育·作業·PM·故障 週/月サマリー',back:'← メイン',refresh:'更新',sl_country:'国',sl_region:'区分',sl_customer:'顧客',sl_line:'ライン',sl_fab:'FAB',sl_period:'期間',all:'全体',hr_note:'顧客フィルタ連動 · 国/ライン非適用',hr_note2:'',sec_ops:'運営',ops_note:'可用人員=人員現況の現場(O)在籍者·顧客フィルタ連動',ops_wait:'人員現況/休暇現況シート未接続 — report/index.html 上部の GID_ROSTER / GID_LEAVE を設定してください',ch_att:'出勤 · 休暇',note_att:'平日の日平均 · 出勤=可用人員−休暇',att_a:'出勤',att_l:'休暇',ch_to:'総人員 vs TO',note_to:'TO=搬入チャンバー÷30 (DUAL=2·SINGLE=1)',head_l:'総人員',ch_chp:'一人当たり管理チャンバー',note_chp:'累計搬入チャンバー÷可用人員·詳細はツールチップ',cutoff:'締め',att_pj:'一人当たり作業',man_tot:'工数(h)',grp_t:'経歴',grp_s:'所属',cr_u1:'1年未満',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'キャンパス別人員推移',note_career:'各区間末の現場(O)在籍·ライン別スタック',nCareer:'1年未満 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'対象人員',edu_rt:'完了率',edu_goal:'目標90%',edu_ttf:'完了 {d} / 対象 {t}',man_sum:'合計',chp_c:'チャンバー(搬入)',chp_p:'一人当たり',nTo:'充足率 {p}% · TO比 {d}名',nEdu:'完了率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'進捗 {p}% · 残り {n}件',nAtt:'日平均出勤 {a}名 · 休暇 {l}名 · 作業 {j}件 (一人 {p}件)',nChp:'一人 {v}チャンバー ({c}ch · {h}名)',nMan:'一人日平均 {v}h · PM {pm}h',nMan_ex:'工数分母から {n}名 除外',n_drop:'集計除外 — {v}',u_case:'件',op_unk_u:'台',op_unk:'⚠ 未知の設備状態 {n}台 — 搬入·稼働のどちらにも入っていません ({v})',dq_drop:'集計から外れた行 — 内部·内的以外の値',dq_drop_a:'シートの「内的/外的」値を確認してください',dq_rnd:'「{v}」と判定されたライン表記',dq_rnd_a:'シートに新しいライン表記が増えていないか確認してください',dq_hex:'工数分母から除いた人員 — チーム長·OFFICE·団地長',dq_hex_u:'名',dq_hex_a:'人員現況の職責·団地·ライン値を確認してください',dq_unk:'未知の設備状態 — 搬入·稼働のどちらにも入っていません',dq_unk_a:'設置現況の設備状態値を確認してください',nFt:'直近 {n}件 · 前比 {d}',per_ws:'週',per_ms:'月',per_ys:'年',ytd:'{y} 累計',top_allblank:'故障{m}件 · アラーム種別未記入 — シートZ列の入力が必要',per_w:'週別',per_m:'月別',per_note:'直近12区間',print:'🖨 印刷',wk_narr:'📋 今週サマリー',wk_narr_w:'📋 今週サマリー',wk_narr_m:'📋 今月サマリー',
+ja:{sl_more:'週間現況専用',title:'週間現況',sub:'人員·教育·作業·PM·故障 週/月サマリー',back:'← メイン',refresh:'更新',sl_country:'国',sl_region:'区分',sl_customer:'顧客',sl_line:'ライン',sl_fab:'FAB',sl_period:'期間',all:'全体',hr_note:'顧客フィルタ連動 · 国/ライン非適用',hr_note2:'',sec_ops:'運営',ops_note:'可用人員=人員現況の現場(O)在籍者·顧客フィルタ連動',ops_wait:'人員現況/休暇現況シート未接続 — report/index.html 上部の GID_ROSTER / GID_LEAVE を設定してください',ch_att:'出勤 · 休暇',note_att:'平日の日平均 · 出勤=可用人員−休暇',att_a:'出勤',att_l:'休暇',ch_to:'総人員 vs TO',note_to:'TO=搬入チャンバー÷30 (DUAL=2·SINGLE=1)',head_l:'総人員',ch_chp:'一人当たり管理チャンバー',note_chp:'累計搬入チャンバー÷可用人員·詳細はツールチップ',cutoff:'締め',att_pj:'一人当たり作業',man_tot:'工数(h)',grp_t:'経歴',grp_s:'所属',cr_u1:'1年未満',cr_u2:'1~2年',cr_u3:'2年以上',ch_career:'キャンパス別人員推移',note_career:'各区間末の現場(O)在籍·ライン別スタック',nCareer:'1年未満 {a} · 1~2年 {b} · 2年+ {c}名',edu_tg:'対象人員',edu_rt:'完了率',edu_goal:'目標90%',edu_ttf:'完了 {d} / 対象 {t}',man_sum:'合計',chp_c:'チャンバー(搬入)',chp_p:'一人当たり',nTo:'充足率 {p}% · TO比 {d}名',nEdu:'完了率 {p}% · {d}/{t}名 (LV1+LV2)',nCip:'進捗 {p}% · 残り {n}件',nAtt:'日平均出勤 {a}名 · 休暇 {l}名 · 作業 {j}件 (一人 {p}件)',nChp:'一人 {v}チャンバー ({c}ch · {h}名)',nMan:'一人日平均 {v}h · PM {pm}h',nMan_ex:'工数分母から {n}名 除外',n_drop:'集計除外 — {v}',u_case:'件',op_unk_u:'台',op_unk:'⚠ 未知の設備状態 {n}台 — 搬入·稼働のどちらにも入っていません ({v})',dq_drop:'集計から外れた行 — 内部·内的以外の値',dq_drop_a:'シートの「内的/外的」値を確認してください',dq_rnd:'「{v}」と判定されたライン表記',dq_rnd_a:'シートに新しいライン表記が増えていないか確認してください',dq_hex:'工数分母から除いた人員 — チーム長·OFFICE·団地長',dq_hex_u:'名',dq_hex_a:'人員現況の職責·団地·ライン値を確認してください',dq_unk:'未知の設備状態 — 搬入·稼働のどちらにも入っていません',dq_unk_a:'設置現況の設備状態値を確認してください',nFt:'直近 {n}件 · 前比 {d}',per_ws:'週',per_ms:'月',per_ys:'年',ytd:'{y} 累計',top_allblank:'故障{m}件 · アラーム種別未記入 — シートZ列の入力が必要',per_w:'週別',per_m:'月別',per_note:'直近12区間',print:'印刷',wk_narr:'今週サマリー',wk_narr_w:'今週サマリー',wk_narr_m:'今月サマリー',
  kp1:'在籍人員',kp2:'今月 入社·退社',kp3:'教育完了率',kp4:'BM件数·直近30日',kp5:'一人工数(h)·直近30日',kp6:'PM進捗·今年',
   kf3b:'対象 {a} {m}名 · {b} {n}名',kd_edun2:'{a} {p}% (修了 {d}/{m}) · {b} {q}% (修了 {e}/{n})',kd_30d:'直近30日',kd_edu:'教育修了状況',kd_educ:'氏名|拠点|コース|修了日|状態',kd_edun:'修了 {a} / 対象 {b}',kd_pm:'PM スケジュール進捗 (年初来)',kd_pmc:'月|計画(累計)|完了(累計)|進捗',kd_pmn:'計画 {a} · 完了 {b}',kd_ioh:'カードは全人員を数えます — 同じ画面の入社・退社チャートは現場(O)のみです',kd_asof:'基準日',
  kf1:'2年+ {n}名 · 1年未満 {m}名',kf2:'直近12ヶ月入社 {n}名',kf3:'Veteran {p}% (対象 {n}名)',kf4:'前30日 {n}件',kf5:'PM比率 {p}%',kf6:'計画 {a} · 完了 {b}',
@@ -899,7 +893,7 @@ const valLabelPlugin={id:'valLabel',
         const isLine=meta.type==='line'; if(isLine!==wantLine)return;
         meta.data.forEach((el,i)=>{
           const v=ds.data[i]; if(v==null||!isFinite(v)||+v===0)return;
-          if(isLine){ put(fmt(v)+(ds._suf||''),el.x,el.y-7,'bottom',o.color||'#E6EDF3'); return; }
+          if(isLine){ put(fmt(v)+(ds._suf||''),el.x,el.y-7,'bottom',o.color||GST.chartTheme().ink); return; }
           const hgt=el.base!=null?Math.abs(el.base-el.y):0;
           if(ds.stack){
             // 막대 색 위 라벨은 명도 대비색으로 — 연한 막대에 흰 글씨가 묻히는 문제 방지
@@ -912,8 +906,8 @@ const valLabelPlugin={id:'valLabel',
             // 9px 미만 아주 작은 세그먼트만 생략(툴팁으로 확인)
             return;
           }
-          if(hgt>20)put(fmt(v)+(ds._suf||''),el.x,el.y+4,'top',o.color||'#E6EDF3');
-          else put(fmt(v)+(ds._suf||''),el.x,el.y-4,'bottom',o.color||'#E6EDF3');
+          if(hgt>20)put(fmt(v)+(ds._suf||''),el.x,el.y+4,'top',o.color||GST.chartTheme().ink);
+          else put(fmt(v)+(ds._suf||''),el.x,el.y-4,'bottom',o.color||GST.chartTheme().ink);
         });
       });
       pass(false); pass(true);   // 막대 라벨 먼저 고정 → 라인 라벨이 회피
@@ -934,7 +928,7 @@ const valLabelPlugin={id:'valLabel',
           });
         });
       }
-      ctx.font='700 10px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif'; ctx.fillStyle=o.color||'#E6EDF3'; ctx.textAlign='center';
+      ctx.font='700 10px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif'; ctx.fillStyle=o.color||GST.chartTheme().ink; ctx.textAlign='center';
       const bars=chart.data.datasets.map((ds,di)=>({ds,meta:chart.getDatasetMeta(di)})).filter(x=>x.meta&&!x.meta.hidden&&x.meta.type!=='line');
       const n=(chart.data.labels||[]).length;
       for(let i=0;i<n;i++){ let pos=0,neg=0,topY=null,botY=null,x=null;
@@ -950,7 +944,7 @@ const valLabelPlugin={id:'valLabel',
     if(!meta||!meta.data||!meta.data.length){ctx.restore();return;}
     const nums=ds.data.filter(v=>v!=null&&isFinite(v));
     const max=nums.length?Math.max.apply(null,nums):null;
-    ctx.fillStyle=o.color||'#E6EDF3';
+    ctx.fillStyle=o.color||GST.chartTheme().ink;
     ctx.font='700 11px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
     meta.data.forEach(function(el,i){
       const v=ds.data[i]; if(v==null)return;
@@ -967,7 +961,7 @@ const valLabelPlugin={id:'valLabel',
 function setNote(canvasId,txt,sev){ GST.setNote(canvasId,txt,sev); }
 // % 보조축 (오른쪽, 그리드 없음)
 function pctAxis(TH,max){return {position:'right',min:0,max:max||100,grid:{drawOnChartArea:false},ticks:{color:TH.txt,callback:v=>v+'%',maxTicksLimit:5,font:{size:9}}};}
-function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
+function inkStrong(TH){return TH.ink||(TH.key==='slate'?'#E6EDF3':'#101828');}
 // 막대 색 위에 얹는 값 라벨 색을 명도로 자동 결정(밝은 막대=검정, 어두운 막대=흰색) — 연한 회색 위 흰글씨 가독성 문제 해결
 function labelOn(fill){
   if(typeof fill!=='string')return '#F8FAFC';

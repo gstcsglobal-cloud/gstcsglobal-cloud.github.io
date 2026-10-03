@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=143"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=144"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write)·admin 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB */
@@ -14,79 +14,56 @@ body:not([data-role="admin"]):not([data-role="legacy"]):not([data-role="editor"]
 /* 오프라인 내보내기는 admin 만(v137) — /offline/ 자체도 isAdmin 게이트라 editor 에게 보이면 눌러도 잠긴 문이다 */
 body:not([data-role="admin"]):not([data-role="legacy"]) #offlineBtn{display:none}
 *{margin:0;padding:0;box-sizing:border-box}
+/* v139 — 라이트가 기본이다. 셸은 theme.css 를 싣지 않으므로 토큰을 여기 한 벌 더 둔다(이름은 theme.css 와 같다).
+   다크(body.theme-slate)는 같은 이름에 어두운 값만 넣는다 — 컴포넌트 규칙은 한 벌이다. */
 :root{
-  --bg1:#14142f;--bg2:#1e1d4d;--line:#3b3a6b;--txt:#e2e8f0;--mut:#94a3b8;
-  --accent:#38bdf8;--glass:rgba(255,255,255,0.06);--glassb:rgba(255,255,255,0.13);
+  --bg:#F5F6F8;--surface:#FFFFFF;--surface-2:#F2F4F7;--line:#E4E7EC;--line-2:#CDD3DC;
+  --txt:#101828;--txt-2:#344054;--mut:#667085;
+  --accent:#2F6FED;--accent-soft:#EAF1FE;--accent-ink:#1D4ED8;--bad:#D92D20;--warn:#B7670A;
+  --glass:var(--surface);--glassb:var(--line);--card:var(--surface);
+  --shadow-md:0 4px 12px rgba(16,24,40,.08);
+}
+body.theme-slate{
+  --bg:#0F1419;--surface:#161C24;--surface-2:#1C2430;--line:rgba(151,170,196,.14);--line-2:rgba(151,170,196,.28);
+  --txt:#E6EDF3;--txt-2:#C3CCD8;--mut:#8B98A9;
+  --accent:#5B8DEF;--accent-soft:rgba(91,141,239,.16);--accent-ink:#8AB0F7;--bad:#F0716B;--warn:#F2B134;
+  --shadow-md:0 8px 24px rgba(0,0,0,.45);color-scheme:dark;
 }
 html,body{height:100%;overflow:hidden}
 body{font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
-  background:linear-gradient(135deg,#14142f,#1e1d4d);display:flex;flex-direction:column}
-body.theme-burgundy{background:linear-gradient(135deg,#1a0813,#2d0b1e)}
-body.theme-burgundy .topbar,body.theme-burgundy .tabbar{background:rgba(26,8,19,.85)}
-body.theme-burgundy .gbarrow{background:rgba(26,8,19,.7)}
-body.theme-light{background:linear-gradient(135deg,#f1f5f9,#e2e8f0);color:#0f172a}
-body.theme-light .topbar,body.theme-light .tabbar{background:rgba(241,245,249,.9);border-color:rgba(15,23,42,.1)}
-body.theme-light .gbarrow{background:rgba(241,245,249,.75);border-color:rgba(15,23,42,.08)}
-body.theme-light .gb-b{background:rgba(15,23,42,.05);border-color:rgba(15,23,42,.12);color:#334155}
-body.theme-light .gb-inp{background:rgba(255,255,255,.9);border-color:rgba(15,23,42,.12);color:#0f172a;color-scheme:light}
-body.theme-light .gb-b.on{background:#2563eb;color:#fff;border-color:#2563eb}
-body.theme-light .tab{color:#64748b}
-body.theme-light .tab:hover{color:#0f172a}
-body.theme-light .tab.active{color:#2563eb;border-bottom-color:#2563eb}
-body.theme-light .tb-btn{background:rgba(15,23,42,.05);border-color:rgba(15,23,42,.12);color:#0f172a}
-body.theme-light .brand .tag{color:#64748b}
-body.theme-light .frame-wrap{background:#f1f5f9}
-body.theme-light .frame-wrap iframe{background:#f1f5f9}
+  background:var(--bg);display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
 
-/* Slate — 새 기본 테마: 단일 표면 + 단일 액센트 */
-body.theme-slate{background:#0B0F14;color:#E6EDF3}
-body.theme-slate .topbar,body.theme-slate .tabbar{background:#0E141C;border-color:rgba(151,170,196,.10)}
-body.theme-slate .gbarrow{background:#0C1219;border-color:rgba(151,170,196,.08)}
-body.theme-slate .gb-b,body.theme-slate .gb-inp{background:transparent;border-color:rgba(151,170,196,.16);color:#8B98A9}
-body.theme-slate .gb-b:hover{background:#16202C;color:#E6EDF3}
-body.theme-slate .gb-b.on{background:#2DD4BF;color:#04211C;border-color:#2DD4BF}
-body.theme-slate .brand .logo{background:linear-gradient(90deg,#2DD4BF,#E6EDF3);
-  -webkit-background-clip:text;background-clip:text}
-body.theme-slate .brand .tag{color:#5E6D80}
-body.theme-slate .tab{color:#8B98A9}
-body.theme-slate .tab:hover{color:#E6EDF3}
-body.theme-slate .tab.active{color:#2DD4BF;border-bottom-color:#2DD4BF}
-body.theme-slate .tb-btn{background:transparent;border-color:rgba(151,170,196,.16);color:#8B98A9;border-radius:8px}
-body.theme-slate .tb-btn:hover{background:#16202C;color:#E6EDF3}
-body.theme-slate .tb-btn.logout:hover{border-color:#e66767;color:#e66767}
-body.theme-slate .frame-wrap{background:#0B0F14}
-body.theme-slate .frame-wrap iframe{background:#0B0F14}
-body.theme-slate .spinner{border-color:rgba(151,170,196,.16);border-top-color:#2DD4BF}
-
-/* 상단 바 */
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;
-  background:rgba(20,20,47,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);flex-shrink:0}
-.brand{display:flex;align-items:center;gap:12px}
-.brand .logo{font-size:22px;font-weight:900;background:linear-gradient(90deg,#00cec9,#6c5ce7,#fd79a8);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px}
-.brand .tag{font-size:12px;color:var(--mut)}
+/* 상단 바 — 흰 면 하나, 아래 선 하나 */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;
+  background:var(--surface);border-bottom:1px solid var(--line);flex-shrink:0}
+.brand{display:flex;align-items:center;gap:10px}
+.brand::before{content:'';width:28px;height:28px;border-radius:8px;flex:none;
+  background:var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 17l5-6 4 3 7-8'/%3E%3C/svg%3E") center/18px no-repeat}
+.brand .logo{font-size:16px;font-weight:700;color:var(--txt);letter-spacing:-.2px}
+.brand .tag{font-size:12px;color:var(--mut);padding-left:10px;border-left:1px solid var(--line)}
 .topbar-right{display:flex;align-items:center;gap:10px}
 /* 툴바 버튼이 여섯 개다 — 좁은 화면에서 줄바꿈이 안 되면 로그아웃이 화면 밖으로 잘린다 */
 .topbar-right{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
-.tb-btn{display:inline-flex;align-items:center;gap:6px;background:var(--glass);border:1px solid var(--glassb);color:var(--txt);
-  padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-decoration:none}
-.tb-btn:hover{background:rgba(255,255,255,.12)}
-.tb-btn.logout:hover{border-color:#fb7185;color:#fda4af}
+.tb-btn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid transparent;color:var(--txt-2);
+  padding:7px 11px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;text-decoration:none;font-family:inherit}
+.tb-btn:hover{background:var(--surface-2);color:var(--txt);border-color:var(--line)}
+.tb-btn.logout{border-color:var(--line)}
+.tb-btn.logout:hover{border-color:var(--bad);color:var(--bad)}
 
 /* 탭 바 — 자기 줄 전체를 쓴다 (툴바가 탭을 가리지 않도록 분리) */
-.tabbar{display:flex;gap:2px;padding:0 24px;background:rgba(20,20,47,.6);
-  border-bottom:2px solid var(--line);flex-shrink:0;overflow-x:auto}
+.tabbar{display:flex;gap:4px;padding:0 24px;background:var(--surface);
+  border-bottom:1px solid var(--line);flex-shrink:0;overflow-x:auto}
 .tabbar::-webkit-scrollbar{height:0}
 
 /* 공통 컨트롤 바 — 탭 줄 바로 아래 전용 줄. 전 페이지 동일 세트(미지원은 비활성) */
 /* 챗봇까지 한 덩어리로 오른쪽 정렬 — 기존 컨트롤 위치는 그대로 유지된다 */
-.gbarrow{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:0 24px;
-  background:rgba(20,20,47,.45);border-bottom:1px solid var(--line);flex-shrink:0;overflow:visible;position:relative;flex-wrap:wrap}
+.gbarrow{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:4px 24px;
+  background:var(--bg);border-bottom:1px solid var(--line);flex-shrink:0;overflow:visible;position:relative;flex-wrap:wrap}
 .gbarrow::-webkit-scrollbar{height:0}
 /* 챗봇 입력줄 */
 .askwrap{display:flex;align-items:center;gap:6px;height:27px;padding:0 8px;flex:0 1 340px;min-width:150px;
   background:var(--glass);border:1px solid var(--glassb);border-radius:8px;transition:border-color .2s,box-shadow .2s}
-.askwrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(45,212,191,.16)}
+.askwrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .askwrap .ask-ic{color:var(--accent);flex:none}
 .ask-inp{font-family:inherit;flex:1;min-width:0;background:transparent;border:none;outline:none;
   color:var(--txt);font-size:11.5px;font-weight:600}
@@ -95,15 +72,15 @@ body.theme-slate .spinner{border-color:rgba(151,170,196,.16);border-top-color:#2
   font-weight:800;padding:0 2px;flex:none}
 .ask-go:hover{color:var(--accent)}
 .askpanel{display:none;position:absolute;z-index:60;right:24px;top:calc(100% - 2px);width:min(520px,calc(100vw - 32px));
-  max-height:min(60vh,520px);flex-direction:column;background:var(--card,#111827);border:1px solid var(--glassb);
-  border-radius:0 0 12px 12px;box-shadow:0 18px 44px rgba(0,0,0,.5);overflow:hidden}
+  max-height:min(60vh,520px);flex-direction:column;background:var(--surface);border:1px solid var(--line);
+  border-radius:0 0 12px 12px;box-shadow:var(--shadow-md);overflow:hidden}
 .askpanel.open{display:flex}
 .ask-head{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--txt)}
 .ask-mode{font-size:10px;font-weight:700;color:var(--mut)}
 .ask-x{margin-left:auto;background:none;border:none;color:var(--mut);cursor:pointer;font-size:12px}
 .ask-log{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:9px}
 .ask-msg{font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
-.ask-msg.q{align-self:flex-end;max-width:85%;background:var(--accent);color:#04211d;font-weight:700;
+.ask-msg.q{align-self:flex-end;max-width:85%;background:var(--accent);color:#fff;font-weight:600;
   padding:6px 10px;border-radius:10px 10px 2px 10px}
 .ask-msg.a{align-self:flex-start;max-width:95%;color:var(--txt);background:var(--glass);
   border:1px solid var(--glassb);padding:8px 10px;border-radius:10px 10px 10px 2px}
@@ -120,11 +97,11 @@ body.theme-slate .spinner{border-color:rgba(151,170,196,.16);border-top-color:#2
 .gb-b{font-family:inherit;background:var(--glass);border:1px solid var(--glassb);border-radius:8px;
   padding:0 12px;height:27px;color:var(--mut);font-size:11.5px;font-weight:700;cursor:pointer;
   white-space:nowrap;transition:all .2s;flex:none}
-.gb-b:hover{background:rgba(255,255,255,.12);color:var(--txt)}
+.gb-b:hover{background:var(--surface-2);color:var(--txt)}
 .gb-seg .gb-b{border:none;border-radius:0}
-.gb-b.on{background:var(--accent);color:#04211d}
+.gb-b.on{background:var(--accent);color:#fff}
 .gb-inp{font-family:inherit;background:var(--glass);border:1px solid var(--glassb);border-radius:8px;
-  padding:0 7px;height:27px;color:var(--txt);font-size:11px;outline:none;color-scheme:dark;flex:none}
+  padding:0 7px;height:27px;color:var(--txt);font-size:11px;outline:none;flex:none}
 .gb-inp[type=month]{width:118px}
 select.gb-inp{width:104px}
 .gb-note{font-size:11px;color:var(--mut);font-weight:700;white-space:nowrap;flex:none}
@@ -132,17 +109,17 @@ select.gb-inp{width:104px}
 /* 이 페이지가 지원하지 않는 컨트롤 — 자리는 유지(폭 통일), 동작만 막는다 */
 #gbar .off,#gstLocalBar .off{opacity:.32}
 .gb-badge{display:inline-block;margin-left:5px;min-width:15px;padding:0 4px;border-radius:8px;
-  background:var(--bad,#fb7185);color:#1a0508;font-size:9.5px;font-weight:800;line-height:15px;text-align:center}
-.tab{padding:13px 22px;font-size:14px;font-weight:700;color:var(--mut);cursor:pointer;
-  border:none;background:transparent;border-bottom:3px solid transparent;transition:color .2s,border-color .25s cubic-bezier(.4,0,.2,1);white-space:nowrap;position:relative;top:2px}
+  background:var(--bad,#D92D20);color:#fff;font-size:9.5px;font-weight:800;line-height:15px;text-align:center}
+.tab{padding:11px 16px 10px;font-size:13.5px;font-weight:600;color:var(--mut);cursor:pointer;font-family:inherit;
+  border:none;background:transparent;border-bottom:2px solid transparent;transition:color .15s,border-color .2s cubic-bezier(.4,0,.2,1);white-space:nowrap;position:relative;top:1px}
 .tab:hover{color:var(--txt)}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab.active{color:var(--accent-ink);border-bottom-color:var(--accent)}
 .tab.err::after{content:' ⚠';font-size:11px}   /* 그 화면에서 잡히지 않은 예외가 났다(v135) */
 .tab .ic{margin-right:7px;display:inline-flex;vertical-align:-2px}
 
 /* iframe 영역 */
-.frame-wrap{flex:1;position:relative;background:#16163a}
-.frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:none;display:none;background:#16163a}
+.frame-wrap{flex:1;position:relative;background:var(--bg)}
+.frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:none;display:none;background:var(--bg)}
 .frame-wrap iframe.active{display:block;animation:frameIn .3s ease}
 @keyframes frameIn{from{opacity:.3}to{opacity:1}}
 .frame-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;pointer-events:none}
@@ -175,8 +152,8 @@ body.kiosk-full .topbar,body.kiosk-full .tabbar,body.kiosk-full .gbarrow{display
 body.kiosk-full .kiosk-panel{display:none}
 
 .kiosk-panel{position:absolute;right:12px;top:52px;z-index:9500;display:none;width:330px;
-  background:var(--card,#0E141C);border:1px solid var(--glassb);border-radius:12px;
-  padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.5);font:13px system-ui,sans-serif;color:var(--txt)}
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:14px 16px;box-shadow:var(--shadow-md);font:13px 'Pretendard Variable',Pretendard,system-ui,sans-serif;color:var(--txt)}
 .kiosk-panel.open{display:block}
 .kiosk-panel h4{margin:0 0 4px;font-size:14px}
 .kiosk-panel .kp-sub{color:#8B98A9;font-size:11px;margin-bottom:12px;line-height:1.5}
@@ -186,12 +163,12 @@ body.kiosk-full .kiosk-panel{display:none}
 .kiosk-panel .kp-row{display:flex;flex-wrap:wrap;gap:6px}
 .kiosk-panel .kp-chip{padding:5px 10px;border:1px solid var(--glassb);border-radius:7px;
   background:transparent;color:var(--txt);cursor:pointer;font-size:12px}
-.kiosk-panel .kp-chip.on{background:var(--accent,#2DD4BF);color:#04211C;border-color:var(--accent,#2DD4BF);font-weight:700}
+.kiosk-panel .kp-chip.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
 .kiosk-panel .kp-box{max-height:132px;overflow:auto;border:1px solid var(--glassb);border-radius:8px;padding:8px}
 .kiosk-panel .kp-box label{display:flex;align-items:center;gap:7px;padding:3px 2px;cursor:pointer;font-size:12px}
 .kiosk-panel .kp-box input{width:auto;margin:0}
 .kiosk-panel .kp-go{margin-top:14px;width:100%;padding:9px;border:none;border-radius:8px;
-  background:var(--accent,#2DD4BF);color:#04211C;font-weight:800;font-size:13px;cursor:pointer}
+  background:var(--accent);color:#fff;font-weight:700;font-size:13px;cursor:pointer}
 .kiosk-panel .kp-go:disabled{opacity:.45;cursor:default}
 .kiosk-panel .kp-warn{margin-top:10px;color:#fbbf24;font-size:11px;line-height:1.5}
 
@@ -212,7 +189,7 @@ body.kiosk-full .kiosk-panel{display:none}
 </head>
 <body>
 
-<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
 <!-- 상단 바 -->
 <div class="topbar">
   <div class="brand">
@@ -231,7 +208,7 @@ body.kiosk-full .kiosk-panel{display:none}
     <button class="tb-btn" onclick="openOffline()" id="offlineBtn" title="오프라인 판 내보내기 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> <span id="offlineLabel">오프라인</span></button>
     <button class="tb-btn" onclick="kioskBtn()" id="kioskBtn" title="자동순회 — 단지별로 화면이 바뀌며 돌아갑니다"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 8 4 2.5-4 2.5z" fill="currentColor"/></svg> <span id="kioskLabel">자동순회</span></button>
     <button class="tb-btn" onclick="shareLink()" id="shareBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> <span id="shareLabel">공유</span></button>
-    <button class="tb-btn" onclick="cycleTheme()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9c0-.5-.4-1-1-1h-2a3 3 0 0 1-3-3V6c0-.6-.4-1-1-1z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="6.5" r="1"/><circle cx="15" cy="15.5" r="1"/></svg> <span id="themeLabel">Slate</span></button>
+    <button class="tb-btn" onclick="cycleTheme()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9c0-.5-.4-1-1-1h-2a3 3 0 0 1-3-3V6c0-.6-.4-1-1-1z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="6.5" r="1"/><circle cx="15" cy="15.5" r="1"/></svg> <span id="themeLabel">Light</span></button>
     <button class="tb-btn" onclick="cycleLang()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> <span id="langLabel">KO</span></button>
     <button class="tb-btn logout" onclick="doLogout()" id="logoutBtn">로그아웃</button>
   </div>
@@ -252,7 +229,7 @@ body.kiosk-full .kiosk-panel{display:none}
   <label style="display:flex;align-items:center;gap:7px;margin-top:12px;font-size:12px;cursor:pointer"><input type="checkbox" id="kkFull" checked style="width:auto;margin:0"> 전체화면으로 (모니터를 꽉 채웁니다)</label>
   <div class="kp-est" id="kkEst"></div>
   <div class="kp-warn" id="kkWarn" style="display:none"></div>
-  <button class="kp-go" id="kkGo" onclick="kioskStart()">▶ 시작</button>
+  <button class="kp-go" id="kkGo" onclick="kioskStart()">시작</button>
 </div>
 <!-- 순회 중 하단 표시 -->
 <div class="kiosk-bar" id="kioskBar">
@@ -672,8 +649,9 @@ window.addEventListener('message',e=>{
 
 
 // ===== 테마 (모든 iframe에 전파) =====
-const THEMES=[{key:'slate',label:'Slate'},{key:'default',label:'Navy'},{key:'burgundy',label:'Burgundy'},{key:'light',label:'Light'}];
-let THEME='slate';
+/* v139 — 둘뿐이다: 라이트(기본) · 다크. 옛 저장값(navy=default·burgundy)은 라이트로 읽는다. */
+const THEMES=[{key:'light',label:'Light'},{key:'slate',label:'Dark'}];
+let THEME='light';
 try{const s=sessionStorage.getItem('gst_theme');if(s&&THEMES.find(t=>t.key===s))THEME=s;}catch(e){}
 
 function cycleTheme(){
@@ -685,7 +663,10 @@ function cycleTheme(){
 }
 function applyTheme(){
   document.getElementById('themeLabel').textContent=THEMES.find(t=>t.key===THEME).label;
-  document.body.className = THEME==='default' ? '' : 'theme-'+THEME;
+  /* className 을 통째로 갈면 kiosk-on·kiosk-full 같은 다른 클래스가 날아간다 — 테마 클래스만 바꾼다 */
+  const cl=document.body.classList;
+  [...cl].filter(c=>/^theme-/.test(c)).forEach(c=>cl.remove(c));
+  cl.add('theme-'+THEME);
 }
 // 모든 iframe에 메시지 전송
 function broadcast(msg){
