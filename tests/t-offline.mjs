@@ -37,6 +37,10 @@ const ymd = d => d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad
 const NOW = new Date();
 const ASOF = new Date(Date.UTC(NOW.getUTCFullYear(), NOW.getUTCMonth(), 0));
 const dAgo = n => new Date(ASOF.getTime() - n * 86400000);
+/* 두 실행의 «지금»을 같은 순간에 못 박는다(clock.setFixedTime — 타이머는 그대로 돈다).
+   tco 가 경과시간 기반 누적비용을 Date.now 로 재므로, 몇 분 차이로 만원 반올림 경계를
+   넘어 841만↔842만 이 갈렸다(실측). 제품 결함이 아니라 검사의 비결정성이라 여기서 고친다. */
+const FIX = new Date(ASOF.getTime() + 12 * 3600000);
 
 /* ── 픽스처 (전부 지어낸 값 · t-kpi 와 같은 꼴) ─────────────────────────── */
 const IH = ['NO','Country','Customer','Location','FAB','Line','Bay','Scrubber CODE','Scrubber S/N',
@@ -200,6 +204,7 @@ const REF = {};
   for (const p of PAGES) {
     const pg = await ctx.newPage(); const pe = [];
     pg.on('pageerror', e => pe.push(e.message));
+    await pg.clock.setFixedTime(FIX);
     await pg.goto(BASE + p, { waitUntil:'domcontentloaded' });
     await pg.waitForTimeout(WAIT(p));
     REF[p] = await kpiRead(pg);
@@ -254,6 +259,7 @@ console.log('[3] file:// 오프라인 실행');
   ctx.on('request', r => { if (/^https?:/.test(r.url())) net.push(r.url()); });
   const pg = await ctx.newPage(); const pe = [];
   pg.on('pageerror', e => pe.push(e.message));
+  await pg.clock.setFixedTime(FIX);
   await pg.goto('file://' + path.join(OUT, 'offline.html'));
   await pg.waitForTimeout(5000);
 
