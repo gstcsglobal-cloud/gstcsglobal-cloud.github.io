@@ -6,11 +6,13 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=142"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=143"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write)·admin 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB */
 body:not([data-role="admin"]):not([data-role="legacy"]):not([data-role="editor"]) #uploadBtn{display:none}
+/* 오프라인 내보내기는 admin 만(v137) — /offline/ 자체도 isAdmin 게이트라 editor 에게 보이면 눌러도 잠긴 문이다 */
+body:not([data-role="admin"]):not([data-role="legacy"]) #offlineBtn{display:none}
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
   --bg1:#14142f;--bg2:#1e1d4d;--line:#3b3a6b;--txt:#e2e8f0;--mut:#94a3b8;
@@ -224,6 +226,9 @@ body.kiosk-full .kiosk-panel{display:none}
          새 창으로 여는 이유: 탭 iframe 에 띄우면 탭 줄에서 아무 탭도 활성이 아니게 되고,
          업로드 도중에 탭을 누르면 진행 중이던 적재 화면이 그대로 날아간다. -->
     <button class="tb-btn" onclick="openUpload()" id="uploadBtn" title="데이터 업로드 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg> <span id="uploadLabel">업로드</span></button>
+    <!-- 오프라인 내보내기도 탭이 아니다(업로드와 같은 규율 · v137). 시연용 단일 HTML 과
+         데이터 스냅샷을 받는 관리 화면이라 새 창으로 연다. -->
+    <button class="tb-btn" onclick="openOffline()" id="offlineBtn" title="오프라인 판 내보내기 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> <span id="offlineLabel">오프라인</span></button>
     <button class="tb-btn" onclick="kioskBtn()" id="kioskBtn" title="자동순회 — 단지별로 화면이 바뀌며 돌아갑니다"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 8 4 2.5-4 2.5z" fill="currentColor"/></svg> <span id="kioskLabel">자동순회</span></button>
     <button class="tb-btn" onclick="shareLink()" id="shareBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> <span id="shareLabel">공유</span></button>
     <button class="tb-btn" onclick="cycleTheme()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9c0-.5-.4-1-1-1h-2a3 3 0 0 1-3-3V6c0-.6-.4-1-1-1z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="6.5" r="1"/><circle cx="15" cy="15.5" r="1"/></svg> <span id="themeLabel">Slate</span></button>
@@ -309,10 +314,10 @@ const TABS=[
 ];
 
 const L={
-  ko:{tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!'},
-  en:{tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!'},
-  zh:{tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!'},
-  ja:{tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!'}
+  ko:{tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',offline:'오프라인',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!'},
+  en:{tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',offline:'Offline',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!'},
+  zh:{tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',offline:'离线版',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!'},
+  ja:{tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',offline:'オフライン',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!'}
 };
 let LANG='ko';
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&L[sl])LANG=sl; else if(window.name && L[window.name]) LANG=window.name; }catch(e){}
@@ -604,6 +609,7 @@ document.addEventListener('keydown',e=>{
 
 /* 업로드 화면은 별도 창. 셸의 iframe 에 띄우지 않는다 — 위 버튼 주석 참조. */
 function openUpload(){ window.open('/upload/','gstUpload'); }
+function openOffline(){ window.open('/offline/','gstOffline'); }
 
 function applyLang(){
   {const _bt=document.getElementById('brandTag'); if(_bt&&!_bt.hasAttribute('data-lock'))_bt.textContent=lt('tag');}
@@ -611,6 +617,7 @@ function applyLang(){
   document.getElementById('refreshLabel').textContent=lt('refresh');
   document.getElementById('shareLabel').textContent=lt('share');
   document.getElementById('uploadLabel').textContent=lt('upload');
+  document.getElementById('offlineLabel').textContent=lt('offline');
   document.getElementById('kioskLabel').textContent=KIOSK.on?lt('kioskStop'):lt('kiosk');
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
   // 탭 이름 갱신
@@ -741,10 +748,24 @@ function askFacts(ms){
    ⚠ frames[t.id] 는 «만들 때» 채운다 — 나중에 채우면 그 사이에 사람이 탭을 눌러
      같은 페이지가 두 번 만들어진다. */
 const ASK_BATCH=2, ASK_GAP=2500;
+/* iframe 의 «내용이 어디서 오나»는 이 한 곳이다 (v137 · 오프라인 판).
+   온라인은 지금까지처럼 배포 주소(src). 오프라인 단일 HTML(window.__OFFLINE_FILES 존재)은
+   같은 페이지를 srcdoc 으로 심는다 — file:// 에는 서버가 없어 src 로는 열 수 없고,
+   srcdoc 은 부모 출처를 상속해 parent.__SNAP(스냅샷)을 읽을 수 있다.
+   ⚠ ?f= 딥링크는 srcdoc 에서 location.search 가 비므로 쓸 수 없다 — 오프라인은 load 뒤
+   gst-filter 로 같은 값을 보낸다(core 가 250ms×40 재시도로 받는 기존 경로 · v103). */
+function frameSrc(f, tab, fState){
+  if(window.__OFFLINE_FILES){
+    f.srcdoc = window.__offlinePage(tab.path);   // 없는 경로면 저쪽이 크게 던진다 — 조용한 빈 탭 금지
+    if(fState) f.addEventListener('load', ()=>{ try{ f.contentWindow.postMessage({type:'gst-filter', f:fState}, '*'); }catch(e){} });
+  } else {
+    f.src = BASE + tab.path + (fState ? ('?f='+fState) : '');
+  }
+}
 function askLoadAll(){
   const miss=TABS.filter(t=>!frames[t.id]);
   if(!miss.length)return false;
-  const mk=t=>{ const f=document.createElement('iframe'); f.src=BASE+t.path; f.dataset.id=t.id;
+  const mk=t=>{ const f=document.createElement('iframe'); frameSrc(f, t, ''); f.dataset.id=t.id;
     document.getElementById('frameWrap').appendChild(f); frames[t.id]=f; };
   const step=i=>{ if(i>=miss.length)return; miss.slice(i,i+ASK_BATCH).forEach(mk);
     if(i+ASK_BATCH<miss.length) setTimeout(()=>step(i+ASK_BATCH), ASK_GAP); };
@@ -849,7 +870,7 @@ function switchTab(id){
   if(!frames[id]){
     const tab=TABS.find(t=>t.id===id);
     const f=document.createElement('iframe');
-    f.src=BASE+tab.path+((PENDING_STATE&&PENDING_STATE.tab===id&&PENDING_STATE.f)?('?f='+PENDING_STATE.f):'');
+    frameSrc(f, tab, (PENDING_STATE&&PENDING_STATE.tab===id&&PENDING_STATE.f)?PENDING_STATE.f:'');
     f.dataset.id=id;
     f.addEventListener('load',()=>{try{f.contentWindow.postMessage({type:'gst-theme',theme:THEME},'*');f.contentWindow.postMessage({type:'gst-lang',lang:LANG},'*');}catch(e){ console.warn('[shell] iframe 초기 전파 실패', id, e); }});
     document.getElementById('frameWrap').appendChild(f);
