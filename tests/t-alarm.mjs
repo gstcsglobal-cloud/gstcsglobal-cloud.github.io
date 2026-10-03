@@ -334,8 +334,11 @@ console.log('\n[11] 「내/외」 필터 — 판정이 둘로 쪼개져 있고, 
   { const UP = fs.readFileSync(ROOT+'/upload/index.html','utf8');
     is(/pair:'sheet_allbypass'/.test(UP) && /pair:'sheet_alarm'/.test(UP),
        'upload — 알람·올바가 서로를 짝으로 선언한다');
-    is(/짝 표 「'\+t\.pairLabel\+'」 가 <b>0행<\/b>/.test(UP),
-       'upload — 검사 화면이 짝 표가 비었음을 붉게 알린다');
+    /* v138 — 사이트 경로에서는 «그 사이트 분»으로 센다는 표식(pairScope)까지 함께 지킨다.
+       스코프를 빼고 전체 행수로 돌아가면 남의 사이트 행 때문에 초록이 떠서, 자기 반쪽을
+       안 올리고 끝났다고 믿게 된다(t-sitetpl 이 동작으로도 지킨다). */
+    is(/짝 표 「'\+t\.pairLabel\+'」'\+pairScope\(\)\+' 가 <b>0행<\/b>/.test(UP),
+       'upload — 검사 화면이 짝 표가 비었음을 붉게 알린다 (사이트 분 표식 포함)');
     is(/⚠ 아직 반쪽입니다/.test(UP),
        'upload — 완료 뒤에도 남은 반쪽을 알린다 (끝난 줄 알고 돌아가지 않게)'); }
   is(/id="sl-krorg"/.test(RP), 'report — 「관리담당 기준」 칸이 있다');

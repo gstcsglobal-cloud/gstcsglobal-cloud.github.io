@@ -44,6 +44,13 @@ window.GST && GST.needVer && GST.needVer(121);   // csv_table_cols 대조(v121) 
 <div class="card">
   <h3>1. 어느 표에 올리나</h3>
   <select id="tsel"></select>
+  <!-- 표준 템플릿 — 각 사이트가 제각각의 양식을 보내는 골칫거리의 «배포용» 답(v138).
+       머리글은 GST.SM.SPEC(별칭 배열의 첫 이름 = 정본)에서 그 자리에서 «생성»한다 —
+       파일로 박아 두면 스펙이 바뀔 때마다 갈라지는 네 번째 사본이 된다(제2원칙). -->
+  <div style="margin-top:10px">
+    <button class="btn" id="tplBtn" onclick="downloadTemplate()" style="margin-top:0;background:linear-gradient(90deg,#6366f1,#8b5cf6)">📄 표준 템플릿 받기 (.xlsx)</button>
+    <div class="sub" style="margin-top:6px">머리글 + 기입 안내가 든 빈 양식입니다. <b>지금 쓰시는 양식도 계속 그대로 받습니다</b> — 새 입력부터 이 양식을 쓰면 됩니다.</div>
+  </div>
   <!-- 넣는 방식 셋. 10만행 제한으로 기간을 나눠 뽑을 때 앞 파일을 지우지 않으려면 «구간 교체»,
        기존 것을 하나도 건드리지 않고 뒤에 붙이려면 «이어붙이기».
        ⚠ 이어붙이기는 겹치는 구간을 «지우지 않으므로» 겹친 만큼 이중 계산된다
@@ -81,31 +88,33 @@ window.GST && GST.needVer && GST.needVer(121);   // csv_table_cols 대조(v121) 
    import  — 컬럼이 시트 머리글 그대로인 표. CSV 헤더가 표 컬럼과 (정규화 후) 일치해야 한다. */
 /* win — 구간 교체를 지원하는 표와 그 날짜 필드(SPEC 키). 설치현황은 «그 시점의 전체 명부»라
    구간이라는 개념이 없다 → 통째 교체만. SQL 쪽 _csv_datecol 과 짝이다. */
+/* rid — 사이트 경로(SITE_ROUTES)가 대상을 가리키는 열쇠. ⚠ 배열 인덱스로 가리키면 항목을
+   끼워 넣는 순간 남의 표를 가리키고, key 는 'abp2' 가 두 항목에 겹치고 여섯 항목엔 없다. */
 const TABLES = [
-  { key:'wk',   label:'수선실적 (엑셀 또는 CSV)',  table:'sheet_wk',   kind:'mirror', win:'dStart',
+  { rid:'wk', key:'wk',   label:'수선실적 (엑셀 또는 CSV)',  table:'sheet_wk',   kind:'mirror', win:'dStart',
     after:'고장분석 → 데이터 품질 카드에서 「미기재」 건수를, 주간현황에서 BM 추이를 확인하세요.' },
-  { key:'mat',  label:'자재실적 (엑셀 또는 CSV)',  table:'sheet_mat',  kind:'mirror', win:'workDate',
+  { rid:'mat', key:'mat',  label:'자재실적 (엑셀 또는 CSV)',  table:'sheet_mat',  kind:'mirror', win:'workDate',
     after:'자재실적 → 데이터 품질 카드에서 「수량 단위 오입력 의심」 건수를 확인하세요.' },
   /* 설치현황은 **국내·해외 양식이 서로 다른 파일**로 온다(국내 74열 한글 · 해외 118열 영문).
      통합할 수 없다는 것이 사용자 확정이라, SPEC 의 별칭 배열이 둘 다 흡수한다 — 대상은 하나다.
      ⚠ 두 파일을 다 넣어야 하므로 **첫 파일은 「통째 교체」, 두 번째는 「이어붙이기」** 다.
         둘 다 통째 교체로 올리면 먼저 올린 쪽이 사라진다. */
-  { key:'inst', label:'설치현황 (국내·해외 양식 모두)',  table:'sheet_inst', kind:'mirror',
+  { rid:'inst', key:'inst', label:'설치현황 (국내·해외 양식 모두)',  table:'sheet_inst', kind:'mirror',
     note:'국내·해외 두 파일을 각각 올립니다 — 첫 파일은 「통째 교체」, 두 번째는 「이어붙이기」로.',
     /* 설치현황은 «조직 축의 정본»이라, 올린 뒤 조인이 얼마나 붙었는지가 가장 중요하다 —
        안 붙으면 사업부·단지·라인이 조용히 「미상」으로 몰린다(v135 · 7단계). */
     after:'주간현황·설치현황의 데이터 품질 카드에서 S/N 조인율과 「설비상태」 인식을 확인하세요 — 낮으면 단지·라인이 미상으로 몰립니다.' },
-  { label:'교육현황 (엑셀 또는 CSV)',      table:'sheet_edu',     kind:'import',
+  { rid:'edu', label:'교육현황 (엑셀 또는 CSV)',      table:'sheet_edu',     kind:'import',
     after:'인원 현황 → 데이터 품질 카드에서 「교육현황과 못 이은 재직 인원」이 0 인지 확인하세요.' },
-  { label:'인원현황 (엑셀 또는 CSV)',   table:'sheet_roster',  kind:'import',
+  { rid:'roster', label:'인원현황 (엑셀 또는 CSV)',   table:'sheet_roster',  kind:'import',
     after:'인원 현황에서 단지·라인 목록이 비지 않았는지, 재직 인원 수가 맞는지 확인하세요.' },
-  { label:'휴가현황 (엑셀 또는 CSV)',    table:'sheet_leave',   kind:'import',
+  { rid:'leave', label:'휴가현황 (엑셀 또는 CSV)',    table:'sheet_leave',   kind:'import',
     after:'주간현황의 인당 공수(출근 연인원에서 휴가를 뺀 값)가 상식적인지 확인하세요.' },
-  { label:'CIP F11 (엑셀 또는 CSV)',  table:'sheet_cip_f11', kind:'import',
+  { rid:'cipf11', label:'CIP F11 (엑셀 또는 CSV)',  table:'sheet_cip_f11', kind:'import',
     after:'CIP 현황에서 분모(대상 건수)가 줄지 않았는지 확인하세요 — 줄었다면 새 항목 열이 빠진 것입니다.' },
-  { label:'CIP F16 (엑셀 또는 CSV)',  table:'sheet_cip_f16', kind:'import',
+  { rid:'cipf16', label:'CIP F16 (엑셀 또는 CSV)',  table:'sheet_cip_f16', kind:'import',
     after:'CIP 현황에서 분모(대상 건수)가 줄지 않았는지 확인하세요 — 줄었다면 새 항목 열이 빠진 것입니다.' },
-  { label:'All By-Pass (엑셀 또는 CSV · 세로형)', table:'sheet_abp',     kind:'import',
+  { rid:'abp', label:'All By-Pass (엑셀 또는 CSV · 세로형)', table:'sheet_abp',     kind:'import',
     after:'주간현황 Alarm 차트에서 해외 All By-Pass 막대가 서는지 확인하세요.' },
   /* 국내 알람 원장 — 한 워크북(.xlsx)에 K·P·H 세 운영단위 시트가 «각자 다른 양식»으로 들어 있다.
      CSV 여섯 개로 쪼개 올리게 하면 어느 시트를 어느 표에 넣는지 사람이 틀린다 →
@@ -116,11 +125,11 @@ const TABLES = [
      그래서 pair 로 짝을 선언하고, 검사·완료 화면이 «짝 표의 현재 행수»를 항상 같이 보여준다.
      한 버튼으로 두 표를 다 넣지 않는 이유: 비우기-넣기가 표마다 원자적이어야 한다.
      중간에 실패하면 한 표만 빈 채로 남는데, 그게 지금 상태보다 나쁘다. */
-  { key:'alarm', label:'국내 알람 (CS 알람관리 .xlsx) — 두 반쪽 중 ①', table:'sheet_alarm',
+  { rid:'alarm', key:'alarm', label:'국내 알람 (CS 알람관리 .xlsx) — 두 반쪽 중 ①', table:'sheet_alarm',
     kind:'xlsx', win:'occurDate', sheets:/^([KPH])운영[_\s]*ALARM$/i,     hint:'○운영_ALARM',
     pair:'sheet_allbypass', pairLabel:'국내 올바이패스', ddl:'setup-10-alarm.sql',
     after:'주간현황의 데이터 품질 카드에서 「국내 알람 원장이 비어…」 줄이 사라졌는지, S/N 조인율이 높은지 확인하세요.' },
-  { key:'abp2',  label:'국내 올바이패스 (CS 알람관리 .xlsx) — 두 반쪽 중 ②', table:'sheet_allbypass',
+  { rid:'abp2kr', key:'abp2',  label:'국내 올바이패스 (CS 알람관리 .xlsx) — 두 반쪽 중 ②', table:'sheet_allbypass',
     kind:'xlsx', win:'occurDate', sheets:/^([KPH])운영[_\s]*ALL[_\s]*BYPASS$/i, hint:'○운영_ALLBYPASS',
     pair:'sheet_alarm', pairLabel:'국내 알람', ddl:'setup-10-alarm.sql',
     defMode:'win', shared:{ label:'해외 올바이패스', others:q=>q.eq('src_sheet','OS') },
@@ -136,7 +145,7 @@ const TABLES = [
        'GST TAIWAN SCRUBBER' 라 국내 행(K·P·H운영)은 한 줄도 안 지워진다.
      ⚠ 시트 이름이 정해져 있지 않다(사용자 파일은 'Sheet1'). 그래서 이름으로 고르지 않고
        «올바이패스 양식으로 읽히는 시트»를 고른다 — SPEC 의 힌트가 그 판정을 한다. */
-  { key:'abp2', label:'해외 올바이패스 리스트 (엑셀 · 행 단위)', table:'sheet_allbypass',
+  { rid:'abp2os', key:'abp2', label:'해외 올바이패스 리스트 (엑셀 · 행 단위)', table:'sheet_allbypass',
     kind:'xlsx', win:'occurDate', tag:'OS', defMode:'win',
     ddl:'setup-14-abp-overseas.sql',
     hint:'올바이패스 양식(Group·S/N·Work Date …)으로 읽히는 시트',
@@ -149,7 +158,48 @@ const TABLES = [
     after:'주간현황 고장 차트에서 All By-Pass 막대를 눌러 세부내역이 나오는지, 국내 행이 그대로 있는지 확인하세요.' },
 ];
 const $=id=>document.getElementById(id);
-TABLES.forEach((t,i)=>{ $('tsel').insertAdjacentHTML('beforeend','<option value="'+i+'">'+t.label+'</option>'); });
+
+/* ============ 사이트 담당자 경로 (v138 · ?site=K|P|H|TW) ============
+   각 사이트 담당자가 «자기 몫만» 올리는 전용 화면. 같은 페이지가 쿼리로 갈린다 —
+   파라미터가 없으면 지금까지의 관리자 전체 화면 그대로다(한 글자도 안 바뀐다).
+
+   ⚠ 이것은 «화면 수준» 스코프다(사용자 확정 — DB 강제는 setup-16 별도 단계).
+     서버의 구간 교체는 「날짜 × op」로 지우므로, 화면이 ① 모드를 구간 교체로 고정하고
+     ② 파일의 전 행 op 가 이 사이트 것인지 검사해 막으면, 이 경로로는 남의 사이트 행을
+     지우지도 넣지도 못한다. 관리자 화면(파라미터 없음)은 지금처럼 전권이다.
+   ⚠ 대상은 «op 로 안전하게 갈리는 표»만 연다. 설치현황은 op 열이 없고 지우기가 전역
+     truncate 뿐이라 사이트 경로에 열 수 없다(열면 한 사이트 파일이 전 사이트를 지운다).
+     국내 수선·자재도 op 가 법인 단위(SEC Scrubber)라 K/P/H 를 못 가른다 — 중앙 유지.
+   ⚠ 알람·올바의 op 는 build 가 시트 이름 태그에서 만들므로(K→'K운영') 파일 열이 아니다 —
+     그래서 시트 정규식도 사이트 문자로 좁힌다(남의 사이트 시트는 «무시했다»고 적는다). */
+const SITE_ROUTES={
+  K :{ name:'K운영',  tag:'K', targets:['alarm','abp2kr'], opOk:v=>v==='K운영', opDesc:'「K운영」' },
+  P :{ name:'P운영',  tag:'P', targets:['alarm','abp2kr'], opOk:v=>v==='P운영', opDesc:'「P운영」' },
+  H :{ name:'H운영',  tag:'H', targets:['alarm','abp2kr'], opOk:v=>v==='H운영', opDesc:'「H운영」' },
+  TW:{ name:'대만 (GST TAIWAN)', targets:['abp2os','wk','mat'],
+       opOk:v=>/^GST/i.test(v), opDesc:'운영단위가 「GST …」 인' },
+};
+const SITE=(function(){ try{ const s=(new URLSearchParams(location.search).get('site')||'').toUpperCase();
+  return SITE_ROUTES[s]?s:null; }catch(e){ return null; } })();
+const ROUTE=SITE?SITE_ROUTES[SITE]:null;
+
+/* 사이트 화면은 route.targets «순서대로» 보여준다 — 그 사이트의 할 일 순서(원장 먼저)다.
+   배열 순서로 그리면 설정의 순서가 조용히 무시된다. */
+(ROUTE ? ROUTE.targets.map(r=>TABLES.findIndex(t=>t&&t.rid===r)).filter(i=>i>=0)
+       : TABLES.map((_,i)=>i)
+).forEach(i=>{
+  $('tsel').insertAdjacentHTML('beforeend','<option value="'+i+'">'+TABLES[i].label+'</option>');
+});
+if(ROUTE){
+  document.title=ROUTE.name+' 업로드 · CS Global Team';
+  document.querySelector('h1').textContent='📤 '+ROUTE.name+' 데이터 업로드';
+  /* 담당자 화면의 머리글은 «할 일 순서»다 — 관리자용 설명(진단 링크 등)은 여기선 소음이다. */
+  document.querySelector('.sub').innerHTML=
+    '<b>'+ROUTE.name+' 담당자 전용 화면</b>입니다 — 올린 데이터는 '+(ROUTE.opDesc)+' 행만 갈아끼워지고, 다른 사이트 데이터는 건드리지 않습니다.<br>'
+    +'① 아래 「표준 템플릿 받기」로 양식을 내려받아 채웁니다 (지금 쓰시는 워크북 그대로도 올라갑니다 — 머리글만 그대로 두세요)<br>'
+    +'② 파일을 올리면 자동 검사 결과를 확인하고 「업로드」를 누릅니다<br>'
+    +'③ 화면에 「두 반쪽」 안내가 뜨면 대상을 바꿔 <b>같은 파일로 한 번 더</b> 올립니다';
+}
 
 let PREP=null;   // {t, rows(객체배열), fileRows, oldCount, warns[]}
 
@@ -173,6 +223,17 @@ async function tableCount(c,t){
   if(r.error)throw new Error(r.error.message);
   return r.count||0;
 }
+/* 짝 표(두 반쪽) 행수 — 사이트 화면에서는 «그 사이트 분»만 센다. 전체 행수로 세면
+   남의 사이트가 올려 둔 행 때문에 초록이 떠서, 자기 반쪽을 안 올리고 끝났다고 믿게 된다
+   (전체 화면이 두 반쪽에서 겪은 그 실패가 사이트 단위로 재현된다). */
+async function pairCount(c,t){
+  let q=c.from(t).select('*',{count:'exact',head:true});
+  if(ROUTE&&ROUTE.tag)q=q.eq('op',ROUTE.tag+'운영');
+  const r=await q;
+  if(r.error)throw new Error(r.error.message);
+  return r.count||0;
+}
+const pairScope=()=> (ROUTE&&ROUTE.tag)?(' ('+ROUTE.name+' 분)'):'';
 
 /* 파일 읽기 — 인코딩을 스스로 정한다.
    엑셀(한국어 Windows)의 «다른 이름으로 저장 → CSV(쉼표로 분리)»는 UTF-8 이 아니라
@@ -222,6 +283,91 @@ async function xlsxLib(){
   _XLSX=window.XLSX; if(!_XLSX)throw new Error('xlsx 라이브러리 로드 실패');
   return _XLSX;
 }
+/* ============ 표준 템플릿 생성 (v138) ============
+   각 사이트가 제각각의 엑셀을 보내는 문제의 «배포» 쪽 답 — 우리 시스템이 읽는 모양
+   그대로의 빈 워크북을 그 자리에서 만들어 내려준다.
+
+   ⚠ 머리글은 SPEC «별칭 배열의 첫 이름»이다 — dbRows·gen-ddl·봇이 머리글을 되살릴 때
+     쓰는 바로 그 규약이라, 템플릿이 곧 시스템의 정본 표기가 된다. 별칭[1..]은
+     「지금 쓰는 다른 이름」 매핑표로 안내 시트에 들어간다 — 사이트 자체양식의 이름이
+     별칭에 추가되면 이 매핑표도 저절로 따라온다(사본 없음).
+   ⚠ 데이터 시트에 예시 행을 넣지 않는다 — 지우는 걸 잊은 예시 행은 «조용한 가짜
+     데이터»가 된다. 예시 값은 안내 시트에만 적는다.
+   ⚠ 알람·올바는 실제 흐름(한 워크북을 두 반쪽으로 두 번 올림)에 맞춰 «한 워크북에
+     두 시트»(○운영_ALARM · ○운영_ALLBYPASS)로 낸다 — 반쪽짜리 템플릿을 주면
+     반쪽만 올리는 그 사고를 템플릿이 부추기는 셈이다. */
+const TPL_NAME={wk:'수선실적',mat:'자재실적',inst:'설치현황',edu:'교육현황',roster:'인원현황',
+  leave:'휴가현황',cipf11:'CIP_F11',cipf16:'CIP_F16',abp:'AllByPass크로스탭',
+  alarm:'알람·올바이패스',abp2kr:'알람·올바이패스',abp2os:'해외올바이패스'};
+function tplSpecRows(specKey, sheetName, dateKey){
+  const S=GST.SM.SPEC[specKey], keys=Object.keys(S.fields), opt=S.opt||[];
+  const canon=k=>[].concat(S.fields[k])[0];
+  const g=[['— 시트 「'+sheetName+'」 —','','',''],
+           ['열 이름','필수','적는 법','지금 쓰는 다른 이름 (그대로 올려도 읽힙니다)']];
+  keys.forEach(k=>{
+    const al=[].concat(S.fields[k]);
+    g.push([al[0], opt.indexOf(k)<0?'필수':'',
+      k===dateKey?'날짜 YYYY-MM-DD — 이 날짜로 «겹치는 구간만 교체»가 됩니다':'',
+      al.slice(1).join(' / ')]);
+  });
+  g.push(['','','','']);
+  return { head:keys.map(canon), guide:g };
+}
+window.downloadTemplate=async function(){
+  const t=TABLES[+$('tsel').value]; if(!t)return;
+  const btn=$('tplBtn'); btn.disabled=true;
+  try{
+    const XLSX=await xlsxLib();
+    const wb=XLSX.utils.book_new();
+    const guide=[];
+    const addData=(name,head)=>{
+      const ws=XLSX.utils.aoa_to_sheet([head]);
+      ws['!cols']=head.map(h=>({wch:Math.max(10,Math.min(26,String(h).length+4))}));
+      XLSX.utils.book_append_sheet(wb,ws,name);
+    };
+    let fname;
+    if(t.rid==='alarm'||t.rid==='abp2kr'){
+      const tag=(ROUTE&&ROUTE.tag)||'P';
+      const a=tplSpecRows('alarm', tag+'운영_ALARM', 'occur');
+      const b=tplSpecRows('abp2',  tag+'운영_ALLBYPASS', 'occur');
+      addData(tag+'운영_ALARM', a.head);
+      addData(tag+'운영_ALLBYPASS', b.head);
+      guide.push(['CS 알람관리 표준 워크북 — 한 파일에 두 반쪽(알람·올바이패스)이 들어 있습니다.','','',''],
+        [(ROUTE?'':'※ 시트 이름의 「'+tag+'」 를 자기 사이트 문자(K·P·H)로 바꿔 쓰세요.'),'','',''],
+        ['※ 업로드는 두 번입니다 — 대상 「국내 알람」으로 한 번, 「국내 올바이패스」로 한 번(같은 파일).','','',''],
+        ['※ 올바이패스 사건이 없는 달에도 시트는 지우지 말고 비워 두세요.','','','']);
+      guide.push.apply(guide, a.guide); guide.push.apply(guide, b.guide);
+      fname='표준양식_'+tag+'운영_알람올바이패스.xlsx';
+    }else if(t.kind==='import'){
+      /* Import 표의 머리글 정본은 SPEC 이 아니라 «표의 실제 컬럼»이다(처음 이관한 시트
+         머리글 그대로) — 그래서 표에서 읽는다. 다른 데서 만들면 네 번째 사본이다. */
+      const c=await GST.db(); if(!c)throw new Error('로그인이 필요합니다');
+      const cols=await tableCols(c,t.table);
+      if(!cols)throw new Error('표 컬럼을 읽지 못했습니다 — setup-8 의 csv_table_cols RPC 를 확인하세요');
+      const head=cols.filter(k=>!GST._CSV_SKIP[k]);
+      addData('데이터', head);
+      guide.push([t.label+' 표준 양식 — 머리글은 시스템이 쓰는 표의 열 그대로입니다.','','',''],
+        ['※ 열 이름을 바꾸거나 지우지 마세요. 새 정보가 필요하면 관리자에게 열 추가를 요청하세요.','','',''],
+        ['','','',''],['열 이름','','',''],...head.map(h=>[h,'','','']));
+      fname='표준양식_'+(TPL_NAME[t.rid]||t.table)+'.xlsx';
+    }else{
+      const r=tplSpecRows(t.key, TPL_NAME[t.rid], t.win);
+      addData(TPL_NAME[t.rid], r.head);
+      guide.push([t.label+' 표준 양식','','','']);
+      if(t.rid==='inst')guide.push(['※ 국내·해외 공용 표준입니다 — 기존 국내(한글 74열)·해외(영문 118열) 양식도 계속 그대로 받습니다.','','','']);
+      if(t.rid==='abp2os')guide.push(['※ 「운영단위」에는 법인명(GST TAIWAN SCRUBBER …)을 그대로 적으세요 — 이 값으로 국내와 구분됩니다.','','','']);
+      guide.push(['','','','']);
+      guide.push.apply(guide, r.guide);
+      fname='표준양식_'+(TPL_NAME[t.rid]||t.key)+'.xlsx';
+    }
+    const gw=XLSX.utils.aoa_to_sheet(guide);
+    gw['!cols']=[{wch:30},{wch:6},{wch:46},{wch:60}];
+    XLSX.utils.book_append_sheet(wb,gw,'기입 안내');
+    XLSX.writeFile(wb,fname);
+  }catch(e){ chkShow('<span class="bad">❌ 템플릿 생성 실패: '+String(e.message||e)+'</span>'); }
+  finally{ btn.disabled=false; }
+};
+
 /* 셀 → 문자열. 날짜는 «현지 시각 구성요소»로 찍는다 — toISOString 을 쓰면 UTC 로 밀려
    자정 근처 행의 날짜가 하루 어긋난다(엑셀은 시각대 개념 없이 저장한다). */
 function cellStr(v){
@@ -315,9 +461,18 @@ window.checkFile=async function(){
          흡수한다(GST.SM.SPEC.alarm · abp2). 사이트별 코드를 여기 만들지 말 것 — 제2원칙. */
       const XLSX=await xlsxLib();
       const wb=XLSX.read(new Uint8Array(await f.arrayBuffer()),{type:'array',cellDates:true});
-      const hit=[];
+      const hit=[]; const ignored=[];
       if(t.sheets){
-        wb.SheetNames.forEach(function(n){ const mm=t.sheets.exec(String(n).trim()); if(mm)hit.push([n,mm[1].toUpperCase()]); });
+        /* 사이트 경로에서는 정규식의 [KPH] 를 그 사이트 문자로 좁힌다 — build 의 op 가
+           시트 이름 태그에서 나오므로, 남의 시트를 받으면 남의 op 행이 만들어진다.
+           ⚠ 조용히 거르면 담당자는 «그 시트도 올라간 줄» 안다 — 무시한 시트를 세어 적는다. */
+        const re=(ROUTE&&ROUTE.tag)?new RegExp(t.sheets.source.replace('[KPH]',ROUTE.tag),'i'):t.sheets;
+        wb.SheetNames.forEach(function(n){
+          const nm=String(n).trim();
+          const mm=re.exec(nm);
+          if(mm){ hit.push([n,mm[1].toUpperCase()]); return; }
+          if(ROUTE&&ROUTE.tag&&t.sheets.exec(nm)) ignored.push(n);
+        });
       }else{
         /* 이름 규칙이 없는 파일(해외 올바이패스는 시트가 'Sheet1' 이다) — 이름 대신
            «그 양식으로 읽히는가»로 고른다. SPEC 의 힌트가 헤더 행을 찾으면 그 시트다.
@@ -329,8 +484,12 @@ window.checkFile=async function(){
           if(GST.SM.headerRow(rr, S.hints, S.scan)>=0) hit.push([n, t.tag||'OS']);
         });
       }
-      if(!hit.length)throw new Error('워크북에 «'+t.hint+'» 시트가 없습니다'
-        +'\n(이 파일에 있는 시트: '+wb.SheetNames.join(', ')+')');
+      if(!hit.length)throw new Error('워크북에 «'
+        +((ROUTE&&ROUTE.tag&&t.sheets)?t.hint.replace('○',ROUTE.tag):t.hint)+'» 시트가 없습니다'
+        +'\n(이 파일에 있는 시트: '+wb.SheetNames.join(', ')+')'
+        +(ignored.length?'\n다른 사이트 시트('+ignored.join(', ')+')는 이 화면에서 올릴 수 없습니다.':''));
+      if(ignored.length)msgs.push('<span class="warn">ℹ 이 화면은 '+ROUTE.name+' 전용이라 <b>'
+        +ignored.join(', ')+'</b> 시트는 올리지 않았습니다 — 그 시트는 해당 사이트 담당자 화면에서 올려야 합니다.</span>');
       out=[]; const per=[]; let skipTot=0;
       for(const pair of hit){
         const rr=sheetRows(XLSX, wb.Sheets[pair[0]]);   // 변환기는 한 벌 — 두 벌이면 갈라진다
@@ -453,6 +612,21 @@ window.checkFile=async function(){
 
     if(!out.length)throw new Error('데이터 행이 없습니다');
 
+    /* ── 사이트 경로: 전 행의 op 가 이 사이트 것인지 — 아니면 «진행 자체를 막는다» ──
+       구간 교체의 삭제 조건이 파일의 op 집합에서 나오므로(아래 win 계산), 남의 op 행이
+       한 줄이라도 섞이면 그 사이트의 기존 행이 지워지고 이 파일 행이 그 자리에 들어간다.
+       조용히 걸러서 올리면 담당자는 «그 행도 올라간 줄» 안다 — 빼지 말고 막고, 어느
+       값이 몇 행인지 적는다(v138 · 화면 수준 스코프의 심장). */
+    if(ROUTE){
+      const bad={};
+      out.forEach(function(o){ const v=String(o.op==null?'':o.op); if(!ROUTE.opOk(v))bad[v]=(bad[v]||0)+1; });
+      const bk=Object.keys(bad);
+      if(bk.length)throw new Error('이 화면('+ROUTE.name+')에서 올릴 수 없는 운영단위 행이 있습니다 — '
+        +bk.map(function(k){ return '「'+(k||'(빈칸)')+'」 '+bad[k].toLocaleString()+'행'; }).join(' · ')
+        +'\n이 화면은 '+ROUTE.opDesc+' 행만 받습니다. 파일에 다른 사이트 데이터가 섞였는지 확인하거나,'
+        +'\n전체 데이터는 관리자 화면(/upload/)에서 올려야 합니다.');
+    }
+
     /* 표에 «실제로 있는 열»과 대조한다 — 비우기 전에.
        예전에는 이 검사 없이 비우고 적재해서, 표에서 열 하나가 지워져 있으면
        (실제로 extra 를 콘솔에서 지운 일이 있었다) 비운 직후 적재가 실패해
@@ -546,10 +720,10 @@ window.checkFile=async function(){
     /* 짝 표의 상태를 «묻지 않아도» 보여준다. 이 한 줄이 없어서 «올바만 올리고 끝났다고
        믿는» 상태가 며칠 갔다 — 사용자가 알아서 확인하게 두면 안 되는 종류의 사실이다. */
     if(t.pair){
-      const pc=await tableCount(c,t.pair);
+      const pc=await pairCount(c,t.pair);
       msgs.push(pc>0
-        ? '<span class="ok">짝 표 「'+t.pairLabel+'」 <b>'+pc.toLocaleString()+'행</b> — 이미 올라가 있습니다</span>'
-        : '<span class="bad big">⚠ 짝 표 「'+t.pairLabel+'」 가 <b>0행</b>입니다 — 이 파일을 올린 뒤 '
+        ? '<span class="ok">짝 표 「'+t.pairLabel+'」'+pairScope()+' <b>'+pc.toLocaleString()+'행</b> — 이미 올라가 있습니다</span>'
+        : '<span class="bad big">⚠ 짝 표 「'+t.pairLabel+'」'+pairScope()+' 가 <b>0행</b>입니다 — 이 파일을 올린 뒤 '
           +'대상을 「'+t.pairLabel+'」 로 바꿔 <b>같은 파일로 한 번 더</b> 올려야 합니다.<br>'
           +'그때까지 국내 지표는 그 절반이 수선실적으로 계산됩니다.</span>');
     }
@@ -572,6 +746,19 @@ function appending(){ return mode()==='add'; }
 function syncMode(){
   const t=TABLES[+$('tsel').value], sel=$('modeSel'), hint=$('modeHint');
   if(!t||!sel)return;
+  /* 사이트 경로는 «구간 교체» 하나로 고정한다. sheet_alarm 의 기본이 통째 교체(truncate)라
+     그대로 두면 P 담당자의 파일이 K·H 행을 전부 지운다 — 옵션을 잠그는 게 아니라 숨긴다:
+     담당자에게 「고를 수 있는데 막힌 것」처럼 보이면 왜냐고 묻게 되고, 보이지 않으면
+     애초에 선택지가 아니다. 관리자 화면(ROUTE 없음)은 셋 다 지금 그대로다. */
+  if(ROUTE){
+    sel.value='win';
+    sel.querySelectorAll('option').forEach(o=>{ if(o.value!=='win'){ o.disabled=true; o.style.display='none'; } });
+    sel.disabled=true;
+    if(hint)hint.innerHTML='<span>이 화면은 언제나 「겹치는 구간만 교체」로 올립니다 — 파일이 덮는 기간의 '
+      +ROUTE.opDesc+' 행만 갈아끼우고, 다른 사이트·다른 기간은 건드리지 않습니다.</span>';
+    const btn0=$('goBtn'); if(btn0)btn0.textContent='업로드 (내 사이트 분량만 교체)';
+    return;
+  }
   const winOpt=sel.querySelector('option[value="win"]');
   if(winOpt){ winOpt.disabled=!t.win;
     winOpt.textContent=t.win?'겹치는 구간만 교체 — 이 파일이 덮는 사업부 × 기간만 갈아끼웁니다'
@@ -679,8 +866,8 @@ window.doUpload=async function(){
     /* 완료 화면에서 «아직 남은 반쪽»을 명시한다. 여기서 말해 주지 않으면 사용자는
        끝난 줄 알고 화면으로 돌아가고, 절반이 옛 경로로 계산되는 것을 모른 채 지낸다. */
     if(PREP.t.pair){
-      const pc=await tableCount(c,PREP.t.pair);
-      if(pc>0) logLine('ok','짝 표 「'+PREP.t.pairLabel+'」 '+pc.toLocaleString()+'행 — 두 반쪽 모두 올라갔습니다.');
+      const pc=await pairCount(c,PREP.t.pair);
+      if(pc>0) logLine('ok','짝 표 「'+PREP.t.pairLabel+'」'+pairScope()+' '+pc.toLocaleString()+'행 — 두 반쪽 모두 올라갔습니다.');
       else     logLine('bad big','⚠ 아직 반쪽입니다 — 대상을 「'+PREP.t.pairLabel
                  +'」 로 바꿔 **같은 파일로 한 번 더** 올리세요. 그때까지 국내 지표의 그 절반은 수선실적으로 계산됩니다.');
     }
