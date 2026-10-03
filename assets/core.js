@@ -16,7 +16,14 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 142;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 143;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+/* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
+   오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
+   'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
+   여덟 페이지에서 «한 키»로 충돌하고, 챗봇 출처 라벨·자동순회 페이지 id 도 전부 같아진다.
+   에러는 하나도 안 나고, 마지막에 저장한 페이지가 남의 설정을 덮을 뿐이다. 오프라인 심이
+   페이지마다 __PAGE_PATH('/fault/')를 심고, 온라인에서는 지금까지와 한 글자도 다르지 않다. */
+GST.pagePath = function(){ return window.__PAGE_PATH || location.pathname; };
 /* 인사이트 띠의 머리글. 예전에는 «INSIGHT» 영문 대문자가 core 에 박혀 있어 네 언어 어디서도 안 바뀌고
    PPT 장표까지 그대로 나갔다(v135). core 의 공용 문자열 관례(GST._lang + 사전) 그대로다. */
 GST.INS_T = {ko:'요약', en:'Summary', zh:'摘要', ja:'要約'};
@@ -3527,7 +3534,7 @@ GST.topN = function(list, n, unit){
 // 선택 상태는 sessionStorage에 페이지별로 기억. 라벨 갱신(언어 전환)을 위해 재호출 가능.
 GST.sectionNav = function(defs){
   if(!defs || !defs.length) return;
-  const storeKey = 'gst_sec_' + location.pathname.replace(/[^a-z0-9]/gi,'');
+  const storeKey = 'gst_sec_' + GST.pagePath().replace(/[^a-z0-9]/gi,'');
   let nav = document.getElementById('gstSecNav');
   if(!nav){
     nav = document.createElement('nav');
@@ -4859,7 +4866,7 @@ GST._localBar = function(reg){
    ============================================================ */
 GST.factPack = function(opt){
   const O=opt||{}, TOPN=O.top||10, SER=O.series||12;
-  const P={tab:(location.pathname.replace(/\/index\.html$/,'').split('/').filter(Boolean).pop()||'main'),
+  const P={tab:(GST.pagePath().replace(/\/index\.html$/,'').split('/').filter(Boolean).pop()||'main'),
            title:(document.title||'').trim(), kpi:[], series:[], groups:[], filters:[]};
   try{ const st=document.getElementById('status'); if(st)P.status=st.textContent.trim().slice(0,220); }catch(e){}
   // ① KPI 카드 — 화면에 뜬 값 그대로
@@ -4924,7 +4931,7 @@ window.addEventListener('message', function(e){
     let list=[]; const ax=d.axis||'campus';
     try{ list=GST.filters.options(ax)||[]; }catch(x){}
     try{ (e.source||window.parent).postMessage(
-      {type:'gst-kiosk-a', axis:ax, list:list, ver:GST.VER, page:(GST._pageId||location.pathname)}, '*'); }catch(x){}
+      {type:'gst-kiosk-a', axis:ax, list:list, ver:GST.VER, page:(GST._pageId||GST.pagePath())}, '*'); }catch(x){}
     return; }
   if(d.type==='gst-kiosk-set'){
     /* 걸었는지를 «반드시» 돌려준다. 그 페이지 자료에 없는 값은 조용히 버려져 «전체»가
@@ -5939,7 +5946,7 @@ GST.AX_T={ko:{t:'축 범위 (min / max)',apply:'적용',reset:'초기화'},
           zh:{t:'轴范围 (min / max)',apply:'应用',reset:'重置'},
           ja:{t:'軸範囲 (min / max)',apply:'適用',reset:'リセット'}};
 GST.axbKey = function(){
-  const p=(location.pathname.match(/\/([a-z]+)\/?(?:index\.html)?$/)||[])[1]||'root';
+  const p=(GST.pagePath().match(/\/([a-z]+)\/?(?:index\.html)?$/)||[])[1]||'root';
   return (p==='report'||p==='cip') ? 'gst_rpt_axb' : 'gst_axb_'+p;
 };
 GST.axbLoad = function(){ try{ return JSON.parse(localStorage.getItem(GST.axbKey())||'{}')||{}; }catch(e){ return {}; } };
@@ -6138,7 +6145,7 @@ GST._snOf=function(td){
 };
 GST.snMenu=function(sn, x, y){
   const old=document.getElementById('gstSnMenu'); if(old)old.remove();
-  const here=(location.pathname.match(/\/([a-z]+)\/?$/)||[])[1]||'';
+  const here=(GST.pagePath().match(/\/([a-z]+)\/?$/)||[])[1]||'';
   const lang=(function(){ try{ return sessionStorage.getItem('gst_lang')||'ko'; }catch(e){ return 'ko'; } })();
   const m=document.createElement('div'); m.id='gstSnMenu';
   m.style.cssText='position:fixed;z-index:9999;min-width:180px;background:var(--glass,#111823);'
@@ -6698,7 +6705,7 @@ GST.pivotCalc=function(rows, rowKs, colK, T){
           colRecs:function(c){ return many(rKeys,c); },
           allRecs:function(){ return many(rKeys,null); }};
 };
-GST._pivKey=function(){ return 'gst_piv_'+location.pathname.replace(/[^a-z0-9]/gi,''); };
+GST._pivKey=function(){ return 'gst_piv_'+GST.pagePath().replace(/[^a-z0-9]/gi,''); };
 GST._pivLoad=function(){ try{ return JSON.parse(sessionStorage.getItem(GST._pivKey())||'{}')||{}; }catch(e){ return {}; } };
 GST._pivSave=function(o){ try{ sessionStorage.setItem(GST._pivKey(), JSON.stringify(o)); }catch(e){} };
 

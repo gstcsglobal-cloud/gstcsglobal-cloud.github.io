@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오프라인 내보내기 · CS Global Team</title>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
+<script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=143"></script>
+<style>
+/* 관리 도구 화면 — /upload/·/diag/ 와 같은 부류라 테마·i18n 을 싣지 않는다(KO 고정) */
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0f16;color:#dbe4f0;font:14px/1.7 'Malgun Gothic',system-ui,sans-serif;padding:26px 18px 60px}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-size:19px;margin-bottom:4px} .sub{color:#8b98a9;font-size:12.5px;margin-bottom:22px}
+.card{background:#111823;border:1px solid rgba(151,170,196,.18);border-radius:14px;padding:20px 22px;margin-bottom:16px}
+.card h2{font-size:15px;margin-bottom:8px} .card p{color:#a2aebf;font-size:12.5px;margin-bottom:10px}
+button.go{background:#2563eb;color:#fff;border:0;border-radius:9px;padding:9px 18px;font-size:13.5px;font-weight:700;cursor:pointer}
+button.go:disabled{opacity:.45;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:12px}
+th,td{padding:5px 8px;border-bottom:1px solid rgba(151,170,196,.12);text-align:left}
+th{color:#8b98a9;font-weight:600} td.n{text-align:right;font-variant-numeric:tabular-nums}
+.ok{color:#34d399} .err{color:#f87171;white-space:pre-line} .note{color:#8b98a9;font-size:12px;margin-top:10px;white-space:pre-line}
+.warn{background:#3b2f14;border:1px solid #a16207;border-radius:10px;padding:10px 14px;color:#fde68a;font-size:12.5px;margin-bottom:16px}
+#gate{max-width:460px;margin:18vh auto 0;padding:26px 28px;border-radius:14px;background:#111823;text-align:center;display:none}
+#loginOverlay{position:fixed;inset:0;z-index:99999;background:#070b10}
+code{background:#1a2332;border-radius:5px;padding:1px 6px;font-size:12px}
+.prog{color:#93c5fd;font-size:12.5px;margin-top:10px;white-space:pre-line}
+</style>
+</head>
+<body>
+<div id="loginOverlay"></div>
+<div id="gate"><b>관리자 전용 화면입니다</b><br><span style="color:#8b98a9;font-size:12.5px">오프라인 판 내보내기는 관리자 계정으로만 쓸 수 있습니다.</span></div>
+
+<div class="wrap" id="app" style="display:none">
+  <h1>오프라인 판 내보내기</h1>
+  <div class="sub">팀장 시연용 — 네트워크 없이 도는 대시보드를 두 파일로 만듭니다. 실데이터는 <b>이 브라우저에서 파일로 바로</b> 내려가고, 서버·저장소 어디에도 남지 않습니다.</div>
+
+  <div class="warn">받은 두 파일(<code>offline.html</code> · <code>data.js</code>)을 <b>같은 폴더</b>에 두고 offline.html 을 더블클릭하세요.
+데이터가 바뀌면 <b>data.js 만</b> 다시 내보내면 됩니다. ⚠ data.js 에는 실데이터(작업자 실명·고객사·설비 S/N)가 들어 있습니다 — 사외로 보내지 마세요.</div>
+
+  <div class="card">
+    <h2>① 오프라인 HTML 만들기 (offline.html)</h2>
+    <p>지금 배포돼 있는 셸·8개 페이지·core.js·테마·차트 라이브러리를 그대로 읽어 한 파일로 조립합니다. 코드만 들어가고 데이터는 들어가지 않습니다.</p>
+    <button class="go" id="btnHtml">offline.html 받기</button>
+    <div class="prog" id="progHtml"></div>
+  </div>
+
+  <div class="card">
+    <h2>② 데이터 내보내기 (data.js)</h2>
+    <p>대시보드가 화면을 그릴 때 쓰는 <b>바로 그 읽기 함수</b>로 전 표를 받아 담습니다 — 오프라인 판이 온라인과 같은 숫자를 내는 근거가 이것입니다.</p>
+    <button class="go" id="btnData">data.js 받기</button>
+    <table id="tbl" style="display:none"><thead><tr><th>표</th><th style="text-align:right">행수</th><th>상태</th></tr></thead><tbody></tbody></table>
+    <div class="prog" id="progData"></div>
+    <div class="note" id="afterData" style="display:none">받은 뒤 확인할 것:
+· offline.html 을 열어 출처 배지의 「기준 시각」이 방금 시각인지
+· 주간현황 탭의 국내 Alarm 차트가 «원장 기준»으로 서는지 (주석에 「원장이 비어…」가 없어야 정상)
+· 위 표의 행수가 /diag/ 또는 업로드 화면의 행수와 같은 자릿수인지</div>
+  </div>
+
+  <div class="note">이 화면이 하는 일은 둘뿐입니다 — ① 배포 코드를 그대로 묶기 ② 읽기 함수의 반환값을 그대로 담기.
+집계 규칙·열 해석을 여기서 다시 쓰지 않으므로(제2원칙), 오프라인 판 숫자가 온라인과 다르면 그것은 «스냅샷 시점 차이»뿐입니다.</div>
+</div>
+
+<script>
+'use strict';
+/* ============================================================================
+   오프라인 내보내기 (v137)
+
+   ② data.js — «core.js 의 읽기 함수가 돌려준 그 배열»을 gzip 조각으로 담는다.
+      ⚠ 수선실적은 JSON 374MB 라 한 문자열 직렬화/파싱이 V8 한도·메모리를 친다 —
+        2만 행 조각으로 쓰고(아래 CH), 오프라인 로더도 조각마다 풀어 이어 붙인다.
+   ① offline.html — 배포 셸·페이지를 fetch 해 절대 URL 자산을 제자리 인라인하고,
+      페이지들은 __FILES 로 실어 셸의 frameSrc(v137 이음새)가 srcdoc 으로 띄우게 한다.
+      치환은 «개수를 세며» 한다 — 하나라도 어긋나면 여기서 멈춘다(조용한 반쪽 조립 금지).
+   ============================================================================ */
+GST.needVer(143);
+
+const $=id=>document.getElementById(id);
+const dl=(name,parts,mime)=>{ const b=new Blob(parts,{type:mime||'text/javascript'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000); };
+
+/* ---------- 공통: gzip + base64 ---------- */
+async function gz(str){
+  const cs=new CompressionStream('gzip');
+  return new Uint8Array(await new Response(new Blob([str]).stream().pipeThrough(cs)).arrayBuffer());
+}
+function b64(u8){ let s=''; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000)); return btoa(s); }
+
+/* ============================ ② data.js ============================ */
+const CH=20000;                 // 행 블록 크기 — 조각 JSON ≈ 30MB 이하로 유지
+async function runData(){
+  const bt=$('btnData'); bt.disabled=true; $('progData').textContent=''; $('progData').className='prog';
+  const tb=$('tbl'); tb.style.display=''; const body=tb.querySelector('tbody'); body.innerHTML='';
+  try{
+    if(typeof CompressionStream==='undefined') throw new Error('이 브라우저에는 압축 기능(CompressionStream)이 없습니다 — Chrome/Edge 로 여세요');
+    /* 담을 목록 — gid 는 core 의 라우팅 표에서 «그대로» 뽑는다(목록을 여기 박으면 네 번째 사본이 된다).
+       표 직접 읽기 셋만 열거한다: 국내외 원장 둘(report 가 csvTableRows 로 직접 읽는 그 호출)과
+       pm_adjust(pm 이 GST.db 로 직접 읽는 유일한 표 — 빠지면 pm 일정 조정이 온라인과 갈린다). */
+    const jobs=[];
+    Object.keys(GST.TABLE_OF_GID).forEach(g=>jobs.push(['gid',g,GST.TABLE_OF_GID[g]]));
+    Object.keys(GST.CSV_TABLE_OF_GID).forEach(g=>jobs.push(['gid',g,GST.CSV_TABLE_OF_GID[g]]));
+    jobs.push(['tbl','sheet_alarm','알람 원장'], ['tbl','sheet_allbypass','올바이패스 원장'], ['tbl','pm_adjust','PM 일정 조정']);
+
+    const lines=['/* GST CS Global 오프라인 스냅샷 — offline.html 과 같은 폴더에 두세요 */\n'];
+    const counts={};
+    const metaIdx=lines.push('')-1;                       // 자리 — 끝나고 채운다(행수 검증용 counts 포함)
+    lines.push('window.__SNAP_PARTS=[];\n');
+    for(const [kind,key,label] of jobs){
+      const tr=document.createElement('tr');
+      tr.innerHTML='<td>'+label+' <code>'+key+'</code></td><td class="n">—</td><td>⏳</td>';
+      body.appendChild(tr);
+      let rows;
+      if(kind==='gid'){ rows=(await GST.fetchCSVCached(GST.sheetUrl(key),'off'+key)).rows; }
+      else if(key==='pm_adjust'){
+        const db=await GST.db(); if(!db) throw new Error('로그인이 풀렸습니다 — 새로고침 후 다시');
+        const r=await db.from('pm_adjust').select('key,new_date,memo,updated_at');   // pm 의 loadAdjust 와 같은 선택
+        if(r.error) throw new Error('pm_adjust: '+r.error.message);
+        rows=r.data||[];
+      }else{
+        rows=await GST.csvTableRows(key, key==='sheet_alarm'?GST._KR_COLS_A:GST._KR_COLS_B);
+      }
+      counts[kind+':'+key]=rows.length;
+      for(let i=0;i<rows.length;i+=CH){
+        const u8=await gz(JSON.stringify(rows.slice(i,i+CH)));
+        lines.push('__SNAP_PARTS.push('+JSON.stringify([kind,key,b64(u8)])+');\n');
+        $('progData').textContent=label+' — '+Math.min(i+CH,rows.length).toLocaleString()+' / '+rows.length.toLocaleString()+' 행';
+      }
+      tr.children[1].textContent=rows.length.toLocaleString();
+      tr.children[2].innerHTML='<span class="ok">✓</span>';
+      rows=null;
+    }
+    lines[metaIdx]='window.__SNAP_META='+JSON.stringify({at:new Date().toISOString(),core:GST.VER,counts:counts})+';\n';
+    dl('data.js',lines);
+    $('progData').textContent='완료 — data.js 를 offline.html 옆에 두세요.';
+    $('afterData').style.display='';
+  }catch(e){
+    $('progData').className='prog err';
+    $('progData').textContent='❌ '+((e&&e.message)||e)+'\n중간 파일은 쓰지 마세요 — 원인을 고치고 처음부터 다시 받으세요(조각이 빠진 data.js 는 열 때 SNAP_SHORT 로 멈춥니다).';
+    try{ console.error(e); }catch(_){}
+  }finally{ bt.disabled=false; }
+}
+
+/* ============================ ① offline.html ============================ */
+const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+async function getText(p){ const r=await fetch(p,{cache:'no-cache'}); if(!r.ok) throw new Error('읽기 실패 '+p+' — HTTP '+r.status); return r.text(); }
+/* 치환은 전부 «함수 치환»이다 — 교체문에 든 $ 가 캡처로 읽히는 사고(v134 워크북)를 원천 차단 */
+function subN(html, re, makeRepl, want, what){
+  let n=0; const out=html.replace(re, m=>{ n++; return makeRepl(m); });
+  if(n!==want) throw new Error('조립 중단: '+what+' — '+want+'개여야 하는데 '+n+'개를 찾았습니다. 배포 페이지 구조가 바뀌었으면 /offline/ 조립 규칙도 같이 고쳐야 합니다');
+  return out;
+}
+const inlineJs=src=>'<script>\n'+src.replace(/<\/script/gi,'<\\/script')+'\n<\/script>';
+
+async function runHtml(){
+  const bt=$('btnHtml'); bt.disabled=true; const pg=$('progHtml'); pg.textContent='배포 파일 읽는 중…'; pg.className='prog';
+  try{
+    const HOST='https://gstcsglobal-cloud.github.io';
+    const shell=await getText('/index.html');
+    /* 탭 경로는 셸 소스의 TABS 에서 뽑는다 — 여기 박아 두면 탭이 늘 때 조용히 빠진다 */
+    const paths=[...new Set([...shell.matchAll(/path:\s*'(\/[a-z]+\/)'/g)].map(m=>m[1]))];
+    if(paths.length<8) throw new Error('셸 TABS 에서 경로를 '+paths.length+'개만 찾았습니다 — 셸 구조 변경 여부를 확인하세요');
+    const A={ core:await getText('/assets/core.js'), theme:await getText('/assets/theme.css'),
+              shim:await getText('/offline/shim.js'), qbr:await getText('/assets/qbr-ppt.js') };
+    const VENDOR={};
+    for(const f of ['chart.umd.min.js','chartjs-plugin-zoom.min.js','papaparse.min.js']) VENDOR[f]=await getText('/assets/vendor/'+f);
+    const coreShim=A.core+'\n;\n/* ---- offline/shim.js ---- */\n'+A.shim;
+
+    function page(html, path){
+      let h=html;
+      h=subN(h, /<head([^>]*)>/i, m=>m+'<script>window.__OFFLINE__=true;window.__PAGE_PATH='+JSON.stringify(path)+';<\/script>', 1, path+' <head>');
+      for(const f in VENDOR){
+        const re=new RegExp('<script src="'+esc(HOST+'/assets/vendor/'+f)+'"><\\/script>','g');
+        h=h.replace(re, ()=>inlineJs(VENDOR[f]));
+      }
+      h=subN(h, new RegExp('<script src="'+esc(HOST)+'\\/assets\\/core\\.js\\?v=\\d+"><\\/script>','g'), ()=>inlineJs(coreShim), 1, path+' core.js');
+      h=subN(h, new RegExp('<link rel="stylesheet" href="'+esc(HOST)+'\\/assets\\/theme\\.css\\?v=\\d+"[^>]*>','g'), ()=>'<style>\n'+A.theme+'\n</style>', 1, path+' theme.css');
+      h=h.replace(/<script src="\.\.\/assets\/qbr-ppt\.js"><\/script>/, ()=>inlineJs(A.qbr));
+      h=h.replace(/<link[^>]+cdn\.jsdelivr\.net[^>]*>/g, '<!-- cdn css: offline 제거 -->');
+      if(/<link[^>]+https:\/\//.test(h)) throw new Error(path+' 에 외부 <link> 가 남았습니다');
+      h=h.split(HOST).join('');                     // «← Main» 등 href 꼬리 — 로드되는 태그는 위에서 전부 처리했다
+      return h;
+    }
+
+    pg.textContent='페이지 조립 중…';
+    const FILES={};
+    for(const p of paths) FILES[p]=page(await getText(p), p);
+
+    let sh=shell;
+    sh=subN(sh, /<head([^>]*)>/i, m=>m+'<script>window.__OFFLINE__=true;window.__OFFLINE_FILES=true;<\/script>', 1, '셸 <head>');
+    sh=subN(sh, new RegExp('<script src="'+esc(HOST)+'\\/assets\\/core\\.js\\?v=\\d+"><\\/script>','g'), ()=>inlineJs(coreShim), 1, '셸 core.js');
+    sh=sh.replace(/<link[^>]+cdn\.jsdelivr\.net[^>]*>/g, '<!-- cdn css: offline 제거 -->');
+    sh=sh.split(HOST).join('');
+    const filesJson=JSON.stringify(FILES).replace(/<\/script/gi,'<\\/script');
+    const boot='<script src="data.js"><\/script>\n'
+      +'<script>window.__FILES='+filesJson+';'
+      +'window.__offlinePage=function(p){var h=window.__FILES[p];if(!h)throw new Error("OFFLINE_FILES missing "+p);return h;};'
+      +'GSTOFF.bootShell();<\/script>\n';
+    sh=subN(sh, /<\/body>/gi, ()=>boot+'</body>', 1, '셸 </body>');
+
+    /* 마지막 자물쇠 — 배포 주소가 한 글자라도 남으면 내보내지 않는다(조용한 외부 요청 금지) */
+    const left=[sh,...Object.values(FILES)].reduce((n,d)=>n+d.split(HOST).length-1,0);
+    if(left) throw new Error('조립 결과에 배포 주소가 '+left+'곳 남았습니다 — 내보내기를 중단합니다');
+
+    dl('offline.html',[sh],'text/html');
+    pg.textContent='완료 — offline.html ('+(sh.length/1048576).toFixed(1)+'MB). data.js 와 같은 폴더에 두세요.';
+  }catch(e){
+    pg.className='prog err'; pg.textContent='❌ '+((e&&e.message)||e);
+    try{ console.error(e); }catch(_){}
+  }finally{ bt.disabled=false; }
+}
+
+/* ============================ 게이트 ============================ */
+(async function(){
+  try{
+    await GST.authGate();
+    await GST.loadMe();
+    if(!GST.isAdmin()){ $('gate').style.display='block'; return; }   // fail-closed — 등급 미상이면 비관리자(v135)
+    $('app').style.display='';
+    $('btnData').onclick=runData;
+    $('btnHtml').onclick=runHtml;
+  }catch(e){ $('gate').style.display='block'; $('gate').innerHTML='<b>로그인 확인 실패</b><br><span style="color:#8b98a9;font-size:12.5px">'+String((e&&e.message)||e)+'</span>'; }
+})();
+</script>
+</body>
+</html>
