@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 143;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 144;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -219,7 +219,7 @@ GST._errBand = function(msg, where){
     let d = document.getElementById('gstErrBand');
     if(!d){
       d = document.createElement('div'); d.id = 'gstErrBand';
-      d.style.cssText = 'background:#4c1d95;color:#ede9fe;padding:8px 14px;font:12px/1.5 system-ui,-apple-system,sans-serif;position:relative;z-index:99999';
+      d.style.cssText = 'background:#F4F3FF;color:#4C1D95;border:1px solid #DDD6FE;border-radius:10px;padding:8px 14px;margin:0 0 12px;font:12.5px/1.5 \'Pretendard Variable\',Pretendard,system-ui,-apple-system,sans-serif;position:relative;z-index:99999';
       (document.body||document.documentElement).insertAdjacentElement('afterbegin', d);
     }
     d.textContent = '⚠️ 화면 일부가 그려지지 않았을 수 있습니다 — 새로고침해 보고, 계속되면 관리자에게 알려 주세요'
@@ -372,23 +372,40 @@ GST.db = async function(){ if(!GST.authOn())return null;
 GST._readyP=null; GST._readyRes=null;
 GST.authReady=function(){ if(!GST._readyP)GST._readyP=new Promise(function(r){GST._readyRes=r;}); return GST._readyP; };
 GST._authOk=function(){ GST.authReady(); GST._readyRes&&GST._readyRes(); try{ GST.loadMe(); }catch(e){} };
+/* 로그인 화면의 생김새 — 첫인상이다(v139). 흰 카드 하나, 액센트 하나. 셸·페이지 어디서 떠도 같은 모양이어야 하므로
+   토큰을 여기 인라인으로 둔다(오버레이는 theme.css 를 안 싣는 셸에서도 뜬다). */
+GST._loginUI = {
+  card:'max-width:380px;width:92%;background:#FFFFFF;border:1px solid #E4E7EC;border-radius:14px;padding:30px 28px 24px;'
+      +'box-shadow:0 8px 28px rgba(16,24,40,.08);text-align:center;color:#101828;'
+      +'font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif',
+  mark:'<div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:18px">'
+      +'<span style="display:inline-block;width:30px;height:30px;border-radius:8px;background:#2F6FED url(&quot;data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2.4\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M4 17l5-6 4 3 7-8\'/%3E%3C/svg%3E&quot;) center/19px no-repeat"></span>'
+      +'<span style="font-size:15px;font-weight:700;letter-spacing:-.2px">GST CS Global</span></div>',
+  title:'font-size:19px;font-weight:700;letter-spacing:-.3px;margin-bottom:6px',
+  sub:'font-size:13px;color:#667085;line-height:1.6',
+  input:'width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid #D0D5DD;background:#fff;color:#101828;'
+       +'font-size:14px;font-family:inherit;margin-bottom:8px;outline:none',
+  btn:'width:100%;padding:10px;border-radius:8px;border:0;background:#2F6FED;color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit',
+  btnSm:'margin-top:14px;padding:9px 22px;border-radius:8px;border:0;background:#2F6FED;color:#fff;font-weight:600;cursor:pointer;font-family:inherit',
+  err:'#D92D20'
+};
 GST._loginCard=function(title, sub, extra, color){
-  return '<div class="login-card" style="max-width:360px;width:90%;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
-    +'<div style="font-size:17px;font-weight:800;color:'+(color||'#e6edf3')+';margin-bottom:8px">'+title+'</div>'
-    +(sub?'<div style="font-size:12px;color:#8a97a5;line-height:1.6">'+sub+'</div>':'')+(extra||'')+'</div>';
+  const U=GST._loginUI;
+  return '<div class="login-card" style="'+U.card+'">'+U.mark
+    +'<div style="'+U.title+';color:'+(color||'#101828')+'">'+title+'</div>'
+    +(sub?'<div style="'+U.sub+'">'+sub+'</div>':'')+(extra||'')+'</div>';
 };
 // 로그인 게이트: #loginOverlay를 이메일 OTP UI로 교체(없으면 생성). 성공 시 resolve.
 GST.authGate = async function(){
   var ov=document.getElementById('loginOverlay');
   if(!ov){ ov=document.createElement('div'); ov.id='loginOverlay'; ov.className='login-overlay';
-    ov.style.cssText='position:fixed;inset:0;background:rgba(4,8,12,.92);z-index:9998;display:flex;align-items:center;justify-content:center';
+    ov.style.cssText='position:fixed;inset:0;background:#F5F6F8;z-index:9998;display:flex;align-items:center;justify-content:center';
     document.body.appendChild(ov); }
+  else { ov.style.background='#F5F6F8'; }   // 페이지에 박힌 옛 어두운 오버레이 색을 덮는다(v139)
   // 인증이 설정되지 않았으면 통과시키지 않는다(fail-closed). 예전엔 공용 비밀번호로 우회됐다.
   if(!GST.authOn()){
     ov.classList.remove('hidden'); ov.style.display='flex';
-    ov.innerHTML='<div style="max-width:340px;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
-      +'<div style="font-size:17px;font-weight:800;color:#ffb4b4;margin-bottom:8px">인증이 설정되지 않았습니다</div>'
-      +'<div style="font-size:12px;color:#8a97a5">관리자에게 문의하세요</div></div>';
+    ov.innerHTML=GST._loginCard('인증이 설정되지 않았습니다','관리자에게 문의하세요','',GST._loginUI.err);
     return new Promise(function(){});   // 절대 resolve하지 않음 → 페이지가 열리지 않는다
   }
   /* 로그인 모듈부터 확보한다 (v135). 예전에는 getSession() 안에서 CDN 을 기다렸고 그 대기에 시간 제한이 없어,
@@ -402,29 +419,30 @@ GST.authGate = async function(){
     ov.classList.remove('hidden'); ov.style.display='flex';
     ov.innerHTML=GST._loginCard('로그인 모듈을 불러오지 못했습니다',
       'cdn.jsdelivr.net 을 막고 있을 수 있습니다 — 전산팀에 허용을 요청하거나 잠시 뒤 다시 시도하세요',
-      '<button onclick="location.reload()" title="'+String(e&&e.tried||e&&e.message||'').replace(/"/g,'&quot;')+'" style="margin-top:14px;padding:9px 22px;border-radius:10px;border:0;background:#2C5FAE;color:#fff;font-weight:700;cursor:pointer">다시 시도</button>',
-      '#ffb4b4');
+      '<button onclick="location.reload()" title="'+String(e&&e.tried||e&&e.message||'').replace(/"/g,'&quot;')+'" style="'+GST._loginUI.btnSm+'">다시 시도</button>',
+      GST._loginUI.err);
     return new Promise(function(){});   // 모듈 없이는 인증도 자료도 없다 — 열지 않는다
   }
   clearTimeout(slow);
   var s=await GST.getSession();
   if(s){ ov.classList.add('hidden'); ov.style.display='none'; GST._authOk(); return true; }
   ov.classList.remove('hidden'); ov.style.display='flex';
-  ov.innerHTML='<div class="login-card" style="max-width:340px;width:90%;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
-    +'<div style="font-size:20px;font-weight:800;color:#e6edf3;margin-bottom:6px">GST CS Dashboard</div>'
-    +'<div style="font-size:12px;color:#8a97a5;margin-bottom:18px">등록된 이메일로 인증코드를 받아 로그인하세요</div>'
-    +'<input id="sbEmail" type="email" placeholder="name@company.com" autocomplete="email" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#e6edf3;font-size:14px;margin-bottom:8px">'
-    +'<button id="sbSend" style="width:100%;padding:10px;border-radius:10px;border:0;background:#2C5FAE;color:#fff;font-weight:700;font-size:14px;cursor:pointer">인증코드 받기</button>'
+  var U=GST._loginUI;
+  ov.innerHTML='<div class="login-card" style="'+U.card+'">'+U.mark
+    +'<div style="'+U.title+'">Service Operation Dashboard</div>'
+    +'<div style="'+U.sub+';margin-bottom:20px">등록된 이메일로 인증코드를 받아 로그인하세요</div>'
+    +'<input id="sbEmail" type="email" placeholder="name@company.com" autocomplete="email" style="'+U.input+'">'
+    +'<button id="sbSend" style="'+U.btn+'">인증코드 받기</button>'
     +'<div id="sbStep2" style="display:none;margin-top:10px">'
-      +'<input id="sbCode" inputmode="numeric" maxlength="8" placeholder="이메일로 받은 6자리 코드" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#e6edf3;font-size:14px;letter-spacing:3px;text-align:center;margin-bottom:8px">'
-      +'<button id="sbVerify" style="width:100%;padding:10px;border-radius:10px;border:0;background:#34D399;color:#04211d;font-weight:800;font-size:14px;cursor:pointer">로그인</button></div>'
+      +'<input id="sbCode" inputmode="numeric" maxlength="8" placeholder="이메일로 받은 6자리 코드" style="'+U.input+';letter-spacing:3px;text-align:center">'
+      +'<button id="sbVerify" style="'+U.btn+'">로그인</button></div>'
     // 아이디+비밀번호 (조회 전용 계정) — 이메일 인증 없이 들어온다. 권한은 RLS(allowed_users)가 판정.
     +'<div id="sbPw" style="display:none">'
-      +'<input id="pwId" placeholder="아이디" autocomplete="username" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#e6edf3;font-size:14px;margin-bottom:8px">'
-      +'<input id="pwPw" type="password" placeholder="비밀번호" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#e6edf3;font-size:14px;margin-bottom:8px">'
-      +'<button id="pwGo" style="width:100%;padding:10px;border-radius:10px;border:0;background:#2C5FAE;color:#fff;font-weight:700;font-size:14px;cursor:pointer">로그인</button></div>'
-    +'<div id="sbErr" style="color:#ff8a8a;font-size:12px;margin-top:10px;min-height:16px"></div>'
-    +'<a id="sbMode" style="display:block;font-size:12px;color:#5EC2FF;margin-top:8px;cursor:pointer;user-select:none">🔑 아이디·비밀번호로 로그인</a></div>';
+      +'<input id="pwId" placeholder="아이디" autocomplete="username" style="'+U.input+'">'
+      +'<input id="pwPw" type="password" placeholder="비밀번호" autocomplete="current-password" style="'+U.input+'">'
+      +'<button id="pwGo" style="'+U.btn+'">로그인</button></div>'
+    +'<div id="sbErr" style="color:'+U.err+';font-size:12.5px;margin-top:10px;min-height:16px"></div>'
+    +'<a id="sbMode" style="display:block;font-size:12.5px;color:#2F6FED;margin-top:10px;cursor:pointer;user-select:none">아이디·비밀번호로 로그인</a></div>';
   var $=function(id){return document.getElementById(id);};
   var err=function(m){ $('sbErr').textContent=m||''; };
   return new Promise(function(resolve){
@@ -458,7 +476,7 @@ GST.authGate = async function(){
       $('sbEmail').style.display=pwMode?'none':'block';
       $('sbSend').style.display=pwMode?'none':'block';
       $('sbStep2').style.display='none';
-      $('sbMode').textContent=pwMode?'✉ 이메일 인증코드로 로그인':'🔑 아이디·비밀번호로 로그인';
+      $('sbMode').textContent=pwMode?'이메일 인증코드로 로그인':'아이디·비밀번호로 로그인';
       (pwMode?$('pwId'):$('sbEmail')).focus();
     };
     $('pwGo').onclick=async function(){
@@ -478,10 +496,10 @@ GST.authGate = async function(){
 GST.authDenied=function(code){
   var ov=document.getElementById('loginOverlay'); if(!ov)return;
   ov.classList.remove('hidden'); ov.style.display='flex';
-  ov.innerHTML='<div class="login-card" style="max-width:360px;background:#0d141c;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px;text-align:center;font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif">'
-    +'<div style="font-size:17px;font-weight:800;color:#ffb4b4;margin-bottom:8px">'+(code===403?'접근 권한이 없습니다':'로그인이 만료되었습니다')+'</div>'
-    +'<div style="font-size:12px;color:#8a97a5;margin-bottom:16px">'+(code===403?'관리자에게 이메일 등록을 요청하세요':'다시 로그인해 주세요')+'</div>'
-    +'<button onclick="GST.signOut()" style="padding:9px 22px;border-radius:10px;border:0;background:#2C5FAE;color:#fff;font-weight:700;cursor:pointer">다시 로그인</button></div>';
+  ov.style.background='#F5F6F8';
+  ov.innerHTML=GST._loginCard(code===403?'접근 권한이 없습니다':'로그인이 만료되었습니다',
+    code===403?'관리자에게 이메일 등록을 요청하세요':'다시 로그인해 주세요',
+    '<button onclick="GST.signOut()" style="'+GST._loginUI.btnSm+'">다시 로그인</button>', GST._loginUI.err);
 };
 
 /* ---------- 2. CSV 로드 ---------- */
@@ -930,23 +948,22 @@ GST.setPalette = function(key, silent){
   if(silent) return;
   // 현재 테마 키를 넘겨 페이지의 재렌더 훅 호출 (material은 (theme,label) 시그니처)
   const b=document.body?document.body.className:'';
-  const cur = b.indexOf('theme-slate')>-1?'slate' : b.indexOf('theme-light')>-1?'light'
-            : b.indexOf('theme-burgundy')>-1?'burgundy' : 'default';
+  const cur = b.indexOf('theme-slate')>-1?'slate':'light';
   if(typeof global.changeDashboardTheme==='function'){ try{ global.changeDashboardTheme(cur,cur); }catch(e){} }
 };
 try{ const k=localStorage.getItem('gst_pal'); if(k&&GST.PALETTES[k]) GST.setPalette(k,true); }catch(e){}
 // 현재 테마에 맞는 차트 잉크/팔레트/상태색. 차트 생성 시점에 호출해야 함.
 // 상태색은 의미(정상/경고/위험) 전용 — 범주 시리즈로 재사용하지 않는다.
+// v139 — 테마는 둘뿐이다. 다크 클래스가 없으면 라이트다(옛 'default'·'burgundy' 저장값 포함).
+// key 는 'light' | 'slate'. ink 는 «값 라벨»처럼 또렷해야 하는 글자색이다(플러그인 기본값).
 GST.chartTheme = function(){
-  const b = document.body.className || '';
-  let key='default', txt='#94a3b8', grid='rgba(255,255,255,.05)';
-  if(b.indexOf('theme-slate')>-1){ key='slate'; txt='#8B98A9'; grid='rgba(151,170,196,.08)'; }
-  else if(b.indexOf('theme-light')>-1){ key='light'; txt='#64748b'; grid='rgba(15,23,42,.06)'; }
-  else if(b.indexOf('theme-burgundy')>-1){ key='burgundy'; txt='#b49aa9'; grid='rgba(255,240,245,.06)'; }
-  const slate = key==='slate';
-  return { key, txt, grid, pal:GST.PAL, pal8:GST.PAL8,
-    status:{ bad: slate?'#e66767':'#fb7185', warn: slate?'#fab219':'#fbbf24',
-             ok: slate?'#3fbf3f':'#34d399', na:'#64748b' } };
+  const b = (document.body&&document.body.className) || '';
+  const slate = b.indexOf('theme-slate')>-1;
+  const key = slate?'slate':'light';
+  const txt = slate?'#8B98A9':'#667085', grid = slate?'rgba(151,170,196,.10)':'rgba(16,24,40,.07)';
+  return { key, txt, grid, ink: slate?'#E6EDF3':'#101828', pal:GST.PAL, pal8:GST.PAL8,
+    status:{ bad: slate?'#F0716B':'#D92D20', warn: slate?'#F2B134':'#B7670A',
+             ok: slate?'#3FBF7F':'#12873F', na: slate?'#5E6D80':'#98A2B3' } };
 };
 /* 차트 전역 규격 — 8개 페이지가 각자 설정하던 것을 한 곳으로.
    페이지는 로드 시와 테마 전환 시 GST.chartDefaults()만 부른다.
@@ -963,10 +980,10 @@ GST.chartDefaults = function(){
   Chart.defaults.plugins.legend.labels.boxWidth = 6;
   Chart.defaults.plugins.legend.labels.boxHeight = 6;
   Chart.defaults.plugins.legend.labels.padding = 14;
-  // 툴팁: 다크 글래스 — 테마와 무관하게 일관(라이트에서도 다크 툴팁이 가독 우수)
+  // 툴팁: 어두운 잉크 — 테마와 무관하게 일관(라이트에서도 어두운 툴팁이 가독 우수)
   const tt=Chart.defaults.plugins.tooltip;
-  tt.backgroundColor='rgba(13,20,28,.92)'; tt.borderColor='rgba(151,170,196,.25)'; tt.borderWidth=1;
-  tt.cornerRadius=8; tt.padding=10; tt.titleColor='#E6EDF3'; tt.bodyColor='#B7C3D3';
+  tt.backgroundColor='rgba(16,24,40,.94)'; tt.borderColor='rgba(255,255,255,.08)'; tt.borderWidth=1;
+  tt.cornerRadius=8; tt.padding=10; tt.titleColor='#FFFFFF'; tt.bodyColor='#D0D5DD';
   tt.titleFont={family:GST.FONT_STACK,size:11.5,weight:'700'};
   tt.bodyFont={family:GST.FONT_STACK,size:11};
   tt.boxPadding=4; tt.usePointStyle=true;
@@ -1215,11 +1232,22 @@ GST.initSync = function(opts){
       new MutationObserver(markInFrame).observe(document.body||document.documentElement,{attributes:true,attributeFilter:['class']});
     }catch(e){}
   }
+  /* v139 — 테마는 둘이다: light(기본 · :root) · slate(다크). 옛 저장값(default=navy · burgundy)은 라이트로 읽는다.
+     ⚠ body.className 을 통째로 갈지 않는다 — gst-inframe·gst-sb-open·kiosk-* 가 함께 날아가던 자리. 테마 클래스만 바꾼다. */
+  function setThemeClass(th){
+    th = (th==='slate') ? 'slate' : 'light';
+    const cl=document.body.classList;
+    Array.prototype.slice.call(cl).forEach(function(c){ if(/^theme-/.test(c)) cl.remove(c); });
+    cl.add('theme-'+th);
+    return th;
+  }
   function applyStored(){
     let th=null, lg=null;
     try{ th=sessionStorage.getItem('gst_theme'); lg=sessionStorage.getItem('gst_lang'); }catch(e){}
-    th = th || 'slate'; // 저장된 테마가 없으면 새 기본 디자인(Slate)
-    document.body.className = th==='default' ? '' : 'theme-'+th;
+    /* 저장값이 없으면(교차 출처 iframe 은 셸의 sessionStorage 를 못 본다) 셸이 메시지로 걸어 둔 클래스를 지킨다 —
+       1.5초 뒤 재적용이 그것을 라이트로 되돌리던 자리. */
+    if(!th && document.body && /theme-slate/.test(document.body.className)) th='slate';
+    th = setThemeClass(th || 'light');
     if(typeof global.changeDashboardTheme==='function'){
       try{ global.changeDashboardTheme(th, th); }catch(e){}
     }
@@ -1231,9 +1259,9 @@ GST.initSync = function(opts){
   window.addEventListener('message', e=>{
     const d=e.data||{};
     if(d.type==='gst-theme'){
-      document.body.className = d.theme==='default' ? '' : 'theme-'+d.theme;
+      const th=setThemeClass(d.theme);
       if(typeof global.changeDashboardTheme==='function'){
-        try{ global.changeDashboardTheme(d.theme==='default'?'default':d.theme, d.theme); }catch(e){}
+        try{ global.changeDashboardTheme(th, th); }catch(e){}
       }
     }
     if(d.type==='gst-lang' && typeof global.setLang==='function'){
@@ -2669,8 +2697,8 @@ GST._dbBanner = function(){
   if(!bad.length){ if(el) el.remove(); return; }
   if(!el){
     el = document.createElement('div'); el.id='gstMirrorWarn';
-    el.style.cssText='background:#78350f;color:#fde68a;padding:9px 14px;border-radius:10px;'+
-      'margin:0 0 12px;font-size:12px;font-weight:600;line-height:1.5';
+    el.style.cssText='background:var(--warn-soft,#FFF6E5);color:var(--warn,#B7670A);border:1px solid rgba(183,103,10,.3);padding:9px 14px;border-radius:10px;'+
+      'margin:0 0 12px;font-size:12.5px;font-weight:600;line-height:1.5';
     const a=document.querySelector('.status')||document.body.firstElementChild;
     if(a&&a.parentNode) a.parentNode.insertBefore(el, a.nextSibling);
     else document.body.insertAdjacentElement('afterbegin', el);
@@ -3152,15 +3180,16 @@ GST._srcChip = function(){
   let el = document.getElementById('gstSrcChip');
   if(!el){
     el = document.createElement('div'); el.id='gstSrcChip';
-    el.style.cssText='position:fixed;left:10px;bottom:10px;z-index:999998;padding:4px 10px;border-radius:999px;'+
-      'font:11px/1.5 system-ui,-apple-system,sans-serif;font-weight:700;cursor:pointer;opacity:.8;user-select:none';
+    /* 오른쪽 아래 — 왼쪽은 필터 사이드바 발치(「자동 30분」 버튼)와 겹친다(v139) */
+    el.style.cssText='position:fixed;right:12px;bottom:10px;z-index:999998;padding:4px 10px;border-radius:999px;'+
+      'font:11px/1.5 \'Pretendard Variable\',Pretendard,system-ui,-apple-system,sans-serif;font-weight:600;cursor:pointer;opacity:.85;user-select:none';
     el.title = GST._srcT().title;
     el.onclick = function(){
       if(!GST.isAdmin()) return;   // 표 이름·행수·캐시 상태는 관리자만(v135) — «core N» 은 누구나 본다(v128 규약)
       let d = document.getElementById('gstSrcDetail');
       if(d){ d.remove(); return; }
       d = document.createElement('div'); d.id='gstSrcDetail';
-      d.style.cssText='position:fixed;left:10px;bottom:38px;z-index:999998;max-width:320px;padding:9px 12px;'+
+      d.style.cssText='position:fixed;right:12px;bottom:38px;z-index:999998;max-width:320px;padding:9px 12px;'+
         'border-radius:10px;background:#111827;color:#e5e7eb;font:11px/1.7 system-ui,sans-serif;'+
         'box-shadow:0 6px 24px rgba(0,0,0,.35);white-space:pre-wrap';
       d.textContent = Object.keys(GST._srcSeen).map(function(k){
@@ -3851,8 +3880,8 @@ GST._bfNote = function(table, on){
   if(!Object.keys(GST._bfOn).length){ if(el) el.remove(); return; }
   if(!el){
     el = document.createElement('div'); el.id = 'gstBackfill';
-    el.style.cssText = 'position:fixed;left:10px;bottom:40px;z-index:999998;padding:5px 11px;'+
-      'border-radius:999px;background:#1e3a8a;color:#bfdbfe;font:11px/1.5 system-ui,-apple-system,sans-serif;'+
+    el.style.cssText = 'position:fixed;right:12px;bottom:40px;z-index:999998;padding:5px 11px;'+
+      'border-radius:999px;background:#EAF1FE;color:#1D4ED8;border:1px solid #C7D7FB;font:11px/1.5 \'Pretendard Variable\',Pretendard,system-ui,-apple-system,sans-serif;'+
       'font-weight:700;opacity:.92;pointer-events:none';
     document.body.appendChild(el);
   }
@@ -4725,14 +4754,14 @@ GST.barHTML = function(reg, lang){
     +'<button type="button" class="gb-b'+off(hasCut)+'" data-gb="clear" title="'+T.clr+'"'+dis(hasCut)+'>↺</button>';
   // 차트 디자인·PPT — 전 페이지 공통
   const st=GST.STY[s.style]||GST.sty();
-  h+='<button type="button" class="gb-b'+off(c.style!==false)+'" data-gb="style" title="'+T.sty+'">🎨 <span class="gb-sty">'+st.lbl+'</span></button>'
-    +'<button type="button" class="gb-b'+off(!!c.ppt)+'" data-gb="ppt" title="'+T.ppt+'"'+dis(!!c.ppt)+'>📊 PPT</button>';
+  h+='<button type="button" class="gb-b'+off(c.style!==false)+'" data-gb="style" title="'+T.sty+'"><span class="gb-sty">'+st.lbl+'</span></button>'
+    +'<button type="button" class="gb-b'+off(!!c.ppt)+'" data-gb="ppt" title="'+T.ppt+'"'+dis(!!c.ppt)+'>PPT</button>';
   // 브리핑·피벗 — 페이지가 GST.watch()/GST.pivotReg()로 데이터를 등록하면 자동 활성
   // 배지는 건수가 0이어도 자리를 비워 둔다 — 있고 없고에 따라 바 폭이 달라지면
   // 페이지를 옮길 때마다 툴바가 흔들리고 탭이 밀린다(전 페이지 동일 폭 원칙).
-  h+='<button type="button" class="gb-b'+off(!!c.brief)+'" data-gb="brief" title="'+T.brf+'"'+dis(!!c.brief)+'>🔔 '+T.brf
+  h+='<button type="button" class="gb-b'+off(!!c.brief)+'" data-gb="brief" title="'+T.brf+'"'+dis(!!c.brief)+'>'+T.brf
     + '<span class="gb-badge"'+(s.briefN?'':' style="visibility:hidden"')+'>'+(s.briefN||0)+'</span></button>'
-    +'<button type="button" class="gb-b'+off(!!c.pivot)+'" data-gb="pivot" title="'+T.piv+'"'+dis(!!c.pivot)+'>🧊 '+T.piv+'</button>';
+    +'<button type="button" class="gb-b'+off(!!c.pivot)+'" data-gb="pivot" title="'+T.piv+'"'+dis(!!c.pivot)+'>'+T.piv+'</button>';
   return h;
 };
 // 바 안의 컨트롤을 send(key,val)로 연결. 셸/페이지 양쪽이 같은 함수를 쓴다.
@@ -4836,7 +4865,7 @@ GST._localBar = function(reg){
       +'#gstLocalBar .gb-b{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;'
       +'padding:0 12px;height:27px;color:var(--txt-muted);font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex:none}'
       +'#gstLocalBar .gb-seg .gb-b{border:none;border-radius:0}'
-      +'#gstLocalBar .gb-b.on{background:var(--accent-1);color:#04211d}'
+      +'#gstLocalBar .gb-b.on{background:var(--accent-1);color:#fff}'
       +'#gstLocalBar .gb-inp{font-family:inherit;background:var(--glass);border:1px solid var(--glass-border);border-radius:8px;'
       +'padding:0 7px;height:27px;color:var(--txt-main);font-size:11px;outline:none;flex:none}'
       +'#gstLocalBar .gb-inp[type=month]{width:118px}'
@@ -4845,7 +4874,7 @@ GST._localBar = function(reg){
       +'#gstLocalBar .gb-cut{margin-left:8px}'
       +'#gstLocalBar .off{opacity:.32}'
       +'#gstLocalBar .gb-badge{display:inline-block;margin-left:5px;min-width:15px;padding:0 4px;border-radius:8px;'
-      +'background:var(--bad,#fb7185);color:#1a0508;font-size:9.5px;font-weight:800;line-height:15px;text-align:center}'
+      +'background:var(--bad,#D92D20);color:#fff;font-size:9.5px;font-weight:800;line-height:15px;text-align:center}'
       +'@media print{#gstLocalBar{display:none !important}}';
     document.head.appendChild(st);
     el=document.createElement('div'); el.id='gstLocalBar';

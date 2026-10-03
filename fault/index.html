@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=143"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=144"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -25,20 +25,20 @@ body{color:var(--txt);
 .btn-grad{background:linear-gradient(90deg,var(--a1),var(--a2));color:#fff}
 .btn-grad:hover{opacity:.85;transform:translateY(-1px)}
 .btn-glass{background:var(--glass);border:1px solid var(--glassb);color:var(--txt)}
-.btn-glass:hover{background:rgba(255,255,255,.1)}
+.btn-glass:hover{background:var(--line-2)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .lang-wrap{position:relative}
 .lang-btn{background:var(--glass);border:1px solid var(--glassb);color:var(--txt);padding:9px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
-.lang-btn:hover{background:rgba(255,255,255,.1)}
+.lang-btn:hover{background:var(--line-2)}
 .lang-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:#2a1a30;border:1px solid var(--glassb);border-radius:14px;padding:6px;z-index:100;min-width:130px;display:none;backdrop-filter:blur(20px)}
 .lang-dropdown.open{display:block}
 .lang-item{padding:9px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600}
-.lang-item:hover{background:rgba(255,255,255,.08)}
+.lang-item:hover{background:var(--surface-2)}
 .status{font-size:12px;color:var(--mut);margin-bottom:16px;text-align:right}
 .status.ok{color:var(--a5)}.status.err{color:var(--bad)}
 .slicer{background:var(--glass);border:1px solid var(--glassb);border-radius:16px;padding:12px 16px;backdrop-filter:blur(12px)}
 .slicer .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--mut);margin-bottom:8px;font-weight:700}
-.slicer select,.dt-input{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:10px;padding:7px 12px;color:var(--txt);font-size:12px;outline:none;min-width:120px;color-scheme:dark}
+.slicer select,.dt-input{background:var(--surface-2);border:1px solid var(--glassb);border-radius:10px;padding:7px 12px;color:var(--txt);font-size:12px;outline:none;min-width:120px}
 .search-sl{margin-left:auto}
 /* 데이터 입력 정합성 스트립 */
 .dq-strip{display:flex;flex-direction:column;gap:5px;margin-top:4px}
@@ -50,7 +50,7 @@ body{color:var(--txt);
 .dq-fill{background:none;border:1px solid var(--glassb);border-radius:6px;color:var(--accent-1,#2DD4BF);
   font-size:11px;font-weight:700;padding:2px 8px;cursor:pointer}
 .dq-fill:hover{border-color:var(--accent-1,#2DD4BF)}
-.search-sl input{background:rgba(255,255,255,.06);border:1px solid var(--glassb);border-radius:30px;padding:8px 16px;color:var(--txt);font-size:13px;width:210px;outline:none}
+.search-sl input{background:var(--surface-2);border:1px solid var(--glassb);border-radius:30px;padding:8px 16px;color:var(--txt);font-size:13px;width:210px;outline:none}
 .search-sl input:focus{border-color:var(--a1)}
 .search-sl input::placeholder{color:var(--mut)}
 /* ⚠ cursor 는 여기서 주지 않는다 — theme.css 가 «동작이 붙은 카드»(data-kdrill·data-stage·data-s)에만 준다.
@@ -70,13 +70,13 @@ body{color:var(--txt);
 .grid2-trend{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
 @media(max-width:900px){.grid2-trend{grid-template-columns:1fr}}
 .card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:18px;backdrop-filter:blur(14px)}
-.card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:#dfe6ff}
+.card h3{font-size:13px;font-weight:700;margin-bottom:4px;color:var(--txt-main)}
 .card-note{font-size:10px;color:var(--mut);margin-bottom:10px;font-style:italic}
 .card .cw{position:relative;height:var(--ch-std,240px)}
 .trend-card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px);margin-bottom:16px}
 .trend-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
-.trend-header h3{font-size:14px;font-weight:700;color:#dfe6ff}
-.trend-meta{font-size:11px;color:var(--mut);background:rgba(255,255,255,.05);padding:4px 12px;border-radius:20px}
+.trend-header h3{font-size:14px;font-weight:700;color:var(--txt-main)}
+.trend-meta{font-size:11px;color:var(--mut);background:var(--surface-2);padding:4px 12px;border-radius:20px}
 .trend-wrap{position:relative;height:240px}
 /* 유무상 분할바 카드 */
 .wbig{display:flex;align-items:baseline;gap:8px;margin:6px 0 12px}
@@ -98,8 +98,8 @@ table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
 th{text-align:left;padding:10px 11px;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:1px;
   border-bottom:1px solid var(--glassb);position:sticky;top:0;background:rgba(31,10,10,.96);cursor:pointer;user-select:none}
 th:hover{color:var(--a1)}
-td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.04);max-width:340px;overflow:hidden;text-overflow:ellipsis}
-tr:hover td{background:rgba(255,255,255,.04)}
+td{padding:8px 11px;border-bottom:1px solid var(--line);max-width:340px;overflow:hidden;text-overflow:ellipsis}
+tr:hover td{background:var(--surface-2)}
 .pill{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
 .pill.bm{background:rgba(251,113,133,.18);color:#fda4af}
 .pill.cbm{background:rgba(167,139,250,.18);color:#c4b5fd}
@@ -126,7 +126,7 @@ canvas{cursor:pointer}
 .dp-h{font-size:12px;font-weight:800;letter-spacing:.3px;margin-bottom:7px}
 .bw2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
 @media(max-width:900px){.bw2{grid-template-columns:1fr}}
-.dp-tile{background:rgba(255,255,255,.05);border-radius:10px;padding:10px 12px}
+.dp-tile{background:var(--surface-2);border-radius:10px;padding:10px 12px}
 .dp-tile .l{font-size:10.5px;opacity:.6}
 .dp-tile .v{font-size:20px;font-weight:800;margin:2px 0 1px;font-variant-numeric:tabular-nums}
 .dp-tile .d{font-size:11px;opacity:.65}
@@ -137,16 +137,16 @@ canvas{cursor:pointer}
 .card,.trend-card,.tablecard{position:relative}
 .capbtns{position:absolute;top:12px;right:14px;display:flex;gap:4px;z-index:6;opacity:0;transition:opacity .15s}
 .card:hover .capbtns,.trend-card:hover .capbtns,.tablecard:hover .capbtns{opacity:1}
-.capbtn{font-family:inherit;background:var(--glass,rgba(255,255,255,.06));border:1px solid var(--glass-border,rgba(255,255,255,.14));border-radius:8px;padding:2px 8px;color:var(--txt-muted,#94a3b8);font-size:11px;font-weight:700;cursor:pointer;height:22px;line-height:16px}
+.capbtn{font-family:inherit;background:var(--glass,var(--line));border:1px solid var(--glass-border,var(--line-2));border-radius:8px;padding:2px 8px;color:var(--txt-muted,#94a3b8);font-size:11px;font-weight:700;cursor:pointer;height:22px;line-height:16px}
 .capbtn:hover{color:#fff;border-color:var(--accent-1,#2dd4bf)}
-#capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1,#2dd4bf);color:#04211d;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
+#capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1,#2dd4bf);color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
 @media print{.capbtns,.header-right,.slicers,.fchips{display:none!important}.card,.trend-card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=143">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=144">
 </head>
 <body>
 
-<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070b10;display:flex;align-items:center;justify-content:center"></div>
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
     <h1 data-i="title">서비스·고장 대응 대시보드</h1>
@@ -1220,7 +1220,7 @@ const valLabelPlugin={id:'valLabel',
     if(!meta||!meta.data||!meta.data.length)return;
     const nums=ds.data.filter(v=>v!=null&&isFinite(v));
     const max=nums.length?Math.max.apply(null,nums):null;
-    ctx.save(); ctx.fillStyle=o.color||'#E6EDF3';
+    ctx.save(); ctx.fillStyle=o.color||GST.chartTheme().ink;
     ctx.font='700 11px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
     meta.data.forEach(function(el,i){
       const v=ds.data[i]; if(v==null)return;
@@ -1242,14 +1242,14 @@ const donutCenterPlugin={id:'dCenter',
     const x=meta.data[0].x,y=meta.data[0].y,ctx=chart.ctx;
     const total=chart.data.datasets[0].data.reduce((a,b)=>a+(+b||0),0);
     ctx.save();ctx.textAlign='center';
-    ctx.fillStyle=o.color||'#E6EDF3';
+    ctx.fillStyle=o.color||GST.chartTheme().ink;
     ctx.font='800 17px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
     ctx.textBaseline='bottom';ctx.fillText(total.toLocaleString(),x,y+2);
     ctx.fillStyle=o.mut||'#8B98A9';
     ctx.font='700 8px "Pretendard Variable",Pretendard,"Segoe UI",sans-serif';ctx.textBaseline='top';ctx.fillText('TOTAL',x,y+5);
     ctx.restore();
   }};
-function inkStrong(TH){return TH.key==='light'?'#0f172a':'#E6EDF3';}
+function inkStrong(TH){return TH.ink||(TH.key==='slate'?'#E6EDF3':'#101828');}
 
 /* ===== 데이터 입력 정합성 + 미기재 목록 + 현장 입력 =====
    알람·현상·원인·조치 입력률이 2%대라 심층 분석이 막혀 있다(실측).
