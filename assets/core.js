@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 145;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 146;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -5633,12 +5633,53 @@ GST.savePng = function(id){
    PPT 에도 편집 가능한 차트로 붙는다 — 사용자가 원한 «PPT 나 엑셀에 바로»의 엑셀 쪽 답이다.
    ⚠ 부품이 다섯이다: 시트 rels · sheet1 의 <drawing> · [Content_Types] Override 둘 · drawing1 · chart1.
      하나라도 빠지면 엑셀이 «복구» 대화상자를 띄우고 차트를 버린다. t-export 가 다섯을 다 센다. */
-GST.xlsxLibLoad = function(){                 // SheetJS — /upload/ 가 쓴다(v135 에 자체 사본 규율로 편입)
+GST.xlsxLibLoad = function(){                 // SheetJS — /upload/·/edit/ 가 쓴다(v135 에 자체 사본 규율로 편입)
   if(window.XLSX) return Promise.resolve();
   if(GST._xlsxP) return GST._xlsxP;
   GST._xlsxP = GST._loadScript([GST.XLSX_VENDOR, GST.XLSX_CDN], function(){ return !!window.XLSX; })
     .catch(function(e){ GST._xlsxP=null; throw e; });
   return GST._xlsxP;
+};
+/* ---- 엑셀 셀 → 문자열 · 워크시트 → 2차원 배열 (v141 · /upload/ 에서 옮겨 왔다) ----
+   /upload/ 와 데이터 관리(/edit/)의 엑셀 일괄 수정이 «같은 규칙»으로 엑셀을 읽어야 한다 — 두 벌이면
+   «업로드는 되는데 일괄 수정은 날짜가 깨지는» 상태가 온다(제2원칙). 그래서 정본을 여기 둔다(t-xlsx 가 지킨다).
+
+   셀 → 문자열. 날짜는 «현지 시각 구성요소»로 찍는다 — toISOString 을 쓰면 UTC 로 밀려
+   자정 근처 행의 날짜가 하루 어긋난다(엑셀은 시각대 개념 없이 저장한다). */
+GST.cellStr = function(v){
+  if(v==null)return '';
+  if(v instanceof Date){
+    const p=n=>String(n).padStart(2,'0');
+    /* 밀리초는 초 단위로 «반올림» 한다. 엑셀 시리얼을 Date 로 풀면 13:28:32.556 처럼
+       찌꺼기가 붙는데, 시트를 CSV 로 내보내면 13:28:33 으로 찍힌다 — 잘라내면 1초 어긋난다. */
+    const r=new Date(Math.round(v.getTime()/1000)*1000);
+    const d=r.getFullYear()+'-'+p(r.getMonth()+1)+'-'+p(r.getDate());
+    const hms=p(r.getHours())+':'+p(r.getMinutes())+':'+p(r.getSeconds());
+    /* «시각만» 있는 칸(작업시작시간 15:00)은 엑셀이 1899-12-30 에 얹어 저장한다.
+       그대로 찍으면 `1899-12-30 15:00:00` 이 되어 CSV 의 `15:00:00` 과 달라진다. */
+    if(r.getFullYear()<1900) return hms;
+    /* 자정 정각이면 «날짜만» 찍는다. 시트를 CSV 로 내보내면 날짜 칸은 `2026-08-14` 이지
+       `2026-08-14 00:00:00` 이 아니다 — 여기서 갈리면 CSV 로 올린 과거 행과 xlsx 로 올린
+       새 행이 «같은 날인데 다른 문자열» 이 되어, 구간 교체·중복 판정이 어긋난다. */
+    if(hms==='00:00:00') return d;
+    return d+' '+hms;
+  }
+  if(typeof v==='boolean') return v?'TRUE':'FALSE';   // 시트 CSV 표기와 같게
+  if(typeof v==='number'){
+    if(!isFinite(v)) return '';
+    /* 부동소수 찌꺼기(0.30000000000000004)를 떨어낸다 — CSV 에는 0.3 으로 찍혀 있었다.
+       정수는 String() 이 이미 `1` 로 준다(`1.0` 이 아니다). */
+    return Number.isInteger(v) ? String(v) : String(Math.round(v*1e10)/1e10);
+  }
+  return String(v);
+};
+
+/* 워크시트 → 2차원 문자열 배열. CSV 경로가 Papa.parse 로 만드는 것과 «같은 모양»이라
+   뒤 파이프라인(mirror·import·xlsx)을 한 줄도 안 고친다. 변환 규칙을 여기 한 곳에만 둔다 —
+   두 벌이면 «알람은 되는데 실적은 날짜가 깨지는» 상태가 온다(제2원칙). */
+GST.sheetRows = function(XLSX, ws){
+  return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''})
+    .map(function(row){ return (row||[]).map(GST.cellStr); });
 };
 GST._xml = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
 GST._colName = function(n){ let s=''; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); } return s; };

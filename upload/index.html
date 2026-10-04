@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=145"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=146"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:var(--txt,#e6edf3);background:var(--bg-gradient,#0b1118);background-size:400% 400%;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
@@ -29,7 +29,7 @@ a{color:var(--a1,#38bdf8)}
 <body>
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-window.GST && GST.needVer && GST.needVer(121);   // csv_table_cols 대조(v121) 이전 core 면 배너 — «숫자가 0» 대신(v135)
+window.GST && GST.needVer && GST.needVer(146);   // GST.sheetRows(v141 · 엑셀 변환 정본이 core 로 옮겨 왔다) 이전 core 면 배너 — «숫자가 0» 대신(v135)
 </script>
 
 <h1>📤 CSV 업로드</h1>
@@ -373,43 +373,9 @@ window.downloadTemplate=async function(){
   finally{ btn.disabled=false; }
 };
 
-/* 셀 → 문자열. 날짜는 «현지 시각 구성요소»로 찍는다 — toISOString 을 쓰면 UTC 로 밀려
-   자정 근처 행의 날짜가 하루 어긋난다(엑셀은 시각대 개념 없이 저장한다). */
-function cellStr(v){
-  if(v==null)return '';
-  if(v instanceof Date){
-    const p=n=>String(n).padStart(2,'0');
-    /* 밀리초는 초 단위로 «반올림» 한다. 엑셀 시리얼을 Date 로 풀면 13:28:32.556 처럼
-       찌꺼기가 붙는데, 시트를 CSV 로 내보내면 13:28:33 으로 찍힌다 — 잘라내면 1초 어긋난다. */
-    const r=new Date(Math.round(v.getTime()/1000)*1000);
-    const d=r.getFullYear()+'-'+p(r.getMonth()+1)+'-'+p(r.getDate());
-    const hms=p(r.getHours())+':'+p(r.getMinutes())+':'+p(r.getSeconds());
-    /* «시각만» 있는 칸(작업시작시간 15:00)은 엑셀이 1899-12-30 에 얹어 저장한다.
-       그대로 찍으면 `1899-12-30 15:00:00` 이 되어 CSV 의 `15:00:00` 과 달라진다. */
-    if(r.getFullYear()<1900) return hms;
-    /* 자정 정각이면 «날짜만» 찍는다. 시트를 CSV 로 내보내면 날짜 칸은 `2026-08-14` 이지
-       `2026-08-14 00:00:00` 이 아니다 — 여기서 갈리면 CSV 로 올린 과거 행과 xlsx 로 올린
-       새 행이 «같은 날인데 다른 문자열» 이 되어, 구간 교체·중복 판정이 어긋난다. */
-    if(hms==='00:00:00') return d;
-    return d+' '+hms;
-  }
-  if(typeof v==='boolean') return v?'TRUE':'FALSE';   // 시트 CSV 표기와 같게
-  if(typeof v==='number'){
-    if(!isFinite(v)) return '';
-    /* 부동소수 찌꺼기(0.30000000000000004)를 떨어낸다 — CSV 에는 0.3 으로 찍혀 있었다.
-       정수는 String() 이 이미 `1` 로 준다(`1.0` 이 아니다). */
-    return Number.isInteger(v) ? String(v) : String(Math.round(v*1e10)/1e10);
-  }
-  return String(v);
-}
-
-/* 워크시트 → 2차원 문자열 배열. CSV 경로가 Papa.parse 로 만드는 것과 «같은 모양»이라
-   뒤 파이프라인(mirror·import·xlsx)을 한 줄도 안 고친다. 변환 규칙을 여기 한 곳에만 둔다 —
-   두 벌이면 «알람은 되는데 실적은 날짜가 깨지는» 상태가 온다(제2원칙). */
-function sheetRows(XLSX, ws){
-  return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''})
-    .map(function(row){ return (row||[]).map(cellStr); });
-}
+/* 셀 → 문자열 · 워크시트 → 2차원 배열 — 정본은 core.js 의 GST.cellStr · GST.sheetRows 다(v141).
+   데이터 관리(/edit/)의 엑셀 일괄 수정이 «같은 규칙»으로 읽어야 해서 옮겼다 — 여기 사본을 두면
+   «업로드는 되는데 일괄 수정은 날짜가 깨지는» 상태가 온다(제2원칙). 규칙의 이유는 core 의 주석에 있다. */
 
 /* ---------- 검사 — 업로드 전에 파일이 표에 맞는지 그 자리에서 판정 ----------
    시트 고르는 칸이 바뀌어도 같은 검사를 다시 돌려야 하므로 함수로 둔다. */
@@ -429,7 +395,7 @@ window.checkFile=async function(){
   if(t.kind==='xlsx'){ $('shrow').style.display='none'; rd={txt:'',enc:'xlsx'}; }
   else if(isX){
     /* 단일 표 + 워크북 — 사용자가 CSV 로 변환하지 않아도 되게 한다(v95).
-       변환은 sheetRows 한 곳만 지나므로 CSV 경로와 «같은 2차원 문자열 배열»이 된다. */
+       변환은 GST.sheetRows 한 곳만 지나므로 CSV 경로와 «같은 2차원 문자열 배열»이 된다. */
     rd={txt:'',enc:'xlsx'};
     let XLSX;
     try{ XLSX=await xlsxLib(); }
@@ -446,7 +412,7 @@ window.checkFile=async function(){
     $('shrow').style.display = names.length>1 ? '' : 'none';
     const pick = names.indexOf(sel.value)>=0 ? sel.value : names[0];
     sel.value = pick;
-    rows = sheetRows(XLSX, wb.Sheets[pick]);
+    rows = GST.sheetRows(XLSX, wb.Sheets[pick]);
     if(names.length>1) chkShow('⏳ «'+pick+'» 시트 해석 중…');
   }
   else { $('shrow').style.display='none'; rd=await readText(f);
@@ -485,7 +451,7 @@ window.checkFile=async function(){
              워크북에서 조용히 0행이 올라간다. 판정은 SPEC 이 한다(제1원칙). */
         const S=GST.SM.SPEC[t.key==='abp2'?'abp2':'alarm'];
         wb.SheetNames.forEach(function(n){
-          const rr=sheetRows(XLSX, wb.Sheets[n]);
+          const rr=GST.sheetRows(XLSX, wb.Sheets[n]);
           if(GST.SM.headerRow(rr, S.hints, S.scan)>=0) hit.push([n, t.tag||'OS']);
         });
       }
@@ -497,7 +463,7 @@ window.checkFile=async function(){
         +ignored.join(', ')+'</b> 시트는 올리지 않았습니다 — 그 시트는 해당 사이트 담당자 화면에서 올려야 합니다.</span>');
       out=[]; const per=[]; let skipTot=0;
       for(const pair of hit){
-        const rr=sheetRows(XLSX, wb.Sheets[pair[0]]);   // 변환기는 한 벌 — 두 벌이면 갈라진다
+        const rr=GST.sheetRows(XLSX, wb.Sheets[pair[0]]);   // 변환기는 한 벌 — 두 벌이면 갈라진다
         const b=GST.ALARM.build(rr,t.key,pair[1]);
         if(b.err)throw new Error(pair[0]+' — '+b.err+peek(rr,{enc:'xlsx'}));
         skipTot+=b.skipped;

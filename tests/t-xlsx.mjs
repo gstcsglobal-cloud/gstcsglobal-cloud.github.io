@@ -20,21 +20,29 @@ const bad = (m) => { fail++; console.log('  ❌ ' + m); };
 const is  = (c, m) => c ? ok(m) : bad(m);
 const eq  = (a, b, m) => is(a === b, m + '  (' + JSON.stringify(a) + (a === b ? '' : ' ≠ ' + JSON.stringify(b)) + ')');
 
-/* 업로드 페이지의 cellStr·sheetRows 를 «소스에서 그대로» 떼어 온다.
-   복사해 두면 페이지를 고쳐도 검사는 옛 규칙을 지키게 된다 — 그러면 검사가 아니다. */
+/* 정본은 core.js 의 GST.cellStr·GST.sheetRows 다 — v141 에 /upload/ 에서 옮겼다(/edit/ 의 엑셀 일괄 수정이
+   «같은 규칙»으로 읽어야 해서). «소스에서 그대로» 떼어 온다. 복사해 두면 core 를 고쳐도 검사는 옛 규칙을
+   지키게 된다 — 그러면 검사가 아니다. */
+const CORE_SRC = fs.readFileSync(path.join(ROOT, 'assets/core.js'), 'utf8');
 const SRC = fs.readFileSync(path.join(ROOT, 'upload/index.html'), 'utf8');
+const EDIT = fs.readFileSync(path.join(ROOT, 'edit/index.html'), 'utf8');
 function grab(name){
-  const i = SRC.indexOf('function ' + name + '(');
-  if (i < 0) throw new Error(name + ' 를 upload/index.html 에서 찾지 못했습니다');
+  const i = CORE_SRC.indexOf('GST.' + name + ' = function(');
+  if (i < 0) throw new Error('GST.' + name + ' 를 assets/core.js 에서 찾지 못했습니다');
   let d = 0;
-  for (let k = SRC.indexOf('{', i); k < SRC.length; k++) {
-    if (SRC[k] === '{') d++;
-    else if (SRC[k] === '}') { d--; if (!d) return SRC.slice(i, k + 1); }
+  for (let k = CORE_SRC.indexOf('{', i); k < CORE_SRC.length; k++) {
+    if (CORE_SRC[k] === '{') d++;
+    else if (CORE_SRC[k] === '}') { d--; if (!d) return CORE_SRC.slice(i, k + 1) + ';'; }
   }
   throw new Error(name + ' 의 끝을 찾지 못했습니다');
 }
 const { cellStr, sheetRows } =
-  new Function('GST', grab('cellStr') + '\n' + grab('sheetRows') + '\nreturn {cellStr, sheetRows};')({ _esc: s => s });
+  new Function('GST', grab('cellStr') + '\n' + grab('sheetRows') + '\nreturn {cellStr: GST.cellStr, sheetRows: GST.sheetRows};')({ _esc: s => s });
+
+console.log('\n[0] 변환 규칙은 한 벌 — 두 화면이 core 의 정본을 부른다');
+is(!/function cellStr\(/.test(SRC) && !/function sheetRows\(/.test(SRC), '업로드 화면에 자체 변환기가 없다 (정본 GST.cellStr·GST.sheetRows)');
+is(!/function cellStr\(/.test(EDIT) && !/function sheetRows\(/.test(EDIT), '데이터 관리 화면에 자체 변환기가 없다');
+is(/GST\.sheetRows\(/.test(EDIT), '데이터 관리의 엑셀 올리기도 GST.sheetRows 를 지난다');
 
 console.log('\n[1] 셀 → 문자열 규칙');
 eq(cellStr(new Date(2026, 7, 14)),               '2026-08-14',          '자정 정각은 날짜만 (CSV 와 같게)');
@@ -91,7 +99,7 @@ console.log('\n[4] 업로드 화면이 xlsx 를 «모든 표»에 대해 받는�
   is(!/은 CSV 를 받습니다/.test(SRC), '「CSV 만 받는다」며 거부하던 분기가 없다');
   is(/id="ssel"/.test(SRC) && /시트가 여럿/.test(SRC), '시트가 여럿이면 고를 수 있다');
   // 변환기는 한 벌이어야 한다 — 알람(다중 시트)도 같은 sheetRows 를 지난다
-  is((SRC.match(/sheetRows\(XLSX/g) || []).length >= 2, '알람 경로도 같은 변환기를 쓴다 (두 벌이면 갈라진다)');
+  is((SRC.match(/GST\.sheetRows\(XLSX/g) || []).length >= 2, '알람 경로도 같은 변환기를 쓴다 (두 벌이면 갈라진다)');
   is(!/sheet_to_json\(wb\.Sheets\[pair\[0\]\]/.test(SRC), '알람 경로에 옛 복제 변환이 남아 있지 않다');
 }
 

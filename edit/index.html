@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=145"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=146"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -151,6 +151,22 @@ details.grp>summary::-webkit-details-marker{display:none}
 .op.x{background:var(--surface-2);color:var(--txt-muted)}
 .restored{color:var(--txt-faint);font-size:11.5px}
 
+/* 엑셀 일괄 수정 — 목록 체크 칸 · 선택 막대 · 미리보기 */
+table.rt th.ck,table.rt td.ck{width:34px;padding-left:12px;padding-right:2px;text-overflow:clip;cursor:default}
+table.rt th.ck input,table.rt td.ck input{width:15px;height:15px;cursor:pointer;vertical-align:middle;accent-color:var(--accent)}
+.list-h .sp{flex:1}
+.selbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pv-sum{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.pv-sum .badge{font-size:12px;padding:3px 10px}
+.badge.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.badge.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.pv h4{font-size:12.5px;margin:14px 0 6px;font-weight:700}
+.pv .box{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.pv .box table.dt th{position:sticky;top:0;z-index:1}
+.pv del{color:var(--bad);text-decoration:line-through;text-decoration-thickness:1px}
+.pv ins{color:var(--ok);text-decoration:none}
+.pv .wn{color:var(--warn);font-weight:600}
+
 /* 대화상자 · 알림 */
 .mask{position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:1000;display:grid;place-items:center;padding:16px}
 .dlg{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-md);width:min(620px,100%);max-height:86vh;display:flex;flex-direction:column}
@@ -220,10 +236,12 @@ table.dt td.v{word-break:break-all}
     </div>
     <div class="foot">어떻게 기록되나 — 저장·입력·삭제·되돌리기는 한 번에 «쓰기 + 변경 이력(행 전체 before/after) + 대시보드 캐시 갱신»으로 처리됩니다. 셋 중 하나라도 실패하면 전부 없던 일이 됩니다.
 삭제한 행도 이력에 통째로 남아 「변경 이력」 탭에서 되살릴 수 있습니다. 대시보드는 새로고침하면 바뀐 값을 봅니다.
+엑셀 일괄 수정 — 목록에서 체크한 행을 「엑셀로 받기」로 내려받아 고친 뒤 「엑셀 올리기」로 올리면, 미리보기를 거쳐 바뀐 칸만 반영됩니다(500줄씩 «전부 아니면 전무»). 그 묶음은 「변경 이력」에서 통째로 되돌릴 수 있습니다.
 ⚠ 실적·설치는 «통째 교체» 업로드를 하면 행 번호가 0 부터 다시 매겨집니다 — 그 전 이력의 번호는 지금 다른 행일 수 있고, 되돌리기는 내용 대조로 막힙니다.</div>
   </div>
 </div>
 <div id="snack"></div>
+<input type="file" id="xfile" accept=".xlsx,.xlsm,.xls" hidden>
 
 <script>
 'use strict';
@@ -243,7 +261,7 @@ table.dt td.v{word-break:break-all}
      「기타」로 저절로 뜬다(승격된 새 열이 조용히 안 보이는 일이 없게).
    · 값 목록을 박지 않는다 — 입력 보조 목록은 edit_distinct 로 «지금 표에 있는 값»을 받는다.
    ============================================================================ */
-GST.needVer(145);
+GST.needVer(146);
 const $ = id => document.getElementById(id);
 const esc = s => GST._esc(s);
 const PAGE = 100;
@@ -353,10 +371,11 @@ const ADMIN_COLS = new Set(['synced_at','imported_at','created_at','extra']);
 
 const S = {
   tab:'wk', ready:null, why:'',
-  can:{ del:true, restore:true },    // 삭제·되돌리기 함수가 서버에 있나(부분 적용 상태를 «말하며» 잠근다)
+  can:{ del:true, restore:true, bulk:true },   // 삭제·되돌리기·엑셀 일괄 함수가 서버에 있나(부분 적용 상태를 «말하며» 잠근다)
   cols:{}, types:{},                  // 표 → 실제 열 목록 · 열 → 타입 (edit_cols)
   all:{},                             // whole 표 → 전 행
   rows:[], after:null, more:false, busy:false,
+  sel:new Set(), lastCk:null,         // 체크한 행 키(글자) — 탭을 바꾸거나 새로 검색하면 비운다(«보이는 목록»의 선택이다)
   cur:null,                           // {t, key, row, hash, isNew, orig, origX}
   dist:{},                            // 'tbl|col' → [[값, 건수]]
   hist:{ rows:[], last:null, more:false }
@@ -501,7 +520,7 @@ async function switchTab(id, opt){
   $('pgData').hidden = id === 'hist'; $('pgHist').hidden = id !== 'hist';
   if(id === 'hist'){ renderHistFilters(opt); return loadHist(false); }
   const t = TAB();
-  S.rows = []; S.after = null; S.more = false;
+  S.rows = []; S.after = null; S.more = false; S.sel = new Set(); S.lastCk = null;
   renderSearch(); renderList(); renderEditor();
   try{ await loadCols(t); }catch(e){ /* 배너가 이미 밝힌다 */ }
   renderSearch();
@@ -533,8 +552,10 @@ function renderSearch(){
     + other.map(c => '<option value="' + esc(c) + '"' + (f.ocol === c ? ' selected' : '') + '>' + esc(label(t, c).name) + (label(t, c).name !== c ? ' (' + esc(c) + ')' : '') + '</option>').join('')
     + '</select><select class="ctl" name="omode"><option value="has"' + (f.omode === 'has' ? ' selected' : '') + '>포함</option><option value="eq"' + (f.omode === 'eq' ? ' selected' : '') + '>정확히</option><option value="nul"' + (f.omode === 'nul' ? ' selected' : '') + '>비어 있음</option></select>'
     + '<input class="ctl" name="oval" value="' + esc(f.oval || '') + '" placeholder="값"></div>';
+  const bulkOff = S.ready === false || !S.can.bulk;
   h += '<div class="sbar"><button class="btn pri" type="submit">검색</button><button class="btn" type="button" data-act="reset">조건 지우기</button>'
-    + '<span class="sp"></span><button class="btn" type="button" data-act="new"' + (S.ready === false ? ' disabled' : '') + '>+ 새 행</button></div>';
+    + '<span class="sp"></span><button class="btn" type="button" data-act="xup"' + (bulkOff ? ' disabled title="엑셀 일괄 수정 함수가 아직 서버에 없습니다"' : ' title="받은 양식(또는 같은 머리글의 엑셀)을 올리면 미리보기 뒤에 바뀐 칸만 반영합니다"') + '>엑셀 올리기</button>'
+    + '<button class="btn" type="button" data-act="new"' + (S.ready === false ? ' disabled' : '') + '>+ 새 행</button></div>';
   $('search').innerHTML = h;
 }
 function readSearch(){
@@ -548,6 +569,7 @@ $('search').addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if(!b) return;
   if(b.dataset.act === 'reset'){ S.f && (S.f[S.tab] = {}); renderSearch(); if(TAB().mode === 'whole') runSearch(false); }
   if(b.dataset.act === 'new'){ if(await leaveOk()) newRow(null); }
+  if(b.dataset.act === 'xup'){ if(await leaveOk()) $('xfile').click(); }
 });
 /* 입력 보조 목록 — 칸에 처음 들어갈 때 한 번 받는다(edit_distinct · 많은 순) */
 document.addEventListener('focusin', e => {
@@ -582,10 +604,10 @@ async function runSearch(append){
     if(t.mode === 'whole'){
       if(!S.all[t.id]) S.all[t.id] = await loadAll(t);
       const all = S.all[t.id].filter(r => passWhole(t, f, r)).sort((a, b) => (b[t.key] || 0) - (a[t.key] || 0));
-      S.rows = all; S.more = false;
+      S.rows = all; S.more = false; S.sel = new Set(); S.lastCk = null;
       renderList(all.length + '건' + (all.length !== S.all[t.id].length ? ' · 전체 ' + S.all[t.id].length.toLocaleString() + '건 중' : ''));
     }else{
-      if(!append){ S.rows = []; S.after = null; }
+      if(!append){ S.rows = []; S.after = null; S.sel = new Set(); S.lastCk = null; }
       const listCols = listColsOf(t);
       let q = C.from(t.tbl).select([t.key].concat(listCols).join(',')).order(t.key, {ascending:false}).limit(PAGE + 1);
       if(append && S.after != null) q = q.lt(t.key, S.after);
@@ -687,25 +709,66 @@ async function loadAll(t){
 /* ---------- 결과 목록 ---------- */
 function renderList(head){
   const t = TAB();
-  if(head != null) $('listH').innerHTML = '<b>' + esc(head) + '</b>' + (t.mode === 'server' ? '<span class="hint">최근에 올린 행부터</span>' : '');
+  if(head != null) $('listH').innerHTML = '<b>' + esc(head) + '</b>' + (t.mode === 'server' ? '<span class="hint">최근에 올린 행부터</span>' : '')
+    + '<span class="sp"></span><span class="selbar" id="selBar"></span>';
+  renderSelBar();
   const cols = listColsOf(t);
   if(!S.rows.length){
     $('list').innerHTML = '';
     $('more').innerHTML = head != null && head !== '' ? '<div class="empty">맞는 행이 없습니다.\n조건을 줄이거나 「그 밖의 열로 찾기」를 써 보세요.</div>' : '';
     return;
   }
-  $('list').innerHTML = '<thead><tr><th>#</th>' + cols.map(c => '<th>' + esc(label(t, c).name) + '</th>').join('') + '</tr></thead><tbody>'
-    + S.rows.map(r => '<tr data-key="' + esc(r[t.key]) + '"' + (S.cur && !S.cur.isNew && String(S.cur.key) === String(r[t.key]) ? ' class="on"' : '') + '><td class="k">' + esc(r[t.key])
-      + '</td>' + cols.map(c => { const v = cellOf(t, r, c); return '<td title="' + esc(v) + '">' + esc(v) + '</td>'; }).join('') + '</tr>').join('') + '</tbody>';
+  const allOn = S.rows.every(r => S.sel.has(String(r[t.key])));
+  $('list').innerHTML = '<thead><tr><th class="ck"><input type="checkbox" id="ckAll" title="지금 목록의 행 전부 고르기 · 풀기 (더 보기로 불러온 행 포함)"' + (allOn ? ' checked' : '') + '></th><th>#</th>'
+    + cols.map(c => '<th>' + esc(label(t, c).name) + '</th>').join('') + '</tr></thead><tbody>'
+    + S.rows.map(r => { const k = String(r[t.key]);
+      return '<tr data-key="' + esc(k) + '"' + (S.cur && !S.cur.isNew && String(S.cur.key) === k ? ' class="on"' : '') + '><td class="ck"><input type="checkbox" data-ck="' + esc(k) + '"' + (S.sel.has(k) ? ' checked' : '') + '></td><td class="k">' + esc(k)
+        + '</td>' + cols.map(c => { const v = cellOf(t, r, c); return '<td title="' + esc(v) + '">' + esc(v) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody>';
   $('more').innerHTML = S.more ? '<div class="more"><button class="btn" type="button" id="moreBtn">' + PAGE + '건 더 보기</button></div>' : '';
   if(S.more) $('moreBtn').onclick = () => runSearch(true);
 }
+/* 선택 막대 — 체크한 행 수 · 엑셀로 받기. 아무것도 안 골랐으면 «빈 양식»(머리글만 · 새 행을 여러 줄 넣을 때) */
+function renderSelBar(){
+  const el = $('selBar'); if(!el) return;
+  const n = S.sel.size, off = S.ready === false || !S.can.bulk;
+  el.innerHTML = (n ? '<span class="hint">' + n.toLocaleString() + '건 선택</span><button class="btn sm" type="button" data-act="xclr">선택 풀기</button>' : '')
+    + '<button class="btn sm" type="button" data-act="xdown"' + (off ? ' disabled title="엑셀 일괄 수정 함수가 아직 서버에 없습니다"'
+      : ' title="' + (n ? '체크한 행을 일괄 수정용 엑셀로 받습니다' : '체크한 행이 없으면 머리글만 든 빈 양식을 받습니다 — 새 행을 여러 줄 넣을 때') + '"')
+    + '>' + (n ? '선택 ' + n.toLocaleString() + '건 엑셀로 받기' : '빈 양식 받기') + '</button>';
+}
+$('listH').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if(!b || b.disabled) return;
+  if(b.dataset.act === 'xdown') bulkDown();
+  if(b.dataset.act === 'xclr'){ S.sel = new Set(); S.lastCk = null; renderList(null); }
+});
 $('list').addEventListener('click', async e => {
+  if(e.target.closest('th.ck, td.ck')){ onCheck(e); return; }       // 체크 칸은 행을 열지 않는다
   const tr = e.target.closest('tr[data-key]'); if(!tr) return;
   if(S.cur && !S.cur.isNew && String(S.cur.key) === tr.dataset.key) return;
   if(!(await leaveOk())) return;
   openRow(tr.dataset.key);
 });
+function onCheck(e){
+  const t = TAB(), cell = e.target.closest('th.ck, td.ck');
+  let ck = e.target.closest('input[type=checkbox]');
+  if(!ck){ ck = cell && cell.querySelector('input'); if(!ck) return; ck.checked = !ck.checked; }   // 칸 여백을 눌러도 체크
+  if(ck.id === 'ckAll'){
+    S.rows.forEach(r => { const k = String(r[t.key]); if(ck.checked) S.sel.add(k); else S.sel.delete(k); });
+    $('list').querySelectorAll('[data-ck]').forEach(x => { x.checked = ck.checked; });
+    S.lastCk = null;
+  }else{
+    const k = ck.dataset.ck, idx = S.rows.findIndex(r => String(r[t.key]) === k);
+    /* Shift 로 범위 — 마지막으로 누른 줄부터 이 줄까지 같은 상태로(엑셀·메일과 같은 손버릇) */
+    if(e.shiftKey && S.lastCk != null && idx >= 0){
+      const a = Math.min(S.lastCk, idx), b = Math.max(S.lastCk, idx);
+      for(let i = a; i <= b; i++){ const kk = String(S.rows[i][t.key]); if(ck.checked) S.sel.add(kk); else S.sel.delete(kk); }
+      $('list').querySelectorAll('[data-ck]').forEach(x => { x.checked = S.sel.has(x.dataset.ck); });
+    }else{ if(ck.checked) S.sel.add(k); else S.sel.delete(k); }
+    S.lastCk = idx;
+    const all = $('ckAll'); if(all) all.checked = S.rows.length > 0 && S.rows.every(r => S.sel.has(String(r[t.key])));
+  }
+  renderSelBar();
+}
 
 /* ---------- 편집기 ---------- */
 async function openRow(key){
@@ -851,17 +914,24 @@ window.addEventListener('beforeunload', e => { if(S.cur && changes().n){ e.preve
 
 /* 입력값 검사 — 바뀐 칸만 본다(옛 행에 이미 있던 이상한 값 때문에 저장이 막히면 안 된다).
    날짜는 눕히고 · 숫자는 쉼표를 떼고(Number('2,093') 은 NaN — v95) · 수식처럼 보이는 값은 막는다. */
+/* 칸 하나 검사 — 한 행 편집(validate)과 엑셀 일괄 수정이 «같은 함수»를 지난다. 두 벌이면 화면에서 넣은 값과
+   엑셀로 넣은 값이 다른 꼴이 된다(날짜 2026.3.1 이 한쪽만 눕혀지는 식). 돌려주는 v 는 «넣을 값»(빈칸은 null). */
+function cellCheck(t, c, raw){
+  if(raw == null) return { v:null };
+  let v = String(raw).trim();
+  if(v === '') return { v:null };
+  if(isDate(t, c)){ const n = normDate(v); if(!n) return { v:v, err:'날짜는 YYYY-MM-DD 로 적어 주세요' }; v = n; }
+  else if(isNum(t, c)){ const n = GST.numv(v); if(!isFinite(n)) return { v:v, err:'숫자만 적을 수 있습니다' }; v = String(v).replace(/[\s, ]/g, ''); }
+  if(formulaLike(v)) return { v:v, err:'= + @ 로 시작하는 값은 엑셀에서 수식으로 읽힙니다' };
+  return { v:v };
+}
 function validate(t, vals, isNew){
   const errs = {};
   Object.keys(vals).forEach(c => {
-    let v = vals[c];
-    if(v == null) return;
-    v = String(v).trim();
-    if(v === ''){ vals[c] = null; return; }
-    if(isDate(t, c)){ const n = normDate(v); if(!n) errs[c] = '날짜는 YYYY-MM-DD 로 적어 주세요'; else v = n; }
-    else if(isNum(t, c)){ const n = GST.numv(v); if(!isFinite(n)) errs[c] = '숫자만 적을 수 있습니다'; else v = String(v).replace(/[\s, ]/g, ''); }
-    if(!errs[c] && formulaLike(v)) errs[c] = '= + @ 로 시작하는 값은 엑셀에서 수식으로 읽힙니다';
-    vals[c] = v;
+    if(vals[c] == null) return;
+    const r = cellCheck(t, c, vals[c]);
+    vals[c] = r.v;
+    if(r.err) errs[c] = r.err;
   });
   if(isNew){
     t.need.forEach(n => {
@@ -1056,21 +1126,461 @@ async function snFill(){
   snack(n ? n + '칸을 채웠습니다 — 확인하고 저장하세요' : '채운 칸이 없습니다');
 }
 
+/* ---------- 엑셀 일괄 수정 (v141) ----------
+   사용자 요청: 「목록에서 체크한 행을 엑셀 표준양식으로 받아 엑셀에서 한꺼번에 고치고, 올리면 덮어쓰게.
+   설치=S/N · 수선=실적코드 · 인원=사원번호처럼 고유코드가 있으니까 · 새로 적은 줄은 이어 붙고」.
+
+   ⚠ «고유코드»는 실측으로 고유가 아니다(2026-10): 실적코드 197개가 두 행씩이고 246행은 비어 있으며, S/N 도 하나가
+     두 행이다. 그래서 받은 양식 맨 앞에 «행번호»(PK)를 같이 싣고, 올릴 때 그것으로 정확한 행을 찾는다.
+     행번호가 없는 줄(새로 적은 줄)만 업무 키로 찾는다 — 정확히 한 행이면 그 행을 고치고, 없으면 새 행,
+     여럿이면 «어느 행인지 모른다»고 건너뛴다(정확히-한-행 규율 · sheet-write·dbWrite 와 같다).
+     그렇게 찾은 줄은 «채운 칸만» 덮는다 — 받은 줄(행번호)의 빈칸은 «지움»이지만, 새로 적은 줄의 빈칸은 «모름»이다.
+   ⚠ 받은 시점의 행 해시를 숨김 시트(_meta)에 싣는다 — 받은 뒤 누가 같은 행을 고쳤으면 그 줄은 덮지 않고 알린다
+     (한 행 편집의 충돌 규칙과 같다). 단 «바뀐 것이 없는 줄»을 먼저 거른다 — 그래야 반쯤 반영된 뒤 같은 파일을
+     다시 올렸을 때 들어간 줄이 «충돌»이 아니라 «변경 없음»으로 읽힌다.
+   ⚠ 칸 검사는 한 행 편집과 같은 함수(cellCheck) · 읽기는 core 의 GST.sheetRows(업로드와 같은 변환 규칙)다.
+   · 쓰기는 edit_bulk 한 통로 — 500줄씩 «전부 아니면 전무» · 묶음 머리 이력(bulk) + 줄마다 이력(ref = 머리).
+   · 행 지우기는 엑셀로 하지 않는다 — 파일에서 줄을 지운 것은 «이 줄은 안 고친다»와 구별되지 않는다. */
+const BULK_KEY = '행번호';                 // 받은 양식 맨 앞 칸 — 표에서 그 행을 찾는 열쇠(PK)
+const BULK_MAX = 500;                      // edit_bulk 한 번에 들어가는 줄 수(서버 상한과 같다 · 운영 실측 500줄 5.4초 — 묶음 = 전부 아니면 전무의 단위)
+const NK = GST.SM.norm(BULK_KEY);
+const SHOW = 300;                          // 미리보기 표에 그리는 줄 수(반영은 전부 한다)
+
+/* 양식의 열 — 편집기와 같은 순서(묶음 → 기타 → 옛 양식 열). 키·관리 열은 뺀다(키는 맨 앞 «행번호» 칸에 따로 든다).
+   extra(jsonb)도 뺀다 — 한 칸에 여러 값이 든 칸은 엑셀로 고치면 모양이 깨진다(편집기에서 고친다). */
+function bulkCols(t){
+  const cols = (S.cols[t.tbl] || []).filter(c => c !== t.key && !ADMIN_COLS.has(c));
+  const seen = new Set(), out = [], legacy = [];
+  t.groups.forEach(g => g[1].forEach(c => { if(cols.indexOf(c) >= 0 && !seen.has(c)){ seen.add(c); (g[2] === 'legacy' ? legacy : out).push(c); } }));
+  cols.forEach(c => { if(!seen.has(c)){ seen.add(c); out.push(c); } });
+  return out.concat(legacy);
+}
+/* 머리글 — 미러 표는 SPEC 별칭[0](표준 템플릿과 같은 정본 표기 · v138), Import 표는 열 이름 그대로.
+   정규화해서 겹치면 «(열이름)»을 붙여 갈라 둔다 — 겹친 머리글은 올릴 때 어느 열인지 모른다. */
+function bulkHead(t, cols){
+  const used = new Set([NK]);
+  return cols.map(c => {
+    let h = label(t, c).name;
+    if(used.has(GST.SM.norm(h))) h += ' (' + c + ')';
+    used.add(GST.SM.norm(h));
+    return h;
+  });
+}
+/* 머리글 → 열. 양식의 머리글이 먼저(언제나 맞물린다), 그다음 열 이름·SPEC 의 다른 별칭(사이트 자체 양식에서 옮겨 붙인 열).
+   ⚠ 별칭이 두 열에 걸리면 그 이름은 버린다 — 잘못 맞물려 남의 열을 덮느니 «모르는 열»로 두고 알리는 편이 낫다(제1원칙). */
+function headMap(t, cols){
+  const m = new Map(), weak = new Map(), amb = new Set();
+  bulkHead(t, cols).forEach((h, i) => m.set(GST.SM.norm(h), cols[i]));
+  const add = (h, c) => { const k = GST.SM.norm(h); if(!k || k === NK || m.has(k)) return; if(weak.has(k) && weak.get(k) !== c) amb.add(k); else weak.set(k, c); };
+  cols.forEach(c => add(c, c));
+  const sp = t.spec && GST.SM.SPEC[t.spec];
+  if(sp) Object.keys(sp.fields).forEach(f => { const c = GST._snake(f); if(cols.indexOf(c) >= 0) [].concat(sp.fields[f]).forEach(a => add(a, c)); });
+  weak.forEach((c, k) => { if(!amb.has(k)) m.set(k, c); });
+  return m;
+}
+/* 업무 키 열 — 행번호가 없는 줄이 «어느 행인지» 고를 때만 쓴다. 자재·휴가는 업무 키가 없다(새 행으로만 들어간다). */
+const bulkKeys = t => t.dup ? [].concat(t.dup).filter(c => (S.cols[t.tbl] || []).indexOf(c) >= 0) : [];
+const josa = (w, a, b) => { const ch = String(w).trim().slice(-1).charCodeAt(0); return w + ((ch >= 0xAC00 && ch <= 0xD7A3 && (ch - 0xAC00) % 28) ? a : b); };
+const stampL = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()); };
+const cut2 = (s, n) => { s = s == null ? '' : String(s); return s.length > n ? s.slice(0, n) + '…' : s; };
+/* 엑셀과 지금 값이 «같은가» — 표기만 다른 것은 같은 것으로 본다(이력이 소음이 되지 않게).
+   날짜 2026-03-01 ≡ 2026-03-01 00:00:00 · 숫자 2,093 ≡ 2093 · 앞뒤 공백 무시 · 빈칸 ≡ null */
+function sameVal(t, c, v, cur){
+  const a = v == null ? '' : String(v).trim(), b = vs(cur).trim();
+  if(a === b) return true;
+  if(a === '' || b === '') return false;
+  if(isDate(t, c)){ const x = normDate(a), y = normDate(b); if(x && y) return x.replace(/ 00:00:00$/, '') === y.replace(/ 00:00:00$/, ''); }
+  if(isNum(t, c)){ const x = GST.numv(a), y = GST.numv(b); if(isFinite(x) && isFinite(y)) return x === y; }
+  return false;
+}
+async function xlsx(){
+  try{ await GST.xlsxLibLoad(); }
+  catch(e){ throw new Error('엑셀 라이브러리를 받지 못했습니다(' + ((e && e.message) || e) + ') — 새로고침하거나, 사내망이 cdn.jsdelivr.net 을 막고 있다면 전산팀에 허용을 요청하세요.'); }
+  if(!window.XLSX) throw new Error('엑셀 라이브러리를 싣지 못했습니다 — 새로고침해 보세요');
+  return window.XLSX;
+}
+/* 전 칸을 «텍스트»로 — 엑셀이 사번의 앞 0 을 떼거나, 긴 숫자를 지수로, 날짜를 숫자로 바꾸지 않게(서식 @) */
+function asText(XLSX, ws){
+  if(!ws['!ref']) return;
+  const rg = XLSX.utils.decode_range(ws['!ref']);
+  for(let R = rg.s.r; R <= rg.e.r; R++) for(let K = rg.s.c; K <= rg.e.c; K++){
+    const c = ws[XLSX.utils.encode_cell({ r:R, c:K })];
+    if(c){ c.t = 's'; c.v = c.v == null ? '' : String(c.v); c.z = '@'; }
+  }
+}
+function bulkGuide(t, n){
+  const ks = bulkKeys(t), kn = ks.length ? label(t, pickCol(t, ks) || ks[0]).name : '';
+  const g = [
+    ['데이터 관리 — 엑셀 일괄 수정 양식'],
+    ['표', t.name + ' (' + t.tbl + ')'],
+    ['받은 행', n ? n + '행 — 받은 시점의 값입니다' : '없음 — 빈 양식(새 행을 여러 줄 넣을 때)'],
+    [''],
+    ['고치는 법'],
+    ['1', '값을 고치고 저장한 뒤, 데이터 관리 화면 「' + t.name + '」 탭의 「엑셀 올리기」로 올립니다.'],
+    ['2', '올리면 «무엇이 어떻게 바뀌는지» 미리보기가 먼저 뜹니다. 확인하고 「반영」을 눌러야 표가 바뀝니다.'],
+    ['3', '바꾼 칸만 반영됩니다. 손대지 않은 칸·줄은 그대로입니다.'],
+    [''],
+    ['지킬 것'],
+    ['·', '「' + BULK_KEY + '」 열은 고치지 마세요 — 표에서 그 행을 찾는 열쇠입니다.'],
+    ['·', '새 행은 맨 아래에 「' + BULK_KEY + '」 칸을 비워 두고 적습니다.' + (kn ? ' 단 「' + kn + '」 값이 표에 «정확히 한 행» 있으면 새 행이 아니라 그 행의 «채운 칸만» 덮어씁니다(빈칸은 그대로). 여러 행이면 그 줄은 건너뜁니다.' : '')],
+    ['·', '받은 줄(행번호 있음)에서 칸을 비우면 그 값이 지워집니다(빈칸 = 값 없음). 열을 통째로 지우면 그 열은 손대지 않습니다.'],
+    ['·', '행 지우기는 이 파일로 하지 않습니다 — 파일에서 줄을 지워도 표에서는 지워지지 않습니다. 화면에서 한 행씩 지우세요(이력에 남습니다).'],
+    ['·', '날짜는 YYYY-MM-DD 로 적습니다(2026.3.1 · 2026/3/1 도 읽습니다). = + @ 로 시작하는 값은 넣을 수 없습니다(엑셀 수식으로 읽힘).'],
+    ['·', '받은 뒤에 다른 사람이 같은 행을 고쳤으면 그 줄은 덮지 않고 알려 줍니다 — 다시 받아서 고치세요.'],
+    ['·', '숨김 시트 「_meta」는 지우지 마세요 — 받은 시점의 값을 대조하는 데 씁니다.'],
+    [''],
+    ['반영한 내용은 「변경 이력」 탭에 줄마다 행 전체로 남고, 그 묶음을 통째로 되돌릴 수 있습니다.']
+  ];
+  if(t.note) g.push([''], ['참고', t.note]);
+  return g;
+}
+
+/* 받기 — 체크한 행(목록 순서 그대로)을 «지금 값 + 해시»로 다시 읽어 양식을 만든다. 목록 칸은 몇 열뿐이라 그대로 쓰면 안 된다. */
+async function bulkDown(){
+  const t = TAB();
+  const keys = S.rows.map(r => String(r[t.key])).filter(k => S.sel.has(k));
+  let XLSX;
+  try{ XLSX = await xlsx(); }catch(e){ snack(e.message, {err:true}); return; }
+  if(!S.cols[t.tbl]){ try{ await loadCols(t); }catch(e){ snack(e.message, {err:true}); return; } }
+  const cols = bulkCols(t), heads = bulkHead(t, cols);
+  let got = [];
+  try{
+    for(let i = 0; i < keys.length; i += BULK_MAX){
+      snack(keys.length.toLocaleString() + '건 읽는 중… ' + Math.min(i + BULK_MAX, keys.length).toLocaleString(), {ms:60000});
+      got = got.concat(await rpc('edit_get_many', {p_tbl:t.tbl, p_keys:keys.slice(i, i + BULK_MAX).map(Number)}) || []);
+    }
+  }catch(e){ snack(e.message, {err:true}); return; }
+  const by = new Map(got.map(x => [String(x.key), x]));
+  const have = keys.filter(k => by.has(k)), gone = keys.length - have.length;
+  const aoa = [[BULK_KEY].concat(heads)].concat(have.map(k => [k].concat(cols.map(c => vs(by.get(k).row[c])))));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  asText(XLSX, ws);
+  ws['!cols'] = [{ wch:8 }].concat(heads.map((h, i) => ({ wch: Math.round(Math.max(8, Math.min(40, Math.max.apply(null, [h.length * 1.7].concat(aoa.slice(1, 200).map(r => String(r[i + 1]).length))) + 2))) })));
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s:{ r:0, c:0 }, e:{ r:Math.max(aoa.length - 1, 1), c:cols.length } }) };
+  const meta = [['gst-edit-bulk', '1'], ['표', t.tbl], ['탭', t.name], ['받은 시각', new Date().toISOString()], ['받은 사람', (GST._me || {}).email || ''],
+                ['행 수', String(have.length)], [BULK_KEY, '해시']].concat(have.map(k => [k, by.get(k).hash]));
+  const ms = XLSX.utils.aoa_to_sheet(meta); asText(XLSX, ms);
+  const gs = XLSX.utils.aoa_to_sheet(bulkGuide(t, have.length)); gs['!cols'] = [{ wch:10 }, { wch:120 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, t.name);
+  XLSX.utils.book_append_sheet(wb, gs, '안내');
+  XLSX.utils.book_append_sheet(wb, ms, '_meta');
+  wb.Workbook = { Sheets:[{ Hidden:0 }, { Hidden:0 }, { Hidden:1 }] };   // _meta 는 숨긴다 — 받은 시점의 해시(대조용)
+  XLSX.writeFile(wb, '일괄수정_' + t.name + '_' + (have.length ? have.length + '건' : '빈양식') + '_' + stampL() + '.xlsx');
+  snack((have.length ? have.length.toLocaleString() + '건을 받았습니다' : '빈 양식을 받았습니다') + (gone ? ' · ' + gone + '건은 그새 없어져 뺐습니다' : '')
+    + ' — 고친 뒤 「엑셀 올리기」로 올리세요', {ms:7000});
+}
+
+/* 받은 양식의 숨김 시트 — 표 이름과 «받은 시점의 해시»(행번호 → 해시) */
+function readMeta(XLSX, wb){
+  const ws = wb.Sheets['_meta']; if(!ws) return null;
+  const rows = GST.sheetRows(XLSX, ws);
+  if(!rows.length || String(rows[0][0]).trim() !== 'gst-edit-bulk') return null;
+  const m = { hash:new Map(), tbl:'', at:'' }; let inH = false;
+  rows.slice(1).forEach(r => {
+    const a = String(r[0] == null ? '' : r[0]).trim(), b = String(r[1] == null ? '' : r[1]).trim();
+    if(inH){ if(a) m.hash.set(a, b); return; }
+    if(a === '표') m.tbl = b; else if(a === '받은 시각') m.at = b; else if(a === BULK_KEY) inH = true;
+  });
+  return m;
+}
+/* 데이터 시트 — «머리글이 가장 많이 맞는» 시트(첫 6줄 안에서 머리글 줄을 찾는다). 받은 양식이 아니어도
+   같은 머리글이면 받는다(표준 템플릿·사이트 양식에서 옮겨 붙인 시트). */
+function pickSheet(XLSX, wb, hm){
+  let best = null;
+  (wb.SheetNames || []).forEach(n => {
+    if(n === '_meta' || n === '안내') return;
+    const rows = GST.sheetRows(XLSX, wb.Sheets[n]);
+    for(let i = 0; i < Math.min(rows.length, 6); i++){
+      let hit = 0, pk = false;
+      (rows[i] || []).forEach(h => { const k = GST.SM.norm(h); if(!k) return; if(k === NK) pk = true; else if(hm.has(k)) hit++; });
+      if(hit >= 1 && (pk || hit >= 2) && (!best || hit > best.hit)) best = { name:n, rows:rows, hi:i, hit:hit };
+    }
+  });
+  return best;
+}
+/* 업무 키로 표의 행 찾기(큰 표) — in(…) 도 서버 행수 상한에 잘린다. count 로 «다 왔나»를 보고 모자라면 반으로 쪼갠다
+   («요청한 만큼 안 오면 끝» 판정 금지 · v128). */
+async function inRows(t, col, vals){
+  const out = [];
+  const go = async list => {
+    const r = await C.from(t.tbl).select(t.key + ',' + col, { count:'exact' }).in(col, list).limit(1000);
+    if(r.error) throw new Error(rpcErr(r.error));
+    const d = r.data || [];
+    if(r.count != null && r.count > d.length){
+      if(list.length === 1) throw new Error('「' + list[0] + '」 행이 너무 많습니다(' + r.count + '행) — 행번호로 지정하세요');
+      const h = list.length >> 1; await go(list.slice(0, h)); await go(list.slice(h)); return;
+    }
+    d.forEach(x => out.push(x));
+  };
+  for(let i = 0; i < vals.length; i += 100) await go(vals.slice(i, i + 100));
+  return out;
+}
+
+$('xfile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if(f) bulkUp(f); });
+async function bulkUp(file){
+  const t = TAB();
+  let XLSX, wb;
+  try{ XLSX = await xlsx(); }catch(e){ snack(e.message, {err:true}); return; }
+  snack('「' + file.name + '」 읽는 중…', {ms:60000});
+  try{ wb = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type:'array', cellDates:true }); }
+  catch(e){ snack('엑셀 파일을 읽지 못했습니다 — ' + ((e && e.message) || e), {err:true}); return; }
+  const meta = readMeta(XLSX, wb);
+  if(meta && meta.tbl && meta.tbl !== t.tbl){
+    const o = TAB_OF_TBL[meta.tbl];
+    snack('이 파일은 「' + (o ? o.name : meta.tbl) + '」 탭에서 받은 파일입니다 — 그 탭에서 올리세요', {err:true, ms:8000});
+    return;
+  }
+  if(!S.cols[t.tbl]){ try{ await loadCols(t); }catch(e){ snack(e.message, {err:true}); return; } }
+  const cols = bulkCols(t), hm = headMap(t, cols);
+  const pick = pickSheet(XLSX, wb, hm);
+  if(!pick){ snack('이 파일에서 「' + t.name + '」 머리글을 찾지 못했습니다 — 「엑셀로 받기」로 받은 양식에 고쳐 올리세요', {err:true, ms:8000}); return; }
+  let P;
+  try{ P = await bulkPlan(t, pick, meta, hm, file.name); }
+  catch(e){ snack(e.message, {err:true}); return; }
+  snack('미리보기를 만들었습니다', {ms:1200});
+  if(await showPlan(t, P)) await bulkApply(t, P);
+}
+
+/* 줄마다 «무엇을 할지» 정한다 — 수정 · 새 행 · 변경 없음 · 건너뜀(이유). 서버에는 아직 아무것도 안 쓴다. */
+async function bulkPlan(t, pick, meta, hm, fname){
+  const hdr = pick.rows[pick.hi] || [], at = {}, unknown = [], twice = [];
+  let pkAt = -1;
+  hdr.forEach((h, j) => {
+    const k = GST.SM.norm(h); if(!k) return;
+    if(k === NK){ pkAt = j; return; }
+    const c = hm.get(k);
+    if(!c){ unknown.push(String(h).trim()); return; }
+    if(c in at){ twice.push(String(h).trim()); return; }
+    at[c] = j;
+  });
+  const mapped = Object.keys(at), ks = bulkKeys(t).filter(c => c in at);
+  const kName = ks.length ? label(t, ks[0]).name : '';
+  /* 줄 읽기 — 완전히 빈 줄은 건너뛴다(엑셀은 서식만 남은 빈 줄을 흔히 남긴다) */
+  const lines = [];
+  for(let i = pick.hi + 1; i < pick.rows.length; i++){
+    const r = pick.rows[i] || [];
+    const pk = pkAt >= 0 ? String(r[pkAt] == null ? '' : r[pkAt]).trim() : '';
+    const vals = {}; let any = pk !== '';
+    mapped.forEach(c => { const v = r[at[c]]; vals[c] = v == null ? '' : String(v); if(vals[c].trim() !== '') any = true; });
+    if(!any) continue;
+    lines.push({ ln:i + 1, pk:pk, vals:vals, bk: ks.map(c => vals[c].trim()).find(Boolean) || '' });
+  }
+  const P = { file:fname, sheet:pick.name, meta:meta, hasPk:pkAt >= 0, unknown:unknown, twice:twice, mapped:mapped, kName:kName,
+              upd:[], ins:[], same:[], skip:[], total:lines.length };
+  const skip = (L, why) => { P.skip.push({ L:L, why:why }); };
+  /* 업무 키 → 표의 행. 작은 표는 통째로 «새로» 받는다 — 화면을 연 뒤의 옛 목록으로 판정하지 않게. */
+  const all = bulkKeys(t), bkVals = Array.from(new Set(lines.filter(L => !L.pk && L.bk).map(L => L.bk)));
+  const match = new Map();
+  const addM = (v, k) => { const a = match.get(v) || []; if(a.indexOf(k) < 0) a.push(k); match.set(v, a); };
+  if(bkVals.length){
+    const want = new Set(bkVals);
+    if(t.mode === 'whole'){
+      S.all[t.id] = await loadAll(t);
+      S.all[t.id].forEach(r => all.forEach(c => { const v = vs(r[c]).trim(); if(v && want.has(v)) addM(v, String(r[t.key])); }));
+    }else{
+      for(const c of all) (await inRows(t, c, bkVals)).forEach(r => addM(vs(r[c]).trim(), String(r[t.key])));
+    }
+  }
+  /* 줄 → 대상 행 */
+  const pkN = new Map(), bkN = new Map();
+  lines.forEach(L => { if(L.pk) pkN.set(L.pk, (pkN.get(L.pk) || 0) + 1); else if(L.bk) bkN.set(L.bk, (bkN.get(L.bk) || 0) + 1); });
+  lines.forEach(L => {
+    if(L.pk){
+      if(!/^\d+$/.test(L.pk)){ L.bad = '「' + BULK_KEY + '」 칸이 숫자가 아닙니다 — 그 칸은 고치지 마세요'; return; }
+      if(pkN.get(L.pk) > 1){ L.bad = '파일 안에 ' + BULK_KEY + ' ' + L.pk + ' 줄이 ' + pkN.get(L.pk) + '개 있습니다 — 어느 줄이 맞는지 몰라 건너뜁니다'; return; }
+      L.key = L.pk; L.by = 'pk';
+    }else if(L.bk){
+      if(bkN.get(L.bk) > 1){ L.bad = '파일 안에 ' + kName + ' 「' + L.bk + '」 줄이 ' + bkN.get(L.bk) + '개 있습니다 — 어느 줄이 맞는지 몰라 건너뜁니다'; return; }
+      const m = match.get(L.bk) || [];
+      if(m.length > 1){ L.bad = '표에 ' + kName + ' 「' + L.bk + '」 행이 ' + m.length + '개라 어느 행인지 모릅니다 — 받은 양식의 ' + BULK_KEY + '로 지정하세요'; return; }
+      if(m.length === 1){ L.key = m[0]; L.by = 'bk'; }
+    }
+  });
+  /* 같은 행을 두 줄이 고치면(행번호로 한 번 · 업무 키로 한 번) 둘 다 건너뛴다 — 어느 쪽이 맞는지 화면이 정할 수 없다 */
+  const claim = new Map();
+  lines.forEach(L => { if(!L.bad && L.key != null) claim.set(L.key, (claim.get(L.key) || 0) + 1); });
+  lines.forEach(L => { if(!L.bad && L.key != null && claim.get(L.key) > 1) L.bad = '같은 행(' + BULK_KEY + ' ' + L.key + ')을 다른 줄도 고칩니다 — 둘 다 건너뜁니다'; });
+  /* 대상 행의 «지금» 값과 해시 */
+  const keys = Array.from(new Set(lines.filter(L => !L.bad && L.key != null).map(L => L.key)));
+  const cur = new Map();
+  for(let i = 0; i < keys.length; i += BULK_MAX){
+    (await rpc('edit_get_many', {p_tbl:t.tbl, p_keys:keys.slice(i, i + BULK_MAX).map(Number)}) || []).forEach(x => cur.set(String(x.key), x));
+  }
+  lines.forEach(L => {
+    if(L.bad) return skip(L, L.bad);
+    if(L.key == null){                       // 새 행
+      const row = {}, errs = [];
+      mapped.forEach(c => { const r = cellCheck(t, c, L.vals[c]); if(r.v == null) return; if(r.err) errs.push(label(t, c).name + ': ' + r.err); else row[c] = r.v; });
+      t.need.forEach(n => { const al = [].concat(n); if(!al.some(c => row[c] != null && row[c] !== '')) errs.push(label(t, pickCol(t, al) || al[0]).name + ': 필수 칸입니다'); });
+      if(errs.length) return skip(L, errs.join(' · '));
+      return P.ins.push({ L:L, row:row });
+    }
+    /* 행번호만 남기고 나머지를 다 비운 줄 — «행을 지우려는» 손짓으로 보인다. 그대로 두면 그 행의 모든 칸이 지워진다. */
+    if(L.by === 'pk' && mapped.length && mapped.every(c => String(L.vals[c]).trim() === ''))
+      return skip(L, BULK_KEY + '만 남고 나머지 칸이 전부 비었습니다 — 행을 지우려는 것이면 화면에서 한 행씩 지우세요(이 파일로는 지우지 않습니다)');
+    const x = cur.get(L.key);
+    if(!x) return skip(L, L.by === 'pk' ? BULK_KEY + ' ' + L.key + ' 인 행이 표에 없습니다(지워졌거나 통째 재업로드로 번호가 바뀌었습니다) — 다시 받아서 고치세요' : '그 행을 읽지 못했습니다 — 다시 올려 보세요');
+    const ch = {}, errs = [];
+    mapped.forEach(c => {
+      const r = cellCheck(t, c, L.vals[c]);
+      /* 행번호 없는 줄은 «채운 칸만» 덮는다 — 그 줄은 받은 양식에서 온 것이 아니라 빈칸이 «지움»인지 «모름»인지 모른다.
+         그대로 비우면 사번 하나 맞춰 새로 적은 줄이 남의 행 나머지 칸을 통째로 지운다(행번호 있는 줄은 빈칸 = 지움). */
+      if(L.by === 'bk' && r.v == null) return;
+      if(sameVal(t, c, r.v, x.row[c])) return;
+      if(r.err) errs.push(label(t, c).name + ': ' + r.err); else ch[c] = r.v;
+    });
+    if(!errs.length && !Object.keys(ch).length) return P.same.push({ L:L, key:L.key });
+    if(errs.length) return skip(L, errs.join(' · '));
+    /* 받은 뒤에 바뀌었나 — 받은 시점 해시(_meta)와 지금 해시. «바뀐 것이 없는 줄»은 바로 위에서 이미 걸렀다. */
+    if(L.by === 'pk'){
+      const mh = meta && meta.hash.get(L.key);
+      if(mh && mh !== x.hash) return skip(L, '받은 뒤에 이 행이 바뀌었습니다(다른 편집·업로드) — 덮지 않았습니다. 다시 받아서 고치세요');
+      if(!mh && ks.length){
+        const now = all.map(c => vs(x.row[c]).trim()).find(Boolean) || '';
+        if(L.bk && now && L.bk !== now) return skip(L, '받은 시점 정보가 없어 같은 행인지 확인할 수 없습니다 — 표의 ' + kName + '(' + now + ')와 파일(' + L.bk + ')이 다릅니다');
+      }
+    }
+    P.upd.push({ L:L, key:L.key, hash:x.hash, ch:ch, row:x.row, by:L.by });
+  });
+  return P;
+}
+
+function planTable(head, rows){
+  return '<div class="box"><table class="dt"><tr>' + head.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr>' + rows.join('') + '</table></div>';
+}
+async function showPlan(t, P){
+  const nu = P.upd.length, ni = P.ins.length, n = nu + ni, cells = P.upd.reduce((s, u) => s + Object.keys(u.ch).length, 0);
+  const more = arr => arr.length > SHOW ? '<p class="hint">… 외 ' + (arr.length - SHOW).toLocaleString() + '줄 (반영은 전부 합니다)</p>' : '';
+  const kOf = row => bulkKeys(t).map(c => vs(row[c]).trim()).find(Boolean) || '';
+  let h = '<div class="pv"><p><b>' + esc(t.name) + '</b> · 파일 「' + esc(P.file) + '」 · 시트 「' + esc(P.sheet) + '」 · 데이터 ' + P.total.toLocaleString() + '줄</p>'
+    + '<div class="pv-sum"><span class="badge ok">수정 ' + nu.toLocaleString() + '행 · ' + cells.toLocaleString() + '칸</span><span class="badge ok">새 행 ' + ni.toLocaleString() + '</span>'
+    + '<span class="badge">변경 없음 ' + P.same.length.toLocaleString() + '</span>' + (P.skip.length ? '<span class="badge bad">건너뜀 ' + P.skip.length.toLocaleString() + '</span>' : '') + '</div>';
+  if(P.hasPk && !P.meta) h += '<p class="wn">⚠ 받은 시점 정보(숨김 시트 «_meta»)가 없습니다 — 지금 값과만 비교했습니다. 받은 뒤 다른 사람이 고친 칸이 있으면 그 위에 덮어씁니다.</p>';
+  if(!P.hasPk && P.kName) h += '<p class="wn">⚠ 「' + BULK_KEY + '」 열이 없어 «' + esc(P.kName) + '»로 행을 찾았습니다(정확히 한 행일 때만).</p>';
+  const byK = P.upd.filter(u => u.by === 'bk').length;
+  if(byK) h += '<p class="hint">「' + BULK_KEY + '」 없이 «' + esc(P.kName) + '»로 찾은 ' + byK + '줄은 «채운 칸만» 덮어씁니다 — 빈칸은 그대로 둡니다.</p>';
+  /* 열 대부분을 모르면 다른 표의 파일일 수 있다 — 겹치는 이름(사원번호·No) 몇 개로 남의 표 값을 덮지 않게 크게 알린다 */
+  if(P.unknown.length > P.mapped.length) h += '<p class="wn" style="color:var(--bad)">⚠ 이 파일의 열 ' + (P.unknown.length + P.mapped.length) + '개 중 ' + P.unknown.length
+    + '개가 「' + esc(t.name) + '」 표에 없습니다 — 다른 표에서 받은 파일이 아닌지 확인하세요. 맞는 열은 ' + esc(P.mapped.map(c => label(t, c).name).slice(0, 8).join(' · ')) + ' 뿐입니다.</p>';
+  if(P.unknown.length) h += '<p class="hint">모르는 열은 무시했습니다: ' + esc(P.unknown.slice(0, 12).join(' · ')) + (P.unknown.length > 12 ? ' 외 ' + (P.unknown.length - 12) + '개' : '') + '</p>';
+  if(P.twice.length) h += '<p class="hint">같은 열이 두 번 있어 뒤의 것은 무시했습니다: ' + esc(P.twice.join(' · ')) + '</p>';
+  if(P.skip.length) h += '<h4>건너뛰는 줄 — 반영하지 않습니다</h4>' + planTable(['엑셀 줄', BULK_KEY + ' · 키', '이유'],
+    P.skip.slice(0, SHOW).map(s => '<tr><td>' + s.L.ln + '</td><td>' + esc(s.L.pk || s.L.bk || '') + '</td><td class="v">' + esc(s.why) + '</td></tr>')) + more(P.skip);
+  if(nu) h += '<h4>수정</h4>' + planTable(['엑셀 줄', BULK_KEY].concat(P.kName ? [P.kName] : []).concat(['바뀌는 칸']),
+    P.upd.slice(0, SHOW).map(u => { const ks = Object.keys(u.ch);
+      return '<tr><td>' + u.L.ln + '</td><td>' + esc(u.key) + '</td>' + (P.kName ? '<td>' + esc(kOf(u.row)) + '</td>' : '') + '<td class="v">'
+        + ks.slice(0, 6).map(c => esc(label(t, c).name) + ': <del>' + esc(cut2(vs(u.row[c]), 24) || '빈칸') + '</del> → <ins>' + esc(cut2(u.ch[c], 24) || '빈칸') + '</ins>').join(' · ')
+        + (ks.length > 6 ? ' <span class="hint">외 ' + (ks.length - 6) + '칸</span>' : '') + '</td></tr>'; })) + more(P.upd);
+  if(ni){
+    const lc = listColsOf(t).filter(c => P.mapped.indexOf(c) >= 0).slice(0, 5);
+    h += '<h4>새 행</h4>' + planTable(['엑셀 줄'].concat(lc.map(c => label(t, c).name)),
+      P.ins.slice(0, SHOW).map(x => '<tr><td>' + x.L.ln + '</td>' + lc.map(c => '<td class="v">' + esc(cut2(x.row[c], 30)) + '</td>').join('') + '</tr>')) + more(P.ins);
+  }
+  h += '<p class="hint" style="margin-top:12px">' + (n > BULK_MAX ? BULK_MAX + '줄씩 ' + Math.ceil(n / BULK_MAX) + '번에 나눠, 묶음마다' : '한 번에')
+    + ' «전부 아니면 전무»로 들어갑니다 — 미리보기 뒤에 누가 같은 행을 고쳤으면 그 묶음은 통째로 멈춥니다. 모든 줄이 「변경 이력」에 남고, 묶음을 통째로 되돌릴 수 있습니다.</p></div>';
+  const p = dialog('엑셀 일괄 수정 — 미리보기', h, [{l:'취소', v:false}, {l: n ? n.toLocaleString() + '행 반영' : '반영할 것이 없습니다', v:true, cls:'pri'}], true);
+  if(!n){ const b = dialog.last.querySelector('.btn.pri'); if(b) b.disabled = true; }
+  return (await p) === true && n > 0;
+}
+
+/* 반영 — 500줄씩 edit_bulk. 한 묶음이 충돌로 돌아오면 거기서 멈추고 «어디까지 들어갔나»를 그대로 적는다. */
+async function bulkApply(t, P){
+  const items = P.upd.map(u => ({ op:'update', key:+u.key, hash:u.hash, changes:u.ch, ln:u.L.ln }))
+    .concat(P.ins.map(x => ({ op:'insert', row:x.row, ln:x.L.ln })));
+  const parts = Math.ceil(items.length / BULK_MAX), done = { u:0, i:0, s:0, logs:[] };
+  for(let p = 0; p < parts; p++){
+    const chunk = items.slice(p * BULK_MAX, (p + 1) * BULK_MAX);
+    snack('반영하는 중… ' + (parts > 1 ? (p + 1) + '/' + parts + ' 묶음' : chunk.length.toLocaleString() + '줄'), {ms:120000});
+    let r;
+    try{
+      r = await rpc('edit_bulk', { p_tbl:t.tbl,
+        p_items:chunk.map(x => x.op === 'update' ? { op:x.op, key:x.key, hash:x.hash, changes:x.changes } : { op:x.op, row:x.row }),
+        p_note:{ file:P.file, sheet:P.sheet, part:p + 1, parts:parts, rows:chunk.length } });
+    }catch(e){ return bulkStop(t, done, p, parts, e.message, null); }
+    if(r && r.error === 'conflict'){
+      const lnOf = new Map(chunk.filter(x => x.op === 'update').map(x => [String(x.key), x.ln]));
+      return bulkStop(t, done, p, parts, null, (r.rows || []).map(x => ({ key:x.key, ln:lnOf.get(String(x.key)), why:x.error })));
+    }
+    done.u += (r && r.updated) || 0; done.i += (r && r.inserted) || 0; done.s += (r && r.same) || 0; if(r && r.log) done.logs.push(r.log);
+  }
+  await bulkAfter(t);
+  snack('반영했습니다 — 수정 ' + done.u + '행 · 새 행 ' + done.i + (done.s ? ' · 변경 없음 ' + done.s : '') + (done.logs.length ? ' · 이력 #' + done.logs.join(', #') : ''),
+    done.logs.length ? { act:'이력 보기', fn: () => switchTab('hist', { tbl:t.tbl, kind:'blk' }), ms:12000 } : {});
+}
+async function bulkAfter(t){
+  S.all = {};                                     // 작은 표는 다음 검색 때 새로 받는다(인원이면 교육 연쇄도 있다)
+  const open = S.cur && !S.cur.isNew && S.cur.t === t.id ? S.cur.key : null;
+  if(S.tab === t.id){ await runSearch(false); if(open != null) openRow(open); }
+}
+async function bulkStop(t, done, p, parts, msg, rows){
+  const WHY = { conflict:'미리보기 뒤에 다른 곳에서 바뀜', not_found:'그새 없어짐', dup:'같은 행이 두 번' };
+  let h = '';
+  if(p > 0) h += '<p>앞의 ' + p + '묶음은 반영됐습니다 — 수정 ' + done.u + '행 · 새 행 ' + done.i + (done.logs.length ? ' (이력 #' + done.logs.join(', #') + ')' : '') + '.</p>';
+  h += '<p><b>' + (parts > 1 ? (p + 1) + '번째 묶음은' : '이번 반영은') + ' 하나도 들어가지 않았습니다</b> — ' + esc(msg || '미리보기 뒤에 다른 곳에서 같은 행이 바뀌었습니다.') + '</p>';
+  if(rows && rows.length) h += planTable(['엑셀 줄', BULK_KEY, '이유'], rows.map(x => '<tr><td>' + esc(x.ln || '') + '</td><td>' + esc(x.key) + '</td><td>' + esc(WHY[x.why] || x.why) + '</td></tr>'));
+  h += '<p style="margin-top:10px">같은 파일을 다시 올리면 이미 들어간 줄은 «변경 없음»으로, 남은 줄만 다시 보여 줍니다.</p>';
+  await dialog('엑셀 일괄 수정이 멈췄습니다', '<div class="pv">' + h + '</div>', [{l:'확인', v:true, cls:'pri'}], true);
+  await bulkAfter(t);
+}
+
+/* 일괄 되돌리기 — 묶음의 줄 이력을 «나중 것부터» edit_restore 로 하나씩. 되돌리기 규칙(그 뒤 같은 칸이 또 바뀌었으면
+   멈춘다 · 넣은 뒤 고친 새 행은 안 지운다)이 서버에 한 벌로 있으므로 여기서 새로 짜지 않는다.
+   이미 되돌린 줄은 뺀다. 못 되돌린 줄은 건너뛰고 끝에 모아 알린다 — 줄끼리는 서로 다른 행이라 하나가 막혀도 나머지는 된다. */
+async function bulkUndo(en){
+  const t = TAB_OF_TBL[en.tbl];
+  let kids = [];
+  try{
+    const r = await C.from('sheet_edits').select('id,op,row_key').eq('ref', en.id).in('op', ['update', 'insert']).order('id', { ascending:false }).limit(1000);
+    if(r.error) throw new Error(rpcErr(r.error));
+    kids = r.data || [];
+    const gone = new Set();
+    for(let i = 0; i < kids.length; i += 200){
+      const q = await C.from('sheet_edits').select('ref').eq('op', 'restore').in('ref', kids.slice(i, i + 200).map(k => k.id)).limit(1000);
+      if(q.error) throw new Error(rpcErr(q.error));
+      (q.data || []).forEach(x => gone.add(String(x.ref)));
+    }
+    kids = kids.filter(k => !gone.has(String(k.id)));
+  }catch(e){ snack(e.message, {err:true}); return; }
+  if(!kids.length){ snack('이 묶음은 이미 다 되돌렸습니다'); return; }
+  const nu = kids.filter(k => k.op === 'update').length, ni = kids.length - nu;
+  if(!(await ask('일괄 수정을 되돌릴까요? — ' + (t ? t.name : en.tbl) + ' · 이력 #' + en.id,
+    '<p>이 묶음의 ' + kids.length + '줄을 «나중 것부터» 하나씩 되돌립니다 — 수정 ' + nu + '행은 옛 값으로, 새 행 ' + ni + '개는 지웁니다.</p>'
+    + '<p>그 뒤 같은 칸이 또 바뀐 줄(또는 넣은 뒤 고친 새 행)은 덮지 않고 건너뛴 뒤 끝에 알려 줍니다. 되돌리기도 줄마다 이력에 남습니다.</p>', '되돌리기'))) return;
+  let ok = 0; const stop = [];
+  for(let i = 0; i < kids.length; i++){
+    snack('되돌리는 중… ' + (i + 1) + '/' + kids.length, {ms:60000});
+    try{
+      const r = await rpc('edit_restore', {p_id:kids[i].id});
+      if(r && r.ok) ok++;
+      else stop.push({ k:kids[i], why: r && r.error === 'conflict' ? '그 뒤에 같은 칸이 또 바뀜' : r && r.error === 'gone' ? '그 행이 이제 없음' : '알 수 없음' });
+    }catch(e){ stop.push({ k:kids[i], why:e.message }); }
+  }
+  S.all = {};
+  if(stop.length){
+    await dialog('되돌리기 결과', '<div class="pv"><p>' + ok + '줄 되돌림 · <b>' + stop.length + '줄은 되돌리지 않았습니다</b>.</p>'
+      + planTable(['이력', (t && t.key === 'src_row' ? '행 #' : 'id'), '이유'], stop.map(s => '<tr><td>#' + esc(s.k.id) + '</td><td>' + esc(s.k.row_key) + '</td><td>' + esc(s.why) + '</td></tr>')) + '</div>',
+      [{l:'확인', v:true, cls:'pri'}], true);
+  }else snack(ok + '줄을 되돌렸습니다');
+  loadHist(false);
+}
+
 /* ---------- 변경 이력 ---------- */
 const OPS = {
   upd:{ l:'수정', ops:['update','dbw:update'] }, ins:{ l:'입력', ops:['insert','dbw:append'] },
   del:{ l:'삭제', ops:['delete','dbw:delete'] }, rst:{ l:'되돌리기', ops:['restore'] },
-  cas:{ l:'연쇄', ops:['cascade'] }, up:{ l:'업로드', like:'upload:%' }
+  cas:{ l:'연쇄', ops:['cascade'] }, blk:{ l:'일괄(엑셀)', ops:['bulk'] }, up:{ l:'업로드', like:'upload:%' }
 };
 const OP_VIEW = op => /^upload:/.test(op) ? { c:'x', l:'업로드 ' + ({full:'통째', win:'구간', add:'이어붙이기'}[op.split(':')[1]] || '') }
   : ({ update:{c:'u', l:'수정'}, 'dbw:update':{c:'u', l:'수정 (인원·고장 화면)'}, insert:{c:'i', l:'입력'}, 'dbw:append':{c:'i', l:'입력 (인원 화면)'},
-       delete:{c:'d', l:'삭제'}, 'dbw:delete':{c:'d', l:'삭제 (인원 화면)'}, restore:{c:'r', l:'되돌리기'}, cascade:{c:'u', l:'연쇄 수정'} })[op] || { c:'x', l:op || '?' };
+       delete:{c:'d', l:'삭제'}, 'dbw:delete':{c:'d', l:'삭제 (인원 화면)'}, restore:{c:'r', l:'되돌리기'}, cascade:{c:'u', l:'연쇄 수정'},
+       bulk:{c:'u', l:'일괄 수정 (엑셀)'} })[op] || { c:'x', l:op || '?' };
 const RESTORABLE = new Set(['update','insert','delete','dbw:update','dbw:append','dbw:delete']);
 function renderHistFilters(opt){
   opt = opt || {};
   const tbls = [['', '모든 표']].concat(TABS.map(t => [t.tbl, t.name])).concat([['sheet_alarm', '국내 알람 원장'], ['sheet_allbypass', '올바이패스 원장'], ['sheet_cip_f11', 'CIP F11'], ['sheet_cip_f16', 'CIP F16'], ['sheet_abp', 'ABP'], ['(old)', '옛 시트 편집 기록']]);
   $('hfilt').innerHTML = '<label class="sf"><span>표</span><select name="tbl">' + tbls.map(x => '<option value="' + esc(x[0]) + '"' + (opt.tbl === x[0] ? ' selected' : '') + '>' + esc(x[1]) + '</option>').join('') + '</select></label>'
-    + '<label class="sf"><span>종류</span><select name="kind"><option value="">전부</option>' + Object.keys(OPS).map(k => '<option value="' + k + '">' + esc(OPS[k].l) + '</option>').join('') + '</select></label>'
+    + '<label class="sf"><span>종류</span><select name="kind"><option value="">전부</option>' + Object.keys(OPS).map(k => '<option value="' + k + '"' + (opt.kind === k ? ' selected' : '') + '>' + esc(OPS[k].l) + '</option>').join('') + '</select></label>'
     + '<label class="sf"><span>행 번호 · id</span><input name="key" value="' + esc(opt.key || '') + '" placeholder="정확히"></label>'
     + '<label class="sf"><span>누가 (메일)</span><input name="who" placeholder="포함"></label>'
     + '<label class="sf range"><span>날짜</span><div><input type="date" name="from"><span class="hint">~</span><input type="date" name="to"></div></label>'
@@ -1126,6 +1636,10 @@ function renderHist(){
         + esc((a.site ? '사이트 ' + a.site + ' · ' : '') + (a.file ? '파일 「' + a.file + '」 · ' : '') + (b.rows != null ? b.rows.toLocaleString() + ' → ' : '') + (a.rows != null ? a.rows.toLocaleString() + '행' : '')
         + (a.n != null ? ' (이번에 ' + a.n.toLocaleString() + '행)' : '') + (b.from ? ' · 구간 ' + b.from + ' ~ ' + b.to + ' (지움 ' + (b.deleted != null ? b.deleted.toLocaleString() : '?') + ')' : '')
         + (a.dup ? ' · 키 중복 의심 ' + a.dup.toLocaleString() + '행' : '') + (a.ok === false ? ' · ⚠ 행수 불일치' : ''));
+    }else if(e.op === 'bulk'){
+      const a = e.after || {};
+      detail = esc((a.file ? '파일 「' + a.file + '」' + (a.sheet ? ' · 시트 「' + a.sheet + '」' : '') + ' · ' : '') + '수정 ' + (a.updated || 0) + '행 · 새 행 ' + (a.inserted || 0)
+        + (a.same ? ' · 변경 없음 ' + a.same : '') + (a.parts > 1 ? ' · 묶음 ' + a.part + '/' + a.parts : ''));
     }else if(Array.isArray(e.before) || Array.isArray(e.after) || !e.tbl){
       detail = '<span class="hint">옛 형식(시트 직접 편집) — 「보기」로 원문</span>';
     }else if(/update|cascade/.test(e.op) || (e.op === 'restore' && e.before && e.after)){
@@ -1136,18 +1650,21 @@ function renderHist(){
       detail = esc(rowSummary(t, e.after || e.before));
     }
     const can = S.can.restore && RESTORABLE.has(e.op) && !!t && !restored.has(String(e.id));
+    const canB = S.can.restore && e.op === 'bulk' && !!t;
     return '<div class="he"><div><div class="t">' + esc(ymdhm(e.edited_at)) + '</div><div class="w" title="' + esc(e.edited_by) + '">' + esc(e.edited_by || '') + '</div></div>'
       + '<div><span class="op ' + ov.c + '">' + esc(ov.l) + '</span></div>'
       + '<div class="s"><div class="tl">' + title + ' <span class="hint">· 이력 #' + esc(e.id) + (e.ref ? ' · 원인 이력 #' + esc(e.ref) : '') + '</span></div><div class="ch">' + detail + '</div></div>'
       + '<div class="a"><button class="btn sm" type="button" data-hv="' + esc(e.id) + '">보기</button>'
-      + (can ? '<button class="btn sm" type="button" data-hr="' + esc(e.id) + '">되돌리기</button>' : (restored.has(String(e.id)) ? '<span class="restored">되돌림</span>' : '')) + '</div></div>';
+      + (can ? '<button class="btn sm" type="button" data-hr="' + esc(e.id) + '">되돌리기</button>' : (restored.has(String(e.id)) ? '<span class="restored">되돌림</span>' : ''))
+      + (canB ? '<button class="btn sm" type="button" data-hb="' + esc(e.id) + '" title="이 묶음의 줄 이력을 나중 것부터 하나씩 되돌립니다">일괄 되돌리기</button>' : '') + '</div></div>';
   }).join('');
   $('hmore').innerHTML = H.more ? '<div class="more"><button class="btn" type="button" id="hmoreBtn">더 보기</button></div>' : '';
   if(H.more) $('hmoreBtn').onclick = () => loadHist(true);
 }
 $('hlist').addEventListener('click', async e => {
-  const v = e.target.closest('[data-hv]'), r = e.target.closest('[data-hr]');
+  const v = e.target.closest('[data-hv]'), r = e.target.closest('[data-hr]'), hb = e.target.closest('[data-hb]');
   if(v){ const en = S.hist.rows.find(x => String(x.id) === v.dataset.hv); if(en) histView(en); }
+  if(hb){ const en = S.hist.rows.find(x => String(x.id) === hb.dataset.hb); if(en) bulkUndo(en); return; }
   if(r){
     const en = S.hist.rows.find(x => String(x.id) === r.dataset.hr); if(!en) return;
     const t = TAB_OF_TBL[en.tbl], ov = OP_VIEW(en.op);
@@ -1193,10 +1710,14 @@ function histView(e){
        부작용 없는 호출로 있는지만 본다(없는 키 -1 · 없는 이력 -1). 없으면 그 단추만 잠그고 «무엇을 하면 되는지» 적는다. */
     if(S.ready){
       const miss = [];
-      for(const [fn, args, k] of [['edit_delete', {p_tbl:'sheet_wk', p_key:-1, p_hash:''}, 'del'], ['edit_restore', {p_id:-1}, 'restore']]){
+      for(const [fn, args, k] of [['edit_delete', {p_tbl:'sheet_wk', p_key:-1, p_hash:''}, 'del'], ['edit_restore', {p_id:-1}, 'restore'],
+                                  ['edit_get_many', {p_tbl:'sheet_wk', p_keys:[]}, 'bulk'], ['edit_bulk', {p_tbl:'sheet_wk', p_items:[]}, 'bulk']]){
         try{ const r = await C.rpc(fn, args); if(r && fnMissing(r.error)){ S.can[k] = false; miss.push(fn); } }catch(e){}
       }
-      if(miss.length) banner('warn', '<b>삭제·되돌리기가 아직 잠겨 있습니다</b> — 서버에 ' + esc(miss.join(' · ')) + ' 함수가 없습니다.'
+      const what = [];
+      if(!S.can.del || !S.can.restore) what.push('삭제·되돌리기');
+      if(!S.can.bulk) what.push('엑셀 일괄 수정');
+      if(miss.length) banner('warn', '<b>' + esc(josa(what.join(' · '), '이', '가')) + ' 아직 잠겨 있습니다</b> — 서버에 ' + esc(miss.join(' · ')) + ' 함수가 없습니다.'
         + '\nSupabase SQL Editor 에서 supabase/setup-16-edit.sql 을 Run 하세요(여러 번 Run 해도 안전합니다). 검색·수정·새 행·변경 이력 보기는 지금도 됩니다.');
     }
     switchTab(S.tab);

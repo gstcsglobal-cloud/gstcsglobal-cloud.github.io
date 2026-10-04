@@ -25,6 +25,7 @@
  * insert 정책은 여전히 «없다» — 이력은 아래 definer 함수만 남길 수 있고 사용자는 위조할 수 없다.
  *
  * 선행: setup-8(csv_upload_finish) · setup-15(role). 여러 번 Run 해도 안전하다.
+ * v141 — 5절(엑셀 일괄 수정: edit_get_many · edit_bulk)을 더했다. 5절만 따로 Run 해도 된다(그 절에 지우는 문장이 없다).
  */
 
 /* ---------- 0. 이력 표 보강 ---------- */
@@ -33,7 +34,7 @@ alter table public.sheet_edits add column if not exists ref bigint;   -- 되돌�
 create index if not exists sheet_edits_tbl_at_idx on public.sheet_edits(tbl, edited_at desc);
 
 /* ---------- 1. 권한 — 한 곳 ----------
- * p_op: read · update · insert · delete · restore. 지금은 전부 같은 규칙(admin)이다. */
+ * p_op: read · update · insert · delete · restore · bulk(v141 엑셀 일괄). 지금은 전부 같은 규칙(admin)이다. */
 create or replace function public._edit_allow(p_op text) returns boolean
 language sql stable set search_path = public as $$
   select exists (select 1 from public.allowed_users a
@@ -370,6 +371,112 @@ begin
     'public.edit_get(text,bigint)', 'public.edit_update(text,bigint,text,jsonb)',
     'public.edit_insert(text,jsonb)', 'public.edit_delete(text,bigint,text)', 'public.edit_restore(bigint)',
     'public.edit_distinct(text,text,int)', 'public.edit_cols(text)', 'public.edit_note(text,text,text,jsonb,jsonb)'] loop
+    execute format('revoke all on function %s from public, anon', f);
+    execute format('grant execute on function %s to authenticated', f);
+  end loop;
+end $$;
+
+/* ---------- 5. 엑셀 일괄 수정 (v141) ----------
+ * 사용자 요청: 「목록에서 체크한 행을 엑셀 표준양식으로 받아 엑셀에서 한꺼번에 고치고, 올리면 덮어쓰게」.
+ * 화면이 파일을 읽어 «무엇이 어떻게 바뀌나»를 먼저 보여 주고(미리보기), 사람이 「반영」을 누르면 여기로 온다.
+ *
+ *   - 행은 PK 로 찾고 행 해시로 동시 수정을 막는다 — 한 행 편집(edit_update)과 «같은 규칙»이다.
+ *     업무 키(실적코드·S/N·사원번호)로 행을 고르는 일은 화면이 미리보기에서 하고(정확히 한 행일 때만),
+ *     여기에는 언제나 PK 로 온다. 실적코드는 실측 197개가 두 행씩이라(2026-10) 키만으로는 못 고른다.
+ *   - «전부 아니면 전무» — 먼저 전 행을 잠그고(for update) 해시를 대조한다. 하나라도 어긋나면 아무것도
+ *     안 쓰고 어긋난 행 목록을 돌려준다. 반만 들어간 묶음은 «어디까지 들어갔나»를 사람이 맞혀야 하는 상태다.
+ *   - 묶음 머리 이력(op='bulk') 한 줄 + 행마다 이력 한 줄(ref = 머리 번호). 「이 엑셀로 무엇을 바꿨나」를
+ *     한 번에 찾고, 행 하나씩도 되돌릴 수 있다. 머리 줄은 쓰기 «전에» 결과 수를 담는다 — 이력은 고치지 않는다.
+ *   - 캐시 도장은 묶음 끝에 한 번(csv_upload_finish) — 행마다 찍을 이유가 없다.
+ *   - 한 번에 500 행까지 — 묶음이 곧 «전부 아니면 전무»의 단위이고, 그동안 그 행들을 잠근다.
+ *     실측(2026-10 · 운영): 수선실적 500 행 = 5.4초. 문장 시간 제한은 authenticated 60초다(v129 에 올렸다 ·
+ *     PostgREST 가 그 역할의 설정을 적용한다 — authenticator 의 8초가 아니다). 넉넉하지만 더 키우면 잠그는 시간과
+ *     «한 번 막히면 통째로 다시» 의 범위가 같이 커진다. 더 많으면 화면이 500 행씩 나눠 부른다.
+ *     ⚠ 함수 안에서 시간 제한을 늘려도 이미 시작된 문장의 시계는 안 바뀐다 — 줄 수로 다스린다.
+ *   - 바뀐 것이 없는 줄은 이력도 안 남긴다(같은 값을 다시 쓰면 이력이 소음이 된다 — edit_update 와 같다).
+ *   ⚠ 이 절에는 행을 «지우는» 문장이 없다. 일괄 되돌리기는 화면이 edit_restore 를 한 줄씩 부른다 —
+ *     그래야 «그 뒤 같은 칸이 또 바뀌었으면 멈춘다»는 되돌리기 규칙이 한 벌로 남는다. */
+create or replace function public.edit_get_many(p_tbl text, p_keys bigint[]) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare kc text := public._edit_key(p_tbl); r jsonb;
+begin
+  if not public._edit_allow('read') then raise exception 'forbidden'; end if;
+  if kc is null then raise exception 'bad_table: %', p_tbl; end if;
+  if coalesce(array_length(p_keys, 1), 0) > 2000 then raise exception 'too_many: %', array_length(p_keys, 1); end if;
+  execute format('select coalesce(jsonb_agg(jsonb_build_object(''key'', t.%I, ''row'', to_jsonb(t), ''hash'', public._edit_hash(to_jsonb(t))) order by t.%I), ''[]''::jsonb)
+                    from public.%I t where t.%I = any($1)', kc, kc, p_tbl, kc)
+    into r using coalesce(p_keys, '{}'::bigint[]);
+  return r;
+end $$;
+
+create or replace function public.edit_bulk(p_tbl text, p_items jsonb, p_note jsonb default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare kc text := public._edit_key(p_tbl); it jsonb; cur jsonb; ch jsonb; v jsonb; nk bigint; r jsonb; bid bigint;
+        prep jsonb := '[]'::jsonb; conf jsonb := '[]'::jsonb; seen bigint[] := '{}'; nu int := 0; ni int := 0; ns int := 0;
+begin
+  if not public._edit_allow('bulk') then raise exception 'forbidden'; end if;
+  if kc is null then raise exception 'bad_table: %', p_tbl; end if;
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then raise exception 'no_values'; end if;
+  if jsonb_array_length(p_items) > 500 then raise exception 'too_many: %', jsonb_array_length(p_items); end if;
+  if p_note is not null and jsonb_typeof(p_note) <> 'object' then raise exception 'bad_note'; end if;
+  if coalesce(pg_column_size(p_note), 0) > 65536 then raise exception 'too_large'; end if;
+
+  /* 1) 확인 — 쓰기 전에 전 행을 잠그고 대조한다. 여기서는 아무것도 안 쓴다. */
+  for it in select value from jsonb_array_elements(p_items) loop
+    if it->>'op' = 'update' then
+      nk := (it->>'key')::bigint;
+      if nk = any(seen) then conf := conf || jsonb_build_array(jsonb_build_object('key', nk, 'error', 'dup')); continue; end if;
+      seen := seen || nk;
+      cur := public._edit_row(p_tbl, nk, true);
+      if cur is null then conf := conf || jsonb_build_array(jsonb_build_object('key', nk, 'error', 'not_found')); continue; end if;
+      if (it->>'hash') is distinct from public._edit_hash(cur) then
+        conf := conf || jsonb_build_array(jsonb_build_object('key', nk, 'error', 'conflict')); continue;
+      end if;
+      ch := public._edit_clean(p_tbl, coalesce(it->'changes', '{}'::jsonb));
+      select coalesce(jsonb_object_agg(key, value), '{}'::jsonb) into ch from jsonb_each(ch) where (cur -> key) is distinct from value;
+      if ch = '{}'::jsonb then ns := ns + 1; continue; end if;
+      prep := prep || jsonb_build_array(jsonb_build_object('op', 'update', 'key', nk, 'cur', cur, 'ch', ch));
+    elsif it->>'op' = 'insert' then
+      v := public._edit_clean(p_tbl, coalesce(it->'row', '{}'::jsonb));
+      select coalesce(jsonb_object_agg(key, value), '{}'::jsonb) into v from jsonb_each(v) where value <> 'null'::jsonb;
+      if v = '{}'::jsonb then raise exception 'no_values'; end if;
+      prep := prep || jsonb_build_array(jsonb_build_object('op', 'insert', 'row', v));
+    else
+      raise exception 'bad_op: %', coalesce(it->>'op', 'null');
+    end if;
+  end loop;
+  if jsonb_array_length(conf) > 0 then
+    return jsonb_build_object('ok', false, 'error', 'conflict', 'rows', conf);
+  end if;
+  select count(*) filter (where x->>'op' = 'update'), count(*) filter (where x->>'op' = 'insert')
+    into nu, ni from jsonb_array_elements(prep) x;
+  if nu + ni = 0 then
+    return jsonb_build_object('ok', true, 'log', null, 'updated', 0, 'inserted', 0, 'same', ns);
+  end if;
+
+  /* 2) 묶음 머리 — 결과 수를 «쓰기 전에» 담는다(이력 줄은 나중에 고치지 않는다) */
+  bid := public._edit_log(p_tbl, '*', 'bulk', null,
+           coalesce(p_note, '{}'::jsonb) || jsonb_build_object('updated', nu, 'inserted', ni, 'same', ns), null);
+
+  /* 3) 쓰기 — 행마다 이력 한 줄(ref = 머리). 인원 행이면 _edit_apply 가 교육 짝 행 연쇄까지 한다. */
+  for it in select value from jsonb_array_elements(prep) loop
+    if it->>'op' = 'update' then
+      perform public._edit_apply(p_tbl, (it->>'key')::bigint, it->'cur', it->'ch', 'update', bid);
+    else
+      nk := public._edit_put(p_tbl, it->'row', null);
+      r := public._edit_row(p_tbl, nk);
+      perform public._edit_log(p_tbl, nk::text, 'insert', null, r, bid);
+    end if;
+  end loop;
+  perform public.csv_upload_finish(p_tbl);
+  return jsonb_build_object('ok', true, 'log', bid, 'updated', nu, 'inserted', ni, 'same', ns);
+end $$;
+
+/* 실행 권한 — 이 절의 두 함수만(4절의 목록은 그 절에서 만든 함수만 안다 · 이 절만 따로 Run 해도 되게) */
+do $$
+declare f text;
+begin
+  foreach f in array array['public.edit_get_many(text,bigint[])', 'public.edit_bulk(text,jsonb,jsonb)'] loop
     execute format('revoke all on function %s from public, anon', f);
     execute format('grant execute on function %s to authenticated', f);
   end loop;
