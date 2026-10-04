@@ -46,7 +46,8 @@ const BASE = 'http://127.0.0.1:' + srv.address().port;
 function fake(seed) {
   const DB = JSON.parse(JSON.stringify(seed.tables));
   const LOG = window.__QLOG = [];
-  const KEY = { sheet_wk:'src_row', sheet_mat:'src_row', sheet_inst:'src_row', sheet_roster:'id', sheet_edu:'id', sheet_leave:'id', sheet_edits:'id' };
+  const KEY = { sheet_wk:'src_row', sheet_mat:'src_row', sheet_inst:'src_row', sheet_alarm:'src_row', sheet_allbypass:'src_row',
+               sheet_roster:'id', sheet_edu:'id', sheet_leave:'id', sheet_edits:'id' };
   const hash = r => { const o = Object.assign({}, r); delete o.synced_at; return 'h:' + JSON.stringify(o); };
   const toRe = (p, ci) => new RegExp('^' + String(p).replace(/\\([%_\\])/g, '\u0001$1').replace(/[.+?^${}()|[\]\\]/g, '\\$&')
       .replace(/[*%]/g, '.*').replace(/_/g, '.').replace(/\u0001(.)/g, (m, c) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) + '$', ci ? 'i' : '');
@@ -65,14 +66,30 @@ function fake(seed) {
     if (op === 'in') return v.map(String).indexOf(String(x)) >= 0;
     throw new Error('fake: op ' + op);
   };
-  const splitTop = s => { const out = []; let d = 0, cur = '';
-    for (const ch of s) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && d === 0) { out.push(cur); cur = ''; } else cur += ch; }
+  const splitTop = s => { const out = []; let d = 0, cur = '', q = false, esc = false;
+    for (const ch of s) {
+      if (esc) { cur += ch; esc = false; continue; }
+      if (q && ch === '\\') { cur += ch; esc = true; continue; }
+      if (ch === '"') q = !q;
+      if (!q) { if (ch === '(') d++; if (ch === ')') d--; }
+      if (ch === ',' && d === 0 && !q) { out.push(cur); cur = ''; } else cur += ch;
+    }
     if (cur) out.push(cur); return out; };
+  const inList = v => { const out = []; let cur = '', q = false, esc = false;
+    for (const ch of v.slice(1, -1)) {
+      if (esc) { cur += ch; esc = false; continue; }
+      if (q && ch === '\\') { esc = true; continue; }
+      if (ch === '"') { q = !q; continue; }
+      if (ch === ',' && !q) { out.push(cur); cur = ''; continue; }
+      cur += ch;
+    }
+    out.push(cur); return out; };
   const evalTerm = (row, t) => {
     if (/^and\(/.test(t)) return splitTop(t.slice(4, -1)).every(x => evalTerm(row, x));
     if (/^or\(/.test(t)) return splitTop(t.slice(3, -1)).some(x => evalTerm(row, x));
     const a = t.indexOf('.'), b = t.indexOf('.', a + 1);
-    return test(row, t.slice(0, a), t.slice(a + 1, b), t.slice(b + 1));
+    const op = t.slice(a + 1, b), v = t.slice(b + 1);
+    return test(row, t.slice(0, a), op, op === 'in' ? inList(v) : v);
   };
   function from(tbl) {
     const st = { tbl, f:[], or:[], order:null, asc:true, limit:null, cols:null, single:false, head:false, ins:null };
@@ -172,6 +189,7 @@ function fake(seed) {
       });
       return { ok:true, log:bid, updated:nu, inserted:ni, same };
     },
+    edit_overwrites: a => window.__OVW || { n:0, last:null, keys:[], who:[] },
     edit_distinct: a => { const m = new Map(); (DB[a.p_tbl] || []).forEach(r => { const v = r[a.p_col]; if (v != null) m.set(String(v), (m.get(String(v)) || 0) + 1); });
       return Array.from(m.entries()).sort((x, y) => y[1] - x[1]).slice(0, a.p_limit || 60); }
   };
@@ -181,6 +199,7 @@ function fake(seed) {
       LOG.push({ rpc:name, args:JSON.parse(JSON.stringify(args || {})) });
       if ((seed.noSetup && /^edit_/.test(name)) || (seed.missing || []).indexOf(name) >= 0)
         return { data:null, error:{ code:'PGRST202', message:'Could not find the function public.' + name + ' in the schema cache' } };
+      if (args && (seed.badTbl || []).indexOf(args.p_tbl) >= 0) return { data:null, error:{ message:'bad_table: ' + args.p_tbl } };   // 옛 setup-16 — 표 사전에 원장이 없다
       if (!RPC[name]) return { data:null, error:{ message:'fake: no rpc ' + name } };
       try { return { data:RPC[name](args || {}), error:null }; } catch (e) { return { data:null, error:{ message:e.message } }; }
     }
@@ -202,6 +221,12 @@ const MAT_COLS = ['src_row','op','customer','rs_code','campus','line','bay','pro
   'days_prev','pf','free_reason','warranty_term','price','kit_sn','sn_in','sn_out','stock_chk','store','synced_at','extra'];
 const INST_COLS = ['src_row','pjt','country','customer','location','code','sn','model','burner','fab','floor','bay','group1','group2','detail1','detail2',
   'tool_id','tool_maker','tool_model','fab_in','start','turn_on','warranty_date','warranty','pm_cycle','type','extra','div','state','line2'];
+const ALARM_COLS = ['src_row','src_sheet','op','site','line','area','bay','eqp_id','proc','subproc','chamber','chpos','sn','sn_key','seqp_id',
+  'status','maker','model','ch','alevel','alarm','alarm_name','occur','rel_time','hold','occur_date','atype','ctype','ctype2','inout','incl','cnt',
+  'cause','phenom','action','module','src_month','src_week','src_year','fmonth','fweek','checker','extra','imported_at'];
+const ABP_COLS = ['src_row','src_sheet','op','site','line','area','eqp_id','chamber','sn','sn_key','model','maker','occur','occur_t','rel_time','hold',
+  'occur_date','alarm','seq','grp','real','inout','incl','cnt','atype','ctype','atype2','ctype2','proc','subproc','cause','action','phenom',
+  'src_month','src_week','src_year','fmonth','fweek','checker','extra','imported_at'];
 const ROS_COLS = ['No.','ID','Name((영문)','Name(중문)','Dept.','Position Level','Work Place','2025 Position Role','Date of entry','Resignation',
   '조직도 위치','직급','업무/직책','현장 인원여부','id','인사','이름(영문)','이름(중문)','직급(한글)','직급(영문)','담당구분','사업부','고객사','지역','팀',
   '단지','라인','입사일','퇴사일','E-Mail','운영단위','구분','사원번호'];
@@ -225,9 +250,26 @@ function seedOf(over) {
   ].map(r => full(INST_COLS, r));
   const roster = [
     { id:1, '사원번호':'9100001', '이름(영문)':'Tester One', '단지':'Q1', '팀':'T1', '입사일':'2024-01-02' },
-    { id:2, '사원번호':'9100002', '이름(영문)':'Tester Two', '단지':'Q2', '팀':'T2', '입사일':'2024-02-03', '퇴사일':'2025-05-01' },
+    { id:2, '사원번호':'9100002', '이름(영문)':'Tester Two', '단지':'Q2', '팀':'T2', '입사일':'2024-02-03', '퇴사일':'2025-05-01', '운영단위':'GST TAIWAN SCRUBBER' },
     { id:3, 'ID':'9100003', 'Name((영문)':'Tester Three', 'Work Place':'Q1', 'Date of entry':'2023-03-04' }
   ].map(r => full(ROS_COLS, r));
+  const I0 = '2026-09-01T00:00:00+00:00';
+  const alarm = [
+    { src_row:0, src_sheet:'P', op:'P운영', site:'P1', line:'P1-A', sn:'ZZA-0001', sn_key:'ZZA0001', alarm:'PRESSURE HIGH', occur:'2026-03-02 10:00:00', occur_date:'2026-03-02',
+      inout:'내적', cnt:true, src_month:'26년 3월', fmonth:'2026-03', fweek:'2026-W10', imported_at:I0 },
+    { src_row:1, src_sheet:'P', op:'P운영', site:'P2', sn:'ZZA-0002', sn_key:'ZZA0002', alarm:'FLAME OFF', occur:'2026-03-05 11:00:00', occur_date:'2026-03-05',
+      inout:'외적', cnt:false, src_month:'26년 3월', fmonth:'2026-03', fweek:'2026-W10', imported_at:I0 },
+    { src_row:2, src_sheet:'K', op:'K운영', site:'K1', sn:'ZZA-0003', sn_key:'ZZA0003', alarm:'INLET P', occur:'2026-04-01 09:00:00', occur_date:'2026-04-01',
+      inout:'내부', cnt:true, fmonth:'2026-04', fweek:'2026-W14', imported_at:I0 }
+  ].map(r => full(ALARM_COLS, r));
+  const abp = [
+    { src_row:0, src_sheet:'H', op:'H운영', sn:'ZZB-0001', sn_key:'ZZB0001', occur:'2026-03-02', occur_date:'2026-03-02', inout:'내적', seq:'1', cnt:true,
+      fmonth:'2026-03', fweek:'2026-W10', imported_at:I0 },
+    { src_row:1, src_sheet:'OS', op:'GST TAIWAN SCRUBBER', sn:'ZZC-0001L', sn_key:'ZZC0001L', occur:'2026-03-03 08:00', occur_date:'2026-03-03', inout:'GST',
+      seq:'1', grp:'7', cnt:true, fmonth:'2026-03', fweek:'2026-W10', imported_at:I0 },
+    { src_row:2, src_sheet:'OS', op:'GST TAIWAN SCRUBBER', sn:'ZZC-0001R', sn_key:'ZZC0001R', occur:'2026-03-03 08:00', occur_date:'2026-03-03', inout:'External',
+      seq:'2', grp:'7', cnt:false, fmonth:'2026-03', fweek:'2026-W10', imported_at:I0 }
+  ].map(r => full(ABP_COLS, r));
   const edits = [
     { id:1, gid:'1213453343', tbl:null, row_key:'5', op:'update', before:['a','b'], after:['a','c'], edited_by:'old@test.local', edited_at:'2026-07-01T00:00:00Z', ref:null },
     { id:2, gid:'646668307', tbl:'sheet_wk', row_key:'*', op:'upload:add', before:{ rows:3 }, after:{ rows:9, file:'t.xlsx', n:6 }, edited_by:'boss@test.local', edited_at:'2026-07-02T00:00:00Z', ref:null },
@@ -235,12 +277,15 @@ function seedOf(over) {
   ];
   return Object.assign({
     me:{ email:'boss@test.local', can_write:true, role:'admin' },
-    tables:{ sheet_wk:wk, sheet_mat:mat, sheet_inst:inst, sheet_roster:roster, sheet_edu:[], sheet_leave:[], sheet_edits:edits,
+    tables:{ sheet_wk:wk, sheet_mat:mat, sheet_inst:inst, sheet_alarm:alarm, sheet_allbypass:abp, sheet_roster:roster, sheet_edu:[], sheet_leave:[], sheet_edits:edits,
              allowed_users:[{ email:'boss@test.local', can_write:true, role:'admin' }, { email:'ed@test.local', can_write:true, role:'editor' }] },
-    cols:{ sheet_wk:WK_COLS, sheet_mat:MAT_COLS, sheet_inst:INST_COLS, sheet_roster:ROS_COLS,
+    cols:{ sheet_wk:WK_COLS, sheet_mat:MAT_COLS, sheet_inst:INST_COLS, sheet_alarm:ALARM_COLS, sheet_allbypass:ABP_COLS, sheet_roster:ROS_COLS,
            sheet_edu:['No','Site','인원','사원번호','Basic 교육완료일','Veteran 교육완료일','Scrubber Lv.2 교육완료일','Scrubber Lv.3 교육완료일','id','구분'],
            sheet_leave:['사원번호','이름','소속','항목','발생일','휴가시작일','휴가시작시간','휴가종료일','휴가종료시간','휴가신청시간','비고','id'] },
-    types:{ sheet_wk:{ src_row:'integer' }, sheet_roster:{ id:'bigint' }, sheet_edu:{ '사원번호':'bigint', id:'bigint' }, sheet_leave:{ '사원번호':'bigint', '휴가신청시간':'double precision' } }
+    types:{ sheet_wk:{ src_row:'integer' },
+            sheet_alarm:{ src_row:'integer', occur_date:'date', cnt:'boolean', extra:'jsonb', imported_at:'timestamp with time zone' },
+            sheet_allbypass:{ src_row:'integer', occur_date:'date', cnt:'boolean', extra:'jsonb', imported_at:'timestamp with time zone' },
+            sheet_roster:{ id:'bigint' }, sheet_edu:{ '사원번호':'bigint', id:'bigint' }, sheet_leave:{ '사원번호':'bigint', '휴가신청시간':'double precision' } }
   }, over || {});
 }
 
@@ -922,6 +967,180 @@ console.log('[19] 일괄 함수만 서버에 없을 때 — 그 단추만 잠그
   is(pe2.length === 0, 'JS 에러 없음' + (pe2.length ? ' → ' + pe2[0] : ''));
   await c2.close();
 }
+console.log('[20] 구분 — 국내·해외·미상 (대시보드 정본 판정 · v143)');
+{
+  const { ctx:c3, pg, pe:pe3 } = await open(seedOf());
+  /* 큰 표 — 운영단위 «값»을 정본(GST.ORG.region)으로 갈라 in(…) 으로 건다. 괄호가 든 값도 그대로 맞물려야 한다. */
+  await pg.evaluate(() => { const W = window.__DB.sheet_wk;
+    W.push(Object.assign({}, W[0], { src_row:20, rs_code:'RS-R-KR', op:'SEC Scrubber' }),
+           Object.assign({}, W[0], { src_row:21, rs_code:'RS-R-OS', op:'GST CHINA(WUHAN) SCRUBBER' }),
+           Object.assign({}, W[0], { src_row:22, rs_code:'RS-R-NULL', op:null })); });
+  is(await pg.$eval('#search .sf select[name=region]', e => !!e && e.closest('.sgrid').firstElementChild === e.closest('.sf')), '구분 칸이 검색 칸 맨 앞에 있다(대시보드 필터와 같은 순서)');
+  await qlog(pg);
+  await pg.selectOption('#search [name=region]', 'kr'); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  let L = await qlog(pg);
+  is(!!rpcs(L, 'edit_distinct').find(x => x.args.p_tbl === 'sheet_wk' && x.args.p_col === 'op'), '구분 → 운영단위 «값 목록»을 받아 판정한다 (edit_distinct)');
+  const kr = await listKeys(pg);
+  let q = sel(L, 'sheet_wk').filter(x => !x.head).pop();
+  is(kr.join() === '20' && q && q.or.some(o => /op\.in\.\("SEC Scrubber"\)/.test(o)), '국내 = SEC Scrubber 행만 · 조건은 or(op.in.("…")) (' + kr + ' · ' + (q && q.or) + ')');
+  await pg.selectOption('#search [name=region]', 'os'); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  is((await listKeys(pg)).join() === '21', '해외 = 괄호가 든 운영단위도 맞물린다 (GST CHINA(WUHAN) SCRUBBER)');
+  await pg.selectOption('#search [name=region]', 'unk'); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  const unk = await listKeys(pg), all = await pg.evaluate(() => window.__DB.sheet_wk.length);
+  is(unk.indexOf('22') >= 0 && unk.length + 2 === all, '미상 = 판정 불가 값 + 빈 운영단위 — 국내+해외+미상 = 전체 (' + unk.length + '+2=' + all + ')');
+  await pg.selectOption('#search [name=region]', 'os'); await pg.fill('#search [name=sn]', 'ZZT-0001');
+  await qlog(pg); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  q = sel(await qlog(pg), 'sheet_wk').filter(x => !x.head).pop();
+  is((await listKeys(pg)).join() === '21' && q && q.or.length === 1 && /^and\(or\(op\.in/.test(q.or[0]), '구분 + S/N(여러 열) → and(or(…),or(…)) 한 파라미터로 (' + (q && q.or[0]) + ')');
+  is(/구분: 해외/.test(await pg.evaluate(() => condText(TAB(), S.qf.f))), '받은 양식의 조건 글에 «구분: 해외»');
+  /* 작은 표 — 인원은 주간현황과 같은 순서(구분 → 운영단위 → … → 다수결) */
+  await pg.click('.tab[data-tab=roster]'); await pg.waitForTimeout(400);
+  const pick = async v => { await pg.selectOption('#search [name=region]', v); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(250); return (await listKeys(pg)).join(); };
+  is(await pick('os') === '2' && await pick('kr') === '3,1' && await pick('unk') === '', '인원 — 해외(운영단위 GST TAIWAN) 1 · 국내 2(다수결) · 미상 0');
+  /* 교육·휴가 — «그 사람»의 구분(사번, 없으면 이름 → 인원현황) */
+  await pg.evaluate(() => { window.__DB.sheet_edu.push(
+    { id:1, '사원번호':9100002, '인원':'Tester Two', 'Site':'Q2' }, { id:2, '사원번호':9100001, '인원':'Tester One', 'Site':'Q1' },
+    { id:3, '사원번호':null, '인원':'Tester Two', 'Site':'Q2' }, { id:4, '사원번호':9999999, '인원':'Nobody', 'Site':'Q9' }); });
+  await pg.click('.tab[data-tab=edu]'); await pg.waitForTimeout(400);
+  is(await pick('os') === '3,1' && await pick('unk') === '4' && await pick('kr') === '2', '교육 — 사번(없으면 이름)으로 인원현황의 구분을 빌린다 · 모르는 사람은 미상');
+  is(pe3.length === 0, 'JS 에러 없음' + (pe3.length ? ' → ' + pe3[0] : ''));
+
+  console.log('[21] 원장(알람·올바) — 계산 칸 잠금 · 저장 때 다시 계산 · 운영단위는 새 행에서만 · Group 줄 잠금');
+  await pg.click('.tab[data-tab=alarm]'); await pg.waitForTimeout(400);
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  is((await listKeys(pg)).join() === '2,1,0' && /집계/.test(await pg.$eval('#list', e => e.innerText)) && /제외/.test(await pg.$eval('#list', e => e.innerText)),
+     '알람 탭 — 원장 행 · 집계 대상은 «집계·제외»로');
+  is(await pick('kr') === '2,1,0' && await pick('os') === '', '알람의 구분 — K·P·H운영은 국내 워크북(GST.ALARM.region)');
+  await pg.selectOption('#search [name=region]', ''); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(250);
+  /* S/N 칸을 «바로» 누른다 — core 의 설비 메뉴(S/N 머리글 칸을 캡처 단계에서 먹는다)가 행 열기를 가로채면 안 된다.
+     v140~v142 의 수선·자재·설치 목록도 S/N 칸만 눌리지 않았다(가운데가 다른 칸이라 검사가 못 봤다). */
+  const snIdx = await pg.$$eval('#list thead th', ths => ths.findIndex(th => /S\/N/.test(th.textContent)));
+  await pg.click('#list tr[data-key="1"] td:nth-child(' + (snIdx + 1) + ')'); await pg.waitForTimeout(300);
+  is(snIdx > 1 && !(await pg.$('#gstSnMenu')) && await pg.evaluate(() => S.cur && S.cur.key === 1), 'S/N 칸을 눌러도 그 행이 열린다 — 설비 메뉴가 가로채지 않는다');
+  const ro = await pg.$$eval('#editor .fld.ro [data-col]', xs => xs.map(x => x.dataset.col).sort().join());
+  is(ro === 'cnt,fmonth,fweek,occur_date,op,sn_key,src_sheet', '계산 칸 여섯 + 운영단위가 잠긴다 (' + ro + ')');
+  is(await pg.$eval('#editor [data-col=sn_key]', e => e.readOnly), '잠긴 칸은 readonly — 사람이 못 고친다');
+  await setField(pg, 'sn', 'ZZA-0099'); await setField(pg, 'occur', '2026-03-25 07:30'); await setField(pg, 'inout', '내적');
+  await qlog(pg);
+  await pg.click('#editor [data-act=save]'); await pg.waitForTimeout(300);
+  const ch = (rpcs(await qlog(pg), 'edit_update').pop() || { args:{} }).args.p_changes || {};
+  const wk13 = await pg.evaluate(() => GST.ALARM.isoWeek('2026-03-25'));
+  is(ch.sn === 'ZZA-0099' && ch.sn_key === 'ZZA0099', 'S/N 을 고치면 조인 키도 같이 (ZZA0099)');
+  is(ch.occur === '2026-03-25 07:30:00' && ch.occur_date === '2026-03-25' && ch.fweek === wk13, '발생시각 → 발생일 · 주차(시트 주차가 없으면 달력) (' + ch.fweek + ')');
+  is(!('fmonth' in ch), '정산월은 시트 원문(26년 3월)이 우선 — 발생일이 바뀌어도 그대로');
+  is(ch.inout === '내적' && ch.cnt === true, '내/외를 고치면 집계 대상도 (외적 → 내적 = 집계)');
+  is(/\+ 계산 칸 4개/.test(await snackText(pg)), '알림이 «계산 칸도 다시 계산했다»고 말한다 (' + await snackText(pg) + ')');
+  /* 새 행 — 운영단위는 표에 있는 값만 · 계산 칸과 시트 표지를 채운다 */
+  await pg.click('#search [data-act=new]'); await pg.waitForTimeout(200);
+  is(!(await pg.$eval('#editor [data-col=op]', e => e.readOnly)), '새 행에서는 운영단위를 고를 수 있다');
+  await setField(pg, 'op', 'P 운영'); await setField(pg, 'sn', 'ZZA-0100'); await setField(pg, 'occur', '2026-05-04 10:00');
+  await qlog(pg);
+  await pg.click('#editor [data-act=insert]'); await pg.waitForTimeout(300);
+  is(!rpcs(await qlog(pg), 'edit_insert').length && /표에 이미 있는 값/.test(await pg.$eval('#editor [data-col=op]', e => e.closest('.fld').querySelector('.err').textContent)),
+     '표에 없는 운영단위(오타)는 막는다 — 다음 업로드의 구간 교체가 못 찾아 두 번 센다');
+  await setField(pg, 'op', 'P운영');
+  await pg.click('#editor [data-act=insert]'); await pg.waitForTimeout(300);
+  const ins = (rpcs(await qlog(pg), 'edit_insert').pop() || { args:{} }).args.p_row || {};
+  is(ins.op === 'P운영' && ins.src_sheet === 'P' && ins.sn_key === 'ZZA0100' && ins.occur_date === '2026-05-04' && ins.fmonth === '2026-05' && ins.cnt === true,
+     '새 행 — 시트 표지(P) · 조인 키 · 발생일 · 정산월 · 집계 대상을 채운다 (' + JSON.stringify(ins) + ')');
+  /* 올바 — 해외 Group 줄은 Seq·Group·담당을 잠근다 · 국내 H 의 Seq 는 시트 원문이라 고칠 수 있다 */
+  await pg.click('.tab[data-tab=abp]'); await pg.waitForTimeout(400);
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  is(await pick('os') === '2,1' && await pick('kr') === '0', '올바의 구분 — 해외 리스트(GST TAIWAN) 2 · 국내(H운영) 1');
+  await pg.selectOption('#search [name=region]', ''); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(250);
+  await pg.click('#list tr[data-key="1"]'); await pg.waitForTimeout(300);
+  const roG = await pg.$$eval('#editor .fld.ro [data-col]', xs => xs.map(x => x.dataset.col));
+  is(['seq','grp','inout','incl'].every(c => roG.indexOf(c) >= 0) && roG.indexOf('cause') < 0, 'Group 줄 — Seq·Group·담당이 잠긴다 · 원인은 고칠 수 있다');
+  await pg.click('#list tr[data-key="0"]'); await pg.waitForTimeout(300);
+  const roH = await pg.$$eval('#editor .fld.ro [data-col]', xs => xs.map(x => x.dataset.col));
+  is(roH.indexOf('seq') < 0 && roH.indexOf('inout') < 0, '국내 H 줄 — Seq·내/외는 시트 원문이라 열려 있다');
+  await pg.click('#search [data-act=new]'); await pg.waitForTimeout(200);
+  await setField(pg, 'op', 'GST TAIWAN SCRUBBER'); await setField(pg, 'sn', 'ZZC-0009L'); await setField(pg, 'occur', '2026-05-04'); await setField(pg, 'grp', '9');
+  await qlog(pg);
+  await pg.click('#editor [data-act=insert]'); await pg.waitForTimeout(300);
+  is(!rpcs(await qlog(pg), 'edit_insert').length && /원본 리스트로/.test(await pg.$eval('#editor [data-col=grp]', e => e.closest('.fld').querySelector('.err').textContent)),
+     '새 Group 줄은 막는다 — 한 줄만으로는 그 사건의 대표 줄을 못 정한다');
+  await setField(pg, 'grp', '');
+  await pg.click('#editor [data-act=insert]'); await pg.waitForTimeout(300);
+  const ins2 = (rpcs(await qlog(pg), 'edit_insert').pop() || { args:{} }).args.p_row || {};
+  is(ins2.src_sheet === 'OS' && ins2.op === 'GST TAIWAN SCRUBBER' && ins2.occur_date === '2026-05-04', '해외 새 행 — 시트 표지 OS (해외 리스트)');
+  /* 엑셀 일괄 — 계산 칸은 양식에 없다 · 운영단위를 고친 줄은 건너뛴다 · 고친 줄·새 줄은 계산 칸을 함께 */
+  await pg.click('.tab[data-tab=alarm]'); await pg.waitForTimeout(400);
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  const wbA = readWb(await download(pg, '#selBar [data-act=xall]'));
+  const A = aoaOf(wbA, '알람'), H = A[0];
+  is(H.indexOf('운영단위 (시트)') > 0 && H.indexOf('S/N 조인 키') < 0 && H.indexOf('발생일') < 0 && H.indexOf('집계 대상') < 0,
+     '양식 — 계산 칸은 빠지고 운영단위는 있다 (' + H.slice(0, 6).join(' | ') + ' …)');
+  is(/계산 칸/.test(aoaOf(wbA, '안내').map(r => r.join(' ')).join('\n')), '안내 시트가 «계산 칸은 다시 계산한다»고 적는다');
+  const at = n => H.indexOf(n), keyRow = k => A.find(r => r[0] === String(k));
+  const r0 = keyRow(0).slice(), r2 = keyRow(2).slice();
+  r0[at('운영단위 (시트)')] = 'K운영';                       // 운영단위를 고친 줄 → 건너뛴다
+  r2[at('SEQP S/N')] = 'ZZA-0333';                           // S/N 을 고친 줄 → 조인 키도
+  const nw = H.map(() => ''); nw[at('운영단위 (시트)')] = 'K운영'; nw[at('SEQP S/N')] = 'ZZA-0444'; nw[at('Occur Time')] = '2026-06-01 06:00';
+  await qlog(pg);
+  await pg.setInputFiles('#xfile', writeWb(wbA, '알람', [H, r0, r2, nw], 'alarm-up.xlsx'));
+  await waitDlg(pg, /미리보기/);
+  const body = await dlgBody(pg);
+  is(/수정 1행/.test(body) && /새 행 1/.test(body) && /건너뜀 1/.test(body) && /운영단위\(op\)는 새 행에서만/.test(body), '미리보기 — 수정 1 · 새 행 1 · 운영단위를 고친 줄은 건너뜀 (이유와 함께)');
+  await pg.click('.mask .btn.pri'); await pg.waitForTimeout(600);
+  const bk = rpcs(await qlog(pg), 'edit_bulk').pop();
+  const it = bk ? bk.args.p_items : [], u = it.find(x => x.op === 'update'), nn = it.find(x => x.op === 'insert');
+  is(!!u && u.key === 2 && u.changes.sn === 'ZZA-0333' && u.changes.sn_key === 'ZZA0333' && Object.keys(u.changes).length === 2, '고친 줄 — S/N + 조인 키만 (' + JSON.stringify(u && u.changes) + ')');
+  is(!!nn && nn.row.src_sheet === 'K' && nn.row.sn_key === 'ZZA0444' && nn.row.occur_date === '2026-06-01' && nn.row.cnt === true, '새 줄 — 시트 표지 K · 계산 칸을 채운다');
+  is(pe3.length === 0, '원장 편집 전 과정 JS 에러 없음' + (pe3.length ? ' → ' + pe3.join(' | ') : ''));
+
+  console.log('[22] 업로드 — 데이터 관리에서 고친 행이 덮이면 미리 말한다 (edit_overwrites)');
+  const XLSX = await import('./node_modules/xlsx/xlsx.mjs');
+  const up = await c3.newPage(); const upe = [];
+  up.on('pageerror', e => upe.push(e.message)); up.on('dialog', d => d.accept());
+  await up.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await up.waitForTimeout(500);
+  const canon = await up.evaluate(() => { const S0 = GST.SM.SPEC.wk; return Object.keys(S0.fields).map(k => [k, [].concat(S0.fields[k])[0]]); });
+  const urow = o => canon.map(([k]) => o[k] == null ? '' : o[k]);
+  const mk = name => { const w = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(w, XLSX.utils.aoa_to_sheet([canon.map(x => x[1]),
+      urow({ rsCode:'RS-T-0201', dStart:'2026-04-01', op:'OPX Scrubber', stage:'BM' }), urow({ rsCode:'RS-T-0202', dStart:'2026-04-03', op:'OPY Scrubber', stage:'BM' })]), '수선실적');
+    const f = path.join(TMP, name); fs.writeFileSync(f, XLSX.write(w, { type:'buffer', bookType:'xlsx' })); return f; };
+  const chkOf = async (mode, file, ovw) => {
+    await up.evaluate(v => { window.__OVW = v; window.__QLOG.splice(0); }, ovw);
+    await up.selectOption('#tsel', await up.evaluate(() => String(TABLES.findIndex(t => t.rid === 'wk'))));
+    await up.selectOption('#modeSel', mode); await up.evaluate(() => window.onMode());
+    await up.setInputFiles('#fsel', mk(file));
+    await up.waitForFunction(() => /행 ↔ 표의 현재/.test(document.getElementById('chk').innerText), null, { timeout:15000 }).catch(() => {});
+    return { txt: await up.$eval('#chk', e => e.innerText), L: await up.evaluate(() => window.__QLOG.splice(0)) };
+  };
+  const OV = { n:3, last:'2026-10-04T01:02:03Z', keys:[1, 2, 5], who:['boss@test.local'] };
+  let R = await chkOf('win', 'ov-win.xlsx', OV);
+  let ov = rpcs(R.L, 'edit_overwrites')[0];
+  is(/데이터 관리」에서 고치거나 넣은 3행이 이 업로드로 덮입니다/.test(R.txt) && /행 번호 1, 2, 5/.test(R.txt) && /boss@test\.local/.test(R.txt),
+     '구간 교체 — «고친 3행이 덮인다» · 누가 · 행 번호');
+  is(!!ov && ov.args.p_tbl === 'sheet_wk' && ov.args.p_from === '2026-04-01' && ov.args.p_to === '2026-04-03' && ov.args.p_ops.slice().sort().join() === 'OPX Scrubber,OPY Scrubber',
+     '구간은 파일의 날짜 범위 × 운영단위 — 구간 교체가 지울 바로 그 범위 (' + JSON.stringify(ov && ov.args) + ')');
+  R = await chkOf('full', 'ov-full.xlsx', OV);
+  ov = rpcs(R.L, 'edit_overwrites')[0];
+  is(!!ov && ov.args.p_from === undefined && /3행이 이 업로드로 덮입니다/.test(R.txt), '통째 교체 — 표 전체에서 센다(구간 없이)');
+  R = await chkOf('add', 'ov-add.xlsx', OV);
+  is(!rpcs(R.L, 'edit_overwrites').length && !/덮입니다/.test(R.txt), '이어붙이기 — 아무것도 안 지우므로 묻지도 않는다');
+  R = await chkOf('win', 'ov-zero.xlsx', { n:0, last:null, keys:[], who:[] });
+  is(!/덮입니다/.test(R.txt), '고친 행이 없으면 아무 말도 안 한다');
+  is(upe.length === 0, '업로드 화면 JS 에러 없음' + (upe.length ? ' → ' + upe[0] : ''));
+  await up.close();
+  await c3.close();
+}
+console.log('[21b] 서버의 표 사전에 원장이 없을 때(옛 setup-16) — 그 탭만 «무엇을 하면 되는지» 말한다');
+{
+  const { ctx:c4, pg, pe:pe4 } = await open(seedOf({ badTbl:['sheet_alarm','sheet_allbypass'] }));
+  await pg.click('.tab[data-tab=alarm]'); await pg.waitForTimeout(400);
+  const ban = await pg.$eval('#banner', e => e.innerText);
+  is(/알람 탭/.test(ban) && /setup-16-edit\.sql/.test(ban) && !/bad_table/.test(ban), '배너가 그 탭과 «setup-16 을 Run» 을 적는다 — 원문(bad_table)이 아니라 (' + ban.replace(/\s+/g, ' ').slice(0, 90) + ')');
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  await pg.click('#list tr[data-key="1"] td:nth-child(3)'); await pg.waitForTimeout(300);
+  is(/setup-16-edit\.sql/.test(await pg.$eval('#editor', e => e.innerText)), '행을 열어도 같은 말 — 막다른 길이 아니다');
+  await pg.click('.tab[data-tab=wk]'); await pg.waitForTimeout(300); await pg.click('.tab[data-tab=alarm]'); await pg.waitForTimeout(400);
+  is((await pg.$$('#banner .banner')).length === 1, '같은 탭을 다시 열어도 배너는 한 번만');
+  is(pe4.length === 0, 'JS 에러 없음' + (pe4.length ? ' → ' + pe4[0] : ''));
+  await c4.close();
+}
+
 await browser.close();
 srv.close();
 console.log(fail ? `\n❌ t-edit: ${pass} 통과 · ${fail} 실패` : `\n✅ t-edit: ${pass}/${pass} 통과`);
