@@ -363,6 +363,12 @@ console.log('[3] 검색이 보내는 조건');
 const { ctx, pg, pe } = await open(seedOf());
 {
   is(await pg.$eval('#app', e => !e.hidden), '관리자는 열린다');
+  /* v144 — 셸 상단의 「업로드」는 admin 에게서 빠졌다(「하나로 합치기」). 그 입구가 여기 머리에 있어야 한다 —
+     없으면 관리자는 원본 파일(월 실적·원장 워크북·CIP)을 올릴 길을 잃는다. 창 이름은 셸 openUpload 와 같다. */
+  const tu = await pg.$eval('#toUpload', a => ({ vis: a.offsetParent !== null, top: !!a.closest('header.top'),
+    href: a.getAttribute('href'), target: a.getAttribute('target') }));
+  is(tu.vis && tu.top && tu.href === '/upload/' && tu.target === 'gstUpload',
+    '머리에 「원본 파일 올리기」 — /upload/ 를 셸과 같은 창(gstUpload)으로 (' + JSON.stringify(tu) + ')');
   await qlog(pg);
   await pg.fill('#search [name=sn]', 'ZZT-0001'); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(250);
   let L = sel(await qlog(pg), 'sheet_wk');
