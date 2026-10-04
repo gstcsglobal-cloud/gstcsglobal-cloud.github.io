@@ -41,9 +41,12 @@ if (!G || !G.dbWrite || !G.DBW) { console.log('❌ core.js 에서 GST.dbWrite �
  *  · 미지의 컬럼에 쓰면 에러 (PGRST204 흉내) — 잔재 필드가 새어들면 여기서 잡힌다
  *  · RLS 거부는 에러가 아니라 «0행 반환»
  *  · 표는 {cols:[...], rows:[{...}]} — 컬럼 집합이 고정이다                       */
+const RPCLOG = [];
 function mkDb(tables, opt) {
   opt = opt || {};
   const client = {
+    /* v140 — 쓰기 뒤의 이력(edit_note)·캐시 도장(csv_upload_finish)을 «기록»만 한다 */
+    async rpc(name, args) { RPCLOG.push({ name, args: JSON.parse(JSON.stringify(args || {})) }); return { data: 1, error: opt.rpcErr ? { message: 'x' } : null }; },
     from(t) {
       const T = tables[t];
       const st = { op: 'select', eq: null, ilike: null, upd: null, ins: null, lim: null, single: false };
@@ -260,6 +263,42 @@ console.log('\n[8] 수선실적 dq (v82) — rs_code 로 정확히 한 행 · up
     try { await G.dbWrite(op, GID_W, body, {}); err(`실적 ${op} 가 통과 — CSV 업로드가 원장인데 행을 만들/지울 수 있다`); }
     catch (e) { codeOf(e) === 'op_disabled' ? ok(`실적 ${op} → op_disabled`) : err(`op_disabled 대신 ` + codeOf(e)); }
   }
+}
+
+console.log('\n[8b] 쓰기 뒤 — 변경 이력(edit_note) · 미러는 캐시 도장(csv_upload_finish) (v140)');
+{
+  const t = freshTables(true);
+  t.sheet_wk = { cols: ['src_row','rs_code','alarm','phenom','cause','action','synced_at'],
+    rows: [ { src_row: 7, rs_code: 'RS007', alarm: null, phenom: null, cause: null, action: null } ] };
+  useDb(t);
+  RPCLOG.length = 0;
+  const r0 = await G.dbWrite('row', '646668307', null, { key: 'RS007' });
+  await G.dbWrite('update', '646668307', { key: 'RS007', baseHash: r0.hash, changes: { alarm: 'GAS LOW' } }, {});
+  const note = RPCLOG.find(x => x.name === 'edit_note'), fin = RPCLOG.find(x => x.name === 'csv_upload_finish');
+  (note && note.args.p_tbl === 'sheet_wk' && note.args.p_op === 'dbw:update' && note.args.p_key === '7'
+    && note.args.p_before.alarm === null && note.args.p_after.alarm === 'GAS LOW')
+    ? ok('실적 dq 편집 → 이력 한 줄(행 전체 before/after · 키 = src_row)') : err('edit_note 가 틀리다: ' + JSON.stringify(note));
+  (fin && fin.args.p_tbl === 'sheet_wk')
+    ? ok('미러 편집 → 캐시 도장 — 다른 브라우저가 옛 캐시를 계속 쓰지 않게') : err('csv_upload_finish 를 안 불렀다 (고친 값이 새로고침 뒤 옛 값으로 보인다)');
+
+  RPCLOG.length = 0;
+  const t2 = freshTables(true); useDb(t2);
+  await G.dbWrite('update', GID_R, { key: 'E1', changes: { posKo: 'Senior' } }, {});
+  (RPCLOG.some(x => x.name === 'edit_note' && x.args.p_tbl === 'sheet_roster' && x.args.p_op === 'dbw:update')
+    && !RPCLOG.some(x => x.name === 'csv_upload_finish'))
+    ? ok('인원 편집 → 이력은 남기고 도장은 안 찍는다(Import 표는 sync_log 대조가 없다)') : err('인원 편집 RPC: ' + JSON.stringify(RPCLOG.map(x => x.name)));
+
+  RPCLOG.length = 0;
+  await G.dbWrite('delete', GID_R, { key: 'E2', cascade: false }, {});
+  const dn = RPCLOG.find(x => x.name === 'edit_note');
+  (dn && dn.args.p_op === 'dbw:delete' && dn.args.p_before && dn.args.p_before['Name((영문)'] === 'LEE S' && dn.args.p_after === null)
+    ? ok('삭제 → 지운 행 «전체»가 이력에 (데이터 관리 화면에서 되살린다)') : err('삭제 이력이 틀리다: ' + JSON.stringify(dn));
+
+  RPCLOG.length = 0;
+  const t3 = freshTables(true); useDb(t3, { rpcErr: true });
+  try { await G.dbWrite('update', GID_R, { key: 'E1', changes: { posKo: 'X' } }, {});
+        t3.sheet_roster.rows[0]['직급'] === 'X' ? ok('이력 기록이 실패해도 저장은 그대로(최선) — setup-16 전 DB') : err('저장이 안 됐다'); }
+  catch (e) { err('이력 실패가 저장을 막았다 → ' + codeOf(e)); }
 }
 
 console.log('\n[9] RLS 거부 — 0행 반환을 «저장됨»으로 오인하지 않는지');

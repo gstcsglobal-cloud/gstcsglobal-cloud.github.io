@@ -13,7 +13,7 @@ ok(Number.isInteger(VER) && VER > 0, 'core.js 에서 GST.VER 를 못 읽었다')
 
 const PAGES = ['index.html', 'report/index.html', 'fault/index.html', 'material/index.html', 'pm/index.html',
   'scrubber/index.html', 'tco/index.html', 'cip/index.html', 'hr/index.html', 'upload/index.html', 'diag/index.html',
-  'offline/index.html'];
+  'offline/index.html', 'edit/index.html'];
 console.log('[1] ?v= 가 GST.VER(' + VER + ') 와 같은가');
 for (const f of PAGES) {
   const s = fs.readFileSync(path.join(ROOT, f), 'utf8');

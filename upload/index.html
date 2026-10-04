@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=144"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=145"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:var(--txt,#e6edf3);background:var(--bg-gradient,#0b1118);background-size:400% 400%;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
@@ -91,15 +91,20 @@ window.GST && GST.needVer && GST.needVer(121);   // csv_table_cols 대조(v121) 
 /* rid — 사이트 경로(SITE_ROUTES)가 대상을 가리키는 열쇠. ⚠ 배열 인덱스로 가리키면 항목을
    끼워 넣는 순간 남의 표를 가리키고, key 는 'abp2' 가 두 항목에 겹치고 여섯 항목엔 없다. */
 const TABLES = [
+  /* dup — 「이어붙이기」 전에 «이 파일의 행이 이미 표에 있나»를 세는 열(SPEC 필드 키 · v140). 막지 않고 보여만 준다. */
   { rid:'wk', key:'wk',   label:'수선실적 (엑셀 또는 CSV)',  table:'sheet_wk',   kind:'mirror', win:'dStart',
+    dup:{ cols:['rsCode'], label:'실적코드' },
     after:'고장분석 → 데이터 품질 카드에서 「미기재」 건수를, 주간현황에서 BM 추이를 확인하세요.' },
   { rid:'mat', key:'mat',  label:'자재실적 (엑셀 또는 CSV)',  table:'sheet_mat',  kind:'mirror', win:'workDate',
+    dup:{ cols:['rsCode','matCode','matPos','workDate','qty'], by:'rsCode', soft:true,
+          label:'수선실적번호·자재코드·자재위치·일자·수량 조합' },
     after:'자재실적 → 데이터 품질 카드에서 「수량 단위 오입력 의심」 건수를 확인하세요.' },
   /* 설치현황은 **국내·해외 양식이 서로 다른 파일**로 온다(국내 74열 한글 · 해외 118열 영문).
      통합할 수 없다는 것이 사용자 확정이라, SPEC 의 별칭 배열이 둘 다 흡수한다 — 대상은 하나다.
      ⚠ 두 파일을 다 넣어야 하므로 **첫 파일은 「통째 교체」, 두 번째는 「이어붙이기」** 다.
         둘 다 통째 교체로 올리면 먼저 올린 쪽이 사라진다. */
   { rid:'inst', key:'inst', label:'설치현황 (국내·해외 양식 모두)',  table:'sheet_inst', kind:'mirror',
+    dup:{ cols:['sn'], label:'Scrubber S/N' },
     note:'국내·해외 두 파일을 각각 올립니다 — 첫 파일은 「통째 교체」, 두 번째는 「이어붙이기」로.',
     /* 설치현황은 «조직 축의 정본»이라, 올린 뒤 조인이 얼마나 붙었는지가 가장 중요하다 —
        안 붙으면 사업부·단지·라인이 조용히 「미상」으로 몰린다(v135 · 7단계). */
@@ -163,7 +168,7 @@ const $=id=>document.getElementById(id);
    각 사이트 담당자가 «자기 몫만» 올리는 전용 화면. 같은 페이지가 쿼리로 갈린다 —
    파라미터가 없으면 지금까지의 관리자 전체 화면 그대로다(한 글자도 안 바뀐다).
 
-   ⚠ 이것은 «화면 수준» 스코프다(사용자 확정 — DB 강제는 setup-16 별도 단계).
+   ⚠ 이것은 «화면 수준» 스코프다(사용자 확정 — DB 강제는 setup-17 별도 단계 · setup-16 은 v140 데이터 관리).
      서버의 구간 교체는 「날짜 × op」로 지우므로, 화면이 ① 모드를 구간 교체로 고정하고
      ② 파일의 전 행 op 가 이 사이트 것인지 검사해 막으면, 이 경로로는 남의 사이트 행을
      지우지도 넣지도 못한다. 관리자 화면(파라미터 없음)은 지금처럼 전권이다.
@@ -695,6 +700,7 @@ window.checkFile=async function(){
     /* 이어붙이기 — 아무것도 지우지 않는다. 대신 «겹칠 수 있는 기존 행»을 미리 세어 보여준다.
        같은 조건식(csv_window dry)을 쓰므로, 구간 교체로 마음을 바꿨을 때 숫자가 달라지지 않는다. */
     const add=appending();
+    let dup=null;
     if(add){
       msgs.push('<span class="bad">➕ 이어붙이기 — 기존 '+oldCount.toLocaleString()+'행을 하나도 지우지 않습니다</span>');
       if(t.win){
@@ -708,6 +714,22 @@ window.checkFile=async function(){
             msgs.push('<span class="bad big">⚠ 이 파일이 덮는 기간·사업부에 기존 행이 <b>'
               +Number(pv.data.hit).toLocaleString()+'행</b> 있습니다 — 그만큼 이중 계산됩니다.'
               +' 갈아끼우려면 «겹치는 구간만 교체»를 고르세요.</span>');
+        }
+      }
+      if(t.dup){
+        try{
+          dup=await dupScan(c,t,out);
+          const D=t.dup;
+          if(dup.hit) msgs.push('<span class="bad big">⚠ 이 파일의 <b>'+dup.hit.toLocaleString()+'행</b>은 '+D.label+'가 이미 표에 있습니다'
+            +' (예: '+dup.sample.map(GST._esc).join(', ')+') — 이어붙이면 그만큼 두 번 셉니다.'
+            +(D.soft?'<br><span class="warn">자재실적에는 자연키가 없어 이 조합도 원래 겹칠 수 있습니다 — 참고용입니다.</span>':'')
+            +'<br>같은 실적을 갈아끼우려면 «겹치는 구간만 교체»를, 몇 행만 고치려면 「데이터 관리」 화면을 쓰세요.</span>');
+          else msgs.push('<span class="ok">✅ 키 중복 없음 — 이 파일의 '+D.label+' '+dup.keys.toLocaleString()+'개 중 표에 이미 있는 것이 없습니다</span>');
+          if(dup.inFile) msgs.push('<span class="warn">⚠ 파일 안에서도 같은 '+D.label+' 행이 '+dup.inFile.toLocaleString()+'개 겹칩니다</span>');
+          if(dup.partial) msgs.push('<span class="warn">⚠ 키 하나에 행이 너무 많아 일부는 끝까지 세지 못했습니다 — 위 숫자는 «적어도»입니다</span>');
+        }catch(e){
+          dup=null;
+          msgs.push('<span class="warn">⚠ 키 중복을 확인하지 못했습니다('+GST._esc(e.message||e)+') — 이어붙이기 전에 표를 직접 확인하세요</span>');
         }
       }
     }
@@ -730,7 +752,7 @@ window.checkFile=async function(){
     const shrink=!win&&!add&&oldCount>100&&out.length<oldCount/2;
     if(shrink)msgs.push('<span class="bad big">⚠ 파일이 기존의 절반도 안 됩니다 — 잘린 파일이 아닌지 확인하세요. 그래도 진행하면 기존 데이터가 이 파일로 줄어듭니다.</span>');
     chkShow(msgs.join('<br>'));
-    PREP={t,rows:out,oldCount,shrink,win,add,missing,killOther};
+    PREP={t,rows:out,oldCount,shrink,win,add,missing,killOther,dup};
     $('goBtn').disabled=false;
     $('goBtn').className='btn'+(shrink?' danger':'');
   }catch(e){ chkShow('<span class="bad">❌ '+String(e.message||e).replace(/\n/g,'<br>')+'</span>'); }
@@ -780,6 +802,53 @@ function syncMode(){
 }
 window.onMode=function(){ $('fsel').value=''; $('ssel').dataset.keys=''; $('shrow').style.display='none'; $('chk').innerHTML=''; $('goBtn').disabled=true; PREP=null; syncMode(); };
 syncMode();
+
+/* 이어붙이기 «키 중복» 미리보기 (v140) — 날짜 겹침(csv_window)과 다른 질문이다: «이 파일의 실적이 이미 표에 있나».
+   같은 파일을 두 번 이어붙이면 날짜 겹침도 잡지만, 날짜가 틀어진 재전송이나 다른 기간에 섞여 온 같은 실적은
+   키로만 보인다. ⚠ 막지 않는다 — 키 병합을 만들지 않는다(v87: 자재에는 자연키가 없고 실적코드도 빈값·중복이
+   실측으로 있다). 세어서 보여 줄 뿐이다.
+   ⚠ in(…) 질의도 서버 행수 상한(max-rows)에 잘린다 — 꽉 찬 장이 오면 키 묶음을 반으로 쪼개 다시 묻는다
+     («요청한 만큼 안 오면 끝» 판정을 쓰지 않는다 · v128). 키 하나가 상한을 넘으면 «적어도»라고 밝힌다. */
+async function dupScan(c,t,out){
+  const D=t.dup, cols=D.cols.map(GST._snake), by=GST._snake(D.by||D.cols[0]);
+  const sig=o=>cols.map(k=>{ let v=String(o[k]==null?'':o[k]).trim(); if(/date/.test(k))v=v.slice(0,10); return v; }).join('\u0001');
+  const rows=out.filter(o=>String(o[by]==null?'':o[by]).trim()!=='');
+  const seen=new Set(); let inFile=0;
+  rows.forEach(o=>{ const g=sig(o); if(seen.has(g))inFile++; else seen.add(g); });
+  const keys=[...new Set(rows.map(o=>String(o[by]).trim()))];
+  const have=new Set(), CAP=1000; let partial=false;
+  async function ask(ks){
+    const r=await c.from(t.table).select(cols.join(',')).in(by,ks);
+    if(r.error)throw new Error(r.error.message);
+    const d=r.data||[];
+    if(d.length>=CAP){
+      if(ks.length>1){ const h=ks.length>>1; await ask(ks.slice(0,h)); await ask(ks.slice(h)); return; }
+      partial=true;
+    }
+    d.forEach(x=>have.add(sig(x)));
+  }
+  const CH=120, jobs=[];
+  for(let i=0;i<keys.length;i+=CH)jobs.push(keys.slice(i,i+CH));
+  for(let i=0;i<jobs.length;i+=4) await Promise.all(jobs.slice(i,i+4).map(ask));
+  const hits=rows.filter(o=>have.has(sig(o)));
+  return { inFile, hit:hits.length, keys:keys.length, partial,
+           sample:[...new Set(hits.map(o=>String(o[by]).trim()))].slice(0,3) };
+}
+
+/* 업로드 «요약»을 변경 이력에 한 줄 남긴다 (v140 · edit_note). 누가 언제 어느 표를 어떤 방식으로 몇 행
+   넣었나 — 행 내용은 안 담는다(26만 행이다). 실패도 남긴다: 「왜 표가 비었지」의 답이 그 줄이다.
+   ⚠ 최선이다 — 기록 실패가 업로드 결과를 바꾸면 안 된다(setup-16 전이면 함수가 없다). 콘솔에는 남긴다. */
+async function uploadNote(c,extra){
+  try{
+    const P=PREP, f=$('fsel').files&&$('fsel').files[0];
+    const m=P.add?'add':P.win?'win':'full';
+    const after=Object.assign({ mode:m, file:f?f.name:'', n:P.rows.length, site:SITE||null,
+      sheets:($('ssel')&&$('ssel').dataset.keys)||null, dup:P.dup?P.dup.hit:null }, extra||{});
+    const before=Object.assign({ rows:P.oldCount }, P.win?{ from:P.win.from, to:P.win.to, ops:P.win.ops, deleted:P.win.hit }:{});
+    const r=await c.rpc('edit_note',{p_tbl:P.t.table,p_op:'upload:'+m,p_key:'*',p_before:before,p_after:after});
+    if(r&&r.error)console.warn('[upload] 이력 기록 실패 (setup-16 미적용?)', r.error.message||r.error);
+  }catch(e){ console.warn('[upload] 이력 기록 실패', e&&e.message||e); }
+}
 
 /* 이어붙일 때 시작 src_row. 미러 표의 PK 라 남은 행과 겹치면 적재가 통째로 실패한다.
    RPC 를 새로 만들지 않고 표에서 최댓값을 직접 읽는다 — 새 SQL 을 안 돌려도 되는 편이
@@ -859,6 +928,7 @@ window.doUpload=async function(){
 
     const now=await tableCount(c,PREP.t.table);
     const want=ADD?(PREP.oldCount+N):(W?(W.keep+N):N);
+    await uploadNote(c,{ rows:now, src_from:off, src_to:off+N-1, ok:now===want });
     if(now!==want)throw new Error('행수 불일치: 표 '+now+' ≠ 기대 '+want+' — 다시 업로드하세요');
     logLine('ok big','③ 완료 ✅ '+PREP.t.table+' = '+now.toLocaleString()+'행'
       +(ADD?' (기존 '+PREP.oldCount.toLocaleString()+' + 추가 '+N.toLocaleString()+')'
@@ -875,6 +945,7 @@ window.doUpload=async function(){
     logLine('','대시보드를 새로고침하면 새 데이터가 보입니다.');
   }catch(e){
     logLine('bad big','❌ '+String(e.message||e));
+    await uploadNote(c,{ error:String(e.message||e).slice(0,300) });
     logLine('bad', ADD ? '일부만 들어갔을 수 있습니다 — 표 행수를 확인하고, 남은 분만 다시 올리거나 통째 교체로 되돌리세요.'
                  : W ? '구간이 지워진 상태일 수 있습니다 — 같은 파일로 다시 업로드하면 복구됩니다.'
                      : '표가 비워진 상태일 수 있습니다 — 같은 파일로 다시 업로드하면 복구됩니다.');

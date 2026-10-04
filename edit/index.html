@@ -1,0 +1,1210 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>데이터 관리 · CS Global Team</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=145"></script>
+<style>
+/* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
+   생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
+:root{
+  color-scheme:light;
+  --bg:#F5F6F8;--surface:#FFFFFF;--surface-2:#F2F4F7;--surface-3:#E9ECF1;--line:#E4E7EC;--line-2:#CDD3DC;
+  --txt-main:#101828;--txt-2:#344054;--txt-muted:#667085;--txt-faint:#98A2B3;
+  --accent:#2F6FED;--accent-soft:#EAF1FE;--accent-ink:#1D4ED8;
+  --ok:#12873F;--warn:#B7670A;--bad:#D92D20;--ok-soft:#ECFDF3;--warn-soft:#FFF6E5;--bad-soft:#FEF3F2;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.05);--shadow-md:0 8px 28px rgba(16,24,40,.12);
+}
+body.theme-slate{
+  color-scheme:dark;
+  --bg:#0F1419;--surface:#161C24;--surface-2:#1C2430;--surface-3:#232D3A;--line:rgba(151,170,196,.14);--line-2:rgba(151,170,196,.28);
+  --txt-main:#E6EDF3;--txt-2:#C3CCD8;--txt-muted:#8B98A9;--txt-faint:#5E6D80;
+  --accent:#5B8DEF;--accent-soft:rgba(91,141,239,.16);--accent-ink:#8AB0F7;
+  --ok:#3FBF7F;--warn:#F2B134;--bad:#F0716B;--ok-soft:rgba(63,191,127,.12);--warn-soft:rgba(242,177,52,.12);--bad-soft:rgba(240,113,107,.12);
+  --shadow-sm:none;--shadow-md:0 8px 24px rgba(0,0,0,.45);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt-main);font:13px/1.55 'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',system-ui,sans-serif;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+#loginOverlay{position:fixed;inset:0;z-index:99999;background:#F5F6F8}
+.gate{max-width:440px;margin:18vh auto 0;padding:26px 28px;border-radius:12px;background:var(--surface);border:1px solid var(--line);text-align:center;box-shadow:var(--shadow-sm)}
+.gate b{font-size:15px}.gate p{color:var(--txt-muted);font-size:12.5px;margin-top:6px}
+
+/* 머리 */
+.top{display:flex;align-items:center;gap:14px;padding:14px 22px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.mark{width:28px;height:28px;border-radius:8px;background:var(--accent);display:grid;place-items:center;flex:none}
+.top h1{font-size:15.5px;font-weight:700;letter-spacing:-.2px}
+.top .sub{color:var(--txt-muted);font-size:12px}
+.top .sp{flex:1}
+.me{display:flex;align-items:center;gap:8px;color:var(--txt-muted);font-size:12px}
+.badge{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--surface-2);color:var(--txt-2);border:1px solid var(--line)}
+.badge.ad{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
+a.lnk{color:var(--accent-ink);text-decoration:none;font-weight:600}a.lnk:hover{text-decoration:underline}
+
+.wrap{max-width:1560px;margin:0 auto;padding:14px 22px 60px}
+.banner{border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12.5px;white-space:pre-line;border:1px solid}
+.banner.bad{background:var(--bad-soft);border-color:rgba(217,45,32,.35);color:var(--bad)}
+.banner.warn{background:var(--warn-soft);border-color:rgba(183,103,10,.35);color:var(--warn)}
+.banner b{font-weight:700}
+
+/* 탭 */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:14px;overflow-x:auto}
+.tab{padding:9px 14px 10px;border:0;background:none;color:var(--txt-muted);font-weight:600;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tab:hover{color:var(--txt-main)}
+.tab.on{color:var(--accent-ink);border-bottom-color:var(--accent)}
+.tab .cnt{font-weight:500;color:var(--txt-faint);font-size:11.5px;margin-left:4px}
+.tab.hist{margin-left:auto}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:14px;align-items:start}
+@media (max-width:1100px){.grid{grid-template-columns:minmax(0,1fr)}}   /* 1fr 은 minmax(auto,1fr) — 목록 표 너비가 칸을 밀어 화면이 가로로 넘친다 */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-sm)}
+
+/* 검색 */
+.search{padding:14px 16px 12px;margin-bottom:12px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px 12px}
+.sf{display:flex;flex-direction:column;gap:4px;min-width:0}
+.sf>span{font-size:11.5px;color:var(--txt-muted);font-weight:600}
+.sf.range{grid-column:span 2}
+.sf.range>div{display:flex;gap:6px;align-items:center}
+.sf.range input{min-width:0;flex:1}
+.ctl,.sf input,.sf select{width:100%;height:32px;padding:0 10px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);outline:none}
+.ctl:focus,.sf input:focus,.sf select:focus,.fld input:focus,.fld textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.sother{display:grid;grid-template-columns:minmax(150px,1.1fr) 92px minmax(120px,1fr);gap:6px;margin-top:10px}
+.sbar{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+.sbar .sp{flex:1}
+.btn{height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface);font-weight:600;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.pri:hover{filter:brightness(1.06)}
+.btn.dng{color:var(--bad);border-color:rgba(217,45,32,.4)}
+.btn.dng:hover{background:var(--bad-soft)}
+.btn.sm{height:26px;padding:0 9px;font-size:11.5px;border-radius:7px}
+.btn:disabled{opacity:.45;cursor:default;filter:none}
+.hint{color:var(--txt-muted);font-size:11.5px}
+
+/* 결과 목록 */
+.list-h{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12.5px}
+.list-h b{font-weight:700}
+.tw{overflow:auto;max-height:calc(100vh - 330px);min-height:120px}
+table.rt{width:100%;border-collapse:collapse;font-size:12px}
+table.rt th{position:sticky;top:0;background:var(--surface-2);color:var(--txt-muted);font-weight:600;text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;z-index:1}
+table.rt td{padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+table.rt tbody tr{cursor:pointer}
+table.rt tbody tr:hover td{background:var(--surface-2)}
+table.rt tbody tr.on td{background:var(--accent-soft)}
+table.rt td.k{color:var(--txt-faint);font-variant-numeric:tabular-nums}
+.empty{padding:34px 18px;text-align:center;color:var(--txt-muted);font-size:12.5px;white-space:pre-line}
+.more{padding:10px;text-align:center;border-top:1px solid var(--line)}
+
+/* 편집기 */
+.ed{position:sticky;top:70px;max-height:calc(100vh - 156px);display:flex;flex-direction:column}   /* 처음 화면(스크롤 전)에서도 저장 단추가 보이는 높이 */
+.ed-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.ed-h h2{font-size:14px;font-weight:700}
+.ed-h .key{color:var(--txt-faint);font-size:12px;font-variant-numeric:tabular-nums}
+.ed-h .sp{flex:1}
+.ed-b{overflow:auto;padding:4px 16px 14px;flex:1;min-height:0}   /* min-height:0 — 없으면 flex 항목이 내용 높이 밑으로 안 줄어 저장 단추가 화면 밖으로 밀린다 */
+.ed-f{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;background:var(--surface);border-radius:0 0 12px 12px}
+.ed-f .sp{flex:1}
+.grp{margin-top:12px}
+.grp-h{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:var(--txt-muted);text-transform:none;letter-spacing:.2px;margin-bottom:6px}
+.grp-h .ln{flex:1;height:1px;background:var(--line)}
+details.grp>summary{cursor:pointer;list-style:none}
+details.grp>summary::-webkit-details-marker{display:none}
+.flds{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px 12px}
+.fld{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fld.wide{grid-column:1/-1}
+.fl{font-size:11.5px;color:var(--txt-2);font-weight:600;display:flex;gap:6px;align-items:baseline;min-width:0}
+.fl i{font-style:normal;font-weight:500;color:var(--txt-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fld input,.fld textarea{width:100%;padding:6px 9px;border:1px solid var(--line-2);border-radius:7px;background:var(--surface);outline:none;font-size:12.5px}
+.fld input{height:30px}
+.fld textarea{resize:vertical;min-height:52px;line-height:1.45}
+.fld.dirty input,.fld.dirty textarea{border-color:var(--accent);background:var(--accent-soft)}
+.fld.clash input,.fld.clash textarea{border-color:var(--warn);background:var(--warn-soft)}
+.fld.bad input,.fld.bad textarea{border-color:var(--bad);background:var(--bad-soft)}
+.fld em.err{font-style:normal;font-size:11px;color:var(--bad);min-height:0}
+.fld em.err:empty{display:none}
+.fld.ro input{color:var(--txt-muted);background:var(--surface-2)}
+.ed .note{color:var(--txt-muted);font-size:11.5px;margin-top:10px;white-space:pre-line}
+.newtag{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+
+/* 이력 */
+.hf{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 12px;padding:14px 16px}
+.hl{border-top:1px solid var(--line)}
+.he{display:grid;grid-template-columns:132px 124px minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 16px;border-bottom:1px solid var(--line);font-size:12.5px}
+@media (max-width:900px){.he{grid-template-columns:1fr}}
+.he .t{color:var(--txt-muted);font-variant-numeric:tabular-nums;font-size:12px}
+.he .w{color:var(--txt-faint);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.he .s{min-width:0}
+.he .s .tl{font-weight:600;margin-bottom:2px}
+.he .s .ch{color:var(--txt-2);font-size:12px;overflow:hidden;text-overflow:ellipsis}
+.he .s .ch del{color:var(--bad);text-decoration:line-through;text-decoration-thickness:1px}
+.he .s .ch ins{color:var(--ok);text-decoration:none}
+.he .a{display:flex;gap:6px}
+.op{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+.hf .sf.go{justify-content:flex-end;align-items:flex-start}
+.op.u{background:var(--accent-soft);color:var(--accent-ink)}
+.op.i{background:var(--ok-soft);color:var(--ok)}
+.op.d{background:var(--bad-soft);color:var(--bad)}
+.op.r{background:var(--warn-soft);color:var(--warn)}
+.op.x{background:var(--surface-2);color:var(--txt-muted)}
+.restored{color:var(--txt-faint);font-size:11.5px}
+
+/* 대화상자 · 알림 */
+.mask{position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:1000;display:grid;place-items:center;padding:16px}
+.dlg{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-md);width:min(620px,100%);max-height:86vh;display:flex;flex-direction:column}
+.dlg.wide{width:min(980px,100%)}
+.dlg-h{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
+.dlg-b{padding:14px 18px;overflow:auto;font-size:12.5px;white-space:normal}
+.dlg-b p{margin-bottom:8px;color:var(--txt-2)}
+.dlg-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+table.dt{width:100%;border-collapse:collapse;font-size:12px}
+table.dt th,table.dt td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+table.dt th{color:var(--txt-muted);font-weight:600;background:var(--surface-2)}
+table.dt tr.chg td{background:var(--warn-soft)}
+table.dt td.v{word-break:break-all}
+#snack{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#101828;color:#fff;border-radius:10px;padding:10px 14px;font-size:12.5px;display:flex;gap:12px;align-items:center;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:2000;max-width:min(680px,92vw);box-shadow:var(--shadow-md)}
+#snack.on{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+#snack.err{background:#B42318}
+#snack button{background:none;border:0;color:#8AB0F7;font-weight:700;cursor:pointer;white-space:nowrap}
+.foot{color:var(--txt-muted);font-size:11.5px;margin-top:18px;white-space:pre-line;line-height:1.7}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line-2);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* 좁은 화면 — 한 줄로 쌓고 가로 스크롤을 없앤다(목록 표만 자기 안에서 스크롤) */
+@media (max-width:1100px){.ed{position:static;max-height:none}.ed-b{overflow:visible}}
+@media (max-width:640px){
+  .top{flex-wrap:wrap;padding:12px 14px}.top .sub{display:none}.me{width:100%;justify-content:flex-end;flex-wrap:wrap}
+  .wrap{padding:12px 12px 48px}
+  .sgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sf.range{grid-column:1/-1}
+  .sother{grid-template-columns:minmax(0,1fr) 92px}.sother input{grid-column:1/-1}
+  .flds{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hf{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+</head>
+<body>
+<div id="loginOverlay"></div>
+<div class="gate" id="gate" hidden><b>관리자 전용 화면입니다</b><p>데이터 관리는 관리자 계정(쓰기 권한 포함)으로만 열립니다.</p></div>
+
+<div id="app" hidden>
+  <header class="top">
+    <div class="mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
+    <div><h1>데이터 관리</h1><div class="sub">표를 직접 찾아 고치고 · 한 행씩 넣고 · 지웁니다. 모든 변경은 이력에 남고 되돌릴 수 있습니다.</div></div>
+    <div class="sp"></div>
+    <div class="me" id="me"></div>
+  </header>
+  <div class="wrap">
+    <div id="banner"></div>
+    <nav class="tabs" id="tabs"></nav>
+    <div id="pgData">
+      <div class="grid">
+        <section>
+          <form class="card search" id="search" autocomplete="off"></form>
+          <div class="card">
+            <div class="list-h" id="listH"></div>
+            <div class="tw"><table class="rt" id="list"></table></div>
+            <div id="more"></div>
+          </div>
+        </section>
+        <section class="card ed" id="editor"></section>
+      </div>
+    </div>
+    <div id="pgHist" hidden>
+      <div class="card">
+        <form class="hf" id="hfilt" autocomplete="off"></form>
+        <div class="hl" id="hlist"></div>
+        <div id="hmore"></div>
+      </div>
+    </div>
+    <div class="foot">어떻게 기록되나 — 저장·입력·삭제·되돌리기는 한 번에 «쓰기 + 변경 이력(행 전체 before/after) + 대시보드 캐시 갱신»으로 처리됩니다. 셋 중 하나라도 실패하면 전부 없던 일이 됩니다.
+삭제한 행도 이력에 통째로 남아 「변경 이력」 탭에서 되살릴 수 있습니다. 대시보드는 새로고침하면 바뀐 값을 봅니다.
+⚠ 실적·설치는 «통째 교체» 업로드를 하면 행 번호가 0 부터 다시 매겨집니다 — 그 전 이력의 번호는 지금 다른 행일 수 있고, 되돌리기는 내용 대조로 막힙니다.</div>
+  </div>
+</div>
+<div id="snack"></div>
+
+<script>
+'use strict';
+/* ============================================================================
+   데이터 관리 (v140) — 관리자가 표를 직접 찾아 고치고·넣고·지운다.
+
+   쓰기는 전부 setup-16 의 RPC(edit_update·edit_insert·edit_delete·edit_restore)를 지난다.
+   브라우저가 표를 직접 update 해도 RLS 로는 되지만, 그러면 ① 쓰기 ② 이력 ③ 캐시 도장이
+   «따로» 일어나고 하나가 빠지면 조용히 틀린다(③ 이 빠지면 다른 사람은 옛 캐시를 계속 본다).
+   RPC 는 셋을 한 트랜잭션에서 한다.
+
+   지키는 것:
+   · 행은 업무 키가 아니라 PK(src_row·id)로 찾는다 — 실적코드·S/N 은 빈값·중복이 실측으로 있다.
+   · 동시 수정은 행 해시로 막는다. 연 뒤 누가(또는 재업로드가) 바꿨으면 conflict 로 돌아온다.
+   · 열 이름표는 GST.SM.SPEC 별칭에서 — 스펙 사본을 여기 만들지 않는다(제2원칙).
+     이 파일이 아는 것은 «화면 배치»(무엇을 어느 묶음에 둘지)뿐이고, 묶음에 없는 실제 열은
+     「기타」로 저절로 뜬다(승격된 새 열이 조용히 안 보이는 일이 없게).
+   · 값 목록을 박지 않는다 — 입력 보조 목록은 edit_distinct 로 «지금 표에 있는 값»을 받는다.
+   ============================================================================ */
+GST.needVer(145);
+const $ = id => document.getElementById(id);
+const esc = s => GST._esc(s);
+const PAGE = 100;
+let C = null;                         // supabase client
+
+/* ---------- 표마다 «화면 배치» ----------
+   list: 결과 목록 열 · quick: 검색 칸(text=포함 · pick=정확히 · range=기간 · active=재직)
+   groups: 편집 칸 묶음(세 번째 값 'fill' = 설치현황에서 채우기 단추 · 'legacy' = 접어 둔다)
+   need: 새 행 필수 · dup: 넣기 전 중복 확인 열 · dates/nums: 입력값 검사 · long: 여러 줄
+   열 이름이 별칭 배열이면 «표에 실제로 있고 값이 찬 열»을 고른다(인원명단 양식이 세 벌 — v96). */
+const TABS = [
+  { id:'wk', tbl:'sheet_wk', name:'수선실적', spec:'wk', key:'src_row', mode:'server',
+    list:['rs_code','d_start','op','campus','line','stage','eq_no','sn_in','action','workers'],
+    quick:[ {k:'rs', l:'실적코드', cols:['rs_code'], t:'text', ph:'일부만 적어도 찾습니다'},
+            {k:'sn', l:'S/N · 설비호기', cols:['sn_in','sn_out','eq_no','main_eq'], t:'text', ph:'예: GBWS-0000'},
+            {k:'dt', l:'작업시작일', cols:['d_start'], t:'range'},
+            {k:'stage', l:'작업단계', cols:['stage'], t:'pick'},
+            {k:'op', l:'운영단위', cols:['op'], t:'pick'},
+            {k:'campus', l:'단지', cols:['campus'], t:'pick'},
+            {k:'wkr', l:'작업자', cols:['workers'], t:'text'} ],
+    groups:[ ['실적', ['rs_code','status','req_type','stage','pf','reg_date','ship_date','wrs']],
+             ['조직', ['pg','op','customer','campus','line','bay','proc','subproc']],
+             ['설비', ['model','main_eq','eq_no','prod_code','chamber','chpos','sn_in','sn_out'], 'fill'],
+             ['작업', ['d_start','t_start','d_end','t_end','move_min','work_min','man_min','workers','worker_cnt']],
+             ['내용', ['alarm','phenom','cause','action','action_detail']] ],
+    need:['rs_code','d_start'], dup:'rs_code',
+    dates:['d_start','d_end','reg_date','ship_date'], nums:['move_min','work_min','man_min','worker_cnt'],
+    long:['phenom','cause','action','action_detail'],
+    dl:['pg','op','customer','campus','line','bay','proc','subproc','model','status','req_type','stage','pf','chamber','chpos','alarm'],
+    fill:{ code:'eq_no', sn:['sn_in','sn_out'],
+           map:{ op:'country', customer:'customer', campus:'location', line:'fab', bay:'bay', model:'model', eq_no:'code' } } },
+  { id:'mat', tbl:'sheet_mat', name:'자재실적', spec:'mat', key:'src_row', mode:'server',
+    list:['rs_code','work_date','op','eq','sn','mat_code','mat_name','qty','pf'],
+    quick:[ {k:'rs', l:'수선실적번호', cols:['rs_code'], t:'text'},
+            {k:'sn', l:'S/N · 설비호기', cols:['sn','eq','main_eq'], t:'text', ph:'예: GBWS-0000'},
+            {k:'mat', l:'자재코드 · 자재명', cols:['mat_code','mat_name','cust_mat_code'], t:'text'},
+            {k:'dt', l:'자재실적일자', cols:['work_date'], t:'range'},
+            {k:'op', l:'운영단위', cols:['op'], t:'pick'},
+            {k:'pf', l:'유/무상', cols:['pf'], t:'pick'} ],
+    groups:[ ['실적', ['rs_code','work_date','wo','pf','free_reason','reason']],
+             ['조직', ['op','customer','campus','line','bay','proc','detail']],
+             ['설비', ['model','main_eq','eq','chamber','sn','eq_pos'], 'fill'],
+             ['자재', ['mat_code','cust_mat_code','mat_name','spec','mat_pos','qty','unit','assembly','part','kit_sn','sn_in','sn_out','price','warranty_term','stock_chk','store']],
+             ['사용주기', ['prev_paid_date','prev_date','days_paid','days_prev']] ],
+    need:['rs_code','work_date'],
+    dates:['work_date','prev_paid_date','prev_date'], nums:['qty','days_paid','days_prev','price'],
+    dl:['op','customer','campus','line','bay','proc','detail','model','pf','free_reason','reason','mat_pos','eq_pos','store'],
+    fill:{ code:'eq', sn:['sn'],
+           map:{ op:'country', customer:'customer', campus:'location', line:'fab', bay:'bay', model:'model', eq:'code', sn:'sn' } } },
+  { id:'inst', tbl:'sheet_inst', name:'설치현황', spec:'inst', key:'src_row', mode:'server',
+    list:['code','sn','country','customer','location','fab','bay','model','state','turn_on'],
+    quick:[ {k:'sn', l:'S/N · CODE', cols:['sn','code'], t:'text', ph:'예: GBWS-0000'},
+            {k:'country', l:'운영단위 (Country)', cols:['country'], t:'pick'},
+            {k:'cust', l:'고객사', cols:['customer'], t:'pick'},
+            {k:'fab', l:'Line 1 / FAB', cols:['fab'], t:'pick'},
+            {k:'model', l:'모델', cols:['model'], t:'text'},
+            {k:'state', l:'설비상태', cols:['state'], t:'pick'} ],
+    groups:[ ['식별', ['code','sn','model','burner','type','pjt','state']],
+             ['조직', ['country','customer','div','location','fab','line2','floor','bay']],
+             ['공정 · 메인설비', ['group1','group2','detail1','detail2','tool_id','tool_maker','tool_model']],
+             ['일정 · 보증', ['fab_in','start','turn_on','warranty_date','warranty','pm_cycle']] ],
+    need:['sn'], dup:'sn',
+    dates:['fab_in','start','turn_on','warranty_date'],
+    dl:['country','customer','div','location','fab','line2','floor','bay','model','burner','type','state','warranty','group1','group2','tool_maker'] },
+  { id:'roster', tbl:'sheet_roster', name:'인원현황', key:'id', mode:'whole',
+    list:[['사원번호','ID'],['이름(영문)','Name((영문)'],['이름(중문)','Name(중문)'],'운영단위',['단지','Work Place'],'라인','팀',['직급(한글)','직급'],['입사일','Date of entry'],['퇴사일','Resignation']],
+    quick:[ {k:'q', l:'이름 · 사번 · 메일', cols:['사원번호','ID','이름(영문)','이름(중문)','Name((영문)','Name(중문)','E-Mail'], t:'text'},
+            {k:'op', l:'운영단위', cols:['운영단위'], t:'pick'},
+            {k:'campus', l:'단지', cols:['단지','Work Place'], t:'pick'},
+            {k:'team', l:'팀', cols:['팀'], t:'pick'},
+            {k:'act', l:'재직 여부', cols:['퇴사일','Resignation'], t:'active'} ],
+    groups:[ ['인적사항', ['사원번호','이름(영문)','이름(중문)','직급(한글)','직급(영문)','E-Mail','인사']],
+             ['조직', ['구분','담당구분','운영단위','사업부','고객사','지역','팀','단지','라인','업무/직책','현장 인원여부']],
+             ['근무', ['입사일','퇴사일']],
+             ['옛 양식 열 (영문 명단)', ['No.','ID','Name((영문)','Name(중문)','Dept.','Position Level','Work Place','2025 Position Role','Date of entry','Resignation','조직도 위치','직급'], 'legacy'] ],
+    need:[['이름(영문)','Name((영문)'],['사원번호','ID'],['입사일','Date of entry']], dup:['사원번호','ID'],
+    dates:['입사일','퇴사일','Date of entry','Resignation'],
+    dl:['구분','담당구분','운영단위','사업부','고객사','지역','팀','단지','라인','직급(한글)','직급(영문)','업무/직책','현장 인원여부'],
+    note:'사번·이름을 고치면 교육현황의 짝 행도 같은 글자로 같이 고칩니다(인원 화면과 같은 규칙 · 이력에 「연쇄」로 남습니다).\n새로 넣거나 지울 때는 교육현황이 따라오지 않습니다 — 교육현황 탭에서 따로 손보세요.' },
+  { id:'edu', tbl:'sheet_edu', name:'교육현황', key:'id', mode:'whole',
+    list:['사원번호','인원','Site','구분','Basic 교육완료일','Veteran 교육완료일','Scrubber Lv.2 교육완료일','Scrubber Lv.3 교육완료일'],
+    quick:[ {k:'q', l:'이름 · 사번', cols:['사원번호','인원'], t:'text'},
+            {k:'site', l:'Site', cols:['Site'], t:'pick'},
+            {k:'kind', l:'구분', cols:['구분'], t:'pick'} ],
+    groups:[ ['인원', ['사원번호','인원','Site','구분','No']],
+             ['교육완료일', ['Basic 교육완료일','Veteran 교육완료일','Scrubber Lv.2 교육완료일','Scrubber Lv.3 교육완료일']] ],
+    need:['인원'], dup:'사원번호',
+    dates:['Basic 교육완료일','Veteran 교육완료일','Scrubber Lv.2 교육완료일','Scrubber Lv.3 교육완료일'],
+    dl:['Site','구분'],
+    note:'이수 판정은 «완료일이 있는가» 하나입니다. 인원과의 짝은 사번(없으면 이름)으로 맞춥니다.' },
+  { id:'leave', tbl:'sheet_leave', name:'휴가', key:'id', mode:'whole',
+    list:['사원번호','이름','소속','항목','휴가시작일','휴가종료일','휴가신청시간','비고'],
+    quick:[ {k:'q', l:'이름 · 사번', cols:['사원번호','이름'], t:'text'},
+            {k:'dt', l:'휴가시작일', cols:['휴가시작일'], t:'range'},
+            {k:'kind', l:'항목', cols:['항목'], t:'pick'},
+            {k:'org', l:'소속', cols:['소속'], t:'pick'} ],
+    groups:[ ['인원', ['사원번호','이름','소속']],
+             ['휴가', ['항목','발생일','휴가시작일','휴가시작시간','휴가종료일','휴가종료시간','휴가신청시간','비고']] ],
+    need:['이름','항목','휴가시작일','휴가종료일'],
+    dates:['발생일','휴가시작일','휴가종료일'],
+    dl:['소속','항목'] }
+];
+const TAB_BY = Object.fromEntries(TABS.map(t => [t.id, t]));
+const TAB_OF_TBL = Object.fromEntries(TABS.map(t => [t.tbl, t]));
+const NUM_TYPES = /^(bigint|integer|smallint|numeric|real|double precision)$/;
+const ADMIN_COLS = new Set(['synced_at','imported_at','created_at','extra']);
+
+const S = {
+  tab:'wk', ready:null, why:'',
+  can:{ del:true, restore:true },    // 삭제·되돌리기 함수가 서버에 있나(부분 적용 상태를 «말하며» 잠근다)
+  cols:{}, types:{},                  // 표 → 실제 열 목록 · 열 → 타입 (edit_cols)
+  all:{},                             // whole 표 → 전 행
+  rows:[], after:null, more:false, busy:false,
+  cur:null,                           // {t, key, row, hash, isNew, orig, origX}
+  dist:{},                            // 'tbl|col' → [[값, 건수]]
+  hist:{ rows:[], last:null, more:false }
+};
+const TAB = () => TAB_BY[S.tab];
+
+/* ---------- 이름표 — SPEC 별칭이 정본 ----------
+   미러 표의 열(snake) ← SPEC 필드 키. 이름표 = 별칭[0], 옆에 나머지 별칭을 작게(국내·해외 양식이 다른 이름을 쓴다). */
+const LBL = {};
+TABS.forEach(t => {
+  LBL[t.id] = {};
+  const sp = t.spec && GST.SM && GST.SM.SPEC && GST.SM.SPEC[t.spec];
+  if(!sp) return;
+  Object.keys(sp.fields).forEach(f => {
+    const a = [].concat(sp.fields[f]);
+    LBL[t.id][GST._snake(f)] = { name:String(a[0]).replace(/\s*\n\s*/g,' '), alt:a.slice(1).join(' · ') };
+  });
+});
+const label = (t, c) => (LBL[t.id] && LBL[t.id][c]) || { name:c, alt:'' };
+
+/* ---------- 작은 도구들 ---------- */
+const vs = v => v == null ? '' : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+/* 검색 글자 → «포함» 패턴. 영숫자·한글 덩어리만 남겨 순서대로 잇는다 — GBWS-0000 · GBWS0000 · GBWS-0000L 이
+   한 번에 잡힌다(설비 S/N 표기가 운영단위마다 갈린다 · v92). 덩어리 밖의 글자(. , ( ) %)를 버리므로
+   PostgREST 필터 문법을 깨뜨릴 글자가 원리적으로 안 들어간다. */
+function runs(v){ return String(v == null ? '' : v).normalize('NFKC').split(/[^0-9A-Za-zㄱ-ㆎ가-힣぀-ヿ一-鿿]+/).filter(Boolean); }
+function pat(v){ const r = runs(v); return r.length ? '*' + r.join('*') + '*' : null; }
+function patRe(v){ const r = runs(v); return r.length ? new RegExp(r.map(x => x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('.*'), 'i') : null; }
+function nextDay(d){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d); if(!m) return d;
+  return new Date(Date.UTC(+m[1], +m[2]-1, +m[3]+1)).toISOString().slice(0,10); }   // Date.UTC ↔ toISOString — 같은 시계(v109)
+/* 날짜 칸 — 구간 교체(left(...,10))·기간 검색이 «YYYY-MM-DD» 로만 비교하므로 그 형식으로 눕힌다.
+   문자열만 다룬다(Date 왕복 없음 — 두 시계를 섞지 않는다). 못 읽으면 null. */
+function normDate(v){
+  const s = String(v).trim();
+  let m = /^(\d{4})\s*[-./년]\s*(\d{1,2})\s*[-./월]\s*(\d{1,2})\s*[.일]?(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(s);
+  if(!m){ const k = /^(\d{4})(\d{2})(\d{2})$/.exec(s); if(k) m = [k[0], k[1], k[2], k[3]]; }
+  if(!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  if(mo < 1 || mo > 12 || d < 1 || d > new Date(Date.UTC(y, mo, 0)).getUTCDate()) return null;
+  let out = m[1] + '-' + String(mo).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+  if(m[4] != null){ if(+m[4] > 23) return null; out += ' ' + String(+m[4]).padStart(2,'0') + ':' + m[5] + ':' + (m[6] != null ? m[6] : '00'); }
+  return out;
+}
+/* 엑셀 수식 주입 — 대시보드의 「데이터 복사」·엑셀 내보내기로 나가면 = + @ 로 시작하는 값은 수식이 된다.
+   «-» 하나·음수는 실데이터에 있으므로 막지 않는다(GST._dbwGuard 보다 좁다 — 그 검사는 hr 입력용). */
+function formulaLike(v){ const s = String(v); return /^[=+@\t\r]/.test(s) || (/^-/.test(s) && s !== '-' && !/^-\d[\d,.]*$/.test(s)); }
+function ymdhm(iso){ const d = new Date(iso); if(isNaN(d)) return String(iso || '');
+  const p = n => String(n).padStart(2,'0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+function isDate(t, c){ return (t.dates || []).indexOf(c) >= 0; }
+function isNum(t, c){ return (t.nums || []).indexOf(c) >= 0 || NUM_TYPES.test((S.types[t.tbl] || {})[c] || ''); }
+/* 별칭 배열 → 실제 열. 표에 있고 «값이 찬» 열 먼저(빈 옛 ID 를 집지 않게 · v96), 없으면 있는 열 */
+function pickCol(t, want){
+  const list = [].concat(want), cols = S.cols[t.tbl] || [];
+  const exist = list.filter(c => cols.indexOf(c) >= 0);
+  if(t.mode === 'whole' && S.all[t.id]){
+    for(const c of exist){ if(S.all[t.id].some(r => vs(r[c]).trim() !== '')) return c; }
+  }
+  return exist[0] || (cols.length ? null : list[0]);
+}
+
+/* ---------- 알림 · 대화상자 ---------- */
+let snackT = null;
+function snack(msg, opt){
+  opt = opt || {};
+  const el = $('snack');
+  el.className = 'on' + (opt.err ? ' err' : '');
+  el.innerHTML = '<span>' + esc(msg) + '</span>' + (opt.act ? '<button type="button">' + esc(opt.act) + '</button>' : '');
+  if(opt.act){ el.querySelector('button').onclick = () => { el.className = ''; opt.fn && opt.fn(); }; }
+  clearTimeout(snackT); snackT = setTimeout(() => { el.className = ''; }, opt.ms || (opt.act ? 9000 : opt.err ? 6000 : 2600));
+}
+function dialog(title, body, buttons, wide){
+  return new Promise(res => {
+    const m = document.createElement('div'); m.className = 'mask';
+    m.innerHTML = '<div class="dlg' + (wide ? ' wide' : '') + '"><div class="dlg-h">' + esc(title) + '</div><div class="dlg-b">' + body
+      + '</div><div class="dlg-f">' + buttons.map((b, i) => '<button type="button" class="btn ' + (b.cls || '') + '" data-i="' + i + '">' + esc(b.l) + '</button>').join('') + '</div></div>';
+    const done = v => { m.remove(); document.removeEventListener('keydown', onKey); res(v); };
+    const onKey = e => { if(e.key === 'Escape') done(null); };
+    m.addEventListener('click', e => { if(e.target === m) return done(null);
+      const rb = e.target.closest('[data-ret]'); if(rb) return done(rb.dataset.ret);      // 본문 안의 고르기 단추
+      const b = e.target.closest('[data-i]'); if(b) done(buttons[+b.dataset.i].v === undefined ? +b.dataset.i : buttons[+b.dataset.i].v); });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(m);
+    const pri = m.querySelector('.btn.pri,.btn.dng'); if(pri) pri.focus();
+    dialog.last = m;
+  });
+}
+const ask = (title, body, okL, danger) => dialog(title, body, [{l:'취소', v:false}, {l:okL || '확인', v:true, cls: danger ? 'dng' : 'pri'}]).then(v => v === true);
+
+/* ---------- 서버 호출 ---------- */
+/* RPC 오류를 «사람이 할 일»로 옮긴다. 원문은 콘솔에 남긴다(관리자 화면이라 원문도 함께 보인다). */
+const fnMissing = e => !!e && (e.code === 'PGRST202' || /PGRST202|Could not find the function/i.test(String(e.message || e)));
+function rpcErr(e){
+  const m = String((e && (e.message || e.details)) || e || '');
+  if(fnMissing(e) || /does not exist/i.test(m))
+    return '서버 준비가 아직 안 됐습니다 — Supabase SQL Editor 에서 supabase/setup-16-edit.sql 을 Run 하세요.';
+  if(/forbidden/.test(m)) return '서버가 이 계정을 관리자로 보지 않습니다 — allowed_users 에 role=admin · can_write=true 가 필요합니다.';
+  if(/^read_only/.test(m)) return '쓰기 권한(can_write)이 없습니다.';
+  let r;
+  if((r = /locked_column: (.*)/.exec(m))) return '「' + r[1] + '」 열은 바꿀 수 없습니다(행 번호·관리 열).';
+  if((r = /bad_column: (.*)/.exec(m))) return '표에 「' + r[1] + '」 열이 없습니다 — 화면을 새로고침하세요.';
+  if(/no_values/.test(m)) return '빈 행은 넣을 수 없습니다.';
+  if(/already_restored/.test(m)) return '이미 되돌린 이력입니다.';
+  if(/not_restorable/.test(m)) return '이 이력은 되돌릴 수 없습니다(업로드 요약·옛 시트 편집 기록).';
+  if((r = /invalid input syntax for type (\w+[\w ]*): "(.*)"/.exec(m))) return '숫자 칸에 숫자가 아닌 값이 있습니다: 「' + r[2] + '」';
+  if(/statement timeout|canceling statement/i.test(m)) return '검색이 너무 오래 걸려 서버가 멈췄습니다 — 조건을 더 좁혀 주세요(기간·운영단위 등).';
+  if(/Failed to fetch|NetworkError|network/i.test(m)) return '네트워크 연결을 확인하세요.';
+  return m || '알 수 없는 오류';
+}
+async function rpc(name, args){
+  const r = await C.rpc(name, args);
+  if(r.error){ console.warn('[edit] ' + name, r.error); const e = new Error(rpcErr(r.error)); e.raw = r.error; throw e; }
+  return r.data;
+}
+function banner(kind, html){ $('banner').innerHTML = html ? '<div class="banner ' + kind + '">' + html + '</div>' : ''; }
+
+/* 표의 실제 열·타입 — 새 행 칸과 숫자 검사가 «표»를 따른다. setup-16 전이면 목록 열 그대로(읽기만). */
+async function loadCols(t){
+  if(S.cols[t.tbl]) return;
+  try{
+    const r = await rpc('edit_cols', {p_tbl:t.tbl});
+    S.cols[t.tbl] = r.map(x => x[0]);
+    S.types[t.tbl] = Object.fromEntries(r.map(x => [x[0], x[1]]));
+  }catch(e){
+    S.cols[t.tbl] = null;
+    throw e;
+  }
+}
+
+/* ---------- 탭 ---------- */
+function renderTabs(){
+  $('tabs').innerHTML = TABS.map(t => '<button type="button" class="tab' + (S.tab === t.id ? ' on' : '') + '" data-tab="' + t.id + '">' + esc(t.name) + '</button>').join('')
+    + '<button type="button" class="tab hist' + (S.tab === 'hist' ? ' on' : '') + '" data-tab="hist">변경 이력</button>';
+}
+$('tabs').addEventListener('click', async e => {
+  const b = e.target.closest('[data-tab]'); if(!b || b.dataset.tab === S.tab) return;
+  if(!(await leaveOk())) return;
+  switchTab(b.dataset.tab);
+});
+async function switchTab(id, opt){
+  S.tab = id; S.cur = null; renderTabs();
+  $('pgData').hidden = id === 'hist'; $('pgHist').hidden = id !== 'hist';
+  if(id === 'hist'){ renderHistFilters(opt); return loadHist(false); }
+  const t = TAB();
+  S.rows = []; S.after = null; S.more = false;
+  renderSearch(); renderList(); renderEditor();
+  try{ await loadCols(t); }catch(e){ /* 배너가 이미 밝힌다 */ }
+  renderSearch();
+  if(t.mode === 'whole') runSearch(false);
+  else $('listH').innerHTML = '<span class="hint">조건을 넣고 「검색」을 누르세요. 아무 조건 없이 누르면 최근에 올린 행부터 ' + PAGE + '건씩 보여 줍니다.</span>';
+}
+
+/* ---------- 검색 ---------- */
+function renderSearch(){
+  const t = TAB(), cols = S.cols[t.tbl] || [];
+  const f = S.f && S.f[t.id] || {};
+  let h = '<div class="sgrid">';
+  t.quick.forEach(q => {
+    const v = f[q.k] || '';
+    if(q.t === 'range'){
+      h += '<label class="sf range"><span>' + esc(q.l) + '</span><div><input type="date" name="' + q.k + '_from" value="' + esc(f[q.k + '_from'] || '') + '"><span class="hint">~</span><input type="date" name="' + q.k + '_to" value="' + esc(f[q.k + '_to'] || '') + '"></div></label>';
+    }else if(q.t === 'active'){
+      h += '<label class="sf"><span>' + esc(q.l) + '</span><select name="' + q.k + '"><option value="">전체</option><option value="y"' + (v === 'y' ? ' selected' : '') + '>재직</option><option value="n"' + (v === 'n' ? ' selected' : '') + '>퇴사</option></select></label>';
+    }else{
+      h += '<label class="sf"><span>' + esc(q.l) + '</span><input name="' + q.k + '" value="' + esc(v) + '" placeholder="' + esc(q.ph || (q.t === 'pick' ? '정확히 같은 값' : '포함')) + '"'
+        + (q.t === 'pick' ? ' list="dl_q_' + q.k + '" data-dlcol="' + esc(q.cols[0]) + '"' : '') + '>'
+        + (q.t === 'pick' ? '<datalist id="dl_q_' + q.k + '"></datalist>' : '') + '</label>';
+    }
+  });
+  h += '</div>';
+  /* 그 밖의 열 — 화면 칸에 없는 조건(「작업단계가 비어 있는 행」 같은 정리 작업)을 위해 */
+  const other = cols.filter(c => !ADMIN_COLS.has(c));
+  h += '<div class="sother"><select class="ctl" name="ocol"><option value="">그 밖의 열로 찾기…</option>'
+    + other.map(c => '<option value="' + esc(c) + '"' + (f.ocol === c ? ' selected' : '') + '>' + esc(label(t, c).name) + (label(t, c).name !== c ? ' (' + esc(c) + ')' : '') + '</option>').join('')
+    + '</select><select class="ctl" name="omode"><option value="has"' + (f.omode === 'has' ? ' selected' : '') + '>포함</option><option value="eq"' + (f.omode === 'eq' ? ' selected' : '') + '>정확히</option><option value="nul"' + (f.omode === 'nul' ? ' selected' : '') + '>비어 있음</option></select>'
+    + '<input class="ctl" name="oval" value="' + esc(f.oval || '') + '" placeholder="값"></div>';
+  h += '<div class="sbar"><button class="btn pri" type="submit">검색</button><button class="btn" type="button" data-act="reset">조건 지우기</button>'
+    + '<span class="sp"></span><button class="btn" type="button" data-act="new"' + (S.ready === false ? ' disabled' : '') + '>+ 새 행</button></div>';
+  $('search').innerHTML = h;
+}
+function readSearch(){
+  const fd = new FormData($('search')), f = {};
+  for(const [k, v] of fd.entries()) f[k] = String(v).trim();
+  S.f = S.f || {}; S.f[S.tab] = f;
+  return f;
+}
+$('search').addEventListener('submit', e => { e.preventDefault(); runSearch(false); });
+$('search').addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if(!b) return;
+  if(b.dataset.act === 'reset'){ S.f && (S.f[S.tab] = {}); renderSearch(); if(TAB().mode === 'whole') runSearch(false); }
+  if(b.dataset.act === 'new'){ if(await leaveOk()) newRow(null); }
+});
+/* 입력 보조 목록 — 칸에 처음 들어갈 때 한 번 받는다(edit_distinct · 많은 순) */
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  if(!(el instanceof HTMLInputElement) || !el.list || el.list.dataset.loaded) return;
+  const col = el.dataset.dlcol || el.dataset.col; if(!col) return;
+  fillDatalist(TAB(), col, el.list);
+});
+async function fillDatalist(t, col, dl){
+  dl.dataset.loaded = '1';
+  let vals = [];
+  try{
+    if(t.mode === 'whole'){
+      const cnt = new Map();
+      (S.all[t.id] || []).forEach(r => { const v = vs(r[col]).trim(); if(v) cnt.set(v, (cnt.get(v) || 0) + 1); });
+      vals = Array.from(cnt.entries()).sort((a, b) => b[1] - a[1]).slice(0, 200);
+    }else{
+      const k = t.tbl + '|' + col;
+      if(!S.dist[k]) S.dist[k] = await rpc('edit_distinct', {p_tbl:t.tbl, p_col:col, p_limit:200});
+      vals = S.dist[k];
+    }
+  }catch(e){ dl.dataset.loaded = ''; return; }
+  dl.innerHTML = vals.map(v => '<option value="' + esc(v[0]) + '">' + esc(v[1] + '건') + '</option>').join('');
+}
+
+async function runSearch(append){
+  const t = TAB(), f = readSearch();
+  if(S.busy) return;
+  S.busy = true;
+  $('listH').innerHTML = '<span class="spin"></span> <span class="hint">찾는 중…</span>';
+  try{
+    if(t.mode === 'whole'){
+      if(!S.all[t.id]) S.all[t.id] = await loadAll(t);
+      const all = S.all[t.id].filter(r => passWhole(t, f, r)).sort((a, b) => (b[t.key] || 0) - (a[t.key] || 0));
+      S.rows = all; S.more = false;
+      renderList(all.length + '건' + (all.length !== S.all[t.id].length ? ' · 전체 ' + S.all[t.id].length.toLocaleString() + '건 중' : ''));
+    }else{
+      if(!append){ S.rows = []; S.after = null; }
+      const listCols = listColsOf(t);
+      let q = C.from(t.tbl).select([t.key].concat(listCols).join(',')).order(t.key, {ascending:false}).limit(PAGE + 1);
+      if(append && S.after != null) q = q.lt(t.key, S.after);
+      q = applyServer(t, f, q);
+      const r = await q;
+      if(r.error) throw new Error(rpcErr(r.error));
+      const got = r.data || [];
+      S.more = got.length > PAGE;
+      const page = got.slice(0, PAGE);
+      S.rows = S.rows.concat(page);
+      if(page.length) S.after = page[page.length - 1][t.key];
+      renderList(S.rows.length.toLocaleString() + '건' + (S.more ? ' · 더 있음' : ''));
+    }
+  }catch(e){
+    renderList('');
+    $('listH').innerHTML = '<span style="color:var(--bad)">' + esc(e.message || e) + '</span>';
+  }finally{ S.busy = false; }
+}
+function listColsOf(t){
+  const cols = S.cols[t.tbl];
+  return t.list.map(c => pickCol(t, c)).filter(c => c && (!cols || cols.indexOf(c) >= 0));
+}
+/* 목록 칸 값 — 머리글은 «값이 찬» 열 이름으로 서지만, 옛 영문 양식 행은 값이 옛 열(ID·Name((영문))에만 있다.
+   그 행을 빈칸으로 보여 주면 «이름 없는 사람»처럼 읽힌다 — 같은 뜻의 별칭 중 그 행에서 찬 값을 보여 준다. */
+function cellOf(t, r, c){
+  const v = vs(r[c]);
+  if(v.trim() !== '') return v;
+  const al = t.list.find(x => Array.isArray(x) && x.indexOf(c) >= 0);
+  if(al){ for(const a of al){ const w = vs(r[a]); if(w.trim() !== '') return w; } }
+  return v;
+}
+/* 서버 검색 조건 — text 는 여러 열 «중 하나에» 포함(or) · pick 은 정확히 · range 는 YYYY-MM-DD 문자열 비교.
+   ⚠ 여러 열 칸이 둘 이상이면 or 를 and 로 한 번 더 감싼다 — or 파라미터를 두 번 붙이는 것에 기대지 않는다. */
+function applyServer(t, f, q){
+  const ors = [];
+  t.quick.forEach(qd => {
+    if(qd.t === 'text'){
+      const p = pat(f[qd.k]); if(!p) return;
+      if(qd.cols.length === 1) q = q.ilike(qd.cols[0], p);
+      else ors.push('or(' + qd.cols.map(c => c + '.ilike.' + p).join(',') + ')');
+    }else if(qd.t === 'pick'){
+      if(f[qd.k]) q = q.eq(qd.cols[0], f[qd.k]);
+    }else if(qd.t === 'range'){
+      if(f[qd.k + '_from']) q = q.gte(qd.cols[0], f[qd.k + '_from']);
+      if(f[qd.k + '_to']) q = q.lt(qd.cols[0], nextDay(f[qd.k + '_to']));
+    }
+  });
+  if(ors.length === 1) q = q.or(ors[0].slice(3, -1));
+  else if(ors.length > 1) q = q.or('and(' + ors.join(',') + ')');
+  if(f.ocol){
+    if(f.omode === 'nul') q = q.is(f.ocol, null);
+    else if(f.oval){
+      if(f.omode === 'eq' || f.ocol === t.key) q = q.eq(f.ocol, f.oval);
+      else { const p = pat(f.oval); if(p) q = q.ilike(f.ocol, p); }
+    }
+  }
+  return q;
+}
+function passWhole(t, f, r){
+  for(const qd of t.quick){
+    const v = f[qd.k];
+    if(qd.t === 'text'){ const re = patRe(v); if(re && !qd.cols.some(c => re.test(vs(r[c])))) return false; }
+    else if(qd.t === 'pick'){ if(v && !qd.cols.some(c => vs(r[c]).trim() === v)) return false; }
+    else if(qd.t === 'active'){
+      const gone = qd.cols.some(c => vs(r[c]).trim() !== '');
+      if(v === 'y' && gone) return false; if(v === 'n' && !gone) return false;
+    }else if(qd.t === 'range'){
+      const d = normDate(vs(r[qd.cols[0]]).slice(0, 10)) || '';
+      if(f[qd.k + '_from'] && !(d && d >= f[qd.k + '_from'])) return false;
+      if(f[qd.k + '_to'] && !(d && d <= f[qd.k + '_to'])) return false;
+    }
+  }
+  if(f.ocol){
+    const x = vs(r[f.ocol]).trim();
+    if(f.omode === 'nul'){ if(x !== '') return false; }
+    else if(f.oval){
+      if(f.omode === 'eq'){ if(x !== f.oval) return false; }
+      else { const re = patRe(f.oval); if(re && !re.test(x)) return false; }
+    }
+  }
+  return true;
+}
+/* 작은 표(인원·교육·휴가)는 통째로 받아 화면에서 거른다. 키셋 — «0행일 때만 멈춘다»(짧은 장을 끝으로 읽으면
+   서버 상한에 잘린 것을 완료로 착각한다 · v128 규약). */
+async function loadAll(t){
+  let all = [], last = null;
+  for(let guard = 0; guard < 200; guard++){
+    let q = C.from(t.tbl).select('*').order(t.key, {ascending:true}).limit(1000);
+    if(last != null) q = q.gt(t.key, last);
+    const r = await q;
+    if(r.error) throw new Error(rpcErr(r.error));
+    if(!r.data || !r.data.length) break;
+    all = all.concat(r.data); last = r.data[r.data.length - 1][t.key];
+  }
+  if(!S.cols[t.tbl] && all.length) S.cols[t.tbl] = Object.keys(all[0]);
+  return all;
+}
+
+/* ---------- 결과 목록 ---------- */
+function renderList(head){
+  const t = TAB();
+  if(head != null) $('listH').innerHTML = '<b>' + esc(head) + '</b>' + (t.mode === 'server' ? '<span class="hint">최근에 올린 행부터</span>' : '');
+  const cols = listColsOf(t);
+  if(!S.rows.length){
+    $('list').innerHTML = '';
+    $('more').innerHTML = head != null && head !== '' ? '<div class="empty">맞는 행이 없습니다.\n조건을 줄이거나 「그 밖의 열로 찾기」를 써 보세요.</div>' : '';
+    return;
+  }
+  $('list').innerHTML = '<thead><tr><th>#</th>' + cols.map(c => '<th>' + esc(label(t, c).name) + '</th>').join('') + '</tr></thead><tbody>'
+    + S.rows.map(r => '<tr data-key="' + esc(r[t.key]) + '"' + (S.cur && !S.cur.isNew && String(S.cur.key) === String(r[t.key]) ? ' class="on"' : '') + '><td class="k">' + esc(r[t.key])
+      + '</td>' + cols.map(c => { const v = cellOf(t, r, c); return '<td title="' + esc(v) + '">' + esc(v) + '</td>'; }).join('') + '</tr>').join('') + '</tbody>';
+  $('more').innerHTML = S.more ? '<div class="more"><button class="btn" type="button" id="moreBtn">' + PAGE + '건 더 보기</button></div>' : '';
+  if(S.more) $('moreBtn').onclick = () => runSearch(true);
+}
+$('list').addEventListener('click', async e => {
+  const tr = e.target.closest('tr[data-key]'); if(!tr) return;
+  if(S.cur && !S.cur.isNew && String(S.cur.key) === tr.dataset.key) return;
+  if(!(await leaveOk())) return;
+  openRow(tr.dataset.key);
+});
+
+/* ---------- 편집기 ---------- */
+async function openRow(key){
+  const t = TAB();
+  $('editor').innerHTML = '<div class="empty"><span class="spin"></span> 여는 중…</div>';
+  try{
+    const r = await rpc('edit_get', {p_tbl:t.tbl, p_key:+key});
+    if(!r || !r.ok){ $('editor').innerHTML = '<div class="empty">이 행이 이제 없습니다 — 지워졌거나 재업로드로 번호가 바뀌었습니다.\n다시 검색해 주세요.</div>'; S.cur = null; return; }
+    setCur(t, +key, r.row, r.hash, false);
+  }catch(e){ S.cur = null; $('editor').innerHTML = '<div class="empty" style="color:var(--bad)">' + esc(e.message) + '</div>'; }
+}
+function setCur(t, key, row, hash, isNew){
+  const orig = {}, origX = {};
+  Object.keys(row || {}).forEach(c => { if(c !== 'extra') orig[c] = vs(row[c]); });
+  const x = row && row.extra && typeof row.extra === 'object' ? row.extra : {};
+  Object.keys(x).forEach(k => { origX[k] = vs(x[k]); });
+  S.cur = { t:t.id, key:key, row:row || {}, hash:hash, isNew:isNew, orig:orig, origX:origX, extra0:x };
+  renderEditor();
+  document.querySelectorAll('#list tr.on').forEach(tr => tr.classList.remove('on'));
+  if(!isNew){ const tr = document.querySelector('#list tr[data-key="' + CSS.escape(String(key)) + '"]'); if(tr) tr.classList.add('on'); }
+}
+function newRow(from){
+  const t = TAB(), cols = (S.cols[t.tbl] || []).filter(c => c !== t.key && !ADMIN_COLS.has(c) || c === 'extra');
+  const row = {};
+  cols.forEach(c => { row[c] = null; });
+  if(from){
+    Object.keys(from).forEach(c => { if(c !== t.key && c !== 'synced_at' && c !== 'imported_at') row[c] = from[c]; });
+    [].concat(t.dup || []).forEach(c => { if(c in row) row[c] = null; });   // 중복 키는 비운다 — 새 실적코드·S/N 을 적게
+  }
+  setCur(t, null, row, null, true);
+  const first = $('editor').querySelector('[data-col="' + CSS.escape(String(pickCol(t, [].concat(t.dup || t.need[0])[0]) || '')) + '"]')
+             || $('editor').querySelector('[data-col]');
+  if(first) first.focus();
+}
+function renderEditor(){
+  const ed = $('editor'), cur = S.cur;
+  if(!cur){ ed.innerHTML = '<div class="empty">왼쪽 목록에서 행을 고르면 여기서 고칠 수 있습니다.\n새로 넣으려면 「+ 새 행」을 누르세요.</div>'; return; }
+  const t = TAB_BY[cur.t], row = cur.row;
+  const cols = (S.cols[t.tbl] || Object.keys(row)).filter(c => c in row || cur.isNew);
+  const used = new Set([t.key].concat(Array.from(ADMIN_COLS)));
+  let h = '<div class="ed-h"><h2>' + esc(t.name) + '</h2>'
+    + (cur.isNew ? '<span class="badge newtag">새 행</span>' : '<span class="key">' + (t.key === 'src_row' ? '행 #' : 'id ') + esc(cur.key) + '</span>')
+    + '<span class="sp"></span>'
+    + (!cur.isNew ? '<button class="btn sm" type="button" data-act="hist">이 행 이력</button>' : '')
+    + '</div><div class="ed-b" id="edBody">';
+  let fi = 0;
+  const field = c => {
+    const lb = label(t, c), v = vs(row[c]);
+    const long = (t.long || []).indexOf(c) >= 0 || v.length > 70;
+    const dlId = (t.dl || []).indexOf(c) >= 0 ? 'dl_e_' + (fi++) : '';
+    return '<label class="fld' + (long ? ' wide' : '') + '"><span class="fl">' + esc(lb.name) + (lb.alt ? '<i title="' + esc(lb.alt) + '">' + esc(lb.alt) + '</i>' : '') + '</span>'
+      + (long ? '<textarea data-col="' + esc(c) + '" rows="2">' + esc(v) + '</textarea>'
+              : '<input data-col="' + esc(c) + '" value="' + esc(v) + '"' + (dlId ? ' list="' + dlId + '"' : '')
+                + (isDate(t, c) ? ' placeholder="YYYY-MM-DD"' : isNum(t, c) ? ' inputmode="decimal"' : '') + '>'
+                + (dlId ? '<datalist id="' + dlId + '"></datalist>' : ''))
+      + '<em class="err"></em></label>';
+  };
+  t.groups.forEach(g => {
+    const present = g[1].filter(c => cols.indexOf(c) >= 0);
+    present.forEach(c => used.add(c));
+    if(!present.length) return;
+    const tools = g[2] === 'fill' && !!t.fill ? '<button class="btn sm" type="button" data-act="fill" title="S/N·설비호기로 설치현황을 찾아 빈 칸을 채웁니다">설치현황에서 채우기</button>' : '';
+    if(g[2] === 'legacy'){
+      const anyVal = present.some(c => vs(row[c]).trim() !== '');
+      h += '<details class="grp"' + (anyVal ? ' open' : '') + '><summary class="grp-h">' + esc(g[0]) + ' <span class="hint">' + (anyVal ? '' : '— 이 행은 비어 있음') + '</span><span class="ln"></span></summary><div class="flds">' + present.map(field).join('') + '</div></details>';
+    }else{
+      h += '<div class="grp"><div class="grp-h">' + esc(g[0]) + '<span class="ln"></span>' + tools + '</div><div class="flds">' + present.map(field).join('') + '</div></div>';
+    }
+  });
+  const rest = cols.filter(c => !used.has(c));
+  if(rest.length) h += '<div class="grp"><div class="grp-h">기타<span class="ln"></span></div><div class="flds">' + rest.map(field).join('') + '</div></div>';
+  /* extra — 업로드 때 표에 없던 열(SPEC 밖). 승격 전에도 값을 고칠 수 있게 한다(v89 승격 규약 · 값은 이미 여기 있다) */
+  if(cols.indexOf('extra') >= 0){
+    const xs = Object.keys(cur.origX);
+    if(xs.length) h += '<details class="grp"' + (cur.isNew ? ' open' : '') + '><summary class="grp-h">추가 열 (extra · ' + xs.length + ') <span class="hint">업로드 파일에만 있던 열</span><span class="ln"></span></summary><div class="flds">'
+      + xs.map(k => '<label class="fld"><span class="fl">' + esc(String(k).replace(/\s*\r?\n\s*/g, ' ')) + '</span><input data-x="' + esc(k) + '" value="' + esc(cur.origX[k]) + '"><em class="err"></em></label>').join('') + '</div></details>';
+  }
+  if(t.note) h += '<div class="note">' + esc(t.note) + '</div>';
+  h += '</div><div class="ed-f">';
+  if(cur.isNew) h += '<button class="btn pri" type="button" data-act="insert">넣기</button><button class="btn" type="button" data-act="cancel">취소</button>';
+  else h += '<button class="btn pri" type="button" data-act="save" disabled>저장</button><button class="btn" type="button" data-act="revert" disabled>변경 취소</button>'
+    + '<button class="btn" type="button" data-act="copy">복사해서 새 행</button><span class="sp"></span><button class="btn dng" type="button" data-act="del">삭제</button>';
+  if(cur.isNew) h += '<span class="sp"></span><span class="hint">필수: ' + esc(t.need.map(n => label(t, pickCol(t, n) || [].concat(n)[0]).name).join(' · ')) + '</span>';
+  h += '</div>';
+  ed.innerHTML = h;
+  if(S.ready === false) ed.querySelectorAll('[data-act=save],[data-act=insert],[data-act=del],[data-act=copy]').forEach(b => { b.disabled = true; b.title = '서버 준비(setup-16) 전에는 읽기만 됩니다'; });
+  if(!S.can.del) ed.querySelectorAll('[data-act=del]').forEach(b => { b.disabled = true; b.title = '삭제 함수가 아직 서버에 없습니다 — 위 안내대로 SQL 을 Run 하세요'; });
+}
+/* 바뀐 칸 — 원래 값과 «글자가 다른» 칸. 빈칸과 null 은 같은 것이다(업로드 규약: 빈칸 = null). */
+function changes(){
+  const cur = S.cur, out = {}, x = {};
+  if(!cur) return { cols:out, extra:null, n:0 };
+  $('editor').querySelectorAll('[data-col]').forEach(el => {
+    const c = el.dataset.col, v = el.value;
+    if(v !== cur.orig[c] && !(v.trim() === '' && (cur.orig[c] || '') === '')) out[c] = v;
+  });
+  let xn = 0;
+  $('editor').querySelectorAll('[data-x]').forEach(el => { const k = el.dataset.x; if(el.value !== cur.origX[k]){ x[k] = el.value; xn++; } });
+  return { cols:out, extra: xn ? x : null, n: Object.keys(out).length + xn };
+}
+function markDirty(){
+  const cur = S.cur; if(!cur) return;
+  const ch = changes();
+  $('editor').querySelectorAll('[data-col]').forEach(el => el.closest('.fld').classList.toggle('dirty', !cur.isNew && el.dataset.col in ch.cols));
+  $('editor').querySelectorAll('[data-x]').forEach(el => el.closest('.fld').classList.toggle('dirty', !cur.isNew && !!(ch.extra && el.dataset.x in ch.extra)));
+  const sv = $('editor').querySelector('[data-act=save]'), rv = $('editor').querySelector('[data-act=revert]');
+  if(sv && S.ready !== false){ sv.disabled = !ch.n; sv.textContent = ch.n ? '저장 (' + ch.n + '칸)' : '저장'; }
+  if(rv) rv.disabled = !ch.n;
+}
+$('editor').addEventListener('input', e => {
+  if(e.target.matches('[data-col],[data-x]')){ const f = e.target.closest('.fld'); f.classList.remove('bad', 'clash'); f.querySelector('.err').textContent = ''; markDirty(); }
+});
+/* 날짜 칸은 칸을 떠날 때 YYYY-MM-DD 로 눕힌다 — 사람이 2026.8.1 로 적어도 표에는 한 형식만 들어간다 */
+$('editor').addEventListener('focusout', e => {
+  const el = e.target; if(!el.matches || !el.matches('[data-col]') || !S.cur) return;
+  const t = TAB_BY[S.cur.t], c = el.dataset.col, v = el.value.trim();
+  if(v && isDate(t, c)){ const n = normDate(v); if(n && n !== el.value){ el.value = n; markDirty(); } }
+});
+$('editor').addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if(!b || b.disabled) return;
+  const a = b.dataset.act;
+  if(a === 'save') return save();
+  if(a === 'insert') return insert();
+  if(a === 'revert'){ renderEditor(); return; }
+  if(a === 'cancel'){ S.cur = null; renderEditor(); return; }
+  if(a === 'copy'){ if(await leaveOk()) newRow(S.cur.row); return; }
+  if(a === 'del') return del();
+  if(a === 'fill') return snFill();
+  if(a === 'hist'){ const t = TAB_BY[S.cur.t]; if(await leaveOk()) switchTab('hist', {tbl:t.tbl, key:String(S.cur.key)}); }
+});
+document.addEventListener('keydown', e => {
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && S.cur && S.tab !== 'hist'){
+    e.preventDefault(); if(S.cur.isNew) insert(); else save();
+  }
+});
+async function leaveOk(){
+  const ch = changes();
+  if(!S.cur || (!ch.n && !S.cur.isNew)) return true;
+  if(S.cur.isNew && !ch.n && !Object.values(collectNew().row).length) return true;
+  return ask('저장하지 않은 변경', '<p>고친 칸 ' + (ch.n || '여러') + '개를 저장하지 않았습니다. 버리고 넘어갈까요?</p>', '버리고 넘어가기', true);
+}
+window.addEventListener('beforeunload', e => { if(S.cur && changes().n){ e.preventDefault(); e.returnValue = ''; } });
+
+/* 입력값 검사 — 바뀐 칸만 본다(옛 행에 이미 있던 이상한 값 때문에 저장이 막히면 안 된다).
+   날짜는 눕히고 · 숫자는 쉼표를 떼고(Number('2,093') 은 NaN — v95) · 수식처럼 보이는 값은 막는다. */
+function validate(t, vals, isNew){
+  const errs = {};
+  Object.keys(vals).forEach(c => {
+    let v = vals[c];
+    if(v == null) return;
+    v = String(v).trim();
+    if(v === ''){ vals[c] = null; return; }
+    if(isDate(t, c)){ const n = normDate(v); if(!n) errs[c] = '날짜는 YYYY-MM-DD 로 적어 주세요'; else v = n; }
+    else if(isNum(t, c)){ const n = GST.numv(v); if(!isFinite(n)) errs[c] = '숫자만 적을 수 있습니다'; else v = String(v).replace(/[\s, ]/g, ''); }
+    if(!errs[c] && formulaLike(v)) errs[c] = '= + @ 로 시작하는 값은 엑셀에서 수식으로 읽힙니다';
+    vals[c] = v;
+  });
+  if(isNew){
+    t.need.forEach(n => {
+      const alias = [].concat(n), col = pickCol(t, alias) || alias[0];
+      if(!alias.some(c => vals[c] != null && vals[c] !== '')) errs[col] = '필수 칸입니다';
+    });
+  }
+  return errs;
+}
+function showErrs(errs){
+  let first = null;
+  Object.keys(errs).forEach(c => {
+    const el = $('editor').querySelector('[data-col="' + CSS.escape(c) + '"]'); if(!el) return;
+    const f = el.closest('.fld'); f.classList.add('bad'); f.querySelector('.err').textContent = errs[c];
+    if(!first) first = el;
+  });
+  if(first){ first.focus(); snack('고칠 칸이 ' + Object.keys(errs).length + '개 있습니다', {err:true}); }
+}
+function extraObj(chx){
+  const base = Object.assign({}, S.cur.extra0 || {});
+  Object.keys(chx).forEach(k => { const v = String(chx[k]).trim(); if(v === '') delete base[k]; else base[k] = v; });
+  return Object.keys(base).length ? base : null;
+}
+
+async function save(){
+  const cur = S.cur, t = TAB_BY[cur.t], ch = changes();
+  if(!ch.n) return;
+  const vals = Object.assign({}, ch.cols), errs = validate(t, vals, false);
+  if(Object.keys(errs).length) return showErrs(errs);
+  if(ch.extra) vals.extra = extraObj(ch.extra);
+  const sv = $('editor').querySelector('[data-act=save]'); sv.disabled = true; sv.textContent = '저장 중…';
+  try{
+    const r = await rpc('edit_update', {p_tbl:t.tbl, p_key:cur.key, p_hash:cur.hash, p_changes:vals});
+    if(r.error === 'not_found'){ snack('이 행이 이제 없습니다 — 다시 검색해 주세요', {err:true}); S.cur = null; renderEditor(); return; }
+    if(r.error === 'conflict') return conflict(t, r, vals);
+    afterSaved(t, r.row, r.hash);
+    let msg = r.same ? '바뀐 칸이 없습니다' : '저장했습니다 · ' + Object.keys(vals).length + '칸 · 이력 #' + r.log;
+    if(r.cascade){ msg += r.cascade.done ? ' · 교육현황 짝 행도 고쳤습니다' : ' · 교육현황 짝 행은 못 찾아 그대로입니다(' + (r.cascade.n || 0) + '건 일치)'; delete S.all.edu; }
+    snack(msg, (r.same || !S.can.restore) ? {} : { act:'되돌리기', fn: () => restore(r.log, t.id) });
+  }catch(e){ snack(e.message, {err:true}); markDirty(); }
+}
+function afterSaved(t, row, hash){
+  setCur(t, row[t.key], row, hash, false);
+  const i = S.rows.findIndex(x => String(x[t.key]) === String(row[t.key]));
+  if(i >= 0){ S.rows[i] = Object.assign({}, S.rows[i], row); }
+  if(t.mode === 'whole' && S.all[t.id]){
+    const j = S.all[t.id].findIndex(x => String(x[t.key]) === String(row[t.key]));
+    if(j >= 0) S.all[t.id][j] = row; else S.all[t.id].push(row);
+  }
+  renderList(null);
+  const tr = document.querySelector('#list tr[data-key="' + CSS.escape(String(row[t.key])) + '"]'); if(tr) tr.classList.add('on');
+}
+/* 충돌 — 연 뒤 누가(또는 재업로드가) 이 행을 바꿨다. 지금 값으로 다시 열고 «내가 고친 칸»을 그 위에 다시 얹어
+   보여 준다. 상대도 같은 칸을 바꿨으면 노랗게 — 그 칸은 사람이 골라야 한다(조용히 덮지 않는다). */
+async function conflict(t, r, mine){
+  const base = S.cur.orig;
+  await dialog('다른 곳에서 먼저 바뀌었습니다', '<p>이 행을 연 뒤에 다른 편집 또는 재업로드가 같은 행을 바꿨습니다. 지금 값으로 다시 열고, 내가 고친 칸을 그 위에 다시 얹어 둡니다.</p>'
+    + '<p>노란 칸은 상대도 바꾼 칸입니다 — 어느 값을 남길지 확인한 뒤 다시 저장하세요.</p>', [{l:'확인', v:true, cls:'pri'}]);
+  setCur(t, S.cur.key, r.row, r.hash, false);
+  Object.keys(mine).forEach(c => {
+    if(c === 'extra') return;
+    const el = $('editor').querySelector('[data-col="' + CSS.escape(c) + '"]'); if(!el) return;
+    const theirs = vs(r.row[c]);
+    el.value = mine[c] == null ? '' : mine[c];
+    if(theirs !== (base[c] || '')){ const f = el.closest('.fld'); f.classList.add('clash'); el.title = '상대가 바꾼 값: ' + (theirs || '(빈칸)'); }
+  });
+  markDirty();
+}
+
+function collectNew(){
+  const row = {}, t = TAB_BY[S.cur.t];
+  $('editor').querySelectorAll('[data-col]').forEach(el => { const v = el.value.trim(); if(v !== '') row[el.dataset.col] = v; });
+  const x = {}; let xn = 0;
+  $('editor').querySelectorAll('[data-x]').forEach(el => { const v = el.value.trim(); if(v !== ''){ x[el.dataset.x] = v; xn++; } });
+  return { row:row, extra: xn ? x : null, t:t };
+}
+async function insert(){
+  const { row, extra, t } = collectNew();
+  const errs = validate(t, row, true);
+  if(Object.keys(errs).length) return showErrs(errs);
+  Object.keys(row).forEach(c => { if(row[c] == null) delete row[c]; });
+  if(extra) row.extra = extra;
+  /* 중복 — 막지 않고 묻는다. 실적코드·S/N 은 원장에 이미 빈값·중복이 있어 «유일» 규칙으로 막을 근거가 없다.
+     대신 «이미 있다»는 사실은 넣기 전에 반드시 보여 준다(조용히 두 벌이 되지 않게). */
+  const dupCol = t.dup ? pickCol(t, t.dup) : null;
+  if(dupCol && row[dupCol]){
+    let n = 0;
+    try{
+      if(t.mode === 'whole') n = (S.all[t.id] || []).filter(x => vs(x[dupCol]).trim() === String(row[dupCol])).length;
+      else { const r = await C.from(t.tbl).select(t.key).eq(dupCol, row[dupCol]).limit(20); if(!r.error) n = (r.data || []).length; }
+    }catch(e){}
+    if(n && !(await ask('같은 값이 이미 있습니다', '<p>「' + esc(label(t, dupCol).name) + '」 = <b>' + esc(row[dupCol]) + '</b> 인 행이 이미 ' + n + (n >= 20 ? '건 이상' : '건') + ' 있습니다.</p><p>그래도 새 행으로 넣을까요? (같은 실적을 두 번 넣으면 대시보드에서 두 번 셉니다)</p>', '그래도 넣기'))) return;
+  }
+  const bt = $('editor').querySelector('[data-act=insert]'); bt.disabled = true; bt.textContent = '넣는 중…';
+  try{
+    const r = await rpc('edit_insert', {p_tbl:t.tbl, p_row:row});
+    if(t.mode === 'whole' && S.all[t.id]) S.all[t.id].push(r.row);
+    S.rows.unshift(r.row);
+    setCur(t, r.key, r.row, r.hash, false);
+    renderList((S.rows.length) + '건');
+    snack('넣었습니다 · ' + (t.key === 'src_row' ? '행 #' : 'id ') + r.key + ' · 이력 #' + r.log, S.can.restore ? { act:'되돌리기', fn: () => restore(r.log, t.id) } : {});
+  }catch(e){ snack(e.message, {err:true}); bt.disabled = false; bt.textContent = '넣기'; }
+}
+async function del(){
+  const cur = S.cur, t = TAB_BY[cur.t];
+  const show = listColsOf(t).slice(0, 5).map(c => '<tr><th>' + esc(label(t, c).name) + '</th><td class="v">' + esc(vs(cur.row[c])) + '</td></tr>').join('');
+  const ok = await ask('이 행을 지울까요?', '<table class="dt">' + show + '</table><p style="margin-top:10px">지운 행은 「변경 이력」에 통째로 남아 언제든 되살릴 수 있습니다.</p>'
+    + (t.id === 'roster' ? '<p>⚠ 교육현황의 짝 행은 그대로 남습니다 — 같이 지우려면 교육현황 탭에서 지우세요.</p>' : ''), '지우기', true);
+  if(!ok) return;
+  try{
+    const r = await rpc('edit_delete', {p_tbl:t.tbl, p_key:cur.key, p_hash:cur.hash});
+    if(r.error === 'conflict') return conflict(t, r, {});
+    if(r.error === 'not_found'){ snack('이미 없는 행입니다', {err:true}); }
+    S.rows = S.rows.filter(x => String(x[t.key]) !== String(cur.key));
+    if(t.mode === 'whole' && S.all[t.id]) S.all[t.id] = S.all[t.id].filter(x => String(x[t.key]) !== String(cur.key));
+    S.cur = null; renderEditor(); renderList(S.rows.length + '건');
+    if(r.ok) snack('지웠습니다 · 이력 #' + r.log + ' 에 행 전체가 남았습니다', { act:'되살리기', fn: () => restore(r.log, t.id) });
+  }catch(e){ snack(e.message, {err:true}); }
+}
+/* tabId 를 주면(방금 한 일의 「되돌리기」) 그 탭에 있을 때 목록·편집기를 새로 맞춘다 */
+async function restore(id, tabId){
+  try{
+    const r = await rpc('edit_restore', {p_id:id});
+    if(r.error === 'conflict'){ snack('그 뒤에 같은 칸이 또 바뀌어 되돌리지 않았습니다 — 이력에서 확인하세요', {err:true, ms:7000}); return false; }
+    if(r.error === 'gone'){ snack('그 행이 이제 없어 되돌릴 수 없습니다', {err:true}); return false; }
+    snack(r.same ? '이미 그 값입니다' : '되돌렸습니다 · 이력 #' + (r.log || ''));
+    S.all = {};                                    // 작은 표는 다음 검색 때 새로 받는다
+    if(S.tab === 'hist') loadHist(false);
+    else if(tabId === S.tab){
+      const t = TAB(), k = r.key != null ? r.key : (r.row ? r.row[t.key] : null);
+      await runSearch(false);
+      if(k != null) openRow(k); else { S.cur = null; renderEditor(); }   // 입력을 되돌리면 그 행은 없다
+    }
+    return true;
+  }catch(e){ snack(e.message, {err:true}); return false; }
+}
+
+/* ---------- 설치현황에서 채우기 ----------
+   실적의 설비호기는 설치현황 Scrubber CODE 와, S/N 은 Scrubber S/N 과 맞물린다(GST.ORG.instIndex 와 같은 순서).
+   표기가 갈려도(AAA0001·AAA-0001) 영숫자만 남겨 맞추고, 안 맞으면 채널 접미 L/R/S 를 떼고 한 번 더(v92).
+   «빈 칸만» 기본으로 채운다 — 값이 있는 칸은 보여만 주고 사람이 체크해야 바뀐다. */
+const N = s => String(s == null ? '' : s).toUpperCase().replace(/[^0-9A-Z]/g, '');
+async function snFill(){
+  const t = TAB_BY[S.cur.t], F = t.fill, LI = TAB_BY.inst;
+  const val = c => { const el = $('editor').querySelector('[data-col="' + CSS.escape(c) + '"]'); return el ? el.value.trim() : ''; };
+  const code = val(F.code), sns = F.sn.map(val).filter(Boolean);
+  if(!code && !sns.length){ snack('S/N 이나 설비호기를 먼저 적어 주세요', {err:true}); return; }
+  /* 서버 검색어에 «접미를 뗀 S/N» 도 넣는다 — 0001L 로만 찾으면 설치현황의 0001 은 애초에 후보로 안 온다 */
+  const terms = new Set([code].concat(sns).filter(Boolean));
+  sns.forEach(v => { const m = /^(.*\d)\s*[LRS]$/i.exec(v); if(m) terms.add(m[1]); });
+  const ors = [];
+  terms.forEach(v => { const p = pat(v); if(p) ors.push('code.ilike.' + p, 'sn.ilike.' + p); });
+  let cand = [];
+  try{
+    const r = await C.from('sheet_inst').select('*').or(ors.join(',')).limit(40);
+    if(r.error) throw new Error(rpcErr(r.error));
+    cand = r.data || [];
+  }catch(e){ snack(e.message, {err:true}); return; }
+  let hit = cand.filter(x => (code && N(x.code) === N(code)) || sns.some(s => N(x.sn) === N(s)));
+  if(!hit.length){ const strip = s => N(s).replace(/[LRS]$/, ''); hit = cand.filter(x => sns.some(s => N(x.sn) === strip(s) || N(x.sn).replace(/[LRS]$/, '') === strip(s))); }
+  if(!hit.length){ snack('설치현황에서 못 찾았습니다 — ' + [code].concat(sns).filter(Boolean).join(' · '), {err:true}); return; }
+  let inst = hit[0];
+  if(hit.length > 1){
+    const k = await dialog('설치현황에 맞는 설비가 ' + hit.length + '대입니다', '<p>어느 설비로 채울까요?</p><table class="dt"><tr><th></th><th>CODE</th><th>S/N</th><th>' + esc(label(LI, 'customer').name) + '</th><th>' + esc(label(LI, 'fab').name) + '</th><th>' + esc(label(LI, 'model').name) + '</th></tr>'
+      + hit.map((x, i) => '<tr><td><button class="btn sm" type="button" data-ret="' + i + '">고르기</button></td><td>' + esc(x.code) + '</td><td>' + esc(x.sn) + '</td><td>' + esc(x.customer) + '</td><td>' + esc(x.fab) + '</td><td>' + esc(x.model) + '</td></tr>').join('') + '</table>',
+      [{l:'취소', v:null}], true);
+    if(k == null || hit[+k] == null) return;
+    inst = hit[+k];
+  }
+  const rows = Object.keys(F.map).filter(c => (S.cols[t.tbl] || []).indexOf(c) >= 0).map(c => {
+    const now = val(c), v = vs(inst[F.map[c]]).trim();
+    return { c:c, now:now, v:v, same: N(now) === N(v) && now !== '' , def: !now && !!v };
+  }).filter(r => r.v !== '');
+  if(!rows.length){ snack('설치현황 그 행에 채울 값이 없습니다'); return; }
+  const body = '<p>설치현황 <b>' + esc(inst.code || '') + ' · ' + esc(inst.sn || '') + '</b> 에서 찾은 값입니다. 체크한 칸만 채웁니다 — 기본은 «빈 칸»뿐입니다.</p>'
+    + '<table class="dt"><tr><th></th><th>칸</th><th>지금 값</th><th>설치현황 값</th></tr>'
+    + rows.map((r, k) => '<tr' + (r.now && !r.same ? ' class="chg"' : '') + '><td>' + (r.same ? '같음' : '<input type="checkbox" data-k="' + k + '"' + (r.def ? ' checked' : '') + '>') + '</td><td>' + esc(label(t, r.c).name)
+      + '</td><td class="v">' + esc(r.now || '(빈칸)') + '</td><td class="v">' + esc(r.v) + ' <span class="hint">' + esc(label(LI, F.map[r.c]).name) + '</span></td></tr>').join('') + '</table>';
+  const holder = {};
+  const p = dialog('설치현황에서 채우기', body, [{l:'취소', v:false}, {l:'체크한 칸 채우기', v:true, cls:'pri'}], true);
+  const m = dialog.last;
+  m.addEventListener('change', e => { if(e.target.matches('[data-k]')) holder[e.target.dataset.k] = e.target.checked; });
+  rows.forEach((r, k) => { holder[k] = r.def; });
+  if(!(await p)) return;
+  let n = 0;
+  rows.forEach((r, k) => {
+    if(r.same || !holder[k]) return;
+    const el = $('editor').querySelector('[data-col="' + CSS.escape(r.c) + '"]'); if(!el) return;
+    el.value = r.v; n++;
+  });
+  markDirty();
+  snack(n ? n + '칸을 채웠습니다 — 확인하고 저장하세요' : '채운 칸이 없습니다');
+}
+
+/* ---------- 변경 이력 ---------- */
+const OPS = {
+  upd:{ l:'수정', ops:['update','dbw:update'] }, ins:{ l:'입력', ops:['insert','dbw:append'] },
+  del:{ l:'삭제', ops:['delete','dbw:delete'] }, rst:{ l:'되돌리기', ops:['restore'] },
+  cas:{ l:'연쇄', ops:['cascade'] }, up:{ l:'업로드', like:'upload:%' }
+};
+const OP_VIEW = op => /^upload:/.test(op) ? { c:'x', l:'업로드 ' + ({full:'통째', win:'구간', add:'이어붙이기'}[op.split(':')[1]] || '') }
+  : ({ update:{c:'u', l:'수정'}, 'dbw:update':{c:'u', l:'수정 (인원·고장 화면)'}, insert:{c:'i', l:'입력'}, 'dbw:append':{c:'i', l:'입력 (인원 화면)'},
+       delete:{c:'d', l:'삭제'}, 'dbw:delete':{c:'d', l:'삭제 (인원 화면)'}, restore:{c:'r', l:'되돌리기'}, cascade:{c:'u', l:'연쇄 수정'} })[op] || { c:'x', l:op || '?' };
+const RESTORABLE = new Set(['update','insert','delete','dbw:update','dbw:append','dbw:delete']);
+function renderHistFilters(opt){
+  opt = opt || {};
+  const tbls = [['', '모든 표']].concat(TABS.map(t => [t.tbl, t.name])).concat([['sheet_alarm', '국내 알람 원장'], ['sheet_allbypass', '올바이패스 원장'], ['sheet_cip_f11', 'CIP F11'], ['sheet_cip_f16', 'CIP F16'], ['sheet_abp', 'ABP'], ['(old)', '옛 시트 편집 기록']]);
+  $('hfilt').innerHTML = '<label class="sf"><span>표</span><select name="tbl">' + tbls.map(x => '<option value="' + esc(x[0]) + '"' + (opt.tbl === x[0] ? ' selected' : '') + '>' + esc(x[1]) + '</option>').join('') + '</select></label>'
+    + '<label class="sf"><span>종류</span><select name="kind"><option value="">전부</option>' + Object.keys(OPS).map(k => '<option value="' + k + '">' + esc(OPS[k].l) + '</option>').join('') + '</select></label>'
+    + '<label class="sf"><span>행 번호 · id</span><input name="key" value="' + esc(opt.key || '') + '" placeholder="정확히"></label>'
+    + '<label class="sf"><span>누가 (메일)</span><input name="who" placeholder="포함"></label>'
+    + '<label class="sf range"><span>날짜</span><div><input type="date" name="from"><span class="hint">~</span><input type="date" name="to"></div></label>'
+    + '<div class="sf go"><span>&nbsp;</span><button class="btn pri" type="submit">이력 보기</button></div>';
+}
+$('hfilt').addEventListener('submit', e => { e.preventDefault(); loadHist(false); });
+async function loadHist(more){
+  const H = S.hist, fd = new FormData($('hfilt')), f = {};
+  for(const [k, v] of fd.entries()) f[k] = String(v).trim();
+  if(!more){ H.rows = []; H.last = null; $('hlist').innerHTML = '<div class="empty"><span class="spin"></span> 읽는 중…</div>'; }
+  try{
+    let q = C.from('sheet_edits').select('id,gid,tbl,row_key,op,before,after,edited_by,edited_at,ref').order('id', {ascending:false}).limit(51);
+    if(more && H.last != null) q = q.lt('id', H.last);
+    if(f.tbl === '(old)') q = q.is('tbl', null); else if(f.tbl) q = q.eq('tbl', f.tbl);
+    if(f.kind && OPS[f.kind]){ const o = OPS[f.kind]; q = o.like ? q.like('op', o.like) : q.in('op', o.ops); }
+    if(f.key) q = q.eq('row_key', f.key);
+    if(f.who){ const w = runs(f.who).join('*'); if(w) q = q.ilike('edited_by', '*' + w + '*'); }
+    if(f.from) q = q.gte('edited_at', new Date(f.from + 'T00:00:00').toISOString());       // 사람이 고른 «로컬 날짜»의 자정부터
+    if(f.to) q = q.lt('edited_at', new Date(nextDay(f.to) + 'T00:00:00').toISOString());
+    const r = await q;
+    if(r.error) throw new Error(rpcErr(r.error));
+    const got = r.data || [];
+    H.more = got.length > 50;
+    const page = got.slice(0, 50);
+    H.rows = H.rows.concat(page);
+    if(page.length) H.last = page[page.length - 1].id;
+    renderHist();
+  }catch(e){ $('hlist').innerHTML = '<div class="empty" style="color:var(--bad)">' + esc(e.message) + '</div>'; }
+}
+function rowSummary(t, row){
+  if(!row || typeof row !== 'object' || Array.isArray(row)) return '';
+  const cols = t ? listColsOf(t) : Object.keys(row);
+  return cols.map(c => vs(row[c]).trim()).filter(Boolean).slice(0, 4).join(' · ');
+}
+function diffCols(b, a){
+  if(!b || !a || typeof b !== 'object' || typeof a !== 'object' || Array.isArray(b) || Array.isArray(a)) return [];
+  const ks = new Set(Object.keys(b).concat(Object.keys(a)));
+  return Array.from(ks).filter(k => k !== 'synced_at' && vs(b[k]) !== vs(a[k]));
+}
+const cut = (s, n) => { s = vs(s); return s.length > n ? s.slice(0, n) + '…' : s; };
+function renderHist(){
+  const H = S.hist;
+  const restored = new Set(H.rows.filter(e => e.op === 'restore' && e.ref != null).map(e => String(e.ref)));
+  if(!H.rows.length){ $('hlist').innerHTML = '<div class="empty">조건에 맞는 이력이 없습니다.</div>'; $('hmore').innerHTML = ''; return; }
+  $('hlist').innerHTML = H.rows.map(e => {
+    const t = TAB_OF_TBL[e.tbl], ov = OP_VIEW(e.op);
+    const tn = t ? t.name : (e.tbl || '옛 시트 (gid ' + (e.gid || '?') + ')');
+    let title = esc(tn) + (e.row_key && e.row_key !== '*' ? ' <span class="hint">' + (t && t.key === 'src_row' ? '행 #' : 'id ') + esc(e.row_key) + '</span>' : '');
+    let detail = '';
+    if(/^upload:/.test(e.op)){
+      const a = e.after || {}, b = e.before || {};
+      detail = (a.error ? '<span style="color:var(--bad)">실패 — ' + esc(cut(a.error, 120)) + '</span> · ' : '')
+        + esc((a.site ? '사이트 ' + a.site + ' · ' : '') + (a.file ? '파일 「' + a.file + '」 · ' : '') + (b.rows != null ? b.rows.toLocaleString() + ' → ' : '') + (a.rows != null ? a.rows.toLocaleString() + '행' : '')
+        + (a.n != null ? ' (이번에 ' + a.n.toLocaleString() + '행)' : '') + (b.from ? ' · 구간 ' + b.from + ' ~ ' + b.to + ' (지움 ' + (b.deleted != null ? b.deleted.toLocaleString() : '?') + ')' : '')
+        + (a.dup ? ' · 키 중복 의심 ' + a.dup.toLocaleString() + '행' : '') + (a.ok === false ? ' · ⚠ 행수 불일치' : ''));
+    }else if(Array.isArray(e.before) || Array.isArray(e.after) || !e.tbl){
+      detail = '<span class="hint">옛 형식(시트 직접 편집) — 「보기」로 원문</span>';
+    }else if(/update|cascade/.test(e.op) || (e.op === 'restore' && e.before && e.after)){
+      const ks = diffCols(e.before, e.after);
+      detail = ks.slice(0, 4).map(k => esc(t ? label(t, k).name : k) + ': <del>' + esc(cut(e.before[k], 24) || '빈칸') + '</del> → <ins>' + esc(cut(e.after[k], 24) || '빈칸') + '</ins>').join(' · ')
+        + (ks.length > 4 ? ' <span class="hint">외 ' + (ks.length - 4) + '칸</span>' : '');
+    }else{
+      detail = esc(rowSummary(t, e.after || e.before));
+    }
+    const can = S.can.restore && RESTORABLE.has(e.op) && !!t && !restored.has(String(e.id));
+    return '<div class="he"><div><div class="t">' + esc(ymdhm(e.edited_at)) + '</div><div class="w" title="' + esc(e.edited_by) + '">' + esc(e.edited_by || '') + '</div></div>'
+      + '<div><span class="op ' + ov.c + '">' + esc(ov.l) + '</span></div>'
+      + '<div class="s"><div class="tl">' + title + ' <span class="hint">· 이력 #' + esc(e.id) + (e.ref ? ' · 원인 이력 #' + esc(e.ref) : '') + '</span></div><div class="ch">' + detail + '</div></div>'
+      + '<div class="a"><button class="btn sm" type="button" data-hv="' + esc(e.id) + '">보기</button>'
+      + (can ? '<button class="btn sm" type="button" data-hr="' + esc(e.id) + '">되돌리기</button>' : (restored.has(String(e.id)) ? '<span class="restored">되돌림</span>' : '')) + '</div></div>';
+  }).join('');
+  $('hmore').innerHTML = H.more ? '<div class="more"><button class="btn" type="button" id="hmoreBtn">더 보기</button></div>' : '';
+  if(H.more) $('hmoreBtn').onclick = () => loadHist(true);
+}
+$('hlist').addEventListener('click', async e => {
+  const v = e.target.closest('[data-hv]'), r = e.target.closest('[data-hr]');
+  if(v){ const en = S.hist.rows.find(x => String(x.id) === v.dataset.hv); if(en) histView(en); }
+  if(r){
+    const en = S.hist.rows.find(x => String(x.id) === r.dataset.hr); if(!en) return;
+    const t = TAB_OF_TBL[en.tbl], ov = OP_VIEW(en.op);
+    const what = /delete/.test(en.op) ? '지운 행을 다시 넣습니다(원래 번호가 비어 있으면 그 번호로).'
+      : /update/.test(en.op) ? '그때 바뀐 칸을 옛 값으로 돌립니다. 그 뒤 같은 칸이 또 바뀌었으면 멈춥니다.'
+      : '그때 넣은 행을 지웁니다(그 뒤 바뀌지 않았을 때만).';
+    if(await ask('되돌릴까요? — ' + ov.l + ' · ' + (t ? t.name : en.tbl) + ' #' + en.row_key, '<p>' + esc(what) + '</p><p>되돌리기도 이력에 한 줄로 남습니다.</p>', '되돌리기')) restore(en.id);
+  }
+});
+function histView(e){
+  const t = TAB_OF_TBL[e.tbl];
+  let body;
+  if(Array.isArray(e.before) || Array.isArray(e.after) || /^upload:/.test(e.op) || !e.tbl){
+    body = '<table class="dt"><tr><th>전</th><td class="v">' + esc(JSON.stringify(e.before)) + '</td></tr><tr><th>후</th><td class="v">' + esc(JSON.stringify(e.after)) + '</td></tr></table>';
+  }else{
+    const b = e.before || {}, a = e.after || {};
+    const ks = Array.from(new Set(Object.keys(b).concat(Object.keys(a)))).filter(k => k !== 'synced_at');
+    const ch = new Set(diffCols(b, a));
+    body = '<table class="dt"><tr><th>칸</th><th>전</th><th>후</th></tr>' + ks.map(k => '<tr' + (ch.has(k) ? ' class="chg"' : '') + '><th>' + esc(t ? label(t, k).name : k) + '</th><td class="v">' + esc(vs(b[k])) + '</td><td class="v">' + esc(vs(a[k])) + '</td></tr>').join('') + '</table>';
+  }
+  dialog('이력 #' + e.id + ' · ' + OP_VIEW(e.op).l + ' · ' + ymdhm(e.edited_at) + ' · ' + (e.edited_by || ''), body, [{l:'닫기', v:true}], true);
+}
+
+/* ---------- 시작 — 관리자 게이트 ----------
+   화면은 isAdmin()+canWrite() 로 열고, 실제 판정은 서버(_edit_allow: role=admin · can_write)가 다시 한다.
+   서버 준비(setup-16) 여부는 edit_cols 한 번으로 본다 — 안 됐으면 검색·보기만 열고 쓰기 단추를 잠근다. */
+(async function(){
+  try{
+    await GST.authGate();
+    await GST.loadMe();
+    if(!GST.isAdmin() || !GST.canWrite()){ $('gate').hidden = false; return; }
+    C = await GST.db();
+    if(!C) throw new Error('로그인 세션이 없습니다');
+    const me = GST._me || {};
+    $('me').innerHTML = esc(me.email || '') + ' <span class="badge ad">' + esc(me.role === 'legacy' ? '관리자(legacy)' : '관리자') + '</span> <a class="lnk" href="/" target="_blank" rel="noopener">대시보드 ↗</a>';
+    $('app').hidden = false;
+    try{ await rpc('edit_cols', {p_tbl:'sheet_inst'}); S.ready = true; }
+    catch(e){
+      S.ready = false; S.why = e.message;
+      banner('bad', '<b>쓰기 기능이 잠겨 있습니다</b> — ' + esc(e.message) + '\n검색·보기는 됩니다. 고치기·넣기·지우기·되돌리기는 서버 준비가 끝난 뒤 열립니다.');
+    }
+    /* 삭제·되돌리기는 SQL 이 «따로» 들어갈 수 있다 — DELETE 가 든 SQL 은 도구로 못 올려 SQL Editor 에서 Run 해야 한다(v140).
+       부작용 없는 호출로 있는지만 본다(없는 키 -1 · 없는 이력 -1). 없으면 그 단추만 잠그고 «무엇을 하면 되는지» 적는다. */
+    if(S.ready){
+      const miss = [];
+      for(const [fn, args, k] of [['edit_delete', {p_tbl:'sheet_wk', p_key:-1, p_hash:''}, 'del'], ['edit_restore', {p_id:-1}, 'restore']]){
+        try{ const r = await C.rpc(fn, args); if(r && fnMissing(r.error)){ S.can[k] = false; miss.push(fn); } }catch(e){}
+      }
+      if(miss.length) banner('warn', '<b>삭제·되돌리기가 아직 잠겨 있습니다</b> — 서버에 ' + esc(miss.join(' · ')) + ' 함수가 없습니다.'
+        + '\nSupabase SQL Editor 에서 supabase/setup-16-edit.sql 을 Run 하세요(여러 번 Run 해도 안전합니다). 검색·수정·새 행·변경 이력 보기는 지금도 됩니다.');
+    }
+    switchTab(S.tab);
+  }catch(e){
+    $('gate').hidden = false;
+    $('gate').innerHTML = '<b>로그인 확인 실패</b><p>' + esc((e && e.message) || e) + '</p>';
+  }
+})();
+</script>
+</body>
+</html>
