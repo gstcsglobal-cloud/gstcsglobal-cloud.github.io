@@ -2432,8 +2432,19 @@ RPC 는 셋을 **한 트랜잭션**에서 한다 — 하나가 실패하면 전�
 (2026-10-04 · 통째로 세 번 실패 — `cancelled` 둘·60초 타임아웃 하나). 쪼개서 가렸다: ALTER·CREATE INDEX·함수 생성·
 **SECURITY DEFINER**·INSERT·UPDATE(정적·동적 둘 다)·REVOKE/GRANT 는 통과하고, **함수 본문 안의 `delete from`
 (동적 문자열이어도)** 이 든 덩어리만 취소된다. 그래서 운영 DB 에는 12개 마이그레이션으로 나눠 들어갔고
-(`edit_audit_columns` … `edit_rpc_grants`), **`edit_delete`·`edit_restore` 둘만 빠졌다** → 사람이 SQL Editor 에서
-`setup-16-edit.sql` 을 통째로 Run 한다(전부 `create or replace`·`if not exists` 라 재실행이 안전하다).
+(`edit_audit_columns` … `edit_rpc_grants`), **`edit_delete`·`edit_restore` 둘만 빠져 사용자가 SQL Editor 에서 Run 했다**
+(같은 날 · 두 함수와 그 권한 줄만). 지금은 열여덟 함수가 전부 있다. 다시 깔아야 하면 `setup-16-edit.sql` 을
+통째로 Run 하면 된다(전부 `create or replace`·`if not exists` 라 재실행이 안전하다).
+- ⚠ **SQL Editor 로 넣은 함수는 본문 md5 가 저장소와 «다르게» 나온다 — 붙여넣기가 줄바꿈을 CRLF 로 남긴다**
+  (실측 `\r` edit_delete 14개 · edit_restore 50개). 대조는 `md5(replace(prosrc, E'\r', ''))` 로 한다 — 그러면 둘 다
+  저장소와 정확히 같다. 두 본문에는 여러 줄에 걸친 문자열 상수가 없어 `\r` 은 공백으로만 읽힌다(동작 차이 없음).
+  «다르다»만 보고 누가 고친 것으로 읽지 말 것 — 9단계 kakao-bot 의 끝 개행 2바이트와 같은 부류다.
+- 삭제·되살리기도 같은 «되돌려지는» DO 블록으로 실검증했다(20항목 · 흔적 0): 틀린 해시는 안 지운다 · 지우면 이력에
+  행 전체(before)가 남고 after 는 null · 캐시 도장이 바뀐다 · 되살리면 «같은 번호·같은 내용» · 두 번째 되살리기는
+  `already_restored` · 인원(identity)도 원래 id 로 돌아온다 · 낯선 계정은 `forbidden`.
+- ⚠ **`sheet_edits.id` 의 빈 번호는 «이력을 지운 흔적»이 아니다.** 시퀀스는 트랜잭션 밖이라 되돌려진 쓰기(위 검증 ·
+  중간에 실패한 RPC)도 번호를 먹는다. 이력 표는 API 로 못 지운다 — RLS 정책이 SELECT(허용 사용자) 하나뿐이라
+  insert·update·delete 는 전부 거절된다. 지울 수 있는 것은 RLS 를 건너뛰는 서버 키와 SQL Editor 뿐이다.
 - ⚠ **확인 창을 «피하려고» SQL 을 고쳐 쓰지 말 것**(`'de'||'lete'` 같은 문자열 쪼개기 등). 그 창은 사람이 삭제를
   확인하라고 있는 장치다 — 탐지를 속이는 것은 고치는 것이 아니다. 사람이 Run 하는 길을 안내한다.
 - **화면은 그 «부분 적용» 상태를 말한다** — 시작할 때 `edit_delete`(없는 키 -1)·`edit_restore`(없는 이력 -1)를
