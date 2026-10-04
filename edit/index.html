@@ -236,7 +236,7 @@ table.dt td.v{word-break:break-all}
     </div>
     <div class="foot">어떻게 기록되나 — 저장·입력·삭제·되돌리기는 한 번에 «쓰기 + 변경 이력(행 전체 before/after) + 대시보드 캐시 갱신»으로 처리됩니다. 셋 중 하나라도 실패하면 전부 없던 일이 됩니다.
 삭제한 행도 이력에 통째로 남아 「변경 이력」 탭에서 되살릴 수 있습니다. 대시보드는 새로고침하면 바뀐 값을 봅니다.
-엑셀 일괄 수정 — 목록에서 체크한 행을 「엑셀로 받기」로 내려받아 고친 뒤 「엑셀 올리기」로 올리면, 미리보기를 거쳐 바뀐 칸만 반영됩니다(500줄씩 «전부 아니면 전무»). 그 묶음은 「변경 이력」에서 통째로 되돌릴 수 있습니다.
+엑셀 일괄 수정 — 검색한 뒤 「검색 결과 N건 엑셀로 받기」(체크한 행이 있으면 그 행만)로 내려받아 고친 뒤 「엑셀 올리기」로 올리면, 미리보기를 거쳐 바뀐 칸만 반영됩니다(500줄씩 «전부 아니면 전무»). 한 번에 2만 건까지 받습니다. 그 묶음은 「변경 이력」에서 통째로 되돌릴 수 있습니다.
 ⚠ 실적·설치는 «통째 교체» 업로드를 하면 행 번호가 0 부터 다시 매겨집니다 — 그 전 이력의 번호는 지금 다른 행일 수 있고, 되돌리기는 내용 대조로 막힙니다.</div>
   </div>
 </div>
@@ -375,6 +375,8 @@ const S = {
   cols:{}, types:{},                  // 표 → 실제 열 목록 · 열 → 타입 (edit_cols)
   all:{},                             // whole 표 → 전 행
   rows:[], after:null, more:false, busy:false,
+  qf:null, total:null, counting:false, seq:0,   // 지금 목록을 만든 «검색 조건»(탭과 함께) · 그 조건의 전체 건수 · 세는 중 · 검색 차례(늦게 온 건수를 버린다)
+  dl:false,                           // 엑셀 받는 중(두 번 눌러 두 벌을 만들지 않게)
   sel:new Set(), lastCk:null,         // 체크한 행 키(글자) — 탭을 바꾸거나 새로 검색하면 비운다(«보이는 목록»의 선택이다)
   cur:null,                           // {t, key, row, hash, isNew, orig, origX}
   dist:{},                            // 'tbl|col' → [[값, 건수]]
@@ -521,6 +523,7 @@ async function switchTab(id, opt){
   if(id === 'hist'){ renderHistFilters(opt); return loadHist(false); }
   const t = TAB();
   S.rows = []; S.after = null; S.more = false; S.sel = new Set(); S.lastCk = null;
+  S.qf = null; S.total = null; S.counting = false; S.seq++;
   renderSearch(); renderList(); renderEditor();
   try{ await loadCols(t); }catch(e){ /* 배너가 이미 밝힌다 */ }
   renderSearch();
@@ -595,17 +598,21 @@ async function fillDatalist(t, col, dl){
   dl.innerHTML = vals.map(v => '<option value="' + esc(v[0]) + '">' + esc(v[1] + '건') + '</option>').join('');
 }
 
+/* 검색 — 「검색」을 누른 순간의 조건을 S.qf 에 떠 둔다. 「더 보기」와 「검색 결과 받기」는 그 조건을 쓴다 —
+   칸을 고쳐 놓고 검색을 안 누른 채 더 보기·받기를 누르면, 화면의 목록과 다른 조건의 행이 섞여 들어온다. */
 async function runSearch(append){
-  const t = TAB(), f = readSearch();
+  const t = TAB();
   if(S.busy) return;
+  const f = append && S.qf && S.qf.tab === t.id ? S.qf.f : readSearch();
   S.busy = true;
   $('listH').innerHTML = '<span class="spin"></span> <span class="hint">찾는 중…</span>';
   try{
+    if(!append){ S.qf = { tab:t.id, f:Object.assign({}, f) }; S.total = null; S.counting = false; S.seq++; }
     if(t.mode === 'whole'){
       if(!S.all[t.id]) S.all[t.id] = await loadAll(t);
       const all = S.all[t.id].filter(r => passWhole(t, f, r)).sort((a, b) => (b[t.key] || 0) - (a[t.key] || 0));
       S.rows = all; S.more = false; S.sel = new Set(); S.lastCk = null;
-      renderList(all.length + '건' + (all.length !== S.all[t.id].length ? ' · 전체 ' + S.all[t.id].length.toLocaleString() + '건 중' : ''));
+      renderList(listHead(t));
     }else{
       if(!append){ S.rows = []; S.after = null; S.sel = new Set(); S.lastCk = null; }
       const listCols = listColsOf(t);
@@ -619,7 +626,9 @@ async function runSearch(append){
       const page = got.slice(0, PAGE);
       S.rows = S.rows.concat(page);
       if(page.length) S.after = page[page.length - 1][t.key];
-      renderList(S.rows.length.toLocaleString() + '건' + (S.more ? ' · 더 있음' : ''));
+      if(!append && S.more) S.counting = true;
+      renderList(listHead(t));
+      if(!append && S.more) countTotal(t, f, S.seq);
     }
   }catch(e){
     renderList('');
@@ -690,6 +699,50 @@ function passWhole(t, f, r){
   }
   return true;
 }
+/* 검색 결과 «전체» 건수 — 첫 장이 100건을 넘지 않으면 그 장이 곧 전부라 공짜로 안다(작은 표는 늘 전부를 들고 있다).
+   넘으면 countTotal 이 따로 센 값, 그새 못 셌으면 null(받을 때 키를 모으며 센다). */
+const resultTotal = t => (t.mode === 'whole' || !S.more) ? S.rows.length : S.total;
+/* 전체 건수를 따로 센다 — 목록 질의에 count 를 붙이지 않는 이유: 드문 S/N 은 «세는 쪽»이 표를 한 바퀴 다 돈다
+   (운영 실측 2026-10: S/N 네 열 포함 검색의 count 3.8초 · 기간 검색은 2ms). 목록을 먼저 그리고 건수는 뒤에서 받아
+   머리·버튼만 고친다. 그새 다른 검색을 했거나 탭을 바꿨으면 버린다(seq). */
+async function countTotal(t, f, seq){
+  try{
+    const r = await applyServer(t, f, C.from(t.tbl).select(t.key, { count:'exact', head:true }));
+    if(seq === S.seq && !r.error && r.count != null) S.total = r.count;
+  }catch(e){ /* 못 세도 받기는 된다 — 받을 때 키를 모으며 센다 */ }
+  if(seq !== S.seq) return;
+  S.counting = false;
+  if(TAB() === t && S.rows.length) renderHead(t);
+}
+/* 받은 양식의 «안내» 시트와 알림에 적는 검색 조건 — 파일만 봐서는 무엇을 받았는지 모른다 */
+function condText(t, f){
+  const out = [];
+  t.quick.forEach(q => {
+    if(q.t === 'range'){ const a = f[q.k + '_from'], b = f[q.k + '_to']; if(a || b) out.push(q.l + ' ' + (a || '') + ' ~ ' + (b || '')); }
+    else if(q.t === 'active'){ if(f[q.k]) out.push(q.l + ': ' + (f[q.k] === 'y' ? '재직' : '퇴사')); }
+    else if(f[q.k]) out.push(q.l + ': ' + f[q.k] + (q.t === 'text' ? ' (포함)' : ''));
+  });
+  if(f.ocol && (f.omode === 'nul' || f.oval)) out.push(label(t, f.ocol).name + ': ' + (f.omode === 'nul' ? '비어 있음' : f.oval + (f.omode === 'eq' ? '' : ' (포함)')));
+  return out.length ? out.join(' · ') : '조건 없음(표 전체)';
+}
+/* 검색 결과의 키 «전부»(큰 표) — 목록과 같은 조건(applyServer)·같은 순서(최근 것부터)로 키만 받는다.
+   키셋 · «0행일 때만 멈춘다»(서버 상한에 잘린 짧은 장을 끝으로 읽지 않는다 · v128). 상한을 넘으면 거기서 그만 모은다. */
+async function searchKeys(t, f, cap, prog){
+  const keys = []; let last = null;
+  for(let guard = 0; guard < 5000; guard++){
+    let q = C.from(t.tbl).select(t.key).order(t.key, {ascending:false}).limit(1000);
+    if(last != null) q = q.lt(t.key, last);
+    const r = await applyServer(t, f, q);
+    if(r.error) throw new Error(rpcErr(r.error));
+    const d = r.data || [];
+    if(!d.length) return keys;
+    d.forEach(x => keys.push(String(x[t.key])));
+    last = d[d.length - 1][t.key];
+    if(keys.length > cap) return keys;
+    if(prog) prog(keys.length);
+  }
+  throw new Error('검색 결과를 끝까지 모으지 못했습니다 — 다시 해 보세요');
+}
 /* 작은 표(인원·교육·휴가)는 통째로 받아 화면에서 거른다. 키셋 — «0행일 때만 멈춘다»(짧은 장을 끝으로 읽으면
    서버 상한에 잘린 것을 완료로 착각한다 · v128 규약). */
 async function loadAll(t){
@@ -707,11 +760,24 @@ async function loadAll(t){
 }
 
 /* ---------- 결과 목록 ---------- */
-function renderList(head){
-  const t = TAB();
-  if(head != null) $('listH').innerHTML = '<b>' + esc(head) + '</b>' + (t.mode === 'server' ? '<span class="hint">최근에 올린 행부터</span>' : '')
+/* 목록 머리 — 검색 결과 «전체» 건수와 «지금 보이는» 줄 수를 갈라 적는다. 「100건 · 더 있음」만 적으면
+   받기 단추가 무엇을 받는지(보이는 100건인가 전부인가) 사람이 알 수 없다. */
+function listHead(t){
+  const n = S.rows.length;
+  if(t.mode === 'whole'){ const all = (S.all[t.id] || []).length; return n.toLocaleString() + '건' + (all && n !== all ? ' · 전체 ' + all.toLocaleString() + '건 중' : ''); }
+  const tot = resultTotal(t);
+  if(tot == null) return n.toLocaleString() + '건 · 더 있음';
+  return tot.toLocaleString() + '건' + (n < tot ? ' 중 ' + n.toLocaleString() + '건 표시' : '');
+}
+function renderHead(t, head){
+  const hint = t.mode === 'server' ? '최근에 올린 행부터' + (S.counting ? ' · 전체 건수 세는 중…' : '') : '';
+  $('listH').innerHTML = '<b>' + esc(head == null ? listHead(t) : head) + '</b>' + (hint ? '<span class="hint">' + esc(hint) + '</span>' : '')
     + '<span class="sp"></span><span class="selbar" id="selBar"></span>';
   renderSelBar();
+}
+function renderList(head){
+  const t = TAB();
+  if(head != null) renderHead(t, head); else renderSelBar();
   const cols = listColsOf(t);
   if(!S.rows.length){
     $('list').innerHTML = '';
@@ -727,18 +793,30 @@ function renderList(head){
   $('more').innerHTML = S.more ? '<div class="more"><button class="btn" type="button" id="moreBtn">' + PAGE + '건 더 보기</button></div>' : '';
   if(S.more) $('moreBtn').onclick = () => runSearch(true);
 }
-/* 선택 막대 — 체크한 행 수 · 엑셀로 받기. 아무것도 안 골랐으면 «빈 양식»(머리글만 · 새 행을 여러 줄 넣을 때) */
+/* 선택 막대 — 엑셀로 받기(사용자 지적 v142: 「검색한 다음 목록이 뜨면 빈 양식이 아니라 검색된 데이터가 나와야」).
+   · 체크한 행이 있으면 → 그 행만
+   · 없으면 → 검색 결과 «전부»(보이는 100건만이 아니라 — 머리에 적힌 그 건수) · 빈 양식은 옆에 작게
+   · 결과가 없으면 → 빈 양식(머리글만 · 새 행을 여러 줄 넣을 때) */
 function renderSelBar(){
   const el = $('selBar'); if(!el) return;
-  const n = S.sel.size, off = S.ready === false || !S.can.bulk;
-  el.innerHTML = (n ? '<span class="hint">' + n.toLocaleString() + '건 선택</span><button class="btn sm" type="button" data-act="xclr">선택 풀기</button>' : '')
-    + '<button class="btn sm" type="button" data-act="xdown"' + (off ? ' disabled title="엑셀 일괄 수정 함수가 아직 서버에 없습니다"'
-      : ' title="' + (n ? '체크한 행을 일괄 수정용 엑셀로 받습니다' : '체크한 행이 없으면 머리글만 든 빈 양식을 받습니다 — 새 행을 여러 줄 넣을 때') + '"')
-    + '>' + (n ? '선택 ' + n.toLocaleString() + '건 엑셀로 받기' : '빈 양식 받기') + '</button>';
+  const t = TAB(), n = S.sel.size, off = S.ready === false || !S.can.bulk;
+  const dis = ' disabled title="엑셀 일괄 수정 함수가 아직 서버에 없습니다"';
+  const blank = big => '<button class="btn sm" type="button" data-act="xblank"' + (off ? dis : ' title="머리글만 든 빈 양식 — 새 행을 여러 줄 넣을 때"') + '>' + (big ? '빈 양식 받기' : '빈 양식') + '</button>';
+  if(n){
+    el.innerHTML = '<span class="hint">' + n.toLocaleString() + '건 선택</span><button class="btn sm" type="button" data-act="xclr">선택 풀기</button>'
+      + '<button class="btn sm pri" type="button" data-act="xdown"' + (off ? dis : ' title="체크한 행만 일괄 수정용 엑셀로 받습니다"') + '>선택 ' + n.toLocaleString() + '건 엑셀로 받기</button>';
+  }else if(S.rows.length){
+    const tot = resultTotal(t);
+    el.innerHTML = '<button class="btn sm pri" type="button" data-act="xall"'
+      + (off ? dis : ' title="지금 검색 조건에 맞는 행 «전부»를 받습니다 — 목록에 보이는 줄만이 아니라 · 한 번에 ' + DOWN_MAX.toLocaleString() + '건까지"')
+      + '>검색 결과 ' + (tot != null ? tot.toLocaleString() + '건' : '전부') + ' 엑셀로 받기</button>' + blank(false);
+  }else el.innerHTML = blank(true);
 }
 $('listH').addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if(!b || b.disabled) return;
-  if(b.dataset.act === 'xdown') bulkDown();
+  if(b.dataset.act === 'xdown') bulkDown('sel');
+  if(b.dataset.act === 'xall') bulkDown('all');
+  if(b.dataset.act === 'xblank') bulkDown('blank');
   if(b.dataset.act === 'xclr'){ S.sel = new Set(); S.lastCk = null; renderList(null); }
 });
 $('list').addEventListener('click', async e => {
@@ -1030,8 +1108,9 @@ async function insert(){
     const r = await rpc('edit_insert', {p_tbl:t.tbl, p_row:row});
     if(t.mode === 'whole' && S.all[t.id]) S.all[t.id].push(r.row);
     S.rows.unshift(r.row);
+    if(S.total != null) S.total++;
     setCur(t, r.key, r.row, r.hash, false);
-    renderList((S.rows.length) + '건');
+    renderList(listHead(t));
     snack('넣었습니다 · ' + (t.key === 'src_row' ? '행 #' : 'id ') + r.key + ' · 이력 #' + r.log, S.can.restore ? { act:'되돌리기', fn: () => restore(r.log, t.id) } : {});
   }catch(e){ snack(e.message, {err:true}); bt.disabled = false; bt.textContent = '넣기'; }
 }
@@ -1045,9 +1124,12 @@ async function del(){
     const r = await rpc('edit_delete', {p_tbl:t.tbl, p_key:cur.key, p_hash:cur.hash});
     if(r.error === 'conflict') return conflict(t, r, {});
     if(r.error === 'not_found'){ snack('이미 없는 행입니다', {err:true}); }
+    const had = S.rows.length;
     S.rows = S.rows.filter(x => String(x[t.key]) !== String(cur.key));
+    if(S.total != null && S.rows.length < had) S.total--;
+    S.sel.delete(String(cur.key));
     if(t.mode === 'whole' && S.all[t.id]) S.all[t.id] = S.all[t.id].filter(x => String(x[t.key]) !== String(cur.key));
-    S.cur = null; renderEditor(); renderList(S.rows.length + '건');
+    S.cur = null; renderEditor(); renderList(listHead(t));
     if(r.ok) snack('지웠습니다 · 이력 #' + r.log + ' 에 행 전체가 남았습니다', { act:'되살리기', fn: () => restore(r.log, t.id) });
   }catch(e){ snack(e.message, {err:true}); }
 }
@@ -1145,6 +1227,11 @@ const BULK_KEY = '행번호';                 // 받은 양식 맨 앞 칸 — �
 const BULK_MAX = 500;                      // edit_bulk 한 번에 들어가는 줄 수(서버 상한과 같다 · 운영 실측 500줄 5.4초 — 묶음 = 전부 아니면 전무의 단위)
 const NK = GST.SM.norm(BULK_KEY);
 const SHOW = 300;                          // 미리보기 표에 그리는 줄 수(반영은 전부 한다)
+const GET_MAX = 2000;                      // edit_get_many 한 번에 읽는 행 수(서버 상한과 같다 · 운영 실측 500행 120ms)
+/* 한 번에 받는 행 수 — 운영 실측(2026-10): 수선실적 한 달 최대 14,578행 · 설치현황 전체 8,894행 · 인원 523행이라
+   «한 달 치 · 전 설비»가 한 번에 들어간다. 만드는 비용(node 실측 · 41열): 2만 행 ≈ 5초 · 12MB(압축) · 다시 읽기 ≈ 4초.
+   넘으면 받지 않고 «조건을 좁히라»고 말한다 — 조용히 앞의 2만 행만 담으면 파일이 검색 결과의 일부라는 것을 아무도 모른다. */
+const DOWN_MAX = 20000;
 
 /* 양식의 열 — 편집기와 같은 순서(묶음 → 기타 → 옛 양식 열). 키·관리 열은 뺀다(키는 맨 앞 «행번호» 칸에 따로 든다).
    extra(jsonb)도 뺀다 — 한 칸에 여러 값이 든 칸은 엑셀로 고치면 모양이 깨진다(편집기에서 고친다). */
@@ -1208,12 +1295,12 @@ function asText(XLSX, ws){
     if(c){ c.t = 's'; c.v = c.v == null ? '' : String(c.v); c.z = '@'; }
   }
 }
-function bulkGuide(t, n){
+function bulkGuide(t, n, what){
   const ks = bulkKeys(t), kn = ks.length ? label(t, pickCol(t, ks) || ks[0]).name : '';
   const g = [
     ['데이터 관리 — 엑셀 일괄 수정 양식'],
     ['표', t.name + ' (' + t.tbl + ')'],
-    ['받은 행', n ? n + '행 — 받은 시점의 값입니다' : '없음 — 빈 양식(새 행을 여러 줄 넣을 때)'],
+    ['받은 행', n ? n.toLocaleString() + '행 — ' + (what ? what + ' · ' : '') + '받은 시점의 값입니다' : '없음 — 빈 양식(새 행을 여러 줄 넣을 때)'],
     [''],
     ['고치는 법'],
     ['1', '값을 고치고 저장한 뒤, 데이터 관리 화면 「' + t.name + '」 탭의 「엑셀 올리기」로 올립니다.'],
@@ -1235,21 +1322,48 @@ function bulkGuide(t, n){
   return g;
 }
 
-/* 받기 — 체크한 행(목록 순서 그대로)을 «지금 값 + 해시»로 다시 읽어 양식을 만든다. 목록 칸은 몇 열뿐이라 그대로 쓰면 안 된다. */
-async function bulkDown(){
+/* 받기 — 행을 «지금 값 + 해시»로 다시 읽어 양식을 만든다. 목록 칸은 몇 열뿐이라 그대로 쓰면 안 된다.
+   kind: 'sel' 체크한 행 · 'all' 검색 결과 전부(S.qf — 「검색」을 누른 순간의 조건) · 'blank' 빈 양식. 순서는 목록과 같다(최근 것부터). */
+async function bulkDown(kind){
   const t = TAB();
-  const keys = S.rows.map(r => String(r[t.key])).filter(k => S.sel.has(k));
+  if(S.dl){ snack('이미 받는 중입니다 — 끝나면 다시 누르세요'); return; }
+  S.dl = true;
+  try{ await bulkDown2(t, kind); }
+  finally{ S.dl = false; }
+}
+function tooMany(t, n){
+  return dialog('검색 결과가 너무 많습니다', '<p>검색 결과가 <b>' + (n != null ? n.toLocaleString() + '건' : DOWN_MAX.toLocaleString() + '건 넘게') + '</b>이라 한 번에 받을 수 있는 '
+    + DOWN_MAX.toLocaleString() + '건을 넘습니다.</p><p>' + esc(t.quick.filter(q => q.t === 'range' || q.t === 'pick').map(q => q.l).join(' · ') || '조건')
+    + ' 등으로 좁혀 다시 검색하거나, 고칠 행만 체크해서 받으세요.</p>', [{l:'확인', v:true, cls:'pri'}]);
+}
+async function bulkDown2(t, kind){
+  let keys = [], what = '';
+  if(kind === 'sel'){ keys = S.rows.map(r => String(r[t.key])).filter(k => S.sel.has(k)); what = '목록에서 체크한 행'; }
+  else if(kind === 'all'){
+    const f = S.qf && S.qf.tab === t.id ? S.qf.f : {};
+    what = '검색 결과 전체 · 조건: ' + condText(t, f);
+    const tot = resultTotal(t);
+    if(tot != null && tot > DOWN_MAX) return tooMany(t, tot);
+    if(t.mode === 'whole' || !S.more) keys = S.rows.map(r => String(r[t.key]));    // 목록이 곧 전부
+    else{
+      try{ keys = await searchKeys(t, f, DOWN_MAX, n => snack('검색 결과 모으는 중… ' + n.toLocaleString() + (tot != null ? ' / ' + tot.toLocaleString() : '') + '건', {ms:60000})); }
+      catch(e){ snack(e.message, {err:true}); return; }
+      if(keys.length > DOWN_MAX) return tooMany(t, tot);
+    }
+  }
+  if(keys.length > DOWN_MAX) return tooMany(t, keys.length);
   let XLSX;
   try{ XLSX = await xlsx(); }catch(e){ snack(e.message, {err:true}); return; }
   if(!S.cols[t.tbl]){ try{ await loadCols(t); }catch(e){ snack(e.message, {err:true}); return; } }
   const cols = bulkCols(t), heads = bulkHead(t, cols);
   let got = [];
   try{
-    for(let i = 0; i < keys.length; i += BULK_MAX){
-      snack(keys.length.toLocaleString() + '건 읽는 중… ' + Math.min(i + BULK_MAX, keys.length).toLocaleString(), {ms:60000});
-      got = got.concat(await rpc('edit_get_many', {p_tbl:t.tbl, p_keys:keys.slice(i, i + BULK_MAX).map(Number)}) || []);
+    for(let i = 0; i < keys.length; i += GET_MAX){
+      snack(keys.length.toLocaleString() + '건 읽는 중… ' + Math.min(i + GET_MAX, keys.length).toLocaleString(), {ms:60000});
+      got = got.concat(await rpc('edit_get_many', {p_tbl:t.tbl, p_keys:keys.slice(i, i + GET_MAX).map(Number)}) || []);
     }
   }catch(e){ snack(e.message, {err:true}); return; }
+  if(keys.length > GET_MAX){ snack(keys.length.toLocaleString() + '건으로 엑셀 만드는 중…', {ms:60000}); await new Promise(r => setTimeout(r, 30)); }  // 알림이 먼저 그려지게(만드는 동안 화면이 잠깐 멈춘다)
   const by = new Map(got.map(x => [String(x.key), x]));
   const have = keys.filter(k => by.has(k)), gone = keys.length - have.length;
   const aoa = [[BULK_KEY].concat(heads)].concat(have.map(k => [k].concat(cols.map(c => vs(by.get(k).row[c])))));
@@ -1260,14 +1374,15 @@ async function bulkDown(){
   const meta = [['gst-edit-bulk', '1'], ['표', t.tbl], ['탭', t.name], ['받은 시각', new Date().toISOString()], ['받은 사람', (GST._me || {}).email || ''],
                 ['행 수', String(have.length)], [BULK_KEY, '해시']].concat(have.map(k => [k, by.get(k).hash]));
   const ms = XLSX.utils.aoa_to_sheet(meta); asText(XLSX, ms);
-  const gs = XLSX.utils.aoa_to_sheet(bulkGuide(t, have.length)); gs['!cols'] = [{ wch:10 }, { wch:120 }];
+  const gs = XLSX.utils.aoa_to_sheet(bulkGuide(t, have.length, what)); gs['!cols'] = [{ wch:10 }, { wch:120 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, t.name);
   XLSX.utils.book_append_sheet(wb, gs, '안내');
   XLSX.utils.book_append_sheet(wb, ms, '_meta');
   wb.Workbook = { Sheets:[{ Hidden:0 }, { Hidden:0 }, { Hidden:1 }] };   // _meta 는 숨긴다 — 받은 시점의 해시(대조용)
-  XLSX.writeFile(wb, '일괄수정_' + t.name + '_' + (have.length ? have.length + '건' : '빈양식') + '_' + stampL() + '.xlsx');
-  snack((have.length ? have.length.toLocaleString() + '건을 받았습니다' : '빈 양식을 받았습니다') + (gone ? ' · ' + gone + '건은 그새 없어져 뺐습니다' : '')
+  /* 압축해서 쓴다 — SheetJS 는 기본이 «무압축»이라 2만 행이 36MB 가 된다(압축 12MB · node 실측). 메일로 주고받는 파일이다. */
+  XLSX.writeFile(wb, '일괄수정_' + t.name + '_' + (have.length ? have.length + '건' : '빈양식') + '_' + stampL() + '.xlsx', { compression:true });
+  snack((have.length ? have.length.toLocaleString() + '건을 받았습니다' + (kind === 'all' ? '(검색 결과 전체)' : '') : '빈 양식을 받았습니다') + (gone ? ' · ' + gone + '건은 그새 없어져 뺐습니다' : '')
     + ' — 고친 뒤 「엑셀 올리기」로 올리세요', {ms:7000});
 }
 
@@ -1404,8 +1519,9 @@ async function bulkPlan(t, pick, meta, hm, fname){
   /* 대상 행의 «지금» 값과 해시 */
   const keys = Array.from(new Set(lines.filter(L => !L.bad && L.key != null).map(L => L.key)));
   const cur = new Map();
-  for(let i = 0; i < keys.length; i += BULK_MAX){
-    (await rpc('edit_get_many', {p_tbl:t.tbl, p_keys:keys.slice(i, i + BULK_MAX).map(Number)}) || []).forEach(x => cur.set(String(x.key), x));
+  for(let i = 0; i < keys.length; i += GET_MAX){
+    if(keys.length > GET_MAX) snack('지금 값과 대조하는 중… ' + Math.min(i + GET_MAX, keys.length).toLocaleString() + ' / ' + keys.length.toLocaleString() + '행', {ms:60000});
+    (await rpc('edit_get_many', {p_tbl:t.tbl, p_keys:keys.slice(i, i + GET_MAX).map(Number)}) || []).forEach(x => cur.set(String(x.key), x));
   }
   lines.forEach(L => {
     if(L.bad) return skip(L, L.bad);

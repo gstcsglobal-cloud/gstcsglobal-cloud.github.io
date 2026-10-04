@@ -91,6 +91,9 @@ function fake(seed) {
         if (st.order) rows = rows.slice().sort((a, b) => (st.asc ? 1 : -1) * cmp(a[st.order], b[st.order]));
         const total = rows.length;
         if (st.limit != null) rows = rows.slice(0, st.limit);
+        if (window.__MAXROWS && !st.head && rows.length > window.__MAXROWS) rows = rows.slice(0, window.__MAXROWS);   // 서버 행수 상한(max-rows) — 요청보다 짧은 장이 온다
+        if (st.head && window.__COUNT_ERR) return Promise.resolve({ data:null, count:null, error:{ message:'canceling statement due to statement timeout' } }).then(res, rej);
+        if (st.head && window.__COUNT_AS != null) return Promise.resolve({ data:null, count:window.__COUNT_AS, error:null }).then(res, rej);
         if (st.cols && st.cols !== '*') { const cs = st.cols.split(','); rows = rows.map(r => Object.fromEntries(cs.map(c => [c, r[c] === undefined ? null : r[c]]))); }
         else rows = rows.map(r => Object.assign({}, r));
         const out = st.head ? { count: rows.length, data: null, error: null }
@@ -631,7 +634,9 @@ const B = await open(seedOf());
 {
   const pg = B.pg;
   await pg.click('.tab[data-tab=roster]'); await pg.waitForTimeout(400);
-  is(await pg.$eval('[data-act=xdown]', b => b.textContent) === '빈 양식 받기', '아무것도 안 고르면 «빈 양식 받기»');
+  is(await pg.$eval('#selBar [data-act=xall]', b => b.textContent) === '검색 결과 3건 엑셀로 받기' && await pg.$eval('#selBar [data-act=xblank]', b => b.textContent) === '빈 양식',
+     '아무것도 안 고르면 «검색 결과 3건 엑셀로 받기» · 빈 양식은 옆에 작게 (v142 사용자 지적)');
+  is(!(await pg.$('#selBar [data-act=xdown]')), '고른 것이 없으면 «선택 받기» 단추는 없다');
   await pg.click('#ckAll'); await pg.waitForTimeout(100);
   is(/선택 3건 엑셀로 받기/.test(await pg.$eval('#selBar', e => e.textContent)), '머리 체크 → 보이는 행 전부(3건)');
   await pg.click('#list tr[data-key="1"] td.ck input'); await pg.waitForTimeout(100);
@@ -658,9 +663,23 @@ const B = await open(seedOf());
   const M = aoaOf(wb, '_meta');
   is(M[0][0] === 'gst-edit-bulk' && M.some(r => r[0] === '표' && r[1] === 'sheet_roster') && M.some(r => r[0] === '2' && r[1] === B.h2), '_meta: 표 이름 · 받은 시점의 해시');
   is(/안내/.test(wb.SheetNames.join()) && /행번호/.test(aoaOf(wb, '안내').map(r => r.join(' ')).join('\n')), '안내 시트가 «행번호는 고치지 말라»고 적는다');
+  is(/목록에서 체크한 행/.test(aoaOf(wb, '안내').map(r => r.join(' ')).join('\n')), '안내 시트가 «무엇을 받았나»(체크한 행)를 적는다');
   await pg.click('[data-act=xclr]'); await pg.waitForTimeout(100);
-  const A0 = aoaOf(readWb(await download(pg, '[data-act=xdown]')), '인원현황');
+  is(/검색 결과 3건 엑셀로 받기/.test(await pg.$eval('#selBar', e => e.textContent)), '선택을 풀면 다시 «검색 결과 3건»');
+  const A0 = aoaOf(readWb(await download(pg, '#selBar [data-act=xblank]')), '인원현황');
   is(A0.length === 1 && A0[0][0] === '행번호' && /^일괄수정_인원현황_빈양식_/.test(lastName), '빈 양식 — 머리글만 (' + lastName + ')');
+  /* 검색 결과 전부 — 작은 표는 걸러 둔 목록이 곧 전부다 */
+  await pg.fill('#search [name=campus]', 'Q1'); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(250);
+  is(/^2건 · 전체 3건 중/.test(await pg.$eval('#listH b', e => e.textContent)) && /검색 결과 2건 엑셀로 받기/.test(await pg.$eval('#selBar', e => e.textContent)),
+     '단지 Q1 로 거르면 «검색 결과 2건» (목록 머리: 2건 · 전체 3건 중)');
+  await qlog(pg);
+  const wbA = readWb(await download(pg, '#selBar [data-act=xall]'));
+  const AA = aoaOf(wbA, '인원현황'), gmA = rpcs(await qlog(pg), 'edit_get_many');
+  is(AA.length === 3 && AA.slice(1).map(r => r[0]).join() === '3,1' && /^일괄수정_인원현황_2건_/.test(lastName), '검색 결과 2건이 목록 순서 그대로 (' + AA.slice(1).map(r => r[0]) + ')');
+  is(gmA.length === 1 && gmA[0].args.p_keys.slice().sort().join() === '1,3', '그 2건을 edit_get_many 로 «지금 행 전체» 다시 읽는다');
+  is(/검색 결과 전체 · 조건: 단지: Q1/.test(aoaOf(wbA, '안내').map(r => r.join(' ')).join('\n')), '안내 시트에 검색 조건을 적는다 (단지: Q1)');
+  is(/2건을 받았습니다\(검색 결과 전체\)/.test(await snackText(pg)), '알림: 몇 건을 무엇으로 받았나');
+  await pg.click('#search [data-act=reset]'); await pg.waitForTimeout(250);
   B.fp = fp;
 }
 
@@ -795,6 +814,75 @@ console.log('[17] 큰 표 — 업무 키 in(…) · Shift 범위 · 500줄씩 �
   is(await pg.evaluate(() => window.__DB.sheet_wk.find(r => r.src_row === 1).d_start) === '2026-06-02', '실적코드로 찾은 행이 고쳐졌다');
 }
 
+console.log('[17b] 큰 표 — 검색 결과 «전부» 받기 · 건수 · 더 보기는 검색한 조건으로 · 상한');
+{
+  const pg = B.pg;
+  const head = () => pg.$eval('#listH b', e => e.textContent);
+  const bar = () => pg.$eval('#selBar', e => e.textContent);
+  const hint = () => pg.$eval('#listH', e => e.textContent);
+  await qlog(pg);
+  await pg.click('#search [data-act=reset]'); await pg.waitForTimeout(100);
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  const total = await pg.evaluate(() => window.__DB.sheet_wk.length);
+  is(await head() === total.toLocaleString() + '건 중 100건 표시' && /검색 결과 [\d,]+건 엑셀로 받기/.test(await bar()) && (await bar()).indexOf(total.toLocaleString()) >= 0,
+     '첫 장이 100건을 넘으면 전체 건수를 따로 세어 적는다 — «' + await head() + '» · «' + await bar() + '»');
+  const cq = sel(await qlog(pg), 'sheet_wk').filter(x => x.head);
+  is(cq.length === 1 && cq[0].count === true && cq[0].limit == null && cq[0].cols === 'src_row', '건수는 따로 한 번(head · count) — 목록 질의에 붙이지 않는다');
+  is(!/세는 중/.test(await hint()), '다 세면 «세는 중»이 사라진다');
+
+  /* 기간으로 거른 뒤 칸을 고쳐 놓고 «검색을 안 누른 채» 더 보기·받기 → 둘 다 «검색한 조건»으로 */
+  await pg.fill('#search [name=dt_from]', '2026-06-01'); await pg.fill('#search [name=dt_to]', '2026-06-01');
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  is(await head() === '1,001건 중 100건 표시', '작업시작일 6/1 → 1,001건 중 100건 표시 (' + await head() + ')');
+  await pg.fill('#search [name=stage]', 'BM');                                   // 검색은 안 누른다
+  await qlog(pg);
+  await pg.click('#moreBtn'); await pg.waitForTimeout(300);
+  const mq = sel(await qlog(pg), 'sheet_wk').filter(x => !x.head).pop();
+  is(!!mq && mq.f.some(f => f[0] === 'd_start' && f[1] === 'gte') && !mq.f.some(f => f[0] === 'stage') && (await listKeys(pg)).length === 200,
+     '더 보기는 «검색한 조건»으로 — 칸만 고친 작업단계 BM 은 안 붙는다 (200줄)');
+  await pg.evaluate(() => { window.__MAXROWS = 300; });                          // 서버가 장을 300행에서 자른다(max-rows)
+  await qlog(pg);
+  const wbK = readWb(await download(pg, '#selBar [data-act=xall]'));
+  await pg.evaluate(() => { window.__MAXROWS = 0; });
+  const L = await qlog(pg), kq = sel(L, 'sheet_wk').filter(x => x.cols === 'src_row' && !x.head), gm = rpcs(L, 'edit_get_many');
+  const AK = aoaOf(wbK, '수선실적');
+  const want = await pg.evaluate(() => window.__DB.sheet_wk.filter(r => String(r.d_start).slice(0, 10) === '2026-06-01').map(r => r.src_row).sort((a, b) => b - a).join());
+  is(AK.length === 1002 && AK.slice(1).map(r => r[0]).join() === want, '검색 결과 1,001건 «전부» — 보이는 200줄이 아니라 · 목록과 같은 순서(최근 것부터)');
+  is(kq.length === 5 && kq.every(x => x.f.some(f => f[0] === 'd_start' && f[1] === 'gte' && f[2] === '2026-06-01') && !x.f.some(f => f[0] === 'stage')),
+     '키는 «검색한 조건»으로 · 서버가 300행에서 잘라도 «0행일 때만» 멈춘다 (' + kq.length + '번)');
+  is(gm.length === 1 && gm[0].args.p_keys.length === 1001, '지금 값은 edit_get_many 2,000행씩 (1번)');
+  is(/검색 결과 전체 · 조건: 작업시작일 2026-06-01 ~ 2026-06-01/.test(aoaOf(wbK, '안내').map(r => r.join(' ')).join('\n')), '안내 시트에 검색 조건(작업시작일)을 적는다');
+
+  /* 상한 — 건수를 알면 받기 전에 말한다 */
+  await pg.click('#search [data-act=reset]'); await pg.waitForTimeout(100);
+  await pg.fill('#search [name=dt_from]', '2026-06-01'); await pg.fill('#search [name=dt_to]', '2026-06-01');
+  await pg.evaluate(() => { window.__COUNT_AS = 25000; });
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  await pg.evaluate(() => { window.__COUNT_AS = null; });
+  is(/검색 결과 25,000건 엑셀로 받기/.test(await bar()), '건수 25,000 → 단추에 그대로');
+  await qlog(pg);
+  await pg.click('#selBar [data-act=xall]'); await waitDlg(pg, /너무 많습니다/);
+  is(/25,000건/.test(await dlgBody(pg)) && /20,000건/.test(await dlgBody(pg)) && /체크/.test(await dlgBody(pg)), '2만 건이 넘으면 받지 않고 «좁히라 · 체크해서 받으라»고 말한다');
+  let L2 = await qlog(pg);
+  is(!sel(L2, 'sheet_wk').length && !rpcs(L2, 'edit_get_many').length, '받기 전에 멈춘다 — 키도 행도 안 읽는다');
+  await pg.click('.mask .btn.pri'); await pg.waitForTimeout(100);
+
+  /* 상한 — 건수를 못 셌으면 키를 모으다 넘는 순간 멈춘다 */
+  await pg.evaluate(() => { window.__COUNT_ERR = true; const W = window.__DB.sheet_wk; let k = W.reduce((m, r) => Math.max(m, r.src_row), 0);
+    for (let i = 0; i < 20001; i++) W.push({ src_row:++k, rs_code:'RS-C-' + i, d_start:'2027-01-01', op:'OPZ Scrubber' }); });
+  await pg.fill('#search [name=dt_from]', '2027-01-01'); await pg.fill('#search [name=dt_to]', '2027-01-01');
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(400);
+  is(await head() === '100건 · 더 있음' && /검색 결과 전부 엑셀로 받기/.test(await bar()), '건수를 못 세면 «100건 · 더 있음» · «검색 결과 전부»');
+  await qlog(pg);
+  await pg.click('#selBar [data-act=xall]'); await waitDlg(pg, /너무 많습니다/);
+  is(/20,000건 넘게/.test(await dlgBody(pg)), '키를 모으다 2만 건을 넘으면 «2만 건 넘게»라고 말하고 멈춘다');
+  L2 = await qlog(pg);
+  is(!rpcs(L2, 'edit_get_many').length && sel(L2, 'sheet_wk').filter(x => x.cols === 'src_row').length === 21, '행은 하나도 안 읽는다 · 키는 상한을 넘는 장에서 그만 (21번)');
+  await pg.click('.mask .btn.pri'); await pg.waitForTimeout(100);
+  await pg.evaluate(() => { window.__COUNT_ERR = false; window.__DB.sheet_wk = window.__DB.sheet_wk.filter(r => r.d_start !== '2027-01-01'); });
+  await pg.click('#search [data-act=reset]'); await pg.waitForTimeout(100);
+}
+
 console.log('[18] 변경 이력 — 일괄 머리 줄 · 일괄 되돌리기');
 {
   const pg = B.pg;
@@ -829,7 +917,7 @@ console.log('[19] 일괄 함수만 서버에 없을 때 — 그 단추만 잠그
   is(/엑셀 일괄 수정이 아직 잠겨/.test(ban) && /setup-16-edit\.sql/.test(ban), '배너가 «엑셀 일괄 수정»이 잠겼다고 · 무엇을 하면 되는지 적는다');
   is(await pg.$eval('#search [data-act=xup]', b => b.disabled), '「엑셀 올리기」 잠김');
   await pg.click('#search button[type=submit]'); await pg.waitForTimeout(250);
-  is(await pg.$eval('#selBar [data-act=xdown]', b => b.disabled), '「엑셀로 받기」 잠김');
+  is(await pg.$eval('#selBar [data-act=xall]', b => b.disabled) && await pg.$eval('#selBar [data-act=xblank]', b => b.disabled), '「검색 결과 받기」·「빈 양식」 잠김');
   is(!(await pg.$eval('#search [data-act=new]', b => b.disabled)), '한 행 편집은 그대로 열려 있다');
   is(pe2.length === 0, 'JS 에러 없음' + (pe2.length ? ' → ' + pe2[0] : ''));
   await c2.close();
