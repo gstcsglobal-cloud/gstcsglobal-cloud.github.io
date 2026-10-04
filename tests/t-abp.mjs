@@ -412,5 +412,16 @@ console.log('\n[12] 자유 서술을 «버리지» 않는다 — 코드는 어�
      '드릴 요약도 같은 규율이다 (한쪽만 고치면 같은 화면의 두 표가 갈린다)');
 }
 
+console.log('\n[13] 계산 칸은 «한 함수»(GST.ALARM.derive)가 낸다 — 데이터 관리에서 한 칸을 고쳐도 같은 답 (v143)');
+{
+  /* 해외 Group 리스트는 집계 대상이 «그 사건의 다른 줄»을 보고 정해진다(대표 줄의 seq). derive 는 행 하나만 보므로,
+     만든 행(대표 줄 seq 가 이미 박힌 행)을 다시 먹였을 때 같은 cnt 가 나와야 데이터 관리의 재계산이 build 와 안 갈린다. */
+  const bad = [];
+  B.rows.forEach((r, i) => { const d = GST.ALARM.derive(r, 'abp2');
+    Object.keys(d).forEach(c => { const a = r[c] == null ? null : r[c];
+      if (JSON.stringify(a) !== JSON.stringify(d[c])) bad.push('#' + i + '.' + c + ' ' + JSON.stringify(a) + '≠' + JSON.stringify(d[c])); }); });
+  is(!bad.length, '해외 Group 리스트 16행 — derive 에 다시 먹여도 계산 칸(대표 줄의 집계 대상 포함)이 같다' + (bad.length ? ' → ' + bad.slice(0, 3).join(' | ') : ''));
+}
+
 console.log(fail ? `\n❌ t-abp ${pass}/${pass + fail}` : `\n✅ t-abp ${pass}/${pass + fail}`);
 process.exit(fail ? 1 : 0);

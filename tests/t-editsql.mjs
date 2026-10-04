@@ -15,6 +15,7 @@ import { spawnSync } from 'child_process';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const SQL_FILE = path.join(ROOT, 'supabase/setup-16-edit.sql');
+const LEDGER_FILE = path.join(ROOT, 'supabase/setup-10-alarm.sql');   // 원장 표·csv_window — «저장소의 그 파일»을 그대로 먹인다(v143)
 
 function findBin() {
   if (process.env.PG_BIN && fs.existsSync(path.join(process.env.PG_BIN, 'initdb'))) return process.env.PG_BIN;
@@ -170,6 +171,21 @@ create or replace function public.t_as(email text) returns void language sql as 
 grant execute on function public.t_ok(boolean, text), public.t_as(text) to authenticated;
 `;
 
+/* 원장 씨앗 — 지어낸 값(실데이터 아님). 운영과 같이 authenticated 에 표 권한(Supabase 는 기본으로 준다). */
+const LEDGER_SEED = String.raw`
+grant select, insert, update, delete on public.sheet_alarm, public.sheet_allbypass to anon, authenticated;
+insert into public.sheet_alarm(src_row, src_sheet, op, site, sn, sn_key, occur, occur_date, inout, cnt, src_month, fmonth, fweek, imported_at) values
+  (0, 'P', 'P운영', 'P1', 'ZZA-0001', 'ZZA0001', '2026-03-02 10:00:00', '2026-03-02', '내적', true,  '26년 3월', '2026-03', '2026-W10', '2026-09-01T00:00:00Z'),
+  (1, 'P', 'P운영', 'P1', 'ZZA-0002', 'ZZA0002', '2026-03-05 11:00:00', '2026-03-05', '외적', false, '26년 3월', '2026-03', '2026-W10', '2026-09-01T00:00:00Z'),
+  (2, 'K', 'K운영', 'K1', 'ZZA-0003', 'ZZA0003', '2026-04-01 09:00:00', '2026-04-01', '내부', true,  null,       '2026-04', '2026-W14', '2026-09-01T00:00:00Z');
+insert into public.sheet_allbypass(src_row, src_sheet, op, sn, sn_key, occur, occur_date, inout, seq, grp, cnt, imported_at) values
+  (0, 'H',  'H운영',               'ZZB-0001',  'ZZB0001',  '2026-03-02',       '2026-03-02', '내적',     '1', null, true,  '2026-09-01T00:00:00Z'),
+  (1, 'OS', 'GST TAIWAN SCRUBBER', 'ZZC-0001L', 'ZZC0001L', '2026-03-03 08:00', '2026-03-03', 'GST',      '1', '7',  true,  '2026-09-01T00:00:00Z'),
+  (2, 'OS', 'GST TAIWAN SCRUBBER', 'ZZC-0001R', 'ZZC0001R', '2026-03-03 08:00', '2026-03-03', 'External', '2', '7',  false, '2026-09-01T00:00:00Z'),
+  (3, 'H',  null,                  'ZZB-0002',  'ZZB0002',  '2026-03-31',       '2026-03-31', '내적',     '1', null, true,  '2026-09-01T00:00:00Z'),
+  (4, 'H',  'H운영',               'ZZB-0003',  'ZZB0003',  null,               null,         '내적',     '1', null, true,  '2026-09-01T00:00:00Z');
+`;
+
 /* ---------- 검사 ----------
    하나씩 DO 블록이라 하나가 틀려도 나머지는 돈다. 기대하는 실패는 블록 안에서 잡아 «무엇으로» 실패했는지 본다. */
 const CHECKS = String.raw`
@@ -248,7 +264,7 @@ begin perform t_as('boss@test.local');
   exception when others then perform t_ok(sqlerrm like 'locked_column%', '2-11 키 열은 못 바꾼다'); end;
   begin perform edit_update('sheet_wk', 0, u->>'hash', '{"no_such":"1"}'); perform t_ok(false, '2-12 없는 열');
   exception when others then perform t_ok(sqlerrm like 'bad_column%', '2-12 없는 열은 거절'); end;
-  begin perform edit_update('sheet_alarm', 0, 'x', '{}'); perform t_ok(false, '2-13 사전에 없는 표');
+  begin perform edit_update('sheet_cip_f11', 0, 'x', '{}'); perform t_ok(false, '2-13 사전에 없는 표');
   exception when others then perform t_ok(sqlerrm like 'bad_table%', '2-13 사전에 없는 표는 거절'); end;
   u := edit_update('sheet_wk', 0, (edit_get('sheet_wk',0))->>'hash', '{"extra":{"CTC항목":"B","새 열":"x"}}');
   perform t_ok(u->'row'->'extra'->>'CTC항목' = 'B' and u->'row'->'extra'->>'새 열' = 'x', '2-14 extra(jsonb)도 고친다');
@@ -268,7 +284,7 @@ begin perform t_as('boss@test.local');
   begin perform edit_insert('sheet_wk', '{"rs_code":"  "}'); perform t_ok(false, '3-5 빈 행이 들어갔다');
   exception when others then perform t_ok(sqlerrm = 'no_values', '3-5 전부 빈 행은 거절'); end;
   r := edit_insert('sheet_inst', '{"sn":"ZZT-0099","customer":"TESTCO"}');
-  perform t_ok((r->>'key')::int = 2 and (select rows from sheet_sync_log where tbl='inst') = 3, '3-6 설치현황(synced_at 없는 표)도 된다');
+  perform t_ok((r->>'key')::int = 2 and (select rows from sheet_sync_log where tbl='inst') = 3, '3-6 설치현황도 된다 (운영 DB 처럼 synced_at 이 빠진 채 만든 표 — setup-16 이 되살린다)');
 end $$;
 
 -- [4] 삭제 → 이력에 행 전체 → 되돌리기(같은 번호) → 두 번은 안 된다
@@ -458,6 +474,120 @@ do $$ declare f text; bad text := ''; begin
   end loop;
   perform t_ok(bad = '', '9-20 일괄 함수 둘은 authenticated 만 ' || bad);
 end $$;
+set role authenticated;
+
+-- [10] 원장(알람·올바) — v143: 표 사전 · 고치면 imported_at 이 오른다(캐시 열쇠) · 이력에는 그 칸을 안 남긴다 · 되돌리기
+do $$ declare r jsonb; u jsonb; h text; i0 timestamptz; e1 bigint; e2 bigint; d jsonb;
+begin perform t_as('boss@test.local');
+  r := edit_get('sheet_alarm', 1);
+  perform t_ok((r->>'ok')::boolean and r->'row'->>'inout' = '외적', '10-1 원장도 표 사전에 있다 (edit_get)');
+  i0 := (r->'row'->>'imported_at')::timestamptz;
+  u := edit_update('sheet_alarm', 1, r->>'hash', '{"inout":"내적","cnt":true}');
+  e1 := (u->>'log')::bigint;
+  perform t_ok((u->>'ok')::boolean and (u->'row'->>'cnt')::boolean, '10-2 원장 행을 고친다 (계산 칸 cnt 는 화면이 보낸 값 그대로)');
+  perform t_ok((u->'row'->>'imported_at')::timestamptz > i0, '10-3 고치면 imported_at 이 오른다 — 대시보드 캐시 열쇠(행수+마지막 적재 시각)가 바뀐다');
+  perform t_ok(u->>'hash' = (edit_get('sheet_alarm', 1))->>'hash', '10-4 돌려준 해시 = 지금 행의 해시 (시각을 올린 «뒤»의 행)');
+  perform t_ok(not ((select before from sheet_edits where id = e1) ? 'imported_at') and not ((select after from sheet_edits where id = e1) ? 'imported_at'),
+               '10-5 이력의 before/after 에는 imported_at 이 없다');
+  -- 다른 칸만 또 고친 뒤 첫 수정을 되돌린다 — 시각 칸 때문에 «충돌»로 멈추면 안 된다
+  u := edit_update('sheet_alarm', 1, u->>'hash', '{"cause":"원인 메모"}'); e2 := (u->>'log')::bigint;
+  d := edit_restore(e1);
+  perform t_ok((d->>'ok')::boolean and (select inout from sheet_alarm where src_row = 1) = '외적'
+               and (select cause from sheet_alarm where src_row = 1) = '원인 메모', '10-6 다른 칸만 바뀌었으면 되돌리기가 된다 (시각 칸은 비교하지 않는다) ' || coalesce(d::text,''));
+  -- 같은 칸을 또 바꿨으면 여전히 멈춘다
+  u := edit_update('sheet_alarm', 0, (edit_get('sheet_alarm',0))->>'hash', '{"inout":"외적"}'); e1 := (u->>'log')::bigint;
+  u := edit_update('sheet_alarm', 0, u->>'hash', '{"inout":"제외"}');
+  d := edit_restore(e1);
+  perform t_ok(d->>'error' = 'conflict', '10-7 같은 칸이 또 바뀌었으면 되돌리기는 멈춘다');
+  r := edit_insert('sheet_alarm', '{"op":"P운영","src_sheet":"P","sn":"ZZA-0009","sn_key":"ZZA0009","occur":"2026-03-20 08:00","occur_date":"2026-03-20","cnt":true}');
+  perform t_ok((r->>'key')::int = 3 and (r->'row'->>'imported_at') is not null, '10-8 원장 입력 — src_row = max+1 · imported_at 기본값');
+  u := edit_bulk('sheet_allbypass', jsonb_build_array(jsonb_build_object('op','update','key',0,'hash',(edit_get('sheet_allbypass',0))->>'hash',
+         'changes', jsonb_build_object('sn','ZZB-0011','sn_key','ZZB0011'))));
+  perform t_ok((u->>'updated')::int = 1 and (select (imported_at > '2026-09-01T00:00:00Z'::timestamptz) from sheet_allbypass where src_row = 0),
+               '10-9 엑셀 일괄로 고쳐도 imported_at 이 오른다');
+end $$;
+
+-- [10b] edit_overwrites — 업로드가 «데이터 관리에서 고친 행»을 덮는가
+do $$ declare o jsonb; w record; n_ov int; n_cw int; bad text := ''; k int;
+begin perform t_as('boss@test.local');
+  o := edit_overwrites('sheet_alarm', '2026-03-01', '2026-03-31', array['P운영']);
+  perform t_ok((o->>'n')::int = 3 and o->'keys' = '[0,1,3]'::jsonb and o->'who' = '["boss@test.local"]'::jsonb,
+               '10-10 구간(3월 × P운영) 안에서 고친·넣은 행 — 0·1·3 (4월 K운영 행은 밖) ' || o::text);
+  perform t_ok((o->>'last') is not null, '10-11 마지막 수정 시각을 준다');
+  perform t_ok((edit_overwrites('sheet_alarm', '2026-03-01', '2026-03-31', array['K운영'])->>'n')::int = 0, '10-12 다른 운영단위는 안 센다');
+  -- csv_window 와 «같은 식»인가 — 모든 행을 한 번씩 고친 뒤(그러면 고친 행 = 구간 안 행), 여러 구간에서 두 함수의 수를 견준다
+  for k in 0..4 loop perform edit_update('sheet_allbypass', k, (edit_get('sheet_allbypass', k))->>'hash', jsonb_build_object('real', 'T' || k)); end loop;
+  for w in select * from (values ('2026-03-01','2026-03-31', array['H운영','GST TAIWAN SCRUBBER']),
+                                 ('2026-03-03','2026-03-03', array['GST TAIWAN SCRUBBER']),
+                                 ('2026-03-02','2026-03-31', array['', 'H운영']),
+                                 ('2026-01-01','2026-12-31', array['']),
+                                 ('2026-04-01','2026-04-30', array['H운영'])) v(f, t, ops) loop
+    n_ov := (edit_overwrites('sheet_allbypass', w.f, w.t, w.ops)->>'n')::int;
+    n_cw := (csv_window('sheet_allbypass', w.f, w.t, w.ops, true)->>'hit')::int;
+    if n_ov is distinct from n_cw then bad := bad || w.f || '~' || w.t || ' ' || array_to_string(w.ops, '|') || ': ' || n_ov || '≠' || n_cw || '  '; end if;
+  end loop;
+  perform t_ok(bad = '', '10-13 구간 판정이 csv_window(dry) 와 같다 — 시각이 붙은 날짜 · 빈 op · 빈 날짜 포함 ' || bad);
+  perform t_ok((edit_overwrites('sheet_allbypass')->>'n')::int = 5, '10-14 통째 교체(구간 없음)는 표 전체에서 센다');
+  -- 업로드가 같은 번호를 «새로» 넣으면(적재 시각이 이력보다 늦다) 옛 이력은 그 행의 것이 아니다
+  delete from sheet_allbypass where src_row = 4;
+  insert into sheet_allbypass(src_row, src_sheet, op, sn, imported_at) values (4, 'H', 'H운영', 'ZZB-0003', now() + interval '1 minute');
+  perform t_ok((edit_overwrites('sheet_allbypass')->>'n')::int = 4, '10-15 다시 올라온 행(같은 번호)은 옛 이력으로 세지 않는다');
+  perform t_ok((edit_overwrites('sheet_roster')->>'n')::int >= 1, '10-16 Import 표(적재 시각 열 없음)도 센다 — id 는 다시 쓰이지 않는다');
+  perform t_ok((edit_overwrites('sheet_wk', '2026-01-01', '2026-12-31', array['OPX Scrubber'])->>'n')::int >= 1, '10-17 미러(synced_at)도 센다');
+  begin perform edit_overwrites('sheet_abp'); perform t_ok(false, '10-18 사전에 없는 표');
+  exception when others then perform t_ok(sqlerrm like 'bad_table%', '10-18 사전에 없는 표는 거절'); end;
+  begin perform edit_overwrites('sheet_alarm', '2026-04-01', '2026-03-01', array['P운영']); perform t_ok(false, '10-19 거꾸로 된 구간');
+  exception when others then perform t_ok(sqlerrm = 'bad_range', '10-19 거꾸로 된 구간은 거절'); end;
+  perform t_as('ed@test.local');
+  perform t_ok((edit_overwrites('sheet_alarm')->>'n')::int >= 3, '10-20 업로드 권한(can_write)이면 편집자도 본다 — 업로드 화면이 부른다');
+  perform t_as('vw@test.local');
+  begin perform edit_overwrites('sheet_alarm'); perform t_ok(false, '10-21 조회자가 불렀다');
+  exception when others then perform t_ok(sqlerrm = 'read_only', '10-21 쓰기 권한이 없으면 read_only'); end;
+end $$;
+
+reset role;
+do $$ begin
+  perform t_ok(has_function_privilege('authenticated', 'public.edit_overwrites(text,text,text,text[])', 'EXECUTE')
+               and not has_function_privilege('anon', 'public.edit_overwrites(text,text,text,text[])', 'EXECUTE'), '10-22 edit_overwrites 는 authenticated 만');
+  perform t_ok(exists (select 1 from information_schema.columns
+                        where table_schema = 'public' and table_name = 'sheet_inst' and column_name = 'synced_at'),
+               '10-23 setup-16 이 sheet_inst 의 synced_at 을 되살린다 (운영 DB 에 빠져 있던 칸 · setup-4 그대로)');
+end $$;
+
+-- [10c] 설치현황 — 통째 교체로 번호가 다시 매겨지면 옛 수정은 «덮인다»로 세지 않는다 (synced_at 이 있어야 가린다)
+set role authenticated;
+do $$ declare o jsonb;
+begin perform t_as('boss@test.local');
+  perform edit_update('sheet_inst', 0, (edit_get('sheet_inst', 0))->>'hash', '{"bay":"BAY-T9"}');
+  o := edit_overwrites('sheet_inst');
+  perform t_ok(o->'keys' @> '[0,2]'::jsonb, '10-24 설치현황 — 고친 행(0)·넣은 행(2)을 센다 ' || o::text);
+end $$;
+reset role;
+truncate public.sheet_inst;                 -- 통째 교체 흉내: 비우고 «같은 번호»로 다시 넣는다(적재 시각 = 지금 · 이력보다 늦다)
+insert into public.sheet_inst(src_row, sn, customer) select g, 'ZZT-01' || g, 'TESTCO' from generate_series(0, 3) g;
+set role authenticated;
+do $$ begin perform t_as('boss@test.local');
+  perform t_ok((edit_overwrites('sheet_inst')->>'n')::int = 0, '10-25 다시 올라온 설치현황 — 옛 수정의 번호가 «다른 행»에 붙지 않는다');
+end $$;
+
+-- [10d] 원장에 넣고 → 고치고 → 그 수정을 되돌린 뒤 «넣은 것»도 되돌린다. 단계마다 트랜잭션을 나눈다 —
+--       한 트랜잭션 안에서는 now() 가 같아 imported_at 이 안 갈려, 해시가 그 칸을 보더라도 검사가 못 잡는다.
+do $$ declare r jsonb; u jsonb;
+begin perform t_as('boss@test.local');
+  r := edit_insert('sheet_alarm', '{"op":"P운영","src_sheet":"P","sn":"ZZA-0077","occur":"2026-03-21 09:00"}');
+  u := edit_update('sheet_alarm', (r->>'key')::bigint, r->>'hash', '{"cause":"메모"}');
+  perform set_config('t.k', r->>'key', false); perform set_config('t.li', r->>'log', false); perform set_config('t.lu', u->>'log', false);
+end $$;
+do $$ begin perform t_as('boss@test.local');
+  perform t_ok((edit_restore(current_setting('t.lu')::bigint)->>'ok')::boolean, '10-26 원장 수정을 되돌린다 (imported_at 은 또 오른다)');
+end $$;
+do $$ declare d jsonb;
+begin perform t_as('boss@test.local');
+  d := edit_restore(current_setting('t.li')::bigint);
+  perform t_ok((d->>'ok')::boolean and not exists (select 1 from sheet_alarm where src_row = current_setting('t.k')::int),
+               '10-27 고쳤다 되돌린 원장 행도 «넣은 것»을 되돌릴 수 있다 — 해시가 적재 시각(imported_at)을 안 본다 ' || coalesce(d::text, ''));
+end $$;
+reset role;
 `;
 
 let skipped = 0;
@@ -467,16 +597,20 @@ try {
   const st = run('pg_ctl', ['-D', DATA, '-o', `-p ${PORT} -k ${DIR} -c listen_addresses=`, '-l', path.join(DIR, 'log'), '-w', 'start']);
   if (st.status !== 0) throw new Error('pg_ctl start 실패: ' + (st.stderr || st.stdout) + (fs.existsSync(path.join(DIR,'log')) ? fs.readFileSync(path.join(DIR, 'log'), 'utf8') : ''));
 
-  console.log('[0] 복제 스키마 + 저장소의 setup-16-edit.sql 적용');
+  console.log('[0] 복제 스키마 + 저장소의 setup-10-alarm.sql · setup-16-edit.sql 적용');
   const p0 = psql(PRELUDE, 'prelude');
   ok(!/ERROR/.test(p0.stderr), '복제 스키마 실패:\n' + p0.stderr);
+  const pL = psql(fs.readFileSync(LEDGER_FILE, 'utf8'), 'setup10');
+  ok(!/ERROR/.test(pL.stderr), 'setup-10-alarm.sql 적용 실패:\n' + pL.stderr);
+  const pS = psql(LEDGER_SEED, 'ledger-seed');
+  ok(!/ERROR/.test(pS.stderr), '원장 씨앗 실패:\n' + pS.stderr);
   const sqlText = fs.readFileSync(SQL_FILE, 'utf8');
   const p1 = psql(sqlText, 'setup16');
   ok(!/ERROR/.test(p1.stderr), 'setup-16-edit.sql 적용 실패:\n' + p1.stderr);
   const p1b = psql(sqlText, 'setup16b');          // «여러 번 Run 해도 안전하다» 를 그대로 시험
   ok(!/ERROR/.test(p1b.stderr), 'setup-16-edit.sql 두 번째 적용 실패:\n' + p1b.stderr);
 
-  console.log('[1~9] 권한 · 수정 · 입력 · 삭제 · 되돌리기 · 연쇄 · 보조 함수 · 엑셀 일괄');
+  console.log('[1~10] 권한 · 수정 · 입력 · 삭제 · 되돌리기 · 연쇄 · 보조 함수 · 엑셀 일괄 · 원장 · 업로드 덮어쓰기 확인');
   const p2 = psql(CHECKS, 'checks');
   const out = (p2.stderr || '') + (p2.stdout || '');
   const oks = out.match(/T_OK [^\n]*/g) || [];
@@ -484,7 +618,7 @@ try {
   oks.forEach(() => pass++);
   bads.forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
   /* 검사가 «조용히 덜 돈» 것을 잡는다 — 블록 하나가 통째로 안 돌면 T_OK 개수가 모자란다 */
-  const EXPECT = 76;
+  const EXPECT = 103;
   ok(oks.length === EXPECT, 'T_OK 가 ' + oks.length + '개 — 기대 ' + EXPECT + '개 (검사가 덜 돌았거나 늘었다)');
 } catch (e) {
   fail++; console.log('  ❌ ' + (e && e.message || e));

@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 146;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 147;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -1967,6 +1967,33 @@ GST.ALARM = {
            .sort(function(a, b){ return b.n - a.n; });
   },
 
+  /* 계산 칸 — 원장 한 행(DB 열 이름 · snake)에서 sn_key·occur_date·fmonth·fweek·cnt 를 낸다 (v143).
+     업로드(build)와 데이터 관리(/edit/)가 «같은 함수»를 쓴다 — 사람이 S/N·발생시각·내/외를 고치면 대시보드가 실제로
+     세는 칸(occur_date·sn_key·fmonth·fweek)이 따라와야 한다. 화면에서 따로 계산하면 업로드와 다른 규칙이 된다(제2원칙).
+       day0  — 이미 구한 발생일(build 는 «스탬프 전» 원문으로 구한다). 안 주면 occur → occur_t 순으로 다시 구한다.
+     ⚠ seq(해외 Group → seq)는 여기서 안 다룬다 — 한 줄만 보고는 정할 수 없는 칸이다(그 사건의 다른 줄을 봐야 한다).
+       그래서 데이터 관리는 Group 이 있는 줄의 seq·grp·내/외를 잠근다. */
+  derive: function(o, kind, day0){
+    const g=function(k){ return String(o&&o[k]!=null?o[k]:'').trim(); };
+    const day=day0!==undefined ? day0 : (GST.ALARM.day(g('occur'))||GST.ALARM.day(g('occur_t')));
+    return {
+      sn_key: GST.ALARM.key(g('sn'))||null,
+      occur_date: day||null,
+      // 시트의 «정산월·주차»를 우선 쓴다(국내는 삼성 기준 월이 달력과 다르다). 없으면 달력.
+      fmonth: GST.ALARM.ym(g('src_month'), g('src_year')) || (day?day.slice(0,7):null),
+      fweek:  GST.ALARM.yw(g('src_week'),  g('src_year')) || (day?GST.ALARM.isoWeek(day):null),
+      cnt: GST.ALARM.counts({seq:g('seq'), incl:g('incl'), inout:g('inout')}, kind)
+    };
+  },
+  /* 원장 행의 구분 — op 는 업로드가 붙인 «시트 표지»다(아래 build: K·P·H 워크북 = tag+'운영' · 해외 리스트 = 시트의 운영단위).
+     그래서 K·P·H운영은 국내 워크북에서 온 행이고, 그 밖은 GST.ORG.region 이 운영단위로 가른다(v143 · 데이터 관리의 구분 칸).
+     ⚠ 대시보드의 «조직 축»은 여전히 S/N → 설치현황 조인이다(krJoin) — 이것은 «어느 원장에서 왔나»를 묻는 칸이다. */
+  region: function(op){
+    const t=String(op==null?'':op).trim();
+    if(/^[KPH]운영$/.test(t)) return GST.ORG.REGION_KR;
+    return GST.ORG.region(t);
+  },
+
   /* 시트 한 장 → DB 행. 업로드 화면과 검증 스크립트가 «같은 함수»를 쓴다 —
      화면에만 두면 테스트가 흉내를 내게 되고, 흉내는 반드시 본체와 갈라진다
      (t-upload 가 그 이유로 실제 페이지를 띄워 대조하고 있다).
@@ -2016,12 +2043,10 @@ GST.ALARM = {
       o.op=/^[KPH]$/.test(String(tag||'')) ? (tag+'운영')
          : ((v.opRaw||'').trim() || (tag+'운영'));
       delete o.op_raw;                          // op 가 이미 그 값이다 — 컬럼을 둘 만들지 않는다
-      o.sn_key=GST.ALARM.key(v.sn)||null;
-      o.occur_date=day||null;
-      // 시트의 «정산월·주차»를 우선 쓴다(국내는 삼성 기준 월이 달력과 다르다). 없으면 달력.
-      o.fmonth=GST.ALARM.ym(v.srcMonth, v.srcYear) || (day?day.slice(0,7):null);
-      o.fweek =GST.ALARM.yw(v.srcWeek,  v.srcYear) || (day?GST.ALARM.isoWeek(day):null);
-      o.cnt=GST.ALARM.counts(v, kind);
+      /* 계산 칸(sn_key·occur_date·fmonth·fweek·cnt)은 derive 한 곳에서 — 데이터 관리(/edit/)가 한 칸을 고칠 때도
+         «같은 함수»로 다시 계산한다(v143). 두 벌이면 고친 행만 다른 규칙으로 계산돼 대시보드가 조용히 갈린다.
+         ⚠ 발생일은 «스탬프 전» 원문으로 이미 구해 둔 값을 넘긴다(위 skip 판정과 같은 값 — 출력이 한 글자도 안 바뀐다). */
+      Object.assign(o, GST.ALARM.derive(o, kind, day));
       o._v=v;                                   // 아래 Group 눕히기에서만 쓰고 지운다
       const ex={};
       extraCols.forEach(function(x){ const t=String(r[x.i]==null?'':r[x.i]).trim(); if(t) ex[x.h]=t; });
@@ -6236,6 +6261,9 @@ GST.SN_PAGES=[{id:'scrubber',ko:'설치 현황',en:'Installation'},{id:'pm',ko:'
 GST._snHdr=/(^|[^a-z])s\/?n([^a-z]|$)|serial|설비\s*번호|설비코드/i;
 GST._snOf=function(td){
   if(!td||!td.parentNode||td.tagName!=='TD') return '';
+  /* 표의 클릭이 «자기 일»을 하는 곳은 빠진다 — 데이터 관리 목록은 행을 눌러 «그 행을 연다».
+     이 메뉴가 캡처 단계에서 먼저 먹으면 S/N 칸을 누른 사람만 행이 안 열리고 다른 메뉴가 뜬다(v143 · 실제로 그랬다). */
+  if(td.closest('[data-gst-nosn]')) return '';
   const tbl=td.closest('table'); if(!tbl) return '';
   const idx=[].indexOf.call(td.parentNode.children, td);
   const hr=tbl.querySelector('thead tr')||tbl.rows[0]; if(!hr) return '';

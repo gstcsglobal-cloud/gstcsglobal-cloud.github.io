@@ -516,5 +516,21 @@ console.log('\n[12-d] 공수 분모 제외 — 팀장 · OFFICE인원 · 단지�
   is(sc.vals.length === 3, '잡힌 «값»도 돌려준다 — 화면이 그것을 적는다 (분모가 조용히 작아지면 인당이 조용히 높아진다)');
 }
 
+console.log('\n[13] 계산 칸은 «한 함수»(GST.ALARM.derive)가 낸다 — 업로드와 데이터 관리(/edit/)가 같은 답 (v143)');
+{
+  /* 만든 행을 derive 에 다시 먹이면 같은 계산 칸이 나와야 한다. build 가 식을 따로 들면(또는 데이터 관리가 자기 식을
+     들면) 「한 칸을 고친 행」만 다른 규칙으로 계산돼 대시보드 숫자가 조용히 갈린다 — 제2원칙의 자리다. */
+  const bad = [];
+  Object.keys(B).map(k => [k, B[k].rows, k.indexOf('alarm') === 0 ? 'alarm' : 'abp2'])
+    .concat([['P2alarm', G.ALARM.build(P2_ALARM, 'alarm', 'P').rows, 'alarm'], ['P2abp', G.ALARM.build(P2_ABP, 'abp2', 'P').rows, 'abp2']])
+    .forEach(([k, rows, kind]) => rows.forEach((r, i) => { const d = G.ALARM.derive(r, kind);
+      Object.keys(d).forEach(c => { const a = r[c] == null ? null : r[c];
+        if (JSON.stringify(a) !== JSON.stringify(d[c])) bad.push(k + '#' + i + '.' + c + ' ' + JSON.stringify(a) + '≠' + JSON.stringify(d[c])); }); }));
+  is(!bad.length, '세 사이트·두 표·통합 양식 — 만든 행을 derive 에 다시 먹여도 계산 칸이 같다' + (bad.length ? ' → ' + bad.slice(0, 3).join(' | ') : ''));
+  const ed = fs.readFileSync(ROOT + '/edit/index.html', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  is(/GST\.ALARM\.derive\(/.test(ed) && !/ALARM\.(isoWeek|ym|yw|counts|key|day)\(/.test(ed),
+     '데이터 관리는 derive 만 부른다 — 계산 칸의 식(조인 키·발생일·정산월·주차·집계 대상)을 따로 들지 않는다');
+}
+
 console.log('\n' + (fail ? '❌ t-alarm ' + fail + ' 실패 / ' + (pass+fail) : '✅ t-alarm ' + pass + '/' + pass));
 process.exit(fail ? 1 : 0);

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=146"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=147"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -156,6 +156,7 @@ table.rt th.ck,table.rt td.ck{width:34px;padding-left:12px;padding-right:2px;tex
 table.rt th.ck input,table.rt td.ck input{width:15px;height:15px;cursor:pointer;vertical-align:middle;accent-color:var(--accent)}
 .list-h .sp{flex:1}
 .selbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fld.ro input,.fld.ro textarea{background:var(--surface-2);color:var(--txt-muted);cursor:not-allowed}
 .pv-sum{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
 .pv-sum .badge{font-size:12px;padding:3px 10px}
 .badge.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
@@ -220,7 +221,7 @@ table.dt td.v{word-break:break-all}
           <form class="card search" id="search" autocomplete="off"></form>
           <div class="card">
             <div class="list-h" id="listH"></div>
-            <div class="tw"><table class="rt" id="list"></table></div>
+            <div class="tw"><table class="rt" id="list" data-gst-nosn></table></div>
             <div id="more"></div>
           </div>
         </section>
@@ -261,7 +262,7 @@ table.dt td.v{word-break:break-all}
      「기타」로 저절로 뜬다(승격된 새 열이 조용히 안 보이는 일이 없게).
    · 값 목록을 박지 않는다 — 입력 보조 목록은 edit_distinct 로 «지금 표에 있는 값»을 받는다.
    ============================================================================ */
-GST.needVer(146);
+GST.needVer(147);
 const $ = id => document.getElementById(id);
 const esc = s => GST._esc(s);
 const PAGE = 100;
@@ -273,7 +274,7 @@ let C = null;                         // supabase client
    need: 새 행 필수 · dup: 넣기 전 중복 확인 열 · dates/nums: 입력값 검사 · long: 여러 줄
    열 이름이 별칭 배열이면 «표에 실제로 있고 값이 찬 열»을 고른다(인원명단 양식이 세 벌 — v96). */
 const TABS = [
-  { id:'wk', tbl:'sheet_wk', name:'수선실적', spec:'wk', key:'src_row', mode:'server',
+  { id:'wk', tbl:'sheet_wk', name:'수선실적', spec:'wk', key:'src_row', mode:'server', region:{ col:'op', of:v => GST.ORG.region(v), by:'운영단위' },
     list:['rs_code','d_start','op','campus','line','stage','eq_no','sn_in','action','workers'],
     quick:[ {k:'rs', l:'실적코드', cols:['rs_code'], t:'text', ph:'일부만 적어도 찾습니다'},
             {k:'sn', l:'S/N · 설비호기', cols:['sn_in','sn_out','eq_no','main_eq'], t:'text', ph:'예: GBWS-0000'},
@@ -293,7 +294,7 @@ const TABS = [
     dl:['pg','op','customer','campus','line','bay','proc','subproc','model','status','req_type','stage','pf','chamber','chpos','alarm'],
     fill:{ code:'eq_no', sn:['sn_in','sn_out'],
            map:{ op:'country', customer:'customer', campus:'location', line:'fab', bay:'bay', model:'model', eq_no:'code' } } },
-  { id:'mat', tbl:'sheet_mat', name:'자재실적', spec:'mat', key:'src_row', mode:'server',
+  { id:'mat', tbl:'sheet_mat', name:'자재실적', spec:'mat', key:'src_row', mode:'server', region:{ col:'op', of:v => GST.ORG.region(v), by:'운영단위' },
     list:['rs_code','work_date','op','eq','sn','mat_code','mat_name','qty','pf'],
     quick:[ {k:'rs', l:'수선실적번호', cols:['rs_code'], t:'text'},
             {k:'sn', l:'S/N · 설비호기', cols:['sn','eq','main_eq'], t:'text', ph:'예: GBWS-0000'},
@@ -311,7 +312,57 @@ const TABS = [
     dl:['op','customer','campus','line','bay','proc','detail','model','pf','free_reason','reason','mat_pos','eq_pos','store'],
     fill:{ code:'eq', sn:['sn'],
            map:{ op:'country', customer:'customer', campus:'location', line:'fab', bay:'bay', model:'model', eq:'code', sn:'sn' } } },
-  { id:'inst', tbl:'sheet_inst', name:'설치현황', spec:'inst', key:'src_row', mode:'server',
+  /* ── 원장(v143 · 사용자 확정 「고치기까지」) ──────────────────────────────────────
+     ⚠ 원장은 업로드가 그 기간을 통째로 갈아끼운다 — 여기서 고친 행은 같은 기간을 다시 올리면 사라진다.
+       업로드 화면이 올리기 전에 «데이터 관리에서 고친 N행이 덮입니다»라고 말한다(edit_overwrites · setup-16 6절).
+     ⚠ 계산 칸(calc)은 사람이 못 고친다 — 저장할 때 core 의 GST.ALARM.derive 로 다시 계산해 함께 보낸다(업로드와 같은 함수).
+       op·src_sheet 는 «어느 시트에서 왔나»라 구간 교체의 기준이다 — 새 행에서만 고른다(lockOld).
+     ⚠ 해외 올바(Group 이 있는 줄)는 seq 가 «그 사건의 다른 줄»에서 정해진다 — 한 줄만 고치면 대표 줄이 바뀐다.
+       그래서 그 줄의 seq·grp·내/외는 잠근다(grpLock). 원본 리스트에서 고쳐 다시 올린다. */
+  { id:'alarm', tbl:'sheet_alarm', name:'알람', spec:'alarm', key:'src_row', mode:'server', ledger:'alarm',
+    region:{ col:'op', of:v => GST.ALARM.region(v), by:'운영단위(K·P·H운영 = 국내 워크북 · 그 밖은 운영단위로)' },
+    list:['occur','op','site','line','sn','alarm','atype','inout','cnt','cause'],
+    quick:[ {k:'sn', l:'S/N · EQP', cols:['sn','eqp_id','seqp_id'], t:'text', ph:'예: GBWS-0000'},
+            {k:'dt', l:'발생일', cols:['occur_date'], t:'range'},
+            {k:'op', l:'운영단위', cols:['op'], t:'pick'},
+            {k:'site', l:'Site', cols:['site'], t:'pick'},
+            {k:'inout', l:'내/외', cols:['inout'], t:'pick'},
+            {k:'txt', l:'알람 · 원인 · 조치', cols:['alarm','alarm_name','cause','action'], t:'text'} ],
+    groups:[ ['발생', ['occur','rel_time','hold','alarm','alarm_name','alevel']],
+             ['설비', ['site','line','area','bay','eqp_id','sn','seqp_id','model','maker','ch','chamber','chpos','status','proc','subproc']],
+             ['판정 (내/외 · 유형)', ['inout','incl','atype','ctype','ctype2']],
+             ['내용', ['cause','phenom','action','module']],
+             ['정산월 · 주차 (시트 원문)', ['src_month','src_week','src_year']],
+             ['계산 칸 — 저장할 때 자동으로 다시 계산합니다', ['op','src_sheet','sn_key','occur_date','fmonth','fweek','cnt'], 'calc'],
+             ['담당자 (실명)', ['checker'], 'legacy'] ],
+    calc:['src_sheet','sn_key','occur_date','fmonth','fweek','cnt'], lockOld:['op'],
+    labels:{ op:'운영단위 (시트)', src_sheet:'시트', sn_key:'S/N 조인 키', occur_date:'발생일', fmonth:'정산월 (눕힘)', fweek:'주차 (눕힘)', cnt:'집계 대상' },
+    need:['op','sn','occur'], dates:['occur'], long:['cause','phenom','action','alarm'],
+    dl:['op','site','line','area','bay','proc','subproc','status','maker','model','alevel','atype','ctype','ctype2','inout','incl','module'],
+    note:'원장은 업로드가 그 기간을 통째로 갈아끼웁니다 — 여기서 고친 값은 같은 기간을 다시 올리면 사라집니다(업로드 화면이 미리 알려 줍니다). 원본 워크북에도 같이 고쳐 두세요.\n계산 칸(발생일·S/N 조인 키·정산월·주차·집계 대상)은 저장할 때 업로드와 같은 규칙으로 다시 계산합니다.' },
+  { id:'abp', tbl:'sheet_allbypass', name:'올바이패스', spec:'abp2', key:'src_row', mode:'server', ledger:'abp2',
+    region:{ col:'op', of:v => GST.ALARM.region(v), by:'운영단위(K·P·H운영 = 국내 워크북 · 그 밖은 운영단위로)' },
+    list:['occur','op','site','line','sn','alarm','seq','grp','inout','cnt'],
+    quick:[ {k:'sn', l:'S/N · EQP', cols:['sn','eqp_id'], t:'text', ph:'예: GBWS-0000'},
+            {k:'dt', l:'발생일', cols:['occur_date'], t:'range'},
+            {k:'op', l:'운영단위', cols:['op'], t:'pick'},
+            {k:'site', l:'Site', cols:['site'], t:'pick'},
+            {k:'inout', l:'내/외 · 담당', cols:['inout'], t:'pick'},
+            {k:'txt', l:'알람 · 원인 · 조치', cols:['alarm','cause','action'], t:'text'} ],
+    groups:[ ['발생', ['occur','occur_t','rel_time','hold','alarm','real']],
+             ['설비', ['site','line','area','eqp_id','sn','chamber','model','maker','proc','subproc']],
+             ['한 사건의 줄 (Seq · Group)', ['seq','grp']],
+             ['판정 (내/외 · 유형)', ['inout','incl','atype','atype2','ctype','ctype2']],
+             ['내용', ['cause','phenom','action']],
+             ['정산월 · 주차 (시트 원문)', ['src_month','src_week','src_year']],
+             ['계산 칸 — 저장할 때 자동으로 다시 계산합니다', ['op','src_sheet','sn_key','occur_date','fmonth','fweek','cnt'], 'calc'],
+             ['확인자 (실명)', ['checker'], 'legacy'] ],
+    calc:['src_sheet','sn_key','occur_date','fmonth','fweek','cnt'], lockOld:['op'], grpLock:['seq','grp','inout','incl'],
+    labels:{ op:'운영단위 (시트)', src_sheet:'시트', sn_key:'S/N 조인 키', occur_date:'발생일', fmonth:'정산월 (눕힘)', fweek:'주차 (눕힘)', cnt:'집계 대상' },
+    need:['op','sn','occur'], dates:['occur'], long:['cause','phenom','action','alarm'],
+    dl:['op','site','line','area','proc','subproc','maker','model','real','atype','atype2','ctype','ctype2','inout','incl'],
+    note:'원장은 업로드가 그 기간을 통째로 갈아끼웁니다 — 여기서 고친 값은 같은 기간을 다시 올리면 사라집니다(업로드 화면이 미리 알려 줍니다). 원본 파일에도 같이 고쳐 두세요.\n해외 리스트의 Group 줄(두 챔버가 한 사건)은 Seq·Group·담당을 잠급니다 — 한 줄만 바꾸면 그 사건의 대표 줄이 바뀌어 건수가 달라집니다. 원본 리스트에서 고쳐 다시 올리세요.' },
+  { id:'inst', tbl:'sheet_inst', name:'설치현황', spec:'inst', key:'src_row', mode:'server', region:{ col:'country', of:v => GST.ORG.region(v), by:'Country(운영단위)' },
     list:['code','sn','country','customer','location','fab','bay','model','state','turn_on'],
     quick:[ {k:'sn', l:'S/N · CODE', cols:['sn','code'], t:'text', ph:'예: GBWS-0000'},
             {k:'country', l:'운영단위 (Country)', cols:['country'], t:'pick'},
@@ -326,7 +377,7 @@ const TABS = [
     need:['sn'], dup:'sn',
     dates:['fab_in','start','turn_on','warranty_date'],
     dl:['country','customer','div','location','fab','line2','floor','bay','model','burner','type','state','warranty','group1','group2','tool_maker'] },
-  { id:'roster', tbl:'sheet_roster', name:'인원현황', key:'id', mode:'whole',
+  { id:'roster', tbl:'sheet_roster', name:'인원현황', key:'id', mode:'whole', region:{ row:r => personRegion(r), by:'구분 → 운영단위 → 고객사 → 지역 → 중문명·Dept.·사번 다수결(주간현황과 같은 순서)' },
     list:[['사원번호','ID'],['이름(영문)','Name((영문)'],['이름(중문)','Name(중문)'],'운영단위',['단지','Work Place'],'라인','팀',['직급(한글)','직급'],['입사일','Date of entry'],['퇴사일','Resignation']],
     quick:[ {k:'q', l:'이름 · 사번 · 메일', cols:['사원번호','ID','이름(영문)','이름(중문)','Name((영문)','Name(중문)','E-Mail'], t:'text'},
             {k:'op', l:'운영단위', cols:['운영단위'], t:'pick'},
@@ -341,7 +392,7 @@ const TABS = [
     dates:['입사일','퇴사일','Date of entry','Resignation'],
     dl:['구분','담당구분','운영단위','사업부','고객사','지역','팀','단지','라인','직급(한글)','직급(영문)','업무/직책','현장 인원여부'],
     note:'사번·이름을 고치면 교육현황의 짝 행도 같은 글자로 같이 고칩니다(인원 화면과 같은 규칙 · 이력에 「연쇄」로 남습니다).\n새로 넣거나 지울 때는 교육현황이 따라오지 않습니다 — 교육현황 탭에서 따로 손보세요.' },
-  { id:'edu', tbl:'sheet_edu', name:'교육현황', key:'id', mode:'whole',
+  { id:'edu', tbl:'sheet_edu', name:'교육현황', key:'id', mode:'whole', region:{ staff:true, row:r => staffRegion(r, '인원'), by:'사번(없으면 이름)으로 인원현황의 구분' },
     list:['사원번호','인원','Site','구분','Basic 교육완료일','Veteran 교육완료일','Scrubber Lv.2 교육완료일','Scrubber Lv.3 교육완료일'],
     quick:[ {k:'q', l:'이름 · 사번', cols:['사원번호','인원'], t:'text'},
             {k:'site', l:'Site', cols:['Site'], t:'pick'},
@@ -352,7 +403,7 @@ const TABS = [
     dates:['Basic 교육완료일','Veteran 교육완료일','Scrubber Lv.2 교육완료일','Scrubber Lv.3 교육완료일'],
     dl:['Site','구분'],
     note:'이수 판정은 «완료일이 있는가» 하나입니다. 인원과의 짝은 사번(없으면 이름)으로 맞춥니다.' },
-  { id:'leave', tbl:'sheet_leave', name:'휴가', key:'id', mode:'whole',
+  { id:'leave', tbl:'sheet_leave', name:'휴가', key:'id', mode:'whole', region:{ staff:true, row:r => staffRegion(r, '이름'), by:'사번(없으면 이름)으로 인원현황의 구분' },
     list:['사원번호','이름','소속','항목','휴가시작일','휴가종료일','휴가신청시간','비고'],
     quick:[ {k:'q', l:'이름 · 사번', cols:['사원번호','이름'], t:'text'},
             {k:'dt', l:'휴가시작일', cols:['휴가시작일'], t:'range'},
@@ -364,6 +415,7 @@ const TABS = [
     dates:['발생일','휴가시작일','휴가종료일'],
     dl:['소속','항목'] }
 ];
+TABS.forEach(t => { if(t.region) t.quick.unshift({ k:'region', l:'구분', t:'region' }); });
 const TAB_BY = Object.fromEntries(TABS.map(t => [t.id, t]));
 const TAB_OF_TBL = Object.fromEntries(TABS.map(t => [t.tbl, t]));
 const NUM_TYPES = /^(bigint|integer|smallint|numeric|real|double precision)$/;
@@ -377,6 +429,9 @@ const S = {
   rows:[], after:null, more:false, busy:false,
   qf:null, total:null, counting:false, seq:0,   // 지금 목록을 만든 «검색 조건»(탭과 함께) · 그 조건의 전체 건수 · 세는 중 · 검색 차례(늦게 온 건수를 버린다)
   dl:false,                           // 엑셀 받는 중(두 번 눌러 두 벌을 만들지 않게)
+  reg:{},                             // 표 → 구분별 값 목록 {kr,os,unk,cut} (edit_distinct 로 받아 정본 판정)
+  ops:{},                             // 원장 표 → 지금 있는 운영단위(op) 값 — 새 행이 고를 수 있는 값
+  badTab:{},                          // 서버가 «이 표만» 모르는 탭(옛 setup-16 에 원장이 없을 때) — 배너에 한 번만 적는다
   sel:new Set(), lastCk:null,         // 체크한 행 키(글자) — 탭을 바꾸거나 새로 검색하면 비운다(«보이는 목록»의 선택이다)
   cur:null,                           // {t, key, row, hash, isNew, orig, origX}
   dist:{},                            // 'tbl|col' → [[값, 건수]]
@@ -396,6 +451,7 @@ TABS.forEach(t => {
     LBL[t.id][GST._snake(f)] = { name:String(a[0]).replace(/\s*\n\s*/g,' '), alt:a.slice(1).join(' · ') };
   });
 });
+TABS.forEach(t => { Object.keys(t.labels || {}).forEach(c => { LBL[t.id][c] = { name:t.labels[c], alt:c }; }); });
 const label = (t, c) => (LBL[t.id] && LBL[t.id][c]) || { name:c, alt:'' };
 
 /* ---------- 작은 도구들 ---------- */
@@ -479,6 +535,7 @@ function rpcErr(e){
   let r;
   if((r = /locked_column: (.*)/.exec(m))) return '「' + r[1] + '」 열은 바꿀 수 없습니다(행 번호·관리 열).';
   if((r = /bad_column: (.*)/.exec(m))) return '표에 「' + r[1] + '」 열이 없습니다 — 화면을 새로고침하세요.';
+  if((r = /bad_table: (\S+)/.exec(m))) return '서버의 표 사전에 아직 없는 표입니다(' + r[1] + ') — Supabase SQL Editor 에서 supabase/setup-16-edit.sql 을 Run 하세요(여러 번 Run 해도 안전합니다).';
   if(/no_values/.test(m)) return '빈 행은 넣을 수 없습니다.';
   if(/already_restored/.test(m)) return '이미 되돌린 이력입니다.';
   if(/not_restorable/.test(m)) return '이 이력은 되돌릴 수 없습니다(업로드 요약·옛 시트 편집 기록).';
@@ -525,7 +582,10 @@ async function switchTab(id, opt){
   S.rows = []; S.after = null; S.more = false; S.sel = new Set(); S.lastCk = null;
   S.qf = null; S.total = null; S.counting = false; S.seq++;
   renderSearch(); renderList(); renderEditor();
-  try{ await loadCols(t); }catch(e){ /* 배너가 이미 밝힌다 */ }
+  try{ await loadCols(t); }
+  catch(e){   // 서버 준비 전(S.ready=false)이면 시작 배너가 이미 밝혔다. 준비됐는데 «이 표만» 못 열면 여기서 말한다 — 시작 배너는 덮지 않는다
+    if(S.ready && !S.badTab[t.id]){ S.badTab[t.id] = 1; $('banner').insertAdjacentHTML('beforeend', '<div class="banner warn"><b>' + esc(t.name) + ' 탭</b> — ' + esc(e.message) + '</div>'); }
+  }
   renderSearch();
   if(t.mode === 'whole') runSearch(false);
   else $('listH').innerHTML = '<span class="hint">조건을 넣고 「검색」을 누르세요. 아무 조건 없이 누르면 최근에 올린 행부터 ' + PAGE + '건씩 보여 줍니다.</span>';
@@ -540,6 +600,10 @@ function renderSearch(){
     const v = f[q.k] || '';
     if(q.t === 'range'){
       h += '<label class="sf range"><span>' + esc(q.l) + '</span><div><input type="date" name="' + q.k + '_from" value="' + esc(f[q.k + '_from'] || '') + '"><span class="hint">~</span><input type="date" name="' + q.k + '_to" value="' + esc(f[q.k + '_to'] || '') + '"></div></label>';
+    }else if(q.t === 'region'){
+      const R = S.reg[t.tbl], tip = '판정 근거: ' + t.region.by + (R ? ' · 국내 ' + R.kr.length + ' · 해외 ' + R.os.length + ' · 미상 ' + R.unk.length + '가지 값' : '');
+      h += '<label class="sf"><span>' + esc(q.l) + '</span><select name="' + q.k + '" title="' + esc(tip) + '"><option value="">전체</option>'
+        + Object.keys(REG).map(k => '<option value="' + k + '"' + (v === k ? ' selected' : '') + '>' + REG[k] + (k === 'unk' ? ' (판정 불가)' : '') + '</option>').join('') + '</select></label>';
     }else if(q.t === 'active'){
       h += '<label class="sf"><span>' + esc(q.l) + '</span><select name="' + q.k + '"><option value="">전체</option><option value="y"' + (v === 'y' ? ' selected' : '') + '>재직</option><option value="n"' + (v === 'n' ? ' selected' : '') + '>퇴사</option></select></label>';
     }else{
@@ -608,6 +672,7 @@ async function runSearch(append){
   $('listH').innerHTML = '<span class="spin"></span> <span class="hint">찾는 중…</span>';
   try{
     if(!append){ S.qf = { tab:t.id, f:Object.assign({}, f) }; S.total = null; S.counting = false; S.seq++; }
+    if(f.region && t.region) await regionReady(t);
     if(t.mode === 'whole'){
       if(!S.all[t.id]) S.all[t.id] = await loadAll(t);
       const all = S.all[t.id].filter(r => passWhole(t, f, r)).sort((a, b) => (b[t.key] || 0) - (a[t.key] || 0));
@@ -642,6 +707,7 @@ function listColsOf(t){
 /* 목록 칸 값 — 머리글은 «값이 찬» 열 이름으로 서지만, 옛 영문 양식 행은 값이 옛 열(ID·Name((영문))에만 있다.
    그 행을 빈칸으로 보여 주면 «이름 없는 사람»처럼 읽힌다 — 같은 뜻의 별칭 중 그 행에서 찬 값을 보여 준다. */
 function cellOf(t, r, c){
+  if(typeof r[c] === 'boolean') return r[c] ? '집계' : '제외';
   const v = vs(r[c]);
   if(v.trim() !== '') return v;
   const al = t.list.find(x => Array.isArray(x) && x.indexOf(c) >= 0);
@@ -653,7 +719,8 @@ function cellOf(t, r, c){
 function applyServer(t, f, q){
   const ors = [];
   t.quick.forEach(qd => {
-    if(qd.t === 'text'){
+    if(qd.t === 'region'){ if(f[qd.k]) ors.push(regionTerm(t, f[qd.k])); }
+    else if(qd.t === 'text'){
       const p = pat(f[qd.k]); if(!p) return;
       if(qd.cols.length === 1) q = q.ilike(qd.cols[0], p);
       else ors.push('or(' + qd.cols.map(c => c + '.ilike.' + p).join(',') + ')');
@@ -678,7 +745,8 @@ function applyServer(t, f, q){
 function passWhole(t, f, r){
   for(const qd of t.quick){
     const v = f[qd.k];
-    if(qd.t === 'text'){ const re = patRe(v); if(re && !qd.cols.some(c => re.test(vs(r[c])))) return false; }
+    if(qd.t === 'region'){ if(v && regionKey(t.region.row(r)) !== v) return false; }
+    else if(qd.t === 'text'){ const re = patRe(v); if(re && !qd.cols.some(c => re.test(vs(r[c])))) return false; }
     else if(qd.t === 'pick'){ if(v && !qd.cols.some(c => vs(r[c]).trim() === v)) return false; }
     else if(qd.t === 'active'){
       const gone = qd.cols.some(c => vs(r[c]).trim() !== '');
@@ -699,6 +767,64 @@ function passWhole(t, f, r){
   }
   return true;
 }
+/* ---------- 구분 (국내 · 해외 · 미상) — v143 사용자 요청 ----------
+   판정은 대시보드의 정본을 그대로 쓴다 — 실적·설치는 GST.ORG.region(운영단위·Country), 원장은 GST.ALARM.region(op),
+   인원은 주간현황과 같은 순서(personRegion), 교육·휴가는 «그 사람»(사번 → 인원현황)의 구분. 여기서 새 규칙을 짜지 않는다.
+   · 큰 표는 그 열의 «값 목록»을 받아(edit_distinct) 값마다 판정한 뒤 in(…) 으로 거른다 — 판정 규칙이 브라우저에 있어
+     서버가 행마다 판정할 수 없고, 운영단위 값은 수십 가지라 목록이 작다.
+   · «미상»(판정 불가 · 빈칸)도 고를 수 있다 — 국내·해외 어느 쪽에도 안 잡히는 행이 조용히 사라지지 않게, 그리고 고칠 수 있게.
+     세 칸(국내 + 해외 + 미상)을 합치면 언제나 «전체»다. */
+const REG = { kr:'국내', os:'해외', unk:'미상' };
+const regionKey = g => g === GST.ORG.REGION_KR ? 'kr' : g === GST.ORG.REGION_OS ? 'os' : 'unk';
+async function regionReady(t){
+  if(t.mode === 'whole'){
+    if(t.region.staff){                                 // 교육·휴가 — 인원현황을 받아 사람별 구분표를 만든다(매번 새로: 인원을 고쳤을 수 있다)
+      if(!S.all.roster) S.all.roster = await loadAll(TAB_BY.roster);
+      STAFF = staffIndex(S.all.roster);
+    }
+    return;
+  }
+  if(S.reg[t.tbl]) return;
+  const vals = await rpc('edit_distinct', {p_tbl:t.tbl, p_col:t.region.col, p_limit:300}) || [];
+  const R = { kr:[], os:[], unk:[], cut: vals.length >= 300 };
+  vals.forEach(v => R[regionKey(t.region.of(v[0]))].push(v[0]));
+  S.reg[t.tbl] = R;
+  if(R.cut) snack(t.region.by + ' 값이 300가지를 넘어 일부만 판정했습니다 — 구분 결과가 모자랄 수 있습니다', {err:true, ms:8000});
+  renderSearch();                                       // 고르는 칸의 풍선 도움말에 판정 결과(가짓수)를 싣는다
+}
+/* PostgREST 논리식 안의 값 — 운영단위에는 괄호·쉼표·공백이 든다(GST CHINA(WUHAN) SCRUBBER). 큰따옴표로 감싼다. */
+const pgq = v => '"' + String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+function regionTerm(t, v){
+  const R = S.reg[t.tbl], c = t.region.col;
+  if(!R) throw new Error('구분 값 목록을 아직 못 받았습니다 — 다시 검색해 주세요');
+  const list = R[v] || [];
+  if(v === 'unk') return 'or(' + c + '.is.null' + (list.length ? ',' + c + '.in.(' + list.map(pgq).join(',') + ')' : '') + ')';
+  return list.length ? 'or(' + c + '.in.(' + list.map(pgq).join(',') + '))' : 'or(' + t.key + '.lt.0)';   // 그 구분의 값이 하나도 없다 → 0행
+}
+/* 인원 한 사람의 구분 — 주간현황(report parseRoster)과 «같은 순서»: 시트의 구분 → 운영단위 → 고객사 → 지역 →
+   중문명·Dept.·사번 다수결(GST.ORG.emp). 적힌 값이 짐작보다 언제나 낫다. ⚠ 순서를 바꾸면 두 화면이 같은 사람을 다르게 가른다. */
+function personRegion(r){
+  const g = k => vs(r[k]).trim(), g2 = (a, b) => g(a) || g(b);
+  return GST.ORG.region(g('구분')) || GST.ORG.region(g2('운영단위', '사업부')) || GST.ORG.region(g('고객사')) || GST.ORG.region(g('지역'))
+    || GST.ORG.emp({ cn:g2('이름(중문)', 'Name(중문)'), dept:g('Dept.'), id:g2('사원번호', 'ID'), wp:g('Work Place') || g('라인') });
+}
+/* 교육·휴가 — 사람의 구분은 인원현황이 정본이다(교육·휴가 표에는 구분을 말해 줄 열이 없다). 사번, 없으면 이름으로 잇는다. */
+let STAFF = null;
+function staffIndex(rows){
+  const id = new Map(), nm = new Map();
+  (rows || []).forEach(r => {
+    const g = personRegion(r), k = vs(r['사원번호']).trim() || vs(r['ID']).trim(), n = vs(r['이름(영문)']).trim() || vs(r['Name((영문)']).trim();
+    if(k) id.set(k, g); if(n && !nm.has(n)) nm.set(n, g);
+  });
+  return { id:id, nm:nm };
+}
+function staffRegion(r, nameCol){
+  if(!STAFF) return '';
+  const k = vs(r['사원번호']).trim();
+  if(k && STAFF.id.has(k)) return STAFF.id.get(k);
+  const n = vs(r[nameCol]).trim();
+  return n && STAFF.nm.has(n) ? STAFF.nm.get(n) : '';
+}
 /* 검색 결과 «전체» 건수 — 첫 장이 100건을 넘지 않으면 그 장이 곧 전부라 공짜로 안다(작은 표는 늘 전부를 들고 있다).
    넘으면 countTotal 이 따로 센 값, 그새 못 셌으면 null(받을 때 키를 모으며 센다). */
 const resultTotal = t => (t.mode === 'whole' || !S.more) ? S.rows.length : S.total;
@@ -718,7 +844,8 @@ async function countTotal(t, f, seq){
 function condText(t, f){
   const out = [];
   t.quick.forEach(q => {
-    if(q.t === 'range'){ const a = f[q.k + '_from'], b = f[q.k + '_to']; if(a || b) out.push(q.l + ' ' + (a || '') + ' ~ ' + (b || '')); }
+    if(q.t === 'region'){ if(f[q.k]) out.push(q.l + ': ' + (REG[f[q.k]] || f[q.k])); }
+    else if(q.t === 'range'){ const a = f[q.k + '_from'], b = f[q.k + '_to']; if(a || b) out.push(q.l + ' ' + (a || '') + ' ~ ' + (b || '')); }
     else if(q.t === 'active'){ if(f[q.k]) out.push(q.l + ': ' + (f[q.k] === 'y' ? '재직' : '퇴사')); }
     else if(f[q.k]) out.push(q.l + ': ' + f[q.k] + (q.t === 'text' ? ' (포함)' : ''));
   });
@@ -848,6 +975,55 @@ function onCheck(e){
   renderSelBar();
 }
 
+/* ---------- 원장(알람·올바) 편집 규칙 — v143 ----------
+   잠그는 칸이 셋이다. 셋 다 «사람이 고치면 숫자가 조용히 갈리는» 칸이다:
+     calc     계산 칸 — 업로드가 만든 값(발생일·S/N 조인 키·정산월·주차·집계 대상). 대시보드는 이 칸으로 센다.
+              사람이 고칠 칸(발생시각·S/N·정산월 원문·내/외)을 고치면 core 의 GST.ALARM.derive 가 다시 계산한다.
+     lockOld  운영단위(op) — 업로드의 구간 교체가 «날짜 × op» 로 갈아끼울 행을 찾는다. 고치면 그 행이 다음 업로드에
+              안 지워지고 새 행이 얹혀 «두 번» 센다(v109 의 자리). 새 행에서만, 그것도 표에 이미 있는 값 중에서 고른다.
+     grpLock  해외 Group 줄 — seq 는 «그 사건의 다른 줄»을 보고 정해진다(build). 한 줄만 고치면 대표 줄이 바뀐다. */
+function lockWhy(t, cur, c){
+  if((t.calc || []).indexOf(c) >= 0) return '계산 칸 — 저장할 때 업로드와 같은 규칙으로 다시 계산합니다';
+  if(!cur.isNew && (t.lockOld || []).indexOf(c) >= 0) return '운영단위(시트)는 새 행에서만 정합니다 — 업로드의 구간 교체가 이 값으로 행을 찾습니다';
+  if(!cur.isNew && (t.grpLock || []).indexOf(c) >= 0 && vs(cur.row.grp).trim() !== '') return 'Group 줄(두 챔버가 한 사건)의 Seq·Group·담당은 잠급니다 — 원본 리스트에서 고쳐 다시 올리세요';
+  return '';
+}
+/* 고친 값을 얹은 행으로 계산 칸을 다시 내고, «지금과 달라진» 계산 칸만 vals 에 더한다. 더한 수를 돌려준다. */
+function ledgerDerive(t, row, vals){
+  const d = GST.ALARM.derive(Object.assign({}, row, vals), t.ledger);
+  let n = 0;
+  Object.keys(d).forEach(k => {
+    const a = d[k] == null ? null : d[k], b = row[k] == null ? null : row[k];
+    if(JSON.stringify(a) !== JSON.stringify(b)){ vals[k] = a; n++; }
+  });
+  return n;
+}
+/* 엑셀 한 줄(행번호 있는 줄)이 잠긴 칸을 건드리나 — 건드리면 그 줄은 건너뛴다(이유를 적는다) */
+function ledgerLineWhy(t, row, ch){
+  if((t.lockOld || []).some(c => c in ch)) return '운영단위(op)는 새 행에서만 정합니다 — 업로드의 구간 교체가 이 값으로 행을 찾습니다';
+  if(vs(row.grp).trim() !== '' && (t.grpLock || []).some(c => c in ch)) return 'Group 줄(두 챔버가 한 사건)의 Seq·Group·담당은 원본 리스트에서 고칩니다';
+  return '';
+}
+/* 새 원장 행 — 운영단위는 표에 이미 있는 값(또는 K·P·H운영)만 · Group 줄은 받지 않는다 · 계산 칸과 시트 표지를 채운다.
+   틀리면 {칸: 이유} 를 돌려준다(한 행 편집은 칸에 · 엑셀은 그 줄의 이유로 적는다). */
+async function ledgerOps(t){
+  if(!S.ops[t.tbl]) S.ops[t.tbl] = (await rpc('edit_distinct', {p_tbl:t.tbl, p_col:'op', p_limit:300}) || []).map(v => v[0]);
+  return S.ops[t.tbl];
+}
+const sheetOf = op => { const m = /^([KPH])운영$/.exec(String(op == null ? '' : op).trim()); return m ? m[1] : 'OS'; };
+function ledgerNew(t, row, ops){
+  const errs = {}, op = String(row.op == null ? '' : row.op).trim();
+  if(op && ops.indexOf(op) < 0 && !/^[KPH]운영$/.test(op))
+    errs.op = '운영단위는 표에 이미 있는 값 중에서 고르세요(' + ops.slice(0, 4).join(' · ') + (ops.length > 4 ? ' …' : '') + ') — 업로드의 구간 교체가 이 값으로 행을 찾습니다';
+  if(t.grpLock && vs(row.grp).trim() !== '') errs.grp = 'Group 줄(해외 두 챔버 사건)은 원본 리스트로 올리세요 — 한 줄만 넣으면 그 사건의 대표 줄을 정할 수 없습니다';
+  if(Object.keys(errs).length) return errs;
+  (t.calc || []).forEach(c => { delete row[c]; });
+  const d = GST.ALARM.derive(row, t.ledger);
+  Object.keys(d).forEach(k => { if(d[k] != null) row[k] = d[k]; });
+  row.src_sheet = sheetOf(op);
+  return null;
+}
+
 /* ---------- 편집기 ---------- */
 async function openRow(key){
   const t = TAB();
@@ -894,12 +1070,13 @@ function renderEditor(){
     + '</div><div class="ed-b" id="edBody">';
   let fi = 0;
   const field = c => {
-    const lb = label(t, c), v = vs(row[c]);
+    const lb = label(t, c), v = vs(row[c]), why = lockWhy(t, cur, c);
     const long = (t.long || []).indexOf(c) >= 0 || v.length > 70;
-    const dlId = (t.dl || []).indexOf(c) >= 0 ? 'dl_e_' + (fi++) : '';
-    return '<label class="fld' + (long ? ' wide' : '') + '"><span class="fl">' + esc(lb.name) + (lb.alt ? '<i title="' + esc(lb.alt) + '">' + esc(lb.alt) + '</i>' : '') + '</span>'
-      + (long ? '<textarea data-col="' + esc(c) + '" rows="2">' + esc(v) + '</textarea>'
-              : '<input data-col="' + esc(c) + '" value="' + esc(v) + '"' + (dlId ? ' list="' + dlId + '"' : '')
+    const dlId = !why && (t.dl || []).indexOf(c) >= 0 ? 'dl_e_' + (fi++) : '';
+    const ro = why ? ' readonly title="' + esc(why) + '"' : '';
+    return '<label class="fld' + (long ? ' wide' : '') + (why ? ' ro' : '') + '"><span class="fl">' + esc(lb.name) + (lb.alt ? '<i title="' + esc(lb.alt) + '">' + esc(lb.alt) + '</i>' : '') + '</span>'
+      + (long ? '<textarea data-col="' + esc(c) + '" rows="2"' + ro + '>' + esc(v) + '</textarea>'
+              : '<input data-col="' + esc(c) + '" value="' + esc(v) + '"' + ro + (dlId ? ' list="' + dlId + '"' : '')
                 + (isDate(t, c) ? ' placeholder="YYYY-MM-DD"' : isNum(t, c) ? ' inputmode="decimal"' : '') + '>'
                 + (dlId ? '<datalist id="' + dlId + '"></datalist>' : ''))
       + '<em class="err"></em></label>';
@@ -1040,13 +1217,14 @@ async function save(){
   const vals = Object.assign({}, ch.cols), errs = validate(t, vals, false);
   if(Object.keys(errs).length) return showErrs(errs);
   if(ch.extra) vals.extra = extraObj(ch.extra);
+  const nCalc = t.ledger ? ledgerDerive(t, cur.row, vals) : 0;
   const sv = $('editor').querySelector('[data-act=save]'); sv.disabled = true; sv.textContent = '저장 중…';
   try{
     const r = await rpc('edit_update', {p_tbl:t.tbl, p_key:cur.key, p_hash:cur.hash, p_changes:vals});
     if(r.error === 'not_found'){ snack('이 행이 이제 없습니다 — 다시 검색해 주세요', {err:true}); S.cur = null; renderEditor(); return; }
     if(r.error === 'conflict') return conflict(t, r, vals);
     afterSaved(t, r.row, r.hash);
-    let msg = r.same ? '바뀐 칸이 없습니다' : '저장했습니다 · ' + Object.keys(vals).length + '칸 · 이력 #' + r.log;
+    let msg = r.same ? '바뀐 칸이 없습니다' : '저장했습니다 · ' + (Object.keys(vals).length - nCalc) + '칸' + (nCalc ? ' (+ 계산 칸 ' + nCalc + '개)' : '') + ' · 이력 #' + r.log;
     if(r.cascade){ msg += r.cascade.done ? ' · 교육현황 짝 행도 고쳤습니다' : ' · 교육현황 짝 행은 못 찾아 그대로입니다(' + (r.cascade.n || 0) + '건 일치)'; delete S.all.edu; }
     snack(msg, (r.same || !S.can.restore) ? {} : { act:'되돌리기', fn: () => restore(r.log, t.id) });
   }catch(e){ snack(e.message, {err:true}); markDirty(); }
@@ -1090,6 +1268,10 @@ async function insert(){
   const { row, extra, t } = collectNew();
   const errs = validate(t, row, true);
   if(Object.keys(errs).length) return showErrs(errs);
+  if(t.ledger){
+    let ops; try{ ops = await ledgerOps(t); }catch(e){ return snack(e.message, {err:true}); }
+    const le = ledgerNew(t, row, ops); if(le) return showErrs(le);
+  }
   Object.keys(row).forEach(c => { if(row[c] == null) delete row[c]; });
   if(extra) row.extra = extra;
   /* 중복 — 막지 않고 묻는다. 실적코드·S/N 은 원장에 이미 빈값·중복이 있어 «유일» 규칙으로 막을 근거가 없다.
@@ -1236,7 +1418,8 @@ const DOWN_MAX = 20000;
 /* 양식의 열 — 편집기와 같은 순서(묶음 → 기타 → 옛 양식 열). 키·관리 열은 뺀다(키는 맨 앞 «행번호» 칸에 따로 든다).
    extra(jsonb)도 뺀다 — 한 칸에 여러 값이 든 칸은 엑셀로 고치면 모양이 깨진다(편집기에서 고친다). */
 function bulkCols(t){
-  const cols = (S.cols[t.tbl] || []).filter(c => c !== t.key && !ADMIN_COLS.has(c));
+  /* 원장의 계산 칸은 양식에 싣지 않는다 — 올리면 화면이 업로드와 같은 규칙으로 다시 계산한다(사람이 적을 칸이 아니다) */
+  const cols = (S.cols[t.tbl] || []).filter(c => c !== t.key && !ADMIN_COLS.has(c) && (t.calc || []).indexOf(c) < 0);
   const seen = new Set(), out = [], legacy = [];
   t.groups.forEach(g => g[1].forEach(c => { if(cols.indexOf(c) >= 0 && !seen.has(c)){ seen.add(c); (g[2] === 'legacy' ? legacy : out).push(c); } }));
   cols.forEach(c => { if(!seen.has(c)){ seen.add(c); out.push(c); } });
@@ -1315,6 +1498,7 @@ function bulkGuide(t, n, what){
     ['·', '날짜는 YYYY-MM-DD 로 적습니다(2026.3.1 · 2026/3/1 도 읽습니다). = + @ 로 시작하는 값은 넣을 수 없습니다(엑셀 수식으로 읽힘).'],
     ['·', '받은 뒤에 다른 사람이 같은 행을 고쳤으면 그 줄은 덮지 않고 알려 줍니다 — 다시 받아서 고치세요.'],
     ['·', '숨김 시트 「_meta」는 지우지 마세요 — 받은 시점의 값을 대조하는 데 씁니다.'],
+    ...(t.ledger ? [['·', '계산 칸(발생일·S/N 조인 키·정산월·주차·집계 대상)은 양식에 없습니다 — 올리면 업로드와 같은 규칙으로 다시 계산합니다. 운영단위(op)는 새 행에서만 정하고(표에 이미 있는 값), 해외 Group 줄의 Seq·Group·담당은 고치지 않습니다.']] : []),
     [''],
     ['반영한 내용은 「변경 이력」 탭에 줄마다 행 전체로 남고, 그 묶음을 통째로 되돌릴 수 있습니다.']
   ];
@@ -1516,6 +1700,7 @@ async function bulkPlan(t, pick, meta, hm, fname){
   const claim = new Map();
   lines.forEach(L => { if(!L.bad && L.key != null) claim.set(L.key, (claim.get(L.key) || 0) + 1); });
   lines.forEach(L => { if(!L.bad && L.key != null && claim.get(L.key) > 1) L.bad = '같은 행(' + BULK_KEY + ' ' + L.key + ')을 다른 줄도 고칩니다 — 둘 다 건너뜁니다'; });
+  const ops = t.ledger ? await ledgerOps(t) : null;     // 새 원장 행이 고를 수 있는 운영단위(줄 판정은 아래에서 동기로 한다)
   /* 대상 행의 «지금» 값과 해시 */
   const keys = Array.from(new Set(lines.filter(L => !L.bad && L.key != null).map(L => L.key)));
   const cur = new Map();
@@ -1530,6 +1715,7 @@ async function bulkPlan(t, pick, meta, hm, fname){
       mapped.forEach(c => { const r = cellCheck(t, c, L.vals[c]); if(r.v == null) return; if(r.err) errs.push(label(t, c).name + ': ' + r.err); else row[c] = r.v; });
       t.need.forEach(n => { const al = [].concat(n); if(!al.some(c => row[c] != null && row[c] !== '')) errs.push(label(t, pickCol(t, al) || al[0]).name + ': 필수 칸입니다'); });
       if(errs.length) return skip(L, errs.join(' · '));
+      if(t.ledger){ const le = ledgerNew(t, row, ops); if(le) return skip(L, Object.keys(le).map(c => label(t, c).name + ': ' + le[c]).join(' · ')); }
       return P.ins.push({ L:L, row:row });
     }
     /* 행번호만 남기고 나머지를 다 비운 줄 — «행을 지우려는» 손짓으로 보인다. 그대로 두면 그 행의 모든 칸이 지워진다. */
@@ -1556,6 +1742,10 @@ async function bulkPlan(t, pick, meta, hm, fname){
         const now = all.map(c => vs(x.row[c]).trim()).find(Boolean) || '';
         if(L.bk && now && L.bk !== now) return skip(L, '받은 시점 정보가 없어 같은 행인지 확인할 수 없습니다 — 표의 ' + kName + '(' + now + ')와 파일(' + L.bk + ')이 다릅니다');
       }
+    }
+    if(t.ledger){
+      const why = ledgerLineWhy(t, x.row, ch); if(why) return skip(L, why);
+      ledgerDerive(t, x.row, ch);
     }
     P.upd.push({ L:L, key:L.key, hash:x.hash, ch:ch, row:x.row, by:L.by });
   });
@@ -1694,7 +1884,7 @@ const OP_VIEW = op => /^upload:/.test(op) ? { c:'x', l:'업로드 ' + ({full:'�
 const RESTORABLE = new Set(['update','insert','delete','dbw:update','dbw:append','dbw:delete']);
 function renderHistFilters(opt){
   opt = opt || {};
-  const tbls = [['', '모든 표']].concat(TABS.map(t => [t.tbl, t.name])).concat([['sheet_alarm', '국내 알람 원장'], ['sheet_allbypass', '올바이패스 원장'], ['sheet_cip_f11', 'CIP F11'], ['sheet_cip_f16', 'CIP F16'], ['sheet_abp', 'ABP'], ['(old)', '옛 시트 편집 기록']]);
+  const tbls = [['', '모든 표']].concat(TABS.map(t => [t.tbl, t.name])).concat([['sheet_cip_f11', 'CIP F11'], ['sheet_cip_f16', 'CIP F16'], ['sheet_abp', 'ABP'], ['(old)', '옛 시트 편집 기록']]);
   $('hfilt').innerHTML = '<label class="sf"><span>표</span><select name="tbl">' + tbls.map(x => '<option value="' + esc(x[0]) + '"' + (opt.tbl === x[0] ? ' selected' : '') + '>' + esc(x[1]) + '</option>').join('') + '</select></label>'
     + '<label class="sf"><span>종류</span><select name="kind"><option value="">전부</option>' + Object.keys(OPS).map(k => '<option value="' + k + '"' + (opt.kind === k ? ' selected' : '') + '>' + esc(OPS[k].l) + '</option>').join('') + '</select></label>'
     + '<label class="sf"><span>행 번호 · id</span><input name="key" value="' + esc(opt.key || '') + '" placeholder="정확히"></label>'

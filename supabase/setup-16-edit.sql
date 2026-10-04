@@ -26,6 +26,11 @@
  *
  * 선행: setup-8(csv_upload_finish) · setup-15(role). 여러 번 Run 해도 안전하다.
  * v141 — 5절(엑셀 일괄 수정: edit_get_many · edit_bulk)을 더했다. 5절만 따로 Run 해도 된다(그 절에 지우는 문장이 없다).
+ * v143 — 알람·올바 원장(sheet_alarm · sheet_allbypass)을 표 사전에 더했다(사용자 확정 「고치기까지」) ·
+ *        원장을 고치면 imported_at 을 함께 올린다(대시보드 캐시 열쇠) · 6절(edit_overwrites — 업로드가 고친 행을 덮는지).
+ *        해시에서 imported_at 을 뺐다 · 운영 DB 의 sheet_inst 에 빠져 있던 synced_at 을 되살린다(6절 앞 · setup-4 그대로).
+ *        바뀐 것(_edit_hash · _edit_key · _edit_apply · sheet_inst.synced_at · edit_overwrites)에는 지우는 문장이 없어
+ *        그것만 따로 Run 해도 된다.
  */
 
 /* ---------- 0. 이력 표 보강 ---------- */
@@ -44,16 +49,21 @@ $$;
 
 /* ---------- 2. 표 사전 ----------
  * 고칠 수 있는 표와 그 PK. 여기 없는 표는 모든 edit_* 가 bad_table 로 거절한다.
- * 미러 3종은 src_row, Import 표(인원·교육·휴가)는 id(identity). 원장(알람·올바)·CIP·ABP 는 아직 뺀다 —
- * 원장은 «구간 교체»가 행을 통째로 갈아끼우는 표라 한 행 편집이 다음 업로드에 그대로 덮인다. */
+ * 미러 3종·원장 2종은 src_row, Import 표(인원·교육·휴가)는 id(identity). CIP·ABP 는 아직 뺀다.
+ * v143 — 원장(알람·올바)을 넣었다(사용자 확정 「고치기까지」). ⚠ 원장은 «구간 교체»가 그 기간을 통째로 갈아끼우는
+ *   표라, 여기서 고친 행은 같은 기간을 다시 올리면 사라진다 — 그래서 업로드 화면이 6절(edit_overwrites)로 «덮인다»고
+ *   먼저 말한다. 계산 칸(sn_key·occur_date·fmonth·fweek·cnt)은 화면이 core 의 GST.ALARM.derive 로 다시 계산해 보낸다
+ *   (업로드와 같은 함수 — SQL 에 사본을 두지 않는다 · 제2원칙). */
 create or replace function public._edit_key(p_tbl text) returns text
 language sql immutable as $$
-  select case p_tbl when 'sheet_wk'     then 'src_row'
-                    when 'sheet_mat'    then 'src_row'
-                    when 'sheet_inst'   then 'src_row'
-                    when 'sheet_roster' then 'id'
-                    when 'sheet_edu'    then 'id'
-                    when 'sheet_leave'  then 'id' end
+  select case p_tbl when 'sheet_wk'        then 'src_row'
+                    when 'sheet_mat'       then 'src_row'
+                    when 'sheet_inst'      then 'src_row'
+                    when 'sheet_alarm'     then 'src_row'
+                    when 'sheet_allbypass' then 'src_row'
+                    when 'sheet_roster'    then 'id'
+                    when 'sheet_edu'       then 'id'
+                    when 'sheet_leave'     then 'id' end
 $$;
 -- 옛 이력과 같은 열(gid)에 시트 gid 를 적는다. 원장 표처럼 gid 가 없는 표는 표 이름 그대로.
 create or replace function public._edit_gid(p_tbl text) returns text
@@ -64,9 +74,12 @@ language sql immutable as $$
     when 'sheet_cip_f11' then '2123129719' when 'sheet_cip_f16' then '1999732389'
     when 'sheet_abp' then '1263412805' else p_tbl end
 $$;
--- 행 해시 — synced_at 은 «언제 적재했나»라 내용이 아니다. jsonb 의 글자 표현은 키 순서가 정해져 있어 안정적이다.
+-- 행 해시 — synced_at(미러)·imported_at(원장)은 «언제 적재했나»라 내용이 아니다. jsonb 의 글자 표현은 키 순서가 정해져 있어 안정적이다.
+-- v143 — imported_at 을 같이 뺀다. 원장을 고치면 그 칸이 올라가므로(캐시 열쇠 · _edit_apply), 넣어 두면 «고쳤다가 되돌린»
+--   행이 내용은 그대로인데 해시만 달라 «넣은 행 되돌리기»가 충돌로 멈춘다. 그 칸을 가진 표는 원장 둘뿐이고 v143 전에는
+--   고칠 수 없던 표라, 이미 받아 둔 엑셀의 해시가 바뀌는 일도 없다(운영 실측 2026-10: 두 표의 편집 이력 0건).
 create or replace function public._edit_hash(r jsonb) returns text
-language sql immutable as $$ select md5((r - 'synced_at')::text) $$;
+language sql immutable as $$ select md5((r - 'synced_at' - 'imported_at')::text) $$;
 
 create or replace function public._edit_row(p_tbl text, p_key bigint, p_lock boolean default false) returns jsonb
 language plpgsql set search_path = public as $$
@@ -135,14 +148,22 @@ end $$;
 /* 바뀐 열만 실제로 쓰고 이력을 남긴다 (update · restore 공용) */
 create or replace function public._edit_apply(p_tbl text, p_key bigint, p_cur jsonb, p_changes jsonb, p_op text, p_ref bigint)
 returns jsonb language plpgsql set search_path = public as $$
-declare kc text := public._edit_key(p_tbl); sets text; nxt jsonb; lid bigint; casc jsonb := null;
+declare kc text := public._edit_key(p_tbl); sets text; nxt jsonb; lid bigint; casc jsonb := null; stamp boolean;
 begin
+  /* v143 — imported_at 이 있는 표(원장)는 고칠 때 그 시각을 함께 올린다. 대시보드가 원장을 «행수 + 마지막 적재 시각»으로
+     캐시하는데(core csvTableRows), 고쳐도 행수는 그대로라 이것이 없으면 다른 사람 브라우저가 옛 캐시를 계속 쓴다(v80 의 자리).
+     ⚠ 이력의 before/after 에는 그 칸을 넣지 않는다 — 넣으면 되돌리기(edit_restore)가 «그 뒤 같은 칸이 또 바뀌었나»를
+       볼 때 이 칸까지 비교해, 다른 칸만 고친 뒤에도 충돌로 멈추고 같은 칸을 두 번 set 하게 된다. */
+  stamp := exists (select 1 from information_schema.columns
+                    where table_schema = 'public' and table_name = p_tbl and column_name = 'imported_at');
+  p_changes := p_changes - 'imported_at';
   select string_agg(format('%I = r.%I', k, k), ', ') into sets from jsonb_object_keys(p_changes) k;
+  if stamp then sets := sets || ', imported_at = now()'; end if;
   -- jsonb_populate_record 가 열 타입으로 바꿔 준다(교육 표의 bigint 사번 등). 바꾸는 열만 set 한다.
   execute format('update public.%I t set %s from jsonb_populate_record(null::public.%I, $1) r where t.%I = $2',
                  p_tbl, sets, p_tbl, kc) using (p_cur || p_changes), p_key;
   nxt := public._edit_row(p_tbl, p_key);
-  lid := public._edit_log(p_tbl, p_key::text, p_op, p_cur, nxt, p_ref);
+  lid := public._edit_log(p_tbl, p_key::text, p_op, p_cur - 'imported_at', nxt - 'imported_at', p_ref);
   if p_tbl = 'sheet_roster' then casc := public._edit_cascade_edu(p_cur, nxt, lid); end if;
   return jsonb_build_object('ok', true, 'row', nxt, 'hash', public._edit_hash(nxt), 'log', lid, 'cascade', casc);
 end $$;
@@ -480,6 +501,72 @@ begin
     execute format('revoke all on function %s from public, anon', f);
     execute format('grant execute on function %s to authenticated', f);
   end loop;
+end $$;
+
+/* ---------- 6. 업로드가 «데이터 관리에서 고친 행»을 덮는가 (v143) ----------
+ * 원장을 여기서 고칠 수 있게 되면서(사용자 확정 「고치기까지」), 같은 기간을 다시 올리면 그 수정이 사라진다는 사실을
+ * 업로드 «전에» 알려야 한다. 수선·자재·설치·인원도 v140 부터 같은 처지였는데 지금까지 아무 말이 없었다.
+ *
+ *   p_from 이 null      → 통째 교체: 표의 모든 행이 대상
+ *   p_from·p_to·p_ops   → 구간 교체: csv_window(setup-10) 와 «같은 식»(날짜 앞 10자 × op)
+ *                         ⚠ SPEC-SYNC — 한쪽만 고치면 경고와 실제 삭제가 다른 행을 본다. t-editsql 이 두 함수를 대조한다.
+ *
+ * «고친 행» = 그 행의 키로 남은 편집 이력(수정·입력·되살리기·연쇄·hr/고장분석 편집) 중 «그 행이 올라온 뒤» 것이 있는 행.
+ *   · 적재 시각 열이 있으면(미러 synced_at · 원장 imported_at) 그보다 늦은 이력만 센다 — 통째 교체는 src_row 를
+ *     0 부터 다시 매기므로 옛 이력의 번호가 지금은 «다른 행»일 수 있다.
+ *   · Import 표(인원·교육·휴가)는 id 가 identity 라 번호가 다시 쓰이지 않는다 — 키만 맞으면 그 행의 이력이다.
+ *   · 지운 행은 세지 않는다(표에 없어 기간·운영단위를 대조할 행이 없다) — 업로드 파일에 그 행이 있으면 다시 들어온다.
+ * 막지 않는다 — 원본 파일에도 같은 수정을 넣었다면 덮여도 된다. 사람이 알고 올리게 할 뿐이다.
+ * 돌려주는 것은 건수·키·시각·누가뿐이다(행 내용은 안 싣는다). 업로드 권한(can_write)이면 부를 수 있다. */
+-- 설치현황 미러에 적재 시각을 되살린다. setup-4 는 세 미러 모두에 synced_at 을 두는데 운영 DB 의 sheet_inst 에만 없었다
+--   (2026-10 실측). 이 함수가 «그 행이 올라온 뒤의 수정»만 세려면 그 칸이 있어야 한다 — 없으면 통째 교체로 번호가
+--   0 부터 다시 매겨진 뒤에도 옛 수정의 번호가 «다른 행»에 붙어 «덮인다»가 계속 뜬다(거짓 경보는 경보를 무시하게 만든다).
+--   기존 행은 이 문장을 돌린 시각을 받는다 — 그 전의 수정은 세지 않는다(운영 실측 2026-10: 설치현황 편집 이력 0건).
+alter table public.sheet_inst add column if not exists synced_at timestamptz not null default now();
+
+create or replace function public.edit_overwrites(p_tbl text, p_from text default null, p_to text default null, p_ops text[] default null)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare kc text := public._edit_key(p_tbl); dc text; tc text; w text := 'true'; r jsonb;
+begin
+  if not exists (select 1 from public.allowed_users a
+                  where lower(a.email) = lower(auth.jwt()->>'email') and a.can_write) then
+    raise exception 'read_only';
+  end if;
+  if kc is null then raise exception 'bad_table: %', p_tbl; end if;
+  if p_from is not null then
+    dc := public._csv_datecol(p_tbl);
+    if dc is null then raise exception 'bad_table: %', p_tbl; end if;
+    if p_to is null or p_from > p_to then raise exception 'bad_range'; end if;
+    w := format('left(coalesce(t.%I::text,''''),10) between $1 and $2 and coalesce(t.op,'''') = any($3)', dc);
+  end if;
+  select c.column_name::text into tc from information_schema.columns c
+   where c.table_schema = 'public' and c.table_name = p_tbl and c.column_name in ('synced_at','imported_at')
+   order by c.column_name desc limit 1;
+  execute format(
+    'with e as (
+       select x.row_key, max(x.edited_at) at, array_agg(distinct x.edited_by) whos
+         from public.sheet_edits x
+        where x.tbl = %2$L and x.row_key ~ ''^[0-9]{1,18}$''
+          and x.op in (''update'',''insert'',''restore'',''cascade'',''dbw:update'',''dbw:append'')
+        group by x.row_key
+     ), hit as (
+       select t.%1$I k, e.at, e.whos from e join public.%2$I t on t.%1$I = e.row_key::bigint
+        where %3$s %4$s
+     )
+     select jsonb_build_object(
+       ''n'',    (select count(*) from hit),
+       ''last'', (select max(at) from hit),
+       ''keys'', coalesce((select to_jsonb((array_agg(k order by k))[1:20]) from hit), ''[]''::jsonb),
+       ''who'',  coalesce((select jsonb_agg(distinct u) from hit, unnest(whos) u), ''[]''::jsonb))',
+    kc, p_tbl, w, case when tc is null then '' else format('and e.at >= t.%I', tc) end)
+    into r using p_from, p_to, p_ops;
+  return r;
+end $$;
+
+do $$
+begin
+  execute 'revoke all on function public.edit_overwrites(text,text,text,text[]) from public, anon';
+  execute 'grant execute on function public.edit_overwrites(text,text,text,text[]) to authenticated';
 end $$;
 
 -- 확인
