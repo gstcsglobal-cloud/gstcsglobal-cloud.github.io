@@ -588,6 +588,40 @@ begin perform t_as('boss@test.local');
                '10-27 고쳤다 되돌린 원장 행도 «넣은 것»을 되돌릴 수 있다 — 해시가 적재 시각(imported_at)을 안 본다 ' || coalesce(d::text, ''));
 end $$;
 reset role;
+
+-- [11] edit_last_wk (v145) — 같은 S/N 의 직전 수선실적. S/N 은 영숫자만 대문자로 맞춘다(화면 N() 과 같은 규칙) · 관리자만.
+--      지어낸 S/N 다섯 줄 — 표기가 셋으로 갈린 한 설비(ZZL-0001·zzl0001·ZZL 0001)와 작업시작일이 같은 두 줄.
+insert into public.sheet_wk(src_row, op, rs_code, stage, d_start, sn_in, model, pg, extra) values
+  (9001, 'OPX Scrubber', 'RS-L-1', 'BM',  '2026-05-01 10:00:00', 'ZZL-0001', 'MDL-OLD',   '스크러버', '{"x":1}'),
+  (9002, 'OPX Scrubber', 'RS-L-2', 'TBM', '2026-06-01 09:00:00', 'zzl0001',  'MDL-NEW',   '스크러버', null),
+  (9003, 'OPX Scrubber', 'RS-L-3', 'CM',  '2026-04-01',          'ZZL 0001', 'MDL-OLDER', '스크러버', null),
+  (9004, 'OPY Scrubber', 'RS-L-4', 'BM',  '2026-06-02 08:00:00', 'ZZL-0002', 'MDL-A',     '칠러',     null),
+  (9005, 'OPY Scrubber', 'RS-L-5', 'BM',  '2026-06-02 08:00:00', 'ZZL-0002', 'MDL-B',     '칠러',     null);
+set role authenticated;
+do $$ declare r jsonb;
+begin perform t_as('boss@test.local');
+  r := edit_last_wk(array['zzl-0001', ' ZZL 0002 ', 'ZZL-9999', '', null]);
+  perform t_ok(r ? 'ZZL0001' and r ? 'ZZL0002' and not (r ? 'ZZL9999') and not (r ? ''),
+               '11-1 S/N 을 영숫자·대문자로 맞춰 찾는다 · 없는 S/N·빈칸은 키가 없다 ' || coalesce((select string_agg(k, ',') from jsonb_object_keys(r) k), ''));
+  perform t_ok(r->'ZZL0001'->0->>'rs_code' = 'RS-L-2' and r->'ZZL0001'->1->>'rs_code' = 'RS-L-1' and jsonb_array_length(r->'ZZL0001') = 2,
+               '11-2 표기가 갈려도 한 설비 — 작업시작일이 늦은 순으로 두 행까지(세 행 중) ' || coalesce((r->'ZZL0001')::text, ''));
+  perform t_ok(r->'ZZL0002'->0->>'rs_code' = 'RS-L-5' and r->'ZZL0002'->1->>'rs_code' = 'RS-L-4',
+               '11-3 작업시작일이 같으면 나중에 올린 행(src_row 큰 것)이 앞 ' || coalesce((r->'ZZL0002')::text, ''));
+  perform t_ok(not (r->'ZZL0001'->0 ? 'extra') and not (r->'ZZL0001'->0 ? 'synced_at') and r->'ZZL0001'->0 ? 'model' and r->'ZZL0001'->0 ? 'src_row',
+               '11-4 행 전체에서 extra·synced_at 만 뺀다');
+  begin perform edit_last_wk(array_fill('x'::text, array[2001])); perform t_ok(false, '11-5 2,001 개가 통과했다');
+  exception when others then perform t_ok(sqlerrm like 'too_many%', '11-5 한 번에 2,000 개까지 (' || sqlerrm || ')'); end;
+end $$;
+do $$ begin perform t_as('ed@test.local');
+  begin perform edit_last_wk(array['ZZL-0001']); perform t_ok(false, '11-6 editor 가 edit_last_wk 를 불렀다');
+  exception when others then perform t_ok(sqlerrm = 'forbidden', '11-6 editor → forbidden (' || sqlerrm || ')'); end;
+end $$;
+reset role;
+do $$ begin
+  perform t_ok(not has_function_privilege('anon', 'public.edit_last_wk(text[])', 'execute')
+           and has_function_privilege('authenticated', 'public.edit_last_wk(text[])', 'execute'),
+               '11-7 실행 권한 — anon 은 못 부르고 authenticated 만');
+end $$;
 `;
 
 let skipped = 0;
@@ -609,8 +643,15 @@ try {
   ok(!/ERROR/.test(p1.stderr), 'setup-16-edit.sql 적용 실패:\n' + p1.stderr);
   const p1b = psql(sqlText, 'setup16b');          // «여러 번 Run 해도 안전하다» 를 그대로 시험
   ok(!/ERROR/.test(p1b.stderr), 'setup-16-edit.sql 두 번째 적용 실패:\n' + p1b.stderr);
+  /* [11-0] edit_last_wk 의 식과 식 인덱스가 «글자까지» 같은가 — 갈리면 인덱스를 안 타고 부를 때마다 26만 행에
+     정규식을 돌린다(운영 실측 설비 하나 0.7~1.2초). 결과는 같아서 동작 검사로는 원리적으로 못 잡는다. */
+  const idxExpr = (sqlText.match(/create index if not exists sheet_wk_snkey_idx\s+on public\.sheet_wk \(\((.+?)\)\);/s) || [])[1];
+  const fnBody = sqlText.slice(sqlText.indexOf('create or replace function public.edit_last_wk'));
+  const fnExpr = (fnBody.match(/join public\.sheet_wk t on (upper\(regexp_replace\(coalesce\(t\.sn_in[^\n]*?\)\)) = ks\.k/) || [])[1];
+  ok(!!idxExpr && !!fnExpr && idxExpr === fnExpr.replace(/\bt\./g, ''),
+     '11-0 edit_last_wk 의 S/N 식과 sheet_wk_snkey_idx 의 식이 같다 (' + idxExpr + ' ↔ ' + fnExpr + ')');
 
-  console.log('[1~10] 권한 · 수정 · 입력 · 삭제 · 되돌리기 · 연쇄 · 보조 함수 · 엑셀 일괄 · 원장 · 업로드 덮어쓰기 확인');
+  console.log('[1~11] 권한 · 수정 · 입력 · 삭제 · 되돌리기 · 연쇄 · 보조 함수 · 엑셀 일괄 · 원장 · 업로드 덮어쓰기 · 직전 실적 확인');
   const p2 = psql(CHECKS, 'checks');
   const out = (p2.stderr || '') + (p2.stdout || '');
   const oks = out.match(/T_OK [^\n]*/g) || [];
@@ -618,7 +659,7 @@ try {
   oks.forEach(() => pass++);
   bads.forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
   /* 검사가 «조용히 덜 돈» 것을 잡는다 — 블록 하나가 통째로 안 돌면 T_OK 개수가 모자란다 */
-  const EXPECT = 103;
+  const EXPECT = 110;
   ok(oks.length === EXPECT, 'T_OK 가 ' + oks.length + '개 — 기대 ' + EXPECT + '개 (검사가 덜 돌았거나 늘었다)');
 } catch (e) {
   fail++; console.log('  ❌ ' + (e && e.message || e));

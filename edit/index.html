@@ -168,6 +168,21 @@ table.rt th.ck input,table.rt td.ck input{width:15px;height:15px;cursor:pointer;
 .pv del{color:var(--bad);text-decoration:line-through;text-decoration-thickness:1px}
 .pv ins{color:var(--ok);text-decoration:none}
 .pv .wn{color:var(--warn);font-weight:600}
+/* v145 — 설비 칸 자동 채움 · 설비/수선실적 고르기 */
+.fld.auto input,.fld.auto textarea{border-color:var(--ok);background:var(--ok-soft)}
+.atag{font-style:normal;font-size:10px;font-weight:700;color:var(--ok);background:var(--ok-soft);border-radius:4px;padding:0 5px;margin-left:auto;cursor:help}
+.ed .note.anote{margin:0 0 10px;color:var(--txt-2)}
+.pk-f{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}
+.pk-f.pk-f1{grid-template-columns:minmax(0,1fr) auto}
+.pk-n{margin:6px 0}
+.pk-l{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.pk-l:empty{display:none}
+.pk-l table.dt th{position:sticky;top:0;z-index:1}
+.pk-l tr[data-ret]{cursor:pointer}
+.pk-l tr[data-ret]:hover td{background:var(--accent-soft)}
+.pv td.au{color:var(--ok)}
+.pv .bd{color:var(--bad)}
+.pv .wd{color:var(--warn)}
 
 /* 대화상자 · 알림 */
 .mask{position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:1000;display:grid;place-items:center;padding:16px}
@@ -244,6 +259,7 @@ table.dt td.v{word-break:break-all}
     <div class="foot">어떻게 기록되나 — 저장·입력·삭제·되돌리기는 한 번에 «쓰기 + 변경 이력(행 전체 before/after) + 대시보드 캐시 갱신»으로 처리됩니다. 셋 중 하나라도 실패하면 전부 없던 일이 됩니다.
 삭제한 행도 이력에 통째로 남아 「변경 이력」 탭에서 되살릴 수 있습니다. 대시보드는 새로고침하면 바뀐 값을 봅니다.
 엑셀 일괄 수정 — 검색한 뒤 「검색 결과 N건 엑셀로 받기」(체크한 행이 있으면 그 행만)로 내려받아 고친 뒤 「엑셀 올리기」로 올리면, 미리보기를 거쳐 바뀐 칸만 반영됩니다(500줄씩 «전부 아니면 전무»). 한 번에 2만 건까지 받습니다. 그 묶음은 「변경 이력」에서 통째로 되돌릴 수 있습니다.
+새 행 — 수선실적은 설비(S/N)부터, 자재실적은 그 수선실적부터 고릅니다(GST 시스템 실적등록과 같은 순서). 고르면 운영단위·고객사·단지·라인·공정·모델 같은 설비 칸이 채워집니다. 「빈 양식」에는 그 칸이 없습니다 — S/N(자재는 수선실적번호)만 적어 올리면 올릴 때 채웁니다.
 ⚠ 실적·설치는 «통째 교체» 업로드를 하면 행 번호가 0 부터 다시 매겨집니다 — 그 전 이력의 번호는 지금 다른 행일 수 있고, 되돌리기는 내용 대조로 막힙니다.</div>
   </div>
 </div>
@@ -298,8 +314,24 @@ const TABS = [
     dates:['d_start','d_end','reg_date','ship_date'], nums:['move_min','work_min','man_min','worker_cnt'],
     long:['phenom','cause','action','action_detail'],
     dl:['pg','op','customer','campus','line','bay','proc','subproc','model','status','req_type','stage','pf','chamber','chpos','alarm'],
-    fill:{ code:'eq_no', sn:['sn_in','sn_out'],
-           map:{ op:'country', customer:'customer', campus:'location', line:'fab', bay:'bay', model:'model', eq_no:'code' } } },
+    /* 설비 칸 — 설비(S/N)를 고르면 채운다(v145 · 사용자: 「S/N 기준으로 … 어차피 땡겨 오는 건데 빈 양식에 넣을 필요가 있나」).
+       ⚠ 대시보드는 이 칸들을 «행에 적힌 값»으로 센다 — 비워 넣으면 그 실적은 미배치·미상으로 빠진다(땡겨 오지 않는다).
+       칸 ← 출처(앞에서부터 처음 값이 있는 것). 'i:열' = 고른 설비의 설치현황 · 'p' = 같은 S/N 의 직전 수선실적(GST 시스템이
+       그 설비에 쓴 그 글자 — setup-16 7절 edit_last_wk). 국내·해외가 다르면 {KR:[…], OS:[…]}.
+       운영 실측(2026-10 · 7월 이후 실적이 두 출처와 «정확히» 같은 비율 — 출처를 고른 근거):
+         운영단위·고객사·라인·제품코드 ← 설치현황 99.4~100%
+         단지·BAY·공정·세부공정 ← 국내 설치현황 99.8~99.97% · 해외는 설치현황에 없거나(단지) 표기가 달라(BAY 84 · 공정 72 ·
+           세부공정 88%) 직전 실적 99.3~99.9%
+         모델·제품군 ← 직전 실적 99.8~100% (설치현황은 모델 표기가 달라 국내 51% · 제품군 열이 없다)
+         메인설비호기 ← 국내 직전 실적 98.5%(설치현황의 그 열이 비었다) · 해외 설치현황 CODE 98.7%
+       ⚠ 덜 맞는 출처(국내 BAY·공정·세부공정의 직전 실적 84~89% 등)로는 메우지 않는다 — 비워 두고 알린다.
+       ⚠ 설비호기는 찾는 열쇠로 «S/N 다음»이다 — 국내는 같은 설비호기 값이 여러 설비에 붙어 있다(운영 실측). */
+    fill:{ sn:'sn_in', code:'eq_no',
+           src:{ op:['i:country','p'], customer:['i:customer','p'], line:['i:fab','p'], prod_code:['i:pjt','p'],
+                 campus:{ KR:['i:location','p'], OS:['p'] }, bay:{ KR:['i:bay'], OS:['p'] },
+                 proc:{ KR:['i:group1'], OS:['p'] }, subproc:{ KR:['i:detail1'], OS:['p'] },
+                 model:['p'], pg:['p'], main_eq:{ KR:['p'], OS:['i:code'] },
+                 eq_no:['i:code','p'], sn_in:['i:sn'] } } },
   { id:'mat', tbl:'sheet_mat', name:'자재실적', spec:'mat', key:'src_row', mode:'server', region:{ col:'op', of:v => GST.ORG.region(v), by:'운영단위' },
     list:['rs_code','work_date','op','eq','sn','mat_code','mat_name','qty','pf'],
     quick:[ {k:'rs', l:'수선실적번호', cols:['rs_code'], t:'text'},
@@ -316,8 +348,12 @@ const TABS = [
     need:['rs_code','work_date'],
     dates:['work_date','prev_paid_date','prev_date'], nums:['qty','days_paid','days_prev','price'],
     dl:['op','customer','campus','line','bay','proc','detail','model','pf','free_reason','reason','mat_pos','eq_pos','store'],
-    fill:{ code:'eq', sn:['sn'],
-           map:{ op:'country', customer:'customer', campus:'location', line:'fab', bay:'bay', model:'model', eq:'code', sn:'sn' } } },
+    /* 자재는 «그 수선실적»에서 — 수선실적번호가 같은 수선실적 행과 운영 실측 100% 같다(7월 이후 · 국내 66,514 · 해외 8,911행).
+       그 수선실적이 표에 없거나(아직 안 올렸다) 같은 번호가 둘이면 S/N 으로 수선실적과 «같은 규칙»(위 src)을 쓰고 이름만 옮긴다.
+       ⚠ 자재실적일자·유/무상은 옮기지 않는다 — 수선실적과 같은 날이 0%, 유/무상 91%(운영 실측)라 그 자재의 값이다. */
+    fill:{ parent:'rs_code', sn:'sn', code:'eq',
+           from:{ op:'op', customer:'customer', campus:'campus', line:'line', bay:'bay', proc:'proc', detail:'subproc',
+                  main_eq:'main_eq', eq:'eq_no', sn:'sn_in', model:'model' } } },
   /* ── 원장(v143 · 사용자 확정 「고치기까지」) ──────────────────────────────────────
      ⚠ 원장은 업로드가 그 기간을 통째로 갈아끼운다 — 여기서 고친 행은 같은 기간을 다시 올리면 사라진다.
        업로드 화면이 올리기 전에 «데이터 관리에서 고친 N행이 덮입니다»라고 말한다(edit_overwrites · setup-16 6절).
@@ -439,8 +475,10 @@ const S = {
   ops:{},                             // 원장 표 → 지금 있는 운영단위(op) 값 — 새 행이 고를 수 있는 값
   badTab:{},                          // 서버가 «이 표만» 모르는 탭(옛 setup-16 에 원장이 없을 때) — 배너에 한 번만 적는다
   sel:new Set(), lastCk:null,         // 체크한 행 키(글자) — 탭을 바꾸거나 새로 검색하면 비운다(«보이는 목록»의 선택이다)
-  cur:null,                           // {t, key, row, hash, isNew, orig, origX}
+  cur:null,                           // {t, key, row, hash, isNew, orig, origX, auto}
   dist:{},                            // 'tbl|col' → [[값, 건수]]
+  inst:null,                          // 설치현황 전 행(설비 칸 채우기·설비 고르기) — 설치현황 탭에서 쓰면 비운다
+  pickF:{},                           // 설비 고르기 창의 마지막 조건(같은 단지 설비를 잇달아 넣을 때)
   hist:{ rows:[], last:null, more:false }
 };
 const TAB = () => TAB_BY[S.tab];
@@ -625,10 +663,17 @@ function renderSearch(){
     + other.map(c => '<option value="' + esc(c) + '"' + (f.ocol === c ? ' selected' : '') + '>' + esc(label(t, c).name) + (label(t, c).name !== c ? ' (' + esc(c) + ')' : '') + '</option>').join('')
     + '</select><select class="ctl" name="omode"><option value="has"' + (f.omode === 'has' ? ' selected' : '') + '>포함</option><option value="eq"' + (f.omode === 'eq' ? ' selected' : '') + '>정확히</option><option value="nul"' + (f.omode === 'nul' ? ' selected' : '') + '>비어 있음</option></select>'
     + '<input class="ctl" name="oval" value="' + esc(f.oval || '') + '" placeholder="값"></div>';
-  const bulkOff = S.ready === false || !S.can.bulk;
+  const bulkOff = S.ready === false || !S.can.bulk, offT = ' disabled title="엑셀 일괄 수정 함수가 아직 서버에 없습니다"';
+  /* 「빈 양식」은 「엑셀 올리기」 바로 왼쪽 — 받아서 적고 올리는 한 흐름이다(v145 · 사용자: 「빈양식 버튼을 엑셀 올리기
+     좌측에 놔야 양식에 써서 올리기 할 수 있지 않을까」). 예전에는 목록 머리에 있어 검색하기 전에는 안 보였다. */
+  const blankT = t.fill ? '머리글만 든 빈 양식 — 새 행을 여러 줄 넣을 때. ' + (t.fill.parent ? '수선실적번호' : 'S/N') + ' 만 적으면 설비·조직 칸은 올릴 때 채웁니다'
+                        : '머리글만 든 빈 양식 — 새 행을 여러 줄 넣을 때';
   h += '<div class="sbar"><button class="btn pri" type="submit">검색</button><button class="btn" type="button" data-act="reset">조건 지우기</button>'
-    + '<span class="sp"></span><button class="btn" type="button" data-act="xup"' + (bulkOff ? ' disabled title="엑셀 일괄 수정 함수가 아직 서버에 없습니다"' : ' title="받은 양식(또는 같은 머리글의 엑셀)을 올리면 미리보기 뒤에 바뀐 칸만 반영합니다"') + '>엑셀 올리기</button>'
-    + '<button class="btn" type="button" data-act="new"' + (S.ready === false ? ' disabled' : '') + '>+ 새 행</button></div>';
+    + '<span class="sp"></span><button class="btn" type="button" data-act="xblank"' + (bulkOff ? offT : ' title="' + esc(blankT) + '"') + '>빈 양식</button>'
+    + '<button class="btn" type="button" data-act="xup"' + (bulkOff ? offT : ' title="받은 양식(또는 같은 머리글의 엑셀)을 올리면 미리보기 뒤에 바뀐 칸만 반영합니다"') + '>엑셀 올리기</button>'
+    + '<button class="btn" type="button" data-act="new"' + (S.ready === false ? ' disabled' : '')
+    + (t.fill ? ' title="' + (t.fill.parent ? '어느 수선실적의 자재인지 먼저 고릅니다 — 고르면 설비·조직 칸이 채워집니다' : '설비(S/N)부터 고릅니다 — GST 시스템 실적등록과 같은 순서 · 고르면 설비·조직 칸이 채워집니다') + '"' : '')
+    + '>+ 새 행</button></div>';
   $('search').innerHTML = h;
 }
 function readSearch(){
@@ -641,7 +686,9 @@ $('search').addEventListener('submit', e => { e.preventDefault(); runSearch(fals
 $('search').addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if(!b) return;
   if(b.dataset.act === 'reset'){ S.f && (S.f[S.tab] = {}); renderSearch(); if(TAB().mode === 'whole') runSearch(false); }
-  if(b.dataset.act === 'new'){ if(await leaveOk()) newRow(null); }
+  if(b.disabled) return;
+  if(b.dataset.act === 'new'){ if(await leaveOk()) newStart(TAB()); }
+  if(b.dataset.act === 'xblank') bulkDown('blank');
   if(b.dataset.act === 'xup'){ if(await leaveOk()) $('xfile').click(); }
 });
 /* 입력 보조 목록 — 칸에 처음 들어갈 때 한 번 받는다(edit_distinct · 많은 순) */
@@ -928,13 +975,12 @@ function renderList(head){
 }
 /* 선택 막대 — 엑셀로 받기(사용자 지적 v142: 「검색한 다음 목록이 뜨면 빈 양식이 아니라 검색된 데이터가 나와야」).
    · 체크한 행이 있으면 → 그 행만
-   · 없으면 → 검색 결과 «전부»(보이는 100건만이 아니라 — 머리에 적힌 그 건수) · 빈 양식은 옆에 작게
-   · 결과가 없으면 → 빈 양식(머리글만 · 새 행을 여러 줄 넣을 때) */
+   · 없으면 → 검색 결과 «전부»(보이는 100건만이 아니라 — 머리에 적힌 그 건수)
+   · 빈 양식은 여기 없다 — 검색 칸 아래 「엑셀 올리기」 왼쪽(v145 · 받아서 적고 올리는 한 흐름 · 검색 전에도 보인다) */
 function renderSelBar(){
   const el = $('selBar'); if(!el) return;
   const t = TAB(), n = S.sel.size, off = S.ready === false || !S.can.bulk;
   const dis = ' disabled title="엑셀 일괄 수정 함수가 아직 서버에 없습니다"';
-  const blank = big => '<button class="btn sm" type="button" data-act="xblank"' + (off ? dis : ' title="머리글만 든 빈 양식 — 새 행을 여러 줄 넣을 때"') + '>' + (big ? '빈 양식 받기' : '빈 양식') + '</button>';
   if(n){
     el.innerHTML = '<span class="hint">' + n.toLocaleString() + '건 선택</span><button class="btn sm" type="button" data-act="xclr">선택 풀기</button>'
       + '<button class="btn sm pri" type="button" data-act="xdown"' + (off ? dis : ' title="체크한 행만 일괄 수정용 엑셀로 받습니다"') + '>선택 ' + n.toLocaleString() + '건 엑셀로 받기</button>';
@@ -942,14 +988,13 @@ function renderSelBar(){
     const tot = resultTotal(t);
     el.innerHTML = '<button class="btn sm pri" type="button" data-act="xall"'
       + (off ? dis : ' title="지금 검색 조건에 맞는 행 «전부»를 받습니다 — 목록에 보이는 줄만이 아니라 · 한 번에 ' + DOWN_MAX.toLocaleString() + '건까지"')
-      + '>검색 결과 ' + (tot != null ? tot.toLocaleString() + '건' : '전부') + ' 엑셀로 받기</button>' + blank(false);
-  }else el.innerHTML = blank(true);
+      + '>검색 결과 ' + (tot != null ? tot.toLocaleString() + '건' : '전부') + ' 엑셀로 받기</button>';
+  }else el.innerHTML = '';
 }
 $('listH').addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if(!b || b.disabled) return;
   if(b.dataset.act === 'xdown') bulkDown('sel');
   if(b.dataset.act === 'xall') bulkDown('all');
-  if(b.dataset.act === 'xblank') bulkDown('blank');
   if(b.dataset.act === 'xclr'){ S.sel = new Set(); S.lastCk = null; renderList(null); }
 });
 $('list').addEventListener('click', async e => {
@@ -1040,17 +1085,18 @@ async function openRow(key){
     setCur(t, +key, r.row, r.hash, false);
   }catch(e){ S.cur = null; $('editor').innerHTML = '<div class="empty" style="color:var(--bad)">' + esc(e.message) + '</div>'; }
 }
-function setCur(t, key, row, hash, isNew){
+function setCur(t, key, row, hash, isNew, auto){
   const orig = {}, origX = {};
   Object.keys(row || {}).forEach(c => { if(c !== 'extra') orig[c] = vs(row[c]); });
   const x = row && row.extra && typeof row.extra === 'object' ? row.extra : {};
   Object.keys(x).forEach(k => { origX[k] = vs(x[k]); });
-  S.cur = { t:t.id, key:key, row:row || {}, hash:hash, isNew:isNew, orig:orig, origX:origX, extra0:x };
+  S.cur = { t:t.id, key:key, row:row || {}, hash:hash, isNew:isNew, orig:orig, origX:origX, extra0:x, auto:auto || null };
   renderEditor();
   document.querySelectorAll('#list tr.on').forEach(tr => tr.classList.remove('on'));
   if(!isNew){ const tr = document.querySelector('#list tr[data-key="' + CSS.escape(String(key)) + '"]'); if(tr) tr.classList.add('on'); }
 }
-function newRow(from){
+/* auto: 설비 고르기가 채운 칸 {vals:{칸:{v,src}}, note} — 편집기에 «자동» 표시를 남긴다(사람이 고치면 사라진다) */
+function newRow(from, auto){
   const t = TAB(), cols = (S.cols[t.tbl] || []).filter(c => c !== t.key && !ADMIN_COLS.has(c) || c === 'extra');
   const row = {};
   cols.forEach(c => { row[c] = null; });
@@ -1058,10 +1104,33 @@ function newRow(from){
     Object.keys(from).forEach(c => { if(c !== t.key && c !== 'synced_at' && c !== 'imported_at') row[c] = from[c]; });
     [].concat(t.dup || []).forEach(c => { if(c in row) row[c] = null; });   // 중복 키는 비운다 — 새 실적코드·S/N 을 적게
   }
-  setCur(t, null, row, null, true);
-  const first = $('editor').querySelector('[data-col="' + CSS.escape(String(pickCol(t, [].concat(t.dup || t.need[0])[0]) || '')) + '"]')
+  const put = new Map();
+  if(auto) Object.keys(auto.vals).forEach(c => { if(c in row && (row[c] == null || row[c] === '')){ row[c] = auto.vals[c].v; put.set(c, auto.vals[c].src); } });
+  setCur(t, null, row, null, true, auto ? { put:put, note:auto.note || '' } : null);
+  /* 첫 칸 — 고른 뒤에는 «사람이 적을» 첫 필수 칸(실적코드 등 · 이미 찬 칸은 건너뛴다 — 자재의 수선실적번호)으로,
+     아니면 중복 키(새 실적코드·S/N)로 */
+  const need1 = t.need.map(n => pickCol(t, [].concat(n))).find(c => c && !put.has(c) && (row[c] == null || row[c] === ''));
+  const first = $('editor').querySelector('[data-col="' + CSS.escape(String((auto ? need1 : null) || pickCol(t, [].concat(t.dup || t.need[0])[0]) || '')) + '"]')
              || $('editor').querySelector('[data-col]');
   if(first) first.focus();
+}
+/* 「+ 새 행」 — 설비 칸이 있는 표는 «먼저 고른다»(GST 시스템 실적등록과 같은 순서 · 사용자 v145):
+   수선실적은 설비(설치현황), 자재실적은 그 자재가 속한 수선실적. 고르면 설비 칸을 채운 새 행이 열린다 —
+   채우는 규칙은 엑셀 일괄·「설비 칸 채우기」 단추와 «같은 한 벌»(fillPlan)이다. 「… 없이 빈 행」은 지금까지의 빈 행. */
+async function newStart(t){
+  if(!t.fill){ newRow(null); return; }
+  let pick;
+  try{ pick = t.fill.parent ? await pickParent(t) : await pickEquip(t); }
+  catch(e){ snack(e.message, {err:true}); return; }
+  if(pick == null) return;
+  if(pick === 'blank'){ newRow(null); return; }
+  snack('설비 칸 채우는 중…', {ms:30000});
+  let f;
+  try{ f = (await fillPlan(t, [pick]))[0]; }
+  catch(e){ snack(e.message, {err:true}); newRow(null); return; }
+  const n = Object.keys(f.vals).length;
+  newRow(t.fill.parent && pick.parentRow ? { [t.fill.parent]: pick.parentRow.rs_code } : null, { vals:f.vals, note:fillNote(t, f) });
+  snack(n ? n + '칸을 채웠습니다 — 나머지를 적고 「넣기」' : (f.why || '채울 값이 없습니다'), n ? {} : {err:true, ms:7000});
 }
 function renderEditor(){
   const ed = $('editor'), cur = S.cur;
@@ -1073,14 +1142,17 @@ function renderEditor(){
     + (cur.isNew ? '<span class="badge newtag">새 행</span>' : '<span class="key">' + (t.key === 'src_row' ? '행 #' : 'id ') + esc(cur.key) + '</span>')
     + '<span class="sp"></span>'
     + (!cur.isNew ? '<button class="btn sm" type="button" data-act="hist">이 행 이력</button>' : '')
-    + '</div><div class="ed-b" id="edBody">';
+    + '</div><div class="ed-b" id="edBody">'
+    + (cur.isNew && cur.auto && cur.auto.note ? '<div class="note anote">' + esc(cur.auto.note) + '</div>' : '');
   let fi = 0;
+  const auto = cur.auto && cur.auto.put;
   const field = c => {
     const lb = label(t, c), v = vs(row[c]), why = lockWhy(t, cur, c);
     const long = (t.long || []).indexOf(c) >= 0 || v.length > 70;
     const dlId = !why && (t.dl || []).indexOf(c) >= 0 ? 'dl_e_' + (fi++) : '';
     const ro = why ? ' readonly title="' + esc(why) + '"' : '';
-    return '<label class="fld' + (long ? ' wide' : '') + (why ? ' ro' : '') + '"><span class="fl">' + esc(lb.name) + (lb.alt ? '<i title="' + esc(lb.alt) + '">' + esc(lb.alt) + '</i>' : '') + '</span>'
+    const au = auto && auto.has(c) ? '<b class="atag" title="' + esc(SRC_L[auto.get(c)] || '') + '에서 채움 — 고치면 이 표시가 사라집니다">자동</b>' : '';
+    return '<label class="fld' + (long ? ' wide' : '') + (why ? ' ro' : '') + (au ? ' auto' : '') + '"><span class="fl">' + esc(lb.name) + (lb.alt ? '<i title="' + esc(lb.alt) + '">' + esc(lb.alt) + '</i>' : '') + au + '</span>'
       + (long ? '<textarea data-col="' + esc(c) + '" rows="2"' + ro + '>' + esc(v) + '</textarea>'
               : '<input data-col="' + esc(c) + '" value="' + esc(v) + '"' + ro + (dlId ? ' list="' + dlId + '"' : '')
                 + (isDate(t, c) ? ' placeholder="YYYY-MM-DD"' : isNum(t, c) ? ' inputmode="decimal"' : '') + '>'
@@ -1091,7 +1163,9 @@ function renderEditor(){
     const present = g[1].filter(c => cols.indexOf(c) >= 0);
     present.forEach(c => used.add(c));
     if(!present.length) return;
-    const tools = g[2] === 'fill' && !!t.fill ? '<button class="btn sm" type="button" data-act="fill" title="S/N·설비호기로 설치현황을 찾아 빈 칸을 채웁니다">설치현황에서 채우기</button>' : '';
+    const tools = g[2] === 'fill' && !!t.fill ? '<button class="btn sm" type="button" data-act="fill" title="'
+      + esc(t.fill.parent ? '수선실적번호로 그 수선실적에서(없으면 S/N 으로 설치현황·직전 수선실적에서) 설비·조직 칸을 찾습니다 — 기본은 빈 칸만'
+                          : 'S/N 으로 설치현황·같은 S/N 의 직전 수선실적에서 설비·조직 칸을 찾습니다(GST 시스템과 같은 표기) — 기본은 빈 칸만') + '">설비 칸 채우기</button>' : '';
     if(g[2] === 'legacy'){
       const anyVal = present.some(c => vs(row[c]).trim() !== '');
       h += '<details class="grp"' + (anyVal ? ' open' : '') + '><summary class="grp-h">' + esc(g[0]) + ' <span class="hint">' + (anyVal ? '' : '— 이 행은 비어 있음') + '</span><span class="ln"></span></summary><div class="flds">' + present.map(field).join('') + '</div></details>';
@@ -1140,7 +1214,14 @@ function markDirty(){
   if(rv) rv.disabled = !ch.n;
 }
 $('editor').addEventListener('input', e => {
-  if(e.target.matches('[data-col],[data-x]')){ const f = e.target.closest('.fld'); f.classList.remove('bad', 'clash'); f.querySelector('.err').textContent = ''; markDirty(); }
+  if(e.target.matches('[data-col],[data-x]')){
+    const f = e.target.closest('.fld'); f.classList.remove('bad', 'clash'); f.querySelector('.err').textContent = '';
+    if(f.classList.contains('auto')){                // 사람이 고친 칸은 더는 «자동»이 아니다
+      f.classList.remove('auto'); const a = f.querySelector('.atag'); if(a) a.remove();
+      if(S.cur && S.cur.auto) S.cur.auto.put.delete(e.target.dataset.col);
+    }
+    markDirty();
+  }
 });
 /* 날짜 칸은 칸을 떠날 때 YYYY-MM-DD 로 눕힌다 — 사람이 2026.8.1 로 적어도 표에는 한 형식만 들어간다 */
 $('editor').addEventListener('focusout', e => {
@@ -1168,7 +1249,8 @@ document.addEventListener('keydown', e => {
 async function leaveOk(){
   const ch = changes();
   if(!S.cur || (!ch.n && !S.cur.isNew)) return true;
-  if(S.cur.isNew && !ch.n && !Object.values(collectNew().row).length) return true;
+  /* 설비만 골라 «자동»으로 채운 새 행 — 사람이 적은 칸이 없으면 묻지 않는다(다시 고르면 같은 값이 나온다) */
+  if(S.cur.isNew && !ch.n && (S.cur.auto || !Object.values(collectNew().row).length)) return true;
   return ask('저장하지 않은 변경', '<p>고친 칸 ' + (ch.n || '여러') + '개를 저장하지 않았습니다. 버리고 넘어갈까요?</p>', '버리고 넘어가기', true);
 }
 window.addEventListener('beforeunload', e => { if(S.cur && changes().n){ e.preventDefault(); e.returnValue = ''; } });
@@ -1236,6 +1318,7 @@ async function save(){
   }catch(e){ snack(e.message, {err:true}); markDirty(); }
 }
 function afterSaved(t, row, hash){
+  touch(t);
   setCur(t, row[t.key], row, hash, false);
   const i = S.rows.findIndex(x => String(x[t.key]) === String(row[t.key]));
   if(i >= 0){ S.rows[i] = Object.assign({}, S.rows[i], row); }
@@ -1294,6 +1377,7 @@ async function insert(){
   const bt = $('editor').querySelector('[data-act=insert]'); bt.disabled = true; bt.textContent = '넣는 중…';
   try{
     const r = await rpc('edit_insert', {p_tbl:t.tbl, p_row:row});
+    touch(t);
     if(t.mode === 'whole' && S.all[t.id]) S.all[t.id].push(r.row);
     S.rows.unshift(r.row);
     if(S.total != null) S.total++;
@@ -1311,6 +1395,7 @@ async function del(){
   try{
     const r = await rpc('edit_delete', {p_tbl:t.tbl, p_key:cur.key, p_hash:cur.hash});
     if(r.error === 'conflict') return conflict(t, r, {});
+    touch(t);
     if(r.error === 'not_found'){ snack('이미 없는 행입니다', {err:true}); }
     const had = S.rows.length;
     S.rows = S.rows.filter(x => String(x[t.key]) !== String(cur.key));
@@ -1329,6 +1414,7 @@ async function restore(id, tabId){
     if(r.error === 'gone'){ snack('그 행이 이제 없어 되돌릴 수 없습니다', {err:true}); return false; }
     snack(r.same ? '이미 그 값입니다' : '되돌렸습니다 · 이력 #' + (r.log || ''));
     S.all = {};                                    // 작은 표는 다음 검색 때 새로 받는다
+    touch(null);                                   // 어느 표였든 — 설치현황이었으면 받아 둔 전 행이 옛것이다
     if(S.tab === 'hist') loadHist(false);
     else if(tabId === S.tab){
       const t = TAB(), k = r.key != null ? r.key : (r.row ? r.row[t.key] : null);
@@ -1339,52 +1425,198 @@ async function restore(id, tabId){
   }catch(e){ snack(e.message, {err:true}); return false; }
 }
 
-/* ---------- 설치현황에서 채우기 ----------
-   실적의 설비호기는 설치현황 Scrubber CODE 와, S/N 은 Scrubber S/N 과 맞물린다(GST.ORG.instIndex 와 같은 순서).
-   표기가 갈려도(AAA0001·AAA-0001) 영숫자만 남겨 맞추고, 안 맞으면 채널 접미 L/R/S 를 떼고 한 번 더(v92).
-   «빈 칸만» 기본으로 채운다 — 값이 있는 칸은 보여만 주고 사람이 체크해야 바뀐다. */
-const N = s => String(s == null ? '' : s).toUpperCase().replace(/[^0-9A-Z]/g, '');
+/* ---------- 설비 칸 채우기 (v145) ----------
+   사용자: 「수선실적은 S/N 기준으로 가는데 공정·세부공정·제품군·운영단위·고객사·단지·라인·BAY·모델 등등 어차피 땡겨 오는 건데
+   빈 양식에 넣을 필요가 있나」 · 「GST 시스템은 실적등록을 누르면 설비 S/N 고르는 팝업이 먼저 뜬다」.
+   ⚠ 땡겨 오지 않는다 — 대시보드는 그 칸들을 «수선실적 행에 적힌 값»으로 센다(설치현황에서 끌어오는 것은 Floor·사업부·라인2
+     뿐이다). 비워 넣으면 그 실적은 미배치·미상으로 빠진다. 그래서 «넣을 때» 채워 저장한다.
+   이 한 벌을 세 곳이 지난다 — 「+ 새 행」의 고르기 · 「설비 칸 채우기」 단추 · 엑셀 일괄의 새 행. 두 벌이면 같은 설비를
+   화면에서 넣을 때와 엑셀로 넣을 때 다른 글자가 들어간다(제2원칙).
+   ⚠ 채우는 것은 «빈 칸»뿐이다 — 사람이 적은 값은 덮지 않는다(단추는 체크한 칸만 · 새 행·엑셀은 빈 칸만).
+   ⚠ 칸마다 «어디서» 채우나(설치현황 · 직전 수선실적)는 표 사전(TABS 의 fill)에 운영 실측 근거와 함께 있다 — 여기서 정하지 않는다. */
+const N = s => String(s == null ? '' : s).toUpperCase().replace(/[^0-9A-Z]/g, '');   // S/N·CODE 맞추기 — setup-16 7절 edit_last_wk 와 같은 규칙(SPEC-SYNC)
+const SRC_L = { inst:'설치현황', prev:'직전 수선실적', parent:'그 수선실적' };
+const INST_COLS = ['src_row','code','sn','country','customer','location','fab','bay','group1','detail1','pjt','model','state','div'];
+const WK_COLS = ['src_row','rs_code','d_start','stage','pg','op','customer','campus','line','bay','proc','subproc','model','main_eq','prod_code','eq_no','sn_in'];
+/* 빈 양식에서 빼는 칸 = 올릴 때 채우는 칸. 찾는 열쇠(S/N · 자재의 수선실적번호)는 남긴다. */
+const autoCols = t => t.fill ? Object.keys(t.fill.src || t.fill.from).filter(c => c !== t.fill.sn && c !== t.fill.parent) : [];
+
+/* 설치현황 전 행(8,9천 행 · 필요한 열만)을 한 번 받아 둔다 — 설비 고르기 창이 키 칠 때마다 서버에 묻지 않게.
+   설치현황 탭에서 무엇을 쓰면 비운다(touch). 키셋으로 받는다 — «0행일 때만 멈춘다»(짧은 장을 끝으로 읽지 않는다 · v128). */
+async function instAll(){
+  if(S.inst) return S.inst;
+  const LI = TAB_BY.inst;
+  await loadCols(LI);
+  const have = S.cols[LI.tbl] || [], cols = INST_COLS.filter(c => have.indexOf(c) >= 0);
+  const rows = []; let last = -1;
+  for(;;){
+    const r = await C.from(LI.tbl).select(cols.join(',')).gt('src_row', last).order('src_row').limit(1000);
+    if(r.error) throw new Error(rpcErr(r.error));
+    const d = r.data || []; if(!d.length) break;
+    d.forEach(x => rows.push(x)); last = d[d.length - 1].src_row;
+  }
+  const add = (m, k, x) => { if(!k) return; const a = m.get(k); if(a) a.push(x); else m.set(k, [x]); };
+  const I = { rows:rows, bySN:new Map(), byStrip:new Map(), byCode:new Map() };
+  rows.forEach(x => { const s = N(x.sn); add(I.bySN, s, x); add(I.byStrip, s.replace(/[LRS]$/, ''), x); add(I.byCode, N(x.code), x); });
+  S.inst = I;
+  return I;
+}
+const touch = t => { if(!t || t.tbl === 'sheet_inst') S.inst = null; };
+/* S/N 먼저(영숫자만 · 안 맞으면 채널 접미 L/R/S 를 떼고 한 번 더 — v92), S/N 이 없거나 못 찾으면 설비호기(CODE).
+   여럿이 맞으면 «모른다» — 사람이 고르게 한다(엑셀은 비워 두고 알린다). 국내는 같은 설비호기 값이 여러 설비에 붙어
+   있어(운영 실측) S/N 을 먼저 믿는다. */
+function instFind(I, sn, code){
+  const s = N(sn);
+  let hit = s ? (I.bySN.get(s) || I.byStrip.get(s.replace(/[LRS]$/, '')) || []) : [];
+  if(!hit.length && N(code)) hit = I.byCode.get(N(code)) || [];
+  return hit;
+}
+/* 같은 S/N 의 직전 수선실적 — setup-16 7절 edit_last_wk. { 맞춘 S/N → [최근 행, 그 앞 행] }
+   두 행인 이유: 있는 행에서 「설비 칸 채우기」를 누르면 가장 최근 행이 «그 행 자신»일 수 있다 — 자기 값으로 자기를
+   채우면 «찾았다»고 말하면서 아무것도 안 가르쳐 준다. 그때는 그 앞 행을 쓴다(items[i].skip). */
+async function lastWk(sns){
+  const ks = Array.from(new Set(sns.map(N).filter(Boolean))), out = new Map();
+  for(let i = 0; i < ks.length; i += 2000){
+    const r = await rpc('edit_last_wk', {p_sns:ks.slice(i, i + 2000)}) || {};
+    Object.keys(r).forEach(k => out.set(k, r[k]));
+  }
+  return out;
+}
+/* 자재의 «그 수선실적» — 수선실적번호로. in(…) 도 서버 행수 상한에 잘린다 — 꽉 찬 장이면 반으로 쪼갠다(v128). */
+async function wkByRs(vals){
+  await loadCols(TAB_BY.wk);
+  const have = S.cols.sheet_wk || [], cols = WK_COLS.filter(c => have.indexOf(c) >= 0), out = new Map();
+  const go = async list => {
+    const r = await C.from('sheet_wk').select(cols.join(','), { count:'exact' }).in('rs_code', list).limit(1000);
+    if(r.error) throw new Error(rpcErr(r.error));
+    const d = r.data || [];
+    if(r.count != null && r.count > d.length && list.length > 1){ const h = list.length >> 1; await go(list.slice(0, h)); await go(list.slice(h)); return; }
+    d.forEach(x => { const k = vs(x.rs_code).trim(), a = out.get(k) || []; a.push(x); out.set(k, a); });
+  };
+  for(let i = 0; i < vals.length; i += 100) await go(vals.slice(i, i + 100));
+  return out;
+}
+/* 정본 — items: [{ sn, code, rs, inst, parentRow, skip }] → 같은 순서로 [{ vals:{칸:{v, src}}, inst, prev, parent, amb, why }]
+   · skip: 직전 수선실적으로 쓰지 않을 수선실적 행번호(지금 고치는 그 행 — 「설비 칸 채우기」 단추).
+   · 자재: 그 수선실적(수선실적번호가 표에 «정확히 한 행»)에서 from 대로 옮긴다. 아니면 S/N 길로.
+   · S/N 길: 설치현황(고른 설비 · S/N 으로 찾은 설비) + 같은 S/N 의 직전 수선실적 → 수선실적의 fill.src 규칙.
+     자재는 그 결과를 from 으로 옮긴다 — 규칙은 수선실적 한 벌이다(자재용을 따로 두지 않는다).
+   · 국내·해외는 고른 설비의 운영단위(없으면 직전 실적의 운영단위)로 가린다 — GST.ORG.region 정본. */
+async function fillPlan(t, items){
+  const F = t.fill, W = TAB_BY.wk.fill;
+  const out = items.map(() => ({ vals:{}, inst:null, prev:null, parent:null, amb:null, why:'', pwhy:'' }));
+  let viaSn = items.map((it, i) => i);
+  if(F.parent){
+    const need = Array.from(new Set(items.filter(it => !it.parentRow).map(it => vs(it.rs).trim()).filter(Boolean)));
+    const par = need.length ? await wkByRs(need) : new Map();
+    viaSn = [];
+    items.forEach((it, i) => {
+      const k = vs(it.rs).trim(), a = it.parentRow ? [it.parentRow] : k ? (par.get(k) || []) : [];
+      if(a.length === 1){
+        const o = out[i]; o.parent = a[0];
+        Object.keys(F.from).forEach(c => { const v = vs(a[0][F.from[c]]).trim(); if(v) o.vals[c] = { v:v, src:'parent' }; });
+      }else{
+        out[i].pwhy = a.length > 1 ? '수선실적번호 「' + k + '」 행이 ' + a.length + '개라 어느 수선실적인지 모릅니다'
+                    : k ? '표에 없는 수선실적번호입니다(' + k + ')' : '';
+        viaSn.push(i);
+      }
+    });
+    if(!viaSn.length) return out;
+  }
+  const I = await instAll(), inst = new Map();
+  viaSn.forEach(i => {
+    const it = items[i];
+    if(it.inst){ inst.set(i, it.inst); return; }
+    const hit = instFind(I, it.sn, it.code);
+    if(hit.length === 1) inst.set(i, hit[0]); else if(hit.length > 1) out[i].amb = hit;
+  });
+  const snOf = i => vs(items[i].sn).trim() || (inst.get(i) ? vs(inst.get(i).sn).trim() : '');
+  let prev = new Map(), perr = '';
+  try{ prev = await lastWk(viaSn.map(snOf).filter(Boolean)); }
+  catch(e){ perr = '직전 수선실적을 읽지 못했습니다 — ' + e.message; }      // 설치현황 칸은 그대로 채운다(조용히 빼지 않고 이유에 적는다)
+  viaSn.forEach(i => {
+    const sk = items[i].skip, o = out[i], x = inst.get(i) || null;
+    const p = [].concat(prev.get(N(snOf(i))) || []).find(r => r && (sk == null || String(r.src_row) !== String(sk))) || null;
+    o.inst = x; o.prev = p;
+    const rg = GST.ORG.region(x ? x.country : p ? p.op : ''), R = rg === GST.ORG.REGION_KR ? 'KR' : rg === GST.ORG.REGION_OS ? 'OS' : '';
+    const wk = {};
+    Object.keys(W.src).forEach(c => {
+      const rule = Array.isArray(W.src[c]) ? W.src[c] : R ? W.src[c][R] : null;
+      if(!rule) return;
+      for(const s of rule){
+        const v = s === 'p' ? (p ? vs(p[c]).trim() : '') : (x ? vs(x[s.slice(2)]).trim() : '');
+        if(v){ wk[c] = { v:v, src: s === 'p' ? 'prev' : 'inst' }; break; }
+      }
+    });
+    if(F.from) Object.keys(F.from).forEach(c => { if(wk[F.from[c]] && !o.vals[c]) o.vals[c] = wk[F.from[c]]; });
+    else o.vals = wk;
+    /* 까닭은 채웠을 때도 적는다 — 수선실적번호를 못 찾아 S/N 으로 채웠거나, 설비가 여러 대라 직전 실적 값만 넣었으면
+       나머지가 왜 비었는지 사람이 알아야 한다(조용히 반쪽만 채우지 않는다) */
+    const it = items[i], key = vs(it.sn).trim() || vs(it.code).trim(), notes = [];
+    const ambW = o.amb ? '설치현황에 맞는 설비가 ' + o.amb.length + '대입니다(' + key + ')' : '';
+    if(!Object.keys(o.vals).length){
+      if(o.pwhy) notes.push(o.pwhy);
+      notes.push(o.amb ? ambW + ' — 행을 열어 「설비 칸 채우기」로 고르세요'
+        : !key ? (F.parent && !vs(it.rs).trim() ? '수선실적번호도 S/N 도 비어 있습니다' : 'S/N 이 비어 있습니다')
+        : '설치현황에도 수선실적에도 없는 S/N 입니다(' + key + ')');
+    }else{
+      if(o.pwhy) notes.push(o.pwhy + ' — S/N 으로 찾아 채웠습니다');
+      if(o.amb) notes.push(ambW + ' — 직전 수선실적 값만 채웠습니다(설치현황 칸은 행을 열어 「설비 칸 채우기」로 고르세요)');
+    }
+    if(perr) notes.push(perr);
+    o.why = notes.join(' · ');
+  });
+  return out;
+}
+/* 무엇에서 몇 칸을 채웠나 — 편집기 머리·단추 창에 적는다(조용히 채우지 않는다). 못 채운 칸도 이름을 적는다. */
+function fillNote(t, f, short){
+  const cnt = {}; Object.keys(f.vals).forEach(c => { const s = f.vals[c].src; cnt[s] = (cnt[s] || 0) + 1; });
+  const parts = [];
+  if(cnt.parent) parts.push('수선실적 ' + vs(f.parent && f.parent.rs_code) + '에서 ' + cnt.parent + '칸');
+  if(cnt.inst) parts.push('설치현황(' + [vs(f.inst && f.inst.sn), vs(f.inst && f.inst.code)].filter(Boolean).join(' · ') + ')에서 ' + cnt.inst + '칸');
+  if(cnt.prev) parts.push('직전 수선실적(' + vs(f.prev && f.prev.rs_code) + (f.prev && f.prev.d_start ? ' · ' + String(f.prev.d_start).slice(0, 10) : '') + ')에서 ' + cnt.prev + '칸');
+  const have = S.cols[t.tbl] || [];
+  const miss = autoCols(t).filter(c => have.indexOf(c) >= 0 && !f.vals[c]).map(c => label(t, c).name);
+  return (parts.length ? '설비 칸 — ' + parts.join(' · ') + '.' + (f.why ? ' ' + f.why + '.' : '') : (f.why || '채울 값을 찾지 못했습니다') + '.')
+    + (parts.length && miss.length ? ' 못 찾은 칸: ' + miss.join(' · ') + '(직접 적으세요).' : '')
+    + (short ? '' : ' 「자동」 표시 칸은 확인하고 고쳐도 됩니다.');
+}
+
+/* 「설비 칸 채우기」 단추 — 지금 적힌 S/N(자재는 수선실적번호)으로 같은 한 벌(fillPlan)을 돌려 칸마다 «지금 값 · 찾은 값 · 출처»를
+   보여 준다. 기본은 «빈 칸만» 체크 — 값이 있는 칸은 보여만 주고 사람이 체크해야 바뀐다. 여러 대가 맞으면 고르게 한다. */
 async function snFill(){
   const t = TAB_BY[S.cur.t], F = t.fill, LI = TAB_BY.inst;
   const val = c => { const el = $('editor').querySelector('[data-col="' + CSS.escape(c) + '"]'); return el ? el.value.trim() : ''; };
-  const code = val(F.code), sns = F.sn.map(val).filter(Boolean);
-  if(!code && !sns.length){ snack('S/N 이나 설비호기를 먼저 적어 주세요', {err:true}); return; }
-  /* 서버 검색어에 «접미를 뗀 S/N» 도 넣는다 — 0001L 로만 찾으면 설치현황의 0001 은 애초에 후보로 안 온다 */
-  const terms = new Set([code].concat(sns).filter(Boolean));
-  sns.forEach(v => { const m = /^(.*\d)\s*[LRS]$/i.exec(v); if(m) terms.add(m[1]); });
-  const ors = [];
-  terms.forEach(v => { const p = pat(v); if(p) ors.push('code.ilike.' + p, 'sn.ilike.' + p); });
-  let cand = [];
+  /* 고치는 행이 수선실적이면 그 행 자신을 «직전 수선실적»으로 쓰지 않는다(자재의 행번호는 다른 표의 번호라 견주지 않는다) */
+  const it = { sn:val(F.sn), code:val(F.code), rs:F.parent ? val(F.parent) : '', skip: !S.cur.isNew && t.tbl === 'sheet_wk' ? S.cur.key : null };
+  if(!it.sn && !it.code && !it.rs){ snack((F.parent ? '수선실적번호나 ' : '') + 'S/N 을 먼저 적어 주세요', {err:true}); return; }
+  snack('찾는 중…', {ms:30000});
+  let f;
   try{
-    const r = await C.from('sheet_inst').select('*').or(ors.join(',')).limit(40);
-    if(r.error) throw new Error(rpcErr(r.error));
-    cand = r.data || [];
+    f = (await fillPlan(t, [it]))[0];
+    if(f.amb){                                     // 여러 대면 언제나 묻는다 — 직전 실적만으로 채우면 설치현황 칸이 조용히 빈다
+      const k = await dialog('설치현황에 맞는 설비가 ' + f.amb.length + '대입니다', '<p>어느 설비로 채울까요?</p><table class="dt"><tr><th></th><th>CODE</th><th>S/N</th><th>'
+        + esc(label(LI, 'customer').name) + '</th><th>' + esc(label(LI, 'fab').name) + '</th><th>' + esc(label(LI, 'model').name) + '</th></tr>'
+        + f.amb.map((x, i) => '<tr><td><button class="btn sm" type="button" data-ret="' + i + '">고르기</button></td><td>' + esc(x.code) + '</td><td>' + esc(x.sn) + '</td><td>'
+          + esc(x.customer) + '</td><td>' + esc(x.fab) + '</td><td>' + esc(x.model) + '</td></tr>').join('') + '</table>', [{l:'취소', v:null}], true);
+      if(k == null || f.amb[+k] == null){ snack('취소했습니다'); return; }
+      f = (await fillPlan(t, [Object.assign({}, it, { inst:f.amb[+k] })]))[0];
+    }
   }catch(e){ snack(e.message, {err:true}); return; }
-  let hit = cand.filter(x => (code && N(x.code) === N(code)) || sns.some(s => N(x.sn) === N(s)));
-  if(!hit.length){ const strip = s => N(s).replace(/[LRS]$/, ''); hit = cand.filter(x => sns.some(s => N(x.sn) === strip(s) || N(x.sn).replace(/[LRS]$/, '') === strip(s))); }
-  if(!hit.length){ snack('설치현황에서 못 찾았습니다 — ' + [code].concat(sns).filter(Boolean).join(' · '), {err:true}); return; }
-  let inst = hit[0];
-  if(hit.length > 1){
-    const k = await dialog('설치현황에 맞는 설비가 ' + hit.length + '대입니다', '<p>어느 설비로 채울까요?</p><table class="dt"><tr><th></th><th>CODE</th><th>S/N</th><th>' + esc(label(LI, 'customer').name) + '</th><th>' + esc(label(LI, 'fab').name) + '</th><th>' + esc(label(LI, 'model').name) + '</th></tr>'
-      + hit.map((x, i) => '<tr><td><button class="btn sm" type="button" data-ret="' + i + '">고르기</button></td><td>' + esc(x.code) + '</td><td>' + esc(x.sn) + '</td><td>' + esc(x.customer) + '</td><td>' + esc(x.fab) + '</td><td>' + esc(x.model) + '</td></tr>').join('') + '</table>',
-      [{l:'취소', v:null}], true);
-    if(k == null || hit[+k] == null) return;
-    inst = hit[+k];
-  }
-  const rows = Object.keys(F.map).filter(c => (S.cols[t.tbl] || []).indexOf(c) >= 0).map(c => {
-    const now = val(c), v = vs(inst[F.map[c]]).trim();
-    return { c:c, now:now, v:v, same: N(now) === N(v) && now !== '' , def: !now && !!v };
-  }).filter(r => r.v !== '');
-  if(!rows.length){ snack('설치현황 그 행에 채울 값이 없습니다'); return; }
-  const body = '<p>설치현황 <b>' + esc(inst.code || '') + ' · ' + esc(inst.sn || '') + '</b> 에서 찾은 값입니다. 체크한 칸만 채웁니다 — 기본은 «빈 칸»뿐입니다.</p>'
-    + '<table class="dt"><tr><th></th><th>칸</th><th>지금 값</th><th>설치현황 값</th></tr>'
+  const have = S.cols[t.tbl] || [];
+  const rows = Object.keys(f.vals).filter(c => have.indexOf(c) >= 0).map(c => {
+    const now = val(c), v = f.vals[c].v;
+    return { c:c, now:now, v:v, src:f.vals[c].src, same: N(now) === N(v) && now !== '', def: !now };
+  });
+  if(!rows.length){ snack(f.why || '채울 값을 찾지 못했습니다', {err:true, ms:7000}); return; }
+  const body = '<p>' + esc(fillNote(t, f, true)) + ' 체크한 칸만 채웁니다 — 기본은 «빈 칸»뿐입니다.</p>'
+    + '<table class="dt"><tr><th></th><th>칸</th><th>지금 값</th><th>찾은 값</th><th>출처</th></tr>'
     + rows.map((r, k) => '<tr' + (r.now && !r.same ? ' class="chg"' : '') + '><td>' + (r.same ? '같음' : '<input type="checkbox" data-k="' + k + '"' + (r.def ? ' checked' : '') + '>') + '</td><td>' + esc(label(t, r.c).name)
-      + '</td><td class="v">' + esc(r.now || '(빈칸)') + '</td><td class="v">' + esc(r.v) + ' <span class="hint">' + esc(label(LI, F.map[r.c]).name) + '</span></td></tr>').join('') + '</table>';
+      + '</td><td class="v">' + esc(r.now || '(빈칸)') + '</td><td class="v">' + esc(r.v) + '</td><td class="hint">' + esc(SRC_L[r.src] || '') + '</td></tr>').join('') + '</table>';
   const holder = {};
-  const p = dialog('설치현황에서 채우기', body, [{l:'취소', v:false}, {l:'체크한 칸 채우기', v:true, cls:'pri'}], true);
-  const m = dialog.last;
-  m.addEventListener('change', e => { if(e.target.matches('[data-k]')) holder[e.target.dataset.k] = e.target.checked; });
   rows.forEach((r, k) => { holder[k] = r.def; });
+  const p = dialog('설비 칸 채우기', body, [{l:'취소', v:false}, {l:'체크한 칸 채우기', v:true, cls:'pri'}], true);
+  dialog.last.addEventListener('change', e => { if(e.target.matches('[data-k]')) holder[e.target.dataset.k] = e.target.checked; });
   if(!(await p)) return;
   let n = 0;
   rows.forEach((r, k) => {
@@ -1394,6 +1626,96 @@ async function snFill(){
   });
   markDirty();
   snack(n ? n + '칸을 채웠습니다 — 확인하고 저장하세요' : '채운 칸이 없습니다');
+}
+
+/* 설비 고르기 — GST 시스템 «설비 검색» 창과 같은 조건(운영단위·고객사·사업부·설비상태·S/N)과 같은 열(S/N·상태·사업부·단지·
+   라인·공정·세부공정·설비호기). 설치현황 전 행을 한 번 받아 두고 화면에서 거른다. 조건은 다음 번에도 남는다(같은 단지 설비를
+   잇달아 넣을 때). 돌려주는 것: { inst, sn, code } · 'blank'(설비 없이 빈 행) · null(취소) */
+const PICK_MAX = 100;
+async function pickEquip(t){
+  const LI = TAB_BY.inst, L = c => label(LI, c).name, f = Object.assign({}, S.pickF.equip || {});
+  const AX = ['country','customer','div','state'];
+  const p = dialog('설비 고르기 — ' + t.name + ' 새 행',
+    '<p class="hint">GST 시스템 실적등록처럼 설비부터 고릅니다. 고르면 운영단위·고객사·단지·라인·공정·모델 같은 설비 칸이 채워집니다(설치현황 · 같은 S/N 의 직전 수선실적 — GST 시스템과 같은 표기).</p>'
+    + '<div class="pk-f">' + AX.map(k => '<select class="ctl" data-pf="' + k + '"><option value="">' + esc(L(k)) + ' 전체</option></select>').join('')
+    + '<input class="ctl" data-pf="q" placeholder="S/N · 설비호기 (일부만 적어도 됩니다)" value="' + esc(f.q || '') + '"></div>'
+    + '<div class="pk-n hint" data-pk="n"><span class="spin"></span> 설치현황 읽는 중…</div><div class="pk-l" data-pk="l"></div>',
+    [{l:'설비 없이 빈 행', v:'blank'}, {l:'취소', v:null}], true);
+  const m = dialog.last, q = m.querySelector('[data-pf=q]'), nEl = m.querySelector('[data-pk=n]'), lEl = m.querySelector('[data-pk=l]');
+  q.focus();
+  let I = null, shown = [];
+  const draw = () => {
+    if(!I) return;
+    AX.forEach(k => { const s = m.querySelector('[data-pf="' + k + '"]'); if(s.dataset.on) f[k] = s.value; });
+    f.q = q.value.trim();
+    /* 조건은 «앞 칸으로 좁힌 설비»에서 목록을 만든다 — 운영단위를 고르면 고객사 목록이 그 운영단위 것만 남는다 */
+    let rows = I.rows;
+    AX.forEach(k => {
+      const s = m.querySelector('[data-pf="' + k + '"]'), cnt = new Map();
+      rows.forEach(x => { const v = vs(x[k]).trim(); if(v) cnt.set(v, (cnt.get(v) || 0) + 1); });
+      const opts = Array.from(cnt).sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])));
+      if(f[k] && !cnt.has(f[k])) f[k] = '';
+      s.innerHTML = '<option value="">' + esc(L(k)) + ' 전체</option>' + opts.map(([v, n]) => '<option value="' + esc(v) + '"' + (v === f[k] ? ' selected' : '') + '>' + esc(v) + ' (' + n.toLocaleString() + ')</option>').join('');
+      s.dataset.on = '1';
+      if(f[k]) rows = rows.filter(x => vs(x[k]).trim() === f[k]);
+    });
+    const re = patRe(f.q);
+    if(re) rows = rows.filter(x => re.test(vs(x.sn)) || re.test(vs(x.code)));
+    shown = rows.slice().sort((a, b) => vs(a.sn).localeCompare(vs(b.sn))).slice(0, PICK_MAX);
+    nEl.textContent = rows.length ? rows.length.toLocaleString() + '대' + (rows.length > PICK_MAX ? ' — 앞 ' + PICK_MAX + '대만 보입니다. 조건을 좁히세요' : '') + ' · 줄을 누르면 고릅니다'
+                                  : '맞는 설비가 없습니다 — 조건을 바꾸거나 「설비 없이 빈 행」';
+    const C2 = ['sn','state','div','location','fab','group1','detail1','model','code'];
+    lEl.innerHTML = rows.length ? '<table class="dt"><tr>' + C2.map(c => '<th>' + esc(L(c)) + '</th>').join('') + '</tr>'
+      + shown.map((x, i) => '<tr data-ret="' + i + '">' + C2.map(c => '<td>' + esc(vs(x[c])) + '</td>').join('') + '</tr>').join('') + '</table>' : '';
+  };
+  m.addEventListener('change', e => { if(e.target.matches('select[data-pf]')) draw(); });
+  q.addEventListener('input', draw);
+  q.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); const one = shown.length === 1 && lEl.querySelector('tr[data-ret]'); if(one) one.click(); } });
+  instAll().then(x => { I = x; draw(); }).catch(e => { nEl.textContent = e.message; });
+  const v = await p;
+  S.pickF.equip = { country:f.country || '', customer:f.customer || '', div:f.div || '', state:f.state || '', q:f.q || '' };
+  if(v === 'blank' || v == null) return v;
+  const x = shown[+v];
+  return x ? { inst:x, sn:x.sn, code:x.code } : null;
+}
+/* 자재 새 행 — 그 자재가 쓰인 수선실적부터 고른다(실적코드 · S/N · 설비호기로 찾기 · 최근 것부터 50건).
+   자재의 설비·조직 칸은 그 수선실적과 운영 실측 100% 같다. 돌려주는 것: { parentRow, rs, sn, code } · 'blank' · null */
+async function pickParent(t){
+  const f = Object.assign({}, S.pickF.parent || {}), W = TAB_BY.wk;
+  const p = dialog('수선실적 고르기 — ' + t.name + ' 새 행',
+    '<p class="hint">이 자재가 쓰인 수선실적을 고릅니다. 고르면 수선실적번호와 운영단위·고객사·단지·라인·설비 칸이 그 수선실적 값으로 채워집니다.</p>'
+    + '<div class="pk-f pk-f1"><input class="ctl" data-pf="q" placeholder="실적코드 또는 S/N · 설비호기 (일부만 적어도 됩니다)" value="' + esc(f.q || '') + '"><button class="btn" type="button" data-pk="go">찾기</button></div>'
+    + '<div class="pk-n hint" data-pk="n">실적코드나 S/N 을 적고 「찾기」(Enter)</div><div class="pk-l" data-pk="l"></div>',
+    [{l:'수선실적 없이 빈 행', v:'blank'}, {l:'취소', v:null}], true);
+  const m = dialog.last, q = m.querySelector('[data-pf=q]'), nEl = m.querySelector('[data-pk=n]'), lEl = m.querySelector('[data-pk=l]');
+  q.focus();
+  let rows = [], seq = 0;
+  const go = async () => {
+    const pt = pat(q.value), my = ++seq;
+    f.q = q.value.trim();
+    if(!pt){ nEl.textContent = '실적코드나 S/N 을 적어 주세요'; return; }
+    nEl.innerHTML = '<span class="spin"></span> 찾는 중…';
+    try{
+      await loadCols(W);
+      const have = S.cols.sheet_wk || [], cols = WK_COLS.filter(c => have.indexOf(c) >= 0);
+      const r = await C.from('sheet_wk').select(cols.join(',')).or(['rs_code','sn_in','eq_no'].map(c => c + '.ilike.' + pt).join(',')).order('src_row', { ascending:false }).limit(50);
+      if(my !== seq) return;                       // 그새 다시 찾았다
+      if(r.error) throw new Error(rpcErr(r.error));
+      rows = r.data || [];
+    }catch(e){ nEl.textContent = e.message; return; }
+    const C2 = ['rs_code','d_start','stage','op','campus','line','eq_no','sn_in','model'];
+    nEl.textContent = rows.length ? rows.length + '건(최근에 올린 행부터' + (rows.length >= 50 ? ' · 50건까지 — 더 좁혀 찾으세요' : '') + ') · 줄을 누르면 고릅니다' : '맞는 수선실적이 없습니다';
+    lEl.innerHTML = rows.length ? '<table class="dt"><tr>' + C2.map(c => '<th>' + esc(label(W, c).name) + '</th>').join('') + '</tr>'
+      + rows.map((x, i) => '<tr data-ret="' + i + '">' + C2.map(c => '<td>' + esc(c === 'd_start' ? vs(x[c]).slice(0, 16) : vs(x[c])) + '</td>').join('') + '</tr>').join('') + '</table>' : '';
+  };
+  m.querySelector('[data-pk=go]').onclick = go;
+  q.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); go(); } });
+  if(f.q) go();
+  const v = await p;
+  S.pickF.parent = { q:f.q || '' };
+  if(v === 'blank' || v == null) return v;
+  const x = rows[+v];
+  return x ? { parentRow:x, rs:x.rs_code, sn:x.sn_in, code:x.eq_no } : null;
 }
 
 /* ---------- 엑셀 일괄 수정 (v141) ----------
@@ -1430,6 +1752,14 @@ function bulkCols(t){
   t.groups.forEach(g => g[1].forEach(c => { if(cols.indexOf(c) >= 0 && !seen.has(c)){ seen.add(c); (g[2] === 'legacy' ? legacy : out).push(c); } }));
   cols.forEach(c => { if(!seen.has(c)){ seen.add(c); out.push(c); } });
   return out.concat(legacy);
+}
+/* 빈 양식의 열 — 올릴 때 채우는 설비 칸(autoCols)은 뺀다(v145 · 사용자: 「어차피 땡겨 오는 건데 빈 양식에 넣을 필요가 있나」).
+   찾는 열쇠(자재 수선실적번호 · S/N)를 맨 앞에 둔다 — GST 시스템처럼 «설비부터». 머리글은 전체 양식과 «같은 글자»다
+   (bulkHead 가 겹치는 이름에 붙이는 꼬리가 열 수에 따라 달라지지 않게, 전체 양식의 머리글에서 골라 쓴다). */
+function blankCols(t){
+  const all = bulkCols(t), auto = new Set(autoCols(t));
+  const first = t.fill ? [t.fill.parent, t.fill.sn].filter(c => c && all.indexOf(c) >= 0) : [];
+  return first.concat(all.filter(c => !auto.has(c) && first.indexOf(c) < 0));
 }
 /* 머리글 — 미러 표는 SPEC 별칭[0](표준 템플릿과 같은 정본 표기 · v138), Import 표는 열 이름 그대로.
    정규화해서 겹치면 «(열이름)»을 붙여 갈라 둔다 — 겹친 머리글은 올릴 때 어느 열인지 모른다. */
@@ -1484,7 +1814,7 @@ function asText(XLSX, ws){
     if(c){ c.t = 's'; c.v = c.v == null ? '' : String(c.v); c.z = '@'; }
   }
 }
-function bulkGuide(t, n, what){
+function bulkGuide(t, n, what, blank){
   const ks = bulkKeys(t), kn = ks.length ? label(t, pickCol(t, ks) || ks[0]).name : '';
   const g = [
     ['데이터 관리 — 엑셀 일괄 수정 양식'],
@@ -1505,6 +1835,12 @@ function bulkGuide(t, n, what){
     ['·', '받은 뒤에 다른 사람이 같은 행을 고쳤으면 그 줄은 덮지 않고 알려 줍니다 — 다시 받아서 고치세요.'],
     ['·', '숨김 시트 「_meta」는 지우지 마세요 — 받은 시점의 값을 대조하는 데 씁니다.'],
     ...(t.ledger ? [['·', '계산 칸(발생일·S/N 조인 키·정산월·주차·집계 대상)은 양식에 없습니다 — 올리면 업로드와 같은 규칙으로 다시 계산합니다. 운영단위(op)는 새 행에서만 정하고(표에 이미 있는 값), 해외 Group 줄의 Seq·Group·담당은 고치지 않습니다.']] : []),
+    ...(t.fill ? [[''], ['설비 칸 — 새 행은 올릴 때 채웁니다'],
+      ['·', (blank ? '이 빈 양식에는 설비 칸이 없습니다: ' : '새 행(「' + BULK_KEY + '」 칸이 빈 줄)의 빈 설비 칸은 올릴 때 채웁니다: ')
+            + autoCols(t).filter(c => (S.cols[t.tbl] || []).indexOf(c) >= 0).map(c => label(t, c).name).join(' · ')],
+      ['·', t.fill.parent ? '「' + label(t, t.fill.parent).name + '」만 적으면 그 수선실적에서 채웁니다(같은 값). 그 수선실적이 아직 표에 없으면 「' + label(t, t.fill.sn).name + '」으로 설치현황·같은 S/N 의 직전 수선실적에서 채웁니다.'
+                          : '「' + label(t, t.fill.sn).name + '」만 적으면 설치현황(지금의 설비 명부)과 같은 S/N 의 직전 수선실적에서 GST 시스템과 같은 표기로 채웁니다.'],
+      ['·', '빈 칸만 채웁니다 — 직접 적고 싶으면 그 머리글을 열로 붙여 적으세요(적은 값이 그대로 들어갑니다). 못 찾은 줄은 미리보기가 이유와 함께 알려 줍니다.']] : []),
     [''],
     ['반영한 내용은 「변경 이력」 탭에 줄마다 행 전체로 남고, 그 묶음을 통째로 되돌릴 수 있습니다.']
   ];
@@ -1545,7 +1881,8 @@ async function bulkDown2(t, kind){
   let XLSX;
   try{ XLSX = await xlsx(); }catch(e){ snack(e.message, {err:true}); return; }
   if(!S.cols[t.tbl]){ try{ await loadCols(t); }catch(e){ snack(e.message, {err:true}); return; } }
-  const cols = bulkCols(t), heads = bulkHead(t, cols);
+  const all = bulkCols(t), allH = bulkHead(t, all);
+  const cols = kind === 'blank' ? blankCols(t) : all, heads = cols.map(c => allH[all.indexOf(c)]);
   let got = [];
   try{
     for(let i = 0; i < keys.length; i += GET_MAX){
@@ -1564,7 +1901,7 @@ async function bulkDown2(t, kind){
   const meta = [['gst-edit-bulk', '1'], ['표', t.tbl], ['탭', t.name], ['받은 시각', new Date().toISOString()], ['받은 사람', (GST._me || {}).email || ''],
                 ['행 수', String(have.length)], [BULK_KEY, '해시']].concat(have.map(k => [k, by.get(k).hash]));
   const ms = XLSX.utils.aoa_to_sheet(meta); asText(XLSX, ms);
-  const gs = XLSX.utils.aoa_to_sheet(bulkGuide(t, have.length, what)); gs['!cols'] = [{ wch:10 }, { wch:120 }];
+  const gs = XLSX.utils.aoa_to_sheet(bulkGuide(t, have.length, what, kind === 'blank')); gs['!cols'] = [{ wch:10 }, { wch:120 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, t.name);
   XLSX.utils.book_append_sheet(wb, gs, '안내');
@@ -1755,7 +2092,29 @@ async function bulkPlan(t, pick, meta, hm, fname){
     }
     P.upd.push({ L:L, key:L.key, hash:x.hash, ch:ch, row:x.row, by:L.by });
   });
+  /* 새 행의 설비 칸 — 빈 칸만 채운다(v145 · 「+ 새 행」의 고르기·「설비 칸 채우기」와 같은 한 벌 fillPlan).
+     업무 키로 찾은 줄(수정)은 채우지 않는다 — 그 줄의 빈칸은 «모름»이고 행에는 이미 값이 있다. */
+  if(t.fill && P.ins.length){
+    snack('새 행 ' + P.ins.length.toLocaleString() + '줄의 설비 칸을 찾는 중…', {ms:60000});
+    const F = t.fill, have = new Set(S.cols[t.tbl] || []);
+    const plan = await fillPlan(t, P.ins.map(x => ({ sn:x.row[F.sn], code:x.row[F.code], rs:F.parent ? x.row[F.parent] : '' })));
+    P.ins.forEach((x, j) => {
+      const f = plan[j], put = {};
+      Object.keys(f.vals).forEach(c => { if(have.has(c) && (x.row[c] == null || x.row[c] === '')){ x.row[c] = f.vals[c].v; put[c] = f.vals[c].src; } });
+      x.fill = { put:put, why:f.why, miss:autoCols(t).filter(c => have.has(c) && (x.row[c] == null || x.row[c] === '')) };
+    });
+  }
   return P;
+}
+/* 미리보기 «설비 칸» 열 — 몇 칸을 어디서 채웠나 · 못 채운 까닭 · 빈 채로 들어가는 칸 */
+function fillCell(t, f){
+  if(!f) return '';
+  const ks = Object.keys(f.put);
+  if(!ks.length) return '<span class="bd">' + esc(f.why || '찾지 못했습니다') + '</span>';
+  const cnt = {}; ks.forEach(c => { cnt[f.put[c]] = (cnt[f.put[c]] || 0) + 1; });
+  return '자동 ' + ks.length + '칸 <span class="hint">(' + Object.keys(cnt).map(s => SRC_L[s] + ' ' + cnt[s]).join(' · ') + ')</span>'
+    + (f.miss.length ? ' <span class="wd">· 빈 칸: ' + esc(f.miss.map(c => label(t, c).name).join(' · ')) + '</span>' : '')
+    + (f.why ? ' <span class="wd">· ' + esc(f.why) + '</span>' : '');
 }
 
 function planTable(head, rows){
@@ -1777,6 +2136,11 @@ async function showPlan(t, P){
     + '개가 「' + esc(t.name) + '」 표에 없습니다 — 다른 표에서 받은 파일이 아닌지 확인하세요. 맞는 열은 ' + esc(P.mapped.map(c => label(t, c).name).slice(0, 8).join(' · ')) + ' 뿐입니다.</p>';
   if(P.unknown.length) h += '<p class="hint">모르는 열은 무시했습니다: ' + esc(P.unknown.slice(0, 12).join(' · ')) + (P.unknown.length > 12 ? ' 외 ' + (P.unknown.length - 12) + '개' : '') + '</p>';
   if(P.twice.length) h += '<p class="hint">같은 열이 두 번 있어 뒤의 것은 무시했습니다: ' + esc(P.twice.join(' · ')) + '</p>';
+  const fl = P.ins.filter(x => x.fill), fN = fl.filter(x => Object.keys(x.fill.put).length).length,
+        fC = fl.reduce((s, x) => s + Object.keys(x.fill.put).length, 0), fMiss = fl.length - fN;
+  if(fl.length) h += '<p class="' + (fMiss ? 'wn' : 'hint') + '">설비 칸 자동 채움 — 새 행 ' + fN.toLocaleString() + '줄 · ' + fC.toLocaleString() + '칸'
+    + (fMiss ? ' · 못 채운 ' + fMiss.toLocaleString() + '줄(아래 「설비 칸」의 이유 — 그 칸은 비어 들어갑니다)' : '')
+    + '. 빈 칸만 채웁니다 — 파일에 적은 값은 그대로입니다.</p>';
   if(P.skip.length) h += '<h4>건너뛰는 줄 — 반영하지 않습니다</h4>' + planTable(['엑셀 줄', BULK_KEY + ' · 키', '이유'],
     P.skip.slice(0, SHOW).map(s => '<tr><td>' + s.L.ln + '</td><td>' + esc(s.L.pk || s.L.bk || '') + '</td><td class="v">' + esc(s.why) + '</td></tr>')) + more(P.skip);
   if(nu) h += '<h4>수정</h4>' + planTable(['엑셀 줄', BULK_KEY].concat(P.kName ? [P.kName] : []).concat(['바뀌는 칸']),
@@ -1785,9 +2149,11 @@ async function showPlan(t, P){
         + ks.slice(0, 6).map(c => esc(label(t, c).name) + ': <del>' + esc(cut2(vs(u.row[c]), 24) || '빈칸') + '</del> → <ins>' + esc(cut2(u.ch[c], 24) || '빈칸') + '</ins>').join(' · ')
         + (ks.length > 6 ? ' <span class="hint">외 ' + (ks.length - 6) + '칸</span>' : '') + '</td></tr>'; })) + more(P.upd);
   if(ni){
-    const lc = listColsOf(t).filter(c => P.mapped.indexOf(c) >= 0).slice(0, 5);
-    h += '<h4>새 행</h4>' + planTable(['엑셀 줄'].concat(lc.map(c => label(t, c).name)),
-      P.ins.slice(0, SHOW).map(x => '<tr><td>' + x.L.ln + '</td>' + lc.map(c => '<td class="v">' + esc(cut2(x.row[c], 30)) + '</td>').join('') + '</tr>')) + more(P.ins);
+    const au = new Set(); fl.forEach(x => Object.keys(x.fill.put).forEach(c => au.add(c)));
+    const lc = listColsOf(t).filter(c => P.mapped.indexOf(c) >= 0 || au.has(c)).slice(0, 6), fcol = fl.length ? ['설비 칸'] : [];
+    h += '<h4>새 행</h4>' + planTable(['엑셀 줄'].concat(lc.map(c => label(t, c).name)).concat(fcol),
+      P.ins.slice(0, SHOW).map(x => '<tr><td>' + x.L.ln + '</td>' + lc.map(c => '<td class="v' + (x.fill && x.fill.put[c] ? ' au' : '') + '">' + esc(cut2(x.row[c], 30)) + '</td>').join('')
+        + (fcol.length ? '<td class="v">' + fillCell(t, x.fill) + '</td>' : '') + '</tr>')) + more(P.ins);
   }
   h += '<p class="hint" style="margin-top:12px">' + (n > BULK_MAX ? BULK_MAX + '줄씩 ' + Math.ceil(n / BULK_MAX) + '번에 나눠, 묶음마다' : '한 번에')
     + ' «전부 아니면 전무»로 들어갑니다 — 미리보기 뒤에 누가 같은 행을 고쳤으면 그 묶음은 통째로 멈춥니다. 모든 줄이 「변경 이력」에 남고, 묶음을 통째로 되돌릴 수 있습니다.</p></div>';
@@ -1822,6 +2188,7 @@ async function bulkApply(t, P){
 }
 async function bulkAfter(t){
   S.all = {};                                     // 작은 표는 다음 검색 때 새로 받는다(인원이면 교육 연쇄도 있다)
+  touch(t);
   const open = S.cur && !S.cur.isNew && S.cur.t === t.id ? S.cur.key : null;
   if(S.tab === t.id){ await runSearch(false); if(open != null) openRow(open); }
 }

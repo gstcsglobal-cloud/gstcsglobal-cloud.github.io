@@ -31,6 +31,7 @@
  *        해시에서 imported_at 을 뺐다 · 운영 DB 의 sheet_inst 에 빠져 있던 synced_at 을 되살린다(6절 앞 · setup-4 그대로).
  *        바뀐 것(_edit_hash · _edit_key · _edit_apply · sheet_inst.synced_at · edit_overwrites)에는 지우는 문장이 없어
  *        그것만 따로 Run 해도 된다.
+ * v145 — 7절(edit_last_wk — 같은 S/N 의 직전 수선실적). 새 행을 «설비를 골라» 채울 때 쓴다. 읽기 전용이라 따로 Run 해도 된다.
  */
 
 /* ---------- 0. 이력 표 보강 ---------- */
@@ -567,6 +568,64 @@ do $$
 begin
   execute 'revoke all on function public.edit_overwrites(text,text,text,text[]) from public, anon';
   execute 'grant execute on function public.edit_overwrites(text,text,text,text[]) to authenticated';
+end $$;
+
+/* ---------- 7. 설비를 고르면 «그 설비의 직전 수선실적» (v145) ----------
+ * 사용자: 「S/N 기준으로 가는데 공정·세부공정·제품군·운영단위·고객사·단지·라인·BAY·모델 등등 … 어차피 땡겨 오는 건데
+ *          빈 양식에 넣을 필요가 있나」 + 「GST 시스템은 실적등록을 누르면 설비 S/N 고르는 팝업이 먼저 뜬다」.
+ * ⚠ 대시보드는 그 칸들을 «수선실적 행에 적힌 값»으로 센다(설치현황에서 끌어오는 것은 Floor·사업부·라인2 뿐) —
+ *   비워 넣으면 그 실적은 「미배치·미상」으로 빠진다. 그래서 «넣을 때» 채워 저장한다.
+ *
+ * 칸마다 어디서 채우나는 화면(edit/index.html 의 fill.src)이 정한다 — 운영 실측(2026-10 · 7월 이후 실적 vs 두 출처 · 정확일치):
+ *   · 설치현황(지금의 설비 명부)이 GST 표기와 같은 칸 — 운영단위·고객사·라인·제품코드(+ 국내 단지·BAY·공정·세부공정 ·
+ *     해외 메인설비호기) 99%+
+ *   · 설치현황과 표기가 다른 칸(모델 국내 51% · 해외 공정 72% …)·설치현황에 없는 칸(제품군) — «같은 S/N 의 직전 수선실적»
+ *     (GST 시스템이 그 설비에 쓴 그 글자 · 실측 99%+)
+ * 이 함수는 그 «직전 수선실적»만 돌려준다 — 읽기 전용이다(지우거나 쓰는 문장이 없다).
+ *
+ *   - S/N 은 영숫자만 남겨 대문자로 맞춘다 — 화면의 N() 과 같은 규칙(SPEC-SYNC). 'GBWS-0000' = 'gbws0000'.
+ *   - «직전» = 작업시작일(앞 19자)이 가장 늦은 행 · 같으면 src_row 가 큰 행(나중에 올린 행).
+ *   - 돌려주는 모양: { "<맞춘 S/N>": [가장 늦은 행, 그 앞 행] } (extra·synced_at 뺀 전 열 · 최대 두 행) — 없는 S/N 은 키가 없다.
+ *     두 행인 까닭: 이미 표에 있는 행을 열고 「설비 칸 채우기」를 누르면 그 행 «자신»이 가장 늦은 행일 때가 많다 —
+ *     자기 빈 칸을 자기에게서 찾을 수는 없으니 화면이 그 행을 건너뛰고 다음 행을 쓴다.
+ *   - 맞춘 S/N 에 «식 인덱스»를 둔다. 없으면 부를 때마다 26만 행 전부에 정규식을 돌린다 — 운영 실측(2026-10):
+ *     인덱스 전 설비 하나 1.2초 · 500개 4.1초 → 인덱스 뒤 1ms · 0.3초. 값: 인덱스 2.1MB(DB 255MB) · 수선실적 업로드 때
+ *     그 식을 한 번 더 계산한다. ⚠ 함수 안의 식과 «글자까지 같아야» 인덱스를 탄다 — 결과는 같아서 동작으로는 못 잡는다
+ *     (t-editsql [11-0] 이 두 식을 글자로 대조한다). (= any(배열) 로 쓰면 행마다 배열 전체와 견줘 6.5초였다 — unnest 와 조인한다.)
+ *   - 행 전체(to_jsonb)는 «고른 행»에만 만든다. 맞는 행 전부에 만들고 나서 고르면 3만 행을 jsonb 로 짓는다.
+ *   - 한 번에 2,000 개까지(엑셀 일괄은 500 줄씩이다). */
+create index if not exists sheet_wk_snkey_idx
+  on public.sheet_wk ((upper(regexp_replace(coalesce(sn_in, ''), '[^0-9A-Za-z]', '', 'g'))));
+
+create or replace function public.edit_last_wk(p_sns text[]) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare r jsonb;
+begin
+  if not public._edit_allow('read') then raise exception 'forbidden'; end if;
+  if coalesce(array_length(p_sns, 1), 0) > 2000 then raise exception 'too_many: %', array_length(p_sns, 1); end if;
+  with ks as (
+    select distinct upper(regexp_replace(coalesce(s, ''), '[^0-9A-Za-z]', '', 'g')) k
+      from unnest(coalesce(p_sns, '{}'::text[])) s
+  ), w as (
+    select z.k, z.src_row, z.rn from (
+      select ks.k, t.src_row,
+             row_number() over (partition by ks.k order by left(coalesce(t.d_start, ''), 19) desc, t.src_row desc) rn
+        from ks join public.sheet_wk t on upper(regexp_replace(coalesce(t.sn_in, ''), '[^0-9A-Za-z]', '', 'g')) = ks.k
+       where ks.k <> ''
+    ) z where z.rn <= 2
+  )
+  select coalesce(jsonb_object_agg(a.k, a.rows), '{}'::jsonb) into r from (
+    select w.k, jsonb_agg(to_jsonb(t) - 'extra' - 'synced_at' order by w.rn) rows
+      from w join public.sheet_wk t on t.src_row = w.src_row
+     group by w.k
+  ) a;
+  return r;
+end $$;
+
+do $$
+begin
+  execute 'revoke all on function public.edit_last_wk(text[]) from public, anon';
+  execute 'grant execute on function public.edit_last_wk(text[]) to authenticated';
 end $$;
 
 -- 확인
