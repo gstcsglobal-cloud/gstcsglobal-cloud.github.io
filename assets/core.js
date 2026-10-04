@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 144;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 145;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -673,6 +673,29 @@ GST._dbwFind = async function(c, W, key, name){
 GST._dbwGuard = function(vals){                // 수식 주입 차단 — sheet-write 와 같은 검사
   for(var k in vals){ if(/^[=+\-@]/.test(String(vals[k]||''))) throw GST._dbwErr('bad_value', 400, {field:k}); }
 };
+/* 쓰기 «뒤»의 두 가지 — 이력 한 줄과 캐시 도장 (v140).
+   ① 이력: 예전에는 hr·고장분석 편집이 아무 기록도 안 남겼다 — 「누가 언제 이 값을 바꿨나」를
+      물을 곳이 없었다. edit_note(setup-16)가 sheet_edits 에 «행 전체» before/after 를 남긴다.
+      누가(edited_by)는 인자가 아니라 서버가 로그인 토큰에서 읽는다 — 위조할 수 없다.
+   ② 캐시 도장: 미러 표(sheet_wk 등)를 고치고 sheet_sync_log 를 안 건드리면, 캐시 열쇠
+      (synced_at+행수 · v101)가 그대로라 «저장했는데 새로고침하면 옛 값»이 된다(v80 의 그 실패).
+      고장분석의 dq 편집이 실제로 그 상태였다 — 고친 사람 자신도 새로고침하면 옛 값을 봤다.
+      정본 규칙은 csv_upload_finish 한 곳이다(여기서 sync_log 를 직접 쓰지 않는다).
+   ⚠ 둘 다 «최선»이다 — 쓰기는 이미 끝났으므로 여기 실패가 저장을 되돌리면 안 된다.
+     다만 조용하지 않게 콘솔에 남긴다(setup-16 을 아직 안 돌린 DB 면 edit_note 가 없다). */
+GST._DBW_MIRROR = {sheet_wk:1, sheet_mat:1, sheet_inst:1};
+GST._dbwNote = async function(c, tbl, op, before, after){
+  var row = after || before || {};
+  var key = row.id != null ? row.id : (row.src_row != null ? row.src_row : '');
+  try{ var r = await c.rpc('edit_note', {p_tbl:tbl, p_op:'dbw:'+op, p_key:String(key), p_before:before||null, p_after:after||null});
+       if(r && r.error) console.warn('[dbWrite] 변경 이력을 못 남겼습니다 (setup-16 미적용?)', r.error.message||r.error); }
+  catch(e){ console.warn('[dbWrite] 변경 이력을 못 남겼습니다', e&&e.message||e); }
+  if(GST._DBW_MIRROR[tbl]){
+    try{ var f = await c.rpc('csv_upload_finish', {p_tbl:tbl});
+         if(f && f.error) console.warn('[dbWrite] 캐시 도장 실패 — 다른 브라우저는 옛 값을 볼 수 있습니다', f.error.message||f.error); }
+    catch(e){ console.warn('[dbWrite] 캐시 도장 실패', e&&e.message||e); }
+  }
+};
 GST.dbWrite = async function(op, gid, body, params){
   var W = GST.DBW[gid]; body = body||{}; params = params||{};
   var c = await GST.db(); if(!c) throw GST._dbwErr('unauthorized', 401);
@@ -722,24 +745,28 @@ GST.dbWrite = async function(op, gid, body, params){
     var cmap = GST._dbwColMap(f.row), upd = {};
     Object.keys(ch).forEach(function(k){ if(W.cols[k]) upd[GST._dbwCol(cmap, W.cols[k])] = String(ch[k]); });
     if(!Object.keys(upd).length) throw GST._dbwErr('no_changes', 400);
+    /* 이력의 «전» 행은 쓰기 «전에» 떠 둔다 — 클라이언트가 읽은 객체를 갱신 결과로 덮을 수 있다(그러면 전=후가 된다) */
+    var before0 = JSON.parse(JSON.stringify(f.row));
     var r = await c.from(W.table).update(upd).eq(f.matchCol, f.matchVal).select('*');
     if(r.error) throw GST._dbwErr('sheets_error', 500, {detail:r.error.message});
     /* RLS 가 막으면 PostgREST 는 에러가 아니라 **0행**을 돌려준다. 그걸 '저장됨'으로
        보이게 두면 안 되므로 여기서 던진다. */
     if(!r.data || r.data.length !== 1) throw GST._dbwErr('read_only', 403);
     var row = r.data[0];
+    await GST._dbwNote(c, W.table, 'update', before0, row);
     var res = { ok:true, hash:GST._dbwHash(row), fields:GST._dbwFields(W, row) };
     // 사번/이름이 바뀌면 교육 표의 짝 행도 같은 문자열로 — 조인이 깨지지 않게 (sheet-write 규약)
     if(W.cascadeTo && GST.DBW[W.cascadeTo] && (ch.id!=null || ch.name!=null)){
       var We = GST.DBW[W.cascadeTo], oldF = GST._dbwFields(W, f.row);
       try{
         var fe = await GST._dbwFind(c, We, body.key, oldF.name);
-        var cm2 = GST._dbwColMap(fe.row), up2 = {};
+        var cm2 = GST._dbwColMap(fe.row), up2 = {}, beforeE = JSON.parse(JSON.stringify(fe.row));
         if(ch.id!=null)   up2[GST._dbwCol(cm2, We.cols.id)]   = String(ch.id);
         if(ch.name!=null) up2[GST._dbwCol(cm2, We.cols.name)] = String(ch.name);
         var r2 = await c.from(We.table).update(up2).eq(fe.matchCol, fe.matchVal).select('*');
         if(r2.error || !r2.data || r2.data.length !== 1) res.cascade = { done:false };
-        else res.cascade = { done:true, hash:GST._dbwHash(r2.data[0]), fields:GST._dbwFields(We, r2.data[0]) };
+        else { await GST._dbwNote(c, We.table, 'update', beforeE, r2.data[0]);
+               res.cascade = { done:true, hash:GST._dbwHash(r2.data[0]), fields:GST._dbwFields(We, r2.data[0]) }; }
       }catch(e){ res.cascade = { done:false }; }
     }
     return res;
@@ -779,6 +806,7 @@ GST.dbWrite = async function(op, gid, body, params){
     if(ri.error) throw GST._dbwErr('sheets_error', 500, {detail:ri.error.message});
     if(!ri.data || !ri.data.length) throw GST._dbwErr('read_only', 403);   // RLS 거부 = 0행
     var nrow = ri.data[0];
+    await GST._dbwNote(c, W.table, 'append', null, nrow);
     var out2 = { ok:true, hash:GST._dbwHash(nrow), fields:GST._dbwFields(W, nrow) };
     // 인원 신규 등록이면 교육 표에도 짝 행 (같은 사번/이름 문자열 — sheet-write 규약)
     if(body.edu && W.cascadeTo && GST.DBW[W.cascadeTo]){
@@ -789,7 +817,8 @@ GST.dbWrite = async function(op, gid, body, params){
         Object.keys(ef).forEach(function(k){ if(We2.cols[k]) ins2[We2.cols[k]] = String(ef[k]); });
         var r3 = await c.from(We2.table).insert(ins2).select('*');
         if(r3.error || !r3.data || !r3.data.length) out2.edu = { ok:false, error:(r3.error&&r3.error.message)||'insert failed' };
-        else out2.edu = { ok:true, hash:GST._dbwHash(r3.data[0]), fields:GST._dbwFields(We2, r3.data[0]) };
+        else { await GST._dbwNote(c, We2.table, 'append', null, r3.data[0]);
+               out2.edu = { ok:true, hash:GST._dbwHash(r3.data[0]), fields:GST._dbwFields(We2, r3.data[0]) }; }
       }catch(e){ out2.edu = { ok:false, error:String(e&&e.message||e) }; }
     }
     return out2;
@@ -804,6 +833,7 @@ GST.dbWrite = async function(op, gid, body, params){
     var rd = await c.from(W.table)['delete']().eq(fd.matchCol, fd.matchVal).select('*');
     if(rd.error) throw GST._dbwErr('sheets_error', 500, {detail:rd.error.message});
     if(!rd.data || rd.data.length !== 1) throw GST._dbwErr('read_only', 403);
+    await GST._dbwNote(c, W.table, 'delete', fd.row, null);     // 행 전체를 남긴다 — /edit/ 의 변경 이력에서 되살릴 수 있다
     var del = { row:true, edu:false };
     if(body.cascade && W.cascadeTo && GST.DBW[W.cascadeTo]){
       var We3 = GST.DBW[W.cascadeTo];
@@ -811,6 +841,7 @@ GST.dbWrite = async function(op, gid, body, params){
         var fe3 = await GST._dbwFind(c, We3, body.key, GST._dbwFields(W, fd.row).name);
         var r4 = await c.from(We3.table)['delete']().eq(fe3.matchCol, fe3.matchVal).select('*');
         del.edu = !!(r4.data && r4.data.length === 1);
+        if(del.edu) await GST._dbwNote(c, We3.table, 'delete', fe3.row, null);
       }catch(e){ /* 교육 미등록 — 지울 것이 없다 */ }
     }
     return { ok:true, deleted:del };

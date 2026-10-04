@@ -6,13 +6,15 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=144"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=145"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write)·admin 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB */
 body:not([data-role="admin"]):not([data-role="legacy"]):not([data-role="editor"]) #uploadBtn{display:none}
 /* 오프라인 내보내기는 admin 만(v137) — /offline/ 자체도 isAdmin 게이트라 editor 에게 보이면 눌러도 잠긴 문이다 */
 body:not([data-role="admin"]):not([data-role="legacy"]) #offlineBtn{display:none}
+/* 데이터 관리(/edit/)도 admin 만(v140) — 그 화면이 서버에서 admin+can_write 를 다시 본다(_edit_allow). 버튼은 길 안내일 뿐이다 */
+body:not([data-role="admin"]):not([data-role="legacy"]) #editBtn{display:none}
 *{margin:0;padding:0;box-sizing:border-box}
 /* v139 — 라이트가 기본이다. 셸은 theme.css 를 싣지 않으므로 토큰을 여기 한 벌 더 둔다(이름은 theme.css 와 같다).
    다크(body.theme-slate)는 같은 이름에 어두운 값만 넣는다 — 컴포넌트 규칙은 한 벌이다. */
@@ -206,6 +208,8 @@ body.kiosk-full .kiosk-panel{display:none}
     <!-- 오프라인 내보내기도 탭이 아니다(업로드와 같은 규율 · v137). 시연용 단일 HTML 과
          데이터 스냅샷을 받는 관리 화면이라 새 창으로 연다. -->
     <button class="tb-btn" onclick="openOffline()" id="offlineBtn" title="오프라인 판 내보내기 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> <span id="offlineLabel">오프라인</span></button>
+    <!-- 데이터 관리 — 표를 직접 찾아 고치고·넣고·지우는 관리 화면(v140). 업로드와 같은 규율로 새 창. -->
+    <button class="tb-btn" onclick="openEdit()" id="editBtn" title="데이터 관리 — 검색·수정·입력·삭제 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> <span id="editLabel">데이터 관리</span></button>
     <button class="tb-btn" onclick="kioskBtn()" id="kioskBtn" title="자동순회 — 단지별로 화면이 바뀌며 돌아갑니다"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 8 4 2.5-4 2.5z" fill="currentColor"/></svg> <span id="kioskLabel">자동순회</span></button>
     <button class="tb-btn" onclick="shareLink()" id="shareBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> <span id="shareLabel">공유</span></button>
     <button class="tb-btn" onclick="cycleTheme()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9c0-.5-.4-1-1-1h-2a3 3 0 0 1-3-3V6c0-.6-.4-1-1-1z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="6.5" r="1"/><circle cx="15" cy="15.5" r="1"/></svg> <span id="themeLabel">Light</span></button>
@@ -291,10 +295,10 @@ const TABS=[
 ];
 
 const L={
-  ko:{tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',offline:'오프라인',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!'},
-  en:{tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',offline:'Offline',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!'},
-  zh:{tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',offline:'离线版',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!'},
-  ja:{tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',offline:'オフライン',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!'}
+  ko:{tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',offline:'오프라인',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!'},
+  en:{tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',offline:'Offline',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!'},
+  zh:{tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',offline:'离线版',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!'},
+  ja:{tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',offline:'オフライン',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!'}
 };
 let LANG='ko';
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&L[sl])LANG=sl; else if(window.name && L[window.name]) LANG=window.name; }catch(e){}
@@ -587,6 +591,7 @@ document.addEventListener('keydown',e=>{
 /* 업로드 화면은 별도 창. 셸의 iframe 에 띄우지 않는다 — 위 버튼 주석 참조. */
 function openUpload(){ window.open('/upload/','gstUpload'); }
 function openOffline(){ window.open('/offline/','gstOffline'); }
+function openEdit(){ window.open('/edit/','gstEdit'); }
 
 function applyLang(){
   {const _bt=document.getElementById('brandTag'); if(_bt&&!_bt.hasAttribute('data-lock'))_bt.textContent=lt('tag');}
@@ -595,6 +600,7 @@ function applyLang(){
   document.getElementById('shareLabel').textContent=lt('share');
   document.getElementById('uploadLabel').textContent=lt('upload');
   document.getElementById('offlineLabel').textContent=lt('offline');
+  document.getElementById('editLabel').textContent=lt('edit');
   document.getElementById('kioskLabel').textContent=KIOSK.on?lt('kioskStop'):lt('kiosk');
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
   // 탭 이름 갱신
