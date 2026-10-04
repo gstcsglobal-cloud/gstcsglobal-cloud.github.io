@@ -9,9 +9,12 @@
      ⑤ 충돌이면 지금 값으로 다시 열고 내 변경을 다시 얹는다(상대도 바꾼 칸은 노랗게).
      ⑥ 새 행 — 필수 검사 · 중복이면 묻는다 · 빈칸은 보내지 않는다.
      ⑦ 삭제 — 해시와 함께 · 「되살리기」가 edit_restore 를 부른다.
-     ⑧ 설치현황에서 채우기 — 채널 접미(L/R/S)를 떼고도 찾는다 · «빈 칸만» 기본으로 채운다.
+     ⑧ 설비 칸 채우기(v145) — 설치현황(채널 접미 L/R/S 를 떼고도) + 같은 S/N 의 직전 수선실적 · «빈 칸만» 기본 ·
+        고치는 행 자신은 «직전 수선실적»으로 쓰지 않는다 · 여러 대가 맞으면 고르게 한다.
      ⑨ 변경 이력 — 표·종류 필터가 질의에 실린다 · 옛 형식·업로드 요약은 되돌리기 단추가 없다.
      ⑩ 작은 표(인원)는 키셋으로 통째로 받는다 — «0행일 때만 멈춘다».
+     ⑪ (v145) 「+ 새 행」은 설비(자재는 그 수선실적)부터 고른다 — 고르면 설비 칸이 국내·해외 출처 규칙대로 «자동»으로 채워진다 ·
+        「빈 양식」은 검색 칸의 「엑셀 올리기」 바로 왼쪽 · 빈 양식에는 설비 칸이 없다 · 엑셀 새 행은 올릴 때 같은 규칙으로 채운다.
 
    ⚠ 가짜 Supabase 는 «질의를 기록»한다 — 화면이 무엇을 보냈는지는 소스가 아니라 이 기록이 안다.
      RPC 의 실제 의미(이력·캐시 도장·해시)는 t-editsql 이 진짜 Postgres 로 지킨다. 여기서는 모양만 흉내 낸다.
@@ -190,6 +193,19 @@ function fake(seed) {
       return { ok:true, log:bid, updated:nu, inserted:ni, same };
     },
     edit_overwrites: a => window.__OVW || { n:0, last:null, keys:[], who:[] },
+    /* edit_last_wk — 맞춘 S/N(영숫자·대문자)마다 최근 두 행(작업시작일 앞 19자 ↓ · 행번호 ↓) · extra·synced_at 뺀다 (setup-16 7절과 같은 모양) */
+    edit_last_wk: a => {
+      const N = v => String(v == null ? '' : v).replace(/[^0-9A-Za-z]/g, '').toUpperCase(), out = {};
+      if ((a.p_sns || []).length > 2000) throw new Error('too_many: ' + a.p_sns.length);
+      new Set((a.p_sns || []).map(N)).forEach(k => {
+        if (!k) return;
+        const rows = (DB.sheet_wk || []).filter(r => N(r.sn_in) === k)
+          .sort((x, y) => String(y.d_start || '').slice(0, 19).localeCompare(String(x.d_start || '').slice(0, 19)) || y.src_row - x.src_row)
+          .slice(0, 2).map(r => { const o = Object.assign({}, r); delete o.extra; delete o.synced_at; return o; });
+        if (rows.length) out[k] = rows;
+      });
+      return out;
+    },
     edit_distinct: a => { const m = new Map(); (DB[a.p_tbl] || []).forEach(r => { const v = r[a.p_col]; if (v != null) m.set(String(v), (m.get(String(v)) || 0) + 1); });
       return Array.from(m.entries()).sort((x, y) => y[1] - x[1]).slice(0, a.p_limit || 60); }
   };
@@ -313,6 +329,29 @@ async function setField(pg, col, v) {
   const h = await pg.$('#editor [data-col="' + col + '"]');
   await h.fill(v); await h.dispatchEvent('input');
 }
+
+/* 엑셀·대화상자 도우미 — [7]·[9] 의 설비 고르기 창과 [14~] 의 일괄 수정이 같이 쓴다 */
+const XL = await import('./node_modules/xlsx/xlsx.mjs');
+const TMP = fs.mkdtempSync(path.join((await import('os')).tmpdir(), 'gst-bulk-'));
+let dlN = 0, lastName = '';
+async function download(pg, selector) {
+  const [d] = await Promise.all([pg.waitForEvent('download', { timeout:10000 }), pg.click(selector)]);
+  lastName = d.suggestedFilename();
+  const fp = path.join(TMP, (++dlN) + '.xlsx'); await d.saveAs(fp); return fp;      // 이름이 겹쳐도 덮어쓰지 않게 차례 번호로
+}
+const readWb = fp => XL.read(fs.readFileSync(fp), { type:'buffer', cellDates:true, cellNF:true });
+const aoaOf = (wb, name) => XL.utils.sheet_to_json(wb.Sheets[name], { header:1, raw:false, defval:'' });
+function writeWb(wb, name, aoa, file) {
+  wb.Sheets[name] = XL.utils.aoa_to_sheet(aoa);
+  if (wb.SheetNames.indexOf(name) < 0) wb.SheetNames.push(name);
+  const fp = path.join(TMP, file); fs.writeFileSync(fp, XL.write(wb, { type:'buffer', bookType:'xlsx' })); return fp;
+}
+async function waitDlg(pg, re) {
+  await pg.waitForFunction(r => { const h = document.querySelector('.mask .dlg-h'); return !!h && new RegExp(r).test(h.textContent); }, re.source, { timeout:10000 });
+}
+const dlgBody = pg => pg.$eval('.mask .dlg-b', e => e.innerText);
+const fakeHash = (pg, tbl, k) => pg.evaluate(([tbl, k]) => { const K = tbl === 'sheet_wk' ? 'src_row' : 'id';
+  const o = Object.assign({}, window.__DB[tbl].find(x => x[K] === k)); delete o.synced_at; return 'h:' + JSON.stringify(o); }, [tbl, k]);
 
 /* ═══ [1] 게이트 ═══ */
 console.log('[1] 관리자 게이트');
@@ -485,8 +524,9 @@ console.log('[6] 충돌 — 다시 열고 내 변경을 다시 얹는다');
 /* ═══ [7] 새 행 ═══ */
 console.log('[7] 새 행 — 필수 · 중복이면 묻는다');
 {
-  await pg.click('#search [data-act=new]'); await pg.waitForTimeout(200);
-  is(await pg.$eval('#editor .badge.newtag', e => !!e), '새 행 편집기');
+  await pg.click('#search [data-act=new]'); await waitDlg(pg, /설비 고르기/);
+  await pg.click('.mask .dlg-f .btn:has-text("설비 없이 빈 행")'); await pg.waitForTimeout(200);
+  is(await pg.$eval('#editor .badge.newtag', e => !!e) && !(await pg.$('#editor .fld.auto')), '「설비 없이 빈 행」 — 지금까지의 빈 새 행 (자동 칸 없음)');
   await qlog(pg);
   await pg.click('#editor [data-act=insert]'); await pg.waitForTimeout(150);
   const bad = await pg.$$eval('#editor .fld.bad', fs => fs.map(f => f.querySelector('[data-col]').dataset.col).sort());
@@ -518,28 +558,44 @@ console.log('[8] 삭제 → 되살리기');
   is(rpcs(L, 'edit_restore').length === 1 && (await listKeys(pg)).includes('7'), '되살리기 → edit_restore · 목록에 다시');
 }
 
-/* ═══ [9] 설치현황에서 채우기 ═══ */
-console.log('[9] 설치현황에서 채우기');
+/* ═══ [9] 설비 칸 채우기 — 있는 행 (v145) ═══ */
+console.log('[9] 설비 칸 채우기 — 설치현황 + 직전 수선실적 · 빈 칸만 · 그 행 자신은 직전 실적이 아니다');
 {
+  /* 행 #2(S/N ZZT-0001L · 2/7)보다 «앞선» 같은 설비 실적 하나 — 표기가 다른 S/N(소문자·하이픈)으로 */
+  await pg.evaluate(() => { const W = window.__DB.sheet_wk;
+    W.push(Object.assign({}, W[0], { src_row:9, rs_code:'RS-T-0009', d_start:'2026-01-20', sn_in:'zzt-0001l', op:'OPY Scrubber', model:'MDL-PREV', pg:'PG-PREV', eq_no:null, extra:null })); });
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
   await pg.click('#list tr[data-key="2"]'); await pg.waitForTimeout(250);
   await setField(pg, 'model', 'KEEP-ME');
   await qlog(pg);
-  await pg.click('#editor [data-act=fill]'); await pg.waitForTimeout(300);
-  const L = sel(await qlog(pg), 'sheet_inst');
-  is(L.length === 1 && L[0].or[0].includes('sn.ilike.*ZZT*0001*') && L[0].or[0].includes('sn.ilike.*ZZT*0001L*'), '접미를 뗀 S/N 도 함께 찾는다');
-  const rows = await pg.$$eval('.mask table.dt tr', trs => trs.slice(1).map(t => [t.cells[1].textContent, !!t.querySelector('input:checked'), !!t.querySelector('input')]));
+  await pg.click('#editor [data-act=fill]'); await waitDlg(pg, /설비 칸 채우기/);
+  const L = await qlog(pg), iq = sel(L, 'sheet_inst'), lw = rpcs(L, 'edit_last_wk');
+  is(iq.length === 2 && iq[0].f.some(f => f[0] === 'src_row' && f[1] === 'gt') && iq[0].order === 'src_row' && iq[0].limit === 1000 && !/\*/.test(iq[0].cols),
+     '설치현황은 필요한 열만 키셋으로 한 번 받는다 — «0행일 때만» 멈춘다 (' + iq.length + '번)');
+  is(lw.length === 1 && JSON.stringify(lw[0].args.p_sns) === '["ZZT0001L"]', '직전 수선실적 — 맞춘 S/N 으로 edit_last_wk (' + JSON.stringify(lw[0] && lw[0].args) + ')');
+  const rows = await pg.$$eval('.mask table.dt tr', trs => trs.slice(1).map(t => [t.cells[1].textContent, !!t.querySelector('input:checked'), !!t.querySelector('input'), t.cells[3].textContent, t.cells[4].textContent]));
   const m = Object.fromEntries(rows.map(r => [r[0], r]));
-  is(m['설비호기'] && m['설비호기'][1] && m['운영단위'] && m['운영단위'][2] && !m['운영단위'][1], '빈 칸(설비호기)만 기본 체크 · 값 있는 칸(운영단위)은 체크 안 됨');
-  is(m['MODEL(자사)'] && !m['MODEL(자사)'][1], '내가 적은 값(모델)은 기본으로 안 덮는다');
+  const LB = await pg.evaluate(() => Object.fromEntries(['eq_no','op','model','pg','customer'].map(c => [c, label(TAB_BY.wk, c).name])));
+  is(m[LB.eq_no] && m[LB.eq_no][1] && m[LB.eq_no][3] === 'ZQ-001' && m[LB.eq_no][4] === '설치현황', '빈 칸(설비호기)만 기본 체크 — 접미 L 을 떼고 설치현황 ZZT-0001 을 찾았다');
+  is(m[LB.op] && m[LB.op][2] && !m[LB.op][1], '값 있는 칸(운영단위)은 보여만 주고 체크 안 됨');
+  is(m[LB.model] && !m[LB.model][1] && m[LB.model][3] === 'MDL-PREV' && m[LB.model][4] === '직전 수선실적', '내가 적은 모델은 기본으로 안 덮는다 · 모델은 직전 수선실적에서');
+  is(m[LB.pg] && m[LB.pg][1] && m[LB.pg][3] === 'PG-PREV',
+     '고치는 행(#2)이 그 S/N 의 가장 최근 실적이어도 «자기»가 아니라 그 앞 실적(#9)에서 찾는다 (' + JSON.stringify(m[LB.pg]) + ')');
+  is(/직전 수선실적\(RS-T-0009 · 2026-01-20\)/.test(await dlgBody(pg)), '창 머리가 «어느 실적에서 몇 칸»을 적는다');
   await pg.click('.mask .btn.pri'); await pg.waitForTimeout(150);
-  is(await pg.$eval('#editor [data-col=eq_no]', e => e.value) === 'ZQ-001' && await pg.$eval('#editor [data-col=model]', e => e.value) === 'KEEP-ME', '설비호기만 채워졌다');
+  is(await pg.$eval('#editor [data-col=eq_no]', e => e.value) === 'ZQ-001' && await pg.$eval('#editor [data-col=model]', e => e.value) === 'KEEP-ME'
+     && await pg.$eval('#editor [data-col=pg]', e => e.value) === 'PG-PREV', '체크한 칸(빈 칸)만 채워졌다');
   is(await pg.$eval('#editor [data-col=eq_no]', e => e.closest('.fld').classList.contains('dirty')), '채운 칸은 «바뀐 칸»으로 보인다(저장은 사람이)');
   await pg.click('#editor [data-act=revert]');
-  /* 두 대가 맞으면 고르게 한다 */
+  /* 두 대가 맞으면 고르게 한다 — 직전 실적이 있어도 묻는다(그것만으로 채우면 설치현황 칸이 조용히 빈다) ·
+     설치현황은 이미 받아 두었다(다시 읽지 않는다) */
+  await pg.evaluate(() => { const W = window.__DB.sheet_wk;
+    W.push(Object.assign({}, W[0], { src_row:10, rs_code:'RS-T-0010', d_start:'2026-01-25', sn_in:'ZZT-0007', model:'MDL-7P', eq_no:null, extra:null })); });
   await setField(pg, 'sn_in', 'ZZT-0007');
-  await pg.click('#editor [data-act=fill]'); await pg.waitForTimeout(300);
-  is(/2대/.test(await pg.$eval('.mask .dlg-h', e => e.textContent)), '설치현황에 맞는 설비가 둘이면 고르게 한다');
-  await pg.click('.mask [data-ret="1"]'); await pg.waitForTimeout(200);
+  await qlog(pg);
+  await pg.click('#editor [data-act=fill]'); await waitDlg(pg, /대입니다/);
+  is(/2대/.test(await pg.$eval('.mask .dlg-h', e => e.textContent)) && !sel(await qlog(pg), 'sheet_inst').length, '설치현황에 맞는 설비가 둘이면 고르게 한다 · 설치현황은 다시 안 읽는다');
+  await pg.click('.mask [data-ret="1"]'); await waitDlg(pg, /설비 칸 채우기/);
   is(/ZQ-007B/.test(await pg.$eval('.mask .dlg-b', e => e.textContent)), '고른 설비(ZQ-007B)로 채우기 표가 뜬다');
   await pg.click('.mask .btn:not(.pri)'); await pg.click('#editor [data-act=revert]');
 }
@@ -658,35 +714,13 @@ await ctx.close();
 
 /* ═══ [14~19] 엑셀 일괄 수정 (v141) ═══
    파일은 «실제 버튼»으로 받고, 그 파일을 고쳐 «실제 파일 칸»으로 올린다 — 검사가 양식 규칙을 다시 짜지 않는다(t-upload 의 교훈). */
-const XL = await import('./node_modules/xlsx/xlsx.mjs');
-const TMP = fs.mkdtempSync(path.join((await import('os')).tmpdir(), 'gst-bulk-'));
-let dlN = 0, lastName = '';
-async function download(pg, selector) {
-  const [d] = await Promise.all([pg.waitForEvent('download', { timeout:10000 }), pg.click(selector)]);
-  lastName = d.suggestedFilename();
-  const fp = path.join(TMP, (++dlN) + '.xlsx'); await d.saveAs(fp); return fp;      // 이름이 겹쳐도 덮어쓰지 않게 차례 번호로
-}
-const readWb = fp => XL.read(fs.readFileSync(fp), { type:'buffer', cellDates:true, cellNF:true });
-const aoaOf = (wb, name) => XL.utils.sheet_to_json(wb.Sheets[name], { header:1, raw:false, defval:'' });
-function writeWb(wb, name, aoa, file) {
-  wb.Sheets[name] = XL.utils.aoa_to_sheet(aoa);
-  if (wb.SheetNames.indexOf(name) < 0) wb.SheetNames.push(name);
-  const fp = path.join(TMP, file); fs.writeFileSync(fp, XL.write(wb, { type:'buffer', bookType:'xlsx' })); return fp;
-}
-async function waitDlg(pg, re) {
-  await pg.waitForFunction(r => { const h = document.querySelector('.mask .dlg-h'); return !!h && new RegExp(r).test(h.textContent); }, re.source, { timeout:10000 });
-}
-const dlgBody = pg => pg.$eval('.mask .dlg-b', e => e.innerText);
-const fakeHash = (pg, tbl, k) => pg.evaluate(([tbl, k]) => { const K = tbl === 'sheet_wk' ? 'src_row' : 'id';
-  const o = Object.assign({}, window.__DB[tbl].find(x => x[K] === k)); delete o.synced_at; return 'h:' + JSON.stringify(o); }, [tbl, k]);
-
 console.log('[14] 엑셀 일괄 — 체크 · 받기');
 const B = await open(seedOf());
 {
   const pg = B.pg;
   await pg.click('.tab[data-tab=roster]'); await pg.waitForTimeout(400);
-  is(await pg.$eval('#selBar [data-act=xall]', b => b.textContent) === '검색 결과 3건 엑셀로 받기' && await pg.$eval('#selBar [data-act=xblank]', b => b.textContent) === '빈 양식',
-     '아무것도 안 고르면 «검색 결과 3건 엑셀로 받기» · 빈 양식은 옆에 작게 (v142 사용자 지적)');
+  is(await pg.$eval('#selBar [data-act=xall]', b => b.textContent) === '검색 결과 3건 엑셀로 받기' && !(await pg.$('#selBar [data-act=xblank]')),
+     '아무것도 안 고르면 «검색 결과 3건 엑셀로 받기» (v142) · 빈 양식은 목록 머리가 아니라 검색 칸에 (v145)');
   is(!(await pg.$('#selBar [data-act=xdown]')), '고른 것이 없으면 «선택 받기» 단추는 없다');
   await pg.click('#ckAll'); await pg.waitForTimeout(100);
   is(/선택 3건 엑셀로 받기/.test(await pg.$eval('#selBar', e => e.textContent)), '머리 체크 → 보이는 행 전부(3건)');
@@ -717,7 +751,7 @@ const B = await open(seedOf());
   is(/목록에서 체크한 행/.test(aoaOf(wb, '안내').map(r => r.join(' ')).join('\n')), '안내 시트가 «무엇을 받았나»(체크한 행)를 적는다');
   await pg.click('[data-act=xclr]'); await pg.waitForTimeout(100);
   is(/검색 결과 3건 엑셀로 받기/.test(await pg.$eval('#selBar', e => e.textContent)), '선택을 풀면 다시 «검색 결과 3건»');
-  const A0 = aoaOf(readWb(await download(pg, '#selBar [data-act=xblank]')), '인원현황');
+  const A0 = aoaOf(readWb(await download(pg, '#search [data-act=xblank]')), '인원현황');
   is(A0.length === 1 && A0[0][0] === '행번호' && /^일괄수정_인원현황_빈양식_/.test(lastName), '빈 양식 — 머리글만 (' + lastName + ')');
   /* 검색 결과 전부 — 작은 표는 걸러 둔 목록이 곧 전부다 */
   await pg.fill('#search [name=campus]', 'Q1'); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(250);
@@ -968,7 +1002,7 @@ console.log('[19] 일괄 함수만 서버에 없을 때 — 그 단추만 잠그
   is(/엑셀 일괄 수정이 아직 잠겨/.test(ban) && /setup-16-edit\.sql/.test(ban), '배너가 «엑셀 일괄 수정»이 잠겼다고 · 무엇을 하면 되는지 적는다');
   is(await pg.$eval('#search [data-act=xup]', b => b.disabled), '「엑셀 올리기」 잠김');
   await pg.click('#search button[type=submit]'); await pg.waitForTimeout(250);
-  is(await pg.$eval('#selBar [data-act=xall]', b => b.disabled) && await pg.$eval('#selBar [data-act=xblank]', b => b.disabled), '「검색 결과 받기」·「빈 양식」 잠김');
+  is(await pg.$eval('#selBar [data-act=xall]', b => b.disabled) && await pg.$eval('#search [data-act=xblank]', b => b.disabled), '「검색 결과 받기」·「빈 양식」 잠김');
   is(!(await pg.$eval('#search [data-act=new]', b => b.disabled)), '한 행 편집은 그대로 열려 있다');
   is(pe2.length === 0, 'JS 에러 없음' + (pe2.length ? ' → ' + pe2[0] : ''));
   await c2.close();
@@ -1145,6 +1179,168 @@ console.log('[21b] 서버의 표 사전에 원장이 없을 때(옛 setup-16) �
   is((await pg.$$('#banner .banner')).length === 1, '같은 탭을 다시 열어도 배너는 한 번만');
   is(pe4.length === 0, 'JS 에러 없음' + (pe4.length ? ' → ' + pe4[0] : ''));
   await c4.close();
+}
+
+console.log('[23] 새 행 — 설비부터 고른다 · 국내·해외 출처 규칙 · 빈 양식 · 엑셀 새 행 (v145)');
+{
+  /* 지어낸 설비 둘(국내 SEC · 해외 GST TAIWAN)과 그 설비의 지난 실적. 출처가 갈리는 칸마다 «다른 값»을 둬서
+     어느 출처에서 왔는지가 값으로 드러나게 한다(설치현황 모델 INST-MDL ↔ 실적 모델 WK-MDL2 · 해외 BAY TB1 ↔ TB-WK …). */
+  const s5 = seedOf(), I5 = s5.tables.sheet_inst, W5 = s5.tables.sheet_wk, SY = { synced_at:'2026-01-01T00:00:00Z' };
+  I5.push(full(INST_COLS, { src_row:10, code:'ZK-101', sn:'ZZK-0101', country:'SEC Scrubber', customer:'KCO', location:'K9', fab:'K9-L1', bay:'KB1',
+                            group1:'ETCH', detail1:'ETCH-A', pjt:'PJT-K', model:'INST-MDL', state:'Operation', div:'MEM' }),
+          full(INST_COLS, { src_row:11, code:'ZT-201', sn:'ZZW-0201', country:'GST TAIWAN SCRUBBER', customer:'TCO', location:'TAICHUNG', fab:'F99', bay:'TB1',
+                            group1:'G-INST', detail1:'D-INST', pjt:'PJT-T', model:'INST-MDL-T', state:'Operation' }));
+  W5.push(full(WK_COLS, Object.assign({ src_row:30, rs_code:'RS-K-0001', d_start:'2026-03-01', sn_in:'ZZK0101', op:'SEC Scrubber', customer:'KCO', campus:'K8',
+                                        model:'WK-MDL', pg:'PG-K', main_eq:'KMAIN-1' }, SY)),
+          full(WK_COLS, Object.assign({ src_row:31, rs_code:'RS-K-0002', d_start:'2026-04-01 09:00:00', sn_in:'zzk-0101', op:'SEC Scrubber', customer:'KCO', campus:'K7',
+                                        line:'K9-L1', bay:'KB1', proc:'ETCH', subproc:'ETCH-A', model:'WK-MDL2', pg:'PG-K2', main_eq:'KMAIN-2', eq_no:'ZK-101' }, SY)),
+          full(WK_COLS, Object.assign({ src_row:40, rs_code:'RS-W-0001', d_start:'2026-05-01', sn_in:'ZZW-0201', op:'GST TAIWAN SCRUBBER', customer:'TCO', campus:'기타',
+                                        line:'F99', bay:'TB-WK', proc:'PROC-WK', subproc:'SUB-WK', model:'MDL-WK', pg:'PG-T', main_eq:'TMAIN-WK', prod_code:'PJT-T', eq_no:'ZT-201' }, SY)),
+          full(WK_COLS, Object.assign({ src_row:41, rs_code:'RS-DUP', d_start:'2026-05-02', sn_in:'ZZD-0001', op:'GST TAIWAN SCRUBBER' }, SY)),
+          full(WK_COLS, Object.assign({ src_row:42, rs_code:'RS-DUP', d_start:'2026-05-03', sn_in:'ZZD-0001', op:'GST TAIWAN SCRUBBER' }, SY)),
+          full(WK_COLS, Object.assign({ src_row:43, rs_code:'RS-T-0043', d_start:'2026-05-04', sn_in:'ZZT-0007', op:'OPX Scrubber', customer:'TESTCO', model:'MDL-7P', pg:'PG-7' }, SY)));
+  const { ctx:c5, pg, pe:pe5 } = await open(s5);
+  const LB = await pg.evaluate(() => ({ wk:LBL.wk, mat:LBL.mat }));
+  const nm = (id, c) => (LB[id][c] && LB[id][c].name) || c;
+  const autoVals = () => pg.$$eval('#editor .fld.auto [data-col]', xs => Object.fromEntries(xs.map(x => [x.dataset.col, x.value]).sort()));
+  const same = (a, b) => JSON.stringify(Object.entries(a).sort()) === JSON.stringify(Object.entries(b).sort());
+
+  /* (a) 「빈 양식」 자리 — 검색 칸에서 「엑셀 올리기」 바로 왼쪽 · 목록 머리에는 없다 */
+  const acts = await pg.$$eval('#search .sbar > *', xs => xs.map(x => x.dataset.act || ''));
+  is(acts.indexOf('xblank') >= 0 && acts.indexOf('xblank') + 1 === acts.indexOf('xup'), '「빈 양식」은 검색 칸의 「엑셀 올리기」 바로 왼쪽 (' + acts.filter(Boolean).join(' · ') + ')');
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  is(!(await pg.$('#selBar [data-act=xblank]')), '검색한 뒤에도 목록 머리에는 없다(한 자리)');
+
+  /* (b) 수선실적 「+ 새 행」 → 설비 고르기 → 국내 설비 */
+  await qlog(pg);
+  await pg.click('#search [data-act=new]'); await waitDlg(pg, /설비 고르기/);
+  const cnt = () => pg.$eval('.mask [data-pk=n]', e => e.textContent);
+  await pg.waitForFunction(() => /대 ·|맞는 설비가 없습니다/.test((document.querySelector('.mask [data-pk=n]') || {}).textContent || ''));
+  const iq = sel(await qlog(pg), 'sheet_inst');
+  is(/^5대/.test(await cnt()) && iq.length === 2 && iq[1].f.some(f => f[0] === 'src_row' && f[1] === 'gt' && f[2] === 11), '설치현황 전 설비(5대)를 키셋으로 받아 화면에서 거른다 (' + await cnt() + ')');
+  await pg.selectOption('.mask select[data-pf=country]', 'SEC Scrubber'); await pg.waitForTimeout(100);
+  const custOpts = await pg.$$eval('.mask select[data-pf=customer] option', os => os.map(o => o.value).filter(Boolean));
+  is(/^1대/.test(await cnt()) && custOpts.join() === 'KCO', '운영단위를 고르면 그 설비만 · 고객사 목록도 그 운영단위 것만 (' + custOpts + ')');
+  await pg.selectOption('.mask select[data-pf=country]', ''); await pg.waitForTimeout(100);
+  await pg.fill('.mask [data-pf=q]', '0101'); await pg.waitForTimeout(100);
+  is(/^1대/.test(await cnt()), 'S/N 일부(0101)로 찾는다');
+  await pg.press('.mask [data-pf=q]', 'Enter'); await pg.waitForTimeout(400);
+  const KR = { op:'SEC Scrubber', customer:'KCO', line:'K9-L1', prod_code:'PJT-K', campus:'K9', bay:'KB1', proc:'ETCH', subproc:'ETCH-A',
+               model:'WK-MDL2', pg:'PG-K2', main_eq:'KMAIN-2', eq_no:'ZK-101', sn_in:'ZZK-0101' };
+  const kv = await autoVals();
+  is(!!(await pg.$('#editor .badge.newtag')) && same(kv, KR),
+     '한 대뿐이면 Enter 로 고른다 · 국내 — 단지·BAY·공정·세부공정은 설치현황, 모델·제품군·메인설비호기는 직전 수선실적 (' + JSON.stringify(kv) + ')');
+  is(await pg.$eval('#editor [data-col=model]', e => e.closest('.fld').querySelector('.atag').title.startsWith('직전 수선실적'))
+     && await pg.$eval('#editor [data-col=campus]', e => e.closest('.fld').querySelector('.atag').title.startsWith('설치현황')), '「자동」 표시가 출처를 말한다(설치현황 · 직전 수선실적)');
+  const note = await pg.$eval('#editor .note.anote', e => e.textContent);
+  is(/설치현황\(ZZK-0101 · ZK-101\)에서 10칸/.test(note) && /직전 수선실적\(RS-K-0002 · 2026-04-01\)에서 3칸/.test(note), '편집기 머리가 «무엇에서 몇 칸»을 적는다 (' + note + ')');
+  is(await pg.evaluate(() => document.activeElement && document.activeElement.dataset.col) === 'rs_code', '첫 칸은 «사람이 적을» 실적코드');
+  await setField(pg, 'model', 'MY-MDL');
+  is(!(await pg.$('#editor .fld.auto [data-col=model]')) && !!(await pg.$('#editor .fld.auto [data-col=pg]')), '고친 칸은 「자동」 표시가 사라진다(나머지는 그대로)');
+  await setField(pg, 'rs_code', 'RS-N-0001'); await setField(pg, 'd_start', '2026-07-01');
+  await qlog(pg);
+  await pg.click('#editor [data-act=insert]'); await pg.waitForTimeout(300);
+  const ins = (rpcs(await qlog(pg), 'edit_insert')[0] || { args:{} }).args.p_row || {};
+  is(ins.rs_code === 'RS-N-0001' && ins.op === 'SEC Scrubber' && ins.campus === 'K9' && ins.model === 'MY-MDL' && ins.main_eq === 'KMAIN-2' && ins.sn_in === 'ZZK-0101',
+     '넣으면 채운 설비 칸이 그대로 저장된다 · 사람이 고친 모델은 사람 값 (' + JSON.stringify(ins) + ')');
+
+  /* (c) 해외 설비 — 고르기 조건은 다음 번에도 남는다 · 단지·BAY·공정은 직전 실적 · 메인설비호기는 설치현황 CODE */
+  await pg.click('#search [data-act=new]'); await waitDlg(pg, /설비 고르기/);
+  await pg.waitForFunction(() => /대 ·|맞는 설비가 없습니다/.test((document.querySelector('.mask [data-pk=n]') || {}).textContent || ''));
+  is(await pg.$eval('.mask [data-pf=q]', e => e.value) === '0101', '고르기 조건(S/N 0101)이 다음 번에도 남는다');
+  await pg.fill('.mask [data-pf=q]', 'zzw'); await pg.waitForTimeout(100);
+  await pg.click('.mask tr[data-ret="0"]'); await pg.waitForTimeout(400);
+  const OS = { op:'GST TAIWAN SCRUBBER', customer:'TCO', line:'F99', prod_code:'PJT-T', campus:'기타', bay:'TB-WK', proc:'PROC-WK', subproc:'SUB-WK',
+               model:'MDL-WK', pg:'PG-T', main_eq:'ZT-201', eq_no:'ZT-201', sn_in:'ZZW-0201' };
+  const ov = await autoVals();
+  is(same(ov, OS), '해외 — 단지·BAY·공정·세부공정은 직전 수선실적(설치현황과 표기가 다르다) · 메인설비호기는 설치현황 CODE (' + JSON.stringify(ov) + ')');
+  /* 「설비 없이 빈 행」·「취소」 */
+  await pg.click('#search [data-act=new]'); await waitDlg(pg, /설비 고르기/);
+  await pg.click('.mask .dlg-f .btn:has-text("취소")'); await pg.waitForTimeout(150);
+  is(same(await autoVals(), OS), '「취소」 — 하던 새 행은 그대로');
+
+  /* (d) 자재실적 「+ 새 행」 → 그 수선실적부터 */
+  await pg.click('.tab[data-tab=mat]'); await pg.waitForTimeout(400);
+  await pg.click('#search [data-act=new]'); await waitDlg(pg, /수선실적 고르기/);
+  await qlog(pg);
+  await pg.fill('.mask [data-pf=q]', 'RS-K-0002'); await pg.press('.mask [data-pf=q]', 'Enter');
+  await pg.waitForFunction(() => /건\(최근에|맞는 수선실적이 없습니다/.test((document.querySelector('.mask [data-pk=n]') || {}).textContent || ''));
+  const pq = sel(await qlog(pg), 'sheet_wk').pop();
+  is(!!pq && pq.or[0] === 'rs_code.ilike.*RS*K*0002*,sn_in.ilike.*RS*K*0002*,eq_no.ilike.*RS*K*0002*' && pq.order === 'src_row' && !pq.asc && pq.limit === 50,
+     '실적코드·S/N·설비호기 중 하나로 · 최근에 올린 행부터 50건 (' + (pq && pq.or[0]) + ')');
+  await pg.click('.mask tr[data-ret="0"]'); await pg.waitForTimeout(400);
+  const MK = { op:'SEC Scrubber', customer:'KCO', campus:'K7', line:'K9-L1', bay:'KB1', proc:'ETCH', detail:'ETCH-A', main_eq:'KMAIN-2', eq:'ZK-101', sn:'zzk-0101', model:'WK-MDL2' };
+  const mv = await autoVals();
+  is(same(mv, MK) && await pg.$eval('#editor [data-col=rs_code]', e => e.value) === 'RS-K-0002',
+     '자재 — 그 수선실적 값 그대로(세부공정 → 세부공정 · 설비호기 → 설비 · S/N(IN) → S/N) (' + JSON.stringify(mv) + ')');
+  is(await pg.$eval('#editor [data-col=work_date]', e => e.value) === '' && await pg.$eval('#editor [data-col=pf]', e => e.value) === ''
+     && await pg.evaluate(() => document.activeElement && document.activeElement.dataset.col) === 'work_date', '자재실적일자·유/무상은 옮기지 않는다 · 첫 칸은 빈 필수 칸(자재실적일자)');
+  is(/수선실적 RS-K-0002에서 11칸/.test(await pg.$eval('#editor .note.anote', e => e.textContent)), '머리: «수선실적 RS-K-0002 에서 11칸»');
+
+  /* (e) 빈 양식 — 설비 칸이 없다 · 찾는 열쇠(S/N · 자재는 수선실적번호)가 맨 앞 */
+  await pg.click('.tab[data-tab=wk]'); await pg.waitForTimeout(400);
+  const wbB = readWb(await download(pg, '#search [data-act=xblank]'));
+  const HB = aoaOf(wbB, '수선실적')[0];
+  const autoWk = ['op','customer','line','prod_code','campus','bay','proc','subproc','model','pg','main_eq','eq_no'];
+  is(HB[0] === '행번호' && HB[1] === nm('wk', 'sn_in') && HB.indexOf(nm('wk', 'rs_code')) > 1, '빈 양식 — 행번호 · S/N(IN) 이 맨 앞 (' + HB.slice(0, 4).join(' | ') + ' …)');
+  is(!autoWk.some(c => HB.indexOf(nm('wk', c)) >= 0), '빈 양식에는 설비 칸(운영단위·고객사·단지·라인·BAY·공정·세부공정·모델·제품군·메인설비호기·설비호기·제품코드)이 없다');
+  const GB = aoaOf(wbB, '안내').map(r => r.join(' ')).join('\n');
+  is(/설비 칸 — 새 행은 올릴 때 채웁니다/.test(GB) && /이 빈 양식에는 설비 칸이 없습니다/.test(GB), '안내 시트가 «설비 칸은 올릴 때 채운다»고 적는다');
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  const full0 = aoaOf(readWb(await download(pg, '#selBar [data-act=xall]')), '수선실적')[0];
+  is(HB.slice(1).every(h => full0.indexOf(h) > 0), '빈 양식의 머리글은 검색 결과 양식과 «같은 글자»');
+
+  /* (f) 엑셀 새 행 — 올릴 때 같은 규칙으로 «빈 칸만» 채운다 · 못 채운 줄은 이유와 함께 */
+  const col = n => HB.indexOf(n), H6 = HB.concat([nm('wk', 'model')]);
+  const nr = (sn, rs, d, mdl) => { const r = H6.map(() => ''); r[col(nm('wk', 'sn_in'))] = sn; r[col(nm('wk', 'rs_code'))] = rs; r[col(nm('wk', 'd_start'))] = d; if(mdl) r[H6.length - 1] = mdl; return r; };
+  const fpB = writeWb(wbB, '수선실적', [H6, nr('ZZK0101', 'RS-B-0001', '2026-07-02'), nr('zzw 0201', 'RS-B-0002', '2026-07-03', 'MY-OS'),
+    nr('ZZQ-9999', 'RS-B-0003', '2026-07-04'), nr('ZZT-0007', 'RS-B-0004', '2026-07-05'), nr('', 'RS-B-0005', '2026-07-06')], 'blank-wk.xlsx');
+  await qlog(pg);
+  await pg.setInputFiles('#xfile', fpB);
+  await waitDlg(pg, /미리보기/);
+  const body = await dlgBody(pg);
+  is(/새 행 5/.test(body) && /설비 칸 자동 채움 — 새 행 3줄 · 27칸 · 못 채운 2줄/.test(body), '미리보기 — 자동 채움 3줄 · 27칸 · 못 채운 2줄 [' + (body.match(/설비 칸 자동 채움[^\n]*/) || [''])[0] + ']');
+  is(/설치현황에도 수선실적에도 없는 S\/N 입니다\(ZZQ-9999\)/.test(body) && /S\/N 이 비어 있습니다/.test(body), '못 채운 줄마다 까닭 — 모르는 S/N · S/N 빈칸');
+  is(/설치현황에 맞는 설비가 2대입니다\(ZZT-0007\) — 직전 수선실적 값만 채웠습니다/.test(body),
+     '설비가 둘인데 직전 실적은 있으면 — 그 값만 채우고 «반쪽»이라고 적는다(조용히 반만 채우지 않는다)');
+  const lw = rpcs(await qlog(pg), 'edit_last_wk');
+  is(lw.length === 1 && lw[0].args.p_sns.slice().sort().join() === 'ZZK0101,ZZQ9999,ZZT0007,ZZW0201', '직전 수선실적은 한 번에 묻는다 (' + (lw[0] && lw[0].args.p_sns) + ')');
+  await pg.click('.mask .btn.pri'); await pg.waitForTimeout(600);
+  const bk = (rpcs(await qlog(pg), 'edit_bulk')[0] || { args:{ p_items:[] } }).args.p_items.map(x => x.row);
+  const b1 = bk.find(r => r.rs_code === 'RS-B-0001') || {}, b2 = bk.find(r => r.rs_code === 'RS-B-0002') || {}, b3 = bk.find(r => r.rs_code === 'RS-B-0003') || {};
+  /* 모델은 «직전» 수선실적 — 이제는 (b)에서 방금 넣은 RS-N-0001(7/1 · 사람이 고친 MY-MDL)이 그 설비의 가장 최근 실적이다 */
+  is(b1.op === 'SEC Scrubber' && b1.campus === 'K9' && b1.bay === 'KB1' && b1.model === 'MY-MDL' && b1.main_eq === 'KMAIN-2' && b1.sn_in === 'ZZK0101',
+     '국내 줄 — 설비 칸이 채워졌고 적은 S/N 은 그대로 · 모델은 방금 넣은 실적(가장 최근)에서 (' + JSON.stringify(b1) + ')');
+  is(b2.op === 'GST TAIWAN SCRUBBER' && b2.bay === 'TB-WK' && b2.main_eq === 'ZT-201' && b2.model === 'MY-OS' && b2.sn_in === 'zzw 0201',
+     '해외 줄 — 해외 규칙 · 파일에 적은 모델(MY-OS)은 덮지 않는다 (' + JSON.stringify(b2) + ')');
+  is(!('op' in b3) && b3.sn_in === 'ZZQ-9999', '못 찾은 줄은 설비 칸 없이 그대로 들어간다(미리보기가 알렸다)');
+
+  /* (g) 자재 빈 양식 — 수선실적번호로 그 수선실적에서 · 없거나 둘이면 S/N 으로 */
+  await pg.click('.tab[data-tab=mat]'); await pg.waitForTimeout(400);
+  const wbM = readWb(await download(pg, '#search [data-act=xblank]'));
+  const HM = aoaOf(wbM, '자재실적')[0];
+  is(HM[1] === nm('mat', 'rs_code') && HM[2] === nm('mat', 'sn') && !['op','customer','campus','model','eq','detail'].some(c => HM.indexOf(nm('mat', c)) >= 0),
+     '자재 빈 양식 — 수선실적번호 · S/N 이 맨 앞 · 설비 칸 없음 (' + HM.slice(0, 4).join(' | ') + ' …)');
+  const cm = n => HM.indexOf(nm('mat', n));
+  const mr = (rs, sn, d) => { const r = HM.map(() => ''); r[cm('rs_code')] = rs; r[cm('sn')] = sn; r[cm('work_date')] = d; r[cm('mat_code')] = 'MC-9'; r[cm('qty')] = '1'; return r; };
+  await qlog(pg);
+  await pg.setInputFiles('#xfile', writeWb(wbM, '자재실적', [HM, mr('RS-K-0002', '', '2026-07-05'), mr('RS-NOPE', 'ZZW-0201', '2026-07-06'), mr('RS-DUP', '', '2026-07-07')], 'blank-mat.xlsx'));
+  await waitDlg(pg, /미리보기/);
+  const mb = await dlgBody(pg);
+  const wq = sel(await qlog(pg), 'sheet_wk').filter(x => x.f.some(f => f[0] === 'rs_code' && f[1] === 'in'));
+  is(wq.length === 1 && wq[0].count === true && wq[0].f.find(f => f[1] === 'in')[2].slice().sort().join() === 'RS-DUP,RS-K-0002,RS-NOPE', '수선실적번호는 in(…) 한 번 · count 로 «다 왔나»를 본다');
+  is(/새 행 2줄 · \d+칸 · 못 채운 1줄/.test(mb) && /표에 없는 수선실적번호입니다\(RS-NOPE\) — S\/N 으로 찾아 채웠습니다/.test(mb)
+     && /「RS-DUP」 행이 2개라 어느 수선실적인지 모릅니다/.test(mb) && !/수선실적번호도 S\/N 도 비어/.test(mb),
+     '자재 — 그 수선실적 · 없으면 S/N 으로(까닭을 적는다) · 번호가 둘이면 «모른다» [' + (mb.match(/설비 칸 자동 채움[^\n]*/) || [''])[0] + ']');
+  await pg.click('.mask .btn.pri'); await pg.waitForTimeout(600);
+  const mk = (rpcs(await qlog(pg), 'edit_bulk')[0] || { args:{ p_items:[] } }).args.p_items.map(x => x.row);
+  const m1 = mk.find(r => r.rs_code === 'RS-K-0002') || {}, m2 = mk.find(r => r.rs_code === 'RS-NOPE') || {};
+  is(m1.op === 'SEC Scrubber' && m1.detail === 'ETCH-A' && m1.eq === 'ZK-101' && m1.sn === 'zzk-0101' && m1.campus === 'K7' && !('pf' in m1),
+     '그 수선실적에서 — 세부공정·설비·S/N 까지 · 유/무상은 안 옮긴다 (' + JSON.stringify(m1) + ')');
+  is(m2.op === 'GST TAIWAN SCRUBBER' && m2.detail === 'SUB-WK' && m2.eq === 'ZT-201' && m2.sn === 'ZZW-0201' && m2.campus === '기타' && m2.model === 'MY-OS',
+     'S/N 길 — 수선실적 규칙을 자재 이름으로 옮긴다(세부공정 ← 세부공정 · 설비 ← 설비호기) (' + JSON.stringify(m2) + ')');
+  is(pe5.length === 0, 'JS 에러 없음' + (pe5.length ? ' → ' + pe5.join(' | ') : ''));
+  await c5.close();
 }
 
 await browser.close();
