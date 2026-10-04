@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 147;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 148;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -158,6 +158,14 @@ GST.isAdmin = function(){
   var r = GST._me.role; return r==='admin' || r==='legacy';
 };
 GST.canWrite = function(){ return !!(GST._me && GST._me.can_write); };
+/* 국내 데모(주간현황(국내) · kr_ 표)에 쓸 수 있는 사람인가 (v146) — 서버 _kr_can 과 같은 규칙:
+   관리자(쓰기 권한) 또는 국내 운영자(role='kr'). ⚠ kr 은 can_write 가 «꺼져» 있다(서버 제약) — 운영 표의 모든 쓰기
+   검사가 can_write 를 보므로 그대로 막힌다. 이 함수는 버튼을 보일지 정할 뿐, 실제로 막는 것은 서버다. */
+GST.isKrOp = function(){
+  if(!GST._me) return false;
+  var r = GST._me.role;
+  return r === 'kr' || ((r === 'admin' || r === 'legacy') && !!GST._me.can_write);
+};
 GST._meApply = function(me){
   GST._me = me;
   try{ if(document.body) document.body.dataset.role = me && me.role ? me.role : 'viewer'; }catch(e){}
@@ -337,10 +345,11 @@ GST.verifyOtp = async function(email,code){ var c, r;
   try{ c=await GST.sb(); r=await c.auth.verifyOtp({email:email,token:code,type:'email'}); }
   catch(e){ return GST._sbFail; }
   return r.error?(r.error.message||'코드 확인 실패'):null; };
-/* 아이디+비밀번호 로그인 (조회 전용 계정용).
+/* 아이디+비밀번호 로그인 (조회용 계정 · 국내 데모 운영자 kr 계정 — v146).
    Supabase 는 이메일 형태만 받으므로, @ 없는 아이디에는 아래 도메인을 붙여 계정 이메일로 만든다.
    계정은 관리자가 콘솔(Authentication → Add user, Auto Confirm)에서 만들고 allowed_users 에
-   can_write=false 로 넣는다 — 쓰기 권한은 RLS 가 막으므로 화면 조회만 된다. */
+   can_write=false 로 넣는다 — 쓰기 권한은 RLS 가 막으므로 화면 조회만 된다.
+   role='kr' 이면 데모 표(kr_sheet_*)에만 쓸 수 있다(setup-17 · can_write 는 꺼진 채 — 운영 표는 그대로 막힌다). */
 GST.PW_DOMAIN='gstcs.view';
 GST.pwLogin = async function(id,pw){ var c, r;
   var em=(id.indexOf('@')>=0?id:(id+'@'+GST.PW_DOMAIN)).toLowerCase();
@@ -2655,13 +2664,14 @@ GST.SM.panel = function(){
    캐시가 없는 것과 결과는 같은데 매 로드마다 그 비용만 낸다. 큰 표는 IndexedDB(GST.idb)가
    맡으므로 여기서는 아예 시도하지 않는다. 경계는 넉넉히 잡았다(한 행 38열 기준 약 5MB). */
 GST.CACHE_MAX_ROWS = 20000;
+/* 열쇠 앞머리 GST.TBL_NS (v146) — 데모 화면과 본 화면이 같은 출처의 localStorage 를 쓰므로 가른다 */
 GST.cacheSave=function(key,rows){
   if(!rows || rows.length > GST.CACHE_MAX_ROWS){ GST._cacheSkip=(GST._cacheSkip||0)+1; return; }
-  try{ localStorage.setItem('gstc_'+key, JSON.stringify({t:Date.now(),rows})); }
+  try{ localStorage.setItem('gstc_'+(GST.TBL_NS||'')+key, JSON.stringify({t:Date.now(),rows})); }
   catch(e){ GST._cacheQuota=(GST._cacheQuota||0)+1; }   // 조용히 버리지 않고 세어 둔다
 };
 GST.cacheLoad=function(key){
-  try{ return JSON.parse(localStorage.getItem('gstc_'+key)||'null'); }catch(e){ return null; }
+  try{ return JSON.parse(localStorage.getItem('gstc_'+(GST.TBL_NS||'')+key)||'null'); }catch(e){ return null; }
 };
 
 /* ---------- 9-a. IndexedDB 행 캐시 (v101) ----------
@@ -2717,6 +2727,20 @@ GST.idb=(function(){
 GST.TABLE_OF_GID = { '646668307':'wk', '31302669':'mat', '891608329':'inst' };
 GST.USE_DB = true;                       // 되돌리려면 이 한 줄을 false로
 
+/* ── 다른 표 읽기 (v146 · 주간현황(국내) 데모) ──
+   데모 화면은 운영 표가 아니라 «데모 표»(kr_sheet_*)를 읽는다. 페이지가 지도(TBL_MAP)만 주면 읽기 경로 셋
+   (dbRows · csvTableRows · fetchCSVCached)이 같은 지도를 본다 — 페이지마다 표 이름을 바꿔 적으면 반드시 한 곳이 빠진다.
+   ⚠ TBL_NS 는 캐시 열쇠의 앞머리다. 데모와 본 화면이 같은 출처(origin)의 localStorage·IndexedDB 를 나눠 쓰므로,
+     가르지 않으면 «본 주간현황이 데모 숫자를 캐시에서 꺼내는» 사고가 난다(IndexedDB 열쇠는 실제 표 이름이 가른다).
+   ⚠ 지도에 든 표는 구글시트로 되돌아가지 않는다(fetchCSVCached) — 데모 표를 못 읽었는데 시트(운영 보관본)로
+     폴백하면, 화면은 «데모»라고 적힌 채 운영 숫자를 그린다. 그 자리에서 실패를 밝힌다.
+   기본값은 빈 지도 — 지금까지의 모든 화면은 한 글자도 안 바뀐다. */
+GST.TBL_MAP = GST.TBL_MAP || {};
+GST.TBL_NS  = GST.TBL_NS  || '';
+GST.physTbl = function(t){ return (GST.TBL_MAP && GST.TBL_MAP[t]) || t; };
+/* 적재 기록(sheet_sync_log)의 열쇠 — csv_upload_finish 와 같은 규칙(sheet_ 를 뗀다): sheet_wk → wk · kr_sheet_wk → kr_wk */
+GST.logKey = function(phys){ return String(phys).replace('sheet_', ''); };
+
 /* ── 기간 기본창 (v127) ── 콜드 로드에서 «최근 것 먼저». 값은 대상 표의 날짜 컬럼(snake).
    창 크기 12 = 이번 달 1일 기준 12개월 전 1일부터 — 13개월치라, 화면 기본값
    «최근 12개 구간»(주별·월별 모두)이 첫 그림에서 이미 완전하다.
@@ -2769,6 +2793,9 @@ GST._dbBanner = function(){
 GST.dbRows = async function(table){
   const c = await GST.db(); if(!c) throw new Error('DB_OFF');
   const S = GST.SM.SPEC[table]; if(!S) throw new Error('NO_SPEC '+table);
+  /* 실제로 읽는 표와 적재 기록 열쇠 (v146) — 지도가 비어 있으면 sheet_<table> · <table> 그대로다.
+     IndexedDB 열쇠도 LK 로 가른다 — 데모(kr_wk)와 본 화면(wk)이 같은 브라우저에서 서로의 캐시를 쓰지 않게. */
+  const PT = GST.physTbl('sheet_'+table), LK = GST.logKey(PT);
   const keys = Object.keys(S.fields);
   const cols = keys.map(GST._snake);
   // 헤더 행은 SPEC의 **첫 번째 이름**을 쓴다. 별칭은 시트 쪽 사정이고 미러는 컬럼이 고정이다.
@@ -2776,7 +2803,7 @@ GST.dbRows = async function(table){
 
   /* 기대 행수를 먼저 본다. 미러가 아직 안 채워졌는데 빈 배열을 돌려주면
      화면이 "데이터 0건"으로 멀쩡히 그려진다 — 그게 가장 위험한 실패다. */
-  const lg = await c.from('sheet_sync_log').select('rows,err,synced_at,ms').eq('tbl', table).maybeSingle();
+  const lg = await c.from('sheet_sync_log').select('rows,err,synced_at,ms').eq('tbl', LK).maybeSingle();
   /* ⚠ 여기서 던지면 IndexedDB 에 든 25만 행을 «갖고도» 못 쓴다 (v135 · 8단계).
      idb 조회가 이 질의가 «성공한 뒤에야» 나오기 때문이고, 폴백 cacheLoad 는
      localStorage 라 2만 행 초과는 애초에 저장하지 않는다 — 화면에는 「❌ Failed to
@@ -2789,7 +2816,7 @@ GST.dbRows = async function(table){
     const m = String(lg.error.message||'');
     const transient = /fetch|network|timeout|abort|502|503|504|Load failed/i.test(m);
     if(transient){
-      let last=null; try{ last = await GST.idb.get('rows:'+table); }catch(e){}
+      let last=null; try{ last = await GST.idb.get('rows:'+LK); }catch(e){}
       if(last && last.rows && last.rows.length){
         const hrs = Math.max(0, Math.round((Date.now()-(last.t||0))/3600000));
         GST._dbWarn(table, '연결이 안 돼 마지막으로 받은 자료를 보여줍니다 ('+hrs+'시간 전)');
@@ -2835,7 +2862,7 @@ GST.dbRows = async function(table){
      RPC 가 없는 환경(setup-8 미실행)은 옛 동작 그대로 — 전부 고른다. */
   let use = cols, miss = [];
   try{
-    const pc = await c.rpc('csv_table_cols', {p_tbl:'sheet_'+table});
+    const pc = await c.rpc('csv_table_cols', {p_tbl:PT});
     if(!pc.error && Array.isArray(pc.data) && pc.data.length){
       const have = new Set(pc.data);
       use  = cols.filter(function(x){ return have.has(x); });
@@ -2856,7 +2883,7 @@ GST.dbRows = async function(table){
      적재 시각과 행수가 같으면 내용도 같다 — sheet_sync_log 가 보증하는 사실이다.
      ⚠ 열쇠에 «고른 컬럼»도 넣는다(v120). 안 넣으면 DB 에 열을 더한 뒤에도 옛 캐시가
        맞는 것으로 판정돼, 새 열이 영영 빈 채로 남는다(적재 시각이 안 바뀌므로). */
-  const stamp = table+'|'+lg.data.synced_at+'|'+want+'|'+use.length;
+  const stamp = LK+'|'+lg.data.synced_at+'|'+want+'|'+use.length;
 
   /* 직전 백필이 완성해 둔 전체본이 있으면 그것부터 소비한다 (v127 — 기간 기본창).
      IndexedDB «저장»이 실패하는 환경(시크릿 창·용량)에서 이 다리가 없으면
@@ -2866,12 +2893,12 @@ GST.dbRows = async function(table){
   if(mem){ delete GST._bfFull[table];
     if(mem.stamp === stamp){
       GST._idbHit = (GST._idbHit||0)+1;                 // 배지의 «재사용» — 뜻이 같다
-      GST.idb.set('rows:'+table, {stamp:stamp, rows:mem.rows, t:Date.now()});   // 저장 재시도(실패해도 무해)
+      GST.idb.set('rows:'+LK, {stamp:stamp, rows:mem.rows, t:Date.now()});   // 저장 재시도(실패해도 무해)
       return mem.rows;
     }
   }
 
-  const hit = await GST.idb.get('rows:'+table);
+  const hit = await GST.idb.get('rows:'+LK);
   if(hit && hit.stamp === stamp && Array.isArray(hit.rows) && hit.rows.length === want+1){
     GST._idbHit = (GST._idbHit||0)+1;
     return hit.rows;
@@ -2905,7 +2932,7 @@ GST.dbRows = async function(table){
   };
   const page = function(a, b, mod){                     // src_row ∈ [a, b)
     return runQ('범위 '+a+'~'+b, function(){
-      let q = c.from('sheet_'+table).select(SEL).gte('src_row', a).lt('src_row', b);
+      let q = c.from(PT).select(SEL).gte('src_row', a).lt('src_row', b);
       if(mod) q = mod(q);                               // 창·백필의 날짜 조건이 여기 끼워진다
       return q.order('src_row', {ascending:true});
     });
@@ -2917,13 +2944,13 @@ GST.dbRows = async function(table){
      폭이 min(상한, 1,000) 이하이므로 PK 유일성 때문에 어떤 범위 질의도 상한에 잘리지
      않는다 — «조용히 모자라는» 일이 원리적으로 없다. */
   const capD = await runQ('폭탐침', function(){
-    return c.from('sheet_'+table).select('src_row')
+    return c.from(PT).select('src_row')
             .order('src_row', {ascending:true}).range(0, 9999);
   });
   const width = Math.min(capD.length, GST.DB_PAGE_MAX || 1000);   // 폭 상한 — 주석은 DB_PAGE_MAX 정의부
   if(!width) throw new Error('MIRROR_SHORT 0/'+want);
   const mxD = await runQ('최대번호', function(){
-    return c.from('sheet_'+table).select('src_row')
+    return c.from(PT).select('src_row')
             .order('src_row', {ascending:false}).limit(1);
   });
   const maxSr = mxD[0] ? +mxD[0].src_row : -1;
@@ -2963,7 +2990,7 @@ GST.dbRows = async function(table){
   };
   /* 다음 로드를 위해 담아 둔다. 저장 실패(용량·시크릿 창)는 «느려질 뿐» 틀리지 않으므로
      막지 않는다 — 다만 왜 느린지 알 수 있게 흔적은 남긴다(GST._idbErr). */
-  const keep = function(rows){ GST.idb.set('rows:'+table, {stamp:stamp, rows:rows, t:Date.now()}); };
+  const keep = function(rows){ GST.idb.set('rows:'+LK, {stamp:stamp, rows:rows, t:Date.now()}); };
 
   /* ── 기간 기본창 (v127) — 최근 13개월을 먼저 그리고, 나머지는 뒤에서 받는다 ──
      gte(cutoff) 와 or(lt.cutoff, is.null) 은 어떤 값이든 «정확히 한쪽»에 들어간다
@@ -3077,6 +3104,9 @@ GST._authGlitch = function(msg){
 GST._CSV_KEYS = ['src_row', 'id'];      // 키셋에 쓸 유일·정수 열 — 앞의 것을 우선한다
 GST.csvTableRows = async function(table, cols){
   const c = await GST.db(); if(!c) throw new Error('DB_OFF');
+  /* 실제로 읽는 표 (v146) — 데모 화면은 지도(TBL_MAP)가 kr_ 표를 가리킨다. 아래의 표 이름은 전부 이것이다 —
+     단, «화면이 직접 고치는 표인가»(GST.DBW)는 논리 이름(table)으로 본다. */
+  const logical = table; table = GST.physTbl(table);
   const sel = (cols && cols.length) ? cols.join(',') : '*';
 
   /* count 를 같이 받는다(exact 는 응답 헤더 한 줄이다) — 캐시 열쇠와 «다 받았나» 대조에 쓴다 */
@@ -3102,7 +3132,7 @@ GST.csvTableRows = async function(table, cols){
      담으면 «저장했는데 새로고침하면 옛 값»이 된다(v80 의 그 실패). 열쇠를 못 만들면 담지 않는다(느릴 뿐 틀리지 않는다). */
   const writable = Object.keys(GST.DBW||{}).map(function(g){ return (GST.DBW[g]||{}).table; });
   let stamp = null;
-  if(total!=null && keys0.indexOf('imported_at')>=0 && writable.indexOf(table)<0){
+  if(total!=null && keys0.indexOf('imported_at')>=0 && writable.indexOf(logical)<0){
     const mx = await c.from(table).select('imported_at').order('imported_at', {ascending:false}).limit(1);
     if(!mx.error && mx.data && mx.data[0]) stamp = table+'|'+total+'|'+mx.data[0].imported_at+'|'+sel;
   }
@@ -3282,6 +3312,9 @@ GST._srcChip = function(){
 GST.fetchCSVCached = async function(url, key){
   const gm = String(url||'').match(/[?&]gid=(\d+)/);
   const table = gm && GST.TABLE_OF_GID[gm[1]];
+  /* 지도에 든 표(데모)는 시트·옛 캐시로 되돌아가지 않는다 (v146) — 아래에서 실패하면 그 자리에서 던진다 */
+  const ctbl0 = gm && GST.CSV_TABLE_OF_GID[gm[1]];
+  const mapped = !!((table && GST.TBL_MAP['sheet_'+table]) || (ctbl0 && GST.TBL_MAP[ctbl0]));
   /* 인증이 꺼진 환경(로컬 파일 열기·검증 스크립트)에서는 Supabase 자체가 없다.
      그건 폴백이 아니라 원래 시트 경로이므로 경고하지 않는다 — 늘 뜨는 경고는 아무도 안 본다. */
   if(table && GST.USE_DB && GST.authOn()){
@@ -3289,7 +3322,7 @@ GST.fetchCSVCached = async function(url, key){
       const rows = await GST.dbRows(table);
       if(rows && rows.length>1){ GST.cacheSave(key, rows); GST._srcNote(key,'db',rows.length-1); return {rows, cached:false, ageMin:0, src:'db'}; }
       throw new Error('MIRROR_EMPTY');
-    }catch(e){ GST._dbWarn(table, e); }   // 시트로 되돌아간다. 아래가 그 경로다.
+    }catch(e){ GST._dbWarn(table, e); if(mapped) throw e; }   // 시트로 되돌아간다(데모 표는 제외). 아래가 그 경로다.
   }
   /* CSV Import 표 (v79). 위 미러와 같은 자리에서 갈라지고 실패하면 똑같이 시트로 되돌아간다.
      모양 복원은 여기서 한다 — 페이지는 자기가 DB 를 보는지 시트를 보는지 모른다. */
@@ -3301,8 +3334,9 @@ GST.fetchCSVCached = async function(url, key){
       else if(ctbl === 'sheet_abp') rows = GST._abpWide(rows);                // 크로스탭 복원
       if(rows && rows.length>1){ GST.cacheSave(key, rows); GST._srcNote(key,'db',rows.length-1); return {rows, cached:false, ageMin:0, src:'db'}; }
       throw new Error('EMPTY');
-    }catch(e){ GST._dbWarn(ctbl, e); }
+    }catch(e){ GST._dbWarn(ctbl, e); if(mapped) throw e; }
   }
+  if(mapped) throw new Error('DB_OFF — 데모 표는 시트 경로가 없다');
   try{
     const rows = await GST.fetchCSV(url);
     if(rows && rows.length>1) GST.cacheSave(key, rows);

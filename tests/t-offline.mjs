@@ -271,7 +271,7 @@ console.log('[3] file:// 오프라인 실행');
     return e ? getComputedStyle(e).display : 'none'; }));
   is(hid.every(d => d === 'none'), '업로드·오프라인 버튼이 숨었다 (' + hid.join(',') + ')');
 
-  const TABS = await pg.evaluate(() => TABS.map(t => ({ id:t.id, path:t.path })));
+  const TABS = await pg.evaluate(() => TABS.filter(tabOn).map(t => ({ id:t.id, path:t.path })));   // 조회자에게 보이는 탭(데모는 오프라인 판에 없다 · v146)
   const findFrame = async p => { for (const f of pg.frames()) { try {
     if (await f.evaluate(() => window.__PAGE_PATH).catch(()=>null) === p) return f; } catch(e){} } return null; };
 
@@ -308,6 +308,15 @@ console.log('[3] file:// 오프라인 실행');
   }));
   is(ka && Array.isArray(ka.list), '자동순회 질의에 프레임이 답한다');
   is(ka && ka.page && ka.page !== 'srcdoc' && String(ka.page).includes('/'), '순회 답의 page 가 진짜 경로다 → ' + (ka && ka.page));
+
+  /* 등급 전용 탭(주간현황(국내) 데모 · v146)은 오프라인 판에 없다 — 조회자 고정이라 탭이 안 보이고, 열려고 하면 «없다»고 말한다(던지지 않는다) */
+  const demo = await pg.evaluate(() => { const t = TABS.find(x => x.roles); if (!t) return null;
+    const b = document.querySelector('.tab[data-id="' + t.id + '"]'); let thrown = null;
+    try { switchTab(t.id); } catch (e) { thrown = e.message; }
+    const f = frames[t.id]; return { id:t.id, vis:b ? getComputedStyle(b).display !== 'none' : null, thrown, note:!!f && /오프라인 판에 없습니다/.test(f.srcdoc || '') }; });
+  is(!!demo && demo.vis === false && !demo.thrown && demo.note, '데모 탭 — 오프라인 판에 없다: 탭이 안 보이고, 열어도 «없다»고 말한다 (' + JSON.stringify(demo) + ')');
+  const rk = fs.readFileSync(path.join(OUT, 'offline.html'), 'utf8');
+  is(!/주간 현황\(국내\) · CS Global Team/.test(rk), '조립물에 데모 화면(report-kr)이 들어가지 않았다');
 
   is(net.length === 0, 'http(s) 요청이 0건' + (net.length ? ' → ' + net.slice(0,3).join(' · ') : ''));
   const badErr = pe.filter(m => !/OFFLINE/.test(m));
