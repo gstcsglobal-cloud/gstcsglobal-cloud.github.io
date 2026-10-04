@@ -382,7 +382,82 @@ begin perform t_as('boss@test.local');
   exception when others then perform t_ok(sqlerrm = 'not_restorable', '8-8 업로드 요약은 되돌리기 대상이 아니다'); end;
 end $$;
 
+-- [9] 엑셀 일괄 수정 (v141) — edit_get_many · edit_bulk
+do $$ declare g jsonb; h0 text; h1 text; b jsonb; n0 int; s0 timestamptz; bid bigint; rid bigint; eid bigint; k bigint;
+begin perform t_as('boss@test.local');
+  g := edit_get_many('sheet_wk', array[0,1,999]::bigint[]);
+  perform t_ok(jsonb_array_length(g) = 2 and (g->0->>'key')::int = 0 and (g->1->>'key')::int = 1, '9-1 edit_get_many 는 있는 행만 · 키 순서');
+  perform t_ok(g->0->>'hash' = (edit_get('sheet_wk', 0))->>'hash' and g->0->'row'->>'rs_code' = 'RS-T-0001', '9-2 묶음으로 받은 해시 = 한 행으로 받은 해시');
+  h0 := g->0->>'hash'; h1 := g->1->>'hash';
+  select count(*) into n0 from sheet_edits;
+  select synced_at into s0 from sheet_sync_log where tbl = 'wk';
+  /* 하나라도 해시가 어긋나면 «아무것도» 안 쓴다 — 맞는 줄(0)도 · 새 행도 · 이력도 */
+  b := edit_bulk('sheet_wk', jsonb_build_array(
+         jsonb_build_object('op','update','key',0,'hash',h0,'changes',jsonb_build_object('workers','BULK-A')),
+         jsonb_build_object('op','update','key',1,'hash','stale','changes',jsonb_build_object('workers','BULK-B')),
+         jsonb_build_object('op','insert','row',jsonb_build_object('rs_code','RS-T-0200','d_start','2026-05-01'))), '{"file":"t.xlsx"}');
+  perform t_ok(b->>'error' = 'conflict' and b->'rows'->0->>'key' = '1' and b->'rows'->0->>'error' = 'conflict'
+               and jsonb_array_length(b->'rows') = 1, '9-3 해시가 어긋난 줄만 골라 알려 준다');
+  perform t_ok((select workers from sheet_wk where src_row = 0) is distinct from 'BULK-A'
+               and not exists(select 1 from sheet_wk where rs_code = 'RS-T-0200')
+               and (select count(*) from sheet_edits) = n0, '9-4 전부 아니면 전무 — 맞는 줄도 안 썼고 이력도 없다');
+  b := edit_bulk('sheet_wk', jsonb_build_array(
+         jsonb_build_object('op','update','key',0,'hash',h0,'changes',jsonb_build_object('workers','BULK-A')),
+         jsonb_build_object('op','update','key',1,'hash',h1,'changes',jsonb_build_object('workers',(select workers from sheet_wk where src_row = 1))),
+         jsonb_build_object('op','insert','row',jsonb_build_object('rs_code','RS-T-0200','d_start','2026-05-01','action',''))), '{"file":"t.xlsx","part":1}');
+  bid := (b->>'log')::bigint;
+  perform t_ok((b->>'ok')::boolean and (b->>'updated')::int = 1 and (b->>'inserted')::int = 1 and (b->>'same')::int = 1,
+               '9-5 수정 1 · 입력 1 · 변경 없음 1 (' || b::text || ')');
+  perform t_ok((select op from sheet_edits where id = bid) = 'bulk' and (select after->>'file' from sheet_edits where id = bid) = 't.xlsx'
+               and (select (after->>'updated')::int from sheet_edits where id = bid) = 1
+               and (select edited_by from sheet_edits where id = bid) = 'boss@test.local', '9-6 묶음 머리 이력(bulk) — 파일·결과 수·누가');
+  perform t_ok((select count(*) from sheet_edits where ref = bid) = 2
+               and (select op from sheet_edits where ref = bid and row_key = '0') = 'update'
+               and (select after->>'workers' from sheet_edits where ref = bid and row_key = '0') = 'BULK-A'
+               and (select before->>'rs_code' from sheet_edits where ref = bid and row_key = '0') = 'RS-T-0001',
+               '9-7 줄마다 이력 한 줄(행 전체) — ref 가 머리를 가리킨다 · 변경 없는 줄은 이력 없음');
+  perform t_ok((select count(*) from sheet_edits) = n0 + 3, '9-8 이력은 머리 1 + 줄 2 = 3줄');
+  perform t_ok((select synced_at from sheet_sync_log where tbl = 'wk') > s0, '9-9 캐시 도장이 움직인다(묶음 끝에 한 번)');
+  k := (select row_key::bigint from sheet_edits where ref = bid and op = 'insert');
+  perform t_ok((select action from sheet_wk where src_row = k) is null and (select rs_code from sheet_wk where src_row = k) = 'RS-T-0200',
+               '9-10 새 줄은 max+1 번호 · 빈칸은 null');
+  /* ⚠ 되돌리기와 «행 읽기»를 한 식에 넣지 말 것 — 서브쿼리가 함수 호출보다 먼저 평가돼(InitPlan) 되돌리기 «전» 값을 본다 */
+  b := edit_restore((select id from sheet_edits where ref = bid and row_key = '0'));
+  perform t_ok((b->>'ok')::boolean and (select workers from sheet_wk where src_row = 0) is null, '9-11 일괄 수정의 줄 이력도 하나씩 되돌린다');
+  begin perform edit_restore(bid); perform t_ok(false, '9-12 머리 줄을 되돌렸다');
+  exception when others then perform t_ok(sqlerrm = 'not_restorable', '9-12 묶음 머리 줄 자체는 되돌리기 대상이 아니다'); end;
+  b := edit_bulk('sheet_wk', jsonb_build_array(
+         jsonb_build_object('op','update','key',5,'hash',(edit_get('sheet_wk',5))->>'hash','changes','{"workers":"X"}'::jsonb),
+         jsonb_build_object('op','update','key',5,'hash',(edit_get('sheet_wk',5))->>'hash','changes','{"workers":"Y"}'::jsonb)));
+  perform t_ok(b->>'error' = 'conflict' and b->'rows'->0->>'error' = 'dup' and (select workers from sheet_wk where src_row = 5) is null,
+               '9-13 같은 행을 한 묶음에서 두 번 고치려 하면 막는다');
+  begin perform edit_bulk('sheet_wk', (select jsonb_agg(jsonb_build_object('op','insert','row',jsonb_build_object('rs_code','Z'||i))) from generate_series(1,501) i));
+        perform t_ok(false, '9-14 501 줄이 들어갔다');
+  exception when others then perform t_ok(sqlerrm like 'too_many%', '9-14 한 번에 500 줄까지 (묶음 = 전부 아니면 전무의 단위 · 운영 실측 500줄 5.4초)'); end;
+  begin perform edit_bulk('sheet_wk', '[]'::jsonb); perform t_ok(false, '9-15 빈 묶음');
+  exception when others then perform t_ok(sqlerrm = 'no_values', '9-15 빈 묶음은 거절'); end;
+  perform t_as('ed@test.local');
+  begin perform edit_bulk('sheet_wk', '[{"op":"insert","row":{"rs_code":"E"}}]'); perform t_ok(false, '9-16 editor 가 일괄 수정');
+  exception when others then perform t_ok(sqlerrm = 'forbidden', '9-16 editor → forbidden'); end;
+  begin perform edit_get_many('sheet_wk', array[0]::bigint[]); perform t_ok(false, '9-17 editor 가 묶음 읽기');
+  exception when others then perform t_ok(sqlerrm = 'forbidden', '9-17 묶음 읽기도 관리자만'); end;
+  perform t_as('boss@test.local');
+  select id into rid from sheet_roster where "사원번호" = '9100001';
+  select id into eid from sheet_edu where "사원번호" = 9100001;
+  b := edit_bulk('sheet_roster', jsonb_build_array(jsonb_build_object('op','update','key',rid,'hash',(edit_get('sheet_roster',rid))->>'hash',
+         'changes', jsonb_build_object('사원번호','9100021'))));
+  perform t_ok((b->>'updated')::int = 1 and (select "사원번호" from sheet_edu where id = eid) = 9100021, '9-18 인원 일괄 수정도 교육 짝 행을 따라 고친다');
+  perform t_ok((select ref from sheet_edits where tbl = 'sheet_edu' and op = 'cascade' order by id desc limit 1)
+               = (select id from sheet_edits where ref = (b->>'log')::bigint), '9-19 연쇄 이력은 그 줄의 이력을 가리킨다');
+end $$;
+
 reset role;
+do $$ declare f text; bad text := ''; begin
+  foreach f in array array['public.edit_get_many(text,bigint[])','public.edit_bulk(text,jsonb,jsonb)'] loop
+    if not has_function_privilege('authenticated', f, 'EXECUTE') or has_function_privilege('anon', f, 'EXECUTE') then bad := bad || f || ' '; end if;
+  end loop;
+  perform t_ok(bad = '', '9-20 일괄 함수 둘은 authenticated 만 ' || bad);
+end $$;
 `;
 
 let skipped = 0;
@@ -401,7 +476,7 @@ try {
   const p1b = psql(sqlText, 'setup16b');          // «여러 번 Run 해도 안전하다» 를 그대로 시험
   ok(!/ERROR/.test(p1b.stderr), 'setup-16-edit.sql 두 번째 적용 실패:\n' + p1b.stderr);
 
-  console.log('[1~8] 권한 · 수정 · 입력 · 삭제 · 되돌리기 · 연쇄 · 보조 함수');
+  console.log('[1~9] 권한 · 수정 · 입력 · 삭제 · 되돌리기 · 연쇄 · 보조 함수 · 엑셀 일괄');
   const p2 = psql(CHECKS, 'checks');
   const out = (p2.stderr || '') + (p2.stdout || '');
   const oks = out.match(/T_OK [^\n]*/g) || [];
@@ -409,7 +484,7 @@ try {
   oks.forEach(() => pass++);
   bads.forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
   /* 검사가 «조용히 덜 돈» 것을 잡는다 — 블록 하나가 통째로 안 돌면 T_OK 개수가 모자란다 */
-  const EXPECT = 56;
+  const EXPECT = 76;
   ok(oks.length === EXPECT, 'T_OK 가 ' + oks.length + '개 — 기대 ' + EXPECT + '개 (검사가 덜 돌았거나 늘었다)');
 } catch (e) {
   fail++; console.log('  ❌ ' + (e && e.message || e));

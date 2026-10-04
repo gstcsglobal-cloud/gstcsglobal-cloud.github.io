@@ -77,7 +77,7 @@ function fake(seed) {
   function from(tbl) {
     const st = { tbl, f:[], or:[], order:null, asc:true, limit:null, cols:null, single:false, head:false, ins:null };
     const q = {
-      select(c, o) { st.cols = c; if (o && o.head) st.head = true; return q; },
+      select(c, o) { st.cols = c; if (o && o.head) st.head = true; if (o && o.count) st.count = true; return q; },
       insert(rows) { st.ins = JSON.parse(JSON.stringify(rows)); return q; },
       order(c, o) { st.order = c; st.asc = !(o && o.ascending === false); return q; },
       limit(n) { st.limit = n; return q; },
@@ -89,11 +89,12 @@ function fake(seed) {
         if (st.ins) { (DB[tbl] = DB[tbl] || []).push(...st.ins); return Promise.resolve({ data:null, error:null }).then(res, rej); }
         let rows = (DB[tbl] || []).filter(r => st.f.every(([c, op, v]) => test(r, c, op, v)) && st.or.every(e => splitTop(e).some(x => evalTerm(r, x))));
         if (st.order) rows = rows.slice().sort((a, b) => (st.asc ? 1 : -1) * cmp(a[st.order], b[st.order]));
+        const total = rows.length;
         if (st.limit != null) rows = rows.slice(0, st.limit);
         if (st.cols && st.cols !== '*') { const cs = st.cols.split(','); rows = rows.map(r => Object.fromEntries(cs.map(c => [c, r[c] === undefined ? null : r[c]]))); }
         else rows = rows.map(r => Object.assign({}, r));
         const out = st.head ? { count: rows.length, data: null, error: null }
-          : st.single ? { data: rows[0] || null, error: null } : { data: rows, error: null };
+          : st.single ? { data: rows[0] || null, error: null } : { data: rows, count: st.count ? total : null, error: null };
         return Promise.resolve(out).then(res, rej);
       }
     };
@@ -132,6 +133,42 @@ function fake(seed) {
     csv_upload_finish: a => ({ rows:(DB[a.p_tbl] || []).length, log:true }),
     csv_window: a => ({ hit:0, rows:(DB[a.p_tbl] || []).length, next_src:nextId(a.p_tbl), dry:!!a.p_dry }),
     edit_note: a => logEdit(a.p_tbl, a.p_key, a.p_op, a.p_before, a.p_after),
+    edit_get_many: a => (a.p_keys || []).map(k => DB[a.p_tbl].find(x => x[KEY[a.p_tbl]] === k)).filter(Boolean)
+      .sort((x, y) => x[KEY[a.p_tbl]] - y[KEY[a.p_tbl]]).map(r => ({ key:r[KEY[a.p_tbl]], row:Object.assign({}, r), hash:hash(r) })),
+    /* edit_bulk — 확인 먼저(하나라도 어긋나면 아무것도 안 쓴다) · 머리 이력(bulk) + 줄마다 이력(ref) · 모양만 흉내(의미는 t-editsql) */
+    edit_bulk: a => {
+      const items = a.p_items || [], K = KEY[a.p_tbl];
+      if (!items.length) throw new Error('no_values');
+      if (items.length > 500) throw new Error('too_many: ' + items.length);
+      if (window.__BULK_BEFORE) { const f = window.__BULK_BEFORE; window.__BULK_BEFORE = null; f(DB); }     // 미리보기 뒤 «상대»가 먼저 바꿨다
+      const conf = [], seen = new Set(), prep = []; let same = 0;
+      for (const it of items) {
+        if (it.op === 'update') {
+          if (seen.has(it.key)) { conf.push({ key:it.key, error:'dup' }); continue; } seen.add(it.key);
+          const r = DB[a.p_tbl].find(x => x[K] === it.key);
+          if (!r) { conf.push({ key:it.key, error:'not_found' }); continue; }
+          if (it.hash !== hash(r)) { conf.push({ key:it.key, error:'conflict' }); continue; }
+          const ch = {}; Object.keys(it.changes || {}).forEach(c => { if (JSON.stringify(r[c] === undefined ? null : r[c]) !== JSON.stringify(it.changes[c])) ch[c] = it.changes[c]; });
+          if (!Object.keys(ch).length) { same++; continue; }
+          prep.push({ op:'update', r, ch });
+        } else if (it.op === 'insert') {
+          const v = {}; Object.keys(it.row || {}).forEach(c => { if (it.row[c] != null) v[c] = it.row[c]; });
+          if (!Object.keys(v).length) throw new Error('no_values');
+          if (K in v) throw new Error('locked_column: ' + K);
+          prep.push({ op:'insert', v });
+        } else throw new Error('bad_op: ' + it.op);
+      }
+      if (conf.length) return { ok:false, error:'conflict', rows:conf };
+      const nu = prep.filter(x => x.op === 'update').length, ni = prep.length - nu;
+      if (!prep.length) return { ok:true, log:null, updated:0, inserted:0, same };
+      const bid = logEdit(a.p_tbl, '*', 'bulk', null, Object.assign({}, a.p_note || {}, { updated:nu, inserted:ni, same }));
+      prep.forEach(x => {
+        if (x.op === 'update') { const b = Object.assign({}, x.r); Object.assign(x.r, x.ch); logEdit(a.p_tbl, x.r[K], 'update', b, Object.assign({}, x.r), bid); }
+        else { const k = nextId(a.p_tbl); const r = Object.assign(Object.fromEntries((seed.cols[a.p_tbl] || []).map(c => [c, null])), x.v, { [K]:k });
+               DB[a.p_tbl].push(r); logEdit(a.p_tbl, k, 'insert', null, Object.assign({}, r), bid); }
+      });
+      return { ok:true, log:bid, updated:nu, inserted:ni, same };
+    },
     edit_distinct: a => { const m = new Map(); (DB[a.p_tbl] || []).forEach(r => { const v = r[a.p_col]; if (v != null) m.set(String(v), (m.get(String(v)) || 0) + 1); });
       return Array.from(m.entries()).sort((x, y) => y[1] - x[1]).slice(0, a.p_limit || 60); }
   };
@@ -204,7 +241,9 @@ function seedOf(over) {
   }, over || {});
 }
 
-const browser = await chromium.launch(PW);
+/* LANG 이 없는 상자(컨테이너)에서는 Chromium 이 한글 파일 이름을 «download» 로 바꿔 받는다 — 실제 PC 의 브라우저는 그렇지 않다.
+   그 차이로 받은 파일끼리 덮어써 검사가 엉뚱한 파일을 읽은 적이 있다(v141) → 브라우저에만 UTF-8 로캘을 준다. */
+const browser = await chromium.launch(Object.assign({ env:Object.assign({}, process.env, { LANG:'C.UTF-8', LC_ALL:'C.UTF-8' }) }, PW));
 async function open(seed) {
   const ctx = await browser.newContext({ viewport:{ width:1500, height:1000 }, locale:'ko-KR' });
   await ctx.route('**gstcsglobal-cloud.github.io/assets/core.js*', r => r.fulfill({ status:200, contentType:'application/javascript',
@@ -350,7 +389,7 @@ console.log('[4] 열기 · 바뀐 칸만 저장');
   is(up && up.args.p_changes.extra && up.args.p_changes.extra['CTC항목'] === 'B', 'extra 는 합친 객체로');
   is(up && /^h:/.test(up.args.p_hash), '연 시점의 해시를 함께 보낸다');
   is(/저장했습니다/.test(await snackText(pg)) && /되돌리기/.test(await snackText(pg)), '저장 알림 + 되돌리기');
-  is(await pg.$eval('#list tr[data-key="0"] td:nth-child(7)', e => e.textContent) === 'TBM', '목록 칸도 새 값으로');
+  is(await pg.$eval('#list tr[data-key="0"] td:nth-child(8)', e => e.textContent) === 'TBM', '목록 칸도 새 값으로 (맨 앞은 체크 칸 · 행번호)');
 }
 
 /* ═══ [5] 입력값 검사 ═══ */
@@ -498,7 +537,7 @@ console.log('[12] 인원현황 — 통째로 받아 화면에서 거른다');
   is(L.length >= 2 && L[L.length - 1].f.some(f => f[0] === 'id' && f[1] === 'gt'), '키셋(gt id)으로 받고 «0행»에서 멈춘다 (' + L.length + '번)');
   is((await listKeys(pg)).length === 3, '세 명 전부');
   const head = await pg.$$eval('#list thead th', ths => ths.map(t => t.textContent));
-  is(head[1] === '사원번호', '목록 열은 «값이 찬» 사원번호 (빈 ID 를 집지 않는다)');
+  is(head[2] === '사원번호', '목록 열은 «값이 찬» 사원번호 (빈 ID 를 집지 않는다 · 맨 앞은 체크 칸)');
   await pg.fill('#search [name=q]', 'tester t'); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(200);
   is((await listKeys(pg)).sort().join() === '2,3', '이름 «포함»은 덩어리 순서대로 (Tester Two · Tester Three)');
   await pg.selectOption('#search [name=act]', 'y'); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(200);
@@ -562,6 +601,239 @@ console.log('[13] 업로드 — 키 중복 미리보기 · 요약 이력');
 
 is(pe.length === 0, '전 과정 JS 에러 없음' + (pe.length ? ' → ' + pe.join(' | ') : ''));
 await ctx.close();
+
+/* ═══ [14~19] 엑셀 일괄 수정 (v141) ═══
+   파일은 «실제 버튼»으로 받고, 그 파일을 고쳐 «실제 파일 칸»으로 올린다 — 검사가 양식 규칙을 다시 짜지 않는다(t-upload 의 교훈). */
+const XL = await import('./node_modules/xlsx/xlsx.mjs');
+const TMP = fs.mkdtempSync(path.join((await import('os')).tmpdir(), 'gst-bulk-'));
+let dlN = 0, lastName = '';
+async function download(pg, selector) {
+  const [d] = await Promise.all([pg.waitForEvent('download', { timeout:10000 }), pg.click(selector)]);
+  lastName = d.suggestedFilename();
+  const fp = path.join(TMP, (++dlN) + '.xlsx'); await d.saveAs(fp); return fp;      // 이름이 겹쳐도 덮어쓰지 않게 차례 번호로
+}
+const readWb = fp => XL.read(fs.readFileSync(fp), { type:'buffer', cellDates:true, cellNF:true });
+const aoaOf = (wb, name) => XL.utils.sheet_to_json(wb.Sheets[name], { header:1, raw:false, defval:'' });
+function writeWb(wb, name, aoa, file) {
+  wb.Sheets[name] = XL.utils.aoa_to_sheet(aoa);
+  if (wb.SheetNames.indexOf(name) < 0) wb.SheetNames.push(name);
+  const fp = path.join(TMP, file); fs.writeFileSync(fp, XL.write(wb, { type:'buffer', bookType:'xlsx' })); return fp;
+}
+async function waitDlg(pg, re) {
+  await pg.waitForFunction(r => { const h = document.querySelector('.mask .dlg-h'); return !!h && new RegExp(r).test(h.textContent); }, re.source, { timeout:10000 });
+}
+const dlgBody = pg => pg.$eval('.mask .dlg-b', e => e.innerText);
+const fakeHash = (pg, tbl, k) => pg.evaluate(([tbl, k]) => { const K = tbl === 'sheet_wk' ? 'src_row' : 'id';
+  const o = Object.assign({}, window.__DB[tbl].find(x => x[K] === k)); delete o.synced_at; return 'h:' + JSON.stringify(o); }, [tbl, k]);
+
+console.log('[14] 엑셀 일괄 — 체크 · 받기');
+const B = await open(seedOf());
+{
+  const pg = B.pg;
+  await pg.click('.tab[data-tab=roster]'); await pg.waitForTimeout(400);
+  is(await pg.$eval('[data-act=xdown]', b => b.textContent) === '빈 양식 받기', '아무것도 안 고르면 «빈 양식 받기»');
+  await pg.click('#ckAll'); await pg.waitForTimeout(100);
+  is(/선택 3건 엑셀로 받기/.test(await pg.$eval('#selBar', e => e.textContent)), '머리 체크 → 보이는 행 전부(3건)');
+  await pg.click('#list tr[data-key="1"] td.ck input'); await pg.waitForTimeout(100);
+  is(/선택 2건/.test(await pg.$eval('#selBar', e => e.textContent)) && !(await pg.$eval('#ckAll', e => e.checked)), '한 줄을 풀면 2건 · 머리 체크도 풀린다');
+  is(await pg.$eval('#editor', e => /목록에서 행을 고르면/.test(e.textContent)), '체크 칸을 눌러도 행이 열리지 않는다');
+  await pg.click('#list tr[data-key="1"] td.ck'); await pg.waitForTimeout(100);       // 칸 여백을 눌러도 체크된다
+  is(/선택 3건/.test(await pg.$eval('#selBar', e => e.textContent)) && await pg.$eval('#ckAll', e => e.checked), '칸 여백을 눌러도 체크 · 다 고르면 머리 체크도');
+  B.h2 = await fakeHash(pg, 'sheet_roster', 2);
+  await qlog(pg);
+  const fp = await download(pg, '[data-act=xdown]');
+  const gm = rpcs(await qlog(pg), 'edit_get_many')[0];
+  is(gm && gm.args.p_tbl === 'sheet_roster' && gm.args.p_keys.slice().sort().join() === '1,2,3', '받기 → edit_get_many(체크한 키) — 목록 칸이 아니라 «지금 행 전체»를 다시 읽는다');
+  is(/^일괄수정_인원현황_3건_\d{8}-\d{4}\.xlsx$/.test(lastName), '파일 이름: 일괄수정_표_건수_시각 (' + lastName + ')');
+  const wb = readWb(fp);
+  is(JSON.stringify(wb.SheetNames) === JSON.stringify(['인원현황','안내','_meta']), '시트: 데이터 · 안내 · _meta (' + wb.SheetNames + ')');
+  is(!!(wb.Workbook && wb.Workbook.Sheets && wb.Workbook.Sheets[2].Hidden), '_meta 는 숨김 시트');
+  const A = aoaOf(wb, '인원현황');
+  is(A[0][0] === '행번호' && A[0].indexOf('사원번호') > 0 && A[0].indexOf('팀') > 0, '머리글: 행번호 + 표의 열 이름');
+  is(A[0].indexOf('ID') > A[0].indexOf('퇴사일'), '옛 양식 열(ID)은 뒤로');
+  is(A.length === 4 && A.slice(1).map(r => r[0]).join() === '3,2,1', '체크한 행 — 목록 순서 그대로 (' + A.slice(1).map(r => r[0]) + ')');
+  is(!A[0].some(h => /^(id|synced_at|imported_at|extra)$/.test(h)), '키·관리 열(id·synced_at·extra)은 데이터 칸에 없다');
+  const c = wb.Sheets['인원현황'][XL.utils.encode_cell({ r:1, c:A[0].indexOf('사원번호') })];
+  is(!!c && c.t === 's' && c.z === '@', '칸은 텍스트(@) — 엑셀이 사번 앞 0·날짜를 바꾸지 않게');
+  const M = aoaOf(wb, '_meta');
+  is(M[0][0] === 'gst-edit-bulk' && M.some(r => r[0] === '표' && r[1] === 'sheet_roster') && M.some(r => r[0] === '2' && r[1] === B.h2), '_meta: 표 이름 · 받은 시점의 해시');
+  is(/안내/.test(wb.SheetNames.join()) && /행번호/.test(aoaOf(wb, '안내').map(r => r.join(' ')).join('\n')), '안내 시트가 «행번호는 고치지 말라»고 적는다');
+  await pg.click('[data-act=xclr]'); await pg.waitForTimeout(100);
+  const A0 = aoaOf(readWb(await download(pg, '[data-act=xdown]')), '인원현황');
+  is(A0.length === 1 && A0[0][0] === '행번호' && /^일괄수정_인원현황_빈양식_/.test(lastName), '빈 양식 — 머리글만 (' + lastName + ')');
+  B.fp = fp;
+}
+
+console.log('[15] 엑셀 올리기 — 미리보기 · 반영');
+{
+  const pg = B.pg;
+  const wb = readWb(B.fp), A = aoaOf(wb, '인원현황'), H = A[0], col = n => H.indexOf(n);
+  const r1 = A[3], r2 = A[2];                                    // r3 줄은 지운다 — 줄을 지우면 «안 고친다»
+  r2[col('팀')] = 'T7';
+  const blank = () => H.map(() => '');
+  const n1 = blank(); n1[col('사원번호')] = '9100009'; n1[col('이름(영문)')] = 'Tester Nine'; n1[col('입사일')] = '2025.4.1';
+  const n2 = blank(); n2[col('사원번호')] = '9100003'; n2[col('팀')] = 'T3';        // 행번호 없이 — 옛 양식 행(ID 9100003) 하나와 맞는다
+  const n3 = blank(); n3[0] = '999'; n3[col('팀')] = 'TX';
+  const n4 = blank(); n4[col('사원번호')] = '9100010'; n4[col('이름(영문)')] = 'Bad Date'; n4[col('입사일')] = '2025-13-01';
+  const H2 = H.concat(['ZZZ메모']);
+  const fp = writeWb(wb, '인원현황', [H2, r2, r1, [], n1, n2, n3, n4].map(r => r.length ? r.concat(['']) : r), 'up1.xlsx');
+  await qlog(pg);
+  await pg.setInputFiles('#xfile', fp);
+  await waitDlg(pg, /미리보기/);
+  const body = await dlgBody(pg);
+  is(/수정 2행 · 3칸/.test(body) && /새 행 1/.test(body) && /변경 없음 1/.test(body) && /건너뜀 2/.test(body),
+     '미리보기 — 수정 2행·3칸 · 새 행 1 · 변경 없음 1 · 건너뜀 2  [' + body.split('\n').slice(1, 2).join(' ') + ']');
+  is(/ZZZ메모/.test(body), '모르는 열은 «무시했다»고 적는다');
+  is(/행번호 999 인 행이 표에 없습니다/.test(body) && /입사일: 날짜는 YYYY-MM-DD/.test(body), '건너뛰는 이유를 줄마다 적는다');
+  is(/T2/.test(body) && /T7/.test(body), '바뀌는 칸: 옛값 → 새값');
+  is(/채운 칸만/.test(body), '행번호 없이 찾은 줄은 «채운 칸만» 덮는다고 적는다');
+  is(rpcs(await qlog(pg), 'edit_bulk').length === 0, '미리보기만으로는 서버에 쓰지 않는다');
+  await pg.click('.mask .btn.pri'); await pg.waitForTimeout(600);
+  const L = await qlog(pg), bk = rpcs(L, 'edit_bulk');
+  const items = bk[0] ? bk[0].args.p_items : [], ups = items.filter(x => x.op === 'update'), ins = items.filter(x => x.op === 'insert');
+  is(bk.length === 1 && bk[0].args.p_tbl === 'sheet_roster' && ups.length === 2 && ins.length === 1, 'edit_bulk 한 번 — 수정 2 · 입력 1');
+  const u2 = ups.find(x => x.key === 2), u3 = ups.find(x => x.key === 3);
+  is(!!u2 && JSON.stringify(u2.changes) === '{"팀":"T7"}' && u2.hash === B.h2, '행번호 줄: 바뀐 칸만 · 받은 시점의 해시로');
+  is(!!u3 && JSON.stringify(Object.keys(u3.changes).sort()) === JSON.stringify(['사원번호','팀']) && !('Name((영문)' in u3.changes),
+     '행번호 없는 줄: 옛 양식 ID 와 맞는 «정확히 한 행»의 «채운 칸만» — 빈칸으로 남의 이름을 지우지 않는다 (' + JSON.stringify(u3 && u3.changes) + ')');
+  const i1 = ins[0];
+  is(!!i1 && i1.row['입사일'] === '2025-04-01' && i1.row['사원번호'] === '9100009' && !('id' in i1.row) && Object.values(i1.row).every(v => v !== null && v !== ''),
+     '새 행: 날짜는 눕히고 · 빈칸·키는 안 보낸다');
+  is(bk[0] && bk[0].args.p_note.file === 'up1.xlsx' && bk[0].args.p_note.parts === 1, '묶음 메모: 파일 이름 · 묶음 수');
+  is(/반영했습니다 — 수정 2행 · 새 행 1/.test(await snackText(pg)), '반영 알림');
+  const db = await pg.evaluate(() => window.__DB.sheet_roster.map(r => [r.id, r['팀'], r['사원번호'], r['Name((영문)']]));
+  is(db.find(r => r[0] === 2)[1] === 'T7' && db.find(r => r[0] === 3)[1] === 'T3' && db.find(r => r[0] === 3)[3] === 'Tester Three' && db.some(r => r[2] === '9100009'),
+     '표가 바뀌었다 · 옛 양식 이름은 그대로');
+  is((await listKeys(pg)).length === 4, '목록을 다시 읽어 새 행이 보인다');
+}
+
+console.log('[15b] 같은 파일을 다시 · 받은 뒤 바뀐 줄');
+{
+  const pg = B.pg;
+  await pg.setInputFiles('#xfile', path.join(TMP, 'up1.xlsx'));
+  await waitDlg(pg, /미리보기/);
+  let body = await dlgBody(pg);
+  is(/수정 0행/.test(body) && /새 행 0/.test(body) && /변경 없음 4/.test(body) && !/받은 뒤에 이 행이 바뀌었습니다/.test(body),
+     '다시 올리면 들어간 줄은 «변경 없음» — 해시가 바뀌었어도 «충돌»로 읽지 않는다');
+  is(await pg.$eval('.mask .btn.pri', b => b.disabled && /반영할 것이 없습니다/.test(b.textContent)), '반영할 것이 없으면 단추가 잠긴다');
+  await pg.click('.mask .btn:not(.pri)'); await pg.waitForTimeout(150);
+  /* 받은 뒤 «상대»가 1번 행을 고쳤다 → 그 줄은 덮지 않는다 */
+  await pg.evaluate(() => { window.__DB.sheet_roster.find(r => r.id === 1)['인사'] = '휴직'; });
+  const wb = readWb(B.fp), A = aoaOf(wb, '인원현황'), H = A[0];
+  A[3][H.indexOf('팀')] = 'T5';
+  await pg.setInputFiles('#xfile', writeWb(wb, '인원현황', [H, A[3]], 'up2.xlsx'));
+  await waitDlg(pg, /미리보기/);
+  body = await dlgBody(pg);
+  is(/받은 뒤에 이 행이 바뀌었습니다/.test(body) && /수정 0행/.test(body), '받은 뒤 바뀐 행은 건너뛴다(덮지 않는다)');
+  await pg.click('.mask .btn:not(.pri)'); await pg.waitForTimeout(150);
+  /* 같은 행을 두 줄이 겨눈다(행번호 2 · 사원번호 9100002) → 어느 쪽이 맞는지 모르니 둘 다 건너뛴다 */
+  const n5 = H.map(() => ''); n5[H.indexOf('사원번호')] = '9100002'; n5[H.indexOf('팀')] = 'TZ';
+  await pg.setInputFiles('#xfile', writeWb(wb, '인원현황', [H, A[2], n5], 'up2b.xlsx'));
+  await waitDlg(pg, /미리보기/);
+  body = await dlgBody(pg);
+  is(/건너뜀 2/.test(body) && /다른 줄도 고칩니다/.test(body), '같은 행을 두 줄이 고치면 둘 다 건너뛴다');
+  await pg.click('.mask .btn:not(.pri)'); await pg.waitForTimeout(150);
+  /* 행번호만 남기고 다 비운 줄 — «지우려는» 손짓 → 그 행의 모든 칸을 지우지 않는다 */
+  const wiped = A[2].map((v, i) => i ? '' : v);
+  await pg.setInputFiles('#xfile', writeWb(wb, '인원현황', [H, wiped], 'up2c.xlsx'));
+  await waitDlg(pg, /미리보기/);
+  body = await dlgBody(pg);
+  is(/행번호만 남고 나머지 칸이 전부 비었습니다/.test(body) && /수정 0행/.test(body), '행번호만 남은 줄은 건너뛴다(행 전체를 지우지 않는다)');
+  await pg.click('.mask .btn:not(.pri)'); await pg.waitForTimeout(150);
+  /* 다른 표의 파일 — 겹치는 이름(사원번호·No) 몇 개만 맞는다 → 크게 알린다 */
+  const ew = XL.utils.book_new();
+  await pg.setInputFiles('#xfile', writeWb(ew, '교육', [['No', 'Site', '인원', '사원번호', 'Basic 교육완료일', 'Veteran 교육완료일'], ['1', 'Q1', 'Tester One', '9100001', '2025-01-02', '']], 'edu-like.xlsx'));
+  await waitDlg(pg, /미리보기/);
+  body = await dlgBody(pg);
+  is(/다른 표에서 받은 파일이 아닌지 확인하세요/.test(body), '열 대부분이 이 표에 없으면 «다른 표의 파일»인지 크게 묻는다');
+  await pg.click('.mask .btn:not(.pri)'); await pg.waitForTimeout(150);
+}
+
+console.log('[16] 반영 순간의 충돌 — 묶음이 통째로 멈춘다');
+{
+  const pg = B.pg;
+  const wb = XL.utils.book_new();
+  const fp = writeWb(wb, '아무시트', [['사원번호', '팀'], ['9100001', 'T5']], 'up3.xlsx');      // 행번호·_meta 없는 남의 엑셀
+  await pg.setInputFiles('#xfile', fp);
+  await waitDlg(pg, /미리보기/);
+  const body = await dlgBody(pg);
+  is(/행번호」 열이 없어 «사원번호»로 행을 찾았습니다/.test(body) && /수정 1행/.test(body), '행번호 없는 엑셀도 받는다 — 사원번호로 «정확히 한 행»');
+  await pg.evaluate(() => { window.__BULK_BEFORE = DB => { DB.sheet_roster.find(r => r.id === 1)['인사'] = '복직'; }; });
+  await qlog(pg);
+  await pg.click('.mask .btn.pri'); await waitDlg(pg, /멈췄습니다/);
+  const b2 = await dlgBody(pg);
+  is(/하나도 들어가지 않았습니다/.test(b2) && /다른 곳에서 바뀜/.test(b2), '멈춘 이유와 «하나도 안 들어갔다»를 적는다');
+  is(await pg.evaluate(() => window.__DB.sheet_roster.find(r => r.id === 1)['팀']) === 'T1', '아무것도 쓰지 않았다');
+  await pg.click('.mask .btn.pri'); await pg.waitForTimeout(300);
+}
+
+console.log('[17] 큰 표 — 업무 키 in(…) · Shift 범위 · 500줄씩 나눠');
+{
+  const pg = B.pg;
+  await pg.click('.tab[data-tab=wk]'); await pg.waitForTimeout(300);
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(300);
+  await pg.click('#list tr[data-key="6"] td.ck input');
+  await pg.click('#list tr[data-key="1"] td.ck input', { modifiers:['Shift'] }); await pg.waitForTimeout(100);
+  is(/선택 4건/.test(await pg.$eval('#selBar', e => e.textContent)), 'Shift 로 범위 체크 (6→1 · 4건)');
+  const [hRs, hDs] = await pg.evaluate(() => [[].concat(GST.SM.SPEC.wk.fields.rsCode)[0], [].concat(GST.SM.SPEC.wk.fields.dStart)[0]].map(x => String(x).replace(/\s*\n\s*/g, ' ')));
+  const rows = [[hRs, hDs], ['RS-T-0002', '2026-06-02']];
+  for (let i = 1; i <= 1001; i++) rows.push(['RS-N-' + String(i).padStart(4, '0'), '2026-06-01']);
+  const fp = writeWb(XL.utils.book_new(), '수선실적', rows, 'big.xlsx');
+  await qlog(pg);
+  await pg.setInputFiles('#xfile', fp);
+  await waitDlg(pg, /미리보기/);
+  const body = await dlgBody(pg);
+  is(/수정 1행/.test(body) && /새 행 1,001/.test(body), '실적코드가 «한 행»이면 그 행을 · 없으면 새 행 (수정 1 · 새 행 1,001)');
+  is(/500줄씩 3번에 나눠/.test(body), '500줄 넘으면 나눠 넣는다고 적는다');
+  const q = sel(await qlog(pg), 'sheet_wk').filter(x => x.f.some(f => f[0] === 'rs_code' && f[1] === 'in'));
+  is(q.length === 11 && q.every(x => x.count === true && x.f.find(f => f[1] === 'in')[2].length <= 100), '업무 키는 in(…) 100개씩 · count 로 «다 왔나»를 본다 (' + q.length + '번)');
+  await pg.click('.mask .btn.pri');
+  await pg.waitForFunction(() => /반영했습니다/.test(document.getElementById('snack').textContent), null, { timeout:15000 });
+  const bk = rpcs(await qlog(pg), 'edit_bulk');
+  is(bk.length === 3 && bk.map(x => x.args.p_items.length).join() === '500,500,2' && bk.map(x => x.args.p_note.part + '/' + x.args.p_note.parts).join() === '1/3,2/3,3/3',
+     '500줄씩 세 번 (' + bk.map(x => x.args.p_items.length).join() + ')');
+  is(await pg.evaluate(() => window.__DB.sheet_wk.find(r => r.src_row === 1).d_start) === '2026-06-02', '실적코드로 찾은 행이 고쳐졌다');
+}
+
+console.log('[18] 변경 이력 — 일괄 머리 줄 · 일괄 되돌리기');
+{
+  const pg = B.pg;
+  await pg.click('.tab[data-tab=hist]'); await pg.waitForTimeout(200);
+  await pg.selectOption('#hfilt [name=tbl]', 'sheet_roster'); await pg.selectOption('#hfilt [name=kind]', 'blk');
+  await qlog(pg);
+  await pg.click('#hfilt button[type=submit]'); await pg.waitForTimeout(300);
+  const q = sel(await qlog(pg), 'sheet_edits').pop();
+  is(!!q && q.f.some(f => f[0] === 'op' && f[1] === 'in' && f[2].join() === 'bulk'), '종류=일괄 → op in (bulk)');
+  const top = await pg.$eval('#hlist .he', e => e.innerText);
+  is(/일괄 수정 \(엑셀\)/.test(top) && /up1\.xlsx/.test(top) && /수정 2행 · 새 행 1/.test(top), '머리 줄: 파일 · 수정·새 행 수');
+  await pg.click('#hlist [data-hb]'); await waitDlg(pg, /되돌릴까요/);
+  is(/3줄/.test(await dlgBody(pg)), '되돌릴 줄 수를 먼저 보여 준다(수정 2 · 새 행 1)');
+  await qlog(pg);
+  await pg.click('.mask .btn.pri');
+  await pg.waitForFunction(() => /되돌렸습니다/.test(document.getElementById('snack').textContent), null, { timeout:10000 });
+  const rs = rpcs(await qlog(pg), 'edit_restore').map(x => x.args.p_id);
+  is(rs.length === 3 && rs.every((v, i) => !i || v < rs[i - 1]), '줄 이력을 나중 것부터 하나씩 edit_restore (' + rs + ')');
+  const db = await pg.evaluate(() => window.__DB.sheet_roster.map(r => [r.id, r['팀'], r['사원번호']]));
+  is(db.find(r => r[0] === 2)[1] === 'T2' && db.find(r => r[0] === 3)[1] == null && !db.some(r => r[2] === '9100009'), '되돌렸다 — 팀 T2 · 옛 행 그대로 · 새 행은 지움');
+  await pg.click('#hfilt button[type=submit]'); await pg.waitForTimeout(300);
+  await pg.click('#hlist [data-hb]'); await pg.waitForTimeout(400);
+  is(/이미 다 되돌렸습니다/.test(await snackText(pg)), '한 번 되돌린 묶음은 «이미 다 되돌렸다»');
+  is(B.pe.length === 0, '일괄 수정 전 과정 JS 에러 없음' + (B.pe.length ? ' → ' + B.pe.join(' | ') : ''));
+}
+await B.ctx.close();
+
+console.log('[19] 일괄 함수만 서버에 없을 때 — 그 단추만 잠그고 말한다');
+{
+  const { ctx:c2, pg, pe:pe2 } = await open(seedOf({ missing:['edit_get_many','edit_bulk'] }));
+  const ban = await pg.$eval('#banner', e => e.innerText);
+  is(/엑셀 일괄 수정이 아직 잠겨/.test(ban) && /setup-16-edit\.sql/.test(ban), '배너가 «엑셀 일괄 수정»이 잠겼다고 · 무엇을 하면 되는지 적는다');
+  is(await pg.$eval('#search [data-act=xup]', b => b.disabled), '「엑셀 올리기」 잠김');
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(250);
+  is(await pg.$eval('#selBar [data-act=xdown]', b => b.disabled), '「엑셀로 받기」 잠김');
+  is(!(await pg.$eval('#search [data-act=new]', b => b.disabled)), '한 행 편집은 그대로 열려 있다');
+  is(pe2.length === 0, 'JS 에러 없음' + (pe2.length ? ' → ' + pe2[0] : ''));
+  await c2.close();
+}
 await browser.close();
 srv.close();
 console.log(fail ? `\n❌ t-edit: ${pass} 통과 · ${fail} 실패` : `\n✅ t-edit: ${pass}/${pass} 통과`);
