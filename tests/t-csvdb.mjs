@@ -318,7 +318,8 @@ console.log('\n[5] dbRows — 표에 없는 열이 SPEC 에 있어도 시트가 
   // (b) 캐시 열쇠에 «고른 컬럼 수»가 들어가는지 — 안 들어가면 alter 뒤에도 옛 캐시를 쓴다
   {
     const src = fs.readFileSync(ROOT + '/assets/core.js', 'utf8');
-    const m = /const stamp = table\+'\|'\+lg\.data\.synced_at\+'\|'\+want([^;]*);/.exec(src);
+    /* v146 — 앞머리가 «적재 기록 열쇠»(LK)가 됐다. 지도가 비면 LK = table 이라 운영 화면의 열쇠는 한 글자도 안 바뀐다 */
+    const m = /const stamp = (?:table|LK)\+'\|'\+lg\.data\.synced_at\+'\|'\+want([^;]*);/.exec(src);
     m && /use\.length/.test(m[1])
       ? ok('캐시 열쇠에 고른 컬럼 수가 들어간다 (alter 뒤 옛 캐시가 무효가 된다)')
       : err('캐시 열쇠에 컬럼 수가 없다 — DB 에 열을 더해도 옛 캐시가 계속 맞는 것으로 판정된다');

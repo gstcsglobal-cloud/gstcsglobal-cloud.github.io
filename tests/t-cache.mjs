@@ -169,7 +169,7 @@ console.log('\n[4] 실패해도 조용하지 않다');
   is(/GST\._idbErr/.test(SRC), 'IndexedDB 저장 실패를 기록한다');
   is(/캐시 저장 실패/.test(SRC), '그 사실이 출처 배지에 뜬다 (왜 느린지 물을 수 있게)');
   is(/GST\._cacheQuota/.test(SRC), 'localStorage 용량 초과도 세어 둔다 (예전엔 통째로 삼켰다)');
-  is(/stamp = table\+'\|'\+lg\.data\.synced_at\+'\|'\+want/.test(SRC),
+  is(/stamp = (?:table|LK)\+'\|'\+lg\.data\.synced_at\+'\|'\+want/.test(SRC),   // v146 — 앞머리는 적재 기록 열쇠(LK · 지도가 비면 table 과 같다)
      '무효화 열쇠가 «적재 시각 + 행수» 다');
 }
 is(!errs.length, 'JS 에러 0건' + (errs.length ? ' → ' + errs[0] : ''));

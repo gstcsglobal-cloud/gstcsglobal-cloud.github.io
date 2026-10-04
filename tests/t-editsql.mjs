@@ -16,6 +16,7 @@ import { spawnSync } from 'child_process';
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const SQL_FILE = path.join(ROOT, 'supabase/setup-16-edit.sql');
 const LEDGER_FILE = path.join(ROOT, 'supabase/setup-10-alarm.sql');   // 원장 표·csv_window — «저장소의 그 파일»을 그대로 먹인다(v143)
+const KR_FILE = path.join(ROOT, 'supabase/setup-17-kr-demo.sql');      // 국내 데모 표·kr 등급(v146) — 1~11 이 끝난 뒤에 먹인다
 
 function findBin() {
   if (process.env.PG_BIN && fs.existsSync(path.join(process.env.PG_BIN, 'initdb'))) return process.env.PG_BIN;
@@ -79,7 +80,7 @@ grant usage on schema auth, public to anon, authenticated;
 grant execute on function auth.jwt() to anon, authenticated;
 
 create table public.allowed_users(email text primary key, can_write boolean not null default false,
-  role text not null default 'viewer' check (role in ('viewer','editor','admin')));
+  role text not null default 'viewer', constraint allowed_users_role_chk check (role in ('viewer','editor','admin')));
 create table public.sheet_edits(id bigserial primary key, gid text, row_key text, op text,
   before jsonb, after jsonb, edited_by text, edited_at timestamptz default now());
 create table public.sheet_sync_log(tbl text primary key, gid text, rows int, sheet_rows int, ms int, err text, synced_at timestamptz);
@@ -624,6 +625,130 @@ do $$ begin
 end $$;
 `;
 
+/* ---------- [12] 국내 데모(v146) — setup-17 을 먹이기 «전에» 운영 표에 국내 행을 지어 넣는다 ----------
+   (1~11 의 번호 계산을 흔들지 않게 그 검사가 끝난 뒤에 넣는다 · 운영단위 이름은 CLAUDE.md 에 이미 있는 공개 표기 · 나머지는 지어낸 값) */
+const KR_SEED = String.raw`
+insert into public.sheet_wk(src_row, op, rs_code, stage, d_start, sn_in, model, extra) values
+  (7001, 'SEC Scrubber',        'RS-K-1', 'BM',  '2026-05-01', 'ZZK-0001', 'MDL-K1', '{"x":1}'),
+  (7002, 'SDC Scrubber',        'RS-K-2', 'TBM', '2026-05-02', 'ZZK-0002', 'MDL-K2', null),
+  (7003, 'GST TAIWAN SCRUBBER', 'RS-W-1', 'BM',  '2026-05-03', 'ZZW-0001', 'MDL-W1', null),
+  (7004, null,                  'RS-N-1', 'BM',  '2026-05-04', 'ZZN-0001', 'MDL-N1', null);
+insert into public.sheet_inst(src_row, country, customer, location, code, sn, model, fab, state) values
+  (7001, 'SEC Scrubber',        'KCO', 'K9', 'ZK-101', 'ZZK-0001', 'MDL-K1', 'K9-L1', 'Operation'),
+  (7002, '국내 기타 CHILLER',    'KCO', 'K8', 'ZK-102', 'ZZK-0003', 'MDL-K3', 'K8-L1', 'Operation'),
+  (7003, 'GST TAIWAN SCRUBBER', 'TCO', 'TX', 'ZT-201', 'ZZW-0001', 'MDL-W1', 'F99',   'Operation');
+`;
+const KR_CHECKS = String.raw`
+reset role;
+-- [12] 국내 데모 표 · kr 등급 (v146)
+do $$ declare t text; bad text := ''; begin
+  foreach t in array array['wk','inst','roster','edu','leave','alarm','allbypass'] loop
+    if (select string_agg(column_name, ',' order by ordinal_position) from information_schema.columns where table_schema='public' and table_name='sheet_'||t)
+       is distinct from
+       (select string_agg(column_name, ',' order by ordinal_position) from information_schema.columns where table_schema='public' and table_name='kr_sheet_'||t)
+    then bad := bad || t || ' '; end if;
+  end loop;
+  perform t_ok(bad = '', '12-1 데모 표 일곱 — 운영 표와 열·순서가 같다 ' || bad);
+  perform t_ok(exists (select 1 from pg_indexes where tablename = 'kr_sheet_wk' and indexdef like '%regexp_replace%'),
+               '12-2 데모 수선실적도 S/N 식 인덱스를 받았다(like … including all)');
+  perform t_ok((select string_agg(op, ',' order by src_row) from kr_sheet_wk) = 'SEC Scrubber,SDC Scrubber',
+               '12-3 데모 수선실적 = 국내 운영단위 행만 (해외·빈 운영단위는 안 온다) ' || coalesce((select string_agg(coalesce(op,'∅'), ',' order by src_row) from kr_sheet_wk), ''));
+  perform t_ok((select string_agg(country, ',' order by src_row) from kr_sheet_inst) = 'SEC Scrubber,국내 기타 CHILLER',
+               '12-4 데모 설치현황 = 국내 Country 행만');
+  perform t_ok((select count(*) from kr_sheet_alarm) = (select count(*) from sheet_alarm where op in ('K운영','P운영','H운영'))
+           and (select count(*) from kr_sheet_allbypass) = 2 and not exists (select 1 from kr_sheet_allbypass where op is distinct from 'H운영'),
+               '12-5 원장 = K·P·H운영 행만 (해외 올바·운영단위 빈 행은 안 온다)');
+  perform t_ok((select count(*) from kr_sheet_roster) = (select count(*) from sheet_roster)
+           and (select count(*) from kr_sheet_edu) = (select count(*) from sheet_edu)
+           and (select min(id) from kr_sheet_roster) = 1,
+               '12-6 인원·교육 = 통째로 · id 는 데모 표의 새 번호(1 부터)');
+  perform t_ok((select rows from sheet_sync_log where tbl = 'kr_wk') = 2 and (select rows from sheet_sync_log where tbl = 'kr_inst') = 2
+           and (select ms from sheet_sync_log where tbl = 'kr_wk') = -1,
+               '12-7 데모 미러의 적재 기록(kr_wk · kr_inst) — 행수와 같다');
+end $$;
+insert into public.allowed_users values ('kr@test.local', false, 'kr');
+do $$ begin
+  begin insert into public.allowed_users values ('kr2@test.local', true, 'kr'); perform t_ok(false, '12-8 can_write 를 켠 kr 이 들어갔다');
+  exception when others then perform t_ok(sqlerrm like '%allowed_users_kr_ro_chk%', '12-8 kr 은 can_write 를 켤 수 없다 (' || sqlerrm || ')'); end;
+end $$;
+set role authenticated;
+-- kr — 운영 표에는 아무것도 못 쓴다(서버에서)
+do $$ declare r jsonb; begin perform t_as('kr@test.local');
+  begin insert into sheet_wk(src_row, op) values (8001, 'SEC Scrubber'); perform t_ok(false, '12-9 kr 이 운영 수선실적에 insert');
+  exception when others then perform t_ok(true, '12-9 운영 표 직접 쓰기 — RLS 가 막는다'); end;
+  begin perform csv_upload_begin('sheet_inst'); perform t_ok(false, '12-10 kr 이 운영 설치현황을 비웠다');
+  exception when others then perform t_ok(sqlerrm = 'read_only', '12-10 운영 표 비우기 → read_only (' || sqlerrm || ')'); end;
+  begin perform csv_window('sheet_wk', '2026-01-01', '2026-12-31', array['SEC Scrubber'], false); perform t_ok(false, '12-11 kr 이 운영 수선실적 구간을 지웠다');
+  exception when others then perform t_ok(sqlerrm = 'read_only', '12-11 운영 표 구간 교체 → read_only'); end;
+  begin perform edit_update('sheet_wk', 0, 'x', '{"stage":"CM"}'); perform t_ok(false, '12-12 kr 이 운영 행을 고쳤다');
+  exception when others then perform t_ok(sqlerrm like 'bad_table%', '12-12 데이터 관리로 운영 표 → bad_table (' || sqlerrm || ')'); end;
+  begin perform edit_restore((select min(id) from sheet_edits where tbl = 'sheet_wk' and op = 'update')); perform t_ok(false, '12-13 kr 이 운영 이력을 되돌렸다');
+  exception when others then perform t_ok(sqlerrm = 'not_restorable', '12-13 운영 이력 되돌리기 → not_restorable (' || sqlerrm || ')'); end;
+  begin perform edit_note('sheet_wk', 'upload:full', '*', null, '{}'::jsonb); perform t_ok(false, '12-14 kr 이 운영 표 이름으로 이력을 남겼다');
+  exception when others then perform t_ok(sqlerrm = 'read_only', '12-14 운영 표 업로드 요약 → read_only'); end;
+  begin perform edit_last_wk(array['ZZK-0001'], 'sheet_wk'); perform t_ok(false, '12-15 kr 이 운영 수선실적으로 채우기를 했다');
+  exception when others then perform t_ok(sqlerrm like 'bad_table%', '12-15 직전 실적(운영 표) → bad_table'); end;
+  begin perform edit_overwrites('sheet_wk'); perform t_ok(false, '12-16 kr 이 운영 표 덮어쓰기 경고를 불렀다');
+  exception when others then perform t_ok(sqlerrm = 'read_only', '12-16 운영 표 덮어쓰기 경고 → read_only'); end;
+end $$;
+-- kr — 데모 표에는 전부 된다
+do $$ declare r jsonb; h text; k bigint; n int; begin perform t_as('kr@test.local');
+  r := edit_get('kr_sheet_wk', 7001);
+  perform t_ok((r->>'ok')::boolean, '12-17 데모 행 읽기 (edit_get)');
+  r := edit_update('kr_sheet_wk', 7001, r->>'hash', '{"stage":"CM"}');
+  perform t_ok((r->>'ok')::boolean and (select stage from kr_sheet_wk where src_row = 7001) = 'CM'
+           and (select stage from sheet_wk where src_row = 7001) = 'BM', '12-18 데모 행 고치기 — 운영 행은 그대로');
+  perform t_ok((select tbl from sheet_edits order by id desc limit 1) = 'kr_sheet_wk', '12-19 이력은 kr_sheet_wk 로 남는다');
+  perform t_ok((select ms from sheet_sync_log where tbl = 'kr_wk') = -1, '12-20 캐시 도장은 kr_wk (운영 wk 가 아니다)');
+  r := edit_last_wk(array['zzk-0001'], 'kr_sheet_wk');
+  perform t_ok(r->'ZZK0001'->0->>'rs_code' = 'RS-K-1' and (r->'ZZK0001'->0->>'stage') = 'CM', '12-21 직전 실적 — 데모 수선실적에서 찾는다');
+  insert into kr_sheet_wk(src_row, op, rs_code, d_start) values (8001, 'SEC Scrubber', 'RS-K-9', '2026-06-01');
+  perform t_ok(exists (select 1 from kr_sheet_wk where src_row = 8001), '12-22 데모 표 직접 쓰기(업로드의 insert) — RLS 가 연다');
+  r := csv_window('kr_sheet_wk', '2026-06-01', '2026-06-01', array['SEC Scrubber'], false);
+  perform t_ok((r->>'hit')::int = 1 and not exists (select 1 from kr_sheet_wk where src_row = 8001), '12-23 데모 표 구간 교체 (csv_window)');
+  r := csv_upload_finish('kr_sheet_inst');
+  perform t_ok((r->>'log')::boolean and (select rows from sheet_sync_log where tbl = 'kr_inst') = 2, '12-24 데모 설치현황 적재 기록 (kr_inst)');
+  perform t_ok(edit_note('kr_sheet_alarm', 'upload:win', '*', null, '{"n":1}'::jsonb) > 0, '12-25 데모 표 업로드 요약 (edit_note)');
+  perform csv_upload_begin('kr_sheet_leave');
+  perform t_ok(not exists (select 1 from kr_sheet_leave), '12-26 데모 표 비우기 (csv_upload_begin)');
+  /* 인원 → 교육 연쇄는 «데모» 교육 표로 */
+  -- 1~11 의 연쇄 검사가 운영 인원의 사번을 이미 바꿨을 수 있다 — «데모 교육 표와 사번이 이어진» 데모 인원 한 명을 고른다
+  select r0.id, r0."사원번호" into k, h from kr_sheet_roster r0 join kr_sheet_edu e0 on e0."사원번호"::text = r0."사원번호" order by r0.id limit 1;
+  r := edit_get('kr_sheet_roster', k);
+  r := edit_update('kr_sheet_roster', k, r->>'hash', '{"사원번호":"9100091"}');
+  perform t_ok(k is not null and r->'cascade'->>'done' = 'true' and exists (select 1 from kr_sheet_edu where "사원번호" = 9100091)
+           and exists (select 1 from sheet_edu where "사원번호" = h::bigint) and not exists (select 1 from sheet_edu where "사원번호" = 9100091),
+               '12-27 데모 인원 사번을 바꾸면 «데모» 교육 표가 따라간다 — 운영 교육 표는 그대로 ' || coalesce((r->'cascade')::text, ''));
+end $$;
+-- editor(can_write · admin 아님)는 데모 표에 못 쓴다 · admin 은 쓴다 · viewer 는 읽기만
+do $$ begin perform t_as('ed@test.local');
+  begin insert into kr_sheet_wk(src_row, op) values (8101, 'SEC Scrubber'); perform t_ok(false, '12-28 editor 가 데모 표에 썼다');
+  exception when others then perform t_ok(true, '12-28 editor 는 데모 표에 못 쓴다(admin·kr 만)'); end;
+  begin perform csv_upload_begin('kr_sheet_wk'); perform t_ok(false, '12-29 editor 가 데모 표를 비웠다');
+  exception when others then perform t_ok(sqlerrm = 'read_only', '12-29 editor 의 데모 표 비우기 → read_only'); end;
+end $$;
+do $$ begin perform t_as('vw@test.local');
+  perform t_ok((select count(*) from kr_sheet_wk) >= 1, '12-30 viewer 도 데모 표를 읽는다');
+end $$;
+do $$ declare r jsonb; begin perform t_as('boss@test.local');
+  insert into kr_sheet_wk(src_row, op, rs_code) values (8201, 'SEC Scrubber', 'RS-K-A');
+  perform t_ok(exists (select 1 from kr_sheet_wk where src_row = 8201), '12-31 관리자는 데모 표에 쓴다');
+  r := edit_last_wk(array['ZZK-0001']);
+  perform t_ok(r->'ZZK0001'->0->>'rs_code' = 'RS-K-1' and (r->'ZZK0001'->0->>'stage') = 'BM', '12-32 한 인자 판은 운영 수선실적 그대로(껍데기)');
+  r := edit_get('sheet_wk', 0);
+  perform t_ok((r->>'ok')::boolean, '12-33 관리자는 운영 표도 그대로');
+end $$;
+reset role;
+do $$ declare f text; bad text := ''; begin
+  foreach f in array array['public._kr_can()', 'public._tbl_can_write(text)', 'public._is_kr()', 'public._edit_cascade_edu_t(jsonb,jsonb,bigint,text)'] loop
+    if has_function_privilege('authenticated', f, 'EXECUTE') or has_function_privilege('anon', f, 'EXECUTE') then bad := bad || f || ' '; end if;
+  end loop;
+  perform t_ok(bad = '', '12-34 새 내부 함수 넷은 실행 권한이 없다 ' || bad);
+  perform t_ok(has_function_privilege('authenticated', 'public.edit_last_wk(text[],text)', 'EXECUTE')
+           and not has_function_privilege('anon', 'public.edit_last_wk(text[],text)', 'EXECUTE'), '12-35 두 인자 edit_last_wk — authenticated 만');
+end $$;
+`;
+
 let skipped = 0;
 try {
   const init = run('initdb', ['-D', DATA, '-A', 'trust', '-U', 'postgres', '--no-sync']);
@@ -661,6 +786,28 @@ try {
   /* 검사가 «조용히 덜 돈» 것을 잡는다 — 블록 하나가 통째로 안 돌면 T_OK 개수가 모자란다 */
   const EXPECT = 110;
   ok(oks.length === EXPECT, 'T_OK 가 ' + oks.length + '개 — 기대 ' + EXPECT + '개 (검사가 덜 돌았거나 늘었다)');
+
+  console.log('[12] 국내 데모(v146) — 저장소의 setup-17-kr-demo.sql 을 두 번 먹이고 kr 등급의 범위를 본다');
+  const pK0 = psql(KR_SEED, 'kr-seed');
+  ok(!/ERROR/.test(pK0.stderr), '국내 씨앗 실패:\n' + pK0.stderr);
+  const krText = fs.readFileSync(KR_FILE, 'utf8');
+  const pK1 = psql(krText, 'setup17');
+  ok(!/ERROR/.test(pK1.stderr), 'setup-17-kr-demo.sql 적용 실패:\n' + pK1.stderr);
+  const pK2 = psql(krText, 'setup17b');          // 다시 Run — 데모 표가 비어 있지 않으면 복사를 건너뛴다(담당자가 올린 자료를 안 덮는다)
+  ok(!/ERROR/.test(pK2.stderr), 'setup-17-kr-demo.sql 두 번째 적용 실패:\n' + pK2.stderr);
+  ok(/이미 자료가 있어 건너뜀/.test(pK2.stderr), '12-0 두 번째 Run 은 복사를 건너뛴다 (NOTICE 없음)');
+  /* 두 인자 edit_last_wk 의 식도 식 인덱스와 «글자까지» 같아야 한다 — 데모 표는 like … including all 로 같은 식 인덱스를 받는다 */
+  const krFn = krText.slice(krText.indexOf('create or replace function public.edit_last_wk(p_sns text[], p_tbl text)'));
+  const krExpr = (krFn.match(/join public\.%1\$I t on (upper\(regexp_replace\(coalesce\(t\.sn_in[^\n]*?\)\)) = ks\.k/) || [])[1];
+  ok(!!idxExpr && !!krExpr && idxExpr === krExpr.replace(/\bt\./g, ''), '12-0b 두 인자 edit_last_wk 의 S/N 식 = 식 인덱스 (' + krExpr + ')');
+  const pK3 = psql(KR_CHECKS, 'kr-checks');
+  const outK = (pK3.stderr || '') + (pK3.stdout || '');
+  const oksK = outK.match(/T_OK [^\n]*/g) || [];
+  const badsK = outK.match(/ERROR:[^\n]*/g) || [];
+  oksK.forEach(() => pass++);
+  badsK.forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
+  const EXPECT_K = 35;
+  ok(oksK.length === EXPECT_K, '[12] T_OK 가 ' + oksK.length + '개 — 기대 ' + EXPECT_K + '개');
 } catch (e) {
   fail++; console.log('  ❌ ' + (e && e.message || e));
 } finally {

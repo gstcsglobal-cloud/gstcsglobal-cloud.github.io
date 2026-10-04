@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=147"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=148"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -458,6 +458,25 @@ const TABS = [
     dl:['소속','항목'] }
 ];
 TABS.forEach(t => { if(t.region) t.quick.unshift({ k:'region', l:'구분', t:'region' }); });
+/* ---------- 국내 데모 모드 (?site=KR · v146) ----------
+   주간현황(국내) 데모의 «데모 표»(kr_sheet_*)를 고친다 — 국내 운영자(kr)와 관리자가 쓴다. 같은 화면이 표 이름만 바꿔 돈다:
+   이 화면의 모든 읽기·쓰기(검색·편집·엑셀 일괄·이력·설비 칸 채우기)가 t.tbl 을 지나므로 여기 한 곳이면 된다.
+   ⚠ 운영 표 이름(sheet_wk 등)을 아래에 따로 적으면 그 자리만 운영 표를 건드린다 — 설비 칸 채우기·시작 검사도 TAB_BY 를 지난다.
+   ⚠ 막는 것은 서버다 — kr 은 _edit_key 가 «kr_ 표가 아니면 null»(= bad_table)이라 운영 표를 고칠 길이 없다(setup-17).
+   대상은 주간현황이 읽는 일곱 표뿐이다(자재는 데모 표가 없다). */
+const KR = (function(){ try{ return (new URLSearchParams(location.search).get('site') || '').toUpperCase() === 'KR'; }catch(e){ return false; } })();
+if(KR){
+  for(let i = TABS.length - 1; i >= 0; i--) if(TABS[i].id === 'mat') TABS.splice(i, 1);
+  TABS.forEach(t => { t.tbl = 'kr_' + t.tbl; });
+  /* 머리 — «어느 표를 고치는가»를 화면이 말한다(본 데이터 관리와 생김새가 같아 헷갈린다) · 원본 올리기도 데모 경로로 */
+  document.title = '국내 데모 — 데이터 관리 · CS Global Team';
+  const h1 = document.querySelector('h1'); if(h1) h1.textContent = '국내 데모 — 데이터 관리';
+  const sub = document.querySelector('.sub');
+  if(sub) sub.textContent = '주간현황(국내) 데모의 «데모 표»를 찾아 고칩니다 — 본 대시보드(해외 포함)는 한 글자도 안 바뀝니다. 모든 변경은 이력에 남고 되돌릴 수 있습니다.';
+  const up = document.getElementById('toUpload'); if(up){ up.href = '/upload/?site=KR'; up.target = 'gstUploadKR'; }
+  const gt = document.getElementById('gate');
+  if(gt) gt.innerHTML = '<b>국내 데모 — 관리자·국내 운영자 전용입니다</b><p>주간현황(국내) 데모의 데이터 관리는 관리자(쓰기 권한) 또는 국내 운영자 계정으로만 열립니다.</p>';
+}
 const TAB_BY = Object.fromEntries(TABS.map(t => [t.id, t]));
 const TAB_OF_TBL = Object.fromEntries(TABS.map(t => [t.tbl, t]));
 const NUM_TYPES = /^(bigint|integer|smallint|numeric|real|double precision)$/;
@@ -1461,7 +1480,7 @@ async function instAll(){
   S.inst = I;
   return I;
 }
-const touch = t => { if(!t || t.tbl === 'sheet_inst') S.inst = null; };
+const touch = t => { if(!t || t.id === 'inst') S.inst = null; };
 /* S/N 먼저(영숫자만 · 안 맞으면 채널 접미 L/R/S 를 떼고 한 번 더 — v92), S/N 이 없거나 못 찾으면 설비호기(CODE).
    여럿이 맞으면 «모른다» — 사람이 고르게 한다(엑셀은 비워 두고 알린다). 국내는 같은 설비호기 값이 여러 설비에 붙어
    있어(운영 실측) S/N 을 먼저 믿는다. */
@@ -1477,17 +1496,18 @@ function instFind(I, sn, code){
 async function lastWk(sns){
   const ks = Array.from(new Set(sns.map(N).filter(Boolean))), out = new Map();
   for(let i = 0; i < ks.length; i += 2000){
-    const r = await rpc('edit_last_wk', {p_sns:ks.slice(i, i + 2000)}) || {};
+    const r = await rpc('edit_last_wk', {p_sns:ks.slice(i, i + 2000), p_tbl:TAB_BY.wk.tbl}) || {};   // 어느 수선실적 표에서(국내 데모면 데모 표)
     Object.keys(r).forEach(k => out.set(k, r[k]));
   }
   return out;
 }
 /* 자재의 «그 수선실적» — 수선실적번호로. in(…) 도 서버 행수 상한에 잘린다 — 꽉 찬 장이면 반으로 쪼갠다(v128). */
 async function wkByRs(vals){
-  await loadCols(TAB_BY.wk);
-  const have = S.cols.sheet_wk || [], cols = WK_COLS.filter(c => have.indexOf(c) >= 0), out = new Map();
+  const W = TAB_BY.wk;                       // 국내 데모 모드면 데모 수선실적(kr_sheet_wk) — 표 이름을 여기 적지 않는다
+  await loadCols(W);
+  const have = S.cols[W.tbl] || [], cols = WK_COLS.filter(c => have.indexOf(c) >= 0), out = new Map();
   const go = async list => {
-    const r = await C.from('sheet_wk').select(cols.join(','), { count:'exact' }).in('rs_code', list).limit(1000);
+    const r = await C.from(W.tbl).select(cols.join(','), { count:'exact' }).in('rs_code', list).limit(1000);
     if(r.error) throw new Error(rpcErr(r.error));
     const d = r.data || [];
     if(r.count != null && r.count > d.length && list.length > 1){ const h = list.length >> 1; await go(list.slice(0, h)); await go(list.slice(h)); return; }
@@ -1588,7 +1608,7 @@ async function snFill(){
   const t = TAB_BY[S.cur.t], F = t.fill, LI = TAB_BY.inst;
   const val = c => { const el = $('editor').querySelector('[data-col="' + CSS.escape(c) + '"]'); return el ? el.value.trim() : ''; };
   /* 고치는 행이 수선실적이면 그 행 자신을 «직전 수선실적»으로 쓰지 않는다(자재의 행번호는 다른 표의 번호라 견주지 않는다) */
-  const it = { sn:val(F.sn), code:val(F.code), rs:F.parent ? val(F.parent) : '', skip: !S.cur.isNew && t.tbl === 'sheet_wk' ? S.cur.key : null };
+  const it = { sn:val(F.sn), code:val(F.code), rs:F.parent ? val(F.parent) : '', skip: !S.cur.isNew && t.id === 'wk' ? S.cur.key : null };
   if(!it.sn && !it.code && !it.rs){ snack((F.parent ? '수선실적번호나 ' : '') + 'S/N 을 먼저 적어 주세요', {err:true}); return; }
   snack('찾는 중…', {ms:30000});
   let f;
@@ -1697,8 +1717,8 @@ async function pickParent(t){
     nEl.innerHTML = '<span class="spin"></span> 찾는 중…';
     try{
       await loadCols(W);
-      const have = S.cols.sheet_wk || [], cols = WK_COLS.filter(c => have.indexOf(c) >= 0);
-      const r = await C.from('sheet_wk').select(cols.join(',')).or(['rs_code','sn_in','eq_no'].map(c => c + '.ilike.' + pt).join(',')).order('src_row', { ascending:false }).limit(50);
+      const have = S.cols[W.tbl] || [], cols = WK_COLS.filter(c => have.indexOf(c) >= 0);
+      const r = await C.from(W.tbl).select(cols.join(',')).or(['rs_code','sn_in','eq_no'].map(c => c + '.ilike.' + pt).join(',')).order('src_row', { ascending:false }).limit(50);
       if(my !== seq) return;                       // 그새 다시 찾았다
       if(r.error) throw new Error(rpcErr(r.error));
       rows = r.data || [];
@@ -2257,7 +2277,9 @@ const OP_VIEW = op => /^upload:/.test(op) ? { c:'x', l:'업로드 ' + ({full:'�
 const RESTORABLE = new Set(['update','insert','delete','dbw:update','dbw:append','dbw:delete']);
 function renderHistFilters(opt){
   opt = opt || {};
-  const tbls = [['', '모든 표']].concat(TABS.map(t => [t.tbl, t.name])).concat([['sheet_cip_f11', 'CIP F11'], ['sheet_cip_f16', 'CIP F16'], ['sheet_abp', 'ABP'], ['(old)', '옛 시트 편집 기록']]);
+  /* 국내 데모 모드는 데모 표의 이력만 — 운영 표 이력은 보여도 되돌릴 수 없고(서버가 not_restorable) 헷갈리기만 한다 */
+  const tbls = [['', KR ? '국내 데모 표 전부' : '모든 표']].concat(TABS.map(t => [t.tbl, t.name]))
+    .concat(KR ? [] : [['sheet_cip_f11', 'CIP F11'], ['sheet_cip_f16', 'CIP F16'], ['sheet_abp', 'ABP'], ['(old)', '옛 시트 편집 기록']]);
   $('hfilt').innerHTML = '<label class="sf"><span>표</span><select name="tbl">' + tbls.map(x => '<option value="' + esc(x[0]) + '"' + (opt.tbl === x[0] ? ' selected' : '') + '>' + esc(x[1]) + '</option>').join('') + '</select></label>'
     + '<label class="sf"><span>종류</span><select name="kind"><option value="">전부</option>' + Object.keys(OPS).map(k => '<option value="' + k + '"' + (opt.kind === k ? ' selected' : '') + '>' + esc(OPS[k].l) + '</option>').join('') + '</select></label>'
     + '<label class="sf"><span>행 번호 · id</span><input name="key" value="' + esc(opt.key || '') + '" placeholder="정확히"></label>'
@@ -2273,7 +2295,7 @@ async function loadHist(more){
   try{
     let q = C.from('sheet_edits').select('id,gid,tbl,row_key,op,before,after,edited_by,edited_at,ref').order('id', {ascending:false}).limit(51);
     if(more && H.last != null) q = q.lt('id', H.last);
-    if(f.tbl === '(old)') q = q.is('tbl', null); else if(f.tbl) q = q.eq('tbl', f.tbl);
+    if(f.tbl === '(old)') q = q.is('tbl', null); else if(f.tbl) q = q.eq('tbl', f.tbl); else if(KR) q = q.in('tbl', TABS.map(t => t.tbl));
     if(f.kind && OPS[f.kind]){ const o = OPS[f.kind]; q = o.like ? q.like('op', o.like) : q.in('op', o.ops); }
     if(f.key) q = q.eq('row_key', f.key);
     if(f.who){ const w = runs(f.who).join('*'); if(w) q = q.ilike('edited_by', '*' + w + '*'); }
@@ -2374,13 +2396,18 @@ function histView(e){
   try{
     await GST.authGate();
     await GST.loadMe();
-    if(!GST.isAdmin() || !GST.canWrite()){ $('gate').hidden = false; return; }
+    /* 국내 데모 모드는 «관리자(쓰기 권한) 또는 국내 운영자(kr)» — 서버 _edit_allow·_edit_key 와 같은 범위(setup-17) */
+    if(KR ? !(GST.isKrOp && GST.isKrOp()) : (!GST.isAdmin() || !GST.canWrite())){
+      /* 국내 운영자가 본 데이터 관리를 열었으면 — 막다른 길로 두지 않고 갈 곳을 적는다(업로드 화면과 같은 안내) */
+      if(!KR && GST._me && GST._me.role === 'kr') $('gate').insertAdjacentHTML('beforeend', '<p>국내 데모 자료는 「주간 현황(국내)」 화면의 「데이터 관리」로 고칩니다.</p>');
+      $('gate').hidden = false; return;
+    }
     C = await GST.db();
     if(!C) throw new Error('로그인 세션이 없습니다');
     const me = GST._me || {};
-    $('me').innerHTML = esc(me.email || '') + ' <span class="badge ad">' + esc(me.role === 'legacy' ? '관리자(legacy)' : '관리자') + '</span> <a class="lnk" href="/" target="_blank" rel="noopener">대시보드 ↗</a>';
+    $('me').innerHTML = esc(me.email || '') + ' <span class="badge ad">' + esc(me.role === 'kr' ? '국내 운영자' : me.role === 'legacy' ? '관리자(legacy)' : '관리자') + '</span> <a class="lnk" href="/" target="_blank" rel="noopener">대시보드 ↗</a>';
     $('app').hidden = false;
-    try{ await rpc('edit_cols', {p_tbl:'sheet_inst'}); S.ready = true; }
+    try{ await rpc('edit_cols', {p_tbl:TAB_BY.inst.tbl}); S.ready = true; }
     catch(e){
       S.ready = false; S.why = e.message;
       banner('bad', '<b>쓰기 기능이 잠겨 있습니다</b> — ' + esc(e.message) + '\n검색·보기는 됩니다. 고치기·넣기·지우기·되돌리기는 서버 준비가 끝난 뒤 열립니다.');
@@ -2389,8 +2416,9 @@ function histView(e){
        부작용 없는 호출로 있는지만 본다(없는 키 -1 · 없는 이력 -1). 없으면 그 단추만 잠그고 «무엇을 하면 되는지» 적는다. */
     if(S.ready){
       const miss = [];
-      for(const [fn, args, k] of [['edit_delete', {p_tbl:'sheet_wk', p_key:-1, p_hash:''}, 'del'], ['edit_restore', {p_id:-1}, 'restore'],
-                                  ['edit_get_many', {p_tbl:'sheet_wk', p_keys:[]}, 'bulk'], ['edit_bulk', {p_tbl:'sheet_wk', p_items:[]}, 'bulk']]){
+      const WT = TAB_BY.wk.tbl;   // 국내 데모 모드면 데모 표로 묻는다 — kr 은 운영 표에 bad_table 이라 «없다»로 잘못 읽힌다
+      for(const [fn, args, k] of [['edit_delete', {p_tbl:WT, p_key:-1, p_hash:''}, 'del'], ['edit_restore', {p_id:-1}, 'restore'],
+                                  ['edit_get_many', {p_tbl:WT, p_keys:[]}, 'bulk'], ['edit_bulk', {p_tbl:WT, p_items:[]}, 'bulk']]){
         try{ const r = await C.rpc(fn, args); if(r && fnMissing(r.error)){ S.can[k] = false; miss.push(fn); } }catch(e){}
       }
       const what = [];

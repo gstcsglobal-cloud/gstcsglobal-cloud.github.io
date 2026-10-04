@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=147"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=148"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write) 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB(옛 동작 그대로 보인다).
@@ -18,6 +18,9 @@ body:not([data-role="editor"]):not([data-role="legacy"]) #uploadBtn{display:none
 body:not([data-role="admin"]):not([data-role="legacy"]) #offlineBtn{display:none}
 /* 데이터 관리(/edit/)도 admin 만(v140) — 그 화면이 서버에서 admin+can_write 를 다시 본다(_edit_allow). 버튼은 길 안내일 뿐이다 */
 body:not([data-role="admin"]):not([data-role="legacy"]) #editBtn{display:none}
+/* 주간현황(국내) 데모 탭은 관리자·국내 운영자(kr)에게만(v146) — 국내 담당자가 운영해 보고 피드백을 주는 화면이다.
+   조회자에게 «데모»가 섞여 보이면 어느 숫자가 공식인지 헷갈린다. 등급을 모르면(로그인 직후) 숨겨 둔다(fail-closed). */
+body:not([data-role="admin"]):not([data-role="kr"]):not([data-role="legacy"]) .tab[data-id="report_kr"]{display:none}
 *{margin:0;padding:0;box-sizing:border-box}
 /* v139 — 라이트가 기본이다. 셸은 theme.css 를 싣지 않으므로 토큰을 여기 한 벌 더 둔다(이름은 theme.css 와 같다).
    다크(body.theme-slate)는 같은 이름에 어두운 값만 넣는다 — 컴포넌트 규칙은 한 벌이다. */
@@ -286,6 +289,7 @@ const SVG={
   tco:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>',
   cip:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>'
 };
+SVG.report_kr = SVG.report;   // 주간현황(국내) 데모 — 같은 그림(v146)
 const TABS=[
   {id:'report',  path:'/report/',   ko:'주간 현황', en:'Weekly',       zh:'周现况', ja:'週間現況'},
   {id:'hr',      path:'/hr/',       ko:'인원 현황', en:'Workforce',    zh:'人员',   ja:'人員'},
@@ -294,8 +298,13 @@ const TABS=[
   {id:'fault',   path:'/fault/',    ko:'고장 분석', en:'Fault',        zh:'故障',   ja:'故障'},
   {id:'material',path:'/material/', ko:'자재 실적', en:'Material',     zh:'材料',   ja:'資材'},
   {id:'cip',     path:'/cip/',      ko:'CIP 현황',  en:'CIP',          zh:'CIP',    ja:'CIP'},
-  {id:'tco',     path:'/tco/',      ko:'TCO',       en:'TCO',          zh:'TCO',    ja:'TCO'}
+  {id:'tco',     path:'/tco/',      ko:'TCO',       en:'TCO',          zh:'TCO',    ja:'TCO'},
+  /* 주간현황(국내) 데모 (v146) — 맨 뒤에 둔다(숫자 단축키 1~6 의 자리를 안 바꾼다). roles 밖의 등급에게는 탭이 안 보이고
+     자동순회 목록에도 안 든다(tabOn). 화면 자체는 데모 표(kr_)를 읽는다 — report-kr/index.html 머리 주석. */
+  {id:'report_kr',path:'/report-kr/', ko:'주간 현황(국내)', en:'Weekly (Korea)', zh:'周现况(国内)', ja:'週間現況(国内)', roles:['admin','kr','legacy']}
 ];
+/* 이 등급에게 보이는 탭인가 — 탭 버튼(CSS)·자동순회 목록이 같은 규칙을 본다. 등급을 모르면 roles 가 있는 탭은 안 보인다. */
+function tabOn(t){ return !t.roles || t.roles.indexOf((document.body && document.body.dataset.role) || '') >= 0; }
 
 const L={
   ko:{tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',offline:'오프라인',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!'},
@@ -406,7 +415,7 @@ function kioskBuildPanel(){
     sec.querySelectorAll('.kp-chip').forEach(x=>x.classList.toggle('on',x===b)); kioskEst(); });
   // 페이지 — 탭 정의에서 만든다(탭이 늘면 여기도 자동으로 는다)
   const pg=document.getElementById('kkPages');
-  pg.innerHTML = TABS.map(t=>'<label><input type="checkbox" value="'+t.id+'"'
+  pg.innerHTML = TABS.filter(tabOn).map(t=>'<label><input type="checkbox" value="'+t.id+'"'
     +((!KIOSK.pages.length||KIOSK.pages.indexOf(t.id)>=0)?' checked':'')+'> '+(t[LANG]||t.ko)+'</label>').join('');
   pg.onchange=kioskEst;
   kioskAsk();
@@ -746,6 +755,9 @@ const ASK_BATCH=2, ASK_GAP=2500;
    gst-filter 로 같은 값을 보낸다(core 가 250ms×40 재시도로 받는 기존 경로 · v103). */
 function frameSrc(f, tab, fState){
   if(window.__OFFLINE_FILES){
+    /* 등급 전용 탭(데모 · v146)은 오프라인 판에 «일부러» 넣지 않는다 — 오프라인은 조회자 고정이라 탭이 안 보이고, 데모 표는 스냅샷에 없다.
+       그 탭만 «없다»고 말하는 쪽지를 띄운다. 그 밖의 경로가 없으면 지금처럼 저쪽이 크게 던진다(조립 사고는 조용하면 안 된다). */
+    if(tab.roles && !tabOn(tab)){ f.srcdoc='<!doctype html><meta charset="utf-8"><p style="font:14px sans-serif;padding:24px;color:#555">이 화면은 오프라인 판에 없습니다.</p>'; return; }   // ⚠ body 닫는 태그를 쓰지 말 것(주석에도) — 오프라인 조립기가 셸에서 그 태그를 정확히 1개로 센다
     f.srcdoc = window.__offlinePage(tab.path);   // 없는 경로면 저쪽이 크게 던진다 — 조용한 빈 탭 금지
     if(fState) f.addEventListener('load', ()=>{ try{ f.contentWindow.postMessage({type:'gst-filter', f:fState}, '*'); }catch(e){} });
   } else {
@@ -753,7 +765,7 @@ function frameSrc(f, tab, fState){
   }
 }
 function askLoadAll(){
-  const miss=TABS.filter(t=>!frames[t.id]);
+  const miss=TABS.filter(t=>tabOn(t)&&!frames[t.id]);   // 이 등급에게 안 보이는 탭(데모)은 불러오지 않는다(v146)
   if(!miss.length)return false;
   const mk=t=>{ const f=document.createElement('iframe'); frameSrc(f, t, ''); f.dataset.id=t.id;
     document.getElementById('frameWrap').appendChild(f); frames[t.id]=f; };
@@ -783,7 +795,7 @@ async function askSend(){
     if(!ans){ ans=GST.chatLocal(q,packs); mode='기본'; }
     wait.remove();
     if(!ans){
-      const unopened=TABS.filter(t=>!frames[t.id]).length;
+      const unopened=TABS.filter(t=>tabOn(t)&&!frames[t.id]).length;
       askSay('a','그 값은 지금 열려 있는 탭에서 못 찾았습니다.'
         +(unopened?('\n안 연 탭이 '+unopened+'개 있습니다 — 아래 버튼을 누르면 전 탭을 불러와 다음 질문부터 함께 찾습니다.'):'')
         +'\n※ AI 응답은 kakao-bot 엣지펑션(op=web 지원 버전)이 배포돼 있어야 합니다.');
@@ -897,11 +909,11 @@ function start(){
 }
 
 
-// 키보드 단축키: 1~6 탭 전환
+// 키보드 단축키: 숫자로 탭 전환 — 이 등급에게 안 보이는 탭(데모 · v146)은 건너뛴다(9 를 누르면 숨긴 탭이 열리던 틈)
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;
   const n=parseInt(e.key);
-  if(n>=1 && n<=TABS.length) switchTab(TABS[n-1].id);
+  if(n>=1 && n<=TABS.length && tabOn(TABS[n-1])) switchTab(TABS[n-1].id);
 });
 
 // 초기화 — 로그인 성공 전에는 start()가 호출되지 않는다(대시보드가 열리지 않음)
