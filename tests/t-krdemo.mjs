@@ -262,6 +262,9 @@ function seedOf(over) {
     rs_code:'RS-D-' + pad(i), eq_no:'ZK-0' + pad(i), sn_in:'ZKD-00' + pad(i), work_min:'60', man_min:'120', workers:'W1,W2', action:act, model:'MDL-K' });
   const kwk = [dw(0, 5, 'BM', 'P1', 'RESET'), dw(1, 12, 'TBM', 'P1', '설비 PM'), dw(2, 20, 'CM', 'P2', 'CLEAN'), dw(3, 35, 'BM', 'P2', 'RESET'),
     dw(4, 50, 'TBM', 'P1', 'SWAP'), dw(5, 70, 'BM', 'P2', 'RESET'),
+    /* v147 공수 보정 — 작업공수 빈칸(작업시간 60 × 작업자 2 = 120 으로 메움) · 한 건 25h(1,500분 — 공수에서 빼고 건수엔 남김) */
+    Object.assign(dw(7, 9, 'CM', 'P1', 'CLEAN'), { man_min:null, work_min:'60', worker_cnt:'2' }),
+    Object.assign(dw(8, 10, 'BM', 'P2', 'RESET'), { man_min:'1500', work_min:'1500', worker_cnt:'1' }),
     { src_row:6, op:'GST TAIWAN SCRUBBER', customer:'TESTCO (F16)', line:'F16', stage:'BM', d_start:dAgo(8), rs_code:'RS-O-01', sn_in:'ZTW-0001', work_min:'30' }
   ].map(r => full(WK_COLS, Object.assign({ synced_at:SYNC_AT }, r)));
   const di = (i, campus) => ({ src_row:i, country:'SEC Scrubber', customer:'삼성전자(주)', location:campus, code:'ZK-0' + pad(i), sn:'ZKD-00' + pad(i),
@@ -402,7 +405,25 @@ const KR_TBLS = ['kr_sheet_wk','kr_sheet_inst','kr_sheet_roster','kr_sheet_edu',
     drop:window._KRDEMO_DROP, dropTxt:(document.getElementById('krDrop') || {}).textContent, dropVis:!(document.getElementById('krDrop') || {}).hidden,
     reg:GST.filters.options('region'), st:(document.getElementById('status') || {}).textContent || '', h1:document.querySelector('h1').textContent,
     bar:(document.getElementById('krDemo') || {}).innerText || '' }));
-  is(S.wk === 6 && S.wkKr && !/ZT/.test(S.rs), '수선실적 — 국내 6행만 (해외 1행은 뺐다) (' + S.wk + ')');
+  is(S.wk === 8 && S.wkKr && !/ZT/.test(S.rs), '수선실적 — 국내 8행만 (해외 1행은 뺐다) (' + S.wk + ')');
+  /* v147 공수 보정 — 빈 작업공수 = 작업시간×작업자수 · 24h 초과는 공수 0(건수엔 남음) · ⚠ 심벌은 제목·KPI 옆 · 누르면 팝업 · 품질 카드 */
+  const MH = await pg.evaluate(() => { const a = WK.find(x => x.eqNo === 'ZK-007'), b = WK.find(x => x.eqNo === 'ZK-008');
+    const card = document.getElementById('cMan').closest('.card');
+    return { a:a && [a.manMin, a.mhFilled, a.mhBig], b:b && [b.manMin, b.mhRaw, b.mhBig], s:window._KRMH && { f:window._KRMH.filled, n:window._KRMH.big.length },
+      badge:[!!card.querySelector('h3 .mhw'), !!document.getElementById('kp5').closest('.krow').querySelector('.mhw')],
+      noteTxt:card.querySelector('.card-note').textContent,
+      dq:(() => { try { return (JSON.parse(localStorage.getItem('gst_dq_report_kr') || '{}').items || []).map(x => x.key); } catch (e) { return ['ERR']; } })() }; });
+  is(MH.a && MH.a[0] === 120 && MH.a[1] === true && MH.a[2] === false, '빈 작업공수 → 작업시간×작업자수 (60×2=120) ' + JSON.stringify(MH.a));
+  is(MH.b && MH.b[0] === 0 && MH.b[1] === 1500 && MH.b[2] === true, '25h 행 → 공수 0 · 원값 1,500분 보존 ' + JSON.stringify(MH.b));
+  is(MH.s && MH.s.f === 1 && MH.s.n === 1, '_KRMH — 메운 1 · 뺀 1 ' + JSON.stringify(MH.s));
+  is(MH.badge[0] && MH.badge[1], '⚠ 심벌 — 작업 공수 제목 · 인당 공수 KPI 옆 ' + JSON.stringify(MH.badge));
+  is(!/24h|제외 1|메움/.test(MH.noteTxt), '카드 주석에는 문장을 더 쓰지 않는다 (' + MH.noteTxt + ')');
+  is(MH.dq.indexOf('kr_mh') >= 0, '데이터 품질 카드에 kr_mh 신호 (' + MH.dq.join(',') + ')');
+  const MD = await pg.evaluate(() => { document.getElementById('cMan').closest('.card').querySelector('h3 .mhw').click();
+    const ov = document.querySelector('.gpv-t'); const rows = ov ? Array.from(ov.querySelectorAll('tbody tr')).map(r => Array.from(r.children).map(c => c.textContent).join('|')) : null;
+    const sub = (document.querySelector('.gov-sub') || {}).textContent || ''; GST._ovClose && GST._ovClose(); return { rows, sub }; });
+  is(MD.rows && MD.rows.length === 1 && /\|ZK-008\|25\|1,500\|/.test(MD.rows[0]), '심벌 클릭 → 뺀 행 1건(ZK-008 · 25h · 1,500분) ' + JSON.stringify(MD.rows));
+  is(/24h/.test(MD.sub) && /빈 1건/.test(MD.sub), '팝업 설명에 기준(24h)·메운 건수 (' + MD.sub.slice(0, 80) + ')');
   is(S.inst === 4, '설치현황 — 국내 4대만 (' + S.inst + ')');
   is(S.ro === 3 && S.roKr, '인원 — 국내 3명만 (' + S.ro + ')');
   is(JSON.stringify(S.drop) === '{"w":1,"i":1,"r":1}' && S.dropVis && /수선실적 1/.test(S.dropTxt) && /설치현황 1/.test(S.dropTxt) && /인원 1/.test(S.dropTxt),
