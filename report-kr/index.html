@@ -153,6 +153,10 @@ body{
 .mp-btn.active{background:var(--accent-1);color:#fff}
 .card h3{font-size:14px;font-weight:600;margin-bottom:4px;color:var(--txt-main)}
 .card .card-note{font-size:12px;color:var(--txt-muted);margin-bottom:10px}
+/* ⚑ 국내 데모 — 공수 보정 ⚠ 심벌(v147) · 제목·KPI 옆 인라인 */
+.mhw{display:inline-block;margin-left:6px;vertical-align:middle;border:1px solid var(--warn,#d97706);background:var(--warn-soft,#fff7ed);color:var(--warn,#b45309);border-radius:7px;font-size:12px;line-height:18px;padding:0 6px;cursor:pointer;font-weight:600;font-family:inherit}
+.mhw:hover{filter:brightness(.95)}
+@media print{.mhw{display:none!important}}
 .card .cw{position:relative;height:var(--ch-std,240px)}
 .bignums{display:flex;flex-direction:column;gap:14px;justify-content:center;height:250px}
 .bn{display:flex;align-items:baseline;gap:10px}
@@ -468,6 +472,9 @@ ko:{sl_more:'주간현황 전용',title:'주간 현황(국내)',kr_demo_t:'국�
  ch_edu:'교육 완료율 추이',note_edu:'이수일 기준 누적 완료 / 해당 시점 재직 인원',
  ch_jobs:'작업 건수',note_jobs:'전체 작업 실적 · 최대/최신값 라벨',
  ch_man:'작업 공수 (h)',note_man:'PM · 서비스 · 설치 구분 (이상치 제외)',man_pm:'PM',man_np:'非PM',man_svc:'서비스',man_inst:'설치',
+ mhw_tip:'공수 보정 — 한 건 {h}h 초과 {n}건 제외 · 빈 작업공수 {f}건은 작업시간×작업자수 · 누르면 목록',mhw_title:'작업 공수 보정 내역',mhw_cols:'작업일|작업단계|단지|설비호기|작업공수(h)|작업시간(분)|작업자수',
+ mhw_note:'한 건 {h}h 를 넘는 {n}건은 공수에서 뺐습니다(작업 건수에는 포함) · 「작업공수」가 빈 {f}건은 작업시간×작업자수로 메웠습니다',
+ dq_mh:'공수 보정 — 한 건 {h}h 초과 {n}건 제외 · 빈 작업공수 {f}건은 작업시간×작업자수',dq_mh_a:'실적현황 원본의 작업공수(분)를 확인하세요 — 월 단위로 몰아 적은 행은 날짜별로 나누고 빈 칸은 채우면 보정 없이 그대로 셉니다',
  ch_pc:'인당 작업 건수',note_pc:'구간 내 실제 투입 인원 기준',
  ch_sc:'PM 계획 대비 완료 (올해 누적)',note_sc:'계획 = 설비별 주기 기반 도래 건수 · 진행율은 툴팁',sc_plan:'계획(누적)',sc_done:'완료(누적)',
  ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',pv_stage:'작업단계',pv_sn:'설비 S/N',pv_s_ft:'고장 (BM·수리)',pv_s_wk:'작업 실적 (전체)',pv_s_hr:'인원',pv_s_io:'입·퇴사',pv_join:'입사',pv_quit:'퇴사',pv_active:'재직',ft_total:'건수',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) 만',ftv_abp:'All By-Pass 만',dq_kra:'국내 알람 원장이 비어 수선실적 BM 으로 세는 중',dq_kra_a:'/upload/ 에서 「CS 알람관리」 워크북을 «알람» 대상으로 올리세요',dq_krb:'국내 All By-Pass 원장이 비어 그 지표가 0 입니다',dq_krb_a:'같은 워크북을 «올바이패스» 대상으로 한 번 더 올리세요',dq_divj:'실적 행에 사업부가 안 붙었습니다 — 사업부 필터에서 그 행은 그냥 통과합니다',dq_divj_a:'설치현황의 S/N 표기를 확인하세요 — 실적의 설비호기와 이어져야 합니다',dq_krj:'국내 원장 행이 설치현황과 안 이어졌습니다 — 단지·라인이 「미상」으로 몰립니다',dq_krj_a:'원장의 SEQP S/N 표기를 설치현황 S/N 과 맞추세요',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
@@ -487,6 +494,9 @@ en:{sl_more:'Weekly only',title:'Weekly Status (Korea)',kr_demo_t:'Korea demo',k
  ch_edu:'Training Completion Trend',note_edu:'cumulative completions / active headcount',
  ch_jobs:'Job Count',note_jobs:'all work records · peak/latest labeled',
  ch_man:'Man-hours (h)',note_man:'PM · Service · Install (outliers excluded)',man_pm:'PM',man_np:'Non-PM',man_svc:'Service',man_inst:'Install',
+ mhw_tip:'Man-hour adjustments — {n} rows over {h}h excluded · {f} blank rows filled with work min × workers · click for the list',mhw_title:'Man-hour adjustments',mhw_cols:'Date|Stage|Site|Equipment|Man-hours (h)|Work min|Workers',
+ mhw_note:'{n} rows over {h}h each were excluded from man-hours (still counted as jobs) · {f} rows with a blank man-hour cell were filled with work minutes × workers',
+ dq_mh:'Man-hour adjustments — {n} rows over {h}h excluded · {f} blank rows = work min × workers',dq_mh_a:'Check the man-hour (min) column in the source file — split month-lump rows by date and fill blanks; then no adjustment applies',
  ch_pc:'Jobs per Person',note_pc:'based on workers actually deployed in period',
  ch_sc:'PM Plan vs Done (YTD cumulative)',note_sc:'plan = due events from per-tool cycles · progress in tooltip',sc_plan:'Plan (cum)',sc_done:'Done (cum)',
  ch_ft:'Alarm · Fault Count',note_ft:'Alarm=BM · All By-Pass separate · Total=sum',pv_stage:'Stage',pv_sn:'Equipment S/N',pv_s_ft:'Faults (BM)',pv_s_wk:'All work records',pv_s_hr:'Headcount',pv_s_io:'Join / Leave',pv_join:'Join',pv_quit:'Leave',pv_active:'Active',ft_total:'Count',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) only',ftv_abp:'All By-Pass only',dq_kra:'Domestic alarm ledger is empty — counting BM from the repair sheet instead',dq_kra_a:'Upload the CS alarm workbook as the «alarm» target via /upload/',dq_krb:'Domestic All By-Pass ledger is empty — that metric reads 0',dq_krb_a:'Upload the same workbook again as the «All By-Pass» target',dq_divj:'Some job rows have no division attached — they pass the division filter unfiltered',dq_divj_a:'Check the S/N wording in the install sheet against the job sheet',dq_krj:'Ledger rows did not join the install sheet — site/line fall into “unknown”',dq_krj_a:'Align the SEQP S/N wording in the ledger with the install sheet S/N',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP Progress',note_cip:'target = Not yet + done · done = dated cells · rate in tooltip',cip_t:'Target',cip_d:'Done',cip_p:'Progress',edu_tt:'{n} targets',
@@ -506,6 +516,9 @@ zh:{sl_more:'仅周现况',title:'周间现况(国内)',kr_demo_t:'国内演示'
  ch_edu:'教育完成率趋势',note_edu:'按完成日累计 / 当时在职人数',
  ch_jobs:'作业件数',note_jobs:'全部作业实绩 · 最大/最新标注',
  ch_man:'作业工时(h)',note_man:'PM·服务·安装区分(除异常值)',man_pm:'PM',man_np:'非PM',man_svc:'服务',man_inst:'安装',
+ mhw_tip:'工时修正 — 单行超过{h}h的{n}行已排除 · 工时空白的{f}行以作业时间×作业人数补入 · 点击查看列表',mhw_title:'作业工时修正明细',mhw_cols:'作业日|作业阶段|园区|设备号|工时(h)|作业时间(分)|作业人数',
+ mhw_note:'单行超过{h}h的{n}行已从工时中排除(件数仍计入) · 工时空白的{f}行以作业时间×作业人数补入',
+ dq_mh:'工时修正 — 超过{h}h {n}行排除 · 空白工时{f}行=作业时间×作业人数',dq_mh_a:'请核对实绩原表的作业工时(分) — 按月汇总填写的行请按日期拆分、空白请补填，之后不再修正',
  ch_pc:'人均作业件数',note_pc:'按区间内实际投入人员',
  ch_sc:'PM计划 vs 完成(今年累计)',note_sc:'计划=按设备周期到期件数 · 进度见提示框',sc_plan:'计划(累计)',sc_done:'完成(累计)',
  ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass另计 · Total=合计',pv_stage:'作业阶段',pv_sn:'设备S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全部作业记录',pv_s_hr:'人员',pv_s_io:'入职·离职',pv_join:'入职',pv_quit:'离职',pv_active:'在职',ft_total:'件数',ftv_all:'Alarm + All By-Pass',ftv_alarm:'仅 Alarm(BM)',ftv_abp:'仅 All By-Pass',dq_kra:'国内报警台账为空 — 正以维修实绩 BM 计算',dq_kra_a:'请在 /upload/ 将「CS 报警管理」工作簿作为«报警»对象上传',dq_krb:'国内 All By-Pass 台账为空 — 该指标为 0',dq_krb_a:'请将同一工作簿再作为«All By-Pass»对象上传一次',dq_divj:'部分实绩行未关联事业部 — 这些行会直接通过事业部筛选',dq_divj_a:'请确认安装现况的 S/N 写法与实绩的设备号一致',dq_krj:'台账行未与安装现况关联 — 园区·线别会归入「未知」',dq_krj_a:'请使台账的 SEQP S/N 写法与安装现况 S/N 一致',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP进度',note_cip:'对象=Not yet+完成 · 完成=有完成日 · 进度见提示框',cip_t:'对象',cip_d:'完成',cip_p:'进度',edu_tt:'对象 {n}名',
@@ -525,6 +538,9 @@ ja:{sl_more:'週間現況専用',title:'週間現況(国内)',kr_demo_t:'国内�
  ch_edu:'教育完了率推移',note_edu:'完了日基準の累計 / 当時の在籍数',
  ch_jobs:'作業件数',note_jobs:'全作業実績 · 最大/最新ラベル',
  ch_man:'作業工数(h)',note_man:'PM·サービス·設置区分(異常値除外)',man_pm:'PM',man_np:'非PM',man_svc:'サービス',man_inst:'設置',
+ mhw_tip:'工数補正 — 1件{h}h超の{n}行を除外 · 工数空欄の{f}行は作業時間×作業者数で補完 · クリックで一覧',mhw_title:'作業工数 補正内訳',mhw_cols:'作業日|作業段階|拠点|設備番号|工数(h)|作業時間(分)|作業者数',
+ mhw_note:'1件{h}hを超える{n}行は工数から除外(件数には含む) · 工数が空欄の{f}行は作業時間×作業者数で補完',
+ dq_mh:'工数補正 — {h}h超 {n}行除外 · 空欄工数 {f}行=作業時間×作業者数',dq_mh_a:'実績原本の作業工数(分)を確認 — 月まとめ行は日付ごとに分け、空欄を埋めれば補正なしで集計します',
  ch_pc:'一人当たり作業件数',note_pc:'区間内の実投入人員基準',
  ch_sc:'PM計画対完了(今年累計)',note_sc:'計画=設備別周期の到来件数 · 進捗はツールチップ',sc_plan:'計画(累計)',sc_done:'完了(累計)',
  ch_ft:'Alarm · 故障件数',note_ft:'Alarm=BM · All By-Pass別途 · Total=合計',pv_stage:'作業段階',pv_sn:'設備S/N',pv_s_ft:'故障 (BM)',pv_s_wk:'全作業記録',pv_s_hr:'人員',pv_s_io:'入社·退社',pv_join:'入社',pv_quit:'退社',pv_active:'在籍',ft_total:'件数',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) のみ',ftv_abp:'All By-Pass のみ',dq_kra:'国内アラーム元帳が空で、修繕実績 BM で数えています',dq_kra_a:'/upload/ で「CS アラーム管理」ワークブックを«アラーム»対象としてアップロードしてください',dq_krb:'国内 All By-Pass 元帳が空で、その指標が 0 です',dq_krb_a:'同じワークブックを«All By-Pass»対象としてもう一度アップロードしてください',dq_divj:'一部の実績行に事業部が付いていません — その行は事業部フィルタを素通りします',dq_divj_a:'設置現況の S/N 表記が実績の設備号と合っているか確認してください',dq_krj:'元帳の行が設置現況と結びつきませんでした — 団地·ラインが「不明」に寄ります',dq_krj_a:'元帳の SEQP S/N 表記を設置現況の S/N に合わせてください',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP進捗',note_cip:'対象=Not yet+完了 · 完了=完了日入力 · 進捗はツールチップ',cip_t:'対象',cip_d:'完了',cip_p:'進捗',edu_tt:'対象 {n}名',
@@ -768,6 +784,16 @@ const MS=86400000;
 // 숫자 파싱 — 콤마/공백/단위 등 서식이 섞여도 값 그대로 읽기(값 누락 방지). 빈칸·비숫자는 0.
 function numv(s){ if(s==null)return 0; if(typeof s==='number')return isFinite(s)?s:0;
   const v=parseFloat(String(s).replace(/[^0-9.\-]/g,'')); return isFinite(v)?v:0; }
+/* ⚑ 국내 데모 — 공수 보정 두 가지 (사용자 확정 2026-10-07 · v147).
+   ① 「작업공수」가 빈 행은 작업시간(분) × 작업자수 로 메운다. 실측(P운영 2026-10 추출본): 1~4월은 달마다 5~6천 행 중
+      작업공수가 찬 행이 2~23건뿐이고(5월부터 입력 시작), 작업시간·작업자수는 전 행에 있으며, 셋이 다 있는 19,888행 중
+      19,881행이 정확히 그 곱이다. 그래서 그 곱을 쓴다 — 공수 차트가 1~4월에 0 으로 서던 원인이 이것이다.
+   ② 한 건이 24h 를 넘는 행은 공수에서 뺀다(작업 «건수»에는 그대로 남는다). 실측 8월 「기타」 44,624분(=31일)짜리 행 134건 —
+      월 단위로 몰아 적은 값이라 하루 28.4h 라는 불가능한 인당 공수가 나왔다.
+   둘 다 «조용히» 하지 않는다. 다만 사용자 요청대로 차트에 글자를 더 쓰지 않는다 — 작업 공수 카드 제목과 인당 공수 KPI 옆에
+   ⚠ 심벌 하나, 누르면 뺀 행 목록과 메운 건수가 팝업으로. 데이터 품질 카드(GST.dq)에도 같은 사실이 실린다.
+   ⚠ 해외 주간현황(report/index.html)은 손대지 않았다 — 제3원칙(해외 기준은 별도 지시까지 그대로). 국내 데모 전용 규칙이다. */
+const KR_MH_MAX_MIN = 24*60;
 /* '2022. 8. 1' / '2025-07-10' / 엑셀 시리얼(46153) / Date — 정본은 core.js GST.toDate 다 (v135).
    예전에는 여기 사본이 '2022. 8. 1' 을 UTC 자정으로 읽고 core 는 로컬 자정으로 읽어, 같은 문자열에
    하루 다른 날짜를 냈다(두 시계). 사본을 지우고 core 를 넓혔다 — t-quiet [1b] 가 옛 표기 전부를 대조한다. */
@@ -1326,7 +1352,12 @@ async function loadData(){
     WK = wk.status==='fulfilled'?wk.value.rows.slice(HI_WK+1).map(r=>{
       const stg=String(r[CW.stage]||'').trim().toUpperCase().replace(/\s/g,'');
       const wd=pd(r[CW.work]); if(!stg||!wd)return null;
-      const manMin=numv(r[CW.manMin]), workMin=numv(r[CW.workMin]);
+      const manMin0=numv(r[CW.manMin]), workMin=numv(r[CW.workMin]), workerN=numv(r[CW.workerCnt]);
+      /* ⚑ 국내 데모 — 공수 보정(KR_MH_MAX_MIN 주석). 원값은 mhRaw 에 남겨 팝업이 보여 준다 */
+      let manMin=manMin0, mhFilled=false, mhBig=false;
+      if(!(manMin>0) && workMin>0 && workerN>0){ manMin=workMin*workerN; mhFilled=true; }
+      const mhRaw=manMin;
+      if(manMin>KR_MH_MAX_MIN){ mhBig=true; manMin=0; }
       // 라인·S/N은 전각(ＰＳＭＣ·Ｆ１６)이 섞여 들어오므로 반각으로 통일한다.
       // fabOf가 빈 값이면 원본으로 폴백하는데, 그 폴백까지 정규화해야 PSMC와 ＰＳＭＣ가 한 그룹이 된다.
       const lineN=GST.nfw(String(r[CW.line]||'')).trim();
@@ -1337,7 +1368,7 @@ async function loadData(){
         chamber:String(r[CW.chamber]||'').trim(),cause:String(r[CW.cause]||'').trim(),
         alarm:String(r[CW.alarm]||'').trim(),
         phenom:String(r[CW.phenom]||'').trim(),action:String(r[CW.action]||'').trim(),
-        manMin:manMin,   // 값 그대로 합산 — 상한/이상치 제거 없음(엑셀 매크로와 동일)
+        manMin:manMin, mhRaw:mhRaw, mhFilled:mhFilled, mhBig:mhBig,   // ⚑ 국내 데모 — 보정 뒤 값으로 합산(원값 mhRaw · 24h 초과는 0 · 메운 행은 mhFilled)
         workMin:workMin,
         eqNo:String(r[CW.eqNo]||'').trim(),
         workers:String(r[CW.workers]||'').split(/[,、;/]+/).map(s=>s.trim()).filter(Boolean)};
@@ -1353,6 +1384,8 @@ async function loadData(){
     /* ⚑ 몇 행을 뺐는지 띠에 적는다 — 조용히 빼지 않는다(인원은 통째로 복사해 해외 인원이 들어 있다 · 구분 미상도 여기서 빠진다) */
     window._KRDEMO_DROP = { w:_n0[0]-WK.length, i:_n0[1]-INST.length, r:_n0[2]-ROSTER.length };   // ⚠ _KRDROP 은 원장 «집계 제외» 목록(본 화면) — 이름을 겹치지 말 것
     krDropNote();
+    /* ⚑ 국내 데모 — 공수 보정 집계(로드마다 새로 · 국내로 거른 뒤). 카드의 ⚠ 심벌과 데이터 품질 카드가 읽는다 */
+    window._KRMH = { filled: WK.filter(x=>x.mhFilled).length, big: WK.filter(x=>x.mhBig) };
     /* 실적에 «사업부»를 실어 준다 — 설치현황에만 있는 열이라 조인해야 얻는다.
        설비호기 → S/N 순으로 찾는 것은 Floor 조인과 같은 규약(GST.ORG.instIndex).
        ⚠ 한 번만 만든다. rows() 는 필터를 만질 때마다 불리므로 거기서 조인하면
@@ -2384,6 +2417,7 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
           tooltip:{callbacks:{footer:it=>t('man_sum')+' '+(hTot[it[0].dataIndex]??0)+'h'}}},
         scales:baseScales(TH,true)},
       plugins:[valLabelPlugin]});
+    krMhBadge();   // ⚑ 국내 데모 — 보정이 있을 때만 ⚠ (제목·KPI 옆)
     const _mi=hPM.length-1, _tot=hTot[_mi]??0;
     /* PM 공수의 «근거»를 적는다 (v112 · 사용자 지적).
        PM = 작업단계가 정확히 'TBM' 인 행의 작업공수 합이다. 그 한 줄이 전부다 —
@@ -3066,6 +3100,11 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
         if(ou && ou.length)
           GST.dq.push({key:'op_unk', sev:'warn', label:t('dq_unk')+' — '+GST.topN(ou, 99, t('op_unk_u')),
                        n:ou.reduce((s,e)=>s+e.n,0), act:t('dq_unk_a')}); }
+      { const mh=window._KRMH;   // ⚑ 국내 데모 — 공수 보정(v147) · 사실은 모두에게, 조치는 관리자에게(GST.dq 규약)
+        if(mh && (mh.filled || (mh.big&&mh.big.length)))
+          GST.dq.push({key:'kr_mh', sev:(mh.big&&mh.big.length)?'warn':'info',
+                       label:t('dq_mh').replace('{h}',KR_MH_MAX_MIN/60).replace('{f}',(mh.filled||0).toLocaleString()).replace('{n}',(mh.big||[]).length.toLocaleString()),
+                       n:(mh.big||[]).length, act:t('dq_mh_a')}); }
       GST.dq.render(GST.filtSummary?GST.filtSummary():'');
     }
   }
@@ -3577,6 +3616,26 @@ window.saveTop3Csv=function(){
    들어오면서 «정의만 되고 아무도 안 부르는» 코드가 됐다(호출부 0건 · grep 으로 확인). */
 function capToast(msg){ return GST.capToast(msg); }
 function chartHiRes(id,scale){ return GST.chartHiRes(id,scale); }
+/* ⚑ 국내 데모 — 공수 보정 ⚠ 심벌 · 팝업(v147). 차트·주석에 글자를 더 쓰지 않는다(사용자: 서술형 싫다) — 심벌 하나, 내용은 팝업으로.
+   심벌은 제목(h3)·KPI 값 옆에 «인라인»으로 둔다 — 오른쪽 위는 주/월 토글과 hover 버튼이 이미 나눠 쓰고 있어 겹친다. */
+function krMhBadge(){
+  const S=window._KRMH||{filled:0,big:[]}, n=(S.big||[]).length, f=S.filled||0;
+  const put=host=>{ if(!host)return; let b=host.querySelector('.mhw');
+    if(!(n||f)){ if(b)b.remove(); return; }
+    if(!b){ b=document.createElement('button'); b.type='button'; b.className='mhw'; b.textContent='⚠';
+      b.addEventListener('click',e=>{ e.stopPropagation(); e.preventDefault(); krMhModal(); }); host.appendChild(b); }
+    b.title=t('mhw_tip').replace('{h}',KR_MH_MAX_MIN/60).replace('{n}',n.toLocaleString()).replace('{f}',f.toLocaleString()); };
+  const cv=document.getElementById('cMan'); put(cv&&cv.closest('.card')?cv.closest('.card').querySelector('h3'):null);
+  const k5=document.getElementById('kp5'); put(k5?k5.closest('.krow'):null);
+}
+function krMhModal(){
+  const S=window._KRMH||{filled:0,big:[]}, H=m=>Math.round(m/60*10)/10;
+  const rows=(S.big||[]).slice().sort((a,b)=>b.mhRaw-a.mhRaw)
+    .map(x=>[GST.ymdL(x.wd), x.stage, x.campus||x.fab||'', x.eqNo||x.sn||'', H(x.mhRaw).toLocaleString(),
+             x.workMin?Math.round(x.workMin).toLocaleString():'', (x.workers&&x.workers.length)||'']);
+  GST.rowsModal(t('mhw_title'), t('mhw_cols').split('|'), rows,
+    t('mhw_note').replace('{h}',KR_MH_MAX_MIN/60).replace('{n}',rows.length.toLocaleString()).replace('{f}',(S.filled||0).toLocaleString()));
+}
 function addCapBtns(){
   // Scrubber 가동 현황 표 — 복사(PPT/엑셀)·CSV 버튼
   const opCard=document.getElementById('opTblBody')?document.getElementById('opTblBody').closest('.tablecard'):null;
@@ -3827,6 +3886,8 @@ krDemoBtns();   // 등급이 이 스크립트보다 먼저 도착했어도(캐�
   if(box&&window.MutationObserver){ new MutationObserver(upd).observe(box,{subtree:true,childList:true,characterData:true}); }
   setTimeout(upd,2200); setInterval(upd,4000);
 })();
+/* ⚑ 국내 데모 — applyLang 이 h3·cap 을 textContent 로 다시 쓰므로(core applyI18n) 공수 보정 ⚠ 심벌을 그 뒤에 다시 붙인다 */
+{ const _al0=applyLang; applyLang=function(){ const r=_al0.apply(this,arguments); try{ if(window._KRMH) krMhBadge(); }catch(e){ console.warn('krMhBadge',e); } return r; }; }
 </script>
 </body>
 </html>
