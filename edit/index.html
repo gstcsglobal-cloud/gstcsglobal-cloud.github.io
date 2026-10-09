@@ -2179,7 +2179,7 @@ async function vmRender(reload){
     + '<label><input type="radio" name="vmView" value="val"' + (VM.view === 'val' || VM.tbl !== 'inst' ? ' checked' : '') + '> 값별 · 칸 <select id="vmCol">'
     + T.cols.map(c => '<option value="' + c + '"' + (c === VM.col ? ' selected' : '') + '>' + esc(VM.L[c] || c) + '</option>').join('') + '</select></label>'
     + '<button type="button" class="btn sm" id="vmRe">다시 읽기</button></div>'
-    + '<p class="hint">규칙은 원본을 바꾸지 않고 대시보드가 «읽을 때» 입힙니다 — 여덟 화면·PPT·오프라인 판이 똑같이 봅니다(카카오 챗봇은 아직 원본으로 답합니다). '
+    + '<p class="hint">규칙은 원본을 바꾸지 않고 대시보드가 «읽을 때» 입힙니다 — 여덟 화면·PPT·오프라인 판·카카오 챗봇이 똑같이 봅니다. '
     + '저장한 뒤 대시보드를 새로고침하면 반영됩니다. 다시 올려도 규칙은 그대로 먹고, 규칙을 지우면 원래대로 돌아갑니다.</p>';
   if(VM.err){ box.innerHTML = h + '<div class="banner warn">' + esc(VM.err) + '</div>'; return; }
   const view = VM.tbl === 'inst' ? VM.view : 'val';
