@@ -63,6 +63,7 @@ function fake(seed) {
     if (op === 'is') return v === null || v === 'null' ? x == null : x === v;
     if (x == null) return false;
     if (op === 'eq') return String(x) === String(v);
+    if (op === 'neq') return String(x) !== String(v);
     if (op === 'ilike') return toRe(v, true).test(String(x));
     if (op === 'like') return toRe(v, false).test(String(x));
     if (op === 'gte') return cmp(x, v) >= 0;
@@ -93,9 +94,12 @@ function fake(seed) {
   const evalTerm = (row, t) => {
     if (/^and\(/.test(t)) return splitTop(t.slice(4, -1)).every(x => evalTerm(row, x));
     if (/^or\(/.test(t)) return splitTop(t.slice(3, -1)).some(x => evalTerm(row, x));
-    const a = t.indexOf('.'), b = t.indexOf('.', a + 1);
-    const op = t.slice(a + 1, b), v = t.slice(b + 1);
-    return test(row, t.slice(0, a), op, op === 'in' ? inList(v) : v);
+    let a = t.indexOf('.'), b = t.indexOf('.', a + 1), neg = false;
+    if (t.slice(a + 1, b) === 'not') { neg = true; a = b; b = t.indexOf('.', a + 1); }   // c.not.is.null · c.not.like.v
+    const op = t.slice(a + 1, b); let v = t.slice(b + 1);
+    if (op !== 'in' && /^".*"$/.test(v)) v = v.slice(1, -1).replace(/\\(.)/g, '$1');      // 큰따옴표 값(PostgREST 와 같이 벗긴다)
+    const r = test(row, t.slice(0, t.indexOf('.')), op, op === 'in' ? inList(v) : v);
+    return neg ? !r : r;
   };
   function from(tbl) {
     const st = { tbl, f:[], or:[], order:null, asc:true, limit:null, cols:null, single:false, head:false, ins:null };
@@ -1635,6 +1639,78 @@ console.log('[26] 기준 정보 — 새 사이트가 «어디에 · 어떻게» 
   await pg.click('[data-vmdel="0"]'); await waitDlg(pg, /규칙 지우기/); await pg.click('.mask .btn.dng');
   await pg.waitForFunction(n => window.__DB.value_map.length === n - 1, nb, { timeout:5000 }).catch(() => {});
   is(await pg.evaluate(n => window.__DB.value_map.length === n - 1, nb), '규칙 지우기 — 확인 뒤 지운다');
+  is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
+  await ctx.close();
+}
+
+console.log('[27] 조건으로 한 열 일괄 바꾸기 — FAB=F16N 이고 Turn-on 이 있는 행의 설비상태 (v154)');
+{
+  const s = seedOf({});
+  const add = [
+    { src_row:20, code:'ZN-1', sn:'ZZN-0001', country:'GST TAIWAN SCRUBBER', fab:'F16N', turn_on:'2026-03-02', state:null },
+    { src_row:21, code:'ZN-2', sn:'ZZN-0002', country:'GST TAIWAN SCRUBBER', fab:'F16N', turn_on:'2026-04-10', state:'Set-up' },
+    { src_row:22, code:'ZN-3', sn:'ZZN-0003', country:'GST TAIWAN SCRUBBER', fab:'F16N', turn_on:null, state:null },
+    { src_row:23, code:'ZN-4', sn:'ZZN-0004', country:'GST TAIWAN SCRUBBER', fab:'F16N', turn_on:'', state:'Set-up' },
+    { src_row:24, code:'ZN-5', sn:'ZZN-0005', country:'GST TAIWAN SCRUBBER', fab:'F16N', turn_on:'2026-05-01', state:'Operation' },
+    { src_row:25, code:'ZN-6', sn:'ZZN-0006', country:'GST TAIWAN SCRUBBER', fab:'F16', turn_on:'2026-05-01', state:'Set-up' } ];
+  s.tables.sheet_inst = s.tables.sheet_inst.concat(add.map(r => Object.assign(Object.fromEntries(INST_COLS.map(c => [c, null])), r)));
+  const { ctx, pg, pe } = await open(s);
+  await pg.click('.tab[data-tab=inst]'); await pg.waitForTimeout(400);
+  const before = await pg.evaluate(() => JSON.stringify(window.__DB.sheet_inst));
+  await pg.click('#search [data-act=cset]');
+  await waitDlg(pg, /조건으로 일괄 바꾸기/);
+  is(await pg.$eval('input[name=csScope][value=all]', e => e.checked) && await pg.$eval('input[name=csScope][value=sel]', e => e.disabled), '기본 범위는 표 전체 · 체크한 행이 없으면 그 칸은 잠긴다');
+  /* 조건 없이 표 전체 — 막는다 */
+  await pg.selectOption('#csCol', 'state'); await pg.fill('#csVal', 'Operation');
+  await pg.click('.mask .btn.pri');
+  await pg.waitForFunction(() => /조건을 하나 이상/.test(document.getElementById('snack').textContent), null, { timeout:5000 }).catch(() => {});
+  is(/조건을 하나 이상/.test(await snackText(pg)), '조건 없이 표 전체를 한 값으로 덮는 것은 막는다');
+  await waitDlg(pg, /조건으로 일괄 바꾸기 — 설치현황/);
+  is(await pg.$eval('#csCol', e => e.value) === 'state' && await pg.$eval('#csVal', e => e.value) === 'Operation', '돌아와도 고른 값이 남아 있다');
+  /* FAB = F16N · Turn-on 비어 있지 않음 */
+  await pg.selectOption('[data-cs-c]', 'fab'); await pg.fill('[data-cs-v]', 'F16N');
+  await pg.click('[data-cs-add]');
+  const rows = await pg.$$('[data-cs]');
+  await (await rows[1].$('[data-cs-c]')).selectOption('turn_on'); await (await rows[1].$('[data-cs-op]')).selectOption('set');
+  is(await (await rows[1].$('[data-cs-v]')).evaluate(e => e.disabled), '「비어 있지 않음」은 값 칸을 잠근다');
+  await qlog(pg);
+  await pg.click('.mask .btn.pri');
+  await waitDlg(pg, /미리 보기/);
+  const L = await qlog(pg), q = sel(L, 'sheet_inst').find(x => x.or.length);
+  is(q && q.or[0] === 'and(fab.eq."F16N",turn_on.neq."")', '서버 조건은 한 논리식 — FAB 같음 · Turn-on 빈칸 아님 (' + (q && q.or[0]) + ')');
+  const pv = await pg.$eval('.mask .dlg-b', e => e.innerText);
+  is(/바뀌는 행 2/.test(pv) && /이미 그 값 1/.test(pv), '미리 보기 — 바뀌는 2행 · 이미 Operation 인 1행 (' + pv.slice(0, 160).replace(/\n/g, ' ') + ')');
+  is(/빈칸 1 · Set-up 1|Set-up 1 · 빈칸 1/.test(pv), '지금 값 분포를 적는다');
+  is(rpcs(L, 'edit_bulk').length === 0 && await pg.evaluate(b => JSON.stringify(window.__DB.sheet_inst) === b, before), '미리 보기만으로는 쓰지 않는다');
+  /* 조건 고치기로 돌아갔다 다시 */
+  await pg.click('.mask .btn[data-i="0"]');
+  await waitDlg(pg, /조건으로 일괄 바꾸기 — 설치현황/);
+  is((await pg.$$('[data-cs]')).length === 2, '「조건 고치기」 — 두 조건이 그대로 남아 있다');
+  await pg.click('.mask .btn.pri'); await waitDlg(pg, /미리 보기/);
+  await pg.click('.mask .btn.dng');
+  await pg.waitForFunction(() => /반영했습니다/.test(document.getElementById('snack').textContent), null, { timeout:8000 }).catch(() => {});
+  const st = await pg.evaluate(() => Object.fromEntries(window.__DB.sheet_inst.filter(r => r.src_row >= 20).map(r => [r.src_row, r.state])));
+  is(st[20] === 'Operation' && st[21] === 'Operation' && st[22] === null && st[23] === 'Set-up' && st[24] === 'Operation' && st[25] === 'Set-up',
+    '조건에 맞는 행만 바뀐다 — Turn-on 빈칸(null·"")과 F16 은 그대로 (' + JSON.stringify(st) + ')');
+  const bk = rpcs(await qlog(pg), 'edit_bulk');
+  is(bk.length === 1 && bk[0].args.p_items.length === 2 && bk[0].args.p_items.every(x => x.op === 'update' && x.hash && Object.keys(x.changes).join() === 'state'),
+    'edit_bulk 한 번 · 두 행 · 해시와 함께 · 그 열만');
+  const head = await pg.evaluate(() => window.__DB.sheet_edits.filter(e => e.op === 'bulk').pop());
+  is(head && /F16N.*Turn On.*비어 있지 않음.*설비상태 = Operation/.test(head.after.sheet || ''), '이력 머리에 «무엇을 했나»가 남는다 (' + (head && head.after.sheet) + ')');
+  /* 체크한 행에서 — 비우기 */
+  await pg.click('#search .btn.pri'); await pg.waitForTimeout(400);
+  await pg.click('#list tr[data-key="20"] td.ck'); await pg.click('#list tr[data-key="21"] td.ck'); await pg.click('#list tr[data-key="25"] td.ck');
+  await pg.click('#listH [data-act=cset]');
+  await waitDlg(pg, /조건으로 일괄 바꾸기/);
+  is(await pg.$eval('input[name=csScope][value=sel]', e => e.checked), '선택 막대에서 열면 범위가 «체크한 행»');
+  await pg.selectOption('[data-cs-c]', 'fab'); await pg.fill('[data-cs-v]', 'F16N ');
+  await pg.selectOption('#csCol', 'state'); await pg.check('#csClr');
+  await pg.click('.mask .btn.pri'); await waitDlg(pg, /미리 보기/);
+  is(/범위 3행 중 조건에 맞는 2행/.test(await pg.$eval('.mask .dlg-b', e => e.innerText)), '체크한 3행 안에서 조건(FAB=F16N)을 화면이 다시 건다 — 범위를 적는다');
+  await pg.click('.mask .btn.dng');
+  await pg.waitForFunction(() => window.__DB.sheet_inst.find(r => r.src_row === 20).state == null, null, { timeout:8000 }).catch(() => {});
+  is(await pg.evaluate(() => { const g = k => window.__DB.sheet_inst.find(r => r.src_row === k).state; return g(20) == null && g(21) == null && g(24) === 'Operation' && g(25) === 'Set-up'; }),
+    '「비우기」 — 체크했어도 조건에 안 맞는 F16 행은 그대로');
   is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
   await ctx.close();
 }

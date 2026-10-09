@@ -188,6 +188,14 @@ table.rt th.ck input,table.rt td.ck input{width:15px;height:15px;cursor:pointer;
 .pv td.au{color:var(--ok)}
 .pv .bd{color:var(--bad)}
 .pv .wd{color:var(--warn)}
+/* v154 — 조건으로 일괄 바꾸기 */
+.cs h4{font-size:12.5px;margin:14px 0 6px;font-weight:700}
+.cs-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}
+.cs-row select.ctl{min-width:190px;max-width:280px}
+.cs-row input.ctl{flex:1;min-width:140px}
+.cs-scope{display:flex;flex-direction:column;gap:4px}
+.cs-sc{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.cs-ar{color:var(--txt-muted)}
 
 /* 대화상자 · 알림 */
 .mask{position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:1000;display:grid;place-items:center;padding:16px}
@@ -708,6 +716,7 @@ function renderSearch(){
   h += '<div class="sbar"><button class="btn pri" type="submit">검색</button><button class="btn" type="button" data-act="reset">조건 지우기</button>'
     + '<span class="sp"></span><button class="btn" type="button" data-act="xblank"' + (bulkOff ? offT : ' title="' + esc(blankT) + '"') + '>빈 양식</button>'
     + '<button class="btn" type="button" data-act="xup"' + (bulkOff ? offT : ' title="받은 양식(또는 같은 머리글의 엑셀)을 올리면 미리보기 뒤에 바뀐 칸만 반영합니다"') + '>엑셀 올리기</button>'
+    + '<button class="btn" type="button" data-act="cset"' + (bulkOff ? offT : ' title="여러 조건으로 행을 골라 한 열을 같은 값으로 바꿉니다(예: FAB=F16N 이고 Turn-on 날짜가 있는 행의 설비상태 → Operation) — 미리 보기 뒤에 반영 · 되돌릴 수 있습니다"') + '>조건으로 바꾸기</button>'
     + '<button class="btn" type="button" data-act="new"' + (S.ready === false ? ' disabled' : '')
     + (t.fill ? ' title="' + (t.fill.parent ? '어느 수선실적의 자재인지 먼저 고릅니다 — 고르면 설비·조직 칸이 채워집니다' : '설비(S/N)부터 고릅니다 — GST 시스템 실적등록과 같은 순서 · 고르면 설비·조직 칸이 채워집니다') + '"' : '')
     + '>+ 새 행</button></div>';
@@ -727,6 +736,7 @@ $('search').addEventListener('click', async e => {
   if(b.dataset.act === 'new'){ if(await leaveOk()) newStart(TAB()); }
   if(b.dataset.act === 'xblank') bulkDown('blank');
   if(b.dataset.act === 'xup'){ if(await leaveOk()) $('xfile').click(); }
+  if(b.dataset.act === 'cset') csOpen();
 });
 /* 입력 보조 목록 — 칸에 처음 들어갈 때 한 번 받는다(edit_distinct · 많은 순) */
 document.addEventListener('focusin', e => {
@@ -1020,6 +1030,7 @@ function renderSelBar(){
   const dis = ' disabled title="엑셀 일괄 수정 함수가 아직 서버에 없습니다"';
   if(n){
     el.innerHTML = '<span class="hint">' + n.toLocaleString() + '건 선택</span><button class="btn sm" type="button" data-act="xclr">선택 풀기</button>'
+      + '<button class="btn sm" type="button" data-act="cset"' + (off ? dis : ' title="체크한 행의 한 열을 같은 값으로 바꿉니다(조건을 더 걸 수 있습니다)"') + '>선택 행 한 열 바꾸기</button>'
       + '<button class="btn sm pri" type="button" data-act="xdown"' + (off ? dis : ' title="체크한 행만 일괄 수정용 엑셀로 받습니다"') + '>선택 ' + n.toLocaleString() + '건 엑셀로 받기</button>';
   }else if(S.rows.length){
     const tot = resultTotal(t);
@@ -1032,6 +1043,7 @@ $('listH').addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if(!b || b.disabled) return;
   if(b.dataset.act === 'xdown') bulkDown('sel');
   if(b.dataset.act === 'xall') bulkDown('all');
+  if(b.dataset.act === 'cset') csOpen('sel');
   if(b.dataset.act === 'xclr'){ S.sel = new Set(); S.lastCk = null; renderList(null); }
 });
 $('list').addEventListener('click', async e => {
@@ -2633,6 +2645,196 @@ async function bulkUndo(en){
       [{l:'확인', v:true, cls:'pri'}], true);
   }else snack(ok + '줄을 되돌렸습니다');
   loadHist(false);
+}
+
+/* ---------- 조건으로 한 열 일괄 바꾸기 (v154 · 사용자 요청) ----------
+   사용자: 「F16N 으로 잡고 > 턴온 날짜가 기입된 것을 잡고 > 설비상태를 Turn-On 으로 바꾸기 — 다중 조건으로 걸러 일괄 수정」.
+   엑셀을 받아 고쳐 올리는 길(v141)의 «한 열» 판이다 — 쓰기는 같은 edit_bulk(500줄씩 전부 아니면 전무 · 행 해시 · 줄마다 이력 ·
+   「변경 이력」의 일괄 되돌리기)를 그대로 지난다. 새 쓰기 통로를 만들지 않는다(제2원칙).
+   · 범위: 표 전체(조건 필수) · 지금 검색 결과 · 체크한 행. 조건은 «그 범위 안에서» 다시 건다.
+   · 서버 조건과 화면 판정(csPass)이 같은 뜻이어야 한다 — 서버로 좁힌 뒤 받아 온 행에 화면 판정을 «한 번 더» 건다.
+     그래서 둘이 어긋나도 «조건에 안 맞는 행»은 바뀌지 않는다(어긋난 수는 미리보기에 적는다).
+   · 조건 없이 표 전체를 한 값으로 덮는 것은 막는다 — 실수 한 번이 수십만 행이다. */
+const CS_OPS = { eq:'같음', ne:'같지 않음', has:'포함', nul:'비어 있음', set:'비어 있지 않음' };
+const CS_MAX = 20000;                      // 한 번에 바꾸는 행 수 상한 — 엑셀 받기(DOWN_MAX)와 같은 값 · 500줄 묶음 40번
+const csText = (t, c) => /char|text/.test((S.types[t.tbl] || {})[c] || 'text');
+function csEq(t, c, v, x){
+  if(isDate(t, c)){ const a = normDate(String(v).trim()), b = normDate(vs(x).trim()); return !!a && !!b && a.slice(0, 10) === b.slice(0, 10); }   // 날짜는 «같은 날»
+  return sameVal(t, c, String(v).trim(), x);
+}
+function csPass(t, d, r){
+  const x = vs(r[d.c]).trim();
+  if(d.op === 'nul') return x === '';
+  if(d.op === 'set') return x !== '';
+  if(d.op === 'eq') return csEq(t, d.c, d.v, r[d.c]);
+  if(d.op === 'ne') return !csEq(t, d.c, d.v, r[d.c]);
+  if(d.op === 'has'){ const re = patRe(d.v); return !!re && re.test(x); }
+  return false;
+}
+/* 서버 조건 한 개 — PostgREST 논리식(or(and(…)) 한 파라미터로 묶는다 · v140 규약). 빈칸은 null 과 '' 둘 다다(편집이 '' 을 남긴다). */
+function csTerm(t, d){
+  const c = d.c, txt = csText(t, c);
+  if(d.op === 'nul') return txt ? 'or(' + c + '.is.null,' + c + '.eq."")' : c + '.is.null';
+  if(d.op === 'set') return txt ? c + '.neq.""' : c + '.not.is.null';
+  if(d.op === 'has') return c + '.ilike.' + pat(d.v);
+  const v = isDate(t, c) ? normDate(String(d.v).trim()).slice(0, 10) : String(d.v).trim();
+  if(isDate(t, c)) return d.op === 'eq' ? c + '.like.' + v + '*' : 'or(' + c + '.is.null,' + c + '.not.like.' + v + '*)';
+  return d.op === 'eq' ? c + '.eq.' + pgq(v) : 'or(' + c + '.is.null,' + c + '.neq.' + pgq(v) + ')';
+}
+async function csKeys(t, conds, prog){
+  const term = 'and(' + conds.map(d => csTerm(t, d)).join(',') + ')';
+  const keys = []; let last = null;
+  for(let guard = 0; guard < 5000; guard++){
+    let q = C.from(t.tbl).select(t.key).order(t.key, {ascending:false}).limit(1000).or(term);
+    if(last != null) q = q.lt(t.key, last);
+    const r = await q;
+    if(r.error) throw new Error(rpcErr(r.error));
+    const d = r.data || [];
+    if(!d.length) return keys;                   // 0행일 때만 멈춘다(v128)
+    d.forEach(x => keys.push(String(x[t.key])));
+    last = d[d.length - 1][t.key];
+    if(keys.length > CS_MAX) return keys;
+    if(prog) prog(keys.length);
+  }
+  throw new Error('조건에 맞는 행을 끝까지 모으지 못했습니다 — 다시 해 보세요');
+}
+/* 바꿀 수 있는 열 — 행 번호·관리 열·계산 칸·운영단위(원장)·Group 잠금 칸은 뺀다(한 행 편집과 같은 잠금) */
+function csTargets(t){
+  const no = new Set([t.key].concat(t.calc || [], t.lockOld || [], t.grpLock || []));
+  return (S.cols[t.tbl] || []).filter(c => !ADMIN_COLS.has(c) && !no.has(c));
+}
+const csOpt = (t, cols, sel) => '<option value="">열 고르기…</option>' + cols.map(c => '<option value="' + esc(c) + '"' + (c === sel ? ' selected' : '') + '>'
+  + esc(label(t, c).name) + (label(t, c).name !== c ? ' (' + esc(c) + ')' : '') + '</option>').join('');
+let CS_N = 0;
+function csCondRow(t, cols, d){
+  const id = 'dl_cs' + (++CS_N);
+  return '<div class="cs-row" data-cs="1"><select class="ctl" data-cs-c>' + csOpt(t, cols, d.c) + '</select>'
+    + '<select class="ctl" data-cs-op>' + Object.keys(CS_OPS).map(k => '<option value="' + k + '"' + (d.op === k ? ' selected' : '') + '>' + CS_OPS[k] + '</option>').join('') + '</select>'
+    + '<input class="ctl" data-cs-v value="' + esc(d.v || '') + '" placeholder="값" list="' + id + '" data-col="' + esc(d.c || '') + '"' + (d.op === 'nul' || d.op === 'set' ? ' disabled' : '') + '><datalist id="' + id + '"></datalist>'
+    + '<button type="button" class="btn sm" data-cs-del title="이 조건 빼기">✕</button></div>';
+}
+async function csOpen(scope){
+  const t = TAB();
+  if(S.ready === false || !S.can.bulk){ snack('일괄 수정 함수가 아직 서버에 없습니다', {err:true}); return; }
+  if(!(await leaveOk())) return;
+  try{ if(!S.cols[t.tbl]){ if(t.mode === 'whole') S.all[t.id] = await loadAll(t); else await loadCols(t); } }catch(e){ snack(e.message, {err:true}); return; }
+  const qOk = !!(S.qf && S.qf.tab === t.id), qTxt = qOk ? condText(t, S.qf.f) : '';
+  const st = { scope: scope || (S.sel.size ? 'sel' : 'all'), conds:[{ c:'', op:'eq', v:'' }], col:'', val:'', clr:false };
+  for(;;){
+    const cols = (S.cols[t.tbl] || []).filter(c => !ADMIN_COLS.has(c)), tg = csTargets(t);
+    const sc = (k, l, dis) => '<label class="cs-sc"><input type="radio" name="csScope" value="' + k + '"' + (st.scope === k ? ' checked' : '') + (dis ? ' disabled' : '') + '> ' + l + '</label>';
+    const body = '<div class="cs"><p class="hint">조건에 맞는 행의 한 열을 같은 값으로 바꿉니다. 미리 보기에서 몇 행이 어떻게 바뀌는지 보고 반영합니다 — 모든 줄이 「변경 이력」에 남고 묶음째 되돌릴 수 있습니다.</p>'
+      + '<h4>어느 행에서</h4><div class="cs-scope">' + sc('all', esc(t.name) + ' 전체') + sc('q', '지금 검색 결과' + (qOk ? ' <span class="hint">(' + esc(qTxt) + ')</span>' : ' <span class="hint">(검색을 먼저 하세요)</span>'), !qOk)
+      + sc('sel', '체크한 ' + S.sel.size.toLocaleString() + '행', !S.sel.size) + '</div>'
+      + '<h4>조건 <span class="hint">— 모두 맞는 행만 (그리고)</span></h4><div id="csConds">' + st.conds.map(d => csCondRow(t, cols, d)).join('') + '</div>'
+      + '<button type="button" class="btn sm" data-cs-add>+ 조건 더하기</button>'
+      + '<h4>무엇을 바꾸나</h4><div class="cs-row"><select class="ctl" id="csCol">' + csOpt(t, tg, st.col) + '</select><span class="cs-ar">→</span>'
+      + '<input class="ctl" id="csVal" value="' + esc(st.val) + '" placeholder="새 값" list="dl_csv" data-col="' + esc(st.col) + '"' + (st.clr ? ' disabled' : '') + '><datalist id="dl_csv"></datalist>'
+      + '<label class="cs-sc"><input type="checkbox" id="csClr"' + (st.clr ? ' checked' : '') + '> 비우기</label></div>'
+      + ((t.calc || []).length ? '<p class="hint">계산 칸·운영단위·Group 줄의 잠긴 칸은 고를 수 없습니다 — 원문 칸(S/N·발생시각 등)을 바꾸면 계산 칸은 같이 다시 계산합니다.</p>' : '')
+      + '</div>';
+    const p = dialog('조건으로 일괄 바꾸기 — ' + t.name, body, [{l:'취소', v:false}, {l:'미리 보기', v:'pv', cls:'pri'}], true);
+    const m = dialog.last;
+    const reCol = (inp, c) => { inp.dataset.col = c; if(inp.list){ inp.list.innerHTML = ''; inp.list.dataset.loaded = ''; } };
+    m.addEventListener('change', e => {
+      const el = e.target;
+      if(el.matches('[data-cs-c]')) reCol(el.parentNode.querySelector('[data-cs-v]'), el.value);
+      if(el.matches('[data-cs-op]')){ const v = el.parentNode.querySelector('[data-cs-v]'); v.disabled = el.value === 'nul' || el.value === 'set'; }
+      if(el.id === 'csCol') reCol(m.querySelector('#csVal'), el.value);
+      if(el.id === 'csClr') m.querySelector('#csVal').disabled = el.checked;
+    });
+    m.addEventListener('click', e => {
+      if(e.target.closest('[data-cs-add]')) m.querySelector('#csConds').insertAdjacentHTML('beforeend', csCondRow(t, cols, { c:'', op:'eq', v:'' }));
+      const dl = e.target.closest('[data-cs-del]'); if(dl) dl.parentNode.remove();
+    });
+    const v = await p;
+    /* 고른 것을 떠 둔다(대화상자가 닫혀도 요소는 값을 들고 있다) — 「조건 고치기」로 돌아오면 그대로 다시 그린다 */
+    const sr = m.querySelector('input[name=csScope]:checked'); if(sr) st.scope = sr.value;
+    st.conds = Array.from(m.querySelectorAll('[data-cs]')).map(r => ({ c:r.querySelector('[data-cs-c]').value, op:r.querySelector('[data-cs-op]').value, v:r.querySelector('[data-cs-v]').value }));
+    if(!st.conds.length) st.conds = [{ c:'', op:'eq', v:'' }];
+    st.col = m.querySelector('#csCol').value; st.val = m.querySelector('#csVal').value; st.clr = m.querySelector('#csClr').checked;
+    if(v !== 'pv') return;
+    let P;
+    try{ P = await csPlan(t, st); $('snack').className = ''; }
+    catch(e){ snack(e.message, {err:true, ms:8000}); continue; }
+    const go = await csShow(t, st, P);
+    if(go === 'back') continue;
+    if(go === true) await bulkApply(t, P);
+    return;
+  }
+}
+async function csPlan(t, st){
+  const conds = st.conds.filter(d => d.c && (d.op === 'nul' || d.op === 'set' || String(d.v).trim() !== ''));
+  if(st.conds.some(d => d.c && d.op !== 'nul' && d.op !== 'set' && String(d.v).trim() === '')) throw new Error('값이 빈 조건이 있습니다 — 값을 적거나 「비어 있음」을 고르세요');
+  conds.forEach(d => {
+    if(d.op === 'has' && !pat(d.v)) throw new Error(label(t, d.c).name + ': 「포함」에는 글자나 숫자를 적으세요');
+    if((d.op === 'eq' || d.op === 'ne') && isDate(t, d.c) && !normDate(String(d.v).trim())) throw new Error(label(t, d.c).name + ': 날짜는 YYYY-MM-DD 로 적어 주세요');
+  });
+  if(st.scope === 'all' && !conds.length) throw new Error('표 전체에서 바꾸려면 조건을 하나 이상 넣으세요 — 조건 없이 표 전체를 한 값으로 덮는 일은 막아 둡니다');
+  if(st.scope === 'q' && !(S.qf && S.qf.tab === t.id)) throw new Error('검색을 먼저 하세요');
+  if(!st.col) throw new Error('바꿀 열을 고르세요');
+  let nv = null;
+  if(!st.clr){
+    const r = cellCheck(t, st.col, st.val);
+    if(r.v == null) throw new Error('새 값을 적거나 「비우기」를 체크하세요');
+    if(r.err) throw new Error(label(t, st.col).name + ': ' + r.err);
+    nv = r.v;
+  }
+  const prog = n => snack('행을 모으는 중… ' + n.toLocaleString() + '행', {ms:60000});
+  let keys;
+  if(st.scope === 'sel') keys = Array.from(S.sel);
+  else if(t.mode === 'whole'){
+    S.all[t.id] = await loadAll(t);
+    let rows = S.all[t.id];
+    if(st.scope === 'q'){ if(S.qf.f.region) await regionReady(t); rows = rows.filter(r => passWhole(t, S.qf.f, r)); }
+    keys = rows.filter(r => conds.every(d => csPass(t, d, r))).map(r => String(r[t.key]));
+  }else keys = st.scope === 'q' ? await searchKeys(t, S.qf.f, CS_MAX, prog) : await csKeys(t, conds, prog);
+  if(keys.length > CS_MAX) throw new Error('맞는 행이 ' + CS_MAX.toLocaleString() + '행을 넘습니다 — 한 번에 바꾸는 상한입니다. 조건을 더 좁혀 나눠서 하세요');
+  const got = [];
+  for(let i = 0; i < keys.length; i += GET_MAX){
+    if(keys.length > GET_MAX) snack('지금 값을 읽는 중… ' + Math.min(i + GET_MAX, keys.length).toLocaleString() + ' / ' + keys.length.toLocaleString() + '행', {ms:60000});
+    [].push.apply(got, await rpc('edit_get_many', {p_tbl:t.tbl, p_keys:keys.slice(i, i + GET_MAX).map(Number)}) || []);
+  }
+  const P = { file:'조건 일괄 바꾸기', sheet:'', upd:[], ins:[], same:[], skip:[], miss:0, gone:keys.length - got.length, scopeN:keys.length, nv:nv };
+  const dist = new Map();
+  got.forEach(x => {
+    if(!conds.every(d => csPass(t, d, x.row))){ P.miss++; return; }
+    if(sameVal(t, st.col, nv, x.row[st.col])) return P.same.push(x);
+    const ch = {}; ch[st.col] = nv;
+    if(t.ledger){ const why = ledgerLineWhy(t, x.row, ch); if(why) return P.skip.push({ x:x, why:why }); ledgerDerive(t, x.row, ch); }
+    const o = vs(x.row[st.col]).trim(); dist.set(o, (dist.get(o) || 0) + 1);
+    P.upd.push({ L:{ ln:'' }, key:String(x.key), hash:x.hash, ch:ch, row:x.row });
+  });
+  P.dist = Array.from(dist).sort((a, b) => b[1] - a[1]);
+  /* 이력 머리에 남길 «무엇을 했나» — 이력만 봐도 그 일괄 수정을 알아보게 */
+  P.sheet = ({ all:t.name + ' 전체', q:'검색 결과(' + condText(t, S.qf ? S.qf.f : {}) + ')', sel:'체크한 ' + S.sel.size + '행' })[st.scope]
+    + (conds.length ? ' · ' + conds.map(d => label(t, d.c).name + ' ' + CS_OPS[d.op] + (d.op === 'nul' || d.op === 'set' ? '' : ' ' + String(d.v).trim())).join(' · ') : '')
+    + ' → ' + label(t, st.col).name + ' = ' + (nv == null ? '(비움)' : nv);
+  return P;
+}
+async function csShow(t, st, P){
+  const n = P.upd.length, lc = listColsOf(t).filter(c => c !== st.col).slice(0, 4);
+  const hit = P.upd.length + P.same.length + P.skip.length;
+  let h = '<div class="pv"><p><b>' + esc(P.sheet) + '</b></p>'
+    + '<div class="pv-sum"><span class="badge ok">바뀌는 행 ' + n.toLocaleString() + '</span><span class="badge">이미 그 값 ' + P.same.length.toLocaleString() + '</span>'
+    + (P.skip.length ? '<span class="badge bad">건너뜀 ' + P.skip.length.toLocaleString() + '</span>' : '') + '</div>'
+    + '<p class="hint">' + (st.scope === 'all' ? '조건에 맞는 행 ' + hit.toLocaleString() + '개' : '범위 ' + P.scopeN.toLocaleString() + '행 중 조건에 맞는 ' + hit.toLocaleString() + '행') + '.</p>';
+  if(st.scope === 'all' && P.miss) h += '<p class="wn">서버가 고른 ' + P.miss.toLocaleString() + '행이 화면 판정에서는 조건에 안 맞아 뺐습니다(날짜 표기 등) — 그 행은 바뀌지 않습니다.</p>';
+  if(P.gone) h += '<p class="wn">' + P.gone.toLocaleString() + '행은 그새 없어졌습니다(다른 편집·업로드).</p>';
+  if(P.dist.length) h += '<p class="hint">지금 「' + esc(label(t, st.col).name) + '」 값: ' + P.dist.slice(0, 8).map(([v, k]) => esc(v || '빈칸') + ' ' + k.toLocaleString()).join(' · ')
+    + (P.dist.length > 8 ? ' 외 ' + (P.dist.length - 8) + '가지' : '') + ' → 모두 <b>' + esc(P.nv == null ? '빈칸' : P.nv) + '</b></p>';
+  if(P.skip.length) h += '<h4>건너뛰는 행</h4>' + planTable(['행', '이유'], P.skip.slice(0, SHOW).map(s => '<tr><td>' + esc(s.x.key) + '</td><td class="v">' + esc(s.why) + '</td></tr>'));
+  if(n) h += '<h4>바뀌는 행</h4>' + planTable(['행'].concat(lc.map(c => label(t, c).name)).concat([label(t, st.col).name]),
+    P.upd.slice(0, SHOW).map(u => '<tr><td>' + esc(u.key) + '</td>' + lc.map(c => '<td>' + esc(cut2(cellOf(t, u.row, c), 24)) + '</td>').join('')
+      + '<td class="v"><del>' + esc(cut2(vs(u.row[st.col]), 24) || '빈칸') + '</del> → <ins>' + esc(cut2(P.nv, 24) || '빈칸') + '</ins>'
+      + (Object.keys(u.ch).length > 1 ? ' <span class="hint">+ 계산 칸 ' + (Object.keys(u.ch).length - 1) + '</span>' : '') + '</td></tr>'))
+    + (n > SHOW ? '<p class="hint">… 외 ' + (n - SHOW).toLocaleString() + '행 (반영은 전부 합니다)</p>' : '');
+  h += '<p class="hint" style="margin-top:12px">' + (n > BULK_MAX ? BULK_MAX + '행씩 ' + Math.ceil(n / BULK_MAX) + '번에 나눠, 묶음마다' : '한 번에')
+    + ' «전부 아니면 전무»로 들어갑니다. 「변경 이력」에서 묶음째 되돌릴 수 있습니다.</p></div>';
+  const p = dialog('조건으로 일괄 바꾸기 — 미리 보기', h, [{l:'조건 고치기', v:'back'}, {l:'취소', v:false}, {l: n ? n.toLocaleString() + '행 바꾸기' : '바꿀 행이 없습니다', v:true, cls:'dng'}], true);
+  if(!n){ const b = dialog.last.querySelector('.btn.dng'); if(b) b.disabled = true; }
+  const v = await p;
+  return v === 'back' ? 'back' : v === true && n > 0;
 }
 
 /* ---------- 변경 이력 ---------- */
