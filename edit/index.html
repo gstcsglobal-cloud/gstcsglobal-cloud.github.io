@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=151"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=152"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -56,6 +56,11 @@ a.lnk{color:var(--accent-ink);text-decoration:none;font-weight:600}a.lnk:hover{t
 .tab.on{color:var(--accent-ink);border-bottom-color:var(--accent)}
 .tab .cnt{font-weight:500;color:var(--txt-faint);font-size:11.5px;margin-left:4px}
 .tab.hist{margin-left:auto}
+.tab.vm{margin-left:auto}.tab.vm+.tab.hist{margin-left:0}
+.vm-top{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin-bottom:8px}.vm-top select{margin-left:4px}
+.vm-t td{vertical-align:top}.vm-t tr.vm-w td{background:var(--warn-soft,#fffaeb)}.vm-wt{color:var(--warn,#b54708);font-size:12px;max-width:340px}
+#vmBox{padding:14px 16px}.vm-v{font-weight:600}.vm-f{margin:10px 0}.vm-f input,#vmTo{width:100%;margin-top:4px;padding:7px 9px;border:1px solid var(--line-2);border-radius:6px;font:inherit;background:var(--surface);color:inherit}
+.vm-sug{margin-left:6px;padding:1px 8px;border:1px solid var(--accent);border-radius:10px;background:var(--accent-soft);color:var(--accent-ink);font-size:11.5px;cursor:pointer}
 
 .grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:14px;align-items:start}
 @media (max-width:1100px){.grid{grid-template-columns:minmax(0,1fr)}}   /* 1fr 은 minmax(auto,1fr) — 목록 표 너비가 칸을 밀어 화면이 가로로 넘친다 */
@@ -259,6 +264,7 @@ table.dt td.v{word-break:break-all}
         <section class="card ed" id="editor"></section>
       </div>
     </div>
+    <div id="pgVmap" hidden><div class="card" id="vmBox"></div></div>
     <div id="pgHist" hidden>
       <div class="card">
         <form class="hf" id="hfilt" autocomplete="off"></form>
@@ -640,6 +646,7 @@ async function loadCols(t){
 /* ---------- 탭 ---------- */
 function renderTabs(){
   $('tabs').innerHTML = TABS.map(t => '<button type="button" class="tab' + (S.tab === t.id ? ' on' : '') + '" data-tab="' + t.id + '">' + esc(t.name) + '</button>').join('')
+    + (KR ? '' : '<button type="button" class="tab vm' + (S.tab === 'vmap' ? ' on' : '') + '" data-tab="vmap" title="새 값이 대시보드 어디에 · 어떻게 반영되는지 보고, 규칙으로 정합니다">기준 정보</button>')
     + '<button type="button" class="tab hist' + (S.tab === 'hist' ? ' on' : '') + '" data-tab="hist">변경 이력</button>';
 }
 $('tabs').addEventListener('click', async e => {
@@ -649,8 +656,9 @@ $('tabs').addEventListener('click', async e => {
 });
 async function switchTab(id, opt){
   S.tab = id; S.cur = null; renderTabs();
-  $('pgData').hidden = id === 'hist'; $('pgHist').hidden = id !== 'hist';
+  $('pgData').hidden = id === 'hist' || id === 'vmap'; $('pgHist').hidden = id !== 'hist'; $('pgVmap').hidden = id !== 'vmap';
   if(id === 'hist'){ renderHistFilters(opt); return loadHist(false); }
+  if(id === 'vmap') return vmRender(true);
   const t = TAB();
   S.rows = []; S.after = null; S.more = false; S.sel = new Set(); S.lastCk = null;
   S.qf = null; S.total = null; S.counting = false; S.seq++;
@@ -2117,7 +2125,208 @@ function openUp(o){
 /* 머리의 「원본 파일 올리기」도 새 창이 아니라 이 안에서 연다 — 지금 보는 탭의 표를 골라 둔다(v151 · 통합).
    Ctrl·가운데 클릭은 지금까지처럼 새 창(링크 그대로) — 두 화면을 나란히 보고 싶은 사람의 길을 막지 않는다. */
 { const up = document.getElementById('toUpload');
-  if(up) up.addEventListener('click', e => { if(e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault(); openUp({ rid:UP_RID[TAB().id] }); }); }
+  if(up) up.addEventListener('click', e => { if(e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault(); openUp({ rid:UP_RID[(TAB() || {}).id] }); }); }
+/* ---------- 기준 정보(값 사전) — 새 값이 «어디에 · 어떻게» 반영되는지 보고, 규칙으로 정한다 (v152 · 사용자 요청) ----------
+   사용자: 「F16S 신규 사이트 설치현황을 올렸는데 차트·가동현황 표에 반영이 안 된다 … 새로운 게 들어가면 어디에 반영하는지,
+   어떻게 반영하는지 그런 기능이 필요하다 — 이럴 때마다 코딩을 변경할 수는 없다」.
+   실측 원인: F16S·F16N·F11 사이트 파일은 법인 «TAIWAN»·고객사 «MICRON», F16 원본은 «GST TAIWAN SCRUBBER»·«Micron Memory Taiwan Co., Ltd.(F16)».
+   같은 대만이 두 법인으로 갈라 세어졌다 — 코드가 F16S 를 몰라서가 아니라 «같은 뜻이 다르게 적혀서»다.
+   · 값 보기 — 표·칸을 고르면 그 칸의 값마다 «행 수 · 대시보드가 읽는 값 · 그 뜻(구분·국가·대수 판정)»과 «어디에 쓰이나»를 적는다.
+   · 사이트 보기(설치현황) — FAB 마다 법인·고객사·지역·설비상태를 한 줄로. 「이 사이트 정하기」로 «FAB=X 인 행은 이렇게 읽는다» 규칙을 만든다.
+   · 규칙은 GST.vmap(core) 한 벌이 «읽을 때» 입힌다 — 원본은 그대로(고칠 대상은 원본 · 이 화면의 다른 탭은 원본을 보여 준다).
+   ⚠ 판정(구분·국가·대수)은 대시보드와 «같은 함수»(GST.ORG · GST.EQ)를 부른다 — 여기서 다시 짜면 화면과 다른 말을 한다. */
+const VM = {
+  tbl:'inst', col:'country', view:'site', groups:null, rules:[], err:'', only:true,
+  T:{ inst:{ name:'설치현황', db:'sheet_inst', cols:['country','customer','location','fab','state','div'] },
+      wk:{ name:'수선실적', db:'sheet_wk', cols:['op','customer','campus','line'] },
+      mat:{ name:'자재실적', db:'sheet_mat', cols:['op','customer','campus','line'] } },
+  L:{ country:'법인 (Country · 운영단위)', customer:'고객사', location:'지역 (Location)', fab:'FAB (사이트)', state:'설비상태', div:'사업부',
+      op:'운영단위', campus:'단지', line:'라인' },
+  WHERE:{
+    country:'주간현황 가동현황 표의 «법인» 행 · 사이드바 «운영단위» · PPT 오른쪽 위 법인 상자 · 구분(국내/해외)·국가 판정. 같은 법인이 두 표기면 행이 두 줄로 갈린다.',
+    customer:'사이드바 «고객사»(표기 차이는 흡수) · 주간현황 가동현황 표의 고객사 행(원문 그대로 행이 선다) · 고장·자재 분석의 고객사 축.',
+    location:'설치현황 화면의 지역 · 구분·국가 판정의 보조(도시명).',
+    fab:'사이드바 «단지»(해외) · 가동현황 표의 단지 행 · S/N 조인으로 실적·CIP 에 붙는 단지.',
+    state:'설비 대수 — 반입(반입완료·Set-up·Turn-off·Operation) · 가동(Operation) · 미가동 · 안 셈(반납·반출·출하대기). 빈칸이면 반입일(FAB In)이 있을 때만 반입으로 센다.',
+    div:'사이드바 «사업부»(설비 기준) · S/N 으로 실적에 조인.',
+    op:'사이드바 «운영단위» · 구분(국내/해외) 판정 · 주간현황의 법인 축.', campus:'사이드바 «단지» · 가동현황 표 단지 행.', line:'사이드바 «라인».' }
+};
+const vmK = v => GST.vmap.K(v);
+const vmMean = (col, v) => GST.vmap.mean(col, v);   // 판정은 core 한 벌(업로드 점검과 같은 말)
+async function vmLoad(){
+  VM.err = ''; VM.groups = null;
+  const T = VM.T[VM.tbl];
+  try{
+    const r = await C.rpc('value_groups', { p_tbl:T.db, p_cols:T.cols });   // 기준 정보는 본 대시보드 전용(데모 모드에는 탭이 없다)
+    if(r.error) throw new Error(fnMissing(r.error) ? '서버 준비가 아직 안 됐습니다 — Supabase SQL Editor 에서 supabase/setup-20-value-map.sql 을 Run 하세요.' : rpcErr(r.error));
+    VM.groups = r.data || [];
+    const q = await C.from('value_map').select('*').eq('tbl', VM.tbl);
+    if(q.error) throw new Error(q.error.message);
+    VM.rules = q.data || [];
+  }catch(e){ VM.err = e.message || String(e); }
+}
+/* 한 묶음(g)의 칸 col «읽는 값» — 규칙(GST.vmap.pick)을 대시보드와 같은 순서로 입힌다 */
+function vmRead(by, g, col){ const h = GST.vmap.pick(by[col], f => g[f], col); return h ? h.val : vs(g[col]); }
+function vmDist(list){ const m = new Map(); list.forEach(([v, n]) => m.set(v, (m.get(v) || 0) + n)); return Array.from(m).sort((a, b) => b[1] - a[1]); }
+const vmDistTxt = (d, col) => d.slice(0, 3).map(([v, n]) => '<span class="vm-v">' + esc(v || '(빈칸)') + '</span> ' + n.toLocaleString()).join(' · ') + (d.length > 3 ? ' · 외 ' + (d.length - 3) : '');
+async function vmRender(reload){
+  const box = $('vmBox');
+  if(reload || !VM.groups){ box.innerHTML = '<p class="hint">읽는 중…</p>'; await vmLoad(); }
+  const T = VM.T[VM.tbl], by = GST.vmap.compile(VM.tbl, VM.rules), G = VM.groups || [];
+  const has = c => T.cols.indexOf(c) >= 0;
+  let h = '<div class="vm-top"><label>표 <select id="vmTbl">' + Object.keys(VM.T).map(k => '<option value="' + k + '"' + (k === VM.tbl ? ' selected' : '') + '>' + VM.T[k].name + '</option>').join('') + '</select></label>'
+    + (VM.tbl === 'inst' ? '<label><input type="radio" name="vmView" value="site"' + (VM.view === 'site' ? ' checked' : '') + '> 사이트(FAB)별</label>' : '')
+    + '<label><input type="radio" name="vmView" value="val"' + (VM.view === 'val' || VM.tbl !== 'inst' ? ' checked' : '') + '> 값별 · 칸 <select id="vmCol">'
+    + T.cols.map(c => '<option value="' + c + '"' + (c === VM.col ? ' selected' : '') + '>' + esc(VM.L[c] || c) + '</option>').join('') + '</select></label>'
+    + '<button type="button" class="btn sm" id="vmRe">다시 읽기</button></div>'
+    + '<p class="hint">규칙은 원본을 바꾸지 않고 대시보드가 «읽을 때» 입힙니다 — 여덟 화면·PPT·오프라인 판이 똑같이 봅니다(카카오 챗봇은 아직 원본으로 답합니다). '
+    + '저장한 뒤 대시보드를 새로고침하면 반영됩니다. 다시 올려도 규칙은 그대로 먹고, 규칙을 지우면 원래대로 돌아갑니다.</p>';
+  if(VM.err){ box.innerHTML = h + '<div class="banner warn">' + esc(VM.err) + '</div>'; return; }
+  const view = VM.tbl === 'inst' ? VM.view : 'val';
+  if(view === 'site'){
+    /* FAB 마다 — 같은 국가에서 법인 표기가 갈리면(국가 이름이 법인 칸에 적힌 것) 표시한다 */
+    const fabs = new Map();
+    G.forEach(g => { const f = vs(g.fab).trim(); (fabs.get(f) || fabs.set(f, []).get(f)).push(g); });
+    const corpBig = vmCorpBig(by, 'country');      // 국가 → 가장 많이 쓰인 «법인 이름»
+    h += '<p class="hint">' + esc(VM.WHERE.fab) + '</p><label class="hint"><input type="checkbox" id="vmOnly"' + (VM.only ? ' checked' : '') + '> 확인할 것이 있는 사이트만</label><table class="dt vm-t"><thead><tr><th>FAB</th><th>대수</th><th>법인 (읽는 값)</th><th>고객사 (읽는 값)</th><th>지역</th><th>설비상태</th><th>확인할 것</th><th></th></tr></thead><tbody>'
+      + Array.from(fabs).map(([f, gs]) => {
+        const n = gs.reduce((s, g) => s + g.n, 0);
+        const co = vmDist(gs.map(g => [vmRead(by, g, 'country'), g.n])), cu = vmDist(gs.map(g => [vmRead(by, g, 'customer'), g.n]));
+        const lo = has('location') ? vmDist(gs.map(g => [vmRead(by, g, 'location'), g.n])) : [];
+        const stc = vmDist(gs.map(g => { const c = GST.EQ.cls(vmRead(by, g, 'state')); return [c === 'run' ? '가동' : c === 'in' ? '반입' : c === 'out' ? '안 셈' : c === '?' ? '모름' : '빈칸', g.n]; }));
+        const warn = [];
+        co.forEach(([v]) => { const c = GST.ORG.country(v); if(GST.vmap.countryName(v) && corpBig.has(c)) warn.push('법인 칸에 국가 이름(' + v + ') — 같은 국가의 다른 설비는 «' + corpBig.get(c) + '»'); });
+        const blank = (stc.find(x => x[0] === '빈칸') || [0, 0])[1], unk = (stc.find(x => x[0] === '모름') || [0, 0])[1];
+        if(blank) warn.push('설비상태 빈칸 ' + blank + '대 — 반입일 있을 때만 셈');
+        if(unk) warn.push('처음 보는 설비상태 ' + unk + '대');
+        if(!f) warn.push('FAB 빈칸 — 단지 «미배치»');
+        const ruled = VM.rules.some(r => r.when_col === 'fab' && vmK(r.when_val) === vmK(f));
+        return { w:warn.length, n:n, h:'<tr' + (warn.length ? ' class="vm-w"' : '') + '><td><b>' + esc(f || '(빈칸)') + '</b>' + (ruled ? ' <span class="badge ok">규칙</span>' : '') + '</td><td>' + n.toLocaleString() + '</td>'
+          + '<td>' + vmDistTxt(co) + '</td><td>' + vmDistTxt(cu) + '</td><td>' + vmDistTxt(lo) + '</td><td>' + vmDistTxt(stc) + '</td>'
+          + '<td class="vm-wt">' + esc(warn.join(' · ')) + '</td><td>' + (f ? '<button type="button" class="btn sm" data-vmsite="' + esc(f) + '">이 사이트 정하기</button>' : '') + '</td></tr>' };
+      })
+      /* 확인할 것이 있는 사이트가 먼저 — FAB 이 백 개가 넘는다(실측 국내 포함). 「확인할 것만」이 기본(있을 때). */
+      .sort((a, b) => (b.w > 0) - (a.w > 0) || b.n - a.n)
+      .filter((r, i, arr) => !VM.only || !arr.some(x => x.w) || r.w).map(r => r.h).join('') + '</tbody></table>';
+  }else{
+    const col = has(VM.col) ? VM.col : T.cols[0]; VM.col = col;
+    const vals = new Map();
+    G.forEach(g => { const v = vs(g[col]); const o = vals.get(v) || vals.set(v, { n:0, rd:[] }).get(v); o.n += g.n; o.rd.push([vmRead(by, g, col), g.n]); });
+    const big = (col === 'country' || col === 'op') ? vmCorpBig(by, col) : new Map();
+    h += '<p class="hint"><b>' + esc(VM.L[col] || col) + '</b> — 어디에 쓰이나: ' + esc(VM.WHERE[col] || '') + '</p>'
+      + '<table class="dt vm-t"><thead><tr><th>원본 값</th><th>행 수</th><th>대시보드가 읽는 값</th><th>그 뜻</th><th>확인할 것</th><th></th></tr></thead><tbody>'
+      + Array.from(vals).sort((a, b) => b[1].n - a[1].n).map(([v, o]) => {
+        const rd = vmDist(o.rd), main = rd[0] ? rd[0][0] : v, warn = [];
+        /* 읽는 값 중 하나라도 «국가 이름»이면 짚는다 — 조건 규칙이 일부 행만 바꿨을 수 있다(F16S 만 정하고 F11 은 그대로) */
+        const cnV = (col === 'country' || col === 'op') ? (rd.find(([x]) => GST.vmap.countryName(x) && big.has(GST.ORG.country(x))) || [null])[0] : null;
+        const cnN = cnV != null ? rd.find(x => x[0] === cnV)[1] : 0;
+        if(cnV != null) warn.push('법인 칸에 국가 이름' + (rd.length > 1 ? '(' + cnN.toLocaleString() + '행)' : '') + ' — 같은 국가의 다른 설비는 «' + big.get(GST.ORG.country(cnV)) + '»');
+        const mean = vmMean(col, main);
+        if(/^⚠/.test(mean)) warn.push(mean.replace(/^⚠\s*/, ''));
+        const sug = cnV != null ? big.get(GST.ORG.country(cnV)) : '';
+        return '<tr' + (warn.length ? ' class="vm-w"' : '') + '><td><b>' + esc(v || '(빈칸)') + '</b></td><td>' + o.n.toLocaleString() + '</td>'
+          + '<td>' + (rd.length === 1 && rd[0][0] === v ? '<span class="hint">원본 그대로</span>' : vmDistTxt(rd)) + '</td><td>' + esc(mean.replace(/^⚠\s*/, '')) + '</td>'
+          + '<td class="vm-wt">' + esc(warn.join(' · ')) + '</td>'
+          + '<td>' + (sug ? '<button type="button" class="btn sm pri" data-vmsug="' + esc(v) + '" data-to="' + esc(sug) + '">«' + esc(sug) + '» 로 읽기</button> ' : '')
+          + '<button type="button" class="btn sm" data-vmval="' + esc(v) + '">바꿔 읽기</button></td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+  /* 규칙 목록 — 지금 이 표에 걸린 것 전부 */
+  h += '<h4 style="margin-top:16px">이 표의 규칙 ' + VM.rules.length + '개</h4>'
+    + (VM.rules.length ? '<table class="dt vm-t"><thead><tr><th>칸</th><th>원본 값</th><th>조건</th><th>→ 읽는 값</th><th>누가 · 언제</th><th></th></tr></thead><tbody>'
+      + VM.rules.map((r, i) => '<tr><td>' + esc(VM.L[r.col] || r.col) + '</td><td>' + esc(r.raw === '*' ? '(아무 값)' : r.raw === '' ? '(빈칸)' : r.raw) + '</td>'
+        + '<td>' + (r.when_col ? esc((VM.L[r.when_col] || r.when_col) + ' = ' + r.when_val) : '—') + '</td><td><b>' + esc(r.val) + '</b></td>'
+        + '<td class="hint">' + esc((r.updated_by || '') + ' · ' + String(r.updated_at || '').slice(0, 16).replace('T', ' ')) + '</td>'
+        + '<td><button type="button" class="btn sm dng" data-vmdel="' + i + '">지우기</button></td></tr>').join('') + '</tbody></table>'
+      : '<p class="hint">아직 없습니다.</p>');
+  box.innerHTML = h;
+}
+/* 국가 → 그 국가에서 가장 많이 쓰인 «법인 이름»(국가 이름이 아닌 것) — 사이트 보기·값 보기·정하기 창이 같이 쓴다 */
+function vmCorpBig(by, col){
+  const big = new Map();
+  vmDist((VM.groups || []).map(g => [vmRead(by, g, col || 'country'), g.n])).forEach(([v]) => { const c = GST.ORG.country(v); if(c && !GST.vmap.countryName(v) && !big.has(c)) big.set(c, v); });
+  return big;
+}
+async function vmSave(rows, dels){
+  try{
+    for(const r of dels || []){
+      const q = await C.from('value_map').delete().eq('tbl', r.tbl).eq('col', r.col).eq('raw', r.raw).eq('when_col', r.when_col || '').eq('when_val', r.when_val || '').select();
+      if(q.error) throw new Error(q.error.message);
+    }
+    for(const r of rows || []){
+      const q = await C.from('value_map').upsert(Object.assign({ when_col:'', when_val:'' }, r, { updated_by:(GST._me && GST._me.email) || null, updated_at:new Date().toISOString() })).select();
+      if(q.error) throw new Error(q.error.message);
+      if(!(q.data || []).length) throw new Error('저장 권한이 없습니다(쓰기 권한 필요)');
+    }
+    GST.vmap._p = null;
+    snack('저장했습니다 — 대시보드를 새로고침하면 반영됩니다', {ms:4000});
+    await vmRender(true);
+  }catch(e){ snack('저장 실패: ' + (e.message || e), {err:true, ms:7000}); }
+}
+/* 고를 값 목록 — 이 표에 이미 있는 «읽는 값»(새 이름을 지어내지 않게 · 그래도 직접 적을 수 있다) */
+function vmOpts(col){
+  const by = GST.vmap.compile(VM.tbl, VM.rules);
+  return vmDist((VM.groups || []).map(g => [vmRead(by, g, col), g.n])).filter(([v]) => v).map(([v, n]) => '<option value="' + esc(v) + '">' + n.toLocaleString() + '행</option>').join('');
+}
+async function vmSiteDlg(fab){
+  const T = VM.T.inst, cols = ['country', 'customer', 'location', 'state'].filter(c => T.cols.indexOf(c) >= 0);
+  const cur = c => VM.rules.find(r => r.col === c && r.when_col === 'fab' && vmK(r.when_val) === vmK(fab) && r.raw === (c === 'state' ? '' : '*'));
+  const by = GST.vmap.compile('inst', VM.rules), gs = (VM.groups || []).filter(g => vmK(g.fab) === vmK(fab));
+  const body = '<p>FAB <b>' + esc(fab) + '</b> (' + gs.reduce((s, g) => s + g.n, 0).toLocaleString() + '대) 의 행을 대시보드가 이렇게 읽게 합니다. 비워 두면 원본 그대로입니다.</p>'
+    + cols.map(c => {
+      const d = vmDist(gs.map(g => [vmRead(by, g, c), g.n])), r = cur(c);
+      /* 법인 칸이 국가 이름뿐이면 — 같은 국가의 법인 이름을 «제안»으로 한 번에 채운다(이름을 지어내지 않는다 · 표에 이미 있는 값) */
+      const cn = c === 'country' ? (d.find(([v]) => GST.vmap.countryName(v)) || [null])[0] : null, sug = cn ? vmCorpBig(by).get(GST.ORG.country(cn)) : '';
+      return '<div class="vm-f"><label><b>' + esc(VM.L[c]) + '</b>' + (c === 'state' ? ' — <span class="hint">설비상태가 «빈칸»인 행만</span>' : '')
+        + (sug ? '<button type="button" class="vm-sug" data-vmfill="' + c + '" data-v="' + esc(sug) + '">제안: ' + esc(sug) + '</button>' : '') + '</label>'
+        + '<input data-vmf="' + c + '" list="vml_' + c + '" value="' + esc(r ? r.val : '') + '" placeholder="지금: ' + esc(d.map(([v, n]) => (v || '(빈칸)') + ' ' + n).join(' · ')) + '">'
+        + '<datalist id="vml_' + c + '">' + (c === 'state' ? GST.EQ.IN.concat(GST.EQ.OUT).map(v => '<option value="' + esc(v) + '">').join('') : vmOpts(c)) + '</datalist>'
+        + '<div class="hint">' + esc(VM.WHERE[c]) + '</div></div>';
+    }).join('')
+    + '<p class="hint">예) 같은 대만 설비인데 이 파일만 법인이 «TAIWAN» 이면 «GST TAIWAN SCRUBBER» 를 고르면 가동현황 표에서 같은 법인 행에 합쳐집니다. '
+    + '고객사를 «Micron Memory Taiwan Co., Ltd.(' + esc(fab) + ')» 처럼 적으면 그 사이트가 고객사 행으로 따로 섭니다.</p>';
+  const p = dialog('이 사이트 정하기 — ' + fab, body, [{l:'취소', v:false}, {l:'저장', v:true, cls:'pri'}], true);
+  const box = dialog.last;
+  box.addEventListener('click', e => { const b = e.target.closest('[data-vmfill]'); if(b){ const i = box.querySelector('[data-vmf="' + b.dataset.vmfill + '"]'); if(i) i.value = b.dataset.v; } });
+  if((await p) !== true) return;
+  const rows = [], dels = [];
+  cols.forEach(c => {
+    const v = String((box.querySelector('[data-vmf="' + c + '"]') || {}).value || '').trim(), r = cur(c);
+    const k = { tbl:'inst', col:c, raw:c === 'state' ? '' : '*', when_col:'fab', when_val:fab };
+    if(v) rows.push(Object.assign(k, { val:v })); else if(r) dels.push(k);
+  });
+  if(!rows.length && !dels.length) return;
+  await vmSave(rows, dels);
+}
+async function vmValDlg(v, to){
+  const col = VM.col, r = VM.rules.find(x => x.col === col && x.raw === v && !x.when_col);
+  if(to) return vmSave([{ tbl:VM.tbl, col:col, raw:v, val:to }]);
+  const body = '<p><b>' + esc(VM.L[col] || col) + '</b> 칸의 «' + esc(v || '(빈칸)') + '» 를 대시보드가 이렇게 읽게 합니다(모든 행). 비우면 규칙을 지웁니다.</p>'
+    + '<input id="vmTo" list="vml_x" value="' + esc(r ? r.val : '') + '" style="width:100%"><datalist id="vml_x">'
+    + (col === 'state' ? GST.EQ.IN.concat(GST.EQ.OUT).map(x => '<option value="' + esc(x) + '">').join('') : vmOpts(col)) + '</datalist>'
+    + '<p class="hint">' + esc(VM.WHERE[col] || '') + '</p>';
+  const p = dialog('바꿔 읽기', body, [{l:'취소', v:false}, {l:'저장', v:true, cls:'pri'}]);
+  const box = dialog.last;
+  if((await p) !== true) return;
+  const nv = String(box.querySelector('#vmTo').value || '').trim();
+  if(nv) await vmSave([{ tbl:VM.tbl, col:col, raw:v, val:nv }]);
+  else if(r) await vmSave([], [{ tbl:VM.tbl, col:col, raw:v }]);
+}
+$('vmBox').addEventListener('change', e => {
+  if(e.target.id === 'vmTbl'){ VM.tbl = e.target.value; VM.col = VM.T[VM.tbl].cols[0]; VM.view = VM.tbl === 'inst' ? 'site' : 'val'; vmRender(true); }
+  if(e.target.id === 'vmCol'){ VM.col = e.target.value; VM.view = 'val'; vmRender(false); }
+  if(e.target.name === 'vmView'){ VM.view = e.target.value; vmRender(false); }
+  if(e.target.id === 'vmOnly'){ VM.only = e.target.checked; vmRender(false); }
+});
+$('vmBox').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  if(b.id === 'vmRe') return vmRender(true);
+  if(b.dataset.vmsite != null) return vmSiteDlg(b.dataset.vmsite);
+  if(b.dataset.vmsug != null) return vmValDlg(b.dataset.vmsug, b.dataset.to);
+  if(b.dataset.vmval != null) return vmValDlg(b.dataset.vmval);
+  if(b.dataset.vmdel != null){ const r = VM.rules[+b.dataset.vmdel]; if(r) ask('규칙 지우기', '«' + esc(r.raw === '*' ? '(아무 값)' : r.raw || '(빈칸)') + ' → ' + esc(r.val) + '» 규칙을 지웁니다. 대시보드는 원본 값으로 돌아갑니다.', '지우기', true)
+    .then(ok => ok && vmSave([], [r])); }
+});
 async function bulkUp(file){
   const t = TAB();
   let XLSX, wb;

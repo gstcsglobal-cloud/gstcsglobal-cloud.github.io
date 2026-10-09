@@ -390,7 +390,7 @@ const KR_TBLS = ['kr_sheet_wk','kr_sheet_inst','kr_sheet_roster','kr_sheet_edu',
   const { ctx, pg, pe, sheetHits } = await openKr(seedOf());
   const L = await pg.evaluate(() => window.__QLOG.slice());
   const tbls = Array.from(new Set(L.filter(x => x.tbl).map(x => x.tbl))).sort();
-  const okT = t => /^kr_sheet_/.test(t) || t === 'sheet_sync_log' || t === 'allowed_users';
+  const okT = t => /^kr_sheet_/.test(t) || t === 'sheet_sync_log' || t === 'allowed_users' || t === 'value_map';   // value_map = 기준 정보 규칙(v152 · 읽기만 · 원본 표가 아니다)
   is(tbls.every(okT), '읽은 표 — 데모 표 · 적재 기록 · 자기 등급뿐 (' + tbls.join(' ') + ')');
   is(KR_TBLS.every(t => tbls.indexOf(t) >= 0), '데모 표 일곱을 다 읽었다');
   const syncKeys = Array.from(new Set(L.filter(x => x.tbl === 'sheet_sync_log').map(x => (x.f.find(f => f[0] === 'tbl') || [])[2]))).sort();

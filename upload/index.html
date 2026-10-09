@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=151"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=152"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:#1d2433;background:#F5F6F8;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
@@ -618,6 +618,7 @@ window.checkFile=async function(){
         +pendInFile.map(k=>String(header[C[k]]||k).trim()).join(', ')
         +'<br>값은 <b>extra 에 담겨 보존</b>되지만 화면·필터·챗봇은 못 씁니다.'
         +' 쓰려면 <b>supabase/setup-13-inst-line2.sql</b> 같은 승격 SQL 을 Run 한 뒤 다시 올리세요.</span>');
+      { const vc=await vmCheck(c,t,out); if(vc) msgs.push(vc); }
     }else{
       /* Import 표 — CSV 헤더가 표의 실제 컬럼과 정규화 후 정확일치해야 한다.
          모르는 헤더가 있으면 막는다(조용히 버리면 그 열은 «올린 줄 알았는데 없는» 상태가 된다). */
@@ -960,6 +961,31 @@ document.addEventListener('change',async function(e){
   if(!e.target.closest||!e.target.closest('#chk')) return;
   if(await GST.cmap.handle(e, cmapSite(), await GST.db())) await window.checkFile();
 });
+/* ---------- 새 값 점검 (v152 · 사용자: 「새로운 게 들어가면 어디에 반영하는지, 어떻게 반영하는지」) ----------
+   올리기 «전에» 이 파일의 값을 지금 표와 견준다 — 처음 보는 값(새 사이트 F16S 등) · 법인 칸에 국가 이름(TAIWAN) · 빈 설비상태.
+   대시보드가 그것을 «어떻게 읽을지»(구분·국가·대수 판정)를 적고, 다르게 읽히게 하려면 데이터 관리 「기준 정보」에서 정한다.
+   ⚠ 막지 않는다 — 규칙은 원본을 안 건드리고 «읽을 때» 먹으므로 올린 뒤에 정해도 된다. 판정은 core GST.vmap.check 한 벌. */
+const VM_COLS={ inst:['country','customer','location','fab','state'], wk:['op','customer','campus','line'], mat:['op','customer','campus','line'] };
+const VM_L={ country:'법인', customer:'고객사', location:'지역', fab:'FAB(사이트)', op:'운영단위', campus:'단지', line:'라인', state:'설비상태' };
+async function vmCheck(c,t,out){
+  const cols=VM_COLS[t.key]; if(!cols||!out.length) return '';
+  try{
+    await GST.vmap.load();
+    const r=await c.rpc('value_groups',{p_tbl:t.table,p_cols:cols});
+    if(r.error){ console.warn('[upload] 새 값 점검 건너뜀 (setup-20 미적용?)', r.error.message); return ''; }
+    /* 양식의 빈 줄(크기 계산식 칸만 찬 줄)은 세지 않는다 — 실제 파일에서 8대짜리 시트가 32줄로 읽혔다 */
+    const objs=out.filter(o=>cols.some(cc=>o[cc]!=null&&String(o[cc]).trim()!==''));
+    const k=GST.vmap.check(t.key,objs,r.data||[],cols), E=GST._esc, L=[];
+    k.fresh.forEach(f=>L.push('<b>'+E(VM_L[f.col]||f.col)+' «'+E(f.v)+'»</b> '+f.n.toLocaleString()+'행 — 처음 보는 값 · 대시보드는 '
+      +(f.read!==f.v?'«'+E(f.read)+'» 로 읽고 ':'')+E(f.mean.replace(/^⚠\s*/,''))));
+    k.cname.forEach(x=>L.push('<b>'+E(VM_L[x.col])+' «'+E(x.v)+'»</b> '+x.n.toLocaleString()+'행 — 법인 칸에 «국가 이름»이 적혔습니다. 같은 국가의 다른 설비는 «'+E(x.to)
+      +'» 라 <b>가동현황 표에서 법인 행이 따로 섭니다</b>'));
+    if(k.blankState) L.push('<b>설비상태 빈칸</b> '+k.blankState.toLocaleString()+'행 — 반입일(FAB In)이 있는 '+k.blankStateDated.toLocaleString()+'행만 반입으로 세고, 나머지는 설비 대수에 안 셉니다');
+    if(!L.length) return '';
+    return '<div class="qa"><b>새 값 점검</b> — 이 파일이 대시보드에서 이렇게 읽힙니다<ul class="qa-i">'+L.map(x=>'<li>'+x+'</li>').join('')+'</ul>'
+      +'<div class="muted">다르게 읽히게 하려면 <b>데이터 관리 → 「기준 정보」</b>에서 정하세요(예: FAB F16S 의 법인 = GST TAIWAN SCRUBBER). 원본은 그대로 두고 대시보드가 읽을 때 바뀝니다 — 올린 뒤에 정해도 됩니다.</div></div>';
+  }catch(e){ console.warn('[upload] 새 값 점검', e); return ''; }
+}
 /* 워크북에서 쓸 시트 — 사람이 고른 시트는 기억한다(__sheet). 고른 적이 없으면 «이 표의 열과 가장 많이 맞는 시트».
    ⚠ 첫 시트를 집으면 안 된다 — 대만 근태 워크북은 첫 시트가 인원명단이고 휴가는 여섯 번째다(사용자 파일 실측). */
 async function bestSheet(c,t,XLSX,wb,names){
