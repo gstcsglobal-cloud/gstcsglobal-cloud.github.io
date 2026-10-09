@@ -153,6 +153,26 @@ console.log('\n[8] GST.fillHint — 30% 미만에서만 뜨고 넘으면 스스�
 }
 
 is(errs.length === 0, 'JS 에러 없음' + (errs.length ? ' → ' + errs.slice(0, 2).join(' | ') : ''));
+console.log('\n[10] 맨 아래 카드가 아니라 팝업 — «확인할 것 N» 을 누르면 뜬다 · 관리자에게는 데이터 관리로 가는 단추 (v155)');
+{
+  await page.evaluate(() => { GST.authOn = () => false; GST._me = null; });
+  await fill(); await page.evaluate(() => GST.dq.render('전체'));
+  const st = () => page.evaluate(() => { const b = document.getElementById('gstDq'); return { hid: b.hidden, vis: b.getBoundingClientRect().height > 0, pop: b.classList.contains('gst-dq-pop'), go: !!b.querySelector('[data-dqgo]') }; });
+  let x = await st();
+  is(x.pop && x.hid && !x.vis, '처음에는 감춰져 있다(화면 맨 아래에 카드가 서지 않는다)');
+  is(await page.evaluate(() => /확인할 것 1/.test((document.getElementById('gstDqChip') || {}).textContent || '')), '요약 띠에 «확인할 것 1»(warn·bad 만 센다)');
+  await page.click('#gstDqChip');
+  x = await st();
+  is(!x.hid && x.vis, '칩을 누르면 팝업이 뜬다');
+  is(x.go, '관리자(legacy)에게는 «데이터 관리에서 고치기» 단추');
+  await page.keyboard.press('Escape');
+  is((await st()).hid, 'Esc 로 닫힌다');
+  await page.evaluate(() => { GST.authOn = () => true; GST._me = { email:'v@v', can_write:false, role:'viewer' }; });
+  await fill(); await page.evaluate(() => GST.dq.render('전체'));
+  is(!(await st()).go, '조회자에게는 그 단추가 없다(가 봐야 잠긴 문이다)');
+  await page.evaluate(() => { GST.authOn = () => false; GST._me = null; });
+}
+
 await browser.close();
 
 console.log('\n[9] 소스 — 여덟 페이지가 같은 기계를 쓰는가');

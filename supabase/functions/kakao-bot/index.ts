@@ -121,7 +121,68 @@ function importOrderCol(keys: string[]) {
   const safe = keys.filter((k) => /^[A-Za-z0-9_가-힣]+$/.test(k));
   return ["id", "src_row", "No", "no", "NO"].find((p) => safe.includes(p)) ?? safe[0] ?? null;
 }
+/* 기준 정보(값 사전 · v152~v153) — «이 표의 이 칸에 이 값이 오면 이렇게 읽는다»(value_map · setup-20).
+   대시보드는 fetchCSVCached 에서 «읽을 때» 입히는데 봇은 표를 직접 읽어 몰랐다 — 같은 질문에 화면은 «GST TAIWAN SCRUBBER»,
+   봇은 «TAIWAN» 으로 갈라 답했다(사용자 요청으로 v153 에 맞췄다).
+   SPEC-SYNC: assets/core.js GST.vmap(K · compile · pick) 과 «같은 규칙»이다 — 런타임이 달라(브라우저 ↔ Deno) 파일을 못 나눈다.
+   한쪽만 고치면 화면과 봇이 같은 설비를 다른 법인으로 답한다. tests/t-botvmap.mjs 가 두 구현에 같은 입력을 먹여 대조한다.
+   · 규칙의 col·when_col 은 SPEC 필드(camel) — 표 열(snake)로 바꿔 행 객체에서 읽는다(GST._snake 와 같은 식).
+   · 조건은 «원본» 값으로 본다 · 바뀐 행만 복사한다 · 우선순위 값+조건 > 값 > *+조건 > * (core 와 같다). */
+type VRule = { tbl: string; col: string; raw: string; when_col?: string | null; when_val?: string | null; val: string };
+type VList = { raw: string; wc: string; wv: string; val: string; lv: number }[];
+const vmK = (v: unknown) => String(v ?? "").trim().toUpperCase();
+const vmSnake = (f: string) => String(f).replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+function vmCompile(tbl: string, rules: VRule[]) {
+  const by: Record<string, VList> = {};
+  for (const r of rules || []) {
+    if (r.tbl !== tbl) continue;
+    const any = r.raw === "*", cond = !!r.when_col, c = vmSnake(r.col);
+    (by[c] = by[c] || []).push({ raw: any ? "*" : vmK(r.raw), wc: r.when_col ? vmSnake(r.when_col) : "", wv: vmK(r.when_val),
+      val: r.val, lv: (any ? 2 : 0) + (cond ? 0 : 1) });
+  }
+  for (const c of Object.keys(by)) by[c].sort((a, b) => a.lv - b.lv);
+  return by;
+}
+function vmPick(list: VList, o: Record<string, unknown>, col: string) {
+  const kc = vmK(o[col]);
+  for (const r of list || []) {
+    if (r.raw !== "*" && r.raw !== kc) continue;
+    if (r.wc && vmK(o[r.wc]) !== r.wv) continue;
+    return r;
+  }
+  return null;
+}
+// 표 행(객체 · 표 열 이름 키)에 입힌다 — 규칙에 걸린 칸만 바꾸고, 바뀐 행만 복사한다.
+function vmApplyRows(tbl: string, rows: Record<string, unknown>[], rules: VRule[]) {
+  const by = vmCompile(tbl, rules), cols = Object.keys(by);
+  let n = 0, cells = 0;
+  if (!cols.length) return { rows, n, cells };
+  const out = rows.map((o) => {
+    let cp: Record<string, unknown> | null = null;
+    for (const c of cols) {
+      const h = vmPick(by[c], o, c);
+      if (h && String(h.val) !== String(o[c] ?? "")) { if (!cp) cp = { ...o }; cp[c] = h.val; cells++; }
+    }
+    if (cp) n++;
+    return cp || o;
+  });
+  return { rows: out, n, cells };
+}
+// 규칙이 «보는» 표 열 — 조회가 열을 골라 받을 때(queryFaults) 이 열도 같이 받아야 조건·대상이 보인다.
+function vmCols(tbl: string, rules: VRule[]) {
+  const s = new Set<string>();
+  for (const r of rules || []) if (r.tbl === tbl) { s.add(vmSnake(r.col)); if (r.when_col) s.add(vmSnake(r.when_col)); }
+  return [...s];
+}
 /* ---------- 순수 복원부 끝 ---------- */
+/* 규칙 읽기 — 실패해도 답은 한다(원본 값으로). 다만 조용하지 않게 로그에 남긴다. */
+async function loadVmap(svc: any, tbl: string): Promise<VRule[]> {
+  try {
+    const r = await svc.from("value_map").select("tbl,col,raw,when_col,when_val,val").eq("tbl", tbl);
+    if (r.error) { console.warn("vmap 읽기 실패 (setup-20 미적용?)", r.error.message); return []; }
+    return (r.data ?? []) as VRule[];
+  } catch (e) { console.warn("vmap 읽기 실패", String(e)); return []; }
+}
 
 async function fetchCsv(gid: string) {
   const t = Date.now();
@@ -162,7 +223,14 @@ async function fetchCsv(gid: string) {
     from += n;
   }
   if (!all.length) throw new Error("EMPTY " + D.tbl);
-  const text = rowsToCsv(head, cols, all);
+  /* 기준 정보 규칙(v153) — 대시보드와 같은 값으로 답하게. 미러 표(설치·수선)만 — 규칙의 표가 그 둘(과 자재)이다. */
+  let rows = all;
+  if (D.kind === "mirror") {
+    const lt = D.tbl.replace("sheet_", ""), vm = vmApplyRows(lt, all, await loadVmap(svc, lt));
+    rows = vm.rows;
+    if (vm.n) console.log("vmap", lt, "rows", vm.n, "cells", vm.cells);
+  }
+  const text = rowsToCsv(head, cols, rows);
   return { text, bytes: text.length, ms: Date.now() - t };
 }
 
@@ -258,7 +326,7 @@ const FAULT_DEFAULT_DAYS = 90;  // 질문이 기간을 안 밝혔을 때의 기�
 
 type FaultQ = {
   rows: any[]; total: number; used: number; truncated: boolean;
-  from: string; to: string; spoken: boolean; ms: number;
+  from: string; to: string; spoken: boolean; ms: number; vmapRows?: number;
 };
 
 async function queryFaults(svc: any, filters: any, now: Date): Promise<FaultQ> {
@@ -305,19 +373,24 @@ async function queryFaults(svc: any, filters: any, now: Date): Promise<FaultQ> {
   const total = cnt.count ?? 0;
   const take = Math.min(total, FAULT_CAP);
 
+  /* 기준 정보 규칙(v153) — 규칙이 보는 열(대상·조건)도 같이 받는다. 표에 없는 열은 빼고(select 가 통째로 거부된다 · v92). */
+  const vrules = await loadVmap(svc, "wk");
+  const known = new Set(cm.data.map((r: any) => r.col));
+  const selCols = [...new Set([...cols, ...vmCols("wk", vrules).filter((c) => known.has(c))])];
   const all: Record<string, unknown>[] = [];
   const STEP = 5000;
   for (let f = 0; f < take; f += STEP) {
-    const r = await cond(svc.from("sheet_wk").select(cols.join(",")))
+    const r = await cond(svc.from("sheet_wk").select(selCols.join(",")))
       .order(dCol, { ascending: false })            // 잘릴 때 «최근»이 남아야 한다
       .range(f, Math.min(f + STEP, take) - 1);
     if (r.error) throw new Error("READ " + r.error.message);
     if (!r.data?.length) break;
     for (const o of r.data) all.push(o);
   }
-  const rows = parseFaultRecords(rowsToCsv(heads, cols, all));
+  const vm = vmApplyRows("wk", all, vrules);
+  const rows = parseFaultRecords(rowsToCsv(heads, cols, vm.rows));
   return { rows, total, used: rows.length, truncated: total > FAULT_CAP,
-           from: d10(from), to: d10(to), spoken, ms: Date.now() - t };
+           from: d10(from), to: d10(to), spoken, ms: Date.now() - t, vmapRows: vm.n };
 }
 
 /* 조회 범위를 «답변이 서는 근거»로 남긴다. 조용히 자르면 그 답은 거짓말이 된다 —
@@ -327,10 +400,11 @@ function faultNote(f: FaultQ | null, err: string | null) {
   if (!f) return "";
   const win = `[고장 실적 조회 범위] ${f.from} ~ ${f.to}`
     + (f.spoken ? "" : ` (질문에 기간이 없어 최근 ${FAULT_DEFAULT_DAYS}일)`);
-  return f.truncated
+  const vm = f.vmapRows ? ` · 기준 정보 규칙으로 ${f.vmapRows.toLocaleString()}건의 값을 대시보드와 같게 읽었습니다` : "";
+  return (f.truncated
     ? `${win} · 조건에 맞는 ${f.total.toLocaleString()}건 중 최근 ${f.used.toLocaleString()}건만 사용했습니다.`
       + ` 이 답의 건수는 실제보다 적습니다 — 기간을 좁혀 다시 물어봐 주세요.`
-    : `${win} · ${f.used.toLocaleString()}건 전부 사용`;
+    : `${win} · ${f.used.toLocaleString()}건 전부 사용`) + vm;
 }
 
 /* loadCache 를 감싼다 — faults 만 표에서 직접 읽어 끼워 넣는다.

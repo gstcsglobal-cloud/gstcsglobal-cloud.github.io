@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=152"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=155"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -77,6 +77,9 @@ body{
   .arow .cw{height:var(--ch-std,240px);flex:none}
   .arow .tbl-wrap{max-height:260px;flex:none}}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;position:relative}
+.mhw{display:inline-block;margin-left:6px;vertical-align:middle;border:1px solid var(--warn,#d97706);background:var(--warn-soft,#fff7ed);color:var(--warn,#b45309);border-radius:7px;font-size:12px;line-height:18px;padding:0 6px;cursor:pointer;font-weight:600;font-family:inherit}
+.mhw:hover{filter:brightness(.95)}
+@media print{.mhw{display:none!important}}
 .mini-per{position:absolute;top:14px;right:14px;display:flex;gap:0;z-index:5;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface-2)}
 /* 카드 안 인라인 체크 토글 (입사·퇴사 현장 인원 필터) */
 .onsw{display:inline-flex;align-items:center;gap:4px;margin-left:8px;cursor:pointer;user-select:none;white-space:nowrap}
@@ -167,7 +170,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=152">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=155">
 </head>
 <body>
 
@@ -432,6 +435,7 @@ ko:{sl_more:'주간현황 전용',title:'주간 현황',sub:'인력 · 교육 ·
  ch_io:'입사 · 퇴사 (단지별)',io_onsite:'현장(O) 인원만',note_io:'위 = 입사 · 아래 = 퇴사 · 단지별 구분',io_in:'입사',io_out:'퇴사',
  ch_edu:'교육 완료율 추이',note_edu:'이수일 기준 누적 완료 / 해당 시점 재직 인원',
  ch_jobs:'작업 건수',note_jobs:'전체 작업 실적 · 최대/최신값 라벨',
+ mhw_tip:'확인 필요 — 한 건이 24시간을 넘는 작업 {n}건(대개 작업종료일 오기입) · 누르면 목록',mhw_title:'작업 공수 — 확인이 필요한 행',mhw_cols:'작업시작일|작업종료일|작업단계|운영단위|설비호기|실적코드|작업시간(h)|작업공수(h)',mhw_note:'한 건이 24시간을 넘는 {n}건 — 대개 작업종료일 오기입입니다. 차트는 그대로 셉니다(빼지 않습니다)',mhw_go:'데이터 관리에서 고치기',dq_mhw:'작업시간 24시간 초과 행(공수 허수 의심)',dq_mhw_a:'데이터 관리 › 데이터 품질에서 행을 열어 작업종료일·작업시간을 바로잡으세요',
  ch_man:'작업 공수 (h)',note_man:'PM · 서비스 · 설치 구분 (이상치 제외)',man_pm:'PM',man_np:'非PM',man_svc:'서비스',man_inst:'설치',
  ch_pc:'인당 작업 건수',note_pc:'구간 내 실제 투입 인원 기준',
  ch_sc:'PM 계획 대비 완료 (올해 누적)',note_sc:'계획 = 설비별 주기 기반 도래 건수 · 진행율은 툴팁',sc_plan:'계획(누적)',sc_done:'완료(누적)',
@@ -452,6 +456,7 @@ en:{sl_more:'Weekly only',title:'Weekly Status',sub:'Weekly/monthly summary — 
  ch_io:'Joins · Leaves (by line)',io_onsite:'On-site (O) only',note_io:'up = joins · down = leaves · by line',io_in:'Joined',io_out:'Left',
  ch_edu:'Training Completion Trend',note_edu:'cumulative completions / active headcount',
  ch_jobs:'Job Count',note_jobs:'all work records · peak/latest labeled',
+ mhw_tip:'Check — {n} jobs over 24 h each (usually a wrong end date) · click for the list',mhw_title:'Man-hours — rows to check',mhw_cols:'Start|End|Stage|Unit|Equipment|Record code|Work (h)|Man-hours (h)',mhw_note:'{n} jobs over 24 h each — usually a mistyped end date. The chart still counts them (not excluded)',mhw_go:'Fix in Data management',dq_mhw:'Jobs over 24 h (suspected false man-hours)',dq_mhw_a:'Open Data management › Data quality and correct the end date / work time',
  ch_man:'Man-hours (h)',note_man:'PM · Service · Install (outliers excluded)',man_pm:'PM',man_np:'Non-PM',man_svc:'Service',man_inst:'Install',
  ch_pc:'Jobs per Person',note_pc:'based on workers actually deployed in period',
  ch_sc:'PM Plan vs Done (YTD cumulative)',note_sc:'plan = due events from per-tool cycles · progress in tooltip',sc_plan:'Plan (cum)',sc_done:'Done (cum)',
@@ -472,6 +477,7 @@ zh:{sl_more:'仅周现况',title:'周间现况',sub:'人力·教育·作业·PM�
  ch_io:'入职 · 离职(按线)',io_onsite:'仅现场(O)人员',note_io:'上=入职·下=离职·按线区分',io_in:'入职',io_out:'离职',
  ch_edu:'教育完成率趋势',note_edu:'按完成日累计 / 当时在职人数',
  ch_jobs:'作业件数',note_jobs:'全部作业实绩 · 最大/最新标注',
+ mhw_tip:'需确认 — 单件超过24小时的作业{n}件(多为结束日期误填) · 点击查看列表',mhw_title:'作业工时 — 需确认的行',mhw_cols:'开始日|结束日|作业阶段|运营单位|设备号|实绩编号|作业时间(h)|工时(h)',mhw_note:'单件超过24小时的{n}件 — 多为结束日期误填。图表照常计入(未排除)',mhw_go:'在数据管理中修正',dq_mhw:'作业时间超过24小时的行(疑似虚高工时)',dq_mhw_a:'在 数据管理 › 数据质量 中打开该行,修正结束日期·作业时间',
  ch_man:'作业工时(h)',note_man:'PM·服务·安装区分(除异常值)',man_pm:'PM',man_np:'非PM',man_svc:'服务',man_inst:'安装',
  ch_pc:'人均作业件数',note_pc:'按区间内实际投入人员',
  ch_sc:'PM计划 vs 完成(今年累计)',note_sc:'计划=按设备周期到期件数 · 进度见提示框',sc_plan:'计划(累计)',sc_done:'完成(累计)',
@@ -492,6 +498,7 @@ ja:{sl_more:'週間現況専用',title:'週間現況',sub:'人員·教育·作�
  ch_io:'入社 · 退社(ライン別)',io_onsite:'現場(O)のみ',note_io:'上=入社·下=退社·ライン別',io_in:'入社',io_out:'退社',
  ch_edu:'教育完了率推移',note_edu:'完了日基準の累計 / 当時の在籍数',
  ch_jobs:'作業件数',note_jobs:'全作業実績 · 最大/最新ラベル',
+ mhw_tip:'要確認 — 1件24時間超の作業{n}件(多くは終了日の誤入力) · クリックで一覧',mhw_title:'作業工数 — 確認が必要な行',mhw_cols:'開始日|終了日|作業段階|運営単位|設備番号|実績コード|作業時間(h)|工数(h)',mhw_note:'1件24時間を超える{n}件 — 多くは終了日の誤入力です。チャートはそのまま数えます(除外しません)',mhw_go:'データ管理で修正',dq_mhw:'作業時間24時間超の行(工数の水増し疑い)',dq_mhw_a:'データ管理 › データ品質 で行を開き、終了日・作業時間を修正してください',
  ch_man:'作業工数(h)',note_man:'PM·サービス·設置区分(異常値除外)',man_pm:'PM',man_np:'非PM',man_svc:'サービス',man_inst:'設置',
  ch_pc:'一人当たり作業件数',note_pc:'区間内の実投入人員基準',
  ch_sc:'PM計画対完了(今年累計)',note_sc:'計画=設備別周期の到来件数 · 進捗はツールチップ',sc_plan:'計画(累計)',sc_done:'完了(累計)',
@@ -1306,6 +1313,7 @@ async function loadData(){
         phenom:String(r[CW.phenom]||'').trim(),action:String(r[CW.action]||'').trim(),
         manMin:manMin,   // 값 그대로 합산 — 상한/이상치 제거 없음(엑셀 매크로와 동일)
         workMin:workMin,
+        rsCode:String(r[CW.rsCode]||'').trim(), dEnd:String(r[CW.dEnd]||'').trim().slice(0,10),   // v155 — 공수 ⚠ 목록(어느 행인지 · 종료일 오기입을 눈으로)
         eqNo:String(r[CW.eqNo]||'').trim(),
         workers:String(r[CW.workers]||'').split(/[,、;/]+/).map(s=>s.trim()).filter(Boolean)};
     }).filter(Boolean):[];
@@ -2341,6 +2349,12 @@ function render(){ GST.dq&&GST.dq.reset('report');
           tooltip:{callbacks:{footer:it=>t('man_sum')+' '+(hTot[it[0].dataIndex]??0)+'h'}}},
         scales:baseScales(TH,true)},
       plugins:[valLabelPlugin]});
+    /* v155 — 확인이 필요한 공수 행(사용자: 「35주차 작업공수에 허수가 있는 것 같다 … 고치라는 의미와 내게 알리는 의미로」).
+       한 건이 24시간을 넘는 작업 — 실측 대만 35주차 2,989h 중 1,898h 가 «종료일 오기입» 두 행이었다(시작 08-28 · 종료 09-08/09-28).
+       ⚠ 빼지 않는다(제3원칙 — 해외 규칙은 그대로) · «확인하라»고만 한다. 국내 데모(report-kr)는 v147 에서 이미 뺀다.
+       ⚠ 차트가 더한 «그 행들»(지금 구간 · PM+非PM)에서 고른다 — 따로 고르면 막대와 목록이 다른 모집단이 된다. */
+    window._MHW=[].concat.apply([], P.map(p=>bk(u,p.key))).filter(x=>(isPM(x)||isSvc(x)) && x.workMin>MHW_MIN);
+    mhwBadge();
     const _mi=hPM.length-1, _tot=hTot[_mi]??0;
     /* PM 공수의 «근거»를 적는다 (v112 · 사용자 지적).
        PM = 작업단계가 정확히 'TBM' 인 행의 작업공수 합이다. 그 한 줄이 전부다 —
@@ -2993,6 +3007,8 @@ function render(){ GST.dq&&GST.dq.reset('report');
        ⚠ 노트의 문장은 그대로 둔다(v92 규약 — Alarm 차트 주석 맨 앞이 그 자리다).
          여기는 «모으는 자리»이지 옮기는 자리가 아니다. */
     if(GST.dq){
+      if(window._MHW && window._MHW.length)
+        GST.dq.push({key:'wk_24h', sev:'warn', label:t('dq_mhw'), n:window._MHW.length, act:t('dq_mhw_a')});
       if(!KR_ON && window._KRWHY)
         GST.dq.push({key:'kr_alarm', sev:'warn', label:t('dq_kra')+' — '+window._KRWHY, act:t('dq_kra_a')});
       if(window._KRWHYB)
@@ -3726,6 +3742,29 @@ window.downloadPPT=async function(btn){
   }catch(e){ console.error('PPT 생성 오류',e); capToast('PPT 생성 실패: '+((e&&e.message)||e)); }
   finally{ if(btn){btn.disabled=false;btn.textContent=old;} }
 };
+/* v155 — 공수 ⚠ 심벌 · 팝업. 차트에 글자를 더 쓰지 않는다(심벌 하나 · 내용은 팝업 — v147 사용자 확정).
+   제목(h3) 옆 «인라인» — 오른쪽 위는 주/월 토글과 hover 버튼이 이미 나눠 쓴다. applyLang 이 h3 를 다시 쓰므로 그 뒤에 다시 붙인다. */
+const MHW_MIN = 24*60;
+function mhwBadge(){
+  const n=(window._MHW||[]).length, cv=document.getElementById('cMan'), host=cv&&cv.closest('.card')?cv.closest('.card').querySelector('h3'):null;
+  if(!host) return;
+  let b=host.querySelector('.mhw');
+  if(!n){ if(b) b.remove(); return; }
+  if(!b){ b=document.createElement('button'); b.type='button'; b.className='mhw'; b.textContent='⚠';
+    b.addEventListener('click',e=>{ e.stopPropagation(); e.preventDefault(); mhwModal(); }); host.appendChild(b); }
+  b.title=t('mhw_tip').replace('{n}',n.toLocaleString());
+}
+function mhwModal(){
+  const H=m=>Math.round(m/60*10)/10, L=window._MHW||[];
+  const rows=L.slice().sort((a,b)=>b.workMin-a.workMin)
+    .map(x=>[GST.ymdL(x.wd), x.dEnd||'', x.stage, x.op, x.eqNo||x.sn||'', x.rsCode||'', H(x.workMin).toLocaleString(), H(x.manMin||0).toLocaleString()]);
+  const ov=GST.rowsModal(t('mhw_title'), t('mhw_cols').split('|'), rows, t('mhw_note').replace('{n}',rows.length.toLocaleString()));
+  /* 관리자 — 그 자리에서 고치러 간다(데이터 관리 「데이터 품질」 탭 · 같은 창 gstEdit 을 다시 쓴다) */
+  try{ if(ov && GST.isAdmin && GST.isAdmin()){ const hd=ov.querySelector('.gov-h .gov-sp');
+    if(hd){ const a=document.createElement('button'); a.className='gov-b'; a.textContent=t('mhw_go');
+      a.addEventListener('click',()=>{ try{ window.open('/edit/?tab=dq','gstEdit'); }catch(e){} }); hd.after(a); } } }catch(e){ console.warn('mhwModal', e); }
+}
+{ const _al0=applyLang; applyLang=function(){ const r=_al0.apply(this,arguments); try{ mhwBadge(); }catch(e){ console.warn('mhwBadge',e); } return r; }; }
 // (구) pptxgenjs 재구성 방식 — 양식 수술 방식으로 대체됨
 applyLang(); loadData();
 </script>
