@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=152"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=155"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -201,6 +201,18 @@ table.rt th.ck input,table.rt td.ck input{width:15px;height:15px;cursor:pointer;
 .mask{position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:1000;display:grid;place-items:center;padding:16px}
 .dlg{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-md);width:min(620px,100%);max-height:86vh;display:flex;flex-direction:column}
 .dlg.wide{width:min(980px,100%)}
+/* v155 — 데이터 품질 */
+#dqBox{padding:14px 16px}
+.dq-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.dq-h h3{margin:0;font-size:15px}.dq-h .sp{flex:1}
+#dqBox h4{font-size:13px;margin:18px 0 6px}
+.dq-t{width:100%;margin:6px 0 4px}.dq-t td.r,.dq-t th.r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.dq-t tr.dq-bad td:first-child{border-left:3px solid var(--bad);color:var(--bad)}
+.dq-t tr.dq-warn td:first-child{border-left:3px solid var(--warn);color:var(--warn)}
+.dq-t tr.dq-info td:first-child{border-left:3px solid var(--txt-muted)}
+.dq-t tr.dq-ok td{color:var(--txt-muted)}
+.dq-pg{margin:12px 0 2px}
+.tab .tbadge{display:inline-block;margin-left:5px;min-width:16px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:10.5px;line-height:16px;font-weight:700;text-align:center}
+.tab .tbadge[hidden]{display:none}
 /* v151 — 열 맵핑 확인 · 업로드 오버레이 */
 .dlg.wide{width:min(1100px,100%)}
 .cmm{display:block;margin:6px 0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer;line-height:1.5}
@@ -273,6 +285,7 @@ table.dt td.v{word-break:break-all}
       </div>
     </div>
     <div id="pgVmap" hidden><div class="card" id="vmBox"></div></div>
+    <div id="pgDq" hidden><div class="card" id="dqBox"></div></div>
     <div id="pgHist" hidden>
       <div class="card">
         <form class="hf" id="hfilt" autocomplete="off"></form>
@@ -655,6 +668,7 @@ async function loadCols(t){
 function renderTabs(){
   $('tabs').innerHTML = TABS.map(t => '<button type="button" class="tab' + (S.tab === t.id ? ' on' : '') + '" data-tab="' + t.id + '">' + esc(t.name) + '</button>').join('')
     + (KR ? '' : '<button type="button" class="tab vm' + (S.tab === 'vmap' ? ' on' : '') + '" data-tab="vmap" title="새 값이 대시보드 어디에 · 어떻게 반영되는지 보고, 규칙으로 정합니다">기준 정보</button>')
+    + '<button type="button" class="tab vm' + (S.tab === 'dq' ? ' on' : '') + '" data-tab="dq" title="공수 허수(작업시간 24h 초과 등)·주별 급증을 찾아 그 행을 고칩니다 · 여덟 화면의 자료 문제도 여기 모입니다">데이터 품질<span class="tbadge"' + (dqCount(S.dq) ? '' : ' hidden') + '>' + (dqCount(S.dq) || '') + '</span></button>'
     + '<button type="button" class="tab hist' + (S.tab === 'hist' ? ' on' : '') + '" data-tab="hist">변경 이력</button>';
 }
 $('tabs').addEventListener('click', async e => {
@@ -664,12 +678,13 @@ $('tabs').addEventListener('click', async e => {
 });
 async function switchTab(id, opt){
   S.tab = id; S.cur = null; renderTabs();
-  $('pgData').hidden = id === 'hist' || id === 'vmap'; $('pgHist').hidden = id !== 'hist'; $('pgVmap').hidden = id !== 'vmap';
+  $('pgData').hidden = id === 'hist' || id === 'vmap' || id === 'dq'; $('pgHist').hidden = id !== 'hist'; $('pgVmap').hidden = id !== 'vmap'; $('pgDq').hidden = id !== 'dq';
   if(id === 'hist'){ renderHistFilters(opt); return loadHist(false); }
   if(id === 'vmap') return vmRender(true);
+  if(id === 'dq') return dqRender(false);
   const t = TAB();
   S.rows = []; S.after = null; S.more = false; S.sel = new Set(); S.lastCk = null;
-  S.qf = null; S.total = null; S.counting = false; S.seq++;
+  S.qf = null; S.total = null; S.counting = false; S.seq++; S.dqView = null;
   renderSearch(); renderList(); renderEditor();
   try{ await loadCols(t); }
   catch(e){   // 서버 준비 전(S.ready=false)이면 시작 배너가 이미 밝혔다. 준비됐는데 «이 표만» 못 열면 여기서 말한다 — 시작 배너는 덮지 않는다
@@ -771,7 +786,7 @@ async function runSearch(append){
   S.busy = true;
   $('listH').innerHTML = '<span class="spin"></span> <span class="hint">찾는 중…</span>';
   try{
-    if(!append){ S.qf = { tab:t.id, f:Object.assign({}, f) }; S.total = null; S.counting = false; S.seq++; }
+    if(!append){ S.qf = { tab:t.id, f:Object.assign({}, f) }; S.total = null; S.counting = false; S.seq++; S.dqView = null; }
     if(f.region && t.region) await regionReady(t);
     if(t.mode === 'whole'){
       if(!S.all[t.id]) S.all[t.id] = await loadAll(t);
@@ -1925,7 +1940,7 @@ async function bulkDown2(t, kind){
   if(kind === 'sel'){ keys = S.rows.map(r => String(r[t.key])).filter(k => S.sel.has(k)); what = '목록에서 체크한 행'; }
   else if(kind === 'all'){
     const f = S.qf && S.qf.tab === t.id ? S.qf.f : {};
-    what = '검색 결과 전체 · 조건: ' + condText(t, f);
+    what = S.dqView ? S.dqView : '검색 결과 전체 · 조건: ' + condText(t, f);
     const tot = resultTotal(t);
     if(tot != null && tot > DOWN_MAX) return tooMany(t, tot);
     if(t.mode === 'whole' || !S.more) keys = S.rows.map(r => String(r[t.key]));    // 목록이 곧 전부
@@ -2837,6 +2852,102 @@ async function csShow(t, st, P){
   return v === 'back' ? 'back' : v === true && n > 0;
 }
 
+/* ---------- 데이터 품질 (v155 · 사용자 요청) ----------
+   사용자: 「작업공수 35주차는 허수의 값이 있는 것 같다 — 주간현황 맨 밑의 데이터 품질 표를 데이터 관리로 옮기고,
+            정합성이 안 맞는 것을 고치라는 의미와 내게 알리는 의미로 기능을 하나 추가하고, 내가 직접 확인하고 수정할 수 있게」.
+   두 부분이다.
+   ① 원장 점검 — 수선실적을 서버가 직접 훑는다(setup-21 edit_dq). 판정은 SQL 한 벌이고(edit_dq · edit_dq_rows 가 같은 식),
+      여기는 «몇 건 · 어느 행»을 보여 주고 그 행을 수선실적 탭 목록에 그대로 띄운다 — 고치기는 그 탭의 편집·조건으로 바꾸기·
+      엑셀 일괄이 한다(새 쓰기 통로를 만들지 않는다 · 이력·되돌리기 그대로).
+      ⚠ 집계에서 빼지 않는다(제3원칙 — 해외 규칙은 그대로). «확인하라»고만 한다. 고치면 차트가 저절로 바로잡힌다.
+   ② 화면 신호 — 여덟 화면이 GST.dq.render() 에서 남긴 스냅샷(localStorage gst_dq_<page>). 예전에는 각 화면 맨 아래 카드였다.
+      «언제·어떤 필터로» 잰 것인지를 같이 적는다(어제 수치를 지금 것으로 읽지 않게). 같은 출처라 /diag/ 와 같은 저장을 읽는다. */
+const DQ_CHECK = {
+  work24:  { l:'작업시간 24시간 초과', why:'한 건이 하루를 넘습니다 — 대개 작업종료일 오기입입니다(시작 08-28 · 종료 09-28 처럼). GST 시스템이 시작→종료로 작업시간을 계산해 공수가 통째로 부풉니다.', act:'행을 열어 작업종료일·시간을 바로잡고 작업시간(분)·작업공수를 다시 적으세요.', sev:'bad' },
+  endlt:   { l:'작업종료일이 시작일보다 앞', why:'종료가 시작보다 이릅니다.', act:'작업시작일·종료일을 바로잡으세요.', sev:'bad' },
+  future:  { l:'작업시작일이 미래', why:'아직 오지 않은 날짜입니다 — 연도·월 오기입일 수 있습니다.', act:'작업시작일을 바로잡으세요.', sev:'warn' },
+  manmis:  { l:'작업공수 ≠ 작업시간 × 작업자수', why:'시스템은 공수를 작업시간 × 작업자수로 적습니다(실측 19,881/19,888 행) — 크게 다르면 한쪽이 틀린 것입니다.', act:'작업자수·작업시간·작업공수 중 틀린 칸을 고치세요.', sev:'warn' },
+  mannull: { l:'작업공수 빈칸(작업시간은 있음)', why:'공수 차트는 이 행을 0 으로 셉니다.', act:'작업공수를 채우세요(작업시간 × 작업자수). 조건으로 바꾸기로 한 번에 넣을 수 없는 값이라 엑셀 일괄이 편합니다.', sev:'info' }
+};
+const DQ_PAGES = [['report','주간현황'],['fault','고장분석'],['material','자재실적'],['pm','PM 점검'],['scrubber','설치현황'],['tco','TCO'],['cip','CIP'],['hr','인원현황'],['report_kr','주간현황(국내)']];
+const dqTbl = () => TAB_BY.wk.tbl;
+async function dqLoad(force){
+  if(!force && S.dq && S.dq.tbl === dqTbl()) return S.dq;
+  const r = await rpc('edit_dq', { p_tbl:dqTbl() });
+  S.dq = Object.assign({ tbl:dqTbl(), at:Date.now() }, r || {});
+  dqBadge();
+  return S.dq;
+}
+/* «확인할 것» 수 — 탭 이름표에 띄운다(알림). info(공수 빈칸)는 세지 않는다 — 늘 있는 입력 누락이라 세면 숫자가 소음이 된다. */
+const dqCount = d => d ? Object.keys(DQ_CHECK).filter(k => DQ_CHECK[k].sev !== 'info').reduce((a, k) => a + (d[k] || 0), 0) + (d.spikes || []).length : 0;
+function dqBadge(){ const b = document.querySelector('.tab[data-tab=dq] .tbadge'); const n = dqCount(S.dq);
+  if(b){ b.textContent = n ? n.toLocaleString() : ''; b.hidden = !n; } }
+async function dqRender(force){
+  const box = $('dqBox');
+  box.innerHTML = '<div class="empty"><span class="spin"></span> 수선실적을 점검하는 중… (최근 400일 · 수 초 걸립니다)</div>';
+  let d;
+  try{ d = await dqLoad(force); }
+  catch(e){
+    box.innerHTML = '<div class="banner bad">' + esc(fnMissing(e.raw) ? '점검 함수가 아직 서버에 없습니다 — Supabase SQL Editor 에서 supabase/setup-21-dq.sql 을 Run 하세요.' : e.message) + '</div>' + dqPagesHTML();
+    return;
+  }
+  const at = new Date(d.at), p2 = v => String(v).padStart(2, '0');
+  let h = '<div class="dq-h"><h3>원장 점검 — ' + esc(TAB_BY.wk.name) + '</h3><span class="hint">작업시작일 ' + esc(d.from) + ' 이후 ' + (d.rows || 0).toLocaleString() + '행 · '
+    + at.getHours() + ':' + p2(at.getMinutes()) + ' 기준</span><span class="sp"></span><button class="btn sm" type="button" data-dq="re">다시 점검</button></div>'
+    + '<p class="hint">대시보드는 이 행들을 «그대로» 셉니다(빼지 않습니다). 행을 열어 고치면 차트가 저절로 바로잡힙니다 — 모든 수정은 「변경 이력」에 남고 되돌릴 수 있습니다.</p>'
+    + '<table class="dt dq-t"><thead><tr><th>점검</th><th class="r">건수</th><th>왜 문제인가 · 무엇을 하면 되나</th><th></th></tr></thead><tbody>'
+    + Object.keys(DQ_CHECK).map(k => { const c = DQ_CHECK[k], n = d[k] || 0;
+        return '<tr class="dq-' + (n ? c.sev : 'ok') + '"><td><b>' + esc(c.l) + '</b></td><td class="r">' + n.toLocaleString() + '</td><td>' + esc(c.why) + '<br><span class="hint">' + esc(c.act) + '</span></td>'
+          + '<td>' + (n ? '<button class="btn sm pri" type="button" data-dq="rows" data-k="' + k + '">행 보기</button>' : '<span class="hint">없음</span>') + '</td></tr>'; }).join('')
+    + '</tbody></table>';
+  const sp = d.spikes || [];
+  h += '<h4>주별 공수 급증 <span class="hint">— 운영단위 × 주의 공수 합이 앞뒤 8주 중앙값의 2배를 넘고 50h 이상 많은 주</span></h4>';
+  h += sp.length ? '<table class="dt dq-t"><thead><tr><th>운영단위</th><th>주(월요일)</th><th class="r">공수(h)</th><th class="r">평소(h)</th><th class="r">배</th><th class="r">24h 초과 행</th><th></th></tr></thead><tbody>'
+      + sp.map((x, i) => '<tr class="dq-' + (x.nb ? 'bad' : 'warn') + '"><td>' + esc(x.op || '(빈칸)') + '</td><td>' + esc(x.wk) + ' <span class="hint">W' + GST.isoW(new Date(x.wk + 'T00:00:00')) + '</span></td><td class="r">' + Number(x.h).toLocaleString()
+        + '</td><td class="r">' + Number(x.base).toLocaleString() + '</td><td class="r">' + GST.xmul(x.h / x.base) + '</td><td class="r">' + (x.nb || 0) + '</td>'
+        + '<td><button class="btn sm pri" type="button" data-dq="spike" data-i="' + i + '">공수 큰 행부터 보기</button></td></tr>').join('') + '</tbody></table>'
+    : '<p class="hint">급증한 주가 없습니다.</p>';
+  box.innerHTML = h + dqPagesHTML();
+}
+/* ② 화면 신호 — 예전에 각 화면 맨 아래 있던 «데이터 품질» 표(사용자: 「데이터 관리로 옮기고」) */
+function dqPagesHTML(){
+  const now = Date.now();
+  let h = '<h4>화면 신호 — 여덟 화면이 마지막으로 그릴 때 찾은 자료 문제</h4><p class="hint">이 브라우저에서 그 화면을 마지막으로 연 때의 값입니다(필터가 걸려 있었다면 그 필터 기준). 최신으로 보려면 그 화면을 새로고침한 뒤 여기를 다시 여세요.</p>';
+  DQ_PAGES.forEach(pg => {
+    let o = null; try{ o = JSON.parse(localStorage.getItem('gst_dq_' + pg[0]) || 'null'); }catch(e){}
+    if(!o){ if(pg[0] !== 'report_kr') h += '<div class="dq-pg"><b>' + esc(pg[1]) + '</b> <span class="hint">— 이 브라우저에서 아직 한 번도 안 열었습니다</span></div>'; return; }
+    const mins = Math.round((now - (o.at || 0)) / 60000), age = mins < 60 ? mins + '분 전' : mins < 2880 ? Math.round(mins / 60) + '시간 전' : Math.round(mins / 1440) + '일 전';
+    h += '<div class="dq-pg"><b>' + esc(pg[1]) + '</b> <span class="hint">· ' + esc(age) + ' · 필터 ' + esc(o.filter || '전체') + '</span></div>';
+    if(!o.items || !o.items.length){ h += '<p class="hint" style="margin:2px 0 8px">문제 없음</p>'; return; }
+    h += '<table class="dt dq-t"><tbody>' + o.items.map(x => '<tr class="dq-' + esc(x.sev || 'warn') + '"><td>' + esc(x.label) + '</td><td class="r">'
+      + esc(x.n == null ? '' : Number(x.n).toLocaleString() + (x.of == null ? '' : ' / ' + Number(x.of).toLocaleString())) + '</td><td class="hint">' + esc(x.act) + '</td></tr>').join('') + '</tbody></table>';
+  });
+  return h;
+}
+/* 점검 결과의 행을 수선실적 탭 «목록»에 그대로 띄운다 — 거기서 행을 열어 고치고, 체크해 조건으로 바꾸기·엑셀로 받을 수 있다 */
+async function dqShow(title, args){
+  snack('행을 읽는 중…', {ms:60000});
+  let keys, rows = [];
+  try{
+    keys = (await rpc('edit_dq_rows', Object.assign({ p_tbl:dqTbl() }, args)) || []).map(Number);
+    for(let i = 0; i < keys.length; i += GET_MAX) [].push.apply(rows, await rpc('edit_get_many', { p_tbl:dqTbl(), p_keys:keys.slice(i, i + GET_MAX) }) || []);
+  }catch(e){ snack(e.message, {err:true}); return; }
+  $('snack').className = '';
+  const ord = new Map(keys.map((k, i) => [String(k), i]));
+  rows.sort((a, b) => ord.get(String(a.key)) - ord.get(String(b.key)));
+  await switchTab('wk');
+  S.rows = rows.map(x => x.row); S.more = false; S.qf = null; S.dqView = title;
+  renderList(title + ' — ' + S.rows.length.toLocaleString() + '행' + (keys.length >= 2000 ? ' (앞 2,000행)' : ''));
+  if(S.rows.length) openRow(String(S.rows[0][TAB_BY.wk.key]));
+}
+$('dqBox').addEventListener('click', e => {
+  const b = e.target.closest('[data-dq]'); if(!b) return;
+  if(b.dataset.dq === 're') dqRender(true);
+  if(b.dataset.dq === 'rows') dqShow('데이터 품질 · ' + DQ_CHECK[b.dataset.k].l, { p_check:b.dataset.k });
+  if(b.dataset.dq === 'spike'){ const x = S.dq.spikes[+b.dataset.i];
+    dqShow('데이터 품질 · ' + (x.op || '(빈칸)') + ' ' + x.wk + ' 주 공수 ' + Number(x.h).toLocaleString() + 'h (평소 ' + Number(x.base).toLocaleString() + 'h) · 공수 큰 순', { p_check:'spike', p_op:x.op, p_wk:x.wk }); }
+});
+
 /* ---------- 변경 이력 ---------- */
 const OPS = {
   upd:{ l:'수정', ops:['update','dbw:update'] }, ins:{ l:'입력', ops:['insert','dbw:append'] },
@@ -3000,7 +3111,11 @@ function histView(e){
       if(miss.length) banner('warn', '<b>' + esc(josa(what.join(' · '), '이', '가')) + ' 아직 잠겨 있습니다</b> — 서버에 ' + esc(miss.join(' · ')) + ' 함수가 없습니다.'
         + '\nSupabase SQL Editor 에서 supabase/setup-16-edit.sql 을 Run 하세요(여러 번 Run 해도 안전합니다). 검색·수정·새 행·변경 이력 보기는 지금도 됩니다.');
     }
+    /* ?tab=dq — 주간현황 공수 차트의 ⚠ 가 «여기서 고치세요»로 바로 연다(v155) */
+    try{ const qt = new URLSearchParams(location.search).get('tab'); if(qt && (TAB_BY[qt] || qt === 'dq' || qt === 'hist')) S.tab = qt; }catch(e){}
     switchTab(S.tab);
+    /* 탭 이름표의 «확인할 것 N» — 뒤에서 한 번 센다(알림 · 수 초 걸려 시작을 막지 않는다) */
+    if(S.tab !== 'dq') dqLoad(false).catch(e => console.warn('[edit] edit_dq', e && e.message));
   }catch(e){
     $('gate').hidden = false;
     $('gate').innerHTML = '<b>로그인 확인 실패</b><p>' + esc((e && e.message) || e) + '</p>';

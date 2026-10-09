@@ -516,3 +516,10 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #gstSrcDetail{display:no
   .gst-insights{gap:6px 12px !important;font-size:12.5px}
   .gst-dqchip{margin-left:0}
 }
+/* v155 — 데이터 품질은 화면 맨 아래 카드가 아니라 «확인할 것 N» 을 누르면 뜨는 팝업이다(본 자리는 데이터 관리 「데이터 품질」 탭) */
+.gst-dq.gst-dq-pop{position:fixed;top:9vh;left:50%;transform:translateX(-50%);width:min(780px,94vw);max-height:78vh;overflow:auto;z-index:9000;margin:0;box-shadow:0 18px 50px rgba(16,24,40,.28)}
+.gst-dq.gst-dq-pop[hidden]{display:none}
+.gst-dq-hd{display:flex;align-items:center;gap:8px}.gst-dq-hd h3{margin:0}
+.gst-dq-x,.gst-dq-go{border:1px solid var(--line,#d0d5dd);background:var(--surface,#fff);color:inherit;border-radius:7px;font:inherit;font-size:12px;padding:3px 9px;cursor:pointer}
+.gst-dq-go{border-color:var(--accent,#2563eb);color:var(--accent,#2563eb);font-weight:600}
+@media print{.gst-dq.gst-dq-pop{display:none!important}}

@@ -125,16 +125,17 @@ const BM_PAID = 4;                                // 유상 BM — 분자가 0 �
 const MAN_BM = 60, MAN_TBM = 120, MAN_INS = 90;
 const wkCsv = () => {
   const rows = [WHF]; let n = 0;
-  const one = (stage, days, man, cause, pf, u) => { n++; const d = ymd(dAgo(days));
+  const one = (stage, days, man, cause, pf, u, wm) => { n++; const d = ymd(dAgo(days));
     const k = u == null ? (n % EQ_BM + 1) : u;
     rows.push(['SCRUBBER', 'GST TAIWAN SCRUBBER', 'Micron Memory Taiwan Co., Ltd.(F16)',
       'F16', 'F16', 'B1', 'ETCH', 'DRY', 'GST-1000', 'R' + n, '완료', '정기', stage, 'A',
       'W' + n, 'MT' + n, 'P1', 'TWC' + k, 'L', 'TWS' + k, '', pf || '무상',
       '', '', cause || '', '', '', d, d, '09:00', '10:00', d, '',
-      '10', '60', man, 'STAFF', '1']);
+      '10', wm || '60', man, 'STAFF', '1']);
   };
   for (let i = 0; i < BM_30; i++)      one('BM',  2 + i, MAN_BM,  'PUMP', i < BM_PAID ? '유상' : '무상');
-  for (let i = 0; i < TBM_30; i++)     one('TBM', 3 + i, MAN_TBM, '');
+  /* 첫 TBM 은 작업시간만 1,600분(26.7h) — 공수 ⚠(v155)를 띄운다. 공수(MAN_TBM)는 그대로라 KPI 숫자는 안 움직인다 */
+  for (let i = 0; i < TBM_30; i++)     one('TBM', 3 + i, MAN_TBM, '', '', null, i === 0 ? '1600' : '');
   for (let i = 0; i < INSTALL_30; i++) one('반입', 4 + i, MAN_INS, '');
   for (let i = 0; i < BM_OLD; i++)     one('BM',  60 + i, MAN_BM, 'PUMP');
   /* 재방문(FTFR) — 같은 설비에서 30일 안에 BM 이 다시 난다. 없으면 rk5 목록이 0줄이라
@@ -565,6 +566,30 @@ console.log('\n[7] 배지 모드 — 필터 클릭이 이미 붙은 카드는 «
   is(sel2 === 'overdue', `pm: 카드 클릭은 지금까지대로 상태를 고른다 (실제 ${sel2 || '(전체)'})`);
   is(P.pe.length === 0, 'pm 배지: JS 에러 없음' + (P.pe.length ? ' → ' + P.pe[0] : ''));
   await P.close();
+}
+
+console.log('\n[8] 주간현황 작업 공수 ⚠ — 한 건 24h 초과 행을 알리고 목록을 띄운다(빼지 않는다) (v155)');
+{
+  await page.goto(BASE + '/report/', { waitUntil:'domcontentloaded' });
+  await page.waitForTimeout(9000);
+  await page.evaluate(m => window.setEnd && window.setEnd('m', m), ENDM);
+  await page.waitForTimeout(2800);
+  const b = await page.evaluate(() => { const cv = document.getElementById('cMan'), h = cv.closest('.card').querySelector('h3'), m = h.querySelector('.mhw');
+    return { n:(window._MHW || []).length, has:!!m, tip:m ? m.title : '' }; });
+  is(b.n === 1 && b.has && /1건/.test(b.tip), '공수 차트 제목 옆 ⚠ — 작업시간 24h 초과 1건 (' + JSON.stringify(b) + ')');
+  await page.evaluate(() => document.querySelector('#cMan').closest('.card').querySelector('.mhw').click());
+  await page.waitForTimeout(300);
+  const ov = await page.evaluate(() => { const o = document.querySelector('.gov-h'); return o ? o.closest('div').parentElement.innerText : ''; });
+  is(/확인이 필요한 행/.test(ov) && /26\.7/.test(ov) && /빼지 않습니다/.test(ov), '팝업 — 그 행(작업시간 26.7h)과 «빼지 않는다»를 적는다');
+  is(/데이터 관리에서 고치기/.test(ov), '관리자에게는 데이터 관리로 가는 단추');
+  await shut();
+  is(await page.evaluate(() => GST.dq.list().some(d => d.key === 'wk_24h' && d.n === 1)), '데이터 품질 신호(wk_24h)에도 실린다 — 데이터 관리 「데이터 품질」의 화면 신호로 간다');
+  /* 숫자는 그대로 — 공수 합은 이 행을 «포함»한다(해외 규칙 · 제3원칙) */
+  is(await page.evaluate(() => (window._MHW[0].manMin === 120)), '그 행의 공수는 그대로 센다(빼지 않음)');
+  /* 언어를 바꿔도 ⚠ 가 남는다(applyLang 이 h3 를 다시 쓴다) */
+  await page.evaluate(() => { try{ setLang && setLang('en'); }catch(e){} });
+  await page.waitForTimeout(400);
+  is(await page.evaluate(() => !!document.querySelector('#cMan').closest('.card').querySelector('h3 .mhw')), '언어를 바꿔도 ⚠ 가 다시 붙는다');
 }
 
 await browser.close(); srv.close();
