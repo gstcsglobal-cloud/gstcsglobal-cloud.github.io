@@ -212,6 +212,15 @@ function fake(seed) {
     /* edit_dq · edit_dq_rows (setup-21 · v155) — 판정은 SQL 소관(운영 실측으로 확인). 여기는 «화면이 받은 대로 보여 주고 그 행을 띄우는가»만 */
     edit_dq: a => { if (!window.__DQ) throw new Error('Could not find the function public.edit_dq'); window.__DQN = (window.__DQN || 0) + 1; return Object.assign({ from:'2025-09-01' }, window.__DQ); },
     edit_dq_rows: a => (window.__DQROWS || {})[a.p_check + (a.p_op ? '|' + a.p_op + '|' + a.p_wk : '')] || [],
+    /* v156 — 운영단위 여럿·기간. mfill 은 표에서 «정말» 고른다(자동 채우기가 그 행을 고치는지 보려고). 나머지는 지어 둔 답. */
+    edit_dq_rows2: a => {
+      if (window.__DQ_OLD) throw new Error('Could not find the function public.edit_dq_rows2');
+      if (a.p_check === 'mfill') return window.__DB.sheet_wk.filter(r => (r.man_min == null || r.man_min === '') && +r.work_min > 0 && +r.worker_cnt > 0
+        && (!a.p_ops || a.p_ops.indexOf(r.op || '') >= 0)).map(r => r.src_row);
+      return (window.__DQROWS || {})[a.p_check + (a.p_wk ? '|' + (a.p_ops || []).join(',') + '|' + a.p_wk : '')] || [];
+    },
+    edit_dq_join: a => { if (!window.__DQJ) throw new Error('Could not find the function public.edit_dq_join'); window.__DQJN = (window.__DQJN || 0) + 1; return Object.assign({ tbl:a.p_tbl }, window.__DQJ); },
+    edit_dq_join_rows: a => (window.__DQJR || {})[a.p_kind + '|' + (a.p_ops || []).join(',') + (a.p_sn ? '|' + a.p_sn : '')] || [],
     /* edit_last_wk — 맞춘 S/N(영숫자·대문자)마다 최근 두 행(작업시작일 앞 19자 ↓ · 행번호 ↓) · extra·synced_at 뺀다 (setup-16 7절과 같은 모양) */
     edit_last_wk: a => {
       const N = v => String(v == null ? '' : v).replace(/[^0-9A-Za-z]/g, '').toUpperCase(), out = {};
@@ -470,8 +479,21 @@ const { ctx, pg, pe } = await open(seedOf());
   await pg.selectOption('#search [name=ocol]', 'eq_no'); await pg.selectOption('#search [name=omode]', 'nul');
   await pg.click('#search button[type=submit]'); await pg.waitForTimeout(250);
   L = sel(await qlog(pg), 'sheet_wk');
-  is(L[L.length - 1].f.some(f => f[0] === 'eq_no' && f[1] === 'is' && f[2] === null) && (await listKeys(pg)).join() === '6,2',
-    '「그 밖의 열 · 비어 있음」 → is null (' + (await listKeys(pg)) + ')');
+  is(L[L.length - 1].or.some(o => o === 'eq_no.is.null,eq_no.eq.""') && (await listKeys(pg)).join() === '6,2',
+    '「그 밖의 열 · 비어 있음」 → null 과 빈 글자 둘 다 (' + (await listKeys(pg)) + ' · ' + JSON.stringify(L[L.length - 1].or) + ')');
+  /* v156 — 조건을 더 건다(그리고). 두 조건은 and(…) 한 파라미터로 */
+  await pg.click('#search [data-act=scadd]');
+  await pg.selectOption('#search [data-sc]:nth-of-type(2) [name=ocol]', 'stage'); await pg.selectOption('#search [data-sc]:nth-of-type(2) [name=omode]', 'eq');
+  await pg.fill('#search [data-sc]:nth-of-type(2) [name=oval]', 'BM');
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(250);
+  L = sel(await qlog(pg), 'sheet_wk');
+  is(L[L.length - 1].or.length === 1 && L[L.length - 1].or[0] === 'and(or(eq_no.is.null,eq_no.eq.""),stage.eq."BM")' && (await listKeys(pg)).join() === '6',
+    '그 밖의 열 조건 둘 → and(…) 한 파라미터 · 결과 6 (' + (await listKeys(pg)) + ' · ' + JSON.stringify(L[L.length - 1].or) + ')');
+  is(await pg.$$eval('#search [data-sc]', e => e.length) === 2, '검색 뒤에도 조건 두 줄이 그대로 남는다');
+  /* ✕ 로 하나 빼면 한 조건으로 돌아간다 */
+  await pg.click('#search [data-sc]:nth-of-type(2) [data-act=scdel]');
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(250);
+  is((await listKeys(pg)).join() === '6,2', '조건을 빼면 다시 두 행');
 
   /* 자재 — 여러 열 칸 둘이면 and(or,or) */
   await pg.click('.tab[data-tab=mat]'); await pg.waitForTimeout(300);
@@ -1748,11 +1770,12 @@ console.log('[28] 데이터 품질 — 공수 허수를 찾아 «그 행»을 �
   await pg.click('[data-dq=rows][data-k=work24]');
   await pg.waitForFunction(() => document.querySelectorAll('#list tbody tr').length === 2, null, { timeout:8000 }).catch(() => {});
   is(JSON.stringify(await listKeys(pg)) === JSON.stringify([String(k2), String(k1)]), '「행 보기」 — 수선실적 탭 목록에 그 행들이 서버가 준 순서 그대로 (' + (await listKeys(pg)) + ')');
-  is(/데이터 품질 · 작업시간 24시간 초과 — 2행/.test(await pg.$eval('#listH', e => e.innerText)), '목록 머리에 무엇을 보고 있는지 적는다');
+  is(/데이터 품질 · 작업시간 24시간 초과 · 최근 400일 — 2행/.test(await pg.$eval('#listH', e => e.innerText)), '목록 머리에 무엇을 보고 있는지 적는다');
   await pg.waitForFunction(() => !!document.querySelector('#editor [data-col]'), null, { timeout:8000 }).catch(() => {});
   is(await pg.evaluate(k => !!document.querySelector('#list tr.on') && document.querySelector('#list tr.on').dataset.key === String(k), k2), '첫 행이 편집기에 열린다 — 바로 고친다');
   const L = await qlog(pg);
-  is(rpcs(L, 'edit_dq_rows').length === 1 && rpcs(L, 'edit_dq_rows')[0].args.p_check === 'work24', 'edit_dq_rows(work24) 로 행 번호를 받는다');
+  is(rpcs(L, 'edit_dq_rows2').length === 1 && rpcs(L, 'edit_dq_rows2')[0].args.p_check === 'work24' && rpcs(L, 'edit_dq_rows2')[0].args.p_ops == null && /^\d{4}-\d\d-\d\d$/.test(rpcs(L, 'edit_dq_rows2')[0].args.p_from),
+    'edit_dq_rows2(work24) 로 행 번호를 받는다 — 필터 없으면 운영단위 조건 없음 · 기간은 넘긴다');
   /* 고치기 — 그 탭의 편집 그대로(이력·되돌리기) */
   await setField(pg, 'd_end', '2026-08-28'); await pg.click('#editor [data-act=save]');
   await pg.waitForFunction(() => /저장했습니다/.test(document.getElementById('snack').textContent), null, { timeout:8000 }).catch(() => {});
@@ -1774,6 +1797,114 @@ console.log('[28] 데이터 품질 — 공수 허수를 찾아 «그 행»을 �
   await pg.waitForFunction(() => /setup-21-dq\.sql/.test((document.getElementById('dqBox') || {}).innerText || ''), null, { timeout:8000 }).catch(() => {});
   is(await pg.evaluate(() => /setup-21-dq\.sql/.test(document.getElementById('dqBox').innerText) && !document.getElementById('pgDq').hidden),
     '?tab=dq 로 바로 열린다 · 서버에 점검 함수가 없으면 «무엇을 하면 되는지» 적는다');
+  is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
+  await ctx.close();
+}
+
+console.log('[29] 데이터 품질 — 구분·운영단위·기간 필터 · 작업공수 자동 채우기 · 설치현황 연결 길잡이 · 신호 → 고칠 자리 (v156)');
+{
+  const s = seedOf({});
+  const W = s.tables.sheet_wk;
+  /* 지어낸 값 — 국내(SEC)·해외(GST) 운영단위 하나씩. 공수 빈칸 셋 중 둘만 «시간 × 인원»으로 채울 수 있다 */
+  Object.assign(W[0], { op:'SEC Scrubber', work_min:'30', worker_cnt:'2', man_min:null });
+  Object.assign(W[1], { op:'GST TESTLAND SCRUBBER', work_min:'45', worker_cnt:'3', man_min:null });
+  Object.assign(W[2], { op:'GST TESTLAND SCRUBBER', work_min:'50', worker_cnt:null, man_min:null });
+  Object.assign(W[3], { op:'SEC Scrubber', work_min:'20', worker_cnt:'1', man_min:'20' });
+  const { ctx, pg, pe } = await open(s);
+  await ctx.addInitScript(() => {
+    window.__DQ = { rows:120, work24:2, endlt:0, future:0, manmis:1, mannull:3, mfill:2,
+      by_op:[{ op:'GST TESTLAND SCRUBBER', rows:100, work24:2, endlt:0, future:0, manmis:0, mannull:2, mfill:1 },
+             { op:'SEC Scrubber', rows:20, work24:0, endlt:0, future:0, manmis:1, mannull:1, mfill:1 }],
+      spikes:[{ op:'GST TESTLAND SCRUBBER', wk:'2026-08-24', h:2989, base:955.1, n:277, nb:2 }] };
+    window.__DQROWS = { manmis:[3] };
+    window.__DQJ = { rows:120,
+      by_op:[{ op:'GST TESTLAND SCRUBBER', rows:100, nokey:0, miss:99, nodiv:1, nofloor:0 },
+             { op:'SEC Scrubber', rows:20, nokey:1, miss:3, nodiv:2, nofloor:1 }],
+      miss_top:[{ op:'GST TESTLAND SCRUBBER', eq:'ZQ-900', sn:'ZZT-0900', n:50 }, { op:'SEC Scrubber', eq:'ZQ-009', sn:'ZZT-0009', n:3 }],
+      inst_refs:[{ ir:1, op:'SEC Scrubber', n:2, nd:2, nf:0 }, { ir:2, op:'SEC Scrubber', n:1, nd:0, nf:1 }] };
+    window.__DQJR = { 'miss|SEC Scrubber|ZZT-0009':[5, 0], 'nokey|SEC Scrubber':[6] };
+    if (!sessionStorage.getItem('dqSeeded2')) { sessionStorage.setItem('dqSeeded2', '1');
+      localStorage.removeItem('gst_edit_dqf');
+      localStorage.setItem('gst_dq_fault', JSON.stringify({ at:Date.now() - 600e3, filter:'', items:[
+        { key:'wk_blank', sev:'warn', label:'BM 미기재 3/3', n:3, of:3, act:'채우세요' },
+        { key:'floor_na', sev:'info', label:'Floor 미상', n:9, of:10, act:'설치현황 S/N' }] })); }
+  });
+  await pg.goto(BASE + '/edit/?tab=dq', { waitUntil:'domcontentloaded' });
+  await pg.waitForFunction(() => /원장 점검/.test(document.getElementById('dqBox').innerText), null, { timeout:8000 });
+  const tx = () => pg.$eval('#dqBox', e => e.innerText);
+  /* 필터 — 구분 국내 */
+  await pg.selectOption('[data-dqf=reg]', 'kr');
+  await pg.waitForFunction(() => /\(국내 · 최근 400일\)/.test(document.getElementById('dqBox').innerText), null, { timeout:8000 }).catch(() => {});
+  let b = await tx();
+  is(/작업시간 24시간 초과\s+0/.test(b) && /작업공수 ≠ 작업시간 × 작업자수\s+1/.test(b) && /20행/.test(b), '구분 «국내» — 운영단위별 건수를 국내만 더한다 (24h 0 · 불일치 1 · 20행)');
+  is(/필터로 1주 숨김/.test(b) && !/2,989/.test(b), '주별 급증도 거른다 — 해외 운영단위의 급증은 숨기고 그렇다고 적는다');
+  is(await pg.$$eval('[data-dqf=op] option', o => o.map(x => x.value).join('|')) === '|SEC Scrubber', '운영단위 목록도 구분을 따라 좁혀진다');
+  await qlog(pg);
+  await pg.click('[data-dq=rows][data-k=manmis]');
+  await pg.waitForFunction(() => document.querySelectorAll('#list tbody tr').length === 1, null, { timeout:8000 }).catch(() => {});
+  let L = await qlog(pg);
+  is(rpcs(L, 'edit_dq_rows2').length === 1 && JSON.stringify(rpcs(L, 'edit_dq_rows2')[0].args.p_ops) === '["SEC Scrubber"]', '「행 보기」가 필터의 운영단위를 서버에 넘긴다 (' + JSON.stringify(rpcs(L, 'edit_dq_rows2').map(x => x.args.p_ops)) + ')');
+  /* 기간 — 서버가 다시 센다 */
+  await pg.click('.tab[data-tab=dq]'); await pg.waitForFunction(() => /원장 점검/.test(document.getElementById('dqBox').innerText), null, { timeout:8000 });
+  await qlog(pg);
+  await pg.selectOption('[data-dqf=days]', '90');
+  await pg.waitForFunction(() => /최근 90일/.test(document.getElementById('dqBox').innerText), null, { timeout:8000 }).catch(() => {});
+  L = await qlog(pg);
+  const ago = d => { const x = new Date(); x.setDate(x.getDate() - d); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+  is(rpcs(L, 'edit_dq').some(x => x.args.p_from === ago(90)), '기간 «최근 90일» → edit_dq(p_from = 오늘−90일) 로 다시 센다');
+  is(await pg.evaluate(() => JSON.parse(localStorage.getItem('gst_edit_dqf')).days) === '90', '필터는 다음에 열어도 남는다');
+  await pg.click('[data-dq=fclr]'); await pg.waitForTimeout(200);
+  /* 작업공수 자동 채우기 */
+  b = await tx();
+  is(/자동 채우기 2행/.test(b), '공수 빈칸 줄에 «자동 채우기 2행» — 시간·인원이 다 있는 행만 센다');
+  await pg.click('[data-dq=fill]');
+  await pg.waitForFunction(() => /작업공수 자동 채우기 — 미리 보기/.test(document.body.innerText), null, { timeout:8000 }).catch(() => {});
+  const pv = await pg.evaluate(() => document.querySelector('.dlg, dialog, .modal') ? (document.querySelector('.dlg, dialog, .modal')).innerText : document.body.innerText);
+  is(/채우는 행 2/.test(pv) && /\b60\b/.test(pv) && /\b135\b/.test(pv), '미리 보기 — 30분×2=60 · 45분×3=135');
+  await qlog(pg);
+  await pg.click('button.dng:has-text("2행 채우기")');
+  await pg.waitForFunction(() => /반영했습니다/.test(document.getElementById('snack').textContent), null, { timeout:8000 }).catch(() => {});
+  const g = k => pg.evaluate(k => { const r = window.__DB.sheet_wk.find(x => x.src_row === k); return r.man_min; }, k);
+  is(await g(W[0].src_row) === '60' && await g(W[1].src_row) === '135', '반영 — 빈 작업공수 = 작업시간 × 작업자수');
+  is(await g(W[2].src_row) == null && await g(W[3].src_row) === '20', '작업자수가 빈 행은 짐작하지 않고, 이미 적힌 공수는 손대지 않는다');
+  L = await qlog(pg);
+  is(rpcs(L, 'edit_bulk').length === 1 && rpcs(L, 'edit_bulk')[0].args.p_note.file === '작업공수 자동 채우기', '쓰기는 edit_bulk 한 통로 — 이력 머리에 «작업공수 자동 채우기»');
+  /* 설치현황 연결 길잡이 */
+  await pg.waitForFunction(() => /설치현황 연결/.test(document.getElementById('dqBox').innerText) && /ZZT-0009/.test(document.getElementById('dqBox').innerText), null, { timeout:8000 }).catch(() => {});
+  b = await tx();
+  is(/설치현황에 거의 없습니다/.test(b) && /설치현황 원본 올리기/.test(b), '법인 통째로 안 이어지면 «행을 고칠 일이 아니라 원본을 올리라»고 적는다');
+  is(/해외 설치현황 양식에는 사업부 열이 없습니다/.test(b), '해외의 사업부 빈칸은 «고칠 것 아님»으로 적는다');
+  is(/ZZT-0009/.test(b) && !/ZZT-0900/.test(b), '안 이어진 설비 목록 — 통째로 빠진 법인의 설비는 접어 둔다');
+  await qlog(pg);
+  await pg.click('[data-dq=jmrow]');
+  await pg.waitForFunction(() => document.querySelectorAll('#list tbody tr').length === 2, null, { timeout:8000 }).catch(() => {});
+  L = await qlog(pg);
+  const jr = rpcs(L, 'edit_dq_join_rows')[0];
+  is(jr && jr.args.p_kind === 'miss' && jr.args.p_sn === 'ZZT-0009' && jr.args.p_eq === 'ZQ-009' && JSON.stringify(await listKeys(pg)) === '["5","0"]', '「실적 행 보기」— 그 S/N 의 안 이어진 실적 행 (' + (await listKeys(pg)) + ')');
+  await pg.click('.tab[data-tab=dq]'); await pg.waitForFunction(() => /설치현황 행 열기/.test(document.getElementById('dqBox').innerText), null, { timeout:8000 });
+  await pg.click('[data-dq=jidiv]');
+  await pg.waitForFunction(() => /사업부 빈 설비/.test(document.getElementById('listH').innerText), null, { timeout:8000 }).catch(() => {});
+  is(await pg.evaluate(() => document.querySelector('.tab.on').dataset.tab) === 'inst' && JSON.stringify(await listKeys(pg)) === '["1"]', '「설치현황 행 열기」— 사업부가 빈 설치현황 행을 설치현황 탭에 (' + (await listKeys(pg)) + ')');
+  /* 화면 신호 → 고칠 자리 */
+  await pg.click('.tab[data-tab=dq]'); await pg.waitForFunction(() => /알람유형 빈 BM 행 찾기/.test(document.getElementById('dqBox').innerText), null, { timeout:8000 });
+  await qlog(pg);
+  await pg.click('[data-dq=fix][data-fx="fault.wk_blank"]');
+  await pg.waitForFunction(() => document.querySelector('.tab.on').dataset.tab === 'wk' && document.querySelectorAll('#list tbody tr').length > 0, null, { timeout:8000 }).catch(() => {});
+  L = sel(await qlog(pg), 'sheet_wk');
+  is(L.length && L[L.length - 1].or[0] === 'and(stage.eq."BM",or(alarm.is.null,alarm.eq.""))' && (await listKeys(pg)).join() === '6,5,0',
+    '「알람유형 빈 BM 행 찾기」— 수선실적 탭에 조건을 채워 검색한다 (' + (await listKeys(pg)) + ')');
+  is(await pg.$$eval('#search [data-sc]', e => e.length) === 2 && await pg.$eval('#search [data-sc] [name=ocol]', e => e.value) === 'stage', '검색 칸에 그 조건이 보인다 — 사람이 보고 고칠 수 있다');
+  is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
+  await ctx.close();
+}
+{ /* ?fix=… — 각 화면 품질 팝업의 「찾아서 고치기」가 연결 길잡이로 바로 */
+  const { ctx, pg, pe } = await open(seedOf({}));
+  await ctx.addInitScript(() => { window.__DQ = { rows:1, work24:0, endlt:0, future:0, manmis:0, mannull:0, spikes:[], by_op:[] };
+    window.__DQJ = { rows:1, by_op:[{ op:'SEC Scrubber', rows:1, nokey:0, miss:0, nodiv:0, nofloor:1 }], miss_top:[], inst_refs:[] }; });
+  await pg.goto(BASE + '/edit/?tab=dq&fix=material.floor_na', { waitUntil:'domcontentloaded' });
+  await pg.waitForFunction(() => window.__DQJN >= 1 && /Floor 빈칸/.test(document.getElementById('dqBox').innerText), null, { timeout:8000 }).catch(() => {});
+  const L = await qlog(pg);
+  is(rpcs(L, 'edit_dq_join').some(x => x.args.p_tbl === 'sheet_mat') && await pg.$eval('[data-dqf=jt]', e => e.value) === 'mat', '?fix=material.floor_na → 자재실적의 설치현황 연결을 연다');
   is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
   await ctx.close();
 }

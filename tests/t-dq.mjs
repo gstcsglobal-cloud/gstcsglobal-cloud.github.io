@@ -165,11 +165,19 @@ console.log('\n[10] 맨 아래 카드가 아니라 팝업 — «확인할 것 N�
   x = await st();
   is(!x.hid && x.vis, '칩을 누르면 팝업이 뜬다');
   is(x.go, '관리자(legacy)에게는 «데이터 관리에서 고치기» 단추');
+  /* v156 — 줄마다 «찾아서 고치기»: 그 신호의 고칠 자리(/edit/?tab=dq&fix=화면.신호)로 */
+  is(await page.evaluate(() => Array.from(document.querySelectorAll('#gstDq [data-dqfix]')).map(b => b.getAttribute('data-dqfix')).join()) === 'fault.a,fault.b',
+     '관리자 — 신호 줄마다 «찾아서 고치기» 단추(화면.신호 열쇠)');
+  await page.evaluate(() => { window.__open = null; window.open = (u, n) => { window.__open = [u, n]; return null; }; });
+  await page.click('#gstDq [data-dqfix="fault.a"]');
+  is(await page.evaluate(() => JSON.stringify(window.__open)) === JSON.stringify(['/edit/?tab=dq&fix=fault.a', 'gstEdit']), '누르면 데이터 관리(같은 창 gstEdit)의 그 신호 자리로 연다');
+  await page.click('#gstDqChip');
   await page.keyboard.press('Escape');
   is((await st()).hid, 'Esc 로 닫힌다');
   await page.evaluate(() => { GST.authOn = () => true; GST._me = { email:'v@v', can_write:false, role:'viewer' }; });
   await fill(); await page.evaluate(() => GST.dq.render('전체'));
   is(!(await st()).go, '조회자에게는 그 단추가 없다(가 봐야 잠긴 문이다)');
+  is(await page.evaluate(() => document.querySelectorAll('#gstDq [data-dqfix]').length) === 0, '조회자에게는 줄마다의 «찾아서 고치기»도 없다');
   await page.evaluate(() => { GST.authOn = () => false; GST._me = null; });
 }
 

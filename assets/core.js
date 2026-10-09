@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 155;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 156;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -3744,16 +3744,16 @@ GST.insights = function(items){
 GST.DQ_T = {
   ko:{title:'데이터 품질', none:'이 화면에서 발견된 자료 문제가 없습니다',
       what:'무엇이', n:'건수', act:'무엇을 하면 되나',
-      tell:'관리자에게 알려 주세요', basis:'기준 {t} · 필터 {f}', all:'전체', go:'데이터 관리에서 고치기'},
+      tell:'관리자에게 알려 주세요', basis:'기준 {t} · 필터 {f}', all:'전체', go:'데이터 관리에서 고치기', fix:'찾아서 고치기'},
   en:{title:'Data quality', none:'No data problems found on this page',
       what:'Finding', n:'Count', act:'What to do',
-      tell:'Let an administrator know', basis:'as of {t} · filter {f}', all:'all', go:'Fix in Data management'},
+      tell:'Let an administrator know', basis:'as of {t} · filter {f}', all:'all', go:'Fix in Data management', fix:'Find & fix'},
   zh:{title:'数据质量', none:'本页未发现数据问题',
       what:'问题', n:'件数', act:'该怎么做',
-      tell:'请告知管理员', basis:'基准 {t} · 筛选 {f}', all:'全部', go:'在数据管理中修正'},
+      tell:'请告知管理员', basis:'基准 {t} · 筛选 {f}', all:'全部', go:'在数据管理中修正', fix:'查找并修正'},
   ja:{title:'データ品質', none:'この画面で見つかった資料の問題はありません',
       what:'内容', n:'件数', act:'何をすればよいか',
-      tell:'管理者にお知らせください', basis:'基準 {t} · フィルタ {f}', all:'全体', go:'データ管理で修正'}
+      tell:'管理者にお知らせください', basis:'基準 {t} · フィルタ {f}', all:'全体', go:'データ管理で修正', fix:'探して修正'}
 };
 GST._dqT = function(){ return GST.DQ_T[(GST._lang && GST._lang()) || 'ko'] || GST.DQ_T.ko; };
 GST.dq = {
@@ -3788,6 +3788,10 @@ GST.dq = {
       box.addEventListener('click', function(e){
         if(e.target.closest('[data-dqx]')) box.hidden=true;
         if(e.target.closest('[data-dqgo]')){ try{ window.open('/edit/?tab=dq','gstEdit'); }catch(x){} box.hidden=true; }
+        /* v156 — 신호 한 줄의 «고칠 자리»로 바로 간다(사용자: 「경고만 주지 어디서 어떻게 고치는지 길잡이가 없다」).
+           무엇을 어디서 여는지는 데이터 관리의 DQ_FIX 한 곳이 정한다(모르는 신호면 데이터 품질 탭만 연다). */
+        const fx=e.target.closest('[data-dqfix]');
+        if(fx){ try{ window.open('/edit/?tab=dq&fix='+encodeURIComponent(fx.getAttribute('data-dqfix')),'gstEdit'); }catch(x){} box.hidden=true; }
       });
     }
     const ts=new Date(), p2=function(v){ return String(v).padStart(2,'0'); };
@@ -3797,15 +3801,17 @@ GST.dq = {
     const head='<div class="gst-dq-hd"><h3>'+esc(T.title)+'</h3><span style="flex:1"></span>'
       +(adm?'<button type="button" class="gst-dq-go" data-dqgo>'+esc(T.go)+'</button>':'')
       +'<button type="button" class="gst-dq-x" data-dqx aria-label="close">✕</button></div><div class="card-note">'+esc(basis)+'</div>';
+    const page=this._page||'page';
     if(!this._l.length){ box.innerHTML=head+'<div class="gst-dq-ok">'+esc(T.none)+'</div>'; }
     else {
       const rows=this._l.map(function(d){
         const cnt=d.n==null ? '' : (d.n.toLocaleString()+(d.of==null?'':' / '+d.of.toLocaleString()));
         return '<tr class="dq-'+d.sev+'"><td>'+esc(d.label)+'</td><td class="dq-n">'+esc(cnt)+'</td>'
-             + '<td>'+esc(adm ? d.act : T.tell)+'</td></tr>';
+             + '<td>'+esc(adm ? d.act : T.tell)+'</td>'
+             + (adm ? '<td><button type="button" class="gst-dq-go" data-dqfix="'+esc(page+'.'+d.key)+'">'+esc(T.fix)+'</button></td>' : '')+'</tr>';
       }).join('');
       box.innerHTML=head+'<div style="overflow-x:auto"><table class="gst-dq-t"><thead><tr><th>'+esc(T.what)
-        +'</th><th>'+esc(T.n)+'</th><th>'+esc(T.act)+'</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+        +'</th><th>'+esc(T.n)+'</th><th>'+esc(T.act)+'</th>'+(adm?'<th></th>':'')+'</tr></thead><tbody>'+rows+'</tbody></table></div>';
     }
     /* /diag/ 가 여덟 페이지를 한 표로 모을 수 있게 스냅샷을 남긴다.
        ⚠ 진단 화면이 페이지를 여덟 개 띄우지 않아도 되게 하려는 것뿐이다 —
