@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=155"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=156"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -76,7 +76,8 @@ a.lnk{color:var(--accent-ink);text-decoration:none;font-weight:600}a.lnk:hover{t
 .sf.range input{min-width:0;flex:1}
 .ctl,.sf input,.sf select{width:100%;height:32px;padding:0 10px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);outline:none}
 .ctl:focus,.sf input:focus,.sf select:focus,.fld input:focus,.fld textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.sother{display:grid;grid-template-columns:minmax(150px,1.1fr) 92px minmax(120px,1fr);gap:6px;margin-top:10px}
+.sother{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:10px}
+.sc-row{display:grid;grid-template-columns:minmax(150px,1.1fr) 116px minmax(120px,1fr) auto;gap:6px;width:100%}
 .sbar{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
 .sbar .sp{flex:1}
 .btn{height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface);font-weight:600;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
@@ -211,6 +212,10 @@ table.rt th.ck input,table.rt td.ck input{width:15px;height:15px;cursor:pointer;
 .dq-t tr.dq-info td:first-child{border-left:3px solid var(--txt-muted)}
 .dq-t tr.dq-ok td{color:var(--txt-muted)}
 .dq-pg{margin:12px 0 2px}
+.dq-f{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:0 0 12px;font-size:13px}.dq-f label{display:flex;gap:6px;align-items:center;color:var(--txt-2)}
+.dq-f select{max-width:260px}
+.dq-t td.dq-b{white-space:nowrap;text-align:right}.dq-t td.dq-b .btn+.btn{margin-left:4px}
+.dq-t td.dq-tip{font-size:12.5px;line-height:1.55}.dq-t td.dq-tip .btn{margin:2px 0 2px 4px}
 .tab .tbadge{display:inline-block;margin-left:5px;min-width:16px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:10.5px;line-height:16px;font-weight:700;text-align:center}
 .tab .tbadge[hidden]{display:none}
 /* v151 — 열 맵핑 확인 · 업로드 오버레이 */
@@ -246,7 +251,7 @@ table.dt td.v{word-break:break-all}
   .wrap{padding:12px 12px 48px}
   .sgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .sf.range{grid-column:1/-1}
-  .sother{grid-template-columns:minmax(0,1fr) 92px}.sother input{grid-column:1/-1}
+  .sc-row{grid-template-columns:minmax(0,1fr) 116px auto}.sc-row input{grid-column:1/-1}
   .flds{grid-template-columns:repeat(2,minmax(0,1fr))}
   .hf{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
@@ -717,12 +722,13 @@ function renderSearch(){
     }
   });
   h += '</div>';
-  /* 그 밖의 열 — 화면 칸에 없는 조건(「작업단계가 비어 있는 행」 같은 정리 작업)을 위해 */
+  /* 그 밖의 열 — 화면 칸에 없는 조건(「작업단계가 비어 있는 행」 같은 정리 작업)을 위해.
+     v156: 여러 개를 «그리고»로 건다(사용자: 「그 밖의 열로 찾기가 하나밖에 못 넣어 한정적」). 판정은 조건으로 바꾸기(v154)와
+     같은 CS_OPS · csTerm(서버) · csPass(화면) 한 벌이다 — 검색과 일괄 바꾸기가 같은 «비어 있음»을 본다. */
   const other = cols.filter(c => !ADMIN_COLS.has(c));
-  h += '<div class="sother"><select class="ctl" name="ocol"><option value="">그 밖의 열로 찾기…</option>'
-    + other.map(c => '<option value="' + esc(c) + '"' + (f.ocol === c ? ' selected' : '') + '>' + esc(label(t, c).name) + (label(t, c).name !== c ? ' (' + esc(c) + ')' : '') + '</option>').join('')
-    + '</select><select class="ctl" name="omode"><option value="has"' + (f.omode === 'has' ? ' selected' : '') + '>포함</option><option value="eq"' + (f.omode === 'eq' ? ' selected' : '') + '>정확히</option><option value="nul"' + (f.omode === 'nul' ? ' selected' : '') + '>비어 있음</option></select>'
-    + '<input class="ctl" name="oval" value="' + esc(f.oval || '') + '" placeholder="값"></div>';
+  const oc = ocList(f);
+  h += '<div class="sother" id="sOther">' + (oc.length ? oc : [{ c:'', op:'has', v:'' }]).map(d => scRow(t, other, d)).join('')
+    + '<button class="btn sm" type="button" data-act="scadd" title="조건을 하나 더 겁니다 — 모두 맞는 행만(그리고)">+ 조건</button></div>';
   const bulkOff = S.ready === false || !S.can.bulk, offT = ' disabled title="엑셀 일괄 수정 함수가 아직 서버에 없습니다"';
   /* 「빈 양식」은 「엑셀 올리기」 바로 왼쪽 — 받아서 적고 올리는 한 흐름이다(v145 · 사용자: 「빈양식 버튼을 엑셀 올리기
      좌측에 놔야 양식에 써서 올리기 할 수 있지 않을까」). 예전에는 목록 머리에 있어 검색하기 전에는 안 보였다. */
@@ -739,7 +745,9 @@ function renderSearch(){
 }
 function readSearch(){
   const fd = new FormData($('search')), f = {};
-  for(const [k, v] of fd.entries()) f[k] = String(v).trim();
+  for(const [k, v] of fd.entries()){ if(k === 'ocol' || k === 'omode' || k === 'oval') continue; f[k] = String(v).trim(); }
+  f.oc = Array.from($('search').querySelectorAll('[data-sc]')).map(r => ({ c:r.querySelector('[name=ocol]').value, op:r.querySelector('[name=omode]').value, v:r.querySelector('[name=oval]').value.trim() }))
+    .filter(d => d.c && (d.op === 'nul' || d.op === 'set' || d.v));
   S.f = S.f || {}; S.f[S.tab] = f;
   return f;
 }
@@ -747,6 +755,10 @@ $('search').addEventListener('submit', e => { e.preventDefault(); runSearch(fals
 $('search').addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if(!b) return;
   if(b.dataset.act === 'reset'){ S.f && (S.f[S.tab] = {}); renderSearch(); if(TAB().mode === 'whole') runSearch(false); }
+  if(b.dataset.act === 'scadd'){ const t = TAB(); b.insertAdjacentHTML('beforebegin', scRow(t, (S.cols[t.tbl] || []).filter(c => !ADMIN_COLS.has(c)), { c:'', op:'has', v:'' })); return; }
+  if(b.dataset.act === 'scdel'){ const r = b.closest('[data-sc]'), box = r.parentNode; r.remove();
+    if(!box.querySelector('[data-sc]')){ const t = TAB(); box.insertAdjacentHTML('afterbegin', scRow(t, (S.cols[t.tbl] || []).filter(c => !ADMIN_COLS.has(c)), { c:'', op:'has', v:'' })); }
+    return; }
   if(b.disabled) return;
   if(b.dataset.act === 'new'){ if(await leaveOk()) newStart(TAB()); }
   if(b.dataset.act === 'xblank') bulkDown('blank');
@@ -829,6 +841,29 @@ function cellOf(t, r, c){
   if(al){ for(const a of al){ const w = vs(r[a]); if(w.trim() !== '') return w; } }
   return v;
 }
+/* 그 밖의 열 조건 목록 — v156 은 f.oc(배열), 그 전 저장본은 f.ocol/omode/oval 한 칸이다(옛 'eq' 는 «같음»으로 읽는다).
+   값이 빈 조건은 버린다(«비어 있음»·«비어 있지 않음»만 값 없이 선다). */
+function ocList(f){
+  if(!f) return [];
+  const L = Array.isArray(f.oc) ? f.oc : (f.ocol ? [{ c:f.ocol, op:f.omode || 'has', v:f.oval || '' }] : []);
+  return L.filter(d => d && d.c && CS_OPS[d.op] && (d.op === 'nul' || d.op === 'set' || String(d.v || '').trim() !== ''));
+}
+const csDesc = (t, d) => label(t, d.c).name + ' ' + CS_OPS[d.op] + (d.op === 'nul' || d.op === 'set' ? '' : ' ' + String(d.v).trim());
+let SC_N = 0;
+function scRow(t, cols, d){
+  const id = 'dl_sc' + (++SC_N);
+  return '<div class="sc-row" data-sc="1"><select class="ctl" name="ocol"><option value="">그 밖의 열로 찾기…</option>'
+    + cols.map(c => '<option value="' + esc(c) + '"' + (d.c === c ? ' selected' : '') + '>' + esc(label(t, c).name) + (label(t, c).name !== c ? ' (' + esc(c) + ')' : '') + '</option>').join('')
+    + '</select><select class="ctl" name="omode">' + Object.keys(CS_OPS).map(k => '<option value="' + k + '"' + (d.op === k ? ' selected' : '') + '>' + CS_OPS[k] + '</option>').join('') + '</select>'
+    + '<input class="ctl" name="oval" value="' + esc(d.v || '') + '" placeholder="값" list="' + id + '" data-col="' + esc(d.c || '') + '"' + (d.op === 'nul' || d.op === 'set' ? ' disabled' : '') + '><datalist id="' + id + '"></datalist>'
+    + '<button class="btn sm" type="button" data-act="scdel" title="이 조건 빼기">✕</button></div>';
+}
+$('search').addEventListener('change', e => {
+  const el = e.target, r = el.closest && el.closest('[data-sc]'); if(!r) return;
+  const v = r.querySelector('[name=oval]');
+  if(el.name === 'omode') v.disabled = el.value === 'nul' || el.value === 'set';
+  if(el.name === 'ocol'){ v.dataset.col = el.value; if(v.list){ v.list.innerHTML = ''; v.list.dataset.loaded = ''; } }
+});
 /* 서버 검색 조건 — text 는 여러 열 «중 하나에» 포함(or) · pick 은 정확히 · range 는 YYYY-MM-DD 문자열 비교.
    ⚠ 여러 열 칸이 둘 이상이면 or 를 and 로 한 번 더 감싼다 — or 파라미터를 두 번 붙이는 것에 기대지 않는다. */
 function applyServer(t, f, q){
@@ -846,15 +881,9 @@ function applyServer(t, f, q){
       if(f[qd.k + '_to']) q = q.lt(qd.cols[0], nextDay(f[qd.k + '_to']));
     }
   });
-  if(ors.length === 1) q = q.or(ors[0].slice(3, -1));
+  ocList(f).forEach(d => ors.push(csTerm(t, d)));      // 그 밖의 열 조건들 — 같은 and(…) 한 파라미터에 싣는다
+  if(ors.length === 1) q = q.or(/^or\(/.test(ors[0]) ? ors[0].slice(3, -1) : ors[0]);
   else if(ors.length > 1) q = q.or('and(' + ors.join(',') + ')');
-  if(f.ocol){
-    if(f.omode === 'nul') q = q.is(f.ocol, null);
-    else if(f.oval){
-      if(f.omode === 'eq' || f.ocol === t.key) q = q.eq(f.ocol, f.oval);
-      else { const p = pat(f.oval); if(p) q = q.ilike(f.ocol, p); }
-    }
-  }
   return q;
 }
 function passWhole(t, f, r){
@@ -872,14 +901,7 @@ function passWhole(t, f, r){
       if(f[qd.k + '_to'] && !(d && d <= f[qd.k + '_to'])) return false;
     }
   }
-  if(f.ocol){
-    const x = vs(r[f.ocol]).trim();
-    if(f.omode === 'nul'){ if(x !== '') return false; }
-    else if(f.oval){
-      if(f.omode === 'eq'){ if(x !== f.oval) return false; }
-      else { const re = patRe(f.oval); if(re && !re.test(x)) return false; }
-    }
-  }
+  for(const d of ocList(f)) if(!csPass(t, d, r)) return false;
   return true;
 }
 /* ---------- 구분 (국내 · 해외 · 미상) — v143 사용자 요청 ----------
@@ -964,7 +986,7 @@ function condText(t, f){
     else if(q.t === 'active'){ if(f[q.k]) out.push(q.l + ': ' + (f[q.k] === 'y' ? '재직' : '퇴사')); }
     else if(f[q.k]) out.push(q.l + ': ' + f[q.k] + (q.t === 'text' ? ' (포함)' : ''));
   });
-  if(f.ocol && (f.omode === 'nul' || f.oval)) out.push(label(t, f.ocol).name + ': ' + (f.omode === 'nul' ? '비어 있음' : f.oval + (f.omode === 'eq' ? '' : ' (포함)')));
+  ocList(f).forEach(d => out.push(csDesc(t, d)));
   return out.length ? out.join(' · ') : '조건 없음(표 전체)';
 }
 /* 검색 결과의 키 «전부»(큰 표) — 목록과 같은 조건(applyServer)·같은 순서(최근 것부터)로 키만 받는다.
@@ -2867,85 +2889,324 @@ const DQ_CHECK = {
   endlt:   { l:'작업종료일이 시작일보다 앞', why:'종료가 시작보다 이릅니다.', act:'작업시작일·종료일을 바로잡으세요.', sev:'bad' },
   future:  { l:'작업시작일이 미래', why:'아직 오지 않은 날짜입니다 — 연도·월 오기입일 수 있습니다.', act:'작업시작일을 바로잡으세요.', sev:'warn' },
   manmis:  { l:'작업공수 ≠ 작업시간 × 작업자수', why:'시스템은 공수를 작업시간 × 작업자수로 적습니다(실측 19,881/19,888 행) — 크게 다르면 한쪽이 틀린 것입니다.', act:'작업자수·작업시간·작업공수 중 틀린 칸을 고치세요.', sev:'warn' },
-  mannull: { l:'작업공수 빈칸(작업시간은 있음)', why:'공수 차트는 이 행을 0 으로 셉니다.', act:'작업공수를 채우세요(작업시간 × 작업자수). 조건으로 바꾸기로 한 번에 넣을 수 없는 값이라 엑셀 일괄이 편합니다.', sev:'info' }
+  mannull: { l:'작업공수 빈칸(작업시간은 있음)', why:'공수 차트는 이 행을 0 으로 셉니다.', act:'「자동 채우기」가 작업시간 × 작업자수로 한 번에 채웁니다(미리 보기 뒤 반영 · 되돌릴 수 있음). 작업자수가 빈 행은 직접 고치세요.', sev:'info' }
 };
 const DQ_PAGES = [['report','주간현황'],['fault','고장분석'],['material','자재실적'],['pm','PM 점검'],['scrubber','설치현황'],['tco','TCO'],['cip','CIP'],['hr','인원현황'],['report_kr','주간현황(국내)']];
 const dqTbl = () => TAB_BY.wk.tbl;
+/* 걸러 보기 (v156 · 사용자: 「필터 잡아서 보고 싶은 것만 볼 수 있게」) — 구분 · 운영단위 · 기간.
+   ⚠ 구분 판정은 대시보드 정본(GST.ORG.region)을 운영단위 «값»에 건다 — 서버는 운영단위별 건수(by_op)만 주고 판정은 여기 한 곳이다.
+   ⚠ 기간은 서버가 다시 센다(p_from) — 주별 급증의 «평소»(앞뒤 8주 중앙값)도 그 기간 안의 주로만 본다. */
+const DQ_DAYS = [['30','최근 30일'],['90','최근 90일'],['180','최근 180일'],['400','최근 400일'],['730','최근 2년'],['all','전체']];
+function dqF(){
+  if(!S.dqf){ let o = null; try{ o = JSON.parse(localStorage.getItem('gst_edit_dqf') || 'null'); }catch(e){}
+    S.dqf = Object.assign({ reg:'', op:'', days:'400', jt:'wk' }, o || {}); }
+  return S.dqf;
+}
+function dqFSave(){ try{ localStorage.setItem('gst_edit_dqf', JSON.stringify(S.dqf)); }catch(e){} }
+function dqFrom(){
+  const d = dqF().days;
+  if(d === 'all') return '2000-01-01';
+  const x = new Date(); x.setDate(x.getDate() - (+d || 400)); return GST.ymdL ? GST.ymdL(x) : x.toISOString().slice(0, 10);
+}
+const dqRegOf = op => regionKey(GST.ORG.region(op));
+/* 지금 필터에 드는 운영단위 목록 — 필터가 없으면 null(=전부 · 서버에 조건을 안 건다) */
+function dqOps(all){
+  const f = dqF(); if(!f.reg && !f.op) return null;
+  return all.filter(op => (!f.reg || dqRegOf(op) === f.reg) && (!f.op || op === f.op));
+}
+const dqOpOk = op => { const f = dqF(); return (!f.reg || dqRegOf(op) === f.reg) && (!f.op || op === f.op); };
+const dqFTxt = () => { const f = dqF(); return [f.reg ? REG[f.reg] : '', f.op || '', (DQ_DAYS.find(x => x[0] === f.days) || [,''])[1]].filter(Boolean).join(' · '); };
 async function dqLoad(force){
-  if(!force && S.dq && S.dq.tbl === dqTbl()) return S.dq;
-  const r = await rpc('edit_dq', { p_tbl:dqTbl() });
-  S.dq = Object.assign({ tbl:dqTbl(), at:Date.now() }, r || {});
+  const from = dqFrom();
+  if(!force && S.dq && S.dq.tbl === dqTbl() && S.dq.qfrom === from) return S.dq;
+  const r = await rpc('edit_dq', { p_tbl:dqTbl(), p_from:from });
+  S.dq = Object.assign({ tbl:dqTbl(), qfrom:from, at:Date.now() }, r || {});
   dqBadge();
   return S.dq;
 }
-/* «확인할 것» 수 — 탭 이름표에 띄운다(알림). info(공수 빈칸)는 세지 않는다 — 늘 있는 입력 누락이라 세면 숫자가 소음이 된다. */
+/* 탭 이름표의 «확인할 것 N» — 필터와 무관하게 «전체»를 센다(알림은 걸러 보기 전의 사실이다).
+   info(공수 빈칸)는 세지 않는다 — 늘 있는 입력 누락이라 세면 숫자가 소음이 된다. */
 const dqCount = d => d ? Object.keys(DQ_CHECK).filter(k => DQ_CHECK[k].sev !== 'info').reduce((a, k) => a + (d[k] || 0), 0) + (d.spikes || []).length : 0;
 function dqBadge(){ const b = document.querySelector('.tab[data-tab=dq] .tbadge'); const n = dqCount(S.dq);
   if(b){ b.textContent = n ? n.toLocaleString() : ''; b.hidden = !n; } }
+/* 운영단위별 건수를 지금 필터로 더한다 — by_op 가 없는 옛 서버면 전체 값 그대로(걸러지지 않았다고 화면이 말한다) */
+function dqSum(d){
+  if(!Array.isArray(d.by_op)) return Object.assign({ old:true }, d);
+  const o = { rows:0, mfill:0 }; Object.keys(DQ_CHECK).forEach(k => o[k] = 0);
+  d.by_op.forEach(x => { if(!dqOpOk(x.op)) return; o.rows += x.rows || 0; o.mfill += x.mfill || 0; Object.keys(DQ_CHECK).forEach(k => o[k] += x[k] || 0); });
+  return o;
+}
+function dqFilterBar(ops){
+  const f = dqF();
+  const opsV = ops.filter(op => !f.reg || dqRegOf(op) === f.reg).sort();
+  return '<div class="dq-f"><label>구분 <select data-dqf="reg"><option value="">전체</option>' + Object.keys(REG).map(k => '<option value="' + k + '"' + (f.reg === k ? ' selected' : '') + '>' + REG[k] + '</option>').join('') + '</select></label>'
+    + '<label>운영단위 <select data-dqf="op"><option value="">전체' + (f.reg ? ' (' + REG[f.reg] + ')' : '') + '</option>' + opsV.map(op => '<option value="' + esc(op) + '"' + (f.op === op ? ' selected' : '') + '>' + esc(op || '(빈칸)') + '</option>').join('') + '</select></label>'
+    + '<label>기간 <select data-dqf="days">' + DQ_DAYS.map(x => '<option value="' + x[0] + '"' + (f.days === x[0] ? ' selected' : '') + '>' + x[1] + '</option>').join('') + '</select></label>'
+    + (f.reg || f.op ? '<button class="btn sm" type="button" data-dq="fclr">필터 지우기</button>' : '') + '</div>';
+}
 async function dqRender(force){
   const box = $('dqBox');
-  box.innerHTML = '<div class="empty"><span class="spin"></span> 수선실적을 점검하는 중… (최근 400일 · 수 초 걸립니다)</div>';
+  box.innerHTML = '<div class="empty"><span class="spin"></span> 수선실적을 점검하는 중… (' + esc(dqFTxt()) + ' · 수 초 걸립니다)</div>';
   let d;
   try{ d = await dqLoad(force); }
   catch(e){
     box.innerHTML = '<div class="banner bad">' + esc(fnMissing(e.raw) ? '점검 함수가 아직 서버에 없습니다 — Supabase SQL Editor 에서 supabase/setup-21-dq.sql 을 Run 하세요.' : e.message) + '</div>' + dqPagesHTML();
     return;
   }
-  const at = new Date(d.at), p2 = v => String(v).padStart(2, '0');
-  let h = '<div class="dq-h"><h3>원장 점검 — ' + esc(TAB_BY.wk.name) + '</h3><span class="hint">작업시작일 ' + esc(d.from) + ' 이후 ' + (d.rows || 0).toLocaleString() + '행 · '
-    + at.getHours() + ':' + p2(at.getMinutes()) + ' 기준</span><span class="sp"></span><button class="btn sm" type="button" data-dq="re">다시 점검</button></div>'
+  const ops = Array.from(new Set((d.by_op || []).map(x => x.op).concat(S.dqj ? (S.dqj.by_op || []).map(x => x.op) : []).concat((d.spikes || []).map(x => x.op || ''))));
+  const sm = dqSum(d), at = new Date(d.at), p2 = v => String(v).padStart(2, '0');
+  let h = dqFilterBar(ops)
+    + '<div class="dq-h"><h3>원장 점검 — ' + esc(TAB_BY.wk.name) + '</h3><span class="hint">작업시작일 ' + esc(d.from) + ' 이후 ' + (sm.rows || 0).toLocaleString() + '행'
+    + (dqF().reg || dqF().op ? ' (' + esc(dqFTxt()) + ')' : '') + ' · ' + at.getHours() + ':' + p2(at.getMinutes()) + ' 기준</span><span class="sp"></span><button class="btn sm" type="button" data-dq="re">다시 점검</button></div>'
+    + (sm.old ? '<div class="banner warn">서버 점검 함수가 옛 판이라 구분·운영단위로 못 거릅니다(기간은 됩니다) — supabase/setup-21-dq.sql 을 Run 하세요.</div>' : '')
     + '<p class="hint">대시보드는 이 행들을 «그대로» 셉니다(빼지 않습니다). 행을 열어 고치면 차트가 저절로 바로잡힙니다 — 모든 수정은 「변경 이력」에 남고 되돌릴 수 있습니다.</p>'
     + '<table class="dt dq-t"><thead><tr><th>점검</th><th class="r">건수</th><th>왜 문제인가 · 무엇을 하면 되나</th><th></th></tr></thead><tbody>'
-    + Object.keys(DQ_CHECK).map(k => { const c = DQ_CHECK[k], n = d[k] || 0;
+    + Object.keys(DQ_CHECK).map(k => { const c = DQ_CHECK[k], n = sm[k] || 0;
+        const fill = k === 'mannull' && n ? (sm.mfill ? '<button class="btn sm" type="button" data-dq="fill" title="작업공수 = 작업시간(분) × 작업자수 — 시스템이 쓰는 식 그대로(실측 19,881/19,888 행). 미리 보기 뒤 반영 · 되돌릴 수 있습니다">자동 채우기 ' + sm.mfill.toLocaleString() + '행</button>' : '<span class="hint">작업자수가 빈 행이라 자동으로 못 채웁니다</span>') : '';
         return '<tr class="dq-' + (n ? c.sev : 'ok') + '"><td><b>' + esc(c.l) + '</b></td><td class="r">' + n.toLocaleString() + '</td><td>' + esc(c.why) + '<br><span class="hint">' + esc(c.act) + '</span></td>'
-          + '<td>' + (n ? '<button class="btn sm pri" type="button" data-dq="rows" data-k="' + k + '">행 보기</button>' : '<span class="hint">없음</span>') + '</td></tr>'; }).join('')
+          + '<td class="dq-b">' + (n ? fill + '<button class="btn sm pri" type="button" data-dq="rows" data-k="' + k + '">행 보기</button>' : '<span class="hint">없음</span>') + '</td></tr>'; }).join('')
     + '</tbody></table>';
-  const sp = d.spikes || [];
-  h += '<h4>주별 공수 급증 <span class="hint">— 운영단위 × 주의 공수 합이 앞뒤 8주 중앙값의 2배를 넘고 50h 이상 많은 주</span></h4>';
+  const spAll = d.spikes || [], sp = spAll.map((x, i) => Object.assign({ i:i }, x)).filter(x => dqOpOk(x.op || ''));
+  h += '<h4>주별 공수 급증 <span class="hint">— 운영단위 × 주의 공수 합이 앞뒤 8주 중앙값의 2배를 넘고 50h 이상 많은 주' + (sp.length < spAll.length ? ' · 필터로 ' + (spAll.length - sp.length) + '주 숨김' : '') + '</span></h4>';
   h += sp.length ? '<table class="dt dq-t"><thead><tr><th>운영단위</th><th>주(월요일)</th><th class="r">공수(h)</th><th class="r">평소(h)</th><th class="r">배</th><th class="r">24h 초과 행</th><th></th></tr></thead><tbody>'
-      + sp.map((x, i) => '<tr class="dq-' + (x.nb ? 'bad' : 'warn') + '"><td>' + esc(x.op || '(빈칸)') + '</td><td>' + esc(x.wk) + ' <span class="hint">W' + GST.isoW(new Date(x.wk + 'T00:00:00')) + '</span></td><td class="r">' + Number(x.h).toLocaleString()
+      + sp.map(x => '<tr class="dq-' + (x.nb ? 'bad' : 'warn') + '"><td>' + esc(x.op || '(빈칸)') + '</td><td>' + esc(x.wk) + ' <span class="hint">W' + GST.isoW(new Date(x.wk + 'T00:00:00')) + '</span></td><td class="r">' + Number(x.h).toLocaleString()
         + '</td><td class="r">' + Number(x.base).toLocaleString() + '</td><td class="r">' + GST.xmul(x.h / x.base) + '</td><td class="r">' + (x.nb || 0) + '</td>'
-        + '<td><button class="btn sm pri" type="button" data-dq="spike" data-i="' + i + '">공수 큰 행부터 보기</button></td></tr>').join('') + '</tbody></table>'
+        + '<td><button class="btn sm pri" type="button" data-dq="spike" data-i="' + x.i + '">공수 큰 행부터 보기</button></td></tr>').join('') + '</tbody></table>'
     : '<p class="hint">급증한 주가 없습니다.</p>';
+  h += '<div id="dqJoin">' + dqJoinHTML() + '</div>';
   box.innerHTML = h + dqPagesHTML();
+  if(!S.dqj && !S.dqjBusy && !S.dqjErr) dqJoinLoad(false);
 }
+/* ---------- 설치현황 연결 길잡이 (v156 · 사용자 요청) ----------
+   사용자: 「"실적 행에 사업부가 안 붙었습니다" 같은 것은 경고만 주지, 어디서 어떻게 어떤 사이트를 수정해야 하는지 모르잖아 —
+            길잡이 역할을 하는 기능」. 그래서 «몇 행»이 아니라 «어느 운영단위의 어느 S/N 이 · 왜 · 어디서 고치나»를 적고
+   한 번에 그 행을 연다. 판정은 서버 한 벌(setup-21 edit_dq_join · instIndex 와 같은 순서 · SPEC-SYNC).
+   진단은 넷이고 고칠 곳이 다르다 — 실적(설비호기·S/N 표기) / 설치현황(설비가 없음 · 사업부·Floor 빈칸) / 원본(법인 통째 빠짐). */
+const DQJ_WHOLE = 0.95;          // 이 비율 넘게 안 이어지면 «행을 고칠 일»이 아니라 «설치현황에 그 법인 자료가 없다»로 읽는다
+const dqjTbl = () => dqF().jt === 'mat' && TAB_BY.mat ? TAB_BY.mat.tbl : TAB_BY.wk.tbl;
+const dqjTab = () => dqF().jt === 'mat' && TAB_BY.mat ? TAB_BY.mat : TAB_BY.wk;
+async function dqJoinLoad(force){
+  const from = dqF().days === 'all' ? null : dqFrom(), tbl = dqjTbl();
+  if(!force && S.dqj && S.dqj.tbl === tbl && S.dqj.qfrom === from) return;
+  S.dqjBusy = true; S.dqjErr = null; dqJoinPaint();
+  try{ const r = await rpc('edit_dq_join', { p_tbl:tbl, p_from:from }); S.dqj = Object.assign({ qfrom:from, at:Date.now() }, r || {}, { tbl:tbl }); }
+  catch(e){ S.dqjErr = fnMissing(e.raw) ? '연결 점검 함수가 아직 서버에 없습니다 — Supabase SQL Editor 에서 supabase/setup-21-dq.sql 을 Run 하세요.' : (e.message || String(e)); }
+  S.dqjBusy = false; dqJoinPaint();
+}
+function dqJoinPaint(){ const el = $('dqJoin'); if(el) el.innerHTML = dqJoinHTML(); }
+function dqJoinHTML(){
+  const f = dqF(), j = S.dqj;
+  let h = '<h4>설치현황 연결 — 실적 행이 «어느 설비»와 이어지는가</h4>'
+    + '<div class="dq-f"><label>표 <select data-dqf="jt"><option value="wk"' + (f.jt !== 'mat' ? ' selected' : '') + '>수선실적</option>' + (TAB_BY.mat ? '<option value="mat"' + (f.jt === 'mat' ? ' selected' : '') + '>자재실적</option>' : '') + '</select></label>'
+    + '<button class="btn sm" type="button" data-dq="jre"' + (S.dqjBusy ? ' disabled' : '') + '>다시 점검</button></div>'
+    + '<p class="hint">대시보드는 실적의 설비호기 → S/N 순으로 설치현황을 찾아 사업부·Floor·라인2 를 붙입니다. 안 이어진 행은 사업부·라인2 필터를 그냥 통과하고 Floor 가 「미상」이 됩니다 — '
+    + '주간현황의 「실적 행에 사업부가 안 붙었습니다」·고장분석/자재실적의 「Floor 미상」이 이 숫자입니다.</p>';
+  if(S.dqjBusy) return h + '<div class="empty"><span class="spin"></span> 설치현황과 대조하는 중… (10초쯤 걸립니다)</div>';
+  if(S.dqjErr) return h + '<div class="banner bad">' + esc(S.dqjErr) + '</div>';
+  if(!j) return h + '<p class="hint"><button class="btn sm pri" type="button" data-dq="jre">연결 점검 하기</button></p>';
+  const rows = (j.by_op || []).filter(x => dqOpOk(x.op));
+  if(!rows.length) return h + '<p class="hint">이 필터에 드는 행이 없습니다.</p>';
+  h += '<table class="dt dq-t dq-j"><thead><tr><th>운영단위</th><th class="r">행</th><th class="r">설치현황에 없음</th><th class="r">설비호기·S/N 빈칸</th><th class="r">사업부 빈칸</th><th class="r">Floor 빈칸</th><th>어디서 무엇을 고치나</th></tr></thead><tbody>';
+  rows.forEach(x => {
+    const kr = dqRegOf(x.op) === 'kr', whole = x.rows && x.miss / x.rows >= DQJ_WHOLE;
+    const tips = [];
+    const b = (k, l, extra) => '<button class="btn sm" type="button" data-dq="j' + k + '" data-op="' + esc(x.op) + '"' + (extra || '') + '>' + l + '</button>';
+    if(whole) tips.push('<b>이 운영단위의 설비가 설치현황에 거의 없습니다</b>(' + Math.round(x.miss / x.rows * 100) + '%) — 행을 하나씩 고칠 일이 아닙니다. 설치현황 원본에 이 법인 자료가 빠졌거나, 원래 설치현황 대상이 아닌 설비(예: 칠러)입니다. '
+      + '<button class="btn sm pri" type="button" data-dq="jup">설치현황 원본 올리기</button>');
+    else if(x.miss) tips.push('설비호기·S/N 이 설치현황과 안 맞는 행 — 실적의 표기가 틀렸거나 설치현황에 그 설비가 없습니다. 아래 «안 이어진 설비»에서 S/N 별로 봅니다. ' + b('miss', '행 보기'));
+    if(x.nokey) tips.push('설비호기·S/N 이 둘 다 빈 행 — 실적에서 채웁니다. ' + b('nokey', '행 보기'));
+    if(x.nodiv){
+      if(kr) tips.push('이어졌는데 설치현황의 <b>사업부</b>가 빈 설비 — 설치현황에서 채웁니다. ' + b('idiv', '설치현황 행 열기'));
+      else tips.push('<span class="hint">사업부 빈칸 ' + x.nodiv.toLocaleString() + '행 — 해외 설치현황 양식에는 사업부 열이 없습니다(고칠 것 아님 · 사업부 필터는 그 행을 그냥 통과시킵니다).</span>');
+    }
+    if(x.nofloor) tips.push('이어졌는데 설치현황의 <b>Floor</b> 가 빈 설비 — 설치현황에서 채웁니다. ' + b('iflr', '설치현황 행 열기'));
+    const sev = whole || x.miss || x.nokey || (kr && x.nodiv) || x.nofloor ? (whole ? 'bad' : 'warn') : 'ok';
+    const c = (n, warn) => '<td class="r">' + (n ? (warn ? '<b>' + n.toLocaleString() + '</b>' : n.toLocaleString()) : '<span class="hint">0</span>') + '</td>';
+    h += '<tr class="dq-' + sev + '"><td><b>' + esc(x.op || '(빈칸)') + '</b> <span class="hint">' + esc(REG[dqRegOf(x.op)]) + '</span></td><td class="r">' + (x.rows || 0).toLocaleString() + '</td>'
+      + c(x.miss, 1) + c(x.nokey, 1) + c(x.nodiv, kr) + c(x.nofloor, 1) + '<td class="dq-tip">' + (tips.length ? tips.join('<br>') : '<span class="hint">문제 없음</span>') + '</td></tr>';
+  });
+  h += '</tbody></table>';
+  /* 안 이어진 설비 — 운영단위마다 행이 많은 순 100개(서버). «법인 통째»인 운영단위는 목록이 길기만 해서 접어 둔다. */
+  const okOps = new Set(rows.filter(x => !(x.rows && x.miss / x.rows >= DQJ_WHOLE)).map(x => x.op));
+  const mt = (j.miss_top || []).filter(x => okOps.has(x.op));
+  h += '<h4>안 이어진 설비 <span class="hint">— 운영단위별로 행이 많은 순 · 설치현황에 그 설비가 있는지 먼저 찾아보고, 있으면 실적의 표기를, 없으면 설치현황에 그 설비를 넣습니다</span></h4>';
+  h += mt.length ? '<table class="dt dq-t"><thead><tr><th>운영단위</th><th>설비호기</th><th>S/N</th><th class="r">실적 행</th><th></th></tr></thead><tbody>'
+      + mt.slice(0, 60).map(x => '<tr class="dq-warn"><td>' + esc(x.op || '(빈칸)') + '</td><td>' + esc(x.eq || '—') + '</td><td>' + esc(x.sn || '—') + '</td><td class="r">' + x.n.toLocaleString() + '</td>'
+        + '<td class="dq-b"><button class="btn sm pri" type="button" data-dq="jmrow" data-i="' + j.miss_top.indexOf(x) + '">실적 행 보기</button>'
+        + '<button class="btn sm" type="button" data-dq="jmins" data-i="' + j.miss_top.indexOf(x) + '" title="설치현황에서 이 S/N(없으면 설비호기)을 포함 검색합니다 — 하이픈·접미 차이를 흡수합니다">설치현황에서 찾기</button></td></tr>').join('')
+      + '</tbody></table>' + (mt.length > 60 ? '<p class="hint">… 외 ' + (mt.length - 60) + '개 — 운영단위를 골라 좁혀 보세요.</p>' : '')
+    : '<p class="hint">' + (rows.some(x => x.miss) ? '안 이어진 행은 전부 «법인 통째» 운영단위에 있습니다 — 위 표에서 원본을 올리세요.' : '안 이어진 설비가 없습니다.') + '</p>';
+  return h;
+}
+/* 화면 신호 → 고칠 자리 (v156 · 길잡이). 키는 «화면.신호». 여기 없는 신호는 규칙으로 정해진 제외(head_ex 등)라 고칠 행이 없다. */
+const DQ_FIX = {
+  'report.wk_24h':    { l:'24h 초과 행 보기', dq:'work24' },
+  'report_kr.wk_24h': { l:'24h 초과 행 보기', dq:'work24' },
+  'report.div_join':  { l:'설치현황 연결 보기', join:'wk' },
+  'report_kr.div_join': { l:'설치현황 연결 보기', join:'wk' },
+  'fault.floor_na':   { l:'설치현황 연결 보기', join:'wk' },
+  'material.floor_na':{ l:'설치현황 연결 보기', join:'mat' },
+  'fault.wk_blank':   { l:'알람유형 빈 BM 행 찾기', tab:'wk', oc:[{ c:'stage', op:'eq', v:'BM' }, { c:'alarm', op:'nul', v:'' }] },
+  'scrubber.inst_nodate': { l:'Turn On 빈 설비 찾기', tab:'inst', oc:[{ c:'turn_on', op:'nul', v:'' }] },
+  'scrubber.inst_unkstate': { l:'기준 정보에서 정하기', tab:'vmap' },
+  'fault.inst_unkstate':    { l:'기준 정보에서 정하기', tab:'vmap' }
+};
 /* ② 화면 신호 — 예전에 각 화면 맨 아래 있던 «데이터 품질» 표(사용자: 「데이터 관리로 옮기고」) */
 function dqPagesHTML(){
   const now = Date.now();
-  let h = '<h4>화면 신호 — 여덟 화면이 마지막으로 그릴 때 찾은 자료 문제</h4><p class="hint">이 브라우저에서 그 화면을 마지막으로 연 때의 값입니다(필터가 걸려 있었다면 그 필터 기준). 최신으로 보려면 그 화면을 새로고침한 뒤 여기를 다시 여세요.</p>';
+  let h = '<h4>화면 신호 — 여덟 화면이 마지막으로 그릴 때 찾은 자료 문제</h4><p class="hint">이 브라우저에서 그 화면을 마지막으로 연 때의 값입니다(필터가 걸려 있었다면 그 필터 기준). 최신으로 보려면 그 화면을 새로고침한 뒤 여기를 다시 여세요. 「찾아서 고치기」가 고칠 행을 그 탭에 띄웁니다.</p>';
   DQ_PAGES.forEach(pg => {
     let o = null; try{ o = JSON.parse(localStorage.getItem('gst_dq_' + pg[0]) || 'null'); }catch(e){}
     if(!o){ if(pg[0] !== 'report_kr') h += '<div class="dq-pg"><b>' + esc(pg[1]) + '</b> <span class="hint">— 이 브라우저에서 아직 한 번도 안 열었습니다</span></div>'; return; }
     const mins = Math.round((now - (o.at || 0)) / 60000), age = mins < 60 ? mins + '분 전' : mins < 2880 ? Math.round(mins / 60) + '시간 전' : Math.round(mins / 1440) + '일 전';
     h += '<div class="dq-pg"><b>' + esc(pg[1]) + '</b> <span class="hint">· ' + esc(age) + ' · 필터 ' + esc(o.filter || '전체') + '</span></div>';
     if(!o.items || !o.items.length){ h += '<p class="hint" style="margin:2px 0 8px">문제 없음</p>'; return; }
-    h += '<table class="dt dq-t"><tbody>' + o.items.map(x => '<tr class="dq-' + esc(x.sev || 'warn') + '"><td>' + esc(x.label) + '</td><td class="r">'
-      + esc(x.n == null ? '' : Number(x.n).toLocaleString() + (x.of == null ? '' : ' / ' + Number(x.of).toLocaleString())) + '</td><td class="hint">' + esc(x.act) + '</td></tr>').join('') + '</tbody></table>';
+    h += '<table class="dt dq-t"><tbody>' + o.items.map(x => { const fx = DQ_FIX[pg[0] + '.' + x.key];
+      return '<tr class="dq-' + esc(x.sev || 'warn') + '"><td>' + esc(x.label) + '</td><td class="r">'
+      + esc(x.n == null ? '' : Number(x.n).toLocaleString() + (x.of == null ? '' : ' / ' + Number(x.of).toLocaleString())) + '</td><td class="hint">' + esc(x.act) + '</td>'
+      + '<td class="dq-b">' + (fx ? '<button class="btn sm pri" type="button" data-dq="fix" data-fx="' + esc(pg[0] + '.' + x.key) + '">' + esc(fx.l) + '</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>';
   });
   return h;
 }
-/* 점검 결과의 행을 수선실적 탭 «목록»에 그대로 띄운다 — 거기서 행을 열어 고치고, 체크해 조건으로 바꾸기·엑셀로 받을 수 있다 */
-async function dqShow(title, args){
+/* 신호 하나를 «고칠 자리»로 — 다른 탭이면 조건을 채워 검색까지 한다(그 탭에 그 열이 없으면 조건 없이 연다) */
+async function dqFix(id){
+  const fx = DQ_FIX[id]; if(!fx) return;
+  if(fx.dq) return dqShow('데이터 품질 · ' + DQ_CHECK[fx.dq].l, { p_check:fx.dq });
+  if(fx.join){
+    dqF().jt = fx.join; dqFSave();
+    if(S.tab !== 'dq') await switchTab('dq');
+    await dqJoinLoad(false);
+    const el = $('dqJoin'); if(el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+    return;
+  }
+  if(fx.tab === 'vmap'){ if(!KR) await switchTab('vmap'); return; }
+  if(fx.tab && TAB_BY[fx.tab]) return dqSearch(fx.tab, fx.oc || []);
+}
+/* 다른 탭을 «조건이 채워진 검색»으로 연다 — 사람이 조건을 보고 고칠 수 있다(검색 칸의 그 밖의 열 조건 · v156) */
+async function dqSearch(tabId, oc){
+  await switchTab(tabId);
+  const t = TAB(), cols = S.cols[t.tbl] || [];
+  const ok = oc.filter(d => cols.indexOf(d.c) >= 0);
+  S.f = S.f || {}; S.f[t.id] = { oc:ok };
+  renderSearch();
+  await runSearch(false);
+  if(ok.length < oc.length) snack('이 표에 없는 열이라 뺀 조건이 있습니다 — ' + oc.filter(d => cols.indexOf(d.c) < 0).map(d => d.c).join(', '), { ms:6000 });
+}
+/* 점검 결과의 행을 그 탭 «목록»에 그대로 띄운다 — 거기서 행을 열어 고치고, 체크해 조건으로 바꾸기·엑셀로 받을 수 있다 */
+async function dqShow(title, args, fn, tabId){
+  fn = fn || 'edit_dq_rows2'; const t0 = TAB_BY[tabId || 'wk'];
   snack('행을 읽는 중…', {ms:60000});
   let keys, rows = [];
   try{
-    keys = (await rpc('edit_dq_rows', Object.assign({ p_tbl:dqTbl() }, args)) || []).map(Number);
-    for(let i = 0; i < keys.length; i += GET_MAX) [].push.apply(rows, await rpc('edit_get_many', { p_tbl:dqTbl(), p_keys:keys.slice(i, i + GET_MAX) }) || []);
+    let a = Object.assign({ p_tbl:t0.tbl }, args);
+    if(fn === 'edit_dq_rows2'){ if(!('p_ops' in a)) a.p_ops = dqOps((S.dq && S.dq.by_op || []).map(x => x.op)); a.p_from = dqFrom(); }
+    try{ keys = (await rpc(fn, a) || []).map(Number); }
+    catch(e){   // 옛 서버(v155) — 운영단위 여럿·기간을 못 받는다. 걸러지지 않은 결과라는 것을 제목에 적는다.
+      if(fn !== 'edit_dq_rows2' || !fnMissing(e.raw)) throw e;
+      keys = (await rpc('edit_dq_rows', { p_tbl:t0.tbl, p_check:a.p_check, p_op:a.p_ops && a.p_ops.length === 1 ? a.p_ops[0] : null, p_wk:a.p_wk || null }) || []).map(Number);
+      title += ' (옛 서버 — 필터 미적용)';
+    }
+    for(let i = 0; i < keys.length; i += GET_MAX) [].push.apply(rows, await rpc('edit_get_many', { p_tbl:t0.tbl, p_keys:keys.slice(i, i + GET_MAX) }) || []);
   }catch(e){ snack(e.message, {err:true}); return; }
+  return dqList(title, keys, rows, t0.id);
+}
+async function dqList(title, keys, rows, tabId){
   $('snack').className = '';
   const ord = new Map(keys.map((k, i) => [String(k), i]));
   rows.sort((a, b) => ord.get(String(a.key)) - ord.get(String(b.key)));
-  await switchTab('wk');
+  await switchTab(tabId);
   S.rows = rows.map(x => x.row); S.more = false; S.qf = null; S.dqView = title;
   renderList(title + ' — ' + S.rows.length.toLocaleString() + '행' + (keys.length >= 2000 ? ' (앞 2,000행)' : ''));
-  if(S.rows.length) openRow(String(S.rows[0][TAB_BY.wk.key]));
+  if(S.rows.length) openRow(String(S.rows[0][TAB_BY[tabId].key]));
 }
+/* 설치현황 행(사업부·Floor 빈칸 · 그 행을 가리키는 실적이 많은 순)을 설치현황 탭 목록에 띄운다 */
+async function dqInstRows(op, k){
+  const j = S.dqj, ti = TAB_BY.inst; if(!j || !ti) return;
+  const by = new Map();
+  (j.inst_refs || []).forEach(x => { if(x.op !== op || !(k === 'nd' ? x.nd : x.nf)) return; by.set(x.ir, (by.get(x.ir) || 0) + (k === 'nd' ? x.nd : x.nf)); });
+  const keys = Array.from(by).sort((a, b) => b[1] - a[1]).map(x => +x[0]).slice(0, 2000);
+  if(!keys.length){ snack('해당 설치현황 행이 없습니다'); return; }
+  snack('행을 읽는 중…', {ms:60000});
+  let rows = [];
+  try{ for(let i = 0; i < keys.length; i += GET_MAX) [].push.apply(rows, await rpc('edit_get_many', { p_tbl:ti.tbl, p_keys:keys.slice(i, i + GET_MAX) }) || []); }
+  catch(e){ snack(e.message, {err:true}); return; }
+  return dqList('설치현황 연결 · ' + (op || '(빈칸)') + ' · ' + (k === 'nd' ? '사업부' : 'Floor') + ' 빈 설비 (실적이 많이 가리키는 순)', keys, rows, 'inst');
+}
+/* ---------- 작업공수 자동 채우기 (v156 · 사용자: 「어차피 사람수 × 작업시간인데 … 채우는 기능도 있어야겠다」) ----------
+   빈 작업공수 = 작업시간(분) × 작업자수 — 시스템이 쓰는 식 그대로다(실측 19,881/19,888 행이 정확히 곱 · v147).
+   ⚠ 빈칸만 채운다 — 이미 적힌 공수는 손대지 않는다(다르면 «공수 ≠ 시간 × 인원» 점검이 따로 보여 준다).
+   ⚠ 작업자수·작업시간이 비었거나 0 인 행은 짐작하지 않는다 — 건너뛴다.
+   ⚠ 쓰기는 엑셀 일괄과 같은 edit_bulk(500줄씩 · 행 해시 · 줄마다 이력 · 「변경 이력」의 일괄 되돌리기). 새 쓰기 통로 없음.
+   ⚠ 해외 주간현황은 지금 이 행의 공수를 0 으로 센다 — 채우면 그만큼 공수 차트가 올라간다(그게 맞는 값이다).
+     국내 데모는 v147 부터 읽을 때 같은 식으로 메워 보고 있었으니 숫자가 안 바뀐다. */
+const MAN_COL = 'man_min', WMIN_COL = 'work_min', WCNT_COL = 'worker_cnt';
+function manFill(row){
+  if(vs(row[MAN_COL]).trim() !== '') return null;
+  const wm = GST.numv(row[WMIN_COL]), wc = GST.numv(row[WCNT_COL]);
+  if(!(isFinite(wm) && wm > 0 && isFinite(wc) && wc > 0)) return null;
+  return String(Math.round(wm * wc * 100) / 100);
+}
+async function dqFill(){
+  const t = TAB_BY.wk;
+  if(!S.can.bulk){ snack('일괄 수정 함수가 아직 서버에 없습니다', {err:true}); return; }
+  snack('채울 행을 모으는 중…', {ms:60000});
+  let keys, got = [];
+  try{
+    keys = (await rpc('edit_dq_rows2', { p_tbl:t.tbl, p_check:'mfill', p_ops:dqOps((S.dq && S.dq.by_op || []).map(x => x.op)), p_from:dqFrom(), p_limit:CS_MAX }) || []).map(Number);
+    for(let i = 0; i < keys.length; i += GET_MAX){
+      if(keys.length > GET_MAX) snack('지금 값을 읽는 중… ' + Math.min(i + GET_MAX, keys.length).toLocaleString() + ' / ' + keys.length.toLocaleString() + '행', {ms:60000});
+      [].push.apply(got, await rpc('edit_get_many', { p_tbl:t.tbl, p_keys:keys.slice(i, i + GET_MAX) }) || []);
+    }
+  }catch(e){ snack(fnMissing(e.raw) ? '자동 채우기 함수가 아직 서버에 없습니다 — supabase/setup-21-dq.sql 을 Run 하세요' : e.message, {err:true}); return; }
+  $('snack').className = '';
+  const P = { file:'작업공수 자동 채우기', sheet:'작업공수 = 작업시간(분) × 작업자수 · ' + dqFTxt(), upd:[], ins:[], same:[], skip:[] };
+  got.forEach(x => { const v = manFill(x.row); if(v == null) return P.skip.push(x);
+    const ch = {}; ch[MAN_COL] = v; P.upd.push({ L:{ ln:'' }, key:String(x.key), hash:x.hash, ch:ch, row:x.row }); });
+  const n = P.upd.length, cols = ['d_start', 'op', 'stage', 'eq_no'].filter(c => (S.cols[t.tbl] || [c]).indexOf(c) >= 0);
+  const mins = P.upd.reduce((a, u) => a + (+u.ch[MAN_COL] || 0), 0);
+  let h = '<div class="pv"><p><b>' + esc(P.sheet) + '</b></p><div class="pv-sum"><span class="badge ok">채우는 행 ' + n.toLocaleString() + '</span>'
+    + (P.skip.length ? '<span class="badge">건너뜀 ' + P.skip.length.toLocaleString() + ' (그새 채워졌거나 값이 없음)</span>' : '') + '</div>'
+    + '<p class="hint">더해지는 공수 ' + Math.round(mins / 60).toLocaleString() + 'h — 공수 차트가 지금은 이 행들을 0 으로 셉니다. 이미 적힌 공수는 손대지 않습니다.</p>'
+    + (keys.length >= CS_MAX ? '<p class="wn">한 번에 ' + CS_MAX.toLocaleString() + '행까지입니다 — 반영한 뒤 다시 누르면 나머지를 채웁니다.</p>' : '')
+    + (n ? '<h4>채우는 행</h4>' + planTable(['행'].concat(cols.map(c => label(t, c).name)).concat([label(t, WMIN_COL).name, label(t, WCNT_COL).name, label(t, MAN_COL).name]),
+        P.upd.slice(0, SHOW).map(u => '<tr><td>' + esc(u.key) + '</td>' + cols.map(c => '<td>' + esc(cut2(cellOf(t, u.row, c), 20)) + '</td>').join('')
+          + '<td>' + esc(vs(u.row[WMIN_COL])) + '</td><td>' + esc(vs(u.row[WCNT_COL])) + '</td><td class="v"><ins>' + esc(u.ch[MAN_COL]) + '</ins></td></tr>'))
+        + (n > SHOW ? '<p class="hint">… 외 ' + (n - SHOW).toLocaleString() + '행 (반영은 전부 합니다)</p>' : '') : '')
+    + '<p class="hint" style="margin-top:12px">' + (n > BULK_MAX ? BULK_MAX + '행씩 ' + Math.ceil(n / BULK_MAX) + '번에 나눠, 묶음마다' : '한 번에') + ' «전부 아니면 전무»로 들어갑니다. 「변경 이력」에서 묶음째 되돌릴 수 있습니다.</p></div>';
+  const p = dialog('작업공수 자동 채우기 — 미리 보기', h, [{l:'취소', v:false}, {l: n ? n.toLocaleString() + '행 채우기' : '채울 행이 없습니다', v:true, cls:'dng'}], true);
+  if(!n){ const b = dialog.last.querySelector('.btn.dng'); if(b) b.disabled = true; }
+  if(await p !== true || !n) return;
+  await bulkApply(t, P);
+  if(S.tab === 'dq') dqRender(true); else S.dq = null;
+}
+$('dqBox').addEventListener('change', e => {
+  const el = e.target.closest('[data-dqf]'); if(!el) return;
+  const f = dqF(), k = el.dataset.dqf; f[k] = el.value;
+  if(k === 'reg' && f.op && dqRegOf(f.op) !== f.reg && f.reg) f.op = '';
+  dqFSave();
+  if(k === 'days'){ S.dqj = null; dqRender(false); }
+  else if(k === 'jt'){ S.dqj = null; dqJoinLoad(false); }
+  else dqRender(false);
+});
 $('dqBox').addEventListener('click', e => {
-  const b = e.target.closest('[data-dq]'); if(!b) return;
-  if(b.dataset.dq === 're') dqRender(true);
-  if(b.dataset.dq === 'rows') dqShow('데이터 품질 · ' + DQ_CHECK[b.dataset.k].l, { p_check:b.dataset.k });
-  if(b.dataset.dq === 'spike'){ const x = S.dq.spikes[+b.dataset.i];
-    dqShow('데이터 품질 · ' + (x.op || '(빈칸)') + ' ' + x.wk + ' 주 공수 ' + Number(x.h).toLocaleString() + 'h (평소 ' + Number(x.base).toLocaleString() + 'h) · 공수 큰 순', { p_check:'spike', p_op:x.op, p_wk:x.wk }); }
+  const b = e.target.closest('[data-dq]'); if(!b || b.disabled) return;
+  const a = b.dataset.dq, op = b.dataset.op;
+  if(a === 're'){ S.dqj = null; dqRender(true); }
+  if(a === 'fclr'){ const f = dqF(); f.reg = ''; f.op = ''; dqFSave(); dqRender(false); }
+  if(a === 'rows') dqShow('데이터 품질 · ' + DQ_CHECK[b.dataset.k].l + (dqFTxt() ? ' · ' + dqFTxt() : ''), { p_check:b.dataset.k });
+  if(a === 'fill') dqFill();
+  if(a === 'spike'){ const x = S.dq.spikes[+b.dataset.i];
+    dqShow('데이터 품질 · ' + (x.op || '(빈칸)') + ' ' + x.wk + ' 주 공수 ' + Number(x.h).toLocaleString() + 'h (평소 ' + Number(x.base).toLocaleString() + 'h) · 공수 큰 순', { p_check:'spike', p_ops:[x.op || ''], p_wk:x.wk }); }
+  if(a === 'jre') dqJoinLoad(true);
+  if(a === 'jup') openUp({ rid:UP_RID.inst });
+  const jt = dqjTab().id, jf = dqF().days === 'all' ? null : dqFrom();
+  if(a === 'jmiss' || a === 'jnokey') dqShow('설치현황 연결 · ' + (op || '(빈칸)') + ' · ' + (a === 'jmiss' ? '설치현황에 없는 행' : '설비호기·S/N 빈칸'),
+    { p_tbl:dqjTbl(), p_kind:a.slice(1), p_ops:[op], p_from:jf }, 'edit_dq_join_rows', jt);
+  if(a === 'jidiv' || a === 'jiflr') dqInstRows(op, a === 'jidiv' ? 'nd' : 'nf');
+  if(a === 'jmrow' || a === 'jmins'){ const x = S.dqj.miss_top[+b.dataset.i];
+    if(a === 'jmrow') dqShow('설치현황 연결 · ' + (x.op || '(빈칸)') + ' · ' + (x.sn || x.eq) + ' (설치현황에 없음)', { p_tbl:dqjTbl(), p_kind:'miss', p_ops:[x.op], p_eq:x.eq, p_sn:x.sn, p_from:jf }, 'edit_dq_join_rows', jt);
+    else dqSearch('inst', [{ c:x.sn ? 'sn' : 'code', op:'has', v:x.sn || x.eq }]); }   // 「포함」은 영숫자 덩어리로 찾는다(pat) — 하이픈·띄어쓰기 차이를 흡수
+  if(a === 'fix') dqFix(b.dataset.fx);
 });
 
 /* ---------- 변경 이력 ---------- */
@@ -3112,8 +3373,12 @@ function histView(e){
         + '\nSupabase SQL Editor 에서 supabase/setup-16-edit.sql 을 Run 하세요(여러 번 Run 해도 안전합니다). 검색·수정·새 행·변경 이력 보기는 지금도 됩니다.');
     }
     /* ?tab=dq — 주간현황 공수 차트의 ⚠ 가 «여기서 고치세요»로 바로 연다(v155) */
-    try{ const qt = new URLSearchParams(location.search).get('tab'); if(qt && (TAB_BY[qt] || qt === 'dq' || qt === 'hist')) S.tab = qt; }catch(e){}
-    switchTab(S.tab);
+    let fixId = null;
+    try{ const sp = new URLSearchParams(location.search), qt = sp.get('tab'); if(qt && (TAB_BY[qt] || qt === 'dq' || qt === 'hist')) S.tab = qt;
+         fixId = sp.get('fix'); if(fixId && !DQ_FIX[fixId]) fixId = null; if(fixId) S.tab = 'dq'; }catch(e){}
+    /* ?fix=화면.신호 — 각 화면 데이터 품질 팝업의 「찾아서 고치기」(v156)가 그 신호의 «고칠 자리»로 바로 연다 */
+    await switchTab(S.tab);
+    if(fixId) dqFix(fixId);
     /* 탭 이름표의 «확인할 것 N» — 뒤에서 한 번 센다(알림 · 수 초 걸려 시작을 막지 않는다) */
     if(S.tab !== 'dq') dqLoad(false).catch(e => console.warn('[edit] edit_dq', e && e.message));
   }catch(e){

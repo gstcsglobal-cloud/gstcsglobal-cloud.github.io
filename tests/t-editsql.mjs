@@ -16,7 +16,8 @@ import { spawnSync } from 'child_process';
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const SQL_FILE = path.join(ROOT, 'supabase/setup-16-edit.sql');
 const LEDGER_FILE = path.join(ROOT, 'supabase/setup-10-alarm.sql');   // 원장 표·csv_window — «저장소의 그 파일»을 그대로 먹인다(v143)
-const KR_FILE = path.join(ROOT, 'supabase/setup-17-kr-demo.sql');      // 국내 데모 표·kr 등급(v146) — 1~11 이 끝난 뒤에 먹인다
+const KR_FILE = path.join(ROOT, 'supabase/setup-17-kr-demo.sql');
+const DQ_FILE = path.join(ROOT, 'supabase/setup-21-dq.sql');           // 데이터 품질 점검(v155·v156) — 읽기 전용 · 맨 끝에 먹인다      // 국내 데모 표·kr 등급(v146) — 1~11 이 끝난 뒤에 먹인다
 
 function findBin() {
   if (process.env.PG_BIN && fs.existsSync(path.join(process.env.PG_BIN, 'initdb'))) return process.env.PG_BIN;
@@ -749,9 +750,53 @@ do $$ declare f text; bad text := ''; begin
 end $$;
 `;
 
+/* [13] 데이터 품질 점검(setup-21 · v156) — 운영단위별 건수 · 여럿 운영단위 행 번호 · 설치현황 연결(instIndex 와 같은 순서) */
+const DQ_CHECKS = String.raw`
+truncate public.sheet_wk, public.sheet_inst, public.sheet_mat;
+insert into public.sheet_inst(src_row, code, sn, div, floor) values (0, 'ZQ-1', 'SN-1', 'MEM', '3F'), (1, 'ZQ-2', 'SN 2', null, null), (2, 'ZQ-1', 'SN-X', 'OTHER', '9F');
+insert into public.sheet_wk(src_row, op, eq_no, sn_in, d_start, work_min, worker_cnt, man_min) values
+  (0, 'SEC Scrubber', 'zq-1', null, to_char(current_date - 10, 'YYYY-MM-DD'), '30', '2', null),
+  (1, 'SEC Scrubber', 'ZQ-9', 'SN2', to_char(current_date - 20, 'YYYY-MM-DD'), '10', '1', '10'),
+  (2, 'GST X SCRUBBER', 'ZZ', 'ZZ', to_char(current_date - 30, 'YYYY-MM-DD'), '2000', '1', '1,000'),
+  (3, null, null, '  ', to_char(current_date - 500, 'YYYY-MM-DD'), null, null, null),
+  (4, 'GST X SCRUBBER', '', 'sn-1', to_char(current_date + 5, 'YYYY-MM-DD'), '50', null, null);
+do $$ declare d jsonb; j jsonb; o jsonb; begin
+  d := edit_dq('sheet_wk', null);
+  perform t_ok((d->>'rows')::int = 4 and (d->>'work24')::int = 1 and (d->>'future')::int = 1 and (d->>'manmis')::int = 1
+           and (d->>'mannull')::int = 2 and (d->>'mfill')::int = 1, '13-1 edit_dq — 400일 안 4행 · 24h 1 · 미래 1 · 불일치 1 · 공수 빈칸 2 · 채울 수 있는 1 ' || d::text);
+  perform t_ok(jsonb_array_length(d->'by_op') = 2
+           and (select sum((e->>'work24')::int) from jsonb_array_elements(d->'by_op') e) = (d->>'work24')::int
+           and (select sum((e->>'rows')::int) from jsonb_array_elements(d->'by_op') e) = (d->>'rows')::int, '13-2 운영단위별 건수의 합 = 전체');
+  perform t_ok((select array_agg(r) from edit_dq_rows2('sheet_wk', 'mfill', array['SEC Scrubber']) r) = array[0::bigint]
+           and (select count(*) from edit_dq_rows2('sheet_wk', 'mfill', array['GST X SCRUBBER'])) = 0
+           and (select array_agg(r) from edit_dq_rows2('sheet_wk', 'work24') r) = array[2::bigint], '13-3 edit_dq_rows2 — 운영단위 여럿으로 거른다 · mfill 은 인원이 있는 빈 공수만');
+  perform t_ok((select count(*) from edit_dq_rows2('sheet_wk', 'mannull', null, null, (current_date - 5))) = 1, '13-4 기간(p_from) 을 따른다');
+  j := edit_dq_join('sheet_wk', null);
+  select e into o from jsonb_array_elements(j->'by_op') e where e->>'op' = 'SEC Scrubber';
+  perform t_ok((j->>'rows')::int = 5 and (o->>'miss')::int = 0 and (o->>'nodiv')::int = 1 and (o->>'nofloor')::int = 1,
+    '13-5 설비호기(대소문자·공백 무시) → S/N(공백 무시) 순으로 붙는다 · 이어진 행의 빈 사업부·Floor ' || coalesce(o::text, 'null'));
+  perform t_ok((select (e->>'miss')::int from jsonb_array_elements(j->'by_op') e where e->>'op' = 'GST X SCRUBBER') = 1
+           and (select (e->>'nokey')::int from jsonb_array_elements(j->'by_op') e where e->>'op' = '') = 1, '13-6 설치현황에 없음 1 · 설비호기·S/N 빈칸 1');
+  perform t_ok(exists(select 1 from jsonb_array_elements(j->'miss_top') e where e->>'eq' = 'ZZ' and (e->>'n')::int = 1)
+           and exists(select 1 from jsonb_array_elements(j->'inst_refs') e where (e->>'ir')::int = 1 and e->>'op' = 'SEC Scrubber' and (e->>'nd')::int = 1), '13-7 안 이어진 설비 목록 · 빈 칸이 있는 설치현황 행');
+  perform t_ok((select array_agg(r) from edit_dq_join_rows('sheet_wk', 'nodiv') r) = array[1::bigint]
+           and (select array_agg(r) from edit_dq_join_rows('sheet_wk', 'miss', array['GST X SCRUBBER'], 'ZZ', 'ZZ') r) = array[2::bigint]
+           and (select array_agg(r) from edit_dq_join_rows('sheet_wk', 'nokey') r) = array[3::bigint], '13-8 edit_dq_join_rows — 판정 · 운영단위 · 그 S/N');
+  perform t_ok((select count(*) from edit_dq_join_rows('sheet_wk', 'nodiv', array['GST X SCRUBBER'])) = 0, '13-9 운영단위로 거른다');
+  perform t_ok(((edit_dq_join('sheet_wk', current_date - 100))->>'rows')::int = 4, '13-10 연결 점검도 기간을 따른다');
+  perform t_ok(((edit_dq_join('sheet_mat', null))->>'rows')::int = 0, '13-11 자재실적도 돈다');
+  /* 설치현황의 같은 CODE 가 둘이면 «첫 행» — instIndex 와 같다(ZQ-1 은 0번 행 · div MEM) */
+  perform t_ok((select count(*) from edit_dq_join_rows('sheet_wk', 'nodiv', array['SEC Scrubber'])) = 1, '13-12 같은 열쇠가 여럿이면 첫 행(0번 · 사업부 MEM)');
+  begin perform edit_dq_join('sheet_roster'); perform t_ok(false, '13-13 허용 밖 표'); exception when others then perform t_ok(sqlerrm like 'bad_table%', '13-13 허용 밖 표는 bad_table'); end;
+  perform t_ok(not has_function_privilege('anon', 'public.edit_dq_join(text,date)', 'EXECUTE')
+           and not has_function_privilege('anon', 'public.edit_dq_rows2(text,text,text[],date,date,int)', 'EXECUTE')
+           and has_function_privilege('authenticated', 'public.edit_dq_join_rows(text,text,text[],text,text,date,int)', 'EXECUTE'), '13-14 anon 불가 · authenticated 가능');
+end $$;
+`;
+
 let skipped = 0;
 try {
-  const init = run('initdb', ['-D', DATA, '-A', 'trust', '-U', 'postgres', '--no-sync']);
+  const init = run('initdb', ['-D', DATA, '-A', 'trust', '-U', 'postgres', '--no-sync', '-E', 'UTF8', '--locale=C']);
   if (init.status !== 0) throw new Error('initdb 실패: ' + (init.stderr || init.stdout));
   const st = run('pg_ctl', ['-D', DATA, '-o', `-p ${PORT} -k ${DIR} -c listen_addresses=`, '-l', path.join(DIR, 'log'), '-w', 'start']);
   if (st.status !== 0) throw new Error('pg_ctl start 실패: ' + (st.stderr || st.stdout) + (fs.existsSync(path.join(DIR,'log')) ? fs.readFileSync(path.join(DIR, 'log'), 'utf8') : ''));
@@ -808,6 +853,17 @@ try {
   badsK.forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
   const EXPECT_K = 35;
   ok(oksK.length === EXPECT_K, '[12] T_OK 가 ' + oksK.length + '개 — 기대 ' + EXPECT_K + '개');
+
+  console.log('[13] 데이터 품질 점검(v156) — 저장소의 setup-21-dq.sql 을 두 번 먹이고 운영단위별 건수 · 설치현황 연결을 본다');
+  const dqText = fs.readFileSync(DQ_FILE, 'utf8');
+  for (const tag of ['setup21', 'setup21b']) { const r = psql(dqText, tag); ok(!/ERROR/.test(r.stderr), 'setup-21-dq.sql 적용 실패(' + tag + '):\n' + r.stderr); }
+  const pD = psql(DQ_CHECKS, 'dq-checks');
+  const outD = (pD.stderr || '') + (pD.stdout || '');
+  const oksD = outD.match(/T_OK [^\n]*/g) || [];
+  const badsD = outD.match(/ERROR:[^\n]*/g) || [];
+  oksD.forEach(() => pass++);
+  badsD.forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
+  ok(oksD.length === 14, '[13] T_OK 가 ' + oksD.length + '개 — 기대 14개');
 } catch (e) {
   fail++; console.log('  ❌ ' + (e && e.message || e));
 } finally {

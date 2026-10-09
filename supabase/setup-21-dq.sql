@@ -111,3 +111,187 @@ revoke all on function public.edit_dq(text, date) from public, anon;
 revoke all on function public.edit_dq_rows(text, text, text, date, date) from public, anon;
 grant execute on function public.edit_dq(text, date) to authenticated;
 grant execute on function public.edit_dq_rows(text, text, text, date, date) to authenticated;
+
+-- ============================================================================
+-- v156 — 걸러 보기 · 연결(조인) 길잡이 · 작업공수 자동 채우기 (사용자 요청)
+--
+-- 사용자: 「필터 잡아서 보고 싶은 것만 볼 수 있게」 · 「"실적 행에 사업부가 안 붙었습니다" 같은 것은 경고만 주지
+--          어디서 어떻게 어떤 사이트를 수정해야 하는지 모르잖아 — 길잡이 역할을 하는 기능」 · 「작업공수 채우는 기능」.
+-- ⚠ 지우는 문장이 없다(MCP 로 바로 들어간다). 옛 함수 시그니처는 그대로 두고 «새 이름»을 더한다 — 바꾸려면 DROP 이
+--   필요하고(확인 창 · v140), 같은 이름 겹치기(overload)는 PostgREST 가 어느 쪽인지 못 가른다.
+-- ============================================================================
+
+-- ① edit_dq 에 «운영단위별» 건수를 싣는다 — 화면이 구분(국내·해외 · GST.ORG.region)·운영단위로 걸러 더한다.
+--    구분 판정은 브라우저 정본이라 서버에 사본을 두지 않는다(제2원칙). 기간은 p_from 그대로.
+create or replace function public.edit_dq(p_tbl text default 'sheet_wk', p_from date default null)
+returns jsonb
+language plpgsql stable security invoker set search_path = public as $$
+declare
+  v_from text := to_char(coalesce(p_from, current_date - 400), 'YYYY-MM-DD');
+  v_tom date := current_date + 1;
+  r jsonb; s jsonb;
+begin
+  if p_tbl not in ('sheet_wk', 'kr_sheet_wk') then raise exception 'bad_table: %', p_tbl; end if;
+  execute format($q$
+    with w as materialized (%s),
+    o as (
+      select op,
+        count(*) n,
+        count(*) filter (where wm > 1440) work24,
+        count(*) filter (where de < ds) endlt,
+        count(*) filter (where ds > %L::date) future,
+        count(*) filter (where mm is not null and wm is not null and wc > 0
+                          and abs(mm - wm * wc) >= greatest(30, wm * wc * 0.5)) manmis,
+        count(*) filter (where mm is null and wm > 0) mannull,
+        count(*) filter (where mm is null and wm > 0 and wc > 0) mfill
+      from w group by op)
+    select jsonb_build_object(
+      'rows', coalesce(sum(n), 0), 'work24', coalesce(sum(work24), 0), 'endlt', coalesce(sum(endlt), 0),
+      'future', coalesce(sum(future), 0), 'manmis', coalesce(sum(manmis), 0), 'mannull', coalesce(sum(mannull), 0),
+      'mfill', coalesce(sum(mfill), 0),
+      'by_op', coalesce(jsonb_agg(jsonb_build_object('op', op, 'rows', n, 'work24', work24, 'endlt', endlt, 'future', future,
+                        'manmis', manmis, 'mannull', mannull, 'mfill', mfill) order by n desc), '[]'::jsonb))
+    from o $q$, public._dq_w(p_tbl, v_from), v_tom) into r;
+  execute format($q$
+    with w as materialized (%s),
+    g as (
+      select op, date_trunc('week', ds)::date wk, sum(mm) / 60.0 h, count(*) n,
+             count(*) filter (where wm > 1440) nb
+        from w where ds is not null and mm is not null group by 1, 2),
+    b as (
+      select g.*, (select percentile_cont(0.5) within group (order by g2.h) from g g2
+                    where g2.op = g.op and g2.wk <> g.wk and g2.wk between g.wk - 56 and g.wk + 56) base
+        from g)
+    select coalesce(jsonb_agg(jsonb_build_object('op', op, 'wk', wk, 'h', round(h::numeric, 1),
+                    'base', round(base::numeric, 1), 'n', n, 'nb', nb) order by h / base desc), '[]'::jsonb)
+      from b where base > 0 and h > base * 2 and h - base >= 50 $q$, public._dq_w(p_tbl, v_from)) into s;
+  return r || jsonb_build_object('spikes', s, 'from', v_from);
+end $$;
+
+-- ② 행 번호 — 운영단위 «여럿»(p_ops · null 이면 전부)과 상한(p_limit · 최대 20,000)을 받는다.
+--    mfill = 작업공수가 비었고 작업시간·작업자수가 둘 다 있어 «작업시간 × 작업자수»로 채울 수 있는 행(v147 실측 근거).
+create or replace function public.edit_dq_rows2(p_tbl text, p_check text, p_ops text[] default null, p_wk date default null,
+                                                p_from date default null, p_limit int default 2000)
+returns setof bigint
+language plpgsql stable security invoker set search_path = public as $$
+declare
+  v_from text := to_char(coalesce(p_from, current_date - 400), 'YYYY-MM-DD');
+  v_tom date := current_date + 1;
+  v_cond text;
+begin
+  if p_tbl not in ('sheet_wk', 'kr_sheet_wk') then raise exception 'bad_table: %', p_tbl; end if;
+  v_cond := case p_check
+    when 'work24'  then 'wm > 1440'
+    when 'endlt'   then 'de < ds'
+    when 'future'  then format('ds > %L::date', v_tom)
+    when 'manmis'  then 'mm is not null and wm is not null and wc > 0 and abs(mm - wm * wc) >= greatest(30, wm * wc * 0.5)'
+    when 'mannull' then 'mm is null and wm > 0'
+    when 'mfill'   then 'mm is null and wm > 0 and wc > 0'
+    when 'spike'   then format('date_trunc(''week'', ds)::date = %L::date and mm is not null', p_wk)
+    else null end;
+  if v_cond is null then raise exception 'bad_check: %', p_check; end if;
+  if p_ops is not null then v_cond := v_cond || format(' and op = any(%L::text[])', p_ops); end if;
+  return query execute format($q$
+    with w as materialized (%s)
+    select src_row::bigint from w where %s order by coalesce(mm, wm, 0) desc, src_row desc limit %s $q$,
+    public._dq_w(p_tbl, v_from), v_cond, least(greatest(coalesce(p_limit, 2000), 1), 20000));
+end $$;
+
+-- ③ 설치현황 연결(조인) 길잡이 — 대시보드의 GST.ORG.instIndex 와 «같은 순서»로 찾는다:
+--    설비호기(eq_no · 자재는 eq) ↔ 설치현황 Scrubber CODE 먼저, 못 찾으면 S/N(sn_in · 자재는 sn) ↔ Scrubber S/N.
+--    열쇠는 공백을 지우고 대문자(instIndex 의 key() — JS \s 의 흔한 글자: 공백·탭·줄바꿈·NBSP·전각 공백) — SPEC-SYNC: assets/core.js GST.ORG.instIndex.
+--    ⚠ regexp_replace 는 26만 행에서 4초였다 — translate 로 쓴다.
+--    ⚠ 설치현황에 같은 열쇠가 여럿이면 instIndex 는 «처음 것»을 쓴다 — 여기서도 src_row 가 가장 작은 행을 쓴다.
+--    판정 넷:  nokey  설비호기·S/N 둘 다 빈칸 — 어느 설비인지 모른다(실적에서 고친다)
+--              miss   값은 있는데 설치현황에 없다 — 실적의 표기가 틀렸거나 설치현황에 그 설비가 없다
+--              nodiv  이어졌는데 설치현황의 사업부가 빈칸(국내 양식에만 있는 열 — 해외는 화면이 «문제 아님»으로 적는다)
+--              nofloor 이어졌는데 설치현황의 Floor 가 빈칸
+--    inst_refs = 사업부·Floor 가 빈 «설치현황 행»(ir = 그 행 번호)과 그 행을 가리키는 실적 수 — 고칠 곳은 설치현황이다.
+--    p_from 이 있으면 그 날짜(작업시작일 · 자재는 자재실적일자) 이후만 본다 — 화면의 기간 칸.
+create or replace function public._dq_jw(p_tbl text, p_from text) returns text
+language plpgsql immutable as $f$
+declare
+  v_inst text := case when p_tbl like 'kr\_%' then 'kr_sheet_inst' else 'sheet_inst' end;
+  v_eq text := case when p_tbl like '%sheet\_mat' then 'eq' else 'eq_no' end;
+  v_sn text := case when p_tbl like '%sheet\_mat' then 'sn' else 'sn_in' end;
+  v_d  text := case when p_tbl like '%sheet\_mat' then 'work_date' else 'd_start' end;
+begin
+  return format($q$
+    with ic as materialized (select distinct on (k) k, src_row ir, div, floor from
+             (select upper(translate(coalesce(code, ''), %6$L, '')) k, src_row, div, floor from %1$I) a where k <> '' order by k, src_row),
+         isn as materialized (select distinct on (k) k, src_row ir, div, floor from
+             (select upper(translate(coalesce(sn, ''), %6$L, '')) k, src_row, div, floor from %1$I) a where k <> '' order by k, src_row),
+         w as materialized (select src_row, coalesce(op, '') op, coalesce(%3$I, '') eq, coalesce(%4$I, '') sn,
+                   upper(translate(coalesce(%3$I, ''), %6$L, '')) ke, upper(translate(coalesce(%4$I, ''), %6$L, '')) ks
+              from %2$I %5$s),
+         j as materialized (select w.*, coalesce(ic.ir, isn.ir) ir,
+                   case when ic.ir is not null then ic.div else isn.div end div,
+                   case when ic.ir is not null then ic.floor else isn.floor end floor
+              from w left join ic on ic.k = w.ke and w.ke <> '' left join isn on isn.k = w.ks and w.ks <> '' and ic.ir is null)
+    $q$, v_inst, p_tbl, v_eq, v_sn,
+    case when p_from is null then '' else format('where %I >= %L', v_d, p_from) end,
+    ' ' || chr(9) || chr(10) || chr(11) || chr(12) || chr(13) || chr(160) || chr(12288));
+end $f$;
+
+create or replace function public.edit_dq_join(p_tbl text default 'sheet_wk', p_from date default null)
+returns jsonb
+language plpgsql stable security invoker set search_path = public as $$
+declare
+  v_from text := case when p_from is null then null else to_char(p_from, 'YYYY-MM-DD') end;
+  r jsonb;
+begin
+  if p_tbl not in ('sheet_wk', 'kr_sheet_wk', 'sheet_mat') then raise exception 'bad_table: %', p_tbl; end if;
+  execute public._dq_jw(p_tbl, v_from) || $q$
+    , o as (select op, count(*) n,
+                   count(*) filter (where ke = '' and ks = '') nokey,
+                   count(*) filter (where ir is null and (ke <> '' or ks <> '')) miss,
+                   count(*) filter (where ir is not null and coalesce(trim(div), '') = '') nodiv,
+                   count(*) filter (where ir is not null and coalesce(trim(floor), '') = '') nofloor
+              from j group by op),
+      m as (select * from (select op, eq, sn, count(*) n, row_number() over (partition by op order by count(*) desc, eq, sn) rn
+                             from j where ir is null and (ke <> '' or ks <> '') group by op, eq, sn) a where rn <= 100),
+      x as (select ir, op, count(*) n, count(*) filter (where coalesce(trim(div), '') = '') nd,
+                   count(*) filter (where coalesce(trim(floor), '') = '') nf
+              from j where ir is not null and (coalesce(trim(div), '') = '' or coalesce(trim(floor), '') = '') group by ir, op)
+    select jsonb_build_object(
+      'rows', (select coalesce(sum(n), 0) from o),
+      'by_op', (select coalesce(jsonb_agg(jsonb_build_object('op', op, 'rows', n, 'nokey', nokey, 'miss', miss, 'nodiv', nodiv, 'nofloor', nofloor)
+                        order by n desc), '[]'::jsonb) from o),
+      'miss_top', (select coalesce(jsonb_agg(jsonb_build_object('op', op, 'eq', eq, 'sn', sn, 'n', n) order by n desc), '[]'::jsonb) from m),
+      'inst_refs', (select coalesce(jsonb_agg(jsonb_build_object('ir', ir, 'op', op, 'n', n, 'nd', nd, 'nf', nf) order by n desc), '[]'::jsonb) from x))
+    $q$ into r;
+  return r || jsonb_build_object('tbl', p_tbl, 'from', v_from);
+end $$;
+
+-- 행 번호 — 판정 하나(nokey·miss·nodiv·nofloor) × 운영단위 여럿 × (miss 면) 그 설비호기·S/N 원문.
+create or replace function public.edit_dq_join_rows(p_tbl text, p_kind text, p_ops text[] default null, p_eq text default null,
+                                                    p_sn text default null, p_from date default null, p_limit int default 2000)
+returns setof bigint
+language plpgsql stable security invoker set search_path = public as $$
+declare
+  v_from text := case when p_from is null then null else to_char(p_from, 'YYYY-MM-DD') end;
+  v_cond text;
+begin
+  if p_tbl not in ('sheet_wk', 'kr_sheet_wk', 'sheet_mat') then raise exception 'bad_table: %', p_tbl; end if;
+  v_cond := case p_kind
+    when 'nokey'   then 'ke = '''' and ks = '''''
+    when 'miss'    then 'ir is null and (ke <> '''' or ks <> '''')'
+    when 'nodiv'   then 'ir is not null and coalesce(trim(div), '''') = '''''
+    when 'nofloor' then 'ir is not null and coalesce(trim(floor), '''') = '''''
+    else null end;
+  if v_cond is null then raise exception 'bad_kind: %', p_kind; end if;
+  if p_ops is not null then v_cond := v_cond || format(' and op = any(%L::text[])', p_ops); end if;
+  if p_eq is not null then v_cond := v_cond || format(' and eq = %L', p_eq); end if;
+  if p_sn is not null then v_cond := v_cond || format(' and sn = %L', p_sn); end if;
+  return query execute public._dq_jw(p_tbl, v_from)
+    || format(' select src_row::bigint from j where %s order by src_row desc limit %s', v_cond, least(greatest(coalesce(p_limit, 2000), 1), 20000));
+end $$;
+
+revoke all on function public._dq_jw(text, text) from public, anon;
+grant execute on function public._dq_jw(text, text) to authenticated;
+revoke all on function public.edit_dq_rows2(text, text, text[], date, date, int) from public, anon;
+revoke all on function public.edit_dq_join(text, date) from public, anon;
+revoke all on function public.edit_dq_join_rows(text, text, text[], text, text, date, int) from public, anon;
+grant execute on function public.edit_dq_rows2(text, text, text[], date, date, int) to authenticated;
+grant execute on function public.edit_dq_join(text, date) to authenticated;
+grant execute on function public.edit_dq_join_rows(text, text, text[], text, text, date, int) to authenticated;
