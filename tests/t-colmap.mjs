@@ -133,6 +133,35 @@ await pg.evaluate(() => { window.__CM_DENY=1; CMAP_CACHE={}; });
 let alerted=''; pg.on('dialog', d => { alerted=d.message(); d.dismiss(); });
 await pg.selectOption('select[data-cmap="customer"]', other); await pg.waitForTimeout(1200);
 is(/저장 실패/.test(alerted), '조용히 넘어가지 않는다 — '+alerted.slice(0,40));
+
+console.log('[7] Import 표(교육) — 표의 열마다 머리글을 고른다 · 모르는 열은 막지 않고 밝힌다');
+await pg.evaluate(() => { window.__CM_DENY=0; window.__CM=[]; CMAP_CACHE={}; });
+await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='edu'))));
+await put('번호,현장,이름,사번,교육완료일,비고\n1,X1,가나,A001,2026-01-02,메모\n2,X2,다라,A002,2026-02-03,\n', 'e.csv');
+let t7 = await chk();
+is(/열 맵핑/.test(t7) && /올리지 않는 열/.test(t7), '패널과 «올리지 않는 열» 목록이 뜬다 (예전처럼 통째로 막지 않는다)');
+is(await pg.evaluate(() => !document.getElementById('goBtn').disabled), '맞는 열이 하나라도 있으면 진행된다');
+is(await pg.evaluate(() => (PREP.rows[0]||{})['교육완료일']==='2026-01-02' && (PREP.rows[0]||{})['인원']==null), '자동 인식은 이름이 같은 열만');
+await pg.selectOption('select[data-cmap="인원"]', '이름'); await pg.waitForTimeout(1500);
+is(await pg.evaluate(() => window.__CM.some(r=>r.tbl==='edu'&&r.field==='인원'&&r.header==='이름')), '표 열 이름으로 저장 (tbl=edu)');
+is(await pg.evaluate(() => (PREP.rows[0]||{})['인원']==='가나'), '지정한 머리글의 값이 그 표 열로 들어간다');
+await put('a,b,c\n1,2,3\n', 'e2.csv');
+is(/하나도 없습니다/.test(await chk()) && await pg.evaluate(() => !!document.querySelector('details.cmap select[data-cmap]')), '하나도 안 맞으면 멈추되 고를 패널을 준다');
+
+console.log('[8] 알람 워크북 — 시트 태그별로 기억한다');
+await pg.evaluate(() => { window.__CM=[]; CMAP_CACHE={}; });
+await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='alarm'))));
+const wb = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['장비번호','Alarm Comment','Occur Time','내적/외적'],
+  ['ZZA-0001','PRESSURE HIGH','2026-08-03 10:00:00','내적'],['ZZA-0002','FLAME OFF','2026-08-04 11:00:00','외적']]), 'P운영_ALARM');
+const xp = path.join(OUT,'al.xlsx'); XLSX.writeFile(wb, xp);
+await pg.setInputFiles('#fsel', xp); await pg.waitForTimeout(2500);
+let t8 = await chk();
+is(/헤더 행을 찾지 못했습니다|열을 못 찾았습니다/.test(t8) && await pg.evaluate(() => !!document.querySelector('select[data-cmap="sn"][data-tbl="alarm:P"]')), 'S/N 머리글이 다르면 말하고 그 시트의 패널을 연다');
+await pg.selectOption('select[data-cmap="sn"][data-tbl="alarm:P"]', '장비번호'); await pg.waitForTimeout(2500);
+is(await pg.evaluate(() => window.__CM.some(r=>r.tbl==='alarm:P'&&r.field==='sn'&&r.header==='장비번호')), '시트 태그 열쇠(alarm:P)로 저장');
+t8 = await chk();
+is(/시트 1개/.test(t8) && await pg.evaluate(() => (PREP.rows[0]||{}).sn==='ZZA-0001'), '다시 검사해 그 열이 S/N 으로 들어간다');
 is(pe.length===0, 'JS 에러 0' + (pe.length?' → '+pe[0]:''));
 await browser.close(); srv.close();
 console.log(fail?`\n❌ t-colmap: ${pass} 통과 · ${fail} 실패`:`\n✅ t-colmap: ${pass}/${pass} 통과`);

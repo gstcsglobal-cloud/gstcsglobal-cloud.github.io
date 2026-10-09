@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 149;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 150;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -451,7 +451,8 @@ GST.authGate = async function(){
       +'<input id="pwPw" type="password" placeholder="비밀번호" autocomplete="current-password" style="'+U.input+'">'
       +'<button id="pwGo" style="'+U.btn+'">로그인</button></div>'
     +'<div id="sbErr" style="color:'+U.err+';font-size:12.5px;margin-top:10px;min-height:16px"></div>'
-    +'<a id="sbMode" style="display:block;font-size:12.5px;color:#2F6FED;margin-top:10px;cursor:pointer;user-select:none">아이디·비밀번호로 로그인</a></div>';
+    +'<a id="sbMode" style="display:block;font-size:12.5px;color:#2F6FED;margin-top:10px;cursor:pointer;user-select:none">아이디·비밀번호로 로그인</a>'
+    +'<a id="sbPwc" style="display:block;font-size:12px;color:#667085;margin-top:8px;cursor:pointer;user-select:none">관리자 비밀번호 변경</a></div>';
   var $=function(id){return document.getElementById(id);};
   var err=function(m){ $('sbErr').textContent=m||''; };
   return new Promise(function(resolve){
@@ -499,7 +500,71 @@ GST.authGate = async function(){
       GST._authOk(); resolve(true);
     };
     $('pwPw').addEventListener('keydown',function(ev){if(ev.key==='Enter')$('pwGo').click();});
+    $('sbPwc').onclick=function(){ GST._pwChange(ov, resolve); };
   });
+};
+/* 관리자 «아이디 계정» 비밀번호 변경 (v150 · 사용자 요청 · setup-19).
+   ① 관리자 이메일로 인증코드 → ② 코드로 로그인 → ③ 아이디·새 비밀번호. 확인은 서버(admin_set_pw)가 «다시» 한다:
+   관리자+쓰기 권한 · 15분 안 이메일 코드로 받은 세션 · 아이디 계정(@gstcs.view)만 · 등록된 계정만.
+   ⚠ 비밀번호로 들어온 세션으로는 못 바꾼다 — «비밀번호를 아는 사람»이 아니라 «관리자 메일함을 가진 사람»만 바꾸게 한다.
+   ⚠ 변경 사실은 이력(sheet_edits · op pw_change)에 남고 비밀번호 값은 어디에도 남지 않는다. */
+GST.PWC_ERR={login:'로그인이 풀렸습니다 — 처음부터 다시 해 주세요', forbidden:'이 이메일은 관리자(쓰기 권한)가 아닙니다',
+  need_otp:'이메일 인증코드로 로그인한 지 15분이 지났습니다 — 코드를 다시 받아 주세요', weak:'비밀번호는 8자 이상이어야 합니다',
+  not_id_account:'이메일 계정은 비밀번호가 없습니다(인증코드로 로그인) — 아이디 계정만 바꿀 수 있습니다',
+  not_found:'등록된 아이디가 아닙니다'};
+GST._pwChange=function(ov, resolve){
+  var U=GST._loginUI, $=function(id){return document.getElementById(id);};
+  ov.innerHTML='<div class="login-card" style="'+U.card+'">'+U.mark
+    +'<div style="'+U.title+'">관리자 비밀번호 변경</div>'
+    +'<div style="'+U.sub+';margin-bottom:16px">관리자 이메일로 받은 인증코드로 본인을 확인한 뒤 바꿉니다</div>'
+    +'<div id="pcS1"><input id="pcEmail" type="email" placeholder="관리자 이메일" autocomplete="email" style="'+U.input+'">'
+      +'<button id="pcSend" style="'+U.btn+'">인증코드 받기</button>'
+      +'<div id="pcS1b" style="display:none;margin-top:10px"><input id="pcCode" inputmode="numeric" maxlength="8" placeholder="이메일로 받은 코드" style="'+U.input+';letter-spacing:3px;text-align:center">'
+      +'<button id="pcVerify" style="'+U.btn+'">확인</button></div></div>'
+    +'<div id="pcS2" style="display:none">'
+      +'<input id="pcId" placeholder="바꿀 아이디" value="gstadmin" autocomplete="username" style="'+U.input+'">'
+      +'<input id="pcPw1" type="password" placeholder="새 비밀번호 (8자 이상)" autocomplete="new-password" style="'+U.input+'">'
+      +'<input id="pcPw2" type="password" placeholder="새 비밀번호 확인" autocomplete="new-password" style="'+U.input+'">'
+      +'<button id="pcGo" style="'+U.btn+'">비밀번호 바꾸기</button></div>'
+    +'<div id="pcDone" style="display:none"><button id="pcEnter" style="'+U.btn+'">대시보드로 들어가기</button></div>'
+    +'<div id="pcErr" style="color:'+U.err+';font-size:12.5px;margin-top:10px;min-height:16px"></div>'
+    +'<a id="pcBack" style="display:block;font-size:12.5px;color:#2F6FED;margin-top:10px;cursor:pointer">로그인 화면으로</a></div>';
+  var err=function(m,ok){ var e=$('pcErr'); e.textContent=m||''; e.style.color=ok?'#067647':U.err; };
+  $('pcBack').onclick=function(){ GST.signOut(); };
+  $('pcSend').onclick=async function(){
+    var em=($('pcEmail').value||'').trim().toLowerCase();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ err('이메일 형식을 확인하세요'); return; }
+    err(''); $('pcSend').disabled=true; $('pcSend').textContent='전송 중…';
+    var e=await GST.sendOtp(em);
+    $('pcSend').disabled=false; $('pcSend').textContent='인증코드 다시 받기';
+    if(e){ err(e); return; }
+    $('pcS1b').style.display='block'; $('pcCode').focus(); err('메일이 안 보이면 스팸함을 확인하세요', true);
+  };
+  $('pcVerify').onclick=async function(){
+    var em=($('pcEmail').value||'').trim().toLowerCase(), cd=($('pcCode').value||'').trim();
+    if(!cd){ err('코드를 입력하세요'); return; }
+    $('pcVerify').disabled=true; var e=await GST.verifyOtp(em,cd); $('pcVerify').disabled=false;
+    if(e){ err('확인 실패: '+e); return; }
+    err(''); $('pcS1').style.display='none'; $('pcS2').style.display='block'; $('pcPw1').focus();
+  };
+  $('pcGo').onclick=async function(){
+    var id=($('pcId').value||'').trim(), p1=$('pcPw1').value||'', p2=$('pcPw2').value||'';
+    if(!id){ err('아이디를 입력하세요'); return; }
+    if(p1.length<8){ err(GST.PWC_ERR.weak); return; }
+    if(p1!==p2){ err('두 비밀번호가 다릅니다'); return; }
+    $('pcGo').disabled=true;
+    try{
+      var c=await GST.sb(), r=await c.rpc('admin_set_pw',{p_login:id,p_pw:p1});
+      $('pcGo').disabled=false;
+      if(r.error){ err(/function|does not exist/i.test(r.error.message)?'서버 준비가 안 됐습니다 — setup-19-admin-pw.sql 을 Run 하세요':r.error.message); return; }
+      var d=r.data||{};
+      if(!d.ok){ err(GST.PWC_ERR[d.err]||('변경 실패: '+(d.err||''))); return; }
+      $('pcS2').style.display='none'; $('pcDone').style.display='block';
+      err('«'+String(d.login||id).replace(/@gstcs\.view$/,'')+'» 의 비밀번호를 바꿨습니다. 이미 열려 있던 그 계정의 접속은 만료될 때까지 남습니다.', true);
+    }catch(x){ $('pcGo').disabled=false; err(String(x&&x.message||x)); }
+  };
+  $('pcEnter').onclick=function(){ ov.classList.add('hidden'); ov.style.display='none'; GST._authOk(); resolve(true); };
+  $('pcEmail').focus();
 };
 // 미등록 이메일(403) 안내
 GST.authDenied=function(code){
@@ -2007,8 +2072,10 @@ GST.ALARM = {
      화면에만 두면 테스트가 흉내를 내게 되고, 흉내는 반드시 본체와 갈라진다
      (t-upload 가 그 이유로 실제 페이지를 띄워 대조하고 있다).
      tag = 'K'|'P'|'H' (어느 운영단위 시트인가) · kind = 'alarm'|'abp2' */
-  build: function(rows, kind, tag){
-    const S=GST.SM.SPEC[kind==='abp2'?'abp2':'alarm'];
+  build: function(rows, kind, tag, spec){
+    /* spec — 사이트별 열 맵핑 지정이 얹힌 스펙(v150 · 업로드의 cmapSpec). 안 주면 정본 그대로다.
+       ⚠ 판정 규칙은 그대로 한 벌이다 — 지정은 별칭 배열 «맨 앞»에 얹힌 이름일 뿐이다. */
+    const S=spec||GST.SM.SPEC[kind==='abp2'?'abp2':'alarm'];
     const m=GST.SM.map(rows, S);
     if(m.hi<0) return {err:'헤더 행을 찾지 못했습니다 (힌트: '+(S.hints||[]).join(' + ')+')'};
     if(m.miss.length) return {err:'열을 못 찾았습니다: '+m.miss.join(', ')};

@@ -332,7 +332,7 @@ const logText = pg => pg.evaluate(() => document.getElementById('log').innerText
   is(ins.length > 0 && ins.every(t => t === 'kr_sheet_alarm') && fin.join() === 'kr_sheet_alarm', '넣기·마무리 모두 데모 표 (넣기 ' + ins.join() + ' · 마무리 ' + fin.join() + ')');
   const pairQ = L.filter(x => x.tbl === 'kr_sheet_allbypass');
   is(pairQ.length > 0 && pairQ.every(x => !x.eq.length) && /두 반쪽 모두/.test(lg), '짝 표는 데모 올바 «전체» 행수로 센다(데모 표 전체가 담당자 몫)');
-  const touched = Array.from(new Set(L.map(x => x.tbl || (x.args && x.args.p_tbl)).filter(Boolean)));
+  const touched = Array.from(new Set(L.map(x => x.tbl || (x.args && x.args.p_tbl)).filter(Boolean))).filter(t => t !== 'colmap_site');   // 열 맵핑 설정 표는 자료 표가 아니다(v150)
   is(touched.every(t => /^kr_sheet_/.test(t)), '업로드가 건드린 표 — 전부 데모 표 (' + touched.join(' ') + ')');
 
   /* 서버의 «통째·구간 교체»가 아직 옛 판(setup-17 7절 미적용)이면 — 무엇을 하면 되는지 적는다 */
