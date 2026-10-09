@@ -111,9 +111,10 @@ function fake(seed) {
       delete() { st.del = true; return q; },
       then(res, rej) {
         LOG.push(JSON.parse(JSON.stringify(st)));
-        /* 열 맵핑 저장(colmap_site · v151) — (site, tbl, field) 가 열쇠 */
+        /* 열 맵핑(colmap_site · v151)·기준 정보(value_map · v152) 저장 — 표마다 PK 로 갈아끼운다 */
         if (st.ups) { const o = st.ups, T = (DB[tbl] = DB[tbl] || []);
-          for (let i = T.length - 1; i >= 0; i--) if (T[i].site === o.site && T[i].tbl === o.tbl && T[i].field === o.field) T.splice(i, 1);
+          const PK = tbl === 'value_map' ? ['tbl','col','raw','when_col','when_val'] : ['site','tbl','field'];   // 표마다 실제 PK
+          for (let i = T.length - 1; i >= 0; i--) if (PK.every(k => String(T[i][k] == null ? '' : T[i][k]) === String(o[k] == null ? '' : o[k]))) T.splice(i, 1);
           T.push(o); return Promise.resolve({ data:[o], error:null }).then(res, rej); }
         if (st.del) { const T = DB[tbl] || [], d = T.filter(r => st.f.every(([c, op, v]) => test(r, c, op, v)));
           DB[tbl] = T.filter(r => d.indexOf(r) < 0); return Promise.resolve({ data:d, error:null }).then(res, rej); }
@@ -219,6 +220,8 @@ function fake(seed) {
       });
       return out;
     },
+    value_groups: a => { const m = new Map(); (DB[a.p_tbl] || []).forEach(r => { const k = JSON.stringify(a.p_cols.map(c => r[c] == null ? null : r[c]));
+      m.set(k, (m.get(k) || 0) + 1); }); return Array.from(m).map(([k, n]) => { const v = JSON.parse(k), o = { n }; a.p_cols.forEach((c, i) => { o[c] = v[i]; }); return o; }); },
     edit_distinct: a => { const m = new Map(); (DB[a.p_tbl] || []).forEach(r => { const v = r[a.p_col]; if (v != null) m.set(String(v), (m.get(String(v)) || 0) + 1); });
       return Array.from(m.entries()).sort((x, y) => y[1] - x[1]).slice(0, a.p_limit || 60); }
   };
@@ -1546,6 +1549,92 @@ console.log('[25] 남의 양식(중문 머리글·제목 줄) — 열 맵핑 확
   is(up.embed && up.h1 === 'none', '안에서는 업로드 화면의 머리 설명을 숨긴다');
   await pg.click('#upClose');
   is(await pg.$eval('#upOv', e => e.hidden), '닫으면 오버레이가 사라진다');
+  is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
+  await ctx.close();
+}
+
+console.log('[26] 기준 정보 — 새 사이트가 «어디에 · 어떻게» 읽히는지 보고 규칙으로 정한다 (v152)');
+{
+  const s = seedOf({});
+  const add = [
+    { src_row:10, code:'ZT-1', sn:'ZZW-0001', country:'GST TAIWAN SCRUBBER', customer:'Testco Memory Taiwan Co., Ltd.(F16)', location:'TAICHUNG', fab:'F16', state:'Operation' },
+    { src_row:11, code:'ZT-2', sn:'ZZW-0002', country:'GST TAIWAN SCRUBBER', customer:'Testco Memory Taiwan Co., Ltd.(F16)', location:'TAICHUNG', fab:'F16', state:'Operation' },
+    { src_row:12, code:'ZT-3', sn:'ZZW-0003', country:'TAIWAN', customer:'TESTCO', location:'TAINAN', fab:'F16S', state:null },
+    { src_row:13, code:'ZT-4', sn:'ZZW-0004', country:'TAIWAN', customer:'TESTCO', location:'TAINAN', fab:'F16S', state:null },
+    { src_row:14, code:'ZT-5', sn:'ZZW-0005', country:'TAIWAN', customer:'TESTCO', location:'TAICHUNG', fab:'F11', state:'Operation' } ];
+  s.tables.sheet_inst = s.tables.sheet_inst.concat(add.map(r => Object.assign(Object.fromEntries(INST_COLS.map(c => [c, null])), r)));
+  s.tables.value_map = [];
+  const { ctx, pg, pe } = await open(s);
+  await pg.click('.tab[data-tab=vmap]');
+  await pg.waitForFunction(() => /FAB/.test((document.getElementById('vmBox') || {}).innerText || '') && !/읽는 중/.test(document.getElementById('vmBox').innerText), null, { timeout:8000 });
+  const rowTxt = f => pg.evaluate(f => { const tr = [...document.querySelectorAll('#vmBox table.vm-t tbody tr')].find(r => r.cells[0].innerText.trim().replace(/\s*규칙$/, '') === f); return tr ? tr.innerText : ''; }, f);
+  let t = await rowTxt('F16S');
+  is(/법인 칸에 국가 이름\(TAIWAN\)/.test(t) && /GST TAIWAN SCRUBBER/.test(t), '사이트별 보기 — F16S 의 법인이 «TAIWAN»(국가 이름)이라고 짚고 같은 국가의 법인 이름을 알려 준다');
+  is(/설비상태 빈칸 2대/.test(t), '설비상태가 빈 대수를 적는다(대수에 안 셀 수 있다)');
+  is(await pg.$eval('#vmOnly', e => e.checked) && (await rowTxt('F16')) === '', '기본은 «확인할 것이 있는 사이트만» — 멀쩡한 F16 은 접어 둔다');
+  await pg.uncheck('#vmOnly'); await pg.waitForTimeout(200);
+  const f16 = await rowTxt('F16');
+  is(f16 !== '' && !/법인 칸에 국가 이름/.test(f16), '이미 법인 이름으로 적힌 F16 은 짚지 않는다');
+  is(/가동현황 표/.test(await pg.$eval('#vmBox', e => e.innerText)), '«어디에 쓰이나»를 적는다');
+  await pg.click('[data-vmsite="F16S"]');
+  await waitDlg(pg, /이 사이트 정하기/);
+  await pg.click('[data-vmfill="country"]');
+  is(await pg.$eval('[data-vmf="country"]', e => e.value) === 'GST TAIWAN SCRUBBER', '「제안」 단추 — 같은 국가의 법인 이름(표에 이미 있는 값)을 한 번에 채운다');
+  await pg.fill('[data-vmf="customer"]', 'Testco Memory Taiwan Co., Ltd.(F16S)');
+  await pg.fill('[data-vmf="state"]', '반입완료');
+  await pg.click('.mask .btn.pri');
+  await pg.waitForFunction(() => window.__DB.value_map.length === 3, null, { timeout:5000 }).catch(() => {});
+  const vm = await pg.evaluate(() => window.__DB.value_map.map(r => [r.col, r.raw, r.when_col, r.when_val, r.val].join('|')).sort());
+  is(vm.join(' / ') === 'country|*|fab|F16S|GST TAIWAN SCRUBBER / customer|*|fab|F16S|Testco Memory Taiwan Co., Ltd.(F16S) / state||fab|F16S|반입완료',
+    '저장 — «FAB=F16S 인 행»의 법인·고객사는 아무 값이든, 설비상태는 빈칸일 때만 (' + vm.join(' / ') + ')');
+  await pg.waitForFunction(() => /규칙 3개/.test(document.getElementById('vmBox').innerText), null, { timeout:5000 });
+  t = await rowTxt('F16S');
+  is(!/법인 칸에 국가 이름/.test(t) && !/빈칸 2대/.test(t) && /반입 2/.test(t), '규칙을 입혀 다시 읽는다 — 경고가 사라지고 2대가 반입으로 (' + t.replace(/\s+/g, ' ').slice(0, 160) + ')');
+  is(await pg.evaluate(() => window.__DB.sheet_inst.filter(r => r.fab === 'F16S').every(r => r.country === 'TAIWAN' && r.state == null)), '원본은 그대로다 — 규칙은 «읽을 때»만');
+  /* 값별 보기 — 남은 «TAIWAN»(F11) 은 한 번에 «GST TAIWAN SCRUBBER» 로 */
+  await pg.check('input[name=vmView][value=val]');
+  await pg.waitForFunction(() => /원본 값/.test(document.getElementById('vmBox').innerText), null, { timeout:5000 });
+  is(!!(await pg.$('[data-vmsug="TAIWAN"][data-to="GST TAIWAN SCRUBBER"]')), '값별 보기 — 법인 «TAIWAN» 에 «GST TAIWAN SCRUBBER 로 읽기» 단추');
+  await pg.click('[data-vmsug="TAIWAN"]');
+  await pg.waitForFunction(() => window.__DB.value_map.some(r => r.col === 'country' && r.raw === 'TAIWAN' && !r.when_col), null, { timeout:5000 });
+  is(true, '한 번 누르면 «TAIWAN → GST TAIWAN SCRUBBER» 규칙(조건 없음)');
+  /* core — 화면이 지나는 문(fetchCSVCached)과 같은 함수로 입혀 본다 */
+  const ap = await pg.evaluate(() => {
+    const S = GST.SM.SPEC.inst, H = Object.keys(S.fields).map(k => [].concat(S.fields[k])[0]);
+    const row = o => H.map((h, i) => { const k = Object.keys(S.fields)[i]; return o[k] == null ? '' : o[k]; });
+    const rows = [H, row({ sn:'A1', country:'TAIWAN', fab:'F16S', customer:'TESTCO' }), row({ sn:'A2', country:'GST TAIWAN SCRUBBER', fab:'F16', customer:'X', state:'Operation' }), row({ sn:'A3', country:'taiwan ', fab:'F11', customer:'TESTCO' })];
+    const keep = JSON.stringify(rows);
+    GST.vmap.rules = window.__DB.value_map.slice();   // 검사 이음새는 DB 경로를 끈다 — 화면이 저장한 규칙을 그대로 먹인다
+    const a = GST.vmap.apply('inst', rows), m = GST.SM.map(a.rows, S), C = m.C;
+    return { same: JSON.stringify(rows) === keep, n:a.n, cells:a.cells,
+      r1:[a.rows[1][C.country], a.rows[1][C.customer], a.rows[1][C.state]], r2:a.rows[2] === rows[2], r3:a.rows[3][C.country] };
+  });
+  is(ap.same, 'core apply — 원본 배열을 고치지 않는다(캐시가 든 배열)');
+  is(ap.r1.join('|') === 'GST TAIWAN SCRUBBER|Testco Memory Taiwan Co., Ltd.(F16S)|반입완료', '조건 규칙(FAB=F16S)이 먼저 — ' + ap.r1.join('|'));
+  is(ap.r2, '규칙에 안 걸린 행은 같은 객체 그대로(복사 안 함)');
+  is(ap.r3 === 'GST TAIWAN SCRUBBER', '대소문자·앞뒤 공백만 무시하고 맞춘다 — «taiwan » 도');
+  /* 모든 화면이 지나는 문(fetchCSVCached) — 어느 길로 와도 규칙을 입힌다. 시트 경로를 흉내 낸다(검사 이음새는 DB 경로를 끈다). */
+  const fc = await pg.evaluate(async () => {
+    const S = GST.SM.SPEC.inst, ks = Object.keys(S.fields), H = ks.map(k => [].concat(S.fields[k])[0]);
+    const row = o => ks.map(k => o[k] == null ? '' : o[k]);
+    const raw = [H, row({ sn:'B1', country:'TAIWAN', fab:'F16S' }), row({ sn:'B2', country:'GST TAIWAN SCRUBBER', fab:'F16' })];
+    const keep = GST.fetchCSV; GST.fetchCSV = async () => raw.map(r => r.slice());
+    GST.vmap._p = Promise.resolve(GST.vmap.rules = window.__DB.value_map.slice());
+    try {
+      const r = await GST.fetchCSVCached(GST.sheetUrl ? GST.sheetUrl('891608329') : 'x?gid=891608329', 'vm_t');
+      const C = GST.SM.map(r.rows, S).C;
+      const w = await GST.fetchCSVCached('x?gid=646668307', 'vm_w');   // 다른 표(수선실적) — inst 규칙이 안 먹는다
+      return { c1:r.rows[1][C.country], cu1:r.rows[1][C.customer], c2:r.rows[2][C.country], ap:JSON.stringify(GST.vmap.applied.inst), w:w.rows[1][C.country] };
+    } finally { GST.fetchCSV = keep; }
+  });
+  is(fc.c1 === 'GST TAIWAN SCRUBBER' && /F16S/.test(fc.cu1) && fc.c2 === 'GST TAIWAN SCRUBBER', 'fetchCSVCached — 화면이 받는 행에 규칙이 입혀져 있다 (' + fc.c1 + ' · ' + fc.cu1 + ')');
+  is(/"rows":1/.test(fc.ap), '몇 행·몇 칸을 바꿨는지 남긴다 (' + fc.ap + ')');
+  is(fc.w === 'TAIWAN', '규칙은 그 표에만 — 수선실적으로 받은 같은 배열은 그대로');
+  /* 지우기 */
+  const nb = await pg.evaluate(() => window.__DB.value_map.length);
+  await pg.click('[data-vmdel="0"]'); await waitDlg(pg, /규칙 지우기/); await pg.click('.mask .btn.dng');
+  await pg.waitForFunction(n => window.__DB.value_map.length === n - 1, nb, { timeout:5000 }).catch(() => {});
+  is(await pg.evaluate(n => window.__DB.value_map.length === n - 1, nb), '규칙 지우기 — 확인 뒤 지운다');
   is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
   await ctx.close();
 }

@@ -52,6 +52,7 @@ const STUB = '\n;GST.USE_DB=false;GST.authOn=function(){return false;};'
   +  'rpc:async function(name,args){window.__QLOG.push({rpc:name,args:args});'
   +   'if(name==="csv_table_cols"){var cols={sheet_edu:["No","Site","인원","사원번호","교육완료일","id","src_row","created_at","imported_at","extra"]}[args&&args.p_tbl];'
   +    'return {data:cols||null,error:null};}'
+  +   'if(name==="value_groups")return {data:window.__VG||[],error:null};'
   +   'if(name==="csv_window"&&window.__WIN_ERR)return {data:null,error:{message:window.__WIN_ERR}};'
   +   'if(name==="csv_upload_begin"&&window.__BEGIN_ERR)return {data:null,error:{message:window.__BEGIN_ERR}};'
   +   'if(name==="csv_window")return {data:{hit:3,rows:50,next_src:1000,dry:!!(args&&args.p_dry)},error:null};'
@@ -164,6 +165,24 @@ await pg.selectOption('select[data-cmap="sn"][data-tbl="alarm:P"]', '장비번�
 is(await pg.evaluate(() => window.__CM.some(r=>r.tbl==='alarm:P'&&r.field==='sn'&&r.header==='장비번호')), '시트 태그 열쇠(alarm:P)로 저장');
 t8 = await chk();
 is(/시트 1개/.test(t8) && await pg.evaluate(() => (PREP.rows[0]||{}).sn==='ZZA-0001'), '다시 검사해 그 열이 S/N 으로 들어간다');
+console.log('[9] 새 값 점검 — 처음 보는 사이트 · 법인 칸의 국가 이름 · 빈 설비상태 (v152)');
+await pg.evaluate(() => { window.__CM=[]; GST.cmap._c={}; window.__VG=[
+  {country:'GST TAIWAN SCRUBBER',customer:'Testco Memory Taiwan Co., Ltd.(F16)',location:null,fab:'F16',state:'Operation',n:50},
+  {country:'OPX Scrubber',customer:'TESTCO',location:'Q1',fab:'Q1-A',state:'Operation',n:20}]; });
+await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='inst'))));
+{ const HH=Object.keys(spec).map(k=>spec[k]); const row=o=>Object.keys(spec).map(k=>o[k]==null?'':o[k]);
+  const csv=[HH, row({sn:'ZZS-1',country:'TAIWAN',customer:'TESTCO',location:'TAINAN',fab:'F16S',fabIn:'2026-09-01'}), row({sn:'ZZS-2',country:'TAIWAN',customer:'TESTCO',location:'TAINAN',fab:'F16S'}),
+    row({sn:'ZZS-3',country:'GST TAIWAN SCRUBBER',customer:'TESTCO',fab:'F16',state:'Operation'}), HH.map(()=>'')].map(r=>r.join(',')).join('\n')+'\n';
+  await put(csv, 'v.csv'); }
+const t9 = await chk();
+is(/새 값 점검/.test(t9) && /FAB\(사이트\) «F16S» 2행 — 처음 보는 값/.test(t9), '처음 보는 FAB(F16S)를 행 수와 함께 짚는다');
+is(/법인 «TAIWAN» 2행 — 법인 칸에 «국가 이름»/.test(t9) && /GST TAIWAN SCRUBBER/.test(t9), '법인 칸의 국가 이름 — 같은 국가의 법인 이름과 «행이 따로 선다»는 결과까지');
+is(/설비상태 빈칸 2행 — 반입일\(FAB In\)이 있는 1행만/.test(t9), '빈 설비상태 — 몇 행이 대수에서 빠지는지');
+is(!/«F16»/.test(t9) && !/OPX/.test(t9), '이미 있는 값은 짚지 않는다');
+is(/기준 정보/.test(t9), '무엇을 하면 되는지(데이터 관리 → 기준 정보)를 적는다');
+await pg.evaluate(() => { GST.vmap.rules=[{tbl:'inst',col:'country',raw:'TAIWAN',when_col:'',when_val:'',val:'GST TAIWAN SCRUBBER'}]; GST.vmap._p=Promise.resolve(GST.vmap.rules); GST.cmap._c={}; });
+await pg.evaluate(() => window.checkFile()); await pg.waitForTimeout(1500);
+is(!/국가 이름/.test(await chk()), '규칙(TAIWAN → GST TAIWAN SCRUBBER)이 있으면 그 경고는 사라진다 — 같은 판정 함수');
 is(pe.length===0, 'JS 에러 0' + (pe.length?' → '+pe[0]:''));
 await browser.close(); srv.close();
 console.log(fail?`\n❌ t-colmap: ${pass} 통과 · ${fail} 실패`:`\n✅ t-colmap: ${pass}/${pass} 통과`);

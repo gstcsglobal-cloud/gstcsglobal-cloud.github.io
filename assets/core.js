@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 151;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 152;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -65,16 +65,16 @@ GST._fltT = function(){ var l=(GST._lang && GST._lang()) || 'ko'; return GST.FLT
 GST.SRC_T = {
   ko:{ db:'Supabase', sheet:'시트', cache:'캐시', dbL:'Supabase', sheetL:'구글시트', cacheL:'브라우저 캐시', src:'출처', reuse:'재사용', idbFail:'⚠ 캐시 저장 실패',
        title:'데이터를 어디서 읽었는지 — 누르면 자세히', idbTitle:'IndexedDB: {e} — 매번 다시 받습니다',
-       verTitle:'화면 코드 버전', verBad:' · 자료 출처에 이상이 있습니다 — 관리자에게 알려 주세요', rows:'행' },
+       verTitle:'화면 코드 버전', verBad:' · 자료 출처에 이상이 있습니다 — 관리자에게 알려 주세요', rows:'행', vmap:'기준 정보 — {t}: 규칙 {r}개 · {n}행을 바꿔 읽음' },
   en:{ db:'Supabase', sheet:'sheet', cache:'cache', dbL:'Supabase', sheetL:'Google Sheet', cacheL:'browser cache', src:'Source', reuse:'reused', idbFail:'⚠ cache save failed',
        title:'Where the data came from — click for details', idbTitle:'IndexedDB: {e} — fetching every time',
-       verTitle:'Page code version', verBad:' · a data source has a problem — tell the admin', rows:' rows' },
+       verTitle:'Page code version', verBad:' · a data source has a problem — tell the admin', rows:' rows', vmap:'Value rules — {t}: {r} rules · {n} rows re-read' },
   zh:{ db:'Supabase', sheet:'表格', cache:'缓存', dbL:'Supabase', sheetL:'谷歌表格', cacheL:'浏览器缓存', src:'来源', reuse:'复用', idbFail:'⚠ 缓存保存失败',
        title:'数据来源 — 点击查看详情', idbTitle:'IndexedDB: {e} — 每次重新获取',
-       verTitle:'页面代码版本', verBad:' · 数据来源异常 — 请联系管理员', rows:'行' },
+       verTitle:'页面代码版本', verBad:' · 数据来源异常 — 请联系管理员', rows:'行', vmap:'基准信息 — {t}：规则 {r} 条 · {n} 行改读' },
   ja:{ db:'Supabase', sheet:'シート', cache:'キャッシュ', dbL:'Supabase', sheetL:'Googleシート', cacheL:'ブラウザキャッシュ', src:'出所', reuse:'再利用', idbFail:'⚠ キャッシュ保存失敗',
        title:'データの読み込み元 — 押すと詳細', idbTitle:'IndexedDB: {e} — 毎回再取得します',
-       verTitle:'画面コードのバージョン', verBad:' · データ出所に異常があります — 管理者へ', rows:'行' }
+       verTitle:'画面コードのバージョン', verBad:' · データ出所に異常があります — 管理者へ', rows:'行', vmap:'基準情報 — {t}：ルール {r} 件 · {n} 行を読み替え' }
 };
 GST._srcT = function(){ var l=(GST._lang && GST._lang()) || 'ko'; return GST.SRC_T[l] || GST.SRC_T.ko; };
 /* 상태줄 — 캐시 표시·로드 실패·빈 결과. 실패 «부류»별 한 줄(무엇을 하면 되는지) + 원문은 관리자에게만(A-4). */
@@ -3348,7 +3348,11 @@ GST._srcChip = function(){
       d.textContent = Object.keys(GST._srcSeen).map(function(k){
         const v = GST._srcSeen[k];
         return (v.src==='db'?'✅ ':'⚠️ ')+k+' ← '+(GST._srcT()[v.src+'L']||v.src)+' · '+v.n+GST._srcT().rows;
-      }).join('\n');
+      }).concat(Object.keys(GST.vmap.applied).filter(function(t){ return GST.vmap.applied[t].rows; }).map(function(t){
+        /* 기준 정보 규칙이 «바꿔 읽은» 행 — 조용히 바꾸지 않는다(v152 · 원본과 화면이 다른 이유가 여기 있다) */
+        const a = GST.vmap.applied[t];
+        return '🔁 '+GST._srcT().vmap.replace('{t}',t).replace('{r}',a.rules).replace('{n}',a.rows.toLocaleString());
+      })).join('\n');
       document.body.appendChild(d);
     };
     document.body.appendChild(el);
@@ -3376,7 +3380,137 @@ GST._srcChip = function(){
 };
 
 // 캐시 폴백 로드: 성공 시 저장, 실패 시 캐시로 대체 (cached/ageMin 플래그 반환)
+/* ---------- 기준 정보(값 사전) — «이 칸에 이 값이 오면 이렇게 읽는다» (v152 · 사용자 요청 · setup-20) ----------
+   사이트마다 같은 뜻을 다르게 적는다 — F16 원본은 법인 «GST TAIWAN SCRUBBER», F11·F16N·F16S 사이트 파일은 «TAIWAN».
+   그대로면 같은 법인이 두 행으로 갈려 세어지고, 새 사이트가 들어올 때마다 코드를 고쳐야 했다
+   (사용자: 「계속 이럴 때마다 유지보수 개념으로 코딩을 변경할 수는 없는 노릇」). 규칙은 데이터 관리 「기준 정보」에서 사람이 정한다.
+   ⚠ 원본 자료는 그대로 두고 «읽을 때» 바꾼다 — 모든 화면이 지나는 fetchCSVCached 한 곳(아래). 다시 올려도 규칙이 그대로 먹고,
+     규칙을 지우면 원래대로 돌아간다. 데이터 관리 목록은 원본을 보여 준다(고칠 대상은 원본이다).
+   ⚠ 조건은 «원본» 값으로 본다 — 규칙끼리 서로의 결과를 보면 적용 순서에 따라 답이 갈린다.
+   ⚠ 판정은 대소문자·앞뒤 공백만 무시한다(GST.vmap.K) — 짐작으로 비슷한 값을 묶지 않는다(제1원칙의 부분일치 사고).
+   ⚠ 카카오 챗봇(kakao-bot)은 표를 직접 읽어 이 규칙을 모른다 — 원본 값으로 답한다(알려진 차이 · CLAUDE.md v152).
+   우선순위: «값 + 조건» > «값» > «아무 값(*) + 조건» > «아무 값(*)». 같은 단계 안에서는 만든 순서가 아니라 열쇠가 하나뿐이다(PK). */
+GST.vmap = {
+  rules: [], _p: null, applied: {},
+  K: function(v){ return String(v == null ? '' : v).trim().toUpperCase(); },
+  load: function(force){
+    if(this._p && !force) return this._p;
+    const self = this;
+    return this._p = (async function(){
+      if(!(GST.USE_DB && GST.authOn())) return self.rules;
+      try{
+        const c = await GST.db(); if(!c) return self.rules;
+        const r = await c.from('value_map').select('tbl,col,raw,when_col,when_val,val');
+        if(r.error){ console.warn('[vmap] 기준 정보 읽기 실패 (setup-20 미적용?)', r.error.message); return self.rules; }
+        self.rules = r.data || [];
+      }catch(e){ console.warn('[vmap] 기준 정보 읽기 실패', e); }
+      return self.rules;
+    })();
+  },
+  /* 한 표의 규칙을 «칸 → 단계별 목록»으로 */
+  compile: function(tbl, rules){
+    const K = this.K, by = {};
+    (rules || this.rules).filter(function(r){ return r.tbl === tbl; }).forEach(function(r){
+      const any = r.raw === '*', cond = !!r.when_col;
+      (by[r.col] = by[r.col] || []).push({ raw:any ? '*' : K(r.raw), wc:r.when_col || '', wv:K(r.when_val), val:r.val, lv:(any ? 2 : 0) + (cond ? 0 : 1) });
+    });
+    Object.keys(by).forEach(function(c){ by[c].sort(function(a, b){ return a.lv - b.lv; }); });
+    return by;
+  },
+  /* 한 행(값 꺼내는 함수 get)에 대해 칸 col 의 «읽는 값» — 규칙이 없으면 원본 그대로. 기준 정보 화면·업로드 점검도 이것을 부른다(판정 한 벌). */
+  pick: function(list, get, col){
+    const K = this.K, cur = get(col), kc = K(cur);
+    for(let i = 0; i < (list || []).length; i++){
+      const r = list[i];
+      if(r.raw !== '*' && r.raw !== kc) continue;
+      if(r.wc && K(get(r.wc)) !== r.wv) continue;
+      return { val:r.val, rule:r };
+    }
+    return null;
+  },
+  /* 대시보드가 이 값을 어떻게 읽나 — 판정은 대시보드 함수 그대로(GST.EQ · GST.ORG). 기준 정보 화면·업로드 점검이 같이 쓴다. */
+  mean: function(col, v){
+    const s = String(v == null ? '' : v).trim();
+    if(col === 'state'){
+      const c = GST.EQ.cls(s);
+      return c === 'run' ? '가동 · 반입에 셈' : c === 'in' ? '반입(미가동)' : c === 'out' ? '대수에 안 셈(나감·미반입)'
+        : c === '?' ? '⚠ 처음 보는 상태 — 대수에 안 셈 · 미가동에 듦' : '⚠ 빈칸 — 반입일(FAB In)이 있을 때만 반입으로 셈';
+    }
+    if(!s) return '⚠ 빈칸 — 이 축에서 「미배치·미상」';
+    if(col === 'country' || col === 'op' || col === 'location' || col === 'fab'){
+      const r = GST.ORG.region(s), c = GST.ORG.country(s);
+      return (r || '⚠ 구분 미상') + (c ? ' · ' + c : '');
+    }
+    if(col === 'customer') return '고객사 축: ' + (GST.ORG.customer(s) || s);
+    return '';
+  },
+  /* 법인 칸에 «국가 이름»이 적혔나 — 같은 국가의 다른 행은 법인 이름(GST TAIWAN SCRUBBER)으로 적혀 있을 때만 짚는다.
+     국내의 SEC·SDC·SK 처럼 «같은 국가의 서로 다른 법인»은 짚지 않는다(그건 다른 법인이 맞다). */
+  countryName: function(v){ const c = GST.ORG.country(v); return !!c && this.K(v) === c; },
+  /* 새로 올릴 행(objs · 표 열 이름 키)을 지금 표(groups · value_groups 결과)와 견줘 «처음 보는 값»·«법인 칸의 국가 이름»·«빈 상태»를 센다.
+     막지 않는다 — 말할 뿐이다(규칙은 올린 뒤에 정해도 원본을 안 건드리고 읽을 때 먹는다). */
+  check: function(tbl, objs, groups, cols){
+    const self = this, by = this.compile(tbl), K = this.K, out = { fresh:[], cname:[], blankState:0, blankStateDated:0 };
+    const rd = function(o, c){ const h = self.pick(by[c], function(f){ return o[f]; }, c); return h ? h.val : (o[c] == null ? '' : String(o[c])); };
+    const big = {};      // 국가 → 지금 표에서 가장 많이 쓴 «법인 이름»
+    if(cols.indexOf('country') >= 0 || cols.indexOf('op') >= 0){
+      const cc = cols.indexOf('country') >= 0 ? 'country' : 'op', cnt = {};
+      (groups || []).forEach(function(g){ const v = rd(g, cc); if(v && !self.countryName(v)){ const c = GST.ORG.country(v); if(c){ cnt[c] = cnt[c] || {}; cnt[c][v] = (cnt[c][v] || 0) + (g.n || 1); } } });
+      Object.keys(cnt).forEach(function(c){ big[c] = Object.keys(cnt[c]).sort(function(a, b){ return cnt[c][b] - cnt[c][a]; })[0]; });
+      const fn = {};
+      objs.forEach(function(o){ const v = rd(o, cc); if(self.countryName(v) && big[GST.ORG.country(v)]) fn[v] = (fn[v] || 0) + 1; });
+      Object.keys(fn).forEach(function(v){ out.cname.push({ col:cc, v:v, n:fn[v], to:big[GST.ORG.country(v)] }); });
+    }
+    cols.forEach(function(c){
+      if(c === 'state') return;
+      const cn = {}; out.cname.forEach(function(x){ if(x.col === c) cn[K(x.v)] = 1; });   // 위에서 이미 짚은 값은 두 번 적지 않는다
+      const known = {}; (groups || []).forEach(function(g){ known[K(g[c])] = 1; });
+      const seen = {};
+      objs.forEach(function(o){ const v = o[c] == null ? '' : String(o[c]).trim(); if(v && !known[K(v)] && !cn[K(v)]) seen[v] = (seen[v] || 0) + 1; });
+      Object.keys(seen).sort(function(a, b){ return seen[b] - seen[a]; }).forEach(function(v){
+        const o0 = objs.find(function(o){ return String(o[c] == null ? '' : o[c]).trim() === v; });
+        const r = o0 ? rd(o0, c) : v;
+        out.fresh.push({ col:c, v:v, n:seen[v], read:r, mean:self.mean(c, r) });
+      });
+    });
+    if(cols.indexOf('state') >= 0) objs.forEach(function(o){ if(!K(rd(o, 'state'))){ out.blankState++; if(o.fab_in) out.blankStateDated++; } });
+    return out;
+  },
+  /* 2차원 배열(머리글 + 행)에 적용 — 바뀐 행만 복사한다(캐시가 든 원본 배열을 고치지 않는다). */
+  apply: function(tbl, rows){
+    const S = GST.SM.SPEC[tbl], by = this.compile(tbl), cols = Object.keys(by);
+    const out = { rows:rows, n:0, cells:0, rules:cols.reduce(function(a, c){ return a + by[c].length; }, 0) };
+    if(!S || !cols.length || !rows || rows.length < 2) return out;
+    const m = GST.SM.map(rows, S); if(m.hi < 0) return out;
+    const C = m.C, need = cols.filter(function(c){ return C[c] >= 0; });
+    if(!need.length) return out;
+    const res = rows.slice(), self = this;
+    for(let i = m.hi + 1; i < rows.length; i++){
+      const r = rows[i]; if(!r) continue;
+      const get = function(f){ return C[f] >= 0 ? r[C[f]] : ''; };
+      let cp = null;
+      need.forEach(function(c){
+        const hit = self.pick(by[c], get, c);
+        if(hit && String(hit.val) !== String(r[C[c]] == null ? '' : r[C[c]])){ if(!cp) cp = r.slice(); cp[C[c]] = hit.val; out.cells++; }
+      });
+      if(cp){ res[i] = cp; out.n++; }
+    }
+    out.rows = res;
+    return out;
+  }
+};
+/* 모든 화면이 지나는 문 — 실적·설치 3표는 여기서 «기준 정보» 규칙을 입힌다(v152). 시트·DB·캐시·오프라인 스냅샷 어느 길로 와도 같다. */
 GST.fetchCSVCached = async function(url, key){
+  const gm = String(url||'').match(/[?&]gid=(\d+)/), tbl = gm && GST.TABLE_OF_GID[gm[1]];
+  const rp = (tbl && GST.SM.SPEC[tbl]) ? GST.vmap.load() : null;
+  const r = await GST._fetchCSVCached0(url, key);
+  if(rp && r && r.rows){
+    try{ await rp; const a = GST.vmap.apply(tbl, r.rows); r.rows = a.rows; GST.vmap.applied[tbl] = { rules:a.rules, rows:a.n, cells:a.cells }; }
+    catch(e){ console.warn('[vmap] 적용 실패 — 원본 그대로 보여 줍니다', e); }
+  }
+  return r;
+};
+GST._fetchCSVCached0 = async function(url, key){
   const gm = String(url||'').match(/[?&]gid=(\d+)/);
   const table = gm && GST.TABLE_OF_GID[gm[1]];
   /* 지도에 든 표(데모)는 시트·옛 캐시로 되돌아가지 않는다 (v146) — 아래에서 실패하면 그 자리에서 던진다 */
