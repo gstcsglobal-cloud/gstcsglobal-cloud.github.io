@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=148"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=149"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:var(--txt,#e6edf3);background:var(--bg-gradient,#0b1118);background-size:400% 400%;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
@@ -24,6 +24,12 @@ select option{background:#101820;color:#e6edf3}
 .ok{color:#34d399}.warn{color:#fbbf24}.bad{color:#fb7185}
 .big{font-size:14px;font-weight:800}
 a{color:var(--a1,#38bdf8)}
+.qa{margin:8px 0;padding:10px 12px;border:1px solid var(--line,#ddd);border-radius:10px;background:var(--surface-2,#fafafa)}
+.qa-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}.qa-g{display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:7px;font-weight:800;color:#fff}
+.qa-g.ok{background:#16a34a}.qa-g.warn{background:#d97706}.qa-g.bad{background:#dc2626}
+.qa-t{border-collapse:collapse;font-size:12px}.qa-t td,.qa-t th{padding:2px 10px 2px 0;text-align:left}.qa-t tr.lo td{color:#b45309}
+.qa-bar{display:inline-block;width:90px;height:7px;border-radius:4px;background:#e5e7eb;vertical-align:middle;overflow:hidden}.qa-bar i{display:block;height:100%;background:#2563eb}
+.qa-i{margin:6px 0 0 16px;padding:0;font-size:12px}.qa .muted{color:#6b7280;font-size:12px}
 </style>
 </head>
 <body>
@@ -96,10 +102,10 @@ window.GST && GST.needVer && GST.needVer(146);   // GST.sheetRows(v141 · 엑셀
    끼워 넣는 순간 남의 표를 가리키고, key 는 'abp2' 가 두 항목에 겹치고 여섯 항목엔 없다. */
 const TABLES = [
   /* dup — 「이어붙이기」 전에 «이 파일의 행이 이미 표에 있나»를 세는 열(SPEC 필드 키 · v140). 막지 않고 보여만 준다. */
-  { rid:'wk', key:'wk',   label:'수선실적 (엑셀 또는 CSV)',  table:'sheet_wk',   kind:'mirror', win:'dStart',
+  { rid:'wk', key:'wk', qa:{key:['stage','sn_in','eq_no','alarm','phenom','cause','action','man_min'], date:'d_start', num:['work_min','man_min','worker_cnt'], cap:{work_min:1440, man_min:1440}, by:'op'},   label:'수선실적 (엑셀 또는 CSV)',  table:'sheet_wk',   kind:'mirror', win:'dStart',
     dup:{ cols:['rsCode'], label:'실적코드' },
     after:'고장분석 → 데이터 품질 카드에서 「미기재」 건수를, 주간현황에서 BM 추이를 확인하세요.' },
-  { rid:'mat', key:'mat',  label:'자재실적 (엑셀 또는 CSV)',  table:'sheet_mat',  kind:'mirror', win:'workDate',
+  { rid:'mat', key:'mat', qa:{key:['rs_code','sn','mat_code','mat_name','qty'], date:'work_date', num:['qty'], by:'op'},  label:'자재실적 (엑셀 또는 CSV)',  table:'sheet_mat',  kind:'mirror', win:'workDate',
     dup:{ cols:['rsCode','matCode','matPos','workDate','qty'], by:'rsCode', soft:true,
           label:'수선실적번호·자재코드·자재위치·일자·수량 조합' },
     after:'자재실적 → 데이터 품질 카드에서 「수량 단위 오입력 의심」 건수를 확인하세요.' },
@@ -107,7 +113,7 @@ const TABLES = [
      통합할 수 없다는 것이 사용자 확정이라, SPEC 의 별칭 배열이 둘 다 흡수한다 — 대상은 하나다.
      ⚠ 두 파일을 다 넣어야 하므로 **첫 파일은 「통째 교체」, 두 번째는 「이어붙이기」** 다.
         둘 다 통째 교체로 올리면 먼저 올린 쪽이 사라진다. */
-  { rid:'inst', key:'inst', label:'설치현황 (국내·해외 양식 모두)',  table:'sheet_inst', kind:'mirror',
+  { rid:'inst', key:'inst', qa:{key:['sn','customer','fab','line','state','model','turn_on'], by:'country'}, label:'설치현황 (국내·해외 양식 모두)',  table:'sheet_inst', kind:'mirror',
     dup:{ cols:['sn'], label:'Scrubber S/N' },
     note:'국내·해외 두 파일을 각각 올립니다 — 첫 파일은 「통째 교체」, 두 번째는 「이어붙이기」로.',
     /* 설치현황은 «조직 축의 정본»이라, 올린 뒤 조인이 얼마나 붙었는지가 가장 중요하다 —
@@ -752,6 +758,9 @@ window.checkFile=async function(){
         }
       }
     }
+    /* 자료 성적표 (v148 · 2단계) — 막지 않고 «무엇이 이상한지»를 올리는 그 자리에서 보여준다. */
+    let qa=null;
+    if(t.qa){ try{ qa=GST.qa(out,t.qa); msgs.push(qaHtml(qa)); }catch(e){ console.warn('[upload] 성적표', e); } }
     if(t.note) msgs.push('<span class="warn">ℹ '+t.note+'</span>');
     /* 「올린 뒤 무엇을 확인하라」 — 업로드는 끝이 아니라 시작이다. 이 줄이 없어서
        설치현황을 올리고도 조인율을 아무도 안 봤다(CLAUDE.md v134 「남은 확인」). */
@@ -771,7 +780,7 @@ window.checkFile=async function(){
     const shrink=!win&&!add&&oldCount>100&&out.length<oldCount/2;
     if(shrink)msgs.push('<span class="bad big">⚠ 파일이 기존의 절반도 안 됩니다 — 잘린 파일이 아닌지 확인하세요. 그래도 진행하면 기존 데이터가 이 파일로 줄어듭니다.</span>');
     chkShow(msgs.join('<br>'));
-    PREP={t,rows:out,oldCount,shrink,win,add,missing,killOther,dup};
+    PREP={t,rows:out,oldCount,shrink,win,add,missing,killOther,dup,qa};
     $('goBtn').disabled=false;
     $('goBtn').className='btn'+(shrink?' danger':'');
   }catch(e){ chkShow('<span class="bad">❌ '+String(e.message||e).replace(/\n/g,'<br>')+'</span>'); }
@@ -857,12 +866,34 @@ async function dupScan(c,t,out){
 /* 업로드 «요약»을 변경 이력에 한 줄 남긴다 (v140 · edit_note). 누가 언제 어느 표를 어떤 방식으로 몇 행
    넣었나 — 행 내용은 안 담는다(26만 행이다). 실패도 남긴다: 「왜 표가 비었지」의 답이 그 줄이다.
    ⚠ 최선이다 — 기록 실패가 업로드 결과를 바꾸면 안 된다(setup-16 전이면 함수가 없다). 콘솔에는 남긴다. */
+/* 자료 성적표 그리기 (v148 · 2단계). 계산은 GST.qa 한 곳 — 여기는 글자로 옮길 뿐이다. */
+const QA_COL={stage:'작업단계',sn_in:'S/N',eq_no:'설비호기',alarm:'알람유형',phenom:'현상',cause:'원인',action:'조치',
+  man_min:'작업공수',work_min:'작업시간(분)',worker_cnt:'작업자수',rs_code:'실적코드',sn:'S/N',mat_code:'자재코드',
+  mat_name:'자재명',qty:'수량',customer:'고객사',fab:'FAB',line:'라인',state:'설비상태',model:'모델',turn_on:'Turn-on',
+  d_start:'작업시작일',work_date:'자재실적일자'};
+function qaHtml(q){
+  const E=GST._esc, nm=k=>QA_COL[k]||k, col={A:'ok',B:'ok',C:'warn',D:'bad'}[q.grade];
+  const bar=x=>'<span class="qa-bar"><i style="width:'+Math.min(100,x.pct)+'%"></i></span> '+x.pct+'%';
+  let h='<div class="qa"><div class="qa-h"><span class="qa-g '+col+'">'+q.grade+'</span><b>자료 성적표</b> '
+    +'<span class="muted">'+q.score+'점 · 중요 열 입력률에서 이상값 비율만큼 뺀 값 · 막지 않습니다</span></div>';
+  if(q.fill.length) h+='<table class="qa-t"><tr><th>열</th><th>입력률</th></tr>'+q.fill.map(x=>
+    '<tr'+(x.pct<30?' class="lo"':'')+'><td>'+E(nm(x.col))+(x.key?'':' <span class="muted">(그 밖)</span>')+'</td><td>'+bar(x)+'</td></tr>').join('')+'</table>';
+  const say={date_bad:i=>'날짜를 못 읽은 행 '+i.n.toLocaleString(), date_future:i=>'미래 날짜 '+i.n.toLocaleString()+'행',
+    date_old:i=>'2010년 이전 날짜 '+i.n.toLocaleString()+'행', neg:i=>nm(i.col)+' 음수 '+i.n.toLocaleString()+'행',
+    over:i=>nm(i.col)+' '+(i.cap>=1440?'24시간':i.cap)+' 초과 '+i.n.toLocaleString()+'행',
+    month_low:i=>i.ym+' 행이 '+i.n.toLocaleString()+'개뿐(다른 달 중앙값 '+i.med.toLocaleString()+') — 빠진 자료가 없는지'};
+  h+= q.issues.length ? '<ul class="qa-i">'+q.issues.map(i=>'<li class="'+i.sev+'">'+E(say[i.kind]?say[i.kind](i):i.kind)+'</li>').join('')+'</ul>'
+                      : '<div class="ok">이상값 없음</div>';
+  if(q.by.length>1) h+='<div class="muted" style="margin-top:4px">사이트별 중요 열 입력률: '+q.by.slice(0,8).map(b=>E(b.v)+' <b>'+b.fill+'%</b>').join(' · ')+'</div>';
+  return h+'</div>';
+}
 async function uploadNote(c,extra){
   try{
     const P=PREP, f=$('fsel').files&&$('fsel').files[0];
     const m=P.add?'add':P.win?'win':'full';
     const after=Object.assign({ mode:m, file:f?f.name:'', n:P.rows.length, site:SITE||null,
-      sheets:($('ssel')&&$('ssel').dataset.keys)||null, dup:P.dup?P.dup.hit:null }, extra||{});
+      sheets:($('ssel')&&$('ssel').dataset.keys)||null, dup:P.dup?P.dup.hit:null,
+      qa:P.qa?{grade:P.qa.grade, score:P.qa.score, issues:P.qa.issues.length}:null }, extra||{});
     const before=Object.assign({ rows:P.oldCount }, P.win?{ from:P.win.from, to:P.win.to, ops:P.win.ops, deleted:P.win.hit }:{});
     const r=await c.rpc('edit_note',{p_tbl:P.t.table,p_op:'upload:'+m,p_key:'*',p_before:before,p_after:after});
     if(r&&r.error)console.warn('[upload] 이력 기록 실패 (setup-16 미적용?)', r.error.message||r.error);

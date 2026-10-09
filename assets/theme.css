@@ -501,3 +501,18 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #gstSrcDetail{display:no
   border:1px solid var(--line);background:var(--surface)}
 .gst-anchors a:hover{color:var(--accent-ink);border-color:var(--accent-1);background:var(--accent-soft)}
 @media print{.gst-anchors,.gst-fchips,.gst-empty-clear{display:none !important}}
+
+/* ── v148 · 5단계 첫 화면 ─────────────────────────────────────────────
+   상태줄은 «메타»다 — 지표보다 눈에 띄면 안 된다. 휴대폰에서는 한 줄로 자른다. */
+.status{font-size:11.5px !important;color:var(--txt-muted)}
+.status.err{color:var(--bad) !important;font-weight:600}
+.kpi .val{white-space:nowrap}
+.gst-dqchip{margin-left:auto;font:inherit;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;
+  border:1px solid var(--warn);background:var(--warn-soft,transparent);color:var(--txt-main);cursor:pointer}
+.gst-dqchip:hover{filter:brightness(.97)}
+@media print{.gst-dqchip{display:none}}
+@media(max-width:768px){
+  .status{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left !important}
+  .gst-insights{gap:6px 12px !important;font-size:12.5px}
+  .gst-dqchip{margin-left:0}
+}
