@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 150;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 151;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -5985,6 +5985,164 @@ GST.cellStr = function(v){
 GST.sheetRows = function(XLSX, ws){
   return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''})
     .map(function(row){ return (row||[]).map(GST.cellStr); });
+};
+/* ---------- 열 맵핑 — 한 벌 (v149 업로드 → v151 core · 사용자: 「업로드할 때 맵핑이 잘 되는지 확인도 하고, 안 되는 건 수동으로,
+   그리고 본인 PC 에만 할지 대시보드에 저장할지도」) ----------
+   사이트마다 양식이 달라 같은 항목이 다른 머리글·다른 열·다른 언어로 온다(대만 근태 시스템은 중문 머리글이다).
+   업로드 화면과 데이터 관리의 「엑셀 올리기」가 «같은 이 함수들»을 쓴다 — 두 벌이면 한쪽에서 고른 맵핑이 다른 쪽에서 안 먹는다.
+   ⚠ 저장하는 것은 열 번호가 아니라 «머리글 이름»이다(제1원칙) — 열이 끼어들어도 맞는다.
+   ⚠ 지정은 별칭 배열의 «맨 앞»에 얹을 뿐이다 — 판정(GST.SM.map · 정규화 정확일치)은 그대로 한 벌이다(제2원칙).
+   저장 위치는 둘이다 — «대시보드»(colmap_site · 모든 사람·모든 PC) · «이 PC»(localStorage · 이 브라우저만).
+   둘 다 있으면 «이 PC» 가 이긴다(개인이 자기 파일에 맞춰 덮은 것이므로). 표의 상태 칸이 어느 쪽 값인지 적는다.
+   특수 열쇠 둘 — `__hi`(머리글 행 · 1부터) · `__sheet`(워크북에서 쓸 시트 이름). 사람이 고른 것을 다음 번에도 쓴다. */
+/* 내장 별칭 — Import 표(표의 열 이름이 곧 정본)에 SPEC 이 없어, 다른 언어 양식을 «처음부터» 알아보게 하는 사전.
+   ⚠ 정규화 정확일치로만 쓴다(부분일치 금지 — 제1원칙). 여기 없는 머리글은 사람이 한 번 고르면 저장된다.
+   휴가(leave) — 대만 근태 시스템(請款) 내보내기. ⚠ 「請假單位」(小時·天·分鐘)는 표의 「비고」로 간다 —
+   hr·주간현황이 신청시간의 «단위»를 비고 열에서 읽는다(天 을 시간으로 더하면 12% 과소집계 · hr/index.html LV_HRS_PER_DAY). */
+GST.CMAP_ALIAS = {
+  leave: { '사원번호':['員工編號','工號','員工代號'], '이름':['姓名','員工姓名'], '소속':['部門','部門名稱'],
+    '항목':['假勤項目','假別'], '발생일':['事件發生日'], '휴가시작일':['假勤開始日期','請假開始日期'],
+    '휴가시작시간':['假勤開始時間','請假開始時間'], '휴가종료일':['假勤結束日期','請假結束日期'],
+    '휴가종료시간':['假勤結束時間','時數結束時間','請假結束時間'], '휴가신청시간':['請假時數'], '비고':['請假單位'] }
+};
+GST.cmap = {
+  _c:{},
+  _lk:function(site,tbl){ return 'gst_cmap:'+site+':'+tbl; },
+  pc:function(site,tbl){ try{ return JSON.parse(localStorage.getItem(this._lk(site,tbl))||'{}')||{}; }catch(e){ return {}; } },
+  /* {ovr, src} — ovr={field:header} · src={field:'pc'|'db'} */
+  load:async function(c,site,tbl){
+    const k=site+'|'+tbl; if(this._c[k]) return this._c[k];
+    const db={};
+    if(c) try{ const r=await c.from('colmap_site').select('field,header').eq('site',site).eq('tbl',tbl);
+         if(!r.error) (r.data||[]).forEach(function(x){ db[x.field]=x.header; });
+         else console.warn('[cmap] 대시보드 맵핑 읽기 실패 (setup-18 미적용?)', r.error.message); }
+    catch(e){ console.warn('[cmap] 대시보드 맵핑 읽기 실패', e); }
+    const pc=this.pc(site,tbl), ovr={}, src={};
+    Object.keys(db).forEach(function(f){ ovr[f]=db[f]; src[f]='db'; });
+    Object.keys(pc).forEach(function(f){ if(pc[f]){ ovr[f]=pc[f]; src[f]='pc'; } });
+    return this._c[k]={ovr:ovr, src:src};
+  },
+  /* 저장 — header '' 이면 «그 저장 위치의» 지정을 지운다. 대시보드 쓰기가 RLS 로 막히면 0행이 온다 — 그것을 «실패»로 말한다. */
+  save:async function(c,site,tbl,field,header,where){
+    delete this._c[site+'|'+tbl];
+    if(where==='pc'){
+      const o=this.pc(site,tbl); if(header) o[field]=header; else delete o[field];
+      try{ localStorage.setItem(this._lk(site,tbl), JSON.stringify(o)); }catch(e){ throw new Error('이 PC 에 저장하지 못했습니다(브라우저 저장소가 막혀 있음)'); }
+      return;
+    }
+    if(!c) throw new Error('로그인이 필요합니다');
+    let r;
+    if(header) r=await c.from('colmap_site').upsert({site:site,tbl:tbl,field:field,header:header,
+              updated_by:(GST._me&&GST._me.email)||null,updated_at:new Date().toISOString()}).select();
+    else    r=await c.from('colmap_site').delete().eq('site',site).eq('tbl',tbl).eq('field',field).select();
+    if(r.error) throw new Error(r.error.message);
+    if(header && !(r.data||[]).length) throw new Error('저장 권한이 없습니다');
+    /* 대시보드에 «자동 인식»으로 되돌렸는데 이 PC 에 옛 지정이 남아 있으면 그것이 계속 이긴다 — 같이 지운다 */
+    if(!header){ const o=this.pc(site,tbl); if(o[field]){ delete o[field]; try{ localStorage.setItem(this._lk(site,tbl), JSON.stringify(o)); }catch(e){} } }
+  },
+  where:function(){ try{ return localStorage.getItem('gst_cmap_where')||'db'; }catch(e){ return 'db'; } },
+  setWhere:function(w){ try{ localStorage.setItem('gst_cmap_where', w==='pc'?'pc':'db'); }catch(e){} },
+  /* SPEC 표 — 지정 머리글을 별칭 «맨 앞»에 얹고, 머리글 행을 찾는 힌트도 지정 이름으로 바꿔 준다
+     (힌트 이름 자체가 다른 양식이면 머리글 행을 못 찾는다 · 설치현황의 힌트는 S/N 하나다). */
+  spec:function(S0,ovr){
+    const fields={}, N=GST.SM.norm;
+    Object.keys(S0.fields).forEach(function(k){ const a=[].concat(S0.fields[k]); fields[k]=ovr[k]?[ovr[k]].concat(a):a; });
+    const hints=(S0.hints||[]).map(function(h){ const k=Object.keys(ovr).find(function(f){ return S0.fields[f]&&[].concat(S0.fields[f]).some(function(a){ return N(a)===N(h); }); }); return k?ovr[k]:h; });
+    return Object.assign({},S0,{fields:fields,hints:hints});
+  },
+  col:function(i){ let s=''; i++; while(i>0){ const r=(i-1)%26; s=String.fromCharCode(65+r)+s; i=Math.floor((i-1)/26); } return s; },
+  /* 머리글 행 후보 — 찾았으면 그 행, 못 찾았으면 앞 15줄 중 «글자가 가장 많이 찬 줄» */
+  guessHi:function(rows,hi){ if(hi>=0) return hi; let best=0,bn=-1; (rows||[]).slice(0,15).forEach(function(r,i){ const n=(r||[]).filter(function(v){ return String(v==null?'':v).trim(); }).length; if(n>bn){bn=n;best=i;} }); return best; },
+  /* Import 형(표의 열 이름이 정본) 맞추기. 정본 이름 → 내장 별칭 → 지정 순으로 «정규화 정확일치».
+     머리글 행: 지정(__hi) → 맞는 열이 가장 많은 줄(앞 15줄 · 동률이면 앞줄) → 없으면 가장 찬 줄(고를 후보용).
+     ⚠ 0행부터 보지 않으면 제목 줄(「Update : 2026.10.3」)이 있는 파일에서 머리글을 못 찾는다(사용자 파일 실측). */
+  match:function(rows,cols,ovr,alias){
+    const N=GST.SM.norm, al=alias||{}, o=ovr||{};
+    const names={}; cols.forEach(function(c){ const a=[c].concat(al[c]||[]); if(o[c]) a.unshift(o[c]); names[c]=a.map(N).filter(Boolean); });
+    const hitsOf=function(r){ const at={}; (r||[]).forEach(function(x,i){ const h=N(String(x==null?'':x)); if(h&&at[h]==null) at[h]=i; });
+      let n=0; cols.forEach(function(c){ if(names[c].some(function(k){ return at[k]!=null; })) n++; }); return n; };
+    let hi=-1, found=false;
+    const fixed=parseInt(o.__hi,10);
+    if(fixed>0 && fixed<=rows.length){ hi=fixed-1; found=hitsOf(rows[hi])>0; }
+    else { let bn=0; (rows||[]).slice(0,15).forEach(function(r,k){ const n=hitsOf(r); if(n>bn){ bn=n; hi=k; } }); found=bn>0; if(hi<0) hi=GST.cmap.guessHi(rows,-1); }
+    const header=((rows||[])[hi]||[]).map(function(x){ return String(x==null?'':x).trim(); });
+    const at={}; header.forEach(function(h,k){ const n=N(h); if(n&&at[n]==null) at[n]=k; });
+    const idx={}, via={}, used={};
+    cols.forEach(function(c){
+      let i=-1, v='';
+      if(o[c]){ const k=at[N(o[c])]; if(k!=null){ i=k; v='ovr'; } else v='ovrmiss'; }
+      if(i<0 && at[N(c)]!=null && !used[at[N(c)]]){ i=at[N(c)]; v=v||'auto'; }
+      if(i<0) (al[c]||[]).some(function(a){ const k=at[N(a)]; if(k!=null && !used[k]){ i=k; v=v||'alias'; return true; } });
+      if(i>=0) used[i]=1; idx[c]=i; via[c]=v||(i>=0?'auto':'');
+    });
+    const unknown=header.filter(function(h,k){ return h && !used[k]; });
+    return {hi:hi, hiFound:found, header:header, idx:idx, via:via, unknown:unknown};
+  },
+  /* 그 열의 예시 값 — 사람이 «맞게 잡혔나»를 눈으로 확인하는 근거(사용자: 업로더가 맵핑을 검증할 수 있어야) */
+  sample:function(rows,hi,i,n){ const out=[]; if(i<0) return out;
+    for(let r=hi+1;r<(rows||[]).length&&out.length<(n||2);r++){ const v=String(((rows[r]||[])[i])==null?'':rows[r][i]).trim(); if(v) out.push(v.length>24?v.slice(0,24)+'…':v); }
+    return out; },
+  css:function(){ if(typeof document==='undefined'||document.getElementById('gstCmapCss')) return;
+    const s=document.createElement('style'); s.id='gstCmapCss';
+    s.textContent='.gcm{margin:8px 0;padding:10px 12px;border:1px solid rgba(127,127,127,.35);border-radius:10px;background:rgba(127,127,127,.07);color:inherit;font-size:12.5px}'
+      +'.gcm summary{cursor:pointer}.gcm select{background:rgba(127,127,127,.1);color:inherit;border:1px solid rgba(127,127,127,.45);border-radius:6px;padding:3px 6px;max-width:300px;font:inherit}'
+      +'.gcm select option{color:#111;background:#fff}.gcm table{border-collapse:collapse;width:100%;margin-top:6px}'
+      +'.gcm td,.gcm th{padding:4px 10px 4px 0;text-align:left;vertical-align:top;border-top:1px solid rgba(127,127,127,.18)}.gcm th{font-weight:600;opacity:.75;border-top:0}'
+      +'.gcm tr.lo td{color:#d97706}.gcm .m{opacity:.7}.gcm .ok{color:#16a34a}.gcm .bad{color:#dc2626}.gcm .ex{opacity:.8;font-size:11.5px;word-break:break-all}'
+      +'.gcm .where{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0}.gcm .where label{cursor:pointer}.gcm .warn{color:#d97706}';
+    document.head.appendChild(s); },
+  /* 표 한 벌 — o: {items:[{k,label,req,idx,via?}], H, rows, hi, hiFound, ovr, src, tbl, title, siteL, canDb, unknown, missTxt, open, hiSel}
+     data-cmap(항목)·data-cmhi(머리글 행)·name=cmWhere(저장 위치) 를 GST.cmap.handle 이 받는다. */
+  table:function(o){
+    GST.cmap.css();
+    const E=GST._esc, N=GST.SM.norm, H=o.H||[], ovr=o.ovr||{}, src=o.src||{}, C=GST.cmap.col;
+    const w=o.canDb===false?'pc':GST.cmap.where();
+    const opts=H.map(function(h,i){ return h?'<option value="'+E(h)+'">'+C(i)+' · '+E(h)+'</option>':''; }).join('');
+    let nMiss=0, nOvr=0;
+    const tr=o.items.map(function(it){
+      const k=it.k, i=it.idx, oh=ovr[k], oHit=oh && H.some(function(h){ return N(h)===N(oh); });
+      const where=src[k]==='pc'?'이 PC':'공유';
+      let st;
+      if(oh&&oHit){ st='<span class="ok">지정 · '+where+'</span>'; nOvr++; }
+      else if(oh){ st='<span class="bad">지정('+where+') 머리글이 이 파일에 없음 → 자동</span>'; nOvr++; }
+      else if(i>=0) st='<span class="m">'+(it.via==='alias'?'자동(내장 사전)':'자동')+'</span>';
+      else if(it.req){ st='<span class="bad">못 찾음</span>'; nMiss++; }
+      else st='<span class="m">'+E(o.missTxt||'없음(선택)')+'</span>';
+      const got=i>=0?C(i)+' · '+E(H[i]||''):'—';
+      const ex=i>=0?GST.cmap.sample(o.rows,o.hi,i,2).map(E).join(' · '):'';
+      const sel='<select data-cmap="'+E(k)+'" data-tbl="'+E(o.tbl)+'"><option value="">(자동 인식)</option>'
+        +(oh?opts.replace('value="'+E(oh)+'"','value="'+E(oh)+'" selected'):opts)+'</select>';
+      return '<tr'+(it.req&&i<0?' class="lo"':'')+'><td>'+E(it.label)+(it.req?' <b class="bad">*</b>':'')+'</td><td>'+got+'</td><td class="ex">'+(ex||'<span class="m">—</span>')+'</td><td>'+st+'</td><td>'+sel+'</td></tr>';
+    }).join('');
+    let hiSel='';
+    if(o.hiSel){
+      const cur=parseInt(ovr.__hi,10)||0;
+      hiSel=' · 머리글 행 <select data-cmhi="1" data-tbl="'+E(o.tbl)+'"><option value="">자동 ('+(o.hi+1)+'행)</option>'
+        +(o.rows||[]).slice(0,15).map(function(r,k){ const t=(r||[]).map(function(x){ return String(x==null?'':x).trim(); }).filter(Boolean).slice(0,3).join(' · ');
+          return t?'<option value="'+(k+1)+'"'+(cur===k+1?' selected':'')+'>'+(k+1)+'행 — '+E(t.length>40?t.slice(0,40)+'…':t)+'</option>':''; }).join('')+'</select>';
+    }
+    const extra=(o.unknown&&o.unknown.length)?'<div class="warn" style="margin-top:6px">⚠ 표에 자리가 없어 <b>올리지 않는</b> 파일 열 '+o.unknown.length+'개: '
+        +E(o.unknown.join(', '))+' — 이 중에 위 항목의 값이 있으면 오른쪽에서 그 머리글을 고르세요.</div>':'';
+    const whereH='<div class="where"><span class="m">고른 맵핑 저장:</span>'
+      +'<label><input type="radio" name="cmWhere" value="db"'+(w==='db'?' checked':'')+(o.canDb===false?' disabled':'')+'> 대시보드에 저장 (모든 사람·모든 PC 가 같이 씀)</label>'
+      +'<label><input type="radio" name="cmWhere" value="pc"'+(w==='pc'?' checked':'')+'> 이 PC 에만 (이 브라우저에서만)</label></div>';
+    return '<details class="gcm"'+((nMiss||nOvr||o.open)?' open':'')+'><summary><b>열 맵핑'+(o.title?' — '+E(o.title):'')+'</b> <span class="m">— '+E(o.siteL||'')
+      +' · 머리글 '+(o.hiFound?(o.hi+1)+'행':'못 찾음 (가장 찬 '+(o.hi+1)+'행을 후보로)')+' · 지정 '+nOvr+'개'+(nMiss?' · 필수 못 찾음 '+nMiss+'개':'')+'</span></summary>'
+      +'<div class="m" style="margin:6px 0">«예시 값»을 보고 맞게 잡혔는지 확인하세요. 틀렸거나 못 찾았으면 오른쪽에서 이 파일의 머리글을 고르면 바로 다시 검사합니다 — 열 위치가 아니라 머리글 이름으로 기억합니다.'+hiSel+'</div>'
+      +whereH+'<table><tr><th>항목</th><th>잡힌 열</th><th>예시 값</th><th>상태</th><th>지정</th></tr>'+tr+'</table>'+extra+'</details>';
+  },
+  /* 패널의 change 를 받아 저장한다 — 처리했으면 true(페이지가 다시 검사한다) */
+  handle:async function(e,site,c){
+    const t=e.target; if(!t||!t.closest) return false;
+    if(t.name==='cmWhere'){ GST.cmap.setWhere(t.value); return false; }
+    const s=t.closest('select[data-cmap],select[data-cmhi]'); if(!s) return false;
+    const box=s.closest('.gcm'), rb=box&&box.querySelector('input[name=cmWhere]:checked');
+    const field=s.dataset.cmhi?'__hi':s.dataset.cmap, w=rb?rb.value:GST.cmap.where();   // 패널이 대시보드 저장을 잠갔으면(권한 없음) 그 패널의 선택을 따른다
+    s.disabled=true;
+    try{ await GST.cmap.save(c,site,s.dataset.tbl,field,s.value,w); }
+    catch(err){ s.disabled=false; alert('열 맵핑 저장 실패: '+(err.message||err)); return false; }
+    return true;
+  }
 };
 GST._xml = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
 GST._colName = function(n){ let s=''; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); } return s; };

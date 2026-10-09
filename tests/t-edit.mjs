@@ -47,7 +47,9 @@ const BASE = 'http://127.0.0.1:' + srv.address().port;
    표 필터(eq·ilike·gte·lt·gt·is·in·like·or(and(...)))를 실제로 평가해 «찾은 행»을 돌려준다.
    RPC 는 SQL 과 같은 «응답 모양»만 흉내 낸다(의미는 t-editsql 소관). */
 function fake(seed) {
-  const DB = JSON.parse(JSON.stringify(seed.tables));
+  /* 서버는 하나다 — 데이터 관리 안에 뜬 업로드 화면(iframe · v151)도 «같은» 표를 본다(같은 출처라 부모의 것을 빌린다) */
+  let par = null; try { if (window.parent !== window && window.parent.__DB) par = window.parent.__DB; } catch (e) {}
+  const DB = par || JSON.parse(JSON.stringify(seed.tables));
   const LOG = window.__QLOG = [];
   const KEY = { sheet_wk:'src_row', sheet_mat:'src_row', sheet_inst:'src_row', sheet_alarm:'src_row', sheet_allbypass:'src_row',
                sheet_roster:'id', sheet_edu:'id', sheet_leave:'id', sheet_edits:'id' };
@@ -105,8 +107,16 @@ function fake(seed) {
       maybeSingle() { st.single = true; return q; },
       or(e) { st.or.push(e); return q; },
       in(c, v) { st.f.push([c, 'in', v]); return q; },
+      upsert(o) { st.ups = JSON.parse(JSON.stringify(o)); return q; },
+      delete() { st.del = true; return q; },
       then(res, rej) {
         LOG.push(JSON.parse(JSON.stringify(st)));
+        /* 열 맵핑 저장(colmap_site · v151) — (site, tbl, field) 가 열쇠 */
+        if (st.ups) { const o = st.ups, T = (DB[tbl] = DB[tbl] || []);
+          for (let i = T.length - 1; i >= 0; i--) if (T[i].site === o.site && T[i].tbl === o.tbl && T[i].field === o.field) T.splice(i, 1);
+          T.push(o); return Promise.resolve({ data:[o], error:null }).then(res, rej); }
+        if (st.del) { const T = DB[tbl] || [], d = T.filter(r => st.f.every(([c, op, v]) => test(r, c, op, v)));
+          DB[tbl] = T.filter(r => d.indexOf(r) < 0); return Promise.resolve({ data:d, error:null }).then(res, rej); }
         if (st.ins) { (DB[tbl] = DB[tbl] || []).push(...st.ins); return Promise.resolve({ data:null, error:null }).then(res, rej); }
         let rows = (DB[tbl] || []).filter(r => st.f.every(([c, op, v]) => test(r, c, op, v)) && st.or.every(e => splitTop(e).some(x => evalTerm(r, x))));
         if (st.order) rows = rows.slice().sort((a, b) => (st.asc ? 1 : -1) * cmp(a[st.order], b[st.order]));
@@ -353,6 +363,17 @@ function writeWb(wb, name, aoa, file) {
 }
 async function waitDlg(pg, re) {
   await pg.waitForFunction(r => { const h = document.querySelector('.mask .dlg-h'); return !!h && new RegExp(r).test(h.textContent); }, re.source, { timeout:10000 });
+}
+/* v151 — 이 화면에서 받은 양식(_meta)이 아니면 «열 맵핑 확인»이 먼저 뜬다. 넣는 방식을 고르고(기본 한 행씩) 확인 칸을 체크해 넘긴다. */
+async function passMap(pg, method) {
+  await pg.waitForFunction(() => !!document.querySelector('.mask .dlg-h'), null, { timeout:10000 }).catch(() => {});
+  if (!await pg.evaluate(() => /열 맵핑 확인/.test((document.querySelector('.mask .dlg-h') || {}).textContent || ''))) return false;
+  await pg.waitForFunction(() => !!document.querySelector('#cmSheet'), null, { timeout:10000 });
+  const r = await pg.$('input[name=cmMethod][value="' + (method || 'rows') + '"]'); if (r) await r.check();
+  if (await pg.$('#cmOk')) await pg.check('#cmOk');
+  await pg.click('.mask .btn.pri');
+  await pg.waitForFunction(() => !/열 맵핑 확인/.test((document.querySelector('.mask .dlg-h') || {}).textContent || ''), null, { timeout:10000 });
+  return true;
 }
 const dlgBody = pg => pg.$eval('.mask .dlg-b', e => e.innerText);
 const fakeHash = (pg, tbl, k) => pg.evaluate(([tbl, k]) => { const K = tbl === 'sheet_wk' ? 'src_row' : 'id';
@@ -788,7 +809,7 @@ console.log('[15] 엑셀 올리기 — 미리보기 · 반영');
   const fp = writeWb(wb, '인원현황', [H2, r2, r1, [], n1, n2, n3, n4].map(r => r.length ? r.concat(['']) : r), 'up1.xlsx');
   await qlog(pg);
   await pg.setInputFiles('#xfile', fp);
-  await waitDlg(pg, /미리보기/);
+  await passMap(pg); await waitDlg(pg, /미리보기/);
   const body = await dlgBody(pg);
   is(/수정 2행 · 3칸/.test(body) && /새 행 1/.test(body) && /변경 없음 1/.test(body) && /건너뜀 2/.test(body),
      '미리보기 — 수정 2행·3칸 · 새 행 1 · 변경 없음 1 · 건너뜀 2  [' + body.split('\n').slice(1, 2).join(' ') + ']');
@@ -820,7 +841,7 @@ console.log('[15b] 같은 파일을 다시 · 받은 뒤 바뀐 줄');
 {
   const pg = B.pg;
   await pg.setInputFiles('#xfile', path.join(TMP, 'up1.xlsx'));
-  await waitDlg(pg, /미리보기/);
+  await passMap(pg); await waitDlg(pg, /미리보기/);
   let body = await dlgBody(pg);
   is(/수정 0행/.test(body) && /새 행 0/.test(body) && /변경 없음 4/.test(body) && !/받은 뒤에 이 행이 바뀌었습니다/.test(body),
      '다시 올리면 들어간 줄은 «변경 없음» — 해시가 바뀌었어도 «충돌»로 읽지 않는다');
@@ -831,28 +852,28 @@ console.log('[15b] 같은 파일을 다시 · 받은 뒤 바뀐 줄');
   const wb = readWb(B.fp), A = aoaOf(wb, '인원현황'), H = A[0];
   A[3][H.indexOf('팀')] = 'T5';
   await pg.setInputFiles('#xfile', writeWb(wb, '인원현황', [H, A[3]], 'up2.xlsx'));
-  await waitDlg(pg, /미리보기/);
+  await passMap(pg); await waitDlg(pg, /미리보기/);
   body = await dlgBody(pg);
   is(/받은 뒤에 이 행이 바뀌었습니다/.test(body) && /수정 0행/.test(body), '받은 뒤 바뀐 행은 건너뛴다(덮지 않는다)');
   await pg.click('.mask .btn:not(.pri)'); await pg.waitForTimeout(150);
   /* 같은 행을 두 줄이 겨눈다(행번호 2 · 사원번호 9100002) → 어느 쪽이 맞는지 모르니 둘 다 건너뛴다 */
   const n5 = H.map(() => ''); n5[H.indexOf('사원번호')] = '9100002'; n5[H.indexOf('팀')] = 'TZ';
   await pg.setInputFiles('#xfile', writeWb(wb, '인원현황', [H, A[2], n5], 'up2b.xlsx'));
-  await waitDlg(pg, /미리보기/);
+  await passMap(pg); await waitDlg(pg, /미리보기/);
   body = await dlgBody(pg);
   is(/건너뜀 2/.test(body) && /다른 줄도 고칩니다/.test(body), '같은 행을 두 줄이 고치면 둘 다 건너뛴다');
   await pg.click('.mask .btn:not(.pri)'); await pg.waitForTimeout(150);
   /* 행번호만 남기고 다 비운 줄 — «지우려는» 손짓 → 그 행의 모든 칸을 지우지 않는다 */
   const wiped = A[2].map((v, i) => i ? '' : v);
   await pg.setInputFiles('#xfile', writeWb(wb, '인원현황', [H, wiped], 'up2c.xlsx'));
-  await waitDlg(pg, /미리보기/);
+  await passMap(pg); await waitDlg(pg, /미리보기/);
   body = await dlgBody(pg);
   is(/행번호만 남고 나머지 칸이 전부 비었습니다/.test(body) && /수정 0행/.test(body), '행번호만 남은 줄은 건너뛴다(행 전체를 지우지 않는다)');
   await pg.click('.mask .btn:not(.pri)'); await pg.waitForTimeout(150);
   /* 다른 표의 파일 — 겹치는 이름(사원번호·No) 몇 개만 맞는다 → 크게 알린다 */
   const ew = XL.utils.book_new();
   await pg.setInputFiles('#xfile', writeWb(ew, '교육', [['No', 'Site', '인원', '사원번호', 'Basic 교육완료일', 'Veteran 교육완료일'], ['1', 'Q1', 'Tester One', '9100001', '2025-01-02', '']], 'edu-like.xlsx'));
-  await waitDlg(pg, /미리보기/);
+  await passMap(pg); await waitDlg(pg, /미리보기/);
   body = await dlgBody(pg);
   is(/다른 표에서 받은 파일이 아닌지 확인하세요/.test(body), '열 대부분이 이 표에 없으면 «다른 표의 파일»인지 크게 묻는다');
   await pg.click('.mask .btn:not(.pri)'); await pg.waitForTimeout(150);
@@ -864,7 +885,7 @@ console.log('[16] 반영 순간의 충돌 — 묶음이 통째로 멈춘다');
   const wb = XL.utils.book_new();
   const fp = writeWb(wb, '아무시트', [['사원번호', '팀'], ['9100001', 'T5']], 'up3.xlsx');      // 행번호·_meta 없는 남의 엑셀
   await pg.setInputFiles('#xfile', fp);
-  await waitDlg(pg, /미리보기/);
+  await passMap(pg); await waitDlg(pg, /미리보기/);
   const body = await dlgBody(pg);
   is(/행번호」 열이 없어 «사원번호»로 행을 찾았습니다/.test(body) && /수정 1행/.test(body), '행번호 없는 엑셀도 받는다 — 사원번호로 «정확히 한 행»');
   await pg.evaluate(() => { window.__BULK_BEFORE = DB => { DB.sheet_roster.find(r => r.id === 1)['인사'] = '복직'; }; });
@@ -890,7 +911,7 @@ console.log('[17] 큰 표 — 업무 키 in(…) · Shift 범위 · 500줄씩 �
   const fp = writeWb(XL.utils.book_new(), '수선실적', rows, 'big.xlsx');
   await qlog(pg);
   await pg.setInputFiles('#xfile', fp);
-  await waitDlg(pg, /미리보기/);
+  await passMap(pg); await waitDlg(pg, /미리보기/);
   const body = await dlgBody(pg);
   is(/수정 1행/.test(body) && /새 행 1,001/.test(body), '실적코드가 «한 행»이면 그 행을 · 없으면 새 행 (수정 1 · 새 행 1,001)');
   is(/500줄씩 3번에 나눠/.test(body), '500줄 넘으면 나눠 넣는다고 적는다');
@@ -1124,7 +1145,7 @@ console.log('[20] 구분 — 국내·해외·미상 (대시보드 정본 판정 
   const nw = H.map(() => ''); nw[at('운영단위 (시트)')] = 'K운영'; nw[at('SEQP S/N')] = 'ZZA-0444'; nw[at('Occur Time')] = '2026-06-01 06:00';
   await qlog(pg);
   await pg.setInputFiles('#xfile', writeWb(wbA, '알람', [H, r0, r2, nw], 'alarm-up.xlsx'));
-  await waitDlg(pg, /미리보기/);
+  await passMap(pg); await waitDlg(pg, /미리보기/);
   const body = await dlgBody(pg);
   is(/수정 1행/.test(body) && /새 행 1/.test(body) && /건너뜀 1/.test(body) && /운영단위\(op\)는 새 행에서만/.test(body), '미리보기 — 수정 1 · 새 행 1 · 운영단위를 고친 줄은 건너뜀 (이유와 함께)');
   await pg.click('.mask .btn.pri'); await pg.waitForTimeout(600);
@@ -1302,7 +1323,7 @@ console.log('[23] 새 행 — 설비부터 고른다 · 국내·해외 출처 �
     nr('ZZQ-9999', 'RS-B-0003', '2026-07-04'), nr('ZZT-0007', 'RS-B-0004', '2026-07-05'), nr('', 'RS-B-0005', '2026-07-06')], 'blank-wk.xlsx');
   await qlog(pg);
   await pg.setInputFiles('#xfile', fpB);
-  await waitDlg(pg, /미리보기/);
+  await passMap(pg); await waitDlg(pg, /미리보기/);
   const body = await dlgBody(pg);
   is(/새 행 5/.test(body) && /설비 칸 자동 채움 — 새 행 3줄 · 27칸 · 못 채운 2줄/.test(body), '미리보기 — 자동 채움 3줄 · 27칸 · 못 채운 2줄 [' + (body.match(/설비 칸 자동 채움[^\n]*/) || [''])[0] + ']');
   is(/설치현황에도 수선실적에도 없는 S\/N 입니다\(ZZQ-9999\)/.test(body) && /S\/N 이 비어 있습니다/.test(body), '못 채운 줄마다 까닭 — 모르는 S/N · S/N 빈칸');
@@ -1330,7 +1351,7 @@ console.log('[23] 새 행 — 설비부터 고른다 · 국내·해외 출처 �
   const mr = (rs, sn, d) => { const r = HM.map(() => ''); r[cm('rs_code')] = rs; r[cm('sn')] = sn; r[cm('work_date')] = d; r[cm('mat_code')] = 'MC-9'; r[cm('qty')] = '1'; return r; };
   await qlog(pg);
   await pg.setInputFiles('#xfile', writeWb(wbM, '자재실적', [HM, mr('RS-K-0002', '', '2026-07-05'), mr('RS-NOPE', 'ZZW-0201', '2026-07-06'), mr('RS-DUP', '', '2026-07-07')], 'blank-mat.xlsx'));
-  await waitDlg(pg, /미리보기/);
+  await passMap(pg); await waitDlg(pg, /미리보기/);
   const mb = await dlgBody(pg);
   const wq = sel(await qlog(pg), 'sheet_wk').filter(x => x.f.some(f => f[0] === 'rs_code' && f[1] === 'in'));
   is(wq.length === 1 && wq[0].count === true && wq[0].f.find(f => f[1] === 'in')[2].slice().sort().join() === 'RS-DUP,RS-K-0002,RS-NOPE', '수선실적번호는 in(…) 한 번 · count 로 «다 왔나»를 본다');
@@ -1444,6 +1465,89 @@ console.log('[24] 국내 데모 모드 — 데모 표만 · 국내 운영자 게
   const a24 = await open(krSeed(), '/edit/?site=KR');
   is(await a24.pg.$eval('#app', e => !e.hidden) && /관리자/.test(await a24.pg.$eval('#me', e => e.textContent)), '관리자(쓰기) — 데모 모드가 열린다');
   await a24.ctx.close();
+}
+
+console.log('[25] 남의 양식(중문 머리글·제목 줄) — 열 맵핑 확인 · 내장 사전 · 수동 지정 · 저장 위치 · 똑같은 행 · 원본 교체 (v151)');
+{
+  const s = seedOf({});
+  s.tables.sheet_leave = [{ id:1, '사원번호':'9100001', '이름':'Tester One', '소속':'F99-Set up', '항목':'特休假', '발생일':null, '휴가시작일':'2026/01/02',
+    '휴가시작시간':'09:00', '휴가종료일':'2026/01/02', '휴가종료시간':'18:00', '휴가신청시간':'8', '비고':'小時' }];
+  s.tables.colmap_site = [];
+  const { ctx, pg, pe } = await open(s);
+  /* 업로드 화면(오버레이 안)이 부르는 저장소 파일들 — 실제 배포처럼 로컬 파일로 준다. core 는 이음새가 붙은 위 경로가 맡는다. */
+  await ctx.route('**gstcsglobal-cloud.github.io/**', r => { const u = new URL(r.request().url()).pathname;
+    if (/\/assets\/core\.js/.test(u)) return r.fallback();
+    const f = path.join(ROOT, u); if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) return r.fulfill({ status:404, body:'nf' });
+    r.fulfill({ status:200, contentType:/\.js$/.test(f) ? 'application/javascript' : 'text/plain', body:fs.readFileSync(f) }); });
+  await pg.click('.tab[data-tab=leave]'); await pg.waitForTimeout(400);
+  const H = ['員工編號','姓名','部門','假勤項目','事件發生日','假勤開始日期','假勤開始時間','假勤結束日期','時數結束時間','請假時數','請假單位','',''];
+  const L1 = ['9100001','Tester One','F99-Set up','特休假','','2026/01/02','09:00','2026/01/02','18:00','8','小時'];   // 표에 이미 똑같은 행
+  const L2 = ['9100002','Tester Two','F99-Set up','事假','','2026/02/03','13:00','2026/02/03','17:00','4','小時'];
+  const L3 = ['9100003','Tester Three','F99-Set up','特休假','','2026/03/04','09:00','2026/03/05','18:00','2','天'];
+  const mk = (head, file) => { const wb = XL.utils.book_new();
+    XL.utils.book_append_sheet(wb, XL.utils.aoa_to_sheet([['No.','인사','이름(영문)'],['1','재직','Tester One']]), 'CS人員清單');   // 첫 시트는 남의 표
+    XL.utils.book_append_sheet(wb, XL.utils.aoa_to_sheet([['Update : 2026.10.3 (1/1-9/30)'], head, L1, L2, L3]), '근태请款');
+    const fp = path.join(TMP, file); fs.writeFileSync(fp, XL.write(wb, { type:'buffer', bookType:'xlsx' })); return fp; };
+  const head = () => pg.evaluate(() => (document.querySelector('.mask .dlg-h') || {}).textContent || '');
+  const cmBody = () => pg.$eval('#cmBody', e => e.innerText);
+  const fpA = mk(H, 'tw-leave.xlsx');
+  await pg.setInputFiles('#xfile', fpA);
+  await pg.waitForFunction(() => !!document.querySelector('#cmSheet'), null, { timeout:10000 });
+  let b = await cmBody();
+  is(/열 맵핑 확인/.test(await head()), '받은 양식이 아니면 «열 맵핑 확인»이 먼저 뜬다');
+  is(await pg.$eval('#cmSheet', e => e.value) === '근태请款', '시트는 «이 표와 가장 많이 맞는» 근태请款 (첫 시트를 집지 않는다)');
+  is(/머리글 2행/.test(b) && /표의 열 11\/11개를 찾았습니다/.test(b), '제목 줄(Update …)을 건너 2행이 머리글 · 11/11 열');
+  is((b.match(/자동\(내장 사전\)/g) || []).length === 11, '중문 머리글을 내장 사전으로 전부 알아본다 — ' + (b.match(/자동\(내장 사전\)/g) || []).length);
+  is(/小時/.test(await pg.$eval('#cmBody', e => [...e.querySelectorAll('tr')].find(r => /^비고/.test(r.innerText)).innerText)), '「請假單位」(小時·天)는 「비고」로 — 화면이 단위를 비고에서 읽는다');
+  is(await pg.evaluate(() => !!document.getElementById('cmOk') && document.querySelector('.mask .btn.pri').disabled), '자동 인식이 «깨끗하지 않으면» 확인 칸을 체크하기 전에는 «다음»이 잠긴다');
+  is(await pg.$eval('input[name=cmMethod][value=rows]', e => e.checked), '작은 파일은 «한 행씩»이 기본');
+  await pg.check('#cmOk'); await pg.click('.mask .btn.pri');
+  await waitDlg(pg, /미리보기/);
+  b = await dlgBody(pg);
+  is(/새 행 2/.test(b) && /똑같은 행이 있는 1줄은 넣지 않습니다/.test(b), '미리보기 — 새 행 2 · 표에 이미 있는 똑같은 줄 1은 넣지 않는다');
+  await pg.click('.mask .btn.pri'); await pg.waitForTimeout(800);
+  const lv = await pg.evaluate(() => window.__DB.sheet_leave.map(r => r['이름'] + '|' + r['비고'] + '|' + r['휴가신청시간']));
+  is(lv.length === 3 && lv.indexOf('Tester Three|天|2') >= 0, '반영 — 3행 · 天 단위가 비고에 들어간다 (' + lv.join(', ') + ')');
+  await pg.setInputFiles('#xfile', fpA);
+  await passMap(pg); await waitDlg(pg, /미리보기/);
+  b = await dlgBody(pg);
+  is(/새 행 0/.test(b) && /똑같은 행이 있는 3줄/.test(b), '같은 원본을 다시 올려도 두 번 들어가지 않는다');
+  await pg.click('.mask .btn:not(.pri)'); await pg.waitForTimeout(150);
+
+  /* 수동 지정 — 사전에 없는 머리글 · 저장 위치 둘 */
+  const H2 = H.slice(); H2[1] = '員工名稱';
+  await pg.setInputFiles('#xfile', mk(H2, 'tw-leave2.xlsx'));
+  await pg.waitForFunction(() => !!document.querySelector('#cmSheet'), null, { timeout:10000 });
+  b = await cmBody();
+  is(/못 찾음/.test(await pg.$eval('#cmBody', e => [...e.querySelectorAll('tr')].find(r => /^이름/.test(r.innerText)).innerText)), '사전에 없는 머리글 — 「이름」 못 찾음(필수)');
+  await pg.check('input[name=cmWhere][value=pc]');
+  await pg.selectOption('select[data-cmap="이름"]', '員工名稱');
+  await pg.waitForFunction(() => /지정 · 이 PC/.test(document.getElementById('cmBody').innerText), null, { timeout:5000 });
+  is(await pg.evaluate(() => JSON.parse(localStorage.getItem('gst_cmap:ALL:leave') || '{}')['이름'] === '員工名稱' && !window.__DB.colmap_site.some(r => r.field === '이름')),
+    '«이 PC 에만» — 이 브라우저(localStorage)에만 저장, 대시보드 표에는 안 쓴다');
+  await pg.check('input[name=cmWhere][value=db]');
+  await pg.selectOption('select[data-cmap="소속"]', '部門');
+  await pg.waitForFunction(() => /지정 · 공유/.test(document.getElementById('cmBody').innerText), null, { timeout:5000 });
+  is(await pg.evaluate(() => window.__DB.colmap_site.some(r => r.site === 'ALL' && r.tbl === 'leave' && r.field === '소속' && r.header === '部門')),
+    '«대시보드에 저장» — 업로드와 같은 열쇠(ALL · leave · 표 열 이름)로 colmap_site 에');
+
+  /* 원본으로 교체 — 업로드 화면을 이 안에 띄우고 같은 파일을 건넨다 */
+  await pg.check('input[name=cmMethod][value=replace]');
+  if (await pg.$('#cmOk')) await pg.check('#cmOk');
+  await pg.click('.mask .btn.pri');
+  await pg.waitForFunction(() => { const o = document.getElementById('upOv'); return o && !o.hidden; }, null, { timeout:5000 });
+  is(/embed=1/.test(await pg.$eval('#upFrame', e => e.src)) && /rid=leave/.test(await pg.$eval('#upFrame', e => e.src)), '교체 — 업로드 화면이 데이터 관리 «안»에 뜬다(embed · 표 미리 고름)');
+  let fr = null; for (let i = 0; i < 50 && !fr; i++) { fr = pg.frames().find(f => /\/upload\//.test(f.url())); if (!fr) await pg.waitForTimeout(100); }
+  await fr.waitForFunction(() => /표의 열 11\/11개를 파일에서 찾았습니다/.test((document.getElementById('chk') || {}).innerText || ''), null, { timeout:15000 }).catch(() => {});
+  const up = await fr.evaluate(() => ({ f:(document.getElementById('fsel').files[0] || {}).name, sh:document.getElementById('ssel').value, chk:document.getElementById('chk').innerText,
+    embed:document.body.classList.contains('embed'), h1:getComputedStyle(document.querySelector('h1')).display }));
+  is(up.f === 'tw-leave2.xlsx' && up.sh === '근태请款', '같은 파일·같은 시트를 넘겨받는다 (' + up.f + ' · ' + up.sh + ')');
+  is(/표의 열 11\/11개를 파일에서 찾았습니다/.test(up.chk) && /지정 · 이 PC/.test(up.chk) && /지정 · 공유/.test(up.chk), '데이터 관리에서 고른 맵핑을 업로드도 그대로 쓴다(이 PC · 공유 둘 다)'); 
+  is(up.embed && up.h1 === 'none', '안에서는 업로드 화면의 머리 설명을 숨긴다');
+  await pg.click('#upClose');
+  is(await pg.$eval('#upOv', e => e.hidden), '닫으면 오버레이가 사라진다');
+  is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
+  await ctx.close();
 }
 
 await browser.close();

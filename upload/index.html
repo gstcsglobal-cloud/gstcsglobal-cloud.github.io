@@ -7,33 +7,36 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=150"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=151"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{color:var(--txt,#e6edf3);background:var(--bg-gradient,#0b1118);background-size:400% 400%;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
+body{color:#1d2433;background:#F5F6F8;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
 h1{font-size:20px;margin-bottom:4px}
-.sub{font-size:12px;color:var(--mut,#8a97a5);margin-bottom:20px;line-height:1.6}
-.card{background:var(--glass,rgba(255,255,255,.05));border:1px solid var(--glassb,rgba(255,255,255,.1));border-radius:16px;padding:18px 20px;margin-bottom:14px;max-width:860px}
+.sub{font-size:12px;color:#5b6576;margin-bottom:20px;line-height:1.6}
+.card{background:#fff;border:1px solid #e4e7ec;border-radius:16px;padding:18px 20px;margin-bottom:14px;max-width:860px}
 .card h3{font-size:14px;margin-bottom:10px}
-select,input[type=file]{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:inherit;padding:9px 12px;font-size:13px;width:100%;max-width:480px}
-select option{background:#101820;color:#e6edf3}
-.btn{border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;padding:10px 22px;background:linear-gradient(90deg,var(--a1,#38bdf8),var(--a2,#34d399));color:#fff;margin-top:10px}
+select,input[type=file]{background:#fff;border:1px solid #d0d5dd;border-radius:10px;color:inherit;padding:9px 12px;font-size:13px;width:100%;max-width:480px}
+.btn{border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;padding:10px 22px;background:#2F6FED;color:#fff;margin-top:10px}
 .btn:disabled{opacity:.4;cursor:not-allowed}
-.btn.danger{background:linear-gradient(90deg,#e05252,#b83280)}
+.btn.danger{background:#d92d20}
 #chk,#log{font-size:12.5px;line-height:1.9;white-space:pre-wrap;word-break:break-all}
-.ok{color:#34d399}.warn{color:#fbbf24}.bad{color:#fb7185}
+.ok{color:#067647}.warn{color:#b54708}.bad{color:#d92d20}
 .big{font-size:14px;font-weight:800}
-a{color:var(--a1,#38bdf8)}
-/* 업로드 화면은 어두운 바탕이다 — 밝은 고정색을 쓰면 글씨가 안 보인다(v150 · 사용자 화면). 반투명 + 상속 색으로 두 바탕 모두 읽힌다. */
+a{color:#2F6FED}
+/* v151 — 데이터 관리(밝은 바탕) 안에 열리므로 같은 밝은 팔레트로 바꿨다(옛 어두운 바탕에서 맵핑 표가 안 읽혔다 · 사용자 화면).
+   반투명 + 상속 색이라 어느 바탕이든 읽힌다.
+   ?embed=1 — 데이터 관리 안에서는 머리 설명을 숨긴다(그 화면이 이미 설명한다). */
+body.embed{padding:12px 14px}body.embed>h1,body.embed>.sub{display:none}body.embed .card{max-width:none}
 .qa{margin:8px 0;padding:10px 12px;border:1px solid rgba(127,127,127,.35);border-radius:10px;background:rgba(127,127,127,.08);color:inherit}
 .qa select{background:rgba(127,127,127,.12);color:inherit;border:1px solid rgba(127,127,127,.45);border-radius:6px;padding:3px 6px;max-width:320px}
 .qa select option{color:#111;background:#fff}
 .qa summary{cursor:pointer}
 .qa-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}.qa-g{display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:7px;font-weight:800;color:#fff}
 .qa-g.ok{background:#16a34a}.qa-g.warn{background:#d97706}.qa-g.bad{background:#dc2626}
-.qa-t{border-collapse:collapse;font-size:12px}.qa-t td,.qa-t th{padding:2px 10px 2px 0;text-align:left}.qa-t tr.lo td{color:#f59e0b}
+.qa-t{border-collapse:collapse;font-size:12px}.qa-t td,.qa-t th{padding:2px 10px 2px 0;text-align:left}.qa-t tr.lo td{color:#b54708}
 .qa-bar{display:inline-block;width:90px;height:7px;border-radius:4px;background:rgba(127,127,127,.3);vertical-align:middle;overflow:hidden}.qa-bar i{display:block;height:100%;background:#2563eb}
 .qa-i{margin:6px 0 0 16px;padding:0;font-size:12px}.qa .muted{color:inherit;opacity:.7;font-size:12px}
+.cmok{display:inline-block;margin:8px 0;padding:8px 12px;border:1px solid #d97706;border-radius:8px;font-weight:600;cursor:pointer}
 </style>
 </head>
 <body>
@@ -48,11 +51,11 @@ window.GST && GST.needVer && GST.needVer(146);   // GST.sheetRows(v141 · 엑셀
 머리글은 시트에 있는 그대로 두세요. 시트가 여럿인 워크북은 아래에서 고를 수 있습니다.<br>
 <!-- 진단 화면은 여기서만 이어 준다 — 대시보드 탭에 넣으면 «매일 보는 화면»에 관리용 카드가 섞인다.
      대신 링크가 아무 데도 없으면 사람이 못 찾으므로, 데이터를 손대는 이 화면에 둔다. -->
-🔎 <a href="https://gstcsglobal-cloud.github.io/diag/" style="color:var(--a1,#38bdf8)">S/N 조인 진단</a>
+🔎 <a href="https://gstcsglobal-cloud.github.io/diag/" >S/N 조인 진단</a>
 — 실적이 설치현황에 <b>표기 차이로 안 붙는 건수</b>를 셉니다(읽기만 합니다).
 <!-- v144 — 관리자의 입구가 「데이터 관리」 하나로 합쳐졌다(셸 상단). 여기서 되돌아갈 길도 둔다. 데이터 관리는 admin 만 열리므로
      링크도 admin 에게만 보인다(사이트 담당자 editor 에게 보이면 눌러도 잠긴 문이다 — 셸의 오프라인 버튼과 같은 규율). -->
-<span id="toEdit" hidden><br>✏️ <a href="/edit/" target="gstEdit" style="color:var(--a1,#38bdf8)">데이터 관리</a>
+<span id="toEdit" hidden><br>✏️ <a href="/edit/" target="gstEdit" >데이터 관리</a>
 — 올라온 행 중 <b>몇 개만</b> 찾아 고칠 때(행 단위 · 이력이 남고 되돌릴 수 있습니다). 이 화면은 원본 파일을 <b>통째·기간 단위</b>로 갈아끼웁니다.</span></div>
 
 <div class="card">
@@ -86,7 +89,7 @@ window.GST && GST.needVer && GST.needVer(146);   // GST.sheetRows(v141 · 엑셀
   <!-- 워크북에 시트가 여럿이면 어느 것인지 사람이 골라야 한다. 첫 시트를 말없이 쓰면
        «표지» 나 «집계» 시트를 올리고도 성공한 줄 알게 된다. -->
   <div id="shrow" style="display:none;margin-top:10px">
-    <label class="sub">시트 <select id="ssel" onchange="checkFile()"></select></label>
+    <label class="sub">시트 <select id="ssel" onchange="sheetPicked()"></select></label>
   </div>
   <div id="chk" style="margin-top:10px"></div>
   <button class="btn" id="goBtn" disabled onclick="doUpload()">업로드 (기존 데이터를 이 파일로 교체)</button>
@@ -232,7 +235,7 @@ if(ROUTE&&ROUTE.demo){
     +'② 파일을 올리면 자동 검사 결과를 확인하고 「업로드」 — 데모 표 전체가 담당자 몫이라 «통째 교체»도 됩니다<br>'
     +'③ 국내 알람·올바는 같은 워크북의 «두 반쪽»입니다 — 안내가 뜨면 대상을 바꿔 <b>같은 파일로 한 번 더</b> 올립니다'
     /* 머리를 통째로 갈면 그 안의 「데이터 관리」 링크(#toEdit)도 사라진다 — 데모 데이터 관리로 가는 링크를 여기 다시 둔다 */
-    +'<span id="toEdit" hidden><br>✏️ <a href="/edit/?site=KR" target="gstEditKR" style="color:var(--a1,#38bdf8)">데이터 관리(국내 데모)</a>'
+    +'<span id="toEdit" hidden><br>✏️ <a href="/edit/?site=KR" target="gstEditKR" >데이터 관리(국내 데모)</a>'
     +' — 올라온 행 중 <b>몇 개만</b> 찾아 고칠 때(이력이 남고 되돌릴 수 있습니다).</span>';
 }else if(ROUTE){
   document.title=ROUTE.name+' 업로드 · CS Global Team';
@@ -451,6 +454,9 @@ window.checkFile=async function(){
     if(sel.dataset.keys!==names.join('\u001f')){
       sel.dataset.keys=names.join('\u001f');
       sel.innerHTML=names.map(function(n){ return '<option>'+GST._esc(n)+'</option>'; }).join('');
+      if(sel.dataset.want&&names.indexOf(sel.dataset.want)>=0){ sel.value=sel.dataset.want; }   // 데이터 관리에서 고른 시트(넘겨받은 것)
+      else if(names.length>1 && t.kind!=='xlsx') try{ sel.value=await bestSheet(await GST.db(),t,XLSX,wb,names); }catch(e){ console.warn('[upload] 시트 고르기', e); }
+      sel.dataset.want='';
     }
     $('shrow').style.display = names.length>1 ? '' : 'none';
     const pick = names.indexOf(sel.value)>=0 ? sel.value : names[0];
@@ -464,6 +470,7 @@ window.checkFile=async function(){
     const c=await GST.db(); if(!c)throw new Error('로그인이 필요합니다');
     const oldCount=await tableCount(c,t.table);
     let out, msgs=[], missing=[];
+    CM_NEED='';   // 맵핑을 사람이 확인해야 하는 까닭(빈 값이면 자동 인식이 깨끗하다) — 아래 «확인했습니다» 칸
     /* 표의 실제 컬럼 — 미러 경로에서 한 번 받아 아래 「비우기 전 대조」까지 같이 쓴다.
        두 번 물으면 그 사이에 답이 달라질 수 있고(콘솔에서 alter 하는 중), 그러면
        «담아 보낸 열»과 «검사한 열»이 갈린다. */
@@ -523,6 +530,7 @@ window.checkFile=async function(){
         const tbl=t.rid+':'+pair[1], ovr=await cmapLoad(c,site,tbl), S=cmapSpec(S0,ovr);
         const m=GST.SM.map(rr,S);
         panels.push(cmapHtml(S0,S,m,rr,ovr,site,tbl,pair[0]));
+        { const nO=Object.keys(ovr).filter(k=>k.slice(0,2)!=='__').length; if(nO) CM_NEED=(CM_NEED?CM_NEED+' · ':'')+pair[0]+' 지정 '+nO+'개'; }
         const b=GST.ALARM.build(rr,t.key,pair[1],S);
         if(b.err){ chkShow('<span class="bad">❌ '+GST._esc(pair[0])+' — '+GST._esc(b.err)+'</span><br>아래 «열 맵핑»에서 이 시트의 어느 머리글이 그 항목인지 골라 주세요 — 고르면 저장되고 바로 다시 검사합니다.'+panels.join('')); return; }
         skipTot+=b.skipped;
@@ -558,6 +566,7 @@ window.checkFile=async function(){
       const S=cmapSpec(GST.SM.SPEC[t.key],ovr);
       const m=GST.SM.map(rows,S);
       const panel=cmapHtml(GST.SM.SPEC[t.key],S,m,rows,ovr,site,t.rid);
+      { const nO=Object.keys(ovr).filter(k=>k.slice(0,2)!=='__').length; if(nO) CM_NEED='지정 '+nO+'개'; }
       if(!m.ok){ chkShow('<span class="bad">❌ 필수 열을 못 찾았습니다: '+GST._esc(m.miss.map(x=>x.split(' [')[0]).map(k=>cmapName(k,GST.SM.SPEC[t.key])).join(', '))
         +'</span><br>아래 «열 맵핑»에서 이 사이트 파일의 어느 머리글이 그 항목인지 골라 주세요 — 고르면 저장되고 바로 다시 검사합니다.'+panel); return; }
       msgs.push(panel);
@@ -624,21 +633,19 @@ window.checkFile=async function(){
         cols0=Object.keys(probe.data[0]);
       }
       const colOf={}; cols0.forEach(k=>{ if(!GST._CSV_SKIP[k])colOf[GST.SM.norm(k)]=k; });
-      /* 사이트별 열 맵핑(v150) — Import 표는 «표의 열 = 정본 이름»이다. 표의 열마다 파일의 어느 머리글을 쓸지
-         자동(이름 정규화 일치) 또는 지정(colmap_site · field=표 열 이름)으로 정한다. 판정 규칙은 GST.SM.norm 한 벌. */
-      const site=SITE||'ALL', ovr=await cmapLoad(c,site,t.rid), N=GST.SM.norm;
-      const tcols=Object.values(colOf), ovrN={}; Object.keys(ovr).forEach(k=>{ ovrN[N(ovr[k])]=1; });
-      // 머리글 행 — 0행이 기본(Import 규약). 0행이 아무 열과도 안 맞으면 앞 15줄 중 가장 많이 맞는 줄을 쓴다(사이트 양식의 제목 줄).
-      const hits=r=>(r||[]).filter(x=>{ const h=N(String(x==null?'':x)); return h&&(colOf[h]||ovrN[h]); }).length;
-      let hi=0; if(!hits(rows[0])){ let bn=0; rows.slice(0,15).forEach((r,k)=>{ const n=hits(r); if(n>bn){bn=n;hi=k;} }); }
-      const header=(rows[hi]||[]).map(x=>String(x==null?'':x).trim());
-      const at={}; header.forEach((h,k)=>{ const n=N(h); if(n&&at[n]==null) at[n]=k; });
-      const idxOf={}; tcols.forEach(col=>{ const o=ovr[col]; idxOf[col]=(o&&at[N(o)]!=null)?at[N(o)]:(at[N(col)]!=null?at[N(col)]:-1); });
+      /* 사이트별 열 맵핑(v150 · v151 core) — Import 표는 «표의 열 = 정본 이름»이다. 표의 열마다 파일의 어느 머리글을 쓸지
+         자동(이름 정규화 일치 · 내장 사전 GST.CMAP_ALIAS) 또는 지정(field=표 열 이름)으로 정한다. 판정은 GST.cmap.match 한 벌 —
+         데이터 관리의 「엑셀 올리기」도 같은 함수를 지난다. 머리글 행은 제목 줄을 건너 «가장 많이 맞는 줄»(또는 사람이 고른 줄). */
+      const site=SITE||'ALL', ovr=await cmapLoad(c,site,t.rid);
+      const tcols=Object.values(colOf);
+      const M=GST.cmap.match(rows,tcols,ovr,GST.CMAP_ALIAS[t.rid]);
+      const hi=M.hi, idxOf=M.idx, unknown=M.unknown;
       const used=new Set(Object.values(idxOf).filter(k=>k>=0));
-      const unknown=header.filter((h,k)=>h&&!used.has(k));
-      const panel=cmapTable({items:tcols.map(col=>({k:col,label:col,req:false,idx:idxOf[col]})), H:header, hi:hi,
-        hiFound:hits(rows[hi])>0, ovr:ovr, site:site, tbl:t.rid, unknown:unknown, missTxt:'파일에 없음 → 빈 값', open:unknown.length>0});
+      const panel=cmapTable({items:tcols.map(col=>({k:col,label:col,req:false,idx:idxOf[col],via:M.via[col]})), H:M.header, rows:rows, hi:hi,
+        hiFound:M.hiFound, hiSel:true, ovr:ovr, site:site, tbl:t.rid, unknown:unknown, missTxt:'파일에 없음 → 빈 값', open:true});
       if(!used.size){ chkShow('<span class="bad">❌ 표의 열과 맞는 머리글이 하나도 없습니다</span><br>다른 양식의 파일이면 아래 «열 맵핑»에서 표의 열마다 이 파일의 머리글을 골라 주세요 — 고르면 저장되고 바로 다시 검사합니다.'+panel); return; }
+      { const nA=Object.values(M.via).filter(v=>v==='alias').length, nO=Object.values(M.via).filter(v=>v==='ovr').length, nMiss=tcols.filter(col=>idxOf[col]<0).length;
+        CM_NEED=[nO?'지정 '+nO+'개':'', nA?'내장 사전으로 잡은 열 '+nA+'개':'', nMiss?'못 찾은 표 열 '+nMiss+'개':'', unknown.length?'올리지 않는 파일 열 '+unknown.length+'개':''].filter(Boolean).join(' · '); }
       msgs.push(panel);
       /* 표에 자리가 없는 파일 열은 «막지 않고» 올리지 않는다 — 대신 조용하지 않게 목록으로 밝힌다(위 패널 · 이 줄).
          예전에는 하나라도 있으면 통째로 막아, 사이트마다 열이 하나씩 더 붙은 양식이 매번 멈췄다. */
@@ -818,9 +825,13 @@ window.checkFile=async function(){
     }
     const shrink=!win&&!add&&oldCount>100&&out.length<oldCount/2;
     if(shrink)msgs.push('<span class="bad big">⚠ 파일이 기존의 절반도 안 됩니다 — 잘린 파일이 아닌지 확인하세요. 그래도 진행하면 기존 데이터가 이 파일로 줄어듭니다.</span>');
+    /* 맵핑을 «사람이» 확인했다는 표시 — 자동 인식이 깨끗하지 않으면(지정·내장 사전·못 찾음·버리는 열) 확인 전에는 못 올린다.
+       사용자: 「업로더가 열 맵핑이 잘 되는지 확인·검증도 해야」. 매달 같은 양식이 그대로 맞으면 묻지 않는다. */
+    if(CM_NEED) msgs.push('<label class="cmok"><input type="checkbox" id="cmOk"> 위 «열 맵핑»의 예시 값을 보고 맞게 잡힌 것을 확인했습니다 <span class="muted">('+GST._esc(CM_NEED)+')</span></label>');
     chkShow(msgs.join('<br>'));
     PREP={t,rows:out,oldCount,shrink,win,add,missing,killOther,dup,qa};
-    $('goBtn').disabled=false;
+    $('goBtn').disabled=!!CM_NEED;
+    if(CM_NEED) $('cmOk').onchange=function(){ $('goBtn').disabled=!this.checked; };
     $('goBtn').className='btn'+(shrink?' danger':'');
   }catch(e){ chkShow('<span class="bad">❌ '+String(e.message||e).replace(/\n/g,'<br>')+'</span>'); }
 };
@@ -926,86 +937,49 @@ function qaHtml(q){
   if(q.by.length>1) h+='<div class="muted" style="margin-top:4px">사이트별 중요 열 입력률: '+q.by.slice(0,8).map(b=>E(b.v)+' <b>'+b.fill+'%</b>').join(' · ')+'</div>';
   return h+'</div>';
 }
-/* ---------- 사이트별 열 맵핑 (v149 · 사용자 요청) ----------
-   사이트마다 양식이 달라 같은 항목이 다른 머리글·다른 열에 있다. 자동 인식(SPEC 별칭)이 무엇을
-   어느 열로 잡았는지 «보여 주고», 틀렸거나 못 찾았으면 사람이 «이 사이트는 이 머리글»이라고 지정한다.
-   ⚠ 저장하는 것은 열 번호가 아니라 «머리글 이름»이다(제1원칙) — 열이 하나 끼어들어도 계속 맞는다.
-   ⚠ 지정은 별칭 배열의 «맨 앞»에 얹을 뿐이다 — 판정 규칙(GST.SM.map)은 그대로 한 벌이다(제2원칙).
-   지정한 머리글이 파일에 없으면 자동 인식으로 돌아가고 표에 「지정 머리글 없음」이라 적는다. */
-let CMAP_CACHE={}, UP_CANW=false;
-async function cmapLoad(c,site,rid){
-  const k=site+'|'+rid; if(CMAP_CACHE[k]) return CMAP_CACHE[k];
-  const o={};
-  try{ const r=await c.from('colmap_site').select('field,header').eq('site',site).eq('tbl',rid);
-       if(!r.error) (r.data||[]).forEach(x=>{ o[x.field]=x.header; });
-       else console.warn('[upload] 열 맵핑 읽기 실패 (setup-18 미적용?)', r.error.message); }
-  catch(e){ console.warn('[upload] 열 맵핑 읽기 실패', e); }
-  return CMAP_CACHE[k]=o;
-}
-function cmapSpec(S0,ovr){
-  const fields={}, N=GST.SM.norm;
-  Object.keys(S0.fields).forEach(k=>{ const a=[].concat(S0.fields[k]); fields[k]=ovr[k]?[ovr[k]].concat(a):a; });
-  // 헤더 행을 찾는 힌트도 지정 머리글로 바꿔 준다 — 힌트 이름 자체가 다른 양식이면 머리글 행을 못 찾는다
-  const hints=(S0.hints||[]).map(h=>{ const k=Object.keys(ovr).find(f=>[].concat(S0.fields[f]).some(a=>N(a)===N(h))); return k?ovr[k]:h; });
-  return Object.assign({},S0,{fields:fields,hints:hints});
-}
-function cmapCol(i){ let s=''; i++; while(i>0){ const r=(i-1)%26; s=String.fromCharCode(65+r)+s; i=Math.floor((i-1)/26); } return s; }
+/* ---------- 사이트별 열 맵핑 (v149 · v151 에 core 로 옮겼다 — GST.cmap) ----------
+   데이터 관리의 「엑셀 올리기」와 «같은 함수·같은 저장소»를 쓴다 — 한쪽에서 고른 맵핑이 다른 쪽에서도 먹는다(제2원칙).
+   여기는 «이 화면의 맥락»(사이트 이름·권한)만 얹는다. */
+let UP_CANW=false, CM_NEED='';
+const cmapSite=()=>SITE||'ALL';
+async function cmapLoad(c,site,rid){ return (await GST.cmap.load(c,site,rid)).ovr; }
+const cmapSpec=(S0,ovr)=>GST.cmap.spec(S0,ovr);
 function cmapName(k,S0){ return (typeof QA_COL!=='undefined'&&QA_COL[GST._snake(k)])||(S0&&S0.fields&&S0.fields[k]?[].concat(S0.fields[k])[0]:k); }
-/* 머리글 행 — 찾았으면 그 행, 못 찾았으면 앞 15줄 중 «글자가 가장 많이 찬 줄»(고를 후보를 주기 위해서일 뿐) */
-function cmapGuessHi(rows,hi){ if(hi>=0) return hi; let best=0,bn=-1; rows.slice(0,15).forEach((r,i)=>{ const n=(r||[]).filter(v=>String(v==null?'':v).trim()).length; if(n>bn){bn=n;best=i;} }); return best; }
-/* 표 한 벌 — SPEC 표(실적·설치·알람 워크북)와 Import 표(교육·인원·휴가·CIP·ABP)가 같이 쓴다.
-   items=[{k, label, req, idx}] · H=그 파일의 머리글 행 · tbl=저장 열쇠(rid 또는 rid:시트태그) */
 function cmapTable(o){
-  const E=GST._esc, N=GST.SM.norm, H=o.H, ovr=o.ovr||{};
-  const opts=H.map((h,i)=>h?'<option value="'+E(h)+'">'+cmapCol(i)+' · '+E(h)+'</option>':'').join('');
-  const canW=UP_CANW;
-  let nMiss=0, nOvr=0;
-  const tr=o.items.map(it=>{
-    const k=it.k, i=it.idx, oh=ovr[k], oHit=oh && H.some(h=>N(h)===N(oh));
-    let st;
-    if(oh&&oHit){ st='<span class="ok">지정</span>'; nOvr++; }
-    else if(oh){ st='<span class="bad">지정 머리글 없음 → 자동</span>'; nOvr++; }
-    else if(i>=0) st='<span class="muted">자동</span>';
-    else if(it.req){ st='<span class="bad">못 찾음</span>'; nMiss++; }
-    else st='<span class="muted">'+(o.missTxt||'없음(선택)')+'</span>';
-    const got=i>=0?cmapCol(i)+' · '+E(H[i]||''):'—';
-    const sel='<select data-cmap="'+E(k)+'" data-tbl="'+E(o.tbl)+'"'+(canW?'':' disabled')+'><option value="">(자동 인식)</option>'
-      +(oh?opts.replace('value="'+E(oh)+'"','value="'+E(oh)+'" selected'):opts)+'</select>';
-    return '<tr'+(it.req&&i<0?' class="lo"':'')+'><td>'+E(it.label)+(it.req?' <b style="color:#dc2626">*</b>':'')+'</td><td>'+got+'</td><td>'+st+'</td><td>'+sel+'</td></tr>';
-  }).join('');
-  const siteL=o.site==='ALL'?'관리자 전체 화면':(ROUTE?ROUTE.name:o.site);
-  const extra=(o.unknown&&o.unknown.length)?'<div class="warn" style="margin-top:6px">⚠ 표에 자리가 없어 <b>올리지 않는</b> 파일 열 '+o.unknown.length+'개: '
-      +E(o.unknown.join(', '))+' — 이 중에 위 항목의 값이 있으면 오른쪽에서 그 머리글을 고르세요.</div>':'';
-  return '<details class="qa cmap"'+((nMiss||nOvr||o.open)?' open':'')+'><summary><b>열 맵핑'+(o.title?' — '+E(o.title):'')+'</b> <span class="muted">— '+E(siteL)
-    +' · 머리글 행 '+(o.hiFound?(o.hi+1)+'행':'못 찾음 (가장 찬 '+(o.hi+1)+'행을 후보로 보여 줍니다)')+' · 지정 '+nOvr+'개'+(nMiss?' · 필수 못 찾음 '+nMiss+'개':'')+'</span></summary>'
-    +'<div class="muted" style="margin:6px 0">자동으로 잡힌 열이 틀렸거나 못 찾았으면 오른쪽에서 이 사이트 파일의 머리글을 고르세요. '
-    +'고르면 «'+E(siteL)+'» 의 기본값으로 저장되어 다음 업로드부터 그대로 씁니다. 열 위치가 아니라 머리글 이름으로 기억합니다.'
-    +(canW?'':' <b>(이 계정은 지정을 바꿀 권한이 없습니다)</b>')+'</div>'
-    +'<table class="qa-t"><tr><th>항목</th><th>잡힌 열</th><th>상태</th><th>이 사이트 지정</th></tr>'+tr+'</table>'+extra+'</details>';
+  const r=GST.cmap._c[o.site+'|'+o.tbl]||{};
+  return GST.cmap.table(Object.assign({siteL:o.site==='ALL'?'관리자 전체 화면':(ROUTE?ROUTE.name:o.site), canDb:UP_CANW, src:r.src||{}}, o));
 }
 /* SPEC 표용 — 필수는 SPEC 의 opt 밖(판정 사본 없음) */
 function cmapHtml(S0,S,m,rows,ovr,site,tbl,title){
-  const opt=S0.opt||[], hi=cmapGuessHi(rows,m.hi);
+  const opt=S0.opt||[], hi=GST.cmap.guessHi(rows,m.hi);
   const keys=Object.keys(S0.fields).sort((a,b)=>(opt.indexOf(a)>=0)-(opt.indexOf(b)>=0));
   return cmapTable({items:keys.map(k=>({k:k,label:cmapName(k,S0),req:opt.indexOf(k)<0,idx:m.C[k]})),
-    H:(rows[hi]||[]).map(x=>String(x==null?'':x).trim()), hi:hi, hiFound:m.hi>=0, ovr:ovr, site:site, tbl:tbl, title:title});
+    H:(rows[hi]||[]).map(x=>String(x==null?'':x).trim()), rows:rows, hi:hi, hiFound:m.hi>=0, ovr:ovr, site:site, tbl:tbl, title:title});
 }
 document.addEventListener('change',async function(e){
-  const sel=e.target.closest&&e.target.closest('select[data-cmap]'); if(!sel) return;
-  const site=SITE||'ALL', tbl=sel.dataset.tbl, field=sel.dataset.cmap, hdr=sel.value;
-  sel.disabled=true;
-  try{
-    const c=await GST.db(); if(!c) throw new Error('로그인이 필요합니다');
-    let r;
-    if(hdr) r=await c.from('colmap_site').upsert({site:site,tbl:tbl,field:field,header:hdr,
-              updated_by:(GST._me&&GST._me.email)||null,updated_at:new Date().toISOString()}).select();
-    else    r=await c.from('colmap_site').delete().eq('site',site).eq('tbl',tbl).eq('field',field).select();
-    if(r.error) throw new Error(r.error.message);
-    if(hdr && !(r.data||[]).length) throw new Error('저장 권한이 없습니다');
-    delete CMAP_CACHE[site+'|'+tbl];
-    await window.checkFile();
-  }catch(err){ sel.disabled=false; alert('열 맵핑 저장 실패: '+(err.message||err)); }
+  if(!e.target.closest||!e.target.closest('#chk')) return;
+  if(await GST.cmap.handle(e, cmapSite(), await GST.db())) await window.checkFile();
 });
+/* 워크북에서 쓸 시트 — 사람이 고른 시트는 기억한다(__sheet). 고른 적이 없으면 «이 표의 열과 가장 많이 맞는 시트».
+   ⚠ 첫 시트를 집으면 안 된다 — 대만 근태 워크북은 첫 시트가 인원명단이고 휴가는 여섯 번째다(사용자 파일 실측). */
+async function bestSheet(c,t,XLSX,wb,names){
+  const saved=(await GST.cmap.load(c,cmapSite(),t.rid)).ovr.__sheet;
+  if(saved&&names.indexOf(saved)>=0) return saved;
+  let best=names[0], bn=0, cols=null, ovr=(await GST.cmap.load(c,cmapSite(),t.rid)).ovr;
+  if(t.kind==='import'){ cols=(await tableCols(c,t.table)||[]).filter(k=>!GST._CSV_SKIP[k]); if(!cols.length) return best; }
+  names.forEach(n=>{
+    const rr=GST.sheetRows(XLSX,wb.Sheets[n]); let sc=0;
+    if(t.kind==='import'){ const m=GST.cmap.match(rr,cols,ovr,GST.CMAP_ALIAS[t.rid]); if(m.hiFound) sc=Object.values(m.idx).filter(i=>i>=0).length; }
+    else { const m=GST.SM.map(rr,GST.cmap.spec(GST.SM.SPEC[t.key],ovr)); if(m.hi>=0) sc=Object.values(m.C).filter(i=>i>=0).length; }
+    if(sc>bn){ bn=sc; best=n; }
+  });
+  return best;
+}
+window.sheetPicked=async function(){
+  const t=TABLES[$('tsel').value], v=$('ssel').value;
+  if(t&&v) try{ await GST.cmap.save(await GST.db(),cmapSite(),t.rid,'__sheet',v,GST.cmap.where()); }catch(e){ console.warn('[upload] 시트 선택 저장 실패', e); }
+  checkFile();
+};
 async function uploadNote(c,extra){
   try{
     const P=PREP, f=$('fsel').files&&$('fsel').files[0];
@@ -1122,6 +1096,34 @@ window.doUpload=async function(){
   }
 };
 
+/* ---------- 데이터 관리 안에서 열린다 (v151 · 사용자: 「업로드에서 하는 기능들 자체를 데이터관리 화면이랑 통합」) ----------
+   ?embed=1 — 데이터 관리가 이 화면을 자기 안(오버레이)에 띄우고, 표(rid)와 파일을 건네준다. 사람은 파일을 한 번만 고른다.
+   ⚠ 적재 엔진(비우기·구간 교체·이어붙이기·행수 대조·덮어쓰기 경고)은 여기 «한 벌»뿐이다 — 데이터 관리에 같은 적재 코드를
+     또 짜면 두 경로가 다른 규칙으로 표를 비운다(제2원칙). 열 맵핑은 GST.cmap 한 벌이라 양쪽에서 고른 것이 그대로 이어진다. */
+const EMBED=new URLSearchParams(location.search).get('embed')==='1';
+if(EMBED) document.body.classList.add('embed');
+function pickRid(rid){
+  const i=TABLES.findIndex(t=>t.rid===rid);
+  if(i<0||!$('tsel').querySelector('option[value="'+i+'"]')) return false;   // 이 화면(사이트 경로)이 안 여는 표면 고르지 않는다
+  if($('tsel').value!==String(i)){ $('tsel').value=String(i); $('tsel').onchange(); }
+  return true;
+}
+{ const rid=new URLSearchParams(location.search).get('rid'); if(rid) pickRid(rid); }
+/* 적재 중인지 — 데이터 관리가 오버레이를 닫을 때 «올리는 중이면 멈추지 않게» 묻는다. 끝나면 알려 목록을 새로 읽게 한다. */
+{ const du=window.doUpload; window.doUpload=async function(){ window.UP_BUSY=true;
+    try{ return await du.apply(this,arguments); }
+    finally{ window.UP_BUSY=false; if(EMBED&&window.parent!==window) window.parent.postMessage({type:'gst-upload-done'},location.origin); } }; }
+window.addEventListener('message',function(e){
+  if(e.origin!==location.origin||!e.data||e.data.type!=='gst-upload-file') return;
+  const d=e.data;
+  if(d.rid&&!pickRid(d.rid)){ chkShow('<span class="bad">❌ 이 화면에서 올릴 수 없는 표입니다 ('+GST._esc(d.rid)+')</span>'); return; }
+  if(d.file && !$('fsel').disabled){
+    try{ const dt=new DataTransfer(); dt.items.add(d.file); $('fsel').files=dt.files; }
+    catch(err){ chkShow('<span class="bad">❌ 파일을 넘겨받지 못했습니다 — 아래 「파일」에서 다시 골라 주세요</span>'); return; }
+    if(d.sheet){ const sel=$('ssel'); sel.dataset.keys=''; sel.dataset.want=d.sheet; }
+    $('fsel').onchange();
+  }
+});
 /* 로그인 게이트 — 다른 페이지와 동일. 쓰기 권한(can_write)은 RLS 가 최종 판정한다. */
 GST.authGate().then(async()=>{
   try{ const p=await GST.sheetWrite('perm','1213453343');
@@ -1135,6 +1137,7 @@ GST.authGate().then(async()=>{
        else if(demo){ const te=$('toEdit'), a=te&&te.querySelector('a'); if(a){ a.href='/edit/?site=KR'; a.target='gstEditKR'; } if(te) te.hidden=false; }
        else if(GST.isAdmin && GST.isAdmin() && $('toEdit')) $('toEdit').hidden=false; }   // perm 경로가 등급(_me)을 채운다 — 모르면 관리자가 아니다(fail-closed)
   catch(e){}
+  if(EMBED&&window.parent!==window) window.parent.postMessage({type:'gst-upload-ready'},location.origin);   // 권한 판정 «뒤»에 — 그 전에 파일을 받으면 잠긴 칸에 들어간다
 });
 </script>
 </body>
