@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=150"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=151"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -188,6 +188,16 @@ table.rt th.ck input,table.rt td.ck input{width:15px;height:15px;cursor:pointer;
 .mask{position:fixed;inset:0;background:rgba(16,24,40,.45);z-index:1000;display:grid;place-items:center;padding:16px}
 .dlg{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-md);width:min(620px,100%);max-height:86vh;display:flex;flex-direction:column}
 .dlg.wide{width:min(980px,100%)}
+/* v151 — 열 맵핑 확인 · 업로드 오버레이 */
+.dlg.wide{width:min(1100px,100%)}
+.cmm{display:block;margin:6px 0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer;line-height:1.5}
+.cmm:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.cmok{display:block;margin:10px 0 0;padding:8px 10px;border:1px solid #d97706;border-radius:8px;font-weight:600;cursor:pointer}
+.upov{position:fixed;inset:0;z-index:900;background:var(--bg);display:flex;flex-direction:column}
+.upov[hidden]{display:none}
+.upov-h{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.upov-h .btn{margin-left:auto}
+.upov iframe{flex:1;border:0;width:100%;background:#F5F6F8}
 .dlg-h{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
 .dlg-b{padding:14px 18px;overflow:auto;font-size:12.5px;white-space:normal}
 .dlg-b p{margin-bottom:8px;color:var(--txt-2)}
@@ -1809,6 +1819,14 @@ const bulkKeys = t => t.dup ? [].concat(t.dup).filter(c => (S.cols[t.tbl] || [])
 const josa = (w, a, b) => { const ch = String(w).trim().slice(-1).charCodeAt(0); return w + ((ch >= 0xAC00 && ch <= 0xD7A3 && (ch - 0xAC00) % 28) ? a : b); };
 const stampL = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()); };
 const cut2 = (s, n) => { s = s == null ? '' : String(s); return s.length > n ? s.slice(0, n) + '…' : s; };
+/* 한 행의 «내용 서명» — 키 없는 표에서 «똑같은 행이 이미 있나»를 볼 때만 쓴다. sameVal 과 같은 눕힘(날짜 꼴·숫자 쉼표·공백). */
+function sigV(t, c, v){
+  v = v == null ? '' : String(v).trim(); if(!v) return '';
+  if(isDate(t, c)){ const d = normDate(v); if(d) return d.replace(/ 00:00:00$/, ''); }
+  if(isNum(t, c)){ const n = GST.numv(v); if(isFinite(n)) return String(n); }
+  return v;
+}
+const rowSig = (t, cols, r) => cols.map(c => sigV(t, c, r[c])).join('\u0001');
 /* 엑셀과 지금 값이 «같은가» — 표기만 다른 것은 같은 것으로 본다(이력이 소음이 되지 않게).
    날짜 2026-03-01 ≡ 2026-03-01 00:00:00 · 숫자 2,093 ≡ 2093 · 앞뒤 공백 무시 · 빈칸 ≡ null */
 function sameVal(t, c, v, cur){
@@ -1980,6 +1998,126 @@ async function inRows(t, col, vals){
 }
 
 $('xfile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if(f) bulkUp(f); });
+/* ---------- 남의 양식 올리기 — 열 맵핑 확인 · 원본 교체 (v151 · 사용자 요청) ----------
+   사용자: 「근태 시트 헤더가 중국말이라 맵핑이 전혀 안 되는 것 같다 … 업로드할 적에 업로더가 열 맵핑이 잘 되는지 확인·검증도 해야 되고,
+   안 되는 것은 수동으로 할 수 있어야 하고, 본인 PC 에만 할지 대시보드에 저장할지도 있어야」 + 「업로드 기능 자체를 데이터 관리와 통합」.
+   · 이 화면에서 받은 양식(숨김 시트 _meta)이 아니면 «열 맵핑 확인»을 먼저 거친다 — 시트·머리글 행·열마다 잡힌 머리글과 «예시 값».
+   · 맞추기·저장은 GST.cmap 한 벌(업로드 화면과 같은 함수·같은 저장소 · 저장 열쇠도 업로드의 rid) — 여기서 고른 맵핑이 업로드에서도 먹는다.
+   · 그다음 «넣는 방식»을 고른다: 한 행씩 반영(이력·되돌리기 · 지금까지의 엑셀 일괄) / 원본으로 교체(통째·기간 — 업로드 엔진).
+     ⚠ 교체는 이 화면이 하지 않는다 — 업로드 화면을 이 안에 띄워(?embed=1) 같은 파일을 건네준다. 적재 엔진을 두 벌 두면
+       두 경로가 다른 규칙으로 표를 비운다(제2원칙). */
+const UP_RID = { wk:'wk', mat:'mat', inst:'inst', roster:'roster', edu:'edu', leave:'leave', alarm:'alarm', abp:'abp2kr' };
+const cmSite = () => KR ? 'KR' : 'ALL';
+/* 저장 열쇠 — 업로드와 같다. 원장은 «시트 태그»별(K·P·H 양식이 다르다 · 이름 규칙이 없는 시트는 해외 OS). */
+function cmKey(t, sheet){
+  if(t.ledger){
+    const m = /^([KPH])운영/i.exec(String(sheet || '').trim()), tag = m ? m[1].toUpperCase() : 'OS';
+    const rid = t.id === 'abp' ? (tag === 'OS' ? 'abp2os' : 'abp2kr') : 'alarm';
+    return { rid:rid, tbl:rid + ':' + tag };
+  }
+  const rid = UP_RID[t.id] || t.id; return { rid:rid, tbl:rid };
+}
+/* 표의 열 → 저장 항목 이름. 미러·원장은 SPEC 필드(업로드가 그 이름으로 저장한다) · Import 표는 열 이름 그대로. */
+function cmField(t, c){ const sp = t.spec && GST.SM.SPEC[t.spec]; return (sp && Object.keys(sp.fields).find(k => GST._snake(k) === c)) || c; }
+async function mapDlg(t, XLSX, wb, file, cols, hm){
+  const names = (wb.SheetNames || []).filter(n => n !== '_meta' && n !== '안내');
+  if(!names.length){ snack('워크북에 시트가 없습니다', {err:true}); return null; }
+  const rowsOf = (cache => n => cache[n] || (cache[n] = GST.sheetRows(XLSX, wb.Sheets[n])))({});
+  const F = {}; cols.forEach(c => { F[c] = cmField(t, c); });
+  const keys = cols.map(c => F[c]);
+  /* 자동 인식의 이름 — 이 화면 양식의 머리글·열 이름·SPEC 별칭(headMap) + 내장 사전(GST.CMAP_ALIAS) */
+  const alias = {}; keys.forEach(k => { alias[k] = []; });
+  hm.forEach((c, k) => { if(alias[F[c]]) alias[F[c]].push(k); });
+  const ca = GST.CMAP_ALIAS[cmKey(t, '').rid] || {};
+  Object.keys(ca).forEach(c => { const k = F[c] || c; if(alias[k]) alias[k] = alias[k].concat(ca[c]); });
+  const need = new Set([].concat.apply([], t.need.map(n => [].concat(n))));
+  const run = async n => { const K = cmKey(t, n), L = await GST.cmap.load(C, cmSite(), K.tbl); return { K:K, L:L, M:GST.cmap.match(rowsOf(n), keys, L.ovr, alias) }; };
+  /* 시트 — 기억한 시트(__sheet) → 이 표의 열과 가장 많이 맞는 시트. ⚠ 첫 시트를 집지 않는다(대만 근태 워크북은 휴가가 여섯 번째 시트다). */
+  let sheet = (await GST.cmap.load(C, cmSite(), cmKey(t, '').rid)).ovr.__sheet;
+  if(names.indexOf(sheet) < 0){
+    let bn = -1; sheet = names[0];
+    for(const n of names){ const r = await run(n); const sc = r.M.hiFound ? Object.values(r.M.idx).filter(i => i >= 0).length : 0; if(sc > bn){ bn = sc; sheet = n; } }
+  }
+  let method = null;
+  const p = dialog('엑셀 올리기 — 열 맵핑 확인 · ' + t.name, '<div id="cmBody">읽는 중…</div>',
+    [{l:'취소', v:false}, {l:'다음', v:true, cls:'pri'}], true);
+  const box = dialog.last, body = box.querySelector('#cmBody'), next = box.querySelector('.btn.pri');
+  let cur = null;
+  const draw = async () => {
+    cur = await run(sheet);
+    const M = cur.M, rows = rowsOf(sheet), nData = rows.slice(M.hi + 1).filter(r => (r || []).some(v => String(v == null ? '' : v).trim() !== '')).length;
+    const pk = M.header.some(h => GST.SM.norm(h) === NK);
+    const unknown = M.unknown.filter(h => GST.SM.norm(h) !== NK);
+    const nMap = Object.values(M.idx).filter(i => i >= 0).length;
+    if(method == null) method = (!pk && nData >= 100) ? 'replace' : 'rows';   // 행번호 없는 큰 파일은 대개 «그 기간 전체» — 교체가 맞다
+    const vias = Object.values(M.via), why = [
+      vias.filter(v => v === 'ovr').length ? '지정 ' + vias.filter(v => v === 'ovr').length + '개' : '',
+      vias.filter(v => v === 'alias').length ? '내장 사전 ' + vias.filter(v => v === 'alias').length + '개' : '',
+      unknown.length ? '표에 없는 파일 열 ' + unknown.length + '개' : '',
+      cols.filter(c => need.has(c) && M.idx[F[c]] < 0).length ? '필수 못 찾음 ' + cols.filter(c => need.has(c) && M.idx[F[c]] < 0).length + '개' : ''].filter(Boolean);
+    const upOk = !!UP_RID[t.id] || !!t.ledger;
+    body.innerHTML = '<p>파일 「' + esc(file.name) + '」 · 시트 <select id="cmSheet">' + names.map(n => '<option' + (n === sheet ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select>'
+      + ' · 데이터 <b>' + nData.toLocaleString() + '</b>줄 · 표의 열 ' + nMap + '/' + keys.length + '개를 찾았습니다</p>'
+      + (nMap ? '' : '<p class="wn" style="color:var(--bad)">⚠ 이 시트에서 표의 열과 맞는 머리글을 하나도 못 찾았습니다 — 다른 시트가 아닌지 보거나, 아래에서 열마다 머리글을 골라 주세요.</p>')
+      + GST.cmap.table({ items:cols.map(c => ({ k:F[c], label:label(t, c).name, req:need.has(c), idx:M.idx[F[c]], via:M.via[F[c]] })),
+          H:M.header, rows:rows, hi:M.hi, hiFound:M.hiFound, hiSel:true, ovr:cur.L.ovr, src:cur.L.src, tbl:cur.K.tbl, title:sheet,
+          siteL:KR ? '국내 데모' : '관리자', canDb:true, unknown:unknown, missTxt:'파일에 없음', open:true })
+      + '<h4 style="margin-top:12px">넣는 방식</h4>'
+      + '<label class="cmm"><input type="radio" name="cmMethod" value="rows"' + (method === 'rows' ? ' checked' : '') + '> <b>한 행씩 반영</b> — 「' + BULK_KEY + '」(또는 키)로 찾은 행은 고치고, 나머지는 새 행으로 넣습니다. '
+      + (bulkKeys(t).length ? '' : '표에 이미 똑같은 행은 넣지 않습니다. ') + '모든 줄이 이력에 남고 되돌릴 수 있습니다. <span class="hint">— 몇 줄 고치거나 보탤 때</span></label>'
+      + (upOk ? '<label class="cmm"><input type="radio" name="cmMethod" value="replace"' + (method === 'replace' ? ' checked' : '') + '> <b>원본으로 교체</b> — 이 파일로 표를 통째(또는 겹치는 기간만) 갈아끼웁니다. '
+      + '파일에서 빠진 행은 표에서도 빠집니다. <span class="hint">— 그 기간 전체를 새로 받은 원본일 때</span></label>' : '')
+      + (why.length ? '<label class="cmok"><input type="checkbox" id="cmOk"> 위 «예시 값»을 보고 맞게 잡힌 것을 확인했습니다 <span class="hint">(' + esc(why.join(' · ')) + ')</span></label>' : '');
+    next.disabled = !nMap || (why.length && !box.querySelector('#cmOk').checked);
+    next.textContent = method === 'replace' ? '다음 — 교체 검사' : '다음 — 미리보기';
+  };
+  box.addEventListener('change', async e => {
+    if(e.target.id === 'cmSheet'){ sheet = e.target.value; method = null;
+      try{ await GST.cmap.save(C, cmSite(), cmKey(t, '').rid, '__sheet', sheet, GST.cmap.where()); }catch(err){ console.warn('[edit] 시트 기억 실패', err); }
+      return draw(); }
+    if(e.target.name === 'cmMethod'){ method = e.target.value; next.textContent = method === 'replace' ? '다음 — 교체 검사' : '다음 — 미리보기'; return; }
+    if(e.target.id === 'cmOk'){ next.disabled = !e.target.checked; return; }
+    if(await GST.cmap.handle(e, cmSite(), C)) await draw();
+  });
+  try{ await draw(); }catch(e){ body.innerHTML = '<p class="wn">' + esc(e.message || e) + '</p>'; }
+  if((await p) !== true || !cur) return null;
+  const M = cur.M, at = {};
+  cols.forEach(c => { if(M.idx[F[c]] >= 0) at[c] = M.idx[F[c]]; });
+  return { method:method, rid:cur.K.rid, sheet:sheet, pick:{ name:sheet, rows:rowsOf(sheet), hi:M.hi, at:at, unknown:M.unknown.filter(h => GST.SM.norm(h) !== NK) } };
+}
+/* 업로드 화면을 이 안에 띄운다 — 적재 엔진은 그 화면 한 벌이다. 파일을 넘겨받을 준비가 되면(gst-upload-ready) 건넨다. */
+let UPV = null;
+function openUp(o){
+  o = o || {};
+  if(!UPV){
+    const d = document.createElement('div'); d.id = 'upOv'; d.className = 'upov';
+    d.innerHTML = '<div class="upov-h"><b>원본 파일 올리기</b><span class="hint"> — 표를 통째·기간 단위로 갈아끼웁니다 · 열 맵핑은 「엑셀 올리기」와 같은 것을 씁니다</span>'
+      + '<button type="button" class="btn" id="upClose">닫기</button></div><iframe id="upFrame" title="원본 파일 올리기"></iframe>';
+    document.body.appendChild(d);
+    UPV = { el:d, fr:d.querySelector('#upFrame'), pend:null, done:false };
+    d.querySelector('#upClose').onclick = () => {
+      const w = UPV.fr.contentWindow;
+      if(w && w.UP_BUSY && !confirm('올리는 중입니다 — 닫으면 진행이 끊길 수 있습니다. 닫을까요?')) return;
+      d.hidden = true; UPV.fr.src = 'about:blank';
+      if(UPV.done){ UPV.done = false; S.all = {}; if(S.qf) runSearch(); snack('표가 바뀌었습니다 — 목록을 다시 읽었습니다', {ms:3000}); }
+    };
+    window.addEventListener('message', e => {
+      if(e.origin !== location.origin || !UPV || e.source !== UPV.fr.contentWindow || !e.data) return;
+      if(e.data.type === 'gst-upload-ready' && UPV.pend){ UPV.fr.contentWindow.postMessage(Object.assign({type:'gst-upload-file'}, UPV.pend), location.origin); UPV.pend = null; }
+      if(e.data.type === 'gst-upload-done') UPV.done = true;
+    });
+  }
+  const q = new URLSearchParams({ embed:'1' });
+  if(KR) q.set('site', 'KR');
+  if(o.rid) q.set('rid', o.rid);
+  UPV.pend = o.file ? { rid:o.rid, file:o.file, sheet:o.sheet || '' } : null;
+  UPV.el.hidden = false;
+  UPV.fr.src = '/upload/?' + q.toString();
+}
+/* 머리의 「원본 파일 올리기」도 새 창이 아니라 이 안에서 연다 — 지금 보는 탭의 표를 골라 둔다(v151 · 통합).
+   Ctrl·가운데 클릭은 지금까지처럼 새 창(링크 그대로) — 두 화면을 나란히 보고 싶은 사람의 길을 막지 않는다. */
+{ const up = document.getElementById('toUpload');
+  if(up) up.addEventListener('click', e => { if(e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault(); openUp({ rid:UP_RID[TAB().id] }); }); }
 async function bulkUp(file){
   const t = TAB();
   let XLSX, wb;
@@ -1995,8 +2133,19 @@ async function bulkUp(file){
   }
   if(!S.cols[t.tbl]){ try{ await loadCols(t); }catch(e){ snack(e.message, {err:true}); return; } }
   const cols = bulkCols(t), hm = headMap(t, cols);
-  const pick = pickSheet(XLSX, wb, hm);
-  if(!pick){ snack('이 파일에서 「' + t.name + '」 머리글을 찾지 못했습니다 — 「엑셀로 받기」로 받은 양식에 고쳐 올리세요', {err:true, ms:8000}); return; }
+  let pick;
+  if(meta){
+    /* 이 화면에서 받은 양식(_meta) — 머리글이 정확히 맞물린다. 맵핑 확인 없이 바로 미리보기로. */
+    pick = pickSheet(XLSX, wb, hm);
+    if(!pick){ snack('이 파일에서 「' + t.name + '」 머리글을 찾지 못했습니다 — 머리글 줄을 지우거나 바꾸지 않았는지 확인하세요', {err:true, ms:8000}); return; }
+  }else{
+    /* 그 밖의 파일(사이트 자체 양식 · 다른 언어 머리글) — 열 맵핑을 «사람이 확인»하고 넣는 방식을 고른다(v151) */
+    $('snack').className = '';
+    const r = await mapDlg(t, XLSX, wb, file, cols, hm);
+    if(!r) return;
+    if(r.method === 'replace'){ openUp({ rid:r.rid, file:file, sheet:r.sheet }); return; }
+    pick = r.pick;
+  }
   let P;
   try{ P = await bulkPlan(t, pick, meta, hm, file.name); }
   catch(e){ snack(e.message, {err:true}); return; }
@@ -2008,7 +2157,9 @@ async function bulkUp(file){
 async function bulkPlan(t, pick, meta, hm, fname){
   const hdr = pick.rows[pick.hi] || [], at = {}, unknown = [], twice = [];
   let pkAt = -1;
-  hdr.forEach((h, j) => {
+  /* 열 맵핑 확인을 거친 파일 — 사람이 확인한 «열 → 머리글»을 그대로 쓴다(여기서 다시 맞추면 확인한 것과 다른 열이 들어간다) */
+  if(pick.at){ Object.assign(at, pick.at); [].push.apply(unknown, pick.unknown || []); hdr.forEach((h, j) => { if(GST.SM.norm(h) === NK) pkAt = j; }); }
+  else hdr.forEach((h, j) => {
     const k = GST.SM.norm(h); if(!k) return;
     if(k === NK){ pkAt = j; return; }
     const c = hm.get(k);
@@ -2063,6 +2214,14 @@ async function bulkPlan(t, pick, meta, hm, fname){
   const claim = new Map();
   lines.forEach(L => { if(!L.bad && L.key != null) claim.set(L.key, (claim.get(L.key) || 0) + 1); });
   lines.forEach(L => { if(!L.bad && L.key != null && claim.get(L.key) > 1) L.bad = '같은 행(' + BULK_KEY + ' ' + L.key + ')을 다른 줄도 고칩니다 — 둘 다 건너뜁니다'; });
+  /* 키가 없는 표(휴가 등)의 새 행 — 표에 «똑같은 행»이 이미 있으면 넣지 않는다(v151). 같은 원본을 다시 올리거나 기간이 겹친 파일을
+     «한 행씩»으로 올리면 그대로 두 번 들어가 휴가가 두 배가 된다. 비교는 맵핑된 열만 · 표기 차이(날짜·숫자 꼴)는 같은 것으로.
+     같은 줄이 파일에 둘이고 표에 하나면 하나만 «있음»으로 친다(개수로 센다). 큰 표(자재)는 통째로 못 받아 여기 들지 않는다. */
+  let exist = null;
+  if(!bulkKeys(t).length && t.mode === 'whole' && lines.some(L => !L.pk)){
+    S.all[t.id] = await loadAll(t); exist = new Map();
+    S.all[t.id].forEach(r => { const k = rowSig(t, mapped, r); exist.set(k, (exist.get(k) || 0) + 1); });
+  }
   const ops = t.ledger ? await ledgerOps(t) : null;     // 새 원장 행이 고를 수 있는 운영단위(줄 판정은 아래에서 동기로 한다)
   /* 대상 행의 «지금» 값과 해시 */
   const keys = Array.from(new Set(lines.filter(L => !L.bad && L.key != null).map(L => L.key)));
@@ -2079,6 +2238,7 @@ async function bulkPlan(t, pick, meta, hm, fname){
       t.need.forEach(n => { const al = [].concat(n); if(!al.some(c => row[c] != null && row[c] !== '')) errs.push(label(t, pickCol(t, al) || al[0]).name + ': 필수 칸입니다'); });
       if(errs.length) return skip(L, errs.join(' · '));
       if(t.ledger){ const le = ledgerNew(t, row, ops); if(le) return skip(L, Object.keys(le).map(c => label(t, c).name + ': ' + le[c]).join(' · ')); }
+      if(exist){ const k = rowSig(t, mapped, row), n = exist.get(k) || 0; if(n > 0){ exist.set(k, n - 1); return P.same.push({ L:L, dup:true }); } }
       return P.ins.push({ L:L, row:row });
     }
     /* 행번호만 남기고 나머지를 다 비운 줄 — «행을 지우려는» 손짓으로 보인다. 그대로 두면 그 행의 모든 칸이 지워진다. */
@@ -2155,6 +2315,8 @@ async function showPlan(t, P){
   if(P.unknown.length > P.mapped.length) h += '<p class="wn" style="color:var(--bad)">⚠ 이 파일의 열 ' + (P.unknown.length + P.mapped.length) + '개 중 ' + P.unknown.length
     + '개가 「' + esc(t.name) + '」 표에 없습니다 — 다른 표에서 받은 파일이 아닌지 확인하세요. 맞는 열은 ' + esc(P.mapped.map(c => label(t, c).name).slice(0, 8).join(' · ')) + ' 뿐입니다.</p>';
   if(P.unknown.length) h += '<p class="hint">모르는 열은 무시했습니다: ' + esc(P.unknown.slice(0, 12).join(' · ')) + (P.unknown.length > 12 ? ' 외 ' + (P.unknown.length - 12) + '개' : '') + '</p>';
+  const dupN = P.same.filter(x => x.dup).length;
+  if(dupN) h += '<p class="hint">표에 이미 똑같은 행이 있는 ' + dupN.toLocaleString() + '줄은 넣지 않습니다(「변경 없음」에 셉니다) — 같은 원본을 다시 올려도 두 번 들어가지 않습니다.</p>';
   if(P.twice.length) h += '<p class="hint">같은 열이 두 번 있어 뒤의 것은 무시했습니다: ' + esc(P.twice.join(' · ')) + '</p>';
   const fl = P.ins.filter(x => x.fill), fN = fl.filter(x => Object.keys(x.fill.put).length).length,
         fC = fl.reduce((s, x) => s + Object.keys(x.fill.put).length, 0), fMiss = fl.length - fN;

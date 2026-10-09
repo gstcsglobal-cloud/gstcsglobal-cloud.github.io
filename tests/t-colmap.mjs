@@ -93,7 +93,7 @@ console.log('[1] 못 찾은 필수 열 — 말하고 패널을 연다');
 await put(mk({sn:'시리얼'}), 'a.csv');
 let t1 = await chk();
 is(/필수 열을 못 찾았습니다/.test(t1), '못 찾았다고 말한다');
-is(await pg.evaluate(() => !!document.querySelector('details.cmap[open] select[data-cmap="sn"]')), '열 맵핑 패널이 열려 있고 S/N 칸에 고르기가 있다');
+is(await pg.evaluate(() => !!document.querySelector('details.gcm[open] select[data-cmap="sn"]')), '열 맵핑 패널이 열려 있고 S/N 칸에 고르기가 있다');
 is(await pg.evaluate(() => document.getElementById('goBtn').disabled), '올리기 단추는 잠겨 있다');
 
 console.log('[2] 머리글을 고르면 저장하고 다시 검사한다');
@@ -103,11 +103,13 @@ is(cm.length===1 && cm[0].site==='ALL' && cm[0].tbl==='inst' && cm[0].field==='s
 t1 = await chk();
 is(/열 인식/.test(t1) && !/못 찾았습니다/.test(t1), '다시 검사해 통과');
 is(/지정 1개/.test(t1), '패널 머리에 «지정 1개»');
-is(await pg.evaluate(() => !document.getElementById('goBtn').disabled), '올리기 단추가 열린다');
+is(await pg.evaluate(() => document.getElementById('goBtn').disabled && !!document.getElementById('cmOk')), '지정이 있으면 «확인했습니다» 전까지 올리기 단추가 잠긴다');
+await pg.check('#cmOk');
+is(await pg.evaluate(() => !document.getElementById('goBtn').disabled), '확인하면 올리기 단추가 열린다');
 is(await pg.evaluate(() => (PREP.rows[0]||{}).sn==='ZZS0'), '그 열의 값이 S/N 으로 들어간다');
 
 console.log('[3] 열 위치가 바뀌어도 머리글로 맞는다');
-await pg.evaluate(() => { CMAP_CACHE={}; });
+await pg.evaluate(() => { GST.cmap._c={}; });
 await put(mk({sn:'시리얼'}, true), 'b.csv');
 is(await pg.evaluate(() => PREP && (PREP.rows[0]||{}).sn==='ZZS0'), '맨 앞으로 옮긴 열도 S/N 으로 잡힌다');
 
@@ -129,27 +131,27 @@ const ql = await pg2.evaluate(() => window.__QLOG.filter(q=>q.tbl==='colmap_site
 is(ql.some(q => q.eq.some(e=>e[0]==='site'&&e[1]==='KR')), '지정은 site=KR 로 묻는다');
 
 console.log('[6] 권한이 없으면 «실패»로 말한다');
-await pg.evaluate(() => { window.__CM_DENY=1; CMAP_CACHE={}; });
+await pg.evaluate(() => { window.__CM_DENY=1; GST.cmap._c={}; });
 let alerted=''; pg.on('dialog', d => { alerted=d.message(); d.dismiss(); });
 await pg.selectOption('select[data-cmap="customer"]', other); await pg.waitForTimeout(1200);
 is(/저장 실패/.test(alerted), '조용히 넘어가지 않는다 — '+alerted.slice(0,40));
 
 console.log('[7] Import 표(교육) — 표의 열마다 머리글을 고른다 · 모르는 열은 막지 않고 밝힌다');
-await pg.evaluate(() => { window.__CM_DENY=0; window.__CM=[]; CMAP_CACHE={}; });
+await pg.evaluate(() => { window.__CM_DENY=0; window.__CM=[]; GST.cmap._c={}; });
 await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='edu'))));
 await put('번호,현장,이름,사번,교육완료일,비고\n1,X1,가나,A001,2026-01-02,메모\n2,X2,다라,A002,2026-02-03,\n', 'e.csv');
 let t7 = await chk();
 is(/열 맵핑/.test(t7) && /올리지 않는 열/.test(t7), '패널과 «올리지 않는 열» 목록이 뜬다 (예전처럼 통째로 막지 않는다)');
-is(await pg.evaluate(() => !document.getElementById('goBtn').disabled), '맞는 열이 하나라도 있으면 진행된다');
+is(await pg.evaluate(() => !!document.getElementById('cmOk') && document.getElementById('goBtn').disabled), '맞는 열이 있으면 진행하되, 버리는 열이 있으니 확인을 받는다');
 is(await pg.evaluate(() => (PREP.rows[0]||{})['교육완료일']==='2026-01-02' && (PREP.rows[0]||{})['인원']==null), '자동 인식은 이름이 같은 열만');
 await pg.selectOption('select[data-cmap="인원"]', '이름'); await pg.waitForTimeout(1500);
 is(await pg.evaluate(() => window.__CM.some(r=>r.tbl==='edu'&&r.field==='인원'&&r.header==='이름')), '표 열 이름으로 저장 (tbl=edu)');
 is(await pg.evaluate(() => (PREP.rows[0]||{})['인원']==='가나'), '지정한 머리글의 값이 그 표 열로 들어간다');
 await put('a,b,c\n1,2,3\n', 'e2.csv');
-is(/하나도 없습니다/.test(await chk()) && await pg.evaluate(() => !!document.querySelector('details.cmap select[data-cmap]')), '하나도 안 맞으면 멈추되 고를 패널을 준다');
+is(/하나도 없습니다/.test(await chk()) && await pg.evaluate(() => !!document.querySelector('details.gcm select[data-cmap]')), '하나도 안 맞으면 멈추되 고를 패널을 준다');
 
 console.log('[8] 알람 워크북 — 시트 태그별로 기억한다');
-await pg.evaluate(() => { window.__CM=[]; CMAP_CACHE={}; });
+await pg.evaluate(() => { window.__CM=[]; GST.cmap._c={}; });
 await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='alarm'))));
 const wb = XLSX.utils.book_new();
 XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['장비번호','Alarm Comment','Occur Time','내적/외적'],
