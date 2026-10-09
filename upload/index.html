@@ -532,10 +532,14 @@ window.checkFile=async function(){
         +'행은 사이트·라인 조인이 안 됩니다 (「미상」으로 잡힙니다)</span>');
     }else if(t.kind==='mirror'){
       /* sheet-sync 와 같은 해석 — SPEC 으로 열을 «이름으로» 찾는다. 못 찾으면 막는다. */
-      const S=GST.SM.SPEC[t.key];
+      /* 사이트별 열 맵핑 지정(v149 · colmap_site) — 지정한 머리글을 SPEC 별칭보다 «먼저» 본다. */
+      const site=SITE||'ALL', ovr=await cmapLoad(c,site,t.rid);
+      const S=cmapSpec(GST.SM.SPEC[t.key],ovr);
       const m=GST.SM.map(rows,S);
-      if(!m.ok)throw new Error('열을 못 찾았습니다: '+m.miss.join(', ')
-        +'\n(시트 머리글이 그대로 있는 CSV 인지 확인하세요)'+peek(rows,rd));
+      const panel=cmapHtml(GST.SM.SPEC[t.key],S,m,rows,ovr,site,t.rid);
+      if(!m.ok){ chkShow('<span class="bad">❌ 필수 열을 못 찾았습니다: '+GST._esc(m.miss.map(x=>x.split(' [')[0]).map(cmapName).join(', '))
+        +'</span><br>아래 «열 맵핑»에서 이 사이트 파일의 어느 머리글이 그 항목인지 골라 주세요 — 고르면 저장되고 바로 다시 검사합니다.'+panel); return; }
+      msgs.push(panel);
       const keys=Object.keys(S.fields), C=m.C;
       const header=(rows[m.hi]||[]).map(x=>String(x==null?'':x));
       const mapped=new Set(keys.map(k=>C[k]).filter(i=>i>=0));
@@ -887,6 +891,77 @@ function qaHtml(q){
   if(q.by.length>1) h+='<div class="muted" style="margin-top:4px">사이트별 중요 열 입력률: '+q.by.slice(0,8).map(b=>E(b.v)+' <b>'+b.fill+'%</b>').join(' · ')+'</div>';
   return h+'</div>';
 }
+/* ---------- 사이트별 열 맵핑 (v149 · 사용자 요청) ----------
+   사이트마다 양식이 달라 같은 항목이 다른 머리글·다른 열에 있다. 자동 인식(SPEC 별칭)이 무엇을
+   어느 열로 잡았는지 «보여 주고», 틀렸거나 못 찾았으면 사람이 «이 사이트는 이 머리글»이라고 지정한다.
+   ⚠ 저장하는 것은 열 번호가 아니라 «머리글 이름»이다(제1원칙) — 열이 하나 끼어들어도 계속 맞는다.
+   ⚠ 지정은 별칭 배열의 «맨 앞»에 얹을 뿐이다 — 판정 규칙(GST.SM.map)은 그대로 한 벌이다(제2원칙).
+   지정한 머리글이 파일에 없으면 자동 인식으로 돌아가고 표에 「지정 머리글 없음」이라 적는다. */
+let CMAP_CACHE={}, UP_CANW=false;
+async function cmapLoad(c,site,rid){
+  const k=site+'|'+rid; if(CMAP_CACHE[k]) return CMAP_CACHE[k];
+  const o={};
+  try{ const r=await c.from('colmap_site').select('field,header').eq('site',site).eq('tbl',rid);
+       if(!r.error) (r.data||[]).forEach(x=>{ o[x.field]=x.header; });
+       else console.warn('[upload] 열 맵핑 읽기 실패 (setup-18 미적용?)', r.error.message); }
+  catch(e){ console.warn('[upload] 열 맵핑 읽기 실패', e); }
+  return CMAP_CACHE[k]=o;
+}
+function cmapSpec(S0,ovr){
+  const fields={}, N=GST.SM.norm;
+  Object.keys(S0.fields).forEach(k=>{ const a=[].concat(S0.fields[k]); fields[k]=ovr[k]?[ovr[k]].concat(a):a; });
+  // 헤더 행을 찾는 힌트도 지정 머리글로 바꿔 준다 — 힌트 이름 자체가 다른 양식이면 머리글 행을 못 찾는다
+  const hints=(S0.hints||[]).map(h=>{ const k=Object.keys(ovr).find(f=>[].concat(S0.fields[f]).some(a=>N(a)===N(h))); return k?ovr[k]:h; });
+  return Object.assign({},S0,{fields:fields,hints:hints});
+}
+function cmapCol(i){ let s=''; i++; while(i>0){ const r=(i-1)%26; s=String.fromCharCode(65+r)+s; i=Math.floor((i-1)/26); } return s; }
+function cmapName(k){ return (typeof QA_COL!=='undefined'&&QA_COL[GST._snake(k)])||k; }
+function cmapHtml(S0,S,m,rows,ovr,site,rid){
+  const E=GST._esc, N=GST.SM.norm, opt=S0.opt||[];
+  // 헤더 행 — 못 찾았으면 앞 15줄 중 «글자가 가장 많이 찬 줄»을 보여 준다(고를 후보를 주기 위해서일 뿐)
+  let hi=m.hi; if(hi<0){ let best=-1,bn=0; rows.slice(0,15).forEach((r,i)=>{ const n=(r||[]).filter(v=>String(v==null?'':v).trim()).length; if(n>bn){bn=n;best=i;} }); hi=best; }
+  const H=(rows[hi]||[]).map(x=>String(x==null?'':x).trim());
+  const opts=H.map((h,i)=>h?'<option value="'+E(h)+'">'+cmapCol(i)+' · '+E(h)+'</option>':'').join('');
+  const canW=UP_CANW;
+  const keys=Object.keys(S0.fields).sort((a,b)=>(opt.indexOf(a)>=0)-(opt.indexOf(b)>=0));
+  let nMiss=0, nOvr=0;
+  const tr=keys.map(k=>{
+    const i=m.C[k], req=opt.indexOf(k)<0, o=ovr[k];
+    const oHit=o && H.some(h=>N(h)===N(o));
+    let st;
+    if(o&&oHit){ st='<span class="ok">지정</span>'; nOvr++; }
+    else if(o){ st='<span class="bad">지정 머리글 없음 → 자동</span>'; nOvr++; }
+    else if(i>=0) st='<span class="muted">자동</span>';
+    else { st=req?'<span class="bad">못 찾음</span>':'<span class="muted">없음(선택)</span>'; if(req)nMiss++; }
+    const got=i>=0?cmapCol(i)+' · '+E(H[i]||''):'—';
+    const sel='<select data-cmap="'+E(k)+'"'+(canW?'':' disabled')+'><option value="">(자동 인식)</option>'
+      +opts.replace('value="'+E(o||'\u0000')+'"','value="'+E(o||'')+'" selected')+'</select>';
+    return '<tr'+(req&&i<0?' class="lo"':'')+'><td>'+E(cmapName(k))+(req?' <b style="color:#dc2626">*</b>':'')+'</td><td>'+got+'</td><td>'+st+'</td><td>'+sel+'</td></tr>';
+  }).join('');
+  const siteL=site==='ALL'?'관리자 전체 화면':(ROUTE?ROUTE.name:site);
+  return '<details class="qa cmap"'+((nMiss||nOvr)?' open':'')+'><summary><b>열 맵핑</b> <span class="muted">— '+E(siteL)
+    +' · 머리글 행 '+(m.hi>=0?(m.hi+1)+'행':'못 찾음')+' · 지정 '+nOvr+'개'+(nMiss?' · 필수 못 찾음 '+nMiss+'개':'')+'</span></summary>'
+    +'<div class="muted" style="margin:6px 0">자동으로 잡힌 열이 틀렸거나 못 찾았으면 오른쪽에서 이 사이트 파일의 머리글을 고르세요. '
+    +'고르면 «'+E(siteL)+'» 의 기본값으로 저장되어 다음 업로드부터 그대로 씁니다. 열 위치가 아니라 머리글 이름으로 기억합니다.'
+    +(canW?'':' <b>(이 계정은 지정을 바꿀 권한이 없습니다)</b>')+'</div>'
+    +'<table class="qa-t"><tr><th>항목</th><th>잡힌 열</th><th>상태</th><th>이 사이트 지정</th></tr>'+tr+'</table></details>';
+}
+document.addEventListener('change',async function(e){
+  const sel=e.target.closest&&e.target.closest('select[data-cmap]'); if(!sel) return;
+  const t=TABLES[+$('tsel').value], site=SITE||'ALL', field=sel.dataset.cmap, hdr=sel.value;
+  sel.disabled=true;
+  try{
+    const c=await GST.db(); if(!c) throw new Error('로그인이 필요합니다');
+    let r;
+    if(hdr) r=await c.from('colmap_site').upsert({site:site,tbl:t.rid,field:field,header:hdr,
+              updated_by:(GST._me&&GST._me.email)||null,updated_at:new Date().toISOString()}).select();
+    else    r=await c.from('colmap_site').delete().eq('site',site).eq('tbl',t.rid).eq('field',field).select();
+    if(r.error) throw new Error(r.error.message);
+    if(hdr && !(r.data||[]).length) throw new Error('저장 권한이 없습니다');
+    delete CMAP_CACHE[site+'|'+t.rid];
+    await window.checkFile();
+  }catch(err){ sel.disabled=false; alert('열 맵핑 저장 실패: '+(err.message||err)); }
+});
 async function uploadNote(c,extra){
   try{
     const P=PREP, f=$('fsel').files&&$('fsel').files[0];
@@ -1009,6 +1084,7 @@ GST.authGate().then(async()=>{
        /* 데모 경로는 «관리자(쓰기 권한) 또는 국내 운영자(kr)» — kr 은 can_write 가 꺼져 있으므로 can_write 로 보면 안 된다.
           그 밖(운영 표)은 지금까지대로 can_write 다 — kr 계정이 /upload/ 를 그냥 열면 여기서 잠긴다(서버도 막는다). */
        const demo=!!(ROUTE&&ROUTE.demo), ok=demo ? !!(GST.isKrOp&&GST.isKrOp()) : p.can_write;
+       UP_CANW=!!ok;   // 열 맵핑 패널도 «이 화면의 업로드 권한»과 같은 판정을 쓴다(v149)
        if(!ok){ chkShow('<span class="bad">이 계정은 읽기 전용입니다 — '+(demo?'국내 데모 업로드 권한(관리자·국내 운영자)':'업로드 권한(can_write)')+'이 없습니다.'
                  +(!demo&&GST._me&&GST._me.role==='kr'?' 국내 데모 자료는 「주간 현황(국내)」 화면의 「자료 올리기」로 올립니다.':'')+'</span>'); $('fsel').disabled=true; }
        /* ⚠ 사이트 화면은 머리(.sub)를 갈아 #toEdit 이 없을 수 있다 — 없으면 건너뛴다(던지면 아래 catch 가 삼켜 원인이 안 보인다) */
