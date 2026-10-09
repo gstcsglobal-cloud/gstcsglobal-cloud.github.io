@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 148;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 149;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -3468,9 +3468,17 @@ GST.pctDelta=function(cur,prev){
   return Math.round((cur-prev)/prev*100);
 };
 // ▲/▼ 증감 배지 HTML. goodWhenDown=true면 감소가 초록(고장·교체 등)
+GST.DELTA_ABS_MAX=10;
 GST.deltaBadge=function(cur,prev,goodWhenDown){
   const p=GST.pctDelta(cur,prev);
   if(p===null) return '';
+  /* 기준이 작으면 %가 과장된다 — 1건→9건이 「▲800%」로 떠 화면에서 가장 큰 경보가 됐다(v148).
+     직전값이 DELTA_ABS_MAX 미만이면 «건수 차이»로 적는다. 색 규칙은 그대로다. */
+  if(Math.abs(prev)<GST.DELTA_ABS_MAX && cur!==prev){
+    const upA=cur>prev, goodA=goodWhenDown?!upA:upA;
+    return '<span style="font-size:10px;font-weight:800;color:'+(goodA?'var(--ok,#4ade80)':'var(--bad,#fb7185)')+'">'
+      +(upA?'▲ +':'▼ −')+Math.abs(Math.round((cur-prev)*10)/10).toLocaleString()+'</span>';
+  }
   if(p===0) return '<span style="font-size:10px;font-weight:800;color:var(--txt-muted)">— 0%</span>';
   const up=p>0;
   const good = goodWhenDown ? !up : up;
@@ -3590,10 +3598,181 @@ GST.dq = {
        ⚠ 진단 화면이 페이지를 여덟 개 띄우지 않아도 되게 하려는 것뿐이다 —
          그래서 «언제·어떤 필터로 잰 것인지»를 같이 담는다. 없으면 오래된 수치를
          지금 것으로 읽는다. localStorage 는 그 브라우저 안에만 산다(공유되지 않는다). */
+    GST._dqChip(this._l);
     try{ localStorage.setItem('gst_dq_'+(this._page||'page'),
       JSON.stringify({at:ts.getTime(), filter:filterLabel||'', items:this._l})); }catch(e){}
     return this;
   }
+};
+
+/* 요약 띠 끝에 «확인할 것 N» 한 칸 (v148 · 5단계).
+   데이터 품질 카드는 페이지 맨 아래라 아무도 거기까지 안 내려간다 — 숫자의 뜻이 바뀌는 경고가
+   묻힌다. 그래서 warn·bad 신호가 있으면 첫 화면 요약 띠에 개수만 띄우고, 누르면 카드로 내려간다.
+   ⚠ 문장을 옮기지 않는다(개수만) — 문장은 카드 한 곳이 정본이다. info 는 세지 않는다. */
+GST.DQCHIP_T={ko:'확인할 것 {n}',en:'{n} to check',zh:'待确认 {n}',ja:'要確認 {n}'};
+GST._dqChip=function(list){
+  try{
+    const n=(list||[]).filter(function(d){ return d.sev==='warn'||d.sev==='bad'; }).length;
+    let el=document.getElementById('gstDqChip');
+    if(!n){ if(el) el.remove(); return; }
+    let box=document.getElementById('gstInsights');
+    if(!box){
+      const anchor=document.querySelector('.kpis'); if(!anchor||!anchor.parentNode) return;
+      box=document.createElement('div'); box.id='gstInsights'; box.className='gst-insights';
+      box.innerHTML='<span class="gst-ins-head">'+GST.insHead()+'</span>';
+      anchor.parentNode.insertBefore(box, anchor);
+    }
+    if(!el||el.parentNode!==box){ if(el) el.remove();
+      el=document.createElement('button'); el.type='button'; el.id='gstDqChip'; el.className='gst-dqchip';
+      el.onclick=function(){ const c=document.getElementById('gstDq'); if(c) c.scrollIntoView({behavior:'smooth',block:'start'}); };
+      box.appendChild(el); }
+    const T=GST.DQCHIP_T[(GST._lang&&GST._lang())||'ko']||GST.DQCHIP_T.ko;
+    el.textContent='⚠ '+T.replace('{n}',n);
+  }catch(e){ console.warn('[gst.dq] 요약 띠', e); }
+};
+
+/* KPI 숫자가 카드 폭을 넘으면 «줄바꿈» 대신 글자를 줄인다 (v148).
+   「45% · 50%」가 두 줄로 꺾여 카드 높이가 제각각이 됐다. 값이 바뀔 때마다 다시 잰다. */
+GST.fitKpis=function(root){
+  try{
+    (root||document).querySelectorAll('.kpi .val').forEach(function(v){
+      v.style.fontSize='';
+      const row=v.closest('.krow')||v.parentNode; if(!row) return;
+      const avail=row.clientWidth-((row.querySelector('.kd')||{}).offsetWidth||0)-6;
+      if(avail>0 && v.scrollWidth>avail){
+        const base=parseFloat(getComputedStyle(v).fontSize)||28;
+        v.style.fontSize=Math.max(15, Math.floor(base*avail/v.scrollWidth))+'px';
+      }
+    });
+  }catch(e){}
+};
+(function(){
+  if(typeof document==='undefined'||typeof MutationObserver==='undefined') return;
+  let tm=0; const kick=function(){ clearTimeout(tm); tm=setTimeout(function(){ GST.fitKpis(); },60); };
+  const arm=function(){
+    document.querySelectorAll('.kpis').forEach(function(k){
+      if(k._gstFit) return; k._gstFit=1;
+      new MutationObserver(kick).observe(k,{subtree:true,childList:true,characterData:true});
+    });
+    kick();
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',arm); else arm();
+  window.addEventListener('resize',kick);
+})();
+
+/* 자료 성적표 (v148 · 2단계) — 올리는 순간 «무엇이 이상한지»를 센다.
+   왜: 알람유형 입력률 0.3% 같은 사실을 현장이 «올린 그 자리»에서 못 보면 품질이 영원히 안 오른다.
+   업로드 검사 화면이 부르고, 결과(점수)는 업로드 이력에도 남는다.
+   ⚠ 막지 않는다 — 판정은 «알리는 것»뿐이다. 막는 규칙은 업로드 검사(날짜 형식·op)에 이미 있다.
+   ⚠ 어느 열이 «중요한가»는 표마다 다르므로 부르는 쪽이 준다(opt.key). 여기에 표 이름을 박지 않는다.
+   rows = 업로드 직전의 행 객체 배열(snake 열 이름) · opt = {key:[열], date:'열', num:[열], cap:{열:최댓값}, by:'op'} */
+GST.qa=function(rows, opt){
+  opt=opt||{}; rows=rows||[];
+  const N=rows.length, blank=v=>v==null||String(v).trim()==='';
+  const pct=(a,b)=>b?Math.round(a/b*1000)/10:0;
+  const res={n:N, fill:[], date:null, num:[], months:[], by:[], issues:[], score:100, grade:'A'};
+  if(!N) return res;
+  const cols=Object.keys(rows[0]).filter(k=>k!=='src_row'&&k!=='extra');
+  const keyCols=(opt.key||[]).filter(k=>cols.indexOf(k)>=0);
+  // ① 열별 입력률 — 중요 열 전부 + 그 밖에서 낮은 순 몇 개
+  const fillOf=k=>{ let g=0; for(const r of rows) if(!blank(r[k])) g++; return g; };
+  const all=cols.map(k=>({col:k, got:fillOf(k)})).map(x=>Object.assign(x,{pct:pct(x.got,N), key:keyCols.indexOf(x.col)>=0}));
+  res.fill=all.filter(x=>x.key).concat(all.filter(x=>!x.key&&x.pct<50&&x.got>0).sort((a,b)=>a.pct-b.pct).slice(0,5));
+  // ② 날짜 — 해석 불가 · 미래 · 2010 이전
+  if(opt.date && cols.indexOf(opt.date)>=0){
+    const today=new Date(); const lim=new Date(today.getTime()+86400000).toISOString().slice(0,10);
+    let bad=0, fut=0, old=0; const mon={};
+    for(const r of rows){ const v=String(r[opt.date]==null?'':r[opt.date]).slice(0,10);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(v)){ bad++; continue; }
+      if(v>lim) fut++; else if(v<'2010-01-01') old++;
+      const m=v.slice(0,7); mon[m]=(mon[m]||0)+1; }
+    res.date={col:opt.date, bad:bad, future:fut, old:old};
+    // ③ 달마다 행 수 — 앞뒤 달(덜 찬 달)을 뺀 중앙값의 절반에 못 미치면 «빠졌나?»
+    const ks=Object.keys(mon).sort();
+    res.months=ks.map(k=>({ym:k, n:mon[k]}));
+    if(ks.length>=4){
+      const mid=ks.slice(1,-1).map(k=>mon[k]).sort((a,b)=>a-b), med=mid[Math.floor(mid.length/2)];
+      ks.slice(1,-1).forEach(k=>{ if(mon[k]<med*0.5) res.issues.push({sev:'warn', kind:'month_low', ym:k, n:mon[k], med:med}); });
+    }
+    if(bad) res.issues.push({sev:'warn', kind:'date_bad', n:bad});
+    if(fut) res.issues.push({sev:'bad', kind:'date_future', n:fut});
+    if(old) res.issues.push({sev:'warn', kind:'date_old', n:old});
+  }
+  // ④ 숫자 — 음수 · 상한 초과
+  (opt.num||[]).filter(k=>cols.indexOf(k)>=0).forEach(k=>{
+    let neg=0, over=0; const cap=opt.cap&&opt.cap[k];
+    for(const r of rows){ if(blank(r[k])) continue; const v=GST.numv(r[k]); if(!isFinite(v)) continue;
+      if(v<0) neg++; if(cap!=null && v>cap) over++; }
+    res.num.push({col:k, neg:neg, over:over, cap:cap==null?null:cap});
+    if(neg) res.issues.push({sev:'bad', kind:'neg', col:k, n:neg});
+    if(over) res.issues.push({sev:'warn', kind:'over', col:k, n:over, cap:cap});
+  });
+  // ⑤ 사이트(운영단위)별 — 중요 열 평균 입력률
+  if(opt.by && cols.indexOf(opt.by)>=0 && keyCols.length){
+    const g={}; for(const r of rows){ const b=String(r[opt.by]==null?'':r[opt.by]).trim()||'(빈칸)'; (g[b]=g[b]||[]).push(r); }
+    res.by=Object.keys(g).map(b=>{ const L=g[b];
+      const f=keyCols.map(k=>{ let x=0; for(const r of L) if(!blank(r[k])) x++; return pct(x,L.length); });
+      return {v:b, n:L.length, fill:Math.round(f.reduce((a,c)=>a+c,0)/f.length)}; }).sort((a,b)=>b.n-a.n);
+  }
+  // 점수 — 중요 열 평균 입력률에서 문제 비율만큼 깎는다(설명 가능한 단순식)
+  const base=keyCols.length ? res.fill.filter(x=>x.key).reduce((a,x)=>a+x.pct,0)/keyCols.length : 100;
+  const badN=res.issues.filter(i=>i.kind!=='month_low').reduce((a,i)=>a+(i.n||0),0);
+  res.score=Math.max(0, Math.round(base - pct(badN,N)*2 - res.issues.filter(i=>i.kind==='month_low').length*3));
+  res.grade=res.score>=90?'A':res.score>=75?'B':res.score>=60?'C':'D';
+  return res;
+};
+
+/* 고장 위험 설비 순위 (v148 · 3단계) — «세는 화면»에서 «이번 주 무엇을 할지»로.
+   점수는 설명 가능한 단순식이다(기계학습 아님). 원인 코드가 거의 비어 있는 동안(입력률 ~10%)은
+   «왜»를 못 배우므로, «언제·얼마나 자주»만 본다 — 그 한계를 카드 주석이 밝힌다.
+     최근 90일 BM 1건당 3점 · 재고장(직전 BM 후 14일 안에 또) 1건당 4점
+     · 직전 90일보다 2건 이상 늘면 3점 · 마지막 BM 이 14일 안이면 2점
+     · PM 지연: 마지막 PM 이 180일보다 오래됐거나 180일 안에 PM 기록이 없으면 4점
+   ⚠ 행 모양을 페이지마다 다시 맞추지 않게 «사건 목록»만 받는다 — 무엇이 BM 이고 무엇이 PM 인지는
+     부르는 쪽이 이미 쓰는 정본(KPI 카드의 bmRowsIn · GST.PM.is)으로 고른다. 여기서 다시 판정하면
+     카드와 순위표가 다른 BM 을 센다(제2원칙).
+   ev = {bm:[{key,label,site,d:Date}], pm:[{key,d:Date}], asOf:Date, n:20}
+   반환: [{key,label,site,score,bm90,bmPrev,rep,lastBm,lastPm,why:['bm90','rep','up','recent','pm']}] */
+GST.RISK_W={bm:3, rep:4, up:3, recent:2, pm:4, repDays:14, recentDays:14, pmDays:180};
+GST.snKey=function(v){ return String(v==null?'':v).toUpperCase().replace(/[^0-9A-Z가-힣]/g,''); };
+GST.riskRank=function(ev){
+  const W=GST.RISK_W, DAY=86400000, asOf=ev.asOf||new Date(), t0=asOf.getTime();
+  const U={};
+  (ev.bm||[]).forEach(function(e){ if(!e||!e.key||!(e.d instanceof Date)||isNaN(e.d)) return;
+    const dt=e.d.getTime(); if(dt>t0) return;
+    const u=U[e.key]||(U[e.key]={key:e.key,label:e.label||e.key,site:e.site||'',bm:[],lastPm:null});
+    if(!u.site&&e.site) u.site=e.site; u.bm.push(dt); });
+  (ev.pm||[]).forEach(function(e){ if(!e||!e.key||!U[e.key]||!(e.d instanceof Date)) return;
+    const dt=e.d.getTime(); if(dt>t0) return; if(U[e.key].lastPm==null||dt>U[e.key].lastPm) U[e.key].lastPm=dt; });
+  const out=[];
+  Object.keys(U).forEach(function(k){
+    const u=U[k], b=u.bm.sort(function(a,c){return a-c;});
+    const in90=b.filter(function(x){return x>t0-90*DAY;}).length;
+    const prev90=b.filter(function(x){return x<=t0-90*DAY&&x>t0-180*DAY;}).length;
+    if(in90+prev90<2) return;                       // 한 번 난 설비는 «위험»이 아니라 사건이다
+    let rep=0; for(let i=1;i<b.length;i++) if(b[i]>t0-180*DAY && b[i]-b[i-1]<=W.repDays*DAY && b[i]!==b[i-1]) rep++;
+    const last=b[b.length-1], why=[]; let sc=0;
+    if(in90){ sc+=in90*W.bm; why.push('bm90'); }
+    if(rep){ sc+=rep*W.rep; why.push('rep'); }
+    if(in90-prev90>=2){ sc+=W.up; why.push('up'); }
+    if(last>t0-W.recentDays*DAY){ sc+=W.recent; why.push('recent'); }
+    if(u.lastPm==null||u.lastPm<t0-W.pmDays*DAY){ sc+=W.pm; why.push('pm'); }
+    out.push({key:k,label:u.label,site:u.site,score:sc,bm90:in90,bmPrev:prev90,rep:rep,
+              lastBm:new Date(last),lastPm:u.lastPm==null?null:new Date(u.lastPm),why:why});
+  });
+  out.sort(function(a,c){ return c.score-a.score || c.bm90-a.bm90 || c.lastBm-a.lastBm; });
+  return out.slice(0, ev.n||20);
+};
+GST.RISK_T={
+  ko:{bm90:'최근 90일 고장 {n}건', rep:'14일 안 재고장 {n}회', up:'직전 90일보다 +{n}', recent:'최근 2주 안 고장', pm:'PM 180일 넘게 없음'},
+  en:{bm90:'{n} BM in 90d', rep:'{n} repeat within 14d', up:'+{n} vs prior 90d', recent:'failed in last 2 weeks', pm:'no PM for 180d+'},
+  zh:{bm90:'近90天故障 {n}件', rep:'14天内复发 {n}次', up:'较前90天 +{n}', recent:'近两周内故障', pm:'超过180天未PM'},
+  ja:{bm90:'直近90日故障 {n}件', rep:'14日以内再故障 {n}回', up:'前90日比 +{n}', recent:'直近2週間で故障', pm:'PM 180日以上なし'}
+};
+GST.riskWhy=function(r){
+  const T=GST.RISK_T[(GST._lang&&GST._lang())||'ko']||GST.RISK_T.ko;
+  const n={bm90:r.bm90, rep:r.rep, up:r.bm90-r.bmPrev, recent:'', pm:''};
+  return r.why.map(function(w){ return T[w].replace('{n}',n[w]); }).join(' · ');
 };
 
 /* 입력률이 낮은 열의 차트에 «왜 비어 보이는지»를 적는다 (v135 · 7단계에 core 로).
@@ -6637,6 +6816,9 @@ GST._ovCss=function(){
   +'.gbf-w,.gbf-fc{font-size:10.5px;color:var(--gov-mut) !important;margin-top:3px}'
   +'.gbf-sp{flex:none;margin-top:3px;opacity:.85}'
   +'.gbf-none{padding:26px 4px;text-align:center;font-size:12px;color:var(--gov-mut) !important}'
+  +'.gw5{margin:0 0 14px;padding:12px 14px;border:1px solid var(--line,#ddd);border-radius:10px;background:var(--surface-2,transparent)}'
+  +'.gw5-h{font-weight:800;font-size:13px;margin-bottom:6px}.gw5 ol{margin:0;padding-left:20px}.gw5 li{margin:6px 0;font-size:12.5px}'
+  +'.gw5 li.bad::marker{color:#dc2626;font-weight:800}.gw5 li.warn::marker{color:#d97706;font-weight:800}.gw5-a{color:var(--gov-mut);font-size:12px}'
   +'.gbf-src{font-size:9.5px;color:var(--gov-mut) !important;margin-left:6px;font-weight:600}'
   // 피벗 컨트롤
   +'.gpv-c{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--gov-line);position:relative}'
@@ -6698,9 +6880,52 @@ GST._num=function(v){
   if(v==null||!isFinite(v)) return '—';
   return (Math.round(v*10)/10).toLocaleString(undefined,{maximumFractionDigits:1});
 };
+/* 이번 주 알아야 할 다섯 가지 (v148 · 4단계) — «보러 오지 않아도 가는» 요약의 본문.
+   새로 계산하지 않는다 — 이미 화면이 만든 셋을 «할 일» 문장으로 묶을 뿐이다:
+     고장 위험 순위(window._RISK · GST.riskRank) · 지표 변화(GST.briefFind) · 자료 결함(GST.dq)
+   ⚠ 숫자를 여기서 다시 세면 카드와 다른 말을 한다(제2원칙). 다섯을 못 채우면 있는 만큼만 낸다. */
+GST.W5_T={
+  ko:{head:'이번 주 알아야 할 다섯 가지', risk:'고장 위험 1순위 {a} ({s}점 · {w})', riskN:' 외 {n}대', riskA:'→ 이번 주 점검 일정에 넣기',
+      up:'{l} {d}', upA:'→ 원인 확인(세부내역은 그 차트를 누르면 나옵니다)', dq:'자료 문제: {l}', dqA:'→ ', none:'이번 주는 특별히 알릴 것이 없습니다.'},
+  en:{head:'5 things to know this week', risk:'Top risk unit {a} ({s} pts · {w})', riskN:' +{n} more', riskA:'→ add to this week\'s inspection',
+      up:'{l} {d}', upA:'→ check the cause (click the chart for details)', dq:'Data issue: {l}', dqA:'→ ', none:'Nothing notable this week.'},
+  zh:{head:'本周须知五件事', risk:'故障风险第1位 {a} ({s}分 · {w})', riskN:' 等 {n}台', riskA:'→ 列入本周点检',
+      up:'{l} {d}', upA:'→ 确认原因（点击图表查看明细）', dq:'数据问题: {l}', dqA:'→ ', none:'本周无特别事项。'},
+  ja:{head:'今週知っておくべき5つ', risk:'故障リスク1位 {a} ({s}点 · {w})', riskN:' 他{n}台', riskA:'→ 今週の点検予定に入れる',
+      up:'{l} {d}', upA:'→ 原因確認（チャートを押すと明細）', dq:'データ問題: {l}', dqA:'→ ', none:'今週は特に知らせることはありません。'}
+};
+GST.weekly5=function(){
+  const T=GST.W5_T[GST._lang()]||GST.W5_T.ko, out=[];
+  try{
+    const R=window._RISK||[];
+    if(R.length){ const r=R[0];
+      out.push({sev:r.score>=20?'bad':'warn', text:T.risk.replace('{a}',r.label).replace('{s}',r.score).replace('{w}',GST.riskWhy(r))
+        +(R.length>1?T.riskN.replace('{n}',R.length-1):''), act:T.riskA}); }
+  }catch(e){}
+  try{
+    (GST.briefFind?GST.briefFind():[]).filter(function(f){ return f.sev==='bad'||f.sev==='warn'; }).slice(0,2).forEach(function(f){
+      const small=f.prev!=null&&Math.abs(f.prev)<GST.DELTA_ABS_MAX, dv=f.cur-f.prev;
+      const d=GST._num(f.prev)+' → '+GST._num(f.cur)+(f.unit||'')+(small&&isFinite(dv)?' ('+(dv>0?'+':'')+GST._num(dv)+')':(f.pct!=null?' ('+(f.pct>0?'+':'')+f.pct+'%)':''));
+      out.push({sev:f.sev, text:T.up.replace('{l}',f.label).replace('{d}',d)
+        +(f.why&&f.why.length?' · '+f.why.slice(0,2).map(function(w){ return w.name+' '+(w.own>0?'+':'')+GST._num(w.own); }).join(', '):''), act:T.upA});
+    });
+  }catch(e){}
+  try{
+    const adm=!!(GST.isAdmin&&GST.isAdmin()), dqT=GST._dqT?GST._dqT():{tell:''};
+    (GST.dq?GST.dq.list():[]).filter(function(d){ return d.sev==='bad'||d.sev==='warn'; }).slice(0,2).forEach(function(d){
+      out.push({sev:d.sev, text:T.dq.replace('{l}',d.label)+(d.n!=null?' ('+d.n.toLocaleString()+')':''), act:T.dqA+(adm?d.act:dqT.tell)}); });
+  }catch(e){}
+  return out.slice(0,5);
+};
+GST.weekly5Text=function(){
+  const T=GST.W5_T[GST._lang()]||GST.W5_T.ko, L=GST.weekly5();
+  const ic={bad:'🔴',warn:'🟡',info:'🔵',ok:'🟢'};
+  return '['+(document.title||'').split('·')[0].trim()+'] '+T.head+'\n'
+    +(L.length?L.map(function(x,i){ return (i+1)+'. '+(ic[x.sev]||'•')+' '+x.text+'\n   '+x.act; }).join('\n'):T.none);
+};
 GST.briefText=function(){
   const T=GST.BRF_T[GST._lang()]||GST.BRF_T.ko, F=GST.briefFind();
-  const head=(document.title||'')+' — '+T.t;
+  const head=GST.weekly5Text()+'\n\n'+(document.title||'')+' — '+T.t;
   if(!F.length) return head+'\n'+T.none;
   return head+'\n'+F.map(function(f){
     let s='• '+f.label+': '+(f.prevL?f.prevL+' ':'')+GST._num(f.prev)+' → '+(f.curL?f.curL+' ':'')+GST._num(f.cur)+(f.unit||'')
@@ -6710,6 +6935,12 @@ GST.briefText=function(){
     if(f.fc!=null) s+='\n  '+T.fc+': '+GST._num(f.fc)+(f.unit||'');
     return s;
   }).join('\n');
+};
+GST._w5Html=function(){
+  const T=GST.W5_T[GST._lang()]||GST.W5_T.ko, L=GST.weekly5(), E=GST._esc;
+  return '<div class="gw5"><div class="gw5-h">'+E(T.head)+'</div>'
+    +(L.length?'<ol>'+L.map(function(x){ return '<li class="'+x.sev+'"><div>'+E(x.text)+'</div><div class="gw5-a">'+E(x.act)+'</div></li>'; }).join('')+'</ol>'
+              :'<div class="gbf-none">'+E(T.none)+'</div>')+'</div>';
 };
 GST.briefOpen=function(){
   const T=GST.BRF_T[GST._lang()]||GST.BRF_T.ko, cfg=GST.briefCfg(), F=GST.briefFind();
@@ -6734,7 +6965,7 @@ GST.briefOpen=function(){
      '<div class="gov-h"><h4>🔔 '+T.t+'</h4><span class="gov-sub">'+T.sub+'</span><span class="gov-sp"></span>'
     +'<button class="gov-b" data-brf="copy">'+T.copy+'</button>'
     +'<button class="gov-b" data-brf="close">'+T.close+'</button></div>'
-    +'<div class="gov-body">'+body+'</div>'
+    +'<div class="gov-body">'+GST._w5Html()+body+'</div>'
     +'<div class="gov-f"><span>'+T.cfg+'</span>'
     +'<label>'+T.warn+' <input id="gbfWarn" type="number" min="1" max="200" value="'+cfg.warn+'"></label>'
     +'<label>'+T.z+' <input id="gbfZ" type="number" min="1" max="6" step="0.5" value="'+cfg.z+'"></label>'
