@@ -5699,9 +5699,13 @@ GST.filters = (function(){
       + '<span class="gb-sp"></span>'
       + '<button type="button" class="gb-more" id="gb-more"></button>'
       + '<button type="button" class="gb-clr" id="gb-clr" hidden></button>';
-    const anchor = document.getElementById('filtBadge') || document.getElementById('fchips')
+    let anchor = document.getElementById('filtBadge') || document.getElementById('fchips')
       || document.querySelector('.kpis') || document.querySelector('[data-sec]') || document.querySelector(GST.CARD_SEL||'.card');
     if(!anchor || !anchor.parentNode) return;
+    /* 요약 띠(GST.insights)가 먼저 KPI 위에 섰으면 그 «위»에 선다 — 화면마다 «띠 → 요약 → KPI» 한 순서
+       (PM 처럼 칩 줄이 없는 화면에서만 요약이 띠 위로 올라가 있었다) */
+    const ins = document.getElementById('gstInsights');
+    if(ins && ins.parentNode === anchor.parentNode && ins.nextElementSibling === anchor) anchor = ins;
     anchor.parentNode.insertBefore(d, anchor);
     d.addEventListener('click', function(e){
       const rb = e.target.closest('[data-gbr]');

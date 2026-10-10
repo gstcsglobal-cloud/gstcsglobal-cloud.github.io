@@ -47,11 +47,15 @@ is(['fault','material','pm','scrubber','tco','cip','hr','hub','site'].every(p =>
 console.log('[2] 카드 · KPI');
 let pg = await ctx.newPage(); const pe = []; pg.on('pageerror', e => pe.push(e.message));
 await pg.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(800);
-const an = await pg.evaluate(() => getComputedStyle(document.querySelector('.card')).animationName);
-is(an === 'gstRise', '카드가 떠오른다 (' + an + ')');
+/* «첫 화면 안에서 보이는» 첫 카드를 고른다 — 첫 화면 밖 카드는 떠오르기 대신 스크롤 등장(v175)이라 animation 이 none 이 맞다.
+   v179 에 범위 띠가 한 줄 들어오면서 고장분석의 DOM 첫 카드가 900px 아래로 밀려 그쪽이 됐다(제품은 맞고 검사의 가정이 틀렸다).
+   떠오르는 것은 카드 다섯 종류(theme.css 의 gstRise 선택자와 같은 목록)이므로 그 안에서 고른다 */
+await pg.evaluate(() => { const c = [...document.querySelectorAll('.card,.trend-card,.cross-card,.tablecard,.kpi')].find(c => { const r = c.getBoundingClientRect(); return r.height > 0 && r.top < innerHeight && getComputedStyle(c).display !== 'none'; }); if (c) c.setAttribute('data-tm', '1'); });
+const an = await pg.evaluate(() => { const c = document.querySelector('[data-tm]'); return c ? getComputedStyle(c).animationName : 'no-card-in-view'; });
+is(an === 'gstRise', '첫 화면의 카드가 떠오른다 (' + an + ')');
 await pg.waitForTimeout(800);
-const tf = await pg.evaluate(() => getComputedStyle(document.querySelector('.card')).transform);
-if (process.env.DBG) console.log('    tf=', tf, await pg.evaluate(() => { const c=document.querySelector('.card'); return [c.className, getComputedStyle(c).animationName, getComputedStyle(c).animationPlayState, c.getAnimations().map(a=>a.animationName+':'+a.playState+':'+a.currentTime)]; }));
+const tf = await pg.evaluate(() => { const c = document.querySelector('[data-tm]'); return c ? getComputedStyle(c).transform : 'no-card'; });
+if (process.env.DBG) console.log('    tf=', tf, await pg.evaluate(() => { const c=document.querySelector('[data-tm]'); return c ? [c.className, getComputedStyle(c).animationName, getComputedStyle(c).animationPlayState, c.getAnimations().map(a=>a.animationName+':'+a.playState+':'+a.currentTime)] : null; }));
 is(tf === 'none', '떠오르기가 끝나면 transform 이 남지 않는다 (카드 안 fixed 팝업의 기준이 안 바뀐다)');
 /* 처음 숫자 → 바뀐 숫자 */
 await pg.waitForTimeout(2200);   // 로드 중 사람 손이 닿은 흔적이 없도록
