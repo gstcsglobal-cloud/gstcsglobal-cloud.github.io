@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=166"></script>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=166">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=167"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=167">
 <style>
 /* ============================================================
    통합 관제 (v165 · 사용자 요청 「통합관리화면 신규 구축」)
@@ -76,6 +76,31 @@ body.hb{padding:0 !important;min-height:100vh}
 /* 세계지도 */
 .hb-map{position:relative;width:100%;aspect-ratio:240/93;min-height:220px}
 .hb-map canvas{position:absolute;inset:0;width:100%;height:100%}
+/* v171 — 벡터 지도(나라 경계 · 나라 안 행정구역). 캔버스 점지도는 모양 파일을 못 읽을 때(오프라인 판 등)의 폴백이다 */
+.hb-map svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.hb-map svg path{vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.hb-map .ct{fill:var(--surface-2);stroke:var(--line-2);stroke-width:.6;transition:fill .2s}
+.hb-map .ct.has{fill:color-mix(in srgb,var(--accent) 20%,var(--surface-2));stroke:color-mix(in srgb,var(--accent) 45%,var(--line-2));cursor:pointer}
+.hb-map .ct.has:hover{fill:color-mix(in srgb,var(--accent) 34%,var(--surface-2))}
+.hb-map .ct.dim{fill:color-mix(in srgb,var(--surface-2) 60%,transparent)}
+.hb-map .rg{fill:var(--surface-2);stroke:var(--line-2);stroke-width:.8}
+.hb-map .rg.has{fill:color-mix(in srgb,var(--accent) calc(var(--k,0) * 1%),var(--surface-2))}
+.hb-map .rl{fill:var(--txt-muted);font-size:11px;font-weight:600;text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:var(--surface);stroke-width:3px}
+.hb-map svg.zoom{animation:hbZoom .45s cubic-bezier(.2,.8,.2,1)}
+@keyframes hbZoom{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+.hb-back{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--accent);border-radius:8px;padding:3px 9px;cursor:pointer;margin-right:6px}
+.hb-dist{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.hb-dist h4{margin:0 0 6px;font-size:12px;color:var(--txt-2);font-weight:600}
+.hb-dist .hb-hb{display:flex;flex-direction:column;gap:4px}
+.hb-dist .hb-hb button{display:grid;grid-template-columns:minmax(70px,120px) 1fr 44px;gap:6px;align-items:center;font:inherit;font-size:12px;color:inherit;background:none;border:0;padding:2px 0;cursor:pointer;text-align:left}
+.hb-dist .hb-hb span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-dist .tr{height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden}
+.hb-dist .tr i{display:block;height:100%;border-radius:5px;background:var(--accent);transform-origin:left;animation:hbGrow .5s cubic-bezier(.2,.8,.2,1) both}
+.hb-dist .tr i.un{background:var(--line-2)}
+.hb-dist b{text-align:right;font-variant-numeric:tabular-nums}
+@keyframes hbGrow{from{transform:scaleX(0)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.hb-map svg.zoom,.hb-dist .tr i{animation:none}}
+@media (max-width:640px){.hb-dist{grid-template-columns:1fr}}
 .hb-bub{position:absolute;transform:translate(-50%,-50%);border-radius:50%;cursor:pointer;padding:0;
   border:2px solid var(--surface);box-shadow:0 0 0 0 transparent;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s var(--ease)}
 .hb-bub:hover{transform:translate(-50%,-50%) scale(1.15)}
@@ -181,9 +206,10 @@ body.hb{padding:0 !important;min-height:100vh}
     </div>
 
     <div class="hb-card hb-mapcard">
-      <h2><span data-i="mapT">글로벌 설치 현황</span><span class="s" data-i="mapS">원 크기 = 반입 설비 · 색 = 신호</span></h2>
-      <div class="hb-map" id="map"><canvas id="mapC" aria-hidden="true"></canvas><div id="bubs"></div><div class="hb-pop" id="pop" hidden></div></div>
+      <h2><button type="button" class="hb-back" id="mapBack" hidden data-i="back">← 전세계</button><span id="mapTitle" data-i="mapT">글로벌 설치 현황</span><span class="s" id="mapSub" data-i="mapS">원 크기 = 반입 설비 · 색 = 신호 · 나라를 누르면 그 나라 지도로</span></h2>
+      <div class="hb-map" id="map"><svg id="mapS" viewBox="0 0 1000 386" preserveAspectRatio="none" aria-hidden="true"></svg><canvas id="mapC" aria-hidden="true"></canvas><div id="bubs"></div><div class="hb-pop" id="pop" hidden></div></div>
       <div class="hb-stats" id="stats"></div>
+      <div class="hb-dist" id="cdist" hidden></div>
       <div class="hb-note" id="mapNote"></div>
     </div>
 
@@ -206,7 +232,7 @@ body.hb{padding:0 !important;min-height:100vh}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer && GST.needVer(166);
+GST.needVer && GST.needVer(167);
 GST.authGate();
 
 /* ── 세계 육지 점지도 ──
@@ -219,8 +245,8 @@ const GEO={ KOREA:[36.4,127.9], TAIWAN:[23.8,121.0], USA:[39.5,-98.5], JAPAN:[36
   CHINA:[34,108.9], WUHAN:[30.6,114.3], HEFEI:[31.8,117.2], XIAN:[34.3,108.9], WUXI:[31.5,120.3] };
 
 const T={
-ko:{title:'통합 관제',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'위험',warn:'주의',ok:'정상',sigCols:'이번 주 고장 · 위험 설비',
-  mapT:'글로벌 설치 현황',mapS:'원 크기 = 반입 설비 · 색 = 신호',qT:'처리할 일',heatT:'주차별 고장 히트맵',heatS:'진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록',
+ko:{title:'통합 관제',back:'← 전세계',cdReg:'지역 분포',cdCust:'고객사 분포',unplaced:'위치 미지정',unplacedN:'지도에 못 놓은 곳 {n} · {u}대: {list}',unplacedAdm:' — 데이터 관리 「사이트」 탭의 «지도 위치»에서 정합니다',mapT_c:'{c} 설치 현황',mapS_c:'원 크기 = 반입 설비 · 색 = 그 운영단위의 신호 · 막대를 누르면 그 설비 목록',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'위험',warn:'주의',ok:'정상',sigCols:'이번 주 고장 · 위험 설비',
+  mapT:'글로벌 설치 현황',mapS:'원 크기 = 반입 설비 · 색 = 신호 · 나라를 누르면 그 나라 지도로',qT:'처리할 일',heatT:'주차별 고장 히트맵',heatS:'진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록',
   byOp:'운영단위',byCampus:'단지',loading:'자료를 불러오는 중…',asof:'기준 {d} (자료의 마지막 날) · {w}',
   k_run:'가동 설비',k_run_d:'반입 {n}대 · 가동률 {p}%',k_bm:'이번 주 고장(BM)',k_pm:'이번 주 PM',k_risk:'고장 위험 설비',k_risk_d:'14일 안 재고장 {n}대',
   k_warr:'워런티 만료 90일 안',k_warr_d:'워런티 내 {n}대',k_dq:'자료 확인할 것',k_dq_d:'여덟 화면이 마지막으로 잰 값',k_dq_none:'문제 없음',
@@ -236,8 +262,8 @@ ko:{title:'통합 관제',open_site:'사이트 상세',all:'전체',kr:'국내',
   l_date:'날짜',l_op:'운영단위',l_campus:'단지',l_eq:'설비',l_sn:'S/N',l_src:'출처',l_desc:'내용',l_score:'점수',l_why:'근거',l_wd:'워런티 만료일',l_state:'설비상태',
   src_wk:'수선실적',src_kr:'알람 원장',week:'주',none:'자료 없음',fail:'일부 자료를 못 읽었습니다',
   dq_tip:'데이터 관리에서 고치기'},
-en:{title:'Command Center',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Critical',warn:'Watch',ok:'Normal',sigCols:'BM this week · at-risk units',
-  mapT:'Global installed base',mapS:'size = installed units · color = signal',qT:'To do',heatT:'Weekly failure heatmap',heatS:'darker = above usual · click a cell for that week\'s failures',
+en:{title:'Command Center',back:'← World',cdReg:'By region',cdCust:'By customer',unplaced:'No position',unplacedN:'{n} place(s) not on the map · {u} units: {list}',unplacedAdm:' — set them in Data management «Sites» › Map position',mapT_c:'{c} installed base',mapS_c:'size = installed units · color = signal of its unit · click a bar for the unit list',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Critical',warn:'Watch',ok:'Normal',sigCols:'BM this week · at-risk units',
+  mapT:'Global installed base',mapS:'size = installed units · color = signal · click a country to zoom in',qT:'To do',heatT:'Weekly failure heatmap',heatS:'darker = above usual · click a cell for that week\'s failures',
   byOp:'Operating unit',byCampus:'Campus',loading:'Loading…',asof:'As of {d} (last data day) · {w}',
   k_run:'Running units',k_run_d:'{n} installed · {p}% running',k_bm:'Failures (BM) this week',k_pm:'PM this week',k_risk:'At-risk units',k_risk_d:'{n} repeat within 14 days',
   k_warr:'Warranty ends in 90 days',k_warr_d:'{n} under warranty',k_dq:'Data to check',k_dq_d:'last measured on the eight screens',k_dq_none:'No issues',
@@ -253,8 +279,8 @@ en:{title:'Command Center',open_site:'Site detail',all:'All',kr:'Korea',os:'Over
   l_date:'Date',l_op:'Unit',l_campus:'Campus',l_eq:'Equipment',l_sn:'S/N',l_src:'Source',l_desc:'Detail',l_score:'Score',l_why:'Why',l_wd:'Warranty end',l_state:'Status',
   src_wk:'Repair',src_kr:'Alarm ledger',week:'wk',none:'No data',fail:'Some data could not be read',
   dq_tip:'Fix in Data management'},
-zh:{title:'综合监控',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'危险',warn:'注意',ok:'正常',sigCols:'本周故障 · 风险设备',
-  mapT:'全球安装现况',mapS:'圆大小 = 已进场设备 · 颜色 = 信号',qT:'待处理',heatT:'按周故障热力图',heatS:'越深 = 高于平时 · 点击格子查看该周故障',
+zh:{title:'综合监控',back:'← 全球',cdReg:'地区分布',cdCust:'客户分布',unplaced:'未指定位置',unplacedN:'未能放到地图上的 {n} 处 · {u}台: {list}',unplacedAdm:' — 在数据管理「站点」页的地图位置中设定',mapT_c:'{c} 安装现况',mapS_c:'圆大小 = 已进场设备 · 颜色 = 所属运营单位信号 · 点击柱查看设备',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'危险',warn:'注意',ok:'正常',sigCols:'本周故障 · 风险设备',
+  mapT:'全球安装现况',mapS:'圆大小 = 已进场设备 · 颜色 = 信号 · 点击国家查看该国地图',qT:'待处理',heatT:'按周故障热力图',heatS:'越深 = 高于平时 · 点击格子查看该周故障',
   byOp:'运营单位',byCampus:'园区',loading:'正在加载…',asof:'基准 {d}（数据最后一天）· {w}',
   k_run:'运行设备',k_run_d:'进场 {n}台 · 运行率 {p}%',k_bm:'本周故障(BM)',k_pm:'本周PM',k_risk:'故障风险设备',k_risk_d:'14天内复发 {n}台',
   k_warr:'90天内保修到期',k_warr_d:'保修内 {n}台',k_dq:'待确认数据',k_dq_d:'八个画面最后测得的值',k_dq_none:'没有问题',
@@ -270,8 +296,8 @@ zh:{title:'综合监控',open_site:'站点详情',all:'全部',kr:'国内',os:'�
   l_date:'日期',l_op:'运营单位',l_campus:'园区',l_eq:'设备',l_sn:'S/N',l_src:'来源',l_desc:'内容',l_score:'分数',l_why:'依据',l_wd:'保修到期日',l_state:'设备状态',
   src_wk:'维修实绩',src_kr:'报警台账',week:'周',none:'无数据',fail:'部分数据未能读取',
   dq_tip:'在数据管理中修正'},
-ja:{title:'統合管制',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'危険',warn:'注意',ok:'正常',sigCols:'今週の故障 · 危険設備',
-  mapT:'グローバル設置現況',mapS:'円の大きさ = 搬入設備 · 色 = シグナル',qT:'対応すること',heatT:'週別故障ヒートマップ',heatS:'濃いほど平常より多い · セルを押すとその週の故障一覧',
+ja:{title:'統合管制',back:'← 全世界',cdReg:'地域分布',cdCust:'顧客分布',unplaced:'位置未指定',unplacedN:'地図に置けない場所 {n} · {u}台: {list}',unplacedAdm:' — データ管理「サイト」タブの地図位置で設定します',mapT_c:'{c} 設置現況',mapS_c:'円の大きさ = 搬入設備 · 色 = その運営単位の信号 · 棒を押すと設備一覧',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'危険',warn:'注意',ok:'正常',sigCols:'今週の故障 · 危険設備',
+  mapT:'グローバル設置現況',mapS:'円の大きさ = 搬入設備 · 色 = シグナル · 国を押すとその国の地図へ',qT:'対応すること',heatT:'週別故障ヒートマップ',heatS:'濃いほど平常より多い · セルを押すとその週の故障一覧',
   byOp:'運営単位',byCampus:'団地',loading:'データ読み込み中…',asof:'基準 {d}（データ最終日）· {w}',
   k_run:'稼働設備',k_run_d:'搬入 {n}台 · 稼働率 {p}%',k_bm:'今週の故障(BM)',k_pm:'今週のPM',k_risk:'故障リスク設備',k_risk_d:'14日以内再故障 {n}台',
   k_warr:'90日以内に保証終了',k_warr_d:'保証内 {n}台',k_dq:'確認すべきデータ',k_dq_d:'8画面が最後に測った値',k_dq_none:'問題なし',
@@ -302,7 +328,8 @@ const REDUCE=(function(){ try{ return matchMedia('(prefers-reduced-motion: reduc
 const RULE={badX:1.5, badD:5, warnX:1.2, warnD:3, repBad:3, repWarn:1};
 
 let RAW=null;                          // 읽어 온 그대로(파싱 뒤)
-const S={region:'all', heat:'op', sel:null};
+const S={region:'all', heat:'op', sel:null, cc:''};   // cc — 나라 지도로 들어가면 그 나라(ISO2) · 모든 칸이 그 나라만 본다
+const GEOD={world:null, cc:{}, PL:{}, fail:false};
 
 /* ===== 읽기 — 파싱·조인·판정은 core GST.ops 한 벌(v167 · 사이트 상세와 같은 식) ===== */
 const cityOf=GST.ops.cityOf;
@@ -350,21 +377,25 @@ function weeksOf(asOf){
 }
 const median=a=>{ if(!a.length) return 0; const s=a.slice().sort((x,y)=>x-y), m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; };
 function compute(){
-  const R=RAW, rg=S.region, okR=reg=>rg==='all'||(rg==='kr'?reg===KR:reg===OS);
+  const R=RAW, rg=S.region, okR0=reg=>rg==='all'||(rg==='kr'?reg===KR:reg===OS);
+  /* 나라 거르기(v171) — 설비는 설치현황의 국가, 실적·원장은 운영단위에서 푼 국가(국내 원장은 한국) */
+  const ccCty=S.cc?(GST.geo.CC[S.cc]||{}).cty:'';
+  const ctyOf=x=>x.cty||GST.ORG.country(x.op)||(x.region===KR?'KOREA':'');
+  const okR=(reg,x)=>okR0(reg)&&(!ccCty||!x||ctyOf(x)===ccCty);
   /* 기준일 = 자료의 마지막 날(오늘을 넘지 않는다) — 수동 업로드라 «오늘»로 자르면 이번 주가 빈다 */
   const asOf=GST.ops.asOf(R);
   const W=weeksOf(asOf), wIx=d=>{ const v=d.getTime(); for(let i=0;i<W.length;i++) if(v>=W[i].st.getTime()&&v<W[i].en.getTime()) return i; return -1; };
 
   /* 고장(BM) — 주간현황과 같은 규칙(v92·v115): 해외 = 수선실적 BM · 국내 = 원장(내적·한 사건 첫 줄). 원장이 비면 국내도 수선실적 BM. */
   const KR_ON=R.KRA.length>0;
-  const bm=GST.ops.bm(R, x=>okR(x.region));
-  const pm=GST.ops.pm(R, x=>okR(x.region));
+  const bm=GST.ops.bm(R, x=>okR(x.region,x));
+  const pm=GST.ops.pm(R, x=>okR(x.region,x));
   const t0=asOf.getTime();
   /* 고장 위험 — 고장분석 「고장 위험 설비 TOP 20」과 같은 식(GST.ops.risk · v148) */
-  const RISK=GST.ops.risk(R, asOf, x=>okR(x.region));
+  const RISK=GST.ops.risk(R, asOf, x=>okR(x.region,x));
 
   /* 설비 — GST.EQ 정본 */
-  const inst=R.INST.filter(x=>okR(x.region));
+  const inst=R.INST.filter(x=>okR(x.region,x));
   const isIn=x=>GST.ops.isIn(x,asOf), isRun=x=>GST.ops.isRun(x,asOf);
 
   /* 운영단위 묶음 */
@@ -486,9 +517,10 @@ const CTY={ko:{KOREA:'한국',TAIWAN:'대만',CHINA:'중국',USA:'미국',JAPAN:
 function ctyName(c){ return (CTY[LANG]||CTY.ko)[c]||c||''; }
 function pick(op){ S.sel=op; drawSignals(); drawMap(); drawSel(); }
 
-/* 지도 — 캔버스에 점을 찍고, 원은 버튼(키보드로도 고른다) */
-function drawMap(){
+/* 점지도(폴백) — 모양 파일(assets/geo)을 못 읽을 때만. 원은 버튼(키보드로도 고른다) */
+function drawDots(){
   const host=document.getElementById('map'), cv=document.getElementById('mapC');
+  cv.style.display=''; document.getElementById('mapS').innerHTML='';
   const r=host.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
   /* 탭이 숨겨진 동안(셸의 다른 탭 · display:none) 다시 그리면 폭이 0 이라 캔버스가 1px 로 굳는다 — 그리지 않고 «보일 때»로 미룬다 */
   if(r.width<20||r.height<20){ S.mapDirty=true; return; }
@@ -526,6 +558,133 @@ function drawMap(){
     .map(a=>'<div class="hb-stat">'+esc(a[0])+'<b>'+esc(a[1])+'</b></div>').join('');
   document.getElementById('mapNote').textContent=noLoc.length?fmt(t('noLoc'),{n:noLoc.length,list:noLoc.slice(0,4).map(g=>short(g.op)).join(', ')+(noLoc.length>4?' …':'')}):'';
 }
+/* ===== 지도 (v171) — 세계: 나라 경계 · 운영단위 원 / 나라: 행정구역 · 사이트 원 · 지역·고객사 분포 =====
+   모양은 assets/geo(공개 자료 · tools/geo-build.mjs) · 위치는 GST.geo.placeOf(사람이 정한 geo_places → 행정구역 이름 정확일치).
+   ⚠ 못 놓은 설비는 «위치 미지정»으로 대수와 함께 밝힌다 — 지도 밖으로 조용히 사라지면 분포의 합이 반입 대수와 안 맞는다. */
+const VW=1000, VH=386, LAT0=83, LAT1=-56;
+const projW=(lng,lat)=>[ (lng+180)/360*VW, (LAT0-lat)/(LAT0-LAT1)*VH ];
+function pathOf(rings, proj){ let d=''; rings.forEach(poly=>poly.forEach(r=>{ r.forEach((p,i)=>{ const q=proj(p[0],p[1]); d+=(i?'L':'M')+q[0].toFixed(1)+','+q[1].toFixed(1); }); d+='Z'; })); return d; }
+function countryProj(adm){
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  adm.f.forEach((f,i)=>{ if(GST.geo.FAR[f.iso]) return; adm._r=adm._r||adm.f.map(g=>GST.geo.rings(g, adm.P));
+    adm._r[i].forEach(poly=>poly[0].forEach(p=>{ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1]; })); });
+  const k=Math.cos((y0+y1)/2*Math.PI/180), w=(x1-x0)*k, h=(y1-y0), pad=24, sc=Math.min((VW-2*pad)/w,(VH-2*pad)/h);
+  const ox=(VW-w*sc)/2, oy=(VH-h*sc)/2;
+  return (lng,lat)=>[ ox+(lng-x0)*k*sc, oy+(y1-lat)*sc ];
+}
+async function geoEnsure(){
+  if(GEOD.fail) return false;
+  try{
+    if(!GEOD.world){ const r=await Promise.all([GST.geo.load('world'), GST.geo.places()]); GEOD.world=r[0]; GEOD.PL=r[1]; }
+    if(S.cc&&!GEOD.cc[S.cc]) GEOD.cc[S.cc]=await GST.geo.load(S.cc);
+    return true;
+  }catch(e){ console.warn('[hub] 지도 모양을 못 읽어 점지도로 그린다', e); GEOD.fail=true; return false; }
+}
+let _mapSeq=0;
+async function drawMap(){
+  const host=document.getElementById('map'), r=host.getBoundingClientRect();
+  /* 탭이 숨겨진 동안(셸의 다른 탭 · display:none) 다시 그리면 폭이 0 이라 굳는다 — 그리지 않고 «보일 때»로 미룬다(v170) */
+  if(r.width<20||r.height<20){ S.mapDirty=true; return; }
+  S.mapDirty=false;
+  const seq=++_mapSeq;
+  const ok=await geoEnsure(); if(seq!==_mapSeq) return;
+  if(!ok){ if(S.cc){ S.cc=''; render(); return; } return drawDots(); }
+  document.getElementById('mapC').style.display='none';
+  const svg=document.getElementById('mapS');
+  document.getElementById('mapBack').hidden=!S.cc;
+  document.getElementById('mapTitle').textContent=S.cc?fmt(t('mapT_c'),{c:ctyName((GST.geo.CC[S.cc]||{}).cty)}):t('mapT');
+  document.getElementById('mapSub').textContent=S.cc?t('mapS_c'):t('mapS');
+  if(S.cc) drawCountry(svg); else drawWorld(svg);
+  if(S._zoom){ svg.classList.remove('zoom'); void svg.getBoundingClientRect(); svg.classList.add('zoom'); S._zoom=false; }
+}
+function bubbles(B, unplaced){
+  const host=document.getElementById('map').getBoundingClientRect();
+  const taken=[];
+  B.slice().sort((a,b)=>(b.on)-(a.on)||b.sz-a.sz).forEach(b=>{
+    const px=b.x/VW*host.width, py=b.y/VH*host.height+b.sz/2+8, w=Math.max(40,String(b.lb).length*6.4);
+    b.showLb=!taken.some(t=>Math.abs(t.x-px)<(t.w+w)/2+4 && Math.abs(t.y-py)<15);
+    if(b.showLb) taken.push({x:px,y:py,w}); });
+  const bubs=document.getElementById('bubs');
+  bubs.innerHTML=B.map((b,i)=>'<button type="button" class="hb-bub '+b.st+(b.on?' on':'')+'" data-b="'+i+'" style="left:'+(b.x/VW*100).toFixed(2)+'%;top:'+(b.y/VH*100).toFixed(2)+'%;width:'+b.sz+'px;height:'+b.sz+'px" aria-label="'+esc(b.lb+' · '+t(b.st))+'">'
+    +(b.showLb?'<span class="lb">'+esc(b.lb)+'</span>':'')+'</button>').join('');
+  bubs.querySelectorAll('.hb-bub').forEach(el=>{ const b=B[+el.dataset.b];
+    el.onclick=()=>b.click(); el.onmouseenter=el.onfocus=()=>popAt(el, b.pop()); el.onmouseleave=el.onblur=()=>{ document.getElementById('pop').hidden=true; }; });
+}
+function popAt(el, html){
+  const p=document.getElementById('pop'), host=document.getElementById('map').getBoundingClientRect(), br=el.getBoundingClientRect();
+  p.innerHTML=html; p.hidden=false;
+  const cx=br.left-host.left+br.width/2, cy=br.top-host.top;
+  const left=cx>host.width*0.62; p.style.left=left?'':(cx+br.width/2+8)+'px'; p.style.right=left?(host.width-cx+br.width/2+8)+'px':''; p.style.top=Math.max(4,cy-10)+'px';
+}
+function drawWorld(svg){
+  const W=GEOD.world, has={};
+  D.groups.forEach(g=>{ const cc=GST.geo.ccOfCty(g.cty); if(cc&&g.inN) has[cc]=(has[cc]||0)+g.inN; });
+  svg.innerHTML=W.f.map(f=>{ const cc=GST.geo.ccOfId(f.id), on=cc&&has[cc];
+    return '<path class="ct'+(on?' has':'')+'" data-cc="'+(on?cc:'')+'" d="'+pathOf(GST.geo.rings(f, W.P), projW)+'"><title>'+esc(on?ctyName(GST.geo.CC[cc].cty)+' · '+nf(has[cc])+t('u_ea'):f.n)+'</title></path>'; }).join('');
+  svg.querySelectorAll('path.has').forEach(el=>el.onclick=()=>enterCountry(el.dataset.cc));
+  // 운영단위 원 — 국가(중국은 도시) 자리 · 같은 나라의 여러 법인은 둥글게 벌린다
+  const byLoc={}, noLoc=[];
+  D.groups.forEach(g=>{ const k=GEO[g.city]?g.city:(GEO[g.cty]?g.cty:''); if(!k){ if(g.inN) noLoc.push(g); return; } (byLoc[k]=byLoc[k]||[]).push(g); });
+  const mx=Math.max(1,...D.groups.map(g=>g.inN)), B=[];
+  Object.keys(byLoc).forEach(k=>{ const L=byLoc[k], n=L.length;
+    L.forEach((g,i)=>{ let [lat,lon]=GEO[k]; if(n>1){ const a=i/n*2*Math.PI-Math.PI/2, rr=3.2; lat+=Math.sin(a)*rr*0.8; lon+=Math.cos(a)*rr; }
+      const [x,y]=projW(lon,lat);
+      B.push({x,y,sz:Math.round(14+Math.sqrt(g.inN/mx)*34), st:g.st, on:g.op===S.sel, lb:short(g.op),
+        /* 원을 누르면 그 나라 지도로 — 대만처럼 작은 나라는 원이 나라를 덮어 경계를 누를 수 없다 */
+        click:()=>{ S.sel=g.op; const cc=GST.geo.ccOfCty(g.cty); if(cc) enterCountry(cc, g.op); else pick(g.op); }, pop:()=>'<span>'+esc(ctyName(g.cty))+'</span><b>'+esc(short(g.op))+'</b><span class="big">'+nf(g.inN)+'</span> '+esc(t('u_ea'))+'<br>'+esc(t('k_bm'))+' '+g.cur+' · <span class="hb-pill '+g.st+'">'+esc(t(g.st))+'</span>'}); }); });
+  bubbles(B);
+  const tot=D.groups.reduce((s,g)=>s+g.inN,0), ctys=new Set(D.groups.map(g=>g.cty).filter(Boolean)), bm12=D.bmW.reduce((s,v)=>s+v,0);
+  document.getElementById('stats').innerHTML=[[t('st_units'),nf(tot)],[t('st_ops'),D.groups.length],[t('st_cty'),ctys.size],[t('st_bm12'),nf(bm12)]]
+    .map(a=>'<div class="hb-stat">'+esc(a[0])+'<b>'+esc(a[1])+'</b></div>').join('');
+  document.getElementById('cdist').hidden=true;
+  document.getElementById('mapNote').textContent=noLoc.length?fmt(t('noLoc'),{n:noLoc.length,list:noLoc.slice(0,4).map(g=>short(g.op)).join(', ')+(noLoc.length>4?' …':'')}):'';
+}
+function drawCountry(svg){
+  const adm=GEOD.cc[S.cc], proj=countryProj(adm), PL=GEOD.PL;
+  const isIn=x=>GST.ops.isIn(x,D.asOf), isRun=x=>GST.ops.isRun(x,D.asOf);
+  const gOf={}; D.groups.forEach(g=>{ gOf[g.op]=g; });
+  // 사이트(위치)별 묶음 · 지역 · 고객사
+  const P={}, REG={}, CUS={}, UN={};
+  D.inst.forEach(x=>{ if(!isIn(x)) return;
+    const pl=GST.geo.placeOf(x, PL, adm);
+    const cu=(GST.ORG.customer?GST.ORG.customer(x.cust):x.cust)||'—';
+    (CUS[cu]=CUS[cu]||[]).push(x);
+    if(!pl){ const k=x.loc||x.campus||x.fab||'—'; (UN[k]=UN[k]||[]).push(x); (REG['\u0000']=REG['\u0000']||[]).push(x); return; }
+    const p=P[pl.key]||(P[pl.key]={pl, rows:[], run:0, ops:{}});
+    p.rows.push(x); if(isRun(x)) p.run++; p.ops[x.op]=(p.ops[x.op]||0)+1;
+    const rg=GST.geo.regionOf(pl.lng, pl.lat, adm), rk=rg?GST.geo.admName(rg, LANG):'\u0000';
+    (REG[rk]=REG[rk]||[]).push(x); });
+  const regCnt={}; Object.keys(REG).forEach(k=>{ if(k!=='\u0000') regCnt[k]=REG[k].length; });
+  const rmx=Math.max(1,...Object.values(regCnt));
+  svg.innerHTML=adm.f.map((f,i)=>{ const nm=GST.geo.admName(f, LANG), n=regCnt[nm]||0;
+    return '<path class="rg'+(n?' has':'')+'" style="--k:'+(n?Math.round(18+n/rmx*55):0)+'" d="'+pathOf(adm._r[i], proj)+'"><title>'+esc(nm+(n?' · '+nf(n)+t('u_ea'):''))+'</title></path>'; }).join('')
+    + adm.f.filter(f=>regCnt[GST.geo.admName(f, LANG)]&&f.c).map(f=>{ const q=proj(f.c[0],f.c[1]); return '<text class="rl" x="'+q[0].toFixed(1)+'" y="'+(q[1]-12).toFixed(1)+'">'+esc(GST.geo.admName(f, LANG))+'</text>'; }).join('');
+  const L=Object.values(P), mx=Math.max(1,...L.map(p=>p.rows.length));
+  const B=L.map(p=>{ const [x,y]=proj(p.pl.lng,p.pl.lat), top=Object.keys(p.ops).sort((a,b)=>p.ops[b]-p.ops[a])[0], g=gOf[top]||{st:'ok'};
+    return {x,y,sz:Math.round(14+Math.sqrt(p.rows.length/mx)*36), st:g.st, on:top===S.sel, lb:p.pl.label,
+      click:()=>{ if(top) pick(top); listUnits(p.pl.label, p.rows); },
+      pop:()=>'<span>'+esc(Object.keys(p.ops).map(short).join(' · '))+'</span><b>'+esc(p.pl.label)+'</b><span class="big">'+nf(p.rows.length)+'</span> '+esc(t('u_ea'))+'<br>'+esc(t('k_run'))+' '+nf(p.run)}; });
+  bubbles(B);
+  const tot=D.inst.filter(isIn).length, unN=(REG['\u0000']||[]).length;
+  document.getElementById('stats').innerHTML=[[t('st_units'),nf(tot)],[t('st_ops'),D.groups.length],[t('cdReg'),Object.keys(regCnt).length],[t('st_bm12'),nf(D.bmW.reduce((s,v)=>s+v,0))]]
+    .map(a=>'<div class="hb-stat">'+esc(a[0])+'<b>'+esc(a[1])+'</b></div>').join('');
+  // 분포 두 개 — 막대를 누르면 그 설비 목록
+  const bars=(M, label)=>{ const K=Object.keys(M).sort((a,b)=>(a==='\u0000')-(b==='\u0000')||M[b].length-M[a].length).slice(0,10), m=Math.max(1,...K.map(k=>M[k].length));
+    return '<div><h4>'+esc(label)+'</h4><div class="hb-hb">'+K.map((k,i)=>'<button type="button" data-k="'+esc(k)+'"><span title="'+esc(k==='\u0000'?t('unplaced'):k)+'">'+esc(k==='\u0000'?t('unplaced'):k)+'</span><span class="tr"><i class="'+(k==='\u0000'?'un':'')+'" style="width:'+(M[k].length/m*100).toFixed(1)+'%;animation-delay:'+(i*35)+'ms"></i></span><b>'+nf(M[k].length)+'</b></button>').join('')+'</div></div>'; };
+  const cd=document.getElementById('cdist'); cd.hidden=false;
+  cd.innerHTML=bars(REG, t('cdReg'))+bars(CUS, t('cdCust'));
+  const parts=cd.children;
+  parts[0].querySelectorAll('button').forEach(b=>b.onclick=()=>listUnits(b.dataset.k==='\u0000'?t('unplaced'):b.dataset.k, REG[b.dataset.k]||[]));
+  parts[1].querySelectorAll('button').forEach(b=>b.onclick=()=>listUnits(b.dataset.k, CUS[b.dataset.k]||[]));
+  const unK=Object.keys(UN).sort((a,b)=>UN[b].length-UN[a].length);
+  document.getElementById('mapNote').textContent=unN?fmt(t('unplacedN'),{n:unK.length,u:nf(unN),list:unK.slice(0,5).map(k=>k+' '+UN[k].length).join(', ')+(unK.length>5?' …':'')})+(GST.isAdmin&&GST.isAdmin()?t('unplacedAdm'):''):'';
+}
+function listUnits(title, rows){
+  GST.rowsModal(title, [t('l_op'),t('l_campus'),'FAB',t('l_eq'),t('l_sn'),t('l_state')],
+    rows.slice().sort((a,b)=>String(a.campus).localeCompare(String(b.campus))).map(x=>[short(x.op),x.campus||x.loc||'',x.fab||'',x.code||'',x.sn||'',x.stateRaw||'']));
+}
+function enterCountry(cc, op){ if(!GST.geo.CC[cc]) return; S.cc=cc; S.sel=op||null; S._zoom=true; document.getElementById('pop').hidden=true; render(); }
+function leaveCountry(){ S.cc=''; S.sel=null; S._zoom=true; document.getElementById('pop').hidden=true; render(); }
 function popShow(b){
   const g=D.groups.find(x=>x.op===b.dataset.op); if(!g) return;
   const p=document.getElementById('pop'), host=document.getElementById('map').getBoundingClientRect(), br=b.getBoundingClientRect();
@@ -617,6 +776,8 @@ document.getElementById('segRegion').addEventListener('click',e=>{ const b=e.tar
   S.region=b.dataset.r; document.querySelectorAll('#segRegion button').forEach(x=>x.classList.toggle('on',x===b)); S.sel=null; render(); });
 document.getElementById('segHeat').addEventListener('click',e=>{ const b=e.target.closest('button[data-h]'); if(!b) return;
   S.heat=b.dataset.h; document.querySelectorAll('#segHeat button').forEach(x=>x.classList.toggle('on',x===b)); drawHeat(); });
+document.getElementById('mapBack').onclick=leaveCountry;
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&S.cc&&!document.querySelector('.gov')) leaveCountry(); });
 document.getElementById('ruleBtn').onclick=()=>GST.rowsModal(t('rule_t'), [t('l_desc')], t('rule').split('\n').filter(Boolean).map(s=>[s]));
 let _rz=0; window.addEventListener('resize',()=>{ cancelAnimationFrame(_rz); _rz=requestAnimationFrame(()=>D&&drawMap()); });
 /* 지도 상자의 크기가 바뀌면(숨김 → 보임 포함) 다시 그린다 · 셸이 이 탭을 다시 보여 줄 때도 */

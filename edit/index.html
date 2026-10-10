@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=166"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=167"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -329,7 +329,7 @@ table.dt td.v{word-break:break-all}
      「기타」로 저절로 뜬다(승격된 새 열이 조용히 안 보이는 일이 없게).
    · 값 목록을 박지 않는다 — 입력 보조 목록은 edit_distinct 로 «지금 표에 있는 값»을 받는다.
    ============================================================================ */
-GST.needVer(147);
+GST.needVer(167);
 const $ = id => document.getElementById(id);
 const esc = s => GST._esc(s);
 const PAGE = 100;
@@ -3429,8 +3429,65 @@ async function siteRender(reload){
         + '<td>' + vmDistTxt(r.co) + (r.warn ? '<div class="vm-wt">' + esc(r.warn) + '</div>' : '') + '</td><td>' + vmDistTxt(r.cu) + '</td><td>' + vmDistTxt(r.lo) + '</td>'
         + '<td>' + esc(r.reg || (s && s.region) || '') + '</td><td>' + cip + '</td><td class="st-act">' + act.join(' ') + '</td></tr>';
     }).join('') + '</tbody></table>'
-    + (show.length ? '' : '<p class="hint">등록된 사이트가 없습니다.</p>');
+    + (show.length ? '' : '<p class="hint">등록된 사이트가 없습니다.</p>')
+    + '<div id="geoBox" style="margin-top:22px"></div>';
   box.innerHTML = h;
+  geoRender();
+}
+/* ---------- 지도 위치 (v171 · setup-26 geo_places) ----------
+   통합 관제의 나라 지도가 설비를 «어디에» 놓을지. 설치현황의 지역 · 단지 · FAB 값마다 지금 어디에 놓이는지(사람이 정한 좌표 /
+   행정구역 이름 / 미지정)를 보이고, 좌표를 정한다. 판정은 core GST.geo.placeOf 한 벌 — 관제와 같은 함수로 «지금 위치»를 보인다.
+   ⚠ 단지 코드(P1·H2)의 위치는 코드에 박지 않는다 — 여기서 사람이 정한다. 끝 숫자를 뗀 열쇠(P)로 정하면 P1~P4 가 함께 간다. */
+const GEOE = { PL:null, adm:{}, err:'' };
+async function geoRender(){
+  const box = $('geoBox'); if(!box) return;
+  box.innerHTML = '<p class="hint">지도 위치 읽는 중…</p>';
+  try{
+    const q = await C.from('geo_places').select('*');
+    if(q.error){ GEOE.err = /geo_places|relation|schema cache/i.test(q.error.message) ? '서버 준비가 아직 안 됐습니다 — Supabase SQL Editor 에서 supabase/setup-26-geo.sql 을 Run 하세요.' : q.error.message; GEOE.PL = {}; }
+    else { GEOE.err = ''; GEOE.PL = {}; (q.data || []).forEach(p => { GEOE.PL[p.key] = p; }); }
+  }catch(e){ GEOE.err = e.message; GEOE.PL = {}; }
+  /* 설치현황의 값 묶음 → (지역 · 단지 · FAB) 마다 대수 */
+  const M = new Map();
+  (SITE.groups.inst || []).forEach(g => {
+    const loc = vs(g.location).trim(), fab = vs(g.fab).trim(), op = vs(g.country).trim();
+    const cty = GST.ORG.country(op) || GST.ORG.country(vs(g.customer)) || GST.ORG.country(fab), cc = GST.geo.ccOfCty(cty);
+    const x = { loc:loc, campus:GST.ORG.campus(loc, fab, op) || '', fab:fab, cty:cty };
+    const k = cc + '\u0001' + (loc || x.campus || fab || '—');
+    const e = M.get(k) || { x:x, cc:cc, n:0 }; e.n += g.n; M.set(k, e); });
+  const L = Array.from(M.values()).filter(e => e.cc);
+  await Promise.all(Array.from(new Set(L.map(e => e.cc))).map(async cc => { if(!GEOE.adm[cc]) try{ GEOE.adm[cc] = await GST.geo.load(cc); }catch(e){ GEOE.adm[cc] = null; } }));
+  L.forEach(e => { e.pl = GST.geo.placeOf(e.x, GEOE.PL, GEOE.adm[e.cc]);
+    const v = GST.geo.norm(e.x.loc || e.x.campus || e.x.fab); e.sug = (e.pl && e.pl.src === 'db') ? e.pl.key : (/\d$/.test(v) && /^[A-Z]+\d+[A-Z]?$/.test(v) ? v.replace(/\d+[A-Z]?$/, '') : v.replace(/\(.*?\)/g, '')); });
+  L.sort((a, b) => (!!a.pl - !!b.pl) || b.n - a.n);
+  const un = L.filter(e => !e.pl), canW = GST.canWrite && GST.canWrite();
+  const admOpts = cc => { const a = GEOE.adm[cc]; return a ? a.f.filter(f => f.c).map(f => '<option value="' + f.c[1] + ',' + f.c[0] + '">' + esc((f.n.ko || f.n.en) + (f.n.ko && f.n.en ? ' · ' + f.n.en : '')) + '</option>').join('') : ''; };
+  box.innerHTML = '<h3 style="margin:0 0 6px">지도 위치</h3>'
+    + '<p class="hint">통합 관제의 나라 지도가 설비를 놓는 자리입니다. 설치현황의 <b>지역 → 단지 → FAB</b> 값으로 찾고, 정해 둔 좌표가 없으면 행정구역 이름과 정확히 같은 값만 저절로 놓습니다. '
+    + '나머지는 «위치 미지정»으로 지도 아래에 대수와 함께 뜹니다. <b>P1·P2</b> 처럼 끝에 숫자가 붙은 단지 코드는 열쇠를 <b>P</b> 로 정하면 한꺼번에 갑니다.</p>'
+    + (GEOE.err ? '<div class="banner warn">' + esc(GEOE.err) + '</div>' : '')
+    + (un.length ? '<div class="banner warn">지도에 못 놓은 값 ' + un.length + '개 · ' + un.reduce((a, e) => a + e.n, 0).toLocaleString() + '대 — 아래에서 정하세요.</div>' : '<p class="hint">설치현황의 모든 값이 지도에 놓입니다.</p>')
+    + '<table class="dt vm-t" data-gst-nosn><thead><tr><th>나라</th><th>지역 · 단지 · FAB</th><th>대수</th><th>지금 위치</th><th>열쇠</th><th>행정구역에서 고르기</th><th>위도</th><th>경도</th><th></th></tr></thead><tbody>'
+    + L.map((e, i) => { const p = e.pl, db = p && p.src === 'db';
+      return '<tr data-gi="' + i + '"' + (p ? '' : ' class="vm-w"') + '><td>' + esc(e.cc) + '</td><td><b>' + esc(e.x.loc || e.x.campus || e.x.fab) + '</b>' + (e.x.loc && e.x.fab ? ' <span class="hint">' + esc(e.x.fab) + '</span>' : '') + '</td>'
+        + '<td>' + e.n.toLocaleString() + '</td>'
+        + '<td>' + (p ? (db ? '정함 <span class="hint">' + esc(p.key) + ' · ' + p.lat.toFixed(3) + ', ' + p.lng.toFixed(3) + '</span>' : '행정구역 <span class="hint">' + esc(p.label) + '</span>') : '<b class="vm-wt">미지정</b>') + '</td>'
+        + '<td><input data-gk value="' + esc(e.sug) + '" style="width:110px"' + (canW ? '' : ' disabled') + '></td>'
+        + '<td><select data-ga' + (canW ? '' : ' disabled') + '><option value="">—</option>' + admOpts(e.cc) + '</select></td>'
+        + '<td><input data-glat type="number" step="0.001" style="width:88px" value="' + (db ? p.lat : '') + '"' + (canW ? '' : ' disabled') + '></td>'
+        + '<td><input data-glng type="number" step="0.001" style="width:96px" value="' + (db ? p.lng : '') + '"' + (canW ? '' : ' disabled') + '></td>'
+        + '<td>' + (canW && !GEOE.err ? '<button type="button" class="btn sm pri" data-gs="' + i + '">저장</button>' + (db ? ' <button type="button" class="btn sm" data-gc="' + i + '">비우기</button>' : '') : '') + '</td></tr>'; }).join('')
+    + '</tbody></table>';
+  box.querySelectorAll('[data-ga]').forEach(sel => sel.onchange = () => { const tr = sel.closest('tr'), v = sel.value.split(','); if(v.length === 2){ tr.querySelector('[data-glat]').value = (+v[0]).toFixed(3); tr.querySelector('[data-glng]').value = (+v[1]).toFixed(3); } });
+  const save = async (i, clear) => { const e = L[i], tr = box.querySelector('[data-gi="' + i + '"]');
+    const key = GST.geo.norm(tr.querySelector('[data-gk]').value), lat = clear ? null : parseFloat(tr.querySelector('[data-glat]').value), lng = clear ? null : parseFloat(tr.querySelector('[data-glng]').value);
+    if(!key) return snack('열쇠를 적으세요', {err:true});
+    if(!clear && !(isFinite(lat) && isFinite(lng))) return snack('위도·경도를 적거나 행정구역에서 고르세요', {err:true});
+    try{ await rpc('geo_place_set', { p_key:key, p_lat:lat, p_lng:lng, p_label:e.x.loc || e.x.campus || e.x.fab, p_cc:e.cc });
+      snack(clear ? key + ' 위치를 비웠습니다' : key + ' 위치를 저장했습니다 — 통합 관제를 새로고침하면 반영됩니다'); geoRender();
+    }catch(err){ snack(err.message, {err:true, ms:8000}); } };
+  box.querySelectorAll('[data-gs]').forEach(b => b.onclick = () => save(+b.dataset.gs, false));
+  box.querySelectorAll('[data-gc]').forEach(b => b.onclick = () => save(+b.dataset.gc, true));
 }
 /* 정의 창 — 등록부 한 줄 + 규칙(표마다 «그 사이트 칸 = X» 인 행 · 운영단위·고객사·지역 = 아무 값 · 설비상태 = 빈칸만).
    «어느 표에 걸지»를 고른다 — 국내 실적처럼 «라인» 칸이 FAB 이 아닌 표에 같은 글자가 우연히 있으면 남의 행에 걸린다. */

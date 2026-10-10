@@ -25,9 +25,9 @@ const IH = ['NO','Country','Customer','Location','FAB','Line','Bay','Scrubber CO
   'Burner Type','Scrubber type','Process','Detail Process(HQ)','Detail Process(Customer)','Main Tool ID','Main Tool Maker',
   'Main Tool Model','Receipt date','Setup date','Turn-on date','Warranty date','Warranty In/Out','설비상태'];
 const inst = [IH]; let no = 0;
-const unit = (op, cust, fab, code, state, wd, wio) => { no++; inst.push([no, op, cust, 'LOC', fab, 'L1', 'B1', code, code + 'S', 'GST-1000',
+const unit = (op, cust, fab, code, state, wd, wio, loc) => { no++; inst.push([no, op, cust, loc || 'LOC', fab, 'L1', 'B1', code, code + 'S', 'GST-1000',
   'BURN', 'SINGLE', 'ETCH', 'DRY', 'DRY', 'MT' + no, 'TEL', 'TEL-A', '2023-03-01', '2023-03-10', '2023-03-20', wd || '2030-01-01', wio || 'IN', state]); };
-for (let i = 1; i <= 30; i++) unit('GST TAIWAN SCRUBBER', 'Micron Memory Taiwan Co., Ltd.(F16)', 'F16', 'TWC' + i, i <= 28 ? 'Operation' : 'Set-up', i <= 3 ? ymd(dAgo(-30)) : '');
+for (let i = 1; i <= 30; i++) unit('GST TAIWAN SCRUBBER', 'Micron Memory Taiwan Co., Ltd.(F16)', 'F16', 'TWC' + i, i <= 28 ? 'Operation' : 'Set-up', i <= 3 ? ymd(dAgo(-30)) : '', '', i <= 10 ? 'TAINAN' : '');
 for (let i = 1; i <= 10; i++) unit('GST CHINA(WUHAN) SCRUBBER', 'YMTC', 'FAB1', 'WHC' + i, 'Operation');
 for (let i = 1; i <= 12; i++) unit('SEC Scrubber', '삼성전자(주)', 'P1', 'KRC' + i, i <= 10 ? 'Operation' : '반납');
 
@@ -99,11 +99,34 @@ const heat = await pg.evaluate(() => { const rl = Array.from(document.querySelec
   const cells = Array.from(document.querySelectorAll('#heat .hb-cell[data-r="' + i + '"]')); return cells.map(c => +(c.textContent || 0)); });
 is(heat.length === 12 && heat[11] === 12 && heat.slice(0, 11).every(v => v === 1 || v === 0), '히트맵 대만 줄 — 마지막 칸 12 · 나머지는 평소(1)');
 
-console.log('[3] 지도 — 외부 자료 없이 그린다');
-const map = await pg.evaluate(() => { const c = document.getElementById('mapC'), x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-  let on = 0; for (let i = 3; i < x.length; i += 4) if (x[i]) on++; return { on, bub:document.querySelectorAll('#bubs .hb-bub').length }; });
-is(map.on > 1000 && map.bub === 3, '육지 점이 찍히고 운영단위 원 3개 (대만·우한·한국)');
-is(ext.length === 0, '지도·글꼴 외에 외부 요청 0' + (ext.length ? ' → ' + ext[0] : ''));
+console.log('[3] 지도 — 벡터 세계 지도 · 나라를 누르면 그 나라 지도 (v171)');
+await pg.waitForTimeout(800);
+const map = await pg.evaluate(() => ({ paths:document.querySelectorAll('#mapS path.ct').length, has:[...document.querySelectorAll('#mapS path.has')].map(p => p.dataset.cc).sort().join(','),
+  bub:document.querySelectorAll('#bubs .hb-bub').length, canvas:getComputedStyle(document.getElementById('mapC')).display }));
+is(map.paths > 200 && map.canvas === 'none', '나라 경계를 벡터로 그린다(점지도 캔버스는 숨김 · ' + map.paths + '개 나라)');
+is(map.has === 'CN,KR,TW' && map.bub === 3, '설비가 있는 나라(중국·한국·대만)가 칠해지고 운영단위 원 3개 (' + map.has + ')');
+is(ext.length === 0, '외부 요청 0 — 지도 모양은 저장소 파일(assets/geo)' + (ext.length ? ' → ' + ext[0] : ''));
+await pg.click('#bubs .hb-bub[aria-label^="GST TAIWAN"]'); await pg.waitForTimeout(1200);   // 대만은 원이 나라를 덮는다 — 사람처럼 원을 누른다
+const tw = await pg.evaluate(() => ({ title:document.getElementById('mapTitle').textContent, back:!document.getElementById('mapBack').hidden,
+  rg:document.querySelectorAll('#mapS path.rg').length, rgHas:[...document.querySelectorAll('#mapS path.rg.has')].length,
+  bubs:[...document.querySelectorAll('#bubs .hb-bub')].map(b => b.getAttribute('aria-label')),
+  reg:[...document.querySelectorAll('#cdist > div:first-child button')].map(b => [b.querySelector('span').textContent, +b.querySelector('b').textContent.replace(/,/g,'')]),
+  cus:[...document.querySelectorAll('#cdist > div:last-child button')].map(b => +b.querySelector('b').textContent.replace(/,/g,'')),
+  note:document.getElementById('mapNote').textContent,
+  run:+document.querySelector('#kpis .hb-kpi[data-k="run"] .num').textContent.replace(/,/g,''), sig:document.querySelectorAll('#sigs .hb-sig').length }));
+is(/대만/.test(tw.title) && tw.back && tw.rg === 21, '대만을 누르면 대만 지도(행정구역 21) · 「← 전세계」 (' + tw.title + ')');
+is(tw.rgHas === 1 && tw.bubs.length === 1 && /TAINAN/.test(tw.bubs[0]), 'TAINAN 은 행정구역 이름으로 저절로 놓인다(원 하나 · 그 구역만 칠해진다)');
+const regSum = tw.reg.reduce((a, r) => a + r[1], 0), cusSum = tw.cus.reduce((a, v) => a + v, 0);
+is(tw.reg.some(r => /Tainan|타이난|台南|臺南/.test(r[0]) && r[1] === 10) && tw.reg.some(r => /미지정/.test(r[0]) && r[1] === 20) && regSum === 30 && cusSum === 30,
+   '지역 분포 = 타이난 10 + 위치 미지정 20 · 고객사 분포 합 30 — 못 놓은 설비도 버리지 않는다');
+is(/지도에 못 놓은 곳/.test(tw.note) && /LOC 20/.test(tw.note), '못 놓은 값과 대수를 밝힌다 (' + tw.note.slice(0, 40) + ')');
+is(tw.run === 28 && tw.sig === 1, '모든 칸이 그 나라만 — 가동 28 · 신호등 1곳');
+await pg.click('#cdist > div:first-child button'); await pg.waitForTimeout(400);
+is(await pg.evaluate(() => document.querySelectorAll('.gov-body tbody tr').length) >= 10, '분포 막대를 누르면 그 설비 목록');
+await pg.evaluate(() => GST._ovClose && GST._ovClose());
+if (process.env.HUB_SHOT) await pg.screenshot({ path: process.env.HUB_SHOT + '/hub-tw.png', fullPage:true });
+await pg.click('#mapBack'); await pg.waitForTimeout(800);
+is(await pg.evaluate(() => document.querySelectorAll('#mapS path.ct').length > 200 && +document.querySelector('#kpis .hb-kpi[data-k="run"] .num').textContent === 48), '「← 전세계」 — 세계 지도와 전체 숫자(가동 48)로 돌아온다');
 
 console.log('[4] 구분 전환이 모든 칸에 걸린다');
 await pg.click('#segRegion button[data-r="os"]'); await pg.waitForTimeout(500); K = await kpi();
@@ -137,9 +160,8 @@ const hubF = ps.frames().find(f => /\/hub\//.test(f.url()));
 await ps.click('.tab[data-id="cip"]'); await ps.waitForTimeout(800);
 await hubF.evaluate(() => { render(); });                 // 숨겨진 채로 다시 그린다(자동 새로고침·테마 전환과 같은 길)
 await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(900);
-const mp = await hubF.evaluate(() => { const c = document.getElementById('mapC'), x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-  let on = 0; for (let i = 3; i < x.length; i += 4) if (x[i]) on++; return { w: c.width, on }; });
-is(mp.w > 300 && mp.on > 1000, '숨김 중에 다시 그려도 돌아오면 지도가 선다 (폭 ' + mp.w + ' · 점 ' + mp.on + ')');
+const mp = await hubF.evaluate(() => ({ p:document.querySelectorAll('#mapS path.ct').length, b:document.querySelectorAll('#bubs .hb-bub').length, w:document.getElementById('map').getBoundingClientRect().width }));
+is(mp.p > 200 && mp.b === 3 && mp.w > 300, '숨김 중에 다시 그려도 돌아오면 지도가 선다 (나라 ' + mp.p + ' · 원 ' + mp.b + ')');
 /* 라이트/다크 스위치 — 라이트가 기본 · 고르면 다음에 열 때도 남고 페이지(iframe)까지 간다 */
 const th = async () => { const o = await ps.evaluate(() => ({ dark:document.body.classList.contains('theme-slate'), aria:document.getElementById('themeSw').getAttribute('aria-checked') }));
   const f = ps.frames().find(x => /\/hub\//.test(x.url())); o.fr = f ? await f.evaluate(() => document.body.classList.contains('theme-slate')) : null; return o; };

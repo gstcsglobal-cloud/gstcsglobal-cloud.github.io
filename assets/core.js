@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 166;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 167;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -4061,6 +4061,71 @@ GST.riskWhy=function(r){
   return r.why.map(function(w){ return T[w].replace('{n}',n[w]); }).join(' · ');
 };
 
+/* ---------- 지도 자료 · 위치 판정 (v171 · 「나라를 누르면 그 나라 지도로」) ----------
+   모양은 assets/geo/*.json(tools/geo-build.mjs 가 공개 자료로 만든다 · Natural Earth · world-atlas) — 화면은 읽기만 한다.
+   설비의 위치는 «설치현황의 지역 · 단지 · FAB» 값으로 정한다. 정하는 순서(위가 이긴다):
+     ① geo_places(setup-26 · 사람이 정한 좌표) — 그 값 그대로 → 괄호를 뗀 값 → 끝 숫자를 뗀 값(P1 → P · 단지 코드 묶음)
+     ② 그 나라 행정구역 이름과 «정확히» 같은 값(네 언어 · 시·현·City 같은 꼬리는 뗀다 — 부분일치 아님 · 제1원칙)
+     ③ 못 정함 → null. 화면이 «위치 미지정»으로 대수와 함께 밝힌다(조용히 빼지 않는다 · 짐작하지 않는다).
+   ⚠ 고객사 단지 코드(P1·H2)가 어느 도시인지를 코드에 박지 않는다 — DB 의 geo_places 가 정한다(데이터 관리 「사이트」 탭에서 고친다). */
+GST.geo = {
+  BASE:'https://gstcsglobal-cloud.github.io/assets/geo/',
+  CC:{ KR:{id:'410',cty:'KOREA'}, TW:{id:'158',cty:'TAIWAN'}, CN:{id:'156',cty:'CHINA'}, JP:{id:'392',cty:'JAPAN'}, US:{id:'840',cty:'USA'}, SG:{id:'702',cty:'SINGAPORE'} },
+  /* 지도 범위를 정할 때 빼는 먼 조각(그려는 진다) — 미국 알래스카·하와이 · 대만 진먼·롄장 · 중국 남중국해 섬 */
+  FAR:{ 'US-AK':1, 'US-HI':1, 'TW-KIN':1, 'TW-LIE':1, 'CN-X01':1, 'CN-X02':1 },
+  _p:{},
+  load:function(name){
+    if(!GST.geo._p[name]) GST.geo._p[name]=fetch(GST.geo.BASE+name+'.json?v='+GST.VER).then(function(r){ if(!r.ok) throw new Error('geo '+name+' '+r.status); return r.json(); })
+      .catch(function(e){ delete GST.geo._p[name]; throw e; });
+    return GST.geo._p[name];
+  },
+  ccOfCty:function(cty){ const C=GST.geo.CC; for(const k in C) if(C[k].cty===cty) return k; return ''; },
+  ccOfId:function(id){ const C=GST.geo.CC; for(const k in C) if(C[k].id===String(id)) return k; return ''; },
+  /* 정수 차이 배열 → [[경도,위도]…] */
+  rings:function(f, P){ return f.g.map(function(poly){ return poly.map(function(a){ const r=[]; let x=0,y=0; for(let i=0;i<a.length;i+=2){ x+=a[i]; y+=a[i+1]; r.push([x/P,y/P]); } return r; }); }); },
+  norm:function(v){ return String(v==null?'':v).toUpperCase().replace(/\s+/g,''); },
+  /* 행정구역 이름 열쇠 — 꼬리(시·현·도·특별시·광역시·City·County·Province…)를 뗀 정규화 이름들 */
+  admKeys:function(f){
+    const out=[]; ['en','ko','zh','ja'].forEach(function(l){ const n=f.n&&f.n[l]; if(!n) return;
+      const a=GST.geo.norm(n); out.push(a);
+      const b=a.replace(/(CITY|COUNTY|PROVINCE|PREFECTURE|特別市|特別自治市|廣域市|广域市|自治區|自治区|特别行政区|特別行政區|市|縣|县|省|府|都|道|特별시|광역시|특별자치시|특별자치도|도|시|군|현|구)$/,'');
+      if(b&&b!==a) out.push(b); });
+    return out;
+  },
+  /* 한 설비의 위치 — PL: {열쇠:{lat,lng,label}} (geo_places) · adm: 그 나라 행정구역 자료(없어도 된다) */
+  placeOf:function(x, PL, adm){
+    const cand=[x.loc, x.campus, x.fab].filter(Boolean);
+    for(let i=0;i<cand.length;i++){
+      const k=GST.geo.norm(cand[i]); if(!k) continue;
+      const ks=[k, k.replace(/\(.*?\)/g,''), k.replace(/\(.*?\)/g,'').replace(/[-_]?\d+[A-Z]?$/,'')];
+      for(let j=0;j<ks.length;j++){ const p=PL&&PL[ks[j]]; if(p&&p.lat!=null&&p.lng!=null) return {key:ks[j], name:cand[i], lat:p.lat, lng:p.lng, label:p.label||cand[i], src:'db'}; }
+    }
+    if(adm){ for(let i=0;i<cand.length;i++){ const k=GST.geo.norm(cand[i]).replace(/(CITY|COUNTY)$/,'');
+      const f=adm.f.find(function(f){ return f.c&&GST.geo.admKeys(f).indexOf(k)>=0; });
+      if(f) return {key:'ADM:'+f.iso, name:cand[i], lat:f.c[1], lng:f.c[0], label:cand[i], src:'adm'}; } }
+    return null;
+  },
+  /* 점이 든 행정구역(짝수-홀수 규칙) — 없으면 가장 가까운 중심(해안선 단순화로 바다에 찍힌 점) */
+  regionOf:function(lng, lat, adm){
+    if(!adm) return null;
+    if(!adm._r) adm._r=adm.f.map(function(f){ return GST.geo.rings(f, adm.P); });
+    for(let i=0;i<adm.f.length;i++){ const polys=adm._r[i];
+      for(let p=0;p<polys.length;p++){ let inside=false; const ring=polys[p][0];
+        for(let a=0,b=ring.length-1;a<ring.length;b=a++){ const xi=ring[a][0], yi=ring[a][1], xj=ring[b][0], yj=ring[b][1];
+          if(((yi>lat)!==(yj>lat)) && (lng < (xj-xi)*(lat-yi)/((yj-yi)||1e-12)+xi)) inside=!inside; }
+        if(inside) return adm.f[i]; } }
+    let best=null, bd=1e9; adm.f.forEach(function(f){ if(!f.c) return; const d=(f.c[0]-lng)*(f.c[0]-lng)+(f.c[1]-lat)*(f.c[1]-lat); if(d<bd){ bd=d; best=f; } });
+    return bd<1?best:null;
+  },
+  admName:function(f, lang){ if(!f) return ''; const n=f.n||{}; return n[lang]||n.en||''; },
+  /* geo_places 읽기 — 못 읽어도(표 없음·오프라인) 빈 것으로 간다: 그때는 행정구역 이름으로만 놓는다 */
+  places:async function(){
+    try{ const C=await GST.db(); if(!C) return {};
+      const r=await C.from('geo_places').select('key,lat,lng,label,cc'); if(r.error) return {};
+      const o={}; (r.data||[]).forEach(function(p){ o[p.key]=p; }); return o; }catch(e){ return {}; }
+  }
+};
+
 /* ---------- 움직임 (v169 · 「통합관리화면」 5단계) ----------
    카드가 차례로 떠오르고 · 숫자가 바뀌면 잠깐 빛나고 · 팝업이 튀어나온다. 규칙은 theme.css 의 «body.gst-motion» 아래에만 있다.
    ⚠ 주간현황(report · report-kr)에는 걸지 않는다 — 그 화면은 손대지 않는다(사용자 지시). 판정은 경로 한 곳.
@@ -4114,7 +4179,7 @@ GST.ops = {
       const op=String(v(r,'country')||'').trim(), cust=String(v(r,'customer')||'').trim(), fab=String(v(r,'fab')||'').trim();
       const cty=GST.ORG.country(op)||GST.ORG.country(cust)||GST.ORG.country(fab);
       return { op:op, region:GST.ORG.region(op)||GST.ORG.region(cty), cty:cty, cityKey:GST.ops.cityOf(op,cty),
-        cust:cust, campus:GST.ORG.campus(v(r,'location'),fab,op)||'', fab:fab, model:String(v(r,'model')||'').trim(),
+        cust:cust, loc:String(v(r,'location')||'').trim(), campus:GST.ORG.campus(v(r,'location'),fab,op)||'', fab:fab, model:String(v(r,'model')||'').trim(),
         sn:String(v(r,'sn')||'').trim(), code:String(v(r,'code')||'').trim(),
         state:v(r,'state'), stateRaw:String(v(r,'state')||'').trim(), d:GST.toDate(v(r,'fabIn'))||GST.toDate(v(r,'turnOn')), dOn:GST.toDate(v(r,'turnOn')),
         warr:GST.WARR(v(r,'warranty')), wd:GST.toDate(v(r,'warrantyDate')) };
