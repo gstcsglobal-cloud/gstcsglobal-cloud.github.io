@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=173"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=174"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -131,7 +131,7 @@ tr:hover td{background:var(--glass-hover)}
 @media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}}
 @media(max-width:768px){.card h3{padding-right:0}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=173">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=174">
 </head>
 <body>
 
@@ -209,19 +209,12 @@ tr:hover td{background:var(--glass-hover)}
 <!-- ═══ 개요 ═══ -->
 <div data-sec="ov">
   <!-- 추이 한 쌍을 나란히 — 전폭 거대 카드 2장 적층은 페이지를 비어 보이게 한다 -->
-  <div class="grid2">
-    <div class="card tall">
-      <div class="mini-per" data-ch="cipTrend"></div>
-      <h3 data-i="ch_trend">CIP 진행 추이 (누계)</h3>
-      <div class="card-note" data-i="note_trend">대상 = Not yet + 완료 · 구간 말 기준 누계 · 진행율은 우측 축</div>
-      <div class="cw"><canvas id="cipTrend"></canvas></div>
-    </div>
-    <div class="card tall">
-      <div class="mini-per" data-ch="cipNew"></div>
-      <h3 data-i="ch_new">구간별 신규 완료</h3>
-      <div class="card-note" data-i="note_new">그 구간에 실제로 처리한 건수 (누계 차트로는 안 보이는 실적)</div>
-      <div class="cw"><canvas id="cipNew"></canvas></div>
-    </div>
+  <!-- v179 — 진행 추이 한 장(막대 = 구간 신규 완료 · 선 = 누계 진행율). 예전의 «누계 / 구간별» 두 장을 합쳤다 -->
+  <div class="card tall">
+    <div class="mini-per" data-ch="cipTrend"></div>
+    <h3 data-i="ch_trend">CIP 진행 추이</h3>
+    <div class="card-note" data-i="note_trend">막대 = 그 구간에 새로 완료한 건수 · 선 = 구간 말 누계 진행율(우측 축)</div>
+    <div class="cw"><canvas id="cipTrend"></canvas></div>
   </div>
   <div class="grid3">
     <div class="card">
@@ -357,8 +350,7 @@ ko:{title:'CIP 진행',sub:'스크러버 개조·점검(CIP) 항목별 진행 �
   kp1:'진행율',kp2:'대상',kp3:'완료',kp4:'잔여',kp5:'이번 구간 완료',kp6:'잔여 설비',u_cnt:'건',u_eq:'대',
   kf1:'완료 {d} / 대상 {t}',kf2:'설비 {n}대 × 항목 {i}개',kf3:'전 구간 {n}건',kf4:'미착수 항목 {n}개',
   kf5:'{lab} 구간 · 직전 {n}건',kf6:'전체 {t}대 중',
-  ch_site:'사이트별 진행율',note_site:'사이트별 완료/잔여 — 사이트 간 진도 비교 · 🖱️ 클릭 시 필터',ch_toprem:'잔여 TOP 항목',note_toprem:'잔여 건수 상위 8개 — 어디부터 칠지',ch_trend:'CIP 진행 추이 (누계)',note_trend:'대상 = Not yet + 완료 · 구간 말 기준 누계 · 진행율은 우측 축',
-  ch_new:'구간별 신규 완료',note_new:'그 구간에 실제로 처리한 건수 (누계 차트로는 안 보이는 실적)',
+  ch_site:'사이트별 진행율',note_site:'사이트별 완료/잔여 — 사이트 간 진도 비교 · 🖱️ 클릭 시 필터',ch_toprem:'잔여 TOP 항목',note_toprem:'잔여 건수 상위 8개 — 어디부터 칠지',ch_trend:'CIP 진행 추이',note_trend:'막대 = 그 구간에 새로 완료한 건수 · 선 = 구간 말 누계 진행율(우측 축)',
   ch_proc:'공정별 진행 현황',note_proc:'완료·잔여 스택 + 진행율 · 작업 우선순위 판단 기준',
   hm_title:'공정 × 항목 잔여 히트맵',hm_note:'— 잔여 상위 12개 항목 · 셀 클릭 시 필터',
   ch_item:'항목별 진행 현황',so_rem:'잔여순',so_rate:'진행율순',so_pair:'좌/우 묶기',
@@ -386,8 +378,7 @@ en:{title:'CIP progress',sub:'Scrubber retrofit/inspection (CIP) progress by ite
   kp1:'Progress',kp2:'Target',kp3:'Done',kp4:'Remaining',kp5:'Done This Period',kp6:'Units Remaining',u_cnt:'',u_eq:'units',
   kf1:'{d} done / {t} target',kf2:'{n} units × {i} items',kf3:'prev period {n}',kf4:'{n} items not started',
   kf5:'{lab} · prev {n}',kf6:'of {t} units',
-  ch_site:'Progress by Site',note_site:'Done/remaining by site — click to filter',ch_toprem:'Top Remaining Items',note_toprem:'Top 8 by remaining count — where to start',ch_trend:'CIP Progress Trend (cumulative)',note_trend:'target = Not yet + done · cumulative at period end · rate on right axis',
-  ch_new:'Newly Completed per Period',note_new:'what was actually processed in that period',
+  ch_site:'Progress by Site',note_site:'Done/remaining by site — click to filter',ch_toprem:'Top Remaining Items',note_toprem:'Top 8 by remaining count — where to start',ch_trend:'CIP Progress Trend',note_trend:'bars = newly completed in the period · line = cumulative progress at period end (right axis)',
   ch_proc:'Progress by Process',note_proc:'done/remaining stack + rate · priority basis',
   hm_title:'Process × Item Remaining Heatmap',hm_note:'— top 12 items by remaining · click a cell to filter',
   ch_item:'Progress by Item',so_rem:'By remaining',so_rate:'By rate',so_pair:'Merge L/R',
@@ -415,8 +406,7 @@ zh:{title:'CIP进度',sub:'洗涤器改造·点检(CIP)按项目进度管理',ba
   kp1:'进度',kp2:'对象',kp3:'完成',kp4:'剩余',kp5:'本区间完成',kp6:'剩余设备',u_cnt:'件',u_eq:'台',
   kf1:'完成 {d} / 对象 {t}',kf2:'设备 {n}台 × 项目 {i}个',kf3:'上区间 {n}件',kf4:'未着手项目 {n}个',
   kf5:'{lab} 区间 · 上次 {n}件',kf6:'共 {t}台中',
-  ch_site:'各站点进度',note_site:'各站点 完成/剩余 — 点击筛选',ch_toprem:'剩余TOP项目',note_toprem:'剩余数量前8 — 从哪里开始',ch_trend:'CIP进度趋势 (累计)',note_trend:'对象 = Not yet + 完成 · 区间末累计 · 进度见右轴',
-  ch_new:'各区间新增完成',note_new:'该区间实际处理的件数 (累计图看不到)',
+  ch_site:'各站点进度',note_site:'各站点 完成/剩余 — 点击筛选',ch_toprem:'剩余TOP项目',note_toprem:'剩余数量前8 — 从哪里开始',ch_trend:'CIP进度趋势',note_trend:'柱 = 该区间新增完成 · 线 = 区间末累计进度(右轴)',
   ch_proc:'按工艺进度',note_proc:'完成·剩余堆叠 + 进度 · 作业优先级依据',
   hm_title:'工艺 × 项目 剩余热力图',hm_note:'— 剩余前12项 · 点击单元格筛选',
   ch_item:'按项目进度',so_rem:'按剩余',so_rate:'按进度',so_pair:'合并左/右',
@@ -444,8 +434,7 @@ ja:{title:'CIP進捗',sub:'スクラバー改造·点検(CIP)の項目別進捗�
   kp1:'進捗',kp2:'対象',kp3:'完了',kp4:'残り',kp5:'当区間完了',kp6:'残り設備',u_cnt:'件',u_eq:'台',
   kf1:'完了 {d} / 対象 {t}',kf2:'設備 {n}台 × 項目 {i}個',kf3:'前区間 {n}件',kf4:'未着手項目 {n}個',
   kf5:'{lab} 区間 · 直前 {n}件',kf6:'全 {t}台中',
-  ch_site:'サイト別進捗率',note_site:'サイト別 完了/残り — クリックでフィルタ',ch_toprem:'残りTOP項目',note_toprem:'残り件数上位8 — どこから着手するか',ch_trend:'CIP進捗推移 (累計)',note_trend:'対象 = Not yet + 完了 · 区間末累計 · 進捗は右軸',
-  ch_new:'区間別 新規完了',note_new:'その区間に実際処理した件数 (累計では見えない実績)',
+  ch_site:'サイト別進捗率',note_site:'サイト別 完了/残り — クリックでフィルタ',ch_toprem:'残りTOP項目',note_toprem:'残り件数上位8 — どこから着手するか',ch_trend:'CIP進捗推移',note_trend:'棒 = その区間の新規完了 · 線 = 区間末の累計進捗(右軸)',
   ch_proc:'工程別 進捗状況',note_proc:'完了·残り積み上げ + 進捗 · 優先順位の判断基準',
   hm_title:'工程 × 項目 残りヒートマップ',hm_note:'— 残り上位12項目 · セルクリックで絞込',
   ch_item:'項目別 進捗状況',so_rem:'残り順',so_rate:'進捗順',so_pair:'左/右をまとめる',
@@ -735,8 +724,7 @@ async function loadData(){ GST.skeleton(true);
     BADN+=CIP.filter(x=>x.bad).length;
     GST.schemaBanner(issues,'CIP');
     fillSlicers();
-    status.textContent=(cached?GST.staleText()+' · ':'✅ ')+new Date().toLocaleString()
-      +' · '+t('kp2')+' '+CIP.length.toLocaleString()+' · '+per.join(' · ')+' · '+VER;
+    status.textContent=cached?GST.staleText():(GST.okText?GST.okText(t('kp2')+' '+CIP.length.toLocaleString()+' · '+per.join(' · ')+' · '+VER):'✅');   // 행 수·버전은 관리자에게만(v179)
     status.style.color=cached?'#fbbf24':'';
     render();
   }catch(e){ status.textContent='❌ '+GST.failNote(e); console.error(e); }   // 부류별 한 줄 · 원문은 관리자에게만(v135)
@@ -874,64 +862,38 @@ function render(){ GST.dq&&GST.dq.reset('cip');
       return {title:t('kp6')+' '+remSn.size.toLocaleString(),cols:t('rd_cip_sn').split('|'),rows,note:t('kf6').replace('{t}',allSn.size.toLocaleString())}; }
   });
 
-  // ── 추이 (누계) ──
+  // ── 진행 추이 — 한 차트(v179 · «핵심만»): 막대 = 그 구간에 «새로» 끝낸 건수 · 선 = 구간 말 누계 진행율(우측 %)
+  //    예전에는 누계(대상·완료 막대 + 진행율)와 구간별 신규(막대 + 창 내 누계선)가 두 장이었다. 두 장이 묻는 것은
+  //    «이번에 얼마나 했고(속도) · 지금 어디까지 왔나(진도)» 한 가지라 한 그림에 둔다. 식은 두 차트가 쓰던 그대로다
+  //    (inP · tgt/don) — 새 식은 없다. 대상·완료 누계 숫자는 툴팁 꼬리에 남긴다(KPI kp1~kp4 가 같은 숫자를 크게 보인다).
   {
     const {P,labels}=PU('cipTrend');
     destroyMk('cipTrend');
     if(fR.length){
+      const nw=P.map(p=>fR.filter(x=>inP(x,p)).length);
       const tgt=P.map(p=>fR.filter(x=>!x.ap||x.ap<=p.end).length);
       const don=P.map(p=>fR.filter(x=>(!x.ap||x.ap<=p.end)&&x.done&&x.done<=p.end).length);
       const rt=tgt.map((v,i)=>v?Math.round(don[i]/v*100):null);
       CHARTS.cipTrend=new Chart(document.getElementById('cipTrend'),{type:'bar',
         data:{labels,datasets:[
-          {label:t('s_tgt'),data:tgt,backgroundColor:BAR_C+'2e',borderColor:BAR_C,borderWidth:1.5,order:3},
-          {label:t('s_done'),data:don,backgroundColor:barHi(don.length),order:2},
+          {label:t('s_new'),data:nw,backgroundColor:barHi(nw.length),order:2},
           lineDs(t('s_rate'),rt,LINE_C,{yAxisID:'y2'})]},
         options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
           plugins:{legend:{position:'bottom',labels:{padding:8}},
-            tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.y+(c.datasetIndex===2?'%':''),
-              footer:it=>{const i=it[0].dataIndex;return tgt[i]?(t('s_rem')+' '+(tgt[i]-don[i]).toLocaleString()):'';}}}},
+            tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.y+(c.datasetIndex===1?'%':''),
+              footer:it=>{const i=it[0].dataIndex;return tgt[i]?(t('s_done')+' '+don[i].toLocaleString()+' / '+t('s_tgt')+' '+tgt[i].toLocaleString()+' · '+t('s_rem')+' '+(tgt[i]-don[i]).toLocaleString()):'';}}}},
           scales:{x:baseScales(TH,false).x,
             y:{grace:'20%',beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
             y2:pctAxis(TH)}}});
-      // 세부내역 — 막대와 같은 필터식(tgt/don 계산식 그대로)이어야 숫자가 맞는다
+      // 세부내역 — 막대는 그 구간에 완료한 행(inP) · 선은 그 구간 말까지 완료한 대상 행(don 식 그대로) — 숫자와 줄 수가 같다
       CHARTS.cipTrend.$rows=(di,i)=>{
-        if(di===2||!P[i])return null;                       // 진행율 선은 비율 — 원본 행 목록이 없다
-        const recs=di===0
-          ? fR.filter(x=>!x.ap||x.ap<=P[i].end)
-          : fR.filter(x=>(!x.ap||x.ap<=P[i].end)&&x.done&&x.done<=P[i].end);
-        return rdet(recs,P[i].label+' — '+(di===0?t('s_tgt'):t('s_done'))+' '+recs.length);
-      };
-      setNote('cipTrend',t('ins_rate').replace('{p}',rt[rt.length-1]??'—').replace('{n}',(tgt[tgt.length-1]-don[don.length-1]).toLocaleString()),'val');   // 값 요약 — 늘 보인다(v173)
-    }
-  }
-
-  // ── 구간별 신규 완료 (증분) ──
-  {
-    const {P,labels}=PU('cipNew');
-    destroyMk('cipNew');
-    if(fR.length){
-      const nw=P.map(p=>fR.filter(x=>inP(x,p)).length);
-      let acc=0; const cum=nw.map(v=>acc+=v);
-      CHARTS.cipNew=new Chart(document.getElementById('cipNew'),{type:'bar',
-        data:{labels,datasets:[
-          {label:t('s_new'),data:nw,backgroundColor:barHi(nw.length),order:2},
-          lineDs(t('s_cum'),cum,LINE_C,{yAxisID:'y2'})]},
-        options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:14}},
-          plugins:{legend:{position:'bottom',labels:{padding:8}}},
-          scales:{x:baseScales(TH,false).x,
-            y:{grace:'20%',beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}},
-            y2:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:TH.txt,precision:0,maxTicksLimit:5,font:{size:9}}}}}});
-      // 세부내역 — 신규는 inP(그 구간에 완료). 누계 선은 nw의 창 내 누계라
-      // 표시 12구간 첫 구간(P[0].st)부터 세야 선의 숫자와 행 수가 일치한다 —
-      // 창 이전 완료까지 넣으면 행이 선값보다 많아진다.
-      CHARTS.cipNew.$rows=(di,i)=>{
         if(!P[i])return null;
         const recs=di===0
           ? fR.filter(x=>inP(x,P[i]))
-          : fR.filter(x=>x.done&&x.done>=P[0].st&&x.done<=P[i].end);
-        return rdet(recs,P[i].label+' — '+(di===0?t('s_new'):t('s_cum'))+' '+recs.length);
+          : fR.filter(x=>(!x.ap||x.ap<=P[i].end)&&x.done&&x.done<=P[i].end);
+        return rdet(recs,P[i].label+' — '+(di===0?t('s_new')+' '+recs.length:t('s_rate')+' '+(rt[i]??'—')+'% · '+t('s_done')+' '+recs.length+' / '+t('s_tgt')+' '+tgt[i]));
       };
+      setNote('cipTrend',t('ins_rate').replace('{p}',rt[rt.length-1]??'—').replace('{n}',(tgt[tgt.length-1]-don[don.length-1]).toLocaleString()),'val');   // 값 요약 — 늘 보인다(v173)
     }
   }
 
@@ -1324,11 +1286,10 @@ window.axReset=function(id){
 };
 
 /* 차트 배치 (v174 · 판정표 docs/v2/PLAN.md 4절) — 차트 코드는 그대로 두고 «어디에 무엇을 보이나»만 정한다.
-   · 진행 추이(누계)·구간별 신규 완료는 한 계열의 두 얼굴이다 — 한 카드.
+   · 진행 추이(누계)·구간별 신규 완료는 한 계열의 두 얼굴이다 — v179 에 «한 차트»로 합쳤다(막대 = 구간 신규 · 선 = 누계 진행율).
    · 층·구역·모델·반입 연도는 «어디가 남았나»를 축만 바꿔 묻는다 — 한 카드. */
 if(GST.chartLayout) GST.chartLayout({ page:'cip',
   groups:[
-    { key:'trend', items:[['cipTrend',{ko:'누계',en:'Cumulative',zh:'累计',ja:'累計'}], ['cipNew',{ko:'구간별',en:'Per period',zh:'分期',ja:'期間別'}]] },
     { key:'where', items:[['cipFloor',{ko:'층·구역',en:'Floor',zh:'楼层·区域',ja:'フロア'}], ['cipModel',{ko:'모델',en:'Model',zh:'型号',ja:'モデル'}], ['cipVint',{ko:'반입 연도',en:'Install year',zh:'搬入年度',ja:'搬入年'}]] }
   ] });
 

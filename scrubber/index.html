@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=173"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=174"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -102,6 +102,10 @@ body{color:var(--txt);
 /* 워런티 OUT 은 «나쁜 소식»이 아니다 — 보증이 끝나면 자재 판매가 유상이 된다(사용자 확정 · CLAUDE.md 제4원칙). 붉게 칠하지 않는다 */
 .kpi.k5 .val{color:var(--accent-ink)}
 /* Warranty 분할 바 카드 */
+.wsum{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:22px;align-items:center;margin:2px 0 10px}
+.wsum .wbig{grid-row:1 / span 2;margin:0}
+.wsum .wbar{margin:0 0 6px}.wsum .wleg{margin:0}
+@media (max-width:640px){.wsum{grid-template-columns:1fr}.wsum .wbig{grid-row:auto}}
 .wbig{display:flex;align-items:baseline;gap:8px;margin:6px 0 12px}
 .wbig .wv{font-size:28px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
 .wbig .wlbl{font-size:11px;color:var(--mut)}
@@ -205,7 +209,7 @@ tr:hover td{background:var(--surface-2)}
    데이터 품질 팝업(GST.dq · inst_nodate)이 모두에게 말하므로, 조회자에게서 이 표를 감춰도 조용히 빠지는 숫자는 없다. */
 body:not([data-role="admin"]):not([data-role="legacy"]) #mdCard{display:none !important}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=173">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=174">
 </head>
 <body>
 
@@ -352,20 +356,6 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #mdCard{display:none !im
       <div class="card-note" data-i="note_drill2">Distribution · click to filter</div>
       <div class="cw"><canvas id="cModel"></canvas></div>
     </div>
-    <div class="card">
-      <h3 data-i="ch_warr">워런티 현황</h3>
-      <div class="card-note" data-i="note_warr">무상(보증 중) · 유상(보증 종료) 구성</div>
-      <div class="wbig"><span class="wv" id="wPct">0%</span><span class="wlbl" data-i="w_ratio">유상 비율 (보증 종료)</span></div>
-      <div class="wbar"><div class="wa" id="wBarA" style="width:0%"></div><div class="wb"></div></div>
-      <div class="wleg">
-        <span><i class="pd"></i><span data-i="warr_exp">유상 (보증 종료)</span> <b id="wExp">0</b></span>
-        <span><i></i><span data-i="warr_ok">무상 (보증 중)</span> <b id="wOk">0</b></span>
-      </div>
-      <div class="wexp" id="wExpNote" style="display:none">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.5"/></svg>
-        <span id="wExpTxt"></span>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -450,6 +440,16 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #mdCard{display:none !im
     <div class="trend-header">
       <h3 data-i="ch_wpipe">Warranty Expiry Pipeline</h3>
       <div class="trend-meta" data-i="note_wpipe">days until expiry</div>
+    </div>
+    <!-- v179 — 워런티 두 카드를 한 카드로: 머리 = 유상 비율(판정색 없이 주색 · 제4원칙) · 본문 = 라인별 IN/OUT.
+         숫자는 예전 개요 카드의 식 그대로(active·expired) — 옮긴 것은 자리뿐이다 -->
+    <div class="wsum">
+      <div class="wbig"><span class="wv" id="wPct">0%</span><span class="wlbl" data-i="w_ratio">유상 비율 (보증 종료)</span></div>
+      <div class="wbar"><div class="wa" id="wBarA" style="width:0%"></div><div class="wb"></div></div>
+      <div class="wleg">
+        <span><i class="pd"></i><span data-i="warr_exp">유상 (보증 종료)</span> <b id="wExp">0</b></span>
+        <span><i></i><span data-i="warr_ok">무상 (보증 중)</span> <b id="wOk">0</b></span>
+      </div>
     </div>
     <div class="trend-wrap"><canvas id="cWarrPipe"></canvas></div>
   </div>
@@ -827,7 +827,7 @@ async function loadData(){ GST.skeleton(true);
     RAW=parsed.data.slice(HI_INST+1).filter(r=>r[CI.sn]&&String(r[CI.sn]).trim()!=='');
     document.getElementById('totRec').textContent=chSum(RAW);
     status.className='status ok';
-    status.textContent='✅ '+new Date().toLocaleString('ko-KR')+' · '+RAW.length+' '+t('units');
+    status.textContent=GST.okText ? GST.okText(RAW.length+' '+t('units')) : '✅ '+new Date().toLocaleString('ko-KR');   // 행 수는 관리자에게만(v179)
     initDefaultRange();
     rebuildFilters(); render();
     if(fetched.cached){status.textContent=GST.staleText(fetched.ageMin);status.style.color='#fbbf24';}

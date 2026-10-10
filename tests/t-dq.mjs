@@ -150,6 +150,25 @@ console.log('\n[8] GST.fillHint — 30% 미만에서만 뜨고 넘으면 스스�
     return !!document.querySelector('.fill-hint');
   });
   is(!alt, '폴백 열(altKey)이 채워져 있으면 «채워진 것»으로 센다 — 화면이 그 값을 쓰기 때문이다');
+  /* v179 — 입력률이 낮으면 차트를 «접는다»(지우지 않는다) · 단추 글자에 입력률 · 누르면 그 카드만 펼친다 · 임계를 넘으면 저절로 펼친다 */
+  const fold = await page.evaluate(() => {
+    const card = document.getElementById('cv').closest(GST.CARD_SEL || '.card');
+    const rows = []; for (let i = 0; i < 100; i++) rows.push({ a: i < 3 ? 'x' : '' });
+    GST.fillHint('cv', rows, 'a');
+    const bt = card.querySelector('.gst-foldbtn');
+    const s0 = { fold: card.classList.contains('gst-fold'), txt: bt ? bt.textContent : '', cwHid: getComputedStyle(card.querySelector('.cw') || document.getElementById('cv')).display === 'none' };
+    bt && bt.click();
+    const s1 = { fold: card.classList.contains('gst-fold'), txt: bt ? bt.textContent : '' };
+    GST.fillHint('cv', rows, 'a');                       // 다시 그려도 사람이 펼친 것은 그대로
+    const s2 = { fold: card.classList.contains('gst-fold') };
+    const hi = []; for (let i = 0; i < 100; i++) hi.push({ a: i < 60 ? 'x' : '' });
+    card.dataset.gstUnfold = ''; GST.fillHint('cv', hi, 'a');
+    const s3 = { fold: card.classList.contains('gst-fold'), btn: !!card.querySelector('.gst-foldbtn') };
+    return { s0, s1, s2, s3 };
+  });
+  is(fold.s0.fold && /3%/.test(fold.s0.txt), `입력률 3% → 차트를 접고 단추에 입력률을 적는다 (${fold.s0.txt})`);
+  is(fold.s1.fold === false && fold.s2.fold === false, '단추를 누르면 펼치고, 다시 그려도 펼친 채 남는다');
+  is(fold.s3.fold === false && !fold.s3.btn, '입력률이 임계를 넘으면 접기도 단추도 사라진다');
 }
 
 is(errs.length === 0, 'JS 에러 없음' + (errs.length ? ' → ' + errs.slice(0, 2).join(' | ') : ''));

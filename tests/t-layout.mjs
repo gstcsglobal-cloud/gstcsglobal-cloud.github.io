@@ -329,7 +329,7 @@ for (const P of ['fault','material','pm','scrubber','tco','cip','hr']) {
   const st = await probe(pg);
   if (!st.length) { is(false, P + ': 배치 기록이 없다 (chartLayout 미적용)'); await c.close(); continue; }
   const s = st[0];
-  const EXP = { fault:[4,5], material:[2,1], pm:[2,1], scrubber:[0,5], tco:[1,0], cip:[2,0], hr:[2,0] }[P];
+  const EXP = { fault:[4,5], material:[2,1], pm:[2,1], scrubber:[0,5], tco:[1,0], cip:[1,0], hr:[2,0] }[P];
   /* 묶음은 카드를 둘 이상 찾았을 때만 선다 — id 가 틀리면 «조용히» 빠지므로 개수를 판정표와 대조한다 */
   is(s.groups.length === EXP[0] && s.retired.length === EXP[1],
      `${P}: 판정표대로 묶음 ${EXP[0]} · 은퇴 ${EXP[1]} (실제 ${s.groups.length} · ${s.retired.length})`);
