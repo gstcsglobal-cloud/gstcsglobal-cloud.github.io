@@ -865,7 +865,7 @@ console.log('\n[15] 고장 차트 세부내역이 누른 데이터셋을 따르�
    지키는 것: 손실 낱말이 문구에 없다 · 경고색(warn·bad)으로 칠하지 않는다 · 게이지·비율은 «유상 비율» */
 console.log('\n[17] 워런티 종료 = 유상 전환 (제4원칙)');
 {
-  const pages = ['hub','home','site','scrubber','report','report-kr','tco','action','studio','targets'];
+  const pages = ['hub','home','site','scrubber','report','tco','action','studio','targets'];
   const LOSS = /무상 지원 종료|무상 기술지원 종료|free support ended|免费支持已结束|無償サポート終了|갱신 협의|재계약|renewal needed/;
   pages.forEach(p => { let src = ''; try { src = rd(p + '/index.html'); } catch (e) { return; }
     const m = LOSS.exec(src);

@@ -30,7 +30,7 @@ const STUB = '\n;GST.USE_DB=false;GST.authOn=function(){return false;};'
   + 'GST.getSession=async function(){return {user:{email:"t@t"}}};GST.token=async function(){return "t";};'
   + 'GST.authGate=async function(){var o=document.getElementById("loginOverlay");if(o)o.remove();'
   + 'if(GST._authOk)GST._authOk();return true;};'
-  /* 등급 — 기본은 지금까지대로(editor 처럼 쓰기 권한). 페이지가 window.__ME_OBJ 를 주면 그 등급으로(국내 데모 · v146 — 진짜 perm 처럼 _meApply 까지) */
+  /* 등급 — 기본은 지금까지대로(editor 처럼 쓰기 권한). 페이지가 window.__ME_OBJ 를 주면 그 등급으로(진짜 perm 처럼 _meApply 까지) */
   + 'GST.sheetWrite=async function(){var m=window.__ME_OBJ;if(m){GST._meApply(m);return {ok:true,can_write:!!m.can_write,role:m.role,email:m.email};}return {ok:true,can_write:true,role:"editor"};};'
   + 'window.__QLOG=[];'
   + 'window.__FDB={from:function(tbl){var st={tbl:tbl,eq:[],neq:[],op:"select",ins:0};'
@@ -127,13 +127,20 @@ is(await pg.evaluate(() => !window.__CM.some(r=>r.field==='customer')), '«자�
 is(await pg.evaluate(() => { const r=PREP.rows[0]; return r && r.customer!==r.model; }), '값도 자동 인식으로 돌아온다');
 
 console.log('[5] 사이트마다 따로');
-const pg2 = await ctx.newPage(); await pg2.goto(BASE + '/upload/?site=KR', { waitUntil:'domcontentloaded' }); await pg2.waitForTimeout(900);
-await pg2.evaluate(cm => { window.__CM = cm; }, await pg.evaluate(() => window.__CM));
-await pg2.selectOption('#tsel', await pg2.evaluate(() => String(TABLES.findIndex(t=>t.rid==='inst'))));
-const p2=path.join(OUT,'c.csv'); fs.writeFileSync(p2,'﻿'+mk({sn:'시리얼'})); await pg2.setInputFiles('#fsel', p2); await pg2.waitForTimeout(1500);
-is(/못 찾았습니다/.test(await pg2.evaluate(() => document.getElementById('chk').innerText)), 'KR 화면은 관리자(ALL) 지정을 안 쓴다');
+/* v176 — 국내 데모 경로(?site=KR)를 접어 대만 경로(?site=TW · 수선실적)로 본다. 관리자(ALL)에게 수선실적 지정을 하나 심고,
+   대만 화면이 그 지정을 «안 쓰고» site=TW 로 묻는지 본다 */
+const pg2 = await ctx.newPage(); await pg2.goto(BASE + '/upload/?site=TW', { waitUntil:'domcontentloaded' }); await pg2.waitForTimeout(900);
+const W5 = await pg2.evaluate(() => { const S=GST.SM.SPEC.wk, opt=S.opt||[], ks=Object.keys(S.fields);
+  return { ks, H:ks.map(k=>[].concat(S.fields[k])[0]), req:ks.find(k=>opt.indexOf(k)<0) }; });
+const cm5 = (await pg.evaluate(() => window.__CM)).concat([{ site:'ALL', tbl:'wk', field:W5.req, header:'코드번호' }]);
+await pg2.evaluate(cm => { window.__CM = cm; }, cm5);
+await pg2.selectOption('#tsel', await pg2.evaluate(() => String(TABLES.findIndex(t=>t.rid==='wk'))));
+const H5 = W5.H.map((h,i) => W5.ks[i]===W5.req ? '코드번호' : h);
+const p2=path.join(OUT,'c.csv'); fs.writeFileSync(p2,'\ufeff'+[H5].concat([0,1,2].map(r=>H5.map((h,j)=>'v'+r+'_'+j))).map(r=>r.join(',')).join('\n')+'\n');
+await pg2.setInputFiles('#fsel', p2); await pg2.waitForTimeout(1500);
+is(/못 찾았습니다/.test(await pg2.evaluate(() => document.getElementById('chk').innerText)), '대만(TW) 화면은 관리자(ALL) 지정을 안 쓴다 (' + W5.req + ')');
 const ql = await pg2.evaluate(() => window.__QLOG.filter(q=>q.tbl==='colmap_site'));
-is(ql.some(q => q.eq.some(e=>e[0]==='site'&&e[1]==='KR')), '지정은 site=KR 로 묻는다');
+is(ql.some(q => q.eq.some(e=>e[0]==='site'&&e[1]==='TW')), '지정은 site=TW 로 묻는다');
 
 console.log('[6] 권한이 없으면 «실패»로 말한다');
 await pg.evaluate(() => { window.__CM_DENY=1; GST.cmap._c={}; });

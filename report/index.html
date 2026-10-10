@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=171"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=172"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -170,7 +170,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=171">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=172">
 </head>
 <body>
 
@@ -2364,7 +2364,7 @@ function render(){ GST.dq&&GST.dq.reset('report');
       plugins:[valLabelPlugin]});
     /* v155 — 확인이 필요한 공수 행(사용자: 「35주차 작업공수에 허수가 있는 것 같다 … 고치라는 의미와 내게 알리는 의미로」).
        한 건이 24시간을 넘는 작업 — 실측 대만 35주차 2,989h 중 1,898h 가 «종료일 오기입» 두 행이었다(시작 08-28 · 종료 09-08/09-28).
-       ⚠ 빼지 않는다(제3원칙 — 해외 규칙은 그대로) · «확인하라»고만 한다. 국내 데모(report-kr)는 v147 에서 이미 뺀다.
+       ⚠ 빼지 않는다(제3원칙 — 해외 규칙은 그대로) · «확인하라»고만 한다.
        ⚠ 차트가 더한 «그 행들»(지금 구간 · PM+非PM)에서 고른다 — 따로 고르면 막대와 목록이 다른 모집단이 된다. */
     window._MHW=[].concat.apply([], P.map(p=>bk(u,p.key))).filter(x=>(isPM(x)||isSvc(x)) && x.workMin>MHW_MIN);
     mhwBadge();

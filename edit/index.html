@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=171"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=172"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -519,25 +519,6 @@ const TABS = [
 ];
 TABS.push(Object.assign({}, TABS.find(t => t.id === 'cip11'), { id:'cip16', tbl:'sheet_cip_f16', name:'CIP F16', cip:'F16' }));
 TABS.forEach(t => { if(t.region) t.quick.unshift({ k:'region', l:'구분', t:'region' }); });
-/* ---------- 국내 데모 모드 (?site=KR · v146) ----------
-   주간현황(국내) 데모의 «데모 표»(kr_sheet_*)를 고친다 — 국내 운영자(kr)와 관리자가 쓴다. 같은 화면이 표 이름만 바꿔 돈다:
-   이 화면의 모든 읽기·쓰기(검색·편집·엑셀 일괄·이력·설비 칸 채우기)가 t.tbl 을 지나므로 여기 한 곳이면 된다.
-   ⚠ 운영 표 이름(sheet_wk 등)을 아래에 따로 적으면 그 자리만 운영 표를 건드린다 — 설비 칸 채우기·시작 검사도 TAB_BY 를 지난다.
-   ⚠ 막는 것은 서버다 — kr 은 _edit_key 가 «kr_ 표가 아니면 null»(= bad_table)이라 운영 표를 고칠 길이 없다(setup-17).
-   대상은 주간현황이 읽는 일곱 표뿐이다(자재는 데모 표가 없다). */
-const KR = (function(){ try{ return (new URLSearchParams(location.search).get('site') || '').toUpperCase() === 'KR'; }catch(e){ return false; } })();
-if(KR){
-  for(let i = TABS.length - 1; i >= 0; i--) if(TABS[i].id === 'mat' || TABS[i].cip) TABS.splice(i, 1);   // 데모 표가 없다(자재·CIP)
-  TABS.forEach(t => { t.tbl = 'kr_' + t.tbl; });
-  /* 머리 — «어느 표를 고치는가»를 화면이 말한다(본 데이터 관리와 생김새가 같아 헷갈린다) · 원본 올리기도 데모 경로로 */
-  document.title = '국내 데모 — 데이터 관리 · CS Global Team';
-  const h1 = document.querySelector('h1'); if(h1) h1.textContent = '국내 데모 — 데이터 관리';
-  const sub = document.querySelector('.sub');
-  if(sub) sub.textContent = '주간현황(국내) 데모의 «데모 표»를 찾아 고칩니다 — 본 대시보드(해외 포함)는 한 글자도 안 바뀝니다. 모든 변경은 이력에 남고 되돌릴 수 있습니다.';
-  const up = document.getElementById('toUpload'); if(up){ up.href = '/upload/?site=KR'; up.target = 'gstUploadKR'; }
-  const gt = document.getElementById('gate');
-  if(gt) gt.innerHTML = '<b>국내 데모 — 관리자·국내 운영자 전용입니다</b><p>주간현황(국내) 데모의 데이터 관리는 관리자(쓰기 권한) 또는 국내 운영자 계정으로만 열립니다.</p>';
-}
 const TAB_BY = Object.fromEntries(TABS.map(t => [t.id, t]));
 const TAB_OF_TBL = Object.fromEntries(TABS.map(t => [t.tbl, t]));
 const NUM_TYPES = /^(bigint|integer|smallint|numeric|real|double precision)$/;
@@ -691,7 +672,7 @@ async function loadCols(t){
 /* ---------- 탭 ---------- */
 function renderTabs(){
   $('tabs').innerHTML = TABS.map(t => '<button type="button" class="tab' + (S.tab === t.id ? ' on' : '') + '" data-tab="' + t.id + '">' + esc(t.name) + '</button>').join('')
-    + (KR ? '' : '<button type="button" class="tab vm' + (S.tab === 'site' ? ' on' : '') + '" data-tab="site" title="새 사이트(FAB)를 등록하고 운영단위·고객사·지역을 정의합니다 · 사이트별 CIP 표·점검 항목">사이트</button><button type="button" class="tab vm2' + (S.tab === 'vmap' ? ' on' : '') + '" data-tab="vmap" title="새 값이 대시보드 어디에 · 어떻게 반영되는지 보고, 규칙으로 정합니다">기준 정보</button>')
+    + ('<button type="button" class="tab vm' + (S.tab === 'site' ? ' on' : '') + '" data-tab="site" title="새 사이트(FAB)를 등록하고 운영단위·고객사·지역을 정의합니다 · 사이트별 CIP 표·점검 항목">사이트</button><button type="button" class="tab vm2' + (S.tab === 'vmap' ? ' on' : '') + '" data-tab="vmap" title="새 값이 대시보드 어디에 · 어떻게 반영되는지 보고, 규칙으로 정합니다">기준 정보</button>')
     + '<button type="button" class="tab vm' + (S.tab === 'dq' ? ' on' : '') + '" data-tab="dq" title="공수 허수(작업시간 24h 초과 등)·주별 급증을 찾아 그 행을 고칩니다 · 여덟 화면의 자료 문제도 여기 모입니다">데이터 품질<span class="tbadge"' + (dqCount(S.dq) ? '' : ' hidden') + '>' + (dqCount(S.dq) || '') + '</span></button>'
     + '<button type="button" class="tab hist' + (S.tab === 'hist' ? ' on' : '') + '" data-tab="hist">변경 이력</button>';
 }
@@ -1583,14 +1564,14 @@ function instFind(I, sn, code){
 async function lastWk(sns){
   const ks = Array.from(new Set(sns.map(N).filter(Boolean))), out = new Map();
   for(let i = 0; i < ks.length; i += 2000){
-    const r = await rpc('edit_last_wk', {p_sns:ks.slice(i, i + 2000), p_tbl:TAB_BY.wk.tbl}) || {};   // 어느 수선실적 표에서(국내 데모면 데모 표)
+    const r = await rpc('edit_last_wk', {p_sns:ks.slice(i, i + 2000), p_tbl:TAB_BY.wk.tbl}) || {};
     Object.keys(r).forEach(k => out.set(k, r[k]));
   }
   return out;
 }
 /* 자재의 «그 수선실적» — 수선실적번호로. in(…) 도 서버 행수 상한에 잘린다 — 꽉 찬 장이면 반으로 쪼갠다(v128). */
 async function wkByRs(vals){
-  const W = TAB_BY.wk;                       // 국내 데모 모드면 데모 수선실적(kr_sheet_wk) — 표 이름을 여기 적지 않는다
+  const W = TAB_BY.wk;
   await loadCols(W);
   const have = S.cols[W.tbl] || [], cols = WK_COLS.filter(c => have.indexOf(c) >= 0), out = new Map();
   const go = async list => {
@@ -2084,7 +2065,7 @@ $('xfile').addEventListener('change', e => { const f = e.target.files && e.targe
      ⚠ 교체는 이 화면이 하지 않는다 — 업로드 화면을 이 안에 띄워(?embed=1) 같은 파일을 건네준다. 적재 엔진을 두 벌 두면
        두 경로가 다른 규칙으로 표를 비운다(제2원칙). */
 const UP_RID = { wk:'wk', mat:'mat', inst:'inst', roster:'roster', edu:'edu', leave:'leave', alarm:'alarm', abp:'abp2kr', cip11:'cipf11', cip16:'cipf16' };
-const cmSite = () => KR ? 'KR' : 'ALL';
+const cmSite = () => 'ALL';
 /* 저장 열쇠 — 업로드와 같다. 원장은 «시트 태그»별(K·P·H 양식이 다르다 · 이름 규칙이 없는 시트는 해외 OS). */
 function cmKey(t, sheet){
   if(t.ledger){
@@ -2138,7 +2119,7 @@ async function mapDlg(t, XLSX, wb, file, cols, hm){
       + (nMap ? '' : '<p class="wn" style="color:var(--bad)">⚠ 이 시트에서 표의 열과 맞는 머리글을 하나도 못 찾았습니다 — 다른 시트가 아닌지 보거나, 아래에서 열마다 머리글을 골라 주세요.</p>')
       + GST.cmap.table({ items:cols.map(c => ({ k:F[c], label:label(t, c).name, req:need.has(c), idx:M.idx[F[c]], via:M.via[F[c]] })),
           H:M.header, rows:rows, hi:M.hi, hiFound:M.hiFound, hiSel:true, ovr:cur.L.ovr, src:cur.L.src, tbl:cur.K.tbl, title:sheet,
-          siteL:KR ? '국내 데모' : '관리자', canDb:true, unknown:unknown, missTxt:'파일에 없음', open:true })
+          siteL:'관리자', canDb:true, unknown:unknown, missTxt:'파일에 없음', open:true })
       + '<h4 style="margin-top:12px">넣는 방식</h4>'
       + '<label class="cmm"><input type="radio" name="cmMethod" value="rows"' + (method === 'rows' ? ' checked' : '') + '> <b>한 행씩 반영</b> — 「' + BULK_KEY + '」(또는 키)로 찾은 행은 고치고, 나머지는 새 행으로 넣습니다. '
       + (bulkKeys(t).length ? '' : '표에 이미 똑같은 행은 넣지 않습니다. ') + '모든 줄이 이력에 남고 되돌릴 수 있습니다. <span class="hint">— 몇 줄 고치거나 보탤 때</span></label>'
@@ -2185,7 +2166,6 @@ function openUp(o){
     });
   }
   const q = new URLSearchParams({ embed:'1' });
-  if(KR) q.set('site', 'KR');
   if(o.rid) q.set('rid', o.rid);
   UPV.pend = o.file ? { rid:o.rid, file:o.file, sheet:o.sheet || '' } : null;
   UPV.el.hidden = false;
@@ -2913,7 +2893,7 @@ const DQ_CHECK = {
   manmis:  { l:'작업공수 ≠ 작업시간 × 작업자수', why:'시스템은 공수를 작업시간 × 작업자수로 적습니다(실측 19,881/19,888 행) — 크게 다르면 한쪽이 틀린 것입니다.', act:'작업자수·작업시간·작업공수 중 틀린 칸을 고치세요.', sev:'warn' },
   mannull: { l:'작업공수 빈칸(작업시간은 있음)', why:'공수 차트는 이 행을 0 으로 셉니다.', act:'「자동 채우기」가 작업시간 × 작업자수로 한 번에 채웁니다(미리 보기 뒤 반영 · 되돌릴 수 있음). 작업자수가 빈 행은 직접 고치세요.', sev:'info' }
 };
-const DQ_PAGES = [['report','주간현황'],['fault','고장분석'],['material','자재실적'],['pm','PM 점검'],['scrubber','설치현황'],['tco','TCO'],['cip','CIP'],['hr','인원현황'],['report_kr','주간현황(국내)']];
+const DQ_PAGES = [['report','주간현황'],['fault','고장분석'],['material','자재실적'],['pm','PM 점검'],['scrubber','설치현황'],['tco','TCO'],['cip','CIP'],['hr','인원현황']];
 const dqTbl = () => TAB_BY.wk.tbl;
 /* 걸러 보기 (v156 · 사용자: 「필터 잡아서 보고 싶은 것만 볼 수 있게」) — 구분 · 운영단위 · 기간.
    ⚠ 구분 판정은 대시보드 정본(GST.ORG.region)을 운영단위 «값»에 건다 — 서버는 운영단위별 건수(by_op)만 주고 판정은 여기 한 곳이다.
@@ -3063,9 +3043,7 @@ function dqJoinHTML(){
 /* 화면 신호 → 고칠 자리 (v156 · 길잡이). 키는 «화면.신호». 여기 없는 신호는 규칙으로 정해진 제외(op_unk 등)라 고칠 행이 없다. */
 const DQ_FIX = {
   'report.wk_24h':    { l:'24h 초과 행 보기', dq:'work24' },
-  'report_kr.wk_24h': { l:'24h 초과 행 보기', dq:'work24' },
   'report.div_join':  { l:'설치현황 연결 보기', join:'wk' },
-  'report_kr.div_join': { l:'설치현황 연결 보기', join:'wk' },
   'fault.floor_na':   { l:'설치현황 연결 보기', join:'wk' },
   'material.floor_na':{ l:'설치현황 연결 보기', join:'mat' },
   'fault.wk_blank':   { l:'알람유형 빈 BM 행 찾기', tab:'wk', oc:[{ c:'stage', op:'eq', v:'BM' }, { c:'alarm', op:'nul', v:'' }] },
@@ -3074,16 +3052,13 @@ const DQ_FIX = {
   'fault.inst_unkstate':    { l:'기준 정보에서 정하기', tab:'vmap' },
   /* v162 (사용자: 「눌르면 연결 안 된 게 나와야 내가 고치지」) — 주간현황의 국내 원장·인원 신호도 «그 행»을 띄운다 */
   'report.kr_join':    { l:'안 이어진 원장 행 보기', fn:'krJoin' },
-  'report_kr.kr_join': { l:'안 이어진 원장 행 보기', fn:'krJoin' },
   'report.kr_drop':    { l:'빠진 원장 행 보기', fn:'krDrop' },
-  'report_kr.kr_drop': { l:'빠진 원장 행 보기', fn:'krDrop' },
-  'report.head_ex':    { l:'확인할 인원 보기', fn:'headEx' },
-  'report_kr.head_ex': { l:'확인할 인원 보기', fn:'headEx' }
+  'report.head_ex':    { l:'확인할 인원 보기', fn:'headEx' }
 };
 /* 신호의 «구분» — 데이터 품질 탭의 구분·운영단위 필터가 화면 신호에도 걸리게 한다(사용자: 「필터 걸면 필터에 해당하는 것만」).
-   국내 원장·국내 실적·반도체연구소·국내 데모 화면은 국내 신호다(공수 분모 제외는 그 화면의 인원 필터를 이미 탔다). 표에 없는 신호는 구분이 없다(늘 보인다). */
-const DQ_SCOPE = { kr_alarm:'kr', kr_abp:'kr', kr_join:'kr', kr_drop:'kr', kr_rnd:'kr', div_join:'kr', kr_mh:'kr' };
-const dqScopeOf = (pg, key) => pg === 'report_kr' ? 'kr' : (DQ_SCOPE[key] || '');
+   국내 원장·국내 실적·반도체연구소는 국내 신호다(공수 분모 제외는 그 화면의 인원 필터를 이미 탔다). 표에 없는 신호는 구분이 없다(늘 보인다). */
+const DQ_SCOPE = { kr_alarm:'kr', kr_abp:'kr', kr_join:'kr', kr_drop:'kr', kr_rnd:'kr', div_join:'kr' };
+const dqScopeOf = (pg, key) => DQ_SCOPE[key] || '';
 /* 지금 필터가 그 구분을 «빼는가» — 구분을 골랐으면 그것, 운영단위만 골랐으면 그 운영단위의 구분 */
 function dqScopeOut(sc){
   if(!sc) return false;
@@ -3157,8 +3132,7 @@ function dqPagesHTML(){
   let h = '<h4>화면 신호 — 여덟 화면이 마지막으로 그릴 때 찾은 자료 문제</h4><p class="hint">이 브라우저에서 그 화면을 마지막으로 연 때의 값입니다(필터가 걸려 있었다면 그 필터 기준). 최신으로 보려면 그 화면을 새로고침한 뒤 여기를 다시 여세요. 「찾아서 고치기」가 고칠 행을 그 탭에 띄웁니다.</p>';
   DQ_PAGES.forEach(pg => {
     let o = null; try{ o = JSON.parse(localStorage.getItem('gst_dq_' + pg[0]) || 'null'); }catch(e){}
-    if(pg[0] === 'report_kr' && dqScopeOut('kr')) return;   // 국내 데모 화면 — 해외로 걸면 통째로 안 보인다
-    if(!o){ if(pg[0] !== 'report_kr') h += '<div class="dq-pg"><b>' + esc(pg[1]) + '</b> <span class="hint">— 이 브라우저에서 아직 한 번도 안 열었습니다</span></div>'; return; }
+    if(!o){ h += '<div class="dq-pg"><b>' + esc(pg[1]) + '</b> <span class="hint">— 이 브라우저에서 아직 한 번도 안 열었습니다</span></div>'; return; }
     const mins = Math.round((now - (o.at || 0)) / 60000), age = mins < 60 ? mins + '분 전' : mins < 2880 ? Math.round(mins / 60) + '시간 전' : Math.round(mins / 1440) + '일 전';
     h += '<div class="dq-pg"><b>' + esc(pg[1]) + '</b> <span class="hint">· ' + esc(age) + ' · 필터 ' + esc(o.filter || '전체') + '</span></div>';
     if(!o.items || !o.items.length){ h += '<p class="hint" style="margin:2px 0 8px">문제 없음</p>'; return; }
@@ -3184,7 +3158,7 @@ async function dqFix(id){
     const el = $('dqJoin'); if(el) el.scrollIntoView({ behavior:'smooth', block:'start' });
     return;
   }
-  if(fx.tab === 'vmap'){ if(!KR) await switchTab('vmap'); return; }
+  if(fx.tab === 'vmap'){ await switchTab('vmap'); return; }
   if(fx.tab && TAB_BY[fx.tab]) return dqSearch(fx.tab, fx.oc || []);
 }
 /* 다른 탭을 «조건이 채워진 검색»으로 연다 — 사람이 조건을 보고 고칠 수 있다(검색 칸의 그 밖의 열 조건 · v156) */
@@ -3242,8 +3216,7 @@ async function dqInstRows(op, k){
    ⚠ 빈칸만 채운다 — 이미 적힌 공수는 손대지 않는다(다르면 «공수 ≠ 시간 × 인원» 점검이 따로 보여 준다).
    ⚠ 작업자수·작업시간이 비었거나 0 인 행은 짐작하지 않는다 — 건너뛴다.
    ⚠ 쓰기는 엑셀 일괄과 같은 edit_bulk(500줄씩 · 행 해시 · 줄마다 이력 · 「변경 이력」의 일괄 되돌리기). 새 쓰기 통로 없음.
-   ⚠ 해외 주간현황은 지금 이 행의 공수를 0 으로 센다 — 채우면 그만큼 공수 차트가 올라간다(그게 맞는 값이다).
-     국내 데모는 v147 부터 읽을 때 같은 식으로 메워 보고 있었으니 숫자가 안 바뀐다. */
+   ⚠ 해외 주간현황은 지금 이 행의 공수를 0 으로 센다 — 채우면 그만큼 공수 차트가 올라간다(그게 맞는 값이다). */
 const MAN_COL = 'man_min', WMIN_COL = 'work_min', WCNT_COL = 'worker_cnt';
 function manFill(row){
   if(vs(row[MAN_COL]).trim() !== '') return null;
@@ -3344,7 +3317,7 @@ const SITE_DEF = [
 ];
 /* CIP 탭 하나 — 옛 F11 탭을 틀로 쓴다(열 묶음·빠른 칸·안내가 같다) */
 function addCipTab(s){
-  if(KR || !s.cip_table || TAB_OF_TBL[s.cip_table]) return null;
+  if(!s.cip_table || TAB_OF_TBL[s.cip_table]) return null;
   const base = TABS.find(t => t.cip) || null; if(!base) return null;
   const id = 'cip_' + s.fab.toLowerCase();
   const t = Object.assign({}, base, { id:id, tbl:s.cip_table, name:'CIP ' + s.fab, cip:s.fab });
@@ -3682,9 +3655,8 @@ const OP_VIEW = op => /^upload:/.test(op) ? { c:'x', l:'업로드 ' + ({full:'�
 const RESTORABLE = new Set(['update','insert','delete','dbw:update','dbw:append','dbw:delete']);
 function renderHistFilters(opt){
   opt = opt || {};
-  /* 국내 데모 모드는 데모 표의 이력만 — 운영 표 이력은 보여도 되돌릴 수 없고(서버가 not_restorable) 헷갈리기만 한다 */
-  const tbls = [['', KR ? '국내 데모 표 전부' : '모든 표']].concat(TABS.map(t => [t.tbl, t.name]))
-    .concat(KR ? [] : [['sheet_cip_f11', 'CIP F11'], ['sheet_cip_f16', 'CIP F16'], ['sheet_abp', 'ABP'], ['(old)', '옛 시트 편집 기록']].filter(x => !TAB_OF_TBL[x[0]]));
+  const tbls = [['', '모든 표']].concat(TABS.map(t => [t.tbl, t.name]))
+    .concat([['sheet_cip_f11', 'CIP F11'], ['sheet_cip_f16', 'CIP F16'], ['sheet_abp', 'ABP'], ['(old)', '옛 시트 편집 기록']].filter(x => !TAB_OF_TBL[x[0]]));
   $('hfilt').innerHTML = '<label class="sf"><span>표</span><select name="tbl">' + tbls.map(x => '<option value="' + esc(x[0]) + '"' + (opt.tbl === x[0] ? ' selected' : '') + '>' + esc(x[1]) + '</option>').join('') + '</select></label>'
     + '<label class="sf"><span>종류</span><select name="kind"><option value="">전부</option>' + Object.keys(OPS).map(k => '<option value="' + k + '"' + (opt.kind === k ? ' selected' : '') + '>' + esc(OPS[k].l) + '</option>').join('') + '</select></label>'
     + '<label class="sf"><span>행 번호 · id</span><input name="key" value="' + esc(opt.key || '') + '" placeholder="정확히"></label>'
@@ -3700,7 +3672,7 @@ async function loadHist(more){
   try{
     let q = C.from('sheet_edits').select('id,gid,tbl,row_key,op,before,after,edited_by,edited_at,ref').order('id', {ascending:false}).limit(51);
     if(more && H.last != null) q = q.lt('id', H.last);
-    if(f.tbl === '(old)') q = q.is('tbl', null); else if(f.tbl) q = q.eq('tbl', f.tbl); else if(KR) q = q.in('tbl', TABS.map(t => t.tbl));
+    if(f.tbl === '(old)') q = q.is('tbl', null); else if(f.tbl) q = q.eq('tbl', f.tbl);
     if(f.kind && OPS[f.kind]){ const o = OPS[f.kind]; q = o.like ? q.like('op', o.like) : q.in('op', o.ops); }
     if(f.key) q = q.eq('row_key', f.key);
     if(f.who){ const w = runs(f.who).join('*'); if(w) q = q.ilike('edited_by', '*' + w + '*'); }
@@ -3801,16 +3773,13 @@ function histView(e){
   try{
     await GST.authGate();
     await GST.loadMe();
-    /* 국내 데모 모드는 «관리자(쓰기 권한) 또는 국내 운영자(kr)» — 서버 _edit_allow·_edit_key 와 같은 범위(setup-17) */
-    if(KR ? !(GST.isKrOp && GST.isKrOp()) : (!GST.isAdmin() || !GST.canWrite())){
-      /* 국내 운영자가 본 데이터 관리를 열었으면 — 막다른 길로 두지 않고 갈 곳을 적는다(업로드 화면과 같은 안내) */
-      if(!KR && GST._me && GST._me.role === 'kr') $('gate').insertAdjacentHTML('beforeend', '<p>국내 데모 자료는 「주간 현황(국내)」 화면의 「데이터 관리」로 고칩니다.</p>');
+    if(!GST.isAdmin() || !GST.canWrite()){
       $('gate').hidden = false; return;
     }
     C = await GST.db();
     if(!C) throw new Error('로그인 세션이 없습니다');
     const me = GST._me || {};
-    $('me').innerHTML = esc(me.email || '') + ' <span class="badge ad">' + esc(me.role === 'kr' ? '국내 운영자' : me.role === 'legacy' ? '관리자(legacy)' : '관리자') + '</span> <a class="lnk" href="/" target="_blank" rel="noopener">대시보드 ↗</a>';
+    $('me').innerHTML = esc(me.email || '') + ' <span class="badge ad">' + esc(me.role === 'legacy' ? '관리자(legacy)' : '관리자') + '</span> <a class="lnk" href="/" target="_blank" rel="noopener">대시보드 ↗</a>';
     $('app').hidden = false;
     try{ await rpc('edit_cols', {p_tbl:TAB_BY.inst.tbl}); S.ready = true; }
     catch(e){
@@ -3821,7 +3790,7 @@ function histView(e){
        부작용 없는 호출로 있는지만 본다(없는 키 -1 · 없는 이력 -1). 없으면 그 단추만 잠그고 «무엇을 하면 되는지» 적는다. */
     if(S.ready){
       const miss = [];
-      const WT = TAB_BY.wk.tbl;   // 국내 데모 모드면 데모 표로 묻는다 — kr 은 운영 표에 bad_table 이라 «없다»로 잘못 읽힌다
+      const WT = TAB_BY.wk.tbl;
       for(const [fn, args, k] of [['edit_delete', {p_tbl:WT, p_key:-1, p_hash:''}, 'del'], ['edit_restore', {p_id:-1}, 'restore'],
                                   ['edit_get_many', {p_tbl:WT, p_keys:[]}, 'bulk'], ['edit_bulk', {p_tbl:WT, p_items:[]}, 'bulk']]){
         try{ const r = await C.rpc(fn, args); if(r && fnMissing(r.error)){ S.can[k] = false; miss.push(fn); } }catch(e){}
@@ -3835,8 +3804,8 @@ function histView(e){
     /* ?tab=dq — 주간현황 공수 차트의 ⚠ 가 «여기서 고치세요»로 바로 연다(v155) */
     let fixId = null;
     /* 등록부의 «새» CIP 사이트를 탭으로 (v160) — 옛 F11·F16 은 위 TABS 그대로. 못 읽으면 옛 둘만(사이트 탭이 이유를 적는다). */
-    if(!KR) try{ (await GST.cipSites(false, C)).forEach(addCipTab); }catch(e){ console.warn('[edit] 사이트 등록부', e); }
-    try{ const sp = new URLSearchParams(location.search), qt = sp.get('tab'); if(qt && (TAB_BY[qt] || qt === 'dq' || qt === 'hist' || (qt === 'site' && !KR))) S.tab = qt;
+    try{ (await GST.cipSites(false, C)).forEach(addCipTab); }catch(e){ console.warn('[edit] 사이트 등록부', e); }
+    try{ const sp = new URLSearchParams(location.search), qt = sp.get('tab'); if(qt && (TAB_BY[qt] || qt === 'dq' || qt === 'hist' || qt === 'site')) S.tab = qt;
          fixId = sp.get('fix'); if(fixId && !DQ_FIX[fixId]) fixId = null; if(fixId) S.tab = 'dq'; }catch(e){}
     /* ?fix=화면.신호 — 각 화면 데이터 품질 팝업의 「찾아서 고치기」(v156)가 그 신호의 «고칠 자리»로 바로 연다 */
     await switchTab(S.tab);

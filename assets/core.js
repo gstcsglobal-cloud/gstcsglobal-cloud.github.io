@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 171;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 172;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -158,14 +158,6 @@ GST.isAdmin = function(){
   var r = GST._me.role; return r==='admin' || r==='legacy';
 };
 GST.canWrite = function(){ return !!(GST._me && GST._me.can_write); };
-/* 국내 데모(주간현황(국내) · kr_ 표)에 쓸 수 있는 사람인가 (v146) — 서버 _kr_can 과 같은 규칙:
-   관리자(쓰기 권한) 또는 국내 운영자(role='kr'). ⚠ kr 은 can_write 가 «꺼져» 있다(서버 제약) — 운영 표의 모든 쓰기
-   검사가 can_write 를 보므로 그대로 막힌다. 이 함수는 버튼을 보일지 정할 뿐, 실제로 막는 것은 서버다. */
-GST.isKrOp = function(){
-  if(!GST._me) return false;
-  var r = GST._me.role;
-  return r === 'kr' || ((r === 'admin' || r === 'legacy') && !!GST._me.can_write);
-};
 /* 처리함(v166)에 담고·바꿀 수 있는 사람인가 — 서버 _act_who 와 같은 규칙(쓰기 권한 또는 관리자·사이트 담당자·국내 운영자).
    단추를 보일지 정할 뿐, 막는 것은 서버다. 등급을 모르면 false(fail-closed). */
 GST.actCan = function(){
@@ -178,7 +170,7 @@ GST.actCan = function(){
    기본으로 숨기고, 관리자가 셸의 「설명 표시」를 켰을 때만 보인다(localStorage gst_explain — 같은 출처라 모든 탭이 같은 값을 본다).
    ⚠ 숫자의 뜻이 바뀌는 경고(.card-note.warn — 예: 원장이 비어 다른 자료로 집계 중)는 지우지 않는다. ⚠ 하나로 줄이고 누르면 내용이 뜬다
      (v147 공수 차트에서 사용자가 정한 방식). 지우면 그 경고를 못 본 사람이 다른 뜻의 숫자를 읽는다(v92).
-   주간현황(report · report-kr)도 같다(v173 · 사용자 확정 「주간현황도 문구 정도는 수정하고 숨겨도 돼」) — 처음엔 예외였다.
+   주간현황(report)도 같다(v173 · 사용자 확정 「주간현황도 문구 정도는 수정하고 숨겨도 돼」) — 처음엔 예외였다.
    예외가 필요해지면 EXPLAIN_SKIP 에 그 화면 경로를 정규식으로 넣는다(기본 null = 예외 없음).
    판정은 이 한 함수다 — CSS(theme.css · ds.css · 셸)는 body.gst-explain 만 본다. */
 GST.EXPLAIN_SKIP = null;
@@ -2845,8 +2837,8 @@ GST.idb=(function(){
 GST.TABLE_OF_GID = { '646668307':'wk', '31302669':'mat', '891608329':'inst' };
 GST.USE_DB = true;                       // 되돌리려면 이 한 줄을 false로
 
-/* ── 다른 표 읽기 (v146 · 주간현황(국내) 데모) ──
-   데모 화면은 운영 표가 아니라 «데모 표»(kr_sheet_*)를 읽는다. 페이지가 지도(TBL_MAP)만 주면 읽기 경로 셋
+/* ── 다른 표 읽기 (v146 · 주간현황(국내) 데모가 쓰던 층 — 데모는 v176 에 접었고 층은 남겼다 · tests/t-tblmap.mjs) ──
+   그때 데모 화면은 운영 표가 아니라 «데모 표»(kr_sheet_*)를 읽었다. 페이지가 지도(TBL_MAP)만 주면 읽기 경로 셋
    (dbRows · csvTableRows · fetchCSVCached)이 같은 지도를 본다 — 페이지마다 표 이름을 바꿔 적으면 반드시 한 곳이 빠진다.
    ⚠ TBL_NS 는 캐시 열쇠의 앞머리다. 데모와 본 화면이 같은 출처(origin)의 localStorage·IndexedDB 를 나눠 쓰므로,
      가르지 않으면 «본 주간현황이 데모 숫자를 캐시에서 꺼내는» 사고가 난다(IndexedDB 열쇠는 실제 표 이름이 가른다).
@@ -4200,9 +4192,9 @@ GST.geo = {
 
 /* ---------- 움직임 (v169 · 「통합관리화면」 5단계) ----------
    카드가 차례로 떠오르고 · 숫자가 바뀌면 잠깐 빛나고 · 팝업이 튀어나온다. 규칙은 theme.css 의 «body.gst-motion» 아래에만 있다.
-   ⚠ 주간현황(report · report-kr)에는 걸지 않는다 — 그 화면은 손대지 않는다(사용자 지시). 판정은 경로 한 곳.
+   ⚠ 주간현황(report)에는 걸지 않는다 — 그 화면은 손대지 않는다(사용자 지시). 판정은 경로 한 곳.
    ⚠ 움직임 줄이기(prefers-reduced-motion)를 고른 사람에게는 CSS 가 아무것도 안 한다 — 이 함수는 클래스만 단다. */
-GST.MOTION_SKIP = /^\/report(-kr)?\//;
+GST.MOTION_SKIP = /^\/report\//;
 GST._motionInit = function(){
   try{
     if(!document.body || GST.MOTION_SKIP.test(GST.pagePath())) return;

@@ -366,12 +366,12 @@ const pa = put[0] && put[0].p_payload;
 is(pa && pa.as_of === put[0].p_as_of && /^\d{4}-\d\d-\d\d$/.test(pa.as_of) && pa.kpis.length === 5, '자료일 · 카드 다섯(처리함을 읽었으니 기한 경과 건까지)');
 const card = await pb.evaluate(() => document.querySelector('#kpis .ds-kpi[data-k="bm_per100"] .ds-kpi-t').textContent);
 const pw4 = pa && pa.kpis.find(k => k.k === 'bm_per100');
-is(pw4 && pw4.val === '46.00' && pw4.st === 'bad' && /목표 30\.00 이하 · 초과 16\.00/.test(pw4.tgt), '전사 스냅샷 — 46.00 · 위험 · 화면 카드와 같은 목표 문장(GST.kpiText 한 벌)');
+is(pw4 && pw4.val === '46.00' && pw4.st === 'bad' && /목표 30\.00 이하 · 초과 16\.00/.test(pw4.tgt), '전사 스냅샷 — 46.00 · 점검 권장 · 화면 카드와 같은 목표 문장(GST.kpiText 한 벌)');
 const pwh = put[1] && put[1].p_payload.kpis.find(k => k.k === 'bm_per100');
 is(pwh && pwh.tgt === card, '우한 스냅샷의 목표 문장 = 지금 화면 카드의 글자 그대로 («' + card + '»)');
 is(pa && pa.dec.some(d => /TAIWAN/.test(d.title)) && pa.dec.every(d => d.title && d.tag), '확인 사항 — 화면과 같은 목록(decisions 한 벌)');
 const txt = briefText({ scope:'all', as_of:pa.as_of, payload:pa, made_at:new Date().toISOString() }, new Date());
-is(/\[위험\] 설비 100대당 고장\(최근 4주\) 46\.00 — 목표 30\.00 이하 · 초과 16\.00/.test(txt) && txt.length <= 940, '챗봇 글 — 스냅샷을 그대로 옮긴다 (' + txt.length + '자)');
+is(/\[점검 권장\] 설비 100대당 고장\(최근 4주\) 46\.00 — 목표 30\.00 이하 · 초과 16\.00/.test(txt) && txt.length <= 940, '챗봇 글 — 스냅샷을 그대로 옮긴다 (' + txt.length + '자)');
 const again = await pb.evaluate(async () => { const n = window.__RPC.length; const r = await briefSave(); return { r, more:window.__RPC.length - n }; });
 is(again.r === 'skip' && again.more === 0, '같은 자료일이면 30분 안에 다시 남기지 않는다');
 const part = await pb.evaluate(async () => { GST._bfOn = { wk:1 }; const r = await briefSave(); GST._bfOn = {}; return r; });
@@ -430,7 +430,7 @@ console.log('[14] 셸 — 탭 묶음 · 처리함 배지 · 더보기');
 const pz2 = await open('/', clearDB);
 await pz2.evaluate(() => { const o = document.getElementById('loginOverlay'); if (o) o.remove(); });
 await pz2.waitForTimeout(800);
-const shl = await pz2.evaluate(() => ({ top:Array.from(document.getElementById('tabbar').children).map(e => e.classList.contains('tgrp') ? '[' + e.querySelector('.tgrp-l').textContent + ':' + Array.from(e.querySelectorAll('.tab')).map(b => b.dataset.id).join('+') + ']' : e.dataset.id),
+const shl = await pz2.evaluate(() => ({ top:Array.from(document.getElementById('tabbar').children).filter(e => e.matches('.tab,.tgrp')).map(e => e.classList.contains('tgrp') ? '[' + e.querySelector('.tgrp-l').textContent + ':' + Array.from(e.querySelectorAll('.tab')).map(b => b.dataset.id).join('+') + ']' : e.dataset.id),
   badge:document.getElementById('actBadge').hidden ? '' : document.getElementById('actBadge').textContent, explain:getComputedStyle(document.getElementById('mExplain')).display }));
 is(shl.top.join(' ') === 'home hub report fault [정비:pm+cip] scrubber [자재·비용:material+tco] hr', '탭 줄 — 8묶음 (' + shl.top.join(' ') + ')');
 is(shl.badge === '2', '처리함 배지 — 미완료 2건(완료 건은 안 셈 · ' + shl.badge + ')');

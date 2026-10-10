@@ -34,7 +34,7 @@ const row = { scope:'all', as_of:'2026-10-09', payload:P, made_at:'2026-10-10T06
 const tx = briefText(row, NOW);
 is(/^이번 주 브리핑 — 전사/.test(tx), '머리 — 범위 이름');
 is(/^2026-10-09 기준 · 3시간 전 집계$/m.test(tx), '기준일 · «언제 집계했나»(3시간 전) — 설명 없이 짧게');
-is(/\[위험\] 설비 100대당 고장\(최근 4주\) 46\.00 — 목표 30\.00 이하 · 초과 16\.00 · ▲ \+30\.00 직전 4주 대비/.test(tx), '카드 문장을 그대로 — 판정 이름·값·목표·직전 대비');
+is(/\[점검 권장\] 설비 100대당 고장\(최근 4주\) 46\.00 — 목표 30\.00 이하 · 초과 16\.00 · ▲ \+30\.00 직전 4주 대비/.test(tx), '카드 문장을 그대로 — 판정 이름·값·목표·직전 대비');
 is(/· PM 비율\(최근 4주\) 18% — 목표 미설정/.test(tx) && !/\[\] PM/.test(tx), '판정 없는 지표는 [ ] 없이');
 is(/이번 주 확인 사항\n1\. \[목표\] GST TAIWAN/.test(tx) && /2\. \[재고장\] EQ-0000/.test(tx), '확인 사항 — 번호와 꼬리표');
 is(/⚠ 국내 알람 원장이 비어 있어/.test(tx), '국내 원장이 비면 그 사실을 맨 앞쪽에(숫자의 뜻이 바뀐다 · v92)');
@@ -42,7 +42,7 @@ is(!/설정된 목표가 없습니다/.test(tx), '목표가 있으면 «목표 �
 is(/설정된 목표가 없습니다/.test(briefText(Object.assign({}, row, { payload:Object.assign({}, P, { tgt_n:0 }) }), NOW)), '목표가 하나도 없으면 그렇다고 말한다');
 const old = briefText(Object.assign({}, row, { made_at:'2026-09-20T00:00:00Z' }), NOW);
 is(/⚠ 20일 전 집계된 브리핑입니다/.test(old) && /20일 전 집계/.test(old), BRIEF_STALE_DAYS + '일보다 오래되면 «오래됐다»고 앞에 적는다');
-is(/아직 브리핑이 없습니다/.test(briefText(null, NOW)), '스냅샷이 없으면 «내 화면을 열면 만들어진다»');
+is(/아직 브리핑이 없습니다/.test(briefText(null, NOW)), '스냅샷이 없으면 «홈을 열면 만들어진다»');
 const many = Object.assign({}, P, { dec: Array.from({ length:30 }, (_, i) => ({ sev:'warn', tag:'목표', title:'운영단위 ' + i + ' — 설비 100대당 고장이 목표를 넘었습니다 · 초과 ' + i + '.00 · 같은 길이를 맞추려는 긴 문장' })) });
 const tm = briefText(Object.assign({}, row, { payload:many }), NOW);
 is(tm.length <= BRIEF_MAX, '길어도 ' + BRIEF_MAX + '자 안 (' + tm.length + ')');
@@ -81,6 +81,12 @@ try { const js = module.stripTypeScriptTypes(I); const f = path.join(ROOT, 'test
   tsOk = r.status === 0; tsErr = (r.stderr || '').split('\n').find(l => /Error/.test(l)) || ''; }
 catch (e) { tsOk = false; tsErr = String(e && e.message || e).split('\n')[0]; }
 is(tsOk, 'index.ts 구문이 멀쩡하다(타입을 걷어 낸 뒤 node --check)' + (tsOk ? '' : ' → ' + tsErr));
+
+/* 판정 이름 — 화면 카드(core V2_T ko)와 같은 낱말인가. 갈리면 같은 숫자를 대시보드와 챗봇이 다른 말로 부른다(v175 에 실제로 갈렸다) */
+const CORE = fs.readFileSync(path.join(ROOT, 'assets/core.js'), 'utf8');
+const cm = CORE.match(/st_ok:'([^']+)', st_warn:'([^']+)', st_bad:'([^']+)'/);
+const bm = B.match(/const ST = \{ bad: '([^']+)', warn: '([^']+)', ok: '([^']+)' \}/);
+is(!!(cm && bm && cm[1] === bm[3] && cm[2] === bm[2] && cm[3] === bm[1]), '판정 이름이 화면 카드와 같다(' + (bm ? bm.slice(1).join('·') : '?') + ' ↔ ' + (cm ? cm.slice(1).join('·') : '?') + ')');
 
 console.log((fail ? '❌' : '✅') + ` t-brief ${pass}/${pass + fail}`);
 process.exit(fail ? 1 : 0);

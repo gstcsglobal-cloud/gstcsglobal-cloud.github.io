@@ -1,11 +1,11 @@
 /* ============================================================================
-   카카오 챗봇 「브리핑」 — 대시보드 «내 화면»이 남긴 스냅샷(brief_snap)을 글로 옮긴다
+   카카오 챗봇 「브리핑」 — 대시보드 «홈»이 남긴 스냅샷(brief_snap)을 글로 옮긴다
    (2단계 «제품화» · supabase/setup-27-targets.sql 7절 · docs/v2/PLAN.md 6절 ①)
    ----------------------------------------------------------------------------
    ⚠ 여기서 판정하지 않는다. 목표 대비·위험 설비·고장을 이 함수(Deno)에서 다시 세면 판정의 «네 번째 사본»이 된다
      (CLAUDE.md v109 — 원장을 챗봇에서 파싱하지 말 것 · 제2원칙). 숫자와 문장은 전부 스냅샷에 든 것 —
      대시보드의 GST.kpiText · decisions() 가 한국어로 만든 그 글 — 을 그대로 쓴다.
-   ⚠ «언제 계산한 것인지»를 언제나 적는다. 스냅샷은 사람이 «내 화면»을 열 때 갱신된다 — 오래됐으면 오래됐다고 말한다
+   ⚠ «언제 계산한 것인지»를 언제나 적는다. 스냅샷은 사람이 «홈»을 열 때 갱신된다 — 오래됐으면 오래됐다고 말한다
      (v128: 읽기는 되는데 값이 옛날 것인 실패가 가장 설명하기 어렵다).
    순수 JS(타입 없음) — Deno(엣지펑션)와 Node(tests/t-brief.mjs)가 같은 파일을 읽는다.
    ============================================================================ */
@@ -16,7 +16,8 @@ export const BRIEF_RE = /^\s*(?:이번\s*주\s*|주간\s*)?(?:브리핑|확인\s
 export const BRIEF_STALE_DAYS = 8;      // 스냅샷이 이보다 오래되면 «오래됐다»고 앞에 적는다
 export const BRIEF_MAX = 940;           // index.ts 의 KAKAO_MAX(950) 보다 짧게 — 그쪽 clip 이 문장 중간을 자르지 않게
 
-const ST = { bad: '위험', warn: '주의', ok: '정상' };
+/* 판정 이름은 화면 카드(core V2_T st_bad·st_warn·st_ok)와 같은 낱말이다 — 갈리면 같은 숫자를 두 말로 부른다 */
+const ST = { bad: '점검 권장', warn: '관찰 중', ok: '안정' };
 
 function ageText(made, now) {
   const h = Math.max(0, Math.round((now.getTime() - new Date(made).getTime()) / 3600000));
@@ -53,7 +54,7 @@ export function briefText(row, now = new Date(), note = '') {
 const NO_TABLE = /does not exist|relation|schema cache|42P01|PGRST20[05]/i;
 
 /* svc = 서비스 키 클라이언트 · email = 인증된 카카오 사용자의 이메일.
-   범위 = 그 사람의 기본 운영단위(allowed_users.home_op — 「내 화면」에서 「기본 화면으로 설정」) · 없으면 전사. */
+   범위 = 그 사람의 기본 운영단위(allowed_users.home_op — 「홈」에서 「기본 화면으로 설정」) · 없으면 전사. */
 export async function briefReply(svc, email, now = new Date()) {
   let scope = 'all';
   try {

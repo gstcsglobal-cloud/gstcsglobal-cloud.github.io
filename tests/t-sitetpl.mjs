@@ -47,7 +47,7 @@ const STUB = '\n;GST.USE_DB=false;GST.authOn=function(){return false;};'
   + 'GST.getSession=async function(){return {user:{email:"t@t"}}};GST.token=async function(){return "t";};'
   + 'GST.authGate=async function(){var o=document.getElementById("loginOverlay");if(o)o.remove();'
   + 'if(GST._authOk)GST._authOk();return true;};'
-  /* 등급 — 기본은 지금까지대로(editor 처럼 쓰기 권한). 페이지가 window.__ME_OBJ 를 주면 그 등급으로(국내 데모 · v146 — 진짜 perm 처럼 _meApply 까지) */
+  /* 등급 — 기본은 지금까지대로(editor 처럼 쓰기 권한). 페이지가 window.__ME_OBJ 를 주면 그 등급으로(진짜 perm 처럼 _meApply 까지) */
   + 'GST.sheetWrite=async function(){var m=window.__ME_OBJ;if(m){GST._meApply(m);return {ok:true,can_write:!!m.can_write,role:m.role,email:m.email};}return {ok:true,can_write:true,role:"editor"};};'
   + 'window.__QLOG=[];'
   + 'window.__FDB={from:function(tbl){var st={tbl:tbl,eq:[],neq:[],op:"select",ins:0};'
@@ -270,11 +270,10 @@ console.log('[3] ?site=TW');
   await pg.close();
 }
 
-/* ═══ [4] ?site=KR — 주간현황(국내) 데모 (v146) ═══
-   다른 넷과 성격이 다르다 — 운영 표의 자기 몫이 아니라 «데모 표»(kr_sheet_*) 전체가 담당자 몫이다.
-   그래서 표 이름이 데모 표로 바뀌고 · 모드를 고정하지 않고 · 운영단위로 막지 않는다. 막는 것은 서버다(setup-17 —
-   kr 은 can_write 가 꺼져 운영 표의 모든 쓰기가 거절되고, 데모 표는 «관리자 또는 kr» 만 쓴다). */
-console.log('[4] ?site=KR (국내 데모)');
+/* ═══ [4] ?site=KR 은 없다 (v176 · 국내 데모를 접었다 — 사용자 확정 「국내 데모 페이지는 필요없다 · 전체 업로드 할 거라」) ═══
+   쿼리가 붙어도 사이트 경로가 아니다 — 관리자 전체 화면 그대로(운영 표 · 모드 자유)이고, 데모 표(kr_sheet_*)를 한 번도 부르지 않는다.
+   쓰기 권한 판정은 can_write 하나다(옛 데모 경로의 «kr 이면 열림»이 되살아나면 붉다). */
+console.log('[4] ?site=KR 은 없다 (v176)');
 async function openAs(q, me) {
   const pg = await ctx.newPage(); const pe = [];
   pg.on('pageerror', e => pe.push(e.message));
@@ -286,90 +285,23 @@ async function openAs(q, me) {
 }
 const logText = pg => pg.evaluate(() => document.getElementById('log').innerText || '');
 {
-  const KRME = { email:'kr@test.local', can_write:false, role:'kr' };
-  const { pg, pe } = await openAs('?site=KR', KRME);
-  is(!(await pg.evaluate(() => document.getElementById('fsel').disabled)) && !/읽기 전용/.test(await chkText(pg)),
-    '국내 운영자(kr · 쓰기 권한 꺼짐)도 데모 경로에서는 파일을 고를 수 있다');
-  is(/국내 데모/.test(await pg.title()) && /국내 데모/.test(await pg.$eval('h1', e => e.textContent)), '제목·머리가 «국내 데모»를 말한다');
-  const T = await pg.evaluate(() => [...document.querySelectorAll('#tsel option')].map(o => { const t = TABLES[+o.value];
-    return { rid:t.rid, label:o.textContent, table:t.table, pair:t.pair || null }; }));
-  is(T.map(t => t.rid).join() === 'wk,inst,roster,edu,leave,alarm,abp2kr', '대상 일곱 — 설정 순서 그대로 (' + T.map(t => t.rid) + ')');
-  is(T.every(t => /^\[데모\] /.test(t.label)), '이름표마다 [데모]');
-  is(T.every(t => /^kr_sheet_/.test(t.table) && (!t.pair || /^kr_sheet_/.test(t.pair))),
-    '표·짝 표가 전부 데모 표 (' + T.map(t => t.table + (t.pair ? '↔' + t.pair : '')).join(' ') + ')');
-  const md = await pg.evaluate(() => ({ dis:document.getElementById('modeSel').disabled,
-    hidden:[...document.querySelectorAll('#modeSel option')].filter(o => o.style.display === 'none').length }));
-  is(!md.dis && md.hidden === 0, '모드는 고정하지 않는다 — 데모 표 전체가 담당자 몫(통째 교체도 된다)');
-  const te = await pg.evaluate(() => { const a = document.querySelector('#toEdit a');
-    return { vis:!document.getElementById('toEdit').hidden, href:a && a.getAttribute('href'), target:a && a.getAttribute('target') }; });
-  is(te.vis && te.href === '/edit/?site=KR' && te.target === 'gstEditKR', '데이터 관리 링크도 데모 경로 · 데모 창으로 (' + JSON.stringify(te) + ')');
-
-  /* 국내 알람 워크북 — K·P 두 시트가 다 들어간다(운영단위로 막지 않는다) · 이어붙이기로 끝까지 올린다 */
-  const CA = await canonOf(pg, 'alarm');
-  const headA = CA.keys.map(k => CA.map[k]);
-  const mk = (tag) => { const r = headA.map(() => '');
-    r[headA.indexOf(CA.map.sn)] = tag + 'BW0001'; r[headA.indexOf(CA.map.alarm)] = 'MSG ' + tag;
-    r[headA.indexOf(CA.map.occur)] = '2026-02-10'; return [headA, r]; };
-  const both = path.join(OUT, 'kr-both.xlsx');
-  { const w = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(w, XLSX.utils.aoa_to_sheet(mk('P')), 'P운영_ALARM');
-    XLSX.utils.book_append_sheet(w, XLSX.utils.aoa_to_sheet(mk('K')), 'K운영_ALARM');
-    XLSX.writeFile(w, both); }
-  await qlog(pg);
-  await pg.selectOption('#tsel', await idxOf(pg, 'alarm'));
-  await pg.selectOption('#modeSel', 'add');
-  await pg.setInputFiles('#fsel', both);
-  await pg.waitForTimeout(1400);
-  const ck = await chkText(pg);
-  const ops = await pg.evaluate(() => PREP && [...new Set(PREP.rows.map(o => o.op))].sort());
-  is(ops && ops.join() === 'K운영,P운영' && !/무시|올릴 수 없는 운영단위/.test(ck),
-    'K·P 두 시트가 다 올라간다 — 데모 경로는 운영단위로 막지 않는다 (' + JSON.stringify(ops) + ')');
-  await pg.click('#goBtn'); await pg.waitForTimeout(1500);
-  const lg = await logText(pg);
-  is(/완료/.test(lg) && /kr_sheet_alarm/.test(lg), '이어붙이기 완료 — kr_sheet_alarm (' + (lg.match(/③[^\n]*/) || [''])[0] + ')');
-  const L = await qlog(pg);
-  const ins = L.filter(x => x.op === 'insert').map(x => x.tbl), fin = L.filter(x => x.rpc === 'csv_upload_finish').map(x => x.args.p_tbl);
-  is(ins.length > 0 && ins.every(t => t === 'kr_sheet_alarm') && fin.join() === 'kr_sheet_alarm', '넣기·마무리 모두 데모 표 (넣기 ' + ins.join() + ' · 마무리 ' + fin.join() + ')');
-  const pairQ = L.filter(x => x.tbl === 'kr_sheet_allbypass');
-  is(pairQ.length > 0 && pairQ.every(x => !x.eq.length) && /두 반쪽 모두/.test(lg), '짝 표는 데모 올바 «전체» 행수로 센다(데모 표 전체가 담당자 몫)');
-  const touched = Array.from(new Set(L.map(x => x.tbl || (x.args && x.args.p_tbl)).filter(Boolean))).filter(t => t !== 'colmap_site');   // 열 맵핑 설정 표는 자료 표가 아니다(v150)
-  is(touched.every(t => /^kr_sheet_/.test(t)), '업로드가 건드린 표 — 전부 데모 표 (' + touched.join(' ') + ')');
-
-  /* 서버의 «통째·구간 교체»가 아직 옛 판(setup-17 7절 미적용)이면 — 무엇을 하면 되는지 적는다 */
-  await pg.evaluate(() => { window.__BEGIN_ERR = 'read_only'; });
-  await pg.selectOption('#modeSel', 'full');
-  await pg.setInputFiles('#fsel', both);
-  await pg.waitForTimeout(1400);
-  await pg.click('#goBtn'); await pg.waitForTimeout(1200);
-  const lg2 = await logText(pg);
-  is(/비우기 실패: read_only/.test(lg2) && /setup-17-kr-demo\.sql 7절/.test(lg2) && /이어붙이기/.test(lg2), '통째 교체가 막히면 — 7절이 필요하고 그 전에도 이어붙이기는 된다고 적는다');
-  await pg.evaluate(() => { window.__BEGIN_ERR = null; window.__WIN_ERR = 'bad_table: kr_sheet_alarm'; });
-  await pg.selectOption('#modeSel', 'win');
-  await pg.setInputFiles('#fsel', both);
-  await pg.waitForTimeout(1400);
-  const ck3 = await chkText(pg);
-  is(/구간 확인 실패/.test(ck3) && /7절/.test(ck3), '구간 교체 미리보기가 막혀도 같은 안내');
-  await pg.evaluate(() => { window.__WIN_ERR = null; });
+  const { pg, pe } = await openAs('?site=KR', { email:'a@t', can_write:true, role:'admin' });
+  const T = await pg.evaluate(() => [...document.querySelectorAll('#tsel option')].map(o => TABLES[+o.value]));
+  is(!/국내 데모/.test(await pg.title() + await pg.$eval('h1', e => e.textContent)), '제목·머리에 «국내 데모»가 없다');
+  is(T.length > 7 && T.every(t => !/^kr_/.test(t.table) && (!t.pair || !/^kr_/.test(t.pair)) && !/^\[데모\]/.test(t.label)),
+    '관리자 전체 화면 그대로 — 표·짝 표가 전부 운영 표 (' + T.length + '개)');
+  is(!(await pg.evaluate(() => document.getElementById('modeSel').disabled)), '모드를 잠그지 않는다(사이트 경로가 아니다)');
   is(pe.length === 0, 'JS 에러 없음' + (pe.length ? ' → ' + pe[0] : ''));
   await pg.close();
 }
 {
-  /* 국내 운영자가 «본» 업로드(/upload/)를 열면 — 잠기고 갈 곳을 적는다(서버도 막는다) */
-  const { pg } = await openAs('', { email:'kr@test.local', can_write:false, role:'kr' });
-  is(await pg.evaluate(() => document.getElementById('fsel').disabled) && /주간 현황\(국내\)/.test(await chkText(pg)), '국내 운영자의 본 업로드 — 잠김 · 「주간 현황(국내)」로 안내');
-  await pg.close();
-}
-{
-  /* 조회자·사이트 담당자(editor)는 데모 경로도 잠긴다 · 관리자(쓰기)는 열린다 */
-  let r = await openAs('?site=KR', { email:'v@t', can_write:false, role:'viewer' });
-  is(await r.pg.evaluate(() => document.getElementById('fsel').disabled) && /국내 데모 업로드 권한/.test(await chkText(r.pg)), '조회자 — 데모 경로도 잠김(무엇이 없는지 적는다)');
-  await r.pg.close();
-  r = await openAs('?site=KR', { email:'e@t', can_write:true, role:'editor' });
-  is(await r.pg.evaluate(() => document.getElementById('fsel').disabled), '사이트 담당자(editor) — 데모 경로는 잠김(국내 데모는 관리자·국내 운영자 몫)');
-  await r.pg.close();
-  r = await openAs('?site=KR', { email:'a@t', can_write:true, role:'admin' });
-  is(!(await r.pg.evaluate(() => document.getElementById('fsel').disabled)), '관리자(쓰기) — 데모 경로가 열린다');
-  await r.pg.close();
+  /* kr 계정이 남아 있어도 — 쓰기 권한이 없으면 잠긴다 · 데모로 가는 안내도 없다 */
+  for (const q of ['', '?site=KR']) {
+    const { pg } = await openAs(q, { email:'kr@test.local', can_write:false, role:'kr' });
+    const t = await chkText(pg);
+    is(await pg.evaluate(() => document.getElementById('fsel').disabled) && /읽기 전용/.test(t) && !/주간 현황\(국내\)|국내 데모/.test(t), 'kr 계정 ' + (q || '(본 업로드)') + ' — 잠김 · 데모 안내 없음');
+    await pg.close();
+  }
 }
 
 await browser.close(); srv.close();
