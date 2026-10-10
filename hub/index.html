@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>통합 관제 · CS Global Team</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
+<script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=162"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=162">
+<style>
+/* ============================================================
+   통합 관제 (v165 · 사용자 요청 「통합관리화면 신규 구축」)
+   «세는 화면»이 아니라 «어디를 먼저 볼지»를 말하는 첫 화면이다.
+   ⚠ 숫자를 새로 정의하지 않는다 — 판정은 전부 core 정본을 부른다:
+     설비 대수 GST.EQ · PM 판정 GST.PM · 고장 위험 GST.riskRank · 국내 BM = 알람 원장(v92 · KR_ON) ·
+     국내/해외 GST.ORG.region · 워런티 GST.WARR. 이 화면이 다른 탭과 다른 숫자를 내면 그것은 사고다.
+   ⚠ 생김새는 theme.css 토큰을 그대로 쓴다(라이트 기본 · 다크 = body.theme-slate). 클래스는 hb- 로 갈라
+     theme.css 의 .kpi/.card 규칙과 섞이지 않게 한다.
+   ============================================================ */
+body.hb{padding:0 !important;min-height:100vh}
+.hb-wrap{max-width:1680px;margin:0 auto;padding:18px 24px 28px;display:flex;flex-direction:column;gap:14px}
+.hb-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.hb-title{font-size:20px;font-weight:700;letter-spacing:-.3px;color:var(--txt-main)}
+.hb-asof{font-size:12px;color:var(--txt-muted)}
+.hb-sp{flex:1}
+.hb-seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.hb-seg button{font:inherit;font-size:12.5px;font-weight:600;border:0;background:transparent;color:var(--txt-2);
+  padding:6px 13px;border-radius:999px;cursor:pointer;transition:background .18s var(--ease),color .18s var(--ease)}
+.hb-seg button:hover{color:var(--txt-main)}
+.hb-seg button.on{background:var(--accent);color:#fff}
+.hb-seg button:focus-visible,.hb-btn:focus-visible,.hb-kpi:focus-visible,.hb-sig:focus-visible,.hb-bub:focus-visible,.hb-cell:focus-visible,.hb-q:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.hb-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.hb-kpi{position:relative;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);
+  border-radius:14px;padding:14px 16px 12px;display:flex;flex-direction:column;gap:6px;cursor:pointer;overflow:hidden;
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease),border-color .18s var(--ease)}
+.hb-kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:var(--line-2)}
+.hb-kpi .l{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--txt-muted);font-weight:600}
+.hb-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--txt-faint)}
+.hb-dot.ok{background:var(--ok)}.hb-dot.warn{background:var(--warn)}.hb-dot.bad{background:var(--bad)}
+.hb-kpi .row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.hb-kpi .v{font-size:30px;font-weight:700;letter-spacing:-.6px;line-height:1;font-variant-numeric:tabular-nums;color:var(--txt-main)}
+.hb-kpi .v small{font-size:13px;font-weight:600;color:var(--txt-muted);margin-left:3px;letter-spacing:0}
+.hb-kpi .d{font-size:12px;color:var(--txt-muted);min-height:16px}
+.hb-kpi .d.up-bad,.hb-kpi .d.dn-bad{color:var(--bad)} .hb-kpi .d.up-ok,.hb-kpi .d.dn-ok{color:var(--ok)}
+.hb-spark{width:92px;height:30px;flex:none}
+
+.hb-grid{display:grid;grid-template-columns:minmax(230px,1fr) minmax(0,3fr) minmax(280px,1.15fr);gap:12px;align-items:stretch}
+.hb-grid2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,2fr);gap:12px}
+@media (max-width:1200px){ .hb-grid{grid-template-columns:1fr 1fr} .hb-grid .hb-mapcard{grid-column:1 / -1;order:-1} .hb-grid2{grid-template-columns:1fr} }
+@media (max-width:720px){ .hb-grid{grid-template-columns:1fr} .hb-wrap{padding:12px} }
+.hb-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.hb-card h2{font-size:14px;font-weight:700;color:var(--txt-main);margin:0;display:flex;align-items:center;gap:8px}
+.hb-card h2 .s{font-size:12px;font-weight:500;color:var(--txt-muted)}
+.hb-card h2 .r{margin-left:auto}
+.hb-info{font:inherit;font-size:11px;font-weight:700;width:18px;height:18px;border-radius:50%;border:1px solid var(--line-2);
+  background:transparent;color:var(--txt-muted);cursor:pointer;line-height:1;padding:0}
+.hb-info:hover{color:var(--accent);border-color:var(--accent)}
+
+/* 사이트 신호등 */
+.hb-sigs{display:flex;flex-direction:column;gap:2px;overflow:auto;max-height:520px;margin:0 -6px;padding:0 6px}
+.hb-sig{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;color:inherit;background:transparent;
+  border:1px solid transparent;border-radius:10px;padding:8px 10px;cursor:pointer;transition:background .15s var(--ease),border-color .15s var(--ease)}
+.hb-sig:hover{background:var(--surface-2)}
+.hb-sig.on{background:var(--accent-soft);border-color:var(--accent)}
+.hb-sig .n{flex:1;min-width:0}
+.hb-sig .n b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-sig .n span{display:block;font-size:11.5px;color:var(--txt-muted)}
+.hb-sig .c{display:flex;gap:9px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.hb-sig .c .bm{color:var(--txt-main)} .hb-sig .c .rk{color:var(--bad)} .hb-sig .c .rk.z{color:var(--txt-muted);font-weight:500}
+.hb-pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.hb-pill.ok{background:var(--ok-soft);color:var(--ok)} .hb-pill.warn{background:var(--warn-soft);color:var(--warn)} .hb-pill.bad{background:var(--bad-soft);color:var(--bad)}
+
+/* 세계지도 */
+.hb-map{position:relative;width:100%;aspect-ratio:240/93;min-height:220px}
+.hb-map canvas{position:absolute;inset:0;width:100%;height:100%}
+.hb-bub{position:absolute;transform:translate(-50%,-50%);border-radius:50%;cursor:pointer;padding:0;
+  border:2px solid var(--surface);box-shadow:0 0 0 0 transparent;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s var(--ease)}
+.hb-bub:hover{transform:translate(-50%,-50%) scale(1.15)}
+.hb-bub.on{border-color:var(--txt-main);box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 22%,transparent)}
+.hb-bub.ok{background:color-mix(in srgb,var(--ok) 82%,transparent)} .hb-bub.warn{background:color-mix(in srgb,var(--warn) 85%,transparent)} .hb-bub.bad{background:color-mix(in srgb,var(--bad) 88%,transparent)}
+.hb-bub .lb{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:3px;font-size:10.5px;font-weight:700;
+  color:var(--txt-2);white-space:nowrap;pointer-events:none;text-shadow:0 0 3px var(--surface),0 0 3px var(--surface)}
+@keyframes hbPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--bad) 55%,transparent)}70%{box-shadow:0 0 0 14px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.hb-bub.bad:not(.on){animation:hbPulse 1.8s infinite}
+.hb-pop{position:absolute;z-index:3;min-width:170px;max-width:240px;background:var(--surface);border:1px solid var(--line-2);border-radius:12px;
+  padding:10px 12px;box-shadow:var(--shadow-md);pointer-events:none;font-size:12px;color:var(--txt-2)}
+.hb-pop b{display:block;font-size:13.5px;color:var(--txt-main)}
+.hb-pop .big{font-size:18px;font-weight:700;color:var(--txt-main);font-variant-numeric:tabular-nums}
+.hb-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--txt-muted);align-items:center}
+.hb-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.hb-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.hb-stat{background:var(--surface-2);border-radius:10px;padding:8px 10px;font-size:11.5px;color:var(--txt-muted)}
+.hb-stat b{display:block;font-size:17px;color:var(--txt-main);font-variant-numeric:tabular-nums}
+
+/* 선택한 운영단위 */
+.hb-sel h3{margin:0;font-size:18px;font-weight:700;color:var(--txt-main);line-height:1.25;word-break:keep-all}
+.hb-sel .sub{font-size:12px;color:var(--txt-muted)}
+.hb-gauges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.hb-g{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;color:var(--txt-muted);text-align:center}
+.hb-g .w{position:relative;width:72px;height:72px}
+.hb-g .w b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--txt-main);font-variant-numeric:tabular-nums}
+.hb-bars{display:flex;align-items:flex-end;gap:3px;height:64px}
+.hb-bars i{flex:1;border-radius:3px 3px 0 0;background:color-mix(in srgb,var(--accent) 45%,transparent);transform-origin:bottom;
+  animation:hbGrow .5s cubic-bezier(.2,.8,.2,1) both}
+.hb-bars i.cur{background:var(--accent)}
+@keyframes hbGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.hb-mini{display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.hb-mini div{display:flex;justify-content:space-between;gap:8px}
+.hb-mini span{color:var(--txt-muted)}
+.hb-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+.hb-btn{font:inherit;font-size:13px;font-weight:600;min-height:40px;padding:0 14px;border-radius:10px;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);color:var(--txt-main);display:inline-flex;align-items:center;gap:6px;
+  transition:background .15s var(--ease),border-color .15s var(--ease)}
+.hb-btn:hover{background:var(--surface-2);border-color:var(--line-2)}
+.hb-btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.hb-btn.pri:hover{filter:brightness(1.06)}
+
+/* 처리할 일 */
+.hb-qs{display:flex;flex-direction:column;gap:6px}
+.hb-q{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface-2);
+  border:1px solid transparent;border-radius:10px;padding:9px 11px;cursor:pointer;transition:border-color .15s var(--ease),transform .15s var(--ease)}
+.hb-q:hover{border-color:var(--line-2);transform:translateX(2px)}
+.hb-q .t{flex:1;min-width:0}
+.hb-q .t b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-q .t span{display:block;font-size:11.5px;color:var(--txt-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-sev{font-size:11px;font-weight:700;min-width:40px;text-align:center;padding:3px 6px;border-radius:6px;color:#fff;flex:none}
+.hb-sev.bad{background:var(--bad)} .hb-sev.warn{background:var(--warn)} .hb-sev.info{background:var(--accent)}
+
+/* 히트맵 */
+.hb-heat{display:grid;gap:3px;font-size:11.5px;overflow-x:auto}
+.hb-heat .h{color:var(--txt-muted);text-align:center;font-size:11px}
+.hb-heat .rl{color:var(--txt-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:6px;display:flex;align-items:center}
+.hb-cell{font:inherit;font-size:11px;font-variant-numeric:tabular-nums;height:28px;border:0;border-radius:5px;cursor:pointer;color:var(--txt-main);
+  background:var(--surface-2);opacity:0;animation:hbIn .35s var(--ease) forwards}
+.hb-cell:hover{outline:2px solid var(--line-2)}
+@keyframes hbIn{to{opacity:1}}
+.hb-empty{font-size:12.5px;color:var(--txt-muted);padding:10px 0}
+.hb-status{font-size:12px;color:var(--txt-muted);text-align:right}
+.hb-status.err{color:var(--bad)}
+.hb-note{font-size:11.5px;color:var(--txt-muted)}
+.hb-sk{background:linear-gradient(90deg,var(--surface-2),var(--surface-3),var(--surface-2));background-size:200% 100%;
+  animation:hbSk 1.2s ease-in-out infinite;border-radius:8px;color:transparent !important}
+@keyframes hbSk{0%{background-position:100% 0}100%{background-position:-100% 0}}
+@media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} .hb-cell{opacity:1} }
+@media print{ .hb-seg,.hb-btns,.hb-info{display:none} }
+</style>
+</head>
+<body class="hb">
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
+<div class="hb-wrap">
+  <div class="hb-head">
+    <div>
+      <div class="hb-title" data-i="title">통합 관제</div>
+      <div class="hb-asof" id="asof">—</div>
+    </div>
+    <span class="hb-sp"></span>
+    <div class="hb-seg" role="group" aria-label="구분" id="segRegion">
+      <button type="button" data-r="all" class="on" data-i="all">전체</button>
+      <button type="button" data-r="kr" data-i="kr">국내</button>
+      <button type="button" data-r="os" data-i="os">해외</button>
+    </div>
+  </div>
+
+  <section class="hb-kpis" id="kpis" aria-label="핵심 지표"></section>
+
+  <section class="hb-grid">
+    <div class="hb-card">
+      <h2><span data-i="sigT">운영단위 신호등</span><button type="button" class="hb-info r" id="ruleBtn" aria-label="판정 기준" title="판정 기준">i</button></h2>
+      <div class="hb-legend"><span><i style="background:var(--bad)"></i><span data-i="bad">위험</span></span><span><i style="background:var(--warn)"></i><span data-i="warn">주의</span></span><span><i style="background:var(--ok)"></i><span data-i="ok">정상</span></span><span class="hb-sp"></span><span data-i="sigCols">이번 주 고장 · 위험 설비</span></div>
+      <div class="hb-sigs" id="sigs"></div>
+    </div>
+
+    <div class="hb-card hb-mapcard">
+      <h2><span data-i="mapT">글로벌 설치 현황</span><span class="s" data-i="mapS">원 크기 = 반입 설비 · 색 = 신호</span></h2>
+      <div class="hb-map" id="map"><canvas id="mapC" aria-hidden="true"></canvas><div id="bubs"></div><div class="hb-pop" id="pop" hidden></div></div>
+      <div class="hb-stats" id="stats"></div>
+      <div class="hb-note" id="mapNote"></div>
+    </div>
+
+    <div class="hb-card hb-sel" id="sel"></div>
+  </section>
+
+  <section class="hb-grid2">
+    <div class="hb-card">
+      <h2><span data-i="qT">처리할 일</span><span class="s" id="qS"></span></h2>
+      <div class="hb-qs" id="queue"></div>
+    </div>
+    <div class="hb-card">
+      <h2><span data-i="heatT">주차별 고장 히트맵</span><span class="s" data-i="heatS">진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록</span>
+        <span class="r hb-seg" role="group" aria-label="행 기준" id="segHeat"><button type="button" data-h="op" class="on" data-i="byOp">운영단위</button><button type="button" data-h="campus" data-i="byCampus">단지</button></span></h2>
+      <div class="hb-heat" id="heat"></div>
+    </div>
+  </section>
+  <div class="hb-status" id="status"></div>
+</div>
+
+<script>
+if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
+GST.needVer && GST.needVer(162);
+GST.authGate();
+
+/* ── 세계 육지 점지도 ──
+   Natural Earth(공개 자료) land 110m 를 1.5° 격자로 미리 래스터화해 행마다 «바다·육지 번갈아 길이»로 담았다
+   (world-atlas@2.0.2 · ISC). 런타임에 외부 지도·타일을 받지 않는다 — 사내망이 CDN 을 묵살해도, 오프라인 판에서도 뜬다(v105·v137 규율).
+   ⚠ 위치는 «국가(중국은 도시)» 수준이다. 사이트 좌표를 짐작하지 않는다 — 정확한 사이트 좌표는 사이트 등록부에 둘 자리다. */
+const WORLD={"step":1.5,"lat0":82,"lon0":-180,"w":240,"rle":["60,16,2,34,128","56,16,4,32,19,2,1,2,1,5,44,5,53","52,1,1,2,3,1,2,7,2,36,21,5,1,1,52,2,51","39,3,13,4,1,8,5,33,58,2,21,4,49","42,7,4,2,1,1,1,9,14,26,51,3,18,17,15,8,21","37,6,13,4,2,1,3,1,16,23,50,2,16,21,19,1,25","36,4,1,9,2,5,3,6,1,3,13,21,51,2,9,3,3,1,1,32,7,6,21","14,5,22,10,5,3,1,13,11,19,1,1,31,4,16,2,6,4,1,57,14","11,17,1,12,2,9,2,2,1,3,3,3,3,6,11,17,29,11,14,3,3,2,3,1,63,2,6","2,128,17,2,2,2,16,1,70","6,123,14,2,2,1,92","3,2,4,3,1,49,1,2,3,8,9,8,11,6,17,7,2,7,1,2,1,93","6,2,4,48,12,5,9,6,33,8,1,105,1","9,49,10,4,15,5,31,9,2,94,1,7,4","9,9,1,2,2,34,11,6,16,1,32,9,3,2,2,84,5,4,1,1,6","12,1,1,4,10,30,10,6,2,2,46,2,1,4,5,78,12,2,12","14,2,1,1,13,27,1,1,9,10,37,3,7,1,1,3,3,1,1,77,11,5,11","12,2,18,31,6,11,36,3,6,3,1,1,4,77,13,4,12","33,32,2,15,32,2,2,2,6,1,1,1,1,81,13,3,13","34,31,3,15,31,2,1,4,2,93,8,2,14","35,46,1,1,34,4,1,92,1,1,8,1,15","35,40,2,1,3,2,37,94,1,1,24","38,39,4,4,32,96,27","37,40,7,1,34,35,1,57,3,1,24","37,39,1,2,40,9,1,11,2,10,2,57,29","37,36,3,1,42,6,2,2,1,9,7,6,2,56,4,3,23","37,36,41,8,6,2,3,6,9,4,3,52,6,1,1,1,24","37,34,43,6,5,1,3,3,1,3,1,1,1,14,2,51,7,1,26","37,33,44,6,14,2,2,15,2,44,2,1,2,1,8,2,25","38,32,44,6,8,2,4,1,3,15,3,43,1,1,3,2,6,2,26","39,30,47,1,3,7,15,1,1,57,3,2,5,3,26","40,29,47,11,17,56,4,1,3,5,27","42,25,47,13,16,57,6,3,31","42,1,1,22,48,16,3,4,6,58,6,1,32","43,1,1,15,3,3,48,87,39","45,11,9,1,47,39,2,47,39","44,1,1,9,10,2,44,31,2,9,2,45,40","45,1,1,8,11,1,43,33,1,9,4,43,40","46,1,1,7,55,34,1,10,1,2,7,34,1,1,39","49,6,9,3,42,35,2,14,6,14,1,16,3,1,39","50,5,5,2,6,1,40,36,1,13,8,11,3,11,1,1,46","16,1,33,6,4,2,9,2,36,36,2,11,11,8,5,9,2,1,46","51,10,7,1,1,3,2,1,33,36,3,10,11,7,7,8,9,2,38","53,8,48,37,2,8,13,6,8,9,8,2,38","58,6,45,38,2,5,15,4,12,8,7,1,39","60,4,45,39,1,3,18,3,12,8,8,2,37","62,2,45,40,21,3,13,1,1,5,10,1,36","63,1,6,5,35,39,2,3,17,2,16,3,7,1,1,2,37","64,1,2,1,1,3,1,6,32,43,17,3,16,1,49","66,1,1,13,30,42,20,1,12,1,14,3,36","68,14,31,9,1,30,20,1,13,1,15,1,36","68,17,29,2,8,28,32,1,2,2,7,3,41","68,18,40,25,34,1,2,1,6,3,42","68,19,39,24,36,2,6,5,41","67,19,40,23,37,3,4,5,42","66,24,36,22,39,3,3,5,2,2,5,2,31","67,25,35,20,41,3,2,5,1,1,8,2,1,3,6,1,19","66,29,33,18,42,3,10,1,8,7,4,1,18","66,31,31,18,44,1,21,6,1,2,19","67,30,32,17,45,4,17,6,22","67,30,32,17,52,1,1,1,2,2,9,2,2,1,21","68,28,33,18,55,1,16,1,20","68,27,34,18,61,1,31","69,25,34,19,5,1,54,4,3,2,24","69,25,34,19,5,1,50,2,1,4,4,3,23","0,147,3,3,49,10,2,3,14,1,8","72,22,34,17,4,4,49,15,21,1,1","73,21,34,16,6,3,48,17,22","73,20,36,14,6,3,46,21,21","73,19,38,14,5,3,44,24,20","73,17,40,14,5,3,44,25,19","73,15,42,12,8,1,45,26,18","73,15,42,12,54,26,18","73,15,43,11,54,26,18","72,15,44,10,56,25,18","72,14,46,8,57,25,18","72,13,47,7,58,6,6,12,19","72,12,48,2,63,3,10,1,1,9,19","72,10,131,7,20","71,11,131,7,16,1,3","71,9,137,1,18,3,1","71,7,159,1,2","71,6,140,2,15,2,4","71,6,140,1,15,2,5","70,6,156,2,6","70,5,156,2,7","70,6,164","70,5,91,1,73","70,4,166","70,4,5,1,160","71,4,165","73,2,165","240"]};
+/* 국가 → 표시 좌표(위도·경도). 중국 법인은 이름에 도시가 들어 있어(GST CHINA(WUHAN)…) 도시로 놓는다. */
+const GEO={ KOREA:[36.4,127.9], TAIWAN:[23.8,121.0], USA:[39.5,-98.5], JAPAN:[36.2,138.3], SINGAPORE:[1.35,103.8], EUROPE:[50,10],
+  CHINA:[34,108.9], WUHAN:[30.6,114.3], HEFEI:[31.8,117.2], XIAN:[34.3,108.9], WUXI:[31.5,120.3] };
+
+const T={
+ko:{title:'통합 관제',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'위험',warn:'주의',ok:'정상',sigCols:'이번 주 고장 · 위험 설비',
+  mapT:'글로벌 설치 현황',mapS:'원 크기 = 반입 설비 · 색 = 신호',qT:'처리할 일',heatT:'주차별 고장 히트맵',heatS:'진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록',
+  byOp:'운영단위',byCampus:'단지',loading:'자료를 불러오는 중…',asof:'기준 {d} (자료의 마지막 날) · {w}',
+  k_run:'가동 설비',k_run_d:'반입 {n}대 · 가동률 {p}%',k_bm:'이번 주 고장(BM)',k_pm:'이번 주 PM',k_risk:'고장 위험 설비',k_risk_d:'14일 안 재고장 {n}대',
+  k_warr:'워런티 만료 90일 안',k_warr_d:'워런티 내 {n}대',k_dq:'자료 확인할 것',k_dq_d:'여덟 화면이 마지막으로 잰 값',k_dq_none:'문제 없음',
+  vsPrev:'{s} vs 전주',vsBase:'평소(8주 중앙값) {b}',u_ea:'대',u_case:'건',
+  st_units:'반입 설비',st_ops:'운영단위',st_cty:'국가',st_bm12:'12주 고장',
+  noLoc:'지도에 못 놓은 운영단위 {n}곳(국가 미상): {list}',
+  sel_h:'선택한 운영단위',g_run:'가동률',g_warr:'워런티 내',g_pm:'PM 실시율',bars:'주별 고장(BM) · 최근 12주',
+  m_units:'반입 / 가동',m_risk:'고장 위험 설비',m_rep:'14일 안 재고장',m_last:'마지막 고장',
+  open_fault:'고장 분석에서 보기',open_inst:'설치 현황에서 보기',risk_top:'위험 설비 상위',
+  q_risk:'고장 위험',q_dq:'자료 품질',q_none:'지금 처리할 것이 없습니다',q_s:'고장 위험 상위 · 자료 결함',
+  rule_t:'신호 판정 기준',rule:'위험 = 이번 주 고장이 평소(직전 8주 중앙값)의 1.5배 이상이고 5건 이상 많거나, 14일 안 재고장 설비가 3대 이상\n주의 = 평소의 1.2배를 넘고 3건 이상 많거나, 재고장 설비가 1대 이상\n정상 = 그 밖\n\n고장 = 해외는 수선실적 작업단계 BM · 국내는 알람 원장(내적·한 사건 첫 줄). 원장이 비었으면 국내도 수선실적 BM.\n고장 위험 설비 = 고장분석 「고장 위험 설비 TOP 20」과 같은 식(GST.riskRank).',
+  krFall:'국내 알람 원장이 비어 수선실적 BM 으로 세는 중',
+  l_date:'날짜',l_op:'운영단위',l_campus:'단지',l_eq:'설비',l_sn:'S/N',l_src:'출처',l_desc:'내용',l_score:'점수',l_why:'근거',l_wd:'워런티 만료일',l_state:'설비상태',
+  src_wk:'수선실적',src_kr:'알람 원장',week:'주',none:'자료 없음',fail:'일부 자료를 못 읽었습니다',
+  dq_tip:'데이터 관리에서 고치기'},
+en:{title:'Command Center',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Critical',warn:'Watch',ok:'Normal',sigCols:'BM this week · at-risk units',
+  mapT:'Global installed base',mapS:'size = installed units · color = signal',qT:'To do',heatT:'Weekly failure heatmap',heatS:'darker = above usual · click a cell for that week\'s failures',
+  byOp:'Operating unit',byCampus:'Campus',loading:'Loading…',asof:'As of {d} (last data day) · {w}',
+  k_run:'Running units',k_run_d:'{n} installed · {p}% running',k_bm:'Failures (BM) this week',k_pm:'PM this week',k_risk:'At-risk units',k_risk_d:'{n} repeat within 14 days',
+  k_warr:'Warranty ends in 90 days',k_warr_d:'{n} under warranty',k_dq:'Data to check',k_dq_d:'last measured on the eight screens',k_dq_none:'No issues',
+  vsPrev:'{s} vs last week',vsBase:'usual (8-wk median) {b}',u_ea:'',u_case:'',
+  st_units:'Installed',st_ops:'Operating units',st_cty:'Countries',st_bm12:'BM 12 wks',
+  noLoc:'{n} unit(s) not on the map (unknown country): {list}',
+  sel_h:'Selected unit',g_run:'Running',g_warr:'In warranty',g_pm:'PM ratio',bars:'Weekly BM · last 12 weeks',
+  m_units:'Installed / running',m_risk:'At-risk units',m_rep:'Repeat within 14 days',m_last:'Last failure',
+  open_fault:'Open in Fault',open_inst:'Open in Installation',risk_top:'Top at-risk units',
+  q_risk:'Risk',q_dq:'Data',q_none:'Nothing to handle right now',q_s:'top risks · data issues',
+  rule_t:'Signal rule',rule:'Critical = this week\'s BM ≥ 1.5× usual (8-week median) and ≥5 more, or ≥3 units with repeat failure within 14 days\nWatch = > 1.2× usual and ≥3 more, or ≥1 repeat-failure unit\nNormal = otherwise\n\nBM = overseas: repair records stage BM · Korea: alarm ledger (internal, first line per event). If the ledger is empty, Korea also uses repair BM.\nAt-risk units = same formula as Fault «At-risk TOP 20» (GST.riskRank).',
+  krFall:'Korea alarm ledger is empty — counting repair-record BM',
+  l_date:'Date',l_op:'Unit',l_campus:'Campus',l_eq:'Equipment',l_sn:'S/N',l_src:'Source',l_desc:'Detail',l_score:'Score',l_why:'Why',l_wd:'Warranty end',l_state:'Status',
+  src_wk:'Repair',src_kr:'Alarm ledger',week:'wk',none:'No data',fail:'Some data could not be read',
+  dq_tip:'Fix in Data management'},
+zh:{title:'综合监控',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'危险',warn:'注意',ok:'正常',sigCols:'本周故障 · 风险设备',
+  mapT:'全球安装现况',mapS:'圆大小 = 已进场设备 · 颜色 = 信号',qT:'待处理',heatT:'按周故障热力图',heatS:'越深 = 高于平时 · 点击格子查看该周故障',
+  byOp:'运营单位',byCampus:'园区',loading:'正在加载…',asof:'基准 {d}（数据最后一天）· {w}',
+  k_run:'运行设备',k_run_d:'进场 {n}台 · 运行率 {p}%',k_bm:'本周故障(BM)',k_pm:'本周PM',k_risk:'故障风险设备',k_risk_d:'14天内复发 {n}台',
+  k_warr:'90天内保修到期',k_warr_d:'保修内 {n}台',k_dq:'待确认数据',k_dq_d:'八个画面最后测得的值',k_dq_none:'没有问题',
+  vsPrev:'较上周 {s}',vsBase:'平时(8周中位数) {b}',u_ea:'台',u_case:'件',
+  st_units:'进场设备',st_ops:'运营单位',st_cty:'国家',st_bm12:'12周故障',
+  noLoc:'未能放在地图上的运营单位 {n} 个（国家不明）: {list}',
+  sel_h:'所选运营单位',g_run:'运行率',g_warr:'保修内',g_pm:'PM实施率',bars:'按周故障(BM) · 最近12周',
+  m_units:'进场 / 运行',m_risk:'故障风险设备',m_rep:'14天内复发',m_last:'最后故障',
+  open_fault:'在故障分析中查看',open_inst:'在安装现况中查看',risk_top:'风险设备前列',
+  q_risk:'故障风险',q_dq:'数据质量',q_none:'目前没有待处理事项',q_s:'风险前列 · 数据缺陷',
+  rule_t:'信号判定标准',rule:'危险 = 本周故障为平时(前8周中位数)的1.5倍以上且多5件以上，或14天内复发设备3台以上\n注意 = 超过平时1.2倍且多3件以上，或复发设备1台以上\n正常 = 其他\n\n故障 = 海外为维修实绩作业阶段BM · 国内为报警台账(内部·每事件第一行)。台账为空时国内也按维修实绩BM。\n故障风险设备 = 与故障分析「故障风险设备 TOP 20」同一公式(GST.riskRank)。',
+  krFall:'国内报警台账为空 — 正按维修实绩BM计数',
+  l_date:'日期',l_op:'运营单位',l_campus:'园区',l_eq:'设备',l_sn:'S/N',l_src:'来源',l_desc:'内容',l_score:'分数',l_why:'依据',l_wd:'保修到期日',l_state:'设备状态',
+  src_wk:'维修实绩',src_kr:'报警台账',week:'周',none:'无数据',fail:'部分数据未能读取',
+  dq_tip:'在数据管理中修正'},
+ja:{title:'統合管制',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'危険',warn:'注意',ok:'正常',sigCols:'今週の故障 · 危険設備',
+  mapT:'グローバル設置現況',mapS:'円の大きさ = 搬入設備 · 色 = シグナル',qT:'対応すること',heatT:'週別故障ヒートマップ',heatS:'濃いほど平常より多い · セルを押すとその週の故障一覧',
+  byOp:'運営単位',byCampus:'団地',loading:'データ読み込み中…',asof:'基準 {d}（データ最終日）· {w}',
+  k_run:'稼働設備',k_run_d:'搬入 {n}台 · 稼働率 {p}%',k_bm:'今週の故障(BM)',k_pm:'今週のPM',k_risk:'故障リスク設備',k_risk_d:'14日以内再故障 {n}台',
+  k_warr:'90日以内に保証終了',k_warr_d:'保証内 {n}台',k_dq:'確認すべきデータ',k_dq_d:'8画面が最後に測った値',k_dq_none:'問題なし',
+  vsPrev:'前週比 {s}',vsBase:'平常(8週中央値) {b}',u_ea:'台',u_case:'件',
+  st_units:'搬入設備',st_ops:'運営単位',st_cty:'国',st_bm12:'12週故障',
+  noLoc:'地図に置けない運営単位 {n} か所（国不明）: {list}',
+  sel_h:'選択した運営単位',g_run:'稼働率',g_warr:'保証内',g_pm:'PM実施率',bars:'週別故障(BM) · 直近12週',
+  m_units:'搬入 / 稼働',m_risk:'故障リスク設備',m_rep:'14日以内再故障',m_last:'最終故障',
+  open_fault:'故障分析で見る',open_inst:'設置現況で見る',risk_top:'リスク設備上位',
+  q_risk:'故障リスク',q_dq:'データ品質',q_none:'今対応することはありません',q_s:'リスク上位 · データ欠陥',
+  rule_t:'シグナル判定基準',rule:'危険 = 今週の故障が平常(直前8週中央値)の1.5倍以上かつ5件以上多い、または14日以内再故障設備が3台以上\n注意 = 平常の1.2倍超かつ3件以上多い、または再故障設備が1台以上\n正常 = その他\n\n故障 = 海外は修繕実績の作業段階BM · 国内はアラーム台帳(内的・1事象の最初の行)。台帳が空なら国内も修繕実績BM。\n故障リスク設備 = 故障分析「故障リスク設備 TOP 20」と同じ式(GST.riskRank)。',
+  krFall:'国内アラーム台帳が空 — 修繕実績BMで集計中',
+  l_date:'日付',l_op:'運営単位',l_campus:'団地',l_eq:'設備',l_sn:'S/N',l_src:'出典',l_desc:'内容',l_score:'点数',l_why:'根拠',l_wd:'保証終了日',l_state:'設備状態',
+  src_wk:'修繕実績',src_kr:'アラーム台帳',week:'週',none:'データなし',fail:'一部のデータを読めませんでした',
+  dq_tip:'データ管理で直す'}
+};
+let LANG='ko';
+try{ const l=sessionStorage.getItem('gst_lang'); if(l&&T[l]) LANG=l; else if(window.name&&T[window.name]) LANG=window.name; }catch(e){}
+const t=k=>(T[LANG]&&T[LANG][k]!=null)?T[LANG][k]:(T.ko[k]!=null?T.ko[k]:k);
+const fmt=(s,o)=>String(s).replace(/\{(\w+)\}/g,(m,k)=>o[k]!=null?o[k]:m);
+const esc=s=>GST._esc(s);
+const nf=n=>Number(n||0).toLocaleString('en-US');
+const DAY=864e5;
+const KR=GST.ORG.REGION_KR, OS=GST.ORG.REGION_OS;
+const REDUCE=(function(){ try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } })();
+
+/* 판정 기준 — 화면 «i» 와 같은 글을 쓴다. 숫자를 바꾸면 rule 문구도 같이 바꾼다. */
+const RULE={badX:1.5, badD:5, warnX:1.2, warnD:3, repBad:3, repWarn:1};
+
+let RAW=null;                          // 읽어 온 그대로(파싱 뒤)
+const S={region:'all', heat:'op', sel:null};
+
+/* ===== 읽기 ===== */
+function parseInst(rows){
+  const m=GST.SM.map(rows, GST.SM.SPEC.inst), C=m.C, v=(r,k)=>GST.SM.val(r,C,k);
+  return rows.slice(m.hi+1).map(r=>{
+    const op=String(v(r,'country')||'').trim();
+    const cust=String(v(r,'customer')||'').trim(), fab=String(v(r,'fab')||'').trim();
+    const cty=GST.ORG.country(op)||GST.ORG.country(cust)||GST.ORG.country(fab);
+    return { op, region:GST.ORG.region(op)||GST.ORG.region(cty), cty, cityKey:cityOf(op,cty),
+      campus:GST.ORG.campus(v(r,'location'),fab,op)||'', fab, sn:String(v(r,'sn')||'').trim(), code:String(v(r,'code')||'').trim(),
+      state:v(r,'state'), stateRaw:String(v(r,'state')||'').trim(), d:GST.toDate(v(r,'fabIn'))||GST.toDate(v(r,'turnOn')),
+      warr:GST.WARR(v(r,'warranty')), wd:GST.toDate(v(r,'warrantyDate')) };
+  }).filter(x=>x.sn||x.code);
+}
+function parseWk(rows){
+  const m=GST.SM.map(rows, GST.SM.SPEC.wk), C=m.C, v=(r,k)=>GST.SM.val(r,C,k);
+  return rows.slice(m.hi+1).map(r=>{
+    const op=String(v(r,'op')||'').trim();
+    return { op, region:GST.ORG.region(op), stage:String(v(r,'stage')||'').trim().toUpperCase(), action:v(r,'action'),
+      campus:GST.ORG.campus(v(r,'campus'),v(r,'line'),op)||'', line:String(v(r,'line')||'').trim(),
+      d:GST.toDate(v(r,'dStart')), sn:String(v(r,'snIn')||'').trim(), code:String(v(r,'eqNo')||'').trim(),
+      desc:String(v(r,'cause')||v(r,'phenom')||v(r,'alarm')||'').trim(), src:'wk' };
+  }).filter(x=>x.d);
+}
+function parseLedger(rows){
+  if(!rows||rows.length<2) return [];
+  const h=rows[0], ix={}; h.forEach((k,i)=>ix[k]=i);
+  const g=(r,k)=>ix[k]==null?'':String(r[ix[k]]==null?'':r[ix[k]]).trim();
+  return rows.slice(1).map(r=>({ snk:g(r,'sn_key'), sn:g(r,'sn'), d:GST.toDate(g(r,'occur_date').slice(0,10)),
+    seq:g(r,'seq'), inout:g(r,'inout'), incl:g(r,'incl'), op0:g(r,'op'),
+    desc:g(r,'alarm')||g(r,'alarm_name')||g(r,'cause'), src:'kr' }));
+}
+function cityOf(op,cty){
+  const u=GST.upk(op||'');
+  if(cty==='CHINA'){ for(const c of ['WUHAN','HEFEI','XIAN','WUXI']) if(u.indexOf(c)>=0) return c; }
+  return cty||'';
+}
+
+async function load(){
+  status(t('loading'));
+  skel(true);
+  const [inst, wk, kra] = await Promise.allSettled([
+    GST.fetchCSVCached(GST.sheetUrl('891608329'),'hub_inst'),
+    GST.fetchCSVCached(GST.sheetUrl('646668307'),'hub_wk'),
+    GST.csvTableRows('sheet_alarm', GST._KR_COLS_A)
+  ]);
+  const fails=[];
+  const INST=inst.status==='fulfilled'?parseInst(inst.value.rows):(fails.push('inst'),[]);
+  const WK=wk.status==='fulfilled'?parseWk(wk.value.rows):(fails.push('wk'),[]);
+  const KRA=kra.status==='fulfilled'?parseLedger(kra.value):[];
+  /* 원장 행의 조직 축은 설비 S/N 으로 설치현황에서 얻는다(v92 — 원장에 담지 않는다). 못 붙으면 접미 L/R/S 를 떼고 한 번 더. */
+  const ix={};
+  INST.forEach(x=>{ const k=GST.ALARM.key(x.sn); if(!k) return; if(!ix[k]) ix[k]=x; const b=GST.ALARM.keyBase(x.sn); if(!ix[b]) ix[b]=x; });
+  KRA.forEach(x=>{ const o=ix[x.snk]||ix[GST.ALARM.keyBase(x.snk)]||null;
+    x.op=o?o.op:''; x.region=o?o.region:''; x.campus=o?o.campus:''; x.code=o?o.code:''; });
+  RAW={INST, WK, KRA, fails};
+  skel(false);
+  render();
+  const tm=new Date();
+  status((fails.length?t('fail')+' ('+fails.join(', ')+') · ':'')+'✅ '+tm.toLocaleString(), !!fails.length);
+}
+
+/* ===== 계산 — 판정은 core 정본만 부른다 ===== */
+function weeksOf(asOf){
+  const sun=new Date(Date.UTC(asOf.getUTCFullYear(),asOf.getUTCMonth(),asOf.getUTCDate())); sun.setUTCDate(sun.getUTCDate()-sun.getUTCDay());
+  const out=[]; for(let i=11;i>=0;i--){ const st=new Date(sun.getTime()-i*7*DAY), en=new Date(st.getTime()+7*DAY);
+    const k=GST.isoW(st); out.push({key:k, st, en, label:'W'+k.slice(-2)}); }
+  return out;
+}
+const median=a=>{ if(!a.length) return 0; const s=a.slice().sort((x,y)=>x-y), m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; };
+function compute(){
+  const R=RAW, rg=S.region, okR=reg=>rg==='all'||(rg==='kr'?reg===KR:reg===OS);
+  /* 기준일 = 자료의 마지막 날(오늘을 넘지 않는다) — 수동 업로드라 «오늘»로 자르면 이번 주가 빈다 */
+  let last=0; R.WK.forEach(x=>{ const v=x.d.getTime(); if(v>last) last=v; }); R.KRA.forEach(x=>{ if(x.d){ const v=x.d.getTime(); if(v>last) last=v; } });
+  const now=Date.now(), asOf=new Date(Math.min(now, last||now));
+  const W=weeksOf(asOf), wIx=d=>{ const v=d.getTime(); for(let i=0;i<W.length;i++) if(v>=W[i].st.getTime()&&v<W[i].en.getTime()) return i; return -1; };
+
+  /* 고장(BM) — 주간현황과 같은 규칙(v92·v115): 해외 = 수선실적 BM · 국내 = 원장(내적·한 사건 첫 줄). 원장이 비면 국내도 수선실적 BM. */
+  const KR_ON=R.KRA.length>0;
+  const bm=[];
+  R.WK.forEach(x=>{ if(x.stage!=='BM'||GST.PM.is(x)) return; if(KR_ON&&x.region===KR) return; if(!okR(x.region)) return; bm.push(x); });
+  if(KR_ON) R.KRA.forEach(x=>{ if(!x.d||!GST.ALARM.dedup(x)||!GST.ALARM.inner(x)) return; if(x.region===OS) return;
+    const reg=x.region||KR; if(!okR(reg)) return; bm.push(Object.assign({}, x, {region:reg, op:x.op||x.op0||'—'})); });
+  const pm=R.WK.filter(x=>GST.PM.is(x)&&okR(x.region));
+
+  /* 고장 위험 — 고장분석 「고장 위험 설비 TOP 20」과 같은 식(수선실적 BM·PM · v148). */
+  const _rk=x=>GST.snKey(x.sn||x.code), t0=asOf.getTime();
+  const rkBm=R.WK.filter(x=>x.stage==='BM'&&!GST.PM.is(x)&&okR(x.region)&&x.d.getTime()>=t0-180*DAY&&_rk(x)).map(x=>({key:_rk(x),label:x.code||x.sn,site:x.op,d:x.d}));
+  const rkPm=R.WK.filter(x=>GST.PM.is(x)&&okR(x.region)&&x.d.getTime()>=t0-400*DAY&&_rk(x)).map(x=>({key:_rk(x),d:x.d}));
+  const RISK=GST.riskRank({bm:rkBm, pm:rkPm, asOf, n:100000});
+
+  /* 설비 — GST.EQ 정본 */
+  const inst=R.INST.filter(x=>okR(x.region));
+  const isIn=x=>GST.EQ.isIn(x.state,x.d,asOf), isRun=x=>GST.EQ.isRun(x.state,x.d,asOf);
+
+  /* 운영단위 묶음 */
+  const G={};
+  const grp=op=>G[op]||(G[op]={op, cty:'', city:'', region:'', inN:0, runN:0, warrIn:0, warrN:0, wk:new Array(12).fill(0), bm:[], risk:[], rep:0, pmN:0});
+  inst.forEach(x=>{ if(!isIn(x)) return; const g=grp(x.op||'—'); g.inN++; if(isRun(x)) g.runN++;
+    if(x.warr){ g.warrN++; if(x.warr==='IN') g.warrIn++; } if(!g.cty&&x.cty){ g.cty=x.cty; g.city=x.cityKey; } if(!g.region) g.region=x.region; });
+  bm.forEach(x=>{ const i=wIx(x.d); const g=grp(x.op||'—'); if(!g.region) g.region=x.region; if(!g.cty){ const c=GST.ORG.country(x.op); if(c){ g.cty=c; g.city=cityOf(x.op,c); } }
+    if(i>=0){ g.wk[i]++; g.bm.push(x); } });
+  pm.forEach(x=>{ if(wIx(x.d)>=W.length-4){ const g=G[x.op]; if(g) g.pmN++; } });
+  RISK.forEach(r=>{ const g=G[r.site]; if(!g) return; g.risk.push(r); if(r.rep) g.rep++; });
+  const groups=Object.values(G).filter(g=>g.inN||g.bm.length);
+  groups.forEach(g=>{
+    const cur=g.wk[11], base=median(g.wk.slice(3,11));
+    g.cur=cur; g.base=base;
+    g.st=((cur>=base*RULE.badX&&cur-base>=RULE.badD)||g.rep>=RULE.repBad)?'bad'
+        :((cur>base*RULE.warnX&&cur-base>=RULE.warnD)||g.rep>=RULE.repWarn)?'warn':'ok';
+  });
+  const rank={bad:0,warn:1,ok:2};
+  groups.sort((a,b)=>rank[a.st]-rank[b.st]||b.cur-a.cur||b.inN-a.inN);
+
+  /* 전체 집계 */
+  const bmW=W.map((w,i)=>bm.filter(x=>wIx(x.d)===i).length);
+  const pmW=W.map((w,i)=>pm.filter(x=>wIx(x.d)===i).length);
+  const inN=inst.filter(isIn).length, runN=inst.filter(isRun).length;
+  const warrIn=inst.filter(x=>isIn(x)&&x.warr==='IN').length;
+  const warrSoon=inst.filter(x=>isIn(x)&&x.wd&&x.wd.getTime()>t0&&x.wd.getTime()<=t0+90*DAY);
+  const repN=RISK.filter(r=>r.rep>0).length;
+  return {asOf, W, wIx, KR_ON, bm, pm, RISK, inst, groups, bmW, pmW, inN, runN, warrIn, warrSoon, repN};
+}
+
+/* ===== 그리기 ===== */
+let D=null;
+function render(){
+  if(!RAW) return;
+  D=compute();
+  if(!S.sel||!D.groups.find(g=>g.op===S.sel)) S.sel=D.groups.length?D.groups[0].op:null;
+  const wkLbl=D.W[11].label+' ('+GST.fmtD(D.W[11].st).slice(5)+'~)';
+  document.getElementById('asof').textContent=fmt(t('asof'),{d:GST.fmtD(D.asOf), w:wkLbl})+(D.KR_ON||S.region==='os'?'':' · ⚠ '+t('krFall'));
+  drawKpis(); drawSignals(); drawMap(); drawSel(); drawQueue(); drawHeat();
+  try{ window.parent!==window && window.parent.postMessage({type:'gst-state',state:''},'*'); }catch(e){}
+}
+function spark(a, col){
+  const mx=Math.max(1,...a), mn=Math.min(...a);
+  const pts=a.map((v,i)=>(i*92/(a.length-1)).toFixed(1)+','+(27-(v-mn)/((mx-mn)||1)*24).toFixed(1)).join(' ');
+  return '<svg class="hb-spark" viewBox="0 0 92 30" aria-hidden="true"><polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+}
+function delta(cur, prev, upBad){
+  const d=cur-prev; if(!prev&&!cur) return '';
+  /* 작은 기준의 % 는 과장이다(v148 · GST.DELTA_ABS_MAX) — 직전이 작으면 건수 차이로 적는다 */
+  const s=(prev<(GST.DELTA_ABS_MAX||10)||!prev)?((d>=0?'+':'')+d):((d>=0?'+':'')+Math.round(d/prev*100)+'%');
+  const cls=d===0?'':(d>0?(upBad?'up-bad':'up-ok'):(upBad?'dn-ok':'dn-bad'));
+  return '<span class="'+cls+'">'+(d>0?'▲ ':d<0?'▼ ':'')+esc(fmt(t('vsPrev'),{s}))+'</span>';
+}
+function dqItems(){
+  const out=[];
+  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!/^gst_dq_/.test(k)||k==='gst_dq_report_kr') continue;
+    const o=JSON.parse(localStorage.getItem(k)||'null'); if(!o||!o.items) continue;
+    o.items.forEach(d=>{ if(d.sev==='warn'||d.sev==='bad') out.push(Object.assign({page:k.slice(7), at:o.at}, d)); }); } }catch(e){}
+  return out.sort((a,b)=>(a.sev==='bad'?0:1)-(b.sev==='bad'?0:1));
+}
+function drawKpis(){
+  const cssv=n=>getComputedStyle(document.body).getPropertyValue(n).trim()||'#2F6FED';
+  const c={ok:cssv('--ok'),warn:cssv('--warn'),bad:cssv('--bad'),acc:cssv('--accent')};
+  const runP=D.inN?Math.round(D.runN/D.inN*100):0;
+  const cur=D.bmW[11], prev=D.bmW[10], base=median(D.bmW.slice(3,11));
+  const bmSt=(cur>=base*RULE.badX&&cur-base>=RULE.badD)?'bad':(cur>base*RULE.warnX&&cur-base>=RULE.warnD)?'warn':'ok';
+  const dq=dqItems();
+  const K=[
+    {id:'run', l:t('k_run'), v:D.runN, u:t('u_ea'), st:'ok', d:esc(fmt(t('k_run_d'),{n:nf(D.inN),p:runP})), sp:null},
+    {id:'bm',  l:t('k_bm'),  v:cur, u:t('u_case'), st:bmSt, d:delta(cur,prev,true)+' · '+esc(fmt(t('vsBase'),{b:Math.round(base)})), sp:spark(D.bmW, c[bmSt==='ok'?'acc':bmSt])},
+    {id:'pm',  l:t('k_pm'),  v:D.pmW[11], u:t('u_case'), st:'ok', d:delta(D.pmW[11],D.pmW[10],false), sp:spark(D.pmW, c.acc)},
+    {id:'risk',l:t('k_risk'),v:D.RISK.length, u:t('u_ea'), st:D.repN>=RULE.repBad?'bad':D.repN?'warn':'ok', d:esc(fmt(t('k_risk_d'),{n:D.repN})), sp:null},
+    {id:'warr',l:t('k_warr'),v:D.warrSoon.length, u:t('u_ea'), st:D.warrSoon.length?'warn':'ok', d:esc(fmt(t('k_warr_d'),{n:nf(D.warrIn)})), sp:null},
+    {id:'dq',  l:t('k_dq'),  v:dq.length, u:'', st:dq.some(x=>x.sev==='bad')?'bad':dq.length?'warn':'ok', d:esc(dq.length?t('k_dq_d'):t('k_dq_none')), sp:null}
+  ];
+  const box=document.getElementById('kpis');
+  box.innerHTML=K.map(k=>'<button type="button" class="hb-kpi" data-k="'+k.id+'"><span class="l"><span class="hb-dot '+k.st+'"></span>'+esc(k.l)+'</span>'
+    +'<span class="row"><span class="v"><span class="num" data-to="'+k.v+'">'+nf(REDUCE?k.v:0)+'</span><small>'+esc(k.u)+'</small></span>'+(k.sp||'')+'</span>'
+    +'<span class="d">'+k.d+'</span></button>').join('');
+  countUp(box);
+  box.querySelectorAll('.hb-kpi').forEach(b=>b.onclick=()=>kpiOpen(b.dataset.k));
+}
+function countUp(root){
+  if(REDUCE) return;
+  root.querySelectorAll('.num[data-to]').forEach(el=>{ const to=+el.dataset.to||0, t0=performance.now(), dur=700;
+    const step=n=>{ const p=Math.min(1,(n-t0)/dur), e=1-Math.pow(1-p,3); el.textContent=nf(Math.round(to*e)); if(p<1) requestAnimationFrame(step); };
+    requestAnimationFrame(step); });
+}
+function bmRows(list){
+  return list.slice().sort((a,b)=>b.d-a.d).map(x=>[GST.fmtD(x.d), x.op||'', x.campus||'', x.code||'', x.sn||'', x.src==='kr'?t('src_kr'):t('src_wk'), x.desc||'']);
+}
+const BM_COLS=()=>[t('l_date'),t('l_op'),t('l_campus'),t('l_eq'),t('l_sn'),t('l_src'),t('l_desc')];
+function kpiOpen(k){
+  const w=D.W[11];
+  if(k==='bm') return GST.rowsModal(t('k_bm')+' · '+w.label, BM_COLS(), bmRows(D.bm.filter(x=>D.wIx(x.d)===11)));
+  if(k==='pm') return GST.rowsModal(t('k_pm')+' · '+w.label, [t('l_date'),t('l_op'),t('l_campus'),t('l_eq'),t('l_sn')],
+    D.pm.filter(x=>D.wIx(x.d)===11).sort((a,b)=>b.d-a.d).map(x=>[GST.fmtD(x.d),x.op,x.campus,x.code,x.sn]));
+  if(k==='risk') return GST.rowsModal(t('k_risk'), [t('l_eq'),t('l_op'),t('l_score'),t('l_why')], D.RISK.map(r=>[r.label,r.site,String(r.score),GST.riskWhy(r)]));
+  if(k==='warr') return GST.rowsModal(t('k_warr'), [t('l_wd'),t('l_op'),t('l_campus'),t('l_eq'),t('l_sn'),t('l_state')],
+    D.warrSoon.slice().sort((a,b)=>a.wd-b.wd).map(x=>[GST.fmtD(x.wd),x.op,x.campus,x.code,x.sn,x.stateRaw]));
+  if(k==='dq') return GST.rowsModal(t('k_dq'), [t('q_dq'),t('l_desc'),'N'], dqItems().map(d=>[d.page, d.label, d.n==null?'':String(d.n)]));
+  if(k==='run') return GST.goTab ? GST.goTab('scrubber') : null;
+}
+function drawSignals(){
+  const box=document.getElementById('sigs');
+  if(!D.groups.length){ box.innerHTML='<div class="hb-empty">'+esc(t('none'))+'</div>'; return; }
+  box.innerHTML=D.groups.map(g=>'<button type="button" class="hb-sig'+(g.op===S.sel?' on':'')+'" data-op="'+esc(g.op)+'">'
+    +'<span class="hb-dot '+g.st+'"></span><span class="n"><b>'+esc(short(g.op))+'</b><span>'+esc([ctyName(g.cty), nf(g.inN)+t('u_ea')].filter(Boolean).join(' · '))+'</span></span>'
+    +'<span class="c"><span class="bm">'+g.cur+'</span><span class="rk'+(g.rep?'':' z')+'">'+g.rep+'</span></span></button>').join('');
+  box.querySelectorAll('.hb-sig').forEach(b=>b.onclick=()=>pick(b.dataset.op));
+}
+/* 법인 이름 꼬리의 담당구분(SCRUBBER)만 뗀다 — 이름을 지어내지 않는다(v98 · corpLabel 과 같은 규칙) */
+function short(op){ return String(op||'—').replace(/\s+(SCRUBBER|CHILLER)$/i,'').trim()||'—'; }
+const CTY={ko:{KOREA:'한국',TAIWAN:'대만',CHINA:'중국',USA:'미국',JAPAN:'일본',SINGAPORE:'싱가포르',EUROPE:'유럽'},
+  en:{KOREA:'Korea',TAIWAN:'Taiwan',CHINA:'China',USA:'USA',JAPAN:'Japan',SINGAPORE:'Singapore',EUROPE:'Europe'},
+  zh:{KOREA:'韩国',TAIWAN:'台湾',CHINA:'中国',USA:'美国',JAPAN:'日本',SINGAPORE:'新加坡',EUROPE:'欧洲'},
+  ja:{KOREA:'韓国',TAIWAN:'台湾',CHINA:'中国',USA:'米国',JAPAN:'日本',SINGAPORE:'シンガポール',EUROPE:'欧州'}};
+function ctyName(c){ return (CTY[LANG]||CTY.ko)[c]||c||''; }
+function pick(op){ S.sel=op; drawSignals(); drawMap(); drawSel(); }
+
+/* 지도 — 캔버스에 점을 찍고, 원은 버튼(키보드로도 고른다) */
+function drawMap(){
+  const host=document.getElementById('map'), cv=document.getElementById('mapC');
+  const r=host.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+  cv.width=Math.max(1,Math.round(r.width*dpr)); cv.height=Math.max(1,Math.round(r.height*dpr));
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,r.width,r.height);
+  const rows=WORLD.rle.length, cw=r.width/WORLD.w, ch=r.height/rows, rad=Math.max(0.8,Math.min(cw,ch)*0.33);
+  ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--line-2').trim()||'#CDD3DC';
+  WORLD.rle.forEach((s,y)=>{ let x=0, land=false; s.split(',').forEach(n=>{ n=+n; if(land){ for(let i=0;i<n;i++){ ctx.beginPath(); ctx.arc((x+i+.5)*cw,(y+.5)*ch,rad,0,6.283); ctx.fill(); } } x+=n; land=!land; }); });
+  // 원
+  const pos=(lat,lon)=>[ (lon-WORLD.lon0)/360*100, (WORLD.lat0-lat)/(rows*WORLD.step)*100 ];
+  const byLoc={}, noLoc=[];
+  D.groups.forEach(g=>{ const k=GEO[g.city]?g.city:(GEO[g.cty]?g.cty:''); if(!k){ if(g.inN) noLoc.push(g); return; } (byLoc[k]=byLoc[k]||[]).push(g); });
+  const mx=Math.max(1,...D.groups.map(g=>g.inN));
+  /* 이름표는 겹치면 안 쓴다 — 동아시아에 법인이 몰려 글자가 포개졌다. 큰 원·고른 원부터 자리를 잡고, 이미 잡힌 이름표와 가까우면 빼고
+     (원은 그대로 · 누르거나 올리면 팝업이 이름을 말한다). */
+  const B=[];
+  Object.keys(byLoc).forEach(k=>{ const L=byLoc[k], n=L.length;
+    L.forEach((g,i)=>{ let [lat,lon]=GEO[k];
+      if(n>1){ const a=i/n*2*Math.PI-Math.PI/2, rr=3.2; lat+=Math.sin(a)*rr*0.8; lon+=Math.cos(a)*rr; }   // 같은 국가의 여러 법인은 둥글게 벌려 놓는다
+      const [x,y]=pos(lat,lon); B.push({g, x, y, sz:Math.round(14+Math.sqrt(g.inN/mx)*34)}); }); });
+  const taken=[];
+  B.slice().sort((a,b)=>(b.g.op===S.sel)-(a.g.op===S.sel)||b.sz-a.sz).forEach(b=>{
+    const px=b.x/100*r.width, py=b.y/100*r.height+b.sz/2+8, w=Math.max(40,short(b.g.op).length*6.4);
+    b.lb=!taken.some(t=>Math.abs(t.x-px)<(t.w+w)/2+4 && Math.abs(t.y-py)<15);
+    if(b.lb) taken.push({x:px,y:py,w}); });
+  let html='';
+  B.forEach(b=>{ const g=b.g;
+    html+='<button type="button" class="hb-bub '+g.st+(g.op===S.sel?' on':'')+'" data-op="'+esc(g.op)+'" style="left:'+b.x.toFixed(2)+'%;top:'+b.y.toFixed(2)+'%;width:'+b.sz+'px;height:'+b.sz+'px" aria-label="'+esc(short(g.op)+' · '+t(g.st))+'">'
+      +(b.lb?'<span class="lb">'+esc(short(g.op))+'</span>':'')+'</button>'; });
+  const bubs=document.getElementById('bubs'); bubs.innerHTML=html;
+  bubs.querySelectorAll('.hb-bub').forEach(b=>{ b.onclick=()=>pick(b.dataset.op); b.onmouseenter=b.onfocus=()=>popShow(b); b.onmouseleave=b.onblur=()=>{ document.getElementById('pop').hidden=true; }; });
+  const tot=D.groups.reduce((s,g)=>s+g.inN,0), ctys=new Set(D.groups.map(g=>g.cty).filter(Boolean)), bm12=D.bmW.reduce((s,v)=>s+v,0);
+  document.getElementById('stats').innerHTML=[[t('st_units'),nf(tot)],[t('st_ops'),D.groups.length],[t('st_cty'),ctys.size],[t('st_bm12'),nf(bm12)]]
+    .map(a=>'<div class="hb-stat">'+esc(a[0])+'<b>'+esc(a[1])+'</b></div>').join('');
+  document.getElementById('mapNote').textContent=noLoc.length?fmt(t('noLoc'),{n:noLoc.length,list:noLoc.slice(0,4).map(g=>short(g.op)).join(', ')+(noLoc.length>4?' …':'')}):'';
+}
+function popShow(b){
+  const g=D.groups.find(x=>x.op===b.dataset.op); if(!g) return;
+  const p=document.getElementById('pop'), host=document.getElementById('map').getBoundingClientRect(), br=b.getBoundingClientRect();
+  p.innerHTML='<span>'+esc(ctyName(g.cty))+'</span><b>'+esc(short(g.op))+'</b><span class="big">'+nf(g.inN)+'</span> '+esc(t('u_ea'))
+    +'<br>'+esc(t('k_bm'))+' '+g.cur+' · <span class="hb-pill '+g.st+'">'+esc(t(g.st))+'</span>';
+  p.hidden=false;
+  const cx=br.left-host.left+br.width/2, cy=br.top-host.top;
+  const left=cx>host.width*0.62; p.style.left=left?'':(cx+br.width/2+8)+'px'; p.style.right=left?(host.width-cx+br.width/2+8)+'px':''; p.style.top=Math.max(4,cy-10)+'px';
+}
+function gauge(v, label){
+  const st=v>=90?'var(--ok)':v>=70?'var(--warn)':'var(--bad)', c=2*Math.PI*29;
+  return '<div class="hb-g"><div class="w"><svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="29" fill="none" stroke="var(--surface-3)" stroke-width="7"/>'
+    +'<circle cx="36" cy="36" r="29" fill="none" stroke="'+st+'" stroke-width="7" stroke-linecap="round" stroke-dasharray="'+(c*v/100).toFixed(1)+' '+c.toFixed(1)+'" transform="rotate(-90 36 36)"/></svg><b>'+(v==null?'—':v+'%')+'</b></div>'+esc(label)+'</div>';
+}
+function drawSel(){
+  const box=document.getElementById('sel'), g=D.groups.find(x=>x.op===S.sel);
+  if(!g){ box.innerHTML='<div class="hb-empty">'+esc(t('none'))+'</div>'; return; }
+  const runP=g.inN?Math.round(g.runN/g.inN*100):null, warrP=g.warrN?Math.round(g.warrIn/g.warrN*100):null;
+  const pmP=(g.pmN+g.wk.slice(8).reduce((s,v)=>s+v,0))?Math.round(g.pmN/(g.pmN+g.wk.slice(8).reduce((s,v)=>s+v,0))*100):null;
+  const mx=Math.max(1,...g.wk);
+  const lastBm=g.bm.length?g.bm.reduce((m,x)=>x.d>m?x.d:m,g.bm[0].d):null;
+  box.innerHTML='<div class="sub">'+esc(t('sel_h'))+' · '+esc([ctyName(g.cty),g.region].filter(Boolean).join(' · '))+'</div>'
+    +'<h3>'+esc(short(g.op))+' <span class="hb-pill '+g.st+'">'+esc(t(g.st))+'</span></h3>'
+    +'<div class="hb-gauges">'+gauge(runP,t('g_run'))+gauge(warrP,t('g_warr'))+gauge(pmP,t('g_pm'))+'</div>'
+    +'<div><div class="sub" style="margin-bottom:6px">'+esc(t('bars'))+'</div><div class="hb-bars">'
+    +g.wk.map((v,i)=>'<i class="'+(i===11?'cur':'')+'" style="height:'+Math.round(v/mx*60+3)+'px;animation-delay:'+(i*25)+'ms" title="'+esc(D.W[i].label+' · '+v)+'"></i>').join('')+'</div></div>'
+    +'<div class="hb-mini">'
+    +'<div><span>'+esc(t('m_units'))+'</span><b>'+nf(g.inN)+' / '+nf(g.runN)+'</b></div>'
+    +'<div><span>'+esc(t('m_risk'))+'</span><b>'+g.risk.length+'</b></div>'
+    +'<div><span>'+esc(t('m_rep'))+'</span><b>'+g.rep+'</b></div>'
+    +'<div><span>'+esc(t('m_last'))+'</span><b>'+(lastBm?GST.fmtD(lastBm):'—')+'</b></div>'
+    +'</div>'
+    +(g.risk.length?'<div class="hb-mini"><div class="sub">'+esc(t('risk_top'))+'</div>'+g.risk.slice(0,3).map(r=>'<div><span>'+esc(r.label)+'</span><b title="'+esc(GST.riskWhy(r))+'">'+r.score+'</b></div>').join('')+'</div>':'')
+    +'<div class="hb-btns"><button type="button" class="hb-btn pri" id="goFault">'+esc(t('open_fault'))+' →</button><button type="button" class="hb-btn" id="goInst">'+esc(t('open_inst'))+'</button></div>';
+  document.getElementById('goFault').onclick=()=>GST.goTab&&GST.goTab('fault');
+  document.getElementById('goInst').onclick=()=>GST.goTab&&GST.goTab('scrubber');
+}
+function drawQueue(){
+  const box=document.getElementById('queue'), adm=GST.isAdmin&&GST.isAdmin();
+  const items=[];
+  D.RISK.slice(0,5).forEach(r=>items.push({sev:r.rep?'bad':'warn', tag:t('q_risk'), title:r.label+' · '+short(r.site), sub:GST.riskWhy(r), go:()=>GST.goTab&&GST.goTab('fault')}));
+  dqItems().slice(0,5).forEach(d=>items.push({sev:d.sev==='bad'?'bad':'warn', tag:t('q_dq'), title:d.label, sub:(d.page||'')+(d.n!=null?' · '+nf(d.n):''),
+    go:adm?()=>window.open('https://gstcsglobal-cloud.github.io/edit/?tab=dq&fix='+encodeURIComponent(d.page+'.'+d.key),'gstEdit'):null}));
+  document.getElementById('qS').textContent=t('q_s');
+  if(!items.length){ box.innerHTML='<div class="hb-empty">'+esc(t('q_none'))+'</div>'; return; }
+  box.innerHTML=items.map((q,i)=>'<button type="button" class="hb-q" data-q="'+i+'"'+(q.go?'':' disabled')+'><span class="hb-sev '+q.sev+'">'+esc(q.tag)+'</span>'
+    +'<span class="t"><b>'+esc(q.title)+'</b><span>'+esc(q.sub)+'</span></span></button>').join('');
+  box.querySelectorAll('.hb-q').forEach(b=>{ const q=items[+b.dataset.q]; if(q.go) b.onclick=q.go; });
+}
+function drawHeat(){
+  const box=document.getElementById('heat'), W=D.W, by=S.heat;
+  const M={};
+  D.bm.forEach(x=>{ const i=D.wIx(x.d); if(i<0) return; const k=(by==='campus'?(x.campus||'—'):short(x.op))||'—'; (M[k]=M[k]||{k, wk:new Array(12).fill(0), list:[]}); M[k].wk[i]++; M[k].list.push(x); });
+  const rows=Object.values(M).sort((a,b)=>b.wk.reduce((s,v)=>s+v,0)-a.wk.reduce((s,v)=>s+v,0)).slice(0,14);
+  if(!rows.length){ box.innerHTML='<div class="hb-empty">'+esc(t('none'))+'</div>'; return; }
+  box.style.gridTemplateColumns='minmax(90px,150px) repeat(12,minmax(30px,1fr))';
+  let h='<div></div>'+W.map(w=>'<div class="h">'+esc(w.label)+'</div>').join('');
+  rows.forEach((r,ri)=>{ const base=median(r.wk.filter(v=>v>0))||0;
+    h+='<div class="rl" title="'+esc(r.k)+'">'+esc(r.k)+'</div>';
+    r.wk.forEach((v,i)=>{ const z=base?(v-base)/base:(v?1:0);
+      const hot=v>0&&z>0.3, a=v?Math.min(0.92,0.18+Math.min(1,Math.abs(z))*0.6+(hot?0.12:0)):0;
+      const bg=v?(hot?'color-mix(in srgb,var(--bad) '+Math.round(a*100)+'%,transparent)':'color-mix(in srgb,var(--accent) '+Math.round(a*70)+'%,transparent)'):'var(--surface-2)';
+      h+='<button type="button" class="hb-cell" data-r="'+ri+'" data-w="'+i+'" style="background:'+bg+';color:'+(a>0.55?'#fff':'var(--txt-main)')+';animation-delay:'+(ri*18+i*6)+'ms" aria-label="'+esc(r.k+' '+W[i].label+' '+v)+'">'+(v||'')+'</button>'; }); });
+  box.innerHTML=h;
+  box.querySelectorAll('.hb-cell').forEach(b=>b.onclick=()=>{ const r=rows[+b.dataset.r], i=+b.dataset.w;
+    GST.rowsModal(r.k+' · '+W[i].label, BM_COLS(), bmRows(r.list.filter(x=>D.wIx(x.d)===i))); });
+}
+
+/* ===== 틀 ===== */
+function status(s, err){ const e=document.getElementById('status'); e.textContent=s; e.classList.toggle('err',!!err); }
+function skel(on){ document.querySelectorAll('.hb-card,#kpis').forEach(e=>e.classList.toggle('hb-sk',!!on)); }
+function applyLang(){
+  document.documentElement.lang=LANG;
+  try{ GST.applyI18n && GST.applyI18n(t, LANG); }catch(e){ document.querySelectorAll('[data-i]').forEach(el=>{ el.textContent=t(el.dataset.i); }); }
+  render();
+}
+window.setLang=function(l){ if(T[l]){ LANG=l; applyLang(); } };
+document.getElementById('segRegion').addEventListener('click',e=>{ const b=e.target.closest('button[data-r]'); if(!b) return;
+  S.region=b.dataset.r; document.querySelectorAll('#segRegion button').forEach(x=>x.classList.toggle('on',x===b)); S.sel=null; render(); });
+document.getElementById('segHeat').addEventListener('click',e=>{ const b=e.target.closest('button[data-h]'); if(!b) return;
+  S.heat=b.dataset.h; document.querySelectorAll('#segHeat button').forEach(x=>x.classList.toggle('on',x===b)); drawHeat(); });
+document.getElementById('ruleBtn').onclick=()=>GST.rowsModal(t('rule_t'), [t('l_desc')], t('rule').split('\n').filter(Boolean).map(s=>[s]));
+let _rz=0; window.addEventListener('resize',()=>{ cancelAnimationFrame(_rz); _rz=requestAnimationFrame(()=>D&&drawMap()); });
+/* 테마가 바뀌면 캔버스 점 색을 다시 칠한다 — 캔버스는 CSS 변수를 못 읽는다 */
+try{ new MutationObserver(()=>D&&(drawMap(),drawKpis())).observe(document.body,{attributes:true,attributeFilter:['class']}); }catch(e){}
+window.addEventListener('message',e=>{ const d=e.data||{}; if(d.type==='gst-lang'&&T[d.lang]){ LANG=d.lang; applyLang(); } });
+applyLang();
+/* 자동 새로고침·셸 「새로고침」·백필 완료가 부르는 이름(GST._softReload 는 window.loadData 를 찾는다) */
+window.loadData=load;
+load().catch(e=>{ console.error('[hub] 읽기 실패', e); skel(false); status((GST.failNote?GST.failNote(e):String(e&&e.message||e)), true); });
+GST.startAutoRefresh && GST.startAutoRefresh(30);
+</script>
+<script>GST.initSync();</script>
+</body>
+</html>

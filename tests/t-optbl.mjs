@@ -129,7 +129,7 @@ await ctx.route('**supabase**', r => r.fulfill({ status:200, contentType:'applic
 
 const page = await ctx.newPage();
 const errs = []; page.on('pageerror', e => errs.push(e.message));
-await page.goto(BASE + '/', { waitUntil:'domcontentloaded' });
+await page.goto(BASE + '/#tab=report', { waitUntil:'domcontentloaded' });   // v165 — 첫 탭이 통합 관제라 주간현황으로 바로 연다
 await page.waitForTimeout(12000);
 const fr = page.frames().find(f => /\/report\//.test(f.url()));
 if (!fr) { console.log('❌ report 프레임을 못 찾았다'); process.exit(1); }

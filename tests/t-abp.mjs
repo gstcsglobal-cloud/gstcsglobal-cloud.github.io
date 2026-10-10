@@ -260,7 +260,7 @@ console.log('\n[8] 주간현황 — 원장이 켜지면 크로스탭은 꺼진�
     await ctx.route('**supabase**', r => r.fulfill({ status:200, contentType:'application/json', body:'{}' }));
     const page = await ctx.newPage();
     const errs = []; page.on('pageerror', e => errs.push(e.message));
-    await page.goto(BASE + '/', { waitUntil:'domcontentloaded' });
+    await page.goto(BASE + '/#tab=report', { waitUntil:'domcontentloaded' });   // v165 — 첫 탭이 통합 관제라 주간현황으로 바로 연다
     await page.waitForTimeout(12000);
     const fr = page.frames().find(f => /\/report\//.test(f.url()));
     /* ⚠ TOP3 를 «연» 으로 본다. 월 모드에서 이 표가 보는 것은 «마지막 구간» 하나뿐인데,
