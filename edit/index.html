@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=160"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=161"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -2982,7 +2982,7 @@ async function dqRender(force){
     + (dqF().reg || dqF().op ? ' (' + esc(dqFTxt()) + ')' : '') + ' · ' + at.getHours() + ':' + p2(at.getMinutes()) + ' 기준</span><span class="sp"></span><button class="btn sm" type="button" data-dq="re">다시 점검</button></div>'
     + (sm.old ? '<div class="banner warn">서버 점검 함수가 옛 판이라 구분·운영단위로 못 거릅니다(기간은 됩니다) — supabase/setup-21-dq.sql 을 Run 하세요.</div>' : '')
     + '<p class="hint">대시보드는 이 행들을 «그대로» 셉니다(빼지 않습니다). 행을 열어 고치면 차트가 저절로 바로잡힙니다 — 모든 수정은 「변경 이력」에 남고 되돌릴 수 있습니다.</p>'
-    + '<table class="dt dq-t"><thead><tr><th>점검</th><th class="r">건수</th><th>왜 문제인가 · 무엇을 하면 되나</th><th></th></tr></thead><tbody>'
+    + '<table data-gst-nosn class="dt dq-t"><thead><tr><th>점검</th><th class="r">건수</th><th>왜 문제인가 · 무엇을 하면 되나</th><th></th></tr></thead><tbody>'
     + Object.keys(DQ_CHECK).map(k => { const c = DQ_CHECK[k], n = sm[k] || 0;
         const fill = k === 'mannull' && n ? (sm.mfill ? '<button class="btn sm" type="button" data-dq="fill" title="작업공수 = 작업시간(분) × 작업자수 — 시스템이 쓰는 식 그대로(실측 19,881/19,888 행). 미리 보기 뒤 반영 · 되돌릴 수 있습니다">자동 채우기 ' + sm.mfill.toLocaleString() + '행</button>' : '<span class="hint">작업자수가 빈 행이라 자동으로 못 채웁니다</span>') : '';
         return '<tr class="dq-' + (n ? c.sev : 'ok') + '"><td><b>' + esc(c.l) + '</b></td><td class="r">' + n.toLocaleString() + '</td><td>' + esc(c.why) + '<br><span class="hint">' + esc(c.act) + '</span></td>'
@@ -2990,7 +2990,7 @@ async function dqRender(force){
     + '</tbody></table>';
   const spAll = d.spikes || [], sp = spAll.map((x, i) => Object.assign({ i:i }, x)).filter(x => dqOpOk(x.op || ''));
   h += '<h4>주별 공수 급증 <span class="hint">— 운영단위 × 주의 공수 합이 앞뒤 8주 중앙값의 2배를 넘고 50h 이상 많은 주' + (sp.length < spAll.length ? ' · 필터로 ' + (spAll.length - sp.length) + '주 숨김' : '') + '</span></h4>';
-  h += sp.length ? '<table class="dt dq-t"><thead><tr><th>운영단위</th><th>주(월요일)</th><th class="r">공수(h)</th><th class="r">평소(h)</th><th class="r">배</th><th class="r">24h 초과 행</th><th></th></tr></thead><tbody>'
+  h += sp.length ? '<table data-gst-nosn class="dt dq-t"><thead><tr><th>운영단위</th><th>주(월요일)</th><th class="r">공수(h)</th><th class="r">평소(h)</th><th class="r">배</th><th class="r">24h 초과 행</th><th></th></tr></thead><tbody>'
       + sp.map(x => '<tr class="dq-' + (x.nb ? 'bad' : 'warn') + '"><td>' + esc(x.op || '(빈칸)') + '</td><td>' + esc(x.wk) + ' <span class="hint">W' + GST.isoW(new Date(x.wk + 'T00:00:00')) + '</span></td><td class="r">' + Number(x.h).toLocaleString()
         + '</td><td class="r">' + Number(x.base).toLocaleString() + '</td><td class="r">' + GST.xmul(x.h / x.base) + '</td><td class="r">' + (x.nb || 0) + '</td>'
         + '<td><button class="btn sm pri" type="button" data-dq="spike" data-i="' + x.i + '">공수 큰 행부터 보기</button></td></tr>').join('') + '</tbody></table>'
@@ -3028,7 +3028,7 @@ function dqJoinHTML(){
   if(!j) return h + '<p class="hint"><button class="btn sm pri" type="button" data-dq="jre">연결 점검 하기</button></p>';
   const rows = (j.by_op || []).filter(x => dqOpOk(x.op));
   if(!rows.length) return h + '<p class="hint">이 필터에 드는 행이 없습니다.</p>';
-  h += '<table class="dt dq-t dq-j"><thead><tr><th>운영단위</th><th class="r">행</th><th class="r">설치현황에 없음</th><th class="r">설비호기·S/N 빈칸</th><th class="r">사업부 빈칸</th><th class="r">Floor 빈칸</th><th>어디서 무엇을 고치나</th></tr></thead><tbody>';
+  h += '<table data-gst-nosn class="dt dq-t dq-j"><thead><tr><th>운영단위</th><th class="r">행</th><th class="r">설치현황에 없음</th><th class="r">설비호기·S/N 빈칸</th><th class="r">사업부 빈칸</th><th class="r">Floor 빈칸</th><th>어디서 무엇을 고치나</th></tr></thead><tbody>';
   rows.forEach(x => {
     const kr = dqRegOf(x.op) === 'kr', whole = x.rows && x.miss / x.rows >= DQJ_WHOLE;
     const tips = [];
@@ -3052,7 +3052,7 @@ function dqJoinHTML(){
   const okOps = new Set(rows.filter(x => !(x.rows && x.miss / x.rows >= DQJ_WHOLE)).map(x => x.op));
   const mt = (j.miss_top || []).filter(x => okOps.has(x.op));
   h += '<h4>안 이어진 설비 <span class="hint">— 운영단위별로 행이 많은 순 · 설치현황에 그 설비가 있는지 먼저 찾아보고, 있으면 실적의 표기를, 없으면 설치현황에 그 설비를 넣습니다</span></h4>';
-  h += mt.length ? '<table class="dt dq-t"><thead><tr><th>운영단위</th><th>설비호기</th><th>S/N</th><th class="r">실적 행</th><th></th></tr></thead><tbody>'
+  h += mt.length ? '<table data-gst-nosn class="dt dq-t"><thead><tr><th>운영단위</th><th>설비호기</th><th>S/N</th><th class="r">실적 행</th><th></th></tr></thead><tbody>'
       + mt.slice(0, 60).map(x => '<tr class="dq-warn"><td>' + esc(x.op || '(빈칸)') + '</td><td>' + esc(x.eq || '—') + '</td><td>' + esc(x.sn || '—') + '</td><td class="r">' + x.n.toLocaleString() + '</td>'
         + '<td class="dq-b"><button class="btn sm pri" type="button" data-dq="jmrow" data-i="' + j.miss_top.indexOf(x) + '">실적 행 보기</button>'
         + '<button class="btn sm" type="button" data-dq="jmins" data-i="' + j.miss_top.indexOf(x) + '" title="설치현황에서 이 S/N(없으면 설비호기)을 포함 검색합니다 — 하이픈·접미 차이를 흡수합니다">설치현황에서 찾기</button></td></tr>').join('')
@@ -3071,19 +3071,100 @@ const DQ_FIX = {
   'fault.wk_blank':   { l:'알람유형 빈 BM 행 찾기', tab:'wk', oc:[{ c:'stage', op:'eq', v:'BM' }, { c:'alarm', op:'nul', v:'' }] },
   'scrubber.inst_nodate': { l:'Turn On 빈 설비 찾기', tab:'inst', oc:[{ c:'turn_on', op:'nul', v:'' }] },
   'scrubber.inst_unkstate': { l:'기준 정보에서 정하기', tab:'vmap' },
-  'fault.inst_unkstate':    { l:'기준 정보에서 정하기', tab:'vmap' }
+  'fault.inst_unkstate':    { l:'기준 정보에서 정하기', tab:'vmap' },
+  /* v162 (사용자: 「눌르면 연결 안 된 게 나와야 내가 고치지」) — 주간현황의 국내 원장·인원 신호도 «그 행»을 띄운다 */
+  'report.kr_join':    { l:'안 이어진 원장 행 보기', fn:'krJoin' },
+  'report_kr.kr_join': { l:'안 이어진 원장 행 보기', fn:'krJoin' },
+  'report.kr_drop':    { l:'빠진 원장 행 보기', fn:'krDrop' },
+  'report_kr.kr_drop': { l:'빠진 원장 행 보기', fn:'krDrop' },
+  'report.head_ex':    { l:'뺀 인원 보기', fn:'headEx' },
+  'report_kr.head_ex': { l:'뺀 인원 보기', fn:'headEx' }
 };
+/* 신호의 «구분» — 데이터 품질 탭의 구분·운영단위 필터가 화면 신호에도 걸리게 한다(사용자: 「필터 걸면 필터에 해당하는 것만」).
+   국내 원장·국내 실적·반도체연구소·국내 데모 화면은 국내 신호다(공수 분모 제외는 그 화면의 인원 필터를 이미 탔다). 표에 없는 신호는 구분이 없다(늘 보인다). */
+const DQ_SCOPE = { kr_alarm:'kr', kr_abp:'kr', kr_join:'kr', kr_drop:'kr', kr_rnd:'kr', div_join:'kr', kr_mh:'kr' };
+const dqScopeOf = (pg, key) => pg === 'report_kr' ? 'kr' : (DQ_SCOPE[key] || '');
+/* 지금 필터가 그 구분을 «빼는가» — 구분을 골랐으면 그것, 운영단위만 골랐으면 그 운영단위의 구분 */
+function dqScopeOut(sc){
+  if(!sc) return false;
+  const f = dqF(), want = f.reg || (f.op ? dqRegOf(f.op) : '');
+  return !!want && want !== sc;
+}
+/* ---------- 신호 → «그 행» (v162) ----------
+   ⚠ 판정을 새로 짜지 않는다 — 주간현황이 센 그 함수(S/N 맞춤 N()·접미 L/R/S · GST.ALARM.dedup/inner · GST.HEAD_EX)를 그대로 부른다.
+   스냅샷의 수와 조금 다를 수 있다 — 스냅샷은 그 화면의 필터·기간 기준이고 여기는 표 전체다(제목에 적는다). */
+const LEDGER_SEL = 'src_row,op,sn,inout,incl,seq';
+async function ledgerAll(t){
+  const out = []; let last = -1;
+  const have = S.cols[t.tbl] || [], sel = LEDGER_SEL.split(',').filter(c => !have.length || have.indexOf(c) >= 0).join(',');
+  for(let g = 0; g < 400; g++){
+    const r = await C.from(t.tbl).select(sel).gt('src_row', last).order('src_row').limit(1000);
+    if(r.error) throw new Error(rpcErr(r.error));
+    const d = r.data || []; if(!d.length) break;
+    d.forEach(x => out.push(x)); last = d[d.length - 1].src_row;
+  }
+  return out;
+}
+async function dqLedgerRows(kind){
+  snack('원장·설치현황을 읽는 중…', {ms:120000});
+  const res = [];
+  try{
+    const I = kind === 'join' ? await instAll() : null;
+    for(const id of ['alarm', 'abp']){
+      const t = TAB_BY[id]; if(!t) continue;
+      try{ await loadCols(t); }catch(e){}
+      const rows = (await ledgerAll(t)).filter(x => GST.ALARM.region(x.op) === GST.ORG.REGION_KR);
+      const hit = kind === 'join'
+        ? rows.filter(x => { const k = N(x.sn); return !k || !(I.bySN.has(k) || I.byStrip.has(k.replace(/[LRS]$/, '')) || I.bySN.has(k.replace(/[LRS]$/, ''))); })
+        : rows.filter(x => GST.ALARM.dedup(x) && !GST.ALARM.inner(x));
+      res.push({ id:id, keys:hit.map(x => x.src_row), n:rows.length });
+    }
+  }catch(e){ snack(e.message, {err:true}); return null; }
+  return res;
+}
+async function dqShowKeys(title, tabId, keys){
+  const t = TAB_BY[tabId]; let rows = [];
+  keys = keys.slice(0, 2000);
+  try{ for(let i = 0; i < keys.length; i += GET_MAX) [].push.apply(rows, await rpc('edit_get_many', { p_tbl:t.tbl, p_keys:keys.slice(i, i + GET_MAX) }) || []); }
+  catch(e){ snack(e.message, {err:true}); return; }
+  return dqList(title, keys, rows, tabId);
+}
+async function dqLedgerFix(kind){
+  const res = await dqLedgerRows(kind); if(!res) return;
+  const name = { alarm:'알람', abp:'올바이패스' }, what = kind === 'join' ? '설치현황과 안 이어진 국내 원장 행 (S/N)' : '집계에서 빠진 국내 원장 행 (내부·내적이 아닌 값)';
+  const has = res.filter(r => r.keys.length);
+  if(!has.length){ $('snack').className = ''; snack('지금 표 전체에서는 해당 행이 없습니다 — 스냅샷이 옛 값이면 주간현황을 새로고침해 보세요', {ms:7000}); return; }
+  const first = has[0], other = has[1];
+  await dqShowKeys(name[first.id] + ' · ' + what, first.id, first.keys);
+  if(other) snack(name[other.id] + '에도 ' + other.keys.length.toLocaleString() + '행 있습니다', { act:name[other.id] + ' 보기', fn:() => dqShowKeys(name[other.id] + ' · ' + what, other.id, other.keys), ms:15000 });
+}
+/* 공수 분모에서 뺀 인원 — 주간현황이 쓰는 GST.HEAD_EX 판정 그대로(직책·단지·라인 칸 · 현장 인원 · 재직) */
+async function dqHeadEx(){
+  const t = TAB_BY.roster; if(!t) return;
+  snack('인원현황을 읽는 중…', {ms:60000});
+  try{ if(!S.all[t.id]) S.all[t.id] = await loadAll(t); }catch(e){ snack(e.message, {err:true}); return; }
+  const g = (r, k) => vs(r[k]).trim();
+  const hit = S.all[t.id].filter(r => g(r, '현장 인원여부').toUpperCase() === 'O' && !g(r, '퇴사일')
+    && GST.HEAD_EX.hit({ role:g(r, '업무/직책'), campus:g(r, '단지'), wp:g(r, '라인') || g(r, 'Work Place'), site:g(r, 'Work Place') || g(r, '단지') || g(r, '라인') }));
+  if(!hit.length){ $('snack').className = ''; snack('지금 인원현황에서는 해당 인원이 없습니다', {ms:6000}); return; }
+  return dqList('공수 분모에서 뺀 인원 (팀장·OFFICE·단지장 — 직책·단지·라인 칸 · 현장 재직자)', hit.map(r => r[t.key]), hit.map(r => ({ key:r[t.key], row:r })), t.id);
+}
+const DQ_FN = { krJoin:() => dqLedgerFix('join'), krDrop:() => dqLedgerFix('drop'), headEx:dqHeadEx };
 /* ② 화면 신호 — 예전에 각 화면 맨 아래 있던 «데이터 품질» 표(사용자: 「데이터 관리로 옮기고」) */
 function dqPagesHTML(){
   const now = Date.now();
   let h = '<h4>화면 신호 — 여덟 화면이 마지막으로 그릴 때 찾은 자료 문제</h4><p class="hint">이 브라우저에서 그 화면을 마지막으로 연 때의 값입니다(필터가 걸려 있었다면 그 필터 기준). 최신으로 보려면 그 화면을 새로고침한 뒤 여기를 다시 여세요. 「찾아서 고치기」가 고칠 행을 그 탭에 띄웁니다.</p>';
   DQ_PAGES.forEach(pg => {
     let o = null; try{ o = JSON.parse(localStorage.getItem('gst_dq_' + pg[0]) || 'null'); }catch(e){}
+    if(pg[0] === 'report_kr' && dqScopeOut('kr')) return;   // 국내 데모 화면 — 해외로 걸면 통째로 안 보인다
     if(!o){ if(pg[0] !== 'report_kr') h += '<div class="dq-pg"><b>' + esc(pg[1]) + '</b> <span class="hint">— 이 브라우저에서 아직 한 번도 안 열었습니다</span></div>'; return; }
     const mins = Math.round((now - (o.at || 0)) / 60000), age = mins < 60 ? mins + '분 전' : mins < 2880 ? Math.round(mins / 60) + '시간 전' : Math.round(mins / 1440) + '일 전';
     h += '<div class="dq-pg"><b>' + esc(pg[1]) + '</b> <span class="hint">· ' + esc(age) + ' · 필터 ' + esc(o.filter || '전체') + '</span></div>';
     if(!o.items || !o.items.length){ h += '<p class="hint" style="margin:2px 0 8px">문제 없음</p>'; return; }
-    h += '<table class="dt dq-t"><tbody>' + o.items.map(x => { const fx = DQ_FIX[pg[0] + '.' + x.key];
+    const its = o.items.filter(x => !dqScopeOut(dqScopeOf(pg[0], x.key))), hid = o.items.length - its.length;
+    if(hid) h += '<p class="hint" style="margin:2px 0 4px">필터(' + esc(dqFTxt()) + ')에 해당 없는 신호 ' + hid + '개는 숨겼습니다.</p>';
+    if(!its.length) return;
+    h += '<table data-gst-nosn class="dt dq-t"><tbody>' + its.map(x => { const fx = DQ_FIX[pg[0] + '.' + x.key];
       return '<tr class="dq-' + esc(x.sev || 'warn') + '"><td>' + esc(x.label) + '</td><td class="r">'
       + esc(x.n == null ? '' : Number(x.n).toLocaleString() + (x.of == null ? '' : ' / ' + Number(x.of).toLocaleString())) + '</td><td class="hint">' + esc(x.act) + '</td>'
       + '<td class="dq-b">' + (fx ? '<button class="btn sm pri" type="button" data-dq="fix" data-fx="' + esc(pg[0] + '.' + x.key) + '">' + esc(fx.l) + '</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>';
@@ -3093,6 +3174,7 @@ function dqPagesHTML(){
 /* 신호 하나를 «고칠 자리»로 — 다른 탭이면 조건을 채워 검색까지 한다(그 탭에 그 열이 없으면 조건 없이 연다) */
 async function dqFix(id){
   const fx = DQ_FIX[id]; if(!fx) return;
+  if(fx.fn && DQ_FN[fx.fn]) return DQ_FN[fx.fn]();
   if(fx.dq) return dqShow('데이터 품질 · ' + DQ_CHECK[fx.dq].l, { p_check:fx.dq });
   if(fx.join){
     dqF().jt = fx.join; dqFSave();
@@ -3241,9 +3323,24 @@ $('dqBox').addEventListener('click', e => {
    ③ 설치현황에서 CIP 행 만들기 — 설치현황에 그 FAB 로 등록됐는데 CIP 표에 없는 S/N 만 새 행으로(edit_bulk · 이력 · 일괄 되돌리기).
    ④ 점검 항목 더하기 — import_add_cols(setup-22 · 같은 뜻의 열이 이미 있으면 안 더한다).
    ⚠ CIP 를 한 표로 합치지 않는다 — 사이트마다 표 하나(적용일자 띠가 열마다 «최초 완료일»이라 합치면 공통 항목의 숫자가 움직인다). */
-const SITE = { list:null, groups:null, rules:[], cnt:{}, err:'', all:false };
-const SITE_COLS = ['country', 'customer', 'location', 'state'];
-const SITE_L = { country:'운영단위 (법인)', customer:'고객사', location:'지역', state:'설비상태 빈칸이면' };
+const SITE = { list:null, groups:{}, rules:[], cnt:{}, err:'', gerr:{}, all:false };
+/* 사이트 정의가 걸리는 표 넷 (v161 · 사용자: 「CIP 뿐만 아니라 다른 탭도 신규 정의 필요한 거는 모두」) —
+   «그 사이트의 행»을 고르는 칸(key)이 표마다 다르다: 설치현황 FAB · 실적의 «라인»(=FAB · 조직 3계층) · 인원 «단지».
+   cols 는 «논리 이름 → 표의 실제 열» — 규칙(value_map)은 논리 이름으로 저장되고(GST.vmap 이 그 이름으로 읽는다) 값 묶음은 실제 열로 센다.
+   ⚠ 표를 하나 더하려면 core GST.vmap.spec 이 그 표를 알아야 한다(아니면 규칙이 저장만 되고 아무 화면에도 안 먹는다). */
+const SITE_TBL = [
+  { k:'inst',   name:'설치현황', tab:'inst', key:'fab',    dkey:'fab',  unit:'대', cols:{ country:'country', customer:'customer', location:'location', state:'state' } },
+  { k:'wk',     name:'수선실적', tab:'wk',   key:'line',   dkey:'line', unit:'행', cols:{ op:'op', customer:'customer' } },
+  { k:'mat',    name:'자재실적', tab:'mat',  key:'line',   dkey:'line', unit:'행', cols:{ op:'op', customer:'customer' } },
+  { k:'roster', name:'인원현황', tab:'roster', key:'campus', dkey:'단지', unit:'명', cols:{ op:'운영단위', customer:'고객사' } }
+];
+/* 정의 칸 → 표마다 어느 논리 칸에 거나 (운영단위는 설치현황에서 Country, 그 밖에서 op · 같은 낱말이다 — v98 실측) */
+const SITE_DEF = [
+  { f:'op',       l:'운영단위 (법인)', to:{ inst:'country', wk:'op', mat:'op', roster:'op' }, w:'country' },
+  { f:'customer', l:'고객사',          to:{ inst:'customer', wk:'customer', mat:'customer', roster:'customer' }, w:'customer' },
+  { f:'location', l:'지역',            to:{ inst:'location' }, w:'location' },
+  { f:'state',    l:'설비상태 빈칸이면', to:{ inst:'state' }, w:'state', raw:'' }
+];
 /* CIP 탭 하나 — 옛 F11 탭을 틀로 쓴다(열 묶음·빠른 칸·안내가 같다) */
 function addCipTab(s){
   if(KR || !s.cip_table || TAB_OF_TBL[s.cip_table]) return null;
@@ -3254,18 +3351,25 @@ function addCipTab(s){
   return t;
 }
 async function siteLoad(){
-  SITE.err = ''; SITE.list = await GST.sites(true, C);
+  SITE.err = ''; SITE.gerr = {}; SITE.list = await GST.sites(true, C);
   if(GST._siteWhy) SITE.err = GST._siteWhy === 'empty'
     ? '사이트 등록부를 읽었는데 비어 있습니다 — 등록부의 읽기 정책이 아직 없는 것입니다. Supabase SQL Editor 에서 supabase/setup-23-sites.sql 을 Run 하세요(여러 번 Run 해도 안전합니다).'
     : '사이트 등록부를 못 읽었습니다(' + GST._siteWhy + ') — Supabase SQL Editor 에서 supabase/setup-23-sites.sql 을 Run 하세요.';
   if(SITE.err) SITE.list = SITE.list.map(s => Object.assign({}, s, { fallback:true }));
+  /* 표마다 값 묶음(그 사이트 칸 × 정의 칸) — 논리 이름으로 눕힌다. 한 표가 실패해도 나머지는 보인다(실패는 그 칸에 적는다). */
+  SITE.groups = {};
+  await Promise.all(SITE_TBL.map(async T => {
+    const db = (TAB_BY[T.tab] || {}).tbl || ('sheet_' + T.k), lc = Object.keys(T.cols);
+    try{
+      const r = await C.rpc('value_groups', { p_tbl:db, p_cols:[T.dkey].concat(lc.map(c => T.cols[c])) });
+      if(r.error) throw new Error(r.error.message);
+      SITE.groups[T.k] = (r.data || []).map(g => { const o = { n:g.n }; o[T.key] = g[T.dkey]; lc.forEach(c => { o[c] = g[T.cols[c]]; }); return o; });
+    }catch(e){ SITE.groups[T.k] = []; SITE.gerr[T.k] = /bad_table/.test(e.message) ? '서버가 이 표의 값 묶음을 아직 모릅니다 — setup-23 을 Run 하세요' : (e.message || String(e)); }
+  }));
   try{
-    const r = await C.rpc('value_groups', { p_tbl:TAB_BY.inst.tbl, p_cols:['fab'].concat(SITE_COLS) });
-    if(r.error) throw new Error(r.error.message);
-    SITE.groups = r.data || [];
-    const q = await C.from('value_map').select('*').eq('tbl', 'inst');
+    const q = await C.from('value_map').select('*').in('tbl', SITE_TBL.map(T => T.k));
     SITE.rules = q.error ? [] : (q.data || []);
-  }catch(e){ SITE.groups = []; SITE.err = (SITE.err ? SITE.err + '\n' : '') + '설치현황 값 묶음을 못 읽었습니다 — ' + (e.message || e); }
+  }catch(e){ SITE.rules = []; }
   SITE.cnt = {};
   await Promise.all(SITE.list.filter(s => s.cip_table).map(async s => {
     const q = await C.from(s.cip_table).select('id', { count:'exact', head:true });
@@ -3273,32 +3377,40 @@ async function siteLoad(){
   }));
   SITE.list.forEach(addCipTab);
 }
+/* 한 표·한 사이트의 묶음과 «읽는 값» 분포 — 규칙은 대시보드와 같은 순서로 입힌다(GST.vmap.pick · vmRead) */
+const siteGs = (k, fab) => { const T = SITE_TBL.find(x => x.k === k); return (SITE.groups[k] || []).filter(g => vmK(g[T.key]) === vmK(fab)); };
+const siteBy = k => GST.vmap.compile(k, SITE.rules);
+const siteRead = (k, fab, col) => vmDist(siteGs(k, fab).map(g => [vmRead(siteBy(k), g, col), g.n]));
 async function siteRender(reload){
   const box = $('siteBox');
   if(reload || !SITE.list){ box.innerHTML = '<p class="hint">읽는 중…</p>'; await siteLoad(); renderTabs(); }
-  const by = GST.vmap.compile('inst', SITE.rules), G = SITE.groups || [];
   const fabs = new Map();
-  G.forEach(g => { const f = vs(g.fab).trim(); if(f) (fabs.get(f) || fabs.set(f, []).get(f)).push(g); });
+  (SITE.groups.inst || []).forEach(g => { const f = vs(g.fab).trim(); if(f) fabs.set(vmK(f), fabs.get(vmK(f)) || f); });
   const reg = new Map(SITE.list.map(s => [vmK(s.fab), s]));
-  const keys = Array.from(new Set(SITE.list.map(s => s.fab).concat(Array.from(fabs.keys()))));
-  const rows = keys.map(f => {
-    const s = reg.get(vmK(f)) || null, gs = fabs.get(f) || Array.from(fabs).filter(([k]) => vmK(k) === vmK(f)).flatMap(([, v]) => v);
-    const n = gs.reduce((a, g) => a + g.n, 0);
-    const d = c => vmDist(gs.map(g => [vmRead(by, g, c), g.n]));
-    const co = d('country'), cu = d('customer'), lo = d('location');
-    const reg1 = co[0] ? GST.ORG.region(co[0][0]) || GST.ORG.region(GST.ORG.country(co[0][0]) || '') : '';
-    const ruled = SITE.rules.some(r => r.when_col === 'fab' && vmK(r.when_val) === vmK(f));
-    return { f:f, s:s, n:n, co:co, cu:cu, lo:lo, reg:reg1, ruled:ruled };
-  }).sort((a, b) => (!!b.s - !!a.s) || b.n - a.n);
+  const keys = Array.from(new Set(SITE.list.map(s => vmK(s.fab)).concat(Array.from(fabs.keys()))));
+  const rows = keys.map(K => {
+    const s = reg.get(K) || null, f = s ? s.fab : fabs.get(K);
+    const n = {}; SITE_TBL.forEach(T => { n[T.k] = siteGs(T.k, f).reduce((a, g) => a + g.n, 0); });
+    const co = siteRead('inst', f, 'country'), cu = siteRead('inst', f, 'customer'), lo = siteRead('inst', f, 'location');
+    /* 표마다 «운영단위로 읽히는 값»이 갈리면 짚는다 — 가동현황 표에서 같은 사이트가 두 법인 행으로 갈라 선다(v152 의 F16S 자리) */
+    const ops = new Set(); SITE_TBL.forEach(T => { const c = T.k === 'inst' ? 'country' : 'op'; if(T.cols[c] || T.k === 'inst') siteRead(T.k, f, c).forEach(([v]) => { if(v) ops.add(v); }); });
+    const warn = ops.size > 1 ? '표마다 운영단위가 다르게 읽힘: ' + Array.from(ops).join(' · ') : '';
+    const rg = co[0] ? (GST.ORG.region(co[0][0]) || GST.ORG.region(GST.ORG.country(co[0][0]) || '')) : '';
+    const ruled = SITE.rules.some(r => r.when_col && vmK(r.when_val) === K);
+    return { f:f, s:s, n:n, co:co, cu:cu, lo:lo, reg:rg, ruled:ruled, warn:warn };
+  }).sort((a, b) => (!!b.s - !!a.s) || b.n.inst - a.n.inst);
   const show = rows.filter(r => SITE.all || r.s);
+  const cnt = (r, T) => SITE.gerr[T.k] ? '<span class="hint" title="' + esc(SITE.gerr[T.k]) + '">?</span>' : r.n[T.k] ? r.n[T.k].toLocaleString() : '<span class="hint">0</span>';
   let h = '<div class="vm-top"><button type="button" class="btn sm pri" data-st="new">+ 새 사이트 등록</button>'
     + '<label class="hint"><input type="checkbox" id="stAll"' + (SITE.all ? ' checked' : '') + '> 설치현황의 다른 FAB 도 보기 (' + rows.filter(r => !r.s).length + '개)</label>'
     + '<button type="button" class="btn sm" data-st="re">다시 읽기</button></div>'
     + '<p class="hint">사이트(FAB)를 먼저 등록하고 정의해 두면 자료가 들어오는 날부터 대시보드가 그 정의대로 읽습니다. '
-    + '정의는 «기준 정보» 규칙(FAB = 그 사이트인 설치현황 행)으로도 저장되어 여덟 화면·PPT·챗봇이 똑같이 봅니다. '
-    + '수선·자재 실적과 인원은 설비 S/N 으로 설치현황에 이어지므로 따로 정의하지 않아도 같은 사이트로 잡힙니다.</p>'
+    + '정의는 «기준 정보» 규칙으로 저장되어 <b>설치현황 · 수선실적 · 자재실적 · 인원현황</b>의 그 사이트 행에 같이 걸립니다(여덟 화면·PPT 가 똑같이 봅니다). '
+    + '사이트 행은 설치현황 FAB · 실적의 «라인» · 인원의 «단지» 칸으로 찾습니다 — 표마다 몇 행이 잡혔는지 아래에 셉니다.</p>'
     + (SITE.err ? '<div class="banner warn">' + esc(SITE.err).replace(/\n/g, '<br>') + '</div>' : '')
-    + '<table class="dt vm-t"><thead><tr><th>FAB</th><th>이름</th><th>설치현황 대수</th><th>운영단위 (읽는 값)</th><th>고객사</th><th>지역</th><th>구분</th><th>CIP</th><th></th></tr></thead><tbody>'
+    + (Object.keys(SITE.gerr).length ? '<div class="banner warn">값 묶음을 못 읽은 표: ' + esc(Object.keys(SITE.gerr).map(k => SITE_TBL.find(T => T.k === k).name + ' — ' + SITE.gerr[k]).join(' · ')) + '</div>' : '')
+    + '<table class="dt vm-t"><thead><tr><th>FAB</th><th>이름</th>' + SITE_TBL.map(T => '<th>' + esc(T.name) + '</th>').join('')
+    + '<th>운영단위 (읽는 값)</th><th>고객사</th><th>지역</th><th>구분</th><th>CIP</th><th></th></tr></thead><tbody>'
     + show.map(r => {
       const s = r.s, ro = !!SITE.err;
       const cip = s && s.cip_table ? '<b>' + (SITE.cnt[s.fab] == null ? '?' : SITE.cnt[s.fab].toLocaleString()) + '행</b> <span class="hint">' + esc(s.cip_table) + '</span>' : '<span class="hint">없음</span>';
@@ -3310,20 +3422,22 @@ async function siteRender(reload){
         act.push('<button type="button" class="btn sm" data-st="item" data-f="' + esc(r.f) + '"' + (ro ? ' disabled' : '') + '>점검 항목 더하기</button>');
         act.push('<button type="button" class="btn sm" data-st="open" data-f="' + esc(r.f) + '">CIP 열기</button>');
       }
-      return '<tr' + (s ? '' : ' class="hint"') + '><td><b>' + esc(r.f) + '</b>' + (r.ruled ? ' <span class="badge ok">규칙</span>' : '') + (s && s.fallback ? ' <span class="badge">기본</span>' : '') + '</td>'
+      return '<tr class="' + (s ? '' : 'hint') + (r.warn ? ' vm-w' : '') + '"><td><b>' + esc(r.f) + '</b>' + (r.ruled ? ' <span class="badge ok">규칙</span>' : '') + (s && s.fallback ? ' <span class="badge">기본</span>' : '') + '</td>'
         + '<td>' + esc(s ? (s.label || '') : '') + (s && s.note ? '<div class="hint">' + esc(s.note) + '</div>' : '') + '</td>'
-        + '<td>' + r.n.toLocaleString() + '</td><td>' + vmDistTxt(r.co) + '</td><td>' + vmDistTxt(r.cu) + '</td><td>' + vmDistTxt(r.lo) + '</td>'
+        + SITE_TBL.map(T => '<td data-stn="' + T.k + '">' + cnt(r, T) + '</td>').join('')
+        + '<td>' + vmDistTxt(r.co) + (r.warn ? '<div class="vm-wt">' + esc(r.warn) + '</div>' : '') + '</td><td>' + vmDistTxt(r.cu) + '</td><td>' + vmDistTxt(r.lo) + '</td>'
         + '<td>' + esc(r.reg || (s && s.region) || '') + '</td><td>' + cip + '</td><td class="st-act">' + act.join(' ') + '</td></tr>';
     }).join('') + '</tbody></table>'
     + (show.length ? '' : '<p class="hint">등록된 사이트가 없습니다.</p>');
   box.innerHTML = h;
 }
-/* 정의 창 — 등록부 한 줄 + 규칙(운영단위·고객사·지역 = 그 FAB 의 «아무 값» · 설비상태 = «빈칸»만) */
+/* 정의 창 — 등록부 한 줄 + 규칙(표마다 «그 사이트 칸 = X» 인 행 · 운영단위·고객사·지역 = 아무 값 · 설비상태 = 빈칸만).
+   «어느 표에 걸지»를 고른다 — 국내 실적처럼 «라인» 칸이 FAB 이 아닌 표에 같은 글자가 우연히 있으면 남의 행에 걸린다. */
 async function siteDefDlg(fab){
   const isNew = fab == null;
   if(isNew){
     const p = dialog('새 사이트 등록', '<p>사이트 코드(FAB)를 적습니다 — 설치현황 FAB · 실적 «라인» · 인원 «단지»에 적히는 바로 그 글자(예: F18).</p>'
-      + '<input id="stFab" style="width:100%" placeholder="F18" maxlength="16"><p class="hint">대문자 영숫자·하이픈 16자까지. 설치현황에 아직 그 FAB 이 없어도 됩니다 — 먼저 정의해 두면 자료가 들어오는 날부터 그대로 읽습니다.</p>',
+      + '<input id="stFab" style="width:100%" placeholder="F18" maxlength="16"><p class="hint">대문자 영숫자·하이픈 16자까지. 아직 어느 표에도 그 사이트가 없어도 됩니다 — 먼저 정의해 두면 자료가 들어오는 날부터 그대로 읽습니다.</p>',
       [{l:'취소', v:false}, {l:'다음', v:true, cls:'pri'}]);
     const box0 = dialog.last;
     if((await p) !== true) return;
@@ -3331,31 +3445,40 @@ async function siteDefDlg(fab){
     if(!/^[A-Z0-9][A-Z0-9-]{0,15}$/.test(fab)) return snack('사이트 코드는 대문자 영숫자·하이픈 16자까지입니다', {err:true});
   }
   const s = SITE.list.find(x => vmK(x.fab) === vmK(fab)) || null;
-  const by = GST.vmap.compile('inst', SITE.rules), gs = (SITE.groups || []).filter(g => vmK(g.fab) === vmK(fab));
-  const cur = c => SITE.rules.find(r => r.col === c && r.when_col === 'fab' && vmK(r.when_val) === vmK(fab) && r.raw === (c === 'state' ? '' : '*'));
-  const opts = c => vmDist((SITE.groups || []).map(g => [vmRead(by, g, c), g.n])).filter(([v]) => v).slice(0, 200).map(([v, n]) => '<option value="' + esc(v) + '">' + n.toLocaleString() + '행</option>').join('');
-  const val = c => { const r = cur(c); if(r) return r.val; const k = { country:'op', customer:'customer', location:'location' }[c]; return s && k && s[k] || ''; };
-  const body = '<p>FAB <b>' + esc(fab) + '</b> — 설치현황 ' + gs.reduce((a, g) => a + g.n, 0).toLocaleString() + '대. 비워 둔 칸은 원본(설치현황에 적힌 값) 그대로 읽습니다.</p>'
+  const curR = (k, col, raw) => SITE.rules.find(r => r.tbl === k && r.col === col && r.when_col === SITE_TBL.find(T => T.k === k).key && vmK(r.when_val) === vmK(fab) && r.raw === raw);
+  /* 지금 걸린 값 — 설치현황 규칙이 정본 자리(없으면 다른 표 · 없으면 등록부) */
+  const val = D => { for(const T of SITE_TBL){ const c = D.to[T.k]; if(!c) continue; const r = curR(T.k, c, D.raw != null ? D.raw : '*'); if(r) return r.val; }
+    const k = { op:'op', customer:'customer', location:'location' }[D.f]; return s && k && s[k] || ''; };
+  const used = T => SITE.rules.some(r => r.tbl === T.k && r.when_col === T.key && vmK(r.when_val) === vmK(fab));
+  const anyRule = SITE_TBL.some(used);
+  const opts = (k, col) => vmDist((SITE.groups[k] || []).map(g => [vmRead(siteBy(k), g, col), g.n])).filter(([v]) => v).slice(0, 200).map(([v, n]) => '<option value="' + esc(v) + '">' + n.toLocaleString() + '</option>').join('');
+  const nowTxt = D => SITE_TBL.filter(T => D.to[T.k]).map(T => { const d = siteRead(T.k, fab, D.to[T.k]); return d.length ? T.name + ': ' + d.slice(0, 3).map(([v, n]) => (v || '(빈칸)') + ' ' + n).join(' · ') : ''; }).filter(Boolean).join('  /  ') || '자료 없음';
+  const body = '<p>FAB <b>' + esc(fab) + '</b> — ' + SITE_TBL.map(T => T.name + ' ' + siteGs(T.k, fab).reduce((a, g) => a + g.n, 0).toLocaleString() + T.unit).join(' · ')
+    + '. 비워 둔 칸은 원본(그 표에 적힌 값) 그대로 읽습니다.</p>'
     + '<div class="vm-f"><label><b>이름</b> <span class="hint">— 주간현황 CIP 축 등에 서는 이름 (예: MICRON ' + esc(fab) + ')</span></label><input data-sf="label" value="' + esc(s ? s.label || '' : fab) + '"></div>'
-    + SITE_COLS.map(c => {
-      const d = vmDist(gs.map(g => [vmRead(by, g, c), g.n]));
-      return '<div class="vm-f"><label><b>' + esc(SITE_L[c]) + '</b></label>'
-        + '<input data-sf="' + c + '" list="stl_' + c + '" value="' + esc(val(c)) + '" placeholder="지금: ' + esc(d.map(([v, n]) => (v || '(빈칸)') + ' ' + n).join(' · ') || '자료 없음') + '">'
-        + '<datalist id="stl_' + c + '">' + (c === 'state' ? GST.EQ.IN.concat(GST.EQ.OUT).map(v => '<option value="' + esc(v) + '">').join('') : opts(c)) + '</datalist>'
-        + '<div class="hint">' + esc(VM.WHERE[c] || '') + '</div></div>';
-    }).join('')
+    + SITE_DEF.map(D => '<div class="vm-f"><label><b>' + esc(D.l) + '</b> <span class="hint">— ' + esc(SITE_TBL.filter(T => D.to[T.k]).map(T => T.name).join(' · ')) + '</span></label>'
+      + '<input data-sf="' + D.f + '" list="stl_' + D.f + '" value="' + esc(val(D)) + '" placeholder="지금: ' + esc(nowTxt(D)) + '">'
+      + '<datalist id="stl_' + D.f + '">' + (D.f === 'state' ? GST.EQ.IN.concat(GST.EQ.OUT).map(v => '<option value="' + esc(v) + '">').join('') : opts('inst', D.to.inst)) + '</datalist>'
+      + '<div class="hint">' + esc(VM.WHERE[D.w] || '') + '</div></div>').join('')
+    + '<div class="vm-f"><label><b>어느 자료에 걸까요</b></label>'
+    + SITE_TBL.map(T => { const n = siteGs(T.k, fab).reduce((a, g) => a + g.n, 0);
+        return '<label style="display:block"><input type="checkbox" data-stt="' + T.k + '"' + ((anyRule ? used(T) : true) ? ' checked' : '') + '> ' + esc(T.name)
+          + ' <span class="hint">— 「' + esc(T.k === 'inst' ? 'FAB' : T.k === 'roster' ? '단지' : '라인') + ' = ' + esc(fab) + '」 인 행 · 지금 ' + n.toLocaleString() + T.unit + '</span></label>'; }).join('')
+    + '<div class="hint">국내 실적처럼 «라인» 칸이 FAB 이 아닌 표에 같은 글자가 있으면 남의 행에 걸립니다 — 그런 표는 끄세요. 끈 표의 이 사이트 규칙은 지웁니다.</div></div>'
     + '<div class="vm-f"><label><b>메모</b></label><input data-sf="note" value="' + esc(s ? s.note || '' : '') + '"></div>'
     + '<p class="hint" id="stMean"></p>'
-    + '<p class="hint">«라인»은 사이트 하나에 정하는 값이 아닙니다 — 해외는 FAB 코드가 곧 화면의 라인이고, 그 아래 Floor 는 설비마다 설치현황에 적힌 값을 씁니다.</p>';
+    + '<p class="hint">«라인»은 사이트 하나에 정하는 값이 아닙니다 — 해외는 FAB 코드가 곧 화면의 라인이고, 그 아래 Floor 는 설비마다 설치현황에 적힌 값을 씁니다. '
+    + '교육·휴가는 사번으로 인원현황에 이어지고, 알람·올바 원장과 CIP 는 S/N 으로 설치현황에 이어지므로 따로 정의할 것이 없습니다.</p>';
   const p = dialog((isNew && !s ? '새 사이트 등록 — ' : '사이트 정의 — ') + fab, body, [{l:'취소', v:false}, {l:'저장', v:true, cls:'pri'}], true);
   const box = dialog.last;
-  const mean = () => { const v = String(box.querySelector('[data-sf="country"]').value || '').trim();
+  const mean = () => { const v = String(box.querySelector('[data-sf="op"]').value || '').trim();
     const rg = v ? (GST.ORG.region(v) || GST.ORG.region(GST.ORG.country(v) || '')) : '';
     box.querySelector('#stMean').textContent = v ? '대시보드가 읽는 구분: ' + (rg || '판정 못 함 — 「미상」으로 섭니다') + (GST.ORG.country(v) ? ' · 국가: ' + GST.ORG.country(v) : '') : ''; };
-  box.addEventListener('input', e => { if(e.target.dataset.sf === 'country') mean(); }); mean();
+  box.addEventListener('input', e => { if(e.target.dataset.sf === 'op') mean(); }); mean();
   if((await p) !== true) return;
   const F = k => String((box.querySelector('[data-sf="' + k + '"]') || {}).value || '').trim();
-  const op = F('country'), rg = op ? (GST.ORG.region(op) || GST.ORG.region(GST.ORG.country(op) || '')) : '';
+  const on = new Set(SITE_TBL.filter(T => (box.querySelector('[data-stt="' + T.k + '"]') || {}).checked).map(T => T.k));
+  const op = F('op'), rg = op ? (GST.ORG.region(op) || GST.ORG.region(GST.ORG.country(op) || '')) : '';
   const me = (GST._me && GST._me.email) || null, now = new Date().toISOString();
   const row = { fab:fab, label:F('label') || fab, op:op || null, customer:F('customer') || null, location:F('location') || null,
     region:(rg === '국내' || rg === '해외') ? rg : '', note:F('note') || null, updated_by:me, updated_at:now };
@@ -3366,10 +3489,11 @@ async function siteDefDlg(fab){
     if(q.error) throw new Error(q.error.message);
     if(!(q.data || []).length) throw new Error('저장 권한이 없습니다 — 등록부의 쓰기 정책이 아직 없으면 Supabase SQL Editor 에서 supabase/setup-23-sites.sql 을 Run 하세요');
     const rows = [], dels = [];
-    SITE_COLS.forEach(c => {
-      const v = F(c), r = cur(c), k = { tbl:'inst', col:c, raw:c === 'state' ? '' : '*', when_col:'fab', when_val:fab };
-      if(v) rows.push(Object.assign(k, { val:v })); else if(r) dels.push(k);
-    });
+    SITE_TBL.forEach(T => SITE_DEF.forEach(D => {
+      const c = D.to[T.k]; if(!c) return;
+      const raw = D.raw != null ? D.raw : '*', v = F(D.f), r = curR(T.k, c, raw), k = { tbl:T.k, col:c, raw:raw, when_col:T.key, when_val:fab };
+      if(v && on.has(T.k)) rows.push(Object.assign(k, { val:v })); else if(r) dels.push(k);
+    }));
     for(const r of dels){ const d = await C.from('value_map').delete().eq('tbl', r.tbl).eq('col', r.col).eq('raw', r.raw).eq('when_col', r.when_col).eq('when_val', r.when_val).select(); if(d.error) throw new Error(d.error.message); }
     for(const r of rows){
       const u = await C.from('value_map').upsert(Object.assign(r, { updated_by:me, updated_at:now })).select();
@@ -3377,7 +3501,7 @@ async function siteDefDlg(fab){
       if(!(u.data || []).length) throw new Error('규칙 저장 권한이 없습니다(쓰기 권한 필요)');
     }
     GST.vmap._p = null; GST._siteP = null;
-    snack('저장했습니다 — 대시보드를 새로고침하면 반영됩니다', {ms:4000});
+    snack('저장했습니다 — 규칙 ' + rows.length + '개' + (dels.length ? ' · 지움 ' + dels.length : '') + ' · 대시보드를 새로고침하면 반영됩니다', {ms:5000});
     await siteRender(true);
   }catch(e){ snack('저장 실패: ' + (e.message || e), {err:true, ms:8000}); }
 }

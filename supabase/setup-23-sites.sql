@@ -182,6 +182,27 @@ end $$;
 revoke all on function public.edit_note(text, text, text, jsonb, jsonb) from public, anon;
 grant execute on function public.edit_note(text, text, text, jsonb, jsonb) to authenticated;
 
+/* ---------- 4-b. 값 묶음(value_groups)이 인원현황도 센다 (v161) ----------
+ * 「사이트」 탭이 새 사이트의 정의를 설치현황뿐 아니라 실적·인원에도 «함께» 건다 — 그 사이트로 몇 명이 잡혔는지·지금 어떤 운영단위로
+ * 읽히는지를 보이려면 인원 표의 값 묶음이 필요하다. 식은 setup-20 그대로이고 허용 표에 인원 둘만 더했다(security invoker — RLS 그대로). */
+create or replace function public.value_groups(p_tbl text, p_cols text[])
+returns jsonb language plpgsql stable security invoker set search_path = public as $$
+declare c text; sel text := ''; r jsonb;
+begin
+  if not (p_tbl = any (array['sheet_inst','sheet_wk','sheet_mat','kr_sheet_inst','kr_sheet_wk','sheet_roster','kr_sheet_roster'])) then raise exception 'bad_table'; end if;
+  if p_cols is null or array_length(p_cols, 1) is null or array_length(p_cols, 1) > 8 then raise exception 'bad_columns'; end if;
+  foreach c in array p_cols loop
+    if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = p_tbl and column_name = c)
+      then raise exception 'bad_column: %', c; end if;
+    sel := sel || format('%I, ', c);
+  end loop;
+  execute format('select coalesce(jsonb_agg(x), ''[]''::jsonb) from (select %s count(*)::int as n from public.%I group by %s) x',
+                 sel, p_tbl, left(sel, length(sel) - 2)) into r;
+  return r;
+end $$;
+revoke all on function public.value_groups(text, text[]) from public, anon;
+grant execute on function public.value_groups(text, text[]) to authenticated;
+
 /* ---------- 5. 통째 교체가 등록된 CIP 표를 받는다 (⚠ 본문에 truncate — MCP 가 막으면 SQL Editor 에서 Run) ----------
  * setup-17 7절 그대로이고, 허용 표에 «등록된 CIP 표»만 더했다. */
 create or replace function public.csv_upload_begin(p_tbl text)

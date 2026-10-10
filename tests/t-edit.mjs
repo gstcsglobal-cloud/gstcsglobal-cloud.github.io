@@ -1969,6 +1969,11 @@ console.log('[31] 사이트 등록부 — 새 사이트를 먼저 정의하고 �
    { code:'ZF-3', sn:'ZZF-0003', country:'TAIWAN', customer:'MICRON', fab:'F18', floor:'A2', model:'MF-1', state:'반납' },
    { code:'ZF-4', sn:null, country:'TAIWAN', customer:'MICRON', fab:'F18', floor:'A3', model:'MF-1', state:'Operation' }]
     .forEach((r, i) => sd.tables.sheet_inst.push(full(INST_COLS, Object.assign({ src_row:iN + i }, r))));
+  /* v161 — 같은 사이트가 실적·인원에도 있다(표마다 «사이트 칸»이 다르다: 실적 «라인» · 인원 «단지») */
+  const wN = sd.tables.sheet_wk.length;
+  sd.tables.sheet_wk.push(full(WK_COLS, { src_row:100, rs_code:'RS-T-F18A', d_start:'2026-09-01', op:'TAIWAN', customer:'MICRON', line:'F18', stage:'BM', sn_in:'ZZF-0001' }),
+                         full(WK_COLS, { src_row:101, rs_code:'RS-T-F18B', d_start:'2026-09-02', op:'TAIWAN', customer:'MICRON', line:'F18', stage:'TBM', sn_in:'ZZF-0002' }));
+  sd.tables.sheet_roster.push(full(ROS_COLS, { id:9, '사원번호':'9100009', '이름(영문)':'Tester Nine', '단지':'F18', '운영단위':'TAIWAN', '고객사':'MICRON', '입사일':'2026-01-02' }));
   const { ctx, pg, pe } = await open(sd);
   await pg.click('.tab[data-tab=site]'); await pg.waitForFunction(() => /FAB/.test((document.getElementById('siteBox') || {}).innerText || ''), null, { timeout:8000 });
   const tx = () => pg.$eval('#siteBox', e => e.innerText);
@@ -1978,13 +1983,26 @@ console.log('[31] 사이트 등록부 — 새 사이트를 먼저 정의하고 �
   await pg.click('[data-st=new]'); await waitDlg(pg, /새 사이트 등록/);
   await pg.fill('#stFab', 'f18'); await pg.click('.mask .btn.pri');
   await waitDlg(pg, /F18/);
-  await pg.fill('[data-sf=label]', 'MICRON F18'); await pg.fill('[data-sf=country]', 'GST TAIWAN SCRUBBER'); await pg.dispatchEvent('[data-sf=country]', 'input');
+  is(/설치현황 4대 · 수선실적 2행 · 자재실적 0행 · 인원현황 1명/.test(await dlgBody(pg)), '정의 창이 표마다 그 사이트로 잡힌 행을 센다 (설치 FAB · 실적 라인 · 인원 단지)');
+  await pg.fill('[data-sf=label]', 'MICRON F18'); await pg.fill('[data-sf=op]', 'GST TAIWAN SCRUBBER'); await pg.dispatchEvent('[data-sf=op]', 'input');
+  await pg.uncheck('[data-stt=mat]');
   is(/해외/.test(await pg.$eval('#stMean', e => e.textContent)), '운영단위를 적으면 «대시보드가 읽는 구분»을 그 자리에서 보여 준다 (정본 판정)');
-  await pg.fill('[data-sf=customer]', 'TESTCO F18'); await pg.click('.mask .btn.pri'); await pg.waitForTimeout(500);
+  await pg.fill('[data-sf=customer]', 'TESTCO F18'); await pg.click('.mask .btn.pri'); await pg.waitForTimeout(700);
   const reg = await pg.evaluate(() => (window.__DB.site_registry || []).find(x => x.fab === 'F18'));
   is(reg && reg.op === 'GST TAIWAN SCRUBBER' && reg.label === 'MICRON F18' && reg.region === '해외' && !reg.cip_table, '등록부에 한 줄 (코드는 대문자 · 구분은 정본 판정으로)');
-  const vm = await pg.evaluate(() => window.__DB.value_map.filter(r => r.when_col === 'fab' && r.when_val === 'F18').map(r => r.col + '=' + r.val).sort().join('|'));
-  is(vm === 'country=GST TAIWAN SCRUBBER|customer=TESTCO F18', '정의가 «기준 정보» 규칙(FAB=F18 인 설치현황 행)으로도 저장된다 (' + vm + ')');
+  const vm = await pg.evaluate(() => window.__DB.value_map.filter(r => r.when_val === 'F18').map(r => r.tbl + '.' + r.when_col + ':' + r.col + '=' + r.val).sort().join('|'));
+  is(vm === ['inst.fab:country=GST TAIWAN SCRUBBER', 'inst.fab:customer=TESTCO F18', 'roster.campus:customer=TESTCO F18', 'roster.campus:op=GST TAIWAN SCRUBBER',
+             'wk.line:customer=TESTCO F18', 'wk.line:op=GST TAIWAN SCRUBBER'].join('|'),
+     '정의가 표마다 «기준 정보» 규칙으로 저장된다 — 설치(FAB) · 수선(라인) · 인원(단지) · 끈 자재는 안 건다 (' + vm + ')');
+  /* 규칙이 실제로 «먹는지» — core 가 인원현황에도 입힌다(fetchCSVCached 와 같은 함수) */
+  const ap = await pg.evaluate(() => { GST.vmap.rules = window.__DB.value_map.slice();
+    const R = [['사원번호','이름(영문)','단지','운영단위','고객사','입사일'], ['9100009','Tester Nine','F18','TAIWAN','MICRON','2026-01-02'], ['9100001','Tester One','Q1','OPX Scrubber','TESTCO','2024-01-02']];
+    const a = GST.vmap.apply('roster', R); return { op:a.rows[1][3], cu:a.rows[1][4], other:a.rows[2][3], same:R[1][3] }; });
+  is(ap.op === 'GST TAIWAN SCRUBBER' && ap.cu === 'TESTCO F18' && ap.other === 'OPX Scrubber' && ap.same === 'TAIWAN', '인원현황에도 규칙이 먹는다 — 그 사이트 사람만 · 원본 배열은 그대로');
+  is(await pg.evaluate(() => GST.VMAP_GID['1213453343'] === 'roster' && !!GST.vmap.spec('roster') && !GST.SM.SPEC.roster), '인원 규칙은 fetchCSVCached 의 gid 지도로 걸린다 (인원 스펙은 SM.SPEC 밖 — 미러로 오인 안 됨)');
+  await pg.click('[data-st=def][data-f=F18]'); await waitDlg(pg, /사이트 정의/);
+  is(await pg.evaluate(() => document.querySelector('[data-stt=mat]').checked === false && document.querySelector('[data-stt=wk]').checked === true), '다시 열면 «어느 자료에 걸었나»를 기억한다 (자재는 꺼진 채)');
+  await pg.click('.mask .btn'); await pg.waitForTimeout(150);
   await pg.click('[data-st=cip][data-f=F18]'); await waitDlg(pg, /CIP 표 만들기/); await pg.click('.mask .btn.pri'); await pg.waitForTimeout(500);
   is(await pg.evaluate(() => !!document.querySelector('.tab[data-tab=cip_f18]') && UP_RID.cip_f18 === 'cip_f18'), 'CIP 표를 만들면 탭 줄에 「CIP F18」 · 원본 교체는 업로드의 cip_f18 로');
   await qlog(pg);
@@ -2017,6 +2035,45 @@ console.log('[31] 사이트 등록부 — 새 사이트를 먼저 정의하고 �
   is(await b.pg.evaluate(() => /setup-23-sites\.sql/.test(document.getElementById('siteBox').innerText) && Array.from(document.querySelectorAll('#siteBox [data-st=def]')).every(x => x.disabled)),
      '등록부를 못 읽으면 «무엇을 하면 되는지»(setup-23 Run) 적고 정의 단추를 잠근다');
   await b.ctx.close();
+}
+
+console.log('[32] 화면 신호 — 국내 원장·뺀 인원도 «그 행»을 띄운다 · 데이터 품질 필터가 신호에도 걸린다 · S/N 메뉴가 끼어들지 않는다 (v162)');
+{
+  const sd = seedOf({});
+  /* K운영 알람 한 줄(ZZA-0003)만 설치현황에 이어 둔다 — 나머지 국내 원장 행(알람 0·1 · 올바 0)이 «안 이어진» 행이다. 해외 올바(GST TAIWAN)는 국내 신호가 아니다. */
+  sd.tables.sheet_inst.push(full(INST_COLS, { src_row:50, code:'ZQ-A3', sn:'ZZA0003', country:'SEC Scrubber', customer:'TESTCO', fab:'K1-A' }));
+  sd.tables.sheet_roster.push(full(ROS_COLS, { id:20, '사원번호':'9100020', '이름(영문)':'Tester Head', '단지':'Q1', '업무/직책':'단지장', '현장 인원여부':'O', '입사일':'2020-01-01' }),
+                              full(ROS_COLS, { id:21, '사원번호':'9100021', '이름(영문)':'Tester Gone', '단지':'Q1', '업무/직책':'팀장', '현장 인원여부':'O', '입사일':'2020-01-01', '퇴사일':'2025-01-01' }));
+  const { ctx, pg, pe } = await open(sd);
+  await ctx.addInitScript(() => {
+    window.__DQ = { rows:0, work24:0, endlt:0, future:0, manmis:0, mannull:0, spikes:[] };
+    if (!sessionStorage.getItem('dq32')) { sessionStorage.setItem('dq32', '1'); localStorage.removeItem('gst_edit_dqf');
+      localStorage.setItem('gst_dq_report', JSON.stringify({ at:Date.now() - 600e3, filter:'전체', items:[
+        { key:'div_join', sev:'info', label:'국내 실적 행에 사업부가 안 붙었습니다', n:5, of:9, act:'데이터 관리 › 데이터 품질 › 설치현황 연결에서 어느 운영단위·S/N 인지 보고 고치세요' },
+        { key:'kr_join', sev:'info', label:'국내 원장 행이 설치현황과 안 이어졌습니다', n:3, of:6, act:'원장의 SEQP S/N 표기를 설치현황 S/N 과 맞추세요' },
+        { key:'head_ex', sev:'info', label:'공수 분모에서 뺀 인원 — 단지장 1명', n:1, act:'인원현황의 직책·단지·라인 값을 확인하세요' } ] })); }
+  });
+  await pg.goto(BASE + '/edit/?tab=dq', { waitUntil:'domcontentloaded' });
+  await pg.waitForFunction(() => /국내 원장 행이 설치현황과/.test((document.getElementById('dqBox') || {}).innerText || ''), null, { timeout:10000 });
+  /* 머리 줄 없는 표의 첫 줄 «…S/N 인지…» 가 S/N 머리글로 읽혀 그 열 전체에 설비 메뉴가 붙던 자리 */
+  const actTd = await pg.evaluateHandle(() => Array.from(document.querySelectorAll('#dqBox td')).find(td => /SEQP S\/N 표기/.test(td.textContent)));
+  await actTd.asElement().click(); await pg.waitForTimeout(200);
+  is(await pg.evaluate(() => !document.getElementById('gstSnMenu')), '신호의 «무엇을 하면 되나» 칸을 눌러도 설비(S/N) 메뉴가 뜨지 않는다');
+  await pg.click('[data-fx="report.kr_join"]'); await pg.waitForTimeout(900);
+  is(await pg.evaluate(() => S.tab) === 'alarm' && (await listKeys(pg)).sort().join() === '0,1', '「안 이어진 원장 행 보기」 → 알람 탭에 안 이어진 국내 행만 (이어진 K 행은 빠진다)');
+  is(/올바이패스에도 1행/.test(await snackText(pg)), '올바이패스 쪽에도 있으면 알리고 단추로 연다');
+  await pg.click('#snack button'); await pg.waitForTimeout(600);
+  is(await pg.evaluate(() => S.tab) === 'abp' && (await listKeys(pg)).join() === '0', '올바이패스 탭 — 국내 행만 (해외 올바는 국내 신호에 안 든다)');
+  await pg.click('.tab[data-tab=dq]'); await pg.waitForTimeout(500);
+  await pg.click('[data-fx="report.head_ex"]'); await pg.waitForTimeout(700);
+  is(await pg.evaluate(() => S.tab) === 'roster' && (await listKeys(pg)).join() === '20', '「뺀 인원 보기」 → 인원현황에 단지장(현장·재직)만 — 퇴사한 팀장은 빠진다 (GST.HEAD_EX 그대로)');
+  await pg.click('.tab[data-tab=dq]'); await pg.waitForTimeout(500);
+  await pg.selectOption('[data-dqf=reg]', 'os'); await pg.waitForTimeout(700);
+  const box = await pg.$eval('#dqBox', e => e.innerText);
+  is(!/국내 원장 행이 설치현황과/.test(box) && !/국내 실적 행에 사업부/.test(box) && /공수 분모에서 뺀 인원/.test(box) && /해당 없는 신호 2개는 숨겼습니다/.test(box),
+     '구분 해외로 걸면 국내 신호(원장·국내 실적)는 숨기고 몇 개 숨겼는지 적는다');
+  is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
+  await ctx.close();
 }
 
 await browser.close();

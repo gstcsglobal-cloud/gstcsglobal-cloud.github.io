@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=160"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=161"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -170,7 +170,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=160">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=161">
 </head>
 <body>
 
@@ -3019,27 +3019,31 @@ function render(){ GST.dq&&GST.dq.reset('report');
        ⚠ 노트의 문장은 그대로 둔다(v92 규약 — Alarm 차트 주석 맨 앞이 그 자리다).
          여기는 «모으는 자리»이지 옮기는 자리가 아니다. */
     if(GST.dq){
+      /* 국내 원장·국내 실적 신호는 필터가 국내를 «빼면» 안 낸다 (v162 · 사용자: 「필터 걸면 필터에 해당하는 것만」).
+         그 수들은 필터와 무관하게 국내 전체를 센 것이라, 해외로 건 화면의 품질 목록에 서면 그 화면과 상관없는 말을 한다. */
+      const krOff=(axHas('region')&&axList('region').indexOf(GST.ORG.REGION_KR)<0)
+        ||(axHas('op')&&!axList('op').some(o=>GST.ALARM.region(o)===GST.ORG.REGION_KR));
       if(window._MHW && window._MHW.length)
         GST.dq.push({key:'wk_24h', sev:'warn', label:t('dq_mhw'), n:window._MHW.length, act:t('dq_mhw_a')});
-      if(!KR_ON && window._KRWHY)
+      if(!krOff && !KR_ON && window._KRWHY)
         GST.dq.push({key:'kr_alarm', sev:'warn', label:t('dq_kra')+' — '+window._KRWHY, act:t('dq_kra_a')});
-      if(window._KRWHYB)
+      if(!krOff && window._KRWHYB)
         GST.dq.push({key:'kr_abp', sev:'warn', label:t('dq_krb')+' — '+window._KRWHYB, act:t('dq_krb_a')});
       const dj=window._DIVJOIN;
-      if(dj && dj.n && dj.hit<dj.n)
+      if(!krOff && dj && dj.n && dj.hit<dj.n)
         GST.dq.push({key:'div_join', sev:'info', label:t('dq_divj'), n:dj.n-dj.hit, of:dj.n, act:t('dq_divj_a')});
       const kj=window._KRJOIN;
-      if(kj && kj.n && kj.hit<kj.n)
+      if(!krOff && kj && kj.n && kj.hit<kj.n)
         GST.dq.push({key:'kr_join', sev:'info', label:t('dq_krj'), n:kj.n-kj.hit, of:kj.n, act:t('dq_krj_a')});
       /* v136 에 카드 주석에서 «옮겨 온» 둘. 카드는 「몇 건 빠졌나」만 적고(사실),
          「어떤 낱말이 잡혔나」는 여기서 전량을 적는다(진단) — /diag/ 가 같은 것을 받는다.
          ⚠ 카드가 상위 셋만 적으므로 여기가 전량을 안 받으면 나머지는 «아무 데도» 없게 된다. */
       { const dr=window._KRDROP;
-        if(dr && dr.length)
+        if(!krOff && dr && dr.length)
           GST.dq.push({key:'kr_drop', sev:'info', label:t('dq_drop')+' — '+GST.topN(dr, 99, t('u_case')),
                        n:dr.reduce((s,e)=>s+e.n,0), act:t('dq_drop_a')}); }
       { const rn=window._KRRND;
-        if(rn && rn.length)
+        if(!krOff && rn && rn.length)
           GST.dq.push({key:'kr_rnd', sev:'info',
                        label:t('dq_rnd').replace('{v}',GST.ORG.RND)+' — '+GST.topN(rn, 99, t('u_case')),
                        n:rn.reduce((s,e)=>s+e.n,0), act:t('dq_rnd_a')}); }
