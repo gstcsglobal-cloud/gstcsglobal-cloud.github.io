@@ -8,9 +8,9 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=173"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=174"></script>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=173">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=174">
 <style>
 /* ============================================================
    분석 작업대 (v168 · 사용자 요청 「통합관리화면」 4단계)
@@ -144,6 +144,7 @@ ko:{title:'맞춤 분석',sub:'표 · 축 · 값을 골라 차트를 만들고, 
   src_wk:'수선실적',src_mat:'자재실적',src_inst:'설치현황',
   new_board_n:'새 보드',my:'내 보드',shared_by:'공유 · {o}',local:'이 PC 에만 저장됨',
   saved:'보드를 저장했습니다',removed:'보드를 감췄습니다',fail:'저장하지 못했습니다',added:'보드에 넣었습니다',empty_board:'아직 차트가 없습니다 — 왼쪽에서 만들고 「보드에 추가」',
+  nosql_v:'보드는 이 PC 에만 저장됩니다',
   nosql:'서버 준비가 아직 안 됐습니다 — 보드는 이 PC 에만 저장됩니다(관리자가 supabase/setup-25-layouts.sql 을 Run 하면 계정에 저장됩니다)',
   not_yours:'남의 보드는 고칠 수 없습니다 — 「새 보드」로 복사해 저장하세요',
   edit:'고치기',del:'빼기',up:'위로',loading:'자료를 불러오는 중…',fail_src:'이 자료를 읽지 못했습니다',
@@ -158,6 +159,7 @@ en:{title:'Custom analysis',sub:'Pick a table · axis · value to build charts, 
   src_wk:'Repair records',src_mat:'Material records',src_inst:'Installations',
   new_board_n:'New board',my:'My boards',shared_by:'Shared · {o}',local:'Saved on this PC only',
   saved:'Board saved',removed:'Board hidden',fail:'Could not save',added:'Added to board',empty_board:'No charts yet — build one on the left and «Add to board»',
+  nosql_v:'Boards are saved on this PC only',
   nosql:'Server is not ready — boards are saved on this PC only (an administrator must run supabase/setup-25-layouts.sql)',
   not_yours:'You cannot change someone else\'s board — use «New board» to save a copy',
   edit:'Edit',del:'Remove',up:'Up',loading:'Loading…',fail_src:'Could not read this data',
@@ -172,6 +174,7 @@ zh:{title:'自定义分析',sub:'选择表 · 轴 · 值来制作图表，并保
   src_wk:'维修实绩',src_mat:'材料实绩',src_inst:'安装现况',
   new_board_n:'新看板',my:'我的看板',shared_by:'共享 · {o}',local:'仅保存在此电脑',
   saved:'已保存看板',removed:'已隐藏看板',fail:'保存失败',added:'已加入看板',empty_board:'还没有图表 — 在左侧制作后点「加入看板」',
+  nosql_v:'看板仅保存在此电脑',
   nosql:'服务器尚未准备好 — 看板仅保存在此电脑（管理员运行 supabase/setup-25-layouts.sql 后可保存到账号）',
   not_yours:'不能修改他人的看板 — 请用「新看板」另存',
   edit:'修改',del:'移除',up:'上移',loading:'正在加载…',fail_src:'无法读取此数据',
@@ -186,6 +189,7 @@ ja:{title:'カスタム分析',sub:'表 · 軸 · 値を選んでチャートを
   src_wk:'修理実績',src_mat:'資材実績',src_inst:'設置現況',
   new_board_n:'新しいボード',my:'自分のボード',shared_by:'共有 · {o}',local:'このPCにのみ保存',
   saved:'ボードを保存しました',removed:'ボードを隠しました',fail:'保存できませんでした',added:'ボードに追加しました',empty_board:'まだチャートがありません — 左で作って「ボードに追加」',
+  nosql_v:'ボードはこのPCにのみ保存されます',
   nosql:'サーバーの準備ができていません — ボードはこのPCにのみ保存されます（管理者が supabase/setup-25-layouts.sql を実行するとアカウントに保存）',
   not_yours:'他人のボードは変更できません — 「新しいボード」で複製して保存してください',
   edit:'修正',del:'外す',up:'上へ',loading:'読み込み中…',fail_src:'このデータを読めませんでした',
@@ -375,7 +379,7 @@ async function loadBoards(){
     } else S.sql=false;
   }catch(e){ S.sql=false; }
   if(!S.sql) S.boards=localBoards().map((b,i)=>Object.assign({id:'L'+i}, b));
-  document.getElementById('warn').innerHTML=S.sql?'':'<div class="sd-warn">'+esc(t('nosql'))+'</div>';
+  document.getElementById('warn').innerHTML=S.sql?'':'<div class="sd-warn">'+esc(t(GST.isAdmin&&GST.isAdmin()?'nosql':'nosql_v'))+'</div>';
   drawBoardSel();
 }
 function drawBoardSel(){

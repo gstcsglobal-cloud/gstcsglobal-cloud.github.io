@@ -221,10 +221,13 @@ await pg.close(); await ctx.close();
 console.log('[3] 셸 — 부팅 화면');
 ctx = await ctxOf(); let ps = await ctx.newPage(); watch(ps);
 await ps.goto(BASE + '/', { waitUntil:'domcontentloaded' }); await ps.waitForTimeout(500);
-const b0 = await ps.evaluate(() => { const b = document.getElementById('boot'); return b ? { pe: getComputedStyle(b).pointerEvents, z: getComputedStyle(b).zIndex } : null; });
+/* 한 번의 evaluate 로 같이 읽는다 — 둘로 나누면 그 사이에 부팅 화면이 걷혀(부하가 걸린 상자에서 실제로) 앞은 «있다», 뒤는 «빈 글자»가 된다 */
+const b0l = await ps.evaluate(() => { const b = document.getElementById('boot'); return b ? { pe: getComputedStyle(b).pointerEvents, z: getComputedStyle(b).zIndex,
+  log:!!document.getElementById('bootLog'), txt:b.textContent || '', pct:(document.getElementById('bootPct') || {}).textContent || '' } : null; });
+const b0 = b0l;
 /* v178 — 부팅 화면에 «무엇을 읽는지» 목록을 두지 않는다(사용자 지시 「로딩 화면에 수선실적·설치현황 이런 거 그냥 빼」) · 진행률은 실제 읽기에서 온다.
    «떠 있는 그 순간»에 읽는다 — 읽기가 빨리 끝나면 1.8초 뒤에는 이미 걷혀 있어(정상) 검사가 빈 글자를 본다 */
-const lg = await ps.evaluate(() => ({ log:!!document.getElementById('bootLog'), txt:(document.getElementById('boot') || {}).textContent || '', pct:(document.getElementById('bootPct') || {}).textContent || '' }));
+const lg = b0l || { log:false, txt:'', pct:'' };
 is(!!b0 && b0.pe === 'none', '세션 첫 화면에 부팅 화면이 뜬다 · 누르는 것을 막지 않는다(pointer-events none)');
 await ps.waitForTimeout(1300);
 is(!lg.log && !/수선|설치|sheet_|행/.test(lg.txt) && /%$/.test(lg.pct), '부팅 화면 — 자료 이름·표 이름·행 수 목록이 없다 · 원과 진행률만 (' + lg.pct + ')');

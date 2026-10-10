@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 173;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 174;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -59,28 +59,28 @@ GST.FLT_T = {
   ko:{ axes:{region:'구분', op:'운영단위', div:'사업부', customer:'고객사', campus:'단지', line:'라인', line2:'라인2', team:'팀', period:'기간'},
        grpEq:'설비 기준', grpEqNote:'설치·실적', grpHr:'인원 기준', grpHrNote:'인원현황', hrPrefix:'인원 ',
        all:'전체', emptyNone:'전체 (이 화면 미적용)', emptyFilt:'전체 (필터에 해당 없음)',
-       own:'이 페이지 전용', ownPeriod:'이 페이지 전용 · 기간', filters:'필터 · Filters', dtOwn:'이 화면은 자체 기준일을 씁니다',
+       own:'이 페이지 전용', ownPeriod:'이 페이지 전용 · 기간', filters:'상세 필터', dtOwn:'이 화면은 자체 기준일을 씁니다',
        selAll:'전체 선택', selNone:'전체 해제', reset:'↺ 초기화', csvTitle:'현재 필터가 적용된 표를 CSV 로 내려받습니다',
        autoTitle:'{n}분마다 데이터만 다시 불러옵니다. 필터는 유지됩니다.', auto:'⟳ 자동 {n}분',
        p1m:'1개월', p3m:'3개월', p6m:'6개월', p1y:'1년', pall:'전체', chipsActive:'활성 필터', chipsClear:'전체 해제' },
   en:{ axes:{region:'Region', op:'Entity', div:'Division', customer:'Customer', campus:'Site', line:'Line', line2:'Line 2', team:'Team', period:'Period'},
        grpEq:'Equipment', grpEqNote:'install · records', grpHr:'People', grpHrNote:'roster', hrPrefix:'People ',
        all:'All', emptyNone:'All (not applicable here)', emptyFilt:'All (none under current filters)',
-       own:'This page only', ownPeriod:'This page only · period', filters:'Filters', dtOwn:'This page uses its own reference date',
+       own:'This page only', ownPeriod:'This page only · period', filters:'More filters', dtOwn:'This page uses its own reference date',
        selAll:'Select all', selNone:'Clear', reset:'↺ Reset all', csvTitle:'Download the filtered table as CSV',
        autoTitle:'Reloads data every {n} min. Filters are kept.', auto:'⟳ Auto {n} min',
        p1m:'1 mo', p3m:'3 mo', p6m:'6 mo', p1y:'1 yr', pall:'All', chipsActive:'Active filters', chipsClear:'Clear all' },
   zh:{ axes:{region:'区分', op:'运营单位', div:'事业部', customer:'客户', campus:'园区', line:'线', line2:'线2', team:'团队', period:'期间'},
        grpEq:'设备基准', grpEqNote:'安装·实绩', grpHr:'人员基准', grpHrNote:'人员现况', hrPrefix:'人员 ',
        all:'全部', emptyNone:'全部 (此页面不适用)', emptyFilt:'全部 (当前筛选无匹配)',
-       own:'仅此页面', ownPeriod:'仅此页面 · 期间', filters:'筛选 · Filters', dtOwn:'此页面使用自己的基准日',
+       own:'仅此页面', ownPeriod:'仅此页面 · 期间', filters:'详细筛选', dtOwn:'此页面使用自己的基准日',
        selAll:'全选', selNone:'全部取消', reset:'↺ 重置', csvTitle:'下载当前筛选的表格 (CSV)',
        autoTitle:'每{n}分钟仅重新加载数据，筛选保持不变。', auto:'⟳ 自动 {n}分',
        p1m:'1个月', p3m:'3个月', p6m:'6个月', p1y:'1年', pall:'全部', chipsActive:'活动筛选', chipsClear:'全部清除' },
   ja:{ axes:{region:'区分', op:'運営単位', div:'事業部', customer:'顧客', campus:'団地', line:'ライン', line2:'ライン2', team:'チーム', period:'期間'},
        grpEq:'設備基準', grpEqNote:'設置·実績', grpHr:'人員基準', grpHrNote:'人員現況', hrPrefix:'人員 ',
        all:'全体', emptyNone:'全体 (この画面は対象外)', emptyFilt:'全体 (現在のフィルタに該当なし)',
-       own:'このページ専用', ownPeriod:'このページ専用 · 期間', filters:'フィルタ · Filters', dtOwn:'この画面は独自の基準日を使います',
+       own:'このページ専用', ownPeriod:'このページ専用 · 期間', filters:'詳細フィルター', dtOwn:'この画面は独自の基準日を使います',
        selAll:'全て選択', selNone:'全て解除', reset:'↺ リセット', csvTitle:'現在のフィルタ適用表を CSV で保存',
        autoTitle:'{n}分ごとにデータだけ再読み込みします。フィルタは維持されます。', auto:'⟳ 自動 {n}分',
        p1m:'1ヶ月', p3m:'3ヶ月', p6m:'6ヶ月', p1y:'1年', pall:'全体', chipsActive:'有効フィルタ', chipsClear:'全解除' }
@@ -110,7 +110,7 @@ GST.STA_T = {
        failRead:'자료를 읽지 못했습니다 — 새로고침해 보고, 계속되면 관리자에게 알려 주세요',
        failGen:'데이터를 불러오지 못했습니다 — 새로고침해 보고, 계속되면 관리자에게 알려 주세요',
        emptyFilt:'현재 필터에 맞는 행이 없습니다 — 필터를 지우면 {n}건', emptyClear:'필터 해제',
-       emptyTable:'이 화면이 보는 표에 행이 없습니다 — 관리자에게 알려 주세요', emptyRows:'해당 행이 없습니다' },
+       emptyTable:'이 화면이 보는 표에 행이 없습니다 — 관리자에게 알려 주세요', emptyRows:'해당 행이 없습니다', loading:'⏳ 데이터 불러오는 중…', noRows:'⚠ 받은 자료에 행이 없습니다 — 원본의 머리글을 확인해 주세요' },
   en:{ stale:'📡 Sheet unreachable — showing cached data ({n} min old)', staleNoAge:'📡 Sheet unreachable — showing cached data',
        failAuth:'Session expired or no permission — sign in again',
        failNet:'Could not reach the server — check the network and refresh',
@@ -118,7 +118,7 @@ GST.STA_T = {
        failRead:'Could not read the data — refresh, and tell the admin if it persists',
        failGen:'Failed to load data — refresh, and tell the admin if it persists',
        emptyFilt:'No rows match the current filters — clearing them shows {n}', emptyClear:'Clear filters',
-       emptyTable:'The table this page reads has no rows — tell the admin', emptyRows:'No rows' },
+       emptyTable:'The table this page reads has no rows — tell the admin', emptyRows:'No rows', loading:'⏳ Loading data…', noRows:'⚠ The data has no rows — check the headers in the source file' },
   zh:{ stale:'📡 无法连接表格 — 显示缓存({n}分钟前)', staleNoAge:'📡 无法连接表格 — 显示缓存',
        failAuth:'登录已过期或无权限 — 请重新登录',
        failNet:'无法连接服务器 — 请检查网络后刷新',
@@ -126,7 +126,7 @@ GST.STA_T = {
        failRead:'无法读取数据 — 请刷新，若持续请联系管理员',
        failGen:'数据加载失败 — 请刷新，若持续请联系管理员',
        emptyFilt:'当前筛选无匹配行 — 清除筛选可见 {n} 行', emptyClear:'清除筛选',
-       emptyTable:'此页面读取的表没有行 — 请联系管理员', emptyRows:'无对应行' },
+       emptyTable:'此页面读取的表没有行 — 请联系管理员', emptyRows:'无对应行', loading:'⏳ 正在加载数据…', noRows:'⚠ 收到的数据没有行 — 请检查原始文件的表头' },
   ja:{ stale:'📡 シート接続失敗 — キャッシュ表示中({n}分前)', staleNoAge:'📡 シート接続失敗 — キャッシュ表示中',
        failAuth:'ログインが切れたか権限がありません — 再ログインしてください',
        failNet:'サーバーに接続できません — ネットワークを確認して更新してください',
@@ -134,9 +134,32 @@ GST.STA_T = {
        failRead:'データを読めませんでした — 更新しても続く場合は管理者へ',
        failGen:'データを読み込めませんでした — 更新しても続く場合は管理者へ',
        emptyFilt:'現在のフィルタに合う行がありません — 解除すると {n} 件', emptyClear:'フィルタ解除',
-       emptyTable:'この画面が読む表に行がありません — 管理者へ', emptyRows:'該当行なし' }
+       emptyTable:'この画面が読む表に行がありません — 管理者へ', emptyRows:'該当行なし', loading:'⏳ データを読み込み中…', noRows:'⚠ 受け取ったデータに行がありません — 元ファイルの見出しを確認してください' }
 };
 GST._staT = function(){ var l=(GST._lang && GST._lang()) || 'ko'; return GST.STA_T[l] || GST.STA_T.ko; };
+/* 상태줄의 «성공» 한 줄 (v179) — 조회자에게는 «언제 받았나»만, 행 수·버전 같은 메타 정보는 관리자에게만(A-4).
+   예전에는 여섯 화면이 「✅ 시각 · 설비 1,234 · 작업 25만 · v50」을 누구에게나 찍었다. */
+/* 범위 띠(GST.filters · v179) 문구 — 축 이름은 GST.FLT_T.axes 를 쓴다(사이드바와 같은 글자) */
+GST.BAND_T = {
+  ko:{ aria:'보는 범위', all:'전체', none:'전체 (이 화면 미적용)', multi:'{n}개 선택 (상세 필터)', kr:'국내', os:'해외',
+       more:'상세 필터', clear:'해제', p_30:'30일', p_90:'90일', p_ytd:'올해', p_all:'전체 기간',
+       unmatched:'{a} 미기재 인원 {n}명은 이 범위에 안 들어갑니다' },
+  en:{ aria:'Scope', all:'All', none:'All (not on this page)', multi:'{n} selected (more filters)', kr:'Korea', os:'Overseas',
+       more:'More filters', clear:'Clear', p_30:'30d', p_90:'90d', p_ytd:'YTD', p_all:'All time',
+       unmatched:'{n} people with no {a} are outside this scope' },
+  zh:{ aria:'查看范围', all:'全部', none:'全部 (此页面不适用)', multi:'已选 {n} 项 (详细筛选)', kr:'国内', os:'海外',
+       more:'详细筛选', clear:'清除', p_30:'30天', p_90:'90天', p_ytd:'今年', p_all:'全部期间',
+       unmatched:'{a} 未填写的 {n} 名人员不在此范围内' },
+  ja:{ aria:'表示範囲', all:'全体', none:'全体 (この画面は対象外)', multi:'{n}件選択 (詳細フィルター)', kr:'国内', os:'海外',
+       more:'詳細フィルター', clear:'解除', p_30:'30日', p_90:'90日', p_ytd:'今年', p_all:'全期間',
+       unmatched:'{a} 未記入の {n} 名はこの範囲に入りません' }
+};
+GST.okText = function(meta){
+  const lang = (GST._lang && GST._lang()) || 'ko';
+  const ts = new Date().toLocaleString(lang==='ko'?'ko-KR':lang==='zh'?'zh-CN':lang==='ja'?'ja-JP':'en-US');
+  const adm = !!(GST.isAdmin && GST.isAdmin());
+  return '✅ ' + ts + (adm && meta ? ' · ' + meta : '');
+};
 GST.staleText = function(ageMin){
   const T = GST._staT();
   return (ageMin==null || isNaN(ageMin)) ? T.staleNoAge : T.stale.replace('{n}', String(ageMin));
@@ -4846,6 +4869,36 @@ GST.FILL_T = {
   ja:'ⓘ この項目のシート入力率は {p}% ({g}/{n}件) です。入力が溜まればこのチャートは自動的に埋まります。'
 };
 GST.FILL_MIN = 30;
+/* 입력률이 낮은 차트는 «접는다» (v179 · 사용자 위임 «핵심만»). 실측 알람유형 0.3% · 현상·원인·조치 ~10% 라
+   그 차트는 대부분 「미기재」 한 막대다 — 결론 화면을 차지할 값이 없다. 지우지 않고 접는다: 카드에 «입력률 N% — 차트 보기»
+   단추 한 줄만 남기고, 누르면 펼친다(그 카드만 · 이 세션 동안 기억). 입력률이 30% 를 넘으면 저절로 펼쳐진다(안내도 사라진다).
+   ⚠ 단추 글자에 입력률을 싣는다 — 설명 숨김(.fill-hint 는 설명이라 숨는다)에서도 «왜 접혔나»가 보여야 한다. 인쇄에서는 펼친다. */
+GST.FOLD_T = {
+  ko:{show:'입력률 {p}% — 차트 보기', hide:'접기'},
+  en:{show:'{p}% filled — show chart', hide:'Collapse'},
+  zh:{show:'填写率 {p}% — 显示图表', hide:'收起'},
+  ja:{show:'入力率 {p}% — グラフを表示', hide:'折りたたむ'}
+};
+GST._foldSet = function(card, pct){
+  let bt=card.querySelector('.gst-foldbtn');
+  if(pct==null){ card.classList.remove('gst-fold'); if(bt) bt.remove(); return; }
+  if(!bt){
+    bt=document.createElement('button'); bt.type='button'; bt.className='gst-foldbtn';
+    bt.addEventListener('click', function(e){
+      e.stopPropagation();
+      const open=card.classList.contains('gst-fold');
+      card.classList.toggle('gst-fold', !open); card.dataset.gstUnfold=open?'1':'';
+      GST._foldSet(card, +bt.dataset.p);
+      if(open && window.Chart && Chart.getChart){ [].forEach.call(card.querySelectorAll('canvas'), function(cv){ try{ const ch=Chart.getChart(cv); if(ch) ch.resize(); }catch(err){} }); }
+    });
+    card.insertBefore(bt, card.querySelector('.fill-hint') || card.querySelector('.cw') || null);
+  }
+  bt.dataset.p=pct;
+  if(card.dataset.gstUnfold!=='1') card.classList.add('gst-fold');
+  const T=GST.FOLD_T[(GST._lang && GST._lang()) || 'ko'] || GST.FOLD_T.ko;
+  bt.textContent=card.classList.contains('gst-fold') ? T.show.replace('{p}', pct) : T.hide;
+  bt.setAttribute('aria-expanded', card.classList.contains('gst-fold') ? 'false' : 'true');
+};
 GST.fillHint = function(canvasId, rows, key, altKey){
   const cv=document.getElementById(canvasId); if(!cv || !cv.closest) return null;
   const card=cv.closest(GST.CARD_SEL || '.card'); if(!card) return null;
@@ -4854,11 +4907,12 @@ GST.fillHint = function(canvasId, rows, key, altKey){
   const got=rows.filter(function(r){
     return String(r[key]||'').trim() || (altKey && String(r[altKey]||'').trim()); }).length;
   const pct=n?Math.round(got/n*100):0;
-  if(!n || pct>=GST.FILL_MIN){ if(el) el.remove(); return null; }
+  if(!n || pct>=GST.FILL_MIN){ if(el) el.remove(); GST._foldSet(card, null); return null; }
   if(!el){ el=document.createElement('div'); el.className='fill-hint';
     card.insertBefore(el, card.querySelector('.cw')||null); }
   const T=GST.FILL_T[(GST._lang && GST._lang()) || 'ko'] || GST.FILL_T.ko;
   el.textContent=T.replace('{p}',pct).replace('{g}',got.toLocaleString()).replace('{n}',n.toLocaleString());
+  GST._foldSet(card, pct);
   return {n:n, got:got, pct:pct};
 };
 
@@ -5209,12 +5263,21 @@ GST._bfNote = function(table, on){
   if(!Object.keys(GST._bfOn).length){ if(el) el.remove(); return; }
   if(!el){
     el = document.createElement('div'); el.id = 'gstBackfill';
+    /* 색은 테마 토큰으로(v179) — 예전에는 밝은 파랑을 박아 두어 다크(기본)에서 흰 알약이 떴다 */
     el.style.cssText = 'position:fixed;right:12px;bottom:40px;z-index:999998;padding:5px 11px;'+
-      'border-radius:999px;background:#EAF1FE;color:#1D4ED8;border:1px solid #C7D7FB;font:11px/1.5 \'Pretendard Variable\',Pretendard,system-ui,-apple-system,sans-serif;'+
+      'border-radius:999px;background:var(--accent-soft,#EAF1FE);color:var(--accent-ink,var(--accent,#1D4ED8));border:1px solid var(--line-2,#C7D7FB);font:11px/1.5 \'Pretendard Variable\',Pretendard,system-ui,-apple-system,sans-serif;'+
       'font-weight:700;opacity:.92;pointer-events:none';
     document.body.appendChild(el);
   }
-  el.textContent = '⏳ 최근 '+((GST.DB_WINDOW_MONTHS||12)+1)+'개월 먼저 표시 — 전체 이력 받는 중 (누적·연간 지표는 곧 갱신)';
+  const T = GST.BF_T[(GST._lang && GST._lang()) || 'ko'] || GST.BF_T.ko;
+  el.textContent = T.replace('{m}', (GST.DB_WINDOW_MONTHS||12)+1);
+};
+/* 네 언어 — core 의 문구는 GST.XXX_T 사전 규약(v135 · 5단계) */
+GST.BF_T = {
+  ko:'⏳ 최근 {m}개월 먼저 표시 — 전체 이력 받는 중 (누적·연간 지표는 곧 갱신)',
+  en:'⏳ Showing the last {m} months first — loading full history (cumulative/annual figures update shortly)',
+  zh:'⏳ 先显示最近 {m} 个月 — 正在加载全部历史 (累计·年度指标稍后更新)',
+  ja:'⏳ 直近 {m} ヶ月を先に表示 — 全履歴を読み込み中 (累計·年間指標はまもなく更新)'
 };
 GST._bfKick = function(){
   /* 아직 받는 중인 표가 있으면 기다린다 — 여기서 그리면 그 표가 «부분»인 채로 다시
@@ -5590,6 +5653,138 @@ GST.filters = (function(){
       el.title = hasD ? '' : _T().dtOwn; });
     if(!hasD){ F.dtFrom=''; F.dtTo=''; }
     if(a) a.value=F.dtFrom; if(b) b.value=F.dtTo;
+    try{ bandDraw(hasD); }catch(e){ console.warn('[filters] band', e); }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     범위 띠 (v179 · 사용자 요청 「다른 페이지 필터도 글로벌 현황처럼 심플하면서 완벽하게」)
+     페이지 맨 위 한 줄 — 구분 · 운영단위 · 단지 · 기간. 사이드바는 «상세 필터»로 남는다.
+     ⚠ 띠는 «두 벌 모두»에 건다(setBoth) — 인당 지표의 분자(설비)와 분모(인원)가 같은 범위를 봐야
+       한다(v112·v114 의 10.8h 사고). 사이드바에서 한쪽만 좁히는 길은 그대로 열려 있다(상세 필터).
+     ⚠ 목록은 새로 세지 않는다 — refreshGroup 이 방금 센 LAST(다른 축으로 좁힌 «실제로 있는 값»)를
+       두 벌 합쳐 쓴다. 따로 세면 띠와 사이드바가 다른 목록을 낸다(제2원칙) · 25만 행을 한 번 더 돌지도 않는다.
+     ⚠ 판정 규칙은 그대로다 — 띠는 F 에 값을 넣을 뿐이고 거르는 일은 pass()/passH() 가 한다.
+     · 두 벌의 값이 다르거나 여럿을 골랐으면(사이드바에서) 띠는 «N개 선택»을 보이고 그 값을 덮지 않는다.
+     · 인원에 그 축 값이 빈 사람은 범위를 걸면 빠진다 — 몇 명인지 띠에 적는다(조용히 빼지 않는다 · 실측
+       인원현황 재직 478명 중 운영단위 공란 76명). 고칠 곳은 인원현황 원본이다.
+     ══════════════════════════════════════════════════════════════════════ */
+  const BAND_AX = ['op','campus'];
+  const bandT = function(){ return (GST.BAND_T[(GST._lang && GST._lang()) || 'ko'] || GST.BAND_T.ko); };
+  const bandVals = function(k){
+    const s = new Set();
+    [EQ,HR].forEach(function(G){ ((G.LAST[k]||{}).list||[]).forEach(function(v){ s.add(v); }); });
+    listK(EQ,k).concat(listK(HR,k)).forEach(function(v){ s.add(v); });   // 고른 값은 목록에서 빠져도 보인다
+    return Array.from(s).sort(function(a,b){ return a.localeCompare(b,'ko'); });
+  };
+  /* 두 벌이 «같은 한 값»이면 그 값 · 둘 다 비었으면 '' · 그 밖(여럿·서로 다름)은 null */
+  const bandCur = function(k){
+    const has = function(G){ return !!cfgOf(G,'cGet') && !!(cfgOf(G,'cGet')||{})[k]; };
+    const ls = [EQ,HR].filter(has).map(function(G){ return listK(G,k).slice().sort().join('\x01'); });
+    if(!ls.length) return '';
+    if(ls.some(function(x){ return x !== ls[0]; })) return null;
+    const v = ls[0].split('\x01').filter(Boolean);
+    return v.length === 0 ? '' : v.length === 1 ? v[0] : null;
+  };
+  function bandMount(){
+    if(document.getElementById('gstBand')) return;
+    const T = bandT();
+    const d = document.createElement('div'); d.className = 'gst-band'; d.id = 'gstBand';
+    d.setAttribute('role', 'group'); d.setAttribute('aria-label', T.aria);
+    d.innerHTML = '<div class="gb-seg" id="gb-region" role="group"></div>'
+      + BAND_AX.map(function(k){ return '<label class="gb-f"><span class="gb-l" data-gbk="'+k+'"></span><select id="gb-'+k+'"></select></label>'; }).join('')
+      + '<span class="gb-f gb-dt" id="gb-dt"><span class="gb-l" data-gbk="period"></span>'
+      +   '<input type="date" id="gb-from" class="gb-date"><span class="gb-tl">~</span><input type="date" id="gb-to" class="gb-date">'
+      +   '<span class="gb-pre">' + ['30','90','ytd','all'].map(function(p){ return '<button type="button" data-gbp="'+p+'"></button>'; }).join('') + '</span></span>'
+      + '<span class="gb-x" id="gb-x" hidden></span>'
+      + '<span class="gb-sp"></span>'
+      + '<button type="button" class="gb-more" id="gb-more"></button>'
+      + '<button type="button" class="gb-clr" id="gb-clr" hidden></button>';
+    const anchor = document.getElementById('filtBadge') || document.getElementById('fchips')
+      || document.querySelector('.kpis') || document.querySelector('[data-sec]') || document.querySelector(GST.CARD_SEL||'.card');
+    if(!anchor || !anchor.parentNode) return;
+    anchor.parentNode.insertBefore(d, anchor);
+    d.addEventListener('click', function(e){
+      const rb = e.target.closest('[data-gbr]');
+      if(rb){ const v = rb.dataset.gbr; setBoth('region', v ? [v] : []); return; }
+      const pb = e.target.closest('[data-gbp]');
+      if(pb){ bandPeriod(pb.dataset.gbp); return; }
+      if(e.target.closest('#gb-more')){ const tg = document.querySelector('.gst-sb-toggle'); if(tg) tg.click(); return; }
+      if(e.target.closest('#gb-clr')){ GST.clearFilters ? GST.clearFilters() : GST.filters.clear(); }
+    });
+    BAND_AX.forEach(function(k){
+      const sel = document.getElementById('gb-'+k);
+      sel.addEventListener('change', function(){ if(sel.value === '\x02') return; setBoth(k, sel.value ? [sel.value] : []); });
+    });
+    ['gb-from','gb-to'].forEach(function(id){
+      document.getElementById(id).addEventListener('change', function(){
+        F.dtFrom = document.getElementById('gb-from').value || ''; F.dtTo = document.getElementById('gb-to').value || '';
+        save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
+      });
+    });
+  }
+  /* 빠른 기간 — 사람이 보는 날짜라 «로컬» 시계로 찍는다(v109 · 두 시계를 섞지 않는다) */
+  function bandPeriod(p){
+    const ymd = GST.ymdL || function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+    const now = new Date();
+    if(p === 'all'){ F.dtFrom = ''; F.dtTo = ''; }
+    else if(p === 'ytd'){ F.dtFrom = now.getFullYear()+'-01-01'; F.dtTo = ymd(now); }
+    else { const a = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (+p) + 1); F.dtFrom = ymd(a); F.dtTo = ymd(now); }
+    save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
+  }
+  function bandDraw(hasD){
+    const d = document.getElementById('gstBand'); if(!d) return;
+    const T = bandT(), AL = _T().axes, esc = GST._esc;
+    d.querySelectorAll('[data-gbk]').forEach(function(el){ el.textContent = AL[el.dataset.gbk] || ''; });
+    /* 구분 — 전체 · 국내 · 해외(자료에 있는 값만) */
+    const rv = bandVals('region'), rc = bandCur('region');
+    const rlab = function(v){ return v === GST.ORG.REGION_KR ? T.kr : v === GST.ORG.REGION_OS ? T.os : v; };
+    const seg = document.getElementById('gb-region');
+    seg.innerHTML = '<span class="gb-l">' + esc(AL.region || '') + '</span>'
+      + [''].concat(rv).map(function(v){ const on = (rc === v); return '<button type="button" data-gbr="'+esc(v)+'" aria-pressed="'+(on?'true':'false')+'">'+esc(v ? rlab(v) : T.all)+'</button>'; }).join('');
+    /* 운영단위 · 단지 */
+    BAND_AX.forEach(function(k){
+      const sel = document.getElementById('gb-'+k); if(!sel) return;
+      const vals = bandVals(k), cur = bandCur(k);
+      const multiN = cur === null ? new Set(listK(EQ,k).concat(listK(HR,k))).size : 0;
+      sel.innerHTML = '<option value="">' + esc(vals.length ? T.all : T.none) + '</option>'
+        + (cur === null ? '<option value="\x02">' + esc(T.multi.replace('{n}', multiN)) + '</option>' : '')
+        + vals.map(function(v){ return '<option value="'+esc(v)+'">'+esc(v)+'</option>'; }).join('');
+      sel.value = cur === null ? '\x02' : (cur || '');
+      sel.disabled = !vals.length && cur !== null && !cur;
+      sel.closest('.gb-f').classList.toggle('on', cur !== '');
+    });
+    /* 기간 — 날짜 축이 있는 화면에만 */
+    const dt = document.getElementById('gb-dt');
+    dt.hidden = !hasD;
+    document.getElementById('gb-from').value = F.dtFrom || ''; document.getElementById('gb-to').value = F.dtTo || '';
+    dt.classList.toggle('on', !!(F.dtFrom || F.dtTo));
+    d.querySelectorAll('[data-gbp]').forEach(function(b){ b.textContent = T['p_'+b.dataset.gbp]; });
+    /* 인원에 그 축 값이 빈 사람 — 범위를 걸면 빠진다. 몇 명인지 적는다(고칠 곳은 인원현황) */
+    const x = document.getElementById('gb-x'); let xt = '';
+    const gH = cfgOf(HR,'cGet'), rfH = CFG && CFG[HR.cRows], loH = cfgOf(HR,'cLoose') || {};
+    if(gH && rfH){
+      const on = BAND_AX.filter(function(k){ return hasK(HR,k) && gH[k] && !loH[k]; });
+      if(on.length){
+        let n = 0; const rows = rfH() || [];
+        for(let i=0;i<rows.length;i++){ const r = rows[i]; if(!passG(HR, r, {noDate:true}) && on.some(function(k){ return !val(gH[k], r); })){
+          /* 다른 축은 다 맞는데 «그 축이 비어서» 빠진 사람만 센다 */
+          let ok = true; for(let a=0;a<AXES.length;a++){ const k=AXES[a]; if(on.indexOf(k)>=0) continue; if(hasK(HR,k) && !axOk(HR,k,r)){ ok=false; break; } }
+          if(ok) n++; } }
+        if(n) xt = T.unmatched.replace('{a}', on.map(function(k){ return AL[k]; }).join('·')).replace('{n}', n.toLocaleString());
+      }
+    }
+    x.hidden = !xt; x.textContent = xt;
+    /* 상세 필터 — 띠 밖 축(팀·고객사·사업부·라인·라인2)과 «한쪽에만» 건 띠 축을 센다 */
+    let nMore = 0;
+    [EQ,HR].forEach(function(G){ AXES.forEach(function(k){
+      if(!hasK(G,k)) return;
+      if(k === 'region' || BAND_AX.indexOf(k) >= 0){ if((k==='region'?bandCur('region'):bandCur(k)) === null) nMore++; return; }
+      nMore++; }); });
+    const mb = document.getElementById('gb-more');
+    mb.innerHTML = esc(T.more) + (nMore ? ' <b>' + nMore + '</b>' : '');
+    mb.classList.toggle('on', nMore > 0);
+    const any = AXES.some(function(k){ return hasK(EQ,k) || hasK(HR,k); }) || !!(F.dtFrom || F.dtTo);
+    const cb = document.getElementById('gb-clr'); cb.hidden = !any; cb.textContent = '✕ ' + T.clear;
   }
 
   function read(gk, changed){
@@ -5756,6 +5951,7 @@ GST.filters = (function(){
         }
       }
       try{ GST._chipsMount(); }catch(e){}   // 자기 칩 줄이 없는 페이지에만 (v135)
+      try{ bandMount(); }catch(e){ console.warn('[filters] band mount', e); }   // 범위 띠 (v179)
       refresh();
     },
     refresh: refresh,

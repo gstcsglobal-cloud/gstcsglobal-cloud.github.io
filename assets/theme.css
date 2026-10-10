@@ -876,3 +876,43 @@ body.theme-slate *::-webkit-scrollbar-thumb{background:rgba(148,170,215,.18)}
 body.theme-slate *::-webkit-scrollbar-thumb:hover{background:rgba(148,170,215,.32)}
 
 @media print{ body::after,.sec-h::before{display:none !important} }
+
+
+/* ── v179 «핵심만» — 입력률이 낮아 접힌 차트(GST.fillHint · _foldSet) ──
+   차트 자리(.cw)만 접고 제목·기준 단추줄·«입력률 N% — 차트 보기» 단추는 남긴다. 인쇄에서는 펼친다. */
+.card.gst-fold .cw,.card.gst-fold .fill-hint{display:none !important}
+.gst-foldbtn{display:inline-flex;align-items:center;gap:6px;margin:8px 0 4px;padding:6px 12px;border-radius:999px;
+  border:1px dashed var(--line-2,var(--line));background:transparent;color:var(--txt-2,var(--txt-muted));
+  font:600 12px var(--font,inherit);cursor:pointer}
+.gst-foldbtn:hover{border-style:solid;color:var(--accent);border-color:var(--accent)}
+.card.gst-fold{min-height:0 !important}
+@media print{.card.gst-fold .cw{display:block !important}.gst-foldbtn{display:none !important}}
+
+/* ── v179 범위 띠(GST.filters · bandMount) — 페이지 맨 위 한 줄: 구분 · 운영단위 · 단지 · 기간 ──
+   글로벌 현황 머리의 고르기와 같은 문법(세그먼트 + 고르기 상자). 사이드바는 «상세 필터»로 남는다. */
+.gst-band{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 14px;padding:9px 12px;
+  border:1px solid var(--line);border-radius:var(--r-lg,14px);background:var(--surface);box-shadow:var(--shadow-card,none)}
+body.theme-slate .gst-band{background:var(--surface-glass,var(--surface))}
+.gst-band .gb-l{font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--txt-muted);margin-right:6px;white-space:nowrap}
+.gst-band .gb-seg{display:inline-flex;align-items:center;gap:2px}
+.gst-band .gb-seg button{font:600 12px var(--font,inherit);padding:5px 11px;border:1px solid var(--line);background:transparent;color:var(--txt-2,var(--txt-main));cursor:pointer;margin-left:-1px}
+.gst-band .gb-seg button:first-of-type{border-radius:999px 0 0 999px;margin-left:0}
+.gst-band .gb-seg button:last-of-type{border-radius:0 999px 999px 0}
+.gst-band .gb-seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.gst-band .gb-f{display:inline-flex;align-items:center}
+.gst-band select,.gst-band .gb-date{font:500 12.5px var(--font,inherit);padding:5px 8px;border:1px solid var(--line);border-radius:var(--r-md,9px);
+  background:var(--surface-2,var(--surface));color:var(--txt-main);max-width:230px}
+.gst-band .gb-f.on select,.gst-band .gb-dt.on .gb-date{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-soft,transparent)}
+.gst-band .gb-tl{margin:0 4px;color:var(--txt-muted)}
+.gst-band .gb-pre{display:inline-flex;gap:4px;margin-left:8px}
+.gst-band .gb-pre button{font:600 11px var(--font,inherit);padding:4px 8px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--txt-muted);cursor:pointer}
+.gst-band .gb-pre button:hover,.gst-band .gb-seg button:hover{border-color:var(--accent);color:var(--accent)}
+.gst-band .gb-seg button[aria-pressed="true"]:hover{color:#fff}
+.gst-band .gb-x{font-size:11.5px;color:var(--warn);font-weight:600}
+.gst-band .gb-sp{flex:1}
+.gst-band .gb-more,.gst-band .gb-clr{font:600 12px var(--font,inherit);padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--txt-2,var(--txt-main));cursor:pointer}
+.gst-band .gb-more.on{border-color:var(--gold,var(--accent));color:var(--gold,var(--accent))}
+.gst-band .gb-more b{display:inline-block;min-width:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:var(--gold,var(--accent));color:#0B1220;font-size:11px}
+.gst-band .gb-clr{color:var(--txt-muted)}
+.gst-band [hidden]{display:none !important}
+@media (max-width:720px){.gst-band{gap:8px}.gst-band .gb-sp{display:none}.gst-band select{max-width:46vw}.gst-band .gb-pre{margin-left:0}}
