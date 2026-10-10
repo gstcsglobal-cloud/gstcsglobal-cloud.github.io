@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 160;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 161;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -3476,9 +3476,18 @@ GST.vmap = {
     if(cols.indexOf('state') >= 0) objs.forEach(function(o){ if(!K(rd(o, 'state'))){ out.blankState++; if(o.fab_in) out.blankStateDated++; } });
     return out;
   },
+  /* 규칙이 먹는 표의 스펙 — 미러 셋은 SPEC 정본 그대로, 인원현황은 «조직 칸만» 아는 작은 스펙(v161).
+     ⚠ 인원 SPEC 을 GST.SM.SPEC 에 넣지 않는다 — 그 이름표는 gen-ddl·업로드·봇이 «미러 표»로 읽는다(넣으면 sheet_roster 미러를 만들려 든다).
+     열 이름은 Import 표의 실제 머리글이다(새 한글 양식 · 옛 영문 양식 Work Place 는 단지의 별칭). 전부 opt — 없는 양식이 거부되지 않게. */
+  XSPEC: {
+    roster: { name:'인원현황', hints:[['입사일','Date of entry']], scan:6,
+      opt:['op','customer','campus','line','region'],
+      fields:{ op:['운영단위'], customer:['고객사'], campus:['단지','Work Place'], line:['라인'], region:['구분'] } }
+  },
+  spec: function(tbl){ return GST.SM.SPEC[tbl] || this.XSPEC[tbl] || null; },
   /* 2차원 배열(머리글 + 행)에 적용 — 바뀐 행만 복사한다(캐시가 든 원본 배열을 고치지 않는다). */
   apply: function(tbl, rows){
-    const S = GST.SM.SPEC[tbl], by = this.compile(tbl), cols = Object.keys(by);
+    const S = this.spec(tbl), by = this.compile(tbl), cols = Object.keys(by);
     const out = { rows:rows, n:0, cells:0, rules:cols.reduce(function(a, c){ return a + by[c].length; }, 0) };
     if(!S || !cols.length || !rows || rows.length < 2) return out;
     const m = GST.SM.map(rows, S); if(m.hi < 0) return out;
@@ -3549,9 +3558,11 @@ GST.cipRows = async function(site, key){
   }
 };
 /* 모든 화면이 지나는 문 — 실적·설치 3표는 여기서 «기준 정보» 규칙을 입힌다(v152). 시트·DB·캐시·오프라인 스냅샷 어느 길로 와도 같다. */
+/* 미러가 아닌데 규칙이 먹는 표 — gid → 논리 이름 (v161 · 인원현황) */
+GST.VMAP_GID = { '1213453343':'roster' };
 GST.fetchCSVCached = async function(url, key){
-  const gm = String(url||'').match(/[?&]gid=(\d+)/), tbl = gm && GST.TABLE_OF_GID[gm[1]];
-  const rp = (tbl && GST.SM.SPEC[tbl]) ? GST.vmap.load() : null;
+  const gm = String(url||'').match(/[?&]gid=(\d+)/), tbl = gm && (GST.TABLE_OF_GID[gm[1]] || GST.VMAP_GID[gm[1]]);
+  const rp = (tbl && GST.vmap.spec(tbl)) ? GST.vmap.load() : null;
   const r = await GST._fetchCSVCached0(url, key);
   if(rp && r && r.rows){
     try{ await rp; const a = GST.vmap.apply(tbl, r.rows); r.rows = a.rows; GST.vmap.applied[tbl] = { rules:a.rules, rows:a.n, cells:a.cells }; }

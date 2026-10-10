@@ -1969,6 +1969,11 @@ console.log('[31] 사이트 등록부 — 새 사이트를 먼저 정의하고 �
    { code:'ZF-3', sn:'ZZF-0003', country:'TAIWAN', customer:'MICRON', fab:'F18', floor:'A2', model:'MF-1', state:'반납' },
    { code:'ZF-4', sn:null, country:'TAIWAN', customer:'MICRON', fab:'F18', floor:'A3', model:'MF-1', state:'Operation' }]
     .forEach((r, i) => sd.tables.sheet_inst.push(full(INST_COLS, Object.assign({ src_row:iN + i }, r))));
+  /* v161 — 같은 사이트가 실적·인원에도 있다(표마다 «사이트 칸»이 다르다: 실적 «라인» · 인원 «단지») */
+  const wN = sd.tables.sheet_wk.length;
+  sd.tables.sheet_wk.push(full(WK_COLS, { src_row:100, rs_code:'RS-T-F18A', d_start:'2026-09-01', op:'TAIWAN', customer:'MICRON', line:'F18', stage:'BM', sn_in:'ZZF-0001' }),
+                         full(WK_COLS, { src_row:101, rs_code:'RS-T-F18B', d_start:'2026-09-02', op:'TAIWAN', customer:'MICRON', line:'F18', stage:'TBM', sn_in:'ZZF-0002' }));
+  sd.tables.sheet_roster.push(full(ROS_COLS, { id:9, '사원번호':'9100009', '이름(영문)':'Tester Nine', '단지':'F18', '운영단위':'TAIWAN', '고객사':'MICRON', '입사일':'2026-01-02' }));
   const { ctx, pg, pe } = await open(sd);
   await pg.click('.tab[data-tab=site]'); await pg.waitForFunction(() => /FAB/.test((document.getElementById('siteBox') || {}).innerText || ''), null, { timeout:8000 });
   const tx = () => pg.$eval('#siteBox', e => e.innerText);
@@ -1978,13 +1983,26 @@ console.log('[31] 사이트 등록부 — 새 사이트를 먼저 정의하고 �
   await pg.click('[data-st=new]'); await waitDlg(pg, /새 사이트 등록/);
   await pg.fill('#stFab', 'f18'); await pg.click('.mask .btn.pri');
   await waitDlg(pg, /F18/);
-  await pg.fill('[data-sf=label]', 'MICRON F18'); await pg.fill('[data-sf=country]', 'GST TAIWAN SCRUBBER'); await pg.dispatchEvent('[data-sf=country]', 'input');
+  is(/설치현황 4대 · 수선실적 2행 · 자재실적 0행 · 인원현황 1명/.test(await dlgBody(pg)), '정의 창이 표마다 그 사이트로 잡힌 행을 센다 (설치 FAB · 실적 라인 · 인원 단지)');
+  await pg.fill('[data-sf=label]', 'MICRON F18'); await pg.fill('[data-sf=op]', 'GST TAIWAN SCRUBBER'); await pg.dispatchEvent('[data-sf=op]', 'input');
+  await pg.uncheck('[data-stt=mat]');
   is(/해외/.test(await pg.$eval('#stMean', e => e.textContent)), '운영단위를 적으면 «대시보드가 읽는 구분»을 그 자리에서 보여 준다 (정본 판정)');
-  await pg.fill('[data-sf=customer]', 'TESTCO F18'); await pg.click('.mask .btn.pri'); await pg.waitForTimeout(500);
+  await pg.fill('[data-sf=customer]', 'TESTCO F18'); await pg.click('.mask .btn.pri'); await pg.waitForTimeout(700);
   const reg = await pg.evaluate(() => (window.__DB.site_registry || []).find(x => x.fab === 'F18'));
   is(reg && reg.op === 'GST TAIWAN SCRUBBER' && reg.label === 'MICRON F18' && reg.region === '해외' && !reg.cip_table, '등록부에 한 줄 (코드는 대문자 · 구분은 정본 판정으로)');
-  const vm = await pg.evaluate(() => window.__DB.value_map.filter(r => r.when_col === 'fab' && r.when_val === 'F18').map(r => r.col + '=' + r.val).sort().join('|'));
-  is(vm === 'country=GST TAIWAN SCRUBBER|customer=TESTCO F18', '정의가 «기준 정보» 규칙(FAB=F18 인 설치현황 행)으로도 저장된다 (' + vm + ')');
+  const vm = await pg.evaluate(() => window.__DB.value_map.filter(r => r.when_val === 'F18').map(r => r.tbl + '.' + r.when_col + ':' + r.col + '=' + r.val).sort().join('|'));
+  is(vm === ['inst.fab:country=GST TAIWAN SCRUBBER', 'inst.fab:customer=TESTCO F18', 'roster.campus:customer=TESTCO F18', 'roster.campus:op=GST TAIWAN SCRUBBER',
+             'wk.line:customer=TESTCO F18', 'wk.line:op=GST TAIWAN SCRUBBER'].join('|'),
+     '정의가 표마다 «기준 정보» 규칙으로 저장된다 — 설치(FAB) · 수선(라인) · 인원(단지) · 끈 자재는 안 건다 (' + vm + ')');
+  /* 규칙이 실제로 «먹는지» — core 가 인원현황에도 입힌다(fetchCSVCached 와 같은 함수) */
+  const ap = await pg.evaluate(() => { GST.vmap.rules = window.__DB.value_map.slice();
+    const R = [['사원번호','이름(영문)','단지','운영단위','고객사','입사일'], ['9100009','Tester Nine','F18','TAIWAN','MICRON','2026-01-02'], ['9100001','Tester One','Q1','OPX Scrubber','TESTCO','2024-01-02']];
+    const a = GST.vmap.apply('roster', R); return { op:a.rows[1][3], cu:a.rows[1][4], other:a.rows[2][3], same:R[1][3] }; });
+  is(ap.op === 'GST TAIWAN SCRUBBER' && ap.cu === 'TESTCO F18' && ap.other === 'OPX Scrubber' && ap.same === 'TAIWAN', '인원현황에도 규칙이 먹는다 — 그 사이트 사람만 · 원본 배열은 그대로');
+  is(await pg.evaluate(() => GST.VMAP_GID['1213453343'] === 'roster' && !!GST.vmap.spec('roster') && !GST.SM.SPEC.roster), '인원 규칙은 fetchCSVCached 의 gid 지도로 걸린다 (인원 스펙은 SM.SPEC 밖 — 미러로 오인 안 됨)');
+  await pg.click('[data-st=def][data-f=F18]'); await waitDlg(pg, /사이트 정의/);
+  is(await pg.evaluate(() => document.querySelector('[data-stt=mat]').checked === false && document.querySelector('[data-stt=wk]').checked === true), '다시 열면 «어느 자료에 걸었나»를 기억한다 (자재는 꺼진 채)');
+  await pg.click('.mask .btn'); await pg.waitForTimeout(150);
   await pg.click('[data-st=cip][data-f=F18]'); await waitDlg(pg, /CIP 표 만들기/); await pg.click('.mask .btn.pri'); await pg.waitForTimeout(500);
   is(await pg.evaluate(() => !!document.querySelector('.tab[data-tab=cip_f18]') && UP_RID.cip_f18 === 'cip_f18'), 'CIP 표를 만들면 탭 줄에 「CIP F18」 · 원본 교체는 업로드의 cip_f18 로');
   await qlog(pg);
