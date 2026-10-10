@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 161;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 162;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -6278,12 +6278,30 @@ GST.cmap = {
     const fixed=parseInt(o.__hi,10);
     if(fixed>0 && fixed<=rows.length){ hi=fixed-1; found=hitsOf(rows[hi])>0; }
     else { let bn=0; (rows||[]).slice(0,15).forEach(function(r,k){ const n=hitsOf(r); if(n>bn){ bn=n; hi=k; } }); found=bn>0; if(hi<0) hi=GST.cmap.guessHi(rows,-1); }
-    const header=GST.cmap.compose(rows,hi);
+    /* 여러 줄 머리글 (v164 · 사용자 파일 실측 — 대만 교육현황). 「No·Site·인원」은 세 줄 세로 병합이고, 그 옆은
+       「교육과정 › Basic (Level 1) › 교육완료일」처럼 세 줄로 내려간다. 머리글 «한 줄»만 보면 교육완료일 칸이 그 줄에서
+       빈 칸이라 자동 인식도, 사람이 고르는 지정도 불가능했고(고를 이름이 없다), 아래 두 줄이 «데이터»로 읽혔다.
+       → 머리글 줄의 «이름이 잡힌 열»(No·Site 처럼 세로 병합된 칸)이 비어 있는 다음 줄은 머리글이 이어지는 것으로 본다(최대 3줄).
+       데이터 줄은 그 열들이 차 있다. 이어진 줄이 있으면 hi 는 «마지막 머리글 줄»이 되고(데이터는 그 다음 줄부터), 칸 이름은 위→아래로 잇는다. */
+    let top=hi;
+    if(found){
+      const key=[]; ((rows||[])[top]||[]).forEach(function(x,i){ const h=N(String(x==null?'':x)); if(h && cols.some(function(c){ return names[c].indexOf(h)>=0; })) key.push(i); });
+      const ne=function(r,i){ return String(((r||[])[i])==null?'':r[i]).trim()!==''; };
+      for(let r=top+1; r<=top+3 && r<(rows||[]).length; r++){
+        const R=rows[r]||[], filled=R.filter(function(x){ return String(x==null?'':x).trim(); }).length;
+        if(filled<1 || key.some(function(i){ return ne(R,i); })) break;   // 묶음이 하나뿐인 줄(칸 하나)도 머리글이다 — 데이터 줄은 이름 잡힌 열이 차 있다
+        hi=r;
+      }
+    }
+    const header=GST.cmap.compose(rows,hi,top);
     const raw=((rows||[])[hi]||[]).map(function(x){ return String(x==null?'':x).trim(); });
     /* 열쇠 셋 — 합친 이름 · 그 이름의 63바이트 자른 판(Postgres 가 표 열 이름을 그 길이에서 자른다) ·
        원래 이름(겹치는 이름이면 첫 칸만 — 예전 동작 그대로라 교육현황 같은 옛 표가 안 움직인다) */
     const at={}, put=function(n,k){ if(n&&at[n]==null) at[n]=k; };
     header.forEach(function(h,k){ put(N(h),k); put(N(GST.cmap.colName(h)),k); });
+    /* 여러 줄 머리글이면 «아래쪽 몇 단만» 이은 이름·괄호를 뗀 이름도 열쇠로 둔다 —
+       표의 열 이름은 「Basic 교육완료일」인데 파일은 「교육과정 Basic (Level 1) 교육완료일」이다. 정규화 정확일치는 그대로다(부분일치 아님). */
+    if(hi>top) GST.cmap.stack(rows,hi,top).forEach(function(st,k){ GST.cmap.variants(st).forEach(function(v){ put(N(v),k); }); });
     raw.forEach(function(h,k){ put(N(h),k); });
     const idx={}, via={}, used={};
     cols.forEach(function(c){
@@ -6294,7 +6312,7 @@ GST.cmap = {
       if(i>=0) used[i]=1; idx[c]=i; via[c]=v||(i>=0?'auto':'');
     });
     const unknown=header.filter(function(h,k){ return h && !used[k]; });
-    return {hi:hi, hiFound:found, header:header, idx:idx, via:via, unknown:unknown};
+    return {hi:hi, top:top, hiFound:found, header:header, idx:idx, via:via, unknown:unknown};
   },
   /* 표 열 이름으로 쓸 글자 — 줄바꿈·연속 공백을 한 칸으로, 그리고 63바이트(UTF-8)에서 자른다.
      ⚠ Postgres 는 그보다 긴 열 이름을 «조용히» 자른다(NOTICE 뿐). 자른 이름을 모르고 다음 업로드에서 원래 이름으로 찾으면
@@ -6311,8 +6329,17 @@ GST.cmap = {
      겹친 채로 두면 서로 다른 점검 항목이 한 이름이 되어 첫 칸만 잡히고 나머지는 조용히 빠진다.
      · 묶음 이름은 병합 칸이라 왼쪽 첫 칸에만 있다 — 왼쪽으로 훑되 «겹치지 않는 머리글»을 만나면 멈춘다(다른 묶음을 빌려 오지 않는다).
      · 겹치지 않는 이름은 손대지 않는다 — 기존 표의 열 이름과 그대로 맞물린다. */
-  compose:function(rows,hi){
-    const N=GST.SM.norm, R=(rows||[])[hi]||[], up=hi>0?((rows||[])[hi-1]||[]):[];
+  compose:function(rows,hi,top){
+    const N=GST.SM.norm;
+    /* 여러 줄 머리글(v164) — 칸마다 위→아래 값을 잇는다(병합 칸은 왼쪽 첫 칸에만 값이 있어 stack 이 오른쪽으로 채운다). */
+    if(top!=null && top<hi){
+      const st=GST.cmap.stack(rows,hi,top), nm=st.map(function(a){ return GST.cmap.colName(a.join(' ')); });
+      const cnt={}; nm.forEach(function(h){ const n=N(h); if(n) cnt[n]=(cnt[n]||0)+1; });
+      if(!Object.keys(cnt).some(function(n){ return cnt[n]>1; }) || top<1) return nm;
+      const up=(rows||[])[top-1]||[];   // 그래도 겹치면 맨 위 줄 바로 위의 묶음 이름을 붙인다(아래 한 줄 규칙과 같다)
+      return nm.map(function(h,k){ if(!h||cnt[N(h)]<2) return h; for(let j=k;j>=0;j--){ const b=String(up[j]==null?'':up[j]).trim(); if(b) return GST.cmap.colName(b+' '+h); } return h; });
+    }
+    const R=(rows||[])[hi]||[], up=hi>0?((rows||[])[hi-1]||[]):[];
     const raw=R.map(function(x){ return String(x==null?'':x).trim(); });
     const cnt={}; raw.forEach(function(h){ const n=N(h); if(n) cnt[n]=(cnt[n]||0)+1; });
     return raw.map(function(h,k){
@@ -6324,6 +6351,34 @@ GST.cmap = {
       }
       return h;
     });
+  },
+  /* 칸마다 [위 단, …, 아래 단] — 가로 병합 칸(묶음 이름)은 왼쪽 첫 칸에만 값이 있으므로 오른쪽으로 채우되,
+     ① 그 칸의 «맨 아래 줄»이 빈 열(세로 병합된 No·Site 같은 열)은 묶음 밖이라 채우지 않고 ② 위 단의 묶음이 바뀌는 곳에서 멈춘다
+     (Basic 의 이름이 Veteran 칸으로 넘어가지 않게). 같은 값이 위아래로 이어지면(세로 병합) 한 번만 쓴다. */
+  stack:function(rows,hi,top){
+    const v=function(r,k){ return String((((rows||[])[r]||[])[k])==null?'':rows[r][k]).trim(); };
+    let w=0; for(let r=top;r<=hi;r++) w=Math.max(w,((rows||[])[r]||[]).length);
+    const F=[];   // F[r-top][k] — 채운 값
+    for(let r=top;r<=hi;r++){
+      const row=[]; let cur='', curK=-1;
+      for(let k=0;k<w;k++){
+        const x=v(r,k);
+        if(x){ cur=x; curK=k; row.push(x); continue; }
+        const leaf=v(hi,k)!=='';
+        const sameParent=r===top || (F[r-top-1][k] && F[r-top-1][k]===F[r-top-1][curK] && curK>=0);
+        row.push(cur && leaf && r<hi && sameParent && !v(top,k)?cur:'');
+      }
+      F.push(row);
+    }
+    const out=[];
+    for(let k=0;k<w;k++){ const a=[]; F.forEach(function(row){ const x=row[k]; if(x && a[a.length-1]!==x) a.push(x); }); out.push(a); }
+    return out;
+  },
+  /* 열쇠로 둘 이름들 — 아래쪽 n단만 이은 것 · 괄호 부분을 뗀 것(Basic (Level 1) → Basic) */
+  variants:function(a){
+    const out=[], strip=function(s){ return String(s).replace(/\s*[(（][^)）]*[)）]\s*/g,' ').replace(/\s+/g,' ').trim(); };
+    for(let i=a.length-1;i>=0;i--){ const p=a.slice(i); out.push(p.join(' ')); out.push(p.map(strip).filter(Boolean).join(' ')); }
+    return out;
   },
   /* 그 열의 예시 값 — 사람이 «맞게 잡혔나»를 눈으로 확인하는 근거(사용자: 업로더가 맵핑을 검증할 수 있어야) */
   sample:function(rows,hi,i,n){ const out=[]; if(i<0) return out;

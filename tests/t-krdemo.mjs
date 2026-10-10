@@ -169,7 +169,7 @@ console.log('[1] core — 표 지도(TBL_MAP)');
 /* ══════════════════════════════════════════════════════════════════════════════
    [2] 셸 — 데모 탭은 admin·kr·legacy 에게만 (계산된 display · 순회 목록 · 전 탭 불러오기 · 숫자 단축키)
    ══════════════════════════════════════════════════════════════════════════════ */
-console.log('[2] 셸 — 데모 탭의 등급');
+console.log('[2] 셸 — 데모 탭은 없다 (v163)');
 {
   const STUBPAGE = '<!doctype html><meta charset="utf-8"><body>stub</body>';
   const ctx = await browser.newContext();
@@ -191,44 +191,18 @@ console.log('[2] 셸 — 데모 탭의 등급');
   await pg.waitForTimeout(800);
   /* 로그인 오버레이가 가려도 셸 함수는 돈다 — 탭을 직접 만든다(start 는 로그인 뒤에 불린다) */
   await pg.evaluate(() => { buildTabs(); const o = document.getElementById('loginOverlay'); if (o) o.remove(); });
+  /* v163 — 데모 탭은 셸에서 뺐다(사용자 확정). 어느 등급에게도 안 보이고 순회·단축키에도 안 든다. */
   const vis = role => pg.evaluate(r => {
     if (r == null) delete document.body.dataset.role; else document.body.dataset.role = r;
-    const d = id => { const b = document.querySelector('.tab[data-id="' + id + '"]'); return b ? getComputedStyle(b).display !== 'none' : null; };
-    return { kr:d('report_kr'), report:d('report'), on:tabOn(TABS.find(t => t.id === 'report_kr')), n:TABS.filter(tabOn).length };
+    return { has:!!TABS.find(t => t.id === 'report_kr'), btn:!!document.querySelector('.tab[data-id="report_kr"]'), n:TABS.filter(tabOn).length, all:TABS.length };
   }, role);
-  const want = { admin:true, kr:true, legacy:true, viewer:false, editor:false, superuser:false };
-  for (const [role, w] of Object.entries(want)) {
+  for (const role of ['admin', 'kr', 'legacy', 'viewer', 'editor', null]) {
     const v = await vis(role);
-    is(v.kr === w && v.on === w && v.report === true && v.n === (w ? 9 : 8), role + ' — 데모 탭 ' + (w ? '보임' : '숨김') + ' · 다른 탭은 그대로 (' + JSON.stringify(v) + ')');
+    is(!v.has && !v.btn && v.n === v.all, (role || '등급 미상') + ' — 데모 탭 없음 · 모든 탭이 같은 목록 (' + JSON.stringify(v) + ')');
   }
-  const v0 = await vis(null);
-  is(v0.kr === false && v0.on === false, '등급 미상(로그인 직후) — 숨김 (fail-closed)');
-  const lbl = await pg.$eval('.tab[data-id="report_kr"] .tab-label', e => e.textContent);
-  is(lbl === '주간 현황(국내)', '탭 이름 — 「주간 현황(국내)」 (' + lbl + ')');
-
-  /* 자동순회 페이지 목록 — 조회자에게는 데모가 안 뜬다 */
   const kp = role => pg.evaluate(r => { document.body.dataset.role = r; kioskBuildPanel(); return Array.from(document.querySelectorAll('#kkPages input')).map(x => x.value); }, role);
-  let pages = await kp('viewer');
-  is(pages.length === 8 && pages.indexOf('report_kr') < 0, '조회자의 순회 목록 — 여덟 페이지 · 데모 없음 (' + pages.length + ')');
-  pages = await kp('kr');
-  is(pages.length === 9 && pages.indexOf('report_kr') >= 0, '국내 운영자의 순회 목록 — 데모 포함 (' + pages.length + ')');
-
-  /* 전 탭 불러오기(챗봇) — 조회자에게는 데모를 안 띄운다 */
-  const ask = role => pg.evaluate(r => {
-    document.body.dataset.role = r;
-    TABS.filter(t => t.id !== 'report_kr').forEach(t => { if (!frames[t.id]) frames[t.id] = document.createElement('iframe'); });   // 나머지는 이미 열려 있다고 치자
-    const res = askLoadAll(); return { res, kr:!!frames.report_kr };
-  }, role);
-  let a = await ask('viewer');
-  is(a.res === false && a.kr === false, '조회자 — 불러올 탭이 없다(데모는 세지 않는다) (' + JSON.stringify(a) + ')');
-
-  /* 숫자 단축키 — 9 번째 탭(데모)은 조회자에게 안 열린다(숨긴 탭이 키보드로 열리던 틈) */
-  const key9 = role => pg.evaluate(async r => { document.body.dataset.role = r; switchTab('report');
-    document.dispatchEvent(new KeyboardEvent('keydown', { key:'9', bubbles:true })); await new Promise(z => setTimeout(z, 50)); return activeTab; }, role);
-  is(await key9('viewer') === 'report', '조회자가 9 를 눌러도 데모 탭이 안 열린다');
-  is(await key9('kr') === 'report_kr', '국내 운영자는 9 로 데모 탭이 열린다');
-  a = await ask('kr');
-  is(a.kr === true, '국내 운영자 — 데모 탭도 열린 탭에 든다');
+  const pages = await kp('kr');
+  is(pages.indexOf('report_kr') < 0 && pages.length === (await pg.evaluate(() => TABS.length)), '국내 운영자의 순회 목록에도 데모 없음 (' + pages.length + ')');
   is(errs.length === 0, 'JS 에러 없음' + (errs.length ? ' → ' + errs[0] : ''));
   await ctx.close();
 }
