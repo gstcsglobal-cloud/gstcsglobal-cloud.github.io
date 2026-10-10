@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=156"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=157"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -271,6 +271,9 @@ table.dt td.v{word-break:break-all}
          (월 실적·원장 워크북·CIP·ABP 를 통째·기간 교체 · 원본에서 빠진 행도 빠진다), 이 화면은 «정정»(행 단위 · 이력·되돌리기).
          창 이름(gstUpload)은 셸의 openUpload 와 같다 — 두 입구가 같은 창을 다시 쓴다. -->
     <a class="btn" id="toUpload" href="/upload/" target="gstUpload" title="월 실적·알람 원장·CIP 등 원본 파일을 통째·기간 단위로 갈아끼웁니다 (새 창) — 몇 행만 고칠 때는 이 화면에서 찾아 고치세요"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg> 원본 파일 올리기</a>
+    <!-- CIP 현황 — 이 화면에 표 탭이 없다(점검 항목이 «열로» 늘어나는 표라 한 행 편집보다 «자체관리 양식 통째 올리기»가 맞다 · v157).
+         업로드 화면이 Detail 시트를 고르고 · 묶음 머리글(Left·Right)을 합치고 · 새 점검 항목을 표에 열로 더하게 해 준다. -->
+    <a class="btn" id="toCip" href="/upload/" target="gstUpload" title="CIP 현황(자체관리 양식 · Site Issue 워크북)을 올립니다 — 새 점검 항목은 표에 열로 더할 수 있습니다">CIP 현황 올리기</a>
     <div class="me" id="me"></div>
   </header>
   <div class="wrap">
@@ -2175,6 +2178,13 @@ function openUp(o){
    Ctrl·가운데 클릭은 지금까지처럼 새 창(링크 그대로) — 두 화면을 나란히 보고 싶은 사람의 길을 막지 않는다. */
 { const up = document.getElementById('toUpload');
   if(up) up.addEventListener('click', e => { if(e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault(); openUp({ rid:UP_RID[(TAB() || {}).id] }); }); }
+/* CIP 현황 올리기 — F11·F16 은 표가 따로다. 먼저 고르게 한다(잘못 고르면 업로드 화면이 파일의 FAB 을 보고 막는다). */
+{ const cp = document.getElementById('toCip');
+  if(cp){ if(KR) cp.hidden = true;
+    cp.addEventListener('click', async e => { if(e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault();
+      const v = await dialog('CIP 현황 올리기', '<p>어느 사이트의 CIP 인가요? 자체관리 양식(Site Issue 워크북)을 그대로 올리면 됩니다 — 업로드 화면이 Detail 시트를 찾아 열을 맞추고, 표에 없는 새 점검 항목은 골라서 열로 더할 수 있습니다.</p>',
+        [{l:'취소', v:false}, {l:'CIP F11', v:'cipf11', cls:'pri'}, {l:'CIP F16', v:'cipf16', cls:'pri'}], true);
+      if(v) openUp({ rid:v }); }); } }
 /* ---------- 기준 정보(값 사전) — 새 값이 «어디에 · 어떻게» 반영되는지 보고, 규칙으로 정한다 (v152 · 사용자 요청) ----------
    사용자: 「F16S 신규 사이트 설치현황을 올렸는데 차트·가동현황 표에 반영이 안 된다 … 새로운 게 들어가면 어디에 반영하는지,
    어떻게 반영하는지 그런 기능이 필요하다 — 이럴 때마다 코딩을 변경할 수는 없다」.
