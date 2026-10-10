@@ -52,7 +52,7 @@ function fake(seed) {
   const DB = par || JSON.parse(JSON.stringify(seed.tables));
   const LOG = window.__QLOG = [];
   const KEY = { sheet_wk:'src_row', sheet_mat:'src_row', sheet_inst:'src_row', sheet_alarm:'src_row', sheet_allbypass:'src_row',
-               sheet_roster:'id', sheet_edu:'id', sheet_leave:'id', sheet_edits:'id' };
+               sheet_roster:'id', sheet_edu:'id', sheet_leave:'id', sheet_cip_f11:'id', sheet_cip_f16:'id', sheet_edits:'id' };
   Object.keys(KEY).forEach(k => { if (k !== 'sheet_edits') KEY['kr_' + k] = KEY[k]; });   // 국내 데모 표(v146) — 열쇠는 운영 표와 같다
   const hash = r => { const o = Object.assign({}, r); delete o.synced_at; return 'h:' + JSON.stringify(o); };
   const toRe = (p, ci) => new RegExp('^' + String(p).replace(/\\([%_\\])/g, '\u0001$1').replace(/[.+?^${}()|[\]\\]/g, '\\$&')
@@ -1909,18 +1909,36 @@ console.log('[29] 데이터 품질 — 구분·운영단위·기간 필터 · �
   await ctx.close();
 }
 
-console.log('[30] CIP 현황 올리기 — 데이터 관리에서 F11·F16 을 골라 업로드 화면을 안에 띄운다 (v157)');
+console.log('[30] CIP F11 · F16 도 다른 표처럼 탭이다 — 찾기 · 한 행 고치기 · 점검 항목 열 · 엑셀 올리기는 CIP 업로드로 (v159)');
 {
-  const { ctx, pg, pe } = await open(seedOf({}));
-  await pg.waitForFunction(() => !!document.getElementById('toCip'), null, { timeout:8000 }).catch(() => {});
-  is(await pg.evaluate(() => { const b = document.getElementById('toCip'); return !!b && !b.hidden && b.getBoundingClientRect().width > 0; }), '머리에 「CIP 현황 올리기」 단추');
-  await pg.click('#toCip');
-  await pg.waitForFunction(() => /어느 사이트의 CIP/.test(document.body.innerText), null, { timeout:8000 }).catch(() => {});
-  await pg.click('button:has-text("CIP F16")');
-  await pg.waitForFunction(() => { const f = document.getElementById('upFrame'); return f && /rid=cipf16/.test(f.src); }, null, { timeout:8000 }).catch(() => {});
-  is(/embed=1/.test(await pg.$eval('#upFrame', e => e.src).catch(() => '')) && /rid=cipf16/.test(await pg.$eval('#upFrame', e => e.src).catch(() => '')), '고른 사이트(CIP F16)로 업로드 화면이 안에 뜬다');
+  const CC = ['NO','Country','Customer','FAB','Floor','Model','Scrubber S/N','Scrubber Code','FAB In','Valve Fix','Remark','id','New Item Alpha'];
+  const cip = [{ id:1, NO:'1', Country:'TAIWAN', Customer:'TESTCO', FAB:'F16', Floor:'A1', Model:'M-1', 'Scrubber S/N':'ZZC-0001', 'Scrubber Code':'C-1', 'FAB In':'2020-01-02', 'Valve Fix':'Not yet', Remark:null, 'New Item Alpha':'N/A' },
+               { id:2, NO:'2', Country:'TAIWAN', Customer:'TESTCO', FAB:'F16', Floor:'B2', Model:'M-2', 'Scrubber S/N':'ZZC-0002', 'Scrubber Code':'C-2', 'FAB In':'2020-01-03', 'Valve Fix':'2026-02-03', Remark:null, 'New Item Alpha':'Not yet' }];
+  const sd = seedOf({}); sd.tables.sheet_cip_f16 = cip; sd.tables.sheet_cip_f11 = []; sd.cols.sheet_cip_f16 = CC; sd.cols.sheet_cip_f11 = CC.filter(c => c !== 'New Item Alpha');
+  sd.types.sheet_cip_f16 = { id:'bigint' }; sd.types.sheet_cip_f11 = { id:'bigint' };
+  const { ctx, pg, pe } = await open(sd);
+  is(await pg.evaluate(() => !document.getElementById('toCip')), '머리의 따로 선 「CIP 현황 올리기」 단추는 없다 (입구는 탭 하나)');
+  is(await pg.evaluate(() => ['cip11','cip16'].every(id => { const b = document.querySelector('.tab[data-tab=' + id + ']'); return b && b.getBoundingClientRect().width > 0; })), '탭 줄에 「CIP F11」·「CIP F16」');
+  await pg.click('.tab[data-tab=cip16]'); await pg.waitForTimeout(400);
+  is((await listKeys(pg)).sort().join() === '1,2', 'CIP F16 표를 통째로 받아 목록에 (2행)');
+  await pg.fill('#search [name=sn]', 'zzc 0002'); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(200);
+  is((await listKeys(pg)).join() === '2', 'S/N 로 찾는다 (하이픈·대소문자 무시)');
+  await pg.click('#list tr[data-key="2"]'); await pg.waitForTimeout(250);
+  const gh = await pg.$$eval('#editor .grp-h', hs => hs.map(h => h.textContent));
+  is(gh.some(t => /^설비/.test(t)) && gh.some(t => /점검 항목/.test(t)), '편집기 묶음 — 설비 · 점검 항목 (' + gh.join(' / ') + ')');
+  is(await pg.$$eval('#editor [data-col]', es => es.map(e => e.dataset.col)).then(c => c.includes('New Item Alpha') && c.includes('Valve Fix')), '더한 항목 열(New Item Alpha)도 고칠 칸으로 선다');
+  await setField(pg, 'New Item Alpha', '2026-05-06');
+  await qlog(pg);
+  await pg.click('#editor [data-act=save]'); await pg.waitForTimeout(300);
+  const up = rpcs(await qlog(pg), 'edit_update')[0];
+  is(up && up.args.p_tbl === 'sheet_cip_f16' && up.args.p_key === 2 && up.args.p_changes['New Item Alpha'] === '2026-05-06', '한 행 수정 → edit_update(sheet_cip_f16, id)');
+  is(await pg.evaluate(() => /통째 교체/.test(document.getElementById('editor').innerText)), '«양식을 다시 올리면 덮인다»를 편집기에 적는다');
+  is(await pg.evaluate(() => UP_RID.cip16 === 'cipf16' && UP_RID.cip11 === 'cipf11'), '「엑셀 올리기」의 원본 교체는 CIP 업로드(cipf11·cipf16)로 간다');
   is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
   await ctx.close();
+  const k = await open(Object.assign(seedOf({}), {}), '/edit/?site=KR');
+  is(await k.pg.evaluate(() => !document.querySelector('.tab[data-tab=cip11]') && !document.querySelector('.tab[data-tab=cip16]')), '국내 데모 모드에는 CIP 탭이 없다 (데모 표가 없다)');
+  await k.ctx.close();
 }
 
 await browser.close();

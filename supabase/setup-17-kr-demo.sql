@@ -190,6 +190,8 @@ language sql stable set search_path = public as $$
                          when 'sheet_roster'       then 'id'
                          when 'sheet_edu'          then 'id'
                          when 'sheet_leave'        then 'id'
+                         when 'sheet_cip_f11'      then 'id'   -- v159 (setup-16 과 같이)
+                         when 'sheet_cip_f16'      then 'id'
                          when 'kr_sheet_wk'        then 'src_row'
                          when 'kr_sheet_inst'      then 'src_row'
                          when 'kr_sheet_alarm'     then 'src_row'

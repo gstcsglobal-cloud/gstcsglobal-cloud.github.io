@@ -273,7 +273,6 @@ table.dt td.v{word-break:break-all}
     <a class="btn" id="toUpload" href="/upload/" target="gstUpload" title="월 실적·알람 원장·CIP 등 원본 파일을 통째·기간 단위로 갈아끼웁니다 (새 창) — 몇 행만 고칠 때는 이 화면에서 찾아 고치세요"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg> 원본 파일 올리기</a>
     <!-- CIP 현황 — 이 화면에 표 탭이 없다(점검 항목이 «열로» 늘어나는 표라 한 행 편집보다 «자체관리 양식 통째 올리기»가 맞다 · v157).
          업로드 화면이 Detail 시트를 고르고 · 묶음 머리글(Left·Right)을 합치고 · 새 점검 항목을 표에 열로 더하게 해 준다. -->
-    <a class="btn" id="toCip" href="/upload/" target="gstUpload" title="CIP 현황(자체관리 양식 · Site Issue 워크북)을 올립니다 — 새 점검 항목은 표에 열로 더할 수 있습니다">CIP 현황 올리기</a>
     <div class="me" id="me"></div>
   </header>
   <div class="wrap">
@@ -500,8 +499,24 @@ const TABS = [
              ['휴가', ['항목','발생일','휴가시작일','휴가시작시간','휴가종료일','휴가종료시간','휴가신청시간','비고']] ],
     need:['이름','항목','휴가시작일','휴가종료일'],
     dates:['발생일','휴가시작일','휴가종료일'],
-    dl:['소속','항목'] }
+    dl:['소속','항목'] },
+  /* ── CIP F11 · F16 (v159 · 사용자: 「다른 시트처럼 데이터 관리 자체에서 수정도 가능하게 — 얘만 빠져 있으면 업로더가 놓칠 수 있다」) ──
+     점검 항목은 «열»로 늘어난다(v130) — 정해진 묶음은 설비 칸뿐이고 나머지 열(=점검 항목 · 더한 열 포함)은 restName 묶음에 저절로 선다.
+     ⚠ 자체관리 양식은 «통째 교체»로 올라간다 — 여기서 고친 값은 양식을 다시 올리면 덮인다(업로드 화면이 edit_overwrites 로 미리 말한다).
+     「엑셀 올리기」의 «원본으로 교체»가 CIP 업로드(없던 열 정하기 · v158)로 간다(UP_RID). 표가 작아 통째로 받는다(whole). */
+  { id:'cip11', tbl:'sheet_cip_f11', name:'CIP F11', key:'id', mode:'whole', cip:'F11',
+    list:['NO','Scrubber S/N','Scrubber Code','FAB','Floor','Model','FAB In','Remark'],
+    quick:[ {k:'sn', l:'S/N · Code', cols:['Scrubber S/N','Scrubber Code'], t:'text', ph:'예: GBWS-0000'},
+            {k:'fab', l:'FAB', cols:['FAB'], t:'pick'},
+            {k:'floor', l:'Floor', cols:['Floor'], t:'pick'},
+            {k:'model', l:'Model', cols:['Model'], t:'pick'} ],
+    groups:[ ['설비', ['NO','Country','Customer','FAB','Floor','area','Type','Model','Model Type','PJT.','Scrubber S/N','Scrubber Code','Group','Detail','FAB In','Remark']] ],
+    restName:'점검 항목 (값: 완료일 · Not yet · N/A)',
+    need:['Scrubber S/N'], dup:'Scrubber S/N', dates:['FAB In'],
+    dl:['Country','Customer','FAB','Floor','area','Type','Model','Model Type','Group','Detail'],
+    note:'점검 항목 칸에는 완료일(YYYY-MM-DD) · Not yet · N/A 를 적습니다 — CIP 화면이 그 값으로 진행률을 셉니다.\n이 표는 자체관리 양식을 «통째 교체»로 올립니다 — 여기서 고친 값은 양식을 다시 올리면 덮입니다(업로드 화면이 미리 알려 줍니다). 원본 양식에도 같이 고쳐 두세요.\n새 점검 항목(열)은 「엑셀 올리기」로 양식을 올릴 때 «새 항목 / 기존과 같음 / 무시»로 정합니다.' }
 ];
+TABS.push(Object.assign({}, TABS.find(t => t.id === 'cip11'), { id:'cip16', tbl:'sheet_cip_f16', name:'CIP F16', cip:'F16' }));
 TABS.forEach(t => { if(t.region) t.quick.unshift({ k:'region', l:'구분', t:'region' }); });
 /* ---------- 국내 데모 모드 (?site=KR · v146) ----------
    주간현황(국내) 데모의 «데모 표»(kr_sheet_*)를 고친다 — 국내 운영자(kr)와 관리자가 쓴다. 같은 화면이 표 이름만 바꿔 돈다:
@@ -511,7 +526,7 @@ TABS.forEach(t => { if(t.region) t.quick.unshift({ k:'region', l:'구분', t:'re
    대상은 주간현황이 읽는 일곱 표뿐이다(자재는 데모 표가 없다). */
 const KR = (function(){ try{ return (new URLSearchParams(location.search).get('site') || '').toUpperCase() === 'KR'; }catch(e){ return false; } })();
 if(KR){
-  for(let i = TABS.length - 1; i >= 0; i--) if(TABS[i].id === 'mat') TABS.splice(i, 1);
+  for(let i = TABS.length - 1; i >= 0; i--) if(TABS[i].id === 'mat' || TABS[i].cip) TABS.splice(i, 1);   // 데모 표가 없다(자재·CIP)
   TABS.forEach(t => { t.tbl = 'kr_' + t.tbl; });
   /* 머리 — «어느 표를 고치는가»를 화면이 말한다(본 데이터 관리와 생김새가 같아 헷갈린다) · 원본 올리기도 데모 경로로 */
   document.title = '국내 데모 — 데이터 관리 · CS Global Team';
@@ -1263,7 +1278,7 @@ function renderEditor(){
     }
   });
   const rest = cols.filter(c => !used.has(c));
-  if(rest.length) h += '<div class="grp"><div class="grp-h">기타<span class="ln"></span></div><div class="flds">' + rest.map(field).join('') + '</div></div>';
+  if(rest.length) h += '<div class="grp"><div class="grp-h">' + esc(t.restName || '기타') + '<span class="ln"></span></div><div class="flds">' + rest.map(field).join('') + '</div></div>';
   /* extra — 업로드 때 표에 없던 열(SPEC 밖). 승격 전에도 값을 고칠 수 있게 한다(v89 승격 규약 · 값은 이미 여기 있다) */
   if(cols.indexOf('extra') >= 0){
     const xs = Object.keys(cur.origX);
@@ -2066,7 +2081,7 @@ $('xfile').addEventListener('change', e => { const f = e.target.files && e.targe
    · 그다음 «넣는 방식»을 고른다: 한 행씩 반영(이력·되돌리기 · 지금까지의 엑셀 일괄) / 원본으로 교체(통째·기간 — 업로드 엔진).
      ⚠ 교체는 이 화면이 하지 않는다 — 업로드 화면을 이 안에 띄워(?embed=1) 같은 파일을 건네준다. 적재 엔진을 두 벌 두면
        두 경로가 다른 규칙으로 표를 비운다(제2원칙). */
-const UP_RID = { wk:'wk', mat:'mat', inst:'inst', roster:'roster', edu:'edu', leave:'leave', alarm:'alarm', abp:'abp2kr' };
+const UP_RID = { wk:'wk', mat:'mat', inst:'inst', roster:'roster', edu:'edu', leave:'leave', alarm:'alarm', abp:'abp2kr', cip11:'cipf11', cip16:'cipf16' };
 const cmSite = () => KR ? 'KR' : 'ALL';
 /* 저장 열쇠 — 업로드와 같다. 원장은 «시트 태그»별(K·P·H 양식이 다르다 · 이름 규칙이 없는 시트는 해외 OS). */
 function cmKey(t, sheet){
@@ -2178,13 +2193,8 @@ function openUp(o){
    Ctrl·가운데 클릭은 지금까지처럼 새 창(링크 그대로) — 두 화면을 나란히 보고 싶은 사람의 길을 막지 않는다. */
 { const up = document.getElementById('toUpload');
   if(up) up.addEventListener('click', e => { if(e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault(); openUp({ rid:UP_RID[(TAB() || {}).id] }); }); }
-/* CIP 현황 올리기 — F11·F16 은 표가 따로다. 먼저 고르게 한다(잘못 고르면 업로드 화면이 파일의 FAB 을 보고 막는다). */
-{ const cp = document.getElementById('toCip');
-  if(cp){ if(KR) cp.hidden = true;
-    cp.addEventListener('click', async e => { if(e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault();
-      const v = await dialog('CIP 현황 올리기', '<p>어느 사이트의 CIP 인가요? 자체관리 양식(Site Issue 워크북)을 그대로 올리면 됩니다 — 업로드 화면이 Detail 시트를 찾아 열을 맞추고, 표에 없는 새 점검 항목은 골라서 열로 더할 수 있습니다.</p>',
-        [{l:'취소', v:false}, {l:'CIP F11', v:'cipf11', cls:'pri'}, {l:'CIP F16', v:'cipf16', cls:'pri'}], true);
-      if(v) openUp({ rid:v }); }); } }
+/* CIP 는 v159 부터 탭이다(CIP F11 · CIP F16) — 「엑셀 올리기」의 «원본으로 교체»가 CIP 업로드로 간다(UP_RID).
+   머리의 따로 선 「CIP 현황 올리기」 단추는 없앴다 — 입구가 둘이면 «CIP 는 고칠 수 없는 표»로 읽힌다(사용자 지적). */
 /* ---------- 기준 정보(값 사전) — 새 값이 «어디에 · 어떻게» 반영되는지 보고, 규칙으로 정한다 (v152 · 사용자 요청) ----------
    사용자: 「F16S 신규 사이트 설치현황을 올렸는데 차트·가동현황 표에 반영이 안 된다 … 새로운 게 들어가면 어디에 반영하는지,
    어떻게 반영하는지 그런 기능이 필요하다 — 이럴 때마다 코딩을 변경할 수는 없다」.

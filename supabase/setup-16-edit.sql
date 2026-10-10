@@ -50,7 +50,9 @@ $$;
 
 /* ---------- 2. 표 사전 ----------
  * 고칠 수 있는 표와 그 PK. 여기 없는 표는 모든 edit_* 가 bad_table 로 거절한다.
- * 미러 3종·원장 2종은 src_row, Import 표(인원·교육·휴가)는 id(identity). CIP·ABP 는 아직 뺀다.
+ * 미러 3종·원장 2종은 src_row, Import 표(인원·교육·휴가·CIP)는 id(identity). ABP 는 아직 뺀다(크로스탭).
+ * v159 — CIP F11·F16 을 넣었다(사용자: 「다른 시트처럼 데이터 관리 자체에서 수정도 가능하게」). 통째 교체 표라 고친 행은
+ *   다음 업로드에 덮인다 — 업로드 화면이 edit_overwrites 로 미리 말한다(날짜 열이 없어 «통째»로만 센다).
  * v143 — 원장(알람·올바)을 넣었다(사용자 확정 「고치기까지」). ⚠ 원장은 «구간 교체»가 그 기간을 통째로 갈아끼우는
  *   표라, 여기서 고친 행은 같은 기간을 다시 올리면 사라진다 — 그래서 업로드 화면이 6절(edit_overwrites)로 «덮인다»고
  *   먼저 말한다. 계산 칸(sn_key·occur_date·fmonth·fweek·cnt)은 화면이 core 의 GST.ALARM.derive 로 다시 계산해 보낸다
@@ -64,7 +66,9 @@ language sql immutable as $$
                     when 'sheet_allbypass' then 'src_row'
                     when 'sheet_roster'    then 'id'
                     when 'sheet_edu'       then 'id'
-                    when 'sheet_leave'     then 'id' end
+                    when 'sheet_leave'     then 'id'
+                    when 'sheet_cip_f11'   then 'id'
+                    when 'sheet_cip_f16'   then 'id' end
 $$;
 -- 옛 이력과 같은 열(gid)에 시트 gid 를 적는다. 원장 표처럼 gid 가 없는 표는 표 이름 그대로.
 create or replace function public._edit_gid(p_tbl text) returns text
