@@ -314,7 +314,8 @@ console.log('[3] file:// 오프라인 실행');
     const b = document.querySelector('.tab[data-id="' + t.id + '"]'); let thrown = null;
     try { switchTab(t.id); } catch (e) { thrown = e.message; }
     const f = frames[t.id]; return { id:t.id, vis:b ? getComputedStyle(b).display !== 'none' : null, thrown, note:!!f && /오프라인 판에 없습니다/.test(f.srcdoc || '') }; });
-  is(!!demo && demo.vis === false && !demo.thrown && demo.note, '데모 탭 — 오프라인 판에 없다: 탭이 안 보이고, 열어도 «없다»고 말한다 (' + JSON.stringify(demo) + ')');
+  /* v163 — 셸에 등급 전용 탭이 없을 수 있다(데모 탭을 뺐다). 있으면 그 탭은 오프라인 판에서 «없다»고 말해야 한다. */
+  is(demo === null || (demo.vis === false && !demo.thrown && demo.note), '등급 전용 탭 — 없거나, 오프라인 판에서 «없다»고 말한다 (' + JSON.stringify(demo) + ')');
   const rk = fs.readFileSync(path.join(OUT, 'offline.html'), 'utf8');
   is(!/주간 현황\(국내\) · CS Global Team/.test(rk), '조립물에 데모 화면(report-kr)이 들어가지 않았다');
 

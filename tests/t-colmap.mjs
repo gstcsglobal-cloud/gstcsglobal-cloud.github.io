@@ -268,6 +268,47 @@ console.log('[10] CIP 자체관리 양식 — Detail 시트 · 묶음 머리글 
   is(/표에 없던 열 6개/.test(tv) && !ov.includes('add') && ov.includes('skip') && ov.includes('map:Widget Swap') && /관리자만/.test(tv), '관리자가 아니면(editor) «새 항목 추가»는 없고 잇기·무시만 고른다');
   await pv.close();
 }
+
+console.log('[11] 여러 줄로 병합된 머리글 — 교육현황 «교육과정 › Basic (Level 1) › 교육완료일» (v164 · 사용자 파일 모양)');
+{
+  const pm = await ctx.newPage(); const pem=[]; pm.on('pageerror', e => pem.push(e.message));
+  const EDU=['No','Site','인원','사원번호','구분','Basic 교육완료일','Veteran 교육완료일','Scrubber Lv.2 교육완료일','Scrubber Lv.3 교육완료일','id','src_row','created_at','imported_at','extra'];
+  await pm.addInitScript(c => { window.__CIPCOLS={sheet_edu:c}; window.__CM=[]; }, EDU);
+  await pm.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await pm.waitForTimeout(900);
+  await pm.selectOption('#tsel', await pm.evaluate(() => String(TABLES.findIndex(t=>t.rid==='edu'))));
+  /* 지어낸 값 — 모양만 실제 파일을 따랐다: 제목 줄 · No~직무 세로 병합 · 교육과정(가로 병합) › 두 묶음 › 칸 넷씩 */
+  const W=20, pad=a=>{ const r=a.slice(); while(r.length<W) r.push(''); return r; };
+  const aoa=[
+    pad(['교육 현황 (예시)']),
+    pad(['No','Site','인원','입사일','경력','직급','직무','','','','','교육과정']),
+    pad(['','','','','','','','','','','','Basic (Level 1)','','','','Veteran (Level 2)']),
+    pad(['','','','','','','','','','','','이수여부','교육시작일','교육완료일','이론교육시간','이수여부','교육시작일','교육완료일','이론교육시간']),
+    pad(['1','S1','가나다','2020-01-01','','','','','','','','Y','2024-01-01','2024-01-05','8','Y','2025-02-01','2025-02-09','8']),
+    pad(['2','S1','라마바','2021-01-01','','','','','','','','Y','2024-03-01','2024-03-07','8','N','','','']),
+  ];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '교육현황');
+  const fp=path.join(OUT,'edu-merged.xlsx'); XLSX.writeFile(wb, fp);
+  await pm.setInputFiles('#fsel', fp); await pm.waitForTimeout(2500);
+  const r = await pm.evaluate(() => ({ n:PREP?PREP.rows.length:-1, r0:PREP&&PREP.rows[0], r1:PREP&&PREP.rows[1],
+    opts:Array.from(document.querySelectorAll('#chk select option')).map(o=>o.textContent) }));
+  is(r.n===2, '머리글 세 줄은 데이터로 안 읽힌다 — 데이터 2행 (받은 ' + r.n + ')');
+  is(r.r0 && r.r0['Basic 교육완료일']==='2024-01-05' && r.r0['Veteran 교육완료일']==='2025-02-09' && r.r0['인원']==='가나다',
+     '병합 아래 «교육완료일»이 자기 묶음의 표 열로 잡힌다 (Basic → N열 · Veteran → R열)');
+  is(r.r1 && !r.r1['Veteran 교육완료일'] && r.r1['Basic 교육완료일']==='2024-03-07', '이수여부·시작일 칸을 완료일로 잘못 집지 않는다');
+  is(r.opts.some(t=>/교육과정 Basic \(Level 1\) 교육완료일/.test(t)) && r.opts.some(t=>/Veteran \(Level 2\) 이론교육시간/.test(t)),
+     '지정 목록에 위→아래로 이은 이름이 뜬다 — 사람이 직접 고를 수 있다');
+  /* 옛·새 교육현황 레이아웃(밴드가 머리글 «위») 은 그대로 */
+  const aoa2=[pad(['','','','','법인 교육과정','','본사 교육과정']), pad(['','','','','Basic','Veteran','Scrubber Lv.2','Scrubber Lv.3']),
+    pad(['No','Site','인원','사원번호','교육완료일','교육완료일','교육완료일','교육완료일']), pad(['1','S1','가나다','A001','2024-01-05','','2025-03-03',''])];
+  const wb2=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(aoa2), '교육현황');
+  const fp2=path.join(OUT,'edu-bandtop.xlsx'); XLSX.writeFile(wb2, fp2);
+  await pm.setInputFiles('#fsel', fp2); await pm.waitForTimeout(2500);
+  const r2 = await pm.evaluate(() => ({ n:PREP?PREP.rows.length:-1, r0:PREP&&PREP.rows[0] }));
+  is(r2.n===1 && r2.r0['Basic 교육완료일']==='2024-01-05' && r2.r0['Scrubber Lv.2 교육완료일']==='2025-03-03' && r2.r0['사원번호']==='A001',
+     '묶음이 머리글 «위»에 있는 양식(2026-08 개편)은 지금까지대로');
+  is(pem.length===0, 'JS 에러 0 (병합 머리글)' + (pem.length?' → '+pem[0]:''));
+  await pm.close();
+}
 is(pe.length===0, 'JS 에러 0' + (pe.length?' → '+pe[0]:''));
 await browser.close(); srv.close();
 console.log(fail?`\n❌ t-colmap: ${pass} 통과 · ${fail} 실패`:`\n✅ t-colmap: ${pass}/${pass} 통과`);
