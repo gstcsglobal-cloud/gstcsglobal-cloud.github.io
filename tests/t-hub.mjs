@@ -131,6 +131,15 @@ await ps.goto(BASE + '/', { waitUntil:'domcontentloaded' }); await ps.waitForTim
 const sh = await ps.evaluate(() => ({ first:(document.querySelector('.tab') || {}).dataset && document.querySelector('.tab').dataset.id,
   src:(document.querySelector('iframe') || {}).src || '' }));
 is(sh.first === 'hub' && /\/hub\//.test(sh.src), '셸을 열면 통합 관제가 먼저 뜬다 (' + sh.first + ' · ' + sh.src.slice(-6) + ')');
+/* 지도 — 다른 탭에 가 있는 동안(숨김) 다시 그려도, 돌아오면 지도가 제대로 선다 (v170 · 사용자 보고: 회색 상자만 남았다) */
+await ps.evaluate(() => { const o = document.getElementById('loginOverlay'); if (o) o.remove(); });
+const hubF = ps.frames().find(f => /\/hub\//.test(f.url()));
+await ps.click('.tab[data-id="cip"]'); await ps.waitForTimeout(800);
+await hubF.evaluate(() => { render(); });                 // 숨겨진 채로 다시 그린다(자동 새로고침·테마 전환과 같은 길)
+await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(900);
+const mp = await hubF.evaluate(() => { const c = document.getElementById('mapC'), x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+  let on = 0; for (let i = 3; i < x.length; i += 4) if (x[i]) on++; return { w: c.width, on }; });
+is(mp.w > 300 && mp.on > 1000, '숨김 중에 다시 그려도 돌아오면 지도가 선다 (폭 ' + mp.w + ' · 점 ' + mp.on + ')');
 /* 라이트/다크 스위치 — 라이트가 기본 · 고르면 다음에 열 때도 남고 페이지(iframe)까지 간다 */
 const th = async () => { const o = await ps.evaluate(() => ({ dark:document.body.classList.contains('theme-slate'), aria:document.getElementById('themeSw').getAttribute('aria-checked') }));
   const f = ps.frames().find(x => /\/hub\//.test(x.url())); o.fr = f ? await f.evaluate(() => document.body.classList.contains('theme-slate')) : null; return o; };

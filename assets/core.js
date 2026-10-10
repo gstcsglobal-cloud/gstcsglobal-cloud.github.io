@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 165;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 166;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -4116,7 +4116,7 @@ GST.ops = {
       return { op:op, region:GST.ORG.region(op)||GST.ORG.region(cty), cty:cty, cityKey:GST.ops.cityOf(op,cty),
         cust:cust, campus:GST.ORG.campus(v(r,'location'),fab,op)||'', fab:fab, model:String(v(r,'model')||'').trim(),
         sn:String(v(r,'sn')||'').trim(), code:String(v(r,'code')||'').trim(),
-        state:v(r,'state'), stateRaw:String(v(r,'state')||'').trim(), d:GST.toDate(v(r,'fabIn'))||GST.toDate(v(r,'turnOn')),
+        state:v(r,'state'), stateRaw:String(v(r,'state')||'').trim(), d:GST.toDate(v(r,'fabIn'))||GST.toDate(v(r,'turnOn')), dOn:GST.toDate(v(r,'turnOn')),
         warr:GST.WARR(v(r,'warranty')), wd:GST.toDate(v(r,'warrantyDate')) };
     }).filter(function(x){ return x.sn||x.code; });
   },
@@ -4132,6 +4132,11 @@ GST.ops = {
         desc:String(v(r,'cause')||v(r,'phenom')||v(r,'alarm')||'').trim(), src:'wk' };
     }).filter(function(x){ return x.d; });
   },
+  /* 반입·가동 판정 — 주간현황과 같은 날짜를 쓴다(report: 가동=Turn-on date · 반입=FAB In).
+     ⚠ 설비상태가 빈 행은 날짜로 판정하는데(GST.EQ «옛 판정»), 가동까지 FAB In 으로 보면 «반입만 된 설비가 전부 가동»이 된다
+       (실측 F16N: 상태 빈칸 82대 · Turn-on 빈칸 82대 → 화면은 77/77, 실제 가동 10대 · 사용자 보고 v170). */
+  isIn :function(x, asOf){ return GST.EQ.isIn(x.state, x.d, asOf); },
+  isRun:function(x, asOf){ return GST.EQ.isRun(x.state, x.dOn, asOf); },
   /* 원장(csvTableRows 의 2차원 배열 · 첫 줄이 열 이름) */
   parseLedger:function(rows){
     if(!rows||rows.length<2) return [];

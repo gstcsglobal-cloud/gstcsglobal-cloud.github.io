@@ -30,6 +30,9 @@ const inst = [IH]; let no = 0;
 const unit = (op, cust, fab, code, state, wd, wio) => { no++; inst.push([no, op, cust, 'LOC', fab, 'L1', 'B1', code, code + 'S', 'GST-1000',
   'BURN', 'SINGLE', 'ETCH', 'DRY', 'DRY', 'MT' + no, 'TEL', 'TEL-A', '2023-03-01', '2023-03-10', '2023-03-20', wd || '2030-01-01', wio || 'IN', state]); };
 for (let i = 1; i <= 30; i++) unit('GST TAIWAN SCRUBBER', 'Micron Memory Taiwan Co., Ltd.(F16)', 'F16', 'TWC' + i, i <= 28 ? 'Operation' : 'Set-up', i <= 3 ? ymd(dAgo(-30)) : '');
+/* v170 회귀 — 설비상태가 빈 사이트 파일(실측 F16N): FAB In 만 있고 Turn-on 이 빈 5대는 «반입»이지 «가동»이 아니다 */
+for (let i = 1; i <= 5; i++) { no++; inst.push([no, 'GST TAIWAN SCRUBBER', 'MICRON', 'LOC', 'F16N', 'L1', 'B1', 'TWN' + i, 'TWN' + i + 'S', 'GST-1000',
+  'BURN', 'SINGLE', 'ETCH', 'DRY', 'DRY', 'MTN' + i, 'TEL', 'TEL-A', '2024-05-01', '', '', '2030-01-01', 'IN', '']); }
 for (let i = 1; i <= 10; i++) unit('GST CHINA(WUHAN) SCRUBBER', 'YMTC', 'FAB1', 'WHC' + i, 'Operation');
 for (let i = 1; i <= 12; i++) unit('SEC Scrubber', '삼성전자(주)', 'P1', 'KRC' + i, i <= 10 ? 'Operation' : '반납');
 
@@ -83,7 +86,7 @@ await pg.goto(BASE + '/site/?op=' + encodeURIComponent('GST TAIWAN SCRUBBER'), {
 const kp = () => pg.evaluate(() => Object.fromEntries(Array.from(document.querySelectorAll('#kpis .st-kpi')).map(b => [b.dataset.k, b.querySelector('.v').firstChild.textContent.trim()])));
 console.log('[1] 숫자 — 관제와 같은 함수(GST.ops)');
 let K = await kp();
-is(K.units === '30 / 28', '대만 반입 30 / 가동 28 (관제 신호등과 같다 · 받은 ' + K.units + ')');
+is(K.units === '35 / 28', '대만 반입 35 / 가동 28 — 상태 빈칸 5대는 반입만(Turn-on 이 비면 가동이 아니다) · 받은 ' + K.units);
 const tr = await pg.evaluate(() => Array.from(document.querySelectorAll('#trend .bar')).map(b => +b.querySelector('title').textContent.split('· ')[1]));
 is(tr.length === 26 && tr[25] === 12 && tr.slice(14, 25).every(v => v === 1), '26주 추이 — 이번 주 12 · 그 앞 11주는 1 (관제 히트맵과 같다)');
 is(K.warr === '3', '워런티 90일 안 3대');
@@ -92,8 +95,11 @@ await pg.click('#trend .bar[data-w="25"]'); await pg.waitForTimeout(400);
 is(await pg.evaluate(() => document.querySelectorAll('.gov-body tbody tr').length) === 12, '이번 주 막대를 누르면 그 12건');
 await pg.evaluate(() => GST._ovClose && GST._ovClose());
 const wh = await pg.evaluate(() => Array.from(document.querySelectorAll('#where button')).map(b => [b.querySelector('span').textContent, +b.querySelector('b').textContent]));
-is(wh.length === 1 && wh[0][0] === 'F16' && wh[0][1] === 23, '고장이 몰리는 곳(90일 · FAB) — F16 23건 (12 + 앞 11주 중 90일 안 11)');
+is(wh.length >= 1 && wh[0][0] === 'F16' && wh[0][1] === 23, '고장이 몰리는 곳(90일 · FAB) — F16 23건 (12 + 앞 11주 중 90일 안 11)');
 if (process.env.HUB_SHOT) await pg.screenshot({ path: process.env.HUB_SHOT + '/site-light.png', fullPage:true });
+await pg.click('#fabs .st-fab[data-f="F16N"]'); await pg.waitForTimeout(400);
+is((await kp()).units === '5 / 0', 'F16N 만 보면 반입 5 / 가동 0 (사용자 보고 v170 — 예전에는 5 / 5)');
+await pg.click('#fabs .st-fab[data-f=""]'); await pg.waitForTimeout(300);
 console.log('[2] 운영단위 바꾸기');
 await pg.selectOption('#opSel', 'SEC Scrubber'); await pg.waitForTimeout(500); K = await kp();
 is(K.units === '10 / 10', '국내 — 반납 2대는 안 센다(반입 10 / 가동 10)');
