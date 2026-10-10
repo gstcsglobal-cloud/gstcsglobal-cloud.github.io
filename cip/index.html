@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=164"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=166"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -131,7 +131,7 @@ tr:hover td{background:var(--glass-hover)}
 @media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}}
 @media(max-width:768px){.card h3{padding-right:0}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=164">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=166">
 </head>
 <body>
 
@@ -552,7 +552,7 @@ function periods(n,anchor,unit){
 
 GST.chartDefaults();
 window.changeDashboardTheme=function(themeClass,label){
-  document.body.className='';
+  [...document.body.classList].filter(c=>/^theme-/.test(c)).forEach(c=>document.body.classList.remove(c));   /* v169 — 테마 클래스만 바꾼다(통째로 갈면 gst-inframe·gst-motion 이 날아간다 · v139 규약) */
   if(themeClass!=='default')document.body.classList.add('theme-'+themeClass);
   const L={slate:'Slate',default:'Navy',burgundy:'Burgundy',light:'Light'};
   const lb=document.getElementById('themeLabel'); if(lb)lb.textContent=L[themeClass]||label||themeClass;

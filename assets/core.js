@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 164;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 166;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -4061,6 +4061,40 @@ GST.riskWhy=function(r){
   return r.why.map(function(w){ return T[w].replace('{n}',n[w]); }).join(' · ');
 };
 
+/* ---------- 움직임 (v169 · 「통합관리화면」 5단계) ----------
+   카드가 차례로 떠오르고 · 숫자가 바뀌면 잠깐 빛나고 · 팝업이 튀어나온다. 규칙은 theme.css 의 «body.gst-motion» 아래에만 있다.
+   ⚠ 주간현황(report · report-kr)에는 걸지 않는다 — 그 화면은 손대지 않는다(사용자 지시). 판정은 경로 한 곳.
+   ⚠ 움직임 줄이기(prefers-reduced-motion)를 고른 사람에게는 CSS 가 아무것도 안 한다 — 이 함수는 클래스만 단다. */
+GST.MOTION_SKIP = /^\/report(-kr)?\//;
+GST._motionInit = function(){
+  try{
+    if(!document.body || GST.MOTION_SKIP.test(GST.pagePath())) return;
+    document.body.classList.add('gst-motion');
+    /* KPI 값이 «사람이 무언가를 바꾼 직후» 바뀌면 그 카드에 잠깐 표식을 단다 — 필터를 바꿨을 때 무엇이 움직였는지 눈이 따라간다.
+       ⚠ 로드 중의 갱신(자리표시 → 숫자 · 번역 적용 · 자동 새로고침)에는 안 단다 — 사람 손이 닿은 지 2초 안의 변화만 센다. */
+    if(typeof MutationObserver==='undefined') return;
+    let lastAct=0; const act=function(){ lastAct=Date.now(); };
+    ['pointerdown','keydown','change','input'].forEach(function(ev){ document.addEventListener(ev, act, true); });
+    window.addEventListener('message', function(e){ const d=e.data||{}; if(d.type==='gst-filter'||d.type==='gst-lang') act(); });
+    const seen=new WeakMap();
+    new MutationObserver(function(ms){
+      const hot=Date.now()-lastAct<2000;
+      ms.forEach(function(m){
+        const el=m.target.nodeType===3?m.target.parentElement:m.target; if(!el||!el.closest) return;
+        const k=el.closest('.kpi'); if(!k) return;
+        const txt=k.textContent, prev=seen.get(k); seen.set(k, txt);
+        if(!hot||prev==null||prev===txt) return;
+        k.classList.remove('gst-upd'); void k.offsetWidth; k.classList.add('gst-upd');
+        clearTimeout(k._gstU); k._gstU=setTimeout(function(){ k.classList.remove('gst-upd'); }, 900);
+      });
+    }).observe(document.body,{subtree:true,childList:true,characterData:true});
+  }catch(e){}
+};
+if(typeof document!=='undefined'){
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', GST._motionInit);
+  else GST._motionInit();
+}
+
 /* ---------- 운영 현황 읽기·판정 한 벌 — 통합 관제 · 사이트 상세가 같이 쓴다 (v167) ----------
    두 화면이 «같은 설비 · 같은 고장»을 다른 식으로 세면 관제의 숫자와 사이트 화면의 숫자가 갈린다(제2원칙).
    그래서 파싱·BM/PM 판정·위험 순위 입력을 여기 한 곳에 둔다. 판정은 전부 정본을 부른다:
@@ -4082,7 +4116,7 @@ GST.ops = {
       return { op:op, region:GST.ORG.region(op)||GST.ORG.region(cty), cty:cty, cityKey:GST.ops.cityOf(op,cty),
         cust:cust, campus:GST.ORG.campus(v(r,'location'),fab,op)||'', fab:fab, model:String(v(r,'model')||'').trim(),
         sn:String(v(r,'sn')||'').trim(), code:String(v(r,'code')||'').trim(),
-        state:v(r,'state'), stateRaw:String(v(r,'state')||'').trim(), d:GST.toDate(v(r,'fabIn'))||GST.toDate(v(r,'turnOn')),
+        state:v(r,'state'), stateRaw:String(v(r,'state')||'').trim(), d:GST.toDate(v(r,'fabIn'))||GST.toDate(v(r,'turnOn')), dOn:GST.toDate(v(r,'turnOn')),
         warr:GST.WARR(v(r,'warranty')), wd:GST.toDate(v(r,'warrantyDate')) };
     }).filter(function(x){ return x.sn||x.code; });
   },
@@ -4098,6 +4132,11 @@ GST.ops = {
         desc:String(v(r,'cause')||v(r,'phenom')||v(r,'alarm')||'').trim(), src:'wk' };
     }).filter(function(x){ return x.d; });
   },
+  /* 반입·가동 판정 — 주간현황과 같은 날짜를 쓴다(report: 가동=Turn-on date · 반입=FAB In).
+     ⚠ 설비상태가 빈 행은 날짜로 판정하는데(GST.EQ «옛 판정»), 가동까지 FAB In 으로 보면 «반입만 된 설비가 전부 가동»이 된다
+       (실측 F16N: 상태 빈칸 82대 · Turn-on 빈칸 82대 → 화면은 77/77, 실제 가동 10대 · 사용자 보고 v170). */
+  isIn :function(x, asOf){ return GST.EQ.isIn(x.state, x.d, asOf); },
+  isRun:function(x, asOf){ return GST.EQ.isRun(x.state, x.dOn, asOf); },
   /* 원장(csvTableRows 의 2차원 배열 · 첫 줄이 열 이름) */
   parseLedger:function(rows){
     if(!rows||rows.length<2) return [];
@@ -7403,17 +7442,21 @@ GST._ovCss=function(){
   st.textContent=
   // 테마 대응 — 페이지마다 --card 같은 변수가 없어서 밝은 테마에서 글씨가 묻혔다.
   // 오버레이가 쓰는 색은 여기서 자급자족하고, body의 테마 클래스로만 갈아끼운다.
-   '.gov{--gov-bg:#101720;--gov-fg:#E6EDF3;--gov-mut:#8B98A9;--gov-line:rgba(151,170,196,.22);'
-  +'--gov-soft:rgba(151,170,196,.09);--gov-heat:45,212,191}'
-  +'body.theme-slate .gov{--gov-bg:#0C1219;--gov-fg:#e2e8f0;--gov-mut:#94a3b8;--gov-line:rgba(151,170,196,.18);--gov-soft:rgba(151,170,196,.08)}'
+  /* v169 — 기본이 라이트다(v139 · :root 가 라이트). 예전에는 기본값이 어두운 색이라 테마 클래스가 아직 안 붙은 화면
+     (셸 밖에서 직접 연 페이지 · 테마 메시지가 오기 전)에서 흰 화면 위에 검은 팝업이 떴다. 다크는 theme-slate 일 때만. */
+   '.gov{--gov-bg:#ffffff;--gov-fg:#101828;--gov-mut:#667085;--gov-line:rgba(16,24,40,.12);'
+  +'--gov-soft:rgba(16,24,40,.04);--gov-heat:47,111,237;--gov-dim:rgba(16,24,40,.42)}'
+  +'body.theme-slate .gov{--gov-bg:#0C1219;--gov-fg:#e2e8f0;--gov-mut:#94a3b8;--gov-line:rgba(151,170,196,.18);--gov-soft:rgba(151,170,196,.08);--gov-heat:45,212,191;--gov-dim:rgba(3,7,18,.72)}'
   +'body.theme-burgundy .gov{--gov-bg:#1f0822;--gov-fg:#fbeaf4;--gov-mut:#b49aa9;--gov-line:rgba(255,240,245,.18);'
   +'--gov-soft:rgba(255,240,245,.08);--gov-heat:244,114,182}'
   +'body.theme-light .gov{--gov-bg:#ffffff;--gov-fg:#0f172a;--gov-mut:#64748b;--gov-line:rgba(15,23,42,.14);'
   +'--gov-soft:rgba(15,23,42,.05);--gov-heat:37,99,235}'
-  +'.gov{position:fixed;inset:0;z-index:9000;background:rgba(3,7,18,.72);display:flex;align-items:flex-start;'
+  +'.gov{position:fixed;inset:0;z-index:9000;background:var(--gov-dim,rgba(3,7,18,.72));display:flex;align-items:flex-start;'
   +'justify-content:center;padding:34px 14px;overflow:auto;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}'
   +'.gov-w{position:relative;width:min(780px,100%);background:var(--gov-bg);color:var(--gov-fg);'
-  +'border:1px solid var(--gov-line);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden}'
+  +'border:1px solid var(--gov-line);border-radius:16px;box-shadow:0 24px 60px rgba(16,24,40,.28);overflow:hidden}'
+  +'@media (prefers-reduced-motion:no-preference){body.gst-motion .gov{animation:gstDim .18s ease both}body.gst-motion .gov-w{animation:gstPop .22s cubic-bezier(.2,.8,.2,1) both}}'
+  +'@keyframes gstDim{from{opacity:0}to{opacity:1}}@keyframes gstPop{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}'
   +'.gov-w.wide{width:min(1180px,100%)}'
   +'.gov *{color:inherit}'
   +'.gov-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--gov-line)}'

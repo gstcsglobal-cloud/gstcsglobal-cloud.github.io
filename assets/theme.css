@@ -523,3 +523,35 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #gstSrcDetail{display:no
 .gst-dq-x,.gst-dq-go{border:1px solid var(--line,#d0d5dd);background:var(--surface,#fff);color:inherit;border-radius:7px;font:inherit;font-size:12px;padding:3px 9px;cursor:pointer}
 .gst-dq-go{border-color:var(--accent,#2563eb);color:var(--accent,#2563eb);font-weight:600}
 @media print{.gst-dq.gst-dq-pop{display:none!important}}
+
+/* ============================================================
+   움직임 (v169 · 「통합관리화면」 5단계) — core GST._motionInit 이 body.gst-motion 을 단 화면에만.
+   ⚠ 주간현황(report)에는 그 클래스가 안 붙는다(손대지 않는다 · 사용자 지시).
+   ⚠ 움직임 줄이기를 고른 사람에게는 아무것도 안 한다(media 쿼리 밖에는 규칙을 두지 않는다).
+   ⚠ 카드에 transform 을 «남기지» 않는다 — transform 이 남으면 카드 안의 position:fixed 팝업(내보내기 메뉴 등)의 기준이 카드로 바뀐다.
+     그래서 떠오르기는 끝나면 transform:none 으로 끝나고, hover 는 그림자만 바꾼다.
+   ============================================================ */
+@media (prefers-reduced-motion:no-preference){
+  /* v139 이 진입 애니메이션을 «소음»이라 껐다(위 Stage 5 의 animation:none !important). v169 에 사용자가 화면 전환·버튼 시각효과를
+     요청해 «짧게 · 한 번만 · 주간현황 밖에서만» 되살렸다 — 그래서 여기도 !important 다(더 좁은 선택자로 이긴다). */
+  body.gst-motion .kpi,
+  body.gst-motion .card,
+  body.gst-motion .trend-card,
+  body.gst-motion .cross-card,
+  body.gst-motion .tablecard{animation:gstRise .5s cubic-bezier(.2,.8,.2,1) backwards !important}   /* backwards — 끝나면 아무것도 안 남는다(both 는 끝값 transform 을 붙들어 카드가 fixed 자식의 기준이 된다 · t-motion) */
+  body.gst-motion .kpi:nth-child(2),body.gst-motion .card:nth-child(2){animation-delay:.04s !important}
+  body.gst-motion .kpi:nth-child(3),body.gst-motion .card:nth-child(3){animation-delay:.08s !important}
+  body.gst-motion .kpi:nth-child(4),body.gst-motion .card:nth-child(4){animation-delay:.12s !important}
+  body.gst-motion .kpi:nth-child(5),body.gst-motion .card:nth-child(5){animation-delay:.16s !important}
+  body.gst-motion .kpi:nth-child(n+6),body.gst-motion .card:nth-child(n+6){animation-delay:.2s !important}
+  body.gst-motion .card,body.gst-motion .kpi{transition:box-shadow .2s ease,border-color .2s ease,outline-color .9s ease}
+  body.gst-motion .kpi{outline:2px solid transparent;outline-offset:2px}
+  body.gst-motion .card:hover{box-shadow:0 8px 24px rgba(16,24,40,.08) !important;border-color:var(--line-2,#CDD3DC) !important}
+  body.gst-motion.theme-slate .card:hover{box-shadow:0 8px 24px rgba(0,0,0,.35) !important}
+  /* 값이 바뀐 카드 — animation 이 아니라 outline 전환으로 한다(animation 을 바꾸면 떠오르기가 다시 돈다) */
+  body.gst-motion .kpi.gst-upd{outline-color:color-mix(in srgb,var(--accent,#2F6FED) 55%,transparent);transition:none}
+  body.gst-motion button:not(:disabled):active,body.gst-motion .btn:not(:disabled):active{transform:scale(.97);transition:transform .08s}
+  body.gst-motion .gst-dq.gst-dq-pop:not([hidden]){animation:gstPop .22s cubic-bezier(.2,.8,.2,1) both}
+}
+@keyframes gstRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes gstPop{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}

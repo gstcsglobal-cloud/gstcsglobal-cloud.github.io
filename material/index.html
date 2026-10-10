@@ -11,7 +11,7 @@
 <script>window.ChartZoom||document.write('<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=164"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=166"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -239,7 +239,7 @@ canvas{cursor:pointer}
 .wleg i.pa{background:var(--accent-2)}
 .wleg b{color:var(--txt-main);font-variant-numeric:tabular-nums}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=164">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=166">
 </head>
 <body>
 
@@ -835,7 +835,7 @@ function toggleLang() { document.getElementById('langMenu').classList.toggle('op
 
 const THEME_LABELS={slate:'Slate',default:'Navy',burgundy:'Burgundy',light:'Light'};
 function changeDashboardTheme(themeClass, label) {
-  document.body.className = '';
+  [...document.body.classList].filter(c=>/^theme-/.test(c)).forEach(c=>document.body.classList.remove(c));   /* v169 — 테마 클래스만 바꾼다(통째로 갈면 gst-inframe·gst-motion 이 날아간다 · v139 규약) */
   if(themeClass !== 'default') document.body.classList.add('theme-' + themeClass);
   const lb=document.getElementById('themeLabel');
   if(lb) lb.textContent = THEME_LABELS[themeClass] || label || themeClass;
