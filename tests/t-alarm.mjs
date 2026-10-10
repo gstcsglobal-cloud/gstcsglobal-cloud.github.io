@@ -451,8 +451,11 @@ const P2_ABP = [
        'report — 제외 사유 «전량»이 GST.dq 로 간다 (카드는 상위 3 만 적는다)');
     is(/GST\.ORG\.rndScan\(/.test(R) && dqKey('kr_rnd'),
        'report — 연구소로 «잡힌 낱말»이 GST.dq 로 간다 (코드에 박은 규칙이므로 밝혀야 한다)');
-    is(/_headEx\.n/.test(R) && /nMan_ex/.test(R) && dqKey('head_ex'),
-       'report — 공수 분모는 «몇 명»을 카드에 적고 «어떤 낱말»은 GST.dq 로 보낸다');
+    is(dqKey('head_ex') && !/t\('nMan_ex'\)/.test(R),
+       'report — 「현장(O)인데 직책이 팀장·OFFICE·단지장」은 GST.dq 로만 간다 (분모를 줄이지 않으므로 카드에 «제외»라 적지 않는다)');
+    { const q = (R.match(/const qbrOk=p=>\{[\s\S]*?\};/) || [''])[0];
+      is(q && !/HEAD_EX/.test(q),
+         'report — 공수 분모(qbrOk)는 직책으로 빼지 않는다 — 현장(O) 기준 (v163 · 사용자 확정)'); }
     is(dqKey('op_unk'),
        'report — 처음 보는 설비상태도 전량이 GST.dq 로 간다');
 
@@ -505,11 +508,11 @@ console.log('\n[12-e] 라인 = 설치현황 Line 2 — «국내만» (사용자 
 console.log('\n[12-d] 공수 분모 제외 — 팀장 · OFFICE인원 · 단지장 (사용자 확정)');
 {
   const P = (o) => Object.assign({role:'',campus:'',wp:'',site:'P1'}, o);
-  is(G.HEAD_EX.hit(P({role:'P1팀장'})),   '직책이 팀장이면 뺀다');
-  is(G.HEAD_EX.hit(P({wp:'단지장'})),      '라인 칸의 단지장도 뺀다 (그 낱말은 라인에 산다)');
-  is(G.HEAD_EX.hit(P({campus:'OFFICE'})), '단지 칸의 OFFICE 도 뺀다');
-  is(!G.HEAD_EX.hit(P({wp:'라인장'})),     '라인장은 «안» 뺀다 — 고객사가 말한 것은 셋뿐이다');
-  is(!G.HEAD_EX.hit(P({campus:'통합'})),   '통합도 «안» 뺀다 (FILT_DROP_ORG 를 재사용하면 여기서 틀린다)');
+  is(G.HEAD_EX.hit(P({role:'P1팀장'})),   '직책이 팀장이면 «확인할 인원»으로 잡는다');
+  is(G.HEAD_EX.hit(P({wp:'단지장'})),      '라인 칸의 단지장도 잡는다 (그 낱말은 라인에 산다)');
+  is(G.HEAD_EX.hit(P({campus:'OFFICE'})), '단지 칸의 OFFICE 도 잡는다');
+  is(!G.HEAD_EX.hit(P({wp:'라인장'})),     '라인장은 «안» 잡는다 — 고객사가 말한 것은 셋뿐이다');
+  is(!G.HEAD_EX.hit(P({campus:'통합'})),   '통합도 «안» 잡는다 (FILT_DROP_ORG 를 재사용하면 여기서 틀린다)');
   is(!G.HEAD_EX.hit(P({wp:'P1C'})),        '평범한 인원은 그대로 센다');
   const sc = G.HEAD_EX.scan([P({role:'P1팀장'}), P({role:'P2팀장'}), P({campus:'OFFICE'}), P({wp:'P1C'})]);
   is(sc.n === 3, '몇 명을 뺐는지 센다 (실제 ' + sc.n + ')');

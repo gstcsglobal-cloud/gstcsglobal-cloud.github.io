@@ -3060,7 +3060,7 @@ function dqJoinHTML(){
     : '<p class="hint">' + (rows.some(x => x.miss) ? '안 이어진 행은 전부 «법인 통째» 운영단위에 있습니다 — 위 표에서 원본을 올리세요.' : '안 이어진 설비가 없습니다.') + '</p>';
   return h;
 }
-/* 화면 신호 → 고칠 자리 (v156 · 길잡이). 키는 «화면.신호». 여기 없는 신호는 규칙으로 정해진 제외(head_ex 등)라 고칠 행이 없다. */
+/* 화면 신호 → 고칠 자리 (v156 · 길잡이). 키는 «화면.신호». 여기 없는 신호는 규칙으로 정해진 제외(op_unk 등)라 고칠 행이 없다. */
 const DQ_FIX = {
   'report.wk_24h':    { l:'24h 초과 행 보기', dq:'work24' },
   'report_kr.wk_24h': { l:'24h 초과 행 보기', dq:'work24' },
@@ -3077,8 +3077,8 @@ const DQ_FIX = {
   'report_kr.kr_join': { l:'안 이어진 원장 행 보기', fn:'krJoin' },
   'report.kr_drop':    { l:'빠진 원장 행 보기', fn:'krDrop' },
   'report_kr.kr_drop': { l:'빠진 원장 행 보기', fn:'krDrop' },
-  'report.head_ex':    { l:'뺀 인원 보기', fn:'headEx' },
-  'report_kr.head_ex': { l:'뺀 인원 보기', fn:'headEx' }
+  'report.head_ex':    { l:'확인할 인원 보기', fn:'headEx' },
+  'report_kr.head_ex': { l:'확인할 인원 보기', fn:'headEx' }
 };
 /* 신호의 «구분» — 데이터 품질 탭의 구분·운영단위 필터가 화면 신호에도 걸리게 한다(사용자: 「필터 걸면 필터에 해당하는 것만」).
    국내 원장·국내 실적·반도체연구소·국내 데모 화면은 국내 신호다(공수 분모 제외는 그 화면의 인원 필터를 이미 탔다). 표에 없는 신호는 구분이 없다(늘 보인다). */
@@ -3138,7 +3138,8 @@ async function dqLedgerFix(kind){
   await dqShowKeys(name[first.id] + ' · ' + what, first.id, first.keys);
   if(other) snack(name[other.id] + '에도 ' + other.keys.length.toLocaleString() + '행 있습니다', { act:name[other.id] + ' 보기', fn:() => dqShowKeys(name[other.id] + ' · ' + what, other.id, other.keys), ms:15000 });
 }
-/* 공수 분모에서 뺀 인원 — 주간현황이 쓰는 GST.HEAD_EX 판정 그대로(직책·단지·라인 칸 · 현장 인원 · 재직) */
+/* 현장(O) 인데 직책·단지·라인이 팀장·OFFICE·단지장인 인원 — 「현장 인원여부」 체크가 맞는지 확인할 목록 (v163).
+   분모는 현장(O) 기준 그대로다(직책으로 빼지 않는다). 판정은 주간현황과 같은 GST.HEAD_EX. */
 async function dqHeadEx(){
   const t = TAB_BY.roster; if(!t) return;
   snack('인원현황을 읽는 중…', {ms:60000});
@@ -3147,7 +3148,7 @@ async function dqHeadEx(){
   const hit = S.all[t.id].filter(r => g(r, '현장 인원여부').toUpperCase() === 'O' && !g(r, '퇴사일')
     && GST.HEAD_EX.hit({ role:g(r, '업무/직책'), campus:g(r, '단지'), wp:g(r, '라인') || g(r, 'Work Place'), site:g(r, 'Work Place') || g(r, '단지') || g(r, '라인') }));
   if(!hit.length){ $('snack').className = ''; snack('지금 인원현황에서는 해당 인원이 없습니다', {ms:6000}); return; }
-  return dqList('공수 분모에서 뺀 인원 (팀장·OFFICE·단지장 — 직책·단지·라인 칸 · 현장 재직자)', hit.map(r => r[t.key]), hit.map(r => ({ key:r[t.key], row:r })), t.id);
+  return dqList('현장(O) 체크 확인 — 직책·단지·라인이 팀장·OFFICE·단지장인 현장 재직자 (「현장 인원여부」가 맞으면 그대로 두세요)', hit.map(r => r[t.key]), hit.map(r => ({ key:r[t.key], row:r })), t.id);
 }
 const DQ_FN = { krJoin:() => dqLedgerFix('join'), krDrop:() => dqLedgerFix('drop'), headEx:dqHeadEx };
 /* ② 화면 신호 — 예전에 각 화면 맨 아래 있던 «데이터 품질» 표(사용자: 「데이터 관리로 옮기고」) */
