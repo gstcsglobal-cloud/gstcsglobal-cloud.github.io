@@ -2051,7 +2051,7 @@ console.log('[32] 화면 신호 — 국내 원장·뺀 인원도 «그 행»을 
       localStorage.setItem('gst_dq_report', JSON.stringify({ at:Date.now() - 600e3, filter:'전체', items:[
         { key:'div_join', sev:'info', label:'국내 실적 행에 사업부가 안 붙었습니다', n:5, of:9, act:'데이터 관리 › 데이터 품질 › 설치현황 연결에서 어느 운영단위·S/N 인지 보고 고치세요' },
         { key:'kr_join', sev:'info', label:'국내 원장 행이 설치현황과 안 이어졌습니다', n:3, of:6, act:'원장의 SEQP S/N 표기를 설치현황 S/N 과 맞추세요' },
-        { key:'head_ex', sev:'info', label:'공수 분모에서 뺀 인원 — 단지장 1명', n:1, act:'인원현황의 직책·단지·라인 값을 확인하세요' } ] })); }
+        { key:'head_ex', sev:'info', label:'현장(O) 인원인데 직책·단지·라인이 팀장·OFFICE·단지장 — 단지장 1명', n:1, act:'인원현황 「현장 인원여부」가 맞게 체크됐는지 확인하세요' } ] })); }
   });
   await pg.goto(BASE + '/edit/?tab=dq', { waitUntil:'domcontentloaded' });
   await pg.waitForFunction(() => /국내 원장 행이 설치현황과/.test((document.getElementById('dqBox') || {}).innerText || ''), null, { timeout:10000 });
@@ -2066,11 +2066,11 @@ console.log('[32] 화면 신호 — 국내 원장·뺀 인원도 «그 행»을 
   is(await pg.evaluate(() => S.tab) === 'abp' && (await listKeys(pg)).join() === '0', '올바이패스 탭 — 국내 행만 (해외 올바는 국내 신호에 안 든다)');
   await pg.click('.tab[data-tab=dq]'); await pg.waitForTimeout(500);
   await pg.click('[data-fx="report.head_ex"]'); await pg.waitForTimeout(700);
-  is(await pg.evaluate(() => S.tab) === 'roster' && (await listKeys(pg)).join() === '20', '「뺀 인원 보기」 → 인원현황에 단지장(현장·재직)만 — 퇴사한 팀장은 빠진다 (GST.HEAD_EX 그대로)');
+  is(await pg.evaluate(() => S.tab) === 'roster' && (await listKeys(pg)).join() === '20', '「확인할 인원 보기」 → 인원현황에 단지장(현장·재직)만 — 퇴사한 팀장은 빠진다 (GST.HEAD_EX 그대로)');
   await pg.click('.tab[data-tab=dq]'); await pg.waitForTimeout(500);
   await pg.selectOption('[data-dqf=reg]', 'os'); await pg.waitForTimeout(700);
   const box = await pg.$eval('#dqBox', e => e.innerText);
-  is(!/국내 원장 행이 설치현황과/.test(box) && !/국내 실적 행에 사업부/.test(box) && /공수 분모에서 뺀 인원/.test(box) && /해당 없는 신호 2개는 숨겼습니다/.test(box),
+  is(!/국내 원장 행이 설치현황과/.test(box) && !/국내 실적 행에 사업부/.test(box) && /현장\(O\) 인원인데 직책/.test(box) && /해당 없는 신호 2개는 숨겼습니다/.test(box),
      '구분 해외로 걸면 국내 신호(원장·국내 실적)는 숨기고 몇 개 숨겼는지 적는다');
   is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
   await ctx.close();
