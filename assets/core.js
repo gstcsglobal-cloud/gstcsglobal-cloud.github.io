@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 158;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 160;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -3497,6 +3497,55 @@ GST.vmap = {
     }
     out.rows = res;
     return out;
+  }
+};
+/* ---------- 사이트 등록부 (v160 · setup-23) ----------
+   CIP 사이트(F11·F16)가 코드 열 군데에 박혀 있어 새 사이트(F18)는 코드를 고치지 않으면 못 넣었다.
+   이제 «어느 사이트가 CIP 표를 갖는가»를 site_registry 가 말한다 — CIP 화면·업로드·데이터 관리가 같은 목록을 본다.
+   · 옛 두 사이트는 지금까지의 길(gid → fetchCSVCached)을 그대로 지난다 — 숫자가 한 자리도 안 움직인다.
+     새 사이트에는 시트 gid 가 없으므로 표에서 바로 읽고 적용일자 띠를 같은 함수(GST._cipBand)로 되살린다.
+   · ⚠ 등록부를 못 읽으면(표 없음·정책 미적용·인증 꺼짐·오프라인) 옛 두 사이트로 «말하며» 돌아간다(GST._siteWhy).
+     비면 CIP 화면이 통째로 빈다 — 그건 지금보다 나쁘다.
+   · CIP 를 한 표로 합치지 않는다 — 적용일자 띠가 열마다 «최초 완료일»이라 합치면 공통 항목의 띠가 움직인다(setup-23 머리 주석). */
+GST.CIP_DEFAULT = [
+  { fab:'F11', label:'MICRON F11', cip_table:'sheet_cip_f11', region:'해외', gid:'2123129719' },
+  { fab:'F16', label:'MICRON F16', cip_table:'sheet_cip_f16', region:'해외', gid:'1999732389' }
+];
+GST._siteP = null;
+GST._siteWhy = '';
+/* client 를 주면(데이터 관리 — 자기 연결을 쓴다) USE_DB 스위치와 무관하게 그 연결로 읽는다 */
+GST.sites = function(force, client){
+  if(GST._siteP && !force) return GST._siteP;
+  const gidOf = {}; GST.CIP_DEFAULT.forEach(function(d){ gidOf[d.cip_table] = d.gid; });
+  const fallback = function(why){ GST._siteWhy = why; return GST.CIP_DEFAULT.map(function(d){ return Object.assign({ fallback:true }, d); }); };
+  GST._siteP = (async function(){
+    if(!client && !(GST.USE_DB && GST.authOn && GST.authOn())) return fallback('off');
+    try{
+      const c = client || await GST.db(); if(!c) return fallback('off');
+      const r = await c.from('site_registry').select('*').order('fab');
+      if(r.error) return fallback('read: ' + r.error.message);
+      if(!r.data || !r.data.length) return fallback('empty');
+      GST._siteWhy = '';
+      return r.data.map(function(x){ return Object.assign({}, x, { gid: gidOf[x.cip_table] || '' }); });
+    }catch(e){ return fallback('read: ' + (e && e.message || e)); }
+  })();
+  return GST._siteP;
+};
+GST.cipSites = async function(force, client){
+  return (await GST.sites(force, client)).filter(function(s){ return !!s.cip_table; });
+};
+/* 한 사이트의 CIP 행 — 반환 모양은 fetchCSVCached 와 같다({rows,cached,ageMin,src}).
+   ⚠ 새 사이트 표가 비어 있는 것은 «실패»가 아니다(막 등록해 아직 안 올렸다) — empty:true 로 돌려준다. */
+GST.cipRows = async function(site, key){
+  if(site.gid) return GST.fetchCSVCached(GST.sheetUrl(site.gid), key || ('cip_' + site.fab));
+  try{
+    const rows = await GST.csvTableRows(site.cip_table);
+    const out = [GST._cipBand(rows)].concat(rows);
+    GST._srcNote(key || ('cip_' + site.fab), 'db', rows.length - 1);
+    return { rows:out, cached:false, ageMin:0, src:'db' };
+  }catch(e){
+    if(/^EMPTY/.test(String(e && e.message || ''))) return { rows:[], cached:false, ageMin:0, src:'db', empty:true };
+    throw e;
   }
 };
 /* 모든 화면이 지나는 문 — 실적·설치 3표는 여기서 «기준 정보» 규칙을 입힌다(v152). 시트·DB·캐시·오프라인 스냅샷 어느 길로 와도 같다. */

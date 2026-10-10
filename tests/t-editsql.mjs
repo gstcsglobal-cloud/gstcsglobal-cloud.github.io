@@ -18,7 +18,9 @@ const SQL_FILE = path.join(ROOT, 'supabase/setup-16-edit.sql');
 const LEDGER_FILE = path.join(ROOT, 'supabase/setup-10-alarm.sql');   // 원장 표·csv_window — «저장소의 그 파일»을 그대로 먹인다(v143)
 const KR_FILE = path.join(ROOT, 'supabase/setup-17-kr-demo.sql');
 const DQ_FILE = path.join(ROOT, 'supabase/setup-21-dq.sql');
-const COLS_FILE = path.join(ROOT, 'supabase/setup-22-import-cols.sql');    // CIP 새 점검 항목 열 더하기(v157)           // 데이터 품질 점검(v155·v156) — 읽기 전용 · 맨 끝에 먹인다      // 국내 데모 표·kr 등급(v146) — 1~11 이 끝난 뒤에 먹인다
+const COLS_FILE = path.join(ROOT, 'supabase/setup-22-import-cols.sql');
+const SITES_FILE = path.join(ROOT, 'supabase/setup-23-sites.sql');   // 사이트 등록부 · 사이트별 CIP 표(v160)
+    // CIP 새 점검 항목 열 더하기(v157)           // 데이터 품질 점검(v155·v156) — 읽기 전용 · 맨 끝에 먹인다      // 국내 데모 표·kr 등급(v146) — 1~11 이 끝난 뒤에 먹인다
 
 function findBin() {
   if (process.env.PG_BIN && fs.existsSync(path.join(process.env.PG_BIN, 'initdb'))) return process.env.PG_BIN;
@@ -826,6 +828,39 @@ Left']);
 end $$;
 `;
 
+/* [15] 사이트 등록부(setup-23 · v160) — 새 사이트 CIP 표를 «등록»으로 만들고, 허용목록 넷이 등록부를 본다 */
+const SITES_CHECKS = String.raw`
+do $$ declare r jsonb; k bigint; u jsonb; begin
+  perform t_ok((select count(*) from site_registry where fab in ('F11','F16')) = 2, '15-1 옛 두 사이트가 씨앗으로 들어 있다');
+  perform t_ok(public._edit_key('sheet_cip_f16') = 'id' and public._edit_key('sheet_cip_f18') is null, '15-2 등록 전 F18 표는 데이터 관리 밖');
+  begin perform cip_site_create('F18'); perform t_ok(false, '15-3 로그인 없이 됐다'); exception when others then perform t_ok(sqlerrm = 'login', '15-3 로그인 없으면 login'); end;
+  perform t_as('ed@test.local');
+  begin perform cip_site_create('F18'); perform t_ok(false, '15-4 editor 가 만들었다'); exception when others then perform t_ok(sqlerrm = 'forbidden', '15-4 관리자가 아니면 forbidden'); end;
+  perform t_as('boss@test.local');
+  begin perform cip_site_create('f 18;drop'); perform t_ok(false, '15-5 이상한 코드'); exception when others then perform t_ok(sqlerrm = 'bad_fab', '15-5 사이트 코드는 영숫자·하이픈만'); end;
+  r := cip_site_create(' f18 ');
+  perform t_ok(r->>'table' = 'sheet_cip_f18' and (r->>'created')::boolean, '15-6 F18 표를 만든다(코드는 대문자로)');
+  perform t_ok((select count(*) from information_schema.columns where table_name = 'sheet_cip_f18' and column_name in ('Scrubber S/N','FAB','FAB In','Remark')) = 4, '15-7 기본 설비 열');
+  perform t_ok((select relrowsecurity from pg_class where relname = 'sheet_cip_f18') and not has_table_privilege('anon', 'public.sheet_cip_f18', 'SELECT'), '15-8 RLS 켜짐 · anon 못 읽음');
+  perform t_ok((select cip_table from site_registry where fab = 'F18') = 'sheet_cip_f18' and exists(select 1 from sheet_edits where op = 'cip_create' and tbl = 'sheet_cip_f18'), '15-9 등록부 + 이력');
+  perform t_ok(not (cip_site_create('F18')->>'created')::boolean, '15-10 두 번 만들면 있는 표를 돌려준다');
+  perform t_ok(public._edit_key('sheet_cip_f18') = 'id', '15-11 등록되면 데이터 관리 허용');
+  r := import_add_cols('sheet_cip_f18', array['New Item Beta']);
+  perform t_ok(r->'added' = '["New Item Beta"]'::jsonb, '15-12 점검 항목을 더한다');
+  insert into sheet_cip_f18("NO", "Scrubber S/N", "New Item Beta") values ('1', 'ZZZ0001', 'Not yet');
+  k := (select max(id) from sheet_cip_f18);
+  u := edit_update('sheet_cip_f18', k, (edit_get('sheet_cip_f18', k))->>'hash', '{"New Item Beta":"2026-05-06"}');
+  perform t_ok((u->>'ok')::boolean and (select "New Item Beta" from sheet_cip_f18 where id = k) = '2026-05-06', '15-13 새 사이트 CIP 행을 고친다');
+  perform edit_note('sheet_cip_f18', 'upload:full', '*', null, '{"n":1}');
+  perform t_ok(exists(select 1 from sheet_edits where tbl = 'sheet_cip_f18' and op = 'upload:full'), '15-14 업로드 요약 이력도 받는다');
+  perform csv_upload_begin('sheet_cip_f18');
+  perform t_ok((select count(*) from sheet_cip_f18) = 0, '15-15 통째 교체(비우기)를 받는다');
+  begin perform csv_upload_begin('sheet_cip_zz'); perform t_ok(false, '15-16 등록 안 된 표'); exception when others then perform t_ok(sqlerrm like 'bad_table%', '15-16 등록 안 된 표는 여전히 bad_table'); end;
+  perform t_ok(not has_function_privilege('anon', 'public.cip_site_create(text)', 'EXECUTE') and has_function_privilege('authenticated', 'public.cip_site_create(text)', 'EXECUTE')
+           and not has_function_privilege('authenticated', 'public._cip_tbl(text)', 'EXECUTE'), '15-17 anon 불가 · 내부 판정 함수는 회수');
+end $$;
+`;
+
 let skipped = 0;
 try {
   const init = run('initdb', ['-D', DATA, '-A', 'trust', '-U', 'postgres', '--no-sync', '-E', 'UTF8', '--locale=C']);
@@ -906,6 +941,15 @@ try {
   (outC.match(/ERROR:[^\n]*/g) || []).forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
   oksC.forEach(() => pass++);
   ok(oksC.length === 11, '[14] T_OK 가 ' + oksC.length + '개 — 기대 11개');
+  console.log('[15] 사이트 등록부(v160) — 저장소의 setup-23-sites.sql 을 두 번 먹인다');
+  const sitesText = fs.readFileSync(SITES_FILE, 'utf8');
+  for (const tag of ['setup23', 'setup23b']) { const r = psql(sitesText, tag); ok(!/ERROR/.test(r.stderr), 'setup-23-sites.sql 적용 실패(' + tag + '):\n' + r.stderr); }
+  const pR = psql(SITES_CHECKS, 'sites-checks');
+  const outR = (pR.stderr || '') + (pR.stdout || '');
+  const oksR = outR.match(/T_OK [^\n]*/g) || [];
+  (outR.match(/ERROR:[^\n]*/g) || []).forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
+  oksR.forEach(() => pass++);
+  ok(oksR.length === 17, '[15] T_OK 가 ' + oksR.length + '개 — 기대 17개');
 } catch (e) {
   fail++; console.log('  ❌ ' + (e && e.message || e));
 } finally {

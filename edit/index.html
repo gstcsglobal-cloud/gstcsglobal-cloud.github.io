@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=158"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=160"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -56,7 +56,7 @@ a.lnk{color:var(--accent-ink);text-decoration:none;font-weight:600}a.lnk:hover{t
 .tab.on{color:var(--accent-ink);border-bottom-color:var(--accent)}
 .tab .cnt{font-weight:500;color:var(--txt-faint);font-size:11.5px;margin-left:4px}
 .tab.hist{margin-left:auto}
-.tab.vm{margin-left:auto}.tab.vm+.tab.hist{margin-left:0}
+.tab.vm{margin-left:auto}.tab.vm+.tab.vm2,.tab.vm+.tab.hist,.tab.vm2+.tab.vm,.tab.vm2+.tab.hist{margin-left:0}.st-act{white-space:normal;min-width:220px}.st-act .btn{margin:2px 0}
 .vm-top{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin-bottom:8px}.vm-top select{margin-left:4px}
 .vm-t td{vertical-align:top}.vm-t tr.vm-w td{background:var(--warn-soft,#fffaeb)}.vm-wt{color:var(--warn,#b54708);font-size:12px;max-width:340px}
 #vmBox{padding:14px 16px}.vm-v{font-weight:600}.vm-f{margin:10px 0}.vm-f input,#vmTo{width:100%;margin-top:4px;padding:7px 9px;border:1px solid var(--line-2);border-radius:6px;font:inherit;background:var(--surface);color:inherit}
@@ -293,6 +293,7 @@ table.dt td.v{word-break:break-all}
     </div>
     <div id="pgVmap" hidden><div class="card" id="vmBox"></div></div>
     <div id="pgDq" hidden><div class="card" id="dqBox"></div></div>
+    <div id="pgSite" hidden><div class="card" id="siteBox"></div></div>
     <div id="pgHist" hidden>
       <div class="card">
         <form class="hf" id="hfilt" autocomplete="off"></form>
@@ -690,7 +691,7 @@ async function loadCols(t){
 /* ---------- 탭 ---------- */
 function renderTabs(){
   $('tabs').innerHTML = TABS.map(t => '<button type="button" class="tab' + (S.tab === t.id ? ' on' : '') + '" data-tab="' + t.id + '">' + esc(t.name) + '</button>').join('')
-    + (KR ? '' : '<button type="button" class="tab vm' + (S.tab === 'vmap' ? ' on' : '') + '" data-tab="vmap" title="새 값이 대시보드 어디에 · 어떻게 반영되는지 보고, 규칙으로 정합니다">기준 정보</button>')
+    + (KR ? '' : '<button type="button" class="tab vm' + (S.tab === 'site' ? ' on' : '') + '" data-tab="site" title="새 사이트(FAB)를 등록하고 운영단위·고객사·지역을 정의합니다 · 사이트별 CIP 표·점검 항목">사이트</button><button type="button" class="tab vm2' + (S.tab === 'vmap' ? ' on' : '') + '" data-tab="vmap" title="새 값이 대시보드 어디에 · 어떻게 반영되는지 보고, 규칙으로 정합니다">기준 정보</button>')
     + '<button type="button" class="tab vm' + (S.tab === 'dq' ? ' on' : '') + '" data-tab="dq" title="공수 허수(작업시간 24h 초과 등)·주별 급증을 찾아 그 행을 고칩니다 · 여덟 화면의 자료 문제도 여기 모입니다">데이터 품질<span class="tbadge"' + (dqCount(S.dq) ? '' : ' hidden') + '>' + (dqCount(S.dq) || '') + '</span></button>'
     + '<button type="button" class="tab hist' + (S.tab === 'hist' ? ' on' : '') + '" data-tab="hist">변경 이력</button>';
 }
@@ -701,8 +702,9 @@ $('tabs').addEventListener('click', async e => {
 });
 async function switchTab(id, opt){
   S.tab = id; S.cur = null; renderTabs();
-  $('pgData').hidden = id === 'hist' || id === 'vmap' || id === 'dq'; $('pgHist').hidden = id !== 'hist'; $('pgVmap').hidden = id !== 'vmap'; $('pgDq').hidden = id !== 'dq';
+  $('pgData').hidden = id === 'hist' || id === 'vmap' || id === 'dq' || id === 'site'; $('pgHist').hidden = id !== 'hist'; $('pgVmap').hidden = id !== 'vmap'; $('pgDq').hidden = id !== 'dq'; $('pgSite').hidden = id !== 'site';
   if(id === 'hist'){ renderHistFilters(opt); return loadHist(false); }
+  if(id === 'site') return siteRender(!SITE.list);
   if(id === 'vmap') return vmRender(true);
   if(id === 'dq') return dqRender(false);
   const t = TAB();
@@ -3229,6 +3231,262 @@ $('dqBox').addEventListener('click', e => {
   if(a === 'fix') dqFix(b.dataset.fx);
 });
 
+/* ---------- 사이트 등록부 (v160 · 사용자: 「F18 이라는 사이트가 생기면 고객사·라인·운영단위가 어디인지 초기에 정의 ·
+   F18 에 CIP 도 설치현황에 그 사이트로 등록된 S/N 이 있으면 CIP 아이템도 추가로 정의 · 커스터마이징이 상당히 중요」) ----------
+   한 줄이 한 사이트(FAB)다. 할 수 있는 것 넷:
+   ① 정의 — 이름 · 운영단위(법인) · 고객사 · 지역 · 빈 설비상태. 등록부(site_registry)와 «기준 정보» 규칙(value_map · FAB=X 인 행)에 «함께» 쓴다.
+      ⚠ 규칙이 실제로 대시보드를 바꾼다(GST.vmap — 읽을 때 입힌다). 등록부 값만 고치면 화면은 그대로다 — 그래서 두 곳을 같이 쓴다.
+      ⚠ «라인»은 사이트 하나에 정할 값이 아니다 — 해외는 FAB 코드가 곧 화면의 라인이고 그 아래 Floor 는 설비마다 다르다(설치현황 행이 정본).
+   ② CIP 표 만들기 — cip_site_create(setup-23). 그 사이트 CIP 탭이 이 화면·CIP 업로드·CIP 화면에 저절로 선다.
+   ③ 설치현황에서 CIP 행 만들기 — 설치현황에 그 FAB 로 등록됐는데 CIP 표에 없는 S/N 만 새 행으로(edit_bulk · 이력 · 일괄 되돌리기).
+   ④ 점검 항목 더하기 — import_add_cols(setup-22 · 같은 뜻의 열이 이미 있으면 안 더한다).
+   ⚠ CIP 를 한 표로 합치지 않는다 — 사이트마다 표 하나(적용일자 띠가 열마다 «최초 완료일»이라 합치면 공통 항목의 숫자가 움직인다). */
+const SITE = { list:null, groups:null, rules:[], cnt:{}, err:'', all:false };
+const SITE_COLS = ['country', 'customer', 'location', 'state'];
+const SITE_L = { country:'운영단위 (법인)', customer:'고객사', location:'지역', state:'설비상태 빈칸이면' };
+/* CIP 탭 하나 — 옛 F11 탭을 틀로 쓴다(열 묶음·빠른 칸·안내가 같다) */
+function addCipTab(s){
+  if(KR || !s.cip_table || TAB_OF_TBL[s.cip_table]) return null;
+  const base = TABS.find(t => t.cip) || null; if(!base) return null;
+  const id = 'cip_' + s.fab.toLowerCase();
+  const t = Object.assign({}, base, { id:id, tbl:s.cip_table, name:'CIP ' + s.fab, cip:s.fab });
+  TABS.push(t); TAB_BY[id] = t; TAB_OF_TBL[t.tbl] = t; UP_RID[id] = 'cip_' + s.fab.toLowerCase();   // 업로드 화면이 등록부로 더한 대상 rid 와 같다
+  return t;
+}
+async function siteLoad(){
+  SITE.err = ''; SITE.list = await GST.sites(true, C);
+  if(GST._siteWhy) SITE.err = GST._siteWhy === 'empty'
+    ? '사이트 등록부를 읽었는데 비어 있습니다 — 등록부의 읽기 정책이 아직 없는 것입니다. Supabase SQL Editor 에서 supabase/setup-23-sites.sql 을 Run 하세요(여러 번 Run 해도 안전합니다).'
+    : '사이트 등록부를 못 읽었습니다(' + GST._siteWhy + ') — Supabase SQL Editor 에서 supabase/setup-23-sites.sql 을 Run 하세요.';
+  if(SITE.err) SITE.list = SITE.list.map(s => Object.assign({}, s, { fallback:true }));
+  try{
+    const r = await C.rpc('value_groups', { p_tbl:TAB_BY.inst.tbl, p_cols:['fab'].concat(SITE_COLS) });
+    if(r.error) throw new Error(r.error.message);
+    SITE.groups = r.data || [];
+    const q = await C.from('value_map').select('*').eq('tbl', 'inst');
+    SITE.rules = q.error ? [] : (q.data || []);
+  }catch(e){ SITE.groups = []; SITE.err = (SITE.err ? SITE.err + '\n' : '') + '설치현황 값 묶음을 못 읽었습니다 — ' + (e.message || e); }
+  SITE.cnt = {};
+  await Promise.all(SITE.list.filter(s => s.cip_table).map(async s => {
+    const q = await C.from(s.cip_table).select('id', { count:'exact', head:true });
+    SITE.cnt[s.fab] = q.error ? null : q.count;
+  }));
+  SITE.list.forEach(addCipTab);
+}
+async function siteRender(reload){
+  const box = $('siteBox');
+  if(reload || !SITE.list){ box.innerHTML = '<p class="hint">읽는 중…</p>'; await siteLoad(); renderTabs(); }
+  const by = GST.vmap.compile('inst', SITE.rules), G = SITE.groups || [];
+  const fabs = new Map();
+  G.forEach(g => { const f = vs(g.fab).trim(); if(f) (fabs.get(f) || fabs.set(f, []).get(f)).push(g); });
+  const reg = new Map(SITE.list.map(s => [vmK(s.fab), s]));
+  const keys = Array.from(new Set(SITE.list.map(s => s.fab).concat(Array.from(fabs.keys()))));
+  const rows = keys.map(f => {
+    const s = reg.get(vmK(f)) || null, gs = fabs.get(f) || Array.from(fabs).filter(([k]) => vmK(k) === vmK(f)).flatMap(([, v]) => v);
+    const n = gs.reduce((a, g) => a + g.n, 0);
+    const d = c => vmDist(gs.map(g => [vmRead(by, g, c), g.n]));
+    const co = d('country'), cu = d('customer'), lo = d('location');
+    const reg1 = co[0] ? GST.ORG.region(co[0][0]) || GST.ORG.region(GST.ORG.country(co[0][0]) || '') : '';
+    const ruled = SITE.rules.some(r => r.when_col === 'fab' && vmK(r.when_val) === vmK(f));
+    return { f:f, s:s, n:n, co:co, cu:cu, lo:lo, reg:reg1, ruled:ruled };
+  }).sort((a, b) => (!!b.s - !!a.s) || b.n - a.n);
+  const show = rows.filter(r => SITE.all || r.s);
+  let h = '<div class="vm-top"><button type="button" class="btn sm pri" data-st="new">+ 새 사이트 등록</button>'
+    + '<label class="hint"><input type="checkbox" id="stAll"' + (SITE.all ? ' checked' : '') + '> 설치현황의 다른 FAB 도 보기 (' + rows.filter(r => !r.s).length + '개)</label>'
+    + '<button type="button" class="btn sm" data-st="re">다시 읽기</button></div>'
+    + '<p class="hint">사이트(FAB)를 먼저 등록하고 정의해 두면 자료가 들어오는 날부터 대시보드가 그 정의대로 읽습니다. '
+    + '정의는 «기준 정보» 규칙(FAB = 그 사이트인 설치현황 행)으로도 저장되어 여덟 화면·PPT·챗봇이 똑같이 봅니다. '
+    + '수선·자재 실적과 인원은 설비 S/N 으로 설치현황에 이어지므로 따로 정의하지 않아도 같은 사이트로 잡힙니다.</p>'
+    + (SITE.err ? '<div class="banner warn">' + esc(SITE.err).replace(/\n/g, '<br>') + '</div>' : '')
+    + '<table class="dt vm-t"><thead><tr><th>FAB</th><th>이름</th><th>설치현황 대수</th><th>운영단위 (읽는 값)</th><th>고객사</th><th>지역</th><th>구분</th><th>CIP</th><th></th></tr></thead><tbody>'
+    + show.map(r => {
+      const s = r.s, ro = !!SITE.err;
+      const cip = s && s.cip_table ? '<b>' + (SITE.cnt[s.fab] == null ? '?' : SITE.cnt[s.fab].toLocaleString()) + '행</b> <span class="hint">' + esc(s.cip_table) + '</span>' : '<span class="hint">없음</span>';
+      const act = [];
+      act.push('<button type="button" class="btn sm' + (s ? '' : ' pri') + '" data-st="def" data-f="' + esc(r.f) + '"' + (ro ? ' disabled' : '') + '>' + (s ? '정의 고치기' : '등록') + '</button>');
+      if(s && !s.cip_table) act.push('<button type="button" class="btn sm" data-st="cip" data-f="' + esc(r.f) + '"' + (ro ? ' disabled' : '') + '>CIP 표 만들기</button>');
+      if(s && s.cip_table){
+        act.push('<button type="button" class="btn sm" data-st="seed" data-f="' + esc(r.f) + '"' + (ro ? ' disabled' : '') + ' title="설치현황에 이 FAB 로 등록됐는데 CIP 표에 없는 S/N 만 새 행으로">설치현황에서 CIP 행 만들기</button>');
+        act.push('<button type="button" class="btn sm" data-st="item" data-f="' + esc(r.f) + '"' + (ro ? ' disabled' : '') + '>점검 항목 더하기</button>');
+        act.push('<button type="button" class="btn sm" data-st="open" data-f="' + esc(r.f) + '">CIP 열기</button>');
+      }
+      return '<tr' + (s ? '' : ' class="hint"') + '><td><b>' + esc(r.f) + '</b>' + (r.ruled ? ' <span class="badge ok">규칙</span>' : '') + (s && s.fallback ? ' <span class="badge">기본</span>' : '') + '</td>'
+        + '<td>' + esc(s ? (s.label || '') : '') + (s && s.note ? '<div class="hint">' + esc(s.note) + '</div>' : '') + '</td>'
+        + '<td>' + r.n.toLocaleString() + '</td><td>' + vmDistTxt(r.co) + '</td><td>' + vmDistTxt(r.cu) + '</td><td>' + vmDistTxt(r.lo) + '</td>'
+        + '<td>' + esc(r.reg || (s && s.region) || '') + '</td><td>' + cip + '</td><td class="st-act">' + act.join(' ') + '</td></tr>';
+    }).join('') + '</tbody></table>'
+    + (show.length ? '' : '<p class="hint">등록된 사이트가 없습니다.</p>');
+  box.innerHTML = h;
+}
+/* 정의 창 — 등록부 한 줄 + 규칙(운영단위·고객사·지역 = 그 FAB 의 «아무 값» · 설비상태 = «빈칸»만) */
+async function siteDefDlg(fab){
+  const isNew = fab == null;
+  if(isNew){
+    const p = dialog('새 사이트 등록', '<p>사이트 코드(FAB)를 적습니다 — 설치현황 FAB · 실적 «라인» · 인원 «단지»에 적히는 바로 그 글자(예: F18).</p>'
+      + '<input id="stFab" style="width:100%" placeholder="F18" maxlength="16"><p class="hint">대문자 영숫자·하이픈 16자까지. 설치현황에 아직 그 FAB 이 없어도 됩니다 — 먼저 정의해 두면 자료가 들어오는 날부터 그대로 읽습니다.</p>',
+      [{l:'취소', v:false}, {l:'다음', v:true, cls:'pri'}]);
+    const box0 = dialog.last;
+    if((await p) !== true) return;
+    fab = String(box0.querySelector('#stFab').value || '').trim().toUpperCase();
+    if(!/^[A-Z0-9][A-Z0-9-]{0,15}$/.test(fab)) return snack('사이트 코드는 대문자 영숫자·하이픈 16자까지입니다', {err:true});
+  }
+  const s = SITE.list.find(x => vmK(x.fab) === vmK(fab)) || null;
+  const by = GST.vmap.compile('inst', SITE.rules), gs = (SITE.groups || []).filter(g => vmK(g.fab) === vmK(fab));
+  const cur = c => SITE.rules.find(r => r.col === c && r.when_col === 'fab' && vmK(r.when_val) === vmK(fab) && r.raw === (c === 'state' ? '' : '*'));
+  const opts = c => vmDist((SITE.groups || []).map(g => [vmRead(by, g, c), g.n])).filter(([v]) => v).slice(0, 200).map(([v, n]) => '<option value="' + esc(v) + '">' + n.toLocaleString() + '행</option>').join('');
+  const val = c => { const r = cur(c); if(r) return r.val; const k = { country:'op', customer:'customer', location:'location' }[c]; return s && k && s[k] || ''; };
+  const body = '<p>FAB <b>' + esc(fab) + '</b> — 설치현황 ' + gs.reduce((a, g) => a + g.n, 0).toLocaleString() + '대. 비워 둔 칸은 원본(설치현황에 적힌 값) 그대로 읽습니다.</p>'
+    + '<div class="vm-f"><label><b>이름</b> <span class="hint">— 주간현황 CIP 축 등에 서는 이름 (예: MICRON ' + esc(fab) + ')</span></label><input data-sf="label" value="' + esc(s ? s.label || '' : fab) + '"></div>'
+    + SITE_COLS.map(c => {
+      const d = vmDist(gs.map(g => [vmRead(by, g, c), g.n]));
+      return '<div class="vm-f"><label><b>' + esc(SITE_L[c]) + '</b></label>'
+        + '<input data-sf="' + c + '" list="stl_' + c + '" value="' + esc(val(c)) + '" placeholder="지금: ' + esc(d.map(([v, n]) => (v || '(빈칸)') + ' ' + n).join(' · ') || '자료 없음') + '">'
+        + '<datalist id="stl_' + c + '">' + (c === 'state' ? GST.EQ.IN.concat(GST.EQ.OUT).map(v => '<option value="' + esc(v) + '">').join('') : opts(c)) + '</datalist>'
+        + '<div class="hint">' + esc(VM.WHERE[c] || '') + '</div></div>';
+    }).join('')
+    + '<div class="vm-f"><label><b>메모</b></label><input data-sf="note" value="' + esc(s ? s.note || '' : '') + '"></div>'
+    + '<p class="hint" id="stMean"></p>'
+    + '<p class="hint">«라인»은 사이트 하나에 정하는 값이 아닙니다 — 해외는 FAB 코드가 곧 화면의 라인이고, 그 아래 Floor 는 설비마다 설치현황에 적힌 값을 씁니다.</p>';
+  const p = dialog((isNew && !s ? '새 사이트 등록 — ' : '사이트 정의 — ') + fab, body, [{l:'취소', v:false}, {l:'저장', v:true, cls:'pri'}], true);
+  const box = dialog.last;
+  const mean = () => { const v = String(box.querySelector('[data-sf="country"]').value || '').trim();
+    const rg = v ? (GST.ORG.region(v) || GST.ORG.region(GST.ORG.country(v) || '')) : '';
+    box.querySelector('#stMean').textContent = v ? '대시보드가 읽는 구분: ' + (rg || '판정 못 함 — 「미상」으로 섭니다') + (GST.ORG.country(v) ? ' · 국가: ' + GST.ORG.country(v) : '') : ''; };
+  box.addEventListener('input', e => { if(e.target.dataset.sf === 'country') mean(); }); mean();
+  if((await p) !== true) return;
+  const F = k => String((box.querySelector('[data-sf="' + k + '"]') || {}).value || '').trim();
+  const op = F('country'), rg = op ? (GST.ORG.region(op) || GST.ORG.region(GST.ORG.country(op) || '')) : '';
+  const me = (GST._me && GST._me.email) || null, now = new Date().toISOString();
+  const row = { fab:fab, label:F('label') || fab, op:op || null, customer:F('customer') || null, location:F('location') || null,
+    region:(rg === '국내' || rg === '해외') ? rg : '', note:F('note') || null, updated_by:me, updated_at:now };
+  if(!s || s.fallback) row.created_by = me;
+  if(s && s.cip_table) row.cip_table = s.cip_table;
+  try{
+    const q = await C.from('site_registry').upsert(row).select();
+    if(q.error) throw new Error(q.error.message);
+    if(!(q.data || []).length) throw new Error('저장 권한이 없습니다 — 등록부의 쓰기 정책이 아직 없으면 Supabase SQL Editor 에서 supabase/setup-23-sites.sql 을 Run 하세요');
+    const rows = [], dels = [];
+    SITE_COLS.forEach(c => {
+      const v = F(c), r = cur(c), k = { tbl:'inst', col:c, raw:c === 'state' ? '' : '*', when_col:'fab', when_val:fab };
+      if(v) rows.push(Object.assign(k, { val:v })); else if(r) dels.push(k);
+    });
+    for(const r of dels){ const d = await C.from('value_map').delete().eq('tbl', r.tbl).eq('col', r.col).eq('raw', r.raw).eq('when_col', r.when_col).eq('when_val', r.when_val).select(); if(d.error) throw new Error(d.error.message); }
+    for(const r of rows){
+      const u = await C.from('value_map').upsert(Object.assign(r, { updated_by:me, updated_at:now })).select();
+      if(u.error) throw new Error(u.error.message);
+      if(!(u.data || []).length) throw new Error('규칙 저장 권한이 없습니다(쓰기 권한 필요)');
+    }
+    GST.vmap._p = null; GST._siteP = null;
+    snack('저장했습니다 — 대시보드를 새로고침하면 반영됩니다', {ms:4000});
+    await siteRender(true);
+  }catch(e){ snack('저장 실패: ' + (e.message || e), {err:true, ms:8000}); }
+}
+async function siteCip(fab){
+  if(!(await ask('CIP 표 만들기 — ' + fab, '<p><b>' + esc(fab) + '</b> 사이트의 CIP 표를 만듭니다(설비 칸만 · 점검 항목은 다음 단계에서 더합니다).</p><p class="hint">만든 표는 이 화면 탭·CIP 업로드 대상·CIP 화면에 저절로 섭니다. 표를 지우는 단추는 없습니다 — 지울 때는 SQL Editor 에서.</p>', '만들기'))) return;
+  try{
+    const r = await rpc('cip_site_create', { p_fab:fab });
+    GST._siteP = null;
+    snack((r && r.created ? '만들었습니다 — ' : '이미 있습니다 — ') + (r && r.table || ''), {ms:4000});
+    await siteRender(true);
+  }catch(e){ snack(/bad_fab/.test(e.message) ? '사이트 코드가 올바르지 않습니다' : /table_exists/.test(e.message) ? '같은 이름의 표가 이미 있습니다 — 등록부에 연결되지 않은 옛 표입니다(관리자 SQL 확인)' : e.message, {err:true, ms:8000}); }
+}
+/* 설치현황 → CIP 행 — 그 FAB 의 설비 중 CIP 표에 «없는» S/N 만. 나간 설비(반납·반출)는 기본으로 뺀다(바꿀 수 있다).
+   칸은 이름이 같은 뜻인 것만 옮긴다(짐작으로 잇지 않는다): Country·Customer·FAB·Floor·Model·Type·PJT.·S/N·Code·FAB In. */
+const SEED_MAP = [['Country','country'], ['Customer','customer'], ['FAB','fab'], ['Floor','floor'], ['Model','model'], ['Type','type'], ['PJT.','pjt'],
+                  ['Scrubber S/N','sn'], ['Scrubber Code','code'], ['FAB In','fab_in']];
+async function siteSeed(fab){
+  const s = SITE.list.find(x => vmK(x.fab) === vmK(fab)); if(!s || !s.cip_table) return;
+  const t = TAB_OF_TBL[s.cip_table] || addCipTab(s); if(!t) return;
+  snack('설치현황·CIP 표를 읽는 중…', {ms:30000});
+  let inst = [], have = new Set(), n0 = 0;
+  try{
+    const LI = TAB_BY.inst; await loadCols(LI); await loadCols(t);
+    const ic = S.cols[LI.tbl] || [], cols = ['src_row', 'state'].concat(SEED_MAP.map(x => x[1])).filter((c, i, a) => ic.indexOf(c) >= 0 && a.indexOf(c) === i);
+    let last = -1;
+    for(;;){
+      const r = await C.from(LI.tbl).select(cols.join(',')).eq('fab', fab).gt('src_row', last).order('src_row').limit(1000);
+      if(r.error) throw new Error(rpcErr(r.error));
+      const d = r.data || []; if(!d.length) break;
+      d.forEach(x => inst.push(x)); last = d[d.length - 1].src_row;
+    }
+    const cr = await rowsAllOf(t);
+    n0 = cr.length; cr.forEach(x => { const k = N(x['Scrubber S/N']); if(k) have.add(k); });
+  }catch(e){ return snack('읽기 실패: ' + (e.message || e), {err:true, ms:8000}); }
+  const cand = inst.filter(x => N(x.sn) && !have.has(N(x.sn)));
+  const outN = cand.filter(x => GST.EQ.cls(x.state) === 'out').length;
+  const tc = S.cols[t.tbl] || [];
+  const body = '<p>설치현황에서 FAB <b>' + esc(fab) + '</b> 설비 ' + inst.length.toLocaleString() + '대 · CIP 표(' + esc(s.cip_table) + ')에 이미 ' + n0.toLocaleString() + '행.</p>'
+    + '<p>CIP 표에 없는 S/N <b>' + cand.length.toLocaleString() + '대</b>를 새 행으로 넣습니다' + (inst.filter(x => !N(x.sn)).length ? ' (S/N 빈칸 ' + inst.filter(x => !N(x.sn)).length + '대는 넣지 않습니다)' : '') + '.</p>'
+    + (outN ? '<label><input type="checkbox" id="sdOut"> 나간 설비(반납·반출·출하대기) ' + outN + '대도 넣기</label>' : '')
+    + '<p class="hint">옮기는 칸: ' + SEED_MAP.filter(x => tc.indexOf(x[0]) >= 0).map(x => x[0]).join(' · ') + '. 점검 항목 칸은 비워 둡니다 — 값(완료일·Not yet·N/A)은 CIP 탭이나 양식 업로드로 넣습니다. '
+    + '일괄 수정 이력으로 남아 「변경 이력」에서 한 번에 되돌릴 수 있습니다.</p>';
+  if(!cand.length) return dialog('설치현황에서 CIP 행 만들기 — ' + fab, body.replace(/<p>CIP 표에 없는[\s\S]*?<\/p>/, '<p><b>새로 넣을 설비가 없습니다.</b></p>'), [{l:'확인', v:true, cls:'pri'}]);
+  const p = dialog('설치현황에서 CIP 행 만들기 — ' + fab, body, [{l:'취소', v:false}, {l:'만들기', v:true, cls:'pri'}], true);
+  const box = dialog.last;
+  if((await p) !== true) return;
+  const withOut = !!(box.querySelector('#sdOut') || {}).checked;
+  const use = cand.filter(x => withOut || GST.EQ.cls(x.state) !== 'out');
+  let no = n0;
+  const ins = use.map((x, i) => {
+    const row = {};
+    if(tc.indexOf('NO') >= 0) row.NO = String(++no);
+    SEED_MAP.forEach(([to, from]) => { if(tc.indexOf(to) >= 0 && x[from] != null && String(x[from]).trim() !== '') row[to] = String(x[from]); });
+    return { row:row, L:{ ln:i + 1 } };
+  });
+  if(!ins.length) return snack('넣을 설비가 없습니다', {});
+  await bulkApply(t, { upd:[], ins:ins, file:'설치현황에서 CIP 행 만들기', sheet:fab });
+  SITE.cnt[s.fab] = (SITE.cnt[s.fab] || 0) + ins.length;
+  if(S.tab === 'site') siteRender(false);
+}
+/* 표 전 행(작은 표 · CIP) — 키셋으로 받는다(«0행일 때만 멈춘다» · v128) */
+async function rowsAllOf(t){
+  const out = []; let last = -1;
+  for(;;){
+    const r = await C.from(t.tbl).select('id,"Scrubber S/N"').gt('id', last).order('id').limit(1000);
+    if(r.error) throw new Error(rpcErr(r.error));
+    const d = r.data || []; if(!d.length) break;
+    d.forEach(x => out.push(x)); last = d[d.length - 1].id;
+  }
+  return out;
+}
+async function siteItem(fab){
+  const s = SITE.list.find(x => vmK(x.fab) === vmK(fab)); if(!s || !s.cip_table) return;
+  const t = TAB_OF_TBL[s.cip_table] || addCipTab(s);
+  try{ S.cols[t.tbl] = null; await loadCols(t); }catch(e){}
+  const tc = S.cols[t.tbl] || [], base = new Set((TABS.find(x => x.cip).groups[0] || [])[1] || []);
+  const items = tc.filter(c => c !== 'id' && !base.has(c) && !ADMIN_COLS.has(c));
+  const p = dialog('점검 항목 더하기 — ' + fab,
+    '<p>지금 항목 ' + items.length + '개' + (items.length ? ': <span class="hint">' + esc(items.join(' · ')) + '</span>' : '') + '</p>'
+    + '<p>더할 항목 이름을 한 줄에 하나씩 적습니다(시트 머리글 그대로 — 묶음 아래 Left·Right 는 «묶음 이름 Left» 처럼).</p>'
+    + '<textarea id="stItems" rows="8" style="width:100%"></textarea>'
+    + '<p class="hint">같은 뜻의 열이 이미 있으면(띄어쓰기·대소문자·줄바꿈 차이) 더하지 않습니다. 63바이트를 넘는 이름은 받지 않습니다. '
+    + '더한 항목은 CIP 화면의 분모(대상)에 들어갑니다 — 더한 열을 지우는 단추는 없습니다.</p>',
+    [{l:'취소', v:false}, {l:'더하기', v:true, cls:'pri'}], true);
+  const box = dialog.last;
+  if((await p) !== true) return;
+  const names = String(box.querySelector('#stItems').value || '').split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+  if(!names.length) return;
+  try{
+    const r = await rpc('import_add_cols', { p_tbl:s.cip_table, p_cols:names });
+    S.cols[t.tbl] = null;
+    const sk = (r.skipped || []).map(x => x.col + (x.why === 'exists' ? ' (이미 있음: ' + x.as + ')' : ' (이름이 올바르지 않음)'));
+    await dialog('점검 항목 더하기 — 결과', '<p>더함 ' + (r.added || []).length + '개' + ((r.added || []).length ? ': ' + esc((r.added || []).join(' · ')) : '') + '</p>'
+      + (sk.length ? '<p>건너뜀 ' + sk.length + '개: <span class="hint">' + esc(sk.join(' · ')) + '</span></p>' : ''), [{l:'확인', v:true, cls:'pri'}]);
+  }catch(e){ snack(e.message, {err:true, ms:8000}); }
+}
+$('siteBox').addEventListener('click', e => {
+  const b = e.target.closest('[data-st]'); if(!b || b.disabled) return;
+  const a = b.dataset.st, f = b.dataset.f;
+  if(a === 're') return siteRender(true);
+  if(a === 'new') return siteDefDlg(null);
+  if(a === 'def') return siteDefDlg(f);
+  if(a === 'cip') return siteCip(f);
+  if(a === 'seed') return siteSeed(f);
+  if(a === 'item') return siteItem(f);
+  if(a === 'open'){ const s = SITE.list.find(x => vmK(x.fab) === vmK(f)), t = s && (TAB_OF_TBL[s.cip_table] || addCipTab(s)); if(t) switchTab(t.id); }
+});
+$('siteBox').addEventListener('change', e => { if(e.target.id === 'stAll'){ SITE.all = e.target.checked; siteRender(false); } });
+
 /* ---------- 변경 이력 ---------- */
 const OPS = {
   upd:{ l:'수정', ops:['update','dbw:update'] }, ins:{ l:'입력', ops:['insert','dbw:append'] },
@@ -3238,13 +3496,13 @@ const OPS = {
 const OP_VIEW = op => /^upload:/.test(op) ? { c:'x', l:'업로드 ' + ({full:'통째', win:'구간', add:'이어붙이기'}[op.split(':')[1]] || '') }
   : ({ update:{c:'u', l:'수정'}, 'dbw:update':{c:'u', l:'수정 (인원·고장 화면)'}, insert:{c:'i', l:'입력'}, 'dbw:append':{c:'i', l:'입력 (인원 화면)'},
        delete:{c:'d', l:'삭제'}, 'dbw:delete':{c:'d', l:'삭제 (인원 화면)'}, restore:{c:'r', l:'되돌리기'}, cascade:{c:'u', l:'연쇄 수정'},
-       bulk:{c:'u', l:'일괄 수정 (엑셀)'} })[op] || { c:'x', l:op || '?' };
+       bulk:{c:'u', l:'일괄 수정 (엑셀)'}, cip_create:{c:'x', l:'CIP 표 만들기'}, add_cols:{c:'x', l:'점검 항목 더하기'} })[op] || { c:'x', l:op || '?' };
 const RESTORABLE = new Set(['update','insert','delete','dbw:update','dbw:append','dbw:delete']);
 function renderHistFilters(opt){
   opt = opt || {};
   /* 국내 데모 모드는 데모 표의 이력만 — 운영 표 이력은 보여도 되돌릴 수 없고(서버가 not_restorable) 헷갈리기만 한다 */
   const tbls = [['', KR ? '국내 데모 표 전부' : '모든 표']].concat(TABS.map(t => [t.tbl, t.name]))
-    .concat(KR ? [] : [['sheet_cip_f11', 'CIP F11'], ['sheet_cip_f16', 'CIP F16'], ['sheet_abp', 'ABP'], ['(old)', '옛 시트 편집 기록']]);
+    .concat(KR ? [] : [['sheet_cip_f11', 'CIP F11'], ['sheet_cip_f16', 'CIP F16'], ['sheet_abp', 'ABP'], ['(old)', '옛 시트 편집 기록']].filter(x => !TAB_OF_TBL[x[0]]));
   $('hfilt').innerHTML = '<label class="sf"><span>표</span><select name="tbl">' + tbls.map(x => '<option value="' + esc(x[0]) + '"' + (opt.tbl === x[0] ? ' selected' : '') + '>' + esc(x[1]) + '</option>').join('') + '</select></label>'
     + '<label class="sf"><span>종류</span><select name="kind"><option value="">전부</option>' + Object.keys(OPS).map(k => '<option value="' + k + '"' + (opt.kind === k ? ' selected' : '') + '>' + esc(OPS[k].l) + '</option>').join('') + '</select></label>'
     + '<label class="sf"><span>행 번호 · id</span><input name="key" value="' + esc(opt.key || '') + '" placeholder="정확히"></label>'
@@ -3394,7 +3652,9 @@ function histView(e){
     }
     /* ?tab=dq — 주간현황 공수 차트의 ⚠ 가 «여기서 고치세요»로 바로 연다(v155) */
     let fixId = null;
-    try{ const sp = new URLSearchParams(location.search), qt = sp.get('tab'); if(qt && (TAB_BY[qt] || qt === 'dq' || qt === 'hist')) S.tab = qt;
+    /* 등록부의 «새» CIP 사이트를 탭으로 (v160) — 옛 F11·F16 은 위 TABS 그대로. 못 읽으면 옛 둘만(사이트 탭이 이유를 적는다). */
+    if(!KR) try{ (await GST.cipSites(false, C)).forEach(addCipTab); }catch(e){ console.warn('[edit] 사이트 등록부', e); }
+    try{ const sp = new URLSearchParams(location.search), qt = sp.get('tab'); if(qt && (TAB_BY[qt] || qt === 'dq' || qt === 'hist' || (qt === 'site' && !KR))) S.tab = qt;
          fixId = sp.get('fix'); if(fixId && !DQ_FIX[fixId]) fixId = null; if(fixId) S.tab = 'dq'; }catch(e){}
     /* ?fix=화면.신호 — 각 화면 데이터 품질 팝업의 「찾아서 고치기」(v156)가 그 신호의 «고칠 자리»로 바로 연다 */
     await switchTab(S.tab);

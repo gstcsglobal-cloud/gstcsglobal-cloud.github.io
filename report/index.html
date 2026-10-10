@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=158"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=160"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -170,7 +170,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=158">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=160">
 </head>
 <body>
 
@@ -372,7 +372,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(142);   // GST.topN(진단 목록 상위 N) · corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
+GST.needVer&&GST.needVer(160);   // GST.topN(진단 목록 상위 N) · corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -1238,6 +1238,9 @@ async function loadData(){
   GST.skeleton(true);   // 여덟 중 이 페이지만 없었다 — 열 개 자료를 받는 몇 초 동안 빈 카드만 보였다(v135)
   try{
     const gidOk=g=>/^\d+$/.test(g);
+    /* 등록부의 «새» CIP 사이트(gid 없음 · v160) — 옛 F11·F16 은 아래 gid 길 그대로(숫자 무변). 실패·빈 표는 그 사이트만 빠진다. */
+    const xsP=GST.cipSites?GST.cipSites().then(ss=>{const xs=ss.filter(s=>!s.gid);
+      return Promise.allSettled(xs.map(s=>GST.cipRows(s,'cip_'+s.fab))).then(rs=>({xs,rs}));}).catch(()=>({xs:[],rs:[]})):Promise.resolve({xs:[],rs:[]});
     const [hr,wk,inst,ro,lv,c11,c16,abp,kra,krb]=await Promise.allSettled([
       GST.fetchCSVCached(URLS.hr,'hr'),
       GST.fetchCSVCached(URLS.wk,'sheet3'),
@@ -1284,6 +1287,9 @@ async function loadData(){
       c11.status==='fulfilled'?parseCIP(c11.value.rows,'MICRON F11'):[],
       c16.status==='fulfilled'?parseCIP(c16.value.rows,'MICRON F16'):[]
     );
+    { const X=await xsP; X.xs.forEach((s,i)=>{const r=X.rs[i];
+        if(r&&r.status==='fulfilled'&&!r.value.empty) CIP=CIP.concat(parseCIP(r.value.rows,s.label||s.fab));
+        else if(r&&r.status==='rejected') console.warn('[CIP '+s.fab+'] 못 읽음 — 이 사이트만 빼고 그립니다',r.reason); }); }
     ABP = abp.status==='fulfilled'?parseABP(abp.value.rows):{m:{},w:{}};
     HR = hr.status==='fulfilled'?parseHR(hr.value.rows):[];
     const _wkRaw = wk.status==='fulfilled'?Math.max(0,wk.value.rows.length-1):0;

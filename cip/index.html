@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=158"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=160"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -131,7 +131,7 @@ tr:hover td{background:var(--glass-hover)}
 @media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}}
 @media(max-width:768px){.card h3{padding-right:0}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=158">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=160">
 </head>
 <body>
 
@@ -226,7 +226,7 @@ tr:hover td{background:var(--glass-hover)}
   <div class="grid3">
     <div class="card">
       <h3 data-i="ch_site">사이트별 진행율</h3>
-      <div class="card-note" data-i="note_site">F11 · F16 완료/잔여 — 사이트 간 진도 비교</div>
+      <div class="card-note" data-i="note_site">사이트별 완료/잔여 — 사이트 간 진도 비교</div>
       <div class="cw"><canvas id="cipSite"></canvas></div>
     </div>
     <div class="card">
@@ -329,7 +329,7 @@ tr:hover td{background:var(--glass-hover)}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(141);   // 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(160);   // 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
 const VER='v50';
@@ -357,7 +357,7 @@ ko:{title:'CIP 현황',sub:'스크러버 개조·점검(CIP) 항목별 진행 �
   kp1:'진행율',kp2:'대상',kp3:'완료',kp4:'잔여',kp5:'이번 구간 완료',kp6:'잔여 설비',u_cnt:'건',u_eq:'대',
   kf1:'완료 {d} / 대상 {t}',kf2:'설비 {n}대 × 항목 {i}개',kf3:'전 구간 {n}건',kf4:'미착수 항목 {n}개',
   kf5:'{lab} 구간 · 직전 {n}건',kf6:'전체 {t}대 중',
-  ch_site:'사이트별 진행율',note_site:'F11 · F16 완료/잔여 — 사이트 간 진도 비교 · 🖱️ 클릭 시 필터',ch_toprem:'잔여 TOP 항목',note_toprem:'잔여 건수 상위 8개 — 어디부터 칠지',ch_trend:'CIP 진행 추이 (누계)',note_trend:'대상 = Not yet + 완료 · 구간 말 기준 누계 · 진행율은 우측 축',
+  ch_site:'사이트별 진행율',note_site:'사이트별 완료/잔여 — 사이트 간 진도 비교 · 🖱️ 클릭 시 필터',ch_toprem:'잔여 TOP 항목',note_toprem:'잔여 건수 상위 8개 — 어디부터 칠지',ch_trend:'CIP 진행 추이 (누계)',note_trend:'대상 = Not yet + 완료 · 구간 말 기준 누계 · 진행율은 우측 축',
   ch_new:'구간별 신규 완료',note_new:'그 구간에 실제로 처리한 건수 (누계 차트로는 안 보이는 실적)',
   ch_proc:'공정별 진행 현황',note_proc:'완료·잔여 스택 + 진행율 · 작업 우선순위 판단 기준',
   hm_title:'공정 × 항목 잔여 히트맵',hm_note:'— 잔여 상위 12개 항목 · 셀 클릭 시 필터',
@@ -386,7 +386,7 @@ en:{title:'CIP Status',sub:'Scrubber retrofit/inspection (CIP) progress by item'
   kp1:'Progress',kp2:'Target',kp3:'Done',kp4:'Remaining',kp5:'Done This Period',kp6:'Units Remaining',u_cnt:'',u_eq:'units',
   kf1:'{d} done / {t} target',kf2:'{n} units × {i} items',kf3:'prev period {n}',kf4:'{n} items not started',
   kf5:'{lab} · prev {n}',kf6:'of {t} units',
-  ch_site:'Progress by Site',note_site:'F11 · F16 done/remaining — click to filter',ch_toprem:'Top Remaining Items',note_toprem:'Top 8 by remaining count — where to start',ch_trend:'CIP Progress Trend (cumulative)',note_trend:'target = Not yet + done · cumulative at period end · rate on right axis',
+  ch_site:'Progress by Site',note_site:'Done/remaining by site — click to filter',ch_toprem:'Top Remaining Items',note_toprem:'Top 8 by remaining count — where to start',ch_trend:'CIP Progress Trend (cumulative)',note_trend:'target = Not yet + done · cumulative at period end · rate on right axis',
   ch_new:'Newly Completed per Period',note_new:'what was actually processed in that period',
   ch_proc:'Progress by Process',note_proc:'done/remaining stack + rate · priority basis',
   hm_title:'Process × Item Remaining Heatmap',hm_note:'— top 12 items by remaining · click a cell to filter',
@@ -415,7 +415,7 @@ zh:{title:'CIP 现况',sub:'洗涤器改造·点检(CIP)按项目进度管理',b
   kp1:'进度',kp2:'对象',kp3:'完成',kp4:'剩余',kp5:'本区间完成',kp6:'剩余设备',u_cnt:'件',u_eq:'台',
   kf1:'完成 {d} / 对象 {t}',kf2:'设备 {n}台 × 项目 {i}个',kf3:'上区间 {n}件',kf4:'未着手项目 {n}个',
   kf5:'{lab} 区间 · 上次 {n}件',kf6:'共 {t}台中',
-  ch_site:'各站点进度',note_site:'F11 · F16 完成/剩余 — 点击筛选',ch_toprem:'剩余TOP项目',note_toprem:'剩余数量前8 — 从哪里开始',ch_trend:'CIP进度趋势 (累计)',note_trend:'对象 = Not yet + 完成 · 区间末累计 · 进度见右轴',
+  ch_site:'各站点进度',note_site:'各站点 完成/剩余 — 点击筛选',ch_toprem:'剩余TOP项目',note_toprem:'剩余数量前8 — 从哪里开始',ch_trend:'CIP进度趋势 (累计)',note_trend:'对象 = Not yet + 完成 · 区间末累计 · 进度见右轴',
   ch_new:'各区间新增完成',note_new:'该区间实际处理的件数 (累计图看不到)',
   ch_proc:'按工艺进度',note_proc:'完成·剩余堆叠 + 进度 · 作业优先级依据',
   hm_title:'工艺 × 项目 剩余热力图',hm_note:'— 剩余前12项 · 点击单元格筛选',
@@ -444,7 +444,7 @@ ja:{title:'CIP 状況',sub:'スクラバー改造·点検(CIP)の項目別進捗
   kp1:'進捗',kp2:'対象',kp3:'完了',kp4:'残り',kp5:'当区間完了',kp6:'残り設備',u_cnt:'件',u_eq:'台',
   kf1:'完了 {d} / 対象 {t}',kf2:'設備 {n}台 × 項目 {i}個',kf3:'前区間 {n}件',kf4:'未着手項目 {n}個',
   kf5:'{lab} 区間 · 直前 {n}件',kf6:'全 {t}台中',
-  ch_site:'サイト別進捗率',note_site:'F11 · F16 完了/残り — クリックでフィルタ',ch_toprem:'残りTOP項目',note_toprem:'残り件数上位8 — どこから着手するか',ch_trend:'CIP進捗推移 (累計)',note_trend:'対象 = Not yet + 完了 · 区間末累計 · 進捗は右軸',
+  ch_site:'サイト別進捗率',note_site:'サイト別 完了/残り — クリックでフィルタ',ch_toprem:'残りTOP項目',note_toprem:'残り件数上位8 — どこから着手するか',ch_trend:'CIP進捗推移 (累計)',note_trend:'対象 = Not yet + 完了 · 区間末累計 · 進捗は右軸',
   ch_new:'区間別 新規完了',note_new:'その区間に実際処理した件数 (累計では見えない実績)',
   ch_proc:'工程別 進捗状況',note_proc:'完了·残り積み上げ + 進捗 · 優先順位の判断基準',
   hm_title:'工程 × 項目 残りヒートマップ',hm_note:'— 残り上位12項目 · セルクリックで絞込',
@@ -709,29 +709,34 @@ async function loadData(){ GST.skeleton(true);
   const status=document.getElementById('status');
   status.textContent='⏳ '+t('loading');
   try{
-    const [r11,r16,rin]=await Promise.allSettled([
-      GST.fetchCSVCached(URLS.cip11,'cip11'),
-      GST.fetchCSVCached(URLS.cip16,'cip16'),
-      GST.fetchCSVCached(URLS.inst ,'cip_inst')   // 실패해도 CIP 는 뜬다 — 조직 축만 비게 둔다
+    /* 사이트는 등록부에서 읽는다 (v160) — 옛 F11·F16 은 지금까지의 길(gid) 그대로, 새 사이트는 표에서 바로.
+       등록부를 못 읽으면 core 가 옛 두 사이트로 돌아간다(GST._siteWhy). */
+    const SITES=await GST.cipSites();
+    const [rs,rin]=await Promise.all([
+      Promise.allSettled(SITES.map(s=>GST.cipRows(s,s.gid?('cip'+s.fab.toLowerCase().replace(/^f/,'')):('cip_'+s.fab)))),
+      Promise.allSettled([GST.fetchCSVCached(URLS.inst ,'cip_inst')]).then(a=>a[0])   // 실패해도 CIP 는 뜬다 — 조직 축만 비게 둔다
     ]);
-    if(r11.status!=='fulfilled')throw r11.reason;
-    if(r16.status!=='fulfilled')throw r16.reason;
-    const c11=r11.value, c16=r16.value;
+    /* 옛 두 사이트가 못 읽히면 지금처럼 멈춘다(조용히 반쪽을 그리지 않는다). 새 사이트 하나가 못 읽히면 그 사이트만
+       빼고 그 사실을 배너에 적는다 — 막 등록한 사이트 하나 때문에 화면 전체가 죽으면 안 된다. */
+    const issues=[], per=[]; let cached=false; CIP=[]; BADN=0;
     buildInstIndex(rin.status==='fulfilled'?rin.value.rows:null);
-    const p11=parseCIP(c11.rows,'F11');
-    const p16=parseCIP(c16.rows,'F16');
-    CIP=p11.recs.concat(p16.recs).map(attachOrg);
-    BADN=p11.bad+p16.bad+CIP.filter(x=>x.bad).length;
-    // CIP 시트는 헤더가 항목명이라 validateSchema를 쓸 수 없다 → 항목 열 수로 구조 변동 감시
-    const issues=[];
-    // 항목 구간을 헤더에서 유도하므로 개수를 미리 박아두지 않는다. 0개면 구조가 깨진 것이다.
-    if(!p11.cols)issues.push(t('warn_cols').replace('{s}','F11').replace('{e}','1+').replace('{a}',p11.cols));
-    if(!p16.cols)issues.push(t('warn_cols').replace('{s}','F16').replace('{e}','1+').replace('{a}',p16.cols));
+    SITES.forEach((s,i)=>{
+      const r=rs[i];
+      if(r.status!=='fulfilled'){ if(s.gid) throw r.reason; issues.push(s.fab+' — '+GST.failNote(r.reason)); per.push(s.fab+' ✕'); return; }
+      const c=r.value; cached=cached||!!c.cached;
+      if(c.empty){ per.push(s.fab+' 0'); return; }
+      const p=parseCIP(c.rows,s.fab);
+      CIP=CIP.concat(p.recs.map(attachOrg)); BADN+=p.bad;
+      // CIP 시트는 헤더가 항목명이라 validateSchema를 쓸 수 없다 → 항목 열 수로 구조 변동 감시
+      // 항목 구간을 헤더에서 유도하므로 개수를 미리 박아두지 않는다. 0개면 구조가 깨진 것이다(새 사이트는 항목을 더하기 전이면 정상이다).
+      if(!p.cols && s.gid)issues.push(t('warn_cols').replace('{s}',s.fab).replace('{e}','1+').replace('{a}',p.cols));
+      per.push(s.fab+' '+p.recs.length);
+    });
+    BADN+=CIP.filter(x=>x.bad).length;
     GST.schemaBanner(issues,'CIP');
     fillSlicers();
-    const cached=c11.cached||c16.cached;
     status.textContent=(cached?GST.staleText()+' · ':'✅ ')+new Date().toLocaleString()
-      +' · '+t('kp2')+' '+CIP.length.toLocaleString()+' · F11 '+p11.recs.length+' · F16 '+p16.recs.length+' · '+VER;
+      +' · '+t('kp2')+' '+CIP.length.toLocaleString()+' · '+per.join(' · ')+' · '+VER;
     status.style.color=cached?'#fbbf24':'';
     render();
   }catch(e){ status.textContent='❌ '+GST.failNote(e); console.error(e); }   // 부류별 한 줄 · 원문은 관리자에게만(v135)
