@@ -103,6 +103,8 @@ body.hb{padding:0 !important;min-height:100vh}
 @keyframes hbZoom{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
 .hb-back{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--accent);border-radius:8px;padding:3px 9px;cursor:pointer;margin-right:6px}
 .hb-dist{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.hb-dist[hidden]{display:none}   /* ⚠ display:grid 가 hidden 속성을 이긴다 — 이 줄이 없으면 나라에서 «전세계»로 돌아와도 옛 분포 머리글만 남는다(v178 사용자 보고) */
+.hb-dist .hb-empty{font-size:12px;color:var(--txt-muted);padding:4px 0}
 .hb-dist h4{margin:0 0 6px;font-size:12px;color:var(--txt-2);font-weight:600}
 .hb-dist .hb-hb{display:flex;flex-direction:column;gap:4px}
 .hb-dist .hb-hb button{display:grid;grid-template-columns:minmax(70px,120px) 1fr 44px;gap:6px;align-items:center;font:inherit;font-size:12px;color:inherit;background:none;border:0;padding:2px 0;cursor:pointer;text-align:left}
@@ -260,7 +262,7 @@ const GEO={ KOREA:[36.4,127.9], TAIWAN:[23.8,121.0], USA:[39.5,-98.5], JAPAN:[36
   CHINA:[34,108.9], WUHAN:[30.6,114.3], HEFEI:[31.8,117.2], XIAN:[34.3,108.9], WUXI:[31.5,120.3] };
 
 const T={
-ko:{title:'글로벌 현황',back:'← 전세계',cdReg:'지역 분포',cdCust:'고객사 분포',unplaced:'위치 미지정',unplacedN:'지도에 못 놓은 곳 {n} · {u}대: {list}',unplacedAdm:' — 데이터 관리 「사이트」 탭의 «지도 위치»에서 정합니다',mapT_c:'{c} 설비 분포',mapS_c:'원 크기 = 반입 설비 · 색 = 그 운영단위의 신호 · 막대를 누르면 그 설비 목록',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'점검 권장',warn:'관찰 중',ok:'안정',tk_run:'가동',tk_bm:'이번 주 고장',tk_lbl:'운영단위 상태',sigCols:'이번 주 고장 · 위험 설비',
+ko:{title:'글로벌 현황',back:'← 전세계',cdReg:'지역 분포',cdCty:'국가 분포',cdCust:'고객사 분포',unplaced:'위치 미지정',unplacedN:'지도에 못 놓은 곳 {n} · {u}대: {list}',unplacedAdm:' — 데이터 관리 「사이트」 탭의 «지도 위치»에서 정합니다',mapT_c:'{c} 설비 분포',mapS_c:'원 크기 = 반입 설비 · 색 = 그 운영단위의 신호 · 막대를 누르면 그 설비 목록',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'점검 권장',warn:'관찰 중',ok:'안정',tk_run:'가동',tk_bm:'이번 주 고장',tk_lbl:'운영단위 상태',sigCols:'이번 주 고장 · 위험 설비',
   mapT:'글로벌 설비 분포',mapS:'원 크기 = 반입 설비 · 색 = 신호 · 나라를 누르면 그 나라 지도로',qT:'확인 사항',heatT:'주차별 고장 히트맵',heatS:'진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록',
   byOp:'운영단위',byCampus:'단지',loading:'자료를 불러오는 중…',asof:'{d} 기준',
   k_run:'가동 설비',k_run_d:'반입 {n}대 · 가동률 {p}%',k_run_none:'설치현황 자료 없음',k_bm:'이번 주 고장(BM)',k_pm:'이번 주 PM',k_risk:'고장 위험 설비',k_risk_d:'{rd}일 이내 재고장 {n}대',
@@ -277,7 +279,7 @@ ko:{title:'글로벌 현황',back:'← 전세계',cdReg:'지역 분포',cdCust:'
   l_date:'날짜',l_op:'운영단위',l_campus:'단지',l_eq:'설비',l_sn:'S/N',l_src:'출처',l_desc:'내용',l_score:'점수',l_why:'근거',l_wd:'유상 전환일',l_state:'설비상태',
   src_wk:'수선실적',src_kr:'알람 원장',week:'주',none:'자료 없음',fail:'일부 자료를 못 읽었습니다',
   dq_tip:'데이터 관리에서 고치기'},
-en:{title:'Global overview',back:'← World',cdReg:'By region',cdCust:'By customer',unplaced:'No position',unplacedN:'{n} place(s) not on the map · {u} units: {list}',unplacedAdm:' — set them in Data management «Sites» › Map position',mapT_c:'{c} installed base',mapS_c:'size = installed units · color = signal of its unit · click a bar for the unit list',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Check advised',warn:'Watching',ok:'Stable',tk_run:'Running',tk_bm:'BM this week',tk_lbl:'Operating unit status',sigCols:'BM this week · at-risk units',
+en:{title:'Global overview',back:'← World',cdReg:'By region',cdCty:'By country',cdCust:'By customer',unplaced:'No position',unplacedN:'{n} place(s) not on the map · {u} units: {list}',unplacedAdm:' — set them in Data management «Sites» › Map position',mapT_c:'{c} installed base',mapS_c:'size = installed units · color = signal of its unit · click a bar for the unit list',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Check advised',warn:'Watching',ok:'Stable',tk_run:'Running',tk_bm:'BM this week',tk_lbl:'Operating unit status',sigCols:'BM this week · at-risk units',
   mapT:'Global installed base',mapS:'size = installed units · color = signal · click a country to zoom in',qT:'To check',heatT:'Weekly failure heatmap',heatS:'darker = above usual · click a cell for that week\'s failures',
   byOp:'Operating unit',byCampus:'Campus',loading:'Loading…',asof:'As of {d}',
   k_run:'Running units',k_run_d:'{n} installed · {p}% running',k_run_none:'No installation data',k_bm:'Failures (BM) this week',k_pm:'PM this week',k_risk:'At-risk units',k_risk_d:'{n} repeat within {rd} days',
@@ -294,7 +296,7 @@ en:{title:'Global overview',back:'← World',cdReg:'By region',cdCust:'By custom
   l_date:'Date',l_op:'Unit',l_campus:'Campus',l_eq:'Equipment',l_sn:'S/N',l_src:'Source',l_desc:'Detail',l_score:'Score',l_why:'Why',l_wd:'Paid from',l_state:'Status',
   src_wk:'Repair',src_kr:'Alarm ledger',week:'wk',none:'No data',fail:'Some data could not be read',
   dq_tip:'Fix in Data management'},
-zh:{title:'全球概况',back:'← 全球',cdReg:'地区分布',cdCust:'客户分布',unplaced:'未指定位置',unplacedN:'未能放到地图上的 {n} 处 · {u}台: {list}',unplacedAdm:' — 在数据管理「站点」页的地图位置中设定',mapT_c:'{c} 设备分布',mapS_c:'圆大小 = 已进场设备 · 颜色 = 所属运营单位信号 · 点击柱查看设备',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'建议检查',warn:'观察中',ok:'稳定',tk_run:'运行',tk_bm:'本周故障',tk_lbl:'运营单位状态',sigCols:'本周故障 · 风险设备',
+zh:{title:'全球概况',back:'← 全球',cdReg:'地区分布',cdCty:'国家分布',cdCust:'客户分布',unplaced:'未指定位置',unplacedN:'未能放到地图上的 {n} 处 · {u}台: {list}',unplacedAdm:' — 在数据管理「站点」页的地图位置中设定',mapT_c:'{c} 设备分布',mapS_c:'圆大小 = 已进场设备 · 颜色 = 所属运营单位信号 · 点击柱查看设备',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'建议检查',warn:'观察中',ok:'稳定',tk_run:'运行',tk_bm:'本周故障',tk_lbl:'运营单位状态',sigCols:'本周故障 · 风险设备',
   mapT:'全球设备分布',mapS:'圆大小 = 已进场设备 · 颜色 = 信号 · 点击国家查看该国地图',qT:'待确认',heatT:'按周故障热力图',heatS:'越深 = 高于平时 · 点击格子查看该周故障',
   byOp:'运营单位',byCampus:'园区',loading:'正在加载…',asof:'截至 {d}',
   k_run:'运行设备',k_run_d:'进场 {n}台 · 运行率 {p}%',k_run_none:'无设备台账数据',k_bm:'本周故障(BM)',k_pm:'本周PM',k_risk:'故障风险设备',k_risk_d:'{rd}天内复发 {n}台',
@@ -311,7 +313,7 @@ zh:{title:'全球概况',back:'← 全球',cdReg:'地区分布',cdCust:'客户�
   l_date:'日期',l_op:'运营单位',l_campus:'园区',l_eq:'设备',l_sn:'S/N',l_src:'来源',l_desc:'内容',l_score:'分数',l_why:'依据',l_wd:'有偿起始日',l_state:'设备状态',
   src_wk:'维修实绩',src_kr:'报警台账',week:'周',none:'无数据',fail:'部分数据未能读取',
   dq_tip:'在数据管理中修正'},
-ja:{title:'グローバル概況',back:'← 全世界',cdReg:'地域分布',cdCust:'顧客分布',unplaced:'位置未指定',unplacedN:'地図に置けない場所 {n} · {u}台: {list}',unplacedAdm:' — データ管理「サイト」タブの地図位置で設定します',mapT_c:'{c} 設備分布',mapS_c:'円の大きさ = 搬入設備 · 色 = その運営単位の信号 · 棒を押すと設備一覧',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'点検推奨',warn:'観察中',ok:'安定',tk_run:'稼働',tk_bm:'今週の故障',tk_lbl:'運営単位の状態',sigCols:'今週の故障 · 危険設備',
+ja:{title:'グローバル概況',back:'← 全世界',cdReg:'地域分布',cdCty:'国別分布',cdCust:'顧客分布',unplaced:'位置未指定',unplacedN:'地図に置けない場所 {n} · {u}台: {list}',unplacedAdm:' — データ管理「サイト」タブの地図位置で設定します',mapT_c:'{c} 設備分布',mapS_c:'円の大きさ = 搬入設備 · 色 = その運営単位の信号 · 棒を押すと設備一覧',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'点検推奨',warn:'観察中',ok:'安定',tk_run:'稼働',tk_bm:'今週の故障',tk_lbl:'運営単位の状態',sigCols:'今週の故障 · 危険設備',
   mapT:'グローバル設備分布',mapS:'円の大きさ = 搬入設備 · 色 = シグナル · 国を押すとその国の地図へ',qT:'確認事項',heatT:'週別故障ヒートマップ',heatS:'濃いほど平常より多い · セルを押すとその週の故障一覧',
   byOp:'運営単位',byCampus:'団地',loading:'データ読み込み中…',asof:'{d} 時点',
   k_run:'稼働設備',k_run_d:'搬入 {n}台 · 稼働率 {p}%',k_run_none:'設置台帳データなし',k_bm:'今週の故障(BM)',k_pm:'今週のPM',k_risk:'故障リスク設備',k_risk_d:'{rd}日以内再故障 {n}台',
@@ -660,6 +662,20 @@ function popAt(el, html){
   const cx=br.left-host.left+br.width/2, cy=br.top-host.top;
   const left=cx>host.width*0.62; p.style.left=left?'':(cx+br.width/2+8)+'px'; p.style.right=left?(host.width-cx+br.width/2+8)+'px':''; p.style.top=Math.max(4,cy-10)+'px';
 }
+/* 분포 두 칸(지역·국가 / 고객사) — 세계·나라 지도가 같은 막대를 쓴다. 막대를 누르면 그 설비 목록.
+   ⚠ 설비가 0대인 나라·운영단위(설치현황 자료가 없는 법인)는 빈 막대가 아니라 «자료 없음»이라고 적는다(v172 규약) */
+function distBars(M, label){
+  const K=Object.keys(M).sort((a,b)=>(a==='\u0000')-(b==='\u0000')||M[b].length-M[a].length).slice(0,10), m=Math.max(1,...K.map(k=>M[k].length));
+  if(!K.length) return '<div><h4>'+esc(label)+'</h4><div class="hb-empty">'+esc(t('k_run_none'))+'</div></div>';
+  return '<div><h4>'+esc(label)+'</h4><div class="hb-hb">'+K.map((k,i)=>'<button type="button" data-k="'+esc(k)+'"><span title="'+esc(k==='\u0000'?t('unplaced'):k)+'">'+esc(k==='\u0000'?t('unplaced'):k)+'</span><span class="tr"><i class="'+(k==='\u0000'?'un':'')+'" style="width:'+(M[k].length/m*100).toFixed(1)+'%;animation-delay:'+(i*35)+'ms"></i></span><b>'+nf(M[k].length)+'</b></button>').join('')+'</div></div>';
+}
+function distShow(A, la, B, lb){
+  const cd=document.getElementById('cdist'); cd.hidden=false;
+  cd.innerHTML=distBars(A, la)+distBars(B, lb);
+  const parts=cd.children;
+  parts[0].querySelectorAll('button').forEach(b=>b.onclick=()=>listUnits(b.dataset.k==='\u0000'?t('unplaced'):b.dataset.k, A[b.dataset.k]||[]));
+  parts[1].querySelectorAll('button').forEach(b=>b.onclick=()=>listUnits(b.dataset.k, B[b.dataset.k]||[]));
+}
 function drawWorld(svg){
   const W=GEOD.world, has={};
   D.groups.forEach(g=>{ const cc=GST.geo.ccOfCty(g.cty); if(cc&&g.inN) has[cc]=(has[cc]||0)+g.inN; });
@@ -680,7 +696,11 @@ function drawWorld(svg){
   const tot=D.groups.reduce((s,g)=>s+g.inN,0), ctys=new Set(D.groups.map(g=>g.cty).filter(Boolean)), bm12=D.bmW.reduce((s,v)=>s+v,0);
   document.getElementById('stats').innerHTML=[[t('st_units'),nf(tot)],[t('st_ops'),D.groups.length],[t('st_cty'),ctys.size],[t('st_bm12'),nf(bm12)]]
     .map(a=>'<div class="hb-stat">'+esc(a[0])+'<b>'+esc(a[1])+'</b></div>').join('');
-  document.getElementById('cdist').hidden=true;
+  /* 전세계 화면도 분포를 보인다 — 국가 · 고객사(사용자 보고 「전체로 잡았는데 안 나온다」). 나라를 고르면 지역 · 고객사로 바뀐다 */
+  const CT={}, CU={}, isInW=x=>GST.ops.isIn(x,D.asOf);
+  D.inst.forEach(x=>{ if(!isInW(x)) return; const c=x.cty?ctyName(x.cty):'\u0000'; (CT[c]=CT[c]||[]).push(x);
+    const cu=(GST.ORG.customer?GST.ORG.customer(x.cust):x.cust)||'—'; (CU[cu]=CU[cu]||[]).push(x); });
+  distShow(CT, t('cdCty'), CU, t('cdCust'));
   document.getElementById('mapNote').textContent=noLoc.length?fmt(t('noLoc'),{n:noLoc.length,list:noLoc.slice(0,4).map(g=>short(g.op)).join(', ')+(noLoc.length>4?' …':'')}):'';
 }
 function drawCountry(svg){
@@ -712,14 +732,7 @@ function drawCountry(svg){
   const tot=D.inst.filter(isIn).length, unN=(REG['\u0000']||[]).length;
   document.getElementById('stats').innerHTML=[[t('st_units'),nf(tot)],[t('st_ops'),D.groups.length],[t('cdReg'),Object.keys(regCnt).length],[t('st_bm12'),nf(D.bmW.reduce((s,v)=>s+v,0))]]
     .map(a=>'<div class="hb-stat">'+esc(a[0])+'<b>'+esc(a[1])+'</b></div>').join('');
-  // 분포 두 개 — 막대를 누르면 그 설비 목록
-  const bars=(M, label)=>{ const K=Object.keys(M).sort((a,b)=>(a==='\u0000')-(b==='\u0000')||M[b].length-M[a].length).slice(0,10), m=Math.max(1,...K.map(k=>M[k].length));
-    return '<div><h4>'+esc(label)+'</h4><div class="hb-hb">'+K.map((k,i)=>'<button type="button" data-k="'+esc(k)+'"><span title="'+esc(k==='\u0000'?t('unplaced'):k)+'">'+esc(k==='\u0000'?t('unplaced'):k)+'</span><span class="tr"><i class="'+(k==='\u0000'?'un':'')+'" style="width:'+(M[k].length/m*100).toFixed(1)+'%;animation-delay:'+(i*35)+'ms"></i></span><b>'+nf(M[k].length)+'</b></button>').join('')+'</div></div>'; };
-  const cd=document.getElementById('cdist'); cd.hidden=false;
-  cd.innerHTML=bars(REG, t('cdReg'))+bars(CUS, t('cdCust'));
-  const parts=cd.children;
-  parts[0].querySelectorAll('button').forEach(b=>b.onclick=()=>listUnits(b.dataset.k==='\u0000'?t('unplaced'):b.dataset.k, REG[b.dataset.k]||[]));
-  parts[1].querySelectorAll('button').forEach(b=>b.onclick=()=>listUnits(b.dataset.k, CUS[b.dataset.k]||[]));
+  distShow(REG, t('cdReg'), CUS, t('cdCust'));
   const unK=Object.keys(UN).sort((a,b)=>UN[b].length-UN[a].length);
   document.getElementById('mapNote').textContent=unN?fmt(t('unplacedN'),{n:unK.length,u:nf(unN),list:unK.slice(0,5).map(k=>k+' '+UN[k].length).join(', ')+(unK.length>5?' …':'')})+(GST.isAdmin&&GST.isAdmin()?t('unplacedAdm'):''):'';
 }

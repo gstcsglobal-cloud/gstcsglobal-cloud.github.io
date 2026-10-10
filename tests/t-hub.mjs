@@ -106,6 +106,12 @@ const map = await pg.evaluate(() => ({ paths:document.querySelectorAll('#mapS pa
 is(map.paths > 200 && map.canvas === 'none', '나라 경계를 벡터로 그린다(점지도 캔버스는 숨김 · ' + map.paths + '개 나라)');
 is(map.has === 'CN,KR,TW' && map.bub === 3, '설비가 있는 나라(중국·한국·대만)가 칠해지고 운영단위 원 3개 (' + map.has + ')');
 is(ext.length === 0, '외부 요청 0 — 지도 모양은 저장소 파일(assets/geo)' + (ext.length ? ' → ' + ext[0] : ''));
+/* v178 사용자 보고 「전체로 잡았는데 안 나온다」 — 전세계 화면에도 분포(국가 · 고객사)가 서야 한다 */
+const wd = await pg.evaluate(() => { const cd = document.getElementById('cdist');
+  return { vis:getComputedStyle(cd).display !== 'none', h:[...cd.querySelectorAll('h4')].map(h => h.textContent),
+    sum:[...cd.querySelectorAll('div:first-child button b')].reduce((a, b) => a + +b.textContent.replace(/,/g,''), 0),
+    run:+document.querySelector('#kpis .hb-kpi[data-k="run"] .num').textContent.replace(/,/g,'') }; });
+is(wd.vis && wd.h[0] === '국가 분포' && wd.h[1] === '고객사 분포' && wd.sum >= wd.run, '전세계 화면 — 국가 분포 · 고객사 분포가 선다(합 ' + wd.sum + ' ≥ 가동 ' + wd.run + ')');
 await pg.click('#bubs .hb-bub[aria-label^="GST TAIWAN"]'); await pg.waitForTimeout(1200);   // 대만은 원이 나라를 덮는다 — 사람처럼 원을 누른다
 const tw = await pg.evaluate(() => ({ title:document.getElementById('mapTitle').textContent, back:!document.getElementById('mapBack').hidden,
   rg:document.querySelectorAll('#mapS path.rg').length, rgHas:[...document.querySelectorAll('#mapS path.rg.has')].length,
@@ -126,6 +132,14 @@ is(await pg.evaluate(() => document.querySelectorAll('.gov-body tbody tr').lengt
 await pg.evaluate(() => GST._ovClose && GST._ovClose());
 if (process.env.HUB_SHOT) await pg.screenshot({ path: process.env.HUB_SHOT + '/hub-tw.png', fullPage:true });
 await pg.click('#mapBack'); await pg.waitForTimeout(800);
+is(await pg.evaluate(() => [...document.querySelectorAll('#cdist h4')].map(h => h.textContent).join('|') === '국가 분포|고객사 분포'),
+   '「← 전세계」 — 분포가 나라 것(지역)으로 남지 않고 국가 · 고객사로 돌아온다');
+/* 설비 0대인 나라에 들어가면 빈 머리글만 남던 자리 — «자료 없음»을 적는다. ⚠ CSS(display:grid)가 hidden 을 이기지 않는지도 본다 */
+const zero = await pg.evaluate(() => { const keep = D.inst; D.inst = []; S.cc = 'TW'; drawCountry(document.getElementById('mapS'));
+  const cd = document.getElementById('cdist'), t = cd.textContent; D.inst = keep; S.cc = '';
+  cd.hidden = true; const hid = getComputedStyle(cd).display === 'none'; cd.hidden = false; return { t, hid }; });
+is(/자료 없음/.test(zero.t) && zero.hid, '설비 0대 — 분포 칸이 «자료 없음» · hidden 이면 정말 숨는다 (' + zero.t.slice(0, 30) + ')');
+await pg.evaluate(() => render()); await pg.waitForTimeout(600);
 is(await pg.evaluate(() => document.querySelectorAll('#mapS path.ct').length > 200 && +document.querySelector('#kpis .hb-kpi[data-k="run"] .num').textContent === 48), '「← 전세계」 — 세계 지도와 전체 숫자(가동 48)로 돌아온다');
 
 console.log('[4] 구분 전환이 모든 칸에 걸린다');
