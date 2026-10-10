@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=172"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=173"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write) 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB(옛 동작 그대로 보인다).
@@ -25,15 +25,17 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #editBtn{display:none}
   --bg:#F5F6F8;--surface:#FFFFFF;--surface-2:#F2F4F7;--line:#E4E7EC;--line-2:#CDD3DC;
   --txt:#101828;--txt-2:#344054;--mut:#667085;
   --accent:#2F6FED;--accent-soft:#EAF1FE;--accent-ink:#1D4ED8;--bad:#D92D20;--warn:#B7670A;
-  --glass:var(--surface);--glassb:var(--line);--card:var(--surface);
   --shadow-md:0 4px 12px rgba(16,24,40,.08);
+  --gold:#B8862F;
 }
+/* ⚠ 별칭은 body 에서도 다시 선언한다 — :root 에만 두면 라이트의 흰색으로 굳어 다크에서도 챗봇 입력칸이 흰색으로 떴다(v178 · theme.css 와 같은 이유) */
+:root,body{--glass:var(--surface);--glassb:var(--line);--card:var(--surface)}
 /* v171 — 다크는 «미드나이트»(theme.css 와 같은 값 · 셸은 theme.css 를 안 싣는다) */
 body.theme-slate{
   --bg:#070B14;--surface:#0D1321;--surface-2:#131B2C;--surface-3:#1A2438;--line:rgba(148,170,215,.13);--line-2:rgba(148,170,215,.26);
   --txt:#E8EEF7;--txt-2:#C5CEDB;--mut:#8C99AD;
   --accent:#6C9BFF;--accent-soft:rgba(108,155,255,.15);--accent-ink:#9DBDFF;--bad:#F2706B;--warn:#F5B83D;
-  --shadow-md:0 12px 32px rgba(0,0,0,.55);color-scheme:dark;
+  --shadow-md:0 12px 32px rgba(0,0,0,.55);--gold:#D8B46A;color-scheme:dark;
 }
 html,body{height:100%;overflow:hidden}
 body{font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
@@ -135,7 +137,7 @@ select.gb-inp{width:104px}
 .tab{padding:11px 16px 10px;font-size:13.5px;font-weight:600;color:var(--mut);cursor:pointer;font-family:inherit;
   border:none;background:transparent;border-bottom:2px solid transparent;transition:color .15s,border-color .2s cubic-bezier(.4,0,.2,1);white-space:nowrap;position:relative;top:1px}
 .tab:hover{color:var(--txt)}
-.tab.active{color:var(--accent-ink);border-bottom-color:var(--accent)}
+.tab.active{color:var(--txt);border-bottom-color:var(--accent)}
 .tab.err::after{content:' ⚠';font-size:11px}   /* 그 화면에서 잡히지 않은 예외가 났다(v135) */
 .tab .ic{margin-right:7px;display:inline-flex;vertical-align:-2px}
 /* 탭 묶음(v172) — «질문»으로 나눈다: 정비(PM·CIP) · 자재·비용(자재·TCO). 묶음 안의 탭도 각자 .tab[data-id] 라 딥링크·순회·검사가 그대로다 */
@@ -169,7 +171,7 @@ body:not([data-role="admin"]):not([data-role="legacy"]) .exp-only{display:none !
 /* ===== 디자인 2.0 (v171) — 탭 밑줄이 미끄러진다 · 검색(Ctrl K) · 읽는 중 막대 · 부팅 화면 ===== */
 .tabbar{position:relative}
 .tab-ink{position:absolute;bottom:0;left:0;width:0;height:2px;border-radius:2px 2px 0 0;pointer-events:none;opacity:0;
-  background:linear-gradient(90deg,var(--accent),#7A5AF8);box-shadow:0 0 10px color-mix(in srgb,var(--accent) 55%,transparent);
+  background:linear-gradient(90deg,var(--accent),var(--gold));box-shadow:0 0 12px color-mix(in srgb,var(--gold) 45%,transparent);
   transition:left .34s cubic-bezier(.3,.9,.3,1),width .34s cubic-bezier(.3,.9,.3,1),opacity .2s}
 .tabbar.has-ink .tab.active{border-bottom-color:transparent}
 @media (prefers-reduced-motion:reduce){.tab-ink{transition:none}}
@@ -206,20 +208,11 @@ body:not([data-role="admin"]):not([data-role="legacy"]) .exp-only{display:none !
 .boot-team{margin-top:8px;font-size:10.5px;font-weight:600;letter-spacing:.32em;padding-left:.32em;color:#5F6F8C}
 .boot-bar{width:min(360px,72vw);height:3px;margin-top:24px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;position:relative}
 .boot-bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#4F8BFF,#9B7BFF,#38D3F5);box-shadow:0 0 16px rgba(155,123,255,.85)}
-.boot-log{margin-top:18px;width:min(460px,86vw);height:118px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;text-align:left;
-  font:11.5px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace;color:#7FB6FF;-webkit-mask:linear-gradient(transparent,#000 40%);mask:linear-gradient(transparent,#000 40%)}
-.boot-log div{display:flex;gap:9px;white-space:nowrap;animation:bootLg .26s ease-out}
-.boot-log .n{color:#D6E3FF}
-.boot-log .m{color:#5D7194;overflow:hidden;text-overflow:ellipsis}
-.boot-log .s{margin-left:auto;padding-left:10px;color:#5D7194}
-.boot-log .ok .s{color:#3FCF8E}
-.boot-log .fail .s{color:#F2706B}
 .boot.out{clip-path:circle(0% at 50% 50%);transition:clip-path .85s cubic-bezier(.8,0,.2,1)}
 @keyframes bootSp{to{transform:rotate(360deg)}}
 @keyframes bootPu{50%{transform:scale(.72);opacity:.55}}
 @keyframes bootSheen{from{background-position:120% 0}to{background-position:-120% 0}}
-@keyframes bootLg{from{opacity:0;transform:translateX(-8px)}}
-@media (prefers-reduced-motion:reduce){.boot-orb i,.boot-orb b,.boot-brand,.boot-log div{animation:none !important}.boot.out{clip-path:none;opacity:0;transition:opacity .2s}}
+@media (prefers-reduced-motion:reduce){.boot-orb i,.boot-orb b,.boot-brand{animation:none !important}.boot.out{clip-path:none;opacity:0;transition:opacity .2s}}
 .frame-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;pointer-events:none}
 .spinner{width:36px;height:36px;border:3px solid var(--glassb);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -270,6 +263,32 @@ body.kiosk-full .kiosk-panel{display:none}
 .kiosk-panel .kp-go:disabled{opacity:.45;cursor:default}
 .kiosk-panel .kp-warn{margin-top:10px;color:#fbbf24;font-size:11px;line-height:1.5}
 
+/* ===== Executive 3.0 (v178) — 셸 머리는 깊은 잉크 띠 하나 · 탭 글자는 또렷하게 · 선택은 사파이어→골드 밑줄 =====
+   ⚠ 셸은 theme.css 를 싣지 않는다 — 같은 규칙을 여기 한 벌 둔다(토큰 이름은 같다). */
+body.theme-slate .topbar,body.theme-slate .tabbar{background:linear-gradient(180deg,#0B1222,#0A1020)}
+/* 브랜드 — 잉크 배지 + 금빛 테두리(다크) · 바탕 선은 사파이어→골드 */
+body.theme-slate .brand::before{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F3DFAE' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 17l5-6 4 3 7-8'/%3E%3C/svg%3E") center/17px no-repeat,
+  linear-gradient(135deg,#1E2E5C,#0B1330);box-shadow:inset 0 0 0 1px rgba(216,180,106,.55),0 8px 20px -8px rgba(216,180,106,.45)}
+body.theme-slate .topbar::after{background:linear-gradient(90deg,transparent 0%,color-mix(in srgb,var(--accent) 45%,transparent) 28%,color-mix(in srgb,var(--gold) 55%,transparent) 70%,transparent 100%)}
+body.theme-slate .brand .logo{background:linear-gradient(180deg,#FFFFFF 30%,#C9D3E6);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.theme-slate .tab.active{color:#fff;text-shadow:0 0 18px color-mix(in srgb,var(--gold) 35%,transparent)}
+body.theme-slate .tab.active .ic{color:var(--gold)}
+body.theme-slate .gbarrow{background:#070B14}
+.topbar{padding:11px 24px}
+.brand .logo{font-weight:750;letter-spacing:-.35px}
+.tab{font-weight:650;letter-spacing:-.15px}
+.tab:hover{color:var(--txt)}
+.tb-btn{border-radius:9px}
+.gb-b,.gb-inp{border-radius:9px}
+.gb-seg{border-radius:9px}
+body.theme-slate .gb-b,body.theme-slate .gb-inp{background:#0F1626;border-color:rgba(148,170,215,.14)}
+body.theme-slate .gb-b:hover{background:#151E32;color:var(--txt)}
+.gb-b.on,body.theme-slate .gb-b.on{background:color-mix(in srgb,var(--accent) 24%,var(--surface));color:var(--txt);border-color:color-mix(in srgb,var(--accent) 50%,transparent)}
+.gb-seg .gb-b.on{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
+body.theme-slate .askwrap{background:#0F1626}
+body.theme-slate .tb-search{background:#0F1626}
+body.theme-slate .more-menu,body.theme-slate .askpanel,body.theme-slate .kiosk-panel{background:#0F1626;border-color:rgba(148,170,215,.16)}
+
 @media(max-width:768px){
   .brand .tag{display:none}
   .brand .logo{font-size:17px}
@@ -288,7 +307,7 @@ body.kiosk-full .kiosk-panel{display:none}
 </head>
 <body>
 
-<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070B14;display:flex;align-items:center;justify-content:center"></div>
 <!-- 상단 바 -->
 <div class="topbar">
   <div class="brand">
@@ -402,7 +421,6 @@ const SVG={
 const TABS=[
   /* v172 — 탭 12 → 8(묶음 포함). id 는 그대로 둔다 — 딥링크(#tab=fault)·자동순회 저장값·챗봇 출처가 id 를 본다.
      grp = 탭 줄에서 한 묶음으로 선다(정비 · 자재·비용) · bar:false = 탭 줄에 안 서고 툴바(처리함 배지 · 더보기)로 연다. */
-  {id:'home',    path:'/home/',     ko:'홈',        en:'Home',         zh:'首页',     ja:'ホーム'},
   {id:'hub',     path:'/hub/',      ko:'글로벌 현황', en:'Global',     zh:'全球概况', ja:'グローバル概況'},
   {id:'report',  path:'/report/',   ko:'주간 현황', en:'Weekly',       zh:'周现况', ja:'週間現況'},
   {id:'fault',   path:'/fault/',    ko:'고장 분석', en:'Failures',     zh:'故障分析', ja:'故障分析'},
@@ -419,6 +437,9 @@ const TABS=[
   /* v163 — 주간현황(국내) 데모 탭은 셸에서 뺐고 v176 에 화면(/report-kr/)째 접었다(사용자 확정 「국내 데모 페이지는 필요없다」).
      roles 장치(tabOn)는 그대로다 — 등급 전용 탭을 다시 둘 때 TABS 에 roles 를 달면 순회·단축키·전 탭 불러오기가 저절로 따른다. */
 ];
+/* v178 — «홈»은 «글로벌 현황»과 합쳤다(사용자 확정 · 탭 7개). 옛 id(딥링크 #tab=home · 저장된 마지막 탭 · 페이지의 GST.goTab('home'))는 여기서 글로벌 현황으로 읽는다 */
+const TAB_ALIAS={home:'hub'};
+const tabId=id=>TAB_ALIAS[id]||id;
 const GROUPS={maint:{ko:'정비',en:'Maintenance',zh:'维护',ja:'保全'}, cost:{ko:'자재·비용',en:'Material & Cost',zh:'材料·费用',ja:'資材·コスト'}};
 /* 이 등급에게 보이는 탭인가 — 탭 버튼(CSS)·자동순회 목록이 같은 규칙을 본다. 등급을 모르면 roles 가 있는 탭은 안 보인다. */
 function tabOn(t){ return !t.roles || t.roles.indexOf((document.body && document.body.dataset.role) || '') >= 0; }
@@ -795,9 +816,10 @@ window.addEventListener('message',e=>{
 
 
 // ===== 테마 (모든 iframe에 전파) =====
-/* v139 — 둘뿐이다: 라이트(기본) · 다크. 옛 저장값(navy=default·burgundy)은 라이트로 읽는다. */
+/* 둘뿐이다: 라이트 · 다크. v178 — 다크가 기본이다(사용자 확정 「기본설정을 다크모드로 하자 · 디자인이 확 살아난다」).
+   직접 고른 사람(localStorage gst_theme_pref)은 그 값이 그대로 이긴다. 옛 저장값(navy=default·burgundy)은 라이트로 읽는다. */
 const THEMES=[{key:'light',label:'Light'},{key:'slate',label:'Dark'}];
-let THEME='light';
+let THEME='slate';
 /* 고른 테마는 다음에 열 때도 남는다(localStorage) — 세션 저장만으로는 창을 닫으면 라이트로 돌아갔다 */
 try{const s=localStorage.getItem('gst_theme_pref')||sessionStorage.getItem('gst_theme');if(s&&THEMES.find(t=>t.key===s))THEME=s;}catch(e){}
 try{sessionStorage.setItem('gst_theme',THEME);}catch(e){}   // 같은 출처 페이지(core)는 세션 값을 본다 — 첫 그림부터 같은 테마로
@@ -828,7 +850,7 @@ const TAB_STATE={};
 let PENDING_STATE=null;
 function parseHash(){
   const p=new URLSearchParams(location.hash.slice(1));
-  return {tab:p.get('tab'), f:p.get('f')};
+  return {tab:p.get('tab')?tabId(p.get('tab')):null, f:p.get('f')};
 }
 function updateHash(){
   try{
@@ -965,6 +987,7 @@ window.addEventListener('message',e=>{
 });
 /* 탭으로 가며 필터를 건다 — 카드·표 드릴(gst-goto)과 명령 팔레트의 S/N 이 같은 길을 쓴다 */
 function gotoTab(tab, f){
+  tab=tabId(tab);
   if(!TABS.find(t=>t.id===tab)) return;
   const loaded=!!frames[tab];
   if(f && !loaded) PENDING_STATE={tab:tab,f:f};
@@ -1069,6 +1092,7 @@ async function prefLang(){
 }
 
 function switchTab(id){
+  id=tabId(id);
   if(activeTab===id)return;
   activeTab=id;
   // 탭 하이라이트
@@ -1121,7 +1145,6 @@ function bootEv(d, fid){
   else if(d.ev==='end'||d.ev==='fail'){ if(j){ j.st=d.ev==='end'?'ok':'fail'; j.ms=d.ms; if(d.n!=null) j.n=d.n; j.t1=Date.now(); } }
   else if(d.ev==='ready'){ if(BOOT.on && fid===BOOT.fid) BOOT.ready=true; }
   const jj=JOBS[d.id];
-  if(BOOT.on && jj && jj.fid===BOOT.fid && jj.kind!=='bg') bootLog(jj);
   fprog();
 }
 let FPT=null;
@@ -1152,7 +1175,7 @@ function bootStart(fid){
   const el=document.createElement('div'); el.className='boot'; el.id='boot'; el.setAttribute('aria-hidden','true');
   el.innerHTML='<canvas></canvas><div class="boot-core"><div class="boot-orb"><i></i><i></i><i></i><b></b><em id="bootPct">0%</em></div>'
     +'<div class="boot-brand">Service Operation Dashboard</div><div class="boot-team">CS GLOBAL TEAM</div>'
-    +'<div class="boot-bar"><i id="bootBar"></i></div><div class="boot-log" id="bootLog"></div></div>';
+    +'<div class="boot-bar"><i id="bootBar"></i></div></div>';
   document.body.appendChild(el); BOOT.el=el;
   try{ bootFx(el.querySelector('canvas')); }catch(e){}
   BOOT.skip=()=>bootEnd();
@@ -1185,19 +1208,7 @@ function bootEnd(){
   el.classList.add('out');
   setTimeout(()=>{ el.remove(); if(BOOT.fx) BOOT.fx.stop(); BOOT.el=null; fprog(); }, (GST._reduce&&GST._reduce())?220:900);
 }
-/* 한 일에 한 줄 — 줄을 다시 만들지 않고 고친다(다시 만들면 등장 효과가 매번 돌아 깜빡인다) */
-function bootLog(j){
-  const box=document.getElementById('bootLog'); if(!box) return;
-  let row=BOOT.rows[j.id];
-  if(!row){ row=document.createElement('div'); row.innerHTML='<span>›</span><span class="n"></span><span class="m"></span><span class="s"></span>'; box.appendChild(row); BOOT.rows[j.id]=row;
-    while(box.children.length>6) box.removeChild(box.firstChild); }
-  row.className=j.st;
-  row.querySelector('.n').textContent=GST.bootName?GST.bootName(j.key):j.key;
-  const adm=!!(GST.isAdmin && GST.isAdmin());
-  const ms=j.ms==null?'':(j.ms<1000?j.ms+'ms':(j.ms/1000).toFixed(1)+'s');
-  row.querySelector('.m').textContent=adm?[GST.bootTbl?GST.bootTbl(j.key):j.key, j.n?Number(j.n).toLocaleString()+lt('rows'):'', ms].filter(Boolean).join(' · '):'';
-  row.querySelector('.s').textContent=j.st==='ok'?'✓':j.st==='fail'?'✕':(j.total?Math.round(Math.min(.99,j.n/j.total)*100)+'%':'…');
-}
+/* v178 — 부팅 화면에 «무엇을 읽는지» 목록을 두지 않는다(사용자 지시). 원·%·막대·브랜드만 — 진행률은 그대로 실제 읽기에서 온다 */
 /* 배경 — 별자리처럼 이어지는 점들. 움직임 줄이기면 한 번만 그린다 */
 function bootFx(cv){
   const x=cv.getContext('2d'); if(!x) return;
@@ -1300,7 +1311,7 @@ function start(){
   try{sessionStorage.setItem('gst_theme',THEME);}catch(e){}
   // 마지막 본 탭 or 첫 탭
   let init=TABS[0].id;
-  try{const saved=sessionStorage.getItem('gst_tab');if(saved&&TABS.find(t=>t.id===saved))init=saved;}catch(e){}
+  try{const saved=tabId(sessionStorage.getItem('gst_tab')||'');if(saved&&TABS.find(t=>t.id===saved))init=saved;}catch(e){}
   const hs=parseHash();
   if(hs.tab&&TABS.find(t=>t.id===hs.tab)){ init=hs.tab; if(hs.f)PENDING_STATE={tab:hs.tab,f:hs.f}; }
   bootStart(init);

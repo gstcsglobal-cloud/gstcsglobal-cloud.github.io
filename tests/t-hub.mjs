@@ -189,12 +189,12 @@ is(await pg.evaluate(() => /Global overview/.test(document.querySelector('[data-
 is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
 await pg.close();
 
-console.log('[6] 셸 — 첫 탭은 «내 화면», 관제는 두 번째 (v172)');
+console.log('[6] 셸 — 첫 탭은 글로벌 현황 (v178 · 홈을 합쳤다)');
 const ps = await ctx.newPage(); const pse = []; ps.on('pageerror', e => pse.push(e.message));
 await ps.goto(BASE + '/', { waitUntil:'domcontentloaded' }); await ps.waitForTimeout(2500);
 const sh = await ps.evaluate(() => ({ ids:Array.from(document.querySelectorAll('.tab')).map(b => b.dataset.id),
   src:(document.querySelector('iframe') || {}).src || '' }));
-is(sh.ids[0] === 'home' && sh.ids[1] === 'hub' && /\/home\//.test(sh.src), '셸을 열면 «내 화면»이 먼저 · 관제는 그다음 탭 (' + sh.ids.slice(0, 3).join(' · ') + ')');
+is(sh.ids[0] === 'hub' && sh.ids.indexOf('home') < 0 && /\/hub\//.test(sh.src), '셸을 열면 글로벌 현황이 먼저 · 홈 탭은 없다(합쳤다) (' + sh.ids.slice(0, 3).join(' · ') + ')');
 /* 지도 — 다른 탭에 가 있는 동안(숨김) 다시 그려도, 돌아오면 지도가 제대로 선다 (v170 · 사용자 보고: 회색 상자만 남았다) */
 await ps.evaluate(() => { const o = document.getElementById('loginOverlay'); if (o) o.remove(); });
 await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(2500);
@@ -204,17 +204,17 @@ await hubF.evaluate(() => { render(); });                 // 숨겨진 채로 �
 await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(900);
 const mp = await hubF.evaluate(() => ({ p:document.querySelectorAll('#mapS path.ct').length, b:document.querySelectorAll('#bubs .hb-bub').length, w:document.getElementById('map').getBoundingClientRect().width }));
 is(mp.p > 200 && mp.b === 3 && mp.w > 300, '숨김 중에 다시 그려도 돌아오면 지도가 선다 (나라 ' + mp.p + ' · 원 ' + mp.b + ')');
-/* 라이트/다크 스위치 — 라이트가 기본 · 고르면 다음에 열 때도 남고 페이지(iframe)까지 간다 */
+/* 라이트/다크 스위치 — v178 부터 다크가 기본(사용자 확정) · 고르면 다음에 열 때도 남고 페이지(iframe)까지 간다 */
 const th = async () => { const o = await ps.evaluate(() => ({ dark:document.body.classList.contains('theme-slate'), aria:document.getElementById('themeSw').getAttribute('aria-checked') }));
   const f = ps.frames().find(x => /\/hub\//.test(x.url())); o.fr = f ? await f.evaluate(() => document.body.classList.contains('theme-slate')) : null; return o; };
 let T0 = await th();
-is(!T0.dark && T0.aria === 'false', '기본은 라이트');
+is(T0.dark && T0.aria === 'true' && T0.fr === true, '기본은 다크 — 셸과 페이지 둘 다 (v178)');
 await ps.evaluate(() => { const o = document.getElementById('loginOverlay'); if (o) o.remove(); document.getElementById('themeSw').click(); }); await ps.waitForTimeout(600);
 T0 = await th();
-is(T0.dark && T0.aria === 'true' && T0.fr === true, '스위치를 누르면 다크 — 셸과 페이지 둘 다');
+is(!T0.dark && T0.aria === 'false' && T0.fr === false, '스위치를 누르면 라이트 — 셸과 페이지 둘 다');
 await ps.reload({ waitUntil:'domcontentloaded' }); await ps.waitForTimeout(3000);
 T0 = await th();
-is(T0.dark && T0.aria === 'true', '다시 열어도 다크가 남는다');
+is(!T0.dark && T0.aria === 'false', '다시 열어도 라이트가 남는다 — 직접 고른 값이 기본값을 이긴다');
 is(pse.length === 0, 'JS 에러 0 (셸)' + (pse.length ? ' → ' + pse[0] : ''));
 await browser.close(); srv.close();
 console.log(fail ? `\n❌ t-hub: ${pass} 통과 · ${fail} 실패` : `\n✅ t-hub: ${pass}/${pass} 통과`);

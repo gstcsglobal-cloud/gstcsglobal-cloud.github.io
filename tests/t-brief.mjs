@@ -43,7 +43,7 @@ is(!/설정된 목표가 없습니다/.test(tx), '목표가 있으면 «목표 �
 is(/설정된 목표가 없습니다/.test(briefText(Object.assign({}, row, { payload:Object.assign({}, P, { tgt_n:0 }) }), NOW)), '목표가 하나도 없으면 그렇다고 말한다');
 const old = briefText(Object.assign({}, row, { made_at:'2026-09-20T00:00:00Z' }), NOW);
 is(/⚠ 20일 전 집계된 브리핑입니다/.test(old) && /20일 전 집계/.test(old), BRIEF_STALE_DAYS + '일보다 오래되면 «오래됐다»고 앞에 적는다');
-is(/아직 브리핑이 없습니다/.test(briefText(null, NOW)), '스냅샷이 없으면 «홈을 열면 만들어진다»');
+is(/아직 브리핑이 없습니다/.test(briefText(null, NOW)), '스냅샷이 없으면 «글로벌 현황을 열면 만들어진다»');
 const many = Object.assign({}, P, { dec: Array.from({ length:30 }, (_, i) => ({ sev:'warn', tag:'목표', title:'운영단위 ' + i + ' — 설비 100대당 고장이 목표를 넘었습니다 · 초과 ' + i + '.00 · 같은 길이를 맞추려는 긴 문장' })) });
 const tm = briefText(Object.assign({}, row, { payload:many }), NOW);
 is(tm.length <= BRIEF_MAX, '길어도 ' + BRIEF_MAX + '자 안 (' + tm.length + ')');

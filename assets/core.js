@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 172;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 173;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -24,6 +24,30 @@ GST.VER = 172;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 
    에러는 하나도 안 나고, 마지막에 저장한 페이지가 남의 설정을 덮을 뿐이다. 오프라인 심이
    페이지마다 __PAGE_PATH('/fault/')를 심고, 온라인에서는 지금까지와 한 글자도 다르지 않다. */
 GST.pagePath = function(){ return window.__PAGE_PATH || location.pathname; };
+/* 기본 테마 = 다크 (v178 · 사용자 확정 「기본설정을 다크모드로 하자 · 디자인이 확 살아난다」).
+   ⚠ 첫 그림부터 다크여야 한다 — 테마 클래스는 DOMContentLoaded 에 붙으므로, 그 전에는 라이트(:root)로 한 번 그려져
+   «흰 화면이 번쩍»한다. core 는 <head> 에서 돌므로 여기서 html 바탕을 먼저 칠하고, body 가 생기는 순간 클래스를 단다
+   (파서가 body 를 넣은 직후의 마이크로태스크 — 첫 그림보다 앞선다). 직접 고른 값(gst_theme_pref·세션)이 이긴다. */
+GST.THEME_DEFAULT = 'slate';
+/* 지금 다크인가 — body 의 테마 클래스가 정본, body 가 아직 없으면(core 가 <head> 에서 차트 기본값을 잡을 때) 저장값 → 기본값 */
+GST._isDark = function(){
+  const b=document.body;
+  if(b && /(^|\s)theme-slate(\s|$)/.test(b.className)) return true;
+  if(b && /(^|\s)theme-light(\s|$)/.test(b.className)) return false;
+  let th=null; try{ th=sessionStorage.getItem('gst_theme')||localStorage.getItem('gst_theme_pref'); }catch(e){}
+  return ((th==='slate'||th==='light')?th:GST.THEME_DEFAULT)==='slate';
+};
+(function(){
+  let th=null; try{ th=sessionStorage.getItem('gst_theme')||localStorage.getItem('gst_theme_pref'); }catch(e){}
+  th=(th==='slate'||th==='light')?th:GST.THEME_DEFAULT;
+  if(th!=='slate') return;
+  try{ document.documentElement.style.background='#070B14'; document.documentElement.style.colorScheme='dark'; }catch(e){}
+  const put=function(){ const b=document.body; if(!b) return false;
+    try{ if(b.classList && !/(^|\s)theme-(slate|light)(\s|$)/.test(b.className||'')) b.classList.add('theme-slate'); }catch(e){}
+    return true; };
+  try{ if(put()) return; }catch(e){ return; }
+  try{ const mo=new MutationObserver(function(){ if(put()) mo.disconnect(); }); mo.observe(document.documentElement,{childList:true}); }catch(e){}
+})();
 /* 인사이트 띠의 머리글. 예전에는 «INSIGHT» 영문 대문자가 core 에 박혀 있어 네 언어 어디서도 안 바뀌고
    PPT 장표까지 그대로 나갔다(v135). core 의 공용 문자열 관례(GST._lang + 사전) 그대로다. */
 GST.INS_T = {ko:'요약', en:'Summary', zh:'摘要', ja:'要約'};
@@ -410,36 +434,63 @@ GST.authReady=function(){ if(!GST._readyP)GST._readyP=new Promise(function(r){GS
 GST._authOk=function(){ GST.authReady(); GST._readyRes&&GST._readyRes(); try{ GST.loadMe(); }catch(e){} };
 /* ⚠ 판정 기준(ops_params)을 여기서 미리 읽지 않는다(v172) — 쓰는 화면(고장분석·관제·사이트 상세·내 화면·운영 목표)은
    계산 전에 GST.params.ready() 를 스스로 기다린다. 여기서 모든 화면이 읽게 하면 국내 데모 화면이 데모 표 밖을 읽는다(t-edit [24]). */
-/* 로그인 화면의 생김새 — 첫인상이다(v139). 흰 카드 하나, 액센트 하나. 셸·페이지 어디서 떠도 같은 모양이어야 하므로
-   토큰을 여기 인라인으로 둔다(오버레이는 theme.css 를 안 싣는 셸에서도 뜬다). */
-GST._loginUI = {
-  card:'max-width:380px;width:92%;background:#FFFFFF;border:1px solid #E4E7EC;border-radius:14px;padding:30px 28px 24px;'
-      +'box-shadow:0 8px 28px rgba(16,24,40,.08);text-align:center;color:#101828;'
-      +'font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif',
-  mark:'<div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:18px">'
-      +'<span style="display:inline-block;width:30px;height:30px;border-radius:8px;background:#2F6FED url(&quot;data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2.4\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M4 17l5-6 4 3 7-8\'/%3E%3C/svg%3E&quot;) center/19px no-repeat"></span>'
-      +'<span style="font-size:15px;font-weight:700;letter-spacing:-.2px">GST CS Global</span></div>',
-  title:'font-size:19px;font-weight:700;letter-spacing:-.3px;margin-bottom:6px',
-  sub:'font-size:13px;color:#667085;line-height:1.6',
-  input:'width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid #D0D5DD;background:#fff;color:#101828;'
-       +'font-size:14px;font-family:inherit;margin-bottom:8px;outline:none',
-  btn:'width:100%;padding:10px;border-radius:8px;border:0;background:#2F6FED;color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit',
-  btnSm:'margin-top:14px;padding:9px 22px;border-radius:8px;border:0;background:#2F6FED;color:#fff;font-weight:600;cursor:pointer;font-family:inherit',
-  err:'#D92D20'
+/* 로그인 화면의 생김새 — 첫인상이다(v139). 셸·페이지 어디서 떠도 같은 모양이어야 하므로
+   토큰을 여기 인라인으로 둔다(오버레이는 theme.css 를 안 싣는 셸에서도 뜬다).
+   v178 — 다크가 기본이다: 깊은 잉크 바탕 위 빛 한 점 + 유리 카드. 라이트를 직접 고른 사람에게는 흰 카드 그대로(GST._loginDark). */
+GST._loginDark = function(){
+  let th=null; try{ th=localStorage.getItem('gst_theme_pref')||sessionStorage.getItem('gst_theme'); }catch(e){}
+  return (th||GST.THEME_DEFAULT)==='slate';
 };
+GST._LOGIN_UI = {
+  dark:{
+    bg:'radial-gradient(900px 560px at 50% 28%,#16295A 0%,#0A1226 46%,#05080F 100%)',
+    card:'max-width:384px;width:92%;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(160,185,235,.16);'
+        +'border-radius:18px;padding:34px 30px 26px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);'
+        +'box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 30px 80px -30px rgba(0,0,0,.9);text-align:center;color:#EEF2F8;'
+        +'font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif',
+    mark:'<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:22px">'
+        +'<span style="display:inline-block;width:32px;height:32px;border-radius:9px;background:url(&quot;data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2.4\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M4 17l5-6 4 3 7-8\'/%3E%3C/svg%3E&quot;) center/19px no-repeat,linear-gradient(135deg,#4F7DF3,#8B6CF6);box-shadow:0 8px 22px -8px rgba(110,140,255,.8)"></span>'
+        +'<span style="font-size:15px;font-weight:700;letter-spacing:-.2px">GST CS Global</span></div>',
+    title:'font-size:20px;font-weight:700;letter-spacing:-.4px;margin-bottom:8px',
+    sub:'font-size:13px;color:#8A96AB;line-height:1.6',
+    input:'width:100%;box-sizing:border-box;padding:11px 13px;border-radius:10px;border:1px solid rgba(160,185,235,.20);background:rgba(5,9,20,.55);color:#EEF2F8;'
+         +'font-size:14px;font-family:inherit;margin-bottom:9px;outline:none',
+    btn:'width:100%;padding:11px;border-radius:10px;border:0;background:linear-gradient(180deg,#7EA3FF,#5B86F2);color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 10px 26px -12px rgba(110,150,255,.9)',
+    btnSm:'margin-top:16px;padding:10px 24px;border-radius:10px;border:0;background:linear-gradient(180deg,#7EA3FF,#5B86F2);color:#fff;font-weight:700;cursor:pointer;font-family:inherit',
+    err:'#F2706B', ink:'#EEF2F8', link:'#9DBDFF', mut:'#8A96AB'
+  },
+  light:{
+    bg:'#F5F6F8',
+    card:'max-width:380px;width:92%;background:#FFFFFF;border:1px solid #E4E7EC;border-radius:14px;padding:30px 28px 24px;'
+        +'box-shadow:0 8px 28px rgba(16,24,40,.08);text-align:center;color:#101828;'
+        +'font-family:\'Pretendard Variable\',Pretendard,\'Segoe UI\',\'Malgun Gothic\',sans-serif',
+    mark:'<div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:18px">'
+        +'<span style="display:inline-block;width:30px;height:30px;border-radius:8px;background:#2F6FED url(&quot;data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2.4\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M4 17l5-6 4 3 7-8\'/%3E%3C/svg%3E&quot;) center/19px no-repeat"></span>'
+        +'<span style="font-size:15px;font-weight:700;letter-spacing:-.2px">GST CS Global</span></div>',
+    title:'font-size:19px;font-weight:700;letter-spacing:-.3px;margin-bottom:6px',
+    sub:'font-size:13px;color:#667085;line-height:1.6',
+    input:'width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid #D0D5DD;background:#fff;color:#101828;'
+         +'font-size:14px;font-family:inherit;margin-bottom:8px;outline:none',
+    btn:'width:100%;padding:10px;border-radius:8px;border:0;background:#2F6FED;color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit',
+    btnSm:'margin-top:14px;padding:9px 22px;border-radius:8px;border:0;background:#2F6FED;color:#fff;font-weight:600;cursor:pointer;font-family:inherit',
+    err:'#D92D20', ink:'#101828', link:'#2F6FED', mut:'#667085'
+  }
+};
+/* 부르는 쪽은 지금까지처럼 GST._loginUI.card … 로 읽는다 — 읽을 때 테마를 본다 */
+Object.defineProperty(GST, '_loginUI', { configurable:true, get:function(){ return GST._loginDark()?GST._LOGIN_UI.dark:GST._LOGIN_UI.light; } });
 GST._loginCard=function(title, sub, extra, color){
   const U=GST._loginUI;
   return '<div class="login-card" style="'+U.card+'">'+U.mark
-    +'<div style="'+U.title+';color:'+(color||'#101828')+'">'+title+'</div>'
+    +'<div style="'+U.title+';color:'+(color||U.ink)+'">'+title+'</div>'
     +(sub?'<div style="'+U.sub+'">'+sub+'</div>':'')+(extra||'')+'</div>';
 };
 // 로그인 게이트: #loginOverlay를 이메일 OTP UI로 교체(없으면 생성). 성공 시 resolve.
 GST.authGate = async function(){
   var ov=document.getElementById('loginOverlay');
   if(!ov){ ov=document.createElement('div'); ov.id='loginOverlay'; ov.className='login-overlay';
-    ov.style.cssText='position:fixed;inset:0;background:#F5F6F8;z-index:9998;display:flex;align-items:center;justify-content:center';
+    ov.style.cssText='position:fixed;inset:0;background:'+GST._loginUI.bg+';z-index:9998;display:flex;align-items:center;justify-content:center';
     document.body.appendChild(ov); }
-  else { ov.style.background='#F5F6F8'; }   // 페이지에 박힌 옛 어두운 오버레이 색을 덮는다(v139)
+  else { ov.style.background=GST._loginUI.bg; }   // 페이지에 박힌 옛 오버레이 색을 덮는다(v139 · v178 다크 기본)
   // 인증이 설정되지 않았으면 통과시키지 않는다(fail-closed). 예전엔 공용 비밀번호로 우회됐다.
   if(!GST.authOn()){
     ov.classList.remove('hidden'); ov.style.display='flex';
@@ -480,8 +531,8 @@ GST.authGate = async function(){
       +'<input id="pwPw" type="password" placeholder="비밀번호" autocomplete="current-password" style="'+U.input+'">'
       +'<button id="pwGo" style="'+U.btn+'">로그인</button></div>'
     +'<div id="sbErr" style="color:'+U.err+';font-size:12.5px;margin-top:10px;min-height:16px"></div>'
-    +'<a id="sbMode" style="display:block;font-size:12.5px;color:#2F6FED;margin-top:10px;cursor:pointer;user-select:none">아이디·비밀번호로 로그인</a>'
-    +'<a id="sbPwc" style="display:block;font-size:12px;color:#667085;margin-top:8px;cursor:pointer;user-select:none">관리자 비밀번호 변경</a></div>';
+    +'<a id="sbMode" style="display:block;font-size:12.5px;color:'+U.link+';margin-top:10px;cursor:pointer;user-select:none">아이디·비밀번호로 로그인</a>'
+    +'<a id="sbPwc" style="display:block;font-size:12px;color:'+U.mut+';margin-top:8px;cursor:pointer;user-select:none">관리자 비밀번호 변경</a></div>';
   var $=function(id){return document.getElementById(id);};
   var err=function(m){ $('sbErr').textContent=m||''; };
   return new Promise(function(resolve){
@@ -557,7 +608,7 @@ GST._pwChange=function(ov, resolve){
       +'<button id="pcGo" style="'+U.btn+'">비밀번호 바꾸기</button></div>'
     +'<div id="pcDone" style="display:none"><button id="pcEnter" style="'+U.btn+'">대시보드로 들어가기</button></div>'
     +'<div id="pcErr" style="color:'+U.err+';font-size:12.5px;margin-top:10px;min-height:16px"></div>'
-    +'<a id="pcBack" style="display:block;font-size:12.5px;color:#2F6FED;margin-top:10px;cursor:pointer">로그인 화면으로</a></div>';
+    +'<a id="pcBack" style="display:block;font-size:12.5px;color:'+U.link+';margin-top:10px;cursor:pointer">로그인 화면으로</a></div>';
   var err=function(m,ok){ var e=$('pcErr'); e.textContent=m||''; e.style.color=ok?'#067647':U.err; };
   $('pcBack').onclick=function(){ GST.signOut(); };
   $('pcSend').onclick=async function(){
@@ -599,7 +650,7 @@ GST._pwChange=function(ov, resolve){
 GST.authDenied=function(code){
   var ov=document.getElementById('loginOverlay'); if(!ov)return;
   ov.classList.remove('hidden'); ov.style.display='flex';
-  ov.style.background='#F5F6F8';
+  ov.style.background=GST._loginUI.bg;
   ov.innerHTML=GST._loginCard(code===403?'접근 권한이 없습니다':'로그인이 만료되었습니다',
     code===403?'관리자에게 이메일 등록을 요청하세요':'다시 로그인해 주세요',
     '<button onclick="GST.signOut()" style="'+GST._loginUI.btnSm+'">다시 로그인</button>', GST._loginUI.err);
@@ -1091,14 +1142,82 @@ try{ const k=localStorage.getItem('gst_pal'); if(k&&GST.PALETTES[k]) GST.setPale
 // v139 — 테마는 둘뿐이다. 다크 클래스가 없으면 라이트다(옛 'default'·'burgundy' 저장값 포함).
 // key 는 'light' | 'slate'. ink 는 «값 라벨»처럼 또렷해야 하는 글자색이다(플러그인 기본값).
 GST.chartTheme = function(){
-  const b = (document.body&&document.body.className) || '';
-  const slate = b.indexOf('theme-slate')>-1;
+  const slate = GST._isDark();
   const key = slate?'slate':'light';
   /* 다크 값은 theme.css 의 미드나이트 토큰(v171)과 같다 — Chart.js 는 CSS 변수를 못 읽어 여기 한 벌 더 둔다 */
-  const txt = slate?'#8C99AD':'#667085', grid = slate?'rgba(148,170,215,.10)':'rgba(16,24,40,.07)';
-  return { key, txt, grid, ink: slate?'#E8EEF7':'#101828', pal:GST.PAL, pal8:GST.PAL8,
+  const txt = slate?'#8C99AD':'#667085', grid = slate?'rgba(148,170,215,.09)':'rgba(16,24,40,.07)';
+  /* surface = 카드 바탕(도넛 조각 사이 틈 · 점 테두리). v178 — 다크 카드는 86% 반투명이라 그 위에서 가장 가까운 단색 */
+  return { key, txt, grid, ink: slate?'#E8EEF7':'#101828', surface: slate?'#0C1220':'#FFFFFF', pal:GST.PAL, pal8:GST.PAL8,
     status:{ bad: slate?'#F2706B':'#D92D20', warn: slate?'#F5B83D':'#B7670A',
              ok: slate?'#3FCF8E':'#12873F', na: slate?'#5E6B80':'#98A2B3' } };
+};
+/* 색 문자열 → [r,g,b,a] (#rgb · #rrggbb · #rrggbbaa · rgb() · rgba()). 못 읽으면 null — 그때 gstLux 는 아무것도 안 한다 */
+GST._rgba = function(c){
+  if(typeof c!=='string') return null;
+  const h=c.trim();
+  let m=h.match(/^#([0-9a-f]{3,8})$/i);
+  if(m){ let x=m[1]; if(x.length===3||x.length===4) x=x.split('').map(function(ch){ return ch+ch; }).join('');
+    if(x.length!==6&&x.length!==8) return null;
+    return [parseInt(x.slice(0,2),16),parseInt(x.slice(2,4),16),parseInt(x.slice(4,6),16),x.length===8?parseInt(x.slice(6,8),16)/255:1]; }
+  m=h.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i);
+  if(m) return [+m[1],+m[2],+m[3],m[4]==null?1:+m[4]];
+  return null;
+};
+GST._luxPlugin = {
+  id:'gstLux',
+  _off:function(ch, opts){ return ch.$noLux || opts===false || (ch.options.plugins && ch.options.plugins.gstLux===false); },
+  beforeDatasetsDraw:function(ch, args, opts){
+    if(GST._luxPlugin._off(ch, opts)) return;
+    const ca=ch.chartArea, ctx=ch.ctx; if(!ca||!ctx) return;
+    const undo=ch.$luxUndo=[];
+    const wrap=function(el, bg){ const o=el.options; if(!o) return; const w=Object.create(o); w.backgroundColor=bg; undo.push([el,o]); el.options=w; };
+    const rgba=function(c,a){ return 'rgba('+c[0]+','+c[1]+','+c[2]+','+(+(c[3]*a).toFixed(3))+')'; };
+    ch.data.datasets.forEach(function(ds, di){
+      const meta=ch.getDatasetMeta(di); if(!meta || meta.hidden || !ch.isDatasetVisible(di)) return;
+      if(meta.type==='bar'){
+        const horiz=(meta.indexAxis||ch.options.indexAxis)==='y';
+        meta.data.forEach(function(el){
+          const o=el.options; if(!o) return; const c=GST._rgba(o.backgroundColor); if(!c) return;
+          const p=el.getProps(['x','y','base']); if(!isFinite(p.base)) return;
+          const a=horiz?p.base:p.base, b=horiz?p.x:p.y; if(!isFinite(b) || Math.abs(b-a)<2) return;
+          const g=horiz?ctx.createLinearGradient(a,0,b,0):ctx.createLinearGradient(0,a,0,b);
+          /* 쌓은 막대는 조각마다 바닥이 다르다 — 옅어지는 폭을 줄여 줄무늬가 지지 않게 */
+          g.addColorStop(0, rgba(c, meta._stacked ? .82 : .5)); g.addColorStop(1, rgba(c,1));
+          wrap(el, g);
+        });
+      } else if(meta.type==='line' && meta.dataset && ds.fill){
+        const o=meta.dataset.options; if(!o) return; const c=GST._rgba(o.backgroundColor); if(!c) return;
+        const g=ctx.createLinearGradient(0,ca.top,0,ca.bottom);
+        g.addColorStop(0, rgba(c,1)); g.addColorStop(1, rgba(c,.05));
+        wrap(meta.dataset, g);
+      }
+    });
+  },
+  beforeDatasetDraw:function(ch, args, opts){
+    if(GST._luxPlugin._off(ch, opts)) return;
+    const th=GST.chartTheme(); if(th.key!=='slate') return;   // 흰 바탕의 빛번짐은 번져 보일 뿐이다 — 다크에서만
+    if(args.meta.type==='bar'){
+      /* «최근 구간» 막대 아래 빛 한 겹 — 차트가 이미 마지막 막대를 다른 색으로 칠한 경우만(색 배열의 끝이 앞과 다를 때).
+         판정을 새로 하지 않는다: 그 막대를 고른 것은 페이지다(report·cip 의 BAR_LAST). 막대가 위에 그려져 빛만 둘레에 남는다 */
+      const ds=ch.data.datasets[args.index], bc=ds && ds.backgroundColor;
+      if(!Array.isArray(bc) || bc.length<2) return;
+      const li=bc.length-1; if(String(bc[li])===String(bc[0])) return;
+      const el=args.meta.data[li], c=el && GST._rgba(String(bc[li])); if(!c) return;
+      const p=el.getProps(['x','y','base','width','height']), horiz=(args.meta.indexAxis||ch.options.indexAxis)==='y';
+      const x0=horiz?Math.min(p.base,p.x):p.x-p.width/2, y0=horiz?p.y-p.height/2:Math.min(p.base,p.y);
+      const w=horiz?Math.abs(p.x-p.base):p.width, h=horiz?p.height:Math.abs(p.base-p.y);
+      if(!(w>1&&h>1)) return;
+      const x=ch.ctx; x.save(); x.shadowColor='rgba('+c[0]+','+c[1]+','+c[2]+',.65)'; x.shadowBlur=18; x.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+',.9)';
+      x.beginPath(); if(x.roundRect) x.roundRect(x0,y0,w,h,5); else x.rect(x0,y0,w,h); x.fill(); x.restore();
+      return;
+    }
+    if(args.meta.type!=='line') return;
+    const o=args.meta.dataset && args.meta.dataset.options, c=o && GST._rgba(o.borderColor); if(!c) return;
+    ch.ctx.save(); ch.$luxGlow=true;
+    ch.ctx.shadowColor='rgba('+c[0]+','+c[1]+','+c[2]+',.45)'; ch.ctx.shadowBlur=10; ch.ctx.shadowOffsetY=2;
+  },
+  afterDatasetDraw:function(ch){ if(ch.$luxGlow){ ch.$luxGlow=false; ch.ctx.restore(); } },
+  afterDatasetsDraw:function(ch){ const u=ch.$luxUndo; if(!u) return; for(let i=u.length-1;i>=0;i--) u[i][0].options=u[i][1]; ch.$luxUndo=null; }
 };
 /* 차트 전역 규격 — 8개 페이지가 각자 설정하던 것을 한 곳으로.
    페이지는 로드 시와 테마 전환 시 GST.chartDefaults()만 부른다.
@@ -1110,6 +1229,31 @@ GST.chartDefaults = function(){
   Chart.defaults.font.family = GST.FONT_STACK;
   Chart.defaults.font.size = 11;
   Chart.defaults.borderColor = TH.grid;
+  /* v178 «Executive» — 축선은 없애고 가로 격자만 머리카락 점선으로 · 범주 축 격자는 끈다 · 도넛은 얇게 · 조각 사이는 카드 바탕색 틈.
+     전부 «기본값»이라 차트가 직접 적은 옵션이 여전히 이긴다(숫자·드릴·내보내기 무관 — 그리는 모양만). */
+  try{
+    Chart.defaults.scale.border.display = false;
+    Chart.defaults.scale.ticks.padding = 7;
+    Chart.defaults.set('scales.linear', { border:{ display:false, dash:[3,4] }, grid:{ color:TH.grid } });
+    Chart.defaults.set('scales.category', { grid:{ display:false } });
+    Chart.defaults.datasets.doughnut.cutout = '70%';
+    Chart.defaults.elements.arc.borderColor = TH.surface;
+    Chart.defaults.elements.arc.borderWidth = 2;
+    Chart.defaults.elements.arc.borderRadius = 3;
+    Chart.defaults.elements.line.borderWidth = 2.25;
+    Chart.defaults.elements.line.borderCapStyle = 'round';
+    Chart.defaults.elements.line.borderJoinStyle = 'round';
+    /* 곡선은 «넘치지 않는» monotone 만 — QBR 양식 스타일(graphite)은 엑셀처럼 직선이어야 한다 */
+    Chart.defaults.elements.line.cubicInterpolationMode = (GST.sty && GST.sty().qbr) ? 'default' : 'monotone';
+    Chart.defaults.elements.point.radius = 2.5;
+    Chart.defaults.elements.point.hoverRadius = 5;
+    Chart.defaults.elements.point.hitRadius = 8;
+    Chart.defaults.elements.point.hoverBorderWidth = 2;
+    Chart.defaults.datasets.bar.categoryPercentage = .74;
+    Chart.defaults.datasets.bar.barPercentage = .86;
+    Chart.defaults.plugins.legend.labels.color = TH.key==='slate' ? '#B4BFD0' : '#475467';
+    Chart.defaults.plugins.legend.labels.font = { family:GST.FONT_STACK, size:11.5, weight:'500' };
+  }catch(e){ console.warn('[gst] 차트 기본값 일부 적용 실패', e); }
   // 범례: 점 스타일 — 사각 스와치보다 정돈된 인상
   Chart.defaults.plugins.legend.labels.usePointStyle = true;
   Chart.defaults.plugins.legend.labels.boxWidth = 6;
@@ -1117,14 +1261,20 @@ GST.chartDefaults = function(){
   Chart.defaults.plugins.legend.labels.padding = 14;
   // 툴팁: 어두운 잉크 — 테마와 무관하게 일관(라이트에서도 어두운 툴팁이 가독 우수)
   const tt=Chart.defaults.plugins.tooltip;
-  tt.backgroundColor='rgba(16,24,40,.94)'; tt.borderColor='rgba(255,255,255,.08)'; tt.borderWidth=1;
-  tt.cornerRadius=8; tt.padding=10; tt.titleColor='#FFFFFF'; tt.bodyColor='#D0D5DD';
+  tt.backgroundColor='rgba(9,14,26,.94)'; tt.borderColor='rgba(160,185,235,.18)'; tt.borderWidth=1;
+  tt.cornerRadius=10; tt.padding={x:12,y:10}; tt.caretSize=6; tt.titleColor='#FFFFFF'; tt.bodyColor='#C9D3E3';
+  tt.titleMarginBottom=6; tt.bodySpacing=4;
   tt.titleFont={family:GST.FONT_STACK,size:11.5,weight:'700'};
   tt.bodyFont={family:GST.FONT_STACK,size:11};
   tt.boxPadding=4; tt.usePointStyle=true;
   // 막대 기하 — 페이지마다 2~6으로 흩어져 있던 radius를 한 값으로, 두께 상한으로 과비만 방지
-  Chart.defaults.elements.bar.borderRadius = 4;
+  Chart.defaults.elements.bar.borderRadius = 5;
   Chart.defaults.datasets.bar.maxBarThickness = 34;
+  /* 그릴 때만 입히는 빛(gstLux · v178) — 막대는 값 끝이 진하고 바닥으로 옅어지는 세로 그라데이션 · 채운 선은 아래로 사라지는 면 ·
+     다크에서는 선에 아주 옅은 빛번짐. ⚠ 데이터셋의 색(문자열)은 손대지 않는다 — PPT·엑셀 내보내기(pptSrc·xlsxChart)가 그 값을 읽는다.
+     그리기 직전에 요소의 옵션을 «감싼 사본»으로 바꿨다가 그린 뒤 되돌린다(Object.create — 나머지 옵션은 원본에서 그대로 읽힌다).
+     끄려면 차트 옵션 plugins.gstLux=false 또는 chart.$noLux=true. */
+  if(!Chart.registry.plugins.get('gstLux')) Chart.register(GST._luxPlugin);
   /* 차트 등장 (v171 · 디자인 2.0) — 처음 그릴 때만 막대·점이 왼쪽부터 차례로 자란다. 값·드릴·내보내기는 그대로(그리는 «때»만 다르다).
      ⚠ 다시 그릴 때(필터 변경·hover·resize)는 차례를 두지 않는다 — 만든 지 1.2초가 지난 차트는 delay 0.
      ⚠ 주간현황(MOTION_SKIP)은 지금 그대로 · 움직임 줄이기를 고른 사람에게는 애니메이션 자체를 끈다(duration 0). */
@@ -1380,13 +1530,18 @@ GST.initSync = function(opts){
       new MutationObserver(markInFrame).observe(document.body||document.documentElement,{attributes:true,attributeFilter:['class']});
     }catch(e){}
   }
-  /* v139 — 테마는 둘이다: light(기본 · :root) · slate(다크). 옛 저장값(default=navy · burgundy)은 라이트로 읽는다.
+  /* v139 — 테마는 둘이다: light(:root) · slate(다크). 옛 저장값(default=navy · burgundy)은 라이트로 읽는다.
+     v178 — 기본은 다크다(GST.THEME_DEFAULT · 사용자 확정). 직접 고른 값(셸이 localStorage gst_theme_pref·세션에 남긴다)이 이긴다.
      ⚠ body.className 을 통째로 갈지 않는다 — gst-inframe·gst-sb-open·kiosk-* 가 함께 날아가던 자리. 테마 클래스만 바꾼다. */
   function setThemeClass(th){
     th = (th==='slate') ? 'slate' : 'light';
     const cl=document.body.classList;
     Array.prototype.slice.call(cl).forEach(function(c){ if(/^theme-/.test(c)) cl.remove(c); });
     cl.add('theme-'+th);
+    /* 팔레트·차트 기본값도 테마를 따른다(다크는 빛나는 한 벌 · 라이트는 깊은 한 벌 · v178) — 페이지의 재렌더 훅이 새 색으로 다시 그린다 */
+    try{ if(GST._palApply) GST._palApply(); if(GST.chartDefaults) GST.chartDefaults(); }catch(e){}
+    /* 첫 그림용으로 칠해 둔 html 바탕(GST.THEME_DEFAULT 블록)을 테마와 맞춘다 — 라이트로 바꿨는데 html 만 검게 남지 않게 */
+    try{ const de=document.documentElement.style; de.background=(th==='slate')?'#070B14':''; de.colorScheme=(th==='slate')?'dark':''; }catch(e){}
     return th;
   }
   function applyStored(){
@@ -1395,7 +1550,8 @@ GST.initSync = function(opts){
     /* 저장값이 없으면(교차 출처 iframe 은 셸의 sessionStorage 를 못 본다) 셸이 메시지로 걸어 둔 클래스를 지킨다 —
        1.5초 뒤 재적용이 그것을 라이트로 되돌리던 자리. */
     if(!th && document.body && /theme-slate/.test(document.body.className)) th='slate';
-    th = setThemeClass(th || 'light');
+    if(!th){ try{ th=localStorage.getItem('gst_theme_pref'); }catch(e){} }
+    th = setThemeClass(th || GST.THEME_DEFAULT);
     if(typeof global.changeDashboardTheme==='function'){
       try{ global.changeDashboardTheme(th, th); }catch(e){}
     }
@@ -4194,10 +4350,13 @@ GST.geo = {
    카드가 차례로 떠오르고 · 숫자가 바뀌면 잠깐 빛나고 · 팝업이 튀어나온다. 규칙은 theme.css 의 «body.gst-motion» 아래에만 있다.
    ⚠ 주간현황(report)에는 걸지 않는다 — 그 화면은 손대지 않는다(사용자 지시). 판정은 경로 한 곳.
    ⚠ 움직임 줄이기(prefers-reduced-motion)를 고른 사람에게는 CSS 가 아무것도 안 한다 — 이 함수는 클래스만 단다. */
-GST.MOTION_SKIP = /^\/report\//;
+/* v178 — 주간현황도 같은 움직임을 쓴다(사용자 지시 「디자인·이펙트는 주간현황까지 전 페이지」). 예외가 필요하면 경로 정규식을 넣는다(null = 없음).
+   인쇄·PPT 는 영향이 없다 — 움직임은 화면 그림에만 걸리고, 캡처는 그려진 결과(캔버스)를 쓴다. */
+GST.MOTION_SKIP = null;
+GST._motionSkip = function(){ try{ return !!(GST.MOTION_SKIP && GST.MOTION_SKIP.test(GST.pagePath())); }catch(e){ return false; } };
 GST._motionInit = function(){
   try{
-    if(!document.body || GST.MOTION_SKIP.test(GST.pagePath())) return;
+    if(!document.body || GST._motionSkip()) return;
     document.body.classList.add('gst-motion');
     /* KPI 값이 «사람이 무언가를 바꾼 직후» 바뀌면 그 카드에 잠깐 표식을 단다 — 필터를 바꿨을 때 무엇이 움직였는지 눈이 따라간다.
        ⚠ 로드 중의 갱신(자리표시 → 숫자 · 번역 적용 · 자동 새로고침)에는 안 단다 — 사람 손이 닿은 지 2초 안의 변화만 센다. */
@@ -4245,7 +4404,7 @@ if(typeof document!=='undefined'){
    ============================================================ */
 GST.FX_SEL = '.card,.trend-card,.cross-card,.tablecard,.kpi,.hb-card,.hb-kpi,.st-card,.st-kpi,.ac-card,.sd-card,.ds-card,.ds-kpi';
 GST._reduce = function(){ try{ return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){ return false; } };
-GST._motionOn = function(){ try{ return !GST._reduce() && !GST.MOTION_SKIP.test(GST.pagePath()); }catch(e){ return false; } };
+GST._motionOn = function(){ try{ return !GST._reduce() && !GST._motionSkip(); }catch(e){ return false; } };
 
 /* ---- 부팅 신호 — 읽기 경로(dbRows · csvTableRows · fetchCSV)가 «무엇을 읽는지»를 셸에 알린다 ----
    셸의 부팅 화면이 진짜 표 이름·진행률을 보여 주는 근거가 이것이다(지어낸 로그를 돌리지 않는다).
@@ -4634,21 +4793,28 @@ GST.ops = {
     const now=Date.now(); return new Date(Math.min(now, last||now));
   },
   /* 고장(BM) 행 — ok(x) 는 화면의 거르기(구분·운영단위 등). 국내 원장 행은 {region, op} 를 채워 돌려준다. */
-  bm:function(R, ok){
-    const KR=GST.ops.KR, OS=GST.ops.OS, KR_ON=R.KRA.length>0, out=[];
-    R.WK.forEach(function(x){ if(x.stage!=='BM'||GST.PM.is(x)) return; if(KR_ON&&x.region===KR) return; if(ok&&!ok(x)) return; out.push(x); });
+  /* 한 번 읽은 자료(R)마다 «거르기 전» 목록을 한 번만 만든다(v178) — 글로벌 현황이 홈을 합치며 한 번 그릴 때 bm·pm·risk 를 여러 범위로 부른다.
+     판정은 그대로다(같은 조건을 처음 한 번 걸어 둘 뿐) · 거르기(ok)는 부를 때마다 건다. ⚠ R 을 고치면 안 된다 — 다시 읽으면 새 R 이라 저절로 새로 만든다.
+     열거되지 않는 속성이라 R 을 훑거나 직렬화하는 곳(스냅샷 등)에 안 섞인다. */
+  _base:function(R){
+    if(R.__ops && R.__ops.W===R.WK && R.__ops.K===R.KRA && R.__ops.nW===R.WK.length && R.__ops.nK===R.KRA.length) return R.__ops;
+    const KR=GST.ops.KR, OS=GST.ops.OS, KR_ON=R.KRA.length>0, bmW=[], bm=[], pm=[], rk=function(x){ return GST.snKey(x.sn||x.code); };
+    R.WK.forEach(function(x){ if(GST.PM.is(x)){ pm.push(x); return; } if(x.stage!=='BM') return; bmW.push(x); if(KR_ON&&x.region===KR) return; bm.push(x); });
     if(KR_ON) R.KRA.forEach(function(x){ if(!x.d||!GST.ALARM.dedup(x)||!GST.ALARM.inner(x)) return; if(x.region===OS) return;
-      const y=Object.assign({}, x, {region:x.region||KR, op:x.op||x.op0||'—'}); if(ok&&!ok(y)) return; out.push(y); });
-    return out;
+      bm.push(Object.assign({}, x, {region:x.region||KR, op:x.op||x.op0||'—'})); });
+    const o={W:R.WK, K:R.KRA, nW:R.WK.length, nK:R.KRA.length, bm:bm, pm:pm,
+      rbm:bmW.filter(rk).map(function(x){ return {x:x, key:rk(x), label:x.code||x.sn, site:x.op, d:x.d}; }),
+      rpm:pm.filter(rk).map(function(x){ return {x:x, key:rk(x), d:x.d}; })};
+    try{ Object.defineProperty(R, '__ops', {value:o, configurable:true, enumerable:false, writable:true}); }catch(e){}
+    return o;
   },
-  pm:function(R, ok){ return R.WK.filter(function(x){ return GST.PM.is(x)&&(!ok||ok(x)); }); },
+  bm:function(R, ok){ const b=GST.ops._base(R).bm; return ok?b.filter(function(x){ return ok(x); }):b.slice(); },
+  pm:function(R, ok){ const b=GST.ops._base(R).pm; return ok?b.filter(function(x){ return ok(x); }):b.slice(); },
   /* 고장 위험 — 고장분석 「고장 위험 설비 TOP 20」과 같은 식(수선실적 BM·PM · v148) */
   risk:function(R, asOf, ok, n){
-    const DAY=864e5, t0=asOf.getTime(), rk=function(x){ return GST.snKey(x.sn||x.code); };
-    const bm=R.WK.filter(function(x){ return x.stage==='BM'&&!GST.PM.is(x)&&(!ok||ok(x))&&x.d.getTime()>=t0-180*DAY&&rk(x); })
-      .map(function(x){ return {key:rk(x),label:x.code||x.sn,site:x.op,d:x.d}; });
-    const pm=R.WK.filter(function(x){ return GST.PM.is(x)&&(!ok||ok(x))&&x.d.getTime()>=t0-400*DAY&&rk(x); })
-      .map(function(x){ return {key:rk(x),d:x.d}; });
+    const DAY=864e5, t0=asOf.getTime(), B=GST.ops._base(R);
+    const bm=B.rbm.filter(function(e){ return (!ok||ok(e.x))&&e.d.getTime()>=t0-180*DAY; }).map(function(e){ return {key:e.key,label:e.label,site:e.site,d:e.d}; });
+    const pm=B.rpm.filter(function(e){ return (!ok||ok(e.x))&&e.d.getTime()>=t0-400*DAY; }).map(function(e){ return {key:e.key,d:e.d}; });
     return GST.riskRank({bm:bm, pm:pm, asOf:asOf, n:n||100000});
   },
   /* 읽기 — 화면 둘이 같은 세 자료를 같은 캐시 열쇠로 읽는다(한 번 받으면 다른 화면은 캐시에서). 실패한 것은 fails 에 남긴다. */
@@ -5821,9 +5987,15 @@ GST.upk = function(s){ return GST.nfw(s).toUpperCase(); };
    ocean/sunset/forest는 제거 — 저장값이 그 키였던 사용자는 로더의 폴백으로 Aurora가 된다.
    키 'vivid'/'cb'는 localStorage 하위호환을 위해 유지하고 라벨만 바꾼다. */
 GST.STY = {
-  vivid:   {lbl:'Aurora',   bar:'#2C5FAE', last:'#5EC2FF', bar2:'#7C6FE0', line:'#5EC2FF', lnG:'#34D399', lnV:'#A78BFA',
-            site:['#2C5FAE','#38BDF8','#5EC2FF','#7C6FE0','#34D399','#D9A441'],
-            pal8:['#5B9BD8','#3FAE8A','#D9A441','#9B8FE8','#E07A85','#7CA982','#C97FB0','#D08A5E']},
+  /* v178 «Executive» — 사파이어 막대 · 최근 구간은 한 단 밝게 · 선은 샴페인 골드(막대와 겹쳐도 또렷하다).
+     다크(기본)와 라이트가 «같은 색 순서»의 두 벌을 쓴다 — 다크는 빛나게, 라이트는 흰 종이에서 읽히게 깊게(GST._palApply).
+     범주 8색은 인접쌍 색각 검증 규칙 그대로(파랑·청록·금·보라·산호·하늘·초록·분홍 — 이웃끼리 색상과 밝기가 함께 갈린다). */
+  vivid:   {lbl:'Aurora',   bar:'#4A74DC', last:'#8DB1FF', bar2:'#9A86F7', line:'#E3B862', lnG:'#34D399', lnV:'#B39CFF',
+            site:['#5B84EE','#2DD4BF','#E3B862','#A58BFF','#FF8A7A','#5CC8FF'],
+            pal8:['#6E9BFF','#2DD4BF','#E3B862','#A58BFF','#FF8A7A','#5CC8FF','#4ADE80','#F472B6'],
+            light:{bar:'#5B7FE0', last:'#1F4FC6', bar2:'#7A5AF8', line:'#B7822A', lnG:'#12873F', lnV:'#7A5AF8',
+                   site:['#2F6FED','#0E9F8E','#C08A1E','#7A5AF8','#E0614F','#1E9BD7'],
+                   pal8:['#2F6FED','#0E9F8E','#C08A1E','#7A5AF8','#E0614F','#1E9BD7','#16A34A','#D9468F']}},
   /* QBR 보고서와 동일 룩 — 회색 막대(보조=진회색) + 빨간 점선 + 원형 마커 + 회색조 라인 팔레트 */
   graphite:{lbl:'Global CS', bar:'#A6A6A6', last:'#A6A6A6', bar2:'#404040', line:'#FF0000', lnG:'#0D0DF7', lnV:'#7F7F7F',
             lnH:'#0D0DF7', lnP:'#FF0000', qbr:true,
@@ -5836,13 +6008,20 @@ GST.STY = {
 GST.STY_ORDER = ['vivid','graphite','cb'];
 GST._styKey = 'vivid';
 GST.style = function(){ return GST._styKey; };
-GST.sty    = function(){ return GST.STY[GST._styKey] || GST.STY.vivid; };
+GST._styDark = function(){ return GST._isDark(); };
+/* 지금 테마의 한 벌 — 라이트 전용 값(light)이 있으면 그것을 얹는다. 옛 호출부(GST.sty().bar …)는 그대로 읽는다 */
+GST.sty    = function(){ const s=GST.STY[GST._styKey] || GST.STY.vivid; return (s.light && !GST._styDark()) ? Object.assign({}, s, s.light) : s; };
+/* 팔레트 배열을 지금 테마·스타일로 «제자리에서» 바꾼다(페이지가 const PAL=GST.PAL8 로 잡아 둔 참조도 따라온다) */
+GST._palApply = function(){
+  const s=GST.sty(); if(!s||!s.pal8) return;
+  GST.PAL.splice.apply(GST.PAL,  [0, GST.PAL.length ].concat(s.pal8.slice(0,5)));
+  GST.PAL8.splice.apply(GST.PAL8,[0, GST.PAL8.length].concat(s.pal8));
+};
 // 스타일 적용 — 팔레트 배열을 제자리 교체하므로 GST.PAL을 잡아둔 페이지도 함께 갱신된다
 GST.setStyle = function(key, silent, fromShell){
   const s = GST.STY[key]; if(!s) return;
   GST._styKey = key; GST._palKey = key;
-  GST.PAL.splice.apply(GST.PAL,  [0, GST.PAL.length ].concat(s.pal8.slice(0,5)));
-  GST.PAL8.splice.apply(GST.PAL8,[0, GST.PAL8.length].concat(s.pal8));
+  GST._palApply();
   try{ localStorage.setItem('gst_chart_style', key); }catch(e){}
   if(silent) return;
   // 이미 열려 있는 다른 탭도 같이 바뀌도록 셸을 통해 전파 (테마·언어와 같은 경로)
@@ -6241,13 +6420,16 @@ GST.chartHiRes = function(id, scale){
   const w=cv.clientWidth||400, h=cv.clientHeight||300;
   if(!scale) scale=Math.min(6,Math.max(3,Math.round(2400/w)));
   const prev=ch.options.devicePixelRatio;
-  ch.options.devicePixelRatio=scale; ch.resize(); ch.render();
-  const oc=document.createElement('canvas'); oc.width=Math.round(w*scale); oc.height=Math.round(h*scale);
-  const g=oc.getContext('2d');
-  g.fillStyle=getComputedStyle(document.body).backgroundColor||'#0B0F14';
-  g.fillRect(0,0,oc.width,oc.height);
-  g.drawImage(cv,0,0,oc.width,oc.height);
-  ch.options.devicePixelRatio=prev; ch.resize(); ch.render();
+  ch.$cap=true;   // 캡처 중 — 값 라벨 플러그인은 «종이» 규칙(전부 적기)으로 그린다(GST.labelAll)
+  let oc=null;
+  try{
+    ch.options.devicePixelRatio=scale; ch.resize(); ch.render();
+    oc=document.createElement('canvas'); oc.width=Math.round(w*scale); oc.height=Math.round(h*scale);
+    const g=oc.getContext('2d');
+    g.fillStyle=getComputedStyle(document.body).backgroundColor||'#0B0F14';
+    g.fillRect(0,0,oc.width,oc.height);
+    g.drawImage(cv,0,0,oc.width,oc.height);
+  } finally { ch.$cap=false; ch.options.devicePixelRatio=prev; ch.resize(); ch.render(); }
   return oc;
 };
 /* 필터 요약 한 줄 — PPT 머리·표 캡션이 «지금 무엇을 걸러 본 숫자인지» 말하게 한다.
@@ -6354,6 +6536,7 @@ GST.chartHiResLight = function(id, scale){
   const prev = ch.options.devicePixelRatio;
   const restore = GST._chartLight(ch);
   let oc = null;
+  ch.$cap = true;
   try{
     ch.options.devicePixelRatio = scale; ch.resize(); ch.render();
     oc = document.createElement('canvas');
@@ -6362,10 +6545,25 @@ GST.chartHiResLight = function(id, scale){
     g.fillStyle = '#FFFFFF'; g.fillRect(0,0,oc.width,oc.height);
     g.drawImage(cv,0,0,oc.width,oc.height);
   } finally {
-    restore();
+    restore(); ch.$cap = false;
     ch.options.devicePixelRatio = prev; ch.resize(); ch.render();
   }
   return oc;
+};
+/* 값 라벨을 «전부» 적을 때인가 (v178) — 화면은 «핵심만»(최근 값 · 최고점), 종이(캡처·인쇄)와 QBR 양식 스타일은 전부.
+   사용자 지적 「차트가 만들다 만 것 같고 무엇을 표현했는지 모르겠다」 — 막대마다 숫자가 서면 숫자가 숫자를 가린다.
+   ⚠ 숫자를 바꾸는 것이 아니다 — 같은 값을 «어디에 적을지»만 고른다. 나머지는 hover 툴팁·세부내역(막대 클릭)에 그대로 있다. */
+GST.labelAll = function(ch){
+  try{ if(ch && ch.$cap) return true; if(GST.sty && GST.sty().qbr) return true;
+       if(window.matchMedia && matchMedia('print').matches) return true; }catch(e){}
+  return false;
+};
+/* 그 데이터셋에서 «적을» 칸 — 마지막 값 · 최고값(막대 · 선 공통). 0·빈칸은 고르지 않는다 */
+GST.labelPick = function(data){
+  const keep = {}; let last=-1, max=-1, mv=-Infinity;
+  (data||[]).forEach(function(v,i){ const n=+v; if(v==null||!isFinite(n)||n===0) return; last=i; if(n>mv){ mv=n; max=i; } });
+  if(last>=0) keep[last]=1; if(max>=0) keep[max]=1;
+  return keep;
 };
 
 /* 범용 PPT — 주간현황(QBR) 양식과 같은 얼굴로 낸다.

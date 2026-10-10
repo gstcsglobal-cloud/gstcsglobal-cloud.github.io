@@ -4,13 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>글로벌 현황 · CS Global Team</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=172"></script>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=172">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=173"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=173">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/ds.css?v=1">
 <style>
 /* ============================================================
+   글로벌 현황 = 옛 «홈» + «글로벌 현황» (v178 · 사용자 확정 「겹쳐 보인다 · 합쳐 · 페이지 많으면 임원이 싫어한다」)
+   보기 셋 — 전사 요약(지도·신호등·확인 사항·히트맵) · 운영 관리(조치 사항·위험 설비·운영단위 목표 대비 표) · 사이트별(운영단위 하나).
+   KPI 카드 여섯은 보기와 상관없이 같고, 목표가 있으면 «목표 대비» 한 줄을 단다(옛 홈의 GST.targets 판정 그대로).
+   옛 /home/ 은 이 화면으로 넘기는 안내 페이지다(쿼리 ?view=&op= 그대로). 챗봇 브리핑(brief_put)도 이 화면이 같은 내용으로 남긴다.
+   ------------------------------------------------------------
    통합 관제 (v165 · 사용자 요청 「통합관리화면 신규 구축」)
    «세는 화면»이 아니라 «어디를 먼저 볼지»를 말하는 첫 화면이다.
    ⚠ 숫자를 새로 정의하지 않는다 — 판정은 전부 core 정본을 부른다:
@@ -24,6 +30,27 @@ body.hb{padding:0 !important;min-height:100vh}
 .hb-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
 .hb-title{font-size:20px;font-weight:700;letter-spacing:-.3px;color:var(--txt-main)}
 .hb-asof{font-size:12px;color:var(--txt-muted)}
+.hb-kpi .tg{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:7px;border-top:1px solid var(--line);font-size:11.5px;color:var(--txt-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-kpi .tg .nm{color:var(--txt-2);font-weight:600}
+.hb-kpi .tg b{font-weight:700;color:var(--txt-main);font-variant-numeric:tabular-nums}
+.hb-kpi .tg.bad b{color:var(--bad)} .hb-kpi .tg.warn b{color:var(--warn)} .hb-kpi .tg.ok b{color:var(--ok)}
+.hb-asofb{font:inherit;font-size:12px;color:var(--txt-muted);background:transparent;border:1px solid transparent;border-radius:999px;padding:1px 8px 1px 0;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.hb-asofb:hover{color:var(--txt-main);border-color:var(--line);padding-left:8px}
+.hb-asofb span{font-size:9px;opacity:.7}
+.hb-asofb.past{color:var(--gold,#B8862F);font-weight:700;border-color:color-mix(in srgb,var(--gold,#B8862F) 45%,transparent);background:color-mix(in srgb,var(--gold,#B8862F) 12%,transparent);padding-left:9px}
+.hb-asofx{font:inherit;font-size:11.5px;border:0;background:none;color:var(--accent);cursor:pointer;padding:0 2px}
+.hb-asofpop{position:absolute;z-index:9500;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow-md);display:flex;flex-direction:column;gap:12px;min-width:260px}
+.hb-asofpop label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--txt-muted);font-weight:600}
+.hb-asofpop input{font:inherit;font-size:14px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2);color:var(--txt-main);color-scheme:inherit}
+.hb-asofpop .r{display:flex;gap:8px;justify-content:flex-end}
+.hb-btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.hb-select{font:inherit;font-size:12.5px;min-height:32px;padding:0 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--txt-main);max-width:220px}
+.hb-btn.sm{padding:6px 12px;font-size:12px;min-height:32px}
+.hb-btn.ghost{background:transparent;border-color:transparent;color:var(--accent)}
+[data-vw][hidden]{display:none !important}
+#body:empty{display:none}
+#body .ds-g2e{align-items:start}   /* 조치 사항이 비면 옆 카드(위험 설비 열 줄) 높이로 늘어 빈 상자가 된다 */
+#body .ds-card{border-radius:var(--r-xl);box-shadow:var(--shadow-card)}
 .hb-scope{font:inherit;font-size:12px;display:inline-flex;align-items:center;gap:7px;margin-left:8px;padding:2px 9px 2px 10px;border-radius:999px;cursor:pointer;
   border:1px solid color-mix(in srgb,var(--gold,#B8862F) 55%,transparent);background:color-mix(in srgb,var(--gold,#B8862F) 14%,transparent);color:var(--txt-main);vertical-align:1px}
 .hb-scope b{font-weight:700}
@@ -210,18 +237,28 @@ body.hb{padding:0 !important;min-height:100vh}
       <div class="hb-asof" id="asof">—</div>
     </div>
     <span class="hb-sp"></span>
+    <!-- 보기 — 같은 숫자를 «무엇을 먼저 볼지»로 세 벌(옛 홈의 경영진·팀장·현장 · 사용자 확정 이름) -->
+    <div class="hb-seg" role="group" id="segView" data-i-title="view_lbl" title="보기">
+      <button type="button" data-v="exec" aria-pressed="true" class="on" data-i="v_exec">전사 요약</button>
+      <button type="button" data-v="lead" aria-pressed="false" data-i="v_lead">운영 관리</button>
+      <button type="button" data-v="field" aria-pressed="false" data-i="v_field">사이트별</button>
+    </div>
+    <select class="hb-select" id="scope" data-i-title="scope_lbl" title="범위"></select>
     <div class="hb-seg" role="group" aria-label="구분" id="segRegion">
       <button type="button" data-r="all" class="on" data-i="all">전체</button>
       <button type="button" data-r="kr" data-i="kr">국내</button>
       <button type="button" data-r="os" data-i="os">해외</button>
     </div>
+    <button type="button" class="hb-btn sm" id="saveDef" data-i="save_def">기본 화면으로 설정</button>
+    <button type="button" class="hb-btn sm ghost" id="goTargets" hidden data-i="go_targets">목표 관리</button>
   </div>
+  <div id="banners" class="ds-grid"></div>
 
   <section class="hb-kpis" id="kpis" aria-label="핵심 지표"></section>
   <!-- 운영단위 상태 띠(v171 · 디자인 2.0) — 신호등과 같은 판정을 한 줄로 흘린다. 누르면 그 운영단위를 고른다. 마우스를 올리면 멈춘다 -->
   <div class="hb-tick" id="tick" role="region" data-i-title="tk_lbl" hidden><div class="hb-tick-in" id="tickIn"></div></div>
 
-  <section class="hb-grid">
+  <section class="hb-grid" data-vw="exec">
     <div class="hb-card">
       <h2><span data-i="sigT">운영단위 신호등</span><button type="button" class="hb-info r" id="ruleBtn" aria-label="판정 기준" title="판정 기준">i</button></h2>
       <div class="hb-legend"><span><i style="background:var(--bad)"></i><span data-i="bad">점검 권장</span></span><span><i style="background:var(--warn)"></i><span data-i="warn">관찰 중</span></span><span><i style="background:var(--ok)"></i><span data-i="ok">안정</span></span><span class="hb-sp"></span><span data-i="sigCols">이번 주 고장 · 위험 설비</span></div>
@@ -239,7 +276,10 @@ body.hb{padding:0 !important;min-height:100vh}
     <div class="hb-card hb-sel" id="sel"></div>
   </section>
 
-  <section class="hb-grid2">
+  <!-- 운영 관리 · 사이트별 — 옛 홈의 카드(ds 부품). 보기마다 다시 그린다 -->
+  <section id="body" class="ds-grid" data-vw="lead field"></section>
+
+  <section class="hb-grid2" data-vw="exec lead">
     <div class="hb-card">
       <h2><span data-i="qT">처리할 일</span><span class="s" id="qS"></span></h2>
       <div class="hb-qs" id="queue"></div>
@@ -255,7 +295,7 @@ body.hb{padding:0 !important;min-height:100vh}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer && GST.needVer(168);
+GST.needVer && GST.needVer(172);   /* v178 — 홈을 합쳤다: GST.metrics·targets·prefs·kpiText(v172) 를 부른다 */
 GST.authGate();
 
 /* ── 세계 육지 점지도 ──
@@ -268,7 +308,9 @@ const GEO={ KOREA:[36.4,127.9], TAIWAN:[23.8,121.0], USA:[39.5,-98.5], JAPAN:[36
   CHINA:[34,108.9], WUHAN:[30.6,114.3], HEFEI:[31.8,117.2], XIAN:[34.3,108.9], WUXI:[31.5,120.3] };
 
 const T={
-ko:{title:'글로벌 현황',scopeX:'전체 보기',back:'← 전세계',cdReg:'지역 분포',cdCty:'국가 분포',cdCust:'고객사 분포',unplaced:'위치 미지정',unplacedN:'지도에 못 놓은 곳 {n} · {u}대: {list}',unplacedAdm:' — 데이터 관리 「사이트」 탭의 «지도 위치»에서 정합니다',mapT_c:'{c} 설비 분포',mapS_c:'원 크기 = 반입 설비 · 색 = 그 운영단위의 신호 · 막대를 누르면 그 설비 목록',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'점검 권장',warn:'관찰 중',ok:'안정',tk_run:'가동',tk_bm:'이번 주 고장',tk_lbl:'운영단위 상태',sigCols:'이번 주 고장 · 위험 설비',
+ko:{
+  /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'기준일 고르기',asof_latest:'최신으로',asof_apply:'적용',asof_state:'과거 날짜로 보고 있습니다 — 고장·PM·가동 날짜는 그 날 기준이지만, 설비 상태(Operation 등)는 지금 값입니다',sc_allop:'전체 운영단위',view_lbl:'보기',scope_lbl:'범위',kpi_lbl:'핵심 지표',v_exec:'전사 요약',v_lead:'운영 관리',v_field:'사이트별',save_def:'기본 화면으로 설정',saved_srv:'기본 화면으로 설정했습니다 — 다음 접속부터 이 화면이 먼저 열립니다',saved_pc:'이 PC에만 저장했습니다',go_targets:'목표 관리',sc_all:'전사',sc_kr:'국내 전체',sc_os:'해외 전체',sc_ops:'운영단위',noTgt:'아직 설정된 목표가 없습니다. 목표를 설정하면 카드와 표가 목표 대비로 판정됩니다.',noTgtAdm:'「목표 관리」에서 설정하세요.',noTbl:'서버에 목표 테이블이 없습니다 — supabase/setup-27-targets.sql을 실행하세요.',opsT:'운영단위별 목표 대비 현황',opsS:'행을 누르면 해당 운영단위로 좁혀 봅니다',decT:'이번 주 확인 사항',decS:'목표 미달 · 재고장 · 기한 경과 건',trendT:'주간 고장 추이 · 최근 12주',trendS:'점선 = 목표를 주 단위로 환산한 값',actT:'조치 사항 — 미완료',actS:'기한 경과 건 우선',riskT:'고장 위험 설비',riskS:'고장분석 TOP 20과 같은 기준',bmT:'이번 주 고장',warrT:'90일 이내 유상 전환',pickT:'운영단위를 선택하세요',pickS:'현장 화면은 운영단위 하나를 기준으로 봅니다 — 「기본 화면으로 설정」을 누르면 다음에도 이 운영단위로 열립니다',c_op:'운영단위',c_st:'판정',c_in:'반입',c_run:'가동률',c_bm:'100대당 고장',c_pm:'PM 비율',c_rep:'재고장',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}일 이내 재고장 {n}회',d_over:'기한 경과 조치 {n}건',d_none:'이번 주 확인할 사항이 없습니다',d_set:'목표 설정하기',tag_tgt:'목표',tag_rep:'재고장',tag_act:'조치',a_none:'미완료 건이 없습니다',a_due:'기한 {d}',a_nodue:'기한 없음',a_who:'담당 {w}',a_nowho:'담당자 미지정',a_fail:'조치 사항을 읽지 못했습니다',l_kind:'구분',l_title:'제목',l_due:'기한',l_who:'담당',go_fault:'고장 분석',go_action:'조치 사항',go_hub:'글로벌 현황',more:'외 {n}건',notRun:'반입 후 미가동 설비(Operation 아님)',kind_pm:'PM',kind_bm:'고장',
+  title:'글로벌 현황',scopeX:'전체 보기',back:'← 전세계',cdReg:'지역 분포',cdCty:'국가 분포',cdCust:'고객사 분포',unplaced:'위치 미지정',unplacedN:'지도에 못 놓은 곳 {n} · {u}대: {list}',unplacedAdm:' — 데이터 관리 「사이트」 탭의 «지도 위치»에서 정합니다',mapT_c:'{c} 설비 분포',mapS_c:'원 크기 = 반입 설비 · 색 = 그 운영단위의 신호 · 막대를 누르면 그 설비 목록',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'점검 권장',warn:'관찰 중',ok:'안정',tk_run:'가동',tk_bm:'이번 주 고장',tk_lbl:'운영단위 상태',sigCols:'이번 주 고장 · 위험 설비',
   mapT:'글로벌 설비 분포',mapS:'원 크기 = 반입 설비 · 색 = 신호 · 나라를 누르면 그 나라 지도로',qT:'확인 사항',heatT:'주차별 고장 히트맵',heatS:'진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록',
   byOp:'운영단위',byCampus:'단지',loading:'자료를 불러오는 중…',asof:'{d} 기준',
   k_run:'가동 설비',k_run_d:'반입 {n}대 · 가동률 {p}%',k_run_none:'설치현황 자료 없음',k_bm:'이번 주 고장(BM)',k_pm:'이번 주 PM',k_risk:'고장 위험 설비',k_risk_d:'{rd}일 이내 재고장 {n}대',
@@ -285,7 +327,9 @@ ko:{title:'글로벌 현황',scopeX:'전체 보기',back:'← 전세계',cdReg:'
   l_date:'날짜',l_op:'운영단위',l_campus:'단지',l_eq:'설비',l_sn:'S/N',l_src:'출처',l_desc:'내용',l_score:'점수',l_why:'근거',l_wd:'유상 전환일',l_state:'설비상태',
   src_wk:'수선실적',src_kr:'알람 원장',week:'주',none:'자료 없음',fail:'일부 자료를 못 읽었습니다',
   dq_tip:'데이터 관리에서 고치기'},
-en:{title:'Global overview',scopeX:'Show all',back:'← World',cdReg:'By region',cdCty:'By country',cdCust:'By customer',unplaced:'No position',unplacedN:'{n} place(s) not on the map · {u} units: {list}',unplacedAdm:' — set them in Data management «Sites» › Map position',mapT_c:'{c} installed base',mapS_c:'size = installed units · color = signal of its unit · click a bar for the unit list',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Check advised',warn:'Watching',ok:'Stable',tk_run:'Running',tk_bm:'BM this week',tk_lbl:'Operating unit status',sigCols:'BM this week · at-risk units',
+en:{
+  /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'Pick the as-of date',asof_latest:'Latest',asof_apply:'Apply',asof_state:'Viewing a past date — failure, PM and turn-on dates are as of that day, but equipment status (Operation etc.) is the current value',sc_allop:'All units',view_lbl:'View',scope_lbl:'Scope',kpi_lbl:'Key metrics',v_exec:'Company summary',v_lead:'Operations',v_field:'By site',save_def:'Make this my default',saved_srv:'Saved as your default — this view opens first next time',saved_pc:'Saved on this PC only',go_targets:'Targets',sc_all:'Company',sc_kr:'All Korea',sc_os:'All overseas',sc_ops:'Operating units',noTgt:'No targets yet. Once targets are set, cards and tables are rated against them.',noTgtAdm:'Set them in «Targets».',noTbl:'The target table is not on the server yet — run supabase/setup-27-targets.sql.',opsT:'By operating unit — vs target',opsS:'click to narrow to that unit',decT:'To review this week',decS:'off target · repeat failures · overdue actions',trendT:'Weekly failures · last 12 weeks',trendS:'dashed = target converted to a week',actT:'Action items — open',actS:'overdue first',riskT:'At-risk units',riskS:'same formula as Fault TOP 20',bmT:'Failures this week',warrT:'Turning paid within 90 days',pickT:'Pick your operating unit',pickS:'The field view shows one unit — «Make this my default» opens it next time',c_op:'Unit',c_st:'Rating',c_in:'Installed',c_run:'Running',c_bm:'BM per 100',c_pm:'PM ratio',c_rep:'Repeat',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {n} repeat(s) within {d} days',d_over:'{n} overdue action(s)',d_none:'Nothing to review this week',d_set:'Set targets',tag_tgt:'Target',tag_rep:'Repeat',tag_act:'Action',a_none:'No open actions',a_due:'due {d}',a_nodue:'no due date',a_who:'owner {w}',a_nowho:'no owner',a_fail:'Could not read action items',l_kind:'Type',l_title:'Item',l_due:'Due',l_who:'Owner',go_fault:'Fault',go_action:'Action items',go_hub:'Global overview',more:'+{n} more',notRun:'Installed but not running (Operation)',kind_pm:'PM',kind_bm:'BM',
+  title:'Global overview',scopeX:'Show all',back:'← World',cdReg:'By region',cdCty:'By country',cdCust:'By customer',unplaced:'No position',unplacedN:'{n} place(s) not on the map · {u} units: {list}',unplacedAdm:' — set them in Data management «Sites» › Map position',mapT_c:'{c} installed base',mapS_c:'size = installed units · color = signal of its unit · click a bar for the unit list',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Check advised',warn:'Watching',ok:'Stable',tk_run:'Running',tk_bm:'BM this week',tk_lbl:'Operating unit status',sigCols:'BM this week · at-risk units',
   mapT:'Global installed base',mapS:'size = installed units · color = signal · click a country to zoom in',qT:'To check',heatT:'Weekly failure heatmap',heatS:'darker = above usual · click a cell for that week\'s failures',
   byOp:'Operating unit',byCampus:'Campus',loading:'Loading…',asof:'As of {d}',
   k_run:'Running units',k_run_d:'{n} installed · {p}% running',k_run_none:'No installation data',k_bm:'Failures (BM) this week',k_pm:'PM this week',k_risk:'At-risk units',k_risk_d:'{n} repeat within {rd} days',
@@ -302,7 +346,9 @@ en:{title:'Global overview',scopeX:'Show all',back:'← World',cdReg:'By region'
   l_date:'Date',l_op:'Unit',l_campus:'Campus',l_eq:'Equipment',l_sn:'S/N',l_src:'Source',l_desc:'Detail',l_score:'Score',l_why:'Why',l_wd:'Paid from',l_state:'Status',
   src_wk:'Repair',src_kr:'Alarm ledger',week:'wk',none:'No data',fail:'Some data could not be read',
   dq_tip:'Fix in Data management'},
-zh:{title:'全球概况',scopeX:'显示全部',back:'← 全球',cdReg:'地区分布',cdCty:'国家分布',cdCust:'客户分布',unplaced:'未指定位置',unplacedN:'未能放到地图上的 {n} 处 · {u}台: {list}',unplacedAdm:' — 在数据管理「站点」页的地图位置中设定',mapT_c:'{c} 设备分布',mapS_c:'圆大小 = 已进场设备 · 颜色 = 所属运营单位信号 · 点击柱查看设备',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'建议检查',warn:'观察中',ok:'稳定',tk_run:'运行',tk_bm:'本周故障',tk_lbl:'运营单位状态',sigCols:'本周故障 · 风险设备',
+zh:{
+  /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'选择基准日',asof_latest:'最新',asof_apply:'应用',asof_state:'正在查看过去日期 — 故障、PM、运行日期按当天计算，但设备状态（Operation 等）为当前值',sc_allop:'全部运营单位',view_lbl:'视图',scope_lbl:'范围',kpi_lbl:'核心指标',v_exec:'全公司概要',v_lead:'运营管理',v_field:'按站点',save_def:'设为默认画面',saved_srv:'已保存为默认 — 下次打开先显示此画面',saved_pc:'仅保存在此电脑',go_targets:'目标管理',sc_all:'全公司',sc_kr:'国内全部',sc_os:'海外全部',sc_ops:'运营单位',noTgt:'尚未设定任何目标。设定后卡片和表格将按目标判定。',noTgtAdm:'请在「目标管理」中设定。',noTbl:'服务器尚无目标表 — 请运行 supabase/setup-27-targets.sql。',opsT:'按运营单位 — 对比目标',opsS:'点击即缩小到该运营单位',decT:'本周确认事项',decS:'偏离目标 · 复发 · 逾期待办',trendT:'按周故障 · 最近12周',trendS:'虚线 = 目标换算为每周的值',actT:'待办事项 — 未关闭',actS:'逾期优先',riskT:'故障风险设备',riskS:'与故障分析 TOP 20 同一公式',bmT:'本周故障',warrT:'90天内转为有偿',pickT:'请选择你的运营单位',pickS:'现场画面只看一个运营单位 — 按「设为默认画面」下次也按此单位打开',c_op:'运营单位',c_st:'判定',c_in:'进场',c_run:'运行率',c_bm:'每100台故障',c_pm:'PM比率',c_rep:'复发',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}天内复发 {n}次',d_over:'逾期待办 {n}件',d_none:'本周没有需确认的事项',d_set:'设定目标',tag_tgt:'目标',tag_rep:'复发',tag_act:'待办',a_none:'没有未关闭的事项',a_due:'期限 {d}',a_nodue:'无期限',a_who:'负责人 {w}',a_nowho:'未定负责人',a_fail:'未能读取待办事项',l_kind:'类别',l_title:'事项',l_due:'期限',l_who:'负责人',go_fault:'故障分析',go_action:'待办事项',go_hub:'全球概况',more:'另 {n}件',notRun:'已进场但未运行(Operation)的设备',kind_pm:'PM',kind_bm:'故障',
+  title:'全球概况',scopeX:'显示全部',back:'← 全球',cdReg:'地区分布',cdCty:'国家分布',cdCust:'客户分布',unplaced:'未指定位置',unplacedN:'未能放到地图上的 {n} 处 · {u}台: {list}',unplacedAdm:' — 在数据管理「站点」页的地图位置中设定',mapT_c:'{c} 设备分布',mapS_c:'圆大小 = 已进场设备 · 颜色 = 所属运营单位信号 · 点击柱查看设备',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'建议检查',warn:'观察中',ok:'稳定',tk_run:'运行',tk_bm:'本周故障',tk_lbl:'运营单位状态',sigCols:'本周故障 · 风险设备',
   mapT:'全球设备分布',mapS:'圆大小 = 已进场设备 · 颜色 = 信号 · 点击国家查看该国地图',qT:'待确认',heatT:'按周故障热力图',heatS:'越深 = 高于平时 · 点击格子查看该周故障',
   byOp:'运营单位',byCampus:'园区',loading:'正在加载…',asof:'截至 {d}',
   k_run:'运行设备',k_run_d:'进场 {n}台 · 运行率 {p}%',k_run_none:'无设备台账数据',k_bm:'本周故障(BM)',k_pm:'本周PM',k_risk:'故障风险设备',k_risk_d:'{rd}天内复发 {n}台',
@@ -319,7 +365,9 @@ zh:{title:'全球概况',scopeX:'显示全部',back:'← 全球',cdReg:'地区�
   l_date:'日期',l_op:'运营单位',l_campus:'园区',l_eq:'设备',l_sn:'S/N',l_src:'来源',l_desc:'内容',l_score:'分数',l_why:'依据',l_wd:'有偿起始日',l_state:'设备状态',
   src_wk:'维修实绩',src_kr:'报警台账',week:'周',none:'无数据',fail:'部分数据未能读取',
   dq_tip:'在数据管理中修正'},
-ja:{title:'グローバル概況',scopeX:'全体を見る',back:'← 全世界',cdReg:'地域分布',cdCty:'国別分布',cdCust:'顧客分布',unplaced:'位置未指定',unplacedN:'地図に置けない場所 {n} · {u}台: {list}',unplacedAdm:' — データ管理「サイト」タブの地図位置で設定します',mapT_c:'{c} 設備分布',mapS_c:'円の大きさ = 搬入設備 · 色 = その運営単位の信号 · 棒を押すと設備一覧',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'点検推奨',warn:'観察中',ok:'安定',tk_run:'稼働',tk_bm:'今週の故障',tk_lbl:'運営単位の状態',sigCols:'今週の故障 · 危険設備',
+ja:{
+  /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'基準日を選ぶ',asof_latest:'最新に戻す',asof_apply:'適用',asof_state:'過去の日付で表示中 — 故障・PM・稼働日はその日基準ですが、設備状態（Operation 等）は現在の値です',sc_allop:'全運営単位',view_lbl:'表示',scope_lbl:'範囲',kpi_lbl:'主要指標',v_exec:'全社サマリー',v_lead:'運営管理',v_field:'サイト別',save_def:'この画面を既定にする',saved_srv:'既定の画面として保存しました — 次回はこの画面が最初に開きます',saved_pc:'このPCにのみ保存しました',go_targets:'目標管理',sc_all:'全社',sc_kr:'国内全体',sc_os:'海外全体',sc_ops:'運営単位',noTgt:'目標がまだありません。目標を決めるとカードと表が目標比で判定します。',noTgtAdm:'「目標管理」で設定してください。',noTbl:'サーバーに目標表がまだありません — supabase/setup-27-targets.sql を実行してください。',opsT:'運営単位別 — 目標比',opsS:'押すとその運営単位に絞ります',decT:'今週の確認事項',decS:'目標外れ · 再故障 · 期限超過の対応',trendT:'週別故障 · 直近12週',trendS:'点線 = 目標を週単位に換算した値',actT:'対応事項 — 未完了',actS:'期限超過を先に',riskT:'故障リスク設備',riskS:'故障分析 TOP 20 と同じ式',bmT:'今週の故障',warrT:'90日以内に有償化',pickT:'自分の運営単位を選んでください',pickS:'現場画面は運営単位ひとつを見ます — 「この画面を既定にする」で次回もこの運営単位で開きます',c_op:'運営単位',c_st:'判定',c_in:'搬入',c_run:'稼働率',c_bm:'100台あたり故障',c_pm:'PM比率',c_rep:'再故障',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}日以内再故障 {n}回',d_over:'期限超過の対応 {n}件',d_none:'今週確認することはありません',d_set:'目標を決める',tag_tgt:'目標',tag_rep:'再故障',tag_act:'対応',a_none:'未完了の対応はありません',a_due:'期限 {d}',a_nodue:'期限なし',a_who:'担当 {w}',a_nowho:'担当未定',a_fail:'対応事項を読めませんでした',l_kind:'区分',l_title:'項目',l_due:'期限',l_who:'担当',go_fault:'故障分析',go_action:'対応事項',go_hub:'グローバル概況',more:'他 {n}件',notRun:'搬入済みだが稼働(Operation)していない設備',kind_pm:'PM',kind_bm:'故障',
+  title:'グローバル概況',scopeX:'全体を見る',back:'← 全世界',cdReg:'地域分布',cdCty:'国別分布',cdCust:'顧客分布',unplaced:'位置未指定',unplacedN:'地図に置けない場所 {n} · {u}台: {list}',unplacedAdm:' — データ管理「サイト」タブの地図位置で設定します',mapT_c:'{c} 設備分布',mapS_c:'円の大きさ = 搬入設備 · 色 = その運営単位の信号 · 棒を押すと設備一覧',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'点検推奨',warn:'観察中',ok:'安定',tk_run:'稼働',tk_bm:'今週の故障',tk_lbl:'運営単位の状態',sigCols:'今週の故障 · 危険設備',
   mapT:'グローバル設備分布',mapS:'円の大きさ = 搬入設備 · 色 = シグナル · 国を押すとその国の地図へ',qT:'確認事項',heatT:'週別故障ヒートマップ',heatS:'濃いほど平常より多い · セルを押すとその週の故障一覧',
   byOp:'運営単位',byCampus:'団地',loading:'データ読み込み中…',asof:'{d} 時点',
   k_run:'稼働設備',k_run_d:'搬入 {n}台 · 稼働率 {p}%',k_run_none:'設置台帳データなし',k_bm:'今週の故障(BM)',k_pm:'今週のPM',k_risk:'故障リスク設備',k_risk_d:'{rd}日以内再故障 {n}台',
@@ -343,6 +391,7 @@ const t=k=>(T[LANG]&&T[LANG][k]!=null)?T[LANG][k]:(T.ko[k]!=null?T.ko[k]:k);
 const fmt=(s,o)=>String(s).replace(/\{(\w+)\}/g,(m,k)=>o[k]!=null?o[k]:m);
 const esc=s=>GST._esc(s);
 const nf=n=>Number(n||0).toLocaleString('en-US');
+const v2t=(k,o)=>GST.v2t(k,o,LANG);
 const DAY=864e5;
 const KR=GST.ORG.REGION_KR, OS=GST.ORG.REGION_OS;
 const REDUCE=(function(){ try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } })();
@@ -358,7 +407,7 @@ const ruleTxt=()=>({bx:RULE.badX, bd:RULE.badD, wx:RULE.warnX, wd:RULE.warnD, rb
 ruleLoad();
 
 let RAW=null;                          // 읽어 온 그대로(파싱 뒤)
-const S={region:'all', heat:'op', sel:null, cc:'', op:null};   // op — 사람이 고른 운영단위(v178): KPI 카드·분포가 그 운영단위만 본다. sel 은 오른쪽 상세 칸(없으면 첫 줄)   // cc — 나라 지도로 들어가면 그 나라(ISO2) · 모든 칸이 그 나라만 본다
+const S={region:'all', heat:'op', sel:null, cc:'', op:null, view:'exec', viewFixed:false, asOf:null};   // asOf — 사람이 고른 기준일(null = 자료의 마지막 날)   // view — 전사 요약(exec)·운영 관리(lead)·사이트별(field) · v178 홈과 합침   // op — 사람이 고른 운영단위(v178): KPI 카드·분포가 그 운영단위만 본다. sel 은 오른쪽 상세 칸(없으면 첫 줄)   // cc — 나라 지도로 들어가면 그 나라(ISO2) · 모든 칸이 그 나라만 본다
 const GEOD={world:null, cc:{}, PL:{}, fail:false};
 
 /* ===== 읽기 — 파싱·조인·판정은 core GST.ops 한 벌(v167 · 사이트 상세와 같은 식) ===== */
@@ -366,11 +415,14 @@ const cityOf=GST.ops.cityOf;
 async function load(){
   status(t('loading'));
   skel(true);
-  const L=await GST.ops.load(); const INST=L.INST, WK=L.WK, KRA=L.KRA, fails=L.fails;
+  const [L]=await Promise.all([GST.ops.load(), GST.targets.load(), GST.params.load(), loadAct()]);
+  const INST=L.INST, WK=L.WK, KRA=L.KRA, fails=L.fails;
   RAW={INST, WK, KRA, fails};
-  loadAct();
+  try{ if(GST.loadMe) await GST.loadMe(); }catch(e){}
+  await initPrefs();
   skel(false);
   render();
+  window._briefP=briefSave();
   const tm=new Date();
   status((fails.length?t('fail')+' ('+fails.join(', ')+') · ':'')+'✅ '+tm.toLocaleString(), !!fails.length);
 }
@@ -378,14 +430,16 @@ async function load(){
 /* ===== 처리함(v166) — 이 신호가 이미 담겼나 =====
    ⚠ 자동으로 담지 않는다 — 사람이 「담기」를 눌러야 들어간다(setup-24 머리 주석). 읽기만 실패해도 관제 화면은 그대로 선다. */
 const ACT={};   // ref → {id,status,assignee}
+let ACTS=null, ACT_FAIL=false;   // 열린 조치 사항 전부(옛 홈 · 운영 관리 보기 · 기한 경과 지표) — 한 번 읽어 둘 다 쓴다
 async function loadAct(){
+  ACT_FAIL=false;
   try{
-    const C=await GST.db(); if(!C) return;
-    const r=await C.from('action_items').select('id,ref,status,assignee').not('status','in','(done,dismissed)').not('ref','is',null).limit(2000);
-    if(r.error) return;
-    Object.keys(ACT).forEach(k=>delete ACT[k]); (r.data||[]).forEach(x=>{ ACT[x.ref]=x; });
-    if(D) drawQueue();
-  }catch(e){ console.warn('[hub] 처리함 읽기 실패', e); }
+    const C=await GST._dbAuthed(); if(!C){ ACTS=null; return; }
+    const r=await C.from('action_items').select('id,kind,ref,sev,status,title,detail,op,page,assignee,due,updated_at').not('status','in','(done,dismissed)').order('updated_at',{ascending:false}).limit(2000);
+    if(r.error){ ACTS=null; ACT_FAIL=true; console.warn('[hub] 조치 사항 읽기 실패', r.error); return; }
+    ACTS=r.data||[];
+    Object.keys(ACT).forEach(k=>delete ACT[k]); ACTS.forEach(x=>{ if(x.ref) ACT[x.ref]=x; });
+  }catch(e){ ACTS=null; ACT_FAIL=true; console.warn('[hub] 조치 사항 읽기 실패', e); }
 }
 async function takeAct(q, btn){
   btn.disabled=true;
@@ -406,6 +460,9 @@ function weeksOf(asOf){
   return out;
 }
 const median=a=>{ if(!a.length) return 0; const s=a.slice().sort((x,y)=>x-y), m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; };
+/* 기준일 — 자료의 마지막 날(오늘을 넘지 않는다)이 기본, 사람이 과거 날짜를 고르면 그 날(v178 · 사용자 요청 「날짜 기준을 바꿔 보고 싶은 사람도 있다」).
+   ⚠ 미래로는 못 간다(자료가 없다). ⚠ 설비 «상태»는 지금 값이다 — 날짜가 없는 판정만 과거로 돌아간다(GST.ops.isIn/isRun) · 그 사실을 머리의 ⚠ 가 말한다 */
+function asOfOf(R){ const a=GST.ops.asOf(R); return (S.asOf&&S.asOf.getTime()<a.getTime())?S.asOf:a; }
 function compute(opSel){
   ruleLoad();   // 판정 기준을 그릴 때마다 — 「운영 목표」에서 바꾸면 다음 그림부터 따라간다
   const R=RAW, rg=S.region, okR0=reg=>rg==='all'||(rg==='kr'?reg===KR:reg===OS);
@@ -415,7 +472,7 @@ function compute(opSel){
   /* 운영단위를 고르면(opSel) 그 운영단위만 — KPI 카드·분포용 두 번째 계산이다. 신호등·지도·히트맵은 고르기 전 그대로(D) 남아 다른 곳으로 옮겨 갈 수 있다 */
   const okR=(reg,x)=>okR0(reg)&&(!ccCty||!x||ctyOf(x)===ccCty)&&(!opSel||!x||x.op===opSel);
   /* 기준일 = 자료의 마지막 날(오늘을 넘지 않는다) — 수동 업로드라 «오늘»로 자르면 이번 주가 빈다 */
-  const asOf=GST.ops.asOf(R);
+  const asOf=asOfOf(R);
   const W=weeksOf(asOf), wIx=d=>{ const v=d.getTime(); for(let i=0;i<W.length;i++) if(v>=W[i].st.getTime()&&v<W[i].en.getTime()) return i; return -1; };
 
   /* 고장(BM) — 주간현황과 같은 규칙(v92·v115): 해외 = 수선실적 BM · 국내 = 원장(내적·한 사건 첫 줄). 원장이 비면 국내도 수선실적 BM. */
@@ -456,26 +513,44 @@ function compute(opSel){
   const warrIn=inst.filter(x=>isIn(x)&&x.warr==='IN').length;
   const warrSoon=inst.filter(x=>isIn(x)&&x.wd&&x.wd.getTime()>t0&&x.wd.getTime()<=t0+90*DAY);
   const repN=RISK.filter(r=>r.rep>0).length;
-  return {asOf, W, wIx, KR_ON, bm, pm, RISK, inst, groups, bmW, pmW, inN, runN, warrIn, warrSoon, repN};
+  return {asOf, W, wIx, KR_ON, bm, pm, RISK, inst, groups, bmW, pmW, inN, runN, warrIn, warrSoon, repN, okR};
 }
 
 /* ===== 그리기 ===== */
 let D=null, DS=null;   // DS = 고른 운영단위만 본 계산(안 골랐으면 D 와 같다)
 function render(){
   if(!RAW) return;
+  if(S.view!=='exec'&&S.cc){ S.cc=''; }   // 나라 지도는 전사 요약에만 있다 — 다른 보기에서는 풀어 둔다(계산 «전»에)
   D=compute();
-  if(S.op&&!D.groups.find(g=>g.op===S.op)) S.op=null;   // 구분·나라를 바꿔 그 운영단위가 빠졌으면 전체로
+  if(S.op&&!D.groups.find(g=>g.op===S.op)&&opsList().indexOf(S.op)<0) S.op=null;   // 구분·나라를 바꿔 그 운영단위가 빠졌으면 전체로
   DS=S.op?compute(S.op):D;
+  /* 목표 대비 한 줄용 지표(GST.metrics — 옛 홈과 같은 식) · 카드와 같은 범위(구분·나라·운영단위) */
+  DS.M=GST.metrics.one(RAW, DS.asOf, x=>DS.okR(x.region,x), {actions:ACTS||undefined});
+  H=hcompute(hsc());   // 운영 관리·사이트별·확인 사항(목표 미달·재고장·조치 기한)
+  document.querySelectorAll('#segView button').forEach(b=>{ const on=b.dataset.v===S.view; b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); });
+  document.querySelectorAll('[data-vw]').forEach(el=>{ el.hidden=el.dataset.vw.split(' ').indexOf(S.view)<0; });
+  fillScope();
+  document.getElementById('goTargets').hidden=!(GST.isAdmin&&GST.isAdmin());
+  drawBanners();
   if(S.op) S.sel=S.op;
   if(!S.sel||!D.groups.find(g=>g.op===S.sel)) S.sel=D.groups.length?D.groups[0].op:null;
     /* 머리에는 날짜만 — 「(자료의 마지막 날) · W41」 같은 설명은 두지 않는다(v172). 숫자의 뜻이 바뀌는 사실(국내 원장이 비어 수선실적으로 집계)은 ⚠ 하나로 · 누르면 내용 */
   const _asof=document.getElementById('asof');
-  _asof.innerHTML=esc(fmt(t('asof'),{d:GST.fmtD(D.asOf)}))+(D.KR_ON||S.region==='os'?'':' <button type="button" class="gst-warn" id="krWarn" title="'+esc(t('krFall'))+'" aria-label="'+esc(t('krFall'))+'">⚠</button>')
+  const past=!!(S.asOf&&D.asOf.getTime()<GST.ops.asOf(RAW).getTime());
+  _asof.innerHTML='<button type="button" class="hb-asofb'+(past?' past':'')+'" id="asofBtn" title="'+esc(t('asof_pick'))+'" aria-haspopup="dialog">'+esc(fmt(t('asof'),{d:GST.fmtD(D.asOf)}))+'<span aria-hidden="true">▾</span></button>'
+    +(past?' <button type="button" class="hb-asofx" id="asofX" title="'+esc(t('asof_latest'))+'">'+esc(t('asof_latest'))+'</button> <button type="button" class="gst-warn" id="pastWarn" title="'+esc(t('asof_state'))+'" aria-label="'+esc(t('asof_state'))+'">⚠</button>':'')
+    +(D.KR_ON||S.region==='os'?'':' <button type="button" class="gst-warn" id="krWarn" title="'+esc(t('krFall'))+'" aria-label="'+esc(t('krFall'))+'">⚠</button>')
     /* 고른 운영단위 칩 — 위 KPI 카드와 아래 분포가 «지금 무엇만 보고 있는지» 말한다. ✕ 로 전체로 돌아간다 */
     +(S.op?' <button type="button" class="hb-scope" id="scopeX" title="'+esc(t('scopeX'))+'" aria-label="'+esc(t('scopeX'))+'"><b>'+esc(short(S.op))+'</b><span aria-hidden="true">✕</span></button>':'');
   const _sx=document.getElementById('scopeX'); if(_sx) _sx.onclick=()=>{ S.op=null; render(); };
   const _kw=document.getElementById('krWarn'); if(_kw) _kw.onclick=()=>GST.rowsModal('⚠', [t('l_desc')], [[t('krFall')]]);
-  drawKpis(); drawTicker(); drawSignals(); drawMap(); drawSel(); drawQueue(); drawHeat();
+  const _pw=document.getElementById('pastWarn'); if(_pw) _pw.onclick=()=>GST.rowsModal('⚠', [t('l_desc')], [[t('asof_state')]]);
+  document.getElementById('asofBtn').onclick=asofOpen;
+  const _ax=document.getElementById('asofX'); if(_ax) _ax.onclick=()=>{ S.asOf=null; render(); };
+  drawKpis(); drawTicker();
+  if(S.view==='exec'){ drawSignals(); drawMap(); drawSel(); }
+  if(S.view!=='field') { drawQueue(); drawHeat(); }
+  drawBody();
   try{ GST.boot && GST.boot.rendered(); }catch(e){}   // 셸의 부팅 화면이 걷힐 신호(v171)
   try{ window.parent!==window && window.parent.postMessage({type:'gst-state',state:''},'*'); }catch(e){}
 }
@@ -517,9 +592,14 @@ function drawKpis(){
     {id:'dq',  l:t('k_dq'),  v:dq.length, u:'', st:dq.some(x=>x.sev==='bad')?'bad':dq.length?'warn':'ok', d:esc(dq.length?t('k_dq_d'):t('k_dq_none')), sp:null}
   ];
   const box=document.getElementById('kpis');
+  /* 목표 대비 한 줄(v178 · 옛 홈의 판정 그대로 — GST.targets.pick/judge) — 목표가 하나도 없으면 줄을 안 단다(«목표 미설정» 넷이 늘어서면 소음이다) */
+  const TG={run:'run_rate', bm:'bm_per100', pm:'pm_ratio', risk:'repeat14'}, anyT=GST.targets.rows.length>0, tsc=tgtSc(hsc());
+  const tgl=id=>{ const mt=TG[id]; if(!mt||!anyT||!X.M) return '';
+    const Y=GST.kpiText({metric:mt, m:X.M.m[mt], t:GST.targets.pick(mt, tsc)}, LANG);
+    return '<span class="tg '+(Y.hasT?Y.st:'none')+'" data-m="'+mt+'" data-v="'+esc(Y.val)+'" data-st="'+esc(Y.st)+'" data-t="'+esc(Y.tline)+'" data-d="'+esc(Y.dv?Y.dv+' '+Y.dvs:'')+'" title="'+esc(Y.desc)+'"><i class="ds-dot '+(Y.hasT?Y.st:'')+'" aria-hidden="true"></i><span class="nm">'+esc(Y.name)+'</span> <b>'+esc(Y.val+Y.unit)+'</b> · '+esc(Y.tline)+'</span>'; };
   box.innerHTML=K.map(k=>'<button type="button" class="hb-kpi" data-k="'+k.id+'"><span class="l"><span class="hb-dot '+k.st+'"></span>'+esc(k.l)+'</span>'
     +'<span class="row"><span class="v"><span class="num" data-to="'+k.v+'">'+nf(REDUCE?k.v:0)+'</span><small>'+esc(k.u)+'</small></span>'+(k.sp||'')+'</span>'
-    +'<span class="d">'+k.d+'</span></button>').join('');
+    +'<span class="d">'+k.d+'</span>'+tgl(k.id)+'</button>').join('');
   countUp(box);
   box.querySelectorAll('.hb-kpi').forEach(b=>b.onclick=()=>kpiOpen(b.dataset.k));
 }
@@ -576,7 +656,25 @@ const CTY={ko:{KOREA:'한국',TAIWAN:'대만',CHINA:'중국',USA:'미국',JAPAN:
   zh:{KOREA:'韩国',TAIWAN:'台湾',CHINA:'中国',USA:'美国',JAPAN:'日本',SINGAPORE:'新加坡',EUROPE:'欧洲'},
   ja:{KOREA:'韓国',TAIWAN:'台湾',CHINA:'中国',USA:'米国',JAPAN:'日本',SINGAPORE:'シンガポール',EUROPE:'欧州'}};
 function ctyName(c){ return (CTY[LANG]||CTY.ko)[c]||c||''; }
-function pick(op){ S.sel=op; S.op=op; render(); }   // 신호등·상태 띠·지도 원 어디서 골라도 같은 일 — KPI·분포·상세가 그 운영단위로
+function pick(op){ S.sel=op; S.op=op; render(); }
+function asofOpen(){
+  let p=document.getElementById('asofPop'); if(p){ p.remove(); return; }
+  const last=GST.fmtD(GST.ops.asOf(RAW)), cur=GST.fmtD(D.asOf), b=document.getElementById('asofBtn').getBoundingClientRect();
+  p=document.createElement('div'); p.id='asofPop'; p.className='hb-asofpop'; p.setAttribute('role','dialog');
+  p.style.left=Math.max(8,b.left)+'px'; p.style.top=(b.bottom+6+window.scrollY)+'px';
+  p.innerHTML='<label>'+esc(t('asof_pick'))+'<input type="date" id="asofIn" max="'+last+'" value="'+cur+'"></label>'
+    +'<div class="r"><button type="button" class="hb-btn sm ghost" id="asofLatest">'+esc(t('asof_latest'))+' ('+esc(last)+')</button><button type="button" class="hb-btn sm pri" id="asofOk">'+esc(t('asof_apply'))+'</button></div>';
+  document.body.appendChild(p);
+  const done=v=>{ p.remove(); document.removeEventListener('pointerdown', away, true); if(v!==undefined){ S.asOf=v; render(); } };
+  const away=e=>{ if(!p.contains(e.target)&&e.target.id!=='asofBtn') done(); };
+  document.addEventListener('pointerdown', away, true);
+  p.querySelector('#asofLatest').onclick=()=>done(null);
+  p.querySelector('#asofOk').onclick=()=>{ const v=p.querySelector('#asofIn').value; if(!v) return done(null);
+    const d=GST.toDate(v); done(d&&GST.fmtD(d)<last?d:null); };
+  p.querySelector('#asofIn').onkeydown=e=>{ if(e.key==='Enter') p.querySelector('#asofOk').click(); if(e.key==='Escape') done(); };
+  setTimeout(()=>{ try{ p.querySelector('#asofIn').focus(); }catch(e){} },0);
+}
+function setView(v){ if(!/^(exec|lead|field)$/.test(v)) return; S.view=v; render(); }   // 신호등·상태 띠·지도 원 어디서 골라도 같은 일 — KPI·분포·상세가 그 운영단위로
 
 /* 점지도(폴백) — 모양 파일(assets/geo)을 못 읽을 때만. 원은 버튼(키보드로도 고른다) */
 function drawDots(){
@@ -800,19 +898,24 @@ function drawSel(){
 }
 function drawQueue(){
   const box=document.getElementById('queue'), adm=GST.isAdmin&&GST.isAdmin();
-  const items=[];
-  D.RISK.slice(0,5).forEach(r=>items.push({sev:r.rep?'bad':'warn', tag:t('q_risk'), title:r.label+' · '+short(r.site), sub:GST.riskWhy(r), go:()=>GST.goTab&&GST.goTab('fault'),
+  /* 확인 사항 = 옛 홈의 «이번 주 확인 사항»(목표 미달 · 재고장 · 조치 기한) + 이 화면의 «처리할 일»(고장 위험 · 자료 결함) — 한 목록 · 같은 신호(ref)는 한 줄 */
+  const items=[], seen={};
+  const push=q=>{ if(q.ref){ if(seen[q.ref]) return; seen[q.ref]=1; } items.push(q); };
+  (H?decisions(H):[]).forEach(q=>push(Object.assign({}, q, { go:(q.op&&q.kind==='manual')?()=>pick(q.op):(q.go?()=>GST.goTab&&GST.goTab(q.go):null) })));
+  D.RISK.slice(0,5).forEach(r=>push({sev:r.rep?'bad':'warn', tag:t('q_risk'), title:r.label+' · '+short(r.site), sub:GST.riskWhy(r), go:()=>GST.goTab&&GST.goTab('fault'),
     kind:'risk', ref:'risk:'+r.key, op:r.site, page:'fault'}));
-  dqItems().slice(0,5).forEach(d=>items.push({sev:d.sev==='bad'?'bad':'warn', tag:t('q_dq'), title:d.label, sub:(d.page||'')+(d.n!=null?' · '+nf(d.n):''),
+  dqItems().slice(0,5).forEach(d=>push({sev:d.sev==='bad'?'bad':'warn', tag:t('q_dq'), title:d.label, sub:(d.page||'')+(d.n!=null?' · '+nf(d.n):''),
     go:adm?()=>window.open('https://gstcsglobal-cloud.github.io/edit/?tab=dq&fix='+encodeURIComponent(d.page+'.'+d.key),'gstEdit'):null,
     kind:'dq', ref:'dq:'+d.page+'.'+d.key, page:d.page}));
+  if(!GST.targets.rows.length&&adm&&GST.targets.why!=='no_table') items.unshift({sev:'', tag:t('tag_tgt'), title:t('d_set'), sub:t('noTgt'), go:goTargets});
+  items.splice(12);
   document.getElementById('qS').textContent=t('q_s');
   if(!items.length){ box.innerHTML='<div class="hb-empty">'+esc(t('q_none'))+'</div>'; return; }
   const can=GST.actCan&&GST.actCan();
   box.innerHTML=items.map((q,i)=>{ const a=ACT[q.ref];
     const side=a?'<button type="button" class="hb-take has" data-open="'+i+'" title="'+esc(t('q_open'))+'">'+esc(t('q_taken'))+' · <b>'+esc(t('st_'+a.status)||a.status)+'</b></button>'
-      :(can?'<button type="button" class="hb-take" data-take="'+i+'">+ '+esc(t('q_take'))+'</button>':'');
-    return '<div class="hb-qr"><button type="button" class="hb-q" data-q="'+i+'"'+(q.go?'':' disabled')+'><span class="hb-sev '+q.sev+'">'+esc(q.tag)+'</span>'
+      :(can&&q.ref&&q.kind?'<button type="button" class="hb-take" data-take="'+i+'">+ '+esc(t('q_take'))+'</button>':'');
+    return '<div class="hb-qr"><button type="button" class="hb-q" data-q="'+i+'"'+(q.go?'':' disabled')+'><span class="hb-sev '+(q.sev||'')+'">'+esc(q.tag)+'</span>'
       +'<span class="t"><b>'+esc(q.title)+'</b><span>'+esc(q.sub)+'</span></span></button>'+side+'</div>'; }).join('');
   box.querySelectorAll('.hb-q').forEach(b=>{ const q=items[+b.dataset.q]; if(q.go) b.onclick=q.go; });
   box.querySelectorAll('[data-take]').forEach(b=>b.onclick=()=>takeAct(items[+b.dataset.take], b));
@@ -837,6 +940,234 @@ function drawHeat(){
     GST.rowsModal(r.k+' · '+W[i].label, BM_COLS(), bmRows(r.list.filter(x=>D.wIx(x.d)===i))); });
 }
 
+/* ===== 옛 «홈»에서 옮겨 온 것 (v178 · 홈 + 글로벌 현황 합치기) =====
+   숫자는 옛 홈과 같은 식이다 — GST.metrics(→ GST.ops) · GST.targets.pick/judge. 이 화면의 KPI 카드(D·DS)와 같은 범위를 본다.
+   H = 운영 관리·사이트별·확인 사항·브리핑이 쓰는 계산(옛 홈의 D). ⚠ 브리핑(brief_put)은 옛 홈과 «같은 내용»을 남긴다 — 챗봇이 그대로 읽는다. */
+let H=null;
+const scKey=sc=>sc.kind==='all'?'all':(sc.kind==='region'?'r:'+sc.v:'o:'+sc.v);
+/* 이 화면의 범위(구분 · 고른 운영단위) → 옛 홈의 범위 */
+function hsc(){ if(S.op) return {kind:'op', v:S.op}; if(S.region==='kr') return {kind:'region', v:KR}; if(S.region==='os') return {kind:'region', v:OS}; return {kind:'all', v:''}; }
+/* 목표 고르기의 범위 — 운영단위면 그 운영단위의 구분까지 같이 넘겨 «운영단위 > 구분 > 전사»로 거슬러 올라가게 */
+const tgtSc=sc=>sc.kind==='op'?{op:sc.v, region:GST.ORG.region(sc.v)||regionOfOp(sc.v)}:(sc.kind==='region'?{region:sc.v}:{});
+function regionOfOp(op){ if(!RAW) return ''; const x=RAW.INST.find(i=>i.op===op)||RAW.WK.find(i=>i.op===op); return x?x.region:''; }
+function opsList(){
+  if(!RAW) return [];
+  const asOf=GST.ops.asOf(RAW), M={};
+  RAW.INST.forEach(x=>{ if(!x.op||!GST.ops.isIn(x,asOf)) return; M[x.op]=(M[x.op]||0)+1; });
+  RAW.WK.forEach(x=>{ if(x.op&&M[x.op]==null) M[x.op]=0; });
+  const rg=S.region;
+  return Object.keys(M).filter(o=>rg==='all'||((GST.ORG.region(o)||regionOfOp(o))===(rg==='kr'?KR:OS))).sort((a,b)=>M[b]-M[a]||a.localeCompare(b));
+}
+/* 운영단위 고르기 — 신호등·지도 원과 같은 상태(S.op). 구분은 옆의 [전체·국내·해외]가 정한다 */
+function fillScope(){
+  const sel=document.getElementById('scope'), ops=opsList();
+  if(S.op&&ops.indexOf(S.op)<0) ops.unshift(S.op);
+  sel.innerHTML='<option value="">'+esc(t('sc_allop'))+'</option>'+ops.map(o=>'<option value="'+esc(o)+'">'+esc(short(o))+'</option>').join('');
+  sel.value=S.op||'';
+}
+/* 처음 뜰 화면 — 주소(?view=&op=&region=) > 저장된 설정(서버 → 이 PC) > 전사 요약.
+   ⚠ 옛 홈은 등급으로 골랐다(관리자 → 팀장). 합친 화면은 지도가 있는 «전사 요약»이 기본이다 — 사용자가 마음에 들어 한 첫 화면이 이것이다 */
+async function initPrefs(){
+  const q=new URLSearchParams(location.search);
+  let p=null; try{ p=await GST.prefs.load(); }catch(e){}
+  const qv=q.get('view'); S.viewFixed=!!qv;
+  S.view=(qv&&/^(exec|lead|field)$/.test(qv)&&qv)||(p&&/^(exec|lead|field)$/.test(p.view||'')&&p.view)||'exec';
+  const qop=q.get('op'), qr=q.get('region');
+  const setR=v=>{ S.region=v; document.querySelectorAll('#segRegion button').forEach(x=>x.classList.toggle('on',x.dataset.r===v)); };
+  if(qop) S.op=qop;
+  else if(qr) setR(qr==='kr'||qr===KR?'kr':qr==='os'||qr===OS?'os':'all');
+  else if(p&&p.op){ if(p.op.slice(0,2)==='r:') setR(p.op.slice(2)===KR?'kr':p.op.slice(2)===OS?'os':'all'); else S.op=p.op; }
+  if(S.op) S.sel=S.op;
+}
+function hcompute(sc){
+  sc=sc||hsc();
+  const R=RAW, asOf=asOfOf(R), ok=GST.metrics.okOf(sc);
+  const one=GST.metrics.one(R, asOf, ok, {actions:ACTS||undefined});
+  const okOps=sc.kind==='region'?ok:null;
+  const by=GST.metrics.by(R, asOf, x=>x.op||'—', okOps, {actions:ACTS||undefined});
+  const W=by.W;
+  const rows=Object.values(by.G).filter(g=>g.inN||g.bm4||g.pm4).map(g=>{
+    const sc2={op:g.k, region:GST.ORG.region(g.k)||regionOfOp(g.k)};
+    const J={}; let worst=null; const rk={bad:0,warn:1,ok:2};
+    ['run_rate','bm_per100','pm_ratio','repeat14'].forEach(mt=>{ const tg=GST.targets.pick(mt, sc2), st=GST.targets.judge(mt, g.m[mt].v, tg);
+      J[mt]={t:tg, st:st}; if(st&&(worst==null||rk[st]<rk[worst])) worst=st; });
+    return {g, sc:sc2, J, st:worst};
+  });
+  const rk={bad:0,warn:1,ok:2,null:3};
+  rows.sort((a,b)=>rk[a.st]-rk[b.st]||(b.g.m.bm_per100.v||0)-(a.g.m.bm_per100.v||0)||b.g.inN-a.g.inN);
+  const notRun=R.INST.filter(x=>(!ok||ok(x))&&GST.ops.isIn(x,asOf)&&!GST.ops.isRun(x,asOf));
+  return {sc, asOf, W, one, rows, notRun, KR_ON:R.KRA.length>0};
+}
+function drawBanners(){
+  const box=document.getElementById('banners'), adm=GST.isAdmin&&GST.isAdmin(), out=[];
+  /* 목표 표 사정은 관리자에게만 — 설정할 사람만 알면 된다(설명 표시를 켰을 때 · v172) */
+  if(GST.targets.why==='no_table'&&adm) out.push('<div class="ds-banner x"><span>'+esc(t('noTbl'))+'</span></div>');
+  else if(!GST.targets.rows.length&&GST.targets.why!=='no_table'&&adm) out.push('<div class="ds-banner x"><span>'+esc(t('noTgt'))+' '+esc(t('noTgtAdm'))+'</span></div>');
+  box.innerHTML=out.join('');
+}
+function overdue(sc){
+  if(!ACTS) return [];
+  const ok=GST.metrics.okOf(sc||hsc()), now=new Date(), today=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate());
+  return ACTS.filter(a=>{ const x={op:a.op||'', region:GST.ORG.region(a.op||'')}; if(ok&&!ok(x)) return false; const d=a.due&&GST.toDate(a.due); return d&&d.getTime()<today; });
+}
+function meter(mt, v, tg, st, max){
+  if(v==null) return '<span class="ds-note">—</span>';
+  const pv=Math.max(0,Math.min(100,v/max*100));
+  return '<div style="display:flex;align-items:center;gap:8px"><div class="ds-meter" style="flex:1"><i class="'+(st||'')+'" style="width:'+pv.toFixed(1)+'%"></i>'
+    +(tg?'<b style="left:'+Math.max(0,Math.min(100,tg.target/max*100)).toFixed(1)+'%"></b>':'')+'</div><span style="min-width:44px;text-align:right">'+esc(GST.v2fmt(mt,v))+'</span></div>';
+}
+function cell(mt, r){ const m=r.g.m[mt], j=r.J[mt]; return '<span class="'+(j.st?'ds-kpi-t '+j.st:'')+'">'+esc(GST.v2fmt(mt,m.v))+esc(m.v==null?'':GST.v2unit(mt))+'</span>'; }
+function drawOps(){
+  const box=document.getElementById('cOps'), rows=H.rows;
+  const maxBm=Math.max(0.01, ...rows.map(r=>Math.max(r.g.m.bm_per100.v||0, r.J.bm_per100.t?r.J.bm_per100.t.target:0)))*1.15;
+  let h='<h2>'+esc(t('opsT'))+'<span class="s x">'+esc(t('opsS'))+'</span></h2>';
+  if(!rows.length){ box.innerHTML=h+'<div class="ds-empty">'+esc(t('none'))+'</div>'; return; }
+  h+='<div class="ds-tbl-wrap"><table class="ds-tbl"><thead><tr><th>'+esc(t('c_op'))+'</th><th>'+esc(t('c_st'))+'</th><th class="n">'+esc(t('c_in'))+'</th><th class="n">'+esc(t('c_run'))+'</th><th style="min-width:160px">'+esc(t('c_bm'))+'</th><th class="n">'+esc(t('c_pm'))+'</th><th class="n">'+esc(t('c_rep'))+'</th></tr></thead><tbody>';
+  rows.forEach(r=>{ const on=S.op===r.g.k;
+    h+='<tr class="click'+(on?' on':'')+'" data-op="'+esc(r.g.k)+'" tabindex="0"><td><b>'+esc(short(r.g.k))+'</b></td>'
+      +'<td><span class="ds-pill '+(r.st||'')+'">'+esc(v2t('st_'+(r.st||'none')))+'</span></td>'
+      +'<td class="n">'+nf(r.g.inN)+'</td><td class="n">'+cell('run_rate',r)+'</td>'
+      +'<td>'+meter('bm_per100', r.g.m.bm_per100.v, r.J.bm_per100.t, r.J.bm_per100.st, maxBm)+'</td>'
+      +'<td class="n">'+cell('pm_ratio',r)+'</td><td class="n">'+cell('repeat14',r)+'</td></tr>'; });
+  box.innerHTML=h+'</tbody></table></div>';
+  box.querySelectorAll('tr[data-op]').forEach(tr=>{ const go=()=>pick(tr.dataset.op);
+    tr.onclick=go; tr.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }; });
+}
+/* 이번 주 확인 사항(옛 홈) — 새로 판정하지 않는다: 목표 판정 · 재고장 · 조치 기한. H0·L 을 받는 이유 — 챗봇 브리핑이 «전사»와 한국어로 같은 목록을 만든다 */
+function decisions(H0, L){
+  H0=H0||H; L=L||LANG;
+  const tr=k=>(T[L]&&T[L][k]!=null)?T[L][k]:T.ko[k], vt=(k,o)=>GST.v2t(k,o,L);
+  const out=[], rk={bad:0,warn:1};
+  H0.rows.filter(r=>r.st==='bad'||r.st==='warn').forEach(r=>{
+    ['bm_per100','run_rate','pm_ratio','repeat14'].forEach(mt=>{ const j=r.J[mt]; if(j.st!=='bad'&&j.st!=='warn') return;
+      const v=r.g.m[mt].v;
+      out.push({sev:j.st, tag:tr('tag_tgt'), go:mt==='bm_per100'||mt==='repeat14'?'fault':'hub', kind:'manual', ref:'tgt:'+r.g.k+':'+mt, page:mt==='bm_per100'||mt==='repeat14'?'fault':'hub',
+        title:fmt(tr('d_tgt'),{op:short(r.g.k), m:vt('m_'+mt), v:GST.v2fmt(mt,v)+GST.v2unit(mt,L), t:GST.v2gap(mt,v,j.t,L)}),
+        sub:vt('tgt',{v:GST.v2fmt(mt,j.t.target)+GST.v2unit(mt,L)+' '+vt(j.t.dir==='ge'?'tgt_ge':'tgt_le')}), op:r.g.k}); }); });
+  out.sort((a,b)=>rk[a.sev]-rk[b.sev]);
+  H0.one.risk.filter(r=>r.rep>0).slice(0,3).forEach(r=>out.push({sev:'warn', tag:tr('tag_rep'), go:'fault', kind:'risk', ref:'risk:'+r.key, page:'fault', op:r.site,
+    title:fmt(tr('d_rep'),{eq:r.label, op:short(r.site), n:r.rep, d:GST.RISK_W.repDays}), sub:GST.riskWhy(r)}));
+  const od=overdue(H0.sc); if(od.length) out.push({sev:'bad', tag:tr('tag_act'), go:'action', ref:'', title:fmt(tr('d_over'),{n:od.length}), sub:od.slice(0,2).map(a=>a.title).join(' · ')});
+  return out;
+}
+function drawAct(){
+  const box=document.getElementById('cAct');
+  const od=overdue();
+  let h='<h2>'+esc(t('actT'))+'<span class="s x">'+esc(t('actS'))+'</span>'+(od.length?'<span class="s"><b style="color:var(--bad)">'+esc(fmt(t('d_over'),{n:od.length}))+'</b></span>':'')+'<button type="button" class="ds-btn sm ghost r" id="goAct">'+esc(t('go_action'))+' →</button></h2>';
+  if(ACTS==null){ box.innerHTML=h+'<div class="ds-empty">'+esc(ACT_FAIL?t('a_fail'):t('none'))+'</div>'; bindGo(box); return; }
+  const ok=GST.metrics.okOf(hsc()), now=new Date(), today=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate());
+  const L=ACTS.filter(a=>!ok||ok({op:a.op||'', region:GST.ORG.region(a.op||'')})).map(a=>{ const d=a.due&&GST.toDate(a.due); return Object.assign({late:!!(d&&d.getTime()<today), dd:d}, a); })
+    .sort((a,b)=>(b.late-a.late)||((a.sev==='bad'?0:1)-(b.sev==='bad'?0:1))||((a.dd?a.dd.getTime():9e15)-(b.dd?b.dd.getTime():9e15)));
+  if(!L.length){ box.innerHTML=h+'<div class="ds-empty">'+esc(t('a_none'))+'</div>'; bindGo(box); return; }
+  h+='<ul class="ds-list">'+L.slice(0,8).map(a=>'<li><button type="button" class="ds-row act"><span class="ds-tag '+(a.late?'bad':(a.sev==='bad'?'bad':'warn'))+'">'+esc(t('st_'+a.status)||a.status)+'</span>'
+    +'<span class="t"><b>'+esc(a.title)+'</b><span>'+esc([short(a.op), a.assignee?fmt(t('a_who'),{w:a.assignee}):t('a_nowho')].filter(Boolean).join(' · '))+'</span></span>'
+    +'<span class="r" style="'+(a.late?'color:var(--bad);font-weight:600':'')+'">'+esc(a.due?fmt(t('a_due'),{d:a.due}):t('a_nodue'))+'</span></button></li>').join('')+'</ul>'
+    +(L.length>8?'<div class="ds-note">'+esc(fmt(t('more'),{n:L.length-8}))+'</div>':'');
+  box.innerHTML=h; bindGo(box);
+  box.querySelectorAll('.ds-row.act').forEach(b=>b.onclick=()=>GST.goTab&&GST.goTab('action'));
+}
+function bindGo(box){ const b=box.querySelector('#goAct'); if(b) b.onclick=()=>GST.goTab&&GST.goTab('action'); }
+function drawRisk(){
+  const box=document.getElementById('cRisk'), L=H.one.risk.slice(0,10);
+  let h='<h2>'+esc(t('riskT'))+'<span class="s x">'+esc(t('riskS'))+'</span><button type="button" class="ds-btn sm ghost r" id="goF">'+esc(t('go_fault'))+' →</button></h2>';
+  h+=L.length?'<ul class="ds-list">'+L.map(r=>'<li><button type="button" class="ds-row" disabled><span class="ds-tag '+(r.rep?'bad':'warn')+'">'+r.score+'</span>'
+      +'<span class="t"><b>'+esc(r.label)+' · '+esc(short(r.site))+'</b><span>'+esc(GST.riskWhy(r))+'</span></span></button></li>').join('')+'</ul>'
+    :'<div class="ds-empty">'+esc(t('none'))+'</div>';
+  box.innerHTML=h; box.querySelector('#goF').onclick=()=>GST.goTab&&GST.goTab('fault');
+}
+function drawBm(){
+  const box=document.getElementById('cBm'), wk=H.W[11], L=H.one.rows.bm4.filter(x=>x.d>=wk.st&&x.d<wk.en).sort((a,b)=>b.d-a.d);
+  let h='<h2>'+esc(t('bmT'))+'<span class="s">'+esc(wk.label)+' · '+L.length+'</span></h2>';
+  h+=L.length?'<ul class="ds-list">'+L.slice(0,8).map(x=>'<li><button type="button" class="ds-row" disabled><span class="ds-tag">'+esc(GST.fmtD(x.d).slice(5))+'</span>'
+      +'<span class="t"><b>'+esc(x.code||x.sn||'—')+(x.campus?' · '+esc(x.campus):'')+'</b><span>'+esc(x.desc||(x.src==='kr'?t('src_kr'):t('src_wk')))+'</span></span></button></li>').join('')+'</ul>'
+      +(L.length>8?'<button type="button" class="ds-btn sm ghost" id="bmAll">'+esc(fmt(t('more'),{n:L.length-8}))+'</button>':'')
+    :'<div class="ds-empty">'+esc(t('none'))+'</div>';
+  box.innerHTML=h; const b=box.querySelector('#bmAll'); if(b) b.onclick=()=>GST.rowsModal(t('bmT')+' · '+wk.label, BM_COLS(), bmRows(L));
+}
+function drawWarr(){
+  /* 유상 전환 = 좋은 소식(제4원칙) — 경고색 태그를 쓰지 않는다(주색) */
+  const box=document.getElementById('cWarr'), L=H.one.warrSoon.slice().sort((a,b)=>a.wd-b.wd);
+  let h='<h2>'+esc(t('warrT'))+'<span class="s">'+L.length+'</span></h2>';
+  h+=L.length?'<ul class="ds-list">'+L.slice(0,8).map(x=>'<li><button type="button" class="ds-row" disabled><span class="ds-tag">'+esc(GST.fmtD(x.wd).slice(5))+'</span>'
+      +'<span class="t"><b>'+esc(x.code||x.sn)+'</b><span>'+esc([x.campus, x.model].filter(Boolean).join(' · '))+'</span></span></button></li>').join('')+'</ul>'
+      +(L.length>8?'<button type="button" class="ds-btn sm ghost" id="wAll">'+esc(fmt(t('more'),{n:L.length-8}))+'</button>':'')
+    :'<div class="ds-empty">'+esc(t('none'))+'</div>';
+  box.innerHTML=h; const b=box.querySelector('#wAll');
+  if(b) b.onclick=()=>GST.rowsModal(t('warrT'), [t('l_wd'),t('l_campus'),t('l_eq'),t('l_sn'),t('l_state')], L.map(x=>[GST.fmtD(x.wd),x.campus,x.code,x.sn,x.stateRaw]));
+}
+function drawPick(){
+  const box=document.getElementById('cPick'), ops=opsList();
+  box.innerHTML='<h2>'+esc(t('pickT'))+'</h2><div class="ds-note x">'+esc(t('pickS'))+'</div><div style="display:flex;flex-wrap:wrap;gap:8px">'
+    +ops.map(o=>'<button type="button" class="ds-btn" data-op="'+esc(o)+'">'+esc(short(o))+'</button>').join('')+'</div>';
+  box.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>pick(b.dataset.op));
+}
+function drawTrend(){
+  const box=document.getElementById('cTrend'), o=H.one, W=H.W, tg=GST.targets.pick('bm_per100', tgtSc(hsc()));
+  const tl=tg&&o.inN?tg.target*o.inN/100/4:null;
+  const mx=Math.max(1, ...o.bmW, tl||0)*1.15, Wd=600, Ht=110, pad=0, bw=(Wd-pad)/12;
+  let svg='<svg class="ds-wkbars" viewBox="0 0 '+Wd+' '+Ht+'" preserveAspectRatio="none" role="img" aria-label="'+esc(t('trendT'))+'">';
+  o.bmW.forEach((v,i)=>{ const h=(v/mx)*(Ht-4), x=pad+i*bw+bw*0.18, cls=i===11?'b cur':(tl!=null&&v>tl?'b hot':'b');
+    svg+='<rect class="'+cls+'" x="'+x.toFixed(1)+'" y="'+(Ht-pad-h).toFixed(1)+'" width="'+(bw*0.64).toFixed(1)+'" height="'+Math.max(0,h).toFixed(1)+'" rx="2"><title>'+esc(W[i].label+' · '+v)+'</title></rect>';
+  });
+  if(tl!=null){ const y=Ht-(tl/mx)*(Ht-4); svg+='<line class="tl" x1="'+pad+'" x2="'+Wd+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" vector-effect="non-scaling-stroke"/>'; }
+  svg+='</svg>';
+  const lab='<div class="ds-wklab" style="padding-left:'+(pad/Wd*100).toFixed(2)+'%">'+W.map((w,i)=>'<span>'+(i%2===1||i===11?esc(w.label):'')+'</span>').join('')+'</div>';
+  box.innerHTML='<h2>'+esc(t('trendT'))+(tl!=null?'<span class="s x">'+esc(t('trendS'))+'</span>':'')
+    +'<button type="button" class="ds-btn sm ghost r" id="goSite2">'+esc(t('open_site'))+' →</button></h2>'+svg+lab;
+  box.querySelector('#goSite2').onclick=()=>{ try{ sessionStorage.setItem('gst_site_sel', S.op||''); }catch(e){} GST.goTab&&GST.goTab('site'); };
+}
+function goTargets(){
+  const u='https://gstcsglobal-cloud.github.io/targets/';
+  try{ window.open(u,'gstTargets'); }catch(e){ location.href=u; }
+}
+/* 운영 관리 · 사이트별 본문 — 옛 홈의 배치 그대로 */
+function drawBody(){
+  const B=document.getElementById('body');
+  if(S.view==='exec'){ B.innerHTML=''; return; }
+  if(S.view==='lead') B.innerHTML='<div class="ds-grid ds-g2e"><div class="ds-card" id="cAct"></div><div class="ds-card" id="cRisk"></div></div><div class="ds-card" id="cOps"></div>';
+  else B.innerHTML=!S.op?'<div class="ds-card" id="cPick"></div>'
+    :'<div class="ds-grid ds-g3"><div class="ds-card" id="cBm"></div><div class="ds-card" id="cRisk"></div><div class="ds-card" id="cWarr"></div></div><div class="ds-grid ds-g2e"><div class="ds-card" id="cAct"></div><div class="ds-card" id="cTrend"></div></div>';
+  const has=id=>document.getElementById(id);
+  if(has('cOps')) drawOps(); if(has('cAct')) drawAct(); if(has('cRisk')) drawRisk();
+  if(has('cBm')) drawBm(); if(has('cWarr')) drawWarr(); if(has('cTrend')) drawTrend(); if(has('cPick')) drawPick();
+}
+
+/* ===== 챗봇 브리핑 스냅샷 (setup-27 7절 · kakao-bot/brief.js 가 읽는다) — 옛 홈에서 그대로 옮겼다 =====
+   챗봇은 판정을 «안 한다» — 여기서 계산한 문장과 숫자를 범위별 한 줄로 남기고, 챗봇은 글로 옮기기만 한다(판정 사본 금지 · v109).
+   남기는 조건 넷 — ① 조치 사항을 쓸 수 있는 사람(GST.actCan) ② 읽기 실패가 없다 ③ 기간 기본창의 부분본이 아니다 ④ 30분 안에 다시 남기지 않는다 */
+const BRIEF_EVERY=30*60*1000;
+function briefPayload(sc){
+  const H0=hcompute(sc), o=H0.one, tsc=tgtSc(sc);
+  const kp=['run_rate','bm_per100','pm_ratio','repeat14','act_overdue'].filter(mt=>mt!=='act_overdue'||ACTS).map(mt=>{
+    const X=GST.kpiText({metric:mt, m:o.m[mt], t:GST.targets.pick(mt, tsc)}, 'ko');
+    return {k:mt, name:X.name, win:(mt==='bm_per100'||mt==='pm_ratio')?GST.v2t('w4',null,'ko'):'', val:X.val, unit:X.unit, st:X.st, tgt:X.tline, dv:X.dv, dvs:X.dv?X.dvs:''}; });
+  const dec=decisions(H0, 'ko').slice(0,5).map(q=>({sev:q.sev, tag:q.tag, title:q.title}));
+  const krIn=sc.kind==='all'||(sc.kind==='region'&&sc.v===KR)||(sc.kind==='op'&&(GST.ORG.region(sc.v)||regionOfOp(sc.v))===KR);
+  return {v:1, scope:scKey(sc), name:sc.kind==='all'?T.ko.sc_all:(sc.kind==='region'?(sc.v===KR?T.ko.sc_kr:sc.v===OS?T.ko.sc_os:sc.v):short(sc.v)),
+    as_of:GST.fmtD(H0.asOf), w4:H0.W[8].label+'~'+H0.W[11].label, kpis:kp, dec:dec, kr_fall:!H0.KR_ON&&krIn, tgt_n:GST.targets.rows.length, core:GST.VER||null};
+}
+async function briefSave(){
+  try{
+    if(!RAW||RAW.fails.length) return 'fail';
+    if(!(GST.actCan&&GST.actCan())) return 'who';
+    if(GST._bfOn&&Object.keys(GST._bfOn).length) return 'partial';
+    if(S.asOf) return 'past';   // 과거 기준일로 보는 중이면 남기지 않는다 — 챗봇 브리핑은 «최신» 한 벌이다
+    const C=await GST._dbAuthed(); if(!C) return 'no_db';
+    const cur=hsc(), scs=[{kind:'all',v:''}]; if(cur.kind!=='all') scs.push(cur);
+    let n=0;
+    for(const sc of scs){
+      const pl=briefPayload(sc), mk='gst_brief_at:'+pl.scope;
+      let last=null; try{ last=JSON.parse(localStorage.getItem(mk)||'null'); }catch(e){}
+      if(last&&last.as_of===pl.as_of&&Date.now()-last.t<BRIEF_EVERY) continue;
+      const r=await C.rpc('brief_put',{p_scope:pl.scope, p_as_of:pl.as_of, p_payload:pl, p_ver:GST.VER||null});
+      if(r.error||!r.data||!r.data.ok){ console.warn('[hub] 브리핑 저장 안 됨', r.error||r.data); continue; }
+      try{ localStorage.setItem(mk, JSON.stringify({as_of:pl.as_of, t:Date.now()})); }catch(e){}
+      n++;
+    }
+    return n?'ok':'skip';
+  }catch(e){ console.warn('[hub] 브리핑 저장 실패', e); return 'fail'; }
+}
+
 /* ===== 틀 ===== */
 function status(s, err){ const e=document.getElementById('status'); e.textContent=s; e.classList.toggle('err',!!err); }
 function skel(on){ document.querySelectorAll('.hb-card,#kpis').forEach(e=>e.classList.toggle('hb-sk',!!on)); }
@@ -848,6 +1179,16 @@ function applyLang(){
 window.setLang=function(l){ if(T[l]){ LANG=l; applyLang(); } };
 document.getElementById('segRegion').addEventListener('click',e=>{ const b=e.target.closest('button[data-r]'); if(!b) return;
   S.region=b.dataset.r; document.querySelectorAll('#segRegion button').forEach(x=>x.classList.toggle('on',x===b)); S.sel=null; S.op=null; render(); });
+document.getElementById('segView').addEventListener('click',e=>{ const b=e.target.closest('button[data-v]'); if(b) setView(b.dataset.v); });
+document.getElementById('scope').addEventListener('change',e=>{ const v=e.target.value||null; S.op=v; if(v) S.sel=v; render(); });
+document.getElementById('goTargets').onclick=goTargets;
+document.getElementById('saveDef').onclick=async ()=>{
+  const b=document.getElementById('saveDef'); b.disabled=true;
+  const op=S.op||(S.region==='kr'?'r:'+KR:S.region==='os'?'r:'+OS:'');
+  const r=await GST.prefs.save({view:S.view, op:op, lang:LANG});
+  b.disabled=false;
+  GST.capToast ? GST.capToast(r.where==='server'?t('saved_srv'):t('saved_pc')) : status(r.where==='server'?t('saved_srv'):t('saved_pc'));
+};
 document.getElementById('segHeat').addEventListener('click',e=>{ const b=e.target.closest('button[data-h]'); if(!b) return;
   S.heat=b.dataset.h; document.querySelectorAll('#segHeat button').forEach(x=>x.classList.toggle('on',x===b)); drawHeat(); });
 document.getElementById('mapBack').onclick=leaveCountry;
@@ -859,11 +1200,12 @@ try{ new ResizeObserver(()=>{ cancelAnimationFrame(_rz); _rz=requestAnimationFra
 window.addEventListener('message',e=>{ if((e.data||{}).type==='gst-shown'&&D) requestAnimationFrame(()=>drawMap()); });
 /* 테마가 바뀌면 캔버스 점 색을 다시 칠한다 — 캔버스는 CSS 변수를 못 읽는다 */
 try{ new MutationObserver(()=>D&&(drawMap(),drawKpis())).observe(document.body,{attributes:true,attributeFilter:['class']}); }catch(e){}
-window.addEventListener('gst-role',()=>{ if(D) drawQueue(); });   // 등급이 늦게 오면 「담기」 단추를 그때 연다
+/* 등급이 «나중에» 온다 — 그때 관리자 단추·「담기」를 다시 정한다 */
+window.addEventListener('gst-role',()=>{ if(D) render(); });
 window.addEventListener('message',e=>{ const d=e.data||{}; if(d.type==='gst-lang'&&T[d.lang]){ LANG=d.lang; applyLang(); } });
 applyLang();
 /* 자동 새로고침·셸 「새로고침」·백필 완료가 부르는 이름(GST._softReload 는 window.loadData 를 찾는다) */
-window.loadData=load;
+window.loadData=load;   // 다시 읽으면 브리핑도 다시 남긴다(load 끝 · 30분에 한 번)
 load().catch(e=>{ console.error('[hub] 읽기 실패', e); skel(false); status((GST.failNote?GST.failNote(e):String(e&&e.message||e)), true); });
 GST.startAutoRefresh && GST.startAutoRefresh(30);
 </script>
