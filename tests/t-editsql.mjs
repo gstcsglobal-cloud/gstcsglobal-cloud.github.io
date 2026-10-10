@@ -267,7 +267,7 @@ begin perform t_as('boss@test.local');
   exception when others then perform t_ok(sqlerrm like 'locked_column%', '2-11 키 열은 못 바꾼다'); end;
   begin perform edit_update('sheet_wk', 0, u->>'hash', '{"no_such":"1"}'); perform t_ok(false, '2-12 없는 열');
   exception when others then perform t_ok(sqlerrm like 'bad_column%', '2-12 없는 열은 거절'); end;
-  begin perform edit_update('sheet_cip_f11', 0, 'x', '{}'); perform t_ok(false, '2-13 사전에 없는 표');
+  begin perform edit_update('sheet_abp', 0, 'x', '{}'); perform t_ok(false, '2-13 사전에 없는 표');
   exception when others then perform t_ok(sqlerrm like 'bad_table%', '2-13 사전에 없는 표는 거절'); end;
   u := edit_update('sheet_wk', 0, (edit_get('sheet_wk',0))->>'hash', '{"extra":{"CTC항목":"B","새 열":"x"}}');
   perform t_ok(u->'row'->'extra'->>'CTC항목' = 'B' and u->'row'->'extra'->>'새 열' = 'x', '2-14 extra(jsonb)도 고친다');
@@ -816,6 +816,13 @@ Left']);
   perform t_ok((select count(*) from information_schema.columns where table_name = 'sheet_cip_f16' and column_name in ('New Item Alpha', 'Gizmo Kit Left')) = 2, '14-7 표에 열이 생겼다');
   perform t_ok((select count(*) from sheet_edits) = e0 + 1 and exists(select 1 from sheet_edits where op = 'add_cols' and tbl = 'sheet_cip_f16' and edited_by = 'boss@test.local'), '14-8 이력 한 줄(누가 · 어느 표 · 무엇을)');
   perform t_ok(not has_function_privilege('anon', 'public.import_add_cols(text,text[])', 'EXECUTE') and has_function_privilege('authenticated', 'public.import_add_cols(text,text[])', 'EXECUTE'), '14-9 anon 불가 · authenticated 가능');
+  /* v159 — CIP 도 데이터 관리에서 고친다(_edit_key 에 id) · 더한 열도 그대로 고칠 수 있다 */
+  insert into sheet_cip_f16("NO", "New Item Alpha") values ('1', 'Not yet');
+  declare k bigint := (select max(id) from sheet_cip_f16); u jsonb; begin
+    u := edit_update('sheet_cip_f16', k, (edit_get('sheet_cip_f16', k))->>'hash', '{"New Item Alpha":"2026-05-06"}');
+    perform t_ok((u->>'ok')::boolean and (select "New Item Alpha" from sheet_cip_f16 where id = k) = '2026-05-06', '14-10 CIP 행을 데이터 관리에서 고친다(더한 항목 열 포함)');
+    perform t_ok(exists(select 1 from sheet_edits where tbl = 'sheet_cip_f16' and op = 'update' and row_key = k::text), '14-11 CIP 편집도 이력에 남는다');
+  end;
 end $$;
 `;
 
@@ -898,7 +905,7 @@ try {
   const oksC = outC.match(/T_OK [^\n]*/g) || [];
   (outC.match(/ERROR:[^\n]*/g) || []).forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
   oksC.forEach(() => pass++);
-  ok(oksC.length === 9, '[14] T_OK 가 ' + oksC.length + '개 — 기대 9개');
+  ok(oksC.length === 11, '[14] T_OK 가 ' + oksC.length + '개 — 기대 11개');
 } catch (e) {
   fail++; console.log('  ❌ ' + (e && e.message || e));
 } finally {
