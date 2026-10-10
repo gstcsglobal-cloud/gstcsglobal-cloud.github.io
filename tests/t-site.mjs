@@ -117,7 +117,7 @@ console.log('[3] 관제에서 넘어오기 — 고른 운영단위를 그대로 
 const ps = await ctx.newPage(); const pse = []; ps.on('pageerror', e => pse.push(e.message));
 await ps.goto(BASE + '/', { waitUntil:'domcontentloaded' }); await ps.waitForTimeout(3500);
 await ps.evaluate(() => { const o = document.getElementById('loginOverlay'); if (o) o.remove(); });
-await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(3000);   // v172 — 첫 탭은 «내 화면»이다
+await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(3000);   // v178 — 첫 탭이 글로벌 현황이다
 const hub = ps.frames().find(f => /\/hub\//.test(f.url()));
 await hub.click('#sigs .hb-sig[data-op*="WUHAN"]'); await hub.waitForTimeout(300);
 await hub.click('#goSite'); await ps.waitForTimeout(4500);
@@ -125,8 +125,8 @@ const site = ps.frames().find(f => /\/site\//.test(f.url()));
 const sel = site ? await site.evaluate(() => document.getElementById('opSel').value) : '';
 is(/WUHAN/.test(sel), '관제에서 우한을 골라 「사이트 상세」 → 사이트 화면이 우한으로 열린다 (' + sel + ')');
 const tabs = await ps.evaluate(() => ({ bar:Array.from(document.querySelectorAll('.tab')).map(t => t.dataset.id).join(','), more:document.getElementById('moreBtn').classList.contains('on') }));
-is(tabs.bar === 'home,hub,report,fault,pm,cip,scrubber,material,tco,hr' && tabs.more,
-  '셸 탭 — 사이트 상세는 탭 줄이 아니라 «더보기»로 열리고, 열려 있으면 더보기 단추가 켜진다 (v172 · ' + tabs.bar + ')');
+is(tabs.bar === 'hub,report,fault,pm,cip,scrubber,material,tco,hr' && tabs.more,
+  '셸 탭 — 사이트 상세는 탭 줄이 아니라 «더보기»로 열리고, 열려 있으면 더보기 단추가 켜진다 (v178 · 홈은 글로벌 현황에 합쳤다 · ' + tabs.bar + ')');
 is(pse.length === 0, 'JS 에러 0 (셸)' + (pse.length ? ' → ' + pse[0] : ''));
 await browser.close(); srv.close();
 console.log(fail ? `\n❌ t-site: ${pass} 통과 · ${fail} 실패` : `\n✅ t-site: ${pass}/${pass} 통과`);

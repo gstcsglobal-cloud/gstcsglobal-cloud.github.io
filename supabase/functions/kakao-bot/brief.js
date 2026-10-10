@@ -1,11 +1,11 @@
 /* ============================================================================
-   카카오 챗봇 「브리핑」 — 대시보드 «홈»이 남긴 스냅샷(brief_snap)을 글로 옮긴다
+   카카오 챗봇 「브리핑」 — 대시보드 «글로벌 현황»(옛 홈 · v178 에 합쳤다)이 남긴 스냅샷(brief_snap)을 글로 옮긴다
    (2단계 «제품화» · supabase/setup-27-targets.sql 7절 · docs/v2/PLAN.md 6절 ①)
    ----------------------------------------------------------------------------
    ⚠ 여기서 판정하지 않는다. 목표 대비·위험 설비·고장을 이 함수(Deno)에서 다시 세면 판정의 «네 번째 사본»이 된다
      (CLAUDE.md v109 — 원장을 챗봇에서 파싱하지 말 것 · 제2원칙). 숫자와 문장은 전부 스냅샷에 든 것 —
      대시보드의 GST.kpiText · decisions() 가 한국어로 만든 그 글 — 을 그대로 쓴다.
-   ⚠ «언제 계산한 것인지»를 언제나 적는다. 스냅샷은 사람이 «홈»을 열 때 갱신된다 — 오래됐으면 오래됐다고 말한다
+   ⚠ «언제 계산한 것인지»를 언제나 적는다. 스냅샷은 사람이 «글로벌 현황»을 열 때 갱신된다 — 오래됐으면 오래됐다고 말한다
      (v128: 읽기는 되는데 값이 옛날 것인 실패가 가장 설명하기 어렵다).
    순수 JS(타입 없음) — Deno(엣지펑션)와 Node(tests/t-brief.mjs)가 같은 파일을 읽는다.
    ============================================================================ */
@@ -28,13 +28,13 @@ function ageText(made, now) {
 /* row = {scope, as_of, payload, made_at} · note = 맨 앞에 붙일 한 줄(내 운영단위 것이 없어 전사를 보낼 때 등) */
 export function briefText(row, now = new Date(), note = '') {
   if (!row || !row.payload || typeof row.payload !== 'object')
-    return '아직 브리핑이 없습니다. 대시보드 「홈」을 한 번 열면 생성됩니다.';
+    return '아직 브리핑이 없습니다. 대시보드 「글로벌 현황」을 한 번 열면 생성됩니다.';
   const p = row.payload, head = [], kp = [], dec = [], tail = [];
   if (note) head.push(note);
   head.push('이번 주 브리핑 — ' + (p.name || '전사'));
   head.push((p.as_of || row.as_of || '-') + ' 기준 · ' + ageText(row.made_at, now) + ' 집계');
   const days = (now.getTime() - new Date(row.made_at).getTime()) / 864e5;
-  if (days > BRIEF_STALE_DAYS) head.push('⚠ ' + Math.round(days) + '일 전 집계된 브리핑입니다 — 대시보드 「홈」을 열면 최신 내용으로 갱신됩니다.');
+  if (days > BRIEF_STALE_DAYS) head.push('⚠ ' + Math.round(days) + '일 전 집계된 브리핑입니다 — 대시보드 「글로벌 현황」을 열면 최신 내용으로 갱신됩니다.');
   if (p.kr_fall) head.push('⚠ 국내 알람 원장이 비어 있어 국내 고장은 수선실적 BM으로 집계 중');
   (p.kpis || []).forEach(k => {
     const st = ST[k.st] ? '[' + ST[k.st] + '] ' : '';
@@ -42,7 +42,7 @@ export function briefText(row, now = new Date(), note = '') {
   });
   (p.dec || []).forEach((d, i) => dec.push((i + 1) + '. [' + d.tag + '] ' + d.title));
   if (!p.tgt_n) tail.push('설정된 목표가 없습니다 — 대시보드 「목표·기준」에서 설정하면 목표 대비로 판정됩니다.');
-  tail.push('자세한 내용: 대시보드 「홈」');
+  tail.push('자세한 내용: 대시보드 「글로벌 현황」');
   const build = (D, cut) => [].concat(head, [''], kp, [''], ['이번 주 확인 사항'], D.length ? D : ['이번 주 확인할 사항이 없습니다'],
     cut ? ['… 외 ' + cut + '건은 대시보드에서 확인하세요'] : [], [''], tail).join('\n');
   /* 길면 «확인 사항»을 뒤에서부터 줄인다 — 머리(기준일·나이)와 숫자는 끝까지 남긴다(그게 이 글의 뜻이다) */
@@ -54,7 +54,7 @@ export function briefText(row, now = new Date(), note = '') {
 const NO_TABLE = /does not exist|relation|schema cache|42P01|PGRST20[05]/i;
 
 /* svc = 서비스 키 클라이언트 · email = 인증된 카카오 사용자의 이메일.
-   범위 = 그 사람의 기본 운영단위(allowed_users.home_op — 「홈」에서 「기본 화면으로 설정」) · 없으면 전사. */
+   범위 = 그 사람의 기본 운영단위(allowed_users.home_op — 「글로벌 현황」에서 「기본 화면으로 설정」) · 없으면 전사. */
 export async function briefReply(svc, email, now = new Date()) {
   let scope = 'all';
   try {

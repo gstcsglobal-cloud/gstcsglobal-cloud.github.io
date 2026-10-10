@@ -21,16 +21,10 @@
   --accent:#2F6FED; --accent-soft:#EAF1FE; --accent-ink:#1D4ED8;
   --ok:#12873F; --warn:#B7670A; --bad:#D92D20;
   --ok-soft:#ECFDF3; --warn-soft:#FFF6E5; --bad-soft:#FEF3F2;
-  --accent-1:var(--accent); --accent-2:var(--accent); --accent-3:#7A5AF8; --accent-4:#D97706; --accent-5:#16A34A;
-  /* 옛 이름 → 새 토큰 */
-  --bg-gradient:var(--bg); --title-gradient:none;
-  --glass:var(--surface); --glass-border:var(--line); --glass-hover:var(--surface-2);
+  --accent-3:#7A5AF8; --accent-4:#D97706; --accent-5:#16A34A;
   --card-shadow:0 1px 2px rgba(16,24,40,.05);
-  --bg1:var(--bg); --bg2:var(--surface-2); --bg3:var(--surface-3);
-  --bg-card:var(--surface); --card:var(--surface); --bd:var(--line); --bg-2:var(--surface-2);
-  --a1:var(--accent-1); --a2:var(--accent-2); --a3:var(--accent-3); --a4:var(--accent-4); --a5:var(--accent-5);
-  --accent2:var(--accent-2); --accent3:var(--accent-3);
-  --glassb:var(--glass-border); --txt:var(--txt-main); --mut:var(--txt-muted); --muted:var(--txt-muted);
+  /* 금(샴페인 골드) — 선택·강조 «표시»에만 한 방울(v178 · 활성 탭 밑줄 · 카드 제목 막대 · 고른 카드 테두리). 데이터 색으로 쓰지 않는다 */
+  --gold:#B8862F; --gold-soft:rgba(184,134,47,.12);
 
   /* 차트 영역 높이 3단 — 전 페이지 공통 (카드가 자라는 게 아니라 .cw가 정한다) */
   --ch-mini:180px;
@@ -39,18 +33,18 @@
   /* 타이포그래피 스케일 — 눈이 아프지 않을 만큼(본문 13 · 표 12.5 · 캡션 12) */
   --fs-display:22px;   /* 대시보드 제목 */
   --fs-title:16px;     /* 섹션 제목 */
-  --fs-card:14px;      /* 카드 제목 */
+  --fs-card:14.5px;    /* 카드 제목 */
   --fs-body:13px;      /* 본문 */
   --fs-table:12.5px;   /* 테이블 */
   --fs-caption:12px;   /* 캡션/라벨 */
   --fs-micro:11px;     /* 테이블 헤더 */
-  --fs-kpi:28px;       /* KPI 숫자 */
+  --fs-kpi:30px;       /* KPI 숫자 (v178 — 숫자가 주인공) */
 
   /* 간격 시스템 (8px 그리드) */
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
 
   /* 모서리 — 카드 12 · 컨트롤 8 */
-  --r-sm:6px; --r-md:8px; --r-lg:12px; --r-xl:12px; --r-pill:999px;
+  --r-sm:6px; --r-md:9px; --r-lg:14px; --r-xl:16px; --r-pill:999px;   /* v178 — 카드 16 · KPI 14 · 컨트롤 9 */
 
   /* 그림자 — 얇게. 깊이는 선이 말한다 */
   --shadow-sm:0 1px 2px rgba(16,24,40,.05);
@@ -58,6 +52,20 @@
 
   /* 전환 */
   --ease:cubic-bezier(.4,0,.2,1);
+}
+/* 옛 이름 → 새 토큰 (v178) — ⚠ «:root 와 body» 둘 다에 둔다.
+   사용자 정의 속성의 var() 는 «선언된 요소»에서 풀린다. :root 에만 두면 --glass 가 라이트의 흰색(#FFF)으로 굳고,
+   body.theme-slate 가 --surface 를 바꿔도 따라오지 않는다 — 다크에서 챗봇 입력칸·「메인으로」·공통바 단추·
+   주간현황 TOTAL 줄이 흰색으로 뜨던 원인이다(사용자 스크린샷). body 에서 다시 선언하면 그 자리의 값으로 풀린다. */
+:root,body{
+  --bg-gradient:var(--bg); --title-gradient:none;
+  --glass:var(--surface); --glass-border:var(--line); --glass-hover:var(--surface-2);
+  --bg1:var(--bg); --bg2:var(--surface-2); --bg3:var(--surface-3);
+  --bg-card:var(--surface); --card:var(--surface); --bd:var(--line); --bg-2:var(--surface-2);
+  --accent-1:var(--accent); --accent-2:var(--accent);
+  --a1:var(--accent-1); --a2:var(--accent-2); --a3:var(--accent-3); --a4:var(--accent-4); --a5:var(--accent-5);
+  --accent2:var(--accent-2); --accent3:var(--accent-3);
+  --glassb:var(--glass-border); --txt:var(--txt-main); --mut:var(--txt-muted); --muted:var(--txt-muted);
 }
 body.theme-light{color-scheme:light}
 
@@ -293,6 +301,7 @@ body.theme-slate{
   --ok:#3FCF8E; --warn:#F5B83D; --bad:#F2706B;
   --ok-soft:rgba(63,207,142,.12); --warn-soft:rgba(245,184,61,.12); --bad-soft:rgba(242,112,107,.12);
   --accent-3:#A78BFA; --accent-4:#F5B83D; --accent-5:#3FCF8E;
+  --gold:#D8B46A; --gold-soft:rgba(216,180,106,.14);
   --card-shadow:none; --shadow-md:0 12px 32px rgba(0,0,0,.55);
   --shadow-sm:inset 0 1px 0 rgba(255,255,255,.045), 0 10px 28px -20px rgba(0,0,0,.9);
   background:#070B14 !important;
@@ -661,3 +670,209 @@ body.theme-slate #capToast{background:rgba(22,30,48,.94) !important;border:1px s
   .gst-rv{opacity:1 !important;translate:none !important}
   body::before,.gst-sprog,.gst-lbar{display:none !important}
 }
+
+
+/* ============================================================
+   Executive 3.0 (v178) — «잉크 네이비 + 샴페인 골드 한 방울 · 넓은 여백 · 숫자가 주인공»
+   사용자 요청 「대기업 수준 · 조잡하지 않게 · 럭셔리 · Gorgeous · 공격적으로」 · 다크가 기본(사용자 확정).
+   ⚠ 바꾸는 것은 «보이는 방식»뿐이다 — 숫자·판정·드릴·필터·내보내기는 한 글자도 안 움직인다.
+   ⚠ 장식은 «개수»가 아니라 «질»로 한다: 그림자 두 겹 · 머리카락 선 · 위 가장자리 빛 한 줄 · 금색은 «선택·강조 표시»에만.
+   ⚠ 카드에 transform 을 쓰지 않는다(v169) — hover 는 그림자·선만 바뀐다.
+   여기가 theme.css 의 마지막이라 같은 특이도의 앞 규칙·페이지 인라인 규칙을 이긴다.
+   ============================================================ */
+:root{
+  --r-ctl:9px;
+  --shadow-card:0 1px 2px rgba(16,24,40,.04),0 12px 32px -18px rgba(16,24,40,.18);
+  --shadow-card-h:0 2px 4px rgba(16,24,40,.05),0 20px 44px -20px rgba(16,24,40,.26);
+  --hl:rgba(255,255,255,0);            /* 카드 윗변의 빛 — 라이트에는 없다 */
+  --surface-glass:var(--surface);
+}
+body.theme-slate{
+  --shadow-card:inset 0 1px 0 rgba(255,255,255,.055),0 1px 1px rgba(0,0,0,.35),0 24px 52px -30px rgba(0,0,0,.95);
+  --shadow-card-h:inset 0 1px 0 rgba(255,255,255,.075),0 1px 1px rgba(0,0,0,.4),0 30px 64px -30px rgba(0,0,0,1);
+  --hl:rgba(190,210,255,.10);
+  --surface-glass:color-mix(in srgb,var(--surface) 86%,transparent);
+  --txt-main:#EEF2F8;
+}
+body{letter-spacing:-.003em;font-feature-settings:'tnum' 0}
+::selection{background:color-mix(in srgb,var(--accent) 45%,transparent);color:#fff}
+
+/* ── 페이지 머리(셸 밖에서 직접 열었을 때) ── */
+.header h1{font-size:24px !important;font-weight:750 !important;letter-spacing:-.6px !important}
+
+/* ── 카드 — 한 벌 ── */
+.card,.trend-card,.cross-card,.tablecard,.cfgcard,.cal-card,.wk-card{
+  border-radius:var(--r-xl) !important;border:1px solid var(--line) !important;box-shadow:var(--shadow-card) !important;
+  background-color:var(--surface-glass)}
+.card,.trend-card,.tablecard,.cfgcard{padding:20px 22px}
+.hb-card,.st-card,.ac-card,.sd-card,.ds-card{border-radius:var(--r-xl) !important;border-color:var(--line) !important;box-shadow:var(--shadow-card) !important}
+.card:hover,.trend-card:hover,.cross-card:hover,.tablecard:hover{border-color:var(--line-2) !important;box-shadow:var(--shadow-card-h) !important}
+/* 카드 제목 — 왼쪽에 짧은 빛 막대 하나(사파이어 → 골드). 제목이 «무엇을 묻는지»를 말하고, 막대가 카드의 머리를 잡아 준다 */
+.card > h3,.tablecard > h3,.trend-header h3,.cross-header h3{font-size:var(--fs-card) !important;font-weight:650 !important;letter-spacing:-.15px !important;
+  color:var(--txt-main) !important;line-height:1.35}
+/* ⚠ h3 를 flex 로 만들지 않는다 — 제목 안의 글자·span 사이 공백이 사라진다. 막대는 inline-block 으로 글자 줄에 얹는다 */
+.card > h3::before,.tablecard > h3::before,.trend-header h3::before,.cross-header h3::before{content:'';display:inline-block;vertical-align:-1px;width:3px;height:13px;border-radius:2px;margin-right:10px;
+  background:linear-gradient(180deg,var(--accent),var(--gold))}
+.card-note{font-size:12px !important;line-height:1.5}
+
+/* ── KPI — 숫자가 주인공 ── */
+.kpi{position:relative;border-radius:var(--r-lg) !important;padding:18px 20px 16px !important;border:1px solid var(--line) !important;
+  background-color:var(--surface-glass) !important;box-shadow:var(--shadow-card) !important}
+.kpi:hover{border-color:var(--line-2) !important}
+.kpi .val{font-size:var(--fs-kpi) !important;font-weight:750 !important;letter-spacing:-.9px !important;line-height:1.08 !important;color:var(--txt-main)}
+.kpi .unit{font-size:13px;font-weight:600;color:var(--txt-muted);margin-left:2px}
+.kpi .cap{font-size:12.5px !important;font-weight:600 !important;color:var(--txt-2) !important;margin-top:8px !important;letter-spacing:-.1px !important}
+.kpi .kf{font-size:11.5px !important;color:var(--txt-muted) !important}
+.kpi .kd{font-size:11.5px;font-weight:700}
+.kpi.sel{border-color:color-mix(in srgb,var(--gold) 55%,transparent) !important;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--gold) 35%,transparent),var(--shadow-card) !important}
+.kpis{gap:14px !important;margin-bottom:22px !important}
+@media(max-width:768px){ .kpi .val{font-size:22px !important} .kpi{padding:14px !important} }
+
+/* ── 단추 — 주 단추는 «보이는» 단추다(cip·material·tco 의 .btn-grad 가 --title-gradient:none 때문에 투명이던 결함) ── */
+.btn{border-radius:var(--r-ctl) !important;font-size:12.5px !important;font-weight:650 !important;padding:8px 15px !important;letter-spacing:-.1px}
+.btn-grad{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 86%,#fff),var(--accent)) !important;color:#fff !important;
+  border:1px solid color-mix(in srgb,var(--accent) 75%,#000) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 8px 20px -10px color-mix(in srgb,var(--accent) 85%,transparent) !important}
+.btn-grad:hover{filter:brightness(1.07);opacity:1 !important}
+.btn-glass,.lang-btn{background:var(--surface-2) !important;border:1px solid var(--line) !important;color:var(--txt-main) !important;border-radius:var(--r-ctl) !important}
+.btn-glass:hover,.lang-btn:hover{background:var(--surface-3) !important;border-color:var(--line-2) !important}
+.btn-glass.active,.btn-glass.dp-tab.active,.btn-glass.rz-tab.active{border-color:color-mix(in srgb,var(--accent) 60%,transparent) !important;
+  color:var(--accent-ink) !important;background:var(--accent-soft) !important}
+.lang-dropdown,.theme-dropdown{background:var(--surface) !important;border:1px solid var(--line) !important;border-radius:12px !important;box-shadow:var(--shadow-md) !important}
+
+/* ── 세그먼트(주/월 · 기준 고르기) — 한 벌의 모양: 옅은 홈 + 떠 있는 선택 칸 ── */
+.mini-per,.gst-axsel{background:color-mix(in srgb,var(--surface-2) 85%,transparent) !important;border:1px solid var(--line) !important;
+  border-radius:var(--r-ctl) !important;padding:2px !important;gap:2px !important}
+.mini-per .mp-btn,.gst-axsel button{border-radius:7px !important;font-size:11px !important;font-weight:650 !important;color:var(--txt-muted) !important;
+  padding:3px 10px !important;transition:background .15s var(--ease),color .15s var(--ease)}
+.mini-per .mp-btn:hover,.gst-axsel button:hover{color:var(--txt-main) !important}
+.mini-per .mp-btn.active,.gst-axsel button[aria-pressed="true"]{background:var(--surface) !important;color:var(--txt-main) !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.18),inset 0 0 0 1px var(--line) !important}
+body.theme-slate .mini-per .mp-btn.active,body.theme-slate .gst-axsel button[aria-pressed="true"]{
+  background:color-mix(in srgb,var(--accent) 24%,var(--surface)) !important;color:#fff !important;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent),0 4px 12px -6px color-mix(in srgb,var(--accent) 70%,transparent) !important}
+.gst-axsel button{font-size:12px !important;padding:4px 12px !important}
+
+/* ── 공통바(직접 열었을 때 · 셸 #gbar 는 셸이 그린다) ── */
+#gstLocalBar .gb-b{border-radius:var(--r-ctl) !important;background:var(--surface-2) !important;border-color:var(--line) !important;color:var(--txt-2) !important}
+#gstLocalBar .gb-b.on{background:color-mix(in srgb,var(--accent) 22%,var(--surface)) !important;color:var(--txt-main) !important;border-color:color-mix(in srgb,var(--accent) 50%,transparent) !important}
+#gstLocalBar .gb-seg{border-radius:var(--r-ctl) !important;border-color:var(--line) !important}
+#gstLocalBar .gb-inp{border-radius:var(--r-ctl) !important;background:var(--surface-2) !important;border-color:var(--line) !important}
+
+/* ── 섹션 탭 · 앵커 — 선택은 금색 밑줄 ── */
+.gst-secnav{border-bottom:1px solid var(--line) !important;gap:6px !important;margin-bottom:18px !important}
+.gst-sec-tab{font-size:13px !important;font-weight:650 !important;padding:10px 14px 11px !important;color:var(--txt-muted) !important}
+.gst-sec-tab:hover{color:var(--txt-main) !important}
+.gst-sec-tab.active{color:var(--txt-main) !important;border-bottom-color:transparent !important;box-shadow:inset 0 -2px 0 var(--gold)}
+.gst-anchors a{border-radius:999px !important;background:var(--surface-glass) !important;border-color:var(--line) !important;color:var(--txt-2) !important;font-weight:650 !important}
+.gst-anchors a:hover{border-color:color-mix(in srgb,var(--gold) 55%,transparent) !important;color:var(--txt-main) !important;background:var(--gold-soft) !important}
+
+/* ── 요약 띠 ── */
+.gst-insights{border-radius:var(--r-lg) !important;border-color:var(--line) !important;box-shadow:var(--shadow-card);padding:12px 16px !important;background:var(--surface-glass) !important}
+.gst-ins-head{background:var(--gold-soft) !important;color:var(--gold) !important;letter-spacing:.06em !important}
+
+/* ── 섹션 머리(.sec-h) — 큰 글자 + 금색 짧은 선 ── */
+.sec-h{font-size:16px !important;font-weight:750 !important;letter-spacing:-.3px !important;color:var(--txt-main) !important;display:flex;align-items:center;gap:10px}
+.sec-h::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent);margin-left:4px}
+
+/* ── 표 — 머리는 옅은 판 · 줄은 머리카락 선 ── */
+th{font-size:11.5px !important;font-weight:650 !important;color:var(--txt-muted) !important;letter-spacing:.01em !important}
+body.theme-slate th{background:color-mix(in srgb,var(--surface-2) 80%,transparent) !important}
+td{border-color:var(--line)}
+tr:hover td{background:color-mix(in srgb,var(--accent) 6%,transparent) !important}
+
+/* ── 칩 · 입력 ── */
+select,input[type="date"],input[type="text"],input[type="month"],input[type="password"],input:not([type]){border-radius:var(--r-ctl) !important}
+body.theme-slate select,body.theme-slate input[type="date"],body.theme-slate input[type="text"],body.theme-slate input[type="month"],body.theme-slate input:not([type]){
+  background:color-mix(in srgb,var(--surface-2) 85%,transparent) !important}
+.gst-fchips{border-radius:var(--r-lg) !important;background:var(--surface-glass) !important}
+
+/* ── 사이드바 ── */
+body.theme-slate .gst-sidebar{background:color-mix(in srgb,#0A1020 92%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.gst-sb-sec{border-radius:var(--r-lg) !important}
+.gst-sb-toggle{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 85%,#fff),var(--accent)) !important}
+
+/* ── 다크 바탕 — 오로라에 금빛 한 점을 더한다(아주 옅게) ── */
+body.theme-slate::before{
+  background:radial-gradient(42vw 42vw at 12% 4%,rgba(64,110,255,.20),transparent 62%),
+             radial-gradient(36vw 36vw at 90% 16%,rgba(139,92,246,.13),transparent 62%),
+             radial-gradient(30vw 30vw at 70% 100%,rgba(216,180,106,.06),transparent 62%),
+             radial-gradient(34vw 34vw at 30% 96%,rgba(14,165,233,.08),transparent 62%) !important}
+
+/* ── 인쇄 — 장식은 걷는다 ── */
+@media print{
+  .card > h3::before,.tablecard > h3::before,.trend-header h3::before,.cross-header h3::before,.sec-h::after{display:none !important}
+  .card,.trend-card,.cross-card,.tablecard,.kpi{box-shadow:none !important;background:#fff !important}
+}
+
+/* ============================================================
+   Luxe (v178) — 사용자 「세계 최고 디자이너처럼 · 과감하고 사치스러워 보여도 가치를 높인다면 절제하지 않아도 된다」
+   보석 같은 KPI(금빛 머리카락 테두리 · 금속 숫자) · 번호를 단 금색 섹션 머리 · 깊은 오로라 · 유리 배지.
+   ⚠ 여전히 지키는 것: 숫자·판정 무변경 · 카드에 transform 없음 · 경고색은 판정에만 · 움직임 줄이기 존중 · 인쇄는 깨끗하게.
+   ============================================================ */
+/* ── KPI — 보석: 금빛→사파이어로 흐르는 머리카락 테두리(마스크한 ::after — 배경 그림·조명 효과와 겹치지 않는다) ── */
+.kpi::after{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--gold) 55%,transparent),color-mix(in srgb,var(--accent) 22%,transparent) 38%,transparent 72%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+  opacity:.55;transition:opacity .25s var(--ease)}
+.kpi:hover::after{opacity:1}
+.kpi.sel::after{opacity:1;background:linear-gradient(145deg,var(--gold),color-mix(in srgb,var(--gold) 30%,var(--accent)) 45%,transparent 85%)}
+body.theme-slate .kpi{background-image:radial-gradient(120% 90% at 0% 0%,rgba(110,150,255,.075),transparent 55%)}
+/* 금속 숫자 — 위가 희고 아래로 은빛. ⚠ 페이지가 숫자에 «판정 색»(지연=빨강 등)을 주면 그 색이 이긴다(color 가 transparent 를 덮는다) */
+.kpi .val{background-image:linear-gradient(180deg,#0B1222 20%,#3B4C6B);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.theme-slate .kpi .val{background-image:linear-gradient(180deg,#FFFFFF 25%,#AFBCD4 100%)}
+.kpi .val[style*="color"]{background-image:none}
+@media print{ .kpi::after{display:none} .kpi .val{background:none !important;color:#000 !important} }
+
+/* ── 섹션 머리 — 번호(01 · 02 …)를 금색 작은 글자로 · 제목 · 흐려지는 선 ── */
+body{counter-reset:gstsec}
+.sec-h{counter-increment:gstsec}
+.sec-h::before{content:counter(gstsec,decimal-leading-zero);font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--gold);
+  padding:3px 8px;border-radius:999px;background:var(--gold-soft);border:1px solid color-mix(in srgb,var(--gold) 35%,transparent);font-variant-numeric:tabular-nums}
+
+/* ── 카드 제목 막대 — 사파이어→골드에 빛을 한 겹 ── */
+body.theme-slate .card > h3::before,body.theme-slate .tablecard > h3::before,body.theme-slate .trend-header h3::before,body.theme-slate .cross-header h3::before{
+  box-shadow:0 0 10px color-mix(in srgb,var(--gold) 55%,transparent)}
+
+/* ── 다크 카드 — 위 가장자리에 아주 얇은 빛 한 줄(유리 끝이 빛을 받는 모양) ── */
+body.theme-slate :is(.card,.trend-card,.cross-card,.tablecard){
+  background-image:linear-gradient(180deg,rgba(255,255,255,.028),transparent 90px)}
+body.theme-slate.gst-motion .gst-sp:is(.card,.trend-card,.cross-card,.tablecard){
+  background-image:radial-gradient(560px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--accent) calc(var(--gst-sa) * 15%),transparent),transparent 46%),
+                   linear-gradient(180deg,rgba(255,255,255,.028),transparent 90px)}
+
+/* ── 바탕 — 더 깊은 밤하늘: 위쪽 사파이어 스포트라이트 · 오른쪽 보라 · 아래 금빛 한 점 · 가장자리는 어둡게 ── */
+body.theme-slate{background:#05080F !important}
+body.theme-slate::before{
+  background:radial-gradient(60vw 34vw at 30% -6%,rgba(74,120,255,.24),transparent 64%),
+             radial-gradient(38vw 38vw at 92% 12%,rgba(139,92,246,.15),transparent 62%),
+             radial-gradient(34vw 30vw at 72% 104%,rgba(216,180,106,.08),transparent 64%) !important}
+body.theme-slate::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(140% 100% at 50% 0%,transparent 55%,rgba(0,0,0,.45) 100%)}
+
+/* ── 요약 띠 — 금빛 머리 ── */
+.gst-insights{position:relative;overflow:hidden}
+body.theme-slate .gst-insights{background-image:linear-gradient(90deg,rgba(216,180,106,.07),transparent 40%) !important}
+.gst-ins b{color:var(--txt-main)}
+
+/* ── 필터 손잡이 · 출처 배지 — 값싼 원색 덩어리 대신 유리 ── */
+.gst-sb-toggle{background:color-mix(in srgb,var(--surface) 80%,transparent) !important;color:var(--gold) !important;
+  border:1px solid color-mix(in srgb,var(--gold) 40%,transparent) !important;border-left:0 !important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.gst-sb-toggle:hover{filter:none !important;background:var(--gold-soft) !important}
+.gst-sb-tglbl{color:var(--txt-2)}
+#gstSrcChip{border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 22px -10px rgba(0,0,0,.7);opacity:.62 !important;font-size:10.5px !important;backdrop-filter:blur(8px)}
+#gstSrcChip:hover{opacity:1 !important}
+
+/* ── 표 머리 — 작은 대문자 느낌의 간격 · 숫자 열은 또렷하게 ── */
+th{letter-spacing:.03em !important}
+body.theme-slate tr.tot td,body.theme-slate tfoot td{background:color-mix(in srgb,var(--gold) 9%,var(--surface-2)) !important;border-top:1px solid color-mix(in srgb,var(--gold) 35%,transparent) !important}
+
+/* ── 상태 알약 — 은은한 빛 ── */
+body.theme-slate .gst-dqchip{box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 12%,transparent)}
+
+/* ── 스크롤바 — 가늘고 어둡게 ── */
+body.theme-slate *::-webkit-scrollbar-thumb{background:rgba(148,170,215,.18)}
+body.theme-slate *::-webkit-scrollbar-thumb:hover{background:rgba(148,170,215,.32)}
+
+@media print{ body::after,.sec-h::before{display:none !important} }

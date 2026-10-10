@@ -1,4 +1,4 @@
-/* t-v2 — 2단계 «제품화» 밑바탕: 내 화면(/home/) · 운영 목표(/targets/) · assets/v2.js. 지어낸 자료만(t-leak).
+/* t-v2 — 2단계 «제품화» 밑바탕: 글로벌 현황(/hub/ · v178 에 옛 «홈»을 합쳤다) · 운영 목표(/targets/) · core 의 v2 블록. 지어낸 자료만(t-leak).
    지키는 것:
    ① 숫자는 GST.ops 를 지난다 — 관제(/hub/)와 같은 창·같은 판정(PM 비율 = 관제의 PM 실시율 게이지 · 가동률 = 가동 게이지)
    ② 목표는 «가장 좁은 것»(운영단위 > 구분 > 전사)으로 판정하고, 카드의 네 줄(이름·값·목표·직전 대비)이 언제나 같은 자리에 선다
@@ -142,13 +142,13 @@ const open = async (url, init) => { const p = await ctx.newPage(); p._pe = []; p
   await p.emulateMedia({ reducedMotion:'reduce' }); await p.goto(BASE + url, { waitUntil:'domcontentloaded' });
   await p.waitForFunction(() => /✅|❌/.test((document.getElementById('status') || {}).textContent || ''), null, { timeout:15000 }).catch(() => {});
   await p.waitForTimeout(300); return p; };
-const kpis = p => p.evaluate(() => { const o = {}; document.querySelectorAll('#kpis .ds-kpi').forEach(b => { o[b.dataset.k] = { v:b.querySelector('.ds-kpi-v b').textContent,
-  st:(b.className.match(/st-(\w+)/) || [])[1], t:b.querySelector('.ds-kpi-t').textContent, d:b.querySelector('.ds-kpi-d').textContent,
-  rows:Array.from(b.children).map(c => c.className.split(' ')[0]) }; }); return o; });
+/* 글로벌 현황의 KPI 카드에 붙은 «목표 대비» 한 줄(v178) — 옛 홈 카드의 값·판정·목표 문장·직전 대비를 data-* 로 싣는다 */
+const kpis = p => p.evaluate(() => { const o = {}; document.querySelectorAll('#kpis .hb-kpi .tg[data-m]').forEach(b => { o[b.dataset.m] = { v:b.dataset.v,
+  st:b.dataset.st, t:b.dataset.t, d:b.dataset.d, card:b.closest('.hb-kpi').dataset.k }; }); return o; });
 const clearDB = 'try{localStorage.removeItem("__gstFakeDB");localStorage.removeItem("gst_home_pref");}catch(e){}';
 
 console.log('[0] v2.js — 지표 목록과 네 언어');
-const p0 = await open('/home/?view=exec', clearDB);
+const p0 = await open('/hub/?view=exec', clearDB);
 const cat = await p0.evaluate(() => { const miss = []; GST.METRIC_ORDER.forEach(k => ['ko','en','zh','ja'].forEach(l => { ['m_','d_'].forEach(pre => { if (!GST.V2_T[l][pre + k]) miss.push(l + ':' + pre + k); }); }));
   const keys = Object.keys(GST.V2_T.ko).sort().join(); const same = ['en','zh','ja'].every(l => Object.keys(GST.V2_T[l]).sort().join() === keys);
   return { miss, same, order:GST.METRIC_ORDER.every(k => GST.METRICS[k]) && Object.keys(GST.METRICS).length === GST.METRIC_ORDER.length }; });
@@ -166,34 +166,45 @@ is(K.bm_per100 && K.bm_per100.v === '46.00' && K.bm_per100.st === 'bad', '100대
 is(/▲ \+30\.00/.test(K.bm_per100.d), '직전 4주(16.00) 대비 ▲ +30.00 (' + K.bm_per100.d + ')');
 is(K.pm_ratio && K.pm_ratio.v === '18' && K.pm_ratio.st === 'none' && /목표 미설정/.test(K.pm_ratio.t), 'PM 비율 18% (5 ÷ 28) · 목표 없으면 «목표 미설정» (' + (K.pm_ratio || {}).v + ')');
 is(K.repeat14 && K.repeat14.v === '1', '14일 이내 재고장 설비 1 (우한 WHC9 · 7일 간격)');
-is(!K.act_overdue, '경영진 카드는 넷(처리함 기한은 팀장·현장)');
-const rowsSame = Object.values(K).every(k => k.rows.join() === 'ds-kpi-l,ds-kpi-v,ds-kpi-bar,ds-kpi-t,ds-kpi-d');
-is(rowsSame, '카드 네 줄(이름·값·막대·목표·직전 대비)이 모든 카드에서 같은 순서 · 같은 자리');
+is(!K.act_overdue && Object.keys(K).length === 4, '목표 대비 줄은 넷 — 가동·고장·PM·위험 카드에 하나씩(조치 기한은 운영 관리의 조치 사항 카드)');
+is(K.run_rate.card === 'run' && K.bm_per100.card === 'bm' && K.pm_ratio.card === 'pm' && K.repeat14.card === 'risk', '줄이 «그 숫자»의 카드에 붙는다 (가동→가동률 · 고장→100대당 · PM→PM 비율 · 위험→재고장)');
+await p0.click('#segView button[data-v="lead"]'); await p0.waitForTimeout(300);
 const ops = await p0.evaluate(() => Array.from(document.querySelectorAll('#cOps tbody tr')).map(tr => ({ op:tr.dataset.op, st:(tr.querySelector('.ds-pill').className.match(/\b(ok|warn|bad)\b/) || [])[1] || '',
   bm:tr.children[4].textContent.trim(), pm:tr.children[5].textContent.trim(), run:tr.children[3].textContent.trim() })));
 is(ops.length === 3 && ops[0].op === 'GST TAIWAN SCRUBBER' && ops[0].st === 'bad' && ops[0].bm === '50.00', '운영단위 표 첫 줄 = 대만(50.00 · 전사 목표 30 → 위험)');
 const wh = ops.find(o => /WUHAN/.test(o.op)), kr = ops.find(o => /SEC/.test(o.op));
 is(wh && wh.bm === '60.00' && wh.st === 'ok', '우한은 «자기» 목표(60 이하)로 판정 — 같은 60.00 이 전사 목표로는 위험 (' + (wh || {}).bm + ' ' + (wh || {}).st + ')');
 is(kr && kr.bm === '20.00' && kr.st === 'ok', '국내(SEC) 20.00 · 정상');
-const dec = await p0.evaluate(() => Array.from(document.querySelectorAll('#cDec .ds-row b')).map(b => b.textContent));
+await p0.click('#segView button[data-v="exec"]'); await p0.waitForTimeout(300);
+/* 확인 사항 — 옛 홈의 «이번 주 확인 사항»과 이 화면의 «처리할 일»이 한 목록(v178) */
+const dec = await p0.evaluate(() => Array.from(document.querySelectorAll('#queue .hb-q b')).map(b => b.textContent));
 is(dec.some(s => /TAIWAN.*100대당 고장 50\.00/.test(s)), '확인 사항 — 대만 고장률 초과가 선다');
 is(dec.some(s => /WHC9.*재고장 1회/.test(s)), '확인 사항 — 재고장 설비(WHC9)가 선다');
 is(dec.some(s => /기한 경과 조치 1건/.test(s)), '확인 사항 — 기한 경과 조치 1건(완료된 건은 안 셈)');
-await p0.click('#kpis .ds-kpi[data-k="bm_per100"]'); await p0.waitForTimeout(300);
-const mr = await p0.evaluate(() => { const b = document.querySelector('.gov-body'); return b ? b.querySelectorAll('tbody tr').length : -1; });
-is(mr === 23, '고장률 카드를 누르면 «그 23건»이 목록으로 (받은 ' + mr + ')');
-await p0.evaluate(() => GST._ovClose && GST._ovClose());
-const trend = await p0.evaluate(() => ({ bars:document.querySelectorAll('#cTrend rect').length, tl:!!document.querySelector('#cTrend line.tl'), hot:document.querySelectorAll('#cTrend rect.hot').length }));
-is(trend.bars === 12 && trend.tl, '주별 고장 12주 막대 + 목표 점선(주 단위 환산)');
 const kw = await p0.evaluate(() => { const b = document.getElementById('krWarn'); return { t:b ? b.title : '', head:document.getElementById('asof').textContent, ban:document.getElementById('banners').textContent }; });
 is(/원장이 비어/.test(kw.t) && !/원장이 비어/.test(kw.ban) && /^\d{4}-\d\d-\d\d 기준/.test(kw.head), '국내 알람 원장이 비면 머리에 ⚠ 하나(띠·문장 대신 · v172) · 머리는 날짜만');
+/* v178 — 기준일을 과거로(사용자 요청) · 최신으로 돌아오기 · 과거 날짜에서는 브리핑을 남기지 않는다 */
+const last = kw.head.slice(0, 10);
+await p0.click('#asofBtn'); await p0.waitForTimeout(150);
+const pop = await p0.evaluate(() => { const i = document.getElementById('asofIn'); return i ? { v:i.value, max:i.max } : null; });
+is(pop && pop.v === last && pop.max === last, '날짜를 누르면 달력 — 지금 기준일 · 그 뒤로는 못 고른다 (' + JSON.stringify(pop) + ')');
+const pastD = await p0.evaluate(l => { const d = new Date(l + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 28); return d.toISOString().slice(0, 10); }, last);
+await p0.fill('#asofIn', pastD); await p0.click('#asofOk'); await p0.waitForTimeout(400);
+const pk = await p0.evaluate(() => ({ head:document.getElementById('asofBtn').textContent, past:document.getElementById('asofBtn').classList.contains('past'), x:!!document.getElementById('asofX'), w:!!document.getElementById('pastWarn'),
+  bm:+document.querySelector('#kpis .hb-kpi[data-k="bm"] .num').dataset.to }));
+const pb0 = await p0.evaluate(async () => await briefSave());
+is(pk.head.startsWith(pastD) && pk.past && pk.x && pk.w, '과거 기준일 — 머리가 그 날짜 · «최신으로» · ⚠(설비 상태는 지금 값)');
+is(pb0 === 'past', '과거 기준일로 보는 동안은 챗봇 브리핑을 남기지 않는다 (' + pb0 + ')');
+await p0.click('#asofX'); await p0.waitForTimeout(400);
+is(await p0.evaluate(() => document.getElementById('asofBtn').textContent).then(t => t.startsWith(last)), '«최신으로» — 자료의 마지막 날로 돌아온다');
 
 console.log('[2] 범위 전환 — 운영단위 · 구분');
-await p0.selectOption('#scope', 'o:GST CHINA(WUHAN) SCRUBBER'); await p0.waitForTimeout(300); K = await kpis(p0);
+await p0.selectOption('#scope', 'GST CHINA(WUHAN) SCRUBBER'); await p0.waitForTimeout(300); K = await kpis(p0);
 is(K.bm_per100.v === '60.00' && K.bm_per100.st === 'ok' && /목표 60\.00/.test(K.bm_per100.t), '우한 — 60.00 · 자기 목표 60 이하 «달성» (' + K.bm_per100.t + ')');
 is(K.run_rate.v === '100.0', '우한 — 가동률 100.0');
-await p0.selectOption('#scope', 'r:국내'); await p0.waitForTimeout(300); K = await kpis(p0);
+await p0.click('#segRegion button[data-r="kr"]'); await p0.waitForTimeout(300); K = await kpis(p0);
 is(K.run_rate.v === '100.0' && K.bm_per100.v === '20.00', '국내 — 가동 10/10 · 100대당 20.00 (반납 2대는 분모에 없다)');
+await p0.click('#segView button[data-v="lead"]'); await p0.waitForTimeout(300);
 const opsKr = await p0.evaluate(() => document.querySelectorAll('#cOps tbody tr').length);
 is(opsKr === 1, '구분으로 좁히면 운영단위 표도 그 구분만');
 await p0.close();
@@ -202,29 +213,26 @@ console.log('[3] 관제와 같은 숫자');
 const ph = await open('/hub/', clearDB);
 const hubG = await ph.evaluate(() => { const g = Array.from(document.querySelectorAll('#sel .hb-g')).map(e => e.querySelector('b').textContent); return { title:document.querySelector('#sel h3').textContent, g }; });
 await ph.close();
-const pl = await open('/home/?view=lead', clearDB);
+const pl = await open('/hub/?view=lead', clearDB);
 const tw = await pl.evaluate(() => { const tr = document.querySelector('#cOps tr[data-op="GST TAIWAN SCRUBBER"]'); return tr ? { run:tr.children[3].textContent.trim(), pm:tr.children[5].textContent.trim() } : null; });
-is(/TAIWAN/.test(hubG.title) && tw && hubG.g[2] === tw.pm.replace('%', '') + '%', 'PM 비율 = 관제의 «PM 실시율» 게이지 (관제 ' + hubG.g[2] + ' · 내 화면 ' + (tw || {}).pm + ')');
-is(tw && hubG.g[0] === Math.round(parseFloat(tw.run)) + '%', '가동률 = 관제의 «가동률» 게이지 (관제 ' + hubG.g[0] + ' · 내 화면 ' + (tw || {}).run + ')');
+is(/TAIWAN/.test(hubG.title) && tw && hubG.g[2] === tw.pm.replace('%', '') + '%', 'PM 비율(운영 관리 표) = 전사 요약의 «PM 실시율» 게이지 (' + hubG.g[2] + ' · ' + (tw || {}).pm + ')');
+is(tw && hubG.g[0] === Math.round(parseFloat(tw.run)) + '%', '가동률(운영 관리 표) = 전사 요약의 «가동률» 게이지 (' + hubG.g[0] + ' · ' + (tw || {}).run + ')');
 
 console.log('[4] 팀장 — 처리함 · 위험 설비');
-K = await kpis(pl);
-is(!!K.act_overdue && K.act_overdue.v === '1', '팀장 카드에 «기한 넘은 처리함 일» 1 (닫힌 일 · 미래 기한은 안 셈)');
+is(/기한 경과 조치 1건/.test(await pl.evaluate(() => document.querySelector('#cAct h2').textContent)), '운영 관리 — 조치 사항 카드 머리에 «기한 경과 조치 1건» (닫힌 일 · 미래 기한은 안 셈)');
 const acts = await pl.evaluate(() => Array.from(document.querySelectorAll('#cAct .ds-row b')).map(b => b.textContent));
 is(acts.length === 2 && acts[0] === '옛 기한 일', '열린 일 둘 · 기한 넘은 일이 먼저 (' + acts.join(' / ') + ')');
 const risk = await pl.evaluate(() => document.querySelectorAll('#cRisk .ds-row').length);
 is(risk > 0, '고장 위험 설비 목록이 선다 (' + risk + ')');
-await pl.click('#kpis .ds-kpi[data-k="act_overdue"]'); await pl.waitForTimeout(300);
-const om = await pl.evaluate(() => { const b = document.querySelector('.gov-body'); return b ? Array.from(b.querySelectorAll('tbody tr')).map(r => r.children[0].textContent) : []; });
-is(om.length === 1 && om[0] === '옛 기한 일', '기한 카드 → 그 1건');
-await pl.evaluate(() => GST._ovClose && GST._ovClose());
 
 console.log('[5] 현장 — 운영단위를 고르고 · 기본으로 저장 · 다시 열면 그 화면');
 await pl.click('#segView button[data-v="field"]'); await pl.waitForTimeout(200);
 const pick = await pl.evaluate(() => !!document.getElementById('cPick') && document.querySelectorAll('#cPick [data-op]').length);
-is(pick === 3, '전사 범위에서 현장을 고르면 «운영단위를 선택하세요» (3곳)');
+is(pick === 3, '운영단위를 안 고르고 «사이트별»을 누르면 «운영단위를 선택하세요» (3곳)');
 await pl.click('#cPick [data-op="GST TAIWAN SCRUBBER"]'); await pl.waitForTimeout(300);
-const fld = await pl.evaluate(() => ({ bm:document.querySelector('#cBm h2 .s').textContent, warr:document.querySelector('#cWarr h2 .s').textContent, scope:document.getElementById('scope').value }));
+const fld = await pl.evaluate(() => ({ bm:document.querySelector('#cBm h2 .s').textContent, warr:document.querySelector('#cWarr h2 .s').textContent, scope:document.getElementById('scope').value,
+  trend:document.querySelectorAll('#cTrend rect').length, tl:!!document.querySelector('#cTrend line.tl') }));
+is(fld.trend === 12 && fld.tl, '사이트별 — 주별 고장 12주 막대 + 목표 점선(주 단위 환산)');
 is(/· 12$/.test(fld.bm), '대만 — 이번 주 고장 12 (' + fld.bm + ')');
 is(fld.warr === '3', '대만 — 90일 이내 워런티 만료 3대');
 await pl.click('#saveDef'); await pl.waitForTimeout(300);
@@ -234,18 +242,18 @@ const toast = await pl.evaluate(() => (document.getElementById('capToast') || {}
 is(/기본 화면으로 설정했습니다/.test(toast), '서버에 저장됐다고 말한다');
 is(pl._pe.length === 0, 'JS 에러 0' + (pl._pe.length ? ' → ' + pl._pe[0] : ''));
 await pl.close();
-const pr = await open('/home/');
+const pr = await open('/hub/');
 const back = await pr.evaluate(() => ({ v:document.querySelector('#segView [aria-pressed="true"]').dataset.v, sc:document.getElementById('scope').value }));
-is(back.v === 'field' && back.sc === 'o:GST TAIWAN SCRUBBER', '주소 없이 다시 열면 저장한 화면(현장 · 대만)이 뜬다 (' + back.v + ' · ' + back.sc + ')');
+is(back.v === 'field' && back.sc === 'GST TAIWAN SCRUBBER', '주소 없이 다시 열면 저장한 화면(사이트별 · 대만)이 뜬다 (' + back.v + ' · ' + back.sc + ')');
 await pr.close();
 
 console.log('[6] 목표 표가 없을 때 — 말하며 선다');
-const pn = await open('/home/?view=exec', clearDB + 'window.__DBERR={ops_targets:{message:\'relation "public.ops_targets" does not exist\',code:"42P01"}};');
-const nb = await pn.evaluate(() => ({ ban:document.getElementById('banners').textContent, t:Array.from(document.querySelectorAll('#kpis .ds-kpi-t')).map(e => e.textContent), why:GST.targets.why }));
+const pn = await open('/hub/?view=exec', clearDB + 'window.__DBERR={ops_targets:{message:\'relation "public.ops_targets" does not exist\',code:"42P01"}};');
+const nb = await pn.evaluate(() => ({ ban:document.getElementById('banners').textContent, n:document.querySelectorAll('#kpis .hb-kpi .tg').length, k:document.querySelectorAll('#kpis .hb-kpi').length, why:GST.targets.why }));
 is(nb.why === 'no_table' && /setup-27/.test(nb.ban), '관리자 — «서버에 목표 표가 없습니다 · setup-27 을 Run» (' + nb.why + ')');
-is(nb.t.every(s => /목표 미설정/.test(s)), '카드는 «목표 미설정»으로 선다(빈 칸이 아니다)');
+is(nb.n === 0 && nb.k === 6, '목표가 하나도 없으면 «목표 대비» 줄을 안 단다(«목표 미설정» 넷이 늘어서면 소음) · 카드 여섯은 그대로');
 await pn.close();
-const pv = await open('/home/?view=exec', clearDB + 'window.__ROLE={email:"view@t",can_write:false,role:"viewer"};window.__DBERR={ops_targets:{message:\'relation "public.ops_targets" does not exist\'}};');
+const pv = await open('/hub/?view=exec', clearDB + 'window.__ROLE={email:"view@t",can_write:false,role:"viewer"};window.__DBERR={ops_targets:{message:\'relation "public.ops_targets" does not exist\'}};');
 const vb = await pv.evaluate(() => ({ ban:document.getElementById('banners').textContent, tg:document.getElementById('goTargets').hidden }));
 is(!/setup-27/.test(vb.ban) && vb.tg, '조회자에게는 서버 사정(setup-27)을 안 보이고 «목표 관리» 단추도 없다 (A-4)');
 await pv.close();
@@ -287,17 +295,17 @@ is(ro.ro && ro.btn === 0 && /관리자만/.test(ro.ban), '입력칸 잠김 · �
 await pq.close();
 
 console.log('[9] 언어 · 외부 요청');
-const pz = await open('/home/?view=exec', clearDB);
+const pz = await open('/hub/?view=exec', clearDB);
 await pz.evaluate(() => window.setLang('en')); await pz.waitForTimeout(300);
-const en = await pz.evaluate(() => ({ t:document.querySelector('[data-i="title"]').textContent, k:document.querySelector('#kpis .ds-kpi-l').textContent, sc:document.querySelector('#scope option').textContent }));
-is(en.t === 'Home' && /Running rate/.test(en.k) && en.sc === 'Company', '영어로 — 제목 · 카드 이름 · 범위 목록');
+const en = await pz.evaluate(() => ({ t:document.querySelector('[data-i="title"]').textContent, k:document.querySelector('#kpis .hb-kpi .tg .nm').textContent, sc:document.querySelector('#scope option').textContent, v:document.querySelector('#segView button[data-v="exec"]').textContent }));
+is(en.t === 'Global overview' && /Running rate/.test(en.k) && en.sc === 'All units' && en.v === 'Company summary', '영어로 — 제목 · 목표 대비 줄 · 범위 목록 · 보기 이름');
 await pz.evaluate(() => document.body.classList.add('theme-slate')); await pz.waitForTimeout(200);
 if (process.env.V2_SHOT) { await pz.evaluate(() => window.setLang('ko')); await pz.waitForTimeout(200); await pz.screenshot({ path:process.env.V2_SHOT + '/home-dark.png', fullPage:true }); }
 is(pz._pe.length === 0, 'JS 에러 0' + (pz._pe.length ? ' → ' + pz._pe[0] : ''));
 await pz.close();
-if (process.env.V2_SHOT) { for (const v of ['exec','lead']) { const s = await open('/home/?view=' + v, clearDB); await s.screenshot({ path:process.env.V2_SHOT + '/home-' + v + '.png', fullPage:true }); await s.close(); }
+if (process.env.V2_SHOT) { for (const v of ['exec','lead','field']) { const s = await open('/hub/?view=' + v, clearDB); await s.screenshot({ path:process.env.V2_SHOT + '/hub-' + v + '.png', fullPage:true }); await s.close(); }
   const s = await open('/targets/', clearDB); await s.screenshot({ path:process.env.V2_SHOT + '/targets.png', fullPage:true }); await s.close();
-  const m = await ctx.newPage(); await m.setViewportSize({ width:400, height:900 }); await m.goto(BASE + '/home/?view=exec', { waitUntil:'domcontentloaded' }); await m.waitForTimeout(2500); await m.screenshot({ path:process.env.V2_SHOT + '/home-phone.png', fullPage:true }); await m.close(); }
+  const m = await ctx.newPage(); await m.setViewportSize({ width:400, height:900 }); await m.goto(BASE + '/hub/?view=exec', { waitUntil:'domcontentloaded' }); await m.waitForTimeout(2500); await m.screenshot({ path:process.env.V2_SHOT + '/home-phone.png', fullPage:true }); await m.close(); }
 is(ext.length === 0, '외부 요청 0' + (ext.length ? ' → ' + ext[0] : ''));
 
 console.log('[11] 판정 기준 — 코드의 기준 숫자를 화면에서 고친다');
@@ -339,7 +347,7 @@ is(hs.rd === 21, '위험 점수의 재고장 간격이 21일로 — GST.RISK_W �
 const why = await ph2.evaluate(() => { const r = { why:['rep','pm'], bm90:3, bmPrev:0, rep:2 }; return GST.riskWhy(r); });
 is(/21일 이내 재고장 2회/.test(why) && /180일 넘게 PM 미실시/.test(why), '위험 이유 문장의 기간도 기준을 따른다 (' + why + ')');
 await ph2.close();
-const pw = await open('/home/?view=exec');   // 같은 가짜 DB(localStorage) — 위에서 띠를 60% 로 넓혔다
+const pw = await open('/hub/?view=exec');   // 같은 가짜 DB(localStorage) — 위에서 띠를 60% 로 넓혔다
 const bw = await kpis(pw);
 is(bw.bm_per100.v === '46.00' && bw.bm_per100.st === 'warn', '주의 띠를 60% 로 넓히면 같은 46.00(목표 30)이 «위험» → «주의» — 기준이 실제로 먹는다 (' + bw.bm_per100.st + ')');
 const oor = await pw.evaluate(() => { GST.params.rows.band_pm_ratio = { key:'band_pm_ratio', value:500 }; const v = GST.params.get('band_pm_ratio'); delete GST.params.rows.band_pm_ratio; return v; });
@@ -358,18 +366,19 @@ await pq2.close();
 
 console.log('[12] 챗봇 브리핑 — 내 화면이 남기고, 챗봇이 그 글을 옮긴다(판정 사본 없이)');
 const { briefText } = await import(ROOT + '/supabase/functions/kakao-bot/brief.js');
-const pb = await open('/home/?view=lead&op=GST CHINA(WUHAN) SCRUBBER', clearDB + 'try{Object.keys(localStorage).filter(k=>/^gst_brief_at/.test(k)).forEach(k=>localStorage.removeItem(k));}catch(e){}');
+const pb = await open('/hub/?view=lead&op=GST CHINA(WUHAN) SCRUBBER', clearDB + 'try{Object.keys(localStorage).filter(k=>/^gst_brief_at/.test(k)).forEach(k=>localStorage.removeItem(k));}catch(e){}');
 await pb.evaluate(() => window._briefP);
 const put = await pb.evaluate(() => window.__RPC.filter(r => r.fn === 'brief_put').map(r => r.args));
 is(put.length === 2 && put[0].p_scope === 'all' && put[1].p_scope === 'o:GST CHINA(WUHAN) SCRUBBER', '전사 + 지금 범위(우한) 둘을 남긴다 (' + put.map(x => x.p_scope).join(' · ') + ')');
 const pa = put[0] && put[0].p_payload;
 is(pa && pa.as_of === put[0].p_as_of && /^\d{4}-\d\d-\d\d$/.test(pa.as_of) && pa.kpis.length === 5, '자료일 · 카드 다섯(처리함을 읽었으니 기한 경과 건까지)');
-const card = await pb.evaluate(() => document.querySelector('#kpis .ds-kpi[data-k="bm_per100"] .ds-kpi-t').textContent);
+const card = await pb.evaluate(() => document.querySelector('#kpis .hb-kpi .tg[data-m="bm_per100"]').dataset.t);
 const pw4 = pa && pa.kpis.find(k => k.k === 'bm_per100');
 is(pw4 && pw4.val === '46.00' && pw4.st === 'bad' && /목표 30\.00 이하 · 초과 16\.00/.test(pw4.tgt), '전사 스냅샷 — 46.00 · 점검 권장 · 화면 카드와 같은 목표 문장(GST.kpiText 한 벌)');
 const pwh = put[1] && put[1].p_payload.kpis.find(k => k.k === 'bm_per100');
 is(pwh && pwh.tgt === card, '우한 스냅샷의 목표 문장 = 지금 화면 카드의 글자 그대로 («' + card + '»)');
 is(pa && pa.dec.some(d => /TAIWAN/.test(d.title)) && pa.dec.every(d => d.title && d.tag), '확인 사항 — 화면과 같은 목록(decisions 한 벌)');
+is(pa && Object.keys(pa).sort().join() === 'as_of,core,dec,kp_fall,kpis,name,scope,tgt_n,v,w4'.replace('kp_fall','kr_fall').split(',').sort().join(), '스냅샷 모양이 옛 홈과 같다 — 챗봇(brief.js)이 그대로 읽는다');
 const txt = briefText({ scope:'all', as_of:pa.as_of, payload:pa, made_at:new Date().toISOString() }, new Date());
 is(/\[점검 권장\] 설비 100대당 고장\(최근 4주\) 46\.00 — 목표 30\.00 이하 · 초과 16\.00/.test(txt) && txt.length <= 940, '챗봇 글 — 스냅샷을 그대로 옮긴다 (' + txt.length + '자)');
 const again = await pb.evaluate(async () => { const n = window.__RPC.length; const r = await briefSave(); return { r, more:window.__RPC.length - n }; });
@@ -380,7 +389,7 @@ await pb.evaluate(() => window.setLang('en')); await pb.waitForTimeout(200);
 const enPl = await pb.evaluate(async () => { Object.keys(localStorage).filter(k => /^gst_brief_at/.test(k)).forEach(k => localStorage.removeItem(k)); await briefSave(); const r = window.__RPC.filter(x => x.fn === 'brief_put').pop(); return r.args.p_payload; });
 is(enPl && /설비 100대당 고장/.test(enPl.kpis.find(k => k.k === 'bm_per100').name), '화면이 영어여도 스냅샷은 한국어(챗봇은 한국어로 답한다)');
 await pb.close();
-const pv2 = await open('/home/?view=exec', clearDB + 'window.__ROLE={email:"view@t",can_write:false,role:"viewer"};');
+const pv2 = await open('/hub/?view=exec', clearDB + 'window.__ROLE={email:"view@t",can_write:false,role:"viewer"};');
 const vr = await pv2.evaluate(async () => ({ r:await window._briefP, n:window.__RPC.filter(x => x.fn === 'brief_put').length }));
 is(vr.r === 'who' && vr.n === 0, '조회자 브라우저는 남기지 않는다(서버 brief_put 과 같은 규칙)');
 await pv2.close();
@@ -432,7 +441,7 @@ await pz2.evaluate(() => { const o = document.getElementById('loginOverlay'); if
 await pz2.waitForTimeout(800);
 const shl = await pz2.evaluate(() => ({ top:Array.from(document.getElementById('tabbar').children).filter(e => e.matches('.tab,.tgrp')).map(e => e.classList.contains('tgrp') ? '[' + e.querySelector('.tgrp-l').textContent + ':' + Array.from(e.querySelectorAll('.tab')).map(b => b.dataset.id).join('+') + ']' : e.dataset.id),
   badge:document.getElementById('actBadge').hidden ? '' : document.getElementById('actBadge').textContent, explain:getComputedStyle(document.getElementById('mExplain')).display }));
-is(shl.top.join(' ') === 'home hub report fault [정비:pm+cip] scrubber [자재·비용:material+tco] hr', '탭 줄 — 8묶음 (' + shl.top.join(' ') + ')');
+is(shl.top.join(' ') === 'hub report fault [정비:pm+cip] scrubber [자재·비용:material+tco] hr', '탭 줄 — 7묶음 · 글로벌 현황이 첫 탭 (홈을 합쳤다 · v178) (' + shl.top.join(' ') + ')');
 is(shl.badge === '2', '처리함 배지 — 미완료 2건(완료 건은 안 셈 · ' + shl.badge + ')');
 await pz2.click('#moreBtn'); await pz2.waitForTimeout(150);
 const mm = await pz2.evaluate(() => Array.from(document.querySelectorAll('#moreMenu [data-go]')).map(b => b.dataset.go).join(','));
@@ -453,7 +462,7 @@ await pz3.close();
 console.log('[10] 새 화면 둘의 정적 규칙 — t-i18n · t-ver 와 같은 규칙(그 둘의 페이지 목록은 셸에 거는 날 넓힌다 · PLAN)');
 const CORE = fs.readFileSync(ROOT + '/assets/core.js', 'utf8');
 const VER = +(CORE.match(/GST\.VER\s*=\s*(\d+)/) || [])[1];
-for (const pg of ['home', 'targets']) {
+for (const pg of ['hub', 'targets']) {
   const src = fs.readFileSync(ROOT + '/' + pg + '/index.html', 'utf8');
   const Tsrc = src.match(/const T=\{([\s\S]*?)\n\};/);
   const Tobj = Tsrc ? (new Function('return {' + Tsrc[1] + '\n};'))() : null;

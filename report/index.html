@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>주간 현황 · CS Global Team</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/chart.umd.min.js"></script>
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=172"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=173"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -170,7 +170,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=172">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=173">
 </head>
 <body>
 
@@ -732,7 +732,9 @@ document.addEventListener('click',e=>{if(!e.target.closest('.lang-wrap'))documen
 
 GST.chartDefaults();
 function changeDashboardTheme(themeClass,label){
-  document.body.className='';
+  /* ⚠ body.className 을 통째로 갈지 않는다(v139 규약) — 갈면 gst-motion·gst-explain·gst-inframe·gst-sb-open 이 함께 날아가
+     주간현황만 움직임·설명 숨김이 꺼져 있었다(v178 에 찾았다). 테마 클래스만 바꾼다 */
+  Array.prototype.slice.call(document.body.classList).forEach(c=>{ if(/^theme-/.test(c)) document.body.classList.remove(c); });
   if(themeClass!=='default')document.body.classList.add('theme-'+themeClass);
   GST.chartDefaults();
   GST.reskinCharts(CHARTS);
@@ -881,6 +883,8 @@ const valLabelPlugin={id:'valLabel',
     const ctx=chart.ctx;
     const fmt=v=>{const n=+v;return Math.abs(n)>=1000?Math.round(n).toLocaleString():String(Math.round(n*10)/10);};
     ctx.save();
+    /* v178 — 화면은 «핵심만»: 각 계열의 최근 값 · 최고값만 적는다. 캡처·인쇄·QBR 스타일은 지금처럼 전부(GST.labelAll) */
+    const full=!GST.labelAll||GST.labelAll(chart);
     if(o.mode==='all'){
       // QBR 스타일 값 표기 — 겹침 방지: 그려진 라벨 박스를 기록하고, 겹치면 위로 밀어낸다(막대 먼저 → 라인)
       ctx.font='700 9.5px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
@@ -900,8 +904,10 @@ const valLabelPlugin={id:'valLabel',
         const meta=chart.getDatasetMeta(di);
         if(!meta||meta.hidden||!meta.data||ds._noLabel)return;
         const isLine=meta.type==='line'; if(isLine!==wantLine)return;
+        const pick=full?null:GST.labelPick(ds.data);
         meta.data.forEach((el,i)=>{
           const v=ds.data[i]; if(v==null||!isFinite(v)||+v===0)return;
+          if(pick&&!pick[i])return;
           if(isLine){ put(fmt(v)+(ds._suf||''),el.x,el.y-7,'bottom',o.color||GST.chartTheme().ink); return; }
           const hgt=el.base!=null?Math.abs(el.base-el.y):0;
           if(ds.stack){
@@ -928,8 +934,10 @@ const valLabelPlugin={id:'valLabel',
         ctx.font='700 9px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
         chart.data.datasets.forEach((ds,di)=>{
           const meta=chart.getDatasetMeta(di); if(!meta||meta.hidden||!meta.data||meta.type==='line')return;
+          const lastI=meta.data.length-1;
           meta.data.forEach((el,i)=>{
             const v=ds.data[i]; if(v==null||!isFinite(v)||+v===0)return;
+            if(!full&&i!==lastI)return;   // 화면 — 조각 값은 최근 막대에만(총합은 막대마다 그대로)
             const hgt=el.base!=null?Math.abs(el.base-el.y):0; if(hgt<9)return;   // 작으면 총합만
             let _f=ds.backgroundColor; if(Array.isArray(_f))_f=_f[i];
             ctx.fillStyle=labelOn(_f); ctx.textAlign='center'; ctx.textBaseline='middle';

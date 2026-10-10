@@ -186,12 +186,13 @@ const fl = await pg.evaluate(() => ({ open: !!document.querySelector('.gst-pal-o
 is(cardT && optN > 0 && !fl.open && fl.flash, '카드 이름으로 찾아 Enter → 팔레트가 닫히고 그 카드로 가 잠깐 빛난다 («' + cardT.slice(0, 20) + '» · 항목 ' + optN + ')');
 await pg.close();
 
-/* 주간현황 · 움직임 줄이기 — 아무 효과도 안 건다 */
+/* 주간현황도 같은 효과(v178 · 사용자 지시 「이펙트는 주간현황까지 전 페이지」) · 움직임 줄이기 — 아무 효과도 안 건다 */
 pg = await ctx.newPage(); watch(pg);
 await pg.goto(BASE + '/report/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(2200);
 const rp = await pg.evaluate(() => ({ rv: document.querySelectorAll('.gst-rv').length, sprog: !!document.querySelector('.gst-sprog'),
   delay: typeof Chart !== 'undefined' && typeof Chart.defaults.animation.delay === 'function' }));
-is(rp.rv === 0 && !rp.sprog && !rp.delay, '주간현황에는 스크롤 등장·읽는 위치·차트 차례를 걸지 않는다 (' + JSON.stringify(rp) + ')');
+is(rp.rv > 0 && rp.sprog && rp.delay && await pg.evaluate(() => document.body.classList.contains('gst-motion')),
+  '주간현황에도 스크롤 등장·읽는 위치·차트 차례가 걸린다 — 테마 전환이 body 클래스를 통째로 지우지 않는다 (' + JSON.stringify(rp) + ')');
 await pg.close(); await ctx.close();
 ctx = await ctxOf({ reduce:true, vp:{ width:1440, height:620 } }); pg = await ctx.newPage(); watch(pg);
 await pg.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(1600);
@@ -223,17 +224,16 @@ await ps.goto(BASE + '/', { waitUntil:'domcontentloaded' }); await ps.waitForTim
 const b0 = await ps.evaluate(() => { const b = document.getElementById('boot'); return b ? { pe: getComputedStyle(b).pointerEvents, z: getComputedStyle(b).zIndex } : null; });
 is(!!b0 && b0.pe === 'none', '세션 첫 화면에 부팅 화면이 뜬다 · 누르는 것을 막지 않는다(pointer-events none)');
 await ps.waitForTimeout(1300);
-const lg = await ps.evaluate(() => [...document.querySelectorAll('#bootLog > div')].map(d => ({ cls: d.className, n: d.querySelector('.n').textContent, m: d.querySelector('.m').textContent, s: d.querySelector('.s').textContent })));
-is(lg.length >= 2 && lg.some(x => x.n === '설치 현황') && lg.some(x => x.n === '수선 실적'), '로그는 실제로 읽는 표다 (' + lg.map(x => x.n).join(' · ') + ')');
-is(lg.some(x => /sheet_inst/.test(x.m) && /52행/.test(x.m)), '관리자(legacy)에게는 표 이름·행 수가 보인다 (' + (lg.find(x => /inst/.test(x.m)) || {}).m + ')');
-is(lg.filter(x => x.cls === 'ok').every(x => x.s === '✓'), '끝난 줄은 ✓');
+/* v178 — 부팅 화면에 «무엇을 읽는지» 목록을 두지 않는다(사용자 지시 「로딩 화면에 수선실적·설치현황 이런 거 그냥 빼」) · 진행률은 실제 읽기에서 온다 */
+const lg = await ps.evaluate(() => ({ log:!!document.getElementById('bootLog'), txt:(document.getElementById('boot') || {}).textContent || '', pct:(document.getElementById('bootPct') || {}).textContent || '' }));
+is(!lg.log && !/수선|설치|sheet_|행/.test(lg.txt) && /%$/.test(lg.pct), '부팅 화면 — 자료 이름·표 이름·행 수 목록이 없다 · 원과 진행률만 (' + lg.pct + ')');
 if (SHOT) await ps.screenshot({ path: SHOT + '/boot.png' });
 await ps.waitForFunction(() => !document.getElementById('boot'), null, { timeout:12000 }).catch(() => {});
 is(await ps.evaluate(() => !document.getElementById('boot') && sessionStorage.getItem('gst_boot_seen') === '1'), '첫 화면이 다 그려지면 걷힌다');
 await ps.reload({ waitUntil:'domcontentloaded' }); await ps.waitForTimeout(500);
 is(await ps.evaluate(() => !document.getElementById('boot')), '같은 세션에서 다시 열면 부팅 화면은 다시 안 뜬다');
 /* 읽는 중 막대 — 켜진 탭이 300ms 넘게 읽으면 */
-const homeF = ps.frames().find(f => /\/home\//.test(f.url()));
+const homeF = ps.frames().find(f => /\/hub\//.test(f.url()));   // 첫 탭 = 글로벌 현황(v178 · 홈을 합쳤다)
 await homeF.evaluate(() => window.parent.postMessage({ type:'gst-boot', ev:'begin', id:'zz1', key:'wk', kind:'fg' }, '*'));
 await ps.waitForTimeout(150);
 const fp0 = await ps.evaluate(() => document.getElementById('fprog').classList.contains('on'));
@@ -249,8 +249,7 @@ await ps.close(); await ctx.close();
 /* 조회자 — 표 이름·행 수를 안 보인다 · 키 하나로 걷힌다 */
 ctx = await ctxOf({ role:'viewer' }); ps = await ctx.newPage(); watch(ps);
 await ps.goto(BASE + '/', { waitUntil:'domcontentloaded' }); await ps.waitForTimeout(1500);
-const lv = await ps.evaluate(() => [...document.querySelectorAll('#bootLog > div')].map(d => ({ n: d.querySelector('.n').textContent, m: d.querySelector('.m').textContent })));
-is(lv.length >= 1 && lv.every(x => x.m === '') && lv.some(x => x.n === '수선 실적'), '조회자에게는 «무엇을» 받는지만 — 표 이름·행 수 없음(A-4)');
+is(await ps.evaluate(() => !document.getElementById('bootLog')), '조회자에게도 목록이 없다');
 await ps.keyboard.press('Shift'); await ps.waitForTimeout(80);
 is(await ps.evaluate(() => { const b = document.getElementById('boot'); return !b || b.classList.contains('out'); }), '키 하나면 바로 걷힌다');
 await ps.close(); await ctx.close();

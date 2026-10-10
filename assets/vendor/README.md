@@ -35,3 +35,13 @@ CDN 이 «거부»하지 않고 «묵살»하면 `onerror` 가 영영 안 오기
 페이지 초기화 순서를 정한다. 비동기 로더(`GST._loadScript`)로 바꾸면 여덟 페이지의 초기화가
 통째로 재배열된다 — 지금 고칠 것이 아니다. `document.write` 는 **파싱 중에만** 쓰므로 순서가
 그대로 유지되고, 자체 사본이 열리면 아예 실행되지 않는다.
+
+## Pretendard (v178)
+
+전 페이지의 글꼴. 예전에는 `cdn.jsdelivr.net/gh/orioncactus/pretendard` 에서 받았다 — CDN 이 막히면 시스템 글꼴(맑은 고딕)로 떨어져
+화면 인상이 통째로 달라진다. 이제 여기 사본을 먼저(유일하게) 싣는다.
+
+- `pretendard/pretendardvariable-dynamic-subset.css` + `pretendard/woff2-dynamic-subset/*.woff2`(92조각 · 3.1MB) ←
+  `npm pack pretendard@1.3.9` 의 `dist/web/variable/` 그대로(한 바이트도 안 고쳤다) · **SIL Open Font License 1.1**(CSS 머리에 원문).
+- dynamic subset 이라 브라우저는 «화면에 나온 글자가 든 조각»만 받는다(유니코드 범위별 @font-face).
+- 오프라인 판(`/offline/`)은 이 링크를 걷어내고 시스템 글꼴로 뜬다 — 조각 92개를 한 파일에 묶지 않는다.

@@ -865,7 +865,7 @@ console.log('\n[15] 고장 차트 세부내역이 누른 데이터셋을 따르�
    지키는 것: 손실 낱말이 문구에 없다 · 경고색(warn·bad)으로 칠하지 않는다 · 게이지·비율은 «유상 비율» */
 console.log('\n[17] 워런티 종료 = 유상 전환 (제4원칙)');
 {
-  const pages = ['hub','home','site','scrubber','report','tco','action','studio','targets'];
+  const pages = ['hub','site','scrubber','report','tco','action','studio','targets'];   // home 은 v178 에 글로벌 현황으로 합쳤다
   const LOSS = /무상 지원 종료|무상 기술지원 종료|free support ended|免费支持已结束|無償サポート終了|갱신 협의|재계약|renewal needed/;
   pages.forEach(p => { let src = ''; try { src = rd(p + '/index.html'); } catch (e) { return; }
     const m = LOSS.exec(src);
@@ -877,8 +877,7 @@ console.log('\n[17] 워런티 종료 = 유상 전환 (제4원칙)');
      'hub — 워런티 게이지는 «유상 비율» · 판정색 없이 주색');
   is(!/\.kpi\.k5 \.val\{color:var\(--bad\)\}/.test(SCR) && !/ins_warr90[^\n]*sev:'warn'|sev:'warn',text:t\('ins_warr90'\)/.test(SCR),
      'scrubber — Warranty OUT 숫자·인사이트를 붉게/경고로 내지 않는다');
-  ['hub','home','site'].forEach(p => {
-    const k = p === 'home' ? 'warrT' : 'k_warr';
+  [['hub','k_warr'],['hub','warrT'],['site','k_warr']].forEach(([p, k]) => {   // hub 의 warrT = 옛 홈의 카드(v178 에 합쳤다)
     const v = (rd(p + '/index.html').match(new RegExp(k + ":'([^']*)'")) || [])[1] || '';
     is(/유상 전환/.test(v), `${p} — ${k} 는 «유상 전환»이라 적는다 (실제 「${v}」)`);
   });

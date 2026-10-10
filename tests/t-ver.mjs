@@ -13,7 +13,7 @@ ok(Number.isInteger(VER) && VER > 0, 'core.js 에서 GST.VER 를 못 읽었다')
 
 const PAGES = ['index.html', 'report/index.html', 'fault/index.html', 'material/index.html', 'pm/index.html',
   'scrubber/index.html', 'tco/index.html', 'cip/index.html', 'hr/index.html', 'upload/index.html', 'diag/index.html',
-  'offline/index.html', 'edit/index.html', 'hub/index.html', 'action/index.html', 'site/index.html', 'studio/index.html', 'home/index.html', 'targets/index.html'];
+  'offline/index.html', 'edit/index.html', 'hub/index.html', 'action/index.html', 'site/index.html', 'studio/index.html', 'targets/index.html'];   // home/ 은 v178 부터 /hub/ 로 넘기는 안내 페이지(core 를 안 싣는다)
 console.log('[1] ?v= 가 GST.VER(' + VER + ') 와 같은가');
 for (const f of PAGES) {
   const s = fs.readFileSync(path.join(ROOT, f), 'utf8');
