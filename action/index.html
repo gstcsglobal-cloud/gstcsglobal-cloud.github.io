@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>처리함 · CS Global Team</title>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=163"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=163">
+<style>
+/* ============================================================
+   처리함 (v166 · 사용자 요청 「통합관리화면」 2단계)
+   통합 관제가 «어디를 먼저 볼지»를 말하면, 여기는 «누가 · 언제까지 · 무엇을 했나»를 남긴다.
+   ⚠ 쓰기는 전부 setup-24 의 RPC(action_add · action_set)를 지난다 — 표를 직접 고치면 이력이 안 남는다.
+   ⚠ 지우지 않는다 — 닫는다(완료 · 보류). 닫힌 일도 이력과 함께 남는다.
+   ⚠ 생김새는 theme.css 토큰(라이트 기본 · 다크 = body.theme-slate). 클래스는 ac- 로 갈라 다른 규칙과 섞이지 않게.
+   ============================================================ */
+body.ac{padding:0 !important;min-height:100vh}
+.ac-wrap{max-width:1500px;margin:0 auto;padding:18px 24px 28px;display:flex;flex-direction:column;gap:14px}
+.ac-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.ac-title{font-size:20px;font-weight:700;letter-spacing:-.3px;color:var(--txt-main)}
+.ac-sub{font-size:12px;color:var(--txt-muted)}
+.ac-sp{flex:1}
+.ac-seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.ac-seg button{font:inherit;font-size:12.5px;font-weight:600;border:0;background:transparent;color:var(--txt-2);padding:6px 13px;border-radius:999px;cursor:pointer;transition:background .18s,color .18s}
+.ac-seg button.on{background:var(--accent);color:#fff}
+.ac-btn{font:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--txt-main);padding:7px 13px;border-radius:9px;cursor:pointer;transition:background .15s,border-color .15s,transform .1s}
+.ac-btn:hover{border-color:var(--accent)}
+.ac-btn:active{transform:scale(.97)}
+.ac-btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.ac-btn:disabled{opacity:.45;cursor:not-allowed}
+.ac-in{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--txt-main);padding:7px 10px;border-radius:9px;min-width:0}
+.ac-in:focus{outline:2px solid color-mix(in srgb,var(--accent) 40%,transparent);outline-offset:0;border-color:var(--accent)}
+.ac-chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.ac-chip{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 16px;text-align:left;font:inherit;color:inherit;cursor:pointer;transition:border-color .15s,box-shadow .2s}
+.ac-chip:hover{border-color:var(--accent);box-shadow:0 4px 14px rgba(16,24,40,.06)}
+.ac-chip.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.ac-chip .l{font-size:12px;color:var(--txt-2);font-weight:600}
+.ac-chip .v{font-size:26px;font-weight:700;letter-spacing:-.5px;margin-top:2px;font-variant-numeric:tabular-nums}
+.ac-chip.bad .v{color:var(--bad)}
+.ac-main{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:14px;align-items:start}
+.ac-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.ac-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
+.ac-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.ac-tbl th{font-size:11.5px;font-weight:600;color:var(--txt-muted);text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--surface-2);position:sticky;top:0}
+.ac-tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.ac-tbl tr.it{cursor:pointer;transition:background .12s}
+.ac-tbl tr.it:hover{background:var(--surface-2)}
+.ac-tbl tr.it.on{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.ac-tbl tr.it.fresh{animation:acFresh 1.4s ease}
+@keyframes acFresh{0%{background:color-mix(in srgb,var(--accent) 22%,transparent)}100%{background:transparent}}
+.ac-t b{display:block;font-weight:600;color:var(--txt-main)}
+.ac-t span{display:block;font-size:12px;color:var(--txt-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px}
+.ac-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.ac-dot.bad{background:var(--bad)}.ac-dot.warn{background:var(--warn)}.ac-dot.info{background:var(--accent)}
+.ac-pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.ac-pill.open{background:var(--bad-soft,#FDECEC);color:var(--bad)}
+.ac-pill.ack{background:var(--warn-soft,#FFF4E0);color:var(--warn)}
+.ac-pill.doing{background:var(--accent-soft,#EAF1FE);color:var(--accent)}
+.ac-pill.done{background:var(--ok-soft,#E7F6EE);color:var(--ok)}
+.ac-pill.dismissed{background:var(--surface-2);color:var(--txt-muted)}
+.ac-late{color:var(--bad);font-weight:600}
+.ac-empty{padding:40px 16px;text-align:center;color:var(--txt-muted);font-size:13px}
+.ac-panel{position:sticky;top:12px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 24px);overflow:auto}
+.ac-panel h3{font-size:16px;font-weight:700;margin:0;color:var(--txt-main);line-height:1.35}
+.ac-meta{display:grid;grid-template-columns:80px 1fr;gap:6px 10px;font-size:12.5px}
+.ac-meta span{color:var(--txt-muted)}
+.ac-st{display:flex;flex-wrap:wrap;gap:6px}
+.ac-st button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.ac-row{display:flex;gap:8px;align-items:center}
+.ac-row .ac-in{flex:1}
+.ac-log{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:6px;padding-left:12px}
+.ac-log div{position:relative;padding:6px 0;font-size:12.5px}
+.ac-log div::before{content:'';position:absolute;left:-17px;top:11px;width:8px;height:8px;border-radius:50%;background:var(--surface);border:2px solid var(--line-2,#CDD3DC)}
+.ac-log div.memo::before{border-color:var(--accent)}
+.ac-log small{display:block;color:var(--txt-muted);font-size:11.5px}
+.ac-log q{display:block;margin-top:3px;padding:6px 9px;background:var(--surface-2);border-radius:8px;quotes:none;white-space:pre-wrap}
+.ac-note{font-size:12px;color:var(--txt-muted)}
+.ac-warn{background:var(--warn-soft,#FFF4E0);color:var(--txt-main);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:10px;padding:10px 12px;font-size:12.5px}
+.ac-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--txt-main);color:var(--surface);padding:9px 16px;border-radius:10px;font-size:13px;transition:opacity .2s,transform .25s;pointer-events:none;z-index:50}
+.ac-toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.ac-dlg{position:fixed;inset:0;background:rgba(16,24,40,.35);display:flex;align-items:center;justify-content:center;z-index:40}
+.ac-dlg[hidden]{display:none}
+.ac-dlg .box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;width:min(520px,92vw);display:flex;flex-direction:column;gap:10px;box-shadow:0 20px 50px rgba(16,24,40,.25);animation:acPop .2s ease}
+@keyframes acPop{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
+.ac-dlg label{font-size:12px;color:var(--txt-2);font-weight:600;display:flex;flex-direction:column;gap:4px}
+.ac-sk td{color:transparent!important}
+.ac-sk td::after{content:'';display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--surface-2),var(--line),var(--surface-2));background-size:200% 100%;animation:acSk 1.2s infinite}
+@keyframes acSk{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.ac-tbl tr.it.fresh,.ac-dlg .box,.ac-sk td::after{animation:none}.ac-btn:active{transform:none}}
+@media (max-width:1100px){.ac-main{grid-template-columns:1fr}.ac-panel{position:static;max-height:none}.ac-chips{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.ac-wrap{padding:12px 16px 20px}.ac-tbl .hide-s{display:none}}
+</style>
+</head>
+<body class="ac">
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
+<div class="ac-wrap">
+  <div class="ac-head">
+    <div>
+      <div class="ac-title" data-i="title">처리함</div>
+      <div class="ac-sub" data-i="sub">통합 관제에서 담은 일 · 누가 · 언제까지 · 무엇을 했나</div>
+    </div>
+    <span class="ac-sp"></span>
+    <button type="button" class="ac-btn" id="reloadBtn" data-i="reload">새로고침</button>
+    <button type="button" class="ac-btn pri" id="addBtn" hidden data-i="add">+ 직접 추가</button>
+  </div>
+  <div id="warn"></div>
+
+  <section class="ac-chips" id="chips"></section>
+
+  <section class="ac-main">
+    <div class="ac-card">
+      <div class="ac-bar">
+        <div class="ac-seg" id="segSt" role="group">
+          <button type="button" data-s="live" class="on" data-i="s_live">진행 중</button>
+          <button type="button" data-s="closed" data-i="s_closed">닫힘</button>
+          <button type="button" data-s="all" data-i="s_all">전체</button>
+        </div>
+        <input class="ac-in" id="q" type="search" data-i-ph="search" placeholder="제목 · 운영단위 · 담당 검색" style="flex:1;min-width:180px">
+      </div>
+      <div style="overflow:auto;max-height:calc(100vh - 290px)">
+        <table class="ac-tbl" data-gst-nosn>
+          <thead><tr><th style="width:34%" data-i="c_title">일</th><th class="hide-s" data-i="c_op">운영단위</th><th data-i="c_who">담당</th><th data-i="c_due">기한</th><th data-i="c_st">상태</th><th class="hide-s" data-i="c_upd">마지막 변경</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <aside class="ac-card ac-panel" id="panel"><div class="ac-empty" data-i="pick">왼쪽에서 일을 고르면 여기서 담당 · 기한 · 상태 · 메모를 바꿉니다</div></aside>
+  </section>
+</div>
+
+<div class="ac-dlg" id="dlg" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+    <h3 id="dlgT" style="margin:0;font-size:16px" data-i="add_t">일 직접 추가</h3>
+    <label><span data-i="f_title">제목</span><input class="ac-in" id="fTitle" maxlength="200"></label>
+    <label><span data-i="f_detail">내용</span><textarea class="ac-in" id="fDetail" rows="3"></textarea></label>
+    <div class="ac-row">
+      <label style="flex:1"><span data-i="f_sev">중요도</span><select class="ac-in" id="fSev"><option value="bad" data-i="sev_bad">위험</option><option value="warn" selected data-i="sev_warn">주의</option><option value="info" data-i="sev_info">참고</option></select></label>
+      <label style="flex:1"><span data-i="f_due">기한</span><input class="ac-in" id="fDue" type="date"></label>
+    </div>
+    <label><span data-i="f_who">담당</span><select class="ac-in" id="fWho"></select></label>
+    <div class="ac-row" style="justify-content:flex-end"><button type="button" class="ac-btn" id="dlgNo" data-i="cancel">취소</button><button type="button" class="ac-btn pri" id="dlgOk" data-i="save">담기</button></div>
+  </div>
+</div>
+<div class="ac-toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
+GST.needVer && GST.needVer(163);
+GST.authGate();
+
+const T={
+ko:{title:'처리함',sub:'통합 관제에서 담은 일 · 누가 · 언제까지 · 무엇을 했나',reload:'새로고침',add:'+ 직접 추가',
+  s_live:'진행 중',s_closed:'닫힘',s_all:'전체',search:'제목 · 운영단위 · 담당 검색',
+  c_title:'일',c_op:'운영단위',c_who:'담당',c_due:'기한',c_st:'상태',c_upd:'마지막 변경',
+  pick:'왼쪽에서 일을 고르면 여기서 담당 · 기한 · 상태 · 메모를 바꿉니다',
+  k_open:'새로 들어옴',k_mine:'내 담당',k_late:'기한 지남',k_done7:'최근 7일 완료',
+  st_open:'새로',st_ack:'확인',st_doing:'진행',st_done:'완료',st_dismissed:'보류',
+  sev_bad:'위험',sev_warn:'주의',sev_info:'참고',
+  kind_risk:'고장 위험',kind_spike:'급증',kind_dq:'자료 결함',kind_manual:'직접 추가',
+  m_kind:'종류',m_op:'운영단위',m_by:'담은 사람',m_at:'담은 때',m_who:'담당',m_due:'기한',m_sev:'중요도',
+  none_who:'— 담당 없음 —',memo_ph:'메모 — 무엇을 확인했고 다음에 무엇을 할지',memo_btn:'메모 남기기',
+  hist:'이력',go:'관련 화면 열기',
+  l_create:'담음',l_status:'상태 {a} → {b}',l_reopen:'다시 열기 {a} → {b}',l_assign:'담당 → {b}',l_unassign:'담당 해제',l_due:'기한 → {b}',l_undue:'기한 해제',l_sev:'중요도 {a} → {b}',l_memo:'메모',
+  empty_live:'진행 중인 일이 없습니다 — 통합 관제 「처리할 일」에서 「담기」로 넣거나 직접 추가하세요',
+  empty_q:'검색에 맞는 일이 없습니다',empty_closed:'닫힌 일이 없습니다',
+  ro:'읽기 전용 — 담당자를 정하거나 상태를 바꾸려면 관리자에게 권한을 요청하세요',
+  nosql:'서버 준비가 아직 안 됐습니다 — 관리자가 supabase/setup-24-actions.sql 을 Run 해야 처리함이 열립니다',
+  offline:'오프라인 판에서는 처리함을 쓸 수 없습니다(공유 기록이 서버에 있습니다)',
+  conflict:'그새 다른 사람이 이 일을 바꿨습니다 — 지금 값으로 다시 열었습니다. 다시 확인하고 바꿔 주세요',
+  already:'같은 신호의 새 일이 이미 열려 있습니다 — 그 일에서 이어 가세요',
+  saved:'저장했습니다',added:'담았습니다',fail:'저장하지 못했습니다',cancel:'취소',save:'담기',
+  add_t:'일 직접 추가',f_title:'제목',f_detail:'내용',f_sev:'중요도',f_due:'기한',f_who:'담당',
+  me:'나',days:'{n}일 지남',today:'오늘',ago_m:'{n}분 전',ago_h:'{n}시간 전',ago_d:'{n}일 전',
+  loading:'불러오는 중…',err:'처리함을 읽지 못했습니다'},
+en:{title:'Actions',sub:'Items taken from the Command Center · who · by when · what was done',reload:'Refresh',add:'+ Add item',
+  s_live:'Active',s_closed:'Closed',s_all:'All',search:'Search title · unit · owner',
+  c_title:'Item',c_op:'Unit',c_who:'Owner',c_due:'Due',c_st:'Status',c_upd:'Last change',
+  pick:'Pick an item on the left to change owner · due date · status · notes here',
+  k_open:'New',k_mine:'Mine',k_late:'Overdue',k_done7:'Done (7 days)',
+  st_open:'New',st_ack:'Acknowledged',st_doing:'In progress',st_done:'Done',st_dismissed:'On hold',
+  sev_bad:'Critical',sev_warn:'Watch',sev_info:'Info',
+  kind_risk:'Failure risk',kind_spike:'Spike',kind_dq:'Data issue',kind_manual:'Manual',
+  m_kind:'Type',m_op:'Unit',m_by:'Added by',m_at:'Added',m_who:'Owner',m_due:'Due',m_sev:'Severity',
+  none_who:'— no owner —',memo_ph:'Note — what was checked and what comes next',memo_btn:'Add note',
+  hist:'History',go:'Open related page',
+  l_create:'Added',l_status:'Status {a} → {b}',l_reopen:'Reopened {a} → {b}',l_assign:'Owner → {b}',l_unassign:'Owner cleared',l_due:'Due → {b}',l_undue:'Due cleared',l_sev:'Severity {a} → {b}',l_memo:'Note',
+  empty_live:'No active items — add one from the Command Center «To do» list or create it here',
+  empty_q:'No items match the search',empty_closed:'No closed items',
+  ro:'Read only — ask an administrator for access to assign or change status',
+  nosql:'Server is not ready — an administrator must run supabase/setup-24-actions.sql',
+  offline:'Actions are not available in the offline edition (the shared log lives on the server)',
+  conflict:'Someone changed this item in the meantime — reopened with the latest values. Please check and try again',
+  already:'A newer item for the same signal is already open — continue there',
+  saved:'Saved',added:'Added',fail:'Could not save',cancel:'Cancel',save:'Add',
+  add_t:'Add item',f_title:'Title',f_detail:'Details',f_sev:'Severity',f_due:'Due',f_who:'Owner',
+  me:'me',days:'{n} days late',today:'today',ago_m:'{n} min ago',ago_h:'{n} h ago',ago_d:'{n} d ago',
+  loading:'Loading…',err:'Could not read actions'},
+zh:{title:'待办',sub:'从综合监控加入的事项 · 谁 · 何时之前 · 做了什么',reload:'刷新',add:'+ 新增',
+  s_live:'进行中',s_closed:'已关闭',s_all:'全部',search:'搜索 标题 · 运营单位 · 负责人',
+  c_title:'事项',c_op:'运营单位',c_who:'负责人',c_due:'期限',c_st:'状态',c_upd:'最后变更',
+  pick:'在左侧选择事项后，可在此更改负责人 · 期限 · 状态 · 备注',
+  k_open:'新进',k_mine:'我负责',k_late:'已逾期',k_done7:'近7天完成',
+  st_open:'新',st_ack:'已确认',st_doing:'进行中',st_done:'完成',st_dismissed:'搁置',
+  sev_bad:'危险',sev_warn:'注意',sev_info:'参考',
+  kind_risk:'故障风险',kind_spike:'激增',kind_dq:'数据缺陷',kind_manual:'手动新增',
+  m_kind:'类型',m_op:'运营单位',m_by:'加入人',m_at:'加入时间',m_who:'负责人',m_due:'期限',m_sev:'重要度',
+  none_who:'— 无负责人 —',memo_ph:'备注 — 确认了什么，下一步做什么',memo_btn:'添加备注',
+  hist:'记录',go:'打开相关页面',
+  l_create:'加入',l_status:'状态 {a} → {b}',l_reopen:'重新打开 {a} → {b}',l_assign:'负责人 → {b}',l_unassign:'取消负责人',l_due:'期限 → {b}',l_undue:'取消期限',l_sev:'重要度 {a} → {b}',l_memo:'备注',
+  empty_live:'没有进行中的事项 — 请从综合监控「待处理」加入或手动新增',
+  empty_q:'没有符合搜索的事项',empty_closed:'没有已关闭的事项',
+  ro:'只读 — 如需指定负责人或更改状态，请向管理员申请权限',
+  nosql:'服务器尚未准备好 — 管理员需要运行 supabase/setup-24-actions.sql',
+  offline:'离线版无法使用待办（共享记录在服务器上）',
+  conflict:'其他人刚刚修改了此事项 — 已按最新值重新打开，请确认后再修改',
+  already:'同一信号的新事项已经打开 — 请在那里继续',
+  saved:'已保存',added:'已加入',fail:'保存失败',cancel:'取消',save:'加入',
+  add_t:'手动新增事项',f_title:'标题',f_detail:'内容',f_sev:'重要度',f_due:'期限',f_who:'负责人',
+  me:'我',days:'逾期{n}天',today:'今天',ago_m:'{n}分钟前',ago_h:'{n}小时前',ago_d:'{n}天前',
+  loading:'加载中…',err:'无法读取待办'},
+ja:{title:'対応',sub:'統合管制から登録した事項 · 誰が · いつまでに · 何をしたか',reload:'再読込',add:'+ 追加',
+  s_live:'対応中',s_closed:'完了済み',s_all:'すべて',search:'件名 · 運営単位 · 担当で検索',
+  c_title:'事項',c_op:'運営単位',c_who:'担当',c_due:'期限',c_st:'状態',c_upd:'最終変更',
+  pick:'左で事項を選ぶと、ここで担当 · 期限 · 状態 · メモを変更できます',
+  k_open:'新着',k_mine:'自分の担当',k_late:'期限超過',k_done7:'直近7日完了',
+  st_open:'新規',st_ack:'確認',st_doing:'対応中',st_done:'完了',st_dismissed:'保留',
+  sev_bad:'危険',sev_warn:'注意',sev_info:'参考',
+  kind_risk:'故障リスク',kind_spike:'急増',kind_dq:'データ不備',kind_manual:'手動追加',
+  m_kind:'種類',m_op:'運営単位',m_by:'登録者',m_at:'登録日時',m_who:'担当',m_due:'期限',m_sev:'重要度',
+  none_who:'— 担当なし —',memo_ph:'メモ — 何を確認し次に何をするか',memo_btn:'メモを残す',
+  hist:'履歴',go:'関連画面を開く',
+  l_create:'登録',l_status:'状態 {a} → {b}',l_reopen:'再オープン {a} → {b}',l_assign:'担当 → {b}',l_unassign:'担当解除',l_due:'期限 → {b}',l_undue:'期限解除',l_sev:'重要度 {a} → {b}',l_memo:'メモ',
+  empty_live:'対応中の事項はありません — 統合管制「対応すること」から登録するか、ここで追加してください',
+  empty_q:'検索に合う事項がありません',empty_closed:'完了済みの事項はありません',
+  ro:'閲覧のみ — 担当の指定や状態の変更には管理者に権限を依頼してください',
+  nosql:'サーバーの準備ができていません — 管理者が supabase/setup-24-actions.sql を実行する必要があります',
+  offline:'オフライン版では対応を使えません（共有記録はサーバーにあります）',
+  conflict:'他の人がこの事項を変更しました — 最新の値で開き直しました。確認してからもう一度変更してください',
+  already:'同じ信号の新しい事項がすでに開いています — そちらで続けてください',
+  saved:'保存しました',added:'登録しました',fail:'保存できませんでした',cancel:'キャンセル',save:'登録',
+  add_t:'事項を追加',f_title:'件名',f_detail:'内容',f_sev:'重要度',f_due:'期限',f_who:'担当',
+  me:'自分',days:'{n}日超過',today:'今日',ago_m:'{n}分前',ago_h:'{n}時間前',ago_d:'{n}日前',
+  loading:'読み込み中…',err:'対応を読み込めませんでした'}
+};
+let LANG=(function(){ try{ return sessionStorage.getItem('gst_lang')||'ko'; }catch(e){ return 'ko'; } })(); if(!T[LANG]) LANG='ko';
+const t=k=>(T[LANG]&&T[LANG][k]!=null)?T[LANG][k]:(T.ko[k]!=null?T.ko[k]:k);
+const fmt=(s,o)=>String(s).replace(/\{(\w+)\}/g,(m,k)=>o[k]!=null?o[k]:m);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const PAGE_TAB={fault:'fault',hub:'hub',report:'report',scrubber:'scrubber',pm:'pm',material:'material',cip:'cip',tco:'tco',hr:'hr'};
+
+const S={items:[], people:[], sel:null, logs:{}, st:'live', chip:'', q:'', state:'loading', fresh:0};
+let C=null;   // supabase 클라이언트
+
+/* ===== 읽기 ===== */
+async function load(){
+  S.state='loading'; draw();
+  if(window.__OFFLINE__){ S.state='offline'; draw(); return; }
+  try{
+    C = await GST.db();
+    if(!C){ S.state='err'; S.err='no client'; draw(); return; }
+    await GST.loadMe();
+    const r = await C.from('action_items').select('*').order('updated_at',{ascending:false}).limit(1000);
+    if(r.error){ S.state=/action_items|relation|schema cache/i.test(r.error.message||'')?'nosql':'err'; S.err=r.error.message; draw(); return; }
+    S.items=r.data||[];
+    if(GST.actCan()){ const p=await C.rpc('action_people'); S.people=(!p.error&&p.data)?p.data.map(x=>typeof x==='string'?x:(x.action_people||'')).filter(Boolean):[]; }
+    S.state='ok';
+    if(S.sel && !S.items.find(x=>x.id===S.sel)) S.sel=null;
+    draw();
+    if(S.sel) openItem(S.sel, true);
+  }catch(e){ console.error('[action] 읽기 실패', e); S.state='err'; S.err=e&&e.message||String(e); draw(); }
+}
+window.loadData=load;   // 자동 새로고침·셸 「새로고침」이 이 이름을 찾는다
+
+/* ===== 그리기 ===== */
+const me=()=>((GST._me&&GST._me.email)||'').toLowerCase();
+const today=()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const live=x=>x.status!=='done'&&x.status!=='dismissed';
+const late=x=>live(x)&&x.due&&x.due<today();
+function ago(ts){ if(!ts) return ''; const m=Math.max(0,Math.round((Date.now()-new Date(ts).getTime())/60000));
+  return m<60?fmt(t('ago_m'),{n:m}):m<1440?fmt(t('ago_h'),{n:Math.round(m/60)}):fmt(t('ago_d'),{n:Math.round(m/1440)}); }
+function who(e){ if(!e) return '—'; return e===me()?t('me'):String(e).replace(/@.*/,''); }
+function filtered(){
+  const q=S.q.trim().toLowerCase();
+  return S.items.filter(x=>{
+    if(S.chip==='open'&&x.status!=='open') return false;
+    if(S.chip==='mine'&&!(live(x)&&x.assignee===me())) return false;
+    if(S.chip==='late'&&!late(x)) return false;
+    if(S.chip==='done7'&&!(x.status==='done'&&x.closed_at&&Date.now()-new Date(x.closed_at).getTime()<=7*864e5)) return false;
+    if(!S.chip){ if(S.st==='live'&&!live(x)) return false; if(S.st==='closed'&&live(x)) return false; }
+    if(q&&![x.title,x.detail,x.op,x.assignee,x.ref].some(v=>String(v||'').toLowerCase().indexOf(q)>=0)) return false;
+    return true;
+  }).sort((a,b)=>(live(b)-live(a))||(late(b)-late(a))||({bad:0,warn:1,info:2}[a.sev]-{bad:0,warn:1,info:2}[b.sev])||(String(b.updated_at).localeCompare(String(a.updated_at))));
+}
+function draw(){
+  const W=document.getElementById('warn');
+  W.innerHTML = S.state==='nosql'?'<div class="ac-warn">'+esc(t('nosql'))+'</div>'
+    : S.state==='offline'?'<div class="ac-warn">'+esc(t('offline'))+'</div>'
+    : S.state==='err'?'<div class="ac-warn">'+esc(t('err'))+(GST.isAdmin&&GST.isAdmin()&&S.err?' — '+esc(S.err):'')+'</div>'
+    : (S.state==='ok'&&!GST.actCan())?'<div class="ac-warn">'+esc(t('ro'))+'</div>':'';
+  document.getElementById('addBtn').hidden=!(S.state==='ok'&&GST.actCan());
+  const it=S.items;
+  const K=[['open',it.filter(x=>x.status==='open').length],['mine',it.filter(x=>live(x)&&x.assignee===me()).length],
+    ['late',it.filter(late).length],['done7',it.filter(x=>x.status==='done'&&x.closed_at&&Date.now()-new Date(x.closed_at).getTime()<=7*864e5).length]];
+  document.getElementById('chips').innerHTML=K.map(k=>'<button type="button" class="ac-chip'+(S.chip===k[0]?' on':'')+(k[0]==='late'&&k[1]?' bad':'')+'" data-c="'+k[0]+'"><div class="l">'+esc(t('k_'+k[0]))+'</div><div class="v">'+k[1]+'</div></button>').join('');
+  document.querySelectorAll('#chips .ac-chip').forEach(b=>b.onclick=()=>{ S.chip=S.chip===b.dataset.c?'':b.dataset.c; draw(); });
+  const tb=document.getElementById('rows');
+  if(S.state==='loading'){ tb.innerHTML=Array.from({length:6},()=>'<tr class="ac-sk"><td>x</td><td class="hide-s">x</td><td>x</td><td>x</td><td>x</td><td class="hide-s">x</td></tr>').join(''); return; }
+  if(S.state!=='ok'){ tb.innerHTML=''; return; }
+  const L=filtered();
+  if(!L.length){ tb.innerHTML='<tr><td colspan="6"><div class="ac-empty">'+esc(S.q?t('empty_q'):S.st==='closed'?t('empty_closed'):t('empty_live'))+'</div></td></tr>'; return; }
+  tb.innerHTML=L.map(x=>{ const d=x.due?(late(x)?'<span class="ac-late">'+esc(x.due)+'</span>':esc(x.due)):'—';
+    return '<tr class="it'+(x.id===S.sel?' on':'')+(x.id===S.fresh?' fresh':'')+'" data-id="'+x.id+'" tabindex="0">'
+      +'<td class="ac-t"><b><span class="ac-dot '+esc(x.sev)+'"></span>'+esc(x.title)+'</b><span>'+esc([t('kind_'+x.kind),x.detail].filter(Boolean).join(' · '))+'</span></td>'
+      +'<td class="hide-s">'+esc(x.op||'—')+'</td><td>'+esc(who(x.assignee))+'</td><td>'+d+'</td>'
+      +'<td><span class="ac-pill '+esc(x.status)+'">'+esc(t('st_'+x.status))+'</span></td><td class="hide-s ac-note">'+esc(ago(x.updated_at))+'</td></tr>'; }).join('');
+  tb.querySelectorAll('tr.it').forEach(r=>{ r.onclick=()=>openItem(+r.dataset.id); r.onkeydown=e=>{ if(e.key==='Enter') openItem(+r.dataset.id); }; });
+  S.fresh=0;
+}
+
+/* ===== 오른쪽 패널 ===== */
+async function openItem(id, quiet){
+  S.sel=id; if(!quiet) draw();
+  const x=S.items.find(v=>v.id===id); if(!x) return;
+  const P=document.getElementById('panel'), can=GST.actCan();
+  const ST=['open','ack','doing','done','dismissed'];
+  const ppl=Array.from(new Set(S.people.concat(x.assignee?[x.assignee]:[])));
+  P.innerHTML='<div class="ac-row" style="gap:6px"><span class="ac-pill '+esc(x.status)+'">'+esc(t('st_'+x.status))+'</span><span class="ac-note">#'+x.id+'</span></div>'
+    +'<h3><span class="ac-dot '+esc(x.sev)+'"></span>'+esc(x.title)+'</h3>'
+    +(x.detail?'<div style="font-size:13px;white-space:pre-wrap">'+esc(x.detail)+'</div>':'')
+    +'<div class="ac-meta"><span>'+esc(t('m_kind'))+'</span><b>'+esc(t('kind_'+x.kind))+'</b>'
+    +'<span>'+esc(t('m_op'))+'</span><b>'+esc(x.op||'—')+'</b>'
+    +'<span>'+esc(t('m_by'))+'</span><b>'+esc(who(x.created_by))+' · '+esc(GST.fmtD?GST.fmtD(new Date(x.created_at)):String(x.created_at).slice(0,10))+'</b></div>'
+    +(can?('<div class="ac-st" id="pSt">'+ST.map(s=>'<button type="button" class="ac-btn'+(s===x.status?' on':'')+'" data-s="'+s+'">'+esc(t('st_'+s))+'</button>').join('')+'</div>'
+      +'<div class="ac-row"><select class="ac-in" id="pWho" aria-label="'+esc(t('m_who'))+'"><option value="">'+esc(t('none_who'))+'</option>'+ppl.map(e=>'<option value="'+esc(e)+'"'+(e===x.assignee?' selected':'')+'>'+esc(e)+'</option>').join('')+'</select>'
+      +'<input class="ac-in" id="pDue" type="date" value="'+esc(x.due||'')+'" aria-label="'+esc(t('m_due'))+'" style="max-width:150px"></div>'
+      +'<textarea class="ac-in" id="pMemo" rows="3" maxlength="2000" placeholder="'+esc(t('memo_ph'))+'"></textarea>'
+      +'<div class="ac-row" style="justify-content:space-between"><button type="button" class="ac-btn" id="pGo"'+(PAGE_TAB[x.page]?'':' hidden')+'>'+esc(t('go'))+' →</button><button type="button" class="ac-btn pri" id="pMemoBtn">'+esc(t('memo_btn'))+'</button></div>')
+      :('<div class="ac-meta"><span>'+esc(t('m_who'))+'</span><b>'+esc(who(x.assignee))+'</b><span>'+esc(t('m_due'))+'</span><b>'+esc(x.due||'—')+'</b></div>'
+       +(PAGE_TAB[x.page]?'<button type="button" class="ac-btn" id="pGo">'+esc(t('go'))+' →</button>':'')))
+    +'<div><div class="ac-note" style="font-weight:600;margin-bottom:6px">'+esc(t('hist'))+'</div><div class="ac-log" id="pLog"><div class="ac-note">'+esc(t('loading'))+'</div></div></div>';
+  const go=document.getElementById('pGo'); if(go) go.onclick=()=>GST.goTab&&GST.goTab(PAGE_TAB[x.page]);
+  if(can){
+    P.querySelectorAll('#pSt button').forEach(b=>b.onclick=()=>save(x,{status:b.dataset.s}));
+    document.getElementById('pWho').onchange=e=>save(x,{assignee:e.target.value});
+    document.getElementById('pDue').onchange=e=>save(x,{due:e.target.value});
+    document.getElementById('pMemoBtn').onclick=()=>{ const v=document.getElementById('pMemo').value.trim(); if(v) save(x,{memo:v}); };
+  }
+  try{
+    const r=await C.from('action_log').select('*').eq('item_id',id).order('at',{ascending:true});
+    if(S.sel!==id) return;
+    const L=r.data||[];
+    document.getElementById('pLog').innerHTML=L.length?L.slice().reverse().map(l=>{
+      const a=l.v_from?(l.op==='status'||l.op==='reopen'?t('st_'+l.v_from):l.op==='sev'?t('sev_'+l.v_from):l.v_from):'', b=l.v_to?(l.op==='status'||l.op==='reopen'?t('st_'+l.v_to):l.op==='sev'?t('sev_'+l.v_to):l.op==='assign'?who(l.v_to):l.v_to):'';
+      const txt=l.op==='create'?t('l_create'):l.op==='assign'?(l.v_to?fmt(t('l_assign'),{b}):t('l_unassign')):l.op==='due'?(l.v_to?fmt(t('l_due'),{b}):t('l_undue')):l.op==='memo'?t('l_memo'):fmt(t('l_'+l.op),{a,b});
+      return '<div class="'+(l.op==='memo'?'memo':'')+'"><b>'+esc(txt)+'</b><small>'+esc(who(l.by))+' · '+esc(ago(l.at))+'</small>'+(l.memo?'<q>'+esc(l.memo)+'</q>':'')+'</div>'; }).join('')
+      :'<div class="ac-note">—</div>';
+  }catch(e){ console.warn('[action] 이력 읽기 실패', e); }
+}
+
+/* ===== 쓰기 — 전부 RPC(action_set) · 들고 있던 시각으로 남의 변경을 덮지 않는다 ===== */
+async function save(x, set){
+  try{
+    const r=await C.rpc('action_set',{p_id:x.id, p_set:set, p_at:x.updated_at});
+    if(r.error){ toast(/already_open/.test(r.error.message)?t('already'):t('fail')); console.warn('[action] 저장 실패', r.error); return; }
+    if(r.data&&r.data.conflict){ toast(t('conflict')); await load(); return; }
+    toast(t('saved')); S.fresh=x.id; await load();
+  }catch(e){ toast(t('fail')); console.warn('[action] 저장 실패', e); }
+}
+let _tt=0; function toast(s){ const e=document.getElementById('toast'); e.textContent=s; e.classList.add('on'); clearTimeout(_tt); _tt=setTimeout(()=>e.classList.remove('on'),2600); }
+
+/* ===== 직접 추가 ===== */
+function openAdd(){
+  const d=document.getElementById('dlg');
+  document.getElementById('fWho').innerHTML='<option value="">'+esc(t('none_who'))+'</option>'+S.people.map(e=>'<option value="'+esc(e)+'">'+esc(e)+'</option>').join('');
+  ['fTitle','fDetail','fDue'].forEach(i=>document.getElementById(i).value='');
+  d.hidden=false; setTimeout(()=>document.getElementById('fTitle').focus(),30);
+}
+async function doAdd(){
+  const ti=document.getElementById('fTitle').value.trim(); if(!ti){ document.getElementById('fTitle').focus(); return; }
+  try{
+    const r=await C.rpc('action_add',{p_kind:'manual',p_ref:null,p_sev:document.getElementById('fSev').value,p_title:ti,
+      p_detail:document.getElementById('fDetail').value.trim()||null,p_op:null,p_page:null,
+      p_assignee:document.getElementById('fWho').value||null,p_due:document.getElementById('fDue').value||null});
+    if(r.error){ toast(t('fail')); console.warn(r.error); return; }
+    document.getElementById('dlg').hidden=true; toast(t('added')); S.fresh=r.data&&r.data.id; S.sel=S.fresh; S.st='live'; S.chip=''; await load();
+  }catch(e){ toast(t('fail')); console.warn(e); }
+}
+
+/* ===== 틀 ===== */
+function applyLang(){
+  document.documentElement.lang=LANG;
+  try{ GST.applyI18n && GST.applyI18n(t, LANG); }catch(e){ document.querySelectorAll('[data-i]').forEach(el=>{ el.textContent=t(el.dataset.i); }); }
+  draw(); if(S.sel) openItem(S.sel, true);
+}
+window.setLang=function(l){ if(T[l]){ LANG=l; applyLang(); } };
+window.addEventListener('message',e=>{ const d=e.data||{}; if(d.type==='gst-lang'&&T[d.lang]){ LANG=d.lang; applyLang(); } });
+window.addEventListener('gst-role',()=>draw());
+document.getElementById('segSt').addEventListener('click',e=>{ const b=e.target.closest('button[data-s]'); if(!b) return;
+  S.st=b.dataset.s; S.chip=''; document.querySelectorAll('#segSt button').forEach(x=>x.classList.toggle('on',x===b)); draw(); });
+document.getElementById('q').addEventListener('input',e=>{ S.q=e.target.value; draw(); });
+document.getElementById('reloadBtn').onclick=()=>load();
+document.getElementById('addBtn').onclick=openAdd;
+document.getElementById('dlgNo').onclick=()=>{ document.getElementById('dlg').hidden=true; };
+document.getElementById('dlgOk').onclick=doAdd;
+document.getElementById('dlg').addEventListener('keydown',e=>{ if(e.key==='Escape') document.getElementById('dlg').hidden=true; });
+applyLang();
+GST.authReady().then(load);
+GST.startAutoRefresh && GST.startAutoRefresh(10);
+</script>
+<script>GST.initSync();</script>
+</body>
+</html>

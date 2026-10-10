@@ -19,7 +19,8 @@ const LEDGER_FILE = path.join(ROOT, 'supabase/setup-10-alarm.sql');   // 원장 
 const KR_FILE = path.join(ROOT, 'supabase/setup-17-kr-demo.sql');
 const DQ_FILE = path.join(ROOT, 'supabase/setup-21-dq.sql');
 const COLS_FILE = path.join(ROOT, 'supabase/setup-22-import-cols.sql');
-const SITES_FILE = path.join(ROOT, 'supabase/setup-23-sites.sql');   // 사이트 등록부 · 사이트별 CIP 표(v160)
+const SITES_FILE = path.join(ROOT, 'supabase/setup-23-sites.sql');
+const ACT_FILE = path.join(ROOT, 'supabase/setup-24-actions.sql');   // 처리함(v166)   // 사이트 등록부 · 사이트별 CIP 표(v160)
     // CIP 새 점검 항목 열 더하기(v157)           // 데이터 품질 점검(v155·v156) — 읽기 전용 · 맨 끝에 먹인다      // 국내 데모 표·kr 등급(v146) — 1~11 이 끝난 뒤에 먹인다
 
 function findBin() {
@@ -861,6 +862,56 @@ do $$ declare r jsonb; k bigint; u jsonb; begin
 end $$;
 `;
 
+
+/* [16] 처리함(setup-24 · v166) — 쓰기는 함수만 · 같은 신호는 한 번만 · 칸마다 이력 · 남의 변경을 덮지 않는다 */
+const ACT_CHECKS = String.raw`
+set role authenticated;
+do $$ declare r jsonb; r2 jsonb; i bigint; at0 timestamptz; s jsonb; n int; begin
+  perform t_as('');
+  begin perform action_add('risk','risk:ZQ-001','bad','ZQ-001 위험'); perform t_ok(false, '16-1 로그인 없이 담았다'); exception when others then perform t_ok(sqlerrm = 'login', '16-1 로그인 없으면 login'); end;
+  perform t_as('vw@test.local');
+  begin perform action_add('risk','risk:ZQ-001','bad','ZQ-001 위험'); perform t_ok(false, '16-2 조회자가 담았다'); exception when others then perform t_ok(sqlerrm = 'forbidden', '16-2 조회자는 forbidden'); end;
+  perform t_ok((select count(*) from action_items) = 0, '16-3 조회자도 읽기는 된다(0행)');
+  begin insert into action_items(title, created_by) values ('x','vw@test.local'); perform t_ok(false, '16-4 표에 직접 넣었다'); exception when others then perform t_ok(sqlstate = '42501', '16-4 표에 직접 쓰기는 권한 없음'); end;
+  perform t_as('ed@test.local');
+  r := action_add('risk','risk:ZQ-001','bad','ZQ-001 위험','14일 안 재고장','OPX Scrubber','fault','boss@test.local', '2026-11-01');
+  perform t_ok((r->>'created')::boolean, '16-5 editor 가 담는다');
+  i := (r->>'id')::bigint;
+  r2 := action_add('risk','risk:ZQ-001','bad','ZQ-001 다시');
+  perform t_ok(not (r2->>'created')::boolean and (r2->>'id')::bigint = i, '16-6 같은 신호는 열려 있는 일을 돌려준다');
+  perform t_ok((select count(*) from action_log where item_id = i) = 2, '16-7 이력 — 생성 + 담당');
+  begin perform action_add('manual',null,'warn','x',null,null,null,'nobody@x.y'); perform t_ok(false, '16-8 모르는 담당자'); exception when others then perform t_ok(sqlerrm = 'bad_assignee', '16-8 허용 사용자가 아니면 담당자가 될 수 없다'); end;
+  begin perform action_add('manual',null,'warn','   '); perform t_ok(false, '16-9 빈 제목'); exception when others then perform t_ok(sqlerrm = 'bad_title', '16-9 빈 제목 거절'); end;
+  at0 := (select updated_at from action_items where id = i);
+  s := action_set(i, '{"status":"ack","memo":"현장 확인 요청"}', at0);
+  perform t_ok((s->>'ok')::boolean and (s->>'changed')::int = 2 and (select status from action_items where id = i) = 'ack', '16-10 상태 + 메모');
+  s := action_set(i, '{"status":"doing"}', at0);
+  perform t_ok(not (s->>'ok')::boolean and (s->>'conflict')::boolean, '16-11 들고 있던 시각이 옛 것이면 conflict (덮지 않는다)');
+  perform t_ok((select status from action_items where id = i) = 'ack', '16-12 conflict 면 안 바뀐다');
+  s := action_set(i, '{"status":"done","assignee":"","due":""}');
+  perform t_ok((select status = 'done' and closed_at is not null and assignee is null and due is null from action_items where id = i), '16-13 완료 · 담당·기한 해제 · 닫힌 시각');
+  r2 := action_add('risk','risk:ZQ-001','bad','ZQ-001 재발');
+  perform t_ok((r2->>'created')::boolean and (r2->>'id')::bigint <> i, '16-14 닫힌 뒤 같은 신호는 새 일(재발은 새 사건)');
+  begin perform action_set(i, '{"status":"open"}'); perform t_ok(false, '16-15a 둘이 열렸다'); exception when others then perform t_ok(sqlerrm = 'already_open', '16-15a 같은 신호의 새 일이 열려 있으면 옛 일을 다시 열지 않는다'); end;
+  perform action_set((r2->>'id')::bigint, '{"status":"dismissed"}');
+  s := action_set(i, '{"status":"open"}');
+  perform t_ok(exists(select 1 from action_log where item_id = i and op = 'reopen'), '16-15 닫힌 일을 다시 열면 reopen 이력');
+  begin perform action_set(i, '{"status":"weird"}'); perform t_ok(false, '16-16 이상한 상태'); exception when others then perform t_ok(sqlerrm = 'bad_status', '16-16 이상한 상태 거절'); end;
+  s := action_set(i, '{"status":"open"}');
+  perform t_ok((s->>'changed')::int = 0, '16-17 같은 값이면 이력을 안 남긴다');
+  n := (select count(*) from action_log where item_id = i);
+  perform t_ok(n = 8, '16-18 이력 줄 수 (생성·담당·상태·메모·상태·담당·기한·reopen = 8 · 받은 ' || n || ')');
+  perform t_ok((select count(*) from action_people() p where p in ('boss@test.local','vw@test.local','ed@test.local')) = 3, '16-19 담당자 목록 = 허용 사용자 이메일');
+  perform t_as('vw@test.local');
+  perform t_ok((select count(*) from action_people()) = 0, '16-20 조회자에게는 담당자 목록을 안 준다');
+  begin perform action_set(i, '{"status":"done"}'); perform t_ok(false, '16-21 조회자가 바꿨다'); exception when others then perform t_ok(sqlerrm = 'forbidden', '16-21 조회자는 못 바꾼다'); end;
+  perform t_ok((select count(*) from action_items) = 2 and (select count(*) from action_log) > 0, '16-22 조회자도 일과 이력을 읽는다');
+  perform t_ok(not has_function_privilege('anon','public.action_add(text,text,text,text,text,text,text,text,date)','EXECUTE')
+           and not has_function_privilege('authenticated','public._act_who()','EXECUTE')
+           and has_function_privilege('authenticated','public.action_set(bigint,jsonb,timestamptz)','EXECUTE'), '16-23 anon 불가 · 내부 판정 회수');
+end $$;
+`;
+
 let skipped = 0;
 try {
   const init = run('initdb', ['-D', DATA, '-A', 'trust', '-U', 'postgres', '--no-sync', '-E', 'UTF8', '--locale=C']);
@@ -950,6 +1001,15 @@ try {
   (outR.match(/ERROR:[^\n]*/g) || []).forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
   oksR.forEach(() => pass++);
   ok(oksR.length === 17, '[15] T_OK 가 ' + oksR.length + '개 — 기대 17개');
+  console.log('[16] 처리함(v166) — 저장소의 setup-24-actions.sql 을 두 번 먹인다');
+  const actText = fs.readFileSync(ACT_FILE, 'utf8');
+  for (const tag of ['setup24', 'setup24b']) { const r = psql(actText, tag); ok(!/ERROR/.test(r.stderr), 'setup-24-actions.sql 적용 실패(' + tag + '):\n' + r.stderr); }
+  const pA = psql(ACT_CHECKS, 'act-checks');
+  const outA = (pA.stderr || '') + (pA.stdout || '');
+  const oksA = outA.match(/T_OK [^\n]*/g) || [];
+  (outA.match(/ERROR:[^\n]*/g) || []).forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
+  oksA.forEach(() => pass++);
+  ok(oksA.length === 24, '[16] T_OK 가 ' + oksA.length + '개 — 기대 24개');
 } catch (e) {
   fail++; console.log('  ❌ ' + (e && e.message || e));
 } finally {

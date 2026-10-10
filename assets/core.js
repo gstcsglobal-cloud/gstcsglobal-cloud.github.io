@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 162;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 163;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -165,6 +165,13 @@ GST.isKrOp = function(){
   if(!GST._me) return false;
   var r = GST._me.role;
   return r === 'kr' || ((r === 'admin' || r === 'legacy') && !!GST._me.can_write);
+};
+/* 처리함(v166)에 담고·바꿀 수 있는 사람인가 — 서버 _act_who 와 같은 규칙(쓰기 권한 또는 관리자·사이트 담당자·국내 운영자).
+   단추를 보일지 정할 뿐, 막는 것은 서버다. 등급을 모르면 false(fail-closed). */
+GST.actCan = function(){
+  if(!GST._me) return false;
+  var r = GST._me.role;
+  return !!GST._me.can_write || r === 'admin' || r === 'editor' || r === 'kr';
 };
 GST._meApply = function(me){
   GST._me = me;
