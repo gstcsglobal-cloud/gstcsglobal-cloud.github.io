@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=167"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=168"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write) 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB(옛 동작 그대로 보인다).
@@ -132,6 +132,25 @@ select.gb-inp{width:104px}
 .tab.active{color:var(--accent-ink);border-bottom-color:var(--accent)}
 .tab.err::after{content:' ⚠';font-size:11px}   /* 그 화면에서 잡히지 않은 예외가 났다(v135) */
 .tab .ic{margin-right:7px;display:inline-flex;vertical-align:-2px}
+/* 탭 묶음(v172) — «질문»으로 나눈다: 정비(PM·CIP) · 자재·비용(자재·TCO). 묶음 안의 탭도 각자 .tab[data-id] 라 딥링크·순회·검사가 그대로다 */
+.tgrp{display:inline-flex;align-items:stretch;margin:0 4px;padding-left:6px;border-left:1px solid var(--line);border-right:1px solid var(--line);flex:none}
+.tgrp-l{align-self:center;font-size:11px;font-weight:700;color:var(--mut);letter-spacing:.02em;padding:0 4px 0 6px;white-space:nowrap}
+.tgrp .tab{padding-left:10px;padding-right:10px}
+/* 처리함 배지 · 더보기 메뉴 */
+.tb-badge{display:inline-block;min-width:17px;padding:0 5px;border-radius:9px;background:var(--bad,#D92D20);color:#fff;font-size:10px;font-weight:800;line-height:17px;text-align:center}
+.tb-btn.on{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
+.tb-more{position:relative;display:inline-flex}
+.more-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:9600;min-width:190px;background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  box-shadow:var(--shadow-md);padding:6px;display:flex;flex-direction:column;gap:2px}
+.more-menu[hidden]{display:none}
+.more-menu button{font:inherit;font-size:13px;font-weight:600;text-align:left;border:0;background:transparent;color:var(--txt);padding:8px 10px;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.more-menu button:hover,.more-menu button:focus-visible{background:var(--surface-2);outline:none}
+.more-menu button.on{color:var(--accent-ink)}
+.more-menu hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
+.more-menu .chk{margin-left:auto;font-size:11px;font-weight:700;color:var(--mut)}
+.more-menu .chk.on{color:var(--accent-ink)}
+/* 「설명 표시」는 관리자만 — 경영진·고객 화면은 기본으로 «값»만 보인다(v172 · core GST.explainOn) */
+body:not([data-role="admin"]):not([data-role="legacy"]) .exp-only{display:none !important}
 
 /* iframe 영역 */
 .frame-wrap{flex:1;position:relative;background:var(--bg)}
@@ -193,6 +212,7 @@ body.kiosk-full .kiosk-panel{display:none}
   .brand .logo{font-size:17px}
   .tab{padding:11px 12px;font-size:12px}
   .tab .ic{margin-right:4px}
+  .tgrp-l{display:none}
   .topbar{padding:8px 12px;gap:6px}
   .tabbar{padding:0 8px}
   .gbarrow{padding:0 8px}
@@ -213,6 +233,17 @@ body.kiosk-full .kiosk-panel{display:none}
     <span class="tag" id="brandTag" data-lock>By CS Global Team</span>
   </div>
   <div class="topbar-right">
+    <!-- 처리함은 탭이 아니라 «할 일 수»가 보이는 단추다(v172 · 탭 12 → 8). 누르면 처리함 화면으로 -->
+    <button class="tb-btn" onclick="switchTab('action')" id="actBtn" title="처리함"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> <span id="actLabel">처리함</span> <b class="tb-badge" id="actBadge" hidden>0</b></button>
+    <!-- 더보기 — 매일 보지 않는 화면(사이트 상세 · 분석 작업대 · 운영 목표)과 관리자의 「설명 표시」 -->
+    <div class="tb-more"><button class="tb-btn" onclick="moreToggle()" id="moreBtn" aria-haspopup="menu" aria-expanded="false" title="더보기"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg> <span id="moreLabel">더보기</span></button>
+      <div class="more-menu" id="moreMenu" role="menu" hidden>
+        <button type="button" role="menuitem" data-go="site" id="mSite">사이트 상세</button>
+        <button type="button" role="menuitem" data-go="studio" id="mStudio">분석 작업대</button>
+        <button type="button" role="menuitem" data-go="targets" id="mTargets">운영 목표</button>
+        <hr class="exp-only">
+        <button type="button" role="menuitemcheckbox" aria-checked="false" id="mExplain" class="exp-only" onclick="explainToggle()"><span id="mExplainL">설명 표시</span><span class="chk" id="mExplainS">끔</span></button>
+      </div></div>
     <button class="tb-btn" onclick="refreshActive()" id="refreshBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg> <span id="refreshLabel">새로고침</span></button>
     <!-- 업로드는 탭이 아니다 — 매일 보는 탭 줄에 관리용 화면을 섞지 않는다(diag 와 같은 규율).
          대신 여기 툴바에 두어 «데이터를 넣는 곳»을 한 번에 찾을 수 있게 한다.
@@ -302,29 +333,36 @@ const SVG={
   cip:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>'
 };
 const TABS=[
+  /* v172 — 탭 12 → 8(묶음 포함). id 는 그대로 둔다 — 딥링크(#tab=fault)·자동순회 저장값·챗봇 출처가 id 를 본다.
+     grp = 탭 줄에서 한 묶음으로 선다(정비 · 자재·비용) · bar:false = 탭 줄에 안 서고 툴바(처리함 배지 · 더보기)로 연다. */
+  {id:'home',    path:'/home/',     ko:'내 화면',   en:'My view',      zh:'我的画面', ja:'マイ画面'},
   {id:'hub',     path:'/hub/',      ko:'통합 관제', en:'Command',      zh:'综合监控', ja:'統合管制'},
-  {id:'action',  path:'/action/',   ko:'처리함',    en:'Actions',      zh:'待办',     ja:'対応'},
-  {id:'site',    path:'/site/',     ko:'사이트 상세', en:'Site',        zh:'站点详情', ja:'サイト詳細'},
-  {id:'studio',  path:'/studio/',   ko:'분석 작업대', en:'Studio',      zh:'分析工作台', ja:'分析ワークベンチ'},
   {id:'report',  path:'/report/',   ko:'주간 현황', en:'Weekly',       zh:'周现况', ja:'週間現況'},
-  {id:'hr',      path:'/hr/',       ko:'인원 현황', en:'Workforce',    zh:'人员',   ja:'人員'},
-  {id:'scrubber',path:'/scrubber/', ko:'설치 현황', en:'Installation', zh:'安装',   ja:'設置'},
-  {id:'pm',      path:'/pm/',       ko:'PM 점검',   en:'PM Schedule',  zh:'PM点检', ja:'PM点検'},
   {id:'fault',   path:'/fault/',    ko:'고장 분석', en:'Fault',        zh:'故障',   ja:'故障'},
-  {id:'material',path:'/material/', ko:'자재 실적', en:'Material',     zh:'材料',   ja:'資材'},
-  {id:'cip',     path:'/cip/',      ko:'CIP 현황',  en:'CIP',          zh:'CIP',    ja:'CIP'},
-  {id:'tco',     path:'/tco/',      ko:'TCO',       en:'TCO',          zh:'TCO',    ja:'TCO'}
+  {id:'pm',      path:'/pm/',       ko:'PM 점검',   en:'PM Schedule',  zh:'PM点检', ja:'PM点検', grp:'maint'},
+  {id:'cip',     path:'/cip/',      ko:'CIP 현황',  en:'CIP',          zh:'CIP',    ja:'CIP',    grp:'maint'},
+  {id:'scrubber',path:'/scrubber/', ko:'설치 현황', en:'Installation', zh:'安装',   ja:'設置'},
+  {id:'material',path:'/material/', ko:'자재 실적', en:'Material',     zh:'材料',   ja:'資材',   grp:'cost'},
+  {id:'tco',     path:'/tco/',      ko:'TCO',       en:'TCO',          zh:'TCO',    ja:'TCO',    grp:'cost'},
+  {id:'hr',      path:'/hr/',       ko:'인원 현황', en:'Workforce',    zh:'人员',   ja:'人員'},
+  {id:'action',  path:'/action/',   ko:'처리함',    en:'Actions',      zh:'待办',     ja:'対応',   bar:false},
+  {id:'site',    path:'/site/',     ko:'사이트 상세', en:'Site',        zh:'站点详情', ja:'サイト詳細', bar:false},
+  {id:'studio',  path:'/studio/',   ko:'분석 작업대', en:'Studio',      zh:'分析工作台', ja:'分析ワークベンチ', bar:false},
+  {id:'targets', path:'/targets/',  ko:'운영 목표', en:'Targets',      zh:'运营目标', ja:'運営目標', bar:false}
   /* v163 — 주간현황(국내) 데모 탭은 셸에서 뺐다(사용자 확정 「국내 데모 페이지는 필요없다」). /report-kr/ 파일과 데모 표는 남아 있고
      roles 장치(tabOn)는 그대로다 — 등급 전용 탭을 다시 둘 때 TABS 에 roles 를 달면 순회·단축키·전 탭 불러오기가 저절로 따른다. */
 ];
+const GROUPS={maint:{ko:'정비',en:'Maintenance',zh:'维护',ja:'保全'}, cost:{ko:'자재·비용',en:'Material & Cost',zh:'材料·费用',ja:'資材·コスト'}};
 /* 이 등급에게 보이는 탭인가 — 탭 버튼(CSS)·자동순회 목록이 같은 규칙을 본다. 등급을 모르면 roles 가 있는 탭은 안 보인다. */
 function tabOn(t){ return !t.roles || t.roles.indexOf((document.body && document.body.dataset.role) || '') >= 0; }
+/* 탭 줄에 서는 탭 — 자동순회 목록·숫자 단축키·전 탭 불러오기가 이것을 본다(툴바로 여는 화면은 순회하지 않는다) */
+function barTabs(){ return TABS.filter(t=>tabOn(t)&&t.bar!==false); }
 
 const L={
-  ko:{tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',offline:'오프라인',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!'},
-  en:{tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',offline:'Offline',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!'},
-  zh:{tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',offline:'离线版',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!'},
-  ja:{tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',offline:'オフライン',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!'}
+  ko:{tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',offline:'오프라인',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!',act:'처리함',more:'더보기',explain:'설명 표시',on:'켬',off:'끔'},
+  en:{tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',offline:'Offline',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!',act:'Actions',more:'More',explain:'Show notes',on:'On',off:'Off'},
+  zh:{tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',offline:'离线版',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!',act:'待办',more:'更多',explain:'显示说明',on:'开',off:'关'},
+  ja:{tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',offline:'オフライン',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!',act:'対応',more:'その他',explain:'説明を表示',on:'オン',off:'オフ'}
 };
 let LANG='ko';
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&L[sl])LANG=sl; else if(window.name && L[window.name]) LANG=window.name; }catch(e){}
@@ -429,7 +467,7 @@ function kioskBuildPanel(){
     sec.querySelectorAll('.kp-chip').forEach(x=>x.classList.toggle('on',x===b)); kioskEst(); });
   // 페이지 — 탭 정의에서 만든다(탭이 늘면 여기도 자동으로 는다)
   const pg=document.getElementById('kkPages');
-  pg.innerHTML = TABS.filter(tabOn).map(t=>'<label><input type="checkbox" value="'+t.id+'"'
+  pg.innerHTML = barTabs().map(t=>'<label><input type="checkbox" value="'+t.id+'"'
     +((!KIOSK.pages.length||KIOSK.pages.indexOf(t.id)>=0)?' checked':'')+'> '+(t[LANG]||t.ko)+'</label>').join('');
   pg.onchange=kioskEst;
   kioskAsk();
@@ -627,6 +665,12 @@ function applyLang(){
   document.getElementById('uploadLabel').textContent=lt('upload');
   document.getElementById('offlineLabel').textContent=lt('offline');
   document.getElementById('editLabel').textContent=lt('edit');
+  document.getElementById('actLabel').textContent=lt('act');
+  document.getElementById('moreLabel').textContent=lt('more');
+  document.getElementById('mExplainL').textContent=lt('explain');
+  ['site','studio','targets'].forEach(id=>{ const t=TABS.find(x=>x.id===id), b=document.querySelector('#moreMenu [data-go="'+id+'"]'); if(t&&b) b.textContent=t[LANG]||t.ko; });
+  document.querySelectorAll('.tgrp').forEach(g=>{ const n=(GROUPS[g.dataset.grp]||{})[LANG]||''; const l=g.querySelector('.tgrp-l'); if(l) l.textContent=n; g.setAttribute('aria-label', n); });
+  explainMark();
   document.getElementById('kioskLabel').textContent=KIOSK.on?lt('kioskStop'):lt('kiosk');
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
   // 탭 이름 갱신
@@ -783,7 +827,7 @@ function frameSrc(f, tab, fState){
   }
 }
 function askLoadAll(){
-  const miss=TABS.filter(t=>tabOn(t)&&!frames[t.id]);   // 이 등급에게 안 보이는 탭(데모)은 불러오지 않는다(v146)
+  const miss=barTabs().filter(t=>!frames[t.id]);   // 이 등급에게 안 보이는 탭(데모)·툴바로 여는 화면은 불러오지 않는다(v146 · v172)
   if(!miss.length)return false;
   const mk=t=>{ const f=document.createElement('iframe'); frameSrc(f, t, ''); f.dataset.id=t.id;
     document.getElementById('frameWrap').appendChild(f); frames[t.id]=f; };
@@ -813,7 +857,7 @@ async function askSend(){
     if(!ans){ ans=GST.chatLocal(q,packs); mode='기본'; }
     wait.remove();
     if(!ans){
-      const unopened=TABS.filter(t=>tabOn(t)&&!frames[t.id]).length;
+      const unopened=barTabs().filter(t=>!frames[t.id]).length;
       askSay('a','그 값은 지금 열려 있는 탭에서 못 찾았습니다.'
         +(unopened?('\n안 연 탭이 '+unopened+'개 있습니다 — 아래 버튼을 누르면 전 탭을 불러와 다음 질문부터 함께 찾습니다.'):'')
         +'\n※ AI 응답은 kakao-bot 엣지펑션(op=web 지원 버전)이 배포돼 있어야 합니다.');
@@ -872,13 +916,66 @@ function cycleLang(){
 function buildTabs(){
   const bar=document.getElementById('tabbar');
   bar.innerHTML='';
+  const G={};
   TABS.forEach(tab=>{
+    if(tab.bar===false||!tabOn(tab)) return;
     const b=document.createElement('button');
     b.className='tab'; b.dataset.id=tab.id;
     b.innerHTML=`<span class="ic">${SVG[tab.id]||''}</span><span class="tab-label">${tab[LANG]||tab.ko}</span>`;
     b.onclick=()=>switchTab(tab.id);
-    bar.appendChild(b);
+    if(tab.grp){
+      if(!G[tab.grp]){ const g=document.createElement('div'); g.className='tgrp'; g.dataset.grp=tab.grp; g.setAttribute('role','group');
+        const gl=document.createElement('span'); gl.className='tgrp-l'; gl.textContent=(GROUPS[tab.grp]||{})[LANG]||(GROUPS[tab.grp]||{}).ko||''; g.setAttribute('aria-label', gl.textContent);
+        g.appendChild(gl); bar.appendChild(g); G[tab.grp]=g; }
+      G[tab.grp].appendChild(b);
+    } else bar.appendChild(b);
   });
+}
+/* 툴바로 여는 화면(처리함 · 더보기)이 열려 있으면 그 단추를 «켜진» 모양으로 — 탭 줄에는 켜진 탭이 없으므로 어디에 있는지 알려 준다 */
+function barMark(){
+  const t=TABS.find(x=>x.id===activeTab)||{};
+  document.getElementById('actBtn').classList.toggle('on', activeTab==='action');
+  document.getElementById('moreBtn').classList.toggle('on', t.bar===false && activeTab!=='action');
+  document.querySelectorAll('#moreMenu [data-go]').forEach(b=>b.classList.toggle('on', b.dataset.go===activeTab));
+}
+function moreToggle(force){
+  const m=document.getElementById('moreMenu'), btn=document.getElementById('moreBtn');
+  const open=force!=null?force:m.hidden; m.hidden=!open; btn.setAttribute('aria-expanded', String(open));
+  if(open){ explainMark(); const f=m.querySelector('button'); if(f) f.focus(); }
+}
+document.addEventListener('click',e=>{ if(!e.target.closest('.tb-more')) { const m=document.getElementById('moreMenu'); if(m&&!m.hidden) moreToggle(false); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const m=document.getElementById('moreMenu'); if(m&&!m.hidden){ moreToggle(false); document.getElementById('moreBtn').focus(); } } });
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('#moreMenu [data-go]').forEach(b=>b.onclick=()=>{ moreToggle(false); switchTab(b.dataset.go); });
+});
+/* 「설명 표시」(관리자) — 같은 출처라 localStorage 하나를 모든 탭이 본다. 켜고 끄면 열린 탭에 알린다(core GST._explainApply) */
+function explainOnNow(){ try{ return localStorage.getItem('gst_explain')==='1'; }catch(e){ return false; } }
+function explainMark(){
+  const on=explainOnNow(), b=document.getElementById('mExplain'), st=document.getElementById('mExplainS');
+  if(b) b.setAttribute('aria-checked', String(on)); if(st){ st.textContent=on?lt('on'):lt('off'); st.classList.toggle('on', on); }
+}
+function explainToggle(){
+  try{ localStorage.setItem('gst_explain', explainOnNow()?'0':'1'); }catch(e){}
+  explainMark(); broadcast({type:'gst-explain'});
+}
+/* 처리함 배지 — 미완료 건수(완료·보류 제외). 못 읽으면 숫자 대신 아무것도 안 띄운다(틀린 0 을 보이지 않는다) */
+async function actCount(){
+  const bd=document.getElementById('actBadge');
+  try{
+    const C=await GST._dbAuthed(); if(!C){ bd.hidden=true; return; }
+    const r=await C.from('action_items').select('id',{count:'exact',head:true}).not('status','in','(done,dismissed)');
+    if(r.error||r.count==null){ bd.hidden=true; return; }
+    bd.textContent=r.count>99?'99+':String(r.count); bd.hidden=!r.count;
+  }catch(e){ bd.hidden=true; }
+}
+/* 저장된 언어(allowed_users.lang · 「내 화면」 기본 설정) — 이번 세션에 사람이 언어를 고르지 않았을 때만 */
+async function prefLang(){
+  try{
+    if(sessionStorage.getItem('gst_lang')) return;
+    await (GST.loadMe&&GST.loadMe());
+    const p=GST.prefs&&await GST.prefs.load();
+    if(p&&p.lang&&L[p.lang]&&p.lang!==LANG){ LANG=p.lang; try{ window.name=LANG; sessionStorage.setItem('gst_lang',LANG); }catch(e){} applyLang(); broadcast({type:'gst-lang',lang:LANG}); }
+  }catch(e){ console.warn('[shell] 저장된 언어 읽기 실패', e); }
 }
 
 function switchTab(id){
@@ -886,6 +983,7 @@ function switchTab(id){
   activeTab=id;
   // 탭 하이라이트
   document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
+  barMark(); actCount();
   // iframe 없으면 생성 (지연 로딩)
   if(!frames[id]){
     const tab=TABS.find(t=>t.id===id);
@@ -911,7 +1009,7 @@ function switchTab(id){
 function doLogout(){ GST.signOut(); }
 
 function start(){
-  GST.needVer && GST.needVer(136);   // 옛 core.js 캐시를 «숫자가 전부 0» 이 아니라 배너로(v135 — 셸도 선언한다)
+  GST.needVer && GST.needVer(168);   // 옛 core.js 캐시를 «숫자가 전부 0» 이 아니라 배너로(v135 — 셸도 선언한다)
   buildTabs();
   GST.barBind(document.getElementById('gbar'), barSend);
   applyLang();
@@ -924,14 +1022,16 @@ function start(){
   const hs=parseHash();
   if(hs.tab&&TABS.find(t=>t.id===hs.tab)){ init=hs.tab; if(hs.f)PENDING_STATE={tab:hs.tab,f:hs.f}; }
   switchTab(init);
+  prefLang();
+  setInterval(actCount, 5*60*1000);   // 처리함 배지 — 5분마다(다른 사람이 담거나 닫은 건이 따라온다)
 }
 
 
 // 키보드 단축키: 숫자로 탭 전환 — 이 등급에게 안 보이는 탭(데모 · v146)은 건너뛴다(9 를 누르면 숨긴 탭이 열리던 틈)
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;
-  const n=parseInt(e.key);
-  if(n>=1 && n<=TABS.length && tabOn(TABS[n-1])) switchTab(TABS[n-1].id);
+  const n=parseInt(e.key), B=barTabs();
+  if(n>=1 && n<=B.length) switchTab(B[n-1].id);
 });
 
 // 초기화 — 로그인 성공 전에는 start()가 호출되지 않는다(대시보드가 열리지 않음)

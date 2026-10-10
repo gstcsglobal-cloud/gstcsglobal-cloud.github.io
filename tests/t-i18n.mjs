@@ -8,7 +8,7 @@ import path from 'path';
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('  ❌ ' + m); } };
-const PAGES = { hub: 'T', action: 'T', site: 'T', studio: 'T', report: 'T', 'report-kr': 'T', fault: 'T', material: 'T', pm: 'T', scrubber: 'T', tco: 'T', cip: 'T', hr: 'TR' };   // report-kr = 주간현황(국내) 데모 사본(v146)
+const PAGES = { home: 'T', targets: 'T', hub: 'T', action: 'T', site: 'T', studio: 'T', report: 'T', 'report-kr': 'T', fault: 'T', material: 'T', pm: 'T', scrubber: 'T', tco: 'T', cip: 'T', hr: 'TR' };   // report-kr = 주간현황(국내) 데모 사본(v146)
 const LANGS = ['ko', 'en', 'zh', 'ja'];
 // 시트 «값»을 그대로 적은 것은 번역 대상이 아니다 — 설비상태·워런티 표기·조치 어휘
 const ALLOW = ['반납', '무상', '유상', '설비 PM', 'SWAP', '반입완료', '반출대기', '반출완료', '출하대기'];

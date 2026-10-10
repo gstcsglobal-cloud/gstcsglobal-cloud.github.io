@@ -6,7 +6,7 @@
 <title>오프라인 내보내기 · CS Global Team</title>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=167"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=168"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/diag/ 와 같은 부류라 테마·i18n 을 싣지 않는다(KO 고정) */
 *{margin:0;padding:0;box-sizing:border-box}
@@ -97,11 +97,13 @@ async function runData(){
     if(typeof CompressionStream==='undefined') throw new Error('이 브라우저에는 압축 기능(CompressionStream)이 없습니다 — Chrome/Edge 로 여세요');
     /* 담을 목록 — gid 는 core 의 라우팅 표에서 «그대로» 뽑는다(목록을 여기 박으면 네 번째 사본이 된다).
        표 직접 읽기 셋만 열거한다: 국내외 원장 둘(report 가 csvTableRows 로 직접 읽는 그 호출)과
-       pm_adjust(pm 이 GST.db 로 직접 읽는 유일한 표 — 빠지면 pm 일정 조정이 온라인과 갈린다). */
+       pm_adjust(pm 이 GST.db 로 직접 읽는 유일한 표 — 빠지면 pm 일정 조정이 온라인과 갈린다).
+       ops_params · ops_targets(v172) — 판정 기준·운영 목표. 빠지면 오프라인이 «기본값»으로 위험 점수·신호·목표 판정을 해
+       온라인과 다른 순위·색을 낸다. 표가 아직 없으면(setup-27 전) 빈 채로 담는다 — 그때는 온라인도 기본값이라 같다. */
     const jobs=[];
     Object.keys(GST.TABLE_OF_GID).forEach(g=>jobs.push(['gid',g,GST.TABLE_OF_GID[g]]));
     Object.keys(GST.CSV_TABLE_OF_GID).forEach(g=>jobs.push(['gid',g,GST.CSV_TABLE_OF_GID[g]]));
-    jobs.push(['tbl','sheet_alarm','알람 원장'], ['tbl','sheet_allbypass','올바이패스 원장'], ['tbl','pm_adjust','PM 일정 조정']);
+    jobs.push(['tbl','sheet_alarm','알람 원장'], ['tbl','sheet_allbypass','올바이패스 원장'], ['tbl','pm_adjust','PM 일정 조정'], ['tbl','ops_params','판정 기준'], ['tbl','ops_targets','운영 목표']);
 
     const lines=['/* GST CS Global 오프라인 스냅샷 — offline.html 과 같은 폴더에 두세요 */\n'];
     const counts={};
@@ -118,6 +120,13 @@ async function runData(){
         const r=await db.from('pm_adjust').select('key,new_date,memo,updated_at');   // pm 의 loadAdjust 와 같은 선택
         if(r.error) throw new Error('pm_adjust: '+r.error.message);
         rows=r.data||[];
+      }else if(key==='ops_params'||key==='ops_targets'){
+        const db=await GST.db(); if(!db) throw new Error('로그인이 풀렸습니다 — 새로고침 후 다시');
+        /* core 의 GST.params.load · GST.targets.load 와 같은 선택(감춘 목표는 안 담는다) */
+        const r=key==='ops_params'?await db.from('ops_params').select('key,value,updated_at,updated_by').limit(500)
+          :await db.from('ops_targets').select('id,metric,scope_kind,scope,target,warn,dir,note,updated_at,updated_by').is('removed_at',null).limit(5000);
+        if(r.error && !/does not exist|relation|schema cache|42P01|PGRST20[05]/i.test(String(r.error.message||r.error.code||''))) throw new Error(key+': '+r.error.message);
+        rows=r.error?[]:(r.data||[]);
       }else{
         rows=await GST.csvTableRows(key, key==='sheet_alarm'?GST._KR_COLS_A:GST._KR_COLS_B);
       }
@@ -163,7 +172,7 @@ async function runHtml(){
          데모 표(kr_)는 스냅샷에 없어 넣으면 운영 자료를 «데모»라고 적고 그린다. 경로 모양(하이픈)에 기대지 않고 roles 로 가른다. */
     const paths=[...new Set([...shell.matchAll(/\{id:'[a-z_]+',\s*path:\s*'(\/[a-z-]+\/)'[^\n]*\}/g)].filter(m=>!/\broles:/.test(m[0])).map(m=>m[1]))];
     if(paths.length<8) throw new Error('셸 TABS 에서 경로를 '+paths.length+'개만 찾았습니다 — 셸 구조 변경 여부를 확인하세요');
-    const A={ core:await getText('/assets/core.js'), theme:await getText('/assets/theme.css'),
+    const A={ core:await getText('/assets/core.js'), theme:await getText('/assets/theme.css'), ds:await getText('/assets/ds.css'),
               shim:await getText('/offline/shim.js'), qbr:await getText('/assets/qbr-ppt.js') };
     const VENDOR={};
     for(const f of ['chart.umd.min.js','chartjs-plugin-zoom.min.js','papaparse.min.js']) VENDOR[f]=await getText('/assets/vendor/'+f);
@@ -178,6 +187,8 @@ async function runHtml(){
       }
       h=subN(h, new RegExp('<script src="'+esc(HOST)+'\\/assets\\/core\\.js\\?v=\\d+"><\\/script>','g'), ()=>inlineJs(coreShim), 1, path+' core.js');
       h=subN(h, new RegExp('<link rel="stylesheet" href="'+esc(HOST)+'\\/assets\\/theme\\.css\\?v=\\d+"[^>]*>','g'), ()=>'<style>\n'+A.theme+'\n</style>', 1, path+' theme.css');
+      /* ds.css(v172 · 내 화면 · 운영 목표의 공용 부품) — 쓰는 화면만 싣는다 */
+      h=h.replace(new RegExp('<link rel="stylesheet" href="'+esc(HOST)+'\\/assets\\/ds\\.css\\?v=\\d+"[^>]*>','g'), ()=>'<style>\n'+A.ds+'\n</style>');
       h=h.replace(/<script src="\.\.\/assets\/qbr-ppt\.js"><\/script>/, ()=>inlineJs(A.qbr));
       h=h.replace(/<link[^>]+cdn\.jsdelivr\.net[^>]*>/g, '<!-- cdn css: offline 제거 -->');
       if(/<link[^>]+https:\/\//.test(h)) throw new Error(path+' 에 외부 <link> 가 남았습니다');

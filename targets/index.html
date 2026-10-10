@@ -7,14 +7,13 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=166"></script>
-<script src="https://gstcsglobal-cloud.github.io/assets/v2.js?v=1"></script>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=166">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=168"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=168">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/ds.css?v=1">
 <!--
-  운영 목표 (2단계 «제품화» 밑바탕 · supabase/setup-26-targets.sql)
+  운영 목표 (2단계 «제품화» 밑바탕 · supabase/setup-27-targets.sql)
   지표 × 범위(전사 · 국내/해외 · 운영단위)마다 목표 하나. 화면은 «가장 좁은 목표»를 쓴다(운영단위 > 구분 > 전사).
-  ⚠ 지표의 뜻은 assets/v2.js GST.METRICS 한 곳 — 이 화면은 «얼마면 정상인가»만 정한다.
+  ⚠ 지표의 뜻은 core 의 GST.METRICS 한 곳 — 이 화면은 «얼마면 정상인가»만 정한다.
   ⚠ 쓰기는 관리자 + 쓰기 권한만(서버 _tgt_who). 다른 사람은 같은 화면을 «읽기»로 본다 — 목표가 얼마인지는 누구나 알아야 판정 색을 믿는다.
   ⚠ 지우지 않고 감춘다. 이력은 ops_target_log 에 남는다.
 -->
@@ -34,30 +33,30 @@
   <div id="banners" class="ds-grid"></div>
   <div class="ds-card" id="cEdit"></div>
   <div class="ds-card" id="cAll"></div>
+  <div class="ds-card" id="cPar"></div>
   <div class="ds-status" id="status"></div>
 </div>
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-if(!GST.metrics){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/v2.js 로드 실패 — Ctrl+Shift+R 로 강제 새로고침</div>');throw new Error('GST v2 missing');}
-GST.needVer && GST.needVer(166);
+GST.needVer && GST.needVer(168);
 GST.authGate();
 
 const T={
-ko:{title:'운영 목표',sub:'목표를 정하면 「내 화면」의 카드와 표가 «목표 대비»로 판정합니다',scope_lbl:'범위',go_home:'내 화면으로',
+ko:{parT:'판정 기준',parS:'화면이 판정에 쓰는 기준값입니다 — 바꾸면 이 기준을 쓰는 모든 화면에 반영됩니다',c_p:'항목',c_def:'기본값',c_val:'현재 값',p_reset:'기본값으로 되돌리기',p_pending:'미적용 — 아직 이 값을 읽는 화면이 없습니다',p_live:'적용 중',p_changed:'변경됨',e_range:'{a}~{b} 사이 값을 입력해 주세요',p_saved:'판정 기준을 저장했습니다',title:'운영 목표',sub:'목표를 설정하면 「내 화면」의 카드와 표가 목표 대비로 판정됩니다',scope_lbl:'범위',go_home:'내 화면으로',
   sc_all:'전사',sc_kr:'국내 전체',sc_os:'해외 전체',sc_ops:'운영단위',loading:'자료를 불러오는 중…',
-  ro:'목표는 관리자만 바꿀 수 있습니다 — 여기서는 지금 정해진 값을 봅니다.',noTbl:'서버에 목표 표가 아직 없습니다 — supabase/setup-26-targets.sql 을 Run 한 뒤 다시 여세요.',noDb:'서버에 연결되지 않아 목표를 읽고 쓸 수 없습니다(인증 꺼짐 · 오프라인).',
-  editT:'{s} 목표',editS:'비워 두면 위 범위의 목표를 따릅니다(운영단위 → 구분 → 전사)',allT:'정해진 목표 전체',allS:'최근에 바꾼 것부터',
-  c_m:'지표',c_now:'지금 값',c_use:'지금 적용',c_tgt:'목표',c_warn:'주의 경계',c_dir:'방향',c_note:'메모',c_sc:'범위',c_by:'마지막 수정',
-  inh:'{s} 목표를 따름',own:'이 범위의 목표',none:'목표 없음',le:'이하가 정상',ge:'이상이 정상',warn_ph:'비우면 기본 띠',
-  save:'저장',remove:'지우기',saved:'저장했습니다',removed:'지웠습니다 — 위 범위의 목표가 다시 적용됩니다',
-  e_num:'목표는 숫자여야 합니다',e_warn:'주의 경계가 목표보다 «좋은» 쪽에 있습니다 — 이하가 정상이면 목표 이상, 이상이 정상이면 목표 이하로',
-  e_forbidden:'목표를 바꿀 권한이 없습니다(관리자 + 쓰기 권한)',e_login:'다시 로그인해 주세요',e_conflict:'그새 다른 사람이 바꿨습니다 — 지금 값을 다시 읽었으니 확인 뒤 다시 저장하세요',
-  e_other:'저장하지 못했습니다: {e}',e_noDb:'서버에 연결되지 않았습니다',rm_q:'이 목표를 지울까요? (이력은 남습니다)',yes:'지우기',no:'그대로 두기',
-  band:'기본 주의 띠: {b}',fail:'일부 자료를 못 읽었습니다'},
-en:{title:'Operating targets',sub:'Once targets are set, «My view» cards and tables are rated against them',scope_lbl:'Scope',go_home:'My view',
+  ro:'목표는 관리자만 변경할 수 있습니다 — 현재 설정값을 보여 드립니다.',noTbl:'서버에 목표 테이블이 없습니다 — supabase/setup-27-targets.sql을 실행한 뒤 다시 여세요.',noDb:'서버에 연결되지 않아 목표를 읽거나 저장할 수 없습니다(인증 꺼짐 · 오프라인).',
+  editT:'{s} 목표',editS:'비워 두면 상위 범위의 목표가 적용됩니다(운영단위 → 국내/해외 → 전사)',allT:'설정된 목표 전체',allS:'최근 변경 순',
+  c_m:'지표',c_now:'현재 값',c_use:'적용 중인 목표',c_tgt:'목표',c_warn:'주의 기준',c_dir:'판정 방향',c_note:'메모',c_sc:'범위',c_by:'최종 수정',
+  inh:'{s} 목표 적용',own:'이 범위 목표',none:'목표 없음',le:'낮을수록 좋음(이하 정상)',ge:'높을수록 좋음(이상 정상)',warn_ph:'비우면 기본 구간',
+  save:'저장',remove:'삭제',saved:'저장했습니다',removed:'삭제했습니다 — 상위 범위의 목표가 다시 적용됩니다',
+  e_num:'목표는 숫자로 입력해 주세요',e_warn:'주의 기준이 목표보다 좋은 쪽에 있습니다 — 낮을수록 좋은 지표는 목표 이상, 높을수록 좋은 지표는 목표 이하로 입력하세요',
+  e_forbidden:'목표를 변경할 권한이 없습니다(관리자 + 쓰기 권한 필요)',e_login:'다시 로그인해 주세요',e_conflict:'그사이 다른 사용자가 변경했습니다 — 최신 값을 다시 불러왔으니 확인 후 다시 저장하세요',
+  e_other:'저장하지 못했습니다: {e}',e_noDb:'서버에 연결되지 않았습니다',rm_q:'이 목표를 삭제할까요? (변경 이력은 남습니다)',yes:'삭제',no:'취소',
+  band:'기본 주의 구간: {b}',fail:'일부 자료를 읽지 못했습니다'},
+en:{parT:'Rating rules',parS:'numbers that used to be fixed in code — every screen using a rule follows the change',c_p:'Rule',c_def:'Default',c_val:'Current',p_reset:'Reset to default',p_pending:'Applies after integration — Command and Fault still use the defaults. Values set now take effect from that day.',p_live:'In effect now',p_changed:'changed',e_range:'Enter a value between {a} and {b}',p_saved:'Rule saved',title:'Operating targets',sub:'Once targets are set, «My view» cards and tables are rated against them',scope_lbl:'Scope',go_home:'My view',
   sc_all:'Company',sc_kr:'All Korea',sc_os:'All overseas',sc_ops:'Operating units',loading:'Loading…',
-  ro:'Only admins can change targets — you are seeing the current values.',noTbl:'The target table is not on the server yet — run supabase/setup-26-targets.sql and reopen.',noDb:'Not connected to the server, so targets cannot be read or saved (auth off · offline).',
+  ro:'Only admins can change targets — you are seeing the current values.',noTbl:'The target table is not on the server yet — run supabase/setup-27-targets.sql and reopen.',noDb:'Not connected to the server, so targets cannot be read or saved (auth off · offline).',
   editT:'Targets for {s}',editS:'leave empty to follow the wider scope (unit → region → company)',allT:'All targets',allS:'most recently changed first',
   c_m:'Metric',c_now:'Now',c_use:'In effect',c_tgt:'Target',c_warn:'Watch limit',c_dir:'Direction',c_note:'Note',c_sc:'Scope',c_by:'Last change',
   inh:'follows {s}',own:'set for this scope',none:'No target',le:'lower is better',ge:'higher is better',warn_ph:'empty = default band',
@@ -66,9 +65,9 @@ en:{title:'Operating targets',sub:'Once targets are set, «My view» cards and t
   e_forbidden:'You cannot change targets (admin + write access)',e_login:'Please sign in again',e_conflict:'Someone changed it meanwhile — the current value was reloaded; check and save again',
   e_other:'Could not save: {e}',e_noDb:'Not connected to the server',rm_q:'Remove this target? (history is kept)',yes:'Remove',no:'Keep',
   band:'default watch band: {b}',fail:'Some data could not be read'},
-zh:{title:'运营目标',sub:'设定目标后，「我的画面」中的卡片和表格将按目标判定',scope_lbl:'范围',go_home:'返回我的画面',
+zh:{parT:'判定标准',parS:'原本写死在代码里的标准数字 — 修改后所有使用该标准的画面都会跟着变',c_p:'标准',c_def:'默认值',c_val:'当前值',p_reset:'恢复默认',p_pending:'整合后适用 — 目前综合监控·故障分析仍使用默认值。现在修改的值将从整合当天起使用。',p_live:'目前适用中',p_changed:'已修改',e_range:'请输入 {a} ~ {b} 之间的值',p_saved:'已保存判定标准',title:'运营目标',sub:'设定目标后，「我的画面」中的卡片和表格将按目标判定',scope_lbl:'范围',go_home:'返回我的画面',
   sc_all:'全公司',sc_kr:'国内全部',sc_os:'海外全部',sc_ops:'运营单位',loading:'正在加载…',
-  ro:'只有管理员可以修改目标 — 此处显示当前设定的值。',noTbl:'服务器尚无目标表 — 请运行 supabase/setup-26-targets.sql 后重新打开。',noDb:'未连接服务器，无法读取或保存目标(认证关闭 · 离线)。',
+  ro:'只有管理员可以修改目标 — 此处显示当前设定的值。',noTbl:'服务器尚无目标表 — 请运行 supabase/setup-27-targets.sql 后重新打开。',noDb:'未连接服务器，无法读取或保存目标(认证关闭 · 离线)。',
   editT:'{s} 的目标',editS:'留空则沿用上级范围的目标(运营单位 → 区分 → 全公司)',allT:'已设定的全部目标',allS:'最近修改的在前',
   c_m:'指标',c_now:'当前值',c_use:'当前适用',c_tgt:'目标',c_warn:'注意界限',c_dir:'方向',c_note:'备注',c_sc:'范围',c_by:'最后修改',
   inh:'沿用{s}目标',own:'此范围的目标',none:'无目标',le:'越低越好',ge:'越高越好',warn_ph:'留空 = 默认区间',
@@ -77,9 +76,9 @@ zh:{title:'运营目标',sub:'设定目标后，「我的画面」中的卡片�
   e_forbidden:'没有修改目标的权限(管理员 + 写入权限)',e_login:'请重新登录',e_conflict:'期间已有他人修改 — 已重新读取当前值，请确认后再保存',
   e_other:'未能保存: {e}',e_noDb:'未连接服务器',rm_q:'删除此目标吗？(保留历史)',yes:'删除',no:'保留',
   band:'默认注意区间: {b}',fail:'部分数据未能读取'},
-ja:{title:'運営目標',sub:'目標を決めると「マイ画面」のカードと表が目標比で判定します',scope_lbl:'範囲',go_home:'マイ画面へ',
+ja:{parT:'判定基準',parS:'コードに固定されていた基準の数字 — 変えるとその基準を使う画面がすべて従う',c_p:'基準',c_def:'既定値',c_val:'現在値',p_reset:'既定値に戻す',p_pending:'統合後に適用 — 今は統合管制・故障分析が既定値を使っています。今変えた値は統合の日から使われます。',p_live:'現在適用中',p_changed:'変更あり',e_range:'{a} ~ {b} の間で入力してください',p_saved:'判定基準を保存しました',title:'運営目標',sub:'目標を決めると「マイ画面」のカードと表が目標比で判定します',scope_lbl:'範囲',go_home:'マイ画面へ',
   sc_all:'全社',sc_kr:'国内全体',sc_os:'海外全体',sc_ops:'運営単位',loading:'データ読み込み中…',
-  ro:'目標は管理者だけが変更できます — ここでは現在の値を表示します。',noTbl:'サーバーに目標表がまだありません — supabase/setup-26-targets.sql を実行してから開き直してください。',noDb:'サーバーに接続されていないため目標を読み書きできません(認証オフ · オフライン)。',
+  ro:'目標は管理者だけが変更できます — ここでは現在の値を表示します。',noTbl:'サーバーに目標表がまだありません — supabase/setup-27-targets.sql を実行してから開き直してください。',noDb:'サーバーに接続されていないため目標を読み書きできません(認証オフ · オフライン)。',
   editT:'{s} の目標',editS:'空欄なら上位範囲の目標に従います(運営単位 → 区分 → 全社)',allT:'設定済みの目標すべて',allS:'最近変更したものから',
   c_m:'指標',c_now:'現在値',c_use:'適用中',c_tgt:'目標',c_warn:'注意境界',c_dir:'方向',c_note:'メモ',c_sc:'範囲',c_by:'最終変更',
   inh:'{s}の目標に従う',own:'この範囲の目標',none:'目標なし',le:'低いほど良い',ge:'高いほど良い',warn_ph:'空欄 = 既定の帯',
@@ -103,7 +102,7 @@ const S={sc:{kind:'all', v:''}};
 
 async function load(){
   status(t('loading'));
-  const r=await Promise.allSettled([GST.ops.load(), GST.targets.load(), loadActs()]);
+  const r=await Promise.allSettled([GST.ops.load(), GST.targets.load(), GST.params.load(), loadActs()]);
   RAW=r[0].status==='fulfilled'?r[0].value:{INST:[],WK:[],KRA:[],fails:['ops']};
   try{ if(GST.loadMe) await GST.loadMe(); }catch(e){}
   const q=new URLSearchParams(location.search);
@@ -112,7 +111,7 @@ async function load(){
   status((RAW.fails.length?t('fail')+' ('+RAW.fails.join(', ')+') · ':'')+'✅ '+new Date().toLocaleString(), !!RAW.fails.length);
 }
 async function loadActs(){
-  try{ const C=await GST.db(); if(!C){ ACTS=null; return; }
+  try{ const C=await GST._dbAuthed(); if(!C){ ACTS=null; return; }
     const r=await C.from('action_items').select('op,due,status').not('status','in','(done,dismissed)').limit(2000);
     ACTS=r.error?null:(r.data||[]);
   }catch(e){ ACTS=null; }
@@ -143,7 +142,7 @@ function render(){
   else if(GST.targets.why==='no_db') B.push(t('noDb'));
   else if(!can) B.push(t('ro'));
   document.getElementById('banners').innerHTML=B.map(s=>'<div class="ds-banner'+(GST.targets.why==='no_table'&&adm?' warn':'')+'"><span>'+esc(s)+'</span></div>').join('');
-  drawEdit(can); drawAll();
+  drawEdit(can); drawAll(); drawPar(can);
 }
 function curVals(){
   const asOf=GST.ops.asOf(RAW);
@@ -218,6 +217,40 @@ function drawAll(){
     tr.onclick=go; tr.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } }; });
 }
 
+/* ===== 판정 기준 (setup-27 6절 · GST.PARAMS) ===== */
+function unitTxt(u){ return u==='pt'?v2t('u_pt'):u==='pct'?v2t('u_rel'):u==='x'?v2t('u_x'):u==='case'?v2t('u_case'):u==='ea'?v2t('u_ea'):u==='day'?v2t('u_day'):u==='pts'?v2t('u_pts'):''; }
+function drawPar(can){
+  const box=document.getElementById('cPar');
+  let h='<h2>'+esc(t('parT'))+'<span class="s">'+esc(t('parS'))+'</span></h2>';
+  GST.PARAM_SECTIONS.forEach(g=>{
+    const keys=Object.keys(GST.PARAMS).filter(k=>GST.PARAMS[k].g===g), live=keys.every(k=>GST.PARAMS[k].live);
+    h+='<div style="margin-top:6px"><b>'+esc(v2t('g_'+g))+'</b> <span class="ds-note">'+esc(v2t('gd_'+g))+'</span> '
+      +'<span class="ds-pill '+(live?'ok':'')+'">'+esc(live?t('p_live'):t('p_pending').split(' — ')[0])+'</span></div>'
+      +(live?'':'<div class="ds-note">'+esc(t('p_pending'))+'</div>')
+      +'<div class="ds-tbl-wrap"><table class="ds-tbl" data-g="'+g+'"><thead><tr><th>'+esc(t('c_p'))+'</th><th class="n">'+esc(t('c_def'))+'</th><th style="min-width:110px">'+esc(t('c_val'))+'</th><th></th></tr></thead><tbody>'
+      +keys.map(k=>{ const P=GST.PARAMS[k], ch=GST.params.changed(k), v=GST.params.get(k), u=unitTxt(P.u);
+        return '<tr data-p="'+k+'"><td>'+esc(v2t('p_'+k))+(ch?' <span class="ds-pill warn">'+esc(t('p_changed'))+'</span>':'')+'</td>'
+          +'<td class="n">'+esc(P.def)+' '+esc(u)+'</td>'
+          +'<td><div style="display:flex;align-items:center;gap:6px"><input class="ds-in" inputmode="decimal" data-f="pv" value="'+esc(v)+'" min="'+P.min+'" max="'+P.max+'" step="'+P.step+'" aria-label="'+esc(v2t('p_'+k))+'"'+(can?'':' readonly')+'><span class="ds-note">'+esc(u)+'</span></div></td>'
+          +'<td style="white-space:nowrap">'+(can?'<button type="button" class="ds-btn sm pri" data-pa="save">'+esc(t('save'))+'</button> '
+            +(ch?'<button type="button" class="ds-btn sm" data-pa="reset">'+esc(t('p_reset'))+'</button>':''):'')+'</td></tr>'; }).join('')
+      +'</tbody></table></div>';
+  });
+  box.innerHTML=h+'<div class="ds-note" id="parMsg" role="status"></div>';
+  box.querySelectorAll('[data-f="pv"]').forEach(i=>i.addEventListener('input',()=>i.classList.add('dirty')));
+  box.querySelectorAll('[data-pa]').forEach(b=>b.onclick=()=>savePar(b.closest('tr').dataset.p, b.dataset.pa==='reset', b));
+}
+async function savePar(k, reset, btn){
+  const P=GST.PARAMS[k], say=(s,bad)=>{ const m=document.getElementById('parMsg'); if(!m) return; m.textContent=s; m.style.color=bad?'var(--bad)':''; if(!bad&&GST.capToast) GST.capToast(s); };
+  let v=null;
+  if(!reset){ const raw=btn.closest('tr').querySelector('[data-f="pv"]').value.trim(); v=GST.numv?GST.numv(raw):Number(raw);
+    if(raw===''||isNaN(v)||v<P.min||v>P.max) return say(fmt(t('e_range'),{a:P.min,b:P.max}), true);
+    if(v===P.def&&!GST.params.changed(k)) return say(t('p_saved')); }
+  btn.disabled=true;
+  const r=await GST.params.save(k, (reset||v===P.def)?null:v);
+  await GST.params.load(); render();
+  if(r&&r.ok) say(t('p_saved')); else say(ERR(r&&r.error), true);
+}
 function status(s, err){ const e=document.getElementById('status'); e.textContent=s; e.classList.toggle('err',!!err); }
 function applyLang(){
   document.documentElement.lang=LANG;

@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=167"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=168"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -143,7 +143,7 @@ canvas{cursor:pointer}
 @media print{.capbtns,.header-right,.slicers,.fchips{display:none!important}.card,.trend-card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 .rk-sc{display:inline-block;min-width:28px;padding:1px 6px;border-radius:6px;font-weight:700;background:var(--surface-2);text-align:center}.rk-sc.mid{background:var(--warn-soft,#fef3c7);color:var(--txt-main)}.rk-sc.hi{background:var(--bad);color:#fff}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=167">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=168">
 </head>
 <body>
 
@@ -711,10 +711,10 @@ const T={
     dp_ch_n:'듀얼 챔버는 좌우가 같은 조건으로 돕니다 — 한쪽에만 계속 손이 가면 배관·드레인 같은 물리적 원인을 의심합니다. 편중도 = max(L,R) ÷ (L+R) · 좌우 합 {m}건 이상만',
     dp_ch_l:'LEFT BM율',dp_ch_r:'RIGHT BM율',dp_ch_sk:'한쪽 70%↑ 설비',dp_ch_skd:'좌우 합 {m}건 이상 {n}대 중',
     dp_th_lr:'LEFT : RIGHT',dp_th_skew:'편중도',dp_th_bmlr:'그중 BM',
-    dp_ch_none:'좌우 합 {m}건 이상인 설비가 없습니다',dp_unit:'대',dp_th_sh:'BM 점유율',dp_sub_sh:'BM 점유율 = 그 구분의 BM ÷ 전체 BM {b}건',rd_wk:'일자|설비호기|S/N|단계|라인|공정|세부공정|모델',rd_rel:'S/N|모델|라인|가동일|BM|MTBF(일)|MTTR(분)|연환산',kd_avg:'카드는 {n}건의 평균입니다 — 목록은 설비 단위',kd_den:'분모 {a} + {b} = {n}',kd_med:'카드는 중앙값입니다 — 목록은 설비 단위 {n}대',kd_fleet:'BM {b}건 ÷ 가동 {o}일(연환산) — 목록은 설비 단위',kd_ftfr:'관측 {o}건 중 재방문 {r}건 = {p}% — 목록은 재방문 건',kd_win:'{w}일 안에 같은 설비에서 BM 이 다시 난 건',rd_share:'공수는 인원수로 안분한 값입니다',rd_mean:'막대는 평균값입니다 — 목록은 원본 전체',
+    dp_ch_none:'좌우 합 {m}건 이상인 설비가 없습니다',dp_unit:'대',dp_th_sh:'BM 점유율',dp_sub_sh:'BM 점유율 = 그 구분의 BM ÷ 전체 BM {b}건',rd_wk:'일자|설비호기|S/N|단계|라인|공정|세부공정|모델',rd_rel:'S/N|모델|라인|가동일|BM|MTBF(일)|MTTR(분)|연환산',kd_avg:'카드는 {n}건의 평균입니다 — 목록은 설비 단위',kd_den:'분모 {a} + {b} = {n}',kd_med:'카드는 중앙값입니다 — 목록은 설비 단위 {n}대',kd_fleet:'BM {b}건 ÷ 가동 {o}일(연환산) — 목록은 설비 단위',kd_ftfr:'관측 {o}건 중 재방문 {r}건 = {p}% — 목록은 재방문 건',kd_win:'{w}일 이내 같은 설비에서 BM이 재발한 건',rd_share:'공수는 인원수로 안분한 값입니다',rd_mean:'막대는 평균값입니다 — 목록은 원본 전체',
     pv_set1:'서비스 실적',pv_set2:'작업자별 (펼침)',pv_subproc:'세부공정',pv_bay:'BAY',
     pv_chpos:'채널위치',pv_maineq:'메인설비호기',pv_worker:'작업자',pv_bm:'BM건수',pv_wkrn:'작업자수',
-    ch_alarmmat:'알람이 뜨면 무슨 자재를 가나',risk_title:'고장 위험 설비 TOP 20',risk_eq:'설비',risk_site:'단지',risk_sc:'점수',risk_bm:'최근 90일 고장',risk_pm:'마지막 PM',risk_why:'왜',risk_note:'점수 = 최근 90일 고장·14일 안 재고장·증가·최근 고장·PM 지연을 더한 값 · 고장 2건 이상 설비만 · 원인 입력률이 낮아 «왜 고장 나는지»는 아직 반영하지 못합니다',risk_none:'대상 설비 없음 — 최근 180일에 고장이 2건 이상 난 설비가 없습니다',sec_life:'설비 이력',life_pick:'설비 선택',note_lifepick:'S/N 또는 설비호기로 검색하세요. 아무 표에서나 S/N을 클릭하면 뜨는 메뉴의 「설비 이력」로도 열립니다.',ch_lifetl:'이력 타임라인',note_lifetl:'설치·Turn On·고장/정비·자재교체를 시간순으로 · 점에 커서를 올리면 상세',ch_lifestage:'작업단계 구성',note_lifestage:'이 설비에 어떤 작업이 얼마나 있었나',ch_lifepart:'교체 자재 TOP',note_lifepart:'이 설비에서 제일 많이 간 자재 · 건수',ch_lifecycle:'자재별 평균 사용주기',note_lifecycle:'교체 시점의 사용일(전교체일 기준) 평균 · 2회 이상 교체된 자재',life_tbl:'전체 이력',life_kind:'구분',life_what:'내용',th_pf2:'유/무상',life_empty:'설비를 검색하면 그 설비의 이력이 표시됩니다',ch_tbmw:'작업자별 TBM 사후 재고장률',note_tbmw:'TBM 후 30일 내 같은 설비 BM 발생 비율 · 낮을수록 좋음 · TBM 10건 이상',ch_tbmgap:'TBM → 다음 고장 경과일',note_tbmgap:'재고장이 난 건만 · 짧을수록 정비 품질 문제',ch_tbmline:'LINE별 TBM 사후 재고장률',note_tbmline:'TBM 5건 이상 · 값은 막대 끝',title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
+    ch_alarmmat:'알람이 뜨면 무슨 자재를 가나',risk_title:'고장 위험 설비 TOP 20',risk_eq:'설비',risk_site:'단지',risk_sc:'점수',risk_bm:'최근 90일 고장',risk_pm:'마지막 PM',risk_why:'왜',risk_note:'점수 = 최근 90일 고장·14일 이내 재고장·증가·최근 고장·PM 지연을 합산한 값 · 고장 2건 이상 설비만 · 원인 입력률이 낮아 «왜 고장 나는지»는 아직 반영하지 못합니다',risk_none:'대상 설비 없음 — 최근 180일에 고장이 2건 이상 난 설비가 없습니다',sec_life:'설비 이력',life_pick:'설비 선택',note_lifepick:'S/N 또는 설비호기로 검색하세요. 아무 표에서나 S/N을 클릭하면 뜨는 메뉴의 「설비 이력」로도 열립니다.',ch_lifetl:'이력 타임라인',note_lifetl:'설치·Turn On·고장/정비·자재교체를 시간순으로 · 점에 커서를 올리면 상세',ch_lifestage:'작업단계 구성',note_lifestage:'이 설비에 어떤 작업이 얼마나 있었나',ch_lifepart:'교체 자재 TOP',note_lifepart:'이 설비에서 제일 많이 간 자재 · 건수',ch_lifecycle:'자재별 평균 사용주기',note_lifecycle:'교체 시점의 사용일(전교체일 기준) 평균 · 2회 이상 교체된 자재',life_tbl:'전체 이력',life_kind:'구분',life_what:'내용',th_pf2:'유/무상',life_empty:'설비를 검색하면 그 설비의 이력이 표시됩니다',ch_tbmw:'작업자별 TBM 사후 재고장률',note_tbmw:'TBM 후 30일 내 같은 설비 BM 발생 비율 · 낮을수록 좋음 · TBM 10건 이상',ch_tbmgap:'TBM → 다음 고장 경과일',note_tbmgap:'재고장이 난 건만 · 짧을수록 정비 품질 문제',ch_tbmline:'LINE별 TBM 사후 재고장률',note_tbmline:'TBM 5건 이상 · 값은 막대 끝',title:'서비스·고장 대응 대시보드',sub:'BM·CBM·CM·CRM 대응 실적 및 작업 부하 분석',back:'← 메인으로',refresh:'새로고침',loading:'데이터 불러오는 중...',
     sec_ov:'개요',sec_ca:'원인·조치',sec_ld:'작업 부하',sec_rel:'신뢰성',sec_dt:'상세 목록',
     r_mtbf:'MTBF · 평균 고장간격',r_mttr:'MTTR · 평균 수리시간',r_frate:'연간 고장률 (건/대)',r_units:'분석 설비',
     rf_mtbf:'중앙값 {n}일',rf_mttr:'BM {n}건 평균',rf_frate:'가동기간 환산',rf_units:'BM 2건↑ · 설치연동 {p}%',
@@ -932,8 +932,10 @@ async function loadData(){ GST.skeleton(true);
   const btn=document.getElementById('refreshBtn'); const status=document.getElementById('status');
   btn.disabled=true; status.className='status'; status.textContent=t('loading');
   try{
-    const [svcR,instR,matR]=await Promise.allSettled([
+    const [svcR,_parR,instR,matR]=await Promise.allSettled([
       GST.fetchCSVCached(SHEET_URL,'svc'),
+      /* 판정 기준(위험 점수 가중치 · v172)을 먼저 읽는다 — 안 기다리면 TOP 20 첫 그림만 기본값으로 서서 관제와 순위가 갈린다 */
+      GST.params&&GST.params.ready(),
       GST.fetchCSVCached(INST_URL,'svc_inst'),
       GST.fetchCSVCached(MAT_URL,'svc_mat')
     ]);

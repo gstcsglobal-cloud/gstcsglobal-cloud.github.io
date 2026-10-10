@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 167;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 168;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -173,6 +173,32 @@ GST.actCan = function(){
   var r = GST._me.role;
   return !!GST._me.can_write || r === 'admin' || r === 'editor' || r === 'kr';
 };
+/* ---------- 설명 표시 (v172 · 사용자 확정 「경영진·고객에게 보이는 화면에 설명문은 격이 떨어진다」) ----------
+   화면에는 «값»만 둔다. 근거·산식·사용법 설명 — 카드 노트(.card-note) · 카드 부제 · 입력률 안내(.fill-hint) · 지도 메모 · 처리 상태 줄 — 은
+   기본으로 숨기고, 관리자가 셸의 「설명 표시」를 켰을 때만 보인다(localStorage gst_explain — 같은 출처라 모든 탭이 같은 값을 본다).
+   ⚠ 숫자의 뜻이 바뀌는 경고(.card-note.warn — 예: 원장이 비어 다른 자료로 집계 중)는 지우지 않는다. ⚠ 하나로 줄이고 누르면 내용이 뜬다
+     (v147 공수 차트에서 사용자가 정한 방식). 지우면 그 경고를 못 본 사람이 다른 뜻의 숫자를 읽는다(v92).
+   ⚠ 주간현황(report · report-kr)은 예외 — 보고서 작성용이라 지금까지대로 다 보인다(사용자 지시 · 손대지 않는다).
+   판정은 이 한 함수다 — CSS(theme.css · ds.css · 셸)는 body.gst-explain 만 본다. */
+GST.EXPLAIN_SKIP = /^\/report(-kr)?\//;
+GST.EXP_T = { ko:{warn:'안내', col:'내용'}, en:{warn:'Note', col:'Detail'}, zh:{warn:'提示', col:'内容'}, ja:{warn:'お知らせ', col:'内容'} };
+GST.explainOn = function(){
+  try{ if(GST.EXPLAIN_SKIP.test(GST.pagePath ? GST.pagePath() : location.pathname)) return true; }catch(e){}
+  if(!(GST._me && (GST._me.role==='admin' || GST._me.role==='legacy'))) return false;   // 등급을 모르면 끈다(fail-closed) — 조회자 화면이 깨끗한 것이 기본이다
+  try{ return localStorage.getItem('gst_explain') === '1'; }catch(e){ return false; }
+};
+GST._explainApply = function(){ try{ if(document.body) document.body.classList.toggle('gst-explain', GST.explainOn()); }catch(e){} };
+if(typeof document!=='undefined'){
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', GST._explainApply); else GST._explainApply();
+  window.addEventListener('message', function(e){ var d=e.data||{}; if(d.type==='gst-explain') GST._explainApply(); });
+  window.addEventListener('storage', function(e){ if(e.key==='gst_explain') GST._explainApply(); });
+  /* ⚠ 로 줄인 경고를 누르면 그 글을 띄운다 — 설명을 켜 둔 사람은 이미 글이 보이므로 안 띄운다 */
+  document.addEventListener('click', function(e){
+    var n=e.target&&e.target.closest&&e.target.closest('.card-note.warn'); if(!n || document.body.classList.contains('gst-explain')) return;
+    var T=GST.EXP_T[(GST._lang&&GST._lang())||'ko']||GST.EXP_T.ko;
+    GST.rowsModal(T.warn, [T.col], String(n.textContent||'').split('\n').filter(Boolean).map(function(x){ return [x]; }));
+  });
+}
 GST._meApply = function(me){
   GST._me = me;
   try{ if(document.body) document.body.dataset.role = me && me.role ? me.role : 'viewer'; }catch(e){}
@@ -180,6 +206,7 @@ GST._meApply = function(me){
   try{ GST._srcChip(); }catch(e){}
   try{ GST._dbBanner(); }catch(e){}
   try{ var bad=(GST.SM&&GST.SM._reg||[]).filter(function(r){ return r.miss.length; }); if(bad.length) GST.SM.banner(bad); }catch(e){}
+  try{ GST._explainApply(); }catch(e){}   // 등급이 늦게 오므로 그때 다시 정한다(v172)
   try{ window.dispatchEvent(new CustomEvent('gst-role', {detail:me})); }catch(e){}
 };
 GST.loadMe = function(){
@@ -388,6 +415,8 @@ GST.db = async function(){ if(!GST.authOn())return null;
 GST._readyP=null; GST._readyRes=null;
 GST.authReady=function(){ if(!GST._readyP)GST._readyP=new Promise(function(r){GST._readyRes=r;}); return GST._readyP; };
 GST._authOk=function(){ GST.authReady(); GST._readyRes&&GST._readyRes(); try{ GST.loadMe(); }catch(e){} };
+/* ⚠ 판정 기준(ops_params)을 여기서 미리 읽지 않는다(v172) — 쓰는 화면(고장분석·관제·사이트 상세·내 화면·운영 목표)은
+   계산 전에 GST.params.ready() 를 스스로 기다린다. 여기서 모든 화면이 읽게 하면 국내 데모 화면이 데모 표 밖을 읽는다(t-edit [24]). */
 /* 로그인 화면의 생김새 — 첫인상이다(v139). 흰 카드 하나, 액센트 하나. 셸·페이지 어디서 떠도 같은 모양이어야 하므로
    토큰을 여기 인라인으로 둔다(오버레이는 theme.css 를 안 싣는 셸에서도 뜬다). */
 GST._loginUI = {
@@ -4050,15 +4079,17 @@ GST.riskRank=function(ev){
   return out.slice(0, ev.n||20);
 };
 GST.RISK_T={
-  ko:{bm90:'최근 90일 고장 {n}건', rep:'14일 안 재고장 {n}회', up:'직전 90일보다 +{n}', recent:'최근 2주 안 고장', pm:'PM 180일 넘게 없음'},
-  en:{bm90:'{n} BM in 90d', rep:'{n} repeat within 14d', up:'+{n} vs prior 90d', recent:'failed in last 2 weeks', pm:'no PM for 180d+'},
-  zh:{bm90:'近90天故障 {n}件', rep:'14天内复发 {n}次', up:'较前90天 +{n}', recent:'近两周内故障', pm:'超过180天未PM'},
-  ja:{bm90:'直近90日故障 {n}件', rep:'14日以内再故障 {n}回', up:'前90日比 +{n}', recent:'直近2週間で故障', pm:'PM 180日以上なし'}
+  ko:{bm90:'최근 90일 고장 {n}건', rep:'{d}일 이내 재고장 {n}회', up:'직전 90일 대비 +{n}건', recent:'최근 {d}일 이내 고장', pm:'{d}일 넘게 PM 미실시'},
+  en:{bm90:'{n} BM in 90d', rep:'{n} repeat within {d}d', up:'+{n} vs prior 90d', recent:'failed in last {d}d', pm:'no PM for {d}d+'},
+  zh:{bm90:'近90天故障 {n}件', rep:'{d}天内复发 {n}次', up:'较前90天 +{n}', recent:'近{d}天内故障', pm:'超过{d}天未PM'},
+  ja:{bm90:'直近90日故障 {n}件', rep:'{d}日以内再故障 {n}回', up:'前90日比 +{n}', recent:'直近{d}日で故障', pm:'PM {d}日以上なし'}
 };
 GST.riskWhy=function(r){
   const T=GST.RISK_T[(GST._lang&&GST._lang())||'ko']||GST.RISK_T.ko;
   const n={bm90:r.bm90, rep:r.rep, up:r.bm90-r.bmPrev, recent:'', pm:''};
-  return r.why.map(function(w){ return T[w].replace('{n}',n[w]); }).join(' · ');
+  /* 기간({d})도 판정 기준(GST.RISK_W)을 따른다 — 「운영 목표 › 판정 기준」에서 바꾸면 이유 문장도 같이 바뀐다(v172) */
+  const W=GST.RISK_W, d={rep:W.repDays, recent:W.recentDays, pm:W.pmDays};
+  return r.why.map(function(w){ return T[w].replace('{n}',n[w]).replace('{d}',d[w]); }).join(' · ');
 };
 
 /* ---------- 지도 자료 · 위치 판정 (v171 · 「나라를 누르면 그 나라 지도로」) ----------
@@ -4246,11 +4277,13 @@ GST.ops = {
   /* 읽기 — 화면 둘이 같은 세 자료를 같은 캐시 열쇠로 읽는다(한 번 받으면 다른 화면은 캐시에서). 실패한 것은 fails 에 남긴다. */
   load:async function(){
     const r=await Promise.allSettled([
+      GST.params ? GST.params.ready() : null,                       // 판정 기준(위험 점수 가중치)을 먼저 — 첫 그림부터 같은 점수(v172)
       GST.fetchCSVCached(GST.sheetUrl('891608329'),'hub_inst'),
       GST.fetchCSVCached(GST.sheetUrl('646668307'),'hub_wk'),
       GST.csvTableRows('sheet_alarm', GST._KR_COLS_A)
     ]);
     const fails=[];
+    r.shift();
     const INST=r[0].status==='fulfilled'?GST.ops.parseInst(r[0].value.rows):(fails.push('inst'),[]);
     const WK=r[1].status==='fulfilled'?GST.ops.parseWk(r[1].value.rows):(fails.push('wk'),[]);
     const KRA=r[2].status==='fulfilled'?GST.ops.parseLedger(r[2].value):[];
@@ -8342,6 +8375,372 @@ GST.chatAI = async function(q, packs, hist){
   if(!res.ok)throw new Error((data&&data.error)||('HTTP '+res.status));
   return (data&&(data.answer||data.text))||'';
 };
+
+/* ============================================================================
+   GST v2 — 2단계 «제품화»의 공용 모듈: 목표(SLA) · 운영 지표 · 표준 KPI 카드 · 사람별 첫 화면 설정
+   ----------------------------------------------------------------------------
+   v172 에 assets/v2.js 에서 core 로 옮겼다 — 따로 두면 ?v= 가 둘이라 «한쪽만 올리는» 사고가 난다(이름은 그대로).
+
+   ⚠ 숫자를 새로 «정의»하지 않는다. 판정은 전부 core 정본을 부른다:
+     설비 대수 GST.EQ(GST.ops.isIn/isRun) · 고장 GST.ops.bm(주간현황과 같은 규칙 · 국내 원장/KR_ON) · PM GST.ops.pm(GST.PM.is) ·
+     재고장 GST.ops.risk(GST.riskRank) · 워런티 GST.WARR. 이 모듈이 하는 일은 «같은 행을 정해진 창으로 묶어 비율로 나누는 것»뿐이다.
+   ⚠ 창(window)은 통합 관제와 같다 — 일요일 시작 주 12개, «최근 4주» = 마지막 네 주(이번 주 포함), «직전 4주» = 그 앞 네 주.
+     관제의 「PM 실시율」 게이지(pmN ÷ (pmN + 4주 고장))와 pm_ratio 는 같은 식이다 — 둘이 다른 숫자를 내면 사고다.
+   ============================================================================ */
+(function(){
+var DAY = 864e5;
+
+/* ---------- 공용 문구 (네 언어 · core 의 GST.XXX_T 관례) ---------- */
+/* 로그인이 끝난 뒤의 DB 연결 — 페이지는 자료 읽기(fetchCSV · 로그인을 기다린다)와 «동시에» 이 표들을 읽는다.
+   GST.db() 는 세션이 없으면 null 이라, 로그인 직후 한순간에 부르면 «표가 없다(no_db)»로 굳는다 — 기다린 뒤 부른다. */
+GST._dbAuthed = async function(){ try{ if(GST.authOn&&GST.authOn()) await GST.authReady(); }catch(e){} return GST.db(); };
+GST.V2_T = {
+  ko:{ m_run_rate:'가동률', m_bm_per100:'설비 100대당 고장', m_pm_ratio:'PM 비율', m_repeat14:'{d}일 이내 재고장 설비', m_act_overdue:'기한 경과 처리 건',
+       d_run_rate:'가동(Operation) ÷ 반입 설비 · 기준일 현재', d_bm_per100:'최근 4주 고장 건수 ÷ 반입 설비 × 100', d_pm_ratio:'최근 4주 PM ÷ (PM + 고장)',
+       d_repeat14:'고장 위험 순위에서 {d}일 이내 재고장이 발생한 설비', d_act_overdue:'처리함에서 기한이 지났지만 완료되지 않은 건',
+       w4:'최근 4주', tgt:'목표 {v}', tgt_le:'이하', tgt_ge:'이상', tgt_none:'목표 미설정', tgt_ok:'달성', tgt_miss:'미달 {g}', tgt_over:'초과 {g}',
+       vs:'직전 4주 대비', vs_none:'비교 없음(현재 상태 기준)', den:'분모 {v}', den_units:'반입 {v}대', den_ev:'PM+고장 {v}건',
+       st_ok:'정상', st_warn:'주의', st_bad:'위험', st_none:'판정 없음', u_pct:'%', u_ea:'대', u_case:'건', u_pt:'p',
+       g_band:'주의 구간 기본값', g_sig:'관제 신호등 기준', g_risk:'고장 위험 점수', gd_band:'목표에 주의 기준을 따로 정하지 않았을 때 쓰는 구간', gd_sig:'운영단위를 위험·주의로 표시하는 기준(이번 주 고장 ÷ 평소)', gd_risk:'고장분석 TOP 20 · 통합 관제 · 내 화면이 함께 쓰는 점수', p_band_run_rate:'가동률', p_band_bm_per100:'설비 100대당 고장', p_band_pm_ratio:'PM 비율', p_band_repeat14:'재고장 설비', p_band_act_overdue:'기한 경과 처리 건', p_sig_bad_x:'위험 — 평소 대비 배수(이상)', p_sig_bad_d:'위험 — 평소보다 늘어난 건수(이상)', p_sig_warn_x:'주의 — 평소 대비 배수(초과)', p_sig_warn_d:'주의 — 평소보다 늘어난 건수(이상)', p_sig_rep_bad:'위험 — 재고장 설비 수(이상)', p_sig_rep_warn:'주의 — 재고장 설비 수(이상)', p_risk_bm:'최근 90일 고장 1건당', p_risk_rep:'재고장 1회당', p_risk_up:'직전 90일 대비 2건 이상 증가 시', p_risk_recent:'최근 고장 발생 시', p_risk_pm:'PM 장기 미실시 시', p_risk_rep_days:'재고장 판단 기간', p_risk_recent_days:'「최근 고장」 판단 기간', p_risk_pm_days:'「PM 장기 미실시」 판단 기간', u_x:'배', u_day:'일', u_pts:'점', u_rel:'%' },
+  en:{ m_run_rate:'Running rate', m_bm_per100:'Failures per 100 units', m_pm_ratio:'PM ratio', m_repeat14:'Units with {d}-day repeat', m_act_overdue:'Overdue actions',
+       d_run_rate:'Running (Operation) ÷ installed · as of today', d_bm_per100:'Last-4-week failures ÷ installed × 100', d_pm_ratio:'Last-4-week PM ÷ (PM + failures)',
+       d_repeat14:'Units in the risk ranking with a repeat failure within {d} days', d_act_overdue:'Open actions past their due date',
+       w4:'last 4 wks', tgt:'Target {v}', tgt_le:'or less', tgt_ge:'or more', tgt_none:'No target', tgt_ok:'Met', tgt_miss:'Short {g}', tgt_over:'Over {g}',
+       vs:'vs prior 4 wks', vs_none:'No comparison (current state)', den:'Base {v}', den_units:'{v} installed', den_ev:'{v} PM+BM',
+       st_ok:'Normal', st_warn:'Watch', st_bad:'Critical', st_none:'No rating', u_pct:'%', u_ea:'', u_case:'', u_pt:'p',
+       g_band:'Default watch band', g_sig:'Command signals', g_risk:'Failure risk score', gd_band:'band used when a target has no watch limit', gd_sig:'when a unit turns critical/watch (this week ÷ usual)', gd_risk:'shared by Fault TOP 20 · Command · My view', p_band_run_rate:'Running rate', p_band_bm_per100:'Failures per 100 units', p_band_pm_ratio:'PM ratio', p_band_repeat14:'Repeat-failure units', p_band_act_overdue:'Overdue actions', p_sig_bad_x:'Critical — at least × usual', p_sig_bad_d:'Critical — at least this many more', p_sig_warn_x:'Watch — more than × usual', p_sig_warn_d:'Watch — at least this many more', p_sig_rep_bad:'Critical — repeat-failure units ≥', p_sig_rep_warn:'Watch — repeat-failure units ≥', p_risk_bm:'per failure in 90 days', p_risk_rep:'per repeat failure', p_risk_up:'if up by 2+ vs prior 90 days', p_risk_recent:'if failed recently', p_risk_pm:'if no PM for long', p_risk_rep_days:'gap counted as repeat', p_risk_recent_days:'length of «recent»', p_risk_pm_days:'length of «no PM for long»', u_x:'×', u_day:'d', u_pts:'pts', u_rel:'%' },
+  zh:{ m_run_rate:'运行率', m_bm_per100:'每100台故障', m_pm_ratio:'PM比率', m_repeat14:'{d}天内复发设备', m_act_overdue:'逾期待办',
+       d_run_rate:'运行(Operation) ÷ 进场设备 · 截至基准日', d_bm_per100:'最近4周故障 ÷ 进场设备 × 100', d_pm_ratio:'最近4周 PM ÷ (PM + 故障)',
+       d_repeat14:'故障风险排名中{d}天内复发的设备', d_act_overdue:'待办中已过期限但未关闭的事项',
+       w4:'最近4周', tgt:'目标 {v}', tgt_le:'以下', tgt_ge:'以上', tgt_none:'未设定目标', tgt_ok:'达成', tgt_miss:'未达 {g}', tgt_over:'超出 {g}',
+       vs:'较前4周', vs_none:'无比较(当前状态)', den:'分母 {v}', den_units:'进场 {v}台', den_ev:'PM+故障 {v}件',
+       st_ok:'正常', st_warn:'注意', st_bad:'危险', st_none:'无判定', u_pct:'%', u_ea:'台', u_case:'件', u_pt:'p',
+       g_band:'目标的默认注意区间', g_sig:'综合监控信号灯', g_risk:'故障风险分数', gd_band:'目标未填写«注意界限»时使用的区间', gd_sig:'将运营单位标为危险·注意的标准(本周故障 ÷ 平时)', gd_risk:'故障分析 TOP 20 · 综合监控 · 我的画面共用的分数', p_band_run_rate:'运行率', p_band_bm_per100:'每100台故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'复发设备', p_band_act_overdue:'逾期待办', p_sig_bad_x:'危险 — 平时的几倍以上', p_sig_bad_d:'危险 — 比平时多几件以上', p_sig_warn_x:'注意 — 超过平时的几倍', p_sig_warn_d:'注意 — 比平时多几件以上', p_sig_rep_bad:'危险 — 复发设备几台以上', p_sig_rep_warn:'注意 — 复发设备几台以上', p_risk_bm:'近90天每件故障', p_risk_rep:'每次复发', p_risk_up:'较前90天增加2件以上时', p_risk_recent:'近期有故障时', p_risk_pm:'长期未做PM时', p_risk_rep_days:'视为复发的间隔', p_risk_recent_days:'«近期»的长度', p_risk_pm_days:'«长期未PM»的长度', u_x:'倍', u_day:'天', u_pts:'分', u_rel:'%' },
+  ja:{ m_run_rate:'稼働率', m_bm_per100:'設備100台あたり故障', m_pm_ratio:'PM比率', m_repeat14:'{d}日以内再故障設備', m_act_overdue:'期限超過の対応',
+       d_run_rate:'稼働(Operation) ÷ 搬入設備 · 基準日時点', d_bm_per100:'直近4週の故障 ÷ 搬入設備 × 100', d_pm_ratio:'直近4週の PM ÷ (PM + 故障)',
+       d_repeat14:'故障リスク順位で{d}日以内に再故障がある設備', d_act_overdue:'対応のうち期限を過ぎて閉じていないもの',
+       w4:'直近4週', tgt:'目標 {v}', tgt_le:'以下', tgt_ge:'以上', tgt_none:'目標未設定', tgt_ok:'達成', tgt_miss:'未達 {g}', tgt_over:'超過 {g}',
+       vs:'前4週比', vs_none:'比較なし(現在の状態)', den:'分母 {v}', den_units:'搬入 {v}台', den_ev:'PM+故障 {v}件',
+       st_ok:'正常', st_warn:'注意', st_bad:'危険', st_none:'判定なし', u_pct:'%', u_ea:'台', u_case:'件', u_pt:'p',
+       g_band:'目標の既定注意帯', g_sig:'統合管制シグナル', g_risk:'故障リスク点数', gd_band:'目標に«注意境界»がないときに使う帯', gd_sig:'運営単位を危険・注意にする基準(今週の故障 ÷ 平常)', gd_risk:'故障分析 TOP 20 · 統合管制 · マイ画面で共通の点数', p_band_run_rate:'稼働率', p_band_bm_per100:'設備100台あたり故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'再故障設備', p_band_act_overdue:'期限超過の対応', p_sig_bad_x:'危険 — 平常の何倍以上', p_sig_bad_d:'危険 — 平常より何件以上多い', p_sig_warn_x:'注意 — 平常の何倍超', p_sig_warn_d:'注意 — 平常より何件以上多い', p_sig_rep_bad:'危険 — 再故障設備何台以上', p_sig_rep_warn:'注意 — 再故障設備何台以上', p_risk_bm:'直近90日の故障1件あたり', p_risk_rep:'再故障1回あたり', p_risk_up:'前90日より2件以上増えたら', p_risk_recent:'最近故障があれば', p_risk_pm:'PMが長くなければ', p_risk_rep_days:'再故障とみなす間隔', p_risk_recent_days:'«最近»の長さ', p_risk_pm_days:'«PMが長くない»の長さ', u_x:'倍', u_day:'日', u_pts:'点', u_rel:'%' }
+};
+GST.v2t = function(k, o, lang){
+  var L=lang||(GST._lang&&GST._lang())||'ko', T=GST.V2_T[L]||GST.V2_T.ko, s=T[k]!=null?T[k]:(GST.V2_T.ko[k]!=null?GST.V2_T.ko[k]:k);
+  /* {d} = 재고장 간격(판정 기준 risk_rep_days) — 이름표에 «14일»을 박아 두면 기준을 바꿔도 글자가 안 따라간다 */
+  var O=Object.assign({d:GST.RISK_W&&GST.RISK_W.repDays}, o||{});
+  return String(s).replace(/\{(\w+)\}/g, function(m,x){ return O[x]!=null?O[x]:m; });
+};
+
+/* ---------- 지표 목록 — «무엇을 세나»의 정본 ----------
+ * dir   — le: 낮을수록 좋다 · ge: 높을수록 좋다 (목표 표 ops_targets.dir 의 기본값)
+ * unit  — pct(%) · rate(배율 없는 수) · ea(대) · case(건)
+ * dec   — 화면 소수 자리
+ * band  — 목표의 주의 띠(목표 표에 warn 이 없을 때). abs = 절대 폭 · rel = 목표의 비율.
+ *         퍼센트 지표에 «목표의 10%»를 쓰면 가동률 93% 의 주의 띠가 83.7% 까지 넓어진다 — 그래서 지표마다 다르다.
+ * ⚠ 지표를 더하면 V2_T 네 언어에 m_<id>·d_<id> 를 같이 넣는다(t-v2 가 센다). */
+GST.METRICS = {
+  run_rate:    { dir:'ge', unit:'pct',  dec:1, band:{abs:3} },
+  bm_per100:   { dir:'le', unit:'rate', dec:2, band:{rel:0.15} },
+  pm_ratio:    { dir:'ge', unit:'pct',  dec:0, band:{abs:10} },
+  repeat14:    { dir:'le', unit:'ea',   dec:0, band:{abs:2} },
+  act_overdue: { dir:'le', unit:'case', dec:0, band:{abs:2} }
+};
+GST.METRIC_ORDER = ['run_rate','bm_per100','pm_ratio','repeat14','act_overdue'];
+
+/* ---------- 창 — 통합 관제 weeksOf 와 같은 규칙(일요일 시작 · 이번 주 포함 12주) ----------
+ * ⚠ 관제·사이트 상세가 각자 weeksOf 를 들고 있다. 셸에 거는 날 그 둘이 이 함수를 부르게 한다(PLAN 「통합 순서」). */
+function weeks(asOf, n){
+  n=n||12;
+  var sun=new Date(Date.UTC(asOf.getUTCFullYear(),asOf.getUTCMonth(),asOf.getUTCDate())); sun.setUTCDate(sun.getUTCDate()-sun.getUTCDay());
+  var out=[]; for(var i=n-1;i>=0;i--){ var st=new Date(sun.getTime()-i*7*DAY), en=new Date(st.getTime()+7*DAY);
+    var k=GST.isoW?GST.isoW(st):''; out.push({key:k, st:st, en:en, label:'W'+String(k).slice(-2)}); }
+  return out;
+}
+
+/* ---------- 지표 계산 ----------
+ * GST.metrics.by(R, asOf, keyOf, ok, opt) — 한 번 훑어 «열쇠별» 묶음을 만든다(운영단위별 표가 열쇠 수만큼 다시 훑지 않게).
+ *   R     — GST.ops.load() 의 결과 {INST, WK, KRA}
+ *   keyOf — 행 → 묶음 열쇠 (전사 하나면 function(){return '*';}). 행은 {op, region} 을 갖는다.
+ *   ok    — 화면의 거르기(구분·운영단위). GST.ops 의 bm/pm/risk 에 그대로 넘긴다 — 같은 모집단.
+ *   opt.actions — 처리함 열린 일 [{op, due, status}] (선택 · act_overdue)
+ * 돌려주는 묶음: {k, inN, runN, bm4, bmP, pm4, pmP, bmW[12], pmW[12], rep, risk[], warrSoon[], rows:{bm4, pm4}, m:{지표 → {v, prev, num, den}}} */
+function blank(k){ return {k:k, inN:0, runN:0, bm4:0, bmP:0, pm4:0, pmP:0, bmW:[0,0,0,0,0,0,0,0,0,0,0,0], pmW:[0,0,0,0,0,0,0,0,0,0,0,0],
+  rep:0, risk:[], warrSoon:[], overdue:0, rows:{bm4:[], pm4:[]}}; }
+/* 묶음 → 지표. 분모가 0 이면 값은 null(«0%»가 아니다 — 설비가 없는 곳의 가동률은 0 이 아니라 «모른다»). */
+function fin(o, hasAct){
+  o.m={
+    run_rate:   { v:o.inN?o.runN/o.inN*100:null, prev:null, num:o.runN, den:o.inN },
+    bm_per100:  { v:o.inN?o.bm4/o.inN*100:null, prev:o.inN?o.bmP/o.inN*100:null, num:o.bm4, den:o.inN },
+    pm_ratio:   { v:(o.pm4+o.bm4)?o.pm4/(o.pm4+o.bm4)*100:null, prev:(o.pmP+o.bmP)?o.pmP/(o.pmP+o.bmP)*100:null, num:o.pm4, den:o.pm4+o.bm4 },
+    repeat14:   { v:o.rep, prev:null, num:o.rep, den:o.risk.length },
+    act_overdue:{ v:hasAct?o.overdue:null, prev:null, num:o.overdue, den:null }
+  };
+  return o;
+}
+GST.metrics = {
+  weeks: weeks,
+  by: function(R, asOf, keyOf, ok, opt){
+    opt=opt||{};
+    var W=weeks(asOf,12), t0=asOf.getTime();
+    var wIx=function(d){ var v=d.getTime(); for(var i=0;i<W.length;i++) if(v>=W[i].st.getTime()&&v<W[i].en.getTime()) return i; return -1; };
+    var G={};
+    var g=function(k){ return G[k]||(G[k]=blank(k)); };
+    var pass=function(x){ return !ok||ok(x); };
+    R.INST.forEach(function(x){ if(!pass(x)||!GST.ops.isIn(x,asOf)) return; var o=g(keyOf(x)); o.inN++; if(GST.ops.isRun(x,asOf)) o.runN++;
+      if(x.wd&&x.wd.getTime()>t0&&x.wd.getTime()<=t0+90*DAY) o.warrSoon.push(x); });
+    GST.ops.bm(R, ok).forEach(function(x){ var i=wIx(x.d); if(i<0) return; var o=g(keyOf(x)); o.bmW[i]++;
+      if(i>=8){ o.bm4++; o.rows.bm4.push(x); } else if(i>=4) o.bmP++; });
+    GST.ops.pm(R, ok).forEach(function(x){ var i=wIx(x.d); if(i<0) return; var o=g(keyOf(x)); o.pmW[i]++;
+      if(i>=8){ o.pm4++; o.rows.pm4.push(x); } else if(i>=4) o.pmP++; });
+    GST.ops.risk(R, asOf, ok).forEach(function(r){ var o=g(keyOf({op:r.site, region:GST.ORG.region(r.site)})); o.risk.push(r); if(r.rep) o.rep++; });
+    var today=new Date(); today=Date.UTC(today.getUTCFullYear(),today.getUTCMonth(),today.getUTCDate());
+    (opt.actions||[]).forEach(function(a){ if(!a||!a.due||a.status==='done'||a.status==='dismissed') return;
+      var x={op:a.op||'', region:GST.ORG.region(a.op||'')}; if(!pass(x)) return;
+      var d=GST.toDate?GST.toDate(a.due):new Date(a.due); if(d&&d.getTime()<today) g(keyOf(x)).overdue++; });
+    Object.keys(G).forEach(function(k){ fin(G[k], !!opt.actions); });
+    return {W:W, G:G};
+  },
+  /* 범위 하나(전사·구분·운영단위)의 묶음 — by() 를 열쇠 하나로 부른 것과 같다. 자료가 하나도 없으면 빈 묶음(값은 전부 null). */
+  one: function(R, asOf, ok, opt){ var r=GST.metrics.by(R, asOf, function(){ return '*'; }, ok, opt);
+    return r.G['*']||fin(blank('*'), !!(opt&&opt.actions)); },
+  /* 화면 범위 → 거르기. sc = {kind:'all'|'region'|'op', v} */
+  okOf: function(sc){
+    if(!sc||sc.kind==='all') return null;
+    if(sc.kind==='region') return function(x){ return x.region===sc.v; };
+    return function(x){ return (x.op||'')===sc.v; };
+  }
+};
+
+/* ---------- 목표 ----------
+ * 표: ops_targets (setup-27). 화면은 «가장 좁은 목표»를 고른다 — 운영단위 > 구분 > 전사.
+ * ⚠ 목표를 못 읽어도 화면은 선다(그때 카드는 «목표 미설정»). 왜 못 읽었는지는 GST.targets.why 에 남긴다:
+ *   'no_db'(인증 꺼짐·오프라인) · 'no_table'(setup-27 전) · 'read_fail' · ''(정상). */
+GST.targets = {
+  rows: [], why: 'not_loaded', at: null,
+  load: async function(client){
+    var C=client; try{ if(!C) C=await GST._dbAuthed(); }catch(e){ C=null; }
+    if(!C){ this.rows=[]; this.why='no_db'; return this.rows; }
+    try{
+      var r=await C.from('ops_targets').select('id,metric,scope_kind,scope,target,warn,dir,note,updated_at,updated_by').is('removed_at',null).limit(5000);
+      if(r.error){ var m=String(r.error.message||r.error.code||'');
+        this.why=/does not exist|relation|schema cache|42P01|PGRST20[05]/i.test(m)?'no_table':'read_fail'; this.rows=[]; console.warn('[v2] 목표 읽기 실패', r.error); return this.rows; }
+      this.rows=(r.data||[]).map(function(x){ return Object.assign({}, x, {target:Number(x.target), warn:x.warn==null?null:Number(x.warn)}); });
+      this.why=''; this.at=new Date(); return this.rows;
+    }catch(e){ this.rows=[]; this.why='read_fail'; console.warn('[v2] 목표 읽기 실패', e); return this.rows; }
+  },
+  /* sc = {op, region} — 운영단위 행이면 op·region 둘 다, 구분 범위면 region 만, 전사면 {} */
+  pick: function(metric, sc){
+    sc=sc||{}; var rs=this.rows.filter(function(t){ return t.metric===metric; });
+    var by=function(kind, v){ for(var i=0;i<rs.length;i++) if(rs[i].scope_kind===kind&&(kind==='all'||rs[i].scope===v)) return rs[i]; return null; };
+    return (sc.op&&by('op',sc.op)) || (sc.region&&by('region',sc.region)) || by('all','') || null;
+  },
+  /* 정확히 그 범위의 목표(고치는 화면용 — 위로 거슬러 올라가지 않는다) */
+  exact: function(metric, kind, v){ for(var i=0;i<this.rows.length;i++){ var t=this.rows[i];
+    if(t.metric===metric&&t.scope_kind===kind&&(kind==='all'||t.scope===v)) return t; } return null; },
+  /* 판정 — 'ok' · 'warn' · 'bad' · null(목표 없음 또는 값 없음). 주의 띠는 목표의 warn, 없으면 지표의 band. */
+  judge: function(metric, v, t){
+    if(v==null||isNaN(v)||!t) return null;
+    var M=GST.METRICS[metric]||{}, dir=t.dir||M.dir||'le', b=M.band||{rel:0.1};
+    var w=t.warn!=null?t.warn:(dir==='le' ? t.target+(b.abs!=null?b.abs:Math.abs(t.target)*b.rel) : t.target-(b.abs!=null?b.abs:Math.abs(t.target)*b.rel));
+    if(dir==='le') return v<=t.target?'ok':(v<=w?'warn':'bad');
+    return v>=t.target?'ok':(v>=w?'warn':'bad');
+  },
+  /* 목표를 바꿀 수 있나 — 서버 _tgt_who 와 같은 규칙(관리자 + 쓰기 권한). 버튼을 보일지 정할 뿐 막는 것은 서버다. */
+  can: function(){ return !!(GST._me && GST._me.role==='admin' && GST._me.can_write); },
+  save: async function(o, client){
+    var C=client||await GST._dbAuthed(); if(!C) return {error:'no_db'};
+    var r=await C.rpc('target_save',{p_metric:o.metric,p_scope_kind:o.scope_kind,p_scope:o.scope||'',p_target:o.target,
+      p_warn:o.warn==null||o.warn===''?null:o.warn,p_dir:o.dir,p_note:o.note||null,p_at:o.at||null});
+    if(r.error) return {error:String(r.error.message||r.error.code||'rpc')};
+    return r.data||{error:'empty'};
+  },
+  remove: async function(id, at, client){
+    var C=client||await GST._dbAuthed(); if(!C) return {error:'no_db'};
+    var r=await C.rpc('target_remove',{p_id:id,p_at:at}); if(r.error) return {error:String(r.error.message||r.error.code||'rpc')};
+    return r.data||{error:'empty'};
+  }
+};
+
+/* ---------- 판정 기준 — 코드에 박혀 있던 «기준 숫자»를 화면에서 고친다 (setup-27 6절) ----------
+ * 사용자 확정(2026-10-10): 기준이 바뀔 때마다 코드를 고치게 두지 않는다. 열쇠·기본값·허용 범위·뜻은 «여기 한 곳»,
+ * 바꾼 값은 ops_params 표. 기본값은 지금 코드가 쓰는 값 그대로다 — 표가 비어 있으면 한 자리도 안 바뀐다.
+ * g     — band(목표의 기본 주의 띠) · sig(관제 신호등) · risk(고장 위험 점수 — 고장분석 TOP 20 · 관제 · 내 화면 공통)
+ * u     — 화면 단위: pt(퍼센트포인트) · pct(%) · x(배) · case(건) · ea(대) · day(일) · pts(점)
+ * live  — 지금 이 값을 읽는 화면이 있나. false 면 화면이 «아직 적용 전»이라고 말한다(지금은 전부 true).
+ * ⚠ 위험 점수(risk)는 GST.RISK_W 를 «갈아 끼워» 건다 — 고장분석 TOP 20 · 관제 · 사이트 상세 · 내 화면이 같은 riskRank 를 부르므로
+ *   어느 화면이든 같은 점수가 나온다. 그 화면들은 계산 전에 GST.params.ready() 를 기다린다(안 기다리면 첫 그림만 기본값이다).
+ *   주간현황은 riskRank 를 안 쓴다 — 그래서 이 값을 바꿔도 주간현황 숫자는 그대로다.
+ * ⚠ risk_pm_days 는 400 을 넘지 못한다 — 고장분석·관제가 PM 이력을 400일만 본다(그 너머 PM 은 «없음»과 같다). */
+GST.PARAMS = {
+  band_run_rate:    { g:'band', def:3,   min:0,   max:50,   step:0.5, u:'pt',   live:true },
+  band_bm_per100:   { g:'band', def:15,  min:0,   max:100,  step:1,   u:'pct',  live:true },
+  band_pm_ratio:    { g:'band', def:10,  min:0,   max:50,   step:1,   u:'pt',   live:true },
+  band_repeat14:    { g:'band', def:2,   min:0,   max:100,  step:1,   u:'ea',   live:true },
+  band_act_overdue: { g:'band', def:2,   min:0,   max:100,  step:1,   u:'case', live:true },
+  sig_bad_x:        { g:'sig',  def:1.5, min:1,   max:10,   step:0.1, u:'x',    live:true },
+  sig_bad_d:        { g:'sig',  def:5,   min:0,   max:1000, step:1,   u:'case', live:true },
+  sig_warn_x:       { g:'sig',  def:1.2, min:1,   max:10,   step:0.1, u:'x',    live:true },
+  sig_warn_d:       { g:'sig',  def:3,   min:0,   max:1000, step:1,   u:'case', live:true },
+  sig_rep_bad:      { g:'sig',  def:3,   min:0,   max:1000, step:1,   u:'ea',   live:true },
+  sig_rep_warn:     { g:'sig',  def:1,   min:0,   max:1000, step:1,   u:'ea',   live:true },
+  risk_bm:          { g:'risk', def:3,   min:0,   max:100,  step:1,   u:'pts',  live:true, w:'bm' },
+  risk_rep:         { g:'risk', def:4,   min:0,   max:100,  step:1,   u:'pts',  live:true, w:'rep' },
+  risk_up:          { g:'risk', def:3,   min:0,   max:100,  step:1,   u:'pts',  live:true, w:'up' },
+  risk_recent:      { g:'risk', def:2,   min:0,   max:100,  step:1,   u:'pts',  live:true, w:'recent' },
+  risk_pm:          { g:'risk', def:4,   min:0,   max:100,  step:1,   u:'pts',  live:true, w:'pm' },
+  risk_rep_days:    { g:'risk', def:14,  min:1,   max:365,  step:1,   u:'day',  live:true, w:'repDays' },
+  risk_recent_days: { g:'risk', def:14,  min:1,   max:365,  step:1,   u:'day',  live:true, w:'recentDays' },
+  risk_pm_days:     { g:'risk', def:180, min:1,   max:400,  step:1,   u:'day',  live:true, w:'pmDays' }
+};
+GST.PARAM_SECTIONS = ['band','sig','risk'];
+GST.params = {
+  rows: {}, why: 'not_loaded',
+  load: async function(client){
+    var C=client; try{ if(!C) C=await GST._dbAuthed(); }catch(e){ C=null; }
+    this.rows={};
+    if(!C){ this.why='no_db'; this.apply(); return this.rows; }
+    try{
+      var r=await C.from('ops_params').select('key,value,updated_at,updated_by').limit(500);
+      if(r.error){ var m=String(r.error.message||r.error.code||''); this.why=/does not exist|relation|schema cache|42P01|PGRST20[05]/i.test(m)?'no_table':'read_fail'; console.warn('[v2] 판정 기준 읽기 실패', r.error); }
+      else { var o=this.rows; (r.data||[]).forEach(function(x){ o[x.key]=x; }); this.why=''; }
+    }catch(e){ this.why='read_fail'; console.warn('[v2] 판정 기준 읽기 실패', e); }
+    this.apply(); return this.rows;
+  },
+  /* 값 — 바꾼 값이 있고 허용 범위 안이면 그것, 아니면 기본값. 범위 밖 값(옛 화면이 넣은 것 등)은 «조용히» 쓰지 않고 기본값으로 돌아가며 콘솔에 남긴다. */
+  get: function(k){
+    var P=GST.PARAMS[k]; if(!P) return undefined;
+    var r=this.rows[k]; if(!r||r.value==null) return P.def;
+    var v=Number(r.value); if(isNaN(v)||v<P.min||v>P.max){ console.warn('[v2] 판정 기준 범위 밖 — 기본값을 쓴다', k, r.value); return P.def; }
+    return v;
+  },
+  changed: function(k){ var r=this.rows[k]; return !!(r&&r.value!=null); },
+  /* live 인 값을 화면에 건다 — 주의 띠(GST.METRICS) · 위험 점수(GST.RISK_W). 관제 신호는 관제가 get() 으로 읽는다. */
+  apply: function(){
+    var self=this, W={}; Object.keys(GST.PARAMS).forEach(function(k){ var P=GST.PARAMS[k]; if(P.w&&P.live) W[P.w]=self.get(k); });
+    GST.RISK_W = Object.assign({}, GST.RISK_W, W);
+    var g=this.get.bind(this);
+    GST.METRICS.run_rate.band    = {abs:g('band_run_rate')};
+    GST.METRICS.bm_per100.band   = {rel:g('band_bm_per100')/100};
+    GST.METRICS.pm_ratio.band    = {abs:g('band_pm_ratio')};
+    GST.METRICS.repeat14.band    = {abs:g('band_repeat14')};
+    GST.METRICS.act_overdue.band = {abs:g('band_act_overdue')};
+  },
+  /* 한 번만 읽는다 — 로그인 직후(GST._authOk) 시작되고, 계산하는 화면이 기다린다. 다시 읽으려면 load() */
+  _p: null,
+  ready: function(){ return this._p || (this._p = this.load().catch(function(){})); },
+  /* 위험 점수 가중치(표의 값 · 없으면 기본값) */
+  riskW: function(){ var o={}, self=this; Object.keys(GST.PARAMS).forEach(function(k){ var P=GST.PARAMS[k]; if(P.w) o[P.w]=self.get(k); }); return o; },
+  save: async function(k, v, client){
+    var C=client||await GST._dbAuthed(); if(!C) return {error:'no_db'};
+    var r0=this.rows[k];
+    var r=await C.rpc('param_save',{p_key:k, p_value:v==null||v===''?null:v, p_at:r0?r0.updated_at:null});
+    if(r.error) return {error:String(r.error.message||r.error.code||'rpc')};
+    return r.data||{error:'empty'};
+  }
+};
+/* 기본 RISK_W 를 기억해 둔다 — PARAMS 의 기본값이 이것과 다르면 «표가 비었는데 숫자가 움직이는» 사고다(t-v2 가 대조한다) */
+GST._RISK_W0 = Object.assign({}, GST.RISK_W);
+GST.params.apply();
+
+/* ---------- 숫자 표기 ---------- */
+GST.v2fmt = function(metric, v){
+  if(v==null||isNaN(v)) return '—';
+  var M=GST.METRICS[metric]||{dec:0}, d=M.dec||0;
+  return Number(v).toLocaleString('en-US',{minimumFractionDigits:d, maximumFractionDigits:d});
+};
+GST.v2unit = function(metric, lang){
+  var u=(GST.METRICS[metric]||{}).unit; return u==='pct'?GST.v2t('u_pct',null,lang):u==='ea'?GST.v2t('u_ea',null,lang):u==='case'?GST.v2t('u_case',null,lang):'';
+};
+/* 목표 대비 차이 — 퍼센트 지표는 «p»(퍼센트포인트) · 나머지는 같은 단위 */
+GST.v2gap = function(metric, v, t, lang){
+  if(v==null||!t) return '';
+  var M=GST.METRICS[metric]||{}, d=Math.abs(v-t.target), s=GST.v2fmt(metric,d)+(M.unit==='pct'?GST.v2t('u_pt',null,lang):GST.v2unit(metric,lang));
+  var dir=t.dir||M.dir;
+  if(dir==='le') return v<=t.target?GST.v2t('tgt_ok',null,lang):GST.v2t('tgt_over',{g:s},lang);
+  return v>=t.target?GST.v2t('tgt_ok',null,lang):GST.v2t('tgt_miss',{g:s},lang);
+};
+
+/* ---------- 카드의 «문장» — 화면 카드(GST.kpiCard)와 챗봇 브리핑(brief_snap)이 같은 글을 쓴다 ----------
+ * 두 벌로 만들면 같은 숫자를 카톡과 화면이 다른 말로 적는 날이 온다(제2원칙). lang 을 주면 그 언어로(브리핑은 ko). */
+GST.kpiText = function(o, lang){
+  var mt=o.metric, M=GST.METRICS[mt]||{}, v=o.m?o.m.v:null, t=o.t||null, L=lang;
+  var st=GST.targets.judge(mt, v, t)||'none', unit=GST.v2unit(mt,L);
+  var tline=t ? GST.v2t('tgt',{v:GST.v2fmt(mt,t.target)+unit+' '+GST.v2t(t.dir==='ge'?'tgt_ge':'tgt_le',null,L)},L)+' · '+GST.v2gap(mt,v,t,L) : GST.v2t('tgt_none',null,L);
+  var dv='', dcls='', dvs=GST.v2t('vs_none',null,L);
+  if(o.m && o.m.prev!=null && v!=null){
+    var d=v-o.m.prev, up=d>0, good=(M.dir==='ge')?up:!up;
+    dcls=Math.abs(d)<1e-9?'':(good?'good':'bad');
+    dv=(d>0?'▲ ':d<0?'▼ ':'')+(d>=0?'+':'−')+GST.v2fmt(mt,Math.abs(d))+(M.unit==='pct'?GST.v2t('u_pt',null,L):'');
+    dvs=GST.v2t('vs',null,L);
+  }
+  var den='';
+  if(o.m && o.m.den!=null){
+    if(mt==='run_rate'||mt==='bm_per100') den=GST.v2t('den_units',{v:Number(o.m.den).toLocaleString('en-US')},L);
+    else if(mt==='pm_ratio') den=GST.v2t('den_ev',{v:Number(o.m.den).toLocaleString('en-US')},L);
+  }
+  return { metric:mt, st:st, name:GST.v2t('m_'+mt,null,L), desc:GST.v2t('d_'+mt,null,L), stName:GST.v2t('st_'+st,null,L),
+    val:GST.v2fmt(mt,v), unit:v==null?'':unit, tline:tline, hasT:!!t, dv:dv, dcls:dcls, dvs:dvs, den:den };
+};
+
+/* ---------- 표준 KPI 카드 ----------
+ * 네 줄의 «자리»가 언제나 같다: ① 이름 ② 값 ③ 목표(없으면 «목표 미설정») ④ 직전 대비 · 분모.
+ * 카드마다 줄이 있다 없다 하면 사람 눈이 매번 «이 카드는 어디에 뭐가 있나»를 다시 찾는다(PLAN 「KPI 카드 규격」).
+ * o = {metric, m:{v,prev,num,den}, t:목표행|null, key, spark:[...], win} → HTML 문자열(button) */
+GST.kpiCard = function(o){
+  var esc=GST._esc, mt=o.metric, M=GST.METRICS[mt]||{}, v=o.m?o.m.v:null, t=o.t||null, X=GST.kpiText(o), st=X.st;
+  var dl=X.dv?'<span class="'+X.dcls+'">'+esc(X.dv)+'</span> '+esc(X.dvs):esc(X.dvs);
+  /* 막대 — 목표가 있으면 그 자리에 눈금. 퍼센트는 0~100, 나머지는 max(값, 목표)×1.25 를 끝으로.
+     목표가 없는 «개수» 지표(재고장 대수·처리함 건수)는 막대를 채우지 않는다 — 끝값이 없으면 길이에 뜻이 없다.
+     자리는 남긴다(빈 홈) — 카드마다 줄이 있다 없다 하면 네 줄의 자리가 흔들린다. */
+  var bar='<span class="ds-kpi-bar" aria-hidden="true"></span>';
+  if(v!=null && (t || M.unit==='pct' || M.unit==='rate')){
+    var max=M.unit==='pct'?100:Math.max(1e-9, v, t?t.target:0)*1.25, pv=Math.max(0,Math.min(100,v/max*100));
+    bar='<span class="ds-kpi-bar" aria-hidden="true"><i class="'+st+'" style="width:'+pv.toFixed(1)+'%"></i>'
+      +(t?'<b style="left:'+Math.max(0,Math.min(100,t.target/max*100)).toFixed(1)+'%"></b>':'')+'</span>';
+  }
+  var sp='';
+  if(o.spark&&o.spark.length>1){ var a=o.spark, mx=Math.max.apply(null,a.concat([1])), mn=Math.min.apply(null,a);
+    sp='<svg class="ds-spark" viewBox="0 0 80 24" aria-hidden="true"><polyline points="'+a.map(function(x,i){ return (i*80/(a.length-1)).toFixed(1)+','+(22-(x-mn)/((mx-mn)||1)*20).toFixed(1); }).join(' ')
+      +'" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>'; }
+  return '<button type="button" class="ds-kpi st-'+st+'" data-k="'+esc(o.key||mt)+'" title="'+esc(X.desc)+'">'
+    +'<span class="ds-kpi-l"><i class="ds-dot '+st+'" aria-hidden="true"></i>'+esc(X.name)
+      +(o.win?'<em>'+esc(o.win)+'</em>':'')+'<span class="ds-sr">'+esc(X.stName)+'</span></span>'
+    +'<span class="ds-kpi-v"><b>'+esc(X.val)+'</b><small>'+esc(X.unit)+'</small>'+sp+'</span>'
+    +bar
+    +'<span class="ds-kpi-t '+(t?st:'none')+'">'+esc(X.tline)+'</span>'
+    +'<span class="ds-kpi-d">'+dl+(X.den?' · '+esc(X.den):'')+'</span>'
+    +'</button>';
+};
+
+/* ---------- 사람별 첫 화면 설정 (setup-27 4절) ----------
+ * 서버(allowed_users.home_view/home_op/lang) → 없으면 이 PC(localStorage). 둘 다 없으면 등급으로 고른다.
+ * ⚠ 서버에 열이 없으면(setup-27 전) PC 에 담고 그렇다고 말한다(where='pc'). 조용히 «저장됐다»고 하지 않는다. */
+GST.prefs = {
+  KEY:'gst_home_pref', v:null, where:'',
+  defView: function(){ var r=GST._me&&GST._me.role; return (r==='admin'||r==='legacy'||r==='editor'||r==='kr')?'lead':'exec'; },
+  load: async function(client){
+    var pc=null; try{ pc=JSON.parse(localStorage.getItem(this.KEY)||'null'); }catch(e){}
+    var C=client; try{ if(!C) C=await GST._dbAuthed(); }catch(e){ C=null; }
+    var em=GST._me&&GST._me.email;
+    if(C&&em){
+      try{ var r=await C.from('allowed_users').select('home_view,home_op,lang').eq('email',em).limit(1);
+        if(!r.error&&r.data&&r.data[0]){ var d=r.data[0]; if(d.home_view||d.home_op||d.lang){ this.v={view:d.home_view||null, op:d.home_op||'', lang:d.lang||null}; this.where='server'; return this.v; } }
+      }catch(e){}
+    }
+    this.v=pc?{view:pc.view||null, op:pc.op||'', lang:pc.lang||null}:null; this.where=pc?'pc':''; return this.v;
+  },
+  save: async function(p, client){
+    var v={view:p.view||null, op:p.op||'', lang:p.lang||null}; this.v=v;
+    try{ localStorage.setItem(this.KEY, JSON.stringify(v)); }catch(e){}
+    var C=client; try{ if(!C) C=await GST._dbAuthed(); }catch(e){ C=null; }
+    if(!C){ this.where='pc'; return {ok:true, where:'pc'}; }
+    try{ var r=await C.rpc('pref_save',{p_view:v.view,p_op:v.op||null,p_lang:v.lang});
+      if(r.error||!r.data||!r.data.ok){ this.where='pc'; return {ok:true, where:'pc', why:String((r.error&&(r.error.message||r.error.code))||(r.data&&r.data.error)||'')}; }
+      this.where='server'; return {ok:true, where:'server'};
+    }catch(e){ this.where='pc'; return {ok:true, where:'pc', why:String(e&&e.message||e)}; }
+  }
+};
+})();
 
 global.GST = GST;
 })(window);

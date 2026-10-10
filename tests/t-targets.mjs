@@ -1,4 +1,4 @@
-// 운영 목표·사람별 설정(setup-26-targets.sql)을 «진짜 Postgres» 에서 돌려 본다 (2단계 밑바탕)
+// 운영 목표·사람별 설정(setup-27-targets.sql)을 «진짜 Postgres» 에서 돌려 본다 (2단계 밑바탕)
 //
 // t-editsql 과 같은 방식 — 임시 클러스터 + Supabase 를 흉내 낸 최소 스키마(allowed_users · auth.jwt)에
 // «저장소의 그 SQL 파일»을 두 번 먹인다(재실행 안전). 운영 DB 에서 시험하면 이력 표에 흔적이 남는다.
@@ -12,7 +12,7 @@ import path from 'path';
 import { spawnSync } from 'child_process';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const SQL_FILE = path.join(ROOT, 'supabase/setup-26-targets.sql');
+const SQL_FILE = path.join(ROOT, 'supabase/setup-27-targets.sql');
 
 function findBin() {
   if (process.env.PG_BIN && fs.existsSync(path.join(process.env.PG_BIN, 'initdb'))) return process.env.PG_BIN;
@@ -24,7 +24,7 @@ function findBin() {
   return null;
 }
 const BIN = findBin();
-if (!BIN) { console.log('⚠️  부분 검사 — PostgreSQL(initdb)이 없어 setup-26 SQL 을 실제로 돌리지 못했다'); process.exit(process.env.STRICT_FIXTURES ? 2 : 0); }
+if (!BIN) { console.log('⚠️  부분 검사 — PostgreSQL(initdb)이 없어 setup-27 SQL 을 실제로 돌리지 못했다'); process.exit(process.env.STRICT_FIXTURES ? 2 : 0); }
 
 const asRoot = typeof process.getuid === 'function' && process.getuid() === 0;
 const DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'gst-targets-'));
@@ -155,6 +155,35 @@ try {
   ok(clr.ok && me2 === '-|-', '비우면 null 로 돌아간다(빈칸 운영단위도 null)');
   const upd2 = as('view@test.local', `update public.allowed_users set role='admin' where email='view@test.local';`);
   ok(/permission denied/.test(upd2.err), '자기 행이라도 표를 직접 고쳐 등급을 올릴 수는 없다');
+
+  console.log('[8] 판정 기준(param_save) — 코드의 기준 숫자를 표로');
+  const J = x => JSON.parse(x.out);
+  ok(J(as('ed@test.local', `select public.param_save('sig_bad_x',1.8,null);`)).error === 'forbidden', '사이트 담당자는 판정 기준을 못 바꾼다');
+  const ps1 = J(as('boss@test.local', `select public.param_save('sig_bad_x',1.8,null);`));
+  ok(ps1.ok && ps1.updated_at, '관리자가 처음 바꾼다(행이 없으면 p_at = null)');
+  ok(J(as('boss@test.local', `select public.param_save('sig_bad_x',2,null);`)).error === 'conflict', '이미 있는데 p_at 없이 또 바꾸면 conflict');
+  const ps2 = J(as('boss@test.local', `select public.param_save('sig_bad_x',null,'${ps1.updated_at}');`));
+  ok(ps2.ok && q1(`select coalesce(value::text,'null') from public.ops_params where key='sig_bad_x';`).out === 'null', 'null 로 저장 = «기본값으로» — 행은 남는다(지우지 않는다)');
+  ok(J(as('boss@test.local', `select public.param_save('Bad Key',1,null);`)).error === 'bad_key', '열쇠 모양이 아니면 bad_key');
+  ok(J(as('boss@test.local', `select public.param_save('risk_pm',-1,null);`)).error === 'bad_value', '음수는 bad_value');
+  ok(q1(`select string_agg(coalesce(v_from::text,'∅')||'→'||coalesce(v_to::text,'∅'), ',' order by id) from public.ops_param_log where key='sig_bad_x';`).out === '∅→1.8,1.8→∅', '이력이 «전 → 후»로 남는다');
+  ok(/permission denied/.test(as('boss@test.local', `update public.ops_params set value=9 where key='sig_bad_x';`).err), '표를 직접 고칠 수는 없다');
+  ok(as('view@test.local', `select count(*) from public.ops_params;`).out === '1', '조회자도 판정 기준을 읽는다(색의 근거)');
+
+  console.log('[9] 브리핑 스냅샷(brief_put) — 챗봇이 읽는다');
+  const bp = (who, sc, d, pl) => J(as(who, `select public.brief_put('${sc}','${d}','${JSON.stringify(pl).replace(/'/g, "''")}'::jsonb,166);`));
+  ok(bp('view@test.local', 'all', '2026-10-09', { k:1 }).error === 'forbidden', '조회자 브라우저는 남기지 않는다');
+  ok(bp('ed@test.local', 'all', '2026-10-09', { k:1 }).ok, '사이트 담당자는 남긴다(처리함을 쓰는 사람과 같은 규칙)');
+  ok(bp('boss@test.local', 'all', '2026-10-02', { k:0 }).error === 'older', '더 옛날 자료로 계산한 스냅샷은 새 것을 못 덮는다');
+  ok(q1(`select payload->>'k' from public.brief_snap where scope='all';`).out === '1', '그래서 값은 새 것 그대로');
+  ok(bp('boss@test.local', 'all', '2026-10-09', { k:2 }).ok && q1(`select payload->>'k'||'|'||made_by from public.brief_snap where scope='all';`).out === '2|boss@test.local', '같은 날 자료면 덮는다 · 누가 남겼는지는 토큰에서');
+  ok(bp('boss@test.local', 'o:GST TAIWAN SCRUBBER', '2026-10-09', { k:3 }).ok, '운영단위 범위도 남긴다');
+  ok(bp('boss@test.local', 'x:bad', '2026-10-09', { k:3 }).error === 'bad_scope', '범위 열쇠 모양(all · r: · o:)이 아니면 bad_scope');
+  ok(J(as('boss@test.local', `select public.brief_put('all','2026-10-09','[1,2]'::jsonb,1);`)).error === 'bad_payload', '객체가 아닌 payload 는 bad_payload');
+  const big = 'x'.repeat(40000);
+  ok(bp('boss@test.local', 'all', '2026-10-10', { big }).error === 'too_big', '32KB 를 넘으면 too_big (챗봇 답은 1,000자다)');
+  ok(as('view@test.local', `select count(*) from public.brief_snap;`).out === '2', '조회자도 읽는다');
+  ok(/permission denied/.test(as('boss@test.local', `insert into public.brief_snap(scope,as_of,payload,made_by) values ('all','2030-01-01','{}','x') on conflict (scope) do update set as_of=excluded.as_of;`).err), '표를 직접 쓸 수는 없다(위조 방지)');
 } catch (e) {
   fail++; console.log('  ❌ 검사가 중간에 멈췄다: ' + (e && e.message || e));
 } finally {

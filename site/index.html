@@ -6,8 +6,8 @@
 <title>사이트 상세 · CS Global Team</title>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=167"></script>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=167">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=168"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=168">
 <style>
 /* ============================================================
    사이트 상세 (v167 · 사용자 요청 「통합관리화면」 3단계)
@@ -118,7 +118,7 @@ body.st{padding:0 !important;min-height:100vh}
       <div class="st-legend"><span><i style="background:var(--accent)"></i><span data-i="lgBm">고장(BM)</span></span><span><i style="background:var(--ok)"></i><span data-i="lgPm">PM</span></span><span><i style="background:var(--bad)"></i><span data-i="lgCur">이번 주</span></span></div>
     </div>
     <div class="st-card">
-      <h2><span data-i="whereT">고장이 몰리는 곳</span><span class="s" data-i="whereS">최근 90일</span>
+      <h2><span data-i="whereT">고장이 몰리는 곳</span><span class="s keep" data-i="whereS">최근 90일</span>
         <span class="r st-seg" id="segBy"><button type="button" data-b="fab" class="on" data-i="by_fab">FAB</button><button type="button" data-b="model" data-i="by_model">모델</button><button type="button" data-b="proc" data-i="by_proc">공정</button></span></h2>
       <div class="st-hb" id="where"></div>
     </div>
@@ -160,9 +160,9 @@ ko:{title:'사이트 상세',open_fault:'고장 분석에서 보기',open_inst:'
   whereT:'고장이 몰리는 곳',whereS:'최근 90일',by_fab:'FAB',by_model:'모델',by_proc:'공정',
   riskT:'고장 위험 설비',riskS:'고장분석 「고장 위험 설비 TOP 20」과 같은 식 · 줄을 누르면 그 설비의 이력',c_eq:'설비',c_fab:'FAB',c_score:'점수',c_why:'왜',
   stateT:'설비 상태',actT:'이 운영단위의 처리함',open_act:'처리함 열기',regT:'사이트 등록 정보',regS:'데이터 관리 「사이트」 탭에서 정한 값',
-  k_units:'반입 / 가동',k_bm:'이번 달 고장',k_pm:'최근 4주 PM',k_risk:'고장 위험 설비',k_warr:'워런티 90일 안 만료',k_act:'열린 처리함 일',
-  vs_prev:'지난달 {n}',run_p:'가동률 {p}%',rep:'14일 안 재고장 {n}대',warr_in:'워런티 내 {n}대',act_late:'기한 지남 {n}',
-  asof:'기준 {d} (자료의 마지막 날)',krFall:'국내 알람 원장이 비어 수선실적 BM 으로 세는 중',
+  k_units:'반입 / 가동',k_bm:'이번 달 고장',k_pm:'최근 4주 PM',k_risk:'고장 위험 설비',k_warr:'90일 이내 워런티 만료',k_act:'열린 처리함 일',
+  vs_prev:'지난달 {n}',run_p:'가동률 {p}%',run_none:'설치현황 자료 없음',rep:'{d}일 이내 재고장 {n}대',warr_in:'워런티 내 {n}대',act_late:'기한 경과 {n}건',
+  asof:'{d} 기준',krFall:'국내 알람 원장이 비어 있어 국내 고장은 수선실적 BM으로 집계 중입니다',
   take:'담기',taken:'처리함',none:'자료가 없습니다',noRisk:'위험 설비가 없습니다',noAct:'열린 일이 없습니다',
   units:'대',cases:'건',loading:'자료를 불러오는 중…',fail:'일부 자료를 못 읽었습니다',
   st_unk:'처음 보는 상태 {n}대',st_noState:'설비상태 칸이 빈 설비 {n}대 — 날짜로 판정',
@@ -176,8 +176,8 @@ en:{title:'Site detail',open_fault:'Open in Fault',open_inst:'Open in Installati
   riskT:'At-risk units',riskS:'same formula as Fault «At-risk units TOP 20» · click a row for its history',c_eq:'Unit',c_fab:'FAB',c_score:'Score',c_why:'Why',
   stateT:'Unit status',actT:'Actions for this unit',open_act:'Open Actions',regT:'Site registry',regS:'values set in Data management «Sites»',
   k_units:'Installed / Running',k_bm:'Failures this month',k_pm:'PM (4 weeks)',k_risk:'At-risk units',k_warr:'Warranty ends in 90 days',k_act:'Open action items',
-  vs_prev:'last month {n}',run_p:'{p}% running',rep:'{n} repeat in 14 days',warr_in:'{n} under warranty',act_late:'{n} overdue',
-  asof:'As of {d} (last data day)',krFall:'Korea alarm ledger is empty — counting repair-record BM',
+  vs_prev:'last month {n}',run_p:'{p}% running',run_none:'No installation data',rep:'{n} repeat in {d} days',warr_in:'{n} under warranty',act_late:'{n} overdue',
+  asof:'As of {d}',krFall:'Korea alarm ledger is empty — counting repair-record BM',
   take:'Add',taken:'Actions',none:'No data',noRisk:'No at-risk units',noAct:'No open items',
   units:'',cases:'',loading:'Loading…',fail:'Some data could not be read',
   st_unk:'{n} with an unknown status',st_noState:'{n} with an empty status — judged by date',
@@ -191,8 +191,8 @@ zh:{title:'站点详情',open_fault:'在故障分析中查看',open_inst:'在安
   riskT:'故障风险设备',riskS:'与故障分析「故障风险设备 TOP 20」相同算法 · 点击行查看该设备记录',c_eq:'设备',c_fab:'FAB',c_score:'分数',c_why:'原因',
   stateT:'设备状态',actT:'该运营单位的待办',open_act:'打开待办',regT:'站点登记信息',regS:'数据管理「站点」页设定的值',
   k_units:'进场 / 运行',k_bm:'本月故障',k_pm:'最近4周 PM',k_risk:'故障风险设备',k_warr:'90天内保修到期',k_act:'未关闭待办',
-  vs_prev:'上月 {n}',run_p:'运行率 {p}%',rep:'14天内重复故障 {n}台',warr_in:'保修内 {n}台',act_late:'逾期 {n}',
-  asof:'基准 {d}（数据最后一天）',krFall:'国内报警台账为空 — 按维修实绩 BM 计数',
+  vs_prev:'上月 {n}',run_p:'运行率 {p}%',run_none:'无设备台账数据',rep:'{d}天内重复故障 {n}台',warr_in:'保修内 {n}台',act_late:'逾期 {n}',
+  asof:'截至 {d}',krFall:'国内报警台账为空 — 按维修实绩 BM 计数',
   take:'加入',taken:'待办',none:'没有数据',noRisk:'没有风险设备',noAct:'没有未关闭事项',
   units:'台',cases:'件',loading:'正在加载…',fail:'部分数据读取失败',
   st_unk:'未知状态 {n}台',st_noState:'设备状态为空 {n}台 — 按日期判定',
@@ -206,8 +206,8 @@ ja:{title:'サイト詳細',open_fault:'故障分析で見る',open_inst:'設置
   riskT:'故障リスク設備',riskS:'故障分析「故障リスク設備 TOP 20」と同じ式 · 行を押すとその設備の履歴',c_eq:'設備',c_fab:'FAB',c_score:'点数',c_why:'理由',
   stateT:'設備状態',actT:'この運営単位の対応',open_act:'対応を開く',regT:'サイト登録情報',regS:'データ管理「サイト」タブで設定した値',
   k_units:'搬入 / 稼働',k_bm:'今月の故障',k_pm:'直近4週 PM',k_risk:'故障リスク設備',k_warr:'90日以内に保証終了',k_act:'未完了の対応',
-  vs_prev:'先月 {n}',run_p:'稼働率 {p}%',rep:'14日以内再故障 {n}台',warr_in:'保証内 {n}台',act_late:'期限超過 {n}',
-  asof:'基準 {d}（データ最終日）',krFall:'国内アラーム台帳が空 — 修理実績 BM で集計中',
+  vs_prev:'先月 {n}',run_p:'稼働率 {p}%',run_none:'設置台帳データなし',rep:'{d}日以内再故障 {n}台',warr_in:'保証内 {n}台',act_late:'期限超過 {n}',
+  asof:'{d} 時点',krFall:'国内アラーム台帳が空 — 修理実績 BM で集計中',
   take:'登録',taken:'対応',none:'データがありません',noRisk:'リスク設備はありません',noAct:'未完了の事項はありません',
   units:'台',cases:'件',loading:'読み込み中…',fail:'一部のデータを読めませんでした',
   st_unk:'未知の状態 {n}台',st_noState:'設備状態が空 {n}台 — 日付で判定',
@@ -306,7 +306,10 @@ function render(){
   sel.innerHTML=D.opList.map(o=>'<option value="'+esc(o.op)+'"'+(o.op===S.op?' selected':'')+'>'+esc(short(o.op))+' ('+nf(o.n)+')</option>').join('');
   const any=RAW.INST.find(x=>x.op===S.op)||{};
   document.getElementById('regPill').textContent=[any.region, ctyName(any.cty)].filter(Boolean).join(' · ');
-  document.getElementById('asof').textContent=fmt(t('asof'),{d:GST.fmtD(D.asOf)})+(D.KR_ON||any.region!==GST.ORG.REGION_KR?'':' · ⚠ '+t('krFall'));
+  /* 머리에는 날짜만(v172) — 숫자의 뜻이 바뀌는 사실(국내 원장이 비어 수선실적으로 집계)은 ⚠ 하나로 · 누르면 내용 */
+  const _asof=document.getElementById('asof');
+  _asof.innerHTML=GST._esc(fmt(t('asof'),{d:GST.fmtD(D.asOf)}))+(D.KR_ON||any.region!==GST.ORG.REGION_KR?'':' <button type="button" class="gst-warn" id="krWarn" title="'+GST._esc(t('krFall'))+'">⚠</button>');
+  const _kw=document.getElementById('krWarn'); if(_kw) _kw.onclick=()=>GST.rowsModal('⚠', [''], [[t('krFall')]]);
   document.getElementById('fabs').innerHTML=D.fabs.length>1?['<button type="button" class="st-fab'+(S.fab?'':' on')+'" data-f="">'+esc(t('all_fab'))+'</button>']
     .concat(D.fabs.map(f=>'<button type="button" class="st-fab'+(S.fab===f?' on':'')+'" data-f="'+esc(f)+'">'+esc(f)+'</button>')).join(''):'';
   document.querySelectorAll('#fabs .st-fab').forEach(b=>b.onclick=()=>{ S.fab=b.dataset.f; render(); });
@@ -314,13 +317,14 @@ function render(){
 }
 function drawKpis(){
   if(!D) return;
-  const runP=D.inN?Math.round(D.runN/D.inN*100):0, d=D.bmM.length-D.bmP.length;
+  /* 반입 0 = 설치현황 자료 없음 — «가동률 0%»로 적지 않는다(관제·공용 지표와 같은 규칙) */
+  const runP=D.inN?Math.round(D.runN/D.inN*100):null, d=D.bmM.length-D.bmP.length;
   const myActs=ACTS.filter(a=>a.op===S.op), late=myActs.filter(a=>a.due&&a.due<new Date().toISOString().slice(0,10)).length;
   const K=[
-    {k:'units', v:nf(D.inN)+' / '+nf(D.runN), u:t('units'), d:fmt(t('run_p'),{p:runP})},
+    {k:'units', v:nf(D.inN)+' / '+nf(D.runN), u:t('units'), d:runP==null?t('run_none'):fmt(t('run_p'),{p:runP})},
     {k:'bm', v:nf(D.bmM.length), u:t('cases'), d:'<span class="'+(d>0?'up':d<0?'dn':'')+'">'+(d>0?'▲ ':d<0?'▼ ':'')+'</span>'+esc(fmt(t('vs_prev'),{n:D.bmP.length}))},
     {k:'pm', v:nf(D.pm4.length), u:t('cases'), d:''},
-    {k:'risk', v:nf(D.RISK.length), u:t('units'), d:esc(fmt(t('rep'),{n:D.RISK.filter(r=>r.rep>0).length}))},
+    {k:'risk', v:nf(D.RISK.length), u:t('units'), d:esc(fmt(t('rep'),{n:D.RISK.filter(r=>r.rep>0).length, d:GST.RISK_W.repDays}))},
     {k:'warr', v:nf(D.warrSoon.length), u:t('units'), d:esc(fmt(t('warr_in'),{n:D.warrIn}))},
     {k:'act', v:nf(myActs.length), u:'', d:late?'<span class="up">'+esc(fmt(t('act_late'),{n:late}))+'</span>':''}
   ];

@@ -153,7 +153,7 @@ const stub = role => '\n;GST.USE_DB=false;GST.authOn=function(){return false;};'
      시트 픽스처로 떨어진다. report 의 원장 직접 호출(cols 있음)만 머리글 한 줄을 받는다. */
   + 'GST.csvTableRows=async function(t,cols){if(!cols)throw new Error("DB_OFF");return [String(cols).split(",")];};'
   + 'GST.db=async function(){return {from:function(tb){var q={};'
-  + '["select","eq","order","limit","ilike","in"].forEach(function(m){q[m]=function(){return q;};});'
+  + '["select","eq","order","limit","ilike","in","is","not","gt","lt","gte","lte","range"].forEach(function(m){q[m]=function(){return q;};});'
   + '["upsert","insert","update","delete"].forEach(function(m){q[m]=function(){return q;};});'
   + 'q.maybeSingle=q.single=function(){return q;};'
   + 'q.then=function(res,rej){return Promise.resolve({data:[],error:null}).then(res,rej);};return q;}};};';
@@ -235,7 +235,7 @@ console.log('[2] /offline/ 내보내기');
   await pg.waitForTimeout(300);
   is((await pg.textContent('#progData')).includes('완료'), 'data.js 내보내기 완료 메시지');
   const okRows = await pg.evaluate(() => [...document.querySelectorAll('#tbl tbody tr')].every(tr => tr.textContent.includes('✓')));
-  is(okRows, '표 전부 ✓ (12개 — 9 gid + 원장 2 + pm_adjust)');
+  is(okRows, '표 전부 ✓ (14개 — 9 gid + 원장 2 + pm_adjust + 판정 기준·운영 목표)');
   is(pe.length === 0, '내보내기 JS 에러 없음' + (pe.length ? ' → ' + pe[0] : ''));
   await ctx.close();
 
@@ -248,7 +248,7 @@ console.log('[2] /offline/ 내보내기');
   is(html.length > 3_000_000, '조립물 크기가 그럴듯하다 (' + (html.length/1048576).toFixed(1) + 'MB)');
   is(data.includes('__SNAP_META') && data.includes('__SNAP_PARTS'), 'data.js 형식');
   const counts = JSON.parse(data.match(/__SNAP_META=(\{.*?\});\n/)[1]).counts;
-  is(Object.keys(counts).length === 12, '스냅샷 counts 12건 (실제 ' + Object.keys(counts).length + ')');
+  is(Object.keys(counts).length === 14, '스냅샷 counts 14건 — 9 gid + 원장 2 + pm_adjust + 판정 기준·운영 목표(v172) (실제 ' + Object.keys(counts).length + ')');
 }
 
 /* ═══ [3] file:// — 네트워크 0 · KPI 동일 · 챗봇/순회 정체성 ═══ */

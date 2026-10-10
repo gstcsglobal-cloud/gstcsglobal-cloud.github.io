@@ -135,3 +135,9 @@ body.theme-slate .ds-seg button[aria-pressed="true"]{background:var(--accent);co
 @keyframes dsSk{0%{background-position:100% 0}100%{background-position:-100% 0}}
 @media (prefers-reduced-motion:reduce){ .ds-sk{animation:none} .ds-kpi,.ds-row,.ds-btn{transition:none} }
 @media print{ .ds-seg,.ds-btn,.ds-select{display:none !important} .ds-kpi,.ds-card{break-inside:avoid;box-shadow:none} }
+
+/* 설명 표시 (v172 · core GST.explainOn) — 꺼져 있으면 부제·설명·상태 줄을 숨긴다 */
+body:not(.gst-explain) .ds-card h2 .s.x,
+body:not(.gst-explain) .ds-note.x,
+body:not(.gst-explain) .ds-banner.x,
+body:not(.gst-explain) .ds-status:not(.err){display:none !important}

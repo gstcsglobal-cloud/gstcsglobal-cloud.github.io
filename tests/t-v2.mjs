@@ -54,7 +54,7 @@ for (let i = 0; i < 2; i++) w('SEC Scrubber', 'P1', 'BM', 0, 'KRC' + (i + 1));
 for (let i = 0; i < 5; i++) w('GST TAIWAN SCRUBBER', 'F16', 'TBM', 0, 'TWC' + (20 + i));
 const SHEETS = { '891608329': csv(inst), '646668307': csv(wk) };
 
-/* ---- 가짜 Supabase — 「무엇을 보냈나」를 기록하고 RPC 는 setup-26 의 규칙을 흉내 낸다 ----
+/* ---- 가짜 Supabase — 「무엇을 보냈나」를 기록하고 RPC 는 setup-27 의 규칙을 흉내 낸다 ----
    (규칙 자체는 t-targets 가 진짜 Postgres 로 지킨다 — 여기서는 화면이 «무엇을 실어 보내나»만 본다) */
 const T0 = '2026-10-01T00:00:00.000Z';
 const DB0 = {
@@ -68,7 +68,9 @@ const DB0 = {
     { id:12, kind:'manual', ref:null, sev:'bad', status:'ack', title:'새 기한 일', op:'GST TAIWAN SCRUBBER', assignee:'kim', due:'2099-01-01', updated_at:T0 },
     { id:13, kind:'manual', ref:null, sev:'warn', status:'done', title:'닫힌 옛 일', op:'GST TAIWAN SCRUBBER', assignee:null, due:'2020-01-01', updated_at:T0 }
   ],
-  allowed_users: [ { email:'boss@t', home_view:null, home_op:null, lang:null } ]
+  allowed_users: [ { email:'boss@t', home_view:null, home_op:null, lang:null } ],
+  ops_params: [],
+  brief_snap: []
 };
 const FAKE = `
 (function(){
@@ -84,7 +86,7 @@ const FAKE = `
       else F.push(function(r){ return r[c]!=null; }); return api; },
     then:function(res,rej){ var E=(window.__DBERR||{})[table]; if(E) return Promise.resolve({data:null,error:E}).then(res,rej);
       var d=(db()[table]||[]).filter(function(r){ return F.every(function(f){ return f(r); }); });
-      return Promise.resolve({data:JSON.parse(JSON.stringify(d)),error:null}).then(res,rej); } };
+      return Promise.resolve({data:JSON.parse(JSON.stringify(d)),error:null,count:d.length}).then(res,rej); } };
     return api; }
   var C={ from:Q, rpc:async function(fn,a){ window.__RPC.push({fn:fn,args:a}); var d=db(), now=new Date().toISOString();
     var E=(window.__RPCERR||{})[fn]; if(E) return {data:{error:E},error:null};
@@ -95,6 +97,14 @@ const FAKE = `
       put(d); return {data:{ok:true,id:id,updated_at:now},error:null}; }
     if(fn==='target_remove'){ var x=d.ops_targets.find(function(t){ return t.id===a.p_id&&!t.removed_at; }); if(!x) return {data:{error:'not_found'},error:null};
       if(x.updated_at!==a.p_at) return {data:{error:'conflict'},error:null}; x.removed_at=now; x.updated_at=now; put(d); return {data:{ok:true},error:null}; }
+    if(fn==='param_save'){ var pr=d.ops_params.find(function(x){ return x.key===a.p_key; });
+      if(pr){ if(a.p_at!==pr.updated_at) return {data:{error:'conflict'},error:null}; pr.value=a.p_value; pr.updated_at=now; }
+      else { if(a.p_at) return {data:{error:'conflict'},error:null}; d.ops_params.push({key:a.p_key,value:a.p_value,updated_at:now,updated_by:'boss@t'}); }
+      put(d); return {data:{ok:true,updated_at:now},error:null}; }
+    if(fn==='brief_put'){ var bs=d.brief_snap.find(function(x){ return x.scope===a.p_scope; });
+      if(bs&&bs.as_of>a.p_as_of) return {data:{error:'older'},error:null};
+      if(bs){ bs.as_of=a.p_as_of; bs.payload=a.p_payload; bs.made_at=now; } else d.brief_snap.push({scope:a.p_scope,as_of:a.p_as_of,payload:a.p_payload,made_at:now,made_by:'boss@t'});
+      put(d); return {data:{ok:true},error:null}; }
     if(fn==='pref_save'){ var u=d.allowed_users[0]; u.home_view=a.p_view; u.home_op=a.p_op; u.lang=a.p_lang; put(d); return {data:{ok:true},error:null}; }
     return {data:null,error:{message:'unknown rpc'}}; } };
   GST.db=async function(){ return C; };
@@ -117,9 +127,8 @@ const ctx = await browser.newContext({ viewport:{ width:1500, height:1100 }, loc
 await ctx.route('**gstcsglobal-cloud.github.io/**', r => { let u = new URL(r.request().url()).pathname; if (u.endsWith('/')) u += 'index.html';
   const f = path.join(ROOT, u); if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.fulfill({ status:404, body:'nf' }); return; }
   r.fulfill({ status:200, contentType:MIME[path.extname(f)] || 'application/octet-stream', body:fs.readFileSync(f) }); });
-await ctx.route('**/assets/core.js*', r => r.fulfill({ status:200, contentType:'application/javascript', body: fs.readFileSync(ROOT + '/assets/core.js', 'utf8') + STUB }));
-/* v2.js 뒤에 가짜 DB 를 붙인다(core 뒤가 아니라 v2 뒤 — GST.db 를 core 가 정의한 뒤에 덮어야 한다) */
-await ctx.route('**/assets/v2.js*', r => r.fulfill({ status:200, contentType:'application/javascript', body: fs.readFileSync(ROOT + '/assets/v2.js', 'utf8') + FAKE }));
+/* core 뒤에 인증 끄기(STUB)와 가짜 DB(FAKE)를 붙인다 — GST.db 를 core 가 정의한 «뒤»에 덮어야 한다 */
+await ctx.route('**/assets/core.js*', r => r.fulfill({ status:200, contentType:'application/javascript', body: fs.readFileSync(ROOT + '/assets/core.js', 'utf8') + STUB + FAKE }));
 await ctx.route('**/cdn.jsdelivr.net/**', r => { const u = r.request().url();
   if (u.includes('papaparse')) return r.fulfill({ status:200, contentType:'application/javascript', body:fs.readFileSync(NM + 'papaparse/papaparse.min.js', 'utf8') });
   if (u.endsWith('.css')) return r.fulfill({ status:200, contentType:'text/css', body:'' });
@@ -156,7 +165,7 @@ is(K.run_rate && K.run_rate.v === '96.0' && K.run_rate.st === 'ok', '가동률 9
 is(K.bm_per100 && K.bm_per100.v === '46.00' && K.bm_per100.st === 'bad', '100대당 고장 46.00 (23 ÷ 50 × 100) · 목표 30 이하 → 위험 (' + (K.bm_per100 || {}).v + ' ' + (K.bm_per100 || {}).st + ')');
 is(/▲ \+30\.00/.test(K.bm_per100.d), '직전 4주(16.00) 대비 ▲ +30.00 (' + K.bm_per100.d + ')');
 is(K.pm_ratio && K.pm_ratio.v === '18' && K.pm_ratio.st === 'none' && /목표 미설정/.test(K.pm_ratio.t), 'PM 비율 18% (5 ÷ 28) · 목표 없으면 «목표 미설정» (' + (K.pm_ratio || {}).v + ')');
-is(K.repeat14 && K.repeat14.v === '1', '14일 안 재고장 설비 1 (우한 WHC9 · 7일 간격)');
+is(K.repeat14 && K.repeat14.v === '1', '14일 이내 재고장 설비 1 (우한 WHC9 · 7일 간격)');
 is(!K.act_overdue, '경영진 카드는 넷(처리함 기한은 팀장·현장)');
 const rowsSame = Object.values(K).every(k => k.rows.join() === 'ds-kpi-l,ds-kpi-v,ds-kpi-bar,ds-kpi-t,ds-kpi-d');
 is(rowsSame, '카드 네 줄(이름·값·막대·목표·직전 대비)이 모든 카드에서 같은 순서 · 같은 자리');
@@ -167,17 +176,17 @@ const wh = ops.find(o => /WUHAN/.test(o.op)), kr = ops.find(o => /SEC/.test(o.op
 is(wh && wh.bm === '60.00' && wh.st === 'ok', '우한은 «자기» 목표(60 이하)로 판정 — 같은 60.00 이 전사 목표로는 위험 (' + (wh || {}).bm + ' ' + (wh || {}).st + ')');
 is(kr && kr.bm === '20.00' && kr.st === 'ok', '국내(SEC) 20.00 · 정상');
 const dec = await p0.evaluate(() => Array.from(document.querySelectorAll('#cDec .ds-row b')).map(b => b.textContent));
-is(dec.some(s => /TAIWAN.*100대당 고장 50\.00/.test(s)), '결정할 것 — 대만 고장률 초과가 선다');
-is(dec.some(s => /WHC9.*재고장 1회/.test(s)), '결정할 것 — 재고장 설비(WHC9)가 선다');
-is(dec.some(s => /기한 넘은 처리함 일 1건/.test(s)), '결정할 것 — 기한 넘은 처리함 일 1건(닫힌 일은 안 셈)');
+is(dec.some(s => /TAIWAN.*100대당 고장 50\.00/.test(s)), '확인 사항 — 대만 고장률 초과가 선다');
+is(dec.some(s => /WHC9.*재고장 1회/.test(s)), '확인 사항 — 재고장 설비(WHC9)가 선다');
+is(dec.some(s => /기한이 지난 처리 건 1건/.test(s)), '확인 사항 — 기한이 지난 처리 건 1건(완료된 건은 안 셈)');
 await p0.click('#kpis .ds-kpi[data-k="bm_per100"]'); await p0.waitForTimeout(300);
 const mr = await p0.evaluate(() => { const b = document.querySelector('.gov-body'); return b ? b.querySelectorAll('tbody tr').length : -1; });
 is(mr === 23, '고장률 카드를 누르면 «그 23건»이 목록으로 (받은 ' + mr + ')');
 await p0.evaluate(() => GST._ovClose && GST._ovClose());
 const trend = await p0.evaluate(() => ({ bars:document.querySelectorAll('#cTrend rect').length, tl:!!document.querySelector('#cTrend line.tl'), hot:document.querySelectorAll('#cTrend rect.hot').length }));
 is(trend.bars === 12 && trend.tl, '주별 고장 12주 막대 + 목표 점선(주 단위 환산)');
-const ban = await p0.evaluate(() => document.getElementById('banners').textContent);
-is(/원장이 비어/.test(ban), '국내 알람 원장이 비면 그 사실을 띠로 (숫자의 뜻이 바뀐다 · v92)');
+const kw = await p0.evaluate(() => { const b = document.getElementById('krWarn'); return { t:b ? b.title : '', head:document.getElementById('asof').textContent, ban:document.getElementById('banners').textContent }; });
+is(/원장이 비어/.test(kw.t) && !/원장이 비어/.test(kw.ban) && /^\d{4}-\d\d-\d\d 기준/.test(kw.head), '국내 알람 원장이 비면 머리에 ⚠ 하나(띠·문장 대신 · v172) · 머리는 날짜만');
 
 console.log('[2] 범위 전환 — 운영단위 · 구분');
 await p0.selectOption('#scope', 'o:GST CHINA(WUHAN) SCRUBBER'); await p0.waitForTimeout(300); K = await kpis(p0);
@@ -213,16 +222,16 @@ await pl.evaluate(() => GST._ovClose && GST._ovClose());
 console.log('[5] 현장 — 운영단위를 고르고 · 기본으로 저장 · 다시 열면 그 화면');
 await pl.click('#segView button[data-v="field"]'); await pl.waitForTimeout(200);
 const pick = await pl.evaluate(() => !!document.getElementById('cPick') && document.querySelectorAll('#cPick [data-op]').length);
-is(pick === 3, '전사 범위에서 현장을 고르면 «운영단위를 고르세요» (3곳)');
+is(pick === 3, '전사 범위에서 현장을 고르면 «운영단위를 선택하세요» (3곳)');
 await pl.click('#cPick [data-op="GST TAIWAN SCRUBBER"]'); await pl.waitForTimeout(300);
 const fld = await pl.evaluate(() => ({ bm:document.querySelector('#cBm h2 .s').textContent, warr:document.querySelector('#cWarr h2 .s').textContent, scope:document.getElementById('scope').value }));
 is(/· 12$/.test(fld.bm), '대만 — 이번 주 고장 12 (' + fld.bm + ')');
-is(fld.warr === '3', '대만 — 워런티 90일 안 만료 3대');
+is(fld.warr === '3', '대만 — 90일 이내 워런티 만료 3대');
 await pl.click('#saveDef'); await pl.waitForTimeout(300);
 const rpc = await pl.evaluate(() => window.__RPC.filter(r => r.fn === 'pref_save').pop());
-is(rpc && rpc.args.p_view === 'field' && rpc.args.p_op === 'GST TAIWAN SCRUBBER', '「이 화면을 기본으로」 → pref_save(field · 대만)');
+is(rpc && rpc.args.p_view === 'field' && rpc.args.p_op === 'GST TAIWAN SCRUBBER', '「기본 화면으로 설정」 → pref_save(field · 대만)');
 const toast = await pl.evaluate(() => (document.getElementById('capToast') || {}).textContent || '');
-is(/기본 화면으로 저장/.test(toast), '서버에 저장됐다고 말한다');
+is(/기본 화면으로 설정했습니다/.test(toast), '서버에 저장됐다고 말한다');
 is(pl._pe.length === 0, 'JS 에러 0' + (pl._pe.length ? ' → ' + pl._pe[0] : ''));
 await pl.close();
 const pr = await open('/home/');
@@ -233,12 +242,12 @@ await pr.close();
 console.log('[6] 목표 표가 없을 때 — 말하며 선다');
 const pn = await open('/home/?view=exec', clearDB + 'window.__DBERR={ops_targets:{message:\'relation "public.ops_targets" does not exist\',code:"42P01"}};');
 const nb = await pn.evaluate(() => ({ ban:document.getElementById('banners').textContent, t:Array.from(document.querySelectorAll('#kpis .ds-kpi-t')).map(e => e.textContent), why:GST.targets.why }));
-is(nb.why === 'no_table' && /setup-26/.test(nb.ban), '관리자 — «서버에 목표 표가 없습니다 · setup-26 을 Run» (' + nb.why + ')');
+is(nb.why === 'no_table' && /setup-27/.test(nb.ban), '관리자 — «서버에 목표 표가 없습니다 · setup-27 을 Run» (' + nb.why + ')');
 is(nb.t.every(s => /목표 미설정/.test(s)), '카드는 «목표 미설정»으로 선다(빈 칸이 아니다)');
 await pn.close();
 const pv = await open('/home/?view=exec', clearDB + 'window.__ROLE={email:"view@t",can_write:false,role:"viewer"};window.__DBERR={ops_targets:{message:\'relation "public.ops_targets" does not exist\'}};');
 const vb = await pv.evaluate(() => ({ ban:document.getElementById('banners').textContent, tg:document.getElementById('goTargets').hidden }));
-is(!/setup-26/.test(vb.ban) && vb.tg, '조회자에게는 서버 사정(setup-26)을 안 보이고 «목표 관리» 단추도 없다 (A-4)');
+is(!/setup-27/.test(vb.ban) && vb.tg, '조회자에게는 서버 사정(setup-27)을 안 보이고 «목표 관리» 단추도 없다 (A-4)');
 await pv.close();
 
 console.log('[7] 목표 관리 — 관리자');
@@ -246,8 +255,8 @@ const pt = await open('/targets/?op=GST CHINA(WUHAN) SCRUBBER', clearDB);
 const tr = await pt.evaluate(() => Array.from(document.querySelectorAll('#cEdit tbody tr')).map(r => ({ m:r.dataset.m, now:r.children[1].textContent, use:r.children[2].textContent,
   tgt:r.querySelector('[data-f="target"]').value, ro:r.querySelector('[data-f="target"]').readOnly, save:!!r.querySelector('[data-act="save"]') })));
 const twh = tr.find(r => r.m === 'bm_per100'), trun = tr.find(r => r.m === 'run_rate');
-is(tr.length === 5 && twh && twh.now === '60.00' && twh.tgt === '60' && /이 범위의 목표/.test(twh.use), '우한 — 고장률 지금 60.00 · 자기 목표 60 (입력칸에 채워짐)');
-is(trun && trun.tgt === '' && /전사 목표를 따름/.test(trun.use), '가동률 — 이 범위 목표 없음 · «전사 목표를 따름»');
+is(tr.length === 5 && twh && twh.now === '60.00' && twh.tgt === '60' && /이 범위 목표/.test(twh.use), '우한 — 고장률 지금 60.00 · 자기 목표 60 (입력칸에 채워짐)');
+is(trun && trun.tgt === '' && /전사 목표 적용/.test(trun.use), '가동률 — 이 범위 목표 없음 · «전사 목표 적용»');
 is(tr.every(r => !r.ro && r.save), '관리자는 고칠 수 있다');
 await pt.fill('#cEdit tr[data-m="bm_per100"] [data-f="target"]', '55'); await pt.click('#cEdit tr[data-m="bm_per100"] [data-act="save"]'); await pt.waitForTimeout(400);
 const sv = await pt.evaluate(() => window.__RPC.filter(r => r.fn === 'target_save').pop());
@@ -260,11 +269,11 @@ await pt.selectOption('#cEdit tr[data-m="pm_ratio"] [data-f="dir"]', 'ge');
 const n0 = await pt.evaluate(() => window.__RPC.length);
 await pt.click('#cEdit tr[data-m="pm_ratio"] [data-act="save"]'); await pt.waitForTimeout(200);
 const wm = await pt.evaluate(() => ({ msg:document.getElementById('editMsg').textContent, n:window.__RPC.length }));
-is(wm.n === n0 && /주의 경계/.test(wm.msg), '«이상이 정상»인데 주의 경계가 목표보다 높으면 서버에 보내기 전에 막고 말한다');
+is(wm.n === n0 && /주의 기준/.test(wm.msg), '«이상이 정상»인데 주의 경계가 목표보다 높으면 서버에 보내기 전에 막고 말한다');
 await pt.evaluate(() => { window.__RPCERR = { target_save:'conflict' }; });
 await pt.fill('#cEdit tr[data-m="bm_per100"] [data-f="target"]', '40'); await pt.click('#cEdit tr[data-m="bm_per100"] [data-act="save"]'); await pt.waitForTimeout(400);
 const cf = await pt.evaluate(() => document.getElementById('editMsg').textContent);
-is(/다른 사람이 바꿨습니다/.test(cf), '충돌이면 덮지 않고 «다시 읽었다»고 말한다');
+is(/다른 사용자가 변경했습니다/.test(cf), '충돌이면 덮지 않고 «다시 읽었다»고 말한다');
 await pt.evaluate(() => { window.__RPCERR = null; });
 const all = await pt.evaluate(() => document.querySelectorAll('#cAll tbody tr').length);
 is(all === 3, '정해진 목표 전체 3개가 표로');
@@ -291,6 +300,135 @@ if (process.env.V2_SHOT) { for (const v of ['exec','lead']) { const s = await op
   const m = await ctx.newPage(); await m.setViewportSize({ width:400, height:900 }); await m.goto(BASE + '/home/?view=exec', { waitUntil:'domcontentloaded' }); await m.waitForTimeout(2500); await m.screenshot({ path:process.env.V2_SHOT + '/home-phone.png', fullPage:true }); await m.close(); }
 is(ext.length === 0, '외부 요청 0' + (ext.length ? ' → ' + ext[0] : ''));
 
+console.log('[11] 판정 기준 — 코드의 기준 숫자를 화면에서 고친다');
+const pp = await open('/targets/', clearDB);
+const par = await pp.evaluate(() => ({ n:document.querySelectorAll('#cPar tr[data-p]').length, keys:Object.keys(GST.PARAMS).length,
+  pend:document.querySelectorAll('#cPar .ds-note').length, rw:JSON.stringify(GST.params.riskW()), cw:JSON.stringify(GST.RISK_W) }));
+is(par.n === par.keys && par.n === 19, '판정 기준 19개가 표로 (' + par.n + ')');
+is(par.rw === par.cw, '위험 점수 기본값 = 지금 core 의 GST.RISK_W 그대로 — 표가 비면 통합해도 숫자가 안 움직인다');
+const HUB = fs.readFileSync(ROOT + '/hub/index.html', 'utf8');
+const RULE0 = { badX:1.5, badD:5, warnX:1.2, warnD:3, repBad:3, repWarn:1 };   // v165~v171 관제에 박혀 있던 값 — 기본값이 이것과 같아야 표가 빌 때 숫자가 그대로다
+const sigDef = await pp.evaluate(() => ({ badX:GST.PARAMS.sig_bad_x.def, badD:GST.PARAMS.sig_bad_d.def, warnX:GST.PARAMS.sig_warn_x.def, warnD:GST.PARAMS.sig_warn_d.def, repBad:GST.PARAMS.sig_rep_bad.def, repWarn:GST.PARAMS.sig_rep_warn.def }));
+is(JSON.stringify(sigDef) === JSON.stringify(RULE0), '관제 신호 기본값 = 예전 관제 코드의 RULE 그대로 (' + JSON.stringify(RULE0) + ')');
+is(!/badX\s*:\s*1\.5|warnX\s*:\s*1\.2/.test(HUB) && /GST\.params\.get\(k\)/.test(HUB) && /g\('sig_bad_x'\)/.test(HUB), '관제 코드에 기준 숫자가 남지 않았다 — GST.params 에서 읽는다');
+const FAULT = fs.readFileSync(ROOT + '/fault/index.html', 'utf8');
+is(/GST\.params&&GST\.params\.ready\(\)/.test(FAULT.slice(FAULT.indexOf('async function loadData'), FAULT.indexOf('async function loadData') + 900)), '고장분석이 계산 전에 판정 기준을 기다린다(TOP 20 첫 그림부터 같은 점수)');
+const n1 = await pp.evaluate(() => window.__RPC.length);
+await pp.fill('#cPar tr[data-p="band_bm_per100"] [data-f="pv"]', '150'); await pp.click('#cPar tr[data-p="band_bm_per100"] [data-pa="save"]'); await pp.waitForTimeout(200);
+const er = await pp.evaluate(() => ({ m:document.getElementById('parMsg').textContent, n:window.__RPC.length }));
+is(er.n === n1 && /0~100 사이/.test(er.m), '허용 범위(0~100) 밖이면 서버에 보내기 전에 막고 범위를 말한다');
+await pp.fill('#cPar tr[data-p="band_bm_per100"] [data-f="pv"]', '60'); await pp.click('#cPar tr[data-p="band_bm_per100"] [data-pa="save"]'); await pp.waitForTimeout(400);
+const ps = await pp.evaluate(() => ({ r:window.__RPC.filter(r => r.fn === 'param_save').pop(), ch:!!document.querySelector('#cPar tr[data-p="band_bm_per100"] .ds-pill.warn'), reset:!!document.querySelector('#cPar tr[data-p="band_bm_per100"] [data-pa="reset"]') }));
+is(ps.r && ps.r.args.p_key === 'band_bm_per100' && ps.r.args.p_value === 60 && ps.r.args.p_at === null, 'param_save(band_bm_per100 · 60 · 처음이라 p_at null)');
+is(ps.ch && ps.reset, '바뀐 기준에 «바뀜» 표시 · 「기본값으로」 단추');
+const live = await pp.evaluate(() => Array.from(document.querySelectorAll('#cPar .ds-pill')).map(e => e.textContent).filter(x => /^적용 중$/.test(x)).length);
+is(live === 3, '세 묶음(주의 띠 · 관제 신호 · 위험 점수) 모두 «지금 적용 중» — 실제로 읽는 화면이 있다');
+/* 관제 신호를 바꾸면 관제의 판정과 «i» 문구가 같이 바뀐다 */
+await pp.fill('#cPar tr[data-p="sig_bad_d"] [data-f="pv"]', '20'); await pp.click('#cPar tr[data-p="sig_bad_d"] [data-pa="save"]'); await pp.waitForTimeout(300);
+await pp.fill('#cPar tr[data-p="risk_rep_days"] [data-f="pv"]', '21'); await pp.click('#cPar tr[data-p="risk_rep_days"] [data-pa="save"]'); await pp.waitForTimeout(300);
+await pp.close();
+const ph2 = await open('/hub/');
+const hs = await ph2.evaluate(() => { const b = document.querySelector('#sigs .hb-sig[data-op="GST TAIWAN SCRUBBER"]');
+  return { st:b ? (b.querySelector('.hb-dot').className.match(/\b(bad|warn|ok)\b/) || [])[1] : '', rd:GST.RISK_W.repDays }; });
+is(hs.st === 'warn', '관제 — «위험» 조건을 «평소보다 20건 이상»으로 올리면 대만(이번 주 12 · 평소 1)이 위험 → 주의 (' + hs.st + ')');
+await ph2.click('#ruleBtn'); await ph2.waitForTimeout(250);
+const rtx = await ph2.evaluate(() => (document.querySelector('.gov-body') || {}).textContent || '');
+is(/20건 이상 많거나/.test(rtx) && /21일 이내 재고장/.test(rtx) && /1\.5배 이상/.test(rtx), '관제 «i» 문구도 바뀐 기준을 적는다(20건 · 21일 · 안 바꾼 1.5배는 그대로)');
+await ph2.evaluate(() => GST._ovClose && GST._ovClose());
+is(hs.rd === 21, '위험 점수의 재고장 간격이 21일로 — GST.RISK_W 를 표의 값으로 갈아 끼웠다');
+const why = await ph2.evaluate(() => { const r = { why:['rep','pm'], bm90:3, bmPrev:0, rep:2 }; return GST.riskWhy(r); });
+is(/21일 이내 재고장 2회/.test(why) && /180일 넘게 PM 미실시/.test(why), '위험 이유 문장의 기간도 기준을 따른다 (' + why + ')');
+await ph2.close();
+const pw = await open('/home/?view=exec');   // 같은 가짜 DB(localStorage) — 위에서 띠를 60% 로 넓혔다
+const bw = await kpis(pw);
+is(bw.bm_per100.v === '46.00' && bw.bm_per100.st === 'warn', '주의 띠를 60% 로 넓히면 같은 46.00(목표 30)이 «위험» → «주의» — 기준이 실제로 먹는다 (' + bw.bm_per100.st + ')');
+const oor = await pw.evaluate(() => { GST.params.rows.band_pm_ratio = { key:'band_pm_ratio', value:500 }; const v = GST.params.get('band_pm_ratio'); delete GST.params.rows.band_pm_ratio; return v; });
+is(oor === 10, '표에 범위 밖 값이 있으면 쓰지 않고 기본값으로 (조용히 이상한 판정을 하지 않는다)');
+await pw.close();
+const pr2 = await open('/targets/');
+for (const k of ['sig_bad_d','risk_rep_days']) { await pr2.click('#cPar tr[data-p="' + k + '"] [data-pa="reset"]'); await pr2.waitForTimeout(300); }
+await pr2.click('#cPar tr[data-p="band_bm_per100"] [data-pa="reset"]'); await pr2.waitForTimeout(400);
+const rs = await pr2.evaluate(() => ({ r:window.__RPC.filter(r => r.fn === 'param_save').pop(), v:document.querySelector('#cPar tr[data-p="band_bm_per100"] [data-f="pv"]').value }));
+is(rs.r && rs.r.args.p_value === null && rs.r.args.p_at && rs.v === '15', '「기본값으로」 → p_value null (행은 남고 값만 비운다) · 화면은 15');
+await pr2.close();
+const pq2 = await open('/targets/', clearDB + 'window.__ROLE={email:"view@t",can_write:false,role:"viewer"};');
+const ro2 = await pq2.evaluate(() => ({ ro:Array.from(document.querySelectorAll('#cPar [data-f="pv"]')).every(i => i.readOnly), b:document.querySelectorAll('#cPar [data-pa]').length }));
+is(ro2.ro && ro2.b === 0, '조회자는 판정 기준도 읽기만');
+await pq2.close();
+
+console.log('[12] 챗봇 브리핑 — 내 화면이 남기고, 챗봇이 그 글을 옮긴다(판정 사본 없이)');
+const { briefText } = await import(ROOT + '/supabase/functions/kakao-bot/brief.js');
+const pb = await open('/home/?view=lead&op=GST CHINA(WUHAN) SCRUBBER', clearDB + 'try{Object.keys(localStorage).filter(k=>/^gst_brief_at/.test(k)).forEach(k=>localStorage.removeItem(k));}catch(e){}');
+await pb.evaluate(() => window._briefP);
+const put = await pb.evaluate(() => window.__RPC.filter(r => r.fn === 'brief_put').map(r => r.args));
+is(put.length === 2 && put[0].p_scope === 'all' && put[1].p_scope === 'o:GST CHINA(WUHAN) SCRUBBER', '전사 + 지금 범위(우한) 둘을 남긴다 (' + put.map(x => x.p_scope).join(' · ') + ')');
+const pa = put[0] && put[0].p_payload;
+is(pa && pa.as_of === put[0].p_as_of && /^\d{4}-\d\d-\d\d$/.test(pa.as_of) && pa.kpis.length === 5, '자료일 · 카드 다섯(처리함을 읽었으니 기한 경과 건까지)');
+const card = await pb.evaluate(() => document.querySelector('#kpis .ds-kpi[data-k="bm_per100"] .ds-kpi-t').textContent);
+const pw4 = pa && pa.kpis.find(k => k.k === 'bm_per100');
+is(pw4 && pw4.val === '46.00' && pw4.st === 'bad' && /목표 30\.00 이하 · 초과 16\.00/.test(pw4.tgt), '전사 스냅샷 — 46.00 · 위험 · 화면 카드와 같은 목표 문장(GST.kpiText 한 벌)');
+const pwh = put[1] && put[1].p_payload.kpis.find(k => k.k === 'bm_per100');
+is(pwh && pwh.tgt === card, '우한 스냅샷의 목표 문장 = 지금 화면 카드의 글자 그대로 («' + card + '»)');
+is(pa && pa.dec.some(d => /TAIWAN/.test(d.title)) && pa.dec.every(d => d.title && d.tag), '확인 사항 — 화면과 같은 목록(decisions 한 벌)');
+const txt = briefText({ scope:'all', as_of:pa.as_of, payload:pa, made_at:new Date().toISOString() }, new Date());
+is(/\[위험\] 설비 100대당 고장\(최근 4주\) 46\.00 — 목표 30\.00 이하 · 초과 16\.00/.test(txt) && txt.length <= 940, '챗봇 글 — 스냅샷을 그대로 옮긴다 (' + txt.length + '자)');
+const again = await pb.evaluate(async () => { const n = window.__RPC.length; const r = await briefSave(); return { r, more:window.__RPC.length - n }; });
+is(again.r === 'skip' && again.more === 0, '같은 자료일이면 30분 안에 다시 남기지 않는다');
+const part = await pb.evaluate(async () => { GST._bfOn = { wk:1 }; const r = await briefSave(); GST._bfOn = {}; return r; });
+is(part === 'partial', '기간 기본창의 부분본(백필 중)이면 남기지 않는다 — 부분 숫자가 카톡으로 나가지 않게');
+await pb.evaluate(() => window.setLang('en')); await pb.waitForTimeout(200);
+const enPl = await pb.evaluate(async () => { Object.keys(localStorage).filter(k => /^gst_brief_at/.test(k)).forEach(k => localStorage.removeItem(k)); await briefSave(); const r = window.__RPC.filter(x => x.fn === 'brief_put').pop(); return r.args.p_payload; });
+is(enPl && /설비 100대당 고장/.test(enPl.kpis.find(k => k.k === 'bm_per100').name), '화면이 영어여도 스냅샷은 한국어(챗봇은 한국어로 답한다)');
+await pb.close();
+const pv2 = await open('/home/?view=exec', clearDB + 'window.__ROLE={email:"view@t",can_write:false,role:"viewer"};');
+const vr = await pv2.evaluate(async () => ({ r:await window._briefP, n:window.__RPC.filter(x => x.fn === 'brief_put').length }));
+is(vr.r === 'who' && vr.n === 0, '조회자 브라우저는 남기지 않는다(서버 brief_put 과 같은 규칙)');
+await pv2.close();
+
+console.log('[13] 설명 표시 — 기본은 값만 · 관리자가 켤 때만 설명 · 뜻이 바뀌는 경고는 ⚠ 하나');
+const px = await open('/hub/', clearDB + 'try{localStorage.removeItem("gst_explain");}catch(e){}');
+const vis = sel => px.evaluate(q => { const e = document.querySelector(q); return e ? getComputedStyle(e).display !== 'none' : null; }, sel);
+is(await vis('.hb-card h2 .s') === false, '기본 — 카드 부제(「원 크기 = 반입 설비 …」 같은 설명)가 안 보인다');
+await px.evaluate(() => { const c = document.createElement('div'); c.className = 'card'; c.innerHTML = '<div class="card-note" id="nInfo">클릭 시 필터</div><div class="card-note warn" id="nWarn">국내 알람 원장이 비어 있어 수선실적으로 집계 중</div>'; document.body.appendChild(c); });
+is(await vis('#nInfo') === false, '기본 — 카드 노트(사용법·산식)도 안 보인다');
+const wv = await px.evaluate(() => { const e = document.getElementById('nWarn'), cs = getComputedStyle(e), b = getComputedStyle(e, '::before'); return { d:cs.display, fs:cs.fontSize, before:b.content }; });
+is(wv.d !== 'none' && wv.fs === '0px' && /⚠/.test(wv.before), '뜻이 바뀌는 경고(.warn)는 지우지 않고 ⚠ 하나로');
+await px.click('#nWarn'); await px.waitForTimeout(250);
+is(/원장이 비어/.test(await px.evaluate(() => (document.querySelector('.gov-body') || {}).textContent || '')), '⚠ 를 누르면 그 경고 글이 뜬다');
+await px.evaluate(() => GST._ovClose && GST._ovClose());
+await px.evaluate(() => { localStorage.setItem('gst_explain', '1'); window.postMessage({ type:'gst-explain' }, '*'); }); await px.waitForTimeout(200);
+is(await vis('.hb-card h2 .s') === true && await vis('#nInfo') === true, '관리자가 「설명 표시」를 켜면 설명이 보인다');
+await px.close();
+const pxv = await open('/hub/', clearDB + 'try{localStorage.setItem("gst_explain","1");}catch(e){} window.__ROLE={email:"view@t",can_write:false,role:"viewer"};');
+is(await pxv.evaluate(() => !document.body.classList.contains('gst-explain')), '조회자는 설정값이 켜져 있어도 설명이 안 보인다(관리자만)');
+await pxv.close();
+const RPT = fs.readFileSync(ROOT + '/assets/core.js', 'utf8');
+is(/GST\.EXPLAIN_SKIP = \/\^\\\/report\(-kr\)\?\\\/\//.test(RPT), '주간현황은 예외 — 지금까지대로 다 보인다(사용자 지시 · 손대지 않는다)');
+
+console.log('[14] 셸 — 탭 묶음 · 처리함 배지 · 더보기');
+const pz2 = await open('/', clearDB);
+await pz2.evaluate(() => { const o = document.getElementById('loginOverlay'); if (o) o.remove(); });
+await pz2.waitForTimeout(800);
+const shl = await pz2.evaluate(() => ({ top:Array.from(document.getElementById('tabbar').children).map(e => e.classList.contains('tgrp') ? '[' + e.querySelector('.tgrp-l').textContent + ':' + Array.from(e.querySelectorAll('.tab')).map(b => b.dataset.id).join('+') + ']' : e.dataset.id),
+  badge:document.getElementById('actBadge').hidden ? '' : document.getElementById('actBadge').textContent, explain:getComputedStyle(document.getElementById('mExplain')).display }));
+is(shl.top.join(' ') === 'home hub report fault [정비:pm+cip] scrubber [자재·비용:material+tco] hr', '탭 줄 — 8묶음 (' + shl.top.join(' ') + ')');
+is(shl.badge === '2', '처리함 배지 — 미완료 2건(완료 건은 안 셈 · ' + shl.badge + ')');
+await pz2.click('#moreBtn'); await pz2.waitForTimeout(150);
+const mm = await pz2.evaluate(() => Array.from(document.querySelectorAll('#moreMenu [data-go]')).map(b => b.dataset.go).join(','));
+is(mm === 'site,studio,targets', '더보기 — 사이트 상세 · 분석 작업대 · 운영 목표');
+is(shl.explain !== 'none', '관리자에게는 「설명 표시」가 있다');
+await pz2.click('#moreMenu [data-go="targets"]'); await pz2.waitForTimeout(1500);
+const tg = await pz2.evaluate(() => ({ fr:!!document.querySelector('iframe.active[data-id="targets"]'), more:document.getElementById('moreBtn').classList.contains('on'), act:document.querySelectorAll('.tab.active').length }));
+is(tg.fr && tg.more && tg.act === 0, '운영 목표가 셸 안에서 열리고 더보기 단추가 켜진다(탭 줄에는 켜진 탭이 없다)');
+await pz2.click('#actBtn'); await pz2.waitForTimeout(1200);
+is(await pz2.evaluate(() => !!document.querySelector('iframe.active[data-id="action"]') && document.getElementById('actBtn').classList.contains('on')), '처리함 단추 → 처리함 화면');
+is(pz2._pe.length === 0, 'JS 에러 0 (셸)' + (pz2._pe.length ? ' → ' + pz2._pe[0] : ''));
+await pz2.close();
+const pz3 = await open('/', clearDB + 'window.__ROLE={email:"view@t",can_write:false,role:"viewer"};');
+await pz3.evaluate(() => { const o = document.getElementById('loginOverlay'); if (o) o.remove(); }); await pz3.waitForTimeout(500);
+is(await pz3.evaluate(() => getComputedStyle(document.getElementById('mExplain')).display === 'none'), '조회자에게는 「설명 표시」 항목이 없다');
+await pz3.close();
+
 console.log('[10] 새 화면 둘의 정적 규칙 — t-i18n · t-ver 와 같은 규칙(그 둘의 페이지 목록은 셸에 거는 날 넓힌다 · PLAN)');
 const CORE = fs.readFileSync(ROOT + '/assets/core.js', 'utf8');
 const VER = +(CORE.match(/GST\.VER\s*=\s*(\d+)/) || [])[1];
@@ -311,15 +449,14 @@ for (const pg of ['home', 'targets']) {
   is(!calls.length, pg + ' — t(\'…\') 로 부르는 키가 전부 있다' + (calls.length ? ' → ' + [...new Set(calls)].join(',') : ''));
   const cv = (src.match(/assets\/core\.js\?v=(\d+)/) || [])[1], tv = (src.match(/assets\/theme\.css\?v=(\d+)/) || [])[1], nv = (src.match(/needVer\((\d+)\)/) || [])[1];
   is(+cv === VER && +tv === VER && +nv <= VER, pg + ' — core·theme ?v= = GST.VER(' + VER + ') · needVer ' + nv);
-  is(/assets\/v2\.js\?v=\d+/.test(src) && /assets\/ds\.css\?v=\d+/.test(src), pg + ' — v2.js · ds.css 도 ?v= 로 부른다(캐시 무효화)');
+  is(!/assets\/v2\.js/.test(src) && /assets\/ds\.css\?v=\d+/.test(src), pg + ' — v2.js 를 따로 부르지 않는다(core 에 합쳤다 · v172) · ds.css 는 ?v= 로');
   is(!/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(src), pg + ' — 제어문자 없음');
 }
-const V2 = fs.readFileSync(ROOT + '/assets/v2.js', 'utf8');
-is(!/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(V2), 'v2.js — 제어문자 없음(t-ver [2] 규율)');
-const v2v = (fs.readFileSync(ROOT + '/home/index.html', 'utf8').match(/assets\/v2\.js\?v=(\d+)/) || [])[1];
-is(+v2v === +(V2.match(/GST\.V2_VER\s*=\s*(\d+)/) || [])[1], 'v2.js ?v= = GST.V2_VER — 하나만 올리면 옛 사본을 문다');
+const V2 = CORE.slice(CORE.indexOf('GST v2 — 2단계'), CORE.lastIndexOf('global.GST = GST;'));
+is(V2.length > 5000 && /GST\.METRICS = /.test(V2), 'core 안의 v2 블록을 찾았다(' + V2.length + '자)');
+is(!fs.existsSync(ROOT + '/assets/v2.js'), 'assets/v2.js 는 없다 — 사본이 남으면 어느 쪽이 정본인지 모른다');
 /* 판정 사본이 생기지 않았나 — v2.js 는 GST.EQ·GST.PM·riskRank 를 «부르기만» 한다 */
-is(!/Operation|\bTBM\b|repDays|\.stage\b/.test(V2.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '').replace(/'(?:[^'\\\n]|\\.)*'/g, "''")), 'v2.js 에 설비상태·PM·BM 판정 낱말이 없다 — 전부 GST.ops 를 지난다');
+is(!/Operation|\bTBM\b|\.stage\b|GST\.riskRank\s*=/.test(V2.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '').replace(/'(?:[^'\\\n]|\\.)*'/g, "''")), 'v2.js 에 설비상태·PM·BM 판정 낱말이 없다 — 전부 GST.ops 를 지난다');
 
 await browser.close(); srv.close();
 console.log((fail ? '❌' : '✅') + ` t-v2 ${pass}/${pass + fail}`);

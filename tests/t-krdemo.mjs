@@ -202,7 +202,9 @@ console.log('[2] 셸 — 데모 탭은 없다 (v163)');
   }
   const kp = role => pg.evaluate(r => { document.body.dataset.role = r; kioskBuildPanel(); return Array.from(document.querySelectorAll('#kkPages input')).map(x => x.value); }, role);
   const pages = await kp('kr');
-  is(pages.indexOf('report_kr') < 0 && pages.length === (await pg.evaluate(() => TABS.length)), '국내 운영자의 순회 목록에도 데모 없음 (' + pages.length + ')');
+  /* v172 — 순회는 «탭 줄에 선 탭»(barTabs)만 돈다. 처리함·사이트 상세·작업대·운영 목표(bar:false)는 순회 화면이 아니다 */
+  const bt = await pg.evaluate(() => ({ n:barTabs().length, ids:barTabs().map(t => t.id) }));
+  is(pages.indexOf('report_kr') < 0 && pages.length === bt.n && pages.every(p => bt.ids.includes(p)), '국내 운영자의 순회 목록에도 데모 없음 · 탭 줄과 같은 목록 (' + pages.length + ')');
   is(errs.length === 0, 'JS 에러 없음' + (errs.length ? ' → ' + errs[0] : ''));
   await ctx.close();
 }

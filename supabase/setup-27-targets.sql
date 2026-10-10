@@ -1,5 +1,5 @@
 -- ============================================================================
--- setup-26 — 운영 목표(SLA) 표 · 사람별 첫 화면 설정 (2단계 «제품화» 밑바탕)
+-- setup-27 — 운영 목표(SLA) 표 · 사람별 첫 화면 설정 (2단계 «제품화» 밑바탕)
 --
 -- 왜 — 지금 대시보드의 차트 99개 중 «기준선»이 있는 것이 0개다. 많다/적다는 보이는데 «정상인가»를
 --   판단할 근거가 화면에 없어서, 결국 보는 사람 머릿속 기준으로 읽는다. 목표 표가 생기면
@@ -12,6 +12,7 @@
 -- ⚠ 목표를 바꾸면 모든 화면의 «판정 색»이 바뀐다 — 쓰기는 관리자(+쓰기 권한)만. 기준 정보(value_map · v152)와 같은 무게다.
 --
 -- 1절 목표 표 · 2절 판정 함수 · 3절 RPC(저장·감추기) · 4절 사람별 첫 화면 설정 · 5절 권한
+-- 6절 판정 기준(관제 신호·위험 점수·주의 띠) · 7절 브리핑 스냅샷(카카오 챗봇 「브리핑」) · 8절 권한(6·7)
 -- 선행: setup-15(allowed_users.role)
 -- ============================================================================
 
@@ -178,4 +179,116 @@ revoke all on function public.pref_save(text,text,text) from public, anon;
 grant execute on function public.target_save(text,text,text,numeric,numeric,text,text,timestamptz) to authenticated;
 grant execute on function public.target_remove(bigint,timestamptz) to authenticated;
 grant execute on function public.pref_save(text,text,text) to authenticated;
+notify pgrst, 'reload schema';
+
+/* ---------- 6. 판정 기준 — 코드에 박혀 있던 «기준 숫자»를 표로 ----------
+ * 사용자 확정(2026-10-10): 「한 번 하드코딩해 놓으면 기준이 바뀔 때마다 고쳐 달라고 해야 한다」.
+ * 목표(1절) 말고도 화면이 «판정»에 쓰는 숫자가 코드에 있었다 — 관제 신호등(평소의 1.5배·5건 …) · 고장 위험 점수의 가중치
+ * (GST.RISK_W) · 목표의 기본 주의 띠. 그 숫자를 여기 둔다.
+ * ⚠ 열쇠와 «기본값·허용 범위·뜻»은 assets/v2.js 의 GST.PARAMS 한 곳이다 — 이 표는 «바꾼 값»만 든다.
+ *   value 가 null 이면 기본값(=코드의 지금 값)으로 돌아간 것이다. 행을 지우지 않는다(이력이 남는다).
+ * ⚠ 서버는 범위를 모른다(사본을 안 만든다) — 화면이 GST.PARAMS 의 min/max 로 막고, 서버는 «말이 되는 수»만 본다. */
+create table if not exists public.ops_params(
+  key         text primary key check (key ~ '^[a-z0-9_]{2,40}$'),
+  value       numeric check (value is null or (value >= 0 and value <= 100000)),
+  updated_by  text not null,
+  updated_at  timestamptz not null default now()
+);
+create table if not exists public.ops_param_log(
+  id      bigint generated always as identity primary key,
+  key     text not null,
+  at      timestamptz not null default now(),
+  by      text not null,
+  v_from  numeric,
+  v_to    numeric
+);
+alter table public.ops_params    enable row level security;
+alter table public.ops_param_log enable row level security;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='ops_params' and policyname='allowed read') then
+    create policy "allowed read" on public.ops_params for select to authenticated
+      using (exists (select 1 from public.allowed_users a where lower(a.email) = lower(auth.jwt()->>'email')));
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='ops_param_log' and policyname='allowed read') then
+    create policy "allowed read" on public.ops_param_log for select to authenticated
+      using (exists (select 1 from public.allowed_users a where lower(a.email) = lower(auth.jwt()->>'email')));
+  end if;
+end $$;
+revoke all on public.ops_params, public.ops_param_log from anon, authenticated;
+grant select on public.ops_params, public.ops_param_log to authenticated;
+
+/* param_save — p_value null = 기본값으로. p_at = 읽은 updated_at(행이 없었으면 null) — 다르면 conflict. 쓰기는 목표와 같은 사람(_tgt_who). */
+create or replace function public.param_save(p_key text, p_value numeric, p_at timestamptz)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare who text := public._tgt_who(); cur public.ops_params; nat timestamptz;
+begin
+  if coalesce(auth.jwt()->>'email','') = '' then return jsonb_build_object('error','login'); end if;
+  if who is null then return jsonb_build_object('error','forbidden'); end if;
+  if p_key is null or p_key !~ '^[a-z0-9_]{2,40}$' then return jsonb_build_object('error','bad_key'); end if;
+  if p_value is not null and (p_value < 0 or p_value > 100000) then return jsonb_build_object('error','bad_value'); end if;
+  select * into cur from public.ops_params where key = p_key for update;
+  if found then
+    if p_at is distinct from cur.updated_at then return jsonb_build_object('error','conflict','updated_at',cur.updated_at); end if;
+    update public.ops_params set value = p_value, updated_by = who, updated_at = clock_timestamp() where key = p_key returning updated_at into nat;
+    insert into public.ops_param_log(key, by, v_from, v_to) values (p_key, who, cur.value, p_value);
+  else
+    if p_at is not null then return jsonb_build_object('error','conflict'); end if;
+    insert into public.ops_params(key, value, updated_by) values (p_key, p_value, who) returning updated_at into nat;
+    insert into public.ops_param_log(key, by, v_from, v_to) values (p_key, who, null, p_value);
+  end if;
+  return jsonb_build_object('ok',true,'updated_at',nat);
+exception when unique_violation then
+  return jsonb_build_object('error','conflict');
+end $$;
+
+/* ---------- 7. 브리핑 스냅샷 — 카카오 챗봇 「브리핑」이 읽는다 ----------
+ * 왜 스냅샷인가 — 챗봇(Deno)이 목표·위험·고장을 직접 세면 판정의 «네 번째 사본»이 된다(CLAUDE.md v109: 원장을 챗봇에서
+ * 파싱하지 말 것). 그래서 «내 화면»이 계산한 결과를 범위별 한 줄로 남기고, 챗봇은 그것을 글로 옮기기만 한다.
+ * scope   — 'all' · 'r:<구분>' · 'o:<운영단위 원문>' (내 화면의 범위 열쇠와 같다)
+ * as_of   — 자료의 마지막 날. «더 옛날 자료»로 계산한 스냅샷은 새 것을 덮지 못한다(캐시를 문 브라우저가 있어도).
+ * payload — 숫자와 «이미 만든 한국어 문장»(지표 이름·결정할 것). 챗봇에 지표 이름 사본을 두지 않기 위해서다. 32KB 까지.
+ * ⚠ 남기는 쪽은 «완성본»일 때만 남긴다(기간 기본창의 부분본 · 읽기 실패가 있으면 안 남긴다) — 화면 쪽 규칙(home briefSave).
+ * 남길 수 있는 사람 = 처리함을 쓸 수 있는 사람(쓰기 권한 · 관리자 · 사이트 담당자 · 국내 운영자) — 조회자 브라우저는 쓰지 않는다. */
+create table if not exists public.brief_snap(
+  scope     text primary key check (length(scope) between 1 and 160),
+  as_of     date not null,
+  payload   jsonb not null check (pg_column_size(payload) <= 32768),
+  core_ver  int,
+  made_by   text not null,
+  made_at   timestamptz not null default now()
+);
+alter table public.brief_snap enable row level security;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='brief_snap' and policyname='allowed read') then
+    create policy "allowed read" on public.brief_snap for select to authenticated
+      using (exists (select 1 from public.allowed_users a where lower(a.email) = lower(auth.jwt()->>'email')));
+  end if;
+end $$;
+revoke all on public.brief_snap from anon, authenticated;
+grant select on public.brief_snap to authenticated;
+
+create or replace function public.brief_put(p_scope text, p_as_of date, p_payload jsonb, p_ver int)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare who text; cur public.brief_snap;
+begin
+  if coalesce(auth.jwt()->>'email','') = '' then return jsonb_build_object('error','login'); end if;
+  select a.email into who from public.allowed_users a
+   where lower(a.email) = lower(auth.jwt()->>'email') and (a.can_write or a.role in ('admin','editor','kr')) limit 1;
+  if who is null then return jsonb_build_object('error','forbidden'); end if;
+  if p_scope is null or length(p_scope) not between 1 and 160 or p_scope !~ '^(all|r:.+|o:.+)$' then return jsonb_build_object('error','bad_scope'); end if;
+  if p_as_of is null or p_payload is null or jsonb_typeof(p_payload) <> 'object' then return jsonb_build_object('error','bad_payload'); end if;
+  if pg_column_size(p_payload) > 32768 then return jsonb_build_object('error','too_big'); end if;
+  select * into cur from public.brief_snap where scope = p_scope for update;
+  if found and cur.as_of > p_as_of then return jsonb_build_object('error','older','as_of',cur.as_of); end if;
+  insert into public.brief_snap(scope, as_of, payload, core_ver, made_by, made_at) values (p_scope, p_as_of, p_payload, p_ver, who, clock_timestamp())
+    on conflict (scope) do update set as_of = excluded.as_of, payload = excluded.payload, core_ver = excluded.core_ver,
+      made_by = excluded.made_by, made_at = excluded.made_at;
+  return jsonb_build_object('ok',true);
+end $$;
+
+/* ---------- 8. 권한(6·7) ---------- */
+revoke all on function public.param_save(text,numeric,timestamptz) from public, anon;
+revoke all on function public.brief_put(text,date,jsonb,int) from public, anon;
+grant execute on function public.param_save(text,numeric,timestamptz) to authenticated;
+grant execute on function public.brief_put(text,date,jsonb,int) to authenticated;
 notify pgrst, 'reload schema';

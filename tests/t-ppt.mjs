@@ -474,7 +474,8 @@ for(const pg of SHARED){
    ══════════════════════════════════════════════════════════════ */
 console.log('[5] 셸 툴바에 업로드 버튼이 있는지');
 const SHELL = fs.readFileSync(ROOT+'/index.html','utf8');
-const bar = (SHELL.match(/<div class="topbar-right">[\s\S]*?<\/div>/)||[''])[0];
+/* 툴바 안에 «더보기» 메뉴(div 중첩 · v172)가 있어 첫 닫는 div 에서 끊으면 툴바 앞부분만 잡힌다 — 로그아웃(툴바의 끝)까지 본다 */
+const bar = (SHELL.match(/<div class="topbar-right">[\s\S]*?id="logoutBtn"/)||[''])[0];
 ok(/id="uploadBtn"/.test(bar), '툴바에 업로드 버튼이 있어야 한다');
 ok(bar.indexOf('id="refreshBtn"') < bar.indexOf('id="uploadBtn"')
    && bar.indexOf('id="uploadBtn"') < bar.indexOf('id="shareBtn"'),

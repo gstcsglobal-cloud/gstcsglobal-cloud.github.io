@@ -21,6 +21,7 @@ import {
   groupCount, groupAccessor, grpKey, FAULT_SPEC, hnorm,
   EQ,
 } from "./hr.js";
+import { BRIEF_RE, briefReply } from "./brief.js";   // 「브리핑」 — 대시보드가 남긴 스냅샷을 글로 옮긴다(판정은 안 한다)
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -1277,6 +1278,10 @@ Deno.serve(async (req) => {
       : utterance;
 
     const respond = async (): Promise<{ payload: unknown }> => {
+      // ── 「브리핑」 — 메뉴 상태와 무관하게 정확히 그 말일 때만(「이번주」 단독은 BM 메뉴의 기간 단추라 안 잡는다) ──
+      if (BRIEF_RE.test(utterance)) {
+        return { payload: quickReply(await briefReply(svc, link.email, now), ["메뉴", "직접입력"]) };
+      }
       // ── 메뉴 시스템 처리 (MENU_ENABLED=true일 때만) ──
       const menuEnabled = Deno.env.get("MENU_ENABLED") !== "false";
       const menuState = menuEnabled && convState?.phase === "menu" ? convState : null;
