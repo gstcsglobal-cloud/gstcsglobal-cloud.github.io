@@ -142,7 +142,7 @@ await pg.click('#rmBtn'); await pg.waitForTimeout(600);
 L = await pg.evaluate(() => window.__LY);
 is(L.calls.some(c => c.rpc === 'layout_remove') && L.rows[0].removed, '「보드 감추기」 → layout_remove (지우지 않고 감춘다)');
 await pg.evaluate(() => window.setLang('en')); await pg.waitForTimeout(400);
-is(await pg.evaluate(() => /Analysis studio/.test(document.querySelector('[data-i="title"]').textContent)), '영어로 바뀐다');
+is(await pg.evaluate(() => /Custom analysis/.test(document.querySelector('[data-i="title"]').textContent)), '영어로 바뀐다');
 is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
 await ctx.close();
 console.log('[6] 서버 준비 전 — 이 PC 에만 저장하고 그렇다고 말한다');

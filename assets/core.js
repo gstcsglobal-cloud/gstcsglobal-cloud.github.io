@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 168;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 169;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -178,12 +178,13 @@ GST.actCan = function(){
    기본으로 숨기고, 관리자가 셸의 「설명 표시」를 켰을 때만 보인다(localStorage gst_explain — 같은 출처라 모든 탭이 같은 값을 본다).
    ⚠ 숫자의 뜻이 바뀌는 경고(.card-note.warn — 예: 원장이 비어 다른 자료로 집계 중)는 지우지 않는다. ⚠ 하나로 줄이고 누르면 내용이 뜬다
      (v147 공수 차트에서 사용자가 정한 방식). 지우면 그 경고를 못 본 사람이 다른 뜻의 숫자를 읽는다(v92).
-   ⚠ 주간현황(report · report-kr)은 예외 — 보고서 작성용이라 지금까지대로 다 보인다(사용자 지시 · 손대지 않는다).
+   주간현황(report · report-kr)도 같다(v173 · 사용자 확정 「주간현황도 문구 정도는 수정하고 숨겨도 돼」) — 처음엔 예외였다.
+   예외가 필요해지면 EXPLAIN_SKIP 에 그 화면 경로를 정규식으로 넣는다(기본 null = 예외 없음).
    판정은 이 한 함수다 — CSS(theme.css · ds.css · 셸)는 body.gst-explain 만 본다. */
-GST.EXPLAIN_SKIP = /^\/report(-kr)?\//;
+GST.EXPLAIN_SKIP = null;
 GST.EXP_T = { ko:{warn:'안내', col:'내용'}, en:{warn:'Note', col:'Detail'}, zh:{warn:'提示', col:'内容'}, ja:{warn:'お知らせ', col:'内容'} };
 GST.explainOn = function(){
-  try{ if(GST.EXPLAIN_SKIP.test(GST.pagePath ? GST.pagePath() : location.pathname)) return true; }catch(e){}
+  try{ if(GST.EXPLAIN_SKIP && GST.EXPLAIN_SKIP.test(GST.pagePath ? GST.pagePath() : location.pathname)) return true; }catch(e){}
   if(!(GST._me && (GST._me.role==='admin' || GST._me.role==='legacy'))) return false;   // 등급을 모르면 끈다(fail-closed) — 조회자 화면이 깨끗한 것이 기본이다
   try{ return localStorage.getItem('gst_explain') === '1'; }catch(e){ return false; }
 };
@@ -3660,7 +3661,10 @@ GST.skeleton=function(on){
 GST.applyI18n = function(t, lang){
   if(lang){ try{ sessionStorage.setItem('gst_lang', lang); }catch(e){} }
   const q = function(sel, fn){ document.querySelectorAll(sel).forEach(fn); };
-  q('[data-i]', function(el){ if(el.hasAttribute('data-lock')) return; el.textContent = t(el.getAttribute('data-i')); });
+  q('[data-i]', function(el){ if(el.hasAttribute('data-lock')) return; el.textContent = t(el.getAttribute('data-i'));
+    /* 카드 노트를 정의 문구로 되돌리면 «값»·«경고» 표식도 같이 지운다(v173). 안 지우면 정의 문구가 값처럼 늘 보이고,
+       차트가 비어 값 요약을 다시 안 쓰는 렌더에서는 그대로 남는다(실제로 그렇게 보였다). 다음 setNote 가 다시 단다. */
+    if(el.classList && el.classList.contains('card-note')){ el.classList.remove('hasv','warn','ml'); } });
   q('[data-i-th]', function(el){ el.textContent = t(el.getAttribute('data-i-th')); });
   q('[data-i-ph]', function(el){ el.placeholder = t(el.getAttribute('data-i-ph')); });
   q('[data-i-title]', function(el){ el.title = t(el.getAttribute('data-i-title')); });
@@ -3671,13 +3675,26 @@ GST.applyI18n = function(t, lang){
 /* 카드 노트 한 곳 (report·cip 이 byte 까지 같은 사본을 들고 있었다). sev='warn' 이면 색·굵기로 «화면 전체의 뜻이
    바뀌는 경고»를 가른다(v92 규약대로 자리는 노트 맨 앞 그대로). 줄바꿈이 든 문장은 pre-line 으로 — 마크업을
    넣지 않는 이유는 applyLang·setNote 가 textContent 로 덮기 때문이다(v131). */
+/* 카드 노트 — 두 조각을 가른다(v173 · 사용자 확정 «설명문은 화면에 두지 않는다»).
+ *   «값»(.nv)  — 그 차트의 마지막 구간 요약(「충원율 95% · TO 대비 −2명」). 늘 보인다 — 숨기면 정보가 사라진다.
+ *   «설명»(.nx) — 집계 기준·정의·제외 건수. 관리자가 「설명 표시」를 켰을 때만 보인다(theme.css).
+ * txt 가 문자열이면 지금까지처럼 «설명»이다. sev='val' 이면 그 문자열 전체가 «값»이다. {v, x} 로 둘을 따로 줄 수 있다.
+ * sev='warn' 이면 숫자의 뜻이 바뀌는 경고 — ⚠ 하나로 줄고 누르면 전문이 뜬다(값 조각은 그 옆에 그대로 보인다).
+ * ⚠ 마크업 대신 span 둘을 쓰는 이유: applyLang 이 .card-note 를 textContent 로 덮어도 다음 render 가 다시 세운다. */
 GST.setNote = function(canvasId, txt, sev){
   const c = document.getElementById(canvasId); if(!c) return;
   const card = c.closest(GST.CARD_SEL || '.card'); if(!card) return;
   const n = card.querySelector('.card-note'); if(!n) return;
-  n.textContent = txt;
+  let v = '', x = '';
+  if(txt && typeof txt === 'object'){ v = String(txt.v || ''); x = String(txt.x || ''); }
+  else if(sev === 'val') v = String(txt == null ? '' : txt);
+  else x = String(txt == null ? '' : txt);
+  n.textContent = '';
+  if(v){ const a = document.createElement('span'); a.className = 'nv'; a.textContent = v; n.appendChild(a); }
+  if(x){ const b = document.createElement('span'); b.className = 'nx'; b.textContent = (v && !/^\n/.test(x) ? (/^⚠/.test(x) ? '\n' : ' · ') : '') + x; n.appendChild(b); }
+  n.classList.toggle('hasv', !!v);
   n.classList.toggle('warn', sev === 'warn');
-  n.classList.toggle('ml', String(txt||'').indexOf('\n') >= 0);
+  n.classList.toggle('ml', (v + x).indexOf('\n') >= 0);
 };
 /* 앵커 목차 — 세로로 이어 읽는 긴 페이지(주간현황)용. GST.sectionNav 는 «숨기는 탭»이라 맞지 않는다. */
 GST.anchorNav = function(sel){
@@ -7234,8 +7251,8 @@ GST.ctxApply=function(){
 // 표의 S/N 열을 클릭하면 같은 설비를 다른 페이지에서 열 수 있는 메뉴가 뜬다.
 // 표 마크업을 바꾸지 않는다 — 헤더 텍스트로 S/N 열을 알아낸다.
 // 설비 단위 필터를 가진 페이지만 대상 (자재 실적은 사용자 요청으로 제외, TCO는 설비 검색이 없어 제외)
-GST.SN_PAGES=[{id:'scrubber',ko:'설치 현황',en:'Installation'},{id:'pm',ko:'PM 점검',en:'PM'},
-              {id:'fault',ko:'고장 분석',en:'Fault'},{id:'cip',ko:'CIP 현황',en:'CIP'}];
+GST.SN_PAGES=[{id:'scrubber',ko:'설비 현황',en:'Equipment'},{id:'pm',ko:'PM 점검',en:'PM'},
+              {id:'fault',ko:'고장 분석',en:'Fault'},{id:'cip',ko:'CIP 진행',en:'CIP'}];
 GST._snHdr=/(^|[^a-z])s\/?n([^a-z]|$)|serial|설비\s*번호|설비코드/i;
 GST._snOf=function(td){
   if(!td||!td.parentNode||td.tagName!=='TD') return '';
@@ -8397,32 +8414,32 @@ GST._dbAuthed = async function(){ try{ if(GST.authOn&&GST.authOn()) await GST.au
 GST.V2_T = {
   ko:{ m_run_rate:'가동률', m_bm_per100:'설비 100대당 고장', m_pm_ratio:'PM 비율', m_repeat14:'{d}일 이내 재고장 설비', m_act_overdue:'기한 경과 처리 건',
        d_run_rate:'가동(Operation) ÷ 반입 설비 · 기준일 현재', d_bm_per100:'최근 4주 고장 건수 ÷ 반입 설비 × 100', d_pm_ratio:'최근 4주 PM ÷ (PM + 고장)',
-       d_repeat14:'고장 위험 순위에서 {d}일 이내 재고장이 발생한 설비', d_act_overdue:'처리함에서 기한이 지났지만 완료되지 않은 건',
+       d_repeat14:'고장 위험 순위에서 {d}일 이내 재고장이 발생한 설비', d_act_overdue:'조치 사항 중 기한이 지났지만 완료되지 않은 건',
        w4:'최근 4주', tgt:'목표 {v}', tgt_le:'이하', tgt_ge:'이상', tgt_none:'목표 미설정', tgt_ok:'달성', tgt_miss:'미달 {g}', tgt_over:'초과 {g}',
        vs:'직전 4주 대비', vs_none:'비교 없음(현재 상태 기준)', den:'분모 {v}', den_units:'반입 {v}대', den_ev:'PM+고장 {v}건',
        st_ok:'정상', st_warn:'주의', st_bad:'위험', st_none:'판정 없음', u_pct:'%', u_ea:'대', u_case:'건', u_pt:'p',
-       g_band:'주의 구간 기본값', g_sig:'관제 신호등 기준', g_risk:'고장 위험 점수', gd_band:'목표에 주의 기준을 따로 정하지 않았을 때 쓰는 구간', gd_sig:'운영단위를 위험·주의로 표시하는 기준(이번 주 고장 ÷ 평소)', gd_risk:'고장분석 TOP 20 · 통합 관제 · 내 화면이 함께 쓰는 점수', p_band_run_rate:'가동률', p_band_bm_per100:'설비 100대당 고장', p_band_pm_ratio:'PM 비율', p_band_repeat14:'재고장 설비', p_band_act_overdue:'기한 경과 처리 건', p_sig_bad_x:'위험 — 평소 대비 배수(이상)', p_sig_bad_d:'위험 — 평소보다 늘어난 건수(이상)', p_sig_warn_x:'주의 — 평소 대비 배수(초과)', p_sig_warn_d:'주의 — 평소보다 늘어난 건수(이상)', p_sig_rep_bad:'위험 — 재고장 설비 수(이상)', p_sig_rep_warn:'주의 — 재고장 설비 수(이상)', p_risk_bm:'최근 90일 고장 1건당', p_risk_rep:'재고장 1회당', p_risk_up:'직전 90일 대비 2건 이상 증가 시', p_risk_recent:'최근 고장 발생 시', p_risk_pm:'PM 장기 미실시 시', p_risk_rep_days:'재고장 판단 기간', p_risk_recent_days:'「최근 고장」 판단 기간', p_risk_pm_days:'「PM 장기 미실시」 판단 기간', u_x:'배', u_day:'일', u_pts:'점', u_rel:'%' },
+       g_band:'주의 구간 기본값', g_sig:'글로벌 현황 신호등 기준', g_risk:'고장 위험 점수', gd_band:'목표에 주의 기준을 따로 정하지 않았을 때 쓰는 구간', gd_sig:'운영단위를 위험·주의로 표시하는 기준(이번 주 고장 ÷ 평소)', gd_risk:'고장 분석 TOP 20 · 글로벌 현황 · 홈이 함께 쓰는 점수', p_band_run_rate:'가동률', p_band_bm_per100:'설비 100대당 고장', p_band_pm_ratio:'PM 비율', p_band_repeat14:'재고장 설비', p_band_act_overdue:'기한 경과 처리 건', p_sig_bad_x:'위험 — 평소 대비 배수(이상)', p_sig_bad_d:'위험 — 평소보다 늘어난 건수(이상)', p_sig_warn_x:'주의 — 평소 대비 배수(초과)', p_sig_warn_d:'주의 — 평소보다 늘어난 건수(이상)', p_sig_rep_bad:'위험 — 재고장 설비 수(이상)', p_sig_rep_warn:'주의 — 재고장 설비 수(이상)', p_risk_bm:'최근 90일 고장 1건당', p_risk_rep:'재고장 1회당', p_risk_up:'직전 90일 대비 2건 이상 증가 시', p_risk_recent:'최근 고장 발생 시', p_risk_pm:'PM 장기 미실시 시', p_risk_rep_days:'재고장 판단 기간', p_risk_recent_days:'「최근 고장」 판단 기간', p_risk_pm_days:'「PM 장기 미실시」 판단 기간', u_x:'배', u_day:'일', u_pts:'점', u_rel:'%' },
   en:{ m_run_rate:'Running rate', m_bm_per100:'Failures per 100 units', m_pm_ratio:'PM ratio', m_repeat14:'Units with {d}-day repeat', m_act_overdue:'Overdue actions',
        d_run_rate:'Running (Operation) ÷ installed · as of today', d_bm_per100:'Last-4-week failures ÷ installed × 100', d_pm_ratio:'Last-4-week PM ÷ (PM + failures)',
        d_repeat14:'Units in the risk ranking with a repeat failure within {d} days', d_act_overdue:'Open actions past their due date',
        w4:'last 4 wks', tgt:'Target {v}', tgt_le:'or less', tgt_ge:'or more', tgt_none:'No target', tgt_ok:'Met', tgt_miss:'Short {g}', tgt_over:'Over {g}',
        vs:'vs prior 4 wks', vs_none:'No comparison (current state)', den:'Base {v}', den_units:'{v} installed', den_ev:'{v} PM+BM',
        st_ok:'Normal', st_warn:'Watch', st_bad:'Critical', st_none:'No rating', u_pct:'%', u_ea:'', u_case:'', u_pt:'p',
-       g_band:'Default watch band', g_sig:'Command signals', g_risk:'Failure risk score', gd_band:'band used when a target has no watch limit', gd_sig:'when a unit turns critical/watch (this week ÷ usual)', gd_risk:'shared by Fault TOP 20 · Command · My view', p_band_run_rate:'Running rate', p_band_bm_per100:'Failures per 100 units', p_band_pm_ratio:'PM ratio', p_band_repeat14:'Repeat-failure units', p_band_act_overdue:'Overdue actions', p_sig_bad_x:'Critical — at least × usual', p_sig_bad_d:'Critical — at least this many more', p_sig_warn_x:'Watch — more than × usual', p_sig_warn_d:'Watch — at least this many more', p_sig_rep_bad:'Critical — repeat-failure units ≥', p_sig_rep_warn:'Watch — repeat-failure units ≥', p_risk_bm:'per failure in 90 days', p_risk_rep:'per repeat failure', p_risk_up:'if up by 2+ vs prior 90 days', p_risk_recent:'if failed recently', p_risk_pm:'if no PM for long', p_risk_rep_days:'gap counted as repeat', p_risk_recent_days:'length of «recent»', p_risk_pm_days:'length of «no PM for long»', u_x:'×', u_day:'d', u_pts:'pts', u_rel:'%' },
+       g_band:'Default watch band', g_sig:'Global overview signals', g_risk:'Failure risk score', gd_band:'band used when a target has no watch limit', gd_sig:'when a unit turns critical/watch (this week ÷ usual)', gd_risk:'shared by Failure TOP 20 · Global overview · Home', p_band_run_rate:'Running rate', p_band_bm_per100:'Failures per 100 units', p_band_pm_ratio:'PM ratio', p_band_repeat14:'Repeat-failure units', p_band_act_overdue:'Overdue actions', p_sig_bad_x:'Critical — at least × usual', p_sig_bad_d:'Critical — at least this many more', p_sig_warn_x:'Watch — more than × usual', p_sig_warn_d:'Watch — at least this many more', p_sig_rep_bad:'Critical — repeat-failure units ≥', p_sig_rep_warn:'Watch — repeat-failure units ≥', p_risk_bm:'per failure in 90 days', p_risk_rep:'per repeat failure', p_risk_up:'if up by 2+ vs prior 90 days', p_risk_recent:'if failed recently', p_risk_pm:'if no PM for long', p_risk_rep_days:'gap counted as repeat', p_risk_recent_days:'length of «recent»', p_risk_pm_days:'length of «no PM for long»', u_x:'×', u_day:'d', u_pts:'pts', u_rel:'%' },
   zh:{ m_run_rate:'运行率', m_bm_per100:'每100台故障', m_pm_ratio:'PM比率', m_repeat14:'{d}天内复发设备', m_act_overdue:'逾期待办',
        d_run_rate:'运行(Operation) ÷ 进场设备 · 截至基准日', d_bm_per100:'最近4周故障 ÷ 进场设备 × 100', d_pm_ratio:'最近4周 PM ÷ (PM + 故障)',
        d_repeat14:'故障风险排名中{d}天内复发的设备', d_act_overdue:'待办中已过期限但未关闭的事项',
        w4:'最近4周', tgt:'目标 {v}', tgt_le:'以下', tgt_ge:'以上', tgt_none:'未设定目标', tgt_ok:'达成', tgt_miss:'未达 {g}', tgt_over:'超出 {g}',
        vs:'较前4周', vs_none:'无比较(当前状态)', den:'分母 {v}', den_units:'进场 {v}台', den_ev:'PM+故障 {v}件',
        st_ok:'正常', st_warn:'注意', st_bad:'危险', st_none:'无判定', u_pct:'%', u_ea:'台', u_case:'件', u_pt:'p',
-       g_band:'目标的默认注意区间', g_sig:'综合监控信号灯', g_risk:'故障风险分数', gd_band:'目标未填写«注意界限»时使用的区间', gd_sig:'将运营单位标为危险·注意的标准(本周故障 ÷ 平时)', gd_risk:'故障分析 TOP 20 · 综合监控 · 我的画面共用的分数', p_band_run_rate:'运行率', p_band_bm_per100:'每100台故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'复发设备', p_band_act_overdue:'逾期待办', p_sig_bad_x:'危险 — 平时的几倍以上', p_sig_bad_d:'危险 — 比平时多几件以上', p_sig_warn_x:'注意 — 超过平时的几倍', p_sig_warn_d:'注意 — 比平时多几件以上', p_sig_rep_bad:'危险 — 复发设备几台以上', p_sig_rep_warn:'注意 — 复发设备几台以上', p_risk_bm:'近90天每件故障', p_risk_rep:'每次复发', p_risk_up:'较前90天增加2件以上时', p_risk_recent:'近期有故障时', p_risk_pm:'长期未做PM时', p_risk_rep_days:'视为复发的间隔', p_risk_recent_days:'«近期»的长度', p_risk_pm_days:'«长期未PM»的长度', u_x:'倍', u_day:'天', u_pts:'分', u_rel:'%' },
+       g_band:'目标的默认注意区间', g_sig:'全球概况信号灯', g_risk:'故障风险分数', gd_band:'目标未填写«注意界限»时使用的区间', gd_sig:'将运营单位标为危险·注意的标准(本周故障 ÷ 平时)', gd_risk:'故障分析 TOP 20 · 全球概况 · 首页共用的分数', p_band_run_rate:'运行率', p_band_bm_per100:'每100台故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'复发设备', p_band_act_overdue:'逾期待办', p_sig_bad_x:'危险 — 平时的几倍以上', p_sig_bad_d:'危险 — 比平时多几件以上', p_sig_warn_x:'注意 — 超过平时的几倍', p_sig_warn_d:'注意 — 比平时多几件以上', p_sig_rep_bad:'危险 — 复发设备几台以上', p_sig_rep_warn:'注意 — 复发设备几台以上', p_risk_bm:'近90天每件故障', p_risk_rep:'每次复发', p_risk_up:'较前90天增加2件以上时', p_risk_recent:'近期有故障时', p_risk_pm:'长期未做PM时', p_risk_rep_days:'视为复发的间隔', p_risk_recent_days:'«近期»的长度', p_risk_pm_days:'«长期未PM»的长度', u_x:'倍', u_day:'天', u_pts:'分', u_rel:'%' },
   ja:{ m_run_rate:'稼働率', m_bm_per100:'設備100台あたり故障', m_pm_ratio:'PM比率', m_repeat14:'{d}日以内再故障設備', m_act_overdue:'期限超過の対応',
        d_run_rate:'稼働(Operation) ÷ 搬入設備 · 基準日時点', d_bm_per100:'直近4週の故障 ÷ 搬入設備 × 100', d_pm_ratio:'直近4週の PM ÷ (PM + 故障)',
        d_repeat14:'故障リスク順位で{d}日以内に再故障がある設備', d_act_overdue:'対応のうち期限を過ぎて閉じていないもの',
        w4:'直近4週', tgt:'目標 {v}', tgt_le:'以下', tgt_ge:'以上', tgt_none:'目標未設定', tgt_ok:'達成', tgt_miss:'未達 {g}', tgt_over:'超過 {g}',
        vs:'前4週比', vs_none:'比較なし(現在の状態)', den:'分母 {v}', den_units:'搬入 {v}台', den_ev:'PM+故障 {v}件',
        st_ok:'正常', st_warn:'注意', st_bad:'危険', st_none:'判定なし', u_pct:'%', u_ea:'台', u_case:'件', u_pt:'p',
-       g_band:'目標の既定注意帯', g_sig:'統合管制シグナル', g_risk:'故障リスク点数', gd_band:'目標に«注意境界»がないときに使う帯', gd_sig:'運営単位を危険・注意にする基準(今週の故障 ÷ 平常)', gd_risk:'故障分析 TOP 20 · 統合管制 · マイ画面で共通の点数', p_band_run_rate:'稼働率', p_band_bm_per100:'設備100台あたり故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'再故障設備', p_band_act_overdue:'期限超過の対応', p_sig_bad_x:'危険 — 平常の何倍以上', p_sig_bad_d:'危険 — 平常より何件以上多い', p_sig_warn_x:'注意 — 平常の何倍超', p_sig_warn_d:'注意 — 平常より何件以上多い', p_sig_rep_bad:'危険 — 再故障設備何台以上', p_sig_rep_warn:'注意 — 再故障設備何台以上', p_risk_bm:'直近90日の故障1件あたり', p_risk_rep:'再故障1回あたり', p_risk_up:'前90日より2件以上増えたら', p_risk_recent:'最近故障があれば', p_risk_pm:'PMが長くなければ', p_risk_rep_days:'再故障とみなす間隔', p_risk_recent_days:'«最近»の長さ', p_risk_pm_days:'«PMが長くない»の長さ', u_x:'倍', u_day:'日', u_pts:'点', u_rel:'%' }
+       g_band:'目標の既定注意帯', g_sig:'グローバル概況シグナル', g_risk:'故障リスク点数', gd_band:'目標に«注意境界»がないときに使う帯', gd_sig:'運営単位を危険・注意にする基準(今週の故障 ÷ 平常)', gd_risk:'故障分析 TOP 20 · グローバル概況 · ホームで共通の点数', p_band_run_rate:'稼働率', p_band_bm_per100:'設備100台あたり故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'再故障設備', p_band_act_overdue:'期限超過の対応', p_sig_bad_x:'危険 — 平常の何倍以上', p_sig_bad_d:'危険 — 平常より何件以上多い', p_sig_warn_x:'注意 — 平常の何倍超', p_sig_warn_d:'注意 — 平常より何件以上多い', p_sig_rep_bad:'危険 — 再故障設備何台以上', p_sig_rep_warn:'注意 — 再故障設備何台以上', p_risk_bm:'直近90日の故障1件あたり', p_risk_rep:'再故障1回あたり', p_risk_up:'前90日より2件以上増えたら', p_risk_recent:'最近故障があれば', p_risk_pm:'PMが長くなければ', p_risk_rep_days:'再故障とみなす間隔', p_risk_recent_days:'«最近»の長さ', p_risk_pm_days:'«PMが長くない»の長さ', u_x:'倍', u_day:'日', u_pts:'点', u_rel:'%' }
 };
 GST.v2t = function(k, o, lang){
   var L=lang||(GST._lang&&GST._lang())||'ko', T=GST.V2_T[L]||GST.V2_T.ko, s=T[k]!=null?T[k]:(GST.V2_T.ko[k]!=null?GST.V2_T.ko[k]:k);

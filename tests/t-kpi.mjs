@@ -580,7 +580,7 @@ console.log('\n[8] 주간현황 작업 공수 ⚠ — 한 건 24h 초과 행을 
   await page.evaluate(() => document.querySelector('#cMan').closest('.card').querySelector('.mhw').click());
   await page.waitForTimeout(300);
   const ov = await page.evaluate(() => { const o = document.querySelector('.gov-h'); return o ? o.closest('div').parentElement.innerText : ''; });
-  is(/확인이 필요한 행/.test(ov) && /26\.7/.test(ov) && /빼지 않습니다/.test(ov), '팝업 — 그 행(작업시간 26.7h)과 «빼지 않는다»를 적는다');
+  is(/확인이 필요한 행/.test(ov) && /26\.7/.test(ov) && /그대로 포함됩니다/.test(ov), '팝업 — 그 행(작업시간 26.7h)과 «빼지 않는다»를 적는다');
   is(/데이터 관리에서 고치기/.test(ov), '관리자에게는 데이터 관리로 가는 단추');
   await shut();
   is(await page.evaluate(() => GST.dq.list().some(d => d.key === 'wk_24h' && d.n === 1)), '데이터 품질 신호(wk_24h)에도 실린다 — 데이터 관리 「데이터 품질」의 화면 신호로 간다');

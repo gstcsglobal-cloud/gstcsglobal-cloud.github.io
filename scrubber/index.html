@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>설치 현황 · CS Global Team</title>
+<title>설비 현황 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/chart.umd.min.js"></script>
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=168"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=169"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -201,14 +201,14 @@ tr:hover td{background:var(--surface-2)}
 #capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1,#2dd4bf);color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
 @media print{.capbtns,.header-right,.date-panel,.slicers,.slicer{display:none!important}.card,.trend-card,.cross-card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=168">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=169">
 </head>
 <body>
 
 <div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
-    <h1 data-i="title">스크러버 설치 현황</h1>
+    <h1 data-i="title">설비 현황</h1>
     <div class="sub" data-i="sub">설치 · Turn On · Warranty 현황</div>
   </div>
   <div class="header-right">
@@ -549,7 +549,7 @@ const basisUnit=()=>BASIS==='unit'?'대':'ch';
 const PAL=GST.PAL8; // 공통 검증 팔레트 (고정 순서)
 
 const T={
-  ko:{ch_model:'모델',ch_warr:'워런티 현황',ch_tony:'연도별 Turn On',ch_cust:'고객사',ch_group:'공정 그룹',title:'스크러버 설치 현황',sub:'설치 · Turn On · Warranty 현황',
+  ko:{ch_model:'모델',ch_warr:'워런티 현황',ch_tony:'연도별 Turn On',ch_cust:'고객사',ch_group:'공정 그룹',title:'설비 현황',sub:'설치 · Turn On · Warranty 현황',
     back:'← 메인으로',total_badge:'총',units:'챔버',refresh:'새로고침',
     date_range:'기간 설정',apply:'적용',reset:'초기화',
     rd_sc:'CODE|S/N|국가|고객사|모델|FAB|반입일|Turn On',rd_sc_c:'국가|설비(ch)',rd_sc_cu:'고객사|설비(ch)|첫 Turn On',rd_sc_ld:'CODE|S/N|고객사|반입일|Turn On|리드타임(일)',rd_sc_new:'막대는 누적, 목록은 그 기간 신규분입니다',rd_sc_w:'값은 챔버 가중(DUAL=2)이라 행 수와 다릅니다',rd_sc_mean:'막대는 평균값입니다 — 행별 값은 목록에',
@@ -570,7 +570,7 @@ const T={
     warr_all:'전체',warr_ok:'유효',warr_exp:'만료',no_data:'조건에 맞는 데이터가 없습니다',
     legend_cum:'누적',legend_new:'신규',range_all:'전체 기간',
     auto_switch:'기간이 길어 자동 전환됨',too_fine:'권장하지 않음'},
-  en:{ch_model:'Model',ch_warr:'Warranty Status',ch_tony:'Turn On by Year',ch_cust:'Customer',ch_group:'Group',title:'Scrubber Installation Status',sub:'Installation · Turn On · Warranty status',
+  en:{ch_model:'Model',ch_warr:'Warranty Status',ch_tony:'Turn On by Year',ch_cust:'Customer',ch_group:'Group',title:'Equipment',sub:'Installation · Turn On · Warranty status',
     back:'← Main',total_badge:'Total',units:'chambers',refresh:'Refresh',
     date_range:'Date Range',apply:'Apply',reset:'Reset',
     rd_sc:'CODE|S/N|Country|Customer|Model|FAB|FAB In|Turn On',rd_sc_c:'Country|Units (ch)',rd_sc_cu:'Customer|Units (ch)|First Turn On',rd_sc_ld:'CODE|S/N|Customer|FAB In|Turn On|Lead Time (d)',rd_sc_new:'Bars are cumulative — the list shows units new in that period',rd_sc_w:'Values are chamber-weighted (DUAL=2), so they differ from row counts',rd_sc_mean:'Bars show averages — per-row values are in the list',
@@ -591,7 +591,7 @@ const T={
     warr_all:'All',warr_ok:'Active',warr_exp:'Expired',no_data:'No data found',
     legend_cum:'Cumulative',legend_new:'New',range_all:'All time',
     auto_switch:'Auto-switched (range too long)',too_fine:'not recommended'},
-  zh:{ch_model:'型号',ch_warr:'保修状态',ch_tony:'按年 Turn On',ch_cust:'客户',ch_group:'工艺组',title:'洗涤器安装状况',sub:'安装 · Turn On · 保修现况',
+  zh:{ch_model:'型号',ch_warr:'保修状态',ch_tony:'按年 Turn On',ch_cust:'客户',ch_group:'工艺组',title:'设备现况',sub:'安装 · Turn On · 保修现况',
     back:'← 主页',total_badge:'共',units:'腔体',refresh:'刷新',
     date_range:'日期范围',apply:'应用',reset:'重置',
     rd_sc:'CODE|S/N|国家|客户|型号|FAB|搬入日|Turn On',rd_sc_c:'国家|设备(腔)',rd_sc_cu:'客户|设备(腔)|首次 Turn On',rd_sc_ld:'CODE|S/N|客户|搬入日|Turn On|周期(天)',rd_sc_new:'柱为累计值，列表为该期间新增',rd_sc_w:'数值按腔体加权(DUAL=2)，与行数不同',rd_sc_mean:'柱为平均值 — 每行数值见列表',
@@ -612,7 +612,7 @@ const T={
     warr_all:'全部',warr_ok:'有效',warr_exp:'到期',no_data:'无数据',
     legend_cum:'累计',legend_new:'新增',range_all:'全部时间',
     auto_switch:'区间过长已自动切换',too_fine:'不推荐'},
-  ja:{ch_model:'モデル',ch_warr:'保証状況',ch_tony:'年別 Turn On',ch_cust:'顧客',ch_group:'工程グループ',title:'スクラバー設置状況',sub:'設置 · Turn On · 保証状況',
+  ja:{ch_model:'モデル',ch_warr:'保証状況',ch_tony:'年別 Turn On',ch_cust:'顧客',ch_group:'工程グループ',title:'設備現況',sub:'設置 · Turn On · 保証状況',
     back:'← メイン',total_badge:'合計',units:'チャンバー',refresh:'更新',
     date_range:'期間設定',apply:'適用',reset:'リセット',
     rd_sc:'CODE|S/N|国|顧客|モデル|FAB|搬入日|Turn On',rd_sc_c:'国|設備(ch)',rd_sc_cu:'顧客|設備(ch)|初回 Turn On',rd_sc_ld:'CODE|S/N|顧客|搬入日|Turn On|リードタイム(日)',rd_sc_new:'棒は累積、リストはその期間の新規分です',rd_sc_w:'値はチャンバー加重(DUAL=2)のため行数と異なります',rd_sc_mean:'棒は平均値です — 行別の値はリストに',

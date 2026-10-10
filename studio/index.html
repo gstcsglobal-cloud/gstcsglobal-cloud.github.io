@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>분석 작업대 · CS Global Team</title>
+<title>맞춤 분석 · CS Global Team</title>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/chart.umd.min.js"></script>
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=168"></script>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=168">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=169"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=169">
 <style>
 /* ============================================================
    분석 작업대 (v168 · 사용자 요청 「통합관리화면」 4단계)
@@ -133,7 +133,7 @@ GST.needVer && GST.needVer(164);
 GST.authGate();
 
 const T={
-ko:{title:'분석 작업대',sub:'표 · 축 · 값을 골라 차트를 만들고, 보드로 묶어 저장합니다',board_name:'보드 이름',shared:'공유',save:'보드 저장',new_board:'새 보드',remove:'보드 감추기',
+ko:{title:'맞춤 분석',sub:'표 · 축 · 값을 골라 차트를 만들고, 보드로 묶어 저장합니다',board_name:'보드 이름',shared:'공유',save:'보드 저장',new_board:'새 보드',remove:'보드 감추기',
   build:'차트 만들기',f_src:'자료',f_type:'모양',f_x:'가로축 (나누는 기준)',f_bucket:'날짜 묶기',b_month:'월',b_week:'주',b_day:'일',
   f_series:'계열 (색으로 나누기 · 선택)',f_agg:'값',a_count:'건수',a_sum:'합계',a_avg:'평균',a_distinct:'고유 수',f_val:'값 열',f_date:'기간 기준 열',f_top:'상위',
   f_filter:'거르기 (모두 만족)',add_filter:'+ 조건',f_title:'차트 제목 (비우면 자동)',add_board:'보드에 추가',update_w:'이 차트 고치기',
@@ -147,7 +147,7 @@ ko:{title:'분석 작업대',sub:'표 · 축 · 값을 골라 차트를 만들�
   not_yours:'남의 보드는 고칠 수 없습니다 — 「새 보드」로 복사해 저장하세요',
   edit:'고치기',del:'빼기',up:'위로',loading:'자료를 불러오는 중…',fail_src:'이 자료를 읽지 못했습니다',
   no_rows:'조건에 맞는 행이 없습니다',val_need:'합계·평균은 숫자 열을 고르세요',sum_of:'{a} · {v}',by:'{y} — {x}별',by2:'{y} — {x} · {s}별'},
-en:{title:'Analysis studio',sub:'Pick a table · axis · value to build charts, then save them as a board',board_name:'Board name',shared:'Shared',save:'Save board',new_board:'New board',remove:'Hide board',
+en:{title:'Custom analysis',sub:'Pick a table · axis · value to build charts, then save them as a board',board_name:'Board name',shared:'Shared',save:'Save board',new_board:'New board',remove:'Hide board',
   build:'Build a chart',f_src:'Data',f_type:'Type',f_x:'X axis (split by)',f_bucket:'Date bucket',b_month:'Month',b_week:'Week',b_day:'Day',
   f_series:'Series (split by color · optional)',f_agg:'Value',a_count:'Count',a_sum:'Sum',a_avg:'Average',a_distinct:'Distinct',f_val:'Value column',f_date:'Date column for range',f_top:'Top',
   f_filter:'Filters (all must match)',add_filter:'+ Filter',f_title:'Chart title (auto if empty)',add_board:'Add to board',update_w:'Update this chart',
@@ -161,7 +161,7 @@ en:{title:'Analysis studio',sub:'Pick a table · axis · value to build charts, 
   not_yours:'You cannot change someone else\'s board — use «New board» to save a copy',
   edit:'Edit',del:'Remove',up:'Up',loading:'Loading…',fail_src:'Could not read this data',
   no_rows:'No rows match',val_need:'Pick a numeric column for sum/average',sum_of:'{a} · {v}',by:'{y} — by {x}',by2:'{y} — by {x} · {s}'},
-zh:{title:'分析工作台',sub:'选择表 · 轴 · 值来制作图表，并保存为看板',board_name:'看板名称',shared:'共享',save:'保存看板',new_board:'新看板',remove:'隐藏看板',
+zh:{title:'自定义分析',sub:'选择表 · 轴 · 值来制作图表，并保存为看板',board_name:'看板名称',shared:'共享',save:'保存看板',new_board:'新看板',remove:'隐藏看板',
   build:'制作图表',f_src:'数据',f_type:'类型',f_x:'横轴（分组依据）',f_bucket:'日期分组',b_month:'月',b_week:'周',b_day:'日',
   f_series:'系列（按颜色区分 · 可选）',f_agg:'值',a_count:'件数',a_sum:'合计',a_avg:'平均',a_distinct:'去重数',f_val:'值列',f_date:'期间依据列',f_top:'前',
   f_filter:'筛选（全部满足）',add_filter:'+ 条件',f_title:'图表标题（留空则自动）',add_board:'加入看板',update_w:'修改此图表',
@@ -175,7 +175,7 @@ zh:{title:'分析工作台',sub:'选择表 · 轴 · 值来制作图表，并保
   not_yours:'不能修改他人的看板 — 请用「新看板」另存',
   edit:'修改',del:'移除',up:'上移',loading:'正在加载…',fail_src:'无法读取此数据',
   no_rows:'没有符合条件的行',val_need:'合计·平均请选择数值列',sum_of:'{a} · {v}',by:'{y} — 按{x}',by2:'{y} — 按{x} · {s}'},
-ja:{title:'分析ワークベンチ',sub:'表 · 軸 · 値を選んでチャートを作り、ボードにまとめて保存します',board_name:'ボード名',shared:'共有',save:'ボード保存',new_board:'新しいボード',remove:'ボードを隠す',
+ja:{title:'カスタム分析',sub:'表 · 軸 · 値を選んでチャートを作り、ボードにまとめて保存します',board_name:'ボード名',shared:'共有',save:'ボード保存',new_board:'新しいボード',remove:'ボードを隠す',
   build:'チャートを作る',f_src:'データ',f_type:'形',f_x:'横軸（分ける基準）',f_bucket:'日付のまとめ',b_month:'月',b_week:'週',b_day:'日',
   f_series:'系列（色で分ける · 任意）',f_agg:'値',a_count:'件数',a_sum:'合計',a_avg:'平均',a_distinct:'ユニーク数',f_val:'値の列',f_date:'期間の基準列',f_top:'上位',
   f_filter:'絞り込み（すべて満たす）',add_filter:'+ 条件',f_title:'チャート名（空なら自動）',add_board:'ボードに追加',update_w:'このチャートを修正',

@@ -154,7 +154,7 @@ if (SHOT) await pg.screenshot({ path: SHOT + '/hub-light.png', fullPage:true });
 await pg.evaluate(() => document.body.classList.add('theme-slate')); await pg.waitForTimeout(300);
 if (SHOT) await pg.screenshot({ path: SHOT + '/hub-dark.png', fullPage:true });
 await pg.evaluate(() => window.setLang('en')); await pg.waitForTimeout(400);
-is(await pg.evaluate(() => /Command Center/.test(document.querySelector('[data-i="title"]').textContent)), '영어로 바뀐다');
+is(await pg.evaluate(() => /Global overview/.test(document.querySelector('[data-i="title"]').textContent)), '영어로 바뀐다');
 is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
 await pg.close();
 

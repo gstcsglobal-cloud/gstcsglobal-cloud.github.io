@@ -178,7 +178,7 @@ is(kr && kr.bm === '20.00' && kr.st === 'ok', '국내(SEC) 20.00 · 정상');
 const dec = await p0.evaluate(() => Array.from(document.querySelectorAll('#cDec .ds-row b')).map(b => b.textContent));
 is(dec.some(s => /TAIWAN.*100대당 고장 50\.00/.test(s)), '확인 사항 — 대만 고장률 초과가 선다');
 is(dec.some(s => /WHC9.*재고장 1회/.test(s)), '확인 사항 — 재고장 설비(WHC9)가 선다');
-is(dec.some(s => /기한이 지난 처리 건 1건/.test(s)), '확인 사항 — 기한이 지난 처리 건 1건(완료된 건은 안 셈)');
+is(dec.some(s => /기한 경과 조치 1건/.test(s)), '확인 사항 — 기한 경과 조치 1건(완료된 건은 안 셈)');
 await p0.click('#kpis .ds-kpi[data-k="bm_per100"]'); await p0.waitForTimeout(300);
 const mr = await p0.evaluate(() => { const b = document.querySelector('.gov-body'); return b ? b.querySelectorAll('tbody tr').length : -1; });
 is(mr === 23, '고장률 카드를 누르면 «그 23건»이 목록으로 (받은 ' + mr + ')');
@@ -290,7 +290,7 @@ console.log('[9] 언어 · 외부 요청');
 const pz = await open('/home/?view=exec', clearDB);
 await pz.evaluate(() => window.setLang('en')); await pz.waitForTimeout(300);
 const en = await pz.evaluate(() => ({ t:document.querySelector('[data-i="title"]').textContent, k:document.querySelector('#kpis .ds-kpi-l').textContent, sc:document.querySelector('#scope option').textContent }));
-is(en.t === 'My view' && /Running rate/.test(en.k) && en.sc === 'Company', '영어로 — 제목 · 카드 이름 · 범위 목록');
+is(en.t === 'Home' && /Running rate/.test(en.k) && en.sc === 'Company', '영어로 — 제목 · 카드 이름 · 범위 목록');
 await pz.evaluate(() => document.body.classList.add('theme-slate')); await pz.waitForTimeout(200);
 if (process.env.V2_SHOT) { await pz.evaluate(() => window.setLang('ko')); await pz.waitForTimeout(200); await pz.screenshot({ path:process.env.V2_SHOT + '/home-dark.png', fullPage:true }); }
 is(pz._pe.length === 0, 'JS 에러 0' + (pz._pe.length ? ' → ' + pz._pe[0] : ''));
@@ -402,8 +402,29 @@ await px.close();
 const pxv = await open('/hub/', clearDB + 'try{localStorage.setItem("gst_explain","1");}catch(e){} window.__ROLE={email:"view@t",can_write:false,role:"viewer"};');
 is(await pxv.evaluate(() => !document.body.classList.contains('gst-explain')), '조회자는 설정값이 켜져 있어도 설명이 안 보인다(관리자만)');
 await pxv.close();
-const RPT = fs.readFileSync(ROOT + '/assets/core.js', 'utf8');
-is(/GST\.EXPLAIN_SKIP = \/\^\\\/report\(-kr\)\?\\\/\//.test(RPT), '주간현황은 예외 — 지금까지대로 다 보인다(사용자 지시 · 손대지 않는다)');
+/* v173 — 카드 노트는 «값»(.nv · 늘 보임)과 «설명»(.nx · 설명 표시 때만) 두 조각 · 주간현황도 예외가 아니다(사용자 확정) */
+const py = await open('/hub/', clearDB + 'try{localStorage.removeItem("gst_explain");}catch(e){}');
+const nv = await py.evaluate(() => {
+  const mk = id => { const c = document.createElement('div'); c.className = 'card'; c.innerHTML = '<div class="card-note"></div><canvas id="' + id + '"></canvas>'; document.body.appendChild(c); return c.querySelector('.card-note'); };
+  const n1 = mk('cV'), n2 = mk('cW'), n3 = mk('cU');
+  GST.setNote('cV', { v:'최근 구간 12건', x:'국내는 알람 원장 기준' });
+  GST.setNote('cW', { v:'최근 구간 3건', x:'⚠ 국내 알람 원장이 비어 수선실적으로 집계 중' }, 'warn');
+  GST.setNote('cU', '충원율 95% · TO 대비 -2명', 'val');
+  const d = e => e ? getComputedStyle(e).display !== 'none' : null;
+  const pp = GST.pagePath; GST.pagePath = () => '/report/'; const rep = GST.explainOn(); GST.pagePath = pp;
+  const n4 = mk('cI'); n4.setAttribute('data-i', 'note_def'); GST.setNote('cI', '충원율 95%', 'val');
+  const before = n4.classList.contains('hasv'); GST.applyI18n(k => k === 'note_def' ? '정의 문구' : k);
+  const i18n = { before, after:n4.classList.contains('hasv'), txt:n4.textContent, vis:d(n4) };
+  return { v1:d(n1.querySelector('.nv')), x1:d(n1.querySelector('.nx')), n1:d(n1),
+           v2:d(n2.querySelector('.nv')), fs2:getComputedStyle(n2.querySelector('.nv')).fontSize, x2:d(n2.querySelector('.nx')), t2:n2.textContent,
+           u:d(n3) && !n3.querySelector('.nx'), rep, skip:GST.EXPLAIN_SKIP, i18n };
+});
+is(nv.n1 && nv.v1 && nv.x1 === false, '값 조각은 보이고 설명 조각은 숨는다 (GST.setNote {v,x})');
+is(nv.v2 && nv.fs2 !== '0px' && nv.x2 === false && /\n⚠/.test(nv.t2), '경고 + 값 — ⚠ 옆에 값이 읽히고, 경고 글은 줄을 바꿔 팝업으로 (' + JSON.stringify(nv.t2) + ')');
+is(nv.u, "sev='val' — 문장 전체가 값이면 통째로 보인다");
+is(nv.i18n.before && !nv.i18n.after && nv.i18n.txt === '정의 문구' && nv.i18n.vis === false, '언어 적용이 노트를 정의 문구로 되돌리면 «값» 표식도 지운다 — 정의 문구가 값처럼 남지 않는다 (' + JSON.stringify(nv.i18n) + ')');
+is(nv.rep === false && nv.skip === null, '주간현황도 예외가 아니다 — 설명은 기본으로 숨는다 (v173 · 사용자 확정)');
+await py.close();
 
 console.log('[14] 셸 — 탭 묶음 · 처리함 배지 · 더보기');
 const pz2 = await open('/', clearDB);
@@ -415,11 +436,11 @@ is(shl.top.join(' ') === 'home hub report fault [정비:pm+cip] scrubber [자재
 is(shl.badge === '2', '처리함 배지 — 미완료 2건(완료 건은 안 셈 · ' + shl.badge + ')');
 await pz2.click('#moreBtn'); await pz2.waitForTimeout(150);
 const mm = await pz2.evaluate(() => Array.from(document.querySelectorAll('#moreMenu [data-go]')).map(b => b.dataset.go).join(','));
-is(mm === 'site,studio,targets', '더보기 — 사이트 상세 · 분석 작업대 · 운영 목표');
+is(mm === 'site,studio,targets', '더보기 — 사이트 상세 · 맞춤 분석 · 목표·기준');
 is(shl.explain !== 'none', '관리자에게는 「설명 표시」가 있다');
 await pz2.click('#moreMenu [data-go="targets"]'); await pz2.waitForTimeout(1500);
 const tg = await pz2.evaluate(() => ({ fr:!!document.querySelector('iframe.active[data-id="targets"]'), more:document.getElementById('moreBtn').classList.contains('on'), act:document.querySelectorAll('.tab.active').length }));
-is(tg.fr && tg.more && tg.act === 0, '운영 목표가 셸 안에서 열리고 더보기 단추가 켜진다(탭 줄에는 켜진 탭이 없다)');
+is(tg.fr && tg.more && tg.act === 0, '목표·기준이 셸 안에서 열리고 더보기 단추가 켜진다(탭 줄에는 켜진 탭이 없다)');
 await pz2.click('#actBtn'); await pz2.waitForTimeout(1200);
 is(await pz2.evaluate(() => !!document.querySelector('iframe.active[data-id="action"]') && document.getElementById('actBtn').classList.contains('on')), '처리함 단추 → 처리함 화면');
 is(pz2._pe.length === 0, 'JS 에러 0 (셸)' + (pz2._pe.length ? ' → ' + pz2._pe[0] : ''));

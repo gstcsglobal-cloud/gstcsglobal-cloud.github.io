@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=168"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=169"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -3435,7 +3435,7 @@ async function siteRender(reload){
   geoRender();
 }
 /* ---------- 지도 위치 (v171 · setup-26 geo_places) ----------
-   통합 관제의 나라 지도가 설비를 «어디에» 놓을지. 설치현황의 지역 · 단지 · FAB 값마다 지금 어디에 놓이는지(사람이 정한 좌표 /
+   글로벌 현황의 나라 지도가 설비를 «어디에» 놓을지. 설치현황의 지역 · 단지 · FAB 값마다 지금 어디에 놓이는지(사람이 정한 좌표 /
    행정구역 이름 / 미지정)를 보이고, 좌표를 정한다. 판정은 core GST.geo.placeOf 한 벌 — 관제와 같은 함수로 «지금 위치»를 보인다.
    ⚠ 단지 코드(P1·H2)의 위치는 코드에 박지 않는다 — 여기서 사람이 정한다. 끝 숫자를 뗀 열쇠(P)로 정하면 P1~P4 가 함께 간다. */
 const GEOE = { PL:null, adm:{}, err:'' };
@@ -3463,7 +3463,7 @@ async function geoRender(){
   const un = L.filter(e => !e.pl), canW = GST.canWrite && GST.canWrite();
   const admOpts = cc => { const a = GEOE.adm[cc]; return a ? a.f.filter(f => f.c).map(f => '<option value="' + f.c[1] + ',' + f.c[0] + '">' + esc((f.n.ko || f.n.en) + (f.n.ko && f.n.en ? ' · ' + f.n.en : '')) + '</option>').join('') : ''; };
   box.innerHTML = '<h3 style="margin:0 0 6px">지도 위치</h3>'
-    + '<p class="hint">통합 관제의 나라 지도가 설비를 놓는 자리입니다. 설치현황의 <b>지역 → 단지 → FAB</b> 값으로 찾고, 정해 둔 좌표가 없으면 행정구역 이름과 정확히 같은 값만 저절로 놓습니다. '
+    + '<p class="hint">글로벌 현황의 나라 지도가 설비를 놓는 자리입니다. 설치현황의 <b>지역 → 단지 → FAB</b> 값으로 찾고, 정해 둔 좌표가 없으면 행정구역 이름과 정확히 같은 값만 저절로 놓습니다. '
     + '나머지는 «위치 미지정»으로 지도 아래에 대수와 함께 뜹니다. <b>P1·P2</b> 처럼 끝에 숫자가 붙은 단지 코드는 열쇠를 <b>P</b> 로 정하면 한꺼번에 갑니다.</p>'
     + (GEOE.err ? '<div class="banner warn">' + esc(GEOE.err) + '</div>' : '')
     + (un.length ? '<div class="banner warn">지도에 못 놓은 값 ' + un.length + '개 · ' + un.reduce((a, e) => a + e.n, 0).toLocaleString() + '대 — 아래에서 정하세요.</div>' : '<p class="hint">설치현황의 모든 값이 지도에 놓입니다.</p>')
@@ -3484,7 +3484,7 @@ async function geoRender(){
     if(!key) return snack('열쇠를 적으세요', {err:true});
     if(!clear && !(isFinite(lat) && isFinite(lng))) return snack('위도·경도를 적거나 행정구역에서 고르세요', {err:true});
     try{ await rpc('geo_place_set', { p_key:key, p_lat:lat, p_lng:lng, p_label:e.x.loc || e.x.campus || e.x.fab, p_cc:e.cc });
-      snack(clear ? key + ' 위치를 비웠습니다' : key + ' 위치를 저장했습니다 — 통합 관제를 새로고침하면 반영됩니다'); geoRender();
+      snack(clear ? key + ' 위치를 비웠습니다' : key + ' 위치를 저장했습니다 — 글로벌 현황을 새로고침하면 반영됩니다'); geoRender();
     }catch(err){ snack(err.message, {err:true, ms:8000}); } };
   box.querySelectorAll('[data-gs]').forEach(b => b.onclick = () => save(+b.dataset.gs, false));
   box.querySelectorAll('[data-gc]').forEach(b => b.onclick = () => save(+b.dataset.gc, true));

@@ -27,21 +27,21 @@ function ageText(made, now) {
 /* row = {scope, as_of, payload, made_at} · note = 맨 앞에 붙일 한 줄(내 운영단위 것이 없어 전사를 보낼 때 등) */
 export function briefText(row, now = new Date(), note = '') {
   if (!row || !row.payload || typeof row.payload !== 'object')
-    return '아직 브리핑이 없습니다. 대시보드 「내 화면」을 한 번 열면 생성됩니다.';
+    return '아직 브리핑이 없습니다. 대시보드 「홈」을 한 번 열면 생성됩니다.';
   const p = row.payload, head = [], kp = [], dec = [], tail = [];
   if (note) head.push(note);
   head.push('이번 주 브리핑 — ' + (p.name || '전사'));
   head.push((p.as_of || row.as_of || '-') + ' 기준 · ' + ageText(row.made_at, now) + ' 집계');
   const days = (now.getTime() - new Date(row.made_at).getTime()) / 864e5;
-  if (days > BRIEF_STALE_DAYS) head.push('⚠ ' + Math.round(days) + '일 전 집계된 브리핑입니다 — 대시보드 「내 화면」을 열면 최신 내용으로 갱신됩니다.');
+  if (days > BRIEF_STALE_DAYS) head.push('⚠ ' + Math.round(days) + '일 전 집계된 브리핑입니다 — 대시보드 「홈」을 열면 최신 내용으로 갱신됩니다.');
   if (p.kr_fall) head.push('⚠ 국내 알람 원장이 비어 있어 국내 고장은 수선실적 BM으로 집계 중');
   (p.kpis || []).forEach(k => {
     const st = ST[k.st] ? '[' + ST[k.st] + '] ' : '';
     kp.push('· ' + st + k.name + (k.win ? '(' + k.win + ')' : '') + ' ' + k.val + (k.unit || '') + ' — ' + k.tgt + (k.dv ? ' · ' + k.dv + ' ' + (k.dvs || '') : ''));
   });
   (p.dec || []).forEach((d, i) => dec.push((i + 1) + '. [' + d.tag + '] ' + d.title));
-  if (!p.tgt_n) tail.push('설정된 목표가 없습니다 — 대시보드 「운영 목표」에서 설정하면 목표 대비로 판정됩니다.');
-  tail.push('자세한 내용: 대시보드 「내 화면」');
+  if (!p.tgt_n) tail.push('설정된 목표가 없습니다 — 대시보드 「목표·기준」에서 설정하면 목표 대비로 판정됩니다.');
+  tail.push('자세한 내용: 대시보드 「홈」');
   const build = (D, cut) => [].concat(head, [''], kp, [''], ['이번 주 확인 사항'], D.length ? D : ['이번 주 확인할 사항이 없습니다'],
     cut ? ['… 외 ' + cut + '건은 대시보드에서 확인하세요'] : [], [''], tail).join('\n');
   /* 길면 «확인 사항»을 뒤에서부터 줄인다 — 머리(기준일·나이)와 숫자는 끝까지 남긴다(그게 이 글의 뜻이다) */

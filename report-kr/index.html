@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=168"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=169"></script>
 <script>
 /* ===== 주간현황(국내) — 데모 (v146 · 사용자 요청) =====
    「국내사이트는 DB 업로드를 국내 담당자에게 맡긴다 · 주간현황(국내)를 데모로 만들어 담당자가 운영해 보고 피드백을 주게 ·
@@ -196,7 +196,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=168">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=169">
 </head>
 <body>
 
@@ -272,7 +272,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 </div>
 
 <div class="sec-h"><span data-i="sec1">핵심 지표</span><span class="sec-note" data-i="hr_note">고객사 필터 연동 · 국가/라인 미적용</span></div>
-<div class="tablecard" id="opsWait" style="display:none"><div class="card-note" data-i="ops_wait">인원현황·휴가현황 시트 연결 대기 — report/index.html 상단의 GID_ROSTER / GID_LEAVE 값을 시트 gid 숫자로 바꿔주세요</div></div>
+<div class="tablecard" id="opsWait" style="display:none"><div class="card-note" data-i="ops_wait">인원현황·휴가현황 자료 미연결</div></div>
 <div class="grid3">
   <div class="card">
     <h3 data-i="ch_to">총인원 vs TO</h3><div class="mini-per" data-ch="cTo"></div>
@@ -406,7 +406,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 // 이 페이지는 GST.ORG.emp / region / country (v88~) 를 쓴다. core.js 가 캐시에 옛 것이면
 // 그 호출이 TypeError 로 죽고 화면은 «전부 0» 으로만 보인다 — 배너로 원인을 드러낸다.
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(148);   // ⚑ 국내 데모: GST.TBL_MAP·TBL_NS·isKrOp(v146) — 옛 core 면 운영 표를 «데모»라고 적고 그린다 · GST.topN(진단 목록 상위 N) · corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
+GST.needVer&&GST.needVer(169);   // GST.setNote {v,x}(v173) · ⚑ 국내 데모: GST.TBL_MAP·TBL_NS·isKrOp(v146) — 옛 core 면 운영 표를 «데모»라고 적고 그린다 · GST.topN(진단 목록 상위 N) · corpLabel · filters.hitL · GST.PM · 라인2 · WARR · EQ.isIdle · cipRange().cols · ALARM.stamp/해외 올바 SPEC · kpiDrill(KPI 카드 클릭)
 const PUB=GST.SHEET_PUB;
 // ▼▼ 새 탭 gid — 구글시트에서 각 탭 클릭 시 주소창의 #gid= 숫자를 붙여넣으세요 ▼▼
 const GID_ROSTER='1213453343';  // 인원현황 탭
@@ -460,9 +460,9 @@ function guessCountry(op){
 }
 
 const T={
-ko:{sl_more:'주간현황 전용',title:'주간 현황(국내)',kr_demo_t:'국내 데모',kr_demo:'국내 데모 표를 봅니다 — 본 주간현황·해외 자료와 따로입니다. 자료는 국내 담당자가 올립니다.',kr_up:'자료 올리기',kr_ed:'데이터 관리',kr_drop:'국내로 판정되지 않은 행은 뺐습니다 — 수선실적 {w} · 설치현황 {i} · 인원 {r}',sub:'인력 · 교육 · 작업 · PM · 고장 주간/월간 요약',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_region:'구분',sl_customer:'고객사',sl_line:'라인',sl_fab:'FAB',sl_period:'기간',all:'전체',hr_note:'고객사 필터 연동 · 국가/라인 미적용',hr_note2:'',sec_ops:'운영',ops_note:'가용인력 = 인원현황의 현장(O) 재직자 · 고객사 필터 연동',ops_wait:'인원현황·휴가현황 시트 연결 대기 — report/index.html 상단의 GID_ROSTER / GID_LEAVE 값을 시트 gid 숫자로 바꿔주세요',ch_att:'출근 · 휴가',note_att:'평일 기준 일평균 · 출근 = 가용인력 − 휴가',att_a:'출근',att_l:'휴가',ch_to:'총인원 vs TO',note_to:'TO = 반입 챔버 ÷ 30 (DUAL=2·SINGLE=1) · 총인원 = 현장 가용인력',head_l:'총인원',ch_chp:'인당 관리 챔버',note_chp:'반입 챔버(누적) ÷ 가용인력 · 챔버/인원 수는 툴팁',cutoff:'마감',att_pj:'인당작업',man_tot:'공수(h)',grp_t:'경력',grp_s:'소속',cr_u1:'1년 미만',cr_u2:'1~2년',cr_u3:'2년 이상',ch_career:'단지별 인원 추이',note_career:'각 구간 말 기준 현장(O) 재직 · 단지별 스택 (단지가 없으면 FAB·고객사)',nCareer:'1년미만 {a} · 1~2년 {b} · 2년+ {c}명',edu_tg:'대상인원',edu_rt:'완료율',edu_goal:'목표 90%',edu_ttf:'완료 {d} / 대상 {t}',man_sum:'합계',chp_c:'챔버(반입)',chp_p:'인당 관리',nTo:'충원율 {p}% · TO 대비 {d}명',nEdu:'완료율 {p}% · 완료 {d}/{t}명 (LV1+LV2)',nCip:'진행율 {p}% · 잔여 {n}건',nAtt:'일평균 출근 {a}명 · 휴가 {l}명 · 작업 {j}건 (인당 {p}건)',nChp:'인당 {v}챔버 (챔버 {c} · 인원 {h}명)',nMan:'인당 일평균 {v}h · PM {pm}h',nMan_ex:'공수 분모 제외 {n}명',n_drop:'집계 제외 — {v}',u_case:'건',op_unk_u:'대',op_unk:'⚠ 처음 보는 설비상태 {n}대 — 반입·가동 어디에도 안 들어갔습니다 ({v})',dq_drop:'집계에서 빠진 행 — 「내부·내적」이 아닌 값',dq_drop_a:'시트의 「내적/외적」 값이 맞는지 확인하세요',dq_rnd:'「{v}」로 잡힌 라인 표기',dq_rnd_a:'시트에 새 라인 표기가 생겼는지 확인하세요',dq_hex:'현장(O) 인원인데 직책·단지·라인이 팀장·OFFICE·단지장',dq_hex_u:'명',dq_hex_a:'인원현황 「현장 인원여부」가 맞게 체크됐는지 확인하세요 — 공수 분모는 현장(O) 기준으로만 세고, 직책은 판단 참고용입니다',dq_unk:'처음 보는 설비상태 — 반입·가동 어디에도 안 들어갔습니다',dq_unk_a:'설치현황의 설비상태 값을 확인하세요',nFt:'최근 구간 {n}건 · 직전 대비 {d}',per_ws:'주',per_ms:'월',per_ys:'연',ytd:'{y} 누적',top_allblank:'고장 {m}건 · 알람유형 미기재 — 시트 Z열 입력 필요',per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',print:'인쇄',wk_narr:'이번 주 요약',wk_narr_w:'이번 주 요약',wk_narr_m:'이번 달 요약',
+ko:{sl_more:'주간현황 전용',title:'주간 현황(국내)',kr_demo_t:'국내 데모',kr_demo:'국내 데모 표를 봅니다 — 본 주간현황·해외 자료와 따로입니다. 자료는 국내 담당자가 올립니다.',kr_up:'자료 올리기',kr_ed:'데이터 관리',kr_drop:'국내로 판정되지 않은 행은 뺐습니다 — 수선실적 {w} · 설치현황 {i} · 인원 {r}',sub:'인력 · 교육 · 작업 · PM · 고장 주간/월간 요약',back:'← 메인으로',refresh:'새로고침',sl_country:'국가',sl_region:'구분',sl_customer:'고객사',sl_line:'라인',sl_fab:'FAB',sl_period:'기간',all:'전체',hr_note:'고객사 필터 연동 · 국가/라인 미적용',hr_note2:'',sec_ops:'운영',ops_note:'가용인력 = 인원현황의 현장(O) 재직자 · 고객사 필터 연동',ops_wait:'인원현황·휴가현황 자료 미연결',ch_att:'출근 · 휴가',note_att:'평일 기준 일평균 · 출근 = 가용인력 − 휴가',att_a:'출근',att_l:'휴가',ch_to:'총인원 vs TO',note_to:'TO = 반입 챔버 ÷ 30 (DUAL=2·SINGLE=1) · 총인원 = 현장 가용인력',head_l:'총인원',ch_chp:'인당 관리 챔버',note_chp:'반입 챔버(누적) ÷ 가용인력 · 챔버/인원 수는 툴팁',cutoff:'마감',att_pj:'인당작업',man_tot:'공수(h)',grp_t:'경력',grp_s:'소속',cr_u1:'1년 미만',cr_u2:'1~2년',cr_u3:'2년 이상',ch_career:'단지별 인원 추이',note_career:'각 구간 말 기준 현장(O) 재직 · 단지별 스택 (단지가 없으면 FAB·고객사)',nCareer:'1년미만 {a} · 1~2년 {b} · 2년+ {c}명',edu_tg:'대상인원',edu_rt:'완료율',edu_goal:'목표 90%',edu_ttf:'완료 {d} / 대상 {t}',man_sum:'합계',chp_c:'챔버(반입)',chp_p:'인당 관리',nTo:'충원율 {p}% · TO 대비 {d}명',nEdu:'완료율 {p}% · 완료 {d}/{t}명 (LV1+LV2)',nCip:'진행율 {p}% · 잔여 {n}건',nAtt:'일평균 출근 {a}명 · 휴가 {l}명 · 작업 {j}건 (인당 {p}건)',nChp:'인당 {v}챔버 (챔버 {c} · 인원 {h}명)',nMan:'인당 일평균 {v}h · PM {pm}h',nMan_ex:'공수 분모 제외 {n}명',n_drop:'집계 제외 — {v}',u_case:'건',op_unk_u:'대',op_unk:'⚠ 미등록 설비상태 {n}대 — 반입·가동 집계에서 제외 ({v})',dq_drop:'집계에서 빠진 행 — 「내부·내적」이 아닌 값',dq_drop_a:'시트의 「내적/외적」 값이 맞는지 확인하세요',dq_rnd:'「{v}」로 잡힌 라인 표기',dq_rnd_a:'시트에 새 라인 표기가 생겼는지 확인하세요',dq_hex:'현장(O) 인원인데 직책·단지·라인이 팀장·OFFICE·단지장',dq_hex_u:'명',dq_hex_a:'인원현황 「현장 인원여부」가 맞게 체크됐는지 확인하세요 — 공수 분모는 현장(O) 기준으로만 세고, 직책은 판단 참고용입니다',dq_unk:'미등록 설비상태 — 반입·가동 집계에서 제외',dq_unk_a:'설치현황의 설비상태 값을 확인하세요',nFt:'최근 구간 {n}건 · 직전 대비 {d}',per_ws:'주',per_ms:'월',per_ys:'연',ytd:'{y} 누적',top_allblank:'고장 {m}건 · 알람유형 미기재 — 시트 Z열 입력 필요',per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',print:'인쇄',wk_narr:'이번 주 요약',wk_narr_w:'이번 주 요약',wk_narr_m:'이번 달 요약',
  kp1:'재직 인원',kp2:'이번 달 입사 · 퇴사',kp3:'교육 완료율',kp4:'BM 건수 · 최근 30일',kp5:'인당 공수(h) · 최근 30일',kp6:'PM 진행율 · 올해',
-  kf3b:'대상 {a} {m}명 · {b} {n}명',kd_edun2:'{a} {p}% (이수 {d}/{m}) · {b} {q}% (이수 {e}/{n})',kd_30d:'최근 30일',kd_edu:'교육 이수 현황',kd_educ:'이름|단지|과정|완료일|상태',kd_edun:'이수 {a} / 대상 {b}',kd_pm:'PM 스케줄 진행 (올해 누적)',kd_pmc:'월|계획(누적)|완료(누적)|진행율',kd_pmn:'계획 {a} · 완료 {b}',kd_ioh:'카드는 인원 전원을 셉니다 — 같은 화면의 입·퇴사 차트는 현장(O)만 셉니다',kd_asof:'기준일',
+  kf3b:'대상 {a} {m}명 · {b} {n}명',kd_edun2:'{a} {p}% (이수 {d}/{m}) · {b} {q}% (이수 {e}/{n})',kd_30d:'최근 30일',kd_edu:'교육 이수 현황',kd_educ:'이름|단지|과정|완료일|상태',kd_edun:'이수 {a} / 대상 {b}',kd_pm:'PM 스케줄 진행 (올해 누적)',kd_pmc:'월|계획(누적)|완료(누적)|진행율',kd_pmn:'계획 {a} · 완료 {b}',kd_ioh:'카드는 전체 인원 기준 · 입·퇴사 차트는 현장(O) 인원 기준',kd_asof:'기준일',
  kf1:'경력 2년+ {n}명 · 1년 미만 {m}명',kf2:'최근 12개월 입사 {n}명',kf3:'Veteran {p}% (대상 {n}명)',kf4:'이전 30일 {n}건',kf5:'PM 비중 {p}%',kf6:'계획 {a} · 완료 {b}',
  sec1:'핵심 지표',sec2:'상세 분석',sec3:'Alarm · 고장',sec4:'설비',
  ch_hc:'인원 추이 (경력구간)',note_hc:'각 구간 말 기준 재직 인원 · 입사일/퇴사일 반영',hc_u1:'1년 미만',hc_u2:'1–2년',hc_u3:'2년 이상',
@@ -470,15 +470,15 @@ ko:{sl_more:'주간현황 전용',title:'주간 현황(국내)',kr_demo_t:'국�
  ch_edu:'교육 완료율 추이',note_edu:'이수일 기준 누적 완료 / 해당 시점 재직 인원',
  ch_jobs:'작업 건수',note_jobs:'전체 작업 실적 · 최대/최신값 라벨',
  ch_man:'작업 공수 (h)',note_man:'PM · 서비스 · 설치 구분 (이상치 제외)',man_pm:'PM',man_np:'非PM',man_svc:'서비스',man_inst:'설치',
- mhw_tip:'공수 보정 — 한 건 {h}h 초과 {n}건 제외 · 빈 작업공수 {f}건은 작업시간×작업자수 · 누르면 목록',mhw_title:'작업 공수 보정 내역',mhw_cols:'작업일|작업단계|단지|설비호기|작업공수(h)|작업시간(분)|작업자수',
- mhw_note:'한 건 {h}h 를 넘는 {n}건은 공수에서 뺐습니다(작업 건수에는 포함) · 「작업공수」가 빈 {f}건은 작업시간×작업자수로 메웠습니다',
+ mhw_tip:'공수 보정 — 한 건 {h}h 초과 {n}건 제외 · 빈 작업공수 {f}건은 작업시간×작업자수로 보완 · 클릭하면 목록',mhw_title:'작업 공수 보정 내역',mhw_cols:'작업일|작업단계|단지|설비호기|작업공수(h)|작업시간(분)|작업자수',
+ mhw_note:'한 건 {h}h를 넘는 {n}건은 공수에서 제외(작업 건수에는 포함) · 작업공수가 빈 {f}건은 작업시간×작업자수로 보완',
  dq_mh:'공수 보정 — 한 건 {h}h 초과 {n}건 제외 · 빈 작업공수 {f}건은 작업시간×작업자수',dq_mh_a:'실적현황 원본의 작업공수(분)를 확인하세요 — 월 단위로 몰아 적은 행은 날짜별로 나누고 빈 칸은 채우면 보정 없이 그대로 셉니다',
  ch_pc:'인당 작업 건수',note_pc:'구간 내 실제 투입 인원 기준',
  ch_sc:'PM 계획 대비 완료 (올해 누적)',note_sc:'계획 = 설비별 주기 기반 도래 건수 · 진행율은 툴팁',sc_plan:'계획(누적)',sc_done:'완료(누적)',
  ch_ft:'Alarm · 고장 건수',note_ft:'Alarm=BM · All By-Pass 별도 · Total=합계',pv_stage:'작업단계',pv_sn:'설비 S/N',pv_s_ft:'고장 (BM·수리)',pv_s_wk:'작업 실적 (전체)',pv_s_hr:'인원',pv_s_io:'입·퇴사',pv_join:'입사',pv_quit:'퇴사',pv_active:'재직',ft_total:'건수',ftv_all:'Alarm + All By-Pass',ftv_alarm:'Alarm(BM) 만',ftv_abp:'All By-Pass 만',dq_kra:'국내 알람 원장이 비어 수선실적 BM 으로 세는 중',dq_kra_a:'/upload/ 에서 「CS 알람관리」 워크북을 «알람» 대상으로 올리세요',dq_krb:'국내 All By-Pass 원장이 비어 그 지표가 0 입니다',dq_krb_a:'같은 워크북을 «올바이패스» 대상으로 한 번 더 올리세요',dq_divj:'실적 행에 사업부가 안 붙었습니다 — 사업부 필터에서 그 행은 그냥 통과합니다',dq_divj_a:'데이터 관리 › 데이터 품질 › 설치현황 연결에서 어느 운영단위·S/N 인지 보고 고치세요',dq_krj:'국내 원장 행이 설치현황과 안 이어졌습니다 — 단지·라인이 「미상」으로 몰립니다',dq_krj_a:'원장의 SEQP S/N 표기를 설치현황 S/N 과 맞추세요',ft_alarm:'Alarm(BM)',ft_abp:'All By-Pass',ft_tot:'Total',ch_cip:'CIP 진행 현황',note_cip:'대상 = Not yet + 완료 · 완료 = 완료일 입력 건 · 진행율은 툴팁',cip_t:'대상',cip_d:'완료',cip_p:'진행율',edu_tt:'대상 {n}명',
  tbl_top:'고장 원인 TOP 3',th_cause:'원인',th_cnt:'건수',th_al:'Alarm Message',th_act:'조치',top_more:'외 {n}종',top_etc:'기타 {n}건 · 알람유형 미기재 {m}건',top_var:'(표기 {n}종 묶음)',
  top_alfb:'* 알람유형(Z열) 미기재 — 현상(AA열)으로 표기',
- tbl_op:'Scrubber 가동 현황',note_op:'가동 = 설비상태 Operation · 미가동 = 반납·Operation 을 뺀 나머지 상태 전부 · W/I = 무상(보증 안) · W/O = 유상 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 = 사이트별 설정(셀 ✎ 클릭 · 기본 40) · PM = 해당 구간 TBM · 마감일 기준',op_corp:'법인',op_corp2:'법인',op_cust2:'고객사',op_camp2:'단지',op_na:'미배치',op_na_t:'단지가 안 적힌 설비·인원 — 합계에서 빼지 않고 여기 담습니다',op_etc:'기타',op_etc_t:'상위 12개 밖 {n}개 — 합계가 맞게 여기 담습니다',op_wna:'⚠ 워런티 미기재 {n}대는 W/O 에 섞여 있습니다',op_nodata:'자료없음',op_nodata_t:'인원 자료를 아직 못 받았습니다 — 0명이 아닙니다',op_nop:'인원 자료 미수신 {n}개 법인: {list}',op_mrg:'{lbl} 는 한 팀이 담당해 한 행으로 셉니다 ({list})',op_amb:'⚠ 담당 FAB 을 알 수 없는 {n}명은 그 고객사의 가장 큰 행에 담았습니다',op_div:'구분',op_run_u:'가동 장비 대수',op_run_c:'가동 챔버수',op_idle:'미가동',op_staff:'담당 인원(명)',op_to:'목표 TO',op_gap:'증감(명)',op_hire:'모집계획',op_chp:'인당 챔버',op_pm:'PM(건)',op_unit:'장비',op_ch:'챔버',op_expat:'주재원',op_local:'현채인',op_fit:'적정 챔버',op_need:'인원(명)',
+ tbl_op:'Scrubber 가동 현황',note_op:'가동 = 설비상태 Operation · 미가동 = 반납·Operation 을 뺀 나머지 상태 전부 · W/I = 무상(보증 안) · W/O = 유상 · 챔버 DUAL=2·SINGLE=1 · 적정 챔버 = 사이트별 설정(셀 ✎ 클릭 · 기본 40) · PM = 해당 구간 TBM · 마감일 기준',op_corp:'법인',op_corp2:'법인',op_cust2:'고객사',op_camp2:'단지',op_na:'미배치',op_na_t:'단지 미기재 설비·인원 — 합계에 포함하도록 이 행에 모았습니다',op_etc:'기타',op_etc_t:'상위 12개 외 {n}개 — 합계에 포함하도록 이 행에 모았습니다',op_wna:'⚠ 워런티 미기재 {n}대는 W/O에 포함',op_nodata:'자료 없음',op_nodata_t:'인원 자료 미수신 (0명이 아님)',op_nop:'인원 자료 미수신 {n}개 법인: {list}',op_mrg:'{lbl}: 한 팀이 담당하여 한 행으로 집계 ({list})',op_amb:'⚠ 담당 FAB 미상 {n}명은 해당 고객사의 최대 행에 포함',op_div:'구분',op_run_u:'가동 장비 대수',op_run_c:'가동 챔버수',op_idle:'미가동',op_staff:'담당 인원(명)',op_to:'목표 TO',op_gap:'증감(명)',op_hire:'모집계획',op_chp:'인당 챔버',op_pm:'PM(건)',op_unit:'장비',op_ch:'챔버',op_expat:'주재원',op_local:'현채인',op_fit:'적정 챔버',op_need:'인원(명)',
  
  ins_pm:'올해 PM 진행율 {p}% (계획 {a} · 완료 {b})',ins_ft:'최근 30일 고장 {n}건 · 직전 30일 대비 {p}',ins_hc:'재직 {n}명 · 이번 달 입사 {a} · 퇴사 {b}',
  ax_t:'축 범위 (빈칸=자동)',
@@ -1033,7 +1033,10 @@ function labelOn(fill){
   const L=(0.299*r+0.587*g+0.114*b)/255;
   return L>0.6?'#0B0F14':'#F8FAFC';
 }
-function destroyMk(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}}
+function destroyMk(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}
+  /* 차트를 치우면 그 카드의 «값» 노트도 정의 문구로 되돌린다(v173) — 자료가 빠진 필터에서 옛 값 요약이 남지 않게 */
+  try{ const c=document.getElementById(id), card=c&&c.closest(GST.CARD_SEL||'.card'), n=card&&card.querySelector('.card-note[data-i]');
+       if(n){ n.textContent=t(n.getAttribute('data-i')); n.classList.remove('hasv','warn','ml'); } }catch(e){} }
 function baseScales(TH,stacked){
   return {x:{stacked:!!stacked,ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{display:false}},
           y:{stacked:!!stacked,grace:'20%',beginAtZero:true,ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}};  // grace 20% — 최댓값 라벨 잘림 방지
@@ -2176,7 +2179,7 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
           return [x.name,x.site,fmtD(e.bdate),fmtD(e.vdate),fmtD(e.lv2date),fmtD(e.lv3date)];})};
     };
     const _le=rate.length-1;
-    setNote('cEdu',t('nEdu').replace('{p}',rate[_le]??'—').replace('{d}',don[_le]||0).replace('{t}',tgt[_le]||0));
+    setNote('cEdu',t('nEdu').replace('{p}',rate[_le]??'—').replace('{d}',don[_le]||0).replace('{t}',tgt[_le]||0),'val');
   }
 
   // ===== 운영 지표 (인원현황·휴가현황·설치) =====
@@ -2238,7 +2241,7 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
           plugins:[valLabelPlugin]});
         const _ai=att.length-1;
         setNote('cAtt',t('nAtt').replace('{a}',att[_ai]??0).replace('{l}',lv[_ai]??0)
-          .replace('{j}',(jb[_ai]??0).toLocaleString()).replace('{p}',pj[_ai]??0));
+          .replace('{j}',(jb[_ai]??0).toLocaleString()).replace('{p}',pj[_ai]??0),'val');
       }
       // 총인원 vs TO (둘 다 '명' — 단일축)
       {
@@ -2271,7 +2274,7 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
         };
         const _ti=hv.length-1, _gap=Math.round((hv[_ti]-to[_ti])*10)/10;
         setNote('cTo',t('nTo').replace('{p}',to[_ti]?Math.round(hv[_ti]/to[_ti]*100):'—')
-          .replace('{d}',(_gap>=0?'+':'')+_gap));
+          .replace('{d}',(_gap>=0?'+':'')+_gap),'val');
       }
       // 관리 챔버 + 인당 관리 (QBR: 챔버 바 + 인당 라인)
       {
@@ -2303,7 +2306,7 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
             rows:rs.map(r=>[String(r[CI.customer]||''),String(r[CI.fab]||''),String(r[CI.type]||''),fmtD(pd(r[CI.fabIn]))])};
         };
         const _ci=per.length-1;
-        setNote('cChp',t('nChp').replace('{v}',per[_ci]??0).replace('{c}',(chs[_ci]||0).toLocaleString()).replace('{h}',hv[_ci]||0));
+        setNote('cChp',t('nChp').replace('{v}',per[_ci]??0).replace('{c}',(chs[_ci]||0).toLocaleString()).replace('{h}',hv[_ci]||0),'val');
       }
     } else { ['cAtt','cTo','cChp'].forEach(destroyMk); }
   }
@@ -2343,7 +2346,7 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
           rows:rs.map(x=>[x.site,x.item,fmtD(x.ap),fmtD(x.done)])};
       };
       const _pi=rate.length-1;
-      setNote('cCip',t('nCip').replace('{p}',rate[_pi]??'—').replace('{n}',((tgt[_pi]||0)-(don[_pi]||0)).toLocaleString()));
+      setNote('cCip',t('nCip').replace('{p}',rate[_pi]??'—').replace('{n}',((tgt[_pi]||0)-(don[_pi]||0)).toLocaleString()),'val');
     }
   }
 
@@ -2386,7 +2389,7 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
           tooltip:{callbacks:{footer:it=>'Σ '+it.reduce((a,i)=>a+i.parsed.y,0)}}},
         scales:baseScales(TH,true)},
       plugins:[valLabelPlugin]});
-    setNote('cCareer',_last.map(a=>a[0]+' '+a[1]).join(' · '));
+    setNote('cCareer',_last.map(a=>a[0]+' '+a[1]).join(' · '),'val');
   }
   {
     const {P,labels,u}=PU('cMan');
@@ -2433,7 +2436,7 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
     /* v163 — 분모는 현장(O) 그대로다. «현장(O)인데 직책이 팀장·OFFICE·단지장»은 체크가 맞는지
        확인할 사람 목록이라 카드에 적지 않고 GST.dq(head_ex)로만 보낸다. */
     window._HEADEX=_headEx;
-    setNote('cMan',t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0));
+    setNote('cMan',t('nMan').replace('{v}',_tot).replace('{pm}',hPM[_mi]??0),'val');
   }
   // ===== PM S-커브 (올해, 월 고정) =====
   let scPlan=0, scDone=0;
@@ -2535,7 +2538,9 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
          「올바만」을 골라 놓고 합계 건수를 읽게 되어, 카드가 자기 그림과 다른 말을 한다. */
       const _fi=shown.length-1, _pv=shown[_fi-1]||0;
       const _fd=GST.pctDelta(shown[_fi]||0,_pv);
-      let _note=t('nFt').replace('{n}',shown[_fi]||0).replace('{d}',_fd==null?'—':(_fd>0?'+':'')+_fd+'%');
+      /* v173 — 값(_v0 · 늘 보인다)과 설명(_note · 「설명 표시」를 켰을 때만)을 따로 쌓는다(GST.setNote {v,x}) */
+      const _v0=t('nFt').replace('{n}',shown[_fi]||0).replace('{d}',_fd==null?'—':(_fd>0?'+':'')+_fd+'%');
+      let _note='';
       /* «막대가 전부 0» 은 두 가지 뜻이다 — 정말 고장이 없었거나, 이 조건의 행에 BM 단계가
          아예 없거나. 둘은 완전히 다른 사실인데 화면은 똑같이 0으로만 보인다(가장 설명하기
          어려운 실패). 그래서 후자면 «어떤 단계가 있는지» 를 그대로 적어 준다. */
@@ -2596,8 +2601,9 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
       window._KRRND = GST.ORG.rndScan(KRAx.concat(KRBx).map(x=>x.lineN||x.srcLine));
       /* 모드 표시는 «맨 앞»에 둔다 — 위의 ⚠ 경고들이 앞에 덧붙으므로, 여기서 얹어야
          「지금 무엇을 보고 있는지」가 문장 첫머리에 온다. 노트의 건수도 그 계통 값이다. */
-      if(FV!=='all')_note='【'+t(FV==='alarm'?'ftv_alarm':'ftv_abp')+'】 '+_note;
-      setNote('cFt',_note, ((!KR_ON&&window._KRWHY)||window._KRWHYB)?'warn':'');   // 원장 문제는 «숫자의 뜻이 바뀌는» 경고 — 색으로 가른다(v135)
+      const _v=(FV!=='all'?'【'+t(FV==='alarm'?'ftv_alarm':'ftv_abp')+'】 ':'')+_v0;
+      _note=_note.replace(/\n{2,}/g,'\n').replace(/^[\s·]+|\s+$/g,'');
+      setNote('cFt',{v:_v,x:_note}, ((!KR_ON&&window._KRWHY)||window._KRWHYB)?'warn':'');   // 원장 문제는 «숫자의 뜻이 바뀌는» 경고 — 색으로 가른다(v135)
     }
     // PPT 내보내기용 — 주/월 양단위 Alarm·ABP 시리즈 스냅샷 (표시 전용 · 위 차트 계산과 동일 식)
     // 앵커는 KPI와 동일한 asOf(마감 통합 기준일) — 월 마감만 잡아도 주간 시리즈가 그 시점으로 정렬
@@ -3013,7 +3019,7 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
        if(_noP.length)parts.push(t('op_nop').replace('{n}',_noP.length)
          .replace('{list}',_noP.slice(0,6).map(v=>v.lbl).join(' · ')
            +(_noP.length>6?' 외 '+(_noP.length-6):'')));
-       if(CI.state<0)parts.push('⚠ 설비상태 열이 없어 옛 날짜 기준으로 셉니다');
+       if(CI.state<0)parts.push('⚠ 설비상태 열이 없어 반입·가동일 기준으로 집계 중');
        /* «미배치»·«기타» 행이 무엇인지 한 줄로 밝힌다 — 행 이름만 보면 사람이
           「왜 이런 게 있지」로 읽는다. 조용히 빼지 않되, 왜 담았는지도 말한다. */
        { if(D.some(d=>d.k===_NA))parts.push(_NA+' '+t('op_na_t'));
@@ -3037,7 +3043,12 @@ function render(){ GST.dq&&GST.dq.reset('report_kr');   // ⚑ 국내 데모 —
        if(uk.length)parts.push(t('op_unk')
          .replace('{n}',uk.reduce((s,k)=>s+_unk[k],0).toLocaleString())
          .replace('{v}',GST.topN(window._OPUNK, 3, t('op_unk_u'))));
-       x.textContent=parts.join(' · ');
+       /* v173 — 이 줄들은 «설명»이라 기본으로 숨는다(「설명 표시」를 켜면 보인다). 다만 ⚠ 로 시작하는 사실
+          (워런티 미기재가 W/O 에 섞임 · 처음 보는 설비상태 · 담당 FAB 미상)은 표 숫자의 뜻을 바꾸므로
+          ⚠ 하나로 남기고 누르면 전문이 뜬다(core 의 .card-note.warn · 줄 단위로 나눠 보인다). */
+       x.textContent=parts.join('\n');
+       x.classList.toggle('ml', parts.length>1);
+       x.classList.toggle('warn', parts.some(v=>/^⚠/.test(v)));
        x.style.display=parts.length?'':'none';
      }}
     const body=document.getElementById('opTblBody');

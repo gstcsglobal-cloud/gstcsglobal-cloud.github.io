@@ -557,19 +557,23 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #gstSrcDetail{display:no
 @keyframes gstPop{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
 
 /* ── 설명 표시 (v172) — 꺼져 있으면(기본) 근거·산식·사용법 설명을 숨긴다. 켜는 것은 관리자(셸 「설명 표시」). 판정은 core GST.explainOn 한 곳 ──
-   주간현황은 core 가 늘 켜 둔다(GST.EXPLAIN_SKIP). 팝업 안(데이터 품질 · 표 팝업)의 설명은 사람이 «열어서» 본 것이라 그대로 둔다. */
-body:not(.gst-explain) .card-note:not(.warn),
+   주간현황도 같다(v173 — 처음엔 예외였다). 팝업 안(데이터 품질 · 표 팝업)의 설명은 사람이 «열어서» 본 것이라 그대로 둔다.
+   카드 노트의 «값» 조각(.nv · GST.setNote)은 늘 보이고, «설명» 조각(.nx)만 숨긴다 — 값 요약까지 숨기면 정보가 사라진다. */
+body:not(.gst-explain) .card-note:not(.warn):not(.hasv),
+body:not(.gst-explain) .card-note .nx,
 body:not(.gst-explain) .fill-hint,
 body:not(.gst-explain) .sub[data-i="sub"],
 body:not(.gst-explain) .hb-card h2 .s,
 body:not(.gst-explain) h2 > span.s[data-i]:not(.keep),
 body:not(.gst-explain) .hb-note,
-body:not(.gst-explain) .st-note,
+body:not(.gst-explain) .st-note, body:not(.gst-explain) .sec-note,
 body:not(.gst-explain) .hb-status:not(.err){display:none !important}
 body:not(.gst-explain) .gst-dq .card-note{display:block !important}
 /* 숫자의 뜻이 바뀌는 경고는 ⚠ 하나로 — 누르면 core 가 그 글을 띄운다 */
 body:not(.gst-explain) .card-note.warn{font-size:0 !important;line-height:0 !important;display:inline-flex !important;align-items:center;cursor:pointer;
   min-height:20px;margin:2px 0;white-space:nowrap}
 body:not(.gst-explain) .card-note.warn::before{content:'⚠';font-size:14px;line-height:1;color:var(--warn)}
+/* 경고 + 값 — ⚠ 옆에 값 요약은 그대로 읽힌다(글자 크기를 되돌린다) */
+body:not(.gst-explain) .card-note.warn .nv{font-size:var(--fs-caption);line-height:1.45;margin-left:6px;white-space:normal;color:var(--txt-muted);font-weight:400}
 .gst-warn{font:inherit;font-size:13px;line-height:1;border:0;background:transparent;color:var(--warn);cursor:pointer;padding:0 3px;vertical-align:0}
 .gst-warn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}

@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=168"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=169"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:#1d2433;background:#F5F6F8;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
@@ -128,15 +128,15 @@ const TABLES = [
        안 붙으면 사업부·단지·라인이 조용히 「미상」으로 몰린다(v135 · 7단계). */
     after:'주간현황·설치현황의 데이터 품질 카드에서 S/N 조인율과 「설비상태」 인식을 확인하세요 — 낮으면 단지·라인이 미상으로 몰립니다.' },
   { rid:'edu', label:'교육현황 (엑셀 또는 CSV)',      table:'sheet_edu',     kind:'import',
-    after:'인원 현황 → 데이터 품질 카드에서 「교육현황과 못 이은 재직 인원」이 0 인지 확인하세요.' },
+    after:'인원·교육 화면의 「확인할 것」에서 「교육현황과 못 이은 재직 인원」이 0 인지 확인하세요.' },
   { rid:'roster', label:'인원현황 (엑셀 또는 CSV)',   table:'sheet_roster',  kind:'import',
-    after:'인원 현황에서 단지·라인 목록이 비지 않았는지, 재직 인원 수가 맞는지 확인하세요.' },
+    after:'인원·교육 화면에서 단지·라인 목록이 비지 않았는지, 재직 인원 수가 맞는지 확인하세요.' },
   { rid:'leave', label:'휴가현황 (엑셀 또는 CSV)',    table:'sheet_leave',   kind:'import',
     after:'주간현황의 인당 공수(출근 연인원에서 휴가를 뺀 값)가 상식적인지 확인하세요.' },
   { rid:'cipf11', label:'CIP F11 (엑셀 또는 CSV)',  table:'sheet_cip_f11', kind:'import', addCols:true, fab:'F11',
-    after:'CIP 현황에서 분모(대상 건수)가 줄지 않았는지 확인하세요 — 줄었다면 새 항목 열이 빠진 것입니다.' },
+    after:'CIP 진행 화면에서 분모(대상 건수)가 줄지 않았는지 확인하세요 — 줄었다면 새 항목 열이 빠진 것입니다.' },
   { rid:'cipf16', label:'CIP F16 (엑셀 또는 CSV)',  table:'sheet_cip_f16', kind:'import', addCols:true, fab:'F16',
-    after:'CIP 현황에서 분모(대상 건수)가 줄지 않았는지 확인하세요 — 줄었다면 새 항목 열이 빠진 것입니다.' },
+    after:'CIP 진행 화면에서 분모(대상 건수)가 줄지 않았는지 확인하세요 — 줄었다면 새 항목 열이 빠진 것입니다.' },
   { rid:'abp', label:'All By-Pass (엑셀 또는 CSV · 세로형)', table:'sheet_abp',     kind:'import',
     after:'주간현황 Alarm 차트에서 해외 All By-Pass 막대가 서는지 확인하세요.' },
   /* 국내 알람 원장 — 한 워크북(.xlsx)에 K·P·H 세 운영단위 시트가 «각자 다른 양식»으로 들어 있다.

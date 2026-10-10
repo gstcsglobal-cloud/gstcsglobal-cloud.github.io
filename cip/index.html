@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIP 현황 · CS Global Team</title>
+<title>CIP 진행 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/chart.umd.min.js"></script>
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=168"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=169"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -131,14 +131,14 @@ tr:hover td{background:var(--glass-hover)}
 @media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}}
 @media(max-width:768px){.card h3{padding-right:0}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=168">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=169">
 </head>
 <body>
 
 <div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
-    <h1 data-i="title">CIP 현황</h1>
+    <h1 data-i="title">CIP 진행</h1>
     <div class="sub" data-i="sub">스크러버 개조·점검(CIP) 항목별 진행 관리</div>
   </div>
   <div class="header-right">
@@ -349,7 +349,7 @@ const URLS={
 // F11에 없는 area·mtype은 못 찾으면 -1이 되고, 기존 -1 처리 로직이 그대로 받는다.
 
 const T={
-ko:{title:'CIP 현황',sub:'스크러버 개조·점검(CIP) 항목별 진행 관리',back:'← 메인으로',refresh:'새로고침',
+ko:{title:'CIP 진행',sub:'스크러버 개조·점검(CIP) 항목별 진행 관리',back:'← 메인으로',refresh:'새로고침',
   per_w:'주별',per_m:'월별',per_note:'최근 12개 구간',per_ws:'주',per_ms:'월',mon_u:'월',cutoff:'마감',
   ax_t:'축 범위 (빈칸=자동)',ax_min:'최소',ax_max:'최대',ax_apply:'적용',ax_reset:'초기화',
   sl_site:'사이트',sl_group:'공정',sl_floor:'층·구역',sl_model:'모델',sl_item:'CIP 항목',sl_search:'검색',
@@ -378,7 +378,7 @@ ko:{title:'CIP 현황',sub:'스크러버 개조·점검(CIP) 항목별 진행 �
   no_data:'조건에 맞는 데이터가 없습니다',search_ph:'S/N, Code, 세부공정...',rd_cip:'S/N|Floor|구분|항목|적용일|완료일',rd_cip_sn:'S/N|사이트|Floor|잔여 항목|항목',loading:'데이터 불러오는 중...',
   sec_ov:'개요',sec_proc:'공정',sec_item:'항목·설비',sec_dt:'상세',
   warn_cols:'CIP 항목 열 수가 예상과 다릅니다 ({s}: 예상 {e}개 · 실제 {a}개) — 시트에 열이 추가·삭제되었는지 확인하세요'},
-en:{title:'CIP Status',sub:'Scrubber retrofit/inspection (CIP) progress by item',back:'← Main',refresh:'Refresh',
+en:{title:'CIP progress',sub:'Scrubber retrofit/inspection (CIP) progress by item',back:'← Main',refresh:'Refresh',
   per_w:'Weekly',per_m:'Monthly',per_note:'last 12 periods',per_ws:'W',per_ms:'M',mon_u:'',cutoff:'As of',
   ax_t:'Axis range (blank=auto)',ax_min:'Min',ax_max:'Max',ax_apply:'Apply',ax_reset:'Reset',
   sl_site:'Site',sl_group:'Process',sl_floor:'Floor',sl_model:'Model',sl_item:'CIP Item',sl_search:'Search',
@@ -407,7 +407,7 @@ en:{title:'CIP Status',sub:'Scrubber retrofit/inspection (CIP) progress by item'
   no_data:'No data found',search_ph:'S/N, Code, sub-process...',rd_cip:'S/N|Floor|Group|Item|Applied|Done',rd_cip_sn:'S/N|Site|Floor|Remaining|Items',loading:'Loading...',
   sec_ov:'Overview',sec_proc:'Process',sec_item:'Item & Unit',sec_dt:'Detail',
   warn_cols:'CIP item column count differs ({s}: expected {e}, found {a}) — check for added/removed columns'},
-zh:{title:'CIP 现况',sub:'洗涤器改造·点检(CIP)按项目进度管理',back:'← 主页',refresh:'刷新',
+zh:{title:'CIP进度',sub:'洗涤器改造·点检(CIP)按项目进度管理',back:'← 主页',refresh:'刷新',
   per_w:'按周',per_m:'按月',per_note:'最近12个区间',per_ws:'周',per_ms:'月',mon_u:'月',cutoff:'截止',
   ax_t:'轴范围 (空=自动)',ax_min:'最小',ax_max:'最大',ax_apply:'应用',ax_reset:'重置',
   sl_site:'站点',sl_group:'工艺',sl_floor:'楼层',sl_model:'型号',sl_item:'CIP项目',sl_search:'搜索',
@@ -436,7 +436,7 @@ zh:{title:'CIP 现况',sub:'洗涤器改造·点检(CIP)按项目进度管理',b
   no_data:'无数据',search_ph:'S/N、Code、细分工艺...',rd_cip:'S/N|楼层|分组|项目|适用日|完成日',rd_cip_sn:'S/N|站点|楼层|剩余项目|项目',loading:'加载中...',
   sec_ov:'概览',sec_proc:'工艺',sec_item:'项目·设备',sec_dt:'明细',
   warn_cols:'CIP项目列数与预期不符 ({s}: 预期{e}个 · 实际{a}个) — 请确认是否增删了列'},
-ja:{title:'CIP 状況',sub:'スクラバー改造·点検(CIP)の項目別進捗管理',back:'← メイン',refresh:'更新',
+ja:{title:'CIP進捗',sub:'スクラバー改造·点検(CIP)の項目別進捗管理',back:'← メイン',refresh:'更新',
   per_w:'週別',per_m:'月別',per_note:'直近12区間',per_ws:'週',per_ms:'月',mon_u:'月',cutoff:'締め',
   ax_t:'軸範囲 (空欄=自動)',ax_min:'最小',ax_max:'最大',ax_apply:'適用',ax_reset:'リセット',
   sl_site:'サイト',sl_group:'工程',sl_floor:'フロア',sl_model:'モデル',sl_item:'CIP項目',sl_search:'検索',
@@ -902,7 +902,7 @@ function render(){ GST.dq&&GST.dq.reset('cip');
           : fR.filter(x=>(!x.ap||x.ap<=P[i].end)&&x.done&&x.done<=P[i].end);
         return rdet(recs,P[i].label+' — '+(di===0?t('s_tgt'):t('s_done'))+' '+recs.length);
       };
-      setNote('cipTrend',t('ins_rate').replace('{p}',rt[rt.length-1]??'—').replace('{n}',(tgt[tgt.length-1]-don[don.length-1]).toLocaleString()));
+      setNote('cipTrend',t('ins_rate').replace('{p}',rt[rt.length-1]??'—').replace('{n}',(tgt[tgt.length-1]-don[don.length-1]).toLocaleString()),'val');   // 값 요약 — 늘 보인다(v173)
     }
   }
 
@@ -1091,7 +1091,7 @@ function render(){ GST.dq&&GST.dq.reset('cip');
       });
       return rdet(recs,B[b]+' — '+t('s_rem')+' '+recs.length);
     };
-    setNote('cipAge',cnt[3]>0?t('ins_old').replace('{n}',cnt[3].toLocaleString()):t('note_age'));
+    setNote('cipAge',cnt[3]>0?t('ins_old').replace('{n}',cnt[3].toLocaleString()):t('note_age'), cnt[3]>0?'val':'');   // 180일 넘은 미착수는 사실(값) · 정의는 설명(v173)
   }
 
   // ── 층·구역별 잔여 ──

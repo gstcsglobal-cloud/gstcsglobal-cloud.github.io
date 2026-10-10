@@ -167,9 +167,9 @@ console.log('[1] 한 고객사가 여러 법인으로 갈려도 «각 행이 자
     is(!!r && n === want[k],
        `${k} 행의 담당 인원 ${want[k]}명 (실제 ${r ? (r.expat + '+' + r.local) : '행 없음'})`);
   });
-  is(!body.some(r => r.expat === '자료없음'),
+  is(!body.some(r => /^자료\s*없음$/.test(r.expat)),
      '「자료없음」 행이 없다 — 값은 다 있는데 못 받아 가던 자리다'
-     + (body.filter(r => r.expat === '자료없음').map(r => r.lbl).join(' · ') || ''));
+     + (body.filter(r => /^자료\s*없음$/.test(r.expat)).map(r => r.lbl).join(' · ') || ''));
 }
 
 console.log('\n[2] 합계는 그대로다 — 두 번 세지도, 사라지지도 않는다');
