@@ -222,10 +222,11 @@ console.log('[3] 셸 — 부팅 화면');
 ctx = await ctxOf(); let ps = await ctx.newPage(); watch(ps);
 await ps.goto(BASE + '/', { waitUntil:'domcontentloaded' }); await ps.waitForTimeout(500);
 const b0 = await ps.evaluate(() => { const b = document.getElementById('boot'); return b ? { pe: getComputedStyle(b).pointerEvents, z: getComputedStyle(b).zIndex } : null; });
+/* v178 — 부팅 화면에 «무엇을 읽는지» 목록을 두지 않는다(사용자 지시 「로딩 화면에 수선실적·설치현황 이런 거 그냥 빼」) · 진행률은 실제 읽기에서 온다.
+   «떠 있는 그 순간»에 읽는다 — 읽기가 빨리 끝나면 1.8초 뒤에는 이미 걷혀 있어(정상) 검사가 빈 글자를 본다 */
+const lg = await ps.evaluate(() => ({ log:!!document.getElementById('bootLog'), txt:(document.getElementById('boot') || {}).textContent || '', pct:(document.getElementById('bootPct') || {}).textContent || '' }));
 is(!!b0 && b0.pe === 'none', '세션 첫 화면에 부팅 화면이 뜬다 · 누르는 것을 막지 않는다(pointer-events none)');
 await ps.waitForTimeout(1300);
-/* v178 — 부팅 화면에 «무엇을 읽는지» 목록을 두지 않는다(사용자 지시 「로딩 화면에 수선실적·설치현황 이런 거 그냥 빼」) · 진행률은 실제 읽기에서 온다 */
-const lg = await ps.evaluate(() => ({ log:!!document.getElementById('bootLog'), txt:(document.getElementById('boot') || {}).textContent || '', pct:(document.getElementById('bootPct') || {}).textContent || '' }));
 is(!lg.log && !/수선|설치|sheet_|행/.test(lg.txt) && /%$/.test(lg.pct), '부팅 화면 — 자료 이름·표 이름·행 수 목록이 없다 · 원과 진행률만 (' + lg.pct + ')');
 if (SHOT) await ps.screenshot({ path: SHOT + '/boot.png' });
 await ps.waitForFunction(() => !document.getElementById('boot'), null, { timeout:12000 }).catch(() => {});
@@ -234,6 +235,10 @@ await ps.reload({ waitUntil:'domcontentloaded' }); await ps.waitForTimeout(500);
 is(await ps.evaluate(() => !document.getElementById('boot')), '같은 세션에서 다시 열면 부팅 화면은 다시 안 뜬다');
 /* 읽는 중 막대 — 켜진 탭이 300ms 넘게 읽으면 */
 const homeF = ps.frames().find(f => /\/hub\//.test(f.url()));   // 첫 탭 = 글로벌 현황(v178 · 홈을 합쳤다)
+/* 진짜 읽기(다시 연 첫 탭의 자료 읽기)가 끝나 막대가 내려간 뒤에 시험한다 — 글로벌 현황은 홈을 합치며 읽는 표가 늘어(목표·기준·조치 사항),
+   다시 연 직후에는 진짜 읽기가 300ms 를 넘겨 막대가 이미 켜져 있다(그건 정상이다) */
+await ps.waitForFunction(() => { const f = document.getElementById('fprog'); return f && !f.classList.contains('on'); }, null, { timeout:15000 }).catch(() => {});
+await ps.waitForTimeout(400);
 await homeF.evaluate(() => window.parent.postMessage({ type:'gst-boot', ev:'begin', id:'zz1', key:'wk', kind:'fg' }, '*'));
 await ps.waitForTimeout(150);
 const fp0 = await ps.evaluate(() => document.getElementById('fprog').classList.contains('on'));
