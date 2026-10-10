@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 169;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 170;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -3671,6 +3671,7 @@ GST.applyI18n = function(t, lang){
   try{ GST.filters.relabel(); }catch(e){}
   try{ GST.relabelChrome(); }catch(e){}
   try{ GST._srcChip(); }catch(e){}
+  try{ GST._layoutRelabel(); }catch(e){}
 };
 /* 카드 노트 한 곳 (report·cip 이 byte 까지 같은 사본을 들고 있었다). sev='warn' 이면 색·굵기로 «화면 전체의 뜻이
    바뀌는 경고»를 가른다(v92 규약대로 자리는 노트 맨 앞 그대로). 줄바꿈이 든 문장은 pre-line 으로 — 마크업을
@@ -6256,6 +6257,118 @@ GST.pptCard = async function(id){
    ============================================================ */
 GST.CARD_SEL = '.card,.trend-card,.cross-card,.tablecard';
 GST.cardOf = function(el){ return (el && el.closest) ? el.closest(GST.CARD_SEL) : null; };
+
+/* ============================================================
+   차트 배치 층 — GST.chartLayout (v174 · 2단계 2차 «차트 정리»)
+   ------------------------------------------------------------
+   사용자 위임: 「지우면 안 되는 차트는 니가 판단해」. 판정표는 docs/v2/PLAN.md 4절 · CLAUDE.md v174 절.
+   ⚠ 차트를 «다시 짜지» 않는다. 기존 차트 코드(숫자·세부내역·필터 토글·PPT)는 한 줄도 안 건드리고,
+     «어느 카드를 어디에 보이나»만 여기서 정한다 — 같은 모양의 카드를 새 부품으로 옮기면 드릴·필터 토글·
+     축 편집·내보내기가 카드마다 조용히 갈린다(제2원칙). 되돌리기는 그 페이지의 spec 한 줄이다.
+   spec = { page, groups:[{ key, at?, items:[[canvasId|선택자, {ko,en,zh,ja}], …] }], retire:[canvasId|선택자, …] }
+     · groups  — 같은 질문(「어디에 몰리나」)의 카드를 한 자리에 모으고 «기준» 단추로 하나만 보인다.
+                 at 을 주면 그 카드 자리에(그 카드가 묶음 밖이면 그 앞에) 선다. 고른 기준은 이 PC 에 기억한다.
+     · retire  — 다른 카드·KPI 와 같은 그림이라 화면에서 뺀 카드. 지우지 않고 숨긴다(data-gst-retired).
+   · 숨은 카드(묶음의 다른 기준 · 은퇴)는 폭이 0 이라 PPT 전체 내보내기(pptAuto)가 저절로 건너뛴다 — 화면에 보이는 것만 나간다.
+   · 카드를 옮기거나 숨겨 격자 칸이 비면 열 수를 맞춘다(gst-n1 · gst-n2 · gst-n0 = 빈 격자 숨김).
+   ============================================================ */
+GST.LAYOUT_T = { ko:{axis:'기준'}, en:{axis:'By'}, zh:{axis:'维度'}, ja:{axis:'軸'} };
+GST._layouts = [];
+GST._layoutFind = function(sel){
+  if(!sel) return null;
+  const el = /^[#.\[]/.test(sel) ? document.querySelector(sel) : document.getElementById(sel);
+  return el ? GST.cardOf(el) : null;
+};
+GST._layoutCols = function(gr){
+  const c = String(gr.className || '');
+  return /\bgrid3\b|grid3-/.test(c) ? 3 : /\bgrid2\b|grid2-|grid2e\b/.test(c) ? 2 : 0;
+};
+GST._layoutFit = function(grids){
+  grids.forEach(function(gr){
+    if(!gr || !gr.classList) return;
+    const cols = GST._layoutCols(gr); if(!cols) return;
+    const n = [].filter.call(gr.children, function(k){ return k.nodeType===1 && !k.hasAttribute('data-gst-alt') && !k.hasAttribute('data-gst-retired'); }).length;
+    gr.classList.remove('gst-n0','gst-n1','gst-n2');
+    if(n===0) gr.classList.add('gst-n0');
+    else if(n===1 && cols>1) gr.classList.add('gst-n1');
+    else if(n===2 && cols>2) gr.classList.add('gst-n2');
+  });
+};
+GST._layoutLbl = function(l){ const L = (GST._lang && GST._lang()) || 'ko'; return (l && (l[L] || l.ko)) || ''; };
+GST.chartLayout = function(spec){
+  spec = spec || {};
+  const page = spec.page || (GST.pagePath ? GST.pagePath() : location.pathname);
+  const grids = new Set(), rec = { page:page, groups:[], retired:[] };
+  (spec.retire || []).forEach(function(sel){
+    const c = GST._layoutFind(sel); if(!c) return;
+    if(c.parentNode) grids.add(c.parentNode);
+    c.setAttribute('data-gst-retired', '1'); rec.retired.push(sel);
+  });
+  (spec.groups || []).forEach(function(g){
+    const items = (g.items || []).map(function(it){ return { id:it[0], l:it[1], card:GST._layoutFind(it[0]) }; })
+                                 .filter(function(x){ return x.card && !x.card.hasAttribute('data-gst-retired'); });
+    if(items.length < 2) return;
+    const at = (g.at && GST._layoutFind(g.at)) || items[0].card;
+    items.forEach(function(x){ if(x.card.parentNode) grids.add(x.card.parentNode); });
+    /* 묶음 카드를 at 자리에 «순서대로» 세운다(at 이 묶음 안이면 그 자신도 그 순서에 선다) */
+    const mark = document.createComment('gst-ax:' + g.key);
+    at.parentNode.insertBefore(mark, at);
+    items.forEach(function(x){ mark.parentNode.insertBefore(x.card, mark); });
+    grids.add(mark.parentNode);
+    mark.parentNode.removeChild(mark);
+    const key = 'gst_ax:' + page + ':' + g.key;
+    let sel = null; try{ sel = localStorage.getItem(key); }catch(e){}
+    if(!items.some(function(x){ return x.id === sel; })) sel = g.def || items[0].id;
+    const G = { key:g.key, items:items, bars:[], sel:sel };
+    const select = function(id, save){
+      G.sel = id;
+      items.forEach(function(x){ if(x.id === id) x.card.removeAttribute('data-gst-alt'); else x.card.setAttribute('data-gst-alt', '1'); });
+      G.bars.forEach(function(b){ [].forEach.call(b.children, function(btn){ btn.setAttribute('aria-pressed', btn.dataset.k === id ? 'true' : 'false'); }); });
+      if(save){ try{ localStorage.setItem(key, id); }catch(e){} }
+      GST._layoutFit(grids);
+      /* 숨어 있던 차트는 폭 0 으로 그려졌다. Chart.js 의 responsive(ResizeObserver)가 보이는 순간 다시 재는 것을 확인했다
+         (t-layout 음성 대조 — 이 줄을 빼도 통과한다). 이 호출은 그 관찰자가 없는 환경을 위한 보험이다. */
+      const cur = items.find(function(x){ return x.id === id; });
+      if(cur && window.Chart && Chart.getChart){
+        const run = function(){ [].forEach.call(cur.card.querySelectorAll('canvas'), function(cv){ try{ const ch = Chart.getChart(cv); if(ch) ch.resize(); }catch(e){} }); };
+        if(window.requestAnimationFrame) requestAnimationFrame(run); else setTimeout(run, 0);
+      }
+    };
+    items.forEach(function(x){
+      const bar = document.createElement('div');
+      bar.className = 'gst-axsel'; bar.setAttribute('role', 'group'); bar.dataset.ax = g.key;
+      bar.setAttribute('aria-label', (GST.LAYOUT_T[(GST._lang && GST._lang()) || 'ko'] || GST.LAYOUT_T.ko).axis);
+      items.forEach(function(y){
+        const b = document.createElement('button'); b.type = 'button'; b.dataset.k = y.id; b.textContent = GST._layoutLbl(y.l);
+        b.addEventListener('click', function(e){ e.stopPropagation(); select(y.id, true); });
+        bar.appendChild(b);
+      });
+      /* 제목 바로 아래 — h3·.card-note «안»에는 두지 않는다(applyLang·setNote 가 textContent 로 덮는다 · v131) */
+      const head = x.card.querySelector('.trend-header') || x.card.querySelector('h3');
+      if(head && head.parentNode === x.card) x.card.insertBefore(bar, head.nextSibling);
+      else if(head && head.parentNode) head.parentNode.insertBefore(bar, head.nextSibling);
+      else x.card.insertBefore(bar, x.card.firstChild);
+      G.bars.push(bar);
+    });
+    select(sel, false);
+    G.select = select;
+    rec.groups.push(G);
+  });
+  GST._layoutFit(grids);
+  GST._layouts.push(rec);
+  return rec;
+};
+/* 언어를 바꾸면 «기준» 단추 글자도 — applyI18n 끝에서 부른다 */
+GST._layoutRelabel = function(){
+  GST._layouts.forEach(function(r){ r.groups.forEach(function(G){
+    G.bars.forEach(function(b){ [].forEach.call(b.children, function(btn){
+      const it = G.items.find(function(x){ return x.id === btn.dataset.k; }); if(it) btn.textContent = GST._layoutLbl(it.l); }); }); }); });
+};
+/* 검사·진단용 — 지금 무엇이 보이나 */
+GST.chartLayout.state = function(){
+  return GST._layouts.map(function(r){ return { page:r.page, retired:r.retired.slice(),
+    groups:r.groups.map(function(G){ return { key:G.key, sel:G.sel, ids:G.items.map(function(x){ return x.id; }) }; }) }; });
+};
 GST.chartCanvases = function(){
   const sel = GST.CARD_SEL.split(',').map(function(s){ return s+' canvas'; }).join(',');
   return [].slice.call(document.querySelectorAll(sel));

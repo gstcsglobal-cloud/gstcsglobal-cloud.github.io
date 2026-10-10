@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=169"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=170"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -143,7 +143,7 @@ canvas{cursor:pointer}
 @media print{.capbtns,.header-right,.slicers,.fchips{display:none!important}.card,.trend-card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 .rk-sc{display:inline-block;min-width:28px;padding:1px 6px;border-radius:6px;font-weight:700;background:var(--surface-2);text-align:center}.rk-sc.mid{background:var(--warn-soft,#fef3c7);color:var(--txt-main)}.rk-sc.hi{background:var(--bad);color:#fff}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=169">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=170">
 </head>
 <body>
 
@@ -641,7 +641,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(141);   // GST.kpiDrill 배지 모드를 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(170);   // GST.chartLayout(v174) · GST.kpiDrill 배지 모드를 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -2697,6 +2697,22 @@ window.openLife=function(sn){ LIFE_SN=sn; const q=document.getElementById('lifeQ
 // 셀에 직접 클릭 핸들러를 달면 절대 실행되지 않으므로, 그 메뉴에 항목으로 합류한다 —
 // 이 페이지의 모든 표·차트에서 S/N을 클릭하면 메뉴 맨 위에 '설비 일대기'가 뜬다.
 GST.snMenuExtra=[{label:()=>'📜 '+t('sec_life'), fn:sn=>openLife(sn)}];
+
+/* 차트 배치 (v174 · 판정표 docs/v2/PLAN.md 4절) — 차트 코드는 그대로 두고 «어디에 무엇을 보이나»만 정한다.
+   · 「어디서」(설비·LINE·모델·공정) 한 카드 · 「왜」(현상·원인·조치·알람) 한 카드 — 같은 질문을 축만 바꿔 묻던 카드들이다.
+   · 뺀 것: 유상 vs 무상(KPI kp5 와 같은 숫자) · 의뢰유형 · 작업시간 분포 · 투입 인원수(판단에 안 쓰이는 구성) ·
+     이상 집중 설비 TOP(같은 섹션의 「고장 위험 설비 TOP 20」이 정본) */
+if(GST.chartLayout) GST.chartLayout({ page:'fault',
+  groups:[
+    { key:'where', items:[['cSn',{ko:'설비',en:'Equipment',zh:'设备',ja:'設備'}], ['cLine',{ko:'LINE',en:'LINE',zh:'LINE',ja:'LINE'}],
+                          ['cModel',{ko:'모델',en:'Model',zh:'型号',ja:'モデル'}], ['cProc',{ko:'공정',en:'Process',zh:'工艺',ja:'工程'}]] },
+    { key:'why', at:'cAlarmP', items:[['cPhenom',{ko:'현상',en:'Symptom',zh:'现象',ja:'現象'}], ['cCause',{ko:'원인',en:'Cause',zh:'原因',ja:'原因'}],
+                          ['cAction',{ko:'조치',en:'Action',zh:'措施',ja:'処置'}], ['cAlarmP',{ko:'알람',en:'Alarm',zh:'报警',ja:'アラーム'}]] },
+    { key:'model', items:[['cRelModel',{ko:'MTBF',en:'MTBF',zh:'MTBF',ja:'MTBF'}], ['cFtfrModel',{ko:'FTFR',en:'FTFR',zh:'FTFR',ja:'FTFR'}]] },
+    { key:'tbm', items:[['cTbmWorker',{ko:'작업자',en:'Technician',zh:'作业员',ja:'作業者'}], ['cTbmLine',{ko:'LINE',en:'LINE',zh:'LINE',ja:'LINE'}],
+                        ['cTbmGap',{ko:'경과일',en:'Days to failure',zh:'间隔天数',ja:'経過日数'}]] }
+  ],
+  retire:['#pfPct','cReqType','cDur','cWcnt','cRelRank'] });
 
 applyLang();
 bindLife();

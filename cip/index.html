@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=169"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=170"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -131,7 +131,7 @@ tr:hover td{background:var(--glass-hover)}
 @media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}}
 @media(max-width:768px){.card h3{padding-right:0}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=169">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=170">
 </head>
 <body>
 
@@ -329,7 +329,7 @@ tr:hover td{background:var(--glass-hover)}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(160);   // 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(170);   // GST.chartLayout(v174) · 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
 const VER='v50';
@@ -1322,6 +1322,15 @@ window.axReset=function(id){
   if(pop)pop.remove();
   delete AXB[id]; saveAXB(); render(); capToast('⚙ '+id+' 축 범위 초기화');
 };
+
+/* 차트 배치 (v174 · 판정표 docs/v2/PLAN.md 4절) — 차트 코드는 그대로 두고 «어디에 무엇을 보이나»만 정한다.
+   · 진행 추이(누계)·구간별 신규 완료는 한 계열의 두 얼굴이다 — 한 카드.
+   · 층·구역·모델·반입 연도는 «어디가 남았나»를 축만 바꿔 묻는다 — 한 카드. */
+if(GST.chartLayout) GST.chartLayout({ page:'cip',
+  groups:[
+    { key:'trend', items:[['cipTrend',{ko:'누계',en:'Cumulative',zh:'累计',ja:'累計'}], ['cipNew',{ko:'구간별',en:'Per period',zh:'分期',ja:'期間別'}]] },
+    { key:'where', items:[['cipFloor',{ko:'층·구역',en:'Floor',zh:'楼层·区域',ja:'フロア'}], ['cipModel',{ko:'모델',en:'Model',zh:'型号',ja:'モデル'}], ['cipVint',{ko:'반입 연도',en:'Install year',zh:'搬入年度',ja:'搬入年'}]] }
+  ] });
 
 applyLang(); loadData();
 </script>

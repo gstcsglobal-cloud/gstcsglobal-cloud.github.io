@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=169"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=170"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -147,7 +147,7 @@ tr:hover td{background:var(--surface-2)}
 @media print{.capbtns,.slicers,.header-right,#filtBadge{display:none!important}.card,.tablecard{break-inside:avoid;page-break-inside:avoid}.grid3{grid-template-columns:1fr 1fr}}
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=169">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=170">
 </head>
 <body>
 
@@ -246,7 +246,7 @@ tr:hover td{background:var(--surface-2)}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(141);   // GST.ORG.campus(단지 정본) 을 쓴다   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
+GST.needVer&&GST.needVer(170);   // GST.chartLayout(v174) · GST.ORG.campus(단지 정본) 을 쓴다   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
 const PUB=GST.SHEET_PUB;
 const URL_ROSTER=PUB+'?gid=1213453343&single=true&output=csv';  // 인원명단
 const URL_EDU   =PUB+'?gid=0&single=true&output=csv';            // 교육현황
@@ -383,7 +383,7 @@ GST.pageBar({
 async function downloadHrPPT(){
   const f=DATA.filter(isActive);
   const six=p=>p.join&&((TODAY-p.join)/86400000)>=182;
-  const l2t=f.filter(p=>p.onsite&&six(p)), l2d=l2t.filter(p=>p.lv2date&&p.lv2date<=TODAY);
+  const l2t=f.filter(p=>l2Tgt(p)), l2d=l2t.filter(p=>p.lv2date&&p.lv2date<=TODAY);   // 화면 kp4 와 같은 판정
   const l3t=f.filter(p=>p.onsite&&p.lv2date&&p.lv2date<=TODAY), l3d=l3t.filter(p=>p.lv3date&&p.lv3date<=TODAY);
   // 법인 과정 대상은 주간현황과 동일: 6개월 미만=Basic · 6개월 이상=Veteran (한 사람 한 과정)
   const cp=f.filter(p=>p.onsite&&p.join&&hasCorp(p));   // 국내는 법인 과정 대상이 아니다
@@ -398,7 +398,10 @@ async function downloadHrPPT(){
     rows.push(['법인','Basic (Lv.1) · 6개월 미만',String(ep.length),String(bd.length),pct(bd.length,ep.length)]);
     rows.push(['법인','Veteran (Lv.2) · 6개월 이상',String(vp.length),String(vd.length),pct(vd.length,vp.length)]);
   }
-  rows.push(['본사','Scrubber Lv.2 (6개월+)',String(l2t.length),String(l2d.length),pct(l2d.length,l2t.length)]);
+  /* 이름표도 잡힌 인원을 따라간다(v96) — 국내만이면 «전원», 해외만이면 «6개월+», 섞이면 둘 다 적는다 */
+  const _kr=f.some(p=>p.onsite&&!hasCorp(p)), _ov=f.some(p=>p.onsite&&hasCorp(p));
+  const _l2n='Scrubber Lv.2'+(_kr&&_ov?' (국내 전원 · 해외 6개월+)':_kr?' (전원)':' (6개월+)');
+  rows.push(['본사',_l2n,String(l2t.length),String(l2d.length),pct(l2d.length,l2t.length)]);
   rows.push(['본사','Scrubber Lv.3 (Lv.2 이수자)',String(l3t.length),String(l3d.length),pct(l3d.length,l3t.length)]);
 
   await GST.pptAuto({
@@ -640,6 +643,10 @@ function lvPerson(rec,byId,byNm){
      적용 여부는 hasCorp 한 곳에서만 판정한다 — 두 벌이면 카드마다 다른 답이 나온다. */
 const eduDoneAt=(d,E)=>!!(d&&d<=(E||TODAY));
 function hasCorp(p){ return p.region!=='국내'; }          // 법인 과정(Basic·Veteran) 대상인가
+/* 본사 Scrubber Lv.2 대상 — 국내는 «전원»(근속 무관 · v134 사용자 확정), 해외는 지금까지대로 입사 6개월 이상(제3원칙).
+   화면 카드(kp4)·과정별 막대·스파크라인·교육 이수 추이·PPT 표가 이 한 함수를 본다. v174 전에는 그 셋이 국내까지 6개월을 세고 있어서,
+   입사 6개월 안 된 국내 인원이 Lv.2 분모에서 조용히 빠졌다(주간현황 eduTgt 와 다른 답). */
+function l2Tgt(p,at){ return !!p.onsite && (!hasCorp(p) || (!!p.join && ((at||TODAY)-p.join)/86400000>=182)); }
 function clsB(p){ return hasCorp(p)?(eduDoneAt(p.bdate)?'이수완료':'미이수'):'비대상'; }
 function clsV(p){ return hasCorp(p)?(eduDoneAt(p.vdate)?'이수완료':'미이수'):'비대상'; }
 /* 국내 Scrubber — 2026-09 CS관리팀 회신 · 사용자 확정
@@ -910,7 +917,7 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('hr');
   animVal(document.getElementById('kp1'),f.length,'',false);
   animVal(document.getElementById('kp2'),f.filter(p=>p.onsite).length,'',false);
   // ---- 교육 판정 헬퍼 (KPI·cEdu·파레토·퍼널 공용) ----
-  // 본사 과정: Lv.2 대상 = 입사 6개월 이상 · Lv.3 대상 = Lv.2 이수자 (사용자 확정 규칙)
+  // 본사 과정: Lv.2 대상 = l2Tgt(국내 전원 · 해외 6개월 이상) · Lv.3 대상 = Lv.2 이수자 (v134 사용자 확정)
   const sixUp=p=>p.join&&((TODAY-p.join)/86400000)>=182;
   const lv2Done=p=>!!(p.lv2date&&p.lv2date<=TODAY);
   const lv3Done=p=>!!(p.lv3date&&p.lv3date<=TODAY);
@@ -928,7 +935,7 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('hr');
     if(el)el.textContent='Basic '+(ep.length?Math.round(bd/ep.length*100):0)+'%('+tr('etr_tgt')+' '+ep.length+')'
       +' · Veteran '+(vp.length?Math.round(vd/vp.length*100):0)+'%('+tr('etr_tgt')+' '+vp.length+')'; }
   // kp4 = 본사 교육과정(Scrubber Lv.2+Lv.3 종합) · kf4 = 과정별 세부
-  const l2t=f.filter(p=>p.onsite&&sixUp(p)), l2d=l2t.filter(lv2Done);
+  const l2t=f.filter(p=>l2Tgt(p)), l2d=l2t.filter(lv2Done);   // 국내 전원 · 해외 6개월+ (l2Tgt 한 곳)
   const l3t=f.filter(p=>p.onsite&&lv2Done(p)), l3d=l3t.filter(lv3Done);
   const hqT=l2t.length+l3t.length, hqD=l2d.length+l3d.length;
   animVal(document.getElementById('kp4'),hqT?hqD/hqT*100:0,'%',true);
@@ -962,7 +969,7 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('hr');
     const v=pp.filter(x=>((p.end-x.join)/86400000)>=182), vD=v.filter(x=>x.vdate&&x.vdate<=p.end);
     const T=e.length+v.length;return T?Math.round((bD.length+vD.length)/T*100):null;});
 
-  const sV   =SP.map(p=>{const a=fAll.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join&&((p.end-x.join)/86400000)>=182);
+  const sV   =SP.map(p=>{const a=fAll.filter(x=>activeAt(x,p.end)&&l2Tgt(x,p.end));   // kp4 와 같은 판정(l2Tgt)
     const aD=a.filter(x=>x.lv2date&&x.lv2date<=p.end);
     const b=fAll.filter(x=>x.onsite&&activeAt(x,p.end)&&x.lv2date&&x.lv2date<=p.end);
     const bD=b.filter(x=>x.lv3date&&x.lv3date<=p.end);
@@ -1076,7 +1083,7 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('hr');
     const CRS=[
       {nm:'Basic',        dt:p=>p.bdate,   tg:(p,E)=>hasCorp(p)&&!sixAt(p,E),     col:S.on},
       {nm:'Veteran',      dt:p=>p.vdate,   tg:(p,E)=>hasCorp(p)&&sixAt(p,E),      col:S.good},
-      {nm:'Scrubber Lv.2',dt:p=>p.lv2date, tg:(p,E)=>sixAt(p,E),                  col:S.warn},
+      {nm:'Scrubber Lv.2',dt:p=>p.lv2date, tg:(p,E)=>l2Tgt(p,E),                  col:S.warn},
       {nm:'Scrubber Lv.3',dt:p=>p.lv3date, tg:(p,E)=>!!(p.lv2date&&p.lv2date<=E), col:S.bad}];
     // 막대는 '그 시점 현장 재직자 중 이수를 마친 인원'(사실 그대로) — 대상에서 빠진 사람의 이수 이력도 남긴다.
     // 선(달성률)만 대상 기준으로 계산해 KPI 카드와 정확히 일치시킨다.
@@ -1779,6 +1786,15 @@ function addCapBtns(){
     box.innerHTML='<button class="capbtn" title="명단을 엑셀에 붙여넣기" onclick="copyTable()">📋 표 복사</button><button class="capbtn" title="CSV 저장" onclick="saveCsv()">⤓</button>';
     card.appendChild(box); }
 }
+
+/* 차트 배치 (v174 · 판정표 docs/v2/PLAN.md 4절) — 차트 코드는 그대로 두고 «어디에 무엇을 보이나»만 정한다.
+   · 사이트별·직무별 인원은 같은 명단을 축만 바꿔 센다 — 한 카드.
+   · 과정별 이수·단계 퍼널은 같은 이수 기록의 두 얼굴이다 — 한 카드. */
+if(GST.chartLayout) GST.chartLayout({ page:'hr',
+  groups:[
+    { key:'who', items:[['cSite',{ko:'사이트',en:'Site',zh:'站点',ja:'サイト'}], ['cRole',{ko:'직무',en:'Role',zh:'岗位',ja:'職務'}]] },
+    { key:'edu', items:[['cEdu',{ko:'과정별',en:'By course',zh:'按课程',ja:'課程別'}], ['cFunnel',{ko:'단계 퍼널',en:'Funnel',zh:'阶段漏斗',ja:'段階ファネル'}]] }
+  ] });
 
 applyLang();
 loadData();

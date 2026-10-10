@@ -11,7 +11,7 @@
 <script>window.ChartZoom||document.write('<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=169"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=170"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -239,7 +239,7 @@ canvas{cursor:pointer}
 .wleg i.pa{background:var(--accent-2)}
 .wleg b{color:var(--txt-main);font-variant-numeric:tabular-nums}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=169">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=170">
 </head>
 <body>
 
@@ -751,7 +751,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(141);   // GST.kpiDrill 배지 모드 · GST.monthRows 를 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(170);   // GST.chartLayout(v174) · GST.kpiDrill 배지 모드 · GST.monthRows 를 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -1520,7 +1520,7 @@ function render(){ GST.skeleton(false); GST.pushState(F); GST.dq&&GST.dq.reset('
   mkDonut('cFree', frees.map(x=>x[0]), frees.map(x=>x[1]));
   renderExclChips('free');
 
-  renderExclOptions('mat'); renderExclOptions('eq'); renderExclOptions('proc'); renderExclOptions('reason'); renderExclOptions('free');
+  ['mat','eq','proc','reason','free'].forEach(k=>renderExclOptions(k,true));
 
   /* ── 차트 세부내역 ($rows) — 클릭이 이미 다른 일(cEq=설비상세, cReason=필터)을 하는 차트는
      그대로 두고, 나머지에 단다. 라벨의 ' (n)' 표본 접미는 떼고 원본과 대조한다. */
@@ -1651,15 +1651,17 @@ function renderExclChips(k) {
   ).join('');
 }
 
-function renderExclOptions(k) {
+/* quiet — render() 가 목록 «내용»만 갈아 끼울 때. 예전에는 렌더마다 다섯 목록을 전부 «열어»
+   차트 위를 덮었다(v174 에 화면 확인으로 잡았다). 여는 것은 사람이 칸을 누르거나 칠 때뿐이다. */
+function renderExclOptions(k, quiet) {
   const id = 'exclSearch' + getExclId(k);
   const ddId = 'exclDD' + getExclId(k);
   const q = document.getElementById(id).value.toLowerCase();
   const list = ALL_VALUES[k].filter(m => !EXCL[k].includes(m) && m.toLowerCase().includes(q));
   const dd = document.getElementById(ddId);
-  if(!list.length){dd.innerHTML='<div class="excl-opt" style="color:var(--txt-muted)">검색 결과 없음</div>';dd.classList.add('open');return;}
+  if(!list.length){dd.innerHTML='<div class="excl-opt" style="color:var(--txt-muted)">검색 결과 없음</div>';if(!quiet)dd.classList.add('open');return;}
   dd.innerHTML = list.map(m => `<div class="excl-opt" onclick="addExcl('${k}','${m}')">${m}</div>`).join('');
-  dd.classList.add('open');
+  if(!quiet) dd.classList.add('open');
 }
 
 window.addExcl = function(k, m) {
@@ -2349,6 +2351,17 @@ function renderCrossTable(){
 function capToast(msg){ return GST.capToast(msg); }
 function chartHiRes(id,scale){ return GST.chartHiRes(id,scale); }
 function addCapBtns(){GST.capBtns();}   // 카드 버튼 한 벌은 core(v135) — 그림 복사 버튼은 없앴다(사용자 확정)
+
+/* 차트 배치 (v174 · 판정표 docs/v2/PLAN.md 4절) — 차트 코드는 그대로 두고 «어디에 무엇을 보이나»만 정한다.
+   · 「어디서」(설비·모델·공정·LINE) 한 카드 — 설비·공정 섹션의 설비 상세 드릴 바로 위에 선다.
+   · 「사유」(교체사유·무상사유) 한 카드.
+   · 뺀 것: 유상 vs 무상(KPI kp3 와 같은 숫자). */
+if(GST.chartLayout) GST.chartLayout({ page:'material',
+  groups:[
+    { key:'where', at:'cEq', items:[['cEq',{ko:'설비',en:'Equipment',zh:'设备',ja:'設備'}], ['cModel',{ko:'모델',en:'Model',zh:'型号',ja:'モデル'}], ['cProc',{ko:'공정',en:'Process',zh:'工艺',ja:'工程'}], ['cLine2',{ko:'LINE',en:'LINE',zh:'LINE',ja:'LINE'}]] },
+    { key:'reason', items:[['cReason',{ko:'교체사유',en:'Reason',zh:'更换原因',ja:'交換理由'}], ['cFree',{ko:'무상사유',en:'Free-of-charge reason',zh:'免费原因',ja:'無償理由'}]] }
+  ],
+  retire:['#pfPct'] });
 
 applyLang(); loadData(); addCapBtns();
 </script>
