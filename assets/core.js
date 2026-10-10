@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 170;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 171;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -1102,10 +1102,11 @@ GST.chartTheme = function(){
   const b = (document.body&&document.body.className) || '';
   const slate = b.indexOf('theme-slate')>-1;
   const key = slate?'slate':'light';
-  const txt = slate?'#8B98A9':'#667085', grid = slate?'rgba(151,170,196,.10)':'rgba(16,24,40,.07)';
-  return { key, txt, grid, ink: slate?'#E6EDF3':'#101828', pal:GST.PAL, pal8:GST.PAL8,
-    status:{ bad: slate?'#F0716B':'#D92D20', warn: slate?'#F2B134':'#B7670A',
-             ok: slate?'#3FBF7F':'#12873F', na: slate?'#5E6D80':'#98A2B3' } };
+  /* 다크 값은 theme.css 의 미드나이트 토큰(v171)과 같다 — Chart.js 는 CSS 변수를 못 읽어 여기 한 벌 더 둔다 */
+  const txt = slate?'#8C99AD':'#667085', grid = slate?'rgba(148,170,215,.10)':'rgba(16,24,40,.07)';
+  return { key, txt, grid, ink: slate?'#E8EEF7':'#101828', pal:GST.PAL, pal8:GST.PAL8,
+    status:{ bad: slate?'#F2706B':'#D92D20', warn: slate?'#F5B83D':'#B7670A',
+             ok: slate?'#3FCF8E':'#12873F', na: slate?'#5E6B80':'#98A2B3' } };
 };
 /* 차트 전역 규격 — 8개 페이지가 각자 설정하던 것을 한 곳으로.
    페이지는 로드 시와 테마 전환 시 GST.chartDefaults()만 부른다.
@@ -1132,6 +1133,19 @@ GST.chartDefaults = function(){
   // 막대 기하 — 페이지마다 2~6으로 흩어져 있던 radius를 한 값으로, 두께 상한으로 과비만 방지
   Chart.defaults.elements.bar.borderRadius = 4;
   Chart.defaults.datasets.bar.maxBarThickness = 34;
+  /* 차트 등장 (v171 · 디자인 2.0) — 처음 그릴 때만 막대·점이 왼쪽부터 차례로 자란다. 값·드릴·내보내기는 그대로(그리는 «때»만 다르다).
+     ⚠ 다시 그릴 때(필터 변경·hover·resize)는 차례를 두지 않는다 — 만든 지 1.2초가 지난 차트는 delay 0.
+     ⚠ 주간현황(MOTION_SKIP)은 지금 그대로 · 움직임 줄이기를 고른 사람에게는 애니메이션 자체를 끈다(duration 0). */
+  try{
+    if(GST._reduce && GST._reduce()) Chart.defaults.animation.duration = 0;
+    else if(GST._motionOn && GST._motionOn()){
+      Chart.defaults.animation.delay = function(c){
+        const ch=c&&c.chart; if(!ch || c.type!=='data' || c.mode!=='default' || ch.$gstT0==null || Date.now()-ch.$gstT0>1200) return 0;
+        return Math.min(c.dataIndex||0, 16)*16 + Math.min(c.datasetIndex||0, 3)*45;
+      };
+      if(!Chart.registry.plugins.get('gstFx')) Chart.register({ id:'gstFx', beforeInit(ch){ ch.$gstT0=Date.now(); } });
+    }
+  }catch(e){}
 
   /* 차트 세부내역 (v84) — 막대·꺾은선·점을 누르면 그 점을 «구성하는 원본 레코드»를 보여준다.
      페이지는 차트를 만든 뒤 `chart.$rows = (di, i) => ({title, cols, rows})` 한 줄만 단다.
@@ -3069,7 +3083,7 @@ GST.dbRows = async function(table){
      쓴다(나눠 짜면 세 벌이 갈라진다 — 제2원칙). 동시 6 × 폭 1,000 은 몇 달간 서버가
      견딘 것이 실증된 부하 프로파일이다 — 동시성·폭을 올리려면 서버 실측부터(v129).
      각 장이 src_row 오름차순의 겹치지 않는 구간이라 이어 붙이면 정렬이 유지된다. */
-  const pump = async function(mod){
+  const pump = async function(mod, onp){
     const out = [];
     for(let p = 0; p < nR; p += 6){
       const batch = [];
@@ -3078,6 +3092,8 @@ GST.dbRows = async function(table){
       const res = await Promise.all(batch);
       for(let i = 0; i < res.length; i++)
         for(let j = 0; j < res[i].length; j++) out.push(res[i][j]);
+      /* 부팅 화면의 진행률 — «지금 몇 행»만 알린다(v171). 셈은 바뀌지 않는다 */
+      try{ if(onp) onp(out.length); else GST.boot.tick(table, out.length, want); }catch(e){}
     }
     return out;
   };
@@ -3118,8 +3134,11 @@ GST.dbRows = async function(table){
       const rowsW = materialize(recent);
       GST._bfNote(table, true);
       (async function(){
+        /* 뒤에서 받는 나머지 이력 — 부팅 화면을 붙잡지 않는 «배경» 일로 알린다(셸 위쪽 가는 막대만 움직인다) */
+        let bj=null; try{ bj=GST.boot.job(table, 'bg'); }catch(e){}
         try{
-          const rest = await pump(function(q){ return q.or(winCol+'.lt.'+cutoff+','+winCol+'.is.null'); });
+          const rest = await pump(function(q){ return q.or(winCol+'.lt.'+cutoff+','+winCol+'.is.null'); },
+            function(n){ if(bj) bj.prog(recent.length+n, want); });
           const all = recent.concat(rest);
           if(all.length !== want) throw new Error('BACKFILL_SHORT '+all.length+'/'+want);
           all.sort(function(a,b){ return (a.src_row||0) - (b.src_row||0); });   // 시트 순서 복원 — 전체 경로와 같은 출력
@@ -3127,8 +3146,10 @@ GST.dbRows = async function(table){
           (GST._bfFull = GST._bfFull || {})[table] = { stamp: stamp, rows: rowsF };
           keep(rowsF);
           GST._bfNote(table, false);
+          try{ if(bj) bj.end(rowsF.length-1); }catch(e2){}
           GST._bfKick();                     // 전 표의 백필이 끝났으면 한 번 다시 그린다
         }catch(e){
+          try{ if(bj) bj.fail(e); }catch(e2){}
           /* 부분인 채로 조용히 두면 «누적 지표가 작은» 화면이 완성본처럼 보인다 —
              경고를 남기고 캐시에는 아무것도 안 담는다(다음 로드가 처음부터 다시). */
           GST._bfNote(table, false);
@@ -3651,6 +3672,8 @@ GST._fetchCSVCached0 = async function(url, key){
 /* ---------- 10. 스켈레톤 로딩 (Stage 3) ---------- */
 GST.skeleton=function(on){
   document.querySelectorAll('.kpi,.card,.trend-card,.cross-card,.tablecard,.alert').forEach(el=>el.classList.toggle('skeleton',!!on));
+  /* 스켈레톤을 걷는 순간 = 첫 그림이 섰다 — 셸의 부팅 화면이 걷힐 신호(v171). 읽기가 한 번도 없었으면 아무 일도 없다 */
+  if(!on){ try{ GST.boot.rendered(); }catch(e){} }
 };
 
 /* ---------- 10-b. i18n 적용 한 벌 (v135 · 5단계) ----------
@@ -4190,23 +4213,367 @@ GST._motionInit = function(){
     let lastAct=0; const act=function(){ lastAct=Date.now(); };
     ['pointerdown','keydown','change','input'].forEach(function(ev){ document.addEventListener(ev, act, true); });
     window.addEventListener('message', function(e){ const d=e.data||{}; if(d.type==='gst-filter'||d.type==='gst-lang') act(); });
-    const seen=new WeakMap();
+    const seen=new WeakMap(), vin=new WeakSet();
     new MutationObserver(function(ms){
       const hot=Date.now()-lastAct<2000;
       ms.forEach(function(m){
         const el=m.target.nodeType===3?m.target.parentElement:m.target; if(!el||!el.closest) return;
+        /* 값이 «처음» 자리를 잡을 때(자리표시 → 숫자) 한 번만 흐릿함이 걷히며 내려앉는다 (v171 · 디자인 2.0).
+           ⚠ 글자는 건드리지 않는다 — 숫자가 세어 올라가는 효과는 쓰지 않는다(검사·복사·스크린리더가 중간값을 읽는다).
+           두 번째 변화부터는 아래 «손이 닿은 직후» 표식이 맡는다 — 둘 다 걸면 필터를 바꿀 때마다 화면이 출렁인다. */
+        const v=el.closest('.kpi .val,.ds-kpi-v b,.st-kpi .v');
+        if(v && !vin.has(v)){
+          const old=m.type==='characterData'?(m.oldValue||''):Array.prototype.map.call(m.removedNodes||[],function(n){ return n.textContent||''; }).join('');
+          if(m.type==='characterData'||(m.removedNodes&&m.removedNodes.length)){ vin.add(v);
+            if(old!==v.textContent){ v.classList.remove('gst-vin'); void v.offsetWidth; v.classList.add('gst-vin');
+              clearTimeout(v._gstV); v._gstV=setTimeout(function(){ v.classList.remove('gst-vin'); }, 800); } }
+        }
         const k=el.closest('.kpi'); if(!k) return;
         const txt=k.textContent, prev=seen.get(k); seen.set(k, txt);
         if(!hot||prev==null||prev===txt) return;
         k.classList.remove('gst-upd'); void k.offsetWidth; k.classList.add('gst-upd');
         clearTimeout(k._gstU); k._gstU=setTimeout(function(){ k.classList.remove('gst-upd'); }, 900);
       });
-    }).observe(document.body,{subtree:true,childList:true,characterData:true});
+    }).observe(document.body,{subtree:true,childList:true,characterData:true,characterDataOldValue:true});
   }catch(e){}
 };
 if(typeof document!=='undefined'){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', GST._motionInit);
   else GST._motionInit();
+}
+
+/* ============================================================
+   디자인 2.0 (v171) — 부팅 화면 · 명령 팔레트(Ctrl K) · 카드 조명 · 스크롤 등장 · 차트 등장
+   사용자 요청(2026-10): 「대시보드 전체 디자인 업그레이드 — 과감하게. 폭죽·설명 문구는 빼고」. 시안 4차(효과 카탈로그)에서 골랐다.
+   지킬 것 넷:
+   ① 숫자·글자를 바꾸지 않는다 — 효과는 «보이는 방식»만 바꾼다. 판정·집계·드릴·내보내기는 한 글자도 안 움직인다.
+   ② 움직임은 주간현황(MOTION_SKIP)과 움직임 줄이기를 고른 사람에게 걸지 않는다 — _motionInit 과 같은 두 판정.
+   ③ 카드에 transform 을 남기지 않는다(v169 · 카드 안 fixed 팝업의 기준이 바뀐다) — 등장은 독립 속성 translate 로 하고 끝나면 none.
+   ④ 메타정보(표 이름·행 수·걸린 시간)는 관리자에게만(A-4) — 부팅 화면의 로그도 같다. 판정은 셸이 body[data-role] 로 한다.
+   ============================================================ */
+GST.FX_SEL = '.card,.trend-card,.cross-card,.tablecard,.kpi,.hb-card,.hb-kpi,.st-card,.st-kpi,.ac-card,.sd-card,.ds-card,.ds-kpi';
+GST._reduce = function(){ try{ return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){ return false; } };
+GST._motionOn = function(){ try{ return !GST._reduce() && !GST.MOTION_SKIP.test(GST.pagePath()); }catch(e){ return false; } };
+
+/* ---- 부팅 신호 — 읽기 경로(dbRows · csvTableRows · fetchCSV)가 «무엇을 읽는지»를 셸에 알린다 ----
+   셸의 부팅 화면이 진짜 표 이름·진행률을 보여 주는 근거가 이것이다(지어낸 로그를 돌리지 않는다).
+   iframe 은 부모(셸)에 postMessage 하고, 셸이 아닌 곳에서 혼자 열린 페이지는 위쪽 가는 막대로 스스로 보인다.
+   ⚠ 신호가 실패해도 읽기는 그대로다 — 모든 호출을 try 로 감싼다(부팅 화면 때문에 자료가 안 뜨면 앞뒤가 바뀐다). */
+GST.BOOT_NAME = {
+  wk:{ko:'수선 실적',en:'Repair records',zh:'维修实绩',ja:'修繕実績'},
+  mat:{ko:'자재 실적',en:'Material records',zh:'材料实绩',ja:'資材実績'},
+  inst:{ko:'설치 현황',en:'Installed base',zh:'安装现况',ja:'設置現況'},
+  sheet_edu:{ko:'교육 현황',en:'Training',zh:'培训现况',ja:'教育現況'},
+  sheet_roster:{ko:'인원 현황',en:'Roster',zh:'人员现况',ja:'人員現況'},
+  sheet_leave:{ko:'휴가 현황',en:'Leave',zh:'休假现况',ja:'休暇現況'},
+  sheet_abp:{ko:'올바이패스(해외)',en:'All By-Pass (overseas)',zh:'全旁路(海外)',ja:'オールバイパス(海外)'},
+  sheet_alarm:{ko:'국내 알람 원장',en:'Korea alarm ledger',zh:'国内报警台账',ja:'国内アラーム台帳'},
+  sheet_allbypass:{ko:'올바이패스 원장',en:'All By-Pass ledger',zh:'全旁路台账',ja:'オールバイパス台帳'},
+  cip:{ko:'CIP 진행',en:'CIP',zh:'CIP进度',ja:'CIP進捗'},
+  data:{ko:'자료',en:'Data',zh:'数据',ja:'データ'}
+};
+GST.bootName = function(key){
+  const L=GST._lang?GST._lang():'ko', k=String(key||'').replace(/^kr_/,'');
+  const pick=function(o){ return o[L]||o.ko; };
+  if(GST.BOOT_NAME[k]) return pick(GST.BOOT_NAME[k]);
+  const m=k.match(/^(?:sheet_)?cip_(.+)$/); if(m) return pick(GST.BOOT_NAME.cip)+' '+m[1].toUpperCase();
+  if(GST.BOOT_NAME['sheet_'+k]) return pick(GST.BOOT_NAME['sheet_'+k]);
+  return pick(GST.BOOT_NAME.data);
+};
+/* 관리자에게 보이는 실제 표 이름 — 미러는 논리 이름(wk)으로 들어오므로 sheet_ 를 붙인다 */
+GST.bootTbl = function(key){ const k=String(key||''); return /^(sheet_|kr_|gid )/.test(k) ? k : (k ? 'sheet_'+k : ''); };
+GST.boot = (function(){
+  let seq=0, inflight=0, quietT=null, ever=false, sent=false;
+  const emit=function(o){
+    o.type='gst-boot';
+    try{
+      if(window.parent && window.parent!==window){ window.parent.postMessage(o,'*'); return; }
+      if(typeof GST.boot.ui==='function'){ GST.boot.ui(o); return; }
+      GST._bootBar(o);
+    }catch(e){}
+  };
+  const ready=function(why){ if(sent) return; sent=true; emit({ev:'ready', why:why||''}); };
+  const job=function(key, kind){
+    const id=(++seq)+'.'+Math.random().toString(36).slice(2,7), t0=Date.now(), bg=kind==='bg';
+    ever=true; if(!bg){ inflight++; clearTimeout(quietT); }
+    emit({ev:'begin', id:id, key:String(key||''), kind:bg?'bg':'fg'});
+    let lp=0, done=false;
+    const fin=function(o){ if(done) return; done=true; o.id=id; o.ms=Date.now()-t0; emit(o);
+      if(!bg){ inflight=Math.max(0,inflight-1);
+        /* 마지막 표를 다 받고 잠시 조용하면 «다 그렸다»로 본다 — 렌더가 끝났다는 신호(skeleton 끄기)가 먼저 오면 그것이 이긴다 */
+        if(!inflight){ clearTimeout(quietT); quietT=setTimeout(function(){ if(!inflight) ready('quiet'); }, 1200); } } };
+    return { id:id,
+      prog:function(n, total){ const t=Date.now(); if(done||t-lp<120) return; lp=t; emit({ev:'prog', id:id, n:+n||0, total:+total||0}); },
+      end:function(n){ fin({ev:'end', n:n==null?null:+n}); },
+      fail:function(e){ fin({ev:'fail', msg:String((e&&e.message)||e||'').slice(0,90)}); } };
+  };
+  /* 진행 막대 — 읽기 함수 안(펌프)에서 «지금 몇 행»을 알릴 자리. 열쇠는 그 읽기의 표 이름이다 */
+  const live={};
+  const tick=function(key, n, total){ const h=live[key]; if(h) h.prog(n, total); };
+  return { job:job, ready:ready, tick:tick, _live:live,
+    rendered:function(){ if(ever && !inflight) ready('render'); },
+    inflight:function(){ return inflight; } };
+})();
+/* 읽기 함수를 감싼다 — 정의를 바꾸지 않고 «앞뒤로 신호만» 붙인다. 감싼 뒤에 검사·오프라인 심이 함수를 갈아 끼우면 신호만 없어진다(읽기는 그대로). */
+GST._bootWrap = function(name, keyOf){
+  const f=GST[name]; if(typeof f!=='function' || f._gstBoot) return;
+  const w=async function(){
+    let h=null, k='';
+    try{ k=keyOf.apply(null, arguments); h=GST.boot.job(k); GST.boot._live[k]=h; }catch(e){}
+    try{
+      const r=await f.apply(this, arguments);
+      try{ if(h){ h.end(Array.isArray(r)?Math.max(0,r.length-1):null); if(GST.boot._live[k]===h) delete GST.boot._live[k]; } }catch(e){}
+      return r;
+    }catch(e){
+      try{ if(h){ h.fail(e); if(GST.boot._live[k]===h) delete GST.boot._live[k]; } }catch(e2){}
+      throw e;
+    }
+  };
+  w._gstBoot=true; w._orig=f; GST[name]=w;
+};
+GST._bootWrap('dbRows', function(t){ return String(t||''); });
+GST._bootWrap('csvTableRows', function(t){ return String(t||''); });
+GST._bootWrap('fetchCSV', function(u){ const m=String(u||'').match(/[?&]gid=(\d+)/), g=m&&m[1];
+  return (g && ((GST.TABLE_OF_GID||{})[g] || (GST.CSV_TABLE_OF_GID||{})[g])) || (g?'gid '+g:'data'); });
+/* 셸 밖에서 혼자 열린 페이지 — 화면 맨 위 가는 막대 하나로 «받는 중»을 보인다(셸 안에서는 셸이 맡는다) */
+GST._bootBar = function(o){
+  if(typeof document==='undefined' || !document.body) return;
+  const S=GST._bootBar.S||(GST._bootBar.S={jobs:{}, el:null, t:null});
+  if(o.ev==='begin' && o.kind!=='bg') S.jobs[o.id]={n:0,total:0};
+  else if(o.ev==='prog' && S.jobs[o.id]){ S.jobs[o.id].n=o.n; S.jobs[o.id].total=o.total; }
+  else if(o.ev==='end'||o.ev==='fail') delete S.jobs[o.id];
+  else return;
+  if(!S.el){ S.el=document.createElement('div'); S.el.className='gst-lbar'; S.el.setAttribute('aria-hidden','true'); S.el.innerHTML='<i></i>'; document.body.appendChild(S.el); }
+  const ids=Object.keys(S.jobs);
+  clearTimeout(S.t);
+  if(!ids.length){ S.el.querySelector('i').style.width='100%'; S.t=setTimeout(function(){ S.el.classList.remove('on'); }, 260); return; }
+  let f=0; ids.forEach(function(i){ const j=S.jobs[i]; f+=j.total?Math.min(.96,j.n/j.total):.2; });
+  S.el.classList.add('on'); S.el.querySelector('i').style.width=Math.max(8, Math.round(f/ids.length*100))+'%';
+};
+
+/* ---- 명령 팔레트 (Ctrl K) — 화면 · 기능 · 설비 S/N · 이 화면의 카드를 한 칸에서 찾는다 ----
+   UI 와 찾기는 여기 한 벌이다. 무엇을 찾을지(항목)는 «여는 쪽»이 준다 — 셸은 탭·툴바 기능·S/N, iframe 은 자기 카드.
+   iframe 에서 Ctrl K 를 누르면 셸에 알려 셸이 연다(탭을 건너 찾는 것이 목적이라 팔레트는 셸에 하나만 뜬다).
+   찾기 규칙: 정규화(소문자·공백 제거) 뒤 «앞에서 일치» > «중간 일치» > «초성 일치» > «글자 순서 일치». 한글 초성(ㄱㅈㅂㅅ)으로도 찾는다. */
+GST.PAL_T = {
+  ko:{ph:'화면 · 기능 · 설비 S/N · 카드 찾기', none:'찾는 항목이 없습니다', g_recent:'최근', g_tab:'화면', g_act:'기능', g_card:'이 화면의 카드', g_sn:'설비 S/N', nav:'이동', open:'열기', close:'닫기', label:'검색'},
+  en:{ph:'Find a screen, action, S/N or card', none:'No matches', g_recent:'Recent', g_tab:'Screens', g_act:'Actions', g_card:'Cards on this screen', g_sn:'Equipment S/N', nav:'Move', open:'Open', close:'Close', label:'Search'},
+  zh:{ph:'查找页面 · 功能 · 设备S/N · 卡片', none:'没有匹配项', g_recent:'最近', g_tab:'页面', g_act:'功能', g_card:'本页卡片', g_sn:'设备 S/N', nav:'移动', open:'打开', close:'关闭', label:'搜索'},
+  ja:{ph:'画面 · 機能 · 設備S/N · カードを検索', none:'該当なし', g_recent:'最近', g_tab:'画面', g_act:'機能', g_card:'この画面のカード', g_sn:'設備 S/N', nav:'移動', open:'開く', close:'閉じる', label:'検索'}
+};
+GST.chosung = function(s){
+  const C='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ'; let o='';
+  for(const ch of String(s||'')){ const c=ch.charCodeAt(0); o += (c>=0xAC00 && c<=0xD7A3) ? C[Math.floor((c-0xAC00)/588)] : ch; }
+  return o;
+};
+GST.palNorm = function(s){ return String(s||'').toLowerCase().replace(/[\s·・\-_/()]+/g,''); };
+GST.palScore = function(q, hay){
+  q=GST.palNorm(q); hay=GST.palNorm(hay);
+  if(!q) return 1; if(!hay) return 0;
+  const i=hay.indexOf(q); if(i===0) return 100; if(i>0) return 80-Math.min(i,30);
+  if(/^[ㄱ-ㅎ]+$/.test(q)){ const ch=GST.chosung(hay), j=ch.indexOf(q); if(j===0) return 70; if(j>0) return 60-Math.min(j,20); }
+  if(q.length<2) return 0;
+  let k=0, gaps=0, last=-1;
+  for(let p=0; p<hay.length && k<q.length; p++){ if(hay[p]===q[k]){ if(last>=0) gaps+=p-last-1; last=p; k++; } }
+  return k===q.length ? Math.max(4, 36-gaps) : 0;
+};
+GST.palette = (function(){
+  let ov=null, src=null, items=[], act=0, back=null, seq=0;
+  const T=function(k){ const t=GST.PAL_T[GST._lang()]||GST.PAL_T.ko; return t[k]||GST.PAL_T.ko[k]||k; };
+  const esc=function(s){ return GST._esc?GST._esc(s):String(s==null?'':s); };
+  const ORDER=['recent','sn','tab','card','act'];
+  const recentGet=function(){ try{ return JSON.parse(localStorage.getItem('gst_pal_recent')||'[]'); }catch(e){ return []; } };
+  const recentAdd=function(id){ try{ const r=recentGet().filter(function(x){ return x!==id; }); r.unshift(id); localStorage.setItem('gst_pal_recent', JSON.stringify(r.slice(0,5))); }catch(e){} };
+  const compute=function(q){
+    let all=[]; try{ all=(src?src(q):[])||[]; }catch(e){ console.warn('[palette] 항목을 못 만들었습니다', e); }
+    const qn=GST.palNorm(q);
+    let out=[];
+    if(!qn){
+      const rec=recentGet(); rec.forEach(function(id){ const it=all.find(function(x){ return x.id===id && x.g!=='sn'; }); if(it) out.push(Object.assign({}, it, {g:'recent'})); });
+      all.forEach(function(it){ if(it.g==='tab'||it.g==='act') out.push(it); });
+    } else {
+      all.forEach(function(it){ const s=it.always?50:GST.palScore(qn, [it.label, it.sub||'', it.kw||''].join(' | ')); if(s>0) out.push(Object.assign({_s:s}, it)); });
+      out.sort(function(a,b){ return (ORDER.indexOf(a.g)-ORDER.indexOf(b.g)) || (b._s-a._s); });
+      const cap={tab:8, act:8, card:8, sn:6}, n={}; out=out.filter(function(it){ n[it.g]=(n[it.g]||0)+1; return n[it.g]<=(cap[it.g]||8); });
+    }
+    return out.slice(0, 40);
+  };
+  const draw=function(){
+    if(!ov) return;
+    const q=ov.querySelector('.gst-pal-in').value; items=compute(q); if(act>=items.length) act=Math.max(0, items.length-1);
+    const L=ov.querySelector('.gst-pal-l'); let h='', g='';
+    if(!items.length) h='<div class="gst-pal-0">'+esc(T('none'))+'</div>';
+    items.forEach(function(it, i){
+      if(it.g!==g){ g=it.g; h+='<div class="gst-pal-g" role="presentation">'+esc(T('g_'+g))+'</div>'; }
+      h+='<div class="gst-pal-o'+(i===act?' on':'')+'" role="option" id="gstPalO'+i+'" data-i="'+i+'" aria-selected="'+(i===act)+'">'
+        +'<span class="gst-pal-ic" aria-hidden="true">'+(it.icon||'')+'</span><span class="gst-pal-t"><b>'+esc(it.label)+'</b>'
+        +(it.sub?'<small>'+esc(it.sub)+'</small>':'')+'</span>'+(it.hint?'<span class="gst-pal-k">'+esc(it.hint)+'</span>':'')+'</div>';
+    });
+    L.innerHTML=h;
+    const inp=ov.querySelector('.gst-pal-in'); inp.setAttribute('aria-activedescendant', items.length?'gstPalO'+act:'');
+    const on=L.querySelector('.gst-pal-o.on'); if(on && on.scrollIntoView) on.scrollIntoView({block:'nearest'});
+  };
+  const run=function(i){ const it=items[i]; if(!it) return; close(); if(it.g!=='card' && it.g!=='sn') recentAdd(it.id);
+    try{ it.run && it.run(); }catch(e){ console.warn('[palette] 실행 실패', it.id, e); } };
+  const close=function(){ if(!ov) return; const o=ov; ov=null; o.classList.add('out'); setTimeout(function(){ o.remove(); }, GST._reduce()?0:140);
+    try{ if(back && back.focus) back.focus(); }catch(e){} back=null; };
+  const open=function(s){
+    if(s) src=s;
+    if(window.parent && window.parent!==window && !src){ try{ window.parent.postMessage({type:'gst-pal'}, '*'); }catch(e){} return; }
+    if(!src) src=GST.palette.local;
+    if(ov){ ov.querySelector('.gst-pal-in').focus(); return; }
+    GST._palCss(); back=document.activeElement; act=0;
+    ov=document.createElement('div'); ov.className='gst-pal-ov';
+    ov.innerHTML='<div class="gst-pal" role="dialog" aria-modal="true" aria-label="'+esc(T('label'))+'">'
+      +'<div class="gst-pal-h"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'
+      +'<input class="gst-pal-in" type="text" role="combobox" aria-expanded="true" aria-controls="gstPalL" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="'+esc(T('ph'))+'"><kbd>Esc</kbd></div>'
+      +'<div class="gst-pal-l" id="gstPalL" role="listbox"></div>'
+      +'<div class="gst-pal-f"><span><kbd>↑</kbd><kbd>↓</kbd> '+esc(T('nav'))+'</span><span><kbd>Enter</kbd> '+esc(T('open'))+'</span><span><kbd>Esc</kbd> '+esc(T('close'))+'</span></div></div>';
+    document.body.appendChild(ov);
+    const inp=ov.querySelector('.gst-pal-in');
+    inp.addEventListener('input', function(){ act=0; draw(); });
+    inp.addEventListener('keydown', function(e){
+      if(e.key==='ArrowDown'){ e.preventDefault(); if(items.length){ act=(act+1)%items.length; draw(); } }
+      else if(e.key==='ArrowUp'){ e.preventDefault(); if(items.length){ act=(act-1+items.length)%items.length; draw(); } }
+      else if(e.key==='Enter'){ e.preventDefault(); run(act); }
+      else if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); close(); }
+      else if(e.key==='Tab'){ e.preventDefault(); }
+    });
+    ov.addEventListener('mousedown', function(e){ if(e.target===ov){ e.preventDefault(); close(); } });
+    const L=ov.querySelector('.gst-pal-l');
+    L.addEventListener('mousemove', function(e){ const o=e.target.closest('.gst-pal-o'); if(o && +o.dataset.i!==act){ act=+o.dataset.i; L.querySelectorAll('.gst-pal-o').forEach(function(x){ const on=+x.dataset.i===act; x.classList.toggle('on', on); x.setAttribute('aria-selected', String(on)); }); inp.setAttribute('aria-activedescendant','gstPalO'+act); } });
+    L.addEventListener('click', function(e){ const o=e.target.closest('.gst-pal-o'); if(o) run(+o.dataset.i); });
+    draw(); inp.focus();
+  };
+  return {
+    open:open, close:close, refresh:draw,
+    isOpen:function(){ return !!ov; },
+    toggle:function(s){ if(ov) close(); else open(s); },
+    setSource:function(s){ src=s; },
+    /* 이 화면의 카드 — 보이는 카드의 제목과(KPI 면) 값. 고르면 그 카드로 스크롤하고 잠깐 빛낸다 */
+    cards:function(){
+      const out=[]; let i=0;
+      document.querySelectorAll(GST.FX_SEL).forEach(function(el){
+        if(out.length>=80 || el.closest('.gov,.gst-pal-ov,.gst-dq-pop')) return;
+        if(!el.getClientRects().length) return;                      // 숨은 카드(묶음의 다른 기준 · 은퇴)는 뺀다
+        const ttl=el.querySelector('h3,h2,.lbl,.l,.ttl,.ds-kpi-l');
+        let t=ttl?(ttl.textContent||'').replace(/\s+/g,' ').trim():''; if(!t || t.length>80) return;
+        if(el.parentElement && el.parentElement.closest(GST.FX_SEL) && !el.matches('.kpi,.hb-kpi,.st-kpi,.ds-kpi')) return;
+        const val=el.querySelector('.val,.num,.v,.ds-kpi-v b'); const v=val?(val.textContent||'').replace(/\s+/g,' ').trim().slice(0,24):'';
+        el.setAttribute('data-gst-pid', String(i)); out.push({i:i, t:t.slice(0,60), v:v}); i++;
+      });
+      return out;
+    },
+    goCard:function(i){
+      const el=document.querySelector('[data-gst-pid="'+i+'"]'); if(!el) return;
+      try{ el.scrollIntoView({behavior:GST._reduce()?'auto':'smooth', block:'center'}); }catch(e){ el.scrollIntoView(); }
+      el.classList.remove('gst-flash'); void el.offsetWidth; el.classList.add('gst-flash'); clearTimeout(el._gstF); el._gstF=setTimeout(function(){ el.classList.remove('gst-flash'); }, 1600);
+    },
+    /* 셸 밖에서 혼자 열린 페이지의 항목 — 이 화면의 카드 */
+    local:function(){ return GST.palette.cards().map(function(c){ return {id:'card:'+c.i, g:'card', label:c.t, sub:c.v, run:function(){ GST.palette.goCard(c.i); }}; }); }
+  };
+})();
+GST._palCss = function(){
+  if(document.getElementById('gstPalCss')) return;
+  const st=document.createElement('style'); st.id='gstPalCss';
+  st.textContent=''
+  +'.gst-pal-ov{position:fixed;inset:0;z-index:99990;background:rgba(15,20,30,.32);display:flex;justify-content:center;align-items:flex-start;padding:12vh 16px 16px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}'
+  +'body.theme-slate .gst-pal-ov{background:rgba(2,5,12,.55)}'
+  +'.gst-pal{width:min(640px,100%);max-height:min(70vh,560px);display:flex;flex-direction:column;overflow:hidden;border-radius:16px;'
+  +'background:color-mix(in srgb,var(--surface,#fff) 92%,transparent);border:1px solid var(--line,#E4E7EC);color:var(--txt,#101828);'
+  +'box-shadow:0 24px 70px rgba(16,24,40,.28),0 0 0 1px rgba(255,255,255,.04) inset;backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);font-family:inherit}'
+  +'body.theme-slate .gst-pal{box-shadow:0 28px 80px rgba(0,0,0,.6),0 0 0 1px rgba(140,170,255,.10) inset}'
+  +'.gst-pal-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line,#E4E7EC);color:var(--mut,#667085)}'
+  +'.gst-pal-in{flex:1;min-width:0;border:0 !important;outline:0;background:transparent !important;color:var(--txt,#101828) !important;font:inherit;font-size:16px;font-weight:500;padding:2px 0;box-shadow:none !important}'
+  +'.gst-pal-in::placeholder{color:var(--mut,#98A2B3)}'
+  +'.gst-pal kbd{font:600 10.5px/1 ui-monospace,SFMono-Regular,Consolas,monospace;padding:3px 6px;border-radius:5px;border:1px solid var(--line,#E4E7EC);background:var(--surface-2,#F2F4F7);color:var(--mut,#667085)}'
+  +'.gst-pal-l{overflow:auto;padding:6px;flex:1}'
+  +'.gst-pal-g{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--mut,#667085);padding:10px 10px 5px}'
+  +'.gst-pal-o{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:10px;cursor:pointer;position:relative}'
+  +'.gst-pal-o.on{background:var(--accent-soft,#EAF1FE)}'
+  +'.gst-pal-o.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--accent,#2F6FED)}'
+  +'.gst-pal-ic{width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex:none;background:var(--surface-2,#F2F4F7);color:var(--accent-ink,#1D4ED8)}'
+  +'.gst-pal-o.on .gst-pal-ic{background:var(--surface,#fff)}'
+  +'.gst-pal-t{display:flex;flex-direction:column;min-width:0;flex:1}'
+  +'.gst-pal-t b{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+  +'.gst-pal-t small{font-size:11.5px;color:var(--mut,#667085);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}'
+  +'.gst-pal-k{font-size:11px;font-weight:600;color:var(--mut,#667085);flex:none}'
+  +'.gst-pal-0{padding:26px;text-align:center;color:var(--mut,#667085);font-size:13px}'
+  +'.gst-pal-f{display:flex;gap:16px;padding:9px 16px;border-top:1px solid var(--line,#E4E7EC);font-size:11px;color:var(--mut,#667085)}'
+  +'.gst-pal-f span{display:inline-flex;align-items:center;gap:4px}'
+  +'@media (max-width:640px){.gst-pal-f{display:none}.gst-pal-ov{padding-top:8vh}}'
+  +'@media (prefers-reduced-motion:no-preference){.gst-pal-ov{animation:gstPalDim .16s ease both}.gst-pal{animation:gstPalIn .22s cubic-bezier(.2,.9,.25,1.05) both}'
+  +'.gst-pal-ov.out{animation:gstPalDim .14s ease reverse both}.gst-pal-ov.out .gst-pal{animation:gstPalIn .14s ease reverse both}}'
+  +'@keyframes gstPalDim{from{opacity:0}to{opacity:1}}@keyframes gstPalIn{from{opacity:0;transform:translateY(-8px) scale(.975)}to{opacity:1;transform:none}}';
+  document.head.appendChild(st);
+};
+/* Ctrl K (맥은 ⌘K) — 어느 창에서 눌러도 연다. 입력 칸 안에서도 연다(검색이 목적이라 막을 이유가 없다) */
+if(typeof document!=='undefined'){
+  document.addEventListener('keydown', function(e){
+    if((e.ctrlKey||e.metaKey) && !e.shiftKey && !e.altKey && (e.key==='k'||e.key==='K')){ e.preventDefault(); e.stopPropagation(); GST.palette.toggle(); }
+  }, true);
+  /* 셸이 «이 화면의 카드»를 묻고, 고른 카드로 가라고 한다 */
+  window.addEventListener('message', function(e){
+    const d=e.data||{};
+    if(d.type==='gst-pal-q'){ let items=[]; try{ items=GST.palette.cards(); }catch(err){} try{ e.source && e.source.postMessage({type:'gst-pal-a', seq:d.seq, items:items}, '*'); }catch(err){} }
+    else if(d.type==='gst-pal-go'){ try{ GST.palette.goCard(d.i); }catch(err){} }
+  });
+}
+
+/* ---- 카드 조명 · 스크롤 등장 · 읽는 위치 — 움직임이 허락된 화면에서만 ---- */
+GST._fxInit = function(){
+  try{
+    if(!document.body || !GST._motionOn()) return;
+    /* 조명 — 마우스가 지나는 자리에 은은한 빛. 정확한 마우스(hover:hover)에서만. 자기 배경 그림이 있는 카드(스켈레톤 등)는 건너뛴다. */
+    if(window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches){
+      let cur=null, raf=0, px=0, py=0;
+      const set=function(){ raf=0; if(!cur) return; const r=cur.getBoundingClientRect(); cur.style.setProperty('--mx', Math.round(px-r.left)+'px'); cur.style.setProperty('--my', Math.round(py-r.top)+'px'); };
+      const off=function(){ if(cur) cur.classList.remove('gst-sp-on'); cur=null; };
+      document.addEventListener('pointermove', function(e){
+        if(e.pointerType && e.pointerType!=='mouse') return;
+        const el=e.target && e.target.closest ? e.target.closest(GST.FX_SEL) : null;
+        if(el!==cur){ off();
+          if(el && !el.classList.contains('skeleton') && !el.closest('.gov,.gst-pal-ov')){
+            if(!el.classList.contains('gst-sp') && !el._gstSpNo){ const bi=getComputedStyle(el).backgroundImage; if(!bi||bi==='none') el.classList.add('gst-sp'); else el._gstSpNo=1; }
+            if(el.classList.contains('gst-sp')){ cur=el; el.classList.add('gst-sp-on'); }
+          } }
+        px=e.clientX; py=e.clientY; if(cur && !raf) raf=requestAnimationFrame(set);
+      }, {passive:true});
+      document.addEventListener('pointerleave', off); window.addEventListener('blur', off);
+    }
+    /* 스크롤 등장 — «첫 화면 밖»의 카드만. 첫 화면 카드는 지금의 떠오르기(gstRise) 그대로다.
+       판정은 떠오르기가 끝난 뒤(0.7초)에 한다 — 막 열린 화면은 필터 블록이 아직 사이드바로 안 옮겨져 카드가 아래로 밀려 있어,
+       그때 재면 첫 화면 카드까지 «밖»으로 잡힌다(t-motion 이 잡았다). 화면 밖 카드가 0.7초 뒤에 감춰지는 것은 아무도 못 본다.
+       ⚠ translate(독립 속성)로 한다 — transform 을 쓰면 끝난 뒤에도 페이지 규칙과 싸우고, fixed 팝업의 기준을 흔든다.
+       ⚠ fixed·sticky 카드와 팝업 안은 건너뛴다. 인쇄할 때는 전부 보인다(beforeprint). */
+    if(typeof IntersectionObserver!=='undefined'){
+      const io=new IntersectionObserver(function(es){ es.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('gst-in'); io.unobserve(en.target); } }); }, {threshold:0.04, rootMargin:'0px 0px -3% 0px'});
+      GST._fxIO=io;
+      const scan=function(){
+        const H=window.innerHeight||800;
+        document.querySelectorAll(GST.FX_SEL).forEach(function(el){
+          if(el._gstRv) return; el._gstRv=1;
+          if(el.closest('.gov,.gst-pal-ov,.gst-dq-pop,.gst-sidebar')) return;
+          const cs=getComputedStyle(el); if(cs.position==='fixed'||cs.position==='sticky') return;
+          const r=el.getBoundingClientRect();
+          if(r.height>0 && r.top<H) return;                          // 한 줄이라도 보이는 카드는 건드리지 않는다
+          el.classList.add('gst-rv'); io.observe(el);
+        });
+      };
+      GST._fxScan=scan; setTimeout(scan, 700); setTimeout(scan, 1600); setTimeout(scan, 3200);
+      window.addEventListener('beforeprint', function(){ document.querySelectorAll('.gst-rv').forEach(function(el){ el.classList.add('gst-in'); }); });
+    }
+    /* 읽는 위치 — 긴 화면에서만 맨 위 2px 막대(카드가 아니라 자기 자신만 늘인다) */
+    const bar=document.createElement('div'); bar.className='gst-sprog'; bar.setAttribute('aria-hidden','true'); bar.innerHTML='<i></i>'; document.body.appendChild(bar);
+    let rq=0; const upd=function(){ rq=0; const h=document.documentElement, mx=h.scrollHeight-h.clientHeight;
+      if(mx<h.clientHeight*0.6){ bar.classList.remove('on'); return; } bar.classList.add('on'); bar.firstChild.style.transform='scaleX('+Math.min(1,Math.max(0,h.scrollTop/mx)).toFixed(4)+')'; };
+    window.addEventListener('scroll', function(){ if(!rq) rq=requestAnimationFrame(upd); }, {passive:true});
+    window.addEventListener('resize', function(){ if(!rq) rq=requestAnimationFrame(upd); }, {passive:true});
+  }catch(e){ console.warn('[fx] 효과를 못 걸었습니다 — 화면은 그대로입니다', e); }
+};
+if(typeof document!=='undefined'){
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', GST._fxInit);
+  else GST._fxInit();
 }
 
 /* ---------- 운영 현황 읽기·판정 한 벌 — 통합 관제 · 사이트 상세가 같이 쓴다 (v167) ----------
@@ -5860,8 +6227,8 @@ GST.zipLoad = function(){
 GST.capToast = function(msg){
   let el=document.getElementById('capToast');
   if(!el){ el=document.createElement('div'); el.id='capToast'; document.body.appendChild(el); }
-  el.textContent=msg; el.style.opacity='1';
-  clearTimeout(el._h); el._h=setTimeout(function(){ el.style.opacity='0'; },1600);
+  el.textContent=msg; el.style.opacity='1'; el.classList.add('on');   // .on — theme.css 의 튀어 오르기(v171). opacity 는 옛 페이지 규칙 호환
+  clearTimeout(el._h); el._h=setTimeout(function(){ el.style.opacity='0'; el.classList.remove('on'); },1600);
 };
 /* 실패를 «보이게» 알린다. alert 는 브라우저·확장에 따라 안 뜨는 자리가 있어 토스트를 먼저 쓴다.
    ⚠ window.capToast 를 먼저 보는 이유 — 페이지가 자기 토스트(다른 자리·다른 모양)를 갖고
@@ -8530,28 +8897,28 @@ GST.V2_T = {
        d_repeat14:'고장 위험 순위에서 {d}일 이내 재고장이 발생한 설비', d_act_overdue:'조치 사항 중 기한이 지났지만 완료되지 않은 건',
        w4:'최근 4주', tgt:'목표 {v}', tgt_le:'이하', tgt_ge:'이상', tgt_none:'목표 미설정', tgt_ok:'달성', tgt_miss:'미달 {g}', tgt_over:'초과 {g}',
        vs:'직전 4주 대비', vs_none:'비교 없음(현재 상태 기준)', den:'분모 {v}', den_units:'반입 {v}대', den_ev:'PM+고장 {v}건',
-       st_ok:'정상', st_warn:'주의', st_bad:'위험', st_none:'판정 없음', u_pct:'%', u_ea:'대', u_case:'건', u_pt:'p',
+       st_ok:'안정', st_warn:'관찰 중', st_bad:'점검 권장', st_none:'판정 없음', u_pct:'%', u_ea:'대', u_case:'건', u_pt:'p',
        g_band:'주의 구간 기본값', g_sig:'글로벌 현황 신호등 기준', g_risk:'고장 위험 점수', gd_band:'목표에 주의 기준을 따로 정하지 않았을 때 쓰는 구간', gd_sig:'운영단위를 위험·주의로 표시하는 기준(이번 주 고장 ÷ 평소)', gd_risk:'고장 분석 TOP 20 · 글로벌 현황 · 홈이 함께 쓰는 점수', p_band_run_rate:'가동률', p_band_bm_per100:'설비 100대당 고장', p_band_pm_ratio:'PM 비율', p_band_repeat14:'재고장 설비', p_band_act_overdue:'기한 경과 처리 건', p_sig_bad_x:'위험 — 평소 대비 배수(이상)', p_sig_bad_d:'위험 — 평소보다 늘어난 건수(이상)', p_sig_warn_x:'주의 — 평소 대비 배수(초과)', p_sig_warn_d:'주의 — 평소보다 늘어난 건수(이상)', p_sig_rep_bad:'위험 — 재고장 설비 수(이상)', p_sig_rep_warn:'주의 — 재고장 설비 수(이상)', p_risk_bm:'최근 90일 고장 1건당', p_risk_rep:'재고장 1회당', p_risk_up:'직전 90일 대비 2건 이상 증가 시', p_risk_recent:'최근 고장 발생 시', p_risk_pm:'PM 장기 미실시 시', p_risk_rep_days:'재고장 판단 기간', p_risk_recent_days:'「최근 고장」 판단 기간', p_risk_pm_days:'「PM 장기 미실시」 판단 기간', u_x:'배', u_day:'일', u_pts:'점', u_rel:'%' },
   en:{ m_run_rate:'Running rate', m_bm_per100:'Failures per 100 units', m_pm_ratio:'PM ratio', m_repeat14:'Units with {d}-day repeat', m_act_overdue:'Overdue actions',
        d_run_rate:'Running (Operation) ÷ installed · as of today', d_bm_per100:'Last-4-week failures ÷ installed × 100', d_pm_ratio:'Last-4-week PM ÷ (PM + failures)',
        d_repeat14:'Units in the risk ranking with a repeat failure within {d} days', d_act_overdue:'Open actions past their due date',
        w4:'last 4 wks', tgt:'Target {v}', tgt_le:'or less', tgt_ge:'or more', tgt_none:'No target', tgt_ok:'Met', tgt_miss:'Short {g}', tgt_over:'Over {g}',
        vs:'vs prior 4 wks', vs_none:'No comparison (current state)', den:'Base {v}', den_units:'{v} installed', den_ev:'{v} PM+BM',
-       st_ok:'Normal', st_warn:'Watch', st_bad:'Critical', st_none:'No rating', u_pct:'%', u_ea:'', u_case:'', u_pt:'p',
+       st_ok:'Stable', st_warn:'Watching', st_bad:'Check advised', st_none:'No rating', u_pct:'%', u_ea:'', u_case:'', u_pt:'p',
        g_band:'Default watch band', g_sig:'Global overview signals', g_risk:'Failure risk score', gd_band:'band used when a target has no watch limit', gd_sig:'when a unit turns critical/watch (this week ÷ usual)', gd_risk:'shared by Failure TOP 20 · Global overview · Home', p_band_run_rate:'Running rate', p_band_bm_per100:'Failures per 100 units', p_band_pm_ratio:'PM ratio', p_band_repeat14:'Repeat-failure units', p_band_act_overdue:'Overdue actions', p_sig_bad_x:'Critical — at least × usual', p_sig_bad_d:'Critical — at least this many more', p_sig_warn_x:'Watch — more than × usual', p_sig_warn_d:'Watch — at least this many more', p_sig_rep_bad:'Critical — repeat-failure units ≥', p_sig_rep_warn:'Watch — repeat-failure units ≥', p_risk_bm:'per failure in 90 days', p_risk_rep:'per repeat failure', p_risk_up:'if up by 2+ vs prior 90 days', p_risk_recent:'if failed recently', p_risk_pm:'if no PM for long', p_risk_rep_days:'gap counted as repeat', p_risk_recent_days:'length of «recent»', p_risk_pm_days:'length of «no PM for long»', u_x:'×', u_day:'d', u_pts:'pts', u_rel:'%' },
   zh:{ m_run_rate:'运行率', m_bm_per100:'每100台故障', m_pm_ratio:'PM比率', m_repeat14:'{d}天内复发设备', m_act_overdue:'逾期待办',
        d_run_rate:'运行(Operation) ÷ 进场设备 · 截至基准日', d_bm_per100:'最近4周故障 ÷ 进场设备 × 100', d_pm_ratio:'最近4周 PM ÷ (PM + 故障)',
        d_repeat14:'故障风险排名中{d}天内复发的设备', d_act_overdue:'待办中已过期限但未关闭的事项',
        w4:'最近4周', tgt:'目标 {v}', tgt_le:'以下', tgt_ge:'以上', tgt_none:'未设定目标', tgt_ok:'达成', tgt_miss:'未达 {g}', tgt_over:'超出 {g}',
        vs:'较前4周', vs_none:'无比较(当前状态)', den:'分母 {v}', den_units:'进场 {v}台', den_ev:'PM+故障 {v}件',
-       st_ok:'正常', st_warn:'注意', st_bad:'危险', st_none:'无判定', u_pct:'%', u_ea:'台', u_case:'件', u_pt:'p',
+       st_ok:'稳定', st_warn:'观察中', st_bad:'建议检查', st_none:'无判定', u_pct:'%', u_ea:'台', u_case:'件', u_pt:'p',
        g_band:'目标的默认注意区间', g_sig:'全球概况信号灯', g_risk:'故障风险分数', gd_band:'目标未填写«注意界限»时使用的区间', gd_sig:'将运营单位标为危险·注意的标准(本周故障 ÷ 平时)', gd_risk:'故障分析 TOP 20 · 全球概况 · 首页共用的分数', p_band_run_rate:'运行率', p_band_bm_per100:'每100台故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'复发设备', p_band_act_overdue:'逾期待办', p_sig_bad_x:'危险 — 平时的几倍以上', p_sig_bad_d:'危险 — 比平时多几件以上', p_sig_warn_x:'注意 — 超过平时的几倍', p_sig_warn_d:'注意 — 比平时多几件以上', p_sig_rep_bad:'危险 — 复发设备几台以上', p_sig_rep_warn:'注意 — 复发设备几台以上', p_risk_bm:'近90天每件故障', p_risk_rep:'每次复发', p_risk_up:'较前90天增加2件以上时', p_risk_recent:'近期有故障时', p_risk_pm:'长期未做PM时', p_risk_rep_days:'视为复发的间隔', p_risk_recent_days:'«近期»的长度', p_risk_pm_days:'«长期未PM»的长度', u_x:'倍', u_day:'天', u_pts:'分', u_rel:'%' },
   ja:{ m_run_rate:'稼働率', m_bm_per100:'設備100台あたり故障', m_pm_ratio:'PM比率', m_repeat14:'{d}日以内再故障設備', m_act_overdue:'期限超過の対応',
        d_run_rate:'稼働(Operation) ÷ 搬入設備 · 基準日時点', d_bm_per100:'直近4週の故障 ÷ 搬入設備 × 100', d_pm_ratio:'直近4週の PM ÷ (PM + 故障)',
        d_repeat14:'故障リスク順位で{d}日以内に再故障がある設備', d_act_overdue:'対応のうち期限を過ぎて閉じていないもの',
        w4:'直近4週', tgt:'目標 {v}', tgt_le:'以下', tgt_ge:'以上', tgt_none:'目標未設定', tgt_ok:'達成', tgt_miss:'未達 {g}', tgt_over:'超過 {g}',
        vs:'前4週比', vs_none:'比較なし(現在の状態)', den:'分母 {v}', den_units:'搬入 {v}台', den_ev:'PM+故障 {v}件',
-       st_ok:'正常', st_warn:'注意', st_bad:'危険', st_none:'判定なし', u_pct:'%', u_ea:'台', u_case:'件', u_pt:'p',
+       st_ok:'安定', st_warn:'観察中', st_bad:'点検推奨', st_none:'判定なし', u_pct:'%', u_ea:'台', u_case:'件', u_pt:'p',
        g_band:'目標の既定注意帯', g_sig:'グローバル概況シグナル', g_risk:'故障リスク点数', gd_band:'目標に«注意境界»がないときに使う帯', gd_sig:'運営単位を危険・注意にする基準(今週の故障 ÷ 平常)', gd_risk:'故障分析 TOP 20 · グローバル概況 · ホームで共通の点数', p_band_run_rate:'稼働率', p_band_bm_per100:'設備100台あたり故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'再故障設備', p_band_act_overdue:'期限超過の対応', p_sig_bad_x:'危険 — 平常の何倍以上', p_sig_bad_d:'危険 — 平常より何件以上多い', p_sig_warn_x:'注意 — 平常の何倍超', p_sig_warn_d:'注意 — 平常より何件以上多い', p_sig_rep_bad:'危険 — 再故障設備何台以上', p_sig_rep_warn:'注意 — 再故障設備何台以上', p_risk_bm:'直近90日の故障1件あたり', p_risk_rep:'再故障1回あたり', p_risk_up:'前90日より2件以上増えたら', p_risk_recent:'最近故障があれば', p_risk_pm:'PMが長くなければ', p_risk_rep_days:'再故障とみなす間隔', p_risk_recent_days:'«最近»の長さ', p_risk_pm_days:'«PMが長くない»の長さ', u_x:'倍', u_day:'日', u_pts:'点', u_rel:'%' }
 };
 GST.v2t = function(k, o, lang){

@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=170"></script>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=170">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=171"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=171">
 <style>
 /* ============================================================
    통합 관제 (v165 · 사용자 요청 「통합관리화면 신규 구축」)
@@ -46,6 +46,19 @@ body.hb{padding:0 !important;min-height:100vh}
 .hb-kpi .d{font-size:12px;color:var(--txt-muted);min-height:16px}
 .hb-kpi .d.up-bad,.hb-kpi .d.dn-bad{color:var(--bad)} .hb-kpi .d.up-ok,.hb-kpi .d.dn-ok{color:var(--ok)}
 .hb-spark{width:92px;height:30px;flex:none}
+.hb-tick{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:7px 0;
+  -webkit-mask:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+.hb-tick-in{display:inline-flex;white-space:nowrap;will-change:transform;animation:hbTick var(--dur,48s) linear infinite}
+.hb-tick:hover .hb-tick-in,.hb-tick:focus-within .hb-tick-in{animation-play-state:paused}
+.hb-tk{display:inline-flex;align-items:center;gap:8px;padding:2px 22px;font:inherit;font-size:12.5px;color:var(--txt-2);border:0;border-right:1px solid var(--line);background:transparent;cursor:pointer}
+.hb-tk:hover b{color:var(--accent-ink)}
+.hb-tk b{color:var(--txt-main);font-weight:700}
+.hb-tk em{font-style:normal;font-weight:700;font-size:11px;padding:2px 8px;border-radius:999px;color:var(--txt-2);background:var(--surface-2)}
+.hb-tk em.ok{color:var(--ok);background:var(--ok-soft)} .hb-tk em.warn{color:var(--warn);background:var(--warn-soft)} .hb-tk em.bad{color:var(--bad);background:var(--bad-soft)}
+.hb-tk .n{font-variant-numeric:tabular-nums;color:var(--txt-main);font-weight:600}
+@keyframes hbTick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){ .hb-tick{overflow-x:auto;-webkit-mask:none;mask:none} .hb-tick-in{animation:none} }
+@media print{ .hb-tick{display:none} }
 
 .hb-grid{display:grid;grid-template-columns:minmax(230px,1fr) minmax(0,3fr) minmax(280px,1.15fr);gap:12px;align-items:stretch}
 .hb-grid2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,2fr);gap:12px}
@@ -197,11 +210,13 @@ body.hb{padding:0 !important;min-height:100vh}
   </div>
 
   <section class="hb-kpis" id="kpis" aria-label="핵심 지표"></section>
+  <!-- 운영단위 상태 띠(v171 · 디자인 2.0) — 신호등과 같은 판정을 한 줄로 흘린다. 누르면 그 운영단위를 고른다. 마우스를 올리면 멈춘다 -->
+  <div class="hb-tick" id="tick" role="region" data-i-title="tk_lbl" hidden><div class="hb-tick-in" id="tickIn"></div></div>
 
   <section class="hb-grid">
     <div class="hb-card">
       <h2><span data-i="sigT">운영단위 신호등</span><button type="button" class="hb-info r" id="ruleBtn" aria-label="판정 기준" title="판정 기준">i</button></h2>
-      <div class="hb-legend"><span><i style="background:var(--bad)"></i><span data-i="bad">위험</span></span><span><i style="background:var(--warn)"></i><span data-i="warn">주의</span></span><span><i style="background:var(--ok)"></i><span data-i="ok">정상</span></span><span class="hb-sp"></span><span data-i="sigCols">이번 주 고장 · 위험 설비</span></div>
+      <div class="hb-legend"><span><i style="background:var(--bad)"></i><span data-i="bad">점검 권장</span></span><span><i style="background:var(--warn)"></i><span data-i="warn">관찰 중</span></span><span><i style="background:var(--ok)"></i><span data-i="ok">안정</span></span><span class="hb-sp"></span><span data-i="sigCols">이번 주 고장 · 위험 설비</span></div>
       <div class="hb-sigs" id="sigs"></div>
     </div>
 
@@ -245,7 +260,7 @@ const GEO={ KOREA:[36.4,127.9], TAIWAN:[23.8,121.0], USA:[39.5,-98.5], JAPAN:[36
   CHINA:[34,108.9], WUHAN:[30.6,114.3], HEFEI:[31.8,117.2], XIAN:[34.3,108.9], WUXI:[31.5,120.3] };
 
 const T={
-ko:{title:'글로벌 현황',back:'← 전세계',cdReg:'지역 분포',cdCust:'고객사 분포',unplaced:'위치 미지정',unplacedN:'지도에 못 놓은 곳 {n} · {u}대: {list}',unplacedAdm:' — 데이터 관리 「사이트」 탭의 «지도 위치»에서 정합니다',mapT_c:'{c} 설비 분포',mapS_c:'원 크기 = 반입 설비 · 색 = 그 운영단위의 신호 · 막대를 누르면 그 설비 목록',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'위험',warn:'주의',ok:'정상',sigCols:'이번 주 고장 · 위험 설비',
+ko:{title:'글로벌 현황',back:'← 전세계',cdReg:'지역 분포',cdCust:'고객사 분포',unplaced:'위치 미지정',unplacedN:'지도에 못 놓은 곳 {n} · {u}대: {list}',unplacedAdm:' — 데이터 관리 「사이트」 탭의 «지도 위치»에서 정합니다',mapT_c:'{c} 설비 분포',mapS_c:'원 크기 = 반입 설비 · 색 = 그 운영단위의 신호 · 막대를 누르면 그 설비 목록',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'점검 권장',warn:'관찰 중',ok:'안정',tk_run:'가동',tk_bm:'이번 주 고장',tk_lbl:'운영단위 상태',sigCols:'이번 주 고장 · 위험 설비',
   mapT:'글로벌 설비 분포',mapS:'원 크기 = 반입 설비 · 색 = 신호 · 나라를 누르면 그 나라 지도로',qT:'확인 사항',heatT:'주차별 고장 히트맵',heatS:'진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록',
   byOp:'운영단위',byCampus:'단지',loading:'자료를 불러오는 중…',asof:'{d} 기준',
   k_run:'가동 설비',k_run_d:'반입 {n}대 · 가동률 {p}%',k_run_none:'설치현황 자료 없음',k_bm:'이번 주 고장(BM)',k_pm:'이번 주 PM',k_risk:'고장 위험 설비',k_risk_d:'{rd}일 이내 재고장 {n}대',
@@ -257,12 +272,12 @@ ko:{title:'글로벌 현황',back:'← 전세계',cdReg:'지역 분포',cdCust:'
   m_units:'반입 / 가동',m_risk:'고장 위험 설비',m_rep:'{rd}일 이내 재고장',m_last:'마지막 고장',
   open_fault:'고장 분석에서 보기',open_inst:'설비 현황에서 보기',risk_top:'위험 설비 상위',
   st_open:'새로',st_ack:'확인',st_doing:'진행',st_done:'완료',st_dismissed:'보류',q_take:'조치 사항에 등록',q_taken:'조치 사항',q_open:'조치 사항 열기',q_risk:'고장 위험',q_dq:'자료 품질',q_none:'지금 처리할 것이 없습니다',q_s:'고장 위험 상위 · 자료 결함',
-  rule_t:'신호 판정 기준',rule:'위험 = 이번 주 고장이 평소(직전 8주 중앙값)의 {bx}배 이상이면서 {bd}건 이상 많거나, {rd}일 이내 재고장 설비가 {rb}대 이상\n주의 = 평소의 {wx}배를 넘으면서 {wd}건 이상 많거나, 재고장 설비가 {rw}대 이상\n정상 = 그 외\n\n고장 = 해외는 수선실적 작업단계 BM · 국내는 알람 원장(내적·한 사건 첫 줄). 원장이 비었으면 국내도 수선실적 BM.\n고장 위험 설비 = 고장분석 「고장 위험 설비 TOP 20」과 같은 식(GST.riskRank).',
+  rule_t:'신호 판정 기준',rule:'점검 권장 = 이번 주 고장이 평소(직전 8주 중앙값)의 {bx}배 이상이면서 {bd}건 이상 많거나, {rd}일 이내 재고장 설비가 {rb}대 이상\n관찰 중 = 평소의 {wx}배를 넘으면서 {wd}건 이상 많거나, 재고장 설비가 {rw}대 이상\n안정 = 그 외\n\n고장 = 해외는 수선실적 작업단계 BM · 국내는 알람 원장(내적·한 사건 첫 줄). 원장이 비었으면 국내도 수선실적 BM.\n고장 위험 설비 = 고장분석 「고장 위험 설비 TOP 20」과 같은 식(GST.riskRank).',
   krFall:'국내 알람 원장이 비어 있어 국내 고장은 수선실적 BM으로 집계 중입니다',
   l_date:'날짜',l_op:'운영단위',l_campus:'단지',l_eq:'설비',l_sn:'S/N',l_src:'출처',l_desc:'내용',l_score:'점수',l_why:'근거',l_wd:'유상 전환일',l_state:'설비상태',
   src_wk:'수선실적',src_kr:'알람 원장',week:'주',none:'자료 없음',fail:'일부 자료를 못 읽었습니다',
   dq_tip:'데이터 관리에서 고치기'},
-en:{title:'Global overview',back:'← World',cdReg:'By region',cdCust:'By customer',unplaced:'No position',unplacedN:'{n} place(s) not on the map · {u} units: {list}',unplacedAdm:' — set them in Data management «Sites» › Map position',mapT_c:'{c} installed base',mapS_c:'size = installed units · color = signal of its unit · click a bar for the unit list',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Critical',warn:'Watch',ok:'Normal',sigCols:'BM this week · at-risk units',
+en:{title:'Global overview',back:'← World',cdReg:'By region',cdCust:'By customer',unplaced:'No position',unplacedN:'{n} place(s) not on the map · {u} units: {list}',unplacedAdm:' — set them in Data management «Sites» › Map position',mapT_c:'{c} installed base',mapS_c:'size = installed units · color = signal of its unit · click a bar for the unit list',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Check advised',warn:'Watching',ok:'Stable',tk_run:'Running',tk_bm:'BM this week',tk_lbl:'Operating unit status',sigCols:'BM this week · at-risk units',
   mapT:'Global installed base',mapS:'size = installed units · color = signal · click a country to zoom in',qT:'To check',heatT:'Weekly failure heatmap',heatS:'darker = above usual · click a cell for that week\'s failures',
   byOp:'Operating unit',byCampus:'Campus',loading:'Loading…',asof:'As of {d}',
   k_run:'Running units',k_run_d:'{n} installed · {p}% running',k_run_none:'No installation data',k_bm:'Failures (BM) this week',k_pm:'PM this week',k_risk:'At-risk units',k_risk_d:'{n} repeat within {rd} days',
@@ -274,12 +289,12 @@ en:{title:'Global overview',back:'← World',cdReg:'By region',cdCust:'By custom
   m_units:'Installed / running',m_risk:'At-risk units',m_rep:'Repeat within {rd} days',m_last:'Last failure',
   open_fault:'Open in Failure analysis',open_inst:'Open in Equipment',risk_top:'Top at-risk units',
   st_open:'New',st_ack:'Ack',st_doing:'In progress',st_done:'Done',st_dismissed:'On hold',q_take:'Add to action items',q_taken:'Action item',q_open:'Open action items',q_risk:'Risk',q_dq:'Data',q_none:'Nothing to handle right now',q_s:'top risks · data issues',
-  rule_t:'Signal rule',rule:'Critical = this week\'s BM ≥ {bx}× usual (8-week median) and ≥{bd} more, or ≥{rb} units with repeat failure within {rd} days\nWatch = > {wx}× usual and ≥{wd} more, or ≥{rw} repeat-failure unit(s)\nNormal = otherwise\n\nBM = overseas: repair records stage BM · Korea: alarm ledger (internal, first line per event). If the ledger is empty, Korea also uses repair BM.\nAt-risk units = same formula as Fault «At-risk TOP 20» (GST.riskRank).',
+  rule_t:'Signal rule',rule:'Check advised = this week\'s BM ≥ {bx}× usual (8-week median) and ≥{bd} more, or ≥{rb} units with repeat failure within {rd} days\nWatching = > {wx}× usual and ≥{wd} more, or ≥{rw} repeat-failure unit(s)\nStable = otherwise\n\nBM = overseas: repair records stage BM · Korea: alarm ledger (internal, first line per event). If the ledger is empty, Korea also uses repair BM.\nAt-risk units = same formula as Fault «At-risk TOP 20» (GST.riskRank).',
   krFall:'Korea alarm ledger is empty — counting repair-record BM',
   l_date:'Date',l_op:'Unit',l_campus:'Campus',l_eq:'Equipment',l_sn:'S/N',l_src:'Source',l_desc:'Detail',l_score:'Score',l_why:'Why',l_wd:'Paid from',l_state:'Status',
   src_wk:'Repair',src_kr:'Alarm ledger',week:'wk',none:'No data',fail:'Some data could not be read',
   dq_tip:'Fix in Data management'},
-zh:{title:'全球概况',back:'← 全球',cdReg:'地区分布',cdCust:'客户分布',unplaced:'未指定位置',unplacedN:'未能放到地图上的 {n} 处 · {u}台: {list}',unplacedAdm:' — 在数据管理「站点」页的地图位置中设定',mapT_c:'{c} 设备分布',mapS_c:'圆大小 = 已进场设备 · 颜色 = 所属运营单位信号 · 点击柱查看设备',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'危险',warn:'注意',ok:'正常',sigCols:'本周故障 · 风险设备',
+zh:{title:'全球概况',back:'← 全球',cdReg:'地区分布',cdCust:'客户分布',unplaced:'未指定位置',unplacedN:'未能放到地图上的 {n} 处 · {u}台: {list}',unplacedAdm:' — 在数据管理「站点」页的地图位置中设定',mapT_c:'{c} 设备分布',mapS_c:'圆大小 = 已进场设备 · 颜色 = 所属运营单位信号 · 点击柱查看设备',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'建议检查',warn:'观察中',ok:'稳定',tk_run:'运行',tk_bm:'本周故障',tk_lbl:'运营单位状态',sigCols:'本周故障 · 风险设备',
   mapT:'全球设备分布',mapS:'圆大小 = 已进场设备 · 颜色 = 信号 · 点击国家查看该国地图',qT:'待确认',heatT:'按周故障热力图',heatS:'越深 = 高于平时 · 点击格子查看该周故障',
   byOp:'运营单位',byCampus:'园区',loading:'正在加载…',asof:'截至 {d}',
   k_run:'运行设备',k_run_d:'进场 {n}台 · 运行率 {p}%',k_run_none:'无设备台账数据',k_bm:'本周故障(BM)',k_pm:'本周PM',k_risk:'故障风险设备',k_risk_d:'{rd}天内复发 {n}台',
@@ -291,12 +306,12 @@ zh:{title:'全球概况',back:'← 全球',cdReg:'地区分布',cdCust:'客户�
   m_units:'进场 / 运行',m_risk:'故障风险设备',m_rep:'{rd}天内复发',m_last:'最后故障',
   open_fault:'在故障分析中查看',open_inst:'在设备现况中查看',risk_top:'风险设备前列',
   st_open:'新',st_ack:'已确认',st_doing:'进行中',st_done:'完成',st_dismissed:'搁置',q_take:'加入待办事项',q_taken:'待办事项',q_open:'打开待办事项',q_risk:'故障风险',q_dq:'数据质量',q_none:'目前没有待处理事项',q_s:'风险前列 · 数据缺陷',
-  rule_t:'信号判定标准',rule:'危险 = 本周故障为平时(前8周中位数)的{bx}倍以上且多{bd}件以上，或{rd}天内复发设备{rb}台以上\n注意 = 超过平时{wx}倍且多{wd}件以上，或复发设备{rw}台以上\n正常 = 其他\n\n故障 = 海外为维修实绩作业阶段BM · 国内为报警台账(内部·每事件第一行)。台账为空时国内也按维修实绩BM。\n故障风险设备 = 与故障分析「故障风险设备 TOP 20」同一公式(GST.riskRank)。',
+  rule_t:'信号判定标准',rule:'建议检查 = 本周故障为平时(前8周中位数)的{bx}倍以上且多{bd}件以上，或{rd}天内复发设备{rb}台以上\n观察中 = 超过平时{wx}倍且多{wd}件以上，或复发设备{rw}台以上\n稳定 = 其他\n\n故障 = 海外为维修实绩作业阶段BM · 国内为报警台账(内部·每事件第一行)。台账为空时国内也按维修实绩BM。\n故障风险设备 = 与故障分析「故障风险设备 TOP 20」同一公式(GST.riskRank)。',
   krFall:'国内报警台账为空 — 正按维修实绩BM计数',
   l_date:'日期',l_op:'运营单位',l_campus:'园区',l_eq:'设备',l_sn:'S/N',l_src:'来源',l_desc:'内容',l_score:'分数',l_why:'依据',l_wd:'有偿起始日',l_state:'设备状态',
   src_wk:'维修实绩',src_kr:'报警台账',week:'周',none:'无数据',fail:'部分数据未能读取',
   dq_tip:'在数据管理中修正'},
-ja:{title:'グローバル概況',back:'← 全世界',cdReg:'地域分布',cdCust:'顧客分布',unplaced:'位置未指定',unplacedN:'地図に置けない場所 {n} · {u}台: {list}',unplacedAdm:' — データ管理「サイト」タブの地図位置で設定します',mapT_c:'{c} 設備分布',mapS_c:'円の大きさ = 搬入設備 · 色 = その運営単位の信号 · 棒を押すと設備一覧',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'危険',warn:'注意',ok:'正常',sigCols:'今週の故障 · 危険設備',
+ja:{title:'グローバル概況',back:'← 全世界',cdReg:'地域分布',cdCust:'顧客分布',unplaced:'位置未指定',unplacedN:'地図に置けない場所 {n} · {u}台: {list}',unplacedAdm:' — データ管理「サイト」タブの地図位置で設定します',mapT_c:'{c} 設備分布',mapS_c:'円の大きさ = 搬入設備 · 色 = その運営単位の信号 · 棒を押すと設備一覧',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'点検推奨',warn:'観察中',ok:'安定',tk_run:'稼働',tk_bm:'今週の故障',tk_lbl:'運営単位の状態',sigCols:'今週の故障 · 危険設備',
   mapT:'グローバル設備分布',mapS:'円の大きさ = 搬入設備 · 色 = シグナル · 国を押すとその国の地図へ',qT:'確認事項',heatT:'週別故障ヒートマップ',heatS:'濃いほど平常より多い · セルを押すとその週の故障一覧',
   byOp:'運営単位',byCampus:'団地',loading:'データ読み込み中…',asof:'{d} 時点',
   k_run:'稼働設備',k_run_d:'搬入 {n}台 · 稼働率 {p}%',k_run_none:'設置台帳データなし',k_bm:'今週の故障(BM)',k_pm:'今週のPM',k_risk:'故障リスク設備',k_risk_d:'{rd}日以内再故障 {n}台',
@@ -308,7 +323,7 @@ ja:{title:'グローバル概況',back:'← 全世界',cdReg:'地域分布',cdCu
   m_units:'搬入 / 稼働',m_risk:'故障リスク設備',m_rep:'{rd}日以内再故障',m_last:'最終故障',
   open_fault:'故障分析で見る',open_inst:'設備現況で見る',risk_top:'リスク設備上位',
   st_open:'新規',st_ack:'確認',st_doing:'対応中',st_done:'完了',st_dismissed:'保留',q_take:'対応事項に登録',q_taken:'対応事項',q_open:'対応事項を開く',q_risk:'故障リスク',q_dq:'データ品質',q_none:'今対応することはありません',q_s:'リスク上位 · データ欠陥',
-  rule_t:'シグナル判定基準',rule:'危険 = 今週の故障が平常(直前8週中央値)の{bx}倍以上かつ{bd}件以上多い、または{rd}日以内再故障設備が{rb}台以上\n注意 = 平常の{wx}倍超かつ{wd}件以上多い、または再故障設備が{rw}台以上\n正常 = その他\n\n故障 = 海外は修繕実績の作業段階BM · 国内はアラーム台帳(内的・1事象の最初の行)。台帳が空なら国内も修繕実績BM。\n故障リスク設備 = 故障分析「故障リスク設備 TOP 20」と同じ式(GST.riskRank)。',
+  rule_t:'シグナル判定基準',rule:'点検推奨 = 今週の故障が平常(直前8週中央値)の{bx}倍以上かつ{bd}件以上多い、または{rd}日以内再故障設備が{rb}台以上\n観察中 = 平常の{wx}倍超かつ{wd}件以上多い、または再故障設備が{rw}台以上\n安定 = その他\n\n故障 = 海外は修繕実績の作業段階BM · 国内はアラーム台帳(内的・1事象の最初の行)。台帳が空なら国内も修繕実績BM。\n故障リスク設備 = 故障分析「故障リスク設備 TOP 20」と同じ式(GST.riskRank)。',
   krFall:'国内アラーム台帳が空 — 修繕実績BMで集計中',
   l_date:'日付',l_op:'運営単位',l_campus:'団地',l_eq:'設備',l_sn:'S/N',l_src:'出典',l_desc:'内容',l_score:'点数',l_why:'根拠',l_wd:'有償開始日',l_state:'設備状態',
   src_wk:'修繕実績',src_kr:'アラーム台帳',week:'週',none:'データなし',fail:'一部のデータを読めませんでした',
@@ -445,7 +460,8 @@ function render(){
   const _asof=document.getElementById('asof');
   _asof.innerHTML=esc(fmt(t('asof'),{d:GST.fmtD(D.asOf)}))+(D.KR_ON||S.region==='os'?'':' <button type="button" class="gst-warn" id="krWarn" title="'+esc(t('krFall'))+'" aria-label="'+esc(t('krFall'))+'">⚠</button>');
   const _kw=document.getElementById('krWarn'); if(_kw) _kw.onclick=()=>GST.rowsModal('⚠', [t('l_desc')], [[t('krFall')]]);
-  drawKpis(); drawSignals(); drawMap(); drawSel(); drawQueue(); drawHeat();
+  drawKpis(); drawTicker(); drawSignals(); drawMap(); drawSel(); drawQueue(); drawHeat();
+  try{ GST.boot && GST.boot.rendered(); }catch(e){}   // 셸의 부팅 화면이 걷힐 신호(v171)
   try{ window.parent!==window && window.parent.postMessage({type:'gst-state',state:''},'*'); }catch(e){}
 }
 function spark(a, col){
@@ -511,6 +527,22 @@ function kpiOpen(k){
     D.warrSoon.slice().sort((a,b)=>a.wd-b.wd).map(x=>[GST.fmtD(x.wd),x.op,x.campus,x.code,x.sn,x.stateRaw]));
   if(k==='dq') return GST.rowsModal(t('k_dq'), [t('q_dq'),t('l_desc'),'N'], dqItems().map(d=>[d.page, d.label, d.n==null?'':String(d.n)]));
   if(k==='run') return GST.goTab ? GST.goTab('scrubber') : null;
+}
+/* 운영단위 상태 띠 — 신호등(drawSignals)과 같은 g.st 를 쓴다. 판정을 새로 하지 않는다.
+   이어 흐르도록 같은 줄을 두 번 이어 붙이고(-50% 이동), 둘째 벌은 키보드·화면 낭독에서 뺀다. */
+function drawTicker(){
+  const box=document.getElementById('tick'), inn=document.getElementById('tickIn'); if(!box||!inn) return;
+  const G=D.groups.filter(g=>g.inN||g.cur);
+  if(!G.length){ box.hidden=true; inn.innerHTML=''; return; }
+  box.hidden=false;
+  const one=(g,dup)=>'<button type="button" class="hb-tk" data-tk="'+esc(g.op)+'"'+(dup?' tabindex="-1" aria-hidden="true"':'')+'>'
+    +'<span class="hb-dot '+g.st+'"></span><b>'+esc(short(g.op))+'</b><em class="'+g.st+'">'+esc(t(g.st))+'</em>'
+    +'<span>'+esc(t('tk_run'))+' <span class="n">'+nf(g.runN)+'</span> / '+nf(g.inN)+'</span>'
+    +'<span>'+esc(t('tk_bm'))+' <span class="n">'+nf(g.cur)+'</span></span></button>';
+  let seq=G; while(seq.length<6) seq=seq.concat(G);
+  inn.innerHTML=seq.map((g,i)=>one(g, i>=G.length)).join('')+seq.map(g=>one(g,true)).join('');
+  inn.style.setProperty('--dur', Math.max(32, seq.length*6)+'s');
+  inn.querySelectorAll('.hb-tk').forEach(b=>b.onclick=()=>pick(b.dataset.tk));
 }
 function drawSignals(){
   const box=document.getElementById('sigs');
