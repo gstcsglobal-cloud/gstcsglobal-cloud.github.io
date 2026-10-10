@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=158"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=160"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:#1d2433;background:#F5F6F8;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
@@ -43,7 +43,7 @@ body.embed{padding:12px 14px}body.embed>h1,body.embed>.sub{display:none}body.emb
 <body>
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-window.GST && GST.needVer && GST.needVer(157);   // GST.cmap.colName·compose(v157 · CIP 묶음 머리글) · GST.sheetRows(v141) 이전 core 면 배너 — «숫자가 0» 대신(v135)
+window.GST && GST.needVer && GST.needVer(160);   // GST.cmap.colName·compose(v157 · CIP 묶음 머리글) · GST.sheetRows(v141) 이전 core 면 배너 — «숫자가 0» 대신(v135)
 </script>
 
 <h1>원본 파일 올리기</h1>
@@ -1266,6 +1266,18 @@ window.addEventListener('message',function(e){
 });
 /* 로그인 게이트 — 다른 페이지와 동일. 쓰기 권한(can_write)은 RLS 가 최종 판정한다. */
 GST.authGate().then(async()=>{
+  /* 등록부의 «새» CIP 사이트를 대상에 더한다 (v160) — 옛 F11·F16 은 위 TABLES 그대로. 사이트 경로(?site=)는 자기 대상만 연다.
+     ⚠ 파일을 넘겨받기(gst-upload-ready) «전에» 더해야 데이터 관리가 건넨 rid 를 고를 수 있다. */
+  if(!ROUTE) try{
+    (await GST.cipSites()).filter(s=>!TABLES.some(t=>t&&t.table===s.cip_table)).forEach(s=>{
+      const rid='cip_'+s.fab.toLowerCase();
+      TABLES.push({ rid, label:'CIP '+s.fab+' (엑셀 또는 CSV)', table:s.cip_table, kind:'import', addCols:true, fab:s.fab,
+        after:'CIP 현황에서 '+s.fab+' 사이트가 뜨는지, 분모(대상 건수)가 줄지 않았는지 확인하세요.' });
+      TPL_NAME[rid]='CIP_'+s.fab;
+      $('tsel').insertAdjacentHTML('beforeend','<option value="'+(TABLES.length-1)+'">'+GST._esc(TABLES[TABLES.length-1].label)+'</option>');
+    });
+    const rid=new URLSearchParams(location.search).get('rid'); if(rid) pickRid(rid);
+  }catch(e){ console.warn('[upload] 사이트 등록부를 못 읽었습니다 — CIP 는 F11·F16 만 보입니다', e); }
   try{ const p=await GST.sheetWrite('perm','1213453343');
        /* 데모 경로는 «관리자(쓰기 권한) 또는 국내 운영자(kr)» — kr 은 can_write 가 꺼져 있으므로 can_write 로 보면 안 된다.
           그 밖(운영 표)은 지금까지대로 can_write 다 — kr 계정이 /upload/ 를 그냥 열면 여기서 잠긴다(서버도 막는다). */

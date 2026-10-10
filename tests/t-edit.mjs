@@ -117,7 +117,7 @@ function fake(seed) {
         LOG.push(JSON.parse(JSON.stringify(st)));
         /* 열 맵핑(colmap_site · v151)·기준 정보(value_map · v152) 저장 — 표마다 PK 로 갈아끼운다 */
         if (st.ups) { const o = st.ups, T = (DB[tbl] = DB[tbl] || []);
-          const PK = tbl === 'value_map' ? ['tbl','col','raw','when_col','when_val'] : ['site','tbl','field'];   // 표마다 실제 PK
+          const PK = tbl === 'value_map' ? ['tbl','col','raw','when_col','when_val'] : tbl === 'site_registry' ? ['fab'] : ['site','tbl','field'];   // 표마다 실제 PK
           for (let i = T.length - 1; i >= 0; i--) if (PK.every(k => String(T[i][k] == null ? '' : T[i][k]) === String(o[k] == null ? '' : o[k]))) T.splice(i, 1);
           T.push(o); return Promise.resolve({ data:[o], error:null }).then(res, rej); }
         if (st.del) { const T = DB[tbl] || [], d = T.filter(r => st.f.every(([c, op, v]) => test(r, c, op, v)));
@@ -130,7 +130,7 @@ function fake(seed) {
         if (window.__MAXROWS && !st.head && rows.length > window.__MAXROWS) rows = rows.slice(0, window.__MAXROWS);   // 서버 행수 상한(max-rows) — 요청보다 짧은 장이 온다
         if (st.head && window.__COUNT_ERR) return Promise.resolve({ data:null, count:null, error:{ message:'canceling statement due to statement timeout' } }).then(res, rej);
         if (st.head && window.__COUNT_AS != null) return Promise.resolve({ data:null, count:window.__COUNT_AS, error:null }).then(res, rej);
-        if (st.cols && st.cols !== '*') { const cs = st.cols.split(','); rows = rows.map(r => Object.fromEntries(cs.map(c => [c, r[c] === undefined ? null : r[c]]))); }
+        if (st.cols && st.cols !== '*') { const cs = st.cols.split(',').map(c => c.replace(/^"|"$/g, '')); /* PostgREST 는 큰따옴표 열 이름을 벗겨 돌려준다 */ rows = rows.map(r => Object.fromEntries(cs.map(c => [c, r[c] === undefined ? null : r[c]]))); }
         else rows = rows.map(r => Object.assign({}, r));
         const out = st.head ? { count: rows.length, data: null, error: null }
           : st.single ? { data: rows[0] || null, error: null } : { data: rows, count: st.count ? total : null, error: null };
@@ -209,6 +209,21 @@ function fake(seed) {
       return { ok:true, log:bid, updated:nu, inserted:ni, same };
     },
     edit_overwrites: a => window.__OVW || { n:0, last:null, keys:[], who:[] },
+    /* 사이트 등록부 (setup-23 · v160) — 모양만 흉내(권한·이름 규칙은 t-editsql [15]) */
+    cip_site_create: a => {
+      const f = String(a.p_fab || '').trim().toUpperCase(); if (!/^[A-Z0-9][A-Z0-9-]{0,15}$/.test(f)) throw new Error('bad_fab');
+      const R = (DB.site_registry = DB.site_registry || []), cur = R.find(x => x.fab === f);
+      if (cur && cur.cip_table) return { table:cur.cip_table, created:false };
+      const t = 'sheet_cip_' + f.toLowerCase().replace(/-/g, '_');
+      DB[t] = []; KEY[t] = 'id';
+      seed.cols[t] = ['id','NO','Country','Customer','FAB','Floor','area','Type','Model','Model Type','PJT.','Scrubber S/N','Scrubber Code','Group','Detail','FAB In','Remark'];
+      seed.types[t] = { id:'bigint' };
+      if (cur) cur.cip_table = t; else R.push({ fab:f, label:f, cip_table:t, region:'' });
+      logEdit(t, f, 'cip_create', null, { fab:f, table:t });
+      return { table:t, created:true };
+    },
+    import_add_cols: a => { const added = (a.p_cols || []).filter(c => (seed.cols[a.p_tbl] || []).indexOf(c) < 0);
+      seed.cols[a.p_tbl] = (seed.cols[a.p_tbl] || []).concat(added); return { added, skipped:[] }; },
     /* edit_dq · edit_dq_rows (setup-21 · v155) — 판정은 SQL 소관(운영 실측으로 확인). 여기는 «화면이 받은 대로 보여 주고 그 행을 띄우는가»만 */
     edit_dq: a => { if (!window.__DQ) throw new Error('Could not find the function public.edit_dq'); window.__DQN = (window.__DQN || 0) + 1; return Object.assign({ from:'2025-09-01' }, window.__DQ); },
     edit_dq_rows: a => (window.__DQROWS || {})[a.p_check + (a.p_op ? '|' + a.p_op + '|' + a.p_wk : '')] || [],
@@ -1939,6 +1954,69 @@ console.log('[30] CIP F11 · F16 도 다른 표처럼 탭이다 — 찾기 · �
   const k = await open(Object.assign(seedOf({}), {}), '/edit/?site=KR');
   is(await k.pg.evaluate(() => !document.querySelector('.tab[data-tab=cip11]') && !document.querySelector('.tab[data-tab=cip16]')), '국내 데모 모드에는 CIP 탭이 없다 (데모 표가 없다)');
   await k.ctx.close();
+}
+
+console.log('[31] 사이트 등록부 — 새 사이트를 먼저 정의하고 · CIP 표를 만들고 · 설치현황 S/N 로 행을 만들고 · 점검 항목을 더한다 (v160)');
+{
+  const sd = seedOf({});
+  sd.tables.site_registry = [{ fab:'F11', label:'MICRON F11', cip_table:'sheet_cip_f11', region:'해외' }, { fab:'F16', label:'MICRON F16', cip_table:'sheet_cip_f16', region:'해외' }];
+  sd.tables.value_map = []; sd.tables.sheet_cip_f11 = []; sd.tables.sheet_cip_f16 = [];
+  const CB = ['id','NO','Country','Customer','FAB','Floor','Model','Scrubber S/N','Scrubber Code','FAB In','Remark'];
+  sd.cols.sheet_cip_f11 = CB; sd.cols.sheet_cip_f16 = CB; sd.types.sheet_cip_f11 = sd.types.sheet_cip_f16 = { id:'bigint' };
+  const iN = sd.tables.sheet_inst.length;
+  [{ code:'ZF-1', sn:'ZZF-0001', country:'TAIWAN', customer:'MICRON', fab:'F18', floor:'A1', model:'MF-1', state:'Operation', fab_in:'2026-09-01' },
+   { code:'ZF-2', sn:'ZZF-0002', country:'TAIWAN', customer:'MICRON', fab:'F18', floor:'A2', model:'MF-1', state:'Set-up' },
+   { code:'ZF-3', sn:'ZZF-0003', country:'TAIWAN', customer:'MICRON', fab:'F18', floor:'A2', model:'MF-1', state:'반납' },
+   { code:'ZF-4', sn:null, country:'TAIWAN', customer:'MICRON', fab:'F18', floor:'A3', model:'MF-1', state:'Operation' }]
+    .forEach((r, i) => sd.tables.sheet_inst.push(full(INST_COLS, Object.assign({ src_row:iN + i }, r))));
+  const { ctx, pg, pe } = await open(sd);
+  await pg.click('.tab[data-tab=site]'); await pg.waitForFunction(() => /FAB/.test((document.getElementById('siteBox') || {}).innerText || ''), null, { timeout:8000 });
+  const tx = () => pg.$eval('#siteBox', e => e.innerText);
+  is(/F11/.test(await tx()) && /F16/.test(await tx()) && !/F18/.test(await tx()), '등록된 사이트만 먼저 (F11·F16) — 설치현황의 다른 FAB 은 접어 둔다');
+  await pg.check('#stAll'); await pg.waitForTimeout(150);
+  is(/F18/.test(await tx()), '「다른 FAB 도 보기」 → 설치현황의 F18 (4대) 이 «등록» 단추와 함께 선다');
+  await pg.click('[data-st=new]'); await waitDlg(pg, /새 사이트 등록/);
+  await pg.fill('#stFab', 'f18'); await pg.click('.mask .btn.pri');
+  await waitDlg(pg, /F18/);
+  await pg.fill('[data-sf=label]', 'MICRON F18'); await pg.fill('[data-sf=country]', 'GST TAIWAN SCRUBBER'); await pg.dispatchEvent('[data-sf=country]', 'input');
+  is(/해외/.test(await pg.$eval('#stMean', e => e.textContent)), '운영단위를 적으면 «대시보드가 읽는 구분»을 그 자리에서 보여 준다 (정본 판정)');
+  await pg.fill('[data-sf=customer]', 'TESTCO F18'); await pg.click('.mask .btn.pri'); await pg.waitForTimeout(500);
+  const reg = await pg.evaluate(() => (window.__DB.site_registry || []).find(x => x.fab === 'F18'));
+  is(reg && reg.op === 'GST TAIWAN SCRUBBER' && reg.label === 'MICRON F18' && reg.region === '해외' && !reg.cip_table, '등록부에 한 줄 (코드는 대문자 · 구분은 정본 판정으로)');
+  const vm = await pg.evaluate(() => window.__DB.value_map.filter(r => r.when_col === 'fab' && r.when_val === 'F18').map(r => r.col + '=' + r.val).sort().join('|'));
+  is(vm === 'country=GST TAIWAN SCRUBBER|customer=TESTCO F18', '정의가 «기준 정보» 규칙(FAB=F18 인 설치현황 행)으로도 저장된다 (' + vm + ')');
+  await pg.click('[data-st=cip][data-f=F18]'); await waitDlg(pg, /CIP 표 만들기/); await pg.click('.mask .btn.pri'); await pg.waitForTimeout(500);
+  is(await pg.evaluate(() => !!document.querySelector('.tab[data-tab=cip_f18]') && UP_RID.cip_f18 === 'cip_f18'), 'CIP 표를 만들면 탭 줄에 「CIP F18」 · 원본 교체는 업로드의 cip_f18 로');
+  await qlog(pg);
+  await pg.click('[data-st=seed][data-f=F18]'); await waitDlg(pg, /설치현황에서 CIP 행 만들기/);
+  const body = await dlgBody(pg);
+  is(/3대/.test(body) && /빈칸 1대/.test(body) && /나간 설비/.test(body), '미리 보기 — CIP 에 없는 S/N 3대 · S/N 빈칸 1대는 안 넣음 · 나간 설비는 고를 수 있다');
+  await pg.click('.mask .btn.pri'); await pg.waitForTimeout(500);
+  const bk = rpcs(await qlog(pg), 'edit_bulk')[0];
+  const rows = bk ? bk.args.p_items.map(x => x.row) : [];
+  is(bk && bk.args.p_tbl === 'sheet_cip_f18' && rows.length === 2 && rows.every(r => r.FAB === 'F18' && r['Scrubber S/N'] && r.Floor && r.Model === 'MF-1')
+     && rows.map(r => r['Scrubber S/N']).join() === 'ZZF-0001,ZZF-0002', '설치현황 → edit_bulk 새 행 2개 (반납 1대는 기본으로 뺀다 · 같은 이름의 칸만 옮긴다)');
+  is(rows[0] && rows[0]['FAB In'] === '2026-09-01' && rows[0].NO === '1', 'FAB In 과 순번(NO)도 옮긴다');
+  await pg.click('[data-st=seed][data-f=F18]'); await waitDlg(pg, /설치현황에서 CIP 행 만들기/);
+  is(/새로 넣을 설비가 없습니다|1대/.test(await dlgBody(pg)), '다시 누르면 이미 든 S/N 은 빼고 센다');
+  await pg.click('.mask .btn'); await pg.waitForTimeout(150);
+  await pg.click('[data-st=item][data-f=F18]'); await waitDlg(pg, /점검 항목 더하기/);
+  await pg.fill('#stItems', 'Valve Kit Left\nValve Kit Right\n'); await pg.click('.mask .btn.pri'); await pg.waitForTimeout(400);
+  const ia = rpcs(await qlog(pg), 'import_add_cols')[0];
+  is(ia && ia.args.p_tbl === 'sheet_cip_f18' && ia.args.p_cols.join('|') === 'Valve Kit Left|Valve Kit Right', '점검 항목 더하기 → import_add_cols (한 줄에 하나 · 빈 줄 무시)');
+  await pg.click('.mask .btn'); await pg.waitForTimeout(150);
+  await pg.click('.tab[data-tab=cip_f18]'); await pg.waitForTimeout(500);
+  is((await listKeys(pg)).length === 2, 'CIP F18 탭이 그 표를 보여 준다 (2행)');
+  is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
+  await ctx.close();
+  /* 등록부를 못 읽으면(정책 미적용 — 읽기가 0행) 말하며 잠근다. 옛 F11·F16 탭은 그대로 선다. */
+  const sd2 = seedOf({}); sd2.tables.sheet_cip_f11 = []; sd2.tables.sheet_cip_f16 = []; sd2.cols.sheet_cip_f11 = sd2.cols.sheet_cip_f16 = CB;
+  const b = await open(sd2);
+  is(await b.pg.evaluate(() => !!document.querySelector('.tab[data-tab=cip11]') && !!document.querySelector('.tab[data-tab=cip16]')), '등록부가 비어도 옛 CIP F11·F16 탭은 그대로');
+  await b.pg.click('.tab[data-tab=site]'); await b.pg.waitForTimeout(600);
+  is(await b.pg.evaluate(() => /setup-23-sites\.sql/.test(document.getElementById('siteBox').innerText) && Array.from(document.querySelectorAll('#siteBox [data-st=def]')).every(x => x.disabled)),
+     '등록부를 못 읽으면 «무엇을 하면 되는지»(setup-23 Run) 적고 정의 단추를 잠근다');
+  await b.ctx.close();
 }
 
 await browser.close();
