@@ -99,22 +99,23 @@ body{color:var(--txt);
 
 
 
-.kpi.k4 .val{color:var(--ok)}.kpi.k5 .val{color:var(--bad)}
+/* 워런티 OUT 은 «나쁜 소식»이 아니다 — 보증이 끝나면 자재 판매가 유상이 된다(사용자 확정 · CLAUDE.md 제4원칙). 붉게 칠하지 않는다 */
+.kpi.k5 .val{color:var(--accent-ink)}
 /* Warranty 분할 바 카드 */
 .wbig{display:flex;align-items:baseline;gap:8px;margin:6px 0 12px}
 .wbig .wv{font-size:28px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
 .wbig .wlbl{font-size:11px;color:var(--mut)}
 .wbar{display:flex;height:16px;border-radius:5px;overflow:hidden;gap:2px;margin-bottom:12px}
-.wbar .wa{background:var(--ok);border-radius:5px 0 0 5px;transition:width .4s}
+.wbar .wa{background:var(--accent);border-radius:5px 0 0 5px;transition:width .4s}
 .wbar .wb{background:rgba(151,170,196,.25);flex:1;border-radius:0 5px 5px 0}
 .wleg{display:flex;gap:18px;font-size:11.5px;color:var(--mut);margin-bottom:12px}
 .wleg i{display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(151,170,196,.25);margin-right:6px}
-.wleg i.ok{background:var(--ok)}
+.wleg i.pd{background:var(--accent)}
 .wleg b{color:var(--txt);font-variant-numeric:tabular-nums}
 .wexp{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;cursor:pointer;
-  background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);font-size:11.5px;color:var(--txt)}
-.wexp:hover{border-color:var(--warn)}
-.wexp b{color:var(--warn)}
+  background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);font-size:11.5px;color:var(--txt)}
+.wexp:hover{border-color:var(--accent)}
+.wexp b{color:var(--accent-ink)}
 
 /* TREND */
 .trend-card{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px);margin-bottom:20px}
@@ -300,10 +301,10 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #mdCard{display:none !im
     <div class="cap" data-i="kp3">고객사</div>
     <div class="kf" id="kf3">—</div></div>
   <div class="kpi k4"><div class="krow"><span class="val" id="kp4">0</span><span class="unit" data-i="unit_ea">대</span><span class="kd" id="kd4"></span></div>
-    <div class="cap" data-i="kp4">Warranty 유효</div>
+    <div class="cap" data-i="kp4">Warranty IN</div>
     <div class="kf" id="kf4">—</div></div>
   <div class="kpi k5"><div class="krow"><span class="val" id="kp5">0</span><span class="unit" data-i="unit_ea">대</span><span class="kd" id="kd5"></span></div>
-    <div class="cap" data-i="kp5">90일 내 만료 예정</div>
+    <div class="cap" data-i="kp5">Warranty OUT</div>
     <div class="kf" id="kf5">—</div></div>
 </div>
 
@@ -353,15 +354,15 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #mdCard{display:none !im
     </div>
     <div class="card">
       <h3 data-i="ch_warr">워런티 현황</h3>
-      <div class="card-note" data-i="note_warr">Active vs Expired ratio</div>
-      <div class="wbig"><span class="wv" id="wPct">0%</span><span class="wlbl" data-i="w_ratio">유효 비율</span></div>
+      <div class="card-note" data-i="note_warr">무상(보증 중) · 유상(보증 종료) 구성</div>
+      <div class="wbig"><span class="wv" id="wPct">0%</span><span class="wlbl" data-i="w_ratio">유상 비율 (보증 종료)</span></div>
       <div class="wbar"><div class="wa" id="wBarA" style="width:0%"></div><div class="wb"></div></div>
       <div class="wleg">
-        <span><i class="ok"></i><span data-i="warr_ok">유효</span> <b id="wOk">0</b></span>
-        <span><i></i><span data-i="warr_exp">만료</span> <b id="wExp">0</b></span>
+        <span><i class="pd"></i><span data-i="warr_exp">유상 (보증 종료)</span> <b id="wExp">0</b></span>
+        <span><i></i><span data-i="warr_ok">무상 (보증 중)</span> <b id="wOk">0</b></span>
       </div>
       <div class="wexp" id="wExpNote" style="display:none">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 2"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.5"/></svg>
         <span id="wExpTxt"></span>
       </div>
     </div>
@@ -453,13 +454,13 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #mdCard{display:none !im
     <div class="trend-wrap"><canvas id="cWarrPipe"></canvas></div>
   </div>
   <div class="card" style="margin-bottom:16px">
-    <h3 data-i="ch_renew">고객사별 Warranty OUT 예정 (180일 내)</h3>
-    <div class="card-note" data-i="note_renew">Warranty OUT 전환 예정 챔버 · 값은 막대 끝</div>
+    <h3 data-i="ch_renew">고객사별 유상 챔버 (보증 종료)</h3>
+    <div class="card-note" data-i="note_renew">보증이 끝나 자재가 유상으로 판매되는 챔버 · 값은 막대 끝</div>
     <div class="cw" style="height:200px"><canvas id="cRenewCust"></canvas></div>
   </div>
   <div class="grid2-trend">
     <div class="tablecard">
-      <h3 data-i="wt_title">Warranty OUT 설비</h3>
+      <h3 data-i="wt_title">유상 설비 (Warranty OUT)</h3>
       <div class="tbl-wrap">
         <table>
           <thead><tr><th>Code</th><th>S/N</th><th>Country</th><th>Customer</th><th>Model</th><th>Warranty</th><th>Turn On</th></tr></thead>
@@ -561,16 +562,16 @@ const T={
     gran_lbl:'집계 단위',gran_note:'↑ 추이 차트 적용',
     g_week:'주 단위',g_month:'월 단위',g_quarter:'분기 단위',g_half:'반기 단위',g_year:'연 단위',
     search_lbl:'검색',
-    kp1:'설치 챔버',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty IN',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'개국',unit_co:'사',kf1:'전년 동기 {n}ch',kf2:'최다 {v} · {n}ch',kf2_unk:'국가 미상 {n}ch',kf3:'신규 {n}개사 (12개월)',kf4:'전체의 {p}%',kf5:'전체의 {p}%',w_ratio:'Warranty IN 비율',ch_newm:'신규 Turn On 추이 (주/월)',note_newm:'최근 12구간(주/월) · 신규 가동',note_hbar:'🖱️ 클릭 시 필터 · 비중은 툴팁',mon_unit:'월',
+    kp1:'설치 챔버',kp2:'설치 국가',kp3:'고객사',kp4:'Warranty IN',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'개국',unit_co:'사',kf1:'전년 동기 {n}ch',kf2:'최다 {v} · {n}ch',kf2_unk:'국가 미상 {n}ch',kf3:'신규 {n}개사 (12개월)',kf4:'전체의 {p}%',kf5:'전체의 {p}%',w_ratio:'유상 비율 (보증 종료)',ch_newm:'신규 Turn On 추이 (주/월)',note_newm:'최근 12구간(주/월) · 신규 가동',note_hbar:'🖱️ 클릭 시 필터 · 비중은 툴팁',mon_unit:'월',
     note_ax:'🖱️ 막대를 눌러 필터 · 축을 바꿔 다른 분포로',etc_n:'기타 ({n}종)',
     by_ax:'{v}별 설치',ax_corp:'법인',ax_cust:'고객사',ax_camp:'단지',ax_line:'라인',ax_model:'모델',ax_tm:'Tool Maker',ax_grp:'공정 그룹',
     dr_on:'차트 드릴',
     trend_dual:'누적 반입·가동 추이',dual_ton:'가동(Turn On)',dual_fab:'반입(FAB In)',trend_fabin:'누적 FAB In 추이 (반입 기준)',trend_turnon:'누적 Turn On 추이 (가동 기준)',
-    note_rate:'Bar: 대수 · Line: 비중(%)',note_warr:'유효/만료 비율',
+    note_rate:'Bar: 대수 · Line: 비중(%)',note_warr:'무상(보증 중) · 유상(보증 종료) 구성',
     note_model:'모델별 분포',note_group:'공정 그룹별 분포',note_yoy:'대수 막대 · 전년비(%)는 툴팁',note_drill:'대수 막대 · 비중(%)은 툴팁 · 🖱️ 클릭 시 필터',note_drill2:'분포 · 🖱️ 클릭 시 필터',cross_title:'교차 분석',cross_x:'가로축',cross_color:'쌓기 기준',
-    ins_warr90:'Warranty OUT {n}ch — 무상 지원 종료',ins_idle:'반입 후 미가동 {n}대 — Turn On 확인 필요',ins_unkstate:'처음 보는 설비상태 {v} — 어느 집계에도 안 들어갑니다',warn_nodate:'⚠ 날짜 없는 {n}대는 추이에 없습니다 — 설치현황의 날짜 칸을 채우면 반영됩니다',dq_unkstate_a:'설치현황의 설비상태 표기를 확인하거나, 새 상태라면 알려 주세요',dq_md_a:'설치현황의 반입일·Setup·Turn-on 칸을 채우고 /upload/ 로 다시 올리세요',md_title:'날짜 미기재 (법인별)',md_note:'개수는 설비상태로 세므로 영향 없습니다 · 추이·리드타임·TCO 만 이 칸을 씁니다',md_corp:'법인',md_fabin:'반입일 없음',md_setup:'Setup 없음',md_ton:'Turn-On 없음',md_tot:'대수',ins_md:'날짜 미기재 {n}대 — {top} (추이·TCO 에서 빠집니다)',sec_ov:'개요',sec_tr:'기간별 현황',sec_di:'분포 분석',sec_wr:'Warranty·관리',sec_dt:'상세 목록',ch_lead:'고객사별 셋업 리드타임',note_lead:'FAB In → Turn On 평균 소요일 · 상위 10',ch_age:'장비 나이 분포',note_age:'Turn On 기준 경과 연수',age_1:'1년 미만',age_13:'1–3년',age_35:'3–5년',age_5:'5년 이상',ch_toolmaker:'Tool Maker별 설치',note_tm:'대수 · 비중은 툴팁',ch_wpipe:'라인별 Warranty IN / OUT',note_wpipe:'라인별 IN/OUT 챔버 구성',ch_renew:'고객사별 Warranty OUT 예정 (180일 내)',note_renew:'Warranty OUT 전환 예정 챔버 · 값은 막대 끝',wp_exp:'Warranty OUT',wt_title:'Warranty OUT 설비 (무상 지원 종료)',idle_title:'반입 후 미가동 장비',days_unit:'일',ins_topctry:'최다 국가 {v} — 점유 {p}% ({n}대)',ins_turnon:'최근 12개월 신규 Turn On {n}대 · 이전 12개월 대비 {p}',
+    ins_warr90:'보증 종료 {n}ch — 자재 유상 판매 대상',ins_idle:'반입 후 미가동 {n}대 — Turn On 확인 필요',ins_unkstate:'처음 보는 설비상태 {v} — 어느 집계에도 안 들어갑니다',warn_nodate:'⚠ 날짜 없는 {n}대는 추이에 없습니다 — 설치현황의 날짜 칸을 채우면 반영됩니다',dq_unkstate_a:'설치현황의 설비상태 표기를 확인하거나, 새 상태라면 알려 주세요',dq_md_a:'설치현황의 반입일·Setup·Turn-on 칸을 채우고 /upload/ 로 다시 올리세요',md_title:'날짜 미기재 (법인별)',md_note:'개수는 설비상태로 세므로 영향 없습니다 · 추이·리드타임·TCO 만 이 칸을 씁니다',md_corp:'법인',md_fabin:'반입일 없음',md_setup:'Setup 없음',md_ton:'Turn-On 없음',md_tot:'대수',ins_md:'날짜 미기재 {n}대 — {top} (추이·TCO 에서 빠집니다)',sec_ov:'개요',sec_tr:'기간별 현황',sec_di:'분포 분석',sec_wr:'Warranty·관리',sec_dt:'상세 목록',ch_lead:'고객사별 셋업 리드타임',note_lead:'FAB In → Turn On 평균 소요일 · 상위 10',ch_age:'장비 나이 분포',note_age:'Turn On 기준 경과 연수',age_1:'1년 미만',age_13:'1–3년',age_35:'3–5년',age_5:'5년 이상',ch_toolmaker:'Tool Maker별 설치',note_tm:'대수 · 비중은 툴팁',ch_wpipe:'라인별 Warranty IN / OUT',note_wpipe:'라인별 IN/OUT 챔버 구성',ch_renew:'고객사별 유상 챔버 (보증 종료)',note_renew:'보증이 끝나 자재가 유상으로 판매되는 챔버 · 값은 막대 끝',wp_exp:'Warranty OUT',wt_title:'유상 설비 (Warranty OUT)',idle_title:'반입 후 미가동 장비',days_unit:'일',ins_topctry:'최다 국가 {v} — 점유 {p}% ({n}대)',ins_turnon:'최근 12개월 신규 Turn On {n}대 · 이전 12개월 대비 {p}',
     tbl_title:'상세 목록',loading:'데이터 불러오는 중...',
-    warr_all:'전체',warr_ok:'유효',warr_exp:'만료',no_data:'조건에 맞는 데이터가 없습니다',
+    warr_all:'전체',warr_ok:'무상 (보증 중)',warr_exp:'유상 (보증 종료)',no_data:'조건에 맞는 데이터가 없습니다',
     legend_cum:'누적',legend_new:'신규',range_all:'전체 기간',
     auto_switch:'기간이 길어 자동 전환됨',too_fine:'권장하지 않음'},
   en:{ch_model:'Model',ch_warr:'Warranty Status',ch_tony:'Turn On by Year',ch_cust:'Customer',ch_group:'Group',title:'Equipment',sub:'Installation · Turn On · Warranty status',
@@ -582,16 +583,16 @@ const T={
     gran_lbl:'View By',gran_note:'↑ Trend chart unit',
     g_week:'Week',g_month:'Month',g_quarter:'Quarter',g_half:'Half-Year',g_year:'Year',
     search_lbl:'Search',
-    kp1:'Installed Chambers',kp2:'Countries',kp3:'Customers',kp4:'Warranty IN',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'countries',unit_co:'cos.',kf1:'A year ago: {n}',kf2:'Top {v} · {n}',kf2_unk:'{n} unresolved',kf3:'{n} new customers (12mo)',kf4:'{p}% of total',kf5:'{p}% of total',w_ratio:'Warranty IN ratio',ch_newm:'New Turn On Trend (W/M)',note_newm:'Last 12 periods (W/M)',note_hbar:'🖱️ click to filter · share in tooltip',mon_unit:'',
+    kp1:'Installed Chambers',kp2:'Countries',kp3:'Customers',kp4:'Warranty IN',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'countries',unit_co:'cos.',kf1:'A year ago: {n}',kf2:'Top {v} · {n}',kf2_unk:'{n} unresolved',kf3:'{n} new customers (12mo)',kf4:'{p}% of total',kf5:'{p}% of total',w_ratio:'Paid share (out of warranty)',ch_newm:'New Turn On Trend (W/M)',note_newm:'Last 12 periods (W/M)',note_hbar:'🖱️ click to filter · share in tooltip',mon_unit:'',
     note_ax:'🖱️ click a bar to filter · switch the axis for another breakdown',etc_n:'Others ({n})',
     by_ax:'Installed by {v}',ax_corp:'Entity',ax_cust:'Customer',ax_camp:'Campus',ax_line:'Line',ax_model:'Model',ax_tm:'Tool Maker',ax_grp:'Process Group',
     dr_on:'Chart drill',
     trend_dual:'Cumulative FAB In vs Turn On',dual_ton:'Turn On',dual_fab:'FAB In',trend_fabin:'Cumulative FAB In Trend',trend_turnon:'Cumulative Turn On Trend',
-    note_rate:'Bar: count · Line: rate(%)',note_warr:'Active vs Expired ratio',
+    note_rate:'Bar: count · Line: rate(%)',note_warr:'Free (in warranty) vs paid (out of warranty)',
     note_model:'By model',note_group:'By process group',note_yoy:'Count bars · YoY(%) in tooltip',note_drill:'Count bars · rate(%) in tooltip · 🖱️ click to filter',note_drill2:'Distribution · 🖱️ click to filter',cross_title:'Cross Analysis',cross_x:'X-Axis',cross_color:'Stack By',
-    ins_warr90:'Warranty OUT {n} ch — free support ended',ins_idle:'{n} units FAB-In but not turned on',ins_unkstate:'Unknown equipment status {v} — not counted anywhere',warn_nodate:'⚠ {n} units without a date are missing from the trend — fill the date column in the install sheet',dq_unkstate_a:'Check the status wording in the install sheet, or tell us if it is new',dq_md_a:'Fill the receipt/setup/turn-on dates in the install sheet and re-upload via /upload/',md_title:'Missing dates by entity',md_note:'Counts use equipment status · only trends/lead time/TCO need these cells',md_corp:'Entity',md_fabin:'No FAB In',md_setup:'No Setup',md_ton:'No Turn-On',md_tot:'Units',ins_md:'{n} units with missing dates — {top} (excluded from trends/TCO)',sec_ov:'Overview',sec_tr:'Trends',sec_di:'Breakdown',sec_wr:'Warranty',sec_dt:'Data',ch_lead:'Setup Lead Time by Customer',note_lead:'FAB In → Turn On avg days · TOP 10',ch_age:'Fleet Age',note_age:'Years since Turn On',age_1:'<1y',age_13:'1–3y',age_35:'3–5y',age_5:'5y+',ch_toolmaker:'Installed base by Tool Maker',note_tm:'Count · share in tooltip',ch_wpipe:'Warranty IN / OUT by Line',note_wpipe:'IN/OUT chambers by line',ch_renew:'Warranty OUT pipeline by Customer (<180d)',note_renew:'chambers turning Warranty OUT · value at bar end',wp_exp:'Warranty OUT',wt_title:'Warranty OUT units (free support ended)',idle_title:'FAB-In but not Turned On',days_unit:'d',ins_topctry:'Top country {v} — {p}% share ({n} units)',ins_turnon:'{n} new Turn-Ons in last 12mo · {p} vs prior 12mo',
+    ins_warr90:'{n} ch out of warranty — parts are billable',ins_idle:'{n} units FAB-In but not turned on',ins_unkstate:'Unknown equipment status {v} — not counted anywhere',warn_nodate:'⚠ {n} units without a date are missing from the trend — fill the date column in the install sheet',dq_unkstate_a:'Check the status wording in the install sheet, or tell us if it is new',dq_md_a:'Fill the receipt/setup/turn-on dates in the install sheet and re-upload via /upload/',md_title:'Missing dates by entity',md_note:'Counts use equipment status · only trends/lead time/TCO need these cells',md_corp:'Entity',md_fabin:'No FAB In',md_setup:'No Setup',md_ton:'No Turn-On',md_tot:'Units',ins_md:'{n} units with missing dates — {top} (excluded from trends/TCO)',sec_ov:'Overview',sec_tr:'Trends',sec_di:'Breakdown',sec_wr:'Warranty',sec_dt:'Data',ch_lead:'Setup Lead Time by Customer',note_lead:'FAB In → Turn On avg days · TOP 10',ch_age:'Fleet Age',note_age:'Years since Turn On',age_1:'<1y',age_13:'1–3y',age_35:'3–5y',age_5:'5y+',ch_toolmaker:'Installed base by Tool Maker',note_tm:'Count · share in tooltip',ch_wpipe:'Warranty IN / OUT by Line',note_wpipe:'IN/OUT chambers by line',ch_renew:'Paid chambers by customer (out of warranty)',note_renew:'Chambers whose parts are now billable · value at bar end',wp_exp:'Warranty OUT',wt_title:'Paid units (Warranty OUT)',idle_title:'FAB-In but not Turned On',days_unit:'d',ins_topctry:'Top country {v} — {p}% share ({n} units)',ins_turnon:'{n} new Turn-Ons in last 12mo · {p} vs prior 12mo',
     tbl_title:'Detail List',loading:'Loading...',
-    warr_all:'All',warr_ok:'Active',warr_exp:'Expired',no_data:'No data found',
+    warr_all:'All',warr_ok:'Free (in warranty)',warr_exp:'Paid (out of warranty)',no_data:'No data found',
     legend_cum:'Cumulative',legend_new:'New',range_all:'All time',
     auto_switch:'Auto-switched (range too long)',too_fine:'not recommended'},
   zh:{ch_model:'型号',ch_warr:'保修状态',ch_tony:'按年 Turn On',ch_cust:'客户',ch_group:'工艺组',title:'设备现况',sub:'安装 · Turn On · 保修现况',
@@ -603,16 +604,16 @@ const T={
     gran_lbl:'聚合单位',gran_note:'↑ 趋势图适用',
     g_week:'按周',g_month:'按月',g_quarter:'按季度',g_half:'按半年',g_year:'按年',
     search_lbl:'搜索',
-    kp1:'安装腔体',kp2:'国家',kp3:'客户',kp4:'保修有效',kp5:'Warranty OUT',unit_ea:'腔',unit_cty:'国',unit_co:'家',kf1:'去年同期 {n}腔',kf2:'最多 {v} · {n}腔',kf2_unk:'国家不明 {n}腔',kf3:'新客户 {n}家 (12个月)',kf4:'占总数{p}%',kf5:'占总数 {p}%',w_ratio:'有效比率',ch_newm:'新增Turn On趋势 (周/月)',note_newm:'近12期(周/月)',note_hbar:'🖱️点击筛选 · 占比见提示框',mon_unit:'月',
+    kp1:'安装腔体',kp2:'国家',kp3:'客户',kp4:'保修内',kp5:'Warranty OUT',unit_ea:'腔',unit_cty:'国',unit_co:'家',kf1:'去年同期 {n}腔',kf2:'最多 {v} · {n}腔',kf2_unk:'国家不明 {n}腔',kf3:'新客户 {n}家 (12个月)',kf4:'占总数{p}%',kf5:'占总数 {p}%',w_ratio:'有偿比率 (保修结束)',ch_newm:'新增Turn On趋势 (周/月)',note_newm:'近12期(周/月)',note_hbar:'🖱️点击筛选 · 占比见提示框',mon_unit:'月',
     note_ax:'🖱️点击柱状筛选 · 切换轴查看其他分布',etc_n:'其他 ({n}种)',
     by_ax:'按{v}安装',ax_corp:'法人',ax_cust:'客户',ax_camp:'园区',ax_line:'线',ax_model:'型号',ax_tm:'Tool Maker',ax_grp:'工艺组',
     dr_on:'图表筛选',
     trend_dual:'累计搬入·运行趋势',dual_ton:'运行(Turn On)',dual_fab:'搬入(FAB In)',trend_fabin:'累计FAB In趋势（搬入）',trend_turnon:'累计Turn On趋势（运行）',
-    note_rate:'柱:台数·线:占比%',note_warr:'有效/到期比率',
+    note_rate:'柱:台数·线:占比%',note_warr:'免费(保修内) · 有偿(保修结束) 构成',
     note_model:'按型号',note_group:'按工艺组',note_yoy:'台数柱状 · 同比%见提示框',note_drill:'台数柱状 · 占比%见提示框 · 🖱️点击筛选',note_drill2:'分布 · 🖱️点击筛选',cross_title:'交叉分析',cross_x:'横轴',cross_color:'堆叠依据',
-    ins_warr90:'Warranty OUT {n}腔 — 免费支持已结束',ins_idle:'搬入后未运行 {n}台 — 需确认Turn On',ins_unkstate:'未知设备状态 {v} — 未计入任何统计',warn_nodate:'⚠ 无日期的 {n}台未计入趋势 — 填写安装现况的日期栏后即可反映',dq_unkstate_a:'请确认安装现况的设备状态写法；若是新状态请告知',dq_md_a:'请填写安装现况的到货·Setup·Turn-on 日期并通过 /upload/ 重新上传',md_title:'日期缺失(法人)',md_note:'台数按设备状态统计 · 仅趋势·前置期·TCO 使用这些日期',md_corp:'法人',md_fabin:'无入库日',md_setup:'无Setup',md_ton:'无Turn-On',md_tot:'台数',ins_md:'日期缺失 {n}台 — {top}',sec_ov:'概览',sec_tr:'趋势',sec_di:'分布分析',sec_wr:'保修·管理',sec_dt:'明细',ch_lead:'客户安装周期',note_lead:'FAB In → Turn On 平均天数 · TOP 10',ch_age:'设备年龄分布',note_age:'自Turn On经过年数',age_1:'不满1年',age_13:'1–3年',age_35:'3–5年',age_5:'5年以上',ch_toolmaker:'按Tool Maker',note_tm:'台数 · 占比见提示框',ch_wpipe:'按线 Warranty IN / OUT',note_wpipe:'按线IN/OUT腔体构成',ch_renew:'按客户 Warranty OUT 预定 (180天内)',note_renew:'即将转为Warranty OUT的腔体 · 数值在柱端',wp_exp:'Warranty OUT',wt_title:'Warranty OUT 设备 (免费支持已结束)',idle_title:'搬入后未运行设备',days_unit:'天',ins_topctry:'最多国家 {v} — 占 {p}% ({n}台)',ins_turnon:'近12个月新增Turn On {n}台 · 环比前12个月 {p}',
+    ins_warr90:'保修结束 {n}腔 — 备件转为有偿销售',ins_idle:'搬入后未运行 {n}台 — 需确认Turn On',ins_unkstate:'未知设备状态 {v} — 未计入任何统计',warn_nodate:'⚠ 无日期的 {n}台未计入趋势 — 填写安装现况的日期栏后即可反映',dq_unkstate_a:'请确认安装现况的设备状态写法；若是新状态请告知',dq_md_a:'请填写安装现况的到货·Setup·Turn-on 日期并通过 /upload/ 重新上传',md_title:'日期缺失(法人)',md_note:'台数按设备状态统计 · 仅趋势·前置期·TCO 使用这些日期',md_corp:'法人',md_fabin:'无入库日',md_setup:'无Setup',md_ton:'无Turn-On',md_tot:'台数',ins_md:'日期缺失 {n}台 — {top}',sec_ov:'概览',sec_tr:'趋势',sec_di:'分布分析',sec_wr:'保修·管理',sec_dt:'明细',ch_lead:'客户安装周期',note_lead:'FAB In → Turn On 平均天数 · TOP 10',ch_age:'设备年龄分布',note_age:'自Turn On经过年数',age_1:'不满1年',age_13:'1–3年',age_35:'3–5年',age_5:'5年以上',ch_toolmaker:'按Tool Maker',note_tm:'台数 · 占比见提示框',ch_wpipe:'按线 Warranty IN / OUT',note_wpipe:'按线IN/OUT腔体构成',ch_renew:'按客户 有偿腔体 (保修结束)',note_renew:'保修结束、备件有偿销售的腔体 · 数值在柱端',wp_exp:'Warranty OUT',wt_title:'有偿设备 (Warranty OUT)',idle_title:'搬入后未运行设备',days_unit:'天',ins_topctry:'最多国家 {v} — 占 {p}% ({n}台)',ins_turnon:'近12个月新增Turn On {n}台 · 环比前12个月 {p}',
     tbl_title:'详细列表',loading:'加载中...',
-    warr_all:'全部',warr_ok:'有效',warr_exp:'到期',no_data:'无数据',
+    warr_all:'全部',warr_ok:'免费 (保修内)',warr_exp:'有偿 (保修结束)',no_data:'无数据',
     legend_cum:'累计',legend_new:'新增',range_all:'全部时间',
     auto_switch:'区间过长已自动切换',too_fine:'不推荐'},
   ja:{ch_model:'モデル',ch_warr:'保証状況',ch_tony:'年別 Turn On',ch_cust:'顧客',ch_group:'工程グループ',title:'設備現況',sub:'設置 · Turn On · 保証状況',
@@ -624,16 +625,16 @@ const T={
     gran_lbl:'集計単位',gran_note:'↑ 推移チャート適用',
     g_week:'週単位',g_month:'月単位',g_quarter:'四半期',g_half:'半期',g_year:'年単位',
     search_lbl:'検索',
-    kp1:'設置チャンバー',kp2:'設置国',kp3:'顧客',kp4:'保証有効',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'カ国',unit_co:'社',kf1:'前年同期 {n}ch',kf2:'最多 {v} · {n}ch',kf2_unk:'国不明 {n}ch',kf3:'新規 {n}社 (12ヶ月)',kf4:'全体の{p}%',kf5:'全体の {p}%',w_ratio:'有効比率',ch_newm:'新規Turn On推移 (週/月)',note_newm:'直近12区間(週/月)',note_hbar:'🖱️クリックで絞込 · 構成比はツールチップ',mon_unit:'月',
+    kp1:'設置チャンバー',kp2:'設置国',kp3:'顧客',kp4:'保証中',kp5:'Warranty OUT',unit_ea:'ch',unit_cty:'カ国',unit_co:'社',kf1:'前年同期 {n}ch',kf2:'最多 {v} · {n}ch',kf2_unk:'国不明 {n}ch',kf3:'新規 {n}社 (12ヶ月)',kf4:'全体の{p}%',kf5:'全体の {p}%',w_ratio:'有償比率 (保証終了)',ch_newm:'新規Turn On推移 (週/月)',note_newm:'直近12区間(週/月)',note_hbar:'🖱️クリックで絞込 · 構成比はツールチップ',mon_unit:'月',
     note_ax:'🖱️棒をクリックで絞込 · 軸を変えて別の分布へ',etc_n:'その他 ({n}種)',
     by_ax:'{v}別設置',ax_corp:'法人',ax_cust:'顧客',ax_camp:'団地',ax_line:'ライン',ax_model:'モデル',ax_tm:'Tool Maker',ax_grp:'工程グループ',
     dr_on:'チャート絞込',
     trend_dual:'累積搬入・稼働推移',dual_ton:'稼働(Turn On)',dual_fab:'搬入(FAB In)',trend_fabin:'累積FAB In推移（搬入）',trend_turnon:'累積Turn On推移（稼働）',
-    note_rate:'棒:台数·線:構成比%',note_warr:'有効/切れ比率',
+    note_rate:'棒:台数·線:構成比%',note_warr:'無償(保証中) · 有償(保証終了) の構成',
     note_model:'モデル別',note_group:'工程グループ別',note_yoy:'台数棒 · 前年比%はツールチップ',note_drill:'台数棒 · 構成比%はツールチップ · 🖱️クリックで絞込',note_drill2:'分布 · 🖱️クリックで絞込',cross_title:'クロス分析',cross_x:'横軸',cross_color:'積み上げ基準',
-    ins_warr90:'Warranty OUT {n}ch — 無償サポート終了',ins_idle:'搬入後未稼働 {n}台 — Turn On要確認',ins_unkstate:'初めて見る設備状態 {v} — どの集計にも入りません',warn_nodate:'⚠ 日付のない {n}台は推移に入っていません — 設置現況の日付欄を埋めると反映されます',dq_unkstate_a:'設置現況の設備状態の表記を確認するか、新しい状態ならお知らせください',dq_md_a:'設置現況の搬入日·Setup·Turn-on 欄を埋めて /upload/ から再アップロードしてください',md_title:'日付未記入(法人別)',md_note:'台数は設備状態で数えます · 推移·リードタイム·TCO のみこの日付を使います',md_corp:'法人',md_fabin:'搬入日なし',md_setup:'Setupなし',md_ton:'Turn-Onなし',md_tot:'台数',ins_md:'日付未記入 {n}台 — {top}',sec_ov:'概要',sec_tr:'期間別',sec_di:'分布分析',sec_wr:'保証·管理',sec_dt:'詳細',ch_lead:'顧客別セットアップLT',note_lead:'FAB In → Turn On 平均日数 · TOP10',ch_age:'設備年齢分布',note_age:'Turn On基準経過年数',age_1:'1年未満',age_13:'1–3年',age_35:'3–5年',age_5:'5年以上',ch_toolmaker:'Tool Maker別設置',note_tm:'台数 · 構成比はツールチップ',ch_wpipe:'ライン別 Warranty IN / OUT',note_wpipe:'ライン別IN/OUTチャンバー構成',ch_renew:'顧客別 Warranty OUT 予定 (180日以内)',note_renew:'Warranty OUTに切替わるチャンバー · 値は棒の先',wp_exp:'Warranty OUT',wt_title:'Warranty OUT 設備 (無償サポート終了)',idle_title:'搬入後未稼働設備',days_unit:'日',ins_topctry:'最多国 {v} — 占有 {p}% ({n}台)',ins_turnon:'直近12ヶ月新規Turn On {n}台 · 前12ヶ月比 {p}',
+    ins_warr90:'保証終了 {n}ch — 部材は有償販売の対象',ins_idle:'搬入後未稼働 {n}台 — Turn On要確認',ins_unkstate:'初めて見る設備状態 {v} — どの集計にも入りません',warn_nodate:'⚠ 日付のない {n}台は推移に入っていません — 設置現況の日付欄を埋めると反映されます',dq_unkstate_a:'設置現況の設備状態の表記を確認するか、新しい状態ならお知らせください',dq_md_a:'設置現況の搬入日·Setup·Turn-on 欄を埋めて /upload/ から再アップロードしてください',md_title:'日付未記入(法人別)',md_note:'台数は設備状態で数えます · 推移·リードタイム·TCO のみこの日付を使います',md_corp:'法人',md_fabin:'搬入日なし',md_setup:'Setupなし',md_ton:'Turn-Onなし',md_tot:'台数',ins_md:'日付未記入 {n}台 — {top}',sec_ov:'概要',sec_tr:'期間別',sec_di:'分布分析',sec_wr:'保証·管理',sec_dt:'詳細',ch_lead:'顧客別セットアップLT',note_lead:'FAB In → Turn On 平均日数 · TOP10',ch_age:'設備年齢分布',note_age:'Turn On基準経過年数',age_1:'1年未満',age_13:'1–3年',age_35:'3–5年',age_5:'5年以上',ch_toolmaker:'Tool Maker別設置',note_tm:'台数 · 構成比はツールチップ',ch_wpipe:'ライン別 Warranty IN / OUT',note_wpipe:'ライン別IN/OUTチャンバー構成',ch_renew:'顧客別 有償チャンバー (保証終了)',note_renew:'保証が終わり部材が有償になったチャンバー · 値は棒の先',wp_exp:'Warranty OUT',wt_title:'有償設備 (Warranty OUT)',idle_title:'搬入後未稼働設備',days_unit:'日',ins_topctry:'最多国 {v} — 占有 {p}% ({n}台)',ins_turnon:'直近12ヶ月新規Turn On {n}台 · 前12ヶ月比 {p}',
     tbl_title:'詳細リスト',loading:'読込中...',
-    warr_all:'全体',warr_ok:'有効',warr_exp:'期限切れ',no_data:'データなし',
+    warr_all:'全体',warr_ok:'無償 (保証中)',warr_exp:'有償 (保証終了)',no_data:'データなし',
     legend_cum:'累積',legend_new:'新規',range_all:'全期間',
     auto_switch:'期間が長いため自動切替',too_fine:'非推奨'}
 };
@@ -1503,7 +1504,7 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('scrubber');
   animVal(document.getElementById('kp4'),active);
   setTxt('kd4','');
   setTxt('kf4',t('kf4').replace('{p}',chSum(f)?Math.round(active/chSum(f)*100):0));
-  // ⑤ Warranty OUT — 무상 기술지원 종료분
+  // ⑤ Warranty OUT — 보증이 끝나 자재가 유상으로 판매되는 챔버(제4원칙 · 나쁜 소식으로 칠하지 않는다)
   animVal(document.getElementById('kp5'),expired);
   setTxt('kd5','');
   setTxt('kf5',t('kf5').replace('{p}',chSum(f)?Math.round(expired/chSum(f)*100):0));
@@ -1571,9 +1572,11 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('scrubber');
   // Warranty 현황 카드 (분할 바)
   {
     const tot=active+expired;
-    const pct=tot?Math.round(active/tot*1000)/10:0;
+    /* 머리 숫자는 «유상(보증 종료) 비율»이다 — 보증이 끝난 챔버는 자재가 유상으로 팔린다(CLAUDE.md 제4원칙). 예전에는 «유효 비율»을
+       초록으로 세워 보증 종료를 손실처럼 보였다 */
+    const pct=tot?Math.round(expired/tot*1000)/10:0;
     const e1=document.getElementById('wPct'); if(e1)e1.textContent=pct+'%';
-    const eb=document.getElementById('wBarA'); if(eb)eb.style.width=(tot?active/tot*100:0)+'%';
+    const eb=document.getElementById('wBarA'); if(eb)eb.style.width=(tot?expired/tot*100:0)+'%';
     const eo=document.getElementById('wOk'); if(eo)eo.textContent=active.toLocaleString();
     const ee=document.getElementById('wExp'); if(ee)ee.textContent=expired.toLocaleString();
     const en=document.getElementById('wExpNote');
@@ -1648,7 +1651,7 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('scrubber');
   let idleCount=0;
   {
     // 만료일 열이 없어 '며칠 뒤 만료' 파이프라인은 만들 수 없다.
-    // 대신 라인(FAB)별 IN/OUT 구성을 스택으로 — 어느 라인의 무상 지원이 끝났는지 한눈에.
+    // 대신 라인(FAB)별 IN/OUT 구성을 스택으로 — 어느 라인이 유상(보증 종료)으로 넘어갔는지 한눈에.
     const soonL=[], idleL=[];
     const byFab={};
     f.forEach(r=>{
@@ -1671,8 +1674,8 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('scrubber');
       if(CHARTS.cWarrPipe)CHARTS.cWarrPipe.destroy();
       CHARTS.cWarrPipe=new Chart(document.getElementById('cWarrPipe'),{type:'bar',
         data:{labels:fbs,datasets:[
-          {label:'Warranty IN', data:fbs.map(k=>byFab[k].IN), backgroundColor:TH.pal[0],stack:'w'},
-          {label:'Warranty OUT',data:fbs.map(k=>byFab[k].OUT),backgroundColor:TH.status.na,stack:'w'}]},
+          {label:'Warranty IN', data:fbs.map(k=>byFab[k].IN), backgroundColor:TH.status.na,stack:'w'},
+          {label:'Warranty OUT',data:fbs.map(k=>byFab[k].OUT),backgroundColor:TH.pal[0],stack:'w'}]},   // OUT(유상) 을 주색으로 — 회색으로 두면 «꺼진 것»처럼 읽힌다
         options:{responsive:true,maintainAspectRatio:false,
           plugins:{legend:{position:'bottom'}},
           scales:{x:{stacked:true,ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},
@@ -1707,7 +1710,7 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('scrubber');
   // ===== 인사이트 (필터 적용 기준) =====
   {
     const ins=[];
-    if(exp90>0)ins.push({sev:'warn',text:t('ins_warr90').replace('{n}','<b>'+exp90+'</b>')});
+    if(exp90>0)ins.push({sev:'ok',text:t('ins_warr90').replace('{n}','<b>'+exp90+'</b>')});   // 경고가 아니다 — 유상 판매 대상(제4원칙)
     if(ctryAll.length&&f.length){
       const p=Math.round(ctryAll[0][1]/(chN||1)*100);
       ins.push({sev:p>=50?'warn':'info',text:t('ins_topctry').replace('{v}','<b>'+ctryAll[0][0]+'</b>').replace('{p}',p).replace('{n}',ctryAll[0][1])});

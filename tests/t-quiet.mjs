@@ -859,6 +859,31 @@ console.log('\n[15] 고장 차트 세부내역이 누른 데이터셋을 따르�
      '  문구가 네 언어에 다 있다');
 }
 
+/* ── [17] 워런티(보증) 종료는 «좋은 소식»이다 (제4원칙 · v175 · 사용자 확정) ─────────────────
+   보증이 끝나면 자재 판매가 유상이 된다 — 재계약을 서두르는 «마감»이 아니다. 화면이 그것을 손실·경고로 칠하면
+   받아 보는 사람이 반대로 읽는다(사용자: 「부정적인 느낌으로 들어가 있어서 보기 싫어」).
+   지키는 것: 손실 낱말이 문구에 없다 · 경고색(warn·bad)으로 칠하지 않는다 · 게이지·비율은 «유상 비율» */
+console.log('\n[17] 워런티 종료 = 유상 전환 (제4원칙)');
+{
+  const pages = ['hub','home','site','scrubber','report','report-kr','tco','action','studio','targets'];
+  const LOSS = /무상 지원 종료|무상 기술지원 종료|free support ended|免费支持已结束|無償サポート終了|갱신 협의|재계약|renewal needed/;
+  pages.forEach(p => { let src = ''; try { src = rd(p + '/index.html'); } catch (e) { return; }
+    const m = LOSS.exec(src);
+    is(!m, `${p} — 워런티 종료를 «손실»로 적는 낱말이 없다` + (m ? ' → ' + m[0] : '')); });
+  const HUB = rd('hub/index.html'), SCR = rd('scrubber/index.html');
+  is(!/id:'warr'[^}]*st:[^,}]*'warn'/.test(HUB) && !/id:'warr'[^}]*st:[^,}]*'bad'/.test(HUB),
+     'hub — 「90일 이내 유상 전환」 카드를 경고색으로 칠하지 않는다');
+  is(/gauge\(warrP,t\('g_warr'\),'var\(--accent\)'\)/.test(HUB) && /warrP=g\.warrN\?Math\.round\(\(g\.warrN-g\.warrIn\)\/g\.warrN/.test(HUB),
+     'hub — 워런티 게이지는 «유상 비율» · 판정색 없이 주색');
+  is(!/\.kpi\.k5 \.val\{color:var\(--bad\)\}/.test(SCR) && !/ins_warr90[^\n]*sev:'warn'|sev:'warn',text:t\('ins_warr90'\)/.test(SCR),
+     'scrubber — Warranty OUT 숫자·인사이트를 붉게/경고로 내지 않는다');
+  ['hub','home','site'].forEach(p => {
+    const k = p === 'home' ? 'warrT' : 'k_warr';
+    const v = (rd(p + '/index.html').match(new RegExp(k + ":'([^']*)'")) || [])[1] || '';
+    is(/유상 전환/.test(v), `${p} — ${k} 는 «유상 전환»이라 적는다 (실제 「${v}」)`);
+  });
+}
+
 console.log('\n' + (fail ? '❌ t-quiet ' + fail + ' 실패 / ' + (pass + fail)
                          : '✅ t-quiet ' + pass + '/' + pass));
 process.exit(fail ? 1 : 0);
