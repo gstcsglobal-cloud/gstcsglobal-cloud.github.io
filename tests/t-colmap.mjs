@@ -188,61 +188,84 @@ await pg.evaluate(() => { GST.vmap.rules=[{tbl:'inst',col:'country',raw:'TAIWAN'
 await pg.evaluate(() => window.checkFile()); await pg.waitForTimeout(1500);
 is(!/국가 이름/.test(await chk()), '규칙(TAIWAN → GST TAIWAN SCRUBBER)이 있으면 그 경고는 사라진다 — 같은 판정 함수');
 
-console.log('[10] CIP 자체관리 양식 — Detail 시트 · 묶음 머리글(Left·Right) · 이름이 바뀐 항목 제안 · 새 점검 항목 열 더하기 · 다른 FAB (v157)');
+console.log('[10] CIP 자체관리 양식 — Detail 시트 · 묶음 머리글 · 없던 열을 «새 항목 / 기존과 같음 / 오류·무시» 로 정한다 · 다른 FAB (v157·v158)');
 { /* 지어낸 양식 — 실제 Site Issue 워크북의 «모양»(제목 줄 · 시작일 줄 · 대상/Drop 줄 · 묶음 줄 · 머리글)만 따랐다 */
   const wbC = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wbC, XLSX.utils.aoa_to_sheet([['','Status','',"Q'ty"],['','진행중','','2']]), 'Task');
   XLSX.utils.book_append_sheet(wbC, XLSX.utils.aoa_to_sheet([['NO','Country','Old Thing'],['1','TAIWAN','N/A']]), 'Detail (Finish)');
   XLSX.utils.book_append_sheet(wbC, XLSX.utils.aoa_to_sheet([
     ['','작성방법'],
-    ['','','','','','','2025-01-01','2025-02-01','','2025-02-01','','2025-03-01','2026-01-01',''],
-    ['','','','','','','대상','대상','','대상','','Drop','대상',''],
-    ['','','','','','','','Gizmo Kit\n(TEST)','','Tank Kit','','','',''],
-    ['NO','Country','Customer','FAB','Scrubber\nS/N','FAB In','Valve Fix','Left','Right','Left','Right','Widget Swap\n(OLD MODEL)','New Item\nAlpha','Remark'],
-    ['1','TAIWAN','TESTCO','F16','ZZC-0001','2020-01-02','2026-02-03','N/A','Not yet','N/A','N/A','2026-03-04','2026-05-06',''],
-    ['2','TAIWAN','TESTCO','F16','ZZC-0002','2020-01-03','Not yet','2026-02-01','N/A','2026-04-01','N/A','N/A','Not yet',''],
-    ['3','','','','ZZC-0003','','','','','','','','','']]), 'Detail');
+    ['','','','','','','2025-01-01','2025-02-01','','2025-02-01','','2025-03-01','2026-01-01','','','','',''],
+    ['','','','','','','대상','대상','','대상','','Drop','대상','','','','',''],
+    ['','','','','','','','Gizmo Kit\n(TEST)','','Tank Kit','','','','','','','',''],
+    ['NO','Country','Customer','FAB','Scrubber\nS/N','FAB In','Valve Fix','Left','Right','Left','Right','Widget Swap\n(OLD MODEL)','New Item\nAlpha','Memo Note','Blank X','Pump Kit (A)','Pump Kit (B)','Remark'],
+    ['1','TAIWAN','TESTCO','F16','ZZC-0001','2020-01-02','2026-02-03','N/A','Not yet','N/A','N/A','2026-03-04','2026-05-06','checked by A','','2026-06-01','N/A',''],
+    ['2','TAIWAN','TESTCO','F16','ZZC-0002','2020-01-03','Not yet','2026-02-01','N/A','2026-04-01','N/A','N/A','Not yet','see mail','','Not yet','2026-07-01',''],
+    ['3','','','','ZZC-0003','','','','','','','','','','','','','']]), 'Detail');
   const cp = path.join(OUT,'cip.xlsx'); XLSX.writeFile(wbC, cp);
-  const seed = () => ({ sheet_cip_f16:['NO','Country','Customer','FAB','Scrubber S/N','FAB In','Valve Fix','Gizmo Kit (TEST) Left','Gizmo Kit (TEST) Right','Tank Kit Left','Tank Kit Right','Widget Swap','Remark','id'],
+  const seed = () => ({ sheet_cip_f16:['NO','Country','Customer','FAB','Scrubber S/N','FAB In','Valve Fix','Gizmo Kit (TEST) Left','Gizmo Kit (TEST) Right','Tank Kit Left','Tank Kit Right','Widget Swap','Pump Kit','Remark','id'],
                         sheet_cip_f11:['NO','Country','Customer','FAB','Scrubber S/N','FAB In','Valve Fix','Remark','id'] });
   const pa = await ctx.newPage(); const pea=[]; pa.on('pageerror', e => pea.push(e.message));
+  const dlg=[]; pa.on('dialog', d => { dlg.push(d.message()); d.accept(); });
   await pa.addInitScript(s0 => { window.__ME_OBJ={email:'a@t',can_write:true,role:'admin'}; window.__CIPCOLS=s0; window.__CM=[]; }, seed());
   await pa.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await pa.waitForTimeout(900);
   const chkA = () => pa.evaluate(() => document.getElementById('chk').innerText);
+  const decs = () => pa.evaluate(() => Object.fromEntries(Array.from(document.querySelectorAll('#chk [data-cipdec]')).map(s=>[s.dataset.cipdec, {v:s.value, opts:Array.from(s.options).map(o=>o.value), hint:s.closest('tr').children[3].innerText, cls:s.closest('tr').children[3].className, above:s.closest('tr').children[1].innerText, vals:s.closest('tr').children[2].innerText}])));
   await pa.selectOption('#tsel', await pa.evaluate(() => String(TABLES.findIndex(t=>t.rid==='cipf16'))));
   await pa.setInputFiles('#fsel', cp); await pa.waitForTimeout(2500);
-  let tc = await chkA();
+  let tc = await chkA(), D = await decs();
   is(await pa.evaluate(() => document.getElementById('ssel').value) === 'Detail', 'Detail 시트를 고른다 (Task · Detail (Finish) 가 앞에 있어도)');
   is(await pa.evaluate(() => { const r=(PREP&&PREP.rows)||[]; return r[0] && r[0]['Gizmo Kit (TEST) Left']==='N/A' && r[0]['Gizmo Kit (TEST) Right']==='Not yet' && r[1]['Gizmo Kit (TEST) Left']==='2026-02-01' && r[1]['Tank Kit Left']==='2026-04-01' && r[0]['Tank Kit Right']==='N/A'; }),
      '묶음 아래 Left·Right 가 «묶음 이름 + Left/Right» 표 열로 들어간다 (겹친 이름이 첫 칸만 잡히지 않는다)');
-  is(/새 점검 항목 2개/.test(tc) && /New Item Alpha/.test(tc) && /대상 · 2026-01-01/.test(tc) && /날짜 1 · Not yet 1/.test(tc),
-     '새 점검 항목 — 이름 · 시트 위쪽 줄(대상·시작일) · 값 분포를 적는다 · 이름이 바뀐 열도 «지정 전에는» 새 항목으로 보인다 ('+(tc.match(/새 점검 항목[^\n]*/)||[''])[0]+')');
-  is(await pa.evaluate(() => !(PREP.rows[0]||{}).hasOwnProperty('New Item Alpha')), '더하기 전에는 그 열이 안 올라간다 (막지는 않는다)');
-  is(/이름이 바뀐 항목일 수 있습니다/.test(tc) && /Widget Swap/.test(tc) && await pa.evaluate(() => (PREP.rows[0]||{})['Widget Swap']==null), '표 열 「Widget Swap」 ← 파일 「Widget Swap (OLD MODEL)」 을 «제안»만 한다 (자동으로 잇지 않는다)');
+  is(/표에 없던 열 6개/.test(tc) && Object.keys(D).sort().join('|')==='Blank X|Memo Note|New Item Alpha|Pump Kit (A)|Pump Kit (B)|Widget Swap (OLD MODEL)', '없던 열 여섯을 하나씩 묻는다 ('+Object.keys(D).join(', ')+')');
+  const A0 = D['New Item Alpha']||{};
+  is(/대상 · 2026-01-01/.test(A0.above) && /날짜 1 · Not yet 1/.test(A0.vals) && /처음 보는 항목/.test(A0.hint) && A0.cls==='ok' && A0.v==='', '새 항목 — 시트 위쪽 줄 · 값 분포 · «처음 보는 항목» 근거 · 미리 고르지 않는다');
+  const W0 = D['Widget Swap (OLD MODEL)']||{};
+  is(W0.v==='map:Widget Swap' && /거의 같습니다/.test(W0.hint) && W0.cls==='warn' && /Drop/.test(W0.above), '이름이 거의 같은 열은 «기존 Widget Swap 과 같음» 을 미리 골라 두되 근거(유사도·Drop)를 적는다');
+  is(await pa.evaluate(() => (PREP.rows[0]||{})['Widget Swap']==null && !(PREP.rows[0]||{}).hasOwnProperty('New Item Alpha')), '적용 전에는 아무것도 잇거나 올리지 않는다 (미리 고른 것도 저장 전이다)');
+  is(/점검 결과 모양/.test((D['Memo Note']||{}).hint) && (D['Memo Note']||{}).cls==='bad', '값이 점검 결과 모양이 아닌 열은 «오류일 수 있음»으로 짚는다');
+  is(/모두 빈칸/.test((D['Blank X']||{}).hint) && (D['Blank X']||{}).cls==='bad', '전부 빈 열은 «쓰지 않는 열·오류일 수 있음»으로 짚는다');
+  const P1=D['Pump Kit (A)']||{}, P2=D['Pump Kit (B)']||{};
+  is(P1.v==='' && P2.v==='' && /비슷한 열이 2개/.test(P1.hint) && P1.opts.includes('map:Pump Kit'), '한 기존 항목에 거의 같은 열이 둘이면(항목이 갈라짐) 미리 고르지 않고 그 사실을 적는다');
+  is(['','add','map:Widget Swap','skip'].every(v=>A0.opts.includes(v)), '고를 수 있는 것: 정하지 않음 · 새 항목 추가 · 기존 항목과 같음 · 무시');
+  is(/못 찾은 항목 2개: Widget Swap, Pump Kit/.test(tc), '표에 있는데 파일에 없는 항목을 적는다 (이름이 바뀐 것이면 잇게)');
   is(/FAB 칸이 빈 행 1개/.test(tc), 'S/N 만 적힌 행을 센다 (빼지 않고 알린다)');
-  await pa.click('#chk [data-cipsug="Widget Swap"]'); await pa.waitForTimeout(2200);
-  is(await pa.evaluate(() => window.__CM.some(r=>r.tbl==='cipf16'&&r.field==='Widget Swap'&&/Widget Swap/.test(r.header)) && (PREP.rows[0]||{})['Widget Swap']==='2026-03-04'), '「이 열로 지정」 — 맵핑을 저장하고 다시 검사해 그 값이 들어간다');
-  is(/새 점검 항목 1개/.test(await chkA()), '지정한 열은 새 항목 목록에서 빠진다');
-  pa.on('dialog', d => d.accept());
-  await pa.click('#chk [data-cipcol="New Item Alpha"]');
-  await pa.click('#chk [data-cipadd]'); await pa.waitForTimeout(3200);
+  /* 두 열을 같은 기존 항목에 잇는 것은 막는다 */
+  await pa.selectOption('#chk [data-cipdec="New Item Alpha"]', 'map:Widget Swap');
+  await pa.click('#chk [data-cipgo]'); await pa.waitForTimeout(600);
+  is(dlg.some(m=>/두 열/.test(m)) && (await pa.evaluate(() => window.__CM.length))===0, '두 열을 한 기존 항목에 이으면 막는다 (아무것도 저장하지 않는다)');
+  /* 정한 대로 적용 — 잇기 · 추가 · 무시, 하나는 정하지 않음 */
+  dlg.length=0;
+  await pa.selectOption('#chk [data-cipdec="New Item Alpha"]', 'add');
+  await pa.selectOption('#chk [data-cipdec="Memo Note"]', 'skip');
+  await pa.click('#chk [data-cipgo]'); await pa.waitForTimeout(3600);
+  is(dlg.some(m=>/＋ 새 항목: New Item Alpha/.test(m) && /＝ Widget Swap \(OLD MODEL\) → 기존 「Widget Swap」/.test(m) && /× 무시: Memo Note/.test(m) && !/Blank X/.test(m)), '적용 전에 무엇을 할지 한 번 더 보인다 (정하지 않은 열은 빠진다)');
+  const cm10 = await pa.evaluate(() => window.__CM);
+  is(cm10.some(r=>r.tbl==='cipf16'&&r.field==='Widget Swap'&&/Widget Swap/.test(r.header)) && cm10.some(r=>r.tbl==='cipf16'&&r.field==='__ign:memonote'), '잇기는 열 맵핑으로 · 무시는 __ign: 열쇠로 저장한다 (다음 업로드에도 남는다)');
   const add = await pa.evaluate(() => window.__QLOG.filter(x=>x.rpc==='import_add_cols'));
-  is(add.length===1 && add[0].args.p_tbl==='sheet_cip_f16' && JSON.stringify(add[0].args.p_cols)==='["New Item Alpha"]', '고른 항목만 import_add_cols 로 (한 줄 이름 · 그 표)');
-  tc = await chkA();
-  is(!/새 점검 항목/.test(tc) && await pa.evaluate(() => (PREP.rows[0]||{})['New Item Alpha']==='2026-05-06'), '더한 뒤 다시 검사 — 그 항목이 표 열로 올라간다');
+  is(add.length===1 && add[0].args.p_tbl==='sheet_cip_f16' && JSON.stringify(add[0].args.p_cols)==='["New Item Alpha"]', '«새 항목»만 import_add_cols 로 (한 줄 이름 · 그 표)');
+  tc = await chkA(); D = await decs();
+  is(await pa.evaluate(() => (PREP.rows[0]||{})['Widget Swap']==='2026-03-04' && (PREP.rows[0]||{})['New Item Alpha']==='2026-05-06'), '다시 검사 — 이은 열과 더한 열의 값이 올라간다');
+  is(Object.keys(D).sort().join('|')==='Blank X|Pump Kit (A)|Pump Kit (B)' && /표에 없던 열 3개/.test(tc), '정하지 않은 열만 다시 묻는다');
+  is(/무시하기로 한 열 1개/.test(tc) && await pa.evaluate(() => !(PREP.rows[0]||{}).hasOwnProperty('Memo Note')), '무시한 열은 따로 접어 보이고 올라가지 않는다');
+  await pa.evaluate(() => { const d=document.querySelector('#chk details'); if(d) d.open=true; });
+  await pa.click('#chk [data-cipunign="Memo Note"]'); await pa.waitForTimeout(2200);
+  D = await decs();
+  is(D['Memo Note'] && !(await pa.evaluate(() => window.__CM.some(r=>r.field==='__ign:memonote'))), '«무시 취소» — 기억을 지우고 다시 묻는다');
   await pa.selectOption('#tsel', await pa.evaluate(() => String(TABLES.findIndex(t=>t.rid==='cipf11'))));
   await pa.setInputFiles('#fsel', cp); await pa.waitForTimeout(2500);
   is(/FAB 은 F16 2행/.test(await chkA()) && await pa.evaluate(() => !PREP && document.getElementById('goBtn').disabled), '다른 FAB 의 파일(F16 → CIP F11)은 막는다 — 통째 교체로 남의 표를 갈아끼우지 않게');
   is(pea.length===0, 'JS 에러 0 (관리자 화면)' + (pea.length?' → '+pea[0]:''));
   await pa.close();
-  /* 관리자가 아니면 «더하기» 단추가 없다 — 사이트 담당자(editor · 쓰기 권한은 있음) */
+  /* 관리자가 아니면 «새 항목 추가»가 없다 — 사이트 담당자(editor · 쓰기 권한은 있음)는 잇기·무시만 */
   const pv = await ctx.newPage();
   await pv.addInitScript(s0 => { window.__ME_OBJ={email:'e@t',can_write:true,role:'editor'}; window.__CIPCOLS=s0; window.__CM=[]; }, seed());
   await pv.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await pv.waitForTimeout(900);
   await pv.selectOption('#tsel', await pv.evaluate(() => String(TABLES.findIndex(t=>t.rid==='cipf16'))));
   await pv.setInputFiles('#fsel', cp); await pv.waitForTimeout(2500);
   const tv = await pv.evaluate(() => document.getElementById('chk').innerText);
-  is(/새 점검 항목 2개/.test(tv) && /관리자\(쓰기 권한\)만/.test(tv) && await pv.evaluate(() => !document.querySelector('#chk [data-cipadd]')), '관리자가 아니면(editor) 목록만 보이고 «더하기»는 없다');
+  const ov = await pv.evaluate(() => Array.from(document.querySelectorAll('#chk [data-cipdec] option')).map(o=>o.value));
+  is(/표에 없던 열 6개/.test(tv) && !ov.includes('add') && ov.includes('skip') && ov.includes('map:Widget Swap') && /관리자만/.test(tv), '관리자가 아니면(editor) «새 항목 추가»는 없고 잇기·무시만 고른다');
   await pv.close();
 }
 is(pe.length===0, 'JS 에러 0' + (pe.length?' → '+pe[0]:''));

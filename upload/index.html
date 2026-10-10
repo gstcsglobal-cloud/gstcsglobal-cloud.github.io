@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=157"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=158"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:#1d2433;background:#F5F6F8;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
@@ -26,7 +26,7 @@ a{color:#2F6FED}
 /* v151 — 데이터 관리(밝은 바탕) 안에 열리므로 같은 밝은 팔레트로 바꿨다(옛 어두운 바탕에서 맵핑 표가 안 읽혔다 · 사용자 화면).
    반투명 + 상속 색이라 어느 바탕이든 읽힌다.
    ?embed=1 — 데이터 관리 안에서는 머리 설명을 숨긴다(그 화면이 이미 설명한다). */
-.cipx{margin:8px 0;padding:10px 12px;border:1px solid rgba(127,127,127,.35);border-radius:10px;background:rgba(127,127,127,.06);font-size:12.5px}.cipx table{border-collapse:collapse;width:100%;margin:6px 0}.cipx td,.cipx th{padding:3px 8px 3px 0;text-align:left;vertical-align:top;border-top:1px solid rgba(127,127,127,.18)}.cipx th{border-top:0;font-weight:600;opacity:.75}.cipx.warn{color:#b45309}.cipx .muted{opacity:.72;font-size:12px}.cipb{border:1px solid rgba(127,127,127,.45);border-radius:7px;background:transparent;color:inherit;font:inherit;font-size:12px;padding:4px 10px;cursor:pointer}.cipb.pri{background:#2F6FED;border-color:#2F6FED;color:#fff;font-weight:700;margin-top:6px}.cipb:disabled{opacity:.5;cursor:default}
+.cipx{margin:8px 0;padding:10px 12px;border:1px solid rgba(127,127,127,.35);border-radius:10px;background:rgba(127,127,127,.06);font-size:12.5px}.cipx table{border-collapse:collapse;width:100%;margin:6px 0}.cipx td,.cipx th{padding:3px 8px 3px 0;text-align:left;vertical-align:top;border-top:1px solid rgba(127,127,127,.18)}.cipx th{border-top:0;font-weight:600;opacity:.75}.cipx.warn{color:#b45309}.cipx td.ok{color:#16a34a}.cipx td.warn{color:#b45309}.cipx td.bad{color:#dc2626}.cipx select{max-width:340px;font:inherit;font-size:12px}.cipx .muted{opacity:.72;font-size:12px}.cipb{border:1px solid rgba(127,127,127,.45);border-radius:7px;background:transparent;color:inherit;font:inherit;font-size:12px;padding:4px 10px;cursor:pointer}.cipb.pri{background:#2F6FED;border-color:#2F6FED;color:#fff;font-weight:700;margin-top:6px}.cipb:disabled{opacity:.5;cursor:default}
 body.embed{padding:12px 14px}body.embed>h1,body.embed>.sub{display:none}body.embed .card{max-width:none}
 .qa{margin:8px 0;padding:10px 12px;border:1px solid rgba(127,127,127,.35);border-radius:10px;background:rgba(127,127,127,.08);color:inherit}
 .qa select{background:rgba(127,127,127,.12);color:inherit;border:1px solid rgba(127,127,127,.45);border-radius:6px;padding:3px 6px;max-width:320px}
@@ -259,38 +259,80 @@ function chkShow(html){ $('chk').innerHTML=html; }
    그리고 비어 있는 순간이 바로 이 검사가 가장 필요한 때다(적재 실패로 비워진 직후).
    그래서 information_schema 를 읽는 RPC 를 쓴다. RPC 가 아직 없으면(구 SQL) null 을
    돌려주고 검사를 건너뛴다 — 검사가 없다고 업로드를 막을 이유는 없다. */
-/* ---------- CIP 자체관리 양식 — 새 점검 항목 · 이름이 바뀐 항목 · 다른 FAB 파일 (v157 · 사용자 요청) ----------
-   CIP 는 점검 항목이 «열로» 늘어나는 표다. 표에 자리가 없는 파일 열은 올리지 않으므로(v150) 새 항목은 영영 안 들어간다 —
-   여기서 «어느 열이 새 항목인지» 보여 주고, 사람이 고른 항목만 표에 열로 더한다(import_add_cols · setup-22 · 관리자만).
-   ⚠ 항목을 «더할지»는 사람이 정한다 — 시트의 대상·Drop·시작일 줄을 그대로 옆에 적어 판단 근거를 준다(낱말로 판정하지 않는다).
-   ⚠ 더한 열을 지우는 단추는 없다(지우는 DDL 은 사람이 SQL Editor 에서) — 그래서 기본은 «아무것도 안 고름»이다. */
-function cipItemsHtml(t,rows,M,tcols){
-  const E=GST._esc, N=GST.SM.norm, H=M.header||[], hi=M.hi, used=new Set(Object.values(M.idx).filter(i=>i>=0));
+/* ---------- CIP 자체관리 양식 — 새로 생긴 열 «판정» (v157 · v158 사용자 요청) ----------
+   CIP 는 점검 항목이 «열로» 늘어나는 표다. 표에 자리가 없는 파일 열은 올리지 않으므로(v150) 새 항목은 그냥 두면 영영 안 들어간다.
+   v158 사용자: 「없던 열이 생겼는데 다시 어떻게 추가할 건지? 추가된 게 맞는 건지 오류인지」 — 열마다 셋 중 하나로 정한다:
+     ① 새 점검 항목 → 표에 열로 더한다(import_add_cols · setup-22 · 관리자만)
+     ② 기존 항목과 같은 항목(이름이 바뀜·오타) → 그 표 열로 지정한다(열 맵핑 저장 — 다음 업로드에도 남는다)
+     ③ 오류·올리지 않을 열 → «무시»로 기억한다(다음 업로드부터 묻지 않는다 · 언제든 되돌린다)
+   ⚠ 판정은 사람이 한다. 화면은 근거만 낸다 — 시트 위쪽 줄(대상·Drop·시작일 · 그대로) · 값 분포 · 비슷한 기존 열(유사도) · 값 모양(점검 결과 같은가).
+     낱말(Drop 등)이나 유사도로 «정하지» 않는다(제1원칙 — 부분일치로 잇지 않는다). 아무것도 안 고르면 이번에는 안 올라갈 뿐이다.
+   ⚠ 더한 열을 지우는 단추는 없다(지우는 DDL 은 사람이 SQL Editor 에서) — 그래서 «추가»는 확인을 한 번 더 받는다. */
+const CIP_IGN='__ign:';                      // 무시 결정의 저장 열쇠(colmap_site.field) — __hi·__sheet 와 같은 특수 열쇠 규약
+function cipKind(v){ v=String(v==null?'':v).trim(); if(!v) return ''; if(/^\d{4}-\d\d-\d\d/.test(v)) return '날짜'; if(/^not\s*yet$/i.test(v)) return 'Not yet'; if(/^n[./]?a$/i.test(v)) return 'N/A'; return '그 밖'; }
+/* 이름 비슷한 정도(0~1) — 판정 근거로만 보인다. 정규화한 글자의 편집 거리와 낱말 겹침 중 큰 쪽. */
+function cipSim(a,b){
+  const N=GST.SM.norm, x=N(a), y=N(b); if(!x||!y) return 0; if(x===y) return 1;
+  const m=x.length, n=y.length; let p=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){ const q=[i]; for(let j=1;j<=n;j++) q[j]=Math.min(p[j]+1,q[j-1]+1,p[j-1]+(x[i-1]===y[j-1]?0:1)); p=q; }
+  const lev=1-p[n]/Math.max(m,n);
+  const w=s=>new Set(String(s).toLowerCase().split(/[^0-9a-z가-힣]+/).filter(t=>t.length>1));
+  const A=w(a), B=w(b); let inter=0; A.forEach(t=>{ if(B.has(t)) inter++; });
+  const jac=A.size&&B.size?inter/Math.min(A.size,B.size):0;
+  return Math.max(lev, jac*0.95, (x.indexOf(y)===0||y.indexOf(x)===0)?0.9:0);
+}
+function cipItemsHtml(t,rows,M,tcols,ovr){
+  const E=GST._esc, N=GST.SM.norm, H=M.header||[], hi=M.hi, used=new Set(Object.values(M.idx).filter(i=>i>=0)), o=ovr||{};
   const fabIn=tcols.find(c=>N(c)==='fabin'), from=fabIn&&M.idx[fabIn]>=0?M.idx[fabIn]:-1;
   const data=rows.slice(hi+1).filter(r=>r.some(v=>String(v==null?'':v).trim()!==''));
-  const kind=v=>{ v=String(v==null?'':v).trim(); if(!v) return ''; if(/^\d{4}-\d\d-\d\d/.test(v)) return '날짜'; if(/^not\s*yet$/i.test(v)) return 'Not yet'; if(/^n[./]?a$/i.test(v)) return 'N/A'; return '그 밖'; };
-  const items=[];
+  const ign={}; Object.keys(o).forEach(k=>{ if(k.indexOf(CIP_IGN)===0&&o[k]) ign[k.slice(CIP_IGN.length)]=o[k]; });
+  /* 표에 있는데 파일에서 못 찾은 열 — «기존 항목과 같음»의 후보다(이미 맞물린 열을 빼앗지 않게 그것만 내놓는다) */
+  const miss=tcols.filter(c=>M.idx[c]<0&&N(c)!=='id');
+  const items=[], ignored=[];
   H.forEach((h,k)=>{
     if(!h||used.has(k)||k<=from) return;
+    const name=GST.cmap.colName(h);
+    if(ign[N(name)]){ ignored.push({k:k,name:name}); return; }
     const above=[1,2,3].map(d=>hi-d>=0?String(((rows[hi-d]||[])[k])==null?'':rows[hi-d][k]).trim():'').filter(Boolean);
-    const cnt={}; data.forEach(r=>{ const c=kind(r[k]); if(c) cnt[c]=(cnt[c]||0)+1; });
-    items.push({k:k,name:GST.cmap.colName(h),above:above,cnt:cnt});
+    const cnt={}; let nv=0; data.forEach(r=>{ const c=cipKind(r[k]); if(c){ cnt[c]=(cnt[c]||0)+1; nv++; } });
+    const sims=miss.map(c=>({c:c,s:cipSim(name,c)})).sort((a,b)=>b.s-a.s);
+    const best=sims[0]&&sims[0].s>=0.6?sims[0]:null;
+    let hint, cls, pre='';
+    if(!nv){ hint='값이 모두 빈칸 — 쓰지 않는 열이거나 양식 오류일 수 있습니다'; cls='bad'; }
+    else if((cnt['그 밖']||0)/nv>0.5){ hint='값이 점검 결과 모양(날짜·Not yet·N/A)이 아닙니다 — 메모·구분용 열이거나 오류일 수 있습니다'; cls='bad'; }
+    else if(best&&best.s>=0.8){ hint='기존 항목 「'+best.c+'」 과 이름이 거의 같습니다('+Math.round(best.s*100)+'%) — 이름이 바뀌었거나 오타일 수 있습니다'; cls='warn'; pre='map:'+best.c; }
+    else if(best){ hint='기존 항목 「'+best.c+'」 과 비슷합니다('+Math.round(best.s*100)+'%) — 같은 항목인지 확인하세요'; cls='warn'; }
+    else { hint='처음 보는 항목입니다 — 새 점검 항목으로 보입니다'; cls='ok'; }
+    items.push({k:k,name:name,above:above,cnt:cnt,hint:hint,cls:cls,pre:pre,sims:sims});
   });
+  /* 한 기존 항목에 «거의 같은» 열이 둘 이상이면 미리 고르지 않는다 — 항목이 둘로 갈라졌을 수 있다(실측 F16: 「Horiba MFC + Surge For DIFF」
+     → (OLD GAIA) · (Down Size …) 둘). 둘 다 미리 고르면 «한 항목에 두 열» 검사에 걸려 적용이 늘 막힌다. 어느 쪽을 잇고 어느 쪽을 더할지는 사람이 정한다. */
+  const preN={}; items.forEach(x=>{ if(x.pre) preN[x.pre]=(preN[x.pre]||0)+1; });
+  items.forEach(x=>{ if(x.pre&&preN[x.pre]>1){ const c=x.pre.slice(4); x.hint='기존 항목 「'+c+'」 과 비슷한 열이 '+preN[x.pre]+'개입니다 — 한 항목이 둘로 갈라졌을 수 있습니다. 하나는 «같은 항목»으로 잇고 나머지는 «새 항목»으로 더하거나, 둘 다 새 항목으로 더하세요'; x.pre=''; } });
   let h='';
-  /* 표에는 있는데 파일에서 못 찾은 열 — 이름이 바뀐 항목일 수 있다. «앞이 같은» 파일 열을 «제안»만 한다(고르는 것은 사람 · 제1원칙: 부분일치로 정하지 않는다). */
-  const miss=tcols.filter(c=>M.idx[c]<0), sug=[];
-  miss.forEach(c=>{ const nc=N(c); H.forEach((hh,k)=>{ if(hh&&!used.has(k)&&nc.length>=4&&N(hh).indexOf(nc)===0) sug.push({col:c,h:hh}); }); });
-  if(sug.length) h+='<div class="cipx"><b>이름이 바뀐 항목일 수 있습니다</b> — 표의 열과 이름 앞부분이 같은 파일 열입니다. 같은 항목이면 «이 열로 지정»을 누르세요(지정은 다음 업로드에도 남습니다).<table>'
-    +sug.map(x=>'<tr><td>표 열 「'+E(x.col)+'」</td><td>← 파일 「'+E(GST.cmap.colName(x.h))+'」</td><td><button type="button" class="cipb" data-cipsug="'+E(x.col)+'" data-h="'+E(x.h)+'">이 열로 지정</button></td></tr>').join('')+'</table></div>';
   if(items.length){
-    const can=UP_CANW&&GST.isAdmin&&GST.isAdmin();
-    h+='<div class="cipx"><b>새 점검 항목 '+items.length+'개</b> — 표에 열이 없어 <b>지금은 올라가지 않습니다</b>. 고른 항목을 표에 열로 더하면 그 항목의 완료일·Not yet 이 함께 올라가 CIP 화면의 분모·진행률에 들어갑니다.'
-      +'<div class="muted">오른쪽 «시트 위쪽 줄»은 이 파일의 머리글 위에 적힌 그대로입니다(대상·Drop·시작일 등) — 판단 근거로 보세요. 더한 열은 이 화면에서 지울 수 없습니다(관리자에게 SQL 로).</div>'
-      +'<table><tr><th><input type="checkbox" data-cipall title="모두 고르기"></th><th>항목(표 열 이름)</th><th>시트 위쪽 줄</th><th>값</th></tr>'
-      +items.map(x=>'<tr><td><input type="checkbox" data-cipcol="'+E(x.name)+'"></td><td>'+E(x.name)+' <span class="muted">('+GST.cmap.col(x.k)+'열)</span></td><td class="muted">'+E(x.above.join(' · ')||'—')+'</td><td class="muted">'
-        +E(Object.keys(x.cnt).map(c=>c+' '+x.cnt[c]).join(' · ')||'빈칸')+'</td></tr>').join('')+'</table>'
-      +(can?'<button type="button" class="cipb pri" data-cipadd>고른 항목을 표에 열로 더하기</button>':'<div class="muted">열을 더하는 것은 관리자(쓰기 권한)만 할 수 있습니다.</div>')+'</div>';
+    const can=UP_CANW, canAdd=UP_CANW&&GST.isAdmin&&GST.isAdmin();
+    const opt=(v,l,sel)=>'<option value="'+E(v)+'"'+(sel?' selected':'')+'>'+E(l)+'</option>';
+    h+='<div class="cipx"><b>표에 없던 열 '+items.length+'개 — 하나씩 정해 주세요</b>'
+      +'<div class="muted">정하지 않은 열은 이번에는 올라가지 않습니다(다른 열은 그대로 올라갑니다). 판단 근거로 시트 위쪽 줄(대상·Drop·시작일 등 그대로)·값 분포·비슷한 기존 항목을 보여 드립니다.'
+      +' 「새 항목」으로 더한 열은 CIP 화면의 분모·진행률에 들어가고, 이 화면에서 지울 수 없습니다.</div>'
+      +'<table><tr><th>열(표 열 이름)</th><th>시트 위쪽 줄</th><th>값</th><th>판단 근거</th><th>어떻게 할까요</th></tr>'
+      +items.map(x=>'<tr data-cipk="'+E(x.name)+'"><td><b>'+E(x.name)+'</b> <span class="muted">('+GST.cmap.col(x.k)+'열)</span></td>'
+        +'<td class="muted">'+E(x.above.join(' · ')||'—')+'</td>'
+        +'<td class="muted">'+E(Object.keys(x.cnt).map(c=>c+' '+x.cnt[c]).join(' · ')||'빈칸')+'</td>'
+        +'<td class="'+x.cls+'">'+E(x.hint)+'</td>'
+        +'<td><select data-cipdec="'+E(x.name)+'">'+opt('','정하지 않음 (이번엔 안 올림)',!x.pre)
+          +(canAdd?opt('add','새 점검 항목으로 추가'):'')
+          +x.sims.map(s=>opt('map:'+s.c,'기존 「'+s.c+'」 과 같은 항목'+(s.s>=0.6?' ('+Math.round(s.s*100)+'%)':''),x.pre==='map:'+s.c)).join('')
+          +opt('skip','오류·쓰지 않는 열 — 무시(기억)')+'</select></td></tr>').join('')+'</table>'
+      +(can?'<button type="button" class="cipb pri" data-cipgo>정한 대로 적용</button>':'<div class="muted">정하는 것은 쓰기 권한이 있는 사람만 할 수 있습니다.</div>')
+      +(can&&!canAdd?'<div class="muted">「새 점검 항목으로 추가」는 관리자만 할 수 있습니다 — 관리자에게 이 파일을 넘겨 주세요.</div>':'')+'</div>';
   }
+  if(ignored.length) h+='<details class="cipx"><summary>무시하기로 한 열 '+ignored.length+'개 (올라가지 않음)</summary><table>'
+    +ignored.map(x=>'<tr><td>'+E(x.name)+' <span class="muted">('+GST.cmap.col(x.k)+'열)</span></td><td>'+(UP_CANW?'<button type="button" class="cipb" data-cipunign="'+E(x.name)+'">무시 취소</button>':'')+'</td></tr>').join('')+'</table></details>';
+  /* 표에 있는데 파일에 없는 항목 — 통째 교체면 그 항목 값이 전부 빈칸이 된다(아래 붉은 줄). 이름이 바뀐 것이면 위 표에서 «같은 항목»으로 잇는다. */
+  if(miss.length) h+='<div class="cipx warn">⚠ 표에 있는데 이 파일에서 못 찾은 항목 '+miss.length+'개: '+E(miss.join(', '))
+    +' — 이름이 바뀐 것이면 위 표에서 그 열을 «기존 … 과 같은 항목»으로 고르세요. 정말 없어진 항목이면 그대로 두세요(올리면 그 항목 값이 빈칸이 됩니다).</div>';
   /* 다른 FAB 의 파일 — 통째 교체면 그 표를 남의 자료로 갈아끼운다. 막는다(대상을 바꾸면 된다). */
   const fc=tcols.find(c=>N(c)==='fab');
   if(t.fab&&fc&&M.idx[fc]>=0){
@@ -303,23 +345,31 @@ function cipItemsHtml(t,rows,M,tcols){
   return h;
 }
 document.addEventListener('click',async function(e){
-  const b=e.target.closest&&e.target.closest('#chk [data-cipadd],#chk [data-cipsug],#chk [data-cipall]'); if(!b) return;
+  const b=e.target.closest&&e.target.closest('#chk [data-cipgo],#chk [data-cipunign]'); if(!b) return;
   const t=TABLES[$('tsel').value]; if(!t) return;
-  if(b.matches('[data-cipall]')){ document.querySelectorAll('#chk [data-cipcol]').forEach(x=>{ x.checked=b.checked; }); return; }
   const c=await GST.db(); if(!c){ alert('로그인이 필요합니다'); return; }
+  const N=GST.SM.norm, site=cmapSite(), where=GST.cmap.where();
   try{
-    if(b.matches('[data-cipsug]')){ await GST.cmap.save(c,cmapSite(),t.rid,b.dataset.cipsug,b.dataset.h,GST.cmap.where()); await window.checkFile(); return; }
-    const cols=Array.from(document.querySelectorAll('#chk [data-cipcol]:checked')).map(x=>x.dataset.cipcol);
-    if(!cols.length){ alert('더할 항목을 고르세요'); return; }
-    if(!confirm(t.table+' 표에 점검 항목 열 '+cols.length+'개를 더합니다:\n\n'+cols.join('\n')+'\n\n더한 열은 이 화면에서 지울 수 없습니다. 진행할까요?')) return;
-    b.disabled=true; b.textContent='더하는 중…';
-    const r=await c.rpc('import_add_cols',{p_tbl:t.table,p_cols:cols});
-    if(r.error) throw new Error(/Could not find the function|PGRST202/i.test(r.error.message)?'서버에 열 추가 함수가 아직 없습니다 — Supabase SQL Editor 에서 supabase/setup-22-import-cols.sql 을 Run 하세요':r.error.message);
-    const sk=(r.data&&r.data.skipped)||[];
-    if(sk.length) alert('더하지 않은 항목 '+sk.length+'개:\n'+sk.map(x=>x.col+' — '+(x.why==='exists'?'같은 뜻의 열이 이미 있음(「'+x.as+'」)':'이름이 너무 길거나 쓸 수 없는 글자')).join('\n'));
-    await new Promise(res=>setTimeout(res,800));    // 서버가 표 사전(스키마 캐시)을 다시 읽는 사이
+    if(b.matches('[data-cipunign]')){ await GST.cmap.save(c,site,t.rid,CIP_IGN+N(b.dataset.cipunign),'',where); await window.checkFile(); return; }
+    const dec=Array.from(document.querySelectorAll('#chk [data-cipdec]')).map(s=>({name:s.dataset.cipdec,v:s.value})).filter(d=>d.v);
+    if(!dec.length){ alert('정한 열이 없습니다 — 열마다 «어떻게 할까요»를 고르세요'); return; }
+    const maps=dec.filter(d=>d.v.indexOf('map:')===0), adds=dec.filter(d=>d.v==='add'), skips=dec.filter(d=>d.v==='skip');
+    /* 같은 기존 항목에 두 열을 잇는 것은 막는다 — 열 맵핑은 표 열마다 머리글 하나다(뒤의 것이 앞을 조용히 덮는다) */
+    const seen={}; for(const d of maps){ const k=d.v.slice(4); if(seen[k]){ alert('「'+k+'」 에 두 열('+seen[k]+' · '+d.name+')을 이었습니다 — 하나만 고르세요'); return; } seen[k]=d.name; }
+    const lines=[].concat(adds.map(d=>'＋ 새 항목: '+d.name), maps.map(d=>'＝ '+d.name+' → 기존 「'+d.v.slice(4)+'」'), skips.map(d=>'× 무시: '+d.name));
+    if(!confirm(t.label+' 에 이렇게 적용합니다:\n\n'+lines.join('\n')+(adds.length?'\n\n새 항목으로 더한 열은 이 화면에서 지울 수 없습니다.':'')+'\n\n진행할까요?')) return;
+    b.disabled=true; b.textContent='적용하는 중…';
+    for(const d of maps) await GST.cmap.save(c,site,t.rid,d.v.slice(4),d.name,where);
+    for(const d of skips) await GST.cmap.save(c,site,t.rid,CIP_IGN+N(d.name),d.name,where);
+    if(adds.length){
+      const r=await c.rpc('import_add_cols',{p_tbl:t.table,p_cols:adds.map(d=>d.name)});
+      if(r.error) throw new Error(/Could not find the function|PGRST202/i.test(r.error.message)?'서버에 열 추가 함수가 아직 없습니다 — Supabase SQL Editor 에서 supabase/setup-22-import-cols.sql 을 Run 하세요':r.error.message);
+      const sk=(r.data&&r.data.skipped)||[];
+      if(sk.length) alert('더하지 않은 항목 '+sk.length+'개:\n'+sk.map(x=>x.col+' — '+(x.why==='exists'?'같은 뜻의 열이 이미 있음(「'+x.as+'」)':'이름이 너무 길거나 쓸 수 없는 글자')).join('\n'));
+      await new Promise(res=>setTimeout(res,800));    // 서버가 표 사전(스키마 캐시)을 다시 읽는 사이
+    }
     await window.checkFile();
-  }catch(err){ alert(String(err.message||err)); b.disabled=false; }
+  }catch(err){ alert(String(err.message||err)); b.disabled=false; b.textContent='정한 대로 적용'; }
 });
 async function tableCols(c,t){
   try{
@@ -711,7 +761,7 @@ window.checkFile=async function(){
       { const nA=Object.values(M.via).filter(v=>v==='alias').length, nO=Object.values(M.via).filter(v=>v==='ovr').length, nMiss=tcols.filter(col=>idxOf[col]<0).length;
         CM_NEED=[nO?'지정 '+nO+'개':'', nA?'내장 사전으로 잡은 열 '+nA+'개':'', nMiss?'못 찾은 표 열 '+nMiss+'개':'', unknown.length?'올리지 않는 파일 열 '+unknown.length+'개':''].filter(Boolean).join(' · '); }
       msgs.push(panel);
-      if(t.addCols) msgs.unshift(cipItemsHtml(t,rows,M,tcols));
+      if(t.addCols) msgs.unshift(cipItemsHtml(t,rows,M,tcols,ovr));
       /* 표에 자리가 없는 파일 열은 «막지 않고» 올리지 않는다 — 대신 조용하지 않게 목록으로 밝힌다(위 패널 · 이 줄).
          예전에는 하나라도 있으면 통째로 막아, 사이트마다 열이 하나씩 더 붙은 양식이 매번 멈췄다. */
       if(unknown.length)msgs.push('<span class="warn">⚠ 표에 자리가 없어 올리지 않는 열 '+unknown.length+'개: '+GST._esc(unknown.join(', '))+'</span>');
