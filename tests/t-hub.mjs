@@ -142,6 +142,23 @@ is(/자료 없음/.test(zero.t) && zero.hid, '설비 0대 — 분포 칸이 «�
 await pg.evaluate(() => render()); await pg.waitForTimeout(600);
 is(await pg.evaluate(() => document.querySelectorAll('#mapS path.ct').length > 200 && +document.querySelector('#kpis .hb-kpi[data-k="run"] .num').textContent === 48), '「← 전세계」 — 세계 지도와 전체 숫자(가동 48)로 돌아온다');
 
+console.log('[3b] 운영단위를 고르면 KPI 카드·분포·팝업이 그 운영단위로 (v178 사용자 요청)');
+const runOf = () => pg.evaluate(() => +document.querySelector('#kpis .hb-kpi[data-k="run"] .num').textContent.replace(/,/g,''));
+await pg.click('#sigs .hb-sig[data-op*="WUHAN"]'); await pg.waitForTimeout(500);
+const sc = await pg.evaluate(() => ({ chip:(document.getElementById('scopeX') || {}).textContent || '', sigs:document.querySelectorAll('#sigs .hb-sig').length,
+  on:(document.querySelector('#sigs .hb-sig.on') || {}).dataset?.op || '',
+  dsum:[...document.querySelectorAll('#cdist > div:last-child button b')].reduce((a, b) => a + +b.textContent.replace(/,/g,''), 0),
+  want:D.groups.find(g => /WUHAN/.test(g.op)) }));
+const wRun = await runOf();
+is(/WUHAN/.test(sc.chip) && /WUHAN/.test(sc.on) && sc.sigs === 3, '신호등에서 우한을 누르면 날짜 옆에 «우한 ✕» 칩 · 신호등은 그대로 세 곳 (' + sc.chip + ')');
+is(wRun === sc.want.runN && wRun < 48 && sc.dsum === sc.want.inN, 'KPI 가동 = 우한 ' + sc.want.runN + ' · 고객사 분포 합 = 우한 반입 ' + sc.want.inN + ' (받은 ' + wRun + '·' + sc.dsum + ')');
+await pg.click('#kpis .hb-kpi[data-k="bm"]'); await pg.waitForTimeout(300);
+const scBm = await pg.evaluate(() => ({ ops:[...document.querySelectorAll('.gov-body tbody tr')].map(tr => tr.children[1].textContent), card:+document.querySelector('#kpis .hb-kpi[data-k="bm"] .num').textContent }));
+await pg.evaluate(() => GST._ovClose && GST._ovClose());
+is(scBm.ops.length === scBm.card && scBm.ops.every(o => /WUHAN/.test(o)), '고장 카드 팝업도 우한 행만 — 카드 숫자 = 목록 줄 수 (' + scBm.card + ')');
+await pg.click('#scopeX'); await pg.waitForTimeout(500);
+is(await runOf() === 48 && !(await pg.$('#scopeX')), '칩의 ✕ — 전체(가동 48)로 돌아오고 칩이 사라진다');
+
 console.log('[4] 구분 전환이 모든 칸에 걸린다');
 await pg.click('#segRegion button[data-r="os"]'); await pg.waitForTimeout(500); K = await kpi();
 const sigOs = await pg.evaluate(() => document.querySelectorAll('#sigs .hb-sig').length);
