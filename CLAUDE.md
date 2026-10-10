@@ -3700,6 +3700,31 @@ Lv.2 분모에서 조용히 빠졌다(같은 사람이 주간현황과 인원 �
 **4. 검사** — t-v2 의 탭 줄 검사가 디자인 2.0 의 «탭 밑줄»(`#tabInk`)을 탭으로 세어 붉었다(제품 결함 아님 · `.tab,.tgrp` 만 센다).
 `GST.VER` 172 · `?v=172`.
 
+## 챗봇 AI 가 모두 400 — 원인은 «Anthropic API 잔액 부족»이었다 (v177 · kakao-bot v97)
+
+카톡 자유 질문·대시보드 챗봇의 AI 답이 v93 무렵부터 전부 실패했다(메뉴 버튼·「브리핑」은 AI 를 안 불러 멀쩡했다).
+로그에는 `route error 400` · `web analyze error 400` 만 있었다 — **상태 숫자만 남겨서 모델 이름 탓인지·잔액 탓인지·요청 모양 탓인지 가를 수 없었다.**
+
+- **실측(2026-10-10 · 아래 probe)** — 지금 쓰는 모델 이름 셋과 현행 Claude 5 계열 이름 셋, **여섯 이름 모두 같은 400**:
+  `invalid_request_error · Your credit balance is too low to access the Anthropic API`. 코드·모델 이름 문제가 아니다 —
+  `ANTHROPIC_API_KEY` 가 속한 Anthropic 계정(console.anthropic.com › Plans & Billing)에 크레딧을 채우는 것이 고치는 길이다.
+  ⚠ 잔액 검사가 모델 이름 검사보다 앞서므로 **«모델 이름이 맞는지»는 아직 모른다** — 충전 뒤 probe 를 다시 돌려 404 가 나는 이름이 있으면
+  그때 현행 이름으로 바꾼다(모델 이름 변경은 사용자 확인 뒤 · 이 문서에는 이름을 적지 않는다).
+- **거절 «까닭»을 남긴다** — `apiErr(r)` 가 응답 본문 앞 300자를 로그에 싣는다(세 호출 자리 `route error`·`analyze error`·`web analyze error`).
+  ⚠ 요청 본문·API 키는 남기지 않는다(`t-brief` [5] 가 로그 줄에 `apiKey`·요청 본문이 끼는 것을 막는다).
+- **잔액 부족이면 사실대로 말한다** — 예전 문구 «잠시 후 다시 시도해주세요»는 거짓말이었다(다시 보내도 안 되고, 고칠 사람은 관리자다).
+  `AI_BILLING_MSG`: «AI 답변이 지금 멈춰 있습니다(Anthropic API 잔액 부족). 관리자에게 알려 주세요. 메뉴 버튼과 「브리핑」은 그대로 쓸 수 있습니다.»
+  판정은 «방금(60초 안) 본문에 `credit balance` 가 있었나» 하나(`aiBilling()`) · 라우팅이 성공하면 지운다 · 다른 400 은 옛 문구 그대로.
+  웹은 라우팅이 잔액 부족으로 실패하면 데이터를 읽지 않고 바로 그 문장을 돌려준다(분석도 같은 400 이다). 카톡은 「메뉴」·「브리핑」 단추를 같이 준다.
+- **`?op=probe` — AI 점검 손잡이.** 모델마다 1토큰짜리 호출을 보내 `{model, status, body}` 만 돌려준다(`&models=a,b` 로 다른 이름도 · 최대 6).
+  sync 와 같은 비밀(`x-sync-secret`)로 막되 더 좁다 — 비밀이 설정돼 있지 않으면 아예 닫는다(돈이 드는 호출이다).
+  · ⚠ 이 상자의 프록시가 `*.supabase.co` 를 막아 curl 로는 못 부른다. **sync cron 의 명령을 SQL 안에서 고쳐 그대로 실행**하면 비밀을 보지 않고 부를 수 있다 —
+    `select command from cron.job where jobname='sync-kakao-bot'` 의 `?op=sync` 를 `?op=probe` 로 바꿔 `execute`(DO 블록) → `net._http_response` 의 최신 줄에 결과가 든다.
+    비밀 값을 출력하지 말 것(명령 전체를 select 하면 그대로 찍힌다 — 바꿔 실행만 한다).
+- 배포: v96(본문 로그 + probe) → v97(잔액 부족 안내). 둘 다 배포 전 대조(콘솔 전용 수정 없음) · `verify_jwt:false` 그대로 ·
+  배포 뒤 바이트 대조 hr.js·brief.js 일치 · index.ts 끝 개행 1바이트만(알려진 부류).
+- `t-brief` [5](35/35) — 음성 대조 넷: probe 비밀 검사를 느슨하게(`want &&`) 하면 / route 로그에서 본문을 빼면 / 잔액 판정을 빼면 / 로그에 키를 실으면 붉다.
+
 ## 검증
 
 `tests/`에 47종이 있다.

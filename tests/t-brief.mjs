@@ -9,6 +9,7 @@
 import fs from 'fs';
 import path from 'path';
 import module from 'module';
+import url from 'url';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const BRIEF = path.join(ROOT, 'supabase/functions/kakao-bot/brief.js');
@@ -87,6 +88,34 @@ const CORE = fs.readFileSync(path.join(ROOT, 'assets/core.js'), 'utf8');
 const cm = CORE.match(/st_ok:'([^']+)', st_warn:'([^']+)', st_bad:'([^']+)'/);
 const bm = B.match(/const ST = \{ bad: '([^']+)', warn: '([^']+)', ok: '([^']+)' \}/);
 is(!!(cm && bm && cm[1] === bm[3] && cm[2] === bm[2] && cm[3] === bm[1]), '판정 이름이 화면 카드와 같다(' + (bm ? bm.slice(1).join('·') : '?') + ' ↔ ' + (cm ? cm.slice(1).join('·') : '?') + ')');
+
+/* [5] AI 거절의 «까닭»을 남기고, 잔액 부족이면 사실대로 말한다 (v177 · 실측 2026-10-10 — v93~v95 내내 「route error 400」만 남아
+   원인을 몰랐고, 사람에게는 «잠시 후 다시»라고 거짓말을 했다. 진짜 원인은 Anthropic API 잔액 부족이었다) */
+console.log('[5] AI 오류 — 응답 본문 로그 · 잔액 부족 안내 · 점검(probe) 잠금');
+const Ic = I.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*/gm, '');
+for (const tag of ['route error', 'analyze error', 'web analyze error'])
+  is(new RegExp('console\\.error\\("' + tag + '", r\\.status, [^)]*await apiErr\\(r\\)\\)').test(Ic), `「${tag}」 로그가 응답 본문(apiErr)을 남긴다`);
+is(!/console\.(log|error|warn)\([^;\n]*(apiKey|x-api-key|JSON\.stringify\(\{ model)/.test(Ic), '로그에 API 키·요청 본문을 남기지 않는다');
+is((Ic.match(/aiBilling\(\)/g) || []).length >= 4, '잔액 부족이면 분석 두 곳 · 웹 라우팅 · 카톡 라우팅이 그 사실을 말한다');
+const pb = Ic.slice(Ic.indexOf('"op") === "probe"')), pGuard = pb.indexOf('if (!want || req.headers.get("x-sync-secret") !== want)'), pFetch = pb.indexOf('api.anthropic.com');
+is(pGuard > 0 && pFetch > pGuard, '점검(probe)은 sync 비밀이 «설정돼 있고 맞을 때만» Anthropic 을 부른다');
+/* 동작 — apiErr·aiBilling 를 떼어 가짜 응답으로 돌린다(본문에 «credit balance» 가 있을 때만 잔액 부족) */
+{
+  const a = I.indexOf('async function apiErr'), z = I.indexOf('const AI_BILLING_MSG');
+  const src = module.stripTypeScriptTypes(I.slice(a, z)) + '\nexport { apiErr, aiBilling };';
+  const f = path.join(ROOT, 'tests', '.t-brief-ai.mjs'); fs.writeFileSync(f, src);
+  try {
+    const M = await import(url.pathToFileURL(f).href + '?' + Date.now());
+    const fake = (t) => ({ text: async () => t });
+    const b1 = await M.apiErr(fake('{"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low"}}'));
+    is(M.aiBilling() && /credit balance/.test(b1), '잔액 부족 본문 → 판정 참 · 본문을 돌려준다');
+    const M2 = await import(url.pathToFileURL(f).href + '?b' + Date.now());
+    await M2.apiErr(fake('{"type":"error","error":{"type":"not_found_error","message":"model: x"}}'));
+    is(!M2.aiBilling(), '다른 400(모델 이름 등) → 잔액 부족으로 말하지 않는다');
+    const long = await M2.apiErr(fake('x'.repeat(1000)));
+    is(long.length === 300, '본문은 300자에서 자른다');
+  } finally { fs.unlinkSync(f); }
+}
 
 console.log((fail ? '❌' : '✅') + ` t-brief ${pass}/${pass + fail}`);
 process.exit(fail ? 1 : 0);

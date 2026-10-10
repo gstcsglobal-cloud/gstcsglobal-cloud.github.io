@@ -43,6 +43,22 @@ const MODEL_ROUTE = "claude-haiku-4-5-20251001";  // 라우팅용 (저렴)
 const MODEL_FAST  = "claude-sonnet-5";              // 분석용
 const MODEL_SMART = "claude-sonnet-5";              // Opus 제거
 let smartBroken = false;
+// API 가 거절한 «까닭»(응답 본문 앞 300자). 상태 숫자만 남기면 400 이 모델 이름인지·잔액인지·요청 모양인지
+// 가를 수 없다 — 실제로 v93~v95 내내 「route error 400」만 찍혀 원인을 몰랐다.
+// ⚠ 요청 본문·API 키는 남기지 않는다 — 응답 본문(Anthropic 의 error.type·message)만이다.
+async function apiErr(r: Response): Promise<string> {
+  let b = "";
+  try { b = (await r.text()).slice(0, 300).replace(/\s+/g, " "); } catch (_) { return "(본문 읽기 실패)"; }
+  if (/credit balance/i.test(b)) aiBillingAt = Date.now();
+  return b;
+}
+/* 잔액 부족(v177 · 실측 2026-10-10 — 모든 모델이 같은 400 「Your credit balance is too low」).
+   그때 «잠시 후 다시 시도해주세요»는 거짓말이다 — 다시 보내도 안 되고, 고칠 사람은 관리자다.
+   무엇이 멈췄고 무엇은 되는지까지 적는다(메뉴 버튼·「브리핑」은 AI 를 안 부른다). 판정은 «방금(60초 안) 그 거절을 봤나» 하나다. */
+let aiBillingAt = 0;
+const aiBilling = () => Date.now() - aiBillingAt < 60000;
+const AI_BILLING_MSG = "AI 답변이 지금 멈춰 있습니다(Anthropic API 잔액 부족). 관리자에게 알려 주세요. "
+  + "메뉴 버튼과 「브리핑」은 그대로 쓸 수 있습니다.";
 const FRESH_MS = 10 * 60 * 1000;
 
 /* ============================================================
@@ -618,9 +634,10 @@ async function routeQuery(
 
   if (!r.ok) {
     if (r.status === 404 || r.status === 400) { smartBroken = true; }
-    console.error("route error", r.status);
+    console.error("route error", r.status, model, await apiErr(r));
     return null;
   }
+  aiBillingAt = 0;
   const body = await r.json();
   const use = (body.content ?? []).find((c: any) => c.type === "tool_use");
   return use?.input ?? null;
@@ -662,8 +679,8 @@ async function analyzeAndAnswer(
   });
 
   if (!r.ok) {
-    console.error("analyze error", r.status);
-    return "데이터 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+    console.error("analyze error", r.status, model, await apiErr(r));
+    return aiBilling() ? AI_BILLING_MSG : "데이터 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
   }
   const body = await r.json();
   return (body.content ?? []).map((c: any) => c.text ?? "").join("").trim();
@@ -706,7 +723,10 @@ async function analyzeForWeb(
     body: JSON.stringify({ model: MODEL_FAST, max_tokens: 1200, system: sys, messages: msgs }),
     signal: AbortSignal.timeout(45000),
   });
-  if (!r.ok) { console.error("web analyze error", r.status); return "분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."; }
+  if (!r.ok) {
+    console.error("web analyze error", r.status, MODEL_FAST, await apiErr(r));
+    return aiBilling() ? AI_BILLING_MSG : "분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+  }
   const body = await r.json();
   return (body.content ?? []).map((c: any) => c.text ?? "").join("").trim();
 }
@@ -1172,6 +1192,37 @@ Deno.serve(async (req) => {
       return json({ ok: true, took_ms: Date.now() - t0, result, note });
     }
 
+    /* AI 점검 (v177) — 모델마다 1토큰짜리 호출을 보내 «상태 · 거절 까닭(응답 본문)»만 돌려준다.
+       챗봇의 AI 답이 «오류가 발생했습니다»로만 떨어질 때 원인(모델 이름 · 잔액 · 요청 모양)을 가르는 손잡이다 —
+       v93~v95 내내 「route error 400」만 남아 까닭을 몰랐다. ?models=a,b 로 다른 모델 이름도 시험한다(최대 6).
+       ⚠ sync 와 같은 비밀로 막되 더 좁게 — 비밀이 설정돼 있지 않으면 아예 닫는다(돈이 드는 호출이다).
+       ⚠ 요청 본문·API 키는 돌려주지도 남기지도 않는다. */
+    if (url.searchParams.get("op") === "probe") {
+      const want = Deno.env.get("SYNC_SECRET");
+      if (!want || req.headers.get("x-sync-secret") !== want)
+        return new Response("forbidden", { status: 403, headers: CORS });
+      const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+      if (!apiKey) return json({ ok: false, error: "no ANTHROPIC_API_KEY" });
+      const extra = (url.searchParams.get("models") || "").split(",").map((s) => s.trim())
+        .filter((s) => /^claude-[a-z0-9.-]{1,60}$/.test(s)).slice(0, 6);
+      const models = [...new Set([MODEL_ROUTE, MODEL_FAST, MODEL_SMART, ...extra])];
+      const probe: { model: string; status: number; body: string }[] = [];
+      for (const model of models) {
+        try {
+          const r = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+            body: JSON.stringify({ model, max_tokens: 1, messages: [{ role: "user", content: "ping" }] }),
+            signal: AbortSignal.timeout(15000),
+          });
+          const b = r.ok ? (await r.text().catch(() => ""), "") : await apiErr(r);
+          probe.push({ model, status: r.status, body: b });
+        } catch (e) { probe.push({ model, status: 0, body: String((e as Error).message).slice(0, 200) }); }
+      }
+      console.log("probe", JSON.stringify(probe));
+      return json({ ok: true, took_ms: Date.now() - t0, probe });
+    }
+
     // ── 웹 대시보드 챗봇 ─────────────────────────────────────────────
     // 카카오와 같은 엔진(bot_cache + routeQuery + serializeData)을 쓰고 출력 형식만 다르다.
     // 카카오 시크릿 검사 앞에 둔다 — 웹은 그 헤더를 갖고 있지 않다.
@@ -1190,6 +1241,8 @@ Deno.serve(async (req) => {
 
       // 1) 어떤 데이터가 필요한지 (웹은 5초 제약이 없어 allowSlow=true)
       const route = await routeQuery(q, null, null, "W" + isoW(now).slice(-2), true);
+      // 잔액 부족이면 데이터를 읽어 봐야 분석이 또 같은 400 이다 — 바로 사실을 말한다
+      if (!route && aiBilling()) return json({ answer: AI_BILLING_MSG });
       // 라우팅이 실패해도 답은 해야 한다 — 실적+설비를 기본으로 깔고 진행
       const action = route?.action ?? "load_data";
 
@@ -1300,7 +1353,8 @@ Deno.serve(async (req) => {
 
       if (!route) {
         await saveConvState(svc, botUserKey, null);
-        return { payload: simpleText("질문 해석에 잠시 실패했습니다. 다시 보내주세요.") };
+        return { payload: aiBilling() ? quickReply(AI_BILLING_MSG, ["메뉴", "브리핑"])
+                                      : simpleText("질문 해석에 잠시 실패했습니다. 다시 보내주세요.") };
       }
 
       // 잡담
