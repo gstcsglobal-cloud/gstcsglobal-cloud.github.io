@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=167"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=172"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write) 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB(옛 동작 그대로 보인다).
@@ -28,11 +28,12 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #editBtn{display:none}
   --glass:var(--surface);--glassb:var(--line);--card:var(--surface);
   --shadow-md:0 4px 12px rgba(16,24,40,.08);
 }
+/* v171 — 다크는 «미드나이트»(theme.css 와 같은 값 · 셸은 theme.css 를 안 싣는다) */
 body.theme-slate{
-  --bg:#0F1419;--surface:#161C24;--surface-2:#1C2430;--line:rgba(151,170,196,.14);--line-2:rgba(151,170,196,.28);
-  --txt:#E6EDF3;--txt-2:#C3CCD8;--mut:#8B98A9;
-  --accent:#5B8DEF;--accent-soft:rgba(91,141,239,.16);--accent-ink:#8AB0F7;--bad:#F0716B;--warn:#F2B134;
-  --shadow-md:0 8px 24px rgba(0,0,0,.45);color-scheme:dark;
+  --bg:#070B14;--surface:#0D1321;--surface-2:#131B2C;--surface-3:#1A2438;--line:rgba(148,170,215,.13);--line-2:rgba(148,170,215,.26);
+  --txt:#E8EEF7;--txt-2:#C5CEDB;--mut:#8C99AD;
+  --accent:#6C9BFF;--accent-soft:rgba(108,155,255,.15);--accent-ink:#9DBDFF;--bad:#F2706B;--warn:#F5B83D;
+  --shadow-md:0 12px 32px rgba(0,0,0,.55);color-scheme:dark;
 }
 html,body{height:100%;overflow:hidden}
 body{font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
@@ -43,7 +44,12 @@ body{font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',san
   background:var(--surface);border-bottom:1px solid var(--line);flex-shrink:0}
 .brand{display:flex;align-items:center;gap:10px}
 .brand::before{content:'';width:28px;height:28px;border-radius:8px;flex:none;
-  background:var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 17l5-6 4 3 7-8'/%3E%3C/svg%3E") center/18px no-repeat}
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 17l5-6 4 3 7-8'/%3E%3C/svg%3E") center/18px no-repeat,
+    linear-gradient(135deg,#2F6FED 0%,#7A5AF8 100%);box-shadow:0 6px 16px -6px rgba(79,90,240,.65)}
+/* 상단 바 아래 가는 빛 한 줄(v171) — 선 하나가 디자인이라는 v139 규약 그대로, 그 선에 액센트만 실었다 */
+.topbar{position:relative}
+.topbar::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;pointer-events:none;z-index:2;
+  background:linear-gradient(90deg,transparent 0%,color-mix(in srgb,var(--accent) 50%,transparent) 30%,color-mix(in srgb,#7A5AF8 45%,transparent) 70%,transparent 100%)}
 .brand .logo{font-size:16px;font-weight:700;color:var(--txt);letter-spacing:-.2px}
 .brand .tag{font-size:12px;color:var(--mut);padding-left:10px;border-left:1px solid var(--line)}
 .topbar-right{display:flex;align-items:center;gap:10px}
@@ -132,12 +138,88 @@ select.gb-inp{width:104px}
 .tab.active{color:var(--accent-ink);border-bottom-color:var(--accent)}
 .tab.err::after{content:' ⚠';font-size:11px}   /* 그 화면에서 잡히지 않은 예외가 났다(v135) */
 .tab .ic{margin-right:7px;display:inline-flex;vertical-align:-2px}
+/* 탭 묶음(v172) — «질문»으로 나눈다: 정비(PM·CIP) · 자재·비용(자재·TCO). 묶음 안의 탭도 각자 .tab[data-id] 라 딥링크·순회·검사가 그대로다 */
+.tgrp{display:inline-flex;align-items:stretch;margin:0 4px;padding-left:6px;border-left:1px solid var(--line);border-right:1px solid var(--line);flex:none}
+.tgrp-l{align-self:center;font-size:11px;font-weight:700;color:var(--mut);letter-spacing:.02em;padding:0 4px 0 6px;white-space:nowrap}
+.tgrp .tab{padding-left:10px;padding-right:10px}
+/* 처리함 배지 · 더보기 메뉴 */
+.tb-badge{display:inline-block;min-width:17px;padding:0 5px;border-radius:9px;background:var(--bad,#D92D20);color:#fff;font-size:10px;font-weight:800;line-height:17px;text-align:center}
+.tb-btn.on{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
+.tb-more{position:relative;display:inline-flex}
+.more-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:9600;min-width:190px;background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  box-shadow:var(--shadow-md);padding:6px;display:flex;flex-direction:column;gap:2px}
+.more-menu[hidden]{display:none}
+.more-menu button{font:inherit;font-size:13px;font-weight:600;text-align:left;border:0;background:transparent;color:var(--txt);padding:8px 10px;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.more-menu button:hover,.more-menu button:focus-visible{background:var(--surface-2);outline:none}
+.more-menu button.on{color:var(--accent-ink)}
+.more-menu hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
+.more-menu .chk{margin-left:auto;font-size:11px;font-weight:700;color:var(--mut)}
+.more-menu .chk.on{color:var(--accent-ink)}
+/* 「설명 표시」는 관리자만 — 경영진·고객 화면은 기본으로 «값»만 보인다(v172 · core GST.explainOn) */
+body:not([data-role="admin"]):not([data-role="legacy"]) .exp-only{display:none !important}
 
 /* iframe 영역 */
 .frame-wrap{flex:1;position:relative;background:var(--bg)}
 .frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:none;display:none;background:var(--bg)}
-.frame-wrap iframe.active{display:block;animation:frameIn .3s ease}
-@keyframes frameIn{from{opacity:.3}to{opacity:1}}
+/* 화면 전환 — 아래에서 살짝 떠오르며 밝아진다(v171). translate 는 iframe 자신에만 걸려 안쪽 화면과 무관하다 */
+.frame-wrap iframe.active{display:block;animation:frameIn .34s cubic-bezier(.2,.8,.2,1)}
+@keyframes frameIn{from{opacity:0;translate:0 8px}to{opacity:1;translate:none}}
+@media (prefers-reduced-motion:reduce){.frame-wrap iframe.active{animation:none}}
+
+/* ===== 디자인 2.0 (v171) — 탭 밑줄이 미끄러진다 · 검색(Ctrl K) · 읽는 중 막대 · 부팅 화면 ===== */
+.tabbar{position:relative}
+.tab-ink{position:absolute;bottom:0;left:0;width:0;height:2px;border-radius:2px 2px 0 0;pointer-events:none;opacity:0;
+  background:linear-gradient(90deg,var(--accent),#7A5AF8);box-shadow:0 0 10px color-mix(in srgb,var(--accent) 55%,transparent);
+  transition:left .34s cubic-bezier(.3,.9,.3,1),width .34s cubic-bezier(.3,.9,.3,1),opacity .2s}
+.tabbar.has-ink .tab.active{border-bottom-color:transparent}
+@media (prefers-reduced-motion:reduce){.tab-ink{transition:none}}
+.tb-search{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 7px 0 11px;min-width:200px;border-radius:9px;
+  border:1px solid var(--line);background:var(--surface-2);color:var(--mut);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+  transition:border-color .15s,color .15s,box-shadow .15s}
+.tb-search:hover{border-color:var(--line-2);color:var(--txt);box-shadow:0 0 0 3px var(--accent-soft)}
+.tb-search:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tb-search span{flex:1;text-align:left}
+.tb-search kbd{font:600 10.5px/1 ui-monospace,SFMono-Regular,Consolas,monospace;padding:3px 6px;border-radius:5px;border:1px solid var(--line);background:var(--surface);color:var(--mut)}
+@media(max-width:1180px){.tb-search{min-width:0}.tb-search span,.tb-search kbd{display:none}}
+.fprog{position:absolute;left:0;right:0;top:0;height:2px;z-index:3;pointer-events:none;opacity:0;transition:opacity .25s;overflow:hidden}
+.fprog.on{opacity:1}
+.fprog i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,var(--accent),#7A5AF8 60%,#0EA5E9);
+  box-shadow:0 0 12px color-mix(in srgb,var(--accent) 70%,transparent);transition:width .35s ease}
+.fprog.ind i{width:32% !important;animation:fprogInd 1.15s ease-in-out infinite}
+@keyframes fprogInd{from{left:-32%}to{left:100%}}
+@media (prefers-reduced-motion:reduce){.fprog.ind i{animation:none;left:0;width:100% !important;opacity:.5}}
+/* 부팅 화면 — 세션 첫 화면 한 번만. 실제로 읽는 표와 진행률을 보인다(로그는 지어내지 않는다).
+   pointer-events:none — 덮고 있어도 누르는 것을 막지 않는다(누르거나 키를 치면 바로 걷힌다). */
+.boot{position:fixed;inset:0;z-index:99998;display:grid;place-items:center;overflow:hidden;pointer-events:none;color:#E8EEF7;font-family:inherit;
+  background:radial-gradient(1200px 720px at 50% 40%,#0F1C3E 0%,#070B18 55%,#03050C 100%);clip-path:circle(150% at 50% 50%)}
+.boot canvas{position:absolute;inset:0;width:100%;height:100%}
+.boot-core{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center}
+.boot-orb{width:132px;height:132px;position:relative;margin-bottom:26px}
+.boot-orb i{position:absolute;inset:0;border-radius:50%;border:2px solid transparent}
+.boot-orb i:nth-child(1){border-top-color:#4F8BFF;border-right-color:#4F8BFF;animation:bootSp 1.15s linear infinite;filter:drop-shadow(0 0 8px #4F8BFF)}
+.boot-orb i:nth-child(2){inset:13px;border-bottom-color:#9B7BFF;border-left-color:#9B7BFF;animation:bootSp 1.7s linear infinite reverse;filter:drop-shadow(0 0 8px #9B7BFF)}
+.boot-orb i:nth-child(3){inset:26px;border-top-color:#38D3F5;animation:bootSp .85s linear infinite;filter:drop-shadow(0 0 8px #38D3F5)}
+.boot-orb b{position:absolute;inset:46px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.95),rgba(79,139,255,.6) 42%,transparent 72%);animation:bootPu 1.3s ease-in-out infinite}
+.boot-orb em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:21px;font-variant-numeric:tabular-nums;letter-spacing:-.3px;text-shadow:0 0 14px rgba(79,139,255,.9)}
+.boot-brand{font-size:12.5px;font-weight:700;letter-spacing:.42em;padding-left:.42em;text-transform:uppercase;
+  background:linear-gradient(90deg,#7F95BC 0%,#FFFFFF 50%,#7F95BC 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:bootSheen 2.6s linear infinite}
+.boot-team{margin-top:8px;font-size:10.5px;font-weight:600;letter-spacing:.32em;padding-left:.32em;color:#5F6F8C}
+.boot-bar{width:min(360px,72vw);height:3px;margin-top:24px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;position:relative}
+.boot-bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#4F8BFF,#9B7BFF,#38D3F5);box-shadow:0 0 16px rgba(155,123,255,.85)}
+.boot-log{margin-top:18px;width:min(460px,86vw);height:118px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;text-align:left;
+  font:11.5px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace;color:#7FB6FF;-webkit-mask:linear-gradient(transparent,#000 40%);mask:linear-gradient(transparent,#000 40%)}
+.boot-log div{display:flex;gap:9px;white-space:nowrap;animation:bootLg .26s ease-out}
+.boot-log .n{color:#D6E3FF}
+.boot-log .m{color:#5D7194;overflow:hidden;text-overflow:ellipsis}
+.boot-log .s{margin-left:auto;padding-left:10px;color:#5D7194}
+.boot-log .ok .s{color:#3FCF8E}
+.boot-log .fail .s{color:#F2706B}
+.boot.out{clip-path:circle(0% at 50% 50%);transition:clip-path .85s cubic-bezier(.8,0,.2,1)}
+@keyframes bootSp{to{transform:rotate(360deg)}}
+@keyframes bootPu{50%{transform:scale(.72);opacity:.55}}
+@keyframes bootSheen{from{background-position:120% 0}to{background-position:-120% 0}}
+@keyframes bootLg{from{opacity:0;transform:translateX(-8px)}}
+@media (prefers-reduced-motion:reduce){.boot-orb i,.boot-orb b,.boot-brand,.boot-log div{animation:none !important}.boot.out{clip-path:none;opacity:0;transition:opacity .2s}}
 .frame-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;pointer-events:none}
 .spinner{width:36px;height:36px;border:3px solid var(--glassb);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -193,6 +275,7 @@ body.kiosk-full .kiosk-panel{display:none}
   .brand .logo{font-size:17px}
   .tab{padding:11px 12px;font-size:12px}
   .tab .ic{margin-right:4px}
+  .tgrp-l{display:none}
   .topbar{padding:8px 12px;gap:6px}
   .tabbar{padding:0 8px}
   .gbarrow{padding:0 8px}
@@ -213,6 +296,19 @@ body.kiosk-full .kiosk-panel{display:none}
     <span class="tag" id="brandTag" data-lock>By CS Global Team</span>
   </div>
   <div class="topbar-right">
+    <!-- 검색(명령 팔레트 · v171) — 화면 · 기능 · 설비 S/N · 지금 화면의 카드를 한 칸에서 찾는다. 어느 화면에서든 Ctrl K -->
+    <button class="tb-search" id="palBtn" type="button" onclick="palOpen()" aria-keyshortcuts="Control+K Meta+K" aria-haspopup="dialog"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span id="palLabel">검색</span><kbd id="palKbd">Ctrl K</kbd></button>
+    <!-- 처리함은 탭이 아니라 «할 일 수»가 보이는 단추다(v172 · 탭 12 → 8). 누르면 처리함 화면으로 -->
+    <button class="tb-btn" onclick="switchTab('action')" id="actBtn" title="조치 사항"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> <span id="actLabel">조치 사항</span> <b class="tb-badge" id="actBadge" hidden>0</b></button>
+    <!-- 더보기 — 매일 보지 않는 화면(사이트 상세 · 분석 작업대 · 운영 목표)과 관리자의 「설명 표시」 -->
+    <div class="tb-more"><button class="tb-btn" onclick="moreToggle()" id="moreBtn" aria-haspopup="menu" aria-expanded="false" title="더보기"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg> <span id="moreLabel">더보기</span></button>
+      <div class="more-menu" id="moreMenu" role="menu" hidden>
+        <button type="button" role="menuitem" data-go="site" id="mSite">사이트 상세</button>
+        <button type="button" role="menuitem" data-go="studio" id="mStudio">맞춤 분석</button>
+        <button type="button" role="menuitem" data-go="targets" id="mTargets">목표·기준</button>
+        <hr class="exp-only">
+        <button type="button" role="menuitemcheckbox" aria-checked="false" id="mExplain" class="exp-only" onclick="explainToggle()"><span id="mExplainL">설명 표시</span><span class="chk" id="mExplainS">끔</span></button>
+      </div></div>
     <button class="tb-btn" onclick="refreshActive()" id="refreshBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg> <span id="refreshLabel">새로고침</span></button>
     <!-- 업로드는 탭이 아니다 — 매일 보는 탭 줄에 관리용 화면을 섞지 않는다(diag 와 같은 규율).
          대신 여기 툴바에 두어 «데이터를 넣는 곳»을 한 번에 찾을 수 있게 한다.
@@ -280,6 +376,7 @@ body.kiosk-full .kiosk-panel{display:none}
 
 <!-- iframe 영역 -->
 <div class="frame-wrap" id="frameWrap">
+  <div class="fprog" id="fprog" aria-hidden="true"><i></i></div>
   <div class="frame-loading" id="frameLoading"><div class="spinner"></div></div>
 </div>
 
@@ -288,6 +385,7 @@ const BASE='https://gstcsglobal-cloud.github.io';
 
 // 탭 정의 (순서대로)
 const SVG={
+  home:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg>',
   studio:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/><circle cx="19" cy="7" r="1.5"/></svg>',
   site:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M9 10h.01M15 10h.01"/></svg>',
   action:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
@@ -302,29 +400,36 @@ const SVG={
   cip:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>'
 };
 const TABS=[
-  {id:'hub',     path:'/hub/',      ko:'통합 관제', en:'Command',      zh:'综合监控', ja:'統合管制'},
-  {id:'action',  path:'/action/',   ko:'처리함',    en:'Actions',      zh:'待办',     ja:'対応'},
-  {id:'site',    path:'/site/',     ko:'사이트 상세', en:'Site',        zh:'站点详情', ja:'サイト詳細'},
-  {id:'studio',  path:'/studio/',   ko:'분석 작업대', en:'Studio',      zh:'分析工作台', ja:'分析ワークベンチ'},
+  /* v172 — 탭 12 → 8(묶음 포함). id 는 그대로 둔다 — 딥링크(#tab=fault)·자동순회 저장값·챗봇 출처가 id 를 본다.
+     grp = 탭 줄에서 한 묶음으로 선다(정비 · 자재·비용) · bar:false = 탭 줄에 안 서고 툴바(처리함 배지 · 더보기)로 연다. */
+  {id:'home',    path:'/home/',     ko:'홈',        en:'Home',         zh:'首页',     ja:'ホーム'},
+  {id:'hub',     path:'/hub/',      ko:'글로벌 현황', en:'Global',     zh:'全球概况', ja:'グローバル概況'},
   {id:'report',  path:'/report/',   ko:'주간 현황', en:'Weekly',       zh:'周现况', ja:'週間現況'},
-  {id:'hr',      path:'/hr/',       ko:'인원 현황', en:'Workforce',    zh:'人员',   ja:'人員'},
-  {id:'scrubber',path:'/scrubber/', ko:'설치 현황', en:'Installation', zh:'安装',   ja:'設置'},
-  {id:'pm',      path:'/pm/',       ko:'PM 점검',   en:'PM Schedule',  zh:'PM点检', ja:'PM点検'},
-  {id:'fault',   path:'/fault/',    ko:'고장 분석', en:'Fault',        zh:'故障',   ja:'故障'},
-  {id:'material',path:'/material/', ko:'자재 실적', en:'Material',     zh:'材料',   ja:'資材'},
-  {id:'cip',     path:'/cip/',      ko:'CIP 현황',  en:'CIP',          zh:'CIP',    ja:'CIP'},
-  {id:'tco',     path:'/tco/',      ko:'TCO',       en:'TCO',          zh:'TCO',    ja:'TCO'}
-  /* v163 — 주간현황(국내) 데모 탭은 셸에서 뺐다(사용자 확정 「국내 데모 페이지는 필요없다」). /report-kr/ 파일과 데모 표는 남아 있고
+  {id:'fault',   path:'/fault/',    ko:'고장 분석', en:'Failures',     zh:'故障分析', ja:'故障分析'},
+  {id:'pm',      path:'/pm/',       ko:'PM 점검',   en:'PM Schedule',  zh:'PM点检', ja:'PM点検', grp:'maint'},
+  {id:'cip',     path:'/cip/',      ko:'CIP 진행',  en:'CIP',          zh:'CIP进度', ja:'CIP進捗', grp:'maint'},
+  {id:'scrubber',path:'/scrubber/', ko:'설비 현황', en:'Equipment',    zh:'设备',   ja:'設備'},
+  {id:'material',path:'/material/', ko:'자재 사용', en:'Material',     zh:'材料',   ja:'資材',   grp:'cost'},
+  {id:'tco',     path:'/tco/',      ko:'TCO',       en:'TCO',          zh:'TCO',    ja:'TCO',    grp:'cost'},
+  {id:'hr',      path:'/hr/',       ko:'인원·교육', en:'Workforce',    zh:'人员·培训', ja:'人員·教育'},
+  {id:'action',  path:'/action/',   ko:'조치 사항', en:'Action items', zh:'待办事项', ja:'対応事項', bar:false},
+  {id:'site',    path:'/site/',     ko:'사이트 상세', en:'Site',        zh:'站点详情', ja:'サイト詳細', bar:false},
+  {id:'studio',  path:'/studio/',   ko:'맞춤 분석', en:'Custom analysis', zh:'自定义分析', ja:'カスタム分析', bar:false},
+  {id:'targets', path:'/targets/',  ko:'목표·기준', en:'Targets & rules', zh:'目标·标准', ja:'目標·基準', bar:false}
+  /* v163 — 주간현황(국내) 데모 탭은 셸에서 뺐고 v176 에 화면(/report-kr/)째 접었다(사용자 확정 「국내 데모 페이지는 필요없다」).
      roles 장치(tabOn)는 그대로다 — 등급 전용 탭을 다시 둘 때 TABS 에 roles 를 달면 순회·단축키·전 탭 불러오기가 저절로 따른다. */
 ];
+const GROUPS={maint:{ko:'정비',en:'Maintenance',zh:'维护',ja:'保全'}, cost:{ko:'자재·비용',en:'Material & Cost',zh:'材料·费用',ja:'資材·コスト'}};
 /* 이 등급에게 보이는 탭인가 — 탭 버튼(CSS)·자동순회 목록이 같은 규칙을 본다. 등급을 모르면 roles 가 있는 탭은 안 보인다. */
 function tabOn(t){ return !t.roles || t.roles.indexOf((document.body && document.body.dataset.role) || '') >= 0; }
+/* 탭 줄에 서는 탭 — 자동순회 목록·숫자 단축키·전 탭 불러오기가 이것을 본다(툴바로 여는 화면은 순회하지 않는다) */
+function barTabs(){ return TABS.filter(t=>tabOn(t)&&t.bar!==false); }
 
 const L={
-  ko:{tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',offline:'오프라인',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!'},
-  en:{tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',offline:'Offline',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!'},
-  zh:{tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',offline:'离线版',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!'},
-  ja:{tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',offline:'オフライン',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!'}
+  ko:{tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',offline:'오프라인',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!',act:'조치 사항',more:'더보기',explain:'설명 표시',on:'켬',off:'끔',search:'검색',pal_dark:'다크 모드로 바꾸기',pal_light:'라이트 모드로 바꾸기',pal_sn:'{p}에서 보기',pal_lang:'언어',rows:'행'},
+  en:{tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',offline:'Offline',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!',act:'Action items',more:'More',explain:'Show notes',on:'On',off:'Off',search:'Search',pal_dark:'Switch to dark mode',pal_light:'Switch to light mode',pal_sn:'Open in {p}',pal_lang:'Language',rows:' rows'},
+  zh:{tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',offline:'离线版',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!',act:'待办事项',more:'更多',explain:'显示说明',on:'开',off:'关',search:'搜索',pal_dark:'切换到深色模式',pal_light:'切换到浅色模式',pal_sn:'在{p}中查看',pal_lang:'语言',rows:'行'},
+  ja:{tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',offline:'オフライン',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!',act:'対応事項',more:'その他',explain:'説明を表示',on:'オン',off:'オフ',search:'検索',pal_dark:'ダークモードに切替',pal_light:'ライトモードに切替',pal_sn:'{p}で見る',pal_lang:'言語',rows:'行'}
 };
 let LANG='ko';
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&L[sl])LANG=sl; else if(window.name && L[window.name]) LANG=window.name; }catch(e){}
@@ -429,7 +534,7 @@ function kioskBuildPanel(){
     sec.querySelectorAll('.kp-chip').forEach(x=>x.classList.toggle('on',x===b)); kioskEst(); });
   // 페이지 — 탭 정의에서 만든다(탭이 늘면 여기도 자동으로 는다)
   const pg=document.getElementById('kkPages');
-  pg.innerHTML = TABS.filter(tabOn).map(t=>'<label><input type="checkbox" value="'+t.id+'"'
+  pg.innerHTML = barTabs().map(t=>'<label><input type="checkbox" value="'+t.id+'"'
     +((!KIOSK.pages.length||KIOSK.pages.indexOf(t.id)>=0)?' checked':'')+'> '+(t[LANG]||t.ko)+'</label>').join('');
   pg.onchange=kioskEst;
   kioskAsk();
@@ -627,6 +732,15 @@ function applyLang(){
   document.getElementById('uploadLabel').textContent=lt('upload');
   document.getElementById('offlineLabel').textContent=lt('offline');
   document.getElementById('editLabel').textContent=lt('edit');
+  document.getElementById('actLabel').textContent=lt('act');
+  document.getElementById('moreLabel').textContent=lt('more');
+  document.getElementById('mExplainL').textContent=lt('explain');
+  document.getElementById('palLabel').textContent=lt('search');
+  { const mac=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||''); document.getElementById('palKbd').textContent=mac?'⌘K':'Ctrl K'; document.getElementById('palBtn').title=(mac?'⌘K':'Ctrl+K'); }
+  inkMove();
+  ['site','studio','targets'].forEach(id=>{ const t=TABS.find(x=>x.id===id), b=document.querySelector('#moreMenu [data-go="'+id+'"]'); if(t&&b) b.textContent=t[LANG]||t.ko; });
+  document.querySelectorAll('.tgrp').forEach(g=>{ const n=(GROUPS[g.dataset.grp]||{})[LANG]||''; const l=g.querySelector('.tgrp-l'); if(l) l.textContent=n; g.setAttribute('aria-label', n); });
+  explainMark();
   document.getElementById('kioskLabel').textContent=KIOSK.on?lt('kioskStop'):lt('kiosk');
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
   // 탭 이름 갱신
@@ -783,7 +897,7 @@ function frameSrc(f, tab, fState){
   }
 }
 function askLoadAll(){
-  const miss=TABS.filter(t=>tabOn(t)&&!frames[t.id]);   // 이 등급에게 안 보이는 탭(데모)은 불러오지 않는다(v146)
+  const miss=barTabs().filter(t=>!frames[t.id]);   // 이 등급에게 안 보이는 탭(데모)·툴바로 여는 화면은 불러오지 않는다(v146 · v172)
   if(!miss.length)return false;
   const mk=t=>{ const f=document.createElement('iframe'); frameSrc(f, t, ''); f.dataset.id=t.id;
     document.getElementById('frameWrap').appendChild(f); frames[t.id]=f; };
@@ -813,7 +927,7 @@ async function askSend(){
     if(!ans){ ans=GST.chatLocal(q,packs); mode='기본'; }
     wait.remove();
     if(!ans){
-      const unopened=TABS.filter(t=>tabOn(t)&&!frames[t.id]).length;
+      const unopened=barTabs().filter(t=>!frames[t.id]).length;
       askSay('a','그 값은 지금 열려 있는 탭에서 못 찾았습니다.'
         +(unopened?('\n안 연 탭이 '+unopened+'개 있습니다 — 아래 버튼을 누르면 전 탭을 불러와 다음 질문부터 함께 찾습니다.'):'')
         +'\n※ AI 응답은 kakao-bot 엣지펑션(op=web 지원 버전)이 배포돼 있어야 합니다.');
@@ -847,13 +961,18 @@ function shareLink(){
 window.addEventListener('message',e=>{
   const d=e.data||{};
   if(d.type!=='gst-goto' || !d.tab)return;
-  const loaded=!!frames[d.tab];
-  if(d.f && !loaded) PENDING_STATE={tab:d.tab,f:d.f};
-  switchTab(d.tab);
-  if(d.f && loaded){
-    try{ frames[d.tab].contentWindow.postMessage({type:'gst-filter',f:d.f},'*'); }catch(err){}
-  }
+  gotoTab(d.tab, d.f);
 });
+/* 탭으로 가며 필터를 건다 — 카드·표 드릴(gst-goto)과 명령 팔레트의 S/N 이 같은 길을 쓴다 */
+function gotoTab(tab, f){
+  if(!TABS.find(t=>t.id===tab)) return;
+  const loaded=!!frames[tab];
+  if(f && !loaded) PENDING_STATE={tab:tab,f:f};
+  switchTab(tab);
+  if(f && loaded){
+    try{ frames[tab].contentWindow.postMessage({type:'gst-filter',f:f},'*'); }catch(err){}
+  }
+}
 // 현재 탭 새로고침
 function refreshActive(){
   if(activeTab && frames[activeTab]){
@@ -863,7 +982,10 @@ function refreshActive(){
 
 function cycleLang(){
   const order=['ko','en','zh','ja'];
-  LANG=order[(order.indexOf(LANG)+1)%4];
+  setLang(order[(order.indexOf(LANG)+1)%4]);
+}
+function setLang(l){
+  if(!L[l]) return; LANG=l;
   try{window.name=LANG;sessionStorage.setItem('gst_lang',LANG);}catch(e){}
   applyLang();
   broadcast({type:'gst-lang',lang:LANG});
@@ -872,13 +994,78 @@ function cycleLang(){
 function buildTabs(){
   const bar=document.getElementById('tabbar');
   bar.innerHTML='';
+  const G={};
   TABS.forEach(tab=>{
+    if(tab.bar===false||!tabOn(tab)) return;
     const b=document.createElement('button');
     b.className='tab'; b.dataset.id=tab.id;
     b.innerHTML=`<span class="ic">${SVG[tab.id]||''}</span><span class="tab-label">${tab[LANG]||tab.ko}</span>`;
     b.onclick=()=>switchTab(tab.id);
-    bar.appendChild(b);
+    if(tab.grp){
+      if(!G[tab.grp]){ const g=document.createElement('div'); g.className='tgrp'; g.dataset.grp=tab.grp; g.setAttribute('role','group');
+        const gl=document.createElement('span'); gl.className='tgrp-l'; gl.textContent=(GROUPS[tab.grp]||{})[LANG]||(GROUPS[tab.grp]||{}).ko||''; g.setAttribute('aria-label', gl.textContent);
+        g.appendChild(gl); bar.appendChild(g); G[tab.grp]=g; }
+      G[tab.grp].appendChild(b);
+    } else bar.appendChild(b);
   });
+  const ink=document.createElement('span'); ink.className='tab-ink'; ink.id='tabInk'; ink.setAttribute('aria-hidden','true');
+  bar.appendChild(ink); bar.classList.add('has-ink'); inkMove();
+}
+/* 탭 밑줄 — 켜진 탭 아래로 미끄러진다(v171). 탭 줄에 켜진 탭이 없으면(조치 사항·더보기 화면) 사라진다 */
+function inkMove(){
+  const bar=document.getElementById('tabbar'), ink=document.getElementById('tabInk'); if(!bar||!ink) return;
+  const a=bar.querySelector('.tab.active');
+  if(!a||!a.offsetWidth){ ink.style.opacity='0'; return; }
+  const br=bar.getBoundingClientRect(), r=a.getBoundingClientRect();
+  ink.style.left=Math.round(r.left-br.left+bar.scrollLeft+10)+'px'; ink.style.width=Math.max(12,Math.round(r.width-20))+'px'; ink.style.opacity='1';
+}
+window.addEventListener('resize', ()=>inkMove());
+try{ document.fonts && document.fonts.ready.then(()=>inkMove()); }catch(e){}
+/* 툴바로 여는 화면(처리함 · 더보기)이 열려 있으면 그 단추를 «켜진» 모양으로 — 탭 줄에는 켜진 탭이 없으므로 어디에 있는지 알려 준다 */
+function barMark(){
+  const t=TABS.find(x=>x.id===activeTab)||{};
+  document.getElementById('actBtn').classList.toggle('on', activeTab==='action');
+  document.getElementById('moreBtn').classList.toggle('on', t.bar===false && activeTab!=='action');
+  document.querySelectorAll('#moreMenu [data-go]').forEach(b=>b.classList.toggle('on', b.dataset.go===activeTab));
+}
+function moreToggle(force){
+  const m=document.getElementById('moreMenu'), btn=document.getElementById('moreBtn');
+  const open=force!=null?force:m.hidden; m.hidden=!open; btn.setAttribute('aria-expanded', String(open));
+  if(open){ explainMark(); const f=m.querySelector('button'); if(f) f.focus(); }
+}
+document.addEventListener('click',e=>{ if(!e.target.closest('.tb-more')) { const m=document.getElementById('moreMenu'); if(m&&!m.hidden) moreToggle(false); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const m=document.getElementById('moreMenu'); if(m&&!m.hidden){ moreToggle(false); document.getElementById('moreBtn').focus(); } } });
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('#moreMenu [data-go]').forEach(b=>b.onclick=()=>{ moreToggle(false); switchTab(b.dataset.go); });
+});
+/* 「설명 표시」(관리자) — 같은 출처라 localStorage 하나를 모든 탭이 본다. 켜고 끄면 열린 탭에 알린다(core GST._explainApply) */
+function explainOnNow(){ try{ return localStorage.getItem('gst_explain')==='1'; }catch(e){ return false; } }
+function explainMark(){
+  const on=explainOnNow(), b=document.getElementById('mExplain'), st=document.getElementById('mExplainS');
+  if(b) b.setAttribute('aria-checked', String(on)); if(st){ st.textContent=on?lt('on'):lt('off'); st.classList.toggle('on', on); }
+}
+function explainToggle(){
+  try{ localStorage.setItem('gst_explain', explainOnNow()?'0':'1'); }catch(e){}
+  explainMark(); broadcast({type:'gst-explain'});
+}
+/* 처리함 배지 — 미완료 건수(완료·보류 제외). 못 읽으면 숫자 대신 아무것도 안 띄운다(틀린 0 을 보이지 않는다) */
+async function actCount(){
+  const bd=document.getElementById('actBadge');
+  try{
+    const C=await GST._dbAuthed(); if(!C){ bd.hidden=true; return; }
+    const r=await C.from('action_items').select('id',{count:'exact',head:true}).not('status','in','(done,dismissed)');
+    if(r.error||r.count==null){ bd.hidden=true; return; }
+    bd.textContent=r.count>99?'99+':String(r.count); bd.hidden=!r.count;
+  }catch(e){ bd.hidden=true; }
+}
+/* 저장된 언어(allowed_users.lang · 「내 화면」 기본 설정) — 이번 세션에 사람이 언어를 고르지 않았을 때만 */
+async function prefLang(){
+  try{
+    if(sessionStorage.getItem('gst_lang')) return;
+    await (GST.loadMe&&GST.loadMe());
+    const p=GST.prefs&&await GST.prefs.load();
+    if(p&&p.lang&&L[p.lang]&&p.lang!==LANG){ LANG=p.lang; try{ window.name=LANG; sessionStorage.setItem('gst_lang',LANG); }catch(e){} applyLang(); broadcast({type:'gst-lang',lang:LANG}); }
+  }catch(e){ console.warn('[shell] 저장된 언어 읽기 실패', e); }
 }
 
 function switchTab(id){
@@ -886,13 +1073,14 @@ function switchTab(id){
   activeTab=id;
   // 탭 하이라이트
   document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
+  barMark(); actCount(); inkMove(); fprog();
   // iframe 없으면 생성 (지연 로딩)
   if(!frames[id]){
     const tab=TABS.find(t=>t.id===id);
     const f=document.createElement('iframe');
     frameSrc(f, tab, (PENDING_STATE&&PENDING_STATE.tab===id&&PENDING_STATE.f)?PENDING_STATE.f:'');
     f.dataset.id=id;
-    f.addEventListener('load',()=>{try{f.contentWindow.postMessage({type:'gst-theme',theme:THEME},'*');f.contentWindow.postMessage({type:'gst-lang',lang:LANG},'*');}catch(e){ console.warn('[shell] iframe 초기 전파 실패', id, e); }});
+    f.addEventListener('load',()=>{ if(BOOT.fid===id) BOOT.loadAt=Date.now(); try{f.contentWindow.postMessage({type:'gst-theme',theme:THEME},'*');f.contentWindow.postMessage({type:'gst-lang',lang:LANG},'*');}catch(e){ console.warn('[shell] iframe 초기 전파 실패', id, e); }});
     document.getElementById('frameWrap').appendChild(f);
     frames[id]=f;
   }
@@ -910,8 +1098,200 @@ function switchTab(id){
 // 로그아웃 — GST.signOut()이 세션 저장소 정리 후 새로고침까지 수행한다(공용 PC 보호)
 function doLogout(){ GST.signOut(); }
 
+/* ============================================================
+   부팅 화면 · 읽는 중 막대 (v171 · 디자인 2.0)
+   페이지(iframe)의 읽기 함수가 «무엇을 · 몇 행까지» 읽는지 알려 온다(core GST.boot · gst-boot 메시지).
+   · 부팅 화면 — 세션 첫 화면 한 번만. 첫 탭이 다 그려지면(또는 9초) 원이 오므라들며 걷힌다. 키·클릭 하나면 바로 걷힌다.
+   · 읽는 중 막대 — 그 뒤로는 화면 맨 위 2px. 켜진 탭이 300ms 넘게 읽을 때만 뜬다(캐시는 조용히 지나간다).
+   ⚠ 로그의 표 이름·행 수·걸린 시간은 관리자에게만(A-4). 조회자에게는 «무엇을» 받는지만 보인다.
+   ⚠ 셸 자신은 신호를 내지 않는다(GST.boot.ui = 빈 함수) — 안 그러면 core 의 «혼자 열린 화면» 막대가 셸 위에 뜬다.
+   ============================================================ */
+const JOBS={};   // id → {key, kind, fid, t0, n, total, st, ms}
+const BOOT={on:false, el:null, fid:null, t0:0, loadAt:0, ready:false, pct:0, raf:0, cap:null, rows:{}, fx:null, skip:null};
+if(GST.boot) GST.boot.ui=function(){};   // 옛 core(캐시)면 GST.boot 이 없다 — 셸이 죽지 않게 감싼다(needVer 배너가 따로 알린다)
+window.addEventListener('message',e=>{
+  const d=e.data||{}; if(d.type!=='gst-boot') return;
+  const fid=frameIdOf(e.source); if(!fid) return;
+  bootEv(d, fid);
+});
+function bootEv(d, fid){
+  const j=JOBS[d.id];
+  if(d.ev==='begin') JOBS[d.id]={id:d.id, key:d.key, kind:d.kind, fid:fid, t0:Date.now(), n:0, total:0, st:'run'};
+  else if(d.ev==='prog'){ if(j){ j.n=d.n; j.total=d.total; } }
+  else if(d.ev==='end'||d.ev==='fail'){ if(j){ j.st=d.ev==='end'?'ok':'fail'; j.ms=d.ms; if(d.n!=null) j.n=d.n; j.t1=Date.now(); } }
+  else if(d.ev==='ready'){ if(BOOT.on && fid===BOOT.fid) BOOT.ready=true; }
+  const jj=JOBS[d.id];
+  if(BOOT.on && jj && jj.fid===BOOT.fid && jj.kind!=='bg') bootLog(jj);
+  fprog();
+}
+let FPT=null;
+function fprog(){
+  const el=document.getElementById('fprog'); if(!el) return;
+  const now=Date.now();
+  Object.keys(JOBS).forEach(k=>{ const j=JOBS[k]; if(j.st!=='run' && now-(j.t1||now)>20000) delete JOBS[k]; });
+  const run=Object.values(JOBS).filter(j=>j.fid===activeTab && j.st==='run');
+  clearTimeout(FPT);
+  if(!run.length || BOOT.on){
+    if(el.classList.contains('on')){ el.querySelector('i').style.width='100%'; FPT=setTimeout(()=>el.classList.remove('on','ind'), 320); }
+    return;
+  }
+  const oldest=Math.min(...run.map(j=>j.t0));
+  if(now-oldest<300){ FPT=setTimeout(fprog, 320-(now-oldest)); return; }
+  const known=run.filter(j=>j.total>0);
+  const f=known.length ? run.reduce((s,j)=>s+(j.total?Math.min(.97,j.n/j.total):.1),0)/run.length : 0;
+  el.classList.add('on'); el.classList.toggle('ind', !known.length);
+  el.querySelector('i').style.width=Math.max(6, Math.round(f*100))+'%';
+  FPT=setTimeout(fprog, 600);   // 마지막 신호가 없어도 오래된 일을 정리하며 다시 본다
+}
+function bootStart(fid){
+  if(!GST.boot||!GST._reduce) return;   // 옛 core 면 부팅 화면 없이 연다
+  let seen=false; try{ seen=sessionStorage.getItem('gst_boot_seen')==='1'; }catch(e){}
+  if(seen) return;
+  try{ sessionStorage.setItem('gst_boot_seen','1'); }catch(e){}
+  BOOT.on=true; BOOT.fid=fid; BOOT.t0=Date.now(); BOOT.pct=0; BOOT.ready=false; BOOT.rows={};
+  const el=document.createElement('div'); el.className='boot'; el.id='boot'; el.setAttribute('aria-hidden','true');
+  el.innerHTML='<canvas></canvas><div class="boot-core"><div class="boot-orb"><i></i><i></i><i></i><b></b><em id="bootPct">0%</em></div>'
+    +'<div class="boot-brand">Service Operation Dashboard</div><div class="boot-team">CS GLOBAL TEAM</div>'
+    +'<div class="boot-bar"><i id="bootBar"></i></div><div class="boot-log" id="bootLog"></div></div>';
+  document.body.appendChild(el); BOOT.el=el;
+  try{ bootFx(el.querySelector('canvas')); }catch(e){}
+  BOOT.skip=()=>bootEnd();
+  document.addEventListener('keydown', BOOT.skip, true); document.addEventListener('pointerdown', BOOT.skip, true);
+  BOOT.cap=setTimeout(()=>{ BOOT.ready=true; }, 9000);   // 아무 신호가 없어도 9초면 걷힌다 — 그 뒤는 읽는 중 막대가 맡는다
+  const step=()=>{ if(!BOOT.on) return; bootTick(); BOOT.raf=requestAnimationFrame(step); };
+  BOOT.raf=requestAnimationFrame(step);
+}
+function bootTick(){
+  const now=Date.now(), el=now-BOOT.t0;
+  const js=Object.values(JOBS).filter(j=>j.fid===BOOT.fid && j.kind!=='bg');
+  /* 첫 탭이 다 떴는데 읽기를 하나도 안 했으면(자료가 없는 화면) 그대로 걷는다 */
+  if(!js.length && BOOT.loadAt && now-BOOT.loadAt>2500) BOOT.ready=true;
+  const jp=js.length ? js.reduce((s,j)=>s+(j.st!=='run'?1:(j.total?Math.min(.97,j.n/j.total):.12)),0)/js.length : 0;
+  const tp=.7*(1-Math.exp(-el/1800));
+  const target=BOOT.ready?1:Math.min(.96, Math.max(jp*.97, tp));
+  if(GST._reduce()) BOOT.pct=target; else BOOT.pct+=(target-BOOT.pct)*(BOOT.ready?.2:.08);
+  if(BOOT.ready && 1-BOOT.pct<.006) BOOT.pct=1;
+  const p=Math.round(BOOT.pct*100), pe=document.getElementById('bootPct'), be=document.getElementById('bootBar');
+  if(pe) pe.textContent=p+'%'; if(be) be.style.width=p+'%';
+  if(BOOT.pct>=1 && el>=1100) bootEnd();
+}
+function bootEnd(){
+  if(!BOOT.on) return; BOOT.on=false;
+  cancelAnimationFrame(BOOT.raf); clearTimeout(BOOT.cap);
+  document.removeEventListener('keydown', BOOT.skip, true); document.removeEventListener('pointerdown', BOOT.skip, true);
+  const el=BOOT.el; if(!el) return;
+  const pe=document.getElementById('bootPct'), be=document.getElementById('bootBar');
+  if(pe) pe.textContent='100%'; if(be) be.style.width='100%';
+  el.classList.add('out');
+  setTimeout(()=>{ el.remove(); if(BOOT.fx) BOOT.fx.stop(); BOOT.el=null; fprog(); }, (GST._reduce&&GST._reduce())?220:900);
+}
+/* 한 일에 한 줄 — 줄을 다시 만들지 않고 고친다(다시 만들면 등장 효과가 매번 돌아 깜빡인다) */
+function bootLog(j){
+  const box=document.getElementById('bootLog'); if(!box) return;
+  let row=BOOT.rows[j.id];
+  if(!row){ row=document.createElement('div'); row.innerHTML='<span>›</span><span class="n"></span><span class="m"></span><span class="s"></span>'; box.appendChild(row); BOOT.rows[j.id]=row;
+    while(box.children.length>6) box.removeChild(box.firstChild); }
+  row.className=j.st;
+  row.querySelector('.n').textContent=GST.bootName?GST.bootName(j.key):j.key;
+  const adm=!!(GST.isAdmin && GST.isAdmin());
+  const ms=j.ms==null?'':(j.ms<1000?j.ms+'ms':(j.ms/1000).toFixed(1)+'s');
+  row.querySelector('.m').textContent=adm?[GST.bootTbl?GST.bootTbl(j.key):j.key, j.n?Number(j.n).toLocaleString()+lt('rows'):'', ms].filter(Boolean).join(' · '):'';
+  row.querySelector('.s').textContent=j.st==='ok'?'✓':j.st==='fail'?'✕':(j.total?Math.round(Math.min(.99,j.n/j.total)*100)+'%':'…');
+}
+/* 배경 — 별자리처럼 이어지는 점들. 움직임 줄이기면 한 번만 그린다 */
+function bootFx(cv){
+  const x=cv.getContext('2d'); if(!x) return;
+  const red=GST._reduce(), dpr=Math.min(2, window.devicePixelRatio||1);
+  let W=0, H=0, P=[], run=true, raf=0;
+  const rs=()=>{ W=cv.clientWidth||innerWidth; H=cv.clientHeight||innerHeight; cv.width=W*dpr; cv.height=H*dpr; x.setTransform(dpr,0,0,dpr,0,0);
+    const n=Math.round(Math.min(90, W*H/16000));
+    P=Array.from({length:n},()=>({x:Math.random()*W, y:Math.random()*H, vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3, r:Math.random()*1.4+.4})); };
+  rs(); window.addEventListener('resize', rs);
+  const draw=()=>{
+    x.clearRect(0,0,W,H);
+    if(!red) for(const p of P){ p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>W) p.vx*=-1; if(p.y<0||p.y>H) p.vy*=-1; }
+    x.lineWidth=1;
+    for(let i=0;i<P.length;i++){ const a=P[i]; for(let k=i+1;k<P.length;k++){ const b=P[k], dx=a.x-b.x, dy=a.y-b.y, dd=dx*dx+dy*dy;
+      if(dd<13000){ x.strokeStyle='rgba(108,155,255,'+(.16*(1-dd/13000)).toFixed(3)+')'; x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.stroke(); } } }
+    x.fillStyle='rgba(170,200,255,.55)';
+    for(const p of P){ x.beginPath(); x.arc(p.x,p.y,p.r,0,6.2832); x.fill(); }
+    if(run && !red) raf=requestAnimationFrame(draw);
+  };
+  draw();
+  BOOT.fx={stop(){ run=false; cancelAnimationFrame(raf); window.removeEventListener('resize', rs); }};
+}
+
+/* ============================================================
+   명령 팔레트 (Ctrl K · v171) — UI·찾기는 core GST.palette 한 벌. 여기서는 «무엇을 찾을지»만 만든다.
+   화면(탭 전부 · 툴바로 여는 화면 포함) · 기능(툴바 단추와 같은 함수) · 설비 S/N(GST.SN_PAGES · 표의 S/N 메뉴와 같은 길) ·
+   지금 화면의 카드(그 iframe 에 묻는다 — gst-pal-q/a).
+   ⚠ 등급 판정은 툴바 CSS 와 같다 — 툴바에 안 보이는 기능은 여기에도 없다(업로드 = editor·legacy · 데이터 관리·오프라인·설명 표시 = admin·legacy).
+   ============================================================ */
+const PAL_IC={
+  refresh:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>',
+  theme:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+  lang:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  play:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="m10 8 4 2.5-4 2.5z" fill="currentColor"/></svg>',
+  link:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>',
+  edit:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  up:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>',
+  down:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>',
+  note:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>',
+  out:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>',
+  card:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 15l3-4 3 2 4-5"/></svg>',
+  sn:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>'
+};
+const LANG_NAME={ko:'한국어',en:'English',zh:'中文',ja:'日本語'};
+let PAL_CARDS=[], PAL_SEQ=0;
+function palItems(q){
+  const role=(document.body.dataset.role)||'';
+  const adm=role==='admin'||role==='legacy', ed=role==='editor'||role==='legacy';
+  const out=[];
+  TABS.filter(tabOn).forEach(t=>{
+    const g=t.grp?(((GROUPS[t.grp]||{})[LANG])||''):'';
+    out.push({id:'tab:'+t.id, g:'tab', label:t[LANG]||t.ko, sub:g, icon:SVG[t.id]||'', hint:t.id===activeTab?'●':'', kw:[t.ko,t.en,t.zh,t.ja,t.id].join(' '), run:()=>switchTab(t.id)});
+  });
+  const A=[
+    {id:'act:refresh', label:lt('refresh'), icon:PAL_IC.refresh, run:refreshActive, kw:'새로고침 refresh reload 刷新 更新'},
+    {id:'act:theme', label:THEME==='slate'?lt('pal_light'):lt('pal_dark'), icon:PAL_IC.theme, run:cycleTheme, kw:'테마 다크 라이트 dark light theme 深色 浅色 ダーク ライト'}
+  ];
+  Object.keys(LANG_NAME).forEach(l=>{ if(l!==LANG) A.push({id:'act:lang:'+l, label:LANG_NAME[l], sub:lt('pal_lang'), icon:PAL_IC.lang, run:()=>setLang(l), kw:'언어 language 语言 言語 '+l}); });
+  A.push({id:'act:kiosk', label:KIOSK.on?lt('kioskStop'):lt('kiosk'), icon:PAL_IC.play, run:kioskBtn, kw:'자동순회 키오스크 kiosk tour 轮播 巡回'});
+  A.push({id:'act:share', label:lt('share'), icon:PAL_IC.link, run:shareLink, kw:'공유 링크 share link 分享 共有'});
+  if(adm) A.push({id:'act:edit', label:lt('edit'), icon:PAL_IC.edit, run:openEdit, kw:'데이터 관리 data edit 数据管理 データ管理'});
+  if(ed)  A.push({id:'act:upload', label:lt('upload'), icon:PAL_IC.up, run:openUpload, kw:'업로드 upload 上传 アップロード'});
+  if(adm) A.push({id:'act:offline', label:lt('offline'), icon:PAL_IC.down, run:openOffline, kw:'오프라인 offline 离线 オフライン'});
+  if(adm) A.push({id:'act:explain', label:lt('explain'), sub:explainOnNow()?lt('on'):lt('off'), icon:PAL_IC.note, run:explainToggle, kw:'설명 표시 notes explain 说明 説明'});
+  A.push({id:'act:logout', label:lt('logout'), icon:PAL_IC.out, run:doLogout, kw:'로그아웃 logout sign out 登出 ログアウト'});
+  A.forEach(a=>{ a.g='act'; out.push(a); });
+  /* 설비 S/N — 영숫자 4자 이상에 숫자가 섞이면 «이 설비를 그 화면에서» 항목을 띄운다(표의 S/N 메뉴와 같은 길 · GST.goTab 의 sn 상태) */
+  const qs=String(q||'').trim();
+  if(/^[A-Za-z0-9][A-Za-z0-9\-_.]{3,}$/.test(qs) && /\d/.test(qs)){
+    GST.SN_PAGES.forEach(p=>{ const t=TABS.find(x=>x.id===p.id); if(!t||!tabOn(t)) return;
+      out.push({id:'sn:'+p.id, g:'sn', always:true, label:qs.toUpperCase(), sub:lt('pal_sn').replace('{p}', t[LANG]||t.ko), icon:SVG[p.id]||PAL_IC.sn,
+        run:()=>gotoTab(p.id, GST.encodeState({sn:qs}))}); });
+  }
+  PAL_CARDS.forEach(c=>out.push({id:'card:'+c.i, g:'card', label:c.t, sub:c.v||'', icon:PAL_IC.card,
+    run:()=>{ const f=frames[activeTab]; try{ f && f.contentWindow.postMessage({type:'gst-pal-go', i:c.i},'*'); }catch(e){} }}));
+  return out;
+}
+function palAskCards(){
+  PAL_CARDS=[]; const f=frames[activeTab]; if(!f) return;
+  const s=++PAL_SEQ; try{ f.contentWindow.postMessage({type:'gst-pal-q', seq:s},'*'); }catch(e){}
+}
+function palOpen(){ if(!GST.palette) return; if(GST.palette.isOpen()) return GST.palette.close(); palAskCards(); GST.palette.open(palItems); }
+if(GST.palette){
+  GST.palette.setSource(palItems);
+  const _t=GST.palette.toggle; GST.palette.toggle=function(){ if(!GST.palette.isOpen()) palAskCards(); return _t.apply(GST.palette, arguments); };
+}
+window.addEventListener('message',e=>{
+  const d=e.data||{};
+  if(d.type==='gst-pal'){ palOpen(); return; }
+  if(d.type==='gst-pal-a' && d.seq===PAL_SEQ){ PAL_CARDS=(d.items||[]).slice(0,80); if(GST.palette&&GST.palette.isOpen()) GST.palette.refresh(); }
+});
+
 function start(){
-  GST.needVer && GST.needVer(136);   // 옛 core.js 캐시를 «숫자가 전부 0» 이 아니라 배너로(v135 — 셸도 선언한다)
+  GST.needVer && GST.needVer(171);   // 옛 core.js 캐시를 «숫자가 전부 0» 이 아니라 배너로(v135 — 셸도 선언한다)
   buildTabs();
   GST.barBind(document.getElementById('gbar'), barSend);
   applyLang();
@@ -923,15 +1303,18 @@ function start(){
   try{const saved=sessionStorage.getItem('gst_tab');if(saved&&TABS.find(t=>t.id===saved))init=saved;}catch(e){}
   const hs=parseHash();
   if(hs.tab&&TABS.find(t=>t.id===hs.tab)){ init=hs.tab; if(hs.f)PENDING_STATE={tab:hs.tab,f:hs.f}; }
+  bootStart(init);
   switchTab(init);
+  prefLang();
+  setInterval(actCount, 5*60*1000);   // 처리함 배지 — 5분마다(다른 사람이 담거나 닫은 건이 따라온다)
 }
 
 
 // 키보드 단축키: 숫자로 탭 전환 — 이 등급에게 안 보이는 탭(데모 · v146)은 건너뛴다(9 를 누르면 숨긴 탭이 열리던 틈)
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;
-  const n=parseInt(e.key);
-  if(n>=1 && n<=TABS.length && tabOn(TABS[n-1])) switchTab(TABS[n-1].id);
+  const n=parseInt(e.key), B=barTabs();
+  if(n>=1 && n<=B.length) switchTab(B[n-1].id);
 });
 
 // 초기화 — 로그인 성공 전에는 start()가 호출되지 않는다(대시보드가 열리지 않음)

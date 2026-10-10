@@ -190,6 +190,19 @@ is(/function clsL3\(p\)\{ return eduDoneAt\(p\.lv2date\)/.test(HR.replace(/\s+/g
    /clsL3[\s\S]{0,160}?eduDoneAt\(p\.lv2date\)[\s\S]{0,160}?'비대상'/.test(HR),
    'hr — clsL3 가 Lv2 미이수자를 「비대상」으로 낸다 (아직 받을 차례가 아닌 것을 «안 받았다»로 적지 않는다)');
 
+console.log('\n[7-d] hr — 본사 Lv.2 대상도 국내 «전원» · 해외 6개월+ 이고, 카드·막대·추이·PPT 가 한 함수를 본다 (v174)');
+{
+  const bare = HR.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  const fn = /function l2Tgt\(p,at\)\{([^\n]*)\}/.exec(bare);
+  is(!!fn && /!hasCorp\(p\)\s*\|\|/.test(fn[1]) && />=182/.test(fn[1]),
+     'hr — l2Tgt: 국내(!hasCorp)는 근속 조건 없이 대상 · 해외만 182일');
+  const l2 = (bare.match(/const l2t=[^;]*/g) || []);
+  is(l2.length === 2 && l2.every(x => /l2Tgt\(/.test(x)),
+     'hr — Lv.2 대상 두 곳(화면 kp4 · PPT 표)이 모두 l2Tgt 를 지난다 (실제 ' + l2.map(x => x.slice(0, 40)).join(' | ') + ')');
+  is(/const sV\s*=SP\.map\([^\n]*l2Tgt\(x,p\.end\)/.test(bare), 'hr — 스파크라인(본사 종합)의 Lv.2 대상도 l2Tgt (그 구간 말 기준)');
+  is(/nm:'Scrubber Lv\.2'[^\n]*tg:\(p,E\)=>l2Tgt\(p,E\)/.test(bare), 'hr — 교육 이수 추이의 Lv.2 대상도 l2Tgt');
+}
+
 const AXES7 = ['region','op','div','customer','campus','line','team'];
 console.log('\n[7-5] 사업부 축 — 국내 설치현황에만 있는 열 (v96)');
 {

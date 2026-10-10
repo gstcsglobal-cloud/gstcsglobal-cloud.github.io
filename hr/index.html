@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>인원 현황 · CS Global Team</title>
+<title>인원·교육 · CS Global Team</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/chart.umd.min.js"></script>
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=167"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=172"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -147,14 +147,14 @@ tr:hover td{background:var(--surface-2)}
 @media print{.capbtns,.slicers,.header-right,#filtBadge{display:none!important}.card,.tablecard{break-inside:avoid;page-break-inside:avoid}.grid3{grid-template-columns:1fr 1fr}}
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=167">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=172">
 </head>
 <body>
 
 <div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
-    <h1 data-i="title">인원 현황</h1>
+    <h1 data-i="title">인원·교육</h1>
     <div class="sub" data-i="sub">인원명단 · 교육 이수 현황</div>
   </div>
   <div class="header-right">
@@ -246,7 +246,7 @@ tr:hover td{background:var(--surface-2)}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
-GST.needVer&&GST.needVer(141);   // GST.ORG.campus(단지 정본) 을 쓴다   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
+GST.needVer&&GST.needVer(170);   // GST.chartLayout(v174) · GST.ORG.campus(단지 정본) 을 쓴다   // 구버전 core.js 가 캐시에 남으면 «전부 0» 대신 붉은 배너가 뜨게
 const PUB=GST.SHEET_PUB;
 const URL_ROSTER=PUB+'?gid=1213453343&single=true&output=csv';  // 인원명단
 const URL_EDU   =PUB+'?gid=0&single=true&output=csv';            // 교육현황
@@ -254,7 +254,7 @@ const URL_LV    =PUB+'?gid=262805841&single=true&output=csv';    // 휴가현황
 const VER='v48';
 
 const TR={
-  ko:{edit_title:'행 편집',ed_save:'저장',ed_cancel:'취소',ed_saving:'저장 중…',ed_saved:'저장되었습니다 (구글 시트에 반영됨)',ed_failed:'저장 실패',ed_conflict:'다른 사용자가 이미 이 행을 수정했습니다 — 아래 최신 값을 확인하고 다시 저장하세요',ed_locked:'다른 사용자가 저장 중입니다 — 잠시 후 다시 시도하세요',ed_readonly:'편집 권한이 없습니다 (관리자에게 요청하세요)',ed_nokey:'사번이 비어 있어 편집할 수 없습니다',ed_lockfld:'이 항목은 대시보드에서 수정할 수 없습니다',ed_gone:'시트에서 이 행을 찾을 수 없습니다',ed_dup:'사번이 중복되어 저장할 수 없습니다',ed_badval:'입력값을 확인하세요',ed_new:'신규 인원',ed_new_title:'신규 인원 등록',ed_sec_r:'인적사항 (인원명단 시트)',ed_sec_e:'교육현황 (교육현황 시트)',ed_edu_new:'교육현황 미등록 — 저장 시 새 행이 생성됩니다',ed_del:'행 삭제',ed_del_warn:'이 인원을 인원명단·교육현황 두 시트에서 삭제합니다. 입·퇴사 추이 등 이력 차트가 소급 변경되며 되돌릴 수 없습니다. 퇴사자는 삭제 대신 퇴사일 입력을 권장합니다.',ed_del_confirm:'삭제 실행',ed_deleted:'삭제되었습니다 (구글 시트에 반영됨)',ed_cascade_miss:'교육현황에서 짝 행을 찾지 못해 그쪽은 바뀌지 않았습니다',ed_partial:'인원명단은 저장됐지만 교육현황 저장에 실패했습니다 — 교육 항목만 다시 시도하세요',ed_required:'필수 항목(사번·이름·입사일)을 입력하세요',ed_baddate:'날짜 형식이 잘못되었습니다 (YYYY-MM-DD)',ed_srv:'시트 구조를 읽지 못했습니다 — 관리자에게 문의하세요',ed_sheets:'구글 시트 호출에 실패했습니다 — Supabase 로그를 확인하세요',ed_appended:'신규 인원이 등록되었습니다 (두 시트에 반영됨)',ed_quitnote:'교육현황 비고에 퇴사일 기록',ed_showquit:'퇴사자 표시',f_name:'이름(영문)',f_wp:'Work Place',f_duty:'업무/직책',f_quit:'퇴사일',f_basic:'Basic 이수여부',f_bsdate:'Basic 시작일',f_bdate:'Basic 완료일',f_vet:'Veteran 이수여부',f_vsdate:'Veteran 시작일',f_vdate:'Veteran 완료일',f_note:'비고',f_lv2date:'Scrubber Lv.2 완료일',f_lv3date:'Scrubber Lv.3 완료일',f_cn:'중문 이름',f_onsite:'현장 인원',f_id:'사번',title:'인원 현황',sub:'인원명단 · 교육 이수 현황',back:'← 메인으로',refresh:'새로고침',print:'🖨 인쇄',
+  ko:{edit_title:'행 편집',ed_save:'저장',ed_cancel:'취소',ed_saving:'저장 중…',ed_saved:'저장되었습니다 (구글 시트에 반영됨)',ed_failed:'저장 실패',ed_conflict:'다른 사용자가 이미 이 행을 수정했습니다 — 아래 최신 값을 확인하고 다시 저장하세요',ed_locked:'다른 사용자가 저장 중입니다 — 잠시 후 다시 시도하세요',ed_readonly:'편집 권한이 없습니다 (관리자에게 요청하세요)',ed_nokey:'사번이 비어 있어 편집할 수 없습니다',ed_lockfld:'이 항목은 대시보드에서 수정할 수 없습니다',ed_gone:'시트에서 이 행을 찾을 수 없습니다',ed_dup:'사번이 중복되어 저장할 수 없습니다',ed_badval:'입력값을 확인하세요',ed_new:'신규 인원',ed_new_title:'신규 인원 등록',ed_sec_r:'인적사항 (인원명단 시트)',ed_sec_e:'교육현황 (교육현황 시트)',ed_edu_new:'교육현황 미등록 — 저장 시 새 행이 생성됩니다',ed_del:'행 삭제',ed_del_warn:'이 인원을 인원명단·교육현황 두 시트에서 삭제합니다. 입·퇴사 추이 등 이력 차트가 소급 변경되며 되돌릴 수 없습니다. 퇴사자는 삭제 대신 퇴사일 입력을 권장합니다.',ed_del_confirm:'삭제 실행',ed_deleted:'삭제되었습니다 (구글 시트에 반영됨)',ed_cascade_miss:'교육현황에서 짝 행을 찾지 못해 그쪽은 바뀌지 않았습니다',ed_partial:'인원명단은 저장됐지만 교육현황 저장에 실패했습니다 — 교육 항목만 다시 시도하세요',ed_required:'필수 항목(사번·이름·입사일)을 입력하세요',ed_baddate:'날짜 형식이 잘못되었습니다 (YYYY-MM-DD)',ed_srv:'시트 구조를 읽지 못했습니다 — 관리자에게 문의하세요',ed_sheets:'구글 시트 호출에 실패했습니다 — Supabase 로그를 확인하세요',ed_appended:'신규 인원이 등록되었습니다 (두 시트에 반영됨)',ed_quitnote:'교육현황 비고에 퇴사일 기록',ed_showquit:'퇴사자 표시',f_name:'이름(영문)',f_wp:'Work Place',f_duty:'업무/직책',f_quit:'퇴사일',f_basic:'Basic 이수여부',f_bsdate:'Basic 시작일',f_bdate:'Basic 완료일',f_vet:'Veteran 이수여부',f_vsdate:'Veteran 시작일',f_vdate:'Veteran 완료일',f_note:'비고',f_lv2date:'Scrubber Lv.2 완료일',f_lv3date:'Scrubber Lv.3 완료일',f_cn:'중문 이름',f_onsite:'현장 인원',f_id:'사번',title:'인원·교육',sub:'인원명단 · 교육 이수 현황',back:'← 메인으로',refresh:'새로고침',print:'🖨 인쇄',
     total_pre:'재직',total_post:'명',loading:'데이터 불러오는 중...',
     sl_site:'사이트',sl_org:'소속·공정',sl_role:'직무',sl_edu:'교육',sl_search:'검색',search_ph:'이름·사번 검색...',all:'전체',
     kp1:'재직 인원',dq_noedu:'교육현황과 못 이은 재직 인원 — 이 사람들은 교육 지표에서 「미등록」입니다',dq_noedu_a:'인원현황과 교육현황의 사원번호를 맞추세요 — 둘 중 한쪽이 비어 있으면 안 이어집니다',dq_nocamp:'단지가 비어 「미배치」로 선 인원',dq_nocamp_a:'인원현황의 단지 칸을 채우세요 — 비어 있으면 단지별 표에서 미배치로 섭니다',kp2:'현장 인원',kp3:'법인 교육과정',kp4:'본사 교육과정',kp5:'평균 경력(년)',kp6:'최근 1년 입사',
@@ -271,7 +271,7 @@ const TR={
     tbl_title:'상세 명단',tbl_unit:'명',th_name:'이름',th_site:'사이트',th_org:'소속',th_role:'직무',th_pos:'직급',th_exp:'경력',th_join:'입사일',th_status:'상태',
     s_act:'재직',s_quit:'퇴사',d_total:'인원',d_on:'현장',d_edu:'교육대상',d_done:'이수',kd_overlap:'겹침 {n}명',kd_ten:'경력 합 ÷ 인원 · 입사일 없는 {n}명 제외',
     ins_basic:'Basic 미이수 {n}명 ({p}%)',ins_vet:'Veteran 미이수 {n}명 (대상의 {p}%)',ins_new:'최근 1년 입사 {n}명',sim_t:'인력 시나리오',sim_sub:'채용·이탈을 가정해 12개월 뒤 인원과 교육 이수율을 미리 본다',sim_n:'신규 입사',sim_when:'입사 시점',sim_line:'배치 라인',sim_out:'월 이탈 가정',sim_run:'실행',sim_clr:'초기화',sim_note:'가정: 신입은 입사 시점에 Basic 미이수로 편입되고 3개월 뒤 이수 완료 · 이탈은 매월 균등 발생 · 확정 퇴사일은 기준선에 이미 반영됨',sim_k1:'12개월 뒤 재직',sim_k2:'12개월 뒤 Basic 이수율',sim_k3:'이수율 최저점',sim_k4:'입사 / 이탈 (12개월)',sim_base:'기준',sim_scen:'시나리오'},
-  en:{edit_title:'Edit row',ed_save:'Save',ed_cancel:'Cancel',ed_saving:'Saving…',ed_saved:'Saved to the Google Sheet',ed_failed:'Save failed',ed_conflict:'Someone else already changed this row — check the latest values below and save again',ed_locked:'Another user is saving — please retry shortly',ed_readonly:'You do not have edit permission',ed_nokey:'No employee ID — cannot edit',ed_lockfld:'This field cannot be edited here',ed_gone:'This row no longer exists in the sheet',ed_dup:'Duplicate employee ID — cannot save',ed_badval:'Please check the entered value',ed_new:'New hire',ed_new_title:'Register new hire',ed_sec_r:'Personal (roster sheet)',ed_sec_e:'Training (education sheet)',ed_edu_new:'Not in education sheet — a new row will be created on save',ed_del:'Delete row',ed_del_warn:'Deletes this person from BOTH sheets. Historical charts (join/leave trends) change retroactively and this cannot be undone. For leavers, set a resignation date instead.',ed_del_confirm:'Delete',ed_deleted:'Deleted (reflected in the Google Sheet)',ed_cascade_miss:'No matching education row found — that sheet was not changed',ed_partial:'Roster saved, but the education sheet failed — retry the training fields',ed_required:'Fill the required fields (ID · name · entry date)',ed_baddate:'Invalid date (YYYY-MM-DD)',ed_srv:'Could not read the sheet structure — contact the admin',ed_sheets:'Google Sheets call failed — check Supabase logs',ed_appended:'New hire registered (both sheets)',ed_quitnote:'Note the quit date in the education sheet',ed_showquit:'Show leavers',f_name:'Name (EN)',f_wp:'Work Place',f_duty:'Duty',f_quit:'Resignation',f_basic:'Basic status',f_bsdate:'Basic start',f_bdate:'Basic done',f_vet:'Veteran status',f_vsdate:'Veteran start',f_vdate:'Veteran done',f_note:'Note',f_lv2date:'Scrubber Lv.2 done',f_lv3date:'Scrubber Lv.3 done',f_cn:'Chinese name',f_onsite:'On-site',f_id:'Employee ID',title:'Workforce',sub:'Roster · training completion',back:'← Main',refresh:'Refresh',print:'🖨 Print',
+  en:{edit_title:'Edit row',ed_save:'Save',ed_cancel:'Cancel',ed_saving:'Saving…',ed_saved:'Saved to the Google Sheet',ed_failed:'Save failed',ed_conflict:'Someone else already changed this row — check the latest values below and save again',ed_locked:'Another user is saving — please retry shortly',ed_readonly:'You do not have edit permission',ed_nokey:'No employee ID — cannot edit',ed_lockfld:'This field cannot be edited here',ed_gone:'This row no longer exists in the sheet',ed_dup:'Duplicate employee ID — cannot save',ed_badval:'Please check the entered value',ed_new:'New hire',ed_new_title:'Register new hire',ed_sec_r:'Personal (roster sheet)',ed_sec_e:'Training (education sheet)',ed_edu_new:'Not in education sheet — a new row will be created on save',ed_del:'Delete row',ed_del_warn:'Deletes this person from BOTH sheets. Historical charts (join/leave trends) change retroactively and this cannot be undone. For leavers, set a resignation date instead.',ed_del_confirm:'Delete',ed_deleted:'Deleted (reflected in the Google Sheet)',ed_cascade_miss:'No matching education row found — that sheet was not changed',ed_partial:'Roster saved, but the education sheet failed — retry the training fields',ed_required:'Fill the required fields (ID · name · entry date)',ed_baddate:'Invalid date (YYYY-MM-DD)',ed_srv:'Could not read the sheet structure — contact the admin',ed_sheets:'Google Sheets call failed — check Supabase logs',ed_appended:'New hire registered (both sheets)',ed_quitnote:'Note the quit date in the education sheet',ed_showquit:'Show leavers',f_name:'Name (EN)',f_wp:'Work Place',f_duty:'Duty',f_quit:'Resignation',f_basic:'Basic status',f_bsdate:'Basic start',f_bdate:'Basic done',f_vet:'Veteran status',f_vsdate:'Veteran start',f_vdate:'Veteran done',f_note:'Note',f_lv2date:'Scrubber Lv.2 done',f_lv3date:'Scrubber Lv.3 done',f_cn:'Chinese name',f_onsite:'On-site',f_id:'Employee ID',title:'Workforce & training',sub:'Roster · training completion',back:'← Main',refresh:'Refresh',print:'🖨 Print',
     total_pre:'Active',total_post:'',loading:'Loading data...',
     sl_site:'Site',sl_org:'Team/Process',sl_role:'Role',sl_edu:'Training',sl_search:'Search',search_ph:'Search name/ID...',all:'All',
     kp1:'Active Staff',dq_noedu:'Active staff not matched to the training sheet — they read as “unregistered”',dq_noedu_a:'Align the employee numbers between the roster and the training sheet',dq_nocamp:'Staff with no site — shown as “unassigned”',dq_nocamp_a:'Fill the site column in the roster sheet',kp2:'On-site Staff',kp3:'Corporate Training',kp4:'HQ Training',kp5:'Avg Tenure (yr)',kp6:'Joined (1yr)',
@@ -288,7 +288,7 @@ const TR={
     tbl_title:'Detail List',tbl_unit:'',th_name:'Name',th_site:'Site',th_org:'Team',th_role:'Role',th_pos:'Grade',th_exp:'Exp',th_join:'Join',th_status:'Status',
     s_act:'Active',s_quit:'Left',d_total:'Staff',d_on:'On-site',d_edu:'Eligible',d_done:'Done',kd_overlap:'overlap {n}',kd_ten:'sum of tenure ÷ people · {n} without join date excluded',
     ins_basic:'{n} pending Basic ({p}%)',ins_vet:'{n} pending Veteran ({p}% of eligible)',ins_new:'{n} joined in last year',sim_t:'Workforce Scenario',sim_sub:'Model hiring and attrition to preview 12-month headcount and training impact',sim_n:'New hires',sim_when:'Start month',sim_line:'Assign to line',sim_out:'Monthly attrition',sim_run:'Run',sim_clr:'Reset',sim_note:'Assumptions: new hires enter as Basic-incomplete and finish 3 months later · attrition spread evenly per month · confirmed leave dates already in the baseline',sim_k1:'Headcount in 12 months',sim_k2:'Basic rate in 12 months',sim_k3:'Lowest rate',sim_k4:'Hires / Attrition (12m)',sim_base:'Baseline',sim_scen:'Scenario'},
-  zh:{edit_title:'编辑行',ed_save:'保存',ed_cancel:'取消',ed_saving:'保存中…',ed_saved:'已保存到谷歌表格',ed_failed:'保存失败',ed_conflict:'该行已被他人修改 — 请确认下方最新值后重新保存',ed_locked:'其他用户正在保存 — 请稍后重试',ed_readonly:'没有编辑权限',ed_nokey:'工号为空，无法编辑',ed_lockfld:'此项不可在此修改',ed_gone:'表格中已无此行',ed_dup:'工号重复，无法保存',ed_badval:'请检查输入值',ed_new:'新员工',ed_new_title:'登记新员工',ed_sec_r:'人员信息(名单表)',ed_sec_e:'培训状况(教育表)',ed_edu_new:'教育表中无此人 — 保存时将新建一行',ed_del:'删除行',ed_del_warn:'将从名单·教育两个表中删除此人。入职·离职趋势等历史图表会追溯变化且无法恢复。离职人员建议填写离职日而非删除。',ed_del_confirm:'执行删除',ed_deleted:'已删除(已反映到谷歌表格)',ed_cascade_miss:'教育表中未找到对应行 — 该表未修改',ed_partial:'名单已保存，但教育表保存失败 — 请仅重试培训项',ed_required:'请填写必填项(工号·姓名·入职日)',ed_baddate:'日期格式错误 (YYYY-MM-DD)',ed_srv:'无法读取表结构 — 请联系管理员',ed_sheets:'谷歌表格调用失败 — 请查看Supabase日志',ed_appended:'新员工已登记(两表均已反映)',ed_quitnote:'在教育表备注中记录离职日',ed_showquit:'显示离职者',f_name:'姓名(英文)',f_wp:'Work Place',f_duty:'业务/职责',f_quit:'离职日',f_basic:'Basic状态',f_bsdate:'Basic开始日',f_bdate:'Basic完成日',f_vet:'Veteran状态',f_vsdate:'Veteran开始日',f_vdate:'Veteran完成日',f_note:'备注',f_lv2date:'Scrubber Lv.2 完成日',f_lv3date:'Scrubber Lv.3 完成日',f_cn:'中文姓名',f_onsite:'现场人员',f_id:'工号',title:'人员现况',sub:'人员名单 · 培训完成情况',back:'← 主页',refresh:'刷新',print:'🖨 打印',
+  zh:{edit_title:'编辑行',ed_save:'保存',ed_cancel:'取消',ed_saving:'保存中…',ed_saved:'已保存到谷歌表格',ed_failed:'保存失败',ed_conflict:'该行已被他人修改 — 请确认下方最新值后重新保存',ed_locked:'其他用户正在保存 — 请稍后重试',ed_readonly:'没有编辑权限',ed_nokey:'工号为空，无法编辑',ed_lockfld:'此项不可在此修改',ed_gone:'表格中已无此行',ed_dup:'工号重复，无法保存',ed_badval:'请检查输入值',ed_new:'新员工',ed_new_title:'登记新员工',ed_sec_r:'人员信息(名单表)',ed_sec_e:'培训状况(教育表)',ed_edu_new:'教育表中无此人 — 保存时将新建一行',ed_del:'删除行',ed_del_warn:'将从名单·教育两个表中删除此人。入职·离职趋势等历史图表会追溯变化且无法恢复。离职人员建议填写离职日而非删除。',ed_del_confirm:'执行删除',ed_deleted:'已删除(已反映到谷歌表格)',ed_cascade_miss:'教育表中未找到对应行 — 该表未修改',ed_partial:'名单已保存，但教育表保存失败 — 请仅重试培训项',ed_required:'请填写必填项(工号·姓名·入职日)',ed_baddate:'日期格式错误 (YYYY-MM-DD)',ed_srv:'无法读取表结构 — 请联系管理员',ed_sheets:'谷歌表格调用失败 — 请查看Supabase日志',ed_appended:'新员工已登记(两表均已反映)',ed_quitnote:'在教育表备注中记录离职日',ed_showquit:'显示离职者',f_name:'姓名(英文)',f_wp:'Work Place',f_duty:'业务/职责',f_quit:'离职日',f_basic:'Basic状态',f_bsdate:'Basic开始日',f_bdate:'Basic完成日',f_vet:'Veteran状态',f_vsdate:'Veteran开始日',f_vdate:'Veteran完成日',f_note:'备注',f_lv2date:'Scrubber Lv.2 完成日',f_lv3date:'Scrubber Lv.3 完成日',f_cn:'中文姓名',f_onsite:'现场人员',f_id:'工号',title:'人员·培训',sub:'人员名单 · 培训完成情况',back:'← 主页',refresh:'刷新',print:'🖨 打印',
     total_pre:'在职',total_post:'人',loading:'正在加载数据...',
     sl_site:'站点',sl_org:'所属·工序',sl_role:'职务',sl_edu:'培训',sl_search:'搜索',search_ph:'搜索姓名/工号...',all:'全部',
     kp1:'在职人数',dq_noedu:'未与培训现况关联的在职人员 — 在培训指标中显示为「未登记」',dq_noedu_a:'请统一人员现况与培训现况的员工编号',dq_nocamp:'园区为空、显示为「未分配」的人员',dq_nocamp_a:'请填写人员现况的园区列',kp2:'现场人数',kp3:'法人培训课程',kp4:'总部培训课程',kp5:'平均工龄(年)',kp6:'近1年入职',
@@ -305,7 +305,7 @@ const TR={
     tbl_title:'详细名单',tbl_unit:'人',th_name:'姓名',th_site:'站点',th_org:'所属',th_role:'职务',th_pos:'职级',th_exp:'工龄',th_join:'入职日',th_status:'状态',
     s_act:'在职',s_quit:'离职',d_total:'人数',d_on:'现场',d_edu:'对象',d_done:'完成',kd_overlap:'重叠 {n}人',kd_ten:'经历合计 ÷ 人数 · 排除无入职日 {n}人',
     ins_basic:'Basic未完成 {n}人 ({p}%)',ins_vet:'Veteran未完成 {n}人 (对象的{p}%)',ins_new:'近1年入职 {n}人',sim_t:'人力情景模拟',sim_sub:'假设招聘与流失，预览12个月后的人数与教育完成率',sim_n:'新进人数',sim_when:'入职时点',sim_line:'配置线别',sim_out:'月流失假设',sim_run:'执行',sim_clr:'重置',sim_note:'假设：新人入职时为Basic未完成，3个月后完成 · 流失按月均匀发生 · 已确定的离职日期已计入基准',sim_k1:'12个月后在职',sim_k2:'12个月后Basic完成率',sim_k3:'完成率最低点',sim_k4:'入职 / 流失 (12个月)',sim_base:'基准',sim_scen:'情景'},
-  ja:{edit_title:'行の編集',ed_save:'保存',ed_cancel:'キャンセル',ed_saving:'保存中…',ed_saved:'Googleシートに保存しました',ed_failed:'保存失敗',ed_conflict:'この行は既に他のユーザーが変更しました — 下の最新値を確認して再保存してください',ed_locked:'他のユーザーが保存中です — しばらくして再試行してください',ed_readonly:'編集権限がありません',ed_nokey:'社番が空のため編集できません',ed_lockfld:'この項目はここでは編集できません',ed_gone:'シートにこの行が見つかりません',ed_dup:'社番が重複しており保存できません',ed_badval:'入力値を確認してください',ed_new:'新規人員',ed_new_title:'新規人員の登録',ed_sec_r:'人的事項(名簿シート)',ed_sec_e:'教育状況(教育シート)',ed_edu_new:'教育シート未登録 — 保存時に新しい行を作成します',ed_del:'行削除',ed_del_warn:'この人員を名簿・教育の両シートから削除します。入退社推移など履歴チャートが遡って変わり、元に戻せません。退社者は削除ではなく退社日入力を推奨します。',ed_del_confirm:'削除実行',ed_deleted:'削除しました(Googleシートに反映)',ed_cascade_miss:'教育シートに対応行が見つからず、そちらは変更されていません',ed_partial:'名簿は保存されましたが教育シートの保存に失敗 — 教育項目のみ再試行してください',ed_required:'必須項目(社番·名前·入社日)を入力してください',ed_baddate:'日付形式が不正です (YYYY-MM-DD)',ed_srv:'シート構造を読めませんでした — 管理者に連絡してください',ed_sheets:'Googleシート呼び出しに失敗 — Supabaseログを確認してください',ed_appended:'新規人員を登録しました(両シートに反映)',ed_quitnote:'教育シートの備考に退社日を記録',ed_showquit:'退社者表示',f_name:'名前(英文)',f_wp:'Work Place',f_duty:'業務/職責',f_quit:'退社日',f_basic:'Basic状態',f_bsdate:'Basic開始日',f_bdate:'Basic完了日',f_vet:'Veteran状態',f_vsdate:'Veteran開始日',f_vdate:'Veteran完了日',f_note:'備考',f_lv2date:'Scrubber Lv.2 完了日',f_lv3date:'Scrubber Lv.3 完了日',f_cn:'中国語名',f_onsite:'現場人員',f_id:'社番',title:'人員現況',sub:'人員名簿 · 教育修了状況',back:'← メイン',refresh:'更新',print:'🖨 印刷',
+  ja:{edit_title:'行の編集',ed_save:'保存',ed_cancel:'キャンセル',ed_saving:'保存中…',ed_saved:'Googleシートに保存しました',ed_failed:'保存失敗',ed_conflict:'この行は既に他のユーザーが変更しました — 下の最新値を確認して再保存してください',ed_locked:'他のユーザーが保存中です — しばらくして再試行してください',ed_readonly:'編集権限がありません',ed_nokey:'社番が空のため編集できません',ed_lockfld:'この項目はここでは編集できません',ed_gone:'シートにこの行が見つかりません',ed_dup:'社番が重複しており保存できません',ed_badval:'入力値を確認してください',ed_new:'新規人員',ed_new_title:'新規人員の登録',ed_sec_r:'人的事項(名簿シート)',ed_sec_e:'教育状況(教育シート)',ed_edu_new:'教育シート未登録 — 保存時に新しい行を作成します',ed_del:'行削除',ed_del_warn:'この人員を名簿・教育の両シートから削除します。入退社推移など履歴チャートが遡って変わり、元に戻せません。退社者は削除ではなく退社日入力を推奨します。',ed_del_confirm:'削除実行',ed_deleted:'削除しました(Googleシートに反映)',ed_cascade_miss:'教育シートに対応行が見つからず、そちらは変更されていません',ed_partial:'名簿は保存されましたが教育シートの保存に失敗 — 教育項目のみ再試行してください',ed_required:'必須項目(社番·名前·入社日)を入力してください',ed_baddate:'日付形式が不正です (YYYY-MM-DD)',ed_srv:'シート構造を読めませんでした — 管理者に連絡してください',ed_sheets:'Googleシート呼び出しに失敗 — Supabaseログを確認してください',ed_appended:'新規人員を登録しました(両シートに反映)',ed_quitnote:'教育シートの備考に退社日を記録',ed_showquit:'退社者表示',f_name:'名前(英文)',f_wp:'Work Place',f_duty:'業務/職責',f_quit:'退社日',f_basic:'Basic状態',f_bsdate:'Basic開始日',f_bdate:'Basic完了日',f_vet:'Veteran状態',f_vsdate:'Veteran開始日',f_vdate:'Veteran完了日',f_note:'備考',f_lv2date:'Scrubber Lv.2 完了日',f_lv3date:'Scrubber Lv.3 完了日',f_cn:'中国語名',f_onsite:'現場人員',f_id:'社番',title:'人員·教育',sub:'人員名簿 · 教育修了状況',back:'← メイン',refresh:'更新',print:'🖨 印刷',
     total_pre:'在籍',total_post:'名',loading:'データ読み込み中...',
     sl_site:'サイト',sl_org:'所属·工程',sl_role:'職務',sl_edu:'教育',sl_search:'検索',search_ph:'名前·社番検索...',all:'全体',
     kp1:'在籍人数',dq_noedu:'教育現況と結びつかなかった在籍人員 — 教育指標では「未登録」になります',dq_noedu_a:'人員現況と教育現況の社員番号を合わせてください',dq_nocamp:'団地が空で「未配置」に立つ人員',dq_nocamp_a:'人員現況の団地欄を埋めてください',kp2:'現場人数',kp3:'法人教育課程',kp4:'本社教育課程',kp5:'平均勤続(年)',kp6:'直近1年入社',
@@ -383,7 +383,7 @@ GST.pageBar({
 async function downloadHrPPT(){
   const f=DATA.filter(isActive);
   const six=p=>p.join&&((TODAY-p.join)/86400000)>=182;
-  const l2t=f.filter(p=>p.onsite&&six(p)), l2d=l2t.filter(p=>p.lv2date&&p.lv2date<=TODAY);
+  const l2t=f.filter(p=>l2Tgt(p)), l2d=l2t.filter(p=>p.lv2date&&p.lv2date<=TODAY);   // 화면 kp4 와 같은 판정
   const l3t=f.filter(p=>p.onsite&&p.lv2date&&p.lv2date<=TODAY), l3d=l3t.filter(p=>p.lv3date&&p.lv3date<=TODAY);
   // 법인 과정 대상은 주간현황과 동일: 6개월 미만=Basic · 6개월 이상=Veteran (한 사람 한 과정)
   const cp=f.filter(p=>p.onsite&&p.join&&hasCorp(p));   // 국내는 법인 과정 대상이 아니다
@@ -398,11 +398,14 @@ async function downloadHrPPT(){
     rows.push(['법인','Basic (Lv.1) · 6개월 미만',String(ep.length),String(bd.length),pct(bd.length,ep.length)]);
     rows.push(['법인','Veteran (Lv.2) · 6개월 이상',String(vp.length),String(vd.length),pct(vd.length,vp.length)]);
   }
-  rows.push(['본사','Scrubber Lv.2 (6개월+)',String(l2t.length),String(l2d.length),pct(l2d.length,l2t.length)]);
+  /* 이름표도 잡힌 인원을 따라간다(v96) — 국내만이면 «전원», 해외만이면 «6개월+», 섞이면 둘 다 적는다 */
+  const _kr=f.some(p=>p.onsite&&!hasCorp(p)), _ov=f.some(p=>p.onsite&&hasCorp(p));
+  const _l2n='Scrubber Lv.2'+(_kr&&_ov?' (국내 전원 · 해외 6개월+)':_kr?' (전원)':' (6개월+)');
+  rows.push(['본사',_l2n,String(l2t.length),String(l2d.length),pct(l2d.length,l2t.length)]);
   rows.push(['본사','Scrubber Lv.3 (Lv.2 이수자)',String(l3t.length),String(l3d.length),pct(l3d.length,l3t.length)]);
 
   await GST.pptAuto({
-    title:'인력 · 교육 현황',
+    title:'인원·교육',
     asOf: CUT_M ? cutEndYMD(CUT_M) : GST.ymdL(),
     tables:[{cap:'교육과정 요약', rows:rows, span:2, colW:[0.8,2.6,0.9,0.9,0.9]}]
   });
@@ -640,6 +643,10 @@ function lvPerson(rec,byId,byNm){
      적용 여부는 hasCorp 한 곳에서만 판정한다 — 두 벌이면 카드마다 다른 답이 나온다. */
 const eduDoneAt=(d,E)=>!!(d&&d<=(E||TODAY));
 function hasCorp(p){ return p.region!=='국내'; }          // 법인 과정(Basic·Veteran) 대상인가
+/* 본사 Scrubber Lv.2 대상 — 국내는 «전원»(근속 무관 · v134 사용자 확정), 해외는 지금까지대로 입사 6개월 이상(제3원칙).
+   화면 카드(kp4)·과정별 막대·스파크라인·교육 이수 추이·PPT 표가 이 한 함수를 본다. v174 전에는 그 셋이 국내까지 6개월을 세고 있어서,
+   입사 6개월 안 된 국내 인원이 Lv.2 분모에서 조용히 빠졌다(주간현황 eduTgt 와 다른 답). */
+function l2Tgt(p,at){ return !!p.onsite && (!hasCorp(p) || (!!p.join && ((at||TODAY)-p.join)/86400000>=182)); }
 function clsB(p){ return hasCorp(p)?(eduDoneAt(p.bdate)?'이수완료':'미이수'):'비대상'; }
 function clsV(p){ return hasCorp(p)?(eduDoneAt(p.vdate)?'이수완료':'미이수'):'비대상'; }
 /* 국내 Scrubber — 2026-09 CS관리팀 회신 · 사용자 확정
@@ -910,7 +917,7 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('hr');
   animVal(document.getElementById('kp1'),f.length,'',false);
   animVal(document.getElementById('kp2'),f.filter(p=>p.onsite).length,'',false);
   // ---- 교육 판정 헬퍼 (KPI·cEdu·파레토·퍼널 공용) ----
-  // 본사 과정: Lv.2 대상 = 입사 6개월 이상 · Lv.3 대상 = Lv.2 이수자 (사용자 확정 규칙)
+  // 본사 과정: Lv.2 대상 = l2Tgt(국내 전원 · 해외 6개월 이상) · Lv.3 대상 = Lv.2 이수자 (v134 사용자 확정)
   const sixUp=p=>p.join&&((TODAY-p.join)/86400000)>=182;
   const lv2Done=p=>!!(p.lv2date&&p.lv2date<=TODAY);
   const lv3Done=p=>!!(p.lv3date&&p.lv3date<=TODAY);
@@ -928,7 +935,7 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('hr');
     if(el)el.textContent='Basic '+(ep.length?Math.round(bd/ep.length*100):0)+'%('+tr('etr_tgt')+' '+ep.length+')'
       +' · Veteran '+(vp.length?Math.round(vd/vp.length*100):0)+'%('+tr('etr_tgt')+' '+vp.length+')'; }
   // kp4 = 본사 교육과정(Scrubber Lv.2+Lv.3 종합) · kf4 = 과정별 세부
-  const l2t=f.filter(p=>p.onsite&&sixUp(p)), l2d=l2t.filter(lv2Done);
+  const l2t=f.filter(p=>l2Tgt(p)), l2d=l2t.filter(lv2Done);   // 국내 전원 · 해외 6개월+ (l2Tgt 한 곳)
   const l3t=f.filter(p=>p.onsite&&lv2Done(p)), l3d=l3t.filter(lv3Done);
   const hqT=l2t.length+l3t.length, hqD=l2d.length+l3d.length;
   animVal(document.getElementById('kp4'),hqT?hqD/hqT*100:0,'%',true);
@@ -962,7 +969,7 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('hr');
     const v=pp.filter(x=>((p.end-x.join)/86400000)>=182), vD=v.filter(x=>x.vdate&&x.vdate<=p.end);
     const T=e.length+v.length;return T?Math.round((bD.length+vD.length)/T*100):null;});
 
-  const sV   =SP.map(p=>{const a=fAll.filter(x=>x.onsite&&activeAt(x,p.end)&&x.join&&((p.end-x.join)/86400000)>=182);
+  const sV   =SP.map(p=>{const a=fAll.filter(x=>activeAt(x,p.end)&&l2Tgt(x,p.end));   // kp4 와 같은 판정(l2Tgt)
     const aD=a.filter(x=>x.lv2date&&x.lv2date<=p.end);
     const b=fAll.filter(x=>x.onsite&&activeAt(x,p.end)&&x.lv2date&&x.lv2date<=p.end);
     const bD=b.filter(x=>x.lv3date&&x.lv3date<=p.end);
@@ -1076,7 +1083,7 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('hr');
     const CRS=[
       {nm:'Basic',        dt:p=>p.bdate,   tg:(p,E)=>hasCorp(p)&&!sixAt(p,E),     col:S.on},
       {nm:'Veteran',      dt:p=>p.vdate,   tg:(p,E)=>hasCorp(p)&&sixAt(p,E),      col:S.good},
-      {nm:'Scrubber Lv.2',dt:p=>p.lv2date, tg:(p,E)=>sixAt(p,E),                  col:S.warn},
+      {nm:'Scrubber Lv.2',dt:p=>p.lv2date, tg:(p,E)=>l2Tgt(p,E),                  col:S.warn},
       {nm:'Scrubber Lv.3',dt:p=>p.lv3date, tg:(p,E)=>!!(p.lv2date&&p.lv2date<=E), col:S.bad}];
     // 막대는 '그 시점 현장 재직자 중 이수를 마친 인원'(사실 그대로) — 대상에서 빠진 사람의 이수 이력도 남긴다.
     // 선(달성률)만 대상 기준으로 계산해 KPI 카드와 정확히 일치시킨다.
@@ -1779,6 +1786,15 @@ function addCapBtns(){
     box.innerHTML='<button class="capbtn" title="명단을 엑셀에 붙여넣기" onclick="copyTable()">📋 표 복사</button><button class="capbtn" title="CSV 저장" onclick="saveCsv()">⤓</button>';
     card.appendChild(box); }
 }
+
+/* 차트 배치 (v174 · 판정표 docs/v2/PLAN.md 4절) — 차트 코드는 그대로 두고 «어디에 무엇을 보이나»만 정한다.
+   · 사이트별·직무별 인원은 같은 명단을 축만 바꿔 센다 — 한 카드.
+   · 과정별 이수·단계 퍼널은 같은 이수 기록의 두 얼굴이다 — 한 카드. */
+if(GST.chartLayout) GST.chartLayout({ page:'hr',
+  groups:[
+    { key:'who', items:[['cSite',{ko:'사이트',en:'Site',zh:'站点',ja:'サイト'}], ['cRole',{ko:'직무',en:'Role',zh:'岗位',ja:'職務'}]] },
+    { key:'edu', items:[['cEdu',{ko:'과정별',en:'By course',zh:'按课程',ja:'課程別'}], ['cFunnel',{ko:'단계 퍼널',en:'Funnel',zh:'阶段漏斗',ja:'段階ファネル'}]] }
+  ] });
 
 applyLang();
 loadData();

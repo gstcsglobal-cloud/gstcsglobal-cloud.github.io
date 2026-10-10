@@ -103,7 +103,8 @@ await pg.click('#fabs .st-fab[data-f=""]'); await pg.waitForTimeout(300);
 console.log('[2] 운영단위 바꾸기');
 await pg.selectOption('#opSel', 'SEC Scrubber'); await pg.waitForTimeout(500); K = await kp();
 is(K.units === '10 / 10', '국내 — 반납 2대는 안 센다(반입 10 / 가동 10)');
-is(/원장이 비어/.test(await pg.evaluate(() => document.getElementById('asof').textContent)), '국내 원장이 비면 그렇다고 말한다');
+is(await pg.evaluate(() => { const b = document.getElementById('krWarn'); return !!b && /원장이 비어/.test(b.title) && !/원장이 비어/.test(document.getElementById('asof').textContent); }),
+  '국내 원장이 비면 머리에 ⚠ 하나로 알린다(글로 늘어놓지 않는다 · v172)');
 await pg.selectOption('#opSel', 'GST CHINA(WUHAN) SCRUBBER'); await pg.waitForTimeout(500);
 const tr2 = await pg.evaluate(() => Array.from(document.querySelectorAll('#trend .bar')).map(b => +b.querySelector('title').textContent.split('· ')[1]));
 is(tr2.slice(14).every(v => v === 1), '우한 — 매주 1');
@@ -116,14 +117,16 @@ console.log('[3] 관제에서 넘어오기 — 고른 운영단위를 그대로 
 const ps = await ctx.newPage(); const pse = []; ps.on('pageerror', e => pse.push(e.message));
 await ps.goto(BASE + '/', { waitUntil:'domcontentloaded' }); await ps.waitForTimeout(3500);
 await ps.evaluate(() => { const o = document.getElementById('loginOverlay'); if (o) o.remove(); });
+await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(3000);   // v172 — 첫 탭은 «내 화면»이다
 const hub = ps.frames().find(f => /\/hub\//.test(f.url()));
 await hub.click('#sigs .hb-sig[data-op*="WUHAN"]'); await hub.waitForTimeout(300);
 await hub.click('#goSite'); await ps.waitForTimeout(4500);
 const site = ps.frames().find(f => /\/site\//.test(f.url()));
 const sel = site ? await site.evaluate(() => document.getElementById('opSel').value) : '';
 is(/WUHAN/.test(sel), '관제에서 우한을 골라 「사이트 상세」 → 사이트 화면이 우한으로 열린다 (' + sel + ')');
-const tabs = await ps.evaluate(() => Array.from(document.querySelectorAll('.tab')).map(t => t.dataset.id).slice(0, 3).join(','));
-is(tabs === 'hub,action,site', '셸 탭 순서 — 통합 관제 · 처리함 · 사이트 상세 (' + tabs + ')');
+const tabs = await ps.evaluate(() => ({ bar:Array.from(document.querySelectorAll('.tab')).map(t => t.dataset.id).join(','), more:document.getElementById('moreBtn').classList.contains('on') }));
+is(tabs.bar === 'home,hub,report,fault,pm,cip,scrubber,material,tco,hr' && tabs.more,
+  '셸 탭 — 사이트 상세는 탭 줄이 아니라 «더보기»로 열리고, 열려 있으면 더보기 단추가 켜진다 (v172 · ' + tabs.bar + ')');
 is(pse.length === 0, 'JS 에러 0 (셸)' + (pse.length ? ' → ' + pse[0] : ''));
 await browser.close(); srv.close();
 console.log(fail ? `\n❌ t-site: ${pass} 통과 · ${fail} 실패` : `\n✅ t-site: ${pass}/${pass} 통과`);

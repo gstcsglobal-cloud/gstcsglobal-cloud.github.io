@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>목표·기준 · CS Global Team</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
+<script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=172"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=172">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/ds.css?v=1">
+<!--
+  운영 목표 (2단계 «제품화» 밑바탕 · supabase/setup-27-targets.sql)
+  지표 × 범위(전사 · 국내/해외 · 운영단위)마다 목표 하나. 화면은 «가장 좁은 목표»를 쓴다(운영단위 > 구분 > 전사).
+  ⚠ 지표의 뜻은 core 의 GST.METRICS 한 곳 — 이 화면은 «얼마면 정상인가»만 정한다.
+  ⚠ 쓰기는 관리자 + 쓰기 권한만(서버 _tgt_who). 다른 사람은 같은 화면을 «읽기»로 본다 — 목표가 얼마인지는 누구나 알아야 판정 색을 믿는다.
+  ⚠ 지우지 않고 감춘다. 이력은 ops_target_log 에 남는다.
+-->
+</head>
+<body class="ds">
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
+<div class="ds-wrap">
+  <header class="ds-head">
+    <div>
+      <h1 class="ds-title" data-i="title">목표·기준</h1>
+      <div class="ds-sub" data-i="sub">목표를 정하면 「내 화면」의 카드와 표가 «목표 대비»로 판정합니다</div>
+    </div>
+    <span class="ds-sp"></span>
+    <select class="ds-select" id="scope" data-i-title="scope_lbl" title="범위"></select>
+    <button type="button" class="ds-btn" id="goHome" data-i="go_home">내 화면으로</button>
+  </header>
+  <div id="banners" class="ds-grid"></div>
+  <div class="ds-card" id="cEdit"></div>
+  <div class="ds-card" id="cAll"></div>
+  <div class="ds-card" id="cPar"></div>
+  <div class="ds-status" id="status"></div>
+</div>
+
+<script>
+if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
+GST.needVer && GST.needVer(168);
+GST.authGate();
+
+const T={
+ko:{parT:'판정 기준',parS:'화면이 판정에 쓰는 기준값입니다 — 바꾸면 이 기준을 쓰는 모든 화면에 반영됩니다',c_p:'항목',c_def:'기본값',c_val:'현재 값',p_reset:'기본값으로 되돌리기',p_pending:'미적용 — 아직 이 값을 읽는 화면이 없습니다',p_live:'적용 중',p_changed:'변경됨',e_range:'{a}~{b} 사이 값을 입력해 주세요',p_saved:'판정 기준을 저장했습니다',title:'목표·기준',sub:'목표를 설정하면 홈의 카드와 표가 목표 대비로 판정됩니다',scope_lbl:'범위',go_home:'홈으로',
+  sc_all:'전사',sc_kr:'국내 전체',sc_os:'해외 전체',sc_ops:'운영단위',loading:'자료를 불러오는 중…',
+  ro:'목표는 관리자만 변경할 수 있습니다 — 현재 설정값을 보여 드립니다.',noTbl:'서버에 목표 테이블이 없습니다 — supabase/setup-27-targets.sql을 실행한 뒤 다시 여세요.',noDb:'서버에 연결되지 않아 목표를 읽거나 저장할 수 없습니다(인증 꺼짐 · 오프라인).',
+  editT:'{s} 목표',editS:'비워 두면 상위 범위의 목표가 적용됩니다(운영단위 → 국내/해외 → 전사)',allT:'설정된 목표 전체',allS:'최근 변경 순',
+  c_m:'지표',c_now:'현재 값',c_use:'적용 중인 목표',c_tgt:'목표',c_warn:'주의 기준',c_dir:'판정 방향',c_note:'메모',c_sc:'범위',c_by:'최종 수정',
+  inh:'{s} 목표 적용',own:'이 범위 목표',none:'목표 없음',le:'낮을수록 좋음(이하 정상)',ge:'높을수록 좋음(이상 정상)',warn_ph:'비우면 기본 구간',
+  save:'저장',remove:'삭제',saved:'저장했습니다',removed:'삭제했습니다 — 상위 범위의 목표가 다시 적용됩니다',
+  e_num:'목표는 숫자로 입력해 주세요',e_warn:'주의 기준이 목표보다 좋은 쪽에 있습니다 — 낮을수록 좋은 지표는 목표 이상, 높을수록 좋은 지표는 목표 이하로 입력하세요',
+  e_forbidden:'목표를 변경할 권한이 없습니다(관리자 + 쓰기 권한 필요)',e_login:'다시 로그인해 주세요',e_conflict:'그사이 다른 사용자가 변경했습니다 — 최신 값을 다시 불러왔으니 확인 후 다시 저장하세요',
+  e_other:'저장하지 못했습니다: {e}',e_noDb:'서버에 연결되지 않았습니다',rm_q:'이 목표를 삭제할까요? (변경 이력은 남습니다)',yes:'삭제',no:'취소',
+  band:'기본 주의 구간: {b}',fail:'일부 자료를 읽지 못했습니다'},
+en:{parT:'Rating rules',parS:'numbers that used to be fixed in code — every screen using a rule follows the change',c_p:'Rule',c_def:'Default',c_val:'Current',p_reset:'Reset to default',p_pending:'Not applied yet — no screen reads this value',p_live:'In effect now',p_changed:'changed',e_range:'Enter a value between {a} and {b}',p_saved:'Rule saved',title:'Targets & rules',sub:'Once targets are set, cards and tables on Home are rated against them',scope_lbl:'Scope',go_home:'Home',
+  sc_all:'Company',sc_kr:'All Korea',sc_os:'All overseas',sc_ops:'Operating units',loading:'Loading…',
+  ro:'Only admins can change targets — you are seeing the current values.',noTbl:'The target table is not on the server yet — run supabase/setup-27-targets.sql and reopen.',noDb:'Not connected to the server, so targets cannot be read or saved (auth off · offline).',
+  editT:'Targets for {s}',editS:'leave empty to follow the wider scope (unit → region → company)',allT:'All targets',allS:'most recently changed first',
+  c_m:'Metric',c_now:'Now',c_use:'In effect',c_tgt:'Target',c_warn:'Watch limit',c_dir:'Direction',c_note:'Note',c_sc:'Scope',c_by:'Last change',
+  inh:'follows {s}',own:'set for this scope',none:'No target',le:'lower is better',ge:'higher is better',warn_ph:'empty = default band',
+  save:'Save',remove:'Remove',saved:'Saved',removed:'Removed — the wider scope target applies again',
+  e_num:'Target must be a number',e_warn:'Watch limit is on the «good» side of the target — above it when lower is better, below it when higher is better',
+  e_forbidden:'You cannot change targets (admin + write access)',e_login:'Please sign in again',e_conflict:'Someone changed it meanwhile — the current value was reloaded; check and save again',
+  e_other:'Could not save: {e}',e_noDb:'Not connected to the server',rm_q:'Remove this target? (history is kept)',yes:'Remove',no:'Keep',
+  band:'default watch band: {b}',fail:'Some data could not be read'},
+zh:{parT:'判定标准',parS:'原本写死在代码里的标准数字 — 修改后所有使用该标准的画面都会跟着变',c_p:'标准',c_def:'默认值',c_val:'当前值',p_reset:'恢复默认',p_pending:'尚未适用 — 目前没有画面读取此值',p_live:'目前适用中',p_changed:'已修改',e_range:'请输入 {a} ~ {b} 之间的值',p_saved:'已保存判定标准',title:'目标·标准',sub:'设定目标后，首页的卡片和表格将按目标判定',scope_lbl:'范围',go_home:'返回首页',
+  sc_all:'全公司',sc_kr:'国内全部',sc_os:'海外全部',sc_ops:'运营单位',loading:'正在加载…',
+  ro:'只有管理员可以修改目标 — 此处显示当前设定的值。',noTbl:'服务器尚无目标表 — 请运行 supabase/setup-27-targets.sql 后重新打开。',noDb:'未连接服务器，无法读取或保存目标(认证关闭 · 离线)。',
+  editT:'{s} 的目标',editS:'留空则沿用上级范围的目标(运营单位 → 区分 → 全公司)',allT:'已设定的全部目标',allS:'最近修改的在前',
+  c_m:'指标',c_now:'当前值',c_use:'当前适用',c_tgt:'目标',c_warn:'注意界限',c_dir:'方向',c_note:'备注',c_sc:'范围',c_by:'最后修改',
+  inh:'沿用{s}目标',own:'此范围的目标',none:'无目标',le:'越低越好',ge:'越高越好',warn_ph:'留空 = 默认区间',
+  save:'保存',remove:'删除',saved:'已保存',removed:'已删除 — 重新适用上级范围的目标',
+  e_num:'目标必须是数字',e_warn:'注意界限位于目标的«好»的一侧 — 越低越好时应高于目标，越高越好时应低于目标',
+  e_forbidden:'没有修改目标的权限(管理员 + 写入权限)',e_login:'请重新登录',e_conflict:'期间已有他人修改 — 已重新读取当前值，请确认后再保存',
+  e_other:'未能保存: {e}',e_noDb:'未连接服务器',rm_q:'删除此目标吗？(保留历史)',yes:'删除',no:'保留',
+  band:'默认注意区间: {b}',fail:'部分数据未能读取'},
+ja:{parT:'判定基準',parS:'コードに固定されていた基準の数字 — 変えるとその基準を使う画面がすべて従う',c_p:'基準',c_def:'既定値',c_val:'現在値',p_reset:'既定値に戻す',p_pending:'未適用 — この値を読む画面はまだありません',p_live:'現在適用中',p_changed:'変更あり',e_range:'{a} ~ {b} の間で入力してください',p_saved:'判定基準を保存しました',title:'目標·基準',sub:'目標を設定するとホームのカードと表が目標比で判定されます',scope_lbl:'範囲',go_home:'ホームへ',
+  sc_all:'全社',sc_kr:'国内全体',sc_os:'海外全体',sc_ops:'運営単位',loading:'データ読み込み中…',
+  ro:'目標は管理者だけが変更できます — ここでは現在の値を表示します。',noTbl:'サーバーに目標表がまだありません — supabase/setup-27-targets.sql を実行してから開き直してください。',noDb:'サーバーに接続されていないため目標を読み書きできません(認証オフ · オフライン)。',
+  editT:'{s} の目標',editS:'空欄なら上位範囲の目標に従います(運営単位 → 区分 → 全社)',allT:'設定済みの目標すべて',allS:'最近変更したものから',
+  c_m:'指標',c_now:'現在値',c_use:'適用中',c_tgt:'目標',c_warn:'注意境界',c_dir:'方向',c_note:'メモ',c_sc:'範囲',c_by:'最終変更',
+  inh:'{s}の目標に従う',own:'この範囲の目標',none:'目標なし',le:'低いほど良い',ge:'高いほど良い',warn_ph:'空欄 = 既定の帯',
+  save:'保存',remove:'削除',saved:'保存しました',removed:'削除しました — 上位範囲の目標が再び適用されます',
+  e_num:'目標は数値にしてください',e_warn:'注意境界が目標の«良い»側にあります — 低いほど良いなら目標以上、高いほど良いなら目標以下に',
+  e_forbidden:'目標を変更する権限がありません(管理者 + 書き込み権限)',e_login:'もう一度ログインしてください',e_conflict:'その間に他の人が変更しました — 現在値を読み直したので確認して再保存してください',
+  e_other:'保存できませんでした: {e}',e_noDb:'サーバーに接続されていません',rm_q:'この目標を削除しますか？(履歴は残ります)',yes:'削除',no:'残す',
+  band:'既定の注意帯: {b}',fail:'一部のデータを読めませんでした'}
+};
+let LANG='ko';
+try{ const l=sessionStorage.getItem('gst_lang'); if(l&&T[l]) LANG=l; else if(window.name&&T[window.name]) LANG=window.name; }catch(e){}
+const t=k=>(T[LANG]&&T[LANG][k]!=null)?T[LANG][k]:(T.ko[k]!=null?T.ko[k]:k);
+const fmt=(s,o)=>String(s).replace(/\{(\w+)\}/g,(m,k)=>o[k]!=null?o[k]:m);
+const esc=s=>GST._esc(s);
+const v2t=(k,o)=>GST.v2t(k,o,LANG);
+const KR=GST.ORG.REGION_KR, OS=GST.ORG.REGION_OS;
+const short=op=>String(op||'—').replace(/\s+(SCRUBBER|CHILLER)$/i,'').trim()||'—';
+
+let RAW=null, ACTS=null;
+const S={sc:{kind:'all', v:''}};
+
+async function load(){
+  status(t('loading'));
+  const r=await Promise.allSettled([GST.ops.load(), GST.targets.load(), GST.params.load(), loadActs()]);
+  RAW=r[0].status==='fulfilled'?r[0].value:{INST:[],WK:[],KRA:[],fails:['ops']};
+  try{ if(GST.loadMe) await GST.loadMe(); }catch(e){}
+  const q=new URLSearchParams(location.search);
+  if(q.get('op')) S.sc={kind:'op', v:q.get('op')}; else if(q.get('region')) S.sc={kind:'region', v:q.get('region')==='os'?OS:KR};
+  fillScope(); render();
+  status((RAW.fails.length?t('fail')+' ('+RAW.fails.join(', ')+') · ':'')+'✅ '+new Date().toLocaleString(), !!RAW.fails.length);
+}
+async function loadActs(){
+  try{ const C=await GST._dbAuthed(); if(!C){ ACTS=null; return; }
+    const r=await C.from('action_items').select('op,due,status').not('status','in','(done,dismissed)').limit(2000);
+    ACTS=r.error?null:(r.data||[]);
+  }catch(e){ ACTS=null; }
+}
+function opsList(){
+  const asOf=GST.ops.asOf(RAW), M={};
+  RAW.INST.forEach(x=>{ if(!x.op||!GST.ops.isIn(x,asOf)) return; M[x.op]=(M[x.op]||0)+1; });
+  GST.targets.rows.forEach(x=>{ if(x.scope_kind==='op'&&M[x.scope]==null) M[x.scope]=0; });   // 자료에서 사라진 운영단위의 목표도 고칠 수 있어야 한다
+  return Object.keys(M).sort((a,b)=>M[b]-M[a]||a.localeCompare(b));
+}
+const scKey=sc=>sc.kind==='all'?'all':(sc.kind==='region'?'r:'+sc.v:'o:'+sc.v);
+const scOf=k=>!k||k==='all'?{kind:'all',v:''}:(k.slice(0,2)==='r:'?{kind:'region',v:k.slice(2)}:{kind:'op',v:k.slice(2)});
+const scName=sc=>sc.kind==='all'?t('sc_all'):(sc.kind==='region'?(sc.v===KR?t('sc_kr'):sc.v===OS?t('sc_os'):sc.v):short(sc.v));
+const rowSc=x=>({kind:x.scope_kind, v:x.scope});
+function regionOfOp(op){ const x=RAW.INST.find(i=>i.op===op)||RAW.WK.find(i=>i.op===op); return GST.ORG.region(op)||(x?x.region:''); }
+function fillScope(){
+  const sel=document.getElementById('scope'), ops=opsList();
+  sel.innerHTML='<option value="all">'+esc(t('sc_all'))+'</option><option value="r:'+esc(KR)+'">'+esc(t('sc_kr'))+'</option><option value="r:'+esc(OS)+'">'+esc(t('sc_os'))+'</option>'
+    +'<optgroup label="'+esc(t('sc_ops'))+'">'+ops.map(o=>'<option value="o:'+esc(o)+'">'+esc(short(o))+'</option>').join('')+'</optgroup>';
+  sel.value=scKey(S.sc);
+}
+
+function render(){
+  const can=GST.targets.can()&&GST.targets.why==='', adm=GST.isAdmin&&GST.isAdmin();
+  /* 띠 — 서버 사정은 관리자에게 원인까지, 그 밖에는 «읽기 전용»이라는 사실만 */
+  const B=[];
+  if(GST.targets.why==='no_table') B.push(adm?t('noTbl'):t('ro'));
+  else if(GST.targets.why==='no_db') B.push(t('noDb'));
+  else if(!can) B.push(t('ro'));
+  document.getElementById('banners').innerHTML=B.map(s=>'<div class="ds-banner'+(GST.targets.why==='no_table'&&adm?' warn':'')+'"><span>'+esc(s)+'</span></div>').join('');
+  drawEdit(can); drawAll(); drawPar(can);
+}
+function curVals(){
+  const asOf=GST.ops.asOf(RAW);
+  return GST.metrics.one(RAW, asOf, GST.metrics.okOf(S.sc), {actions:ACTS||undefined});
+}
+function bandTxt(mt){ const b=(GST.METRICS[mt]||{}).band||{}; return b.abs!=null?('±'+b.abs+((GST.METRICS[mt].unit==='pct')?v2t('u_pt'):GST.v2unit(mt))):('±'+Math.round((b.rel||0.1)*100)+'%'); }
+function drawEdit(can){
+  const box=document.getElementById('cEdit'), cur=curVals(), sc=S.sc;
+  const pickSc=sc.kind==='op'?{op:sc.v, region:regionOfOp(sc.v)}:(sc.kind==='region'?{region:sc.v}:{});
+  let h='<h2>'+esc(fmt(t('editT'),{s:scName(sc)}))+'<span class="s">'+esc(t('editS'))+'</span></h2>'
+    +'<div class="ds-tbl-wrap"><table class="ds-tbl"><thead><tr><th>'+esc(t('c_m'))+'</th><th class="n">'+esc(t('c_now'))+'</th><th>'+esc(t('c_use'))+'</th>'
+    +'<th style="min-width:90px">'+esc(t('c_tgt'))+'</th><th style="min-width:110px">'+esc(t('c_warn'))+'</th><th>'+esc(t('c_dir'))+'</th><th style="min-width:140px">'+esc(t('c_note'))+'</th><th></th></tr></thead><tbody>';
+  GST.METRIC_ORDER.forEach(mt=>{
+    const M=GST.METRICS[mt], ex=GST.targets.exact(mt, sc.kind, sc.kind==='all'?'':sc.v), use=GST.targets.pick(mt, pickSc);
+    const v=cur.m[mt].v, st=GST.targets.judge(mt, v, use);
+    const useTxt=use?(GST.v2fmt(mt,use.target)+GST.v2unit(mt)+' '+v2t(use.dir==='ge'?'tgt_ge':'tgt_le')+' · '+(ex?t('own'):fmt(t('inh'),{s:scName(rowSc(use))}))):t('none');
+    const dir=ex?ex.dir:M.dir, ro=can?'':' readonly';
+    h+='<tr data-m="'+mt+'"><td><b>'+esc(v2t('m_'+mt))+'</b><div class="ds-note">'+esc(v2t('d_'+mt))+'</div></td>'
+      +'<td class="n"><span class="ds-kpi-t '+(st||'')+'">'+esc(GST.v2fmt(mt,v))+esc(v==null?'':GST.v2unit(mt))+'</span></td>'
+      +'<td><span class="ds-note">'+esc(useTxt)+'</span></td>'
+      +'<td><input class="ds-in" inputmode="decimal" data-f="target" value="'+(ex?esc(ex.target):'')+'" aria-label="'+esc(t('c_tgt'))+'"'+ro+'></td>'
+      +'<td><input class="ds-in" inputmode="decimal" data-f="warn" value="'+(ex&&ex.warn!=null?esc(ex.warn):'')+'" placeholder="'+esc(t('warn_ph'))+'" title="'+esc(fmt(t('band'),{b:bandTxt(mt)}))+'" aria-label="'+esc(t('c_warn'))+'"'+ro+'></td>'
+      +'<td><select class="ds-in" data-f="dir" aria-label="'+esc(t('c_dir'))+'"'+(can?'':' disabled')+'><option value="le"'+(dir==='le'?' selected':'')+'>'+esc(t('le'))+'</option><option value="ge"'+(dir==='ge'?' selected':'')+'>'+esc(t('ge'))+'</option></select></td>'
+      +'<td><input class="ds-in" data-f="note" maxlength="300" value="'+(ex&&ex.note?esc(ex.note):'')+'" aria-label="'+esc(t('c_note'))+'"'+ro+'></td>'
+      +'<td style="white-space:nowrap">'+(can?'<button type="button" class="ds-btn sm pri" data-act="save">'+esc(t('save'))+'</button> '
+        +(ex?'<button type="button" class="ds-btn sm" data-act="rm">'+esc(t('remove'))+'</button>':''):'')+'</td></tr>';
+  });
+  box.innerHTML=h+'</tbody></table></div><div class="ds-note" id="editMsg" role="status"></div>';
+  box.querySelectorAll('.ds-in').forEach(i=>i.addEventListener('input',()=>i.classList.add('dirty')));
+  box.querySelectorAll('[data-act="save"]').forEach(b=>b.onclick=()=>save(b.closest('tr')));
+  box.querySelectorAll('[data-act="rm"]').forEach(b=>b.onclick=()=>askRemove(b.closest('tr'), b));
+}
+function msg(s, bad){ const e=document.getElementById('editMsg'); if(e){ e.textContent=s; e.style.color=bad?'var(--bad)':''; } if(!bad&&GST.capToast) GST.capToast(s); }
+const ERR=e=>({forbidden:t('e_forbidden'),login:t('e_login'),conflict:t('e_conflict'),no_db:t('e_noDb'),bad_warn:t('e_warn'),bad_target:t('e_num')})[e]||fmt(t('e_other'),{e:e});
+async function save(tr){
+  const mt=tr.dataset.m, g=f=>tr.querySelector('[data-f="'+f+'"]').value.trim(), sc=S.sc;
+  const num=s=>{ if(s==='') return null; const n=GST.numv?GST.numv(s):Number(s); return isNaN(n)?NaN:n; };
+  const tg=num(g('target')), wn=num(g('warn')), dir=g('dir');
+  if(tg==null||isNaN(tg)) return msg(t('e_num'), true);
+  if(wn!=null&&(isNaN(wn)||(dir==='le'&&wn<tg)||(dir==='ge'&&wn>tg))) return msg(t('e_warn'), true);
+  const ex=GST.targets.exact(mt, sc.kind, sc.kind==='all'?'':sc.v);
+  tr.querySelectorAll('button').forEach(b=>b.disabled=true);
+  const r=await GST.targets.save({metric:mt, scope_kind:sc.kind, scope:sc.kind==='all'?'':sc.v, target:tg, warn:wn, dir:dir, note:g('note'), at:ex?ex.updated_at:null});
+  if(r&&r.ok){ await GST.targets.load(); render(); msg(t('saved')); return; }
+  if(r&&r.error==='conflict'){ await GST.targets.load(); render(); }
+  else tr.querySelectorAll('button').forEach(b=>b.disabled=false);
+  msg(ERR(r&&r.error), true);
+}
+/* 확인은 화면 안에서 — confirm() 은 셸 iframe 에서 막히는 환경이 있다 */
+function askRemove(tr, btn){
+  const cell=btn.parentElement, keep=cell.innerHTML;
+  cell.innerHTML='<span class="ds-note">'+esc(t('rm_q'))+'</span> <button type="button" class="ds-btn sm" data-y>'+esc(t('yes'))+'</button> <button type="button" class="ds-btn sm ghost" data-n>'+esc(t('no'))+'</button>';
+  cell.querySelector('[data-n]').onclick=()=>{ render(); };
+  cell.querySelector('[data-y]').onclick=async ()=>{
+    const mt=tr.dataset.m, sc=S.sc, ex=GST.targets.exact(mt, sc.kind, sc.kind==='all'?'':sc.v); if(!ex) return render();
+    const r=await GST.targets.remove(ex.id, ex.updated_at);
+    await GST.targets.load(); render();
+    if(r&&r.ok) msg(t('removed')); else msg(ERR(r&&r.error), true);
+  };
+}
+function drawAll(){
+  const box=document.getElementById('cAll'), L=GST.targets.rows.slice().sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at)));
+  let h='<h2>'+esc(t('allT'))+'<span class="s">'+esc(t('allS'))+'</span></h2>';
+  if(!L.length){ box.innerHTML=h+'<div class="ds-empty">'+esc(t('none'))+'</div>'; return; }
+  h+='<div class="ds-tbl-wrap"><table class="ds-tbl"><thead><tr><th>'+esc(t('c_m'))+'</th><th>'+esc(t('c_sc'))+'</th><th class="n">'+esc(t('c_tgt'))+'</th><th class="n">'+esc(t('c_warn'))+'</th><th>'+esc(t('c_dir'))+'</th><th>'+esc(t('c_note'))+'</th><th>'+esc(t('c_by'))+'</th></tr></thead><tbody>'
+    +L.map(x=>'<tr class="click" data-k="'+esc(scKey(rowSc(x)))+'" tabindex="0"><td>'+esc(v2t('m_'+x.metric))+'</td><td>'+esc(scName(rowSc(x)))+'</td>'
+      +'<td class="n">'+esc(GST.v2fmt(x.metric,x.target))+esc(GST.v2unit(x.metric))+'</td><td class="n">'+(x.warn==null?'—':esc(GST.v2fmt(x.metric,x.warn)))+'</td>'
+      +'<td>'+esc(t(x.dir))+'</td><td>'+esc(x.note||'')+'</td><td class="ds-note">'+esc([x.updated_by, String(x.updated_at||'').slice(0,16).replace('T',' ')].filter(Boolean).join(' · '))+'</td></tr>').join('')
+    +'</tbody></table></div>';
+  box.innerHTML=h;
+  box.querySelectorAll('tr[data-k]').forEach(tr=>{ const go=()=>{ S.sc=scOf(tr.dataset.k); fillScope(); render(); window.scrollTo({top:0,behavior:'smooth'}); };
+    tr.onclick=go; tr.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } }; });
+}
+
+/* ===== 판정 기준 (setup-27 6절 · GST.PARAMS) ===== */
+function unitTxt(u){ return u==='pt'?v2t('u_pt'):u==='pct'?v2t('u_rel'):u==='x'?v2t('u_x'):u==='case'?v2t('u_case'):u==='ea'?v2t('u_ea'):u==='day'?v2t('u_day'):u==='pts'?v2t('u_pts'):''; }
+function drawPar(can){
+  const box=document.getElementById('cPar');
+  let h='<h2>'+esc(t('parT'))+'<span class="s">'+esc(t('parS'))+'</span></h2>';
+  GST.PARAM_SECTIONS.forEach(g=>{
+    const keys=Object.keys(GST.PARAMS).filter(k=>GST.PARAMS[k].g===g), live=keys.every(k=>GST.PARAMS[k].live);
+    h+='<div style="margin-top:6px"><b>'+esc(v2t('g_'+g))+'</b> <span class="ds-note">'+esc(v2t('gd_'+g))+'</span> '
+      +'<span class="ds-pill '+(live?'ok':'')+'">'+esc(live?t('p_live'):t('p_pending').split(' — ')[0])+'</span></div>'
+      +(live?'':'<div class="ds-note">'+esc(t('p_pending'))+'</div>')
+      +'<div class="ds-tbl-wrap"><table class="ds-tbl" data-g="'+g+'"><thead><tr><th>'+esc(t('c_p'))+'</th><th class="n">'+esc(t('c_def'))+'</th><th style="min-width:110px">'+esc(t('c_val'))+'</th><th></th></tr></thead><tbody>'
+      +keys.map(k=>{ const P=GST.PARAMS[k], ch=GST.params.changed(k), v=GST.params.get(k), u=unitTxt(P.u);
+        return '<tr data-p="'+k+'"><td>'+esc(v2t('p_'+k))+(ch?' <span class="ds-pill warn">'+esc(t('p_changed'))+'</span>':'')+'</td>'
+          +'<td class="n">'+esc(P.def)+' '+esc(u)+'</td>'
+          +'<td><div style="display:flex;align-items:center;gap:6px"><input class="ds-in" inputmode="decimal" data-f="pv" value="'+esc(v)+'" min="'+P.min+'" max="'+P.max+'" step="'+P.step+'" aria-label="'+esc(v2t('p_'+k))+'"'+(can?'':' readonly')+'><span class="ds-note">'+esc(u)+'</span></div></td>'
+          +'<td style="white-space:nowrap">'+(can?'<button type="button" class="ds-btn sm pri" data-pa="save">'+esc(t('save'))+'</button> '
+            +(ch?'<button type="button" class="ds-btn sm" data-pa="reset">'+esc(t('p_reset'))+'</button>':''):'')+'</td></tr>'; }).join('')
+      +'</tbody></table></div>';
+  });
+  box.innerHTML=h+'<div class="ds-note" id="parMsg" role="status"></div>';
+  box.querySelectorAll('[data-f="pv"]').forEach(i=>i.addEventListener('input',()=>i.classList.add('dirty')));
+  box.querySelectorAll('[data-pa]').forEach(b=>b.onclick=()=>savePar(b.closest('tr').dataset.p, b.dataset.pa==='reset', b));
+}
+async function savePar(k, reset, btn){
+  const P=GST.PARAMS[k], say=(s,bad)=>{ const m=document.getElementById('parMsg'); if(!m) return; m.textContent=s; m.style.color=bad?'var(--bad)':''; if(!bad&&GST.capToast) GST.capToast(s); };
+  let v=null;
+  if(!reset){ const raw=btn.closest('tr').querySelector('[data-f="pv"]').value.trim(); v=GST.numv?GST.numv(raw):Number(raw);
+    if(raw===''||isNaN(v)||v<P.min||v>P.max) return say(fmt(t('e_range'),{a:P.min,b:P.max}), true);
+    if(v===P.def&&!GST.params.changed(k)) return say(t('p_saved')); }
+  btn.disabled=true;
+  const r=await GST.params.save(k, (reset||v===P.def)?null:v);
+  await GST.params.load(); render();
+  if(r&&r.ok) say(t('p_saved')); else say(ERR(r&&r.error), true);
+}
+function status(s, err){ const e=document.getElementById('status'); e.textContent=s; e.classList.toggle('err',!!err); }
+function applyLang(){
+  document.documentElement.lang=LANG;
+  try{ GST.applyI18n && GST.applyI18n(t, LANG); }catch(e){ document.querySelectorAll('[data-i]').forEach(el=>{ el.textContent=t(el.dataset.i); }); }
+  if(RAW){ fillScope(); render(); }
+}
+window.setLang=function(l){ if(T[l]){ LANG=l; applyLang(); } };
+document.getElementById('scope').addEventListener('change',e=>{ S.sc=scOf(e.target.value); render(); });
+document.getElementById('goHome').onclick=()=>{ location.href='https://gstcsglobal-cloud.github.io/home/'; };
+window.addEventListener('gst-role',()=>{ if(RAW) render(); });
+window.addEventListener('message',e=>{ const d=e.data||{}; if(d.type==='gst-lang'&&T[d.lang]){ LANG=d.lang; applyLang(); } });
+applyLang();
+window.loadData=load;
+load().catch(e=>{ console.error('[targets] 읽기 실패', e); status((GST.failNote?GST.failNote(e):String(e&&e.message||e)), true); });
+</script>
+<script>GST.initSync();</script>
+</body>
+</html>

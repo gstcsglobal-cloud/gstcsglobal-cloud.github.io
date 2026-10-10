@@ -282,17 +282,20 @@ body.gst-inframe .status{margin-top:2px}
    장식(그라데이션 애니메이션·블롭·유리효과) 제거 = 절제된 전문가 룩
    ============================================================ */
 /* 다크(Slate) — 라이트와 같은 토큰 이름에 어두운 값만 넣는다. 컴포넌트 규칙은 공유한다. */
+/* v171 (디자인 2.0) — 다크를 «미드나이트»로: 더 깊은 바탕 · 한 단 밝은 액센트 · 카드 윗변의 가는 빛(inset).
+   ⚠ 셸 index.html 이 같은 토큰을 한 벌 더 든다(셸은 theme.css 를 안 싣는다) — 값을 바꾸면 둘 다. */
 body.theme-slate{
   color-scheme:dark;
-  --bg:#0F1419; --surface:#161C24; --surface-2:#1C2430; --surface-3:#232D3A;
-  --line:rgba(151,170,196,.14); --line-2:rgba(151,170,196,.28);
-  --txt-main:#E6EDF3; --txt-2:#C3CCD8; --txt-muted:#8B98A9; --txt-faint:#5E6D80;
-  --accent:#5B8DEF; --accent-soft:rgba(91,141,239,.16); --accent-ink:#8AB0F7;
-  --ok:#3FBF7F; --warn:#F2B134; --bad:#F0716B;
-  --ok-soft:rgba(63,191,127,.12); --warn-soft:rgba(242,177,52,.12); --bad-soft:rgba(240,113,107,.12);
-  --accent-3:#A78BFA; --accent-4:#F2B134; --accent-5:#3FBF7F;
-  --card-shadow:none; --shadow-md:0 8px 24px rgba(0,0,0,.45); --shadow-sm:none;
-  background:#0F1419 !important;
+  --bg:#070B14; --surface:#0D1321; --surface-2:#131B2C; --surface-3:#1A2438;
+  --line:rgba(148,170,215,.13); --line-2:rgba(148,170,215,.26);
+  --txt-main:#E8EEF7; --txt-2:#C5CEDB; --txt-muted:#8C99AD; --txt-faint:#5E6B80;
+  --accent:#6C9BFF; --accent-soft:rgba(108,155,255,.15); --accent-ink:#9DBDFF;
+  --ok:#3FCF8E; --warn:#F5B83D; --bad:#F2706B;
+  --ok-soft:rgba(63,207,142,.12); --warn-soft:rgba(245,184,61,.12); --bad-soft:rgba(242,112,107,.12);
+  --accent-3:#A78BFA; --accent-4:#F5B83D; --accent-5:#3FCF8E;
+  --card-shadow:none; --shadow-md:0 12px 32px rgba(0,0,0,.55);
+  --shadow-sm:inset 0 1px 0 rgba(255,255,255,.045), 0 10px 28px -20px rgba(0,0,0,.9);
+  background:#070B14 !important;
 }
 body.theme-slate select,body.theme-slate input{color-scheme:dark}
 body.theme-slate .fchip{border-color:rgba(91,141,239,.45)}
@@ -544,7 +547,9 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #gstSrcDetail{display:no
   body.gst-motion .kpi:nth-child(4),body.gst-motion .card:nth-child(4){animation-delay:.12s !important}
   body.gst-motion .kpi:nth-child(5),body.gst-motion .card:nth-child(5){animation-delay:.16s !important}
   body.gst-motion .kpi:nth-child(n+6),body.gst-motion .card:nth-child(n+6){animation-delay:.2s !important}
-  body.gst-motion .card,body.gst-motion .kpi{transition:box-shadow .2s ease,border-color .2s ease,outline-color .9s ease}
+  /* 전환 한 벌 — 등장(opacity·translate) · 조명(--gst-sa) · hover(그림자·선) · 값 표식(outline). 여러 규칙이 transition 을 나눠 들면 뒤의 것이 앞을 지운다 */
+  body.gst-motion :is(.card,.trend-card,.cross-card,.tablecard,.kpi,.hb-card,.hb-kpi,.st-card,.st-kpi,.ac-card,.sd-card,.ds-card,.ds-kpi){
+    transition:opacity .6s cubic-bezier(.2,.8,.2,1),translate .6s cubic-bezier(.2,.8,.2,1),--gst-sa .35s ease,box-shadow .2s ease,border-color .2s ease,outline-color .9s ease}
   body.gst-motion .kpi{outline:2px solid transparent;outline-offset:2px}
   body.gst-motion .card:hover{box-shadow:0 8px 24px rgba(16,24,40,.08) !important;border-color:var(--line-2,#CDD3DC) !important}
   body.gst-motion.theme-slate .card:hover{box-shadow:0 8px 24px rgba(0,0,0,.35) !important}
@@ -555,3 +560,104 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #gstSrcDetail{display:no
 }
 @keyframes gstRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes gstPop{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
+
+/* ── 설명 표시 (v172) — 꺼져 있으면(기본) 근거·산식·사용법 설명을 숨긴다. 켜는 것은 관리자(셸 「설명 표시」). 판정은 core GST.explainOn 한 곳 ──
+   주간현황도 같다(v173 — 처음엔 예외였다). 팝업 안(데이터 품질 · 표 팝업)의 설명은 사람이 «열어서» 본 것이라 그대로 둔다.
+   카드 노트의 «값» 조각(.nv · GST.setNote)은 늘 보이고, «설명» 조각(.nx)만 숨긴다 — 값 요약까지 숨기면 정보가 사라진다. */
+body:not(.gst-explain) .card-note:not(.warn):not(.hasv),
+body:not(.gst-explain) .card-note .nx,
+body:not(.gst-explain) .fill-hint,
+body:not(.gst-explain) .sub[data-i="sub"],
+body:not(.gst-explain) .hb-card h2 .s,
+body:not(.gst-explain) h2 > span.s[data-i]:not(.keep),
+body:not(.gst-explain) .hb-note,
+body:not(.gst-explain) .st-note, body:not(.gst-explain) .sec-note,
+body:not(.gst-explain) .hb-status:not(.err){display:none !important}
+body:not(.gst-explain) .gst-dq .card-note{display:block !important}
+/* 숫자의 뜻이 바뀌는 경고는 ⚠ 하나로 — 누르면 core 가 그 글을 띄운다 */
+body:not(.gst-explain) .card-note.warn{font-size:0 !important;line-height:0 !important;display:inline-flex !important;align-items:center;cursor:pointer;
+  min-height:20px;margin:2px 0;white-space:nowrap}
+body:not(.gst-explain) .card-note.warn::before{content:'⚠';font-size:14px;line-height:1;color:var(--warn)}
+/* 경고 + 값 — ⚠ 옆에 값 요약은 그대로 읽힌다(글자 크기를 되돌린다) */
+body:not(.gst-explain) .card-note.warn .nv{font-size:var(--fs-caption);line-height:1.45;margin-left:6px;white-space:normal;color:var(--txt-muted);font-weight:400}
+.gst-warn{font:inherit;font-size:13px;line-height:1;border:0;background:transparent;color:var(--warn);cursor:pointer;padding:0 3px;vertical-align:0}
+.gst-warn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* ── 차트 배치 층 (v174 · GST.chartLayout) — 묶음의 다른 기준 · 은퇴 카드는 숨기고, 빈 격자는 열 수를 맞춘다 ──
+   숨은 카드는 폭이 0 이라 PPT 전체 내보내기(pptAuto)가 저절로 건너뛴다. 되돌리기는 그 페이지의 spec 한 줄이다. */
+[data-gst-alt],[data-gst-retired],.gst-n0{display:none !important}
+.gst-n1{grid-template-columns:minmax(0,1fr) !important}
+.gst-n2{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+/* 칸 수를 줄였으니 «몇 칸 걸치기»도 푼다 — span 3 이 한 칸 격자에 남으면 보이지 않는 열이 생긴다(pm 60일 카드) */
+.gst-n1 > *,.gst-n2 > *{grid-column:auto !important}
+@media (max-width:768px){ .gst-n2{grid-template-columns:minmax(0,1fr) !important} }
+.gst-axsel{display:inline-flex;flex-wrap:wrap;gap:2px;padding:2px;margin:2px 0 10px;border:1px solid var(--line);
+  border-radius:8px;background:var(--surface-2);max-width:100%}
+.gst-axsel button{font:inherit;font-size:12px;font-weight:600;line-height:1.2;padding:4px 11px;border:0;border-radius:6px;
+  background:transparent;color:var(--txt-2);cursor:pointer;white-space:nowrap}
+.gst-axsel button:hover{color:var(--txt-main)}
+.gst-axsel button[aria-pressed="true"]{background:var(--surface);color:var(--accent-ink);box-shadow:0 1px 2px rgba(15,23,42,.10)}
+.gst-axsel button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.trend-header + .gst-axsel{margin-top:-2px}
+@media print{ .gst-axsel{display:none !important} }
+
+
+/* ============================================================
+   디자인 2.0 (v171) — 조명 · 스크롤 등장 · 값 내려앉기 · 배경 · 토스트 (core 의 GST._fxInit · _motionInit 짝)
+   사용자 요청 「과감하게 — 폭죽·설명 문구는 빼고」. 시안 4차에서 골랐고, 골라내지 않은 것(커스텀 커서·폭죽·글리치·타자기·3D 기울기·
+   뒤집기 카드·자석 버튼·바닥 격자·노이즈)은 «숫자를 읽는 화면에서 소음»이라 뺐다.
+   ⚠ 움직임은 전부 prefers-reduced-motion:no-preference 안에 있다 · 주간현황은 body.gst-motion 이 없어 걸리지 않는다.
+   ⚠ 카드에는 transform 을 쓰지 않는다 — 등장은 translate(독립 속성)이고 끝나면 none 이다(v169 · t-motion).
+   ============================================================ */
+@property --gst-sa{syntax:'<number>';inherits:false;initial-value:0}
+@media (prefers-reduced-motion:no-preference){
+  /* 조명 — 마우스 자리에 액센트 빛이 번진다(배경 그림 한 겹 · 카드 위치·크기는 안 바뀐다) */
+  body.gst-motion .gst-sp{background-image:radial-gradient(560px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--accent) calc(var(--gst-sa) * 8%),transparent),transparent 46%)}
+  body.gst-motion.theme-slate .gst-sp{background-image:radial-gradient(560px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--accent) calc(var(--gst-sa) * 15%),transparent),transparent 46%)}
+  body.gst-motion .gst-sp.gst-sp-on{--gst-sa:1}
+  /* 스크롤 등장 — 첫 화면 밖의 카드만(core 가 gst-rv 를 단다). 떠오르기(gstRise)와 겹치지 않게 그 카드는 animation 을 끈다 */
+  body.gst-motion .gst-rv{animation:none !important}
+  body.gst-motion .gst-rv:not(.gst-in){opacity:0;translate:0 22px}
+  /* 값 내려앉기 — 숫자가 처음 자리를 잡을 때 한 번(글자는 안 바꾼다) */
+  body.gst-motion .gst-vin{animation:gstValIn .62s cubic-bezier(.2,.8,.2,1) both}
+  /* 다크 배경의 오로라는 아주 느리게만 흐른다(46초 · transform 만 — 다시 그리지 않는다) */
+  body.gst-motion.theme-slate::before{animation:gstAurora 46s ease-in-out infinite alternate;will-change:transform}
+}
+@keyframes gstValIn{from{opacity:0;translate:0 7px;filter:blur(4px)}to{opacity:1;translate:none;filter:none}}
+@keyframes gstAurora{0%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(2.5%,1.5%,0) scale(1.06)}100%{transform:translate3d(-2%,2.5%,0) scale(1.03)}}
+/* 팔레트에서 고른 카드 — 잠깐 테두리 빛(1.6초 뒤 core 가 뗀다) */
+.gst-flash{outline:2px solid var(--accent) !important;outline-offset:4px !important}
+
+/* 배경 — 라이트는 위쪽에 아주 옅은 빛 두 줄기(고정) · 다크는 깊은 바탕 위 오로라 세 점.
+   body 의 배경은 캔버스로 번지므로(html 에 배경이 없다) z-index:-1 의 이 층이 본문 밑·바탕 위에 선다. */
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(900px 420px at 6% -10%,rgba(47,111,237,.075),transparent 70%),
+             radial-gradient(760px 380px at 98% -8%,rgba(122,90,248,.06),transparent 70%)}
+body.theme-slate::before{inset:-12%;
+  background:radial-gradient(42vw 42vw at 14% 8%,rgba(56,104,255,.20),transparent 62%),
+             radial-gradient(36vw 36vw at 88% 22%,rgba(139,92,246,.14),transparent 62%),
+             radial-gradient(34vw 34vw at 52% 96%,rgba(14,165,233,.10),transparent 62%)}
+/* 다크 카드 — 바탕의 빛이 아주 조금 비친다(86%). 팝업·드롭다운은 그대로 불투명(--surface)이다 */
+body.theme-slate :is(.card,.trend-card,.cross-card,.tablecard,.kpi,.hb-card,.hb-kpi,.st-card,.st-kpi,.ac-card,.sd-card,.ds-card,.ds-kpi){
+  background-color:color-mix(in srgb,var(--surface) 86%,transparent)}
+body.theme-slate .gst-insights{background:color-mix(in srgb,var(--surface) 86%,transparent)}
+
+/* 읽는 위치(긴 화면) · 혼자 열린 화면의 «받는 중» 막대 — 자기 자신만 늘인다(카드가 아니다) */
+.gst-sprog,.gst-lbar{position:fixed;left:0;right:0;top:0;height:2px;z-index:5600;pointer-events:none;opacity:0;transition:opacity .3s ease}
+.gst-sprog.on,.gst-lbar.on{opacity:1}
+.gst-sprog i,.gst-lbar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#7A5AF8 60%,#0EA5E9)}
+.gst-sprog i{transform-origin:0 50%;transform:scaleX(0)}
+.gst-lbar i{width:0;transition:width .3s ease;box-shadow:0 0 10px color-mix(in srgb,var(--accent) 60%,transparent)}
+
+/* 토스트 — 짙은 유리 알약 · 아래에서 튕겨 오른다(옛 페이지 규칙의 위치·opacity 는 그대로 쓴다) */
+#capToast{background:rgba(16,24,40,.92) !important;color:#fff !important;font-weight:600 !important;border-radius:12px !important;
+  padding:10px 18px !important;box-shadow:0 14px 34px rgba(16,24,40,.30) !important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+body.theme-slate #capToast{background:rgba(22,30,48,.94) !important;border:1px solid rgba(148,170,215,.18);box-shadow:0 16px 40px rgba(0,0,0,.6) !important}
+@media (prefers-reduced-motion:no-preference){
+  #capToast{translate:0 14px;transition:opacity .22s ease,translate .42s cubic-bezier(.2,1.35,.4,1) !important}
+  #capToast.on{translate:none}
+}
+@media print{
+  .gst-rv{opacity:1 !important;translate:none !important}
+  body::before,.gst-sprog,.gst-lbar{display:none !important}
+}

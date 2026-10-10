@@ -134,8 +134,18 @@ const sigOs = await pg.evaluate(() => document.querySelectorAll('#sigs .hb-sig')
 is(K.run === 38 && K.bm === 13 && sigOs === 2, '해외 — 가동 38 · 고장 13 · 신호등 2곳 (받은 ' + K.run + '·' + K.bm + '·' + sigOs + ')');
 await pg.click('#segRegion button[data-r="kr"]'); await pg.waitForTimeout(500); K = await kpi();
 is(K.run === 10 && K.bm === 2, '국내 — 가동 10(반납은 안 셈) · 고장 2 (받은 ' + K.run + '·' + K.bm + ')');
-const fall = await pg.evaluate(() => document.getElementById('asof').textContent);
-is(/원장이 비어/.test(fall), '국내 알람 원장이 비면 «수선실적으로 세는 중»이라고 말한다');
+const fall = await pg.evaluate(() => { const b = document.getElementById('krWarn'); return { head:document.getElementById('asof').textContent, title:b ? b.title : '' }; });
+await pg.click('#krWarn'); await pg.waitForTimeout(250);
+const fallM = await pg.evaluate(() => (document.querySelector('.gov-body') || {}).textContent || '');
+await pg.evaluate(() => GST._ovClose && GST._ovClose());
+is(/원장이 비어/.test(fall.title) && /원장이 비어/.test(fallM) && !/원장이 비어/.test(fall.head.replace('⚠', '')),
+  '국내 알람 원장이 비면 머리에 ⚠ 하나 — 누르면 «수선실적으로 집계 중» (글로 늘어놓지 않는다 · v172)');
+is(/^\d{4}-\d\d-\d\d 기준/.test(fall.head) && !/마지막 날|W\d\d/.test(fall.head), '머리는 «날짜 기준»만 — 「(자료의 마지막 날) · W41」 같은 설명이 없다 (' + fall.head + ')');
+/* 설치현황이 없는 법인(수선실적만 있는 곳 — 운영 실측 2026-10: 우한·허페이·시안·미국·일본·싱가포르)은
+   «가동률 0%»가 아니라 «자료 없음»이다. 0% 로 적으면 경영진이 «그 법인 설비가 전부 섰다»로 읽는다. */
+const noInst = await pg.evaluate(() => { const keep = { inN:D.inN, runN:D.runN }; D.inN = 0; D.runN = 0; drawKpis();
+  const d = document.querySelector('#kpis .hb-kpi[data-k="run"] .d').textContent; Object.assign(D, keep); drawKpis(); return d; });
+is(/설치현황 자료 없음/.test(noInst) && !/0%/.test(noInst), '반입이 0 이면 «가동률 0%»가 아니라 «설치현황 자료 없음» (' + noInst + ')');
 await pg.click('#segRegion button[data-r="all"]'); await pg.waitForTimeout(400);
 
 console.log('[5] 테마·언어 전환');
@@ -144,18 +154,19 @@ if (SHOT) await pg.screenshot({ path: SHOT + '/hub-light.png', fullPage:true });
 await pg.evaluate(() => document.body.classList.add('theme-slate')); await pg.waitForTimeout(300);
 if (SHOT) await pg.screenshot({ path: SHOT + '/hub-dark.png', fullPage:true });
 await pg.evaluate(() => window.setLang('en')); await pg.waitForTimeout(400);
-is(await pg.evaluate(() => /Command Center/.test(document.querySelector('[data-i="title"]').textContent)), '영어로 바뀐다');
+is(await pg.evaluate(() => /Global overview/.test(document.querySelector('[data-i="title"]').textContent)), '영어로 바뀐다');
 is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
 await pg.close();
 
-console.log('[6] 셸의 첫 탭');
+console.log('[6] 셸 — 첫 탭은 «내 화면», 관제는 두 번째 (v172)');
 const ps = await ctx.newPage(); const pse = []; ps.on('pageerror', e => pse.push(e.message));
 await ps.goto(BASE + '/', { waitUntil:'domcontentloaded' }); await ps.waitForTimeout(2500);
-const sh = await ps.evaluate(() => ({ first:(document.querySelector('.tab') || {}).dataset && document.querySelector('.tab').dataset.id,
+const sh = await ps.evaluate(() => ({ ids:Array.from(document.querySelectorAll('.tab')).map(b => b.dataset.id),
   src:(document.querySelector('iframe') || {}).src || '' }));
-is(sh.first === 'hub' && /\/hub\//.test(sh.src), '셸을 열면 통합 관제가 먼저 뜬다 (' + sh.first + ' · ' + sh.src.slice(-6) + ')');
+is(sh.ids[0] === 'home' && sh.ids[1] === 'hub' && /\/home\//.test(sh.src), '셸을 열면 «내 화면»이 먼저 · 관제는 그다음 탭 (' + sh.ids.slice(0, 3).join(' · ') + ')');
 /* 지도 — 다른 탭에 가 있는 동안(숨김) 다시 그려도, 돌아오면 지도가 제대로 선다 (v170 · 사용자 보고: 회색 상자만 남았다) */
 await ps.evaluate(() => { const o = document.getElementById('loginOverlay'); if (o) o.remove(); });
+await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(2500);
 const hubF = ps.frames().find(f => /\/hub\//.test(f.url()));
 await ps.click('.tab[data-id="cip"]'); await ps.waitForTimeout(800);
 await hubF.evaluate(() => { render(); });                 // 숨겨진 채로 다시 그린다(자동 새로고침·테마 전환과 같은 길)

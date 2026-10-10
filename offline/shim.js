@@ -113,11 +113,11 @@ GST.csvTableRows = async function(tbl){
   if(!S.tbl[tbl]) throw snapMiss('SNAP_MISSING tbl='+tbl+' — 스냅샷에 이 표가 없습니다. /offline/ 에서 데이터를 다시 내보내 주세요');
   return S.tbl[tbl];
 };
-/* pm_adjust 미니 빌더 — 읽기는 스냅샷, 쓰기는 «0행 반환»(RLS 거부 규율 그대로 — pm 이
+/* pm_adjust · ops_params · ops_targets 미니 빌더 — 읽기는 스냅샷, 쓰기는 «0행 반환»(RLS 거부 규율 그대로 — pm 이
    낙관적 반영을 스스로 되돌리고 「읽기전용」이라 말한다. 거짓 「저장됨」이 안 나온다). */
 function miniFrom(tbl){
   var q = { _w:false, _single:false };
-  ['select','eq','neq','gt','gte','lt','lte','ilike','order','limit','range','in'].forEach(function(m){ q[m]=function(){ return q; }; });
+  ['select','eq','neq','gt','gte','lt','lte','ilike','order','limit','range','in','is','not'].forEach(function(m){ q[m]=function(){ return q; }; });   // is·not — 운영 목표 읽기(v172 · 감춘 목표는 스냅샷에 애초에 없다)
   ['upsert','insert','update','delete'].forEach(function(m){ q[m]=function(){ q._w=true; return q; }; });
   q.maybeSingle = function(){ q._single=true; return q; };
   q.single = q.maybeSingle;

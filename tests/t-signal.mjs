@@ -48,7 +48,7 @@ is(R[0].why.includes('rep') && R[0].why.includes('pm') && R[0].why.includes('rec
 is(!R.find(r=>r.key==='C'), '한 번 난 설비는 순위에 없다');
 is(!R.find(r=>r.key==='D'), '미래 날짜 사건은 세지 않는다(남은 1건 → 제외)');
 const b=R.find(r=>r.key==='B'); is(b && !b.why.includes('pm'), 'PM 이 최근이면 PM 지연 아님');
-is(/14일 안 재고장 1회/.test(G.riskWhy(R[0])), '이유 문장');
+is(/14일 이내 재고장 1회/.test(G.riskWhy(R[0])), '이유 문장');
 
 console.log(fail?`\n❌ t-signal: ${pass} 통과 · ${fail} 실패`:`\n✅ t-signal: ${pass} 통과 · 0 실패`);
 process.exit(fail?1:0);

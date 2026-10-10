@@ -53,7 +53,6 @@ function fake(seed) {
   const LOG = window.__QLOG = [];
   const KEY = { sheet_wk:'src_row', sheet_mat:'src_row', sheet_inst:'src_row', sheet_alarm:'src_row', sheet_allbypass:'src_row',
                sheet_roster:'id', sheet_edu:'id', sheet_leave:'id', sheet_cip_f11:'id', sheet_cip_f16:'id', sheet_edits:'id' };
-  Object.keys(KEY).forEach(k => { if (k !== 'sheet_edits') KEY['kr_' + k] = KEY[k]; });   // 국내 데모 표(v146) — 열쇠는 운영 표와 같다
   const hash = r => { const o = Object.assign({}, r); delete o.synced_at; return 'h:' + JSON.stringify(o); };
   const toRe = (p, ci) => new RegExp('^' + String(p).replace(/\\([%_\\])/g, '\u0001$1').replace(/[.+?^${}()|[\]\\]/g, '\\$&')
       .replace(/[*%]/g, '.*').replace(/_/g, '.').replace(/\u0001(.)/g, (m, c) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) + '$', ci ? 'i' : '');
@@ -240,8 +239,8 @@ function fake(seed) {
     edit_last_wk: a => {
       const N = v => String(v == null ? '' : v).replace(/[^0-9A-Za-z]/g, '').toUpperCase(), out = {};
       if ((a.p_sns || []).length > 2000) throw new Error('too_many: ' + a.p_sns.length);
-      const T = a.p_tbl || 'sheet_wk';                                       // v146 — 어느 수선실적 표에서(국내 데모면 kr_sheet_wk)
-      if (['sheet_wk', 'kr_sheet_wk'].indexOf(T) < 0) throw new Error('bad_table: ' + T);
+      const T = a.p_tbl || 'sheet_wk';                                       // v146 — 어느 수선실적 표에서
+      if (T !== 'sheet_wk') throw new Error('bad_table: ' + T);
       new Set((a.p_sns || []).map(N)).forEach(k => {
         if (!k) return;
         const rows = (DB[T] || []).filter(r => N(r.sn_in) === k)
@@ -1416,102 +1415,28 @@ console.log('[23] 새 행 — 설비부터 고른다 · 국내·해외 출처 �
   await c5.close();
 }
 
-/* ═══ [24] 국내 데모 모드 (?site=KR · v146) ═══
-   주간현황(국내) 데모의 데이터 관리 — 국내 운영자(role kr · can_write 꺼짐)와 관리자가 «데모 표»(kr_sheet_*)만 고친다.
-   ⚠ 가짜 서버는 kr 이 운영 표 이름으로 RPC 를 부르면 bad_table 로 막는다(setup-17 _edit_key 와 같다) — 화면이 표 이름을
-     하나라도 운영 표로 적으면 그 자리가 붉게 뜬다. from() 은 RLS 상 읽기가 되므로(조회자와 같다) 질의 기록으로 따로 본다. */
-console.log('[24] 국내 데모 모드 — 데모 표만 · 국내 운영자 게이트 (v146)');
+/* ═══ [24] 국내 데모 모드는 접었다 (v176 · 사용자 확정 「국내 데모 페이지는 필요없다」) ═══
+   ?site=KR 은 더 이상 «데모 표»로 갈아타지 않는다 — 쿼리가 붙어도 본 데이터 관리(운영 표 · 관리자 게이트)다.
+   ⚠ 데모 표(kr_sheet_*)는 사람이 supabase/teardown-kr-demo.sql 로 지운다. 화면이 그 이름을 하나라도 부르면 지운 표를 찾는다. */
+console.log('[24] 국내 데모 모드는 없다 — ?site=KR 이어도 본 데이터 관리 (v176)');
 {
-  const KRME = { email:'kr@test.local', can_write:false, role:'kr' };
-  const krSeed = over => {
-    const s = seedOf(over);
-    ['sheet_wk','sheet_inst','sheet_alarm','sheet_allbypass','sheet_roster','sheet_edu','sheet_leave'].forEach(t => {
-      /* 데모 표 — 운영 표를 복제하되 실적코드를 바꿔 «어느 표를 읽었나»가 값으로도 보이게 */
-      s.tables['kr_' + t] = JSON.parse(JSON.stringify(s.tables[t])).map(r => { if (r.rs_code) r.rs_code = r.rs_code.replace('RS-T', 'RS-KR'); return r; });
-      s.cols['kr_' + t] = s.cols[t]; if (s.types[t]) s.types['kr_' + t] = s.types[t];
-    });
-    s.tables.allowed_users.push(KRME, { email:'view@test.local', can_write:false, role:'viewer' });
-    return s;
-  };
-  const ALL = [];
-  const { ctx:c24, pg:p24, pe:pe24 } = await open(krSeed({ me:KRME }), '/edit/?site=KR');
-  const q24 = async () => { const l = await qlog(p24); ALL.push(...l); return l; };
-  is(await p24.$eval('#app', e => !e.hidden) && await p24.$eval('#gate', e => e.hidden), '국내 운영자(kr · 쓰기 권한 꺼짐)는 데모 모드에서 열린다');
-  is(/국내 운영자/.test(await p24.$eval('#me', e => e.textContent)), '머리 배지 — 국내 운영자');
-  const tabs = await p24.$$eval('.tab[data-tab]', b => b.map(x => x.dataset.tab));
-  is(tabs.indexOf('mat') < 0 && ['wk','alarm','abp','inst','roster','edu','leave'].every(t => tabs.indexOf(t) >= 0), '자재 탭은 없다(데모 표가 없다) · 나머지 일곱 (' + tabs + ')');
-  is(/국내 데모/.test(await p24.$eval('h1', e => e.textContent)) && /국내 데모/.test(await p24.title()), '머리·제목이 «국내 데모»를 말한다');
-  const tu = await p24.$eval('#toUpload', a => ({ href:a.getAttribute('href'), target:a.getAttribute('target') }));
-  is(tu.href === '/upload/?site=KR' && tu.target === 'gstUploadKR', '원본 올리기도 데모 경로 · 데모 창으로 (' + JSON.stringify(tu) + ')');
-  let L = await q24();
-  is(rpcs(L, 'edit_cols').some(x => x.args.p_tbl === 'kr_sheet_inst') && rpcs(L, 'edit_delete').length > 0 && rpcs(L, 'edit_delete').every(x => x.args.p_tbl === 'kr_sheet_wk'),
-     '시작 검사도 데모 표로 묻는다 — 운영 표로 물으면 kr 은 bad_table 이라 «함수가 없다»로 잘못 읽힌다');
-  is(!/잠겨/.test(await p24.$eval('#banner', e => e.innerText)), '쓰기 기능 잠금 배너가 없다');
-
-  /* 검색 → 열기 → 고치기 — 데모 표에만 쓴다 */
-  await p24.click('#search button[type=submit]'); await p24.waitForTimeout(300);
-  is((await listKeys(p24)).length === 5, '데모 수선실적 검색 — 5행');
-  await p24.click('#list tr[data-key="0"]'); await p24.waitForTimeout(300);
-  is(await p24.$eval('#editor [data-col=rs_code]', e => e.value) === 'RS-KR-0001', '열린 행은 데모 표의 것 (실적코드 RS-KR-0001)');
-  await setField(p24, 'workers', 'KW1');
-  await p24.click('#editor [data-act=save]'); await p24.waitForTimeout(350);
-  const db = await p24.evaluate(() => ({ kr:window.__DB.kr_sheet_wk.find(r => r.src_row === 0).workers, prod:window.__DB.sheet_wk.find(r => r.src_row === 0).workers }));
-  is(db.kr === 'KW1' && db.prod === 'W1', '저장은 데모 표에만 — 운영 표는 그대로 (' + JSON.stringify(db) + ')');
-  is(/저장했습니다/.test(await snackText(p24)), '저장 알림');
-
-  /* 직전 수선실적(설비 칸 채우기)도 데모 수선실적에서 */
-  await q24();
-  const lw = await p24.evaluate(async () => { try { const m = await lastWk(['ZZT-0001']); return Array.from(m.entries()).map(([k, v]) => [k, v.map(r => r.rs_code)]); }
-    catch (e) { return 'throw ' + e.message; } });   // 운영 표로 물으면 가짜 서버가 bad_table 로 던진다 — 멈추지 말고 붉게
-  const lwq = rpcs(await q24(), 'edit_last_wk');
-  is(lwq.length === 1 && lwq[0].args.p_tbl === 'kr_sheet_wk' && JSON.stringify(lw) === '[["ZZT0001",["RS-KR-0001"]]]',
-     '직전 수선실적 — edit_last_wk(p_tbl=kr_sheet_wk) · 데모 실적이 돌아온다 (' + JSON.stringify(lw) + ')');
-
-  /* 원장·인원·교육(구분은 인원에서 빌린다)도 데모 표로 */
-  await p24.click('.tab[data-tab=alarm]'); await p24.waitForTimeout(300);
-  await p24.click('#search button[type=submit]'); await p24.waitForTimeout(300);
-  is((await listKeys(p24)).length === 3, '데모 알람 — 3행');
-  await p24.click('.tab[data-tab=roster]'); await p24.waitForTimeout(300);
-  await p24.click('#search button[type=submit]'); await p24.waitForTimeout(300);
-  is((await listKeys(p24)).length === 3, '데모 인원 — 3명');
-  await p24.click('.tab[data-tab=edu]'); await p24.waitForTimeout(300);
-  await p24.selectOption('#search [name=region]', 'kr').catch(() => {});
-  await p24.click('#search button[type=submit]'); await p24.waitForTimeout(300);
-  await q24();
-
-  /* 이력 — 데모 표의 이력만(운영 표 이력은 보여도 되돌릴 수 없고 헷갈리기만 한다) */
-  await p24.click('.tab[data-tab=hist]'); await p24.waitForTimeout(400);
-  L = sel(await q24(), 'sheet_edits');
-  const hq = L[L.length - 1], inF = hq && hq.f.find(f => f[0] === 'tbl' && f[1] === 'in');
-  is(!!inF && inF[2].length === 7 && inF[2].every(t => /^kr_sheet_/.test(t)), '이력 질의 — 데모 표 일곱의 이력만 (' + (inF && inF[2]) + ')');
-  const opts = await p24.$$eval('#hfilt [name=tbl] option', o => o.map(x => x.value));
-  is(opts.filter(Boolean).length === 7 && opts.filter(Boolean).every(v => /^kr_sheet_/.test(v)), '표 고르기 — 데모 표뿐 (CIP·ABP·옛 시트 기록 없음)');
-  const ent = await p24.$$eval('#hlist .he', es => es.map(e => ({ t:e.querySelector('.tl').textContent, r:!!e.querySelector('[data-hr]') })));
-  is(ent.length === 1 && ent[0].r, '방금 고친 데모 행의 이력 한 줄 · 되돌릴 수 있다 (' + ent.length + '줄)');
-
-  /* 지금까지의 모든 질의 — 데모 표 · 이력 · 자기 등급뿐 */
-  const tbls = Array.from(new Set(ALL.filter(x => x.tbl).map(x => x.tbl))).sort();
-  const ptbl = Array.from(new Set(ALL.filter(x => x.rpc && x.args && x.args.p_tbl).map(x => x.args.p_tbl))).sort();
-  is(tbls.every(t => /^kr_sheet_/.test(t) || t === 'sheet_edits' || t === 'allowed_users'), '읽은 표 — 데모 표 · 이력 · 자기 등급뿐 (' + tbls.join(' ') + ')');
-  is(ptbl.length > 0 && ptbl.every(t => /^kr_sheet_/.test(t)), 'RPC 의 표 — 전부 데모 표 (' + ptbl.join(' ') + ')');
-  /* 가짜 서버의 kr 규칙이 살아 있다(검사의 이빨) — 운영 표로 부르면 bad_table */
-  const fang = await p24.evaluate(async () => { const r = await window.__FDB.rpc('edit_get', { p_tbl:'sheet_wk', p_key:0 }); return r.error && r.error.message; });
-  is(/bad_table/.test(fang || ''), '가짜 서버 — kr 이 운영 표를 부르면 bad_table (setup-17 과 같다)');
-  is(pe24.length === 0, 'JS 에러 없음' + (pe24.length ? ' → ' + pe24.join(' | ') : ''));
-  await c24.close();
-
-  /* 국내 운영자가 «본» 데이터 관리를 열면 — 잠긴 문 · 갈 곳을 적는다 */
-  const b24 = await open(krSeed({ me:KRME }));
-  is(await b24.pg.$eval('#gate', e => !e.hidden) && await b24.pg.$eval('#app', e => e.hidden), '국내 운영자가 본 데이터 관리(/edit/)를 열면 잠긴 문 — 운영 표는 관리자만');
-  is(/주간 현황\(국내\)/.test(await b24.pg.$eval('#gate', e => e.innerText)), '잠긴 문이 갈 곳(「주간 현황(국내)」)을 적는다');
-  await b24.ctx.close();
-  /* 조회자는 데모 모드도 잠긴다 · 관리자(쓰기)는 열린다 */
-  const v24 = await open(krSeed({ me:{ email:'view@test.local', can_write:false, role:'viewer' } }), '/edit/?site=KR');
-  is(await v24.pg.$eval('#gate', e => !e.hidden) && /국내 운영자 전용/.test(await v24.pg.$eval('#gate', e => e.innerText)), '조회자 — 데모 모드도 잠긴 문 (문구: 관리자·국내 운영자 전용)');
-  await v24.ctx.close();
-  const a24 = await open(krSeed(), '/edit/?site=KR');
-  is(await a24.pg.$eval('#app', e => !e.hidden) && /관리자/.test(await a24.pg.$eval('#me', e => e.textContent)), '관리자(쓰기) — 데모 모드가 열린다');
+  const s24 = seedOf({});
+  s24.tables.allowed_users.push({ email:'kr@test.local', can_write:false, role:'kr' });
+  const a24 = await open(s24, '/edit/?site=KR');
+  const st = await a24.pg.evaluate(() => ({ app:!document.getElementById('app').hidden, h1:document.querySelector('h1').textContent, title:document.title,
+    tbls:TABS.map(t => t.tbl), mat:!!TAB_BY.mat, site:!!document.querySelector('.tab[data-tab=site]'), cms:cmSite() }));
+  const l24 = await qlog(a24.pg);
+  const kr = l24.filter(q => /^kr_/.test(String(q.tbl || (q.args && q.args.p_tbl) || '')));
+  is(st.app && !/국내 데모/.test(st.h1 + st.title), '관리자 — ?site=KR 이어도 본 화면이 열린다 (' + st.h1 + ')');
+  is(st.tbls.every(t => !/^kr_/.test(t)) && st.mat && st.site && st.cms === 'ALL', '표 이름이 전부 운영 표 · 자재·사이트 탭 있음 · 열 맵핑은 관리자(ALL) (' + JSON.stringify(st.tbls.slice(0, 3)) + ' …)');
+  is(kr.length === 0, '데모 표(kr_)를 한 번도 부르지 않는다 (' + kr.length + ')');
+  is(a24.pe.length === 0, 'JS 에러 없음' + (a24.pe.length ? ' → ' + a24.pe.join(' | ') : ''));
   await a24.ctx.close();
+  /* 국내 운영자(kr) 계정이 남아 있어도 — 쓰기 권한이 없으므로 잠긴 문이다(데모로 가는 안내도 없다) */
+  const b24 = await open(Object.assign(seedOf({ me:{ email:'kr@test.local', can_write:false, role:'kr' } }), {}), '/edit/?site=KR');
+  const g = await b24.pg.evaluate(() => ({ gate:!document.getElementById('gate').hidden, app:!document.getElementById('app').hidden, txt:document.getElementById('gate').innerText }));
+  is(g.gate && !g.app && !/주간 현황\(국내\)|국내 데모/.test(g.txt), 'kr 계정은 잠긴 문 · 데모 안내 없음');
+  await b24.ctx.close();
 }
 
 console.log('[25] 남의 양식(중문 머리글·제목 줄) — 열 맵핑 확인 · 내장 사전 · 수동 지정 · 저장 위치 · 똑같은 행 · 원본 교체 (v151)');
@@ -1951,9 +1876,6 @@ console.log('[30] CIP F11 · F16 도 다른 표처럼 탭이다 — 찾기 · �
   is(await pg.evaluate(() => UP_RID.cip16 === 'cipf16' && UP_RID.cip11 === 'cipf11'), '「엑셀 올리기」의 원본 교체는 CIP 업로드(cipf11·cipf16)로 간다');
   is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
   await ctx.close();
-  const k = await open(Object.assign(seedOf({}), {}), '/edit/?site=KR');
-  is(await k.pg.evaluate(() => !document.querySelector('.tab[data-tab=cip11]') && !document.querySelector('.tab[data-tab=cip16]')), '국내 데모 모드에는 CIP 탭이 없다 (데모 표가 없다)');
-  await k.ctx.close();
 }
 
 console.log('[31] 사이트 등록부 — 새 사이트를 먼저 정의하고 · CIP 표를 만들고 · 설치현황 S/N 로 행을 만들고 · 점검 항목을 더한다 (v160)');

@@ -1,0 +1,143 @@
+/* ============================================================================
+   ds.css — 2단계 «제품화»의 공용 부품 (theme.css 뒤에 싣는다)
+   ----------------------------------------------------------------------------
+   ⚠ 토큰은 새로 만들지 않는다 — theme.css 의 한 벌(--bg·--surface·--line·--txt-*·--accent·--ok/--warn/--bad · --fs-* · --sp-* · --r-*)을 쓴다
+     (v139 규약 「토큰은 한 벌」). 여기 있는 것은 그 토큰으로 만든 «부품»뿐이다.
+   ⚠ 클래스는 전부 ds- 로 시작한다 — 여덟 페이지의 인라인 CSS(.kpi · .card · .slicer …)와 섞이지 않게.
+     지금은 /home/ · /targets/ 만 쓴다. 다른 화면을 옮길 때 그 화면의 인라인 규칙을 «지우고» 이 부품으로 바꾼다
+     (늘리지 않고 없앤다 · v133 규약). docs/v2/PLAN.md 「디자인 시스템」.
+   다크 = body.theme-slate (theme.css 가 토큰만 바꾼다 — 여기에는 테마 분기가 거의 없다).
+   ============================================================================ */
+
+body.ds{padding:0 !important;min-height:100vh;background:var(--bg);color:var(--txt-main)}
+.ds-wrap{max-width:1440px;margin:0 auto;padding:20px 24px 32px;display:flex;flex-direction:column;gap:var(--sp-4)}
+@media (max-width:720px){ .ds-wrap{padding:12px 16px 24px;gap:var(--sp-3)} }
+
+/* 머리 */
+.ds-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.ds-title{font-size:var(--fs-display);font-weight:700;letter-spacing:-.3px;line-height:1.2;margin:0;color:var(--txt-main)}
+.ds-sub{font-size:var(--fs-caption);color:var(--txt-muted);margin-top:2px}
+.ds-sp{flex:1}
+.ds-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* 세그먼트(역할·구분) */
+.ds-seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-pill);padding:3px;gap:2px}
+.ds-seg button{font:inherit;font-size:12.5px;font-weight:600;border:0;background:transparent;color:var(--txt-2);
+  padding:6px 13px;border-radius:var(--r-pill);cursor:pointer;min-height:32px;transition:background .15s var(--ease),color .15s var(--ease)}
+.ds-seg button:hover{color:var(--txt-main)}
+.ds-seg button[aria-pressed="true"]{background:var(--txt-main);color:var(--surface)}
+body.theme-slate .ds-seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.ds-select{font:inherit;font-size:13px;min-height:36px;padding:0 10px;border-radius:var(--r-md);border:1px solid var(--line);
+  background:var(--surface);color:var(--txt-main);max-width:260px}
+
+/* 버튼 */
+.ds-btn{font:inherit;font-size:13px;font-weight:600;min-height:36px;padding:0 14px;border-radius:var(--r-md);cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);color:var(--txt-main);display:inline-flex;align-items:center;gap:6px;
+  transition:background .15s var(--ease),border-color .15s var(--ease)}
+.ds-btn:hover{background:var(--surface-2);border-color:var(--line-2)}
+.ds-btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.ds-btn.pri:hover{filter:brightness(1.06)}
+.ds-btn.ghost{border-color:transparent;background:transparent;color:var(--accent)}
+.ds-btn.sm{min-height:28px;padding:0 10px;font-size:12px}
+.ds-btn:disabled{opacity:.5;cursor:not-allowed}
+.ds-seg button:focus-visible,.ds-btn:focus-visible,.ds-kpi:focus-visible,.ds-row:focus-visible,.ds-select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* 상태 */
+.ds-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none;background:var(--txt-faint)}
+.ds-dot.ok{background:var(--ok)} .ds-dot.warn{background:var(--warn)} .ds-dot.bad{background:var(--bad)}
+.ds-pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);white-space:nowrap;background:var(--surface-2);color:var(--txt-muted)}
+.ds-pill.ok{background:var(--ok-soft);color:var(--ok)} .ds-pill.warn{background:var(--warn-soft);color:var(--warn)} .ds-pill.bad{background:var(--bad-soft);color:var(--bad)}
+
+/* 알림 띠 — 화면 전체의 숫자 뜻이 바뀌는 경고만(v92 규약). 보조 설명은 .ds-note 로. */
+.ds-banner{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:var(--r-lg);border:1px solid var(--line);background:var(--surface);font-size:13px;color:var(--txt-2)}
+.ds-banner.warn{border-color:color-mix(in srgb,var(--warn) 45%,transparent);background:var(--warn-soft)}
+.ds-banner.bad{border-color:color-mix(in srgb,var(--bad) 45%,transparent);background:var(--bad-soft)}
+.ds-banner b{color:var(--txt-main)}
+.ds-note{font-size:12px;color:var(--txt-muted)}
+
+/* KPI 카드 — 네 줄의 자리가 언제나 같다(이름 · 값 · 목표 · 직전 대비·분모) */
+.ds-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--sp-3)}
+.ds-kpi{position:relative;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:14px 16px 12px;display:flex;flex-direction:column;gap:6px;cursor:pointer;min-width:0;
+  transition:border-color .15s var(--ease),box-shadow .15s var(--ease)}
+.ds-kpi:hover{border-color:var(--line-2);box-shadow:var(--shadow-md)}
+.ds-kpi.st-bad{border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+.ds-kpi-l{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--txt-muted)}
+.ds-kpi-l em{font-style:normal;font-weight:500;color:var(--txt-faint);margin-left:auto;font-size:11.5px}
+.ds-kpi-v{display:flex;align-items:baseline;gap:4px;min-height:34px}
+.ds-kpi-v b{font-size:var(--fs-kpi);font-weight:700;letter-spacing:-.6px;line-height:1;font-variant-numeric:tabular-nums;color:var(--txt-main)}
+.ds-kpi-v small{font-size:13px;font-weight:600;color:var(--txt-muted)}
+.ds-spark{width:80px;height:24px;margin-left:auto;color:var(--accent);align-self:center}
+.ds-kpi.st-bad .ds-spark{color:var(--bad)} .ds-kpi.st-warn .ds-spark{color:var(--warn)}
+.ds-kpi-bar{position:relative;height:6px;border-radius:3px;background:var(--surface-2);overflow:visible}
+.ds-kpi-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--accent)}
+.ds-kpi-bar i.ok{background:var(--ok)} .ds-kpi-bar i.warn{background:var(--warn)} .ds-kpi-bar i.bad{background:var(--bad)}
+.ds-kpi-bar b{position:absolute;top:-3px;width:2px;height:12px;margin-left:-1px;border-radius:1px;background:var(--txt-main)}
+.ds-kpi-t{font-size:12px;font-weight:600;color:var(--txt-2)}
+.ds-kpi-t.ok{color:var(--ok)} .ds-kpi-t.warn{color:var(--warn)} .ds-kpi-t.bad{color:var(--bad)} .ds-kpi-t.none{color:var(--txt-faint);font-weight:500}
+.ds-kpi-d{font-size:11.5px;color:var(--txt-muted);font-variant-numeric:tabular-nums}
+.ds-kpi-d .good{color:var(--ok);font-weight:600} .ds-kpi-d .bad{color:var(--bad);font-weight:600}
+
+/* 카드·격자 */
+.ds-grid{display:grid;gap:var(--sp-3)}
+.ds-g2{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+.ds-g2e{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.ds-g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:1100px){ .ds-g2,.ds-g2e,.ds-g3{grid-template-columns:1fr} }
+.ds-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ds-card h2{font-size:var(--fs-card);font-weight:700;color:var(--txt-main);margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ds-card h2 .s{font-size:12px;font-weight:500;color:var(--txt-muted)}
+.ds-card h2 .r{margin-left:auto}
+.ds-empty{font-size:12.5px;color:var(--txt-muted);padding:8px 0}
+
+/* 줄 목록(결정할 것 · 처리함 · 위험 설비) */
+.ds-list{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.ds-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface-2);
+  border:1px solid transparent;border-radius:var(--r-md);padding:9px 11px;cursor:pointer;min-height:44px;transition:border-color .15s var(--ease)}
+.ds-row:hover{border-color:var(--line-2)}
+.ds-row[disabled]{cursor:default}
+.ds-row .t{flex:1;min-width:0}
+.ds-row .t b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ds-row .t span{display:block;font-size:11.5px;color:var(--txt-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ds-row .r{font-size:12px;color:var(--txt-muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ds-tag{font-size:11px;font-weight:700;min-width:40px;text-align:center;padding:3px 6px;border-radius:6px;color:#fff;flex:none;background:var(--accent)}
+.ds-tag.bad{background:var(--bad)} .ds-tag.warn{background:var(--warn)} .ds-tag.ok{background:var(--ok)}
+
+/* 비교 표(운영단위별 목표 대비) */
+.ds-tbl-wrap{overflow-x:auto;margin:0 -4px}
+.ds-tbl{width:100%;border-collapse:collapse;font-size:var(--fs-table);font-variant-numeric:tabular-nums}
+.ds-tbl th{font-size:var(--fs-micro);font-weight:600;color:var(--txt-muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.ds-tbl td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.ds-tbl td.n,.ds-tbl th.n{text-align:right}
+.ds-tbl tr.click{cursor:pointer} .ds-tbl tr.click:hover td{background:var(--surface-2)}
+.ds-tbl tr.on td{background:var(--accent-soft)}
+.ds-meter{position:relative;height:8px;min-width:90px;border-radius:4px;background:var(--surface-2)}
+.ds-meter i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--accent)}
+.ds-meter i.ok{background:var(--ok)} .ds-meter i.warn{background:var(--warn)} .ds-meter i.bad{background:var(--bad)}
+.ds-meter b{position:absolute;top:-3px;width:2px;height:14px;margin-left:-1px;background:var(--txt-main);border-radius:1px}
+
+/* 주별 막대(SVG 안에서 색만 받는다) */
+.ds-wkbars{width:100%;height:110px;display:block}
+.ds-wkbars .b{fill:color-mix(in srgb,var(--accent) 50%,transparent)} .ds-wkbars .b.cur{fill:var(--accent)} .ds-wkbars .b.hot{fill:var(--bad)}
+.ds-wkbars .tl{stroke:var(--txt-main);stroke-width:1.5;stroke-dasharray:4 3}
+.ds-wklab{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));font-size:10.5px;color:var(--txt-muted);text-align:center;margin-top:4px;font-variant-numeric:tabular-nums}
+
+/* 입력 표(목표 관리) */
+.ds-in{font:inherit;font-size:13px;min-height:32px;width:100%;min-width:70px;padding:0 8px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface);color:var(--txt-main);font-variant-numeric:tabular-nums}
+.ds-in:focus{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+.ds-in[readonly]{background:var(--surface-2);color:var(--txt-muted)}
+.ds-in.dirty{border-color:var(--warn)}
+
+.ds-status{font-size:12px;color:var(--txt-muted);text-align:right}
+.ds-status.err{color:var(--bad)}
+.ds-sk{background:linear-gradient(90deg,var(--surface-2),var(--surface-3),var(--surface-2));background-size:200% 100%;animation:dsSk 1.2s ease-in-out infinite;color:transparent !important}
+.ds-sk *{visibility:hidden}
+@keyframes dsSk{0%{background-position:100% 0}100%{background-position:-100% 0}}
+@media (prefers-reduced-motion:reduce){ .ds-sk{animation:none} .ds-kpi,.ds-row,.ds-btn{transition:none} }
+@media print{ .ds-seg,.ds-btn,.ds-select{display:none !important} .ds-kpi,.ds-card{break-inside:avoid;box-shadow:none} }
+
+/* 설명 표시 (v172 · core GST.explainOn) — 꺼져 있으면 부제·설명·상태 줄을 숨긴다 */
+body:not(.gst-explain) .ds-card h2 .s.x,
+body:not(.gst-explain) .ds-note.x,
+body:not(.gst-explain) .ds-banner.x,
+body:not(.gst-explain) .ds-status:not(.err){display:none !important}

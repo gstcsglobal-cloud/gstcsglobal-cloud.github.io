@@ -1,5 +1,5 @@
 /* t-motion — 움직임·모달 기본색 (v169 · 「통합관리화면」 5단계).
-   지키는 것: ① 주간현황(report · report-kr)에는 움직임 클래스가 안 붙는다(손대지 않는다) ② 나머지 화면에는 붙는다
+   지키는 것: ① 주간현황(report)에는 움직임 클래스가 안 붙는다(손대지 않는다) ② 나머지 화면에는 붙는다
    ③ 움직임 줄이기를 고르면 카드 애니메이션이 없다 ④ 팝업(.gov)의 기본색이 라이트다(테마 클래스가 아직 없어도) · 다크는 theme-slate 일 때만
    ⑤ KPI 값이 «바뀌면» 잠깐 표식이 붙고 «처음 그릴 때»는 안 붙는다 ⑥ 표식이 사라질 때 떠오르기 애니메이션이 다시 돌지 않는다.
      실행: PW_CHROMIUM=/opt/pw-browsers/chromium-1194/chrome-linux/chrome node t-motion.mjs */
@@ -38,11 +38,11 @@ async function ctxOf(reduce) {
 console.log('[1] 어느 화면에 붙나');
 let ctx = await ctxOf(false);
 const on = {};
-for (const p of ['report', 'report-kr', 'fault', 'material', 'pm', 'scrubber', 'tco', 'cip', 'hr', 'hub', 'site']) {
+for (const p of ['report', 'fault', 'material', 'pm', 'scrubber', 'tco', 'cip', 'hr', 'hub', 'site']) {
   const pg = await ctx.newPage(); await pg.goto(BASE + '/' + p + '/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(400);
   on[p] = await pg.evaluate(() => document.body.classList.contains('gst-motion')); await pg.close();
 }
-is(!on.report && !on['report-kr'], '주간현황·주간현황(국내)에는 안 붙는다');
+is(!on.report, '주간현황에는 안 붙는다');
 is(['fault','material','pm','scrubber','tco','cip','hr','hub','site'].every(p => on[p]), '나머지 화면에는 붙는다 (' + Object.keys(on).filter(k => on[k]).join(',') + ')');
 console.log('[2] 카드 · KPI');
 let pg = await ctx.newPage(); const pe = []; pg.on('pageerror', e => pe.push(e.message));
