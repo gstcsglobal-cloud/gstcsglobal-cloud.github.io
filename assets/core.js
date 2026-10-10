@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 156;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 157;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -6217,8 +6217,13 @@ GST.cmap = {
     const fixed=parseInt(o.__hi,10);
     if(fixed>0 && fixed<=rows.length){ hi=fixed-1; found=hitsOf(rows[hi])>0; }
     else { let bn=0; (rows||[]).slice(0,15).forEach(function(r,k){ const n=hitsOf(r); if(n>bn){ bn=n; hi=k; } }); found=bn>0; if(hi<0) hi=GST.cmap.guessHi(rows,-1); }
-    const header=((rows||[])[hi]||[]).map(function(x){ return String(x==null?'':x).trim(); });
-    const at={}; header.forEach(function(h,k){ const n=N(h); if(n&&at[n]==null) at[n]=k; });
+    const header=GST.cmap.compose(rows,hi);
+    const raw=((rows||[])[hi]||[]).map(function(x){ return String(x==null?'':x).trim(); });
+    /* 열쇠 셋 — 합친 이름 · 그 이름의 63바이트 자른 판(Postgres 가 표 열 이름을 그 길이에서 자른다) ·
+       원래 이름(겹치는 이름이면 첫 칸만 — 예전 동작 그대로라 교육현황 같은 옛 표가 안 움직인다) */
+    const at={}, put=function(n,k){ if(n&&at[n]==null) at[n]=k; };
+    header.forEach(function(h,k){ put(N(h),k); put(N(GST.cmap.colName(h)),k); });
+    raw.forEach(function(h,k){ put(N(h),k); });
     const idx={}, via={}, used={};
     cols.forEach(function(c){
       let i=-1, v='';
@@ -6229,6 +6234,35 @@ GST.cmap = {
     });
     const unknown=header.filter(function(h,k){ return h && !used[k]; });
     return {hi:hi, hiFound:found, header:header, idx:idx, via:via, unknown:unknown};
+  },
+  /* 표 열 이름으로 쓸 글자 — 줄바꿈·연속 공백을 한 칸으로, 그리고 63바이트(UTF-8)에서 자른다.
+     ⚠ Postgres 는 그보다 긴 열 이름을 «조용히» 자른다(NOTICE 뿐). 자른 이름을 모르고 다음 업로드에서 원래 이름으로 찾으면
+       «표에 없는 열»로 읽혀 같은 항목을 또 더하려 든다 — match 가 자른 판도 열쇠로 본다. 글자 중간에서 자르지 않는다. */
+  colName:function(h){
+    let s=String(h==null?'':h).replace(/\s+/g,' ').trim();
+    if(typeof TextEncoder==='undefined') return s;
+    const enc=new TextEncoder();
+    while(s && enc.encode(s).length>63) s=s.slice(0,-1);
+    return s.trim();
+  },
+  /* 머리글 행의 이름 — 한 행 안에서 «겹치는 이름»(Left·Right 처럼 묶음 아래 칸)은 바로 위 행의 묶음 이름을 앞에 붙인다.
+     CIP 자체관리 양식(v157 · 사용자 파일 실측): 「Motor scraper (KOXD _ DRAON Model)」 아래 Left·Right, 「Tank Filter …」 아래 Left·Right …
+     겹친 채로 두면 서로 다른 점검 항목이 한 이름이 되어 첫 칸만 잡히고 나머지는 조용히 빠진다.
+     · 묶음 이름은 병합 칸이라 왼쪽 첫 칸에만 있다 — 왼쪽으로 훑되 «겹치지 않는 머리글»을 만나면 멈춘다(다른 묶음을 빌려 오지 않는다).
+     · 겹치지 않는 이름은 손대지 않는다 — 기존 표의 열 이름과 그대로 맞물린다. */
+  compose:function(rows,hi){
+    const N=GST.SM.norm, R=(rows||[])[hi]||[], up=hi>0?((rows||[])[hi-1]||[]):[];
+    const raw=R.map(function(x){ return String(x==null?'':x).trim(); });
+    const cnt={}; raw.forEach(function(h){ const n=N(h); if(n) cnt[n]=(cnt[n]||0)+1; });
+    return raw.map(function(h,k){
+      if(!h || cnt[N(h)]<2) return h;
+      for(let j=k;j>=0;j--){
+        if(j<k && raw[j] && cnt[N(raw[j])]<2) break;
+        const b=String(up[j]==null?'':up[j]).trim();
+        if(b) return GST.cmap.colName(b+' '+h);
+      }
+      return h;
+    });
   },
   /* 그 열의 예시 값 — 사람이 «맞게 잡혔나»를 눈으로 확인하는 근거(사용자: 업로더가 맵핑을 검증할 수 있어야) */
   sample:function(rows,hi,i,n){ const out=[]; if(i<0) return out;

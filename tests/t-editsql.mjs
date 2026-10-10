@@ -17,7 +17,8 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const SQL_FILE = path.join(ROOT, 'supabase/setup-16-edit.sql');
 const LEDGER_FILE = path.join(ROOT, 'supabase/setup-10-alarm.sql');   // 원장 표·csv_window — «저장소의 그 파일»을 그대로 먹인다(v143)
 const KR_FILE = path.join(ROOT, 'supabase/setup-17-kr-demo.sql');
-const DQ_FILE = path.join(ROOT, 'supabase/setup-21-dq.sql');           // 데이터 품질 점검(v155·v156) — 읽기 전용 · 맨 끝에 먹인다      // 국내 데모 표·kr 등급(v146) — 1~11 이 끝난 뒤에 먹인다
+const DQ_FILE = path.join(ROOT, 'supabase/setup-21-dq.sql');
+const COLS_FILE = path.join(ROOT, 'supabase/setup-22-import-cols.sql');    // CIP 새 점검 항목 열 더하기(v157)           // 데이터 품질 점검(v155·v156) — 읽기 전용 · 맨 끝에 먹인다      // 국내 데모 표·kr 등급(v146) — 1~11 이 끝난 뒤에 먹인다
 
 function findBin() {
   if (process.env.PG_BIN && fs.existsSync(path.join(process.env.PG_BIN, 'initdb'))) return process.env.PG_BIN;
@@ -794,6 +795,30 @@ do $$ declare d jsonb; j jsonb; o jsonb; begin
 end $$;
 `;
 
+/* [14] CIP 새 점검 항목 열 더하기(setup-22 · v157) — 관리자만 · CIP 두 표만 · 같은 뜻의 열은 안 더함 · 63바이트 · 이력 */
+const COLS_CHECKS = String.raw`
+create table public.sheet_cip_f16(id bigint generated always as identity primary key, "NO" text, "Scrubber
+S/N" text, "CW Regulator Change
+Corrosive, Leak (Left)" text);
+grant select on public.sheet_cip_f16 to authenticated;
+do $$ declare r jsonb; e0 int; begin
+  select count(*) into e0 from sheet_edits;
+  begin perform import_add_cols('sheet_cip_f16', array['x']); perform t_ok(false, '14-1 로그인 없이 됐다'); exception when others then perform t_ok(sqlerrm = 'login', '14-1 로그인 없으면 login'); end;
+  perform t_as('ed@test.local');
+  begin perform import_add_cols('sheet_cip_f16', array['x']); perform t_ok(false, '14-2 editor 가 열을 더했다'); exception when others then perform t_ok(sqlerrm = 'forbidden', '14-2 관리자가 아니면 forbidden'); end;
+  perform t_as('boss@test.local');
+  begin perform import_add_cols('sheet_wk', array['x']); perform t_ok(false, '14-3 실적 표에 더했다'); exception when others then perform t_ok(sqlerrm like 'bad_table%', '14-3 CIP 두 표만'); end;
+  r := import_add_cols('sheet_cip_f16', array['New Item Alpha', 'CW Regulator Change Corrosive, Leak (Left)', repeat('가', 30), E'Gizmo  Kit
+Left']);
+  perform t_ok(r->'added' = '["New Item Alpha", "Gizmo Kit Left"]'::jsonb, '14-4 새 이름만 한 줄 이름으로 더한다 ' || (r->'added')::text);
+  perform t_ok(exists(select 1 from jsonb_array_elements(r->'skipped') x where x->>'why' = 'exists' and x->>'as' like 'CW Regulator Change%'), '14-5 줄바꿈이 든 옛 열과 같은 뜻이면 더하지 않는다(같은 열이 둘 생기지 않게)');
+  perform t_ok(exists(select 1 from jsonb_array_elements(r->'skipped') x where x->>'why' = 'bad_name'), '14-6 63바이트를 넘는 이름은 거절(Postgres 가 조용히 자르지 않게)');
+  perform t_ok((select count(*) from information_schema.columns where table_name = 'sheet_cip_f16' and column_name in ('New Item Alpha', 'Gizmo Kit Left')) = 2, '14-7 표에 열이 생겼다');
+  perform t_ok((select count(*) from sheet_edits) = e0 + 1 and exists(select 1 from sheet_edits where op = 'add_cols' and tbl = 'sheet_cip_f16' and edited_by = 'boss@test.local'), '14-8 이력 한 줄(누가 · 어느 표 · 무엇을)');
+  perform t_ok(not has_function_privilege('anon', 'public.import_add_cols(text,text[])', 'EXECUTE') and has_function_privilege('authenticated', 'public.import_add_cols(text,text[])', 'EXECUTE'), '14-9 anon 불가 · authenticated 가능');
+end $$;
+`;
+
 let skipped = 0;
 try {
   const init = run('initdb', ['-D', DATA, '-A', 'trust', '-U', 'postgres', '--no-sync', '-E', 'UTF8', '--locale=C']);
@@ -864,6 +889,16 @@ try {
   oksD.forEach(() => pass++);
   badsD.forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
   ok(oksD.length === 14, '[13] T_OK 가 ' + oksD.length + '개 — 기대 14개');
+
+  console.log('[14] CIP 새 점검 항목 열 더하기(v157) — 저장소의 setup-22-import-cols.sql 을 두 번 먹인다');
+  const colsText = fs.readFileSync(COLS_FILE, 'utf8');
+  for (const tag of ['setup22', 'setup22b']) { const r = psql(colsText, tag); ok(!/ERROR/.test(r.stderr), 'setup-22-import-cols.sql 적용 실패(' + tag + '):\n' + r.stderr); }
+  const pC = psql(COLS_CHECKS, 'cols-checks');
+  const outC = (pC.stderr || '') + (pC.stdout || '');
+  const oksC = outC.match(/T_OK [^\n]*/g) || [];
+  (outC.match(/ERROR:[^\n]*/g) || []).forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
+  oksC.forEach(() => pass++);
+  ok(oksC.length === 9, '[14] T_OK 가 ' + oksC.length + '개 — 기대 9개');
 } catch (e) {
   fail++; console.log('  ❌ ' + (e && e.message || e));
 } finally {

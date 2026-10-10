@@ -50,9 +50,13 @@ const STUB = '\n;GST.USE_DB=false;GST.authOn=function(){return false;};'
   +   'var n=st.eq.length?17:((base==null?60:base)+(window.__INS[st.tbl]||0));'
   +   'return Promise.resolve({count:n,data:[],error:null}).then(res,rej);}};return q;},'
   +  'rpc:async function(name,args){window.__QLOG.push({rpc:name,args:args});'
-  +   'if(name==="csv_table_cols"){var cols={sheet_edu:["No","Site","인원","사원번호","교육완료일","id","src_row","created_at","imported_at","extra"]}[args&&args.p_tbl];'
+  +   'if(name==="csv_table_cols"){var cols=(window.__CIPCOLS||{})[args&&args.p_tbl]||{sheet_edu:["No","Site","인원","사원번호","교육완료일","id","src_row","created_at","imported_at","extra"]}[args&&args.p_tbl];'
+  +   'if(cols)cols=cols.slice();'
   +    'return {data:cols||null,error:null};}'
   +   'if(name==="value_groups")return {data:window.__VG||[],error:null};'
+  /* v157 — CIP 표에 열 더하기(setup-22). 지어낸 표 사전에 «그 이름 그대로» 붙인다 */
+  +   'if(name==="import_add_cols"){var T=(window.__CIPCOLS||{})[args.p_tbl];if(!T)return {data:null,error:{message:"bad_table"}};'
+  +    'args.p_cols.forEach(function(c){T.splice(T.indexOf("id"),0,c);});return {data:{added:args.p_cols,skipped:[]},error:null};}'
   +   'if(name==="csv_window"&&window.__WIN_ERR)return {data:null,error:{message:window.__WIN_ERR}};'
   +   'if(name==="csv_upload_begin"&&window.__BEGIN_ERR)return {data:null,error:{message:window.__BEGIN_ERR}};'
   +   'if(name==="csv_window")return {data:{hit:3,rows:50,next_src:1000,dry:!!(args&&args.p_dry)},error:null};'
@@ -183,6 +187,64 @@ is(/기준 정보/.test(t9), '무엇을 하면 되는지(데이터 관리 → �
 await pg.evaluate(() => { GST.vmap.rules=[{tbl:'inst',col:'country',raw:'TAIWAN',when_col:'',when_val:'',val:'GST TAIWAN SCRUBBER'}]; GST.vmap._p=Promise.resolve(GST.vmap.rules); GST.cmap._c={}; });
 await pg.evaluate(() => window.checkFile()); await pg.waitForTimeout(1500);
 is(!/국가 이름/.test(await chk()), '규칙(TAIWAN → GST TAIWAN SCRUBBER)이 있으면 그 경고는 사라진다 — 같은 판정 함수');
+
+console.log('[10] CIP 자체관리 양식 — Detail 시트 · 묶음 머리글(Left·Right) · 이름이 바뀐 항목 제안 · 새 점검 항목 열 더하기 · 다른 FAB (v157)');
+{ /* 지어낸 양식 — 실제 Site Issue 워크북의 «모양»(제목 줄 · 시작일 줄 · 대상/Drop 줄 · 묶음 줄 · 머리글)만 따랐다 */
+  const wbC = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wbC, XLSX.utils.aoa_to_sheet([['','Status','',"Q'ty"],['','진행중','','2']]), 'Task');
+  XLSX.utils.book_append_sheet(wbC, XLSX.utils.aoa_to_sheet([['NO','Country','Old Thing'],['1','TAIWAN','N/A']]), 'Detail (Finish)');
+  XLSX.utils.book_append_sheet(wbC, XLSX.utils.aoa_to_sheet([
+    ['','작성방법'],
+    ['','','','','','','2025-01-01','2025-02-01','','2025-02-01','','2025-03-01','2026-01-01',''],
+    ['','','','','','','대상','대상','','대상','','Drop','대상',''],
+    ['','','','','','','','Gizmo Kit\n(TEST)','','Tank Kit','','','',''],
+    ['NO','Country','Customer','FAB','Scrubber\nS/N','FAB In','Valve Fix','Left','Right','Left','Right','Widget Swap\n(OLD MODEL)','New Item\nAlpha','Remark'],
+    ['1','TAIWAN','TESTCO','F16','ZZC-0001','2020-01-02','2026-02-03','N/A','Not yet','N/A','N/A','2026-03-04','2026-05-06',''],
+    ['2','TAIWAN','TESTCO','F16','ZZC-0002','2020-01-03','Not yet','2026-02-01','N/A','2026-04-01','N/A','N/A','Not yet',''],
+    ['3','','','','ZZC-0003','','','','','','','','','']]), 'Detail');
+  const cp = path.join(OUT,'cip.xlsx'); XLSX.writeFile(wbC, cp);
+  const seed = () => ({ sheet_cip_f16:['NO','Country','Customer','FAB','Scrubber S/N','FAB In','Valve Fix','Gizmo Kit (TEST) Left','Gizmo Kit (TEST) Right','Tank Kit Left','Tank Kit Right','Widget Swap','Remark','id'],
+                        sheet_cip_f11:['NO','Country','Customer','FAB','Scrubber S/N','FAB In','Valve Fix','Remark','id'] });
+  const pa = await ctx.newPage(); const pea=[]; pa.on('pageerror', e => pea.push(e.message));
+  await pa.addInitScript(s0 => { window.__ME_OBJ={email:'a@t',can_write:true,role:'admin'}; window.__CIPCOLS=s0; window.__CM=[]; }, seed());
+  await pa.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await pa.waitForTimeout(900);
+  const chkA = () => pa.evaluate(() => document.getElementById('chk').innerText);
+  await pa.selectOption('#tsel', await pa.evaluate(() => String(TABLES.findIndex(t=>t.rid==='cipf16'))));
+  await pa.setInputFiles('#fsel', cp); await pa.waitForTimeout(2500);
+  let tc = await chkA();
+  is(await pa.evaluate(() => document.getElementById('ssel').value) === 'Detail', 'Detail 시트를 고른다 (Task · Detail (Finish) 가 앞에 있어도)');
+  is(await pa.evaluate(() => { const r=(PREP&&PREP.rows)||[]; return r[0] && r[0]['Gizmo Kit (TEST) Left']==='N/A' && r[0]['Gizmo Kit (TEST) Right']==='Not yet' && r[1]['Gizmo Kit (TEST) Left']==='2026-02-01' && r[1]['Tank Kit Left']==='2026-04-01' && r[0]['Tank Kit Right']==='N/A'; }),
+     '묶음 아래 Left·Right 가 «묶음 이름 + Left/Right» 표 열로 들어간다 (겹친 이름이 첫 칸만 잡히지 않는다)');
+  is(/새 점검 항목 2개/.test(tc) && /New Item Alpha/.test(tc) && /대상 · 2026-01-01/.test(tc) && /날짜 1 · Not yet 1/.test(tc),
+     '새 점검 항목 — 이름 · 시트 위쪽 줄(대상·시작일) · 값 분포를 적는다 · 이름이 바뀐 열도 «지정 전에는» 새 항목으로 보인다 ('+(tc.match(/새 점검 항목[^\n]*/)||[''])[0]+')');
+  is(await pa.evaluate(() => !(PREP.rows[0]||{}).hasOwnProperty('New Item Alpha')), '더하기 전에는 그 열이 안 올라간다 (막지는 않는다)');
+  is(/이름이 바뀐 항목일 수 있습니다/.test(tc) && /Widget Swap/.test(tc) && await pa.evaluate(() => (PREP.rows[0]||{})['Widget Swap']==null), '표 열 「Widget Swap」 ← 파일 「Widget Swap (OLD MODEL)」 을 «제안»만 한다 (자동으로 잇지 않는다)');
+  is(/FAB 칸이 빈 행 1개/.test(tc), 'S/N 만 적힌 행을 센다 (빼지 않고 알린다)');
+  await pa.click('#chk [data-cipsug="Widget Swap"]'); await pa.waitForTimeout(2200);
+  is(await pa.evaluate(() => window.__CM.some(r=>r.tbl==='cipf16'&&r.field==='Widget Swap'&&/Widget Swap/.test(r.header)) && (PREP.rows[0]||{})['Widget Swap']==='2026-03-04'), '「이 열로 지정」 — 맵핑을 저장하고 다시 검사해 그 값이 들어간다');
+  is(/새 점검 항목 1개/.test(await chkA()), '지정한 열은 새 항목 목록에서 빠진다');
+  pa.on('dialog', d => d.accept());
+  await pa.click('#chk [data-cipcol="New Item Alpha"]');
+  await pa.click('#chk [data-cipadd]'); await pa.waitForTimeout(3200);
+  const add = await pa.evaluate(() => window.__QLOG.filter(x=>x.rpc==='import_add_cols'));
+  is(add.length===1 && add[0].args.p_tbl==='sheet_cip_f16' && JSON.stringify(add[0].args.p_cols)==='["New Item Alpha"]', '고른 항목만 import_add_cols 로 (한 줄 이름 · 그 표)');
+  tc = await chkA();
+  is(!/새 점검 항목/.test(tc) && await pa.evaluate(() => (PREP.rows[0]||{})['New Item Alpha']==='2026-05-06'), '더한 뒤 다시 검사 — 그 항목이 표 열로 올라간다');
+  await pa.selectOption('#tsel', await pa.evaluate(() => String(TABLES.findIndex(t=>t.rid==='cipf11'))));
+  await pa.setInputFiles('#fsel', cp); await pa.waitForTimeout(2500);
+  is(/FAB 은 F16 2행/.test(await chkA()) && await pa.evaluate(() => !PREP && document.getElementById('goBtn').disabled), '다른 FAB 의 파일(F16 → CIP F11)은 막는다 — 통째 교체로 남의 표를 갈아끼우지 않게');
+  is(pea.length===0, 'JS 에러 0 (관리자 화면)' + (pea.length?' → '+pea[0]:''));
+  await pa.close();
+  /* 관리자가 아니면 «더하기» 단추가 없다 — 사이트 담당자(editor · 쓰기 권한은 있음) */
+  const pv = await ctx.newPage();
+  await pv.addInitScript(s0 => { window.__ME_OBJ={email:'e@t',can_write:true,role:'editor'}; window.__CIPCOLS=s0; window.__CM=[]; }, seed());
+  await pv.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await pv.waitForTimeout(900);
+  await pv.selectOption('#tsel', await pv.evaluate(() => String(TABLES.findIndex(t=>t.rid==='cipf16'))));
+  await pv.setInputFiles('#fsel', cp); await pv.waitForTimeout(2500);
+  const tv = await pv.evaluate(() => document.getElementById('chk').innerText);
+  is(/새 점검 항목 2개/.test(tv) && /관리자\(쓰기 권한\)만/.test(tv) && await pv.evaluate(() => !document.querySelector('#chk [data-cipadd]')), '관리자가 아니면(editor) 목록만 보이고 «더하기»는 없다');
+  await pv.close();
+}
 is(pe.length===0, 'JS 에러 0' + (pe.length?' → '+pe[0]:''));
 await browser.close(); srv.close();
 console.log(fail?`\n❌ t-colmap: ${pass} 통과 · ${fail} 실패`:`\n✅ t-colmap: ${pass}/${pass} 통과`);

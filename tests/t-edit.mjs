@@ -1909,6 +1909,20 @@ console.log('[29] 데이터 품질 — 구분·운영단위·기간 필터 · �
   await ctx.close();
 }
 
+console.log('[30] CIP 현황 올리기 — 데이터 관리에서 F11·F16 을 골라 업로드 화면을 안에 띄운다 (v157)');
+{
+  const { ctx, pg, pe } = await open(seedOf({}));
+  await pg.waitForFunction(() => !!document.getElementById('toCip'), null, { timeout:8000 }).catch(() => {});
+  is(await pg.evaluate(() => { const b = document.getElementById('toCip'); return !!b && !b.hidden && b.getBoundingClientRect().width > 0; }), '머리에 「CIP 현황 올리기」 단추');
+  await pg.click('#toCip');
+  await pg.waitForFunction(() => /어느 사이트의 CIP/.test(document.body.innerText), null, { timeout:8000 }).catch(() => {});
+  await pg.click('button:has-text("CIP F16")');
+  await pg.waitForFunction(() => { const f = document.getElementById('upFrame'); return f && /rid=cipf16/.test(f.src); }, null, { timeout:8000 }).catch(() => {});
+  is(/embed=1/.test(await pg.$eval('#upFrame', e => e.src).catch(() => '')) && /rid=cipf16/.test(await pg.$eval('#upFrame', e => e.src).catch(() => '')), '고른 사이트(CIP F16)로 업로드 화면이 안에 뜬다');
+  is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
+  await ctx.close();
+}
+
 await browser.close();
 srv.close();
 console.log(fail ? `\n❌ t-edit: ${pass} 통과 · ${fail} 실패` : `\n✅ t-edit: ${pass}/${pass} 통과`);
