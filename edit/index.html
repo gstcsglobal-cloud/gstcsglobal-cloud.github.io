@@ -2982,7 +2982,7 @@ async function dqRender(force){
     + (dqF().reg || dqF().op ? ' (' + esc(dqFTxt()) + ')' : '') + ' · ' + at.getHours() + ':' + p2(at.getMinutes()) + ' 기준</span><span class="sp"></span><button class="btn sm" type="button" data-dq="re">다시 점검</button></div>'
     + (sm.old ? '<div class="banner warn">서버 점검 함수가 옛 판이라 구분·운영단위로 못 거릅니다(기간은 됩니다) — supabase/setup-21-dq.sql 을 Run 하세요.</div>' : '')
     + '<p class="hint">대시보드는 이 행들을 «그대로» 셉니다(빼지 않습니다). 행을 열어 고치면 차트가 저절로 바로잡힙니다 — 모든 수정은 「변경 이력」에 남고 되돌릴 수 있습니다.</p>'
-    + '<table class="dt dq-t"><thead><tr><th>점검</th><th class="r">건수</th><th>왜 문제인가 · 무엇을 하면 되나</th><th></th></tr></thead><tbody>'
+    + '<table data-gst-nosn class="dt dq-t"><thead><tr><th>점검</th><th class="r">건수</th><th>왜 문제인가 · 무엇을 하면 되나</th><th></th></tr></thead><tbody>'
     + Object.keys(DQ_CHECK).map(k => { const c = DQ_CHECK[k], n = sm[k] || 0;
         const fill = k === 'mannull' && n ? (sm.mfill ? '<button class="btn sm" type="button" data-dq="fill" title="작업공수 = 작업시간(분) × 작업자수 — 시스템이 쓰는 식 그대로(실측 19,881/19,888 행). 미리 보기 뒤 반영 · 되돌릴 수 있습니다">자동 채우기 ' + sm.mfill.toLocaleString() + '행</button>' : '<span class="hint">작업자수가 빈 행이라 자동으로 못 채웁니다</span>') : '';
         return '<tr class="dq-' + (n ? c.sev : 'ok') + '"><td><b>' + esc(c.l) + '</b></td><td class="r">' + n.toLocaleString() + '</td><td>' + esc(c.why) + '<br><span class="hint">' + esc(c.act) + '</span></td>'
@@ -2990,7 +2990,7 @@ async function dqRender(force){
     + '</tbody></table>';
   const spAll = d.spikes || [], sp = spAll.map((x, i) => Object.assign({ i:i }, x)).filter(x => dqOpOk(x.op || ''));
   h += '<h4>주별 공수 급증 <span class="hint">— 운영단위 × 주의 공수 합이 앞뒤 8주 중앙값의 2배를 넘고 50h 이상 많은 주' + (sp.length < spAll.length ? ' · 필터로 ' + (spAll.length - sp.length) + '주 숨김' : '') + '</span></h4>';
-  h += sp.length ? '<table class="dt dq-t"><thead><tr><th>운영단위</th><th>주(월요일)</th><th class="r">공수(h)</th><th class="r">평소(h)</th><th class="r">배</th><th class="r">24h 초과 행</th><th></th></tr></thead><tbody>'
+  h += sp.length ? '<table data-gst-nosn class="dt dq-t"><thead><tr><th>운영단위</th><th>주(월요일)</th><th class="r">공수(h)</th><th class="r">평소(h)</th><th class="r">배</th><th class="r">24h 초과 행</th><th></th></tr></thead><tbody>'
       + sp.map(x => '<tr class="dq-' + (x.nb ? 'bad' : 'warn') + '"><td>' + esc(x.op || '(빈칸)') + '</td><td>' + esc(x.wk) + ' <span class="hint">W' + GST.isoW(new Date(x.wk + 'T00:00:00')) + '</span></td><td class="r">' + Number(x.h).toLocaleString()
         + '</td><td class="r">' + Number(x.base).toLocaleString() + '</td><td class="r">' + GST.xmul(x.h / x.base) + '</td><td class="r">' + (x.nb || 0) + '</td>'
         + '<td><button class="btn sm pri" type="button" data-dq="spike" data-i="' + x.i + '">공수 큰 행부터 보기</button></td></tr>').join('') + '</tbody></table>'
@@ -3028,7 +3028,7 @@ function dqJoinHTML(){
   if(!j) return h + '<p class="hint"><button class="btn sm pri" type="button" data-dq="jre">연결 점검 하기</button></p>';
   const rows = (j.by_op || []).filter(x => dqOpOk(x.op));
   if(!rows.length) return h + '<p class="hint">이 필터에 드는 행이 없습니다.</p>';
-  h += '<table class="dt dq-t dq-j"><thead><tr><th>운영단위</th><th class="r">행</th><th class="r">설치현황에 없음</th><th class="r">설비호기·S/N 빈칸</th><th class="r">사업부 빈칸</th><th class="r">Floor 빈칸</th><th>어디서 무엇을 고치나</th></tr></thead><tbody>';
+  h += '<table data-gst-nosn class="dt dq-t dq-j"><thead><tr><th>운영단위</th><th class="r">행</th><th class="r">설치현황에 없음</th><th class="r">설비호기·S/N 빈칸</th><th class="r">사업부 빈칸</th><th class="r">Floor 빈칸</th><th>어디서 무엇을 고치나</th></tr></thead><tbody>';
   rows.forEach(x => {
     const kr = dqRegOf(x.op) === 'kr', whole = x.rows && x.miss / x.rows >= DQJ_WHOLE;
     const tips = [];
@@ -3052,7 +3052,7 @@ function dqJoinHTML(){
   const okOps = new Set(rows.filter(x => !(x.rows && x.miss / x.rows >= DQJ_WHOLE)).map(x => x.op));
   const mt = (j.miss_top || []).filter(x => okOps.has(x.op));
   h += '<h4>안 이어진 설비 <span class="hint">— 운영단위별로 행이 많은 순 · 설치현황에 그 설비가 있는지 먼저 찾아보고, 있으면 실적의 표기를, 없으면 설치현황에 그 설비를 넣습니다</span></h4>';
-  h += mt.length ? '<table class="dt dq-t"><thead><tr><th>운영단위</th><th>설비호기</th><th>S/N</th><th class="r">실적 행</th><th></th></tr></thead><tbody>'
+  h += mt.length ? '<table data-gst-nosn class="dt dq-t"><thead><tr><th>운영단위</th><th>설비호기</th><th>S/N</th><th class="r">실적 행</th><th></th></tr></thead><tbody>'
       + mt.slice(0, 60).map(x => '<tr class="dq-warn"><td>' + esc(x.op || '(빈칸)') + '</td><td>' + esc(x.eq || '—') + '</td><td>' + esc(x.sn || '—') + '</td><td class="r">' + x.n.toLocaleString() + '</td>'
         + '<td class="dq-b"><button class="btn sm pri" type="button" data-dq="jmrow" data-i="' + j.miss_top.indexOf(x) + '">실적 행 보기</button>'
         + '<button class="btn sm" type="button" data-dq="jmins" data-i="' + j.miss_top.indexOf(x) + '" title="설치현황에서 이 S/N(없으면 설비호기)을 포함 검색합니다 — 하이픈·접미 차이를 흡수합니다">설치현황에서 찾기</button></td></tr>').join('')
@@ -3071,19 +3071,100 @@ const DQ_FIX = {
   'fault.wk_blank':   { l:'알람유형 빈 BM 행 찾기', tab:'wk', oc:[{ c:'stage', op:'eq', v:'BM' }, { c:'alarm', op:'nul', v:'' }] },
   'scrubber.inst_nodate': { l:'Turn On 빈 설비 찾기', tab:'inst', oc:[{ c:'turn_on', op:'nul', v:'' }] },
   'scrubber.inst_unkstate': { l:'기준 정보에서 정하기', tab:'vmap' },
-  'fault.inst_unkstate':    { l:'기준 정보에서 정하기', tab:'vmap' }
+  'fault.inst_unkstate':    { l:'기준 정보에서 정하기', tab:'vmap' },
+  /* v162 (사용자: 「눌르면 연결 안 된 게 나와야 내가 고치지」) — 주간현황의 국내 원장·인원 신호도 «그 행»을 띄운다 */
+  'report.kr_join':    { l:'안 이어진 원장 행 보기', fn:'krJoin' },
+  'report_kr.kr_join': { l:'안 이어진 원장 행 보기', fn:'krJoin' },
+  'report.kr_drop':    { l:'빠진 원장 행 보기', fn:'krDrop' },
+  'report_kr.kr_drop': { l:'빠진 원장 행 보기', fn:'krDrop' },
+  'report.head_ex':    { l:'뺀 인원 보기', fn:'headEx' },
+  'report_kr.head_ex': { l:'뺀 인원 보기', fn:'headEx' }
 };
+/* 신호의 «구분» — 데이터 품질 탭의 구분·운영단위 필터가 화면 신호에도 걸리게 한다(사용자: 「필터 걸면 필터에 해당하는 것만」).
+   국내 원장·국내 실적·반도체연구소·국내 데모 화면은 국내 신호다(공수 분모 제외는 그 화면의 인원 필터를 이미 탔다). 표에 없는 신호는 구분이 없다(늘 보인다). */
+const DQ_SCOPE = { kr_alarm:'kr', kr_abp:'kr', kr_join:'kr', kr_drop:'kr', kr_rnd:'kr', div_join:'kr', kr_mh:'kr' };
+const dqScopeOf = (pg, key) => pg === 'report_kr' ? 'kr' : (DQ_SCOPE[key] || '');
+/* 지금 필터가 그 구분을 «빼는가» — 구분을 골랐으면 그것, 운영단위만 골랐으면 그 운영단위의 구분 */
+function dqScopeOut(sc){
+  if(!sc) return false;
+  const f = dqF(), want = f.reg || (f.op ? dqRegOf(f.op) : '');
+  return !!want && want !== sc;
+}
+/* ---------- 신호 → «그 행» (v162) ----------
+   ⚠ 판정을 새로 짜지 않는다 — 주간현황이 센 그 함수(S/N 맞춤 N()·접미 L/R/S · GST.ALARM.dedup/inner · GST.HEAD_EX)를 그대로 부른다.
+   스냅샷의 수와 조금 다를 수 있다 — 스냅샷은 그 화면의 필터·기간 기준이고 여기는 표 전체다(제목에 적는다). */
+const LEDGER_SEL = 'src_row,op,sn,inout,incl,seq';
+async function ledgerAll(t){
+  const out = []; let last = -1;
+  const have = S.cols[t.tbl] || [], sel = LEDGER_SEL.split(',').filter(c => !have.length || have.indexOf(c) >= 0).join(',');
+  for(let g = 0; g < 400; g++){
+    const r = await C.from(t.tbl).select(sel).gt('src_row', last).order('src_row').limit(1000);
+    if(r.error) throw new Error(rpcErr(r.error));
+    const d = r.data || []; if(!d.length) break;
+    d.forEach(x => out.push(x)); last = d[d.length - 1].src_row;
+  }
+  return out;
+}
+async function dqLedgerRows(kind){
+  snack('원장·설치현황을 읽는 중…', {ms:120000});
+  const res = [];
+  try{
+    const I = kind === 'join' ? await instAll() : null;
+    for(const id of ['alarm', 'abp']){
+      const t = TAB_BY[id]; if(!t) continue;
+      try{ await loadCols(t); }catch(e){}
+      const rows = (await ledgerAll(t)).filter(x => GST.ALARM.region(x.op) === GST.ORG.REGION_KR);
+      const hit = kind === 'join'
+        ? rows.filter(x => { const k = N(x.sn); return !k || !(I.bySN.has(k) || I.byStrip.has(k.replace(/[LRS]$/, '')) || I.bySN.has(k.replace(/[LRS]$/, ''))); })
+        : rows.filter(x => GST.ALARM.dedup(x) && !GST.ALARM.inner(x));
+      res.push({ id:id, keys:hit.map(x => x.src_row), n:rows.length });
+    }
+  }catch(e){ snack(e.message, {err:true}); return null; }
+  return res;
+}
+async function dqShowKeys(title, tabId, keys){
+  const t = TAB_BY[tabId]; let rows = [];
+  keys = keys.slice(0, 2000);
+  try{ for(let i = 0; i < keys.length; i += GET_MAX) [].push.apply(rows, await rpc('edit_get_many', { p_tbl:t.tbl, p_keys:keys.slice(i, i + GET_MAX) }) || []); }
+  catch(e){ snack(e.message, {err:true}); return; }
+  return dqList(title, keys, rows, tabId);
+}
+async function dqLedgerFix(kind){
+  const res = await dqLedgerRows(kind); if(!res) return;
+  const name = { alarm:'알람', abp:'올바이패스' }, what = kind === 'join' ? '설치현황과 안 이어진 국내 원장 행 (S/N)' : '집계에서 빠진 국내 원장 행 (내부·내적이 아닌 값)';
+  const has = res.filter(r => r.keys.length);
+  if(!has.length){ $('snack').className = ''; snack('지금 표 전체에서는 해당 행이 없습니다 — 스냅샷이 옛 값이면 주간현황을 새로고침해 보세요', {ms:7000}); return; }
+  const first = has[0], other = has[1];
+  await dqShowKeys(name[first.id] + ' · ' + what, first.id, first.keys);
+  if(other) snack(name[other.id] + '에도 ' + other.keys.length.toLocaleString() + '행 있습니다', { act:name[other.id] + ' 보기', fn:() => dqShowKeys(name[other.id] + ' · ' + what, other.id, other.keys), ms:15000 });
+}
+/* 공수 분모에서 뺀 인원 — 주간현황이 쓰는 GST.HEAD_EX 판정 그대로(직책·단지·라인 칸 · 현장 인원 · 재직) */
+async function dqHeadEx(){
+  const t = TAB_BY.roster; if(!t) return;
+  snack('인원현황을 읽는 중…', {ms:60000});
+  try{ if(!S.all[t.id]) S.all[t.id] = await loadAll(t); }catch(e){ snack(e.message, {err:true}); return; }
+  const g = (r, k) => vs(r[k]).trim();
+  const hit = S.all[t.id].filter(r => g(r, '현장 인원여부').toUpperCase() === 'O' && !g(r, '퇴사일')
+    && GST.HEAD_EX.hit({ role:g(r, '업무/직책'), campus:g(r, '단지'), wp:g(r, '라인') || g(r, 'Work Place'), site:g(r, 'Work Place') || g(r, '단지') || g(r, '라인') }));
+  if(!hit.length){ $('snack').className = ''; snack('지금 인원현황에서는 해당 인원이 없습니다', {ms:6000}); return; }
+  return dqList('공수 분모에서 뺀 인원 (팀장·OFFICE·단지장 — 직책·단지·라인 칸 · 현장 재직자)', hit.map(r => r[t.key]), hit.map(r => ({ key:r[t.key], row:r })), t.id);
+}
+const DQ_FN = { krJoin:() => dqLedgerFix('join'), krDrop:() => dqLedgerFix('drop'), headEx:dqHeadEx };
 /* ② 화면 신호 — 예전에 각 화면 맨 아래 있던 «데이터 품질» 표(사용자: 「데이터 관리로 옮기고」) */
 function dqPagesHTML(){
   const now = Date.now();
   let h = '<h4>화면 신호 — 여덟 화면이 마지막으로 그릴 때 찾은 자료 문제</h4><p class="hint">이 브라우저에서 그 화면을 마지막으로 연 때의 값입니다(필터가 걸려 있었다면 그 필터 기준). 최신으로 보려면 그 화면을 새로고침한 뒤 여기를 다시 여세요. 「찾아서 고치기」가 고칠 행을 그 탭에 띄웁니다.</p>';
   DQ_PAGES.forEach(pg => {
     let o = null; try{ o = JSON.parse(localStorage.getItem('gst_dq_' + pg[0]) || 'null'); }catch(e){}
+    if(pg[0] === 'report_kr' && dqScopeOut('kr')) return;   // 국내 데모 화면 — 해외로 걸면 통째로 안 보인다
     if(!o){ if(pg[0] !== 'report_kr') h += '<div class="dq-pg"><b>' + esc(pg[1]) + '</b> <span class="hint">— 이 브라우저에서 아직 한 번도 안 열었습니다</span></div>'; return; }
     const mins = Math.round((now - (o.at || 0)) / 60000), age = mins < 60 ? mins + '분 전' : mins < 2880 ? Math.round(mins / 60) + '시간 전' : Math.round(mins / 1440) + '일 전';
     h += '<div class="dq-pg"><b>' + esc(pg[1]) + '</b> <span class="hint">· ' + esc(age) + ' · 필터 ' + esc(o.filter || '전체') + '</span></div>';
     if(!o.items || !o.items.length){ h += '<p class="hint" style="margin:2px 0 8px">문제 없음</p>'; return; }
-    h += '<table class="dt dq-t"><tbody>' + o.items.map(x => { const fx = DQ_FIX[pg[0] + '.' + x.key];
+    const its = o.items.filter(x => !dqScopeOut(dqScopeOf(pg[0], x.key))), hid = o.items.length - its.length;
+    if(hid) h += '<p class="hint" style="margin:2px 0 4px">필터(' + esc(dqFTxt()) + ')에 해당 없는 신호 ' + hid + '개는 숨겼습니다.</p>';
+    if(!its.length) return;
+    h += '<table data-gst-nosn class="dt dq-t"><tbody>' + its.map(x => { const fx = DQ_FIX[pg[0] + '.' + x.key];
       return '<tr class="dq-' + esc(x.sev || 'warn') + '"><td>' + esc(x.label) + '</td><td class="r">'
       + esc(x.n == null ? '' : Number(x.n).toLocaleString() + (x.of == null ? '' : ' / ' + Number(x.of).toLocaleString())) + '</td><td class="hint">' + esc(x.act) + '</td>'
       + '<td class="dq-b">' + (fx ? '<button class="btn sm pri" type="button" data-dq="fix" data-fx="' + esc(pg[0] + '.' + x.key) + '">' + esc(fx.l) + '</button>' : '') + '</td></tr>'; }).join('') + '</tbody></table>';
@@ -3093,6 +3174,7 @@ function dqPagesHTML(){
 /* 신호 하나를 «고칠 자리»로 — 다른 탭이면 조건을 채워 검색까지 한다(그 탭에 그 열이 없으면 조건 없이 연다) */
 async function dqFix(id){
   const fx = DQ_FIX[id]; if(!fx) return;
+  if(fx.fn && DQ_FN[fx.fn]) return DQ_FN[fx.fn]();
   if(fx.dq) return dqShow('데이터 품질 · ' + DQ_CHECK[fx.dq].l, { p_check:fx.dq });
   if(fx.join){
     dqF().jt = fx.join; dqFSave();

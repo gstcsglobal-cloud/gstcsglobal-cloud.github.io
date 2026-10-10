@@ -2037,6 +2037,45 @@ console.log('[31] 사이트 등록부 — 새 사이트를 먼저 정의하고 �
   await b.ctx.close();
 }
 
+console.log('[32] 화면 신호 — 국내 원장·뺀 인원도 «그 행»을 띄운다 · 데이터 품질 필터가 신호에도 걸린다 · S/N 메뉴가 끼어들지 않는다 (v162)');
+{
+  const sd = seedOf({});
+  /* K운영 알람 한 줄(ZZA-0003)만 설치현황에 이어 둔다 — 나머지 국내 원장 행(알람 0·1 · 올바 0)이 «안 이어진» 행이다. 해외 올바(GST TAIWAN)는 국내 신호가 아니다. */
+  sd.tables.sheet_inst.push(full(INST_COLS, { src_row:50, code:'ZQ-A3', sn:'ZZA0003', country:'SEC Scrubber', customer:'TESTCO', fab:'K1-A' }));
+  sd.tables.sheet_roster.push(full(ROS_COLS, { id:20, '사원번호':'9100020', '이름(영문)':'Tester Head', '단지':'Q1', '업무/직책':'단지장', '현장 인원여부':'O', '입사일':'2020-01-01' }),
+                              full(ROS_COLS, { id:21, '사원번호':'9100021', '이름(영문)':'Tester Gone', '단지':'Q1', '업무/직책':'팀장', '현장 인원여부':'O', '입사일':'2020-01-01', '퇴사일':'2025-01-01' }));
+  const { ctx, pg, pe } = await open(sd);
+  await ctx.addInitScript(() => {
+    window.__DQ = { rows:0, work24:0, endlt:0, future:0, manmis:0, mannull:0, spikes:[] };
+    if (!sessionStorage.getItem('dq32')) { sessionStorage.setItem('dq32', '1'); localStorage.removeItem('gst_edit_dqf');
+      localStorage.setItem('gst_dq_report', JSON.stringify({ at:Date.now() - 600e3, filter:'전체', items:[
+        { key:'div_join', sev:'info', label:'국내 실적 행에 사업부가 안 붙었습니다', n:5, of:9, act:'데이터 관리 › 데이터 품질 › 설치현황 연결에서 어느 운영단위·S/N 인지 보고 고치세요' },
+        { key:'kr_join', sev:'info', label:'국내 원장 행이 설치현황과 안 이어졌습니다', n:3, of:6, act:'원장의 SEQP S/N 표기를 설치현황 S/N 과 맞추세요' },
+        { key:'head_ex', sev:'info', label:'공수 분모에서 뺀 인원 — 단지장 1명', n:1, act:'인원현황의 직책·단지·라인 값을 확인하세요' } ] })); }
+  });
+  await pg.goto(BASE + '/edit/?tab=dq', { waitUntil:'domcontentloaded' });
+  await pg.waitForFunction(() => /국내 원장 행이 설치현황과/.test((document.getElementById('dqBox') || {}).innerText || ''), null, { timeout:10000 });
+  /* 머리 줄 없는 표의 첫 줄 «…S/N 인지…» 가 S/N 머리글로 읽혀 그 열 전체에 설비 메뉴가 붙던 자리 */
+  const actTd = await pg.evaluateHandle(() => Array.from(document.querySelectorAll('#dqBox td')).find(td => /SEQP S\/N 표기/.test(td.textContent)));
+  await actTd.asElement().click(); await pg.waitForTimeout(200);
+  is(await pg.evaluate(() => !document.getElementById('gstSnMenu')), '신호의 «무엇을 하면 되나» 칸을 눌러도 설비(S/N) 메뉴가 뜨지 않는다');
+  await pg.click('[data-fx="report.kr_join"]'); await pg.waitForTimeout(900);
+  is(await pg.evaluate(() => S.tab) === 'alarm' && (await listKeys(pg)).sort().join() === '0,1', '「안 이어진 원장 행 보기」 → 알람 탭에 안 이어진 국내 행만 (이어진 K 행은 빠진다)');
+  is(/올바이패스에도 1행/.test(await snackText(pg)), '올바이패스 쪽에도 있으면 알리고 단추로 연다');
+  await pg.click('#snack button'); await pg.waitForTimeout(600);
+  is(await pg.evaluate(() => S.tab) === 'abp' && (await listKeys(pg)).join() === '0', '올바이패스 탭 — 국내 행만 (해외 올바는 국내 신호에 안 든다)');
+  await pg.click('.tab[data-tab=dq]'); await pg.waitForTimeout(500);
+  await pg.click('[data-fx="report.head_ex"]'); await pg.waitForTimeout(700);
+  is(await pg.evaluate(() => S.tab) === 'roster' && (await listKeys(pg)).join() === '20', '「뺀 인원 보기」 → 인원현황에 단지장(현장·재직)만 — 퇴사한 팀장은 빠진다 (GST.HEAD_EX 그대로)');
+  await pg.click('.tab[data-tab=dq]'); await pg.waitForTimeout(500);
+  await pg.selectOption('[data-dqf=reg]', 'os'); await pg.waitForTimeout(700);
+  const box = await pg.$eval('#dqBox', e => e.innerText);
+  is(!/국내 원장 행이 설치현황과/.test(box) && !/국내 실적 행에 사업부/.test(box) && /공수 분모에서 뺀 인원/.test(box) && /해당 없는 신호 2개는 숨겼습니다/.test(box),
+     '구분 해외로 걸면 국내 신호(원장·국내 실적)는 숨기고 몇 개 숨겼는지 적는다');
+  is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
+  await ctx.close();
+}
+
 await browser.close();
 srv.close();
 console.log(fail ? `\n❌ t-edit: ${pass} 통과 · ${fail} 실패` : `\n✅ t-edit: ${pass}/${pass} 통과`);
