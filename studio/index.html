@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>분석 작업대 · CS Global Team</title>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/chart.umd.min.js"></script>
+<script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
+<script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=164"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=164">
+<style>
+/* ============================================================
+   분석 작업대 (v168 · 사용자 요청 「통합관리화면」 4단계)
+   정해진 차트 밖의 질문 — 「F16 의 모델별 월간 고장」 같은 것 — 을 사람이 직접 만든다. 표 · 가로축 · 계열 · 값 · 거르기를 고르면
+   차트가 서고, 그 차트들을 «보드»로 묶어 저장한다(setup-25 · 설정만 담고 숫자는 담지 않는다 — 열 때마다 지금 자료로 다시 그린다).
+   ⚠ 열은 «SPEC 이 아는 이름»으로만 고른다(GST.SM.SPEC · 제1원칙) — 열 번호를 저장하지 않는다. 시트에 열이 끼어도 보드가 안 깨진다.
+   ⚠ 숫자를 «판정»하지 않는다 — 건수·합계·고유 수만 센다. BM·PM·가동 같은 판정이 필요한 지표는 정해진 화면(관제·사이트·고장분석)이 정본이다.
+   ⚠ 클래스는 sd- 로 갈라 theme.css 와 섞이지 않게. 라이트 기본 · 다크 = body.theme-slate.
+   ============================================================ */
+body.sd{padding:0 !important;min-height:100vh}
+.sd-wrap{max-width:1680px;margin:0 auto;padding:18px 24px 28px;display:flex;flex-direction:column;gap:14px}
+.sd-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.sd-title{font-size:20px;font-weight:700;letter-spacing:-.3px;color:var(--txt-main)}
+.sd-sub{font-size:12px;color:var(--txt-muted)}
+.sd-sp{flex:1}
+.sd-in,.sd-sel{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--txt-main);padding:7px 10px;border-radius:9px;min-width:0}
+.sd-btn{font:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--txt-main);padding:7px 13px;border-radius:9px;cursor:pointer;transition:border-color .15s,transform .1s;white-space:nowrap}
+.sd-btn:hover{border-color:var(--accent)} .sd-btn:active{transform:scale(.97)}
+.sd-btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.sd-btn.ghost{border-color:transparent;background:transparent;color:var(--txt-2)}
+.sd-btn:disabled{opacity:.45;cursor:not-allowed}
+.sd-main{display:grid;grid-template-columns:320px minmax(0,1fr);gap:14px;align-items:start}
+.sd-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-width:0}
+.sd-card h2{font-size:14px;font-weight:700;margin:0 0 10px;display:flex;align-items:center;gap:8px;color:var(--txt-main)}
+.sd-card h2 .s{font-size:11.5px;font-weight:500;color:var(--txt-muted)}
+.sd-form{display:flex;flex-direction:column;gap:10px;position:sticky;top:12px}
+.sd-form label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:600;color:var(--txt-2)}
+.sd-row{display:flex;gap:8px}.sd-row>*{flex:1;min-width:0}
+.sd-types{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.sd-types button{font:inherit;font-size:11px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--txt-2);padding:7px 0;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.sd-types button.on{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.sd-flt{display:flex;flex-direction:column;gap:6px}
+.sd-flt .sd-row{align-items:center}
+.sd-x{font:inherit;border:0;background:none;color:var(--txt-muted);cursor:pointer;font-size:16px;flex:none !important;padding:0 4px}
+.sd-chart{position:relative;height:380px}
+.sd-meta{font-size:11.5px;color:var(--txt-muted);margin-top:8px}
+.sd-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px}
+.sd-w{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0;animation:sdIn .35s ease both}
+@keyframes sdIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.sd-w h3{font-size:13px;font-weight:700;margin:0 0 6px;display:flex;align-items:center;gap:6px;color:var(--txt-main)}
+.sd-w h3 span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sd-w .sd-chart{height:240px}
+.sd-empty{padding:30px 10px;text-align:center;color:var(--txt-muted);font-size:12.5px}
+.sd-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.sd-tbl th{font-size:11px;color:var(--txt-muted);font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
+.sd-tbl td{padding:6px 8px;border-bottom:1px solid var(--line)}
+.sd-tbl td.n{text-align:right;font-variant-numeric:tabular-nums}
+.sd-tblw{overflow:auto;max-height:380px}
+.sd-w .sd-tblw{max-height:240px}
+.sd-warn{background:var(--warn-soft,#FFF4E0);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);border-radius:10px;padding:10px 12px;font-size:12.5px}
+.sd-status{font-size:11.5px;color:var(--txt-muted);text-align:right}
+.sd-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--txt-main);color:var(--surface);padding:9px 16px;border-radius:10px;font-size:13px;transition:opacity .2s,transform .25s;pointer-events:none;z-index:50}
+.sd-toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){.sd-w{animation:none}.sd-btn:active{transform:none}}
+@media (max-width:1100px){.sd-main{grid-template-columns:1fr}.sd-form{position:static}.sd-board{grid-template-columns:1fr}}
+@media (max-width:640px){.sd-wrap{padding:12px 16px 20px}}
+</style>
+</head>
+<body class="sd">
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
+<div class="sd-wrap">
+  <div class="sd-head">
+    <div>
+      <div class="sd-title" data-i="title">분석 작업대</div>
+      <div class="sd-sub" data-i="sub">표 · 축 · 값을 골라 차트를 만들고, 보드로 묶어 저장합니다</div>
+    </div>
+    <span class="sd-sp"></span>
+    <select class="sd-sel" id="boardSel" aria-label="보드"></select>
+    <input class="sd-in" id="boardName" maxlength="80" style="width:170px" data-i-ph="board_name" placeholder="보드 이름">
+    <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--txt-2)"><input type="checkbox" id="boardShared"><span data-i="shared">공유</span></label>
+    <button type="button" class="sd-btn pri" id="saveBtn" data-i="save">보드 저장</button>
+    <button type="button" class="sd-btn" id="newBtn" data-i="new_board">새 보드</button>
+    <button type="button" class="sd-btn ghost" id="rmBtn" data-i="remove">보드 감추기</button>
+  </div>
+  <div id="warn"></div>
+
+  <section class="sd-main">
+    <div class="sd-card sd-form" id="form">
+      <h2 data-i="build">차트 만들기</h2>
+      <label><span data-i="f_src">자료</span><select class="sd-sel" id="fSrc"></select></label>
+      <div><div style="font-size:11.5px;font-weight:600;color:var(--txt-2);margin-bottom:4px" data-i="f_type">모양</div>
+        <div class="sd-types" id="fType"></div></div>
+      <div class="sd-row">
+        <label><span data-i="f_x">가로축 (나누는 기준)</span><select class="sd-sel" id="fX"></select></label>
+        <label style="max-width:96px"><span data-i="f_bucket">날짜 묶기</span><select class="sd-sel" id="fBucket"><option value="month" data-i="b_month">월</option><option value="week" data-i="b_week">주</option><option value="day" data-i="b_day">일</option></select></label>
+      </div>
+      <label><span data-i="f_series">계열 (색으로 나누기 · 선택)</span><select class="sd-sel" id="fSeries"></select></label>
+      <div class="sd-row">
+        <label><span data-i="f_agg">값</span><select class="sd-sel" id="fAgg"><option value="count" data-i="a_count">건수</option><option value="sum" data-i="a_sum">합계</option><option value="avg" data-i="a_avg">평균</option><option value="distinct" data-i="a_distinct">고유 수</option></select></label>
+        <label><span data-i="f_val">값 열</span><select class="sd-sel" id="fVal"></select></label>
+      </div>
+      <div class="sd-row">
+        <label><span data-i="f_date">기간 기준 열</span><select class="sd-sel" id="fDate"></select></label>
+        <label style="max-width:80px"><span data-i="f_top">상위</span><input class="sd-in" id="fTop" type="number" min="3" max="60" value="12"></label>
+      </div>
+      <div class="sd-row"><input class="sd-in" id="fFrom" type="date" aria-label="from"><input class="sd-in" id="fTo" type="date" aria-label="to"></div>
+      <div><div style="display:flex;align-items:center;font-size:11.5px;font-weight:600;color:var(--txt-2);margin-bottom:4px"><span data-i="f_filter" style="flex:1">거르기 (모두 만족)</span><button type="button" class="sd-btn ghost" id="addF" style="padding:2px 6px" data-i="add_filter">+ 조건</button></div>
+        <div class="sd-flt" id="fFlt"></div></div>
+      <label><span data-i="f_title">차트 제목 (비우면 자동)</span><input class="sd-in" id="fTitle" maxlength="80"></label>
+      <div class="sd-row"><button type="button" class="sd-btn pri" id="addW" data-i="add_board">보드에 추가</button><button type="button" class="sd-btn" id="updW" data-i="update_w" hidden>이 차트 고치기</button></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <div class="sd-card">
+        <h2><span id="pvTitle" data-i="preview">미리 보기</span><span class="s" id="pvMeta"></span></h2>
+        <div id="pv"></div>
+        <div class="sd-meta" data-i="drill_hint">막대·점·조각을 누르면 그 행들이 뜹니다</div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;margin:2px 2px 10px"><b style="font-size:14px" data-i="board">보드</b><span class="sd-sub" style="margin-left:8px" id="boardMeta"></span></div>
+        <div class="sd-board" id="board"></div>
+      </div>
+    </div>
+  </section>
+  <div class="sd-status" id="status"></div>
+</div>
+<div class="sd-toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
+GST.needVer && GST.needVer(164);
+GST.authGate();
+
+const T={
+ko:{title:'분석 작업대',sub:'표 · 축 · 값을 골라 차트를 만들고, 보드로 묶어 저장합니다',board_name:'보드 이름',shared:'공유',save:'보드 저장',new_board:'새 보드',remove:'보드 감추기',
+  build:'차트 만들기',f_src:'자료',f_type:'모양',f_x:'가로축 (나누는 기준)',f_bucket:'날짜 묶기',b_month:'월',b_week:'주',b_day:'일',
+  f_series:'계열 (색으로 나누기 · 선택)',f_agg:'값',a_count:'건수',a_sum:'합계',a_avg:'평균',a_distinct:'고유 수',f_val:'값 열',f_date:'기간 기준 열',f_top:'상위',
+  f_filter:'거르기 (모두 만족)',add_filter:'+ 조건',f_title:'차트 제목 (비우면 자동)',add_board:'보드에 추가',update_w:'이 차트 고치기',
+  preview:'미리 보기',drill_hint:'막대·점·조각을 누르면 그 행들이 뜹니다',board:'보드',
+  t_bar:'막대',t_hbar:'가로',t_line:'선',t_doughnut:'도넛',t_table:'표',
+  none:'— 없음 —',all:'전체',other:'그 밖',blank:'(빈칸)',rows:'{n}행',of:'{n}행 중 {m}행',
+  src_wk:'수선실적',src_mat:'자재실적',src_inst:'설치현황',
+  new_board_n:'새 보드',my:'내 보드',shared_by:'공유 · {o}',local:'이 PC 에만 저장됨',
+  saved:'보드를 저장했습니다',removed:'보드를 감췄습니다',fail:'저장하지 못했습니다',added:'보드에 넣었습니다',empty_board:'아직 차트가 없습니다 — 왼쪽에서 만들고 「보드에 추가」',
+  nosql:'서버 준비가 아직 안 됐습니다 — 보드는 이 PC 에만 저장됩니다(관리자가 supabase/setup-25-layouts.sql 을 Run 하면 계정에 저장됩니다)',
+  not_yours:'남의 보드는 고칠 수 없습니다 — 「새 보드」로 복사해 저장하세요',
+  edit:'고치기',del:'빼기',up:'위로',loading:'자료를 불러오는 중…',fail_src:'이 자료를 읽지 못했습니다',
+  no_rows:'조건에 맞는 행이 없습니다',val_need:'합계·평균은 숫자 열을 고르세요',sum_of:'{a} · {v}',by:'{y} — {x}별',by2:'{y} — {x} · {s}별'},
+en:{title:'Analysis studio',sub:'Pick a table · axis · value to build charts, then save them as a board',board_name:'Board name',shared:'Shared',save:'Save board',new_board:'New board',remove:'Hide board',
+  build:'Build a chart',f_src:'Data',f_type:'Type',f_x:'X axis (split by)',f_bucket:'Date bucket',b_month:'Month',b_week:'Week',b_day:'Day',
+  f_series:'Series (split by color · optional)',f_agg:'Value',a_count:'Count',a_sum:'Sum',a_avg:'Average',a_distinct:'Distinct',f_val:'Value column',f_date:'Date column for range',f_top:'Top',
+  f_filter:'Filters (all must match)',add_filter:'+ Filter',f_title:'Chart title (auto if empty)',add_board:'Add to board',update_w:'Update this chart',
+  preview:'Preview',drill_hint:'Click a bar · point · slice to see its rows',board:'Board',
+  t_bar:'Bar',t_hbar:'H-bar',t_line:'Line',t_doughnut:'Donut',t_table:'Table',
+  none:'— none —',all:'All',other:'Other',blank:'(blank)',rows:'{n} rows',of:'{m} of {n} rows',
+  src_wk:'Repair records',src_mat:'Material records',src_inst:'Installations',
+  new_board_n:'New board',my:'My boards',shared_by:'Shared · {o}',local:'Saved on this PC only',
+  saved:'Board saved',removed:'Board hidden',fail:'Could not save',added:'Added to board',empty_board:'No charts yet — build one on the left and «Add to board»',
+  nosql:'Server is not ready — boards are saved on this PC only (an administrator must run supabase/setup-25-layouts.sql)',
+  not_yours:'You cannot change someone else\'s board — use «New board» to save a copy',
+  edit:'Edit',del:'Remove',up:'Up',loading:'Loading…',fail_src:'Could not read this data',
+  no_rows:'No rows match',val_need:'Pick a numeric column for sum/average',sum_of:'{a} · {v}',by:'{y} — by {x}',by2:'{y} — by {x} · {s}'},
+zh:{title:'分析工作台',sub:'选择表 · 轴 · 值来制作图表，并保存为看板',board_name:'看板名称',shared:'共享',save:'保存看板',new_board:'新看板',remove:'隐藏看板',
+  build:'制作图表',f_src:'数据',f_type:'类型',f_x:'横轴（分组依据）',f_bucket:'日期分组',b_month:'月',b_week:'周',b_day:'日',
+  f_series:'系列（按颜色区分 · 可选）',f_agg:'值',a_count:'件数',a_sum:'合计',a_avg:'平均',a_distinct:'去重数',f_val:'值列',f_date:'期间依据列',f_top:'前',
+  f_filter:'筛选（全部满足）',add_filter:'+ 条件',f_title:'图表标题（留空则自动）',add_board:'加入看板',update_w:'修改此图表',
+  preview:'预览',drill_hint:'点击柱 · 点 · 扇区可查看对应行',board:'看板',
+  t_bar:'柱',t_hbar:'横柱',t_line:'线',t_doughnut:'环形',t_table:'表',
+  none:'— 无 —',all:'全部',other:'其他',blank:'（空白）',rows:'{n}行',of:'{n}行中 {m}行',
+  src_wk:'维修实绩',src_mat:'材料实绩',src_inst:'安装现况',
+  new_board_n:'新看板',my:'我的看板',shared_by:'共享 · {o}',local:'仅保存在此电脑',
+  saved:'已保存看板',removed:'已隐藏看板',fail:'保存失败',added:'已加入看板',empty_board:'还没有图表 — 在左侧制作后点「加入看板」',
+  nosql:'服务器尚未准备好 — 看板仅保存在此电脑（管理员运行 supabase/setup-25-layouts.sql 后可保存到账号）',
+  not_yours:'不能修改他人的看板 — 请用「新看板」另存',
+  edit:'修改',del:'移除',up:'上移',loading:'正在加载…',fail_src:'无法读取此数据',
+  no_rows:'没有符合条件的行',val_need:'合计·平均请选择数值列',sum_of:'{a} · {v}',by:'{y} — 按{x}',by2:'{y} — 按{x} · {s}'},
+ja:{title:'分析ワークベンチ',sub:'表 · 軸 · 値を選んでチャートを作り、ボードにまとめて保存します',board_name:'ボード名',shared:'共有',save:'ボード保存',new_board:'新しいボード',remove:'ボードを隠す',
+  build:'チャートを作る',f_src:'データ',f_type:'形',f_x:'横軸（分ける基準）',f_bucket:'日付のまとめ',b_month:'月',b_week:'週',b_day:'日',
+  f_series:'系列（色で分ける · 任意）',f_agg:'値',a_count:'件数',a_sum:'合計',a_avg:'平均',a_distinct:'ユニーク数',f_val:'値の列',f_date:'期間の基準列',f_top:'上位',
+  f_filter:'絞り込み（すべて満たす）',add_filter:'+ 条件',f_title:'チャート名（空なら自動）',add_board:'ボードに追加',update_w:'このチャートを修正',
+  preview:'プレビュー',drill_hint:'棒 · 点 · 扇形を押すとその行が出ます',board:'ボード',
+  t_bar:'棒',t_hbar:'横棒',t_line:'線',t_doughnut:'ドーナツ',t_table:'表',
+  none:'— なし —',all:'全体',other:'その他',blank:'（空欄）',rows:'{n}行',of:'{n}行中 {m}行',
+  src_wk:'修理実績',src_mat:'資材実績',src_inst:'設置現況',
+  new_board_n:'新しいボード',my:'自分のボード',shared_by:'共有 · {o}',local:'このPCにのみ保存',
+  saved:'ボードを保存しました',removed:'ボードを隠しました',fail:'保存できませんでした',added:'ボードに追加しました',empty_board:'まだチャートがありません — 左で作って「ボードに追加」',
+  nosql:'サーバーの準備ができていません — ボードはこのPCにのみ保存されます（管理者が supabase/setup-25-layouts.sql を実行するとアカウントに保存）',
+  not_yours:'他人のボードは変更できません — 「新しいボード」で複製して保存してください',
+  edit:'修正',del:'外す',up:'上へ',loading:'読み込み中…',fail_src:'このデータを読めませんでした',
+  no_rows:'条件に合う行がありません',val_need:'合計·平均は数値の列を選んでください',sum_of:'{a} · {v}',by:'{y} — {x}別',by2:'{y} — {x} · {s}別'}
+};
+let LANG=(function(){ try{ return sessionStorage.getItem('gst_lang')||'ko'; }catch(e){ return 'ko'; } })(); if(!T[LANG]) LANG='ko';
+const t=k=>(T[LANG]&&T[LANG][k]!=null)?T[LANG][k]:(T.ko[k]!=null?T.ko[k]:k);
+const fmt=(s,o)=>String(s).replace(/\{(\w+)\}/g,(m,k)=>o[k]!=null?o[k]:m);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=n=>Number(n||0).toLocaleString(undefined,{maximumFractionDigits:1});
+const TYPES=['bar','hbar','line','doughnut','table'];
+const TYPE_ICON={bar:'▮▮',hbar:'☰',line:'⟋',doughnut:'◔',table:'▦'};
+/* 자료 — SPEC 이 아는 표만. gid 로 읽어 화면 둘(관제·사이트)과 같은 캐시를 쓴다. */
+const SRC={ wk:{spec:'wk', gid:'646668307', key:'studio_wk'}, mat:{spec:'mat', gid:'31302669', key:'studio_mat'}, inst:{spec:'inst', gid:'891608329', key:'studio_inst'} };
+
+const DATA={};   // src → {rows:[obj], fields:[{k,label,kind}]}
+const S={cfg:null, board:{id:null,name:'',shared:false,owner:null,widgets:[]}, boards:[], editIx:-1, sql:true, charts:{}};
+
+/* ===== 자료 읽기 — 열은 SPEC 이 찾는다(제1원칙) ===== */
+async function loadSrc(src){
+  if(DATA[src]) return DATA[src];
+  const D=SRC[src], SP=GST.SM.SPEC[D.spec];
+  const r=await GST.fetchCSVCached(GST.sheetUrl(D.gid), D.key);
+  const m=GST.SM.map(r.rows, SP), keys=Object.keys(SP.fields).filter(k=>m.C[k]!=null&&m.C[k]>=0);
+  const rows=r.rows.slice(m.hi+1).map(row=>{ const o={}; keys.forEach(k=>{ const v=GST.SM.val(row,m.C,k); o[k]=v==null?'':String(v).trim(); }); return o; })
+    .filter(o=>keys.some(k=>o[k]!==''));
+  // 열 성격 — 표본으로 날짜·숫자를 가린다(값의 70% 이상)
+  const smp=rows.length>3000?rows.filter((_,i)=>i%Math.ceil(rows.length/3000)===0):rows;
+  const fields=keys.map(k=>{ const vals=smp.map(o=>o[k]).filter(v=>v!=='');
+    const dn=vals.filter(v=>/^\d{4}[-.\/]\s?\d{1,2}[-.\/]\s?\d{1,2}/.test(v)).length, nn=vals.filter(v=>!isNaN(GST.numv(v))).length;
+    const kind=vals.length&&dn/vals.length>=0.7?'date':vals.length&&nn/vals.length>=0.7?'num':'text';
+    return {k, label:[].concat(SP.fields[k])[0], kind}; });
+  return (DATA[src]={rows, fields});
+}
+
+/* ===== 계산 — 건수·합계·평균·고유 수만(판정 없음) ===== */
+function bucketOf(v, b){ const d=GST.toDate(v); if(!d) return '';
+  const y=d.getUTCFullYear(), mo=String(d.getUTCMonth()+1).padStart(2,'0');
+  if(b==='month') return y+'-'+mo; if(b==='week') return GST.isoW(d); return y+'-'+mo+'-'+String(d.getUTCDate()).padStart(2,'0'); }
+function run(cfg){
+  const DS=DATA[cfg.src]; if(!DS) return null;
+  const F=Object.fromEntries(DS.fields.map(f=>[f.k,f]));
+  const xF=F[cfg.x]; if(!xF) return {err:'x'};
+  const from=cfg.from||'', to=cfg.to||'', dF=cfg.dateF&&F[cfg.dateF]?cfg.dateF:'';
+  const flt=(cfg.filters||[]).filter(f=>f&&f.f&&F[f.f]);
+  const rows=DS.rows.filter(o=>{
+    if(dF&&(from||to)){ const d=GST.toDate(o[dF]); if(!d) return false; const s=GST.fmtD(d); if(from&&s<from) return false; if(to&&s>to) return false; }
+    return flt.every(f=>{ const v=o[f.f]||''; return f.op==='ne'?v!==f.v:f.op==='has'?v.toLowerCase().indexOf(String(f.v).toLowerCase())>=0:v===f.v; });
+  });
+  const keyX=o=>{ const v=xF.kind==='date'?bucketOf(o[cfg.x], cfg.bucket||'month'):o[cfg.x]; return v===''?t('blank'):v; };
+  const sF=cfg.series&&F[cfg.series]?cfg.series:'';
+  const keyS=o=>{ const v=o[sF]; return v===''||v==null?t('blank'):v; };
+  const agg=cfg.agg||'count', vF=cfg.val&&F[cfg.val]?cfg.val:'';
+  if((agg==='sum'||agg==='avg')&&!(vF&&F[vF].kind==='num')) return {err:'val', rows};
+  const cell={}, groups={};
+  rows.forEach(o=>{ const x=keyX(o), s=sF?keyS(o):'_'; const k=x+'\u0001'+s;
+    const c=cell[k]||(cell[k]={x,s,n:0,sum:0,cnt:0,set:new Set(),rows:[]}); c.n++; c.rows.push(o);
+    if(vF){ const v=GST.numv(o[vF]); if(!isNaN(v)){ c.sum+=v; c.cnt++; } if(agg==='distinct') c.set.add(o[vF]); }
+    (groups[x]=groups[x]||{x,n:0}).n++; });
+  const val=c=>agg==='count'?c.n:agg==='sum'?c.sum:agg==='avg'?(c.cnt?c.sum/c.cnt:0):(vF?c.set.size:c.n);
+  // 가로축 순서 — 날짜면 시간순(전부), 아니면 값 큰 순 상위 N + 「그 밖」
+  let xs=Object.keys(groups);
+  const xv={}; Object.values(cell).forEach(c=>{ xv[c.x]=(xv[c.x]||0)+(agg==='avg'?c.n:val(c)); });
+  const top=Math.max(3,Math.min(60,+cfg.top||12));
+  let otherX=[];
+  if(xF.kind==='date') xs.sort();
+  else { xs.sort((a,b)=>xv[b]-xv[a]); if(xs.length>top){ otherX=xs.slice(top-1); xs=xs.slice(0,top-1).concat([t('other')]); } }
+  const mapX=x=>otherX.indexOf(x)>=0?t('other'):x;
+  let ss=['_'];
+  if(sF){ const sv={}; Object.values(cell).forEach(c=>{ sv[c.s]=(sv[c.s]||0)+c.n; }); ss=Object.keys(sv).sort((a,b)=>sv[b]-sv[a]);
+    if(ss.length>8) ss=ss.slice(0,7).concat([t('other')]); }
+  const mapS=s=>sF&&ss.indexOf(s)<0?t('other'):s;
+  const M={}; Object.values(cell).forEach(c=>{ const k=mapX(c.x)+'\u0001'+mapS(c.s);
+    const d=M[k]||(M[k]={n:0,sum:0,cnt:0,set:new Set(),rows:[]}); d.n+=c.n; d.sum+=c.sum; d.cnt+=c.cnt; c.set.forEach(v=>d.set.add(v)); d.rows=d.rows.concat(c.rows); });
+  const series=ss.map(s=>({s, data:xs.map(x=>{ const d=M[x+'\u0001'+s]; return d?val(d):0; }), rows:xs.map(x=>{ const d=M[x+'\u0001'+s]; return d?d.rows:[]; })}));
+  return {xs, series, total:DS.rows.length, n:rows.length, F, sF};
+}
+function autoTitle(cfg){
+  const DS=DATA[cfg.src]; if(!DS) return '';
+  const F=Object.fromEntries(DS.fields.map(f=>[f.k,f])), xl=F[cfg.x]?F[cfg.x].label:'', sl=cfg.series&&F[cfg.series]?F[cfg.series].label:'';
+  const y=cfg.agg==='count'||!cfg.agg?t('src_'+cfg.src)+' '+t('a_count'):fmt(t('sum_of'),{a:t('a_'+cfg.agg),v:F[cfg.val]?F[cfg.val].label:''});
+  return sl?fmt(t('by2'),{y,x:xl,s:sl}):fmt(t('by'),{y,x:xl});
+}
+
+/* ===== 그리기 — Chart.js(자체 사본) · 테마 잉크는 GST.chartTheme() ===== */
+function drawInto(host, cfg, id){
+  if(S.charts[id]){ try{ S.charts[id].destroy(); }catch(e){} delete S.charts[id]; }
+  const R=run(cfg);
+  if(!R){ host.innerHTML='<div class="sd-empty">'+esc(t('loading'))+'</div>'; return null; }
+  if(R.err==='val'){ host.innerHTML='<div class="sd-empty">'+esc(t('val_need'))+'</div>'; return R; }
+  if(R.err||!R.n){ host.innerHTML='<div class="sd-empty">'+esc(t('no_rows'))+'</div>'; return R; }
+  const show=(si,xi)=>{ const s=R.series[si], rows=s.rows[xi]||[], DS=DATA[cfg.src];
+    const cols=DS.fields.slice(0,10); GST.rowsModal(R.xs[xi]+(R.sF?' · '+s.s:''), cols.map(f=>f.label), rows.slice(0,2000).map(o=>cols.map(f=>o[f.k]))); };
+  if(cfg.type==='table'){
+    host.innerHTML='<div class="sd-tblw"><table class="sd-tbl" data-gst-nosn><thead><tr><th>'+esc(R.F[cfg.x].label)+'</th>'+R.series.map(s=>'<th class="n">'+esc(s.s==='_'?t('a_'+(cfg.agg||'count')):s.s)+'</th>').join('')+'</tr></thead><tbody>'
+      +R.xs.map((x,xi)=>'<tr><td>'+esc(x)+'</td>'+R.series.map((s,si)=>'<td class="n"><a href="#" data-s="'+si+'" data-x="'+xi+'">'+nf(s.data[xi])+'</a></td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+    host.querySelectorAll('a[data-s]').forEach(a=>a.onclick=e=>{ e.preventDefault(); show(+a.dataset.s, +a.dataset.x); });
+    return R;
+  }
+  host.innerHTML='<div class="sd-chart"><canvas></canvas></div>';
+  const TH=GST.chartTheme(), pal=(TH.pal8||TH.pal||['#2F6FED','#12873F','#B7670A','#D92D20','#7A5AF8','#0E9384','#C11574','#667085']);
+  const dough=cfg.type==='doughnut', hb=cfg.type==='hbar';
+  const ds=dough?[{data:R.series[0].data, backgroundColor:R.xs.map((_,i)=>pal[i%pal.length]), borderWidth:0}]
+    :R.series.map((s,i)=>({label:s.s==='_'?t('a_'+(cfg.agg||'count')):s.s, data:s.data, backgroundColor:pal[i%pal.length], borderColor:pal[i%pal.length],
+      borderWidth:cfg.type==='line'?2:0, borderRadius:cfg.type==='line'?0:4, maxBarThickness:56, tension:.25, pointRadius:cfg.type==='line'?2.5:0, fill:false}));
+  const ch=new Chart(host.querySelector('canvas'), { type:dough?'doughnut':cfg.type==='line'?'line':'bar',
+    data:{labels:R.xs, datasets:ds},
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:hb?'y':'x', animation:{duration:window.matchMedia('(prefers-reduced-motion:reduce)').matches?0:500},
+      plugins:{ legend:{display:dough||R.series.length>1, position:'bottom', labels:{color:TH.txt, boxWidth:10}}, tooltip:{intersect:false} },
+      scales:dough?{}:{ x:{stacked:R.series.length>1&&cfg.type!=='line', ticks:{color:TH.txt, maxRotation:45, autoSkip:true}, grid:{color:hb?TH.grid:'transparent'}},
+        y:{stacked:R.series.length>1&&cfg.type!=='line', beginAtZero:true, ticks:{color:TH.txt}, grid:{color:hb?'transparent':TH.grid}} },
+      onClick:(e,els)=>{ if(!els.length) return; const el=els[0]; show(dough?0:el.datasetIndex, el.index); } } });
+  S.charts[id]=ch;
+  return R;
+}
+
+/* ===== 만들기 칸 ===== */
+function defaultCfg(src){ const DS=DATA[src]; const d=DS?DS.fields.find(f=>f.kind==='date'):null, x=DS?(DS.fields.find(f=>f.kind==='text')||DS.fields[0]):null;
+  return {src, type:'bar', x:x?x.k:'', bucket:'month', series:'', agg:'count', val:'', dateF:d?d.k:'', from:'', to:'', top:12, filters:[], title:''}; }
+function fieldOpts(sel, kinds, blank){ const DS=DATA[S.cfg.src]; const L=(DS?DS.fields:[]).filter(f=>!kinds||kinds.indexOf(f.kind)>=0);
+  return (blank?'<option value="">'+esc(t('none'))+'</option>':'')+L.map(f=>'<option value="'+f.k+'"'+(f.k===sel?' selected':'')+'>'+esc(f.label)+'</option>').join(''); }
+function drawForm(){
+  const c=S.cfg;
+  document.getElementById('fSrc').innerHTML=Object.keys(SRC).map(k=>'<option value="'+k+'"'+(k===c.src?' selected':'')+'>'+esc(t('src_'+k))+'</option>').join('');
+  document.getElementById('fType').innerHTML=TYPES.map(k=>'<button type="button" data-t="'+k+'"'+(k===c.type?' class="on"':'')+'><span aria-hidden="true">'+TYPE_ICON[k]+'</span>'+esc(t('t_'+k))+'</button>').join('');
+  document.querySelectorAll('#fType button').forEach(b=>b.onclick=()=>{ c.type=b.dataset.t; drawForm(); preview(); });
+  document.getElementById('fX').innerHTML=fieldOpts(c.x);
+  const xK=DATA[c.src]&&(DATA[c.src].fields.find(f=>f.k===c.x)||{}).kind;
+  document.getElementById('fBucket').disabled=xK!=='date'; document.getElementById('fBucket').value=c.bucket||'month';
+  document.getElementById('fSeries').innerHTML=fieldOpts(c.series,['text'],true);
+  document.getElementById('fAgg').value=c.agg||'count';
+  document.getElementById('fVal').innerHTML=fieldOpts(c.val, c.agg==='distinct'?null:['num'], true);
+  document.getElementById('fVal').disabled=(c.agg||'count')==='count';
+  document.getElementById('fDate').innerHTML=fieldOpts(c.dateF,['date'],true);
+  document.getElementById('fFrom').value=c.from||''; document.getElementById('fTo').value=c.to||'';
+  document.getElementById('fTop').value=c.top||12; document.getElementById('fTitle').value=c.title||'';
+  const FL=document.getElementById('fFlt');
+  FL.innerHTML=(c.filters||[]).map((f,i)=>'<div class="sd-row"><select class="sd-sel" data-ff="'+i+'">'+fieldOpts(f.f)+'</select>'
+    +'<select class="sd-sel" data-fo="'+i+'" style="max-width:70px"><option value="eq"'+(f.op==='eq'||!f.op?' selected':'')+'>=</option><option value="ne"'+(f.op==='ne'?' selected':'')+'>≠</option><option value="has"'+(f.op==='has'?' selected':'')+'>∋</option></select>'
+    +'<input class="sd-in" data-fv="'+i+'" list="dl'+i+'" value="'+esc(f.v||'')+'"><datalist id="dl'+i+'">'+valueList(f.f).map(v=>'<option value="'+esc(v)+'">').join('')+'</datalist>'
+    +'<button type="button" class="sd-x" data-fx="'+i+'" aria-label="x">×</button></div>').join('');
+  FL.querySelectorAll('[data-ff]').forEach(e=>e.onchange=()=>{ c.filters[+e.dataset.ff].f=e.value; drawForm(); preview(); });
+  FL.querySelectorAll('[data-fo]').forEach(e=>e.onchange=()=>{ c.filters[+e.dataset.fo].op=e.value; preview(); });
+  FL.querySelectorAll('[data-fv]').forEach(e=>e.oninput=()=>{ c.filters[+e.dataset.fv].v=e.value; preview(); });
+  FL.querySelectorAll('[data-fx]').forEach(e=>e.onclick=()=>{ c.filters.splice(+e.dataset.fx,1); drawForm(); preview(); });
+  document.getElementById('updW').hidden=S.editIx<0;
+}
+function valueList(k){ const DS=DATA[S.cfg.src]; if(!DS||!k) return []; const C={}; DS.rows.forEach(o=>{ const v=o[k]; if(v) C[v]=(C[v]||0)+1; });
+  return Object.keys(C).sort((a,b)=>C[b]-C[a]).slice(0,200); }
+let _pv=0;
+function preview(){ cancelAnimationFrame(_pv); _pv=requestAnimationFrame(()=>{
+  const c=S.cfg; document.getElementById('pvTitle').textContent=c.title||autoTitle(c);
+  const R=drawInto(document.getElementById('pv'), c, 'pv');
+  document.getElementById('pvMeta').textContent=R&&!R.err?fmt(t('of'),{n:nf(R.total),m:nf(R.n)}):''; }); }
+async function setSrc(src){
+  S.cfg=Object.assign(defaultCfg(src), {src});
+  document.getElementById('pv').innerHTML='<div class="sd-empty">'+esc(t('loading'))+'</div>';
+  try{ await loadSrc(src); }catch(e){ document.getElementById('pv').innerHTML='<div class="sd-empty">'+esc(t('fail_src'))+'</div>'; console.warn('[studio]',e); return; }
+  S.cfg=defaultCfg(src); drawForm(); preview();
+}
+
+/* ===== 보드 ===== */
+async function drawBoard(){
+  const B=document.getElementById('board'), W=S.board.widgets;
+  Object.keys(S.charts).filter(k=>k!=='pv').forEach(k=>{ try{ S.charts[k].destroy(); }catch(e){} delete S.charts[k]; });
+  document.getElementById('boardMeta').textContent=(S.sql?'':t('local'))+(S.board.owner&&S.board.owner!==me()?' · '+fmt(t('shared_by'),{o:S.board.owner.replace(/@.*/,'')}):'');
+  if(!W.length){ B.innerHTML='<div class="sd-empty" style="grid-column:1/-1">'+esc(t('empty_board'))+'</div>'; return; }
+  B.innerHTML=W.map((c,i)=>'<div class="sd-w" style="animation-delay:'+(i*50)+'ms"><h3><span>'+esc(c.title||autoTitle(c)||'…')+'</span>'
+    +'<button type="button" class="sd-btn ghost" data-ed="'+i+'" style="padding:2px 6px">'+esc(t('edit'))+'</button>'
+    +(i?'<button type="button" class="sd-btn ghost" data-up="'+i+'" style="padding:2px 6px">↑</button>':'')
+    +'<button type="button" class="sd-btn ghost" data-rm="'+i+'" style="padding:2px 6px">×</button></h3><div data-wh="'+i+'"><div class="sd-empty">'+esc(t('loading'))+'</div></div></div>').join('');
+  B.querySelectorAll('[data-ed]').forEach(b=>b.onclick=async()=>{ const i=+b.dataset.ed; S.editIx=i; await loadSrc(W[i].src); S.cfg=JSON.parse(JSON.stringify(W[i])); drawForm(); preview(); window.scrollTo({top:0,behavior:'smooth'}); });
+  B.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.up; const x=W.splice(i,1)[0]; W.splice(i-1,0,x); drawBoard(); });
+  B.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ W.splice(+b.dataset.rm,1); if(S.editIx>=W.length) S.editIx=-1; drawBoard(); drawForm(); });
+  for(let i=0;i<W.length;i++){ try{ await loadSrc(W[i].src); }catch(e){ continue; } const h=B.querySelector('[data-wh="'+i+'"]'); if(h) drawInto(h, W[i], 'w'+i); }
+}
+const me=()=>((GST._me&&GST._me.email)||'').toLowerCase();
+const LKEY='gst_studio_boards';
+function localBoards(){ try{ return JSON.parse(localStorage.getItem(LKEY)||'[]'); }catch(e){ return []; } }
+async function loadBoards(){
+  S.boards=[];
+  try{
+    const C=await GST.db();
+    if(C){ const r=await C.from('user_layouts').select('id,owner,name,config,shared,updated_at').order('updated_at',{ascending:false}).limit(200);
+      if(r.error){ S.sql=!/user_layouts|relation|schema cache/i.test(r.error.message||''); if(S.sql) console.warn('[studio] 보드 읽기 실패', r.error); }
+      else { S.sql=true; S.boards=(r.data||[]).map(b=>({id:b.id,name:b.name,owner:b.owner,shared:b.shared,widgets:(b.config&&b.config.widgets)||[]})); }
+    } else S.sql=false;
+  }catch(e){ S.sql=false; }
+  if(!S.sql) S.boards=localBoards().map((b,i)=>Object.assign({id:'L'+i}, b));
+  document.getElementById('warn').innerHTML=S.sql?'':'<div class="sd-warn">'+esc(t('nosql'))+'</div>';
+  drawBoardSel();
+}
+function drawBoardSel(){
+  const sel=document.getElementById('boardSel');
+  sel.innerHTML='<option value="">'+esc(t('new_board_n'))+'</option>'+S.boards.map(b=>'<option value="'+b.id+'"'+(String(b.id)===String(S.board.id)?' selected':'')+'>'+esc(b.name)+(b.owner&&b.owner!==me()?' · '+esc(b.owner.replace(/@.*/,'')):'')+'</option>').join('');
+  document.getElementById('boardName').value=S.board.name||'';
+  document.getElementById('boardShared').checked=!!S.board.shared;
+  document.getElementById('rmBtn').hidden=!S.board.id;
+}
+async function saveBoard(asNew){
+  const name=document.getElementById('boardName').value.trim()||t('new_board_n'), shared=document.getElementById('boardShared').checked;
+  const cfg={v:1, widgets:S.board.widgets};
+  if(!S.sql){ const L=localBoards(); const ix=String(S.board.id||'').startsWith('L')&&!asNew?+String(S.board.id).slice(1):-1;
+    const b={name, widgets:S.board.widgets}; if(ix>=0) L[ix]=b; else L.unshift(b); try{ localStorage.setItem(LKEY, JSON.stringify(L.slice(0,50))); }catch(e){}
+    S.board.name=name; await loadBoards(); S.board.id='L'+(ix>=0?ix:0); drawBoardSel(); toast(t('saved')); return; }
+  try{ const C=await GST.db();
+    const own=!S.board.owner||S.board.owner===me();
+    const r=await C.rpc('layout_save',{p_id:asNew||!own?null:S.board.id, p_name:name, p_config:cfg, p_shared:shared});
+    if(r.error){ toast(/not_yours/.test(r.error.message)?t('not_yours'):t('fail')); console.warn(r.error); return; }
+    S.board.id=r.data.id; S.board.name=name; S.board.shared=shared; S.board.owner=me(); await loadBoards(); toast(t('saved'));
+  }catch(e){ toast(t('fail')); console.warn(e); }
+}
+async function removeBoard(){
+  if(!S.board.id) return;
+  if(!S.sql){ const L=localBoards(); L.splice(+String(S.board.id).slice(1),1); try{ localStorage.setItem(LKEY, JSON.stringify(L)); }catch(e){} }
+  else { try{ const C=await GST.db(); const r=await C.rpc('layout_remove',{p_id:S.board.id}); if(r.error){ toast(/not_yours/.test(r.error.message)?t('not_yours'):t('fail')); return; } }catch(e){ toast(t('fail')); return; } }
+  S.board={id:null,name:'',shared:false,owner:null,widgets:[]}; await loadBoards(); drawBoard(); toast(t('removed'));
+}
+let _tt=0; function toast(s){ const e=document.getElementById('toast'); e.textContent=s; e.classList.add('on'); clearTimeout(_tt); _tt=setTimeout(()=>e.classList.remove('on'),2600); }
+
+/* ===== 틀 ===== */
+function bind(){
+  const c=()=>S.cfg;
+  document.getElementById('fSrc').onchange=e=>setSrc(e.target.value);
+  document.getElementById('fX').onchange=e=>{ c().x=e.target.value; drawForm(); preview(); };
+  document.getElementById('fBucket').onchange=e=>{ c().bucket=e.target.value; preview(); };
+  document.getElementById('fSeries').onchange=e=>{ c().series=e.target.value; preview(); };
+  document.getElementById('fAgg').onchange=e=>{ c().agg=e.target.value; drawForm(); preview(); };
+  document.getElementById('fVal').onchange=e=>{ c().val=e.target.value; preview(); };
+  document.getElementById('fDate').onchange=e=>{ c().dateF=e.target.value; preview(); };
+  document.getElementById('fFrom').onchange=e=>{ c().from=e.target.value; preview(); };
+  document.getElementById('fTo').onchange=e=>{ c().to=e.target.value; preview(); };
+  document.getElementById('fTop').onchange=e=>{ c().top=+e.target.value||12; preview(); };
+  document.getElementById('fTitle').oninput=e=>{ c().title=e.target.value; document.getElementById('pvTitle').textContent=e.target.value||autoTitle(c()); };
+  document.getElementById('addF').onclick=()=>{ (c().filters=c().filters||[]).push({f:(DATA[c().src].fields.find(f=>f.kind==='text')||{}).k||'',op:'eq',v:''}); drawForm(); };
+  document.getElementById('addW').onclick=()=>{ S.board.widgets.push(JSON.parse(JSON.stringify(c()))); S.editIx=-1; drawBoard(); drawForm(); toast(t('added')); };
+  document.getElementById('updW').onclick=()=>{ if(S.editIx<0) return; S.board.widgets[S.editIx]=JSON.parse(JSON.stringify(c())); S.editIx=-1; drawBoard(); drawForm(); };
+  document.getElementById('boardSel').onchange=e=>{ const b=S.boards.find(x=>String(x.id)===e.target.value);
+    S.board=b?{id:b.id,name:b.name,shared:b.shared,owner:b.owner||null,widgets:JSON.parse(JSON.stringify(b.widgets||[]))}:{id:null,name:'',shared:false,owner:null,widgets:[]};
+    S.editIx=-1; drawBoardSel(); drawBoard(); drawForm(); };
+  document.getElementById('saveBtn').onclick=()=>saveBoard(false);
+  document.getElementById('newBtn').onclick=()=>{ S.board={id:null,name:'',shared:false,owner:null,widgets:S.board.widgets.slice()}; drawBoardSel(); document.getElementById('boardName').focus(); };
+  document.getElementById('rmBtn').onclick=removeBoard;
+}
+function applyLang(){
+  document.documentElement.lang=LANG;
+  try{ GST.applyI18n && GST.applyI18n(t, LANG); }catch(e){ document.querySelectorAll('[data-i]').forEach(el=>{ el.textContent=t(el.dataset.i); }); }
+  if(S.cfg){ drawForm(); preview(); drawBoard(); } drawBoardSel();
+}
+window.setLang=function(l){ if(T[l]){ LANG=l; applyLang(); } };
+window.addEventListener('message',e=>{ const d=e.data||{}; if(d.type==='gst-lang'&&T[d.lang]){ LANG=d.lang; applyLang(); } });
+/* 테마가 바뀌면 차트 잉크를 다시 칠한다(캔버스는 CSS 변수를 못 읽는다) */
+try{ new MutationObserver(()=>{ if(S.cfg){ preview(); drawBoard(); } }).observe(document.body,{attributes:true,attributeFilter:['class']}); }catch(e){}
+async function load(){
+  document.getElementById('status').textContent=t('loading');
+  Object.keys(DATA).forEach(k=>delete DATA[k]);
+  await setSrc(S.cfg?S.cfg.src:'wk');
+  await GST.loadMe().catch(()=>{});
+  await loadBoards(); drawBoard();
+  document.getElementById('status').textContent='✅ '+new Date().toLocaleString();
+}
+window.loadData=load;
+bind(); applyLang();
+load().catch(e=>{ console.error('[studio] 읽기 실패', e); document.getElementById('status').textContent=GST.failNote?GST.failNote(e):String(e&&e.message||e); });
+GST.startAutoRefresh && GST.startAutoRefresh(30);
+</script>
+<script>GST.initSync();</script>
+</body>
+</html>

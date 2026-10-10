@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 163;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 164;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -4059,6 +4059,100 @@ GST.riskWhy=function(r){
   const T=GST.RISK_T[(GST._lang&&GST._lang())||'ko']||GST.RISK_T.ko;
   const n={bm90:r.bm90, rep:r.rep, up:r.bm90-r.bmPrev, recent:'', pm:''};
   return r.why.map(function(w){ return T[w].replace('{n}',n[w]); }).join(' · ');
+};
+
+/* ---------- 운영 현황 읽기·판정 한 벌 — 통합 관제 · 사이트 상세가 같이 쓴다 (v167) ----------
+   두 화면이 «같은 설비 · 같은 고장»을 다른 식으로 세면 관제의 숫자와 사이트 화면의 숫자가 갈린다(제2원칙).
+   그래서 파싱·BM/PM 판정·위험 순위 입력을 여기 한 곳에 둔다. 판정은 전부 정본을 부른다:
+   설비 대수 GST.EQ · PM GST.PM.is · 위험 GST.riskRank · 국내/해외 GST.ORG.region · 워런티 GST.WARR.
+   BM 규칙은 주간현황과 같다(v92 · v115) — 해외 = 수선실적 BM(PM 판정 뺌) · 국내 = 알람 원장(한 사건 첫 줄 · 내적)이고,
+   원장이 비면 국내도 수선실적 BM(KR_ON). ⚠ 주간현황(report)은 이 모듈을 쓰지 않는다 — 그 화면은 손대지 않는다(사용자 지시). */
+GST.ops = {
+  get KR(){ return GST.ORG.REGION_KR; }, get OS(){ return GST.ORG.REGION_OS; },
+  cityOf:function(op,cty){
+    const u=GST.upk(op||'');
+    if(cty==='CHINA'){ const C=['WUHAN','HEFEI','XIAN','WUXI']; for(let i=0;i<C.length;i++) if(u.indexOf(C[i])>=0) return C[i]; }
+    return cty||'';
+  },
+  parseInst:function(rows){
+    const m=GST.SM.map(rows, GST.SM.SPEC.inst), C=m.C, v=function(r,k){ return GST.SM.val(r,C,k); };
+    return rows.slice(m.hi+1).map(function(r){
+      const op=String(v(r,'country')||'').trim(), cust=String(v(r,'customer')||'').trim(), fab=String(v(r,'fab')||'').trim();
+      const cty=GST.ORG.country(op)||GST.ORG.country(cust)||GST.ORG.country(fab);
+      return { op:op, region:GST.ORG.region(op)||GST.ORG.region(cty), cty:cty, cityKey:GST.ops.cityOf(op,cty),
+        cust:cust, campus:GST.ORG.campus(v(r,'location'),fab,op)||'', fab:fab, model:String(v(r,'model')||'').trim(),
+        sn:String(v(r,'sn')||'').trim(), code:String(v(r,'code')||'').trim(),
+        state:v(r,'state'), stateRaw:String(v(r,'state')||'').trim(), d:GST.toDate(v(r,'fabIn'))||GST.toDate(v(r,'turnOn')),
+        warr:GST.WARR(v(r,'warranty')), wd:GST.toDate(v(r,'warrantyDate')) };
+    }).filter(function(x){ return x.sn||x.code; });
+  },
+  parseWk:function(rows){
+    const m=GST.SM.map(rows, GST.SM.SPEC.wk), C=m.C, v=function(r,k){ return GST.SM.val(r,C,k); };
+    return rows.slice(m.hi+1).map(function(r){
+      const op=String(v(r,'op')||'').trim();
+      return { op:op, region:GST.ORG.region(op), stage:String(v(r,'stage')||'').trim().toUpperCase(), action:v(r,'action'),
+        campus:GST.ORG.campus(v(r,'campus'),v(r,'line'),op)||'', line:String(v(r,'line')||'').trim(),
+        model:String(v(r,'model')||'').trim(), proc:String(v(r,'proc')||'').trim(), rs:String(v(r,'rsCode')||'').trim(),
+        d:GST.toDate(v(r,'dStart')), sn:String(v(r,'snIn')||'').trim(), code:String(v(r,'eqNo')||'').trim(),
+        man:GST.numv(v(r,'manMin')),
+        desc:String(v(r,'cause')||v(r,'phenom')||v(r,'alarm')||'').trim(), src:'wk' };
+    }).filter(function(x){ return x.d; });
+  },
+  /* 원장(csvTableRows 의 2차원 배열 · 첫 줄이 열 이름) */
+  parseLedger:function(rows){
+    if(!rows||rows.length<2) return [];
+    const h=rows[0], ix={}; h.forEach(function(k,i){ ix[k]=i; });
+    const g=function(r,k){ return ix[k]==null?'':String(r[ix[k]]==null?'':r[ix[k]]).trim(); };
+    return rows.slice(1).map(function(r){ return { snk:g(r,'sn_key'), sn:g(r,'sn'), d:GST.toDate(g(r,'occur_date').slice(0,10)),
+      seq:g(r,'seq'), inout:g(r,'inout'), incl:g(r,'incl'), op0:g(r,'op'),
+      desc:g(r,'alarm')||g(r,'alarm_name')||g(r,'cause'), src:'kr' }; });
+  },
+  /* 원장 행의 조직 축은 설비 S/N 으로 설치현황에서 얻는다(v92 — 원장에 담지 않는다). 못 붙으면 접미 L/R/S 를 떼고 한 번 더. */
+  joinLedger:function(INST, KRA){
+    const ix={};
+    INST.forEach(function(x){ const k=GST.ALARM.key(x.sn); if(!k) return; if(!ix[k]) ix[k]=x; const b=GST.ALARM.keyBase(x.sn); if(!ix[b]) ix[b]=x; });
+    KRA.forEach(function(x){ const o=ix[x.snk]||ix[GST.ALARM.keyBase(x.snk)]||null;
+      x.op=o?o.op:''; x.region=o?o.region:''; x.campus=o?o.campus:''; x.code=o?o.code:''; x.model=o?o.model:''; x.fab=o?o.fab:''; });
+    return KRA;
+  },
+  /* 기준일 = 자료의 마지막 날(오늘을 넘지 않는다) — 수동 업로드라 «오늘»로 자르면 이번 주가 빈다 */
+  asOf:function(R){
+    let last=0; R.WK.forEach(function(x){ const v=x.d.getTime(); if(v>last) last=v; });
+    R.KRA.forEach(function(x){ if(x.d){ const v=x.d.getTime(); if(v>last) last=v; } });
+    const now=Date.now(); return new Date(Math.min(now, last||now));
+  },
+  /* 고장(BM) 행 — ok(x) 는 화면의 거르기(구분·운영단위 등). 국내 원장 행은 {region, op} 를 채워 돌려준다. */
+  bm:function(R, ok){
+    const KR=GST.ops.KR, OS=GST.ops.OS, KR_ON=R.KRA.length>0, out=[];
+    R.WK.forEach(function(x){ if(x.stage!=='BM'||GST.PM.is(x)) return; if(KR_ON&&x.region===KR) return; if(ok&&!ok(x)) return; out.push(x); });
+    if(KR_ON) R.KRA.forEach(function(x){ if(!x.d||!GST.ALARM.dedup(x)||!GST.ALARM.inner(x)) return; if(x.region===OS) return;
+      const y=Object.assign({}, x, {region:x.region||KR, op:x.op||x.op0||'—'}); if(ok&&!ok(y)) return; out.push(y); });
+    return out;
+  },
+  pm:function(R, ok){ return R.WK.filter(function(x){ return GST.PM.is(x)&&(!ok||ok(x)); }); },
+  /* 고장 위험 — 고장분석 「고장 위험 설비 TOP 20」과 같은 식(수선실적 BM·PM · v148) */
+  risk:function(R, asOf, ok, n){
+    const DAY=864e5, t0=asOf.getTime(), rk=function(x){ return GST.snKey(x.sn||x.code); };
+    const bm=R.WK.filter(function(x){ return x.stage==='BM'&&!GST.PM.is(x)&&(!ok||ok(x))&&x.d.getTime()>=t0-180*DAY&&rk(x); })
+      .map(function(x){ return {key:rk(x),label:x.code||x.sn,site:x.op,d:x.d}; });
+    const pm=R.WK.filter(function(x){ return GST.PM.is(x)&&(!ok||ok(x))&&x.d.getTime()>=t0-400*DAY&&rk(x); })
+      .map(function(x){ return {key:rk(x),d:x.d}; });
+    return GST.riskRank({bm:bm, pm:pm, asOf:asOf, n:n||100000});
+  },
+  /* 읽기 — 화면 둘이 같은 세 자료를 같은 캐시 열쇠로 읽는다(한 번 받으면 다른 화면은 캐시에서). 실패한 것은 fails 에 남긴다. */
+  load:async function(){
+    const r=await Promise.allSettled([
+      GST.fetchCSVCached(GST.sheetUrl('891608329'),'hub_inst'),
+      GST.fetchCSVCached(GST.sheetUrl('646668307'),'hub_wk'),
+      GST.csvTableRows('sheet_alarm', GST._KR_COLS_A)
+    ]);
+    const fails=[];
+    const INST=r[0].status==='fulfilled'?GST.ops.parseInst(r[0].value.rows):(fails.push('inst'),[]);
+    const WK=r[1].status==='fulfilled'?GST.ops.parseWk(r[1].value.rows):(fails.push('wk'),[]);
+    const KRA=r[2].status==='fulfilled'?GST.ops.parseLedger(r[2].value):[];
+    GST.ops.joinLedger(INST, KRA);
+    return {INST:INST, WK:WK, KRA:KRA, fails:fails};
+  }
 };
 
 /* 입력률이 낮은 열의 차트에 «왜 비어 보이는지»를 적는다 (v135 · 7단계에 core 로).

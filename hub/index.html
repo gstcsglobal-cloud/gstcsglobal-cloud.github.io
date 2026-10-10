@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=163"></script>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=163">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=164"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=164">
 <style>
 /* ============================================================
    통합 관제 (v165 · 사용자 요청 「통합관리화면 신규 구축」)
@@ -206,7 +206,7 @@ body.hb{padding:0 !important;min-height:100vh}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer && GST.needVer(162);
+GST.needVer && GST.needVer(164);
 GST.authGate();
 
 /* ── 세계 육지 점지도 ──
@@ -219,7 +219,7 @@ const GEO={ KOREA:[36.4,127.9], TAIWAN:[23.8,121.0], USA:[39.5,-98.5], JAPAN:[36
   CHINA:[34,108.9], WUHAN:[30.6,114.3], HEFEI:[31.8,117.2], XIAN:[34.3,108.9], WUXI:[31.5,120.3] };
 
 const T={
-ko:{title:'통합 관제',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'위험',warn:'주의',ok:'정상',sigCols:'이번 주 고장 · 위험 설비',
+ko:{title:'통합 관제',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'위험',warn:'주의',ok:'정상',sigCols:'이번 주 고장 · 위험 설비',
   mapT:'글로벌 설치 현황',mapS:'원 크기 = 반입 설비 · 색 = 신호',qT:'처리할 일',heatT:'주차별 고장 히트맵',heatS:'진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록',
   byOp:'운영단위',byCampus:'단지',loading:'자료를 불러오는 중…',asof:'기준 {d} (자료의 마지막 날) · {w}',
   k_run:'가동 설비',k_run_d:'반입 {n}대 · 가동률 {p}%',k_bm:'이번 주 고장(BM)',k_pm:'이번 주 PM',k_risk:'고장 위험 설비',k_risk_d:'14일 안 재고장 {n}대',
@@ -236,7 +236,7 @@ ko:{title:'통합 관제',all:'전체',kr:'국내',os:'해외',sigT:'운영단�
   l_date:'날짜',l_op:'운영단위',l_campus:'단지',l_eq:'설비',l_sn:'S/N',l_src:'출처',l_desc:'내용',l_score:'점수',l_why:'근거',l_wd:'워런티 만료일',l_state:'설비상태',
   src_wk:'수선실적',src_kr:'알람 원장',week:'주',none:'자료 없음',fail:'일부 자료를 못 읽었습니다',
   dq_tip:'데이터 관리에서 고치기'},
-en:{title:'Command Center',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Critical',warn:'Watch',ok:'Normal',sigCols:'BM this week · at-risk units',
+en:{title:'Command Center',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Critical',warn:'Watch',ok:'Normal',sigCols:'BM this week · at-risk units',
   mapT:'Global installed base',mapS:'size = installed units · color = signal',qT:'To do',heatT:'Weekly failure heatmap',heatS:'darker = above usual · click a cell for that week\'s failures',
   byOp:'Operating unit',byCampus:'Campus',loading:'Loading…',asof:'As of {d} (last data day) · {w}',
   k_run:'Running units',k_run_d:'{n} installed · {p}% running',k_bm:'Failures (BM) this week',k_pm:'PM this week',k_risk:'At-risk units',k_risk_d:'{n} repeat within 14 days',
@@ -253,7 +253,7 @@ en:{title:'Command Center',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating un
   l_date:'Date',l_op:'Unit',l_campus:'Campus',l_eq:'Equipment',l_sn:'S/N',l_src:'Source',l_desc:'Detail',l_score:'Score',l_why:'Why',l_wd:'Warranty end',l_state:'Status',
   src_wk:'Repair',src_kr:'Alarm ledger',week:'wk',none:'No data',fail:'Some data could not be read',
   dq_tip:'Fix in Data management'},
-zh:{title:'综合监控',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'危险',warn:'注意',ok:'正常',sigCols:'本周故障 · 风险设备',
+zh:{title:'综合监控',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'危险',warn:'注意',ok:'正常',sigCols:'本周故障 · 风险设备',
   mapT:'全球安装现况',mapS:'圆大小 = 已进场设备 · 颜色 = 信号',qT:'待处理',heatT:'按周故障热力图',heatS:'越深 = 高于平时 · 点击格子查看该周故障',
   byOp:'运营单位',byCampus:'园区',loading:'正在加载…',asof:'基准 {d}（数据最后一天）· {w}',
   k_run:'运行设备',k_run_d:'进场 {n}台 · 运行率 {p}%',k_bm:'本周故障(BM)',k_pm:'本周PM',k_risk:'故障风险设备',k_risk_d:'14天内复发 {n}台',
@@ -270,7 +270,7 @@ zh:{title:'综合监控',all:'全部',kr:'国内',os:'海外',sigT:'运营单位
   l_date:'日期',l_op:'运营单位',l_campus:'园区',l_eq:'设备',l_sn:'S/N',l_src:'来源',l_desc:'内容',l_score:'分数',l_why:'依据',l_wd:'保修到期日',l_state:'设备状态',
   src_wk:'维修实绩',src_kr:'报警台账',week:'周',none:'无数据',fail:'部分数据未能读取',
   dq_tip:'在数据管理中修正'},
-ja:{title:'統合管制',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'危険',warn:'注意',ok:'正常',sigCols:'今週の故障 · 危険設備',
+ja:{title:'統合管制',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'危険',warn:'注意',ok:'正常',sigCols:'今週の故障 · 危険設備',
   mapT:'グローバル設置現況',mapS:'円の大きさ = 搬入設備 · 色 = シグナル',qT:'対応すること',heatT:'週別故障ヒートマップ',heatS:'濃いほど平常より多い · セルを押すとその週の故障一覧',
   byOp:'運営単位',byCampus:'団地',loading:'データ読み込み中…',asof:'基準 {d}（データ最終日）· {w}',
   k_run:'稼働設備',k_run_d:'搬入 {n}台 · 稼働率 {p}%',k_bm:'今週の故障(BM)',k_pm:'今週のPM',k_risk:'故障リスク設備',k_risk_d:'14日以内再故障 {n}台',
@@ -304,60 +304,12 @@ const RULE={badX:1.5, badD:5, warnX:1.2, warnD:3, repBad:3, repWarn:1};
 let RAW=null;                          // 읽어 온 그대로(파싱 뒤)
 const S={region:'all', heat:'op', sel:null};
 
-/* ===== 읽기 ===== */
-function parseInst(rows){
-  const m=GST.SM.map(rows, GST.SM.SPEC.inst), C=m.C, v=(r,k)=>GST.SM.val(r,C,k);
-  return rows.slice(m.hi+1).map(r=>{
-    const op=String(v(r,'country')||'').trim();
-    const cust=String(v(r,'customer')||'').trim(), fab=String(v(r,'fab')||'').trim();
-    const cty=GST.ORG.country(op)||GST.ORG.country(cust)||GST.ORG.country(fab);
-    return { op, region:GST.ORG.region(op)||GST.ORG.region(cty), cty, cityKey:cityOf(op,cty),
-      campus:GST.ORG.campus(v(r,'location'),fab,op)||'', fab, sn:String(v(r,'sn')||'').trim(), code:String(v(r,'code')||'').trim(),
-      state:v(r,'state'), stateRaw:String(v(r,'state')||'').trim(), d:GST.toDate(v(r,'fabIn'))||GST.toDate(v(r,'turnOn')),
-      warr:GST.WARR(v(r,'warranty')), wd:GST.toDate(v(r,'warrantyDate')) };
-  }).filter(x=>x.sn||x.code);
-}
-function parseWk(rows){
-  const m=GST.SM.map(rows, GST.SM.SPEC.wk), C=m.C, v=(r,k)=>GST.SM.val(r,C,k);
-  return rows.slice(m.hi+1).map(r=>{
-    const op=String(v(r,'op')||'').trim();
-    return { op, region:GST.ORG.region(op), stage:String(v(r,'stage')||'').trim().toUpperCase(), action:v(r,'action'),
-      campus:GST.ORG.campus(v(r,'campus'),v(r,'line'),op)||'', line:String(v(r,'line')||'').trim(),
-      d:GST.toDate(v(r,'dStart')), sn:String(v(r,'snIn')||'').trim(), code:String(v(r,'eqNo')||'').trim(),
-      desc:String(v(r,'cause')||v(r,'phenom')||v(r,'alarm')||'').trim(), src:'wk' };
-  }).filter(x=>x.d);
-}
-function parseLedger(rows){
-  if(!rows||rows.length<2) return [];
-  const h=rows[0], ix={}; h.forEach((k,i)=>ix[k]=i);
-  const g=(r,k)=>ix[k]==null?'':String(r[ix[k]]==null?'':r[ix[k]]).trim();
-  return rows.slice(1).map(r=>({ snk:g(r,'sn_key'), sn:g(r,'sn'), d:GST.toDate(g(r,'occur_date').slice(0,10)),
-    seq:g(r,'seq'), inout:g(r,'inout'), incl:g(r,'incl'), op0:g(r,'op'),
-    desc:g(r,'alarm')||g(r,'alarm_name')||g(r,'cause'), src:'kr' }));
-}
-function cityOf(op,cty){
-  const u=GST.upk(op||'');
-  if(cty==='CHINA'){ for(const c of ['WUHAN','HEFEI','XIAN','WUXI']) if(u.indexOf(c)>=0) return c; }
-  return cty||'';
-}
-
+/* ===== 읽기 — 파싱·조인·판정은 core GST.ops 한 벌(v167 · 사이트 상세와 같은 식) ===== */
+const cityOf=GST.ops.cityOf;
 async function load(){
   status(t('loading'));
   skel(true);
-  const [inst, wk, kra] = await Promise.allSettled([
-    GST.fetchCSVCached(GST.sheetUrl('891608329'),'hub_inst'),
-    GST.fetchCSVCached(GST.sheetUrl('646668307'),'hub_wk'),
-    GST.csvTableRows('sheet_alarm', GST._KR_COLS_A)
-  ]);
-  const fails=[];
-  const INST=inst.status==='fulfilled'?parseInst(inst.value.rows):(fails.push('inst'),[]);
-  const WK=wk.status==='fulfilled'?parseWk(wk.value.rows):(fails.push('wk'),[]);
-  const KRA=kra.status==='fulfilled'?parseLedger(kra.value):[];
-  /* 원장 행의 조직 축은 설비 S/N 으로 설치현황에서 얻는다(v92 — 원장에 담지 않는다). 못 붙으면 접미 L/R/S 를 떼고 한 번 더. */
-  const ix={};
-  INST.forEach(x=>{ const k=GST.ALARM.key(x.sn); if(!k) return; if(!ix[k]) ix[k]=x; const b=GST.ALARM.keyBase(x.sn); if(!ix[b]) ix[b]=x; });
-  KRA.forEach(x=>{ const o=ix[x.snk]||ix[GST.ALARM.keyBase(x.snk)]||null;
-    x.op=o?o.op:''; x.region=o?o.region:''; x.campus=o?o.campus:''; x.code=o?o.code:''; });
+  const L=await GST.ops.load(); const INST=L.INST, WK=L.WK, KRA=L.KRA, fails=L.fails;
   RAW={INST, WK, KRA, fails};
   loadAct();
   skel(false);
@@ -400,23 +352,16 @@ const median=a=>{ if(!a.length) return 0; const s=a.slice().sort((x,y)=>x-y), m=
 function compute(){
   const R=RAW, rg=S.region, okR=reg=>rg==='all'||(rg==='kr'?reg===KR:reg===OS);
   /* 기준일 = 자료의 마지막 날(오늘을 넘지 않는다) — 수동 업로드라 «오늘»로 자르면 이번 주가 빈다 */
-  let last=0; R.WK.forEach(x=>{ const v=x.d.getTime(); if(v>last) last=v; }); R.KRA.forEach(x=>{ if(x.d){ const v=x.d.getTime(); if(v>last) last=v; } });
-  const now=Date.now(), asOf=new Date(Math.min(now, last||now));
+  const asOf=GST.ops.asOf(R);
   const W=weeksOf(asOf), wIx=d=>{ const v=d.getTime(); for(let i=0;i<W.length;i++) if(v>=W[i].st.getTime()&&v<W[i].en.getTime()) return i; return -1; };
 
   /* 고장(BM) — 주간현황과 같은 규칙(v92·v115): 해외 = 수선실적 BM · 국내 = 원장(내적·한 사건 첫 줄). 원장이 비면 국내도 수선실적 BM. */
   const KR_ON=R.KRA.length>0;
-  const bm=[];
-  R.WK.forEach(x=>{ if(x.stage!=='BM'||GST.PM.is(x)) return; if(KR_ON&&x.region===KR) return; if(!okR(x.region)) return; bm.push(x); });
-  if(KR_ON) R.KRA.forEach(x=>{ if(!x.d||!GST.ALARM.dedup(x)||!GST.ALARM.inner(x)) return; if(x.region===OS) return;
-    const reg=x.region||KR; if(!okR(reg)) return; bm.push(Object.assign({}, x, {region:reg, op:x.op||x.op0||'—'})); });
-  const pm=R.WK.filter(x=>GST.PM.is(x)&&okR(x.region));
-
-  /* 고장 위험 — 고장분석 「고장 위험 설비 TOP 20」과 같은 식(수선실적 BM·PM · v148). */
-  const _rk=x=>GST.snKey(x.sn||x.code), t0=asOf.getTime();
-  const rkBm=R.WK.filter(x=>x.stage==='BM'&&!GST.PM.is(x)&&okR(x.region)&&x.d.getTime()>=t0-180*DAY&&_rk(x)).map(x=>({key:_rk(x),label:x.code||x.sn,site:x.op,d:x.d}));
-  const rkPm=R.WK.filter(x=>GST.PM.is(x)&&okR(x.region)&&x.d.getTime()>=t0-400*DAY&&_rk(x)).map(x=>({key:_rk(x),d:x.d}));
-  const RISK=GST.riskRank({bm:rkBm, pm:rkPm, asOf, n:100000});
+  const bm=GST.ops.bm(R, x=>okR(x.region));
+  const pm=GST.ops.pm(R, x=>okR(x.region));
+  const t0=asOf.getTime();
+  /* 고장 위험 — 고장분석 「고장 위험 설비 TOP 20」과 같은 식(GST.ops.risk · v148) */
+  const RISK=GST.ops.risk(R, asOf, x=>okR(x.region));
 
   /* 설비 — GST.EQ 정본 */
   const inst=R.INST.filter(x=>okR(x.region));
@@ -611,7 +556,9 @@ function drawSel(){
     +'<div><span>'+esc(t('m_last'))+'</span><b>'+(lastBm?GST.fmtD(lastBm):'—')+'</b></div>'
     +'</div>'
     +(g.risk.length?'<div class="hb-mini"><div class="sub">'+esc(t('risk_top'))+'</div>'+g.risk.slice(0,3).map(r=>'<div><span>'+esc(r.label)+'</span><b title="'+esc(GST.riskWhy(r))+'">'+r.score+'</b></div>').join('')+'</div>':'')
-    +'<div class="hb-btns"><button type="button" class="hb-btn pri" id="goFault">'+esc(t('open_fault'))+' →</button><button type="button" class="hb-btn" id="goInst">'+esc(t('open_inst'))+'</button></div>';
+    +'<div class="hb-btns"><button type="button" class="hb-btn pri" id="goSite">'+esc(t('open_site'))+' →</button><button type="button" class="hb-btn" id="goFault">'+esc(t('open_fault'))+'</button><button type="button" class="hb-btn" id="goInst">'+esc(t('open_inst'))+'</button></div>';
+  /* 사이트 상세로 «이 운영단위»를 넘긴다 — 같은 출처 iframe 끼리 sessionStorage 를 나눠 쓴다(사이트 화면이 gst-shown 에서 받는다) */
+  document.getElementById('goSite').onclick=()=>{ try{ sessionStorage.setItem('gst_site_sel', g.op); }catch(e){} GST.goTab&&GST.goTab('site'); };
   document.getElementById('goFault').onclick=()=>GST.goTab&&GST.goTab('fault');
   document.getElementById('goInst').onclick=()=>GST.goTab&&GST.goTab('scrubber');
 }
