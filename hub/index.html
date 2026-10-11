@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=176"></script>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=176">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=177"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=177">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/ds.css?v=1">
 <style>
 /* ============================================================
@@ -65,7 +65,10 @@ body.hb{padding:0 !important;min-height:100vh}
 .hb-seg button.on{background:var(--accent);color:#fff}
 .hb-seg button:focus-visible,.hb-btn:focus-visible,.hb-kpi:focus-visible,.hb-sig:focus-visible,.hb-bub:focus-visible,.hb-cell:focus-visible,.hb-q:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-.hb-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+/* KPI 다섯 장은 한 줄 — auto-fit 이면 창 폭에 따라 «4장 + 1장»으로 한 장이 혼자 떨어졌다(v185 사용자 캡처). 좁으면 3+2 · 휴대폰 2열(마지막 장은 한 줄 다) */
+.hb-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+@media (max-width:1180px){ .hb-kpis{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media (max-width:640px){ .hb-kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .hb-kpis > .hb-kpi:last-child:nth-child(odd){grid-column:1 / -1} }
 .hb-kpi{position:relative;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);
   border-radius:14px;padding:14px 16px 12px;display:flex;flex-direction:column;gap:6px;cursor:pointer;overflow:hidden;
   transition:transform .18s var(--ease),box-shadow .18s var(--ease),border-color .18s var(--ease)}
@@ -92,6 +95,76 @@ body.hb{padding:0 !important;min-height:100vh}
 @keyframes hbTick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @media (prefers-reduced-motion:reduce){ .hb-tick{overflow-x:auto;-webkit-mask:none;mask:none} .hb-tick-in{animation:none} }
 @media print{ .hb-tick{display:none} }
+/* ===== 글로벌 투어(v185 · 사용자 「자동순회를 글로벌 현황으로 — 지구본이 돌며 나라 → 그 나라 사이트 → 다른 나라로, 동영상처럼」) =====
+   지도 카드 하나가 화면을 채우고, 그 위에 «자막»(왼쪽 아래)·«차트»(오른쪽 아래)·«장(章)»(위)이 흐른다. 숫자는 전부 지금 화면과 같은 계산(compute)이다.
+   ⚠ 지도 모양 비율은 그대로 둔다(나라 지도 240:93 · 지구본 16:9) — 화면 비율에 맞춰 늘이면 나라 모양이 찌그러진다(preserveAspectRatio none) */
+body.hb-tour{overflow:hidden}
+body.hb-tour .hb-wrap > *:not(.hb-grid){display:none !important}
+body.hb-tour .hb-grid{display:block}
+body.hb-tour .hb-grid > *:not(.hb-mapcard){display:none !important}
+body.hb-tour .hb-mapcard{position:fixed;inset:0;z-index:40;border:0 !important;border-radius:0 !important;padding:0 0 9vh;margin:0;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(1100px 680px at 50% 42%,color-mix(in srgb,var(--accent) 13%,transparent),transparent 70%),var(--bg) !important;box-shadow:none !important}
+body.hb-tour .hb-mapcard > :not(#map){display:none !important}
+body.hb-tour #map{width:min(94vw,calc(76vh * 240 / 93));pointer-events:none;flex:none}
+body.hb-tour #map.globe{width:min(94vw,calc(80vh * 16 / 9))}
+body.hb-tour .hb-pop,body.hb-tour .hb-ghud{display:none !important}
+.hb-bub{transition:opacity .5s ease,box-shadow .5s ease}
+.hb-bub.tr-dim{opacity:.32}
+.hb-bub.tr-on{z-index:6;transform:translate(-50%,-50%) scale(1.35);box-shadow:0 0 0 3px var(--gold,#D8B46A),0 0 40px 10px color-mix(in srgb,var(--gold,#D8B46A) 55%,transparent)}
+#tour{position:fixed;inset:0;z-index:60;pointer-events:none;display:none;color:var(--txt-main)}
+body.hb-tour #tour{display:block}
+#tour .tr-top{position:absolute;left:3.2vw;right:3.2vw;top:2.6vh;display:flex;align-items:flex-start;gap:24px}
+#tour .tr-brand{display:flex;flex-direction:column;gap:4px}
+#tour .tr-brand b{font-size:12px;letter-spacing:.32em;color:var(--gold,#D8B46A);font-weight:800}
+#tour .tr-brand span{font-size:13px;color:var(--txt-muted);font-variant-numeric:tabular-nums}
+#tour .tr-chap{flex:1;display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:2px}
+#tour .tr-chap span{font-size:12px;font-weight:600;padding:4px 11px;border-radius:999px;border:1px solid var(--line);color:var(--txt-muted);transition:all .4s ease}
+#tour .tr-chap span.on{color:var(--txt-main);border-color:var(--gold,#D8B46A);background:color-mix(in srgb,var(--gold,#D8B46A) 16%,transparent)}
+#tour .tr-chap span.done{opacity:.55}
+#tour .tr-stop{pointer-events:auto;font:600 12px var(--font,inherit);padding:7px 14px;border-radius:999px;border:1px solid var(--line-2,var(--line));background:color-mix(in srgb,var(--surface) 70%,transparent);color:var(--txt-2);cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+#tour .tr-stop kbd{font:600 10.5px var(--font,inherit);padding:1px 6px;border-radius:5px;border:1px solid var(--line);color:var(--txt-muted)}
+#tour .tr-cap,#tour .tr-side{position:absolute;bottom:5.5vh;padding:22px 26px;border-radius:20px;border:1px solid var(--line);
+  background:color-mix(in srgb,var(--surface) 78%,transparent);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);
+  box-shadow:0 30px 80px -30px rgba(0,0,0,.6);opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .8s cubic-bezier(.16,1,.3,1)}
+#tour .tr-cap{left:3.2vw;max-width:min(760px,56vw)}
+#tour .tr-side{right:3.2vw;width:min(420px,32vw)}
+#tour .tr-cap.in,#tour .tr-side.in{opacity:1;transform:none}
+#tour .tr-eb{font-size:12.5px;font-weight:700;letter-spacing:.14em;color:var(--gold,#D8B46A);text-transform:uppercase}
+#tour .tr-h{font-size:clamp(30px,3.6vw,52px);font-weight:800;letter-spacing:-.025em;line-height:1.08;margin:6px 0 16px}
+#tour .tr-kpis{display:flex;flex-wrap:wrap;gap:12px 34px}
+#tour .tr-k{display:flex;flex-direction:column;gap:3px;min-width:96px}
+#tour .tr-v{font-size:clamp(24px,2.4vw,36px);font-weight:750;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1;position:relative}
+#tour .tr-v small{font-size:.48em;font-weight:600;color:var(--txt-muted);margin-left:3px;letter-spacing:0}
+#tour .tr-v.bad{color:var(--bad)} #tour .tr-v.ok{color:var(--ok)}
+#tour .tr-l{font-size:12.5px;color:var(--txt-muted);font-weight:600}
+#tour .tr-sub{margin-top:16px;display:flex;flex-wrap:wrap;gap:6px}
+#tour .tr-sub span{font-size:12.5px;padding:4px 10px;border-radius:8px;background:var(--surface-2);color:var(--txt-2)}
+#tour .tr-sub b{color:var(--txt-main);font-weight:700;margin-left:4px;font-variant-numeric:tabular-nums}
+#tour .tr-st{font-size:12.5px;font-weight:700;color:var(--txt-2);margin-bottom:12px;display:flex;justify-content:space-between;gap:10px}
+#tour .tr-bars{display:flex;align-items:flex-end;gap:5px;height:110px}
+#tour .tr-bars i{flex:1;border-radius:4px 4px 1px 1px;background:color-mix(in srgb,var(--accent) 55%,transparent);transform:scaleY(0);transform-origin:bottom;transition:transform .8s cubic-bezier(.16,1,.3,1);transition-delay:var(--d,0ms);min-height:2px}
+#tour .tr-bars i.last{background:var(--gold,#D8B46A)}
+#tour .in .tr-bars i{transform:scaleY(1)}
+#tour .tr-wk{display:flex;justify-content:space-between;font-size:10.5px;color:var(--txt-muted);margin-top:6px;font-variant-numeric:tabular-nums}
+#tour .tr-hb{display:flex;flex-direction:column;gap:9px}
+#tour .tr-hb div{display:grid;grid-template-columns:minmax(0,1fr) 46%;gap:10px;align-items:center;font-size:13px}
+#tour .tr-hb span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt-2)}
+#tour .tr-hb em{position:relative;height:10px;border-radius:6px;background:var(--surface-2);font-style:normal}
+#tour .tr-hb em i{position:absolute;inset:0 auto 0 0;border-radius:6px;background:linear-gradient(90deg,var(--accent),var(--gold,#D8B46A));width:0;transition:width .9s cubic-bezier(.16,1,.3,1);transition-delay:var(--d,0ms)}
+#tour .tr-hb em b{position:absolute;right:-2px;top:-17px;font-size:11px;color:var(--txt-main);font-variant-numeric:tabular-nums}
+#tour .tr-hb div.on span{color:var(--gold,#D8B46A);font-weight:700}
+#tour .tr-ring{display:flex;align-items:center;gap:16px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+#tour .tr-ring svg circle.f{transition:stroke-dashoffset 1.2s cubic-bezier(.16,1,.3,1)}
+#tour .tr-ring b{font-size:26px;font-weight:750;font-variant-numeric:tabular-nums}
+#tour .tr-ring span{font-size:12.5px;color:var(--txt-muted);font-weight:600}
+#tour .tr-prog{position:absolute;left:0;right:0;bottom:0;height:3px;background:color-mix(in srgb,var(--line) 60%,transparent)}
+#tour .tr-prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--gold,#D8B46A))}
+@media (max-width:900px){ #tour .tr-side{display:none} #tour .tr-cap{max-width:none;right:3.2vw} }
+@media (prefers-reduced-motion:reduce){ #tour .tr-cap,#tour .tr-side,#tour .tr-bars i,#tour .tr-hb em i{transition:none} }
+/* 이미지 저장 중(v185 · core GST.pageShot 이 body.gst-shot 을 단다) — 흐르는 상태 띠는 멈춰 «한 벌»을 줄바꿈으로 펼친다(잘린 띠가 그림에 남지 않게) */
+body.gst-shot .hb-tick{overflow:visible;-webkit-mask:none;mask:none;padding:7px 4px}
+body.gst-shot .hb-tick-in{animation:none !important;transform:none !important;display:flex;flex-wrap:wrap;white-space:normal;row-gap:6px}
+body.gst-shot .hb-tk[aria-hidden="true"]{display:none}
 
 .hb-grid{display:grid;grid-template-columns:minmax(230px,1fr) minmax(0,3fr) minmax(280px,1.15fr);gap:12px;align-items:stretch}
 .hb-grid2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,2fr);gap:12px}
@@ -318,6 +391,10 @@ body.fx-viewfx .hb-bub.drop{animation:hbDrop .75s cubic-bezier(.34,1.56,.64,1) b
 </head>
 <body class="hb">
 <div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
+<!-- 글로벌 투어 자막·차트·장(章) — body.hb-tour 일 때만 보인다(v185) -->
+<div id="tour" aria-live="polite"><div class="tr-top"><div class="tr-brand"><b data-i="tour_brand">GLOBAL OPERATIONS</b><span id="trAsof"></span></div>
+  <div class="tr-chap" id="trChap"></div><button type="button" class="tr-stop" id="trStop">■ <span data-i="tour_stop">정지</span> <kbd>Esc</kbd></button></div>
+  <div class="tr-cap" id="trCap"></div><div class="tr-side" id="trSide"></div><div class="tr-prog"><i id="trProg"></i></div></div>
 <div class="hb-wrap">
   <div class="hb-head">
     <div>
@@ -337,8 +414,12 @@ body.fx-viewfx .hb-bub.drop{animation:hbDrop .75s cubic-bezier(.34,1.56,.64,1) b
       <button type="button" data-r="kr" data-i="kr">국내</button>
       <button type="button" data-r="os" data-i="os">해외</button>
     </div>
-    <button type="button" class="hb-btn sm" id="saveDef" data-i="save_def">기본 화면으로 설정</button>
-    <button type="button" class="hb-btn sm ghost" id="goTargets" hidden data-i="go_targets">목표 관리</button>
+    <button type="button" class="hb-btn sm gst-noshot" id="saveDef" data-i="save_def">기본 화면으로 설정</button>
+    <button type="button" class="hb-btn sm ghost gst-noshot" id="goTargets" hidden data-i="go_targets">목표 관리</button>
+    <!-- 글로벌 투어(v185) — 셸 안이면 셸이 전체화면·자동순회로 띄운다(gst-tour-req) · 혼자 열었으면 이 화면이 전체화면으로 -->
+    <button type="button" class="hb-btn sm ghost gst-noshot" id="tourBtn" data-i="tour_btn" data-i-title="tour_btnT" title="지구본이 나라와 사이트를 차례로 보여 줍니다 — 벽 화면·회의실용">글로벌 투어</button>
+    <!-- 이미지 저장(v185) — 이 화면 전체를 PNG 로(메일 첨부용 · GST.pageShot). 떠 있는 단추·이 단추 줄은 이미지에 안 들어간다(gst-noshot) -->
+    <button type="button" class="hb-btn sm ghost gst-noshot" id="shotBtn" data-gb="shot" data-i="shot" data-i-title="shotT" title="이 화면 전체를 이미지(PNG)로 저장 — 메일 첨부용">이미지 저장</button>
   </div>
   <div id="banners" class="ds-grid"></div>
 
@@ -393,7 +474,7 @@ body.fx-viewfx .hb-bub.drop{animation:hbDrop .75s cubic-bezier(.34,1.56,.64,1) b
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer && GST.needVer(172);   /* v178 — 홈을 합쳤다: GST.metrics·targets·prefs·kpiText(v172) 를 부른다 */
+GST.needVer && GST.needVer(177);   /* v185 이미지 저장(GST.pageShot) · v178 홈 합침(GST.metrics·targets·prefs·kpiText) */
 GST.authGate();
 
 /* ── 세계 육지 점지도 ──
@@ -408,7 +489,7 @@ const GEO={ KOREA:[36.4,127.9], TAIWAN:[23.8,121.0], USA:[39.5,-98.5], JAPAN:[36
 const T={
 ko:{
   /* 디자인 X(v180) */ m_globe:'지구본',m_flat:'평면',map_lbl:'지도 모양',globe_lbl:'운영단위 지구본 — 끌어서 돌리고 원을 누르면 그 나라 지도로',bT:'이번 주 브리핑',bReplay:'다시 보기',b_bm:'이번 주 고장 {n}건 — 평소 {b}건 대비 {d}건',b_top:'가장 튄 곳은 {op} — 평소의 {x} · {st}',b_top0:'가장 많은 곳은 {op} — 이번 주 {n}건',b_toprep:'{op} — {rd}일 이내 재고장 설비 {n}대 · {st}',b_calm:'평소와 다르게 튄 운영단위는 없습니다',b_rep:'{rd}일 이내 재고장 설비 {r}대 · 고장 위험 설비 {k}대',b_pm:'이번 주 PM {n}건 — 지난주 {p}건',b_warr:'90일 이내 유상 전환 {n}대 — 자재 유상 판매 대상이 늘어납니다',kan_mv_l:'앞 단계로',kan_mv_r:'다음 단계로',kan_moved:'«{t}» → {s}',kan_conflict:'다른 사람이 먼저 바꿨습니다 — 새로 읽었습니다',kan_fail:'옮기지 못했습니다',
-  /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'기준일 고르기',asof_latest:'최신으로',asof_apply:'적용',asof_state:'과거 날짜로 보고 있습니다 — 고장·PM·가동 날짜는 그 날 기준이지만, 설비 상태(Operation 등)는 지금 값입니다',sc_allop:'전체 운영단위',view_lbl:'보기',scope_lbl:'범위',kpi_lbl:'핵심 지표',v_exec:'전사 요약',v_lead:'운영 관리',v_field:'사이트별',save_def:'기본 화면으로 설정',saved_srv:'기본 화면으로 설정했습니다 — 다음 접속부터 이 화면이 먼저 열립니다',saved_pc:'이 PC에만 저장했습니다',go_targets:'목표 관리',sc_all:'전사',sc_kr:'국내 전체',sc_os:'해외 전체',sc_ops:'운영단위',noTgt:'아직 설정된 목표가 없습니다. 목표를 설정하면 카드와 표가 목표 대비로 판정됩니다.',noTgtAdm:'「목표 관리」에서 설정하세요.',noTbl:'서버에 목표 테이블이 없습니다 — supabase/setup-27-targets.sql을 실행하세요.',opsT:'운영단위별 목표 대비 현황',opsS:'행을 누르면 해당 운영단위로 좁혀 봅니다',decT:'이번 주 확인 사항',decS:'목표 미달 · 재고장 · 기한 경과 건',trendT:'주간 고장 추이 · 최근 12주',trendS:'점선 = 목표를 주 단위로 환산한 값',actT:'조치 사항 — 미완료',actS:'기한 경과 건 우선',riskT:'고장 위험 설비',riskS:'고장분석 TOP 20과 같은 기준',bmT:'이번 주 고장',warrT:'90일 이내 유상 전환',pickT:'운영단위를 선택하세요',pickS:'현장 화면은 운영단위 하나를 기준으로 봅니다 — 「기본 화면으로 설정」을 누르면 다음에도 이 운영단위로 열립니다',c_op:'운영단위',c_st:'판정',c_in:'반입',c_run:'가동률',c_bm:'100대당 고장',c_pm:'PM 비율',c_rep:'재고장',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}일 이내 재고장 {n}회',d_over:'기한 경과 조치 {n}건',d_none:'이번 주 확인할 사항이 없습니다',d_set:'목표 설정하기',tag_tgt:'목표',tag_rep:'재고장',tag_act:'조치',a_none:'미완료 건이 없습니다',a_due:'기한 {d}',a_nodue:'기한 없음',a_who:'담당 {w}',a_nowho:'담당자 미지정',a_fail:'조치 사항을 읽지 못했습니다',l_kind:'구분',l_title:'제목',l_due:'기한',l_who:'담당',go_fault:'고장 분석',go_action:'조치 사항',go_hub:'글로벌 현황',more:'외 {n}건',notRun:'반입 후 미가동 설비(Operation 아님)',kind_pm:'PM',kind_bm:'고장',
+  /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'기준일 고르기',asof_latest:'최신으로',asof_apply:'적용',asof_state:'과거 날짜로 보고 있습니다 — 고장·PM·가동 날짜는 그 날 기준이지만, 설비 상태(Operation 등)는 지금 값입니다',sc_allop:'전체 운영단위',view_lbl:'보기',scope_lbl:'범위',kpi_lbl:'핵심 지표',v_exec:'전사 요약',v_lead:'운영 관리',v_field:'사이트별',save_def:'기본 화면으로 설정',shot:'이미지 저장',shotT:'이 화면 전체를 이미지(PNG)로 저장 — 메일 첨부용',tour_btn:'글로벌 투어',tour_btnT:'지구본이 나라와 사이트를 차례로 보여 줍니다 — 벽 화면·회의실용',tour_brand:'GLOBAL OPERATIONS',tour_stop:'정지',tour_world:'전사',tour_intro_t:'전 세계 설비 현황',tour_cty_eb:'국가 {i} / {n}',tour_sites_t:'사이트 분포',tour_site_eb:'{c} · 사이트 {i} / {n}',tour_run:'가동',tour_runp:'가동률',tour_share:'나라 안 비중',tour_unpl:'위치 미지정',tour_regs:'지역',tour_sites:'사이트',tour_top:'설비가 많은 사이트',tour_next:'다음',tour_cust:'고객사',tour_ops:'운영단위',tour_start:'글로벌 투어를 시작합니다',saved_srv:'기본 화면으로 설정했습니다 — 다음 접속부터 이 화면이 먼저 열립니다',saved_pc:'이 PC에만 저장했습니다',go_targets:'목표 관리',sc_all:'전사',sc_kr:'국내 전체',sc_os:'해외 전체',sc_ops:'운영단위',noTgt:'아직 설정된 목표가 없습니다. 목표를 설정하면 카드와 표가 목표 대비로 판정됩니다.',noTgtAdm:'「목표 관리」에서 설정하세요.',noTbl:'서버에 목표 테이블이 없습니다 — supabase/setup-27-targets.sql을 실행하세요.',opsT:'운영단위별 목표 대비 현황',opsS:'행을 누르면 해당 운영단위로 좁혀 봅니다',decT:'이번 주 확인 사항',decS:'목표 미달 · 재고장 · 기한 경과 건',trendT:'주간 고장 추이 · 최근 12주',trendS:'점선 = 목표를 주 단위로 환산한 값',actT:'조치 사항 — 미완료',actS:'기한 경과 건 우선',riskT:'고장 위험 설비',riskS:'고장분석 TOP 20과 같은 기준',bmT:'이번 주 고장',warrT:'90일 이내 유상 전환',pickT:'운영단위를 선택하세요',pickS:'현장 화면은 운영단위 하나를 기준으로 봅니다 — 「기본 화면으로 설정」을 누르면 다음에도 이 운영단위로 열립니다',c_op:'운영단위',c_st:'판정',c_in:'반입',c_run:'가동률',c_bm:'100대당 고장',c_pm:'PM 비율',c_rep:'재고장',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}일 이내 재고장 {n}회',d_over:'기한 경과 조치 {n}건',d_none:'이번 주 확인할 사항이 없습니다',d_set:'목표 설정하기',tag_tgt:'목표',tag_rep:'재고장',tag_act:'조치',a_none:'미완료 건이 없습니다',a_due:'기한 {d}',a_nodue:'기한 없음',a_who:'담당 {w}',a_nowho:'담당자 미지정',a_fail:'조치 사항을 읽지 못했습니다',l_kind:'구분',l_title:'제목',l_due:'기한',l_who:'담당',go_fault:'고장 분석',go_action:'조치 사항',go_hub:'글로벌 현황',more:'외 {n}건',notRun:'반입 후 미가동 설비(Operation 아님)',kind_pm:'PM',kind_bm:'고장',
   title:'글로벌 현황',scopeX:'전체 보기',back:'← 전세계',cdReg:'지역 분포',cdCty:'국가 분포',cdCust:'고객사 분포',unplaced:'위치 미지정',unplacedN:'지도에 못 놓은 곳 {n} · {u}대: {list}',unplacedAdm:' — 데이터 관리 「사이트」 탭의 «지도 위치»에서 정합니다',mapT_c:'{c} 설비 분포',mapS_c:'원 크기 = 반입 설비 · 색 = 그 운영단위의 신호 · 막대를 누르면 그 설비 목록',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'점검 권장',warn:'관찰 중',ok:'안정',tk_run:'가동',tk_bm:'이번 주 고장',tk_lbl:'운영단위 상태',sigCols:'이번 주 고장 · 위험 설비',
   mapT:'글로벌 설비 분포',mapS:'원 크기 = 반입 설비 · 색 = 신호 · 나라를 누르면 그 나라 지도로',qT:'확인 사항',heatT:'주차별 고장 히트맵',heatS:'진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록',
   byOp:'운영단위',byCampus:'단지',loading:'자료를 불러오는 중…',asof:'{d} 기준',
@@ -427,7 +508,7 @@ ko:{
   src_wk:'수선실적',src_kr:'알람 원장',week:'주',none:'자료 없음',fail:'일부 자료를 못 읽었습니다'},
 en:{
   /* Design X (v180) */ m_globe:'Globe',m_flat:'Flat',map_lbl:'Map style',globe_lbl:'Operating unit globe — drag to turn · click a circle to open that country',bT:'This week\'s briefing',bReplay:'Replay',b_bm:'Failures this week {n} — {d} vs. the usual {b}',b_top:'Biggest jump: {op} — {x} usual · {st}',b_top0:'Most failures: {op} — {n} this week',b_toprep:'{op} — {n} repeat-failure units within {rd} days · {st}',b_calm:'No operating unit is off its usual pattern',b_rep:'Repeat failures within {rd} days: {r} units · at-risk units: {k}',b_pm:'PM this week {n} — last week {p}',b_warr:'Turning paid within 90 days: {n} — more units for paid material sales',kan_mv_l:'Back a step',kan_mv_r:'Next step',kan_moved:'«{t}» → {s}',kan_conflict:'Someone changed it first — reloaded',kan_fail:'Could not move it',
-  /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'Pick the as-of date',asof_latest:'Latest',asof_apply:'Apply',asof_state:'Viewing a past date — failure, PM and turn-on dates are as of that day, but equipment status (Operation etc.) is the current value',sc_allop:'All units',view_lbl:'View',scope_lbl:'Scope',kpi_lbl:'Key metrics',v_exec:'Company summary',v_lead:'Operations',v_field:'By site',save_def:'Make this my default',saved_srv:'Saved as your default — this view opens first next time',saved_pc:'Saved on this PC only',go_targets:'Targets',sc_all:'Company',sc_kr:'All Korea',sc_os:'All overseas',sc_ops:'Operating units',noTgt:'No targets yet. Once targets are set, cards and tables are rated against them.',noTgtAdm:'Set them in «Targets».',noTbl:'The target table is not on the server yet — run supabase/setup-27-targets.sql.',opsT:'By operating unit — vs target',opsS:'click to narrow to that unit',decT:'To review this week',decS:'off target · repeat failures · overdue actions',trendT:'Weekly failures · last 12 weeks',trendS:'dashed = target converted to a week',actT:'Action items — open',actS:'overdue first',riskT:'At-risk units',riskS:'same formula as Fault TOP 20',bmT:'Failures this week',warrT:'Turning paid within 90 days',pickT:'Pick your operating unit',pickS:'The field view shows one unit — «Make this my default» opens it next time',c_op:'Unit',c_st:'Rating',c_in:'Installed',c_run:'Running',c_bm:'BM per 100',c_pm:'PM ratio',c_rep:'Repeat',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {n} repeat(s) within {d} days',d_over:'{n} overdue action(s)',d_none:'Nothing to review this week',d_set:'Set targets',tag_tgt:'Target',tag_rep:'Repeat',tag_act:'Action',a_none:'No open actions',a_due:'due {d}',a_nodue:'no due date',a_who:'owner {w}',a_nowho:'no owner',a_fail:'Could not read action items',l_kind:'Type',l_title:'Item',l_due:'Due',l_who:'Owner',go_fault:'Fault',go_action:'Action items',go_hub:'Global overview',more:'+{n} more',notRun:'Installed but not running (Operation)',kind_pm:'PM',kind_bm:'BM',
+  /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'Pick the as-of date',asof_latest:'Latest',asof_apply:'Apply',asof_state:'Viewing a past date — failure, PM and turn-on dates are as of that day, but equipment status (Operation etc.) is the current value',sc_allop:'All units',view_lbl:'View',scope_lbl:'Scope',kpi_lbl:'Key metrics',v_exec:'Company summary',v_lead:'Operations',v_field:'By site',save_def:'Make this my default',shot:'Save image',shotT:'Save this whole screen as an image (PNG) — for email',tour_btn:'Global tour',tour_btnT:'The globe walks through countries and sites — for wall screens and meeting rooms',tour_brand:'GLOBAL OPERATIONS',tour_stop:'Stop',tour_world:'Company',tour_intro_t:'Global installed base',tour_cty_eb:'Country {i} of {n}',tour_sites_t:'Sites',tour_site_eb:'{c} · Site {i} of {n}',tour_run:'Running',tour_runp:'Running rate',tour_share:'Share of country',tour_unpl:'location not set',tour_regs:'Regions',tour_sites:'Sites',tour_top:'Largest sites',tour_next:'Next',tour_cust:'Customers',tour_ops:'Operating units',tour_start:'Starting the global tour',saved_srv:'Saved as your default — this view opens first next time',saved_pc:'Saved on this PC only',go_targets:'Targets',sc_all:'Company',sc_kr:'All Korea',sc_os:'All overseas',sc_ops:'Operating units',noTgt:'No targets yet. Once targets are set, cards and tables are rated against them.',noTgtAdm:'Set them in «Targets».',noTbl:'The target table is not on the server yet — run supabase/setup-27-targets.sql.',opsT:'By operating unit — vs target',opsS:'click to narrow to that unit',decT:'To review this week',decS:'off target · repeat failures · overdue actions',trendT:'Weekly failures · last 12 weeks',trendS:'dashed = target converted to a week',actT:'Action items — open',actS:'overdue first',riskT:'At-risk units',riskS:'same formula as Fault TOP 20',bmT:'Failures this week',warrT:'Turning paid within 90 days',pickT:'Pick your operating unit',pickS:'The field view shows one unit — «Make this my default» opens it next time',c_op:'Unit',c_st:'Rating',c_in:'Installed',c_run:'Running',c_bm:'BM per 100',c_pm:'PM ratio',c_rep:'Repeat',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {n} repeat(s) within {d} days',d_over:'{n} overdue action(s)',d_none:'Nothing to review this week',d_set:'Set targets',tag_tgt:'Target',tag_rep:'Repeat',tag_act:'Action',a_none:'No open actions',a_due:'due {d}',a_nodue:'no due date',a_who:'owner {w}',a_nowho:'no owner',a_fail:'Could not read action items',l_kind:'Type',l_title:'Item',l_due:'Due',l_who:'Owner',go_fault:'Fault',go_action:'Action items',go_hub:'Global overview',more:'+{n} more',notRun:'Installed but not running (Operation)',kind_pm:'PM',kind_bm:'BM',
   title:'Global overview',scopeX:'Show all',back:'← World',cdReg:'By region',cdCty:'By country',cdCust:'By customer',unplaced:'No position',unplacedN:'{n} place(s) not on the map · {u} units: {list}',unplacedAdm:' — set them in Data management «Sites» › Map position',mapT_c:'{c} installed base',mapS_c:'size = installed units · color = signal of its unit · click a bar for the unit list',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Check advised',warn:'Watching',ok:'Stable',tk_run:'Running',tk_bm:'BM this week',tk_lbl:'Operating unit status',sigCols:'BM this week · at-risk units',
   mapT:'Global installed base',mapS:'size = installed units · color = signal · click a country to zoom in',qT:'To check',heatT:'Weekly failure heatmap',heatS:'darker = above usual · click a cell for that week\'s failures',
   byOp:'Operating unit',byCampus:'Campus',loading:'Loading…',asof:'As of {d}',
@@ -446,7 +527,7 @@ en:{
   src_wk:'Repair',src_kr:'Alarm ledger',week:'wk',none:'No data',fail:'Some data could not be read'},
 zh:{
   /* 设计 X (v180) */ m_globe:'地球仪',m_flat:'平面',map_lbl:'地图样式',globe_lbl:'运营单位地球仪 — 拖动旋转 · 点击圆圈进入该国家地图',bT:'本周简报',bReplay:'重播',b_bm:'本周故障 {n} 件 — 较平时 {b} 件 {d} 件',b_top:'波动最大的是 {op} — 平时的 {x} · {st}',b_top0:'故障最多的是 {op} — 本周 {n} 件',b_toprep:'{op} — {rd}天内再故障设备 {n} 台 · {st}',b_calm:'没有偏离平时的运营单位',b_rep:'{rd}天内再故障设备 {r} 台 · 故障风险设备 {k} 台',b_pm:'本周PM {n} 件 — 上周 {p} 件',b_warr:'90天内转为有偿 {n} 台 — 有偿材料销售对象增加',kan_mv_l:'退回上一步',kan_mv_r:'进入下一步',kan_moved:'«{t}» → {s}',kan_conflict:'已被他人先修改 — 已重新读取',kan_fail:'未能移动',
-  /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'选择基准日',asof_latest:'最新',asof_apply:'应用',asof_state:'正在查看过去日期 — 故障、PM、运行日期按当天计算，但设备状态（Operation 等）为当前值',sc_allop:'全部运营单位',view_lbl:'视图',scope_lbl:'范围',kpi_lbl:'核心指标',v_exec:'全公司概要',v_lead:'运营管理',v_field:'按站点',save_def:'设为默认画面',saved_srv:'已保存为默认 — 下次打开先显示此画面',saved_pc:'仅保存在此电脑',go_targets:'目标管理',sc_all:'全公司',sc_kr:'国内全部',sc_os:'海外全部',sc_ops:'运营单位',noTgt:'尚未设定任何目标。设定后卡片和表格将按目标判定。',noTgtAdm:'请在「目标管理」中设定。',noTbl:'服务器尚无目标表 — 请运行 supabase/setup-27-targets.sql。',opsT:'按运营单位 — 对比目标',opsS:'点击即缩小到该运营单位',decT:'本周确认事项',decS:'偏离目标 · 复发 · 逾期待办',trendT:'按周故障 · 最近12周',trendS:'虚线 = 目标换算为每周的值',actT:'待办事项 — 未关闭',actS:'逾期优先',riskT:'故障风险设备',riskS:'与故障分析 TOP 20 同一公式',bmT:'本周故障',warrT:'90天内转为有偿',pickT:'请选择你的运营单位',pickS:'现场画面只看一个运营单位 — 按「设为默认画面」下次也按此单位打开',c_op:'运营单位',c_st:'判定',c_in:'进场',c_run:'运行率',c_bm:'每100台故障',c_pm:'PM比率',c_rep:'复发',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}天内复发 {n}次',d_over:'逾期待办 {n}件',d_none:'本周没有需确认的事项',d_set:'设定目标',tag_tgt:'目标',tag_rep:'复发',tag_act:'待办',a_none:'没有未关闭的事项',a_due:'期限 {d}',a_nodue:'无期限',a_who:'负责人 {w}',a_nowho:'未定负责人',a_fail:'未能读取待办事项',l_kind:'类别',l_title:'事项',l_due:'期限',l_who:'负责人',go_fault:'故障分析',go_action:'待办事项',go_hub:'全球概况',more:'另 {n}件',notRun:'已进场但未运行(Operation)的设备',kind_pm:'PM',kind_bm:'故障',
+  /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'选择基准日',asof_latest:'最新',asof_apply:'应用',asof_state:'正在查看过去日期 — 故障、PM、运行日期按当天计算，但设备状态（Operation 等）为当前值',sc_allop:'全部运营单位',view_lbl:'视图',scope_lbl:'范围',kpi_lbl:'核心指标',v_exec:'全公司概要',v_lead:'运营管理',v_field:'按站点',save_def:'设为默认画面',shot:'保存图片',shotT:'将整个画面保存为图片(PNG) — 用于邮件附件',tour_btn:'全球巡览',tour_btnT:'地球仪依次展示各国家与站点 — 适用于墙面屏幕和会议室',tour_brand:'GLOBAL OPERATIONS',tour_stop:'停止',tour_world:'全公司',tour_intro_t:'全球设备现状',tour_cty_eb:'国家 {i} / {n}',tour_sites_t:'站点分布',tour_site_eb:'{c} · 站点 {i} / {n}',tour_run:'运行',tour_runp:'运行率',tour_share:'国内占比',tour_unpl:'未指定位置',tour_regs:'地区',tour_sites:'站点',tour_top:'设备最多的站点',tour_next:'下一个',tour_cust:'客户',tour_ops:'运营单位',tour_start:'开始全球巡览',saved_srv:'已保存为默认 — 下次打开先显示此画面',saved_pc:'仅保存在此电脑',go_targets:'目标管理',sc_all:'全公司',sc_kr:'国内全部',sc_os:'海外全部',sc_ops:'运营单位',noTgt:'尚未设定任何目标。设定后卡片和表格将按目标判定。',noTgtAdm:'请在「目标管理」中设定。',noTbl:'服务器尚无目标表 — 请运行 supabase/setup-27-targets.sql。',opsT:'按运营单位 — 对比目标',opsS:'点击即缩小到该运营单位',decT:'本周确认事项',decS:'偏离目标 · 复发 · 逾期待办',trendT:'按周故障 · 最近12周',trendS:'虚线 = 目标换算为每周的值',actT:'待办事项 — 未关闭',actS:'逾期优先',riskT:'故障风险设备',riskS:'与故障分析 TOP 20 同一公式',bmT:'本周故障',warrT:'90天内转为有偿',pickT:'请选择你的运营单位',pickS:'现场画面只看一个运营单位 — 按「设为默认画面」下次也按此单位打开',c_op:'运营单位',c_st:'判定',c_in:'进场',c_run:'运行率',c_bm:'每100台故障',c_pm:'PM比率',c_rep:'复发',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}天内复发 {n}次',d_over:'逾期待办 {n}件',d_none:'本周没有需确认的事项',d_set:'设定目标',tag_tgt:'目标',tag_rep:'复发',tag_act:'待办',a_none:'没有未关闭的事项',a_due:'期限 {d}',a_nodue:'无期限',a_who:'负责人 {w}',a_nowho:'未定负责人',a_fail:'未能读取待办事项',l_kind:'类别',l_title:'事项',l_due:'期限',l_who:'负责人',go_fault:'故障分析',go_action:'待办事项',go_hub:'全球概况',more:'另 {n}件',notRun:'已进场但未运行(Operation)的设备',kind_pm:'PM',kind_bm:'故障',
   title:'全球概况',scopeX:'显示全部',back:'← 全球',cdReg:'地区分布',cdCty:'国家分布',cdCust:'客户分布',unplaced:'未指定位置',unplacedN:'未能放到地图上的 {n} 处 · {u}台: {list}',unplacedAdm:' — 在数据管理「站点」页的地图位置中设定',mapT_c:'{c} 设备分布',mapS_c:'圆大小 = 已进场设备 · 颜色 = 所属运营单位信号 · 点击柱查看设备',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'建议检查',warn:'观察中',ok:'稳定',tk_run:'运行',tk_bm:'本周故障',tk_lbl:'运营单位状态',sigCols:'本周故障 · 风险设备',
   mapT:'全球设备分布',mapS:'圆大小 = 已进场设备 · 颜色 = 信号 · 点击国家查看该国地图',qT:'待确认',heatT:'按周故障热力图',heatS:'越深 = 高于平时 · 点击格子查看该周故障',
   byOp:'运营单位',byCampus:'园区',loading:'正在加载…',asof:'截至 {d}',
@@ -465,7 +546,7 @@ zh:{
   src_wk:'维修实绩',src_kr:'报警台账',week:'周',none:'无数据',fail:'部分数据未能读取'},
 ja:{
   /* デザイン X (v180) */ m_globe:'地球儀',m_flat:'平面',map_lbl:'地図の形',globe_lbl:'運営単位の地球儀 — ドラッグで回転 · 円をクリックでその国の地図へ',bT:'今週のブリーフィング',bReplay:'もう一度',b_bm:'今週の故障 {n}件 — 平常 {b}件比 {d}件',b_top:'最も跳ねたのは {op} — 平常の{x} · {st}',b_top0:'最も多いのは {op} — 今週 {n}件',b_toprep:'{op} — {rd}日以内の再故障 {n}台 · {st}',b_calm:'平常と異なる運営単位はありません',b_rep:'{rd}日以内の再故障 {r}台 · 故障リスク設備 {k}台',b_pm:'今週のPM {n}件 — 先週 {p}件',b_warr:'90日以内に有償へ {n}台 — 有償資材販売の対象が増えます',kan_mv_l:'前の段階へ',kan_mv_r:'次の段階へ',kan_moved:'«{t}» → {s}',kan_conflict:'他の人が先に変更しました — 読み直しました',kan_fail:'移動できませんでした',
-  /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'基準日を選ぶ',asof_latest:'最新に戻す',asof_apply:'適用',asof_state:'過去の日付で表示中 — 故障・PM・稼働日はその日基準ですが、設備状態（Operation 等）は現在の値です',sc_allop:'全運営単位',view_lbl:'表示',scope_lbl:'範囲',kpi_lbl:'主要指標',v_exec:'全社サマリー',v_lead:'運営管理',v_field:'サイト別',save_def:'この画面を既定にする',saved_srv:'既定の画面として保存しました — 次回はこの画面が最初に開きます',saved_pc:'このPCにのみ保存しました',go_targets:'目標管理',sc_all:'全社',sc_kr:'国内全体',sc_os:'海外全体',sc_ops:'運営単位',noTgt:'目標がまだありません。目標を決めるとカードと表が目標比で判定します。',noTgtAdm:'「目標管理」で設定してください。',noTbl:'サーバーに目標表がまだありません — supabase/setup-27-targets.sql を実行してください。',opsT:'運営単位別 — 目標比',opsS:'押すとその運営単位に絞ります',decT:'今週の確認事項',decS:'目標外れ · 再故障 · 期限超過の対応',trendT:'週別故障 · 直近12週',trendS:'点線 = 目標を週単位に換算した値',actT:'対応事項 — 未完了',actS:'期限超過を先に',riskT:'故障リスク設備',riskS:'故障分析 TOP 20 と同じ式',bmT:'今週の故障',warrT:'90日以内に有償化',pickT:'自分の運営単位を選んでください',pickS:'現場画面は運営単位ひとつを見ます — 「この画面を既定にする」で次回もこの運営単位で開きます',c_op:'運営単位',c_st:'判定',c_in:'搬入',c_run:'稼働率',c_bm:'100台あたり故障',c_pm:'PM比率',c_rep:'再故障',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}日以内再故障 {n}回',d_over:'期限超過の対応 {n}件',d_none:'今週確認することはありません',d_set:'目標を決める',tag_tgt:'目標',tag_rep:'再故障',tag_act:'対応',a_none:'未完了の対応はありません',a_due:'期限 {d}',a_nodue:'期限なし',a_who:'担当 {w}',a_nowho:'担当未定',a_fail:'対応事項を読めませんでした',l_kind:'区分',l_title:'項目',l_due:'期限',l_who:'担当',go_fault:'故障分析',go_action:'対応事項',go_hub:'グローバル概況',more:'他 {n}件',notRun:'搬入済みだが稼働(Operation)していない設備',kind_pm:'PM',kind_bm:'故障',
+  /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'基準日を選ぶ',asof_latest:'最新に戻す',asof_apply:'適用',asof_state:'過去の日付で表示中 — 故障・PM・稼働日はその日基準ですが、設備状態（Operation 等）は現在の値です',sc_allop:'全運営単位',view_lbl:'表示',scope_lbl:'範囲',kpi_lbl:'主要指標',v_exec:'全社サマリー',v_lead:'運営管理',v_field:'サイト別',save_def:'この画面を既定にする',shot:'画像を保存',shotT:'この画面全体を画像(PNG)で保存 — メール添付用',tour_btn:'グローバルツアー',tour_btnT:'地球儀が国とサイトを順に見せます — 壁面ディスプレイ・会議室向け',tour_brand:'GLOBAL OPERATIONS',tour_stop:'停止',tour_world:'全社',tour_intro_t:'グローバル設備状況',tour_cty_eb:'国 {i} / {n}',tour_sites_t:'サイト分布',tour_site_eb:'{c} · サイト {i} / {n}',tour_run:'稼働',tour_runp:'稼働率',tour_share:'国内シェア',tour_unpl:'位置未設定',tour_regs:'地域',tour_sites:'サイト',tour_top:'設備の多いサイト',tour_next:'次',tour_cust:'顧客',tour_ops:'運営単位',tour_start:'グローバルツアーを開始します',saved_srv:'既定の画面として保存しました — 次回はこの画面が最初に開きます',saved_pc:'このPCにのみ保存しました',go_targets:'目標管理',sc_all:'全社',sc_kr:'国内全体',sc_os:'海外全体',sc_ops:'運営単位',noTgt:'目標がまだありません。目標を決めるとカードと表が目標比で判定します。',noTgtAdm:'「目標管理」で設定してください。',noTbl:'サーバーに目標表がまだありません — supabase/setup-27-targets.sql を実行してください。',opsT:'運営単位別 — 目標比',opsS:'押すとその運営単位に絞ります',decT:'今週の確認事項',decS:'目標外れ · 再故障 · 期限超過の対応',trendT:'週別故障 · 直近12週',trendS:'点線 = 目標を週単位に換算した値',actT:'対応事項 — 未完了',actS:'期限超過を先に',riskT:'故障リスク設備',riskS:'故障分析 TOP 20 と同じ式',bmT:'今週の故障',warrT:'90日以内に有償化',pickT:'自分の運営単位を選んでください',pickS:'現場画面は運営単位ひとつを見ます — 「この画面を既定にする」で次回もこの運営単位で開きます',c_op:'運営単位',c_st:'判定',c_in:'搬入',c_run:'稼働率',c_bm:'100台あたり故障',c_pm:'PM比率',c_rep:'再故障',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}日以内再故障 {n}回',d_over:'期限超過の対応 {n}件',d_none:'今週確認することはありません',d_set:'目標を決める',tag_tgt:'目標',tag_rep:'再故障',tag_act:'対応',a_none:'未完了の対応はありません',a_due:'期限 {d}',a_nodue:'期限なし',a_who:'担当 {w}',a_nowho:'担当未定',a_fail:'対応事項を読めませんでした',l_kind:'区分',l_title:'項目',l_due:'期限',l_who:'担当',go_fault:'故障分析',go_action:'対応事項',go_hub:'グローバル概況',more:'他 {n}件',notRun:'搬入済みだが稼働(Operation)していない設備',kind_pm:'PM',kind_bm:'故障',
   title:'グローバル概況',scopeX:'全体を見る',back:'← 全世界',cdReg:'地域分布',cdCty:'国別分布',cdCust:'顧客分布',unplaced:'位置未指定',unplacedN:'地図に置けない場所 {n} · {u}台: {list}',unplacedAdm:' — データ管理「サイト」タブの地図位置で設定します',mapT_c:'{c} 設備分布',mapS_c:'円の大きさ = 搬入設備 · 色 = その運営単位の信号 · 棒を押すと設備一覧',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'点検推奨',warn:'観察中',ok:'安定',tk_run:'稼働',tk_bm:'今週の故障',tk_lbl:'運営単位の状態',sigCols:'今週の故障 · 危険設備',
   mapT:'グローバル設備分布',mapS:'円の大きさ = 搬入設備 · 色 = シグナル · 国を押すとその国の地図へ',qT:'確認事項',heatT:'週別故障ヒートマップ',heatS:'濃いほど平常より多い · セルを押すとその週の故障一覧',
   byOp:'運営単位',byCampus:'団地',loading:'データ読み込み中…',asof:'{d} 時点',
@@ -517,9 +598,10 @@ async function load(){
   const INST=L.INST, WK=L.WK, KRA=L.KRA, fails=L.fails;
   RAW={INST, WK, KRA, fails};
   try{ if(GST.loadMe) await GST.loadMe(); }catch(e){}
-  await initPrefs();
+  if(!TOUR.on) await initPrefs();   // 투어 중의 자동 새로고침은 보기·운영단위를 저장값으로 되돌리지 않는다(투어가 쥐고 있다)
   skel(false);
   render();
+  if(TOUR.pend&&!TOUR.on){ const tp=TOUR.pend; tourStart(tp.sec, tp.fromShell); }   // 자료를 읽기 전에 온 투어 요청
   window._briefP=briefSave();
   const tm=new Date();
   status((fails.length?t('fail')+' ('+fails.join(', ')+') · ':'')+'✅ '+tm.toLocaleString(), !!fails.length);
@@ -561,12 +643,14 @@ const median=a=>{ if(!a.length) return 0; const s=a.slice().sort((x,y)=>x-y), m=
 /* 기준일 — 자료의 마지막 날(오늘을 넘지 않는다)이 기본, 사람이 과거 날짜를 고르면 그 날(v178 · 사용자 요청 「날짜 기준을 바꿔 보고 싶은 사람도 있다」).
    ⚠ 미래로는 못 간다(자료가 없다). ⚠ 설비 «상태»는 지금 값이다 — 날짜가 없는 판정만 과거로 돌아간다(GST.ops.isIn/isRun) · 그 사실을 머리의 ⚠ 가 말한다 */
 function asOfOf(R){ const a=GST.ops.asOf(R); return (S.asOf&&S.asOf.getTime()<a.getTime())?S.asOf:a; }
+/* 행의 나라 — 설비는 설치현황의 국가, 실적·원장은 운영단위에서 푼 국가(국내 원장은 한국). compute 와 투어가 같은 함수를 쓴다(두 벌이면 갈린다) */
+function ctyOfRow(x){ return x.cty||GST.ORG.country(x.op)||(x.region===KR?'KOREA':''); }
 function compute(opSel){
   ruleLoad();   // 판정 기준을 그릴 때마다 — 「운영 목표」에서 바꾸면 다음 그림부터 따라간다
   const R=RAW, rg=S.region, okR0=reg=>rg==='all'||(rg==='kr'?reg===KR:reg===OS);
   /* 나라 거르기(v171) — 설비는 설치현황의 국가, 실적·원장은 운영단위에서 푼 국가(국내 원장은 한국) */
   const ccCty=S.cc?(GST.geo.CC[S.cc]||{}).cty:'';
-  const ctyOf=x=>x.cty||GST.ORG.country(x.op)||(x.region===KR?'KOREA':'');
+  const ctyOf=ctyOfRow;
   /* 운영단위를 고르면(opSel) 그 운영단위만 — KPI 카드·분포용 두 번째 계산이다. 신호등·지도·히트맵은 고르기 전 그대로(D) 남아 다른 곳으로 옮겨 갈 수 있다 */
   const okR=(reg,x)=>okR0(reg)&&(!ccCty||!x||ctyOf(x)===ccCty)&&(!opSel||!x||x.op===opSel);
   /* 기준일 = 자료의 마지막 날(오늘을 넘지 않는다) — 수동 업로드라 «오늘»로 자르면 이번 주가 빈다 */
@@ -640,7 +724,7 @@ function render(){
     +(D.KR_ON||S.region==='os'?'':' <button type="button" class="gst-warn" id="krWarn" title="'+esc(t('krFall'))+'" aria-label="'+esc(t('krFall'))+'">⚠</button>')
     /* 고른 운영단위 칩 — 위 KPI 카드와 아래 분포가 «지금 무엇만 보고 있는지» 말한다. ✕ 로 전체로 돌아간다 */
     +(S.op?' <button type="button" class="hb-scope" id="scopeX" title="'+esc(t('scopeX'))+'" aria-label="'+esc(t('scopeX'))+'"><b>'+esc(short(S.op))+'</b><span aria-hidden="true">✕</span></button>':'');
-  const _sx=document.getElementById('scopeX'); if(_sx) _sx.onclick=()=>{ S.op=null; render(); };
+  const _sx=document.getElementById('scopeX'); if(_sx) _sx.onclick=()=>{ if(S._ccOp&&S.cc){ leaveCountry(); return; } S.op=null; render(); };
   const _kw=document.getElementById('krWarn'); if(_kw) _kw.onclick=()=>GST.rowsModal('⚠', [t('l_desc')], [[t('krFall')]]);
   const _pw=document.getElementById('pastWarn'); if(_pw) _pw.onclick=()=>GST.rowsModal('⚠', [t('l_desc')], [[t('asof_state')]]);
   document.getElementById('asofBtn').onclick=asofOpen;
@@ -738,7 +822,7 @@ function drawTicker(){
   let seq=G; while(seq.length<6) seq=seq.concat(G);
   inn.innerHTML=seq.map((g,i)=>one(g, i>=G.length)).join('')+seq.map(g=>one(g,true)).join('');
   inn.style.setProperty('--dur', Math.max(32, seq.length*6)+'s');
-  inn.querySelectorAll('.hb-tk').forEach(b=>b.onclick=()=>pick(b.dataset.tk));
+  inn.querySelectorAll('.hb-tk').forEach(b=>b.onclick=()=>goOp(b.dataset.tk));
 }
 function drawSignals(){
   const box=document.getElementById('sigs');
@@ -746,7 +830,7 @@ function drawSignals(){
   box.innerHTML=D.groups.map(g=>'<button type="button" class="hb-sig'+(g.op===S.sel?' on':'')+'" data-op="'+esc(g.op)+'">'
     +'<span class="hb-dot '+g.st+'"></span><span class="n"><b>'+esc(short(g.op))+'</b><span>'+esc([ctyName(g.cty), nf(g.inN)+t('u_ea')].filter(Boolean).join(' · '))+'</span></span>'
     +'<span class="c"><span class="bm">'+g.cur+'</span><span class="rk'+(g.rep?'':' z')+'">'+g.rep+'</span></span></button>').join('');
-  box.querySelectorAll('.hb-sig').forEach(b=>b.onclick=()=>pick(b.dataset.op));
+  box.querySelectorAll('.hb-sig').forEach(b=>b.onclick=()=>goOp(b.dataset.op));
   /* 레이더(「효과 › 맥동 · 레이더」) — 점검 권장 운영단위 수만큼 붉은 점 */
   const rd=document.getElementById('radar'); if(rd) rd.innerHTML=D.groups.filter(g=>g.st==='bad').slice(0,4).map((g,i)=>'<i style="left:'+[4,11,6,12][i]+'px;top:'+[5,8,12,3][i]+'px"></i>').join('');
 }
@@ -758,6 +842,17 @@ const CTY={ko:{KOREA:'한국',TAIWAN:'대만',CHINA:'중국',USA:'미국',JAPAN:
   ja:{KOREA:'韓国',TAIWAN:'台湾',CHINA:'中国',USA:'米国',JAPAN:'日本',SINGAPORE:'シンガポール',EUROPE:'欧州'}};
 function ctyName(c){ return (CTY[LANG]||CTY.ko)[c]||c||''; }
 function pick(op){ S.sel=op; S.op=op; render(); }
+/* 운영단위를 «누르면» 그 나라 지도로 들어간다(v185 · 사용자 「왼쪽에서 사이트를 누르면 지구본이 위치만 이동 — 나라 지도로 들어가야지」).
+   신호등 · 상태 띠 · 지구본(원과 이름표) · 점 지도가 이 한 함수를 지난다 — 따로 두면 어디를 누르느냐에 따라 결과가 갈린다.
+   지구본이면 먼저 그 자리로 돌고 들어간다. 나라 지도가 없는 나라(모양 파일·나라 코드가 없음)·다른 보기(운영 관리·사이트별)는 고르기만 한다. */
+function goOp(op){
+  const g=D&&D.groups.find(x=>x.op===op), cc=g?GST.geo.ccOfCty(g.cty):'';
+  if(S.view!=='exec'||!cc||!GST.geo.CC[cc]||GEOD.fail){ pick(op); return; }
+  if(S.cc===cc){ pick(op); return; }   // 이미 그 나라 지도 — 고르기만
+  const m=(mapModeNow()==='globe'&&!S.cc&&GL.on)?GL.marks.find(x=>x.g.op===op):null;
+  if(m&&!REDUCE&&glFx('viewfx')){ S.sel=op; glFly(m.lat,m.lon,600); setTimeout(()=>{ enterCountry(cc, op); S._ccOp=true; }, 560); return; }
+  enterCountry(cc, op); S._ccOp=true;   // 운영단위를 눌러 들어온 나라 — 칩의 «전체 보기 ✕»는 그 누름을 통째로 되돌린다(나라에서도 나온다)
+}
 function asofOpen(){
   let p=document.getElementById('asofPop'); if(p){ p.remove(); return; }
   const last=GST.fmtD(GST.ops.asOf(RAW)), cur=GST.fmtD(D.asOf), b=document.getElementById('asofBtn').getBoundingClientRect();
@@ -818,7 +913,7 @@ function drawDots(){
     html+='<button type="button" class="hb-bub '+g.st+(g.op===S.sel?' on':'')+'" data-op="'+esc(g.op)+'" style="left:'+b.x.toFixed(2)+'%;top:'+b.y.toFixed(2)+'%;width:'+b.sz+'px;height:'+b.sz+'px" aria-label="'+esc(short(g.op)+' · '+t(g.st))+'">'
       +(b.lb?'<span class="lb">'+esc(short(g.op))+'</span>':'')+'</button>'; });
   const bubs=document.getElementById('bubs'); bubs.innerHTML=html;
-  bubs.querySelectorAll('.hb-bub').forEach(b=>{ b.onclick=()=>pick(b.dataset.op); b.onmouseenter=b.onfocus=()=>popShow(b); b.onmouseleave=b.onblur=()=>{ document.getElementById('pop').hidden=true; }; });
+  bubs.querySelectorAll('.hb-bub').forEach(b=>{ b.onclick=()=>goOp(b.dataset.op); b.onmouseenter=b.onfocus=()=>popShow(b); b.onmouseleave=b.onblur=()=>{ document.getElementById('pop').hidden=true; }; });
   const tot=D.groups.reduce((s,g)=>s+g.inN,0), ctys=new Set(D.groups.map(g=>g.cty).filter(Boolean)), bm12=D.bmW.reduce((s,v)=>s+v,0);
   document.getElementById('stats').innerHTML=[[t('st_units'),nf(tot)],[t('st_ops'),D.groups.length],[t('st_cty'),ctys.size],[t('st_bm12'),nf(bm12)]]
     .map(a=>'<div class="hb-stat">'+esc(a[0])+'<b>'+esc(a[1])+'</b></div>').join('');
@@ -854,7 +949,7 @@ async function drawMap(){
   S.mapDirty=false;
   const seq=++_mapSeq;
   /* 지구본(v180 · 기본) — 세계 화면만. 나라에 들어가면 지금까지의 벡터 나라 지도다. 지구본은 모양 파일(assets/geo)이 필요 없다(점 육지는 이 파일의 WORLD) */
-  const globe=MAPMODE==='globe'&&!S.cc;
+  const globe=mapModeNow()==='globe'&&!S.cc;
   host.classList.toggle('globe', globe); segMapMark();
   if(globe){ _mapSeq++; document.getElementById('mapBack').hidden=true; document.getElementById('mapTitle').textContent=t('mapT'); document.getElementById('mapSub').textContent=t('mapS');
     worldSide(); glShow(); return; }
@@ -946,9 +1041,10 @@ function drawCountry(svg){
     const cu=(GST.ORG.customer?GST.ORG.customer(x.cust):x.cust)||'—', inS=!S.op||x.op===S.op;   // 분포는 고른 운영단위만 · 지도 원은 전부
     if(inS) (CUS[cu]=CUS[cu]||[]).push(x);
     if(!pl){ const k=x.loc||x.campus||x.fab||'—'; (UN[k]=UN[k]||[]).push(x); if(inS) (REG['\u0000']=REG['\u0000']||[]).push(x); return; }
-    const p=P[pl.key]||(P[pl.key]={pl, rows:[], run:0, ops:{}});
+    const p=P[pl.key]||(P[pl.key]={pl, rows:[], run:0, ops:{}, reg:''});
     p.rows.push(x); if(isRun(x)) p.run++; p.ops[x.op]=(p.ops[x.op]||0)+1;
     const rg=GST.geo.regionOf(pl.lng, pl.lat, adm), rk=rg?GST.geo.admName(rg, LANG):'\u0000';
+    if(!p.reg&&rg) p.reg=rk;
     if(inS) (REG[rk]=REG[rk]||[]).push(x); });
   const regCnt={}; Object.keys(REG).forEach(k=>{ if(k!=='\u0000') regCnt[k]=REG[k].length; });
   const rmx=Math.max(1,...Object.values(regCnt));
@@ -956,6 +1052,11 @@ function drawCountry(svg){
     return '<path class="rg'+(n?' has':'')+'" style="--k:'+(n?Math.round(18+n/rmx*55):0)+'" d="'+pathOf(adm._r[i], proj)+'"><title>'+esc(nm+(n?' · '+nf(n)+t('u_ea'):''))+'</title></path>'; }).join('')
     + adm.f.filter(f=>regCnt[GST.geo.admName(f, LANG)]&&f.c).map(f=>{ const q=proj(f.c[0],f.c[1]); return '<text class="rl" x="'+q[0].toFixed(1)+'" y="'+(q[1]-12).toFixed(1)+'">'+esc(GST.geo.admName(f, LANG))+'</text>'; }).join('');
   const L=Object.values(P), mx=Math.max(1,...L.map(p=>p.rows.length));
+  /* 투어가 «지금 지도에 선 원»을 그대로 짚는다 — 순서(data-b)가 같아야 자막과 강조가 같은 사이트를 말한다 */
+  CPL={cc:S.cc, list:L.map((p,i)=>({i, label:p.pl.label, n:p.rows.length, run:p.run, ops:p.ops, rows:p.rows, reg:p.reg})),
+    /* 위치가 안 정해진 설비도 투어에서 빠지지 않게 «지도 아래 목록»과 같은 묶음(UN)으로 싣는다 — 원이 없으니 강조할 자리는 없다(i -1) */
+    un:Object.keys(UN).filter(k=>k!=='—').map(k=>{ const rows=UN[k], ops={}; let run=0; rows.forEach(x=>{ ops[x.op]=(ops[x.op]||0)+1; if(isRun(x)) run++; });
+      return {i:-1, label:k, n:rows.length, run, ops, rows, reg:''}; })};
   const B=L.map(p=>{ const [x,y]=proj(p.pl.lng,p.pl.lat), top=Object.keys(p.ops).sort((a,b)=>p.ops[b]-p.ops[a])[0], g=gOf[top]||{st:'ok'};
     return {x,y,sz:Math.round(14+Math.sqrt(p.rows.length/mx)*36), st:g.st, on:top===S.sel, lb:p.pl.label,
       click:()=>{ if(top) pick(top); listUnits(p.pl.label, p.rows); },
@@ -971,12 +1072,13 @@ function drawCountry(svg){
   const unK=Object.keys(UN).sort((a,b)=>UN[b].length-UN[a].length);
   document.getElementById('mapNote').textContent=unN?fmt(t('unplacedN'),{n:unK.length,u:nf(unN),list:unK.slice(0,5).map(k=>k+' '+UN[k].length).join(', ')+(unK.length>5?' …':'')})+(GST.isAdmin&&GST.isAdmin()?t('unplacedAdm'):''):'';
 }
+let CPL=null;   // 나라 지도에 지금 선 사이트(투어용 · drawCountry 가 채운다)
 function listUnits(title, rows){
   GST.rowsModal(title, [t('l_op'),t('l_campus'),'FAB',t('l_eq'),t('l_sn'),t('l_state')],
     rows.slice().sort((a,b)=>String(a.campus).localeCompare(String(b.campus))).map(x=>[short(x.op),x.campus||x.loc||'',x.fab||'',x.code||'',x.sn||'',x.stateRaw||'']));
 }
-function enterCountry(cc, op){ if(!GST.geo.CC[cc]) return; S.cc=cc; S.sel=op||null; S.op=op||null; S._zoom=true; document.getElementById('pop').hidden=true; render(); }
-function leaveCountry(){ S.cc=''; S.sel=null; S.op=null; S._zoom=true; document.getElementById('pop').hidden=true; render(); }
+function enterCountry(cc, op){ if(!GST.geo.CC[cc]) return; S.cc=cc; S.sel=op||null; S.op=op||null; S._zoom=true; S._ccOp=false; document.getElementById('pop').hidden=true; render(); }
+function leaveCountry(){ S.cc=''; S.sel=null; S.op=null; S._zoom=true; S._ccOp=false; document.getElementById('pop').hidden=true; render(); }
 function popShow(b){
   const g=D.groups.find(x=>x.op===b.dataset.op); if(!g) return;
   const p=document.getElementById('pop'), host=document.getElementById('map').getBoundingClientRect(), br=b.getBoundingClientRect();
@@ -1105,6 +1207,9 @@ function drawHeat(){
    ⚠ 원을 누르면 평면과 같은 일(그 나라 지도 · 못 놓는 나라는 그 운영단위 고르기) — 지구본이 먼저 그 자리로 돈다.
    움직임(자동 회전 · 빛줄기 · 맥동)은 「효과」의 열쇠(spin·arcs·pulse·graticule)를 본다 · 움직임 줄이기면 끌 때만 다시 그린다. */
 let MAPMODE=(function(){ try{ return localStorage.getItem('gst_hub_map')==='flat'?'flat':'globe'; }catch(e){ return 'globe'; } })();
+/* 투어 상태(v185) — 아래 «글로벌 투어» 절. 지도 모양은 투어 동안 지구본으로(사람이 고른 평면 지도는 저장값 그대로 둔다) */
+const TOUR={on:false, sec:7, steps:[], i:-1, tm:0, seq:0, saved:null, cty:'', pend:null, shell:false, wake:null};
+function mapModeNow(){ return TOUR.on?'globe':MAPMODE; }
 function segMapMark(){ document.querySelectorAll('#segMap button').forEach(b=>{ const on=b.dataset.m===MAPMODE; b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); });
   const sg=document.getElementById('segMap'); if(sg) sg.hidden=!!S.cc; }
 function mapMode(m){ if(m!=='globe'&&m!=='flat') return; MAPMODE=m; try{ localStorage.setItem('gst_hub_map', m); }catch(e){} document.getElementById('pop').hidden=true; S._drop=m==='flat'; drawMap(); }
@@ -1158,15 +1263,17 @@ function glLoop(t){
   if(GL.tw){ const k=glClamp((t-GL.tw.t0)/GL.tw.ms,0,1), e=glEase(k); GL.lam=glLerp(GL.tw.l0,GL.tw.l1,e); GL.phi=glLerp(GL.tw.p0,GL.tw.p1,e); if(k>=1) GL.tw=null; moving=true; }
   else if(!GL.drag){
     if(Math.abs(GL.vl)>2e-4||Math.abs(GL.vp)>2e-4){ GL.lam+=GL.vl; GL.phi=glClamp(GL.phi+GL.vp,-1.2,1.2); GL.vl*=.93; GL.vp*=.88; moving=true; } else { GL.vl=0; GL.vp=0; }
-    if(glFx('spin')&&!GL.hover&&!S.op){ GL.lam+=dt*.00008; moving=true; }
+    if((glFx('spin')||(TOUR.on&&!REDUCE))&&!GL.hover&&!S.op&&!TOUR.cty){ GL.lam+=dt*(TOUR.on?.00012:.00008); moving=true; }
   }
+  /* 투어가 나라를 짚으면 카메라가 살짝 다가간다(1.1배) — 움직임 줄이기면 바로 선다 */
+  { const zt=TOUR.on&&TOUR.cty?1.1:1, z0=GL.zk||1; if(Math.abs(z0-zt)>.002&&!REDUCE){ GL.zk=z0+(zt-z0)*Math.min(1,dt/320); moving=true; } else GL.zk=zt; }
   glDraw(t);
   if(moving||GL.drag||glFx('pulse')||glFx('arcs')) GL.raf=requestAnimationFrame(glLoop);
 }
 function glRR(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
 function glDraw(t){
   const c=GL.cx, C=GL.col; if(!c||!C) return;
-  const W=GL.w, H=GL.h, cx=W/2, cy=H/2+4, R=GL.R; c.setTransform(GL.dpr,0,0,GL.dpr,0,0); c.clearRect(0,0,W,H);
+  const W=GL.w, H=GL.h, cx=W/2, cy=H/2+4, R=GL.R*(GL.zk||1); c.setTransform(GL.dpr,0,0,GL.dpr,0,0); c.clearRect(0,0,W,H);
   /* 대기 빛 · 구 바탕 */
   const atm=c.createRadialGradient(cx,cy,R*.9,cx,cy,R*1.3); atm.addColorStop(0,C.dark?'rgba(79,140,255,.34)':'rgba(54,84,245,.18)'); atm.addColorStop(1,'rgba(79,140,255,0)');
   c.fillStyle=atm; c.beginPath(); c.arc(cx,cy,R*1.3,0,6.283); c.fill();
@@ -1199,18 +1306,18 @@ function glDraw(t){
   const stc=s=>s==='bad'?C.bad:s==='warn'?C.warn:C.ok;
   const vis=[];
   MK.forEach(m=>{ const p=glProj(m.lat,m.lon); m.z=p[2]; if(p[2]<=.02){ m.X=null; return; } m.X=cx+R*p[0]; m.Y=cy-R*p[1]; vis.push(m); });
-  vis.sort((a,b)=>a.z-b.z).forEach(m=>{ const col=stc(m.g.st), fade=glClamp(m.z*2.2,0,1), sel=m.g.op===S.sel;
-    c.globalAlpha=fade*(S.op&&!sel?.45:1);
+  vis.sort((a,b)=>a.z-b.z).forEach(m=>{ const col=stc(m.g.st), fade=glClamp(m.z*2.2,0,1), foc=!TOUR.cty||m.g.cty===TOUR.cty, sel=m.g.op===S.sel||(!!TOUR.cty&&foc);
+    c.globalAlpha=fade*((S.op&&!sel)||!foc?.35:1);
     if(glFx('pulse')&&m.g.st!=='ok'){ const per=m.g.st==='bad'?1200:2400, ph=((t+m.lat*97)%per)/per; c.strokeStyle=col; c.lineWidth=1.4; const ga=c.globalAlpha; c.globalAlpha=ga*(1-ph); c.beginPath(); c.arc(m.X,m.Y,m.r+ph*(m.g.st==='bad'?22:14),0,6.283); c.stroke(); c.globalAlpha=ga; }
     const gl=c.createRadialGradient(m.X,m.Y,0,m.X,m.Y,m.r*2.6); gl.addColorStop(0,col); gl.addColorStop(.35,col+'55'); gl.addColorStop(1,col+'00'); c.fillStyle=gl; c.beginPath(); c.arc(m.X,m.Y,m.r*2.6,0,6.283); c.fill();
     c.fillStyle=col; c.beginPath(); c.arc(m.X,m.Y,m.r*.62,0,6.283); c.fill(); c.fillStyle=C.dark?'#0A1230':'#fff'; c.beginPath(); c.arc(m.X,m.Y,m.r*.26,0,6.283); c.fill();
     if(sel||GL.hover===m.g.op){ c.strokeStyle=C.gold; c.lineWidth=1.6; c.setLineDash([3,3]); c.lineDashOffset=glFx('pulse')?-t/60:0; c.beginPath(); c.arc(m.X,m.Y,m.r+7,0,6.283); c.stroke(); c.setLineDash([]); }
   });
   /* 이름표 — 겹치면 안 쓴다(고른 것 · 큰 것 먼저) */
-  c.globalAlpha=1; c.font='600 12px '+C.font; c.textBaseline='middle'; const boxes=[];
-  vis.slice().sort((a,b)=>(b.g.op===S.sel)-(a.g.op===S.sel)||b.g.inN-a.g.inN).forEach(m=>{ if(m.z<.25) return;
+  c.globalAlpha=1; c.font='600 12px '+C.font; c.textBaseline='middle'; const boxes=[]; MK.forEach(m=>{ m.lb=null; });
+  vis.slice().sort((a,b)=>(b.g.cty===TOUR.cty)-(a.g.cty===TOUR.cty)||(b.g.op===S.sel)-(a.g.op===S.sel)||b.g.inN-a.g.inN).forEach(m=>{ if(m.z<.25) return;
     const nm=short(m.g.op), n=String(m.g.cur), tw=c.measureText(nm+'  '+n).width+16, bx=m.X+m.r+8, by=m.Y-11;
-    if(bx+tw>W-2||boxes.some(b=>bx<b[0]+b[2]&&bx+tw>b[0]&&by<b[1]+b[3]&&by+22>b[1])) return; boxes.push([bx,by,tw,22]);
+    if(bx+tw>W-2||boxes.some(b=>bx<b[0]+b[2]&&bx+tw>b[0]&&by<b[1]+b[3]&&by+22>b[1])) return; boxes.push([bx,by,tw,22]); m.lb=[bx,by,tw,22];
     c.fillStyle=C.dark?'rgba(5,9,22,.74)':'rgba(255,255,255,.9)'; glRR(c,bx,by,tw,22,7); c.fill(); c.strokeStyle=m.g.op===S.sel?C.gold:(C.dark?'rgba(120,170,255,.28)':'rgba(54,84,245,.25)'); c.lineWidth=1; c.stroke();
     c.fillStyle=C.txt; c.fillText(nm,bx+8,by+11.5); c.fillStyle=stc(m.g.st); c.fillText(n,bx+8+c.measureText(nm+'  ').width,by+11.5); });
   /* 한국(국가 위치) — 빛줄기의 시작점 */
@@ -1218,16 +1325,16 @@ function glDraw(t){
   const la=document.getElementById('gLat'), lo=document.getElementById('gLon');
   if(la) la.textContent=(GL.phi/DEG).toFixed(1)+'°'; if(lo) lo.textContent=((((GL.lam/DEG)%360)+540)%360-180).toFixed(1)+'°';
 }
+/* 원과 그 이름표(「SEC 0」) 둘 다 누를 수 있다 — 이름표만 눌러도 그 나라로(v185) */
 function glHit(e){ const r=GL.cv.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top; let best=null, bd=1e9;
-  GL.marks.forEach(m=>{ if(m.X==null||m.z<.1) return; const d=Math.hypot(m.X-x,m.Y-y); if(d<m.r+9&&d<bd){ bd=d; best=m; } }); return best?{m:best,x,y}:null; }
+  GL.marks.forEach(m=>{ if(m.X==null||m.z<.1) return; const d=Math.hypot(m.X-x,m.Y-y); if(d<m.r+9&&d<bd){ bd=d; best=m; } });
+  if(!best) GL.marks.forEach(m=>{ const b=m.lb; if(!best&&b&&x>=b[0]&&x<=b[0]+b[2]&&y>=b[1]&&y<=b[1]+b[3]) best=m; });
+  return best?{m:best,x,y}:null; }
 function glPop(h){ const p=document.getElementById('pop'), g=h.m.g;
   p.innerHTML='<span>'+esc(ctyName(g.cty))+'</span><b>'+esc(short(g.op))+'</b><span class="big">'+nf(g.inN)+'</span> '+esc(t('u_ea'))+'<br>'+esc(t('k_bm'))+' '+g.cur+' · <span class="hb-pill '+g.st+'">'+esc(t(g.st))+'</span>';
   p.hidden=false; const left=h.m.X>GL.w*.62; p.style.left=left?'':(h.m.X+h.m.r+10)+'px'; p.style.right=left?(GL.w-h.m.X+h.m.r+10)+'px':''; p.style.top=Math.max(4,h.m.Y-14)+'px'; }
 /* 원을 누르면 평면 지도의 원과 같은 일 — 그 나라 지도(못 놓는 나라는 그 운영단위 고르기). 지구본이 먼저 그 자리로 돈다 */
-function glClick(m){ const g=m.g; S.sel=g.op; const cc=GST.geo.ccOfCty(g.cty);
-  const go=()=>{ if(cc&&GST.geo.CC[cc]) enterCountry(cc, g.op); else pick(g.op); };
-  if(REDUCE||!glFx('viewfx')){ go(); return; }
-  glFly(m.lat,m.lon,600); setTimeout(go, 560); }
+function glClick(m){ goOp(m.g.op); }
 function glBind(){
   const cv=GL.cv;
   cv.addEventListener('pointerdown',e=>{ if(e.button>0) return; try{ cv.setPointerCapture(e.pointerId); }catch(_){} GL.drag={x:e.clientX,y:e.clientY,l:GL.lam,p:GL.phi,moved:false}; GL.tw=null; cv.classList.add('drag'); glKick(); });
@@ -1244,6 +1351,170 @@ function glBind(){
   document.addEventListener('visibilitychange', glKick);
   if(GST.fx) GST.fx.onChange(()=>{ if(GL.on){ glDraw(performance.now()); glKick(); } });
 }
+/* ===== 글로벌 투어 (v185 · 사용자 「자동순회는 글로벌 현황으로 — 지구본이 돌며 어떤 나라 설비 몇 대 → 그 나라 어떤 사이트 몇 대 → 다른 나라로, 반복 · 기왕 하는 거 제대로」) =====
+   장면: ① 전사(지구본이 돈다 · 전체 숫자) → 나라마다 ② 지구본이 그 나라로 날아가 «나라 숫자 + 12주 고장» ③ 그 나라 지도로 들어가 사이트 분포
+   ④ 설비가 많은 사이트를 하나씩 짚는다(최대 4곳) → 다음 나라 … 끝나면 전사부터 다시(그때 자료를 새로 읽는다).
+   ⚠ 숫자를 새로 세지 않는다 — 전사·나라 장면은 compute()(D)와 같은 행·같은 판정(ctyOfRow · GST.ops.isIn/isRun · D.bm · D.wIx),
+     사이트 장면은 나라 지도가 «지금 그린 원»(CPL)을 그대로 읽는다. 투어가 따로 세면 화면의 숫자와 갈린다.
+   ⚠ 설치현황 자료가 없는 나라(설비 0대)는 장면에 넣지 않는다 — 경영진·고객이 보는 화면에 «설비 0대» 장면을 세우지 않는다(v182 와 같은 뜻).
+   ⚠ 사람이 보던 화면(보기·구분·운영단위·나라·기준일)은 끝나면 돌려준다. 멈추는 것은 Esc 와 정지 단추뿐이다(키오스크 규약). */
+function tourCtyStat(cty){
+  const X=D, asOf=X.asOf, inst=X.inst.filter(x=>ctyOfRow(x)===cty&&GST.ops.isIn(x,asOf));
+  const run=inst.filter(x=>GST.ops.isRun(x,asOf)).length, bmW=new Array(X.W.length).fill(0);
+  X.bm.forEach(x=>{ if(ctyOfRow(x)!==cty) return; const i=X.wIx(x.d); if(i>=0) bmW[i]++; });
+  const ops=X.groups.filter(g=>g.cty===cty).sort((a,b)=>b.inN-a.inN);
+  const opSet=new Set(ops.map(g=>g.op)), risk=X.RISK.filter(r=>opSet.has(r.site)).length;
+  const cust={}; inst.forEach(x=>{ const c=(GST.ORG.customer?GST.ORG.customer(x.cust):x.cust)||'—'; cust[c]=(cust[c]||0)+1; });
+  const site={}; inst.forEach(x=>{ const k=x.campus||x.fab||x.loc||''; if(k) site[k]=(site[k]||0)+1; });
+  return {inN:inst.length, run, bmW, ops, risk, cust, site};
+}
+function tourSteps(){
+  const byC={}; D.groups.forEach(g=>{ if(!g.inN||!g.cty) return; (byC[g.cty]=byC[g.cty]||{cty:g.cty, inN:0}).inN+=g.inN; });
+  const C=Object.values(byC).sort((a,b)=>b.inN-a.inN), st=[{k:'intro', C}];
+  C.forEach((c,ci)=>{ const cc=GST.geo.ccOfCty(c.cty); st.push({k:'fly', cty:c.cty, ci, cn:C.length});
+    if(cc&&GST.geo.CC[cc]&&!GEOD.fail) st.push({k:'map', cty:c.cty, cc, ci, cn:C.length}); });
+  TOUR.C=C; return st;
+}
+/* 한 바퀴 길이(초) — 셸 패널이 «한 바퀴 약 N분»을 적는다(«15초»만 보면 한 바퀴가 얼마인지 아무도 모른다 · 키오스크 규약) */
+function tourEst(sec){ if(!D) return {n:0, sec:0}; const S0=sec||TOUR.sec; let tot=S0*1.3, n=0;
+  const byC={}; D.groups.forEach(g=>{ if(g.inN&&g.cty) byC[g.cty]=1; });
+  Object.keys(byC).forEach(c=>{ n++; const st=tourCtyStat(c); tot+=S0*(1+0.7+0.8*Math.min(4,Object.keys(st.site).length)); });
+  return {n, sec:Math.round(tot)}; }
+function tourWorld(){ TOUR.cty=''; if(S.cc||S.op||S.sel){ S.cc=''; S.op=null; S.sel=null; render(); } }
+function tourProg(ms){ const p=document.getElementById('trProg'); if(!p) return; p.style.transition='none'; p.style.width='0'; void p.offsetWidth; p.style.transition='width '+ms+'ms linear'; p.style.width='100%'; }
+function tourChap(cur){
+  const el=document.getElementById('trChap'); if(!el||!TOUR.C) return;
+  el.innerHTML='<span class="'+(cur===''?'on':'done')+'">'+esc(t('tour_world'))+'</span>'+TOUR.C.map((c,i)=>{ const ix=TOUR.C.findIndex(x=>x.cty===cur);
+    return '<span class="'+(c.cty===cur?'on':(ix>=0&&i<ix?'done':''))+'">'+esc(ctyName(c.cty))+'</span>'; }).join('');
+  document.getElementById('trAsof').textContent=fmt(t('asof'),{d:GST.fmtD(D.asOf)});
+}
+const tKpi=(v,u,l,cls)=>'<div class="tr-k"><span class="tr-v'+(cls?' '+cls:'')+'"><span class="num">'+esc(v)+'</span>'+(u?'<small>'+esc(u)+'</small>':'')+'</span><span class="tr-l">'+esc(l)+'</span></div>';
+const tPct=(a,b)=>b?Math.round(a/b*1000)/10:null;
+function tBars(arr, W){ const mx=Math.max(1,...arr), n=arr.length;
+  return '<div class="tr-st"><span>'+esc(t('trendT'))+'</span><b>'+nf(arr.reduce((s,v)=>s+v,0))+t('u_case')+'</b></div><div class="tr-bars">'
+    +arr.map((v,i)=>'<i class="'+(i===n-1?'last':'')+'" style="height:'+Math.max(2,v/mx*100).toFixed(1)+'%;--d:'+(i*45)+'ms" title="'+v+'"></i>').join('')+'</div>'
+    +'<div class="tr-wk"><span>'+esc(wkLb(W[0]))+'</span><span>'+esc(wkLb(W[n-1]))+'</span></div>'; }
+const wkLb=w=>'W'+String(GST.isoW(w.st)).replace(/^.*W/,'');
+function tRing(p, label){ const c=2*Math.PI*26, v=p==null?0:Math.max(0,Math.min(100,p));
+  return '<div class="tr-ring"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--surface-3,var(--line))" stroke-width="7"/>'
+    +'<circle class="f" cx="32" cy="32" r="26" fill="none" stroke="var(--ok)" stroke-width="7" stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+c.toFixed(1)+'" data-to="'+(c*(1-v/100)).toFixed(1)+'" transform="rotate(-90 32 32)"/></svg>'
+    +'<div><b>'+(p==null?'—':p+'%')+'</b><br><span>'+esc(label)+'</span></div></div>'; }
+function tHb(rows, onIx){ const mx=Math.max(1,...rows.map(r=>r[1]));
+  return '<div class="tr-hb">'+rows.map((r,i)=>'<div class="'+(i===onIx?'on':'')+'"><span title="'+esc(r[0])+'">'+esc(r[0])+'</span><em><i style="--d:'+(i*70)+'ms" data-w="'+(r[1]/mx*100).toFixed(1)+'"></i><b>'+nf(r[1])+'</b></em></div>').join('')+'</div>'; }
+/* 자막·차트를 바꾼다 — 한 번 내렸다가(opacity) 새 글로 올린다. 숫자는 «오도미터»(효과)로 굴린다 — 글자는 처음부터 최종값이다(v180 규약) */
+function tourShow(cap, side){
+  const C=document.getElementById('trCap'), Sd=document.getElementById('trSide');
+  [C,Sd].forEach(el=>el.classList.remove('in'));
+  setTimeout(()=>{ if(!TOUR.on) return;
+    C.innerHTML=cap; Sd.innerHTML=side||''; Sd.style.display=side?'':'none';
+    void C.offsetWidth; C.classList.add('in'); if(side) Sd.classList.add('in');
+    requestAnimationFrame(()=>{
+      Sd.querySelectorAll('.tr-ring circle.f').forEach(cc=>{ cc.style.strokeDashoffset=cc.dataset.to; });
+      Sd.querySelectorAll('.tr-hb em i').forEach(ii=>{ ii.style.width=ii.dataset.w+'%'; });
+      C.querySelectorAll('.tr-v .num').forEach(n=>{ try{ GST.fx&&GST.fx.odo(n,''); }catch(e){} });
+    });
+  }, 260);
+}
+function tourGo(i){
+  if(!TOUR.on) return;
+  clearTimeout(TOUR.tm); const tok=++TOUR.seq;
+  if(!TOUR.steps.length||i>=TOUR.steps.length){ tourWorld(); TOUR.steps=tourSteps(); i=0; }   // 한 바퀴 끝 — 그사이 바뀐 자료로 다시 짠다
+  TOUR.i=i; const st=TOUR.steps[i], sec=TOUR.sec*1000;
+  const after=(ms, fn)=>{ TOUR.tm=setTimeout(()=>{ if(tok===TOUR.seq&&TOUR.on) fn(); }, ms); };
+  const next=ms=>{ tourProg(ms); after(ms, ()=>tourGo(i+1)); };
+  if(st.k==='intro'){
+    tourWorld(); tourChap('');
+    if(GL.on) glFly(24, 118, 1400);
+    const X=D, cty=new Set(X.groups.filter(g=>g.inN&&g.cty).map(g=>g.cty)).size;
+    tourShow('<div class="tr-eb">GST CS Global</div><div class="tr-h">'+esc(t('tour_intro_t'))+'</div><div class="tr-kpis">'
+        +tKpi(nf(cty),'',t('st_cty'))+tKpi(nf(X.groups.filter(g=>g.inN).length),'',t('st_ops'))+tKpi(nf(X.inN),t('u_ea'),t('st_units'))
+        +tKpi(nf(X.runN),t('u_ea'),t('tour_run'))+tKpi(nf(X.bmW[X.bmW.length-1]),t('u_case'),t('k_bm'))+'</div>',
+      tBars(X.bmW, X.W)+tRing(tPct(X.runN,X.inN), t('tour_runp')));
+    return next(Math.round(sec*1.3));
+  }
+  if(st.k==='fly'){
+    tourWorld(); TOUR.cty=st.cty; tourChap(st.cty);
+    const ms=GL.marks.filter(m=>m.g.cty===st.cty), g0=GEO[st.cty];
+    const lat=g0?g0[0]:(ms.length?ms.reduce((s,m)=>s+m.lat,0)/ms.length:20), lon=g0?g0[1]:(ms.length?ms.reduce((s,m)=>s+m.lon,0)/ms.length:120);
+    if(GL.on){ glFly(lat, lon, REDUCE?0:1800); glDraw(performance.now()); glKick(); }
+    const c=tourCtyStat(st.cty);
+    tourShow('<div class="tr-eb">'+esc(fmt(t('tour_cty_eb'),{i:st.ci+1,n:st.cn}))+'</div><div class="tr-h">'+esc(ctyName(st.cty))+'</div><div class="tr-kpis">'
+        +tKpi(nf(c.inN),t('u_ea'),t('st_units'))+tKpi(nf(c.run),t('u_ea'),t('tour_run'))+tKpi(nf(c.ops.length),'',t('st_ops'))
+        +tKpi(nf(c.bmW[c.bmW.length-1]),t('u_case'),t('k_bm'))+(c.risk?tKpi(nf(c.risk),t('u_ea'),t('k_risk')):'')+'</div>'
+        +'<div class="tr-sub">'+c.ops.slice(0,6).map(g=>'<span>'+esc(short(g.op))+'<b>'+nf(g.inN)+'</b></span>').join('')+'</div>',
+      tBars(c.bmW, D.W)+tRing(tPct(c.run,c.inN), t('tour_runp')));
+    return next(sec);
+  }
+  if(st.k==='map'){
+    TOUR.cty=st.cty; tourChap(st.cty);
+    S.op=null; S.sel=null; enterCountry(st.cc);
+    /* 나라 지도는 모양 파일을 받아 «비동기»로 그린다 — 원이 설 때까지 잠깐 기다린다(못 그리면 이 장면을 건너뛴다) */
+    let waited=0;
+    const ready=()=>{ if(tok!==TOUR.seq||!TOUR.on) return;
+      const mapOk=!!(CPL&&CPL.cc===st.cc&&S.cc===st.cc);
+      if(!mapOk&&waited<2400){ waited+=150; return after(150, ready); }
+      /* 사이트 = 나라 지도에 선 원(CPL.list) + 위치가 안 정해진 묶음(CPL.un · 지도 아래 «위치 미지정» 목록과 같은 열쇠).
+         지도를 못 그린 나라는 단지·FAB 이름으로 묶어 자막만 보인다 — «사이트 0곳» 장면을 세우지 않는다 */
+      const asOf=D.asOf, inC=D.inst.filter(x=>ctyOfRow(x)===st.cty&&GST.ops.isIn(x,asOf)), tot=inC.length;
+      let L=mapOk?CPL.list.concat(CPL.un||[]):[];
+      if(!L.length){ const G0={}; inC.forEach(x=>{ const k=x.campus||x.fab||x.loc||''; if(!k) return; const p=G0[k]||(G0[k]={i:-1, label:k, n:0, run:0, ops:{}, rows:[], reg:''});
+        p.n++; p.rows.push(x); if(GST.ops.isRun(x,asOf)) p.run++; p.ops[x.op]=(p.ops[x.op]||0)+1; }); L=Object.values(G0); }
+      if(!L.length) return tourGo(i+1);
+      L.sort((a,b)=>b.n-a.n); const regs=new Set(L.map(p=>p.reg).filter(Boolean)).size;
+      const top=L.slice(0,6).map(p=>[p.label,p.n]), cust={}; L.forEach(p=>p.rows.forEach(x=>{ const c=(GST.ORG.customer?GST.ORG.customer(x.cust):x.cust)||'—'; cust[c]=(cust[c]||0)+1; }));
+      const cTop=Object.keys(cust).sort((a,b)=>cust[b]-cust[a]).slice(0,4);
+      tourShow('<div class="tr-eb">'+esc(ctyName(st.cty))+'</div><div class="tr-h">'+esc(t('tour_sites_t'))+'</div><div class="tr-kpis">'
+          +tKpi(nf(L.length),'',t('tour_sites'))+(regs?tKpi(nf(regs),'',t('tour_regs')):'')+tKpi(nf(tot),t('u_ea'),t('st_units'))+'</div>'
+          +'<div class="tr-sub">'+cTop.map(c=>'<span>'+esc(c)+'<b>'+nf(cust[c])+'</b></span>').join('')+'</div>',
+        '<div class="tr-st"><span>'+esc(t('tour_top'))+'</span></div>'+tHb(top, -1));
+      const K=L.slice(0, Math.min(4, L.length)), ov=Math.round(sec*0.7), per=Math.round(sec*0.8);
+      tourProg(ov+per*K.length);
+      const site=j=>{ if(j>=K.length){ document.querySelectorAll('#bubs .hb-bub').forEach(b=>b.classList.remove('tr-on','tr-dim')); return tourGo(i+1); }
+        const p=K[j]; document.querySelectorAll('#bubs .hb-bub').forEach(b=>{ const on=p.i>=0&&+b.dataset.b===p.i; b.classList.toggle('tr-on',on); b.classList.toggle('tr-dim',p.i>=0&&!on); });
+        const opsTxt=Object.keys(p.ops).sort((a,b)=>p.ops[b]-p.ops[a]).map(short), cu={}; p.rows.forEach(x=>{ const c=(GST.ORG.customer?GST.ORG.customer(x.cust):x.cust)||'—'; cu[c]=(cu[c]||0)+1; });
+        tourShow('<div class="tr-eb">'+esc(fmt(t('tour_site_eb'),{c:ctyName(st.cty)+(p.reg?' · '+p.reg:'')+(p.i<0?' · '+t('tour_unpl'):''),i:j+1,n:K.length}))+'</div><div class="tr-h">'+esc(p.label)+'</div><div class="tr-kpis">'
+            +tKpi(nf(p.n),t('u_ea'),t('st_units'))+tKpi(nf(p.run),t('u_ea'),t('tour_run'))+tKpi(String(tPct(p.n,tot)),'%',t('tour_share'))+'</div>'
+            +'<div class="tr-sub">'+opsTxt.slice(0,3).map(o=>'<span>'+esc(o)+'</span>').join('')+Object.keys(cu).sort((a,b)=>cu[b]-cu[a]).slice(0,2).map(c=>'<span>'+esc(c)+'<b>'+nf(cu[c])+'</b></span>').join('')+'</div>',
+          '<div class="tr-st"><span>'+esc(t('tour_top'))+'</span></div>'+tHb(top, L.indexOf(p))+tRing(tPct(p.run,p.n), t('tour_runp')));
+        after(per, ()=>site(j+1)); };
+      after(ov, ()=>site(0));
+    };
+    return after(300, ready);
+  }
+  tourGo(i+1);
+}
+function tourStart(sec, fromShell){
+  if(TOUR.on) return;
+  if(!RAW||!D){ TOUR.pend={sec, fromShell}; return; }   // 아직 자료를 읽는 중 — 다 읽으면 시작한다(load 끝)
+  TOUR.on=true; TOUR.pend=null; TOUR.shell=!!fromShell; TOUR.sec=Math.max(4,Math.min(20,+sec||7));
+  TOUR.saved={view:S.view, region:S.region, op:S.op, sel:S.sel, cc:S.cc, asOf:S.asOf, _ccOp:S._ccOp};
+  S.view='exec'; S.region='all'; S.op=null; S.sel=null; S.cc=''; S.asOf=null; TOUR.cty='';
+  document.getElementById('pop').hidden=true;
+  document.body.classList.add('hb-tour');
+  render(); requestAnimationFrame(()=>{ drawMap(); });
+  if(!fromShell){ try{ navigator.wakeLock&&navigator.wakeLock.request('screen').then(w=>{ TOUR.wake=w; }).catch(()=>{}); }catch(e){} }
+  TOUR.steps=tourSteps(); tourGo(0);
+}
+function tourStop(tell){
+  TOUR.pend=null;
+  if(!TOUR.on) return;
+  TOUR.on=false; clearTimeout(TOUR.tm); TOUR.seq++; TOUR.cty='';
+  document.body.classList.remove('hb-tour');
+  ['trCap','trSide'].forEach(id=>{ const el=document.getElementById(id); el.classList.remove('in'); el.innerHTML=''; });
+  document.querySelectorAll('#bubs .hb-bub').forEach(b=>b.classList.remove('tr-on','tr-dim'));
+  Object.assign(S, TOUR.saved||{}); TOUR.saved=null;
+  render(); requestAnimationFrame(()=>{ drawMap(); });
+  try{ TOUR.wake&&TOUR.wake.release(); }catch(e){} TOUR.wake=null;
+  if(tell&&window.parent!==window){ try{ window.parent.postMessage({type:'gst-tour-stop'},'*'); }catch(e){} }
+  if(!TOUR.shell&&document.fullscreenElement&&document.exitFullscreen){ document.exitFullscreen().catch(()=>{}); }
+}
+/* 셸(자동순회 › 글로벌 투어)이 시작·끝을 보낸다 · 패널이 «나라 몇 곳 · 한 바퀴 몇 분»을 묻는다 */
+window.addEventListener('message',e=>{ const d=e.data||{};
+  if(d.type==='gst-tour'){ if(d.on) tourStart(d.sec, true); else tourStop(false);
+    try{ (e.source||window.parent).postMessage({type:'gst-tour-ack', on:!!d.on, ready:!!D, est:tourEst(d.sec)},'*'); }catch(x){} return; }
+  if(d.type==='gst-tour-q'){ try{ (e.source||window.parent).postMessage({type:'gst-tour-a', est:tourEst(d.sec), ready:!!D},'*'); }catch(x){} } });
+/* 혼자 연 화면에서 투어가 끝나는 길 — 전체화면을 F11·Esc 로 빠져나가면 투어도 끝낸다(머리가 감춰진 채 남지 않게) */
+document.addEventListener('fullscreenchange',()=>{ if(TOUR.on&&!TOUR.shell&&!document.fullscreenElement) tourStop(false); });
 /* ===== 옛 «홈»에서 옮겨 온 것 (v178 · 홈 + 글로벌 현황 합치기) =====
    숫자는 옛 홈과 같은 식이다 — GST.metrics(→ GST.ops) · GST.targets.pick/judge. 이 화면의 KPI 카드(D·DS)와 같은 범위를 본다.
    H = 운영 관리·사이트별·확인 사항·브리핑이 쓰는 계산(옛 홈의 D). ⚠ 브리핑(brief_put)은 옛 홈과 «같은 내용»을 남긴다 — 챗봇이 그대로 읽는다. */
@@ -1529,6 +1800,14 @@ document.getElementById('segRegion').addEventListener('click',e=>{ const b=e.tar
 document.getElementById('segView').addEventListener('click',e=>{ const b=e.target.closest('button[data-v]'); if(b) setView(b.dataset.v); });
 document.getElementById('scope').addEventListener('change',e=>{ const v=e.target.value||null; S.op=v; if(v) S.sel=v; render(); });
 document.getElementById('goTargets').onclick=goTargets;
+document.getElementById('shotBtn').onclick=()=>{ if(GST._barDo) GST._barDo('shot'); };
+/* 글로벌 투어 — 셸 안이면 셸이 띄운다(전체화면 · 셸 머리 감추기 · 화면 잠들지 않기를 셸이 맡는다). 혼자 열었으면 이 화면이 전체화면으로 */
+document.getElementById('tourBtn').onclick=()=>{
+  if(window.parent!==window){ try{ window.parent.postMessage({type:'gst-tour-req'},'*'); return; }catch(e){} }
+  try{ document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen().catch(()=>{}); }catch(e){}
+  tourStart(7, false);
+};
+document.getElementById('trStop').onclick=()=>tourStop(true);
 document.getElementById('saveDef').onclick=async ()=>{
   const b=document.getElementById('saveDef'); b.disabled=true;
   const op=S.op||(S.region==='kr'?'r:'+KR:S.region==='os'?'r:'+OS:'');
@@ -1541,7 +1820,9 @@ document.getElementById('segHeat').addEventListener('click',e=>{ const b=e.targe
 document.getElementById('mapBack').onclick=leaveCountry;
 document.getElementById('segMap').addEventListener('click',e=>{ const b=e.target.closest('button[data-m]'); if(b) mapMode(b.dataset.m); });
 document.getElementById('bReplay').onclick=()=>drawBrief(true);
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&S.cc&&!document.querySelector('.gov')) leaveCountry(); });
+document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return;
+  if(TOUR.on){ e.preventDefault(); tourStop(true); return; }   // 투어 중 Esc = 투어 끝(셸에도 알린다)
+  if(S.cc&&!document.querySelector('.gov')) leaveCountry(); });
 document.getElementById('ruleBtn').onclick=()=>{ ruleLoad(); GST.rowsModal(t('rule_t'), [t('l_desc')], fmt(t('rule'),ruleTxt()).split('\n').filter(Boolean).map(s=>[s])); };
 let _rz=0; window.addEventListener('resize',()=>{ cancelAnimationFrame(_rz); _rz=requestAnimationFrame(()=>D&&drawMap()); });
 /* 지도 상자의 크기가 바뀌면(숨김 → 보임 포함) 다시 그린다 · 셸이 이 탭을 다시 보여 줄 때도 */

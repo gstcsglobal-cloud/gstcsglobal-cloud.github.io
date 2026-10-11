@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 176;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 177;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -145,24 +145,25 @@ GST._staT = function(){ var l=(GST._lang && GST._lang()) || 'ko'; return GST.STA
    예전에는 여섯 화면이 「✅ 시각 · 설비 1,234 · 작업 25만 · v50」을 누구에게나 찍었다. */
 /* 범위 띠(GST.filters · v179) 문구 — 축 이름은 GST.FLT_T.axes 를 쓴다(사이드바와 같은 글자) */
 GST.BAND_T = {
-  ko:{ aria:'보는 범위', all:'전체', none:'전체 (이 화면 미적용)', multi:'{n}개 선택 (상세 필터)', kr:'국내', os:'해외',
+  ko:{ aria:'보는 범위', dt:'기간 {a} ~ {b}', all:'전체', none:'전체 (이 화면 미적용)', multi:'{n}개 선택 (상세 필터)', kr:'국내', os:'해외',
        more:'상세 필터', clear:'해제', p_30:'30일', p_90:'90일', p_ytd:'올해', p_all:'전체 기간',
        unmatched:'{a} 미기재 인원 {n}명은 이 범위에 안 들어갑니다' },
-  en:{ aria:'Scope', all:'All', none:'All (not on this page)', multi:'{n} selected (more filters)', kr:'Korea', os:'Overseas',
+  en:{ aria:'Scope', dt:'Period {a} – {b}', all:'All', none:'All (not on this page)', multi:'{n} selected (more filters)', kr:'Korea', os:'Overseas',
        more:'More filters', clear:'Clear', p_30:'30d', p_90:'90d', p_ytd:'YTD', p_all:'All time',
        unmatched:'{n} people with no {a} are outside this scope' },
-  zh:{ aria:'查看范围', all:'全部', none:'全部 (此页面不适用)', multi:'已选 {n} 项 (详细筛选)', kr:'国内', os:'海外',
+  zh:{ aria:'查看范围', dt:'期间 {a} ~ {b}', all:'全部', none:'全部 (此页面不适用)', multi:'已选 {n} 项 (详细筛选)', kr:'国内', os:'海外',
        more:'详细筛选', clear:'清除', p_30:'30天', p_90:'90天', p_ytd:'今年', p_all:'全部期间',
        unmatched:'{a} 未填写的 {n} 名人员不在此范围内' },
-  ja:{ aria:'表示範囲', all:'全体', none:'全体 (この画面は対象外)', multi:'{n}件選択 (詳細フィルター)', kr:'国内', os:'海外',
+  ja:{ aria:'表示範囲', dt:'期間 {a} ~ {b}', all:'全体', none:'全体 (この画面は対象外)', multi:'{n}件選択 (詳細フィルター)', kr:'国内', os:'海外',
        more:'詳細フィルター', clear:'解除', p_30:'30日', p_90:'90日', p_ytd:'今年', p_all:'全期間',
        unmatched:'{a} 未記入の {n} 名はこの範囲に入りません' }
 };
 GST.okText = function(meta){
   const lang = (GST._lang && GST._lang()) || 'ko';
   const ts = new Date().toLocaleString(lang==='ko'?'ko-KR':lang==='zh'?'zh-CN':lang==='ja'?'ja-JP':'en-US');
-  const adm = !!(GST.isAdmin && GST.isAdmin());
-  return '✅ ' + ts + (adm && meta ? ' · ' + meta : '');
+  /* 행 수·버전 같은 메타는 관리자가 «설명 표시»를 켰을 때만(v185 · 사용자 「이거 왜 보여야 하지?」) — 관리자 화면도 평소에는 값만 */
+  const show = GST.explainOn ? GST.explainOn() : !!(GST.isAdmin && GST.isAdmin());
+  return '✅ ' + ts + (show && meta ? ' · ' + meta : '');
 };
 GST.staleText = function(ageMin){
   const T = GST._staT();
@@ -231,7 +232,8 @@ GST.explainOn = function(){
   if(!(GST._me && (GST._me.role==='admin' || GST._me.role==='legacy'))) return false;   // 등급을 모르면 끈다(fail-closed) — 조회자 화면이 깨끗한 것이 기본이다
   try{ return localStorage.getItem('gst_explain') === '1'; }catch(e){ return false; }
 };
-GST._explainApply = function(){ try{ if(document.body) document.body.classList.toggle('gst-explain', GST.explainOn()); }catch(e){} };
+GST._explainApply = function(){ try{ if(document.body) document.body.classList.toggle('gst-explain', GST.explainOn()); }catch(e){}
+  try{ if(GST._srcChip) GST._srcChip(); }catch(e){} };   /* 출처 배지는 «설명 표시»일 때만(문제가 없으면 · v185) — 켜고 끄면 바로 */
 if(typeof document!=='undefined'){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', GST._explainApply); else GST._explainApply();
   window.addEventListener('message', function(e){ var d=e.data||{}; if(d.type==='gst-explain') GST._explainApply(); });
@@ -3592,6 +3594,12 @@ GST._srcChip = function(){
     document.body.appendChild(el);
   }
   const bad = sh + ca;
+  /* 평소(전부 DB · 문제 없음)에는 숨긴다 — v185 사용자 「이것도 왜 보여야 하고?」. 경영진·고객 화면에는 값만(v172).
+     뜨는 것은 둘: ① 문제가 있을 때(시트·캐시로 그림 · 캐시 저장 실패) — 조용히 옛 숫자를 그리지 않는다(v128)
+     ② 관리자가 «설명 표시»를 켰을 때 — «core N»(옛 코드를 물고 있나) 판정은 거기서 한다 */
+  const show = !!(bad || GST._idbErr || (GST.explainOn && GST.explainOn()));
+  el.style.display = show ? '' : 'none';
+  if(!show){ const dd=document.getElementById('gstSrcDetail'); if(dd) dd.remove(); }
   el.style.background = bad ? '#78350f' : '#064e3b';
   el.style.color      = bad ? '#fde68a' : '#a7f3d0';
   /* 캐시가 실제로 먹었는지 보이게 한다. 안 보이면 «왜 느린지»를 아무도 못 묻는다. */
@@ -5063,6 +5071,8 @@ GST.fx = (function(){
       return true;
     }catch(e){ try{ finish(el); }catch(_){} return false; }
   };
+  /* 굴러가던 겹친 그림을 지금 바로 걷는다 — 이미지 저장(GST.pageShot)이 «최종값»을 찍게. 원래 글자는 처음부터 최종값이다 */
+  F.settle=function(){ document.querySelectorAll('.gst-odo-src').forEach(function(el){ try{ finish(el); }catch(e){} }); };
   /* 제목 디코드 — 글자가 잠깐 뒤섞였다가 왼쪽부터 제자리를 찾는다(겹친 그림만 바뀐다) */
   F.scramble=function(el){
     try{
@@ -6145,10 +6155,10 @@ GST.filters = (function(){
     d.setAttribute('role', 'group'); d.setAttribute('aria-label', T.aria);
     d.innerHTML = '<div class="gb-seg" id="gb-region" role="group"></div>'
       + BAND_AX.map(function(k){ return '<label class="gb-f"><span class="gb-l" data-gbk="'+k+'"></span><select id="gb-'+k+'"></select></label>'; }).join('')
-      + '<span class="gb-f gb-dt" id="gb-dt"><span class="gb-l" data-gbk="period"></span>'
-      +   '<input type="date" id="gb-from" class="gb-date"><span class="gb-tl">~</span><input type="date" id="gb-to" class="gb-date">'
-      +   '<span class="gb-pre">' + ['30','90','ytd','all'].map(function(p){ return '<button type="button" data-gbp="'+p+'"></button>'; }).join('') + '</span></span>'
+      /* 기간(날짜)은 띠에 두지 않는다(v185 · 사용자 「주간현황 말고 다른 페이지도 날짜 기준 정하는 거 숨겨 · 통일성」) —
+         상세 필터 맨 아래 «기간» 칸(빠른 선택 포함)이 정본이다. 걸어 두었으면 칩 하나로 밝힌다(숨긴 설정을 잊지 않게 · #gb-per 와 같은 규칙) */
       + '<span class="gb-x" id="gb-x" hidden></span>'
+      + '<button type="button" class="gb-perc" id="gb-dtc" hidden></button>'
       + '<button type="button" class="gb-perc" id="gb-per" hidden></button>'
       + '<span class="gb-sp"></span>'
       + '<button type="button" class="gb-more" id="gb-more"></button>'
@@ -6170,17 +6180,13 @@ GST.filters = (function(){
       if(e.target.closest('#gb-more')){ const tg = document.querySelector('.gst-sb-toggle'); if(tg) tg.click(); return; }
       /* 기간 칩 — 상세 필터를 «열고»(이미 열려 있으면 그대로) 기간 설정 칸을 보인다 */
       if(e.target.closest('#gb-per')){ if(GST._sbOpen) GST._sbOpen(true); const ps = document.getElementById('gstPerSec'); if(ps) try{ ps.scrollIntoView({block:'nearest'}); }catch(x){} return; }
+      /* 날짜 칩 — 상세 필터를 열고 기간 칸을 보인다 */
+      if(e.target.closest('#gb-dtc')){ if(GST._sbOpen) GST._sbOpen(true); const fe = document.getElementById('gf-from'); if(fe) try{ fe.scrollIntoView({block:'nearest'}); }catch(x){} return; }
       if(e.target.closest('#gb-clr')){ GST.clearFilters ? GST.clearFilters() : GST.filters.clear(); }
     });
     BAND_AX.forEach(function(k){
       const sel = document.getElementById('gb-'+k);
       sel.addEventListener('change', function(){ if(sel.value === '\x02') return; setBoth(k, sel.value ? [sel.value] : []); });
-    });
-    ['gb-from','gb-to'].forEach(function(id){
-      document.getElementById(id).addEventListener('change', function(){
-        F.dtFrom = document.getElementById('gb-from').value || ''; F.dtTo = document.getElementById('gb-to').value || '';
-        save(); refresh(); if(CFG && CFG.onChange) CFG.onChange();
-      });
     });
   }
   /* 빠른 기간 — 사람이 보는 날짜라 «로컬» 시계로 찍는다(v109 · 두 시계를 섞지 않는다) */
@@ -6214,12 +6220,10 @@ GST.filters = (function(){
       sel.disabled = !vals.length && cur !== null && !cur;
       sel.closest('.gb-f').classList.toggle('on', cur !== '');
     });
-    /* 기간 — 날짜 축이 있는 화면에만 */
-    const dt = document.getElementById('gb-dt');
-    dt.hidden = !hasD;
-    document.getElementById('gb-from').value = F.dtFrom || ''; document.getElementById('gb-to').value = F.dtTo || '';
-    dt.classList.toggle('on', !!(F.dtFrom || F.dtTo));
-    d.querySelectorAll('[data-gbp]').forEach(function(b){ b.textContent = T['p_'+b.dataset.gbp]; });
+    /* 기간 — 띠에는 «걸어 둔 것»만 칩으로(v185). 고르는 칸은 상세 필터(gf-from·gf-to · 빠른 선택 .gf-pre) */
+    const dtc = document.getElementById('gb-dtc'), dOn = hasD && !!(F.dtFrom || F.dtTo);
+    if(dtc){ dtc.hidden = !dOn; if(dOn) dtc.textContent = T.dt.replace('{a}', F.dtFrom || '…').replace('{b}', F.dtTo || '…'); }
+    document.querySelectorAll('.gf-pre [data-gbp]').forEach(function(b){ b.textContent = T['p_'+b.dataset.gbp]; b.disabled = !hasD; });
     /* 인원에 그 축 값이 빈 사람 — 범위를 걸면 빠진다. 몇 명인지 적는다(고칠 곳은 인원현황) */
     const x = document.getElementById('gb-x'); let xt = '';
     const gH = cfgOf(HR,'cGet'), rfH = CFG && CFG[HR.cRows], loH = cfgOf(HR,'cLoose') || {};
@@ -6329,7 +6333,9 @@ GST.filters = (function(){
       + '<div class="slicer-div"></div>'
       + '<div class="slicer"><div class="lbl" data-fk="period">'+L.period+'</div>'
       + '<input type="date" id="gf-from" class="dt-input" onchange="GST.filters._on()"> ~ '
-      + '<input type="date" id="gf-to" class="dt-input" onchange="GST.filters._on()"></div>'
+      + '<input type="date" id="gf-to" class="dt-input" onchange="GST.filters._on()">'
+      /* 빠른 선택(30일·90일·올해·전체) — 예전에는 범위 띠에 있었다(v179). 띠에서 날짜를 뺀 뒤로 여기가 한 곳이다(v185) */
+      + '<div class="gf-pre">' + ['30','90','ytd','all'].map(function(p){ return '<button type="button" data-gbp="'+p+'"></button>'; }).join('') + '</div></div>'
       + '</div>';
   }
 
@@ -6412,6 +6418,10 @@ GST.filters = (function(){
         }
       }
       try{ GST._chipsMount(); }catch(e){}   // 자기 칩 줄이 없는 페이지에만 (v135)
+      /* 상세 필터 «기간» 칸의 빠른 선택(v185) — 사이드바는 나중에 옮겨지므로 문서에서 한 번 받는다 */
+      if(!GST._gfPreOn){ GST._gfPreOn = true;
+        document.addEventListener('click', function(e){ const pb = e.target && e.target.closest && e.target.closest('.gf-pre [data-gbp]');
+          if(pb && !pb.disabled) bandPeriod(pb.dataset.gbp); }); }
       try{ bandMount(); }catch(e){ console.warn('[filters] band mount', e); }   // 범위 띠 (v179)
       refresh();
     },
@@ -6760,7 +6770,10 @@ GST.barHTML = function(reg, lang, part){
   // 차트 디자인·PPT — 전 페이지 공통
   const st=GST.STY[s.style]||GST.sty();
   h+='<button type="button" class="gb-b'+off(c.style!==false)+'" data-gb="style" title="'+T.sty+'"><span class="gb-sty">'+st.lbl+'</span></button>'
-    +'<button type="button" class="gb-b'+off(!!c.ppt)+'" data-gb="ppt" title="'+T.ppt+'"'+dis(!!c.ppt)+'>PPT</button>';
+    +'<button type="button" class="gb-b'+off(!!c.ppt)+'" data-gb="ppt" title="'+T.ppt+'"'+dis(!!c.ppt)+'>PPT</button>'
+    /* 이미지(v185) — 이 화면 전체를 PNG 로(메일 첨부용). 어느 화면이든 된다(GST.pageShot) */
+    +(function(){ const S=(GST.SHOT_T&&(GST.SHOT_T[lang]||GST.SHOT_T.ko))||{btn:'이미지',btnT:''};
+      return '<button type="button" class="gb-b" data-gb="shot" title="'+S.btnT+'">'+S.btn+'</button>'; })();
   // 브리핑·피벗 — 페이지가 GST.watch()/GST.pivotReg()로 데이터를 등록하면 자동 활성
   // 배지는 건수가 0이어도 자리를 비워 둔다 — 있고 없고에 따라 바 폭이 달라지면
   // 페이지를 옮길 때마다 툴바가 흔들리고 탭이 밀린다(전 페이지 동일 폭 원칙).
@@ -6834,6 +6847,10 @@ GST._barBusy = function(key, on){
 };
 GST._barDo = function(key, val){
   if(key==='brief'){ GST.briefOpen(); return; }
+  if(key==='shot'){   /* 이미지 저장(v185) — 공통바가 없는 화면(글로벌 현황 등)에서도 셸 «더보기»가 이 길로 온다 */
+    GST._barBusy('shot', true);
+    Promise.resolve(GST.pageShot ? GST.pageShot() : null).then(function(){ GST._barBusy('shot', false); }, function(){ GST._barBusy('shot', false); });
+    return; }
   if(key==='pivot'){ GST.pivotOpen(); return; }
   const s=GST._bar; if(!s) return;
   const on=s.on||{};
@@ -6986,6 +7003,7 @@ window.addEventListener('message', function(e){
     return; }
   if(d.type==='gst-bar-set'){ GST._barDo(d.key, d.val); return; }
   if(d.type==='gst-bar-ask'){ GST.barSync(); return; }
+  if(d.type==='gst-shot'){ GST._barDo('shot'); return; }   // 셸 «더보기 › 이 화면 이미지로 저장» · 팔레트(v185)
   if(d.type==='gst-style'){ if(d.style && d.style!==GST._styKey) GST.setStyle(d.style, false, true); return; }
   if(d.type==='gst-filter'){
     const o = d.f ? GST.decodeState(d.f) : null;
@@ -7133,6 +7151,243 @@ GST.chartHiRes = function(id, scale){
     g.drawImage(cv,0,0,oc.width,oc.height);
   } finally { ch.$cap=false; ch.options.devicePixelRatio=prev; ch.resize(); ch.render(); }
   return oc;
+};
+/* ============================================================
+   화면 전체를 이미지(PNG)로 — 메일 첨부용 (v185 · 사용자 「전체화면 이미지 저장버튼 만들어줘 — 이렇게 나오는 거 말고」)
+   브라우저의 «전체 크기 캡처»로 찍으면 ① 떠 있는 출처 배지·챗봇이 지도를 덮고 ② 흐르는 상태 띠가 잘리고
+   ③ 해상도가 낮았다. 여기서는 화면을 «종이에 옮기듯» 다시 그린다:
+   - 떠 있는 것(position:fixed · 카드 내보내기 단추 · .gst-noshot)은 뺀다
+   - 흐르는 띠는 멈춰 한 벌만 펼쳐 놓는다(body.gst-shot — 페이지 CSS 가 자기 띠를 맞춘다)
+   - 아직 안 보인 카드(스크롤 등장)는 보이게, 굴러가는 숫자(오도미터)는 최종값으로
+   - 차트는 고배율로 다시 그려 넣고(devicePixelRatio) 끝나면 되돌린다
+   - 글꼴은 화면에 나온 글자가 든 Pretendard 조각만 넣는다(92조각을 다 넣지 않는다)
+   ⚠ 숫자·판정은 손대지 않는다 — 지금 화면을 그대로 옮긴다. 바꾸는 것은 «보이는 방식»뿐이고 끝나면 전부 되돌린다.
+   ⚠ 시간 제한이 있다(v105) — 무엇이 멈춰도 단추가 영영 잠기지 않는다.
+   ============================================================ */
+GST.SHOT_VENDOR = '/assets/vendor/html-to-image.js';                                    // 1.11.13 (MIT)
+GST.SHOT_CDN    = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js';
+GST.SHOT_MS     = 60000;
+GST.SHOT_T = {
+  ko:{btn:'이미지', btnT:'이 화면 전체를 이미지(PNG)로 저장 — 메일 첨부용', menu:'이 화면 이미지로 저장', busy:'이미지 만드는 중…', done:'이미지를 저장했습니다',
+      fail:'이미지를 만들지 못했습니다 — 잠시 뒤 다시 시도하세요', lib:'이미지 도구를 불러오지 못했습니다 — 잠시 뒤 다시 시도하세요',
+      slow:'너무 오래 걸려 멈췄습니다 — 필터로 범위를 좁힌 뒤 다시 시도하세요', font:'일부 글꼴을 넣지 못해 기본 글꼴이 섞였습니다'},
+  en:{btn:'Image', btnT:'Save this whole screen as an image (PNG) — for email', menu:'Save this screen as an image', busy:'Making the image…', done:'Image saved',
+      fail:'Could not make the image — try again shortly', lib:'Could not load the image tool — try again shortly',
+      slow:'Took too long and stopped — narrow the filters and try again', font:'Some fonts could not be embedded — the default font was used there'},
+  zh:{btn:'图片', btnT:'将整个画面保存为图片(PNG) — 用于邮件附件', menu:'将此画面保存为图片', busy:'正在生成图片…', done:'图片已保存',
+      fail:'无法生成图片 — 请稍后再试', lib:'无法加载图片工具 — 请稍后再试',
+      slow:'耗时过长已停止 — 请用筛选缩小范围后重试', font:'部分字体未能嵌入,已使用默认字体'},
+  ja:{btn:'画像', btnT:'この画面全体を画像(PNG)で保存 — メール添付用', menu:'この画面を画像で保存', busy:'画像を作成中…', done:'画像を保存しました',
+      fail:'画像を作成できませんでした — 少し後でもう一度お試しください', lib:'画像ツールを読み込めませんでした — 少し後でもう一度お試しください',
+      slow:'時間がかかりすぎたため中止しました — フィルターで範囲を絞ってから再試行してください', font:'一部のフォントを埋め込めず、既定のフォントが混じりました'}
+};
+GST._shotT = function(k){ const T=GST.SHOT_T[GST._lang()]||GST.SHOT_T.ko; return T[k]||GST.SHOT_T.ko[k]||k; };
+GST.shotLoad = function(){
+  if(window.htmlToImage && window.htmlToImage.toBlob) return Promise.resolve();
+  if(GST._shotP) return GST._shotP;
+  GST._shotP = GST._loadScript([GST.SHOT_VENDOR, GST.SHOT_CDN], function(){ return !!(window.htmlToImage && window.htmlToImage.toBlob); })
+    .catch(function(e){ GST._shotP=null; throw e; });
+  return GST._shotP;
+};
+/* 찍는 동안만 거는 규칙 — 움직임을 멈추고, 떠 있는 것을 감추고, 흐르는 띠를 펼친다.
+   ⚠ animation:none 을 «전부»에 걸지 않는다 — forwards 로 끝 상태를 잡고 있는 그림(나라 지도 선 그리기 등)이 처음 상태로 돌아가 사라진다.
+     끝나는 움직임은 finish() 로 끝까지 보내고, 끝없는 움직임은 지금 모습 그대로 옮긴다(복제본에는 @keyframes 가 없어 다시 돌지 않는다). */
+GST._SHOT_CSS = [
+  'body.gst-shot *,body.gst-shot *::before,body.gst-shot *::after{transition:none !important;caret-color:transparent !important}',
+  'body.gst-shot .gst-rv{opacity:1 !important;translate:none !important}',
+  'body.gst-shot .gst-odo-src{opacity:1 !important}',
+  'body.gst-shot .gst-odo{display:none !important}',
+  'body.gst-shot .gst-tilt{transform:none !important}',
+  'body.gst-shot.gst-sb-open{padding-left:0 !important}',
+  'body.gst-shot .gst-insights{flex-wrap:wrap !important}',
+  'body.gst-shot .gst-insights .gst-ins-vp,body.gst-shot .gst-insights .gst-ins-run,body.gst-shot .gst-insights .gst-ins-rep{display:contents !important}',
+  'body.gst-shot .gst-insights .gst-ins-c{display:none !important}',
+  'body.gst-shot .gst-insights .gst-ins-run{animation:none !important}'
+].join('\n');
+/* 화면에 나온 글자가 든 글꼴 조각만 데이터 주소로 — 라이브러리에 맡기면 Pretendard 92조각(3.1MB)을 전부 받는다.
+   돌려주는 것: {css, miss}. 시트를 못 읽거나(다른 출처) 받기에 실패한 조각은 miss 로 센다(그 글자는 기본 글꼴로 나온다). */
+GST._shotFontCache = {};
+GST._shotFontCSS = async function(root){
+  const used=new Set();
+  const add=function(t){ t=String(t||''); for(let i=0;i<t.length;i++){ const c=t.codePointAt(i); used.add(c); if(c>0xFFFF) i++; } };
+  add(root.innerText||root.textContent||'');
+  root.querySelectorAll('input,select,textarea').forEach(function(e){ add(e.value); add(e.placeholder);
+    if(e.tagName==='SELECT') Array.prototype.forEach.call(e.selectedOptions||[], function(o){ add(o.textContent); }); });
+  add('0123456789%+-−.,:;/()[]·—…›‹▾▴▲▼●○✓✕⚠ ');   /* 가상 요소(::before)의 글자 — 섹션 번호·기호는 innerText 에 안 잡힌다 */
+  const parse=function(ur){
+    if(!ur) return null;
+    return ur.split(',').map(function(x){ x=x.trim().replace(/^U\+/i,'');
+      if(x.indexOf('?')>=0) return [parseInt(x.replace(/\?/g,'0'),16), parseInt(x.replace(/\?/g,'F'),16)];
+      const ab=x.split('-'); const a=parseInt(ab[0],16), b=ab[1]?parseInt(ab[1],16):a; return [a,b]; })
+      .filter(function(r){ return isFinite(r[0])&&isFinite(r[1]); });
+  };
+  const hit=function(rs){ if(!rs||!rs.length) return true; for(const c of used){ for(let i=0;i<rs.length;i++){ if(c>=rs[i][0]&&c<=rs[i][1]) return true; } } return false; };
+  const data=function(u){
+    if(GST._shotFontCache[u]) return GST._shotFontCache[u];
+    const p=Promise.race([
+      fetch(u,{credentials:'same-origin'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.blob(); })
+        .then(function(b){ return new Promise(function(res,rej){ const fr=new FileReader(); fr.onload=function(){ res(fr.result); }; fr.onerror=function(){ rej(fr.error); }; fr.readAsDataURL(b); }); }),
+      new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('TIMEOUT')); }, 15000); })
+    ]);
+    GST._shotFontCache[u]=p; p.catch(function(){ delete GST._shotFontCache[u]; });
+    return p;
+  };
+  /* 글꼴 규칙을 모은다 — 같은 출처 시트는 CSSOM 으로, 다른 출처(읽기 막힘)는 그 CSS 파일을 다시 받아 글자로 읽는다
+     (Pages 는 CORS 를 연다 · 받지 못하면 miss 로 센다) */
+  const faces=[], texts=[]; let miss=0;
+  const fromText=function(txt, base){
+    const re=/@font-face\s*\{([^}]*)\}/g; let m;
+    while((m=re.exec(txt))){ const body=m[1];
+      const get=function(k){ const r=new RegExp('(?:^|;)\\s*'+k+'\\s*:\\s*([^;]+)','i').exec(body); return r?r[1].trim():''; };
+      faces.push({get:get, base:base}); }
+  };
+  Array.prototype.forEach.call(document.styleSheets, function(sh){
+    let rs=null; try{ rs=sh.cssRules; }catch(e){ rs=null; }
+    if(!rs){ if(sh.href) texts.push(fetch(sh.href).then(function(r){ return r.ok?r.text():''; }).then(function(t){ fromText(t, sh.href); }, function(){ miss++; })); return; }
+    Array.prototype.forEach.call(rs, function(r){
+      if(!(r.type===5 || (window.CSSFontFaceRule && r instanceof CSSFontFaceRule))) return;
+      const st=r.style; faces.push({get:function(k){ return st.getPropertyValue(k); }, base:sh.href||location.href});
+    });
+  });
+  await Promise.all(texts);
+  const jobs=[];
+  faces.forEach(function(f){
+    if(!hit(parse(f.get('unicode-range')))) return;
+    const m=/url\(\s*(['"]?)([^'")]+)\1\s*\)(?:\s*format\(\s*(['"]?)([^'")]+)\3\s*\))?/.exec(f.get('src')||'');
+    if(!m) return;
+    let abs; try{ abs=/^data:/.test(m[2])?m[2]:new URL(m[2], f.base||location.href).href; }catch(e){ miss++; return; }
+    jobs.push((/^data:/.test(abs)?Promise.resolve(abs):data(abs)).then(function(du){
+      let css='@font-face{';
+      ['font-family','font-style','font-weight','font-stretch','unicode-range'].forEach(function(k){ const v=f.get(k); if(v) css+=k+':'+v+';'; });
+      return css+'src:url('+du+')'+(m[4]?' format("'+m[4]+'")':'')+';}';
+    }, function(){ miss++; return ''; }));
+  });
+  const parts=(await Promise.all(jobs)).filter(Boolean);
+  return {css:parts.join('\n'), miss:miss, n:parts.length, of:faces.length};
+};
+/* «한 줄짜리 글」을 표시한다 — 복제본은 화면에서 잰 폭(width)을 그대로 들고 가는데, 그림 속 글자 폭이 화면과 0.1px 만 달라도
+   줄이 넘어가 단위(「대」「건」)가 다음 줄로 떨어지고 아래 글과 겹쳤다(v185 · 실제로 KPI 카드 다섯 장이 다 그랬다).
+   화면에서 한 줄인 글은 그림에서도 한 줄이어야 맞다 — 이 표식이 붙은 칸만 복제본에서 줄바꿈을 막는다(_SHOT_NOWRAP).
+   ⚠ 화면에는 white-space 를 걸지 않는다(표식 속성만 붙인다) — 걸면 표의 열 폭 계산이 달라져 화면이 잠깐 흔들린다. */
+GST._SHOT_NOWRAP = '[data-gst-1l]{white-space:nowrap !important}\n[data-gst-fs0]{font-size:0 !important}';
+GST._shotLines = function(root){
+  const out=[], rg=document.createRange();
+  const mark=function(e){ e.setAttribute('data-gst-1l',''); out.push(e); };
+  /* 한 줄 칸 안의 «순수 인라인»(span·b·small …) 도 표시한다 — 그 안의 줄바꿈 자리는 그 칸 자신의 white-space 가 정한다.
+     인라인 블록(버튼 등)은 따로 «한 줄 칸»인지 본다(여러 줄짜리 상자를 한 줄로 누르면 넘친다) */
+  const inl=function(e){ for(let c=e.firstElementChild;c;c=c.nextElementSibling){ if(getComputedStyle(c).display==='inline'){ mark(c); inl(c); } } };
+  const els=root.querySelectorAll('*');
+  for(let i=0;i<els.length;i++){
+    const el=els[i];
+    if(el.closest('svg')) continue;
+    const cs=getComputedStyle(el), d0=cs.display;
+    /* 글자 크기 0 으로 숨긴 글(설명 숨김의 ⚠ 경고 등) — 라이브러리가 글자 크기를 «내림 − 0.1px» 로 옮겨 0 이 −0.1px(무효)이 되고,
+       숨겨 둔 긴 문장이 다시 나타나 옆 카드까지 넘쳤다. 표식을 달아 복제본에서도 0 으로 둔다 */
+    if(parseFloat(cs.fontSize)<1 && d0!=='none'){ el.setAttribute('data-gst-fs0',''); out.push(el); }
+    if(el.hasAttribute('data-gst-1l')) continue;
+    if(d0==='none'||d0==='inline'||d0==='contents'||cs.whiteSpace!=='normal') continue;
+    /* flex 칸은 자식이 블록이 된다 — 자기 글(이름 없는 조각)만 본다 */
+    const flex=/flex$/.test(d0);
+    const tops=[], bots=[]; let ok=true, txt=false;
+    const take=function(rs){ for(let k=0;k<rs.length;k++){ if(rs[k].width>0){ tops.push(rs[k].top); bots.push(rs[k].bottom); } } };
+    for(let c=el.firstChild; c && ok; c=c.nextSibling){
+      if(c.nodeType===3){ if(!/\S/.test(c.data)) continue; txt=true; rg.selectNodeContents(c); take(rg.getClientRects()); }
+      else if(c.nodeType===1 && !flex){ const d=getComputedStyle(c).display; if(d==='none') continue;
+        if(d.indexOf('inline')!==0){ ok=false; break; }
+        take(c.getClientRects()); if(/\S/.test(c.textContent||'')) txt=true; }
+    }
+    if(!ok||!txt||!tops.length) continue;
+    /* 한 줄 = 모든 조각이 세로로 한 띠를 함께 지난다(큰 숫자와 작은 단위는 위치가 달라도 겹친다) */
+    if(Math.max.apply(null,tops) < Math.min.apply(null,bots)){ mark(el); if(!flex) inl(el); }
+  }
+  return out;
+};
+/* 복제본에 옮길 속성 목록 — 라이브러리는 «브라우저가 내주는 계산된 속성 목록»만 옮기는데, 그 목록에 몇 개가 «없다»(Chromium 실측):
+   · font-feature-settings — 없으면 theme.css 의 'tnum' 0(비례 숫자)이 빠져 숫자가 고정폭으로 넓어지고,
+     금속 글자(background-clip:text)의 마지막 자리가 상자 밖으로 나가 «16 → 1€» 처럼 잘렸다
+   · counter-* — 없으면 섹션 머리 번호(01·02 …)가 전부 «00»으로 찍혔다 */
+GST._SHOT_PROPS_ADD = ['font-feature-settings','font-variation-settings','font-optical-sizing','font-kerning','font-synthesis','font-size-adjust',
+  'text-rendering','counter-reset','counter-increment','counter-set'];
+GST._shotProps = function(){
+  const props=Array.prototype.slice.call(getComputedStyle(document.documentElement));
+  GST._SHOT_PROPS_ADD.forEach(function(k){ if(props.indexOf(k)<0) props.push(k); });
+  return props;
+};
+/* opt: {scale, name, toast:false, download:false}. 돌려주는 것 {w,h,bytes,name,blob} 또는 null(실패 — 토스트로 말한다) */
+GST.pageShot = async function(opt){
+  opt=opt||{};
+  if(GST._shotBusy) return null;
+  GST._shotBusy=true;
+  const say=function(m){ if(opt.toast===false) return; try{ GST.capToast(m); }catch(e){} };
+  const root=document.body, de=document.documentElement, undo=[];
+  let res=null;
+  say(GST._shotT('busy'));
+  try{
+    try{ await GST.shotLoad(); }catch(e){ const x=new Error('LIB'); x.cause=e; throw x; }
+    if(!document.getElementById('gstShotCss')){ const st=document.createElement('style'); st.id='gstShotCss'; st.textContent=GST._SHOT_CSS; document.head.appendChild(st); }
+    /* 1) 종이 상태 — 마우스가 남긴 빛·기울기·회전 테두리는 걷고, 아직 안 보인 카드는 보이게(어차피 스크롤하면 보일 카드다) */
+    root.classList.add('gst-shot'); undo.push(function(){ root.classList.remove('gst-shot'); });
+    document.querySelectorAll('.gst-sp-on,.gst-hov,.gst-tilt').forEach(function(e){ e.classList.remove('gst-sp-on','gst-hov','gst-tilt'); });
+    document.querySelectorAll('.gst-rv:not(.gst-in)').forEach(function(e){ e.classList.add('gst-in'); });
+    try{ GST.fx && GST.fx.settle && GST.fx.settle(); }catch(e){}
+    try{ (document.getAnimations?document.getAnimations():[]).forEach(function(a){
+      try{ const t=a.effect&&a.effect.getComputedTiming(); if(t && isFinite(t.endTime) && a.playState!=='finished') a.finish(); }catch(e){} }); }catch(e){}
+    /* 두 프레임 기다려 바뀐 모습이 그려지게 — 안 보이는 iframe 에서는 프레임이 안 도므로 시간으로도 끝낸다 */
+    await new Promise(function(r){ const t=setTimeout(r, 150); requestAnimationFrame(function(){ requestAnimationFrame(function(){ clearTimeout(t); r(); }); }); });
+    /* 2) 크기와 배율 — 넓이가 너무 크면(긴 화면) 배율을 낮춘다. 한 변 16,384 는 라이브러리가 지킨다 */
+    const W=Math.ceil(Math.max(root.scrollWidth, de.clientWidth)), H=Math.ceil(Math.max(root.scrollHeight, de.scrollHeight));
+    let pr=opt.scale||2;
+    if(W*H*pr*pr>40e6) pr=Math.max(1, Math.sqrt(40e6/(W*H)));
+    /* 3) 차트는 그 배율로 다시 그려 둔다 — 캔버스는 지금 해상도 그대로 옮겨지므로 안 그러면 흐릿하다 */
+    if(window.Chart && Chart.instances){
+      Object.keys(Chart.instances).forEach(function(k){ const ch=Chart.instances[k];
+        try{ if(!ch||!ch.canvas||!ch.canvas.isConnected||!ch.canvas.offsetParent) return;
+          const prev=ch.options.devicePixelRatio; ch.options.devicePixelRatio=Math.max(pr, window.devicePixelRatio||1); ch.resize(); ch.render();
+          undo.push(function(){ ch.options.devicePixelRatio=prev; ch.resize(); ch.render(); }); }catch(e){} });
+    }
+    const keep=function(n){
+      if(!n || n.nodeType!==1) return true;
+      const tg=n.tagName;
+      if(tg==='SCRIPT'||tg==='NOSCRIPT'||tg==='STYLE'||tg==='TEMPLATE'||tg==='LINK') return false;
+      if(n.id==='loginOverlay'||n.id==='capToast'||n.id==='gstLocalBar') return false;   /* 혼자 연 화면의 단추 줄(차트 디자인·PPT·이미지…)은 그림에 둘 것이 아니다 */
+      const cl=n.classList;
+      if(cl && (cl.contains('gst-noshot')||cl.contains('capbtns')||cl.contains('gst-odo'))) return false;
+      let cs; try{ cs=getComputedStyle(n); }catch(e){ return true; }
+      return cs.position!=='fixed' && cs.display!=='none';
+    };
+    const font=await GST._shotFontCSS(root).catch(function(){ return {css:'', miss:1}; });
+    const lines=GST._shotLines(root); undo.push(function(){ lines.forEach(function(e){ e.removeAttribute('data-gst-1l'); e.removeAttribute('data-gst-fs0'); }); });
+    const cs=getComputedStyle(root);
+    let bg=cs.backgroundColor; if(!bg||/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) bg=getComputedStyle(de).backgroundColor;
+    if(!bg||/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) bg=(GST._isDark&&GST._isDark())?'#070B14':'#F4F5F8';
+    const props=GST._shotProps();
+    const job=window.htmlToImage.toBlob(root, { width:W, height:H, pixelRatio:pr, backgroundColor:bg, cacheBust:false, includeStyleProperties:props,
+      fontEmbedCSS:(font.css||'')+'\n'+GST._SHOT_NOWRAP, filter:keep,   /* 복제본 안에 들어가는 <style> 은 이것 하나다 — 글꼴 + 한 줄 표식 */
+      /* 바탕은 캔버스가 칠한다 — 복제본의 body 가 바탕을 다시 칠하면 그 아래 깔린 배경 빛(body::before · z-index -1)이 가려진다 */
+      style:{ margin:'0', backgroundColor:'transparent', minHeight:H+'px' } });
+    const blob=await Promise.race([job, new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('SLOW')); }, opt.ms||GST.SHOT_MS); })]);
+    if(!blob || !blob.size) throw new Error('EMPTY');
+    const now=new Date(), z=function(n){ return (n<10?'0':'')+n; };
+    const base=String(opt.name||(document.title||'').split(' · ')[0]||'dashboard').replace(/[\\/:*?"<>|]+/g,'_').trim()||'dashboard';
+    const name=base+'_'+GST.ymdL(now)+'_'+z(now.getHours())+z(now.getMinutes())+'.png';
+    res={w:Math.round(W*pr), h:Math.round(H*pr), bytes:blob.size, name:name, blob:blob, fontMiss:font.miss, fontN:font.n||0, fontOf:font.of||0};
+    GST._shotLast=res;
+    if(opt.download!==false){
+      const a=document.createElement('a'), url=URL.createObjectURL(blob);
+      a.href=url; a.download=name; a.style.display='none'; document.body.appendChild(a); a.click();
+      setTimeout(function(){ try{ URL.revokeObjectURL(url); a.remove(); }catch(e){} }, 4000);
+    }
+  }catch(e){
+    const k=e&&e.message==='LIB'?'lib':e&&e.message==='SLOW'?'slow':'fail';
+    console.warn('[gst] 이미지 저장 실패', e);
+    say(GST._shotT(k)+((GST.isAdmin&&GST.isAdmin()&&e&&e.message&&k==='fail')?' ('+String(e.message).slice(0,120)+')':''));
+    res=null;
+  }finally{
+    undo.reverse().forEach(function(f){ try{ f(); }catch(e){} });
+    GST._shotBusy=false;
+  }
+  if(res) say(GST._shotT('done')+' · '+res.w+'×'+res.h+(res.fontMiss?' · '+GST._shotT('font'):''));
+  return res;
 };
 /* 필터 요약 한 줄 — PPT 머리·표 캡션이 «지금 무엇을 걸러 본 숫자인지» 말하게 한다.
    조직 축 이름은 GST.filters 의 L 과 같은 낱말을 쓴다(사람이 사이드바에서 본 그 말). */

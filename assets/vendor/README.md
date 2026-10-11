@@ -45,3 +45,14 @@ CDN 이 «거부»하지 않고 «묵살»하면 `onerror` 가 영영 안 오기
   `npm pack pretendard@1.3.9` 의 `dist/web/variable/` 그대로(한 바이트도 안 고쳤다) · **SIL Open Font License 1.1**(CSS 머리에 원문).
 - dynamic subset 이라 브라우저는 «화면에 나온 글자가 든 조각»만 받는다(유니코드 범위별 @font-face).
 - 오프라인 판(`/offline/`)은 이 링크를 걷어내고 시스템 글꼴로 뜬다 — 조각 92개를 한 파일에 묶지 않는다.
+
+## html-to-image (v185)
+
+「이미지 저장」(화면 전체를 PNG 로)이 쓴다 — 누를 때만 받는다(`GST.shotLoad` · 자체 사본 → CDN · 15초).
+
+- `html-to-image.js` ← `npm pack html-to-image@1.11.13` 의 `dist/html-to-image.js` 그대로(한 바이트도 안 고쳤다 · 이미 압축본 · **MIT**).
+  끝줄의 `sourceMappingURL` 도 그대로라 이름을 원본과 같게 두었다(개발자 도구만 `.map` 을 찾다 404 를 본다 — 동작과 무관).
+- 화면을 SVG `foreignObject` 로 옮겨 캔버스에 그린다 — 글자 금속 효과(`background-clip:text`)·그라데이션 테두리가 화면 그대로 나온다
+  (html2canvas 는 그 둘을 못 그린다).
+- 글꼴은 이 라이브러리가 모으게 두지 않는다 — Pretendard 92조각을 전부 받아 넣는다. `GST._shotFontCSS` 가
+  «화면에 나온 글자가 든 조각»만 골라 넣는다.

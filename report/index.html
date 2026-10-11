@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=176"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=177"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -170,7 +170,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=176">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=177">
 </head>
 <body>
 
@@ -1370,7 +1370,8 @@ async function loadData(){
     const _hrRaw=hr.status==='fulfilled'?hr.value.rows.length:-1;
     const _hrWarn=!HR.length&&_hrRaw>3?' ⚠ 교육시트 열 인식 실패(원본 '+_hrRaw+'행)':(!HR.length&&_hrRaw<0?' ⚠ 교육시트 로드 실패':'');
     if(_hrWarn)st.className='status err';
-    const _adm=!!(GST.isAdmin&&GST.isAdmin());
+    /* 행 수·조인율·버전은 메타 — 관리자가 «설명 표시»를 켰을 때만(v185 · 사용자 「이거 왜 보여야 하지?」 · GST.okText 와 같은 규칙) */
+    const _adm=!!(GST.explainOn?GST.explainOn():(GST.isAdmin&&GST.isAdmin()));
     if(!_adm) st.textContent=(cached?GST.staleText()+' · ':'✅ ')+new Date().toLocaleString(LANG==='ko'?'ko-KR':LANG)+_hrWarn;   /* v179 — 조회자: 시각·경고만 */
     else st.textContent=(cached?GST.staleText()+' · ':'✅ ')+new Date().toLocaleString('ko-KR')+' · HR '+HR.length+_hrWarn+' · 실적 '+WK.length.toLocaleString()
       +(_wkDrop?' (제외 '+_wkDrop.toLocaleString()+'·단계/일자 공란)':'')+' · 설치 '+INST.length.toLocaleString()

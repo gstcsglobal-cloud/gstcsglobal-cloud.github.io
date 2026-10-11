@@ -241,6 +241,9 @@ addEventListener('message',e=>{ const d=e.data||{};
   if(d.type==='gst-kiosk-q'){ if(MUTE) return; const L={campus:['H1','H2','F16'],op:['GST TAIWAN SCRUBBER','SEC Scrubber'],customer:[]};
     (e.source||parent).postMessage({type:'gst-kiosk-a',axis:d.axis,list:L[d.axis]||[],ver:102,page:location.pathname},'*'); }
   if(d.type==='gst-kiosk-set'||d.type==='gst-kiosk-restore'){ GOT.push(d); document.getElementById('t').textContent=JSON.stringify(GOT); }
+  /* 글로벌 투어(v185) — 받았다고 답하고(재전송을 멈추게) 한 바퀴 길이를 알려 준다. 장면은 글로벌 현황의 일이라 여기서는 기록만 */
+  if(d.type==='gst-tour'){ GOT.push(d); if(!MUTE) (e.source||parent).postMessage({type:'gst-tour-ack',on:!!d.on,ready:true,est:{n:3,sec:183}},'*'); }
+  if(d.type==='gst-tour-q'){ GOT.push(d); (e.source||parent).postMessage({type:'gst-tour-a',ready:true,est:{n:3,sec:183}},'*'); }
 });
 </script></body>`;
 
@@ -249,6 +252,8 @@ addEventListener('message',e=>{ const d=e.data||{};
 const br=await chromium.launch({executablePath:process.env.PW_CHROMIUM});
 const pg=await br.newPage(); const errs=[];
 pg.on('pageerror',e=>errs.push(String(e)));
+/* v185 — 자동순회의 기본은 «글로벌 투어»다. 여기는 «화면 순회»(단지 × 페이지)를 보는 자리라 그 방식으로 못 박는다 */
+await pg.addInitScript(()=>{ try{ localStorage.setItem('gst_kiosk_mode','pages'); }catch(e){} });
 await pg.route('https://gstcsglobal-cloud.github.io/**', route=>{
   const u=new URL(route.request().url()).pathname;
   const body = u==='/assets/core.js' ? fs.readFileSync(ROOT+'/assets/core.js','utf8')
@@ -325,6 +330,7 @@ console.log('[2-2] 목록을 못 받았을 때 무엇을 하면 되는지 적는
 const br2=await chromium.launch({executablePath:process.env.PW_CHROMIUM});
 const pg2=await br2.newPage(); const errs2=[];
 pg2.on('pageerror',e=>errs2.push(String(e)));
+await pg2.addInitScript(()=>{ try{ localStorage.setItem('gst_kiosk_mode','pages'); }catch(e){} });
 await pg2.route('https://gstcsglobal-cloud.github.io/**', route=>{
   const u=new URL(route.request().url()).pathname;
   const body = u==='/assets/core.js' ? fs.readFileSync(ROOT+'/assets/core.js','utf8')
@@ -396,6 +402,67 @@ ok(r4.tabs===2 && r4.active==='report', '전제: 탭 둘, 활성은 답을 못 �
 ok(r4.list.length===3, '활성 탭이 못 답해도 다른 탭에서 목록을 받아야 한다 (실제 '+r4.list.length+'개)');
 
 await br2.close();
+
+/* ══════════════════════════════════════════════════════════════
+   [2-3] 글로벌 투어 (v185 · 사용자 「자동순회를 글로벌 현황으로 — 지구본이 돌며 나라 → 사이트 → 다음 나라」)
+   셸은 «글로벌 현황 탭을 띄우고 시작하라»만 보낸다. 장면·숫자는 그 화면의 일이다(t-hub [3c]).
+   ══════════════════════════════════════════════════════════════ */
+console.log('[2-3] 자동순회의 기본은 글로벌 투어 — 셸이 글로벌 현황에 시작·끝을 알리는지');
+{
+  const br4=await chromium.launch({executablePath:process.env.PW_CHROMIUM});
+  const pg4=await br4.newPage(); const errs4=[];
+  pg4.on('pageerror',e=>errs4.push(String(e)));
+  await pg4.route('https://gstcsglobal-cloud.github.io/**', route=>{
+    const u=new URL(route.request().url()).pathname;
+    const body = u==='/assets/core.js' ? fs.readFileSync(ROOT+'/assets/core.js','utf8')
+               : (u==='/'||u==='/index.html') ? fs.readFileSync(ROOT+'/index.html','utf8')
+               : (fs.existsSync(ROOT+u)&&fs.statSync(ROOT+u).isFile()) ? fs.readFileSync(ROOT+u,'utf8') : STUB;
+    route.fulfill({status:200, contentType:u.endsWith('.js')?'text/javascript':u.endsWith('.css')?'text/css':'text/html', body});
+  });
+  await pg4.route('**/*.supabase.co/**', r=>r.abort());
+  await pg4.goto('https://gstcsglobal-cloud.github.io/index.html',{waitUntil:'domcontentloaded'});
+  await pg4.waitForTimeout(1500);
+  const r4 = await pg4.evaluate(async ()=>{
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    const vis=id=>{ const el=document.getElementById(id); return !!el && getComputedStyle(el).display!=='none'; };
+    const out={ mode0:KIOSK.mode };
+    /* 글로벌 현황이 아직 안 열렸으면 한 바퀴 길이를 «모른다»고 적는다(지어내지 않는다) */
+    switchTab('report'); await sleep(400);
+    kioskBtn(); await sleep(500); out.est0=document.getElementById('kkEst').textContent; kioskBtn(); await sleep(100);
+    switchTab('hub'); await sleep(500); switchTab('report'); await sleep(400);
+    kioskBtn(); await sleep(900);
+    out.panel={ tour:vis('kkTourBox'), pages:vis('kkPagesBox'), go:document.getElementById('kkGo').disabled, est:document.getElementById('kkEst').textContent };
+    kioskGo(); await sleep(1600);
+    const hub=frames['hub']; const G=()=>hub?hub.contentWindow.GOT:[];
+    const ons=G().filter(x=>x.type==='gst-tour'&&x.on);
+    out.run={ on:KIOSK.on, run:KIOSK.run, tab:activeTab, cls:document.body.classList.contains('kiosk-on')&&document.body.classList.contains('kiosk-tour'),
+      bar:vis('kioskBar'), sends:ons.length, sec:ons[0]&&ons[0].sec, tsec:KIOSK.tsec };
+    /* 글로벌 현황에서 Esc → 그 화면이 셸에 «끝났다»를 알린다 → 셸도 순회를 끝낸다 */
+    hub.contentWindow.parent.postMessage({type:'gst-tour-stop'},'*'); await sleep(400);
+    out.stopHub={ on:KIOSK.on, cls:document.body.classList.contains('kiosk-tour')||document.body.classList.contains('kiosk-on') };
+    /* 셸에서 끝내면(정지 단추 · Esc) 글로벌 현황에 «끝»을 보낸다 */
+    kioskGo(); await sleep(900); kioskStop(); await sleep(300);
+    out.stopShell={ on:KIOSK.on, offSent:G().some(x=>x.type==='gst-tour'&&x.on===false) };
+    /* 방식 고르기는 이 PC 에 남는다 */
+    kioskBtn(); await sleep(300);
+    document.querySelector('#kkMode .kp-chip[data-k="pages"]').click(); await sleep(200);
+    out.pick={ mode:KIOSK.mode, ls:localStorage.getItem('gst_kiosk_mode'), tour:vis('kkTourBox'), pages:vis('kkPagesBox') };
+    document.querySelector('#kkMode .kp-chip[data-k="tour"]').click();
+    return out;
+  });
+  ok(r4.mode0==='tour', '자동순회의 기본 방식은 글로벌 투어다 (실제 '+r4.mode0+')');
+  ok(r4.panel.tour && !r4.panel.pages && !r4.panel.go, '패널 — 투어 칸만 보이고(단지·페이지 고르기는 숨김) 시작 단추가 열려 있다');
+  ok(/자료를 읽으면/.test(r4.est0), '글로벌 현황이 아직 안 열렸으면 한 바퀴 길이를 지어내지 않는다 (실제: '+r4.est0+')');
+  ok(/나라 3곳/.test(r4.panel.est) && /한 바퀴 약 3분/.test(r4.panel.est), '패널이 글로벌 현황에 물어 «나라 3곳 · 한 바퀴 약 3분»을 적는다 (실제: '+r4.panel.est+')');
+  ok(r4.run.on && r4.run.run==='tour' && r4.run.tab==='hub' && r4.run.cls, '시작하면 글로벌 현황 탭으로 가서 투어를 건다 (탭 '+r4.run.tab+')');
+  ok(r4.run.sends>=1 && r4.run.sends<=2 && r4.run.sec===r4.run.tsec, '시작 신호는 받았다는 답이 오면 그친다 · 장면 길이를 같이 보낸다 (보낸 '+r4.run.sends+'번)');
+  ok(!r4.run.bar, '투어 중에는 화면 순회용 하단바를 감춘다 — 장면이 자기 자막을 갖는다');
+  ok(!r4.stopHub.on && !r4.stopHub.cls, '글로벌 현황에서 끝내면(Esc · 정지) 셸의 순회도 끝난다');
+  ok(!r4.stopShell.on && r4.stopShell.offSent, '셸에서 끝내면 글로벌 현황에 «끝»을 보낸다 — 투어가 혼자 계속 돌지 않는다');
+  ok(r4.pick.mode==='pages' && r4.pick.ls==='pages' && !r4.pick.tour && r4.pick.pages, '「화면 순회」를 고르면 이 PC 에 남고 단지·페이지 고르기가 보인다');
+  ok(errs4.length===0, 'JS 에러가 없어야 한다: '+errs4.slice(0,2).join(' | '));
+  await br4.close();
+}
 
 /* ══════════════════════════════════════════════════════════════
    [3] 규율 — 목록을 셸에 박지 않았는지

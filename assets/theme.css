@@ -672,6 +672,10 @@ body.theme-slate .gst-insights{background:color-mix(in srgb,var(--surface) 86%,t
 .gst-sprog i{transform-origin:0 50%;transform:scaleX(0)}
 .gst-lbar i{width:0;transition:width .3s ease;box-shadow:0 0 10px color-mix(in srgb,var(--accent) 60%,transparent)}
 
+/* 토스트 자리 — 여덟 페이지는 자기 <style> 에 같은 자리를 들고 있지만 글로벌 현황·사이트 상세·조치 사항·맞춤 분석에는 없어서
+   토스트가 «페이지 맨 아래 한 줄»로 붙었다(스크롤해야 보였다 · v185 이미지 저장이 그 줄을 찍어 드러났다). 기본 자리를 여기 한 벌 둔다 */
+#capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;padding:9px 18px;font-size:13px;
+  opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100vw - 32px)}
 /* 토스트 — 짙은 유리 알약 · 아래에서 튕겨 오른다(옛 페이지 규칙의 위치·opacity 는 그대로 쓴다) */
 #capToast{background:rgba(16,24,40,.92) !important;color:#fff !important;font-weight:600 !important;border-radius:12px !important;
   padding:10px 18px !important;box-shadow:0 14px 34px rgba(16,24,40,.30) !important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
@@ -931,6 +935,11 @@ body.theme-slate .gst-band{background:var(--surface-glass,var(--surface))}
 /* 기간 칩(v183) — 마감을 걸어 두었거나 «마감 월만»일 때만 선다. 누르면 상세 필터의 «기간 설정»을 연다 */
 .gst-band .gb-perc{font:600 12px var(--font,inherit);padding:5px 12px;border-radius:999px;border:1px solid color-mix(in srgb,var(--gold,var(--accent)) 60%,transparent);background:color-mix(in srgb,var(--gold,var(--accent)) 10%,transparent);color:var(--gold,var(--accent));cursor:pointer;font-variant-numeric:tabular-nums}
 .gst-band .gb-perc[hidden]{display:none}
+/* 상세 필터 «기간» 칸의 빠른 선택(v185 — 범위 띠에서 옮겨 왔다) */
+.gf-pre{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.gf-pre button{font:600 11px var(--font,inherit);padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--txt-muted);cursor:pointer}
+.gf-pre button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.gf-pre button:disabled{opacity:.4;cursor:default}
 /* 상세 필터 맨 위 «기간 설정»(v183) — 공통바와 같은 컨트롤(barHTML 'per')을 사이드바 폭에 맞춰 두 줄로 */
 .gst-per{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .gst-per .off{display:none !important}

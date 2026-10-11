@@ -58,7 +58,9 @@ const st = () => pg.evaluate(() => {
     op: opt('gb-op'), opv: document.getElementById('gb-op').value, ca: opt('gb-campus'), cav: document.getElementById('gb-campus').value,
     x: document.getElementById('gb-x').hidden ? '' : document.getElementById('gb-x').textContent,
     more: document.getElementById('gb-more').textContent, clr: !document.getElementById('gb-clr').hidden,
-    dt: !document.getElementById('gb-dt').hidden, from: GST.filters.F.dtFrom, to: GST.filters.F.dtTo,
+    dt: !!document.querySelector('.gf-pre [data-gbp]'), bandDt: !!b.querySelector('input[type=date],[data-gbp]'),
+    dtc: document.getElementById('gb-dtc').hidden ? '' : document.getElementById('gb-dtc').textContent,
+    from: GST.filters.F.dtFrom, to: GST.filters.F.dtTo,
     eqOp: GST.filters.chosen('op').join(), hrOp: GST.filters.chosenH('op').join(),
     eqRg: GST.filters.chosen('region').join(), hrRg: GST.filters.chosenH('region').join(), c: window.cnt(),
     before: (b.nextElementSibling || {}).className || '' };
@@ -69,7 +71,8 @@ let s = await st();
 is(!!s, '공통 필터를 단 페이지에 #gstBand 가 생긴다');
 is(s && s.seg.join('|') === '전체*|국내|해외', '구분 — 전체·국내·해외(자료에 있는 값) · 처음엔 «전체» (' + (s && s.seg.join('|')) + ')');
 is(s && /fchips|kpis/.test(s.before), '칩 줄·KPI 바로 위에 선다 (' + (s && s.before) + ')');
-is(s && s.dt, '날짜 축이 있는 화면에는 기간 칸이 있다');
+is(s && s.dt && !s.bandDt, '기간(날짜)은 띠가 아니라 상세 필터에 — 띠에는 날짜 칸·빠른 선택이 없다 (v185 · 주간현황과 같은 모양)');
+is(s && !s.dtc, '기간을 안 걸었으면 띠에 기간 칩도 없다');
 is(s && !s.clr, '아무것도 안 걸렸으면 «해제» 단추가 없다');
 
 console.log('\n[2] 띠는 두 벌 모두에 건다 — 설비와 인원이 같은 범위');
@@ -99,11 +102,15 @@ s = await st();
 is(/상세 필터\s*2/.test(s.more), '띠 밖 축(인원 팀)도 센다 (' + s.more + ')');
 
 console.log('\n[6] 빠른 기간은 로컬 날짜 · 해제가 다 푼다');
-await pg.click('#gstBand [data-gbp="30"]');
+await pg.evaluate(() => document.querySelector('.gf-pre [data-gbp="30"]').click());   // 상세 필터의 빠른 선택(v185)
 s = await st();
 const exp = await pg.evaluate(() => { const n = new Date(), a = new Date(n.getFullYear(), n.getMonth(), n.getDate() - 29);
   const f = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); return f(a) + '|' + f(n); });
 is(s.from + '|' + s.to === exp, '「30일」 → 오늘 포함 30일 (로컬 · ' + s.from + ' ~ ' + s.to + ')');
+is(s.dtc === '기간 ' + s.from + ' ~ ' + s.to, '기간을 걸면 띠에 칩 하나로 밝힌다 — 숨긴 설정을 잊지 않게 (' + s.dtc + ')');
+await pg.evaluate(() => { if(GST._sbOpen) GST._sbOpen(false); });
+await pg.evaluate(() => document.getElementById('gb-dtc').click());
+is(await pg.evaluate(() => document.body.classList.contains('gst-sb-open')), '칩을 누르면 상세 필터가 열린다 (기간 칸으로)');
 const r0 = await pg.evaluate(() => window.RENDERS);
 await pg.click('#gb-clr');
 s = await st();
