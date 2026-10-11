@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 177;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 178;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -4405,7 +4405,12 @@ GST.geo = {
     let best=null, bd=1e9; adm.f.forEach(function(f){ if(!f.c) return; const d=(f.c[0]-lng)*(f.c[0]-lng)+(f.c[1]-lat)*(f.c[1]-lat); if(d<bd){ bd=d; best=f; } });
     return bd<1?best:null;
   },
-  admName:function(f, lang){ if(!f) return ''; const n=f.n||{}; return n[lang]||n.en||''; },
+  /* 한 나라 안에서 «한 언어로» 이름이 같은 행정구역 — 지도는 이름으로 묶어 칠하므로 겹치면 두 곳이 한 덩어리가 된다
+     (실측: 중국 陝西·山西 가 한국어로 둘 다 「산시성」이라, 시안 설비가 두 성에 같이 칠해지고 이름표가 둘 섰다).
+     자료 파일(assets/geo)은 공개 원본 그대로 두고 이름표만 가른다 — t-hub 가 «나라·언어마다 이름이 하나씩»인지 본다. */
+  NAME_FIX:{ 'CN-SN':{ko:'산시성(陝西)'}, 'CN-SX':{ko:'산시성(山西)'}, 'TW-HSQ':{en:'Hsinchu County'}, 'TW-HSZ':{en:'Hsinchu City'},
+    'TW-CYQ':{en:'Chiayi County'}, 'TW-CYI':{en:'Chiayi City'}, 'US-DC':{en:'Washington, D.C.'} },
+  admName:function(f, lang){ if(!f) return ''; const x=GST.geo.NAME_FIX[f.iso]; if(x&&x[lang]) return x[lang]; const n=f.n||{}; return n[lang]||n.en||''; },
   /* geo_places 읽기 — 못 읽어도(표 없음·오프라인) 빈 것으로 간다: 그때는 행정구역 이름으로만 놓는다 */
   places:async function(){
     try{ const C=await GST.db(); if(!C) return {};
