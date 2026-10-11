@@ -1178,7 +1178,10 @@ function pinAsk(why){
     inp.value=''; msg.textContent=''; go.disabled=false; ov.hidden=false;
     setTimeout(()=>{ try{ inp.focus(); }catch(e){} },0);
     let busy=false;
-    function done(v){ ov.hidden=true; go.onclick=no.onclick=null; inp.onkeydown=null; ov.onkeydown=null; resolve(v); }
+    /* Esc 는 «문서 전체»에서 받는다 — 창 안에 초점이 없어도(바탕을 눌렀거나 초점이 아직 안 옮겨 왔을 때) 닫혀야 한다.
+       창에만 걸어 두면 그때 Esc 가 먹지 않고, 올리기를 기다리던 쪽(doUpload)이 영영 멈춘다(CI 에서 실제로 멈췄다). */
+    const esc=e=>{ if(e.key==='Escape' && !ov.hidden){ e.preventDefault(); e.stopPropagation(); done(false); } };
+    function done(v){ ov.hidden=true; go.onclick=no.onclick=null; inp.onkeydown=null; document.removeEventListener('keydown', esc, true); resolve(v); }
     async function submit(){
       if(busy)return;
       const pin=inp.value.trim();
@@ -1199,7 +1202,7 @@ function pinAsk(why){
     go.onclick=submit;
     no.onclick=()=>done(false);
     inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); } };
-    ov.onkeydown=e=>{ if(e.key==='Escape'){ e.preventDefault(); done(false); } };
+    document.addEventListener('keydown', esc, true);
   });
 }
 

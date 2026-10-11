@@ -329,6 +329,8 @@ console.log('[12] 통째 교체는 기본값이 아니고 · 비밀번호로 승
   pq.on('dialog', d => d.accept());
   await pq.addInitScript(() => { window.__PIN='2468'; window.__CM=[]; });
   await pq.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await pq.waitForTimeout(900);
+  /* 기다림에는 늘 끝이 있어야 한다 — 창이 안 닫히면 doUpload 가 영영 안 끝나 검사 전체가 CI 시간 제한(45분)까지 멈춘다(실제로 멈췄다) */
+  const within = (p, ms, lbl) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('시간 초과 — ' + lbl)), ms))]);
   const pick = rid => pq.evaluate(r => { const s=document.getElementById('tsel'); s.value=String(TABLES.findIndex(t=>t.rid===r)); s.onchange(); return document.getElementById('modeSel').value; }, rid);
   is(await pick('wk')==='win' && await pick('alarm')==='win' && await pick('abp2os')==='win', '날짜 구간이 있는 표의 기본은 «겹치는 구간만 교체»');
   is(await pick('inst')==='' && await pick('roster')==='' && await pick('cipf11')==='', '구간이 없는 표는 «고르세요» — 통째 교체가 기본이 아니다');
@@ -363,14 +365,19 @@ console.log('[12] 통째 교체는 기본값이 아니고 · 비밀번호로 승
   const up2 = pq.evaluate(() => window.doUpload());
   await pq.waitForFunction(() => !document.getElementById('pinOv').hidden, null, { timeout:8000 });
   is(/지났습니다/.test(await pq.evaluate(() => document.getElementById('pinD').textContent)), '승인이 지났으면(서버 pin_required) 다시 묻는다');
-  await pq.fill('#pinIn', '2468'); await pq.click('#pinGo'); await up2;
+  await pq.fill('#pinIn', '2468'); await pq.click('#pinGo'); await within(up2, 15000, '다시 승인한 올리기');
   rp = await pq.evaluate(() => window.__QLOG.filter(q=>q.rpc).map(q=>q.rpc));
   is(rp.filter(r=>r==='csv_upload_full').length===2, '다시 승인하면 비우기를 한 번 더 부른다');
   /* 브라우저가 옛 선택(통째 교체)을 되살린 경우 — 승인 없이 올리기를 누르면 그 자리에서 묻는다 */
   await pq.evaluate(() => { PIN_OK=false; window.__QLOG=[]; });
   const up3 = pq.evaluate(() => window.doUpload());
   await pq.waitForFunction(() => !document.getElementById('pinOv').hidden, null, { timeout:8000 });
-  await pq.keyboard.press('Escape'); await up3;
+  /* 초점을 창 밖으로 뺀 채 Esc — 창에만 Esc 를 걸어 두면 여기서 영영 안 닫힌다(초점이 아직 안 옮겨 왔을 때와 같은 상황) */
+  await pq.waitForTimeout(50); await pq.evaluate(() => { const a=document.activeElement; if(a && a.blur) a.blur(); });
+  await pq.keyboard.press('Escape');
+  const up3ok = await within(up3, 5000, 'Esc 로 닫기').then(() => true, () => false);
+  is(up3ok && await pq.evaluate(() => document.getElementById('pinOv').hidden), 'Esc 는 초점이 창 밖에 있어도 창을 닫는다');
+  if(!up3ok) await pq.click('#pinNo').catch(() => {});
   rp = await pq.evaluate(() => window.__QLOG.filter(q=>q.rpc).map(q=>q.rpc));
   is(!rp.includes('csv_upload_full') && !rp.includes('csv_upload_begin'), '승인 없이 올리기를 누르면 묻고, 취소하면 아무것도 안 지운다');
   /* 서버 응답별 문구 */
