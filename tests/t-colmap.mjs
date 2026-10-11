@@ -11,6 +11,9 @@ const PW = process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM }
 let pass = 0, fail = 0;
 const is = (c, m) => { c ? (pass++, console.log('  ✓ ' + m)) : (fail++, console.log('  ❌ ' + m)); };
 const OUT = fs.mkdtempSync(path.join(os.tmpdir(), 'gst-tpl-'));
+/* v184 — 날짜 구간이 없는 표는 «넣는 방식»이 «고르세요»로 시작하고, 통째 교체는 비밀번호 승인이 있어야 고를 수 있다.
+   이 검사의 [1]~[11] 은 «열 맵핑»을 보는 것이라 예전처럼 통째 교체로 두고 승인은 받은 것으로 친다(승인 창은 [12] 가 본다). */
+const asFull = pg => pg.evaluate(async () => { PIN_OK = true; const m = document.getElementById('modeSel'); m.value = 'full'; await window.onMode(); });
 
 /* ── 저장소 서빙 + 스텁 ─────────────────────────────────────────────────── */
 const MIME = { '.js':'text/javascript', '.css':'text/css', '.html':'text/html' };
@@ -59,6 +62,9 @@ const STUB = '\n;GST.USE_DB=false;GST.authOn=function(){return false;};'
   +    'args.p_cols.forEach(function(c){T.splice(T.indexOf("id"),0,c);});return {data:{added:args.p_cols,skipped:[]},error:null};}'
   +   'if(name==="csv_window"&&window.__WIN_ERR)return {data:null,error:{message:window.__WIN_ERR}};'
   +   'if(name==="csv_upload_begin"&&window.__BEGIN_ERR)return {data:null,error:{message:window.__BEGIN_ERR}};'
+  /* v184 — 통째 교체 승인. 번호는 검사가 정한 지어낸 값(window.__PIN) · __PIN_FN 이 있으면 그 응답(잠김·서버 없음 등) */
+  +   'if(name==="upload_pin_check"){if(window.__PIN_FN)return window.__PIN_FN(args);return args.p_pin===window.__PIN?{data:{ok:true},error:null}:{data:{ok:false,err:"wrong",left:3},error:null};}'
+  +   'if(name==="csv_upload_full"){if(window.__FULL_EXPIRE){window.__FULL_EXPIRE=0;return {data:null,error:{message:"pin_required"}};}if(window.__BEGIN_ERR)return {data:null,error:{message:window.__BEGIN_ERR}};return {data:null,error:null};}'
   +   'if(name==="csv_window")return {data:{hit:3,rows:50,next_src:1000,dry:!!(args&&args.p_dry)},error:null};'
   +   'return {data:{},error:null};}};'
   + 'GST.db=async function(){return window.__FDB;};';
@@ -92,7 +98,7 @@ const mk = (hdr, swap) => { let H=Object.keys(spec).map(k=>hdr[k]||spec[k]); if(
   return rows.map(r=>r.join(',')).join('\n')+'\n'; };
 const put = async (csv, name) => { const p=path.join(OUT,name); fs.writeFileSync(p,'﻿'+csv); await pg.setInputFiles('#fsel', p); await pg.waitForTimeout(1200); };
 const chk = () => pg.evaluate(() => document.getElementById('chk').innerText);
-await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='inst'))));
+await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='inst')))); await asFull(pg);
 
 console.log('[1] 못 찾은 필수 열 — 말하고 패널을 연다');
 await put(mk({sn:'시리얼'}), 'a.csv');
@@ -134,7 +140,7 @@ const W5 = await pg2.evaluate(() => { const S=GST.SM.SPEC.wk, opt=S.opt||[], ks=
   return { ks, H:ks.map(k=>[].concat(S.fields[k])[0]), req:ks.find(k=>opt.indexOf(k)<0) }; });
 const cm5 = (await pg.evaluate(() => window.__CM)).concat([{ site:'ALL', tbl:'wk', field:W5.req, header:'코드번호' }]);
 await pg2.evaluate(cm => { window.__CM = cm; }, cm5);
-await pg2.selectOption('#tsel', await pg2.evaluate(() => String(TABLES.findIndex(t=>t.rid==='wk'))));
+await pg2.selectOption('#tsel', await pg2.evaluate(() => String(TABLES.findIndex(t=>t.rid==='wk')))); await asFull(pg2);
 const H5 = W5.H.map((h,i) => W5.ks[i]===W5.req ? '코드번호' : h);
 const p2=path.join(OUT,'c.csv'); fs.writeFileSync(p2,'\ufeff'+[H5].concat([0,1,2].map(r=>H5.map((h,j)=>'v'+r+'_'+j))).map(r=>r.join(',')).join('\n')+'\n');
 await pg2.setInputFiles('#fsel', p2); await pg2.waitForTimeout(1500);
@@ -150,7 +156,7 @@ is(/저장 실패/.test(alerted), '조용히 넘어가지 않는다 — '+alerte
 
 console.log('[7] Import 표(교육) — 표의 열마다 머리글을 고른다 · 모르는 열은 막지 않고 밝힌다');
 await pg.evaluate(() => { window.__CM_DENY=0; window.__CM=[]; GST.cmap._c={}; });
-await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='edu'))));
+await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='edu')))); await asFull(pg);
 await put('번호,현장,이름,사번,교육완료일,비고\n1,X1,가나,A001,2026-01-02,메모\n2,X2,다라,A002,2026-02-03,\n', 'e.csv');
 let t7 = await chk();
 is(/열 맵핑/.test(t7) && /올리지 않는 열/.test(t7), '패널과 «올리지 않는 열» 목록이 뜬다 (예전처럼 통째로 막지 않는다)');
@@ -164,7 +170,7 @@ is(/하나도 없습니다/.test(await chk()) && await pg.evaluate(() => !!docum
 
 console.log('[8] 알람 워크북 — 시트 태그별로 기억한다');
 await pg.evaluate(() => { window.__CM=[]; GST.cmap._c={}; });
-await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='alarm'))));
+await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='alarm')))); await asFull(pg);
 const wb = XLSX.utils.book_new();
 XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['장비번호','Alarm Comment','Occur Time','내적/외적'],
   ['ZZA-0001','PRESSURE HIGH','2026-08-03 10:00:00','내적'],['ZZA-0002','FLAME OFF','2026-08-04 11:00:00','외적']]), 'P운영_ALARM');
@@ -180,7 +186,7 @@ console.log('[9] 새 값 점검 — 처음 보는 사이트 · 법인 칸의 국
 await pg.evaluate(() => { window.__CM=[]; GST.cmap._c={}; window.__VG=[
   {country:'GST TAIWAN SCRUBBER',customer:'Testco Memory Taiwan Co., Ltd.(F16)',location:null,fab:'F16',state:'Operation',n:50},
   {country:'OPX Scrubber',customer:'TESTCO',location:'Q1',fab:'Q1-A',state:'Operation',n:20}]; });
-await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='inst'))));
+await pg.selectOption('#tsel', await pg.evaluate(() => String(TABLES.findIndex(t=>t.rid==='inst')))); await asFull(pg);
 { const HH=Object.keys(spec).map(k=>spec[k]); const row=o=>Object.keys(spec).map(k=>o[k]==null?'':o[k]);
   const csv=[HH, row({sn:'ZZS-1',country:'TAIWAN',customer:'TESTCO',location:'TAINAN',fab:'F16S',fabIn:'2026-09-01'}), row({sn:'ZZS-2',country:'TAIWAN',customer:'TESTCO',location:'TAINAN',fab:'F16S'}),
     row({sn:'ZZS-3',country:'GST TAIWAN SCRUBBER',customer:'TESTCO',fab:'F16',state:'Operation'}), HH.map(()=>'')].map(r=>r.join(',')).join('\n')+'\n';
@@ -218,7 +224,7 @@ console.log('[10] CIP 자체관리 양식 — Detail 시트 · 묶음 머리글 
   await pa.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await pa.waitForTimeout(900);
   const chkA = () => pa.evaluate(() => document.getElementById('chk').innerText);
   const decs = () => pa.evaluate(() => Object.fromEntries(Array.from(document.querySelectorAll('#chk [data-cipdec]')).map(s=>[s.dataset.cipdec, {v:s.value, opts:Array.from(s.options).map(o=>o.value), hint:s.closest('tr').children[3].innerText, cls:s.closest('tr').children[3].className, above:s.closest('tr').children[1].innerText, vals:s.closest('tr').children[2].innerText}])));
-  await pa.selectOption('#tsel', await pa.evaluate(() => String(TABLES.findIndex(t=>t.rid==='cipf16'))));
+  await pa.selectOption('#tsel', await pa.evaluate(() => String(TABLES.findIndex(t=>t.rid==='cipf16')))); await asFull(pa);
   await pa.setInputFiles('#fsel', cp); await pa.waitForTimeout(2500);
   let tc = await chkA(), D = await decs();
   is(await pa.evaluate(() => document.getElementById('ssel').value) === 'Detail', 'Detail 시트를 고른다 (Task · Detail (Finish) 가 앞에 있어도)');
@@ -259,7 +265,7 @@ console.log('[10] CIP 자체관리 양식 — Detail 시트 · 묶음 머리글 
   await pa.click('#chk [data-cipunign="Memo Note"]'); await pa.waitForTimeout(2200);
   D = await decs();
   is(D['Memo Note'] && !(await pa.evaluate(() => window.__CM.some(r=>r.field==='__ign:memonote'))), '«무시 취소» — 기억을 지우고 다시 묻는다');
-  await pa.selectOption('#tsel', await pa.evaluate(() => String(TABLES.findIndex(t=>t.rid==='cipf11'))));
+  await pa.selectOption('#tsel', await pa.evaluate(() => String(TABLES.findIndex(t=>t.rid==='cipf11')))); await asFull(pa);
   await pa.setInputFiles('#fsel', cp); await pa.waitForTimeout(2500);
   is(/FAB 은 F16 2행/.test(await chkA()) && await pa.evaluate(() => !PREP && document.getElementById('goBtn').disabled), '다른 FAB 의 파일(F16 → CIP F11)은 막는다 — 통째 교체로 남의 표를 갈아끼우지 않게');
   is(pea.length===0, 'JS 에러 0 (관리자 화면)' + (pea.length?' → '+pea[0]:''));
@@ -268,7 +274,7 @@ console.log('[10] CIP 자체관리 양식 — Detail 시트 · 묶음 머리글 
   const pv = await ctx.newPage();
   await pv.addInitScript(s0 => { window.__ME_OBJ={email:'e@t',can_write:true,role:'editor'}; window.__CIPCOLS=s0; window.__CM=[]; }, seed());
   await pv.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await pv.waitForTimeout(900);
-  await pv.selectOption('#tsel', await pv.evaluate(() => String(TABLES.findIndex(t=>t.rid==='cipf16'))));
+  await pv.selectOption('#tsel', await pv.evaluate(() => String(TABLES.findIndex(t=>t.rid==='cipf16')))); await asFull(pv);
   await pv.setInputFiles('#fsel', cp); await pv.waitForTimeout(2500);
   const tv = await pv.evaluate(() => document.getElementById('chk').innerText);
   const ov = await pv.evaluate(() => Array.from(document.querySelectorAll('#chk [data-cipdec] option')).map(o=>o.value));
@@ -282,7 +288,7 @@ console.log('[11] 여러 줄로 병합된 머리글 — 교육현황 «교육과
   const EDU=['No','Site','인원','사원번호','구분','Basic 교육완료일','Veteran 교육완료일','Scrubber Lv.2 교육완료일','Scrubber Lv.3 교육완료일','id','src_row','created_at','imported_at','extra'];
   await pm.addInitScript(c => { window.__CIPCOLS={sheet_edu:c}; window.__CM=[]; }, EDU);
   await pm.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await pm.waitForTimeout(900);
-  await pm.selectOption('#tsel', await pm.evaluate(() => String(TABLES.findIndex(t=>t.rid==='edu'))));
+  await pm.selectOption('#tsel', await pm.evaluate(() => String(TABLES.findIndex(t=>t.rid==='edu')))); await asFull(pm);
   /* 지어낸 값 — 모양만 실제 파일을 따랐다: 제목 줄 · No~직무 세로 병합 · 교육과정(가로 병합) › 두 묶음 › 칸 넷씩 */
   const W=20, pad=a=>{ const r=a.slice(); while(r.length<W) r.push(''); return r; };
   const aoa=[
@@ -315,6 +321,83 @@ console.log('[11] 여러 줄로 병합된 머리글 — 교육현황 «교육과
      '묶음이 머리글 «위»에 있는 양식(2026-08 개편)은 지금까지대로');
   is(pem.length===0, 'JS 에러 0 (병합 머리글)' + (pem.length?' → '+pem[0]:''));
   await pm.close();
+}
+
+console.log('[12] 통째 교체는 기본값이 아니고 · 비밀번호로 승인한다 (v184)');
+{
+  const pq = await ctx.newPage(); const pqe=[]; pq.on('pageerror', e => pqe.push(e.message));
+  pq.on('dialog', d => d.accept());
+  await pq.addInitScript(() => { window.__PIN='2468'; window.__CM=[]; });
+  await pq.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await pq.waitForTimeout(900);
+  /* 기다림에는 늘 끝이 있어야 한다 — 창이 안 닫히면 doUpload 가 영영 안 끝나 검사 전체가 CI 시간 제한(45분)까지 멈춘다(실제로 멈췄다) */
+  const within = (p, ms, lbl) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('시간 초과 — ' + lbl)), ms))]);
+  const pick = rid => pq.evaluate(r => { const s=document.getElementById('tsel'); s.value=String(TABLES.findIndex(t=>t.rid===r)); s.onchange(); return document.getElementById('modeSel').value; }, rid);
+  is(await pick('wk')==='win' && await pick('alarm')==='win' && await pick('abp2os')==='win', '날짜 구간이 있는 표의 기본은 «겹치는 구간만 교체»');
+  is(await pick('inst')==='' && await pick('roster')==='' && await pick('cipf11')==='', '구간이 없는 표는 «고르세요» — 통째 교체가 기본이 아니다');
+  is(await pq.evaluate(() => [...document.querySelectorAll('#tsel option')].every((o,i)=>{ const s=document.getElementById('tsel'); s.value=String(i); s.onchange(); return document.getElementById('modeSel').value!=='full'; })),
+     '어느 표에서도 기본이 통째 교체가 아니다');
+  await pick('inst');
+  const csvI = mk({}); const fpI=path.join(OUT,'pin-inst.csv'); fs.writeFileSync(fpI,'﻿'+csvI);
+  await pq.setInputFiles('#fsel', fpI); await pq.waitForTimeout(900);
+  is(/넣는 방식.*먼저 고르세요/.test(await pq.evaluate(() => document.getElementById('chk').innerText))
+     && await pq.evaluate(() => !PREP && document.getElementById('goBtn').disabled), '방식을 안 골랐으면 검사하지 않고 «먼저 고르세요»라고 말한다');
+  await pq.selectOption('#modeSel', 'full'); await pq.waitForTimeout(200);
+  is(await pq.evaluate(() => !document.getElementById('pinOv').hidden), '통째 교체를 고르면 비밀번호 창이 뜬다');
+  await pq.fill('#pinIn', '1357'); await pq.click('#pinGo'); await pq.waitForTimeout(200);
+  is(await pq.evaluate(() => !document.getElementById('pinOv').hidden && /틀렸습니다.*3번/.test(document.getElementById('pinMsg').textContent)),
+     '틀리면 창이 남고 남은 횟수를 말한다');
+  await pq.click('#pinNo'); await pq.waitForTimeout(300);
+  is(await pq.evaluate(() => document.getElementById('pinOv').hidden && document.getElementById('modeSel').value==='' && !PIN_OK),
+     '취소하면 원래 방식으로 돌아간다 (통째 교체 아님)');
+  await pq.selectOption('#modeSel', 'full'); await pq.waitForTimeout(200);
+  await pq.fill('#pinIn', '2468'); await pq.press('#pinIn', 'Enter'); await pq.waitForTimeout(1500);
+  is(await pq.evaluate(() => document.getElementById('pinOv').hidden && document.getElementById('modeSel').value==='full' && PIN_OK),
+     '맞는 번호면 통째 교체가 승인된다');
+  is(await pq.evaluate(() => !!PREP && !document.getElementById('goBtn').disabled && document.getElementById('fsel').files.length===1),
+     '방식을 바꿔도 파일은 그대로 두고 그 자리에서 다시 검사한다 (데이터 관리가 건넨 파일을 잃지 않게)');
+  await pq.evaluate(() => { window.__QLOG=[]; });
+  await pq.evaluate(() => window.doUpload()); await pq.waitForFunction(() => /완료|❌/.test(document.getElementById('log').textContent), null, { timeout:15000 });
+  let rp = await pq.evaluate(() => window.__QLOG.filter(q=>q.rpc).map(q=>q.rpc));
+  is(rp.includes('csv_upload_full') && !rp.includes('csv_upload_begin'), '비우기는 csv_upload_full 하나로만 (서버가 승인표를 다시 본다)');
+  is(await pq.evaluate(() => !PIN_OK), '한 번 올리면 승인이 끝난다 — 다음 통째 교체는 다시 묻는다');
+  /* 승인표가 지났을 때 — 한 번 더 묻고 다시 부른다 */
+  await pq.evaluate(() => { PIN_OK=true; window.__FULL_EXPIRE=1; window.__QLOG=[]; document.getElementById('log').textContent='—'; });
+  const up2 = pq.evaluate(() => window.doUpload());
+  await pq.waitForFunction(() => !document.getElementById('pinOv').hidden, null, { timeout:8000 });
+  is(/지났습니다/.test(await pq.evaluate(() => document.getElementById('pinD').textContent)), '승인이 지났으면(서버 pin_required) 다시 묻는다');
+  await pq.fill('#pinIn', '2468'); await pq.click('#pinGo'); await within(up2, 15000, '다시 승인한 올리기');
+  rp = await pq.evaluate(() => window.__QLOG.filter(q=>q.rpc).map(q=>q.rpc));
+  is(rp.filter(r=>r==='csv_upload_full').length===2, '다시 승인하면 비우기를 한 번 더 부른다');
+  /* 브라우저가 옛 선택(통째 교체)을 되살린 경우 — 승인 없이 올리기를 누르면 그 자리에서 묻는다 */
+  await pq.evaluate(() => { PIN_OK=false; window.__QLOG=[]; });
+  const up3 = pq.evaluate(() => window.doUpload());
+  await pq.waitForFunction(() => !document.getElementById('pinOv').hidden, null, { timeout:8000 });
+  /* 초점을 창 밖으로 뺀 채 Esc — 창에만 Esc 를 걸어 두면 여기서 영영 안 닫힌다(초점이 아직 안 옮겨 왔을 때와 같은 상황) */
+  await pq.waitForTimeout(50); await pq.evaluate(() => { const a=document.activeElement; if(a && a.blur) a.blur(); });
+  await pq.keyboard.press('Escape');
+  const up3ok = await within(up3, 5000, 'Esc 로 닫기').then(() => true, () => false);
+  is(up3ok && await pq.evaluate(() => document.getElementById('pinOv').hidden), 'Esc 는 초점이 창 밖에 있어도 창을 닫는다');
+  if(!up3ok) await pq.click('#pinNo').catch(() => {});
+  rp = await pq.evaluate(() => window.__QLOG.filter(q=>q.rpc).map(q=>q.rpc));
+  is(!rp.includes('csv_upload_full') && !rp.includes('csv_upload_begin'), '승인 없이 올리기를 누르면 묻고, 취소하면 아무것도 안 지운다');
+  /* 서버 응답별 문구 */
+  const msgOf = async fn => { await pq.evaluate(f => { window.__PIN_FN = new Function('a', f); }, fn);
+    await pq.evaluate(() => { const s=document.getElementById('modeSel'); s.value=''; s.dataset.prev=''; PIN_OK=false; });
+    await pq.selectOption('#modeSel', 'full'); await pq.waitForTimeout(150);
+    await pq.fill('#pinIn', '0000'); await pq.click('#pinGo'); await pq.waitForTimeout(300);
+    const m = await pq.evaluate(() => document.getElementById('pinMsg').textContent);
+    await pq.click('#pinNo'); await pq.waitForTimeout(150); return m; };
+  is(/잠겼습니다/.test(await msgOf('return {data:{ok:false,err:"locked",until:new Date(Date.now()+6e5).toISOString()},error:null};')), '다섯 번 틀려 잠기면 «잠겼습니다 — 몇 시 이후»');
+  is(/정해지지 않았습니다/.test(await msgOf('return {data:{ok:false,err:"no_pin"},error:null};')), '번호를 안 정했으면 그렇다고 말한다(막는다)');
+  is(/서버에 승인 기능이 아직 없습니다/.test(await msgOf('return {data:null,error:{message:"Could not find the function public.upload_pin_check(p_pin) in the schema cache"}};')),
+     'setup-28 전이면 «서버에 승인 기능이 없다» — 통째 교체는 막힌다(fail-closed)');
+  is(await pq.evaluate(() => document.getElementById('modeSel').value!=='full'), '승인을 못 받으면 통째 교체로 남지 않는다');
+  is(pqe.length===0, 'JS 에러 0 (승인 창)' + (pqe.length?' → '+pqe[0]:''));
+  await pq.close();
+  /* 소스 — 화면은 표를 직접 비우지 않고, 번호·해시를 들고 있지 않다 */
+  const UP = fs.readFileSync(path.join(ROOT,'upload/index.html'),'utf8');
+  is(!/rpc\(\s*'csv_upload_begin'/.test(UP) && /rpc\(\s*'csv_upload_full'/.test(UP), '업로드 화면은 csv_upload_begin 을 직접 부르지 않는다');
+  is(!/pin_hash|\$2[aby]\$|crypt\(/.test(UP), '화면 코드에 비밀번호 해시·암호화가 없다 (확인은 서버에서)');
 }
 is(pe.length===0, 'JS 에러 0' + (pe.length?' → '+pe[0]:''));
 await browser.close(); srv.close();

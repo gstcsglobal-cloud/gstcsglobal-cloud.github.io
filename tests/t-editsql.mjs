@@ -20,7 +20,8 @@ const KR_FILE = path.join(ROOT, 'supabase/setup-17-kr-demo.sql');
 const DQ_FILE = path.join(ROOT, 'supabase/setup-21-dq.sql');
 const COLS_FILE = path.join(ROOT, 'supabase/setup-22-import-cols.sql');
 const SITES_FILE = path.join(ROOT, 'supabase/setup-23-sites.sql');
-const ACT_FILE = path.join(ROOT, 'supabase/setup-24-actions.sql');   // 처리함(v166)   // 사이트 등록부 · 사이트별 CIP 표(v160)
+const ACT_FILE = path.join(ROOT, 'supabase/setup-24-actions.sql');
+const PIN_FILE = path.join(ROOT, 'supabase/setup-28-upload-pin.sql');   // 통째 교체 비밀번호 승인(v184)   // 처리함(v166)   // 사이트 등록부 · 사이트별 CIP 표(v160)
     // CIP 새 점검 항목 열 더하기(v157)           // 데이터 품질 점검(v155·v156) — 읽기 전용 · 맨 끝에 먹인다      // 국내 데모 표·kr 등급(v146) — 1~11 이 끝난 뒤에 먹인다
 
 function findBin() {
@@ -912,6 +913,77 @@ do $$ declare r jsonb; r2 jsonb; i bigint; at0 timestamptz; s jsonb; n int; begi
 end $$;
 `;
 
+/* [17] 통째 교체 비밀번호 승인(setup-28 · v184) — 해시는 아무도 못 읽고 · 틀리면 잠기고 · 승인표는 한 번 쓰면 끝 ·
+   csv_upload_begin 은 직접 못 부른다. ⚠ 검사의 번호는 지어낸 것이다 — 운영 번호는 저장소 어디에도 없다. */
+const PIN_PRE = String.raw`
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+`;
+const PIN_CHECKS_A = String.raw`
+set role authenticated;
+do $$ declare r jsonb; begin
+  perform t_as('');
+  r := upload_pin_check('2468'); perform t_ok(r->>'err' = 'login', '17-1 로그인 없으면 login');
+  perform t_as('vw@test.local');
+  r := upload_pin_check('2468'); perform t_ok(r->>'err' = 'forbidden', '17-2 조회자는 forbidden');
+  perform t_as('ro-admin@test.local');
+  r := upload_pin_check('2468'); perform t_ok(r->>'err' = 'forbidden', '17-3 쓰기 권한 없는 관리자도 forbidden');
+  perform t_as('ed@test.local');
+  r := upload_pin_check('2468'); perform t_ok(r->>'err' = 'no_pin', '17-4 번호를 아직 안 정했으면 no_pin (막는다)');
+end $$;
+`;
+const PIN_SET = String.raw`
+reset role;
+update public.upload_guard set pin_hash = extensions.crypt('2468', extensions.gen_salt('bf',4)), updated_at = now() where id = 1;
+`;
+const PIN_CHECKS_B = String.raw`
+set role authenticated;
+do $$ declare r jsonb; n0 int; begin
+  perform t_as('ed@test.local');
+  n0 := (select count(*) from sheet_roster);
+  begin perform csv_upload_full('sheet_roster'); perform t_ok(false, '17-5 승인 없이 비웠다'); exception when others then perform t_ok(sqlerrm = 'pin_required', '17-5 승인 없이 통째 교체는 pin_required'); end;
+  perform t_ok((select count(*) from sheet_roster) = n0 and n0 > 0, '17-6 그때 표는 그대로');
+  begin perform csv_upload_begin('sheet_roster'); perform t_ok(false, '17-7 직접 비웠다'); exception when others then perform t_ok(sqlstate = '42501', '17-7 csv_upload_begin 을 직접 부르면 권한 없음'); end;
+  r := upload_pin_check('1111'); perform t_ok(r->>'err' = 'wrong' and (r->>'left')::int = 4, '17-8 틀리면 wrong · 남은 4번');
+  r := upload_pin_check('1112'); r := upload_pin_check('1113'); r := upload_pin_check('1114');
+  r := upload_pin_check('1115'); perform t_ok(r->>'err' = 'locked', '17-9 다섯 번 틀리면 잠긴다');
+  r := upload_pin_check('2468'); perform t_ok(r->>'err' = 'locked', '17-10 잠긴 동안은 맞는 번호도 거절');
+  perform t_as('boss@test.local');
+  r := upload_pin_check('2468'); perform t_ok((r->>'ok')::boolean, '17-11 맞는 번호면 승인 (잠금은 계정마다)');
+  begin perform csv_upload_full('nope_tbl'); perform t_ok(false, '17-12 이상한 표'); exception when others then perform t_ok(sqlerrm like 'bad_table%', '17-12 허용 표 판정은 csv_upload_begin 그대로 (bad_table)'); end;
+  perform csv_upload_full('sheet_roster');
+  perform t_ok((select count(*) from sheet_roster) = 0, '17-13 실패한 호출은 승인표를 안 쓴다 → 다음 통째 교체가 비운다');
+  begin perform csv_upload_full('sheet_edu'); perform t_ok(false, '17-14 승인을 두 번 썼다'); exception when others then perform t_ok(sqlerrm = 'pin_required', '17-14 승인표는 한 번 쓰면 끝'); end;
+  perform t_ok((select count(*) from sheet_edu) > 0, '17-15 그때 표는 그대로');
+  begin perform count(*) from upload_guard; perform t_ok(false, '17-16 해시를 읽었다'); exception when others then perform t_ok(sqlstate = '42501', '17-16 비밀번호 해시 표는 못 읽는다'); end;
+  begin perform count(*) from upload_pin_tok; perform t_ok(false, '17-17 승인표를 읽었다'); exception when others then perform t_ok(sqlstate = '42501', '17-17 승인표도 못 읽는다(직접 못 만든다)'); end;
+  perform t_ok(not has_function_privilege('anon','public.upload_pin_check(text)','EXECUTE')
+           and not has_function_privilege('anon','public.csv_upload_full(text)','EXECUTE')
+           and has_function_privilege('authenticated','public.csv_upload_full(text)','EXECUTE')
+           and not has_function_privilege('authenticated','public.csv_upload_begin(text)','EXECUTE'), '17-18 실행 권한 — anon 불가 · begin 회수');
+  perform t_ok((select count(*) from sheet_edits where op = 'upload_pin' and tbl = 'upload_pin' and (after->>'ok')::boolean) = 1
+           and (select count(*) from sheet_edits where op = 'upload_pin' and not (after->>'ok')::boolean) = 5, '17-19 성공 1 · 실패 5 가 이력에 남는다');
+  perform t_ok(not exists (select 1 from sheet_edits where op = 'upload_pin' and (after::text like '%2468%' or after::text like '%111%')), '17-20 이력에 번호를 안 남긴다');
+end $$;
+`;
+const PIN_AGE = String.raw`
+reset role;
+update public.upload_pin_fail set lock_until = now() - interval '1 minute' where email = 'ed@test.local';
+set role authenticated;
+do $$ declare r jsonb; begin
+  perform t_as('ed@test.local');
+  r := upload_pin_check('9999'); perform t_ok(r->>'err' = 'wrong' and (r->>'left')::int = 4, '17-21 잠금이 풀린 뒤 첫 실패는 1부터 다시 센다');
+  r := upload_pin_check('2468'); perform t_ok((r->>'ok')::boolean, '17-22 잠금이 풀리면 맞는 번호로 승인');
+end $$;
+reset role;
+update public.upload_pin_tok set until = now() - interval '1 minute' where email = 'ed@test.local';
+set role authenticated;
+do $$ begin
+  perform t_as('ed@test.local');
+  begin perform csv_upload_full('sheet_edu'); perform t_ok(false, '17-23 지난 승인표로 비웠다'); exception when others then perform t_ok(sqlerrm = 'pin_required', '17-23 30분 지난 승인표는 못 쓴다'); end;
+end $$;
+`;
+
 let skipped = 0;
 try {
   const init = run('initdb', ['-D', DATA, '-A', 'trust', '-U', 'postgres', '--no-sync', '-E', 'UTF8', '--locale=C']);
@@ -1010,6 +1082,20 @@ try {
   (outA.match(/ERROR:[^\n]*/g) || []).forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
   oksA.forEach(() => pass++);
   ok(oksA.length === 24, '[16] T_OK 가 ' + oksA.length + '개 — 기대 24개');
+  console.log('[17] 통째 교체 비밀번호 승인(v184) — 저장소의 setup-28-upload-pin.sql 을 두 번 먹인다');
+  const pinPre = psql(PIN_PRE, 'pin-pre'); ok(!/ERROR/.test(pinPre.stderr), 'pgcrypto 준비 실패:\n' + pinPre.stderr);
+  const pinText = fs.readFileSync(PIN_FILE, 'utf8');
+  ok(!/crypt\('\d{3,}'/.test(pinText), 'setup-28 에 비밀번호 값이 들어 있다 — 저장소는 공개다');
+  for (const tag of ['setup28', 'setup28b']) { const r = psql(pinText, tag); ok(!/ERROR/.test(r.stderr), 'setup-28-upload-pin.sql 적용 실패(' + tag + '):\n' + r.stderr); }
+  let oksP = 0;
+  for (const [sql, tag] of [[PIN_CHECKS_A, 'pin-a'], [PIN_SET, 'pin-set'], [PIN_CHECKS_B, 'pin-b'], [PIN_AGE, 'pin-age']]) {
+    const pP = psql(sql, tag);
+    const outP = (pP.stderr || '') + (pP.stdout || '');
+    (outP.match(/ERROR:[^\n]*/g) || []).forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
+    oksP += (outP.match(/T_OK [^\n]*/g) || []).length;
+  }
+  pass += oksP;
+  ok(oksP === 23, '[17] T_OK 가 ' + oksP + '개 — 기대 23개');
 } catch (e) {
   fail++; console.log('  ❌ ' + (e && e.message || e));
 } finally {

@@ -1215,6 +1215,9 @@ console.log('[20] 구분 — 국내·해외·미상 (대시보드 정본 판정 
   const chkOf = async (mode, file, ovw) => {
     await up.evaluate(v => { window.__OVW = v; window.__QLOG.splice(0); }, ovw);
     await up.selectOption('#tsel', await up.evaluate(() => String(TABLES.findIndex(t => t.rid === 'wk'))));
+    /* 통째 교체는 비밀번호 승인이 있어야 고를 수 있다(v184) — 이 검사의 관심은 «덮인다» 경고라 승인은 받은 것으로 둔다
+       (안 두면 승인 창이 열린 채 onMode 가 영영 끝나지 않는다 · 승인 창 자체는 t-colmap [12]). */
+    await up.evaluate(m => { PIN_OK = (m === 'full'); }, mode);
     await up.selectOption('#modeSel', mode); await up.evaluate(() => window.onMode());
     await up.setInputFiles('#fsel', mk(file));
     await up.waitForFunction(() => /행 ↔ 표의 현재/.test(document.getElementById('chk').innerText), null, { timeout:15000 }).catch(() => {});
@@ -1510,6 +1513,12 @@ console.log('[25] 남의 양식(중문 머리글·제목 줄) — 열 맵핑 확
   await pg.waitForFunction(() => { const o = document.getElementById('upOv'); return o && !o.hidden; }, null, { timeout:5000 });
   is(/embed=1/.test(await pg.$eval('#upFrame', e => e.src)) && /rid=leave/.test(await pg.$eval('#upFrame', e => e.src)), '교체 — 업로드 화면이 데이터 관리 «안»에 뜬다(embed · 표 미리 고름)');
   let fr = null; for (let i = 0; i < 50 && !fr; i++) { fr = pg.frames().find(f => /\/upload\//.test(f.url())); if (!fr) await pg.waitForTimeout(100); }
+  /* v184 — 휴가는 날짜 구간이 없는 표라 «넣는 방식»이 «고르세요»로 시작한다(통째 교체가 기본이 아니다).
+     건네받은 파일은 그대로 두고 «먼저 고르세요»라고 말하며, 고르면 그 파일을 바로 검사한다(파일을 다시 고르지 않는다). */
+  await fr.waitForFunction(() => /넣는 방식.*먼저 고르세요/.test((document.getElementById('chk') || {}).innerText || ''), null, { timeout:15000 }).catch(() => {});
+  is(await fr.evaluate(() => document.getElementById('modeSel').value === '' && (document.getElementById('fsel').files[0] || {}).name === 'tw-leave2.xlsx'
+       && /먼저 고르세요/.test(document.getElementById('chk').innerText)), '교체 — 구간 없는 표는 방식을 «고르세요»로 시작하고, 건네받은 파일은 그대로 둔다');
+  await fr.selectOption('#modeSel', 'add');
   await fr.waitForFunction(() => /표의 열 11\/11개를 파일에서 찾았습니다/.test((document.getElementById('chk') || {}).innerText || ''), null, { timeout:15000 }).catch(() => {});
   const up = await fr.evaluate(() => ({ f:(document.getElementById('fsel').files[0] || {}).name, sh:document.getElementById('ssel').value, chk:document.getElementById('chk').innerText,
     embed:document.body.classList.contains('embed'), h1:getComputedStyle(document.querySelector('h1')).display }));
