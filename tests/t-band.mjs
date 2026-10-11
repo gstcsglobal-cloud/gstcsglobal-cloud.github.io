@@ -116,6 +116,56 @@ s = await st();
 is(s.seg[0].replace('*', '') === 'All' && /Korea/.test(s.seg.join()) && /More filters/.test(s.more), '영어 — All · Korea · More filters (' + s.seg.join('|') + ' · ' + s.more + ')');
 await pg.evaluate(() => { sessionStorage.setItem('gst_lang', 'ko'); GST.filters.relabel(); });
 
+console.log('\n[8] 기간 설정(주/월·12구간·마감)은 상단 바가 아니라 상세 필터 맨 위 (v183) · 마감을 걸면 띠에 칩');
+/* 페이지가 공통바를 등록한다 — 셸 밖(직접 접속)이면 «차트 디자인·PPT·브리핑·피벗»만 페이지 위에 서고, 기간은 사이드바로 간다 */
+await pg.evaluate(() => {
+  window.PB = { period:'m', endM:'', calls:[] };
+  GST.pageBar({ caps:{ period:true, cutoff:'m', style:true, ppt:'auto' },
+    state:() => ({ period:PB.period, endM:PB.endM, cutDef:PB.def, style:GST.style() }),
+    on:{ period:v => { PB.calls.push('period:' + v); PB.period = v; GST.barSync(); },
+         endM:v => { PB.calls.push('endM:' + v); PB.endM = v; GST.barSync(); },
+         clear:() => { PB.calls.push('clear'); PB.endM = ''; GST.barSync(); } } });
+});
+const pb = () => pg.evaluate(() => {
+  const sec = document.getElementById('gstPerSec'), body = document.querySelector('#gstSidebar .gst-sb-body'), lb = document.getElementById('gstLocalBar'), ch = document.getElementById('gb-per');
+  const vis = el => !!el && getComputedStyle(el).display !== 'none';
+  return { first: !!sec && body.firstElementChild === sec, lbl: sec ? sec.querySelector('.gst-sb-lbl').textContent : '',
+    per: !!sec && !!sec.querySelector('[data-gb="period"][data-v="w"]'), span: !!sec && vis(sec.querySelector('[data-gb="span"]')),
+    month: !!sec && vis(sec.querySelector('[data-gb="endM"]')), week: !!sec && vis(sec.querySelector('[data-gb="endW"]')),
+    lbPer: !!lb && !!lb.querySelector('[data-gb="period"],[data-gb="endM"],[data-gb="span"]'), lbAct: !!lb && !!lb.querySelector('[data-gb="ppt"]'),
+    chip: ch && !ch.hidden ? ch.textContent : '', calls: PB.calls.join(',') }; });
+let b = await pb();
+is(b.first && b.lbl === '기간 설정' && b.per && b.span && b.month, '상세 필터 맨 위에 «기간 설정» — 주/월 · 최근 12개 구간 · 마감 월');
+is(!b.week, '주 마감이 없는 화면(cutoff m)에서는 주 고르기를 아예 안 보인다(비활성 자리 대신 숨김)');
+is(!b.lbPer && b.lbAct, '페이지 위 공통바에는 기간 컨트롤이 없다 — PPT 등 동작만 (셸 상단도 같은 함수 · barHTML act)');
+is(b.chip === '', '기본값(마감 없음 · 12개 구간)이면 띠에 기간 칩이 없다 — 상단이 깔끔하다');
+await pg.click('#gstPerSec [data-gb="period"][data-v="w"]');
+b = await pb();
+is(/period:w/.test(b.calls), '주별을 누르면 페이지 자신의 동작(on.period)을 부른다 — 셸이 보내던 것과 같은 _barDo');
+await pg.fill('#gstPerSec [data-gb="endM"]', '2026-08');
+await pg.dispatchEvent('#gstPerSec [data-gb="endM"]', 'change');
+b = await pb();
+is(/endM:2026-08/.test(b.calls) && b.chip === '마감 2026-08', '마감 월을 걸면 띠에 «마감 2026-08» 칩이 선다 — 숨긴 설정을 걸어 둔 채 잊지 않게 (' + b.chip + ')');
+await pg.click('#gb-per');
+is(await pg.evaluate(() => document.body.classList.contains('gst-sb-open')), '칩을 누르면 상세 필터가 열린다');
+await pg.evaluate(() => { PB.def = true; GST.barSync(); });
+is((await pb()).chip === '', '페이지가 «기본 마감»이라고 알리면(cutDef — PM 이번 달 · TCO 마지막 달) 칩을 세우지 않는다');
+await pg.evaluate(() => { PB.def = false; GST.barSync(); });
+await pg.click('#gstPerSec [data-gb="clear"]');
+b = await pb();
+is(/clear/.test(b.calls) && b.chip === '', '↺ 해제 → 칩이 사라진다');
+await pg.click('#gstPerSec [data-gb="span"]');
+b = await pb();
+is(b.chip === '마감 월만' && await pg.evaluate(() => !GST.span12()), '«최근 12개 구간»을 끄면 띠에 «마감 월만» 칩 (' + b.chip + ')');
+await pg.click('#gstPerSec [data-gb="span"]');
+is((await pb()).chip === '' && await pg.evaluate(() => GST.span12()), '다시 켜면 칩이 사라진다');
+await pg.evaluate(() => { sessionStorage.setItem('gst_lang', 'en'); PB.endM = '2026-07'; GST.barSync(); });
+b = await pb();
+is(b.lbl === 'Period' && b.chip === 'Cut-off 2026-07', '영어 — Period · Cut-off 2026-07 (' + b.lbl + ' · ' + b.chip + ')');
+await pg.evaluate(() => { sessionStorage.setItem('gst_lang', 'ko'); PB.endM = ''; GST.barSync(); });
+const SHELL = fs.readFileSync(ROOT + '/index.html', 'utf8');
+is(/GST\.barHTML\(reg, LANG, 'act'\)/.test(SHELL) && /type==='gst-span'/.test(SHELL), '셸 상단 바는 «act»(디자인·PPT·브리핑·피벗)만 그리고, 상세 필터의 12개 구간 토글을 다른 탭에도 뿌린다');
+
 is(errs.length === 0, 'JS 에러 없음' + (errs.length ? ' → ' + errs.slice(0, 2).join(' | ') : ''));
 await br.close();
 console.log(fail ? `\n❌ t-band: ${pass} 통과 · ${fail} 실패` : `\n✅ t-band: ${pass}/${pass} 통과`);
