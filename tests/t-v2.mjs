@@ -268,7 +268,7 @@ console.log('[6] 목표 표가 없을 때 — 말하며 선다');
 const pn = await open('/hub/?view=exec', clearDB + 'window.__DBERR={ops_targets:{message:\'relation "public.ops_targets" does not exist\',code:"42P01"}};');
 const nb = await pn.evaluate(() => ({ ban:document.getElementById('banners').textContent, n:document.querySelectorAll('#kpis .hb-kpi .tg').length, k:document.querySelectorAll('#kpis .hb-kpi').length, why:GST.targets.why }));
 is(nb.why === 'no_table' && /setup-27/.test(nb.ban), '관리자 — «서버에 목표 표가 없습니다 · setup-27 을 Run» (' + nb.why + ')');
-is(nb.n === 0 && nb.k === 6, '목표가 하나도 없으면 «목표 대비» 줄을 안 단다(«목표 미설정» 넷이 늘어서면 소음) · 카드 여섯은 그대로');
+is(nb.n === 0 && nb.k === 5, '목표가 하나도 없으면 «목표 대비» 줄을 안 단다(«목표 미설정» 넷이 늘어서면 소음) · 카드 다섯은 그대로');
 await pn.close();
 const pv = await open('/hub/?view=exec', clearDB + 'window.__ROLE={email:"view@t",can_write:false,role:"viewer"};window.__DBERR={ops_targets:{message:\'relation "public.ops_targets" does not exist\'}};');
 const vb = await pv.evaluate(() => ({ ban:document.getElementById('banners').textContent, tg:document.getElementById('goTargets').hidden }));

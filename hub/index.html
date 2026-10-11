@@ -399,85 +399,81 @@ const GEO={ KOREA:[36.4,127.9], TAIWAN:[23.8,121.0], USA:[39.5,-98.5], JAPAN:[36
 
 const T={
 ko:{
-  /* 디자인 X(v180) */ m_globe:'지구본',m_flat:'평면',map_lbl:'지도 모양',globe_lbl:'운영단위 지구본 — 끌어서 돌리고 원을 누르면 그 나라 지도로',bT:'이번 주 브리핑',bReplay:'다시 보기',b_bm:'이번 주 고장 {n}건 — 평소 {b}건 대비 {d}건',b_top:'가장 튄 곳은 {op} — 평소의 {x} · {st}',b_top0:'가장 많은 곳은 {op} — 이번 주 {n}건',b_toprep:'{op} — {rd}일 이내 재고장 설비 {n}대 · {st}',b_calm:'평소와 다르게 튄 운영단위는 없습니다',b_rep:'{rd}일 이내 재고장 설비 {r}대 · 고장 위험 설비 {k}대',b_pm:'이번 주 PM {n}건 — 지난주 {p}건',b_warr:'90일 이내 유상 전환 {n}대 — 자재 유상 판매 대상이 늘어납니다',b_dq:'자료 확인할 것 {n}건',kan_mv_l:'앞 단계로',kan_mv_r:'다음 단계로',kan_moved:'«{t}» → {s}',kan_conflict:'다른 사람이 먼저 바꿨습니다 — 새로 읽었습니다',kan_fail:'옮기지 못했습니다',
+  /* 디자인 X(v180) */ m_globe:'지구본',m_flat:'평면',map_lbl:'지도 모양',globe_lbl:'운영단위 지구본 — 끌어서 돌리고 원을 누르면 그 나라 지도로',bT:'이번 주 브리핑',bReplay:'다시 보기',b_bm:'이번 주 고장 {n}건 — 평소 {b}건 대비 {d}건',b_top:'가장 튄 곳은 {op} — 평소의 {x} · {st}',b_top0:'가장 많은 곳은 {op} — 이번 주 {n}건',b_toprep:'{op} — {rd}일 이내 재고장 설비 {n}대 · {st}',b_calm:'평소와 다르게 튄 운영단위는 없습니다',b_rep:'{rd}일 이내 재고장 설비 {r}대 · 고장 위험 설비 {k}대',b_pm:'이번 주 PM {n}건 — 지난주 {p}건',b_warr:'90일 이내 유상 전환 {n}대 — 자재 유상 판매 대상이 늘어납니다',kan_mv_l:'앞 단계로',kan_mv_r:'다음 단계로',kan_moved:'«{t}» → {s}',kan_conflict:'다른 사람이 먼저 바꿨습니다 — 새로 읽었습니다',kan_fail:'옮기지 못했습니다',
   /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'기준일 고르기',asof_latest:'최신으로',asof_apply:'적용',asof_state:'과거 날짜로 보고 있습니다 — 고장·PM·가동 날짜는 그 날 기준이지만, 설비 상태(Operation 등)는 지금 값입니다',sc_allop:'전체 운영단위',view_lbl:'보기',scope_lbl:'범위',kpi_lbl:'핵심 지표',v_exec:'전사 요약',v_lead:'운영 관리',v_field:'사이트별',save_def:'기본 화면으로 설정',saved_srv:'기본 화면으로 설정했습니다 — 다음 접속부터 이 화면이 먼저 열립니다',saved_pc:'이 PC에만 저장했습니다',go_targets:'목표 관리',sc_all:'전사',sc_kr:'국내 전체',sc_os:'해외 전체',sc_ops:'운영단위',noTgt:'아직 설정된 목표가 없습니다. 목표를 설정하면 카드와 표가 목표 대비로 판정됩니다.',noTgtAdm:'「목표 관리」에서 설정하세요.',noTbl:'서버에 목표 테이블이 없습니다 — supabase/setup-27-targets.sql을 실행하세요.',opsT:'운영단위별 목표 대비 현황',opsS:'행을 누르면 해당 운영단위로 좁혀 봅니다',decT:'이번 주 확인 사항',decS:'목표 미달 · 재고장 · 기한 경과 건',trendT:'주간 고장 추이 · 최근 12주',trendS:'점선 = 목표를 주 단위로 환산한 값',actT:'조치 사항 — 미완료',actS:'기한 경과 건 우선',riskT:'고장 위험 설비',riskS:'고장분석 TOP 20과 같은 기준',bmT:'이번 주 고장',warrT:'90일 이내 유상 전환',pickT:'운영단위를 선택하세요',pickS:'현장 화면은 운영단위 하나를 기준으로 봅니다 — 「기본 화면으로 설정」을 누르면 다음에도 이 운영단위로 열립니다',c_op:'운영단위',c_st:'판정',c_in:'반입',c_run:'가동률',c_bm:'100대당 고장',c_pm:'PM 비율',c_rep:'재고장',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}일 이내 재고장 {n}회',d_over:'기한 경과 조치 {n}건',d_none:'이번 주 확인할 사항이 없습니다',d_set:'목표 설정하기',tag_tgt:'목표',tag_rep:'재고장',tag_act:'조치',a_none:'미완료 건이 없습니다',a_due:'기한 {d}',a_nodue:'기한 없음',a_who:'담당 {w}',a_nowho:'담당자 미지정',a_fail:'조치 사항을 읽지 못했습니다',l_kind:'구분',l_title:'제목',l_due:'기한',l_who:'담당',go_fault:'고장 분석',go_action:'조치 사항',go_hub:'글로벌 현황',more:'외 {n}건',notRun:'반입 후 미가동 설비(Operation 아님)',kind_pm:'PM',kind_bm:'고장',
   title:'글로벌 현황',scopeX:'전체 보기',back:'← 전세계',cdReg:'지역 분포',cdCty:'국가 분포',cdCust:'고객사 분포',unplaced:'위치 미지정',unplacedN:'지도에 못 놓은 곳 {n} · {u}대: {list}',unplacedAdm:' — 데이터 관리 「사이트」 탭의 «지도 위치»에서 정합니다',mapT_c:'{c} 설비 분포',mapS_c:'원 크기 = 반입 설비 · 색 = 그 운영단위의 신호 · 막대를 누르면 그 설비 목록',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'점검 권장',warn:'관찰 중',ok:'안정',tk_run:'가동',tk_bm:'이번 주 고장',tk_lbl:'운영단위 상태',sigCols:'이번 주 고장 · 위험 설비',
   mapT:'글로벌 설비 분포',mapS:'원 크기 = 반입 설비 · 색 = 신호 · 나라를 누르면 그 나라 지도로',qT:'확인 사항',heatT:'주차별 고장 히트맵',heatS:'진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록',
   byOp:'운영단위',byCampus:'단지',loading:'자료를 불러오는 중…',asof:'{d} 기준',
   k_run:'가동 설비',k_run_d:'반입 {n}대 · 가동률 {p}%',k_run_none:'설치현황 자료 없음',k_bm:'이번 주 고장(BM)',k_pm:'이번 주 PM',k_risk:'고장 위험 설비',k_risk_d:'{rd}일 이내 재고장 {n}대',
-  k_warr:'90일 이내 유상 전환',k_warr_d:'무상 보증 중 {n}대',k_dq:'자료 확인할 것',k_dq_d:'',k_dq_none:'문제 없음',
+  k_warr:'90일 이내 유상 전환',k_warr_d:'무상 보증 중 {n}대',
   vsPrev:'{s} vs 전주',vsBase:'평소 {b}',u_ea:'대',u_case:'건',
   st_units:'반입 설비',st_ops:'운영단위',st_cty:'국가',st_bm12:'12주 고장',
   noLoc:'지도에 못 놓은 운영단위 {n}곳(국가 미상): {list}',
   sel_h:'선택한 운영단위',g_run:'가동률',g_warr:'유상 비율',g_pm:'PM 실시율',bars:'주별 고장(BM) · 최근 12주',
   m_units:'반입 / 가동',m_risk:'고장 위험 설비',m_rep:'{rd}일 이내 재고장',m_last:'마지막 고장',
   open_fault:'고장 분석에서 보기',open_inst:'설비 현황에서 보기',risk_top:'위험 설비 상위',
-  st_open:'새로',st_ack:'확인',st_doing:'진행',st_done:'완료',st_dismissed:'보류',q_take:'조치 사항에 등록',q_taken:'조치 사항',q_open:'조치 사항 열기',q_risk:'고장 위험',q_dq:'자료 품질',q_none:'지금 처리할 것이 없습니다',q_s:'고장 위험 상위 · 자료 결함',
+  st_open:'새로',st_ack:'확인',st_doing:'진행',st_done:'완료',st_dismissed:'보류',q_take:'조치 사항에 등록',q_taken:'조치 사항',q_open:'조치 사항 열기',q_risk:'고장 위험',q_none:'지금 처리할 것이 없습니다',q_s:'목표 미달 · 고장 위험 · 조치 기한',
   rule_t:'신호 판정 기준',rule:'점검 권장 = 이번 주 고장이 평소(직전 8주 중앙값)의 {bx}배 이상이면서 {bd}건 이상 많거나, {rd}일 이내 재고장 설비가 {rb}대 이상\n관찰 중 = 평소의 {wx}배를 넘으면서 {wd}건 이상 많거나, 재고장 설비가 {rw}대 이상\n안정 = 그 외\n\n고장 = 해외는 수선실적 작업단계 BM · 국내는 알람 원장(내적·한 사건 첫 줄). 원장이 비었으면 국내도 수선실적 BM.\n고장 위험 설비 = 고장분석 「고장 위험 설비 TOP 20」과 같은 식(GST.riskRank).',
   krFall:'국내 알람 원장이 비어 있어 국내 고장은 수선실적 BM으로 집계 중입니다',
   l_date:'날짜',l_op:'운영단위',l_campus:'단지',l_eq:'설비',l_sn:'S/N',l_src:'출처',l_desc:'내용',l_score:'점수',l_why:'근거',l_wd:'유상 전환일',l_state:'설비상태',
-  src_wk:'수선실적',src_kr:'알람 원장',week:'주',none:'자료 없음',fail:'일부 자료를 못 읽었습니다',
-  dq_tip:'데이터 관리에서 고치기'},
+  src_wk:'수선실적',src_kr:'알람 원장',week:'주',none:'자료 없음',fail:'일부 자료를 못 읽었습니다'},
 en:{
-  /* Design X (v180) */ m_globe:'Globe',m_flat:'Flat',map_lbl:'Map style',globe_lbl:'Operating unit globe — drag to turn · click a circle to open that country',bT:'This week\'s briefing',bReplay:'Replay',b_bm:'Failures this week {n} — {d} vs. the usual {b}',b_top:'Biggest jump: {op} — {x} usual · {st}',b_top0:'Most failures: {op} — {n} this week',b_toprep:'{op} — {n} repeat-failure units within {rd} days · {st}',b_calm:'No operating unit is off its usual pattern',b_rep:'Repeat failures within {rd} days: {r} units · at-risk units: {k}',b_pm:'PM this week {n} — last week {p}',b_warr:'Turning paid within 90 days: {n} — more units for paid material sales',b_dq:'Data to check: {n}',kan_mv_l:'Back a step',kan_mv_r:'Next step',kan_moved:'«{t}» → {s}',kan_conflict:'Someone changed it first — reloaded',kan_fail:'Could not move it',
+  /* Design X (v180) */ m_globe:'Globe',m_flat:'Flat',map_lbl:'Map style',globe_lbl:'Operating unit globe — drag to turn · click a circle to open that country',bT:'This week\'s briefing',bReplay:'Replay',b_bm:'Failures this week {n} — {d} vs. the usual {b}',b_top:'Biggest jump: {op} — {x} usual · {st}',b_top0:'Most failures: {op} — {n} this week',b_toprep:'{op} — {n} repeat-failure units within {rd} days · {st}',b_calm:'No operating unit is off its usual pattern',b_rep:'Repeat failures within {rd} days: {r} units · at-risk units: {k}',b_pm:'PM this week {n} — last week {p}',b_warr:'Turning paid within 90 days: {n} — more units for paid material sales',kan_mv_l:'Back a step',kan_mv_r:'Next step',kan_moved:'«{t}» → {s}',kan_conflict:'Someone changed it first — reloaded',kan_fail:'Could not move it',
   /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'Pick the as-of date',asof_latest:'Latest',asof_apply:'Apply',asof_state:'Viewing a past date — failure, PM and turn-on dates are as of that day, but equipment status (Operation etc.) is the current value',sc_allop:'All units',view_lbl:'View',scope_lbl:'Scope',kpi_lbl:'Key metrics',v_exec:'Company summary',v_lead:'Operations',v_field:'By site',save_def:'Make this my default',saved_srv:'Saved as your default — this view opens first next time',saved_pc:'Saved on this PC only',go_targets:'Targets',sc_all:'Company',sc_kr:'All Korea',sc_os:'All overseas',sc_ops:'Operating units',noTgt:'No targets yet. Once targets are set, cards and tables are rated against them.',noTgtAdm:'Set them in «Targets».',noTbl:'The target table is not on the server yet — run supabase/setup-27-targets.sql.',opsT:'By operating unit — vs target',opsS:'click to narrow to that unit',decT:'To review this week',decS:'off target · repeat failures · overdue actions',trendT:'Weekly failures · last 12 weeks',trendS:'dashed = target converted to a week',actT:'Action items — open',actS:'overdue first',riskT:'At-risk units',riskS:'same formula as Fault TOP 20',bmT:'Failures this week',warrT:'Turning paid within 90 days',pickT:'Pick your operating unit',pickS:'The field view shows one unit — «Make this my default» opens it next time',c_op:'Unit',c_st:'Rating',c_in:'Installed',c_run:'Running',c_bm:'BM per 100',c_pm:'PM ratio',c_rep:'Repeat',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {n} repeat(s) within {d} days',d_over:'{n} overdue action(s)',d_none:'Nothing to review this week',d_set:'Set targets',tag_tgt:'Target',tag_rep:'Repeat',tag_act:'Action',a_none:'No open actions',a_due:'due {d}',a_nodue:'no due date',a_who:'owner {w}',a_nowho:'no owner',a_fail:'Could not read action items',l_kind:'Type',l_title:'Item',l_due:'Due',l_who:'Owner',go_fault:'Fault',go_action:'Action items',go_hub:'Global overview',more:'+{n} more',notRun:'Installed but not running (Operation)',kind_pm:'PM',kind_bm:'BM',
   title:'Global overview',scopeX:'Show all',back:'← World',cdReg:'By region',cdCty:'By country',cdCust:'By customer',unplaced:'No position',unplacedN:'{n} place(s) not on the map · {u} units: {list}',unplacedAdm:' — set them in Data management «Sites» › Map position',mapT_c:'{c} installed base',mapS_c:'size = installed units · color = signal of its unit · click a bar for the unit list',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Check advised',warn:'Watching',ok:'Stable',tk_run:'Running',tk_bm:'BM this week',tk_lbl:'Operating unit status',sigCols:'BM this week · at-risk units',
   mapT:'Global installed base',mapS:'size = installed units · color = signal · click a country to zoom in',qT:'To check',heatT:'Weekly failure heatmap',heatS:'darker = above usual · click a cell for that week\'s failures',
   byOp:'Operating unit',byCampus:'Campus',loading:'Loading…',asof:'As of {d}',
   k_run:'Running units',k_run_d:'{n} installed · {p}% running',k_run_none:'No installation data',k_bm:'Failures (BM) this week',k_pm:'PM this week',k_risk:'At-risk units',k_risk_d:'{n} repeat within {rd} days',
-  k_warr:'Turning paid within 90 days',k_warr_d:'{n} under warranty',k_dq:'Data to check',k_dq_d:'',k_dq_none:'No issues',
+  k_warr:'Turning paid within 90 days',k_warr_d:'{n} under warranty',
   vsPrev:'{s} vs last week',vsBase:'usual {b}',u_ea:'',u_case:'',
   st_units:'Installed',st_ops:'Operating units',st_cty:'Countries',st_bm12:'BM 12 wks',
   noLoc:'{n} unit(s) not on the map (unknown country): {list}',
   sel_h:'Selected unit',g_run:'Running',g_warr:'Paid share',g_pm:'PM ratio',bars:'Weekly BM · last 12 weeks',
   m_units:'Installed / running',m_risk:'At-risk units',m_rep:'Repeat within {rd} days',m_last:'Last failure',
   open_fault:'Open in Failure analysis',open_inst:'Open in Equipment',risk_top:'Top at-risk units',
-  st_open:'New',st_ack:'Ack',st_doing:'In progress',st_done:'Done',st_dismissed:'On hold',q_take:'Add to action items',q_taken:'Action item',q_open:'Open action items',q_risk:'Risk',q_dq:'Data',q_none:'Nothing to handle right now',q_s:'top risks · data issues',
+  st_open:'New',st_ack:'Ack',st_doing:'In progress',st_done:'Done',st_dismissed:'On hold',q_take:'Add to action items',q_taken:'Action item',q_open:'Open action items',q_risk:'Risk',q_none:'Nothing to handle right now',q_s:'below target · risk · overdue actions',
   rule_t:'Signal rule',rule:'Check advised = this week\'s BM ≥ {bx}× usual (8-week median) and ≥{bd} more, or ≥{rb} units with repeat failure within {rd} days\nWatching = > {wx}× usual and ≥{wd} more, or ≥{rw} repeat-failure unit(s)\nStable = otherwise\n\nBM = overseas: repair records stage BM · Korea: alarm ledger (internal, first line per event). If the ledger is empty, Korea also uses repair BM.\nAt-risk units = same formula as Fault «At-risk TOP 20» (GST.riskRank).',
   krFall:'Korea alarm ledger is empty — counting repair-record BM',
   l_date:'Date',l_op:'Unit',l_campus:'Campus',l_eq:'Equipment',l_sn:'S/N',l_src:'Source',l_desc:'Detail',l_score:'Score',l_why:'Why',l_wd:'Paid from',l_state:'Status',
-  src_wk:'Repair',src_kr:'Alarm ledger',week:'wk',none:'No data',fail:'Some data could not be read',
-  dq_tip:'Fix in Data management'},
+  src_wk:'Repair',src_kr:'Alarm ledger',week:'wk',none:'No data',fail:'Some data could not be read'},
 zh:{
-  /* 设计 X (v180) */ m_globe:'地球仪',m_flat:'平面',map_lbl:'地图样式',globe_lbl:'运营单位地球仪 — 拖动旋转 · 点击圆圈进入该国家地图',bT:'本周简报',bReplay:'重播',b_bm:'本周故障 {n} 件 — 较平时 {b} 件 {d} 件',b_top:'波动最大的是 {op} — 平时的 {x} · {st}',b_top0:'故障最多的是 {op} — 本周 {n} 件',b_toprep:'{op} — {rd}天内再故障设备 {n} 台 · {st}',b_calm:'没有偏离平时的运营单位',b_rep:'{rd}天内再故障设备 {r} 台 · 故障风险设备 {k} 台',b_pm:'本周PM {n} 件 — 上周 {p} 件',b_warr:'90天内转为有偿 {n} 台 — 有偿材料销售对象增加',b_dq:'待确认数据 {n} 项',kan_mv_l:'退回上一步',kan_mv_r:'进入下一步',kan_moved:'«{t}» → {s}',kan_conflict:'已被他人先修改 — 已重新读取',kan_fail:'未能移动',
+  /* 设计 X (v180) */ m_globe:'地球仪',m_flat:'平面',map_lbl:'地图样式',globe_lbl:'运营单位地球仪 — 拖动旋转 · 点击圆圈进入该国家地图',bT:'本周简报',bReplay:'重播',b_bm:'本周故障 {n} 件 — 较平时 {b} 件 {d} 件',b_top:'波动最大的是 {op} — 平时的 {x} · {st}',b_top0:'故障最多的是 {op} — 本周 {n} 件',b_toprep:'{op} — {rd}天内再故障设备 {n} 台 · {st}',b_calm:'没有偏离平时的运营单位',b_rep:'{rd}天内再故障设备 {r} 台 · 故障风险设备 {k} 台',b_pm:'本周PM {n} 件 — 上周 {p} 件',b_warr:'90天内转为有偿 {n} 台 — 有偿材料销售对象增加',kan_mv_l:'退回上一步',kan_mv_r:'进入下一步',kan_moved:'«{t}» → {s}',kan_conflict:'已被他人先修改 — 已重新读取',kan_fail:'未能移动',
   /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'选择基准日',asof_latest:'最新',asof_apply:'应用',asof_state:'正在查看过去日期 — 故障、PM、运行日期按当天计算，但设备状态（Operation 等）为当前值',sc_allop:'全部运营单位',view_lbl:'视图',scope_lbl:'范围',kpi_lbl:'核心指标',v_exec:'全公司概要',v_lead:'运营管理',v_field:'按站点',save_def:'设为默认画面',saved_srv:'已保存为默认 — 下次打开先显示此画面',saved_pc:'仅保存在此电脑',go_targets:'目标管理',sc_all:'全公司',sc_kr:'国内全部',sc_os:'海外全部',sc_ops:'运营单位',noTgt:'尚未设定任何目标。设定后卡片和表格将按目标判定。',noTgtAdm:'请在「目标管理」中设定。',noTbl:'服务器尚无目标表 — 请运行 supabase/setup-27-targets.sql。',opsT:'按运营单位 — 对比目标',opsS:'点击即缩小到该运营单位',decT:'本周确认事项',decS:'偏离目标 · 复发 · 逾期待办',trendT:'按周故障 · 最近12周',trendS:'虚线 = 目标换算为每周的值',actT:'待办事项 — 未关闭',actS:'逾期优先',riskT:'故障风险设备',riskS:'与故障分析 TOP 20 同一公式',bmT:'本周故障',warrT:'90天内转为有偿',pickT:'请选择你的运营单位',pickS:'现场画面只看一个运营单位 — 按「设为默认画面」下次也按此单位打开',c_op:'运营单位',c_st:'判定',c_in:'进场',c_run:'运行率',c_bm:'每100台故障',c_pm:'PM比率',c_rep:'复发',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}天内复发 {n}次',d_over:'逾期待办 {n}件',d_none:'本周没有需确认的事项',d_set:'设定目标',tag_tgt:'目标',tag_rep:'复发',tag_act:'待办',a_none:'没有未关闭的事项',a_due:'期限 {d}',a_nodue:'无期限',a_who:'负责人 {w}',a_nowho:'未定负责人',a_fail:'未能读取待办事项',l_kind:'类别',l_title:'事项',l_due:'期限',l_who:'负责人',go_fault:'故障分析',go_action:'待办事项',go_hub:'全球概况',more:'另 {n}件',notRun:'已进场但未运行(Operation)的设备',kind_pm:'PM',kind_bm:'故障',
   title:'全球概况',scopeX:'显示全部',back:'← 全球',cdReg:'地区分布',cdCty:'国家分布',cdCust:'客户分布',unplaced:'未指定位置',unplacedN:'未能放到地图上的 {n} 处 · {u}台: {list}',unplacedAdm:' — 在数据管理「站点」页的地图位置中设定',mapT_c:'{c} 设备分布',mapS_c:'圆大小 = 已进场设备 · 颜色 = 所属运营单位信号 · 点击柱查看设备',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'建议检查',warn:'观察中',ok:'稳定',tk_run:'运行',tk_bm:'本周故障',tk_lbl:'运营单位状态',sigCols:'本周故障 · 风险设备',
   mapT:'全球设备分布',mapS:'圆大小 = 已进场设备 · 颜色 = 信号 · 点击国家查看该国地图',qT:'待确认',heatT:'按周故障热力图',heatS:'越深 = 高于平时 · 点击格子查看该周故障',
   byOp:'运营单位',byCampus:'园区',loading:'正在加载…',asof:'截至 {d}',
   k_run:'运行设备',k_run_d:'进场 {n}台 · 运行率 {p}%',k_run_none:'无设备台账数据',k_bm:'本周故障(BM)',k_pm:'本周PM',k_risk:'故障风险设备',k_risk_d:'{rd}天内复发 {n}台',
-  k_warr:'90天内转为有偿',k_warr_d:'保修内 {n}台',k_dq:'待确认数据',k_dq_d:'',k_dq_none:'没有问题',
+  k_warr:'90天内转为有偿',k_warr_d:'保修内 {n}台',
   vsPrev:'较上周 {s}',vsBase:'平时 {b}',u_ea:'台',u_case:'件',
   st_units:'进场设备',st_ops:'运营单位',st_cty:'国家',st_bm12:'12周故障',
   noLoc:'未能放在地图上的运营单位 {n} 个（国家不明）: {list}',
   sel_h:'所选运营单位',g_run:'运行率',g_warr:'有偿比率',g_pm:'PM实施率',bars:'按周故障(BM) · 最近12周',
   m_units:'进场 / 运行',m_risk:'故障风险设备',m_rep:'{rd}天内复发',m_last:'最后故障',
   open_fault:'在故障分析中查看',open_inst:'在设备现况中查看',risk_top:'风险设备前列',
-  st_open:'新',st_ack:'已确认',st_doing:'进行中',st_done:'完成',st_dismissed:'搁置',q_take:'加入待办事项',q_taken:'待办事项',q_open:'打开待办事项',q_risk:'故障风险',q_dq:'数据质量',q_none:'目前没有待处理事项',q_s:'风险前列 · 数据缺陷',
+  st_open:'新',st_ack:'已确认',st_doing:'进行中',st_done:'完成',st_dismissed:'搁置',q_take:'加入待办事项',q_taken:'待办事项',q_open:'打开待办事项',q_risk:'故障风险',q_none:'目前没有待处理事项',q_s:'未达目标 · 故障风险 · 待办逾期',
   rule_t:'信号判定标准',rule:'建议检查 = 本周故障为平时(前8周中位数)的{bx}倍以上且多{bd}件以上，或{rd}天内复发设备{rb}台以上\n观察中 = 超过平时{wx}倍且多{wd}件以上，或复发设备{rw}台以上\n稳定 = 其他\n\n故障 = 海外为维修实绩作业阶段BM · 国内为报警台账(内部·每事件第一行)。台账为空时国内也按维修实绩BM。\n故障风险设备 = 与故障分析「故障风险设备 TOP 20」同一公式(GST.riskRank)。',
   krFall:'国内报警台账为空 — 正按维修实绩BM计数',
   l_date:'日期',l_op:'运营单位',l_campus:'园区',l_eq:'设备',l_sn:'S/N',l_src:'来源',l_desc:'内容',l_score:'分数',l_why:'依据',l_wd:'有偿起始日',l_state:'设备状态',
-  src_wk:'维修实绩',src_kr:'报警台账',week:'周',none:'无数据',fail:'部分数据未能读取',
-  dq_tip:'在数据管理中修正'},
+  src_wk:'维修实绩',src_kr:'报警台账',week:'周',none:'无数据',fail:'部分数据未能读取'},
 ja:{
-  /* デザイン X (v180) */ m_globe:'地球儀',m_flat:'平面',map_lbl:'地図の形',globe_lbl:'運営単位の地球儀 — ドラッグで回転 · 円をクリックでその国の地図へ',bT:'今週のブリーフィング',bReplay:'もう一度',b_bm:'今週の故障 {n}件 — 平常 {b}件比 {d}件',b_top:'最も跳ねたのは {op} — 平常の{x} · {st}',b_top0:'最も多いのは {op} — 今週 {n}件',b_toprep:'{op} — {rd}日以内の再故障 {n}台 · {st}',b_calm:'平常と異なる運営単位はありません',b_rep:'{rd}日以内の再故障 {r}台 · 故障リスク設備 {k}台',b_pm:'今週のPM {n}件 — 先週 {p}件',b_warr:'90日以内に有償へ {n}台 — 有償資材販売の対象が増えます',b_dq:'確認すべきデータ {n}件',kan_mv_l:'前の段階へ',kan_mv_r:'次の段階へ',kan_moved:'«{t}» → {s}',kan_conflict:'他の人が先に変更しました — 読み直しました',kan_fail:'移動できませんでした',
+  /* デザイン X (v180) */ m_globe:'地球儀',m_flat:'平面',map_lbl:'地図の形',globe_lbl:'運営単位の地球儀 — ドラッグで回転 · 円をクリックでその国の地図へ',bT:'今週のブリーフィング',bReplay:'もう一度',b_bm:'今週の故障 {n}件 — 平常 {b}件比 {d}件',b_top:'最も跳ねたのは {op} — 平常の{x} · {st}',b_top0:'最も多いのは {op} — 今週 {n}件',b_toprep:'{op} — {rd}日以内の再故障 {n}台 · {st}',b_calm:'平常と異なる運営単位はありません',b_rep:'{rd}日以内の再故障 {r}台 · 故障リスク設備 {k}台',b_pm:'今週のPM {n}件 — 先週 {p}件',b_warr:'90日以内に有償へ {n}台 — 有償資材販売の対象が増えます',kan_mv_l:'前の段階へ',kan_mv_r:'次の段階へ',kan_moved:'«{t}» → {s}',kan_conflict:'他の人が先に変更しました — 読み直しました',kan_fail:'移動できませんでした',
   /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'基準日を選ぶ',asof_latest:'最新に戻す',asof_apply:'適用',asof_state:'過去の日付で表示中 — 故障・PM・稼働日はその日基準ですが、設備状態（Operation 等）は現在の値です',sc_allop:'全運営単位',view_lbl:'表示',scope_lbl:'範囲',kpi_lbl:'主要指標',v_exec:'全社サマリー',v_lead:'運営管理',v_field:'サイト別',save_def:'この画面を既定にする',saved_srv:'既定の画面として保存しました — 次回はこの画面が最初に開きます',saved_pc:'このPCにのみ保存しました',go_targets:'目標管理',sc_all:'全社',sc_kr:'国内全体',sc_os:'海外全体',sc_ops:'運営単位',noTgt:'目標がまだありません。目標を決めるとカードと表が目標比で判定します。',noTgtAdm:'「目標管理」で設定してください。',noTbl:'サーバーに目標表がまだありません — supabase/setup-27-targets.sql を実行してください。',opsT:'運営単位別 — 目標比',opsS:'押すとその運営単位に絞ります',decT:'今週の確認事項',decS:'目標外れ · 再故障 · 期限超過の対応',trendT:'週別故障 · 直近12週',trendS:'点線 = 目標を週単位に換算した値',actT:'対応事項 — 未完了',actS:'期限超過を先に',riskT:'故障リスク設備',riskS:'故障分析 TOP 20 と同じ式',bmT:'今週の故障',warrT:'90日以内に有償化',pickT:'自分の運営単位を選んでください',pickS:'現場画面は運営単位ひとつを見ます — 「この画面を既定にする」で次回もこの運営単位で開きます',c_op:'運営単位',c_st:'判定',c_in:'搬入',c_run:'稼働率',c_bm:'100台あたり故障',c_pm:'PM比率',c_rep:'再故障',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}日以内再故障 {n}回',d_over:'期限超過の対応 {n}件',d_none:'今週確認することはありません',d_set:'目標を決める',tag_tgt:'目標',tag_rep:'再故障',tag_act:'対応',a_none:'未完了の対応はありません',a_due:'期限 {d}',a_nodue:'期限なし',a_who:'担当 {w}',a_nowho:'担当未定',a_fail:'対応事項を読めませんでした',l_kind:'区分',l_title:'項目',l_due:'期限',l_who:'担当',go_fault:'故障分析',go_action:'対応事項',go_hub:'グローバル概況',more:'他 {n}件',notRun:'搬入済みだが稼働(Operation)していない設備',kind_pm:'PM',kind_bm:'故障',
   title:'グローバル概況',scopeX:'全体を見る',back:'← 全世界',cdReg:'地域分布',cdCty:'国別分布',cdCust:'顧客分布',unplaced:'位置未指定',unplacedN:'地図に置けない場所 {n} · {u}台: {list}',unplacedAdm:' — データ管理「サイト」タブの地図位置で設定します',mapT_c:'{c} 設備分布',mapS_c:'円の大きさ = 搬入設備 · 色 = その運営単位の信号 · 棒を押すと設備一覧',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'点検推奨',warn:'観察中',ok:'安定',tk_run:'稼働',tk_bm:'今週の故障',tk_lbl:'運営単位の状態',sigCols:'今週の故障 · 危険設備',
   mapT:'グローバル設備分布',mapS:'円の大きさ = 搬入設備 · 色 = シグナル · 国を押すとその国の地図へ',qT:'確認事項',heatT:'週別故障ヒートマップ',heatS:'濃いほど平常より多い · セルを押すとその週の故障一覧',
   byOp:'運営単位',byCampus:'団地',loading:'データ読み込み中…',asof:'{d} 時点',
   k_run:'稼働設備',k_run_d:'搬入 {n}台 · 稼働率 {p}%',k_run_none:'設置台帳データなし',k_bm:'今週の故障(BM)',k_pm:'今週のPM',k_risk:'故障リスク設備',k_risk_d:'{rd}日以内再故障 {n}台',
-  k_warr:'90日以内に有償化',k_warr_d:'保証中 {n}台',k_dq:'確認すべきデータ',k_dq_d:'',k_dq_none:'問題なし',
+  k_warr:'90日以内に有償化',k_warr_d:'保証中 {n}台',
   vsPrev:'前週比 {s}',vsBase:'平常 {b}',u_ea:'台',u_case:'件',
   st_units:'搬入設備',st_ops:'運営単位',st_cty:'国',st_bm12:'12週故障',
   noLoc:'地図に置けない運営単位 {n} か所（国不明）: {list}',
   sel_h:'選択した運営単位',g_run:'稼働率',g_warr:'有償比率',g_pm:'PM実施率',bars:'週別故障(BM) · 直近12週',
   m_units:'搬入 / 稼働',m_risk:'故障リスク設備',m_rep:'{rd}日以内再故障',m_last:'最終故障',
   open_fault:'故障分析で見る',open_inst:'設備現況で見る',risk_top:'リスク設備上位',
-  st_open:'新規',st_ack:'確認',st_doing:'対応中',st_done:'完了',st_dismissed:'保留',q_take:'対応事項に登録',q_taken:'対応事項',q_open:'対応事項を開く',q_risk:'故障リスク',q_dq:'データ品質',q_none:'今対応することはありません',q_s:'リスク上位 · データ欠陥',
+  st_open:'新規',st_ack:'確認',st_doing:'対応中',st_done:'完了',st_dismissed:'保留',q_take:'対応事項に登録',q_taken:'対応事項',q_open:'対応事項を開く',q_risk:'故障リスク',q_none:'今対応することはありません',q_s:'目標未達 · 故障リスク · 対応期限',
   rule_t:'シグナル判定基準',rule:'点検推奨 = 今週の故障が平常(直前8週中央値)の{bx}倍以上かつ{bd}件以上多い、または{rd}日以内再故障設備が{rb}台以上\n観察中 = 平常の{wx}倍超かつ{wd}件以上多い、または再故障設備が{rw}台以上\n安定 = その他\n\n故障 = 海外は修繕実績の作業段階BM · 国内はアラーム台帳(内的・1事象の最初の行)。台帳が空なら国内も修繕実績BM。\n故障リスク設備 = 故障分析「故障リスク設備 TOP 20」と同じ式(GST.riskRank)。',
   krFall:'国内アラーム台帳が空 — 修繕実績BMで集計中',
   l_date:'日付',l_op:'運営単位',l_campus:'団地',l_eq:'設備',l_sn:'S/N',l_src:'出典',l_desc:'内容',l_score:'点数',l_why:'根拠',l_wd:'有償開始日',l_state:'設備状態',
-  src_wk:'修繕実績',src_kr:'アラーム台帳',week:'週',none:'データなし',fail:'一部のデータを読めませんでした',
-  dq_tip:'データ管理で直す'}
+  src_wk:'修繕実績',src_kr:'アラーム台帳',week:'週',none:'データなし',fail:'一部のデータを読めませんでした'}
 };
 let LANG='ko';
 try{ const l=sessionStorage.getItem('gst_lang'); if(l&&T[l]) LANG=l; else if(window.name&&T[window.name]) LANG=window.name; }catch(e){}
@@ -660,13 +656,6 @@ function delta(cur, prev, upBad){
   const cls=d===0?'':(d>0?(upBad?'up-bad':'up-ok'):(upBad?'dn-ok':'dn-bad'));
   return '<span class="'+cls+'">'+(d>0?'▲ ':d<0?'▼ ':'')+esc(fmt(t('vsPrev'),{s}))+'</span>';
 }
-function dqItems(){
-  const out=[];
-  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!/^gst_dq_/.test(k)||k==='gst_dq_report_kr') continue;
-    const o=JSON.parse(localStorage.getItem(k)||'null'); if(!o||!o.items) continue;
-    o.items.forEach(d=>{ if(d.sev==='warn'||d.sev==='bad') out.push(Object.assign({page:k.slice(7), at:o.at}, d)); }); } }catch(e){}
-  return out.sort((a,b)=>(a.sev==='bad'?0:1)-(b.sev==='bad'?0:1));
-}
 function drawKpis(){
   const X=DS||D;   // 고른 운영단위가 있으면 그것만(v178 · 사용자 요청 「신호등에서 사이트를 누르면 KPI 도 그 사이트로」)
   const cssv=n=>getComputedStyle(document.body).getPropertyValue(n).trim()||'#2F6FED';
@@ -676,14 +665,12 @@ function drawKpis(){
   const runP=X.inN?Math.round(X.runN/X.inN*100):null;
   const cur=X.bmW[11], prev=X.bmW[10], base=median(X.bmW.slice(3,11));
   const bmSt=(cur>=base*RULE.badX&&cur-base>=RULE.badD)?'bad':(cur>base*RULE.warnX&&cur-base>=RULE.warnD)?'warn':'ok';
-  const dq=dqItems();
   const K=[
     {id:'run', l:t('k_run'), v:X.runN, u:t('u_ea'), st:'ok', d:esc(runP==null?t('k_run_none'):fmt(t('k_run_d'),{n:nf(X.inN),p:runP})), sp:liq(runP)},
     {id:'bm',  l:t('k_bm'),  v:cur, u:t('u_case'), st:bmSt, d:delta(cur,prev,true)+' · '+esc(fmt(t('vsBase'),{b:Math.round(base)})), sp:spark(X.bmW, c[bmSt==='ok'?'acc':bmSt])},
     {id:'pm',  l:t('k_pm'),  v:X.pmW[11], u:t('u_case'), st:'ok', d:delta(X.pmW[11],X.pmW[10],false), sp:spark(X.pmW, c.acc)},
     {id:'risk',l:t('k_risk'),v:X.RISK.length, u:t('u_ea'), st:X.repN>=RULE.repBad?'bad':X.repN?'warn':'ok', d:esc(fmt(t('k_risk_d'),{n:X.repN, rd:RULE.repDays})), sp:null},
-    {id:'warr',l:t('k_warr'),v:X.warrSoon.length, u:t('u_ea'), st:X.warrSoon.length?'ok':'',   /* 유상 전환 = 좋은 소식(제4원칙) — 경고색을 쓰지 않는다 */ d:esc(fmt(t('k_warr_d'),{n:nf(X.warrIn)})), sp:null},
-    {id:'dq',  l:t('k_dq'),  v:dq.length, u:'', st:dq.some(x=>x.sev==='bad')?'bad':dq.length?'warn':'ok', d:esc(dq.length?t('k_dq_d'):t('k_dq_none')), sp:null}
+    {id:'warr',l:t('k_warr'),v:X.warrSoon.length, u:t('u_ea'), st:X.warrSoon.length?'ok':'',   /* 유상 전환 = 좋은 소식(제4원칙) — 경고색을 쓰지 않는다 */ d:esc(fmt(t('k_warr_d'),{n:nf(X.warrIn)})), sp:null}
   ];
   const box=document.getElementById('kpis');
   /* 목표 대비 한 줄(v178 · 옛 홈의 판정 그대로 — GST.targets.pick/judge) — 목표가 하나도 없으면 줄을 안 단다(«목표 미설정» 넷이 늘어서면 소음이다) */
@@ -727,7 +714,6 @@ function kpiOpen(k){
   if(k==='risk') return GST.rowsModal(t('k_risk'), [t('l_eq'),t('l_op'),t('l_score'),t('l_why')], X.RISK.map(r=>[r.label,r.site,String(r.score),GST.riskWhy(r)]));
   if(k==='warr') return GST.rowsModal(t('k_warr'), [t('l_wd'),t('l_op'),t('l_campus'),t('l_eq'),t('l_sn'),t('l_state')],
     X.warrSoon.slice().sort((a,b)=>a.wd-b.wd).map(x=>[GST.fmtD(x.wd),x.op,x.campus,x.code,x.sn,x.stateRaw]));
-  if(k==='dq') return GST.rowsModal(t('k_dq'), [t('q_dq'),t('l_desc'),'N'], dqItems().map(d=>[d.page, d.label, d.n==null?'':String(d.n)]));
   if(k==='run') return GST.goTab ? GST.goTab('scrubber') : null;
 }
 /* 운영단위 상태 띠 — 신호등(drawSignals)과 같은 g.st 를 쓴다. 판정을 새로 하지 않는다.
@@ -1026,15 +1012,14 @@ function drawSel(){
 }
 function drawQueue(){
   const box=document.getElementById('queue'), adm=GST.isAdmin&&GST.isAdmin();
-  /* 확인 사항 = 옛 홈의 «이번 주 확인 사항»(목표 미달 · 재고장 · 조치 기한) + 이 화면의 «처리할 일»(고장 위험 · 자료 결함) — 한 목록 · 같은 신호(ref)는 한 줄 */
+  /* 확인 사항 = 옛 홈의 «이번 주 확인 사항»(목표 미달 · 재고장 · 조치 기한) + 고장 위험 상위 — 한 목록 · 같은 신호(ref)는 한 줄.
+     ⚠ 자료 결함(GST.dq 스냅샷)은 «여기 넣지 않는다»(v182 · 사용자 확정 「글로벌 현황은 전체 서머리 — 임원이 보는데 자료 정합성 얘기는 빼고 데이터 관리로」).
+     그 신호는 데이터 관리 «데이터 품질» 탭(화면 신호)과 각 화면의 품질 팝업에 그대로 있다. KPI 카드·이번 주 브리핑도 같다. */
   const items=[], seen={};
   const push=q=>{ if(q.ref){ if(seen[q.ref]) return; seen[q.ref]=1; } items.push(q); };
   (H?decisions(H):[]).forEach(q=>push(Object.assign({}, q, { go:(q.op&&q.kind==='manual')?()=>pick(q.op):(q.go?()=>GST.goTab&&GST.goTab(q.go):null) })));
   D.RISK.slice(0,5).forEach(r=>push({sev:r.rep?'bad':'warn', tag:t('q_risk'), title:r.label+' · '+short(r.site), sub:GST.riskWhy(r), go:()=>GST.goTab&&GST.goTab('fault'),
     kind:'risk', ref:'risk:'+r.key, op:r.site, page:'fault'}));
-  dqItems().slice(0,5).forEach(d=>push({sev:d.sev==='bad'?'bad':'warn', tag:t('q_dq'), title:d.label, sub:(d.page||'')+(d.n!=null?' · '+nf(d.n):''),
-    go:adm?()=>window.open('https://gstcsglobal-cloud.github.io/edit/?tab=dq&fix='+encodeURIComponent(d.page+'.'+d.key),'gstEdit'):null,
-    kind:'dq', ref:'dq:'+d.page+'.'+d.key, page:d.page}));
   if(!GST.targets.rows.length&&adm&&GST.targets.why!=='no_table') items.unshift({sev:'', tag:t('tag_tgt'), title:t('d_set'), sub:t('noTgt'), go:goTargets});
   items.splice(12);
   document.getElementById('qS').textContent=t('q_s');
@@ -1071,7 +1056,6 @@ function drawBrief(force){
   L.push(bl('b_rep',{rd:{raw:String(RULE.repDays)}, r:nf(X.repN), k:nf(X.RISK.length)},{r:X.repN?'bad':''}));
   L.push(bl('b_pm',{n:nf(X.pmW[11]), p:nf(X.pmW[10])}));
   L.push(bl('b_warr',{n:nf(X.warrSoon.length)},{n:'acc'}));
-  const dq=dqItems(); if(dq.length) L.push(bl('b_dq',{n:nf(dq.length)}));
   document.getElementById('bS').textContent=(S.op?short(S.op):S.region==='kr'?t('sc_kr'):S.region==='os'?t('sc_os'):t('sc_all'))+' · '+X.W[11].label;
   const key=LANG+'|'+L.join('|');
   if(!force&&key===_briefKey) return;   // 같은 내용으로 다시 그릴 때(자동 새로고침)는 다시 쓰지 않는다
