@@ -105,6 +105,19 @@ is(dqv.keys.join() === 'run,bm,pm,risk,warr', 'KPI 카드 다섯 — 가동 · �
 is(!/자료|BM 미기재|조인/.test(dqv.kpTxt + dqv.q + dqv.qS + dqv.b), '품질 스냅샷이 있어도 확인 사항·브리핑·카드 어디에도 «자료» 이야기가 없다');
 await pg.evaluate(() => { localStorage.removeItem('gst_dq_fault'); localStorage.removeItem('gst_dq_report'); render(); });
 
+console.log('[1c] 확인 사항 | 브리핑 + 히트맵 — 5:5 · 확인 사항은 오른쪽 열 높이에 맞춰 스크롤 (v183 · 사용자 요청)');
+const lay = await pg.evaluate(() => { const g = document.querySelector('.hb-grid2'), q = g.querySelector('.hb-qcard'), col = g.querySelector('.hb-col');
+  const qr = q.getBoundingClientRect(), cr = col.getBoundingClientRect(), qs = document.getElementById('queue');
+  /* 확인 사항을 일부러 길게 — 행 높이가 늘지 않고 목록 안에서 스크롤하는지 */
+  const keep = qs.innerHTML; qs.innerHTML = keep + Array.from({ length:30 }, (_, i) => '<div class="hb-qr"><button class="hb-q">x' + i + '</button></div>').join('');
+  const q2 = q.getBoundingClientRect(), r = { qw:qr.width, cw:cr.width, qh:qr.height, ch:cr.height, heatIn:!!col.querySelector('#heat'), briefIn:!!col.querySelector('#briefCard'),
+    long:{ qh:q2.height, ch:col.getBoundingClientRect().height, sh:qs.scrollHeight, cl:qs.clientHeight, ov:getComputedStyle(qs).overflowY } };
+  qs.innerHTML = keep; return r; });
+is(lay.heatIn && lay.briefIn, '히트맵이 브리핑 «아래» 오른쪽 열에 선다');
+is(Math.abs(lay.qw - lay.cw) <= 2, '두 열이 5:5 (' + Math.round(lay.qw) + ' · ' + Math.round(lay.cw) + ')');
+is(Math.abs(lay.qh - lay.ch) <= 2, '확인 사항 카드 높이 = 오른쪽 열 높이 (' + Math.round(lay.qh) + ' · ' + Math.round(lay.ch) + ')');
+is(Math.abs(lay.long.qh - lay.long.ch) <= 2 && lay.long.sh > lay.long.cl && lay.long.ov === 'auto', '목록이 길어도 행이 안 늘고 목록 안에서 스크롤한다 (' + Math.round(lay.long.qh) + ' · 내용 ' + lay.long.sh + ' > 보이는 ' + lay.long.cl + ')');
+
 console.log('[2] 신호등 — 평소보다 튄 곳이 «위험»으로 맨 위');
 const sig = await pg.evaluate(() => Array.from(document.querySelectorAll('#sigs .hb-sig')).map(b => ({ op:b.dataset.op, st:(b.querySelector('.hb-dot').className.match(/\b(bad|warn|ok)\b/) || [])[1], bm:+b.querySelector('.bm').textContent })));
 is(sig.length === 3 && sig[0].op === 'GST TAIWAN SCRUBBER' && sig[0].st === 'bad' && sig[0].bm === 12, '대만(이번 주 12 · 평소 1)이 위험으로 첫 줄');

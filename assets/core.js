@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 175;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 176;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -62,28 +62,32 @@ GST.FLT_T = {
        own:'이 페이지 전용', ownPeriod:'이 페이지 전용 · 기간', filters:'상세 필터', dtOwn:'이 화면은 자체 기준일을 씁니다',
        selAll:'전체 선택', selNone:'전체 해제', reset:'↺ 초기화', csvTitle:'현재 필터가 적용된 표를 CSV 로 내려받습니다',
        autoTitle:'{n}분마다 데이터만 다시 불러옵니다. 필터는 유지됩니다.', auto:'⟳ 자동 {n}분',
-       p1m:'1개월', p3m:'3개월', p6m:'6개월', p1y:'1년', pall:'전체', chipsActive:'활성 필터', chipsClear:'전체 해제' },
+       p1m:'1개월', p3m:'3개월', p6m:'6개월', p1y:'1년', pall:'전체', chipsActive:'활성 필터', chipsClear:'전체 해제',
+       perSet:'기간 설정', perCut:'마감 {v}', perOnly:'마감 월만', perChip:'기간 설정 — 상세 필터에서 바꿉니다' },
   en:{ axes:{region:'Region', op:'Entity', div:'Division', customer:'Customer', campus:'Site', line:'Line', line2:'Line 2', team:'Team', period:'Period'},
        grpEq:'Equipment', grpEqNote:'install · records', grpHr:'People', grpHrNote:'roster', hrPrefix:'People ',
        all:'All', emptyNone:'All (not applicable here)', emptyFilt:'All (none under current filters)',
        own:'This page only', ownPeriod:'This page only · period', filters:'More filters', dtOwn:'This page uses its own reference date',
        selAll:'Select all', selNone:'Clear', reset:'↺ Reset all', csvTitle:'Download the filtered table as CSV',
        autoTitle:'Reloads data every {n} min. Filters are kept.', auto:'⟳ Auto {n} min',
-       p1m:'1 mo', p3m:'3 mo', p6m:'6 mo', p1y:'1 yr', pall:'All', chipsActive:'Active filters', chipsClear:'Clear all' },
+       p1m:'1 mo', p3m:'3 mo', p6m:'6 mo', p1y:'1 yr', pall:'All', chipsActive:'Active filters', chipsClear:'Clear all',
+       perSet:'Period', perCut:'Cut-off {v}', perOnly:'Cut-off month only', perChip:'Period settings — change them in More filters' },
   zh:{ axes:{region:'区分', op:'运营单位', div:'事业部', customer:'客户', campus:'园区', line:'线', line2:'线2', team:'团队', period:'期间'},
        grpEq:'设备基准', grpEqNote:'安装·实绩', grpHr:'人员基准', grpHrNote:'人员现况', hrPrefix:'人员 ',
        all:'全部', emptyNone:'全部 (此页面不适用)', emptyFilt:'全部 (当前筛选无匹配)',
        own:'仅此页面', ownPeriod:'仅此页面 · 期间', filters:'详细筛选', dtOwn:'此页面使用自己的基准日',
        selAll:'全选', selNone:'全部取消', reset:'↺ 重置', csvTitle:'下载当前筛选的表格 (CSV)',
        autoTitle:'每{n}分钟仅重新加载数据，筛选保持不变。', auto:'⟳ 自动 {n}分',
-       p1m:'1个月', p3m:'3个月', p6m:'6个月', p1y:'1年', pall:'全部', chipsActive:'活动筛选', chipsClear:'全部清除' },
+       p1m:'1个月', p3m:'3个月', p6m:'6个月', p1y:'1年', pall:'全部', chipsActive:'活动筛选', chipsClear:'全部清除',
+       perSet:'期间设置', perCut:'截止 {v}', perOnly:'仅截止月', perChip:'期间设置 — 在详细筛选中修改' },
   ja:{ axes:{region:'区分', op:'運営単位', div:'事業部', customer:'顧客', campus:'団地', line:'ライン', line2:'ライン2', team:'チーム', period:'期間'},
        grpEq:'設備基準', grpEqNote:'設置·実績', grpHr:'人員基準', grpHrNote:'人員現況', hrPrefix:'人員 ',
        all:'全体', emptyNone:'全体 (この画面は対象外)', emptyFilt:'全体 (現在のフィルタに該当なし)',
        own:'このページ専用', ownPeriod:'このページ専用 · 期間', filters:'詳細フィルター', dtOwn:'この画面は独自の基準日を使います',
        selAll:'全て選択', selNone:'全て解除', reset:'↺ リセット', csvTitle:'現在のフィルタ適用表を CSV で保存',
        autoTitle:'{n}分ごとにデータだけ再読み込みします。フィルタは維持されます。', auto:'⟳ 自動 {n}分',
-       p1m:'1ヶ月', p3m:'3ヶ月', p6m:'6ヶ月', p1y:'1年', pall:'全体', chipsActive:'有効フィルタ', chipsClear:'全解除' }
+       p1m:'1ヶ月', p3m:'3ヶ月', p6m:'6ヶ月', p1y:'1年', pall:'全体', chipsActive:'有効フィルタ', chipsClear:'全解除',
+       perSet:'期間設定', perCut:'締め {v}', perOnly:'締め月のみ', perChip:'期間設定 — 詳細フィルターで変更します' }
 };
 GST._fltT = function(){ var l=(GST._lang && GST._lang()) || 'ko'; return GST.FLT_T[l] || GST.FLT_T.ko; };
 GST.SRC_T = {
@@ -4030,10 +4034,42 @@ GST.insights = function(items){
     box.id='gstInsights'; box.className='gst-insights';
     anchor.parentNode.insertBefore(box, anchor);
   }
-  box.innerHTML = '<span class="gst-ins-head">'+GST.insHead()+'</span>' +
+  /* v183 — 요약이 옆으로 흐른다(사용자 「다른 페이지도 요약이 움직이는 것으로」 · 글로벌 현황의 상태 띠와 같은 결).
+     원본(.gst-ins)은 그대로 두고 흐름용 사본(.gst-ins-c · aria-hidden)을 뒤에 붙인다 — PPT·검사·화면 낭독은 원본만 읽는다.
+     흐르지 않을 때(움직임 줄이기 · 「효과」의 상태 띠 흐름 끔 · 인쇄)는 vp/run 이 display:contents 라 예전 배치 그대로다. */
+  box.innerHTML = '<span class="gst-ins-head">'+GST.insHead()+'</span><div class="gst-ins-vp"><div class="gst-ins-run">' +
     items.slice(0,4).map(function(it){
       return '<span class="gst-ins '+(it.sev||'info')+'"><span class="gst-ins-dot"></span>'+it.text+'</span>';
-    }).join('');
+    }).join('') + '<span class="gst-ins-rep" aria-hidden="true"></span></div></div>';
+  GST._insRun(box);
+};
+/* 흐름 — 원본 한 벌의 폭(w1)이 띠 폭보다 짧으면 m 벌로 늘려 «m 벌 + m 벌»을 -50% 로 돌린다(이음매 없이).
+   숨은 탭(폭 0)에서는 재지 못하므로 보일 때(ResizeObserver) 다시 잰다. 속도는 일정(≈40px/s)하다 — 길면 오래 돈다. */
+GST.INS_SPEED = 40;
+GST._insRun = function(box){
+  try{
+    box = box || document.getElementById('gstInsights'); if(!box) return;
+    const vp = box.querySelector('.gst-ins-vp'), run = vp && vp.querySelector('.gst-ins-run'), rp = run && run.querySelector('.gst-ins-rep');
+    if(!rp) return;
+    if(GST.fx && GST.fx.onChange && !GST._insHooked){ GST._insHooked = true; GST.fx.onChange(function(){ GST._insRun(); }); }
+    if(!box._insRO && typeof ResizeObserver !== 'undefined'){ let w0 = -1;
+      box._insRO = new ResizeObserver(function(){ const w = vp.clientWidth; if(w !== w0){ w0 = w; GST._insRun(box); } }); box._insRO.observe(vp); }
+    const on = (GST._motionOn ? GST._motionOn() : true) && (!GST.fx || GST.fx.on('ticker'));
+    rp.innerHTML = '';
+    box.classList.toggle('gst-ins-move', !!on);
+    if(!on){ run.style.removeProperty('--ins-d'); return; }
+    const origs = [].slice.call(run.children).filter(function(e){ return e.classList.contains('gst-ins'); });
+    const w1 = run.scrollWidth, vw = vp.clientWidth;
+    /* 아직 안 보인다(숨은 탭 · 폭 0) — 흐름 배치는 둔 채 멈춰 두고 보일 때(ResizeObserver) 다시 잰다.
+       ⚠ 여기서 흐름 배치를 풀면 vp 가 display:contents 가 되어 크기 변화가 안 잡히고 영영 안 흐른다 */
+    box.classList.toggle('gst-ins-wait', !origs.length || !w1 || !vw);
+    if(!origs.length || !w1 || !vw){ run.style.removeProperty('--ins-d'); return; }
+    const m = Math.max(1, Math.ceil(vw / w1)), frag = document.createDocumentFragment();
+    for(let i = 0; i < 2*m - 1; i++) origs.forEach(function(o){ const c = o.cloneNode(true); c.classList.remove('gst-ins'); c.classList.add('gst-ins-c');
+      c.querySelectorAll('button,a,[tabindex]').forEach(function(b){ b.setAttribute('tabindex','-1'); }); frag.appendChild(c); });
+    rp.appendChild(frag);
+    run.style.setProperty('--ins-d', Math.max(12, Math.round(m*w1 / GST.INS_SPEED)) + 's');
+  }catch(e){ console.warn('[gst] 요약 띠 흐름', e); }
 };
 
 /* ---------- 데이터 품질 레지스트리 (v135 · 7단계) ----------
@@ -4792,7 +4828,7 @@ GST.FX_T = {
     tilt:'3D 기울기',tilt_s:'KPI 카드가 마우스를 따라 기운다',sheen:'조명',sheen_s:'마우스 자리에 빛이 번진다',conic:'회전 테두리',conic_s:'마우스를 올린 카드의 테두리를 빛이 돈다',
     odometer:'숫자 오도미터',odometer_s:'숫자가 자릿수마다 굴러 바뀐다',liquid:'물결 게이지',liquid_s:'가동률이 물결로 찬다',neon:'네온 표시',neon_s:'점검 권장 표시가 은은히 빛난다',
     draw:'차트 차례 등장',draw_s:'막대·점이 왼쪽부터 자란다',wave:'히트맵 물결',wave_s:'칸이 대각선 물결로 켜진다',
-    scramble:'제목 디코드',scramble_s:'제목 글자가 풀리며 나타난다',shimmer:'제목 빛 흐름',shimmer_s:'제목 위로 빛이 지나간다',typewriter:'브리핑 타자기',typewriter_s:'이번 주 브리핑이 한 줄씩 써진다',ticker:'상태 띠 흐름',ticker_s:'운영단위 상태가 옆으로 흐른다',
+    scramble:'제목 디코드',scramble_s:'제목 글자가 풀리며 나타난다',shimmer:'제목 빛 흐름',shimmer_s:'제목 위로 빛이 지나간다',typewriter:'브리핑 타자기',typewriter_s:'이번 주 브리핑이 한 줄씩 써진다',ticker:'상태 띠 흐름',ticker_s:'운영단위 상태·화면 요약이 옆으로 흐른다',
     reveal:'스크롤 등장',reveal_s:'아래 카드가 떠오른다',viewfx:'보기 전환',viewfx_s:'보기를 바꾸면 흐려졌다 떠오른다',themefx:'테마 원형 전환',themefx_s:'스위치 자리에서 원이 번진다',progress:'읽는 위치 막대',progress_s:'맨 위 얇은 빛 막대',
     magnetic:'자석 단추',magnetic_s:'단추가 마우스를 살짝 따라온다',ripple:'누름 물결',ripple_s:'누른 자리에서 물결이 번진다',cursor:'빛나는 커서',cursor_s:'점과 고리 커서(마우스에서만)'},
   en:{title:'Effects',sub:'Saved on this PC only · on a PC set to reduce motion, moving effects start off',all:'All on',none:'All off',reset:'Defaults',close:'Close',count:'{n} / {t} on',
@@ -4803,7 +4839,7 @@ GST.FX_T = {
     tilt:'3D tilt',tilt_s:'KPI cards tilt toward the mouse',sheen:'Spotlight',sheen_s:'Light follows the mouse',conic:'Orbiting border',conic_s:'Light circles the hovered card',
     odometer:'Odometer numbers',odometer_s:'Digits roll into place',liquid:'Liquid gauge',liquid_s:'Running rate fills as a wave',neon:'Neon markers',neon_s:'«Check advised» markers glow softly',
     draw:'Staggered charts',draw_s:'Bars and points grow from the left',wave:'Heatmap wave',wave_s:'Cells light up in a diagonal wave',
-    scramble:'Title decode',scramble_s:'Title letters resolve into place',shimmer:'Title shimmer',shimmer_s:'Light sweeps over the title',typewriter:'Briefing typewriter',typewriter_s:'The weekly briefing types line by line',ticker:'Status ticker',ticker_s:'Unit status scrolls sideways',
+    scramble:'Title decode',scramble_s:'Title letters resolve into place',shimmer:'Title shimmer',shimmer_s:'Light sweeps over the title',typewriter:'Briefing typewriter',typewriter_s:'The weekly briefing types line by line',ticker:'Status ticker',ticker_s:'Unit status and page summaries scroll sideways',
     reveal:'Scroll reveal',reveal_s:'Cards below rise into view',viewfx:'View transition',viewfx_s:'Switching views blurs and rises',themefx:'Circular theme switch',themefx_s:'A circle spreads from the switch',progress:'Reading bar',progress_s:'Thin light bar at the top',
     magnetic:'Magnetic buttons',magnetic_s:'Buttons lean toward the mouse',ripple:'Press ripple',ripple_s:'A ripple spreads where you press',cursor:'Glowing cursor',cursor_s:'Dot-and-ring cursor (mouse only)'},
   zh:{title:'效果',sub:'仅保存在本机 · 若本机开启了“减少动态效果”，动态效果默认关闭',all:'全部开启',none:'全部关闭',reset:'默认值',close:'关闭',count:'{n} / {t} 已开启',
@@ -4814,7 +4850,7 @@ GST.FX_T = {
     tilt:'3D 倾斜',tilt_s:'KPI 卡片随鼠标倾斜',sheen:'光照',sheen_s:'光随鼠标位置扩散',conic:'旋转边框',conic_s:'光沿悬停卡片的边框环绕',
     odometer:'数字滚动',odometer_s:'数字逐位滚动到位',liquid:'波浪仪表',liquid_s:'运行率以波浪填充',neon:'霓虹标记',neon_s:'建议检查的标记柔和发光',
     draw:'图表依次出现',draw_s:'柱和点从左侧依次生长',wave:'热力图波浪',wave_s:'格子以对角波浪点亮',
-    scramble:'标题解码',scramble_s:'标题文字逐渐显现',shimmer:'标题光泽',shimmer_s:'光从标题上掠过',typewriter:'简报打字机',typewriter_s:'本周简报逐行打出',ticker:'状态滚动条',ticker_s:'运营单位状态横向滚动',
+    scramble:'标题解码',scramble_s:'标题文字逐渐显现',shimmer:'标题光泽',shimmer_s:'光从标题上掠过',typewriter:'简报打字机',typewriter_s:'本周简报逐行打出',ticker:'状态滚动条',ticker_s:'运营单位状态与页面摘要横向滚动',
     reveal:'滚动出现',reveal_s:'下方卡片浮现',viewfx:'视图切换',viewfx_s:'切换视图时模糊后浮现',themefx:'圆形主题切换',themefx_s:'从开关处扩散圆形',progress:'阅读位置条',progress_s:'顶部细光条',
     magnetic:'磁性按钮',magnetic_s:'按钮轻微跟随鼠标',ripple:'按压波纹',ripple_s:'按下处扩散波纹',cursor:'发光光标',cursor_s:'点与圆环光标（仅鼠标）'},
   ja:{title:'エフェクト',sub:'このPCにのみ保存されます · 「視差効果を減らす」を設定したPCでは動くエフェクトが既定でオフです',all:'すべてオン',none:'すべてオフ',reset:'既定値',close:'閉じる',count:'{n} / {t} オン',
@@ -4825,7 +4861,7 @@ GST.FX_T = {
     tilt:'3D 傾き',tilt_s:'KPIカードがマウスの方へ傾く',sheen:'照明',sheen_s:'マウスの位置に光が広がる',conic:'回転する縁',conic_s:'マウスを乗せたカードの縁を光が回る',
     odometer:'数字オドメーター',odometer_s:'数字が桁ごとに転がって変わる',liquid:'波のゲージ',liquid_s:'稼働率が波で満ちる',neon:'ネオン表示',neon_s:'点検推奨の表示がほのかに光る',
     draw:'チャートの順次表示',draw_s:'棒と点が左から伸びる',wave:'ヒートマップの波',wave_s:'セルが斜めの波で点灯する',
-    scramble:'タイトルのデコード',scramble_s:'タイトルの文字がほどけて現れる',shimmer:'タイトルの光沢',shimmer_s:'タイトルの上を光が流れる',typewriter:'ブリーフィングのタイプ',typewriter_s:'今週のブリーフィングが一行ずつ書かれる',ticker:'状態ティッカー',ticker_s:'運営単位の状態が横に流れる',
+    scramble:'タイトルのデコード',scramble_s:'タイトルの文字がほどけて現れる',shimmer:'タイトルの光沢',shimmer_s:'タイトルの上を光が流れる',typewriter:'ブリーフィングのタイプ',typewriter_s:'今週のブリーフィングが一行ずつ書かれる',ticker:'状態ティッカー',ticker_s:'運営単位の状態と画面の要約が横に流れる',
     reveal:'スクロール表示',reveal_s:'下のカードが浮かび上がる',viewfx:'表示の切替',viewfx_s:'表示を切り替えるとぼかしてから浮かぶ',themefx:'円形のテーマ切替',themefx_s:'スイッチの位置から円が広がる',progress:'読む位置のバー',progress_s:'上端の細い光のバー',
     magnetic:'マグネットボタン',magnetic_s:'ボタンがマウスに少しついてくる',ripple:'押したときの波紋',ripple_s:'押した位置から波紋が広がる',cursor:'光るカーソル',cursor_s:'点と輪のカーソル（マウスのみ）'}
 };
@@ -5533,7 +5569,10 @@ GST.initSidebar = function(opts){
   }catch(e){}
 
   tg.onclick=function(){ setOpen(!document.body.classList.contains('gst-sb-open')); };
+  GST._sbOpen=function(o){ setOpen(!!o); };
   closeBtn.onclick=function(){ setOpen(false); };
+  /* 기간 설정 칸(v183) — 페이지가 공통바를 먼저 등록했으면 사이드바가 생긴 지금 그린다 */
+  try{ GST._perSide && GST._perSide(); }catch(e){}
   bd.onclick=function(){ setOpen(false); };
   document.addEventListener('keydown',function(e){
     if(e.key==='Escape' && isMobile()) setOpen(false);
@@ -6110,6 +6149,7 @@ GST.filters = (function(){
       +   '<input type="date" id="gb-from" class="gb-date"><span class="gb-tl">~</span><input type="date" id="gb-to" class="gb-date">'
       +   '<span class="gb-pre">' + ['30','90','ytd','all'].map(function(p){ return '<button type="button" data-gbp="'+p+'"></button>'; }).join('') + '</span></span>'
       + '<span class="gb-x" id="gb-x" hidden></span>'
+      + '<button type="button" class="gb-perc" id="gb-per" hidden></button>'
       + '<span class="gb-sp"></span>'
       + '<button type="button" class="gb-more" id="gb-more"></button>'
       + '<button type="button" class="gb-clr" id="gb-clr" hidden></button>';
@@ -6121,12 +6161,15 @@ GST.filters = (function(){
     const ins = document.getElementById('gstInsights');
     if(ins && ins.parentNode === anchor.parentNode && ins.nextElementSibling === anchor) anchor = ins;
     anchor.parentNode.insertBefore(d, anchor);
+    try{ GST._perSide && GST._perSide(); }catch(e){}
     d.addEventListener('click', function(e){
       const rb = e.target.closest('[data-gbr]');
       if(rb){ const v = rb.dataset.gbr; setBoth('region', v ? [v] : []); return; }
       const pb = e.target.closest('[data-gbp]');
       if(pb){ bandPeriod(pb.dataset.gbp); return; }
       if(e.target.closest('#gb-more')){ const tg = document.querySelector('.gst-sb-toggle'); if(tg) tg.click(); return; }
+      /* 기간 칩 — 상세 필터를 «열고»(이미 열려 있으면 그대로) 기간 설정 칸을 보인다 */
+      if(e.target.closest('#gb-per')){ if(GST._sbOpen) GST._sbOpen(true); const ps = document.getElementById('gstPerSec'); if(ps) try{ ps.scrollIntoView({block:'nearest'}); }catch(x){} return; }
       if(e.target.closest('#gb-clr')){ GST.clearFilters ? GST.clearFilters() : GST.filters.clear(); }
     });
     BAND_AX.forEach(function(k){
@@ -6684,12 +6727,15 @@ GST.BAR_T = {
 // reg = {caps:{period,cutoff:'wm'|'m'|false,style,ppt}, state:{period,endM,endW,style}, weeks:[{v,t}]}
 // 전 페이지 **동일 세트**를 항상 렌더한다 — 지원하지 않는 컨트롤은 비활성(.off)으로
 // 자리만 유지해 페이지를 옮겨도 바의 구성·폭이 변하지 않는다.
-GST.barHTML = function(reg, lang){
+/* part — 'act'(차트 디자인·PPT·브리핑·피벗 · 셸 상단) · 'per'(주/월·구간·마감 · 상세 필터 맨 위) · 없으면 전부(옛 호출부).
+   v183 사용자 「기간 설정은 한 번 정해 두고 보는 것 — 상단에 늘 노출할 필요가 없다 · 상세 필터로」 */
+GST.barHTML = function(reg, lang, part){
   const T = GST.BAR_T[lang] || GST.BAR_T.ko;
   const c = (reg && reg.caps) || {}, s = (reg && reg.state) || {};
   const off = function(on){ return on ? '' : ' off" title="'+T.na; };   // 비활성엔 이유 툴팁
   const dis = function(on){ return on ? '' : ' disabled'; };
   let h='';
+  if(part!=='act'){
   // 주/월 토글 (추이 차트가 있는 페이지만 활성)
   h+='<span class="gb-seg'+off(c.period)+'">'
     +'<button type="button" class="gb-b'+(c.period&&s.period==='w'?' on':'')+'" data-gb="period" data-v="w"'+dis(c.period)+'>'+T.w+'</button>'
@@ -6709,6 +6755,8 @@ GST.barHTML = function(reg, lang){
     + ws.map(function(w){ return '<option value="'+w.v+'"'+(s.endW===w.v?' selected':'')+'>'+w.t+'</option>'; }).join('')
     +'</select>'
     +'<button type="button" class="gb-b'+off(hasCut)+'" data-gb="clear" title="'+T.clr+'"'+dis(hasCut)+'>↺</button>';
+  }
+  if(part==='per') return h;
   // 차트 디자인·PPT — 전 페이지 공통
   const st=GST.STY[s.style]||GST.sty();
   h+='<button type="button" class="gb-b'+off(c.style!==false)+'" data-gb="style" title="'+T.sty+'"><span class="gb-sty">'+st.lbl+'</span></button>'
@@ -6766,6 +6814,8 @@ GST.barSync = function(){
   if(GST._pivot) caps.pivot=true;
   const reg={type:'gst-bar-reg', caps:caps, state:st,
              weeks:(typeof s.weeks==='function')?s.weeks():null};
+  GST._barReg=reg;
+  try{ GST._perSide(reg); }catch(e){ console.warn('[gst] 기간 설정 그리기 실패', e); }
   if(window.self!==window.top){ try{ window.parent.postMessage(reg,'*'); }catch(e){ console.warn('[gst] 셸에 공통바 등록 실패', e); } }
   else GST._localBar(reg);
 };
@@ -6841,7 +6891,45 @@ GST._localBar = function(reg){
     GST.barBind(el, GST._barDo);
   }
   let lg='ko'; try{ lg=sessionStorage.getItem('gst_lang')||'ko'; }catch(e){}
-  el.innerHTML=GST.barHTML(reg, lg);
+  el.innerHTML=GST.barHTML(reg, lg, 'act');
+};
+/* 기간 설정 — 상세 필터(사이드바) 맨 위 한 칸 (v183 · 사용자 요청).
+   주/월 · 최근 12개 구간 · 마감 월/주 · 해제. 예전에는 셸 상단 공통바에 늘 떠 있었다 — 한 번 정해 두고 보는 설정이라
+   상단은 차트 디자인·PPT·브리핑·피벗만 남기고 여기로 옮겼다. 컨트롤 모양·동작은 공통바와 «같은 함수»다(barHTML 'per' · _barDo).
+   ⚠ 숨기면 «마감을 걸어 둔 채 잊는» 일이 생긴다 — 옛 달을 최신으로 읽는다. 그래서 기본값이 아닐 때만 범위 띠에 칩으로 밝힌다(#gb-per). */
+GST._perSide = function(reg){
+  reg = reg || GST._barReg; if(!reg) return;
+  const c = reg.caps || {}, s = reg.state || {};
+  if(!c.period && !c.cutoff) return;
+  const FT = GST._fltT();
+  const body = document.querySelector('#gstSidebar .gst-sb-body');
+  if(body){
+    let sec = document.getElementById('gstPerSec');
+    if(!sec){
+      sec = document.createElement('div'); sec.className = 'gst-sb-sec gst-sb-per'; sec.id = 'gstPerSec';
+      sec.innerHTML = '<div class="gst-sb-lbl" data-lbl="perSet"></div><div class="gst-per" id="gstPer"></div>';
+      body.insertBefore(sec, body.firstChild);
+      GST.barBind(sec.querySelector('#gstPer'), GST._perSend);
+    }
+    sec.querySelector('.gst-sb-lbl').textContent = FT.perSet;
+    sec.querySelector('#gstPer').innerHTML = GST.barHTML(reg, GST._lang(), 'per');
+  }
+  /* 범위 띠의 칩 — 마감을 걸었거나(기본값이 아니면) «마감 월만»일 때만. 누르면 상세 필터를 연다 */
+  const ch = document.getElementById('gb-per');
+  if(ch){
+    const parts = [];
+    if(c.cutoff && !s.cutDef){
+      if(c.cutoff === 'wm' && s.endW){ const w = (reg.weeks || []).find(function(x){ return x.v === s.endW; }); parts.push(FT.perCut.replace('{v}', w ? w.t : s.endW)); }
+      else if(s.endM) parts.push(FT.perCut.replace('{v}', s.endM));
+    }
+    if(GST.span12 && !GST.span12()) parts.push(FT.perOnly);
+    ch.hidden = !parts.length; ch.textContent = parts.join(' · '); ch.title = FT.perChip;
+  }
+};
+/* 상세 필터의 컨트롤 → 페이지 자신의 동작(_barDo). 구간 범위는 전 페이지 공통이라 셸에 알려 다른 탭에도 뿌리게 한다 */
+GST._perSend = function(k, v){
+  GST._barDo(k, v);
+  if(k === 'span' && window.self !== window.top){ try{ window.parent.postMessage({type:'gst-span', val:v}, '*'); }catch(e){} }
 };
 // 셸에서 온 지시 수신 (테마·언어는 initSync가 처리)
 /* ============================================================

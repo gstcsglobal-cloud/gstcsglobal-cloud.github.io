@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=175"></script>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=175">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=176"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=176">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/ds.css?v=1">
 <style>
 /* ============================================================
@@ -260,7 +260,14 @@ body.fx-neon .hb-dot.bad,body.fx-neon .hb-pill.bad,body.fx-neon .hb-sev.bad{anim
 body:not(.fx-ticker) .hb-tick{overflow-x:auto;-webkit-mask:none;mask:none}
 body:not(.fx-ticker) .hb-tick-in{animation:none}
 /* 이번 주 브리핑 — 카드가 센 숫자를 문장으로(새로 세지 않는다). 타자기는 글자를 바꾸지 않고 «가렸다 드러낸다»(clip-path) */
-.hb-grid2{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);align-items:start}
+.hb-grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch}
+.hb-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.hb-qcard{min-height:420px}
+.hb-qcard > h2{flex:none}
+/* 목록은 «절대 위치»라 카드의 자연 높이에 들어가지 않는다 — 행 높이는 오른쪽 열이 정하고 목록은 그 안에서 스크롤한다 */
+.hb-qbox{position:relative;flex:1 1 auto;min-height:0}
+.hb-qbox > .hb-qs{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;padding-right:4px;scrollbar-width:thin}
+@media (max-width:1200px){ .hb-grid2{grid-template-columns:minmax(0,1fr)} .hb-qcard{min-height:0} .hb-qbox{flex:none} .hb-qbox > .hb-qs{position:static;max-height:520px} }
 .hb-dot.acc{background:var(--accent)}
 .hb-brief .hb-orb{width:20px;height:20px;border-radius:50%;flex:none;background:radial-gradient(circle at 35% 30%,#fff,#4FE3FF 22%,var(--accent) 55%,#A97BFF 85%);box-shadow:0 0 16px color-mix(in srgb,#4FE3FF 45%,transparent)}
 body.fx-pulse .hb-brief .hb-orb{animation:hbOrb 3.2s ease-in-out infinite}
@@ -275,7 +282,6 @@ body.fx-typewriter .hb-blines .tw{animation:gstType var(--tw-d,1s) steps(var(--t
 .hb-caret{display:inline-block;width:7px;height:1.05em;margin-left:3px;vertical-align:-2px;background:var(--accent);opacity:0}
 body.fx-typewriter .hb-caret{animation:hbCaret 1s steps(1) var(--tw-dl,0s) 4}
 @keyframes hbCaret{0%,49%{opacity:1}50%,100%{opacity:0}}
-.hb-heatrow{display:grid}
 /* 히트맵 — 대각선 물결로 켜지고, 칸에 마우스를 올리면 그 행·열만 또렷하다 */
 body.fx-wave .hb-cell{opacity:1;animation:hbWave .7s cubic-bezier(.2,.9,.2,1.2) backwards;animation-delay:var(--d,0ms)}
 @keyframes hbWave{from{opacity:0;transform:scale(.3) rotate(-8deg);filter:brightness(2.2)}}
@@ -362,22 +368,24 @@ body.fx-viewfx .hb-bub.drop{animation:hbDrop .75s cubic-bezier(.34,1.56,.64,1) b
   <!-- 운영 관리 · 사이트별 — 옛 홈의 카드(ds 부품). 보기마다 다시 그린다 -->
   <section id="body" class="ds-grid" data-vw="lead field"></section>
 
+  <!-- 확인 사항 | (이번 주 브리핑 + 주차별 고장 히트맵) — 5:5 (v183 · 사용자 요청 「히트맵을 브리핑 아래 빈 공간에 · 5:5 · 넘치면 스크롤」).
+       확인 사항은 오른쪽 열의 높이를 따라가고 넘치는 줄은 그 안에서 스크롤한다(목록이 절대 위치 — 길어도 행 높이를 키우지 않는다) -->
   <section class="hb-grid2" data-vw="exec lead">
-    <div class="hb-card">
+    <div class="hb-card hb-qcard">
       <h2><span data-i="qT">처리할 일</span><span class="s" id="qS"></span></h2>
-      <div class="hb-qs" id="queue"></div>
+      <div class="hb-qbox"><div class="hb-qs" id="queue"></div></div>
     </div>
-    <!-- 이번 주 브리핑(v180) — 위 카드들이 센 숫자를 문장으로. 새로 세지 않는다 -->
-    <div class="hb-card hb-brief" id="briefCard">
-      <h2><span class="hb-orb" aria-hidden="true"></span><span data-i="bT">이번 주 브리핑</span><span class="s" id="bS"></span><button type="button" class="hb-btn sm ghost r" id="bReplay" data-i="bReplay">다시 보기</button></h2>
-      <ul class="hb-blines" id="blines" aria-live="off"></ul>
-    </div>
-  </section>
-  <section class="hb-heatrow" data-vw="exec lead">
-    <div class="hb-card">
-      <h2><span data-i="heatT">주차별 고장 히트맵</span><span class="s" data-i="heatS">진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록</span>
-        <span class="r hb-seg" role="group" aria-label="행 기준" id="segHeat"><button type="button" data-h="op" class="on" data-i="byOp">운영단위</button><button type="button" data-h="campus" data-i="byCampus">단지</button></span></h2>
-      <div class="hb-heat" id="heat"></div>
+    <div class="hb-col">
+      <!-- 이번 주 브리핑(v180) — 위 카드들이 센 숫자를 문장으로. 새로 세지 않는다 -->
+      <div class="hb-card hb-brief" id="briefCard">
+        <h2><span class="hb-orb" aria-hidden="true"></span><span data-i="bT">이번 주 브리핑</span><span class="s" id="bS"></span><button type="button" class="hb-btn sm ghost r" id="bReplay" data-i="bReplay">다시 보기</button></h2>
+        <ul class="hb-blines" id="blines" aria-live="off"></ul>
+      </div>
+      <div class="hb-card hb-heatcard">
+        <h2><span data-i="heatT">주차별 고장 히트맵</span><span class="s" data-i="heatS">진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록</span>
+          <span class="r hb-seg" role="group" aria-label="행 기준" id="segHeat"><button type="button" data-h="op" class="on" data-i="byOp">운영단위</button><button type="button" data-h="campus" data-i="byCampus">단지</button></span></h2>
+        <div class="hb-heat" id="heat"></div>
+      </div>
     </div>
   </section>
   <div class="hb-status" id="status"></div>

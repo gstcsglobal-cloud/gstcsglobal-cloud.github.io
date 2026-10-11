@@ -75,6 +75,38 @@ await pg.evaluate(() => document.body.classList.add('theme-slate')); const b1 = 
 is(b1 !== 'rgb(255, 255, 255)', '다크(theme-slate)에서는 어두운 바탕 (' + b1 + ')');
 is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
 await ctx.close();
+console.log('[3b] 요약 띠가 흐른다 (v183 · 사용자 「다른 페이지도 요약이 움직이는 것으로」) — 글자는 원본 그대로 · 사본은 aria-hidden');
+{
+  const c3 = await ctxOf(false), p3 = await c3.newPage(); const e3 = []; p3.on('pageerror', e => e3.push(e.message));
+  await p3.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await p3.waitForTimeout(700);
+  const insOf = () => p3.evaluate(() => { const b = document.getElementById('gstInsights'); if (!b) return null;
+    const run = b.querySelector('.gst-ins-run');
+    return { move: b.classList.contains('gst-ins-move'), wait: b.classList.contains('gst-ins-wait'),
+      orig: [...b.querySelectorAll('.gst-ins')].map(x => x.textContent.replace(/\s+/g, ' ').trim()), ppt: document.querySelectorAll('#gstInsights .gst-ins').length,
+      clones: b.querySelectorAll('.gst-ins-c').length, cloneHidden: [...b.querySelectorAll('.gst-ins-c')].every(c => !!c.closest('[aria-hidden="true"]')),
+      anim: getComputedStyle(run).animationName, dur: run.style.getPropertyValue('--ins-d'), tf: getComputedStyle(run).transform }; });
+  await p3.evaluate(() => GST.insights([{ sev:'bad', text:'고장 <b>12</b>건' }, { sev:'ok', text:'PM <b>5</b>건' }]));
+  await p3.waitForTimeout(400);
+  let I = await insOf();
+  is(I && I.move && !I.wait && I.anim === 'gstInsRun' && /s$/.test(I.dur), '요약 띠가 흐른다 (애니메이션 ' + (I && I.anim) + ' · ' + (I && I.dur) + ')');
+  is(I && I.orig.join('|') === '고장 12건|PM 5건' && I.ppt === 2, '원본 두 줄은 그대로 — PPT·검사가 읽는 «.gst-ins» 는 원본뿐 (' + (I && I.orig.join('|')) + ')');
+  is(I && I.clones >= 2 && I.cloneHidden, '흐름용 사본은 화면 낭독에서 빠진다(aria-hidden) · ' + (I && I.clones) + '개');
+  const t1 = I && I.tf; await p3.waitForTimeout(500); const t2 = (await insOf()).tf;
+  is(t1 !== t2, '실제로 움직인다 (transform ' + t1 + ' → ' + t2 + ')');
+  await p3.evaluate(() => GST.fx.set('ticker', false)); await p3.waitForTimeout(200);
+  I = await insOf();
+  is(I && !I.move && I.clones === 0 && I.orig.length === 2, '「효과」에서 상태 띠 흐름을 끄면 멈추고 예전 배치로 (사본 0)');
+  await p3.evaluate(() => GST.fx.set('ticker', true)); await p3.waitForTimeout(200);
+  is((await insOf()).move, '다시 켜면 다시 흐른다');
+  is(e3.length === 0, 'JS 에러 0' + (e3.length ? ' → ' + e3[0] : ''));
+  await c3.close();
+  const c4 = await ctxOf(true), p4 = await c4.newPage();
+  await p4.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await p4.waitForTimeout(500);
+  await p4.evaluate(() => GST.insights([{ sev:'bad', text:'고장 <b>12</b>건' }])); await p4.waitForTimeout(200);
+  const R = await p4.evaluate(() => { const b = document.getElementById('gstInsights'); return { move: b.classList.contains('gst-ins-move'), clones: b.querySelectorAll('.gst-ins-c').length }; });
+  is(!R.move && R.clones === 0, '움직임 줄이기 — 흐르지 않는다(사본도 없다)');
+  await c4.close();
+}
 console.log('[4] 움직임 줄이기');
 ctx = await ctxOf(true); pg = await ctx.newPage(); await pg.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(500);
 is(await pg.evaluate(() => getComputedStyle(document.querySelector('.card')).animationName) === 'none', '카드 애니메이션 없음');

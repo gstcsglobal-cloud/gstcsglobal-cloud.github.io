@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=175"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=176"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write) 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB(옛 동작 그대로 보인다).
@@ -789,7 +789,9 @@ function frameIdOf(src){
 function renderGBar(){
   const el=document.getElementById('gbar'); if(!el)return;
   const reg=TAB_BAR[activeTab];
-  el.innerHTML = reg ? GST.barHTML(reg, LANG) : '';
+  /* 상단에는 차트 디자인·PPT·브리핑·피벗만(v183) — 주/월·구간·마감은 각 페이지 «상세 필터» 맨 위 «기간 설정»으로 옮겼다
+     (사용자 「한 번 정해 두고 보는 것 · 상단을 글로벌 현황처럼 깔끔하게」). 옛 core 가 캐시에 남아 part 를 모르면 전부 그린다 — 안 깨진다 */
+  el.innerHTML = reg ? GST.barHTML(reg, LANG, 'act') : '';
 }
 function barSend(key,val){
   // 구간 범위는 전 페이지 공통 상태 — 셸이 먼저 확정하고 살아 있는 모든 프레임에 뿌린다.
@@ -804,6 +806,12 @@ function barSend(key,val){
 }
 window.addEventListener('message',e=>{
   const d=e.data||{};
+  /* 상세 필터의 «최근 12개 구간» 토글(v183) — 전 페이지 공통 상태라 셸이 다른 탭에도 뿌린다(보낸 탭은 이미 바꿨다) */
+  if(d.type==='gst-span'){
+    GST.setSpan12(d.val===true||d.val==='true');
+    Object.values(frames).forEach(f=>{ try{ if(f.contentWindow!==e.source) f.contentWindow.postMessage({type:'gst-bar-set',key:'span',val:d.val},'*'); }catch(err){} });
+    return;
+  }
   if(d.type==='gst-bar-reg'){
     const id=frameIdOf(e.source); if(!id)return;
     TAB_BAR[id]={caps:d.caps||{},state:d.state||{},weeks:d.weeks||null};
