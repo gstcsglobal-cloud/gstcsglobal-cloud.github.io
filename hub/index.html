@@ -850,7 +850,12 @@ function goOp(op){
   if(S.view!=='exec'||!cc||!GST.geo.CC[cc]||GEOD.fail){ pick(op); return; }
   if(S.cc===cc){ pick(op); return; }   // 이미 그 나라 지도 — 고르기만
   const m=(mapModeNow()==='globe'&&!S.cc&&GL.on)?GL.marks.find(x=>x.g.op===op):null;
-  if(m&&!REDUCE&&glFx('viewfx')){ S.sel=op; glFly(m.lat,m.lon,600); setTimeout(()=>{ enterCountry(cc, op); S._ccOp=true; }, 560); return; }
+  if(m&&!REDUCE&&glFx('viewfx')){
+    /* 고르기(카드·선택 패널)는 «지금» 바뀌고 나라 지도만 날아간 뒤에 — 날아가는 0.5초 동안 옛 운영단위가 패널에 남아 있으면
+       그 사이 누른 «사이트 상세»가 옛 운영단위를 연다(t-site 가 잡았다). 그사이 다른 것을 눌렀으면 들어가지 않는다 */
+    const tok=S._goTok=(S._goTok||0)+1;
+    S.sel=op; S.op=op; GL.lastOp=op; render(); glFly(m.lat,m.lon,600);
+    setTimeout(()=>{ if(S._goTok!==tok||S.op!==op||S.cc) return; enterCountry(cc, op); S._ccOp=true; }, 560); return; }
   enterCountry(cc, op); S._ccOp=true;   // 운영단위를 눌러 들어온 나라 — 칩의 «전체 보기 ✕»는 그 누름을 통째로 되돌린다(나라에서도 나온다)
 }
 function asofOpen(){

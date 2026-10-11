@@ -124,6 +124,8 @@ await hub.click('#goSite'); await ps.waitForTimeout(4500);
 const site = ps.frames().find(f => /\/site\//.test(f.url()));
 const sel = site ? await site.evaluate(() => document.getElementById('opSel').value) : '';
 is(/WUHAN/.test(sel), '관제에서 우한을 골라 「사이트 상세」 → 사이트 화면이 우한으로 열린다 (' + sel + ')');
+/* v185 — 글로벌 현황에서 운영단위를 누르면 (지구본이 그 자리로 돈 뒤) 그 나라 지도로 들어간다. 셸 안은 움직임이 켜져 있어 «날아가는» 길을 탄다 */
+is(await hub.evaluate(() => S.cc === 'CN' && /WUHAN/.test(S.op || '')), '셸 안(움직임 켜짐) — 우한을 누르면 날아간 뒤 중국 지도로 들어간다');
 const tabs = await ps.evaluate(() => ({ bar:Array.from(document.querySelectorAll('.tab')).map(t => t.dataset.id).join(','), more:document.getElementById('moreBtn').classList.contains('on') }));
 is(tabs.bar === 'hub,report,fault,pm,cip,scrubber,material,tco,hr' && tabs.more,
   '셸 탭 — 사이트 상세는 탭 줄이 아니라 «더보기»로 열리고, 열려 있으면 더보기 단추가 켜진다 (v178 · 홈은 글로벌 현황에 합쳤다 · ' + tabs.bar + ')');
