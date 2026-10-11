@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 174;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 175;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -1306,6 +1306,7 @@ GST.chartDefaults = function(){
     else if(GST._motionOn && GST._motionOn()){
       Chart.defaults.animation.delay = function(c){
         const ch=c&&c.chart; if(!ch || c.type!=='data' || c.mode!=='default' || ch.$gstT0==null || Date.now()-ch.$gstT0>1200) return 0;
+        if(GST.fx && !GST.fx.on('draw')) return 0;   /* 「효과 › 차트 차례 등장」(v180) */
         return Math.min(c.dataIndex||0, 16)*16 + Math.min(c.datasetIndex||0, 3)*45;
       };
       if(!Chart.registry.plugins.get('gstFx')) Chart.register({ id:'gstFx', beforeInit(ch){ ch.$gstT0=Date.now(); } });
@@ -4400,7 +4401,14 @@ GST._motionInit = function(){
           const old=m.type==='characterData'?(m.oldValue||''):Array.prototype.map.call(m.removedNodes||[],function(n){ return n.textContent||''; }).join('');
           if(m.type==='characterData'||(m.removedNodes&&m.removedNodes.length)){ vin.add(v);
             if(old!==v.textContent){ v.classList.remove('gst-vin'); void v.offsetWidth; v.classList.add('gst-vin');
-              clearTimeout(v._gstV); v._gstV=setTimeout(function(){ v.classList.remove('gst-vin'); }, 800); } }
+              clearTimeout(v._gstV); v._gstV=setTimeout(function(){ v.classList.remove('gst-vin'); }, 800);
+              /* 오도미터(v180 · 「효과」) — 처음 서는 숫자는 0 에서 굴러 온다. 글자는 그대로이고 겹친 그림만 구른다 */
+              try{ GST.fx && GST.fx.odo(v, /\d/.test(old)?old:''); }catch(e){} } }
+        }
+        else if(v && hot){
+          /* 사람이 바꾼 직후의 값 변화 — 옛 값에서 새 값으로 구른다(자동 새로고침·번역에는 안 건다) */
+          const old=m.type==='characterData'?(m.oldValue||''):Array.prototype.map.call(m.removedNodes||[],function(n){ return n.textContent||''; }).join('');
+          if(old && old!==v.textContent){ try{ GST.fx && GST.fx.odo(v, old); }catch(e){} }
         }
         const k=el.closest('.kpi'); if(!k) return;
         const txt=k.textContent, prev=seen.get(k); seen.set(k, txt);
@@ -4699,12 +4707,13 @@ GST._fxInit = function(){
   try{
     if(!document.body || !GST._motionOn()) return;
     /* 조명 — 마우스가 지나는 자리에 은은한 빛. 정확한 마우스(hover:hover)에서만. 자기 배경 그림이 있는 카드(스켈레톤 등)는 건너뛴다. */
-    if(window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches){
+    if(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches){
       let cur=null, raf=0, px=0, py=0;
       const set=function(){ raf=0; if(!cur) return; const r=cur.getBoundingClientRect(); cur.style.setProperty('--mx', Math.round(px-r.left)+'px'); cur.style.setProperty('--my', Math.round(py-r.top)+'px'); };
       const off=function(){ if(cur) cur.classList.remove('gst-sp-on'); cur=null; };
       document.addEventListener('pointermove', function(e){
         if(e.pointerType && e.pointerType!=='mouse') return;
+        if(GST.fx && !GST.fx.on('sheen')){ off(); return; }   /* 「효과 › 조명」을 끄면 빛을 걸지 않는다(v180) */
         const el=e.target && e.target.closest ? e.target.closest(GST.FX_SEL) : null;
         if(el!==cur){ off();
           if(el && !el.classList.contains('skeleton') && !el.closest('.gov,.gst-pal-ov')){
@@ -4724,6 +4733,7 @@ GST._fxInit = function(){
       const io=new IntersectionObserver(function(es){ es.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('gst-in'); io.unobserve(en.target); } }); }, {threshold:0.04, rootMargin:'0px 0px -3% 0px'});
       GST._fxIO=io;
       const scan=function(){
+        if(GST.fx && !GST.fx.on('reveal')) return;   /* 「효과 › 스크롤 등장」을 끄면 감추지 않는다(v180) */
         const H=window.innerHeight||800;
         document.querySelectorAll(GST.FX_SEL).forEach(function(el){
           if(el._gstRv) return; el._gstRv=1;
@@ -4740,6 +4750,7 @@ GST._fxInit = function(){
     /* 읽는 위치 — 긴 화면에서만 맨 위 2px 막대(카드가 아니라 자기 자신만 늘인다) */
     const bar=document.createElement('div'); bar.className='gst-sprog'; bar.setAttribute('aria-hidden','true'); bar.innerHTML='<i></i>'; document.body.appendChild(bar);
     let rq=0; const upd=function(){ rq=0; const h=document.documentElement, mx=h.scrollHeight-h.clientHeight;
+      if(GST.fx && !GST.fx.on('progress')){ bar.classList.remove('on'); return; }
       if(mx<h.clientHeight*0.6){ bar.classList.remove('on'); return; } bar.classList.add('on'); bar.firstChild.style.transform='scaleX('+Math.min(1,Math.max(0,h.scrollTop/mx)).toFixed(4)+')'; };
     window.addEventListener('scroll', function(){ if(!rq) rq=requestAnimationFrame(upd); }, {passive:true});
     window.addEventListener('resize', function(){ if(!rq) rq=requestAnimationFrame(upd); }, {passive:true});
@@ -4748,6 +4759,409 @@ GST._fxInit = function(){
 if(typeof document!=='undefined'){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', GST._fxInit);
   else GST._fxInit();
+}
+
+/* ============================================================
+   효과 층 «디자인 X» (v180) — 사용자 「세상에 있는 모든 멋진 효과는 다 넣어보자」 → 가상 데이터 시안 확인 → 「폭죽은 없애고 진행시켜」
+   효과마다 켜고 끈다 — 셸 머리의 「효과」(이 PC · localStorage gst_fx 를 셸과 모든 탭이 같이 본다 · storage 이벤트 + gst-fx 메시지).
+   지킬 것 다섯:
+   ① 숫자·글자를 바꾸지 않는다 — 오도미터·제목 디코드는 «겹쳐 그린 그림»(shadow DOM · aria-hidden)이고 원래 글자는 그대로 DOM 에 있다.
+      글자가 세어 올라가거나 한 글자씩 바뀌면 검사·복사·화면 낭독이 중간값을 읽는다(v175 이 count-up 을 뺀 이유 그대로).
+   ② 카드에 transform 을 남기지 않는다 — 3D 기울기는 마우스가 카드 위에 있는 동안만이고 나가면 none(v169 · 카드 안 fixed 팝업의 기준).
+      자석 단추는 transform 이 아니라 독립 속성 translate 를 쓴다(단추가 원래 가진 transform 과 싸우지 않게).
+   ③ 움직임 줄이기(prefers-reduced-motion)를 고른 PC 에서는 «움직이는» 효과의 기본값이 꺼짐이다 — 사람이 직접 켜면 켠다.
+   ④ 폭죽은 넣지 않는다(사용자 확정). 효과를 판정·숫자에 쓰지 않는다 — 꺼도 화면의 숫자는 한 자리도 안 바뀐다.
+   ⑤ 글자·색 규칙은 테마 토큰을 쓴다 — 셸은 theme.css 를 안 싣으므로 효과의 CSS 는 core 가 한 벌 넣는다(_fxCss).
+   ============================================================ */
+/* [열쇠, 움직임인가(움직임 줄이기면 기본 꺼짐), 묶음] — 순서가 패널의 순서다 */
+GST.FX_KEYS = [
+  ['stars',1,'bg'],['aurora',1,'bg'],['grid',0,'bg'],['grain',1,'bg'],['parallax',1,'bg'],
+  ['spin',1,'globe'],['arcs',1,'globe'],['pulse',1,'globe'],['graticule',0,'globe'],
+  ['tilt',1,'card'],['sheen',0,'card'],['conic',1,'card'],['odometer',1,'card'],['liquid',1,'card'],['neon',1,'card'],
+  ['draw',1,'chart'],['wave',1,'chart'],
+  ['scramble',1,'text'],['shimmer',1,'text'],['typewriter',1,'text'],['ticker',1,'text'],
+  ['reveal',1,'move'],['viewfx',1,'move'],['themefx',1,'move'],['progress',0,'move'],
+  ['magnetic',1,'hand'],['ripple',1,'hand'],['cursor',1,'hand']
+];
+GST.FX_T = {
+  ko:{title:'효과',sub:'이 PC 에만 저장됩니다 · 움직임 줄이기를 켜 둔 PC 에서는 움직이는 효과가 기본으로 꺼집니다',all:'전부 켜기',none:'전부 끄기',reset:'기본값',close:'닫기',count:'{n} / {t} 켜짐',
+    g_bg:'배경',g_globe:'지구본',g_card:'카드 · 숫자',g_chart:'차트',g_text:'제목 · 글',g_move:'움직임',g_hand:'손에 닿는 효과',
+    stars:'별빛 · 별자리',stars_s:'마우스 가까이 별이 이어진다',aurora:'오로라 흐름',aurora_s:'배경 빛이 천천히 흐른다',grid:'빛나는 격자',grid_s:'마우스 자리만 격자가 밝아진다',
+    grain:'필름 그레인',grain_s:'화면 전체에 미세한 질감',parallax:'패럴랙스',parallax_s:'스크롤하면 배경 빛이 늦게 따라온다',
+    spin:'자동 회전',spin_s:'지구본이 천천히 돈다 · 끌어서 돌리기는 늘 된다',arcs:'빛줄기',arcs_s:'한국에서 해외 운영단위로 흐르는 호',pulse:'맥동 · 레이더',pulse_s:'점검 권장 운영단위가 숨 쉰다',graticule:'경위선',graticule_s:'지구본의 30° 격자',
+    tilt:'3D 기울기',tilt_s:'KPI 카드가 마우스를 따라 기운다',sheen:'조명',sheen_s:'마우스 자리에 빛이 번진다',conic:'회전 테두리',conic_s:'마우스를 올린 카드의 테두리를 빛이 돈다',
+    odometer:'숫자 오도미터',odometer_s:'숫자가 자릿수마다 굴러 바뀐다',liquid:'물결 게이지',liquid_s:'가동률이 물결로 찬다',neon:'네온 표시',neon_s:'점검 권장 표시가 은은히 빛난다',
+    draw:'차트 차례 등장',draw_s:'막대·점이 왼쪽부터 자란다',wave:'히트맵 물결',wave_s:'칸이 대각선 물결로 켜진다',
+    scramble:'제목 디코드',scramble_s:'제목 글자가 풀리며 나타난다',shimmer:'제목 빛 흐름',shimmer_s:'제목 위로 빛이 지나간다',typewriter:'브리핑 타자기',typewriter_s:'이번 주 브리핑이 한 줄씩 써진다',ticker:'상태 띠 흐름',ticker_s:'운영단위 상태가 옆으로 흐른다',
+    reveal:'스크롤 등장',reveal_s:'아래 카드가 떠오른다',viewfx:'보기 전환',viewfx_s:'보기를 바꾸면 흐려졌다 떠오른다',themefx:'테마 원형 전환',themefx_s:'스위치 자리에서 원이 번진다',progress:'읽는 위치 막대',progress_s:'맨 위 얇은 빛 막대',
+    magnetic:'자석 단추',magnetic_s:'단추가 마우스를 살짝 따라온다',ripple:'누름 물결',ripple_s:'누른 자리에서 물결이 번진다',cursor:'빛나는 커서',cursor_s:'점과 고리 커서(마우스에서만)'},
+  en:{title:'Effects',sub:'Saved on this PC only · on a PC set to reduce motion, moving effects start off',all:'All on',none:'All off',reset:'Defaults',close:'Close',count:'{n} / {t} on',
+    g_bg:'Background',g_globe:'Globe',g_card:'Cards · numbers',g_chart:'Charts',g_text:'Titles · text',g_move:'Motion',g_hand:'Interaction',
+    stars:'Starfield',stars_s:'Stars link up near the mouse',aurora:'Aurora drift',aurora_s:'Background light drifts slowly',grid:'Glowing grid',grid_s:'The grid lights up around the mouse',
+    grain:'Film grain',grain_s:'Fine texture over the screen',parallax:'Parallax',parallax_s:'Background light lags behind the scroll',
+    spin:'Auto spin',spin_s:'The globe turns slowly · dragging always works',arcs:'Light arcs',arcs_s:'Arcs from Korea to overseas units',pulse:'Pulse · radar',pulse_s:'Units with «check advised» breathe',graticule:'Graticule',graticule_s:'30° grid on the globe',
+    tilt:'3D tilt',tilt_s:'KPI cards tilt toward the mouse',sheen:'Spotlight',sheen_s:'Light follows the mouse',conic:'Orbiting border',conic_s:'Light circles the hovered card',
+    odometer:'Odometer numbers',odometer_s:'Digits roll into place',liquid:'Liquid gauge',liquid_s:'Running rate fills as a wave',neon:'Neon markers',neon_s:'«Check advised» markers glow softly',
+    draw:'Staggered charts',draw_s:'Bars and points grow from the left',wave:'Heatmap wave',wave_s:'Cells light up in a diagonal wave',
+    scramble:'Title decode',scramble_s:'Title letters resolve into place',shimmer:'Title shimmer',shimmer_s:'Light sweeps over the title',typewriter:'Briefing typewriter',typewriter_s:'The weekly briefing types line by line',ticker:'Status ticker',ticker_s:'Unit status scrolls sideways',
+    reveal:'Scroll reveal',reveal_s:'Cards below rise into view',viewfx:'View transition',viewfx_s:'Switching views blurs and rises',themefx:'Circular theme switch',themefx_s:'A circle spreads from the switch',progress:'Reading bar',progress_s:'Thin light bar at the top',
+    magnetic:'Magnetic buttons',magnetic_s:'Buttons lean toward the mouse',ripple:'Press ripple',ripple_s:'A ripple spreads where you press',cursor:'Glowing cursor',cursor_s:'Dot-and-ring cursor (mouse only)'},
+  zh:{title:'效果',sub:'仅保存在本机 · 若本机开启了“减少动态效果”，动态效果默认关闭',all:'全部开启',none:'全部关闭',reset:'默认值',close:'关闭',count:'{n} / {t} 已开启',
+    g_bg:'背景',g_globe:'地球仪',g_card:'卡片 · 数字',g_chart:'图表',g_text:'标题 · 文字',g_move:'动态',g_hand:'交互',
+    stars:'星光 · 星座',stars_s:'鼠标附近的星星连成线',aurora:'极光流动',aurora_s:'背景光缓缓流动',grid:'发光网格',grid_s:'鼠标周围的网格变亮',
+    grain:'胶片颗粒',grain_s:'整个画面的细微质感',parallax:'视差',parallax_s:'滚动时背景光缓慢跟随',
+    spin:'自动旋转',spin_s:'地球仪缓慢旋转 · 始终可拖动',arcs:'光弧',arcs_s:'从韩国流向海外运营单位的光弧',pulse:'脉动 · 雷达',pulse_s:'建议检查的运营单位会呼吸',graticule:'经纬线',graticule_s:'地球仪上的30°网格',
+    tilt:'3D 倾斜',tilt_s:'KPI 卡片随鼠标倾斜',sheen:'光照',sheen_s:'光随鼠标位置扩散',conic:'旋转边框',conic_s:'光沿悬停卡片的边框环绕',
+    odometer:'数字滚动',odometer_s:'数字逐位滚动到位',liquid:'波浪仪表',liquid_s:'运行率以波浪填充',neon:'霓虹标记',neon_s:'建议检查的标记柔和发光',
+    draw:'图表依次出现',draw_s:'柱和点从左侧依次生长',wave:'热力图波浪',wave_s:'格子以对角波浪点亮',
+    scramble:'标题解码',scramble_s:'标题文字逐渐显现',shimmer:'标题光泽',shimmer_s:'光从标题上掠过',typewriter:'简报打字机',typewriter_s:'本周简报逐行打出',ticker:'状态滚动条',ticker_s:'运营单位状态横向滚动',
+    reveal:'滚动出现',reveal_s:'下方卡片浮现',viewfx:'视图切换',viewfx_s:'切换视图时模糊后浮现',themefx:'圆形主题切换',themefx_s:'从开关处扩散圆形',progress:'阅读位置条',progress_s:'顶部细光条',
+    magnetic:'磁性按钮',magnetic_s:'按钮轻微跟随鼠标',ripple:'按压波纹',ripple_s:'按下处扩散波纹',cursor:'发光光标',cursor_s:'点与圆环光标（仅鼠标）'},
+  ja:{title:'エフェクト',sub:'このPCにのみ保存されます · 「視差効果を減らす」を設定したPCでは動くエフェクトが既定でオフです',all:'すべてオン',none:'すべてオフ',reset:'既定値',close:'閉じる',count:'{n} / {t} オン',
+    g_bg:'背景',g_globe:'地球儀',g_card:'カード · 数字',g_chart:'チャート',g_text:'タイトル · 文字',g_move:'動き',g_hand:'操作',
+    stars:'星空 · 星座',stars_s:'マウスの近くで星がつながる',aurora:'オーロラの流れ',aurora_s:'背景の光がゆっくり流れる',grid:'光るグリッド',grid_s:'マウスの周りだけグリッドが明るくなる',
+    grain:'フィルムグレイン',grain_s:'画面全体の細かな質感',parallax:'パララックス',parallax_s:'スクロールすると背景の光が遅れてついてくる',
+    spin:'自動回転',spin_s:'地球儀がゆっくり回る · ドラッグはいつでもできる',arcs:'光の弧',arcs_s:'韓国から海外の運営単位へ流れる弧',pulse:'脈動 · レーダー',pulse_s:'点検推奨の運営単位が呼吸する',graticule:'経緯線',graticule_s:'地球儀の30°グリッド',
+    tilt:'3D 傾き',tilt_s:'KPIカードがマウスの方へ傾く',sheen:'照明',sheen_s:'マウスの位置に光が広がる',conic:'回転する縁',conic_s:'マウスを乗せたカードの縁を光が回る',
+    odometer:'数字オドメーター',odometer_s:'数字が桁ごとに転がって変わる',liquid:'波のゲージ',liquid_s:'稼働率が波で満ちる',neon:'ネオン表示',neon_s:'点検推奨の表示がほのかに光る',
+    draw:'チャートの順次表示',draw_s:'棒と点が左から伸びる',wave:'ヒートマップの波',wave_s:'セルが斜めの波で点灯する',
+    scramble:'タイトルのデコード',scramble_s:'タイトルの文字がほどけて現れる',shimmer:'タイトルの光沢',shimmer_s:'タイトルの上を光が流れる',typewriter:'ブリーフィングのタイプ',typewriter_s:'今週のブリーフィングが一行ずつ書かれる',ticker:'状態ティッカー',ticker_s:'運営単位の状態が横に流れる',
+    reveal:'スクロール表示',reveal_s:'下のカードが浮かび上がる',viewfx:'表示の切替',viewfx_s:'表示を切り替えるとぼかしてから浮かぶ',themefx:'円形のテーマ切替',themefx_s:'スイッチの位置から円が広がる',progress:'読む位置のバー',progress_s:'上端の細い光のバー',
+    magnetic:'マグネットボタン',magnetic_s:'ボタンがマウスに少しついてくる',ripple:'押したときの波紋',ripple_s:'押した位置から波紋が広がる',cursor:'光るカーソル',cursor_s:'点と輪のカーソル（マウスのみ）'}
+};
+/* 효과의 CSS — 셸·페이지·관리 화면이 한 벌을 쓴다(셸은 theme.css 를 안 싣는다). 클래스 «fx-열쇠» 가 body 에 있으면 그 효과가 켜진 것이다. */
+GST._FX_CSS = [
+  '@property --gst-ang{syntax:"<angle>";inherits:false;initial-value:0deg}',
+  /* 배경 층 — 별빛(캔버스) · 빛나는 격자 · 그레인. 전부 pointer-events:none · 인쇄에서 걷는다 */
+  '.gst-fx-stars{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;opacity:0;transition:opacity .6s ease}',
+  'body.fx-stars .gst-fx-stars{opacity:1}',
+  '.gst-fx-grid{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .4s ease;',
+  ' background-image:linear-gradient(color-mix(in srgb,var(--accent,#5B8CFF) 26%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--accent,#5B8CFF) 26%,transparent) 1px,transparent 1px);background-size:56px 56px;',
+  ' -webkit-mask-image:radial-gradient(320px circle at var(--gst-gx,50%) var(--gst-gy,30%),#000,transparent 70%);mask-image:radial-gradient(320px circle at var(--gst-gx,50%) var(--gst-gy,30%),#000,transparent 70%)}',
+  'body.fx-grid .gst-fx-grid{opacity:.5}',
+  '.gst-fx-grain{position:fixed;inset:-50%;z-index:9000;pointer-events:none;opacity:0;',
+  ' background-image:url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'160\' height=\'160\'><filter id=\'n\'><feTurbulence type=\'fractalNoise\' baseFrequency=\'.9\' numOctaves=\'2\' stitchTiles=\'stitch\'/><feColorMatrix values=\'0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0\'/></filter><rect width=\'100%\' height=\'100%\' filter=\'url(%23n)\'/></svg>")}',
+  'body.fx-grain .gst-fx-grain{opacity:.05}',
+  'body.fx-grain.theme-slate .gst-fx-grain{opacity:.065}',
+  /* 오로라 흐름 · 패럴랙스 — 다크 배경 층(body::before)을 움직인다. 끄면 멈춘다 */
+  'body:not(.fx-aurora)::before{animation:none !important}',
+  'body.fx-parallax::before{translate:0 var(--gst-par,0px)}',
+  /* 커서 — 점은 마우스 그 자리 · 고리는 살짝 늦게. 글을 쓰는 칸에서는 원래 커서를 그대로 둔다 */
+  '.gst-fx-cdot,.gst-fx-cring{position:fixed;left:0;top:0;z-index:2147483000;pointer-events:none;border-radius:50%;opacity:0;transition:opacity .2s,width .25s,height .25s,margin .25s,border-color .25s,background .25s}',
+  '.gst-fx-cdot{width:6px;height:6px;margin:-3px 0 0 -3px;background:var(--accent,#5B8CFF);box-shadow:0 0 12px var(--accent,#5B8CFF)}',
+  '.gst-fx-cring{width:34px;height:34px;margin:-17px 0 0 -17px;border:1.5px solid color-mix(in srgb,var(--accent,#5B8CFF) 60%,transparent)}',
+  '.gst-fx-cring.big{width:52px;height:52px;margin:-26px 0 0 -26px;border-color:var(--gold,#D8B46A);background:color-mix(in srgb,var(--gold,#D8B46A) 7%,transparent)}',
+  '@media (hover:hover) and (pointer:fine){',
+  ' html.gst-cur-in body.fx-cursor .gst-fx-cdot,html.gst-cur-in body.fx-cursor .gst-fx-cring{opacity:1}',
+  ' html.gst-cur-in body.fx-cursor,html.gst-cur-in body.fx-cursor :not(input):not(textarea):not(select):not([contenteditable]):not([contenteditable] *){cursor:none !important}',
+  '}',
+  /* 자석 단추 · 누름 물결 */
+  'body.fx-magnetic .gst-mag{transition:translate .35s cubic-bezier(.2,.8,.2,1),background-color .15s,border-color .15s,color .15s,box-shadow .2s,filter .15s,opacity .15s !important}',
+  '.gst-rip-w{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;z-index:0}',
+  '.gst-rip{position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:.28;transform:scale(0);animation:gstRip .65s ease-out forwards}',
+  '@keyframes gstRip{to{transform:scale(1);opacity:0}}',
+  /* 3D 기울기 — 마우스가 위에 있는 동안만(gst-tilt). 나가면 클래스가 빠져 transform 이 none 이 된다(v169) */
+  'body.fx-tilt .gst-tilt{transform:perspective(900px) rotateX(var(--gst-rx,0deg)) rotateY(var(--gst-ry,0deg)) !important;transition:transform .12s linear !important;will-change:transform}',
+  /* 회전 테두리 — 마우스가 올라간 카드(gst-hov)의 ::before. ⚠ .kpi::before 는 theme.css 가 display:none !important 로 막아 두어 더 좁은 선택자로 연다 */
+  'body.fx-conic :is(.card,.trend-card,.cross-card,.tablecard,.kpi,.hb-card,.hb-kpi,.st-card,.st-kpi,.ac-card,.sd-card,.ds-card,.ds-kpi).gst-hov::before{content:"" !important;display:block !important;position:absolute !important;inset:0 !important;border-radius:inherit !important;padding:1px !important;pointer-events:none !important;z-index:3 !important;',
+  ' background:conic-gradient(from var(--gst-ang),transparent 0 58%,#4FE3FF 70%,var(--gold,#D8B46A) 80%,#A97BFF 88%,transparent 96%) !important;opacity:1 !important;filter:none !important;width:auto !important;height:auto !important;transform:none !important;',
+  ' -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0) !important;-webkit-mask-composite:xor !important;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0) !important;animation:gstSpin 3.6s linear infinite !important}',
+  '@keyframes gstSpin{to{--gst-ang:360deg}}',
+  /* 오도미터 — 원래 값(.gst-odo-src)은 보이지 않을 뿐 DOM 에 그대로다. 겹친 그림(.gst-odo)은 aria-hidden · 글자가 없다(shadow) */
+  '.gst-odo-src{opacity:0 !important}',
+  /* 제목 빛 흐름 — 제목 글자에 빛이 지나간다(글자는 그대로) */
+  'body.fx-shimmer [data-i="title"]:not(.gst-odo-src){background-image:linear-gradient(100deg,var(--txt-main,#E9EEF8) 0%,var(--txt-main,#E9EEF8) 38%,var(--gold,#D8B46A) 50%,var(--txt-main,#E9EEF8) 62%,var(--txt-main,#E9EEF8) 100%);background-size:260% 100%;-webkit-background-clip:text;background-clip:text;color:transparent !important;-webkit-text-fill-color:transparent;animation:gstShim 7s linear infinite}',
+  '@keyframes gstShim{from{background-position:130% 0}to{background-position:-130% 0}}',
+  /* 보기 전환 · 브리핑 타자기 · 네온 — 쓰는 화면이 클래스를 단다 */
+  '@keyframes gstVtIn{from{opacity:0;translate:0 22px;filter:blur(8px)}to{opacity:1;translate:none;filter:none}}',
+  'body.fx-viewfx .gst-vt{animation:gstVtIn .6s cubic-bezier(.16,1,.3,1) backwards}',
+  '@keyframes gstType{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}',
+  '@keyframes gstCaret{50%{opacity:0}}',
+  '@keyframes gstNeon{50%{box-shadow:0 0 2px var(--bad,#FF5E7E),0 0 18px 4px color-mix(in srgb,var(--bad,#FF5E7E) 55%,transparent)}}',
+  /* 읽는 위치 막대 — 금빛 → 사파이어 → 보라로 */
+  '.gst-sprog i{background:linear-gradient(90deg,var(--gold,#D8B46A),var(--accent,#5B8CFF) 55%,#A97BFF) !important}',
+  /* 효과 패널(셸) */
+  '#gstFxPanel button{font-family:inherit}',
+  '#gstFxPanel{position:fixed;top:0;right:0;bottom:0;z-index:100000;width:min(380px,100vw);transform:translateX(105%);transition:transform .5s cubic-bezier(.2,.9,.2,1);display:flex;flex-direction:column;',
+  ' background:color-mix(in srgb,var(--surface,#0E1526) 94%,transparent);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border-left:1px solid var(--line-2,rgba(148,170,215,.24));color:var(--txt-main,#E9EEF8);box-shadow:-30px 0 80px -40px rgba(0,0,0,.7);font:14px/1.5 var(--font,inherit)}',
+  '#gstFxPanel.on{transform:none}',
+  '#gstFxPanel .fh{display:flex;align-items:center;gap:10px;padding:18px 18px 6px}',
+  '#gstFxPanel .fh b{font-size:15px;font-weight:700}',
+  '#gstFxPanel .fh .n{font-size:11.5px;color:var(--txt-muted,#8A97B4);font-variant-numeric:tabular-nums}',
+  '#gstFxPanel .fh button{margin-left:auto;width:32px;height:32px;border-radius:9px;border:1px solid var(--line,rgba(148,170,215,.16));background:transparent;color:var(--txt-2,#B4C0DA);cursor:pointer;font-size:14px}',
+  '#gstFxPanel .fs{padding:0 18px 10px;font-size:11.5px;color:var(--txt-muted,#8A97B4)}',
+  '#gstFxPanel .fa{display:flex;flex-wrap:wrap;gap:8px;padding:2px 18px 12px;border-bottom:1px solid var(--line,rgba(148,170,215,.16))}',
+  '#gstFxPanel .fa button{font-family:inherit;font-size:12.5px !important;font-weight:600;line-height:1.2;padding:7px 12px;border-radius:10px;border:1px solid var(--line-2,rgba(148,170,215,.24));background:transparent;color:var(--txt-main,#E9EEF8);cursor:pointer}',
+  '#gstFxPanel .fa button.p{background:var(--accent,#5B8CFF);border-color:var(--accent,#5B8CFF);color:#fff}',
+  '#gstFxPanel .fb{overflow:auto;padding:4px 18px 28px}',
+  '#gstFxPanel h4{margin:16px 0 4px;font-size:10.5px;letter-spacing:.16em;color:var(--gold,#D8B46A);font-weight:700}',
+  '#gstFxPanel label{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line,rgba(148,170,215,.16));cursor:pointer}',
+  '#gstFxPanel label > span:first-child{flex:1;min-width:0;font-size:13.5px}',
+  '#gstFxPanel label small{display:block;font-size:11.5px;color:var(--txt-muted,#8A97B4)}',
+  '#gstFxPanel .sw{position:relative;width:40px;height:23px;flex:0 0 40px}',
+  '#gstFxPanel .sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}',
+  '#gstFxPanel .sw i{position:absolute;inset:0;border-radius:999px;background:var(--line-2,rgba(148,170,215,.3));transition:background .25s;pointer-events:none}',
+  '#gstFxPanel .sw i::after{content:"";position:absolute;left:3px;top:3px;width:17px;height:17px;border-radius:50%;background:#fff;transition:transform .35s cubic-bezier(.3,1.5,.4,1)}',
+  '#gstFxPanel .sw input:checked + i{background:linear-gradient(135deg,var(--accent,#5B8CFF),#4FE3FF)}',
+  '#gstFxPanel .sw input:checked + i::after{transform:translateX(17px)}',
+  '#gstFxPanel .sw input:focus-visible + i{outline:2px solid var(--accent,#5B8CFF);outline-offset:2px}',
+  /* 테마 원형 전환(셸) — View Transitions 의 새 화면을 원으로 연다 */
+  'html.gst-vt-theme::view-transition-old(root),html.gst-vt-theme::view-transition-new(root){animation:none;mix-blend-mode:normal}',
+  '@media (prefers-reduced-motion:reduce){#gstFxPanel,#gstFxPanel .sw i::after{transition:none}}',
+  '@media print{.gst-fx-stars,.gst-fx-grid,.gst-fx-grain,.gst-fx-cdot,.gst-fx-cring,.gst-odo,#gstFxPanel{display:none !important}.gst-odo-src{opacity:1 !important}.gst-tilt{transform:none !important}}'
+].join('\n');
+GST.fx = (function(){
+  const KEY='gst_fx', DEF={}, F={shell:false};
+  GST.FX_KEYS.forEach(function(k){ DEF[k[0]]=k; });
+  let S={};
+  const load=function(){ try{ S=JSON.parse(localStorage.getItem(KEY)||'{}')||{}; }catch(e){ S={}; } };
+  load();
+  const inFrame=(function(){ try{ return window.parent!==window; }catch(e){ return true; } })();
+  const fine=function(){ try{ return !!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches); }catch(e){ return false; } };
+  const lang=function(){ return (GST._lang&&GST._lang())||'ko'; };
+  F.t=function(k){ const L=GST.FX_T[lang()]||GST.FX_T.ko; return L[k]!=null?L[k]:(GST.FX_T.ko[k]!=null?GST.FX_T.ko[k]:k); };
+  F.def=function(k){ const d=DEF[k]; return !!d && !(d[1] && GST._reduce && GST._reduce()); };
+  F.on=function(k){ return Object.prototype.hasOwnProperty.call(S,k) ? !!S[k] : F.def(k); };
+  F.count=function(){ return GST.FX_KEYS.filter(function(k){ return F.on(k[0]); }).length; };
+  const hooks=[];
+  F.onChange=function(fn){ if(typeof fn==='function') hooks.push(fn); };
+  F.apply=function(){
+    if(typeof document==='undefined'||!document.body||!document.body.classList) return;   /* 노드 검사의 가짜 document 에서는 아무것도 안 한다 */
+    const cl=document.body.classList;
+    GST.FX_KEYS.forEach(function(k){ cl.toggle('fx-'+k[0], F.on(k[0])); });
+    hooks.forEach(function(fn){ try{ fn(); }catch(e){ console.warn('[fx] 효과 갱신 실패', e); } });
+    if(F._kick) Object.keys(F._kick).forEach(function(k){ try{ F._kick[k](); }catch(e){} });
+    const p=document.getElementById('gstFxPanel'); if(p) F._panelSync(p);
+  };
+  const save=function(){
+    try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
+    F.apply();
+    /* 같은 출처의 다른 문서(탭 iframe)는 storage 이벤트로 알지만, srcdoc(오프라인 판)·막힌 저장소를 위해 메시지도 보낸다 */
+    try{ document.querySelectorAll('iframe').forEach(function(f){ try{ f.contentWindow.postMessage({type:'gst-fx', s:S},'*'); }catch(e){} }); }catch(e){}
+  };
+  F.set=function(k,v){ if(!DEF[k]) return; if(v===F.def(k)) delete S[k]; else S[k]=!!v; save(); };
+  F.setAll=function(v){ S={}; GST.FX_KEYS.forEach(function(k){ if(v!==F.def(k[0])) S[k[0]]=v; }); save(); };
+  F.reset=function(){ S={}; save(); };
+  try{
+    window.addEventListener('storage', function(e){ if(e.key===KEY){ load(); F.apply(); } });
+    /* 셸이 값까지 실어 보낸다 — 출처가 다른 문서(검사 환경 · 미래의 다른 주소)는 storage 이벤트를 못 받는다. 부모(셸)가 보낸 것만 받는다(시각 효과뿐이다) */
+    window.addEventListener('message', function(e){ const d=e.data||{}; if(d.type!=='gst-fx') return;
+      if(d.s&&typeof d.s==='object'&&e.source===window.parent){ S={}; Object.keys(d.s).forEach(function(k){ if(DEF[k]) S[k]=!!d.s[k]; }); try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(_){} } else load();
+      F.apply(); });
+  }catch(e){}
+
+  /* ── 패널 — 셸의 「효과」 단추가 연다(혼자 열린 페이지는 명령 팔레트에서) ── */
+  F._panelSync=function(p){
+    p.querySelectorAll('input[data-k]').forEach(function(i){ i.checked=F.on(i.dataset.k); });
+    const n=p.querySelector('.fh .n'); if(n) n.textContent=F.t('count').replace('{n}',F.count()).replace('{t}',GST.FX_KEYS.length);
+  };
+  F.panel=function(open){
+    let p=document.getElementById('gstFxPanel');
+    if(open===false){ if(p) p.classList.remove('on'); return; }
+    const esc=GST._esc||function(s){ return String(s); };
+    if(!p){
+      p=document.createElement('aside'); p.id='gstFxPanel'; p.setAttribute('role','dialog'); p.setAttribute('aria-modal','false'); document.body.appendChild(p);
+      p.addEventListener('change', function(e){ const k=e.target&&e.target.dataset&&e.target.dataset.k; if(k) F.set(k, e.target.checked); });
+      p.addEventListener('click', function(e){ const b=e.target.closest('button[data-a]'); if(!b) return; const a=b.dataset.a;
+        if(a==='close') F.panel(false); else if(a==='all') F.setAll(true); else if(a==='none') F.setAll(false); else if(a==='reset') F.reset(); });
+      document.addEventListener('keydown', function(e){ if(e.key==='Escape'&&p.classList.contains('on')) F.panel(false); });
+      document.addEventListener('pointerdown', function(e){ if(p.classList.contains('on')&&!p.contains(e.target)&&!(e.target.closest&&e.target.closest('#fxBtn'))) F.panel(false); }, true);
+    }
+    const G={}; GST.FX_KEYS.forEach(function(k){ (G[k[2]]=G[k[2]]||[]).push(k[0]); });
+    p.setAttribute('aria-label', F.t('title'));
+    p.innerHTML='<div class="fh"><b>'+esc(F.t('title'))+'</b><span class="n"></span><button type="button" data-a="close" aria-label="'+esc(F.t('close'))+'">✕</button></div>'
+      +'<div class="fs">'+esc(F.t('sub'))+'</div>'
+      +'<div class="fa"><button type="button" class="p" data-a="all">'+esc(F.t('all'))+'</button><button type="button" data-a="none">'+esc(F.t('none'))+'</button><button type="button" data-a="reset">'+esc(F.t('reset'))+'</button></div>'
+      +'<div class="fb">'+Object.keys(G).map(function(g){ return '<h4>'+esc(F.t('g_'+g))+'</h4>'+G[g].map(function(k){
+        return '<label><span>'+esc(F.t(k))+'<small>'+esc(F.t(k+'_s'))+'</small></span><span class="sw"><input type="checkbox" data-k="'+k+'"><i></i></span></label>'; }).join(''); }).join('')+'</div>';
+    F._panelSync(p);
+    if(open!==undefined || !p.classList.contains('on')) requestAnimationFrame(function(){ p.classList.add('on'); });
+    else p.classList.remove('on');
+  };
+
+  /* ── 겹쳐 그리기 — 원래 요소는 그대로 두고(글자·DOM 무변경) 같은 자리에 그림을 얹었다가 걷는다 ── */
+  const overlay=function(el){
+    if(!el||!el.isConnected||el.children.length) return null;
+    const op=el.offsetParent; if(!op) return null;
+    /* 표 칸처럼 offsetParent 가 «자리 기준»이 아닌 곳은 건너뛴다. body 가 기준이면(자리 잡힌 조상이 없다) 문서 좌표 그대로라 그대로 쓴다 */
+    if(op!==document.body&&getComputedStyle(op).position==='static') return null;
+    const r=el.getBoundingClientRect(); if(r.width<2||r.height<2) return null;
+    const cs=getComputedStyle(el), clip=(cs.webkitBackgroundClip==='text'||cs.backgroundClip==='text');
+    const h=document.createElement('span'); h.className='gst-odo'; h.setAttribute('aria-hidden','true');
+    h.style.cssText='position:absolute;left:'+el.offsetLeft+'px;top:'+el.offsetTop+'px;height:'+r.height+'px;pointer-events:none;white-space:nowrap;z-index:2;display:inline-flex;align-items:stretch;'
+      +'font-family:'+cs.fontFamily+';font-size:'+cs.fontSize+';font-weight:'+cs.fontWeight+';font-style:'+cs.fontStyle+';letter-spacing:'+cs.letterSpacing+';font-variant-numeric:'+cs.fontVariantNumeric+';'
+      +'color:'+cs.color+';--gst-ob:'+(clip?cs.backgroundImage:'none')+';text-shadow:'+cs.textShadow;
+    const paint=clip?'background-image:var(--gst-ob);background-size:100% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent':'';
+    return {h:h, H:r.height, paint:paint, op:op};
+  };
+  const finish=function(el){ const o=el&&el._gstOv; if(!o) return; clearTimeout(o.t); cancelAnimationFrame(o.raf); try{ o.h.remove(); }catch(e){} el.classList.remove('gst-odo-src'); el._gstOv=null; };
+  /* 오도미터 — 자릿수마다 0~9 기둥을 굴린다. from 이 없으면(처음) 0 에서 */
+  F.odo=function(el, from){
+    try{
+      if(!F.on('odometer')||!el) return false;
+      const tn=el.firstChild, raw=(tn&&tn.nodeType===3)?tn.data:'', to=raw.trim();
+      if(!/\d/.test(to)||to.length>16||to===String(from||'').trim()) return false;
+      finish(el);
+      const o=overlay(el); if(!o) return false;
+      /* 글자마다 원래 글자의 폭을 잰다(Range) — 자간·고정폭 숫자·글꼴 차이로 겹친 그림이 원래보다 넓어져 단위(건·대)를 덮던 것을 막는다 */
+      const rg=document.createRange(), wid=[];
+      for(let i=0;i<raw.length;i++){ try{ rg.setStart(tn,i); rg.setEnd(tn,i+1); wid.push(rg.getBoundingClientRect().width); }catch(e){ wid.push(0); } }
+      const fd=String(from||'').replace(/\D/g,'');
+      let di=0;
+      const html=raw.split('').map(function(ch,i){
+        const ws=wid[i]>0?' style="width:'+wid[i].toFixed(2)+'px"':'';
+        if(!/\d/.test(ch)) return '<span class="s"'+ws+'>'+(/\s/.test(ch)?'&nbsp;':GST._esc?GST._esc(ch):ch)+'</span>';
+        const st=+(fd[di]||0); di++;
+        return '<span class="c"'+ws+' data-to="'+ch+'" data-st="'+st+'"><span>'+'0123456789'.split('').map(function(d){ return '<i>'+d+'</i>'; }).join('')+'</span></span>';
+      }).join('');
+      const sr=o.h.attachShadow({mode:'open'}), H=o.H;
+      sr.innerHTML='<style>.c,.s{display:inline-block;height:'+H+'px;line-height:'+H+'px;overflow:hidden;vertical-align:top;letter-spacing:0;white-space:nowrap}.c>span{display:flex;flex-direction:column}i{font-style:normal;display:block;height:'+H+'px;line-height:'+H+'px;text-align:left;'+o.paint+'}.s{'+o.paint+'}</style>'+html;
+      el.after(o.h); el.classList.add('gst-odo-src');
+      const cols=Array.prototype.slice.call(sr.querySelectorAll('.c > span'));
+      cols.forEach(function(c){ c.style.transform='translateY('+(-(+c.parentNode.dataset.st)*H)+'px)'; });
+      el._gstOv={h:o.h, t:0, raf:0};
+      el._gstOv.raf=requestAnimationFrame(function(){ el._gstOv&&(el._gstOv.raf=requestAnimationFrame(function(){
+        cols.forEach(function(c,i){ c.style.transition='transform 1.15s cubic-bezier(.16,1,.3,1) '+(i*55)+'ms'; c.style.transform='translateY('+(-(+c.parentNode.dataset.to)*H)+'px)'; });
+      })); });
+      el._gstOv.t=setTimeout(function(){ finish(el); }, 1250+cols.length*55);
+      return true;
+    }catch(e){ try{ finish(el); }catch(_){} return false; }
+  };
+  /* 제목 디코드 — 글자가 잠깐 뒤섞였다가 왼쪽부터 제자리를 찾는다(겹친 그림만 바뀐다) */
+  F.scramble=function(el){
+    try{
+      if(!F.on('scramble')||!el) return false;
+      const txt=(el.textContent||'').trim(); if(!txt||txt.length>40) return false;
+      finish(el);
+      const o=overlay(el); if(!o) return false;
+      const sr=o.h.attachShadow({mode:'open'});
+      sr.innerHTML='<style>b{font-weight:inherit;display:inline-block;line-height:'+o.H+'px;'+o.paint+'}</style><b></b>';
+      const b=sr.querySelector('b'), G2='가나다라마바사아자차카타파하ABCDEFGHKMNPRSTUVWXYZ0123456789#%&', t0=performance.now(), dur=850;
+      el.after(o.h); el.classList.add('gst-odo-src');
+      el._gstOv={h:o.h, t:0, raf:0};
+      const f=function(){ if(!el._gstOv) return; const k=Math.min(1,(performance.now()-t0)/dur); let s='';
+        for(let i=0;i<txt.length;i++){ const ch=txt[i]; s+=(ch===' '||i<Math.floor(k*txt.length))?ch:G2[Math.floor(Math.random()*G2.length)]; }
+        b.textContent=s; if(k<1) el._gstOv.raf=requestAnimationFrame(f); else finish(el); };
+      f(); el._gstOv.t=setTimeout(function(){ finish(el); }, dur+400);
+      return true;
+    }catch(e){ try{ finish(el); }catch(_){} return false; }
+  };
+
+  /* ── 전역 효과 — 페이지(그리고 셸)가 뜰 때 한 번 ── */
+  F._kick={};
+  F.init=function(){ try{ F._init(); }catch(e){ try{ console.warn('[fx] 효과 층을 못 걸었습니다 — 화면은 그대로입니다', e); }catch(_){} } };
+  F._init=function(){
+    if(F._inited||typeof document==='undefined'||typeof requestAnimationFrame!=='function'||!document.body||!document.body.classList||!document.documentElement||!document.documentElement.classList) return; F._inited=true;   /* 노드 검사의 가짜 DOM 에서는 걸지 않는다 */
+    try{ if(!document.getElementById('gstFxCss')){ const st=document.createElement('style'); st.id='gstFxCss'; st.textContent=GST._FX_CSS; document.head.appendChild(st); } }catch(e){}
+    F.apply();
+    const body=document.body;
+    const mk=function(cls, tag){ const e=document.createElement(tag||'div'); e.className=cls; e.setAttribute('aria-hidden','true'); body.appendChild(e); return e; };
+    /* 별빛 — 페이지마다(셸은 iframe 이 덮어 보이지 않는다). 안 보이는 탭(display:none iframe)에서는 rAF 가 돌지 않는다 */
+    if(!F.shell){
+      const cv=mk('gst-fx-stars','canvas'), cx=cv.getContext&&cv.getContext('2d');
+      let P=[], d=1, W=0, H=0, raf=0, smx=-999, smy=-999;
+      const size=function(){ d=Math.min(2,window.devicePixelRatio||1); W=window.innerWidth; H=window.innerHeight; cv.width=Math.max(1,Math.round(W*d)); cv.height=Math.max(1,Math.round(H*d));
+        const n=Math.round(Math.min(140, W*H/11000)); P=[]; for(let i=0;i<n;i++) P.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.1,vy:(Math.random()-.5)*.1,r:Math.random()*1.3+.3,ph:Math.random()*6}); };
+      const loop=function(t){
+        raf=0; if(!cx) return;
+        cx.setTransform(d,0,0,d,0,0); cx.clearRect(0,0,W,H);
+        if(!F.on('stars')||document.hidden) return;
+        const dark=body.classList.contains('theme-slate'), col=dark?'190,215,255':'40,70,180';
+        for(let i=0;i<P.length;i++){ const p=P[i]; p.x+=p.vx; p.y+=p.vy; if(p.x<0)p.x+=W; if(p.x>W)p.x-=W; if(p.y<0)p.y+=H; if(p.y>H)p.y-=H;
+          const tw=.35+.65*Math.abs(Math.sin(t/1400+p.ph)); cx.fillStyle='rgba('+col+','+(tw*(dark?.75:.32)).toFixed(3)+')'; cx.beginPath(); cx.arc(p.x,p.y,p.r,0,6.283); cx.fill(); }
+        const near=P.filter(function(p){ return Math.abs(p.x-smx)<170&&Math.abs(p.y-smy)<170&&Math.hypot(p.x-smx,p.y-smy)<170; });
+        cx.lineWidth=.7;
+        for(let i=0;i<near.length;i++) for(let j=i+1;j<near.length;j++){ const a=near[i], b=near[j], dd=Math.hypot(a.x-b.x,a.y-b.y);
+          if(dd<120){ cx.strokeStyle='rgba('+col+','+((1-dd/120)*(dark?.42:.22)).toFixed(3)+')'; cx.beginPath(); cx.moveTo(a.x,a.y); cx.lineTo(b.x,b.y); cx.stroke(); } }
+        raf=requestAnimationFrame(loop);
+      };
+      size(); window.addEventListener('resize', function(){ size(); });
+      F._kick.stars=function(){ if(!raf&&F.on('stars')&&!document.hidden) raf=requestAnimationFrame(loop); };
+      document.addEventListener('visibilitychange', F._kick.stars);
+      F._starMouse=function(x,y){ smx=x; smy=y; };
+      F._kick.stars();
+      mk('gst-fx-grid');
+    }
+    /* 그레인 — 맨 위 문서 하나에만(셸이 iframe 까지 덮는다 · 혼자 열린 페이지는 자기가) */
+    if(!inFrame) mk('gst-fx-grain');
+    /* 커서 — 문서마다(셸의 고리는 마우스가 iframe 으로 들어가면 숨는다) */
+    const cdot=mk('gst-fx-cdot'), cring=mk('gst-fx-cring');
+    let mx=-99, my=-99, rx=-99, ry=-99, craf=0;
+    const cloop=function(){ craf=0; rx+=(mx-rx)*.2; ry+=(my-ry)*.2; cring.style.transform='translate('+rx.toFixed(1)+'px,'+ry.toFixed(1)+'px)';
+      if(Math.abs(mx-rx)+Math.abs(my-ry)>.4) craf=requestAnimationFrame(cloop); };
+    /* «마우스가 이 문서 안에 있다»는 html 에 단다 — body 의 class 를 바꾸면 그것을 지켜보는 화면(테마 감시)이 매번 다시 그린다 */
+    const HE=document.documentElement;
+    document.addEventListener('pointerout', function(e){ if(!e.relatedTarget||e.relatedTarget.tagName==='IFRAME') HE.classList.remove('gst-cur-in'); });
+    window.addEventListener('blur', function(){ HE.classList.remove('gst-cur-in'); });
+
+    /* 자석 단추 · 기울기 · 회전 테두리 · 격자 · 커서 — 마우스 한 번 움직임을 한 프레임에 모아 처리한다 */
+    const MAG='.tb-btn,.tb-search,.hb-btn,.ds-btn,.btn-grad,.btn-glass,.hb-take,.gst-foldbtn';
+    const TILT='.kpi,.hb-kpi,.ds-kpi,.st-kpi';
+    let magL=[], magAt=0, rq=0, px=0, py=0, tgt=null, hov=null, tilt=null;
+    const frame=function(){
+      rq=0;
+      /* 격자 · 별자리 */
+      if(F.on('grid')) document.documentElement.style.setProperty('--gst-gx', px+'px'), document.documentElement.style.setProperty('--gst-gy', py+'px');
+      if(F._starMouse) F._starMouse(px,py);
+      /* 커서 */
+      if(F.on('cursor')&&fine()){ cdot.style.transform='translate('+px+'px,'+py+'px)'; if(!HE.classList.contains('gst-cur-in')){ rx=px; ry=py; HE.classList.add('gst-cur-in'); }
+        cring.classList.toggle('big', !!(tgt&&tgt.closest&&tgt.closest('button,a,[role="button"],select,label,summary,.hb-sig,.hb-cell,.hb-bub,.hb-q,tr.click')));
+        if(!craf) craf=requestAnimationFrame(cloop); }
+      /* 마우스가 올라간 카드(회전 테두리) */
+      const card=tgt&&tgt.closest?tgt.closest(GST.FX_SEL):null, okCard=card&&!card.closest('.gov,.gst-pal-ov,.gst-dq-pop,#gstFxPanel')&&!card.classList.contains('skeleton')?card:null;
+      if(okCard!==hov){ if(hov) hov.classList.remove('gst-hov'); hov=okCard; if(hov&&getComputedStyle(hov).position!=='static') hov.classList.add('gst-hov'); }
+      /* 3D 기울기 — KPI 카드만. 카드 안의 단추를 겨누는 동안은 기울지 않는다(작은 단추가 손끝에서 도망가지 않게) */
+      const tc=(F.on('tilt')&&okCard&&okCard.matches(TILT))?okCard:null;
+      if(tc!==tilt){ if(tilt){ tilt.classList.remove('gst-tilt'); tilt.style.removeProperty('--gst-rx'); tilt.style.removeProperty('--gst-ry'); } tilt=tc; }
+      if(tilt){ const inner=tgt.closest('button,a,input,select,[role="button"]'); const r=tilt.getBoundingClientRect();
+        const ax=(inner&&inner!==tilt)?.5:(px-r.left)/r.width, ay=(inner&&inner!==tilt)?.5:(py-r.top)/r.height;
+        tilt.style.setProperty('--gst-rx', ((.5-ay)*7).toFixed(2)+'deg'); tilt.style.setProperty('--gst-ry', ((ax-.5)*8).toFixed(2)+'deg'); tilt.classList.add('gst-tilt'); }
+      /* 자석 단추 — 마우스가 단추 «가까이» 오면 살짝 끌려온다(translate · 6px 이내) */
+      if(F.on('magnetic')){
+        const now=Date.now(); if(now-magAt>1500){ magL=Array.prototype.slice.call(document.querySelectorAll(MAG)); magAt=now; }
+        magL.forEach(function(b){ if(!b.isConnected) return; const r=b.getBoundingClientRect(); if(!r.width) return;
+          const cx=r.left+r.width/2, cy=r.top+r.height/2, dx=px-cx, dy=py-cy, lim=Math.max(r.width,r.height)*.85;
+          if(Math.abs(dx)<lim&&Math.abs(dy)<lim){ b.classList.add('gst-mag'); b.style.translate=Math.max(-6,Math.min(6,dx*.18)).toFixed(1)+'px '+Math.max(-5,Math.min(5,dy*.25)).toFixed(1)+'px'; b._gstM=1; }
+          else if(b._gstM){ b.style.translate=''; b._gstM=0; } });
+      }
+    };
+    document.addEventListener('pointermove', function(e){ if(e.pointerType&&e.pointerType!=='mouse') return; px=e.clientX; py=e.clientY; tgt=e.target; if(!rq) rq=requestAnimationFrame(frame); }, {passive:true});
+    const leave=function(){ if(hov){ hov.classList.remove('gst-hov'); hov=null; } if(tilt){ tilt.classList.remove('gst-tilt'); tilt.style.removeProperty('--gst-rx'); tilt.style.removeProperty('--gst-ry'); tilt=null; }
+      magL.forEach(function(b){ if(b._gstM){ b.style.translate=''; b._gstM=0; } }); };
+    document.addEventListener('pointerleave', leave); window.addEventListener('blur', leave);
+    document.addEventListener('pointerout', function(e){ if(!e.relatedTarget) leave(); });
+    F._kick.mag=function(){ if(!F.on('magnetic')) magL.forEach(function(b){ if(b._gstM){ b.style.translate=''; b._gstM=0; } }); if(!F.on('tilt')&&tilt){ tilt.classList.remove('gst-tilt'); tilt=null; } };
+
+    /* 누름 물결 — 단추 안에 «감싼 층»을 하나 넣고 그 안에서 번진다(단추의 overflow·baseline 을 바꾸지 않는다) */
+    const RIP=MAG+',.hb-seg button,.gb-seg button,.mode-btn,.mini-per button,.gst-axsel button,.hb-sig,.hb-q,.hb-tk';
+    document.addEventListener('pointerdown', function(e){
+      if(!F.on('ripple')||e.button>0) return;
+      const b=e.target&&e.target.closest?e.target.closest(RIP):null; if(!b||b.disabled) return;
+      try{
+        if(getComputedStyle(b).position==='static') b.style.position='relative';
+        const r=b.getBoundingClientRect(), s=Math.max(r.width,r.height)*2.2;
+        const w=document.createElement('span'); w.className='gst-rip-w'; w.setAttribute('aria-hidden','true');
+        const sp=document.createElement('span'); sp.className='gst-rip'; sp.style.cssText='width:'+s+'px;height:'+s+'px;left:'+(e.clientX-r.left-s/2)+'px;top:'+(e.clientY-r.top-s/2)+'px';
+        w.appendChild(sp); b.appendChild(w); setTimeout(function(){ w.remove(); }, 700);
+      }catch(err){}
+    }, true);
+
+    /* 패럴랙스 — 스크롤하면 배경 빛(body::before)이 늦게 따라온다(-120px 까지) */
+    let prq=0;
+    const par=function(){ prq=0; if(!F.on('parallax')){ body.style.removeProperty('--gst-par'); return; } body.style.setProperty('--gst-par', Math.max(-120, -(window.scrollY||0)*.12).toFixed(1)+'px'); };
+    window.addEventListener('scroll', function(){ if(!prq) prq=requestAnimationFrame(par); }, {passive:true});
+    F._kick.par=par;
+    /* 스크롤 등장을 끄면 아직 감춰 둔 카드를 바로 보인다(감춘 채 남지 않게) */
+    F._kick.rv=function(){ if(!F.on('reveal')) document.querySelectorAll('.gst-rv:not(.gst-in)').forEach(function(e){ e.classList.add('gst-in'); }); };
+
+    /* 제목 디코드 — 화면이 처음 뜰 때 한 번(로그인 창이 걷힌 뒤 · 셸은 제목이 없다) */
+    if(!F.shell) setTimeout(function(){ const tl=document.querySelector('[data-i="title"]'); if(tl) F.scramble(tl); }, 650);
+  };
+  return F;
+})();
+if(typeof document!=='undefined'){
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ GST.fx.init(); });
+  else setTimeout(function(){ GST.fx.init(); }, 0);
 }
 
 /* ---------- 운영 현황 읽기·판정 한 벌 — 통합 관제 · 사이트 상세가 같이 쓴다 (v167) ----------

@@ -105,6 +105,9 @@ const FAKE = `
       if(bs&&bs.as_of>a.p_as_of) return {data:{error:'older'},error:null};
       if(bs){ bs.as_of=a.p_as_of; bs.payload=a.p_payload; bs.made_at=now; } else d.brief_snap.push({scope:a.p_scope,as_of:a.p_as_of,payload:a.p_payload,made_at:now,made_by:'boss@t'});
       put(d); return {data:{ok:true},error:null}; }
+    if(fn==='action_set'){ var it=d.action_items.find(function(x){ return x.id===a.p_id; }); if(!it) return {data:null,error:{message:'not_found'}};
+      if(a.p_at&&a.p_at!==it.updated_at) return {data:{ok:false,conflict:true,updated_at:it.updated_at},error:null};
+      if(a.p_set&&a.p_set.status) it.status=a.p_set.status; it.updated_at=now; put(d); return {data:{ok:true,changed:1,updated_at:now,status:it.status},error:null}; }
     if(fn==='pref_save'){ var u=d.allowed_users[0]; u.home_view=a.p_view; u.home_op=a.p_op; u.lang=a.p_lang; put(d); return {data:{ok:true},error:null}; }
     return {data:null,error:{message:'unknown rpc'}}; } };
   GST.db=async function(){ return C; };
@@ -220,8 +223,22 @@ is(tw && hubG.g[0] === Math.round(parseFloat(tw.run)) + '%', '가동률(운영 �
 
 console.log('[4] 팀장 — 처리함 · 위험 설비');
 is(/기한 경과 조치 1건/.test(await pl.evaluate(() => document.querySelector('#cAct h2').textContent)), '운영 관리 — 조치 사항 카드 머리에 «기한 경과 조치 1건» (닫힌 일 · 미래 기한은 안 셈)');
-const acts = await pl.evaluate(() => Array.from(document.querySelectorAll('#cAct .ds-row b')).map(b => b.textContent));
-is(acts.length === 2 && acts[0] === '옛 기한 일', '열린 일 둘 · 기한 넘은 일이 먼저 (' + acts.join(' / ') + ')');
+/* v180 — 운영 관리의 조치 사항은 칸반이다(새로 · 확인 · 진행 · 완료). 열린 일만 읽고, 기한 넘은 일은 붉은 줄 */
+const col = s => pl.evaluate(s => Array.from(document.querySelectorAll('#cAct .hb-kcol[data-col="' + s + '"] .hb-kc b')).map(b => b.textContent), s);
+const kan = { open:await col('open'), ack:await col('ack'), doing:await col('doing'), done:await col('done'),
+  late:await pl.evaluate(() => Array.from(document.querySelectorAll('#cAct .hb-kc.late b')).map(b => b.textContent).join()), drag:await pl.evaluate(() => document.querySelector('#cAct .hb-kc').getAttribute('draggable')) };
+is(kan.open.join() === '옛 기한 일' && kan.ack.join() === '새 기한 일' && !kan.doing.length && !kan.done.length && kan.late === '옛 기한 일' && kan.drag === 'true',
+  '칸반 — 새로(옛 기한 일 · 붉은 줄) · 확인(새 기한 일) · 닫힌 일은 안 읽는다 (' + JSON.stringify(kan) + ')');
+await pl.click('#cAct .hb-kcol[data-col="open"] .hb-kc button[data-mv="ack"]'); await pl.waitForTimeout(500);
+const mv = await pl.evaluate(() => window.__RPC.filter(r => r.fn === 'action_set').pop());
+const ack2 = await col('ack');
+is(mv && mv.args.p_id === 11 && mv.args.p_set.status === 'ack' && mv.args.p_at === T0 && ack2.length === 2 && !(await col('open')).length,
+  '‹ › 로 옮기면 action_set(그 일 · 다음 단계 · p_at = 읽은 시각) — 카드가 «확인»으로 (' + JSON.stringify(mv && mv.args) + ')');
+/* 남이 먼저 바꿨으면 덮지 않는다 — 서버가 conflict 를 돌려주면 다시 읽고 그대로 둔다 */
+await pl.evaluate(() => { const d = JSON.parse(localStorage.getItem('__gstFakeDB')); d.action_items.find(x => x.id === 12).updated_at = '2030-01-01T00:00:00Z'; localStorage.setItem('__gstFakeDB', JSON.stringify(d)); });
+await pl.evaluate(() => { const b = Array.from(document.querySelectorAll('#cAct .hb-kc')).find(k => /새 기한 일/.test(k.textContent)).querySelector('button[data-mv="doing"]'); b.click(); }); await pl.waitForTimeout(600);
+const kcf = await pl.evaluate(() => ({ st:JSON.parse(localStorage.getItem('__gstFakeDB')).action_items.find(x => x.id === 12).status, at:window.__RPC.filter(r => r.fn === 'action_set').pop().args.p_at }));
+is(kcf.st === 'ack' && kcf.at === T0 && (await col('ack')).includes('새 기한 일'), '남이 먼저 바꿨으면(conflict) 아무것도 안 바꾸고 다시 읽는다 — 새 기한 일은 «확인»에 그대로');
 const risk = await pl.evaluate(() => document.querySelectorAll('#cRisk .ds-row').length);
 is(risk > 0, '고장 위험 설비 목록이 선다 (' + risk + ')');
 
