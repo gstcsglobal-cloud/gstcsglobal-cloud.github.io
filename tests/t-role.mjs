@@ -78,6 +78,30 @@ is(lm.role === 'legacy' && lm.admin === true, '인증이 꺼진 환경(검증 �
 is(await page.evaluate(() => { GST._me = null; return GST.isAdmin(); }) === true, '인증 꺼짐 + 등급 미상 → 관리자(로컬·검사 환경)');
 is(errs.length === 0, 'JS 에러 0건' + (errs.length ? ' — ' + errs.join(' | ') : ''));
 
+console.log('[4b] 평소에는 숨긴다 — 출처 배지·상태줄 메타는 «문제가 있을 때» 또는 관리자의 «설명 표시»일 때만 (v185 · 사용자 「이거 왜 보여야 하지?」)');
+{
+  const look = () => page.evaluate(() => { const c = document.getElementById('gstSrcChip');
+    return { disp: c ? getComputedStyle(c).display : 'none', txt: c ? c.textContent : '', ok: GST.okText('행 5') }; });
+  await page.evaluate(() => { GST.authOn = function(){ return true; }; GST._srcSeen = {}; GST._idbErr = null;
+    try{ localStorage.setItem('gst_explain', '0'); }catch(e){}
+    GST._meApply({ email: 'a@b', can_write: true, role: 'admin' }); GST._srcNote('wk', 'db', 5); });
+  let v = await look();
+  is(v.disp === 'none', 'admin 이어도 문제가 없으면(전부 DB) 출처 배지는 숨는다');
+  is(!/행 5/.test(v.ok) && /^✅ /.test(v.ok), '상태줄은 «✅ 시각»만 — 행 수·버전 같은 메타는 숨는다: ' + v.ok);
+  await page.evaluate(() => { localStorage.setItem('gst_explain', '1'); GST._explainApply(); });
+  v = await look();
+  is(v.disp !== 'none' && /core \d+/.test(v.txt), '«설명 표시»를 켜면 배지가 바로 뜬다 — 옛 코드 판정(core N)은 여기서: ' + v.txt);
+  is(/행 5/.test(v.ok), '«설명 표시»면 상태줄 메타도 붙는다: ' + v.ok);
+  await page.evaluate(() => { localStorage.setItem('gst_explain', '0'); GST._explainApply(); GST._srcNote('inst', 'sheet', 7); });
+  v = await look();
+  is(v.disp !== 'none', '문제가 있으면(시트로 그림) «설명 표시»와 상관없이 뜬다 — 조용히 옛 숫자를 그리지 않는다(v128)');
+  await page.evaluate(() => { GST._meApply({ email: 'v@b', can_write: false, role: 'viewer' }); GST._srcSeen = {}; GST._srcNote('wk', 'db', 5);
+    localStorage.setItem('gst_explain', '1'); GST._explainApply(); });
+  v = await look();
+  is(v.disp === 'none' && !/행 5/.test(v.ok), '조회자는 «설명 표시» 값이 남아 있어도 안 보인다 (켜는 것은 관리자만)');
+  await page.evaluate(() => { localStorage.removeItem('gst_explain'); });
+}
+
 console.log('[5] 셸 상단 — 등급마다 «데이터 입구»가 맞게 보이는가 (v144 · 실제 셸 CSS)');
 /* 사용자 확정 「하나로 합치기」 — admin 은 「데이터 관리」 하나로 들어가 그 머리의 「원본 파일 올리기」로 간다.
    소스의 CSS 문자열만 보면 «뒤에서 다른 규칙이 덮는» 경우를 못 본다 → 실제 셸을 열어 계산된 display 로 본다.

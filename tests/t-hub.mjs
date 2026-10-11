@@ -187,22 +187,82 @@ is(/자료 없음/.test(zero.t) && zero.hid, '설비 0대 — 분포 칸이 «�
 await pg.evaluate(() => render()); await pg.waitForTimeout(600);
 is(await pg.evaluate(() => document.querySelectorAll('#mapS path.ct').length > 200 && +document.querySelector('#kpis .hb-kpi[data-k="run"] .num').textContent === 48), '「← 전세계」 — 세계 지도와 전체 숫자(가동 48)로 돌아온다');
 
-console.log('[3b] 운영단위를 고르면 KPI 카드·분포·팝업이 그 운영단위로 (v178 사용자 요청)');
+console.log('[3b] 운영단위를 누르면 그 나라 지도로 들어가고 KPI 카드·분포·팝업이 그 운영단위로 (v178 · v185 사용자 요청)');
 const runOf = () => pg.evaluate(() => +document.querySelector('#kpis .hb-kpi[data-k="run"] .num').textContent.replace(/,/g,''));
-await pg.click('#sigs .hb-sig[data-op*="WUHAN"]'); await pg.waitForTimeout(500);
-const sc = await pg.evaluate(() => ({ chip:(document.getElementById('scopeX') || {}).textContent || '', sigs:document.querySelectorAll('#sigs .hb-sig').length,
-  on:(document.querySelector('#sigs .hb-sig.on') || {}).dataset?.op || '',
+await pg.click('#sigs .hb-sig[data-op*="WUHAN"]'); await pg.waitForTimeout(700);
+const sc = await pg.evaluate(() => ({ chip:(document.getElementById('scopeX') || {}).textContent || '', cc:S.cc, title:document.getElementById('mapTitle').textContent,
+  back:!document.getElementById('mapBack').hidden, sigs:[...document.querySelectorAll('#sigs .hb-sig')].map(b => b.dataset.op),
   dsum:[...document.querySelectorAll('#cdist > div:last-child button b')].reduce((a, b) => a + +b.textContent.replace(/,/g,''), 0),
   want:D.groups.find(g => /WUHAN/.test(g.op)) }));
 const wRun = await runOf();
-is(/WUHAN/.test(sc.chip) && /WUHAN/.test(sc.on) && sc.sigs === 3, '신호등에서 우한을 누르면 날짜 옆에 «우한 ✕» 칩 · 신호등은 그대로 세 곳 (' + sc.chip + ')');
+is(sc.cc === 'CN' && /중국/.test(sc.title) && sc.back, '신호등에서 우한을 누르면 중국 지도로 들어간다 — 지구본·점 지도처럼 «위치만 이동»하지 않는다 (' + sc.title + ')');
+is(/WUHAN/.test(sc.chip) && sc.sigs.length === 1 && /WUHAN/.test(sc.sigs[0]), '날짜 옆에 «우한 ✕» 칩 · 신호등은 그 나라 것만 (' + sc.chip + ')');
 is(wRun === sc.want.runN && wRun < 48 && sc.dsum === sc.want.inN, 'KPI 가동 = 우한 ' + sc.want.runN + ' · 고객사 분포 합 = 우한 반입 ' + sc.want.inN + ' (받은 ' + wRun + '·' + sc.dsum + ')');
 await pg.click('#kpis .hb-kpi[data-k="bm"]'); await pg.waitForTimeout(300);
 const scBm = await pg.evaluate(() => ({ ops:[...document.querySelectorAll('.gov-body tbody tr')].map(tr => tr.children[1].textContent), card:+document.querySelector('#kpis .hb-kpi[data-k="bm"] .num').textContent }));
 await pg.evaluate(() => GST._ovClose && GST._ovClose());
 is(scBm.ops.length === scBm.card && scBm.ops.every(o => /WUHAN/.test(o)), '고장 카드 팝업도 우한 행만 — 카드 숫자 = 목록 줄 수 (' + scBm.card + ')');
+await pg.click('#scopeX'); await pg.waitForTimeout(600);
+is(await runOf() === 48 && !(await pg.$('#scopeX')) && await pg.evaluate(() => !S.cc && document.getElementById('mapBack').hidden),
+  '칩의 ✕ «전체 보기» — 누름을 통째로 되돌린다: 나라에서도 나와 전체(가동 48) · 칩이 사라진다');
+/* 나라를 «직접» 들어간 뒤 그 안에서 고른 운영단위는 ✕ 해도 나라에 남는다 — 사람이 들어간 나라를 칩이 빼앗지 않는다 */
+await pg.click('#bubs .hb-bub[aria-label^="GST TAIWAN"]'); await pg.waitForTimeout(800);
+await pg.evaluate(() => { const b = document.querySelector('#bubs .hb-bub'); if (b) b.click(); }); await pg.waitForTimeout(400);   // 나라 지도의 원 = 그 운영단위 + 설비 목록
+await pg.evaluate(() => GST._ovClose && GST._ovClose());
+const inTw = await pg.evaluate(() => ({ cc:S.cc, op:S.op, chip:!!document.getElementById('scopeX') }));
 await pg.click('#scopeX'); await pg.waitForTimeout(500);
-is(await runOf() === 48 && !(await pg.$('#scopeX')), '칩의 ✕ — 전체(가동 48)로 돌아오고 칩이 사라진다');
+const afTw = await pg.evaluate(() => ({ cc:S.cc, op:S.op }));
+is(inTw.cc === 'TW' && /TAIWAN/.test(inTw.op || '') && inTw.chip && afTw.cc === 'TW' && !afTw.op, '나라 지도 안에서 고른 운영단위의 ✕ — 고르기만 풀고 나라 지도는 그대로 (' + JSON.stringify(afTw) + ')');
+await pg.click('#mapBack'); await pg.waitForTimeout(600);
+/* 지구본 — 원뿐 아니라 이름표(「GST TAIWAN 12」)를 눌러도 그 나라로 (사용자 「지구본에 있는 거 눌러도 · 사이트 이름 눌러도」) */
+await pg.evaluate(() => mapMode('globe')); await pg.waitForTimeout(700);
+const lbp = await pg.evaluate(() => { const m = GL.marks.find(x => /TAIWAN/.test(x.g.op)); glFly(m.lat, m.lon, 0); glDraw(performance.now());
+  const r = GL.cv.getBoundingClientRect(); return m.lb ? { x:r.left + m.lb[0] + m.lb[2] - 6, y:r.top + m.lb[1] + m.lb[3] / 2, dx:Math.hypot(m.lb[0] + m.lb[2] - 6 - m.X, m.lb[1] + m.lb[3] / 2 - m.Y), r:m.r } : null; });
+is(!!lbp && lbp.dx > lbp.r + 9, '지구본 이름표 자리를 안다(원 밖 — 원의 판정 반경 밖에서 누른다)');
+if (lbp) { await pg.mouse.click(lbp.x, lbp.y); await pg.waitForTimeout(900); }
+is(await pg.evaluate(() => S.cc === 'TW' && /TAIWAN/.test(S.op || '')), '지구본에서 이름표를 누르면 그 나라 지도(대만)로 · 그 운영단위가 골라진다');
+await pg.click('#mapBack'); await pg.waitForTimeout(500);
+/* 상태 띠도 같은 함수(goOp) — 누르는 곳마다 결과가 갈리지 않는다 */
+const tk = await pg.$('.hb-tk[data-tk*="TAIWAN"]');
+if (tk) { await pg.evaluate(() => { const b = document.querySelector('.hb-tk[data-tk*="TAIWAN"]'); b && b.click(); }); await pg.waitForTimeout(600); }
+is(!!tk && await pg.evaluate(() => S.cc === 'TW'), '상태 띠의 운영단위를 눌러도 그 나라 지도로');
+await pg.click('#mapBack'); await pg.waitForTimeout(500);
+await pg.evaluate(() => mapMode('flat')); await pg.waitForTimeout(500);
+
+console.log('[3c] 글로벌 투어 — 지구본 → 나라 → 사이트 → 다음 나라 (v185 · 사용자 「자동순회를 글로벌 현황으로 · 영상처럼」)');
+await pg.evaluate(() => { S.view = 'lead'; S.region = 'kr'; render(); }); await pg.waitForTimeout(400);
+await pg.evaluate(() => tourStart(4, false)); await pg.waitForTimeout(900);
+const t0 = await pg.evaluate(() => ({ on:TOUR.on, cls:document.body.classList.contains('hb-tour'), k:TOUR.steps[TOUR.i].k, globe:document.getElementById('map').classList.contains('globe'),
+  steps:TOUR.steps.map(x => x.k + (x.cty ? ':' + x.cty : '')).join(' '), cap:document.getElementById('trCap').innerText, chap:document.getElementById('trChap').innerText,
+  view:S.view, region:S.region }));
+is(t0.on && t0.cls && t0.k === 'intro' && t0.globe, '시작하면 투어 화면(지구본 · 평면을 골라 둔 PC 에서도) · 첫 장면은 전사');
+is(t0.steps === 'intro fly:TAIWAN map:TAIWAN fly:KOREA map:KOREA fly:CHINA map:CHINA', '장면 순서 — 설비가 많은 나라부터 «날아가기 → 나라 지도» (' + t0.steps + ')');
+is(/전 세계 설비 현황/.test(t0.cap) && /\b3\b[\s\S]*국가/.test(t0.cap) && /50[\s\S]*반입 설비/.test(t0.cap) && /48[\s\S]*가동/.test(t0.cap) && /15[\s\S]*이번 주 고장/.test(t0.cap),
+  '전사 장면 — 국가 3 · 반입 50 · 가동 48 · 이번 주 고장 15 (카드와 같은 숫자)');
+is(t0.view === 'exec' && t0.region === 'all', '투어 중에는 전사 요약 · 전체 범위로 본다 (사람이 고른 운영 관리·국내는 끝나면 돌려준다)');
+await pg.evaluate(() => tourGo(1)); await pg.waitForTimeout(700);
+const t1 = await pg.evaluate(() => ({ k:TOUR.steps[TOUR.i].k, cty:TOUR.cty, cap:document.getElementById('trCap').innerText, chapOn:(document.querySelector('#trChap .on') || {}).textContent }));
+is(t1.k === 'fly' && t1.cty === 'TAIWAN' && t1.chapOn === '대만' && /대만/.test(t1.cap) && /30[\s\S]*반입 설비/.test(t1.cap) && /28[\s\S]*가동/.test(t1.cap) && /12[\s\S]*이번 주 고장/.test(t1.cap),
+  '나라 장면 — 대만 반입 30 · 가동 28 · 이번 주 고장 12 (나라 장면 숫자도 같은 판정)');
+await pg.evaluate(() => tourGo(2)); await pg.waitForTimeout(800);
+const t2 = await pg.evaluate(() => ({ cc:S.cc, cap:document.getElementById('trCap').innerText, top:[...document.querySelectorAll('#trSide .tr-hb > div')].map(d => d.innerText.replace(/\s+/g, ' ')) }));
+is(t2.cc === 'TW' && /사이트 분포/.test(t2.cap) && /2[\s\S]*사이트/.test(t2.cap), '나라 지도 장면 — 대만 지도로 들어가 사이트 2곳 (' + t2.cap.replace(/\s+/g, ' ').slice(0, 60) + ')');
+is(t2.top.length === 2 && /LOC 20/.test(t2.top[0]) && /TAINAN 10/.test(t2.top[1]), '사이트 목록 — 지도에 못 놓은 설비도 빠지지 않는다(LOC 20 · TAINAN 10)');
+await pg.waitForTimeout(3300);
+const t3 = await pg.evaluate(() => ({ cap:document.getElementById('trCap').innerText, on:document.querySelectorAll('#bubs .hb-bub.tr-on').length, dim:document.querySelectorAll('#bubs .hb-bub.tr-dim').length }));
+is(/LOC/.test(t3.cap) && /위치 미지정/.test(t3.cap) && /20[\s\S]*반입 설비/.test(t3.cap) && /66\.7[\s\S]*나라 안 비중/.test(t3.cap) && t3.on === 0 && t3.dim === 0,
+  '사이트 장면 — 가장 큰 사이트부터(LOC 20 · 66.7%) · 위치 미지정이면 그렇게 적고 원을 흐리지 않는다');
+await pg.waitForTimeout(3300);
+const t4 = await pg.evaluate(() => ({ cap:document.getElementById('trCap').innerText, on:[...document.querySelectorAll('#bubs .hb-bub.tr-on')].map(b => b.getAttribute('aria-label')) }));
+is(/TAINAN/.test(t4.cap) && /10[\s\S]*반입 설비/.test(t4.cap) && t4.on.length === 1 && /TAINAN/.test(t4.on[0]), '다음 사이트 — TAINAN 10 · 지도의 그 원만 밝힌다');
+await pg.keyboard.press('Escape'); await pg.waitForTimeout(600);
+const tE = await pg.evaluate(() => ({ on:TOUR.on, cls:document.body.classList.contains('hb-tour'), view:S.view, region:S.region, cc:S.cc, cap:document.getElementById('trCap').innerHTML,
+  globe:document.getElementById('map').classList.contains('globe') }));
+is(!tE.on && !tE.cls && tE.cap === '' && tE.view === 'lead' && tE.region === 'kr' && tE.cc === '' && !tE.globe, 'Esc — 투어가 끝나고 사람이 보던 화면(운영 관리 · 국내 · 평면)으로 돌아온다');
+await pg.evaluate(() => { S.view = 'exec'; S.region = 'all'; render(); }); await pg.waitForTimeout(500);
+/* 자료를 읽기 전에 온 요청은 «기다렸다가» 시작한다(셸이 탭을 막 열자마자 보낸다) */
+const pend = await pg.evaluate(() => { const keep = D; D = null; tourStart(5, true); const p = JSON.stringify(TOUR.pend); D = keep; tourStop(false); return { p, after:TOUR.pend }; });
+is(pend.p === '{"sec":5,"fromShell":true}' && pend.after === null, '자료를 읽는 중에 온 시작 요청은 보류했다가 load 끝에 시작한다 · 멈추면 보류도 지운다');
 
 console.log('[4] 구분 전환이 모든 칸에 걸린다');
 await pg.click('#segRegion button[data-r="os"]'); await pg.waitForTimeout(500); K = await kpi();

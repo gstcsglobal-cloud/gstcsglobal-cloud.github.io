@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=176"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=177"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -147,7 +147,7 @@ tr:hover td{background:var(--surface-2)}
 @media print{.capbtns,.slicers,.header-right,#filtBadge{display:none!important}.card,.tablecard{break-inside:avoid;page-break-inside:avoid}.grid3{grid-template-columns:1fr 1fr}}
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=176">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=177">
 </head>
 <body>
 
@@ -821,7 +821,7 @@ async function loadData(){ GST.skeleton(true);
     const eduRaw=ed.status==='fulfilled'?ed.value.rows.length:-1;
     const eduWarn=!EDU.length&&eduRaw>3?' ⚠ 교육시트 열 인식 실패(원본 '+eduRaw+'행)':(!EDU.length&&eduRaw<0?' ⚠ 교육시트 로드 실패':'');
     if(eduWarn)status.className='status err';
-    const _adm=!!(GST.isAdmin&&GST.isAdmin());   // 매칭·명단 행 수·버전은 메타 정보 — 관리자에게만(v179 · A-4)
+    const _adm=!!(GST.explainOn?GST.explainOn():(GST.isAdmin&&GST.isAdmin()));   // 매칭·명단 행 수·버전은 메타 — 관리자가 «설명 표시»를 켰을 때만(v185 · GST.okText 와 같은 규칙)
     status.textContent=_adm ? '✅ '+now+' · 재직 '+act+tr('tbl_unit')+(quit?' (퇴사 '+quit+' 제외)':'')
       +' · 교육매칭 '+matched+' · 명단 '+ROSTER.length+'·교육 '+EDU.length+eduWarn+' · '+VER
       : '✅ '+now+eduWarn;
