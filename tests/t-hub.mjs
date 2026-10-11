@@ -151,6 +151,11 @@ const map = await pg.evaluate(() => ({ paths:document.querySelectorAll('#mapS pa
 is(map.paths > 200 && map.canvas === 'none', '나라 경계를 벡터로 그린다(점지도 캔버스는 숨김 · ' + map.paths + '개 나라)');
 is(map.has === 'CN,KR,TW' && map.bub === 3, '설비가 있는 나라(중국·한국·대만)가 칠해지고 운영단위 원 3개 (' + map.has + ')');
 is(ext.length === 0, '외부 요청 0 — 지도 모양은 저장소 파일(assets/geo)' + (ext.length ? ' → ' + ext[0] : ''));
+const dupNm = await pg.evaluate(async () => { const out = [];
+  for (const cc of ['CN','KR','TW','US','JP','SG']) { const j = await (await fetch(GST.geo.BASE + cc + '.json')).json();
+    for (const L of ['ko','en','zh','ja']) { const seen = {}; j.f.forEach(f => { const n = GST.geo.admName(f, L); if (seen[n]) out.push(cc + ' ' + L + ' ' + n); seen[n] = 1; }); } }
+  return out; });
+is(dupNm.length === 0, '나라·언어마다 행정구역 이름이 하나씩 — 같은 이름이면 지도가 두 곳을 한 덩어리로 칠한다 (陝西·山西 = 「산시성」)' + (dupNm.length ? ' → ' + dupNm.slice(0, 3).join(' · ') : ''));
 /* v178 사용자 보고 「전체로 잡았는데 안 나온다」 — 전세계 화면에도 분포(국가 · 고객사)가 서야 한다 */
 const wd = await pg.evaluate(() => { const cd = document.getElementById('cdist');
   return { vis:getComputedStyle(cd).display !== 'none', h:[...cd.querySelectorAll('h4')].map(h => h.textContent),
@@ -240,6 +245,9 @@ is(t0.steps === 'intro fly:TAIWAN map:TAIWAN fly:KOREA map:KOREA fly:CHINA map:C
 is(/전 세계 설비 현황/.test(t0.cap) && /\b3\b[\s\S]*국가/.test(t0.cap) && /50[\s\S]*반입 설비/.test(t0.cap) && /48[\s\S]*가동/.test(t0.cap) && /15[\s\S]*이번 주 고장/.test(t0.cap),
   '전사 장면 — 국가 3 · 반입 50 · 가동 48 · 이번 주 고장 15 (카드와 같은 숫자)');
 is(t0.view === 'exec' && t0.region === 'all', '투어 중에는 전사 요약 · 전체 범위로 본다 (사람이 고른 운영 관리·국내는 끝나면 돌려준다)');
+const tKo = await pg.evaluate(() => ({ brand:document.querySelector('#tour .tr-brand b').textContent, eb:(document.querySelector('#trCap .tr-eb') || {}).textContent || '' }));
+is(/[가-힣]/.test(tKo.brand) && !/[A-Za-z]/.test(tKo.brand) && /[가-힣]/.test(tKo.eb) && !/[A-Za-z]/.test(tKo.eb),
+  '한국어 화면의 투어 머리·전사 장면 머리는 한글이다 (사용자 「한글로 말해라」 — ' + tKo.brand + ' · ' + tKo.eb + ')');
 await pg.evaluate(() => tourGo(1)); await pg.waitForTimeout(700);
 const t1 = await pg.evaluate(() => ({ k:TOUR.steps[TOUR.i].k, cty:TOUR.cty, cap:document.getElementById('trCap').innerText, chapOn:(document.querySelector('#trChap .on') || {}).textContent }));
 is(t1.k === 'fly' && t1.cty === 'TAIWAN' && t1.chapOn === '대만' && /대만/.test(t1.cap) && /30[\s\S]*반입 설비/.test(t1.cap) && /28[\s\S]*가동/.test(t1.cap) && /12[\s\S]*이번 주 고장/.test(t1.cap),
