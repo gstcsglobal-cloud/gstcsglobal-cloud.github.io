@@ -16,6 +16,9 @@ import fs from 'fs';
 import path from 'path';
 
 const PW_OPTS = process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {};
+/* 통째 교체는 비밀번호 승인이 있어야 고를 수 있다(v184) — 이 검사의 관심은 «변환 규칙»이라 승인은 «이미 받은 것»으로 둔다.
+   승인 창 자체는 t-colmap [12] 가 본다. */
+const fullMode = pg => pg.evaluate(async () => { PIN_OK = true; const m = document.getElementById('modeSel'); m.value = 'full'; await window.onMode(); });
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const ROOT = path.resolve(HERE, '..');
 let bad = 0, n = 0;
@@ -114,6 +117,7 @@ const cmapOf = key => Object.entries(G.SM.SPEC[key].fields)
       const i = [...s.options].findIndex(x => x.text.startsWith('설치'));
       s.value = String(i); s.dispatchEvent(new Event('change'));
     });
+    await fullMode(pg);
     await pg.setInputFiles('#fsel', { name, mimeType: 'text/csv', buffer: Buffer.from(text) });
     await pg.waitForFunction(() => !document.getElementById('goBtn').disabled
       || /❌/.test(document.getElementById('chk').textContent), null, { timeout: 30000 });
@@ -265,6 +269,7 @@ for (const [key, file] of avail) {
     document.getElementById('tsel').dispatchEvent(new Event('change'));
     return o;
   }, key);
+  await fullMode(page);
   if (idx < 0) { err('표 선택 실패'); continue; }
   await page.setInputFiles('#fsel', { name: file, mimeType: 'text/csv', buffer: Buffer.from(csvText) });
   await page.waitForFunction(() => !document.getElementById('goBtn').disabled
@@ -293,8 +298,8 @@ for (const [key, file] of avail) {
     }
   }
   diff === 0 ? ok('전 행 전 칸 일치 (src_row·extra 포함)') : err(`값 불일치 ${diff}칸`);
-  rpc.some(r => r[0] === 'csv_upload_begin') && rpc.some(r => r[0] === 'csv_upload_finish')
-    ? ok('begin → finish RPC 호출') : err('RPC 호출 누락: ' + JSON.stringify(rpc));
+  rpc.some(r => r[0] === 'csv_upload_full') && rpc.some(r => r[0] === 'csv_upload_finish')
+    ? ok('full(승인표를 쓰고 비우기) → finish RPC 호출') : err('RPC 호출 누락: ' + JSON.stringify(rpc));
 }
 
 errs.length ? err('페이지 JS 에러: ' + errs.join(' // ')) : ok('페이지 JS 에러 0');

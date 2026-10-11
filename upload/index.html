@@ -37,6 +37,15 @@ body.embed{padding:12px 14px}body.embed>h1,body.embed>.sub{display:none}body.emb
 .qa-t{border-collapse:collapse;font-size:12px}.qa-t td,.qa-t th{padding:2px 10px 2px 0;text-align:left}.qa-t tr.lo td{color:#b54708}
 .qa-bar{display:inline-block;width:90px;height:7px;border-radius:4px;background:rgba(127,127,127,.3);vertical-align:middle;overflow:hidden}.qa-bar i{display:block;height:100%;background:#2563eb}
 .qa-i{margin:6px 0 0 16px;padding:0;font-size:12px}.qa .muted{color:inherit;opacity:.7;font-size:12px}
+.pinov{position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.42);display:flex;align-items:center;justify-content:center;padding:16px}
+.pinov[hidden]{display:none}
+.pinbox{background:#fff;color:#1d2433;border-radius:16px;padding:20px 22px;width:100%;max-width:360px;box-shadow:0 1px 2px rgba(16,24,40,.06),0 24px 48px rgba(16,24,40,.22)}
+.pinbox h3{font-size:15px;margin-bottom:6px}
+.pinbox input{width:100%;font-size:20px;letter-spacing:.3em;text-align:center;padding:10px 12px;border:1px solid #d0d5dd;border-radius:10px;font-family:inherit}
+.pinmsg{min-height:20px;font-size:12.5px;margin-top:8px;color:#d92d20}
+.pinbtns{display:flex;gap:8px;justify-content:flex-end}
+.pinbtns .btn{margin-top:8px}
+.btn.pinno{background:#eef1f5;color:#344054}
 .cmok{display:inline-block;margin:8px 0;padding:8px 12px;border:1px solid #d97706;border-radius:8px;font-weight:600;cursor:pointer}
 </style>
 </head>
@@ -75,8 +84,12 @@ window.GST && GST.needVer && GST.needVer(160);   // GST.cmap.colName·compose(v1
          (실측: 새 추출본의 대만분 6,534행 중 6,266건이 기존 표에도 있는 실적코드였다). -->
   <div id="modeBox" style="margin-top:12px">
     <label style="display:block;font-size:13px;margin-bottom:5px"><b>넣는 방식</b></label>
+    <!-- v184 — «통째 교체»는 기본값이 아니다(사용자: 「다른 사람이 내 계정을 쓸 건데 통째 교체 못 하게」).
+         날짜 구간이 있는 표는 «겹치는 구간만 교체»가, 없는 표는 «고르세요»가 기본이다. 통째 교체를 고르면 비밀번호 창이 뜬다
+         (번호는 서버에서 확인한다 — setup-28 · 저장소가 공개라 화면 코드에 두지 않는다). -->
     <select id="modeSel" onchange="onMode()">
-      <option value="full">통째 교체 — 표를 비우고 이 파일로 바꿉니다 (기존 전량 삭제)</option>
+      <option value="" disabled>— 넣는 방식을 고르세요 —</option>
+      <option value="full">통째 교체 — 표를 비우고 이 파일로 바꿉니다 (기존 전량 삭제 · 비밀번호 필요)</option>
       <option value="win">겹치는 구간만 교체 — 이 파일이 덮는 사업부 × 기간만 갈아끼웁니다</option>
       <option value="add">겹치는 구간도 그대로 — 아무것도 지우지 않고 뒤에 이어붙입니다</option>
     </select>
@@ -96,6 +109,15 @@ window.GST && GST.needVer && GST.needVer(160);   // GST.cmap.colName·compose(v1
   <button class="btn" id="goBtn" disabled onclick="doUpload()">업로드 (기존 데이터를 이 파일로 교체)</button>
 </div>
 <div class="card"><h3>진행</h3><div id="log">—</div></div>
+<div class="pinov" id="pinOv" hidden role="dialog" aria-modal="true" aria-labelledby="pinT">
+  <div class="pinbox">
+    <h3 id="pinT">통째 교체 승인</h3>
+    <p class="sub" id="pinD" style="margin-bottom:12px">표를 통째로 비우고 이 파일로 바꾸는 작업입니다. 승인 비밀번호를 넣으세요.</p>
+    <input id="pinIn" type="password" inputmode="numeric" autocomplete="off" maxlength="16" aria-label="승인 비밀번호">
+    <div id="pinMsg" class="pinmsg" aria-live="polite"></div>
+    <div class="pinbtns"><button class="btn pinno" id="pinNo" type="button">취소</button><button class="btn" id="pinGo" type="button">승인</button></div>
+  </div>
+</div>
 
 <script>
 /* 관리자 1인용 도구라 단일 언어(한국어)다. 공개 페이지로 승격하면 T 규약(4개 언어)으로 옮길 것. */
@@ -224,6 +246,9 @@ if(ROUTE){
 }
 
 let PREP=null;   // {t, rows(객체배열), fileRows, oldCount, warns[]}
+/* 통째 교체 승인 (v184) — 비밀번호가 맞으면 서버가 이 계정에 «승인표»(30분 · 한 번 쓰면 끝)를 남기고, 화면은 이 깃발을 든다.
+   깃발은 «다시 묻지 않으려는» 표시일 뿐이다 — 실제로 비우는 csv_upload_full 이 서버에서 승인표를 다시 본다. */
+let PIN_OK=false;
 
 function logLine(cls,msg){ const el=$('log'); if(el.textContent==='—')el.textContent='';
   el.insertAdjacentHTML('beforeend','<div class="'+(cls||'')+'">'+msg+'</div>'); }
@@ -512,6 +537,9 @@ window.checkFile=async function(){
   PREP=null; $('goBtn').disabled=true; $('log').textContent='—';
   const t=TABLES[+$('tsel').value], f=$('fsel').files[0];
   if(!f){ $('shrow').style.display='none'; return; }
+  /* 방식을 안 골랐으면 검사하지 않는다 — 검사 화면의 경고(«통째 교체는 … 도 지웁니다» 등)가 방식마다 다르다(v184). */
+  if(!mode()){ chkShow('<span class="warn big">위 「넣는 방식」을 먼저 고르세요</span><br>이 표는 날짜 구간이 없어 '
+    +'<b>통째 교체</b>(비밀번호 필요) 또는 <b>이어붙이기</b> 중 하나입니다. 고르면 이 파일을 바로 검사합니다.'); return; }
   chkShow('⏳ 파일 해석 중…');
   const isX=/\.xls[xm]$/i.test(f.name||'');
   /* 여러 시트를 «한 표»로 눕히는 대상(알람·올바)만 워크북을 강제한다 — CSV 를 주면
@@ -922,7 +950,8 @@ window.checkFile=async function(){
 };
 $('fsel').onchange=function(){ $('ssel').dataset.keys=''; checkFile(); };
 document.getElementById('tsel').onchange=function(){ $('fsel').value=''; $('ssel').dataset.keys=''; $('shrow').style.display='none'; $('chk').innerHTML=''; $('goBtn').disabled=true; PREP=null; syncMode(); };
-function mode(){ const el=$('modeSel'); return el?el.value:'full'; }
+/* ⚠ 고르지 않았으면 '' 이다 — «통째 교체»로 읽지 않는다(v184). 예전에는 없을 때 'full' 을 돌려줬다. */
+function mode(){ const el=$('modeSel'); return el?el.value:''; }
 function merging(){ return mode()==='win'; }
 function appending(){ return mode()==='add'; }
 /* 구간 교체는 날짜 컬럼이 있는 표에서만 뜻이 있다 — 설치현황엔 «구간»이라는 개념이 없다
@@ -948,22 +977,40 @@ function syncMode(){
   if(winOpt){ winOpt.disabled=!t.win;
     winOpt.textContent=t.win?'겹치는 구간만 교체 — 이 파일이 덮는 사업부 × 기간만 갈아끼웁니다'
                             :'겹치는 구간만 교체 — (이 표는 날짜 구간이 없어 불가)'; }
-  if(!t.win&&sel.value==='win')sel.value='full';
-  /* 기본 모드를 표가 정한다. 해외 올바이패스는 국내와 «같은 표»를 쓰므로 통째 교체가
-     남의 자료를 지운다 — 사람이 매번 기억해야 하는 규약은 언젠가 깨진다(v121 의 교훈).
-     대상을 바꿀 때 한 번만 맞춰 준다(그 뒤 사람이 고르면 그 선택을 존중한다). */
-  if(t.defMode && sel.dataset.forT!==String($('tsel').value)){
-    sel.value=t.defMode; sel.dataset.forT=String($('tsel').value); }
-  else if(!t.defMode){ sel.dataset.forT=String($('tsel').value); }
-  const H={ full:'표를 통째로 비우고 이 파일로 바꿉니다. «파일이 곧 전체 상태»입니다.',
+  if(!t.win&&sel.value==='win')sel.value='';
+  /* 기본 모드를 표가 정한다 — 대상을 바꿀 때 한 번만 맞춰 준다(그 뒤 사람이 고르면 그 선택을 존중한다).
+     ⚠ «통째 교체»는 어느 표에서도 기본이 아니다(v184 · 사용자 확정): 날짜 구간이 있는 표는 «겹치는 구간만 교체»,
+       없는 표(설치현황·인원·교육·휴가·CIP·ABP)는 «고르세요» — 통째 교체를 고르면 비밀번호를 묻는다.
+       해외 올바이패스처럼 국내와 «같은 표»를 쓰는 대상은 진작 구간 교체가 기본이었다(v133 · defMode). */
+  if(sel.dataset.forT!==String($('tsel').value)){
+    sel.value=t.defMode||(t.win?'win':''); sel.dataset.forT=String($('tsel').value);
+    if(sel.value!=='full') PIN_OK=false;
+  }
+  sel.dataset.prev=sel.value;
+  const H={ '':'넣는 방식을 먼저 고르세요 — 이 표는 날짜 구간이 없어 «통째 교체»(비밀번호 필요) 또는 «이어붙이기»입니다.',
+            full:'표를 통째로 비우고 이 파일로 바꿉니다. «파일이 곧 전체 상태»입니다. 올리기 전에 승인 비밀번호를 묻습니다.',
             win:'파일의 날짜 범위 × 파일에 든 사업부에 해당하는 기존 행만 지우고 파일을 넣습니다. 중복이 생기지 않습니다.',
             add:'⚠ 아무것도 지우지 않습니다. 기존 표에 이미 있는 실적이 파일에도 있으면 <b>그만큼 이중 계산</b>됩니다.' };
   if(hint)hint.innerHTML=(mode()==='add'?'<span class="bad">':'<span>')+H[mode()]+'</span>';
   const btn=$('goBtn');
   if(btn)btn.textContent=mode()==='add'?'업로드 (지우지 않고 이어붙이기)'
-        :mode()==='win'?'업로드 (겹치는 구간만 교체)':'업로드 (기존 데이터를 이 파일로 교체)';
+        :mode()==='win'?'업로드 (겹치는 구간만 교체)':mode()==='full'?'업로드 (기존 데이터를 이 파일로 교체 · 비밀번호)':'넣는 방식을 먼저 고르세요';
 }
-window.onMode=function(){ $('fsel').value=''; $('ssel').dataset.keys=''; $('shrow').style.display='none'; $('chk').innerHTML=''; $('goBtn').disabled=true; PREP=null; syncMode(); };
+/* 넣는 방식을 바꾸면 검사를 «다시» 돌린다 — 예전에는 파일을 비웠는데, 데이터 관리가 건네준 파일(embed)까지
+   사라져 다시 골라야 했다. 검사 결과(구간·덮어쓰기·키 중복)가 방식마다 다르므로 PREP 는 버리고 새로 만든다.
+   «통째 교체»로 바꾸는 순간 비밀번호를 묻고, 취소·실패면 원래 방식으로 되돌린다(v184). */
+window.onMode=async function(){
+  const sel=$('modeSel'), prev=sel.dataset.prev||'';
+  $('goBtn').disabled=true; PREP=null;
+  if(sel.value==='full' && !PIN_OK){
+    const ok=await pinAsk();
+    if(!ok){ sel.value=(prev==='full'?'':prev); }
+  }
+  if(sel.value!=='full') PIN_OK=false;
+  sel.dataset.prev=sel.value;
+  syncMode();
+  if($('fsel').files&&$('fsel').files[0]) checkFile(); else $('chk').innerHTML='';
+};
 syncMode();
 
 /* 이어붙이기 «키 중복» 미리보기 (v140) — 날짜 겹침(csv_window)과 다른 질문이다: «이 파일의 실적이 이미 표에 있나».
@@ -1113,10 +1160,56 @@ async function nextSrc(c,tbl){
   return (v==null)?0:(Number(v)+1);
 }
 
+/* ---------- 통째 교체 승인 창 (v184 · 사용자 요청) ----------
+   번호는 화면에 없다 — upload_pin_check 가 서버에서 해시와 견준다(저장소가 공개라 화면 코드·해시를 둘 수 없다).
+   틀리면 남은 횟수를, 다섯 번 틀리면 잠긴 시각을 말한다. 서버에 그 함수가 아직 없으면(setup-28 전) «막는다» — fail-closed. */
+const PIN_ERR={
+  wrong:  r=>'비밀번호가 틀렸습니다 — 남은 횟수 '+(r.left!=null?r.left:'?')+'번',
+  locked: r=>'여러 번 틀려 잠겼습니다 — '+(r.until?new Date(r.until).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+' 이후 ':'잠시 뒤 ')+'다시 시도하세요',
+  no_pin: ()=>'통째 교체 승인 비밀번호가 아직 정해지지 않았습니다 — 관리자에게 알려 주세요',
+  forbidden: ()=>'이 계정은 쓰기 권한이 없습니다',
+  login:  ()=>'로그인이 풀렸습니다 — 새로고침한 뒤 다시 로그인하세요'
+};
+function pinAsk(why){
+  return new Promise(resolve=>{
+    const ov=$('pinOv'), inp=$('pinIn'), msg=$('pinMsg'), go=$('pinGo'), no=$('pinNo');
+    if(!ov){ resolve(false); return; }
+    $('pinD').textContent=why||'표를 통째로 비우고 이 파일로 바꾸는 작업입니다. 승인 비밀번호를 넣으세요.';
+    inp.value=''; msg.textContent=''; go.disabled=false; ov.hidden=false;
+    setTimeout(()=>{ try{ inp.focus(); }catch(e){} },0);
+    let busy=false;
+    function done(v){ ov.hidden=true; go.onclick=no.onclick=null; inp.onkeydown=null; ov.onkeydown=null; resolve(v); }
+    async function submit(){
+      if(busy)return;
+      const pin=inp.value.trim();
+      if(!pin){ msg.textContent='비밀번호를 넣으세요'; inp.focus(); return; }
+      busy=true; go.disabled=true; msg.textContent='확인 중…';
+      try{
+        const c=await GST.db();
+        const r=await c.rpc('upload_pin_check',{p_pin:pin});
+        if(r.error){
+          msg.textContent=/function|does not exist|schema cache/i.test(r.error.message||'')
+            ? '서버에 승인 기능이 아직 없습니다 — 관리자에게 알려 주세요 (setup-28)'
+            : '확인하지 못했습니다 — 잠시 뒤 다시 시도하세요'+(GST.isAdmin&&GST.isAdmin()?' ('+r.error.message+')':'');
+        }else if(r.data&&r.data.ok){ PIN_OK=true; done(true); return; }
+        else { const d=r.data||{}; msg.textContent=(PIN_ERR[d.err]||(()=>'승인되지 않았습니다'))(d); }
+      }catch(e){ msg.textContent='확인하지 못했습니다 — 네트워크를 확인하고 다시 시도하세요'; }
+      busy=false; go.disabled=false; inp.value=''; inp.focus();
+    }
+    go.onclick=submit;
+    no.onclick=()=>done(false);
+    inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); } };
+    ov.onkeydown=e=>{ if(e.key==='Escape'){ e.preventDefault(); done(false); } };
+  });
+}
+
 /* ---------- 업로드 — 비우기 → 배치 적재 → 행수 대조 ---------- */
 window.doUpload=async function(){
   if(!PREP)return;
   const W=PREP.win, ADD=PREP.add;
+  /* 통째 교체는 승인이 있어야 한다(v184) — 방식을 고를 때 이미 물었어도, 뒤로 가기·새로고침으로 브라우저가
+     옛 선택(통째 교체)을 되살린 경우는 여기서 처음 묻는다. */
+  if(!W && !ADD && !PIN_OK && !(await pinAsk())) return;
   /* 표에는 있는데 CSV 에 없는 컬럼 — 통째 교체면 그 컬럼이 전 행 NULL 이 된다.
      검사 화면에 이미 붉게 띄웠지만, 스크롤해서 안 볼 수 있으므로 확인창에서 한 번 더 묻는다. */
   if(PREP.missing&&PREP.missing.length&&!ADD&&!confirm(
@@ -1163,8 +1256,16 @@ window.doUpload=async function(){
       PREP.rows.forEach((o,i)=>{ o.src_row=off+i; });
     }else{
       logLine('','① 표 비우는 중…');
-      const b=await c.rpc('csv_upload_begin',{p_tbl:PREP.t.table});
-      if(b.error)throw new Error('비우기 실패: '+b.error.message+(/(function|does not exist)/i.test(b.error.message)?' — setup-8-csv-upload.sql 을 Run 했는지 확인':''));
+      /* 비우기는 csv_upload_full 하나로만 한다(v184) — 서버가 승인표를 «쓰고» 비운다(30분 · 한 번).
+         승인표가 없거나 지났으면(pin_required) 한 번 더 묻고 다시 부른다 — 표는 아직 그대로다. */
+      let b=await c.rpc('csv_upload_full',{p_tbl:PREP.t.table});
+      if(b.error && /pin_required/.test(b.error.message||'')){
+        PIN_OK=false;
+        if(!(await pinAsk('승인이 지났습니다(30분) — 비밀번호를 한 번 더 넣으세요.'))) throw new Error('통째 교체를 승인하지 않아 멈췄습니다 — 표는 그대로입니다');
+        b=await c.rpc('csv_upload_full',{p_tbl:PREP.t.table});
+      }
+      if(b.error)throw new Error('비우기 실패: '+b.error.message+(/(function|does not exist|schema cache)/i.test(b.error.message)?' — setup-28-upload-pin.sql 을 Run 했는지 확인':''));
+      PIN_OK=false;
       logLine('ok','   비움 완료');
     }
 

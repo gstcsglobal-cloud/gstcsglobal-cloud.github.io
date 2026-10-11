@@ -189,7 +189,7 @@ console.log('[2] ?site=P');
     dis:document.getElementById('modeSel').disabled,
     hidden:[...document.querySelectorAll('#modeSel option')].filter(o => o.style.display==='none').map(o=>o.value) }));
   is(md.v === 'win' && md.dis, '모드가 「겹치는 구간만 교체」로 잠김');
-  is(md.hidden.sort().join(',') === 'add,full', '통째 교체·이어붙이기는 보이지도 않는다');
+  is(md.hidden.sort().join(',') === ',add,full', '통째 교체·이어붙이기(와 «고르세요»)는 보이지도 않는다');
 
   /* P+K 두 시트 워크북 — K 는 «무시했다»고 말하고 P 만 올라간다 */
   const CA = await canonOf(pg, 'alarm');
