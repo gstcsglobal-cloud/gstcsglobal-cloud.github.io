@@ -1897,8 +1897,10 @@ console.log('[31] 사이트 등록부 — 새 사이트를 먼저 정의하고 �
                          full(WK_COLS, { src_row:101, rs_code:'RS-T-F18B', d_start:'2026-09-02', op:'TAIWAN', customer:'MICRON', line:'F18', stage:'TBM', sn_in:'ZZF-0002' }));
   sd.tables.sheet_roster.push(full(ROS_COLS, { id:9, '사원번호':'9100009', '이름(영문)':'Tester Nine', '단지':'F18', '운영단위':'TAIWAN', '고객사':'MICRON', '입사일':'2026-01-02' }));
   const { ctx, pg, pe } = await open(sd);
-  await pg.click('.tab[data-tab=site]'); await pg.waitForFunction(() => /FAB/.test((document.getElementById('siteBox') || {}).innerText || ''), null, { timeout:8000 });
-  const tx = () => pg.$eval('#siteBox', e => e.innerText);
+  await pg.click('.tab[data-tab=site]'); await pg.waitForSelector('#siteBox table.vm-t tbody', { timeout:8000 });
+  /* 사이트 표의 줄만 본다 — 같은 상자 아래 «지도 위치»(v171 · 비동기로 늦게 그려진다)는 설치현황의 FAB 을 전부 세우므로
+     상자 전체를 읽으면 그 표가 먼저 그려진 날에만 F18 이 섞여 붉게 뜬다(CI 에서 실제로 그랬다). */
+  const tx = () => pg.$eval('#siteBox table.vm-t tbody', e => e.innerText);
   is(/F11/.test(await tx()) && /F16/.test(await tx()) && !/F18/.test(await tx()), '등록된 사이트만 먼저 (F11·F16) — 설치현황의 다른 FAB 은 접어 둔다');
   await pg.check('#stAll'); await pg.waitForTimeout(150);
   is(/F18/.test(await tx()), '「다른 FAB 도 보기」 → 설치현황의 F18 (4대) 이 «등록» 단추와 함께 선다');
