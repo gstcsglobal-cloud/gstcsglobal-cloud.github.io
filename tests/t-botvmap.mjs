@@ -1,7 +1,8 @@
 /* t-botvmap — 기준 정보 규칙이 «화면»과 «챗봇»에서 같은 답을 내는가 (v153 · SPEC-SYNC).
    대시보드 assets/core.js GST.vmap(브라우저) 과 kakao-bot/index.ts 의 vmApplyRows(Deno) 는 런타임이 달라 파일을 못 나눈다.
    두 벌이면 언젠가 갈라진다 — 같은 규칙·같은 행을 두 구현에 먹여 «칸 하나하나»를 대조한다(지어낸 값 · 무작위 + 경계 사례).
-   ① 대조 ② 원본 불변(복사) ③ 우선순위 ④ 조건은 원본 값 ⑤ 봇이 조회 열을 넓히는 vmCols ⑥ 봇 소스가 실제로 부른다(배선) */
+   ① 대조 ② 원본 불변(복사) ③ 우선순위 ④ 조건은 원본 값 ⑤ 봇이 조회 열을 넓히는 vmCols ⑥ 봇 소스가 실제로 부른다(배선)
+   ⑦ 인원현황(Import 표 · v161 XSPEC) — 열 이름이 머리글 그대로인 표에서도 같은 답(별칭 순서 · 없는 칸 · 머리글 힌트) */
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -16,7 +17,7 @@ const src = fs.readFileSync(ROOT + '/supabase/functions/kakao-bot/index.ts', 'ut
 const a = src.indexOf('/* ---------- 순수 복원부 ----------'), b = src.indexOf('/* ---------- 순수 복원부 끝 ---------- */');
 if (a < 0 || b < 0) { console.log('❌ kakao-bot 에서 순수 복원부를 못 찾았다'); process.exit(1); }
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gst-botvm-'));
-fs.writeFileSync(tmp + '/x.ts', src.slice(a, b) + '\nexport { vmApplyRows, vmCols, vmSnake };');
+fs.writeFileSync(tmp + '/x.ts', src.slice(a, b) + '\nexport { vmApplyRows, vmCols, vmSnake, vmImportCols };');
 const BOT = await import('file://' + tmp + '/x.ts');
 
 const browser = await chromium.launch(PW);
@@ -67,6 +68,54 @@ for (const [tbl, fields] of [['inst', ['country','customer','fab','state','locat
   is(bad === 0, tbl + ' — ' + tries + '판 · ' + cells.toLocaleString() + '칸 전부 같다' + (bad ? ' (' + bad + '곳 갈림)' : ''));
 }
 
+console.log('[1b] 인원현황(Import 표) — 머리글 그대로인 열 이름에서도 화면과 같은 값');
+{ /* 열 묶음 셋 — 새 한글 양식(빈 Work Place 와 채워진 단지가 둘 다) · 옛 영문 양식(Work Place 만) · 구분 열이 없는 표(조건 칸이 없을 때) */
+  const LAY = [
+    ['No.', 'ID', 'Work Place', 'Date of entry', '담당구분', '고객사', '지역', '단지', '라인', '입사일', '운영단위', '구분', '사원번호'],
+    ['No.', 'ID', 'Name', 'Work Place', 'Date of entry', 'Resignation'],
+    ['사원번호', '고객사', '단지', '라인', '입사일', '운영단위'] ];
+  const VR = { '운영단위':['OPX','TAIWAN','',null], '고객사':['TESTCO','Testco (F16)','',null], '단지':['Q1','Q2','F16S',' f16s','',null],
+    'Work Place':['Q1','F16S','',null], '라인':['L1','L2','',null], '구분':['국내','해외','',null] };
+  const pickK = k => VR[k] ? VR[k][rnd(VR[k].length)] : ('v' + rnd(9));
+  const F = ['op', 'customer', 'campus', 'line', 'region', 'foo'];   // foo = 스펙에 없는 칸(규칙이 있어도 안 먹어야 한다)
+  const FV = { op:['OPX','TAIWAN',''], customer:['TESTCO','Testco (F16)',''], campus:['Q1','F16S',''], line:['L1',''], region:['국내','해외',''], foo:['x'] };
+  let bad = 0, cells = 0, nApplied = 0;
+  for (let round = 0; round < 30; round++) {
+    const keys = LAY[round % LAY.length];
+    const R = [];
+    for (let i = 0; i < 9; i++) {
+      const col = F[rnd(F.length)], cond = rnd(2) ? F[rnd(F.length)] : '';
+      R.push({ tbl:'roster', col, raw:['*', '', FV[col][rnd(FV[col].length)] || 'X'][rnd(3)], when_col:cond, when_val:cond ? FV[cond][rnd(FV[cond].length)] : '', val:'R' + i });
+    }
+    const m = new Map(); R.forEach(r => m.set([r.col, r.raw, r.when_col, r.when_val].join('|'), r)); const RR = [...m.values()];
+    const objs = Array.from({ length: 20 }, () => Object.fromEntries(keys.map(k => [k, pickK(k)])));
+    const colOf = BOT.vmImportCols('roster', keys);
+    const bot = colOf ? BOT.vmApplyRows('roster', objs, RR, colOf) : { rows: objs, n: 0 };
+    const ui = await pg.evaluate(([keys, objs, R]) => {
+      GST.vmap.rules = R;
+      const rows = [keys].concat(objs.map(o => keys.map(k => o[k] == null ? '' : o[k])));
+      const a = GST.vmap.apply('roster', rows);
+      return { out: a.rows.slice(1).map(r => Object.fromEntries(keys.map((k, j) => [k, r[j]]))), n: a.n };
+    }, [keys, objs, RR]);
+    nApplied += ui.n;
+    bot.rows.forEach((o, i) => keys.forEach(k => { cells++;
+      const x = String(o[k] ?? ''), y = String(ui.out[i][k] ?? ''); if (x !== y) { if (bad < 3) console.log('     갈림', k, JSON.stringify(objs[i]), '봇=' + x, '화면=' + y); bad++; } }));
+    if (bot.n !== ui.n) { if (bad < 3) console.log('     바뀐 행 수 갈림', bot.n, ui.n); bad++; }
+    if (bot.rows.some(o => Object.keys(o).some(k => !keys.includes(k)))) { if (bad < 3) console.log('     표에 없는 칸이 생겼다'); bad++; }
+  }
+  is(bad === 0 && nApplied > 0, 'roster — 30판 · ' + cells.toLocaleString() + '칸 전부 같다 · 화면이 바꾼 행 ' + nApplied + (bad ? ' (' + bad + '곳 갈림)' : ''));
+  const c1 = BOT.vmImportCols('roster', LAY[0]), c2 = BOT.vmImportCols('roster', LAY[1]);
+  is(c1('campus') === '단지' && c2('campus') === 'Work Place', '단지 — 둘 다 있으면 «단지»(첫 별칭) · 옛 영문 양식이면 Work Place');
+  { /* 표에 없는 «조건» 칸은 '' 로 읽는다(core 의 get) — 무작위로는 이 짝이 드물어 따로 본다(음성 대조로 겪었다: 조건을 지워도 무작위 판은 초록이었다) */
+    const R3 = [{ tbl:'roster', col:'campus', raw:'*', when_col:'op', when_val:'OPX', val:'Z1' }, { tbl:'roster', col:'campus', raw:'Q2', when_col:'region', when_val:'', val:'Z2' }];
+    const o3 = [{ 'No.':'1', 'Work Place':'Q1', 'Date of entry':'' }, { 'No.':'2', 'Work Place':'Q2', 'Date of entry':'' }];
+    const b3 = BOT.vmApplyRows('roster', o3, R3, c2).rows.map(o => o['Work Place']).join(',');
+    const u3 = await pg.evaluate(([R, o]) => { GST.vmap.rules = R; const k = Object.keys(o[0]);
+      return GST.vmap.apply('roster', [k].concat(o.map(x => k.map(c => x[c])))).rows.slice(1).map(r => r[k.indexOf('Work Place')]).join(','); }, [R3, o3]);
+    is(b3 === 'Q1,Z2' && u3 === b3, '표에 없는 조건 칸 — 값이 있으면 안 맞고 빈 값이면 맞는다 · 화면과 같다 (' + b3 + ' / 화면 ' + u3 + ')'); }
+  is(BOT.vmImportCols('roster', ['고객사', '단지']) === null && BOT.vmImportCols('edu', LAY[0]) === null, '머리글 힌트(입사일)가 없거나 스펙 없는 표면 입히지 않는다(core 와 같다)');
+}
+
 console.log('[2] 경계 사례');
 const R0 = [
   { tbl:'inst', col:'country', raw:'TAIWAN', when_col:'', when_val:'', val:'GST TAIWAN SCRUBBER' },
@@ -96,6 +145,10 @@ const qf = body.slice(body.indexOf('async function queryFaults'), body.indexOf('
 is(/loadVmap\(svc,/.test(fc) && /vmApplyRows\(/.test(fc) && /rowsToCsv\(head, cols, rows\)/.test(fc), 'fetchCsv(설치·수선 동기화) — 규칙을 입힌 행으로 CSV 를 만든다');
 is(/loadVmap\(svc, "wk"\)/.test(qf) && /vmCols\("wk"/.test(qf) && /rowsToCsv\(heads, cols, vm\.rows\)/.test(qf), 'queryFaults(고장 조회) — 규칙 열도 받아 입힌 행으로 답한다');
 is(/기준 정보 규칙으로/.test(body), '바꿔 읽은 건수를 답변 근거(조회 범위 노트)에 밝힌다');
+is(/vmImportCols\(lt, cols\)/.test(fc) && /if \(colOf\)/.test(fc), 'fetchCsv(인원 동기화) — Import 표도 규칙을 입힌다(VM_XSPEC)');
+{ const cx = fs.readFileSync(ROOT + '/assets/core.js', 'utf8'), m = cx.match(/roster:\s*\{[^]*?fields:\{([^}]*)\}/), bm = src.match(/roster: \{ hints:[^]*?fields: \{([^}]*)\}/);
+  const norm = t => (t || '').replace(/["'\s]/g, '');
+  is(!!m && !!bm && norm(m[1]) === norm(bm[1]), 'SPEC-SYNC — 봇 VM_XSPEC.roster 와 core GST.vmap.XSPEC.roster 의 fields 가 같다'); }
 is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
 await browser.close();
 fs.rmSync(tmp, { recursive:true, force:true });

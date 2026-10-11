@@ -149,12 +149,38 @@ type VRule = { tbl: string; col: string; raw: string; when_col?: string | null; 
 type VList = { raw: string; wc: string; wv: string; val: string; lv: number }[];
 const vmK = (v: unknown) => String(v ?? "").trim().toUpperCase();
 const vmSnake = (f: string) => String(f).replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
-function vmCompile(tbl: string, rules: VRule[]) {
+/* 미러가 아닌데 규칙이 먹는 표(v161 · 인원현황) — Import 표는 열 이름이 시트 머리글 그대로라 snake 로 못 바꾼다.
+   SPEC-SYNC: assets/core.js GST.vmap.XSPEC(fields · hints) 와 같은 목록이다. 별칭 «순서»가 규약 — 표에 있는 첫 별칭이 이긴다
+   (GST.SM.map 과 같다 · 표에는 빈 «Work Place» 와 채워진 «단지» 가 둘 다 있고 단지가 앞이다).
+   ⚠ 이 갈래가 없을 때 봇은 인원 규칙을 몰랐다 — 사이트 정의(v161)가 인원현황에도 규칙을 쓰면 화면과 봇이 같은 사람을 다른 단지로 답한다. */
+const VM_XSPEC: Record<string, { hints: string[][]; fields: Record<string, string[]> }> = {
+  roster: { hints: [["입사일", "Date of entry"]],
+    fields: { op: ["운영단위"], customer: ["고객사"], campus: ["단지", "Work Place"], line: ["라인"], region: ["구분"] } },
+};
+const vmNorm = (s: unknown) =>   // GST.SM.norm (전각 → 반각 · 공백·문장부호 제거 · 소문자) — hr.js hnorm 과 같은 식
+  String(s ?? "").replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/　/g, " ").replace(/[\s.·()[\]{}/\\_-]/g, "").toLowerCase();
+const VM_NONE = "\u0001";   // 표에 없는 칸 — 조건이면 '' 로 읽히고(core 의 get 과 같다) 대상이면 규칙을 건너뛴다
+/* SPEC 필드 → Import 표의 실제 열 이름. 머리글 힌트가 없으면 null(core 는 머리글 행을 못 찾으면 안 입힌다). */
+function vmImportCols(tbl: string, keys: string[]) {
+  const X = VM_XSPEC[tbl];
+  if (!X) return null;
+  const at: Record<string, string> = {};
+  for (const k of keys) { const n = vmNorm(k); if (n && !(n in at)) at[n] = k; }
+  if (!X.hints.every((alts) => alts.some((h) => vmNorm(h) in at))) return null;
+  return (f: string) => {
+    for (const nm of X.fields[f] || []) { const k = at[vmNorm(nm)]; if (k !== undefined) return k; }
+    return VM_NONE + f;
+  };
+}
+/* colOf = SPEC 필드 → 행 객체의 열 이름(미러는 snake · Import 는 vmImportCols). 기본값이 지금까지의 동작 그대로다. */
+function vmCompile(tbl: string, rules: VRule[], colOf: (f: string) => string = vmSnake) {
   const by: Record<string, VList> = {};
   for (const r of rules || []) {
     if (r.tbl !== tbl) continue;
-    const any = r.raw === "*", cond = !!r.when_col, c = vmSnake(r.col);
-    (by[c] = by[c] || []).push({ raw: any ? "*" : vmK(r.raw), wc: r.when_col ? vmSnake(r.when_col) : "", wv: vmK(r.when_val),
+    const any = r.raw === "*", cond = !!r.when_col, c = colOf(r.col);
+    if (c.startsWith(VM_NONE)) continue;   // 대상 칸이 표에 없다 — core: need = cols.filter(C[c] >= 0)
+    (by[c] = by[c] || []).push({ raw: any ? "*" : vmK(r.raw), wc: r.when_col ? colOf(r.when_col) : "", wv: vmK(r.when_val),
       val: r.val, lv: (any ? 2 : 0) + (cond ? 0 : 1) });
   }
   for (const c of Object.keys(by)) by[c].sort((a, b) => a.lv - b.lv);
@@ -170,8 +196,8 @@ function vmPick(list: VList, o: Record<string, unknown>, col: string) {
   return null;
 }
 // 표 행(객체 · 표 열 이름 키)에 입힌다 — 규칙에 걸린 칸만 바꾸고, 바뀐 행만 복사한다.
-function vmApplyRows(tbl: string, rows: Record<string, unknown>[], rules: VRule[]) {
-  const by = vmCompile(tbl, rules), cols = Object.keys(by);
+function vmApplyRows(tbl: string, rows: Record<string, unknown>[], rules: VRule[], colOf: (f: string) => string = vmSnake) {
+  const by = vmCompile(tbl, rules, colOf), cols = Object.keys(by);
   let n = 0, cells = 0;
   if (!cols.length) return { rows, n, cells };
   const out = rows.map((o) => {
@@ -240,10 +266,13 @@ async function fetchCsv(gid: string) {
     from += n;
   }
   if (!all.length) throw new Error("EMPTY " + D.tbl);
-  /* 기준 정보 규칙(v153) — 대시보드와 같은 값으로 답하게. 미러 표(설치·수선)만 — 규칙의 표가 그 둘(과 자재)이다. */
+  /* 기준 정보 규칙(v153) — 대시보드와 같은 값으로 답하게. 미러 표(설치·수선)와 인원현황(v161 · VM_XSPEC)에 입힌다.
+     Import 표는 열 이름이 머리글 그대로라 SPEC 필드를 그 이름으로 옮겨 읽는다(vmImportCols). */
   let rows = all;
-  if (D.kind === "mirror") {
-    const lt = D.tbl.replace("sheet_", ""), vm = vmApplyRows(lt, all, await loadVmap(svc, lt));
+  const lt = D.tbl.replace("sheet_", "");
+  const colOf = D.kind === "mirror" ? vmSnake : vmImportCols(lt, cols);
+  if (colOf) {
+    const vm = vmApplyRows(lt, all, await loadVmap(svc, lt), colOf);
     rows = vm.rows;
     if (vm.n) console.log("vmap", lt, "rows", vm.n, "cells", vm.cells);
   }
