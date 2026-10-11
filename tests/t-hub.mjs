@@ -99,8 +99,26 @@ const heat = await pg.evaluate(() => { const rl = Array.from(document.querySelec
   const cells = Array.from(document.querySelectorAll('#heat .hb-cell[data-r="' + i + '"]')); return cells.map(c => +(c.textContent || 0)); });
 is(heat.length === 12 && heat[11] === 12 && heat.slice(0, 11).every(v => v === 1 || v === 0), '히트맵 대만 줄 — 마지막 칸 12 · 나머지는 평소(1)');
 
-console.log('[3] 지도 — 벡터 세계 지도 · 나라를 누르면 그 나라 지도 (v171)');
+/* 이번 주 브리핑(v180) — 카드가 «이미 센» 숫자를 문장으로. 새로 세지 않는다 · 움직임 줄이기면 타자기 없이 전문이 처음부터 */
+const br = await pg.evaluate(() => ({ L:[...document.querySelectorAll('#blines li')].map(l => l.textContent), tw:!!document.querySelector('#blines .tw') }));
+is(br.L.length >= 5 && /이번 주 고장 15건/.test(br.L[0]) && /GST TAIWAN — 평소의 12배 · 점검 권장/.test(br.L[1]) && /유상 전환 3대/.test(br.L.join('|')) && !br.tw,
+  '이번 주 브리핑 — 고장 15 · 가장 튄 곳 대만(평소의 12배) · 유상 전환 3대 · 타자기 없음(움직임 줄이기) (' + br.L.slice(0, 2).join(' / ') + ')');
+
+console.log('[3] 지도 — 지구본이 기본(v180) · 원을 누르면 그 나라 지도 · 평면(벡터 세계 지도)으로 바꿀 수 있다');
 await pg.waitForTimeout(800);
+const gl = await pg.evaluate(() => ({ globe:document.getElementById('map').classList.contains('globe'), cv:getComputedStyle(document.getElementById('globe')).display,
+  w:document.getElementById('globe').width, marks:GL.marks.map(m => m.g.op).sort().join('|'), svg:getComputedStyle(document.getElementById('mapS')).display,
+  stats:document.querySelectorAll('#stats .hb-stat').length, dist:[...document.querySelectorAll('#cdist h4')].map(h => h.textContent).join('|') }));
+is(gl.globe && gl.cv === 'block' && gl.w > 300 && gl.marks.split('|').length === 3 && gl.svg === 'none', '기본은 지구본 — 운영단위 원 3 · 평면 벡터 지도는 숨김 (' + gl.marks + ')');
+is(gl.stats === 4 && gl.dist === '국가 분포|고객사 분포', '지구본에서도 통계 넷 · 국가·고객사 분포(평면과 같은 함수)');
+const tp = await pg.evaluate(() => { const m = GL.marks.find(x => /TAIWAN/.test(x.g.op)); glFly(m.lat, m.lon, 0); glDraw(performance.now()); const r = GL.cv.getBoundingClientRect(); return { x:r.left + m.X, y:r.top + m.Y }; });
+await pg.mouse.click(tp.x, tp.y); await pg.waitForTimeout(1000);
+is(await pg.evaluate(() => S.cc === 'TW' && !document.getElementById('map').classList.contains('globe') && document.querySelectorAll('#mapS path.rg').length === 21 && document.getElementById('segMap').hidden),
+  '지구본에서 대만 원을 누르면 대만 지도(행정구역 21) — 나라 지도에서는 지구본|평면 단추가 숨는다');
+await pg.click('#mapBack'); await pg.waitForTimeout(600);
+is(await pg.evaluate(() => document.getElementById('map').classList.contains('globe') && !S.cc), '「← 전세계」 — 지구본으로 돌아온다');
+await pg.click('#segMap button[data-m="flat"]'); await pg.waitForTimeout(900);
+is(await pg.evaluate(() => localStorage.getItem('gst_hub_map') === 'flat' && document.querySelector('#segMap button[data-m="flat"]').getAttribute('aria-pressed') === 'true'), '평면을 고르면 이 PC 에 기억한다');
 const map = await pg.evaluate(() => ({ paths:document.querySelectorAll('#mapS path.ct').length, has:[...document.querySelectorAll('#mapS path.has')].map(p => p.dataset.cc).sort().join(','),
   bub:document.querySelectorAll('#bubs .hb-bub').length, canvas:getComputedStyle(document.getElementById('mapC')).display }));
 is(map.paths > 200 && map.canvas === 'none', '나라 경계를 벡터로 그린다(점지도 캔버스는 숨김 · ' + map.paths + '개 나라)');
@@ -204,6 +222,14 @@ await hubF.evaluate(() => { render(); });                 // 숨겨진 채로 �
 await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(900);
 const mp = await hubF.evaluate(() => ({ p:document.querySelectorAll('#mapS path.ct').length, b:document.querySelectorAll('#bubs .hb-bub').length, w:document.getElementById('map').getBoundingClientRect().width }));
 is(mp.p > 200 && mp.b === 3 && mp.w > 300, '숨김 중에 다시 그려도 돌아오면 지도가 선다 (나라 ' + mp.p + ' · 원 ' + mp.b + ')');
+/* 지구본도 같다 — 숨김 중(폭 0)에 그리면 캔버스가 1px 로 굳는다(v170 의 자리). 돌아오면 제 크기로 다시 그린다 */
+await hubF.evaluate(() => mapMode('globe')); await ps.waitForTimeout(400);
+await ps.click('.tab[data-id="cip"]'); await ps.waitForTimeout(600);
+await hubF.evaluate(() => { render(); });
+await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(900);
+const gm = await hubF.evaluate(() => ({ w:document.getElementById('globe').width, h:document.getElementById('globe').height, m:GL.marks.filter(m => m.X != null).length, g:document.getElementById('map').classList.contains('globe') }));
+is(gm.g && gm.w > 300 && gm.h > 150 && gm.m >= 1, '지구본 — 숨김 중에 다시 그려도 돌아오면 제 크기로 선다 (' + gm.w + '×' + gm.h + ' · 보이는 원 ' + gm.m + ')');
+await hubF.evaluate(() => mapMode('flat'));
 /* 라이트/다크 스위치 — v178 부터 다크가 기본(사용자 확정) · 고르면 다음에 열 때도 남고 페이지(iframe)까지 간다 */
 const th = async () => { const o = await ps.evaluate(() => ({ dark:document.body.classList.contains('theme-slate'), aria:document.getElementById('themeSw').getAttribute('aria-checked') }));
   const f = ps.frames().find(x => /\/hub\//.test(x.url())); o.fr = f ? await f.evaluate(() => document.body.classList.contains('theme-slate')) : null; return o; };
