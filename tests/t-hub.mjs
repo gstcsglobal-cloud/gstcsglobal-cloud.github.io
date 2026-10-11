@@ -91,6 +91,20 @@ const mrows = await pg.evaluate(() => { const b = document.querySelector('.gov-b
 is(mrows === 15, '고장 카드를 누르면 «그 15건»이 목록으로 (받은 ' + mrows + ')');
 await pg.evaluate(() => GST._ovClose && GST._ovClose());
 
+console.log('[1b] 자료 결함은 글로벌 현황에 «안» 선다 — 데이터 관리로 (v182 · 사용자 확정 「임원이 보는 전체 서머리」)');
+/* 다른 화면이 남긴 품질 스냅샷(gst_dq_*)이 있어도 KPI 카드 · 확인 사항 · 이번 주 브리핑 어디에도 안 뜬다.
+   신호 자체는 데이터 관리 «데이터 품질» 탭과 각 화면의 품질 팝업에 그대로 있다(t-dq · t-edit [28]) */
+const dqv = await pg.evaluate(() => {
+  localStorage.setItem('gst_dq_fault', JSON.stringify({ at:Date.now(), filt:'', items:[{ key:'bm_unknown', sev:'bad', label:'BM 미기재 행 12건', n:12, act:'x' }] }));
+  localStorage.setItem('gst_dq_report', JSON.stringify({ at:Date.now(), filt:'', items:[{ key:'div_join', sev:'warn', label:'사업부 조인 실패', n:3, act:'x' }] }));
+  render();
+  const kp = Array.from(document.querySelectorAll('#kpis .hb-kpi'));
+  return { keys:kp.map(b => b.dataset.k), kpTxt:document.getElementById('kpis').innerText, q:document.getElementById('queue').innerText,
+    qS:document.getElementById('qS').textContent, b:(document.getElementById('blines') || {}).innerText || '' }; });
+is(dqv.keys.join() === 'run,bm,pm,risk,warr', 'KPI 카드 다섯 — 가동 · 고장 · PM · 고장 위험 · 유상 전환 («자료 확인할 것» 카드 없음 · ' + dqv.keys.join() + ')');
+is(!/자료|BM 미기재|조인/.test(dqv.kpTxt + dqv.q + dqv.qS + dqv.b), '품질 스냅샷이 있어도 확인 사항·브리핑·카드 어디에도 «자료» 이야기가 없다');
+await pg.evaluate(() => { localStorage.removeItem('gst_dq_fault'); localStorage.removeItem('gst_dq_report'); render(); });
+
 console.log('[2] 신호등 — 평소보다 튄 곳이 «위험»으로 맨 위');
 const sig = await pg.evaluate(() => Array.from(document.querySelectorAll('#sigs .hb-sig')).map(b => ({ op:b.dataset.op, st:(b.querySelector('.hb-dot').className.match(/\b(bad|warn|ok)\b/) || [])[1], bm:+b.querySelector('.bm').textContent })));
 is(sig.length === 3 && sig[0].op === 'GST TAIWAN SCRUBBER' && sig[0].st === 'bad' && sig[0].bm === 12, '대만(이번 주 12 · 평소 1)이 위험으로 첫 줄');
