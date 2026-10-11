@@ -237,8 +237,8 @@ is(mv && mv.args.p_id === 11 && mv.args.p_set.status === 'ack' && mv.args.p_at =
 /* 남이 먼저 바꿨으면 덮지 않는다 — 서버가 conflict 를 돌려주면 다시 읽고 그대로 둔다 */
 await pl.evaluate(() => { const d = JSON.parse(localStorage.getItem('__gstFakeDB')); d.action_items.find(x => x.id === 12).updated_at = '2030-01-01T00:00:00Z'; localStorage.setItem('__gstFakeDB', JSON.stringify(d)); });
 await pl.evaluate(() => { const b = Array.from(document.querySelectorAll('#cAct .hb-kc')).find(k => /새 기한 일/.test(k.textContent)).querySelector('button[data-mv="doing"]'); b.click(); }); await pl.waitForTimeout(600);
-const cf = await pl.evaluate(() => ({ st:JSON.parse(localStorage.getItem('__gstFakeDB')).action_items.find(x => x.id === 12).status, at:window.__RPC.filter(r => r.fn === 'action_set').pop().args.p_at }));
-is(cf.st === 'ack' && cf.at === T0 && (await col('ack')).includes('새 기한 일'), '남이 먼저 바꿨으면(conflict) 아무것도 안 바꾸고 다시 읽는다 — 새 기한 일은 «확인»에 그대로');
+const kcf = await pl.evaluate(() => ({ st:JSON.parse(localStorage.getItem('__gstFakeDB')).action_items.find(x => x.id === 12).status, at:window.__RPC.filter(r => r.fn === 'action_set').pop().args.p_at }));
+is(kcf.st === 'ack' && kcf.at === T0 && (await col('ack')).includes('새 기한 일'), '남이 먼저 바꿨으면(conflict) 아무것도 안 바꾸고 다시 읽는다 — 새 기한 일은 «확인»에 그대로');
 const risk = await pl.evaluate(() => document.querySelectorAll('#cRisk .ds-row').length);
 is(risk > 0, '고장 위험 설비 목록이 선다 (' + risk + ')');
 

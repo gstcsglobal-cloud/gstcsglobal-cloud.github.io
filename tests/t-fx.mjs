@@ -173,6 +173,7 @@ await ps.click('#gstFxPanel input[data-k="stars"]', { force:true }); await ps.wa
 const hubF = ps.frames().find(f => /\/hub\//.test(f.url()));
 const sy = await ps.evaluate(() => ({ ls:JSON.parse(localStorage.getItem('gst_fx') || '{}'), badge:document.getElementById('fxN').textContent }));
 const fr = hubF ? await hubF.evaluate(() => ({ s:document.body.classList.contains('fx-stars'), t:document.body.classList.contains('fx-tilt'), grain:!!document.querySelector('.gst-fx-grain') })) : null;
+if (process.env.DBG) console.log(JSON.stringify({sy, fr}));
 is(sy.ls.stars === false && /^\d+\/\d+$/.test(sy.badge) && fr && !fr.s && fr.t, '별빛을 끄면 — 이 PC 에 남고 · 단추에 «켜진 수/전체» · 열린 탭(iframe)도 바로 꺼진다');
 is(fr && !fr.grain, '탭 안(iframe)에는 그레인이 없다 — 셸의 한 벌이 덮는다(두 겹이면 화면이 탁해진다)');
 await ps.keyboard.press('Escape'); await ps.waitForTimeout(400);

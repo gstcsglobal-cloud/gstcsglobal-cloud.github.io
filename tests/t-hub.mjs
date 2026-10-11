@@ -217,6 +217,8 @@ is(sh.ids[0] === 'hub' && sh.ids.indexOf('home') < 0 && /\/hub\//.test(sh.src), 
 await ps.evaluate(() => { const o = document.getElementById('loginOverlay'); if (o) o.remove(); });
 await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(2500);
 const hubF = ps.frames().find(f => /\/hub\//.test(f.url()));
+/* 셸 안의 탭은 출처가 달라(배포 주소) 위 [3]에서 고른 «평면»을 모른다 — 평면부터 보고, 아래에서 지구본도 본다 */
+await hubF.evaluate(() => mapMode('flat')); await ps.waitForTimeout(600);
 await ps.click('.tab[data-id="cip"]'); await ps.waitForTimeout(800);
 await hubF.evaluate(() => { render(); });                 // 숨겨진 채로 다시 그린다(자동 새로고침·테마 전환과 같은 길)
 await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(900);

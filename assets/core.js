@@ -4937,14 +4937,17 @@ GST.fx = (function(){
     try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
     F.apply();
     /* 같은 출처의 다른 문서(탭 iframe)는 storage 이벤트로 알지만, srcdoc(오프라인 판)·막힌 저장소를 위해 메시지도 보낸다 */
-    try{ document.querySelectorAll('iframe').forEach(function(f){ try{ f.contentWindow.postMessage({type:'gst-fx'},'*'); }catch(e){} }); }catch(e){}
+    try{ document.querySelectorAll('iframe').forEach(function(f){ try{ f.contentWindow.postMessage({type:'gst-fx', s:S},'*'); }catch(e){} }); }catch(e){}
   };
   F.set=function(k,v){ if(!DEF[k]) return; if(v===F.def(k)) delete S[k]; else S[k]=!!v; save(); };
   F.setAll=function(v){ S={}; GST.FX_KEYS.forEach(function(k){ if(v!==F.def(k[0])) S[k[0]]=v; }); save(); };
   F.reset=function(){ S={}; save(); };
   try{
     window.addEventListener('storage', function(e){ if(e.key===KEY){ load(); F.apply(); } });
-    window.addEventListener('message', function(e){ if((e.data||{}).type==='gst-fx'){ load(); F.apply(); } });
+    /* 셸이 값까지 실어 보낸다 — 출처가 다른 문서(검사 환경 · 미래의 다른 주소)는 storage 이벤트를 못 받는다. 부모(셸)가 보낸 것만 받는다(시각 효과뿐이다) */
+    window.addEventListener('message', function(e){ const d=e.data||{}; if(d.type!=='gst-fx') return;
+      if(d.s&&typeof d.s==='object'&&e.source===window.parent){ S={}; Object.keys(d.s).forEach(function(k){ if(DEF[k]) S[k]=!!d.s[k]; }); try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(_){} } else load();
+      F.apply(); });
   }catch(e){}
 
   /* ── 패널 — 셸의 「효과」 단추가 연다(혼자 열린 페이지는 명령 팔레트에서) ── */
@@ -4980,7 +4983,8 @@ GST.fx = (function(){
   const overlay=function(el){
     if(!el||!el.isConnected||el.children.length) return null;
     const op=el.offsetParent; if(!op) return null;
-    if(getComputedStyle(op).position==='static') return null;   // 표 칸처럼 offsetParent 가 «자리 기준»이 아닌 곳은 건너뛴다
+    /* 표 칸처럼 offsetParent 가 «자리 기준»이 아닌 곳은 건너뛴다. body 가 기준이면(자리 잡힌 조상이 없다) 문서 좌표 그대로라 그대로 쓴다 */
+    if(op!==document.body&&getComputedStyle(op).position==='static') return null;
     const r=el.getBoundingClientRect(); if(r.width<2||r.height<2) return null;
     const cs=getComputedStyle(el), clip=(cs.webkitBackgroundClip==='text'||cs.backgroundClip==='text');
     const h=document.createElement('span'); h.className='gst-odo'; h.setAttribute('aria-hidden','true');
@@ -5047,7 +5051,7 @@ GST.fx = (function(){
   F._kick={};
   F.init=function(){ try{ F._init(); }catch(e){ try{ console.warn('[fx] 효과 층을 못 걸었습니다 — 화면은 그대로입니다', e); }catch(_){} } };
   F._init=function(){
-    if(F._inited||typeof document==='undefined'||!document.body||!document.body.classList||!document.documentElement||!document.documentElement.classList) return; F._inited=true;
+    if(F._inited||typeof document==='undefined'||typeof requestAnimationFrame!=='function'||!document.body||!document.body.classList||!document.documentElement||!document.documentElement.classList) return; F._inited=true;   /* 노드 검사의 가짜 DOM 에서는 걸지 않는다 */
     try{ if(!document.getElementById('gstFxCss')){ const st=document.createElement('style'); st.id='gstFxCss'; st.textContent=GST._FX_CSS; document.head.appendChild(st); } }catch(e){}
     F.apply();
     const body=document.body;
