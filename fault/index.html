@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=181"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=182"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -196,7 +196,7 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 #fseMfc{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
 @media(max-width:1100px){#fseMfc{grid-template-columns:1fr}.fse-pri{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=181">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=182">
 </head>
 <body>
 
@@ -2828,6 +2828,8 @@ async function fseLoad(force){
     const [rowsR]=await Promise.allSettled([GST.dbRows('fse'), GST.FSE.reg.load()]);
     if(rowsR.status!=='fulfilled') throw rowsR.reason;
     const D=GST.FSE.parse(rowsR.value,{org:fseOrg()});
+    /* 자재마스터(v190) — 부품 코드로 표준 품목명·규격을 붙인다(bind 앞 — 이름 규칙·유체 판정이 표준 이름도 보게). 못 읽어도 원장 이름으로 선다. */
+    try{ await GST.FSE.items(D); }catch(e){ console.warn('[알람 분석] 자재마스터', e); }
     GST.FSE.bind(D); GST.FSE.enrich(D, fseMats());
     FSEX.D=D; FSEX.st=D.ev.length?'ok':'empty'; FSEX.err='';
   }catch(e){
@@ -2844,6 +2846,7 @@ function fseDq(){
   if(D.joinSn) GST.dq.push({key:'fse_join', sev:'warn', label:ft('dq_join',{n:fseN(D.joinSn)}), n:D.joinSn, act:ft('dq_join_a')});
   if(D.orphan) GST.dq.push({key:'fse_orphan', sev:'info', label:ft('dq_orph',{n:fseN(D.orphan)}), n:D.orphan, of:D.parts.length, act:ft('dq_orph_a')});
   if(D.mismatch) GST.dq.push({key:'fse_mfc_mis', sev:'info', label:ft('dq_mis',{n:fseN(D.mismatch)}), n:D.mismatch, act:ft('dq_mis_a')});
+  if(D.itemMiss) GST.dq.push({key:'fse_item_miss', sev:'info', label:ft('dq_item',{n:fseN(D.itemMiss), r:fseN(D.itemMissRows)}), n:D.itemMiss, of:D.itemCodes, act:ft('dq_item_a')});
 }
 
 /* ── 그리기 ── */
@@ -2864,7 +2867,7 @@ function fseSeg(id, opts, cur, attr){
 }
 function fseEvRows(list){
   return list.slice().sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0).map(e=>[e.date, e.sn, e.ch, e.code||'—', e.msg||'—', e.aw||'—', e.resp||'—',
-    e.cause||'—', e.action||'—', (e.parts||[]).map(p=>p.name||p.code).filter(Boolean).join(', ')||'—']);
+    e.cause||'—', e.action||'—', (e.parts||[]).map(p=>GST.FSE.pname(p)).filter(Boolean).join(', ')||'—']);
 }
 function fseEvCols(){ return [ft('col_date'),ft('col_sn'),ft('col_ch'),ft('col_code'),ft('col_msg'),ft('col_aw'),ft('col_resp'),ft('col_cause'),ft('col_action'),ft('col_parts')]; }
 
@@ -2963,7 +2966,7 @@ function fseKpis(D, FS, st, evs, evsAll, nY, nPY, y, units){
     fk4:()=>({title:ft('k_rep'), cols:[ft('col_sn'),ft('col_ch'),ft('k_n'),ft('th_last')],
       rows:st.rank.filter(r=>r.n>=2).map(r=>{ const U=D.units[r.u]||{}; return [U.sn, U.ch, r.n, r.last]; })}),
     fk5:()=>({title:ft('k_rec',{d:GST.FSE.P().recur}), cols:[ft('col_date'),ft('col_sn'),ft('col_ch'),ft('col_parts'),ft('h_next')],
-      rows:st.rec.list.map(x=>[x.e.date, x.e.sn, x.e.ch, x.parts.map(p=>p.grp+' '+(p.name||p.code)).join(', '),
+      rows:st.rec.list.map(x=>[x.e.date, x.e.sn, x.e.ch, x.parts.map(p=>p.grp+' '+GST.FSE.pname(p)).join(', '),
         x.next?ft('days',{n:GST.FSE.daysBetween(x.e.date,x.next.date)}):'—']), note:ft('note_rec',{d:GST.FSE.P().recur})})
   });
 }
@@ -3090,7 +3093,7 @@ function fseTl(D, FS, rank){
         +'<text x="'+cx+'" y="'+(ya+3.5)+'" text-anchor="middle" class="fse-tn">'+n+'</text></g>'; });
     const pm={}; Object.keys((D.pg&&D.pg[u])||{}).forEach(g=>{ D.pg[u][g].forEach(p=>{ const k=p.date.slice(0,7); if(idx[k]==null) return; ((pm[k]=pm[k]||{})[g]=pm[k][g]||[]).push(p); }); });
     Object.keys(pm).forEach(k=>{ const gs=Object.keys(pm[k]); gs.forEach((g,gi)=>{ const cx=x0+cw*idx[k]+cw/2, yy=yp-6+gi*11;
-      s+='<text x="'+cx+'" y="'+yy+'" text-anchor="middle" style="fill:'+gcol(g)+';font-size:12px"><title>'+fseEsc(g+' · '+pm[k][g].map(p=>p.date+' '+(p.name||p.code)+(p.mfcIn?' ('+p.mfcIn+')':'')).join(' | '))+'</title>'+gsym(g)+'</text>'; }); });
+      s+='<text x="'+cx+'" y="'+yy+'" text-anchor="middle" style="fill:'+gcol(g)+';font-size:12px"><title>'+fseEsc(g+' · '+pm[k][g].map(p=>p.date+' '+GST.FSE.pname(p)+(p.mfcIn?' ('+p.mfcIn+')':'')).join(' | '))+'</title>'+gsym(g)+'</text>'; }); });
     D.ev.forEach(e=>{ if(e.u===u&&e.mc==='TBM'&&idx[e.ym]!=null){ const cx=x0+cw*idx[e.ym]+cw/2; s+='<text x="'+cx+'" y="'+(yp+22)+'" text-anchor="middle" class="fse-tbm"><title>TBM '+e.date+'</title>▼</text>'; } });
   });
   const leg=groups.map(g=>'<span><b style="color:'+gcol(g)+'">'+gsym(g)+'</b> '+fseEsc(g)+'</span>').join('')+'<span><b class="fse-tbm">▼</b> '+fseEsc(ft('tl_tbm'))+'</span>';
@@ -3107,7 +3110,7 @@ function fseTl(D, FS, rank){
     +(H2.length?'<div class="tbl-wrap" style="max-height:330px;overflow:auto"><table data-gst-nosn><thead><tr><th>'+fseEsc(ft('h_date'))+'</th><th>'+fseEsc(ft('th_ch'))+'</th><th>'+fseEsc(ft('h_kind'))+'</th><th>'+fseEsc(ft('h_what'))+'</th>'
       +(D.hasMfc?'<th>'+fseEsc(ft('h_ver'))+'</th>':'')+'<th class="n">'+fseEsc(ft('h_gap'))+'</th><th class="n">'+fseEsc(ft('h_next'))+'</th></tr></thead><tbody>'
       +H2.slice(0,400).map(x=>{ const U=D.units[x.u]||{};
-        const what=x.kind==='alarm'?(x.e.msg||x.e.code):x.kind==='part'?(x.p.grp+' · '+(x.p.name||x.p.code)+(x.p.mfcIn?' · '+x.p.mfcIn:'')):('TBM'+(x.e.kind?' · '+x.e.kind:''));
+        const what=x.kind==='alarm'?(x.e.msg||x.e.code):x.kind==='part'?(x.p.grp+' · '+GST.FSE.pname(x.p)+(x.p.code?' ('+x.p.code+')':'')+(x.p.mfcIn?' · '+x.p.mfcIn:'')):('TBM'+(x.e.kind?' · '+x.e.kind:''));
         return '<tr class="fse-h-'+x.kind+'"><td>'+x.date+'</td><td>'+fseEsc(U.ch||'—')+'</td><td>'+fseEsc(kind[x.kind])+'</td><td title="'+fseEsc(what)+'">'+fseEsc(what)+'</td>'
           +(D.hasMfc?'<td>'+fseEsc(x.kind==='alarm'?(x.ver||''):'')+'</td>':'')
           +'<td class="n">'+(x.kind==='alarm'&&x.gap!=null?fseEsc(ft('days',{n:fseN(x.gap)})):'')+'</td><td class="n">'+(x.kind==='alarm'&&x.next!=null?fseEsc(ft('days',{n:fseN(x.next)})):'')+'</td></tr>'; }).join('')
@@ -3196,21 +3199,72 @@ function fseParts(){
   const reg=GST.FSE.reg, can=!!(GST.canWrite?GST.canWrite():CAN_WRITE);
   const rows=reg.rows.slice();
   const inp=(f,v,ph)=>'<input class="fse-pi" data-pf="'+f+'" value="'+fseEsc(v==null?'':v)+'"'+(ph?' placeholder="'+fseEsc(ph)+'"':'')+(can?'':' readonly')+'>';
-  const line=r=>'<tr data-pid="'+(r.id||'')+'"><td>'+inp('grp',r.grp)+'</td><td>'+inp('code',r.code)+'</td><td>'+inp('name_re',r.name_re)+'</td><td>'+inp('fluid',r.fluid,'LNG')+'</td>'
+  /* 마스터 품목명 칸 — 코드로 정한 줄이 «무슨 부품인가»를 자재마스터로 보인다(v190 · 읽기만 · 저장하지 않는다) */
+  const line=r=>'<tr data-pid="'+(r.id||'')+'"><td>'+inp('grp',r.grp)+'</td><td>'+inp('code',r.code)+'</td><td class="fse-pm" style="font-size:11.5px;color:var(--txt-2);max-width:220px">'+(r.code?'…':'')+'</td><td>'+inp('name_re',r.name_re)+'</td><td>'+inp('fluid',r.fluid,'LNG')+'</td>'
     +'<td>'+inp('maker',r.maker,'MCA')+'</td><td>'+inp('label',r.label)+'</td><td style="text-align:center"><input type="checkbox" data-pf="on_"'+(r.on_!==false?' checked':'')+(can?'':' disabled')+'></td></tr>';
   const ov=GST._ovOpen('<div class="gov-h"><h4>'+fseEsc(ft('parts_t'))+'</h4><span class="gov-sub">'+fseEsc(can?ft('pt_note'):ft('pt_ro'))+'</span><span class="gov-sp"></span>'
     +(can?'<button class="gov-b" data-pa="add">'+fseEsc(ft('pt_add'))+'</button><button class="gov-b" data-pa="save">'+fseEsc(ft('pt_save'))+'</button>':'')
     +'<button class="gov-b" data-pa="close">✕</button></div>'
     +'<div class="gov-body" style="overflow:auto;max-height:70vh"><div class="card-note" style="margin:4px 0 8px">'+fseEsc(ft('pt_hint'))+'</div>'
-    +'<table class="gpv-t" id="fsePt"><thead><tr><th>'+fseEsc(ft('pt_grp'))+'</th><th>'+fseEsc(ft('pt_code'))+'</th><th>'+fseEsc(ft('pt_re'))+'</th><th>'+fseEsc(ft('pt_fluid'))+'</th><th>'+fseEsc(ft('pt_maker'))+'</th><th>'+fseEsc(ft('pt_label'))+'</th><th>'+fseEsc(ft('pt_on'))+'</th></tr></thead><tbody>'
+    /* 자재마스터에서 찾기 — 품목번호·품목명·규격으로 찾아 «묶음에 넣기»(코드 정확일치 줄이 된다) */
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 6px"><b style="font-size:12px">'+fseEsc(ft('pt_find'))+'</b>'
+    +'<input id="fsePq" class="fse-pi" placeholder="'+fseEsc(ft('pt_find_ph'))+'" style="flex:1;min-width:180px">'
+    +'<button class="gov-b" data-pa="find">'+fseEsc(ft('pt_find'))+'</button>'
+    +(can?'<input id="fsePg" class="fse-pi" placeholder="'+fseEsc(ft('pt_grp_ph'))+'" style="width:150px">':'')+'</div>'
+    +'<div id="fsePres" style="margin:0 0 10px"></div>'
+    +'<table class="gpv-t" id="fsePt"><thead><tr><th>'+fseEsc(ft('pt_grp'))+'</th><th>'+fseEsc(ft('pt_code'))+'</th><th>'+fseEsc(ft('pt_m_name'))+'</th><th>'+fseEsc(ft('pt_re'))+'</th><th>'+fseEsc(ft('pt_fluid'))+'</th><th>'+fseEsc(ft('pt_maker'))+'</th><th>'+fseEsc(ft('pt_label'))+'</th><th>'+fseEsc(ft('pt_on'))+'</th></tr></thead><tbody>'
     +(rows.length?rows.map(line).join(''):'')+'</tbody></table>'+(rows.length?'':'<div class="empty" id="fsePtNone">'+fseEsc(ft('pt_none'))+'</div>')
     +'<div class="card-note" id="fsePtMsg" role="status" style="margin-top:8px"></div></div>', true);
   const msg=(s,bad)=>{ const m=ov.querySelector('#fsePtMsg'); if(m){ m.textContent=s; m.style.color=bad?'var(--bad)':''; } };
+  const I=GST.items;
+  /* 원장에서 그 코드가 몇 번 교체됐나 — 마스터에서 찾은 품목이 «이 원장에 실제로 나오는가»를 가른다 */
+  const used={}; ((FSEX.D&&FSEX.D.parts)||[]).forEach(p=>{ const k=I?I.key(p.code):''; if(k) used[k]=(used[k]||0)+1; });
+  const codeOf=tr=>{ const el=tr.querySelector('[data-pf="code"]'); return el?String(el.value||'').trim():''; };
+  const haveCode=k=>[...ov.querySelectorAll('#fsePt tr[data-pid]')].some(tr=>I.key(codeOf(tr))===k);
+  /* 마스터 품목명 칸 채우기 — 못 읽으면 비워 둔다(«마스터에 없음»은 «읽었는데 없을 때»만 적는다) */
+  const fillM=async trs=>{
+    if(!I) return;
+    const codes=trs.map(codeOf).filter(Boolean);
+    try{ await I.get(codes); }catch(err){ console.warn('[알람 분석] 자재마스터', err); }
+    const ok=!I.why;
+    trs.forEach(tr=>{ const td=tr.querySelector('.fse-pm'); if(!td) return; const c=codeOf(tr), x=c?I.of(c):null;
+      td.textContent = !c ? '' : x ? I.label(x) : (ok ? ft('pt_m_miss') : '');
+      td.style.color = (c && !x && ok) ? 'var(--warn)' : ''; });
+  };
+  fillM([...ov.querySelectorAll('#fsePt tr[data-pid]')]);
+  const res=ov.querySelector('#fsePres');
+  const why2=w=>w==='no_table' ? ft('pt_m_none') : ft('pt_m_fail');
+  /* 마스터가 비었으면 처음부터 말한다(찾기를 눌러 보기 전에) */
+  if(I) I.count().then(n=>{ if(n===0 || (n==null && I.why==='no_table')) res.innerHTML='<div class="card-note">'+fseEsc(ft('pt_m_none'))+'</div>'; }).catch(()=>{});
+  const find=async()=>{
+    const q=String((ov.querySelector('#fsePq')||{}).value||'').trim(); if(!q || !I) return;
+    res.innerHTML='<div class="card-note">…</div>';
+    const r=await I.search(q, null, 50);
+    if(r.why){ res.innerHTML='<div class="card-note" style="color:var(--bad)">'+fseEsc(why2(r.why))+'</div>'; return; }
+    if(!r.rows.length){ res.innerHTML='<div class="card-note">'+fseEsc(ft('pt_m_zero'))+'</div>'; return; }
+    res.innerHTML='<div class="card-note" style="margin:0 0 4px">'+fseEsc(ft('pt_m_n',{n:fseN(r.rows.length), m:50}))+'</div>'
+      +'<table class="gpv-t" id="fsePrt"><thead><tr><th>'+fseEsc(ft('pt_code'))+'</th><th>'+fseEsc(ft('th_itype'))+'</th><th>'+fseEsc(ft('pt_m_name'))+'</th><th>'+fseEsc(ft('th_spec'))+'</th>'
+      +'<th style="text-align:right">'+fseEsc(ft('th_used'))+'</th>'+(can?'<th></th>':'')+'</tr></thead><tbody>'
+      +r.rows.map(x=>{ const k=I.key(x.code), n=used[k]||0;
+        return '<tr><td>'+fseEsc(x.code)+'</td><td>'+fseEsc(x.itype||'')+'</td><td>'+fseEsc(x.name||'')+'</td><td>'+fseEsc([x.spec1,x.spec2].filter(v=>v!=null&&String(v).trim()!=='').join(' · '))+'</td>'
+          +'<td style="text-align:right">'+(n?fseN(n):'')+'</td>'
+          +(can?'<td>'+(haveCode(k)?'<span class="card-note">'+fseEsc(ft('pt_in'))+'</span>':'<button class="gov-b" data-pa="put" data-code="'+fseEsc(x.code)+'" data-nm="'+fseEsc(x.name||'')+'">'+fseEsc(ft('pt_put'))+'</button>')+'</td>':'')+'</tr>'; }).join('')
+      +'</tbody></table>';
+  };
+  ov.addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target && e.target.id==='fsePq'){ e.preventDefault(); find(); } });
   ov.addEventListener('input', e=>{ const tr=e.target.closest('tr[data-pid]'); if(tr) tr.dataset.dirty='1'; });
-  ov.addEventListener('change', e=>{ const tr=e.target.closest('tr[data-pid]'); if(tr) tr.dataset.dirty='1'; });
+  ov.addEventListener('change', e=>{ const tr=e.target.closest('tr[data-pid]'); if(tr){ tr.dataset.dirty='1'; if(e.target.dataset.pf==='code') fillM([tr]); } });
   ov.addEventListener('click', async e=>{
     const b=e.target.closest('[data-pa]'); if(!b) return;
     if(b.dataset.pa==='close'){ GST._ovClose(); return; }
+    if(b.dataset.pa==='find'){ find(); return; }
+    if(b.dataset.pa==='put'){
+      const g=String((ov.querySelector('#fsePg')||{}).value||'').trim(); if(!g){ msg(ft('pt_grp_need'),true); const gi=ov.querySelector('#fsePg'); if(gi) gi.focus(); return; }
+      const tb=ov.querySelector('#fsePt tbody'); tb.insertAdjacentHTML('beforeend', line({grp:g, code:b.dataset.code, label:b.dataset.nm||'', on_:true}));
+      const n=ov.querySelector('#fsePtNone'); if(n) n.remove();
+      tb.lastElementChild.dataset.dirty='1'; fillM([tb.lastElementChild]);
+      b.replaceWith(Object.assign(document.createElement('span'),{className:'card-note', textContent:ft('pt_in')}));
+      msg(''); return; }
     if(b.dataset.pa==='add'){ const tb=ov.querySelector('#fsePt tbody'); tb.insertAdjacentHTML('beforeend', line({grp:'',on_:true})); const n=ov.querySelector('#fsePtNone'); if(n) n.remove();
       tb.lastElementChild.dataset.dirty='1'; return; }
     if(b.dataset.pa==='save'){

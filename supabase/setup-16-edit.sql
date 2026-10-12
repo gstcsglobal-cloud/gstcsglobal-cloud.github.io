@@ -68,7 +68,8 @@ language sql immutable as $$
                     when 'sheet_edu'       then 'id'
                     when 'sheet_leave'     then 'id'
                     when 'sheet_cip_f11'   then 'id'
-                    when 'sheet_cip_f16'   then 'id' end
+                    when 'sheet_cip_f16'   then 'id'
+                    when 'item_master'     then 'id' end   -- v190 자재마스터 (setup-30 · 같은 줄이 setup-23·30 에도)
 $$;
 -- 옛 이력과 같은 열(gid)에 시트 gid 를 적는다. 원장 표처럼 gid 가 없는 표는 표 이름 그대로.
 create or replace function public._edit_gid(p_tbl text) returns text
@@ -83,8 +84,10 @@ $$;
 -- v143 — imported_at 을 같이 뺀다. 원장을 고치면 그 칸이 올라가므로(캐시 열쇠 · _edit_apply), 넣어 두면 «고쳤다가 되돌린»
 --   행이 내용은 그대로인데 해시만 달라 «넣은 행 되돌리기»가 충돌로 멈춘다. 그 칸을 가진 표는 원장 둘뿐이고 v143 전에는
 --   고칠 수 없던 표라, 이미 받아 둔 엑셀의 해시가 바뀌는 일도 없다(운영 실측 2026-10: 두 표의 편집 이력 0건).
+-- v190 — seen_at(자재마스터 · «마지막 파일에 있었던 시각»)도 뺀다. 같은 값으로 마스터를 다시 올려도 그 칸이 올라가므로, 넣어 두면
+--   받아 둔 엑셀·열린 편집기가 내용은 그대로인데 «남이 고쳤다»로 멈춘다. 그 칸을 가진 표는 item_master 하나라 다른 표의 해시는 한 글자도 안 바뀐다.
 create or replace function public._edit_hash(r jsonb) returns text
-language sql immutable as $$ select md5((r - 'synced_at' - 'imported_at')::text) $$;
+language sql immutable as $$ select md5((r - 'synced_at' - 'imported_at' - 'seen_at')::text) $$;
 
 create or replace function public._edit_row(p_tbl text, p_key bigint, p_lock boolean default false) returns jsonb
 language plpgsql set search_path = public as $$

@@ -118,6 +118,7 @@ language sql stable set search_path = public as $$
                          when 'sheet_leave'        then 'id'
                          when 'sheet_cip_f11'      then 'id'
                          when 'sheet_cip_f16'      then 'id'
+                         when 'item_master'        then 'id'      -- v190 자재마스터 (setup-30 · 같은 줄이 setup-16·30 에도)
                          when 'kr_sheet_wk'        then 'src_row'
                          when 'kr_sheet_inst'      then 'src_row'
                          when 'kr_sheet_alarm'     then 'src_row'

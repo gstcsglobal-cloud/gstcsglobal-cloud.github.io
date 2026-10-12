@@ -52,7 +52,7 @@ function fake(seed) {
   const DB = par || JSON.parse(JSON.stringify(seed.tables));
   const LOG = window.__QLOG = [];
   const KEY = { sheet_wk:'src_row', sheet_mat:'src_row', sheet_inst:'src_row', sheet_alarm:'src_row', sheet_allbypass:'src_row',
-               sheet_roster:'id', sheet_edu:'id', sheet_leave:'id', sheet_cip_f11:'id', sheet_cip_f16:'id', sheet_edits:'id' };
+               sheet_roster:'id', sheet_edu:'id', sheet_leave:'id', sheet_cip_f11:'id', sheet_cip_f16:'id', sheet_edits:'id', item_master:'id' };
   const hash = r => { const o = Object.assign({}, r); delete o.synced_at; return 'h:' + JSON.stringify(o); };
   const toRe = (p, ci) => new RegExp('^' + String(p).replace(/\\([%_\\])/g, '\u0001$1').replace(/[.+?^${}()|[\]\\]/g, '\\$&')
       .replace(/[*%]/g, '.*').replace(/_/g, '.').replace(/\u0001(.)/g, (m, c) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) + '$', ci ? 'i' : '');
@@ -2059,6 +2059,42 @@ console.log('[33] 지역 칸 · 대만 지도에 «평택» (v187 · 사용자 �
     const a = GST.geo.placeOf({ fab:'P1' }, { P:PL.P }, { cc:'TW', f:[] }), b = GST.geo.placeOf({ fab:'P1' }, PL, { cc:'TW', f:[] }), c = GST.geo.placeOf({ fab:'P1' }, PL, { cc:'KR', f:[] });
     return [a, b && b.key, c && c.key]; });
   is(pf[0] === null && pf[1] === 'TW:P' && pf[2] === 'P', 'placeOf — 대만은 KR 자리를 안 쓰고(null) · TW:P 를 찾고 · 국내는 P (' + JSON.stringify(pf) + ')');
+  is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
+  await ctx.close();
+}
+
+console.log('[34] 자재마스터 탭 — 찾기 · 고치기 · 같은 품목번호는 막는다 · seen_at 은 관리 열 · 엑셀 원본은 «덮어쓰기» (v190)');
+{
+  const IC = ['id','code','itype','name','spec1','spec2','unit','extra','seen_at','synced_at'];
+  const sd = seedOf({});
+  sd.tables.item_master = [
+    { id:1, code:'P-000001', itype:'소모품', name:'PART ONE', spec1:'S1', spec2:null, unit:'EA', extra:null, seen_at:'2026-10-12T00:00:00Z', synced_at:'2026-10-12T00:00:00Z' },
+    { id:2, code:'P-000002', itype:'원자재', name:'VALVE TWO', spec1:'S2', spec2:'X', unit:'EA', extra:null, seen_at:'2026-10-01T00:00:00Z', synced_at:'2026-10-01T00:00:00Z' }];
+  sd.cols.item_master = IC; sd.types.item_master = { id:'bigint', seen_at:'timestamp with time zone', synced_at:'timestamp with time zone' };
+  const { ctx, pg, pe } = await open(sd);
+  is(await pg.evaluate(() => { const b = document.querySelector('.tab[data-tab=item]'); return !!b && /자재마스터/.test(b.textContent); }), '탭 줄에 「자재마스터」');
+  await pg.click('.tab[data-tab=item]'); await pg.waitForTimeout(400);
+  await pg.fill('#search [name=q]', 'valve'); await pg.click('#search button[type=submit]'); await pg.waitForTimeout(400);
+  is((await listKeys(pg)).join() === '2', '품목명으로 찾는다 (대소문자 무시)');
+  await pg.click('#list tr[data-key="2"]'); await pg.waitForTimeout(300);
+  const cols = await pg.$$eval('#editor [data-col]', es => es.map(e => e.dataset.col));
+  is(cols.includes('name') && cols.includes('spec1') && !cols.includes('seen_at') && !cols.includes('synced_at'), 'seen_at·synced_at 은 고칠 칸이 아니다 (관리 열)');
+  is(await pg.$eval('#editor [data-col=code]', e => /품목번호/.test(e.closest('.fld').querySelector('.fl').textContent)), '칸 이름 — 품목번호 (자재코드)');
+  await setField(pg, 'name', 'VALVE TWO NEW'); await qlog(pg);
+  await pg.click('#editor [data-act=save]'); await pg.waitForTimeout(300);
+  const up = rpcs(await qlog(pg), 'edit_update')[0];
+  is(up && up.args.p_tbl === 'item_master' && up.args.p_key === 2 && up.args.p_changes.name === 'VALVE TWO NEW' && Object.keys(up.args.p_changes).length === 1, '한 행 수정 → edit_update(item_master, id) · 바뀐 칸만');
+  /* 같은 번호 새 행 — 묻지 않고 막는다(서버가 유일 제약으로 어차피 거절한다) */
+  await pg.click('#search [data-act=new]'); await pg.waitForTimeout(250);
+  await setField(pg, 'code', 'P-000001'); await setField(pg, 'name', 'DUP'); await qlog(pg);
+  await pg.click('#editor [data-act=insert]'); await pg.waitForTimeout(300);
+  is(!(await pg.$('.mask .dlg-h')) && !rpcs(await qlog(pg), 'edit_insert').length && /이미 있습니다.*한 번호는 한 줄/.test(await snackText(pg)), '같은 품목번호는 «그래도 넣기»를 묻지 않고 막는다');
+  await setField(pg, 'code', 'P-000003');
+  await pg.click('#editor [data-act=insert]'); await pg.waitForTimeout(300);
+  const ins = rpcs(await qlog(pg), 'edit_insert')[0];
+  is(ins && ins.args.p_tbl === 'item_master' && ins.args.p_row.code === 'P-000003' && !('id' in ins.args.p_row) && !('seen_at' in ins.args.p_row), '새 번호는 넣는다 (id·seen_at 은 보내지 않는다)');
+  is(await pg.evaluate(() => UP_RID.item === 'item' && TAB_BY.item.uniq === true), '「엑셀 올리기」의 원본은 업로드 «자재마스터»(덮어쓰기)로 간다');
+  is(await pg.evaluate(() => OP_VIEW('upload:merge').l === '업로드 품목번호 덮어쓰기'), '이력 — 업로드 «품목번호 덮어쓰기»');
   is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
   await ctx.close();
 }

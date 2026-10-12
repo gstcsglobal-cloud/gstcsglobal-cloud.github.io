@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 181;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 182;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -1897,6 +1897,19 @@ GST.SM.SPEC = {
       sdStart:['Shut down Started time','Shut down Start'], sdEnd:['Shut down Finished time','Shut down Finish'],
       mttr:['MTTR (Minute)','MTTR'],
       mfcIn:['In Part SN MFC_上機','MFC In S/N'], mfcOut:['Out part SN MFC_下機','MFC Out S/N']
+    }},
+  /* 자재마스터 (v190 · 사용자 「자재마스터현황 파일 — 이것도 대시보드에 업로드해서 맵핑 자료로」)
+     ERP 의 «품목마스터현황» 한 장 — 품목번호(= 자재코드 · 부품 코드) 하나에 표준 품목명·규격·유형·단위.
+     표 item_master(setup-30)는 미러가 아니다 — src_row·구간이 없고 «품목번호 기준 덮어쓰기»로만 올린다(지우지 않는다).
+     ⚠ 열쇠는 품목번호의 «정확일치»다 — FSE 원장 part_code · 자재실적 mat_code 와 잇는다(부분일치 금지 · 제1원칙).
+     ⚠ 힌트는 번호 + 이름 둘 다 — 자재실적 파일도 자재코드·자재명을 갖고 있어 힌트만으로는 못 가린다.
+       그래서 업로드가 «같은 번호가 여러 줄»인 파일(실적 꼴)을 멈춘다(GST.items.sane). */
+  item: { name:'자재마스터', hints:[['품목번호','자재코드','Item Code','Item No','Part Code','Material Code'], ['품목명','자재명','Item Name','Part Name','Description']],
+    opt:['itype','spec1','spec2','unit'],
+    fields:{
+      code:['품목번호','자재코드','Item Code','Item No','Part Code','Material Code'],
+      itype:['품목유형','Item Type'], name:['품목명','자재명','Item Name','Part Name','Description'],
+      spec1:['규격1','규격','Spec','Specification','Spec 1'], spec2:['규격2','Spec 2'], unit:['단위','Unit','UOM']
     }}
 };
 
@@ -2237,7 +2250,8 @@ GST.SM.LABEL = {
     sn:'S/N', mcode:'작업 구분 (Maintenance Code)', aw:'알람/경고', resp:'책임', msg:'알람 메시지', fcode:'알람 코드', ncode:'알람 분류',
     ftype:'고장 유형', wkind:'작업 성격', chamber:'챔버', symptom:'현상', cause:'원인', action:'조치', partCode:'부품 코드', partQty:'부품 수량',
     partName:'부품 이름', partSpec:'부품 규격', comp:'무상/유상 (Compensation)', remark:'비고', shutdown:'정지 구분', sdStart:'정지 시작',
-    sdEnd:'정지 종료', mttr:'MTTR (분)', mfcIn:'MFC S/N (장착)', mfcOut:'MFC S/N (탈거)' }
+    sdEnd:'정지 종료', mttr:'MTTR (분)', mfcIn:'MFC S/N (장착)', mfcOut:'MFC S/N (탈거)' },
+  item:{ code:'품목번호 (자재코드)', itype:'품목유형', name:'품목명', spec1:'규격1', spec2:'규격2', unit:'단위' }
 };
 /* spec — 'inst' 같은 이름이나 SPEC 객체(지정이 얹힌 사본 포함 · 이름으로 찾는다) */
 GST.SM.label = function(spec, k){
@@ -10644,7 +10658,11 @@ GST.FSE_T = {
        dq_join:'FSE 원장의 설비 {n}대가 설치현황과 안 이어졌습니다 — 구분·운영단위 필터에서 빠집니다', dq_join_a:'설치현황에 그 S/N 이 있는지 확인하세요',
        dq_orph:'작업 행을 못 찾은 부품 행 {n}건', dq_orph_a:'원장에서 부품 행이 같은 S/N·작업일의 작업 행 아래에 있는지 확인하세요',
        dq_mis:'MFC 부품 코드의 제조사와 S/N 모양이 다른 교체 {n}건', dq_mis_a:'MFC S/N 또는 부품 코드를 확인하세요 (판정은 S/N 모양을 따릅니다)',
-       note_rec:'관심 부품을 바꾼 알람 작업 뒤 같은 챔버에서 {d}일 안에 같은 알람이 다시 났는지', why_ver:'판정 기준은 목표·기준 화면의 «MFC 버전 판정»', th_all:'누적', sort_y:'{y}년 순', sort_n:'기간 순', sort_all:'누적 순', unit_sn:'S/N 단위', unit_ch:'챔버 단위', top_more:'전체 보기 ({n})', top_less:'상위 {n}만', rate_min:'설비 {n}대 이상인 값', ver_none:'MFC 판정 대상 설비가 없습니다', hist_none:'이력이 없습니다', swap:'In/Out 이 뒤바뀐 줄 {n}건은 제조사가 맞는 쪽으로 읽었습니다', src_mat:'S/N 이 빈 교체 {n}건은 자재실적의 IN SN 으로 채웠습니다', reload:'다시 읽기', pt_note:'«MFC» 묶음은 버전 판정 · 나머지는 «교체 후 경과일» 열이 됩니다', u_ch:'챔버', ch_all:'모든 챔버' },
+       note_rec:'관심 부품을 바꾼 알람 작업 뒤 같은 챔버에서 {d}일 안에 같은 알람이 다시 났는지', why_ver:'판정 기준은 목표·기준 화면의 «MFC 버전 판정»', th_all:'누적', sort_y:'{y}년 순', sort_n:'기간 순', sort_all:'누적 순', unit_sn:'S/N 단위', unit_ch:'챔버 단위', top_more:'전체 보기 ({n})', top_less:'상위 {n}만', rate_min:'설비 {n}대 이상인 값', ver_none:'MFC 판정 대상 설비가 없습니다', hist_none:'이력이 없습니다', swap:'In/Out 이 뒤바뀐 줄 {n}건은 제조사가 맞는 쪽으로 읽었습니다', src_mat:'S/N 이 빈 교체 {n}건은 자재실적의 IN SN 으로 채웠습니다', reload:'다시 읽기', pt_note:'«MFC» 묶음은 버전 판정 · 나머지는 «교체 후 경과일» 열이 됩니다', u_ch:'챔버', ch_all:'모든 챔버',
+       dq_item:'자재마스터에 없는 부품 코드 {n}개 (교체 {r}줄)', dq_item_a:'자재마스터를 최신 파일로 다시 올리거나 원장의 부품 코드를 확인하세요',
+       pt_find:'자재마스터에서 찾기', pt_find_ph:'품목번호 · 품목명 · 규격', pt_m_name:'마스터 품목명', pt_m_none:'자재마스터가 아직 없습니다 — 「원본 파일 올리기 › 자재마스터」로 올리면 여기서 찾을 수 있습니다',
+       pt_m_fail:'자재마스터를 읽지 못했습니다', pt_m_zero:'맞는 품목이 없습니다', pt_m_n:'{n}건 (최대 {m})', pt_put:'묶음에 넣기', pt_grp_ph:'넣을 묶음 이름', pt_in:'이미 있음',
+       pt_m_miss:'마스터에 없음', th_itype:'유형', th_spec:'규격', th_used:'원장 교체', pt_grp_need:'넣을 묶음 이름을 먼저 적으세요' },
   en:{ sec:'Alarm analysis', ax_code:'Alarm code', ax_ncode:'Alarm group', ax_msg:'Alarm message', f_alarm:'Alarm', f_aw:'Kind', all:'All',
        f_resp:'Responsible', f_ch:'Chamber', f_ut:'Unit type', ut_OLD:'OLD', ut_GLOBAL:'GLOBAL', ut_DRAGON:'DRAGON', ut_ETC:'Other', ut_EXCL:'SWS·GPWS', more:'More', less:'Less',
        search_ph:'Find code or message', clear:'Clear', all_alarms:'All alarms', blank:'(blank)', n_sel:'{n} selected',
@@ -10674,7 +10692,11 @@ GST.FSE_T = {
        dq_join:'{n} FSE ledger units are not in the installation list — they drop out of region/unit filters', dq_join_a:'Check that the S/N is in the installation list',
        dq_orph:'{n} part rows without a work row', dq_orph_a:'In the ledger, keep part rows under the work row of the same S/N and date',
        dq_mis:'{n} MFC replacements whose S/N shape does not match the part code maker', dq_mis_a:'Check the MFC S/N or the part code (judging follows the S/N shape)',
-       note_rec:'after an alarm job that replaced a tracked part, did the same alarm come back on that chamber within {d} days', why_ver:'rules live on Targets & rules › MFC version rules', th_all:'Total', sort_y:'by {y}', sort_n:'by period', sort_all:'by total', unit_sn:'per S/N', unit_ch:'per chamber', top_more:'Show all ({n})', top_less:'Top {n} only', rate_min:'values with {n}+ units', ver_none:'No units to judge MFC versions for', hist_none:'No history', swap:'{n} rows with In/Out swapped were read from the side matching the maker', src_mat:'{n} replacements without S/N were filled from the material records (IN SN)', reload:'Reload', pt_note:'The «MFC» group gets version judging · the others become «since replacement» columns', u_ch:'chambers', ch_all:'All chambers' },
+       note_rec:'after an alarm job that replaced a tracked part, did the same alarm come back on that chamber within {d} days', why_ver:'rules live on Targets & rules › MFC version rules', th_all:'Total', sort_y:'by {y}', sort_n:'by period', sort_all:'by total', unit_sn:'per S/N', unit_ch:'per chamber', top_more:'Show all ({n})', top_less:'Top {n} only', rate_min:'values with {n}+ units', ver_none:'No units to judge MFC versions for', hist_none:'No history', swap:'{n} rows with In/Out swapped were read from the side matching the maker', src_mat:'{n} replacements without S/N were filled from the material records (IN SN)', reload:'Reload', pt_note:'The «MFC» group gets version judging · the others become «since replacement» columns', u_ch:'chambers', ch_all:'All chambers',
+       dq_item:'{n} part codes not in the item master ({r} replacement rows)', dq_item_a:'Upload the latest item master again, or check the part codes in the ledger',
+       pt_find:'Find in item master', pt_find_ph:'Item no. · name · spec', pt_m_name:'Master item name', pt_m_none:'No item master yet — upload it via «Upload source file › Item master» to search here',
+       pt_m_fail:'Could not read the item master', pt_m_zero:'No matching items', pt_m_n:'{n} (max {m})', pt_put:'Add to group', pt_grp_ph:'Group to add to', pt_in:'Already in',
+       pt_m_miss:'Not in master', th_itype:'Type', th_spec:'Spec', th_used:'Ledger replacements', pt_grp_need:'Type the group name first' },
   zh:{ sec:'报警分析', ax_code:'报警代码', ax_ncode:'报警分类', ax_msg:'报警信息', f_alarm:'报警', f_aw:'类别', all:'全部',
        f_resp:'责任', f_ch:'腔体', f_ut:'设备类型', ut_OLD:'OLD', ut_GLOBAL:'GLOBAL', ut_DRAGON:'DRAGON', ut_ETC:'其他', ut_EXCL:'SWS·GPWS', more:'更多', less:'收起',
        search_ph:'查找代码或信息', clear:'清除', all_alarms:'全部报警', blank:'(未填写)', n_sel:'已选 {n} 个',
@@ -10704,7 +10726,11 @@ GST.FSE_T = {
        dq_join:'FSE台账中 {n} 台设备未能与安装现况关联 — 将不受区分·运营单位筛选影响', dq_join_a:'请确认安装现况中是否有该S/N',
        dq_orph:'找不到作业行的部件行 {n} 条', dq_orph_a:'请确认台账中部件行位于同一S/N·作业日的作业行下方',
        dq_mis:'MFC部件代码的制造商与S/N形式不一致的更换 {n} 次', dq_mis_a:'请确认MFC S/N或部件代码 (判定以S/N形式为准)',
-       note_rec:'更换关注部件的报警作业后，同一腔体 {d} 天内是否再次发生同一报警', why_ver:'判定标准在目标·标准页面的«MFC版本判定»', th_all:'累计', sort_y:'按{y}年', sort_n:'按期间', sort_all:'按累计', unit_sn:'按S/N', unit_ch:'按腔体', top_more:'查看全部 ({n})', top_less:'仅前 {n}', rate_min:'设备 {n} 台以上的值', ver_none:'没有需要判定MFC版本的设备', hist_none:'没有履历', swap:'In/Out 颠倒的 {n} 行已按制造商一致的一侧读取', src_mat:'缺少S/N的 {n} 次更换已用物料实绩的 IN SN 补充', reload:'重新读取', pt_note:'«MFC»组用于版本判定 · 其余组成为«更换后天数»列', u_ch:'腔体', ch_all:'全部腔体' },
+       note_rec:'更换关注部件的报警作业后，同一腔体 {d} 天内是否再次发生同一报警', why_ver:'判定标准在目标·标准页面的«MFC版本判定»', th_all:'累计', sort_y:'按{y}年', sort_n:'按期间', sort_all:'按累计', unit_sn:'按S/N', unit_ch:'按腔体', top_more:'查看全部 ({n})', top_less:'仅前 {n}', rate_min:'设备 {n} 台以上的值', ver_none:'没有需要判定MFC版本的设备', hist_none:'没有履历', swap:'In/Out 颠倒的 {n} 行已按制造商一致的一侧读取', src_mat:'缺少S/N的 {n} 次更换已用物料实绩的 IN SN 补充', reload:'重新读取', pt_note:'«MFC»组用于版本判定 · 其余组成为«更换后天数»列', u_ch:'腔体', ch_all:'全部腔体',
+       dq_item:'物料主数据中没有的部件代码 {n} 个 (更换 {r} 行)', dq_item_a:'请重新上传最新的物料主数据，或确认台账中的部件代码',
+       pt_find:'在物料主数据中查找', pt_find_ph:'品目编号 · 品名 · 规格', pt_m_name:'主数据品名', pt_m_none:'还没有物料主数据 — 通过«上传原始文件 › 物料主数据»上传后即可在此查找',
+       pt_m_fail:'无法读取物料主数据', pt_m_zero:'没有匹配的品目', pt_m_n:'{n} 条 (最多 {m})', pt_put:'加入组', pt_grp_ph:'要加入的组名', pt_in:'已存在',
+       pt_m_miss:'主数据中没有', th_itype:'类型', th_spec:'规格', th_used:'台账更换', pt_grp_need:'请先填写要加入的组名' },
   ja:{ sec:'アラーム分析', ax_code:'アラームコード', ax_ncode:'アラーム分類', ax_msg:'アラームメッセージ', f_alarm:'アラーム', f_aw:'区分', all:'全体',
        f_resp:'責任', f_ch:'チャンバー', f_ut:'設備タイプ', ut_OLD:'OLD', ut_GLOBAL:'GLOBAL', ut_DRAGON:'DRAGON', ut_ETC:'その他', ut_EXCL:'SWS·GPWS', more:'もっと見る', less:'閉じる',
        search_ph:'コード・メッセージを検索', clear:'選択解除', all_alarms:'すべてのアラーム', blank:'(未記入)', n_sel:'{n}件選択',
@@ -10734,7 +10760,11 @@ GST.FSE_T = {
        dq_join:'FSE台帳の設備{n}台が設置状況とつながりません — 区分・運営単位フィルターから外れます', dq_join_a:'設置状況にそのS/Nがあるか確認してください',
        dq_orph:'作業行が見つからない部品行{n}件', dq_orph_a:'台帳で部品行が同じS/N・作業日の作業行の下にあるか確認してください',
        dq_mis:'MFC部品コードのメーカーとS/Nの形式が異なる交換{n}件', dq_mis_a:'MFC S/Nまたは部品コードを確認してください (判定はS/Nの形式に従います)',
-       note_rec:'注目部品を交換したアラーム作業の後、同じチャンバーで{d}日以内に同じアラームが再発したか', why_ver:'判定基準は目標・基準画面の«MFCバージョン判定»', th_all:'累計', sort_y:'{y}年順', sort_n:'期間順', sort_all:'累計順', unit_sn:'S/N単位', unit_ch:'チャンバー単位', top_more:'すべて表示 ({n})', top_less:'上位{n}のみ', rate_min:'設備{n}台以上の値', ver_none:'MFC判定対象の設備がありません', hist_none:'履歴がありません', swap:'In/Out が逆の{n}行はメーカーが合う側で読みました', src_mat:'S/Nが空の交換{n}件は資材実績のIN SNで補いました', reload:'再読み込み', pt_note:'«MFC»グループはバージョン判定 · その他は«交換後の経過日»列になります', u_ch:'チャンバー', ch_all:'全チャンバー' }
+       note_rec:'注目部品を交換したアラーム作業の後、同じチャンバーで{d}日以内に同じアラームが再発したか', why_ver:'判定基準は目標・基準画面の«MFCバージョン判定»', th_all:'累計', sort_y:'{y}年順', sort_n:'期間順', sort_all:'累計順', unit_sn:'S/N単位', unit_ch:'チャンバー単位', top_more:'すべて表示 ({n})', top_less:'上位{n}のみ', rate_min:'設備{n}台以上の値', ver_none:'MFC判定対象の設備がありません', hist_none:'履歴がありません', swap:'In/Out が逆の{n}行はメーカーが合う側で読みました', src_mat:'S/Nが空の交換{n}件は資材実績のIN SNで補いました', reload:'再読み込み', pt_note:'«MFC»グループはバージョン判定 · その他は«交換後の経過日»列になります', u_ch:'チャンバー', ch_all:'全チャンバー',
+       dq_item:'資材マスターにない部品コード{n}件 (交換{r}行)', dq_item_a:'最新の資材マスターを再アップロードするか、台帳の部品コードを確認してください',
+       pt_find:'資材マスターから探す', pt_find_ph:'品目番号 · 品名 · 規格', pt_m_name:'マスター品名', pt_m_none:'資材マスターがまだありません — «元ファイルのアップロード › 資材マスター»で上げるとここで探せます',
+       pt_m_fail:'資材マスターを読めませんでした', pt_m_zero:'該当する品目がありません', pt_m_n:'{n}件 (最大{m})', pt_put:'グループに追加', pt_grp_ph:'追加するグループ名', pt_in:'追加済み',
+       pt_m_miss:'マスターにない', th_itype:'種類', th_spec:'規格', th_used:'台帳の交換', pt_grp_need:'先に追加するグループ名を入力してください' }
 };
 GST.fseT = function(k, o, lang){
   var L=lang||GST._lang(), d=GST.FSE_T[L]||GST.FSE_T.ko, s=d[k];
@@ -10876,10 +10906,34 @@ GST.FSE = {
         var re=null; try{ re=new RegExp(x.name_re,'i'); }catch(e){ re=null; } return {x:x, re:re}; }).filter(function(o){ return o.re; }); }
       var txt=(p.name||'')+' '+(p.spec||'');
       for(var j=0;j<this._re.length;j++){ if(this._re[j].re.test(txt)) return this._re[j].x; }
+      /* 원장 글자로 못 잡았으면 자재마스터의 표준 품목명·규격으로 한 번 더(v190) — 원장의 자유 서술은 행마다 달라 규칙이 빗나간다.
+         ⚠ 원장 글자가 «먼저»다 — 그래야 마스터를 올리기 전에 잡히던 줄은 한 줄도 안 바뀐다(늘어나기만 한다). */
+      var st=p.std; if(st){ var t2=(st.name||'')+' '+(st.spec1||'')+' '+(st.spec2||'');
+        for(var j2=0;j2<this._re.length;j2++){ if(this._re[j2].re.test(t2)) return this._re[j2].x; } }
       return null;
     }
   },
   isMfcGrp: function(g){ return String(g||'').trim().toUpperCase()==='MFC'; },
+  /* 부품 이름 — 자재마스터(품목번호 정확일치)가 있으면 표준 품목명, 없으면 원장에 적힌 이름, 그것도 없으면 코드 (v190)
+     원장의 부품 이름은 사람이 자유롭게 적어 같은 코드도 줄마다 다르다(실측 9,934줄이 마스터 품목명과 다름) — 표준 이름으로 읽어야 한 덩어리로 보인다. */
+  pname: function(p){ var s=p&&p.std; return (s&&s.name) || (p&&p.name) || (p&&p.code) || ''; },
+  /* 자재마스터를 입힌다 — parse 뒤 · bind 앞(이름 규칙·유체 판정이 표준 품목명·규격도 보게).
+     못 읽어도 화면은 선다(원장 이름 그대로) — 그 사실은 D.itemWhy 에 남는다. 마스터가 비었으면 «없는 코드»를 세지 않는다(올리기 전이라 전부 없다). */
+  items: async function(D, client){
+    var I=GST.items, codes={};
+    D.parts.forEach(function(p){ var k=I.key(p.code); if(k) codes[k]=(codes[k]||0)+1; });
+    var ks=Object.keys(codes);
+    D.itemCodes=ks.length; D.itemHit=0; D.itemMiss=0; D.itemMissRows=0; D.itemEmpty=false; D.itemWhy='';
+    if(!ks.length) return D;
+    try{
+      await I.get(ks, client);
+      D.itemWhy=I.why;
+      if(!I.why && !ks.some(function(k){ return I.of(k); })) D.itemEmpty=((await I.count(client))===0);
+    }catch(e){ D.itemWhy='read_fail'; }
+    D.parts.forEach(function(p){ p.std=I.of(p.code); });
+    ks.forEach(function(k){ if(I.of(k)) D.itemHit++; else if(!D.itemWhy && !D.itemEmpty){ D.itemMiss++; D.itemMissRows+=codes[k]; } });
+    return D;
+  },
   /* S/N 이 뒤바뀐 줄(자동 보정)·제조사와 모양이 다른 줄(그대로 · 수만 센다) */
   recount: function(D){
     var FSE=GST.FSE; D.mismatch=0; D.swapped=0;
@@ -10910,11 +10964,11 @@ GST.FSE = {
     var f=String(entry&&entry.fluid||'').trim().toUpperCase();
     if(f==='CH4') f='LNG'; if(f==='CDA') f='AIR';
     if(f) return f;
-    var t=((p&&p.spec)||'')+' '+((p&&p.name)||'');
-    if(/CH4|LNG/i.test(t)) return 'LNG';
-    if(/AIR|CDA/i.test(t)) return 'AIR';
-    if(/O2/i.test(t)) return 'O2';
-    return '';
+    var pick=function(t){ if(/CH4|LNG/i.test(t)) return 'LNG'; if(/AIR|CDA/i.test(t)) return 'AIR'; if(/O2/i.test(t)) return 'O2'; return ''; };
+    var r=pick(((p&&p.spec)||'')+' '+((p&&p.name)||''));
+    /* 원장 글자에 유체가 없을 때만 자재마스터 규격·품목명을 본다(v190 · 원장이 먼저 — 이미 정해진 줄은 안 바뀐다) */
+    if(!r && p && p.std) r=pick((p.std.spec1||'')+' '+(p.std.spec2||'')+' '+(p.std.name||''));
+    return r;
   },
   /* 묶음을 원장에 입힌다 — 묶음 표를 다시 읽으면 다시 부른다. 단위별·묶음별 교체 목록(날짜순)을 만든다. */
   bind: function(D){
@@ -11104,6 +11158,70 @@ GST.FSE = {
       if(D.hasMfc) x.ver=FSE.FLUIDS.map(function(f){ return f+' '+FSE.ver(D, u, f, x.date, P).ver; }).join(' · ');
     });
     return out;
+  }
+};
+
+/* ============================================================
+   자재마스터 조회 — GST.items (v190 · 사용자 「자재마스터현황도 업로드해서 맵핑 자료로」)
+   품목번호(= 자재코드 · 부품 코드) → {code, itype, name, spec1, spec2, unit, seen_at}. 표는 item_master(setup-30).
+   ⚠ 표 전체(8만 품목)를 받지 않는다 — 화면이 «필요한 번호»만 묻는다(200개씩 in). 한 번 물은 번호는 이 화면이 기억한다
+     (없는 번호도 기억한다 — 같은 번호를 다시 묻지 않게). 마스터를 다시 올렸으면 clear() 또는 새로고침.
+   ⚠ 열쇠는 «정확일치»다 — 앞뒤 공백과 엑셀이 숫자 칸에 붙이는 «.0» 만 걷는다(대소문자를 바꾸지 않는다 · 제1원칙). */
+GST.items = {
+  _m:{}, _miss:{}, _n:null, why:'',
+  key: function(v){ return String(v==null?'':v).replace(/\.0+$/,'').trim(); },
+  of: function(code){ return GST.items._m[GST.items.key(code)]||null; },
+  clear: function(){ var I=GST.items; I._m={}; I._miss={}; I._n=null; I.why=''; },
+  _why: function(err){ var m=String(err&&(err.message||err.code)||err||''); return /does not exist|relation|schema cache|42P01|PGRST20[05]/i.test(m)?'no_table':'read_fail'; },
+  _db: async function(client){ if(client) return client; try{ return await GST._dbAuthed(); }catch(e){ return null; } },
+  get: async function(codes, client){
+    var I=GST.items, want=[], seen={};
+    (codes||[]).forEach(function(c){ var k=I.key(c); if(k && !seen[k] && !(k in I._m) && !I._miss[k]){ seen[k]=1; want.push(k); } });
+    if(want.length){
+      var C=await I._db(client);
+      if(!C){ I.why='no_db'; }
+      for(var i=0; C && i<want.length; i+=200){
+        var part=want.slice(i,i+200), r;
+        try{ r=await C.from('item_master').select('code,itype,name,spec1,spec2,unit,seen_at').in('code', part); }
+        catch(e){ I.why=I._why(e); break; }
+        if(r.error){ I.why=I._why(r.error); break; }
+        (r.data||[]).forEach(function(x){ I._m[I.key(x.code)]=x; });
+        part.forEach(function(k){ if(!(k in I._m)) I._miss[k]=1; });
+        I.why='';
+      }
+    }
+    var out={}; (codes||[]).forEach(function(c){ var k=I.key(c), x=I._m[k]; if(x) out[k]=x; });
+    return out;
+  },
+  /* 품목 수 — 마스터가 «비었나»(아직 안 올림)를 가른다. 못 읽으면 null */
+  count: async function(client){
+    var I=GST.items; if(I._n!=null) return I._n;
+    var C=await I._db(client); if(!C) return null;
+    try{ var r=await C.from('item_master').select('code',{count:'exact',head:true});
+      if(r.error){ I.why=I._why(r.error); return null; } I._n=r.count||0; return I._n; }
+    catch(e){ I.why=I._why(e); return null; }
+  },
+  /* 찾기 — 품목번호·품목명·규격에 «글자 덩어리를 순서대로» 포함(데이터 관리 검색과 같은 꼴 · PostgREST 문법을 깨는 글자는 원리적으로 안 들어간다) */
+  search: async function(q, client, limit){
+    var I=GST.items, toks=String(q==null?'':q).split(/[^0-9A-Za-z가-힣ㄱ-ㅎ\u3040-\u30ff\u4e00-\u9fff_.\-\/]+/).filter(Boolean);
+    if(!toks.length) return {rows:[], why:''};
+    var C=await I._db(client); if(!C) return {rows:[], why:'no_db'};
+    var pat='*'+toks.map(function(t){ return t.replace(/[*%,()"'\\]/g,''); }).filter(Boolean).join('*')+'*';
+    try{
+      var r=await C.from('item_master').select('code,itype,name,spec1,spec2,unit,seen_at')
+        .or(['code','name','spec1','spec2'].map(function(c){ return c+'.ilike.'+pat; }).join(',')).order('code').limit(limit||50);
+      if(r.error) return {rows:[], why:I._why(r.error)};
+      (r.data||[]).forEach(function(x){ I._m[I.key(x.code)]=x; });
+      return {rows:r.data||[], why:''};
+    }catch(e){ return {rows:[], why:I._why(e)}; }
+  },
+  /* 한 줄 이름 — 품목명 · 규격1 (규격2는 길어 목록에서는 뺀다) */
+  label: function(x){ if(!x) return ''; return [x.name, x.spec1].filter(function(v){ return v!=null && String(v).trim()!==''; }).join(' · '); },
+  /* 업로드 «실적 파일이 아닌가» — 마스터는 번호마다 한 줄이다. 같은 번호가 여러 줄이면(실측 자재실적은 한 번호가 수십 줄) 다른 파일이다. */
+  sane: function(rows){
+    var I=GST.items, n=0, blank=0, seen={}, dup=0;
+    (rows||[]).forEach(function(o){ var k=I.key(o&&o.code); if(!k){ blank++; return; } n++; if(seen[k]) dup++; else seen[k]=1; });
+    return { n:n, blank:blank, dup:dup, uniq:Object.keys(seen).length, bad: dup>Math.max(5, n*0.02) };
   }
 };
 
