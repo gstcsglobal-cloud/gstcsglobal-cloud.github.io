@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=178"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=179"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:#1d2433;background:#F5F6F8;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
@@ -616,7 +616,7 @@ window.checkFile=async function(){
         let cand=null, cn=-1;
         wb.SheetNames.forEach(function(n){
           const rr=GST.sheetRows(XLSX, wb.Sheets[n]);
-          if(GST.SM.headerRow(rr, S.hints, S.scan)>=0) hit.push([n, tg]);
+          if(GST.SM.map(rr, S).hi>=0) hit.push([n, tg]);   // 여러 줄 머리글(병합)도 같은 판정으로(v187)
           else { const k=rr.reduce((a,r)=>a+(r||[]).filter(v=>String(v==null?'':v).trim()).length,0); if(k>cn){cn=k;cand=[n,rr];} }
         });
         /* 아무 시트도 그 양식으로 안 읽히면 — 막다른 길로 두지 않고 «가장 자료가 많은 시트»의 맵핑 표를 띄운다 */
@@ -682,7 +682,7 @@ window.checkFile=async function(){
         +'</span><br>아래 «열 맵핑»에서 이 사이트 파일의 어느 머리글이 그 항목인지 골라 주세요 — 고르면 저장되고 바로 다시 검사합니다.'+panel); return; }
       msgs.push(panel);
       const keys=Object.keys(S.fields), C=m.C;
-      const header=(rows[m.hi]||[]).map(x=>String(x==null?'':x));
+      const header=(m.H||rows[m.hi]||[]).map(x=>String(x==null?'':x));   // 여러 줄 머리글이면 합친 이름(v187) — extra 의 열쇠가 된다
       const mapped=new Set(keys.map(k=>C[k]).filter(i=>i>=0));
       const extraCols=header.map((h,i)=>({i,h:h.trim()})).filter(x=>!mapped.has(x.i)&&x.h!=='');
       /* ── 표에 «아직 없는» SPEC 열 (승격 대기) ──────────────────────────────
@@ -1076,17 +1076,26 @@ let UP_CANW=false, CM_NEED='';
 const cmapSite=()=>SITE||'ALL';
 async function cmapLoad(c,site,rid){ return (await GST.cmap.load(c,site,rid)).ovr; }
 const cmapSpec=(S0,ovr)=>GST.cmap.spec(S0,ovr);
-function cmapName(k,S0){ return (typeof QA_COL!=='undefined'&&QA_COL[GST._snake(k)])||(S0&&S0.fields&&S0.fields[k]?[].concat(S0.fields[k])[0]:k); }
+/* 항목 이름 — 화면 이름표(GST.SM.label · 한국어 「지역」)와 양식 머리글(별칭[0] · 「Location」)을 같이 적는다(v187).
+   사람은 「지역」으로 찾고, 파일에는 「Location」이라 적혀 있다 — 한쪽만 적으면 다른 쪽 사람이 못 찾는다. */
+function cmapName(k,S0){
+  const a0=(S0&&S0.fields&&S0.fields[k])?String([].concat(S0.fields[k])[0]).replace(/\s*\n\s*/g,' '):k;
+  const lb=(GST.SM.label?GST.SM.label(S0,k):'')||(typeof QA_COL!=='undefined'&&QA_COL[GST._snake(k)])||a0;
+  return GST.SM.norm(lb)===GST.SM.norm(a0)?lb:lb+' ('+a0+')';
+}
 function cmapTable(o){
   const r=GST.cmap._c[o.site+'|'+o.tbl]||{};
   return GST.cmap.table(Object.assign({siteL:o.site==='ALL'?'관리자 전체 화면':(ROUTE?ROUTE.name:o.site), canDb:UP_CANW, src:r.src||{}}, o));
 }
 /* SPEC 표용 — 필수는 SPEC 의 opt 밖(판정 사본 없음) */
 function cmapHtml(S0,S,m,rows,ovr,site,tbl,title){
-  const opt=S0.opt||[], hi=GST.cmap.guessHi(rows,m.hi);
+  /* 머리글 — 여러 줄(병합)이면 합친 이름(m.H · v187). 못 찾았으면 «가장 많이 맞는 덩어리»(m.guess)를 후보로 —
+     예전에는 «가장 찬 한 줄»만 보여 세로 병합된 열이 지정 목록에서 빠졌다(사용자 지적). */
+  const opt=S0.opt||[], g=m.hi>=0?{hi:m.hi,H:m.H}:(m.guess||null), hi=g?g.hi:GST.cmap.guessHi(rows,-1);
+  const H=((g&&g.H)||rows[hi]||[]).map(x=>String(x==null?'':x).trim());
   const keys=Object.keys(S0.fields).sort((a,b)=>(opt.indexOf(a)>=0)-(opt.indexOf(b)>=0));
   return cmapTable({items:keys.map(k=>({k:k,label:cmapName(k,S0),req:opt.indexOf(k)<0,idx:m.C[k]})),
-    H:(rows[hi]||[]).map(x=>String(x==null?'':x).trim()), rows:rows, hi:hi, hiFound:m.hi>=0, ovr:ovr, site:site, tbl:tbl, title:title});
+    H:H, rows:rows, hi:hi, hiFound:m.hi>=0, ovr:ovr, site:site, tbl:tbl, title:title});
 }
 document.addEventListener('change',async function(e){
   if(!e.target.closest||!e.target.closest('#chk')) return;

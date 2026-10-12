@@ -400,6 +400,59 @@ console.log('[12] 통째 교체는 기본값이 아니고 · 비밀번호로 승
   is(!/pin_hash|\$2[aby]\$|crypt\(/.test(UP), '화면 코드에 비밀번호 해시·암호화가 없다 (확인은 서버에서)');
 }
 is(pe.length===0, 'JS 에러 0' + (pe.length?' → '+pe[0]:''));
+console.log('[13] 머리글 윗줄 병합 — 설치현황(SPEC 표)도 위 줄을 이어 읽고 · 머리글 없는 열도 고를 수 있다 · 항목 이름은 한국어 (v187 · 사용자 보고)');
+{
+  const pm = await ctx.newPage(); const pem=[]; pm.on('pageerror', e => pem.push(e.message));
+  await pm.addInitScript(() => { window.__CM=[]; });
+  await pm.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await pm.waitForTimeout(900);
+  await pm.selectOption('#tsel', await pm.evaluate(() => String(TABLES.findIndex(t=>t.rid==='inst')))); await asFull(pm);
+  /* 지어낸 값 — 모양: NO·Country·Customer·Location·Line 1·Scrubber type·설비상태 는 두 줄 세로 병합(위 칸에만 이름),
+     나머지는 묶음 띠(설비 정보 · 공정 · Main Tool · Warranty) 아래 칸 · 맨 끝(Q열)은 머리글이 아예 없는 열 */
+  const aoa=[
+    ['NO','Country','Customer','Location','설비 정보','','','Line 1','공정','','Main Tool','','Scrubber type','Warranty','','설비상태',''],
+    ['','','','','Scrubber CODE','Scrubber S/N','Scrubber Model','','Process','Detail Process(Customer)','Maker','Model','','date','In/Out','',''],
+    ['1','GST TAIWAN SCRUBBER','MICRON','TAINAN','ZC-1','ZZM-0001','GX-1','F16','ETCH','DRY','TEL','TA-1','DUAL','2027-01-01','무상','Operation','QV-1'],
+    ['2','GST TAIWAN SCRUBBER','MICRON','TAINAN','ZC-2','ZZM-0002','GX-1','F16','ETCH','DRY','TEL','TA-1','SINGLE','2025-01-01','유상','Operation','QV-2'],
+  ];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '설치현황');
+  const fp=path.join(OUT,'inst-merged.xlsx'); XLSX.writeFile(wb, fp);
+  await pm.setInputFiles('#fsel', fp); await pm.waitForTimeout(2500);
+  const r = await pm.evaluate(() => ({ n:PREP?PREP.rows.length:-1, r0:PREP&&PREP.rows[0], txt:document.getElementById('chk').textContent,
+    opts:Array.from(document.querySelectorAll('#chk select[data-cmap="burner"] option')).map(o=>o.value+'|'+o.textContent) }));
+  is(r.n===2, '머리글 두 줄은 데이터로 안 읽힌다 — 데이터 2행 (받은 ' + r.n + ')');
+  const o = r.r0 || {};
+  is(o.country==='GST TAIWAN SCRUBBER' && o.customer==='MICRON' && o.location==='TAINAN' && o.fab==='F16' && o.type==='DUAL' && o.state==='Operation',
+     '세로 병합(위 칸에만 이름)된 열을 잡는다 — 운영단위·고객사·지역·라인·챔버·설비상태 (' + JSON.stringify([o.country,o.location,o.fab,o.type,o.state]) + ')');
+  is(o.sn==='ZZM-0001' && o.code==='ZC-1' && o.group1==='ETCH' && o.detail1==='DRY', '묶음 띠 아래 칸은 자기 이름으로 그대로 잡힌다');
+  is(o.tool_maker==='TEL' && o.tool_model==='TA-1' && o.warranty_date==='2027-01-01' && o.warranty==='무상', '묶음 + 칸 이름(Main Tool › Maker · Warranty › date)도 정규화 정확일치로 잡힌다');
+  is(!/필수 열을 못 찾았습니다/.test(r.txt), '필수 열을 다 찾는다 (예전에는 한 줄만 읽어 운영단위·고객사 등이 «못 찾음»)');
+  is(/지역 \(Location\)/.test(r.txt) && /운영단위 \(Country\)/.test(r.txt), '열 맵핑 항목 이름이 한국어 — «지역 (Location)» · «운영단위 (Country)»');
+  is(r.opts.some(x => /^Country\|B · Country$/.test(x)) && r.opts.some(x => /^Location\|D · Location$/.test(x)), '지정 목록에 세로 병합 열(Country·Location)이 빠지지 않는다');
+  is(r.opts.some(x => /^@Q\|Q · \(머리글 없음/.test(x)), '머리글이 아예 없는 열도 «열 위치»로 고를 수 있다 (Q열)');
+  await pm.evaluate(() => document.querySelectorAll('#chk details.gcm').forEach(d => { d.open = true; }));   // 맞게 잡혔으면 패널은 접혀 있다
+  await pm.selectOption('#chk select[data-cmap="burner"]', '@Q'); await pm.waitForTimeout(1800);
+  const cm = await pm.evaluate(() => window.__CM.find(x => x.field==='burner'));
+  is(cm && cm.header==='@Q', '열 위치 지정은 «@열문자»로 저장 (' + JSON.stringify(cm) + ')');
+  is(await pm.evaluate(() => (PREP.rows[0]||{}).burner==='QV-1' && /열 위치/.test(document.getElementById('chk').textContent)), '그 열 값이 들어가고, 상태 칸이 «열 위치» 지정이라고 적는다');
+  /* 그 열에 머리글이 «생기면»(양식이 바뀌었다) 위치 지정을 쓰지 않는다 — 남의 열을 읽지 않게 */
+  const aoa2 = aoa.map((row, i) => i===1 ? row.slice(0,16).concat(['Memo']) : row);
+  const wb2=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb2, XLSX.utils.aoa_to_sheet(aoa2), '설치현황');
+  const fp2=path.join(OUT,'inst-merged2.xlsx'); XLSX.writeFile(wb2, fp2);
+  await pm.evaluate(() => { GST.cmap._c={}; });
+  await pm.setInputFiles('#fsel', fp2); await pm.waitForTimeout(2500);
+  is(await pm.evaluate(() => !(PREP.rows[0]||{}).burner && /이제 머리글이 있음/.test(document.getElementById('chk').textContent)), '그 열에 머리글이 생기면 위치 지정을 쓰지 않고 그렇다고 말한다');
+  /* 한 줄 양식은 한 글자도 안 바뀐다 — 덩어리는 «더 많은 항목»을 찾을 때만 */
+  const one = await pm.evaluate(() => { const S=GST.SM.SPEC.inst, H=Object.keys(S.fields).map(k=>[].concat(S.fields[k])[0]);
+    const rows=[['설치현황 (예시)'], H, H.map((h,j)=>'v'+j)]; const m=GST.SM.map(rows,S); return { hi:m.hi, block:!!m.block, ok:m.ok }; });
+  is(one.hi===1 && !one.block && one.ok, '한 줄 머리글(+ 제목 줄)은 예전 그대로 한 줄로 읽는다');
+  /* Import 표 — 위 줄에만 이름이 있는 열(세로 병합)도 잡는다 */
+  const imp = await pm.evaluate(() => { const rows=[['No','기본 정보','',''],['','Site','인원','사원번호'],['1','S1','가나다','A001']];
+    const M=GST.cmap.match(rows,['No','Site','인원','사원번호'],{},{}); return { hi:M.hi, idx:M.idx, header:M.header }; });
+  is(imp.hi===1 && imp.idx.No===0 && imp.idx['사원번호']===3 && imp.header[0]==='No', 'Import 표도 위 줄의 세로 병합 이름(No)을 잡는다 (' + JSON.stringify(imp.idx) + ')');
+  is(pem.length===0, 'JS 에러 0 (병합 머리글 SPEC)' + (pem.length?' → '+pem[0]:''));
+  await pm.close();
+}
+
 await browser.close(); srv.close();
 console.log(fail?`\n❌ t-colmap: ${pass} 통과 · ${fail} 실패`:`\n✅ t-colmap: ${pass}/${pass} 통과`);
 process.exit(fail?1:0);

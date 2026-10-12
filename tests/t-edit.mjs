@@ -252,6 +252,9 @@ function fake(seed) {
     },
     value_groups: a => { const m = new Map(); (DB[a.p_tbl] || []).forEach(r => { const k = JSON.stringify(a.p_cols.map(c => r[c] == null ? null : r[c]));
       m.set(k, (m.get(k) || 0) + 1); }); return Array.from(m).map(([k, n]) => { const v = JSON.parse(k), o = { n }; a.p_cols.forEach((c, i) => { o[c] = v[i]; }); return o; }); },
+    geo_place_set: a => { const k = String(a.p_key || '').toUpperCase().replace(/\s/g, ''); const T = (DB.geo_places = DB.geo_places || []);
+      const i = T.findIndex(x => x.key === k), o = { key:k, lat:a.p_lat, lng:a.p_lng, label:a.p_label || null, cc:a.p_cc || (i >= 0 ? T[i].cc : null) };
+      if (i >= 0) T[i] = o; else T.push(o); return { key:k, ok:true }; },
     edit_distinct: a => { const m = new Map(); (DB[a.p_tbl] || []).forEach(r => { const v = r[a.p_col]; if (v != null) m.set(String(v), (m.get(String(v)) || 0) + 1); });
       return Array.from(m.entries()).sort((x, y) => y[1] - x[1]).slice(0, a.p_limit || 60); }
   };
@@ -2005,6 +2008,57 @@ console.log('[32] 화면 신호 — 국내 원장·뺀 인원도 «그 행»을 
   const box = await pg.$eval('#dqBox', e => e.innerText);
   is(!/국내 원장 행이 설치현황과/.test(box) && !/국내 실적 행에 사업부/.test(box) && /현장\(O\) 인원인데 직책/.test(box) && /해당 없는 신호 2개는 숨겼습니다/.test(box),
      '구분 해외로 걸면 국내 신호(원장·국내 실적)는 숨기고 몇 개 숨겼는지 적는다');
+  is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
+  await ctx.close();
+}
+
+console.log('[33] 지역 칸 · 대만 지도에 «평택» (v187 · 사용자 「데이터 관리에 지역 넣는 게 없다 · 순회하는데 왜 대만에 평택이」)');
+{
+  const s = seedOf({});
+  s.tables.sheet_inst = s.tables.sheet_inst.concat([
+    { src_row:40, code:'ZP-1', sn:'ZZP-0001', country:'GST TAIWAN SCRUBBER', customer:'PSMC', fab:'P1', location:null, state:'Operation' },
+    { src_row:41, code:'ZP-2', sn:'ZZP-0002', country:'SEC Scrubber', customer:'삼성전자(주)', fab:'P3-D', location:'P1', state:'Operation' }
+  ].map(r => Object.assign(Object.fromEntries(INST_COLS.map(c => [c, null])), r)));
+  s.tables.geo_places = [{ key:'P', lat:36.99, lng:127.09, label:'평택(지어낸)', cc:'KR' }];
+  const { ctx, pg, pe } = await open(s);
+  await pg.click('.tab[data-tab=inst]'); await pg.waitForTimeout(400);
+  await pg.click('#search button[type=submit]'); await pg.waitForTimeout(400);
+  await pg.click('#list tr[data-key="40"]'); await pg.waitForTimeout(300);
+  const fl = await pg.$eval('#editor [data-col=location]', e => e.closest('.fld').querySelector('.fl').textContent);
+  is(/^지역/.test(fl) && /Location/.test(fl), '편집 칸 이름이 «지역» (양식 머리글 Location 은 옆에 작게) — ' + fl);
+  is(await pg.$$eval('#search [data-q] , #search label', xs => xs.some(x => /지역/.test(x.textContent))), '검색 칸에 «지역» 고르기가 있다');
+  await pg.click('#search [data-act=cset]'); await waitDlg(pg, /조건으로 일괄 바꾸기/);
+  const opt = await pg.$$eval('#csCol option', os => os.map(o => o.textContent));
+  is(opt.some(t => /^지역/.test(t)), '조건으로 바꾸기 — 바꿀 열 목록에 «지역» (' + opt.filter(t => /지역|Location/.test(t)).join(',') + ')');
+  const copt = await pg.$$eval('[data-cs-c] option', os => os.map(o => o.textContent));
+  is(copt.some(t => /^지역/.test(t)), '조건으로 바꾸기 — 조건 열 목록에도 «지역»');
+  await pg.keyboard.press('Escape'); await pg.waitForTimeout(200);
+  if (await pg.$('.mask')) await pg.evaluate(() => { const m = document.querySelector('.mask'); m && m.remove(); });
+  /* 지도 위치 — 대만 P1 이 국내 'P'(평택)를 빌려 오지 않는다 · 저장은 그 나라 전용 열쇠로 */
+  await ctx.route('**/assets/geo/*.json*', r => { const f = new URL(r.request().url()).pathname.split('/').pop();
+    const fp = path.join(ROOT, 'assets', 'geo', f); return fs.existsSync(fp) ? r.fulfill({ status:200, contentType:'application/json', body:fs.readFileSync(fp, 'utf8') }) : r.fulfill({ status:404, body:'' }); });
+  await pg.click('.tab[data-tab=site]');
+  await pg.waitForFunction(() => !!document.querySelector('#geoBox table tbody tr'), null, { timeout:15000 }).catch(() => {});
+  const g = await pg.evaluate(() => Array.from(document.querySelectorAll('#geoBox tbody tr')).map(tr => ({ cc:tr.children[0].innerText, v:tr.children[1].innerText,
+    now:tr.children[3].innerText, key:(tr.querySelector('[data-gk]') || {}).value, i:tr.dataset.gi })));
+  const tw = g.find(r => r.cc === 'TW' && /^P1/.test(r.v)), kr = g.find(r => r.cc === 'KR' && /^P1/.test(r.v));
+  if (!tw || !kr) console.log('    (지도 위치 표)', JSON.stringify(g).slice(0, 600), (await pg.$eval('#geoBox', e => e.innerText)).slice(0, 300));
+  is(tw && /미지정/.test(tw.now), '대만 P1 은 국내 «P»(평택) 좌표를 쓰지 않는다 — 미지정 (' + (tw && tw.now) + ')');
+  is(kr && /정함/.test(kr.now) && /\bP\b/.test(kr.now), '국내 P1 은 그대로 «P» 자리 (' + (kr && kr.now) + ')');
+  is(tw && tw.key === 'TW:P', '대만 쪽 열쇠 제안은 «TW:P» — 같은 글자를 저장해 국내 평택을 옮기지 않게 (' + (tw && tw.key) + ')');
+  if (tw) {
+    const tr = '#geoBox tr[data-gi="' + tw.i + '"]';
+    await pg.fill(tr + ' [data-gk]', 'P'); await pg.fill(tr + ' [data-glat]', '24.8'); await pg.fill(tr + ' [data-glng]', '121.0');
+    await qlog(pg); await pg.click(tr + ' [data-gs]'); await pg.waitForTimeout(600);
+    const call = rpcs(await qlog(pg), 'geo_place_set')[0];
+    is(call && call.args.p_key === 'TW:P' && call.args.p_cc === 'TW', '«P» 를 적어 저장해도 다른 나라(KR)의 자리이면 «TW:P» 로 저장한다 (' + (call && call.args.p_key) + ')');
+    is(await pg.evaluate(() => { const P = window.__DB.geo_places.find(x => x.key === 'P'); return P && P.cc === 'KR' && P.lat === 36.99; }), '국내 «P»(평택) 자리는 그대로');
+  }
+  /* core 판정 — 그 나라 지도(adm.cc)에서는 다른 나라 자리를 건너뛰고, 나라 전용 열쇠를 먼저 본다 */
+  const pf = await pg.evaluate(() => { const PL = { P:{ key:'P', lat:37, lng:127, cc:'KR' }, 'TW:P':{ key:'TW:P', lat:24.8, lng:121, cc:'TW' } };
+    const a = GST.geo.placeOf({ fab:'P1' }, { P:PL.P }, { cc:'TW', f:[] }), b = GST.geo.placeOf({ fab:'P1' }, PL, { cc:'TW', f:[] }), c = GST.geo.placeOf({ fab:'P1' }, PL, { cc:'KR', f:[] });
+    return [a, b && b.key, c && c.key]; });
+  is(pf[0] === null && pf[1] === 'TW:P' && pf[2] === 'P', 'placeOf — 대만은 KR 자리를 안 쓰고(null) · TW:P 를 찾고 · 국내는 P (' + JSON.stringify(pf) + ')');
   is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
   await ctx.close();
 }

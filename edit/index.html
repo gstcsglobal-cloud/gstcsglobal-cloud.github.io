@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=178"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=179"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -454,7 +454,8 @@ const TABS = [
     quick:[ {k:'sn', l:'S/N · CODE', cols:['sn','code'], t:'text', ph:'예: GBWS-0000'},
             {k:'country', l:'운영단위 (Country)', cols:['country'], t:'pick'},
             {k:'cust', l:'고객사', cols:['customer'], t:'pick'},
-            {k:'fab', l:'Line 1 / FAB', cols:['fab'], t:'pick'},
+            {k:'loc', l:'지역', cols:['location'], t:'pick'},
+            {k:'fab', l:'라인 (Line 1 / FAB)', cols:['fab'], t:'pick'},
             {k:'model', l:'모델', cols:['model'], t:'text'},
             {k:'state', l:'설비상태', cols:['state'], t:'pick'} ],
     groups:[ ['식별', ['code','sn','model','burner','type','pjt','state']],
@@ -544,16 +545,19 @@ const S = {
 };
 const TAB = () => TAB_BY[S.tab];
 
-/* ---------- 이름표 — SPEC 별칭이 정본 ----------
-   미러 표의 열(snake) ← SPEC 필드 키. 이름표 = 별칭[0], 옆에 나머지 별칭을 작게(국내·해외 양식이 다른 이름을 쓴다). */
+/* ---------- 이름표 — 화면 글자는 GST.SM.label(한국어 · core 한 곳), 엑셀 머리글은 SPEC 별칭[0] ----------
+   미러 표의 열(snake) ← SPEC 필드 키. 옆에 양식 머리글(별칭)을 작게(국내·해외 양식이 다른 이름을 쓴다).
+   ⚠ v187 — 예전에는 이름표가 별칭[0] 이라 설치현황의 지역이 «Location» 으로만 떠, 「지역 칸이 없다」로 읽혔다(사용자 보고).
+     엑셀 받기 머리글(std)은 그대로 별칭[0] 이다 — 표준 템플릿(v138)·옛 받은 파일과 같은 글자여야 다시 올릴 때 맞물린다. */
 const LBL = {};
 TABS.forEach(t => {
   LBL[t.id] = {};
   const sp = t.spec && GST.SM && GST.SM.SPEC && GST.SM.SPEC[t.spec];
   if(!sp) return;
   Object.keys(sp.fields).forEach(f => {
-    const a = [].concat(sp.fields[f]);
-    LBL[t.id][GST._snake(f)] = { name:String(a[0]).replace(/\s*\n\s*/g,' '), alt:a.slice(1).join(' · ') };
+    const a = [].concat(sp.fields[f]).map(x => String(x).replace(/\s*\n\s*/g,' '));
+    const nm = GST.SM.label ? GST.SM.label(t.spec, f) : a[0];
+    LBL[t.id][GST._snake(f)] = { name:nm, std:a[0], alt:a.filter(x => GST.SM.norm(x) !== GST.SM.norm(nm)).join(' · ') };
   });
 });
 TABS.forEach(t => { Object.keys(t.labels || {}).forEach(c => { LBL[t.id][c] = { name:t.labels[c], alt:c }; }); });
@@ -1854,7 +1858,7 @@ function blankCols(t){
 function bulkHead(t, cols){
   const used = new Set([NK]);
   return cols.map(c => {
-    let h = label(t, c).name;
+    let h = label(t, c).std || label(t, c).name;
     if(used.has(GST.SM.norm(h))) h += ' (' + c + ')';
     used.add(GST.SM.norm(h));
     return h;
@@ -1869,6 +1873,8 @@ function headMap(t, cols){
   cols.forEach(c => add(c, c));
   const sp = t.spec && GST.SM.SPEC[t.spec];
   if(sp) Object.keys(sp.fields).forEach(f => { const c = GST._snake(f); if(cols.indexOf(c) >= 0) [].concat(sp.fields[f]).forEach(a => add(a, c)); });
+  /* 화면 이름표(한국어 · 「지역」)를 머리글로 적어 온 파일도 받는다 — 사람은 화면에서 본 이름으로 양식을 만든다 */
+  cols.forEach(c => { const lb = label(t, c); if(lb.std) add(lb.name, c); });
   weak.forEach((c, k) => { if(!amb.has(k)) m.set(k, c); });
   return m;
 }
@@ -1940,6 +1946,10 @@ function bulkGuide(t, n, what, blank){
     [''],
     ['반영한 내용은 「변경 이력」 탭에 줄마다 행 전체로 남고, 그 묶음을 통째로 되돌릴 수 있습니다.']
   ];
+  /* 머리글은 양식의 정본 표기(Location)이고 화면 이름은 한국어(지역)다 — 둘을 짝지어 적는다(v187 · 「지역 칸이 없다」).
+     머리글을 화면 이름으로 바꿔 적어 와도 받는다(headMap). */
+  const pair = bulkCols(t).map(c => label(t, c)).filter(lb => lb.std && GST.SM.norm(lb.std) !== GST.SM.norm(lb.name));
+  if(pair.length) g.push([''], ['머리글 = 화면 이름 (머리글을 화면 이름으로 바꿔 적어도 읽습니다)'], ...pair.map(lb => ['·', lb.std + ' = ' + lb.name]));
   if(t.note) g.push([''], ['참고', t.note]);
   return g;
 }
@@ -3425,19 +3435,22 @@ async function geoRender(){
   (SITE.groups.inst || []).forEach(g => {
     const loc = vs(g.location).trim(), fab = vs(g.fab).trim(), op = vs(g.country).trim();
     const cty = GST.ORG.country(op) || GST.ORG.country(vs(g.customer)) || GST.ORG.country(fab), cc = GST.geo.ccOfCty(cty);
-    const x = { loc:loc, campus:GST.ORG.campus(loc, fab, op) || '', fab:fab, cty:cty };
+    const x = { loc:loc, campus:GST.ORG.campus(loc, fab, op) || '', fab:fab, cty:cty, cc:cc };
     const k = cc + '\u0001' + (loc || x.campus || fab || '—');
     const e = M.get(k) || { x:x, cc:cc, n:0 }; e.n += g.n; M.set(k, e); });
   const L = Array.from(M.values()).filter(e => e.cc);
   await Promise.all(Array.from(new Set(L.map(e => e.cc))).map(async cc => { if(!GEOE.adm[cc]) try{ GEOE.adm[cc] = await GST.geo.load(cc); }catch(e){ GEOE.adm[cc] = null; } }));
   L.forEach(e => { e.pl = GST.geo.placeOf(e.x, GEOE.PL, GEOE.adm[e.cc]);
-    const v = GST.geo.norm(e.x.loc || e.x.campus || e.x.fab); e.sug = (e.pl && e.pl.src === 'db') ? e.pl.key : (/\d$/.test(v) && /^[A-Z]+\d+[A-Z]?$/.test(v) ? v.replace(/\d+[A-Z]?$/, '') : v.replace(/\(.*?\)/g, '')); });
+    const v = GST.geo.norm(e.x.loc || e.x.campus || e.x.fab); e.sug = (e.pl && e.pl.src === 'db') ? e.pl.key : (/\d$/.test(v) && /^[A-Z]+\d+[A-Z]?$/.test(v) ? v.replace(/\d+[A-Z]?$/, '') : v.replace(/\(.*?\)/g, ''));
+    /* v187 — 그 열쇠를 다른 나라가 이미 쓰고 있으면(국내 'P'=평택 ↔ 대만 PSMC 'P1') 이 나라 전용 열쇠로 — 같은 글자를 저장하면 남의 나라 위치를 옮긴다 */
+    if(!(e.pl && e.pl.src === 'db')){ const o = GEOE.PL[e.sug]; if(o && o.cc && e.cc && o.cc !== e.cc) e.sug = e.cc + ':' + e.sug; } });
   L.sort((a, b) => (!!a.pl - !!b.pl) || b.n - a.n);
   const un = L.filter(e => !e.pl), canW = GST.canWrite && GST.canWrite();
   const admOpts = cc => { const a = GEOE.adm[cc]; return a ? a.f.filter(f => f.c).map(f => '<option value="' + f.c[1] + ',' + f.c[0] + '">' + esc((f.n.ko || f.n.en) + (f.n.ko && f.n.en ? ' · ' + f.n.en : '')) + '</option>').join('') : ''; };
   box.innerHTML = '<h3 style="margin:0 0 6px">지도 위치</h3>'
     + '<p class="hint">글로벌 현황의 나라 지도가 설비를 놓는 자리입니다. 설치현황의 <b>지역 → 단지 → FAB</b> 값으로 찾고, 정해 둔 좌표가 없으면 행정구역 이름과 정확히 같은 값만 저절로 놓습니다. '
-    + '나머지는 «위치 미지정»으로 지도 아래에 대수와 함께 뜹니다. <b>P1·P2</b> 처럼 끝에 숫자가 붙은 단지 코드는 열쇠를 <b>P</b> 로 정하면 한꺼번에 갑니다.</p>'
+    + '나머지는 «위치 미지정»으로 지도 아래에 대수와 함께 뜹니다. <b>P1·P2</b> 처럼 끝에 숫자가 붙은 단지 코드는 열쇠를 <b>P</b> 로 정하면 한꺼번에 갑니다. '
+    + '같은 글자를 다른 나라가 쓰면(국내 P ↔ 대만 P1) <b>TW:P</b> 처럼 나라를 붙인 열쇠로 따로 정합니다 — 다른 나라 지도에는 서지 않습니다.</p>'
     + (GEOE.err ? '<div class="banner warn">' + esc(GEOE.err) + '</div>' : '')
     + (un.length ? '<div class="banner warn">지도에 못 놓은 값 ' + un.length + '개 · ' + un.reduce((a, e) => a + e.n, 0).toLocaleString() + '대 — 아래에서 정하세요.</div>' : '<p class="hint">설치현황의 모든 값이 지도에 놓입니다.</p>')
     + '<table class="dt vm-t" data-gst-nosn><thead><tr><th>나라</th><th>지역 · 단지 · FAB</th><th>대수</th><th>지금 위치</th><th>열쇠</th><th>행정구역에서 고르기</th><th>위도</th><th>경도</th><th></th></tr></thead><tbody>'
@@ -3453,8 +3466,10 @@ async function geoRender(){
     + '</tbody></table>';
   box.querySelectorAll('[data-ga]').forEach(sel => sel.onchange = () => { const tr = sel.closest('tr'), v = sel.value.split(','); if(v.length === 2){ tr.querySelector('[data-glat]').value = (+v[0]).toFixed(3); tr.querySelector('[data-glng]').value = (+v[1]).toFixed(3); } });
   const save = async (i, clear) => { const e = L[i], tr = box.querySelector('[data-gi="' + i + '"]');
-    const key = GST.geo.norm(tr.querySelector('[data-gk]').value), lat = clear ? null : parseFloat(tr.querySelector('[data-glat]').value), lng = clear ? null : parseFloat(tr.querySelector('[data-glng]').value);
+    let key = GST.geo.norm(tr.querySelector('[data-gk]').value); const lat = clear ? null : parseFloat(tr.querySelector('[data-glat]').value), lng = clear ? null : parseFloat(tr.querySelector('[data-glng]').value);
     if(!key) return snack('열쇠를 적으세요', {err:true});
+    /* 다른 나라 자리를 덮지 않는다 — 그 열쇠가 다른 나라로 정해져 있으면 이 나라 전용 열쇠(TW:P)로 저장한다 */
+    { const o = GEOE.PL[key]; if(key.indexOf(':') < 0 && o && o.cc && e.cc && o.cc !== e.cc) key = e.cc + ':' + key; }
     if(!clear && !(isFinite(lat) && isFinite(lng))) return snack('위도·경도를 적거나 행정구역에서 고르세요', {err:true});
     try{ await rpc('geo_place_set', { p_key:key, p_lat:lat, p_lng:lng, p_label:e.x.loc || e.x.campus || e.x.fab, p_cc:e.cc });
       snack(clear ? key + ' 위치를 비웠습니다' : key + ' 위치를 저장했습니다 — 글로벌 현황을 새로고침하면 반영됩니다'); geoRender();
