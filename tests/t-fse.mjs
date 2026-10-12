@@ -163,7 +163,18 @@ is(V('GBWS-X5001','Left','AIR').ver==='N/A' && V('GBWS-X5001','Left','O2').ver==
 is(V('DBW-X001','Left','LNG').ver==='MKP R0' && V('DBW-X001','Left','AIR').ver==='N/A', 'DRAGON 교체 이력 없음 = MKP R0 · AIR MFC 없음(N/A)');
 is(V('SWS-X001','Single','LNG').how==='etc', 'SWS·GPWS 는 판정하지 않는다');
 const x3=V('GBWS-X003','Right','LNG');
-is(x3.ver==='MRC F/F1' && x3.q && x3.how==='date' && x3.maker==='MRC', 'S/N 없는 교체(2025-06-01) → «MRC F/F1» 확인 필요');
+/* v193 — «확인 필요»는 없다(사용자: 버전표가 전부 추정해 뒀다). 새 버전(F1 250313) 뒤 S/N 없는 교체는 (교체일 − 교체 리드타임 90일)의 버전 */
+is(x3.ver==='MRC F' && !x3.q && x3.how==='datel' && x3.maker==='MRC' && x3.lead===90, 'S/N 없는 교체(2025-06-01) − 90일 = 2025-03-03 → «MRC F» 추정 (확인 필요 아님 · '+x3.ver+'/'+x3.how+')');
+G.params.rows={mfc_lead_rep:{value:30}};
+{ const x30=G.FSE.ver(D,u('GBWS-X003','Right'),'LNG',null,G.FSE.P());
+  is(x30.ver==='MRC F1' && x30.how==='datel' && x30.lead===30, '교체 리드타임을 30일로 바꾸면 2025-05-02 → MRC F1 (판정 기준을 따라간다)'); }
+G.params.rows={};
+{ const P0=G.FSE.P(), J=p=>G.FSE.judge(Object.assign({mfcIn:'',mfcOut:'',src:''},p),P0);
+  is(J({maker:'MKP',date:'2026-09-01'}).ver==='MKP R1' && J({maker:'MKP',date:'2026-09-01'}).how==='datel' && J({maker:'MKP',date:'2026-12-01'}).ver==='MKP R2',
+     'MKP — R2(260703) 뒤 S/N 없는 교체도 −90일로 추정 (09-01 → R1 · 12-01 → R2)');
+  is(J({maker:'MRC',date:'2025-03-01'}).ver==='MRC F' && J({maker:'MRC',date:'2025-03-01'}).how==='date', '새 버전 «전» 교체는 지금처럼 확정 (2025-03-01 → MRC F)');
+  is(J({maker:'HORIBA',date:'2026-05-26'}).ver==='HORIBA' && !J({maker:'HORIBA',date:'2026-05-26'}).q, '버전 규칙 없는 제조사(HORIBA)는 제조사 이름이 버전 — 확인 필요 아님');
+  is(J({maker:'',date:'2026-05-26'}).how==='mk' && J({maker:'',date:'2026-05-26'}).q, '제조사를 모르면 그때만 판정 불가(how mk)'); }
 is(V('GBWS-X003','Right','LNG','2024-12-31').ver==='MRC F' && !V('GBWS-X003','Right','LNG','2024-12-31').q, '기준일 전 교체(2024-05-01) → MRC F 로 확정');
 is(G.FSE.mfcSn('623026703001').ymd===260703 && G.FSE.mfcSn('623025901001').ymd===250901 && G.FSE.mfcSn('62302510A001')===null, 'MKP 날짜코드 — 월 1~9·A~C');
 /* 판정 기준을 바꾸면 따라간다 — 숫자를 코드에 박지 않았다 */
@@ -178,6 +189,13 @@ G.FSE.enrich(D,[{snk:'GBWSX003',date:'2025-06-03',code:'P-MFC-LM',ch:'',snIn:'25
 is(D.enriched===1 && V('GBWS-X003','Right','LNG').ver==='MRC F1' && V('GBWS-X003','Right','LNG').src==='mat', '±3일 안의 자재 줄 하나로 채운다 → F1 (S/N)');
 is(V('GBWS-X001','Left','LNG').ver==='MRC F1', '원장 칸이 이미 차 있으면 자재 줄로 덮지 않는다');
 G.FSE.bind(D); G.FSE.enrich(D,[]); is(D.enriched===1, '묶음을 다시 입혀도 채운 수를 잃지 않는다');
+/* 자재실적이 뒤에서 마저 오면 처음부터 다시 채운다(v193 · 첫 그림은 최근 12개월) — 앞서 채운 칸을 걷고 다시 · 같은 자재 줄을 두 번 쓰지 않는다 */
+G.FSE.reenrich(D,[]);
+is(D.enriched===0 && V('GBWS-X003','Right','LNG').how==='datel' && V('GBWS-X001','Left','LNG').ver==='MRC F1', 'reenrich — 자재 줄이 없으면 채운 칸을 걷는다(원장 칸은 그대로)');
+G.FSE.reenrich(D,[{snk:'GBWSX003',date:'2025-06-03',code:'P-MFC-LM',ch:'',snIn:'250520-77A701_F',snOut:'190101-01A701_S'}]);
+is(D.enriched===1 && V('GBWS-X003','Right','LNG').ver==='MRC F1' && V('GBWS-X003','Right','LNG').src==='mat', 'reenrich — 더 온 자재 줄로 다시 채운다');
+G.FSE.reenrich(D,[{snk:'GBWSX003',date:'2025-06-03',code:'P-MFC-LM',ch:'',snIn:'250520-77A701_F',snOut:'190101-01A701_S'}]);
+is(D.enriched===1 && D.parts.filter(p=>p.src==='mat').length===1, 'reenrich 를 두 번 불러도 같은 결과 (한 자재 줄은 한 교체에만)');
 
 console.log('[5] 집계');
 const evs=al.filter(e=>G.FSE.match(e,{axis:'code',vals:['BFE'],aw:'Alarm'},D));

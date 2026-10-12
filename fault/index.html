@@ -1138,6 +1138,10 @@ async function loadData(){ GST.skeleton(true);
     status.textContent=GST.okText ? GST.okText(ROWS.length.toLocaleString()) : '✅ '+new Date().toLocaleString('ko-KR');   // 행 수는 관리자에게만(v179)
     if(fetched.cached){status.textContent=GST.staleText(fetched.ageMin);status.style.color='#fbbf24';}
     _faultReady&&_faultReady();            // 알람 분석이 설치현황 조인을 기다린다(v189)
+    /* 자재실적이 뒤에서 마저 오면(첫 그림은 최근 12개월 · v127) 알람 분석의 MFC S/N 보충을 처음부터 다시 한다(v193) —
+       첫 보충은 창 안의 자재 줄만 봐서 창 밖 교체의 S/N 을 못 찾고 «확인 필요»로 남겼다. */
+    try{ if(typeof FSEX!=='undefined' && FSEX.D && GST.FSE.reenrich){ GST.FSE.reenrich(FSEX.D, fseMats()); if(document.body.dataset.secOn==='alarm') fseRender(); } }
+    catch(e2){ console.warn('[알람 분석] S/N 보충 다시 하기', e2); }
   }catch(e){ GST.skeleton(false); _faultReady&&_faultReady();
     status.className='status err'; status.textContent='❌ '+GST.failNote(e);   // 부류별 한 줄 · 원문은 관리자에게만(v135)
   }
@@ -2981,12 +2985,12 @@ function fseTop(D, FS, rank, y, perOn, P, evsAll){
 /* 타임라인 — 고른 설비의 챔버마다 한 줄: 위 = 달별 알람(원 크기), 아래 = 관심 부품 교체 기호 · TBM */
 const FSE_SYM=['▲','◆','■','●','★','✚'];
 /* MFC 버전 색 — 같은 버전은 어느 설비에서나 같은 색(띠·범례). 판정은 GST.FSE.ver(정본) · 여기는 «색과 이름»뿐이다 */
-const FSE_VC={'MRC G':'#7F8BA6','MRC F':'#36C2B4','MRC F1':'#5B8CFF','MRC F/F1':'#4FA6D9','MKP R0':'#A67CFF','MKP R1':'#E8A25A','MKP R2':'#E0609A','MKP R1/R2':'#E4818A'};
+const FSE_VC={'MRC G':'#7F8BA6','MRC F':'#36C2B4','MRC F1':'#5B8CFF','MKP R0':'#A67CFF','MKP R1':'#E8A25A','MKP R2':'#E0609A','HORIBA':'#C9A86A'};
 const fseVc=v=>FSE_VC[v]||'#6B768F';
 const fseVName=v=>String(v||'—');   /* 버전 이름은 core 가 제조사째 낸다(«MRC F1» · «MKP R1») */
 const fseVEst=v=>v && v.how!=='sn' && v.how!=='na' && v.how!=='etc';          // S/N 날짜코드가 아니면 «추정»(빗금)
-const fseVs=v=>{ const h=v&&v.how; if(h==='sn') return ft('vs_sn'); if(h==='date') return ft(v.q?'vs_amb':'vs_date');
-  if(h==='fabin'||h==='turnon'||h==='dragon'||h==='q') return ft('vs_'+h); return ''; };
+const fseVs=v=>{ const h=v&&v.how; if(h==='sn') return ft('vs_sn'); if(h==='date') return ft('vs_date'); if(h==='datel') return ft('vs_datel');
+  if(h==='fabin'||h==='turnon'||h==='dragon'||h==='q'||h==='mk') return ft('vs_'+h); return ''; };
 /* 글자 폭 어림(SVG 문자열을 만들 때는 잴 수 없다) — 한글·한자·가나는 글자 크기만큼, 나머지는 0.58 */
 const fseTw=(t,fs)=>{ let w=0; for(const ch of String(t)) w+=/[\u1100-\u11ff\u3000-\u9fff\uac00-\ud7af\uff00-\uffef]/.test(ch)?fs:fs*.58; return w; };
 function fseTl(D, FS, rank){
@@ -3154,9 +3158,10 @@ function fseMfc(D, FS, evs, units, rank, P, y){
   /* 판정 근거 — 관리 설비 × 유체 */
   const how={}; let q=0, nAll=0;
   mu.forEach(u=>F2.FLUIDS.forEach(f=>{ const v=F2.ver(D,u,f,null,P); if(v.how==='na'||v.how==='etc') return; nAll++; how[v.how]=(how[v.how]||0)+1; if(v.q) q++; }));
-  const HO=['sn','date','fabin','turnon','dragon','q'];
-  const hb=HO.filter(h=>how[h]).map(h=>fseBarRow(ft('how_'+h), how[h]/(nAll||1), fseN(how[h])+' · '+Math.round(how[h]/(nAll||1)*100)+'%')).join('')
-    +(q?fseBarRow(ft('how_amb'), q/(nAll||1), fseN(q)+' · '+Math.round(q/(nAll||1)*100)+'%', true):'');
+  /* «확인 필요(두 버전 중 하나)» 막대는 없앴다(v193) — S/N 없이 새 버전 뒤에 바꾼 줄도 교체 리드타임으로 추정한다(사용자 버전표와 같은 방식).
+     판정이 정말 안 되는 것(반입일·제조사 없음)만 붉게 남는다 */
+  const HO=['sn','date','datel','fabin','turnon','dragon','q','mk'];
+  const hb=HO.filter(h=>how[h]).map(h=>fseBarRow(ft('how_'+h), how[h]/(nAll||1), fseN(how[h])+' · '+Math.round(how[h]/(nAll||1)*100)+'%', h==='q'||h==='mk')).join('');
   const notes=[D.swapped?ft('swap',{n:fseN(D.swapped)}):'', D.enriched?ft('src_mat',{n:fseN(D.enriched)}):''].filter(Boolean);
   /* 우선순위 — S/N 단위: 1 = 순위표 상위 N · 2 = 기간 내 1회 이상 · 3 = 그 밖 관리 설비 */
   const snRank=FS.unit==='sn'?rank:(()=>{ const m={}; rank.forEach(r=>{ const s=D.units[r.k].snk; if(!m[s]) m[s]=r; }); return Object.values(m); })();
@@ -3192,7 +3197,7 @@ async function fseExport(kind, list, y, perOn, ctx){
   try{ await GST.xlsxLibLoad(); }catch(e){ GST.capToast&&GST.capToast(String(e&&e.message||e)); return; }
   const vk=(FSEX.view&&FSEX.view.keys)||[], fl=kind==='top'?fseVFl(D,vk):(D.hasMfc?GST.FSE.FLUIDS:[]);
   const vcols=[]; fl.forEach(f=>{ vcols.push('MFC '+f+' '+ft('x_cols_ver'), 'MFC '+f+' '+ft('x_cols_how'), 'MFC '+f+' '+ft('x_cols_sn'), 'MFC '+f+' '+ft('x_cols_dt')); });
-  const vcells=u=>{ const o=[]; fl.forEach(f=>{ const v=GST.FSE.ver(D,u,f,null,P); o.push(v.ver+(v.q&&!/\?$/.test(v.ver)?'?':''), ft('how_'+(v.how||'q')), v.sn||'', v.how==='sn'||v.how==='date'?(v.date||''):''); }); return o; };
+  const vcells=u=>{ const o=[]; fl.forEach(f=>{ const v=GST.FSE.ver(D,u,f,null,P); o.push(v.ver+(v.q&&!/\?$/.test(v.ver)?'?':''), ft('how_'+(v.how||'q')), v.sn||'', v.how==='sn'||v.how==='date'||v.how==='datel'?(v.date||''):''); }); return o; };
   const cnt=(snk,ch,all)=>{ const L=(all?D.ev:ctx&&ctx.evs||[]).filter(e=>e.snk===snk&&(ch==null||e.ch===ch)&&e.alarm&&GST.FSE.match(e,FS,D)); return L; };
   let cols, rows=[], name;
   if(kind==='top'){
