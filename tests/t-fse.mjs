@@ -236,6 +236,9 @@ await page.click('#gstSecNav .gst-sec-tab[data-id="alarm"]');
 await page.waitForFunction(()=>document.getElementById('fseBody')&&document.getElementById('fseBody').style.display!=='none',null,{timeout:20000});
 await page.waitForTimeout(600);
 is(await page.evaluate(()=>window.__fseReads)===1, '탭을 열면 한 번 읽는다');
+is(await page.evaluate(()=>document.body.getAttribute('data-sec-on')==='alarm' && !document.body.matches('[data-sec]') && document.querySelector('[data-sec="alarm"]').id==='fseSec'),
+  '탭 표식은 body[data-sec-on] — body 가 [data-sec] 로 잡히지 않는다(섹션 찾기가 body 를 집던 결함)');
+is(await page.evaluate(()=>getComputedStyle(document.querySelector('.kpis:not(.fse-kpis)')).display==='none'), '알람 분석 탭에서는 수선실적 KPI 줄을 감춘다');
 const k1=async()=>page.evaluate(()=>Number((document.getElementById('fk1')||{}).textContent.replace(/,/g,'')));
 is(await k1()===17, '«모든 알람» — 발생 건수 17 (원장 알람 줄 전부 · S/N·날짜 없는 줄 제외) ('+await k1()+')');
 const chips=await page.$$eval('#fseBar .fse-chip',b=>b.map(x=>x.textContent.trim()));

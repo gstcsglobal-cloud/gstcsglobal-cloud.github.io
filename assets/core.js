@@ -5599,7 +5599,9 @@ GST.sectionNav = function(defs){
   function show(id){
     cur = id;
     try{ sessionStorage.setItem(storeKey, id); }catch(e){}
-    try{ document.body.dataset.sec = id; }catch(e){}   // 탭마다 다른 머리(예: 알람 분석은 페이지 KPI 줄을 감춘다 · v189)
+    /* 탭마다 다른 머리(예: 알람 분석은 페이지 KPI 줄을 감춘다 · v189).
+       ⚠ 이름이 data-sec 이면 안 된다 — 섹션 표식과 같아 querySelector('[data-sec="…"]') 가 body 를 잡는다(실제로 겪었다). */
+    try{ document.body.setAttribute('data-sec-on', id); }catch(e){}
     document.querySelectorAll('[data-sec]').forEach(function(el){
       el.style.display = (el.dataset.sec===id) ? '' : 'none';
     });

@@ -329,7 +329,7 @@ console.log('[11] 판정 기준 — 코드의 기준 숫자를 화면에서 고�
 const pp = await open('/targets/', clearDB);
 const par = await pp.evaluate(() => ({ n:document.querySelectorAll('#cPar tr[data-p]').length, keys:Object.keys(GST.PARAMS).length,
   pend:document.querySelectorAll('#cPar .ds-note').length, rw:JSON.stringify(GST.params.riskW()), cw:JSON.stringify(GST.RISK_W) }));
-is(par.n === par.keys && par.n === 19, '판정 기준 19개가 표로 (' + par.n + ')');
+is(par.n === par.keys && par.n === 27, '판정 기준 27개가 표로 (' + par.n + ') — v189 에 MFC 버전 6 · 알람 분석 2 가 더해졌다');
 is(par.rw === par.cw, '위험 점수 기본값 = 지금 core 의 GST.RISK_W 그대로 — 표가 비면 통합해도 숫자가 안 움직인다');
 const HUB = fs.readFileSync(ROOT + '/hub/index.html', 'utf8');
 const RULE0 = { badX:1.5, badD:5, warnX:1.2, warnD:3, repBad:3, repWarn:1 };   // v165~v171 관제에 박혀 있던 값 — 기본값이 이것과 같아야 표가 빌 때 숫자가 그대로다
@@ -347,7 +347,7 @@ const ps = await pp.evaluate(() => ({ r:window.__RPC.filter(r => r.fn === 'param
 is(ps.r && ps.r.args.p_key === 'band_bm_per100' && ps.r.args.p_value === 60 && ps.r.args.p_at === null, 'param_save(band_bm_per100 · 60 · 처음이라 p_at null)');
 is(ps.ch && ps.reset, '바뀐 기준에 «바뀜» 표시 · 「기본값으로」 단추');
 const live = await pp.evaluate(() => Array.from(document.querySelectorAll('#cPar .ds-pill')).map(e => e.textContent).filter(x => /^적용 중$/.test(x)).length);
-is(live === 3, '세 묶음(주의 띠 · 관제 신호 · 위험 점수) 모두 «지금 적용 중» — 실제로 읽는 화면이 있다');
+is(live === 5, '다섯 묶음(주의 띠 · 관제 신호 · 위험 점수 · MFC 버전 · 알람 분석) 모두 «지금 적용 중» — 실제로 읽는 화면이 있다');
 /* 관제 신호를 바꾸면 관제의 판정과 «i» 문구가 같이 바뀐다 */
 await pp.fill('#cPar tr[data-p="sig_bad_d"] [data-f="pv"]', '20'); await pp.click('#cPar tr[data-p="sig_bad_d"] [data-pa="save"]'); await pp.waitForTimeout(300);
 await pp.fill('#cPar tr[data-p="risk_rep_days"] [data-f="pv"]', '21'); await pp.click('#cPar tr[data-p="risk_rep_days"] [data-pa="save"]'); await pp.waitForTimeout(300);

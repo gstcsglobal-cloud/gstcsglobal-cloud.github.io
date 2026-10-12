@@ -165,7 +165,7 @@ canvas{cursor:pointer}
 .fse-kpis{margin-bottom:16px}
 .fse-kpis .up{color:var(--bad)} .fse-kpis .dn{color:var(--ok)}
 .fse-th{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px !important}
-body[data-sec="alarm"] .kpis:not(.fse-kpis){display:none}   /* 알람 분석 탭에서는 수선실적 KPI 줄을 감춘다 — 이 탭의 숫자가 아니다 */
+body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알람 분석 탭에서는 수선실적 KPI 줄을 감춘다 — 이 탭의 숫자가 아니다 · theme.css 의 .kpis{display:grid !important} 를 이겨야 한다 */
 .fse-th h3{margin:0}
 .fse-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .fse-sub2{font-weight:600;color:var(--txt-2,var(--mut));font-size:12px;margin-left:6px}
