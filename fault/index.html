@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=186"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=187"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -208,8 +208,8 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 .grid2-trend>*,#fseMfc>*{min-width:0}
 #fseSec table{white-space:normal}
 #fseSec th{word-break:keep-all;vertical-align:bottom}
-#fseSec td{overflow-wrap:anywhere}
-.fse-tlw svg{width:100%;height:auto}
+#fseSec td{overflow-wrap:break-word;word-break:keep-all}   /* v194 — 띄어쓰기에서만 줄을 바꾼다(anywhere 는 S/N·날짜를 글자 중간에서 끊었다 «GBWS / -X056») */
+.fse-tlw svg{max-width:100%;height:auto}   /* v194 — 늘리지 않는다(그린 폭 그대로 · 좁을 때만 줄인다) */
 .fse-vrow{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
 .fse-vc{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-ink,var(--accent));
   font-size:12px;font-weight:650;padding:3px 4px 3px 10px;border-radius:99px;max-width:260px}
@@ -220,13 +220,13 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 .fse-vst{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--txt-2,var(--mut))}
 .fse-vst.auto{border-color:color-mix(in srgb,var(--gold,#c9a85a) 55%,transparent);color:var(--gold,#c9a85a)}
 .fse-aff tr[data-fai]{cursor:pointer}
-.fse-aff tr.on td{background:var(--accent-soft)}
+.fse-aff tr.on td:first-child{box-shadow:inset 2px 0 0 var(--accent);font-weight:650}   /* v194 — 줄 전체를 칠하지 않는다(사용자 「이렇게 크게 하이라이트 되어야 할까?」) · 왼쪽 선 한 줄과 단추가 «보는 중»을 말한다 */
 .fse-aff td.c,.fse-aff th.c{text-align:center}
 .fse-aff td.n,.fse-aff th.n{text-align:right}
 .fse-mut{color:var(--txt-muted,var(--mut));font-weight:400}
 .fse-rec{color:var(--gold,#c9a85a)}
 .fse-vb{border:1px solid var(--line);background:var(--surface);color:var(--txt-2,var(--mut));font:inherit;font-size:11.5px;padding:3px 10px;border-radius:99px;cursor:pointer;white-space:nowrap}
-.fse-vb.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink,var(--accent));font-weight:700}
+.fse-vb.on{border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:transparent;color:var(--accent-ink,var(--accent));font-weight:650}
 .fse-vcell div{white-space:nowrap}
 .fse-vf{font-size:10px;color:var(--txt-muted,var(--mut));margin-right:4px}
 .fse-rl{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 12px;margin-top:8px}
@@ -236,8 +236,36 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 .fse-raw .fse-row label{font-size:12.5px;display:inline-flex;align-items:center;gap:4px;margin-right:10px}
 .fse-mfcoff{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--txt-2,var(--mut))}
 @media(max-width:1100px){#fseMfc{grid-template-columns:1fr}.fse-pri{grid-template-columns:1fr}}
+/* v194 — 배율·배치 (사용자 「이 탭 전체적으로 배율, 배치 재검토해」)
+   · KPI 다섯 장은 한 줄을 다 쓴다(theme.css 의 .kpis 는 6칸이라 다섯 장이면 오른쪽 한 칸이 빈다)
+   · 요약 줄 = 발생 추이 | 발생 설비 비율 | 함께 교체한 부품 — «언제 · 어디서 · 무엇을 바꿨나»를 한눈에. 좁으면 둘 + 부품 표 한 줄
+   · 함께 교체한 부품 표는 줄 높이를 정하지 않는다 — 넓은 화면에서는 차트 카드 높이 안에서 스크롤(절대 위치 · v183 확인 사항과 같은 방식)
+   · 설비 타임라인 | 이력 = 3:2 (타임라인이 달 축이라 더 넓어야 한다) · 좁으면 위아래로 */
+.kpis.fse-kpis{grid-template-columns:repeat(5,minmax(0,1fr)) !important}
+@media(max-width:1250px){.kpis.fse-kpis{grid-template-columns:repeat(3,minmax(0,1fr)) !important}}
+@media(max-width:768px){.kpis.fse-kpis{grid-template-columns:repeat(2,minmax(0,1fr)) !important}}
+#fseSec .fse-g3{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(0,1.1fr);align-items:stretch}
+#fseAffCard{display:flex;flex-direction:column;margin:0}
+#fseAffCard .fse-th{margin-bottom:8px !important}
+.fse-affbox{position:relative;flex:1 1 auto;min-height:220px}
+.fse-affbox>.fse-affw{position:absolute;inset:0;overflow:auto}
+.fse-aff td,.fse-aff th{padding:6px 8px !important}
+.fse-aff td.n,.fse-aff td.c,.fse-aff th{white-space:nowrap;overflow-wrap:normal}
+.fse-aff thead th{position:sticky;top:0;z-index:1}
+#fseSec .fse-g2{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}
+#fseHistCard td:nth-child(-n+3){white-space:nowrap;overflow-wrap:normal}   /* 날짜·챔버·구분만 한 줄 — 머리글까지 묶으면 좁은 칸(2/5)에서 표가 넘친다(CI 글꼴에서 13px) */
+#fseTopCard td,#fseTopCard th{padding-left:8px !important;padding-right:8px !important}
+#fseTopCard td:nth-child(-n+2),#fseTopCard td:nth-child(n+4):nth-child(-n+7){white-space:nowrap}   /* 순위·S/N·세부공정·건수·최근 발생은 한 줄(하이픈에서 끊기지 않게) */
+@media(max-width:1499px){
+  #fseSec .fse-g3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  #fseSec .fse-g3>#fseAffCard{grid-column:1/-1}
+  .fse-affbox{min-height:0}
+  .fse-affbox>.fse-affw{position:static;max-height:330px}
+  #fseSec .fse-g2{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:900px){#fseSec .fse-g3{grid-template-columns:minmax(0,1fr)}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=186">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=187">
 </head>
 <body>
 
@@ -414,7 +442,7 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
   <div id="fseBody" style="display:none">
     <div class="card fse-bar" id="fseBar"></div>
     <div class="kpis fse-kpis" id="fseKpis"></div>
-    <div class="grid2-trend">
+    <div class="grid2-trend fse-g3">
       <div class="trend-card" style="margin-bottom:0">
         <div class="trend-header"><h3 id="fseTrT"></h3><div id="fsePer"></div></div>
         <div class="trend-wrap"><canvas id="cFseTrend"></canvas></div>
@@ -423,10 +451,10 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
         <div class="trend-header"><h3 id="fseRateT"></h3><select class="fse-sel" id="fseRateAx" aria-label="axis"></select></div>
         <div class="trend-wrap"><canvas id="cFseRate"></canvas></div>
       </div>
+      <div class="card" id="fseAffCard"></div>
     </div>
-    <div class="card" id="fseAffCard" style="margin-bottom:16px"></div>
     <div class="tablecard" id="fseTopCard" style="margin-bottom:16px"></div>
-    <div class="grid2-trend">
+    <div class="grid2-trend fse-g2">
       <div class="card" id="fseTlCard"></div>
       <div class="card" id="fseHistCard"></div>
     </div>
@@ -2839,7 +2867,7 @@ function fseAff(D, A, V){
   const lim=FS.affAll?A.list.length:12, rows=A.list.slice(0,lim);
   const pct=r=>{ const v=Math.round(r*1000)/10; return v===0&&r>0?'<0.1%':v+'%'; };
   card.innerHTML='<div class="trend-header fse-th"><h3>'+fseEsc(ft('c_aff'))+' <span class="fse-sub2">'+fseEsc(ft('aff_sub',{n:fseN(A.nA),b:fseN(A.nB)}))+'</span></h3></div>'
-    +(rows.length?'<div class="tbl-wrap fse-affw"><table data-gst-nosn class="fse-aff"><thead><tr><th>'+fseEsc(ft('aff_th_p'))+'</th><th class="n">'+fseEsc(ft('aff_th_a'))+'</th>'
+    +(rows.length?'<div class="fse-affbox"><div class="tbl-wrap fse-affw"><table data-gst-nosn class="fse-aff"><thead><tr><th>'+fseEsc(ft('aff_th_p'))+'</th><th class="n">'+fseEsc(ft('aff_th_a'))+'</th>'
       +'<th class="n">'+fseEsc(ft('aff_th_b'))+'</th><th class="n">'+fseEsc(ft('aff_th_x'))+'</th><th class="n">'+fseEsc(ft('aff_th_u'))+'</th><th class="c">'+fseEsc(ft('aff_th_v'))+'</th></tr></thead><tbody>'
       +rows.map((x,i)=>{ const isOn=on.has(x.k);
         return '<tr data-fai="'+i+'" class="'+(isOn?'on':'')+'"><td>'+(rec.has(x.k)?'<span class="fse-rec" title="'+fseEsc(ft('v_tip_auto'))+'">★</span> ':'')+fseEsc(x.label)+'</td>'
@@ -2847,7 +2875,7 @@ function fseAff(D, A, V){
           +'<td class="n"'+(x.x!=null&&GST.xcol?' style="color:'+GST.xcol(x.x)+'"':'')+'><b>'+(x.x==null?'—':fseEsc(GST.xmul?GST.xmul(x.x):(Math.round(x.x*10)/10)+'×'))+'</b></td>'
           +'<td class="n">'+fseN(x.units)+'</td>'
           +'<td class="c"><button type="button" class="fse-vb'+(isOn?' on':'')+'" data-fat="'+fseEsc(x.k)+'">'+fseEsc(isOn?'✓ '+ft('aff_on'):'+ '+ft('aff_add'))+'</button></td></tr>'; }).join('')
-      +'</tbody></table></div>'
+      +'</tbody></table></div></div>'
       +(A.list.length>12?'<div style="margin-top:8px"><button type="button" class="fse-link" data-faa="1">'+fseEsc(FS.affAll?ft('aff_less'):ft('aff_more',{n:fseN(A.list.length)}))+'</button></div>':'')
       +'<div class="card-note">'+fseEsc(ft('aff_note'))+'</div>'
     :'<div class="empty">'+fseEsc(ft('aff_none'))+'</div>');
@@ -2956,7 +2984,7 @@ function fseTop(D, FS, rank, y, perOn, P, evsAll){
   const verChip=v=>'<span class="fse-v'+(v.q?' q':'')+'" title="'+fseEsc(ft('how_'+(v.how||'q'))+(v.sn?' · '+v.sn:'')+(v.date?' · '+v.date:''))+'">'+fseEsc(v.ver+(v.q&&!/\?$/.test(v.ver)?'?':''))+'</span>';
   const body=rows.map((o,i)=>{
     const us=fseChs(D,o), U0=D.units[us[0]]||{};
-    const chTxt=FS.unit==='ch'?(U0.ch||'—'):us.map(u=>{ const c=D.units[u].ch||'—'; return c+' '+fseN(o.per[D.units[u].ch||'']||0); }).join(' · ');
+    const chTxt=FS.unit==='ch'?(U0.ch||'—'):us.map(u=>{ const c=D.units[u].ch||'—'; return c+'\u00a0'+fseN(o.per[D.units[u].ch||'']||0); }).join(' · ');   // «Left 2» 는 한 덩어리 — 좁으면 « · » 에서만 줄을 바꾼다
     const after=u=>{ let lp=''; vk.forEach(k=>{ const l=GST.FSE.lastOf(D,u,k); if(l>lp) lp=l; });
       if(!lp) return ft('never'); return fseN((AD[u]||[]).filter(d=>d>lp).length); };
     return '<tr data-fsel="'+fseEsc(o.k)+'" class="'+(FS.sel===o.k?'sel':'')+'"><td>'+(i+1)+'</td><td>'+fseEsc(o.sn)+'</td><td>'+fseEsc(chTxt)+'</td><td>'+fseEsc(U0.d1||'—')+'</td>'
@@ -2992,6 +3020,16 @@ const fseVEst=v=>v && v.how!=='sn' && v.how!=='na' && v.how!=='etc';          //
 const fseVs=v=>{ const h=v&&v.how; if(h==='sn') return ft('vs_sn'); if(h==='date') return ft('vs_date'); if(h==='datel') return ft('vs_datel');
   if(h==='fabin'||h==='turnon'||h==='dragon'||h==='q'||h==='mk') return ft('vs_'+h); return ''; };
 /* 글자 폭 어림(SVG 문자열을 만들 때는 잴 수 없다) — 한글·한자·가나는 글자 크기만큼, 나머지는 0.58 */
+/* 카드 안쪽 폭(여백 뺀 것) · 숨어 있으면 0 */
+const fseInnerW=el=>{ const w=el.clientWidth||0; if(!w) return 0; const cs=getComputedStyle(el); return Math.floor(w-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0)); };
+/* 타임라인은 «그릴 때의 카드 폭»으로 그린다 — 숨은 동안 그렸거나 창 폭이 바뀌면(24px 넘게) 그 카드만 다시 그린다(v194) */
+let _fseTlRO=null, _fseTlT=0;
+function fseTlWatch(card){
+  if(_fseTlRO || !window.ResizeObserver) return;
+  _fseTlRO=new ResizeObserver(()=>{ const w=fseInnerW(card); if(!FSEX._tlArgs || w<=200 || Math.abs(w-(FSEX._tlW||0))<=24) return;
+    clearTimeout(_fseTlT); _fseTlT=setTimeout(()=>{ try{ if(fseVisible() && FSEX._tlArgs) fseTl.apply(null, FSEX._tlArgs); }catch(e){ console.warn('[fse] 타임라인 다시 그리기', e); } }, 120); });
+  _fseTlRO.observe(card);
+}
 const fseTw=(t,fs)=>{ let w=0; for(const ch of String(t)) w+=/[\u1100-\u11ff\u3000-\u9fff\uac00-\ud7af\uff00-\uffef]/.test(ch)?fs:fs*.58; return w; };
 function fseTl(D, FS, rank){
   const card=document.getElementById('fseTlCard'), hc=document.getElementById('fseHistCard'); if(!card||!hc) return;
@@ -3004,10 +3042,15 @@ function fseTl(D, FS, rank){
   if(!us.length){ card.innerHTML='<h3>'+fseEsc(ft('c_tl'))+'</h3><div class="empty">'+fseEsc(ft('tl_pick'))+'</div>'; hc.innerHTML=''; return; }
   const sn=D.units[us[0]].sn, TH=GST.chartTheme();
   const end=D.asOf.slice(0,7), start=FS.tl==='all'?D.minDate.slice(0,7):(()=>{ const [yy,mm]=end.split('-').map(Number); const d=new Date(Date.UTC(yy,mm-1-23,1)); return d.toISOString().slice(0,7); })();
-  /* 폭은 카드에 맞춘다(v191 · 사용자 「좌우 스크롤은 아니다 — 표랑 차트 폭을 화면에 맞춰야지」) — 달이 많으면 칸이 좁아지고 이름표를 건너뛴다 */
+  /* 폭은 카드에 맞춘다(v191 · 사용자 「좌우 스크롤은 아니다 — 표랑 차트 폭을 화면에 맞춰야지」) — 달이 많으면 칸이 좁아지고 이름표를 건너뛴다.
+     그리고 «원래 크기»로 그린다(v194 · 사용자 「이게 뭐야 크네」). ⚠ 숨은 동안(셸이 다른 탭을 보여 iframe 이 display:none) 그리면
+     카드 폭이 0 이라 예전에는 320 으로 그렸고, svg 가 width:100% 라 보일 때 카드 폭까지 «늘어나» 글자가 세 배가 됐다.
+     이제 svg 는 그린 폭(W px) 그대로이고 좁을 때만 줄어든다(max-width) · 숨은 동안 그렸으면 폭이 생길 때 다시 그린다(fseTlWatch). */
+  fseTlWatch(card);
   const M=GST.FSE.months(start+'-01', end+'-01'), x0=86;
-  const avail=Math.max(320, (card.clientWidth||0)-44);
-  const cw=Math.max(6, Math.min(28, (avail-x0-10)/Math.max(1,M.length))), W=Math.round(x0+M.length*cw+10);
+  const cwd=fseInnerW(card), avail=cwd>200?cwd:760;
+  FSEX._tlW=cwd>200?cwd:0; FSEX._tlArgs=[D,FS,rank];
+  const cw=Math.max(6, Math.min(80, (avail-x0-10)/Math.max(1,M.length))), W=Math.floor(x0+M.length*cw+10);
   const step=[1,2,3,6,12,24].find(k=>k*cw>=34)||24;
   const vk=(FSEX.view&&FSEX.view.keys)||[];
   const gcol=k=>TH.pal[(vk.indexOf(k)+1)%TH.pal.length];
@@ -3033,13 +3076,15 @@ function fseTl(D, FS, rank){
     const sums=[]; const none=[];
     fl.forEach((f,fi)=>{ if(segs[fi].length<2) none.push(ft('tl_mfc',{f})+' '+fseVName(segs[fi][0].v.ver)); else sums.push(sumOf(u,f,segs[fi],alAll)); });
     if(none.length) sums.push({ t1:ft('tl_vnone',{v:none.join(' · ')}), t2:'' });
-    sums.forEach(o=>{ o.one=fseTw(o.t1,11)+(o.t2?fseTw(o.t2,11)+12:0)+24<=W-x0-8; });
+    /* 칩 줄 — 한 줄에 다 들어가면 한 줄 · 아니면 비교를 다음 줄 · 그 비교도 넘치면 «→» 앞뒤로 한 번 더 나눈다(그림 밖으로 잘리지 않게) */
+    sums.forEach(o=>{ const room=W-x0-8; o.one=fseTw(o.t1,11)+(o.t2?fseTw(o.t2,11)+12:0)+24<=room; o.L=[o.t1];
+      if(o.t2 && !o.one){ const i=o.t2.indexOf(' → '); o.L=(fseTw(o.t2,11)+22<=room||i<0)?[o.t1,o.t2]:[o.t1,o.t2.slice(0,i+2),o.t2.slice(i+3)]; } });
     return { u, fl, segs, sums }; });
   const usedV={}; let anyEst=false, anyChg=false;
   /* 레인 높이 — 띠가 없으면 지금 그대로(74) · 있으면 요약 줄(유체마다)·띠(유체마다)만큼 늘어난다 */
   let yTop=24; LN.forEach(o=>{ const n=o.fl.length; o.y=yTop;
     if(!n){ o.ya=yTop+16; o.yp=yTop+46; o.h=74; }
-    else { o.yc=yTop+12; o.ya=yTop+o.sums.reduce((a,x)=>a+(!x.one&&x.t2?42:22),0)+20; o.yb=o.ya+24; o.yp=o.yb+n*21+12; o.h=o.yp+26-yTop; }
+    else { o.yc=yTop+12; o.ya=yTop+o.sums.reduce((a,x)=>a+2+20*x.L.length,0)+20; o.yb=o.ya+24; o.yp=o.yb+n*21+12; o.h=o.yp+26-yTop; }
     yTop+=o.h; });
   const H=yTop+20;
   let s='';
@@ -3078,11 +3123,11 @@ function fseTl(D, FS, rank){
         });
       });
       /* 요약 칩 — 바뀐 것(금색) 옆에 전후 비교 · 한 줄에 안 들어가면 비교는 칩 안의 다음 줄(버리지 않는다) */
-      o.sums.forEach(sm=>{ const w1=fseTw(sm.t1,11)+22, wF=sm.one?w1+(sm.t2?fseTw(sm.t2,11)+12:0):Math.max(w1, fseTw(sm.t2,11)+22), two=!sm.one&&sm.t2;
-        s+='<g class="fse-vsum"><title>'+fseEsc(sm.t1+(sm.t2?'    '+sm.t2:''))+'</title><rect x="'+x0+'" y="'+(yc-12)+'" width="'+wF.toFixed(0)+'" height="'+(two?37:19)+'" rx="9.5" class="fse-vchip"/>'
+      o.sums.forEach(sm=>{ const n=sm.L.length, w1=fseTw(sm.t1,11)+22, wF=sm.one?w1+(sm.t2?fseTw(sm.t2,11)+12:0):Math.max.apply(null, sm.L.map(t=>fseTw(t,11)+22));
+        s+='<g class="fse-vsum"><title>'+fseEsc(sm.t1+(sm.t2?'    '+sm.t2:''))+'</title><rect x="'+x0+'" y="'+(yc-12)+'" width="'+wF.toFixed(0)+'" height="'+(19+18*(n-1))+'" rx="9.5" class="fse-vchip"/>'
           +'<text x="'+(x0+11)+'" y="'+(yc+1.5)+'" class="fse-vct"><tspan class="fse-vca">'+fseEsc(sm.t1)+'</tspan>'+(sm.one&&sm.t2?'<tspan dx="12">'+fseEsc(sm.t2)+'</tspan>':'')+'</text>'
-          +(two?'<text x="'+(x0+11)+'" y="'+(yc+18.5)+'" class="fse-vct">'+fseEsc(sm.t2)+'</text>':'')+'</g>';
-        yc+=two?42:22; });
+          +sm.L.slice(1).map((t,i)=>'<text x="'+(x0+11)+'" y="'+(yc+18.5+18*i)+'" class="fse-vct">'+fseEsc(t)+'</text>').join('')+'</g>';
+        yc+=2+20*n; });
     }
     /* 알람 원 — 말풍선(title)에 «당시» 버전과 직전 교체 후 며칠 (띠가 있을 때) */
     Object.keys(am).forEach(k=>{ const n=am[k].length, cx=x0+cw*idx[k]+cw/2, r=Math.min(12,cw*.55+2,5+2.4*Math.sqrt(n));
@@ -3111,7 +3156,7 @@ function fseTl(D, FS, rank){
     +vk.filter(g=>!bandG(g)).map(g=>'<span><b style="color:'+gcol(g)+'">'+gsym(g)+'</b> '+fseEsc(GST.FSE.ilabel(D,g))+'</span>').join('')+'<span><b class="fse-tbm">▼</b> '+fseEsc(ft('tl_tbm'))+'</span>';
   card.innerHTML='<div class="trend-header fse-th"><h3>'+fseEsc(ft('c_tl'))+' <span class="fse-sub2">'+fseEsc(sn)+'</span></h3><div class="fse-tools">'
     +fseSeg('tl',[['24',ft('tl_24')],['all',ft('tl_all')]],FS.tl,'ftl')+'</div></div>'
-    +'<div class="fse-tlw"><svg width="100%" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMinYMin meet" role="img" aria-label="'+fseEsc(ft('c_tl')+' '+sn)+'">'+s+'</svg></div>'
+    +'<div class="fse-tlw"><svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMinYMin meet" role="img" aria-label="'+fseEsc(ft('c_tl')+' '+sn)+'">'+s+'</svg></div>'
     +'<div class="fse-leg">'+leg+'</div>';
   card.querySelectorAll('[data-ftl]').forEach(b=>b.onclick=()=>{ FS.tl=b.dataset.ftl; fseSave(); fseRender(); });
   /* 이력 — 알람·교체·TBM 을 날짜순으로 (알람 줄: 당시 MFC · 직전 교체 후 · 다음 알람까지) */
