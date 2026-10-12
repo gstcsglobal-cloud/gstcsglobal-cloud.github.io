@@ -128,8 +128,8 @@ is(heat.length === 12 && heat[11] === 12 && heat.slice(0, 11).every(v => v === 1
 
 /* 이번 주 브리핑(v180) — 카드가 «이미 센» 숫자를 문장으로. 새로 세지 않는다 · 움직임 줄이기면 타자기 없이 전문이 처음부터 */
 const br = await pg.evaluate(() => ({ L:[...document.querySelectorAll('#blines li')].map(l => l.textContent), tw:!!document.querySelector('#blines .tw') }));
-is(br.L.length >= 5 && /이번 주 고장 15건/.test(br.L[0]) && /GST TAIWAN — 평소의 12배 · 점검 권장/.test(br.L[1]) && /유상 전환 3대/.test(br.L.join('|')) && !br.tw,
-  '이번 주 브리핑 — 고장 15 · 가장 튄 곳 대만(평소의 12배) · 유상 전환 3대 · 타자기 없음(움직임 줄이기) (' + br.L.slice(0, 2).join(' / ') + ')');
+is(br.L.length >= 5 && /이번 주 고장 15건/.test(br.L[0]) && /GST TAIWAN — 평소의 12배 · 점검 권장/.test(br.L[1]) && /Warranty Out 전환 3대 — 유상 설비 증가/.test(br.L.join('|')) && !br.tw,
+  '이번 주 브리핑 — 고장 15 · 가장 튄 곳 대만(평소의 12배) · Warranty Out 전환 3대(사용자 문구 · v188) · 타자기 없음(움직임 줄이기) (' + br.L.slice(0, 2).join(' / ') + ')');
 
 console.log('[3] 지도 — 지구본이 기본(v180) · 원을 누르면 그 나라 지도 · 평면(벡터 세계 지도)으로 바꿀 수 있다');
 await pg.waitForTimeout(800);
@@ -156,6 +156,18 @@ const dupNm = await pg.evaluate(async () => { const out = [];
     for (const L of ['ko','en','zh','ja']) { const seen = {}; j.f.forEach(f => { const n = GST.geo.admName(f, L); if (seen[n]) out.push(cc + ' ' + L + ' ' + n); seen[n] = 1; }); } }
   return out; });
 is(dupNm.length === 0, '나라·언어마다 행정구역 이름이 하나씩 — 같은 이름이면 지도가 두 곳을 한 덩어리로 칠한다 (陝西·山西 = 「산시성」)' + (dupNm.length ? ' → ' + dupNm.slice(0, 3).join(' · ') : ''));
+/* v188 사용자 보고 「싱가폴꺼 Woodlands 라고 넣었는데 안나오네」 — 행정구역 이름이 아닌 도시는 지도 위치(geo_places)에 한 번 등록하면 놓이고,
+   그 점이 든 구역의 이름이 «읽히는» 이름이어야 한다(공개 자료의 한국어가 «노스 웨스트 케이프»·«…지구 사회 발전 이사회»였다) */
+const sg = await pg.evaluate(async () => { const adm = await (await fetch(GST.geo.BASE + 'SG.json')).json(); adm.cc = adm.cc || 'SG';
+  const PL = { WOODLANDS:{ lat:1.436, lng:103.786, label:'Woodlands', cc:'SG' } };
+  const pl = GST.geo.placeOf({ loc:'Woodlands', campus:'Woodlands', fab:'F10A', cc:'SG' }, PL, adm), rg = pl && GST.geo.regionOf(pl.lng, pl.lat, adm);
+  const nm = GST.geo.placeOf({ loc:'북서부', cc:'SG' }, {}, adm), no = GST.geo.placeOf({ loc:'Woodlands', cc:'SG' }, {}, adm);
+  return { key:pl && pl.key, reg:rg && GST.geo.admName(rg, 'ko'), regEn:rg && GST.geo.admName(rg, 'en'), nm:nm && nm.key, no,
+    bad:adm.f.map(f => GST.geo.admName(f, 'ko')).filter(n => /케이프|이사회/.test(n)) }; });
+is(sg.key === 'WOODLANDS' && sg.reg === '북서부' && sg.regEn === 'North West', '싱가포르 Woodlands — 등록한 자리에 놓이고 북서부 구역으로 센다 (' + sg.key + ' · ' + sg.reg + ')');
+is(sg.no === null, '등록하지 않은 도시 이름은 «위치 미지정» — 짐작해 놓지 않는다');
+is(sg.nm === 'ADM:SG-03', '화면에 뜬 구역 이름(「북서부」)을 지역 칸에 적어도 놓인다 (' + sg.nm + ')');
+is(sg.bad.length === 0, '싱가포르 구역 이름표에 엉뚱한 번역이 없다' + (sg.bad.length ? ' → ' + sg.bad.join(' · ') : ''));
 /* v178 사용자 보고 「전체로 잡았는데 안 나온다」 — 전세계 화면에도 분포(국가 · 고객사)가 서야 한다 */
 const wd = await pg.evaluate(() => { const cd = document.getElementById('cdist');
   return { vis:getComputedStyle(cd).display !== 'none', h:[...cd.querySelectorAll('h4')].map(h => h.textContent),
