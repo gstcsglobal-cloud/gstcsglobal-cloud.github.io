@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 184;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 185;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -5091,9 +5091,21 @@ GST._FX_CSS = [
   ' background-image:url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'160\' height=\'160\'><filter id=\'n\'><feTurbulence type=\'fractalNoise\' baseFrequency=\'.9\' numOctaves=\'2\' stitchTiles=\'stitch\'/><feColorMatrix values=\'0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0\'/></filter><rect width=\'100%\' height=\'100%\' filter=\'url(%23n)\'/></svg>")}',
   'body.fx-grain .gst-fx-grain{opacity:.05}',
   'body.fx-grain.theme-slate .gst-fx-grain{opacity:.065}',
-  /* 오로라 흐름 · 패럴랙스 — 다크 배경 층(body::before)을 움직인다. 끄면 멈춘다 */
-  'body:not(.fx-aurora)::before{animation:none !important}',
-  'body.fx-parallax::before{translate:0 var(--gst-par,0px)}',
+  /* 오로라 흐름 · 패럴랙스 — 다크 배경 층(body::before)을 움직인다. 끄면 멈춘다.
+     ⚠ 패럴랙스는 «스크롤 타임라인» CSS 애니메이션이다(v192) — 예전에는 스크롤할 때마다 JS 가 body 에 --gst-par 를 썼는데,
+       body 의 사용자 정의 속성은 «문서 전체»가 물려받아 프레임마다 모든 요소의 스타일을 다시 계산했다(실측 스크롤 한 번에 474ms → 101ms).
+       노드가 많은 화면(고장 분석 › 알람 분석)일수록 뚝뚝 끊겼다(사용자 보고). 이제 합성(compositor)에서 돌고 JS·스타일 재계산이 0 이다.
+       스크롤 타임라인을 모르는 브라우저에서는 패럴랙스만 없다(화면은 그대로). */
+  'body.gst-motion.theme-slate:not(.fx-aurora)::before{animation:none}',
+  '@keyframes gstPar{from{translate:0 0}to{translate:0 -120px}}',
+  '@supports (animation-timeline:scroll()){',
+  ' body.fx-parallax::before{animation:gstPar linear both;animation-timeline:scroll(root block);animation-range:0px 1000px}',
+  ' body.gst-motion.theme-slate.fx-parallax.fx-aurora::before{animation:gstAurora 46s ease-in-out infinite alternate,gstPar linear both;animation-timeline:auto,scroll(root block);animation-range:normal,0px 1000px}',
+  ' body.gst-motion.theme-slate.fx-parallax:not(.fx-aurora)::before{animation:gstPar linear both;animation-timeline:scroll(root block);animation-range:0px 1000px}',
+  '}',
+  /* 조명(카드 위 마우스 빛)의 좌표 — 상속하지 않게 등록한다. 상속이면 카드 «안의 모든 요소»(표 수천 칸)가 마우스가 움직일 때마다 다시 계산된다 */
+  '@property --mx{syntax:"<length-percentage>";inherits:false;initial-value:50%}',
+  '@property --my{syntax:"<length-percentage>";inherits:false;initial-value:50%}',
   /* 커서 — 점은 마우스 그 자리 · 고리는 살짝 늦게. 글을 쓰는 칸에서는 원래 커서를 그대로 둔다 */
   '.gst-fx-cdot,.gst-fx-cring{position:fixed;left:0;top:0;z-index:2147483000;pointer-events:none;border-radius:50%;opacity:0;transition:opacity .2s,width .25s,height .25s,margin .25s,border-color .25s,background .25s}',
   '.gst-fx-cdot{width:6px;height:6px;margin:-3px 0 0 -3px;background:var(--accent,#5B8CFF);box-shadow:0 0 12px var(--accent,#5B8CFF)}',
@@ -5306,6 +5318,7 @@ GST.fx = (function(){
     F.apply();
     const body=document.body;
     const mk=function(cls, tag){ const e=document.createElement(tag||'div'); e.className=cls; e.setAttribute('aria-hidden','true'); body.appendChild(e); return e; };
+    let gridEl=null;
     /* 별빛 — 페이지마다(셸은 iframe 이 덮어 보이지 않는다). 안 보이는 탭(display:none iframe)에서는 rAF 가 돌지 않는다 */
     if(!F.shell){
       const cv=mk('gst-fx-stars','canvas'), cx=cv.getContext&&cv.getContext('2d');
@@ -5330,7 +5343,7 @@ GST.fx = (function(){
       document.addEventListener('visibilitychange', F._kick.stars);
       F._starMouse=function(x,y){ smx=x; smy=y; };
       F._kick.stars();
-      mk('gst-fx-grid');
+      gridEl=mk('gst-fx-grid');
     }
     /* 그레인 — 맨 위 문서 하나에만(셸이 iframe 까지 덮는다 · 혼자 열린 페이지는 자기가) */
     if(!inFrame) mk('gst-fx-grain');
@@ -5351,7 +5364,8 @@ GST.fx = (function(){
     const frame=function(){
       rq=0;
       /* 격자 · 별자리 */
-      if(F.on('grid')) document.documentElement.style.setProperty('--gst-gx', px+'px'), document.documentElement.style.setProperty('--gst-gy', py+'px');
+      /* 격자 빛의 좌표는 «격자 층 자신»에 쓴다 — html 에 쓰면 마우스가 움직일 때마다 문서 전체가 다시 계산된다(v192) */
+      if(F.on('grid') && gridEl) gridEl.style.setProperty('--gst-gx', px+'px'), gridEl.style.setProperty('--gst-gy', py+'px');
       if(F._starMouse) F._starMouse(px,py);
       /* 커서 */
       if(F.on('cursor')&&fine()){ cdot.style.transform='translate('+px+'px,'+py+'px)'; if(!HE.classList.contains('gst-cur-in')){ rx=px; ry=py; HE.classList.add('gst-cur-in'); }
@@ -5396,11 +5410,8 @@ GST.fx = (function(){
       }catch(err){}
     }, true);
 
-    /* 패럴랙스 — 스크롤하면 배경 빛(body::before)이 늦게 따라온다(-120px 까지) */
-    let prq=0;
-    const par=function(){ prq=0; if(!F.on('parallax')){ body.style.removeProperty('--gst-par'); return; } body.style.setProperty('--gst-par', Math.max(-120, -(window.scrollY||0)*.12).toFixed(1)+'px'); };
-    window.addEventListener('scroll', function(){ if(!prq) prq=requestAnimationFrame(par); }, {passive:true});
-    F._kick.par=par;
+    /* 패럴랙스 — CSS 스크롤 타임라인이 한다(위 _FX_CSS · v192). 스크롤 이벤트에서 body 를 건드리지 않는다(문서 전체 재계산). */
+    F._kick.par=function(){ body.style.removeProperty('--gst-par'); };
     /* 스크롤 등장을 끄면 아직 감춰 둔 카드를 바로 보인다(감춘 채 남지 않게) */
     F._kick.rv=function(){ if(!F.on('reveal')) document.querySelectorAll('.gst-rv:not(.gst-in)').forEach(function(e){ e.classList.add('gst-in'); }); };
 
