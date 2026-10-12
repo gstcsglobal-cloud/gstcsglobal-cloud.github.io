@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 183;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 185;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -2903,7 +2903,17 @@ GST.ORG = {
         /* 운영단위·구분·반입일 (v189) — FSE 원장(알람 분석)이 S/N 으로 이어 받는다. 원장에는 조직 축을 담지 않는다(CIP·원장과 같은 규약). */
         op:       String(GST.SM.val(r, C, 'country') || '').trim(),
         region:   GST.ORG.region(GST.SM.val(r, C, 'country') || ''),
-        fabIn:    GST.ALARM.day(GST.SM.val(r, C, 'fabIn'))
+        fabIn:    GST.ALARM.day(GST.SM.val(r, C, 'fabIn')),
+        /* 설비 제원 (v192) — 알람 분석 «백데이터 엑셀»이 S/N 으로 끌어온다(설비 코드·공정·세부공정·모델·버너·챔버 타입·Turn On).
+           판정에는 안 쓴다 — 덧붙인 것뿐이라 다른 화면은 한 자리도 안 움직인다. */
+        code:     String(GST.SM.val(r, C, 'code') || '').trim(),
+        sn:       String(GST.SM.val(r, C, 'sn') || '').trim(),
+        model:    String(GST.SM.val(r, C, 'model') || '').trim(),
+        burner:   String(GST.SM.val(r, C, 'burner') || '').trim(),
+        type:     String(GST.SM.val(r, C, 'type') || '').trim(),
+        group1:   String(GST.SM.val(r, C, 'group1') || '').trim(),
+        detail1:  String(GST.SM.val(r, C, 'detail1') || '').trim(),
+        turnOn:   GST.ALARM.day(GST.SM.val(r, C, 'turnOn'))
       };
       const c = key(GST.SM.val(r, C, 'code')), s = key(GST.SM.val(r, C, 'sn'));
       if(c && !byCode.has(c)) byCode.set(c, rec);
@@ -5081,9 +5091,21 @@ GST._FX_CSS = [
   ' background-image:url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'160\' height=\'160\'><filter id=\'n\'><feTurbulence type=\'fractalNoise\' baseFrequency=\'.9\' numOctaves=\'2\' stitchTiles=\'stitch\'/><feColorMatrix values=\'0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0\'/></filter><rect width=\'100%\' height=\'100%\' filter=\'url(%23n)\'/></svg>")}',
   'body.fx-grain .gst-fx-grain{opacity:.05}',
   'body.fx-grain.theme-slate .gst-fx-grain{opacity:.065}',
-  /* 오로라 흐름 · 패럴랙스 — 다크 배경 층(body::before)을 움직인다. 끄면 멈춘다 */
-  'body:not(.fx-aurora)::before{animation:none !important}',
-  'body.fx-parallax::before{translate:0 var(--gst-par,0px)}',
+  /* 오로라 흐름 · 패럴랙스 — 다크 배경 층(body::before)을 움직인다. 끄면 멈춘다.
+     ⚠ 패럴랙스는 «스크롤 타임라인» CSS 애니메이션이다(v192) — 예전에는 스크롤할 때마다 JS 가 body 에 --gst-par 를 썼는데,
+       body 의 사용자 정의 속성은 «문서 전체»가 물려받아 프레임마다 모든 요소의 스타일을 다시 계산했다(실측 스크롤 한 번에 474ms → 101ms).
+       노드가 많은 화면(고장 분석 › 알람 분석)일수록 뚝뚝 끊겼다(사용자 보고). 이제 합성(compositor)에서 돌고 JS·스타일 재계산이 0 이다.
+       스크롤 타임라인을 모르는 브라우저에서는 패럴랙스만 없다(화면은 그대로). */
+  'body.gst-motion.theme-slate:not(.fx-aurora)::before{animation:none}',
+  '@keyframes gstPar{from{translate:0 0}to{translate:0 -120px}}',
+  '@supports (animation-timeline:scroll()){',
+  ' body.fx-parallax::before{animation:gstPar linear both;animation-timeline:scroll(root block);animation-range:0px 1000px}',
+  ' body.gst-motion.theme-slate.fx-parallax.fx-aurora::before{animation:gstAurora 46s ease-in-out infinite alternate,gstPar linear both;animation-timeline:auto,scroll(root block);animation-range:normal,0px 1000px}',
+  ' body.gst-motion.theme-slate.fx-parallax:not(.fx-aurora)::before{animation:gstPar linear both;animation-timeline:scroll(root block);animation-range:0px 1000px}',
+  '}',
+  /* 조명(카드 위 마우스 빛)의 좌표 — 상속하지 않게 등록한다. 상속이면 카드 «안의 모든 요소»(표 수천 칸)가 마우스가 움직일 때마다 다시 계산된다 */
+  '@property --mx{syntax:"<length-percentage>";inherits:false;initial-value:50%}',
+  '@property --my{syntax:"<length-percentage>";inherits:false;initial-value:50%}',
   /* 커서 — 점은 마우스 그 자리 · 고리는 살짝 늦게. 글을 쓰는 칸에서는 원래 커서를 그대로 둔다 */
   '.gst-fx-cdot,.gst-fx-cring{position:fixed;left:0;top:0;z-index:2147483000;pointer-events:none;border-radius:50%;opacity:0;transition:opacity .2s,width .25s,height .25s,margin .25s,border-color .25s,background .25s}',
   '.gst-fx-cdot{width:6px;height:6px;margin:-3px 0 0 -3px;background:var(--accent,#5B8CFF);box-shadow:0 0 12px var(--accent,#5B8CFF)}',
@@ -5296,6 +5318,7 @@ GST.fx = (function(){
     F.apply();
     const body=document.body;
     const mk=function(cls, tag){ const e=document.createElement(tag||'div'); e.className=cls; e.setAttribute('aria-hidden','true'); body.appendChild(e); return e; };
+    let gridEl=null;
     /* 별빛 — 페이지마다(셸은 iframe 이 덮어 보이지 않는다). 안 보이는 탭(display:none iframe)에서는 rAF 가 돌지 않는다 */
     if(!F.shell){
       const cv=mk('gst-fx-stars','canvas'), cx=cv.getContext&&cv.getContext('2d');
@@ -5320,7 +5343,7 @@ GST.fx = (function(){
       document.addEventListener('visibilitychange', F._kick.stars);
       F._starMouse=function(x,y){ smx=x; smy=y; };
       F._kick.stars();
-      mk('gst-fx-grid');
+      gridEl=mk('gst-fx-grid');
     }
     /* 그레인 — 맨 위 문서 하나에만(셸이 iframe 까지 덮는다 · 혼자 열린 페이지는 자기가) */
     if(!inFrame) mk('gst-fx-grain');
@@ -5341,7 +5364,8 @@ GST.fx = (function(){
     const frame=function(){
       rq=0;
       /* 격자 · 별자리 */
-      if(F.on('grid')) document.documentElement.style.setProperty('--gst-gx', px+'px'), document.documentElement.style.setProperty('--gst-gy', py+'px');
+      /* 격자 빛의 좌표는 «격자 층 자신»에 쓴다 — html 에 쓰면 마우스가 움직일 때마다 문서 전체가 다시 계산된다(v192) */
+      if(F.on('grid') && gridEl) gridEl.style.setProperty('--gst-gx', px+'px'), gridEl.style.setProperty('--gst-gy', py+'px');
       if(F._starMouse) F._starMouse(px,py);
       /* 커서 */
       if(F.on('cursor')&&fine()){ cdot.style.transform='translate('+px+'px,'+py+'px)'; if(!HE.classList.contains('gst-cur-in')){ rx=px; ry=py; HE.classList.add('gst-cur-in'); }
@@ -5386,11 +5410,8 @@ GST.fx = (function(){
       }catch(err){}
     }, true);
 
-    /* 패럴랙스 — 스크롤하면 배경 빛(body::before)이 늦게 따라온다(-120px 까지) */
-    let prq=0;
-    const par=function(){ prq=0; if(!F.on('parallax')){ body.style.removeProperty('--gst-par'); return; } body.style.setProperty('--gst-par', Math.max(-120, -(window.scrollY||0)*.12).toFixed(1)+'px'); };
-    window.addEventListener('scroll', function(){ if(!prq) prq=requestAnimationFrame(par); }, {passive:true});
-    F._kick.par=par;
+    /* 패럴랙스 — CSS 스크롤 타임라인이 한다(위 _FX_CSS · v192). 스크롤 이벤트에서 body 를 건드리지 않는다(문서 전체 재계산). */
+    F._kick.par=function(){ body.style.removeProperty('--gst-par'); };
     /* 스크롤 등장을 끄면 아직 감춰 둔 카드를 바로 보인다(감춘 채 남지 않게) */
     F._kick.rv=function(){ if(!F.on('reveal')) document.querySelectorAll('.gst-rv:not(.gst-in)').forEach(function(e){ e.classList.add('gst-in'); }); };
 
@@ -10657,7 +10678,7 @@ GST.FSE_T = {
        parts_btn:'부품 묶음', parts_t:'관심 부품 묶음', pt_grp:'묶음', pt_code:'부품 코드', pt_re:'이름 규칙 (정규식)', pt_fluid:'유체', pt_maker:'제조사',
        pt_label:'설명', pt_on:'사용', pt_add:'줄 추가', pt_save:'저장', pt_ro:'읽기 전용 — 쓰기 권한이 있는 계정만 고칠 수 있습니다',
        pt_none:'관심 부품 묶음이 아직 없습니다', pt_saved:'저장했습니다 — 화면에 반영했습니다', pt_saving:'저장 중…', pt_saved_n:'{n}줄 저장했습니다 — 화면에 반영했습니다', pt_nochg:'바뀐 줄이 없습니다', pt_fail_at:'{i}번째 줄을 저장하지 못했습니다', pt_fail:'저장하지 못했습니다', pt_need:'묶음과 부품 코드(또는 이름 규칙)를 적으세요',
-       pt_bad_re:'이름 규칙이 올바른 정규식이 아닙니다', pt_hint:'이름에 «MFC»가 든 묶음(LNG MFC · O2 MFC …)은 버전 판정을 받습니다 — 줄마다 유체(LNG·O2·AIR)와 제조사(MCA·MKP·HORIBA)를 적으세요. 어느 묶음을 볼지는 화면의 «보는 부품»에서 알람마다 고릅니다', v_lbl:'보는 부품', v_max:'보는 부품은 {n}개까지입니다 — 하나를 빼고 넣으세요', v_addg:'+ 부품 묶음', v_empty:'보는 부품을 고르지 않았습니다', v_auto:'자동 추천', v_mine:'직접 고름', v_reset:'자동 추천으로', v_none:'함께 교체한 부품 중 두드러진 것이 없습니다 — 아래 목록에서 고르세요', v_rm:'빼기', v_tip_auto:'이 알람 작업에서 평소보다 두드러지게 교체한 부품', c_aff:'함께 교체한 부품', aff_sub:'알람 작업 {n}건 · 비교 작업 {b}건', aff_th_p:'부품', aff_th_a:'알람 작업', aff_th_b:'평소', aff_th_x:'배수', aff_th_u:'설비', aff_th_v:'보기', aff_on:'보는 중', aff_add:'보기', aff_none:'이 알람 작업에서 교체한 부품이 없습니다', aff_more:'{n}개 모두 보기', aff_less:'접기', aff_d:'{p} — 이 부품을 바꾼 알람 작업 {n}건', aff_note:'배수 = (이 알람 작업 중 그 부품을 바꾼 비율) ÷ (같은 범위의 모든 작업 중 그 부품을 바꾼 비율). 1배 근처는 어디서나 가는 부품입니다. 순서는 «평소보다 몇 번 더 바꿨나».', mfc_off:'보는 부품에 MFC 묶음이 없어 MFC 버전을 숨겼습니다', mfc_add:'MFC 묶음 보기',
+       pt_bad_re:'이름 규칙이 올바른 정규식이 아닙니다', pt_hint:'이름에 «MFC»가 든 묶음(LNG MFC · O2 MFC …)은 버전 판정을 받습니다 — 줄마다 유체(LNG·O2·AIR)와 제조사(MCA·MKP·HORIBA)를 적으세요. 어느 묶음을 볼지는 화면의 «보는 부품»에서 알람마다 고릅니다', v_lbl:'보는 부품', x_raw:'백데이터 엑셀', raw_t:'백데이터 엑셀 — 설비별 자재 교체 이력', raw_scope:'대상 설비', raw_sc_alarm:'알람 발생 설비 {n}대 · 챔버 {c}', raw_sc_all:'관리 설비 전체 · 챔버 {c}', raw_per:'기간', raw_per_all:'전체 이력', raw_per_cur:'지금 기간 ({a} ~ {b})', raw_items:'넣을 자재 — 뺄 것은 체크를 푸세요', raw_find:'자재 찾기 (이름·코드)', raw_all:'전체 선택', raw_none:'전체 해제', raw_view:'보는 부품만', raw_cnt:'{k}종 · 교체 {n}줄', raw_go:'{n}줄 내려받기', raw_zero:'고른 자재가 없습니다', raw_codes:'코드 {n}', raw_cancel:'닫기', xr_rank:'순위', xr_sn:'S/N', xr_ch:'챔버', xr_code:'설비 코드', xr_op:'운영단위', xr_cust:'고객사', xr_fab:'FAB', xr_floor:'Floor', xr_proc:'공정', xr_det:'세부공정', xr_model:'모델', xr_burner:'버너 방식', xr_type:'챔버 타입', xr_turnon:'Turn On', xr_fabin:'반입일', xr_join:'설치현황 연결', xr_date:'작업일자', xr_mc:'작업 구분', xr_alarm:'그 작업의 알람', xr_item:'자재 묶음', xr_pcode:'자재코드', xr_std:'표준 품목명', xr_mspec:'규격(자재마스터)', xr_lname:'부품명(원장)', xr_lspec:'규격(원장)', xr_qty:'수량', xr_comp:'유/무상', xr_in:'MFC In S/N', xr_out:'MFC Out S/N', xr_src:'S/N 출처', xr_src_l:'원장', xr_src_m:'자재실적', xr_prev:'직전 알람', xr_next:'다음 알람', xr_gap:'다음 알람까지(일)', xr_n:'발생 건수', xr_last:'최근 발생', xr_reps:'교체 줄 수', xr_icnt:'{p} 교체', xr_ilast:'{p} 마지막', xs_hist:'교체 이력', xs_sum:'설비 요약', sn_open:'알람 분석에서 이 설비 보기', sn_none:'{sn} — FSE 원장에 없는 설비입니다', v_max:'보는 부품은 {n}개까지입니다 — 하나를 빼고 넣으세요', v_addg:'+ 부품 묶음', v_empty:'보는 부품을 고르지 않았습니다', v_auto:'자동 추천', v_mine:'직접 고름', v_reset:'자동 추천으로', v_none:'함께 교체한 부품 중 두드러진 것이 없습니다 — 아래 목록에서 고르세요', v_rm:'빼기', v_tip_auto:'이 알람 작업에서 평소보다 두드러지게 교체한 부품', c_aff:'함께 교체한 부품', aff_sub:'알람 작업 {n}건 · 비교 작업 {b}건', aff_th_p:'부품', aff_th_a:'알람 작업', aff_th_b:'평소', aff_th_x:'배수', aff_th_u:'설비', aff_th_v:'보기', aff_on:'보는 중', aff_add:'보기', aff_none:'이 알람 작업에서 교체한 부품이 없습니다', aff_more:'{n}개 모두 보기', aff_less:'접기', aff_d:'{p} — 이 부품을 바꾼 알람 작업 {n}건', aff_note:'배수 = (이 알람 작업 중 그 부품을 바꾼 비율) ÷ (같은 범위의 모든 작업 중 그 부품을 바꾼 비율). 1배 근처는 어디서나 가는 부품입니다. 순서는 «평소보다 몇 번 더 바꿨나».', mfc_off:'보는 부품에 MFC 묶음이 없어 MFC 버전을 숨겼습니다', mfc_add:'MFC 묶음 보기',
        loading:'FSE 원장을 읽는 중…', empty:'FSE 원장이 아직 올라오지 않았습니다', empty_a:'데이터 관리 › 원본 파일 올리기에서 «FSE 원장»을 올리면 이 탭이 채워집니다',
        fail:'FSE 원장을 읽지 못했습니다', nosel:'조건에 맞는 알람이 없습니다', basis:'원장 {r}행 · {a} ~ {b}',
        d_title:'{x} — 알람 {n}건', col_date:'날짜', col_sn:'S/N', col_ch:'챔버', col_code:'코드', col_msg:'메시지', col_aw:'구분', col_resp:'책임',
@@ -10691,7 +10712,7 @@ GST.FSE_T = {
        parts_btn:'Part groups', parts_t:'Tracked part groups', pt_grp:'Group', pt_code:'Part code', pt_re:'Name rule (regex)', pt_fluid:'Fluid', pt_maker:'Maker',
        pt_label:'Note', pt_on:'On', pt_add:'Add row', pt_save:'Save', pt_ro:'Read only — accounts with write access can edit',
        pt_none:'No tracked part groups yet', pt_saved:'Saved — the view is updated', pt_saving:'Saving…', pt_saved_n:'Saved {n} rows — the view is updated', pt_nochg:'Nothing changed', pt_fail_at:'Could not save row {i}', pt_fail:'Could not save', pt_need:'Fill in the group and a part code (or name rule)',
-       pt_bad_re:'The name rule is not a valid regular expression', pt_hint:'Groups with «MFC» in the name (LNG MFC · O2 MFC …) get version judging — give each row its fluid (LNG·O2·AIR) and maker (MCA·MKP·HORIBA). Which parts to watch is chosen per alarm in «Parts in view»', v_lbl:'Parts in view', v_max:'Up to {n} parts in view — remove one first', v_addg:'+ Part group', v_empty:'No part chosen', v_auto:'Auto pick', v_mine:'Chosen', v_reset:'Back to auto pick', v_none:'No part stands out in these alarm jobs — pick from the list below', v_rm:'Remove', v_tip_auto:'parts replaced in these alarm jobs far more than usual', c_aff:'Parts replaced with this alarm', aff_sub:'{n} alarm jobs · {b} jobs compared', aff_th_p:'Part', aff_th_a:'Alarm jobs', aff_th_b:'Usual', aff_th_x:'×', aff_th_u:'Units', aff_th_v:'View', aff_on:'In view', aff_add:'View', aff_none:'No part was replaced in these alarm jobs', aff_more:'Show all {n}', aff_less:'Less', aff_d:'{p} — {n} alarm jobs that replaced it', aff_note:'× = (share of these alarm jobs that replaced the part) ÷ (share of all jobs in the same scope that replaced it). Near 1× means a part replaced everywhere. Ordered by «how many more times than usual».', mfc_off:'MFC versions are hidden — no MFC group in Parts in view', mfc_add:'View MFC groups',
+       pt_bad_re:'The name rule is not a valid regular expression', pt_hint:'Groups with «MFC» in the name (LNG MFC · O2 MFC …) get version judging — give each row its fluid (LNG·O2·AIR) and maker (MCA·MKP·HORIBA). Which parts to watch is chosen per alarm in «Parts in view»', v_lbl:'Parts in view', x_raw:'Raw data (Excel)', raw_t:'Raw data — part replacements by unit', raw_scope:'Units', raw_sc_alarm:'Units with the alarm: {n} · chambers {c}', raw_sc_all:'All managed units · chambers {c}', raw_per:'Period', raw_per_all:'Full history', raw_per_cur:'Current period ({a} ~ {b})', raw_items:'Parts to include — untick what to leave out', raw_find:'Find a part (name · code)', raw_all:'Select all', raw_none:'Clear all', raw_view:'Parts in view only', raw_cnt:'{k} parts · {n} replacements', raw_go:'Download {n} rows', raw_zero:'No part selected', raw_codes:'{n} codes', raw_cancel:'Close', xr_rank:'Rank', xr_sn:'S/N', xr_ch:'Chamber', xr_code:'Unit code', xr_op:'Operating unit', xr_cust:'Customer', xr_fab:'FAB', xr_floor:'Floor', xr_proc:'Process', xr_det:'Detail process', xr_model:'Model', xr_burner:'Burner type', xr_type:'Chamber type', xr_turnon:'Turn On', xr_fabin:'FAB-in', xr_join:'Matched to installation list', xr_date:'Work date', xr_mc:'Work type', xr_alarm:'Alarm on that job', xr_item:'Part group', xr_pcode:'Part code', xr_std:'Standard item name', xr_mspec:'Spec (item master)', xr_lname:'Part name (ledger)', xr_lspec:'Spec (ledger)', xr_qty:'Qty', xr_comp:'Paid/Free', xr_in:'MFC In S/N', xr_out:'MFC Out S/N', xr_src:'S/N source', xr_src_l:'Ledger', xr_src_m:'Material usage', xr_prev:'Previous alarm', xr_next:'Next alarm', xr_gap:'Days to next alarm', xr_n:'Alarms', xr_last:'Latest alarm', xr_reps:'Replacements', xr_icnt:'{p} replaced', xr_ilast:'{p} last', xs_hist:'Replacements', xs_sum:'Unit summary', sn_open:'View this unit in Alarm analysis', sn_none:'{sn} — not in the FSE ledger', v_max:'Up to {n} parts in view — remove one first', v_addg:'+ Part group', v_empty:'No part chosen', v_auto:'Auto pick', v_mine:'Chosen', v_reset:'Back to auto pick', v_none:'No part stands out in these alarm jobs — pick from the list below', v_rm:'Remove', v_tip_auto:'parts replaced in these alarm jobs far more than usual', c_aff:'Parts replaced with this alarm', aff_sub:'{n} alarm jobs · {b} jobs compared', aff_th_p:'Part', aff_th_a:'Alarm jobs', aff_th_b:'Usual', aff_th_x:'×', aff_th_u:'Units', aff_th_v:'View', aff_on:'In view', aff_add:'View', aff_none:'No part was replaced in these alarm jobs', aff_more:'Show all {n}', aff_less:'Less', aff_d:'{p} — {n} alarm jobs that replaced it', aff_note:'× = (share of these alarm jobs that replaced the part) ÷ (share of all jobs in the same scope that replaced it). Near 1× means a part replaced everywhere. Ordered by «how many more times than usual».', mfc_off:'MFC versions are hidden — no MFC group in Parts in view', mfc_add:'View MFC groups',
        loading:'Reading the FSE ledger…', empty:'The FSE ledger has not been uploaded yet', empty_a:'Upload the «FSE ledger» from Data management › Upload source files to fill this tab',
        fail:'Could not read the FSE ledger', nosel:'No alarms match', basis:'ledger {r} rows · {a} – {b}',
        d_title:'{x} — {n} alarms', col_date:'Date', col_sn:'S/N', col_ch:'Chamber', col_code:'Code', col_msg:'Message', col_aw:'Kind', col_resp:'Responsible',
@@ -10725,7 +10746,7 @@ GST.FSE_T = {
        parts_btn:'部件组', parts_t:'关注部件组', pt_grp:'组', pt_code:'部件代码', pt_re:'名称规则 (正则)', pt_fluid:'流体', pt_maker:'制造商',
        pt_label:'说明', pt_on:'启用', pt_add:'添加行', pt_save:'保存', pt_ro:'只读 — 仅有写权限的账号可修改',
        pt_none:'还没有关注部件组', pt_saved:'已保存 — 画面已更新', pt_saving:'保存中…', pt_saved_n:'已保存 {n} 行 — 画面已更新', pt_nochg:'没有更改的行', pt_fail_at:'第 {i} 行未能保存', pt_fail:'保存失败', pt_need:'请填写组和部件代码(或名称规则)',
-       pt_bad_re:'名称规则不是有效的正则表达式', pt_hint:'名称含«MFC»的组(LNG MFC · O2 MFC …)判定版本 — 每行请填写流体(LNG·O2·AIR)和制造商(MCA·MKP·HORIBA)。要看哪些部件，在画面的«查看部件»中按报警选择', v_lbl:'查看部件', v_max:'查看部件最多 {n} 个 — 请先移除一个', v_addg:'+ 部件组', v_empty:'未选择部件', v_auto:'自动推荐', v_mine:'手动选择', v_reset:'恢复自动推荐', v_none:'这些报警作业中没有特别突出的部件 — 请从下方列表选择', v_rm:'移除', v_tip_auto:'在这些报警作业中比平时更换得多的部件', c_aff:'一同更换的部件', aff_sub:'报警作业 {n} 件 · 对比作业 {b} 件', aff_th_p:'部件', aff_th_a:'报警作业', aff_th_b:'平时', aff_th_x:'倍数', aff_th_u:'设备', aff_th_v:'查看', aff_on:'查看中', aff_add:'查看', aff_none:'这些报警作业中没有更换部件', aff_more:'显示全部 {n} 个', aff_less:'收起', aff_d:'{p} — 更换该部件的报警作业 {n} 件', aff_note:'倍数 = (这些报警作业中更换该部件的比例) ÷ (同范围所有作业中更换该部件的比例)。接近1倍的是到处都换的部件。按«比平时多换几次»排序。', mfc_off:'查看部件中没有MFC组，已隐藏MFC版本', mfc_add:'查看MFC组',
+       pt_bad_re:'名称规则不是有效的正则表达式', pt_hint:'名称含«MFC»的组(LNG MFC · O2 MFC …)判定版本 — 每行请填写流体(LNG·O2·AIR)和制造商(MCA·MKP·HORIBA)。要看哪些部件，在画面的«查看部件»中按报警选择', v_lbl:'查看部件', x_raw:'原始数据(Excel)', raw_t:'原始数据 — 按设备的部件更换记录', raw_scope:'对象设备', raw_sc_alarm:'发生报警的设备 {n} 台 · 腔体 {c}', raw_sc_all:'全部管理设备 · 腔体 {c}', raw_per:'期间', raw_per_all:'全部记录', raw_per_cur:'当前期间 ({a} ~ {b})', raw_items:'要包含的部件 — 取消勾选即排除', raw_find:'查找部件(名称·编码)', raw_all:'全选', raw_none:'全部取消', raw_view:'仅查看部件', raw_cnt:'{k} 种 · 更换 {n} 行', raw_go:'下载 {n} 行', raw_zero:'未选择部件', raw_codes:'编码 {n}', raw_cancel:'关闭', xr_rank:'排名', xr_sn:'S/N', xr_ch:'腔体', xr_code:'设备编码', xr_op:'运营单位', xr_cust:'客户', xr_fab:'FAB', xr_floor:'Floor', xr_proc:'工艺', xr_det:'细分工艺', xr_model:'型号', xr_burner:'燃烧器方式', xr_type:'腔体类型', xr_turnon:'Turn On', xr_fabin:'进厂日', xr_join:'已匹配安装现况', xr_date:'作业日期', xr_mc:'作业类别', xr_alarm:'该作业的报警', xr_item:'部件组', xr_pcode:'物料编码', xr_std:'标准品名', xr_mspec:'规格(物料主数据)', xr_lname:'部件名(台账)', xr_lspec:'规格(台账)', xr_qty:'数量', xr_comp:'有偿/无偿', xr_in:'MFC In S/N', xr_out:'MFC Out S/N', xr_src:'S/N 来源', xr_src_l:'台账', xr_src_m:'物料实绩', xr_prev:'上一次报警', xr_next:'下一次报警', xr_gap:'距下一次报警(天)', xr_n:'发生件数', xr_last:'最近发生', xr_reps:'更换行数', xr_icnt:'{p} 更换', xr_ilast:'{p} 最近', xs_hist:'更换记录', xs_sum:'设备汇总', sn_open:'在报警分析中查看此设备', sn_none:'{sn} — FSE台账中没有此设备', v_max:'查看部件最多 {n} 个 — 请先移除一个', v_addg:'+ 部件组', v_empty:'未选择部件', v_auto:'自动推荐', v_mine:'手动选择', v_reset:'恢复自动推荐', v_none:'这些报警作业中没有特别突出的部件 — 请从下方列表选择', v_rm:'移除', v_tip_auto:'在这些报警作业中比平时更换得多的部件', c_aff:'一同更换的部件', aff_sub:'报警作业 {n} 件 · 对比作业 {b} 件', aff_th_p:'部件', aff_th_a:'报警作业', aff_th_b:'平时', aff_th_x:'倍数', aff_th_u:'设备', aff_th_v:'查看', aff_on:'查看中', aff_add:'查看', aff_none:'这些报警作业中没有更换部件', aff_more:'显示全部 {n} 个', aff_less:'收起', aff_d:'{p} — 更换该部件的报警作业 {n} 件', aff_note:'倍数 = (这些报警作业中更换该部件的比例) ÷ (同范围所有作业中更换该部件的比例)。接近1倍的是到处都换的部件。按«比平时多换几次»排序。', mfc_off:'查看部件中没有MFC组，已隐藏MFC版本', mfc_add:'查看MFC组',
        loading:'正在读取FSE台账…', empty:'FSE台账尚未上传', empty_a:'在数据管理 › 上传原始文件中上传«FSE台账»后，此标签会显示内容',
        fail:'无法读取FSE台账', nosel:'没有符合条件的报警', basis:'台账 {r} 行 · {a} ~ {b}',
        d_title:'{x} — 报警 {n} 次', col_date:'日期', col_sn:'S/N', col_ch:'腔体', col_code:'代码', col_msg:'信息', col_aw:'类别', col_resp:'责任',
@@ -10759,7 +10780,7 @@ GST.FSE_T = {
        parts_btn:'部品グループ', parts_t:'注目部品グループ', pt_grp:'グループ', pt_code:'部品コード', pt_re:'名前ルール (正規表現)', pt_fluid:'流体', pt_maker:'メーカー',
        pt_label:'説明', pt_on:'使用', pt_add:'行を追加', pt_save:'保存', pt_ro:'読み取り専用 — 書き込み権限のあるアカウントのみ編集できます',
        pt_none:'注目部品グループはまだありません', pt_saved:'保存しました — 画面に反映しました', pt_saving:'保存中…', pt_saved_n:'{n}行を保存しました — 画面に反映しました', pt_nochg:'変更された行はありません', pt_fail_at:'{i}行目を保存できませんでした', pt_fail:'保存できませんでした', pt_need:'グループと部品コード(または名前ルール)を入力してください',
-       pt_bad_re:'名前ルールが正しい正規表現ではありません', pt_hint:'名前に«MFC»を含むグループ(LNG MFC · O2 MFC …)はバージョン判定を受けます — 行ごとに流体(LNG·O2·AIR)とメーカー(MCA·MKP·HORIBA)を入力してください。どの部品を見るかは画面の«表示部品»でアラームごとに選びます', v_lbl:'表示部品', v_max:'表示部品は{n}個までです — 一つ外してから追加してください', v_addg:'+ 部品グループ', v_empty:'部品を選んでいません', v_auto:'自動推薦', v_mine:'手動選択', v_reset:'自動推薦に戻す', v_none:'これらのアラーム作業で目立つ部品はありません — 下の一覧から選んでください', v_rm:'外す', v_tip_auto:'これらのアラーム作業で普段より多く交換した部品', c_aff:'一緒に交換した部品', aff_sub:'アラーム作業 {n}件 · 比較作業 {b}件', aff_th_p:'部品', aff_th_a:'アラーム作業', aff_th_b:'平常', aff_th_x:'倍率', aff_th_u:'設備', aff_th_v:'表示', aff_on:'表示中', aff_add:'表示', aff_none:'これらのアラーム作業で交換した部品はありません', aff_more:'{n}件すべて表示', aff_less:'閉じる', aff_d:'{p} — この部品を交換したアラーム作業 {n}件', aff_note:'倍率 = (これらのアラーム作業でその部品を交換した割合) ÷ (同じ範囲の全作業でその部品を交換した割合)。1倍前後はどこでも交換する部品です。並び順は«普段より何回多く交換したか»。', mfc_off:'表示部品にMFCグループがないためMFCバージョンを隠しました', mfc_add:'MFCグループを表示',
+       pt_bad_re:'名前ルールが正しい正規表現ではありません', pt_hint:'名前に«MFC»を含むグループ(LNG MFC · O2 MFC …)はバージョン判定を受けます — 行ごとに流体(LNG·O2·AIR)とメーカー(MCA·MKP·HORIBA)を入力してください。どの部品を見るかは画面の«表示部品»でアラームごとに選びます', v_lbl:'表示部品', x_raw:'バックデータ(Excel)', raw_t:'バックデータ — 設備別の部品交換履歴', raw_scope:'対象設備', raw_sc_alarm:'アラーム発生設備 {n}台 · チャンバー {c}', raw_sc_all:'管理設備すべて · チャンバー {c}', raw_per:'期間', raw_per_all:'全履歴', raw_per_cur:'現在の期間 ({a} ~ {b})', raw_items:'含める部品 — 除くものはチェックを外してください', raw_find:'部品を探す(名前·コード)', raw_all:'すべて選択', raw_none:'すべて解除', raw_view:'表示部品のみ', raw_cnt:'{k}種 · 交換 {n}行', raw_go:'{n}行をダウンロード', raw_zero:'部品が選ばれていません', raw_codes:'コード {n}', raw_cancel:'閉じる', xr_rank:'順位', xr_sn:'S/N', xr_ch:'チャンバー', xr_code:'設備コード', xr_op:'運営単位', xr_cust:'顧客', xr_fab:'FAB', xr_floor:'Floor', xr_proc:'工程', xr_det:'詳細工程', xr_model:'モデル', xr_burner:'バーナー方式', xr_type:'チャンバータイプ', xr_turnon:'Turn On', xr_fabin:'搬入日', xr_join:'設置現況と照合', xr_date:'作業日', xr_mc:'作業区分', xr_alarm:'その作業のアラーム', xr_item:'部品グループ', xr_pcode:'資材コード', xr_std:'標準品名', xr_mspec:'規格(資材マスター)', xr_lname:'部品名(台帳)', xr_lspec:'規格(台帳)', xr_qty:'数量', xr_comp:'有償/無償', xr_in:'MFC In S/N', xr_out:'MFC Out S/N', xr_src:'S/N 出所', xr_src_l:'台帳', xr_src_m:'資材実績', xr_prev:'直前のアラーム', xr_next:'次のアラーム', xr_gap:'次のアラームまで(日)', xr_n:'発生件数', xr_last:'最近の発生', xr_reps:'交換行数', xr_icnt:'{p} 交換', xr_ilast:'{p} 最後', xs_hist:'交換履歴', xs_sum:'設備要約', sn_open:'アラーム分析でこの設備を見る', sn_none:'{sn} — FSE台帳にない設備です', v_max:'表示部品は{n}個までです — 一つ外してから追加してください', v_addg:'+ 部品グループ', v_empty:'部品を選んでいません', v_auto:'自動推薦', v_mine:'手動選択', v_reset:'自動推薦に戻す', v_none:'これらのアラーム作業で目立つ部品はありません — 下の一覧から選んでください', v_rm:'外す', v_tip_auto:'これらのアラーム作業で普段より多く交換した部品', c_aff:'一緒に交換した部品', aff_sub:'アラーム作業 {n}件 · 比較作業 {b}件', aff_th_p:'部品', aff_th_a:'アラーム作業', aff_th_b:'平常', aff_th_x:'倍率', aff_th_u:'設備', aff_th_v:'表示', aff_on:'表示中', aff_add:'表示', aff_none:'これらのアラーム作業で交換した部品はありません', aff_more:'{n}件すべて表示', aff_less:'閉じる', aff_d:'{p} — この部品を交換したアラーム作業 {n}件', aff_note:'倍率 = (これらのアラーム作業でその部品を交換した割合) ÷ (同じ範囲の全作業でその部品を交換した割合)。1倍前後はどこでも交換する部品です。並び順は«普段より何回多く交換したか»。', mfc_off:'表示部品にMFCグループがないためMFCバージョンを隠しました', mfc_add:'MFCグループを表示',
        loading:'FSE台帳を読み込み中…', empty:'FSE台帳はまだアップロードされていません', empty_a:'データ管理 › 元ファイルのアップロードで«FSE台帳»を上げるとこのタブに表示されます',
        fail:'FSE台帳を読み込めませんでした', nosel:'条件に合うアラームがありません', basis:'台帳 {r}行 · {a} ~ {b}',
        d_title:'{x} — アラーム{n}件', col_date:'日付', col_sn:'S/N', col_ch:'チャンバー', col_code:'コード', col_msg:'メッセージ', col_aw:'区分', col_resp:'責任',
@@ -10817,7 +10838,7 @@ GST.FSE = {
      Compensation·Remark·Shut down·정지 시각 둘·부품 수량)은 이 탭 어디에도 안 쓰인다. 설비 속성(LINE·공정·세부공정·버너·모델·
      Scrubber Code·Turn-on)은 행마다 같은 값이 반복된다(10MB) — 설비마다 한 줄로 따로 받는다(units · RPC fse_units).
      ⚠ extra(작업자·엑셀 계산 칸 26MB)는 처음부터 안 받는다(dbRows 는 SPEC 열만 고른다). DB 용량만 차지한다. */
-  READ: ['workDate','sn','mcode','chamber','aw','resp','msg','fcode','ncode','wkind','cause','action','partCode','partName','partSpec','mfcIn','mfcOut'],
+  READ: ['workDate','sn','mcode','chamber','aw','resp','msg','fcode','ncode','wkind','cause','action','partCode','partName','partSpec','partQty','comp','mfcIn','mfcOut'],   // 수량·유/무상 — 백데이터 엑셀(v192)
   UNIT: ['fab','grp1','det1','btype','model','code','turnOn'],
   /* 설비(S/N × 챔버)마다 «비어 있지 않은 마지막 값» — parse 가 행마다 덮어쓰던 규칙과 같다(원장 뒤쪽 = 최근이 이긴다).
      RPC 가 없으면(setup-31 전) null — 그때 화면은 설비 열을 행마다 받는 옛 방식으로 돈다(읽기 실패가 아니다). */

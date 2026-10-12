@@ -9,6 +9,7 @@
      [5] 집계 — 건수·설비·반복·교체 후 재발 · 달력으로 채운 월 축 · 업로드 날짜 다듬기(엑셀 시리얼)
      [6] 실제 브라우저 — 고장 분석의 «알람 분석» 탭: 열 때 읽기 · KPI = 팝업 목록 · 칩으로 좁히기 · 순위·타임라인·MFC 카드 ·
          엑셀 받기 · 부품 묶음(읽기 전용) · 언어 전환 · JS 에러 0
+     [8] 백데이터 엑셀(v192 · 본사 요청 1-5) — 알람 발생 설비의 교체 줄 그대로 · 뺄 자재 고르기 · 설치현황 S/N 맵핑 · 설비 일대기 탭 삭제 · S/N 메뉴
      [7] 보는 부품(v191) — MFC 판정은 이름에 «MFC» 낱말(LNG MFC …) · 함께 교체한 부품 = 평소 대비 배수(O-RING 은 1배 근처라 안 뽑힌다) ·
          자동 추천 · 교체 후 재발·이력이 보는 부품을 따른다 · 설비 속성을 설비마다 한 줄로 받아도(fse_units) 결과가 같다 ·
          dbRows 가 이 탭이 쓰는 열만 고른다 · 화면: 알람마다 따로 기억 · MFC 카드는 보는 부품에 MFC 가 있을 때만 · 저장 피드백 ·
@@ -427,6 +428,38 @@ await page.setViewportSize({width:1700,height:1200}); await page.waitForTimeout(
 /* 엑셀 */
 const [dl]=await Promise.all([page.waitForEvent('download',{timeout:20000}).catch(()=>null), page.click('#fseTopCard [data-fx="top"]')]);
 is(dl && /^alarm_rank_2026-09-15\.xlsx$/.test(dl.suggestedFilename()), '순위표 엑셀 받기 ('+(dl&&dl.suggestedFilename())+')');
+/* 백데이터 엑셀(v192 · 본사 요청 1-5) — 알람 발생 설비의 교체 줄 그대로 · 뺄 자재 고르기 · 설치현황(S/N)에서 설비 제원 */
+await page.click('#fseTopCard [data-fx="raw"]'); await page.waitForTimeout(300);
+const ritems=await page.$$eval('.gov #fseRl .fse-ri',r=>r.map(x=>x.textContent.replace(/\s+/g,' ').trim()));
+is(ritems.length===3 && /MFC/.test(ritems[0]) && /4$/.test(ritems[0]), '자재 목록 = 알람 발생 설비에서 실제로 교체된 것 (MFC 4 · 버너 노즐 2 · 노즐 커버 1) '+JSON.stringify(ritems));
+is(/3종 · 교체 7줄/.test(await page.textContent('.gov #fseRc')), '기본은 전부 체크 — 3종 · 7줄');
+await page.click('.gov #fseRl input[data-rk="g:버너 노즐"]'); await page.waitForTimeout(200);
+is(/2종 · 교체 5줄/.test(await page.textContent('.gov #fseRc')) && /5줄 내려받기/.test(await page.textContent('.gov [data-ra="go"]')), '체크를 풀면 그 자재가 빠진다 — 2종 · 5줄');
+const [dl2]=await Promise.all([page.waitForEvent('download',{timeout:20000}).catch(()=>null), page.click('.gov [data-ra="go"]')]);
+is(dl2 && /^alarm_parts_BFE_2026-09-15\.xlsx$/.test(dl2.suggestedFilename()), '백데이터 엑셀 받기 ('+(dl2&&dl2.suggestedFilename())+')');
+if(dl2){ const XL=await import('./node_modules/xlsx/xlsx.mjs'); const fp=await dl2.path(); const wb=XL.read(fs.readFileSync(fp));
+  const h=XL.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}), H0=h[0], col=n=>H0.indexOf(n);
+  is(wb.SheetNames.join('|')==='교체 이력|설비 요약' && h.length===6, '시트 둘 · 교체 이력 5줄 (머리글 + 5) — '+wb.SheetNames.join('|')+' '+h.length);
+  is(['설비 코드','공정','세부공정','모델','자재코드','표준 품목명','수량','작업일자','유/무상','MFC In S/N','설치현황 연결'].every(n=>col(n)>=0), '중요 맵핑 열이 다 있다 (설비 코드·공정·세부공정·모델·자재코드·품목명·수량·작업일자 …)');
+  const r1=h.find(r=>r[col('S/N')]==='GBWS-X001' && r[col('자재코드')]==='P-MFC-LM');
+  is(r1 && r1[col('설비 코드')]==='CD0' && r1[col('공정')]==='ETCH' && r1[col('세부공정')]==='DET-A' && r1[col('모델')]==='MODEL-A' && r1[col('챔버 타입')]==='DUAL' && r1[col('설치현황 연결')]==='O',
+    'S/N 으로 설치현황 제원을 끌어온다 (설비 코드 CD0 · 공정 ETCH · 세부공정 · 모델 · 챔버 타입)');
+  is(r1 && r1[col('작업일자')]==='2026-03-01' && r1[col('작업 구분')]==='BM' && r1[col('그 작업의 알람')]==='Alarm-Main flame off' && r1[col('수량')]===1 && r1[col('다음 알람')]==='2026-03-20' && r1[col('다음 알람까지(일)')]===19 && r1[col('MFC In S/N')]==='250610-11A701_F',
+    '교체 줄 그대로 — 작업일·작업 구분·그 작업의 알람·수량·MFC In S/N·다음 알람까지 19일');
+  is(!h.some(r=>r[col('자재 묶음')]==='버너 노즐'), '뺀 자재(버너 노즐)는 없다');
+  const x3=h.find(r=>r[col('S/N')]==='GBWS-X003');
+  is(x3 && x3[col('설치현황 연결')]==='X', '설치현황에 없는 설비는 «설치현황 연결 X» 로 밝힌다(원장 값으로 채움)');
+  const sm=XL.utils.sheet_to_json(wb.Sheets[wb.SheetNames[1]],{header:1,defval:''});
+  is(sm.length===6 && sm[0].indexOf('MFC 교체')>=0, '설비 요약 — 알람 발생 챔버 5줄 · 자재별 교체 횟수 열'); }
+await page.evaluate(()=>GST._ovClose());
+/* 설비 일대기 탭은 걷어냈다(v192 · 사용자 확정) — S/N 메뉴는 «알람 분석에서 이 설비 보기» */
+is(!(await page.$('#gstSecNav .gst-sec-tab[data-id="life"]')) && !(await page.$('[data-sec="life"]')), '설비 일대기 탭이 없다');
+is(await page.evaluate(()=>GST.snMenuExtra&&GST.snMenuExtra.length===1&&GST.snMenuExtra[0].label()==='알람 분석에서 이 설비 보기'), 'S/N 메뉴 = «알람 분석에서 이 설비 보기»');
+await page.evaluate(()=>fseOpenSn('SWS-X001')); await page.waitForTimeout(500);
+is(/SWS-X001/.test(await page.textContent('#fseTlCard h3')), '순위표 밖 설비(고른 알람 없음)도 타임라인으로 연다');
+await page.evaluate(()=>fseOpenSn('NOPE-0000')); await page.waitForTimeout(400);
+is(/FSE 원장에 없는 설비/.test(await page.evaluate(()=>(document.getElementById('capToast')||{}).textContent||'')), '원장에 없는 S/N 은 그렇게 말한다');
+await page.evaluate(()=>{ fseFS().sel=''; fseRender(); });
 /* 부품 묶음 — 쓰기 권한이 없으면 읽기 전용이라고 말한다 */
 await page.click('#fseBar [data-fparts]'); await page.waitForTimeout(300);
 const pt=await page.textContent('.gov');

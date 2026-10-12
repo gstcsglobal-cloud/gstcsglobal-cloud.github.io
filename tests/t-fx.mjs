@@ -122,6 +122,24 @@ await pg.mouse.move(5, 5); await pg.waitForTimeout(500);
 const t2 = await pg.evaluate(() => { const k = document.querySelector('#kpis .hb-kpi[data-k="pm"]'); return { tilt:k.classList.contains('gst-tilt'), hov:k.classList.contains('gst-hov'), tf:getComputedStyle(k).transform, rx:k.style.getPropertyValue('--gst-rx') }; });
 is(!t2.tilt && !t2.hov && t2.tf === 'none' && !t2.rx, '마우스가 나가면 transform 이 none — 카드에 아무것도 남지 않는다(v169)');
 
+console.log('[4b] 스크롤·마우스가 «문서 전체»를 다시 계산하지 않는다 (v192 · 사용자 「스크롤할 때 뚝뚝 끊긴다」)');
+/* body·html 의 사용자 정의 속성은 모든 요소가 물려받는다 — 스크롤·마우스마다 거기에 쓰면 프레임마다 문서 전체의 스타일을 다시 센다
+   (실측 고장 분석 › 알람 분석: 스크롤 487→100ms · 마우스 3,348→94ms). 패럴랙스는 CSS 스크롤 타임라인 · 격자 좌표는 격자 층 자신 · 조명 좌표는 비상속 등록. */
+await pg.evaluate(() => { document.body.style.minHeight = '3200px'; });
+for (let i = 0; i < 6; i++) { await pg.mouse.wheel(0, 300); await pg.waitForTimeout(60); }
+for (let i = 0; i < 12; i++) { await pg.mouse.move(300 + i * 40, 400 + (i % 3) * 30); await pg.waitForTimeout(20); }
+await pg.waitForTimeout(200);
+const sv = await pg.evaluate(() => { const b = document.body, h = document.documentElement, g = document.querySelector('.gst-fx-grid'), bf = getComputedStyle(b, '::before');
+  const card = document.querySelector('.hb-card,.card,.hb-kpi'), kid = card && card.querySelector('*');
+  if (card) card.style.setProperty('--mx', '123px');
+  const out = { sy:window.scrollY, par:b.style.getPropertyValue('--gst-par'), hgx:h.style.getPropertyValue('--gst-gx'), ggx:g ? g.style.getPropertyValue('--gst-gx') : 'no-grid',
+    tl:bf.animationTimeline, an:bf.animationName, kidMx:kid ? getComputedStyle(kid).getPropertyValue('--mx').trim() : 'no-kid', cardMx:card ? getComputedStyle(card).getPropertyValue('--mx').trim() : '' };
+  if (card) card.style.removeProperty('--mx'); b.style.minHeight = ''; window.scrollTo(0, 0); return out; });
+is(sv.sy > 0 && !sv.par, '스크롤해도 body 에 --gst-par 를 쓰지 않는다 (scrollY ' + sv.sy + ')');
+is(/scroll\(/.test(sv.tl) && /gstPar/.test(sv.an), '패럴랙스 = CSS 스크롤 타임라인(합성에서 돈다) — ' + sv.an + ' · ' + sv.tl);
+is(!sv.hgx && /px$/.test(sv.ggx), '격자 빛 좌표는 html 이 아니라 격자 층 자신에 (' + sv.ggx + ')');
+is(sv.cardMx === '123px' && sv.kidMx === '50%', '조명 좌표(--mx)는 상속하지 않는다 — 카드 안의 요소는 다시 계산되지 않는다 (카드 ' + sv.cardMx + ' · 안 ' + sv.kidMx + ')');
+
 console.log('[5] 자석 단추 · 누름 물결');
 const bb = await pg.evaluate(() => { const b = document.getElementById('saveDef'); const r = b.getBoundingClientRect(); return { x:r.left + r.width / 2, y:r.top + r.height / 2, w:r.width }; });
 await pg.mouse.move(bb.x + bb.w * .55, bb.y); await pg.mouse.move(bb.x + bb.w * .6, bb.y + 4); await pg.waitForTimeout(250);
