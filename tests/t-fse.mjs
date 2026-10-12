@@ -424,7 +424,7 @@ is(thead.includes('MFC') && thead.includes('MFC 교체 후') && thead.includes('
 /* 순위 · 타임라인 · 이력 */
 const top=await page.$$eval('#fseTopCard tbody tr',r=>r.map(x=>[...x.children].map(c=>c.textContent.trim())));
 is(top.length===4 && top[0][1]==='GBWS-X001', '순위 첫 줄 = GBWS-X001 (S/N 단위 · 4대)');
-is(/Left 4 · Right 2/.test(top[0][2]), '챔버별 건수를 한 줄에 (Left 4 · Right 2)');
+is(/Left\s4 · Right\s2/.test(top[0][2]), '챔버별 건수를 한 줄에 (Left 4 · Right 2)');
 is(top[0].some(c=>/F1/.test(c)), '순위표에 MFC 버전이 뜬다');
 const circ=await page.$$eval('#fseTlCard svg circle',c=>c.length);
 is(circ>=3, '타임라인에 달별 알람 원 ('+circ+')');
@@ -471,7 +471,29 @@ const o1700=await ovf();
 await page.setViewportSize({width:1280,height:1000}); await page.waitForTimeout(500); await page.evaluate(()=>fseRender()); await page.waitForTimeout(300);
 const o1280=await ovf();
 is(!o1700.length && !o1280.length, '좌우 스크롤 없음 — 1700·1280 폭에서 페이지·표·타임라인이 넘치지 않는다 '+JSON.stringify(o1700.concat(o1280)));
-await page.setViewportSize({width:1700,height:1200}); await page.waitForTimeout(300);
+await page.setViewportSize({width:1700,height:1200}); await page.waitForTimeout(500);
+/* v194 — 배율 (사용자 「이게 뭐야 크네」 · 「이렇게 크게 하이라이트 되어야 할까?」)
+   ⚠ 셸이 다른 탭을 보이는 동안(iframe display:none) 그리면 카드 폭이 0 이다 — 예전에는 320 폭으로 그려 width:100% 로 «늘어나» 글자가 세 배가 됐다 */
+const tlScale=()=>page.evaluate(()=>{ const s=document.querySelector('#fseTlCard svg'), c=document.getElementById('fseTlCard'); if(!s) return null;
+  const vb=s.viewBox.baseVal.width, rw=s.getBoundingClientRect().width, cs=getComputedStyle(c), iw=c.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+  return {vb:Math.round(vb), rw:Math.round(rw), iw:Math.round(iw)}; });
+await page.evaluate(()=>fseRender()); await page.waitForTimeout(300);
+const sc0=await tlScale();
+is(sc0 && sc0.rw<=sc0.vb+1 && sc0.vb>=sc0.iw-30, '타임라인은 카드 폭에 맞춰 «원래 크기»로 그린다 — 늘리지 않는다 '+JSON.stringify(sc0));
+/* 1280 폭(타임라인이 한 줄을 다 쓴다 — 숨은 동안의 임시 폭 760 과 크게 다르다)에서 숨겼다 보인다 */
+await page.setViewportSize({width:1280,height:1000}); await page.waitForTimeout(500); await page.evaluate(()=>{ fseFS().tl='24'; fseRender(); }); await page.waitForTimeout(300);
+const sc2=await tlScale();
+is(sc2 && sc2.rw<=sc2.vb+1 && sc2.vb>=sc2.iw-30, '달이 적어도(최근 24개월) 칸을 넓혀 카드를 채우고 글자는 늘리지 않는다 '+JSON.stringify(sc2));
+await page.evaluate(()=>{ document.documentElement.style.display='none'; fseRender(); });
+const scH=await page.evaluate(()=>{ const s=document.querySelector('#fseTlCard svg'); return s?Math.round(s.viewBox.baseVal.width):0; });
+await page.evaluate(()=>{ document.documentElement.style.display=''; }); await page.waitForTimeout(600);
+const sc1=await tlScale();
+is(sc2 && sc1 && Math.abs(sc2.vb-scH)>60 && sc1.rw<=sc1.vb+1 && Math.abs(sc1.vb-sc2.vb)<=30, '숨은 동안(폭 0) 그렸어도 보이면 카드 폭으로 다시 그린다 — 늘어나지 않는다 (보임 '+(sc2&&sc2.vb)+' · 숨김 '+scH+' → '+JSON.stringify(sc1)+')');
+await page.evaluate(()=>{ fseFS().tl='all'; }); await page.setViewportSize({width:1700,height:1200}); await page.waitForTimeout(400);
+is(await page.evaluate(()=>{ const on=document.querySelector('#fseAffCard tr.on td:nth-child(2)'), off=document.querySelector('#fseAffCard tr:not(.on) td:nth-child(2)');
+  return !!on && !!off && getComputedStyle(on).backgroundColor===getComputedStyle(off).backgroundColor; }), '함께 교체한 부품 — «보는 중» 줄을 칠하지 않는다(왼쪽 선과 단추만)');
+is(await page.evaluate(()=>{ const k=[...document.querySelectorAll('#fseKpis > *')].filter(x=>x.offsetParent); const t=k.map(x=>Math.round(x.getBoundingClientRect().top)); return k.length===5 && new Set(t).size===1; }),
+  'KPI 다섯 장이 한 줄 — 오른쪽 빈칸 없이');
 /* 엑셀 */
 const [dl]=await Promise.all([page.waitForEvent('download',{timeout:20000}).catch(()=>null), page.click('#fseTopCard [data-fx="top"]')]);
 is(dl && /^alarm_rank_2026-09-15\.xlsx$/.test(dl.suggestedFilename()), '순위표 엑셀 받기 ('+(dl&&dl.suggestedFilename())+')');

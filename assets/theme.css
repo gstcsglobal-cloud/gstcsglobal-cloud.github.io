@@ -796,7 +796,7 @@ body.theme-slate .mini-per .mp-btn.active,body.theme-slate .gst-axsel button[ari
 
 /* ── 표 — 머리는 옅은 판 · 줄은 머리카락 선 ── */
 th{font-size:11.5px !important;font-weight:650 !important;color:var(--txt-muted) !important;letter-spacing:.01em !important}
-body.theme-slate th{background:color-mix(in srgb,var(--surface-2) 80%,transparent) !important}
+body.theme-slate th{background:color-mix(in srgb,var(--surface-2) 80%,var(--surface)) !important}   /* v194 — 불투명하게: 머리글이 붙어 있는(sticky) 표를 스크롤하면 뒤 줄이 비쳐 글자가 겹쳤다(사용자 스크린샷 · 알람 분석 이력) */
 td{border-color:var(--line)}
 tr:hover td{background:color-mix(in srgb,var(--accent) 6%,transparent) !important}
 
