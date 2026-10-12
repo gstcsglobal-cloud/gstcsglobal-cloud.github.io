@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=180"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=181"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -141,8 +141,62 @@ canvas{cursor:pointer}
 #capToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent-1,#2dd4bf);color:#fff;font-weight:800;font-size:13px;padding:9px 18px;border-radius:20px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none}
 @media print{.capbtns,.header-right,.slicers,.fchips{display:none!important}.card,.trend-card,.tablecard{break-inside:avoid;page-break-inside:avoid}}
 .rk-sc{display:inline-block;min-width:28px;padding:1px 6px;border-radius:6px;font-weight:700;background:var(--surface-2);text-align:center}.rk-sc.mid{background:var(--warn-soft,#fef3c7);color:var(--txt-main)}.rk-sc.hi{background:var(--bad);color:#fff}
+/* ── 알람 분석 (v189 · FSE 원장) ── 토큰만 쓴다(라이트·다크 한 벌) */
+.fse-msg{padding:28px 18px;text-align:center;color:var(--txt-2,var(--mut))}
+.fse-msg b{display:block;color:var(--txt-main);font-size:14px;margin-bottom:4px}
+.fse-sub{font-size:12px;color:var(--txt-muted,var(--mut));margin-top:4px}
+.fse-bar{margin-bottom:14px}
+.fse-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0}
+.fse-row+.fse-chips,.fse-chips+.fse-row{margin-top:10px}
+.fse-lbl{font-size:11.5px;color:var(--txt-2,var(--mut));margin-left:4px}
+.fse-sp{flex:1}
+.fse-basis{font-size:11.5px;color:var(--txt-muted,var(--mut))}
+.fse-seg{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2)}
+.fse-seg button{border:0;background:transparent;color:var(--txt-2,var(--mut));font:inherit;font-size:12px;padding:4px 9px;border-radius:7px;cursor:pointer}
+.fse-seg button.on{background:var(--accent-soft);color:var(--accent-ink,var(--accent));font-weight:700}
+.fse-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fse-chip{border:1px solid var(--line);background:var(--surface);color:var(--txt-main);font:inherit;font-size:12px;padding:4px 10px;border-radius:99px;cursor:pointer}
+.fse-chip b{font-weight:700;color:var(--txt-2,var(--mut));margin-left:3px;font-variant-numeric:tabular-nums}
+.fse-chip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink,var(--accent))}
+.fse-chip.on b{color:inherit}
+.fse-link{border:0;background:none;color:var(--accent);font:inherit;font-size:12px;cursor:pointer;padding:2px 4px}
+.fse-q{font:inherit;font-size:12px;padding:4px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--txt-main);min-width:200px}
+.fse-pbtn{padding:5px 12px;font-size:12px}
+.fse-kpis{margin-bottom:16px}
+.fse-kpis .up{color:var(--bad)} .fse-kpis .dn{color:var(--ok)}
+.fse-th{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px !important}
+body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알람 분석 탭에서는 수선실적 KPI 줄을 감춘다 — 이 탭의 숫자가 아니다 · theme.css 의 .kpis{display:grid !important} 를 이겨야 한다 */
+.fse-th h3{margin:0}
+.fse-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.fse-sub2{font-weight:600;color:var(--txt-2,var(--mut));font-size:12px;margin-left:6px}
+.fse-sel{font:inherit;font-size:12px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--txt-main)}
+#fseTopCard td.n,#fseTopCard th.n,#fseHistCard td.n,#fseHistCard th.n{text-align:right}
+#fseTopCard tr[data-fsel]{cursor:pointer}
+#fseTopCard tr.sel td{background:var(--accent-soft)}
+.fse-v{display:inline-block;padding:1px 7px;border-radius:99px;font-size:10.5px;font-weight:700;border:1px solid var(--line-2,var(--line));color:var(--txt-main);margin-right:2px}
+.fse-v.q{border-style:dashed;color:var(--warn)}
+.fse-tlw{overflow-x:auto}
+.fse-tlw svg{display:block}
+.fse-tt,.fse-tl{fill:var(--txt-muted,var(--mut));font-size:10.5px}
+.fse-tg{stroke:var(--line);stroke-width:1}
+.fse-tn{fill:var(--txt-main);font-size:10px;font-weight:700}
+.fse-tbm{fill:var(--txt-muted,var(--mut));color:var(--txt-muted,var(--mut));font-size:10px}
+.fse-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--txt-2,var(--mut));margin-top:6px}
+.fse-h-alarm td:nth-child(3){color:var(--bad);font-weight:700}
+.fse-hb{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:12px}
+.fse-hb .nm{width:130px;color:var(--txt-2,var(--mut));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fse-hb .tr{flex:1;height:9px;background:var(--surface-2);border-radius:6px;overflow:hidden}
+.fse-hb .tr i{display:block;height:100%;border-radius:6px;background:var(--accent)}
+.fse-hb .vv{min-width:120px;text-align:right;color:var(--txt-2,var(--mut));font-variant-numeric:tabular-nums}
+.fse-pri{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.fse-pri div{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface)}
+.fse-pri span{font-size:12px;color:var(--accent);font-weight:700}
+.fse-pri b{display:block;font-size:22px;margin:2px 0;font-variant-numeric:tabular-nums}
+.fse-pri i{font-style:normal;font-size:11.5px;color:var(--txt-muted,var(--mut))}
+#fseMfc{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+@media(max-width:1100px){#fseMfc{grid-template-columns:1fr}.fse-pri{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=180">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=181">
 </head>
 <body>
 
@@ -311,6 +365,33 @@ canvas{cursor:pointer}
 </div>
 
 <!-- ═══ 섹션: 작업 부하 ═══ -->
+<!-- ═══ 섹션: 알람 분석 (v189 · FSE 원장) ═══
+     어떤 알람이 · 어디서 · 어느 설비에 몰리고 · 부품을 바꾼 뒤 멎었는지. 알람은 위 막대에서 고른다(특정 알람을 박지 않는다).
+     원장은 이 탭을 열 때만 읽는다 — 문구는 전부 GST.FSE_T(core · 네 언어)에서 온다. -->
+<div data-sec="alarm" id="fseSec">
+  <div class="card" id="fseState" style="display:none"></div>
+  <div id="fseBody" style="display:none">
+    <div class="card fse-bar" id="fseBar"></div>
+    <div class="kpis fse-kpis" id="fseKpis"></div>
+    <div class="grid2-trend">
+      <div class="trend-card" style="margin-bottom:0">
+        <div class="trend-header"><h3 id="fseTrT"></h3><div id="fsePer"></div></div>
+        <div class="trend-wrap"><canvas id="cFseTrend"></canvas></div>
+      </div>
+      <div class="trend-card" style="margin-bottom:0">
+        <div class="trend-header"><h3 id="fseRateT"></h3><select class="fse-sel" id="fseRateAx" aria-label="axis"></select></div>
+        <div class="trend-wrap"><canvas id="cFseRate"></canvas></div>
+      </div>
+    </div>
+    <div class="tablecard" id="fseTopCard" style="margin-bottom:16px"></div>
+    <div class="grid2-trend">
+      <div class="card" id="fseTlCard"></div>
+      <div class="card" id="fseHistCard"></div>
+    </div>
+    <div id="fseMfc"></div>
+  </div>
+</div>
+
 <div data-sec="load">
   <div class="grid2-trend">
     <div class="trend-card" style="margin-bottom:0">
@@ -640,7 +721,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(170);   // GST.chartLayout(v174) · GST.kpiDrill 배지 모드를 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(181);   // GST.FSE·fseT(v189 · 알람 분석) · GST.chartLayout(v174) · GST.kpiDrill 배지 모드 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -901,6 +982,7 @@ function buildSecNav(){
   GST.sectionNav([
     {id:'overview',label:t('sec_ov')},
     {id:'cause',   label:t('sec_ca')},
+    {id:'alarm',   label:GST.fseT?GST.fseT('sec',null,LANG):'Alarm', onShow:()=>fseLoad()},   // v189 · FSE 원장 — 열 때 읽는다
     {id:'load',    label:t('sec_ld')},
     {id:'rel',     label:t('sec_rel')},
     {id:'deep',    label:t('sec_deep')},
@@ -987,7 +1069,9 @@ async function loadData(){ GST.skeleton(true);
            null 이 되어 사용주기 중앙값이 실제보다 짧게 나온다(같은 파일의 다른 칸은 이미
            GST.numv 를 쓰고 있어 한 화면 안에서 규칙이 갈려 있었다). */
         daysPrev:GST.numv(v(r,'daysPrev'))||null, daysPaid:GST.numv(v(r,'daysPaid'))||null,
-        proc:v(r,'proc'), model:v(r,'model')
+        proc:v(r,'proc'), model:v(r,'model'),
+        /* 알람 분석(v189)의 MFC 버전 판정 — 원장 MFC 교체 줄에 S/N 이 빈 곳을 자재실적 IN/OUT SN 으로 채운다(GST.FSE.enrich) */
+        snIn:String(v(r,'snIn')||'').trim(), snOut:String(v(r,'snOut')||'').trim(), chamber:String(v(r,'chamber')||'').trim()
       })).filter(x=>x.sn&&x.name);
     }
     ROWS=fetched.rows.slice(HI_WK+1)
@@ -1081,7 +1165,8 @@ async function loadData(){ GST.skeleton(true);
     status.className='status ok';
     status.textContent=GST.okText ? GST.okText(ROWS.length.toLocaleString()) : '✅ '+new Date().toLocaleString('ko-KR');   // 행 수는 관리자에게만(v179)
     if(fetched.cached){status.textContent=GST.staleText(fetched.ageMin);status.style.color='#fbbf24';}
-  }catch(e){ GST.skeleton(false);
+    _faultReady&&_faultReady();            // 알람 분석이 설치현황 조인을 기다린다(v189)
+  }catch(e){ GST.skeleton(false); _faultReady&&_faultReady();
     status.className='status err'; status.textContent='❌ '+GST.failNote(e);   // 부류별 한 줄 · 원문은 관리자에게만(v135)
   }
   btn.disabled=false;
@@ -1237,7 +1322,7 @@ const valLabelPlugin={id:'valLabel',
     ctx.font='700 11px "Pretendard Variable",Pretendard,"Segoe UI","Malgun Gothic",sans-serif';
     meta.data.forEach(function(el,i){
       const v=ds.data[i]; if(v==null)return;
-      if(o.mode==='h'){ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(v.toLocaleString(),el.x+6,el.y);return;}
+      if(o.mode==='h'){ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(o.fmt?o.fmt(v):v.toLocaleString(),el.x+6,el.y);return;}
       if(o.mode==='peaks'){
         const firstMax=ds.data.findIndex(x=>x===max);
         if(!((i===firstMax&&v>0)||(i===ds.data.length-1&&v>0)))return;
@@ -1764,6 +1849,7 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 
 // ===== 렌더 =====
 function render(){ GST.skeleton(false); GST.pushState(F); GST.dq&&GST.dq.reset('fault');
+  try{ fseRender(); }catch(e){ console.warn('[알람 분석] 그리기', e); }   // 탭이 보일 때만 그린다(v189)
   const TH=GST.chartTheme(); GST.chartDefaults();
   const f=filt();
   renderFilterChips();
@@ -2020,6 +2106,7 @@ function render(){ GST.skeleton(false); GST.pushState(F); GST.dq&&GST.dq.reset('
   if(GST.dq){
     const naN=f.filter(x=>x.floor===FLOOR_NA).length;
     if(naN) GST.dq.push({key:'floor_na', sev:'info', label:t('dq_floorna'), n:naN, of:f.length, act:t('dq_floorna_a')});
+    try{ fseDq(); }catch(e){}            // 알람 분석(FSE 원장)을 읽었으면 그 신호도(v189)
     GST.dq.render(GST.filtSummary?GST.filtSummary():'');
   }
   // 🔔 자동 브리핑 — 최근 12구간(주/월) 건수·공수 추이
@@ -2696,6 +2783,456 @@ window.openLife=function(sn){ LIFE_SN=sn; const q=document.getElementById('lifeQ
 // 셀에 직접 클릭 핸들러를 달면 절대 실행되지 않으므로, 그 메뉴에 항목으로 합류한다 —
 // 이 페이지의 모든 표·차트에서 S/N을 클릭하면 메뉴 맨 위에 '설비 일대기'가 뜬다.
 GST.snMenuExtra=[{label:()=>'📜 '+t('sec_life'), fn:sn=>openLife(sn)}];
+
+/* ===== 알람 분석 (v189 · FSE 원장) ==================================================================
+   사용자: 「FSE Data 있는 거 별도 분석 목적 페이지는 저 원장으로 분석 · 페이지는 "고장분석"의 일부 탭 · BFE 만을 타겟으로 하지 말고 필터로」
+   · 무엇을 «알람»으로 볼지는 위 막대(알람 코드·분류·메시지)가 고른다 — 특정 알람을 코드에 박지 않는다.
+   · 계산은 core GST.FSE 한 벌이다(잇기·고르기·집계·MFC 판정) — 이 화면은 그리기만 한다.
+   · 원장은 이 탭을 «열 때» 읽는다(GST.sectionNav onShow) — 고장 분석의 첫 그림을 늦추지 않게.
+   · 사이드바(구분·운영단위·고객사·단지·라인·사업부·기간)는 S/N 으로 설치현황에 이어 그대로 건다(GST.filters.pass).
+   ⚠ 이 원장은 이 탭에서만 쓴다(제3원칙) — 해외 Alarm(BM) KPI 는 지금처럼 수선실적 기준이다.
+   ⚠ 현장 측정값은 넣지 않는다(사용자 확정). ⚠ 회의록 번호 같은 사정은 화면에 적지 않는다(사용자 지시). */
+const ft=(k,o)=>GST.fseT(k,o,LANG);
+const FSE_KEY='gst_fse_sel';
+const FSEX={ D:null, st:'idle', err:'', fs:null };
+let _faultReady=null; const FAULT_READY=new Promise(r=>{ _faultReady=r; });
+function fseFS(){
+  if(FSEX.fs) return FSEX.fs;
+  let o={}; try{ o=JSON.parse(localStorage.getItem(FSE_KEY)||'{}')||{}; }catch(e){}
+  FSEX.fs=Object.assign({axis:'code', vals:[], aw:'all', resp:'all', ch:'all', ut:'all', per:'m', rateAx:'det1', sort:'y', unit:'sn',
+    tl:'24', verMode:'now', verF:'LNG', more:false, topAll:false}, o, {sel:'', q:''});
+  if(!Array.isArray(FSEX.fs.vals)) FSEX.fs.vals=[];
+  return FSEX.fs;
+}
+function fseSave(){ try{ const o=Object.assign({},FSEX.fs); delete o.sel; delete o.q; localStorage.setItem(FSE_KEY, JSON.stringify(o)); }catch(e){} }
+function fseVisible(){ const s=document.querySelector('[data-sec="alarm"]'); return !!(s && s.style.display!=='none'); }
+const fseEsc=s=>GST._esc(s);
+const fseN=n=>Number(n||0).toLocaleString();
+
+/* 설치현황 조인 — 고장 분석이 이미 만든 INSTIX 를 S/N 열쇠(영숫자·대문자)로 다시 묶는다(하이픈 표기 흔들림 흡수) */
+function fseOrg(){
+  const M=new Map();
+  if(INSTIX&&INSTIX.bySN) INSTIX.bySN.forEach((v,k)=>{ const s=GST.snKey(k); if(s&&!M.has(s)) M.set(s,v); });
+  return snk=>M.get(snk)||null;
+}
+/* 자재실적의 IN/OUT SN — MFC 교체 줄의 S/N 이 빈 곳을 채운다(GST.FSE.enrich) */
+function fseMats(){
+  return (MAT_ROWS||[]).filter(x=>x.snIn||x.snOut).map(x=>({ snk:GST.snKey(x.sn), date:GST.fmtD(x.date), code:x.code, ch:x.chamber||'', snIn:x.snIn, snOut:x.snOut }));
+}
+async function fseLoad(force){
+  if(FSEX.st==='loading') return;
+  if(FSEX.st==='ok' && !force){ fseRender(); return; }
+  FSEX.st='loading'; fseRender();
+  try{
+    await Promise.race([FAULT_READY, new Promise(r=>setTimeout(r,20000))]);   // 설치현황 조인이 필요하다 — 고장 분석 첫 읽기를 기다린다
+    const [rowsR]=await Promise.allSettled([GST.dbRows('fse'), GST.FSE.reg.load()]);
+    if(rowsR.status!=='fulfilled') throw rowsR.reason;
+    const D=GST.FSE.parse(rowsR.value,{org:fseOrg()});
+    GST.FSE.bind(D); GST.FSE.enrich(D, fseMats());
+    FSEX.D=D; FSEX.st=D.ev.length?'ok':'empty'; FSEX.err='';
+  }catch(e){
+    const m=String(e&&e.message||e);
+    FSEX.D=null; FSEX.st=/MIRROR_EMPTY/.test(m)?'empty':'fail'; FSEX.err=m;
+    console.warn('[알람 분석] FSE 원장 읽기', e);
+  }
+  fseRender();
+  if(ROWS.length) render();          // 품질 팝업에 원장 신호를 싣는다(render 가 dq 를 다시 센다)
+}
+/* 품질 신호 — 사실은 모두에게, 조치는 관리자에게(GST.dq 가 가른다) */
+function fseDq(){
+  const D=FSEX.D; if(!D||!GST.dq) return;
+  if(D.joinSn) GST.dq.push({key:'fse_join', sev:'warn', label:ft('dq_join',{n:fseN(D.joinSn)}), n:D.joinSn, act:ft('dq_join_a')});
+  if(D.orphan) GST.dq.push({key:'fse_orphan', sev:'info', label:ft('dq_orph',{n:fseN(D.orphan)}), n:D.orphan, of:D.parts.length, act:ft('dq_orph_a')});
+  if(D.mismatch) GST.dq.push({key:'fse_mfc_mis', sev:'info', label:ft('dq_mis',{n:fseN(D.mismatch)}), n:D.mismatch, act:ft('dq_mis_a')});
+}
+
+/* ── 그리기 ── */
+function fseState(){
+  const st=document.getElementById('fseState'), body=document.getElementById('fseBody'); if(!st||!body) return false;
+  const S=FSEX.st;
+  if(S==='ok'){ st.style.display='none'; st.innerHTML=''; body.style.display=''; return true; }
+  body.style.display='none'; st.style.display='';
+  const adm=GST.isAdmin&&GST.isAdmin();
+  st.innerHTML = S==='loading'||S==='idle' ? '<div class="fse-msg">'+fseEsc(ft('loading'))+'</div>'
+    : S==='empty' ? '<div class="fse-msg"><b>'+fseEsc(ft('empty'))+'</b><div class="fse-sub">'+fseEsc(ft('empty_a'))+'</div></div>'
+    : '<div class="fse-msg"><b>'+fseEsc(ft('fail'))+'</b>'+(adm&&FSEX.err?'<div class="fse-sub">'+fseEsc(FSEX.err.slice(0,200))+'</div>':'')
+      +'<div style="margin-top:10px"><button type="button" class="btn btn-glass" onclick="fseLoad(true)">'+fseEsc(ft('reload'))+'</button></div></div>';
+  return false;
+}
+function fseSeg(id, opts, cur, attr){
+  return '<div class="fse-seg" role="group">'+opts.map(o=>'<button type="button" data-'+attr+'="'+fseEsc(o[0])+'" class="'+(String(cur)===String(o[0])?'on':'')+'">'+fseEsc(o[1])+'</button>').join('')+'</div>';
+}
+function fseEvRows(list){
+  return list.slice().sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0).map(e=>[e.date, e.sn, e.ch, e.code||'—', e.msg||'—', e.aw||'—', e.resp||'—',
+    e.cause||'—', e.action||'—', (e.parts||[]).map(p=>p.name||p.code).filter(Boolean).join(', ')||'—']);
+}
+function fseEvCols(){ return [ft('col_date'),ft('col_sn'),ft('col_ch'),ft('col_code'),ft('col_msg'),ft('col_aw'),ft('col_resp'),ft('col_cause'),ft('col_action'),ft('col_parts')]; }
+
+function fseRender(){
+  if(!fseVisible()) return;
+  if(!fseState()) return;
+  const D=FSEX.D, FS=fseFS(), P=GST.FSE.P(), F2=GST.FSE, TH=GST.chartTheme();
+  /* 기반 — 알람 행 · 사이드바(설치현황 조인으로 붙인 축) · 기간 */
+  const alarmsAll=D.ev.filter(e=>e.alarm && GST.filters.pass(e,{noDate:true}));
+  const alarmsP=alarmsAll.filter(e=>GST.filters.pass(e));
+  const selNoVals=Object.assign({},FS,{vals:[]});
+  const facetSrc=alarmsP.filter(e=>F2.match(e,selNoVals,D));
+  const facet=F2.facet(facetSrc, FS.axis);
+  /* 고른 값이 지금 조건에서 0건이어도 칩으로 남긴다 — 사라지면 «무엇을 골라 둔 채인지» 모른다 */
+  FS.vals.forEach(v=>{ if(!facet.some(x=>x.k===v)) facet.push({k:v, n:0, units:0, label:v, hint:''}); });
+  const evs=alarmsP.filter(e=>F2.match(e,FS,D));
+  const evsAll=alarmsAll.filter(e=>F2.match(e,FS,D));
+  /* 분모 — 관리 설비(챔버). 알람 고르기와 무관하고 같은 사이드바·챔버·타입 조건을 받는다 */
+  const units={};
+  Object.keys(D.units).forEach(u=>{ const U=D.units[u];
+    if(FS.ch!=='all'&&U.ch!==FS.ch) return; if(FS.ut!=='all'&&U.utype!==FS.ut) return;
+    if(!GST.filters.pass({region:U.region, op:U.op, customerN:U.customer, campus:U.campus, line:U.fab, line2:U.line2, div:U.div},{noDate:true})) return;
+    units[u]=U; });
+  const st=F2.stats(D, evs, units, {asOf:D.asOf, recur:P.recur, top:P.top});
+  const y=D.asOf.slice(0,4), md=D.asOf.slice(5);
+  const nY=evsAll.filter(e=>e.y===y).length, nPY=evsAll.filter(e=>e.y===String(+y-1)&&e.date.slice(5)<=md).length;
+  const perOn=!!(GST.filters.F.dtFrom||GST.filters.F.dtTo);
+  fseBar(facet, D); fseKpis(D, FS, st, evs, evsAll, nY, nPY, y, units);
+  const from=perOn&&GST.filters.F.dtFrom ? GST.filters.F.dtFrom : D.minDate, to=perOn&&GST.filters.F.dtTo ? GST.filters.F.dtTo : D.asOf;
+  fseTrend(evs, FS, from, to, TH);
+  fseRate(D, evs, units, FS, TH);
+  const rank=fseRank(D, FS, evs, evsAll, y);
+  fseTop(D, FS, rank, y, perOn, P, evsAll);
+  fseTl(D, FS, rank);
+  fseMfc(D, FS, evs, units, rank, P, y);
+}
+
+/* 고르기 막대 */
+function fseBar(facet, D){
+  const FS=fseFS(), el=document.getElementById('fseBar'); if(!el) return;
+  const lim=FS.more?400:10, q=String(FS.q||'').toLowerCase();
+  const shown=facet.filter(x=>!q || (x.k+' '+x.label+' '+x.hint).toLowerCase().includes(q));
+  const chips=shown.slice(0,lim).map(x=>{ const on=FS.vals.indexOf(x.k)>=0, lab=x.k===''?ft('blank'):(FS.axis==='msg'?x.label:x.k);
+    return '<button type="button" class="fse-chip'+(on?' on':'')+'" data-fv="'+fseEsc(x.k)+'" title="'+fseEsc((x.hint||x.label||'')+' · '+fseN(x.units)+' '+ft('u_ch'))+'">'
+      +fseEsc(lab.length>34?lab.slice(0,33)+'…':lab)+' <b>'+fseN(x.n)+'</b></button>'; }).join('');
+  const resps=[...new Set(D.ev.filter(e=>e.alarm&&e.resp).map(e=>String(e.resp).trim()))].sort();
+  const chs=[...new Set(Object.values(D.units).map(U=>U.ch).filter(Boolean))].sort((a,b)=>{ const o=['Left','Right','Single']; return (o.indexOf(a)<0?9:o.indexOf(a))-(o.indexOf(b)<0?9:o.indexOf(b)); });
+  const uts=['OLD','GLOBAL','DRAGON','ETC','EXCL'].filter(t=>Object.values(D.units).some(U=>U.utype===t));
+  el.innerHTML='<div class="fse-row">'
+    +fseSeg('ax',[['code',ft('ax_code')],['ncode',ft('ax_ncode')],['msg',ft('ax_msg')]],FS.axis,'fax')
+    +'<span class="fse-lbl">'+fseEsc(FS.vals.length?ft('n_sel',{n:FS.vals.length}):ft('all_alarms'))+'</span>'
+    +(FS.vals.length?'<button type="button" class="fse-link" data-fclr="1">'+fseEsc(ft('clear'))+'</button>':'')
+    +'<span class="fse-sp"></span><span class="fse-basis">'+fseEsc(ft('basis',{r:fseN(D.rowsN),a:D.minDate,b:D.asOf}))+'</span>'
+    +'<button type="button" class="btn btn-glass fse-pbtn" data-fparts="1">'+fseEsc(ft('parts_btn'))+'</button></div>'
+    +'<div class="fse-chips">'+chips
+    +(facet.length>10?'<button type="button" class="fse-link" data-fmore="1">'+fseEsc(FS.more?ft('less'):ft('more'))+'</button>':'')
+    +(FS.more?'<input class="fse-q" id="fseQ" placeholder="'+fseEsc(ft('search_ph'))+'" value="'+fseEsc(FS.q||'')+'">':'')+'</div>'
+    +'<div class="fse-row">'
+    +'<span class="fse-lbl">'+fseEsc(ft('f_aw'))+'</span>'+fseSeg('aw',[['all',ft('all')],['Alarm','Alarm'],['Warning','Warning']],FS.aw,'faw')
+    +(resps.length?'<span class="fse-lbl">'+fseEsc(ft('f_resp'))+'</span>'+fseSeg('resp',[['all',ft('all')]].concat(resps.map(r=>[r,r])),FS.resp,'frs'):'')
+    +'<span class="fse-lbl">'+fseEsc(ft('f_ch'))+'</span>'+fseSeg('ch',[['all',ft('all')]].concat(chs.map(c=>[c,c])),FS.ch,'fch')
+    +'<span class="fse-lbl">'+fseEsc(ft('f_ut'))+'</span>'+fseSeg('ut',[['all',ft('all')]].concat(uts.map(t=>[t,ft('ut_'+t)])),FS.ut,'fut')
+    +'</div>';
+  const set=(k,v)=>{ FS[k]=v; fseSave(); fseRender(); };
+  el.querySelectorAll('[data-fax]').forEach(b=>b.onclick=()=>{ FS.axis=b.dataset.fax; FS.vals=[]; FS.sel=''; fseSave(); fseRender(); });
+  el.querySelectorAll('[data-fv]').forEach(b=>b.onclick=()=>{ const v=b.dataset.fv, i=FS.vals.indexOf(v); if(i>=0) FS.vals.splice(i,1); else FS.vals.push(v); FS.sel=''; fseSave(); fseRender(); });
+  el.querySelectorAll('[data-faw]').forEach(b=>b.onclick=()=>set('aw',b.dataset.faw));
+  el.querySelectorAll('[data-frs]').forEach(b=>b.onclick=()=>set('resp',b.dataset.frs));
+  el.querySelectorAll('[data-fch]').forEach(b=>b.onclick=()=>set('ch',b.dataset.fch));
+  el.querySelectorAll('[data-fut]').forEach(b=>b.onclick=()=>set('ut',b.dataset.fut));
+  const clr=el.querySelector('[data-fclr]'); if(clr) clr.onclick=()=>{ FS.vals=[]; FS.sel=''; fseSave(); fseRender(); };
+  const mo=el.querySelector('[data-fmore]'); if(mo) mo.onclick=()=>set('more',!FS.more);
+  const pb=el.querySelector('[data-fparts]'); if(pb) pb.onclick=fseParts;
+  const qi=document.getElementById('fseQ'); if(qi){ qi.oninput=()=>{ FS.q=qi.value; const pos=qi.selectionStart; fseBar(facet,D); const q2=document.getElementById('fseQ'); if(q2){ q2.focus(); try{ q2.setSelectionRange(pos,pos); }catch(e){} } }; }
+}
+
+function fseKpis(D, FS, st, evs, evsAll, nY, nPY, y, units){
+  const el=document.getElementById('fseKpis'); if(!el) return;
+  const pct=(a,b)=>b?Math.round(a/b*1000)/10+'%':'—';
+  const card=(id,v,u,cap,kf)=>'<div class="kpi"><div class="krow"><span class="val" id="'+id+'">'+v+'</span><span class="unit">'+fseEsc(u)+'</span></div>'
+    +'<div class="cap">'+fseEsc(cap)+'</div><div class="kf">'+kf+'</div></div>';
+  const d=nY-nPY, dTxt=nPY||nY?'<span class="'+(d>0?'up':d<0?'dn':'')+'">'+(d>0?'▲ +':d<0?'▼ −':'')+(d?fseN(Math.abs(d)):'±0')+'</span> · ':'';
+  el.innerHTML=
+     card('fk1',fseN(st.n),ft('u_case'),ft('k_n'),fseEsc(ft('k_n_f',{u:fseN(st.sns),c:fseN(st.chambers)})))
+    +card('fk2',fseN(nY),ft('u_case'),ft('k_y',{y:y}),dTxt+fseEsc(ft('k_y_f',{p:fseN(nPY)})))
+    +card('fk3',fseN(st.sns),ft('u_ea'),ft('k_u'),fseEsc(ft('k_u_f',{t:fseN(st.managedSn),r:pct(st.sns,st.managedSn)})))
+    +card('fk4',fseN(st.rep),ft('u_ea'),ft('k_rep'),fseEsc(ft('k_rep_f',{n:st.topN,s:pct(Math.round(st.topShare*1000),1000)})))
+    +card('fk5',st.rec.n?pct(st.rec.hit,st.rec.n):'—','',ft('k_rec',{d:GST.FSE.P().recur}),fseEsc(st.rec.n?ft('k_rec_f',{n:fseN(st.rec.n),h:fseN(st.rec.hit)}):ft('k_rec_none')));
+  if(GST.fitKpis) try{ GST.fitKpis(el); }catch(e){}
+  const C=fseEvCols();
+  GST.kpiDrill({
+    fk1:()=>({title:ft('k_n'), cols:C, rows:fseEvRows(evs)}),
+    fk2:()=>({title:ft('k_y',{y:y}), cols:C, rows:fseEvRows(evsAll.filter(e=>e.y===y))}),
+    fk3:()=>({title:ft('k_u'), cols:[ft('col_sn'),ft('col_ch'),ft('k_n'),ft('th_last'),ft('col_det')],
+      rows:st.rank.map(r=>{ const U=D.units[r.u]||{}; return [U.sn, U.ch, r.n, r.last, U.d1||'—']; })}),
+    fk4:()=>({title:ft('k_rep'), cols:[ft('col_sn'),ft('col_ch'),ft('k_n'),ft('th_last')],
+      rows:st.rank.filter(r=>r.n>=2).map(r=>{ const U=D.units[r.u]||{}; return [U.sn, U.ch, r.n, r.last]; })}),
+    fk5:()=>({title:ft('k_rec',{d:GST.FSE.P().recur}), cols:[ft('col_date'),ft('col_sn'),ft('col_ch'),ft('col_parts'),ft('h_next')],
+      rows:st.rec.list.map(x=>[x.e.date, x.e.sn, x.e.ch, x.parts.map(p=>p.grp+' '+(p.name||p.code)).join(', '),
+        x.next?ft('days',{n:GST.FSE.daysBetween(x.e.date,x.next.date)}):'—']), note:ft('note_rec',{d:GST.FSE.P().recur})})
+  });
+}
+
+const FSE_CH_COL=TH=>({Left:TH.pal[0], Right:TH.pal[1], Single:TH.pal[2]});
+function fseTrend(evs, FS, from, to, TH){
+  const ttl=document.getElementById('fseTrT'), per=document.getElementById('fsePer');
+  if(ttl) ttl.textContent=ft('c_trend');
+  if(per){ per.innerHTML=fseSeg('per',[['m',ft('per_m')],['y',ft('per_y')]],FS.per,'fper');
+    per.querySelectorAll('[data-fper]').forEach(b=>b.onclick=()=>{ FS.per=b.dataset.fper; fseSave(); fseRender(); }); }
+  const S=GST.FSE.series(evs, FS.per, from, to), cc=FSE_CH_COL(TH);
+  const ctx=document.getElementById('cFseTrend'); if(!ctx) return;
+  if(CHARTS.cFseTrend) CHARTS.cFseTrend.destroy();
+  const lab=FS.per==='y'?S.keys:S.keys.map(k=>k.slice(2));
+  const ds=S.ch.map((c,i)=>({label:c.ch||ft('ch_etc'), data:c.data, backgroundColor:cc[c.ch]||TH.pal[(i+3)%TH.pal.length], stack:'a', order:2}));
+  ds.push({type:'line', label:ft('ds_units'), data:S.units, yAxisID:'y2', borderColor:TH.status.warn, backgroundColor:TH.status.warn, borderWidth:2, pointRadius:0, pointHoverRadius:3, tension:.3, order:1, valLabel:false});
+  CHARTS.cFseTrend=new Chart(ctx,{type:'bar', data:{labels:lab, datasets:ds},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:true, position:'bottom', labels:{color:TH.txt, font:{size:10}, boxWidth:10}}},
+      scales:{x:{stacked:true, ticks:{color:TH.txt, font:{size:10}, maxRotation:0, autoSkip:true, maxTicksLimit:14}, grid:{display:false}},
+              y:{stacked:true, ticks:{color:TH.txt, precision:0, maxTicksLimit:5}, grid:{color:TH.grid}},
+              y2:{position:'right', ticks:{color:TH.txt, precision:0, maxTicksLimit:5}, grid:{display:false}}}}});
+  CHARTS.cFseTrend.$rows=(di,i)=>{ const k=S.keys[i]; if(k==null) return null;
+    const ch=di<S.ch.length?S.ch[di].ch:null;
+    const L=evs.filter(e=>(FS.per==='y'?e.y:e.ym)===k && (ch==null||e.ch===ch));
+    return {title:k+(ch?' · '+(ch||ft('ch_etc')):''), cols:fseEvCols(), rows:fseEvRows(L)}; };
+}
+function fseRate(D, evs, units, FS, TH){
+  const ttl=document.getElementById('fseRateT'), sel=document.getElementById('fseRateAx');
+  const AX=[['d1','by_det1'],['g1','by_grp1'],['btype','by_btype'],['model','by_model'],['fab','by_fab']];
+  if(ttl) ttl.textContent=ft('c_rate');
+  if(sel){ sel.innerHTML=AX.map(a=>'<option value="'+a[0]+'"'+(FS.rateAx===a[0]?' selected':'')+'>'+fseEsc(ft(a[1]))+'</option>').join('');
+    sel.onchange=()=>{ FS.rateAx=sel.value; fseSave(); fseRender(); }; }
+  const ax=AX.some(a=>a[0]===FS.rateAx)?FS.rateAx:'d1';
+  const R=GST.FSE.rate(D, evs, units, ax, 3).slice(0,12);
+  const ctx=document.getElementById('cFseRate'); if(!ctx) return;
+  if(CHARTS.cFseRate) CHARTS.cFseRate.destroy();
+  CHARTS.cFseRate=new Chart(ctx,{type:'bar', data:{labels:R.map(x=>x.k.length>18?x.k.slice(0,17)+'…':x.k),
+      datasets:[{data:R.map(x=>Math.round(x.r*1000)/10), backgroundColor:TH.pal[0], barPercentage:.72}]},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:52}},
+      plugins:{legend:{display:false}, valLabel:{mode:'h', color:inkStrong(TH), fmt:v=>v+'%'},
+        tooltip:{callbacks:{title:it=>R[it[0].dataIndex].k, label:c=>' '+c.parsed.x+'% · '+ft('rate_lab',{n:fseN(R[c.dataIndex].n),a:fseN(R[c.dataIndex].a),t:fseN(R[c.dataIndex].t)})}}},
+      scales:{x:{display:false, min:0}, y:{ticks:{color:TH.txt, font:{size:10}}, grid:{display:false}}}},
+    plugins:[valLabelPlugin]});
+  CHARTS.cFseRate.$rows=(di,i)=>{ const x=R[i]; if(!x) return null;
+    const L=evs.filter(e=>{ const U=units[e.u]; return U && (String(U[ax]||'').trim()||'—')===x.k; });
+    return {title:x.k+' · '+ft('rate_lab',{n:fseN(x.n),a:fseN(x.a),t:fseN(x.t)}), cols:fseEvCols(), rows:fseEvRows(L)}; };
+}
+
+/* 순위 — S/N 단위(두 챔버를 한 줄로 · 메일 표와 같은 꼴) 또는 챔버 단위 */
+function fseRank(D, FS, evs, evsAll, y){
+  const key=e=>FS.unit==='ch'?e.u:e.snk, m={};
+  const add=(e,f)=>{ const k=key(e); const o=m[k]||(m[k]={k:k, sn:e.sn, snk:e.snk, units:{}, n:0, nY:0, nAll:0, last:'', per:{}});
+    o.units[e.u]=1; if(f==='p'){ o.n++; o.per[e.ch||'']=(o.per[e.ch||'']||0)+1; if(!o.last||e.date>o.last) o.last=e.date; } else { o.nAll++; if(e.y===y) o.nY++; } };
+  evs.forEach(e=>add(e,'p')); evsAll.forEach(e=>{ if(m[key(e)]) add(e,'a'); });
+  const sk=FS.sort==='n'?'n':FS.sort==='all'?'nAll':'nY';
+  return Object.values(m).filter(o=>o.n>0).sort((a,b)=>b[sk]-a[sk] || b.n-a.n || b.nAll-a.nAll || (a.last<b.last?1:-1));
+}
+function fseChs(D, o){ const o2=['Left','Right','Single']; return Object.keys(o.units).sort((a,b)=>{ const x=o2.indexOf(D.units[a].ch), z=o2.indexOf(D.units[b].ch); return (x<0?9:x)-(z<0?9:z); }); }
+function fseTop(D, FS, rank, y, perOn, P, evsAll){
+  const card=document.getElementById('fseTopCard'); if(!card) return;
+  const AD={}; (evsAll||[]).forEach(e=>{ (AD[e.u]=AD[e.u]||[]).push(e.date); });   // 챔버별 «고른 알람» 날짜 — 줄마다 원장을 다시 훑지 않게
+  const groups=GST.FSE.reg.groups().filter(g=>!GST.FSE.isMfcGrp(g)).slice(0,4);
+  const fl=D.hasMfc?GST.FSE.FLUIDS:[];
+  const lim=FS.topAll?rank.length:P.top, rows=rank.slice(0,lim);
+  const multi=(o,fn)=>fseChs(D,o).map(u=>fn(u)).join(' / ');
+  const days=d=>d==null?'—':ft('days',{n:fseN(d)});
+  const head='<tr><th>'+fseEsc(ft('th_rank'))+'</th><th>S/N</th><th>'+fseEsc(ft('th_ch'))+'</th><th>'+fseEsc(ft('th_det'))+'</th>'
+    +'<th class="n">'+fseEsc(perOn?ft('th_n'):ft('th_all'))+'</th><th class="n">'+fseEsc(ft('th_y',{y:y}))+'</th><th>'+fseEsc(ft('th_last'))+'</th>'
+    +fl.map(f=>'<th>'+fseEsc(ft('th_mfc',{f:f}))+'</th>').join('')
+    +groups.map(g=>'<th class="n">'+fseEsc(ft('th_since',{g:g}))+'</th>').join('')
+    +'<th class="n">'+fseEsc(ft('th_after'))+'</th></tr>';
+  const verChip=v=>'<span class="fse-v'+(v.q?' q':'')+'" title="'+fseEsc(ft('how_'+(v.how||'q'))+(v.sn?' · '+v.sn:'')+(v.date?' · '+v.date:''))+'">'+fseEsc(v.ver+(v.q&&!/\?$/.test(v.ver)?'?':''))+'</span>';
+  const body=rows.map((o,i)=>{
+    const us=fseChs(D,o), U0=D.units[us[0]]||{};
+    const chTxt=FS.unit==='ch'?(U0.ch||'—'):us.map(u=>{ const c=D.units[u].ch||'—'; return c+' '+fseN(o.per[D.units[u].ch||'']||0); }).join(' · ');
+    const after=u=>{ let lp=''; Object.keys((D.pg&&D.pg[u])||{}).forEach(g=>{ const l=GST.FSE.lastRep(D,u,g); if(l>lp) lp=l; });
+      if(!lp) return ft('never'); return fseN((AD[u]||[]).filter(d=>d>lp).length); };
+    return '<tr data-fsel="'+fseEsc(o.k)+'" class="'+(FS.sel===o.k?'sel':'')+'"><td>'+(i+1)+'</td><td>'+fseEsc(o.sn)+'</td><td>'+fseEsc(chTxt)+'</td><td>'+fseEsc(U0.d1||'—')+'</td>'
+      +'<td class="n"><b>'+fseN(perOn?o.n:o.nAll)+'</b></td><td class="n">'+fseN(o.nY)+'</td><td>'+fseEsc(o.last)+'</td>'
+      +fl.map(f=>'<td>'+us.map(u=>verChip(GST.FSE.ver(D,u,f,null,P))).join(' ')+'</td>').join('')
+      +groups.map(g=>'<td class="n">'+fseEsc(multi(o,u=>{ const l=GST.FSE.lastRep(D,u,g); return l?days(GST.FSE.daysBetween(l,D.asOf)):'—'; }))+'</td>').join('')
+      +'<td class="n">'+fseEsc(multi(o,after))+'</td></tr>';
+  }).join('');
+  card.innerHTML='<div class="trend-header fse-th"><h3>'+fseEsc(ft('c_top'))+'</h3><div class="fse-tools">'
+    +fseSeg('unit',[['sn',ft('unit_sn')],['ch',ft('unit_ch')]],FS.unit,'funit')
+    +fseSeg('sort',[['y',ft('sort_y',{y:y})],['n',ft('sort_n')],['all',ft('sort_all')]],FS.sort,'fsort')
+    +'<button type="button" class="btn btn-glass" data-fx="top">'+fseEsc(ft('x_top'))+'</button></div></div>'
+    +(rank.length?'<div class="tbl-wrap" style="max-height:560px;overflow:auto"><table data-gst-nosn><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'
+      +(rank.length>P.top?'<div style="margin-top:8px"><button type="button" class="fse-link" data-ftop="1">'+fseEsc(FS.topAll?ft('top_less',{n:P.top}):ft('top_more',{n:fseN(rank.length)}))+'</button></div>':'')
+      :'<div class="empty">'+fseEsc(ft('nosel'))+'</div>');
+  card.querySelectorAll('[data-funit]').forEach(b=>b.onclick=()=>{ FS.unit=b.dataset.funit; FS.sel=''; fseSave(); fseRender(); });
+  card.querySelectorAll('[data-fsort]').forEach(b=>b.onclick=()=>{ FS.sort=b.dataset.fsort; fseSave(); fseRender(); });
+  card.querySelectorAll('[data-fsel]').forEach(tr=>tr.onclick=()=>{ FS.sel=tr.dataset.fsel; fseRender();
+    const tl=document.getElementById('fseTlCard'); if(tl&&tl.scrollIntoView) tl.scrollIntoView({behavior:'smooth',block:'nearest'}); });
+  const tb=card.querySelector('[data-ftop]'); if(tb) tb.onclick=()=>{ FS.topAll=!FS.topAll; fseSave(); fseRender(); };
+  const xb=card.querySelector('[data-fx="top"]'); if(xb) xb.onclick=()=>fseExport('top', rank.slice(0,lim), y, perOn);
+}
+
+/* 타임라인 — 고른 설비의 챔버마다 한 줄: 위 = 달별 알람(원 크기), 아래 = 관심 부품 교체 기호 · TBM */
+const FSE_SYM=['▲','◆','■','●','★','✚'];
+function fseTl(D, FS, rank){
+  const card=document.getElementById('fseTlCard'), hc=document.getElementById('fseHistCard'); if(!card||!hc) return;
+  let o=rank.find(r=>r.k===FS.sel);
+  if(!o && rank.length){ o=rank[0]; FS.sel=o.k; }
+  const us=o?fseChs(D,o):[];
+  if(!us.length){ card.innerHTML='<h3>'+fseEsc(ft('c_tl'))+'</h3><div class="empty">'+fseEsc(ft('tl_pick'))+'</div>'; hc.innerHTML=''; return; }
+  const sn=D.units[us[0]].sn, TH=GST.chartTheme();
+  const end=D.asOf.slice(0,7), start=FS.tl==='all'?D.minDate.slice(0,7):(()=>{ const [yy,mm]=end.split('-').map(Number); const d=new Date(Date.UTC(yy,mm-1-23,1)); return d.toISOString().slice(0,7); })();
+  const M=GST.FSE.months(start+'-01', end+'-01'), cw=28, x0=86, laneH=74, W=x0+M.length*cw+10, H=24+us.length*laneH+20;
+  const groups=GST.FSE.reg.groups(); const gcol=g=>GST.FSE.isMfcGrp(g)?TH.pal[0]:TH.pal[(groups.indexOf(g)+1)%TH.pal.length];
+  const gsym=g=>FSE_SYM[groups.indexOf(g)%FSE_SYM.length];
+  let s='';
+  M.forEach((m,i)=>{ const cx=x0+cw*i+cw/2; if(i%3===0||i===M.length-1) s+='<text x="'+cx+'" y="'+(H-6)+'" text-anchor="middle" class="fse-tt">'+m.slice(2)+'</text>';
+    s+='<line x1="'+cx+'" x2="'+cx+'" y1="16" y2="'+(H-18)+'" class="fse-tg"/>'; });
+  const idx={}; M.forEach((m,i)=>idx[m]=i);
+  us.forEach((u,li)=>{
+    const U=D.units[u], yc=24+li*laneH, ya=yc+16, yp=yc+46;
+    s+='<text x="4" y="'+(ya+4)+'" class="fse-tl">'+fseEsc((U.ch||'—')+' · '+ft('tl_alarm'))+'</text><text x="4" y="'+(yp+4)+'" class="fse-tl">'+fseEsc(ft('tl_part'))+'</text>';
+    s+='<line x1="'+x0+'" x2="'+(W-6)+'" y1="'+(yc+31)+'" y2="'+(yc+31)+'" class="fse-tg"/>';
+    const am={}; D.ev.forEach(e=>{ if(e.u===u&&e.alarm&&GST.FSE.match(e,FS,D)&&idx[e.ym]!=null){ (am[e.ym]=am[e.ym]||[]).push(e); } });
+    Object.keys(am).forEach(k=>{ const n=am[k].length, cx=x0+cw*idx[k]+cw/2, r=Math.min(12,5+2.4*Math.sqrt(n));
+      s+='<g><title>'+fseEsc(k+' · '+n+' · '+am[k].map(e=>e.date+' '+(e.msg||e.code)).join(' | ').slice(0,300))+'</title><circle cx="'+cx+'" cy="'+ya+'" r="'+r+'" fill="'+TH.status.bad+'" fill-opacity=".22" stroke="'+TH.status.bad+'"/>'
+        +'<text x="'+cx+'" y="'+(ya+3.5)+'" text-anchor="middle" class="fse-tn">'+n+'</text></g>'; });
+    const pm={}; Object.keys((D.pg&&D.pg[u])||{}).forEach(g=>{ D.pg[u][g].forEach(p=>{ const k=p.date.slice(0,7); if(idx[k]==null) return; ((pm[k]=pm[k]||{})[g]=pm[k][g]||[]).push(p); }); });
+    Object.keys(pm).forEach(k=>{ const gs=Object.keys(pm[k]); gs.forEach((g,gi)=>{ const cx=x0+cw*idx[k]+cw/2, yy=yp-6+gi*11;
+      s+='<text x="'+cx+'" y="'+yy+'" text-anchor="middle" style="fill:'+gcol(g)+';font-size:12px"><title>'+fseEsc(g+' · '+pm[k][g].map(p=>p.date+' '+(p.name||p.code)+(p.mfcIn?' ('+p.mfcIn+')':'')).join(' | '))+'</title>'+gsym(g)+'</text>'; }); });
+    D.ev.forEach(e=>{ if(e.u===u&&e.mc==='TBM'&&idx[e.ym]!=null){ const cx=x0+cw*idx[e.ym]+cw/2; s+='<text x="'+cx+'" y="'+(yp+22)+'" text-anchor="middle" class="fse-tbm"><title>TBM '+e.date+'</title>▼</text>'; } });
+  });
+  const leg=groups.map(g=>'<span><b style="color:'+gcol(g)+'">'+gsym(g)+'</b> '+fseEsc(g)+'</span>').join('')+'<span><b class="fse-tbm">▼</b> '+fseEsc(ft('tl_tbm'))+'</span>';
+  card.innerHTML='<div class="trend-header fse-th"><h3>'+fseEsc(ft('c_tl'))+' <span class="fse-sub2">'+fseEsc(sn)+'</span></h3><div class="fse-tools">'
+    +fseSeg('tl',[['24',ft('tl_24')],['all',ft('tl_all')]],FS.tl,'ftl')+'</div></div>'
+    +'<div class="fse-tlw"><svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+fseEsc(ft('c_tl')+' '+sn)+'">'+s+'</svg></div>'
+    +'<div class="fse-leg">'+leg+'</div>';
+  card.querySelectorAll('[data-ftl]').forEach(b=>b.onclick=()=>{ FS.tl=b.dataset.ftl; fseSave(); fseRender(); });
+  /* 이력 — 알람·교체·TBM 을 날짜순으로 (알람 줄: 당시 MFC · 직전 교체 후 · 다음 알람까지) */
+  const H2=[]; us.forEach(u=>GST.FSE.history(D,u,FS).forEach(x=>H2.push(Object.assign({u:u},x))));
+  H2.sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
+  const kind={alarm:ft('k_alarm'), part:ft('k_part'), tbm:ft('k_tbm')};
+  hc.innerHTML='<h3>'+fseEsc(ft('c_hist'))+' <span class="fse-sub2">'+fseEsc(sn)+'</span></h3>'
+    +(H2.length?'<div class="tbl-wrap" style="max-height:330px;overflow:auto"><table data-gst-nosn><thead><tr><th>'+fseEsc(ft('h_date'))+'</th><th>'+fseEsc(ft('th_ch'))+'</th><th>'+fseEsc(ft('h_kind'))+'</th><th>'+fseEsc(ft('h_what'))+'</th>'
+      +(D.hasMfc?'<th>'+fseEsc(ft('h_ver'))+'</th>':'')+'<th class="n">'+fseEsc(ft('h_gap'))+'</th><th class="n">'+fseEsc(ft('h_next'))+'</th></tr></thead><tbody>'
+      +H2.slice(0,400).map(x=>{ const U=D.units[x.u]||{};
+        const what=x.kind==='alarm'?(x.e.msg||x.e.code):x.kind==='part'?(x.p.grp+' · '+(x.p.name||x.p.code)+(x.p.mfcIn?' · '+x.p.mfcIn:'')):('TBM'+(x.e.kind?' · '+x.e.kind:''));
+        return '<tr class="fse-h-'+x.kind+'"><td>'+x.date+'</td><td>'+fseEsc(U.ch||'—')+'</td><td>'+fseEsc(kind[x.kind])+'</td><td title="'+fseEsc(what)+'">'+fseEsc(what)+'</td>'
+          +(D.hasMfc?'<td>'+fseEsc(x.kind==='alarm'?(x.ver||''):'')+'</td>':'')
+          +'<td class="n">'+(x.kind==='alarm'&&x.gap!=null?fseEsc(ft('days',{n:fseN(x.gap)})):'')+'</td><td class="n">'+(x.kind==='alarm'&&x.next!=null?fseEsc(ft('days',{n:fseN(x.next)})):'')+'</td></tr>'; }).join('')
+      +'</tbody></table></div>':'<div class="empty">'+fseEsc(ft('hist_none'))+'</div>');
+}
+
+/* MFC — 버전별 발생 · 판정 근거 · 조사 대상(우선순위) */
+function fseMfc(D, FS, evs, units, rank, P, y){
+  const box=document.getElementById('fseMfc'); if(!box) return;
+  if(!D.hasMfc){ box.innerHTML='<div class="card"><h3>'+fseEsc(ft('c_ver'))+'</h3><div class="empty">'+fseEsc(ft('no_mfc'))+'</div></div>'; return; }
+  const F2=GST.FSE, fluid=F2.FLUIDS.indexOf(FS.verF)>=0?FS.verF:'LNG';
+  const mu=Object.keys(units).filter(u=>{ const t=units[u].utype; return t==='OLD'||t==='GLOBAL'||t==='DRAGON'; });
+  const hitU={}; evs.forEach(e=>{ hitU[e.u]=1; });
+  /* 버전별 */
+  let bars='';
+  if(FS.verMode==='at'){
+    const c={}; evs.forEach(e=>{ const U=D.units[e.u]; if(!U||['OLD','GLOBAL','DRAGON'].indexOf(U.utype)<0) return; const v=F2.ver(D,e.u,fluid,e.date,P).ver; c[v]=(c[v]||0)+1; });
+    const tot=Object.values(c).reduce((a,b)=>a+b,0)||1, L=Object.keys(c).sort((a,b)=>c[b]-c[a]);
+    bars=L.map(v=>fseBarRow(v, c[v]/tot, ft('ver_lab_at',{n:fseN(c[v]), s:Math.round(c[v]/tot*100)+'%'}))).join('');
+  } else {
+    const t={}, a={}; mu.forEach(u=>{ const v=F2.ver(D,u,fluid,null,P).ver; t[v]=(t[v]||0)+1; if(hitU[u]) a[v]=(a[v]||0)+1; });
+    const L=Object.keys(t).sort((x,z)=>((a[z]||0)/t[z])-((a[x]||0)/t[x]));
+    bars=L.map(v=>fseBarRow(v, (a[v]||0)/t[v], ft('ver_lab',{a:fseN(a[v]||0), t:fseN(t[v])}))).join('');
+  }
+  /* 판정 근거 — 관리 설비 × 유체 */
+  const how={}; let q=0, nAll=0;
+  mu.forEach(u=>F2.FLUIDS.forEach(f=>{ const v=F2.ver(D,u,f,null,P); if(v.how==='na'||v.how==='etc') return; nAll++; how[v.how]=(how[v.how]||0)+1; if(v.q) q++; }));
+  const HO=['sn','date','fabin','turnon','dragon','q'];
+  const hb=HO.filter(h=>how[h]).map(h=>fseBarRow(ft('how_'+h), how[h]/(nAll||1), fseN(how[h])+' · '+Math.round(how[h]/(nAll||1)*100)+'%')).join('')
+    +(q?fseBarRow(ft('how_amb'), q/(nAll||1), fseN(q)+' · '+Math.round(q/(nAll||1)*100)+'%', true):'');
+  const notes=[D.swapped?ft('swap',{n:fseN(D.swapped)}):'', D.enriched?ft('src_mat',{n:fseN(D.enriched)}):''].filter(Boolean);
+  /* 우선순위 — S/N 단위: 1 = 순위표 상위 N · 2 = 기간 내 1회 이상 · 3 = 그 밖 관리 설비 */
+  const snRank=FS.unit==='sn'?rank:(()=>{ const m={}; rank.forEach(r=>{ const s=D.units[r.k].snk; if(!m[s]) m[s]=r; }); return Object.values(m); })();
+  const p1=new Set(snRank.slice(0,P.top).map(r=>FS.unit==='sn'?r.k:D.units[r.k].snk)), p2=new Set();
+  evs.forEach(e=>{ if(!p1.has(e.snk)) p2.add(e.snk); });
+  const allSn=new Set(mu.map(u=>D.units[u].snk)), p3=[...allSn].filter(s=>!p1.has(s)&&!p2.has(s));
+  box.innerHTML='<div class="card"><div class="trend-header fse-th"><h3>'+fseEsc(ft('c_ver'))+'</h3><div class="fse-tools">'
+      +fseSeg('vf',F2.FLUIDS.map(f=>[f,f]),fluid,'fvf')+fseSeg('vm',[['now',ft('ver_now')],['at',ft('ver_at')]],FS.verMode,'fvm')+'</div></div>'
+      +(bars||'<div class="empty">'+fseEsc(ft('ver_none'))+'</div>')+'<div class="card-note">'+fseEsc(ft('why_ver'))+'</div></div>'
+    +'<div class="card"><h3>'+fseEsc(ft('c_basis'))+'</h3>'+(hb||'<div class="empty">'+fseEsc(ft('ver_none'))+'</div>')
+      +(notes.length?'<div class="card-note">'+fseEsc(notes.join(' · '))+'</div>':'')+'</div>'
+    +'<div class="card"><h3>'+fseEsc(ft('c_pri'))+'</h3><div class="fse-pri">'
+      +'<div><span>'+fseEsc(ft('pri1'))+'</span><b>'+fseN([...p1].filter(s=>allSn.has(s)).length)+'</b><i>'+fseEsc(ft('pri1_d',{n:P.top}))+'</i></div>'
+      +'<div><span>'+fseEsc(ft('pri2'))+'</span><b>'+fseN([...p2].filter(s=>allSn.has(s)).length)+'</b><i>'+fseEsc(ft('pri2_d'))+'</i></div>'
+      +'<div><span>'+fseEsc(ft('pri3'))+'</span><b>'+fseN(p3.length)+'</b><i>'+fseEsc(ft('pri3_d'))+'</i></div></div>'
+      +'<div class="fse-tools" style="margin-top:10px"><button type="button" class="btn btn-glass" data-fx="p1">'+fseEsc(ft('x_pri1'))+'</button>'
+      +'<button type="button" class="btn btn-glass" data-fx="p12">'+fseEsc(ft('x_pri12'))+'</button><button type="button" class="btn btn-glass" data-fx="pall">'+fseEsc(ft('x_all'))+'</button></div></div>';
+  box.querySelectorAll('[data-fvf]').forEach(b=>b.onclick=()=>{ FS.verF=b.dataset.fvf; fseSave(); fseRender(); });
+  box.querySelectorAll('[data-fvm]').forEach(b=>b.onclick=()=>{ FS.verMode=b.dataset.fvm; fseSave(); fseRender(); });
+  const pri=s=>p1.has(s)?1:p2.has(s)?2:3;
+  const go=(lv)=>{ const sns=[...allSn].filter(s=>pri(s)<=lv); fseExport('mfc', sns, y, null, {pri:pri, units:mu, evs:evs}); };
+  const b1=box.querySelector('[data-fx="p1"]'); if(b1) b1.onclick=()=>go(1);
+  const b2=box.querySelector('[data-fx="p12"]'); if(b2) b2.onclick=()=>go(2);
+  const b3=box.querySelector('[data-fx="pall"]'); if(b3) b3.onclick=()=>go(3);
+}
+function fseBarRow(name, r, lab, warn){
+  return '<div class="fse-hb"><span class="nm" title="'+fseEsc(name)+'">'+fseEsc(name)+'</span><span class="tr"><i style="width:'+Math.max(1,Math.min(100,Math.round(r*100)))+'%'+(warn?';background:var(--warn,#F2B94B)':'')+'"></i></span><span class="vv">'+fseEsc(lab)+'</span></div>';
+}
+
+/* 엑셀 — 순위표(메일 회신용 · S/N × 챔버 한 줄) · MFC 조사 대상(우선순위) */
+async function fseExport(kind, list, y, perOn, ctx){
+  const D=FSEX.D, P=GST.FSE.P(), FS=fseFS(); if(!D) return;
+  try{ await GST.xlsxLibLoad(); }catch(e){ GST.capToast&&GST.capToast(String(e&&e.message||e)); return; }
+  const fl=D.hasMfc?GST.FSE.FLUIDS:[];
+  const vcols=[]; fl.forEach(f=>{ vcols.push('MFC '+f+' '+ft('x_cols_ver'), 'MFC '+f+' '+ft('x_cols_how'), 'MFC '+f+' '+ft('x_cols_sn'), 'MFC '+f+' '+ft('x_cols_dt')); });
+  const vcells=u=>{ const o=[]; fl.forEach(f=>{ const v=GST.FSE.ver(D,u,f,null,P); o.push(v.ver+(v.q&&!/\?$/.test(v.ver)?'?':''), ft('how_'+(v.how||'q')), v.sn||'', v.how==='sn'||v.how==='date'?(v.date||''):''); }); return o; };
+  const cnt=(snk,ch,all)=>{ const L=(all?D.ev:ctx&&ctx.evs||[]).filter(e=>e.snk===snk&&(ch==null||e.ch===ch)&&e.alarm&&GST.FSE.match(e,FS,D)); return L; };
+  let cols, rows=[], name;
+  if(kind==='top'){
+    cols=[ft('th_rank'),'S/N',ft('th_ch'),ft('th_det'),ft('by_model'),ft('f_ut'),ft('x_cols_fabin'),perOn?ft('th_n'):ft('th_all'),ft('th_y',{y:y}),ft('th_last')].concat(vcols);
+    list.forEach((o,i)=>fseChs(D,o).forEach(u=>{ const U=D.units[u]; rows.push([i+1,U.sn,U.ch,U.d1,U.model,ft('ut_'+U.utype)||U.utype,U.fabIn||'',perOn?o.n:o.nAll,o.nY,o.last].concat(vcells(u))); }));
+    name='alarm_rank_'+D.asOf+'.xlsx';
+  } else {
+    cols=[ft('x_cols_pri'),'S/N',ft('th_ch'),ft('th_det'),ft('by_model'),ft('f_ut'),ft('x_cols_fabin'),ft('x_cols_n')].concat(vcols);
+    const us=ctx.units.filter(u=>list.indexOf(D.units[u].snk)>=0);
+    us.sort((a,b)=>ctx.pri(D.units[a].snk)-ctx.pri(D.units[b].snk) || (D.units[a].snk<D.units[b].snk?-1:1) || (D.units[a].ch<D.units[b].ch?-1:1));
+    us.forEach(u=>{ const U=D.units[u]; rows.push([ctx.pri(U.snk),U.sn,U.ch,U.d1,U.model,ft('ut_'+U.utype)||U.utype,U.fabIn||'',cnt(U.snk,U.ch).length].concat(vcells(u))); });
+    name='mfc_survey_'+D.asOf+'.xlsx';
+  }
+  const wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet([cols].concat(rows));
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1'); XLSX.writeFile(wb, name);
+}
+
+/* 관심 부품 묶음 — fse_parts 를 이 화면에서 고친다(쓰기 권한 · RLS). 지우지 않고 «사용»을 끈다. */
+function fseParts(){
+  const reg=GST.FSE.reg, can=!!(GST.canWrite?GST.canWrite():CAN_WRITE);
+  const rows=reg.rows.slice();
+  const inp=(f,v,ph)=>'<input class="fse-pi" data-pf="'+f+'" value="'+fseEsc(v==null?'':v)+'"'+(ph?' placeholder="'+fseEsc(ph)+'"':'')+(can?'':' readonly')+'>';
+  const line=r=>'<tr data-pid="'+(r.id||'')+'"><td>'+inp('grp',r.grp)+'</td><td>'+inp('code',r.code)+'</td><td>'+inp('name_re',r.name_re)+'</td><td>'+inp('fluid',r.fluid,'LNG')+'</td>'
+    +'<td>'+inp('maker',r.maker,'MCA')+'</td><td>'+inp('label',r.label)+'</td><td style="text-align:center"><input type="checkbox" data-pf="on_"'+(r.on_!==false?' checked':'')+(can?'':' disabled')+'></td></tr>';
+  const ov=GST._ovOpen('<div class="gov-h"><h4>'+fseEsc(ft('parts_t'))+'</h4><span class="gov-sub">'+fseEsc(can?ft('pt_note'):ft('pt_ro'))+'</span><span class="gov-sp"></span>'
+    +(can?'<button class="gov-b" data-pa="add">'+fseEsc(ft('pt_add'))+'</button><button class="gov-b" data-pa="save">'+fseEsc(ft('pt_save'))+'</button>':'')
+    +'<button class="gov-b" data-pa="close">✕</button></div>'
+    +'<div class="gov-body" style="overflow:auto;max-height:70vh"><div class="card-note" style="margin:4px 0 8px">'+fseEsc(ft('pt_hint'))+'</div>'
+    +'<table class="gpv-t" id="fsePt"><thead><tr><th>'+fseEsc(ft('pt_grp'))+'</th><th>'+fseEsc(ft('pt_code'))+'</th><th>'+fseEsc(ft('pt_re'))+'</th><th>'+fseEsc(ft('pt_fluid'))+'</th><th>'+fseEsc(ft('pt_maker'))+'</th><th>'+fseEsc(ft('pt_label'))+'</th><th>'+fseEsc(ft('pt_on'))+'</th></tr></thead><tbody>'
+    +(rows.length?rows.map(line).join(''):'')+'</tbody></table>'+(rows.length?'':'<div class="empty" id="fsePtNone">'+fseEsc(ft('pt_none'))+'</div>')
+    +'<div class="card-note" id="fsePtMsg" role="status" style="margin-top:8px"></div></div>', true);
+  const msg=(s,bad)=>{ const m=ov.querySelector('#fsePtMsg'); if(m){ m.textContent=s; m.style.color=bad?'var(--bad)':''; } };
+  ov.addEventListener('input', e=>{ const tr=e.target.closest('tr[data-pid]'); if(tr) tr.dataset.dirty='1'; });
+  ov.addEventListener('change', e=>{ const tr=e.target.closest('tr[data-pid]'); if(tr) tr.dataset.dirty='1'; });
+  ov.addEventListener('click', async e=>{
+    const b=e.target.closest('[data-pa]'); if(!b) return;
+    if(b.dataset.pa==='close'){ GST._ovClose(); return; }
+    if(b.dataset.pa==='add'){ const tb=ov.querySelector('#fsePt tbody'); tb.insertAdjacentHTML('beforeend', line({grp:'',on_:true})); const n=ov.querySelector('#fsePtNone'); if(n) n.remove();
+      tb.lastElementChild.dataset.dirty='1'; return; }
+    if(b.dataset.pa==='save'){
+      const C=await GST._dbAuthed().catch(()=>null); if(!C){ msg(ft('pt_fail'),true); return; }
+      const me=(GST._me&&GST._me.email)||'';
+      const dirty=[...ov.querySelectorAll('tr[data-pid][data-dirty="1"]')];
+      for(const tr of dirty){
+        const g=f=>{ const el=tr.querySelector('[data-pf="'+f+'"]'); return el?(el.type==='checkbox'?el.checked:String(el.value||'').trim()):''; };
+        const o={grp:g('grp'), code:g('code')||null, name_re:g('name_re')||null, fluid:g('fluid').toUpperCase()||null, maker:g('maker').toUpperCase()||null, label:g('label')||null, on_:g('on_'), updated_by:me, updated_at:new Date().toISOString()};
+        if(!o.grp || !(o.code||o.name_re)){ msg(ft('pt_need'),true); return; }
+        if(o.name_re){ try{ new RegExp(o.name_re,'i'); }catch(err){ msg(ft('pt_bad_re')+' — '+o.name_re,true); return; } }
+        const id=tr.dataset.pid;
+        const r=id ? await C.from('fse_parts').update(o).eq('id',Number(id)).select('id') : await C.from('fse_parts').insert(o).select('id');
+        /* RLS 거부는 에러가 아니라 0행이다(CLAUDE.md v80) — 1행이 아니면 실패로 말한다 */
+        if(r.error || !r.data || r.data.length!==1){ msg(ft('pt_fail')+(r.error?' — '+(r.error.message||r.error.code):''),true); return; }
+        tr.dataset.pid=String(r.data[0].id); tr.dataset.dirty='';
+      }
+      await reg.load(); if(FSEX.D){ GST.FSE.bind(FSEX.D); GST.FSE.enrich(FSEX.D, fseMats()); }
+      msg(ft('pt_saved')); fseRender();
+    }
+  });
+}
 
 /* 차트 배치 (v174 · 판정표 docs/v2/PLAN.md 4절) — 차트 코드는 그대로 두고 «어디에 무엇을 보이나»만 정한다.
    · 「어디서」(설비·LINE·모델·공정) 한 카드 · 「왜」(현상·원인·조치·알람) 한 카드 — 같은 질문을 축만 바꿔 묻던 카드들이다.

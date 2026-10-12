@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=180"></script>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=180">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=181"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=181">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/ds.css?v=1">
 <!--
   운영 목표 (2단계 «제품화» 밑바탕 · supabase/setup-27-targets.sql)
@@ -39,7 +39,7 @@
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer && GST.needVer(168);
+GST.needVer && GST.needVer(181);   // 판정 기준 mfc·fse 묶음(v189)
 GST.authGate();
 
 const T={
@@ -218,7 +218,7 @@ function drawAll(){
 }
 
 /* ===== 판정 기준 (setup-27 6절 · GST.PARAMS) ===== */
-function unitTxt(u){ return u==='pt'?v2t('u_pt'):u==='pct'?v2t('u_rel'):u==='x'?v2t('u_x'):u==='case'?v2t('u_case'):u==='ea'?v2t('u_ea'):u==='day'?v2t('u_day'):u==='pts'?v2t('u_pts'):''; }
+function unitTxt(u){ return u==='pt'?v2t('u_pt'):u==='pct'?v2t('u_rel'):u==='x'?v2t('u_x'):u==='case'?v2t('u_case'):u==='ea'?v2t('u_ea'):u==='day'?v2t('u_day'):u==='pts'?v2t('u_pts'):u==='ymd'?v2t('u_ymd'):u==='no'?v2t('u_no'):u==='rows'?v2t('u_rows'):''; }
 function drawPar(can){
   const box=document.getElementById('cPar');
   let h='<h2>'+esc(t('parT'))+'<span class="s">'+esc(t('parS'))+'</span></h2>';
