@@ -329,7 +329,7 @@ console.log('[11] 판정 기준 — 코드의 기준 숫자를 화면에서 고�
 const pp = await open('/targets/', clearDB);
 const par = await pp.evaluate(() => ({ n:document.querySelectorAll('#cPar tr[data-p]').length, keys:Object.keys(GST.PARAMS).length,
   pend:document.querySelectorAll('#cPar .ds-note').length, rw:JSON.stringify(GST.params.riskW()), cw:JSON.stringify(GST.RISK_W) }));
-is(par.n === par.keys && par.n === 27, '판정 기준 27개가 표로 (' + par.n + ') — v189 에 MFC 버전 6 · 알람 분석 2 가 더해졌다');
+is(par.n === par.keys && par.n === 30, '판정 기준 30개가 표로 (' + par.n + ') — v189 에 MFC 버전 6 · 알람 분석 2 · v191 에 자동 추천 3 이 더해졌다');
 is(par.rw === par.cw, '위험 점수 기본값 = 지금 core 의 GST.RISK_W 그대로 — 표가 비면 통합해도 숫자가 안 움직인다');
 const HUB = fs.readFileSync(ROOT + '/hub/index.html', 'utf8');
 const RULE0 = { badX:1.5, badD:5, warnX:1.2, warnD:3, repBad:3, repWarn:1 };   // v165~v171 관제에 박혀 있던 값 — 기본값이 이것과 같아야 표가 빌 때 숫자가 그대로다
