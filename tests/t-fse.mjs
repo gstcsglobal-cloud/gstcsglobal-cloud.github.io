@@ -186,6 +186,53 @@ const h20=hi.find(x=>x.kind==='alarm'&&x.date==='2026-03-20');
 is(h20 && h20.gap===19 && /LNG F1/.test(h20.ver||''), '이력 — 직전 교체 후 19일 · 당시 MFC LNG F1');
 is(hi.some(x=>x.kind==='tbm') && hi.filter(x=>x.kind==='part').length===2, '이력에 TBM·관심 부품 교체가 든다(꺼진 묶음은 없다)');
 
+/* ── [5b] 자재마스터(v190) — 지어낸 품목번호(P-…)뿐 · 실제 품목 코드는 저장소에 두지 않는다 ── */
+console.log('[5b] 자재마스터 — 필요한 번호만 묻기 · 표준 품목명 · 원장 글자가 먼저');
+const MASTER=[{code:'P-NZ-1',itype:'소모품',name:'BURNER NOZZLE ASSY',spec1:'SUS',spec2:null,unit:'EA'},
+  {code:'P-CV-7',itype:'소모품',name:'NOZZLE COVER SUS',spec1:'D50',spec2:null,unit:'EA'},
+  {code:'P-MFC-LM',itype:'원자재',name:'MFC',spec1:'CH4 100SLM',spec2:null,unit:'EA'}];
+const fakeDb=(tbl,opt)=>{ opt=opt||{}; const calls=[];
+  const C={ calls, from(t){ const q={t, f:null, head:false, cnt:false,
+      select(c,o){ if(o&&o.count) q.cnt=true; if(o&&o.head) q.head=true; return q; },
+      in(col,arr){ q.f=arr.slice(); return q; }, or(){ return q; }, order(){ return q; }, limit(){ return q; },
+      then(res,rej){ calls.push({t:q.t, n:q.f?q.f.length:null, head:q.head});
+        if(opt.err) return Promise.resolve({data:null, error:{message:opt.err}}).then(res,rej);
+        if(q.head) return Promise.resolve({data:null, error:null, count:tbl.length}).then(res,rej);
+        const d=q.f?tbl.filter(x=>q.f.indexOf(x.code)>=0):tbl.slice(0,50);
+        return Promise.resolve({data:JSON.parse(JSON.stringify(d)), error:null}).then(res,rej); } }; return q; } };
+  return C; };
+const I=G.items;
+is(I.key('12345.0')==='12345' && I.key(' P-1 ')==='P-1' && I.key('p-1')==='p-1', '열쇠 — 앞뒤 공백·엑셀 «.0» 만 걷는다(대소문자는 그대로 · 정확일치)');
+{ const sa=I.sane([{code:'A'},{code:'B'},{code:''},{code:'C'}]), sb=I.sane(Array.from({length:40},(_,i)=>({code:'X'+(i%5)})));
+  is(!sa.bad && sa.n===3 && sa.blank===1 && sb.bad && sb.dup===35, '«실적 파일이 아닌가» — 같은 번호가 여러 줄이면 마스터가 아니다(빈 번호는 따로 센다)'); }
+I.clear(); { const C=fakeDb(MASTER);
+  await I.get(['P-NZ-1','P-NZ-1','P-ZZ-9'], C);
+  is(C.calls.length===1 && C.calls[0].n===2, '필요한 번호만 묻는다 — 겹친 번호는 한 번 ('+JSON.stringify(C.calls)+')');
+  await I.get(['P-NZ-1','P-ZZ-9'], C);
+  is(C.calls.length===1, '한 번 물은 번호는 다시 묻지 않는다 — 없던 번호도 기억한다');
+  I.clear(); const many=Array.from({length:450},(_,i)=>'P-Q-'+i); await I.get(many, C);
+  is(C.calls.length===4 && C.calls.slice(1).map(c=>c.n).join(',')==='200,200,50', '450개는 200개씩 세 번 ('+C.calls.slice(1).map(c=>c.n).join(',')+')'); }
+/* 원장에 «PART A» 처럼 이름이 빗나가게 적힌 줄 — 마스터 품목명으로 묶음이 잡힌다. 원장 이름으로 잡히던 줄은 그대로다. */
+NO=0;
+const RAW2=[H, A('GBWS-X001','2026-05-01','Left','BFE','Alarm-Main flame off'), P('GBWS-X001','2026-05-01','Left','P-CV-7','PART A'),
+  P('GBWS-X001','2026-05-01','Left','P-NZ-1','BURNER NOZZLE'), P('GBWS-X001','2026-05-01','Left','P-UNK-3','SOMETHING'),
+  P('GBWS-X001','2026-05-01','Left','P-MFC-LM','MFC')];
+const mk=()=>{ const d=G.FSE.parse(toDb(G,RAW2).back,{org:snk=>INST[snk]||null}); return d; };
+{ const D0=mk(); G.FSE.bind(D0);
+  is(!D0.parts.find(p=>p.code==='P-CV-7').grp, '마스터 없이는 «PART A» 줄이 묶음에 안 잡힌다(대조)');
+  I.clear(); const D2=mk(), C=fakeDb(MASTER); await G.FSE.items(D2, C); G.FSE.bind(D2);
+  const pcv=D2.parts.find(p=>p.code==='P-CV-7'), pnz=D2.parts.find(p=>p.code==='P-NZ-1'), pun=D2.parts.find(p=>p.code==='P-UNK-3');
+  is(pcv.grp==='노즐 커버', '마스터 품목명 «NOZZLE COVER SUS» 로 이름 규칙이 잡힌다 → 노즐 커버');
+  is(pnz.grp==='버너 노즐' && G.FSE.pname(pnz)==='BURNER NOZZLE ASSY', '코드로 잡힌 줄은 그대로 · 이름은 표준 품목명으로 보인다');
+  is(G.FSE.pname(pun)==='SOMETHING' && !pun.std, '마스터에 없는 번호는 원장 이름 그대로');
+  is(D2.itemCodes===4 && D2.itemHit===3 && D2.itemMiss===1 && D2.itemMissRows===1 && !D2.itemEmpty, '마스터에 없는 번호를 센다 (4개 중 1 · 1줄)');
+  is(G.FSE.fluidOf({grp:'MFC'}, {name:'MFC', spec:'', std:{spec1:'CH4 100SLM'}})==='LNG' && G.FSE.fluidOf({grp:'MFC'}, {name:'MFC', spec:'O2', std:{spec1:'CH4'}})==='O2',
+    '유체 — 원장 글자에 없을 때만 마스터 규격으로(원장이 먼저)');
+  I.clear(); const D3=mk(); await G.FSE.items(D3, fakeDb([])); is(D3.itemEmpty && D3.itemMiss===0, '마스터가 비었으면 «없는 번호»로 세지 않는다(아직 안 올렸다)');
+  I.clear(); const D4=mk(); await G.FSE.items(D4, fakeDb(MASTER,{err:'relation "public.item_master" does not exist'}));
+  is(D4.itemWhy==='no_table' && D4.itemMiss===0 && G.FSE.pname(D4.parts[0])!=='', '표가 없으면(setup-30 전) 말없이 원장 이름 그대로 — 없는 번호로 세지 않는다'); }
+I.clear();
+
 /* ── [6] 실제 브라우저 ───────────────────────────────────────────────────── */
 console.log('[6] 고장 분석 › 알람 분석 (실제 브라우저)');
 const q=v=>{ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
@@ -212,7 +259,8 @@ const STUB='\n;GST.USE_DB=false;GST.authOn=function(){return false;};'
   +'GST.authGate=async function(){var o=document.getElementById("loginOverlay");if(o)o.remove();if(GST._authOk)GST._authOk();return true;};'
   +'GST.__FSE='+JSON.stringify(back)+';GST.__REG='+JSON.stringify(REG)+';window.__fseReads=0;'
   +'GST.dbRows=async function(t){ if(t==="fse"){ window.__fseReads++; return JSON.parse(JSON.stringify(GST.__FSE)); } throw new Error("DB_OFF"); };'
-  +'GST.FSE.reg.load=async function(){ this.rows=JSON.parse(JSON.stringify(GST.__REG)); this._re=null; this.why=""; return this.rows; };';
+  +'GST.FSE.reg.load=async function(){ this.rows=JSON.parse(JSON.stringify(GST.__REG)); this._re=null; this.why=""; return this.rows; };'
+  +'GST.items._db=async function(){ return null; };GST.items._m={"P-NZ-1":{code:"P-NZ-1",itype:"소모품",name:"BURNER NOZZLE ASSY",spec1:"SUS"}};';
 const SHEETS={'891608329':instCsv,'646668307':wkCsv,'31302669':matCsv};
 const browser=await chromium.launch(PW);
 const bctx=await browser.newContext({viewport:{width:1700,height:1200}, locale:'ko-KR', acceptDownloads:true});
@@ -261,6 +309,7 @@ const circ=await page.$$eval('#fseTlCard svg circle',c=>c.length);
 is(circ>=3, '타임라인에 달별 알람 원 ('+circ+')');
 const hist=await page.$$eval('#fseHistCard tbody tr',r=>r.length);
 is(hist>=7, '이력 표 — 알람·교체·TBM ('+hist+')');
+is(/BURNER NOZZLE ASSY \(P-NZ-1\)/.test(await page.textContent('#fseHistCard')), '이력의 부품 이름은 자재마스터 표준 품목명 (코드 함께)');
 await page.click('#fseTopCard tr[data-fsel="GBWSX002"]'); await page.waitForTimeout(400);
 is(/GBWS-X002/.test(await page.textContent('#fseTlCard h3')), '순위표 줄을 누르면 그 설비의 타임라인');
 /* MFC 카드 */
@@ -274,6 +323,28 @@ is(dl && /^alarm_rank_2026-09-15\.xlsx$/.test(dl.suggestedFilename()), '순위�
 await page.click('#fseBar [data-fparts]'); await page.waitForTimeout(300);
 const pt=await page.textContent('.gov');
 is(/읽기 전용/.test(pt) && !(await page.$('.gov [data-pa="save"]')), '부품 묶음 — 권한 없으면 읽기 전용 · 저장 단추 없음');
+await page.waitForTimeout(300);
+const pmCells=await page.$$eval('.gov #fsePt tbody tr',r=>r.map(x=>[x.querySelector('[data-pf="code"]').value, x.querySelector('.fse-pm').textContent.trim()]));
+is(pmCells.some(c=>c[0]==='P-NZ-1' && c[1]==='BURNER NOZZLE ASSY · SUS'), '코드 줄 옆에 «마스터 품목명» (품목명 · 규격1)');
+is(pmCells.filter(c=>c[0]==='P-MFC-LM').every(c=>c[1]===''), '마스터를 못 읽었으면 «마스터에 없음»이라 하지 않고 비워 둔다');
+await page.fill('.gov #fsePq','NOZ'); await page.click('.gov [data-pa="find"]'); await page.waitForTimeout(300);
+is(/자재마스터를 읽지 못했습니다/.test(await page.textContent('#fsePres')) && !(await page.$('.gov [data-pa="put"]')), '찾기 — 못 읽으면 그렇게 말한다 · 읽기 전용이면 «묶음에 넣기» 없음');
+await page.evaluate(()=>GST._ovClose());
+/* 쓰기 권한 — 찾아서 «묶음에 넣기»(저장은 사람이 «저장»을 눌러야 한다 · 여기서는 줄만 생긴다) */
+await page.evaluate(()=>{ GST.canWrite=()=>true;
+  GST.items.search=async()=>({why:'', rows:[{code:'P-CV-7',itype:'소모품',name:'NOZZLE COVER SUS',spec1:'D50'},{code:'P-NZ-1',itype:'소모품',name:'BURNER NOZZLE ASSY',spec1:'SUS'}]}); });
+await page.click('#fseBar [data-fparts]'); await page.waitForTimeout(300);
+await page.fill('.gov #fsePq','NOZ'); await page.press('.gov #fsePq','Enter'); await page.waitForTimeout(300);
+const rr=await page.$$eval('#fsePrt tbody tr',r=>r.map(x=>[x.children[0].textContent, x.children[4].textContent, x.lastElementChild.textContent]));
+is(rr.length===2 && rr[1][0]==='P-NZ-1' && rr[1][1]==='2' && /이미 있음/.test(rr[1][2]) && /묶음에 넣기/.test(rr[0][2]),
+  '찾은 품목 — 원장 교체 수(P-NZ-1 = X001 한 번 + 작업 없는 줄 한 번) · 이미 묶음에 있는 번호는 «이미 있음» ('+JSON.stringify(rr)+')');
+const nBefore=await page.$$eval('.gov #fsePt tbody tr',r=>r.length);
+await page.click('.gov [data-pa="put"][data-code="P-CV-7"]'); await page.waitForTimeout(200);
+is(/넣을 묶음 이름을 먼저/.test(await page.textContent('#fsePtMsg')) && await page.$$eval('.gov #fsePt tbody tr',r=>r.length)===nBefore, '묶음 이름이 없으면 넣지 않고 그렇게 말한다');
+await page.fill('.gov #fsePg','노즐 커버'); await page.click('.gov [data-pa="put"][data-code="P-CV-7"]'); await page.waitForTimeout(300);
+const last=await page.$eval('.gov #fsePt tbody tr:last-child',tr=>({g:tr.querySelector('[data-pf="grp"]').value, c:tr.querySelector('[data-pf="code"]').value, l:tr.querySelector('[data-pf="label"]').value, d:tr.dataset.dirty, pid:tr.dataset.pid}));
+is(last.g==='노즐 커버' && last.c==='P-CV-7' && last.l==='NOZZLE COVER SUS' && last.d==='1' && last.pid==='', '«묶음에 넣기» → 새 줄(묶음 · 코드 · 표시 이름 = 품목명) · 저장 전 표시');
+is(!(await page.$('.gov [data-pa="put"][data-code="P-CV-7"]')), '넣은 품목은 «이미 있음»으로 바뀐다(두 번 못 넣는다)');
 await page.evaluate(()=>GST._ovClose());
 /* 언어 */
 await page.evaluate(()=>window.setLang&&window.setLang('en')); await page.waitForTimeout(600);

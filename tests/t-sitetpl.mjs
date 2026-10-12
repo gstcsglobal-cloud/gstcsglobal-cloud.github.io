@@ -113,10 +113,15 @@ console.log('[0] 관리자 화면 회귀');
   const { pg, pe } = await openUpload('');
   const n = await pg.evaluate(() => document.querySelectorAll('#tsel option').length);
   const nT = await pg.evaluate(() => TABLES.length);
-  is(n === nT && nT === 13, '대상 목록 전부 보인다 (' + n + '/' + nT + ') — v189 에 FSE 원장이 더해졌다');
+  is(n === nT && nT === 14, '대상 목록 전부 보인다 (' + n + '/' + nT + ') — v189 FSE 원장 · v190 자재마스터');
   is(await pg.evaluate(() => !document.getElementById('modeSel').disabled), '넣는 방식 선택 가능');
-  is(await pg.evaluate(() => [...document.querySelectorAll('#modeSel option')].every(o => o.style.display !== 'none')),
-    '모드 세 가지가 다 보인다');
+  is(await pg.evaluate(() => [...document.querySelectorAll('#modeSel option')].filter(o => o.value !== 'merge').every(o => o.style.display !== 'none')
+      && document.querySelector('#modeSel option[value=merge]').style.display === 'none'),
+    '모드 세 가지가 다 보인다 (자재마스터 전용 «품목번호 기준 덮어쓰기»는 숨김)');
+  await pg.selectOption('#tsel', String(await pg.evaluate(() => TABLES.findIndex(t => t.rid === 'item')))); await pg.waitForTimeout(150);
+  const im = await pg.evaluate(() => ({ v:document.getElementById('modeSel').value,
+    shown:[...document.querySelectorAll('#modeSel option')].filter(o => o.style.display !== 'none').map(o => o.value) }));
+  is(im.v === 'merge' && im.shown.join() === 'merge', '자재마스터를 고르면 «품목번호 기준 덮어쓰기» 하나만 (' + JSON.stringify(im) + ')');
   is(pe.length === 0, 'JS 에러 없음' + (pe.length ? ' → ' + pe[0] : ''));
 
   /* ═══ [1] 템플릿 라운드트립 — 수선실적 ═══ */
@@ -189,7 +194,7 @@ console.log('[2] ?site=P');
     dis:document.getElementById('modeSel').disabled,
     hidden:[...document.querySelectorAll('#modeSel option')].filter(o => o.style.display==='none').map(o=>o.value) }));
   is(md.v === 'win' && md.dis, '모드가 「겹치는 구간만 교체」로 잠김');
-  is(md.hidden.sort().join(',') === ',add,full', '통째 교체·이어붙이기(와 «고르세요»)는 보이지도 않는다');
+  is(md.hidden.sort().join(',') === ',add,full,merge', '통째 교체·이어붙이기(와 «고르세요»·자재마스터 덮어쓰기)는 보이지도 않는다');
 
   /* P+K 두 시트 워크북 — K 는 «무시했다»고 말하고 P 만 올라간다 */
   const CA = await canonOf(pg, 'alarm');

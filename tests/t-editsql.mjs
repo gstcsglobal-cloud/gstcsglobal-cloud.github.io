@@ -21,7 +21,8 @@ const DQ_FILE = path.join(ROOT, 'supabase/setup-21-dq.sql');
 const COLS_FILE = path.join(ROOT, 'supabase/setup-22-import-cols.sql');
 const SITES_FILE = path.join(ROOT, 'supabase/setup-23-sites.sql');
 const ACT_FILE = path.join(ROOT, 'supabase/setup-24-actions.sql');
-const PIN_FILE = path.join(ROOT, 'supabase/setup-28-upload-pin.sql');   // 통째 교체 비밀번호 승인(v184)   // 처리함(v166)   // 사이트 등록부 · 사이트별 CIP 표(v160)
+const PIN_FILE = path.join(ROOT, 'supabase/setup-28-upload-pin.sql');
+const ITEM_FILE = path.join(ROOT, 'supabase/setup-30-items.sql');   // 자재마스터(v190)   // 통째 교체 비밀번호 승인(v184)   // 처리함(v166)   // 사이트 등록부 · 사이트별 CIP 표(v160)
     // CIP 새 점검 항목 열 더하기(v157)           // 데이터 품질 점검(v155·v156) — 읽기 전용 · 맨 끝에 먹인다      // 국내 데모 표·kr 등급(v146) — 1~11 이 끝난 뒤에 먹인다
 
 function findBin() {
@@ -984,6 +985,64 @@ do $$ begin
 end $$;
 `;
 
+/* [18] 자재마스터(setup-30 · v190) — 품목번호 기준 덮어쓰기 · 지우지 않음 · 쓰기는 함수만 · 데이터 관리 탭(id) ·
+   ⚠ 품목번호·이름은 전부 지어낸 것이다(실제 마스터는 저장소에 두지 않는다). */
+const ITEM_CHECKS = String.raw`
+set role authenticated;
+do $$ declare r jsonb; r2 jsonb; r3 jsonb; d jsonb; run1 timestamptz; i bigint; h text; begin
+  perform t_as('');
+  begin perform item_master_put('[]'::jsonb); perform t_ok(false, '18-1 로그인 없이 올렸다'); exception when others then perform t_ok(sqlerrm = 'login', '18-1 로그인 없으면 login'); end;
+  perform t_as('vw@test.local');
+  begin perform item_master_put('[{"code":"P-0009"}]'::jsonb); perform t_ok(false, '18-2 조회자가 올렸다'); exception when others then perform t_ok(sqlerrm = 'read_only', '18-2 조회자는 read_only'); end;
+  perform t_as('ed@test.local');
+  begin insert into item_master(code) values ('P-0009'); perform t_ok(false, '18-3 표에 직접 썼다'); exception when others then perform t_ok(sqlstate = '42501', '18-3 표에 직접 못 쓴다(함수만 지난다)'); end;
+  r := item_master_put('[{"code":" P-0001 ","itype":"소모품","name":"O-RING X","spec1":"S-1","unit":"EA"},
+                         {"code":"P-0002","name":"NOZZLE X"},{"code":"","name":"번호 빈 줄"},
+                         {"code":"P-0002","name":"NOZZLE Y","extra":{"비고":"메모"}},{"code":"P-0003","name":"KIT","spec2":""}]'::jsonb);
+  run1 := (r->>'run')::timestamptz;
+  perform t_ok((r->>'new')::int = 3 and (r->>'changed')::int = 0 and (r->>'skipped')::int = 1, '18-4 새 품목 3 · 번호 빈 줄 1 (' || r::text || ')');
+  perform t_ok((select name from item_master where code = 'P-0002') = 'NOZZLE Y'
+           and (select extra->>'비고' from item_master where code = 'P-0002') = '메모', '18-5 같은 묶음의 같은 번호는 뒤의 줄이 이긴다(extra 포함)');
+  perform t_ok(exists (select 1 from item_master where code = 'P-0001') and (select spec2 from item_master where code = 'P-0003') is null,
+               '18-6 번호 앞뒤 공백을 걷고 빈 칸은 null');
+  r2 := item_master_put('[{"code":"P-0001","itype":"소모품","name":"O-RING X","spec1":"S-1","unit":"EA"},{"code":"P-0003","name":"KIT V2"},{"code":"P-0004","name":"NEW"}]'::jsonb, run1);
+  perform t_ok((r2->>'new')::int = 1 and (r2->>'changed')::int = 1 and (r2->>'same')::int = 1, '18-7 다음 묶음 — 새 1 · 바뀜 1 · 같음 1 (' || r2::text || ')');
+  d := item_master_done(run1, '마스터_1.xlsx', jsonb_build_object('new', 4));
+  perform t_ok((d->>'rows')::int = 4 and (d->>'unseen')::int = 0, '18-8 마무리 — 전체 4 · 이번 파일에 없던 품목 0');
+  r3 := item_master_put('[{"code":"P-0001","name":"O-RING X2"},{"code":"P-0004","name":"NEW"}]'::jsonb, '2030-01-01T00:00:00Z'::timestamptz);
+  d := item_master_done('2030-01-01T00:00:00Z'::timestamptz, '마스터_2.xlsx', null);
+  perform t_ok((d->>'rows')::int = 4 and (d->>'unseen')::int = 2, '18-9 파일에 없는 품목은 지우지 않는다 — 전체 4 · 이번에 없던 2');
+  perform t_ok((select name from item_master where code = 'P-0003') = 'KIT V2', '18-10 빠진 품목의 이름은 그대로 남는다');
+  perform t_ok((select count(*) from sheet_edits where tbl = 'item_master' and op = 'upload:merge') = 2
+           and (select (after->>'unseen')::int from sheet_edits where tbl = 'item_master' and op = 'upload:merge' order by id desc limit 1) = 2,
+               '18-11 업로드마다 이력 한 줄(op upload:merge · 이번에 없던 수)');
+  begin perform item_master_put(jsonb_build_array(1,2,3) || (select jsonb_agg(x) from generate_series(1,5000) x)); perform t_ok(false, '18-12 5,000줄 넘게 받았다'); exception when others then perform t_ok(sqlerrm = 'bad_rows', '18-12 한 번에 5,000줄을 넘기면 bad_rows'); end;
+  perform t_as('vw@test.local');
+  perform t_ok((select count(*) from item_master) = 4, '18-13 조회자는 읽는다');
+  perform t_as('boss@test.local');
+  i := (select id from item_master where code = 'P-0002');
+  r := edit_get('item_master', i);
+  perform t_ok(r->'row'->>'code' = 'P-0002', '18-14 데이터 관리가 id 로 찾는다(_edit_key)');
+  h := r->>'hash';
+  r := edit_update('item_master', i, h, '{"name":"NOZZLE Z"}'::jsonb);
+  perform t_ok((select name from item_master where id = i) = 'NOZZLE Z'
+           and exists (select 1 from sheet_edits where tbl = 'item_master' and op = 'update' and row_key = i::text), '18-15 한 행 고치기 · 이력');
+  h := (edit_get('item_master', i))->>'hash';
+  perform t_as('ed@test.local');
+  perform item_master_put(jsonb_build_array((select to_jsonb(m) - 'id' - 'seen_at' - 'synced_at' from item_master m where id = i)), '2031-01-01T00:00:00Z'::timestamptz);
+  perform t_as('boss@test.local');
+  perform t_ok((select seen_at from item_master where id = i) = '2031-01-01T00:00:00Z'::timestamptz
+           and (edit_get('item_master', i))->>'hash' = h, '18-17 같은 값으로 다시 올리면 seen_at 만 오르고 행 해시는 그대로(받아 둔 엑셀이 충돌로 안 멈춘다)');
+end $$;
+reset role;
+do $$ begin
+  perform t_ok(not has_function_privilege('anon', 'public.item_master_put(jsonb,timestamptz)', 'EXECUTE')
+           and has_function_privilege('authenticated', 'public.item_master_put(jsonb,timestamptz)', 'EXECUTE')
+           and not has_function_privilege('anon', 'public.item_master_done(timestamptz,text,jsonb)', 'EXECUTE')
+           and not has_function_privilege('authenticated', 'public._edit_key(text)', 'EXECUTE'), '18-16 실행 권한 — anon 불가 · _edit_key 회수 그대로');
+end $$;
+`;
+
 let skipped = 0;
 try {
   const init = run('initdb', ['-D', DATA, '-A', 'trust', '-U', 'postgres', '--no-sync', '-E', 'UTF8', '--locale=C']);
@@ -1096,6 +1155,15 @@ try {
   }
   pass += oksP;
   ok(oksP === 23, '[17] T_OK 가 ' + oksP + '개 — 기대 23개');
+  console.log('[18] 자재마스터(v190) — 저장소의 setup-30-items.sql 을 두 번 먹인다');
+  const itemText = fs.readFileSync(ITEM_FILE, 'utf8');
+  ok(!/\bdelete\s+from\b|\btruncate\b|\bdrop\s+(table|function)\b/i.test(itemText), '18-0 setup-30 에 지우는 문장이 없다 (MCP 로 Run 할 수 있어야 한다)');
+  for (const tag of ['setup30', 'setup30b']) { const r = psql(itemText, tag); ok(!/ERROR/.test(r.stderr), 'setup-30-items.sql 적용 실패(' + tag + '):\n' + r.stderr); }
+  { const pI = psql(ITEM_CHECKS, 'item');
+    const outI = (pI.stderr || '') + (pI.stdout || '');
+    (outI.match(/ERROR:[^\n]*/g) || []).forEach(b => { fail++; console.log('  ❌ ' + b.replace(/^ERROR:\s*/, '')); });
+    const oksI = (outI.match(/T_OK [^\n]*/g) || []).length; pass += oksI;
+    ok(oksI === 17, '[18] T_OK 가 ' + oksI + '개 — 기대 17개'); }
 } catch (e) {
   fail++; console.log('  ❌ ' + (e && e.message || e));
 } finally {

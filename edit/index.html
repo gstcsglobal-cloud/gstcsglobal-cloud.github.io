@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>데이터 관리 · CS Global Team</title>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=181"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=182"></script>
 <style>
 /* 관리 도구 화면 — /upload/·/offline/ 와 같은 부류라 i18n 을 싣지 않는다(KO 고정).
    생김새는 v139 토큰(라이트 기본 · 다크는 body.theme-slate)을 그대로 쓴다 — 이름이 theme.css 와 같다. */
@@ -502,6 +502,19 @@ const TABS = [
     need:['이름','항목','휴가시작일','휴가종료일'],
     dates:['발생일','휴가시작일','휴가종료일'],
     dl:['소속','항목'] },
+  /* ── 자재마스터 (v190 · 사용자 「자재마스터현황도 업로드해서 맵핑 자료로」) ──
+     품목번호(= 자재코드) 하나가 한 줄이다 — 표에 «유일» 제약이 있다(uniq). 업로드는 «품목번호 기준 덮어쓰기»(setup-30)이고 지우지 않는다.
+     여기서 고친 이름은 다음 마스터 업로드에 «파일 값»으로 덮인다(덮어쓰기라서) — ERP 에도 같이 고쳐 두라고 note 가 적는다.
+     seen_at(마지막으로 올린 파일에 있었던 시각)은 관리 열이라 고칠 칸이 아니다(ADMIN_COLS). */
+  { id:'item', tbl:'item_master', name:'자재마스터', spec:'item', key:'id', mode:'server', uniq:true,
+    list:['code','itype','name','spec1','spec2','unit'],
+    quick:[ {k:'q', l:'품목번호 · 품목명 · 규격', cols:['code','name','spec1','spec2'], t:'text', ph:'예: P-0000'},
+            {k:'it', l:'품목유형', cols:['itype'], t:'pick'},
+            {k:'unit', l:'단위', cols:['unit'], t:'pick'} ],
+    groups:[ ['품목', ['code','itype','name','spec1','spec2','unit']] ],
+    need:['code'], dup:'code',
+    dl:['itype','unit'],
+    note:'품목번호 하나가 한 줄입니다(같은 번호를 두 번 넣을 수 없습니다). 알람 분석의 부품 이름·부품 묶음 찾기가 이 표를 씁니다.\n자재마스터를 다시 올리면 «품목번호 기준 덮어쓰기»라 여기서 고친 값은 파일 값으로 바뀝니다 — ERP 원본에도 같이 고쳐 두세요.' },
   /* ── CIP F11 · F16 (v159 · 사용자: 「다른 시트처럼 데이터 관리 자체에서 수정도 가능하게 — 얘만 빠져 있으면 업로더가 놓칠 수 있다」) ──
      점검 항목은 «열»로 늘어난다(v130) — 정해진 묶음은 설비 칸뿐이고 나머지 열(=점검 항목 · 더한 열 포함)은 restName 묶음에 저절로 선다.
      ⚠ 자체관리 양식은 «통째 교체»로 올라간다 — 여기서 고친 값은 양식을 다시 올리면 덮인다(업로드 화면이 edit_overwrites 로 미리 말한다).
@@ -523,7 +536,7 @@ TABS.forEach(t => { if(t.region) t.quick.unshift({ k:'region', l:'구분', t:'re
 const TAB_BY = Object.fromEntries(TABS.map(t => [t.id, t]));
 const TAB_OF_TBL = Object.fromEntries(TABS.map(t => [t.tbl, t]));
 const NUM_TYPES = /^(bigint|integer|smallint|numeric|real|double precision)$/;
-const ADMIN_COLS = new Set(['synced_at','imported_at','created_at','extra']);
+const ADMIN_COLS = new Set(['synced_at','imported_at','created_at','extra','seen_at']);
 
 const S = {
   tab:'wk', ready:null, why:'',
@@ -646,6 +659,7 @@ function rpcErr(e){
   if((r = /bad_column: (.*)/.exec(m))) return '표에 「' + r[1] + '」 열이 없습니다 — 화면을 새로고침하세요.';
   if((r = /bad_table: (\S+)/.exec(m))) return '서버의 표 사전에 아직 없는 표입니다(' + r[1] + ') — Supabase SQL Editor 에서 supabase/setup-16-edit.sql 을 Run 하세요(여러 번 Run 해도 안전합니다).';
   if(/no_values/.test(m)) return '빈 행은 넣을 수 없습니다.';
+  if(/duplicate key|23505|item_master_code_uq/i.test(m)) return '같은 번호의 행이 이미 있습니다 — 한 번호는 한 줄입니다(자재마스터 품목번호). 그 행을 찾아 고치세요.';
   if(/already_restored/.test(m)) return '이미 되돌린 이력입니다.';
   if(/not_restorable/.test(m)) return '이 이력은 되돌릴 수 없습니다(업로드 요약·옛 시트 편집 기록).';
   if((r = /invalid input syntax for type (\w+[\w ]*): "(.*)"/.exec(m))) return '숫자 칸에 숫자가 아닌 값이 있습니다: 「' + r[2] + '」';
@@ -1463,6 +1477,8 @@ async function insert(){
       if(t.mode === 'whole') n = (S.all[t.id] || []).filter(x => vs(x[dupCol]).trim() === String(row[dupCol])).length;
       else { const r = await C.from(t.tbl).select(t.key).eq(dupCol, row[dupCol]).limit(20); if(!r.error) n = (r.data || []).length; }
     }catch(e){}
+    /* 유일 제약이 있는 표(자재마스터)는 묻지 않고 막는다 — 넣어 봐야 서버가 거절한다. 있는 그 행을 찾아 고치게 안내한다. */
+    if(n && t.uniq) return snack('「' + label(t, dupCol).name + '」 = ' + row[dupCol] + ' 인 행이 이미 있습니다 — 검색해서 그 행을 고치세요(한 번호는 한 줄입니다)', {err:true});
     if(n && !(await ask('같은 값이 이미 있습니다', '<p>「' + esc(label(t, dupCol).name) + '」 = <b>' + esc(row[dupCol]) + '</b> 인 행이 이미 ' + n + (n >= 20 ? '건 이상' : '건') + ' 있습니다.</p><p>그래도 새 행으로 넣을까요? (같은 실적을 두 번 넣으면 대시보드에서 두 번 셉니다)</p>', '그래도 넣기'))) return;
   }
   const bt = $('editor').querySelector('[data-act=insert]'); bt.disabled = true; bt.textContent = '넣는 중…';
@@ -2074,7 +2090,7 @@ $('xfile').addEventListener('change', e => { const f = e.target.files && e.targe
    · 그다음 «넣는 방식»을 고른다: 한 행씩 반영(이력·되돌리기 · 지금까지의 엑셀 일괄) / 원본으로 교체(통째·기간 — 업로드 엔진).
      ⚠ 교체는 이 화면이 하지 않는다 — 업로드 화면을 이 안에 띄워(?embed=1) 같은 파일을 건네준다. 적재 엔진을 두 벌 두면
        두 경로가 다른 규칙으로 표를 비운다(제2원칙). */
-const UP_RID = { wk:'wk', mat:'mat', inst:'inst', roster:'roster', edu:'edu', leave:'leave', alarm:'alarm', abp:'abp2kr', cip11:'cipf11', cip16:'cipf16' };
+const UP_RID = { wk:'wk', mat:'mat', inst:'inst', roster:'roster', edu:'edu', leave:'leave', alarm:'alarm', abp:'abp2kr', cip11:'cipf11', cip16:'cipf16', item:'item' };
 const cmSite = () => 'ALL';
 /* 저장 열쇠 — 업로드와 같다. 원장은 «시트 태그»별(K·P·H 양식이 다르다 · 이름 규칙이 없는 시트는 해외 OS). */
 function cmKey(t, sheet){
@@ -2133,17 +2149,19 @@ async function mapDlg(t, XLSX, wb, file, cols, hm){
       + '<h4 style="margin-top:12px">넣는 방식</h4>'
       + '<label class="cmm"><input type="radio" name="cmMethod" value="rows"' + (method === 'rows' ? ' checked' : '') + '> <b>한 행씩 반영</b> — 「' + BULK_KEY + '」(또는 키)로 찾은 행은 고치고, 나머지는 새 행으로 넣습니다. '
       + (bulkKeys(t).length ? '' : '표에 이미 똑같은 행은 넣지 않습니다. ') + '모든 줄이 이력에 남고 되돌릴 수 있습니다. <span class="hint">— 몇 줄 고치거나 보탤 때</span></label>'
-      + (upOk ? '<label class="cmm"><input type="radio" name="cmMethod" value="replace"' + (method === 'replace' ? ' checked' : '') + '> <b>원본으로 교체</b> — 업로드 화면에서 이 파일로 겹치는 기간만(날짜 구간이 없는 표는 통째로 · 비밀번호 필요) 갈아끼웁니다. '
+      + (upOk && t.uniq ? '<label class="cmm"><input type="radio" name="cmMethod" value="replace"' + (method === 'replace' ? ' checked' : '') + '> <b>품목번호 기준 덮어쓰기</b> — 업로드 화면에서 같은 번호는 파일 값으로 바꾸고 새 번호는 더합니다. '
+      + '파일에 없는 품목은 지우지 않습니다. <span class="hint">— ERP 에서 새로 받은 마스터 전체일 때</span></label>'
+      : upOk ? '<label class="cmm"><input type="radio" name="cmMethod" value="replace"' + (method === 'replace' ? ' checked' : '') + '> <b>원본으로 교체</b> — 업로드 화면에서 이 파일로 겹치는 기간만(날짜 구간이 없는 표는 통째로 · 비밀번호 필요) 갈아끼웁니다. '
       + '파일에서 빠진 행은 표에서도 빠집니다. <span class="hint">— 그 기간 전체를 새로 받은 원본일 때</span></label>' : '')
       + (why.length ? '<label class="cmok"><input type="checkbox" id="cmOk"> 위 «예시 값»을 보고 맞게 잡힌 것을 확인했습니다 <span class="hint">(' + esc(why.join(' · ')) + ')</span></label>' : '');
     next.disabled = !nMap || (why.length && !box.querySelector('#cmOk').checked);
-    next.textContent = method === 'replace' ? '다음 — 교체 검사' : '다음 — 미리보기';
+    next.textContent = method === 'replace' ? (t.uniq ? '다음 — 덮어쓰기 검사' : '다음 — 교체 검사') : '다음 — 미리보기';
   };
   box.addEventListener('change', async e => {
     if(e.target.id === 'cmSheet'){ sheet = e.target.value; method = null;
       try{ await GST.cmap.save(C, cmSite(), cmKey(t, '').rid, '__sheet', sheet, GST.cmap.where()); }catch(err){ console.warn('[edit] 시트 기억 실패', err); }
       return draw(); }
-    if(e.target.name === 'cmMethod'){ method = e.target.value; next.textContent = method === 'replace' ? '다음 — 교체 검사' : '다음 — 미리보기'; return; }
+    if(e.target.name === 'cmMethod'){ method = e.target.value; next.textContent = method === 'replace' ? (t.uniq ? '다음 — 덮어쓰기 검사' : '다음 — 교체 검사') : '다음 — 미리보기'; return; }
     if(e.target.id === 'cmOk'){ next.disabled = !e.target.checked; return; }
     if(await GST.cmap.handle(e, cmSite(), C)) await draw();
   });
@@ -3663,7 +3681,7 @@ const OPS = {
   del:{ l:'삭제', ops:['delete','dbw:delete'] }, rst:{ l:'되돌리기', ops:['restore'] },
   cas:{ l:'연쇄', ops:['cascade'] }, blk:{ l:'일괄(엑셀)', ops:['bulk'] }, up:{ l:'업로드', like:'upload:%' }
 };
-const OP_VIEW = op => /^upload:/.test(op) ? { c:'x', l:'업로드 ' + ({full:'통째', win:'구간', add:'이어붙이기'}[op.split(':')[1]] || '') }
+const OP_VIEW = op => /^upload:/.test(op) ? { c:'x', l:'업로드 ' + ({full:'통째', win:'구간', add:'이어붙이기', merge:'품목번호 덮어쓰기'}[op.split(':')[1]] || '') }
   : ({ update:{c:'u', l:'수정'}, 'dbw:update':{c:'u', l:'수정 (인원·고장 화면)'}, insert:{c:'i', l:'입력'}, 'dbw:append':{c:'i', l:'입력 (인원 화면)'},
        delete:{c:'d', l:'삭제'}, 'dbw:delete':{c:'d', l:'삭제 (인원 화면)'}, restore:{c:'r', l:'되돌리기'}, cascade:{c:'u', l:'연쇄 수정'},
        bulk:{c:'u', l:'일괄 수정 (엑셀)'}, cip_create:{c:'x', l:'CIP 표 만들기'}, add_cols:{c:'x', l:'점검 항목 더하기'} })[op] || { c:'x', l:op || '?' };
@@ -3728,7 +3746,9 @@ function renderHist(){
       detail = (a.error ? '<span style="color:var(--bad)">실패 — ' + esc(cut(a.error, 120)) + '</span> · ' : '')
         + esc((a.site ? '사이트 ' + a.site + ' · ' : '') + (a.file ? '파일 「' + a.file + '」 · ' : '') + (b.rows != null ? b.rows.toLocaleString() + ' → ' : '') + (a.rows != null ? a.rows.toLocaleString() + '행' : '')
         + (a.n != null ? ' (이번에 ' + a.n.toLocaleString() + '행)' : '') + (b.from ? ' · 구간 ' + b.from + ' ~ ' + b.to + ' (지움 ' + (b.deleted != null ? b.deleted.toLocaleString() : '?') + ')' : '')
-        + (a.dup ? ' · 키 중복 의심 ' + a.dup.toLocaleString() + '행' : '') + (a.ok === false ? ' · ⚠ 행수 불일치' : ''));
+        + (a.dup ? ' · 키 중복 의심 ' + a.dup.toLocaleString() + '행' : '') + (a.ok === false ? ' · ⚠ 행수 불일치' : '')
+        + (a.new != null ? ' · 새 ' + Number(a.new).toLocaleString() + ' · 바뀜 ' + Number(a.changed || 0).toLocaleString() + ' · 그대로 ' + Number(a.same || 0).toLocaleString() : '')
+        + (a.unseen ? ' · 이번 파일에 없던 품목 ' + Number(a.unseen).toLocaleString() + '(지우지 않음)' : ''));
     }else if(e.op === 'bulk'){
       const a = e.after || {};
       detail = esc((a.file ? '파일 「' + a.file + '」' + (a.sheet ? ' · 시트 「' + a.sheet + '」' : '') + ' · ' : '') + '수정 ' + (a.updated || 0) + '행 · 새 행 ' + (a.inserted || 0)

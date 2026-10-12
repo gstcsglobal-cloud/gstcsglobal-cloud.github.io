@@ -66,6 +66,10 @@ const STUB = '\n;GST.USE_DB=false;GST.authOn=function(){return false;};'
   +   'if(name==="upload_pin_check"){if(window.__PIN_FN)return window.__PIN_FN(args);return args.p_pin===window.__PIN?{data:{ok:true},error:null}:{data:{ok:false,err:"wrong",left:3},error:null};}'
   +   'if(name==="csv_upload_full"){if(window.__FULL_EXPIRE){window.__FULL_EXPIRE=0;return {data:null,error:{message:"pin_required"}};}if(window.__BEGIN_ERR)return {data:null,error:{message:window.__BEGIN_ERR}};return {data:null,error:null};}'
   +   'if(name==="csv_window")return {data:{hit:3,rows:50,next_src:1000,dry:!!(args&&args.p_dry)},error:null};'
+  /* v190 — 자재마스터 덮어쓰기. 첫 묶음은 run 을 null 로 보내고, 서버가 돌려준 run 을 다음 묶음에 넘겨야 한다 */
+  +   'if(name==="item_master_put"){window.__IMP=window.__IMP||[];window.__IMP.push({n:args.p_rows.length,run:args.p_run,first:args.p_rows[0],last:args.p_rows[args.p_rows.length-1]});'
+  +    'return {data:{run:"2026-10-12T01:02:03Z",new:args.p_rows.length,changed:0,same:0,skipped:0},error:null};}'
+  +   'if(name==="item_master_done"){window.__IMD=args;return {data:{rows:4600,unseen:2,log:7},error:null};}'
   +   'return {data:{},error:null};}};'
   + 'GST.db=async function(){return window.__FDB;};';
 
@@ -451,6 +455,44 @@ console.log('[13] 머리글 윗줄 병합 — 설치현황(SPEC 표)도 위 줄�
   is(imp.hi===1 && imp.idx.No===0 && imp.idx['사원번호']===3 && imp.header[0]==='No', 'Import 표도 위 줄의 세로 병합 이름(No)을 잡는다 (' + JSON.stringify(imp.idx) + ')');
   is(pem.length===0, 'JS 에러 0 (병합 머리글 SPEC)' + (pem.length?' → '+pem[0]:''));
   await pm.close();
+}
+
+console.log('[14] 자재마스터 — 품목번호 기준 덮어쓰기 · 2,000줄씩 · 서버의 run 을 잇는다 · 실적 파일은 막는다 (v190)');
+{
+  const pi = await ctx.newPage(); const pie=[]; pi.on('pageerror', e => pie.push(e.message)); pi.on('dialog', d => d.accept());
+  await pi.addInitScript(() => { window.__CM=[]; });
+  await pi.goto(BASE + '/upload/', { waitUntil:'domcontentloaded' }); await pi.waitForTimeout(900);
+  await pi.evaluate(() => { const s=document.getElementById('tsel'); s.value=String(TABLES.findIndex(t=>t.rid==='item')); s.onchange(); });
+  /* 지어낸 마스터 — 번호 P-000000 꼴 · 마지막 줄은 앞 번호를 다시 적어 «뒤 줄이 이긴다» · 번호 빈 줄 하나 */
+  const H = ['품목번호','품목유형','품목명','규격1','규격2','단위'];
+  const R = [H]; for(let i=0;i<4500;i++) R.push(['P-'+String(i).padStart(6,'0'),'소모품','PART '+i,'S'+i,'','EA']);
+  R.push(['P-000003','소모품','PART 3 NEW','S3','','EA']); R.push(['','소모품','NO CODE','','','EA']);
+  const fpM = path.join(OUT,'item-master.csv'); fs.writeFileSync(fpM, '\ufeff'+R.map(r=>r.join(',')).join('\n')+'\n');
+  await pi.setInputFiles('#fsel', fpM); await pi.waitForTimeout(1500);
+  const ct = await pi.evaluate(() => document.getElementById('chk').innerText);
+  is(/품목 4,500개/.test(ct) && /빈 1줄은 건너뜁니다/.test(ct) && /다시 나온 1줄은 «뒤의 줄»이 이깁니다/.test(ct) && /지우지 않습니다/.test(ct),
+     '검사 화면 — 품목 수 · 빈 번호 · 겹친 번호(뒤가 이김) · «지우지 않는다»');
+  is(await pi.evaluate(() => PREP && PREP.upsert && !document.getElementById('goBtn').disabled && document.getElementById('modeSel').value==='merge'), '올리기 단추가 열리고 방식은 덮어쓰기 하나');
+  await pi.evaluate(() => { window.__QLOG=[]; window.__IMP=[]; });
+  await pi.evaluate(() => window.doUpload()); await pi.waitForFunction(() => /완료|❌/.test(document.getElementById('log').textContent), null, { timeout:20000 });
+  const imp = await pi.evaluate(() => window.__IMP), imd = await pi.evaluate(() => window.__IMD);
+  is(imp.length===3 && imp.map(x=>x.n).join()==='2000,2000,502', '2,000줄씩 세 번 (' + imp.map(x=>x.n).join() + ')');
+  is(imp[0].run==null && imp[1].run==='2026-10-12T01:02:03Z' && imp[2].run==='2026-10-12T01:02:03Z', '첫 묶음은 run 없이 · 다음 묶음은 서버가 준 run 을 넘긴다(브라우저 시계를 믿지 않는다)');
+  is(imp[0].first.code==='P-000000' && imp[0].first.name==='PART 0' && !('src_row' in imp[0].first), '줄 모양 = {code, itype, name, …} · src_row 없음');
+  is(imp[2].last.code==='' || imp[2].last.code==null || imp[2].last.name==='NO CODE', '번호 빈 줄도 서버에 보내 «건너뛴 수»를 서버가 센다');
+  is(imd && imd.p_run==='2026-10-12T01:02:03Z' && imd.p_counts && imd.p_counts.new===4502, '마무리 — 같은 run · 묶음 결과 합');
+  const lg = await pi.evaluate(() => document.getElementById('log').innerText);
+  is(/완료/.test(lg) && /이번 파일에 없던 기존 품목 2개는 지우지 않고/.test(lg), '완료 — 이번 파일에 없던 품목은 지우지 않았다고 말한다');
+  const rp = await pi.evaluate(() => window.__QLOG.filter(q=>q.rpc).map(q=>q.rpc));
+  is(!rp.some(r=>/csv_upload_(begin|full|finish)|csv_window/.test(r)), '비우기·구간 교체·미러 마무리를 부르지 않는다');
+  /* 자재실적처럼 한 번호가 여러 줄인 파일 — 마스터가 아니다 */
+  const R2=[H]; for(let i=0;i<200;i++) R2.push(['P-00000'+(i%7),'소모품','PART','S','','EA']);
+  const fp2 = path.join(OUT,'not-master.csv'); fs.writeFileSync(fp2, '\ufeff'+R2.map(r=>r.join(',')).join('\n')+'\n');
+  await pi.setInputFiles('#fsel', fp2); await pi.waitForTimeout(1200);
+  is(/같은 품목번호가 여러 줄입니다/.test(await pi.evaluate(() => document.getElementById('chk').innerText)) && await pi.evaluate(() => !PREP && document.getElementById('goBtn').disabled),
+     '같은 번호가 여러 줄인 파일(실적 파일)은 멈추고 까닭을 적는다');
+  is(pie.length===0, 'JS 에러 0 (자재마스터)' + (pie.length?' → '+pie[0]:''));
+  await pi.close();
 }
 
 await browser.close(); srv.close();
