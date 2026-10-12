@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=180"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=181"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:#1d2433;background:#F5F6F8;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
@@ -52,7 +52,7 @@ body.embed{padding:12px 14px}body.embed>h1,body.embed>.sub{display:none}body.emb
 <body>
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-window.GST && GST.needVer && GST.needVer(160);   // GST.cmap.colName·compose(v157 · CIP 묶음 머리글) · GST.sheetRows(v141) 이전 core 면 배너 — «숫자가 0» 대신(v135)
+window.GST && GST.needVer && GST.needVer(181);   // GST.SM.SPEC.fse·normRow(v189 · FSE 원장) · GST.cmap.colName·compose(v157 · CIP 묶음 머리글) · GST.sheetRows(v141) 이전 core 면 배너 — «숫자가 0» 대신(v135)
 </script>
 
 <h1>원본 파일 올리기</h1>
@@ -149,6 +149,17 @@ const TABLES = [
     /* 설치현황은 «조직 축의 정본»이라, 올린 뒤 조인이 얼마나 붙었는지가 가장 중요하다 —
        안 붙으면 사업부·단지·라인이 조용히 「미상」으로 몰린다(v135 · 7단계). */
     after:'주간현황·설치현황의 데이터 품질 카드에서 S/N 조인율과 「설비상태」 인식을 확인하세요 — 낮으면 단지·라인이 미상으로 몰립니다.' },
+  /* FSE 원장 (v189) — 해외 현장의 «작업·알람·부품 교체» 원장. 고장 분석 › 알람 분석 탭이 읽는다.
+     ⚠ op 는 운영단위가 아니라 «적재 범위 열쇠» = SITE(고객사) + LINE(FAB) 이다(setup-29 머리 주석). FSE 파일은 FAB 마다 따로 오므로,
+       「겹치는 구간만 교체」로 올리면 «이 파일의 고객사·FAB × 날짜 범위»만 갈아끼운다 — 다른 FAB 행은 한 줄도 안 지워진다.
+       SITE·LINE 이 빈 줄(실측 0.3% · 설비 마스터에 없는 S/N)은 «이 파일에서 가장 많은 열쇠»를 받는다 — 빈 열쇠로 두면 다른 FAB 파일의
+       빈 줄과 같은 열쇠가 되어 서로를 지운다.
+     ⚠ 파일 순서가 «작업 행 → 그 작업의 부품 행» 연결이다 — src_row 가 파일 순번이라 그대로 남는다(GST.FSE.parse 가 잇는다). */
+  { rid:'fse', key:'fse', label:'FSE 원장 (엑셀 · 작업·알람·부품 이력)', table:'sheet_fse', kind:'mirror', win:'workDate', defMode:'win',
+    opOf:o=>[o.site,o.fab].map(x=>String(x==null?'':x).trim()).filter(Boolean).join(' '), ddl:'setup-29-fse.sql',
+    qa:{key:['sn','mcode','work_date','chamber','msg','fcode','part_code'], date:'work_date', num:['mttr'], by:'op'},
+    note:'FAB(라인)마다 따로 올려도 됩니다 — 「겹치는 구간만 교체」면 이 파일의 고객사·FAB 행만 갈아끼웁니다.',
+    after:'고장 분석 → 「알람 분석」 탭에서 원장 기간·행 수와, 데이터 품질 팝업의 «작업 행을 못 찾은 부품 행» 수를 확인하세요.' },
   { rid:'edu', label:'교육현황 (엑셀 또는 CSV)',      table:'sheet_edu',     kind:'import',
     after:'인원·교육 화면의 「확인할 것」에서 「교육현황과 못 이은 재직 인원」이 0 인지 확인하세요.' },
   { rid:'roster', label:'인원현황 (엑셀 또는 CSV)',   table:'sheet_roster',  kind:'import',
@@ -720,8 +731,20 @@ window.checkFile=async function(){
           o[GST._snake(k)]=v===''?null:v; });
         extraCols.forEach(x=>{ const v=String(r[x.i]==null?'':r[x.i]).trim(); if(v!=='')ex[x.h]=v; });
         o.extra=Object.keys(ex).length?ex:null;
+        /* 날짜·시각·숫자 다듬기(v189) — SPEC 이 dates·stamps·nums 를 선언한 표만(FSE 원장). 수선·자재·설치는 선언이 없어 한 글자도 안 바뀐다
+           (sheet-sync toRows 와의 전 칸 대조 — t-upload — 그대로). */
+        GST.SM.normRow&&GST.SM.normRow(S,o);
         return o;
       });
+      /* 적재 범위 열쇠(op) — 원장에 운영단위 칸이 없는 표(FSE)는 TABLES 가 만드는 법을 준다. 빈 열쇠는 파일의 최다 열쇠로(위 TABLES 주석). */
+      if(t.opOf){
+        const cnt={}; out.forEach(o=>{ o.op=t.opOf(o)||''; if(o.op) cnt[o.op]=(cnt[o.op]||0)+1; });
+        const top=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||'';
+        const nb=out.filter(o=>!o.op).length;
+        if(nb&&top){ out.forEach(o=>{ if(!o.op) o.op=top; });
+          msgs.push('<span class="warn">ℹ 고객사·FAB 칸이 빈 '+nb.toLocaleString()+'행은 이 파일의 «'+GST._esc(top)+'» 로 묶어 올립니다 (구간 교체 열쇠)</span>'); }
+        msgs.push('<span class="ok">✅ 적재 범위 열쇠: '+Object.keys(cnt).map(k=>GST._esc(k)+' '+cnt[k].toLocaleString()+'행').join(' · ')+'</span>');
+      }
       msgs.push('<span class="ok">✅ 열 인식 '+keys.length+'개 · 추가로 담는 열(extra) '+extraCols.length+'개</span>');
       /* 조용히 넘기지 않는다 — «무엇을 하면 되는지»까지 적는다(막다른 길로 두지 않는다).
          파일에도 없는 열은 «이 파일과 무관»하므로 굳이 겁줄 일이 아니다. */

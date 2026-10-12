@@ -113,7 +113,7 @@ console.log('[0] 관리자 화면 회귀');
   const { pg, pe } = await openUpload('');
   const n = await pg.evaluate(() => document.querySelectorAll('#tsel option').length);
   const nT = await pg.evaluate(() => TABLES.length);
-  is(n === nT && nT === 12, '대상 목록 전부 보인다 (' + n + '/' + nT + ')');
+  is(n === nT && nT === 13, '대상 목록 전부 보인다 (' + n + '/' + nT + ') — v189 에 FSE 원장이 더해졌다');
   is(await pg.evaluate(() => !document.getElementById('modeSel').disabled), '넣는 방식 선택 가능');
   is(await pg.evaluate(() => [...document.querySelectorAll('#modeSel option')].every(o => o.style.display !== 'none')),
     '모드 세 가지가 다 보인다');
