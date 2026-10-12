@@ -253,7 +253,7 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 .fse-aff td.n,.fse-aff td.c,.fse-aff th{white-space:nowrap;overflow-wrap:normal}
 .fse-aff thead th{position:sticky;top:0;z-index:1}
 #fseSec .fse-g2{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}
-#fseHistCard td:nth-child(-n+3),#fseHistCard th{white-space:nowrap;overflow-wrap:normal}
+#fseHistCard td:nth-child(-n+3){white-space:nowrap;overflow-wrap:normal}   /* 날짜·챔버·구분만 한 줄 — 머리글까지 묶으면 좁은 칸(2/5)에서 표가 넘친다(CI 글꼴에서 13px) */
 #fseTopCard td,#fseTopCard th{padding-left:8px !important;padding-right:8px !important}
 #fseTopCard td:nth-child(-n+2),#fseTopCard td:nth-child(n+4):nth-child(-n+7){white-space:nowrap}   /* 순위·S/N·세부공정·건수·최근 발생은 한 줄(하이픈에서 끊기지 않게) */
 @media(max-width:1499px){
