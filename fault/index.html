@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=182"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=183"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -194,9 +194,36 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 .fse-pri b{display:block;font-size:22px;margin:2px 0;font-variant-numeric:tabular-nums}
 .fse-pri i{font-style:normal;font-size:11.5px;color:var(--txt-muted,var(--mut))}
 #fseMfc{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+/* v191 — 좌우 스크롤 없이 화면 폭에(사용자). 격자 칸은 min-width:0 이어야 안의 표·그림이 칸을 밀어 넓히지 않는다
+   (격자 항목의 기본 min-width 는 auto = 내용 폭이라, 타임라인 그림·줄바꿈 없는 표가 페이지 전체를 옆으로 밀었다). */
+.grid2-trend>*,#fseMfc>*{min-width:0}
+#fseSec table{white-space:normal}
+#fseSec th{word-break:keep-all;vertical-align:bottom}
+#fseSec td{overflow-wrap:anywhere}
+.fse-tlw svg{width:100%;height:auto}
+.fse-vrow{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.fse-vc{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent-ink,var(--accent));
+  font-size:12px;font-weight:650;padding:3px 4px 3px 10px;border-radius:99px;max-width:260px}
+.fse-vc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fse-vc.mfc{border-style:solid;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--gold,#c9a85a) 45%,transparent)}
+.fse-vc button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:11px;padding:0 4px;opacity:.7}
+.fse-vc button:hover{opacity:1}
+.fse-vst{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--txt-2,var(--mut))}
+.fse-vst.auto{border-color:color-mix(in srgb,var(--gold,#c9a85a) 55%,transparent);color:var(--gold,#c9a85a)}
+.fse-aff tr[data-fai]{cursor:pointer}
+.fse-aff tr.on td{background:var(--accent-soft)}
+.fse-aff td.c,.fse-aff th.c{text-align:center}
+.fse-aff td.n,.fse-aff th.n{text-align:right}
+.fse-mut{color:var(--txt-muted,var(--mut));font-weight:400}
+.fse-rec{color:var(--gold,#c9a85a)}
+.fse-vb{border:1px solid var(--line);background:var(--surface);color:var(--txt-2,var(--mut));font:inherit;font-size:11.5px;padding:3px 10px;border-radius:99px;cursor:pointer;white-space:nowrap}
+.fse-vb.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink,var(--accent));font-weight:700}
+.fse-vcell div{white-space:nowrap}
+.fse-vf{font-size:10px;color:var(--txt-muted,var(--mut));margin-right:4px}
+.fse-mfcoff{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--txt-2,var(--mut))}
 @media(max-width:1100px){#fseMfc{grid-template-columns:1fr}.fse-pri{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=182">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=183">
 </head>
 <body>
 
@@ -383,6 +410,7 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
         <div class="trend-wrap"><canvas id="cFseRate"></canvas></div>
       </div>
     </div>
+    <div class="card" id="fseAffCard" style="margin-bottom:16px"></div>
     <div class="tablecard" id="fseTopCard" style="margin-bottom:16px"></div>
     <div class="grid2-trend">
       <div class="card" id="fseTlCard"></div>
@@ -721,7 +749,7 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 </div>
 
 <script>
-GST.needVer&&GST.needVer(181);   // GST.FSE·fseT(v189 · 알람 분석) · GST.chartLayout(v174) · GST.kpiDrill 배지 모드 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(183);   // GST.FSE.affect·autoPick·units·READ(v191 · 보는 부품) · GST.FSE·fseT(v189 · 알람 분석) · GST.chartLayout(v174) · GST.kpiDrill 배지 모드 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -2800,9 +2828,43 @@ function fseFS(){
   if(FSEX.fs) return FSEX.fs;
   let o={}; try{ o=JSON.parse(localStorage.getItem(FSE_KEY)||'{}')||{}; }catch(e){}
   FSEX.fs=Object.assign({axis:'code', vals:[], aw:'all', resp:'all', ch:'all', ut:'all', per:'m', rateAx:'det1', sort:'y', unit:'sn',
-    tl:'24', verMode:'now', verF:'LNG', more:false, topAll:false}, o, {sel:'', q:''});
+    tl:'24', verMode:'now', verF:'LNG', more:false, topAll:false, affAll:false, pv:{}}, o, {sel:'', q:''});
   if(!Array.isArray(FSEX.fs.vals)) FSEX.fs.vals=[];
+  if(!FSEX.fs.pv || typeof FSEX.fs.pv!=='object' || Array.isArray(FSEX.fs.pv)) FSEX.fs.pv={};
   return FSEX.fs;
+}
+/* «보는 부품» (v191 · 사용자 「알람마다 영향되는 자재가 다른데 왜 MFC 랑 노즐로 하드코딩 해놨어? 커스터마이징으로 바꿔 가면서 봐야」)
+   알람 고르기(축 + 고른 값)마다 따로 기억한다 — BFE 를 볼 때는 MFC·노즐, 누수 알람을 볼 때는 그 알람에 맞는 부품.
+   고른 적이 없으면 «자동 추천»: 그 알람 작업에서 평소보다 두드러지게 바꾼 부품(GST.FSE.affect · autoPick · 기준은 판정 기준 fse_auto_*).
+   이 PC 에 남는다(localStorage · 필터 고르기와 같은 자리). */
+const FSE_VMAX=6;
+function fseVKey(FS){ return FS.axis+':'+(FS.vals.length?FS.vals.slice().sort().join('|'):'*'); }
+function fseView(FS, A, P){
+  const key=fseVKey(FS), pin=Array.isArray(FS.pv[key])?FS.pv[key]:null;
+  return pin ? {keys:pin.slice(0,FSE_VMAX), auto:false, key:key} : {keys:GST.FSE.autoPick(A,P), auto:true, key:key};
+}
+function fseSetView(keys){
+  const FS=fseFS(), k=fseVKey(FS);
+  delete FS.pv[k]; FS.pv[k]=keys.slice(0,FSE_VMAX);
+  const ks=Object.keys(FS.pv); while(ks.length>80) delete FS.pv[ks.shift()];
+  fseSave(); fseRender();
+}
+function fseVToggle(k){
+  const V=FSEX.view||{keys:[]}, ks=V.keys.slice(), i=ks.indexOf(k);
+  if(i>=0) ks.splice(i,1);
+  else { if(ks.length>=FSE_VMAX){ GST.capToast&&GST.capToast(ft('v_max',{n:FSE_VMAX})); return; } ks.push(k); }
+  fseSetView(ks);
+}
+function fseVAuto(){ const FS=fseFS(); delete FS.pv[fseVKey(FS)]; fseSave(); fseRender(); }
+/* 보는 부품에 MFC 묶음이 있으면 그 유체만 MFC 버전 칸으로(묶음 줄의 유체 · 없으면 그 묶음에 실제로 잡힌 부품의 유체 · 그래도 없으면 셋 다) */
+function fseVFl(D, keys){
+  const F2=GST.FSE; if(!D||!D.hasMfc) return [];
+  const mk=keys.filter(F2.isMfcKey); if(!mk.length) return [];
+  const has={};
+  F2.reg.on().forEach(r=>{ if(mk.indexOf('g:'+String(r.grp||'').trim())>=0){ const f=F2.fluidOf(r,null); if(f) has[f]=1; } });
+  D.parts.forEach(p=>{ if(p.fluid && mk.indexOf(p.ik)>=0) has[p.fluid]=1; });
+  const fl=F2.FLUIDS.filter(f=>has[f]);
+  return fl.length?fl:F2.FLUIDS.slice();
 }
 function fseSave(){ try{ const o=Object.assign({},FSEX.fs); delete o.sel; delete o.q; localStorage.setItem(FSE_KEY, JSON.stringify(o)); }catch(e){} }
 function fseVisible(){ const s=document.querySelector('[data-sec="alarm"]'); return !!(s && s.style.display!=='none'); }
@@ -2825,9 +2887,13 @@ async function fseLoad(force){
   FSEX.st='loading'; fseRender();
   try{
     await Promise.race([FAULT_READY, new Promise(r=>setTimeout(r,20000))]);   // 설치현황 조인이 필요하다 — 고장 분석 첫 읽기를 기다린다
-    const [rowsR]=await Promise.allSettled([GST.dbRows('fse'), GST.FSE.reg.load()]);
+    /* 이 탭이 쓰는 열만 받는다(v191 · 실측 65MB → 33MB). 설비 속성(LINE·공정·세부공정·버너·모델·Turn-on)은 설비마다 한 줄로
+       따로 받는다(fse_units · setup-31) — 그 함수가 없으면 옛 방식으로 행마다 받는다(빠지지 않는다). */
+    const ua=await GST.FSE.units().catch(()=>null);
+    const flds=ua?GST.FSE.READ:GST.FSE.READ.concat(GST.FSE.UNIT);
+    const [rowsR]=await Promise.allSettled([GST.dbRows('fse',{fields:flds}), GST.FSE.reg.load()]);
     if(rowsR.status!=='fulfilled') throw rowsR.reason;
-    const D=GST.FSE.parse(rowsR.value,{org:fseOrg()});
+    const D=GST.FSE.parse(rowsR.value,{org:fseOrg(), units:ua});
     /* 자재마스터(v190) — 부품 코드로 표준 품목명·규격을 붙인다(bind 앞 — 이름 규칙·유체 판정이 표준 이름도 보게). 못 읽어도 원장 이름으로 선다. */
     try{ await GST.FSE.items(D); }catch(e){ console.warn('[알람 분석] 자재마스터', e); }
     GST.FSE.bind(D); GST.FSE.enrich(D, fseMats());
@@ -2838,7 +2904,9 @@ async function fseLoad(force){
     console.warn('[알람 분석] FSE 원장 읽기', e);
   }
   fseRender();
-  if(ROWS.length) render();          // 품질 팝업에 원장 신호를 싣는다(render 가 dq 를 다시 센다)
+  /* 품질 팝업에 원장 신호만 더한다 — 예전에는 여기서 고장 분석 전체(수선실적 25만 행)를 한 번 더 그렸다(v191 · 느려짐의 한 원인).
+     렌더마다 다시 세는 규약(dq.reset)은 그대로 — 다음 render() 가 fseDq 를 다시 부른다. */
+  if(ROWS.length && GST.dq){ try{ GST.dq._l=GST.dq._l.filter(x=>!/^fse_/.test(x.key)); fseDq(); GST.dq.render(GST.filtSummary?GST.filtSummary():''); }catch(e){ console.warn('[알람 분석] 품질 신호', e); } }
 }
 /* 품질 신호 — 사실은 모두에게, 조치는 관리자에게(GST.dq 가 가른다) */
 function fseDq(){
@@ -2891,11 +2959,16 @@ function fseRender(){
     if(FS.ch!=='all'&&U.ch!==FS.ch) return; if(FS.ut!=='all'&&U.utype!==FS.ut) return;
     if(!GST.filters.pass({region:U.region, op:U.op, customerN:U.customer, campus:U.campus, line:U.fab, line2:U.line2, div:U.div},{noDate:true})) return;
     units[u]=U; });
-  const st=F2.stats(D, evs, units, {asOf:D.asOf, recur:P.recur, top:P.top});
+  /* 함께 교체한 부품 — 분모는 같은 범위(관리 설비 · 사이드바 · 기간)의 «모든 작업 줄». 보는 부품은 알람 고르기마다(fseView). */
+  const base=D.ev.filter(e=>e.mc && units[e.u] && GST.filters.pass(e));
+  const AFF=F2.affect(D, evs, base), V=fseView(FS, AFF, P);
+  FSEX.aff=AFF; FSEX.view=V;
+  const st=F2.stats(D, evs, units, {asOf:D.asOf, recur:P.recur, top:P.top, items:V.keys});
   const y=D.asOf.slice(0,4), md=D.asOf.slice(5);
   const nY=evsAll.filter(e=>e.y===y).length, nPY=evsAll.filter(e=>e.y===String(+y-1)&&e.date.slice(5)<=md).length;
   const perOn=!!(GST.filters.F.dtFrom||GST.filters.F.dtTo);
   fseBar(facet, D); fseKpis(D, FS, st, evs, evsAll, nY, nPY, y, units);
+  fseAff(D, AFF, V);
   const from=perOn&&GST.filters.F.dtFrom ? GST.filters.F.dtFrom : D.minDate, to=perOn&&GST.filters.F.dtTo ? GST.filters.F.dtTo : D.asOf;
   fseTrend(evs, FS, from, to, TH);
   fseRate(D, evs, units, FS, TH);
@@ -2930,7 +3003,7 @@ function fseBar(facet, D){
     +(resps.length?'<span class="fse-lbl">'+fseEsc(ft('f_resp'))+'</span>'+fseSeg('resp',[['all',ft('all')]].concat(resps.map(r=>[r,r])),FS.resp,'frs'):'')
     +'<span class="fse-lbl">'+fseEsc(ft('f_ch'))+'</span>'+fseSeg('ch',[['all',ft('all')]].concat(chs.map(c=>[c,c])),FS.ch,'fch')
     +'<span class="fse-lbl">'+fseEsc(ft('f_ut'))+'</span>'+fseSeg('ut',[['all',ft('all')]].concat(uts.map(t=>[t,ft('ut_'+t)])),FS.ut,'fut')
-    +'</div>';
+    +'</div>'+fseVRow(D);
   const set=(k,v)=>{ FS[k]=v; fseSave(); fseRender(); };
   el.querySelectorAll('[data-fax]').forEach(b=>b.onclick=()=>{ FS.axis=b.dataset.fax; FS.vals=[]; FS.sel=''; fseSave(); fseRender(); });
   el.querySelectorAll('[data-fv]').forEach(b=>b.onclick=()=>{ const v=b.dataset.fv, i=FS.vals.indexOf(v); if(i>=0) FS.vals.splice(i,1); else FS.vals.push(v); FS.sel=''; fseSave(); fseRender(); });
@@ -2941,7 +3014,49 @@ function fseBar(facet, D){
   const clr=el.querySelector('[data-fclr]'); if(clr) clr.onclick=()=>{ FS.vals=[]; FS.sel=''; fseSave(); fseRender(); };
   const mo=el.querySelector('[data-fmore]'); if(mo) mo.onclick=()=>set('more',!FS.more);
   const pb=el.querySelector('[data-fparts]'); if(pb) pb.onclick=fseParts;
+  el.querySelectorAll('[data-fvx]').forEach(b=>b.onclick=()=>fseVToggle(b.dataset.fvx));
+  const va=el.querySelector('[data-fva]'); if(va) va.onclick=fseVAuto;
+  const vg=el.querySelector('[data-fvg]'); if(vg) vg.onchange=()=>{ if(vg.value) fseVToggle(vg.value); };
   const qi=document.getElementById('fseQ'); if(qi){ qi.oninput=()=>{ FS.q=qi.value; const pos=qi.selectionStart; fseBar(facet,D); const q2=document.getElementById('fseQ'); if(q2){ q2.focus(); try{ q2.setSelectionRange(pos,pos); }catch(e){} } }; }
+}
+
+/* 보는 부품 줄 — 칩(누르면 뺀다) · 자동 추천/직접 고름 · 자동 추천으로 · 부품 묶음 더하기 */
+function fseVRow(D){
+  const F2=GST.FSE, V=FSEX.view||{keys:[], auto:true};
+  const chips=V.keys.map(k=>'<span class="fse-vc'+(F2.isMfcKey(k)?' mfc':'')+'" title="'+fseEsc(F2.ilabel(D,k))+'">'+fseEsc(F2.ilabel(D,k))
+    +'<button type="button" data-fvx="'+fseEsc(k)+'" aria-label="'+fseEsc(ft('v_rm'))+'">✕</button></span>').join('');
+  const gs=F2.reg.groups().filter(g=>V.keys.indexOf('g:'+g)<0);
+  return '<div class="fse-row fse-vrow"><span class="fse-lbl">'+fseEsc(ft('v_lbl'))+'</span>'
+    +(chips||'<span class="fse-basis">'+fseEsc(V.auto?ft('v_none'):ft('v_empty'))+'</span>')
+    +'<span class="fse-vst'+(V.auto?' auto':'')+'"'+(V.auto?' title="'+fseEsc(ft('v_tip_auto'))+'"':'')+'>'+fseEsc(V.auto?ft('v_auto'):ft('v_mine'))+'</span>'
+    +(V.auto?'':'<button type="button" class="fse-link" data-fva="1">'+fseEsc(ft('v_reset'))+'</button>')
+    +(gs.length?'<select class="fse-sel" data-fvg="1" aria-label="'+fseEsc(ft('v_addg'))+'"><option value="">'+fseEsc(ft('v_addg'))+'</option>'
+      +gs.map(g=>'<option value="'+fseEsc('g:'+g)+'">'+fseEsc(g)+'</option>').join('')+'</select>':'')
+    +'</div>';
+}
+/* 함께 교체한 부품 — 고른 알람 작업에서 바꾼 부품을 «평소보다 몇 번 더»(ex) 순으로. 줄을 누르면 그 알람 작업 목록, «보기»는 보는 부품에 넣고 뺀다. */
+function fseAff(D, A, V){
+  const card=document.getElementById('fseAffCard'); if(!card) return;
+  const F2=GST.FSE, FS=fseFS(), on=new Set(V.keys), rec=new Set(F2.autoPick(A));
+  const lim=FS.affAll?A.list.length:12, rows=A.list.slice(0,lim);
+  const pct=r=>{ const v=Math.round(r*1000)/10; return v===0&&r>0?'<0.1%':v+'%'; };
+  card.innerHTML='<div class="trend-header fse-th"><h3>'+fseEsc(ft('c_aff'))+' <span class="fse-sub2">'+fseEsc(ft('aff_sub',{n:fseN(A.nA),b:fseN(A.nB)}))+'</span></h3></div>'
+    +(rows.length?'<div class="tbl-wrap fse-affw"><table data-gst-nosn class="fse-aff"><thead><tr><th>'+fseEsc(ft('aff_th_p'))+'</th><th class="n">'+fseEsc(ft('aff_th_a'))+'</th>'
+      +'<th class="n">'+fseEsc(ft('aff_th_b'))+'</th><th class="n">'+fseEsc(ft('aff_th_x'))+'</th><th class="n">'+fseEsc(ft('aff_th_u'))+'</th><th class="c">'+fseEsc(ft('aff_th_v'))+'</th></tr></thead><tbody>'
+      +rows.map((x,i)=>{ const isOn=on.has(x.k);
+        return '<tr data-fai="'+i+'" class="'+(isOn?'on':'')+'"><td>'+(rec.has(x.k)?'<span class="fse-rec" title="'+fseEsc(ft('v_tip_auto'))+'">★</span> ':'')+fseEsc(x.label)+'</td>'
+          +'<td class="n">'+fseN(x.a)+' <span class="fse-mut">· '+pct(x.share)+'</span></td><td class="n fse-mut">'+pct(x.base)+'</td>'
+          +'<td class="n"'+(x.x!=null&&GST.xcol?' style="color:'+GST.xcol(x.x)+'"':'')+'><b>'+(x.x==null?'—':fseEsc(GST.xmul?GST.xmul(x.x):(Math.round(x.x*10)/10)+'×'))+'</b></td>'
+          +'<td class="n">'+fseN(x.units)+'</td>'
+          +'<td class="c"><button type="button" class="fse-vb'+(isOn?' on':'')+'" data-fat="'+fseEsc(x.k)+'">'+fseEsc(isOn?'✓ '+ft('aff_on'):'+ '+ft('aff_add'))+'</button></td></tr>'; }).join('')
+      +'</tbody></table></div>'
+      +(A.list.length>12?'<div style="margin-top:8px"><button type="button" class="fse-link" data-faa="1">'+fseEsc(FS.affAll?ft('aff_less'):ft('aff_more',{n:fseN(A.list.length)}))+'</button></div>':'')
+      +'<div class="card-note">'+fseEsc(ft('aff_note'))+'</div>'
+    :'<div class="empty">'+fseEsc(ft('aff_none'))+'</div>');
+  card.querySelectorAll('[data-fat]').forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); fseVToggle(b.dataset.fat); });
+  card.querySelectorAll('tr[data-fai]').forEach(tr=>tr.onclick=()=>{ const x=rows[+tr.dataset.fai]; if(!x) return;
+    GST.rowsModal(ft('aff_d',{p:x.label,n:fseN(x.a)}), fseEvCols(), fseEvRows(x.ev)); });
+  const aa=card.querySelector('[data-faa]'); if(aa) aa.onclick=()=>{ FS.affAll=!FS.affAll; fseSave(); fseRender(); };
 }
 
 function fseKpis(D, FS, st, evs, evsAll, nY, nPY, y, units){
@@ -2966,7 +3081,7 @@ function fseKpis(D, FS, st, evs, evsAll, nY, nPY, y, units){
     fk4:()=>({title:ft('k_rep'), cols:[ft('col_sn'),ft('col_ch'),ft('k_n'),ft('th_last')],
       rows:st.rank.filter(r=>r.n>=2).map(r=>{ const U=D.units[r.u]||{}; return [U.sn, U.ch, r.n, r.last]; })}),
     fk5:()=>({title:ft('k_rec',{d:GST.FSE.P().recur}), cols:[ft('col_date'),ft('col_sn'),ft('col_ch'),ft('col_parts'),ft('h_next')],
-      rows:st.rec.list.map(x=>[x.e.date, x.e.sn, x.e.ch, x.parts.map(p=>p.grp+' '+GST.FSE.pname(p)).join(', '),
+      rows:st.rec.list.map(x=>[x.e.date, x.e.sn, x.e.ch, x.parts.map(p=>GST.FSE.pname(p)).join(', '),
         x.next?ft('days',{n:GST.FSE.daysBetween(x.e.date,x.next.date)}):'—']), note:ft('note_rec',{d:GST.FSE.P().recur})})
   });
 }
@@ -3029,26 +3144,27 @@ function fseChs(D, o){ const o2=['Left','Right','Single']; return Object.keys(o.
 function fseTop(D, FS, rank, y, perOn, P, evsAll){
   const card=document.getElementById('fseTopCard'); if(!card) return;
   const AD={}; (evsAll||[]).forEach(e=>{ (AD[e.u]=AD[e.u]||[]).push(e.date); });   // 챔버별 «고른 알람» 날짜 — 줄마다 원장을 다시 훑지 않게
-  const groups=GST.FSE.reg.groups().filter(g=>!GST.FSE.isMfcGrp(g)).slice(0,4);
-  const fl=D.hasMfc?GST.FSE.FLUIDS:[];
+  /* 열은 «보는 부품»을 따른다(v191) — MFC 버전은 보는 부품에 MFC 묶음이 있을 때만(그 유체만) · 「○○ 교체 후」는 보는 부품마다 */
+  const vk=(FSEX.view&&FSEX.view.keys)||[], fl=fseVFl(D, vk);
   const lim=FS.topAll?rank.length:P.top, rows=rank.slice(0,lim);
   const multi=(o,fn)=>fseChs(D,o).map(u=>fn(u)).join(' / ');
   const days=d=>d==null?'—':ft('days',{n:fseN(d)});
+  const short=t=>t.length>22?t.slice(0,21)+'…':t;
   const head='<tr><th>'+fseEsc(ft('th_rank'))+'</th><th>S/N</th><th>'+fseEsc(ft('th_ch'))+'</th><th>'+fseEsc(ft('th_det'))+'</th>'
     +'<th class="n">'+fseEsc(perOn?ft('th_n'):ft('th_all'))+'</th><th class="n">'+fseEsc(ft('th_y',{y:y}))+'</th><th>'+fseEsc(ft('th_last'))+'</th>'
-    +fl.map(f=>'<th>'+fseEsc(ft('th_mfc',{f:f}))+'</th>').join('')
-    +groups.map(g=>'<th class="n">'+fseEsc(ft('th_since',{g:g}))+'</th>').join('')
+    +(fl.length?'<th>MFC</th>':'')
+    +vk.map(k=>{ const l=GST.FSE.ilabel(D,k); return '<th class="n" title="'+fseEsc(ft('th_since',{g:l}))+'">'+fseEsc(ft('th_since',{g:short(l)}))+'</th>'; }).join('')
     +'<th class="n">'+fseEsc(ft('th_after'))+'</th></tr>';
   const verChip=v=>'<span class="fse-v'+(v.q?' q':'')+'" title="'+fseEsc(ft('how_'+(v.how||'q'))+(v.sn?' · '+v.sn:'')+(v.date?' · '+v.date:''))+'">'+fseEsc(v.ver+(v.q&&!/\?$/.test(v.ver)?'?':''))+'</span>';
   const body=rows.map((o,i)=>{
     const us=fseChs(D,o), U0=D.units[us[0]]||{};
     const chTxt=FS.unit==='ch'?(U0.ch||'—'):us.map(u=>{ const c=D.units[u].ch||'—'; return c+' '+fseN(o.per[D.units[u].ch||'']||0); }).join(' · ');
-    const after=u=>{ let lp=''; Object.keys((D.pg&&D.pg[u])||{}).forEach(g=>{ const l=GST.FSE.lastRep(D,u,g); if(l>lp) lp=l; });
+    const after=u=>{ let lp=''; vk.forEach(k=>{ const l=GST.FSE.lastOf(D,u,k); if(l>lp) lp=l; });
       if(!lp) return ft('never'); return fseN((AD[u]||[]).filter(d=>d>lp).length); };
     return '<tr data-fsel="'+fseEsc(o.k)+'" class="'+(FS.sel===o.k?'sel':'')+'"><td>'+(i+1)+'</td><td>'+fseEsc(o.sn)+'</td><td>'+fseEsc(chTxt)+'</td><td>'+fseEsc(U0.d1||'—')+'</td>'
       +'<td class="n"><b>'+fseN(perOn?o.n:o.nAll)+'</b></td><td class="n">'+fseN(o.nY)+'</td><td>'+fseEsc(o.last)+'</td>'
-      +fl.map(f=>'<td>'+us.map(u=>verChip(GST.FSE.ver(D,u,f,null,P))).join(' ')+'</td>').join('')
-      +groups.map(g=>'<td class="n">'+fseEsc(multi(o,u=>{ const l=GST.FSE.lastRep(D,u,g); return l?days(GST.FSE.daysBetween(l,D.asOf)):'—'; }))+'</td>').join('')
+      +(fl.length?'<td class="fse-vcell">'+fl.map(f=>'<div><span class="fse-vf">'+f+'</span>'+us.map(u=>verChip(GST.FSE.ver(D,u,f,null,P))).join('')+'</div>').join('')+'</td>':'')
+      +vk.map(k=>'<td class="n">'+fseEsc(multi(o,u=>{ const l=GST.FSE.lastOf(D,u,k); return l?days(GST.FSE.daysBetween(l,D.asOf)):'—'; }))+'</td>').join('')
       +'<td class="n">'+fseEsc(multi(o,after))+'</td></tr>';
   }).join('');
   card.innerHTML='<div class="trend-header fse-th"><h3>'+fseEsc(ft('c_top'))+'</h3><div class="fse-tools">'
@@ -3076,43 +3192,49 @@ function fseTl(D, FS, rank){
   if(!us.length){ card.innerHTML='<h3>'+fseEsc(ft('c_tl'))+'</h3><div class="empty">'+fseEsc(ft('tl_pick'))+'</div>'; hc.innerHTML=''; return; }
   const sn=D.units[us[0]].sn, TH=GST.chartTheme();
   const end=D.asOf.slice(0,7), start=FS.tl==='all'?D.minDate.slice(0,7):(()=>{ const [yy,mm]=end.split('-').map(Number); const d=new Date(Date.UTC(yy,mm-1-23,1)); return d.toISOString().slice(0,7); })();
-  const M=GST.FSE.months(start+'-01', end+'-01'), cw=28, x0=86, laneH=74, W=x0+M.length*cw+10, H=24+us.length*laneH+20;
-  const groups=GST.FSE.reg.groups(); const gcol=g=>GST.FSE.isMfcGrp(g)?TH.pal[0]:TH.pal[(groups.indexOf(g)+1)%TH.pal.length];
-  const gsym=g=>FSE_SYM[groups.indexOf(g)%FSE_SYM.length];
+  /* 폭은 카드에 맞춘다(v191 · 사용자 「좌우 스크롤은 아니다 — 표랑 차트 폭을 화면에 맞춰야지」) — 달이 많으면 칸이 좁아지고 이름표를 건너뛴다 */
+  const M=GST.FSE.months(start+'-01', end+'-01'), x0=86, laneH=74;
+  const avail=Math.max(320, (card.clientWidth||0)-44);
+  const cw=Math.max(6, Math.min(28, (avail-x0-10)/Math.max(1,M.length))), W=Math.round(x0+M.length*cw+10), H=24+us.length*laneH+20;
+  const step=[1,2,3,6,12,24].find(k=>k*cw>=34)||24;
+  const vk=(FSEX.view&&FSEX.view.keys)||[];
+  const gcol=k=>TH.pal[(vk.indexOf(k)+1)%TH.pal.length];
+  const gsym=k=>FSE_SYM[vk.indexOf(k)%FSE_SYM.length];
   let s='';
-  M.forEach((m,i)=>{ const cx=x0+cw*i+cw/2; if(i%3===0||i===M.length-1) s+='<text x="'+cx+'" y="'+(H-6)+'" text-anchor="middle" class="fse-tt">'+m.slice(2)+'</text>';
-    s+='<line x1="'+cx+'" x2="'+cx+'" y1="16" y2="'+(H-18)+'" class="fse-tg"/>'; });
+  M.forEach((m,i)=>{ const cx=x0+cw*i+cw/2; if(i%step===0||i===M.length-1) s+='<text x="'+cx+'" y="'+(H-6)+'" text-anchor="middle" class="fse-tt">'+m.slice(2)+'</text>';
+    if(cw>=10||i%step===0) s+='<line x1="'+cx+'" x2="'+cx+'" y1="16" y2="'+(H-18)+'" class="fse-tg"/>'; });
   const idx={}; M.forEach((m,i)=>idx[m]=i);
   us.forEach((u,li)=>{
     const U=D.units[u], yc=24+li*laneH, ya=yc+16, yp=yc+46;
     s+='<text x="4" y="'+(ya+4)+'" class="fse-tl">'+fseEsc((U.ch||'—')+' · '+ft('tl_alarm'))+'</text><text x="4" y="'+(yp+4)+'" class="fse-tl">'+fseEsc(ft('tl_part'))+'</text>';
     s+='<line x1="'+x0+'" x2="'+(W-6)+'" y1="'+(yc+31)+'" y2="'+(yc+31)+'" class="fse-tg"/>';
     const am={}; D.ev.forEach(e=>{ if(e.u===u&&e.alarm&&GST.FSE.match(e,FS,D)&&idx[e.ym]!=null){ (am[e.ym]=am[e.ym]||[]).push(e); } });
-    Object.keys(am).forEach(k=>{ const n=am[k].length, cx=x0+cw*idx[k]+cw/2, r=Math.min(12,5+2.4*Math.sqrt(n));
+    Object.keys(am).forEach(k=>{ const n=am[k].length, cx=x0+cw*idx[k]+cw/2, r=Math.min(12,cw*.55+2,5+2.4*Math.sqrt(n));
       s+='<g><title>'+fseEsc(k+' · '+n+' · '+am[k].map(e=>e.date+' '+(e.msg||e.code)).join(' | ').slice(0,300))+'</title><circle cx="'+cx+'" cy="'+ya+'" r="'+r+'" fill="'+TH.status.bad+'" fill-opacity=".22" stroke="'+TH.status.bad+'"/>'
         +'<text x="'+cx+'" y="'+(ya+3.5)+'" text-anchor="middle" class="fse-tn">'+n+'</text></g>'; });
-    const pm={}; Object.keys((D.pg&&D.pg[u])||{}).forEach(g=>{ D.pg[u][g].forEach(p=>{ const k=p.date.slice(0,7); if(idx[k]==null) return; ((pm[k]=pm[k]||{})[g]=pm[k][g]||[]).push(p); }); });
+    const pm={}; vk.forEach(g=>{ ((D.pi&&D.pi[u]&&D.pi[u][g])||[]).forEach(p=>{ const k=p.date.slice(0,7); if(idx[k]==null) return; ((pm[k]=pm[k]||{})[g]=pm[k][g]||[]).push(p); }); });
     Object.keys(pm).forEach(k=>{ const gs=Object.keys(pm[k]); gs.forEach((g,gi)=>{ const cx=x0+cw*idx[k]+cw/2, yy=yp-6+gi*11;
-      s+='<text x="'+cx+'" y="'+yy+'" text-anchor="middle" style="fill:'+gcol(g)+';font-size:12px"><title>'+fseEsc(g+' · '+pm[k][g].map(p=>p.date+' '+GST.FSE.pname(p)+(p.mfcIn?' ('+p.mfcIn+')':'')).join(' | '))+'</title>'+gsym(g)+'</text>'; }); });
+      s+='<text x="'+cx+'" y="'+yy+'" text-anchor="middle" style="fill:'+gcol(g)+';font-size:12px"><title>'+fseEsc(GST.FSE.ilabel(D,g)+' · '+pm[k][g].map(p=>p.date+' '+GST.FSE.pname(p)+(p.mfcIn?' ('+p.mfcIn+')':'')).join(' | '))+'</title>'+gsym(g)+'</text>'; }); });
     D.ev.forEach(e=>{ if(e.u===u&&e.mc==='TBM'&&idx[e.ym]!=null){ const cx=x0+cw*idx[e.ym]+cw/2; s+='<text x="'+cx+'" y="'+(yp+22)+'" text-anchor="middle" class="fse-tbm"><title>TBM '+e.date+'</title>▼</text>'; } });
   });
-  const leg=groups.map(g=>'<span><b style="color:'+gcol(g)+'">'+gsym(g)+'</b> '+fseEsc(g)+'</span>').join('')+'<span><b class="fse-tbm">▼</b> '+fseEsc(ft('tl_tbm'))+'</span>';
+  const leg=vk.map(g=>'<span><b style="color:'+gcol(g)+'">'+gsym(g)+'</b> '+fseEsc(GST.FSE.ilabel(D,g))+'</span>').join('')+'<span><b class="fse-tbm">▼</b> '+fseEsc(ft('tl_tbm'))+'</span>';
   card.innerHTML='<div class="trend-header fse-th"><h3>'+fseEsc(ft('c_tl'))+' <span class="fse-sub2">'+fseEsc(sn)+'</span></h3><div class="fse-tools">'
     +fseSeg('tl',[['24',ft('tl_24')],['all',ft('tl_all')]],FS.tl,'ftl')+'</div></div>'
-    +'<div class="fse-tlw"><svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+fseEsc(ft('c_tl')+' '+sn)+'">'+s+'</svg></div>'
+    +'<div class="fse-tlw"><svg width="100%" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMinYMin meet" role="img" aria-label="'+fseEsc(ft('c_tl')+' '+sn)+'">'+s+'</svg></div>'
     +'<div class="fse-leg">'+leg+'</div>';
   card.querySelectorAll('[data-ftl]').forEach(b=>b.onclick=()=>{ FS.tl=b.dataset.ftl; fseSave(); fseRender(); });
   /* 이력 — 알람·교체·TBM 을 날짜순으로 (알람 줄: 당시 MFC · 직전 교체 후 · 다음 알람까지) */
-  const H2=[]; us.forEach(u=>GST.FSE.history(D,u,FS).forEach(x=>H2.push(Object.assign({u:u},x))));
+  const H2=[]; us.forEach(u=>GST.FSE.history(D,u,FS,vk).forEach(x=>H2.push(Object.assign({u:u},x))));
+  const hv=fseVFl(D,vk).length>0;
   H2.sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
   const kind={alarm:ft('k_alarm'), part:ft('k_part'), tbm:ft('k_tbm')};
   hc.innerHTML='<h3>'+fseEsc(ft('c_hist'))+' <span class="fse-sub2">'+fseEsc(sn)+'</span></h3>'
     +(H2.length?'<div class="tbl-wrap" style="max-height:330px;overflow:auto"><table data-gst-nosn><thead><tr><th>'+fseEsc(ft('h_date'))+'</th><th>'+fseEsc(ft('th_ch'))+'</th><th>'+fseEsc(ft('h_kind'))+'</th><th>'+fseEsc(ft('h_what'))+'</th>'
-      +(D.hasMfc?'<th>'+fseEsc(ft('h_ver'))+'</th>':'')+'<th class="n">'+fseEsc(ft('h_gap'))+'</th><th class="n">'+fseEsc(ft('h_next'))+'</th></tr></thead><tbody>'
+      +(hv?'<th>'+fseEsc(ft('h_ver'))+'</th>':'')+'<th class="n">'+fseEsc(ft('h_gap'))+'</th><th class="n">'+fseEsc(ft('h_next'))+'</th></tr></thead><tbody>'
       +H2.slice(0,400).map(x=>{ const U=D.units[x.u]||{};
-        const what=x.kind==='alarm'?(x.e.msg||x.e.code):x.kind==='part'?(x.p.grp+' · '+GST.FSE.pname(x.p)+(x.p.code?' ('+x.p.code+')':'')+(x.p.mfcIn?' · '+x.p.mfcIn:'')):('TBM'+(x.e.kind?' · '+x.e.kind:''));
+        const what=x.kind==='alarm'?(x.e.msg||x.e.code):x.kind==='part'?((x.p.grp?x.p.grp+' · ':'')+GST.FSE.pname(x.p)+(x.p.code?' ('+x.p.code+')':'')+(x.p.mfcIn?' · '+x.p.mfcIn:'')):('TBM'+(x.e.kind?' · '+x.e.kind:''));
         return '<tr class="fse-h-'+x.kind+'"><td>'+x.date+'</td><td>'+fseEsc(U.ch||'—')+'</td><td>'+fseEsc(kind[x.kind])+'</td><td title="'+fseEsc(what)+'">'+fseEsc(what)+'</td>'
-          +(D.hasMfc?'<td>'+fseEsc(x.kind==='alarm'?(x.ver||''):'')+'</td>':'')
+          +(hv?'<td>'+fseEsc(x.kind==='alarm'?(x.ver||''):'')+'</td>':'')
           +'<td class="n">'+(x.kind==='alarm'&&x.gap!=null?fseEsc(ft('days',{n:fseN(x.gap)})):'')+'</td><td class="n">'+(x.kind==='alarm'&&x.next!=null?fseEsc(ft('days',{n:fseN(x.next)})):'')+'</td></tr>'; }).join('')
       +'</tbody></table></div>':'<div class="empty">'+fseEsc(ft('hist_none'))+'</div>');
 }
@@ -3120,8 +3242,15 @@ function fseTl(D, FS, rank){
 /* MFC — 버전별 발생 · 판정 근거 · 조사 대상(우선순위) */
 function fseMfc(D, FS, evs, units, rank, P, y){
   const box=document.getElementById('fseMfc'); if(!box) return;
-  if(!D.hasMfc){ box.innerHTML='<div class="card"><h3>'+fseEsc(ft('c_ver'))+'</h3><div class="empty">'+fseEsc(ft('no_mfc'))+'</div></div>'; return; }
-  const F2=GST.FSE, fluid=F2.FLUIDS.indexOf(FS.verF)>=0?FS.verF:'LNG';
+  if(!D.hasMfc){ box.innerHTML='<div class="card" style="grid-column:1/-1"><h3>'+fseEsc(ft('c_ver'))+'</h3><div class="empty">'+fseEsc(ft('no_mfc'))+'</div></div>'; return; }
+  /* MFC 버전은 «보는 부품»에 MFC 묶음이 있을 때만 — 누수·압력 알람을 볼 때 MFC 카드가 서 있으면 «MFC 가 원인»처럼 읽힌다(v191) */
+  const vfl=fseVFl(D, (FSEX.view&&FSEX.view.keys)||[]);
+  if(!vfl.length){ box.innerHTML='<div class="card fse-mfcoff" style="grid-column:1/-1"><span>'+fseEsc(ft('mfc_off'))+'</span>'
+      +'<button type="button" class="btn btn-glass" data-fmfc="1">'+fseEsc(ft('mfc_add'))+'</button></div>';
+    const bm=box.querySelector('[data-fmfc]'); if(bm) bm.onclick=()=>{ const ks=((FSEX.view&&FSEX.view.keys)||[]).slice();
+      GST.FSE.reg.groups().filter(GST.FSE.isMfcGrp).forEach(g=>{ if(ks.indexOf('g:'+g)<0 && ks.length<FSE_VMAX) ks.push('g:'+g); }); fseSetView(ks); };
+    return; }
+  const F2=GST.FSE, fluid=vfl.indexOf(FS.verF)>=0?FS.verF:vfl[0];
   const mu=Object.keys(units).filter(u=>{ const t=units[u].utype; return t==='OLD'||t==='GLOBAL'||t==='DRAGON'; });
   const hitU={}; evs.forEach(e=>{ hitU[e.u]=1; });
   /* 버전별 */
@@ -3148,7 +3277,7 @@ function fseMfc(D, FS, evs, units, rank, P, y){
   evs.forEach(e=>{ if(!p1.has(e.snk)) p2.add(e.snk); });
   const allSn=new Set(mu.map(u=>D.units[u].snk)), p3=[...allSn].filter(s=>!p1.has(s)&&!p2.has(s));
   box.innerHTML='<div class="card"><div class="trend-header fse-th"><h3>'+fseEsc(ft('c_ver'))+'</h3><div class="fse-tools">'
-      +fseSeg('vf',F2.FLUIDS.map(f=>[f,f]),fluid,'fvf')+fseSeg('vm',[['now',ft('ver_now')],['at',ft('ver_at')]],FS.verMode,'fvm')+'</div></div>'
+      +fseSeg('vf',vfl.map(f=>[f,f]),fluid,'fvf')+fseSeg('vm',[['now',ft('ver_now')],['at',ft('ver_at')]],FS.verMode,'fvm')+'</div></div>'
       +(bars||'<div class="empty">'+fseEsc(ft('ver_none'))+'</div>')+'<div class="card-note">'+fseEsc(ft('why_ver'))+'</div></div>'
     +'<div class="card"><h3>'+fseEsc(ft('c_basis'))+'</h3>'+(hb||'<div class="empty">'+fseEsc(ft('ver_none'))+'</div>')
       +(notes.length?'<div class="card-note">'+fseEsc(notes.join(' · '))+'</div>':'')+'</div>'
@@ -3174,14 +3303,17 @@ function fseBarRow(name, r, lab, warn){
 async function fseExport(kind, list, y, perOn, ctx){
   const D=FSEX.D, P=GST.FSE.P(), FS=fseFS(); if(!D) return;
   try{ await GST.xlsxLibLoad(); }catch(e){ GST.capToast&&GST.capToast(String(e&&e.message||e)); return; }
-  const fl=D.hasMfc?GST.FSE.FLUIDS:[];
+  const vk=(FSEX.view&&FSEX.view.keys)||[], fl=kind==='top'?fseVFl(D,vk):(D.hasMfc?GST.FSE.FLUIDS:[]);
   const vcols=[]; fl.forEach(f=>{ vcols.push('MFC '+f+' '+ft('x_cols_ver'), 'MFC '+f+' '+ft('x_cols_how'), 'MFC '+f+' '+ft('x_cols_sn'), 'MFC '+f+' '+ft('x_cols_dt')); });
   const vcells=u=>{ const o=[]; fl.forEach(f=>{ const v=GST.FSE.ver(D,u,f,null,P); o.push(v.ver+(v.q&&!/\?$/.test(v.ver)?'?':''), ft('how_'+(v.how||'q')), v.sn||'', v.how==='sn'||v.how==='date'?(v.date||''):''); }); return o; };
   const cnt=(snk,ch,all)=>{ const L=(all?D.ev:ctx&&ctx.evs||[]).filter(e=>e.snk===snk&&(ch==null||e.ch===ch)&&e.alarm&&GST.FSE.match(e,FS,D)); return L; };
   let cols, rows=[], name;
   if(kind==='top'){
-    cols=[ft('th_rank'),'S/N',ft('th_ch'),ft('th_det'),ft('by_model'),ft('f_ut'),ft('x_cols_fabin'),perOn?ft('th_n'):ft('th_all'),ft('th_y',{y:y}),ft('th_last')].concat(vcols);
-    list.forEach((o,i)=>fseChs(D,o).forEach(u=>{ const U=D.units[u]; rows.push([i+1,U.sn,U.ch,U.d1,U.model,ft('ut_'+U.utype)||U.utype,U.fabIn||'',perOn?o.n:o.nAll,o.nY,o.last].concat(vcells(u))); }));
+    /* 보는 부품마다 «교체 후 경과일» — 화면 순위표와 같은 열(메일 회신용) */
+    const scols=vk.map(k=>ft('th_since',{g:GST.FSE.ilabel(D,k)}));
+    const scells=u=>vk.map(k=>{ const l=GST.FSE.lastOf(D,u,k); return l?GST.FSE.daysBetween(l,D.asOf):''; });
+    cols=[ft('th_rank'),'S/N',ft('th_ch'),ft('th_det'),ft('by_model'),ft('f_ut'),ft('x_cols_fabin'),perOn?ft('th_n'):ft('th_all'),ft('th_y',{y:y}),ft('th_last')].concat(vcols).concat(scols);
+    list.forEach((o,i)=>fseChs(D,o).forEach(u=>{ const U=D.units[u]; rows.push([i+1,U.sn,U.ch,U.d1,U.model,ft('ut_'+U.utype)||U.utype,U.fabIn||'',perOn?o.n:o.nAll,o.nY,o.last].concat(vcells(u)).concat(scells(u))); }));
     name='alarm_rank_'+D.asOf+'.xlsx';
   } else {
     cols=[ft('x_cols_pri'),'S/N',ft('th_ch'),ft('th_det'),ft('by_model'),ft('f_ut'),ft('x_cols_fabin'),ft('x_cols_n')].concat(vcols);
@@ -3200,9 +3332,10 @@ function fseParts(){
   const rows=reg.rows.slice();
   const inp=(f,v,ph)=>'<input class="fse-pi" data-pf="'+f+'" value="'+fseEsc(v==null?'':v)+'"'+(ph?' placeholder="'+fseEsc(ph)+'"':'')+(can?'':' readonly')+'>';
   /* 마스터 품목명 칸 — 코드로 정한 줄이 «무슨 부품인가»를 자재마스터로 보인다(v190 · 읽기만 · 저장하지 않는다) */
-  const line=r=>'<tr data-pid="'+(r.id||'')+'"><td>'+inp('grp',r.grp)+'</td><td>'+inp('code',r.code)+'</td><td class="fse-pm" style="font-size:11.5px;color:var(--txt-2);max-width:220px">'+(r.code?'…':'')+'</td><td>'+inp('name_re',r.name_re)+'</td><td>'+inp('fluid',r.fluid,'LNG')+'</td>'
+  const line=r=>'<tr data-pid="'+(r.id||'')+'" data-og="'+fseEsc(r.grp||'')+'"><td>'+inp('grp',r.grp)+'</td><td>'+inp('code',r.code)+'</td><td class="fse-pm" style="font-size:11.5px;color:var(--txt-2);max-width:220px">'+(r.code?'…':'')+'</td><td>'+inp('name_re',r.name_re)+'</td><td>'+inp('fluid',r.fluid,'LNG')+'</td>'
     +'<td>'+inp('maker',r.maker,'MCA')+'</td><td>'+inp('label',r.label)+'</td><td style="text-align:center"><input type="checkbox" data-pf="on_"'+(r.on_!==false?' checked':'')+(can?'':' disabled')+'></td></tr>';
   const ov=GST._ovOpen('<div class="gov-h"><h4>'+fseEsc(ft('parts_t'))+'</h4><span class="gov-sub">'+fseEsc(can?ft('pt_note'):ft('pt_ro'))+'</span><span class="gov-sp"></span>'
+    +'<span class="gov-sub" id="fsePtSt" role="status" style="font-weight:650"></span>'
     +(can?'<button class="gov-b" data-pa="add">'+fseEsc(ft('pt_add'))+'</button><button class="gov-b" data-pa="save">'+fseEsc(ft('pt_save'))+'</button>':'')
     +'<button class="gov-b" data-pa="close">✕</button></div>'
     +'<div class="gov-body" style="overflow:auto;max-height:70vh"><div class="card-note" style="margin:4px 0 8px">'+fseEsc(ft('pt_hint'))+'</div>'
@@ -3215,7 +3348,8 @@ function fseParts(){
     +'<table class="gpv-t" id="fsePt"><thead><tr><th>'+fseEsc(ft('pt_grp'))+'</th><th>'+fseEsc(ft('pt_code'))+'</th><th>'+fseEsc(ft('pt_m_name'))+'</th><th>'+fseEsc(ft('pt_re'))+'</th><th>'+fseEsc(ft('pt_fluid'))+'</th><th>'+fseEsc(ft('pt_maker'))+'</th><th>'+fseEsc(ft('pt_label'))+'</th><th>'+fseEsc(ft('pt_on'))+'</th></tr></thead><tbody>'
     +(rows.length?rows.map(line).join(''):'')+'</tbody></table>'+(rows.length?'':'<div class="empty" id="fsePtNone">'+fseEsc(ft('pt_none'))+'</div>')
     +'<div class="card-note" id="fsePtMsg" role="status" style="margin-top:8px"></div></div>', true);
-  const msg=(s,bad)=>{ const m=ov.querySelector('#fsePtMsg'); if(m){ m.textContent=s; m.style.color=bad?'var(--bad)':''; } };
+  /* 결과는 머리(저장 단추 옆)와 맨 아래 두 곳에 — 맨 아래만 적던 때 «저장을 눌러도 변화가 없다»로 읽혔다(v191 · 사용자 보고 · 실제로는 저장돼 있었다) */
+  const msg=(s,bad)=>{ ['#fsePtMsg','#fsePtSt'].forEach(q=>{ const m=ov.querySelector(q); if(m){ m.textContent=s; m.style.color=bad?'var(--bad)':(q==='#fsePtSt'&&s?'var(--ok)':''); } }); };
   const I=GST.items;
   /* 원장에서 그 코드가 몇 번 교체됐나 — 마스터에서 찾은 품목이 «이 원장에 실제로 나오는가»를 가른다 */
   const used={}; ((FSEX.D&&FSEX.D.parts)||[]).forEach(p=>{ const k=I?I.key(p.code):''; if(k) used[k]=(used[k]||0)+1; });
@@ -3268,22 +3402,43 @@ function fseParts(){
     if(b.dataset.pa==='add'){ const tb=ov.querySelector('#fsePt tbody'); tb.insertAdjacentHTML('beforeend', line({grp:'',on_:true})); const n=ov.querySelector('#fsePtNone'); if(n) n.remove();
       tb.lastElementChild.dataset.dirty='1'; return; }
     if(b.dataset.pa==='save'){
-      const C=await GST._dbAuthed().catch(()=>null); if(!C){ msg(ft('pt_fail'),true); return; }
-      const me=(GST._me&&GST._me.email)||'';
+      if(b.disabled) return;
       const dirty=[...ov.querySelectorAll('tr[data-pid][data-dirty="1"]')];
+      if(!dirty.length){ msg(ft('pt_nochg')); return; }
+      const me=(GST._me&&GST._me.email)||'';
+      /* 먼저 전부 검사한다 — 반쯤 저장한 뒤 멈추면 «어디까지 들어갔나»를 사람이 모른다 */
+      const items=[];
       for(const tr of dirty){
         const g=f=>{ const el=tr.querySelector('[data-pf="'+f+'"]'); return el?(el.type==='checkbox'?el.checked:String(el.value||'').trim()):''; };
         const o={grp:g('grp'), code:g('code')||null, name_re:g('name_re')||null, fluid:g('fluid').toUpperCase()||null, maker:g('maker').toUpperCase()||null, label:g('label')||null, on_:g('on_'), updated_by:me, updated_at:new Date().toISOString()};
-        if(!o.grp || !(o.code||o.name_re)){ msg(ft('pt_need'),true); return; }
+        if(!o.grp || !(o.code||o.name_re)){ msg(ft('pt_need'),true); tr.scrollIntoView&&tr.scrollIntoView({block:'nearest'}); return; }
         if(o.name_re){ try{ new RegExp(o.name_re,'i'); }catch(err){ msg(ft('pt_bad_re')+' — '+o.name_re,true); return; } }
-        const id=tr.dataset.pid;
-        const r=id ? await C.from('fse_parts').update(o).eq('id',Number(id)).select('id') : await C.from('fse_parts').insert(o).select('id');
-        /* RLS 거부는 에러가 아니라 0행이다(CLAUDE.md v80) — 1행이 아니면 실패로 말한다 */
-        if(r.error || !r.data || r.data.length!==1){ msg(ft('pt_fail')+(r.error?' — '+(r.error.message||r.error.code):''),true); return; }
-        tr.dataset.pid=String(r.data[0].id); tr.dataset.dirty='';
+        items.push({tr:tr, id:tr.dataset.pid, og:tr.dataset.og||'', o:o});
       }
-      await reg.load(); if(FSEX.D){ GST.FSE.bind(FSEX.D); GST.FSE.enrich(FSEX.D, fseMats()); }
-      msg(ft('pt_saved')); fseRender();
+      const C=await GST._dbAuthed().catch(()=>null); if(!C){ msg(ft('pt_fail'),true); return; }
+      const lab=b.textContent; b.disabled=true; b.textContent=ft('pt_saving'); msg(ft('pt_saving'));
+      try{
+        /* 줄마다 따로 보내되 한꺼번에(예전에는 한 줄씩 기다려 줄 수만큼 느렸다) */
+        const res=await Promise.all(items.map(it=>(it.id ? C.from('fse_parts').update(it.o).eq('id',Number(it.id)).select('id') : C.from('fse_parts').insert(it.o).select('id'))
+          .then(r=>r, e=>({error:e}))));
+        let bad=-1, why='';
+        res.forEach((r,i)=>{ const it=items[i];
+          /* RLS 거부는 에러가 아니라 0행이다(CLAUDE.md v80) — 1행이 아니면 실패로 말한다 */
+          if(r.error || !r.data || r.data.length!==1){ if(bad<0){ bad=i; why=r.error?(r.error.message||r.error.code||String(r.error)):''; } return; }
+          it.tr.dataset.pid=String(r.data[0].id); it.tr.dataset.dirty=''; it.tr.dataset.og=it.o.grp; });
+        await reg.load();
+        /* 묶음 이름을 바꿨으면 «보는 부품»에 기억해 둔 옛 이름도 새 이름으로 — 안 그러면 알람마다 골라 둔 칸이 조용히 빈다 */
+        /* 하나를 둘로 나눴으면(MFC → LNG MFC · O2 MFC) 둘 다 넣는다 */
+        const live=new Set(reg.groups()), FS=fseFS(), ren={}; let mv=false;
+        items.forEach(it=>{ if(it.og && it.og!==it.o.grp && !live.has(it.og) && live.has(it.o.grp)) (ren[it.og]=ren[it.og]||[]).indexOf(it.o.grp)<0 && ren[it.og].push(it.o.grp); });
+        Object.keys(ren).forEach(og=>Object.keys(FS.pv).forEach(k=>{ const a=FS.pv[k], j=a.indexOf('g:'+og); if(j<0) return;
+          const nx=a.slice(0,j).concat(ren[og].map(g=>'g:'+g), a.slice(j+1)); FS.pv[k]=nx.filter((x,n)=>nx.indexOf(x)===n).slice(0,FSE_VMAX); mv=true; }));
+        if(mv) fseSave();
+        if(FSEX.D){ GST.FSE.bind(FSEX.D); GST.FSE.enrich(FSEX.D, fseMats()); }
+        fseRender();
+        if(bad>=0) msg(ft('pt_fail_at',{i:bad+1})+(why?' — '+why:''),true);
+        else { msg(ft('pt_saved_n',{n:items.length})); GST.capToast&&GST.capToast(ft('pt_saved_n',{n:items.length})); }
+      } finally { b.disabled=false; b.textContent=lab; }
     }
   });
 }

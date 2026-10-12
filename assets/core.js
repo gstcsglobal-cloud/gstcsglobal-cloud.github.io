@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 182;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 183;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -3258,13 +3258,16 @@ GST._dbBanner = function(){
 };
 
 /* 한 표를 통째로 읽어 [헤더행, ...데이터행] 2차원 배열로 되돌린다. */
-GST.dbRows = async function(table){
+GST.dbRows = async function(table, opt){
+  opt = opt || {};
   const c = await GST.db(); if(!c) throw new Error('DB_OFF');
   const S = GST.SM.SPEC[table]; if(!S) throw new Error('NO_SPEC '+table);
   /* 실제로 읽는 표와 적재 기록 열쇠 (v146) — 지도가 비어 있으면 sheet_<table> · <table> 그대로다.
      IndexedDB 열쇠도 LK 로 가른다 — 데모(kr_wk)와 본 화면(wk)이 같은 브라우저에서 서로의 캐시를 쓰지 않게. */
   const PT = GST.physTbl('sheet_'+table), LK = GST.logKey(PT);
-  const keys = Object.keys(S.fields);
+  /* opt.fields — «이 화면이 실제로 쓰는 열»만 받는다 (v191 · FSE 원장). 전부 받던 때 원장 65MB 중 13열은 아무 데도 안 쓰였다.
+     ⚠ 수선·자재·설치에는 쓰지 않는다 — 상세 목록이 원장 전 열을 보여 준다(v126 «열 추리기»를 버린 이유). 넘긴 화면만 줄인다. */
+  const keys = Object.keys(S.fields).filter(function(k){ return !opt.fields || opt.fields.indexOf(k)>=0; });
   const cols = keys.map(GST._snake);
   // 헤더 행은 SPEC의 **첫 번째 이름**을 쓴다. 별칭은 시트 쪽 사정이고 미러는 컬럼이 고정이다.
   const head = keys.map(function(k){ return [].concat(S.fields[k])[0]; });
@@ -3351,7 +3354,7 @@ GST.dbRows = async function(table){
      적재 시각과 행수가 같으면 내용도 같다 — sheet_sync_log 가 보증하는 사실이다.
      ⚠ 열쇠에 «고른 컬럼»도 넣는다(v120). 안 넣으면 DB 에 열을 더한 뒤에도 옛 캐시가
        맞는 것으로 판정돼, 새 열이 영영 빈 채로 남는다(적재 시각이 안 바뀌므로). */
-  const stamp = LK+'|'+lg.data.synced_at+'|'+want+'|'+use.length;
+  const stamp = LK+'|'+lg.data.synced_at+'|'+want+'|'+use.length+(opt.fields?'|f:'+use.join(','):'');
 
   /* 직전 백필이 완성해 둔 전체본이 있으면 그것부터 소비한다 (v127 — 기간 기본창).
      IndexedDB «저장»이 실패하는 환경(시크릿 창·용량)에서 이 다리가 없으면
@@ -10268,28 +10271,28 @@ GST.V2_T = {
        w4:'최근 4주', tgt:'목표 {v}', tgt_le:'이하', tgt_ge:'이상', tgt_none:'목표 미설정', tgt_ok:'달성', tgt_miss:'미달 {g}', tgt_over:'초과 {g}',
        vs:'직전 4주 대비', vs_none:'비교 없음(현재 상태 기준)', den:'분모 {v}', den_units:'반입 {v}대', den_ev:'PM+고장 {v}건',
        st_ok:'안정', st_warn:'관찰 중', st_bad:'점검 권장', st_none:'판정 없음', u_pct:'%', u_ea:'대', u_case:'건', u_pt:'p',
-       g_band:'주의 구간 기본값', g_sig:'글로벌 현황 신호등 기준', g_risk:'고장 위험 점수', gd_band:'목표에 주의 기준을 따로 정하지 않았을 때 쓰는 구간', gd_sig:'운영단위를 위험·주의로 표시하는 기준(이번 주 고장 ÷ 평소)', gd_risk:'고장 분석 TOP 20 · 글로벌 현황 · 홈이 함께 쓰는 점수', p_band_run_rate:'가동률', p_band_bm_per100:'설비 100대당 고장', p_band_pm_ratio:'PM 비율', p_band_repeat14:'재고장 설비', p_band_act_overdue:'기한 경과 처리 건', p_sig_bad_x:'위험 — 평소 대비 배수(이상)', p_sig_bad_d:'위험 — 평소보다 늘어난 건수(이상)', p_sig_warn_x:'주의 — 평소 대비 배수(초과)', p_sig_warn_d:'주의 — 평소보다 늘어난 건수(이상)', p_sig_rep_bad:'위험 — 재고장 설비 수(이상)', p_sig_rep_warn:'주의 — 재고장 설비 수(이상)', p_risk_bm:'최근 90일 고장 1건당', p_risk_rep:'재고장 1회당', p_risk_up:'직전 90일 대비 2건 이상 증가 시', p_risk_recent:'최근 고장 발생 시', p_risk_pm:'PM 장기 미실시 시', p_risk_rep_days:'재고장 판단 기간', p_risk_recent_days:'「최근 고장」 판단 기간', p_risk_pm_days:'「PM 장기 미실시」 판단 기간', u_x:'배', u_day:'일', u_pts:'점', u_rel:'%', g_mfc:'MFC 버전 판정', gd_mfc:'알람 분석의 MFC 버전 — S/N 날짜코드(YYMMDD)로 가른다', p_mfc_mca_f:'MCA F 시작 S/N 날짜코드', p_mfc_mca_f1:'MCA F1 시작 S/N 날짜코드', p_mfc_mkp_r1:'MKP R1 시작 S/N 날짜', p_mfc_mkp_r2:'MKP R2 시작 S/N 날짜', p_mfc_lead:'교체 이력 없는 설비 — 생산일 = 반입일 − 이 일수', p_mfc_global_no:'GLOBAL 타입 시작 S/N 번호(이상이면 AIR MFC 없음)', g_fse:'알람 분석', gd_fse:'고장 분석 › 알람 분석 탭이 쓰는 기준', p_fse_recur_days:'«교체 후 재발» 판단 기간', p_fse_top:'발생 설비 순위표 줄 수', u_ymd:'YYMMDD', u_no:'번', u_rows:'줄' },
+       g_band:'주의 구간 기본값', g_sig:'글로벌 현황 신호등 기준', g_risk:'고장 위험 점수', gd_band:'목표에 주의 기준을 따로 정하지 않았을 때 쓰는 구간', gd_sig:'운영단위를 위험·주의로 표시하는 기준(이번 주 고장 ÷ 평소)', gd_risk:'고장 분석 TOP 20 · 글로벌 현황 · 홈이 함께 쓰는 점수', p_band_run_rate:'가동률', p_band_bm_per100:'설비 100대당 고장', p_band_pm_ratio:'PM 비율', p_band_repeat14:'재고장 설비', p_band_act_overdue:'기한 경과 처리 건', p_sig_bad_x:'위험 — 평소 대비 배수(이상)', p_sig_bad_d:'위험 — 평소보다 늘어난 건수(이상)', p_sig_warn_x:'주의 — 평소 대비 배수(초과)', p_sig_warn_d:'주의 — 평소보다 늘어난 건수(이상)', p_sig_rep_bad:'위험 — 재고장 설비 수(이상)', p_sig_rep_warn:'주의 — 재고장 설비 수(이상)', p_risk_bm:'최근 90일 고장 1건당', p_risk_rep:'재고장 1회당', p_risk_up:'직전 90일 대비 2건 이상 증가 시', p_risk_recent:'최근 고장 발생 시', p_risk_pm:'PM 장기 미실시 시', p_risk_rep_days:'재고장 판단 기간', p_risk_recent_days:'「최근 고장」 판단 기간', p_risk_pm_days:'「PM 장기 미실시」 판단 기간', u_x:'배', u_day:'일', u_pts:'점', u_rel:'%', g_mfc:'MFC 버전 판정', gd_mfc:'알람 분석의 MFC 버전 — S/N 날짜코드(YYMMDD)로 가른다', p_mfc_mca_f:'MCA F 시작 S/N 날짜코드', p_mfc_mca_f1:'MCA F1 시작 S/N 날짜코드', p_mfc_mkp_r1:'MKP R1 시작 S/N 날짜', p_mfc_mkp_r2:'MKP R2 시작 S/N 날짜', p_mfc_lead:'교체 이력 없는 설비 — 생산일 = 반입일 − 이 일수', p_mfc_global_no:'GLOBAL 타입 시작 S/N 번호(이상이면 AIR MFC 없음)', g_fse:'알람 분석', gd_fse:'고장 분석 › 알람 분석 탭이 쓰는 기준', p_fse_recur_days:'«교체 후 재발» 판단 기간', p_fse_top:'발생 설비 순위표 줄 수', p_fse_auto_x:'자동 추천 — 평소 대비 배수(이상)', p_fse_auto_pct:'자동 추천 — 알람 작업 중 교체 비율(이상)', p_fse_auto_n:'자동 추천 — 부품 수(최대)', u_part:'개', u_ymd:'YYMMDD', u_no:'번', u_rows:'줄' },
   en:{ m_run_rate:'Running rate', m_bm_per100:'Failures per 100 units', m_pm_ratio:'PM ratio', m_repeat14:'Units with {d}-day repeat', m_act_overdue:'Overdue actions',
        d_run_rate:'Running (Operation) ÷ installed · as of today', d_bm_per100:'Last-4-week failures ÷ installed × 100', d_pm_ratio:'Last-4-week PM ÷ (PM + failures)',
        d_repeat14:'Units in the risk ranking with a repeat failure within {d} days', d_act_overdue:'Open actions past their due date',
        w4:'last 4 wks', tgt:'Target {v}', tgt_le:'or less', tgt_ge:'or more', tgt_none:'No target', tgt_ok:'Met', tgt_miss:'Short {g}', tgt_over:'Over {g}',
        vs:'vs prior 4 wks', vs_none:'No comparison (current state)', den:'Base {v}', den_units:'{v} installed', den_ev:'{v} PM+BM',
        st_ok:'Stable', st_warn:'Watching', st_bad:'Check advised', st_none:'No rating', u_pct:'%', u_ea:'', u_case:'', u_pt:'p',
-       g_band:'Default watch band', g_sig:'Global overview signals', g_risk:'Failure risk score', gd_band:'band used when a target has no watch limit', gd_sig:'when a unit turns critical/watch (this week ÷ usual)', gd_risk:'shared by Failure TOP 20 · Global overview · Home', p_band_run_rate:'Running rate', p_band_bm_per100:'Failures per 100 units', p_band_pm_ratio:'PM ratio', p_band_repeat14:'Repeat-failure units', p_band_act_overdue:'Overdue actions', p_sig_bad_x:'Critical — at least × usual', p_sig_bad_d:'Critical — at least this many more', p_sig_warn_x:'Watch — more than × usual', p_sig_warn_d:'Watch — at least this many more', p_sig_rep_bad:'Critical — repeat-failure units ≥', p_sig_rep_warn:'Watch — repeat-failure units ≥', p_risk_bm:'per failure in 90 days', p_risk_rep:'per repeat failure', p_risk_up:'if up by 2+ vs prior 90 days', p_risk_recent:'if failed recently', p_risk_pm:'if no PM for long', p_risk_rep_days:'gap counted as repeat', p_risk_recent_days:'length of «recent»', p_risk_pm_days:'length of «no PM for long»', u_x:'×', u_day:'d', u_pts:'pts', u_rel:'%', g_mfc:'MFC version rules', gd_mfc:'MFC version in Alarm analysis — judged by the S/N date code (YYMMDD)', p_mfc_mca_f:'MCA F starts at S/N date code', p_mfc_mca_f1:'MCA F1 starts at S/N date code', p_mfc_mkp_r1:'MKP R1 starts at S/N date', p_mfc_mkp_r2:'MKP R2 starts at S/N date', p_mfc_lead:'No replacement history — built = FAB-in minus this many days', p_mfc_global_no:'GLOBAL type from S/N number (no AIR MFC from here on)', g_fse:'Alarm analysis', gd_fse:'rules used by Failure analysis › Alarm analysis', p_fse_recur_days:'window for «recurred after replacement»', p_fse_top:'rows in the unit ranking', u_ymd:'YYMMDD', u_no:'no.', u_rows:'rows' },
+       g_band:'Default watch band', g_sig:'Global overview signals', g_risk:'Failure risk score', gd_band:'band used when a target has no watch limit', gd_sig:'when a unit turns critical/watch (this week ÷ usual)', gd_risk:'shared by Failure TOP 20 · Global overview · Home', p_band_run_rate:'Running rate', p_band_bm_per100:'Failures per 100 units', p_band_pm_ratio:'PM ratio', p_band_repeat14:'Repeat-failure units', p_band_act_overdue:'Overdue actions', p_sig_bad_x:'Critical — at least × usual', p_sig_bad_d:'Critical — at least this many more', p_sig_warn_x:'Watch — more than × usual', p_sig_warn_d:'Watch — at least this many more', p_sig_rep_bad:'Critical — repeat-failure units ≥', p_sig_rep_warn:'Watch — repeat-failure units ≥', p_risk_bm:'per failure in 90 days', p_risk_rep:'per repeat failure', p_risk_up:'if up by 2+ vs prior 90 days', p_risk_recent:'if failed recently', p_risk_pm:'if no PM for long', p_risk_rep_days:'gap counted as repeat', p_risk_recent_days:'length of «recent»', p_risk_pm_days:'length of «no PM for long»', u_x:'×', u_day:'d', u_pts:'pts', u_rel:'%', g_mfc:'MFC version rules', gd_mfc:'MFC version in Alarm analysis — judged by the S/N date code (YYMMDD)', p_mfc_mca_f:'MCA F starts at S/N date code', p_mfc_mca_f1:'MCA F1 starts at S/N date code', p_mfc_mkp_r1:'MKP R1 starts at S/N date', p_mfc_mkp_r2:'MKP R2 starts at S/N date', p_mfc_lead:'No replacement history — built = FAB-in minus this many days', p_mfc_global_no:'GLOBAL type from S/N number (no AIR MFC from here on)', g_fse:'Alarm analysis', gd_fse:'rules used by Failure analysis › Alarm analysis', p_fse_recur_days:'window for «recurred after replacement»', p_fse_top:'rows in the unit ranking', p_fse_auto_x:'Auto pick — at least × usual', p_fse_auto_pct:'Auto pick — replaced in at least this share of alarm jobs', p_fse_auto_n:'Auto pick — parts (max)', u_part:'', u_ymd:'YYMMDD', u_no:'no.', u_rows:'rows' },
   zh:{ m_run_rate:'运行率', m_bm_per100:'每100台故障', m_pm_ratio:'PM比率', m_repeat14:'{d}天内复发设备', m_act_overdue:'逾期待办',
        d_run_rate:'运行(Operation) ÷ 进场设备 · 截至基准日', d_bm_per100:'最近4周故障 ÷ 进场设备 × 100', d_pm_ratio:'最近4周 PM ÷ (PM + 故障)',
        d_repeat14:'故障风险排名中{d}天内复发的设备', d_act_overdue:'待办中已过期限但未关闭的事项',
        w4:'最近4周', tgt:'目标 {v}', tgt_le:'以下', tgt_ge:'以上', tgt_none:'未设定目标', tgt_ok:'达成', tgt_miss:'未达 {g}', tgt_over:'超出 {g}',
        vs:'较前4周', vs_none:'无比较(当前状态)', den:'分母 {v}', den_units:'进场 {v}台', den_ev:'PM+故障 {v}件',
        st_ok:'稳定', st_warn:'观察中', st_bad:'建议检查', st_none:'无判定', u_pct:'%', u_ea:'台', u_case:'件', u_pt:'p',
-       g_band:'目标的默认注意区间', g_sig:'全球概况信号灯', g_risk:'故障风险分数', gd_band:'目标未填写«注意界限»时使用的区间', gd_sig:'将运营单位标为危险·注意的标准(本周故障 ÷ 平时)', gd_risk:'故障分析 TOP 20 · 全球概况 · 首页共用的分数', p_band_run_rate:'运行率', p_band_bm_per100:'每100台故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'复发设备', p_band_act_overdue:'逾期待办', p_sig_bad_x:'危险 — 平时的几倍以上', p_sig_bad_d:'危险 — 比平时多几件以上', p_sig_warn_x:'注意 — 超过平时的几倍', p_sig_warn_d:'注意 — 比平时多几件以上', p_sig_rep_bad:'危险 — 复发设备几台以上', p_sig_rep_warn:'注意 — 复发设备几台以上', p_risk_bm:'近90天每件故障', p_risk_rep:'每次复发', p_risk_up:'较前90天增加2件以上时', p_risk_recent:'近期有故障时', p_risk_pm:'长期未做PM时', p_risk_rep_days:'视为复发的间隔', p_risk_recent_days:'«近期»的长度', p_risk_pm_days:'«长期未PM»的长度', u_x:'倍', u_day:'天', u_pts:'分', u_rel:'%', g_mfc:'MFC版本判定', gd_mfc:'报警分析中的MFC版本 — 按S/N日期码(YYMMDD)区分', p_mfc_mca_f:'MCA F 起始S/N日期码', p_mfc_mca_f1:'MCA F1 起始S/N日期码', p_mfc_mkp_r1:'MKP R1 起始S/N日期', p_mfc_mkp_r2:'MKP R2 起始S/N日期', p_mfc_lead:'无更换记录的设备 — 生产日 = 进厂日 − 天数', p_mfc_global_no:'GLOBAL型起始S/N编号(以上无AIR MFC)', g_fse:'报警分析', gd_fse:'故障分析 › 报警分析使用的标准', p_fse_recur_days:'«更换后复发»判定期间', p_fse_top:'设备排名行数', u_ymd:'YYMMDD', u_no:'号', u_rows:'行' },
+       g_band:'目标的默认注意区间', g_sig:'全球概况信号灯', g_risk:'故障风险分数', gd_band:'目标未填写«注意界限»时使用的区间', gd_sig:'将运营单位标为危险·注意的标准(本周故障 ÷ 平时)', gd_risk:'故障分析 TOP 20 · 全球概况 · 首页共用的分数', p_band_run_rate:'运行率', p_band_bm_per100:'每100台故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'复发设备', p_band_act_overdue:'逾期待办', p_sig_bad_x:'危险 — 平时的几倍以上', p_sig_bad_d:'危险 — 比平时多几件以上', p_sig_warn_x:'注意 — 超过平时的几倍', p_sig_warn_d:'注意 — 比平时多几件以上', p_sig_rep_bad:'危险 — 复发设备几台以上', p_sig_rep_warn:'注意 — 复发设备几台以上', p_risk_bm:'近90天每件故障', p_risk_rep:'每次复发', p_risk_up:'较前90天增加2件以上时', p_risk_recent:'近期有故障时', p_risk_pm:'长期未做PM时', p_risk_rep_days:'视为复发的间隔', p_risk_recent_days:'«近期»的长度', p_risk_pm_days:'«长期未PM»的长度', u_x:'倍', u_day:'天', u_pts:'分', u_rel:'%', g_mfc:'MFC版本判定', gd_mfc:'报警分析中的MFC版本 — 按S/N日期码(YYMMDD)区分', p_mfc_mca_f:'MCA F 起始S/N日期码', p_mfc_mca_f1:'MCA F1 起始S/N日期码', p_mfc_mkp_r1:'MKP R1 起始S/N日期', p_mfc_mkp_r2:'MKP R2 起始S/N日期', p_mfc_lead:'无更换记录的设备 — 生产日 = 进厂日 − 天数', p_mfc_global_no:'GLOBAL型起始S/N编号(以上无AIR MFC)', g_fse:'报警分析', gd_fse:'故障分析 › 报警分析使用的标准', p_fse_recur_days:'«更换后复发»判定期间', p_fse_top:'设备排名行数', p_fse_auto_x:'自动推荐 — 平时的几倍以上', p_fse_auto_pct:'自动推荐 — 报警作业中更换比例(以上)', p_fse_auto_n:'自动推荐 — 部件数(最多)', u_part:'个', u_ymd:'YYMMDD', u_no:'号', u_rows:'行' },
   ja:{ m_run_rate:'稼働率', m_bm_per100:'設備100台あたり故障', m_pm_ratio:'PM比率', m_repeat14:'{d}日以内再故障設備', m_act_overdue:'期限超過の対応',
        d_run_rate:'稼働(Operation) ÷ 搬入設備 · 基準日時点', d_bm_per100:'直近4週の故障 ÷ 搬入設備 × 100', d_pm_ratio:'直近4週の PM ÷ (PM + 故障)',
        d_repeat14:'故障リスク順位で{d}日以内に再故障がある設備', d_act_overdue:'対応のうち期限を過ぎて閉じていないもの',
        w4:'直近4週', tgt:'目標 {v}', tgt_le:'以下', tgt_ge:'以上', tgt_none:'目標未設定', tgt_ok:'達成', tgt_miss:'未達 {g}', tgt_over:'超過 {g}',
        vs:'前4週比', vs_none:'比較なし(現在の状態)', den:'分母 {v}', den_units:'搬入 {v}台', den_ev:'PM+故障 {v}件',
        st_ok:'安定', st_warn:'観察中', st_bad:'点検推奨', st_none:'判定なし', u_pct:'%', u_ea:'台', u_case:'件', u_pt:'p',
-       g_band:'目標の既定注意帯', g_sig:'グローバル概況シグナル', g_risk:'故障リスク点数', gd_band:'目標に«注意境界»がないときに使う帯', gd_sig:'運営単位を危険・注意にする基準(今週の故障 ÷ 平常)', gd_risk:'故障分析 TOP 20 · グローバル概況 · ホームで共通の点数', p_band_run_rate:'稼働率', p_band_bm_per100:'設備100台あたり故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'再故障設備', p_band_act_overdue:'期限超過の対応', p_sig_bad_x:'危険 — 平常の何倍以上', p_sig_bad_d:'危険 — 平常より何件以上多い', p_sig_warn_x:'注意 — 平常の何倍超', p_sig_warn_d:'注意 — 平常より何件以上多い', p_sig_rep_bad:'危険 — 再故障設備何台以上', p_sig_rep_warn:'注意 — 再故障設備何台以上', p_risk_bm:'直近90日の故障1件あたり', p_risk_rep:'再故障1回あたり', p_risk_up:'前90日より2件以上増えたら', p_risk_recent:'最近故障があれば', p_risk_pm:'PMが長くなければ', p_risk_rep_days:'再故障とみなす間隔', p_risk_recent_days:'«最近»の長さ', p_risk_pm_days:'«PMが長くない»の長さ', u_x:'倍', u_day:'日', u_pts:'点', u_rel:'%', g_mfc:'MFCバージョン判定', gd_mfc:'アラーム分析のMFCバージョン — S/N日付コード(YYMMDD)で判定', p_mfc_mca_f:'MCA F 開始S/N日付コード', p_mfc_mca_f1:'MCA F1 開始S/N日付コード', p_mfc_mkp_r1:'MKP R1 開始S/N日付', p_mfc_mkp_r2:'MKP R2 開始S/N日付', p_mfc_lead:'交換履歴のない設備 — 製造日 = 搬入日 − この日数', p_mfc_global_no:'GLOBALタイプ開始S/N番号(以上はAIR MFCなし)', g_fse:'アラーム分析', gd_fse:'故障分析 › アラーム分析が使う基準', p_fse_recur_days:'«交換後の再発»の判定期間', p_fse_top:'設備ランキングの行数', u_ymd:'YYMMDD', u_no:'番', u_rows:'行' }
+       g_band:'目標の既定注意帯', g_sig:'グローバル概況シグナル', g_risk:'故障リスク点数', gd_band:'目標に«注意境界»がないときに使う帯', gd_sig:'運営単位を危険・注意にする基準(今週の故障 ÷ 平常)', gd_risk:'故障分析 TOP 20 · グローバル概況 · ホームで共通の点数', p_band_run_rate:'稼働率', p_band_bm_per100:'設備100台あたり故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'再故障設備', p_band_act_overdue:'期限超過の対応', p_sig_bad_x:'危険 — 平常の何倍以上', p_sig_bad_d:'危険 — 平常より何件以上多い', p_sig_warn_x:'注意 — 平常の何倍超', p_sig_warn_d:'注意 — 平常より何件以上多い', p_sig_rep_bad:'危険 — 再故障設備何台以上', p_sig_rep_warn:'注意 — 再故障設備何台以上', p_risk_bm:'直近90日の故障1件あたり', p_risk_rep:'再故障1回あたり', p_risk_up:'前90日より2件以上増えたら', p_risk_recent:'最近故障があれば', p_risk_pm:'PMが長くなければ', p_risk_rep_days:'再故障とみなす間隔', p_risk_recent_days:'«最近»の長さ', p_risk_pm_days:'«PMが長くない»の長さ', u_x:'倍', u_day:'日', u_pts:'点', u_rel:'%', g_mfc:'MFCバージョン判定', gd_mfc:'アラーム分析のMFCバージョン — S/N日付コード(YYMMDD)で判定', p_mfc_mca_f:'MCA F 開始S/N日付コード', p_mfc_mca_f1:'MCA F1 開始S/N日付コード', p_mfc_mkp_r1:'MKP R1 開始S/N日付', p_mfc_mkp_r2:'MKP R2 開始S/N日付', p_mfc_lead:'交換履歴のない設備 — 製造日 = 搬入日 − この日数', p_mfc_global_no:'GLOBALタイプ開始S/N番号(以上はAIR MFCなし)', g_fse:'アラーム分析', gd_fse:'故障分析 › アラーム分析が使う基準', p_fse_recur_days:'«交換後の再発»の判定期間', p_fse_top:'設備ランキングの行数', p_fse_auto_x:'自動推薦 — 平常の何倍以上', p_fse_auto_pct:'自動推薦 — アラーム作業での交換割合(以上)', p_fse_auto_n:'自動推薦 — 部品数(最大)', u_part:'個', u_ymd:'YYMMDD', u_no:'番', u_rows:'行' }
 };
 GST.v2t = function(k, o, lang){
   var L=lang||(GST._lang&&GST._lang())||'ko', T=GST.V2_T[L]||GST.V2_T.ko, s=T[k]!=null?T[k]:(GST.V2_T.ko[k]!=null?GST.V2_T.ko[k]:k);
@@ -10468,7 +10471,12 @@ GST.PARAMS = {
   mfc_global_no:    { g:'mfc',  def:1059, min:0,  max:99999, step:1,  u:'no',   live:true },
   /* 알람 분석 (v189) */
   fse_recur_days:   { g:'fse',  def:30,  min:1,   max:365,  step:1,   u:'day',  live:true },
-  fse_top:          { g:'fse',  def:20,  min:5,   max:200,  step:1,   u:'rows', live:true }
+  fse_top:          { g:'fse',  def:20,  min:5,   max:200,  step:1,   u:'rows', live:true },
+  /* 알람 분석 «보는 부품» 자동 추천 (v191) — 그 알람 작업에서 함께 교체한 부품 중 «평소보다 두드러진» 것.
+     배수 = (알람 작업 중 교체 비율) ÷ (모든 작업 중 교체 비율) — 건수만 보면 O-RING 처럼 어디서나 가는 부품이 늘 1등이다. */
+  fse_auto_x:       { g:'fse',  def:2,   min:1,   max:50,   step:0.5, u:'x',    live:true },
+  fse_auto_pct:     { g:'fse',  def:3,   min:0,   max:100,  step:1,   u:'rel',  live:true },
+  fse_auto_n:       { g:'fse',  def:4,   min:0,   max:8,    step:1,   u:'part', live:true }
 };
 GST.PARAM_SECTIONS = ['band','sig','risk','mfc','fse'];
 GST.params = {
@@ -10633,7 +10641,7 @@ GST.FSE_T = {
        f_resp:'책임', f_ch:'챔버', f_ut:'설비 타입', ut_OLD:'OLD', ut_GLOBAL:'GLOBAL', ut_DRAGON:'DRAGON', ut_ETC:'기타', ut_EXCL:'SWS·GPWS', more:'더 보기', less:'접기',
        search_ph:'코드·메시지 찾기', clear:'선택 해제', all_alarms:'모든 알람', blank:'(미기재)', n_sel:'{n}개 선택',
        k_n:'발생 건수', k_n_f:'{u}대 · 챔버 {c}', k_y:'{y}년 발생', k_y_f:'작년 같은 기간 {p}건', k_u:'발생 설비', k_u_f:'관리 설비 {t}대 중 {r}',
-       k_rep:'반복 발생 설비', k_rep_f:'2회 이상 · 상위 {n}대가 {s}', k_rec:'교체 후 {d}일 이내 재발', k_rec_f:'관심 부품을 바꾼 {n}회 중 {h}회', k_rec_none:'관심 부품 교체 없음',
+       k_rep:'반복 발생 설비', k_rep_f:'2회 이상 · 상위 {n}대가 {s}', k_rec:'교체 후 {d}일 이내 재발', k_rec_f:'보는 부품을 바꾼 {n}회 중 {h}회', k_rec_none:'보는 부품 교체 없음',
        u_case:'건', u_ea:'대', c_trend:'발생 추이', per_m:'월', per_y:'연', ds_units:'발생 설비 수', ch_etc:'챔버 미기재',
        c_rate:'발생 설비 비율', by_det1:'세부공정', by_grp1:'공정', by_btype:'버너 방식', by_model:'모델', by_fab:'라인 (FAB)', rate_lab:'{n}건 · {a}/{t}대',
        c_top:'발생 설비 순위', th_rank:'순위', th_sn:'S/N', th_ch:'챔버', th_det:'세부공정', th_n:'기간', th_y:'{y}년', th_last:'최근 발생',
@@ -10645,11 +10653,11 @@ GST.FSE_T = {
        c_basis:'MFC 버전 판정 근거', how_sn:'S/N 날짜코드', how_date:'교체일로 추정', how_fabin:'반입일 환산 (교체 이력 없음)',
        how_turnon:'Turn On 일 환산 (반입일 없음)', how_dragon:'DRAGON 기본값', how_na:'AIR MFC 없음 (GLOBAL)', how_q:'판정 불가 (반입일·Turn On 없음)', how_amb:'확인 필요 (두 버전 중 하나)', how_etc:'판정 대상 아님',
        c_pri:'MFC 조사 대상', pri1:'1순위', pri1_d:'순위표 상위 {n}대', pri2:'2순위', pri2_d:'기간 내 1회 이상 발생', pri3:'3순위', pri3_d:'그 외 관리 설비',
-       x_pri1:'1순위 받기', x_pri12:'1~2순위 받기', x_all:'전체 받기', no_mfc:'«MFC» 부품 묶음이 없어 버전을 판정하지 않습니다',
+       x_pri1:'1순위 받기', x_pri12:'1~2순위 받기', x_all:'전체 받기', no_mfc:'이름에 «MFC»가 든 부품 묶음이 없어 버전을 판정하지 않습니다 — 부품 묶음에서 «LNG MFC»처럼 이름을 정하세요',
        parts_btn:'부품 묶음', parts_t:'관심 부품 묶음', pt_grp:'묶음', pt_code:'부품 코드', pt_re:'이름 규칙 (정규식)', pt_fluid:'유체', pt_maker:'제조사',
        pt_label:'설명', pt_on:'사용', pt_add:'줄 추가', pt_save:'저장', pt_ro:'읽기 전용 — 쓰기 권한이 있는 계정만 고칠 수 있습니다',
-       pt_none:'관심 부품 묶음이 아직 없습니다', pt_saved:'저장했습니다', pt_fail:'저장하지 못했습니다', pt_need:'묶음과 부품 코드(또는 이름 규칙)를 적으세요',
-       pt_bad_re:'이름 규칙이 올바른 정규식이 아닙니다', pt_hint:'«MFC» 묶음만 버전 판정을 받습니다 — 유체(LNG·O2·AIR)와 제조사(MCA·MKP·HORIBA)를 함께 적으세요',
+       pt_none:'관심 부품 묶음이 아직 없습니다', pt_saved:'저장했습니다 — 화면에 반영했습니다', pt_saving:'저장 중…', pt_saved_n:'{n}줄 저장했습니다 — 화면에 반영했습니다', pt_nochg:'바뀐 줄이 없습니다', pt_fail_at:'{i}번째 줄을 저장하지 못했습니다', pt_fail:'저장하지 못했습니다', pt_need:'묶음과 부품 코드(또는 이름 규칙)를 적으세요',
+       pt_bad_re:'이름 규칙이 올바른 정규식이 아닙니다', pt_hint:'이름에 «MFC»가 든 묶음(LNG MFC · O2 MFC …)은 버전 판정을 받습니다 — 줄마다 유체(LNG·O2·AIR)와 제조사(MCA·MKP·HORIBA)를 적으세요. 어느 묶음을 볼지는 화면의 «보는 부품»에서 알람마다 고릅니다', v_lbl:'보는 부품', v_max:'보는 부품은 {n}개까지입니다 — 하나를 빼고 넣으세요', v_addg:'+ 부품 묶음', v_empty:'보는 부품을 고르지 않았습니다', v_auto:'자동 추천', v_mine:'직접 고름', v_reset:'자동 추천으로', v_none:'함께 교체한 부품 중 두드러진 것이 없습니다 — 아래 목록에서 고르세요', v_rm:'빼기', v_tip_auto:'이 알람 작업에서 평소보다 두드러지게 교체한 부품', c_aff:'함께 교체한 부품', aff_sub:'알람 작업 {n}건 · 비교 작업 {b}건', aff_th_p:'부품', aff_th_a:'알람 작업', aff_th_b:'평소', aff_th_x:'배수', aff_th_u:'설비', aff_th_v:'보기', aff_on:'보는 중', aff_add:'보기', aff_none:'이 알람 작업에서 교체한 부품이 없습니다', aff_more:'{n}개 모두 보기', aff_less:'접기', aff_d:'{p} — 이 부품을 바꾼 알람 작업 {n}건', aff_note:'배수 = (이 알람 작업 중 그 부품을 바꾼 비율) ÷ (같은 범위의 모든 작업 중 그 부품을 바꾼 비율). 1배 근처는 어디서나 가는 부품입니다. 순서는 «평소보다 몇 번 더 바꿨나».', mfc_off:'보는 부품에 MFC 묶음이 없어 MFC 버전을 숨겼습니다', mfc_add:'MFC 묶음 보기',
        loading:'FSE 원장을 읽는 중…', empty:'FSE 원장이 아직 올라오지 않았습니다', empty_a:'데이터 관리 › 원본 파일 올리기에서 «FSE 원장»을 올리면 이 탭이 채워집니다',
        fail:'FSE 원장을 읽지 못했습니다', nosel:'조건에 맞는 알람이 없습니다', basis:'원장 {r}행 · {a} ~ {b}',
        d_title:'{x} — 알람 {n}건', col_date:'날짜', col_sn:'S/N', col_ch:'챔버', col_code:'코드', col_msg:'메시지', col_aw:'구분', col_resp:'책임',
@@ -10667,7 +10675,7 @@ GST.FSE_T = {
        f_resp:'Responsible', f_ch:'Chamber', f_ut:'Unit type', ut_OLD:'OLD', ut_GLOBAL:'GLOBAL', ut_DRAGON:'DRAGON', ut_ETC:'Other', ut_EXCL:'SWS·GPWS', more:'More', less:'Less',
        search_ph:'Find code or message', clear:'Clear', all_alarms:'All alarms', blank:'(blank)', n_sel:'{n} selected',
        k_n:'Occurrences', k_n_f:'{u} units · {c} chambers', k_y:'{y} so far', k_y_f:'same period last year {p}', k_u:'Units hit', k_u_f:'{r} of {t} managed units',
-       k_rep:'Repeat units', k_rep_f:'2+ times · top {n} hold {s}', k_rec:'Recurred within {d} days of replacement', k_rec_f:'{h} of {n} part replacements', k_rec_none:'no tracked part replaced',
+       k_rep:'Repeat units', k_rep_f:'2+ times · top {n} hold {s}', k_rec:'Recurred within {d} days of replacement', k_rec_f:'{h} of {n} replacements of the parts in view', k_rec_none:'no part in view replaced',
        u_case:'', u_ea:'', c_trend:'Occurrence trend', per_m:'Month', per_y:'Year', ds_units:'Units hit', ch_etc:'Chamber blank',
        c_rate:'Share of units hit', by_det1:'Detail process', by_grp1:'Process', by_btype:'Burner type', by_model:'Model', by_fab:'Line (FAB)', rate_lab:'{n} · {a}/{t} units',
        c_top:'Unit ranking', th_rank:'Rank', th_sn:'S/N', th_ch:'Chamber', th_det:'Detail process', th_n:'Period', th_y:'{y}', th_last:'Last alarm',
@@ -10679,11 +10687,11 @@ GST.FSE_T = {
        c_basis:'How the MFC version was judged', how_sn:'S/N date code', how_date:'From replacement date', how_fabin:'From FAB-in (never replaced)',
        how_turnon:'From turn-on (no FAB-in)', how_dragon:'DRAGON default', how_na:'No AIR MFC (GLOBAL)', how_q:'Cannot judge (no FAB-in or turn-on)', how_amb:'Needs checking (one of two versions)', how_etc:'Not judged',
        c_pri:'MFC survey targets', pri1:'Priority 1', pri1_d:'top {n} of the ranking', pri2:'Priority 2', pri2_d:'hit at least once in the period', pri3:'Priority 3', pri3_d:'other managed units',
-       x_pri1:'Priority 1', x_pri12:'Priority 1–2', x_all:'All', no_mfc:'No «MFC» part group — versions are not judged',
+       x_pri1:'Priority 1', x_pri12:'Priority 1–2', x_all:'All', no_mfc:'No part group with «MFC» in its name — versions are not judged. Name a group like «LNG MFC» in Part groups',
        parts_btn:'Part groups', parts_t:'Tracked part groups', pt_grp:'Group', pt_code:'Part code', pt_re:'Name rule (regex)', pt_fluid:'Fluid', pt_maker:'Maker',
        pt_label:'Note', pt_on:'On', pt_add:'Add row', pt_save:'Save', pt_ro:'Read only — accounts with write access can edit',
-       pt_none:'No tracked part groups yet', pt_saved:'Saved', pt_fail:'Could not save', pt_need:'Fill in the group and a part code (or name rule)',
-       pt_bad_re:'The name rule is not a valid regular expression', pt_hint:'Only the «MFC» group gets version judging — give its fluid (LNG·O2·AIR) and maker (MCA·MKP·HORIBA)',
+       pt_none:'No tracked part groups yet', pt_saved:'Saved — the view is updated', pt_saving:'Saving…', pt_saved_n:'Saved {n} rows — the view is updated', pt_nochg:'Nothing changed', pt_fail_at:'Could not save row {i}', pt_fail:'Could not save', pt_need:'Fill in the group and a part code (or name rule)',
+       pt_bad_re:'The name rule is not a valid regular expression', pt_hint:'Groups with «MFC» in the name (LNG MFC · O2 MFC …) get version judging — give each row its fluid (LNG·O2·AIR) and maker (MCA·MKP·HORIBA). Which parts to watch is chosen per alarm in «Parts in view»', v_lbl:'Parts in view', v_max:'Up to {n} parts in view — remove one first', v_addg:'+ Part group', v_empty:'No part chosen', v_auto:'Auto pick', v_mine:'Chosen', v_reset:'Back to auto pick', v_none:'No part stands out in these alarm jobs — pick from the list below', v_rm:'Remove', v_tip_auto:'parts replaced in these alarm jobs far more than usual', c_aff:'Parts replaced with this alarm', aff_sub:'{n} alarm jobs · {b} jobs compared', aff_th_p:'Part', aff_th_a:'Alarm jobs', aff_th_b:'Usual', aff_th_x:'×', aff_th_u:'Units', aff_th_v:'View', aff_on:'In view', aff_add:'View', aff_none:'No part was replaced in these alarm jobs', aff_more:'Show all {n}', aff_less:'Less', aff_d:'{p} — {n} alarm jobs that replaced it', aff_note:'× = (share of these alarm jobs that replaced the part) ÷ (share of all jobs in the same scope that replaced it). Near 1× means a part replaced everywhere. Ordered by «how many more times than usual».', mfc_off:'MFC versions are hidden — no MFC group in Parts in view', mfc_add:'View MFC groups',
        loading:'Reading the FSE ledger…', empty:'The FSE ledger has not been uploaded yet', empty_a:'Upload the «FSE ledger» from Data management › Upload source files to fill this tab',
        fail:'Could not read the FSE ledger', nosel:'No alarms match', basis:'ledger {r} rows · {a} – {b}',
        d_title:'{x} — {n} alarms', col_date:'Date', col_sn:'S/N', col_ch:'Chamber', col_code:'Code', col_msg:'Message', col_aw:'Kind', col_resp:'Responsible',
@@ -10701,7 +10709,7 @@ GST.FSE_T = {
        f_resp:'责任', f_ch:'腔体', f_ut:'设备类型', ut_OLD:'OLD', ut_GLOBAL:'GLOBAL', ut_DRAGON:'DRAGON', ut_ETC:'其他', ut_EXCL:'SWS·GPWS', more:'更多', less:'收起',
        search_ph:'查找代码或信息', clear:'清除', all_alarms:'全部报警', blank:'(未填写)', n_sel:'已选 {n} 个',
        k_n:'发生次数', k_n_f:'{u} 台 · 腔体 {c}', k_y:'{y}年发生', k_y_f:'去年同期 {p} 次', k_u:'发生设备', k_u_f:'管理设备 {t} 台中 {r}',
-       k_rep:'重复发生设备', k_rep_f:'2次以上 · 前 {n} 台占 {s}', k_rec:'更换后 {d} 天内复发', k_rec_f:'更换关注部件 {n} 次中 {h} 次', k_rec_none:'无关注部件更换',
+       k_rep:'重复发生设备', k_rep_f:'2次以上 · 前 {n} 台占 {s}', k_rec:'更换后 {d} 天内复发', k_rec_f:'更换所选部件 {n} 次中 {h} 次', k_rec_none:'所选部件无更换',
        u_case:'次', u_ea:'台', c_trend:'发生趋势', per_m:'月', per_y:'年', ds_units:'发生设备数', ch_etc:'腔体未填写',
        c_rate:'发生设备比例', by_det1:'细分工艺', by_grp1:'工艺', by_btype:'燃烧器方式', by_model:'型号', by_fab:'线别 (FAB)', rate_lab:'{n} 次 · {a}/{t} 台',
        c_top:'发生设备排名', th_rank:'排名', th_sn:'S/N', th_ch:'腔体', th_det:'细分工艺', th_n:'期间', th_y:'{y}年', th_last:'最近发生',
@@ -10713,11 +10721,11 @@ GST.FSE_T = {
        c_basis:'MFC版本判定依据', how_sn:'S/N日期码', how_date:'按更换日推定', how_fabin:'按进厂日换算 (无更换记录)',
        how_turnon:'按Turn On日换算 (无进厂日)', how_dragon:'DRAGON默认值', how_na:'无AIR MFC (GLOBAL)', how_q:'无法判定 (无进厂日·Turn On)', how_amb:'需确认 (两个版本之一)', how_etc:'不判定',
        c_pri:'MFC调查对象', pri1:'第1优先', pri1_d:'排名前 {n} 台', pri2:'第2优先', pri2_d:'期间内发生1次以上', pri3:'第3优先', pri3_d:'其余管理设备',
-       x_pri1:'导出第1优先', x_pri12:'导出第1~2优先', x_all:'全部导出', no_mfc:'没有«MFC»部件组，不判定版本',
+       x_pri1:'导出第1优先', x_pri12:'导出第1~2优先', x_all:'全部导出', no_mfc:'没有名称含«MFC»的部件组，不判定版本 — 请在部件组中命名为«LNG MFC»等',
        parts_btn:'部件组', parts_t:'关注部件组', pt_grp:'组', pt_code:'部件代码', pt_re:'名称规则 (正则)', pt_fluid:'流体', pt_maker:'制造商',
        pt_label:'说明', pt_on:'启用', pt_add:'添加行', pt_save:'保存', pt_ro:'只读 — 仅有写权限的账号可修改',
-       pt_none:'还没有关注部件组', pt_saved:'已保存', pt_fail:'保存失败', pt_need:'请填写组和部件代码(或名称规则)',
-       pt_bad_re:'名称规则不是有效的正则表达式', pt_hint:'只有«MFC»组判定版本 — 请同时填写流体(LNG·O2·AIR)和制造商(MCA·MKP·HORIBA)',
+       pt_none:'还没有关注部件组', pt_saved:'已保存 — 画面已更新', pt_saving:'保存中…', pt_saved_n:'已保存 {n} 行 — 画面已更新', pt_nochg:'没有更改的行', pt_fail_at:'第 {i} 行未能保存', pt_fail:'保存失败', pt_need:'请填写组和部件代码(或名称规则)',
+       pt_bad_re:'名称规则不是有效的正则表达式', pt_hint:'名称含«MFC»的组(LNG MFC · O2 MFC …)判定版本 — 每行请填写流体(LNG·O2·AIR)和制造商(MCA·MKP·HORIBA)。要看哪些部件，在画面的«查看部件»中按报警选择', v_lbl:'查看部件', v_max:'查看部件最多 {n} 个 — 请先移除一个', v_addg:'+ 部件组', v_empty:'未选择部件', v_auto:'自动推荐', v_mine:'手动选择', v_reset:'恢复自动推荐', v_none:'这些报警作业中没有特别突出的部件 — 请从下方列表选择', v_rm:'移除', v_tip_auto:'在这些报警作业中比平时更换得多的部件', c_aff:'一同更换的部件', aff_sub:'报警作业 {n} 件 · 对比作业 {b} 件', aff_th_p:'部件', aff_th_a:'报警作业', aff_th_b:'平时', aff_th_x:'倍数', aff_th_u:'设备', aff_th_v:'查看', aff_on:'查看中', aff_add:'查看', aff_none:'这些报警作业中没有更换部件', aff_more:'显示全部 {n} 个', aff_less:'收起', aff_d:'{p} — 更换该部件的报警作业 {n} 件', aff_note:'倍数 = (这些报警作业中更换该部件的比例) ÷ (同范围所有作业中更换该部件的比例)。接近1倍的是到处都换的部件。按«比平时多换几次»排序。', mfc_off:'查看部件中没有MFC组，已隐藏MFC版本', mfc_add:'查看MFC组',
        loading:'正在读取FSE台账…', empty:'FSE台账尚未上传', empty_a:'在数据管理 › 上传原始文件中上传«FSE台账»后，此标签会显示内容',
        fail:'无法读取FSE台账', nosel:'没有符合条件的报警', basis:'台账 {r} 行 · {a} ~ {b}',
        d_title:'{x} — 报警 {n} 次', col_date:'日期', col_sn:'S/N', col_ch:'腔体', col_code:'代码', col_msg:'信息', col_aw:'类别', col_resp:'责任',
@@ -10735,7 +10743,7 @@ GST.FSE_T = {
        f_resp:'責任', f_ch:'チャンバー', f_ut:'設備タイプ', ut_OLD:'OLD', ut_GLOBAL:'GLOBAL', ut_DRAGON:'DRAGON', ut_ETC:'その他', ut_EXCL:'SWS·GPWS', more:'もっと見る', less:'閉じる',
        search_ph:'コード・メッセージを検索', clear:'選択解除', all_alarms:'すべてのアラーム', blank:'(未記入)', n_sel:'{n}件選択',
        k_n:'発生件数', k_n_f:'{u}台 · チャンバー {c}', k_y:'{y}年の発生', k_y_f:'昨年同期 {p}件', k_u:'発生設備', k_u_f:'管理設備 {t}台中 {r}',
-       k_rep:'繰り返し発生設備', k_rep_f:'2回以上 · 上位{n}台が{s}', k_rec:'交換後{d}日以内の再発', k_rec_f:'注目部品の交換{n}回中{h}回', k_rec_none:'注目部品の交換なし',
+       k_rep:'繰り返し発生設備', k_rep_f:'2回以上 · 上位{n}台が{s}', k_rec:'交換後{d}日以内の再発', k_rec_f:'表示部品の交換{n}回中{h}回', k_rec_none:'表示部品の交換なし',
        u_case:'件', u_ea:'台', c_trend:'発生推移', per_m:'月', per_y:'年', ds_units:'発生設備数', ch_etc:'チャンバー未記入',
        c_rate:'発生設備の比率', by_det1:'詳細工程', by_grp1:'工程', by_btype:'バーナー方式', by_model:'モデル', by_fab:'ライン (FAB)', rate_lab:'{n}件 · {a}/{t}台',
        c_top:'発生設備ランキング', th_rank:'順位', th_sn:'S/N', th_ch:'チャンバー', th_det:'詳細工程', th_n:'期間', th_y:'{y}年', th_last:'最近の発生',
@@ -10747,11 +10755,11 @@ GST.FSE_T = {
        c_basis:'MFCバージョンの判定根拠', how_sn:'S/N日付コード', how_date:'交換日から推定', how_fabin:'搬入日から換算 (交換履歴なし)',
        how_turnon:'Turn On日から換算 (搬入日なし)', how_dragon:'DRAGONの既定値', how_na:'AIR MFCなし (GLOBAL)', how_q:'判定不可 (搬入日・Turn Onなし)', how_amb:'要確認 (2つのバージョンのどちらか)', how_etc:'判定対象外',
        c_pri:'MFC調査対象', pri1:'第1優先', pri1_d:'ランキング上位{n}台', pri2:'第2優先', pri2_d:'期間内に1回以上発生', pri3:'第3優先', pri3_d:'その他の管理設備',
-       x_pri1:'第1優先を出力', x_pri12:'第1~2優先を出力', x_all:'全体を出力', no_mfc:'«MFC»部品グループがないためバージョンを判定しません',
+       x_pri1:'第1優先を出力', x_pri12:'第1~2優先を出力', x_all:'全体を出力', no_mfc:'名前に«MFC»を含む部品グループがないためバージョンを判定しません — 部品グループで«LNG MFC»のように名付けてください',
        parts_btn:'部品グループ', parts_t:'注目部品グループ', pt_grp:'グループ', pt_code:'部品コード', pt_re:'名前ルール (正規表現)', pt_fluid:'流体', pt_maker:'メーカー',
        pt_label:'説明', pt_on:'使用', pt_add:'行を追加', pt_save:'保存', pt_ro:'読み取り専用 — 書き込み権限のあるアカウントのみ編集できます',
-       pt_none:'注目部品グループはまだありません', pt_saved:'保存しました', pt_fail:'保存できませんでした', pt_need:'グループと部品コード(または名前ルール)を入力してください',
-       pt_bad_re:'名前ルールが正しい正規表現ではありません', pt_hint:'«MFC»グループだけがバージョン判定を受けます — 流体(LNG·O2·AIR)とメーカー(MCA·MKP·HORIBA)も入力してください',
+       pt_none:'注目部品グループはまだありません', pt_saved:'保存しました — 画面に反映しました', pt_saving:'保存中…', pt_saved_n:'{n}行を保存しました — 画面に反映しました', pt_nochg:'変更された行はありません', pt_fail_at:'{i}行目を保存できませんでした', pt_fail:'保存できませんでした', pt_need:'グループと部品コード(または名前ルール)を入力してください',
+       pt_bad_re:'名前ルールが正しい正規表現ではありません', pt_hint:'名前に«MFC»を含むグループ(LNG MFC · O2 MFC …)はバージョン判定を受けます — 行ごとに流体(LNG·O2·AIR)とメーカー(MCA·MKP·HORIBA)を入力してください。どの部品を見るかは画面の«表示部品»でアラームごとに選びます', v_lbl:'表示部品', v_max:'表示部品は{n}個までです — 一つ外してから追加してください', v_addg:'+ 部品グループ', v_empty:'部品を選んでいません', v_auto:'自動推薦', v_mine:'手動選択', v_reset:'自動推薦に戻す', v_none:'これらのアラーム作業で目立つ部品はありません — 下の一覧から選んでください', v_rm:'外す', v_tip_auto:'これらのアラーム作業で普段より多く交換した部品', c_aff:'一緒に交換した部品', aff_sub:'アラーム作業 {n}件 · 比較作業 {b}件', aff_th_p:'部品', aff_th_a:'アラーム作業', aff_th_b:'平常', aff_th_x:'倍率', aff_th_u:'設備', aff_th_v:'表示', aff_on:'表示中', aff_add:'表示', aff_none:'これらのアラーム作業で交換した部品はありません', aff_more:'{n}件すべて表示', aff_less:'閉じる', aff_d:'{p} — この部品を交換したアラーム作業 {n}件', aff_note:'倍率 = (これらのアラーム作業でその部品を交換した割合) ÷ (同じ範囲の全作業でその部品を交換した割合)。1倍前後はどこでも交換する部品です。並び順は«普段より何回多く交換したか»。', mfc_off:'表示部品にMFCグループがないためMFCバージョンを隠しました', mfc_add:'MFCグループを表示',
        loading:'FSE台帳を読み込み中…', empty:'FSE台帳はまだアップロードされていません', empty_a:'データ管理 › 元ファイルのアップロードで«FSE台帳»を上げるとこのタブに表示されます',
        fail:'FSE台帳を読み込めませんでした', nosel:'条件に合うアラームがありません', basis:'台帳 {r}行 · {a} ~ {b}',
        d_title:'{x} — アラーム{n}件', col_date:'日付', col_sn:'S/N', col_ch:'チャンバー', col_code:'コード', col_msg:'メッセージ', col_aw:'区分', col_resp:'責任',
@@ -10804,10 +10812,37 @@ GST.FSE = {
     if(m){ var no=+m[1], g=(P||GST.FSE.P()).gno; return no>=g?'GLOBAL':'OLD'; }
     return 'ETC';
   },
+  /* 화면이 받는 열 (v191 · 사용자 「FSE 원장 넣으니까 너무 느려지네 — 필수 말고 다른 값도 같이 넣어서 느려지는 거 아니야?」)
+     실측(2026-10 · 89,265행): 전 열을 받으면 JSON 65MB — 그중 13열(NO·SITE·Group_2·Detail_2·Warranty·fail Type·Symptom·
+     Compensation·Remark·Shut down·정지 시각 둘·부품 수량)은 이 탭 어디에도 안 쓰인다. 설비 속성(LINE·공정·세부공정·버너·모델·
+     Scrubber Code·Turn-on)은 행마다 같은 값이 반복된다(10MB) — 설비마다 한 줄로 따로 받는다(units · RPC fse_units).
+     ⚠ extra(작업자·엑셀 계산 칸 26MB)는 처음부터 안 받는다(dbRows 는 SPEC 열만 고른다). DB 용량만 차지한다. */
+  READ: ['workDate','sn','mcode','chamber','aw','resp','msg','fcode','ncode','wkind','cause','action','partCode','partName','partSpec','mfcIn','mfcOut'],
+  UNIT: ['fab','grp1','det1','btype','model','code','turnOn'],
+  /* 설비(S/N × 챔버)마다 «비어 있지 않은 마지막 값» — parse 가 행마다 덮어쓰던 규칙과 같다(원장 뒤쪽 = 최근이 이긴다).
+     RPC 가 없으면(setup-31 전) null — 그때 화면은 설비 열을 행마다 받는 옛 방식으로 돈다(읽기 실패가 아니다). */
+  units: async function(client){
+    var C=client; try{ if(!C) C=await GST._dbAuthed(); }catch(e){ C=null; }
+    if(!C) return null;
+    /* 원장 행과 같은 열쇠(적재 시각 + 행수)로 이 PC 에 담는다 — 행은 IndexedDB 에서 0초에 오는데 이것만 매번 서버에
+       물으면(따뜻할 때 0.5초 · 쉰 뒤 첫 호출 5초대) 빨라진 것이 도로 느려진다. 원장을 다시 올리면 열쇠가 바뀐다. */
+    var stamp='';
+    try{ var lg=await C.from('sheet_sync_log').select('rows,synced_at').eq('tbl', GST.logKey(GST.physTbl('sheet_fse'))).maybeSingle();
+      if(!lg.error && lg.data) stamp=lg.data.synced_at+'|'+lg.data.rows; }catch(e){}
+    if(stamp){ try{ var hit=await GST.idb.get('fse_units'); if(hit && hit.stamp===stamp && hit.m) return hit.m; }catch(e){} }
+    var r; try{ r=await C.rpc('fse_units'); }catch(e){ return null; }
+    if(r.error || !Array.isArray(r.data)) return null;
+    var FSE=GST.FSE, m={}, rows=r.data.slice().sort(function(a,b){ return (+a[2]||0)-(+b[2]||0); });
+    var F=['site','fab','g1','d1','btype','model','code','turnOn'];
+    rows.forEach(function(x){ var k=GST.snKey(x[0])+'|'+FSE.CH(x[1]); if(!GST.snKey(x[0])) return; var o=m[k]||(m[k]={});
+      F.forEach(function(f,i){ var v=x[3+i]; if(v!=null && String(v).trim()!=='') o[f]=String(v).trim(); }); });
+    if(stamp){ try{ GST.idb.set('fse_units', {stamp:stamp, m:m, t:Date.now()}); }catch(e){} }
+    return m;
+  },
   P: function(){
     var g=function(k){ return GST.params&&GST.params.get ? GST.params.get(k) : GST.PARAMS[k].def; };
     return { f:g('mfc_mca_f'), f1:g('mfc_mca_f1'), r1:g('mfc_mkp_r1'), r2:g('mfc_mkp_r2'), lead:g('mfc_lead'), gno:g('mfc_global_no'),
-             recur:g('fse_recur_days'), top:g('fse_top') };
+             recur:g('fse_recur_days'), top:g('fse_top'), autoX:g('fse_auto_x'), autoPct:g('fse_auto_pct'), autoN:g('fse_auto_n') };
   },
 
   /* ── 원장 읽기 · 작업 행과 부품 행 잇기 ──────────────────────────────────────
@@ -10820,7 +10855,7 @@ GST.FSE = {
     var S=GST.SM.SPEC.fse, m=GST.SM.map(rows||[], S), C=m.C, V=GST.SM.val, FSE=GST.FSE;
     var D={ ok:m.ok, miss:m.miss, hi:m.hi, ev:[], parts:[], units:{}, rowsN:0, asOf:'', minDate:'', orphan:0, linked:0, noDate:0, noSn:0, joinMiss:0, joinSn:0 };
     if(m.hi<0) return D;
-    var lastEv=-1, bySnDate={}, pend=[], org=opt.org||null, orgC={};
+    var lastEv=-1, bySnDate={}, pend=[], org=opt.org||null, orgC={}, ua=opt.units||null;
     var P=FSE.P();
     var orgOf=function(snk, sn){
       if(snk in orgC) return orgC[snk];
@@ -10832,7 +10867,9 @@ GST.FSE = {
       if(!U){ var o=orgOf(snk, sn);
         U=D.units[u]={ u:u, sn:sn, snk:snk, ch:ch, utype:FSE.utype(sn,P), fab:'', site:'', g1:'', g2:'', d1:'', d2:'', btype:'', model:'', code:'',
           turnOn:'', warrDate:'', warr:'', joined:!!o,
-          op:o&&o.op||'', region:o&&o.region||'', customer:o&&o.customer||'', campus:o&&o.campus||'', div:o&&o.div||'', line2:o&&o.line2||'', fabIn:o&&o.fabIn||'' }; }
+          op:o&&o.op||'', region:o&&o.region||'', customer:o&&o.customer||'', campus:o&&o.campus||'', div:o&&o.div||'', line2:o&&o.line2||'', fabIn:o&&o.fabIn||'' };
+        /* 설비 속성을 설비마다 한 줄로 받았으면(units) 여기서 입힌다 — 행에 그 열이 없으면 아래 덮어쓰기가 아무 일도 안 한다 */
+        var a=ua&&ua[u]; if(a){ Object.keys(a).forEach(function(f){ if(f==='turnOn'){ var t=GST.ALARM.day(a[f]); if(t) U.turnOn=t; } else U[f]=a[f]; }); } }
       /* 단위 속성은 «비어 있지 않은 마지막 값» — 원장 뒤쪽(최근)이 이긴다 */
       [['fab','fab'],['site','site'],['g1','grp1'],['g2','grp2'],['d1','det1'],['d2','det2'],['btype','btype'],['model','model'],['code','code'],['warr','warr']]
         .forEach(function(a){ var x=v(a[1]); if(x) U[a[0]]=x; });
@@ -10913,7 +10950,22 @@ GST.FSE = {
       return null;
     }
   },
-  isMfcGrp: function(g){ return String(g||'').trim().toUpperCase()==='MFC'; },
+  /* MFC 버전 판정을 받는 묶음 — 묶음 이름에 «MFC» 낱말이 들어 있으면(LNG MFC · O2 MFC · CDA MFC …).
+     ⚠ 예전에는 이름이 정확히 «MFC» 일 때만이라, 사용자가 묶음을 유체별(LNG MFC …)로 나누자 판정이 통째로 꺼졌다(v191 · 사용자 보고).
+     유체는 묶음 이름이 아니라 각 줄의 «유체» 칸(없으면 부품 규격·이름)에서 읽는다(fluidOf). */
+  isMfcGrp: function(g){ return /(^|[^A-Z0-9])MFC([^A-Z0-9]|$)/i.test(String(g||'')); },
+  isMfcKey: function(k){ k=String(k||''); return k.slice(0,2)==='g:' && GST.FSE.isMfcGrp(k.slice(2)); },
+  /* «보는 부품» 열쇠 (v191) — 부품 묶음에 든 줄은 그 묶음(g:), 아니면 자재마스터 표준 품목명(n:), 없으면 부품 코드(c:), 그것도 없으면 원장 이름(n:).
+     표준 품목명으로 묶으면 코드만 다른 같은 부품(MFC 열 몇 가지)이 한 덩어리로 보인다 — 원장 이름은 줄마다 달라 묶지 않는다(코드가 먼저). */
+  ikey: function(p){
+    if(!p) return '';
+    if(p.grp) return 'g:'+p.grp;
+    var st=p.std&&String(p.std.name||'').trim(); if(st) return 'n:'+GST.FSE.mkey(st);
+    var c=String(p.code||'').replace(/\.0+$/,'').trim(); if(c) return 'c:'+c;
+    var n=GST.FSE.mkey(p.name); return n?'n:'+n:'';
+  },
+  /* 열쇠 → 사람이 읽는 이름(묶음 이름 · 품목명 · 「품목명 (코드)」) */
+  ilabel: function(D, k){ return (D&&D.ikl&&D.ikl[k]) || String(k||'').slice(2); },
   /* 부품 이름 — 자재마스터(품목번호 정확일치)가 있으면 표준 품목명, 없으면 원장에 적힌 이름, 그것도 없으면 코드 (v190)
      원장의 부품 이름은 사람이 자유롭게 적어 같은 코드도 줄마다 다르다(실측 9,934줄이 마스터 품목명과 다름) — 표준 이름으로 읽어야 한 덩어리로 보인다. */
   pname: function(p){ var s=p&&p.std; return (s&&s.name) || (p&&p.name) || (p&&p.code) || ''; },
@@ -10972,9 +11024,14 @@ GST.FSE = {
   },
   /* 묶음을 원장에 입힌다 — 묶음 표를 다시 읽으면 다시 부른다. 단위별·묶음별 교체 목록(날짜순)을 만든다. */
   bind: function(D){
-    var FSE=GST.FSE, reg=FSE.reg; D.pg={}; D.mfc={};
+    var FSE=GST.FSE, reg=FSE.reg; D.pg={}; D.mfc={}; D.pi={}; D.ikl={};
     D.parts.forEach(function(p){
       var e=reg.of(p); p.grp=e?String(e.grp||'').trim():''; p.fluid=''; p.maker=''; p.entry=e||null;
+      /* 보는 부품 열쇠 — 모든 줄(묶음 밖 부품도 «함께 교체한 부품»에 든다) */
+      p.ik=FSE.ikey(p);
+      if(p.ik){ var ai=(D.pi[p.u]=D.pi[p.u]||{}); (ai[p.ik]=ai[p.ik]||[]).push(p);
+        if(!D.ikl[p.ik]){ var nm=FSE.pname(p), c=String(p.code||'').trim();
+          D.ikl[p.ik] = p.ik.charAt(0)==='g' ? p.grp : p.ik.charAt(0)==='c' ? (nm&&nm!==c ? nm+' ('+c+')' : c) : nm; } }
       if(!p.grp) return;
       var a=(D.pg[p.u]=D.pg[p.u]||{}); (a[p.grp]=a[p.grp]||[]).push(p);
       if(FSE.isMfcGrp(p.grp)){
@@ -10987,6 +11044,7 @@ GST.FSE = {
     var byDate=function(a,b){ return a.date<b.date?-1:a.date>b.date?1:0; };
     Object.keys(D.pg).forEach(function(u){ Object.keys(D.pg[u]).forEach(function(g){ D.pg[u][g].sort(byDate); }); });
     Object.keys(D.mfc).forEach(function(u){ Object.keys(D.mfc[u]).forEach(function(f){ D.mfc[u][f].sort(byDate); }); });
+    Object.keys(D.pi).forEach(function(u){ Object.keys(D.pi[u]).forEach(function(k){ D.pi[u][k].sort(byDate); }); });
     D.hasMfc = reg.groups().some(FSE.isMfcGrp);
     return D;
   },
@@ -11094,12 +11152,13 @@ GST.FSE = {
     var mSn={}; Object.keys(units||{}).forEach(function(u){ mSn[units[u].snk]=1; });
     var rep=rank.filter(function(r){ return r.n>=2; });
     var topN=opt.top||20, topSum=rank.slice(0,topN).reduce(function(s,r){ return s+r.n; },0);
-    /* 교체 후 재발 — 관심 부품을 바꾼 «그 알람 작업» 뒤 같은 챔버에 같은 고르기의 알람이 N일 안에 다시 났나 */
+    /* 교체 후 재발 — «보는 부품»(opt.items · 없으면 부품 묶음)을 바꾼 «그 알람 작업» 뒤 같은 챔버에 같은 고르기의 알람이 N일 안에 다시 났나 */
     var rec={n:0, hit:0, list:[]}, R=opt.recur||30;
     var evSet={}; evs.forEach(function(e){ evSet[e.i]=1; });
-    var seen={};
+    var seen={}, its=opt.items?{}:null; (opt.items||[]).forEach(function(k){ its[k]=1; });
+    var mine=function(p){ return its ? !!its[p.ik] : !!p.grp; };
     evs.forEach(function(e){
-      var ps=(e.parts||[]).filter(function(p){ return p.grp; }); if(!ps.length) return;
+      var ps=(e.parts||[]).filter(mine); if(!ps.length) return;
       var key=e.u+'|'+e.date; if(seen[key]) return; seen[key]=1;
       var lim=FSE.addDays(e.date, R), nx=(by[e.u]&&by[e.u].list||[]).filter(function(x){ return x.date>e.date && x.date<=lim; });
       rec.n++; if(nx.length){ rec.hit++; } rec.list.push({e:e, parts:ps, next:nx[0]||null});
@@ -11138,24 +11197,57 @@ GST.FSE = {
     L.forEach(function(p){ if(!before||p.date<=before) last=p.date; });
     return last;
   },
+  /* 한 챔버의 마지막 «보는 부품» 교체 날짜 (v191 · 열쇠 g:·n:·c:) */
+  lastOf: function(D, u, k, before){
+    var L=(D.pi&&D.pi[u]&&D.pi[u][k])||[], last='';
+    L.forEach(function(p){ if(!before||p.date<=before) last=p.date; });
+    return last;
+  },
   daysBetween: function(a, b){ var x=Date.parse(a+'T00:00:00Z'), y=Date.parse(b+'T00:00:00Z'); return (isNaN(x)||isNaN(y))?null:Math.round((y-x)/86400000); },
+  /* ── 함께 교체한 부품 (v191 · 사용자 「알람마다 영향되는 자재가 다른데 왜 MFC 랑 노즐로 하드코딩 해놨어?」) ──
+     evs  — 고른 알람(화면과 같은 고르기·기간·사이드바)
+     base — 같은 범위의 «모든 작업»(분모 · 작업 줄)
+     부품마다: a = 그 부품을 바꾼 알람 작업 수 · share = a ÷ 알람 작업 · baseShare = (그 부품을 바꾼 모든 작업) ÷ 모든 작업 ·
+     x(배수) = share ÷ baseShare · ex = a − 기대(= a·(1 − 1/x)) — «평소보다 몇 번 더» 갈았나.
+     ⚠ 건수로 줄 세우지 않는다 — O-RING 처럼 어디서나 가는 부품이 늘 1등이다(CLAUDE.md 심층 분석 «집중지수»). ex 가 크기·두드러짐을 함께 본다.
+     ⚠ 알람 작업 = 원장이 그 작업 줄에 이어 둔 부품(같은 S/N·작업일) — 날짜로 짐작해 붙이지 않는다. */
+  affect: function(D, evs, base){
+    var A={}, B={}, nA=(evs||[]).length, nB=0;
+    var ks=function(e){ var s={}; (e.parts||[]).forEach(function(p){ if(p.ik) s[p.ik]=1; }); return Object.keys(s); };
+    (evs||[]).forEach(function(e){ ks(e).forEach(function(k){ var o=A[k]||(A[k]={a:0, u:{}, ev:[]}); o.a++; o.u[e.u]=1; o.ev.push(e); }); });
+    (base||[]).forEach(function(e){ nB++; ks(e).forEach(function(k){ B[k]=(B[k]||0)+1; }); });
+    var list=Object.keys(A).map(function(k){
+      var o=A[k], sh=nA?o.a/nA:0, bs=nB?(B[k]||0)/nB:0, x=bs?sh/bs:null;
+      return { k:k, label:GST.FSE.ilabel(D,k), a:o.a, share:sh, b:B[k]||0, base:bs, x:x, ex:x?o.a*(1-1/x):o.a,
+               units:Object.keys(o.u).length, ev:o.ev, mfc:GST.FSE.isMfcKey(k) };
+    }).sort(function(p,q){ return q.ex-p.ex || q.a-p.a || (p.label<q.label?-1:1); });
+    return { nA:nA, nB:nB, list:list };
+  },
+  /* 자동 추천 — 두드러진(배수 ≥ autoX) · 충분히 잦은(알람 작업의 autoPct% 이상 · 최소 3번) 부품을 ex 순으로 autoN 개.
+     기준은 판정 기준(fse_auto_*)에서 읽는다 — 코드에 박지 않는다. 아무것도 안 걸리면 빈 목록이다(지어내지 않는다). */
+  autoPick: function(A, P){
+    P=P||GST.FSE.P(); var min=Math.max(3, Math.ceil((A.nA||0)*(P.autoPct||0)/100));
+    return A.list.filter(function(x){ return x.a>=min && x.x!=null && x.x>=P.autoX; }).slice(0, Math.max(0, P.autoN|0)).map(function(x){ return x.k; });
+  },
   /* 한 챔버의 이력 — 알람·관심 부품 교체·TBM 을 날짜순으로 (상세 이력 표 · 타임라인) */
-  history: function(D, u, sel){
-    var FSE=GST.FSE, P=FSE.P(), out=[];
+  history: function(D, u, sel, items){
+    var FSE=GST.FSE, P=FSE.P(), out=[], its=items?{}:null; (items||[]).forEach(function(k){ its[k]=1; });
+    var mine=function(p){ return its ? !!its[p.ik] : !!p.grp; };
+    var showVer = items ? items.some(FSE.isMfcKey) : D.hasMfc;
     D.ev.forEach(function(e){
       if(e.u!==u) return;
       if(e.alarm && FSE.match(e, sel, D)) out.push({date:e.date, kind:'alarm', e:e});
       else if(e.mc==='TBM') out.push({date:e.date, kind:'tbm', e:e});
     });
-    D.parts.forEach(function(p){ if(p.u===u && p.grp) out.push({date:p.date, kind:'part', p:p}); });
+    D.parts.forEach(function(p){ if(p.u===u && mine(p)) out.push({date:p.date, kind:'part', p:p}); });
     out.sort(function(a,b){ return a.date<b.date?-1:a.date>b.date?1:(a.kind==='part'?1:-1); });
     var alarms=out.filter(function(x){ return x.kind==='alarm'; });
     out.forEach(function(x){
       if(x.kind!=='alarm') return;
-      var lp='', ps=D.pg&&D.pg[u]||{}; Object.keys(ps).forEach(function(g){ ps[g].forEach(function(p){ if(p.date<x.date && p.date>lp) lp=p.date; }); });
+      var lp=''; out.forEach(function(y){ if(y.kind==='part' && y.date<x.date && y.date>lp) lp=y.date; });
       x.gap=lp?FSE.daysBetween(lp, x.date):null;
       var nx=alarms.filter(function(a){ return a.date>x.date; })[0]; x.next=nx?FSE.daysBetween(x.date, nx.date):null;
-      if(D.hasMfc) x.ver=FSE.FLUIDS.map(function(f){ return f+' '+FSE.ver(D, u, f, x.date, P).ver; }).join(' · ');
+      if(showVer) x.ver=FSE.FLUIDS.map(function(f){ return f+' '+FSE.ver(D, u, f, x.date, P).ver; }).join(' · ');
     });
     return out;
   }

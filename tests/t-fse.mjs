@@ -9,6 +9,10 @@
      [5] 집계 — 건수·설비·반복·교체 후 재발 · 달력으로 채운 월 축 · 업로드 날짜 다듬기(엑셀 시리얼)
      [6] 실제 브라우저 — 고장 분석의 «알람 분석» 탭: 열 때 읽기 · KPI = 팝업 목록 · 칩으로 좁히기 · 순위·타임라인·MFC 카드 ·
          엑셀 받기 · 부품 묶음(읽기 전용) · 언어 전환 · JS 에러 0
+     [7] 보는 부품(v191) — MFC 판정은 이름에 «MFC» 낱말(LNG MFC …) · 함께 교체한 부품 = 평소 대비 배수(O-RING 은 1배 근처라 안 뽑힌다) ·
+         자동 추천 · 교체 후 재발·이력이 보는 부품을 따른다 · 설비 속성을 설비마다 한 줄로 받아도(fse_units) 결과가 같다 ·
+         dbRows 가 이 탭이 쓰는 열만 고른다 · 화면: 알람마다 따로 기억 · MFC 카드는 보는 부품에 MFC 가 있을 때만 · 저장 피드백 ·
+         묶음 이름을 바꾸면 기억해 둔 보는 부품도 따라간다 · 좌우 스크롤 없음(1280·1700)
    ⚠ 실데이터를 쓰지 않는다 — S/N 은 «X» 가 든 지어낸 꼴(GBWS-X001 …), 부품 코드도 지어낸 것이다(t-leak).
      실행: PW_CHROMIUM=/opt/pw-browsers/chromium-1194/chrome-linux/chrome node t-fse.mjs */
 import fs from 'fs'; import path from 'path'; import vm from 'vm'; import http from 'http';
@@ -233,6 +237,79 @@ const mk=()=>{ const d=G.FSE.parse(toDb(G,RAW2).back,{org:snk=>INST[snk]||null})
   is(D4.itemWhy==='no_table' && D4.itemMiss===0 && G.FSE.pname(D4.parts[0])!=='', '표가 없으면(setup-30 전) 말없이 원장 이름 그대로 — 없는 번호로 세지 않는다'); }
 I.clear();
 
+/* ── [7] 보는 부품 · 함께 교체한 부품 · 설비 속성 따로 받기 (v191) ── */
+console.log('[7] 보는 부품 — MFC 이름 · 배수 · 자동 추천 · 재발·이력 · 설비 속성 · 받는 열');
+is(G.FSE.isMfcGrp('MFC') && G.FSE.isMfcGrp('LNG MFC') && G.FSE.isMfcGrp('O2 MFC') && G.FSE.isMfcGrp('mfc(CDA)') && !G.FSE.isMfcGrp('MFCX') && !G.FSE.isMfcGrp('버너 노즐'),
+  'MFC 판정 묶음 = 이름에 «MFC» 낱말(LNG MFC · O2 MFC …) — 예전에는 정확히 «MFC» 만이라 유체별로 나누면 꺼졌다');
+{ const REG2=[{id:1,grp:'LNG MFC',code:'P-MFC-LM',fluid:'LNG',maker:'MCA',on_:true,ord:1},{id:2,grp:'O2 MFC',code:'P-MFC-OK',fluid:'O2',maker:'MKP',on_:true,ord:2},
+    {id:3,grp:'버너 노즐',code:'P-NZ-1',on_:true,ord:3}];
+  G.FSE.reg.rows=REG2; G.FSE.reg._re=null;
+  const D2=G.FSE.parse(back,{org:snk=>INST[snk]||null}); G.FSE.bind(D2);
+  const v2=G.FSE.ver(D2,u('GBWS-X001','Left'),'LNG',null,G.FSE.P());
+  is(D2.hasMfc && v2.ver==='F1' && v2.how==='sn' && D2.swapped===1, '«LNG MFC»·«O2 MFC» 로 나눠도 버전 판정이 그대로 (F1 · 뒤바뀜 보정 1)');
+  G.FSE.reg.rows=REG; G.FSE.reg._re=null; }
+/* 함께 교체한 부품 — 지어낸 작은 원장: 작업 60건은 늘 O-RING 을 간다(평소) · 알람 10건 중 8건이 MFC · 6건이 O-RING */
+NO=0;
+const RAW3=[H];
+for(let i=0;i<60;i++){ const d='2026-0'+(1+i%8)+'-'+String(1+i%27).padStart(2,'0'); RAW3.push(row({sn:'GBWS-X0'+(10+i%5),d,ch:'Left',mc:'CBM'})); RAW3.push(P('GBWS-X0'+(10+i%5),d,'Left',i%2?'P-OR-1':'P-OR-2','O-RING')); }
+for(let i=0;i<10;i++){ const d='2026-09-'+String(1+i).padStart(2,'0'), sn='GBWS-X02'+(i%3);
+  RAW3.push(A(sn,d,'Right','BFE','Alarm-Main flame off'));
+  if(i<8) RAW3.push(P(sn,d,'Right','P-MFC-LM','MFC'));
+  if(i<6) RAW3.push(P(sn,d,'Right','P-OR-1','O-RING')); }
+RAW3.push(A('GBWS-X020','2026-09-20','Right','BFE','Alarm-Main flame off'));     // MFC 교체(9/1) 19일 뒤 재발
+{ const D3=G.FSE.parse(toDb(G,RAW3).back,{org:()=>null});
+  D3.parts.forEach(p=>{ if(/^P-OR/.test(p.code)) p.std={name:'O-RING'}; });     // 코드가 달라도 표준 품목명이 같으면 한 덩어리
+  G.FSE.bind(D3);
+  is(D3.parts.filter(p=>/^P-OR/.test(p.code)).every(p=>p.ik==='n:o-ring') && D3.parts.find(p=>p.code==='P-MFC-LM').ik==='g:MFC',
+    '보는 부품 열쇠 — 묶음은 g:묶음 · 묶음 밖은 표준 품목명(n:) — 코드 두 가지 O-RING 이 한 덩어리');
+  const ev3=D3.ev.filter(e=>e.alarm && G.FSE.match(e,{axis:'code',vals:['BFE']},D3)), base3=D3.ev.filter(e=>e.mc);
+  const A3=G.FSE.affect(D3, ev3, base3), mfc=A3.list.find(x=>x.k==='g:MFC'), orr=A3.list.find(x=>x.k==='n:o-ring');
+  is(A3.nA===11 && A3.nB===71 && mfc.a===8 && Math.abs(mfc.share-8/11)<1e-9 && Math.abs(mfc.base-8/71)<1e-9 && Math.abs(mfc.x-71/11)<1e-9,
+    '배수 = (알람 작업 중 교체 비율) ÷ (모든 작업 중 교체 비율) — MFC 8/11 ÷ 8/71 = '+(mfc&&mfc.x.toFixed(2)));
+  is(A3.list[0].k==='g:MFC' && orr && orr.x<1, '순서는 «평소보다 몇 번 더» — 건수로는 O-RING 도 많지만 배수가 1 아래라 뒤로 ('+(orr&&orr.x.toFixed(2))+'배)');
+  const ap=G.FSE.autoPick(A3, G.FSE.P());
+  is(ap.length===1 && ap[0]==='g:MFC', '자동 추천 = 두드러지고 잦은 부품만 — MFC (O-RING 은 어디서나 가는 부품이라 빠진다)');
+  G.params.rows={fse_auto_x:{value:20}}; is(G.FSE.autoPick(A3, G.FSE.P()).length===0, '자동 추천 기준(배수)은 판정 기준에서 — 20배로 올리면 아무것도 안 뽑힌다(지어내지 않는다)'); G.params.rows={};
+  const stM=G.FSE.stats(D3, ev3, D3.units, {asOf:D3.asOf, recur:30, top:5, items:['g:MFC']});
+  const stO=G.FSE.stats(D3, ev3, D3.units, {asOf:D3.asOf, recur:30, top:5, items:['n:o-ring']});
+  const st0=G.FSE.stats(D3, ev3, D3.units, {asOf:D3.asOf, recur:30, top:5, items:[]});
+  is(stM.rec.n===8 && stO.rec.n===6 && st0.rec.n===0, '교체 후 재발은 «보는 부품»을 바꾼 작업만 센다 (MFC 8 · O-RING 6 · 없음 0)');
+  const hM=G.FSE.history(D3, G.snKey('GBWS-X020')+'|Right', {axis:'code',vals:['BFE']}, ['g:MFC']);
+  const hO=G.FSE.history(D3, G.snKey('GBWS-X020')+'|Right', {axis:'code',vals:['BFE']}, ['n:o-ring']);
+  is(hM.filter(x=>x.kind==='part').every(x=>x.p.grp==='MFC') && hM.some(x=>x.kind==='alarm'&&x.ver) && hO.filter(x=>x.kind==='alarm').every(x=>!x.ver),
+    '이력 — 보는 부품만 · 당시 MFC 버전은 보는 부품에 MFC 가 있을 때만');
+  const g20=hM.find(x=>x.kind==='alarm'&&x.date==='2026-09-20');
+  is(g20 && g20.gap===13, '이력 «직전 교체 후» 도 보는 부품 기준 (MFC 9/7 → 9/20 = 13일)'); }
+/* 설비 속성을 설비마다 한 줄로(fse_units) 받아도 같은 결과 — 행에서 그 열을 빼고 단위 지도에서 입힌다 */
+{ const UNITC=G.FSE.UNIT, keys=Object.keys(G.SM.SPEC.fse.fields);
+  const keep=keys.filter(k=>G.FSE.READ.indexOf(k)>=0).map(k=>[].concat(G.SM.SPEC.fse.fields[k])[0]);
+  const hdr=back[0], idx=hdr.map((h,i)=>keep.indexOf(h)>=0?i:-1).filter(i=>i>=0);
+  const slim=back.map(r=>idx.map(i=>r[i]));
+  /* fse_units 가 돌려주는 꼴([sn, chamber, last_row, site, fab, grp1, det1, btype, model, code, turn_on]) → GST.FSE.units 와 같은 합치기 */
+  const um={}; const col=k=>hdr.indexOf([].concat(G.SM.SPEC.fse.fields[k])[0]);
+  back.slice(1).forEach((r,ri)=>{ const sn=r[col('sn')]; if(!G.snKey(sn)) return; const k=G.snKey(sn)+'|'+G.FSE.CH(r[col('chamber')]); const o=um[k]||(um[k]={});
+    [['site','site'],['fab','fab'],['g1','grp1'],['d1','det1'],['btype','btype'],['model','model'],['code','code'],['turnOn','turnOn']].forEach(a=>{ const v=r[col(a[1])]; if(v!=null&&String(v).trim()!=='') o[a[0]]=String(v).trim(); }); });
+  const Da=G.FSE.parse(back,{org:snk=>INST[snk]||null}), Db=G.FSE.parse(slim,{org:snk=>INST[snk]||null, units:um});
+  const pick=U=>[U.fab,U.d1,U.g1,U.btype,U.model,U.turnOn,U.utype,U.fabIn].join('|');
+  is(slim[0].length===G.FSE.READ.length && UNITC.every(k=>slim[0].indexOf([].concat(G.SM.SPEC.fse.fields[k])[0])<0), '행에서 설비 속성 열을 뺀 꼴 ('+slim[0].length+'열)');
+  is(Object.keys(Da.units).length===Object.keys(Db.units).length && Object.keys(Da.units).every(u=>pick(Da.units[u])===pick(Db.units[u])) && Da.ev.length===Db.ev.length && Da.parts.length===Db.parts.length,
+    '설비 속성을 설비마다 한 줄로 받아도 설비·알람·부품이 한 자리도 안 바뀐다'); }
+/* dbRows — opt.fields 면 그 열만 고른다(나머지 표는 지금처럼 전부) */
+{ const sel=[]; const N=3;
+  const mk=()=>({ rpc: async()=>({data:Object.keys(G.SM.SPEC.fse.fields).map(G._snake).concat(['src_row','extra']), error:null}),
+    from(t){ if(t==='sheet_sync_log') return { select:()=>({ eq:()=>({ maybeSingle: async()=>({data:{rows:N, err:null, synced_at:'2026-10-01T00:00:00Z', ms:-1}}) }) }) };
+      const st={s:'', a:null, b:null, lo:-1, hi:1e9, desc:false};
+      const q={ select:(x)=>{ st.s=x; sel.push(x); return q; }, gte:(c,v)=>{ st.lo=v; return q; }, lt:(c,v)=>{ st.hi=v; return q; },
+        order:(c,o)=>{ st.desc=!!(o&&o.ascending===false); return q; }, range:(a,b)=>{ st.a=a; st.b=b; return q; }, limit:(n)=>{ st.a=0; st.b=n-1; return q; },
+        then:(res)=>{ let d=[0,1,2].filter(i=>i>=st.lo&&i<st.hi).map(i=>{ const o={src_row:i}; st.s.split(',').forEach(c=>{ if(c!=='src_row') o[c]='v'+i; }); return o; });
+          if(st.desc) d.reverse(); if(st.a!=null) d=d.slice(st.a, st.b+1); res({data:d, error:null}); } }; return q; } });
+  const db0=G.db; G.db=async()=>mk();
+  let r1=null, err=''; try{ r1=await G.dbRows('fse',{fields:G.FSE.READ}); }catch(e){ err=String(e&&e.message||e); }
+  const full=sel.filter(x=>x!=='src_row').pop()||'';
+  is(r1 && r1.length===N+1 && /work_date/.test(full) && /part_code/.test(full) && !/remark|row_no|sd_start|extra|grp1|det1/.test(full),
+    'dbRows(fse, fields) — 이 탭이 쓰는 열만 고른다 (설비 속성·안 쓰는 열·extra 없음) '+err);
+  G.db=db0; }
+
 /* ── [6] 실제 브라우저 ───────────────────────────────────────────────────── */
 console.log('[6] 고장 분석 › 알람 분석 (실제 브라우저)');
 const q=v=>{ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
@@ -300,6 +377,17 @@ await page.click('#fk1'); await page.waitForTimeout(400);
 const mrows=await page.$$eval('.gov .gpv-t tbody tr',r=>r.length);
 is(mrows===11, 'KPI 카드를 누르면 그 11건이 목록으로 ('+mrows+')');
 await page.evaluate(()=>GST._ovClose());
+/* 보는 부품 — 이 원장은 작아(알람 작업에서 교체 3건) 자동 추천이 비어 있다 → 「함께 교체한 부품」에서 고른다 */
+const aff=await page.$$eval('#fseAffCard tbody tr',r=>r.map(x=>x.children[0].textContent.trim()));
+is(aff.length===3 && aff.some(t=>/MFC/.test(t)) && aff.some(t=>/버너 노즐/.test(t)) && aff.some(t=>/노즐 커버/.test(t)), '함께 교체한 부품 — 이 알람 작업에서 바꾼 묶음 셋 ('+aff.join(' / ')+')');
+is(/두드러진 것이 없습니다/.test(await page.textContent('#fseBar .fse-vrow')) && /자동 추천/.test(await page.textContent('#fseBar .fse-vrow')), '자동 추천이 비면 그렇게 말한다(지어내지 않는다)');
+is(/보는 부품에 MFC 묶음이 없어/.test(await page.textContent('#fseMfc')), 'MFC 카드는 보는 부품에 MFC 가 있을 때만 — 지금은 숨기고 그렇게 말한다');
+await page.click('#fseAffCard [data-fat="g:MFC"]'); await page.waitForTimeout(400);
+await page.click('#fseAffCard [data-fat="g:버너 노즐"]'); await page.waitForTimeout(400);
+const vchips=await page.$$eval('#fseBar .fse-vc',c=>c.map(x=>x.textContent.replace('✕','').trim()));
+is(vchips.join('|')==='MFC|버너 노즐' && /직접 고름/.test(await page.textContent('#fseBar .fse-vrow')), '«보기»를 누르면 보는 부품에 들어간다 → 직접 고름 ('+vchips.join('|')+')');
+const thead=await page.$$eval('#fseTopCard thead th',t=>t.map(x=>x.textContent.trim()));
+is(thead.includes('MFC') && thead.includes('MFC 교체 후') && thead.includes('버너 노즐 교체 후') && !thead.some(h=>/노즐 커버/.test(h)), '순위표 열이 보는 부품을 따른다 ('+thead.slice(7).join(' · ')+')');
 /* 순위 · 타임라인 · 이력 */
 const top=await page.$$eval('#fseTopCard tbody tr',r=>r.map(x=>[...x.children].map(c=>c.textContent.trim())));
 is(top.length===4 && top[0][1]==='GBWS-X001', '순위 첫 줄 = GBWS-X001 (S/N 단위 · 4대)');
@@ -316,6 +404,26 @@ is(/GBWS-X002/.test(await page.textContent('#fseTlCard h3')), '순위표 줄을 
 const mfc=await page.textContent('#fseMfc');
 is(/S\/N 날짜코드/.test(mfc) && /MFC 조사 대상/.test(mfc), 'MFC 판정 근거 · 조사 대상 카드');
 is(/뒤바뀐 줄 1건/.test(mfc) && /자재실적의 IN SN 으로 채웠습니다/.test(mfc), '뒤바뀜 보정·자재실적 보충을 숨기지 않고 적는다');
+/* 알람마다 따로 기억 — 다른 알람으로 가면 그 알람의 보는 부품(자동), 돌아오면 고른 것이 그대로 */
+await page.click('#fseBar .fse-chip[data-fv="BFE"]'); await page.waitForTimeout(300);
+await page.click('#fseBar .fse-chip[data-fv="LWA"]'); await page.waitForTimeout(400);
+is(await page.$$eval('#fseBar .fse-vc',c=>c.length)===0 && /자동 추천/.test(await page.textContent('#fseBar .fse-vrow')), '다른 알람(LWA)은 따로 — 자동 추천(빈칸)');
+await page.click('#fseBar .fse-chip[data-fv="LWA"]'); await page.waitForTimeout(300);
+await page.click('#fseBar .fse-chip[data-fv="BFE"]'); await page.waitForTimeout(400);
+is((await page.$$eval('#fseBar .fse-vc',c=>c.map(x=>x.textContent.replace('✕','').trim()))).join('|')==='MFC|버너 노즐', 'BFE 로 돌아오면 골라 둔 보는 부품이 그대로');
+is(await page.evaluate(()=>{ const o=JSON.parse(localStorage.getItem('gst_fse_sel')||'{}'); return o.pv && Array.isArray(o.pv['code:BFE']) && o.pv['code:BFE'].join('|')==='g:MFC|g:버너 노즐'; }), '이 PC 에 «알람 고르기 → 보는 부품»으로 남는다');
+/* 좌우 스크롤 없음 — 페이지·표·타임라인이 화면 폭 안에 */
+const ovf=async()=>page.evaluate(()=>{ const de=document.scrollingElement||document.documentElement, out=[];
+  if(de.scrollWidth>de.clientWidth+1) out.push('page '+de.scrollWidth+'>'+de.clientWidth);
+  document.querySelectorAll('#fseSec table').forEach(t=>{ const w=t.parentElement; if(t.offsetParent && t.scrollWidth>w.clientWidth+1) out.push((w.closest('[id]')||{}).id+' '+t.scrollWidth+'>'+w.clientWidth); });
+  document.querySelectorAll('#fseSec svg').forEach(s=>{ const c=s.closest('.card'); if(c && s.getBoundingClientRect().width>c.clientWidth+1) out.push('svg '+Math.round(s.getBoundingClientRect().width)+'>'+c.clientWidth); });
+  return out; });
+await page.evaluate(()=>{ const FS=fseFS(); FS.tl='all'; fseRender(); }); await page.waitForTimeout(300);
+const o1700=await ovf();
+await page.setViewportSize({width:1280,height:1000}); await page.waitForTimeout(500); await page.evaluate(()=>fseRender()); await page.waitForTimeout(300);
+const o1280=await ovf();
+is(!o1700.length && !o1280.length, '좌우 스크롤 없음 — 1700·1280 폭에서 페이지·표·타임라인이 넘치지 않는다 '+JSON.stringify(o1700.concat(o1280)));
+await page.setViewportSize({width:1700,height:1200}); await page.waitForTimeout(300);
 /* 엑셀 */
 const [dl]=await Promise.all([page.waitForEvent('download',{timeout:20000}).catch(()=>null), page.click('#fseTopCard [data-fx="top"]')]);
 is(dl && /^alarm_rank_2026-09-15\.xlsx$/.test(dl.suggestedFilename()), '순위표 엑셀 받기 ('+(dl&&dl.suggestedFilename())+')');
@@ -345,7 +453,23 @@ await page.fill('.gov #fsePg','노즐 커버'); await page.click('.gov [data-pa=
 const last=await page.$eval('.gov #fsePt tbody tr:last-child',tr=>({g:tr.querySelector('[data-pf="grp"]').value, c:tr.querySelector('[data-pf="code"]').value, l:tr.querySelector('[data-pf="label"]').value, d:tr.dataset.dirty, pid:tr.dataset.pid}));
 is(last.g==='노즐 커버' && last.c==='P-CV-7' && last.l==='NOZZLE COVER SUS' && last.d==='1' && last.pid==='', '«묶음에 넣기» → 새 줄(묶음 · 코드 · 표시 이름 = 품목명) · 저장 전 표시');
 is(!(await page.$('.gov [data-pa="put"][data-code="P-CV-7"]')), '넣은 품목은 «이미 있음»으로 바뀐다(두 번 못 넣는다)');
-await page.evaluate(()=>GST._ovClose());
+/* 저장 — 머리에 결과를 적고 화면을 다시 그린다 · 묶음 이름을 나누면(MFC → LNG MFC · O2 MFC) 기억해 둔 보는 부품도 따라간다 */
+await page.evaluate(()=>{ window.__upd=[]; GST._dbAuthed=async()=>({ from(t){ const q={ _o:null, _id:null,
+    update(o){ q._o=o; return q; }, insert(o){ q._o=o; q._id=99; return q; }, eq(c,v){ q._id=v; return q; },
+    select(){ window.__upd.push({id:q._id, grp:q._o.grp}); const r=GST.__REG.find(x=>x.id===q._id); if(r) Object.assign(r,q._o); else GST.__REG.push(Object.assign({id:q._id},q._o));
+      return Promise.resolve({data:[{id:q._id}], error:null}); } }; return q; } }); });
+const setG=async(code,g)=>page.evaluate(([c,g])=>{ const tr=[...document.querySelectorAll('.gov #fsePt tbody tr')].find(t=>t.querySelector('[data-pf="code"]').value===c);
+  const i=tr.querySelector('[data-pf="grp"]'); i.value=g; i.dispatchEvent(new Event('input',{bubbles:true})); },[code,g]);
+await setG('P-MFC-LM','LNG MFC'); await setG('P-MFC-OK','O2 MFC');
+await page.click('.gov [data-pa="save"]'); await page.waitForTimeout(800);
+const stt=await page.textContent('.gov #fsePtSt');
+is(/3줄 저장했습니다/.test(stt), '저장 결과를 머리(저장 단추 옆)에 적는다 — «'+stt.trim()+'» (넣은 노즐 커버 줄 + 이름 바꾼 두 줄)');
+is(await page.evaluate(()=>window.__upd.length)===3, '바뀐 줄만 보낸다 (3줄)');
+await page.evaluate(()=>GST._ovClose()); await page.waitForTimeout(300);
+const vc2=await page.$$eval('#fseBar .fse-vc',c=>c.map(x=>x.textContent.replace('✕','').trim()));
+is(vc2.join('|')==='LNG MFC|O2 MFC|버너 노즐', '묶음을 나눴더니 보는 부품의 «MFC» 가 «LNG MFC · O2 MFC» 로 ('+vc2.join('|')+')');
+is((await page.$$eval('#fseTopCard tbody tr',r=>r[0]?[...r[0].children].map(c=>c.textContent).join(' '):'')).match(/F1/) && /S\/N 날짜코드/.test(await page.textContent('#fseMfc')),
+  '«LNG MFC» 로 나눠도 순위표·MFC 카드의 버전 판정이 그대로 선다');
 /* 언어 */
 await page.evaluate(()=>window.setLang&&window.setLang('en')); await page.waitForTimeout(600);
 /* 카드 내보내기 단추(core capBtns)는 이 탭의 문구가 아니다 — 빼고 본다 */
