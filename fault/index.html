@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=185"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=186"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -182,6 +182,15 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 .fse-tn{fill:var(--txt-main);font-size:10px;font-weight:700}
 .fse-tbm{fill:var(--txt-muted,var(--mut));color:var(--txt-muted,var(--mut));font-size:10px}
 .fse-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--txt-2,var(--mut));margin-top:6px}
+.fse-tlch{fill:var(--txt-main);font-weight:700;font-size:11.5px}
+.fse-vt{fill:var(--txt-main);font-size:10.5px;font-weight:650;pointer-events:none}
+.fse-vline{stroke:var(--gold,#B8862F);stroke-dasharray:3 3;stroke-opacity:.85}
+.fse-vchip{fill:color-mix(in srgb,var(--gold,#B8862F) 9%,transparent);stroke:color-mix(in srgb,var(--gold,#B8862F) 40%,transparent)}
+.fse-vct{fill:var(--txt-2,var(--mut));font-size:11px}
+.fse-vca{fill:var(--gold,#B8862F);font-weight:700}
+.fse-legv i{display:inline-block;width:20px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:6px;opacity:.8}
+.fse-legv i.est{background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--txt-muted,#8A97B4) 70%,transparent) 0 2px,transparent 2px 6px);border:1px solid var(--txt-muted,#8A97B4);opacity:1}
+.fse-legchg{color:var(--gold,#B8862F)}
 .fse-h-alarm td:nth-child(3){color:var(--bad);font-weight:700}
 .fse-hb{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:12px}
 .fse-hb .nm{width:130px;color:var(--txt-2,var(--mut));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -228,7 +237,7 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 .fse-mfcoff{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--txt-2,var(--mut))}
 @media(max-width:1100px){#fseMfc{grid-template-columns:1fr}.fse-pri{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=185">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=186">
 </head>
 <body>
 
@@ -685,7 +694,7 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 </div>
 
 <script>
-GST.needVer&&GST.needVer(184);   // instIndex 설비 제원·FSE.READ 수량(v192 · 백데이터 엑셀) · GST.FSE.affect·autoPick·units·READ(v191 · 보는 부품) · GST.FSE·fseT(v189 · 알람 분석) · GST.chartLayout(v174) · GST.kpiDrill 배지 모드 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(186);   // GST.FSE.verAt·verSegs(v193 · MFC 버전 띠) · instIndex 설비 제원·FSE.READ 수량(v192 · 백데이터 엑셀) · GST.FSE.affect·autoPick·units·READ(v191 · 보는 부품) · GST.FSE·fseT(v189 · 알람 분석) · GST.chartLayout(v174) · GST.kpiDrill 배지 모드 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -1129,6 +1138,10 @@ async function loadData(){ GST.skeleton(true);
     status.textContent=GST.okText ? GST.okText(ROWS.length.toLocaleString()) : '✅ '+new Date().toLocaleString('ko-KR');   // 행 수는 관리자에게만(v179)
     if(fetched.cached){status.textContent=GST.staleText(fetched.ageMin);status.style.color='#fbbf24';}
     _faultReady&&_faultReady();            // 알람 분석이 설치현황 조인을 기다린다(v189)
+    /* 자재실적이 뒤에서 마저 오면(첫 그림은 최근 12개월 · v127) 알람 분석의 MFC S/N 보충을 처음부터 다시 한다(v193) —
+       첫 보충은 창 안의 자재 줄만 봐서 창 밖 교체의 S/N 을 못 찾고 «확인 필요»로 남겼다. */
+    try{ if(typeof FSEX!=='undefined' && FSEX.D && GST.FSE.reenrich){ GST.FSE.reenrich(FSEX.D, fseMats()); if(document.body.dataset.secOn==='alarm') fseRender(); } }
+    catch(e2){ console.warn('[알람 분석] S/N 보충 다시 하기', e2); }
   }catch(e){ GST.skeleton(false); _faultReady&&_faultReady();
     status.className='status err'; status.textContent='❌ '+GST.failNote(e);   // 부류별 한 줄 · 원문은 관리자에게만(v135)
   }
@@ -2971,6 +2984,15 @@ function fseTop(D, FS, rank, y, perOn, P, evsAll){
 
 /* 타임라인 — 고른 설비의 챔버마다 한 줄: 위 = 달별 알람(원 크기), 아래 = 관심 부품 교체 기호 · TBM */
 const FSE_SYM=['▲','◆','■','●','★','✚'];
+/* MFC 버전 색 — 같은 버전은 어느 설비에서나 같은 색(띠·범례). 판정은 GST.FSE.ver(정본) · 여기는 «색과 이름»뿐이다 */
+const FSE_VC={'MRC G':'#7F8BA6','MRC F':'#36C2B4','MRC F1':'#5B8CFF','MKP R0':'#A67CFF','MKP R1':'#E8A25A','MKP R2':'#E0609A','HORIBA':'#C9A86A'};
+const fseVc=v=>FSE_VC[v]||'#6B768F';
+const fseVName=v=>String(v||'—');   /* 버전 이름은 core 가 제조사째 낸다(«MRC F1» · «MKP R1») */
+const fseVEst=v=>v && v.how!=='sn' && v.how!=='na' && v.how!=='etc';          // S/N 날짜코드가 아니면 «추정»(빗금)
+const fseVs=v=>{ const h=v&&v.how; if(h==='sn') return ft('vs_sn'); if(h==='date') return ft('vs_date'); if(h==='datel') return ft('vs_datel');
+  if(h==='fabin'||h==='turnon'||h==='dragon'||h==='q'||h==='mk') return ft('vs_'+h); return ''; };
+/* 글자 폭 어림(SVG 문자열을 만들 때는 잴 수 없다) — 한글·한자·가나는 글자 크기만큼, 나머지는 0.58 */
+const fseTw=(t,fs)=>{ let w=0; for(const ch of String(t)) w+=/[\u1100-\u11ff\u3000-\u9fff\uac00-\ud7af\uff00-\uffef]/.test(ch)?fs:fs*.58; return w; };
 function fseTl(D, FS, rank){
   const card=document.getElementById('fseTlCard'), hc=document.getElementById('fseHistCard'); if(!card||!hc) return;
   let o=rank.find(r=>r.k===FS.sel);
@@ -2983,31 +3005,110 @@ function fseTl(D, FS, rank){
   const sn=D.units[us[0]].sn, TH=GST.chartTheme();
   const end=D.asOf.slice(0,7), start=FS.tl==='all'?D.minDate.slice(0,7):(()=>{ const [yy,mm]=end.split('-').map(Number); const d=new Date(Date.UTC(yy,mm-1-23,1)); return d.toISOString().slice(0,7); })();
   /* 폭은 카드에 맞춘다(v191 · 사용자 「좌우 스크롤은 아니다 — 표랑 차트 폭을 화면에 맞춰야지」) — 달이 많으면 칸이 좁아지고 이름표를 건너뛴다 */
-  const M=GST.FSE.months(start+'-01', end+'-01'), x0=86, laneH=74;
+  const M=GST.FSE.months(start+'-01', end+'-01'), x0=86;
   const avail=Math.max(320, (card.clientWidth||0)-44);
-  const cw=Math.max(6, Math.min(28, (avail-x0-10)/Math.max(1,M.length))), W=Math.round(x0+M.length*cw+10), H=24+us.length*laneH+20;
+  const cw=Math.max(6, Math.min(28, (avail-x0-10)/Math.max(1,M.length))), W=Math.round(x0+M.length*cw+10);
   const step=[1,2,3,6,12,24].find(k=>k*cw>=34)||24;
   const vk=(FSEX.view&&FSEX.view.keys)||[];
   const gcol=k=>TH.pal[(vk.indexOf(k)+1)%TH.pal.length];
   const gsym=k=>FSE_SYM[vk.indexOf(k)%FSE_SYM.length];
-  let s='';
-  M.forEach((m,i)=>{ const cx=x0+cw*i+cw/2; if(i%step===0||i===M.length-1) s+='<text x="'+cx+'" y="'+(H-6)+'" text-anchor="middle" class="fse-tt">'+m.slice(2)+'</text>';
-    if(cw>=10||i%step===0) s+='<line x1="'+cx+'" x2="'+cx+'" y1="16" y2="'+(H-18)+'" class="fse-tg"/>'; });
   const idx={}; M.forEach((m,i)=>idx[m]=i);
-  us.forEach((u,li)=>{
-    const U=D.units[u], yc=24+li*laneH, ya=yc+16, yp=yc+46;
-    s+='<text x="4" y="'+(ya+4)+'" class="fse-tl">'+fseEsc((U.ch||'—')+' · '+ft('tl_alarm'))+'</text><text x="4" y="'+(yp+4)+'" class="fse-tl">'+fseEsc(ft('tl_part'))+'</text>';
-    s+='<line x1="'+x0+'" x2="'+(W-6)+'" y1="'+(yc+31)+'" y2="'+(yc+31)+'" class="fse-tg"/>';
-    const am={}; D.ev.forEach(e=>{ if(e.u===u&&e.alarm&&GST.FSE.match(e,FS,D)&&idx[e.ym]!=null){ (am[e.ym]=am[e.ym]||[]).push(e); } });
+  /* MFC 버전 띠 (v193 · 사용자 「정상 가동 때 MFC 버전이 뭐였고 이후가 뭐였는지 · 알람 당시 무엇을 썼는지」 → 시안 A 확정).
+     «보는 부품»에 MFC 묶음이 있을 때만, 그 유체만 띠가 선다(MFC 카드와 같은 규칙 · fseVFl). 구간의 버전은 GST.FSE.verSegs → ver() 그대로다.
+     없으면 지금까지의 그림과 한 글자도 다르지 않다. */
+  const P=GST.FSE.P(), vfl=fseVFl(D, vk), sel=FS;
+  const dx=d=>{ if(!d) return null; const ym=d.slice(0,7); if(ym<M[0]) return x0; if(ym>M[M.length-1]) return x0+cw*M.length;
+    const y=+d.slice(0,4), mo=+d.slice(5,7), day=+d.slice(8,10)||1, dim=new Date(Date.UTC(y,mo,0)).getUTCDate(); return x0+cw*(idx[ym]+(day-1)/dim); };
+  const xEnd=Math.min(x0+cw*M.length, dx(GST.FSE.addDays(D.asOf,1))||x0+cw*M.length);
+  /* 전후 요약 — 마지막 교체 전·후(전 기간 · 같은 알람 고르기) · 교체가 없으면 «교체 기록 없음». 한 줄에 안 들어가면 비교를 다음 줄로(버리지 않는다) */
+  const mo=(x,y)=>Math.max(0,Math.round((GST.FSE.daysBetween(x,y)||0)/30.44*10)/10);
+  const sumOf=(u,f,sg,alAll)=>{ const U=D.units[u], n=sg.length;
+    const A=sg[n-2], B=sg[n-1], st=A.from||[D.minDate, U.fabIn||''].sort().pop()||D.minDate;
+    const na=alAll.filter(e=>(!A.from||e.date>A.from)&&e.date<=B.from).length, nb=alAll.filter(e=>e.date>B.from).length;
+    return { t1:ft('tl_vchg',{f, a:fseVName(A.v.ver), b:fseVName(B.v.ver), d:B.from.slice(2)}),
+             t2:ft('tl_vcmp',{a:A.v.ver, na:fseN(na), ma:mo(st,B.from), b:B.v.ver, nb:fseN(nb), mb:mo(B.from,D.asOf)}) }; };
+  const LN=us.map(u=>{ const fl=vfl.filter(f=>{ const h=GST.FSE.ver(D,u,f,null,P).how; return h!=='na'&&h!=='etc'; });
+    const segs=fl.map(f=>GST.FSE.verSegs(D,u,f,P)), alAll=fl.length?D.ev.filter(e=>e.u===u&&e.alarm&&GST.FSE.match(e,sel,D)):[];
+    /* 교체한 유체는 칩 하나씩 · 교체가 없는 유체는 한 칩에 모은다(«LNG MFC MRC G · O2 MFC MRC F · 교체 기록 없음») */
+    const sums=[]; const none=[];
+    fl.forEach((f,fi)=>{ if(segs[fi].length<2) none.push(ft('tl_mfc',{f})+' '+fseVName(segs[fi][0].v.ver)); else sums.push(sumOf(u,f,segs[fi],alAll)); });
+    if(none.length) sums.push({ t1:ft('tl_vnone',{v:none.join(' · ')}), t2:'' });
+    sums.forEach(o=>{ o.one=fseTw(o.t1,11)+(o.t2?fseTw(o.t2,11)+12:0)+24<=W-x0-8; });
+    return { u, fl, segs, sums }; });
+  const usedV={}; let anyEst=false, anyChg=false;
+  /* 레인 높이 — 띠가 없으면 지금 그대로(74) · 있으면 요약 줄(유체마다)·띠(유체마다)만큼 늘어난다 */
+  let yTop=24; LN.forEach(o=>{ const n=o.fl.length; o.y=yTop;
+    if(!n){ o.ya=yTop+16; o.yp=yTop+46; o.h=74; }
+    else { o.yc=yTop+12; o.ya=yTop+o.sums.reduce((a,x)=>a+(!x.one&&x.t2?42:22),0)+20; o.yb=o.ya+24; o.yp=o.yb+n*21+12; o.h=o.yp+26-yTop; }
+    yTop+=o.h; });
+  const H=yTop+20;
+  let s='';
+  /* 달 이름표 — 마지막 달은 늘 적고, 그 바로 앞의 정규 눈금이 겹치면 건너뛴다(«26-0826-09») */
+  M.forEach((m,i)=>{ const cx=x0+cw*i+cw/2, last=M.length-1; if(i===last||(i%step===0&&(last-i)*cw>=34)) s+='<text x="'+cx+'" y="'+(H-6)+'" text-anchor="middle" class="fse-tt">'+m.slice(2)+'</text>';
+    if(cw>=10||i%step===0) s+='<line x1="'+cx+'" x2="'+cx+'" y1="16" y2="'+(H-18)+'" class="fse-tg"/>'; });
+  let defs='';
+  const hid=v=>{ const k='fseVh'+Object.keys(FSE_VC).concat(['_']).indexOf(FSE_VC[v]?v:'_'); return k; };
+  LN.forEach((o,li)=>{
+    const u=o.u, U=D.units[u], ya=o.ya, yp=o.yp, band=o.fl.length>0;
+    const am={}; D.ev.forEach(e=>{ if(e.u===u&&e.alarm&&GST.FSE.match(e,sel,D)&&idx[e.ym]!=null){ (am[e.ym]=am[e.ym]||[]).push(e); } });
+    if(!band){
+      s+='<text x="4" y="'+(ya+4)+'" class="fse-tl">'+fseEsc((U.ch||'—')+' · '+ft('tl_alarm'))+'</text><text x="4" y="'+(yp+4)+'" class="fse-tl">'+fseEsc(ft('tl_part'))+'</text>';
+      s+='<line x1="'+x0+'" x2="'+(W-6)+'" y1="'+(ya+15)+'" y2="'+(ya+15)+'" class="fse-tg"/>';
+    } else {
+      s+='<text x="4" y="'+(o.yc+4)+'" class="fse-tl fse-tlch">'+fseEsc(U.ch||'—')+'</text>';
+      s+='<text x="4" y="'+(ya+4)+'" class="fse-tl">'+fseEsc(ft('tl_alarm'))+'</text><text x="4" y="'+(yp+4)+'" class="fse-tl">'+fseEsc(ft('tl_part'))+'</text>';
+      s+='<line x1="'+x0+'" x2="'+(W-6)+'" y1="'+(ya+15)+'" y2="'+(ya+15)+'" class="fse-tg"/>';
+      let yc=o.yc;
+      o.fl.forEach((f,fi)=>{
+        const sg=o.segs[fi], yb=o.yb+fi*21;
+        s+='<text x="4" y="'+(yb+11)+'" class="fse-tl">'+fseEsc(ft('tl_mfc',{f}))+'</text>';
+        /* 띠 — 구간마다 버전 색 · 추정(S/N 이 아닌 판정)은 빗금 */
+        sg.forEach((g,gi)=>{ const v=g.v, a=g.from?dx(g.from):x0, z=g.to?dx(g.to):xEnd; if(z<=x0||a>=xEnd||z-a<0.5) return;
+          const c=fseVc(v.ver), est=fseVEst(v), w=z-a; usedV[v.ver]=1; if(est) anyEst=true;
+          const how=fseVs(v), nm=fseVName(v.ver), tt=ft('tl_seg',{f, v:nm, a:g.from||ft('tl_start'), b:g.to||ft('tl_now'), how:how+(v.sn?' '+v.sn:'')});
+          s+='<g class="fse-vseg" data-f="'+fseEsc(f)+'" data-v="'+fseEsc(v.ver)+'"><title>'+fseEsc(tt)+'</title><rect x="'+a.toFixed(1)+'" y="'+yb+'" width="'+w.toFixed(1)+'" height="15" rx="4" fill="'+(est?'url(#'+hid(v.ver)+')':c)+'" fill-opacity="'+(est?1:.32)+'" stroke="'+c+'" stroke-opacity=".9"/>';
+          const lab=nm+' · '+how;
+          if(w>fseTw(lab,10.5)+14) s+='<text x="'+(a+7).toFixed(1)+'" y="'+(yb+11)+'" class="fse-vt">'+fseEsc(lab)+'</text>';
+          else if(w>fseTw(nm,10.5)+10) s+='<text x="'+(a+5).toFixed(1)+'" y="'+(yb+11)+'" class="fse-vt">'+fseEsc(nm)+'</text>';
+          s+='</g>';
+          /* 교체선 — 알람 줄부터 이 띠까지(교체일 위치) */
+          if(gi>0 && a>x0 && a<xEnd){ anyChg=true; const pv=sg[gi-1].v;
+            s+='<g class="fse-vchg"><title>'+fseEsc(ft('tl_mfc',{f})+' · '+g.from+' · '+fseVName(pv.ver)+' → '+nm+(v.sn?' · '+v.sn:''))+'</title>'
+              +'<line x1="'+a.toFixed(1)+'" x2="'+a.toFixed(1)+'" y1="'+(ya-13)+'" y2="'+(yb+15)+'" class="fse-vline"/><rect x="'+(a-4).toFixed(1)+'" y="'+(ya-13)+'" width="8" height="'+(yb+28-ya)+'" fill="transparent"/></g>'; }
+        });
+      });
+      /* 요약 칩 — 바뀐 것(금색) 옆에 전후 비교 · 한 줄에 안 들어가면 비교는 칩 안의 다음 줄(버리지 않는다) */
+      o.sums.forEach(sm=>{ const w1=fseTw(sm.t1,11)+22, wF=sm.one?w1+(sm.t2?fseTw(sm.t2,11)+12:0):Math.max(w1, fseTw(sm.t2,11)+22), two=!sm.one&&sm.t2;
+        s+='<g class="fse-vsum"><title>'+fseEsc(sm.t1+(sm.t2?'    '+sm.t2:''))+'</title><rect x="'+x0+'" y="'+(yc-12)+'" width="'+wF.toFixed(0)+'" height="'+(two?37:19)+'" rx="9.5" class="fse-vchip"/>'
+          +'<text x="'+(x0+11)+'" y="'+(yc+1.5)+'" class="fse-vct"><tspan class="fse-vca">'+fseEsc(sm.t1)+'</tspan>'+(sm.one&&sm.t2?'<tspan dx="12">'+fseEsc(sm.t2)+'</tspan>':'')+'</text>'
+          +(two?'<text x="'+(x0+11)+'" y="'+(yc+18.5)+'" class="fse-vct">'+fseEsc(sm.t2)+'</text>':'')+'</g>';
+        yc+=two?42:22; });
+    }
+    /* 알람 원 — 말풍선(title)에 «당시» 버전과 직전 교체 후 며칠 (띠가 있을 때) */
     Object.keys(am).forEach(k=>{ const n=am[k].length, cx=x0+cw*idx[k]+cw/2, r=Math.min(12,cw*.55+2,5+2.4*Math.sqrt(n));
-      s+='<g><title>'+fseEsc(k+' · '+n+' · '+am[k].map(e=>e.date+' '+(e.msg||e.code)).join(' | ').slice(0,300))+'</title><circle cx="'+cx+'" cy="'+ya+'" r="'+r+'" fill="'+TH.status.bad+'" fill-opacity=".22" stroke="'+TH.status.bad+'"/>'
+      const lines=am[k].map(e=>{ let t=e.date+' '+(e.msg||e.code);
+        if(band){ t+=' — '+ft('tl_at',{v:o.fl.map(f=>ft('tl_mfc',{f})+' '+fseVName(GST.FSE.verAt(D,u,f,e.date,P).ver)).join(' · ')});
+          o.fl.forEach((f,fi)=>{ const b=o.segs[fi].filter(g=>g.from&&g.from<e.date).pop(); if(b) t+=' · '+ft('tl_since',{f, n:fseN(GST.FSE.daysBetween(b.from,e.date))}); }); }
+        return t; });
+      s+='<g><title>'+fseEsc(k+' · '+n+' · '+lines.join(' | ').slice(0,band?900:300))+'</title><circle cx="'+cx+'" cy="'+ya+'" r="'+r+'" fill="'+TH.status.bad+'" fill-opacity=".22" stroke="'+TH.status.bad+'"/>'
         +'<text x="'+cx+'" y="'+(ya+3.5)+'" text-anchor="middle" class="fse-tn">'+n+'</text></g>'; });
-    const pm={}; vk.forEach(g=>{ ((D.pi&&D.pi[u]&&D.pi[u][g])||[]).forEach(p=>{ const k=p.date.slice(0,7); if(idx[k]==null) return; ((pm[k]=pm[k]||{})[g]=pm[k][g]||[]).push(p); }); });
+    /* 부품 줄 — 띠로 그린 MFC 교체(그 유체)는 띠의 경계가 대신한다 */
+    const pm={}; vk.forEach(g=>{ ((D.pi&&D.pi[u]&&D.pi[u][g])||[]).forEach(p=>{ if(band && p.fluid && o.fl.indexOf(p.fluid)>=0 && GST.FSE.isMfcGrp(p.grp)) return;
+      const k=p.date.slice(0,7); if(idx[k]==null) return; ((pm[k]=pm[k]||{})[g]=pm[k][g]||[]).push(p); }); });
     Object.keys(pm).forEach(k=>{ const gs=Object.keys(pm[k]); gs.forEach((g,gi)=>{ const cx=x0+cw*idx[k]+cw/2, yy=yp-6+gi*11;
       s+='<text x="'+cx+'" y="'+yy+'" text-anchor="middle" style="fill:'+gcol(g)+';font-size:12px"><title>'+fseEsc(GST.FSE.ilabel(D,g)+' · '+pm[k][g].map(p=>p.date+' '+GST.FSE.pname(p)+(p.mfcIn?' ('+p.mfcIn+')':'')).join(' | '))+'</title>'+gsym(g)+'</text>'; }); });
     D.ev.forEach(e=>{ if(e.u===u&&e.mc==='TBM'&&idx[e.ym]!=null){ const cx=x0+cw*idx[e.ym]+cw/2; s+='<text x="'+cx+'" y="'+(yp+22)+'" text-anchor="middle" class="fse-tbm"><title>TBM '+e.date+'</title>▼</text>'; } });
   });
-  const leg=vk.map(g=>'<span><b style="color:'+gcol(g)+'">'+gsym(g)+'</b> '+fseEsc(GST.FSE.ilabel(D,g))+'</span>').join('')+'<span><b class="fse-tbm">▼</b> '+fseEsc(ft('tl_tbm'))+'</span>';
+  /* 빗금 무늬 — 쓰인 버전 색마다 한 벌 */
+  Object.keys(usedV).forEach(v=>{ const c=fseVc(v); defs+='<pattern id="'+hid(v)+'" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="'+c+'" fill-opacity=".18"/><line x1="0" y1="0" x2="0" y2="6" stroke="'+c+'" stroke-opacity=".6" stroke-width="2"/></pattern>'; });
+  if(defs) s='<defs>'+defs+'</defs>'+s;
+  /* 범례 — MFC 띠로 그린 유체의 묶음은 기호 대신 버전 색으로 */
+  const bandG=g=>LN.some(o=>o.fl.length) && GST.FSE.isMfcKey(g) && !LN.some(o=>((D.pi&&D.pi[o.u]&&D.pi[o.u][g])||[]).some(p=>!(p.fluid&&o.fl.indexOf(p.fluid)>=0)));
+  const vOrder=Object.keys(FSE_VC).concat(Object.keys(usedV).filter(v=>!FSE_VC[v]));
+  const leg=vOrder.filter(v=>usedV[v]).map(v=>'<span class="fse-legv"><i style="background:'+fseVc(v)+'"></i>'+fseEsc(fseVName(v))+'</span>').join('')
+    +(anyEst?'<span class="fse-legv"><i class="est"></i>'+fseEsc(ft('leg_est'))+'</span>':'')
+    +(anyChg?'<span><b class="fse-legchg">┆</b> '+fseEsc(ft('leg_chg'))+'</span>':'')
+    +vk.filter(g=>!bandG(g)).map(g=>'<span><b style="color:'+gcol(g)+'">'+gsym(g)+'</b> '+fseEsc(GST.FSE.ilabel(D,g))+'</span>').join('')+'<span><b class="fse-tbm">▼</b> '+fseEsc(ft('tl_tbm'))+'</span>';
   card.innerHTML='<div class="trend-header fse-th"><h3>'+fseEsc(ft('c_tl'))+' <span class="fse-sub2">'+fseEsc(sn)+'</span></h3><div class="fse-tools">'
     +fseSeg('tl',[['24',ft('tl_24')],['all',ft('tl_all')]],FS.tl,'ftl')+'</div></div>'
     +'<div class="fse-tlw"><svg width="100%" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMinYMin meet" role="img" aria-label="'+fseEsc(ft('c_tl')+' '+sn)+'">'+s+'</svg></div>'
@@ -3046,7 +3147,7 @@ function fseMfc(D, FS, evs, units, rank, P, y){
   /* 버전별 */
   let bars='';
   if(FS.verMode==='at'){
-    const c={}; evs.forEach(e=>{ const U=D.units[e.u]; if(!U||['OLD','GLOBAL','DRAGON'].indexOf(U.utype)<0) return; const v=F2.ver(D,e.u,fluid,e.date,P).ver; c[v]=(c[v]||0)+1; });
+    const c={}; evs.forEach(e=>{ const U=D.units[e.u]; if(!U||['OLD','GLOBAL','DRAGON'].indexOf(U.utype)<0) return; const v=F2.verAt(D,e.u,fluid,e.date,P).ver; c[v]=(c[v]||0)+1; });   /* 알람 «당시» = 그날 아침(같은 날 교체는 뒤 · v193) */
     const tot=Object.values(c).reduce((a,b)=>a+b,0)||1, L=Object.keys(c).sort((a,b)=>c[b]-c[a]);
     bars=L.map(v=>fseBarRow(v, c[v]/tot, ft('ver_lab_at',{n:fseN(c[v]), s:Math.round(c[v]/tot*100)+'%'}))).join('');
   } else {
@@ -3057,9 +3158,10 @@ function fseMfc(D, FS, evs, units, rank, P, y){
   /* 판정 근거 — 관리 설비 × 유체 */
   const how={}; let q=0, nAll=0;
   mu.forEach(u=>F2.FLUIDS.forEach(f=>{ const v=F2.ver(D,u,f,null,P); if(v.how==='na'||v.how==='etc') return; nAll++; how[v.how]=(how[v.how]||0)+1; if(v.q) q++; }));
-  const HO=['sn','date','fabin','turnon','dragon','q'];
-  const hb=HO.filter(h=>how[h]).map(h=>fseBarRow(ft('how_'+h), how[h]/(nAll||1), fseN(how[h])+' · '+Math.round(how[h]/(nAll||1)*100)+'%')).join('')
-    +(q?fseBarRow(ft('how_amb'), q/(nAll||1), fseN(q)+' · '+Math.round(q/(nAll||1)*100)+'%', true):'');
+  /* «확인 필요(두 버전 중 하나)» 막대는 없앴다(v193) — S/N 없이 새 버전 뒤에 바꾼 줄도 교체 리드타임으로 추정한다(사용자 버전표와 같은 방식).
+     판정이 정말 안 되는 것(반입일·제조사 없음)만 붉게 남는다 */
+  const HO=['sn','date','datel','fabin','turnon','dragon','q','mk'];
+  const hb=HO.filter(h=>how[h]).map(h=>fseBarRow(ft('how_'+h), how[h]/(nAll||1), fseN(how[h])+' · '+Math.round(how[h]/(nAll||1)*100)+'%', h==='q'||h==='mk')).join('');
   const notes=[D.swapped?ft('swap',{n:fseN(D.swapped)}):'', D.enriched?ft('src_mat',{n:fseN(D.enriched)}):''].filter(Boolean);
   /* 우선순위 — S/N 단위: 1 = 순위표 상위 N · 2 = 기간 내 1회 이상 · 3 = 그 밖 관리 설비 */
   const snRank=FS.unit==='sn'?rank:(()=>{ const m={}; rank.forEach(r=>{ const s=D.units[r.k].snk; if(!m[s]) m[s]=r; }); return Object.values(m); })();
@@ -3095,7 +3197,7 @@ async function fseExport(kind, list, y, perOn, ctx){
   try{ await GST.xlsxLibLoad(); }catch(e){ GST.capToast&&GST.capToast(String(e&&e.message||e)); return; }
   const vk=(FSEX.view&&FSEX.view.keys)||[], fl=kind==='top'?fseVFl(D,vk):(D.hasMfc?GST.FSE.FLUIDS:[]);
   const vcols=[]; fl.forEach(f=>{ vcols.push('MFC '+f+' '+ft('x_cols_ver'), 'MFC '+f+' '+ft('x_cols_how'), 'MFC '+f+' '+ft('x_cols_sn'), 'MFC '+f+' '+ft('x_cols_dt')); });
-  const vcells=u=>{ const o=[]; fl.forEach(f=>{ const v=GST.FSE.ver(D,u,f,null,P); o.push(v.ver+(v.q&&!/\?$/.test(v.ver)?'?':''), ft('how_'+(v.how||'q')), v.sn||'', v.how==='sn'||v.how==='date'?(v.date||''):''); }); return o; };
+  const vcells=u=>{ const o=[]; fl.forEach(f=>{ const v=GST.FSE.ver(D,u,f,null,P); o.push(v.ver+(v.q&&!/\?$/.test(v.ver)?'?':''), ft('how_'+(v.how||'q')), v.sn||'', v.how==='sn'||v.how==='date'||v.how==='datel'?(v.date||''):''); }); return o; };
   const cnt=(snk,ch,all)=>{ const L=(all?D.ev:ctx&&ctx.evs||[]).filter(e=>e.snk===snk&&(ch==null||e.ch===ch)&&e.alarm&&GST.FSE.match(e,FS,D)); return L; };
   let cols, rows=[], name;
   if(kind==='top'){
@@ -3212,7 +3314,7 @@ function fseParts(){
   const inp=(f,v,ph)=>'<input class="fse-pi" data-pf="'+f+'" value="'+fseEsc(v==null?'':v)+'"'+(ph?' placeholder="'+fseEsc(ph)+'"':'')+(can?'':' readonly')+'>';
   /* 마스터 품목명 칸 — 코드로 정한 줄이 «무슨 부품인가»를 자재마스터로 보인다(v190 · 읽기만 · 저장하지 않는다) */
   const line=r=>'<tr data-pid="'+(r.id||'')+'" data-og="'+fseEsc(r.grp||'')+'"><td>'+inp('grp',r.grp)+'</td><td>'+inp('code',r.code)+'</td><td class="fse-pm" style="font-size:11.5px;color:var(--txt-2);max-width:220px">'+(r.code?'…':'')+'</td><td>'+inp('name_re',r.name_re)+'</td><td>'+inp('fluid',r.fluid,'LNG')+'</td>'
-    +'<td>'+inp('maker',r.maker,'MCA')+'</td><td>'+inp('label',r.label)+'</td><td style="text-align:center"><input type="checkbox" data-pf="on_"'+(r.on_!==false?' checked':'')+(can?'':' disabled')+'></td></tr>';
+    +'<td>'+inp('maker',r.maker,'MRC')+'</td><td>'+inp('label',r.label)+'</td><td style="text-align:center"><input type="checkbox" data-pf="on_"'+(r.on_!==false?' checked':'')+(can?'':' disabled')+'></td></tr>';
   const ov=GST._ovOpen('<div class="gov-h"><h4>'+fseEsc(ft('parts_t'))+'</h4><span class="gov-sub">'+fseEsc(can?ft('pt_note'):ft('pt_ro'))+'</span><span class="gov-sp"></span>'
     +'<span class="gov-sub" id="fsePtSt" role="status" style="font-weight:650"></span>'
     +(can?'<button class="gov-b" data-pa="add">'+fseEsc(ft('pt_add'))+'</button><button class="gov-b" data-pa="save">'+fseEsc(ft('pt_save'))+'</button>':'')
@@ -3289,7 +3391,7 @@ function fseParts(){
       const items=[];
       for(const tr of dirty){
         const g=f=>{ const el=tr.querySelector('[data-pf="'+f+'"]'); return el?(el.type==='checkbox'?el.checked:String(el.value||'').trim()):''; };
-        const o={grp:g('grp'), code:g('code')||null, name_re:g('name_re')||null, fluid:g('fluid').toUpperCase()||null, maker:g('maker').toUpperCase()||null, label:g('label')||null, on_:g('on_'), updated_by:me, updated_at:new Date().toISOString()};
+        const o={grp:g('grp'), code:g('code')||null, name_re:g('name_re')||null, fluid:g('fluid').toUpperCase()||null, maker:GST.FSE.maker(g('maker'))||null, label:g('label')||null, on_:g('on_'), updated_by:me, updated_at:new Date().toISOString()};
         if(!o.grp || !(o.code||o.name_re)){ msg(ft('pt_need'),true); tr.scrollIntoView&&tr.scrollIntoView({block:'nearest'}); return; }
         if(o.name_re){ try{ new RegExp(o.name_re,'i'); }catch(err){ msg(ft('pt_bad_re')+' — '+o.name_re,true); return; } }
         items.push({tr:tr, id:tr.dataset.pid, og:tr.dataset.og||'', o:o});

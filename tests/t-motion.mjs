@@ -2,6 +2,7 @@
    지키는 것: ① v178 부터 주간현황(report)에도 움직임 클래스가 붙는다(사용자 지시 「이펙트는 주간현황까지 전 페이지」) ② 나머지 화면에도 붙는다
    ③ 움직임 줄이기를 고르면 카드 애니메이션이 없다 ④ 팝업(.gov)의 기본색이 라이트다(테마 클래스가 아직 없어도) · 다크는 theme-slate 일 때만
    ⑤ KPI 값이 «바뀌면» 잠깐 표식이 붙고 «처음 그릴 때»는 안 붙는다 ⑥ 표식이 사라질 때 떠오르기 애니메이션이 다시 돌지 않는다.
+   ⑦ v193 — 고장 분석은 «언제나» 움직임이 없다(GST.FX_OFF · 사용자 「이 페이지만 기본값이 효과 아예 없게」). 그래서 대표 화면은 자재 사용이다.
      실행: PW_CHROMIUM=/opt/pw-browsers/chromium-1194/chrome-linux/chrome node t-motion.mjs */
 import fs from 'fs';
 import path from 'path';
@@ -43,10 +44,11 @@ for (const p of ['report', 'fault', 'material', 'pm', 'scrubber', 'tco', 'cip', 
   on[p] = await pg.evaluate(() => document.body.classList.contains('gst-motion')); await pg.close();
 }
 is(on.report, '주간현황에도 붙는다 (v178)');
-is(['fault','material','pm','scrubber','tco','cip','hr','hub','site'].every(p => on[p]), '나머지 화면에는 붙는다 (' + Object.keys(on).filter(k => on[k]).join(',') + ')');
+is(['material','pm','scrubber','tco','cip','hr','hub','site'].every(p => on[p]), '나머지 화면에는 붙는다 (' + Object.keys(on).filter(k => on[k]).join(',') + ')');
+is(!on.fault, '고장 분석에는 안 붙는다 (v193 · 효과 없이 · t-fx [10] 과 같은 판정)');
 console.log('[2] 카드 · KPI');
 let pg = await ctx.newPage(); const pe = []; pg.on('pageerror', e => pe.push(e.message));
-await pg.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(800);
+await pg.goto(BASE + '/material/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(800);
 /* «첫 화면 안에서 보이는» 첫 카드를 고른다 — 첫 화면 밖 카드는 떠오르기 대신 스크롤 등장(v175)이라 animation 이 none 이 맞다.
    v179 에 범위 띠가 한 줄 들어오면서 고장분석의 DOM 첫 카드가 900px 아래로 밀려 그쪽이 됐다(제품은 맞고 검사의 가정이 틀렸다).
    떠오르는 것은 카드 다섯 종류(theme.css 의 gstRise 선택자와 같은 목록)이므로 그 안에서 고른다 */
@@ -78,7 +80,7 @@ await ctx.close();
 console.log('[3b] 요약 띠가 흐른다 (v183 · 사용자 「다른 페이지도 요약이 움직이는 것으로」) — 글자는 원본 그대로 · 사본은 aria-hidden');
 {
   const c3 = await ctxOf(false), p3 = await c3.newPage(); const e3 = []; p3.on('pageerror', e => e3.push(e.message));
-  await p3.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await p3.waitForTimeout(700);
+  await p3.goto(BASE + '/material/', { waitUntil:'domcontentloaded' }); await p3.waitForTimeout(700);
   const insOf = () => p3.evaluate(() => { const b = document.getElementById('gstInsights'); if (!b) return null;
     const run = b.querySelector('.gst-ins-run');
     return { move: b.classList.contains('gst-ins-move'), wait: b.classList.contains('gst-ins-wait'),
@@ -101,14 +103,14 @@ console.log('[3b] 요약 띠가 흐른다 (v183 · 사용자 「다른 페이지
   is(e3.length === 0, 'JS 에러 0' + (e3.length ? ' → ' + e3[0] : ''));
   await c3.close();
   const c4 = await ctxOf(true), p4 = await c4.newPage();
-  await p4.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await p4.waitForTimeout(500);
+  await p4.goto(BASE + '/material/', { waitUntil:'domcontentloaded' }); await p4.waitForTimeout(500);
   await p4.evaluate(() => GST.insights([{ sev:'bad', text:'고장 <b>12</b>건' }])); await p4.waitForTimeout(200);
   const R = await p4.evaluate(() => { const b = document.getElementById('gstInsights'); return { move: b.classList.contains('gst-ins-move'), clones: b.querySelectorAll('.gst-ins-c').length }; });
   is(!R.move && R.clones === 0, '움직임 줄이기 — 흐르지 않는다(사본도 없다)');
   await c4.close();
 }
 console.log('[4] 움직임 줄이기');
-ctx = await ctxOf(true); pg = await ctx.newPage(); await pg.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(500);
+ctx = await ctxOf(true); pg = await ctx.newPage(); await pg.goto(BASE + '/material/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(500);
 is(await pg.evaluate(() => getComputedStyle(document.querySelector('.card')).animationName) === 'none', '카드 애니메이션 없음');
 await ctx.close();
 await browser.close(); srv.close();

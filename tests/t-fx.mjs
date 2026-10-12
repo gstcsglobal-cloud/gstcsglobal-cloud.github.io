@@ -2,7 +2,8 @@
    지키는 것: ① 효과는 숫자·글자를 바꾸지 않는다 — 오도미터·제목 디코드는 겹친 그림(aria-hidden · shadow)이고 원래 글자는 처음부터 최종값
    ② 카드에 transform 을 남기지 않는다 — 기울기는 마우스가 위에 있을 때만(v169) · 자석 단추는 translate
    ③ 움직임 줄이기면 움직이는 효과의 기본값이 꺼짐 ④ 셸 「효과」 패널 — 켜고 끄면 이 PC 에 남고 열린 탭(iframe)까지 간다
-   ⑤ 별빛은 페이지에만 · 그레인은 맨 위 문서 하나에만 ⑥ 폭죽은 없다(사용자 확정).
+   ⑤ 별빛은 페이지에만 · 그레인은 맨 위 문서 하나에만 ⑥ 폭죽은 없다(사용자 확정)
+   ⑦ 효과 없는 화면(고장 분석 · v193) — 설정과 무관하게 처음부터 효과·움직임 층을 안 건다 · 셸도 그 탭에서는 그레인을 거둔다.
      실행: PW_CHROMIUM=/opt/pw-browsers/chromium-1194/chrome-linux/chrome node t-fx.mjs */
 import fs from 'fs';
 import path from 'path';
@@ -201,6 +202,40 @@ await ps.evaluate(() => { try{ sessionStorage.setItem('gst_lang','en'); }catch(e
 is(await ps.evaluate(() => document.querySelector('#gstFxPanel .fh b').textContent === 'Effects'), '언어 — 패널도 그 언어로(GST.FX_T)');
 await ps.evaluate(() => GST.fx.reset());
 is(pse.length === 0, 'JS 에러 0 (셸)' + (pse.length ? ' → ' + pse[0] : ''));
+console.log('[10] 효과 없는 화면 — 고장 분석은 처음부터 효과·움직임을 걸지 않는다 (v193 · 사용자 「이 페이지만 기본값이 효과 아예 없게」)');
+{ const pf = await ctx.newPage(); const pfe = []; pf.on('pageerror', e => pfe.push(e.message));
+  /* 이 PC 에 «전부 켬»을 저장해 둔 사람 — 그래도 꺼져야 한다(설정과 무관) */
+  await pf.addInitScript(() => { try{ const S = {}; ['stars','tilt','odometer','cursor','grain','sheen','reveal','draw'].forEach(k => S[k] = true); localStorage.setItem('gst_fx', JSON.stringify(S)); }catch(e){} });
+  await pf.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await pf.waitForTimeout(2600);
+  const fo = await pf.evaluate(() => ({ fx:[...document.body.classList].filter(c => /^fx-/.test(c)), motion:document.body.classList.contains('gst-motion'),
+    layers:document.querySelectorAll('.gst-fx-stars,.gst-fx-grid,.gst-fx-grain,.gst-fx-cdot,.gst-fx-cring,.gst-sprog').length, css:!!document.getElementById('gstFxCss'),
+    on:GST.FX_KEYS.filter(k => GST.fx.on(k[0])).length, pageOff:GST.fx.pageOff(), anim:Chart.defaults.animation.duration,
+    odo:GST.fx.odo(document.querySelector('.kpi .val') || document.body, '1'), rv:document.querySelectorAll('.gst-rv').length }));
+  is(fo.pageOff && !fo.fx.length && fo.on === 0, '고장 분석 — 이 PC 에 켜 둔 효과가 있어도 전부 꺼짐(body.fx-… 0 · GST.fx.on 0)');
+  is(!fo.motion && !fo.layers && !fo.css && !fo.rv, '움직임 층(gst-motion)·효과 층(별빛·격자·커서·읽는 위치)·효과 CSS·스크롤 등장 — 하나도 안 만든다 (층 ' + fo.layers + ')');
+  is(fo.anim === 0 && fo.odo === false, '차트는 바로 선다(애니메이션 0) · 오도미터도 안 돈다');
+  await pf.mouse.move(400, 400); await pf.mouse.move(420, 410); await pf.waitForTimeout(200);
+  is(await pf.evaluate(() => !document.querySelector('.gst-hov,.gst-tilt,.gst-sp-on') && !document.documentElement.classList.contains('gst-cur-in')), '마우스를 움직여도 카드에 표식이 안 붙는다(마우스 감시가 없다)');
+  is(pfe.length === 0, 'JS 에러 0 (고장 분석)' + (pfe.length ? ' → ' + pfe[0] : ''));
+  await pf.close();
+  /* 다른 화면은 그대로 — 같은 저장값으로 자재 사용을 열면 효과가 선다 */
+  const pm = await ctx.newPage(); await pm.goto(BASE + '/material/', { waitUntil:'domcontentloaded' }); await pm.waitForTimeout(1800);
+  const mo = await pm.evaluate(() => ({ off:GST.fx.pageOff(), motion:document.body.classList.contains('gst-motion'), stars:document.body.classList.contains('fx-stars'), cv:!!document.querySelector('.gst-fx-stars') }));
+  is(!mo.off && mo.motion && mo.stars && mo.cv, '다른 화면(자재 사용)은 지금 그대로 — 움직임·효과가 선다');
+  await pm.evaluate(() => { try{ localStorage.removeItem('gst_fx'); }catch(e){} }); await pm.close();
+  /* 셸 — 고장 분석 탭이 보이는 동안 셸의 그레인이 그 화면을 덮지 않는다 · 다른 탭으로 가면 돌아온다 · 패널이 그 사실을 적는다 */
+  const sq = await ctx.newPage(); const sqe = []; sq.on('pageerror', e => sqe.push(e.message));
+  await sq.goto(BASE + '/', { waitUntil:'domcontentloaded' }); await sq.waitForTimeout(2500);
+  await sq.evaluate(() => { const o = document.getElementById('loginOverlay'); if (o) o.remove(); });
+  const g = () => sq.evaluate(() => { const gr = document.querySelector('.gst-fx-grain'); return { q:document.documentElement.classList.contains('gst-fx-quiet'), gd:gr ? getComputedStyle(gr).display : 'none-el' }; });
+  const g0 = await g();
+  await sq.evaluate(() => switchTab('fault')); await sq.waitForTimeout(400); const g1 = await g();
+  await sq.evaluate(() => switchTab('material')); await sq.waitForTimeout(300); const g2 = await g();
+  is(!g0.q && g0.gd !== 'none' && g1.q && g1.gd === 'none' && !g2.q && g2.gd !== 'none', '셸 — 고장 분석 탭에서만 그레인을 거둔다(' + [g0.gd, g1.gd, g2.gd].join(' → ') + ')');
+  await sq.evaluate(() => GST.fx.panel(true)); await sq.waitForTimeout(300);
+  is(await sq.evaluate(() => /고장 분석/.test((document.querySelector('#gstFxPanel .fs.fo') || {}).textContent || '')), '「효과」 패널 — «고장 분석은 언제나 효과 없이» 를 적는다(스위치와 무관)');
+  is(sqe.length === 0, 'JS 에러 0 (셸 · 탭 전환)' + (sqe.length ? ' → ' + sqe[0] : ''));
+  await sq.close(); }
 await browser.close(); srv.close();
 console.log(fail ? `\n❌ t-fx: ${pass} 통과 · ${fail} 실패` : `\n✅ t-fx: ${pass}/${pass} 통과`);
 process.exit(fail ? 1 : 0);

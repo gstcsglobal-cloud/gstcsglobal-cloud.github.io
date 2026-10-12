@@ -93,7 +93,8 @@ end $$;
  * code  — 부품 코드(정확일치). name_re 를 쓰면 비워 둔다.
  * name_re — 부품 이름·규격에 거는 정규식(대소문자 무시) — 코드가 계속 느는 소모품용. 둘 다 있으면 코드가 먼저다.
  * fluid — MFC 의 유체: LNG · O2 · AIR (그 밖 묶음은 빈칸)
- * maker — MFC 제조사: MCA · MKP · HORIBA … (판정 규칙이 제조사로 갈린다 · 모르는 제조사는 «버전 미상»)
+ * maker — MFC 제조사: MKP · MRC · HORIBA … (판정 규칙이 제조사로 갈린다 · 모르는 제조사는 «버전 미상»)
+ *         옛 표기 «MCA» 는 화면이 MRC 로 읽는다(GST.FSE.maker · v193 사용자 확정 — 제조사 이름은 MRC)
  * on    — false 면 판정·표에서 뺀다(지우지 않고 끈다 — 이력이 남는다). */
 create table if not exists public.fse_parts (
   id         bigint generated always as identity primary key,
@@ -214,6 +215,6 @@ notify pgrst, 'reload schema';
 
 /* 관심 부품 씨앗 — 저장소에 두지 않는다(부품 코드는 이 파일에 적지 않는다). 모양만:
  *   insert into public.fse_parts(grp, code, fluid, maker, label, ord, updated_by)
- *   values ('MFC', '<부품 코드>', 'LNG', 'MCA', '<모델 코드>', 1, '<이메일>');
+ *   values ('MFC', '<부품 코드>', 'LNG', 'MRC', '<모델 코드>', 1, '<이메일>');
  *   insert into public.fse_parts(grp, code, label, ord, updated_by) values ('버너 노즐', '<부품 코드>', '<재질>', 10, '<이메일>');
  * 화면(고장 분석 › 알람 분석 › 「부품 묶음」)에서 넣고 고칠 수 있다. */

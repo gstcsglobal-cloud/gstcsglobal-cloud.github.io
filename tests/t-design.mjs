@@ -159,9 +159,9 @@ const to = await pg.evaluate(() => { GST.capToast('x'); const t = document.getEl
 is(to, '토스트 — on 표식으로 튕겨 오른다(글자는 그대로)');
 await pg.close();
 
-/* 차트 등장 — Chart.js 를 싣는 화면에서 */
+/* 차트 등장 — Chart.js 를 싣는 화면에서. ⚠ 고장 분석은 v193 부터 «언제나 효과 없이»(GST.FX_OFF · t-fx [10])라 차례가 없다 — 자재 사용에서 본다 */
 pg = await ctx.newPage(); watch(pg);
-await pg.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(1500);
+await pg.goto(BASE + '/material/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(1500);
 const ch2 = await pg.evaluate(async () => {
   GST.chartDefaults();
   const cv = document.createElement('canvas'); document.body.appendChild(cv);
