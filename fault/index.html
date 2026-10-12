@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=183"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=184"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -220,10 +220,15 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 .fse-vb.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink,var(--accent));font-weight:700}
 .fse-vcell div{white-space:nowrap}
 .fse-vf{font-size:10px;color:var(--txt-muted,var(--mut));margin-right:4px}
+.fse-rl{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 12px;margin-top:8px}
+.fse-ri{display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 6px;border-radius:8px;cursor:pointer;opacity:.55}
+.fse-ri.on{opacity:1}
+.fse-ri .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fse-raw .fse-row label{font-size:12.5px;display:inline-flex;align-items:center;gap:4px;margin-right:10px}
 .fse-mfcoff{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--txt-2,var(--mut))}
 @media(max-width:1100px){#fseMfc{grid-template-columns:1fr}.fse-pri{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=183">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=184">
 </head>
 <body>
 
@@ -658,75 +663,6 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
   </div>
 </div>
 
-<!-- ═══ 섹션: 설비 일대기 ═══
-     설비 한 대를 골라 설치부터 지금까지를 한 화면에서 본다.
-     설치현황(언제 들어왔나) + 수선실적(무슨 일이 있었나) + 자재실적(뭘 갈았나)을 S/N으로 잇는다. -->
-<div data-sec="life">
-<div class="card" style="margin-bottom:16px">
-  <h3><span data-i="life_pick">설비 선택</span></h3>
-  <div class="note" data-i="note_lifepick">S/N 또는 설비호기로 검색하세요. 아무 표에서나 S/N을 클릭하면 뜨는 메뉴의 「설비 이력」로도 열립니다.</div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
-    <input id="lifeQ" type="search" data-i-ph="life_ph" placeholder="S/N 또는 설비호기" autocomplete="off"
-      style="flex:1;min-width:220px;max-width:380px;padding:9px 12px;border-radius:10px;
-             border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);
-             color:inherit;font-size:13.5px">
-    <span id="lifeHits" class="note" style="margin:0"></span>
-  </div>
-  <div id="lifeSug" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px"></div>
-</div>
-
-<div id="lifeBody" style="display:none">
-  <div class="card" style="margin-bottom:16px">
-    <h3 id="lifeTitle" style="margin-bottom:4px">—</h3>
-    <div id="lifeMeta" class="note" style="margin-bottom:0"></div>
-    <div id="lifeFacts" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin-top:14px"></div>
-  </div>
-
-  <div class="trend-card">
-    <div class="trend-header">
-      <h3 data-i="ch_lifetl">이력 타임라인</h3>
-      <div class="trend-meta" data-i="note_lifetl">설치·Turn On·고장/정비·자재교체를 시간순으로 · 점에 커서를 올리면 상세</div>
-    </div>
-    <div class="trend-wrap"><canvas id="cLifeTL"></canvas></div>
-  </div>
-
-  <div class="grid3" style="margin-top:16px">
-    <div class="card">
-      <h3 data-i="ch_lifestage">작업단계 구성</h3>
-      <div class="note" data-i="note_lifestage">이 설비에 어떤 작업이 얼마나 있었나</div>
-      <div class="cw"><canvas id="cLifeStage"></canvas></div>
-    </div>
-    <div class="card">
-      <h3 data-i="ch_lifepart">교체 자재 TOP</h3>
-      <div class="note" data-i="note_lifepart">이 설비에서 제일 많이 간 자재 · 건수</div>
-      <div class="cw"><canvas id="cLifePart"></canvas></div>
-    </div>
-    <div class="card">
-      <h3 data-i="ch_lifecycle">자재별 평균 사용주기</h3>
-      <div class="note" data-i="note_lifecycle">교체 시점의 사용일(전교체일 기준) 평균 · 2회 이상 교체된 자재</div>
-      <div class="cw"><canvas id="cLifeCycle"></canvas></div>
-    </div>
-  </div>
-
-  <div class="tablecard" style="margin-top:16px">
-    <h3><span data-i="life_tbl">전체 이력</span> (<span id="lifeCnt">0</span>)</h3>
-    <div class="tbl-wrap" style="max-height:460px">
-      <table>
-        <thead><tr>
-          <th data-i-th="th_date">일자</th><th data-i-th="life_kind">구분</th>
-          <th data-i-th="life_what">내용</th><th data-i-th="th_worker">작업자</th>
-          <th data-i-th="th_pf2">유/무상</th>
-        </tr></thead>
-        <tbody id="lifeBodyTbl"></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-<div id="lifeEmpty" class="card" style="text-align:center;padding:44px 20px;opacity:.65">
-  <div data-i="life_empty">설비를 검색하면 그 설비의 이력이 표시됩니다</div>
-</div>
-</div>
-
 <!-- ═══ 섹션: 상세 목록 ═══ -->
 <div data-sec="data">
 <div class="tablecard">
@@ -749,7 +685,7 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 </div>
 
 <script>
-GST.needVer&&GST.needVer(183);   // GST.FSE.affect·autoPick·units·READ(v191 · 보는 부품) · GST.FSE·fseT(v189 · 알람 분석) · GST.chartLayout(v174) · GST.kpiDrill 배지 모드 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(184);   // instIndex 설비 제원·FSE.READ 수량(v192 · 백데이터 엑셀) · GST.FSE.affect·autoPick·units·READ(v191 · 보는 부품) · GST.FSE·fseT(v189 · 알람 분석) · GST.chartLayout(v174) · GST.kpiDrill 배지 모드 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -1014,7 +950,6 @@ function buildSecNav(){
     {id:'load',    label:t('sec_ld')},
     {id:'rel',     label:t('sec_rel')},
     {id:'deep',    label:t('sec_deep')},
-    {id:'life',    label:t('sec_life')},
     {id:'data',    label:t('sec_dt')}
   ]);
 }
@@ -2639,162 +2574,6 @@ function renderDeep(){
     : '<tr><td colspan="6" class="empty">'+t('dp_ch_none').replace('{m}',CH_MIN)+'</td></tr>';
 }
 
-/* ══════ 설비 일대기 ══════════════════════════════════════════════
-   설비 한 대의 설치→수선→자재교체를 S/N 하나로 이어 붙인다.
-   세 시트가 S/N 표기를 조금씩 다르게 쓰므로 normSN으로 맞춘 뒤 조인한다. */
-let LIFE_SN='';
-const lifeFmt=d=>d?fmtD(d):'—';
-
-// 검색어로 후보 설비를 찾는다 — S/N과 설비호기(code) 양쪽을 본다
-function lifeCandidates(q){
-  const k=normSN(q); if(!k)return [];
-  const seen={}, out=[];
-  ROWS.concat(TBM_ROWS).forEach(r=>{
-    const s=normSN(r.sn); if(!s||seen[s])return;
-    const code=normSN(r.code||'');
-    if(s.includes(k)||(code&&code.includes(k))){ seen[s]=1; out.push({sn:r.sn,code:r.code||''}); }
-  });
-  return out.slice(0,12);
-}
-
-function renderLife(){
-  const body=document.getElementById('lifeBody'), empty=document.getElementById('lifeEmpty');
-  if(!body||!empty)return;
-  const TH=GST.chartTheme();
-  const key=normSN(LIFE_SN);
-  if(!key){ body.style.display='none'; empty.style.display=''; return; }
-  body.style.display=''; empty.style.display='none';
-
-  // 이 설비의 이력 — 슬라이서와 무관하게 전체 기간을 본다(일대기이므로)
-  const svc=ROWS.filter(r=>normSN(r.sn)===key&&r.work).sort((a,b)=>a.work-b.work);
-  const tbm=TBM_ROWS.filter(r=>normSN(r.sn)===key&&r.work).sort((a,b)=>a.work-b.work);
-  const mat=MAT_ROWS.filter(r=>r.sn===key&&r.date).sort((a,b)=>a.date-b.date);
-  const info=INSTROW[key]||{};
-  const disp=(svc[0]&&svc[0].sn)||(tbm[0]&&tbm[0].sn)||LIFE_SN;
-
-  document.getElementById('lifeTitle').textContent=disp+(info.code?'  ·  '+info.code:'');
-  document.getElementById('lifeMeta').textContent=[
-    info.customer, info.fab, info.floor&&info.floor+' '+(info.bay||''),
-    info.model, info.group1&&info.group1+(info.detail1?'/'+info.detail1:''),
-    info.toolMaker&&('Main Tool '+info.toolMaker+' '+(info.toolModel||''))
-  ].filter(Boolean).join('  ·  ')||'설치현황에서 이 S/N의 제원을 찾지 못했습니다';
-
-  // 기본 지표
-  const bm=svc.filter(x=>x.stage==='BM');
-  const span=info.turnOn?Math.max(1,Math.round((Date.now()-info.turnOn)/864e5)):null;
-  const mtbf=(bm.length>1)?Math.round((bm[bm.length-1].work-bm[0].work)/864e5/(bm.length-1)):null;
-  const manh=svc.reduce((a,x)=>a+(x.manMin||0),0);
-  const paid=svc.filter(x=>/유상/.test(x.pf)).length, freeN=svc.filter(x=>/무상/.test(x.pf)).length;
-  // 다음 TBM 예상 — 설치 시트의 Target PM Cycle(일) + 마지막 TBM일.
-  // 목표 주기가 등록된 설비만 계산하고, 이미 지났으면 붉게 표시한다.
-  const pmCyc=parseFloat(info.pmCycle)||null;
-  const lastTbm=tbm.length?tbm[tbm.length-1].work:null;
-  let pmDueTxt='—';
-  if(pmCyc&&lastTbm){
-    const due=new Date(lastTbm.getTime()+pmCyc*864e5);
-    const over=Math.round((Date.now()-due)/864e5);
-    pmDueTxt=over>0
-      ?'<span style="color:'+TH.status.bad+'">'+lifeFmt(due)+' ('+over+'일 지남)</span>'
-      :lifeFmt(due);
-  }
-  const facts=[
-    ['설치(FAB In)',lifeFmt(info.fabIn)], ['Turn On',lifeFmt(info.turnOn)],
-    ['가동일수',span?span.toLocaleString()+'일':'—'],
-    ['서비스 건수',svc.length.toLocaleString()], ['그중 고장(BM)',bm.length.toLocaleString()],
-    ['계획정비(TBM)',tbm.length.toLocaleString()],
-    ['다음 TBM 예상',pmDueTxt],
-    ['MTBF',mtbf?mtbf.toLocaleString()+'일':'—'],
-    ['누적 작업공수',manh?Math.round(manh/60).toLocaleString()+'h':'—'],
-    ['자재교체',mat.length.toLocaleString()+'건'],
-    ['유/무상',paid+' / '+freeN],
-    ['보증',info.warranty||'—'], ['챔버',/DUAL/i.test(info.type||'')?'DUAL(2)':'SINGLE(1)']
-  ];
-  document.getElementById('lifeFacts').innerHTML=facts.map(([k,v])=>
-    '<div style="background:rgba(255,255,255,.05);border-radius:10px;padding:9px 11px">'
-    +'<div style="font-size:10.5px;opacity:.6;margin-bottom:3px">'+k+'</div>'
-    +'<div style="font-size:15px;font-weight:700">'+v+'</div></div>').join('');
-
-  // ── 타임라인 — 종류별로 y를 나눠 겹치지 않게 뿌린다
-  const KIND=[
-    {k:'설치',   y:4, col:TH.pal[6], pts:[info.fabIn&&{x:info.fabIn,label:'FAB In'},info.turnOn&&{x:info.turnOn,label:'Turn On'}].filter(Boolean)},
-    {k:'고장 BM',y:3, col:TH.status.bad, pts:bm.map(x=>({x:x.work,label:(x.phenom||x.alarm||x.cause||'BM')+(x.workers?' · '+x.workers:'')}))},
-    {k:'기타 서비스',y:2, col:TH.pal[1], pts:svc.filter(x=>x.stage!=='BM').map(x=>({x:x.work,label:x.stage+(x.workers?' · '+x.workers:'')}))},
-    {k:'계획정비 TBM',y:1, col:TH.pal[3], pts:tbm.map(x=>({x:x.work,label:'TBM'+(x.workers?' · '+x.workers:'')}))},
-    {k:'자재교체',y:0, col:TH.pal[4], pts:mat.map(x=>({x:x.date,label:x.name+' ×'+x.qty+(x.reason?' · '+x.reason:'')}))}
-  ];
-  if(CHARTS.cLifeTL)CHARTS.cLifeTL.destroy();
-  CHARTS.cLifeTL=new Chart(document.getElementById('cLifeTL'),{
-    type:'scatter',
-    data:{datasets:KIND.map(g=>({label:g.k,backgroundColor:g.col,borderColor:g.col,
-      pointRadius:g.k==='설치'?7:4.5,pointHoverRadius:8,
-      // x는 타임스탬프(숫자). Chart.js의 time 축은 별도 날짜 어댑터가 필요한데
-      // 이 페이지는 어댑터를 싣지 않으므로 linear 축에 눈금만 날짜로 찍는다.
-      data:g.pts.map(p=>({x:p.x.getTime(),y:g.y,_l:p.label}))}))},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom',labels:{color:TH.txt,boxWidth:10,font:{size:11}}},
-        tooltip:{callbacks:{label:c=>fmtD(new Date(c.parsed.x))+' · '+(c.raw._l||'')}}},
-      scales:{
-        x:{type:'linear',ticks:{color:TH.txt,font:{size:10},maxTicksLimit:8,
-             callback:v=>{const d=new Date(v);return isNaN(d)?'':d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}},
-           grid:{color:TH.grid}},
-        y:{min:-.6,max:4.6,ticks:{color:TH.txt,font:{size:10},stepSize:1,
-             callback:v=>({0:'자재교체',1:'TBM',2:'서비스',3:'고장',4:'설치'})[v]||''},
-           grid:{color:TH.grid}}}}
-  });
-
-  // 작업단계 구성
-  const stg={}; svc.forEach(x=>{stg[x.stage]=(stg[x.stage]||0)+1;});
-  if(tbm.length)stg['TBM']=tbm.length;
-  mkDonut('cLifeStage',Object.entries(stg).sort((a,b)=>b[1]-a[1]),null,6);
-
-  // 교체 자재 TOP
-  const pc={}; mat.forEach(x=>{pc[x.name]=(pc[x.name]||0)+1;});
-  mkHBar('cLifePart',Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,10),mat.length,null,TH.pal[4],10);
-
-  // 자재별 평균 사용주기 — 시트가 계산해 둔 '사용일(전교체일 기준)'을 쓴다.
-  // 2회 이상 교체된 자재만 봐야 주기라는 말이 성립한다.
-  const cyc={};
-  mat.forEach(x=>{ if(x.daysPrev==null||x.daysPrev<=0)return;
-    (cyc[x.name]=cyc[x.name]||[]).push(x.daysPrev); });
-  const cycEnt=Object.keys(cyc).filter(k=>cyc[k].length>=2)
-    .map(k=>[k,Math.round(cyc[k].reduce((a,b)=>a+b,0)/cyc[k].length)])
-    .sort((a,b)=>a[1]-b[1]).slice(0,10);
-  mkHBar('cLifeCycle',cycEnt,cycEnt.length?cycEnt[cycEnt.length-1][1]:1,null,TH.pal[2],10);
-
-  // 전체 이력 표
-  const ev=[]
-    .concat(svc.map(x=>({d:x.work,k:x.stage,w:[x.phenom,x.cause,x.action,x.detail].filter(Boolean).join(' / ')||x.alarm||'',by:x.workers||'',pf:x.pf||''})))
-    .concat(tbm.map(x=>({d:x.work,k:'TBM',w:'계획정비',by:x.workers||'',pf:''})))
-    .concat(mat.map(x=>({d:x.date,k:'자재',w:x.name+' ×'+x.qty+(x.spec?' ('+x.spec+')':'')+(x.reason?' · '+x.reason:''),by:'',pf:x.pf||''})))
-    .sort((a,b)=>b.d-a.d);
-  document.getElementById('lifeCnt').textContent=ev.length;
-  const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-  document.getElementById('lifeBodyTbl').innerHTML=ev.length
-    ? ev.map(e=>'<tr><td>'+fmtD(e.d)+'</td><td>'+esc(e.k)+'</td><td>'+esc(e.w)
-        +'</td><td>'+esc(e.by)+'</td><td>'+esc(e.pf)+'</td></tr>').join('')
-    : '<tr><td colspan="5" style="text-align:center;opacity:.6;padding:20px">이력이 없습니다</td></tr>';
-}
-
-function bindLife(){
-  const q=document.getElementById('lifeQ'), sug=document.getElementById('lifeSug'),
-        hits=document.getElementById('lifeHits');
-  if(!q)return;
-  const run=()=>{
-    const cands=lifeCandidates(q.value);
-    hits.textContent=q.value.trim()?(cands.length+'대 검색됨'):'';
-    sug.innerHTML=cands.map(c=>'<button class="chip" data-sn="'+c.sn+'" style="padding:5px 10px;'
-      +'border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);'
-      +'color:inherit;font-size:11.5px;cursor:pointer">'+c.sn+(c.code?' · '+c.code:'')+'</button>').join('');
-    // 정확히 한 대면 바로 연다
-    if(cands.length===1){ LIFE_SN=cands[0].sn; renderLife(); }
-  };
-  q.addEventListener('input',run);
-  sug.addEventListener('click',e=>{const b=e.target.closest('[data-sn]'); if(!b)return;
-    LIFE_SN=b.getAttribute('data-sn'); renderLife();
-    document.querySelector('[data-sec="life"]').scrollIntoView({behavior:'smooth',block:'start'}); });
-}
-// 다른 화면에서 설비를 지정해 들어오는 진입점.
-// 탭 전환은 sectionNav가 만든 탭 버튼을 그대로 클릭한다(별도 API가 없다).
 /* 개요의 미기재 줄 → 그 탭으로. sectionNav 의 탭 버튼을 그대로 누른다(두 벌로 짜지 않는다). */
 window.gotoDQ=function(){
   const tab=document.querySelector('#gstSecNav .gst-sec-tab[data-id="cause"]');
@@ -2802,15 +2581,10 @@ window.gotoDQ=function(){
   const el=document.getElementById('dqStrip');
   if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'center'});
 };
-window.openLife=function(sn){ LIFE_SN=sn; const q=document.getElementById('lifeQ');
-  if(q)q.value=sn; renderLife();
-  const tab=document.querySelector('#gstSecNav .gst-sec-tab[data-id="life"]');
-  if(tab)tab.click();
-  window.scrollTo({top:0,behavior:'smooth'}); };
-// S/N 셀 클릭은 core.js의 설비 드릴다운 메뉴가 캡처 단계에서 선점한다(stopPropagation).
-// 셀에 직접 클릭 핸들러를 달면 절대 실행되지 않으므로, 그 메뉴에 항목으로 합류한다 —
-// 이 페이지의 모든 표·차트에서 S/N을 클릭하면 메뉴 맨 위에 '설비 일대기'가 뜬다.
-GST.snMenuExtra=[{label:()=>'📜 '+t('sec_life'), fn:sn=>openLife(sn)}];
+/* S/N 메뉴 — «알람 분석에서 이 설비 보기» (v192 · 설비 일대기 탭을 걷어내고 그 자리로).
+   S/N 셀 클릭은 core 의 설비 메뉴가 캡처 단계에서 선점한다 — 셀에 직접 다는 핸들러는 실행되지 않으므로 그 메뉴에 항목으로 합류한다.
+   일대기(수선실적 · 자재실적 · 설치)는 알람 분석의 설비 타임라인·이력과 같은 질문이라 걷어냈다(사용자 확정). */
+GST.snMenuExtra=[{label:()=>ft('sn_open'), fn:sn=>fseOpenSn(sn)}];
 
 /* ===== 알람 분석 (v189 · FSE 원장) ==================================================================
    사용자: 「FSE Data 있는 거 별도 분석 목적 페이지는 저 원장으로 분석 · 페이지는 "고장분석"의 일부 탭 · BFE 만을 타겟으로 하지 말고 필터로」
@@ -2854,6 +2628,16 @@ function fseVToggle(k){
   if(i>=0) ks.splice(i,1);
   else { if(ks.length>=FSE_VMAX){ GST.capToast&&GST.capToast(ft('v_max',{n:FSE_VMAX})); return; } ks.push(k); }
   fseSetView(ks);
+}
+/* S/N 메뉴에서 온 설비 — 알람 분석 탭을 열고 그 설비의 타임라인으로 */
+function fseOpenSn(sn){
+  const FS=fseFS(), k=GST.snKey(sn); FS.sel=k;
+  const tab=document.querySelector('#gstSecNav .gst-sec-tab[data-id="alarm"]');
+  if(tab) tab.click(); else fseLoad();
+  const go=(n)=>{ if(FSEX.st!=='ok'){ if(n<60) setTimeout(()=>go(n+1),500); return; }
+    if(!Object.keys(FSEX.D.units).some(u=>FSEX.D.units[u].snk===k)){ GST.capToast&&GST.capToast(ft('sn_none',{sn:sn})); return; }
+    fseRender(); const tl=document.getElementById('fseTlCard'); if(tl&&tl.scrollIntoView) tl.scrollIntoView({behavior:'smooth',block:'start'}); };
+  go(0);
 }
 function fseVAuto(){ const FS=fseFS(); delete FS.pv[fseVKey(FS)]; fseSave(); fseRender(); }
 /* 보는 부품에 MFC 묶음이 있으면 그 유체만 MFC 버전 칸으로(묶음 줄의 유체 · 없으면 그 묶음에 실제로 잡힌 부품의 유체 · 그래도 없으면 셋 다) */
@@ -2973,6 +2757,7 @@ function fseRender(){
   fseTrend(evs, FS, from, to, TH);
   fseRate(D, evs, units, FS, TH);
   const rank=fseRank(D, FS, evs, evsAll, y);
+  FSEX.ctx={units:units, rank:rank, evs:evs, evsAll:evsAll, y:y, perOn:perOn};   // 백데이터 엑셀(v192)이 «지금 화면 그대로»를 받는다
   fseTop(D, FS, rank, y, perOn, P, evsAll);
   fseTl(D, FS, rank);
   fseMfc(D, FS, evs, units, rank, P, y);
@@ -3170,7 +2955,8 @@ function fseTop(D, FS, rank, y, perOn, P, evsAll){
   card.innerHTML='<div class="trend-header fse-th"><h3>'+fseEsc(ft('c_top'))+'</h3><div class="fse-tools">'
     +fseSeg('unit',[['sn',ft('unit_sn')],['ch',ft('unit_ch')]],FS.unit,'funit')
     +fseSeg('sort',[['y',ft('sort_y',{y:y})],['n',ft('sort_n')],['all',ft('sort_all')]],FS.sort,'fsort')
-    +'<button type="button" class="btn btn-glass" data-fx="top">'+fseEsc(ft('x_top'))+'</button></div></div>'
+    +'<button type="button" class="btn btn-glass" data-fx="top">'+fseEsc(ft('x_top'))+'</button>'
+    +'<button type="button" class="btn btn-glass" data-fx="raw">'+fseEsc(ft('x_raw'))+'</button></div></div>'
     +(rank.length?'<div class="tbl-wrap" style="max-height:560px;overflow:auto"><table data-gst-nosn><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'
       +(rank.length>P.top?'<div style="margin-top:8px"><button type="button" class="fse-link" data-ftop="1">'+fseEsc(FS.topAll?ft('top_less',{n:P.top}):ft('top_more',{n:fseN(rank.length)}))+'</button></div>':'')
       :'<div class="empty">'+fseEsc(ft('nosel'))+'</div>');
@@ -3180,6 +2966,7 @@ function fseTop(D, FS, rank, y, perOn, P, evsAll){
     const tl=document.getElementById('fseTlCard'); if(tl&&tl.scrollIntoView) tl.scrollIntoView({behavior:'smooth',block:'nearest'}); });
   const tb=card.querySelector('[data-ftop]'); if(tb) tb.onclick=()=>{ FS.topAll=!FS.topAll; fseSave(); fseRender(); };
   const xb=card.querySelector('[data-fx="top"]'); if(xb) xb.onclick=()=>fseExport('top', rank.slice(0,lim), y, perOn);
+  const xr=card.querySelector('[data-fx="raw"]'); if(xr) xr.onclick=fseRaw;
 }
 
 /* 타임라인 — 고른 설비의 챔버마다 한 줄: 위 = 달별 알람(원 크기), 아래 = 관심 부품 교체 기호 · TBM */
@@ -3187,6 +2974,9 @@ const FSE_SYM=['▲','◆','■','●','★','✚'];
 function fseTl(D, FS, rank){
   const card=document.getElementById('fseTlCard'), hc=document.getElementById('fseHistCard'); if(!card||!hc) return;
   let o=rank.find(r=>r.k===FS.sel);
+  /* 순위표 밖 설비(S/N 메뉴 «알람 분석에서 이 설비 보기» · 고른 알람이 없는 설비)도 타임라인·이력은 보인다 — 원장에 그 설비가 있으면 */
+  if(!o && FS.sel){ const us=Object.keys(D.units).filter(u=>u===FS.sel||D.units[u].snk===FS.sel);
+    if(us.length){ const U=D.units[us[0]]; o={k:FS.sel, sn:U.sn, snk:U.snk, units:{}, n:0, nY:0, nAll:0, last:'', per:{}}; us.forEach(u=>o.units[u]=1); } }
   if(!o && rank.length){ o=rank[0]; FS.sel=o.k; }
   const us=o?fseChs(D,o):[];
   if(!us.length){ card.innerHTML='<h3>'+fseEsc(ft('c_tl'))+'</h3><div class="empty">'+fseEsc(ft('tl_pick'))+'</div>'; hc.innerHTML=''; return; }
@@ -3326,6 +3116,95 @@ async function fseExport(kind, list, y, perOn, ctx){
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1'); XLSX.writeFile(wb, name);
 }
 
+/* ── 백데이터 엑셀 (v192 · 본사 요청 1-5 «Alarm 발생 설비 MFC, Nozzle Cover 교체 이력») ──
+   사용자: 「백데이터 개념으로 · 엑셀 다운로드 할 때 교체 자재 어떤 거 뺄지 선택해서 · S/N 기준으로 설비코드·공정·자재코드·수량·작업일자 등
+   중요한 맵핑 정보는 다 땡겨 오게」. 원장 교체 줄 «그대로» 한 줄씩 + 설치현황(S/N)에서 끌어온 설비 제원.
+   · 대상 설비 = 지금 화면이 고른 알람이 난 설비(순위표 전부 · 상위 N 이 아니다) 또는 관리 설비 전체(같은 사이드바·챔버·타입 조건).
+   · 자재 = 그 설비들에서 실제로 교체된 것의 목록 — 기본은 전부 체크 · 뺄 것만 푼다(보는 부품만 · 찾기).
+   · 설비 제원은 설치현황이 정본(S/N 영숫자 맞춤) — 못 붙으면 원장의 값을 쓰고 «설치현황 연결» 칸에 X 로 밝힌다(조용히 섞지 않는다). */
+function fseRawPlan(scope, per){
+  const D=FSEX.D, X=FSEX.ctx||{}; if(!D) return null;
+  const FS=fseFS(), F=GST.filters.F;
+  const rk=X.rank||[], rIdx={}; rk.forEach((o,i)=>fseChs(D,o).forEach(u=>{ if(rIdx[u]==null) rIdx[u]=i+1; }));
+  const us=(scope==='all'?Object.keys(X.units||{}):Object.keys(rIdx)).sort((a,b)=>(rIdx[a]||1e9)-(rIdx[b]||1e9) || (D.units[a].sn<D.units[b].sn?-1:D.units[a].sn>D.units[b].sn?1:0) || (a<b?-1:1));
+  const lo=per==='cur'?(F.dtFrom||''):'', hi=per==='cur'?(F.dtTo||''):'';
+  const items={}, parts=[];
+  us.forEach(u=>{ Object.keys((D.pi&&D.pi[u])||{}).forEach(k=>D.pi[u][k].forEach(p=>{ if(lo&&p.date<lo) return; if(hi&&p.date>hi) return;
+    parts.push(p); const o=items[k]||(items[k]={k:k, label:GST.FSE.ilabel(D,k), n:0, codes:{}}); o.n++; if(p.code) o.codes[p.code]=1; })); });
+  return {us:us, rIdx:rIdx, parts:parts, items:Object.values(items).sort((a,b)=>b.n-a.n || (a.label<b.label?-1:1)), lo:lo, hi:hi};
+}
+function fseRaw(){
+  const D=FSEX.D, X=FSEX.ctx||{}; if(!D) return;
+  const V=new Set((FSEX.view&&FSEX.view.keys)||[]), F=GST.filters.F, perOn=!!(F.dtFrom||F.dtTo);
+  const nAl=Object.keys((()=>{ const m={}; (X.rank||[]).forEach(o=>fseChs(D,o).forEach(u=>m[u]=1)); return m; })()).length;
+  const st={scope:'alarm', per:'all', off:new Set(), q:''};
+  const ov=GST._ovOpen('<div class="gov-h"><h4>'+fseEsc(ft('raw_t'))+'</h4><span class="gov-sp"></span><button class="gov-b" data-ra="close">✕</button></div>'
+    +'<div class="gov-body fse-raw" style="overflow:auto;max-height:74vh">'
+    +'<div class="fse-row"><span class="fse-lbl">'+fseEsc(ft('raw_scope'))+'</span>'
+      +'<label><input type="radio" name="fseRs" value="alarm" checked> '+fseEsc(ft('raw_sc_alarm',{n:fseN((X.rank||[]).length),c:fseN(nAl)}))+'</label>'
+      +'<label><input type="radio" name="fseRs" value="all"> '+fseEsc(ft('raw_sc_all',{c:fseN(Object.keys(X.units||{}).length)}))+'</label></div>'
+    +'<div class="fse-row"><span class="fse-lbl">'+fseEsc(ft('raw_per'))+'</span>'
+      +'<label><input type="radio" name="fseRp" value="all" checked> '+fseEsc(ft('raw_per_all'))+'</label>'
+      +(perOn?'<label><input type="radio" name="fseRp" value="cur"> '+fseEsc(ft('raw_per_cur',{a:F.dtFrom||D.minDate,b:F.dtTo||D.asOf}))+'</label>':'')+'</div>'
+    +'<div class="fse-row" style="margin-top:8px"><b style="font-size:12.5px">'+fseEsc(ft('raw_items'))+'</b><span class="fse-sp"></span>'
+      +'<input class="fse-q" id="fseRq" placeholder="'+fseEsc(ft('raw_find'))+'">'
+      +'<button class="gov-b" data-ra="all">'+fseEsc(ft('raw_all'))+'</button><button class="gov-b" data-ra="none">'+fseEsc(ft('raw_none'))+'</button>'
+      +(V.size?'<button class="gov-b" data-ra="view">'+fseEsc(ft('raw_view'))+'</button>':'')+'</div>'
+    +'<div id="fseRl" class="fse-rl"></div></div>'
+    +'<div class="gov-f" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line)"><span id="fseRc" class="fse-basis"></span><span class="fse-sp"></span>'
+    +'<button class="gov-b" data-ra="close">'+fseEsc(ft('raw_cancel'))+'</button><button class="gov-b" data-ra="go" style="font-weight:700"></button></div>', true);
+  const draw=()=>{
+    const P=fseRawPlan(st.scope, st.per); st.plan=P;
+    const q=st.q.toLowerCase(), list=P.items.filter(x=>!q || (x.label+' '+Object.keys(x.codes).join(' ')).toLowerCase().indexOf(q)>=0);
+    ov.querySelector('#fseRl').innerHTML=list.length?list.map(x=>'<label class="fse-ri'+(st.off.has(x.k)?'':' on')+'"><input type="checkbox" data-rk="'+fseEsc(x.k)+'"'+(st.off.has(x.k)?'':' checked')+'>'
+      +'<span class="nm">'+(V.has(x.k)?'<span class="fse-rec">★</span> ':'')+fseEsc(x.label)+'</span><span class="fse-mut">'+fseEsc(ft('raw_codes',{n:Object.keys(x.codes).length}))+' · '+fseN(x.n)+'</span></label>').join('')
+      :'<div class="empty">'+fseEsc(ft('raw_zero'))+'</div>';
+    const k=P.items.filter(x=>!st.off.has(x.k)), n=k.reduce((a,x)=>a+x.n,0);
+    ov.querySelector('#fseRc').textContent=ft('raw_cnt',{k:fseN(k.length),n:fseN(n)});
+    const go=ov.querySelector('[data-ra="go"]'); go.textContent=ft('raw_go',{n:fseN(n)}); go.disabled=!n;
+  };
+  draw();
+  ov.addEventListener('change', e=>{
+    if(e.target.name==='fseRs'){ st.scope=e.target.value; draw(); return; }
+    if(e.target.name==='fseRp'){ st.per=e.target.value; draw(); return; }
+    const k=e.target.dataset&&e.target.dataset.rk; if(k!=null){ if(e.target.checked) st.off.delete(k); else st.off.add(k); draw(); }
+  });
+  ov.addEventListener('input', e=>{ if(e.target.id==='fseRq'){ st.q=e.target.value; draw(); const qi=ov.querySelector('#fseRq'); if(qi) qi.focus(); } });
+  ov.addEventListener('click', e=>{ const b=e.target.closest('[data-ra]'); if(!b) return; const a=b.dataset.ra;
+    if(a==='close'){ GST._ovClose(); return; }
+    if(a==='all'){ st.off.clear(); draw(); return; }
+    if(a==='none'){ st.plan.items.forEach(x=>st.off.add(x.k)); draw(); return; }
+    if(a==='view'){ st.off.clear(); st.plan.items.forEach(x=>{ if(!V.has(x.k)) st.off.add(x.k); }); draw(); return; }
+    if(a==='go'){ fseRawXlsx(st.plan, st.off).catch(err=>{ console.warn('[알람 분석] 백데이터', err); GST.capToast&&GST.capToast(String(err&&err.message||err)); }); } });
+}
+async function fseRawXlsx(P, off){
+  const D=FSEX.D, X=FSEX.ctx||{}, FS=fseFS(), org=fseOrg(); if(!D||!P) return;
+  try{ await GST.xlsxLibLoad(); }catch(e){ GST.capToast&&GST.capToast(String(e&&e.message||e)); return; }
+  const keep=P.parts.filter(p=>!off.has(p.ik)).sort((a,b)=>(P.rIdx[a.u]||1e9)-(P.rIdx[b.u]||1e9) || (a.u<b.u?-1:a.u>b.u?1:0) || (a.date<b.date?-1:a.date>b.date?1:0));
+  const AD={}; (X.evsAll||[]).forEach(e=>{ (AD[e.u]=AD[e.u]||[]).push(e.date); }); Object.keys(AD).forEach(u=>AD[u].sort());
+  const unitCols=u=>{ const U=D.units[u]||{}, I=org(U.snk)||null;
+    return [P.rIdx[u]||'', U.sn, U.ch, (I&&I.code)||U.code||'', (I&&I.op)||U.op||'', (I&&I.customer)||U.customer||U.site||'', (I&&I.fab)||U.fab||'', (I&&I.floor)||'',
+      (I&&I.group1)||U.g1||'', (I&&I.detail1)||U.d1||'', (I&&I.model)||U.model||'', (I&&I.burner)||U.btype||'', (I&&I.type)||'', (I&&I.turnOn)||U.turnOn||'', (I&&I.fabIn)||U.fabIn||'', I?'O':'X']; };
+  const uh=[ft('xr_rank'),ft('xr_sn'),ft('xr_ch'),ft('xr_code'),ft('xr_op'),ft('xr_cust'),ft('xr_fab'),ft('xr_floor'),ft('xr_proc'),ft('xr_det'),ft('xr_model'),ft('xr_burner'),ft('xr_type'),ft('xr_turnon'),ft('xr_fabin'),ft('xr_join')];
+  const h1=uh.concat([ft('xr_date'),ft('xr_mc'),ft('xr_alarm'),ft('xr_item'),ft('xr_pcode'),ft('xr_std'),ft('xr_mspec'),ft('xr_lname'),ft('xr_lspec'),ft('xr_qty'),ft('xr_comp'),ft('xr_in'),ft('xr_out'),ft('xr_src'),ft('xr_prev'),ft('xr_next'),ft('xr_gap')]);
+  const uc={}, rows=keep.map(p=>{ const e=p.ev>=0?D.ev[p.ev]:null, L=AD[p.u]||[];
+    let pv='', nx=''; for(const d of L){ if(d<=p.date) pv=d; else { nx=d; break; } }
+    const st=p.std||null;
+    return (uc[p.u]||(uc[p.u]=unitCols(p.u))).concat([p.date, e?(e.mc||''):'', e?(e.msg||e.code||''):'', GST.FSE.ilabel(D,p.ik), p.code||'', st?(st.name||''):'',
+      st?[st.spec1,st.spec2].filter(v=>v!=null&&String(v).trim()!=='').join(' · '):'', p.name||'', p.spec||'', p.qty, p.comp||'', p.mfcIn||'', p.mfcOut||'',
+      (p.mfcIn||p.mfcOut)?(p.src==='mat'?ft('xr_src_m'):ft('xr_src_l')):'', pv, nx, nx?GST.FSE.daysBetween(p.date,nx):'']); });
+  /* 설비 요약 — 설비(챔버)마다 고른 알람 건수 · 고른 자재 교체 수 · 자주 간 자재(상위 10종)의 횟수·마지막 교체일 */
+  const top=P.items.filter(x=>!off.has(x.k)).slice(0,10);
+  const h2=uh.concat([ft('xr_n'),ft('xr_last'),ft('xr_reps')]).concat(...top.map(x=>[ft('xr_icnt',{p:x.label}),ft('xr_ilast',{p:x.label})]));
+  const byU={}; keep.forEach(p=>{ (byU[p.u]=byU[p.u]||[]).push(p); });
+  const rows2=P.us.map(u=>{ const L=AD[u]||[], ps=byU[u]||[];
+    return (uc[u]||(uc[u]=unitCols(u))).concat([L.length, L.length?L[L.length-1]:'', ps.length]).concat(...top.map(x=>{ const q=ps.filter(p=>p.ik===x.k); return [q.length||'', q.length?q[q.length-1].date:'']; })); });
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([h1].concat(rows)), ft('xs_hist').slice(0,31));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([h2].concat(rows2)), ft('xs_sum').slice(0,31));
+  XLSX.writeFile(wb, 'alarm_parts_'+(FS.vals.length?FS.vals.join('_').replace(/[^\w가-힣-]+/g,'').slice(0,30)+'_':'')+D.asOf+'.xlsx', {compression:true});
+}
+
 /* 관심 부품 묶음 — fse_parts 를 이 화면에서 고친다(쓰기 권한 · RLS). 지우지 않고 «사용»을 끈다. */
 function fseParts(){
   const reg=GST.FSE.reg, can=!!(GST.canWrite?GST.canWrite():CAN_WRITE);
@@ -3460,7 +3339,6 @@ if(GST.chartLayout) GST.chartLayout({ page:'fault',
   retire:['#pfPct','cReqType','cDur','cWcnt','cRelRank'] });
 
 applyLang();
-bindLife();
 loadData();
 addCapBtns();
 </script>
