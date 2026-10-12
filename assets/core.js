@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 179;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 180;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -4478,10 +4478,11 @@ GST.geo = {
   norm:function(v){ return String(v==null?'':v).toUpperCase().replace(/\s+/g,''); },
   /* 행정구역 이름 열쇠 — 꼬리(시·현·도·특별시·광역시·City·County·Province…)를 뗀 정규화 이름들 */
   admKeys:function(f){
-    const out=[]; ['en','ko','zh','ja'].forEach(function(l){ const n=f.n&&f.n[l]; if(!n) return;
+    /* 자료 원문(f.n)과 바로잡은 이름(NAME_FIX) 둘 다 열쇠다 — 화면에 뜬 이름(「북서부」)을 그대로 지역 칸에 적어도 놓이게 */
+    const fx=GST.geo.NAME_FIX[f.iso]||{}, out=[]; ['en','ko','zh','ja'].forEach(function(l){ [f.n&&f.n[l], fx[l]].forEach(function(n){ if(!n) return;
       const a=GST.geo.norm(n); out.push(a);
       const b=a.replace(/(CITY|COUNTY|PROVINCE|PREFECTURE|特別市|特別自治市|廣域市|广域市|自治區|自治区|特别行政区|特別行政區|市|縣|县|省|府|都|道|特별시|광역시|특별자치시|특별자치도|도|시|군|현|구)$/,'');
-      if(b&&b!==a) out.push(b); });
+      if(b&&b!==a) out.push(b); }); });
     return out;
   },
   /* 한 설비의 위치 — PL: {열쇠:{lat,lng,label}} (geo_places) · adm: 그 나라 행정구역 자료(없어도 된다) */
@@ -4521,7 +4522,12 @@ GST.geo = {
      (실측: 중국 陝西·山西 가 한국어로 둘 다 「산시성」이라, 시안 설비가 두 성에 같이 칠해지고 이름표가 둘 섰다).
      자료 파일(assets/geo)은 공개 원본 그대로 두고 이름표만 가른다 — t-hub 가 «나라·언어마다 이름이 하나씩»인지 본다. */
   NAME_FIX:{ 'CN-SN':{ko:'산시성(陝西)'}, 'CN-SX':{ko:'산시성(山西)'}, 'TW-HSQ':{en:'Hsinchu County'}, 'TW-HSZ':{en:'Hsinchu City'},
-    'TW-CYQ':{en:'Chiayi County'}, 'TW-CYI':{en:'Chiayi City'}, 'US-DC':{en:'Washington, D.C.'} },
+    'TW-CYQ':{en:'Chiayi County'}, 'TW-CYI':{en:'Chiayi City'}, 'US-DC':{en:'Washington, D.C.'},
+    /* 싱가포르 행정구역(CDC) — 공개 자료의 한국어가 «노스 웨스트 케이프»(남아공 지명)·«…지구 사회 발전 이사회»라
+       지도 이름표·지역 분포가 엉뚱하게 읽혔다(v188 · 사용자 보고). 방위 이름으로 짧게 — 판정 열쇠(admKeys)에도 이 이름을 더한다 */
+    'SG-01':{ko:'중부',en:'Central',zh:'中区',ja:'中央地区'}, 'SG-02':{ko:'북동부',en:'North East',zh:'东北区'},
+    'SG-03':{ko:'북서부',en:'North West',zh:'西北区',ja:'北西地区'}, 'SG-04':{ko:'남동부',en:'South East',zh:'东南区'},
+    'SG-05':{ko:'남서부',en:'South West',zh:'西南区'} },
   admName:function(f, lang){ if(!f) return ''; const x=GST.geo.NAME_FIX[f.iso]; if(x&&x[lang]) return x[lang]; const n=f.n||{}; return n[lang]||n.en||''; },
   /* geo_places 읽기 — 못 읽어도(표 없음·오프라인) 빈 것으로 간다: 그때는 행정구역 이름으로만 놓는다 */
   places:async function(){
