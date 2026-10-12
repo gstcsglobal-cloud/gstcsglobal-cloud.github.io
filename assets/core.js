@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 178;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 179;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -1668,25 +1668,95 @@ GST.SM.headerRow = function(rows, hints, scan){
   }
   return -1;
 };
+/* ---- 여러 줄 머리글 (v187 · 사용자 보고 「헤더 윗줄 병합된 것 때문에 열 인식을 못 하고, 수동 맵핑에서도 선택 열에서 빠진다」) ----
+   엑셀의 병합 칸은 «왼쪽 위 칸에만» 값이 있다. 위 줄에 묶음 띠(「설비 정보」가 세 칸 가로 병합)가 있고 몇몇 열은 위아래로
+   세로 병합(「NO」·「Country」)이면, 머리글을 «한 줄»만 읽을 때 세로 병합 열은 그 줄에서 빈 칸이다 — 자동 인식도 못 하고,
+   지정 목록에도 이름이 없어 고를 수조차 없었다(설치현황·수선·자재 — SPEC 표). Import 표(v164)는 아래로 이어지는 줄만 봤다.
+   → 머리글을 «덩어리(최대 3줄)»로 읽는다. 칸 이름 = 그 덩어리에서 «가장 아래에 적힌 값»(세로 병합은 위 칸에만 있다).
+     묶음 띠 아래 칸은 «묶음 + 칸» 이름도 열쇠로 둔다(Warranty › date → 「Warranty date」 · GST.cmap.stack 과 같은 채우기).
+   ⚠ 판정은 그대로 «정규화 정확일치»다(제1원칙) — 부분일치를 쓰지 않는다. 칸 자신의 이름이 언제나 먼저다.
+   ⚠ 한 줄로 이미 맞는 파일은 한 글자도 안 바뀐다 — 덩어리가 «더 많은 항목»을 찾을 때만 덩어리를 쓴다
+     (대시보드가 읽는 DB 경로는 머리글이 한 줄이라 언제나 한 줄 그대로다). */
+GST.SM._v = function(rows, r, k){ const R=(rows||[])[r]; return String(R&&R[k]!=null?R[k]:'').trim(); };
+GST.SM._w = function(rows, top, hi){ let w=0; for(let r=Math.max(0,top); r<=hi+3 && r<(rows||[]).length; r++) w=Math.max(w, ((rows[r])||[]).length); return w; };
+GST.SM.block = function(rows, top, hi){
+  const N=GST.SM.norm, w=GST.SM._w(rows, top, hi), st=(top<hi && GST.cmap) ? GST.cmap.stack(rows, hi, top) : null;
+  const own=[], keys=[];
+  for(let k=0;k<w;k++){
+    let o=''; for(let r=hi;r>=top;r--){ const x=GST.SM._v(rows, r, k); if(x){ o=x; break; } }
+    own.push(o);
+    const ks=[]; if(o) ks.push(N(o));
+    if(st && st[k] && st[k].length>1) GST.cmap.variants(st[k]).forEach(function(x){ const n=N(x); if(n && ks.indexOf(n)<0) ks.push(n); });
+    keys.push(ks);
+  }
+  /* 보이는 이름 — 겹치는 이름(묶음 아래 Left·Right)만 «묶음 + 칸»으로 */
+  const cnt={}; own.forEach(function(o){ const n=N(o); if(n) cnt[n]=(cnt[n]||0)+1; });
+  const H=own.map(function(o,k){ return (o && cnt[N(o)]>1 && st && st[k] && st[k].length>1) ? st[k].join(' ') : o; });
+  return {top:top, hi:hi, H:H, keys:keys};
+};
+/* 열 위치 지정 — 머리글이 아예 없는 열(사용자 지적 「선택 열에서 제외」)을 사람이 고를 수 있게 «@열문자»로 저장한다.
+   ⚠ 그 열에 머리글이 «생기면»(양식이 바뀌었다) 위치 지정을 쓰지 않고 자동으로 돌아간다 — 열이 끼어들면 남의 열을 읽게 되므로. */
+GST.SM.posOf = function(name){ const m=/^@([A-Z]{1,3})$/.exec(String(name==null?'':name).trim()); if(!m) return -1;
+  let n=0; for(let i=0;i<m[1].length;i++) n=n*26+(m[1].charCodeAt(i)-64); return n-1; };
+/* 덩어리 고르기 — 힌트를 다 품고 «한 줄»보다 많은 항목을 찾는 덩어리 중 가장 많이 찾는 것(같으면 얕고 앞선 것).
+   needHint=false 면 힌트 없이 고른다(머리글을 못 찾았을 때 사람이 고를 «후보»를 보여 주려고). */
+GST.SM._bestBlock = function(rows, spec, base, needHint){
+  const N=GST.SM.norm, fs=Object.keys(spec.fields), al={}; fs.forEach(function(f){ al[f]=[].concat(spec.fields[f]).map(N).filter(Boolean); });
+  const want=(spec.hints||[]).map(function(h){ return [].concat(h).map(N); });
+  const n=Math.min((rows||[]).length, (spec.scan||12));
+  /* 점수는 «칸 자기 이름»으로 찾은 항목 수다 — 묶음 + 칸 이름(Warranty › date)은 같은 점수일 때만 가른다.
+     병합 범위를 모르는 채 묶음 이름을 오른쪽으로 채우므로, 그것만으로 덩어리를 고르면 묶음 밖 열에 묶음 이름이 붙은 덩어리가 이길 수 있다. */
+  const score=function(keys){ const own={}, all={}; keys.forEach(function(ks){ if(ks[0]) own[ks[0]]=1; ks.forEach(function(x){ all[x]=1; }); });
+    if(needHint!==false && !want.every(function(a){ return a.some(function(x){ return all[x]; }); })) return null;
+    let o=0, w=0; fs.forEach(function(f){ if(al[f].some(function(x){ return own[x]; })) o++; if(al[f].some(function(x){ return all[x]; })) w++; }); return {o:o, w:w}; };
+  let best=null;
+  for(let t=0;t<n;t++) for(let b=(needHint===false?t:t+1);b<=t+2 && b<(rows||[]).length;b++){
+    const B=GST.SM.block(rows, t, b), sc=score(B.keys);
+    if(sc && sc.o>base && (!best || sc.o>best.s.o || (sc.o===best.s.o && sc.w>best.s.w))){ B.s=sc; best=B; }
+  }
+  return best;
+};
 /* spec = {name, gid, hints:[], scan, opt:[], fields:{논리명:'헤더명' | ['별칭1','별칭2']}}
-   반환 = {ok, hi, C:{논리명:열번호(-1=못찾음)}, miss:[], dup:[]}
+   반환 = {ok, hi, top, H, C:{논리명:열번호(-1=못찾음)}, miss:[], dup:[]}
+   hi 는 «마지막 머리글 줄»(데이터는 그다음 줄부터) · top 은 첫 머리글 줄 · H 는 칸마다 보이는 이름(덩어리면 합친 이름).
    C는 기존 하드코딩 상수와 같은 모양이라 하위 코드(r[C.alarm] 등)는 손대지 않아도 된다. */
 GST.SM.map = function(rows, spec){
-  const hi=GST.SM.headerRow(rows, spec.hints, spec.scan);
-  const out={sheet:spec.name||'', hi:hi, C:{}, miss:[], dup:[], ok:false};
+  const N=GST.SM.norm;
+  const hasHint=!!(spec.hints&&spec.hints.length);
+  let hi=hasHint?GST.SM.headerRow(rows, spec.hints, spec.scan):-1;
+  const out={sheet:spec.name||'', hi:hi, top:hi, H:null, C:{}, miss:[], dup:[], ok:false};
   const opt=spec.opt||[];
+  /* 한 줄의 점수 — 덩어리가 이것보다 «많이» 찾을 때만 덩어리를 쓴다 */
+  let blk=null;
+  if(spec.block!==false){
+    let base=-1;
+    if(hi>=0){ const set={}; (rows[hi]||[]).forEach(function(x){ const h=N(x); if(h) set[h]=1; });
+      base=Object.keys(spec.fields).filter(function(f){ return [].concat(spec.fields[f]).some(function(a){ return set[N(a)]; }); }).length; }
+    if(base<Object.keys(spec.fields).length) blk=GST.SM._bestBlock(rows, spec, base, hasHint);
+  }
+  if(blk){ hi=blk.hi; out.hi=hi; out.top=blk.top; out.block=true; }
   if(hi<0){
     Object.keys(spec.fields).forEach(k=>{ out.C[k]=-1; });
     out.miss.push('헤더 행 자체를 찾지 못함 (힌트: '+(spec.hints||[]).join(' + ')+')');
+    /* 사람이 고를 «후보» — 힌트 없이 가장 많이 맞는 덩어리, 없으면 가장 찬 줄 */
+    const g=GST.SM._bestBlock(rows, spec, 0, false);
+    if(g) out.guess={top:g.top, hi:g.hi, H:g.H};
     GST.SM._log(out); return out;
   }
-  const H=(rows[hi]||[]).map(GST.SM.norm), at={};
-  H.forEach((h,i)=>{ if(h) (at[h]=at[h]||[]).push(i); });
+  const K=blk?blk.keys:(rows[hi]||[]).map(function(x){ const h=N(x); return h?[h]:[]; });
+  out.H=blk?blk.H:(rows[hi]||[]).map(function(x){ return String(x==null?'':x); });
+  /* 열쇠 → 열 — 칸 «자기 이름»을 먼저 넣고, 묶음을 붙인 이름은 그 뒤에(묶음 띠가 남의 이름을 가로채지 않게) */
+  const at={};
+  K.forEach(function(ks,i){ if(ks[0]) (at[ks[0]]=at[ks[0]]||[]).push(i); });
+  K.forEach(function(ks,i){ ks.slice(1).forEach(function(h){ const a=(at[h]=at[h]||[]); if(a.indexOf(i)<0) a.push(i); }); });
+  const W=Math.max(out.H.length, GST.SM._w(rows, out.top, hi));
   Object.keys(spec.fields).forEach(function(k){
     const names=[].concat(spec.fields[k]);
     let idx=-1;
     for(let i=0;i<names.length;i++){
-      const hit=at[GST.SM.norm(names[i])];
+      const pos=GST.SM.posOf(names[i]);
+      if(pos>=0){ if(pos<W && !String(out.H[pos]==null?'':out.H[pos]).trim()){ idx=pos; break; } continue; }
+      const hit=at[N(names[i])];
       if(hit&&hit.length){
         idx=hit[0];
         // 같은 이름 열이 둘 이상이면 첫 번째를 쓰되, 사람이 볼 수 있게 남긴다
@@ -1956,6 +2026,8 @@ GST.WARR = function(v){
 /* SPEC-SYNC · CIP — kakao-bot/hr.js 의 parseCIP 과 «같은 이름 목록»이어야 한다.
    여기 이름을 더하면 그쪽도 더한다(제2원칙). t-cip 가 두 곳을 대조한다. */
 GST.SM.SPEC.cip = { name:'CIP현황', hints:['Scrubber S/N','FAB In'], scan:6,
+  /* 덩어리 머리글을 쓰지 않는다 — CIP 화면은 «머리글 바로 윗줄»을 적용일자 띠로 읽는다(cip/index.html · GST._cipBand). */
+  block:false,
   /* 양식마다 있는 열이 다르다 — F11 에는 area·Model Type 이 없고, 옛 추출본에는
      NO·Country·Customer·FAB 이 없다. 못 찾아도 정상이므로 전부 opt 다. */
   opt:['area','mtype','no','country','customer','fab','remark'],
@@ -2093,6 +2165,38 @@ GST.SM.SPEC.abp2 = { name:'올바이패스', scan:8,
     checker:'확인자'
   }};
 
+/* ---- 화면에 보이는 «이름표» (v187 · 사용자 보고 「데이터 관리에 지역 넣는 게 없다 · 행 일괄 수정에도 없다」) ----
+   SPEC 별칭[0] 은 «양식 머리글의 정본 표기»다(표준 템플릿·엑셀 받기 머리글 · v138) — 설치현황·알람은 영문(Location·Occur Time)이다.
+   그 글자를 화면 이름표로 쓰니 «지역»을 찾는 사람이 못 찾았다(칸은 처음부터 있었다 · 이름이 Location 이었을 뿐).
+   → 사람에게 보이는 글자는 여기 한 곳(한국어), 엑셀 머리글은 별칭 그대로.
+   ⚠ 판정·맞추기에는 쓰지 않는다 — 열을 찾는 것은 언제나 별칭 배열이다(제1원칙). 여기는 «사람에게 보이는 글자»뿐이다.
+   ⚠ 워런티 종료는 «유상 전환»이다(제4원칙) — 날짜 칸 이름도 그렇게 부른다.
+   없는 필드는 별칭[0] 으로 돌아간다(GST.SM.label) — 수선·자재는 별칭[0] 이 이미 한국어라 따로 적지 않았다. */
+GST.SM.LABEL = {
+  inst:{ pjt:'제품코드 (PJT)', country:'운영단위', customer:'고객사', div:'사업부', location:'지역', code:'설비 CODE', sn:'S/N', model:'모델',
+    burner:'버너 방식', fab:'라인 (FAB)', line2:'라인2', floor:'Floor', bay:'BAY', group1:'공정', group2:'세부공정 (본사)', detail1:'세부공정 (고객사)',
+    detail2:'세부공정 2', toolId:'메인설비 ID', toolMaker:'메인설비 제조사', toolModel:'메인설비 모델', fabIn:'반입일 (FAB In)', start:'Set-up 일',
+    turnOn:'Turn On 일', warrantyDate:'유상 전환일 (Warranty)', warranty:'무상/유상 (Warranty)', pmCycle:'PM 주기', type:'챔버 (Scrubber type)', state:'설비상태' },
+  wk:{ model:'모델 (자사)' },
+  alarm:{ site:'단지 (Site)', line:'라인', area:'Area', bay:'BAY', eqpId:'설비 ID', proc:'공정', subproc:'세부공정', chamber:'챔버 ID', chpos:'챔버 위치',
+    sn:'S/N', seqpId:'SEQP ID', status:'상태', maker:'제조사', model:'모델', ch:'채널', alevel:'알람 레벨', alarm:'알람 내용', alarmName:'알람',
+    occur:'발생 시각', relTime:'해제 시각', hold:'지속 시간', atype:'알람 유형', ctype:'원인 유형1', ctype2:'원인 유형2', inout:'내/외', incl:'내적/제외',
+    cause:'실제 원인', phenom:'현상', action:'조치 내용', module:'발생 모듈', srcMonth:'정산월', srcWeek:'주차', srcYear:'년도', checker:'확인자' },
+  abp2:{ site:'단지 (Site)', line:'라인', area:'Area', eqpId:'설비 ID', chamber:'챔버', sn:'S/N', model:'모델', maker:'제조사', occur:'발생일',
+    occurT:'정지 시작', relTime:'정지 종료', hold:'유지 시간', alarm:'알람 내용', seq:'Seq', grp:'Group', real:'진성/가성', inout:'내/외 (담당)',
+    incl:'발생 구분2', atype:'알람 구분', atype2:'고장 유형', ctype:'원인 유형', ctype2:'조치 유형', cause:'발생 사유', action:'조치 내용', phenom:'현상',
+    proc:'공정', subproc:'세부공정', opRaw:'운영단위', srcMonth:'정산월', srcWeek:'주차', srcYear:'년도', checker:'확인자' },
+  cip:{ no:'NO', country:'운영단위', customer:'고객사', fab:'FAB', floor:'Floor', area:'Area', type:'챔버 (Type)', model:'모델', mtype:'모델 유형',
+    pjt:'제품코드 (PJT)', sn:'S/N', code:'설비 CODE', group:'공정', detail:'세부공정', fabIn:'반입일 (FAB In)', remark:'비고' }
+};
+/* spec — 'inst' 같은 이름이나 SPEC 객체(지정이 얹힌 사본 포함 · 이름으로 찾는다) */
+GST.SM.label = function(spec, k){
+  const S=GST.SM.SPEC; let key=typeof spec==='string'?spec:'';
+  if(!key && spec) key=Object.keys(S).find(function(x){ return S[x]===spec; }) || Object.keys(S).find(function(x){ return S[x].name===spec.name; }) || '';
+  const L=GST.SM.LABEL[key]; if(L && L[k]) return L[k];
+  const f=(S[key]&&S[key].fields[k]) || (spec&&spec.fields&&spec.fields[k]);
+  return f!=null ? String([].concat(f)[0]).replace(/\s*\n\s*/g,' ') : k;
+};
 /* 주간현황이 국내 알람·올바이패스에서 실제로 쓰는 열.
    ⚠ checker(담당자·확인자)는 «일부러» 뺐다 — 실명이고 화면이 안 쓴다.
 
@@ -2309,7 +2413,7 @@ GST.ALARM = {
     if(m.hi<0) return {err:'헤더 행을 찾지 못했습니다 (힌트: '+(S.hints||[]).join(' + ')+')'};
     if(m.miss.length) return {err:'열을 못 찾았습니다: '+m.miss.join(', ')};
     const keys=Object.keys(S.fields), C=m.C;
-    const header=(rows[m.hi]||[]).map(function(x){ return String(x==null?'':x); });
+    const header=(m.H||rows[m.hi]||[]).map(function(x){ return String(x==null?'':x); });   // 덩어리 머리글이면 합친 이름(v187)
     const mapped={}; keys.forEach(function(k){ if(C[k]>=0) mapped[C[k]]=1; });
     /* SPEC 에 없는 열은 버리지 않고 extra 로 담는다 — 사이트마다 자기만 쓰는 열이 있고
        (K 의 발생 모듈, H 의 추적완료여부 …), 버리면 «올린 줄 알았는데 없는» 상태가 된다. */
@@ -4381,12 +4485,20 @@ GST.geo = {
     return out;
   },
   /* 한 설비의 위치 — PL: {열쇠:{lat,lng,label}} (geo_places) · adm: 그 나라 행정구역 자료(없어도 된다) */
+  /* ⚠ 나라를 본다 (v187 · 사용자 보고 「순회하는데 왜 대만에 평택이 있어」). 국내 단지 묶음 열쇠 'P'(평택)가 대만 PSMC 의 FAB 'P1' 과
+     «끝 숫자를 뗀» 모양으로 겹쳐, 대만 지도에 평택 좌표가 섰다. 그 나라 지도(adm.cc)를 그리는 중이면 다른 나라로 정해 둔 자리는 건너뛴다.
+     같은 글자를 두 나라가 쓰면 그 나라 전용 열쇠('TW:P')로 따로 정한다 — 데이터 관리 › 사이트 › 지도 위치가 그렇게 저장한다.
+     cc 를 모르는 옛 자리(cc 비어 있음)는 지금까지처럼 받는다. */
   placeOf:function(x, PL, adm){
+    const cc=(adm&&adm.cc)||(x&&x.cc)||'';   // 나라 지도 자료를 못 받았어도(x.cc) 나라는 가린다
     const cand=[x.loc, x.campus, x.fab].filter(Boolean);
     for(let i=0;i<cand.length;i++){
       const k=GST.geo.norm(cand[i]); if(!k) continue;
       const ks=[k, k.replace(/\(.*?\)/g,''), k.replace(/\(.*?\)/g,'').replace(/[-_]?\d+[A-Z]?$/,'')];
-      for(let j=0;j<ks.length;j++){ const p=PL&&PL[ks[j]]; if(p&&p.lat!=null&&p.lng!=null) return {key:ks[j], name:cand[i], lat:p.lat, lng:p.lng, label:p.label||cand[i], src:'db'}; }
+      for(let j=0;j<ks.length;j++){ const L=cc?[cc+':'+ks[j], ks[j]]:[ks[j]];
+        for(let q=0;q<L.length;q++){ const p=PL&&PL[L[q]]; if(!p||p.lat==null||p.lng==null) continue;
+          if(cc && p.cc && p.cc!==cc) continue;
+          return {key:L[q], name:cand[i], lat:p.lat, lng:p.lng, label:p.label||cand[i], src:'db'}; } }
     }
     if(adm){ for(let i=0;i<cand.length;i++){ const k=GST.geo.norm(cand[i]).replace(/(CITY|COUNTY)$/,'');
       const f=adm.f.find(function(f){ return f.c&&GST.geo.admKeys(f).indexOf(k)>=0; });
@@ -8147,7 +8259,10 @@ GST.cmap = {
   spec:function(S0,ovr){
     const fields={}, N=GST.SM.norm;
     Object.keys(S0.fields).forEach(function(k){ const a=[].concat(S0.fields[k]); fields[k]=ovr[k]?[ovr[k]].concat(a):a; });
-    const hints=(S0.hints||[]).map(function(h){ const k=Object.keys(ovr).find(function(f){ return S0.fields[f]&&[].concat(S0.fields[f]).some(function(a){ return N(a)===N(h); }); }); return k?ovr[k]:h; });
+    /* 힌트 칸을 «열 위치»로 지정했으면(머리글이 없는 열) 그 힌트로는 머리글 줄을 못 찾는다 — 힌트에서 빼고, 남은 힌트(없으면 «가장 많이 맞는 줄»)로 찾는다 */
+    const hints=(S0.hints||[]).map(function(h){ if(Array.isArray(h)) return h;
+      const k=Object.keys(ovr).find(function(f){ return S0.fields[f]&&[].concat(S0.fields[f]).some(function(a){ return N(a)===N(h); }); });
+      if(!k) return h; return GST.SM.posOf(ovr[k])>=0?null:ovr[k]; }).filter(function(h){ return h!=null; });
     return Object.assign({},S0,{fields:fields,hints:hints});
   },
   col:function(i){ let s=''; i++; while(i>0){ const r=(i-1)%26; s=String.fromCharCode(65+r)+s; i=Math.floor((i-1)/26); } return s; },
@@ -8170,7 +8285,7 @@ GST.cmap = {
        빈 칸이라 자동 인식도, 사람이 고르는 지정도 불가능했고(고를 이름이 없다), 아래 두 줄이 «데이터»로 읽혔다.
        → 머리글 줄의 «이름이 잡힌 열»(No·Site 처럼 세로 병합된 칸)이 비어 있는 다음 줄은 머리글이 이어지는 것으로 본다(최대 3줄).
        데이터 줄은 그 열들이 차 있다. 이어진 줄이 있으면 hi 는 «마지막 머리글 줄»이 되고(데이터는 그 다음 줄부터), 칸 이름은 위→아래로 잇는다. */
-    let top=hi;
+    let top=hi, up=false;
     if(found){
       const key=[]; ((rows||[])[top]||[]).forEach(function(x,i){ const h=N(String(x==null?'':x)); if(h && cols.some(function(c){ return names[c].indexOf(h)>=0; })) key.push(i); });
       const ne=function(r,i){ return String(((r||[])[i])==null?'':r[i]).trim()!==''; };
@@ -8179,8 +8294,21 @@ GST.cmap = {
         if(filled<1 || key.some(function(i){ return ne(R,i); })) break;   // 묶음이 하나뿐인 줄(칸 하나)도 머리글이다 — 데이터 줄은 이름 잡힌 열이 차 있다
         hi=r;
       }
+      /* 위로도 잇는다 (v187 · 사용자 보고) — 위 줄에 묶음 띠가 있고 몇몇 열은 위아래 세로 병합이면 그 열의 이름은 «위 줄»에만 있다.
+         위 줄을 덩어리에 넣었을 때 «칸 자기 이름»(세로 병합으로 위 칸에만 적힌 이름)으로 맞는 열이 «늘면» 넣는다(최대 2줄).
+         ⚠ 묶음 이름을 붙인 이름(묶음 + 칸)으로 느는 것은 세지 않는다 — 병합 범위를 모르는 채 묶음 이름을 오른쪽으로 채우면
+           묶음 밖의 열(새 점검 항목)에도 묶음 이름이 붙는다(CIP 자체관리 양식 검사가 잡았다). 묶음 아래 겹치는 이름은 compose 가 따로 푼다.
+         제목 줄(「Update : …」)은 아무 열과도 안 맞아 안 들어간다. 사람이 머리글 행을 직접 골랐으면(__hi) 그 줄 하나로 읽는다. */
+      if(!(fixed>0)){
+        const hitsB=function(t){ const B=GST.SM.block(rows, t, hi), set={}; B.keys.forEach(function(ks){ if(ks[0]) set[ks[0]]=1; });
+          let n=0; cols.forEach(function(c){ if(names[c].some(function(k){ return set[k]; })) n++; }); return n; };
+        let bn=hitsB(top);
+        for(let t=top-1; t>=0 && t>=top-2; t--){ const n=hitsB(t); if(n>bn){ bn=n; top=t; up=true; } else break; }
+      }
     }
-    const header=GST.cmap.compose(rows,hi,top);
+    /* 위로 이은 덩어리(v187)는 «칸 자기 이름»(겹치면 묶음 + 칸)으로 — 아래로 이은 덩어리(v164)는 예전처럼 위→아래로 이은 이름 */
+    const header=up?GST.SM.block(rows, top, hi).H.slice():GST.cmap.compose(rows,hi,top);
+    if(!up && top<hi){ const B=GST.SM.block(rows, top, hi); B.H.forEach(function(h,k){ if(!header[k] && h) header[k]=h; }); }
     const raw=((rows||[])[hi]||[]).map(function(x){ return String(x==null?'':x).trim(); });
     /* 열쇠 셋 — 합친 이름 · 그 이름의 63바이트 자른 판(Postgres 가 표 열 이름을 그 길이에서 자른다) ·
        원래 이름(겹치는 이름이면 첫 칸만 — 예전 동작 그대로라 교육현황 같은 옛 표가 안 움직인다) */
@@ -8188,12 +8316,16 @@ GST.cmap = {
     header.forEach(function(h,k){ put(N(h),k); put(N(GST.cmap.colName(h)),k); });
     /* 여러 줄 머리글이면 «아래쪽 몇 단만» 이은 이름·괄호를 뗀 이름도 열쇠로 둔다 —
        표의 열 이름은 「Basic 교육완료일」인데 파일은 「교육과정 Basic (Level 1) 교육완료일」이다. 정규화 정확일치는 그대로다(부분일치 아님). */
-    if(hi>top) GST.cmap.stack(rows,hi,top).forEach(function(st,k){ GST.cmap.variants(st).forEach(function(v){ put(N(v),k); }); });
+    if(hi>top){ GST.SM.block(rows, top, hi).keys.forEach(function(ks,k){ ks.forEach(function(x){ put(x,k); }); });
+      GST.cmap.stack(rows,hi,top).forEach(function(st,k){ GST.cmap.variants(st).forEach(function(v){ put(N(v),k); }); }); }
     raw.forEach(function(h,k){ put(N(h),k); });
-    const idx={}, via={}, used={};
+    const idx={}, via={}, used={}, W=Math.max(header.length, GST.SM._w(rows, top, hi));
+    while(header.length<W) header.push('');
     cols.forEach(function(c){
       let i=-1, v='';
-      if(o[c]){ const k=at[N(o[c])]; if(k!=null){ i=k; v='ovr'; } else v='ovrmiss'; }
+      if(o[c]){ const pos=GST.SM.posOf(o[c]);
+        if(pos>=0){ if(pos<W && !header[pos]){ i=pos; v='ovr'; } else v='ovrmiss'; }   // 열 위치 지정 — 그 열에 머리글이 생겼으면 쓰지 않는다
+        else { const k=at[N(o[c])]; if(k!=null){ i=k; v='ovr'; } else v='ovrmiss'; } }
       if(i<0 && at[N(c)]!=null && !used[at[N(c)]]){ i=at[N(c)]; v=v||'auto'; }
       if(i<0) (al[c]||[]).some(function(a){ const k=at[N(a)]; if(k!=null && !used[k]){ i=k; v=v||'alias'; return true; } });
       if(i>=0) used[i]=1; idx[c]=i; via[c]=v||(i>=0?'auto':'');
@@ -8286,18 +8418,24 @@ GST.cmap = {
     GST.cmap.css();
     const E=GST._esc, N=GST.SM.norm, H=o.H||[], ovr=o.ovr||{}, src=o.src||{}, C=GST.cmap.col;
     const w=o.canDb===false?'pc':GST.cmap.where();
-    const opts=H.map(function(h,i){ return h?'<option value="'+E(h)+'">'+C(i)+' · '+E(h)+'</option>':''; }).join('');
+    /* 지정 목록 — 이름이 있는 열은 이름으로, 머리글이 «없는» 열도 값이 있으면 «열 위치»로 고를 수 있게(v187 · 사용자 지적 「선택 열에서 제외된 것도 결함」).
+       ⚠ 열 위치 지정은 그 열에 머리글이 생기면 쓰지 않는다(GST.SM.posOf) — 양식이 바뀌어 열이 밀리면 남의 열을 읽게 되므로. */
+    const W=Math.max(H.length, GST.SM._w(o.rows||[], o.hi, o.hi));
+    const opts=Array.from({length:W}, function(_, i){ const h=String(H[i]==null?'':H[i]).trim();
+      if(h) return '<option value="'+E(h)+'">'+C(i)+' · '+E(h)+'</option>';
+      return GST.cmap.sample(o.rows,o.hi,i,1).length?'<option value="@'+C(i)+'">'+C(i)+' · (머리글 없음 — 열 위치로)</option>':''; }).join('');
     let nMiss=0, nOvr=0;
     const tr=o.items.map(function(it){
-      const k=it.k, i=it.idx, oh=ovr[k], oHit=oh && H.some(function(h){ return N(h)===N(oh); });
+      const k=it.k, i=it.idx, oh=ovr[k], pos=GST.SM.posOf(oh);
+      const oHit=oh && (pos>=0 ? (pos<W && !String(H[pos]==null?'':H[pos]).trim()) : H.some(function(h){ return N(h)===N(oh); }));
       const where=src[k]==='pc'?'이 PC':'공유';
       let st;
-      if(oh&&oHit){ st='<span class="ok">지정 · '+where+'</span>'; nOvr++; }
-      else if(oh){ st='<span class="bad">지정('+where+') 머리글이 이 파일에 없음 → 자동</span>'; nOvr++; }
+      if(oh&&oHit){ st='<span class="ok">지정'+(pos>=0?' · 열 위치':'')+' · '+where+'</span>'; nOvr++; }
+      else if(oh){ st='<span class="bad">'+(pos>=0?'지정('+where+') '+E(oh.slice(1))+' 열에 이제 머리글이 있음 → 자동':'지정('+where+') 머리글이 이 파일에 없음 → 자동')+'</span>'; nOvr++; }
       else if(i>=0) st='<span class="m">'+(it.via==='alias'?'자동(내장 사전)':'자동')+'</span>';
       else if(it.req){ st='<span class="bad">못 찾음</span>'; nMiss++; }
       else st='<span class="m">'+E(o.missTxt||'없음(선택)')+'</span>';
-      const got=i>=0?C(i)+' · '+E(H[i]||''):'—';
+      const got=i>=0?C(i)+' · '+(H[i]?E(H[i]):'<span class="m">(머리글 없음)</span>'):'—';
       const ex=i>=0?GST.cmap.sample(o.rows,o.hi,i,2).map(E).join(' · '):'';
       const sel='<select data-cmap="'+E(k)+'" data-tbl="'+E(o.tbl)+'"><option value="">(자동 인식)</option>'
         +(oh?opts.replace('value="'+E(oh)+'"','value="'+E(oh)+'" selected'):opts)+'</select>';

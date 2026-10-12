@@ -8,9 +8,9 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=178"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=179"></script>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=178">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=179">
 <style>
 /* ============================================================
    분석 작업대 (v168 · 사용자 요청 「통합관리화면」 4단계)
@@ -221,7 +221,7 @@ async function loadSrc(src){
   const fields=keys.map(k=>{ const vals=smp.map(o=>o[k]).filter(v=>v!=='');
     const dn=vals.filter(v=>/^\d{4}[-.\/]\s?\d{1,2}[-.\/]\s?\d{1,2}/.test(v)).length, nn=vals.filter(v=>!isNaN(GST.numv(v))).length;
     const kind=vals.length&&dn/vals.length>=0.7?'date':vals.length&&nn/vals.length>=0.7?'num':'text';
-    return {k, label:[].concat(SP.fields[k])[0], kind}; });
+    return {k, label:(GST.SM.label?GST.SM.label(SP,k):[].concat(SP.fields[k])[0]), kind}; });
   return (DATA[src]={rows, fields});
 }
 
