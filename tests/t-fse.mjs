@@ -3,13 +3,14 @@
    무엇을 지키나
      [1] 원장 읽기 — 작업 행 아래 부품 행('-')을 같은 S/N·작업일의 작업에 잇는다 · 순서가 섞인 줄도 · 못 이으면 센다(버리지 않는다)
      [2] 알람 고르기 — 코드·분류·메시지(대소문자 흡수) · Alarm/Warning · 책임 · 챔버 · 설비 타입 — 특정 알람을 박지 않는다
-     [3] MFC 버전 — S/N 날짜코드(MCA YYMMDD · MKP 6230+YY+월(1~9,A~C)+DD) · In/Out 뒤바뀜 · 교체일 추정(확인 필요) ·
+     [3] MFC 버전 — S/N 날짜코드(MRC YYMMDD · MKP 6230+YY+월(1~9,A~C)+DD) · In/Out 뒤바뀜 · 교체일 추정(확인 필요) ·
          교체 이력 없음(DRAGON=MKP R0 · GLOBAL AIR=N/A · 반입일−리드타임) · 판정 기준을 바꾸면 결과가 따라간다(코드에 숫자를 박지 않았다)
      [4] 자재실적 S/N 보충 — ±3일 · 한 번만 · 원장 칸이 차 있으면 손대지 않는다
      [5] 집계 — 건수·설비·반복·교체 후 재발 · 달력으로 채운 월 축 · 업로드 날짜 다듬기(엑셀 시리얼)
      [6] 실제 브라우저 — 고장 분석의 «알람 분석» 탭: 열 때 읽기 · KPI = 팝업 목록 · 칩으로 좁히기 · 순위·타임라인·MFC 카드 ·
          엑셀 받기 · 부품 묶음(읽기 전용) · 언어 전환 · JS 에러 0
      [8] 백데이터 엑셀(v192 · 본사 요청 1-5) — 알람 발생 설비의 교체 줄 그대로 · 뺄 자재 고르기 · 설치현황 S/N 맵핑 · 설비 일대기 탭 삭제 · S/N 메뉴
+     [6b] MFC 버전 띠(v193) — 알람 «당시» 버전은 그날 아침(같은 날 교체는 뒤) · 구간은 ver() 그대로 · 챔버마다 유체 띠 · 교체선 · 전후 요약
      [7] 보는 부품(v191) — MFC 판정은 이름에 «MFC» 낱말(LNG MFC …) · 함께 교체한 부품 = 평소 대비 배수(O-RING 은 1배 근처라 안 뽑힌다) ·
          자동 추천 · 교체 후 재발·이력이 보는 부품을 따른다 · 설비 속성을 설비마다 한 줄로 받아도(fse_units) 결과가 같다 ·
          dbRows 가 이 탭이 쓰는 열만 고른다 · 화면: 알람마다 따로 기억 · MFC 카드는 보는 부품에 MFC 가 있을 때만 · 저장 피드백 ·
@@ -75,7 +76,7 @@ const BODY=[
   A('GBWS-X5001','2025-06-02','Left','PI3','Alarm-Inlet#3 pressure high'),
   /* U4 DBW-X001 (DRAGON) */
   A('DBW-X001','2026-08-01','Left','LWA','Alarm-Water Leakage(Tank)'),
-  /* U5 GBWS-X003 (OLD) — S/N 없는 MCA LNG 교체 둘(자재실적이 하나를 채운다) */
+  /* U5 GBWS-X003 (OLD) — S/N 없는 MRC LNG 교체 둘(자재실적이 하나를 채운다) */
   row({sn:'GBWS-X003',d:'2024-05-01',ch:'Right',mc:'CBM'}),
   P('GBWS-X003','2024-05-01','Right','P-MFC-LM','MFC'),
   row({sn:'GBWS-X003',d:'2025-06-01',ch:'Right',mc:'CBM'}),
@@ -93,7 +94,7 @@ const BODY=[
 BODY[BODY.length-1][H.indexOf('Work Date')]='';    // (위 줄은 S/N 이 없고) 이 줄은 날짜도 없다
 BODY.push((()=>{ const r=row({sn:'GBWS-X004',d:'2026-01-01',code:'BFE',msg:'Alarm-Main flame off'}); r[H.indexOf('Work Date')]='—'; return r; })());
 const REG=[
-  {id:1,grp:'MFC',code:'P-MFC-LM',fluid:'LNG',maker:'MCA',on_:true,ord:1},
+  {id:1,grp:'MFC',code:'P-MFC-LM',fluid:'LNG',maker:'mca',on_:true,ord:1},   // 옛 표기(소문자까지) — MRC 로 읽어야 한다(v193)
   {id:2,grp:'MFC',code:'P-MFC-OK',fluid:'O2',maker:'MKP',on_:true,ord:2},
   {id:3,grp:'버너 노즐',code:'P-NZ-1',on_:true,ord:3},
   {id:4,grp:'노즐 커버',code:null,name_re:'nozzle\\s*cover',on_:true,ord:4},
@@ -151,29 +152,31 @@ is(G.FSE.utype('GBWS-X1058')==='OLD' && G.FSE.utype('GBWS-X1059')==='GLOBAL' && 
 
 console.log('[3] MFC 버전');
 const Pm=G.FSE.P(), u=(sn,ch)=>G.snKey(sn)+'|'+ch, V=(sn,ch,f,d)=>G.FSE.ver(D,u(sn,ch),f,d,Pm);
-is(V('GBWS-X001','Left','LNG').ver==='F1' && V('GBWS-X001','Left','LNG').how==='sn', 'MCA S/N 250610 → F1 (S/N 날짜코드)');
-is(V('GBWS-X001','Left','LNG','2026-02-28').how==='fabin' && V('GBWS-X001','Left','LNG','2026-02-28').ver==='G', '교체 «전» 날짜의 버전 = 출하 원품(반입 2022-06-01 − 50일 → G)');
+is(V('GBWS-X001','Left','LNG').ver==='MRC F1' && V('GBWS-X001','Left','LNG').how==='sn' && V('GBWS-X001','Left','LNG').maker==='MRC', 'MRC S/N 250610 → MRC F1 (S/N 날짜코드 · 제조사 MRC)');
+is(G.FSE.maker('MCA')==='MRC' && G.FSE.maker(' mca ')==='MRC' && G.FSE.maker('MKP')==='MKP' && G.FSE.maker('horiba')==='HORIBA' && G.FSE.maker(null)==='', '제조사 이름 — 옛 «MCA» 는 MRC 로 읽는다 (MKP · MRC · HORIBA)');
+is(D.parts.filter(p=>p.code==='P-MFC-LM').every(p=>p.maker==='MRC'), '부품 묶음의 옛 표기 «mca» → 교체 줄 제조사 MRC');
+is(V('GBWS-X001','Left','LNG','2026-02-28').how==='fabin' && V('GBWS-X001','Left','LNG','2026-02-28').ver==='MRC G', '교체 «전» 날짜의 버전 = 출하 원품(반입 2022-06-01 − 50일 → MRC G)');
 const o2=V('GBWS-X002','Left','O2');
 is(o2.ver==='MKP R1' && o2.swap===true && D.swapped===1, 'In/Out 뒤바뀐 MKP 줄 — 제조사가 맞는 Out(623025C… = 25-12-15)을 읽어 R1');
-is(V('GBWS-X002','Left','LNG').ver==='F' && V('GBWS-X002','Left','LNG').how==='fabin', '반입 2025-04-01 − 50일 = 250210 → F (F1 시작 250313 전)');
-is(V('GBWS-X5001','Left','AIR').ver==='N/A' && V('GBWS-X5001','Left','O2').ver==='F', 'GLOBAL — AIR 없음 · 반입 2025-04-11 − 50일 → F');
+is(V('GBWS-X002','Left','LNG').ver==='MRC F' && V('GBWS-X002','Left','LNG').how==='fabin', '반입 2025-04-01 − 50일 = 250210 → MRC F (F1 시작 250313 전)');
+is(V('GBWS-X5001','Left','AIR').ver==='N/A' && V('GBWS-X5001','Left','O2').ver==='MRC F', 'GLOBAL — AIR 없음 · 반입 2025-04-11 − 50일 → MRC F');
 is(V('DBW-X001','Left','LNG').ver==='MKP R0' && V('DBW-X001','Left','AIR').ver==='N/A', 'DRAGON 교체 이력 없음 = MKP R0 · AIR MFC 없음(N/A)');
 is(V('SWS-X001','Single','LNG').how==='etc', 'SWS·GPWS 는 판정하지 않는다');
 const x3=V('GBWS-X003','Right','LNG');
-is(x3.ver==='F/F1' && x3.q && x3.how==='date', 'S/N 없는 교체(2025-06-01) → «F/F1» 확인 필요');
-is(V('GBWS-X003','Right','LNG','2024-12-31').ver==='F' && !V('GBWS-X003','Right','LNG','2024-12-31').q, '기준일 전 교체(2024-05-01) → F 로 확정');
+is(x3.ver==='MRC F/F1' && x3.q && x3.how==='date' && x3.maker==='MRC', 'S/N 없는 교체(2025-06-01) → «MRC F/F1» 확인 필요');
+is(V('GBWS-X003','Right','LNG','2024-12-31').ver==='MRC F' && !V('GBWS-X003','Right','LNG','2024-12-31').q, '기준일 전 교체(2024-05-01) → MRC F 로 확정');
 is(G.FSE.mfcSn('623026703001').ymd===260703 && G.FSE.mfcSn('623025901001').ymd===250901 && G.FSE.mfcSn('62302510A001')===null, 'MKP 날짜코드 — 월 1~9·A~C');
 /* 판정 기준을 바꾸면 따라간다 — 숫자를 코드에 박지 않았다 */
 G.params.rows={mfc_mca_f1:{value:250701}};
-is(G.FSE.ver(D,u('GBWS-X001','Left'),'LNG',null,G.FSE.P()).ver==='F', 'F1 시작을 250701 로 바꾸면 250610 은 F');
+is(G.FSE.ver(D,u('GBWS-X001','Left'),'LNG',null,G.FSE.P()).ver==='MRC F', 'F1 시작을 250701 로 바꾸면 250610 은 MRC F');
 G.params.rows={};
 
 console.log('[4] 자재실적 S/N 보충');
 G.FSE.enrich(D,[{snk:'GBWSX003',date:'2025-06-03',code:'P-MFC-LM',ch:'',snIn:'250520-77A701_F',snOut:''},
                 {snk:'GBWSX003',date:'2025-06-20',code:'P-MFC-LM',ch:'',snIn:'250601-01A701_F',snOut:''},
                 {snk:'GBWSX001',date:'2026-03-01',code:'P-MFC-LM',ch:'Left',snIn:'200101-00A701_F',snOut:''}]);
-is(D.enriched===1 && V('GBWS-X003','Right','LNG').ver==='F1' && V('GBWS-X003','Right','LNG').src==='mat', '±3일 안의 자재 줄 하나로 채운다 → F1 (S/N)');
-is(V('GBWS-X001','Left','LNG').ver==='F1', '원장 칸이 이미 차 있으면 자재 줄로 덮지 않는다');
+is(D.enriched===1 && V('GBWS-X003','Right','LNG').ver==='MRC F1' && V('GBWS-X003','Right','LNG').src==='mat', '±3일 안의 자재 줄 하나로 채운다 → F1 (S/N)');
+is(V('GBWS-X001','Left','LNG').ver==='MRC F1', '원장 칸이 이미 차 있으면 자재 줄로 덮지 않는다');
 G.FSE.bind(D); G.FSE.enrich(D,[]); is(D.enriched===1, '묶음을 다시 입혀도 채운 수를 잃지 않는다');
 
 console.log('[5] 집계');
@@ -188,8 +191,19 @@ const R=G.FSE.rate(D, evs, D.units, 'd1', 1);
 is(R.length===1 && R[0].a===5, '세부공정별 발생 설비 비율 — 분모는 관리 챔버');
 const hi=G.FSE.history(D,u('GBWS-X001','Left'),{axis:'code',vals:['BFE'],aw:'Alarm'});
 const h20=hi.find(x=>x.kind==='alarm'&&x.date==='2026-03-20');
-is(h20 && h20.gap===19 && /LNG F1/.test(h20.ver||''), '이력 — 직전 교체 후 19일 · 당시 MFC LNG F1');
+is(h20 && h20.gap===19 && /LNG MRC F1/.test(h20.ver||''), '이력 — 직전 교체 후 19일 · 당시 MFC LNG MRC F1');
 is(hi.some(x=>x.kind==='tbm') && hi.filter(x=>x.kind==='part').length===2, '이력에 TBM·관심 부품 교체가 든다(꺼진 묶음은 없다)');
+/* 알람 «당시» 버전 = 그날 아침 (v193) — 그 알람 작업이 MFC 를 바꿨으면(같은 작업일) 알람은 «옛» 버전에서 난 것이다 */
+const uX1=u('GBWS-X001','Left');
+is(G.FSE.ver(D,uX1,'LNG','2026-03-01',Pm).ver==='MRC F1' && G.FSE.verAt(D,uX1,'LNG','2026-03-01',Pm).ver==='MRC G' && G.FSE.verAt(D,uX1,'LNG','2026-03-20',Pm).ver==='MRC F1',
+  '당시 버전 — MFC 를 바꾸게 만든 03-01 알람은 G(바꾸기 전) · 19일 뒤 03-20 알람은 F1');
+const h01=hi.find(x=>x.kind==='alarm'&&x.date==='2026-03-01');
+is(h01 && /LNG MRC G/.test(h01.ver||'') && !/LNG MRC F1/.test(h01.ver||''), '이력 «당시 MFC» 도 같은 판정 — 03-01 알람은 LNG MRC G ('+(h01&&h01.ver)+')');
+const sgX1=G.FSE.verSegs(D,uX1,'LNG',Pm);
+is(sgX1.length===2 && sgX1[0].from==='' && sgX1[0].to==='2026-03-01' && sgX1[0].v.ver==='MRC G' && sgX1[0].v.how==='fabin'
+   && sgX1[1].from==='2026-03-01' && sgX1[1].to==='' && sgX1[1].v.ver==='MRC F1' && sgX1[1].v.how==='sn',
+  '버전 구간 — 출하 원품 G(반입일 환산) → 03-01 부터 F1(S/N) · 구간의 버전은 ver() 그대로');
+is(G.FSE.verSegs(D,u('GBWS-X002','Left'),'LNG',Pm).length===1 && G.FSE.verSegs(D,u('GBWS-X5001','Left'),'AIR',Pm)[0].v.ver==='N/A', '교체가 없으면 구간 하나(출하 원품) · GLOBAL AIR 는 N/A');
 
 /* ── [5b] 자재마스터(v190) — 지어낸 품목번호(P-…)뿐 · 실제 품목 코드는 저장소에 두지 않는다 ── */
 console.log('[5b] 자재마스터 — 필요한 번호만 묻기 · 표준 품목명 · 원장 글자가 먼저');
@@ -242,12 +256,12 @@ I.clear();
 console.log('[7] 보는 부품 — MFC 이름 · 배수 · 자동 추천 · 재발·이력 · 설비 속성 · 받는 열');
 is(G.FSE.isMfcGrp('MFC') && G.FSE.isMfcGrp('LNG MFC') && G.FSE.isMfcGrp('O2 MFC') && G.FSE.isMfcGrp('mfc(CDA)') && !G.FSE.isMfcGrp('MFCX') && !G.FSE.isMfcGrp('버너 노즐'),
   'MFC 판정 묶음 = 이름에 «MFC» 낱말(LNG MFC · O2 MFC …) — 예전에는 정확히 «MFC» 만이라 유체별로 나누면 꺼졌다');
-{ const REG2=[{id:1,grp:'LNG MFC',code:'P-MFC-LM',fluid:'LNG',maker:'MCA',on_:true,ord:1},{id:2,grp:'O2 MFC',code:'P-MFC-OK',fluid:'O2',maker:'MKP',on_:true,ord:2},
+{ const REG2=[{id:1,grp:'LNG MFC',code:'P-MFC-LM',fluid:'LNG',maker:'MRC',on_:true,ord:1},{id:2,grp:'O2 MFC',code:'P-MFC-OK',fluid:'O2',maker:'MKP',on_:true,ord:2},
     {id:3,grp:'버너 노즐',code:'P-NZ-1',on_:true,ord:3}];
   G.FSE.reg.rows=REG2; G.FSE.reg._re=null;
   const D2=G.FSE.parse(back,{org:snk=>INST[snk]||null}); G.FSE.bind(D2);
   const v2=G.FSE.ver(D2,u('GBWS-X001','Left'),'LNG',null,G.FSE.P());
-  is(D2.hasMfc && v2.ver==='F1' && v2.how==='sn' && D2.swapped===1, '«LNG MFC»·«O2 MFC» 로 나눠도 버전 판정이 그대로 (F1 · 뒤바뀜 보정 1)');
+  is(D2.hasMfc && v2.ver==='MRC F1' && v2.how==='sn' && D2.swapped===1, '«LNG MFC»·«O2 MFC» 로 나눠도 버전 판정이 그대로 (F1 · 뒤바뀜 보정 1)');
   G.FSE.reg.rows=REG; G.FSE.reg._re=null; }
 /* 함께 교체한 부품 — 지어낸 작은 원장: 작업 60건은 늘 O-RING 을 간다(평소) · 알람 10건 중 8건이 MFC · 6건이 O-RING */
 NO=0;
@@ -399,6 +413,20 @@ is(circ>=3, '타임라인에 달별 알람 원 ('+circ+')');
 const hist=await page.$$eval('#fseHistCard tbody tr',r=>r.length);
 is(hist>=7, '이력 표 — 알람·교체·TBM ('+hist+')');
 is(/BURNER NOZZLE ASSY \(P-NZ-1\)/.test(await page.textContent('#fseHistCard')), '이력의 부품 이름은 자재마스터 표준 품목명 (코드 함께)');
+/* MFC 버전 띠 (v193 · 시안 A) — 보는 부품에 MFC 가 있으면 챔버마다 유체별 띠 · 교체선 · 전후 요약 · 말풍선에 «당시» 버전 */
+const vb=await page.evaluate(()=>{ const c=document.getElementById('fseTlCard');
+  const segs=[...c.querySelectorAll('.fse-vseg')].map(g=>({f:g.dataset.f, v:g.dataset.v, t:(g.querySelector('title')||{}).textContent||'', fill:g.querySelector('rect').getAttribute('fill')}));
+  const sum=[...c.querySelectorAll('.fse-vsum')].map(g=>[...g.querySelectorAll('text')].map(t=>t.textContent).join(' '));   /* 보이는 글자(한 줄에 안 들어가면 비교가 다음 줄) */
+  const tips=[...c.querySelectorAll('svg g > title')].map(t=>t.textContent).filter(t=>/^2026-03 · /.test(t));
+  return { segs, sum, tips, chg:c.querySelectorAll('.fse-vchg line').length, leg:c.querySelector('.fse-leg').textContent, ch:[...c.querySelectorAll('.fse-tlch')].map(x=>x.textContent) }; });
+const lngL=vb.segs.filter(x=>x.f==='LNG');
+is(vb.ch.join('|')==='Left|Right' && lngL.length>=3 && lngL[0].v==='MRC G' && lngL[1].v==='MRC F1', 'MFC 버전 띠 — 챔버(Left·Right)마다 LNG 띠 · Left 는 MRC G → MRC F1 ('+lngL.map(x=>x.v).join(' → ')+')');
+is(/^url\(#fseVh/.test(lngL[0].fill) && !/^url/.test(lngL[1].fill) && /출하 원품 · 반입일 추정/.test(lngL[0].t) && /교체 · S\/N 250610/.test(lngL[1].t), '추정 구간(반입일 환산)은 빗금 · S/N 확정 구간은 칠한 띠 · 띠 말풍선에 근거와 S/N');
+is(vb.chg>=1, 'MFC 교체선 — 교체일 위치에 알람 줄부터 띠까지 ('+vb.chg+')');
+is(vb.sum.some(t=>/LNG MFC MRC G → MRC F1 · 26-03-01/.test(t) && /알람 MRC G 구간 3건 · .*→ MRC F1 구간 1건/.test(t)), '전후 요약 — «LNG MFC MRC G → MRC F1 · 날짜» · 바꾸기 전 3건(25-03-10 · 26-02-05 · 그날 03-01) → 뒤 1건(03-20) ('+vb.sum[0]+')');
+is(vb.tips.some(t=>/2026-03-01 Alarm-Main flame off — 당시 LNG MFC MRC G/.test(t)) && vb.tips.some(t=>/2026-03-20 Alarm-Main flame off — 당시 LNG MFC MRC F1/.test(t) && /LNG 교체 후 19일/.test(t)),
+  '알람 원 말풍선 — 03-01 은 «당시 LNG MFC MRC G»(그날 바꾸기 전) · 03-20 은 «MRC F1 · 교체 후 19일»');
+is(/MRC G/.test(vb.leg) && /MRC F1/.test(vb.leg) && !/MCA/.test(vb.leg) && /MFC 교체/.test(vb.leg) && /추정/.test(vb.leg) && !/▲ MFC/.test(vb.leg), '범례 — 버전 색·추정·교체선 (띠로 그린 MFC 는 기호 대신 띠)');
 await page.click('#fseTopCard tr[data-fsel="GBWSX002"]'); await page.waitForTimeout(400);
 is(/GBWS-X002/.test(await page.textContent('#fseTlCard h3')), '순위표 줄을 누르면 그 설비의 타임라인');
 /* MFC 카드 */
@@ -409,6 +437,7 @@ is(/뒤바뀐 줄 1건/.test(mfc) && /자재실적의 IN SN 으로 채웠습니�
 await page.click('#fseBar .fse-chip[data-fv="BFE"]'); await page.waitForTimeout(300);
 await page.click('#fseBar .fse-chip[data-fv="LWA"]'); await page.waitForTimeout(400);
 is(await page.$$eval('#fseBar .fse-vc',c=>c.length)===0 && /자동 추천/.test(await page.textContent('#fseBar .fse-vrow')), '다른 알람(LWA)은 따로 — 자동 추천(빈칸)');
+is(await page.$$eval('#fseTlCard .fse-vseg, #fseTlCard .fse-vsum',c=>c.length)===0, '보는 부품에 MFC 가 없으면 띠도 없다 — 타임라인은 지금까지 그대로');
 await page.click('#fseBar .fse-chip[data-fv="LWA"]'); await page.waitForTimeout(300);
 await page.click('#fseBar .fse-chip[data-fv="BFE"]'); await page.waitForTimeout(400);
 is((await page.$$eval('#fseBar .fse-vc',c=>c.map(x=>x.textContent.replace('✕','').trim()))).join('|')==='MFC|버너 노즐', 'BFE 로 돌아오면 골라 둔 보는 부품이 그대로');
