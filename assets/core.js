@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 187;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 188;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -5649,11 +5649,26 @@ GST.sectionNav = function(defs){
   }
   let cur = null;
   try{ cur = sessionStorage.getItem(storeKey); }catch(e){}
+  /* 링크로 섹션을 바로 연다 (v195 · 사용자 요청 「알람 분석 탭이 바로 뜨게 링크」) — 셸 #tab=fault&sec=alarm → 페이지 ?sec=alarm.
+     주소의 값은 «처음 한 번»만 이긴다 — 언어를 바꾸면 이 함수가 다시 불리는데, 그때까지 주소를 보면 사람이 고른 섹션이 링크 값으로 되돌아간다.
+     없는 id(오타·옛 링크)는 버린다 — 빈 화면을 띄우지 않고 기억된 섹션(또는 첫 섹션)으로 연다. */
+  if(!GST._secUrlDone){
+    GST._secUrlDone = true;
+    let u = null;
+    try{ u = new URLSearchParams(location.search).get('sec'); }catch(e){}
+    if(u && defs.some(function(d){ return d.id===u; })) cur = u;
+  }
   if(!defs.some(function(d){ return d.id===cur; })) cur = defs[0].id;
 
   function show(id){
     cur = id;
     try{ sessionStorage.setItem(storeKey, id); }catch(e){}
+    /* 셸 주소창이 이 섹션을 따라가게 — 주소를 복사하면 그 링크가 «지금 보는 섹션»으로 열린다.
+       혼자 연 화면이면 자기 주소(?sec=)를 고친다(GST.saveState 의 ?f= 와 같은 꼴). */
+    try{
+      if(window.self!==window.top) window.parent.postMessage({type:'gst-sec', sec:id}, '*');
+      else { const u=new URL(location); u.searchParams.set('sec', id); history.replaceState(null,'',u); }
+    }catch(e){}
     /* 탭마다 다른 머리(예: 알람 분석은 페이지 KPI 줄을 감춘다 · v189).
        ⚠ 이름이 data-sec 이면 안 된다 — 섹션 표식과 같아 querySelector('[data-sec="…"]') 가 body 를 잡는다(실제로 겪었다). */
     try{ document.body.setAttribute('data-sec-on', id); }catch(e){}
