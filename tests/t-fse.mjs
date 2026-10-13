@@ -579,6 +579,32 @@ const sec=await page.evaluate(()=>{ const c=document.querySelector('[data-sec="a
 const ko=(sec.replace(/버너 노즐|노즐 커버|꺼진 묶음/g,'').match(/[가-힣]/g)||[]).length; if(ko) console.log('     한글:', (sec.replace(/버너 노즐|노즐 커버|꺼진 묶음/g,'').match(/.{0,12}[가-힣]+.{0,12}/g)||[]).slice(0,6));
 is(ko===0, '영어로 바꾸면 탭 안에 한글이 없다(부품 묶음 이름=자료 값 제외) — 남은 한글 '+ko+'자');
 is(errs.length===0, 'JS 에러 0 '+(errs.length?errs.slice(0,3).join(' | '):''));
+
+console.log('[6c] 섹션 링크 — #tab=fault&sec=alarm 이면 알람 분석이 바로 뜬다 (v195 · 사용자 요청)');
+{ const p2=await bctx.newPage(); const e2=[]; p2.on('pageerror',e=>e2.push(e.message));
+  await p2.goto(BASE+'/fault/?sec=alarm',{waitUntil:'domcontentloaded'});
+  await p2.waitForFunction(()=>document.body.getAttribute('data-sec-on')==='alarm' && document.getElementById('fseBody') && document.getElementById('fseBody').style.display!=='none',null,{timeout:20000});
+  is(await p2.evaluate(()=>document.querySelector('#gstSecNav .gst-sec-tab.active').dataset.id==='alarm' && window.__fseReads===1), '혼자 연 화면 ?sec=alarm — 처음부터 알람 분석 · 원장을 한 번 읽는다');
+  await p2.click('#gstSecNav .gst-sec-tab[data-id="cause"]'); await p2.waitForTimeout(300);
+  is(await p2.evaluate(()=>new URLSearchParams(location.search).get('sec')==='cause'), '섹션을 바꾸면 자기 주소(?sec=)가 따라간다');
+  await p2.evaluate(()=>window.setLang('en')); await p2.waitForTimeout(400);
+  is(await p2.evaluate(()=>document.body.getAttribute('data-sec-on')==='cause'), '언어를 바꿔도(섹션 다시 그림) 링크 값으로 되돌아가지 않는다');
+  await p2.goto(BASE+'/fault/?sec=nope',{waitUntil:'domcontentloaded'});
+  await p2.waitForFunction(()=>document.querySelector('#gstSecNav .gst-sec-tab.active'),null,{timeout:20000});
+  is(await p2.evaluate(()=>!!document.querySelector('[data-sec="'+document.body.getAttribute('data-sec-on')+'"]')), '없는 섹션(sec=nope)은 버리고 있는 섹션으로 연다(빈 화면 아님)');
+  /* 셸 — 주소의 sec 이 그 탭 iframe 으로 가고, 사람이 섹션을 바꾸면 셸 주소창이 따라간다(복사한 링크 = 지금 보는 칸) */
+  const ps=await bctx.newPage(); ps.on('pageerror',e=>e2.push(e.message));
+  await ps.goto(BASE+'/#tab=fault&sec=alarm',{waitUntil:'domcontentloaded'});
+  await ps.waitForFunction(()=>{ const f=document.querySelector('iframe[data-id="fault"]'); return f && /[?&]sec=alarm/.test(f.src); },null,{timeout:20000});
+  let ff=null; for(let i=0;i<60 && !ff;i++){ ff=ps.frames().find(f=>/\/fault\//.test(f.url())); if(!ff) await ps.waitForTimeout(250); }
+  await ff.waitForFunction(()=>document.body.getAttribute('data-sec-on')==='alarm',null,{timeout:20000});
+  is(true, '셸 #tab=fault&sec=alarm — 고장 분석 탭이 알람 분석으로 바로 열린다');
+  await ps.waitForFunction(()=>/(^|[#&])sec=alarm(&|$)/.test(location.hash) && /tab=fault/.test(location.hash),null,{timeout:5000}).catch(()=>{});
+  is(await ps.evaluate(()=>/(^|[#&])sec=alarm(&|$)/.test(location.hash)), '셸 주소에 sec 이 남는다 ('+await ps.evaluate(()=>location.hash)+')');
+  await ff.click('#gstSecNav .gst-sec-tab[data-id="overview"]'); await ps.waitForTimeout(400);
+  is(await ps.evaluate(()=>/sec=overview/.test(location.hash)), '탭 안에서 섹션을 바꾸면 셸 주소창이 따라간다 ('+await ps.evaluate(()=>location.hash)+')');
+  is(e2.length===0, 'JS 에러 0 (섹션 링크) '+(e2.length?e2.slice(0,3).join(' | '):''));
+  await p2.close(); await ps.close(); }
 await browser.close(); srv.close();
 
 console.log('\n'+(fail?'❌':'✅')+' t-fse '+pass+'/'+(pass+fail));
