@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=188"></script>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=188">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=189"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=189">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/ds.css?v=1">
 <style>
 /* ============================================================
@@ -190,8 +190,13 @@ body.gst-shot .hb-tk[aria-hidden="true"]{display:none}
 .hb-sig .n{flex:1;min-width:0}
 .hb-sig .n b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hb-sig .n span{display:block;font-size:11.5px;color:var(--txt-muted)}
-.hb-sig .c{display:flex;gap:9px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
-.hb-sig .c .bm{color:var(--txt-main)} .hb-sig .c .rk{color:var(--bad)} .hb-sig .c .rk.z{color:var(--txt-muted);font-weight:500}
+.hb-sig .c{display:grid;grid-template-columns:repeat(3,36px);gap:0;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.hb-sig .c .bm{color:var(--txt-main)} .hb-sig .c .rk{color:var(--bad)} .hb-sig .c .rk.z,.hb-sig .c .rs.z{color:var(--txt-muted);font-weight:500} .hb-sig .c .rs{color:var(--txt-2)}
+/* 신호등 머리글(v196) — 줄과 같은 칸 나눔(점 · 이름 · 숫자 셋) */
+.hb-sigh{display:grid;grid-template-columns:10px minmax(0,1fr) repeat(3,36px);gap:10px 0;padding:0 10px 4px;font-size:10.5px;font-weight:700;color:var(--txt-muted);letter-spacing:.02em;border-bottom:1px solid var(--line)}
+.hb-sigh>span{text-align:right} .hb-sigh>span:nth-child(2){text-align:left;padding-left:10px}
+.hb-sig{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:10px}
+.hb-dist-1{grid-template-columns:1fr;margin-top:4px;padding-top:8px;border-top:1px solid var(--line)}
 .hb-pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
 .hb-pill.ok{background:var(--ok-soft);color:var(--ok)} .hb-pill.warn{background:var(--warn-soft);color:var(--warn)} .hb-pill.bad{background:var(--bad-soft);color:var(--bad)}
 
@@ -313,7 +318,7 @@ body.gst-shot .hb-tk[aria-hidden="true"]{display:none}
 .hb-map.globe #mapS,.hb-map.globe #bubs,.hb-map.globe #mapC{display:none !important}
 .hb-map #globe.drag{cursor:grabbing}
 .hb-ghud{position:absolute;left:12px;top:8px;font:600 10.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.12em;color:var(--txt-muted);pointer-events:none;display:none;font-variant-numeric:tabular-nums}
-.hb-map.globe .hb-ghud{display:block}
+.hb-map.globe .hb-ghud{display:none}   /* v196 — «ORTHO · 0 · 0» 좌표 HUD 는 개발자 메모다. 요소는 지구본 코드가 쓰므로 남기고 보이지 않게 */
 .hb-ghud b{color:var(--accent);font-weight:700}
 .hb-mapcard h2 .hb-seg{flex:none}
 .hb-mapcard h2 .hb-seg button{padding:4px 11px;font-size:12px}
@@ -338,6 +343,10 @@ body:not(.fx-ticker) .hb-tick-in{animation:none}
 /* 이번 주 브리핑 — 카드가 센 숫자를 문장으로(새로 세지 않는다). 타자기는 글자를 바꾸지 않고 «가렸다 드러낸다»(clip-path) */
 .hb-grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch}
 .hb-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+/* 운영 관리(v196 · 시안 03) — 두 열이 «독립»으로 쌓인다: 왼쪽 위험 설비 → 확인 사항 · 오른쪽 목표 대비 표 → 브리핑 → 히트맵. 한 «행»으로 묶으면 긴 쪽이 높이를 정해 표 아래 ~450px 이 빈다 */
+.hb-lead{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px;align-items:start;margin-top:12px}
+.hb-lead .hb-qcard{min-height:0} .hb-lead .hb-qbox{flex:none} .hb-lead .hb-qbox > .hb-qs{position:static;max-height:560px}
+@media (max-width:1200px){ .hb-lead{grid-template-columns:minmax(0,1fr)} }
 .hb-qcard{min-height:420px}
 .hb-qcard > h2{flex:none}
 /* 목록은 «절대 위치»라 카드의 자연 높이에 들어가지 않는다 — 행 높이는 오른쪽 열이 정하고 목록은 그 안에서 스크롤한다 */
@@ -433,8 +442,13 @@ body.fx-viewfx .hb-bub.drop{animation:hbDrop .75s cubic-bezier(.34,1.56,.64,1) b
   <section class="hb-grid" data-vw="exec">
     <div class="hb-card">
       <h2><span class="hb-radar" id="radar" aria-hidden="true"></span><span data-i="sigT">운영단위 신호등</span><button type="button" class="hb-info r" id="ruleBtn" aria-label="판정 기준" title="판정 기준">i</button></h2>
-      <div class="hb-legend"><span><i style="background:var(--bad)"></i><span data-i="bad">점검 권장</span></span><span><i style="background:var(--warn)"></i><span data-i="warn">관찰 중</span></span><span><i style="background:var(--ok)"></i><span data-i="ok">안정</span></span><span class="hb-sp"></span><span data-i="sigCols">이번 주 고장 · 위험 설비</span></div>
+      <div class="hb-legend"><span><i style="background:var(--bad)"></i><span data-i="bad">점검 권장</span></span><span><i style="background:var(--warn)"></i><span data-i="warn">관찰 중</span></span><span><i style="background:var(--ok)"></i><span data-i="ok">안정</span></span></div>
+      <!-- 세 숫자 · 머리글(v196 · 시안 02) — 예전 둘째 숫자는 «14일 이내 재고장»인데 머리글이 「위험 설비」라 읽혔다(30 ≠ 위험 설비 96) -->
+      <div class="hb-sigh" aria-hidden="true"><span></span><span data-i="sh_op">운영단위</span><span data-i="sh_bm">고장</span><span data-i="sh_rep">재고장</span><span data-i="sh_risk">위험</span></div>
       <div class="hb-sigs" id="sigs"></div>
+      <div class="hb-note" data-i="sigNote">고장 = 이번 주 BM · 재고장 = 14일 이내 재고장 설비 · 위험 = 고장 위험 설비(점수 순위)</div>
+      <!-- 국가·고객사 분포(나라 안에서는 지역·고객사) — 신호등 카드 아래(v196 · 빈 공간을 채우고 지도 카드는 짧아진다). id 는 그대로(distShow · 검사) -->
+      <div class="hb-dist hb-dist-1" id="cdist" hidden></div>
     </div>
 
     <div class="hb-card hb-mapcard">
@@ -442,7 +456,6 @@ body.fx-viewfx .hb-bub.drop{animation:hbDrop .75s cubic-bezier(.34,1.56,.64,1) b
         <span class="r hb-seg" role="group" id="segMap" data-i-title="map_lbl" title="지도 모양"><button type="button" data-m="globe" aria-pressed="true" class="on" data-i="m_globe">지구본</button><button type="button" data-m="flat" aria-pressed="false" data-i="m_flat">평면</button></span></h2>
       <div class="hb-map" id="map"><svg id="mapS" viewBox="0 0 1000 386" preserveAspectRatio="none" aria-hidden="true"></svg><canvas id="mapC" aria-hidden="true"></canvas><canvas id="globe" role="img" data-i-title="globe_lbl" title="지구본"></canvas><div class="hb-ghud" id="ghud" aria-hidden="true">ORTHO · <b id="gLat">0</b> · <b id="gLon">0</b></div><div id="bubs"></div><div class="hb-pop" id="pop" hidden></div></div>
       <div class="hb-stats" id="stats"></div>
-      <div class="hb-dist" id="cdist" hidden></div>
       <div class="hb-note" id="mapNote"></div>
     </div>
 
@@ -454,7 +467,7 @@ body.fx-viewfx .hb-bub.drop{animation:hbDrop .75s cubic-bezier(.34,1.56,.64,1) b
 
   <!-- 확인 사항 | (이번 주 브리핑 + 주차별 고장 히트맵) — 5:5 (v183 · 사용자 요청 「히트맵을 브리핑 아래 빈 공간에 · 5:5 · 넘치면 스크롤」).
        확인 사항은 오른쪽 열의 높이를 따라가고 넘치는 줄은 그 안에서 스크롤한다(목록이 절대 위치 — 길어도 행 높이를 키우지 않는다) -->
-  <section class="hb-grid2" data-vw="exec lead">
+  <section class="hb-grid2" data-vw="exec">
     <div class="hb-card hb-qcard">
       <h2><span data-i="qT">처리할 일</span><span class="s" id="qS"></span></h2>
       <div class="hb-qbox"><div class="hb-qs" id="queue"></div></div>
@@ -493,7 +506,7 @@ const T={
 ko:{
   /* 디자인 X(v180) */ m_globe:'지구본',m_flat:'평면',map_lbl:'지도 모양',globe_lbl:'운영단위 지구본 — 끌어서 돌리고 원을 누르면 그 나라 지도로',bT:'이번 주 브리핑',bReplay:'다시 보기',b_bm:'이번 주 고장 {n}건 — 평소 {b}건 대비 {d}건',b_top:'가장 튄 곳은 {op} — 평소의 {x} · {st}',b_top0:'가장 많은 곳은 {op} — 이번 주 {n}건',b_toprep:'{op} — {rd}일 이내 재고장 설비 {n}대 · {st}',b_calm:'평소와 다르게 튄 운영단위는 없습니다',b_rep:'{rd}일 이내 재고장 설비 {r}대 · 고장 위험 설비 {k}대',b_pm:'이번 주 PM {n}건 — 지난주 {p}건',b_warr:'90일 이내 Warranty Out 전환 {n}대 — 유상 설비 증가',kan_mv_l:'앞 단계로',kan_mv_r:'다음 단계로',kan_moved:'«{t}» → {s}',kan_conflict:'다른 사람이 먼저 바꿨습니다 — 새로 읽었습니다',kan_fail:'옮기지 못했습니다',
   /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'기준일 고르기',asof_latest:'최신으로',asof_apply:'적용',asof_state:'과거 날짜로 보고 있습니다 — 고장·PM·가동 날짜는 그 날 기준이지만, 설비 상태(Operation 등)는 지금 값입니다',sc_allop:'전체 운영단위',view_lbl:'보기',scope_lbl:'범위',kpi_lbl:'핵심 지표',v_exec:'전사 요약',v_lead:'운영 관리',v_field:'사이트별',save_def:'기본 화면으로 설정',shot:'이미지 저장',shotT:'이 화면 전체를 이미지(PNG)로 저장 — 메일 첨부용',tour_btn:'글로벌 투어',tour_btnT:'지구본이 나라와 사이트를 차례로 보여 줍니다 — 벽 화면·회의실용',tour_brand:'글로벌 운영 현황',tour_co:'전사 요약',tour_stop:'정지',tour_world:'전사',tour_intro_t:'전 세계 설비 현황',tour_cty_eb:'국가 {i} / {n}',tour_sites_t:'사이트 분포',tour_site_eb:'{c} · 사이트 {i} / {n}',tour_run:'가동',tour_runp:'가동률',tour_share:'나라 안 비중',tour_unpl:'위치 미지정',tour_regs:'지역',tour_sites:'사이트',tour_top:'설비가 많은 사이트',tour_next:'다음',tour_cust:'고객사',tour_ops:'운영단위',tour_start:'글로벌 투어를 시작합니다',saved_srv:'기본 화면으로 설정했습니다 — 다음 접속부터 이 화면이 먼저 열립니다',saved_pc:'이 PC에만 저장했습니다',go_targets:'목표 관리',sc_all:'전사',sc_kr:'국내 전체',sc_os:'해외 전체',sc_ops:'운영단위',noTgt:'아직 설정된 목표가 없습니다. 목표를 설정하면 카드와 표가 목표 대비로 판정됩니다.',noTgtAdm:'「목표 관리」에서 설정하세요.',noTbl:'서버에 목표 테이블이 없습니다 — supabase/setup-27-targets.sql을 실행하세요.',opsT:'운영단위별 목표 대비 현황',opsS:'행을 누르면 해당 운영단위로 좁혀 봅니다',decT:'이번 주 확인 사항',decS:'목표 미달 · 재고장 · 기한 경과 건',trendT:'주간 고장 추이 · 최근 12주',trendS:'점선 = 목표를 주 단위로 환산한 값',actT:'조치 사항 — 미완료',actS:'기한 경과 건 우선',riskT:'고장 위험 설비',riskS:'고장분석 TOP 20과 같은 기준',bmT:'이번 주 고장',warrT:'90일 이내 유상 전환',pickT:'운영단위를 선택하세요',pickS:'현장 화면은 운영단위 하나를 기준으로 봅니다 — 「기본 화면으로 설정」을 누르면 다음에도 이 운영단위로 열립니다',c_op:'운영단위',c_st:'판정',c_in:'반입',c_run:'가동률',c_bm:'100대당 고장',c_pm:'PM 비율',c_rep:'재고장',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}일 이내 재고장 {n}회',d_over:'기한 경과 조치 {n}건',d_none:'이번 주 확인할 사항이 없습니다',d_set:'목표 설정하기',tag_tgt:'목표',tag_rep:'재고장',tag_act:'조치',a_none:'미완료 건이 없습니다',a_due:'기한 {d}',a_nodue:'기한 없음',a_who:'담당 {w}',a_nowho:'담당자 미지정',a_fail:'조치 사항을 읽지 못했습니다',l_kind:'구분',l_title:'제목',l_due:'기한',l_who:'담당',go_fault:'고장 분석',go_action:'조치 사항',go_hub:'글로벌 현황',more:'외 {n}건',notRun:'반입 후 미가동 설비(Operation 아님)',kind_pm:'PM',kind_bm:'고장',
-  title:'글로벌 현황',scopeX:'전체 보기',back:'← 전세계',cdReg:'지역 분포',cdCty:'국가 분포',cdCust:'고객사 분포',unplaced:'위치 미지정',unplacedN:'지도에 못 놓은 곳 {n} · {u}대: {list}',unplacedAdm:' — 데이터 관리 「사이트」 탭의 «지도 위치»에서 정합니다',mapT_c:'{c} 설비 분포',mapS_c:'원 크기 = 반입 설비 · 색 = 그 운영단위의 신호 · 막대를 누르면 그 설비 목록',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'점검 권장',warn:'관찰 중',ok:'안정',tk_run:'가동',tk_bm:'이번 주 고장',tk_lbl:'운영단위 상태',sigCols:'이번 주 고장 · 위험 설비',
+  title:'글로벌 현황',scopeX:'전체 보기',back:'← 전세계',cdReg:'지역 분포',cdCty:'국가 분포',cdCust:'고객사 분포',unplaced:'위치 미지정',unplacedN:'지도에 못 놓은 곳 {n} · {u}대: {list}',unplacedAdm:' — 데이터 관리 「사이트」 탭의 «지도 위치»에서 정합니다',mapT_c:'{c} 설비 분포',mapS_c:'원 크기 = 반입 설비 · 색 = 그 운영단위의 신호 · 막대를 누르면 그 설비 목록',open_site:'사이트 상세',all:'전체',kr:'국내',os:'해외',sigT:'운영단위 신호등',bad:'점검 권장',warn:'관찰 중',ok:'안정',sh_op:'운영단위',sh_bm:'고장',sh_rep:'재고장',sh_risk:'위험',sigNote:'고장 = 이번 주 BM · 재고장 = 14일 이내 재고장 설비 · 위험 = 고장 위험 설비(점수 순위)',noTgtH:'목표 미설정 — 목표·기준에서 설정',tk_bm:'이번 주 고장',tk_lbl:'운영단위 상태',
   mapT:'글로벌 설비 분포',mapS:'원 크기 = 반입 설비 · 색 = 신호 · 나라를 누르면 그 나라 지도로',qT:'확인 사항',heatT:'주차별 고장 히트맵',heatS:'진할수록 평소보다 많음 · 칸을 누르면 그 주의 고장 목록',
   byOp:'운영단위',byCampus:'단지',loading:'자료를 불러오는 중…',asof:'{d} 기준',
   k_run:'가동 설비',k_run_d:'반입 {n}대 · 가동률 {p}%',k_run_none:'설치현황 자료 없음',k_bm:'이번 주 고장(BM)',k_pm:'이번 주 PM',k_risk:'고장 위험 설비',k_risk_d:'{rd}일 이내 재고장 {n}대',
@@ -512,7 +525,7 @@ ko:{
 en:{
   /* Design X (v180) */ m_globe:'Globe',m_flat:'Flat',map_lbl:'Map style',globe_lbl:'Operating unit globe — drag to turn · click a circle to open that country',bT:'This week\'s briefing',bReplay:'Replay',b_bm:'Failures this week {n} — {d} vs. the usual {b}',b_top:'Biggest jump: {op} — {x} usual · {st}',b_top0:'Most failures: {op} — {n} this week',b_toprep:'{op} — {n} repeat-failure units within {rd} days · {st}',b_calm:'No operating unit is off its usual pattern',b_rep:'Repeat failures within {rd} days: {r} units · at-risk units: {k}',b_pm:'PM this week {n} — last week {p}',b_warr:'Warranty Out within 90 days: {n} — more paid units',kan_mv_l:'Back a step',kan_mv_r:'Next step',kan_moved:'«{t}» → {s}',kan_conflict:'Someone changed it first — reloaded',kan_fail:'Could not move it',
   /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'Pick the as-of date',asof_latest:'Latest',asof_apply:'Apply',asof_state:'Viewing a past date — failure, PM and turn-on dates are as of that day, but equipment status (Operation etc.) is the current value',sc_allop:'All units',view_lbl:'View',scope_lbl:'Scope',kpi_lbl:'Key metrics',v_exec:'Company summary',v_lead:'Operations',v_field:'By site',save_def:'Make this my default',shot:'Save image',shotT:'Save this whole screen as an image (PNG) — for email',tour_btn:'Global tour',tour_btnT:'The globe walks through countries and sites — for wall screens and meeting rooms',tour_brand:'GLOBAL OPERATIONS',tour_co:'GST CS Global',tour_stop:'Stop',tour_world:'Company',tour_intro_t:'Global installed base',tour_cty_eb:'Country {i} of {n}',tour_sites_t:'Sites',tour_site_eb:'{c} · Site {i} of {n}',tour_run:'Running',tour_runp:'Running rate',tour_share:'Share of country',tour_unpl:'location not set',tour_regs:'Regions',tour_sites:'Sites',tour_top:'Largest sites',tour_next:'Next',tour_cust:'Customers',tour_ops:'Operating units',tour_start:'Starting the global tour',saved_srv:'Saved as your default — this view opens first next time',saved_pc:'Saved on this PC only',go_targets:'Targets',sc_all:'Company',sc_kr:'All Korea',sc_os:'All overseas',sc_ops:'Operating units',noTgt:'No targets yet. Once targets are set, cards and tables are rated against them.',noTgtAdm:'Set them in «Targets».',noTbl:'The target table is not on the server yet — run supabase/setup-27-targets.sql.',opsT:'By operating unit — vs target',opsS:'click to narrow to that unit',decT:'To review this week',decS:'off target · repeat failures · overdue actions',trendT:'Weekly failures · last 12 weeks',trendS:'dashed = target converted to a week',actT:'Action items — open',actS:'overdue first',riskT:'At-risk units',riskS:'same formula as Fault TOP 20',bmT:'Failures this week',warrT:'Turning paid within 90 days',pickT:'Pick your operating unit',pickS:'The field view shows one unit — «Make this my default» opens it next time',c_op:'Unit',c_st:'Rating',c_in:'Installed',c_run:'Running',c_bm:'BM per 100',c_pm:'PM ratio',c_rep:'Repeat',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {n} repeat(s) within {d} days',d_over:'{n} overdue action(s)',d_none:'Nothing to review this week',d_set:'Set targets',tag_tgt:'Target',tag_rep:'Repeat',tag_act:'Action',a_none:'No open actions',a_due:'due {d}',a_nodue:'no due date',a_who:'owner {w}',a_nowho:'no owner',a_fail:'Could not read action items',l_kind:'Type',l_title:'Item',l_due:'Due',l_who:'Owner',go_fault:'Fault',go_action:'Action items',go_hub:'Global overview',more:'+{n} more',notRun:'Installed but not running (Operation)',kind_pm:'PM',kind_bm:'BM',
-  title:'Global overview',scopeX:'Show all',back:'← World',cdReg:'By region',cdCty:'By country',cdCust:'By customer',unplaced:'No position',unplacedN:'{n} place(s) not on the map · {u} units: {list}',unplacedAdm:' — set them in Data management «Sites» › Map position',mapT_c:'{c} installed base',mapS_c:'size = installed units · color = signal of its unit · click a bar for the unit list',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Check advised',warn:'Watching',ok:'Stable',tk_run:'Running',tk_bm:'BM this week',tk_lbl:'Operating unit status',sigCols:'BM this week · at-risk units',
+  title:'Global overview',scopeX:'Show all',back:'← World',cdReg:'By region',cdCty:'By country',cdCust:'By customer',unplaced:'No position',unplacedN:'{n} place(s) not on the map · {u} units: {list}',unplacedAdm:' — set them in Data management «Sites» › Map position',mapT_c:'{c} installed base',mapS_c:'size = installed units · color = signal of its unit · click a bar for the unit list',open_site:'Site detail',all:'All',kr:'Korea',os:'Overseas',sigT:'Operating unit signals',bad:'Check advised',warn:'Watching',ok:'Stable',sh_op:'Unit',sh_bm:'BM',sh_rep:'Repeat',sh_risk:'At risk',sigNote:'BM = failures this week · Repeat = units failing again within 14 days · At risk = at-risk units (score ranking)',noTgtH:'No targets set — set them in Targets & rules',tk_bm:'BM this week',tk_lbl:'Operating unit status',
   mapT:'Global installed base',mapS:'size = installed units · color = signal · click a country to zoom in',qT:'To check',heatT:'Weekly failure heatmap',heatS:'darker = above usual · click a cell for that week\'s failures',
   byOp:'Operating unit',byCampus:'Campus',loading:'Loading…',asof:'As of {d}',
   k_run:'Running units',k_run_d:'{n} installed · {p}% running',k_run_none:'No installation data',k_bm:'Failures (BM) this week',k_pm:'PM this week',k_risk:'At-risk units',k_risk_d:'{n} repeat within {rd} days',
@@ -531,7 +544,7 @@ en:{
 zh:{
   /* 设计 X (v180) */ m_globe:'地球仪',m_flat:'平面',map_lbl:'地图样式',globe_lbl:'运营单位地球仪 — 拖动旋转 · 点击圆圈进入该国家地图',bT:'本周简报',bReplay:'重播',b_bm:'本周故障 {n} 件 — 较平时 {b} 件 {d} 件',b_top:'波动最大的是 {op} — 平时的 {x} · {st}',b_top0:'故障最多的是 {op} — 本周 {n} 件',b_toprep:'{op} — {rd}天内再故障设备 {n} 台 · {st}',b_calm:'没有偏离平时的运营单位',b_rep:'{rd}天内再故障设备 {r} 台 · 故障风险设备 {k} 台',b_pm:'本周PM {n} 件 — 上周 {p} 件',b_warr:'90天内转为 Warranty Out {n} 台 — 有偿设备增加',kan_mv_l:'退回上一步',kan_mv_r:'进入下一步',kan_moved:'«{t}» → {s}',kan_conflict:'已被他人先修改 — 已重新读取',kan_fail:'未能移动',
   /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'选择基准日',asof_latest:'最新',asof_apply:'应用',asof_state:'正在查看过去日期 — 故障、PM、运行日期按当天计算，但设备状态（Operation 等）为当前值',sc_allop:'全部运营单位',view_lbl:'视图',scope_lbl:'范围',kpi_lbl:'核心指标',v_exec:'全公司概要',v_lead:'运营管理',v_field:'按站点',save_def:'设为默认画面',shot:'保存图片',shotT:'将整个画面保存为图片(PNG) — 用于邮件附件',tour_btn:'全球巡览',tour_btnT:'地球仪依次展示各国家与站点 — 适用于墙面屏幕和会议室',tour_brand:'全球运营现况',tour_co:'全公司概要',tour_stop:'停止',tour_world:'全公司',tour_intro_t:'全球设备现状',tour_cty_eb:'国家 {i} / {n}',tour_sites_t:'站点分布',tour_site_eb:'{c} · 站点 {i} / {n}',tour_run:'运行',tour_runp:'运行率',tour_share:'国内占比',tour_unpl:'未指定位置',tour_regs:'地区',tour_sites:'站点',tour_top:'设备最多的站点',tour_next:'下一个',tour_cust:'客户',tour_ops:'运营单位',tour_start:'开始全球巡览',saved_srv:'已保存为默认 — 下次打开先显示此画面',saved_pc:'仅保存在此电脑',go_targets:'目标管理',sc_all:'全公司',sc_kr:'国内全部',sc_os:'海外全部',sc_ops:'运营单位',noTgt:'尚未设定任何目标。设定后卡片和表格将按目标判定。',noTgtAdm:'请在「目标管理」中设定。',noTbl:'服务器尚无目标表 — 请运行 supabase/setup-27-targets.sql。',opsT:'按运营单位 — 对比目标',opsS:'点击即缩小到该运营单位',decT:'本周确认事项',decS:'偏离目标 · 复发 · 逾期待办',trendT:'按周故障 · 最近12周',trendS:'虚线 = 目标换算为每周的值',actT:'待办事项 — 未关闭',actS:'逾期优先',riskT:'故障风险设备',riskS:'与故障分析 TOP 20 同一公式',bmT:'本周故障',warrT:'90天内转为有偿',pickT:'请选择你的运营单位',pickS:'现场画面只看一个运营单位 — 按「设为默认画面」下次也按此单位打开',c_op:'运营单位',c_st:'判定',c_in:'进场',c_run:'运行率',c_bm:'每100台故障',c_pm:'PM比率',c_rep:'复发',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}天内复发 {n}次',d_over:'逾期待办 {n}件',d_none:'本周没有需确认的事项',d_set:'设定目标',tag_tgt:'目标',tag_rep:'复发',tag_act:'待办',a_none:'没有未关闭的事项',a_due:'期限 {d}',a_nodue:'无期限',a_who:'负责人 {w}',a_nowho:'未定负责人',a_fail:'未能读取待办事项',l_kind:'类别',l_title:'事项',l_due:'期限',l_who:'负责人',go_fault:'故障分析',go_action:'待办事项',go_hub:'全球概况',more:'另 {n}件',notRun:'已进场但未运行(Operation)的设备',kind_pm:'PM',kind_bm:'故障',
-  title:'全球概况',scopeX:'显示全部',back:'← 全球',cdReg:'地区分布',cdCty:'国家分布',cdCust:'客户分布',unplaced:'未指定位置',unplacedN:'未能放到地图上的 {n} 处 · {u}台: {list}',unplacedAdm:' — 在数据管理「站点」页的地图位置中设定',mapT_c:'{c} 设备分布',mapS_c:'圆大小 = 已进场设备 · 颜色 = 所属运营单位信号 · 点击柱查看设备',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'建议检查',warn:'观察中',ok:'稳定',tk_run:'运行',tk_bm:'本周故障',tk_lbl:'运营单位状态',sigCols:'本周故障 · 风险设备',
+  title:'全球概况',scopeX:'显示全部',back:'← 全球',cdReg:'地区分布',cdCty:'国家分布',cdCust:'客户分布',unplaced:'未指定位置',unplacedN:'未能放到地图上的 {n} 处 · {u}台: {list}',unplacedAdm:' — 在数据管理「站点」页的地图位置中设定',mapT_c:'{c} 设备分布',mapS_c:'圆大小 = 已进场设备 · 颜色 = 所属运营单位信号 · 点击柱查看设备',open_site:'站点详情',all:'全部',kr:'国内',os:'海外',sigT:'运营单位信号灯',bad:'建议检查',warn:'观察中',ok:'稳定',sh_op:'运营单位',sh_bm:'故障',sh_rep:'复发',sh_risk:'风险',sigNote:'故障 = 本周 BM · 复发 = 14天内再次故障的设备 · 风险 = 故障风险设备(按分数排名)',noTgtH:'未设定目标 — 在「目标·基准」中设定',tk_bm:'本周故障',tk_lbl:'运营单位状态',
   mapT:'全球设备分布',mapS:'圆大小 = 已进场设备 · 颜色 = 信号 · 点击国家查看该国地图',qT:'待确认',heatT:'按周故障热力图',heatS:'越深 = 高于平时 · 点击格子查看该周故障',
   byOp:'运营单位',byCampus:'园区',loading:'正在加载…',asof:'截至 {d}',
   k_run:'运行设备',k_run_d:'进场 {n}台 · 运行率 {p}%',k_run_none:'无设备台账数据',k_bm:'本周故障(BM)',k_pm:'本周PM',k_risk:'故障风险设备',k_risk_d:'{rd}天内复发 {n}台',
@@ -550,7 +563,7 @@ zh:{
 ja:{
   /* デザイン X (v180) */ m_globe:'地球儀',m_flat:'平面',map_lbl:'地図の形',globe_lbl:'運営単位の地球儀 — ドラッグで回転 · 円をクリックでその国の地図へ',bT:'今週のブリーフィング',bReplay:'もう一度',b_bm:'今週の故障 {n}件 — 平常 {b}件比 {d}件',b_top:'最も跳ねたのは {op} — 平常の{x} · {st}',b_top0:'最も多いのは {op} — 今週 {n}件',b_toprep:'{op} — {rd}日以内の再故障 {n}台 · {st}',b_calm:'平常と異なる運営単位はありません',b_rep:'{rd}日以内の再故障 {r}台 · 故障リスク設備 {k}台',b_pm:'今週のPM {n}件 — 先週 {p}件',b_warr:'90日以内に Warranty Out へ {n}台 — 有償設備が増えます',kan_mv_l:'前の段階へ',kan_mv_r:'次の段階へ',kan_moved:'«{t}» → {s}',kan_conflict:'他の人が先に変更しました — 読み直しました',kan_fail:'移動できませんでした',
   /* 홈과 합치며 옮겨 온 낱말(v178) */ asof_pick:'基準日を選ぶ',asof_latest:'最新に戻す',asof_apply:'適用',asof_state:'過去の日付で表示中 — 故障・PM・稼働日はその日基準ですが、設備状態（Operation 等）は現在の値です',sc_allop:'全運営単位',view_lbl:'表示',scope_lbl:'範囲',kpi_lbl:'主要指標',v_exec:'全社サマリー',v_lead:'運営管理',v_field:'サイト別',save_def:'この画面を既定にする',shot:'画像を保存',shotT:'この画面全体を画像(PNG)で保存 — メール添付用',tour_btn:'グローバルツアー',tour_btnT:'地球儀が国とサイトを順に見せます — 壁面ディスプレイ・会議室向け',tour_brand:'グローバル運営状況',tour_co:'全社サマリー',tour_stop:'停止',tour_world:'全社',tour_intro_t:'グローバル設備状況',tour_cty_eb:'国 {i} / {n}',tour_sites_t:'サイト分布',tour_site_eb:'{c} · サイト {i} / {n}',tour_run:'稼働',tour_runp:'稼働率',tour_share:'国内シェア',tour_unpl:'位置未設定',tour_regs:'地域',tour_sites:'サイト',tour_top:'設備の多いサイト',tour_next:'次',tour_cust:'顧客',tour_ops:'運営単位',tour_start:'グローバルツアーを開始します',saved_srv:'既定の画面として保存しました — 次回はこの画面が最初に開きます',saved_pc:'このPCにのみ保存しました',go_targets:'目標管理',sc_all:'全社',sc_kr:'国内全体',sc_os:'海外全体',sc_ops:'運営単位',noTgt:'目標がまだありません。目標を決めるとカードと表が目標比で判定します。',noTgtAdm:'「目標管理」で設定してください。',noTbl:'サーバーに目標表がまだありません — supabase/setup-27-targets.sql を実行してください。',opsT:'運営単位別 — 目標比',opsS:'押すとその運営単位に絞ります',decT:'今週の確認事項',decS:'目標外れ · 再故障 · 期限超過の対応',trendT:'週別故障 · 直近12週',trendS:'点線 = 目標を週単位に換算した値',actT:'対応事項 — 未完了',actS:'期限超過を先に',riskT:'故障リスク設備',riskS:'故障分析 TOP 20 と同じ式',bmT:'今週の故障',warrT:'90日以内に有償化',pickT:'自分の運営単位を選んでください',pickS:'現場画面は運営単位ひとつを見ます — 「この画面を既定にする」で次回もこの運営単位で開きます',c_op:'運営単位',c_st:'判定',c_in:'搬入',c_run:'稼働率',c_bm:'100台あたり故障',c_pm:'PM比率',c_rep:'再故障',d_tgt:'{op} — {m} {v} · {t}',d_rep:'{eq} · {op} — {d}日以内再故障 {n}回',d_over:'期限超過の対応 {n}件',d_none:'今週確認することはありません',d_set:'目標を決める',tag_tgt:'目標',tag_rep:'再故障',tag_act:'対応',a_none:'未完了の対応はありません',a_due:'期限 {d}',a_nodue:'期限なし',a_who:'担当 {w}',a_nowho:'担当未定',a_fail:'対応事項を読めませんでした',l_kind:'区分',l_title:'項目',l_due:'期限',l_who:'担当',go_fault:'故障分析',go_action:'対応事項',go_hub:'グローバル概況',more:'他 {n}件',notRun:'搬入済みだが稼働(Operation)していない設備',kind_pm:'PM',kind_bm:'故障',
-  title:'グローバル概況',scopeX:'全体を見る',back:'← 全世界',cdReg:'地域分布',cdCty:'国別分布',cdCust:'顧客分布',unplaced:'位置未指定',unplacedN:'地図に置けない場所 {n} · {u}台: {list}',unplacedAdm:' — データ管理「サイト」タブの地図位置で設定します',mapT_c:'{c} 設備分布',mapS_c:'円の大きさ = 搬入設備 · 色 = その運営単位の信号 · 棒を押すと設備一覧',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'点検推奨',warn:'観察中',ok:'安定',tk_run:'稼働',tk_bm:'今週の故障',tk_lbl:'運営単位の状態',sigCols:'今週の故障 · 危険設備',
+  title:'グローバル概況',scopeX:'全体を見る',back:'← 全世界',cdReg:'地域分布',cdCty:'国別分布',cdCust:'顧客分布',unplaced:'位置未指定',unplacedN:'地図に置けない場所 {n} · {u}台: {list}',unplacedAdm:' — データ管理「サイト」タブの地図位置で設定します',mapT_c:'{c} 設備分布',mapS_c:'円の大きさ = 搬入設備 · 色 = その運営単位の信号 · 棒を押すと設備一覧',open_site:'サイト詳細',all:'全体',kr:'国内',os:'海外',sigT:'運営単位シグナル',bad:'点検推奨',warn:'観察中',ok:'安定',sh_op:'運営単位',sh_bm:'故障',sh_rep:'再故障',sh_risk:'リスク',sigNote:'故障 = 今週の BM · 再故障 = 14日以内に再び故障した設備 · リスク = 故障リスク設備(スコア順)',noTgtH:'目標未設定 — 「目標・基準」で設定',tk_bm:'今週の故障',tk_lbl:'運営単位の状態',
   mapT:'グローバル設備分布',mapS:'円の大きさ = 搬入設備 · 色 = シグナル · 国を押すとその国の地図へ',qT:'確認事項',heatT:'週別故障ヒートマップ',heatS:'濃いほど平常より多い · セルを押すとその週の故障一覧',
   byOp:'運営単位',byCampus:'団地',loading:'データ読み込み中…',asof:'{d} 時点',
   k_run:'稼働設備',k_run_d:'搬入 {n}台 · 稼働率 {p}%',k_run_none:'設置台帳データなし',k_bm:'今週の故障(BM)',k_pm:'今週のPM',k_risk:'故障リスク設備',k_risk_d:'{rd}日以内再故障 {n}台',
@@ -708,6 +721,8 @@ function render(){
   if(S.view!=='exec'&&S.cc){ S.cc=''; }   // 나라 지도는 전사 요약에만 있다 — 다른 보기에서는 풀어 둔다(계산 «전»에)
   D=compute();
   if(S.op&&!D.groups.find(g=>g.op===S.op)&&opsList().indexOf(S.op)<0) S.op=null;   // 구분·나라를 바꿔 그 운영단위가 빠졌으면 전체로
+  /* 사이트별 보기는 운영단위 하나를 본다 — 저장된 기본이 없으면 신호등 첫 운영단위를 바로 연다(v196 · 시안 02). 고르기는 칩(#cPick)으로 남는다 */
+  if(S.view==='field'&&!S.op){ const o=(D.groups[0]&&D.groups[0].op)||opsList()[0]||null; if(o){ S.op=o; S.sel=o; } }
   DS=S.op?compute(S.op):D;
   /* 목표 대비 한 줄용 지표(GST.metrics — 옛 홈과 같은 식) · 카드와 같은 범위(구분·나라·운영단위) */
   DS.M=GST.metrics.one(RAW, DS.asOf, x=>DS.okR(x.region,x), {actions:ACTS||undefined});
@@ -749,7 +764,7 @@ function delta(cur, prev, upBad){
   /* 작은 기준의 % 는 과장이다(v148 · GST.DELTA_ABS_MAX) — 직전이 작으면 건수 차이로 적는다 */
   const s=(prev<(GST.DELTA_ABS_MAX||10)||!prev)?((d>=0?'+':'')+d):((d>=0?'+':'')+Math.round(d/prev*100)+'%');
   const cls=d===0?'':(d>0?(upBad?'up-bad':'up-ok'):(upBad?'dn-ok':'dn-bad'));
-  return '<span class="'+cls+'">'+(d>0?'▲ ':d<0?'▼ ':'')+esc(fmt(t('vsPrev'),{s}))+'</span>';
+  return '<span class="'+cls+'">'+(d>0?'▲ ':d<0?'▼ ':'')+esc(fmt(t('vsPrev'),{s:d?s.replace(/^[+\-−]/,''):s}))+'</span>';   // 화살표가 방향을 말하므로 부호는 겹치지 않는다(v196)
 }
 function drawKpis(){
   const X=DS||D;   // 고른 운영단위가 있으면 그것만(v178 · 사용자 요청 「신호등에서 사이트를 누르면 KPI 도 그 사이트로」)
@@ -820,7 +835,7 @@ function drawTicker(){
   box.hidden=false;
   const one=(g,dup)=>'<button type="button" class="hb-tk" data-tk="'+esc(g.op)+'"'+(dup?' tabindex="-1" aria-hidden="true"':'')+'>'
     +'<span class="hb-dot '+g.st+'"></span><b>'+esc(short(g.op))+'</b><em class="'+g.st+'">'+esc(t(g.st))+'</em>'
-    +'<span>'+esc(t('tk_run'))+' <span class="n">'+nf(g.runN)+'</span> / '+nf(g.inN)+'</span>'
+    +'<span>'+esc(t('m_units'))+' <span class="n">'+nf(g.inN)+' / '+nf(g.runN)+'</span></span>'
     +'<span>'+esc(t('tk_bm'))+' <span class="n">'+nf(g.cur)+'</span></span></button>';
   let seq=G; while(seq.length<6) seq=seq.concat(G);
   inn.innerHTML=seq.map((g,i)=>one(g, i>=G.length)).join('')+seq.map(g=>one(g,true)).join('');
@@ -832,7 +847,7 @@ function drawSignals(){
   if(!D.groups.length){ box.innerHTML='<div class="hb-empty">'+esc(t('none'))+'</div>'; return; }
   box.innerHTML=D.groups.map(g=>'<button type="button" class="hb-sig'+(g.op===S.sel?' on':'')+'" data-op="'+esc(g.op)+'">'
     +'<span class="hb-dot '+g.st+'"></span><span class="n"><b>'+esc(short(g.op))+'</b><span>'+esc([ctyName(g.cty), nf(g.inN)+t('u_ea')].filter(Boolean).join(' · '))+'</span></span>'
-    +'<span class="c"><span class="bm">'+g.cur+'</span><span class="rk'+(g.rep?'':' z')+'">'+g.rep+'</span></span></button>').join('');
+    +'<span class="c"><span class="bm">'+g.cur+'</span><span class="rk'+(g.rep?'':' z')+'">'+g.rep+'</span><span class="rs'+(g.risk.length?'':' z')+'">'+g.risk.length+'</span></span></button>').join('');
   box.querySelectorAll('.hb-sig').forEach(b=>b.onclick=()=>goOp(b.dataset.op));
   /* 레이더(「효과 › 맥동 · 레이더」) — 점검 권장 운영단위 수만큼 붉은 점 */
   const rd=document.getElementById('radar'); if(rd) rd.innerHTML=D.groups.filter(g=>g.st==='bad').slice(0,4).map((g,i)=>'<i style="left:'+[4,11,6,12][i]+'px;top:'+[5,8,12,3][i]+'px"></i>').join('');
@@ -1110,9 +1125,14 @@ function drawSel(){
   const pmP=(g.pmN+g.wk.slice(8).reduce((s,v)=>s+v,0))?Math.round(g.pmN/(g.pmN+g.wk.slice(8).reduce((s,v)=>s+v,0))*100):null;
   const mx=Math.max(1,...g.wk);
   const lastBm=g.bm.length?g.bm.reduce((m,x)=>x.d>m?x.d:m,g.bm[0].d):null;
+  /* 게이지 색은 «목표가 있을 때만» 판정색이다(v196 · 시안 02 — PM 실시율 43% 가 목표도 없이 붉었다). 판정은 운영단위 표와 같은 GST.targets.judge(hcompute 의 J) ·
+     목표가 있으면 라벨 뒤에 «목표 N». 숫자(runP·pmP)는 지금까지의 식 그대로다 */
+  const RJ=((H&&H.rows)||[]).find(r=>r.g.k===g.op), gj=mt=>{ const j=RJ&&RJ.J&&RJ.J[mt]; return (j&&j.t)?j:null; };
+  const tone=mt=>{ const j=gj(mt); return !j?'var(--accent)':(j.st==='bad'?'var(--bad)':j.st==='warn'?'var(--warn)':'var(--ok)'); };
+  const glab=(mt,base)=>{ const j=gj(mt); return j?base+' · '+GST.v2t('tgt',{v:GST.v2fmt(mt,j.t.target)+GST.v2unit(mt,LANG)},LANG):base; };
   box.innerHTML='<div class="sub">'+esc(t('sel_h'))+' · '+esc([ctyName(g.cty),g.region].filter(Boolean).join(' · '))+'</div>'
     +'<h3>'+esc(short(g.op))+' <span class="hb-pill '+g.st+'">'+esc(t(g.st))+'</span></h3>'
-    +'<div class="hb-gauges">'+gauge(runP,t('g_run'))+gauge(warrP,t('g_warr'),'var(--accent)')+gauge(pmP,t('g_pm'))+'</div>'
+    +'<div class="hb-gauges">'+gauge(runP,glab('run_rate',t('g_run')),tone('run_rate'))+gauge(warrP,t('g_warr'),'var(--accent)')+gauge(pmP,glab('pm_ratio',t('g_pm')),tone('pm_ratio'))+'</div>'
     +'<div><div class="sub" style="margin-bottom:6px">'+esc(t('bars'))+'</div><div class="hb-bars">'
     +g.wk.map((v,i)=>'<i class="'+(i===11?'cur':'')+'" style="height:'+Math.round(v/mx*60+3)+'px;animation-delay:'+(i*25)+'ms" title="'+esc(D.W[i].label+' · '+v)+'"></i>').join('')+'</div></div>'
     +'<div class="hb-mini">'
@@ -1603,12 +1623,14 @@ function cell(mt, r){ const m=r.g.m[mt], j=r.J[mt]; return '<span class="'+(j.st
 function drawOps(){
   const box=document.getElementById('cOps'), rows=H.rows;
   const maxBm=Math.max(0.01, ...rows.map(r=>Math.max(r.g.m.bm_per100.v||0, r.J.bm_per100.t?r.J.bm_per100.t.target:0)))*1.15;
-  let h='<h2>'+esc(t('opsT'))+'<span class="s x">'+esc(t('opsS'))+'</span></h2>';
+  /* 목표가 하나도 없으면 「판정」 열(«목표 없음» 네 줄)을 빼고 머리에 한 줄만 적는다(v196 · 시안 03) — 같은 말을 행마다 되풀이하지 않는다 */
+  const noT=!(GST.targets.rows&&GST.targets.rows.length);
+  let h='<h2>'+esc(t('opsT'))+'<span class="s x">'+esc(t('opsS'))+'</span>'+(noT?'<span class="s">'+esc(t('noTgtH'))+'</span>':'')+'</h2>';
   if(!rows.length){ box.innerHTML=h+'<div class="ds-empty">'+esc(t('none'))+'</div>'; return; }
-  h+='<div class="ds-tbl-wrap"><table class="ds-tbl"><thead><tr><th>'+esc(t('c_op'))+'</th><th>'+esc(t('c_st'))+'</th><th class="n">'+esc(t('c_in'))+'</th><th class="n">'+esc(t('c_run'))+'</th><th style="min-width:160px">'+esc(t('c_bm'))+'</th><th class="n">'+esc(t('c_pm'))+'</th><th class="n">'+esc(t('c_rep'))+'</th></tr></thead><tbody>';
+  h+='<div class="ds-tbl-wrap"><table class="ds-tbl"><thead><tr><th>'+esc(t('c_op'))+'</th>'+(noT?'':'<th>'+esc(t('c_st'))+'</th>')+'<th class="n">'+esc(t('c_in'))+'</th><th class="n">'+esc(t('c_run'))+'</th><th style="min-width:160px">'+esc(t('c_bm'))+'</th><th class="n">'+esc(t('c_pm'))+'</th><th class="n">'+esc(t('c_rep'))+'</th></tr></thead><tbody>';
   rows.forEach(r=>{ const on=S.op===r.g.k;
     h+='<tr class="click'+(on?' on':'')+'" data-op="'+esc(r.g.k)+'" tabindex="0"><td><b>'+esc(short(r.g.k))+'</b></td>'
-      +'<td><span class="ds-pill '+(r.st||'')+'">'+esc(v2t('st_'+(r.st||'none')))+'</span></td>'
+      +(noT?'':'<td><span class="ds-pill '+(r.st||'')+'">'+esc(v2t('st_'+(r.st||'none')))+'</span></td>')
       +'<td class="n">'+nf(r.g.inN)+'</td><td class="n">'+cell('run_rate',r)+'</td>'
       +'<td>'+meter('bm_per100', r.g.m.bm_per100.v, r.J.bm_per100.t, r.J.bm_per100.st, maxBm)+'</td>'
       +'<td class="n">'+cell('pm_ratio',r)+'</td><td class="n">'+cell('repeat14',r)+'</td></tr>'; });
@@ -1724,7 +1746,7 @@ function drawWarr(){
 function drawPick(){
   const box=document.getElementById('cPick'), ops=opsList();
   box.innerHTML='<h2>'+esc(t('pickT'))+'</h2><div class="ds-note x">'+esc(t('pickS'))+'</div><div style="display:flex;flex-wrap:wrap;gap:8px">'
-    +ops.map(o=>'<button type="button" class="ds-btn" data-op="'+esc(o)+'">'+esc(short(o))+'</button>').join('')+'</div>';
+    +ops.map(o=>'<button type="button" class="ds-btn'+(o===S.op?' pri':'')+'" data-op="'+esc(o)+'" aria-pressed="'+(o===S.op)+'">'+esc(short(o))+'</button>').join('')+'</div>';
   box.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>pick(b.dataset.op));
 }
 function drawTrend(){
@@ -1747,15 +1769,26 @@ function goTargets(){
   try{ window.open(u,'gstTargets'); }catch(e){ location.href=u; }
 }
 /* 운영 관리 · 사이트별 본문 — 옛 홈의 배치 그대로 */
+/* 운영 관리의 확인 사항·브리핑·히트맵 카드는 전사 요약의 .hb-grid2 에 사는 «그 요소»다 — 그리는 함수(drawQueue·drawBrief·drawHeat)가 id 로 찾으므로
+   요소를 옮기기만 한다(두 벌로 그리지 않는다). #body 를 다시 그리기 전에 반드시 제자리로 돌려 놓는다(innerHTML 이 옮긴 요소를 지운다) */
+function leadLayout(on){
+  const q=document.querySelector('.hb-qcard'), b=document.getElementById('briefCard'), hc=document.querySelector('.hb-heatcard');
+  const g2=document.querySelector('.hb-grid2'), col=g2&&g2.querySelector('.hb-col');
+  if(!q||!b||!hc||!g2||!col) return;
+  if(on){ const L=document.getElementById('leadL'), R=document.getElementById('leadR'); if(!L||!R) return; L.appendChild(q); R.appendChild(b); R.appendChild(hc); }
+  else { if(q.parentNode!==g2) g2.insertBefore(q, col); if(b.parentNode!==col) col.appendChild(b); if(hc.parentNode!==col) col.appendChild(hc); }
+}
 function drawBody(){
   const B=document.getElementById('body');
+  leadLayout(false);
   if(S.view==='exec'){ B.innerHTML=''; return; }
-  if(S.view==='lead') B.innerHTML='<div class="ds-card" id="cAct"></div><div class="ds-grid ds-g2e"><div class="ds-card" id="cRisk"></div><div class="ds-card" id="cOps"></div></div>';
-  else B.innerHTML=!S.op?'<div class="ds-card" id="cPick"></div>'
-    :'<div class="ds-grid ds-g3"><div class="ds-card" id="cBm"></div><div class="ds-card" id="cRisk"></div><div class="ds-card" id="cWarr"></div></div><div class="ds-grid ds-g2e"><div class="ds-card" id="cAct"></div><div class="ds-card" id="cTrend"></div></div>';
+  if(S.view==='lead') B.innerHTML='<div class="ds-card" id="cAct"></div><div class="hb-lead"><div class="hb-col" id="leadL"><div class="ds-card" id="cRisk"></div></div><div class="hb-col" id="leadR"><div class="ds-card" id="cOps"></div></div></div>';
+  else B.innerHTML='<div class="ds-card" id="cPick"></div>'+(!S.op?''
+    :'<div class="ds-grid ds-g3"><div class="ds-card" id="cBm"></div><div class="ds-card" id="cRisk"></div><div class="ds-card" id="cWarr"></div></div><div class="ds-grid ds-g2e"><div class="ds-card" id="cAct"></div><div class="ds-card" id="cTrend"></div></div>');
   const has=id=>document.getElementById(id);
   if(has('cOps')) drawOps(); if(has('cAct')) drawAct(); if(has('cRisk')) drawRisk();
   if(has('cBm')) drawBm(); if(has('cWarr')) drawWarr(); if(has('cTrend')) drawTrend(); if(has('cPick')) drawPick();
+  if(S.view==='lead') leadLayout(true);
 }
 
 /* ===== 챗봇 브리핑 스냅샷 (setup-27 7절 · kakao-bot/brief.js 가 읽는다) — 옛 홈에서 그대로 옮겼다 =====

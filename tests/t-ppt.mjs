@@ -180,10 +180,11 @@ console.log('[2-3] 교육 표 머리글이 국내에서 Lv.2/Lv.3 로 바뀌는�
 }
 
 /* ══════════════════════════════════════════════════════════════
-   [3] pptAuto — 양식 얼굴 · 한 장에 최대 6개
+   [3] pptAuto — 양식 2.0(v196 · 시안 01) · 섹션 장은 2×2 · 마지막 장은 남은 수에 맞춰 키운다
    가짜 DOM·가짜 PptxGenJS 로 «무엇을 그렸는지» 그대로 받아 본다.
+   첫 장(개요)은 KPI 줄·요약 문장이 있을 때만 선다 — 가짜 DOM 에는 KPI 가 없어 요약(insights)이 있을 때만 첫 장이 생긴다.
    ══════════════════════════════════════════════════════════════ */
-console.log('[3] 공용 PPT 가 양식 얼굴로, 한 장에 6개씩 나오는지');
+console.log('[3] 공용 PPT 가 양식 2.0 얼굴로, 한 장에 2×2 씩 나오는지');
 
 function mkEnv(nCharts, insights){
   const canvases = [];
@@ -220,47 +221,46 @@ function mkEnv(nCharts, insights){
   return slides;
 }
 
-// 7개 차트 → 2장 (6 + 1)
+// 7개 차트 → 2장 (4 + 3 · 마지막 장은 1×3 으로 키운다)
 {
   const slides = mkEnv(7, []);
   F.op = 'GST TAIWAN SCRUBBER';
   await GST.pptAuto({asOf:'2026-08-18'});
-  ok(slides.length===2, '차트 7개면 슬라이드 2장이어야 (실제 '+slides.length+')');
+  ok(slides.length===2, '차트 7개면 슬라이드 2장이어야 — 4 + 3 (실제 '+slides.length+')');
   const imgs = slides.map(s=>s.images.length);
-  ok(imgs[0]===6 && imgs[1]===1, '한 장에 최대 6개여야 (실제 '+imgs.join('+')+')');
+  ok(imgs[0]===4 && imgs[1]===3, '한 장에 2×2(4개) · 마지막 장은 남은 3개 (실제 '+imgs.join('+')+')');
+  /* 마지막 장의 세 칸은 한 줄(1×3) — 세 그림의 y 가 같고 폭이 같다 */
+  const ys = new Set(slides[1].images.map(i=>Math.round(i.y*10)));
+  ok(ys.size===1, '남은 3개는 한 줄(1×3)로 키운다 (y '+[...ys].join('/')+')');
   ok(slides.every(s=>s.background && s.background.color==='FFFFFF'), '양식은 흰 바탕이어야 한다');
   const t0 = slides[0].texts.map(x=>String(x.t));
   ok(t0.some(x=>x==='GST TAIWAN'), '법인 상자가 운영단위를 따라야 한다 — 실제: '+t0.slice(0,3).join(' | '));
   ok(t0.some(x=>/설치 현황\s+\(1\/2\)/.test(x)), '여러 장이면 제목에 (1/2) 가 붙어야 한다');
   ok(t0.some(x=>/2026-08-18 기준/.test(x)), '기준일이 머리에 있어야 한다');
   ok(t0.some(x=>/운영단위 GST TAIWAN SCRUBBER/.test(x)), '어떤 필터로 뽑은 장표인지 머리에 남아야 한다');
-  ok(t0.filter(x=>/^차트 \d+$/.test(x)).length===6, '칸 머리띠에 차트 제목이 들어가야 한다');
+  ok(t0.filter(x=>/^차트 \d+$/.test(x)).length===4, '칸 머리띠에 차트 제목이 들어가야 한다 (첫 장 4개)');
   ok(slides[0].shapes.some(s=>s.k==='line' && s.o.line && s.o.line.width===2.25), '머리 아래 굵은 검정 줄(양식 특징)');
   reset();
 }
 
-/* 표도 «같은 칸»에 담긴다 (v109 — hr 의 교육 요약 표).
-   ⚠ 자리를 «개수»가 아니라 «칸 수»로 세야 한다. 표가 두 칸을 쓰는데 개수로 세면
-     인사이트 칸이 표 «위에 겹쳐» 그려진다 — 겹친 장표는 아무도 못 읽는다. */
+/* 표도 «같은 칸»에 담긴다 (v109 — hr 의 교육 요약 표). 양식 2.0 에서 표는 «표» 장(섹션)에 서고,
+   첫 장(개요)에는 요약 문장과 함께 «핵심 표»로도 한 번 선다(opt.tables 의 첫 표).
+   ⚠ 자리는 «개수»가 아니라 «칸 수»로 센다 — span:2 표는 2×2 격자의 한 줄을 통째로 쓴다. */
 {
   const slides = mkEnv(3, ['인사이트 하나']);
   const TB = [['구분','대상','이수'],['본사','10','4']];
   await GST.pptAuto({asOf:'2026-08-18', tables:[{cap:'교육과정 요약', rows:TB, span:2}]});
-  ok(slides.length===1, '차트 3 + 표 1 = 한 장 (실제 '+slides.length+')');
-  const tbl = slides[0].tables||[];
-  ok(tbl.length===1 && tbl[0].rows===TB, '표가 addTable 로 들어가야 한다 (그림이 아니라 글자로)');
-  ok(slides[0].texts.some(x=>String(x.t)==='교육과정 요약'), '표에도 검정 머리띠가 붙어야 한다');
-  /* 겹침 판정 — 표 머리띠와 INSIGHT 머리띠가 같은 x 를 쓰면 안 된다.
-     표는 2열(칸 0~1), 인사이트는 칸 2 에서 시작해야 한다. */
-  const capBand = slides[0].texts.find(x=>String(x.t)==='교육과정 요약');
+  ok(slides.length===3, '개요(요약+핵심 표) + 차트 3 + 표 1 = 세 장 (실제 '+slides.length+')');
   const INS = /^(INSIGHT|요약|Summary|摘要|要約)$/;   // v135: 머리글이 언어를 따라간다(GST.insHead)
   const insBand = slides[0].texts.find(x=>INS.test(String(x.t)));
-  ok(!!insBand, '남은 칸이 있으면 인사이트를 담는다');
-  ok(capBand && insBand && insBand.o.x >= capBand.o.x + capBand.o.w - 0.001,
-     'INSIGHT 칸이 표 오른쪽에서 시작해야 한다 (겹치면 장표가 못 읽게 된다) — 표 x='
-     +(capBand&&capBand.o.x)+' w='+(capBand&&capBand.o.w)+' · INSIGHT x='+(insBand&&insBand.o.x));
-  ok(capBand && Math.abs(capBand.o.w - (3.89*2+0.16)) < 0.25,
-     'span:2 면 칸 폭이 두 칸이어야 한다 (실제 '+(capBand&&Math.round(capBand.o.w*100)/100)+')');
+  ok(!!insBand, '첫 장에 요약 머리띠가 선다');
+  ok(slides[0].texts.some(x=>/인사이트 하나/.test(String(x.t))), '요약 문장이 첫 장에 담긴다');
+  const tbl = slides[2].tables||[];
+  ok(tbl.length===1 && tbl[0].rows===TB, '표가 addTable 로 들어가야 한다 (그림이 아니라 글자로)');
+  ok(slides[2].texts.some(x=>String(x.t)==='교육과정 요약'), '표에도 검정 머리띠가 붙어야 한다');
+  const capBand = slides[2].texts.find(x=>String(x.t)==='교육과정 요약');
+  ok(capBand && Math.abs(capBand.o.w - 11.83) < 0.25,
+     'span:2 면 2×2 격자의 한 줄(전폭)을 써야 한다 (실제 '+(capBand&&Math.round(capBand.o.w*100)/100)+')');
   reset();
 }
 
@@ -272,26 +272,28 @@ function mkEnv(nCharts, insights){
   const first = slides[0].texts.find(x=>String(x.t)==='차트 1');
   ok(band && first && band.o.y > first.o.y,
      '차트 2개 뒤 span:2 표는 «다음 줄»로 내려가야 한다 (실제 y '+(band&&band.o.y)+' vs '+(first&&first.o.y)+')');
+  ok(slides.length===1, '차트 2 + span:2 표 = 2×2 한 장 (실제 '+slides.length+')');
   reset();
 }
 
-// 정확히 6개 → 1장, 빈 칸 없음
+// 정확히 4개 → 1장 · 요약이 없으면 개요 장도 없다
 {
-  const slides = mkEnv(6, []);
+  const slides = mkEnv(4, []);
   await GST.pptAuto({asOf:'2026-08-18'});
-  ok(slides.length===1, '차트 6개면 한 장 (실제 '+slides.length+')');
-  ok(!slides[0].texts.some(x=>/^(INSIGHT|요약|Summary|摘要|要約)$/.test(String(x.t))), '빈 칸이 없으면 INSIGHT 칸도 없어야 한다');
+  ok(slides.length===1, '차트 4개면 한 장 (실제 '+slides.length+')');
+  ok(!slides[0].texts.some(x=>/^(INSIGHT|요약|Summary|摘要|要約)$/.test(String(x.t))), 'KPI 도 요약도 없으면 개요 장(요약 칸)이 없어야 한다');
   reset();
 }
 
-// 빈 칸이 남으면 인사이트를 거기 담는다 (버리지도, 새 장을 만들지도 않는다)
+// 요약이 있으면 첫 장(개요)에 «문장»으로 담는다 — 버리지 않는다
 {
   const slides = mkEnv(4, ['재고 부족 3건','BM 급증 라인 F16']);
   await GST.pptAuto({asOf:'2026-08-18'});
-  ok(slides.length===1, '차트 4개 + 인사이트는 한 장이어야 (실제 '+slides.length+')');
+  ok(slides.length===2, '개요 한 장 + 차트 4개 한 장 (실제 '+slides.length+')');
   const t = slides[0].texts.map(x=>String(x.t));
-  ok(t.some(x=>/^(INSIGHT|요약|Summary|摘要|要約)$/.test(String(x))), '남은 칸에 INSIGHT 머리띠가 있어야 한다');
-  ok(t.some(x=>/재고 부족 3건/.test(x) && /BM 급증 라인 F16/.test(x)), '인사이트 문구가 담겨야 한다(버리지 않는다)');
+  ok(t.some(x=>/^(INSIGHT|요약|Summary|摘要|要約)$/.test(String(x))), '첫 장에 요약 머리띠가 있어야 한다');
+  ok(t.some(x=>/재고 부족 3건/.test(x) && /BM 급증 라인 F16/.test(x)), '요약 문구가 담겨야 한다(버리지 않는다)');
+  ok(slides[1].images.length===4, '차트 4개는 둘째 장 2×2');
   reset();
 }
 

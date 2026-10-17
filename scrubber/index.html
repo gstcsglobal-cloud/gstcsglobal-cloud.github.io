@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=188"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=189"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -183,6 +183,9 @@ body{color:var(--txt);
 /* TABLE */
 .tablecard{background:var(--glass);border:1px solid var(--glassb);border-radius:20px;padding:20px;backdrop-filter:blur(14px)}
 .tablecard h3{font-size:14px;font-weight:700;margin-bottom:12px}
+.dist2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:16px;margin-bottom:16px;align-items:stretch}
+.dist2>.cross-card{margin:0}
+@media(max-width:1100px){.dist2{grid-template-columns:1fr}}
 .tbl-wrap{max-height:380px;overflow:auto;border-radius:10px}
 .tbl-wrap::-webkit-scrollbar{width:5px;height:5px}.tbl-wrap::-webkit-scrollbar-thumb{background:var(--glassb);border-radius:4px}
 table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
@@ -209,7 +212,7 @@ tr:hover td{background:var(--surface-2)}
    데이터 품질 팝업(GST.dq · inst_nodate)이 모두에게 말하므로, 조회자에게서 이 표를 감춰도 조용히 빠지는 숫자는 없다. */
 body:not([data-role="admin"]):not([data-role="legacy"]) #mdCard{display:none !important}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=188">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=189">
 </head>
 <body>
 
@@ -293,8 +296,8 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #mdCard{display:none !im
      ⚠ .slicers 안에 두면 autoSidebar 가 사이드바로 가져가 버린다 — 바깥에 둔다. -->
 <div class="drillrow" id="pgDrill" style="display:none"></div>
 
-<!-- KPI -->
-<div class="kpis">
+<!-- KPI — 다섯 장이라 격자도 5칸(theme .kpis[data-n] · v196) -->
+<div class="kpis" data-n="5">
   <div class="kpi k1"><div class="krow"><span class="val" id="kp1">0</span><span class="unit" data-i="unit_ea">대</span><span class="kd" id="kd1"></span></div>
     <div class="cap" data-i="kp1">설치 대수</div>
     <div class="kf" id="kf1">—</div></div>
@@ -383,6 +386,7 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #mdCard{display:none !im
 
 <!-- ═══ 섹션: 분포 분석 ═══ -->
 <div data-sec="dist">
+  <!-- 고객사·Tool Maker 카드는 은퇴(v174 · 개요의 축 선택 카드가 같은 분포) — 이 격자는 chartLayout 이 통째로 숨긴다 -->
   <div class="grid3">
     <div class="card">
       <h3 data-i="ch_cust">고객사</h3>
@@ -390,16 +394,18 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #mdCard{display:none !im
       <div class="cw"><canvas id="cCustomer"></canvas></div>
     </div>
     <div class="card">
-      <h3 data-i="ch_group">공정 그룹</h3>
-      <div class="card-note" data-i="note_drill2">Distribution · click to filter</div>
-      <div class="cw"><canvas id="cGroup"></canvas></div>
-    </div>
-    <div class="card">
       <h3 data-i="ch_toolmaker">Installed base by Tool Maker</h3>
       <div class="card-note" data-i="note_tm">Count · share(%) in tooltip</div>
       <div class="cw"><canvas id="cToolMaker"></canvas></div>
     </div>
   </div>
+  <!-- 공정 그룹 도넛 | 교차 분석 — 1 : 1.6 한 줄(v196 · 시안 08). 도넛이 혼자 전폭을 쓰던 자리 -->
+  <div class="dist2">
+    <div class="card">
+      <h3 data-i="ch_group">공정 그룹</h3>
+      <div class="card-note" data-i="note_drill2">Distribution · click to filter</div>
+      <div class="cw"><canvas id="cGroup"></canvas></div>
+    </div>
   <div class="cross-card">
     <div class="cross-header">
       <h3 data-i="cross_title">교차 분석</h3>
@@ -431,6 +437,7 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #mdCard{display:none !im
       </div>
     </div>
     <div class="cross-wrap"><canvas id="cCross"></canvas></div>
+  </div>
   </div>
 </div>
 

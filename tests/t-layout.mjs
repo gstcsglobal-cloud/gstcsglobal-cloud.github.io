@@ -258,8 +258,8 @@ console.log('\n[1] 고장 분석 — 묶음·은퇴·격자');
       is(on.length === 1 && on[0] === g.sel, `«${g.key}» 묶음은 정확히 하나만 보인다 — ${g.sel} (보이는 것 ${on.join(',') || '없음'})`);
       is(g.items.every(x => x.bar), `«${g.key}» 묶음의 카드마다 기준 단추줄이 있다`);
     });
-    is(s.retired.length === 5 && s.retired.every(x => x.exists && !x.shown),
-       '은퇴 다섯 장은 DOM 에 남고 화면에는 안 보인다 (' + s.retired.map(x => x.id + (x.shown ? '=보임' : '')).join(' ') + ')');
+    is(s.retired.length === 6 && s.retired.every(x => x.exists && !x.shown),
+       '은퇴 여섯 장(v174 다섯 + 작업단계 도넛 · v196)은 DOM 에 남고 화면에는 안 보인다 (' + s.retired.map(x => x.id + (x.shown ? '=보임' : '')).join(' ') + ')');
     is(s.emptyGrids === 0, '카드가 다 빠진 격자는 통째로 숨는다');
   }
   /* 격자 열 맞춤 — 원인·조치의 둘째 격자(의뢰유형·모델·공정)는 비고, 개요 격자는 한 칸 */
@@ -329,7 +329,7 @@ for (const P of ['fault','material','pm','scrubber','tco','cip','hr']) {
   const st = await probe(pg);
   if (!st.length) { is(false, P + ': 배치 기록이 없다 (chartLayout 미적용)'); await c.close(); continue; }
   const s = st[0];
-  const EXP = { fault:[4,5], material:[2,1], pm:[2,1], scrubber:[0,5], tco:[1,0], cip:[1,0], hr:[2,0] }[P];
+  const EXP = { fault:[4,6], material:[2,1], pm:[2,1], scrubber:[0,5], tco:[1,0], cip:[1,0], hr:[2,0] }[P];   // fault 은퇴 6 = v174 다섯 + 작업단계 도넛(cStage · v196)
   /* 묶음은 카드를 둘 이상 찾았을 때만 선다 — id 가 틀리면 «조용히» 빠지므로 개수를 판정표와 대조한다 */
   is(s.groups.length === EXP[0] && s.retired.length === EXP[1],
      `${P}: 판정표대로 묶음 ${EXP[0]} · 은퇴 ${EXP[1]} (실제 ${s.groups.length} · ${s.retired.length})`);
