@@ -955,3 +955,26 @@ body.theme-slate .gst-band{background:var(--surface-glass,var(--surface))}
 .gst-per .gb-b[data-gb="clear"]{flex:none;width:32px;padding:0}
 .gst-band [hidden]{display:none !important}
 @media (max-width:720px){.gst-band{gap:8px}.gst-band .gb-sp{display:none}.gst-band select{max-width:46vw}.gst-band .gb-pre{margin-left:0}}
+
+/* ── v196 시안 반영 — KPI 칸 수 · 접힌 카드 띠 · 상세 필터를 연 폭의 격자 · 표 카드 넘침 ──
+   ① KPI 격자는 카드 수를 따른다 — .kpis[data-n] (6칸 고정이라 5장짜리 줄은 오른쪽이 비었다 · 설비 현황 · 고장 분석 신뢰성).
+      페이지 인라인 style 은 위 .kpis 의 !important 에 져서 아무 효과가 없었다 — 그래서 속성 선택자다. */
+.kpis[data-n="5"]{grid-template-columns:repeat(5,1fr) !important}
+.kpis[data-n="4"]{grid-template-columns:repeat(4,1fr) !important}
+.kpis[data-n="3"]{grid-template-columns:repeat(3,1fr) !important}
+.kpis[data-n="2"]{grid-template-columns:repeat(2,1fr) !important}
+@media(max-width:1250px){.kpis[data-n="5"],.kpis[data-n="4"]{grid-template-columns:repeat(3,1fr) !important}}
+/* ② 입력률이 낮아 접힌 카드는 «한 줄 띠»다 — 제목 · 기준 단추줄 · 「입력률 N% — 차트 보기」. 격자의 align-items:stretch 가
+      옆 카드(정합성 · ~700px) 높이로 늘려 빈 상자가 섰다 → 위쪽에 붙인다(align-self:start). 옆 카드가 그 자리를 쓴다. */
+.card.gst-fold:not([data-gst-alt]):not([data-gst-retired]){align-self:start;display:flex !important;   /* 묶음의 다른 기준·은퇴(chartLayout 의 숨김)는 그대로 숨는다 — 이 flex 가 그 display:none 을 이기면 안 된다 */flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 16px !important;min-height:0 !important}
+.card.gst-fold>h3{margin:0 !important;flex:none}
+.card.gst-fold .gst-axsel{margin:0}
+.card.gst-fold .gst-foldbtn{margin:0 0 0 auto}
+.card.gst-fold .card-note,.card.gst-fold .capbtns,.card.gst-fold .mini-per{display:none !important}
+/* ③ 격자는 «뷰포트»가 아니라 «자기 폭»을 본다 — 상세 필터(300px)가 기본 열림이라 1,366 노트북에서 셋째 카드가 110px 잘렸다.
+      사이드바가 열려 있으면(body.gst-sb-open) 분기점을 300px 당긴다. 닫으면 지금처럼 3열. 주간 현황의 .arow 도 같은 처지다. */
+@media(max-width:1550px){body.gst-sb-open .grid3,body.gst-sb-open .arow{grid-template-columns:repeat(2,1fr) !important}}
+/* ④ 격자 칸의 기본 min-width 는 «내용 폭»이다 — nowrap 표가 든 카드가 667px 로 자라 페이지가 옆으로 넘쳤다(설비 현황 Warranty 표 · 실측 1,863px).
+      칸은 격자 폭에 맞추고, 표는 카드 «안»에서 옆으로 민다. 숫자·열은 그대로다. */
+.grid3>*,.grid2>*,.grid2-trend>*,.arow>*,.kpis>*{min-width:0}
+.tbl-wrap{overflow:auto;max-width:100%}
