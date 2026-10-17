@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 188;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 189;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -5638,6 +5638,7 @@ GST.topN = function(list, n, unit){
 // 선택 상태는 sessionStorage에 페이지별로 기억. 라벨 갱신(언어 전환)을 위해 재호출 가능.
 GST.sectionNav = function(defs){
   if(!defs || !defs.length) return;
+  GST._secDefs = defs;   // PPT 전체 내보내기(pptAuto)가 섹션 번호·이름을 장표 머리에 적는다(v196)
   const storeKey = 'gst_sec_' + GST.pagePath().replace(/[^a-z0-9]/gi,'');
   let nav = document.getElementById('gstSecNav');
   if(!nav){
@@ -7833,8 +7834,11 @@ GST.pptSrc = function(ch){ // Chart.js 인스턴스 → {labels,bars,lines,stack
     if(ds.hidden)return;
     const isLn=(ds.type||ch.config.type)==='line';
     const vals=(ds.data||[]).map(v=>v==null?0:(typeof v==='object'?+(v.y||0):(+v||0)));
+    /* 배경이 CanvasPattern(빗금 · 예측 막대)이면 문자열이 아니다 — 그때는 테두리색을 쓴다(v196). 색 배열은 pptHex 가 첫 문자열을 고른다 */
+    const isStr=function(c){ return typeof c==='string'||Array.isArray(c); };
+    const bgc=isStr(ds.backgroundColor)?ds.backgroundColor:(isStr(ds.borderColor)?ds.borderColor:ds.backgroundColor);
     (isLn?lines:bars).push({name:String(ds.label||''),values:vals,
-      color:GST.pptHex(isLn?(ds.borderColor||ds.backgroundColor):(ds.backgroundColor||ds.borderColor)),
+      color:GST.pptHex(isLn?(ds.borderColor||ds.backgroundColor):(bgc||ds.borderColor)),
       y2:ds.yAxisID==='y2'});
   });
   const sc=(ch.options&&ch.options.scales)||{};
@@ -7851,26 +7855,38 @@ GST.pptSrc = function(ch){ // Chart.js 인스턴스 → {labels,bars,lines,stack
   return {labels,bars,lines,stacked:!!((sc.y&&sc.y.stacked)||(sc.x&&sc.x.stacked)),bounds,
           horiz:horiz, showValue:!!(vl&&vl.mode)};
 };
-GST.pptCombo = function(pres,slide,src,x,y,w,h){ // 막대+꺾은선 네이티브 콤보 차트 (도넛·파이도 여기서 · v135)
+GST.pptCombo = function(pres,slide,src,x,y,w,h,opt){ // 막대+꺾은선 네이티브 콤보 차트 (도넛·파이도 여기서 · v135) · opt={fs:글자 배율, fallbackName:이름 없는 단일 계열의 이름, unitScale:억·만 단위}(v196)
   if(!src) return;
+  opt=opt||{}; const fs=+opt.fs||1, F=function(v){ return Math.round(v*fs*10)/10; };
   if(src.pie){
     slide.addChart(pres.ChartType[src.hole?'doughnut':'pie'], [{name:src.name||'', labels:src.labels, values:src.values}],
-      {x:x,y:y,w:w,h:h, chartColors:src.colors, holeSize:src.hole?58:0, showLegend:true, legendPos:'b', legendFontSize:7.5,
-       legendColor:'333333', showTitle:false, showValue:true, showPercent:false, dataLabelColor:'333333', dataLabelFontSize:7.5,
+      {x:x,y:y,w:w,h:h, chartColors:src.colors, holeSize:src.hole?58:0, showLegend:true, legendPos:'b', legendFontSize:F(7.5),
+       legendColor:'333333', showTitle:false, showValue:true, showPercent:false, dataLabelColor:'333333', dataLabelFontSize:F(7.5),
        dataLabelPosition:'bestFit', dataLabelFormatCode:'#,##0'});
     if(src.hole){   // 화면의 가운데 TOTAL 과 같은 숫자를 구멍에 얹는다 — 범례(아래) 높이만큼 위로
       const cx=x+w/2, cy=y+(h-0.35)*0.5;
-      slide.addText(String(src.total.toLocaleString()), {x:cx-0.9, y:cy-0.24, w:1.8, h:0.30, align:'center', valign:'middle', fontSize:14, bold:true, color:'111111', margin:0});
-      slide.addText('TOTAL', {x:cx-0.9, y:cy+0.06, w:1.8, h:0.20, align:'center', valign:'top', fontSize:7, color:'808080', margin:0});
+      slide.addText(String(src.total.toLocaleString()), {x:cx-0.9, y:cy-0.24, w:1.8, h:0.30, align:'center', valign:'middle', fontSize:F(14), bold:true, color:'111111', margin:0});
+      slide.addText('TOTAL', {x:cx-0.9, y:cy+0.06, w:1.8, h:0.20, align:'center', valign:'top', fontSize:F(7), color:'808080', margin:0});
     }
     return;
   }
   if(!src.bars.length&&!src.lines.length)return;
+  /* 이름 없는 계열이 «하나뿐»이면 카드 제목을 이름으로 쓴다(v196) — pptxgenjs 가 «Series1» 이라고 적는 자리다.
+     계열이 여럿인데 이름이 없는 경우는 손대지 않는다(어느 계열이 무엇인지 지어낼 수 없다). */
+  const all0=src.bars.concat(src.lines), unnamed=all0.filter(function(d){ return String(d.name||'').trim()===''; });
+  if(opt.fallbackName && all0.length===1 && unnamed.length===1) unnamed[0].name=String(opt.fallbackName);
+  /* 큰 값은 억·만 단위로 축을 적는다(v196 · 시안 01 «축 3000000000») — 값은 나눠 넣고 단위를 축 제목에 적는다. 보조축(%) 은 그대로. */
+  let div=1, unit='';
+  if(opt.unitScale){
+    let mx=0; src.bars.concat(src.lines.filter(function(l){ return !l.y2; })).forEach(function(d){ (d.values||[]).forEach(function(v){ if(isFinite(v)&&Math.abs(v)>mx) mx=Math.abs(v); }); });
+    if(mx>=1e8){ div=1e8; unit='억'; } else if(mx>=1e5){ div=1e4; unit='만'; }
+  }
+  const sv=function(d){ return div===1?d.values:d.values.map(function(v){ return isFinite(v)?Math.round(v/div*100)/100:v; }); };
   const ln1=src.lines.filter(l=>!l.y2), ln2=src.lines.filter(l=>l.y2);
   const useY2=ln2.length>0&&(src.bars.length>0||ln1.length>0);
   const types=[];
   if(src.bars.length)types.push({type:'bar',
-    data:src.bars.map(b=>({name:b.name,labels:src.labels,values:b.values})),
+    data:src.bars.map(b=>({name:b.name,labels:src.labels,values:sv(b)})),
     /* barDir: 'bar' = 가로 · 'col' = 세로. 화면이 가로 막대면 PPT 도 가로여야 한다 —
        세로로 내보내면 라벨이 겹쳐 읽을 수 없는 장표가 된다. */
     options:{chartColors:src.bars.map(b=>b.color),barDir:src.horiz?'bar':'col',
@@ -7878,27 +7894,29 @@ GST.pptCombo = function(pres,slide,src,x,y,w,h){ // 막대+꺾은선 네이티�
   const lnOpt=ls=>({chartColors:ls.map(l=>l.color),lineSize:1.5,lineSmooth:false,
     lineDataSymbol:'circle',lineDataSymbolSize:4});
   if(ln1.length)types.push({type:'line',
-    data:ln1.map(l=>({name:l.name,labels:src.labels,values:l.values})),options:lnOpt(ln1)});
+    data:ln1.map(l=>({name:l.name,labels:src.labels,values:sv(l)})),options:lnOpt(ln1)});
   if(ln2.length){const o=lnOpt(ln2); if(useY2){o.secondaryValAxis=true;o.secondaryCatAxis=true;}
     types.push({type:'line',data:ln2.map(l=>({name:l.name,labels:src.labels,values:l.values})),options:o});}
   const o={x,y,w,h,chartArea:{fill:{color:'FFFFFF'}},barGapWidthPct:60,
-    catAxisLabelColor:'333333',catAxisLabelFontSize:7.5,catAxisLineColor:'BFBFBF',
-    valAxisLabelColor:'333333',valAxisLabelFontSize:7.5,valAxisLineColor:'BFBFBF',
+    catAxisLabelColor:'333333',catAxisLabelFontSize:F(7.5),catAxisLineColor:'BFBFBF',
+    valAxisLabelColor:'333333',valAxisLabelFontSize:F(7.5),valAxisLineColor:'BFBFBF',
     valGridLine:{color:'E8E8E8',size:0.5},catGridLine:{style:'none'},
     /* 이름 없는 계열만 있으면 범례를 끈다. 켜 두면 pptxgenjs 가 «Series1» 이라고 적는데,
        화면에는 없는 글자다 — 장표가 화면과 다른 말을 하게 된다. */
     showLegend:src.bars.concat(src.lines).some(function(d){ return String(d.name||'').trim()!==''; }),
-    legendPos:'b',legendFontSize:7.5,legendColor:'333333',showTitle:false,
-    showValue:!!src.showValue,dataLabelFontSize:7,dataLabelColor:'333333',dataLabelFormatCode:'#,##0.##'};
+    legendPos:'b',legendFontSize:F(7.5),legendColor:'333333',showTitle:false,
+    showValue:!!src.showValue,dataLabelFontSize:F(7),dataLabelColor:'333333',dataLabelFormatCode:div===1?'#,##0.##':'#,##0.0'};
+  if(unit){ o.showValAxisTitle=true; o.valAxisTitle=unit; o.valAxisTitleFontSize=F(7.5); o.valAxisTitleColor='808080'; }
   const bd=src.bounds||{};
-  if(bd.y){ if(isFinite(bd.y.min))o.valAxisMinVal=bd.y.min; if(isFinite(bd.y.max))o.valAxisMaxVal=bd.y.max; }
+  const sc=function(v){ return div===1?v:v/div; };
+  if(bd.y){ if(isFinite(bd.y.min))o.valAxisMinVal=sc(bd.y.min); if(isFinite(bd.y.max))o.valAxisMaxVal=sc(bd.y.max); }
   if(useY2){ // 보조축 사용 시 valAxes+catAxes 2쌍 필수 (미지정 시 PPT가 차트 폐기)
-    const a1={showValAxisTitle:false,valGridLine:{color:'E8E8E8',size:0.5}};
+    const a1={showValAxisTitle:!!unit,valAxisTitle:unit||undefined,valGridLine:{color:'E8E8E8',size:0.5}};
     const a2={showValAxisTitle:false,valGridLine:{style:'none'}};
-    if(bd.y){ if(isFinite(bd.y.min))a1.valAxisMinVal=bd.y.min; if(isFinite(bd.y.max))a1.valAxisMaxVal=bd.y.max; }
+    if(bd.y){ if(isFinite(bd.y.min))a1.valAxisMinVal=sc(bd.y.min); if(isFinite(bd.y.max))a1.valAxisMaxVal=sc(bd.y.max); }
     if(bd.y2){ if(isFinite(bd.y2.min))a2.valAxisMinVal=bd.y2.min; if(isFinite(bd.y2.max))a2.valAxisMaxVal=bd.y2.max; }
     o.valAxes=[a1,a2];
-    o.catAxes=[{catAxisLabelFontSize:7.5},{catAxisHidden:true}];
+    o.catAxes=[{catAxisLabelFontSize:F(7.5)},{catAxisHidden:true}];
   }
   slide.addChart(types,o);
 };
@@ -8731,7 +8749,24 @@ GST.xlsxCard = async function(id){
   GST._pptSay('⤓ '+fn+' — '+T.hint);
 };
 
-GST.PPT_MAX_PER_SLIDE = 6;
+GST.PPT_MAX_PER_SLIDE = 6;   /* 옛 3×2 양식의 상한 — v196 부터 장표 배치는 GST.PPT_GRID(2×2)가 정본이다. 옛 호출부·검사 보호용으로 남긴다 */
+GST.PPT_GRID = [2,2];     // v196 «양식 2.0» — 섹션 장은 2×2(최대 4장) · 마지막 장은 남은 수에 맞춰 1×2 / 1×1 / 1×3 으로 키운다
+GST.PPT_FS = 1.4;         // 섹션 장의 차트 글자 배율 — 3×2 때(7.5pt)의 1.4배. 2×2 라 칸이 커져 글자도 커져야 읽힌다
+GST.PPTA_T = {
+  ko:{kpi:'핵심 지표', tbl:'핵심 표', item:'항목', val:'값', ov:'개요', tables:'표', fc:'예측',
+      img:'※ 다음 차트는 PPT 안에서 편집할 수 없는 «그림»입니다 (그 형태는 네이티브 차트로 옮기면 화면과 달라집니다): ',
+      nodata:'※ 자료가 없어 뺀 차트: ', page:'{p} / {n}'},
+  en:{kpi:'Key figures', tbl:'Key table', item:'Item', val:'Value', ov:'Overview', tables:'Tables', fc:'Forecast',
+      img:'※ These charts are pictures (not editable in PPT — converting them would change the picture): ',
+      nodata:'※ Charts skipped (no data): ', page:'{p} / {n}'},
+  zh:{kpi:'核心指标', tbl:'核心表', item:'项目', val:'值', ov:'概览', tables:'表', fc:'预测',
+      img:'※ 以下图表为图片（PPT 内不可编辑 — 转为原生图表会与画面不同）: ',
+      nodata:'※ 无数据而省略的图表: ', page:'{p} / {n}'},
+  ja:{kpi:'主要指標', tbl:'主要表', item:'項目', val:'値', ov:'概要', tables:'表', fc:'予測',
+      img:'※ 次のグラフは PPT 内で編集できない«画像»です（ネイティブに変えると画面と異なります）: ',
+      nodata:'※ データがなく省いたグラフ: ', page:'{p} / {n}'}
+};
+GST._pptaT = function(k){ const l=(GST._lang&&GST._lang())||'ko'; const d=GST.PPTA_T[l]||GST.PPTA_T.ko; return (k in d)?d[k]:GST.PPTA_T.ko[k]; };
 GST.pptAuto = async function(opt){
   opt = opt || {};
   try{ await GST.pptLoad(); }
@@ -8750,13 +8785,12 @@ GST.pptAuto = async function(opt){
   if(hid.length){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} await new Promise(function(r){ setTimeout(r,350); }); }
 
   const FONT='맑은 고딕', INK='111111', MUT='808080', LINE='8C8C8C';
-  const X=0.76, W=11.83, COLS=3, GAP=0.16;
-  const CW=(W-GAP*(COLS-1))/COLS, BAND=0.30, BODY=2.62, ROWY=[0.98, 4.06];
+  const X=0.76, W=11.83, GAP=0.16, BAND=0.32, FOOT=6.92;
+  const PT=GST._pptaT;
+  const txt=function(el){ return el?String(el.textContent||el.innerText||'').replace(/\s+/g,' ').trim():''; };
 
-  /* ⚠ LAYOUT_16x9 는 10 × 5.625 in 이다. 아래 배치(X=0.76 · W=11.83 · ROWY[1]=4.06)는
-     13.33 × 7.5 in 을 전제로 잡혀 있어, 16x9 로 두면 오른쪽 칸과 아랫줄이 통째로
-     장표 «밖»에 그려진다. 예전 네이티브 내보내기는 LAYOUT_WIDE 를 썼다 — 그 배치가
-     여기로 옮겨 오면서 레이아웃만 안 따라온 것이다. 실측(LibreOffice 렌더)으로 잡았다. */
+  /* ⚠ LAYOUT_16x9 는 10 × 5.625 in 이다. 아래 배치(X=0.76 · W=11.83)는 13.33 × 7.5 in 을 전제로 잡혀 있어,
+     16x9 로 두면 오른쪽 칸과 아랫줄이 통째로 장표 «밖»에 그려진다(v134 · LibreOffice 렌더로 잡았다). */
   const p = new PptxGenJS(); p.layout='LAYOUT_WIDE';
   const title = (opt.title || (document.querySelector('.header h1')||{}).textContent || document.title || 'Dashboard').trim();
   const corp  = (opt.corp || GST.corpLabel()).toUpperCase();
@@ -8772,27 +8806,30 @@ GST.pptAuto = async function(opt){
     s.addText(meta, {x:5.0, y:0.58, w:7.59, h:0.22, fontFace:FONT, fontSize:8, color:MUT, align:'right', margin:0});
     s.addShape(p.ShapeType.line, {x:X, y:0.86, w:W, h:0, line:{color:'000000', width:2.25}});
   };
-  /* 칸 하나 — 검정 머리띠 + 흰 몸통. 양식의 «가. 인력현황» 칸과 같은 꼴이다. */
-  const slot = function(s, i, it, span){
-    const cap=it.cap, oc=it.oc, tb=it.table;
-    const c=i%COLS, r=Math.floor(i/COLS);
-    const x=X+(CW+GAP)*c, y=ROWY[r], w=CW*span+GAP*(span-1);
+  const footer = function(s, pg, pages, secLabel){
+    s.addText(PT('page').replace('{p}',pg).replace('{n}',pages)+(secLabel?' · '+secLabel:''),
+      {x:X, y:FOOT+0.1, w:4.2, h:0.22, fontFace:FONT, fontSize:8, color:MUT, margin:0, valign:'middle'});
+  };
+  /* 칸 하나 — 검정 머리띠 + 흰 몸통. 양식의 «가. 인력현황» 칸과 같은 꼴이다. 좌표·크기를 그대로 받는다(2×2 · 1×2 · 1×1 · 1×3). */
+  const slot = function(s, it, x, y, w, h){
+    const cap=it.cap, oc=it.oc, tb=it.table, BODY=h-BAND;
     s.addText(cap, {x:x, y:y, w:w, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
-                    fontSize:10, bold:true, valign:'middle', align:'center', margin:4,
+                    fontSize:11, bold:true, valign:'middle', align:'center', margin:4,
                     line:{color:'000000', width:0.75}});
     s.addShape(p.ShapeType.rect, {x:x, y:y+BAND, w:w, h:BODY, fill:{color:'FFFFFF'}, line:{color:LINE, width:0.75}});
     if(tb){
       s.addTable(tb.rows, {x:x+0.06, y:y+BAND+0.06, w:w-0.12, colW:tb.colW, fontFace:FONT,
-                           fontSize:tb.fontSize||8.5, color:INK, align:'center', valign:'middle',
+                           fontSize:tb.fontSize||10, color:INK, align:'center', valign:'middle',
                            border:{type:'solid', color:LINE, pt:0.5},
-                           rowH:Math.max(0.20,(BODY-0.12)/tb.rows.length)});
+                           rowH:Math.max(0.22,Math.min(0.34,(BODY-0.12)/tb.rows.length))});
       return;
     }
     /* 네이티브 차트로 넣을 수 있으면 그렇게 한다 — 받아 본 사람이 PPT 안에서 값·색·축을
        고칠 수 있다. 못 넣는 차트(도넛·산점도·수치축)는 그림으로 남기고, 어느 카드가
-       그림인지는 items 를 만들 때 이미 기록해 두었다(아래 notes). */
+       그림인지는 items 를 만들 때 이미 기록해 두었다(아래 notes).
+       범례가 없는 단일 계열은 카드 제목을 이름으로 쓴다(«Series1» 금지) · 글자는 1.4배 · 큰 값은 억·만 단위(v196). */
     if(it.src){
-      try{ GST.pptCombo(p, s, it.src, x+0.10, y+BAND+0.08, w-0.20, BODY-0.16); return; }
+      try{ GST.pptCombo(p, s, it.src, x+0.10, y+BAND+0.08, w-0.20, BODY-0.16, {fs:GST.PPT_FS, fallbackName:cap, unitScale:true}); return; }
       catch(e){ /* 네이티브가 실패하면 그림으로 내려간다 — 빈 칸을 내보내지 않는다 */
         it.nativeErr=(e&&e.message)||'실패'; }
     }
@@ -8806,9 +8843,16 @@ GST.pptAuto = async function(opt){
   /* ⚠ `.cw canvas` 만 보면 안 된다 — 추이(.trend-wrap)·크로스(.cross-wrap) 카드의 차트가
      통째로 빠진다(실측: 설치현황 14개 중 5개 · 고장분석 32개 중 7개가 그 바깥이다).
      카드 안의 캔버스를 전부 보되, Chart 인스턴스가 없는 것은 아래에서 자연히 걸러진다.
-     clientWidth 0 은 접힌 카드라 캡처하면 빈 그림이 된다. */
+     clientWidth 0 은 접힌 카드(은퇴 · 묶음의 다른 기준 · 입력률 접힘)라 캡처하면 빈 그림이 된다 — 화면에 보이는 것만 나간다. */
   const cvs = GST.chartCanvases().filter(function(c){ return c.id && c.clientWidth>0; });   // 카드 선택자는 GST.CARD_SEL 한 벌(v135)
-  const items = [], imgOnly = [];
+  const items = [], imgOnly = [], noData = [];
+  const secOf = function(cv){ try{ const s=cv.closest&&cv.closest('[data-sec]'); return (s&&s.getAttribute)?(s.getAttribute('data-sec')||''):''; }catch(e){ return ''; } };
+  const empty = function(src){   // 자료가 없는 차트 — 빈 축만 나가는 장표는 받아 본 사람을 헷갈리게 한다. 뺀 것은 마지막 장에 적는다
+    if(!src) return false;
+    if(src.pie) return !(src.values||[]).some(function(v){ return v; });
+    const all=(src.bars||[]).concat(src.lines||[]);
+    return !src.labels||!src.labels.length||!all.length||!all.some(function(d){ return (d.values||[]).some(function(v){ return v; }); });
+  };
   for(const cv of cvs){
     /* 그림은 «언제나» 만들어 둔다 — 네이티브가 도중에 실패해도 빈 칸이 나가지 않게.
        ⚠ 여기서 던지면 내보내기가 통째로 죽는다. 실제로 그랬다 — _chartLight 의 프록시
@@ -8817,7 +8861,7 @@ GST.pptAuto = async function(opt){
     let oc = null;
     try{ oc = GST.chartHiResLight(cv.id); }catch(e){ oc = null; }
     const cap = GST.cardTitle(cv.id);
-    const it = {cap:cap, oc:oc, id:cv.id};
+    const it = {cap:cap, oc:oc, id:cv.id, sec:secOf(cv)};
     /* 네이티브로 옮겨도 «화면과 같은 그림»인 차트만 옮긴다(GST.pptNativeOK).
        ⚠ 판정을 여기서 새로 짜지 말 것 — 카드별 버튼(GST.pptCard)도 같은 함수를 본다. */
     try{
@@ -8826,73 +8870,135 @@ GST.pptAuto = async function(opt){
       if(ch && !why){ it.src = GST.pptSrc(ch); if(!it.src) it.why='데이터를 못 읽음'; }
       else it.why = why;
     }catch(e){ it.why = (e&&e.message)||'판정 실패'; }
+    if(it.src && empty(it.src)){ noData.push(cap); continue; }
     if(!it.src) imgOnly.push(cap + (it.why ? ' ('+it.why+')' : ''));
     if(!it.src && !it.oc) continue;          // 네이티브도 그림도 없으면 담을 것이 없다
     items.push(it);
   }
   /* 표도 «같은 칸»에 담는다. 차트만 담을 수 있으면, 표가 있는 페이지는 자기 덱을 따로
      짤 수밖에 없고 그러면 장표 얼굴이 또 갈라진다(v100 에 hr 이 그랬다).
-     opt.tables = [{cap, rows:[[셀…]…], colW?, span?}] — span 은 가로로 차지할 칸 수. */
+     opt.tables = [{cap, rows:[[셀…]…], colW?, span?}] — span 은 가로로 차지할 칸 수(2×2 격자라 최대 2). */
+  /* 섹션이 없는 화면(인원 등)에서는 표가 차트와 같은 장에 선다(칸 수로 자리를 센다) · 섹션이 있으면 «표» 장으로 따로 간다 */
+  const tbSec = items.every(function(it){ return !it.sec; }) ? '' : '__tables';
   (opt.tables||[]).forEach(function(tb){
-    if(tb && tb.rows && tb.rows.length) items.push({cap:tb.cap||'', table:tb});
+    if(tb && tb.rows && tb.rows.length) items.push({cap:tb.cap||'', table:tb, sec:tbSec});
   });
   hid.forEach(function(s){ s.style.display='none'; });
   if(hid.length){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }
   if(!items.length){ GST._pptSay('내보낼 차트가 없습니다 — 자료가 다 뜬 뒤에 다시 눌러 주세요.'); return; }
 
-  const per = GST.PPT_MAX_PER_SLIDE;
-  /* 자리를 «개수»가 아니라 «칸 수»로 센다 — 표가 두 칸을 쓰면 그만큼 자리를 먹는다.
-     개수로 세면 인사이트 칸이 표 «위에 겹쳐» 그려지고, 겹친 장표는 아무도 못 읽는다.
-     한 줄에 안 들어가는 폭이면 다음 줄로 내린다(줄을 걸쳐 그리면 칸 밖으로 나간다). */
-  const span1 = function(it){ return Math.max(1, Math.min((it.table && it.table.span)||1, COLS)); };
-  const pagesArr = []; let cur = [], cellIdx = 0;
-  items.forEach(function(it){
-    const n = span1(it);
-    let ci = cellIdx;
-    if(ci % COLS + n > COLS) ci += COLS - (ci % COLS);   // 그 줄에 안 들어가면 다음 줄
-    if(ci + n > per){ pagesArr.push(cur); cur = []; ci = 0; }
-    cur.push({it:it, cell:ci, n:n});
-    cellIdx = ci + n;
-  });
-  if(cur.length) pagesArr.push(cur);
+  /* ── 첫 장 «개요» — 화면 첫 KPI 줄(그 숫자 그대로) + 요약 문장 + 핵심 표(첫 순위 차트의 상위 5). (v196 · 시안 01)
+     예전 장표는 차트만 있어 «무엇을 말하나»가 없었고, 요약은 innerText 가 flex 자식마다 줄을 바꿔 낱말 단위로 끊겼다(«채우러 가기 →» 단추 글자까지).
+     ⚠ 숫자를 새로 세지 않는다 — 카드의 글자를 그대로 옮긴다. */
+  const kbox = document.querySelector ? document.querySelector('.kpis') : null;
+  const kpis = kbox ? [].slice.call(kbox.querySelectorAll('.kpi')).filter(function(k){ return !k.getClientRects || k.getClientRects().length; }).slice(0,6)
+    .map(function(k){ return {cap:txt(k.querySelector('.cap')), val:txt(k.querySelector('.val')), unit:txt(k.querySelector('.unit')), kd:txt(k.querySelector('.kd')), kf:txt(k.querySelector('.kf'))}; })
+    .filter(function(k){ return k.val && k.cap; }) : [];
+  const ins = [].slice.call(document.querySelectorAll('#gstInsights .gst-ins')).map(function(x){
+    let s='';
+    try{ if(x.cloneNode){ const c=x.cloneNode(true); [].forEach.call(c.querySelectorAll('button,.gst-go,.gst-ins-dot'), function(b){ b.remove(); }); s=c.textContent||''; } }catch(e){ s=''; }
+    if(!s) s=String(x.textContent||x.innerText||'');
+    return s.replace(/\s+/g,' ').trim(); }).filter(Boolean);
+  /* 핵심 표 — 첫 «순위» 차트(가로 막대 · 계열 하나)의 상위 5. 없으면 첫 막대 차트. 표가 넘겨졌으면(opt.tables) 그 첫 표. */
+  let keyTb = null;
+  { const tb0=(opt.tables||[]).find(function(t){ return t&&t.rows&&t.rows.length; });
+    if(tb0) keyTb={cap:tb0.cap||PT('tbl'), rows:tb0.rows.slice(0,7), colW:tb0.colW};
+    else{
+      const cand=items.filter(function(it){ return it.src&&!it.src.pie&&it.src.bars&&it.src.bars.length; });
+      const it=cand.find(function(it){ return it.src.horiz&&it.src.bars.length===1; })||cand[0];
+      if(it){ const b=it.src.bars[0], L=it.src.labels||[];
+        const rows=[[PT('item'), b.name||PT('val')]];
+        L.slice(0,6).forEach(function(l,i){ const v=b.values[i]; rows.push([String(l), (v==null||isNaN(v))?'':Number(v).toLocaleString()]); });
+        if(rows.length>1) keyTb={cap:it.cap, rows:rows, colW:[3.3, 1.6]}; }
+    } }
+  const slides=[];   // {sec, label, cells:[{it,cell,n}]}
+  const hasCover = !!(kpis.length || ins.length);
 
-  const pages = pagesArr.length;
-  for(let pg=0; pg<pages; pg++){
-    const s = p.addSlide();
-    header(s, title + (pages>1 ? '  ('+(pg+1)+'/'+pages+')' : ''));
-    const part = pagesArr[pg];
-    part.forEach(function(e){ slot(s, e.cell, e.it, e.n); });
-    /* 마지막 장에 빈 칸이 남으면 인사이트를 거기 담는다 — 버리지 않고, 새 장도 만들지 않는다. */
-    const usedCells = part.length ? part[part.length-1].cell + part[part.length-1].n : 0;
-    if(pg===pages-1 && usedCells<per){
-      const ins = [].slice.call(document.querySelectorAll('#gstInsights .gst-ins'))
-                    .map(function(x){ return (x.innerText||'').trim(); }).filter(Boolean);
-      if(ins.length){
-        const i0=usedCells, c=i0%COLS, r=Math.floor(i0/COLS);
-        const x=X+(CW+GAP)*c, y=ROWY[r], span=COLS-c, w=CW*span+GAP*(span-1);
-        s.addText(GST.insHead(), {x:x, y:y, w:w, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT,
-                              fontSize:10, bold:true, valign:'middle', align:'center', margin:4,
-                              line:{color:'000000', width:0.75}});
-        s.addShape(p.ShapeType.rect, {x:x, y:y+BAND, w:w, h:BODY, fill:{color:'FFFFFF'}, line:{color:LINE, width:0.75}});
-        s.addText(ins.map(function(t){ return '· '+t; }).join('\n'),
-          {x:x+0.12, y:y+BAND+0.10, w:w-0.24, h:BODY-0.20, fontFace:FONT, fontSize:9, color:'333333',
-           valign:'top', margin:0, lineSpacingMultiple:1.3});
-      }
+  /* ── 섹션마다 한 장(2×2) — 섹션 탭에 가려진 카드도 섹션 이름을 달고 나간다. 자리는 «칸 수»로 센다(표가 두 칸을 쓰면 그만큼 먹는다). */
+  const defs = GST._secDefs||[];
+  const secLabel = function(id){ if(id==='__tables') return PT('tables'); const d=defs.find(function(d){ return d.id===id; }); return d?String(d.label||id):(id||''); };
+  const groups=[]; items.forEach(function(it){ let g=groups.find(function(g){ return g.sec===it.sec; }); if(!g){ g={sec:it.sec, items:[]}; groups.push(g); } g.items.push(it); });
+  const PER=GST.PPT_GRID[0]*GST.PPT_GRID[1], COLS=GST.PPT_GRID[0];
+  groups.forEach(function(g, gi){
+    const secNo = (g.sec && g.sec!=='__tables' && defs.length) ? String(Math.max(0, defs.findIndex(function(d){ return d.id===g.sec; }))+1).padStart(2,'0') : '';
+    let cur=[], ci=0;
+    const flush=function(){ if(cur.length) slides.push({sec:g.sec, label:secLabel(g.sec), no:secNo, cells:cur}); cur=[]; ci=0; };
+    g.items.forEach(function(it){
+      const n=Math.max(1, Math.min((it.table && it.table.span)||1, COLS));
+      if(ci % COLS + n > COLS) ci += COLS - (ci % COLS);   // 그 줄에 안 들어가면 다음 줄
+      if(ci + n > PER) flush();
+      cur.push({it:it, cell:ci, n:n}); ci+=n;
+    });
+    flush();
+  });
+
+  const pages = slides.length + (hasCover?1:0);
+  let pg=0;
+  if(hasCover){
+    pg++; const s=p.addSlide(); header(s, title + (pages>1 ? '  ('+pg+'/'+pages+')' : ''));
+    let y=1.02;
+    if(kpis.length){
+      const n=kpis.length, kw=(W-GAP*(n-1))/n, kh=1.26;
+      kpis.forEach(function(k,i){
+        const x=X+(kw+GAP)*i;
+        s.addShape(p.ShapeType.rect, {x:x, y:y, w:kw, h:kh, fill:{color:'FFFFFF'}, line:{color:LINE, width:0.75}});
+        s.addText(k.cap, {x:x+0.12, y:y+0.08, w:kw-0.24, h:0.26, fontFace:FONT, fontSize:9, color:MUT, margin:0, valign:'middle'});
+        s.addText([{text:k.val, options:{fontSize:20, bold:true, color:INK}}].concat(k.unit?[{text:' '+k.unit, options:{fontSize:10, color:MUT}}]:[]).concat(k.kd?[{text:'  '+k.kd, options:{fontSize:9, color:MUT}}]:[]),
+          {x:x+0.12, y:y+0.36, w:kw-0.24, h:0.5, fontFace:FONT, margin:0, valign:'middle'});
+        if(k.kf) s.addText(k.kf, {x:x+0.12, y:y+0.9, w:kw-0.24, h:0.3, fontFace:FONT, fontSize:8, color:MUT, margin:0, valign:'top'});
+      });
+      y+=kh+0.22;
     }
-    /* ⚠ «어느 카드가 그림인지»를 마지막 장에 한 줄로 밝힌다. 조용히 두면 받아 본 사람은
-       「왜 이 차트만 편집이 안 되지」로 읽고, 우리는 그걸 결함으로 오해한다.
-       장을 새로 만들지 않는다 — 빈 장은 그 자체로 노이즈다. */
-    if(pg===pages-1){
-      const late = items.filter(function(x){ return x.nativeErr; })
-                        .map(function(x){ return x.cap+' ('+x.nativeErr+')'; });
-      GST._pptImgOnly = imgOnly.concat(late);          // 검사·진단이 본다
-      if(GST._pptImgOnly.length){
-        s.addText('※ 다음 차트는 PPT 안에서 편집할 수 없는 «그림»입니다 (그 형태는 네이티브 차트로 옮기면 화면과 달라집니다): '
-                  + GST._pptImgOnly.join(' · '),
-          {x:X, y:6.86, w:W, h:0.30, fontFace:FONT, fontSize:7.5, color:MUT, valign:'top', margin:0});
-      }
+    const bh=FOOT-y-0.06, both=!!(ins.length&&keyTb);
+    const bw=both?(W-GAP)/2:W;
+    const box=function(x, w, cap){
+      s.addText(cap, {x:x, y:y, w:w, h:BAND, fill:{color:'000000'}, color:'FFFFFF', fontFace:FONT, fontSize:11, bold:true, valign:'middle', align:'center', margin:4, line:{color:'000000', width:0.75}});
+      s.addShape(p.ShapeType.rect, {x:x, y:y+BAND, w:w, h:bh-BAND, fill:{color:'FFFFFF'}, line:{color:LINE, width:0.75}});
+    };
+    let x=X;
+    if(ins.length){
+      box(x, bw, GST.insHead());
+      s.addText(ins.map(function(t){ return '· '+t; }).join('\n'),
+        {x:x+0.16, y:y+BAND+0.14, w:bw-0.32, h:bh-BAND-0.28, fontFace:FONT, fontSize:11.5, color:'333333', valign:'top', margin:0, lineSpacingMultiple:1.35});
+      x+=bw+GAP;
     }
+    if(keyTb){
+      if(!ins.length) x=X;
+      box(x, bw, keyTb.cap);
+      s.addTable(keyTb.rows, {x:x+0.1, y:y+BAND+0.1, w:bw-0.2, colW:keyTb.colW, fontFace:FONT, fontSize:10.5, color:INK, align:'center', valign:'middle',
+        border:{type:'solid', color:LINE, pt:0.5}, rowH:Math.max(0.26, Math.min(0.4,(bh-BAND-0.2)/keyTb.rows.length))});
+    }
+    footer(s, pg, pages, PT('ov'));
   }
+
+  const y0s=1.36, cellW=(W-GAP)/COLS;
+  slides.forEach(function(sl, si){
+    pg++; const s=p.addSlide(); header(s, title + (pages>1 ? '  ('+pg+'/'+pages+')' : ''));
+    let y0=0.98;
+    if(sl.label){ s.addText((sl.no?sl.no+'   ':'')+sl.label, {x:X, y:0.98, w:W, h:0.30, fontFace:FONT, fontSize:12, bold:true, color:INK, margin:0, valign:'middle'}); y0=y0s; }
+    const H=FOOT-y0-0.08, used=sl.cells.length?sl.cells[sl.cells.length-1].cell+sl.cells[sl.cells.length-1].n:0;
+    const singles=sl.cells.every(function(c){ return c.n===1; });
+    if(used<=2 && singles){            // 1×2 · 1×1 — 마지막 장에 한두 장 남으면 키운다(빈 칸을 남기지 않는다)
+      const n=sl.cells.length, w=n===1?W*0.72:(W-GAP)/2, x0=n===1?X+(W-w)/2:X;
+      sl.cells.forEach(function(c,i){ slot(s, c.it, x0+(w+GAP)*i, y0, w, H); });
+    } else if(used===3 && singles){    // 1×3
+      const w=(W-GAP*2)/3; sl.cells.forEach(function(c,i){ slot(s, c.it, X+(w+GAP)*i, y0, w, H); });
+    } else {                           // 2×2(표가 두 칸을 쓰면 그 줄 전체)
+      const h=(H-GAP)/GST.PPT_GRID[1];
+      sl.cells.forEach(function(c){ const col=c.cell%COLS, row=Math.floor(c.cell/COLS);
+        slot(s, c.it, X+(cellW+GAP)*col, y0+(h+GAP)*row, cellW*c.n+GAP*(c.n-1), h); });
+    }
+    footer(s, pg, pages, sl.label);
+    /* ⚠ «어느 카드가 그림인지»·«자료가 없어 뺀 차트»를 마지막 장에 한 줄로 밝힌다. 조용히 두면 받아 본 사람은
+       「왜 이 차트만 편집이 안 되지」로 읽고, 우리는 그걸 결함으로 오해한다. 장을 새로 만들지 않는다 — 빈 장은 그 자체로 노이즈다. */
+    if(si===slides.length-1){
+      const late = items.filter(function(x){ return x.nativeErr; }).map(function(x){ return x.cap+' ('+x.nativeErr+')'; });
+      GST._pptImgOnly = imgOnly.concat(late);          // 검사·진단이 본다
+      GST._pptNoData = noData;
+      const notes=[]; if(GST._pptImgOnly.length) notes.push(PT('img')+GST._pptImgOnly.join(' · ')); if(noData.length) notes.push(PT('nodata')+noData.join(' · '));
+      if(notes.length) s.addText(notes.join('\n'), {x:X+4.3, y:FOOT+0.06, w:W-4.3, h:0.44, fontFace:FONT, fontSize:7.5, color:MUT, valign:'top', margin:0});
+    }
+  });
   const fn = title.replace(/[\\/:*?"<>|]/g,'').slice(0,40)+'_'+asOf+'.pptx';
   await p.writeFile({fileName:fn});
 };
@@ -10694,7 +10800,7 @@ GST.prefs = {
    ⚠ 현장 측정값(연소·유량 등)은 이 분석에 넣지 않는다(사용자 확정) — 원장의 측정 칸은 extra 에만 남는다.
    ============================================================ */
 GST.FSE_T = {
-  ko:{ sec:'알람 분석', ax_code:'알람 코드', ax_ncode:'알람 분류', ax_msg:'알람 메시지', f_alarm:'알람', f_aw:'구분', all:'전체',
+  ko:{ sec:'알람 분석', sec_tag:'해외 FSE 원장', ax_code:'알람 코드', ax_ncode:'알람 분류', ax_msg:'알람 메시지', f_alarm:'알람', f_aw:'구분', all:'전체',
        f_resp:'책임', f_ch:'챔버', f_ut:'설비 타입', ut_OLD:'OLD', ut_GLOBAL:'GLOBAL', ut_DRAGON:'DRAGON', ut_ETC:'기타', ut_EXCL:'SWS·GPWS', more:'더 보기', less:'접기',
        search_ph:'코드·메시지 찾기', clear:'선택 해제', all_alarms:'모든 알람', blank:'(미기재)', n_sel:'{n}개 선택',
        k_n:'발생 건수', k_n_f:'{u}대 · 챔버 {c}', k_y:'{y}년 발생', k_y_f:'작년 같은 기간 {p}건', k_u:'발생 설비', k_u_f:'관리 설비 {t}대 중 {r}',
@@ -10731,7 +10837,7 @@ GST.FSE_T = {
        pt_find:'자재마스터에서 찾기', pt_find_ph:'품목번호 · 품목명 · 규격', pt_m_name:'마스터 품목명', pt_m_none:'자재마스터가 아직 없습니다 — 「원본 파일 올리기 › 자재마스터」로 올리면 여기서 찾을 수 있습니다',
        pt_m_fail:'자재마스터를 읽지 못했습니다', pt_m_zero:'맞는 품목이 없습니다', pt_m_n:'{n}건 (최대 {m})', pt_put:'묶음에 넣기', pt_grp_ph:'넣을 묶음 이름', pt_in:'이미 있음',
        pt_m_miss:'마스터에 없음', th_itype:'유형', th_spec:'규격', th_used:'원장 교체', pt_grp_need:'넣을 묶음 이름을 먼저 적으세요' },
-  en:{ sec:'Alarm analysis', ax_code:'Alarm code', ax_ncode:'Alarm group', ax_msg:'Alarm message', f_alarm:'Alarm', f_aw:'Kind', all:'All',
+  en:{ sec:'Alarm analysis', sec_tag:'overseas FSE ledger', ax_code:'Alarm code', ax_ncode:'Alarm group', ax_msg:'Alarm message', f_alarm:'Alarm', f_aw:'Kind', all:'All',
        f_resp:'Responsible', f_ch:'Chamber', f_ut:'Unit type', ut_OLD:'OLD', ut_GLOBAL:'GLOBAL', ut_DRAGON:'DRAGON', ut_ETC:'Other', ut_EXCL:'SWS·GPWS', more:'More', less:'Less',
        search_ph:'Find code or message', clear:'Clear', all_alarms:'All alarms', blank:'(blank)', n_sel:'{n} selected',
        k_n:'Occurrences', k_n_f:'{u} units · {c} chambers', k_y:'{y} so far', k_y_f:'same period last year {p}', k_u:'Units hit', k_u_f:'{r} of {t} managed units',
@@ -10768,7 +10874,7 @@ GST.FSE_T = {
        pt_find:'Find in item master', pt_find_ph:'Item no. · name · spec', pt_m_name:'Master item name', pt_m_none:'No item master yet — upload it via «Upload source file › Item master» to search here',
        pt_m_fail:'Could not read the item master', pt_m_zero:'No matching items', pt_m_n:'{n} (max {m})', pt_put:'Add to group', pt_grp_ph:'Group to add to', pt_in:'Already in',
        pt_m_miss:'Not in master', th_itype:'Type', th_spec:'Spec', th_used:'Ledger replacements', pt_grp_need:'Type the group name first' },
-  zh:{ sec:'报警分析', ax_code:'报警代码', ax_ncode:'报警分类', ax_msg:'报警信息', f_alarm:'报警', f_aw:'类别', all:'全部',
+  zh:{ sec:'报警分析', sec_tag:'海外 FSE 台账', ax_code:'报警代码', ax_ncode:'报警分类', ax_msg:'报警信息', f_alarm:'报警', f_aw:'类别', all:'全部',
        f_resp:'责任', f_ch:'腔体', f_ut:'设备类型', ut_OLD:'OLD', ut_GLOBAL:'GLOBAL', ut_DRAGON:'DRAGON', ut_ETC:'其他', ut_EXCL:'SWS·GPWS', more:'更多', less:'收起',
        search_ph:'查找代码或信息', clear:'清除', all_alarms:'全部报警', blank:'(未填写)', n_sel:'已选 {n} 个',
        k_n:'发生次数', k_n_f:'{u} 台 · 腔体 {c}', k_y:'{y}年发生', k_y_f:'去年同期 {p} 次', k_u:'发生设备', k_u_f:'管理设备 {t} 台中 {r}',
@@ -10805,7 +10911,7 @@ GST.FSE_T = {
        pt_find:'在物料主数据中查找', pt_find_ph:'品目编号 · 品名 · 规格', pt_m_name:'主数据品名', pt_m_none:'还没有物料主数据 — 通过«上传原始文件 › 物料主数据»上传后即可在此查找',
        pt_m_fail:'无法读取物料主数据', pt_m_zero:'没有匹配的品目', pt_m_n:'{n} 条 (最多 {m})', pt_put:'加入组', pt_grp_ph:'要加入的组名', pt_in:'已存在',
        pt_m_miss:'主数据中没有', th_itype:'类型', th_spec:'规格', th_used:'台账更换', pt_grp_need:'请先填写要加入的组名' },
-  ja:{ sec:'アラーム分析', ax_code:'アラームコード', ax_ncode:'アラーム分類', ax_msg:'アラームメッセージ', f_alarm:'アラーム', f_aw:'区分', all:'全体',
+  ja:{ sec:'アラーム分析', sec_tag:'海外 FSE 台帳', ax_code:'アラームコード', ax_ncode:'アラーム分類', ax_msg:'アラームメッセージ', f_alarm:'アラーム', f_aw:'区分', all:'全体',
        f_resp:'責任', f_ch:'チャンバー', f_ut:'設備タイプ', ut_OLD:'OLD', ut_GLOBAL:'GLOBAL', ut_DRAGON:'DRAGON', ut_ETC:'その他', ut_EXCL:'SWS·GPWS', more:'もっと見る', less:'閉じる',
        search_ph:'コード・メッセージを検索', clear:'選択解除', all_alarms:'すべてのアラーム', blank:'(未記入)', n_sel:'{n}件選択',
        k_n:'発生件数', k_n_f:'{u}台 · チャンバー {c}', k_y:'{y}年の発生', k_y_f:'昨年同期 {p}件', k_u:'発生設備', k_u_f:'管理設備 {t}台中 {r}',

@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=188"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=189"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write) 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB(옛 동작 그대로 보인다).
@@ -55,8 +55,15 @@ body{font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',san
 .brand .logo{font-size:16px;font-weight:700;color:var(--txt);letter-spacing:-.2px}
 .brand .tag{font-size:12px;color:var(--mut);padding-left:10px;border-left:1px solid var(--line)}
 .topbar-right{display:flex;align-items:center;gap:10px}
-/* 툴바 버튼이 여섯 개다 — 좁은 화면에서 줄바꿈이 안 되면 로그아웃이 화면 밖으로 잘린다 */
-.topbar-right{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+/* 툴바(v196 · 시안 07) — 글자 단추는 셋(검색·질문 칸 · 조치 사항 · 새로고침)만, 나머지는 아이콘(툴팁). 1,280 까지 한 줄이다.
+   예전에는 단추 13개가 1,600 에서도 둘째 줄로 떨어졌다(로그아웃이 화면 밖). 라벨 span 은 DOM 에 남긴다 — applyLang·검사가 id 로 본다. */
+.topbar-right{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;flex:1;min-width:0;margin-left:18px}
+.tb-btn.ic{padding:7px 8px}
+.tb-btn.ic>span:not(.th-track){display:none}
+#kioskBtn.on>span{display:inline}          /* 순회 중에는 「■ 정지」 글자가 보여야 멈출 길이 보인다 */
+.fx-btn .fx-n{display:none !important}      /* «★ 4/28» 은 뜻을 알 수 없다 — 별 하나(금색)만 */
+#themeLabel{display:none}                   /* 해·달 스위치가 곧 라벨이다 */
+.tb-btn.logout.ic{border-color:transparent}
 /* v165 — 라이트/다크 스위치(해·달). 라이트가 기본이다(v139). 손잡이가 미끄러지고 아이콘이 바뀐다 — 움직임 줄이기 설정이면 즉시 */
 .th-track{position:relative;width:34px;height:18px;border-radius:999px;background:var(--surface-3,#E5E8EE);border:1px solid var(--line);transition:background .25s ease}
 .th-knob{position:absolute;top:1px;left:1px;width:14px;height:14px;border-radius:50%;background:#fff;color:#E8A317;display:flex;align-items:center;justify-content:center;
@@ -79,25 +86,30 @@ body.theme-slate .th-moon{opacity:1;transform:none}
   border-bottom:1px solid var(--line);flex-shrink:0;overflow-x:auto}
 .tabbar::-webkit-scrollbar{height:0}
 
-/* 공통 컨트롤 바 — 탭 줄 바로 아래 전용 줄. 전 페이지 동일 세트(미지원은 비활성) */
-/* 챗봇까지 한 덩어리로 오른쪽 정렬 — 기존 컨트롤 위치는 그대로 유지된다 */
-.gbarrow{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:4px 24px;
-  background:var(--bg);border-bottom:1px solid var(--line);flex-shrink:0;overflow:visible;position:relative;flex-wrap:wrap}
+/* 공통 컨트롤 바 — 탭 줄과 «같은 줄»의 오른쪽 끝(v196 · 시안 07 — 챗봇 전용 줄을 없애 본문이 40px 위로 올라온다). 전 페이지 동일 세트(미지원은 비활성) */
+.tabrow{display:flex;align-items:stretch;background:var(--surface);border-bottom:1px solid var(--line);flex-shrink:0}
+.tabrow .tabbar{flex:1 1 auto;min-width:0;border-bottom:0}
+.gbarrow{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:0 16px 0 8px;flex:none;
+  background:transparent;overflow:visible;position:relative}
 .gbarrow::-webkit-scrollbar{height:0}
-/* 챗봇 입력줄 */
-.askwrap{display:flex;align-items:center;gap:6px;height:27px;padding:0 8px;flex:0 1 340px;min-width:150px;
-  background:var(--glass);border:1px solid var(--glassb);border-radius:8px;transition:border-color .2s,box-shadow .2s}
+/* 검색·질문 칸 — 하나다(v196). 글자를 치고 Enter 면 챗봇, Ctrl K(또는 오른쪽 Ctrl K 칩)면 검색(명령 팔레트). 팔레트 안에도 «챗봇에 묻기» 항목이 있다 */
+.askwrap{display:flex;align-items:center;gap:7px;height:32px;padding:0 6px 0 11px;flex:1 1 320px;max-width:520px;min-width:160px;position:relative;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:9px;transition:border-color .2s,box-shadow .2s}
 .askwrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.askwrap .ask-ic{color:var(--accent);flex:none}
+.askwrap .ask-ic{color:var(--mut);flex:none}
 .ask-inp{font-family:inherit;flex:1;min-width:0;background:transparent;border:none;outline:none;
-  color:var(--txt);font-size:11.5px;font-weight:600}
+  color:var(--txt);font-size:12.5px;font-weight:600}
 .ask-inp::placeholder{color:var(--mut);font-weight:600}
 .ask-go{font-family:inherit;background:transparent;border:none;color:var(--mut);cursor:pointer;font-size:12px;
   font-weight:800;padding:0 2px;flex:none}
 .ask-go:hover{color:var(--accent)}
-.askpanel{display:none;position:absolute;z-index:60;right:24px;top:calc(100% - 2px);width:min(520px,calc(100vw - 32px));
+.tb-kbd{font-family:inherit;background:transparent;border:0;padding:0;cursor:pointer;flex:none;display:inline-flex}
+.tb-kbd kbd{font:600 10.5px/1 ui-monospace,SFMono-Regular,Consolas,monospace;padding:3px 6px;border-radius:5px;border:1px solid var(--line);background:var(--surface);color:var(--mut)}
+.tb-kbd:hover kbd{color:var(--txt);border-color:var(--line-2)}
+.tb-kbd:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.askpanel{display:none;position:absolute;z-index:9500;left:0;top:calc(100% + 6px);width:min(560px,calc(100vw - 32px));
   max-height:min(60vh,520px);flex-direction:column;background:var(--surface);border:1px solid var(--line);
-  border-radius:0 0 12px 12px;box-shadow:var(--shadow-md);overflow:hidden}
+  border-radius:12px;box-shadow:var(--shadow-md);overflow:hidden;text-align:left}
 .askpanel.open{display:flex}
 .ask-head{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--txt)}
 .ask-mode{font-size:10px;font-weight:700;color:var(--mut)}
@@ -148,7 +160,6 @@ select.gb-inp{width:104px}
 .fx-btn{color:var(--gold,#D8B46A) !important;border-color:color-mix(in srgb,var(--gold,#D8B46A) 38%,transparent) !important}
 .fx-btn .fx-n{background:color-mix(in srgb,var(--gold,#D8B46A) 85%,#000);color:#120D02;font-variant-numeric:tabular-nums}
 .fx-btn .fx-n:empty,.fx-btn .fx-n[hidden]{display:none}
-@media(max-width:1820px){#fxLabel{display:none}}   /* 툴바가 두 줄로 넘치지 않게 — 넓은 화면에서만 글자까지(별 아이콘 · 금색 · 제목 풍선) */
 .tb-badge{display:inline-block;min-width:17px;padding:0 5px;border-radius:9px;background:var(--bad,#D92D20);color:#fff;font-size:10px;font-weight:800;line-height:17px;text-align:center}
 .tb-btn.on{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
 .tb-more{position:relative;display:inline-flex}
@@ -179,14 +190,7 @@ body:not([data-role="admin"]):not([data-role="legacy"]) .exp-only{display:none !
   transition:left .34s cubic-bezier(.3,.9,.3,1),width .34s cubic-bezier(.3,.9,.3,1),opacity .2s}
 .tabbar.has-ink .tab.active{border-bottom-color:transparent}
 @media (prefers-reduced-motion:reduce){.tab-ink{transition:none}}
-.tb-search{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 7px 0 11px;min-width:200px;border-radius:9px;
-  border:1px solid var(--line);background:var(--surface-2);color:var(--mut);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
-  transition:border-color .15s,color .15s,box-shadow .15s}
-.tb-search:hover{border-color:var(--line-2);color:var(--txt);box-shadow:0 0 0 3px var(--accent-soft)}
-.tb-search:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.tb-search span{flex:1;text-align:left}
-.tb-search kbd{font:600 10.5px/1 ui-monospace,SFMono-Regular,Consolas,monospace;padding:3px 6px;border-radius:5px;border:1px solid var(--line);background:var(--surface);color:var(--mut)}
-@media(max-width:1180px){.tb-search{min-width:0}.tb-search span,.tb-search kbd{display:none}}
+@media(max-width:1180px){.askwrap{flex-basis:200px}.tb-kbd{display:none}}
 .fprog{position:absolute;left:0;right:0;top:0;height:2px;z-index:3;pointer-events:none;opacity:0;transition:opacity .25s;overflow:hidden}
 .fprog.on{opacity:1}
 .fprog i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,var(--accent),#7A5AF8 60%,#0EA5E9);
@@ -293,7 +297,6 @@ body.theme-slate .gb-b:hover{background:#151E32;color:var(--txt)}
 .gb-b.on,body.theme-slate .gb-b.on{background:color-mix(in srgb,var(--accent) 24%,var(--surface));color:var(--txt);border-color:color-mix(in srgb,var(--accent) 50%,transparent)}
 .gb-seg .gb-b.on{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
 body.theme-slate .askwrap{background:#0F1626}
-body.theme-slate .tb-search{background:#0F1626}
 body.theme-slate .more-menu,body.theme-slate .askpanel,body.theme-slate .kiosk-panel{background:#0F1626;border-color:rgba(148,170,215,.16)}
 
 @media(max-width:768px){
@@ -322,12 +325,39 @@ body.theme-slate .more-menu,body.theme-slate .askpanel,body.theme-slate .kiosk-p
     <span class="tag" id="brandTag" data-lock>By CS Global Team</span>
   </div>
   <div class="topbar-right">
-    <!-- 검색(명령 팔레트 · v171) — 화면 · 기능 · 설비 S/N · 지금 화면의 카드를 한 칸에서 찾는다. 어느 화면에서든 Ctrl K -->
-    <button class="tb-search" id="palBtn" type="button" onclick="palOpen()" aria-keyshortcuts="Control+K Meta+K" aria-haspopup="dialog"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span id="palLabel">검색</span><kbd id="palKbd">Ctrl K</kbd></button>
+    <!-- 검색·질문 칸(v196 · 시안 07) — 글자를 치고 Enter 면 챗봇(askSend), Ctrl K 칩이면 검색(명령 팔레트 · v171). 입력 칸이 둘(검색·챗봇)이던 것을 하나로.
+         챗봇 답은 지금처럼 이 칸 아래 패널(#askPanel)로 뜬다 -->
+    <div class="askwrap" id="askWrap" role="search">
+      <svg class="ask-ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="askInp" class="ask-inp" type="text" autocomplete="off" placeholder="검색 또는 질문" aria-label="검색 또는 질문">
+      <button class="ask-go" id="askGo" title="질문">↵</button>
+      <button class="tb-kbd" id="palBtn" type="button" onclick="palOpen()" aria-keyshortcuts="Control+K Meta+K" aria-haspopup="dialog" title="Ctrl+K"><kbd id="palKbd">Ctrl K</kbd></button>
+      <!-- 패널은 .askwrap(position:relative) 안에 둔다 — 밖에 두면 기준이 body가 돼 화면 아래로 내려간다 -->
+      <div class="askpanel" id="askPanel">
+        <div class="ask-head"><b>대시보드 챗봇</b><span id="askMode" class="ask-mode"></span><button class="ask-x" onclick="askClose()">✕</button></div>
+        <div class="ask-log" id="askLog"></div>
+        <div class="ask-tips" id="askTips"></div>
+      </div>
+    </div>
     <!-- 처리함은 탭이 아니라 «할 일 수»가 보이는 단추다(v172 · 탭 12 → 8). 누르면 처리함 화면으로 -->
     <button class="tb-btn" onclick="switchTab('action')" id="actBtn" title="조치 사항"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> <span id="actLabel">조치 사항</span> <b class="tb-badge" id="actBadge" hidden>0</b></button>
+    <button class="tb-btn" onclick="refreshActive()" id="refreshBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg> <span id="refreshLabel">새로고침</span></button>
+    <!-- 업로드는 탭이 아니다 — 매일 보는 탭 줄에 관리용 화면을 섞지 않는다(diag 와 같은 규율).
+         대신 여기 툴바에 두어 «데이터를 넣는 곳»을 한 번에 찾을 수 있게 한다.
+         새 창으로 여는 이유: 탭 iframe 에 띄우면 탭 줄에서 아무 탭도 활성이 아니게 되고,
+         업로드 도중에 탭을 누르면 진행 중이던 적재 화면이 그대로 날아간다. -->
+    <button class="tb-btn ic" onclick="openUpload()" id="uploadBtn" title="원본 파일 올리기 — 월 실적·원장·CIP 등을 통째·기간 단위로 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg> <span id="uploadLabel">업로드</span></button>
+    <!-- 오프라인 내보내기도 탭이 아니다(업로드와 같은 규율 · v137). 시연용 단일 HTML 과
+         데이터 스냅샷을 받는 관리 화면이라 새 창으로 연다. -->
+    <button class="tb-btn ic" onclick="openOffline()" id="offlineBtn" title="오프라인 판 내보내기 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> <span id="offlineLabel">오프라인</span></button>
+    <!-- 데이터 관리 — 표를 직접 찾아 고치고·넣고·지우는 관리 화면(v140). 업로드와 같은 규율로 새 창. -->
+    <button class="tb-btn ic" onclick="openEdit()" id="editBtn" title="데이터 관리 — 행 찾아 고치기 · 원본 파일 올리기 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> <span id="editLabel">데이터 관리</span></button>
+    <button class="tb-btn ic" onclick="kioskBtn()" id="kioskBtn" title="자동순회 — 글로벌 투어(지구본이 나라·사이트를 차례로) 또는 화면 순회"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 8 4 2.5-4 2.5z" fill="currentColor"/></svg> <span id="kioskLabel">자동순회</span></button>
+    <button class="tb-btn ic" onclick="shareLink()" id="shareBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> <span id="shareLabel">공유</span></button>
+    <!-- 효과(v180 · 디자인 X) — 별빛·오도미터·지구본 회전·자석 단추… 사람마다 켜고 끈다(이 PC · 모든 탭이 같이 본다) -->
+    <button class="tb-btn fx-btn ic" id="fxBtn" type="button" onclick="GST.fx&&GST.fx.panel()" aria-haspopup="dialog" title="효과"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.9 5.8L20 10l-5 3.6L16.8 20 12 16.4 7.2 20 9 13.6 4 10l6.1-1.2z"/></svg> <span id="fxLabel">효과</span> <b class="tb-badge fx-n" id="fxN"></b></button>
     <!-- 더보기 — 매일 보지 않는 화면(사이트 상세 · 분석 작업대 · 운영 목표)과 관리자의 「설명 표시」 -->
-    <div class="tb-more"><button class="tb-btn" onclick="moreToggle()" id="moreBtn" aria-haspopup="menu" aria-expanded="false" title="더보기"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg> <span id="moreLabel">더보기</span></button>
+    <div class="tb-more"><button class="tb-btn ic" onclick="moreToggle()" id="moreBtn" aria-haspopup="menu" aria-expanded="false" title="더보기"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg> <span id="moreLabel">더보기</span></button>
       <div class="more-menu" id="moreMenu" role="menu" hidden>
         <button type="button" role="menuitem" data-go="site" id="mSite">사이트 상세</button>
         <button type="button" role="menuitem" data-go="studio" id="mStudio">맞춤 분석</button>
@@ -338,24 +368,9 @@ body.theme-slate .more-menu,body.theme-slate .askpanel,body.theme-slate .kiosk-p
         <hr class="exp-only">
         <button type="button" role="menuitemcheckbox" aria-checked="false" id="mExplain" class="exp-only" onclick="explainToggle()"><span id="mExplainL">설명 표시</span><span class="chk" id="mExplainS">끔</span></button>
       </div></div>
-    <button class="tb-btn" onclick="refreshActive()" id="refreshBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg> <span id="refreshLabel">새로고침</span></button>
-    <!-- 업로드는 탭이 아니다 — 매일 보는 탭 줄에 관리용 화면을 섞지 않는다(diag 와 같은 규율).
-         대신 여기 툴바에 두어 «데이터를 넣는 곳»을 한 번에 찾을 수 있게 한다.
-         새 창으로 여는 이유: 탭 iframe 에 띄우면 탭 줄에서 아무 탭도 활성이 아니게 되고,
-         업로드 도중에 탭을 누르면 진행 중이던 적재 화면이 그대로 날아간다. -->
-    <button class="tb-btn" onclick="openUpload()" id="uploadBtn" title="원본 파일 올리기 — 월 실적·원장·CIP 등을 통째·기간 단위로 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg> <span id="uploadLabel">업로드</span></button>
-    <!-- 오프라인 내보내기도 탭이 아니다(업로드와 같은 규율 · v137). 시연용 단일 HTML 과
-         데이터 스냅샷을 받는 관리 화면이라 새 창으로 연다. -->
-    <button class="tb-btn" onclick="openOffline()" id="offlineBtn" title="오프라인 판 내보내기 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> <span id="offlineLabel">오프라인</span></button>
-    <!-- 데이터 관리 — 표를 직접 찾아 고치고·넣고·지우는 관리 화면(v140). 업로드와 같은 규율로 새 창. -->
-    <button class="tb-btn" onclick="openEdit()" id="editBtn" title="데이터 관리 — 행 찾아 고치기 · 원본 파일 올리기 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> <span id="editLabel">데이터 관리</span></button>
-    <button class="tb-btn" onclick="kioskBtn()" id="kioskBtn" title="자동순회 — 글로벌 투어(지구본이 나라·사이트를 차례로) 또는 화면 순회"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 8 4 2.5-4 2.5z" fill="currentColor"/></svg> <span id="kioskLabel">자동순회</span></button>
-    <button class="tb-btn" onclick="shareLink()" id="shareBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> <span id="shareLabel">공유</span></button>
-    <!-- 효과(v180 · 디자인 X) — 별빛·오도미터·지구본 회전·자석 단추… 사람마다 켜고 끈다(이 PC · 모든 탭이 같이 본다) -->
-    <button class="tb-btn fx-btn" id="fxBtn" type="button" onclick="GST.fx&&GST.fx.panel()" aria-haspopup="dialog" title="효과"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.9 5.8L20 10l-5 3.6L16.8 20 12 16.4 7.2 20 9 13.6 4 10l6.1-1.2z"/></svg> <span id="fxLabel">효과</span> <b class="tb-badge fx-n" id="fxN"></b></button>
     <button class="tb-btn th-sw" id="themeSw" onclick="cycleTheme()" role="switch" aria-checked="false" aria-label="Dark mode" title="Light / Dark"><span class="th-track" aria-hidden="true"><span class="th-knob"><svg class="th-sun" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="th-moon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span></span> <span id="themeLabel">Light</span></button>
     <button class="tb-btn" onclick="cycleLang()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> <span id="langLabel">KO</span></button>
-    <button class="tb-btn logout" onclick="doLogout()" id="logoutBtn">로그아웃</button>
+    <button class="tb-btn logout ic" onclick="doLogout()" id="logoutBtn" title="로그아웃"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg> <span id="logoutLabel">로그아웃</span></button>
   </div>
 </div>
 
@@ -395,23 +410,10 @@ body.theme-slate .more-menu,body.theme-slate .askpanel,body.theme-slate .kiosk-p
   <div class="kk-hint" id="kkHint">Esc 종료</div>
 </div>
 
-<!-- 탭 바 -->
-<div class="tabbar" id="tabbar"></div>
-<!-- 공통 컨트롤 바 (전용 줄 — 탭을 가리지 않는다) -->
-<div class="gbarrow">
-  <!-- 챗봇 — 컨트롤 바로 왼쪽에 붙여 함께 오른쪽으로 정렬한다 -->
-  <div class="askwrap" id="askWrap">
-    <svg class="ask-ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.1A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5z"/></svg>
-    <input id="askInp" class="ask-inp" type="text" autocomplete="off" placeholder="대시보드 챗봇">
-    <button class="ask-go" id="askGo" title="질문">↵</button>
-  </div>
-  <!-- 패널은 .gbarrow(position:relative) 안에 둔다 — 밖에 두면 기준이 body가 돼 화면 아래로 내려간다 -->
-  <div class="askpanel" id="askPanel">
-    <div class="ask-head"><b>대시보드 챗봇</b><span id="askMode" class="ask-mode"></span><button class="ask-x" onclick="askClose()">✕</button></div>
-    <div class="ask-log" id="askLog"></div>
-    <div class="ask-tips" id="askTips"></div>
-  </div>
-  <div id="gbar"></div>
+<!-- 탭 바 + 공통 컨트롤 바 — 한 줄(v196). 컨트롤 바(차트 디자인 · PPT · 브리핑 · 피벗)는 탭 줄 오른쪽 끝에 선다. 챗봇은 상단 검색·질문 칸으로 갔다 -->
+<div class="tabrow">
+  <div class="tabbar" id="tabbar"></div>
+  <div class="gbarrow"><div id="gbar"></div></div>
 </div>
 
 <!-- iframe 영역 -->
@@ -470,10 +472,10 @@ function tabOn(t){ return !t.roles || t.roles.indexOf((document.body && document
 function barTabs(){ return TABS.filter(t=>tabOn(t)&&t.bar!==false); }
 
 const L={
-  ko:{shot:'이 화면 이미지로 저장',shotK:'이미지 저장 캡처 그림 png',fx:'효과',tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',offline:'오프라인',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!',act:'조치 사항',more:'더보기',explain:'설명 표시',on:'켬',off:'끔',search:'검색',pal_dark:'다크 모드로 바꾸기',pal_light:'라이트 모드로 바꾸기',pal_sn:'{p}에서 보기',pal_lang:'언어',rows:'행'},
-  en:{shot:'Save this screen as an image',shotK:'image screenshot capture png save',fx:'Effects',tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',offline:'Offline',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!',act:'Action items',more:'More',explain:'Show notes',on:'On',off:'Off',search:'Search',pal_dark:'Switch to dark mode',pal_light:'Switch to light mode',pal_sn:'Open in {p}',pal_lang:'Language',rows:' rows'},
-  zh:{shot:'将此画面保存为图片',shotK:'图片 截图 保存 png',fx:'效果',tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',offline:'离线版',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!',act:'待办事项',more:'更多',explain:'显示说明',on:'开',off:'关',search:'搜索',pal_dark:'切换到深色模式',pal_light:'切换到浅色模式',pal_sn:'在{p}中查看',pal_lang:'语言',rows:'行'},
-  ja:{shot:'この画面を画像で保存',shotK:'画像 スクリーンショット 保存 png',fx:'エフェクト',tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',offline:'オフライン',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!',act:'対応事項',more:'その他',explain:'説明を表示',on:'オン',off:'オフ',search:'検索',pal_dark:'ダークモードに切替',pal_light:'ライトモードに切替',pal_sn:'{p}で見る',pal_lang:'言語',rows:'行'}
+  ko:{ask:'검색 또는 질문',askAi:'챗봇에 묻기',shot:'이 화면 이미지로 저장',shotK:'이미지 저장 캡처 그림 png',fx:'효과',tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',offline:'오프라인',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!',act:'조치 사항',more:'더보기',explain:'설명 표시',on:'켬',off:'끔',search:'검색',pal_dark:'다크 모드로 바꾸기',pal_light:'라이트 모드로 바꾸기',pal_sn:'{p}에서 보기',pal_lang:'언어',rows:'행'},
+  en:{ask:'Search or ask',askAi:'Ask the chatbot',shot:'Save this screen as an image',shotK:'image screenshot capture png save',fx:'Effects',tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',offline:'Offline',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!',act:'Action items',more:'More',explain:'Show notes',on:'On',off:'Off',search:'Search',pal_dark:'Switch to dark mode',pal_light:'Switch to light mode',pal_sn:'Open in {p}',pal_lang:'Language',rows:' rows'},
+  zh:{ask:'搜索或提问',askAi:'问聊天机器人',shot:'将此画面保存为图片',shotK:'图片 截图 保存 png',fx:'效果',tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',offline:'离线版',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!',act:'待办事项',more:'更多',explain:'显示说明',on:'开',off:'关',search:'搜索',pal_dark:'切换到深色模式',pal_light:'切换到浅色模式',pal_sn:'在{p}中查看',pal_lang:'语言',rows:'行'},
+  ja:{ask:'検索または質問',askAi:'チャットボットに聞く',shot:'この画面を画像で保存',shotK:'画像 スクリーンショット 保存 png',fx:'エフェクト',tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',offline:'オフライン',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!',act:'対応事項',more:'その他',explain:'説明を表示',on:'オン',off:'オフ',search:'検索',pal_dark:'ダークモードに切替',pal_light:'ライトモードに切替',pal_sn:'{p}で見る',pal_lang:'言語',rows:'行'}
 };
 let LANG='ko';
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&L[sl])LANG=sl; else if(window.name && L[window.name]) LANG=window.name; }catch(e){}
@@ -625,7 +627,7 @@ function tourStartShell(){
   KIOSK.on=true; KIOSK.run='tour';
   document.getElementById('kioskPanel').classList.remove('open');
   document.body.classList.add('kiosk-on','kiosk-tour');
-  document.getElementById('kioskLabel').textContent=lt('kioskStop');
+  document.getElementById('kioskLabel').textContent=lt('kioskStop'); document.getElementById('kioskBtn').classList.add('on');
   if(KIOSK.full) kioskFull(true);
   kioskWake(true);
   switchTab('hub');
@@ -710,7 +712,7 @@ function kioskStart(){
   KIOSK.i=-1; KIOSK.on=true; KIOSK.run='pages';
   document.getElementById('kioskPanel').classList.remove('open');
   document.body.classList.add('kiosk-on');
-  document.getElementById('kioskLabel').textContent=lt('kioskStop');
+  document.getElementById('kioskLabel').textContent=lt('kioskStop'); document.getElementById('kioskBtn').classList.add('on');
   /* 전체화면은 «사용자 동작 안에서만» 걸린다 — 그래서 시작 버튼 클릭 흐름에서 부른다.
      막히면 조용히 넘어간다(창 모드로도 순회는 그대로 돈다). */
   if(KIOSK.full) kioskFull(true);
@@ -788,7 +790,7 @@ function kioskStop(){
   KIOSK.run='';
   document.body.classList.remove('kiosk-on','kiosk-tour');
   document.getElementById('frameWrap').classList.remove('kk-fade');
-  document.getElementById('kioskLabel').textContent=lt('kiosk');
+  document.getElementById('kioskLabel').textContent=lt('kiosk'); document.getElementById('kioskBtn').classList.remove('on');
   kioskFull(false);
   /* 빌려 쓴 필터를 돌려준다 — 열린 «모든» 탭에 보낸다. 순회 도중 만들어진 탭도 있다. */
   Object.values(frames).forEach(f=>{ try{ f.contentWindow.postMessage({type:'gst-kiosk-restore'},'*'); }catch(e){} });
@@ -826,7 +828,7 @@ function openEdit(){ window.open('/edit/','gstEdit'); }
 
 function applyLang(){
   {const _bt=document.getElementById('brandTag'); if(_bt&&!_bt.hasAttribute('data-lock'))_bt.textContent=lt('tag');}
-  document.getElementById('logoutBtn').textContent=lt('logout');
+  document.getElementById('logoutLabel').textContent=lt('logout');
   document.getElementById('refreshLabel').textContent=lt('refresh');
   document.getElementById('shareLabel').textContent=lt('share');
   document.getElementById('uploadLabel').textContent=lt('upload');
@@ -835,7 +837,9 @@ function applyLang(){
   document.getElementById('actLabel').textContent=lt('act');
   document.getElementById('moreLabel').textContent=lt('more');
   document.getElementById('mExplainL').textContent=lt('explain');
-  document.getElementById('palLabel').textContent=lt('search');
+  /* 아이콘 단추(v196)는 글자가 숨어 있다 — 뜻은 title(툴팁)로. 라벨 span 의 글자와 같은 사전이다 */
+  [['logoutBtn','logout'],['shareBtn','share'],['offlineBtn','offline'],['moreBtn','more']].forEach(function(a){ const b=document.getElementById(a[0]); if(b) b.title=lt(a[1]); });
+  { const pl=document.getElementById('palLabel'); if(pl) pl.textContent=lt('search'); const ai=document.getElementById('askInp'); if(ai){ ai.placeholder=lt('ask'); ai.setAttribute('aria-label', lt('ask')); } }
   { const fl=document.getElementById('fxLabel'); if(fl) fl.textContent=lt('fx'); const fb=document.getElementById('fxBtn'); if(fb) fb.title=lt('fx'); fxMark(); }
   { const mac=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||''); document.getElementById('palKbd').textContent=mac?'⌘K':'Ctrl K'; document.getElementById('palBtn').title=(mac?'⌘K':'Ctrl+K'); }
   inkMove();
@@ -844,6 +848,7 @@ function applyLang(){
   document.querySelectorAll('.tgrp').forEach(g=>{ const n=(GROUPS[g.dataset.grp]||{})[LANG]||''; const l=g.querySelector('.tgrp-l'); if(l) l.textContent=n; g.setAttribute('aria-label', n); });
   explainMark();
   document.getElementById('kioskLabel').textContent=KIOSK.on?lt('kioskStop'):lt('kiosk');
+  { const kb=document.getElementById('kioskBtn'); if(kb){ kb.classList.toggle('on', !!KIOSK.on); kb.title=lt('kiosk'); } }
   document.getElementById('langLabel').textContent=LANG.toUpperCase();
   // 탭 이름 갱신
   document.querySelectorAll('.tab').forEach(el=>{
@@ -1398,8 +1403,11 @@ function palItems(q){
   if(adm) A.push({id:'act:explain', label:lt('explain'), sub:explainOnNow()?lt('on'):lt('off'), icon:PAL_IC.note, run:explainToggle, kw:'설명 표시 notes explain 说明 説明'});
   A.push({id:'act:logout', label:lt('logout'), icon:PAL_IC.out, run:doLogout, kw:'로그아웃 logout sign out 登出 ログアウト'});
   A.forEach(a=>{ a.g='act'; out.push(a); });
-  /* 설비 S/N — 영숫자 4자 이상에 숫자가 섞이면 «이 설비를 그 화면에서» 항목을 띄운다(표의 S/N 메뉴와 같은 길 · GST.goTab 의 sn 상태) */
   const qs=String(q||'').trim();
+  /* 검색과 챗봇이 한 칸(v196) — 팔레트 안에서도 친 글자를 그대로 챗봇에 묻는 항목을 띄운다(«질문하면 챗봇, 이름이면 이동») */
+  if(qs.length>=2) out.push({id:'act:ask', g:'act', always:true, label:lt('askAi')+' · “'+qs+'”', icon:PAL_IC.note,
+    run:()=>{ const inp=document.getElementById('askInp'); if(inp){ inp.value=qs; askSend(); } }});
+  /* 설비 S/N — 영숫자 4자 이상에 숫자가 섞이면 «이 설비를 그 화면에서» 항목을 띄운다(표의 S/N 메뉴와 같은 길 · GST.goTab 의 sn 상태) */
   if(/^[A-Za-z0-9][A-Za-z0-9\-_.]{3,}$/.test(qs) && /\d/.test(qs)){
     GST.SN_PAGES.forEach(p=>{ const t=TABS.find(x=>x.id===p.id); if(!t||!tabOn(t)) return;
       out.push({id:'sn:'+p.id, g:'sn', always:true, label:qs.toUpperCase(), sub:lt('pal_sn').replace('{p}', t[LANG]||t.ko), icon:SVG[p.id]||PAL_IC.sn,

@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=188"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=189"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -165,7 +165,11 @@ canvas{cursor:pointer}
 .fse-kpis{margin-bottom:16px}
 .fse-kpis .up{color:var(--bad)} .fse-kpis .dn{color:var(--ok)}
 .fse-th{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px !important}
-body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알람 분석 탭에서는 수선실적 KPI 줄을 감춘다 — 이 탭의 숫자가 아니다 · theme.css 의 .kpis{display:grid !important} 를 이겨야 한다 */
+body[data-sec-on="alarm"] .kpis:not(.fse-kpis),body[data-sec-on="alarm"] #gstInsights{display:none !important}   /* 요약 띠도 수선실적 이야기다(v196) */
+/* «그 밖» 은 막대가 아니라 꼬리 한 줄(v196 · 시안 10) · 좌우 비대칭 설비가 없으면 그림을 접는다 */
+.hb-rest{display:block;margin:6px 0 0;font:600 11.5px/1.4 inherit;font-family:inherit;color:var(--txt-muted);background:transparent;border:0;cursor:pointer;text-align:left;padding:0}
+.hb-rest:hover{color:var(--accent);text-decoration:underline}
+.tablecard.lr-empty .cw{display:none}   /* 알람 분석 탭에서는 수선실적 KPI 줄을 감춘다 — 이 탭의 숫자가 아니다 · theme.css 의 .kpis{display:grid !important} 를 이겨야 한다 */
 .fse-th h3{margin:0}
 .fse-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .fse-sub2{font-weight:600;color:var(--txt-2,var(--mut));font-size:12px;margin-left:6px}
@@ -265,7 +269,7 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
 }
 @media(max-width:900px){#fseSec .fse-g3{grid-template-columns:minmax(0,1fr)}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=188">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=189">
 </head>
 <body>
 
@@ -342,12 +346,21 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
       </div>
       <div class="trend-wrap"><canvas id="cTrend"></canvas></div>
     </div>
+    <!-- 작업단계 구성 도넛은 은퇴(chartLayout retire · v196 · 시안 10) — KPI 2·3 장과 같은 수다. 되돌리기는 retire 한 줄 -->
     <div class="trend-card" style="margin-bottom:0">
       <div class="trend-header">
         <h3 data-i="ch_stage">작업단계 구성</h3>
         <div class="trend-meta" data-i="note_stage">BM은 상태색으로 강조</div>
       </div>
       <div class="trend-wrap"><canvas id="cStage"></canvas></div>
+    </div>
+    <!-- 같은 자료 · 다른 질문 — 최근 구간의 단계별 건수가 직전 구간보다 늘었나(v196) -->
+    <div class="trend-card" style="margin-bottom:0">
+      <div class="trend-header">
+        <h3 data-i="ch_stage_d">최근 구간 단계별 증감</h3>
+        <div class="trend-meta" data-i="note_stage_d">최근 구간 vs 직전 구간 · 막대를 누르면 그 행들</div>
+      </div>
+      <div class="trend-wrap"><canvas id="cStageD"></canvas></div>
     </div>
   </div>
   <div class="grid3" style="margin-top:16px">
@@ -423,7 +436,7 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
       <div id="dqStrip" class="dq-strip"></div>
       <div id="dqWorker" class="dq-strip" style="display:none;margin-top:10px"></div>
       <div class="card-note hasv" style="margin:8px 0 6px"><span id="dqMissN" class="nv">—</span><span class="nx">
-        — <span data-i="dq_note">행의 ✎로 알람·현상·원인·조치를 바로 채울 수 있습니다 (구글 시트에 저장)</span></span></div>
+        — <span data-i="dq_note">행의 ✎로 알람·현상·원인·조치를 바로 채울 수 있습니다 (저장 즉시 반영 · 변경 이력 기록)</span></span></div>
       <div class="tbl-wrap" style="max-height:320px;overflow:auto">
         <table><thead><tr><th data-i="th_date">작업일</th><th>S/N</th><th>LINE</th>
           <th>Alarm</th><th data-i="th_phenom">현상</th><th data-i="th_cause">원인</th><th data-i="th_action">조치</th><th></th></tr></thead>
@@ -510,7 +523,7 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis){display:none !important}   /* 알
   </table>
   </div>
   </div>
-  <div class="kpis" style="grid-template-columns:repeat(5,1fr)">
+  <div class="kpis" data-n="5">
     <div class="kpi"><div class="krow"><span class="val" id="rk1">0</span><span class="unit" data-i="u_day">일</span></div>
       <div class="cap" data-i="r_mtbf">MTBF · 평균 고장간격</div>
       <div class="kf" id="rf1">—</div></div>
@@ -816,8 +829,8 @@ const T={
     ch_worker:'작업자 TOP (공수)',note_worker:'개인별 누적 인·시 · 공동작업은 인원수로 안분',ch_wcnt:'투입 인원수 구성',note_wcnt:'건당 작업자수',
     ch_lineman:'LINE별 평균 작업시간',note_lineman:'건당 평균(분)',
     tbl_title:'서비스 실적 상세',th_date:'작업일',ft_cnt:'건수',th_stage:'단계',th_pf:'유/무상',th_phenom:'현상',th_cause:'원인',th_action:'조치',th_min:'시간(분)',th_mh:'공수',th_worker:'작업자',
-    ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ch_alarmp:'알람 TOP (파레토)',note_alarmp:'알람(Z) 미기재 시 현상(AA) 폴백 · 라인=누적 %',dq_title:'데이터 입력 정합성 (BM 기준)',dq_missing:'미기재 {n}건 / BM {t}건',dq_note:'행의 ✎로 알람·현상·원인·조치를 바로 채울 수 있습니다 (구글 시트에 저장)',dq_fill:'입력',dq_all:'알람·현상·원인·조치가 모두 기재되어 있습니다',dq_missN:'미기재 {n}건 제외',dq_mt:'고장 기록 입력',dq_close:'닫기',dq_save:'저장',dq_saved:'저장됨 — 구글 시트에 반영되었습니다',dq_savefail:'저장 실패 — 잠시 후 다시 시도하세요',dq_conflict:'다른 사람이 먼저 수정했습니다 — 다시 열어주세요',dq_loadfail:'행을 불러오지 못했습니다',dq_zcol:'Z열',dq_savenext:'저장 후 다음 →',dq_left:'남은 {n}건',dq_done:'미기재 건을 모두 처리했습니다',dq_byworker:'작업자별 미기재 TOP',ins_blank:'BM {n}건에 알람·현상·원인·조치가 비어 있습니다',ins_blank_go:'채우러 가기 →',dq_nostate:'설치현황에 설비상태 열이 없습니다 — 설비 대수를 옛 날짜 기준으로 셉니다',dq_nostate_a:'/upload/ 에서 설비상태 열이 든 설치현황을 다시 올리세요',dq_unkstate:'처음 보는 설비상태 — 신뢰성 모집단에서 제외했습니다',dq_unkstate_a:'설치현황의 설비상태 값을 확인하고, 새 상태라면 알려 주세요',dq_floorna:'설치현황에서 층(Floor)을 못 찾은 작업',dq_floorna_a:'설치현황에 그 설비의 Line(층) 칸을 채우세요',sr_upm:'UPM율 %',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'최근 구간 작업공수 {n}인·시 · 직전 구간 대비 {p}',
-    etc:'기타',mon_unit:'월',dur_b:['<30분','30–60분','1–2시간','2–4시간','4시간+'],wcnt_p:'{n}명'},
+    ins_mom:'최근 30일 {n}건 · 직전 30일 대비 {p}',ins_topcause:'원인 {v} 집중 — 전체의 {p}%',ch_alarmp:'알람 TOP (파레토)',note_alarmp:'알람(Z) 미기재 시 현상(AA) 폴백 · 라인=누적 %',dq_title:'데이터 입력 정합성 (BM 기준)',dq_missing:'미기재 {n}건 / BM {t}건',dq_note:'행의 ✎로 알람·현상·원인·조치를 바로 채울 수 있습니다 (저장 즉시 반영 · 변경 이력 기록)',dq_fill:'입력',dq_all:'알람·현상·원인·조치가 모두 기재되어 있습니다',dq_missN:'미기재 {n}건 제외',dq_mt:'고장 기록 입력',dq_close:'닫기',dq_save:'저장',dq_saved:'저장되었습니다 — 변경 이력에 기록됨',dq_savefail:'저장 실패 — 잠시 후 다시 시도하세요',dq_conflict:'다른 사람이 먼저 수정했습니다 — 다시 열어주세요',dq_loadfail:'행을 불러오지 못했습니다',dq_zcol:'Z열',dq_savenext:'저장 후 다음 →',dq_left:'남은 {n}건',dq_done:'미기재 건을 모두 처리했습니다',dq_byworker:'작업자별 미기재 TOP',ins_blank:'BM {n}건에 알람·현상·원인·조치가 비어 있습니다',ins_blank_go:'채우러 가기 →',dq_nostate:'설치현황에 설비상태 열이 없습니다 — 설비 대수를 옛 날짜 기준으로 셉니다',dq_nostate_a:'/upload/ 에서 설비상태 열이 든 설치현황을 다시 올리세요',dq_unkstate:'처음 보는 설비상태 — 신뢰성 모집단에서 제외했습니다',dq_unkstate_a:'설치현황의 설비상태 값을 확인하고, 새 상태라면 알려 주세요',dq_floorna:'설치현황에서 층(Floor)을 못 찾은 작업',dq_floorna_a:'설치현황에 그 설비의 Line(층) 칸을 채우세요',sr_upm:'UPM율 %',ins_outlier:'설비 {v} 이상 집중 — {n}건',ins_man:'최근 구간 작업공수 {n}인·시 · 직전 구간 대비 {p}',
+    fc_lbl:'예측 ({n}구간)',rest_n:'그 밖 {k} · {n}건',rest_t:'그 밖',ins_man_p:'{m} 작업공수 {n}인·시({d}일치) — 일 평균 {a} · 직전 구간 일 평균 {b} 대비 {p}',ch_stage_d:'최근 구간 단계별 증감',note_stage_d:'최근 구간 vs 직전 구간 · 막대를 누르면 그 행들',sd_cur:'최근 구간',sd_prev:'직전 구간',etc:'기타',mon_unit:'월',dur_b:['<30분','30–60분','1–2시간','2–4시간','4시간+'],wcnt_p:'{n}명'},
   en:{sl_customer:'Customer',sl_fab:'FAB',sl_floor:'Line',sl_more:'Fault only',dp_trend:'Monthly BM Rate',dp_trend_n:'failures that month ÷ all work that month · dashed line is the {p}% fleet average · months with no data are filled with zero on a continuous calendar.',dp_rise:'What Is Rising',dp_rise_n:'only months above 2x the trailing 6-month average · at least {n} that month · {u} found · same rule as the Material surge card.',dp_rise_none:'no month surged with at least {n} records',dp_th_mon:'Period',dp_th_base:'Prior avg',dp_avg:'Fleet average',th_from:'From',th_to:'To',sl_alarm:'Alarm',sl_country2:'Country',dp_sub:'Which Process or Sub-process Fails Disproportionately',dp_sub_n:'BM rate = failures ÷ all work in that group · {u} groups with {n}+ jobs · overall {p}% · click a row to narrow the page · ◆ means over half that group\u2019s failures came from a single unit',dp_th_sub:'Group',dp_th_eqn:'Units',dp_th_top:'Top unit',sl_proc2:'Process',sl_line2:'Line',sec_deep:'Deep Dive',
     
     
@@ -861,8 +874,8 @@ const T={
     ch_worker:'Top Workers (man-hours)',note_worker:'per-person, shared jobs split by headcount',ch_wcnt:'Crew Size Mix',note_wcnt:'workers per case',
     ch_lineman:'Avg Work Time by LINE',note_lineman:'avg minutes per case',
     tbl_title:'Service Records',th_date:'Date',ft_cnt:'Count',th_stage:'Stage',th_pf:'Paid/Free',th_phenom:'Phenomenon',th_cause:'Cause',th_action:'Action',th_min:'Min',th_mh:'Man-min',th_worker:'Workers',
-    ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ch_alarmp:'Top Alarms (Pareto)',note_alarmp:'falls back to symptom(AA) when alarm(Z) blank · line = cumulative %',dq_title:'Data entry integrity (BM)',dq_missing:'{n} missing / {t} BM',dq_note:'click ✎ to fill alarm/phenomenon/cause/action right here (saved to the Google Sheet)',dq_fill:'Fill',dq_all:'Alarm, phenomenon, cause and action are all filled in',dq_missN:'{n} blank excluded',dq_mt:'Fill fault record',dq_close:'Close',dq_save:'Save',dq_saved:'Saved to the Google Sheet',dq_savefail:'Save failed — try again',dq_conflict:'Someone edited this row first — reopen it',dq_loadfail:'Could not load the row',dq_zcol:'col Z',dq_savenext:'Save & next →',dq_left:'{n} left',dq_done:'All missing records are filled',dq_byworker:'Missing entries by worker (top)',ins_blank:'{n} BM records have no alarm/symptom/cause/action',ins_blank_go:'Go fill them →',dq_nostate:'Install sheet has no equipment-status column — unit counts fall back to dates',dq_nostate_a:'Re-upload the install sheet with the status column via /upload/',dq_unkstate:'Unknown equipment status — excluded from the reliability population',dq_unkstate_a:'Check the status values in the install sheet; tell us if it is a new status',dq_floorna:'Jobs with no Floor found in the install sheet',dq_floorna_a:'Fill the Line (floor) cell for that unit in the install sheet',sr_upm:'UPM rate %',ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours in latest period · {p} vs prev',
-    etc:'Others',mon_unit:'',dur_b:['<30m','30–60m','1–2h','2–4h','4h+'],wcnt_p:'{n} ppl'},
+    ins_mom:'{n} cases in last 30d · {p} vs prior 30d',ins_topcause:"Cause '{v}' — {p}% of all",ch_alarmp:'Top Alarms (Pareto)',note_alarmp:'falls back to symptom(AA) when alarm(Z) blank · line = cumulative %',dq_title:'Data entry integrity (BM)',dq_missing:'{n} missing / {t} BM',dq_note:'click ✎ to fill alarm/phenomenon/cause/action right here (applied at once · change history kept)',dq_fill:'Fill',dq_all:'Alarm, phenomenon, cause and action are all filled in',dq_missN:'{n} blank excluded',dq_mt:'Fill fault record',dq_close:'Close',dq_save:'Save',dq_saved:'Saved — recorded in the change history',dq_savefail:'Save failed — try again',dq_conflict:'Someone edited this row first — reopen it',dq_loadfail:'Could not load the row',dq_zcol:'col Z',dq_savenext:'Save & next →',dq_left:'{n} left',dq_done:'All missing records are filled',dq_byworker:'Missing entries by worker (top)',ins_blank:'{n} BM records have no alarm/symptom/cause/action',ins_blank_go:'Go fill them →',dq_nostate:'Install sheet has no equipment-status column — unit counts fall back to dates',dq_nostate_a:'Re-upload the install sheet with the status column via /upload/',dq_unkstate:'Unknown equipment status — excluded from the reliability population',dq_unkstate_a:'Check the status values in the install sheet; tell us if it is a new status',dq_floorna:'Jobs with no Floor found in the install sheet',dq_floorna_a:'Fill the Line (floor) cell for that unit in the install sheet',sr_upm:'UPM rate %',ins_outlier:'Equipment {v} outlier — {n} cases',ins_man:'{n} man-hours in latest period · {p} vs prev',
+    fc_lbl:'Forecast ({n} periods)',rest_n:'Others — {k} · {n} cases',rest_t:'Others',ins_man_p:'{m} man-hours {n} ({d} days so far) — {a}/day · {p} vs previous period {b}/day',ch_stage_d:'Latest period by stage — change',note_stage_d:'latest vs previous period · click a bar for its rows',sd_cur:'Latest period',sd_prev:'Previous period',etc:'Others',mon_unit:'',dur_b:['<30m','30–60m','1–2h','2–4h','4h+'],wcnt_p:'{n} ppl'},
   zh:{sl_customer:'Customer',sl_fab:'FAB',sl_floor:'Line',sl_more:'故障分析专用',dp_trend:'每月BM率趋势',dp_trend_n:'当月故障(BM) ÷ 当月全部作业 · 虚线为整体平均{p}% · 无数据的月份在连续日历上按0填充。',dp_rise:'正在上升的',dp_rise_n:'仅超过前6个月平均2倍的月份 · 当月{n}件以上 · 共{u}件 · 与材料实绩激增判定相同。',dp_rise_none:'没有当月{n}件以上的激增区间',dp_th_mon:'时期',dp_th_base:'前期均值',dp_avg:'整体平均',th_from:'开始日',th_to:'结束日',sl_alarm:'报警',sl_country2:'国家',dp_sub:'哪个工序·细分工序故障异常集中',dp_sub_n:'BM率 = 故障(BM) ÷ 该分类下全部作业 · 作业{n}件以上共{u}个分类 · 全体平均{p}% · 点击行可按该分类收窄画面 · ◆ 表示该分类过半故障来自同一号机',dp_th_sub:'分类',dp_th_eqn:'设备数',dp_th_top:'最多号机',sl_proc2:'工序',sl_line2:'线',sec_deep:'深度分析',
     
     
@@ -906,8 +919,8 @@ const T={
     ch_worker:'作业者TOP (工时)',note_worker:'按人累计,共同作业按人数分摊',ch_wcnt:'投入人数构成',note_wcnt:'每件作业人数',
     ch_lineman:'按LINE平均作业时间',note_lineman:'每件平均(分)',
     tbl_title:'服务实绩明细',th_date:'作业日',ft_cnt:'件数',th_stage:'阶段',th_pf:'有/无偿',th_phenom:'现象',th_cause:'原因',th_action:'措施',th_min:'时间(分)',th_mh:'工时',th_worker:'作业者',
-    ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ch_alarmp:'报警TOP (帕累托)',note_alarmp:'报警(Z)未填时用现象(AA) · 线=累计%',dq_title:'数据录入完整性 (BM)',dq_missing:'未填写 {n}件 / BM {t}件',dq_note:'点✎可直接填写报警·现象·原因·措施 (保存到谷歌表格)',dq_fill:'填写',dq_all:'报警·现象·原因·措施均已填写',dq_missN:'未填{n}件除外',dq_mt:'填写故障记录',dq_close:'关闭',dq_save:'保存',dq_saved:'已保存到谷歌表格',dq_savefail:'保存失败 — 请稍后重试',dq_conflict:'他人已先修改 — 请重新打开',dq_loadfail:'无法读取该行',dq_zcol:'Z列',dq_savenext:'保存并下一条 →',dq_left:'剩余 {n}件',dq_done:'未填写记录已全部处理',dq_byworker:'按作业者未填TOP',ins_blank:'{n} 件 BM 的报警·现象·原因·措施为空',ins_blank_go:'去填写 →',dq_nostate:'安装现况表没有设备状态列 — 设备台数按旧日期基准计算',dq_nostate_a:'请通过 /upload/ 重新上传含设备状态列的安装现况',dq_unkstate:'出现未知设备状态 — 已从可靠性统计中排除',dq_unkstate_a:'请确认安装现况的设备状态值；若是新状态请告知',dq_floorna:'在安装现况中找不到楼层(Floor)的作业',dq_floorna_a:'请在安装现况中填写该设备的 Line(楼层)',sr_upm:'UPM率 %',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'最近区间工时 {n}人·时 · 环比 {p}',
-    etc:'其他',mon_unit:'月',dur_b:['<30分','30–60分','1–2时','2–4时','4时+'],wcnt_p:'{n}人'},
+    ins_mom:'近30天 {n}件 · 环比前30天 {p}',ins_topcause:'原因 {v} 集中 — 占{p}%',ch_alarmp:'报警TOP (帕累托)',note_alarmp:'报警(Z)未填时用现象(AA) · 线=累计%',dq_title:'数据录入完整性 (BM)',dq_missing:'未填写 {n}件 / BM {t}件',dq_note:'点✎可直接填写报警·现象·原因·措施 (保存后立即生效 · 记录变更历史)',dq_fill:'填写',dq_all:'报警·现象·原因·措施均已填写',dq_missN:'未填{n}件除外',dq_mt:'填写故障记录',dq_close:'关闭',dq_save:'保存',dq_saved:'已保存 — 已记入变更历史',dq_savefail:'保存失败 — 请稍后重试',dq_conflict:'他人已先修改 — 请重新打开',dq_loadfail:'无法读取该行',dq_zcol:'Z列',dq_savenext:'保存并下一条 →',dq_left:'剩余 {n}件',dq_done:'未填写记录已全部处理',dq_byworker:'按作业者未填TOP',ins_blank:'{n} 件 BM 的报警·现象·原因·措施为空',ins_blank_go:'去填写 →',dq_nostate:'安装现况表没有设备状态列 — 设备台数按旧日期基准计算',dq_nostate_a:'请通过 /upload/ 重新上传含设备状态列的安装现况',dq_unkstate:'出现未知设备状态 — 已从可靠性统计中排除',dq_unkstate_a:'请确认安装现况的设备状态值；若是新状态请告知',dq_floorna:'在安装现况中找不到楼层(Floor)的作业',dq_floorna_a:'请在安装现况中填写该设备的 Line(楼层)',sr_upm:'UPM率 %',ins_outlier:'设备 {v} 异常集中 — {n}件',ins_man:'最近区间工时 {n}人·时 · 环比 {p}',
+    fc_lbl:'预测 ({n}区间)',rest_n:'其他 {k} · {n}件',rest_t:'其他',ins_man_p:'{m} 工时 {n}人·时({d}天) — 日均 {a} · 对比前区间日均 {b} {p}',ch_stage_d:'最近区间按阶段增减',note_stage_d:'最近区间 vs 前区间 · 点击柱查看行',sd_cur:'最近区间',sd_prev:'前区间',etc:'其他',mon_unit:'月',dur_b:['<30分','30–60分','1–2时','2–4时','4时+'],wcnt_p:'{n}人'},
   ja:{sl_customer:'Customer',sl_fab:'FAB',sl_floor:'Line',sl_more:'故障分析専用',dp_trend:'月別BM率の推移',dp_trend_n:'その月の故障(BM) ÷ その月の全作業 · 破線は全体平均{p}% · データのない月は0として連続カレンダーで埋めます。',dp_rise:'上がっているもの',dp_rise_n:'直前6ヶ月平均の2倍を超えた月のみ · 月{n}件以上 · {u}件 · 資材実績の急増と同じ判定です。',dp_rise_none:'月{n}件以上で急増した区間がありません',dp_th_mon:'時期',dp_th_base:'直前平均',dp_avg:'全体平均',th_from:'開始日',th_to:'終了日',sl_alarm:'アラーム',sl_country2:'国',dp_sub:'工程·詳細工程のどこが特に故障するか',dp_sub_n:'BM率 = 故障(BM) ÷ その区分に入った全作業 · 作業{n}件以上の{u}区分 · 全体平均{p}% · 行を押すとその区分で画面が絞られます · ◆ はその区分の故障の半分以上が1号機から出ている場合',dp_th_sub:'区分',dp_th_eqn:'設備数',dp_th_top:'最多号機',sl_proc2:'工程',sl_line2:'ライン',sec_deep:'深層分析',
     
     
@@ -951,8 +964,8 @@ const T={
     ch_worker:'作業者TOP (工数)',note_worker:'個人別累計·共同作業は人数で按分',ch_wcnt:'投入人数構成',note_wcnt:'件当たり作業者数',
     ch_lineman:'LINE別平均作業時間',note_lineman:'件当たり平均(分)',
     tbl_title:'サービス実績詳細',th_date:'作業日',ft_cnt:'件数',th_stage:'段階',th_pf:'有/無償',th_phenom:'現象',th_cause:'原因',th_action:'処置',th_min:'時間(分)',th_mh:'工数',th_worker:'作業者',
-    ins_mom:'直近30日 {n}件 · 前30日比 {p}',ins_topcause:'原因 {v} 集中 — 全体の{p}%',ch_alarmp:'アラームTOP (パレート)',note_alarmp:'アラーム(Z)未記入時は現象(AA) · 線=累積%',dq_title:'データ入力整合性 (BM)',dq_missing:'未記入 {n}件 / BM {t}件',dq_note:'✎でアラーム・現象・原因・対応をその場で入力 (Googleシートに保存)',dq_fill:'入力',dq_all:'アラーム・現象・原因・対応がすべて記入済みです',dq_missN:'未記入{n}件除外',dq_mt:'故障記録の入力',dq_close:'閉じる',dq_save:'保存',dq_saved:'Googleシートに保存しました',dq_savefail:'保存失敗 — 再試行してください',dq_conflict:'他の人が先に編集しました — 開き直してください',dq_loadfail:'行を読み込めませんでした',dq_zcol:'Z列',dq_savenext:'保存して次へ →',dq_left:'残り {n}件',dq_done:'未記入をすべて処理しました',dq_byworker:'作業者別未記入TOP',ins_blank:'BM {n}件にアラーム·現象·原因·対応が入っていません',ins_blank_go:'入力しに行く →',dq_nostate:'設置現況に設備状態の列がありません — 設備台数を旧日付基準で数えます',dq_nostate_a:'/upload/ から設備状態の列が入った設置現況を再アップロードしてください',dq_unkstate:'初めて見る設備状態 — 信頼性の母集団から除外しました',dq_unkstate_a:'設置現況の設備状態の値を確認し、新しい状態ならお知らせください',dq_floorna:'設置現況でフロア(Floor)が見つからなかった作業',dq_floorna_a:'設置現況でその設備の Line(フロア) 欄を埋めてください',sr_upm:'UPM率 %',ins_outlier:'設備 {v} 異常集中 — {n}件',ins_man:'直近区間工数 {n}人·時 · 前区間比 {p}',
-    etc:'その他',mon_unit:'月',dur_b:['<30分','30–60分','1–2時間','2–4時間','4時間+'],wcnt_p:'{n}名'}
+    ins_mom:'直近30日 {n}件 · 前30日比 {p}',ins_topcause:'原因 {v} 集中 — 全体の{p}%',ch_alarmp:'アラームTOP (パレート)',note_alarmp:'アラーム(Z)未記入時は現象(AA) · 線=累積%',dq_title:'データ入力整合性 (BM)',dq_missing:'未記入 {n}件 / BM {t}件',dq_note:'✎でアラーム・現象・原因・対応をその場で入力 (保存後すぐ反映 · 変更履歴に記録)',dq_fill:'入力',dq_all:'アラーム・現象・原因・対応がすべて記入済みです',dq_missN:'未記入{n}件除外',dq_mt:'故障記録の入力',dq_close:'閉じる',dq_save:'保存',dq_saved:'保存しました — 変更履歴に記録',dq_savefail:'保存失敗 — 再試行してください',dq_conflict:'他の人が先に編集しました — 開き直してください',dq_loadfail:'行を読み込めませんでした',dq_zcol:'Z列',dq_savenext:'保存して次へ →',dq_left:'残り {n}件',dq_done:'未記入をすべて処理しました',dq_byworker:'作業者別未記入TOP',ins_blank:'BM {n}件にアラーム·現象·原因·対応が入っていません',ins_blank_go:'入力しに行く →',dq_nostate:'設置現況に設備状態の列がありません — 設備台数を旧日付基準で数えます',dq_nostate_a:'/upload/ から設備状態の列が入った設置現況を再アップロードしてください',dq_unkstate:'初めて見る設備状態 — 信頼性の母集団から除外しました',dq_unkstate_a:'設置現況の設備状態の値を確認し、新しい状態ならお知らせください',dq_floorna:'設置現況でフロア(Floor)が見つからなかった作業',dq_floorna_a:'設置現況でその設備の Line(フロア) 欄を埋めてください',sr_upm:'UPM率 %',ins_outlier:'設備 {v} 異常集中 — {n}件',ins_man:'直近区間工数 {n}人·時 · 前区間比 {p}',
+    fc_lbl:'予測 ({n}区間)',rest_n:'その他 {k} · {n}件',rest_t:'その他',ins_man_p:'{m} 作業工数 {n}人·時({d}日分) — 日平均 {a} · 前区間の日平均 {b} 比 {p}',ch_stage_d:'直近区間の段階別増減',note_stage_d:'直近区間 vs 前区間 · 棒を押すとその行',sd_cur:'直近区間',sd_prev:'前区間',etc:'その他',mon_unit:'月',dur_b:['<30分','30–60分','1–2時間','2–4時間','4時間+'],wcnt_p:'{n}名'}
 };
 
 let LANG='ko', ROWS=[], TBM_ROWS=[], CHARTS={}, sortK='work', sortAsc=false;
@@ -983,7 +996,7 @@ function buildSecNav(){
   GST.sectionNav([
     {id:'overview',label:t('sec_ov')},
     {id:'cause',   label:t('sec_ca')},
-    {id:'alarm',   label:GST.fseT?GST.fseT('sec',null,LANG):'Alarm', onShow:()=>fseLoad()},   // v189 · FSE 원장 — 열 때 읽는다
+    {id:'alarm',   label:GST.fseT?(GST.fseT('sec',null,LANG)+(GST.fseT('sec_tag',null,LANG)!=='sec_tag'?' · '+GST.fseT('sec_tag',null,LANG):'')):'Alarm', onShow:()=>fseLoad()},   // v189 · FSE 원장 — 열 때 읽는다 · 이름에 «해외 FSE 원장»(v196 — 이 탭만 다른 원장이다)
     {id:'load',    label:t('sec_ld')},
     {id:'rel',     label:t('sec_rel')},
     {id:'deep',    label:t('sec_deep')},
@@ -1512,12 +1525,30 @@ function mkPareto(id,f){
   if(note&&miss)note.textContent=t('note_alarmp')+' · '+t('dq_missN').replace('{n}',miss.toLocaleString());
 }
 
+/* «기타» 는 막대가 아니라 꼬리 한 줄이다(v196 · 시안 10) — 회색 기타 막대가 1위(46)보다 길어(64) 시선이 기타로 갔다.
+   누르면 그 밖의 항목 목록(값은 그대로 · 버리지 않는다). 도넛의 기타 조각은 그대로다(비중을 보는 그림이라 전체가 있어야 한다) */
+function hbarRest(cv, restE, rest, id){
+  const card=cv.closest(GST.CARD_SEL||'.card'); if(!card) return;
+  let el=card.querySelector('.hb-rest');
+  if(!rest){ if(el) el.remove(); return; }
+  if(!el){ el=document.createElement('button'); el.type='button'; el.className='hb-rest';
+    const cw=cv.closest('.cw'); (cw||cv).insertAdjacentElement('afterend', el); }
+  el.textContent=t('rest_n').replace('{k}',restE.length.toLocaleString()).replace('{n}',rest.toLocaleString());
+  el.onclick=()=>GST.rowsModal(GST.cardTitle(id)+' — '+t('rest_t'), [t('rest_t'), t('ft_cnt')], restE.map(e=>[e[0], (+e[1]||0).toLocaleString()]));
+}
+const _HATCH={};
+function hatch(col){ /* 빗금 — 예측 막대(실적과 «다른 계열»임을 그림이 말한다) · 색마다 한 번 */
+  if(_HATCH[col]) return _HATCH[col];
+  const c=document.createElement('canvas'); c.width=c.height=8; const x=c.getContext('2d'); if(!x) return col;
+  x.strokeStyle=col; x.lineWidth=2; x.beginPath(); x.moveTo(0,8); x.lineTo(8,0); x.stroke();
+  const p=x.createPattern(c,'repeat'); _HATCH[col]=p||col; return _HATCH[col];
+}
 function mkHBar(id,entries,total,fkey,color,topN,colorFn){
-  const top=entries.slice(0,topN||8);
-  const rest=entries.slice(topN||8).reduce((a,b)=>a+b[1],0);
+  const top=entries.slice(0,topN||8), restE=entries.slice(topN||8);
+  const rest=restE.reduce((a,b)=>a+b[1],0);
   const labels=top.map(e=>e[0]); const data=top.map(e=>e[1]);
-  if(rest>0){labels.push(t('etc'));data.push(rest);}
   const ctx=document.getElementById(id); if(!ctx)return;
+  hbarRest(ctx, restE, rest, id);
   const TH=GST.chartTheme();
   const onClick=(evt,els)=>{
     if(!fkey||!els.length)return;
@@ -1542,11 +1573,16 @@ function mkBarV(id,labels,data,color,opts){
   // opts.colors: 막대마다 다른 색(급증·이상치 강조). 자재현황 mkBarVX에 있던 것을 맞춘다.
   let L=labels.slice(), D=data.slice(), bg=D.map((_,i)=>(opts.colors&&opts.colors[i])||color);
   const realLen=D.length;
+  /* 예측은 실적과 «다른 계열»이다(v196 · 시안 10) — 예전엔 같은 막대 줄에 색만 바꿔 이어 붙여 범례·부제 어디에도 «예측»이 없고 213.5 처럼 소수점까지 찍혔다.
+     빗금 + 범례 «예측(n구간)» + 정수. 두 계열은 자리가 겹치지 않아(서로 null) 쌓기(stack)로 두면 한 자리에 하나씩 선다 — 값은 GST.linForecast 그대로다(정수 반올림만) */
+  let FC=null;
   if(opts.forecast){ const base=opts.skipLast===false?data:data.slice(0,-1);
     const raw=GST.linForecast(base,opts.forecast+(opts.skipLast===false?0:1))||[];
     const fc=opts.skipLast===false?raw:raw.slice(1);
-    fc.forEach((v,i)=>{L.push('+'+(i+1));D.push(v);bg.push(opts.fcColor||'rgba(56,189,248,.5)');}); }
-  const cfg={type:'bar',data:{labels:L,datasets:[{data:D,backgroundColor:bg}]},
+    const fcol=opts.fcColor||TH.pal[0]||'#6C9BFF';
+    FC={label:t('fc_lbl').replace('{n}',fc.length), data:D.map(()=>null), backgroundColor:hatch(fcol), borderColor:fcol, borderWidth:1, stack:'s', valLabel:false};
+    fc.forEach((v,i)=>{L.push('+'+(i+1));D.push(null);bg.push(color);FC.data.push(Math.max(0,Math.round(+v||0)));}); }
+  const cfg={type:'bar',data:{labels:L,datasets:[{data:D,backgroundColor:bg,stack:'s'}].concat(FC?[FC]:[])},
     options:{responsive:true,maintainAspectRatio:false,onClick:opts.onClick,
       layout:{padding:{top:16}},
       plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)},
@@ -1554,6 +1590,8 @@ function mkBarV(id,labels,data,color,opts){
       scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}},
               y:{grace:'14%',ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
     plugins:[valLabelPlugin]};
+  if(FC){ cfg.options.scales.x.stacked=true; cfg.options.scales.y.stacked=true;
+    cfg.options.plugins.legend={display:true,position:'bottom',labels:{color:TH.txt,font:{size:10},filter:i=>!!i.text}}; }
   if(opts.anomaly){ cfg.options.plugins.trendAnno={anomaly:true,realLen}; cfg.plugins.push(GST.trendAnnoPlugin); }
   if(opts.hline!=null){ // 기준선 — 전체 평균. 없으면 막대끼리만 비교하게 되어 '높다'의 기준이 없다
     cfg.data.datasets.push({type:'line',label:opts.hlineLabel||'',
@@ -1575,6 +1613,19 @@ function mkBarV(id,labels,data,color,opts){
       ?' '+c.dataset.label+': '+(c.parsed.y==null?'—':c.parsed.y+'%')
       :' '+(c.dataset.label?c.dataset.label+': ':'')+c.parsed.y.toLocaleString()};
   }
+  if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
+}
+/* 두 구간 나란히(직전 · 최근) — 값 라벨은 최근 구간에만(valLabel 플러그인은 datasets[0] 만 보므로 최근을 0번에 둔다 · 범례 순서는 직전→최근) */
+function mkStageDelta(id, labels, prev, cur, lp, lc){
+  const ctx=document.getElementById(id); if(!ctx) return; const TH=GST.chartTheme();
+  const cfg={type:'bar', data:{labels, datasets:[
+      {label:(lc?lc+' · ':'')+t('sd_cur'), data:cur, backgroundColor:TH.pal[0], order:1},
+      {label:(lp?lp+' · ':'')+t('sd_prev'), data:prev, backgroundColor:'rgba(151,170,196,.45)', order:2}]},
+    options:{responsive:true,maintainAspectRatio:false, layout:{padding:{top:14}},
+      plugins:{legend:{display:true,position:'bottom',labels:{color:TH.txt,font:{size:10}}}, valLabel:{mode:'all',color:inkStrong(TH)},
+        tooltip:{callbacks:{afterBody:it=>{ const i=it[0].dataIndex, d=(cur[i]||0)-(prev[i]||0); return ' '+(d>0?'+':'')+d; }}}},
+      scales:{x:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}}, y:{grace:'12%',ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
+    plugins:[valLabelPlugin]};
   if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
 }
 function mkDonut(id,entries,fkey,topN,colorFn){
@@ -1774,7 +1825,7 @@ function renderReliability(f){
   fev.forEach(e=>{const mk=_pk(e.work);const o=mAgg[mk]||(mAgg[mk]={o:0,r:0});o.o++;if(e.repeat)o.r++;});
   const PB2=window._PERB||[];
   mkBarV('cFtfrTrend',PB2.map(p=>p.label),
-    PB2.map(p=>{const o=mAgg[p.key];return o&&o.o?Math.round((1-o.r/o.o)*100):null;}),TH.status.ok);
+    PB2.map(p=>{const o=mAgg[p.key];return o&&o.o?Math.round((1-o.r/o.o)*100):null;}),TH.status.ok,{hline:90,hlineLabel:'90%'});   // 목표 90% 기준선(v196)
   const mdl={}; fev.forEach(e=>{const o=mdl[e.model]||(mdl[e.model]={o:0,r:0});o.o++;if(e.repeat)o.r++;});
   const mdlEnt=Object.keys(mdl).filter(m=>mdl[m].o>=3).map(m=>[m,Math.round((1-mdl[m].r/mdl[m].o)*100)]).sort((a,b)=>a[1]-b[1]).slice(0,10);
   mkHBar('cFtfrModel',mdlEnt,100,null,TH.pal[1],10,(l,i)=>i<2?TH.status.bad:TH.pal[1]);
@@ -1956,6 +2007,15 @@ function render(){ GST.skeleton(false); GST.pushState(F); GST.dq&&GST.dq.reset('
 
   const stageColor=(l,i)=>l==='BM'?TH.status.bad:[TH.pal[0],TH.pal[1],TH.pal[3],TH.pal[4]][i%4];
   mkDonut('cStage',countBy(f,'stage'),'stage',5,stageColor);
+  /* 최근 구간 단계별 증감(v196) — 도넛(은퇴)과 같은 자료(f · 작업단계)지만 질문이 다르다: «지금 구간에 어느 단계가 늘었나». 구간은 추이 차트와 같은 PB */
+  { const kC=PB[PB.length-1], kP=PB[PB.length-2];
+    const cnt=k=>{ const m={}; f.forEach(x=>{ if(x.work&&perKey(x.work)===k){ const sg=x.stage||'—'; m[sg]=(m[sg]||0)+1; } }); return m; };
+    const mC=cnt(kC.key), mP=kP?cnt(kP.key):{};
+    const stg=Object.keys(Object.assign({},mP,mC)).sort((a,b)=>(mC[b]||0)-(mC[a]||0)||(mP[b]||0)-(mP[a]||0)).slice(0,6);
+    mkStageDelta('cStageD', stg, stg.map(sg=>mP[sg]||0), stg.map(sg=>mC[sg]||0), kP?kP.label:'', kC.label);
+    if(CHARTS.cStageD) CHARTS.cStageD.$rows=(di,i)=>{ const sg=stg[i]; if(sg==null) return null; const b=di===0?kP:kC; if(!b) return null;
+      return wkDetail(f.filter(x=>x.work&&perKey(x.work)===b.key&&(x.stage||'—')===sg), sg+' — '+b.label); };
+  }
 
   const sns=countBy(f,'sn').slice(0,12);
   const snOut=GST.outliers(sns);
@@ -2092,10 +2152,25 @@ function render(){ GST.skeleton(false); GST.pushState(F); GST.dq&&GST.dq.reset('
       if(so)ins.push({sev:'warn',text:t('ins_outlier').replace('{v}','<b>'+so[0]+'</b>').replace('{n}',so[1])});
     }
     if(mmk.length>=2){
-      const cur=Math.round(manByM[mmk[mmk.length-1]]/60), prev=Math.round(manByM[mmk[mmk.length-2]]/60);
-      const md=GST.pctDelta(cur,prev);
-      ins.push({sev:(md!=null&&md>=30)?'warn':'info',
-        text:t('ins_man').replace('{n}','<b>'+cur.toLocaleString()+'</b>').replace('{p}',md==null?'—':(md>0?'+':'')+md+'%')});
+      const kC=mmk[mmk.length-1], kP=mmk[mmk.length-2];
+      const cur=Math.round(manByM[kC]/60), prev=Math.round(manByM[kP]/60);
+      /* 진행 중인 구간은 완결된 구간과 «일 평균»으로 견준다(v196 · 시안 10) — 16일치 602 를 한 달과 비교해 −52% 라 적으면 거짓 경보다.
+         진행 중인가 = 그 구간의 마지막 날이 자료의 마지막 작업일보다 뒤인가. 완결된 구간이면 지금까지의 문장 그대로 */
+      const bC=PB.find(p=>p.key===kC), bP=PB.find(p=>p.key===kP);
+      /* GST.periods 의 마지막 구간은 end 가 기준일(anchor)까지만이다 — 그래서 «구간이 실제로 덮는 날수»와 «온전한 구간의 날수»(주 7 · 달의 일수)를 견준다 */
+      const days=b=>b?Math.max(1,Math.round((b.end-b.st)/86400000)+1):0;
+      const fullDays=b=>!b?0:(PU==='w'?7:new Date(Date.UTC(b.st.getUTCFullYear(), b.st.getUTCMonth()+1, 0)).getUTCDate());
+      const dC=days(bC);
+      if(bC&&bP&&dC<fullDays(bC)){
+        const a=cur/dC, b=prev/days(bP), md=GST.pctDelta(Math.round(a*10),Math.round(b*10));
+        ins.push({sev:(md!=null&&md>=30)?'warn':'info',
+          text:t('ins_man_p').replace('{m}',bC.label).replace('{n}','<b>'+cur.toLocaleString()+'</b>').replace('{d}',dC)
+            .replace('{a}',a.toFixed(1)).replace('{b}',b.toFixed(1)).replace('{p}',md==null?'—':(md>0?'+':'')+md+'%')});
+      } else {
+        const md=GST.pctDelta(cur,prev);
+        ins.push({sev:(md!=null&&md>=30)?'warn':'info',
+          text:t('ins_man').replace('{n}','<b>'+cur.toLocaleString()+'</b>').replace('{p}',md==null?'—':(md>0?'+':'')+md+'%')});
+      }
     }
     GST.insights(f.length?ins:[]);
   }
@@ -2541,6 +2616,7 @@ function renderDeep(){
     if(s>=CH_MIN) sk.push({k:k,sn:o.sn,line:o.line,L:o.L,R:o.R,Lb:o.Lb,Rb:o.Rb,tt:s,b:Math.max(o.L,o.R)/s}); });
   sk.sort((a,b)=>b.b-a.b||b.tt-a.tt);
   const top=sk.slice(0,10);
+  { const _c=document.getElementById('cLR'), _card=_c&&_c.closest('.tablecard'); if(_card) _card.classList.toggle('lr-empty', !sk.length); }   // v196 — 빈 그림을 세우지 않는다
   const chNote=document.getElementById('chNote');
   if(chNote)chNote.textContent=t('dp_ch_n').replace('{m}',CH_MIN);
   const tile=(l,v,d)=>'<div class="dp-tile"><div class="l">'+l+'</div><div class="v">'+v+'</div>'
@@ -3483,7 +3559,7 @@ if(GST.chartLayout) GST.chartLayout({ page:'fault',
     { key:'tbm', items:[['cTbmWorker',{ko:'작업자',en:'Technician',zh:'作业员',ja:'作業者'}], ['cTbmLine',{ko:'LINE',en:'LINE',zh:'LINE',ja:'LINE'}],
                         ['cTbmGap',{ko:'경과일',en:'Days to failure',zh:'间隔天数',ja:'経過日数'}]] }
   ],
-  retire:['#pfPct','cReqType','cDur','cWcnt','cRelRank'] });
+  retire:['#pfPct','cReqType','cDur','cWcnt','cRelRank','cStage'] });   // cStage(작업단계 도넛) — KPI 2·3 장과 같은 수(v196)
 
 applyLang();
 loadData();
