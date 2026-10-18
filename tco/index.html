@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=189"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=190"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -95,14 +95,16 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
 @media print{.capbtns,.header-right,.slicers,.fchips{display:none!important}.card{break-inside:avoid;page-break-inside:avoid}}
 @media(max-width:1200px){.grid2,.grid2e{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=189">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=190">
 </head>
 <body>
 
 <div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
 <div class="header">
   <div>
-    <h1 data-i="title">TCO 분석</h1>
+    <h1><span data-i="title">TCO 분석</span> <span class="tco-est" data-i="est_badge">모델 추정 · 가정 단가 기준</span></h1>
+    <style>.tco-est{display:inline-block;vertical-align:middle;margin-left:8px;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:0;color:var(--accent);background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}</style>
+    <!-- v197(보완분 A13) — 금액은 전부 «Turn-On 시간 × 가정 유량 × 가정 단가» 모델 추정이다. 설명 숨김에서는 부제·노트가 사라져 그 사실이 한 글자도 안 남았다 — 설명문이 아니라 «라벨»로 둔다 -->
     <div class="sub" data-i="sub">Total Cost of Ownership — 유틸리티 · 전력 · 파츠 월간 운영비용</div>
   </div>
   <div class="header-right">
@@ -264,7 +266,7 @@ body.theme-light .cfg-item input{color-scheme:light;color:#0f172a}
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 /* GST.numv(천 단위 쉼표)·GST.EQ(설비상태)를 쓴다 — 옛 core.js 가 캐시에 남으면
    숫자만 조용히 틀리므로 배너로 드러낸다. */
-GST.needVer && GST.needVer(170);   // GST.chartLayout(v174) · 라인2 축 · GST.pptCardBtn 을 쓴다
+GST.needVer && GST.needVer(190);   // v197 GST.deltaBadgeP·partCmp·monthPart(진행 중 구간 비교)·fcSeries(예측 계열)   // GST.chartLayout(v174) · 라인2 축 · GST.pptCardBtn 을 쓴다
 GST.authGate();
 const VER='v49';
 const PUB=GST.SHEET_PUB;
@@ -323,7 +325,7 @@ ko:{title:'TCO 분석',sub:'Total Cost of Ownership — 유틸리티 · 전력 �
   as3:'<b>전력</b>은 임의 가정값입니다: DIFF {d} > CVD {c} > ETCH·기타 {e} kW/챔버 — ⚙에서 실측값으로 수정하세요.',
   as4:'<b>파츠</b> = 자재교체 수량 × {p}원/개 (수량 9,999개 초과는 단위 오입력으로 보고 1개로 계산).',
   as5:'설비 공정은 설치현황 Group, 없으면 해당 S/N의 작업이력 최빈 공정으로 추정합니다. 모든 단가는 가정값이므로 ⚙에서 계약 단가로 교체하세요.',
-  ins_mom:'이번 달 TCO {v} — 전월 대비 {d}',ins_top_u:'최대 비용 항목 {u} — 전체의 {p}%',ins_top_eq:'최고 비용 설비 {sn} ({v})',
+  ins_mom:'이번 달 TCO {v} — 전월 대비 {d}',ins_top_u:'최대 비용 항목 {u} — 전체의 {p}%',ins_top_eq:'최고 비용 설비 {sn} ({v})',ins_top_eq_tie:'최고 비용 설비 {n}대 동률 ({v})',est_badge:'모델 추정 · 가정 단가 기준',
   ins_down:'작업 정지 {h}h 반영 — 유틸리티 약 {v} 차감',ins_qty:'파츠 수량 오입력 의심 {n}건 — 1개로 계산됨',ins_nodate:'Turn-On 날짜가 없는 {n}대는 TCO 계산에서 빠졌습니다 — 실제보다 적게 나옵니다',dq_nodate_a:'설치현황의 Turn-on date 칸을 채우고 /upload/ 로 다시 올리세요',dq_qty_a:'자재실적 시트의 「사용수량」 칸에서 그 건들을 확인하세요',
   no_data:'조건에 맞는 데이터가 없습니다',loading:'데이터 불러오는 중...',won:'원'},
 en:{title:'TCO Analysis',sub:'Total Cost of Ownership — monthly utility · power · parts cost',back:'← Main',refresh:'Refresh',
@@ -350,7 +352,7 @@ en:{title:'TCO Analysis',sub:'Total Cost of Ownership — monthly utility · pow
   as3:'<b>Power</b> is an arbitrary assumption: DIFF {d} > CVD {c} > ETCH/others {e} kW per chamber — edit in ⚙ with measured values.',
   as4:'<b>Parts</b> = replacement qty × ₩{p}/pc (qty over 9,999 treated as typo → counted as 1).',
   as5:'Unit process comes from install-sheet Group, else inferred from that S/N\'s most frequent job process. All prices are assumptions — replace via ⚙.',
-  ins_mom:'This month TCO {v} — {d} vs prev month',ins_top_u:'Largest cost {u} — {p}% of total',ins_top_eq:'Most expensive unit {sn} ({v})',
+  ins_mom:'This month TCO {v} — {d} vs prev month',ins_top_u:'Largest cost {u} — {p}% of total',ins_top_eq:'Most expensive unit {sn} ({v})',ins_top_eq_tie:'{n} units tied for highest cost ({v})',est_badge:'Model estimate · assumed rates',
   ins_down:'{h}h downtime applied — about {v} of utility deducted',ins_qty:'{n} suspicious part quantities — counted as 1',ins_nodate:'{n} units without a Turn-On date are excluded from TCO — the total reads lower than reality',dq_nodate_a:'Fill the Turn-on date in the install sheet and re-upload via /upload/',dq_qty_a:'Check those rows in the Qty column of the material sheet',
   no_data:'No data found',loading:'Loading...',won:''},
 zh:{title:'TCO 分析',sub:'Total Cost of Ownership — 公用·电力·零件 月度运营成本',back:'← 主页',refresh:'刷新',
@@ -377,7 +379,7 @@ zh:{title:'TCO 分析',sub:'Total Cost of Ownership — 公用·电力·零件 �
   as3:'<b>电力</b>为任意假设值: DIFF {d} > CVD {c} > ETCH·其他 {e} kW/腔 — 请在⚙中改为实测值。',
   as4:'<b>零件</b> = 更换数量 × {p}元/个 (数量超9,999视为误输入按1个计)。',
   as5:'设备工艺取自安装表Group,否则按该S/N作业记录最频繁工艺推断。所有单价均为假设值,请在⚙中替换。',
-  ins_mom:'本月TCO {v} — 环比 {d}',ins_top_u:'最大费用项 {u} — 占{p}%',ins_top_eq:'费用最高设备 {sn} ({v})',
+  ins_mom:'本月TCO {v} — 环比 {d}',ins_top_u:'最大费用项 {u} — 占{p}%',ins_top_eq:'费用最高设备 {sn} ({v})',ins_top_eq_tie:'费用最高设备 {n}台并列 ({v})',est_badge:'模型估算 · 假设单价',
   ins_down:'已反映停机 {h}h — 约扣除公用 {v}',ins_qty:'零件数量疑似误输入 {n}件 — 按1个计算',ins_nodate:'没有 Turn-On 日期的 {n} 台已从 TCO 计算中排除 — 总额比实际偏低',dq_nodate_a:'请填写安装现况的 Turn-on date 并通过 /upload/ 重新上传',dq_qty_a:'请在材料实绩表的「使用数量」列确认这些行',
   no_data:'无数据',loading:'加载中...',won:'元'},
 ja:{title:'TCO 分析',sub:'Total Cost of Ownership — ユーティリティ·電力·パーツ 月間運用コスト',back:'← メイン',refresh:'更新',
@@ -404,7 +406,7 @@ ja:{title:'TCO 分析',sub:'Total Cost of Ownership — ユーティリティ·�
   as3:'<b>電力</b>は任意の仮定値です: DIFF {d} > CVD {c} > ETCH·その他 {e} kW/ch — ⚙で実測値に修正してください。',
   as4:'<b>パーツ</b> = 交換数量 × {p}₩/個 (9,999超は誤入力とみなし1個で計算)。',
   as5:'設備工程は設置シートのGroup、無ければ当該S/Nの作業履歴の最頻工程で推定。単価はすべて仮定値なので⚙で置き換えてください。',
-  ins_mom:'今月TCO {v} — 前月比 {d}',ins_top_u:'最大費用項目 {u} — 全体の{p}%',ins_top_eq:'費用最大設備 {sn} ({v})',
+  ins_mom:'今月TCO {v} — 前月比 {d}',ins_top_u:'最大費用項目 {u} — 全体の{p}%',ins_top_eq:'費用最大設備 {sn} ({v})',ins_top_eq_tie:'費用最大設備 {n}台が同額 ({v})',est_badge:'モデル推定 · 仮定単価',
   ins_down:'作業停止 {h}h 反映 — ユーティリティ約 {v} 控除',ins_qty:'パーツ数量の誤入力疑い {n}件 — 1個で計算',ins_nodate:'Turn-On 日付がない {n}台は TCO 計算から外れています — 実際より少なく出ます',dq_nodate_a:'設置現況の Turn-on date 欄を埋めて /upload/ から再アップロードしてください',dq_qty_a:'資材実績シートの「使用数量」欄でその行を確認してください',
   no_data:'データなし',loading:'読込中...',won:'₩'}
 };
@@ -757,9 +759,12 @@ function render(){ GST.dq&&GST.dq.reset('tco');
   put('kp4',MODEL.selChambers.n.toLocaleString());
   put('kp5',Math.round(sel.downH).toLocaleString());
   put('kp6',MODEL.selChambers.n?fmtWon(sel.total/MODEL.selChambers.n):'—');
-  document.getElementById('kd1').innerHTML=prev?GST.deltaBadge(sel.total,prev.total,true):'';
-  document.getElementById('kd2').innerHTML=prev?GST.deltaBadge(sel.util,prev.util,true):'';
-  document.getElementById('kd3').innerHTML=prev?GST.deltaBadge(sel.parts,prev.parts,true):'';
+  /* 진행 중인 기준 월은 일 평균으로 견준다(v197 · 보완분 A1) — 기준 월만 «지금»에서 잘리고 전월은 꽉 찬 달이라,
+     「−45%」가 정확히 «지난 날수 비율»이었다. 숫자(sel·prev)는 그대로 · 비교 기준만 */
+  const _sp=selPart(), _bd=(a,b)=>GST.deltaBadgeP&&_sp?GST.deltaBadgeP(a,b,true,_sp.d,_sp.full,_sp.pd):GST.deltaBadge(a,b,true);
+  document.getElementById('kd1').innerHTML=prev?_bd(sel.total,prev.total):'';
+  document.getElementById('kd2').innerHTML=prev?_bd(sel.util,prev.util):'';
+  document.getElementById('kd3').innerHTML=prev?_bd(sel.parts,prev.parts):'';
   put('kf1',t('kf1').replace('{u}',fmtWon(sel.util)).replace('{p}',fmtWon(sel.parts)));
   put('kf2',prev?t('kf2').replace('{v}',fmtWon(prev.util)):'');
   put('kf3',t('kf3').replace('{n}',sel.partsCnt.toLocaleString()));
@@ -967,11 +972,19 @@ function renderEqTable(){
     :'<tr><td colspan="9" class="empty">'+GST.emptyHTML(EQUIP.length)+'</td></tr>';   // «필터 때문»이면 해제까지(v135)
 }
 
+/* 기준 월이 진행 중이면 {d: 지난 날수, full: 그 달 날수, pd: 전월 날수} — 아니면 null(완결된 달) */
+function selPart(){
+  const i=MONTHS.findIndex(m=>m.key===SEL_M), m=MONTHS[i], pm=MONTHS[i-1]; if(!m) return null;
+  const NOW=Date.now(); if(m.end<=NOW) return null;
+  const full=Math.round((m.end-m.start)/864e5), d=Math.max(1,Math.ceil((NOW-m.start)/864e5));
+  return {d:Math.min(d,full), full, pd:pm?Math.round((pm.end-pm.start)/864e5):full};
+}
 function renderInsights(sel,prev){
   const ins=[];
   if(prev&&prev.total>0){
-    const d=GST.pctDelta(sel.total,prev.total);
-    ins.push({sev:(d!=null&&d>10)?'warn':'info',text:t('ins_mom').replace('{v}','<b>'+fmtWon(sel.total)+'</b>').replace('{d}','<b>'+(d==null?'—':(d>0?'+':'')+d+'%')+'</b>')});
+    const sp=selPart(), c=(GST.partCmp&&sp)?GST.partCmp(sel.total,prev.total,sp.d,sp.full,sp.pd):{pct:GST.pctDelta(sel.total,prev.total)};
+    const d=c.pct, tag=c.partial?' ('+GST._partT().tag.replace('{d}',c.d)+')':'';
+    ins.push({sev:(d!=null&&d>10)?'warn':'info',text:t('ins_mom').replace('{v}','<b>'+fmtWon(sel.total)+'</b>').replace('{d}','<b>'+(d==null?'—':(d>0?'+':'')+d+'%')+'</b>'+tag)});
   }
   // 경고(데이터 품질)를 정보성 인사이트보다 앞에 — GST.insights는 4개까지만 표시한다
   if(MODEL.qtyBadSel>0)ins.push({sev:'warn',text:t('ins_qty').replace('{n}','<b>'+MODEL.qtyBadSel+'</b>')});
@@ -990,7 +1003,11 @@ function renderInsights(sel,prev){
   const topU=UKEYS.slice().sort((a,b)=>sel.cost[b]-sel.cost[a])[0];
   if(sel.total>0)ins.push({sev:'info',text:t('ins_top_u').replace('{u}','<b>'+uLabel(topU)+'</b>').replace('{p}','<b>'+Math.round(sel.cost[topU]/sel.total*100)+'</b>')});
   const te=MODEL.eqSel.slice().sort((a,b)=>b.total-a.total)[0];
-  if(te)ins.push({sev:'info',text:t('ins_top_eq').replace('{sn}','<b>'+te.sn+'</b>').replace('{v}',fmtWon(te.total))});
+  /* 같은 공정·같은 타입 설비는 모델상 비용이 같다(v197 · 보완분 A15) — 동률 첫 번째를 «최고»라 적으면 이름을 짚는 뜻이 없다.
+     화면이 적는 단위(만 원)로 같은 값이 둘 이상이면 «N대 동률»로 적는다 */
+  if(te){ const same=MODEL.eqSel.filter(x=>fmtWon(x.total)===fmtWon(te.total)).length;
+    ins.push({sev:'info',text:same>1?t('ins_top_eq_tie').replace('{n}','<b>'+same+'</b>').replace('{v}',fmtWon(te.total))
+      :t('ins_top_eq').replace('{sn}','<b>'+te.sn+'</b>').replace('{v}',fmtWon(te.total))}); }
   if(sel.downH>0.5)ins.push({sev:'ok',text:t('ins_down').replace('{h}','<b>'+Math.round(sel.downH)+'</b>').replace('{v}','<b>'+fmtWon(sel.downCost)+'</b>')});
   GST.insights(ins);
   GST.dq&&GST.dq.render(GST.filtSummary?GST.filtSummary():'');

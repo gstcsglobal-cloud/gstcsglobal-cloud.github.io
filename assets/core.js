@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 189;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 190;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
    오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
    'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
@@ -4200,6 +4200,71 @@ GST.deltaBadge=function(cur,prev,goodWhenDown){
   const color = good ? 'var(--ok,#4ade80)' : 'var(--bad,#fb7185)';
   return '<span style="font-size:10px;font-weight:800;color:'+color+'">'+(up?'▲':'▼')+' '+Math.abs(p)+'%</span>';
 };
+/* 진행 중인 구간의 비교 (v197 · 감사 보완분 A1).
+   진행 중인 달(10/1~10/17)을 완결된 지난달과 «그대로» 견주면 매달 중순마다 「▼53%」 같은 반 토막 경보가 선다 —
+   v196 은 고장 분석 요약 띠 한 줄만 고쳤고 같은 식이 여섯 화면에 남아 있었다.
+   d = 진행 중인 구간이 지금까지 덮은 날수 · full = 그 구간의 온전한 날수 · pd = 직전 구간 날수.
+   d < full 이면 «일 평균»으로 견주고 배지 끝에 «N일 기준»을 적는다. 숫자(cur·prev) 자체는 그대로다 — 바뀌는 것은 비교 기준과 표기뿐이다. */
+GST.PART_T={ko:{tag:'{d}일 기준 · 일 평균',part:'진행 중'},en:{tag:'{d} days · per day',part:'in progress'},
+  zh:{tag:'{d}天 · 日均',part:'进行中'},ja:{tag:'{d}日分 · 日平均',part:'進行中'}};
+GST._partT=function(){ return GST.PART_T[GST._lang&&GST._lang()]||GST.PART_T.ko; };
+GST.monthDays=function(y,m){ return new Date(y,m+1,0).getDate(); };
+/* 그 달(y,m · 0 시작)이 asOf 의 달이면 {d:asOf 의 날, full, pd} — 아니면 온전한 달({d:full}). asOf 는 로컬 날짜(사람이 보는 달력). */
+GST.monthPart=function(y,m,asOf){
+  const full=GST.monthDays(y,m), pd=GST.monthDays(m===0?y-1:y, m===0?11:m-1);
+  const a=asOf instanceof Date?asOf:new Date();
+  const d=(a.getFullYear()===y&&a.getMonth()===m)?a.getDate():full;
+  return {d:Math.max(1,Math.min(d,full)), full, pd};
+};
+GST.partCmp=function(cur,prev,d,full,pd){
+  const partial=d>0&&full>0&&d<full;
+  if(!partial) return {partial:false,pct:GST.pctDelta(cur,prev),a:cur,b:prev,d:full};
+  const a=cur/d, b=(prev||0)/(pd||full);
+  return {partial:true,pct:b?Math.round((a-b)/b*100):null,a,b,d};
+};
+GST.deltaBadgeP=function(cur,prev,goodWhenDown,d,full,pd){
+  if(!(d>0&&full>0&&d<full)) return GST.deltaBadge(cur,prev,goodWhenDown);
+  const T=GST._partT(), tag='<span style="font-size:9.5px;font-weight:600;color:var(--txt-muted)">'+T.tag.replace('{d}',d)+'</span>';
+  const c=GST.partCmp(cur,prev,d,full,pd);
+  /* 기준이 작으면 일 평균의 %가 과장된다(v148 규칙) — 그때는 «며칠 기준»만 적는다 */
+  if(c.pct==null || (prev||0)<GST.DELTA_ABS_MAX) return tag;
+  if(c.pct===0) return '<span style="font-size:10px;font-weight:800;color:var(--txt-muted)">0%</span> '+tag;
+  const up=c.pct>0, good=goodWhenDown?!up:up;
+  return '<span style="font-size:10px;font-weight:800;color:'+(good?'var(--ok,#4ade80)':'var(--bad,#fb7185)')+'">'+(up?'▲':'▼')+' '+Math.abs(c.pct)+'%</span> '+tag;
+};
+/* 예측 계열 (v197 · 감사 보완분 A2) — 고장 분석 v196 의 방식(빗금 + 범례 «예측(n구간)» + 정수)을 한 벌로.
+   PM·자재·설비 현황이 옛 방식(같은 막대 줄에 색만 바꿔 이어 붙이기)이라 범례 어디에도 «예측»이 없고 소수점이 찍혔고,
+   PPT 로 나가면 색 배열이 첫 색만 남아 실적과 완전히 같은 막대가 됐다. 값은 GST.linForecast 그대로다(정수 반올림만). */
+GST.FC_T={ko:'예측 ({n}구간)',en:'Forecast ({n} periods)',zh:'预测 ({n}区间)',ja:'予測 ({n}区間)'};
+GST._HATCH={};
+GST.hatch=function(col){
+  if(GST._HATCH[col]) return GST._HATCH[col];
+  try{ const c=document.createElement('canvas'); c.width=c.height=8; const x=c.getContext('2d'); if(!x) return col;
+    x.strokeStyle=col; x.lineWidth=2; x.beginPath(); x.moveTo(0,8); x.lineTo(8,0); x.stroke();
+    const p=x.createPattern(c,'repeat'); GST._HATCH[col]=p||col; return GST._HATCH[col]; }catch(e){ return col; }
+};
+/* labels·data·bg 를 받아 예측 칸을 붙이고 {labels,data,bg,fc} 를 돌려준다 — fc 는 실적과 «서로 null» 인 별도 데이터셋.
+   opts: n(구간 수) · skipLast(진행 중인 마지막 구간을 예측 바탕에서 뺀다 · 기본 true) · color */
+GST.fcSeries=function(labels,data,bg,opts){
+  opts=opts||{}; const n=opts.n||0, L=labels.slice(), D=data.slice(), B=(bg||[]).slice();
+  if(!n) return {labels:L,data:D,bg:B,fc:null};
+  const skip=opts.skipLast!==false, base=skip?data.slice(0,-1):data;
+  const raw=GST.linForecast(base,n+(skip?1:0))||[], fc=skip?raw.slice(1):raw;
+  if(!fc.length) return {labels:L,data:D,bg:B,fc:null};
+  const col=opts.color||((GST.chartTheme&&GST.chartTheme().pal||[])[0])||'#6C9BFF';
+  const T=GST.FC_T[GST._lang&&GST._lang()]||GST.FC_T.ko;
+  const FC={label:T.replace('{n}',fc.length),data:D.map(()=>null),backgroundColor:GST.hatch(col),borderColor:col,borderWidth:1,stack:'s',valLabel:false};
+  fc.forEach((v,i)=>{ L.push('+'+(i+1)); D.push(null); B.push(B[B.length-1]||col); FC.data.push(Math.max(0,Math.round(+v||0))); });
+  return {labels:L,data:D,bg:B,fc:FC};
+};
+/* 예측 계열이 붙은 막대 차트 설정 — 쌓기(두 계열이 서로 null 이라 한 자리에 하나씩) + 범례(이름 있는 계열만) */
+GST.fcStack=function(cfg){
+  const o=cfg.options=cfg.options||{}; o.scales=o.scales||{}; o.scales.x=o.scales.x||{}; o.scales.y=o.scales.y||{};
+  o.scales.x.stacked=true; o.scales.y.stacked=true; (cfg.data.datasets[0]||{}).stack='s';
+  o.plugins=o.plugins||{}; const TH=GST.chartTheme?GST.chartTheme():{};
+  o.plugins.legend={display:true,position:'bottom',labels:{color:TH.txt,font:{size:10},filter:i=>!!i.text}};
+  return cfg;
+};
 // 이상 탐지: 평균+k·표준편차 초과 항목 (entries=[[라벨,건수],...])
 GST.outliers=function(entries,k){
   k=k||3;
@@ -7833,7 +7898,9 @@ GST.pptSrc = function(ch){ // Chart.js 인스턴스 → {labels,bars,lines,stack
     try{ const mt=ch.getDatasetMeta(i); if(mt&&mt.hidden)return; }catch(e){}
     if(ds.hidden)return;
     const isLn=(ds.type||ch.config.type)==='line';
-    const vals=(ds.data||[]).map(v=>v==null?0:(typeof v==='object'?+(v.y||0):(+v||0)));
+    /* null 은 null 로 넘긴다(v197 · 보완분 P4) — 예전엔 0 으로 채워, 서로 null 로 자리를 비운 두 계열(실적·예측)의 선이 0 으로 떨어지고
+       막대마다 «0» 라벨이 찍혔다. pptxgenjs 는 null 을 빈 점(<c:v/>)으로 쓴다 */
+    const vals=(ds.data||[]).map(v=>v==null?null:(typeof v==='object'?(v.y==null?null:+v.y):(+v||0)));
     /* 배경이 CanvasPattern(빗금 · 예측 막대)이면 문자열이 아니다 — 그때는 테두리색을 쓴다(v196). 색 배열은 pptHex 가 첫 문자열을 고른다 */
     const isStr=function(c){ return typeof c==='string'||Array.isArray(c); };
     const bgc=isStr(ds.backgroundColor)?ds.backgroundColor:(isStr(ds.borderColor)?ds.borderColor:ds.backgroundColor);
@@ -7859,13 +7926,21 @@ GST.pptCombo = function(pres,slide,src,x,y,w,h,opt){ // 막대+꺾은선 네이�
   if(!src) return;
   opt=opt||{}; const fs=+opt.fs||1, F=function(v){ return Math.round(v*fs*10)/10; };
   if(src.pie){
-    slide.addChart(pres.ChartType[src.hole?'doughnut':'pie'], [{name:src.name||'', labels:src.labels, values:src.values}],
+    /* 도넛·파이도 억·만 단위(v197 · 보완분 P5) — 예전엔 unitScale 이 이 분기 «뒤»에 있어 조각 라벨·TOTAL 이 원 단위(423,226,053)로 겹쳤다.
+       조각이 여섯 이상이면 값 대신 «비율»을 적는다(2×2 칸에서 값 라벨 일곱은 원리적으로 겹친다) */
+    let pdv=1, pun='';
+    if(opt.unitScale){ const mx=Math.max.apply(null,(src.values||[0]).map(function(v){ return Math.abs(+v||0); }));
+      if(mx>=1e8){ pdv=1e8; pun='억'; } else if(mx>=1e5){ pdv=1e4; pun='만'; } }
+    const pv=pdv===1?src.values:src.values.map(function(v){ return Math.round((+v||0)/pdv*100)/100; });
+    const many=(src.values||[]).length>5;
+    slide.addChart(pres.ChartType[src.hole?'doughnut':'pie'], [{name:src.name||'', labels:src.labels, values:pv}],
       {x:x,y:y,w:w,h:h, chartColors:src.colors, holeSize:src.hole?58:0, showLegend:true, legendPos:'b', legendFontSize:F(7.5),
-       legendColor:'333333', showTitle:false, showValue:true, showPercent:false, dataLabelColor:'333333', dataLabelFontSize:F(7.5),
-       dataLabelPosition:'bestFit', dataLabelFormatCode:'#,##0'});
+       legendColor:'333333', showTitle:false, showValue:!many, showPercent:many, dataLabelColor:'333333', dataLabelFontSize:F(7.5),
+       dataLabelPosition:'bestFit', dataLabelFormatCode:pdv===1?'#,##0;-#,##0;;':'#,##0.0;-#,##0.0;;'});
     if(src.hole){   // 화면의 가운데 TOTAL 과 같은 숫자를 구멍에 얹는다 — 범례(아래) 높이만큼 위로
       const cx=x+w/2, cy=y+(h-0.35)*0.5;
-      slide.addText(String(src.total.toLocaleString()), {x:cx-0.9, y:cy-0.24, w:1.8, h:0.30, align:'center', valign:'middle', fontSize:F(14), bold:true, color:'111111', margin:0});
+      const tt=pdv===1?String(src.total.toLocaleString()):(Math.round(src.total/pdv*10)/10).toLocaleString()+pun;
+      slide.addText(tt, {x:cx-0.9, y:cy-0.24, w:1.8, h:0.30, align:'center', valign:'middle', fontSize:F(14), bold:true, color:'111111', margin:0});
       slide.addText('TOTAL', {x:cx-0.9, y:cy+0.06, w:1.8, h:0.20, align:'center', valign:'top', fontSize:F(7), color:'808080', margin:0});
     }
     return;
@@ -7874,14 +7949,16 @@ GST.pptCombo = function(pres,slide,src,x,y,w,h,opt){ // 막대+꺾은선 네이�
   /* 이름 없는 계열이 «하나뿐»이면 카드 제목을 이름으로 쓴다(v196) — pptxgenjs 가 «Series1» 이라고 적는 자리다.
      계열이 여럿인데 이름이 없는 경우는 손대지 않는다(어느 계열이 무엇인지 지어낼 수 없다). */
   const all0=src.bars.concat(src.lines), unnamed=all0.filter(function(d){ return String(d.name||'').trim()===''; });
-  if(opt.fallbackName && all0.length===1 && unnamed.length===1) unnamed[0].name=String(opt.fallbackName);
+  /* v197(보완분 P2) — 기준선(90% · 전체 평균)이 붙은 차트는 계열이 둘이라 예전 조건(전부 하나)에 안 걸려 «Series1» 이 남았다.
+     «이름 없는 계열이 정확히 하나»면 그것이 카드의 본 계열이다 */
+  if(opt.fallbackName && unnamed.length===1 && unnamed[0]===all0[0]) unnamed[0].name=String(opt.fallbackName);
   /* 큰 값은 억·만 단위로 축을 적는다(v196 · 시안 01 «축 3000000000») — 값은 나눠 넣고 단위를 축 제목에 적는다. 보조축(%) 은 그대로. */
   let div=1, unit='';
   if(opt.unitScale){
     let mx=0; src.bars.concat(src.lines.filter(function(l){ return !l.y2; })).forEach(function(d){ (d.values||[]).forEach(function(v){ if(isFinite(v)&&Math.abs(v)>mx) mx=Math.abs(v); }); });
     if(mx>=1e8){ div=1e8; unit='억'; } else if(mx>=1e5){ div=1e4; unit='만'; }
   }
-  const sv=function(d){ return div===1?d.values:d.values.map(function(v){ return isFinite(v)?Math.round(v/div*100)/100:v; }); };
+  const sv=function(d){ return div===1?d.values:d.values.map(function(v){ return (v!=null&&isFinite(v))?Math.round(v/div*100)/100:v; }); };
   const ln1=src.lines.filter(l=>!l.y2), ln2=src.lines.filter(l=>l.y2);
   const useY2=ln2.length>0&&(src.bars.length>0||ln1.length>0);
   const types=[];
@@ -7891,6 +7968,8 @@ GST.pptCombo = function(pres,slide,src,x,y,w,h,opt){ // 막대+꺾은선 네이�
        세로로 내보내면 라벨이 겹쳐 읽을 수 없는 장표가 된다. */
     options:{chartColors:src.bars.map(b=>b.color),barDir:src.horiz?'bar':'col',
              barGrouping:src.stacked?'stacked':'clustered'}});
+  /* 가로 막대는 PowerPoint 가 첫 범주를 «아래»에 그린다(Chart.js 는 위) — 그대로면 순위표의 1위가 맨 아래에 섰다(v197 · 보완분 P3) */
+  const _hz=!!src.horiz;
   const lnOpt=ls=>({chartColors:ls.map(l=>l.color),lineSize:1.5,lineSmooth:false,
     lineDataSymbol:'circle',lineDataSymbolSize:4});
   if(ln1.length)types.push({type:'line',
@@ -7905,7 +7984,9 @@ GST.pptCombo = function(pres,slide,src,x,y,w,h,opt){ // 막대+꺾은선 네이�
        화면에는 없는 글자다 — 장표가 화면과 다른 말을 하게 된다. */
     showLegend:src.bars.concat(src.lines).some(function(d){ return String(d.name||'').trim()!==''; }),
     legendPos:'b',legendFontSize:F(7.5),legendColor:'333333',showTitle:false,
-    showValue:!!src.showValue,dataLabelFontSize:F(7),dataLabelColor:'333333',dataLabelFormatCode:div===1?'#,##0.##':'#,##0.0'};
+    /* v197(보완분 P4·H23) — 0 은 라벨을 비운다(포맷의 세 번째 칸) · 계열이 넷 이상인 쌓은 막대는 조각마다 숫자가 겹쳐 «숫자 더미»가 되므로 끈다 */
+    showValue:!!src.showValue && !(src.stacked && src.bars.length>=4),dataLabelFontSize:F(7),dataLabelColor:'333333',dataLabelFormatCode:div===1?'#,##0.##;-#,##0.##;;':'#,##0.0;-#,##0.0;;'};
+  if(_hz) o.catAxisOrientation='maxMin';
   if(unit){ o.showValAxisTitle=true; o.valAxisTitle=unit; o.valAxisTitleFontSize=F(7.5); o.valAxisTitleColor='808080'; }
   const bd=src.bounds||{};
   const sc=function(v){ return div===1?v:v/div; };
@@ -7935,7 +8016,10 @@ GST.pptNativeOK = function(ch){
     if((ds0.data||[]).length!==n0) return '계열 길이가 라벨 수와 다름';
     return '';
   }
-  if(t!=='bar'&&t!=='line') return '산점도 등은 그림';
+  /* GST.bar·파레토 차트는 config.type 이 비고 데이터셋에만 type 이 있다(v197 · 보완분 P6) — 예전엔 평범한 막대가 «그림»으로 나갔다 */
+  const t2 = t || (function(){ const ds=(ch.data.datasets||[]); if(!ds.length) return ''; const ty=ds.map(function(d){ return d.type||''; });
+    return ty.every(function(x){ return x==='bar'||x==='line'; }) ? (ty.indexOf('bar')>=0?'bar':'line') : ''; })();
+  if(t2!=='bar'&&t2!=='line') return '산점도 등은 그림';
   /* ⚠ 가로 막대(indexAxis:'y')는 «범주축이 y» 다. x 만 보면 그 차트들이 전부
      「수치축」으로 잘못 떨어진다 — 실측 설치현황·인원 화면의 막대 상당수가 가로 막대다. */
   const cax=GST.pptCatAxis(ch);
@@ -8755,16 +8839,16 @@ GST.PPT_FS = 1.4;         // 섹션 장의 차트 글자 배율 — 3×2 때(7.5
 GST.PPTA_T = {
   ko:{kpi:'핵심 지표', tbl:'핵심 표', item:'항목', val:'값', ov:'개요', tables:'표', fc:'예측',
       img:'※ 다음 차트는 PPT 안에서 편집할 수 없는 «그림»입니다 (그 형태는 네이티브 차트로 옮기면 화면과 달라집니다): ',
-      nodata:'※ 자료가 없어 뺀 차트: ', page:'{p} / {n}'},
+      nodata:'※ 자료가 없어 뺀 차트: ', fold:'※ 입력률이 낮아 화면에서 접힌 카드(빠짐): ', top:'상위 {n}', page:'{p} / {n}'},
   en:{kpi:'Key figures', tbl:'Key table', item:'Item', val:'Value', ov:'Overview', tables:'Tables', fc:'Forecast',
       img:'※ These charts are pictures (not editable in PPT — converting them would change the picture): ',
-      nodata:'※ Charts skipped (no data): ', page:'{p} / {n}'},
+      nodata:'※ Charts skipped (no data): ', fold:'※ Cards folded on screen for low fill rate (left out): ', top:'top {n}', page:'{p} / {n}'},
   zh:{kpi:'核心指标', tbl:'核心表', item:'项目', val:'值', ov:'概览', tables:'表', fc:'预测',
       img:'※ 以下图表为图片（PPT 内不可编辑 — 转为原生图表会与画面不同）: ',
-      nodata:'※ 无数据而省略的图表: ', page:'{p} / {n}'},
+      nodata:'※ 无数据而省略的图表: ', fold:'※ 因填写率低在画面中折叠的卡片(未导出): ', top:'前{n}', page:'{p} / {n}'},
   ja:{kpi:'主要指標', tbl:'主要表', item:'項目', val:'値', ov:'概要', tables:'表', fc:'予測',
       img:'※ 次のグラフは PPT 内で編集できない«画像»です（ネイティブに変えると画面と異なります）: ',
-      nodata:'※ データがなく省いたグラフ: ', page:'{p} / {n}'}
+      nodata:'※ データがなく省いたグラフ: ', fold:'※ 入力率が低く画面で折りたたまれたカード(除外): ', top:'上位{n}', page:'{p} / {n}'}
 };
 GST._pptaT = function(k){ const l=(GST._lang&&GST._lang())||'ko'; const d=GST.PPTA_T[l]||GST.PPTA_T.ko; return (k in d)?d[k]:GST.PPTA_T.ko[k]; };
 GST.pptAuto = async function(opt){
@@ -8846,6 +8930,9 @@ GST.pptAuto = async function(opt){
      clientWidth 0 은 접힌 카드(은퇴 · 묶음의 다른 기준 · 입력률 접힘)라 캡처하면 빈 그림이 된다 — 화면에 보이는 것만 나간다. */
   const cvs = GST.chartCanvases().filter(function(c){ return c.id && c.clientWidth>0; });   // 카드 선택자는 GST.CARD_SEL 한 벌(v135)
   const items = [], imgOnly = [], noData = [];
+  /* 입력률이 낮아 화면에서 접힌 카드(GST._foldSet)는 장표에서 빠진다 — 조용히 빠지면 «왜 원인 차트가 없지»가 된다. 마지막 장에 이름을 적는다(v197). */
+  const folded = [];
+  try{ GST.chartCanvases().forEach(function(c){ if(!c.id || c.clientWidth>0) return; const cd=c.closest&&c.closest('.gst-fold'); if(cd){ const t=GST.cardTitle(c.id); if(t && folded.indexOf(t)<0) folded.push(t); } }); }catch(e){}
   const secOf = function(cv){ try{ const s=cv.closest&&cv.closest('[data-sec]'); return (s&&s.getAttribute)?(s.getAttribute('data-sec')||''):''; }catch(e){ return ''; } };
   const empty = function(src){   // 자료가 없는 차트 — 빈 축만 나가는 장표는 받아 본 사람을 헷갈리게 한다. 뺀 것은 마지막 장에 적는다
     if(!src) return false;
@@ -8894,7 +8981,8 @@ GST.pptAuto = async function(opt){
   const kpis = kbox ? [].slice.call(kbox.querySelectorAll('.kpi')).filter(function(k){ return !k.getClientRects || k.getClientRects().length; }).slice(0,6)
     .map(function(k){ return {cap:txt(k.querySelector('.cap')), val:txt(k.querySelector('.val')), unit:txt(k.querySelector('.unit')), kd:txt(k.querySelector('.kd')), kf:txt(k.querySelector('.kf'))}; })
     .filter(function(k){ return k.val && k.cap; }) : [];
-  const ins = [].slice.call(document.querySelectorAll('#gstInsights .gst-ins')).map(function(x){
+  /* 「채우러 가기」 같은 단추가 달린 줄은 자료 품질 이야기다 — 받아 본 사람(경영진·고객)에게 갈 장표의 요약에는 싣지 않는다(v197 · v182 와 같은 뜻). */
+  const ins = [].slice.call(document.querySelectorAll('#gstInsights .gst-ins')).filter(function(x){ return !(x.querySelector && x.querySelector('.gst-go')); }).map(function(x){
     let s='';
     try{ if(x.cloneNode){ const c=x.cloneNode(true); [].forEach.call(c.querySelectorAll('button,.gst-go,.gst-ins-dot'), function(b){ b.remove(); }); s=c.textContent||''; } }catch(e){ s=''; }
     if(!s) s=String(x.textContent||x.innerText||'');
@@ -8904,12 +8992,14 @@ GST.pptAuto = async function(opt){
   { const tb0=(opt.tables||[]).find(function(t){ return t&&t.rows&&t.rows.length; });
     if(tb0) keyTb={cap:tb0.cap||PT('tbl'), rows:tb0.rows.slice(0,7), colW:tb0.colW};
     else{
-      const cand=items.filter(function(it){ return it.src&&!it.src.pie&&it.src.bars&&it.src.bars.length; });
+      /* 사람(작업자) 순위는 핵심 표로 세우지 않는다 — 첫 장에 개인 이름이 서면 장표가 «사람 평가»로 읽힌다(v197). */
+      const person=function(it){ try{ const cv=document.getElementById(it.id); return /worker/i.test(it.id||'') || !!(cv&&cv.closest&&cv.closest('[data-gst-person]')); }catch(e){ return false; } };
+      const cand=items.filter(function(it){ return it.src&&!it.src.pie&&it.src.bars&&it.src.bars.length&&!person(it); });
       const it=cand.find(function(it){ return it.src.horiz&&it.src.bars.length===1; })||cand[0];
       if(it){ const b=it.src.bars[0], L=it.src.labels||[];
-        const rows=[[PT('item'), b.name||PT('val')]];
+        const rows=[[PT('item'), (b.name&&!/^series\s*\d*$/i.test(b.name))?b.name:(it.cap||PT('val'))]];
         L.slice(0,6).forEach(function(l,i){ const v=b.values[i]; rows.push([String(l), (v==null||isNaN(v))?'':Number(v).toLocaleString()]); });
-        if(rows.length>1) keyTb={cap:it.cap, rows:rows, colW:[3.3, 1.6]}; }
+        if(rows.length>1) keyTb={cap:it.cap+' · '+PT('top').replace('{n}', rows.length-1), rows:rows, colW:[3.3, 1.6]}; }
     } }
   const slides=[];   // {sec, label, cells:[{it,cell,n}]}
   const hasCover = !!(kpis.length || ins.length);
@@ -8918,9 +9008,13 @@ GST.pptAuto = async function(opt){
   const defs = GST._secDefs||[];
   const secLabel = function(id){ if(id==='__tables') return PT('tables'); const d=defs.find(function(d){ return d.id===id; }); return d?String(d.label||id):(id||''); };
   const groups=[]; items.forEach(function(it){ let g=groups.find(function(g){ return g.sec===it.sec; }); if(!g){ g={sec:it.sec, items:[]}; groups.push(g); } g.items.push(it); });
+  /* 섹션은 «화면의 섹션 순서»로 — 캔버스가 DOM 에서 놓인 순서를 따르면 옮겨 붙인 카드 때문에 섹션이 뒤섞였다 · 표 장은 맨 뒤(v197) */
+  const secIx=function(id){ if(id==='__tables') return 1e6; const i=defs.findIndex(function(d){ return d.id===id; }); return i<0?(id?5e5:-1):i; };
+  groups.sort(function(a,b){ return secIx(a.sec)-secIx(b.sec); });
   const PER=GST.PPT_GRID[0]*GST.PPT_GRID[1], COLS=GST.PPT_GRID[0];
+  let secRun=0;   // 번호는 «장표에 나간 순서»로 매긴다 — 자료가 없어 빠진 섹션 때문에 01·03·04 처럼 이가 빠지지 않게
   groups.forEach(function(g, gi){
-    const secNo = (g.sec && g.sec!=='__tables' && defs.length) ? String(Math.max(0, defs.findIndex(function(d){ return d.id===g.sec; }))+1).padStart(2,'0') : '';
+    const secNo = (g.sec && g.sec!=='__tables' && defs.length) ? String(++secRun).padStart(2,'0') : '';
     let cur=[], ci=0;
     const flush=function(){ if(cur.length) slides.push({sec:g.sec, label:secLabel(g.sec), no:secNo, cells:cur}); cur=[]; ci=0; };
     g.items.forEach(function(it){
@@ -8995,7 +9089,8 @@ GST.pptAuto = async function(opt){
       const late = items.filter(function(x){ return x.nativeErr; }).map(function(x){ return x.cap+' ('+x.nativeErr+')'; });
       GST._pptImgOnly = imgOnly.concat(late);          // 검사·진단이 본다
       GST._pptNoData = noData;
-      const notes=[]; if(GST._pptImgOnly.length) notes.push(PT('img')+GST._pptImgOnly.join(' · ')); if(noData.length) notes.push(PT('nodata')+noData.join(' · '));
+      GST._pptFolded = folded;
+      const notes=[]; if(GST._pptImgOnly.length) notes.push(PT('img')+GST._pptImgOnly.join(' · ')); if(noData.length) notes.push(PT('nodata')+noData.join(' · ')); if(folded.length) notes.push(PT('fold')+folded.join(' · '));
       if(notes.length) s.addText(notes.join('\n'), {x:X+4.3, y:FOOT+0.06, w:W-4.3, h:0.44, fontFace:FONT, fontSize:7.5, color:MUT, valign:'top', margin:0});
     }
   });
@@ -10430,28 +10525,28 @@ GST.V2_T = {
        w4:'최근 4주', tgt:'목표 {v}', tgt_le:'이하', tgt_ge:'이상', tgt_none:'목표 미설정', tgt_ok:'달성', tgt_miss:'미달 {g}', tgt_over:'초과 {g}',
        vs:'직전 4주 대비', vs_none:'비교 없음(현재 상태 기준)', den:'분모 {v}', den_units:'반입 {v}대', den_ev:'PM+고장 {v}건',
        st_ok:'안정', st_warn:'관찰 중', st_bad:'점검 권장', st_none:'판정 없음', u_pct:'%', u_ea:'대', u_case:'건', u_pt:'p',
-       g_band:'주의 구간 기본값', g_sig:'글로벌 현황 신호등 기준', g_risk:'고장 위험 점수', gd_band:'목표에 주의 기준을 따로 정하지 않았을 때 쓰는 구간', gd_sig:'운영단위를 위험·주의로 표시하는 기준(이번 주 고장 ÷ 평소)', gd_risk:'고장 분석 TOP 20 · 글로벌 현황 · 홈이 함께 쓰는 점수', p_band_run_rate:'가동률', p_band_bm_per100:'설비 100대당 고장', p_band_pm_ratio:'PM 비율', p_band_repeat14:'재고장 설비', p_band_act_overdue:'기한 경과 처리 건', p_sig_bad_x:'위험 — 평소 대비 배수(이상)', p_sig_bad_d:'위험 — 평소보다 늘어난 건수(이상)', p_sig_warn_x:'주의 — 평소 대비 배수(초과)', p_sig_warn_d:'주의 — 평소보다 늘어난 건수(이상)', p_sig_rep_bad:'위험 — 재고장 설비 수(이상)', p_sig_rep_warn:'주의 — 재고장 설비 수(이상)', p_risk_bm:'최근 90일 고장 1건당', p_risk_rep:'재고장 1회당', p_risk_up:'직전 90일 대비 2건 이상 증가 시', p_risk_recent:'최근 고장 발생 시', p_risk_pm:'PM 장기 미실시 시', p_risk_rep_days:'재고장 판단 기간', p_risk_recent_days:'「최근 고장」 판단 기간', p_risk_pm_days:'「PM 장기 미실시」 판단 기간', u_x:'배', u_day:'일', u_pts:'점', u_rel:'%', g_mfc:'MFC 버전 판정', gd_mfc:'알람 분석의 MFC 버전 — S/N 날짜코드(YYMMDD)로 가른다', p_mfc_mca_f:'MRC F 시작 S/N 날짜코드', p_mfc_mca_f1:'MRC F1 시작 S/N 날짜코드', p_mfc_mkp_r1:'MKP R1 시작 S/N 날짜', p_mfc_mkp_r2:'MKP R2 시작 S/N 날짜', p_mfc_lead:'교체 이력 없는 설비 — 생산일 = 반입일 − 이 일수', p_mfc_lead_rep:'S/N 없는 교체(새 버전 출시 뒤) — 생산일 = 교체일 − 이 일수', p_mfc_global_no:'GLOBAL 타입 시작 S/N 번호(이상이면 AIR MFC 없음)', g_fse:'알람 분석', gd_fse:'고장 분석 › 알람 분석 탭이 쓰는 기준', p_fse_recur_days:'«교체 후 재발» 판단 기간', p_fse_top:'발생 설비 순위표 줄 수', p_fse_auto_x:'자동 추천 — 평소 대비 배수(이상)', p_fse_auto_pct:'자동 추천 — 알람 작업 중 교체 비율(이상)', p_fse_auto_n:'자동 추천 — 부품 수(최대)', u_part:'개', u_ymd:'YYMMDD', u_no:'번', u_rows:'줄' },
+       g_band:'주의 구간 기본값(목표 ± 폭)', g_sig:'글로벌 현황 신호등 기준', g_risk:'고장 위험 점수', gd_band:'목표에 주의 기준을 따로 정하지 않았을 때 쓰는 구간', gd_sig:'운영단위를 점검 권장·관찰 중으로 표시하는 기준(이번 주 고장 ÷ 평소)', gd_risk:'고장 분석 TOP 20 · 글로벌 현황 · 홈이 함께 쓰는 점수', p_band_run_rate:'가동률', p_band_bm_per100:'설비 100대당 고장', p_band_pm_ratio:'PM 비율', p_band_repeat14:'재고장 설비', p_band_act_overdue:'기한 경과 처리 건', p_sig_bad_x:'점검 권장 — 평소 대비 배수(이상)', p_sig_bad_d:'점검 권장 — 평소보다 늘어난 건수(이상)', p_sig_warn_x:'관찰 중 — 평소 대비 배수(초과)', p_sig_warn_d:'관찰 중 — 평소보다 늘어난 건수(이상)', p_sig_rep_bad:'점검 권장 — 재고장 설비 수(이상)', p_sig_rep_warn:'관찰 중 — 재고장 설비 수(이상)', p_risk_bm:'최근 90일 고장 1건당', p_risk_rep:'재고장 1회당', p_risk_up:'직전 90일 대비 2건 이상 증가 시', p_risk_recent:'최근 고장 발생 시', p_risk_pm:'PM 장기 미실시 시', p_risk_rep_days:'재고장 판단 기간', p_risk_recent_days:'「최근 고장」 판단 기간', p_risk_pm_days:'「PM 장기 미실시」 판단 기간', u_x:'배', u_day:'일', u_pts:'점', u_rel:'%', g_mfc:'MFC 버전 판정', gd_mfc:'알람 분석의 MFC 버전 — S/N 날짜코드(YYMMDD)로 가른다', p_mfc_mca_f:'MRC F 시작 S/N 날짜코드', p_mfc_mca_f1:'MRC F1 시작 S/N 날짜코드', p_mfc_mkp_r1:'MKP R1 시작 S/N 날짜', p_mfc_mkp_r2:'MKP R2 시작 S/N 날짜', p_mfc_lead:'교체 이력 없는 설비 — 생산일 = 반입일 − 이 일수', p_mfc_lead_rep:'S/N 없는 교체(새 버전 출시 뒤) — 생산일 = 교체일 − 이 일수', p_mfc_global_no:'GLOBAL 타입 시작 S/N 번호(이상이면 AIR MFC 없음)', g_fse:'알람 분석', gd_fse:'고장 분석 › 알람 분석 탭이 쓰는 기준', p_fse_recur_days:'«교체 후 재발» 판단 기간', p_fse_top:'발생 설비 순위표 줄 수', p_fse_auto_x:'자동 추천 — 평소 대비 배수(이상)', p_fse_auto_pct:'자동 추천 — 알람 작업 중 교체 비율(이상)', p_fse_auto_n:'자동 추천 — 부품 수(최대)', u_part:'개', u_ymd:'YYMMDD', u_no:'번', u_rows:'줄' },
   en:{ m_run_rate:'Running rate', m_bm_per100:'Failures per 100 units', m_pm_ratio:'PM ratio', m_repeat14:'Units with {d}-day repeat', m_act_overdue:'Overdue actions',
        d_run_rate:'Running (Operation) ÷ installed · as of today', d_bm_per100:'Last-4-week failures ÷ installed × 100', d_pm_ratio:'Last-4-week PM ÷ (PM + failures)',
        d_repeat14:'Units in the risk ranking with a repeat failure within {d} days', d_act_overdue:'Open actions past their due date',
        w4:'last 4 wks', tgt:'Target {v}', tgt_le:'or less', tgt_ge:'or more', tgt_none:'No target', tgt_ok:'Met', tgt_miss:'Short {g}', tgt_over:'Over {g}',
        vs:'vs prior 4 wks', vs_none:'No comparison (current state)', den:'Base {v}', den_units:'{v} installed', den_ev:'{v} PM+BM',
        st_ok:'Stable', st_warn:'Watching', st_bad:'Check advised', st_none:'No rating', u_pct:'%', u_ea:'', u_case:'', u_pt:'p',
-       g_band:'Default watch band', g_sig:'Global overview signals', g_risk:'Failure risk score', gd_band:'band used when a target has no watch limit', gd_sig:'when a unit turns critical/watch (this week ÷ usual)', gd_risk:'shared by Failure TOP 20 · Global overview · Home', p_band_run_rate:'Running rate', p_band_bm_per100:'Failures per 100 units', p_band_pm_ratio:'PM ratio', p_band_repeat14:'Repeat-failure units', p_band_act_overdue:'Overdue actions', p_sig_bad_x:'Critical — at least × usual', p_sig_bad_d:'Critical — at least this many more', p_sig_warn_x:'Watch — more than × usual', p_sig_warn_d:'Watch — at least this many more', p_sig_rep_bad:'Critical — repeat-failure units ≥', p_sig_rep_warn:'Watch — repeat-failure units ≥', p_risk_bm:'per failure in 90 days', p_risk_rep:'per repeat failure', p_risk_up:'if up by 2+ vs prior 90 days', p_risk_recent:'if failed recently', p_risk_pm:'if no PM for long', p_risk_rep_days:'gap counted as repeat', p_risk_recent_days:'length of «recent»', p_risk_pm_days:'length of «no PM for long»', u_x:'×', u_day:'d', u_pts:'pts', u_rel:'%', g_mfc:'MFC version rules', gd_mfc:'MFC version in Alarm analysis — judged by the S/N date code (YYMMDD)', p_mfc_mca_f:'MRC F starts at S/N date code', p_mfc_mca_f1:'MRC F1 starts at S/N date code', p_mfc_mkp_r1:'MKP R1 starts at S/N date', p_mfc_mkp_r2:'MKP R2 starts at S/N date', p_mfc_lead:'No replacement history — built = FAB-in minus this many days', p_mfc_lead_rep:'Replacement without S/N (after a new version) — built = replacement date minus this many days', p_mfc_global_no:'GLOBAL type from S/N number (no AIR MFC from here on)', g_fse:'Alarm analysis', gd_fse:'rules used by Failure analysis › Alarm analysis', p_fse_recur_days:'window for «recurred after replacement»', p_fse_top:'rows in the unit ranking', p_fse_auto_x:'Auto pick — at least × usual', p_fse_auto_pct:'Auto pick — replaced in at least this share of alarm jobs', p_fse_auto_n:'Auto pick — parts (max)', u_part:'', u_ymd:'YYMMDD', u_no:'no.', u_rows:'rows' },
+       g_band:'Default watch band', g_sig:'Global overview signals', g_risk:'Failure risk score', gd_band:'band used when a target has no watch limit', gd_sig:'when a unit turns check-advised/watching (this week ÷ usual)', gd_risk:'shared by Failure TOP 20 · Global overview · Home', p_band_run_rate:'Running rate', p_band_bm_per100:'Failures per 100 units', p_band_pm_ratio:'PM ratio', p_band_repeat14:'Repeat-failure units', p_band_act_overdue:'Overdue actions', p_sig_bad_x:'Check advised — at least × usual', p_sig_bad_d:'Check advised — at least this many more', p_sig_warn_x:'Watching — more than × usual', p_sig_warn_d:'Watching — at least this many more', p_sig_rep_bad:'Check advised — repeat-failure units ≥', p_sig_rep_warn:'Watching — repeat-failure units ≥', p_risk_bm:'per failure in 90 days', p_risk_rep:'per repeat failure', p_risk_up:'if up by 2+ vs prior 90 days', p_risk_recent:'if failed recently', p_risk_pm:'if no PM for long', p_risk_rep_days:'gap counted as repeat', p_risk_recent_days:'length of «recent»', p_risk_pm_days:'length of «no PM for long»', u_x:'×', u_day:'d', u_pts:'pts', u_rel:'%', g_mfc:'MFC version rules', gd_mfc:'MFC version in Alarm analysis — judged by the S/N date code (YYMMDD)', p_mfc_mca_f:'MRC F starts at S/N date code', p_mfc_mca_f1:'MRC F1 starts at S/N date code', p_mfc_mkp_r1:'MKP R1 starts at S/N date', p_mfc_mkp_r2:'MKP R2 starts at S/N date', p_mfc_lead:'No replacement history — built = FAB-in minus this many days', p_mfc_lead_rep:'Replacement without S/N (after a new version) — built = replacement date minus this many days', p_mfc_global_no:'GLOBAL type from S/N number (no AIR MFC from here on)', g_fse:'Alarm analysis', gd_fse:'rules used by Failure analysis › Alarm analysis', p_fse_recur_days:'window for «recurred after replacement»', p_fse_top:'rows in the unit ranking', p_fse_auto_x:'Auto pick — at least × usual', p_fse_auto_pct:'Auto pick — replaced in at least this share of alarm jobs', p_fse_auto_n:'Auto pick — parts (max)', u_part:'', u_ymd:'YYMMDD', u_no:'no.', u_rows:'rows' },
   zh:{ m_run_rate:'运行率', m_bm_per100:'每100台故障', m_pm_ratio:'PM比率', m_repeat14:'{d}天内复发设备', m_act_overdue:'逾期待办',
        d_run_rate:'运行(Operation) ÷ 进场设备 · 截至基准日', d_bm_per100:'最近4周故障 ÷ 进场设备 × 100', d_pm_ratio:'最近4周 PM ÷ (PM + 故障)',
        d_repeat14:'故障风险排名中{d}天内复发的设备', d_act_overdue:'待办中已过期限但未关闭的事项',
        w4:'最近4周', tgt:'目标 {v}', tgt_le:'以下', tgt_ge:'以上', tgt_none:'未设定目标', tgt_ok:'达成', tgt_miss:'未达 {g}', tgt_over:'超出 {g}',
        vs:'较前4周', vs_none:'无比较(当前状态)', den:'分母 {v}', den_units:'进场 {v}台', den_ev:'PM+故障 {v}件',
        st_ok:'稳定', st_warn:'观察中', st_bad:'建议检查', st_none:'无判定', u_pct:'%', u_ea:'台', u_case:'件', u_pt:'p',
-       g_band:'目标的默认注意区间', g_sig:'全球概况信号灯', g_risk:'故障风险分数', gd_band:'目标未填写«注意界限»时使用的区间', gd_sig:'将运营单位标为危险·注意的标准(本周故障 ÷ 平时)', gd_risk:'故障分析 TOP 20 · 全球概况 · 首页共用的分数', p_band_run_rate:'运行率', p_band_bm_per100:'每100台故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'复发设备', p_band_act_overdue:'逾期待办', p_sig_bad_x:'危险 — 平时的几倍以上', p_sig_bad_d:'危险 — 比平时多几件以上', p_sig_warn_x:'注意 — 超过平时的几倍', p_sig_warn_d:'注意 — 比平时多几件以上', p_sig_rep_bad:'危险 — 复发设备几台以上', p_sig_rep_warn:'注意 — 复发设备几台以上', p_risk_bm:'近90天每件故障', p_risk_rep:'每次复发', p_risk_up:'较前90天增加2件以上时', p_risk_recent:'近期有故障时', p_risk_pm:'长期未做PM时', p_risk_rep_days:'视为复发的间隔', p_risk_recent_days:'«近期»的长度', p_risk_pm_days:'«长期未PM»的长度', u_x:'倍', u_day:'天', u_pts:'分', u_rel:'%', g_mfc:'MFC版本判定', gd_mfc:'报警分析中的MFC版本 — 按S/N日期码(YYMMDD)区分', p_mfc_mca_f:'MRC F 起始S/N日期码', p_mfc_mca_f1:'MRC F1 起始S/N日期码', p_mfc_mkp_r1:'MKP R1 起始S/N日期', p_mfc_mkp_r2:'MKP R2 起始S/N日期', p_mfc_lead:'无更换记录的设备 — 生产日 = 进厂日 − 天数', p_mfc_lead_rep:'无S/N的更换(新版本推出后) — 生产日 = 更换日 − 天数', p_mfc_global_no:'GLOBAL型起始S/N编号(以上无AIR MFC)', g_fse:'报警分析', gd_fse:'故障分析 › 报警分析使用的标准', p_fse_recur_days:'«更换后复发»判定期间', p_fse_top:'设备排名行数', p_fse_auto_x:'自动推荐 — 平时的几倍以上', p_fse_auto_pct:'自动推荐 — 报警作业中更换比例(以上)', p_fse_auto_n:'自动推荐 — 部件数(最多)', u_part:'个', u_ymd:'YYMMDD', u_no:'号', u_rows:'行' },
+       g_band:'目标的默认注意区间', g_sig:'全球概况信号灯', g_risk:'故障风险分数', gd_band:'目标未填写«注意界限»时使用的区间', gd_sig:'将运营单位标为建议检查·观察中的标准(本周故障 ÷ 平时)', gd_risk:'故障分析 TOP 20 · 全球概况 · 首页共用的分数', p_band_run_rate:'运行率', p_band_bm_per100:'每100台故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'复发设备', p_band_act_overdue:'逾期待办', p_sig_bad_x:'建议检查 — 平时的几倍以上', p_sig_bad_d:'建议检查 — 比平时多几件以上', p_sig_warn_x:'观察中 — 超过平时的几倍', p_sig_warn_d:'观察中 — 比平时多几件以上', p_sig_rep_bad:'建议检查 — 复发设备几台以上', p_sig_rep_warn:'观察中 — 复发设备几台以上', p_risk_bm:'近90天每件故障', p_risk_rep:'每次复发', p_risk_up:'较前90天增加2件以上时', p_risk_recent:'近期有故障时', p_risk_pm:'长期未做PM时', p_risk_rep_days:'视为复发的间隔', p_risk_recent_days:'«近期»的长度', p_risk_pm_days:'«长期未PM»的长度', u_x:'倍', u_day:'天', u_pts:'分', u_rel:'%', g_mfc:'MFC版本判定', gd_mfc:'报警分析中的MFC版本 — 按S/N日期码(YYMMDD)区分', p_mfc_mca_f:'MRC F 起始S/N日期码', p_mfc_mca_f1:'MRC F1 起始S/N日期码', p_mfc_mkp_r1:'MKP R1 起始S/N日期', p_mfc_mkp_r2:'MKP R2 起始S/N日期', p_mfc_lead:'无更换记录的设备 — 生产日 = 进厂日 − 天数', p_mfc_lead_rep:'无S/N的更换(新版本推出后) — 生产日 = 更换日 − 天数', p_mfc_global_no:'GLOBAL型起始S/N编号(以上无AIR MFC)', g_fse:'报警分析', gd_fse:'故障分析 › 报警分析使用的标准', p_fse_recur_days:'«更换后复发»判定期间', p_fse_top:'设备排名行数', p_fse_auto_x:'自动推荐 — 平时的几倍以上', p_fse_auto_pct:'自动推荐 — 报警作业中更换比例(以上)', p_fse_auto_n:'自动推荐 — 部件数(最多)', u_part:'个', u_ymd:'YYMMDD', u_no:'号', u_rows:'行' },
   ja:{ m_run_rate:'稼働率', m_bm_per100:'設備100台あたり故障', m_pm_ratio:'PM比率', m_repeat14:'{d}日以内再故障設備', m_act_overdue:'期限超過の対応',
        d_run_rate:'稼働(Operation) ÷ 搬入設備 · 基準日時点', d_bm_per100:'直近4週の故障 ÷ 搬入設備 × 100', d_pm_ratio:'直近4週の PM ÷ (PM + 故障)',
        d_repeat14:'故障リスク順位で{d}日以内に再故障がある設備', d_act_overdue:'対応のうち期限を過ぎて閉じていないもの',
        w4:'直近4週', tgt:'目標 {v}', tgt_le:'以下', tgt_ge:'以上', tgt_none:'目標未設定', tgt_ok:'達成', tgt_miss:'未達 {g}', tgt_over:'超過 {g}',
        vs:'前4週比', vs_none:'比較なし(現在の状態)', den:'分母 {v}', den_units:'搬入 {v}台', den_ev:'PM+故障 {v}件',
        st_ok:'安定', st_warn:'観察中', st_bad:'点検推奨', st_none:'判定なし', u_pct:'%', u_ea:'台', u_case:'件', u_pt:'p',
-       g_band:'目標の既定注意帯', g_sig:'グローバル概況シグナル', g_risk:'故障リスク点数', gd_band:'目標に«注意境界»がないときに使う帯', gd_sig:'運営単位を危険・注意にする基準(今週の故障 ÷ 平常)', gd_risk:'故障分析 TOP 20 · グローバル概況 · ホームで共通の点数', p_band_run_rate:'稼働率', p_band_bm_per100:'設備100台あたり故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'再故障設備', p_band_act_overdue:'期限超過の対応', p_sig_bad_x:'危険 — 平常の何倍以上', p_sig_bad_d:'危険 — 平常より何件以上多い', p_sig_warn_x:'注意 — 平常の何倍超', p_sig_warn_d:'注意 — 平常より何件以上多い', p_sig_rep_bad:'危険 — 再故障設備何台以上', p_sig_rep_warn:'注意 — 再故障設備何台以上', p_risk_bm:'直近90日の故障1件あたり', p_risk_rep:'再故障1回あたり', p_risk_up:'前90日より2件以上増えたら', p_risk_recent:'最近故障があれば', p_risk_pm:'PMが長くなければ', p_risk_rep_days:'再故障とみなす間隔', p_risk_recent_days:'«最近»の長さ', p_risk_pm_days:'«PMが長くない»の長さ', u_x:'倍', u_day:'日', u_pts:'点', u_rel:'%', g_mfc:'MFCバージョン判定', gd_mfc:'アラーム分析のMFCバージョン — S/N日付コード(YYMMDD)で判定', p_mfc_mca_f:'MRC F 開始S/N日付コード', p_mfc_mca_f1:'MRC F1 開始S/N日付コード', p_mfc_mkp_r1:'MKP R1 開始S/N日付', p_mfc_mkp_r2:'MKP R2 開始S/N日付', p_mfc_lead:'交換履歴のない設備 — 製造日 = 搬入日 − この日数', p_mfc_lead_rep:'S/Nのない交換(新バージョン後) — 製造日 = 交換日 − この日数', p_mfc_global_no:'GLOBALタイプ開始S/N番号(以上はAIR MFCなし)', g_fse:'アラーム分析', gd_fse:'故障分析 › アラーム分析が使う基準', p_fse_recur_days:'«交換後の再発»の判定期間', p_fse_top:'設備ランキングの行数', p_fse_auto_x:'自動推薦 — 平常の何倍以上', p_fse_auto_pct:'自動推薦 — アラーム作業での交換割合(以上)', p_fse_auto_n:'自動推薦 — 部品数(最大)', u_part:'個', u_ymd:'YYMMDD', u_no:'番', u_rows:'行' }
+       g_band:'目標の既定注意帯', g_sig:'グローバル概況シグナル', g_risk:'故障リスク点数', gd_band:'目標に«注意境界»がないときに使う帯', gd_sig:'運営単位を点検推奨・観察中にする基準(今週の故障 ÷ 平常)', gd_risk:'故障分析 TOP 20 · グローバル概況 · ホームで共通の点数', p_band_run_rate:'稼働率', p_band_bm_per100:'設備100台あたり故障', p_band_pm_ratio:'PM比率', p_band_repeat14:'再故障設備', p_band_act_overdue:'期限超過の対応', p_sig_bad_x:'点検推奨 — 平常の何倍以上', p_sig_bad_d:'点検推奨 — 平常より何件以上多い', p_sig_warn_x:'観察中 — 平常の何倍超', p_sig_warn_d:'観察中 — 平常より何件以上多い', p_sig_rep_bad:'点検推奨 — 再故障設備何台以上', p_sig_rep_warn:'観察中 — 再故障設備何台以上', p_risk_bm:'直近90日の故障1件あたり', p_risk_rep:'再故障1回あたり', p_risk_up:'前90日より2件以上増えたら', p_risk_recent:'最近故障があれば', p_risk_pm:'PMが長くなければ', p_risk_rep_days:'再故障とみなす間隔', p_risk_recent_days:'«最近»の長さ', p_risk_pm_days:'«PMが長くない»の長さ', u_x:'倍', u_day:'日', u_pts:'点', u_rel:'%', g_mfc:'MFCバージョン判定', gd_mfc:'アラーム分析のMFCバージョン — S/N日付コード(YYMMDD)で判定', p_mfc_mca_f:'MRC F 開始S/N日付コード', p_mfc_mca_f1:'MRC F1 開始S/N日付コード', p_mfc_mkp_r1:'MKP R1 開始S/N日付', p_mfc_mkp_r2:'MKP R2 開始S/N日付', p_mfc_lead:'交換履歴のない設備 — 製造日 = 搬入日 − この日数', p_mfc_lead_rep:'S/Nのない交換(新バージョン後) — 製造日 = 交換日 − この日数', p_mfc_global_no:'GLOBALタイプ開始S/N番号(以上はAIR MFCなし)', g_fse:'アラーム分析', gd_fse:'故障分析 › アラーム分析が使う基準', p_fse_recur_days:'«交換後の再発»の判定期間', p_fse_top:'設備ランキングの行数', p_fse_auto_x:'自動推薦 — 平常の何倍以上', p_fse_auto_pct:'自動推薦 — アラーム作業での交換割合(以上)', p_fse_auto_n:'自動推薦 — 部品数(最大)', u_part:'個', u_ymd:'YYMMDD', u_no:'番', u_rows:'行' }
 };
 GST.v2t = function(k, o, lang){
   var L=lang||(GST._lang&&GST._lang())||'ko', T=GST.V2_T[L]||GST.V2_T.ko, s=T[k]!=null?T[k]:(GST.V2_T.ko[k]!=null?GST.V2_T.ko[k]:k);

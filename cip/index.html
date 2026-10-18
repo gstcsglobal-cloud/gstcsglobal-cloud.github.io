@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=189"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=190"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -131,7 +131,7 @@ tr:hover td{background:var(--glass-hover)}
 @media(max-width:1200px){.grid2,.grid2b{grid-template-columns:1fr}}
 @media(max-width:768px){.card h3{padding-right:0}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=189">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=190">
 </head>
 <body>
 
@@ -322,7 +322,7 @@ tr:hover td{background:var(--glass-hover)}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(170);   // GST.chartLayout(v174) · 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(190);   // v197 GST.deltaBadgeP·partCmp·monthPart(진행 중 구간 비교)·fcSeries(예측 계열)   // GST.chartLayout(v174) · 필터 두 벌 · 라인2 · cipRange().cols(항목 열 목록) — 옛 core.js 면 붉은 배너
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
 const VER='v50';
@@ -824,7 +824,7 @@ function render(){ GST.dq&&GST.dq.reset('cip');
 
   // ── KPI ──
   const put=(id,v)=>{document.getElementById(id).textContent=v;};
-  const {P:P0,labels:L0}=PU('cipTrend');
+  const {P:P0,labels:L0,u:U0}=PU('cipTrend');
   const lastP=P0[P0.length-1], prevP=P0[P0.length-2];
   const inP=(x,p)=>x.done&&x.done>=p.st&&x.done<=p.end;
   const newLast=fR.filter(x=>inP(x,lastP)).length;
@@ -838,7 +838,12 @@ function render(){ GST.dq&&GST.dq.reset('cip');
   const allSn=new Set(snap.map(x=>x.site+'|'+x.sn));
   put('kp6',remSn.size.toLocaleString());
   document.getElementById('kd1').innerHTML=prevRate!=null?GST.deltaBadge(rate,prevRate,false):'';
-  document.getElementById('kd5').innerHTML=prevP?GST.deltaBadge(newLast,newPrev,false):'';
+  /* 진행 중인 구간은 일 평균으로 견준다(v197 · 보완분 A1) — 17일치 43 을 완결된 117 과 견줘 「▼63%」가 서던 자리.
+     구간이 실제로 덮는 날수(lastP.st~end — end 는 기준일까지) ↔ 온전한 구간의 날수(주 7 · 달의 일수) */
+  { const dd=p=>p?Math.max(1,Math.round((p.end-p.st)/86400000)+1):0;
+    const fullD=p=>!p?0:(U0==='w'?7:new Date(Date.UTC(p.st.getUTCFullYear(),p.st.getUTCMonth()+1,0)).getUTCDate());
+    const dL=dd(lastP), fL=fullD(lastP);
+    document.getElementById('kd5').innerHTML=prevP?(GST.deltaBadgeP?GST.deltaBadgeP(newLast,newPrev,false,dL,fL,dd(prevP)):GST.deltaBadge(newLast,newPrev,false)):''; }
   put('kf1',t('kf1').replace('{d}',nD.toLocaleString()).replace('{t}',nT.toLocaleString()));
   const itemSet=new Set(snap.map(x=>x.item));
   put('kf2',t('kf2').replace('{n}',allSn.size.toLocaleString()).replace('{i}',itemSet.size));

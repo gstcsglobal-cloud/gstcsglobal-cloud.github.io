@@ -8,9 +8,9 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=189"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=190"></script>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=189">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=190">
 <style>
 /* ============================================================
    분석 작업대 (v168 · 사용자 요청 「통합관리화면」 4단계)
@@ -344,11 +344,14 @@ function preview(){ cancelAnimationFrame(_pv); _pv=requestAnimationFrame(()=>{
   const c=S.cfg; document.getElementById('pvTitle').textContent=c.title||autoTitle(c);
   const R=drawInto(document.getElementById('pv'), c, 'pv');
   document.getElementById('pvMeta').textContent=R&&!R.err?fmt(t('of'),{n:nf(R.total),m:nf(R.n)}):''; }); }
-async function setSrc(src){
-  S.cfg=Object.assign(defaultCfg(src), {src});
+async function setSrc(src, keep){
+  /* keep — 자동 새로고침·셸 «새로고침»·백필 완료가 부르는 load() 는 «자료만» 다시 읽는다(v197 · 보완분 A21).
+     예전엔 여기서 언제나 기본 설정으로 덮어, 만들던 차트가 사라지고 「이 차트 고치기」가 저장된 위젯을 기본 차트로 덮었다 */
+  const kept=(keep&&S.cfg&&S.cfg.src===src)?S.cfg:null;
+  S.cfg=kept||Object.assign(defaultCfg(src), {src});
   document.getElementById('pv').innerHTML='<div class="sd-empty">'+esc(t('loading'))+'</div>';
   try{ await loadSrc(src); }catch(e){ document.getElementById('pv').innerHTML='<div class="sd-empty">'+esc(t('fail_src'))+'</div>'; console.warn('[studio]',e); return; }
-  S.cfg=defaultCfg(src); drawForm(); preview();
+  if(!kept) S.cfg=defaultCfg(src); drawForm(); preview();
 }
 
 /* ===== 보드 ===== */
@@ -442,11 +445,12 @@ function applyLang(){
 window.setLang=function(l){ if(T[l]){ LANG=l; applyLang(); } };
 window.addEventListener('message',e=>{ const d=e.data||{}; if(d.type==='gst-lang'&&T[d.lang]){ LANG=d.lang; applyLang(); } });
 /* 테마가 바뀌면 차트 잉크를 다시 칠한다(캔버스는 CSS 변수를 못 읽는다) */
-try{ new MutationObserver(()=>{ if(S.cfg){ preview(); drawBoard(); } }).observe(document.body,{attributes:true,attributeFilter:['class']}); }catch(e){}
+/* 테마 클래스가 바뀐 때만(v197) — 이미지 저장(gst-shot)·효과 패널이 body 클래스를 바꿀 때마다 보드 전체를 다시 그렸다 */
+try{ let _th=document.body.className.match(/theme-\S+/g)+''; new MutationObserver(()=>{ const th=document.body.className.match(/theme-\S+/g)+''; if(th===_th) return; _th=th; if(S.cfg){ preview(); drawBoard(); } }).observe(document.body,{attributes:true,attributeFilter:['class']}); }catch(e){}
 async function load(){
   document.getElementById('status').textContent=t('loading');
   Object.keys(DATA).forEach(k=>delete DATA[k]);
-  await setSrc(S.cfg?S.cfg.src:'wk');
+  await setSrc(S.cfg?S.cfg.src:'wk', true);
   await GST.loadMe().catch(()=>{});
   await loadBoards(); drawBoard();
   document.getElementById('status').textContent='✅ '+new Date().toLocaleString();

@@ -6,9 +6,9 @@
 <title>사이트 상세 · CS Global Team</title>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=189"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=190"></script>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=189">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=190">
 <style>
 /* ============================================================
    사이트 상세 (v167 · 사용자 요청 「통합관리화면」 3단계)
@@ -50,7 +50,7 @@ body.st{padding:0 !important;min-height:100vh}
 .st-trend{width:100%;height:210px;display:block}
 .st-trend .bar{fill:color-mix(in srgb,var(--accent) 70%,transparent);cursor:pointer;transition:fill .15s}
 .st-trend .bar:hover{fill:var(--accent)}
-.st-trend .bar.cur{fill:var(--bad)}
+.st-trend .bar.cur{fill:color-mix(in srgb,var(--accent) 40%,transparent);stroke:var(--accent);stroke-width:1;stroke-dasharray:3 2}  /* v197(보완분 A16) — 진행 중인 부분 주를 위험색으로 칠하면 «경보»로 읽힌다. 옅은 주색 + 점선 = «아직 끝나지 않은 주» */
 .st-trend .pm{fill:none;stroke:var(--ok);stroke-width:2}
 .st-trend .pmd{fill:var(--ok)}
 .st-trend text{fill:var(--txt-muted);font-size:10px}
@@ -116,7 +116,7 @@ body.st{padding:0 !important;min-height:100vh}
     <div class="st-card">
       <h2><span data-i="trendT">주별 고장 · PM</span><span class="s" data-i="trendS">최근 26주 · 막대를 누르면 그 주의 고장 목록</span></h2>
       <svg class="st-trend" id="trend" viewBox="0 0 760 210" preserveAspectRatio="none" role="img"></svg>
-      <div class="st-legend"><span><i style="background:var(--accent)"></i><span data-i="lgBm">고장(BM)</span></span><span><i style="background:var(--ok)"></i><span data-i="lgPm">PM</span></span><span><i style="background:var(--bad)"></i><span data-i="lgCur">이번 주</span></span></div>
+      <div class="st-legend"><span><i style="background:var(--accent)"></i><span data-i="lgBm">고장(BM)</span></span><span><i style="background:var(--ok)"></i><span data-i="lgPm">PM</span></span><span><i style="background:color-mix(in srgb,var(--accent) 40%,transparent);outline:1px dashed var(--accent)"></i><span data-i="lgCur">이번 주</span></span></div>
     </div>
     <div class="st-card">
       <h2><span data-i="whereT">고장이 몰리는 곳</span><span class="s keep" data-i="whereS">최근 90일</span>
@@ -152,7 +152,7 @@ body.st{padding:0 !important;min-height:100vh}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer && GST.needVer(166);
+GST.needVer && GST.needVer(190);   // v197 GST.deltaBadgeP·partCmp·monthPart(진행 중 구간 비교)·fcSeries(예측 계열)
 GST.authGate();
 
 const T={
@@ -320,11 +320,16 @@ function render(){
 function drawKpis(){
   if(!D) return;
   /* 반입 0 = 설치현황 자료 없음 — «가동률 0%»로 적지 않는다(관제·공용 지표와 같은 규칙) */
-  const runP=D.inN?Math.round(D.runN/D.inN*100):null, d=D.bmM.length-D.bmP.length;
+  const runP=D.inN?Math.round(D.runN/D.inN*100):null;
+  /* 이번 달은 기준일까지(부분 달) — 지난달 전체와 그대로 견주면 월초일수록 «고장이 반으로 줄었다»로 읽혔다(v197 · 보완분 A1).
+     진행 중이면 일 평균으로 화살표를 정하고 «N일 기준»을 적는다. 건수(36) 자체는 그대로다 */
+  const _y=D.asOf.getUTCFullYear(), _m=D.asOf.getUTCMonth(), _full=new Date(Date.UTC(_y,_m+1,0)).getUTCDate(), _pd=new Date(Date.UTC(_y,_m,0)).getUTCDate(), _dd=D.asOf.getUTCDate();
+  const _pc=GST.partCmp?GST.partCmp(D.bmM.length,D.bmP.length,_dd,_full,_pd):{partial:false,a:D.bmM.length,b:D.bmP.length};
+  const d=_pc.partial?(_pc.a-_pc.b):(D.bmM.length-D.bmP.length), _tag=_pc.partial?' · '+GST._partT().tag.replace('{d}',_dd):'';
   const myActs=ACTS.filter(a=>a.op===S.op), late=myActs.filter(a=>a.due&&a.due<new Date().toISOString().slice(0,10)).length;
   const K=[
     {k:'units', v:nf(D.inN)+' / '+nf(D.runN), u:t('units'), d:runP==null?t('run_none'):fmt(t('run_p'),{p:runP})},
-    {k:'bm', v:nf(D.bmM.length), u:t('cases'), d:'<span class="'+(d>0?'up':d<0?'dn':'')+'">'+(d>0?'▲ ':d<0?'▼ ':'')+'</span>'+esc(fmt(t('vs_prev'),{n:D.bmP.length}))},
+    {k:'bm', v:nf(D.bmM.length), u:t('cases'), d:'<span class="'+(d>0?'up':d<0?'dn':'')+'">'+(d>0?'▲ ':d<0?'▼ ':'')+'</span>'+esc(fmt(t('vs_prev'),{n:D.bmP.length})+_tag)},
     {k:'pm', v:nf(D.pm4.length), u:t('cases'), d:''},
     {k:'risk', v:nf(D.RISK.length), u:t('units'), d:esc(fmt(t('rep'),{n:D.RISK.filter(r=>r.rep>0).length, d:GST.RISK_W.repDays}))},
     {k:'warr', v:nf(D.warrSoon.length), u:t('units'), d:esc(fmt(t('warr_in'),{n:D.warrIn}))},
