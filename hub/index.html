@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=189"></script>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=189">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=190"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=190">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/ds.css?v=1">
 <style>
 /* ============================================================
@@ -221,7 +221,7 @@ body.gst-shot .hb-tk[aria-hidden="true"]{display:none}
 .hb-dist .hb-empty{font-size:12px;color:var(--txt-muted);padding:4px 0}
 .hb-dist h4{margin:0 0 6px;font-size:12px;color:var(--txt-2);font-weight:600}
 .hb-dist .hb-hb{display:flex;flex-direction:column;gap:4px}
-.hb-dist .hb-hb button{display:grid;grid-template-columns:minmax(70px,120px) 1fr 44px;gap:6px;align-items:center;font:inherit;font-size:12px;color:inherit;background:none;border:0;padding:2px 0;cursor:pointer;text-align:left}
+.hb-dist .hb-hb button{display:grid;grid-template-columns:minmax(48px,120px) minmax(0,1fr) auto;gap:6px;align-items:center;font:inherit;font-size:12px;color:inherit;background:none;border:0;padding:2px 0;cursor:pointer;text-align:left}
 .hb-dist .hb-hb span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hb-dist .tr{height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden}
 .hb-dist .tr i{display:block;height:100%;border-radius:5px;background:var(--accent);transform-origin:left;animation:hbGrow .5s cubic-bezier(.2,.8,.2,1) both}
@@ -230,6 +230,9 @@ body.gst-shot .hb-tk[aria-hidden="true"]{display:none}
 @keyframes hbGrow{from{transform:scaleX(0)}to{transform:none}}
 @media (prefers-reduced-motion:reduce){.hb-map svg.zoom,.hb-dist .tr i{animation:none}}
 @media (max-width:640px){.hb-dist{grid-template-columns:1fr}}
+/* v197(보완분 B6) — 신호등 카드(폭 ~250px) 안의 두 칸 분포가 1,366 에서 숫자를 카드 밖(지도 테두리 위)으로 밀었다 — 좁으면 한 칸으로 쌓는다 */
+.hb-dist{min-width:0}.hb-dist > *{min-width:0;overflow:hidden}
+@media (max-width:1440px){.hb-dist.hb-dist-1{grid-template-columns:1fr}}
 .hb-bub{position:absolute;transform:translate(-50%,-50%);border-radius:50%;cursor:pointer;padding:0;
   border:2px solid var(--surface);box-shadow:0 0 0 0 transparent;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s var(--ease)}
 .hb-bub:hover{transform:translate(-50%,-50%) scale(1.15)}

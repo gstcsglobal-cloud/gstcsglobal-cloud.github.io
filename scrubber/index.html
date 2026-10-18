@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=189"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=190"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -212,7 +212,7 @@ tr:hover td{background:var(--surface-2)}
    데이터 품질 팝업(GST.dq · inst_nodate)이 모두에게 말하므로, 조회자에게서 이 표를 감춰도 조용히 빠지는 숫자는 없다. */
 body:not([data-role="admin"]):not([data-role="legacy"]) #mdCard{display:none !important}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=189">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=190">
 </head>
 <body>
 
@@ -528,7 +528,7 @@ if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="backg
 /* 이 화면의 「설치 국가」 카드는 GST.ORG.country 가 국내 법인(SK·삼성 도시명)을 국가로
    푸는 것에 기댄다(core v99). 옛 core.js 가 캐시에 남으면 그 설비가 통째로 「국가 미상」이
    되는데 에러는 안 난다 — 숫자만 조용히 틀린다. 그래서 버전을 선언해 배너로 드러낸다. */
-GST.needVer && GST.needVer(170);   // GST.chartLayout(v174) · GST.topN(진단 목록 상위 N) · GST.ymdL · 라인2 축 · GST.WARR · GST.pptCardBtn 을 쓴다
+GST.needVer && GST.needVer(190);   // v197 GST.deltaBadgeP·partCmp·monthPart(진행 중 구간 비교)·fcSeries(예측 계열)   // GST.chartLayout(v174) · GST.topN(진단 목록 상위 N) · GST.ymdL · 라인2 축 · GST.WARR · GST.pptCardBtn 을 쓴다
 const SHEET_URL=GST.sheetUrl('891608329');
 // 설치현황 컬럼 맵 — 열 번호를 박지 않고 헤더 이름으로 찾는다(GST.SM, core.js).
 // 이 시트는 128열이라 위치 고정이 특히 위험했다(type이 75열째). 이제 이름으로 따라간다.
@@ -1169,7 +1169,7 @@ function mkTrend(id,labels,cumData,lineColor,fillFrom){
       layout:{padding:{top:16}},
       plugins:{legend:{display:false},valLabel:{mode:'end',color:inkStrong(TH)}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10},maxTicksLimit:14,maxRotation:30},grid:{display:false}},
-              y:{grace:'12%',ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
+              y:{min:0,grace:'12%',ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
     plugins:[valLabelPlugin]};
   if(CHARTS[id])CHARTS[id].destroy();
   CHARTS[id]=new Chart(ctx,cfg);
@@ -1207,7 +1207,7 @@ function mkTrend2(id,d){
       layout:{padding:{top:16}},interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:true,position:'bottom',labels:{color:TH.txt,usePointStyle:true,pointStyle:'line',boxWidth:18,font:{size:11}}}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10},maxTicksLimit:14,maxRotation:30},grid:{display:false}},
-              y:{grace:'12%',ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
+              y:{min:0,grace:'12%',ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
     plugins:[endLbl]};
   if(CHARTS[id])CHARTS[id].destroy();
   CHARTS[id]=new Chart(ctx,cfg);
@@ -1230,17 +1230,19 @@ function mkNewMonthly(id,f){
   // B3 예측(당월 제외 추세) · B4 이상탐지
   const realLen=data.length; let L=labels.slice(), D=data.slice();
   let bg=D.map((_,i)=>i===realLen-1?TH.pal[0]:TH.pal[0]+'8C');
-  {const raw=(GST.linForecast?GST.linForecast(data.slice(0,-1),3):[])||[]; const fc=raw.slice(1);
-   fc.forEach((v,i)=>{L.push('+'+(i+1));D.push(v);bg.push('rgba(56,189,248,.5)');}); }
+  /* 예측은 실적과 «다른 계열»(v197 · 보완분 A2 — core 한 벌 · 빗금 + 범례 «예측(n구간)» + 정수) */
+  let FC=null;
+  if(GST.fcSeries){ const r=GST.fcSeries(labels,data,bg,{n:2,color:TH.pal[0]}); L=r.labels; D=r.data; bg=r.bg; FC=r.fc; }
   const cfg={type:'bar',data:{labels:L,datasets:[{
       data:D, backgroundColor:bg
-    }]},
+    }].concat(FC?[FC]:[])},
     options:{responsive:true,maintainAspectRatio:false,
       layout:{padding:{top:16}},
       plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)},trendAnno:{anomaly:true,realLen:Math.max(0,realLen-1)}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:6},grid:{display:false}},
-              y:{grace:'14%',ticks:{color:TH.txt,precision:0,maxTicksLimit:4},grid:{color:TH.grid}}}},
+              y:{min:0,grace:'14%',ticks:{color:TH.txt,precision:0,maxTicksLimit:4},grid:{color:TH.grid}}}},
     plugins:[valLabelPlugin].concat(GST.trendAnnoPlugin?[GST.trendAnnoPlugin]:[])};
+  if(FC) GST.fcStack(cfg);
   if(CHARTS[id])CHARTS[id].destroy();
   CHARTS[id]=new Chart(ctx,cfg);
   // 세부내역 — 키 규칙(주=GST.isoW · 월=UTC)이 위 집계와 한 벌이라 여기서 단다.
@@ -1328,7 +1330,7 @@ function mkYoY(id,labels,data){
     plugins:{legend:{display:false},valLabel:{mode:'peaks',color:inkStrong(TH)},
       tooltip:{callbacks:{afterLabel:c=>{const r=rates[c.dataIndex];return r==null?'':'YoY '+(r>0?'+':'')+r+'%';}}}},
     scales:{x:{ticks:{color:TH.txt,font:{size:10}},grid:{display:false}},
-      y:{grace:'14%',ticks:{color:TH.txt,precision:0},grid:{color:TH.grid}}}},
+      y:{min:0,grace:'14%',ticks:{color:TH.txt,precision:0},grid:{color:TH.grid}}}},
     plugins:[valLabelPlugin]};
   if(CHARTS[id])CHARTS[id].destroy();
   CHARTS[id]=new Chart(ctx,cfg);

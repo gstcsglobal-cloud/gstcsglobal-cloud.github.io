@@ -225,30 +225,34 @@ function patchTable(slideXml,signature,edits){
   const tbls=slideXml.match(/<a:tbl>[\s\S]*?<\/a:tbl>/g)||[];
   const target=tbls.find(tb=>tb.indexOf(signature)>=0);
   if(!target)return slideXml;
-  const rows=target.match(/<a:tr[\s\S]*?<\/a:tr>/g)||[];
-  let out=target;
+  /* ⚠ 셀·행을 «문자열 첫 일치»로 바꾸지 않는다 — 같은 행의 No 칸과 건수 칸 XML 이 같으면(둘 다 「2」)
+     건수가 No 칸에 들어가고 건수 칸에는 양식의 옛 값이 남았다(v197 감사 P1 · pptx 해부로 확인).
+     표를 «조각 + 행 배열 + 셀 배열»로 쪼개 위치로 고치고 위치로 다시 잇는다. */
+  const rowRe=/<a:tr[\s\S]*?<\/a:tr>/g;
+  const parts=[], rows=[]; let last=0, m;
+  while((m=rowRe.exec(target))){ parts.push(target.slice(last,m.index)); rows.push(m[0]); last=m.index+m[0].length; }
+  const tailT=target.slice(last);
+  const split=row=>{ const cellRe=/<a:tc[ >][\s\S]*?<\/a:tc>/g, ps=[], cs=[]; let l=0, mm;
+    while((mm=cellRe.exec(row))){ ps.push(row.slice(l,mm.index)); cs.push(mm[0]); l=mm.index+mm[0].length; }
+    return {ps, cs, tail:row.slice(l)}; };
+  const R=rows.map(split);
   edits.forEach(e=>{
-    const row=rows[e.r]; if(!row)return;
-    const cells=row.match(/<a:tc[ >][\s\S]*?<\/a:tc>/g)||[];
-    const cell=cells[e.c]; if(!cell)return;
-    let newCell, replaced=false;
+    const row=R[e.r]; if(!row)return;
+    const cell=row.cs[e.c]; if(!cell)return;
+    let newCell;
     if(/<a:t>[\s\S]*?<\/a:t>/.test(cell)){
       let first=true;
-      newCell=cell.replace(/<a:t>[\s\S]*?<\/a:t>/g,mm=>{ // 첫 런에 값, 나머지 런은 비움(서식 유지)
+      newCell=cell.replace(/<a:t>[\s\S]*?<\/a:t>/g,()=>{ // 첫 런에 값, 나머지 런은 비움(서식 유지)
         if(first){first=false;return '<a:t>'+esc(e.v)+'</a:t>';}
         return '<a:t></a:t>';});
-      replaced=true;
     }else{ // 빈 셀: 단락에 런 삽입 (엔드태그 직전)
       newCell=cell.replace(/(<a:p>)([\s\S]*?)(<\/a:p>)/,(mm,a,b,c)=>a+b+'<a:r><a:t>'+esc(e.v)+'</a:t></a:r>'+c);
-      replaced=newCell!==cell;
     }
-    if(replaced){
-      const newRow=row.replace(cell,newCell);
-      out=out.replace(row,newRow);
-      rows[e.r]=newRow;
-    }
+    row.cs[e.c]=newCell;
   });
-  return slideXml.replace(target,out);
+  const join=r=>r.cs.map((c,i)=>r.ps[i]+c).join('')+r.tail;
+  const out=R.map((r,i)=>parts[i]+join(r)).join('')+tailT;
+  return slideXml.replace(target,()=>out);
 }
 
 // ---- 텍스트 치환 (주차 라벨 등) ---------------------------------------------

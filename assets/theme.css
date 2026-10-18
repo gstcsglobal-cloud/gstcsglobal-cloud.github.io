@@ -974,6 +974,13 @@ body.theme-slate .gst-band{background:var(--surface-glass,var(--surface))}
 /* ③ 격자는 «뷰포트»가 아니라 «자기 폭»을 본다 — 상세 필터(300px)가 기본 열림이라 1,366 노트북에서 셋째 카드가 110px 잘렸다.
       사이드바가 열려 있으면(body.gst-sb-open) 분기점을 300px 당긴다. 닫으면 지금처럼 3열. 주간 현황의 .arow 도 같은 처지다. */
 @media(max-width:1550px){body.gst-sb-open .grid3,body.gst-sb-open .arow{grid-template-columns:repeat(2,1fr) !important}}
+/* v197(보완분 B1·B2) — 위 규칙이 chartLayout 의 «한 장만 남은 격자»(.gst-n1 · v174)까지 2열로 되돌려, 상세 필터를 연 1,280~1,536 노트북에서
+   교체 추이·교체 수량 TOP 같은 카드가 반 폭으로 혼자 서고 오른쪽 절반이 비었다. 배치 층의 판정을 다시 이기게 하고,
+   2열이 된 3장 격자는 남는 한 장이 줄을 다 쓴다(숨은·은퇴 카드는 세지 않는다) */
+@media(max-width:1550px){
+  body.gst-sb-open .grid3.gst-n1,body.gst-sb-open .arow.gst-n1{grid-template-columns:minmax(0,1fr) !important}
+  body.gst-sb-open .grid3:not(.gst-n1):not(.gst-n2) > :last-child:nth-child(odd of :not([hidden]):not([data-gst-retired]):not([data-gst-alt])){grid-column:1 / -1}
+}
 /* ④ 격자 칸의 기본 min-width 는 «내용 폭»이다 — nowrap 표가 든 카드가 667px 로 자라 페이지가 옆으로 넘쳤다(설비 현황 Warranty 표 · 실측 1,863px).
       칸은 격자 폭에 맞추고, 표는 카드 «안»에서 옆으로 민다. 숫자·열은 그대로다. */
 .grid3>*,.grid2>*,.grid2-trend>*,.arow>*,.kpis>*{min-width:0}

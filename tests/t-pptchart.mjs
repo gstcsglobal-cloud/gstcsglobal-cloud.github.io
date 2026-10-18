@@ -222,5 +222,19 @@ console.log('\n[6] 양식 내보내기 — 임베드 워크북이 «화면이 �
   is(!rows.some(r => /Micron F11|Micron F16/.test(String(r[0]||''))), '워크북 계열명이 양식 원문이 아니라 화면 이름이다');
 }
 
+console.log('\n[7] 양식 표 — 같은 행의 두 칸 XML 이 같아도 «자기 칸»에 들어가는가 (v197 감사 P1)');
+{
+  const API = (await import('module')).createRequire(import.meta.url)(ROOT + '/assets/qbr-ppt.js');
+  const cell = v => '<a:tc><a:txBody><a:p><a:r><a:t>' + v + '</a:t></a:r></a:p></a:txBody></a:tc>';
+  const tr = (...v) => '<a:tr h="1">' + v.map(cell).join('') + '</a:tr>';
+  const xml = '<p><a:tbl><a:tblGrid/>' + tr('No', '주요 현상', '건수') + tr('1', 'x', '9') + tr('2', 'y', '2') + tr('2', 'y', '2') + '</a:tbl></p>';
+  /* 2행은 No 칸과 건수 칸이 «둘 다 2» — 옛 patchTable 은 건수(6)를 No 칸에 넣고 건수 칸에 옛 값 2 를 남겼다 */
+  const out = API.patchTable(xml, '주요 현상', [{ r: 2, c: 0, v: '2' }, { r: 2, c: 1, v: 'B' }, { r: 2, c: 2, v: '6' }, { r: 3, c: 0, v: '3' }, { r: 3, c: 2, v: '4' }]);
+  const rows = out.match(/<a:tr[\s\S]*?<\/a:tr>/g).map(r => (r.match(/<a:t>(.*?)<\/a:t>/g) || []).map(t => t.slice(5, -6)).join('|'));
+  is(rows[2] === '2|B|6', `건수는 건수 칸에 (실제 ${rows[2]})`);
+  is(rows[3] === '3|y|4', `같은 XML 의 다른 행을 건드리지 않는다 (실제 ${rows[3]})`);
+  is(rows[1] === '1|x|9', '고치지 않은 행은 그대로');
+}
+
 console.log(fail ? `\n❌ t-pptchart ${pass}/${pass + fail}` : `\n✅ t-pptchart ${pass}/${pass + fail}`);
 process.exit(fail ? 1 : 0);

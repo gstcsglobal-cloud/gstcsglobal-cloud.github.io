@@ -11,7 +11,7 @@
 <script>window.ChartZoom||document.write('<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=189"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=190"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -239,7 +239,7 @@ canvas{cursor:pointer}
 .wleg i.pa{background:var(--accent-2)}
 .wleg b{color:var(--txt-main);font-variant-numeric:tabular-nums}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=189">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=190">
 </head>
 <body>
 
@@ -394,10 +394,10 @@ canvas{cursor:pointer}
         <option value="country" data-i="sl_country">국가</option>
         <option value="customer" data-i="sl_customer">고객사</option>
         <option value="line" data-i="sl_line">LINE</option>
-        <option value="process" selected data-i="sl_process">공정</option>
+        <option value="process" data-i="sl_process">공정</option>
         <option value="detail" data-i="sl_detail">세부공정</option>
         <option value="eq" data-i="sl_eq">설비</option>
-        <option value="matName" data-i="cyc_mat">자재명</option>
+        <option value="matName" selected data-i="cyc_mat">자재명</option>
         <option value="reason" data-i="th_reason">교체사유</option>
         <option value="freeReason">무상사유</option>
         <option value="pf" data-i="th_pf">유무상</option>
@@ -751,7 +751,7 @@ canvas{cursor:pointer}
 </div>
 
 <script>
-GST.needVer&&GST.needVer(170);   // GST.chartLayout(v174) · GST.kpiDrill 배지 모드 · GST.monthRows 를 쓴다 — 옛 core.js 면 붉은 배너
+GST.needVer&&GST.needVer(190);   // v197 GST.deltaBadgeP·partCmp·monthPart(진행 중 구간 비교)·fcSeries(예측 계열)   // GST.chartLayout(v174) · GST.kpiDrill 배지 모드 · GST.monthRows 를 쓴다 — 옛 core.js 면 붉은 배너
 
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif;position:relative;z-index:999999">⚠️ assets/core.js 로드 실패 — GitHub에 assets/core.js 업로드 여부와 경로를 확인하세요</div>');throw new Error('GST core missing');}
 GST.authGate();
@@ -1242,17 +1242,18 @@ function mkBarVX(id,labels,data,color,opts){
   // opts.colors — 막대마다 색이 다른 경우(급증 달만 붉게). 없으면 기존처럼 단색.
   let L=labels.slice(), D=data.slice(), bg=(opts.colors&&opts.colors.length===D.length)?opts.colors.slice():D.map(()=>color);
   const realLen=D.length;
-  if(opts.forecast&&GST.linForecast){ const base=opts.skipLast===false?data:data.slice(0,-1);
-    const raw=GST.linForecast(base,opts.forecast+(opts.skipLast===false?0:1))||[];
-    const fc=opts.skipLast===false?raw:raw.slice(1);
-    fc.forEach((v,i)=>{L.push('+'+(i+1));D.push(v);bg.push(opts.fcColor||'rgba(56,189,248,.5)');}); }
-  const cfg={type:'bar',data:{labels:L,datasets:[{data:D,backgroundColor:bg}]},
+  let FC=null;
+  /* 예측은 실적과 «다른 계열»(v197 · 보완분 A2 — core 한 벌) */
+  if(opts.forecast&&GST.fcSeries){ const r=GST.fcSeries(labels,data,bg,{n:opts.forecast,skipLast:opts.skipLast,color:color}); L=r.labels; D=r.data; bg=r.bg; FC=r.fc; }
+  const cfg={type:'bar',data:{labels:L,datasets:[{data:D,backgroundColor:bg}].concat(FC?[FC]:[])},
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:16}},
       plugins:{legend:{display:false},valLabel:{mode:opts.valMode||'peaks',color:inkStrong(TH)}},
       scales:{x:{ticks:{color:TH.txt,font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{display:false}},
               y:{grace:'14%',ticks:{color:TH.txt,precision:0,maxTicksLimit:5},grid:{color:TH.grid}}}},
     plugins:[valLabelPlugin]};
-  if(opts.anomaly&&GST.trendAnnoPlugin){ cfg.options.plugins.trendAnno={anomaly:true,realLen}; cfg.plugins.push(GST.trendAnnoPlugin); }
+  if(FC) GST.fcStack(cfg);
+  /* 이상 탐지는 예측과 같이 진행 중인 마지막 구간을 뺀다(v197 · 보완분 A1) — 17일치 막대에 붉은 «이상» 링이 찍히던 자리 */
+  if(opts.anomaly&&GST.trendAnnoPlugin){ cfg.options.plugins.trendAnno={anomaly:true,realLen:(opts.forecast&&opts.skipLast!==false)?Math.max(1,realLen-1):realLen}; cfg.plugins.push(GST.trendAnnoPlugin); }
   if(CHARTS[id])CHARTS[id].destroy(); CHARTS[id]=new Chart(ctx,cfg);
 }
 
@@ -1325,7 +1326,9 @@ function render(){ GST.skeleton(false); GST.pushState(F); GST.dq&&GST.dq.reset('
   setTxt('kd1',''); setTxt('kf1',t('kf1').replace('{n}',qtySum.toLocaleString()));
   // ② 이번 달 교체 (전월 대비)
   setTxt('kp2',monthCur.toLocaleString());
-  setTxt('kd2',GST.deltaBadge(monthCur,monthPrev,true));
+  /* 진행 중인 달은 일 평균으로 견준다(v197 · 보완분 A1) — 17일치 112건을 완결된 전월 236건과 견줘 「▼53%」가 서던 자리 */
+  const _mp=GST.monthPart?GST.monthPart(_y,_m,_n):null;
+  setTxt('kd2',_mp&&GST.deltaBadgeP?GST.deltaBadgeP(monthCur,monthPrev,true,_mp.d,_mp.full,_mp.pd):GST.deltaBadge(monthCur,monthPrev,true));
   setTxt('kf2',t('kf2').replace('{n}',monthPrev));
   /* ③ 유상 비율 — 분모는 «유상+무상»이다 (v135 · 6단계 · 사용자 확정).
      예전에는 f.length 로 나눠 pf 미기재 행까지 분모에 들었는데, 바로 아래 노트 kf3 는
@@ -1559,9 +1562,10 @@ function render(){ GST.skeleton(false); GST.pushState(F); GST.dq&&GST.dq.reset('
   // ===== 인사이트 (필터 적용 기준) =====
   {
     const ins=[];
-    const pd=GST.pctDelta(monthCur,monthPrev);
+    const _pc=(GST.partCmp&&_mp)?GST.partCmp(monthCur,monthPrev,_mp.d,_mp.full,_mp.pd):{pct:GST.pctDelta(monthCur,monthPrev)};
+    const pd=_pc.pct, _ptag=_pc.partial?' ('+GST._partT().tag.replace('{d}',_pc.d)+')':'';
     if(monthCur||monthPrev)ins.push({sev:(pd!=null&&pd>=30)?'warn':'info',
-      text:t('ins_mom').replace('{n}','<b>'+monthCur+'</b>').replace('{p}',pd==null?'—':(pd>0?'+':'')+pd+'%')});
+      text:t('ins_mom').replace('{n}','<b>'+monthCur+'</b>').replace('{p}',(pd==null?'—':(pd>0?'+':'')+pd+'%')+_ptag)});
     if(f.length){
       const fp=Math.round(free/f.length*100);
       if(fp>=45)ins.push({sev:'warn',text:t('ins_free').replace('{p}','<b>'+fp+'</b>')});
@@ -2197,7 +2201,9 @@ function renderCrossTable(){
   const f=applyExcl(LAST_F);
   const theme=GST.chartTheme();
   const rK=document.getElementById('crossRow').value;
-  const cK=document.getElementById('crossCol').value;
+  let cK=document.getElementById('crossCol').value;
+  /* 행=열이면 대각선만 찬 뜻 없는 표가 된다(v197 · 보완분 A9) — 열을 다른 축으로 돌린다 */
+  if(cK===rK){ cK=rK==='matName'?'process':'matName'; const cs=document.getElementById('crossCol'); if(cs) cs.value=cK; }
   const vK=document.getElementById('crossValue').value;
   const topN=parseInt(document.getElementById('crossTopN').value);
   function getValue(row) {
