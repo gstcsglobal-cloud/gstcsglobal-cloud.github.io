@@ -1,4 +1,4 @@
-/* t-site — 사이트 상세(/site/) (v167). 픽스처는 t-hub 과 같다(같은 자료를 두 화면이 같은 숫자로 세는지 본다).
+/* t-site — 사이트 상세(v167) → 글로벌 현황 «사이트별» 보기로 합쳤다(v198). 픽스처는 t-hub 과 같다(같은 자료를 두 화면이 같은 숫자로 세는지 본다).
    (아래 머리 주석은 t-hub 의 것을 그대로 가져왔다)
    t-hub — 통합 관제(/hub/) 첫 화면 (v165). 지어낸 자료만(t-leak).
    지키는 것: ① 숫자는 core 정본(GST.EQ · 수선실적 BM · GST.PM)으로 센다 — 카드·신호등·히트맵·팝업이 같은 모집단
@@ -82,53 +82,73 @@ const ext = []; ctx.on('request', rq => { const u = rq.url(); if (/^https?:/.tes
 
 const pg = await ctx.newPage(); const pe = []; pg.on('pageerror', e => pe.push(e.message));
 await pg.emulateMedia({ reducedMotion:'reduce' });
-await pg.goto(BASE + '/site/?op=' + encodeURIComponent('GST TAIWAN SCRUBBER'), { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(3500);
-const kp = () => pg.evaluate(() => Object.fromEntries(Array.from(document.querySelectorAll('#kpis .st-kpi')).map(b => [b.dataset.k, b.querySelector('.v').firstChild.textContent.trim()])));
-console.log('[1] 숫자 — 관제와 같은 함수(GST.ops)');
+/* v198 — 사이트 상세는 글로벌 현황의 «사이트별» 보기로 합쳤다. 옛 주소(/site/?op=)는 그 보기로 넘어간다 */
+await pg.goto(BASE + '/site/?op=' + encodeURIComponent('GST TAIWAN SCRUBBER'), { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(4000);
+const kp = () => pg.evaluate(() => Object.fromEntries(Array.from(document.querySelectorAll('#kpis .hb-kpi')).map(b => [b.dataset.k, b.querySelector('.num').textContent.replace(/,/g,'').trim()])));
+const runD = () => pg.evaluate(() => (document.querySelector('#kpis .hb-kpi[data-k="run"] .d')||{}).textContent||'');
+console.log('[0] 옛 주소 → 글로벌 현황 · 사이트별');
+is(/\/hub\//.test(pg.url()) && /view=field/.test(pg.url()), '/site/?op= 는 /hub/?view=field&op= 로 넘어간다 (' + pg.url().replace(BASE,'') + ')');
+is(await pg.evaluate(() => S.view === 'field' && S.op === 'GST TAIWAN SCRUBBER' && document.querySelector('#segView [aria-pressed="true"]').dataset.v === 'field'), '보기 = 사이트별 · 운영단위 = 대만');
+console.log('[1] 숫자 — 글로벌 현황과 같은 함수(GST.ops)');
 let K = await kp();
-is(K.units === '35 / 28', '대만 반입 35 / 가동 28 — 상태 빈칸 5대는 반입만(Turn-on 이 비면 가동이 아니다) · 받은 ' + K.units);
-const tr = await pg.evaluate(() => Array.from(document.querySelectorAll('#trend .bar')).map(b => +b.querySelector('title').textContent.split('· ')[1]));
-is(tr.length === 26 && tr[25] === 12 && tr.slice(14, 25).every(v => v === 1), '26주 추이 — 이번 주 12 · 그 앞 11주는 1 (관제 히트맵과 같다)');
-is(K.warr === '3', '워런티 90일 안 3대');
+is(K.run === '28' && /35/.test(await runD()), '대만 반입 35 / 가동 28 — 상태 빈칸 5대는 반입만(Turn-on 이 비면 가동이 아니다) · 가동 ' + K.run + ' · ' + await runD());
+const tr = await pg.evaluate(() => Array.from(document.querySelectorAll('#sdTrend rect.b')).map(b => +b.querySelector('title').textContent.split('· ')[1]));
+is(tr.length === 26 && tr[25] === 12 && tr.slice(14, 25).every(v => v === 1), '26주 추이 — 이번 주 12 · 그 앞 11주는 1 (히트맵과 같다)');
+is(K.warr === '3', '유상 전환 90일 3대');
 is(+K.risk > 0, '고장 위험 설비가 잡힌다 (' + K.risk + ')');
-await pg.click('#trend .bar[data-w="25"]'); await pg.waitForTimeout(400);
+await pg.click('#sdTrend rect.b[data-w="25"]'); await pg.waitForTimeout(400);
 is(await pg.evaluate(() => document.querySelectorAll('.gov-body tbody tr').length) === 12, '이번 주 막대를 누르면 그 12건');
 await pg.evaluate(() => GST._ovClose && GST._ovClose());
-const wh = await pg.evaluate(() => Array.from(document.querySelectorAll('#where button')).map(b => [b.querySelector('span').textContent, +b.querySelector('b').textContent]));
+const wh = await pg.evaluate(() => Array.from(document.querySelectorAll('#cWhere .sd-hb button')).map(b => [b.querySelector('span').textContent, +b.querySelector('b').textContent]));
 is(wh.length >= 1 && wh[0][0] === 'F16' && wh[0][1] === 23, '고장이 몰리는 곳(90일 · FAB) — F16 23건 (12 + 앞 11주 중 90일 안 11)');
+await pg.click('#sdBy button[data-b="model"]'); await pg.waitForTimeout(200);
+is(await pg.evaluate(() => document.querySelector('#cWhere .sd-hb button span').textContent) === 'GST-1000', '축을 «모델»로 바꾸면 모델별');
+const st = await pg.evaluate(() => document.querySelector('#cState').textContent);
+is(/Operation\s*28/.test(st) && /Set-up\s*2/.test(st) && /빈 설비 5대/.test(st), '설비 상태 — Operation 28 · Set-up 2 · 빈 상태 5대를 숫자로 밝힌다');
+const rk = await pg.evaluate(() => document.querySelectorAll('#cRiskT tbody tr.c').length);
+is(rk > 0, '고장 위험 설비 표 (' + rk + '줄)');
+await pg.click('#cRiskT tbody tr.c'); await pg.waitForTimeout(300);
+is(await pg.evaluate(() => /작업 이력/.test((document.querySelector('.gov h3,.gov .gov-title,.gov')||{}).textContent||'')), '줄을 누르면 그 설비 작업 이력');
+await pg.evaluate(() => GST._ovClose && GST._ovClose());
 if (process.env.HUB_SHOT) await pg.screenshot({ path: process.env.HUB_SHOT + '/site-light.png', fullPage:true });
-await pg.click('#fabs .st-fab[data-f="F16N"]'); await pg.waitForTimeout(400);
-is((await kp()).units === '5 / 0', 'F16N 만 보면 반입 5 / 가동 0 (사용자 보고 v170 — 예전에는 5 / 5)');
-await pg.click('#fabs .st-fab[data-f=""]'); await pg.waitForTimeout(300);
+console.log('[1b] FAB 칩 — 사이트별 보기의 카드 전부가 그 FAB 만');
+is(await pg.evaluate(() => document.querySelectorAll('#sdFabs .sd-fab').length) === 3, 'FAB 칩 — 전체 · F16 · F16N');
+await pg.click('#sdFabs .sd-fab[data-f="F16N"]'); await pg.waitForTimeout(400);
+K = await kp();
+is(K.run === '0' && /5/.test(await runD()), 'F16N 만 보면 반입 5 / 가동 0 (사용자 보고 v170 — 예전에는 5 / 5)');
+is(await pg.evaluate(() => /F16N/.test(document.getElementById('scopeX').textContent)), '범위 칩이 «대만 · F16N» 이라 적는다');
+await pg.click('#sdFabs .sd-fab[data-f=""]'); await pg.waitForTimeout(300);
+is((await kp()).run === '28', '«전체 FAB» 로 돌아온다');
 console.log('[2] 운영단위 바꾸기');
-await pg.selectOption('#opSel', 'SEC Scrubber'); await pg.waitForTimeout(500); K = await kp();
-is(K.units === '10 / 10', '국내 — 반납 2대는 안 센다(반입 10 / 가동 10)');
-is(await pg.evaluate(() => { const b = document.getElementById('krWarn'); return !!b && /원장이 비어/.test(b.title) && !/원장이 비어/.test(document.getElementById('asof').textContent); }),
-  '국내 원장이 비면 머리에 ⚠ 하나로 알린다(글로 늘어놓지 않는다 · v172)');
-await pg.selectOption('#opSel', 'GST CHINA(WUHAN) SCRUBBER'); await pg.waitForTimeout(500);
-const tr2 = await pg.evaluate(() => Array.from(document.querySelectorAll('#trend .bar')).map(b => +b.querySelector('title').textContent.split('· ')[1]));
+await pg.evaluate(() => { S.fab='F16'; });
+await pg.click('#cPick [data-op="SEC Scrubber"]'); await pg.waitForTimeout(500); K = await kp();
+is(K.run === '10' && /10/.test(await runD()) && await pg.evaluate(() => S.fab === ''), '국내 — 반납 2대는 안 센다(반입 10 / 가동 10) · FAB 칩은 «전체»로 돌아간다');
+is(await pg.evaluate(() => { const b = document.getElementById('krWarn'); return !!b && /원장이 비어/.test(b.title); }), '국내 원장이 비면 머리에 ⚠ 하나로 알린다(v172)');
+await pg.click('#cPick [data-op="GST CHINA(WUHAN) SCRUBBER"]'); await pg.waitForTimeout(500);
+const tr2 = await pg.evaluate(() => Array.from(document.querySelectorAll('#sdTrend rect.b')).map(b => +b.querySelector('title').textContent.split('· ')[1]));
 is(tr2.slice(14).every(v => v === 1), '우한 — 매주 1');
 await pg.evaluate(() => window.setLang('en')); await pg.waitForTimeout(300);
-is(await pg.evaluate(() => /Site detail/.test(document.querySelector('[data-i="title"]').textContent)), '영어로 바뀐다');
+is(await pg.evaluate(() => /Weekly failures/.test(document.querySelector('#cTrend h2').textContent)), '영어로 바뀐다');
 is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
 await pg.close();
 
-console.log('[3] 관제에서 넘어오기 — 고른 운영단위를 그대로 받는다');
+console.log('[3] 전사 요약에서 넘어오기 — 고른 운영단위 그대로 · 같은 화면 안에서');
 const ps = await ctx.newPage(); const pse = []; ps.on('pageerror', e => pse.push(e.message));
 await ps.goto(BASE + '/', { waitUntil:'domcontentloaded' }); await ps.waitForTimeout(3500);
 await ps.evaluate(() => { const o = document.getElementById('loginOverlay'); if (o) o.remove(); });
-await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(3000);   // v178 — 첫 탭이 글로벌 현황이다
+await ps.click('.tab[data-id="hub"]'); await ps.waitForTimeout(3000);
 const hub = ps.frames().find(f => /\/hub\//.test(f.url()));
-await hub.click('#sigs .hb-sig[data-op*="WUHAN"]'); await hub.waitForTimeout(300);
-await hub.click('#goSite'); await ps.waitForTimeout(4500);
-const site = ps.frames().find(f => /\/site\//.test(f.url()));
-const sel = site ? await site.evaluate(() => document.getElementById('opSel').value) : '';
-is(/WUHAN/.test(sel), '관제에서 우한을 골라 「사이트 상세」 → 사이트 화면이 우한으로 열린다 (' + sel + ')');
-/* v185 — 글로벌 현황에서 운영단위를 누르면 (지구본이 그 자리로 돈 뒤) 그 나라 지도로 들어간다. 셸 안은 움직임이 켜져 있어 «날아가는» 길을 탄다 */
+await hub.click('#sigs .hb-sig[data-op*="WUHAN"]'); await hub.waitForTimeout(900);
+/* v185 — 운영단위를 누르면 (지구본이 그 자리로 돈 뒤) 그 나라 지도로 들어간다. 셸 안은 움직임이 켜져 있어 «날아가는» 길을 탄다 */
 is(await hub.evaluate(() => S.cc === 'CN' && /WUHAN/.test(S.op || '')), '셸 안(움직임 켜짐) — 우한을 누르면 날아간 뒤 중국 지도로 들어간다');
-const tabs = await ps.evaluate(() => ({ bar:Array.from(document.querySelectorAll('.tab')).map(t => t.dataset.id).join(','), more:document.getElementById('moreBtn').classList.contains('on') }));
-is(tabs.bar === 'hub,report,fault,pm,cip,scrubber,material,tco,hr' && tabs.more,
-  '셸 탭 — 사이트 상세는 탭 줄이 아니라 «더보기»로 열리고, 열려 있으면 더보기 단추가 켜진다 (v178 · 홈은 글로벌 현황에 합쳤다 · ' + tabs.bar + ')');
+await hub.click('#goSite'); await hub.waitForTimeout(600);
+is(await hub.evaluate(() => S.view === 'field' && /WUHAN/.test(S.op || '') && !!document.getElementById('sdTrend')), '「사이트 상세 →」 → 같은 화면의 사이트별 보기(우한)');
+/* 옛 id — 다른 화면의 GST.goTab('site') · #tab=site 는 글로벌 현황 사이트별로 */
+await hub.evaluate(() => { S.view='exec'; render(); });
+await ps.evaluate(() => { sessionStorage.setItem('gst_site_sel','SEC Scrubber'); switchTab('site'); }); await hub.waitForTimeout(500);
+is(await hub.evaluate(() => S.view === 'field' && S.op === 'SEC Scrubber'), '옛 «site» 탭 id → 글로벌 현황이 사이트별(넘긴 운영단위)로 바뀐다');
+const tabs = await ps.evaluate(() => ({ bar:Array.from(document.querySelectorAll('.tab')).map(t => t.dataset.id).join(','), site:!!document.querySelector('#moreMenu [data-go="site"]') }));
+is(tabs.bar === 'hub,report,fault,pm,cip,scrubber,material,tco,hr' && !tabs.site, '셸 — 사이트 상세 탭·더보기 항목이 없다 (' + tabs.bar + ')');
 is(pse.length === 0, 'JS 에러 0 (셸)' + (pse.length ? ' → ' + pse[0] : ''));
 await browser.close(); srv.close();
 console.log(fail ? `\n❌ t-site: ${pass} 통과 · ${fail} 실패` : `\n✅ t-site: ${pass}/${pass} 통과`);

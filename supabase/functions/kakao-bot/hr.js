@@ -177,6 +177,31 @@ function mapCols(headerRow, spec) {
 }
 
 /* ---------- 인원명단 (gid 1213453343) ---------- */
+/* 국내/해외 — SPEC-SYNC: assets/core.js 의 GST.ORG.region · GST.ORG.emp 와 같은 규칙(브라우저 ↔ Deno 라 파일을 못 나눈다).
+   ⚠ 이 판정이 없어서 인원 행에 region 이 한 번도 실리지 않았다(v198 · 보완분 G12) — eduKeyOf·eduTargets 는 p.region==='국내' 로
+     갈리므로 국내 인원이 늘 해외 규칙(Basic·Veteran · 6개월)으로 세어져 국내 교육 답이 0 이었다.
+   순서도 대시보드 report 의 parseRoster 와 같다 — 시트의 「구분」 → 운영단위/사업부 → 고객사 → 지역 → 중문명·Dept·사번 다수결.
+   ⚠ core 의 국가 역산(GST.ORG.country)은 크다 — 여기서는 국가 낱말만 본다(시트가 구분·운영단위를 적어 주므로 거기까지 가는 행이 드물다). */
+const KR_RE = /^SEC|^PSEC|^KSEC|^SDC|^SK\b|KOREA|한국|국내|이천|청주|화성|평택|기흥|탕정|천안/;
+export function regionOf(s) {
+  const u = upk(s || '');
+  if (!u.trim()) return '';
+  if (KR_RE.test(u)) return '국내';
+  if (/TAICHUNG|LINKOU|TAINAN|TONGLUO|HSINCHU|SINCHU|KAOHSIUNG/.test(u)) return '해외';
+  if (/^GST|해외/.test(u)) return '해외';
+  if (/TAIWAN|CHINA|WUHAN|HEFEI|XIAN|USA|AMERICA|JAPAN|SINGAPORE|EUROPE/.test(u)) return '해외';
+  return '';
+}
+export function regionEmp(o) {
+  o = o || {};
+  let kr = 0, os = 0;
+  const cn = String(o.cn || '').trim(), dept = String(o.dept || '').trim(), id = String(o.id || '').trim();
+  if (cn) os++; else kr++;
+  if (dept) os++; else kr++;
+  if (/^20/.test(id)) kr++; else if (/^1[0-9]/.test(id)) os++;
+  if (/F1[0156]|PSMC|POWERCHIP|WINBOND|TSMC|TASC|TONGL|TAINAN|TAICHUNG/.test(upk(o.wp || ''))) os += 2;
+  return os > kr ? '해외' : (kr > os ? '국내' : '');
+}
 export function parseRoster(csvText) {
   const rows = parseCSV(csvText);
   /* SPEC-SYNC — report/index.html · hr/index.html 의 parseRoster 와 같은 규약.
@@ -228,6 +253,12 @@ export function parseRoster(csvText) {
     org:    pick('담당구분', (h) => h.includes('조직도')),
     posKo:  pick('직급(한글)', '직급'),
     onsite: pick((h) => h.includes('현장')),
+    // 국내/해외 판정 자리(v198) — 대시보드 report 의 parseRoster 와 같은 열
+    region: pick('구분'),
+    op:     pick('운영단위', '사업부'),
+    cust:   pick('고객사'),
+    area:   pick('지역'),
+    cn:     pick('이름(중문)', (h) => h.includes('name') && h.includes('중문')),
   };
   const out = [];
   for (let i = hIdx + 1; i < rows.length; i++) {
@@ -242,8 +273,12 @@ export function parseRoster(csvText) {
     const join = pd(r[ci.join]);
     // 대시보드(report:790)와 동일: 입사일 없는 행과 조직도상 Chiller 인원은 전 지표에서 제외
     if (!join || /CHILLER/i.test(org)) continue;
+    const g = (k) => String(ci[k] >= 0 ? (r[ci[k]] ?? '') : '').trim();
+    const region = regionOf(g('region')) || regionOf(g('op')) || regionOf(g('cust')) || regionOf(g('area'))
+      || regionEmp({ cn: g('cn'), dept: g('dept'), id: g('id'), wp: (r[ci.line] ?? '').trim() || (r[ci.wp] ?? '').trim() });
     out.push({
       id,
+      region,
       name: (r[ci.name] ?? '').trim(),
       dept: (r[ci.dept] ?? '').trim(),
       site: siteKey(wp),        // 표시용 정규화 표기 (예: MICRON F16N)

@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=190"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=191"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -147,7 +147,7 @@ tr:hover td{background:var(--surface-2)}
 @media print{.capbtns,.slicers,.header-right,#filtBadge{display:none!important}.card,.tablecard{break-inside:avoid;page-break-inside:avoid}.grid3{grid-template-columns:1fr 1fr}}
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=190">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=191">
 </head>
 <body>
 
@@ -934,8 +934,9 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('hr');
   const corpT=ep.length+vp.length, corpD=bd+vd;
   animVal(document.getElementById('kp3'),corpT?corpD/corpT*100:0,'%',true);
   { const el=document.getElementById('kf3');
-    if(el)el.textContent='Basic '+(ep.length?Math.round(bd/ep.length*100):0)+'%('+tr('etr_tgt')+' '+ep.length+')'
-      +' · Veteran '+(vp.length?Math.round(vd/vp.length*100):0)+'%('+tr('etr_tgt')+' '+vp.length+')'; }
+    /* v198(보완분 A10) — 분자·분모를 «값»으로 같이 적는다(kf4 와 같은 꼴). 「대상 N」만 있으면 카드 % 와 팝업 명단을 못 맞춘다 */
+    if(el)el.textContent='Basic '+(ep.length?Math.round(bd/ep.length*100)+'%':'—')+' ('+bd+'/'+ep.length+')'
+      +' · Veteran '+(vp.length?Math.round(vd/vp.length*100)+'%':'—')+' ('+vd+'/'+vp.length+')'; }
   // kp4 = 본사 교육과정(Scrubber Lv.2+Lv.3 종합) · kf4 = 과정별 세부
   const l2t=f.filter(p=>l2Tgt(p)), l2d=l2t.filter(lv2Done);   // 국내 전원 · 해외 6개월+ (l2Tgt 한 곳)
   const l3t=f.filter(p=>p.onsite&&lv2Done(p)), l3d=l3t.filter(lv3Done);
@@ -945,7 +946,7 @@ function render(){ GST.skeleton(false); GST.dq&&GST.dq.reset('hr');
   { const e=document.getElementById('kp4'), p2=l2t.length?Math.round(l2d.length/l2t.length*100):null, p3=l3t.length?Math.round(l3d.length/l3t.length*100):null;
     if(e) e.textContent=(p2==null?'—':p2+'%')+' · '+(p3==null?'—':p3+'%'); }
   { const el=document.getElementById('kf4');
-    if(el)el.textContent='Lv.2 '+(l2t.length?Math.round(l2d.length/l2t.length*100):0)+'% ('+l2d.length+'/'+l2t.length+') · Lv.3 '+(l3t.length?Math.round(l3d.length/l3t.length*100):0)+'% ('+l3d.length+'/'+l3t.length+')'; }   // 분모를 같이 적는다(v135) — 비율만 서면 팝업 명단과 못 맞춘다
+    if(el)el.textContent='Lv.2 '+(l2t.length?Math.round(l2d.length/l2t.length*100)+'%':'—')+' ('+l2d.length+'/'+l2t.length+') · Lv.3 '+(l3t.length?Math.round(l3d.length/l3t.length*100)+'%':'—')+' ('+l3d.length+'/'+l3t.length+')'; }   // 분모를 같이 적는다(v135) — 비율만 서면 팝업 명단과 못 맞춘다
   const tenn=f.map(p=>tenureYr(p)).filter(x=>x!=null);
   animVal(document.getElementById('kp5'),tenn.length?tenn.reduce((a,b)=>a+b,0)/tenn.length:0,'',true);
   animVal(document.getElementById('kp6'),f.filter(p=>p.join&&(TODAY-p.join)/MS<=365).length,'',false);

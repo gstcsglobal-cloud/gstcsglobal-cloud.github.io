@@ -248,8 +248,8 @@ const pick = await pl.evaluate(() => !!document.getElementById('cPick') && docum
 is(pick === 3, '운영단위를 안 고르고 «사이트별»을 누르면 «운영단위를 선택하세요» (3곳)');
 await pl.click('#cPick [data-op="GST TAIWAN SCRUBBER"]'); await pl.waitForTimeout(300);
 const fld = await pl.evaluate(() => ({ bm:document.querySelector('#cBm h2 .s').textContent, warr:document.querySelector('#cWarr h2 .s').textContent, scope:document.getElementById('scope').value,
-  trend:document.querySelectorAll('#cTrend rect').length, tl:!!document.querySelector('#cTrend line.tl') }));
-is(fld.trend === 12 && fld.tl, '사이트별 — 주별 고장 12주 막대 + 목표 점선(주 단위 환산)');
+  trend:document.querySelectorAll('#cTrend rect.b').length, tl:!!document.querySelector('#cTrend line.tl') }));
+is(fld.trend === 26 && fld.tl, '사이트별 — 주별 고장 26주 막대 + 목표 점선(주 단위 환산 · v198 옛 사이트 상세를 합쳤다)');
 is(/· 12$/.test(fld.bm), '대만 — 이번 주 고장 12 (' + fld.bm + ')');
 is(fld.warr === '3', '대만 — 90일 이내 워런티 만료 3대');
 await pl.click('#saveDef'); await pl.waitForTimeout(300);
@@ -329,7 +329,13 @@ console.log('[11] 판정 기준 — 코드의 기준 숫자를 화면에서 고�
 const pp = await open('/targets/', clearDB);
 const par = await pp.evaluate(() => ({ n:document.querySelectorAll('#cPar tr[data-p]').length, keys:Object.keys(GST.PARAMS).length,
   pend:document.querySelectorAll('#cPar .ds-note').length, rw:JSON.stringify(GST.params.riskW()), cw:JSON.stringify(GST.RISK_W) }));
-is(par.n === par.keys && par.n === 31, '판정 기준 31개가 표로 (' + par.n + ') — v189 에 MFC 버전 6 · 알람 분석 2 · v191 에 자동 추천 3 · v193 에 교체 리드타임 1 이 더해졌다');
+is(par.n === par.keys && par.n === 51, '판정 기준 51개가 표로 (' + par.n + ') — v189 에 MFC 버전 6 · 알람 분석 2 · v191 에 자동 추천 3 · v193 에 교체 리드타임 1 · v198 에 TCO 단가·가정 20 이 더해졌다');
+/* v198 — TCO 단가의 기본값 = TCO 화면이 쓰던 CFG_DEF 그대로(표가 비면 TCO 숫자가 한 자리도 안 움직인다) */
+{ const src = fs.readFileSync(ROOT + '/tco/index.html', 'utf8'), m = src.match(/const CFG_DEF=(\{[\s\S]*?\n\});/);
+  const def = m ? Function('return ' + m[1].replace(/\/\/[^\n]*/g, ''))() : null;
+  const cfg = await pp.evaluate(() => GST.params.tcoCfg());
+  is(def && JSON.stringify(Object.keys(def).sort().map(k => [k, def[k]])) === JSON.stringify(Object.keys(cfg).sort().map(k => [k, cfg[k]])),
+    'TCO 단가 기본값(GST.PARAMS tco_*) = TCO 화면의 옛 CFG_DEF — 표가 비면 TCO 가 그대로 (' + JSON.stringify(cfg).slice(0, 80) + '…)'); }
 is(par.rw === par.cw, '위험 점수 기본값 = 지금 core 의 GST.RISK_W 그대로 — 표가 비면 통합해도 숫자가 안 움직인다');
 const HUB = fs.readFileSync(ROOT + '/hub/index.html', 'utf8');
 const RULE0 = { badX:1.5, badD:5, warnX:1.2, warnD:3, repBad:3, repWarn:1 };   // v165~v171 관제에 박혀 있던 값 — 기본값이 이것과 같아야 표가 빌 때 숫자가 그대로다
@@ -347,7 +353,7 @@ const ps = await pp.evaluate(() => ({ r:window.__RPC.filter(r => r.fn === 'param
 is(ps.r && ps.r.args.p_key === 'band_bm_per100' && ps.r.args.p_value === 60 && ps.r.args.p_at === null, 'param_save(band_bm_per100 · 60 · 처음이라 p_at null)');
 is(ps.ch && ps.reset, '바뀐 기준에 «바뀜» 표시 · 「기본값으로」 단추');
 const live = await pp.evaluate(() => Array.from(document.querySelectorAll('#cPar .ds-pill')).map(e => e.textContent).filter(x => /^적용 중$/.test(x)).length);
-is(live === 5, '다섯 묶음(주의 띠 · 관제 신호 · 위험 점수 · MFC 버전 · 알람 분석) 모두 «지금 적용 중» — 실제로 읽는 화면이 있다');
+is(live === 6, '여섯 묶음(주의 띠 · 관제 신호 · 위험 점수 · MFC 버전 · 알람 분석 · TCO 단가) 모두 «지금 적용 중» — 실제로 읽는 화면이 있다');
 /* 관제 신호를 바꾸면 관제의 판정과 «i» 문구가 같이 바뀐다 */
 await pp.fill('#cPar tr[data-p="sig_bad_d"] [data-f="pv"]', '20'); await pp.click('#cPar tr[data-p="sig_bad_d"] [data-pa="save"]'); await pp.waitForTimeout(300);
 await pp.fill('#cPar tr[data-p="risk_rep_days"] [data-f="pv"]', '21'); await pp.click('#cPar tr[data-p="risk_rep_days"] [data-pa="save"]'); await pp.waitForTimeout(300);
@@ -380,6 +386,22 @@ const pq2 = await open('/targets/', clearDB + 'window.__ROLE={email:"view@t",can
 const ro2 = await pq2.evaluate(() => ({ ro:Array.from(document.querySelectorAll('#cPar [data-f="pv"]')).every(i => i.readOnly), b:document.querySelectorAll('#cPar [data-pa]').length }));
 is(ro2.ro && ro2.b === 0, '조회자는 판정 기준도 읽기만');
 await pq2.close();
+
+console.log('[11b] TCO 단가 — 대시보드에 저장(모두가 같은 단가) · 이 PC 값은 «임시»로 밝힌다 (v198)');
+{ const pt = await open('/tco/', clearDB + 'try{localStorage.setItem("gst_tco_cfg",JSON.stringify({pLng:1200}));}catch(e){}');
+  await pt.waitForTimeout(500);
+  const b0 = await pt.evaluate(() => ({ tmp:!document.getElementById('tcoTmp').hidden, all:!document.getElementById('cfgAll').hidden, v:document.getElementById('cfg-pLng').value }));
+  is(b0.tmp && b0.all && b0.v === '1200', '이 PC 에만 바꾼 단가로 계산 중이면 머리에 «이 PC 임시 단가» 배지 · 관리자에게 «모두에게 저장» (' + JSON.stringify(b0) + ')');
+  await pt.click('#cfgBox summary'); await pt.click('#cfgAll'); await pt.waitForTimeout(800);
+  const b1 = await pt.evaluate(() => ({ r:window.__RPC.filter(r => r.fn === 'param_save').map(r => r.args.p_key + '=' + r.args.p_value), tmp:!document.getElementById('tcoTmp').hidden,
+    ls:localStorage.getItem('gst_tco_cfg'), v:GST.params.get('tco_p_lng'), msg:document.getElementById('cfgMsg').textContent }));
+  is(b1.r.join(',') === 'tco_p_lng=1200' && !b1.tmp && b1.ls === null && b1.v === 1200 && /1개/.test(b1.msg),
+    '«모두에게 저장» → 바뀐 값만 param_save(tco_p_lng=1200) · 임시 값을 지우고 배지가 사라진다 (' + JSON.stringify(b1) + ')');
+  await pt.close();
+  const pt2 = await open('/tco/');
+  is(await pt2.evaluate(() => document.getElementById('cfg-pLng').value === '1200' && document.getElementById('tcoTmp').hidden), '다시 열면(이 PC 값 없이) 대시보드에 저장한 단가 1,200 으로 계산 · 배지 없음');
+  is(pt._pe.length === 0 && pt2._pe.length === 0, 'JS 에러 0' + ((pt._pe[0] || pt2._pe[0]) ? ' → ' + (pt._pe[0] || pt2._pe[0]) : ''));
+  await pt2.close(); }
 
 console.log('[12] 챗봇 브리핑 — 내 화면이 남기고, 챗봇이 그 글을 옮긴다(판정 사본 없이)');
 const { briefText } = await import(ROOT + '/supabase/functions/kakao-bot/brief.js');
@@ -462,7 +484,7 @@ is(shl.top.join(' ') === 'hub report fault [정비:pm+cip] scrubber [자재·비
 is(shl.badge === '2', '처리함 배지 — 미완료 2건(완료 건은 안 셈 · ' + shl.badge + ')');
 await pz2.click('#moreBtn'); await pz2.waitForTimeout(150);
 const mm = await pz2.evaluate(() => Array.from(document.querySelectorAll('#moreMenu [data-go]')).map(b => b.dataset.go).join(','));
-is(mm === 'site,studio,targets', '더보기 — 사이트 상세 · 맞춤 분석 · 목표·기준');
+is(mm === 'studio,targets', '더보기 — 맞춤 분석 · 목표·기준 (사이트 상세는 v198 에 글로벌 현황 «사이트별»로 합쳤다)');
 is(shl.explain !== 'none', '관리자에게는 「설명 표시」가 있다');
 await pz2.click('#moreMenu [data-go="targets"]'); await pz2.waitForTimeout(1500);
 const tg = await pz2.evaluate(() => ({ fr:!!document.querySelector('iframe.active[data-id="targets"]'), more:document.getElementById('moreBtn').classList.contains('on'), act:document.querySelectorAll('.tab.active').length }));

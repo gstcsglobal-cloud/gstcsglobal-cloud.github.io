@@ -35,6 +35,32 @@ console.log('[0] 설비상태 판정이 대시보드와 같은 낱말인지');
   ok(m.EQ.isIn('반출완료') === false && m.EQ.isIn('Operation') === true, 'isIn 판정');
 }
 
+/* ── 인원 행에 구분(국내/해외)이 실린다 (v198 · 보완분 G12) ─────────────────────
+   eduKeyOf·eduTargets 가 p.region==='국내' 로 갈리는데 parseRoster 가 region 을 한 번도 안 실어,
+   국내 인원이 늘 해외 규칙으로 세어져 국내 교육 답이 0 이었다. 순서는 대시보드 report 와 같다. 지어낸 값만. */
+{
+  const q = (v) => /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  const csv = (rows) => rows.map(r => r.map(q).join(',')).join('\n');
+  const R = m.parseRoster(csv([
+    ['No.','이름(영문)','이름(중문)','담당구분','단지','라인','입사일','퇴사일','현장 인원여부','구분','운영단위','고객사','지역','사원번호'],
+    ['1','K1','','Scrubber','P1','','2025-01-02','','O','국내','','','','20250001'],
+    ['2','T1','某某','Scrubber','F16','','2024-01-02','','O','해외','','','','11300001'],
+    ['3','K2','','Scrubber','H1','','2025-01-02','','O','','SEC Scrubber','','','20250002'],
+    ['4','T2','','Scrubber','','','2024-01-02','','O','','','','Taichung','11300002'],
+    ['5','K3','','Scrubber','','','2025-01-02','','O','','','','','20250003'],
+  ]));
+  const rg = Object.fromEntries(R.map(p => [p.name, p.region]));
+  ok(rg.K1 === '국내' && rg.T1 === '해외', `구분 열이 정본 — 국내/해외 (${JSON.stringify(rg)})`);
+  ok(rg.K2 === '국내', '구분이 비면 운영단위(SEC) → 국내');
+  ok(rg.T2 === '해외', '그것도 비면 지역(Taichung) → 해외');
+  ok(rg.K3 === '국내', '전부 비면 중문명·Dept·사번 다수결(사번 20xx · 중문명 없음) → 국내');
+  const asOf = new Date(Date.UTC(2026, 9, 1)), EI = m.buildEduIndex([{ id:'20250001', name:'K1', lv2date:new Date(Date.UTC(2026, 0, 5)) }]);
+  const tg = m.eduTargets(R, EI, asOf);
+  ok(tg.lv1.some(p => p.name === 'K1') && tg.lv2.some(p => p.name === 'K1') && !tg.lv2.some(p => p.name === 'K2'),
+    '국내 — Lv.2 대상은 전원 · Lv.3 대상은 Lv.2 이수자만(K1) — 해외 6개월 규칙으로 세지 않는다');
+  ok(m.eduKeyOf(R.find(p => p.name === 'K1'), 1) === 'lv2date' && m.eduKeyOf(R.find(p => p.name === 'T1'), 1) === 'bdate', '완료일 열쇠 — 국내 lv2date · 해외 bdate');
+}
+
 /* ── 설치현황 ───────────────────────────────────────── */
 if (!has('csv_inst.csv')) {
   skipped++;
