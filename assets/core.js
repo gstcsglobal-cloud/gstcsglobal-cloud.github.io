@@ -16,14 +16,10 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 191;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
-/* «이 페이지가 누구인가»는 location.pathname 이 아니라 여기서 묻는다 (v137 · 오프라인 판).
-   오프라인 단일 HTML 은 페이지를 srcdoc iframe 으로 띄우는데, srcdoc 의 pathname 은 전부
-   'srcdoc' 한 값이다 — 그대로 쓰면 축편집(axbKey)·피벗(sessionStorage)·섹션탭 저장 키가
-   여덟 페이지에서 «한 키»로 충돌하고, 챗봇 출처 라벨·자동순회 페이지 id 도 전부 같아진다.
-   에러는 하나도 안 나고, 마지막에 저장한 페이지가 남의 설정을 덮을 뿐이다. 오프라인 심이
-   페이지마다 __PAGE_PATH('/fault/')를 심고, 온라인에서는 지금까지와 한 글자도 다르지 않다. */
-GST.pagePath = function(){ return window.__PAGE_PATH || location.pathname; };
+GST.VER = 192;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+/* «이 페이지가 누구인가»는 여기서 묻는다 — 저장 키(축편집·피벗·섹션)·챗봇 출처·자동순회 페이지 id 가 이 한 곳을 본다.
+   (v137 에는 오프라인 판의 srcdoc 때문에 두었고, 오프라인 판은 v199 에 없앴다 — 한 곳에서 묻는 규약은 그대로 둔다.) */
+GST.pagePath = function(){ return location.pathname; };
 /* 효과를 «아예» 쓰지 않는 화면 (v193 · 사용자 「효과를 다 꺼야 안 느려지네 — 이 페이지만 기본값이 효과 아예 없게 · 그래야 로딩 때부터 빠르니까」).
    고장 분석은 차트가 가장 많고 알람 분석 탭이 원장 9만 행을 그린다. 효과 층(별빛 rAF · 마우스마다 카드 판정 · KPI 값 감시)과
    움직임 층(떠오르기 · 차트 차례 등장)이 로딩·스크롤을 무겁게 했다 — v192 에 줄였지만 «전부 끄기»를 해야 빨랐다(사용자 실측).
@@ -3997,7 +3993,7 @@ GST.cipRows = async function(site, key){
     throw e;
   }
 };
-/* 모든 화면이 지나는 문 — 실적·설치 3표는 여기서 «기준 정보» 규칙을 입힌다(v152). 시트·DB·캐시·오프라인 스냅샷 어느 길로 와도 같다. */
+/* 모든 화면이 지나는 문 — 실적·설치 3표는 여기서 «기준 정보» 규칙을 입힌다(v152). 시트·DB·캐시 어느 길로 와도 같다. */
 /* 미러가 아닌데 규칙이 먹는 표 — gid → 논리 이름 (v161 · 인원현황) */
 GST.VMAP_GID = { '1213453343':'roster' };
 GST.fetchCSVCached = async function(url, key){
@@ -5280,7 +5276,7 @@ GST.fx = (function(){
   const save=function(){
     try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
     F.apply();
-    /* 같은 출처의 다른 문서(탭 iframe)는 storage 이벤트로 알지만, srcdoc(오프라인 판)·막힌 저장소를 위해 메시지도 보낸다 */
+    /* 같은 출처의 다른 문서(탭 iframe)는 storage 이벤트로 알지만, 출처가 갈린 문서·막힌 저장소를 위해 메시지도 보낸다 */
     try{ document.querySelectorAll('iframe').forEach(function(f){ try{ f.contentWindow.postMessage({type:'gst-fx', s:S},'*'); }catch(e){} }); }catch(e){}
   };
   F.set=function(k,v){ if(!DEF[k]) return; if(v===F.def(k)) delete S[k]; else S[k]=!!v; save(); };

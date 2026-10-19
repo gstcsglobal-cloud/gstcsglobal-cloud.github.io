@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=191"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=192"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write) 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB(옛 동작 그대로 보인다).
@@ -14,8 +14,6 @@
    간다 — 두 버튼이 나란히 있으면 «같은 일»로 읽혔다. ⚠ 업로드 자체를 지우면 안 된다: 기간 통째 교체·원장 워크북 해석·CIP·ABP 는
    업로드만 한다(데이터 관리는 «정정»이다). editor 는 데이터 관리(/edit/ · admin 만)에 못 들어가므로 이 버튼이 유일한 입구다. */
 body:not([data-role="editor"]):not([data-role="legacy"]) #uploadBtn{display:none}
-/* 오프라인 내보내기는 admin 만(v137) — /offline/ 자체도 isAdmin 게이트라 editor 에게 보이면 눌러도 잠긴 문이다 */
-body:not([data-role="admin"]):not([data-role="legacy"]) #offlineBtn{display:none}
 /* 데이터 관리(/edit/)도 admin 만(v140) — 그 화면이 서버에서 admin+can_write 를 다시 본다(_edit_allow). 버튼은 길 안내일 뿐이다 */
 body:not([data-role="admin"]):not([data-role="legacy"]) #editBtn{display:none}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -347,9 +345,6 @@ body.theme-slate .more-menu,body.theme-slate .askpanel,body.theme-slate .kiosk-p
          새 창으로 여는 이유: 탭 iframe 에 띄우면 탭 줄에서 아무 탭도 활성이 아니게 되고,
          업로드 도중에 탭을 누르면 진행 중이던 적재 화면이 그대로 날아간다. -->
     <button class="tb-btn ic" onclick="openUpload()" id="uploadBtn" title="원본 파일 올리기 — 월 실적·원장·CIP 등을 통째·기간 단위로 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg> <span id="uploadLabel">업로드</span></button>
-    <!-- 오프라인 내보내기도 탭이 아니다(업로드와 같은 규율 · v137). 시연용 단일 HTML 과
-         데이터 스냅샷을 받는 관리 화면이라 새 창으로 연다. -->
-    <button class="tb-btn ic" onclick="openOffline()" id="offlineBtn" title="오프라인 판 내보내기 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> <span id="offlineLabel">오프라인</span></button>
     <!-- 데이터 관리 — 표를 직접 찾아 고치고·넣고·지우는 관리 화면(v140). 업로드와 같은 규율로 새 창. -->
     <button class="tb-btn ic" onclick="openEdit()" id="editBtn" title="데이터 관리 — 행 찾아 고치기 · 원본 파일 올리기 (새 창)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> <span id="editLabel">데이터 관리</span></button>
     <button class="tb-btn ic" onclick="kioskBtn()" id="kioskBtn" title="자동순회 — 글로벌 투어(지구본이 나라·사이트를 차례로) 또는 화면 순회"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 8 4 2.5-4 2.5z" fill="currentColor"/></svg> <span id="kioskLabel">자동순회</span></button>
@@ -475,10 +470,10 @@ function tabOn(t){ return !t.roles || t.roles.indexOf((document.body && document
 function barTabs(){ return TABS.filter(t=>tabOn(t)&&t.bar!==false); }
 
 const L={
-  ko:{ask:'검색 또는 질문',askAi:'챗봇에 묻기',shot:'이 화면 이미지로 저장',shotK:'이미지 저장 캡처 그림 png',fx:'효과',tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',offline:'오프라인',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!',act:'조치 사항',more:'더보기',explain:'설명 표시',on:'켬',off:'끔',search:'검색',pal_dark:'다크 모드로 바꾸기',pal_light:'라이트 모드로 바꾸기',pal_sn:'{p}에서 보기',pal_lang:'언어',rows:'행'},
-  en:{ask:'Search or ask',askAi:'Ask the chatbot',shot:'Save this screen as an image',shotK:'image screenshot capture png save',fx:'Effects',tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',offline:'Offline',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!',act:'Action items',more:'More',explain:'Show notes',on:'On',off:'Off',search:'Search',pal_dark:'Switch to dark mode',pal_light:'Switch to light mode',pal_sn:'Open in {p}',pal_lang:'Language',rows:' rows'},
-  zh:{ask:'搜索或提问',askAi:'问聊天机器人',shot:'将此画面保存为图片',shotK:'图片 截图 保存 png',fx:'效果',tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',offline:'离线版',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!',act:'待办事项',more:'更多',explain:'显示说明',on:'开',off:'关',search:'搜索',pal_dark:'切换到深色模式',pal_light:'切换到浅色模式',pal_sn:'在{p}中查看',pal_lang:'语言',rows:'行'},
-  ja:{ask:'検索または質問',askAi:'チャットボットに聞く',shot:'この画面を画像で保存',shotK:'画像 スクリーンショット 保存 png',fx:'エフェクト',tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',offline:'オフライン',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!',act:'対応事項',more:'その他',explain:'説明を表示',on:'オン',off:'オフ',search:'検索',pal_dark:'ダークモードに切替',pal_light:'ライトモードに切替',pal_sn:'{p}で見る',pal_lang:'言語',rows:'行'}
+  ko:{ask:'검색 또는 질문',askAi:'챗봇에 묻기',shot:'이 화면 이미지로 저장',shotK:'이미지 저장 캡처 그림 png',fx:'효과',tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!',act:'조치 사항',more:'더보기',explain:'설명 표시',on:'켬',off:'끔',search:'검색',pal_dark:'다크 모드로 바꾸기',pal_light:'라이트 모드로 바꾸기',pal_sn:'{p}에서 보기',pal_lang:'언어',rows:'행'},
+  en:{ask:'Search or ask',askAi:'Ask the chatbot',shot:'Save this screen as an image',shotK:'image screenshot capture png save',fx:'Effects',tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!',act:'Action items',more:'More',explain:'Show notes',on:'On',off:'Off',search:'Search',pal_dark:'Switch to dark mode',pal_light:'Switch to light mode',pal_sn:'Open in {p}',pal_lang:'Language',rows:' rows'},
+  zh:{ask:'搜索或提问',askAi:'问聊天机器人',shot:'将此画面保存为图片',shotK:'图片 截图 保存 png',fx:'效果',tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!',act:'待办事项',more:'更多',explain:'显示说明',on:'开',off:'关',search:'搜索',pal_dark:'切换到深色模式',pal_light:'切换到浅色模式',pal_sn:'在{p}中查看',pal_lang:'语言',rows:'行'},
+  ja:{ask:'検索または質問',askAi:'チャットボットに聞く',shot:'この画面を画像で保存',shotK:'画像 スクリーンショット 保存 png',fx:'エフェクト',tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!',act:'対応事項',more:'その他',explain:'説明を表示',on:'オン',off:'オフ',search:'検索',pal_dark:'ダークモードに切替',pal_light:'ライトモードに切替',pal_sn:'{p}で見る',pal_lang:'言語',rows:'行'}
 };
 let LANG='ko';
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&L[sl])LANG=sl; else if(window.name && L[window.name]) LANG=window.name; }catch(e){}
@@ -826,7 +821,6 @@ document.addEventListener('keydown',e=>{
 
 /* 업로드 화면은 별도 창. 셸의 iframe 에 띄우지 않는다 — 위 버튼 주석 참조. */
 function openUpload(){ window.open('/upload/','gstUpload'); }
-function openOffline(){ window.open('/offline/','gstOffline'); }
 function openEdit(){ window.open('/edit/','gstEdit'); }
 
 function applyLang(){
@@ -835,13 +829,12 @@ function applyLang(){
   document.getElementById('refreshLabel').textContent=lt('refresh');
   document.getElementById('shareLabel').textContent=lt('share');
   document.getElementById('uploadLabel').textContent=lt('upload');
-  document.getElementById('offlineLabel').textContent=lt('offline');
   document.getElementById('editLabel').textContent=lt('edit');
   document.getElementById('actLabel').textContent=lt('act');
   document.getElementById('moreLabel').textContent=lt('more');
   document.getElementById('mExplainL').textContent=lt('explain');
   /* 아이콘 단추(v196)는 글자가 숨어 있다 — 뜻은 title(툴팁)로. 라벨 span 의 글자와 같은 사전이다 */
-  [['logoutBtn','logout'],['shareBtn','share'],['offlineBtn','offline'],['moreBtn','more']].forEach(function(a){ const b=document.getElementById(a[0]); if(b) b.title=lt(a[1]); });
+  [['logoutBtn','logout'],['shareBtn','share'],['moreBtn','more']].forEach(function(a){ const b=document.getElementById(a[0]); if(b) b.title=lt(a[1]); });
   { const pl=document.getElementById('palLabel'); if(pl) pl.textContent=lt('search'); const ai=document.getElementById('askInp'); if(ai){ ai.placeholder=lt('ask'); ai.setAttribute('aria-label', lt('ask')); } }
   { const fl=document.getElementById('fxLabel'); if(fl) fl.textContent=lt('fx'); const fb=document.getElementById('fxBtn'); if(fb) fb.title=lt('fx'); fxMark(); }
   { const mac=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||''); document.getElementById('palKbd').textContent=mac?'⌘K':'Ctrl K'; document.getElementById('palBtn').title=(mac?'⌘K':'Ctrl+K'); }
@@ -1019,23 +1012,10 @@ function askFacts(ms){
    ⚠ frames[t.id] 는 «만들 때» 채운다 — 나중에 채우면 그 사이에 사람이 탭을 눌러
      같은 페이지가 두 번 만들어진다. */
 const ASK_BATCH=2, ASK_GAP=2500;
-/* iframe 의 «내용이 어디서 오나»는 이 한 곳이다 (v137 · 오프라인 판).
-   온라인은 지금까지처럼 배포 주소(src). 오프라인 단일 HTML(window.__OFFLINE_FILES 존재)은
-   같은 페이지를 srcdoc 으로 심는다 — file:// 에는 서버가 없어 src 로는 열 수 없고,
-   srcdoc 은 부모 출처를 상속해 parent.__SNAP(스냅샷)을 읽을 수 있다.
-   ⚠ ?f= 딥링크는 srcdoc 에서 location.search 가 비므로 쓸 수 없다 — 오프라인은 load 뒤
-   gst-filter 로 같은 값을 보낸다(core 가 250ms×40 재시도로 받는 기존 경로 · v103). */
+/* iframe 의 «내용이 어디서 오나»는 이 한 곳이다 — 배포 주소 + 필터(?f=) · 섹션(?sec=). */
 function frameSrc(f, tab, fState, sec){
-  if(window.__OFFLINE_FILES){
-    /* 등급 전용 탭(데모 · v146)은 오프라인 판에 «일부러» 넣지 않는다 — 오프라인은 조회자 고정이라 탭이 안 보이고, 데모 표는 스냅샷에 없다.
-       그 탭만 «없다»고 말하는 쪽지를 띄운다. 그 밖의 경로가 없으면 지금처럼 저쪽이 크게 던진다(조립 사고는 조용하면 안 된다). */
-    if(tab.roles && !tabOn(tab)){ f.srcdoc='<!doctype html><meta charset="utf-8"><p style="font:14px sans-serif;padding:24px;color:#555">이 화면은 오프라인 판에 없습니다.</p>'; return; }   // ⚠ body 닫는 태그를 쓰지 말 것(주석에도) — 오프라인 조립기가 셸에서 그 태그를 정확히 1개로 센다
-    f.srcdoc = window.__offlinePage(tab.path);   // 없는 경로면 저쪽이 크게 던진다 — 조용한 빈 탭 금지 · ⚠ 섹션 링크(sec)는 오프라인 판에서 안 먹는다(srcdoc 에 location.search 가 없다)
-    if(fState) f.addEventListener('load', ()=>{ try{ f.contentWindow.postMessage({type:'gst-filter', f:fState}, '*'); }catch(e){} });
-  } else {
-    const q=new URLSearchParams(); if(fState) q.set('f', fState); if(sec) q.set('sec', sec);
-    const qs=q.toString(); f.src = BASE + tab.path + (qs ? ('?'+qs) : '');
-  }
+  const q=new URLSearchParams(); if(fState) q.set('f', fState); if(sec) q.set('sec', sec);
+  const qs=q.toString(); f.src = BASE + tab.path + (qs ? ('?'+qs) : '');
 }
 function askLoadAll(){
   const miss=barTabs().filter(t=>!frames[t.id]);   // 이 등급에게 안 보이는 탭(데모)·툴바로 여는 화면은 불러오지 않는다(v146 · v172)
@@ -1365,7 +1345,7 @@ function bootFx(cv){
    명령 팔레트 (Ctrl K · v171) — UI·찾기는 core GST.palette 한 벌. 여기서는 «무엇을 찾을지»만 만든다.
    화면(탭 전부 · 툴바로 여는 화면 포함) · 기능(툴바 단추와 같은 함수) · 설비 S/N(GST.SN_PAGES · 표의 S/N 메뉴와 같은 길) ·
    지금 화면의 카드(그 iframe 에 묻는다 — gst-pal-q/a).
-   ⚠ 등급 판정은 툴바 CSS 와 같다 — 툴바에 안 보이는 기능은 여기에도 없다(업로드 = editor·legacy · 데이터 관리·오프라인·설명 표시 = admin·legacy).
+   ⚠ 등급 판정은 툴바 CSS 와 같다 — 툴바에 안 보이는 기능은 여기에도 없다(업로드 = editor·legacy · 데이터 관리·설명 표시 = admin·legacy).
    ============================================================ */
 const PAL_IC={
   refresh:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>',
@@ -1403,7 +1383,6 @@ function palItems(q){
   A.push({id:'act:fx', label:lt('fx'), icon:PAL_IC.note, run:()=>GST.fx&&GST.fx.panel(true), kw:'효과 effects 이펙트 애니메이션 animation 效果 エフェクト'});
   if(adm) A.push({id:'act:edit', label:lt('edit'), icon:PAL_IC.edit, run:openEdit, kw:'데이터 관리 data edit 数据管理 データ管理'});
   if(ed)  A.push({id:'act:upload', label:lt('upload'), icon:PAL_IC.up, run:openUpload, kw:'업로드 upload 上传 アップロード'});
-  if(adm) A.push({id:'act:offline', label:lt('offline'), icon:PAL_IC.down, run:openOffline, kw:'오프라인 offline 离线 オフライン'});
   if(adm) A.push({id:'act:explain', label:lt('explain'), sub:explainOnNow()?lt('on'):lt('off'), icon:PAL_IC.note, run:explainToggle, kw:'설명 표시 notes explain 说明 説明'});
   A.push({id:'act:logout', label:lt('logout'), icon:PAL_IC.out, run:doLogout, kw:'로그아웃 logout sign out 登出 ログアウト'});
   A.forEach(a=>{ a.g='act'; out.push(a); });

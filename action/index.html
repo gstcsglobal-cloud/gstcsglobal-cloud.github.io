@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>조치 사항 · CS Global Team</title>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=191"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=192"></script>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=191">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=192">
 <style>
 /* ============================================================
    처리함 (v166 · 사용자 요청 「통합관리화면」 2단계)
@@ -169,7 +169,6 @@ ko:{title:'조치 사항',sub:'글로벌 현황에서 등록한 조치 · 담당
   ro:'읽기 전용 — 담당자를 정하거나 상태를 바꾸려면 관리자에게 권한을 요청하세요',
   nosql_v:'조치 사항을 아직 쓸 수 없습니다 — 관리자에게 알려 주세요',
   nosql:'서버 준비가 아직 안 됐습니다 — 관리자가 supabase/setup-24-actions.sql 을 Run 해야 조치 사항이 열립니다',
-  offline:'오프라인 판에서는 조치 사항을 쓸 수 없습니다(공유 기록이 서버에 있습니다)',
   conflict:'그새 다른 사람이 이 일을 바꿨습니다 — 지금 값으로 다시 열었습니다. 다시 확인하고 바꿔 주세요',
   already:'같은 신호의 새 일이 이미 열려 있습니다 — 그 일에서 이어 가세요',
   saved:'저장했습니다',added:'담았습니다',fail:'저장하지 못했습니다',cancel:'취소',save:'등록',
@@ -193,7 +192,6 @@ en:{title:'Action items',sub:'Items registered from Global overview · owner · 
   ro:'Read only — ask an administrator for access to assign or change status',
   nosql_v:'Action items are not available yet — tell the admin',
   nosql:'Server is not ready — an administrator must run supabase/setup-24-actions.sql',
-  offline:'Action items are not available in the offline edition (the shared log lives on the server)',
   conflict:'Someone changed this item in the meantime — reopened with the latest values. Please check and try again',
   already:'A newer item for the same signal is already open — continue there',
   saved:'Saved',added:'Added',fail:'Could not save',cancel:'Cancel',save:'Add',
@@ -217,7 +215,6 @@ zh:{title:'待办事项',sub:'从全球概况加入的事项 · 负责人 · 期
   ro:'只读 — 如需指定负责人或更改状态，请向管理员申请权限',
   nosql_v:'暂时无法使用待办事项 — 请联系管理员',
   nosql:'服务器尚未准备好 — 管理员需要运行 supabase/setup-24-actions.sql',
-  offline:'离线版无法使用待办事项（共享记录在服务器上）',
   conflict:'其他人刚刚修改了此事项 — 已按最新值重新打开，请确认后再修改',
   already:'同一信号的新事项已经打开 — 请在那里继续',
   saved:'已保存',added:'已加入',fail:'保存失败',cancel:'取消',save:'加入',
@@ -241,7 +238,6 @@ ja:{title:'対応事項',sub:'グローバル概況から登録した事項 · �
   ro:'閲覧のみ — 担当の指定や状態の変更には管理者に権限を依頼してください',
   nosql_v:'対応事項はまだ使えません — 管理者にお知らせください',
   nosql:'サーバーの準備ができていません — 管理者が supabase/setup-24-actions.sql を実行する必要があります',
-  offline:'オフライン版では対応事項を使えません（共有記録はサーバーにあります）',
   conflict:'他の人がこの事項を変更しました — 最新の値で開き直しました。確認してからもう一度変更してください',
   already:'同じ信号の新しい事項がすでに開いています — そちらで続けてください',
   saved:'保存しました',added:'登録しました',fail:'保存できませんでした',cancel:'キャンセル',save:'登録',
@@ -261,7 +257,6 @@ let C=null;   // supabase 클라이언트
 /* ===== 읽기 ===== */
 async function load(){
   S.state='loading'; draw();
-  if(window.__OFFLINE__){ S.state='offline'; draw(); return; }
   try{
     C = await GST.db();
     if(!C){ S.state='err'; S.err='no client'; draw(); return; }
@@ -301,7 +296,6 @@ function filtered(){
 function draw(){
   const W=document.getElementById('warn');
   W.innerHTML = S.state==='nosql'?'<div class="ac-warn">'+esc(t(GST.isAdmin&&GST.isAdmin()?'nosql':'nosql_v'))+'</div>'
-    : S.state==='offline'?'<div class="ac-warn">'+esc(t('offline'))+'</div>'
     : S.state==='err'?'<div class="ac-warn">'+esc(t('err'))+(GST.isAdmin&&GST.isAdmin()&&S.err?' — '+esc(S.err):'')+'</div>'
     : (S.state==='ok'&&!GST.actCan())?'<div class="ac-warn">'+esc(t('ro'))+'</div>':'';
   document.getElementById('addBtn').hidden=!(S.state==='ok'&&GST.actCan());
