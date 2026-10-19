@@ -251,6 +251,59 @@ console.log('\n[5] 상위 12 밖은 «기타»로 담고, 설비에 없는 값�
      `TOTAL = 11+5+3 = 19명 — 설비에 없는 TSMC 7명은 «기타»로 몰지 않는다 (실제 ${tot ? hc(tot) : '-'})`);
 }
 
+/* ══════════════════════════════════════════════════════════════
+   [6] 행 순서를 사람이 끌어서 바꾼다 (v200 · 사용자 요청)
+   ⚠ 보이는 순서만 바뀌어야 한다 — 행마다의 숫자·기타·TOTAL 은 한 자리도 안 움직인다.
+     담는 통(상위 12 · 기타)은 대수 순으로 정하고, 순서는 그 «뒤에» 사본에만 건다.
+   ══════════════════════════════════════════════════════════════ */
+console.log('\n[6] 가동현황 표 — 끌어서 순서 바꾸기 · 이 PC 에 남기 · 초기화');
+{
+  const f = page.frames().find(x => /\/report\//.test(x.url()));
+  const R0 = await f.evaluate(() => [...document.querySelectorAll('#opTblBody tr')].map(tr => ({
+    lbl:(tr.querySelector('.lb') || {}).textContent.trim(), h:!!tr.querySelector('.opdrag'),
+    k:tr.dataset.k || '', cells:[...tr.querySelectorAll('td:not(.corp):not(.lb)')].map(c => c.textContent.trim()).join('|') })));
+  const lbls = R0.map(r => r.lbl);
+  is(R0.filter(r => r.h).length === 12, `손잡이는 옮길 수 있는 행에만 — 12개 (실제 ${R0.filter(r => r.h).length})`);
+  is(!R0.filter(r => r.lbl === '기타' || r.lbl === 'TOTAL').some(r => r.h), '「기타」·TOTAL 에는 손잡이가 없다');
+  const textOK = await f.evaluate(() => { const lb = document.querySelector('#opTblBody .opdrag').closest('td');
+    return lb.textContent === lb.textContent.replace(/[⋮⠿≡]/g, ''); });
+  is(textOK, '손잡이는 글자가 아니다 — PPT·복사가 읽는 행 이름에 섞이지 않는다');
+  const src = lbls.indexOf('Customer E Corporation'), dst = lbls.indexOf('Customer B Corporation');
+  await f.evaluate(() => document.getElementById('opTblBody').scrollIntoView({ block:'center' }));
+  await page.waitForTimeout(300);
+  const hs = await f.$$('#opTblBody .opdrag');
+  const a = await hs[src].boundingBox(), b = await hs[dst].boundingBox();
+  await page.mouse.move(a.x + 4, a.y + 6); await page.mouse.down();
+  await page.mouse.move(b.x + 4, b.y + 2, { steps:8 }); await page.mouse.up();
+  await page.waitForTimeout(600);
+  const rd = () => f.evaluate(() => [...document.querySelectorAll('#opTblBody tr')].map(tr => ({
+    lbl:(tr.querySelector('.lb') || {}).textContent.trim(),
+    cells:[...tr.querySelectorAll('td:not(.corp):not(.lb)')].map(c => c.textContent.trim()).join('|') })));
+  const R1 = await rd();
+  const L1 = R1.map(r => r.lbl);
+  is(L1[dst] === 'Customer E Corporation' && L1[dst + 1] === 'Customer B Corporation',
+     `E 를 B 위로 끌면 E 가 B 자리에 선다 (실제 ${L1.slice(0, 6).join(' / ')})`);
+  is(L1[L1.length - 2] === '기타' && L1[L1.length - 1] === 'TOTAL', '「기타」·TOTAL 은 그대로 맨 아래');
+  const byL = rows => Object.fromEntries(rows.map(r => [r.lbl, r.cells]));
+  const b0 = byL(R0), b1 = byL(R1);
+  is(Object.keys(b0).length === Object.keys(b1).length && Object.keys(b0).every(k => b0[k] === b1[k]),
+     '행마다의 숫자(가동·챔버·인원·TO·PM)와 기타·TOTAL 이 한 칸도 안 바뀐다');
+  const saved = await f.evaluate(() => Object.keys(localStorage).filter(k => /^gst_rpt_opord:/.test(k)).map(k => k + '=' + localStorage.getItem(k)));
+  is(saved.length === 1 && /^gst_rpt_opord:cust=/.test(saved[0]) && /Customer E Corporation/.test(saved[0]),
+     `순서는 단계(고객사)마다 이 PC 에 남는다 (${saved.join(' ; ').slice(0, 80)})`);
+  is(await f.evaluate(() => !document.getElementById('opOrdReset').hidden), '정한 순서가 있으면 「순서 초기화」가 보인다');
+  await reload();
+  const f2 = page.frames().find(x => /\/report\//.test(x.url()));
+  const L2 = await f2.evaluate(() => [...document.querySelectorAll('#opTblBody tr')].map(tr => (tr.querySelector('.lb') || {}).textContent.trim()));
+  is(L2.join('/') === L1.join('/'), '다시 열어도 그 순서 그대로');
+  await f2.evaluate(() => document.getElementById('opTblBody').scrollIntoView({ block:'center' }));
+  await f2.click('#opOrdReset'); await page.waitForTimeout(600);
+  const L3 = await f2.evaluate(() => [...document.querySelectorAll('#opTblBody tr')].map(tr => (tr.querySelector('.lb') || {}).textContent.trim()));
+  is(L3.join('/') === lbls.join('/'), '「순서 초기화」를 누르면 대수 순으로 돌아온다');
+  is(await f2.evaluate(() => document.getElementById('opOrdReset').hidden
+       && !Object.keys(localStorage).some(k => /^gst_rpt_opord:/.test(k))), '초기화하면 저장값이 지워지고 단추가 숨는다');
+}
+
 is(!errs.length, 'JS 에러 0건' + (errs.length ? ' → ' + errs[0] : ''));
 await browser.close(); srv.close();
 console.log(fail ? `\n❌ t-optbl ${pass}/${pass + fail}` : `\n✅ t-optbl ${pass}/${pass + fail}`);
