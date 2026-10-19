@@ -113,15 +113,15 @@ console.log('[5] 셸 상단 — 등급마다 «데이터 입구»가 맞게 보�
   await sp.goto('file://' + ROOT + '/index.html');
   const vis = r => sp.evaluate(role => {
     if (role) document.body.dataset.role = role; else delete document.body.dataset.role;
-    return ['uploadBtn', 'editBtn', 'offlineBtn'].filter(i => getComputedStyle(document.getElementById(i)).display !== 'none').join(' ');
+    return ['uploadBtn', 'editBtn'].filter(i => getComputedStyle(document.getElementById(i)).display !== 'none').join(' ');
   }, r);
   let v;
-  v = await vis('admin');  is(v === 'editBtn offlineBtn', 'admin — 「데이터 관리」(+오프라인)뿐 · 업로드는 그 안에서: ' + v);
+  v = await vis('admin');  is(v === 'editBtn', 'admin — 「데이터 관리」뿐 · 업로드는 그 안에서: ' + v);
   v = await vis('editor'); is(v === 'uploadBtn', 'editor — 「업로드」뿐 (데이터 관리는 admin 전용이라 이것이 유일한 입구): ' + v);
   v = await vis('viewer'); is(v === '', 'viewer — 데이터 입구 없음: ' + v);
   v = await vis('');       is(v === '', '등급 미상(로그인 직후) — 없음 (fail-closed): ' + v);
   v = await vis('superuser'); is(v === '', '모르는 등급 — 없음 (음성 대조): ' + v);
-  v = await vis('legacy'); is(v === 'uploadBtn editBtn offlineBtn', 'legacy(role 열 없음) — 옛 동작 그대로 셋 다: ' + v);
+  v = await vis('legacy'); is(v === 'uploadBtn editBtn', 'legacy(role 열 없음) — 옛 동작 그대로 둘 다: ' + v);
   await ctx.close();
 }
 
