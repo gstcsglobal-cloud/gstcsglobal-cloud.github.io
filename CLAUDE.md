@@ -4610,6 +4610,8 @@ PM 「주기 없음」 KPI(A6)·인원 분모(A10)는 숫자의 뜻이 바뀐다
 **챗봇 인원 구분(kakao-bot hr.js)** — `parseRoster` 가 `region` 을 한 번도 안 실어, `eduKeyOf`·`eduTargets`(p.region==='국내')가 늘 해외 규칙으로 갈려
 **국내 교육 답이 0** 이었다(보완분 G12). `regionOf`·`regionEmp` 를 core `GST.ORG.region`·`emp` 와 같은 규칙으로 두고(SPEC-SYNC) 대시보드 report 와 같은 순서
 (구분 → 운영단위/사업부 → 고객사 → 지역 → 중문명·Dept·사번 다수결)로 판정한다. ⚠ core 의 국가 역산은 국가 낱말만 옮겼다. `t-hr` 이 픽스처 없이 지킨다(음성 대조: region 을 빼면 일곱 건이 붉다).
+**kakao-bot v99 배포**(2026-10-19 · verify_jwt false 그대로). 배포 전 대조: v98 배포본 = 저장소 HEAD(세 파일 바이트 동일 · 콘솔 전용 수정 없음) — 바뀐 것은 hr.js 하나.
+배포 뒤 세 파일 md5 가 저장소와 정확히 같다(index.ts cc7ab6da… · hr.js 602298f4… · brief.js 8e402665…).
 
 `GST.VER` 191 · `?v=191` · tco `needVer(191)`.
 
