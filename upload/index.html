@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=190"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=191"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{color:#1d2433;background:#F5F6F8;min-height:100vh;padding:24px 28px;font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif}
@@ -741,8 +741,9 @@ window.checkFile=async function(){
           o[GST._snake(k)]=v===''?null:v; });
         extraCols.forEach(x=>{ const v=String(r[x.i]==null?'':r[x.i]).trim(); if(v!=='')ex[x.h]=v; });
         o.extra=Object.keys(ex).length?ex:null;
-        /* 날짜·시각·숫자 다듬기(v189) — SPEC 이 dates·stamps·nums 를 선언한 표만(FSE 원장). 수선·자재·설치는 선언이 없어 한 글자도 안 바뀐다
-           (sheet-sync toRows 와의 전 칸 대조 — t-upload — 그대로). */
+        /* 날짜·시각·숫자 다듬기(v189) — SPEC 이 dates·stamps·nums 를 선언한 표만(FSE 원장). 수선·설치는 선언이 없어 한 글자도 안 바뀐다
+           (sheet-sync toRows 와의 전 칸 대조 — t-upload — 그대로). 자재실적은 v198 에 serials(«시리얼 숫자일 때만» 날짜로)를 선언했다 —
+           문자열 날짜는 손대지 않으므로 그 대조도 그대로다. */
         GST.SM.normRow&&GST.SM.normRow(S,o);
         return o;
       });

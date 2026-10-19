@@ -39,12 +39,12 @@ async function ctxOf(reduce) {
 console.log('[1] 어느 화면에 붙나');
 let ctx = await ctxOf(false);
 const on = {};
-for (const p of ['report', 'fault', 'material', 'pm', 'scrubber', 'tco', 'cip', 'hr', 'hub', 'site']) {
+for (const p of ['report', 'fault', 'material', 'pm', 'scrubber', 'tco', 'cip', 'hr', 'hub']) {
   const pg = await ctx.newPage(); await pg.goto(BASE + '/' + p + '/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(400);
   on[p] = await pg.evaluate(() => document.body.classList.contains('gst-motion')); await pg.close();
 }
 is(on.report, '주간현황에도 붙는다 (v178)');
-is(['material','pm','scrubber','tco','cip','hr','hub','site'].every(p => on[p]), '나머지 화면에는 붙는다 (' + Object.keys(on).filter(k => on[k]).join(',') + ')');
+is(['material','pm','scrubber','tco','cip','hr','hub'].every(p => on[p]), '나머지 화면에는 붙는다 (' + Object.keys(on).filter(k => on[k]).join(',') + ')');
 is(!on.fault, '고장 분석에는 안 붙는다 (v193 · 효과 없이 · t-fx [10] 과 같은 판정)');
 console.log('[2] 카드 · KPI');
 let pg = await ctx.newPage(); const pe = []; pg.on('pageerror', e => pe.push(e.message));

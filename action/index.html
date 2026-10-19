@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>조치 사항 · CS Global Team</title>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=190"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=191"></script>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=190">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=191">
 <style>
 /* ============================================================
    처리함 (v166 · 사용자 요청 「통합관리화면」 2단계)
@@ -139,6 +139,8 @@ body.ac{padding:0 !important;min-height:100vh}
       <label style="flex:1"><span data-i="f_due">기한</span><input class="ac-in" id="fDue" type="date"></label>
     </div>
     <label><span data-i="f_who">담당</span><select class="ac-in" id="fWho"></select></label>
+    <!-- v198(보완분 A23) — 직접 추가한 일도 운영단위를 가진다. 없으면 글로벌 현황 «사이트별»·운영 관리의 그 운영단위 목록에 안 섰다 -->
+    <label><span data-i="f_op">운영단위</span><input class="ac-in" id="fOp" list="fOpL" autocomplete="off"><datalist id="fOpL"></datalist></label>
     <div class="ac-row" style="justify-content:flex-end"><button type="button" class="ac-btn" id="dlgNo" data-i="cancel">취소</button><button type="button" class="ac-btn pri" id="dlgOk" data-i="save">담기</button></div>
   </div>
 </div>
@@ -171,7 +173,7 @@ ko:{title:'조치 사항',sub:'글로벌 현황에서 등록한 조치 · 담당
   conflict:'그새 다른 사람이 이 일을 바꿨습니다 — 지금 값으로 다시 열었습니다. 다시 확인하고 바꿔 주세요',
   already:'같은 신호의 새 일이 이미 열려 있습니다 — 그 일에서 이어 가세요',
   saved:'저장했습니다',added:'담았습니다',fail:'저장하지 못했습니다',cancel:'취소',save:'등록',
-  add_t:'일 직접 추가',f_title:'제목',f_detail:'내용',f_sev:'중요도',f_due:'기한',f_who:'담당',
+  add_t:'일 직접 추가',f_title:'제목',f_detail:'내용',f_sev:'중요도',f_due:'기한',f_who:'담당',f_op:'운영단위',
   me:'나',days:'{n}일 지남',today:'오늘',ago_m:'{n}분 전',ago_h:'{n}시간 전',ago_d:'{n}일 전',
   loading:'불러오는 중…',err:'조치 사항을 읽지 못했습니다'},
 en:{title:'Action items',sub:'Items registered from Global overview · owner · due · progress',reload:'Refresh',add:'+ Add item',
@@ -195,7 +197,7 @@ en:{title:'Action items',sub:'Items registered from Global overview · owner · 
   conflict:'Someone changed this item in the meantime — reopened with the latest values. Please check and try again',
   already:'A newer item for the same signal is already open — continue there',
   saved:'Saved',added:'Added',fail:'Could not save',cancel:'Cancel',save:'Add',
-  add_t:'Add item',f_title:'Title',f_detail:'Details',f_sev:'Severity',f_due:'Due',f_who:'Owner',
+  add_t:'Add item',f_title:'Title',f_detail:'Details',f_sev:'Severity',f_due:'Due',f_who:'Owner',f_op:'Operating unit',
   me:'me',days:'{n} days late',today:'today',ago_m:'{n} min ago',ago_h:'{n} h ago',ago_d:'{n} d ago',
   loading:'Loading…',err:'Could not read action items'},
 zh:{title:'待办事项',sub:'从全球概况加入的事项 · 负责人 · 期限 · 进展',reload:'刷新',add:'+ 新增',
@@ -219,7 +221,7 @@ zh:{title:'待办事项',sub:'从全球概况加入的事项 · 负责人 · 期
   conflict:'其他人刚刚修改了此事项 — 已按最新值重新打开，请确认后再修改',
   already:'同一信号的新事项已经打开 — 请在那里继续',
   saved:'已保存',added:'已加入',fail:'保存失败',cancel:'取消',save:'加入',
-  add_t:'手动新增事项',f_title:'标题',f_detail:'内容',f_sev:'重要度',f_due:'期限',f_who:'负责人',
+  add_t:'手动新增事项',f_title:'标题',f_detail:'内容',f_sev:'重要度',f_due:'期限',f_who:'负责人',f_op:'运营单位',
   me:'我',days:'逾期{n}天',today:'今天',ago_m:'{n}分钟前',ago_h:'{n}小时前',ago_d:'{n}天前',
   loading:'加载中…',err:'无法读取待办事项'},
 ja:{title:'対応事項',sub:'グローバル概況から登録した事項 · 担当 · 期限 · 進捗',reload:'再読込',add:'+ 追加',
@@ -243,7 +245,7 @@ ja:{title:'対応事項',sub:'グローバル概況から登録した事項 · �
   conflict:'他の人がこの事項を変更しました — 最新の値で開き直しました。確認してからもう一度変更してください',
   already:'同じ信号の新しい事項がすでに開いています — そちらで続けてください',
   saved:'保存しました',added:'登録しました',fail:'保存できませんでした',cancel:'キャンセル',save:'登録',
-  add_t:'事項を追加',f_title:'件名',f_detail:'内容',f_sev:'重要度',f_due:'期限',f_who:'担当',
+  add_t:'事項を追加',f_title:'件名',f_detail:'内容',f_sev:'重要度',f_due:'期限',f_who:'担当',f_op:'運営単位',
   me:'自分',days:'{n}日超過',today:'今日',ago_m:'{n}分前',ago_h:'{n}時間前',ago_d:'{n}日前',
   loading:'読み込み中…',err:'対応事項を読み込めませんでした'}
 };
@@ -377,14 +379,16 @@ let _tt=0; function toast(s){ const e=document.getElementById('toast'); e.textCo
 function openAdd(){
   const d=document.getElementById('dlg');
   document.getElementById('fWho').innerHTML='<option value="">'+esc(t('none_who'))+'</option>'+S.people.map(e=>'<option value="'+esc(e)+'">'+esc(e)+'</option>').join('');
-  ['fTitle','fDetail','fDue'].forEach(i=>document.getElementById(i).value='');
+  ['fTitle','fDetail','fDue','fOp'].forEach(i=>document.getElementById(i).value='');
+  /* 운영단위 후보 — 지금 일들에 적힌 운영단위(지어내지 않는다). 직접 적어도 된다 */
+  document.getElementById('fOpL').innerHTML=Array.from(new Set(S.items.map(x=>x.op).filter(Boolean))).sort().map(o=>'<option value="'+esc(o)+'">').join('');
   d.hidden=false; setTimeout(()=>document.getElementById('fTitle').focus(),30);
 }
 async function doAdd(){
   const ti=document.getElementById('fTitle').value.trim(); if(!ti){ document.getElementById('fTitle').focus(); return; }
   try{
     const r=await C.rpc('action_add',{p_kind:'manual',p_ref:null,p_sev:document.getElementById('fSev').value,p_title:ti,
-      p_detail:document.getElementById('fDetail').value.trim()||null,p_op:null,p_page:null,
+      p_detail:document.getElementById('fDetail').value.trim()||null,p_op:document.getElementById('fOp').value.trim()||null,p_page:null,
       p_assignee:document.getElementById('fWho').value||null,p_due:document.getElementById('fDue').value||null});
     if(r.error){ toast(t('fail')); console.warn(r.error); return; }
     document.getElementById('dlg').hidden=true; toast(t('added')); S.fresh=r.data&&r.data.id; S.sel=S.fresh; S.st='live'; S.chip=''; await load();

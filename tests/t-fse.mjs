@@ -123,6 +123,10 @@ is(Object.keys(G.SM.SPEC.fse.fields).every(k=>m.C[k]>=0 || G.SM.SPEC.fse.opt.ind
 { const o={sd_start:'45672.86', mttr:'165.9999999963', work_date:'2026-01-01'}; G.SM.normRow(G.SM.SPEC.fse,o);
   is(o.sd_start==='2025-01-15 20:38' && o.mttr==='166', '시각 시리얼·MTTR 찌꺼기 다듬기 ('+o.sd_start+' · '+o.mttr+')'); }
 { const o={d_start:'45000'}; G.SM.normRow(G.SM.SPEC.wk,o); is(o.d_start==='45000', '수선실적은 dates 선언이 없어 한 글자도 안 바뀐다(t-upload 대조 그대로)'); }
+/* v198(보완분 A24) — 자재실적은 «시리얼 숫자일 때만» 날짜로(serials). 문자열 날짜는 손대지 않는다(시각이 붙어도 그대로) */
+{ const o={work_date:'46143', prev_date:'46143.5', prev_paid_date:'2026-05-01 13:00:00', qty:'46143'}; G.SM.normRow(G.SM.SPEC.mat,o);
+  is(o.work_date==='2026-05-01' && o.prev_date==='2026-05-01' && o.prev_paid_date==='2026-05-01 13:00:00' && o.qty==='46143',
+    '자재실적 — 시리얼 작업일 46143 → 2026-05-01 · 문자열 날짜·수량은 그대로 (' + JSON.stringify(o) + ')'); }
 
 console.log('[1] 작업·부품 잇기');
 G.FSE.reg.rows=REG; G.FSE.reg._re=null;

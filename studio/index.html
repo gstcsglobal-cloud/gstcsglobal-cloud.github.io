@@ -8,9 +8,9 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=190"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=191"></script>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=190">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=191">
 <style>
 /* ============================================================
    분석 작업대 (v168 · 사용자 요청 「통합관리화면」 4단계)
@@ -219,7 +219,10 @@ async function loadSrc(src){
   // 열 성격 — 표본으로 날짜·숫자를 가린다(값의 70% 이상)
   const smp=rows.length>3000?rows.filter((_,i)=>i%Math.ceil(rows.length/3000)===0):rows;
   const fields=keys.map(k=>{ const vals=smp.map(o=>o[k]).filter(v=>v!=='');
-    const dn=vals.filter(v=>/^\d{4}[-.\/]\s?\d{1,2}[-.\/]\s?\d{1,2}/.test(v)).length, nn=vals.filter(v=>!isNaN(GST.numv(v))).length;
+    /* v198(보완분 A22) — 엑셀 시리얼(45600 같은 숫자)로 적재된 날짜 칸도 날짜다(자재실적 작업일이 실제로 그랬다 · GST.toDate 가 읽는다).
+       ⚠ 아무 숫자 칸이나 시리얼로 보면 작업시간(분)이 날짜가 된다 — 열 열쇠가 날짜 이름(dStart·workDate·fabIn·turnOn …)일 때만 시리얼을 센다 */
+    const dKey=/^d[A-Z]|date|Date|In$|On$|day$|Day$/.test(k), ser=v=>dKey&&/^\d{5}(\.\d+)?$/.test(v)&&!!GST.toDate(v);
+    const dn=vals.filter(v=>/^\d{4}[-.\/]\s?\d{1,2}[-.\/]\s?\d{1,2}/.test(v)||ser(v)).length, nn=vals.filter(v=>!isNaN(GST.numv(v))).length;
     const kind=vals.length&&dn/vals.length>=0.7?'date':vals.length&&nn/vals.length>=0.7?'num':'text';
     return {k, label:(GST.SM.label?GST.SM.label(SP,k):[].concat(SP.fields[k])[0]), kind}; });
   return (DATA[src]={rows, fields});
