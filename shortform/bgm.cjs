@@ -1,0 +1,277 @@
+// BGM · 효과음을 OfflineAudioContext 로 합성 → bgm.wav / bgm-short.wav
+//   node bgm.cjs [full|short]
+//
+// ⚠ 큐 시각은 timeline.js 의 «큐 기준(base)» 축에 적는다. 장면 길이를 바꿔도 여기는 손대지 않는다.
+//   M(t)  = 큐 기준 → 출력 시각. 빠진 장면(짧은 버전)의 큐는 null 이라 소리도 함께 빠진다.
+//   Mc(t) = 같은 변환이되 빠진 장면이면 그 자리로 접는다 — 여러 장면에 걸친 패드용.
+// ⚠ 드럼은 예외로 «출력 시각»에 직접 얹는다. 장면마다 압축률이 다르면 박자가 휘어 곡이 깨진다.
+const { chromium } = require('playwright');
+const fs = require('fs');
+const TL = require('./timeline.js');
+
+const MODE = ['short', 'fullA', 'fullB', 'fullC'].includes(process.argv[2]) ? process.argv[2] : 'full';
+const P = TL.build(MODE);
+const OUT = MODE === 'full' ? 'bgm.wav' : `bgm-${MODE}.wav`;
+
+function Mc(tCue) {                   // 빠진 장면이면 표시 순서상 그 자리로 접는다(여러 장면에 걸친 패드용)
+  const r = TL.toOut(tCue, P);
+  if (r !== null) return r;
+  let a = 0;
+  for (const s of TL.SCENES) {
+    if (tCue >= s.cue0 && tCue < s.cue0 + s.base) return a;
+    const d = MODE === 'short' ? s.short : s.full; if (d > 0) a += d;
+  }
+  return P.DUR;
+}
+const M = tb => TL.toOut(tb, P);      // null = 그 장면이 빠졌다
+
+(async () => {
+  const browser = await chromium.launch({ executablePath: process.env.CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+  const page = await browser.newPage(); await page.goto('about:blank');
+
+  // 큐를 Node 에서 «출력 시각»으로 미리 풀어 넘긴다 — 브라우저 안에서는 매핑을 몰라도 된다
+  const cue = [];
+  const at   = (tb, kind, arg = {}) => { const t = M(tb); if (t !== null) cue.push({ t, kind, ...arg }); };
+  const span = (tb0, tb1, kind, arg = {}) => { const a = Mc(tb0), b = Mc(tb1); if (b - a > 0.05) cue.push({ t: a, t1: b, kind, ...arg }); };
+
+  // ── 0~20 «아무 일도» 네 박자 : 드론 · 타자 · 귀뚜라미 · 반전 효과음
+  span(0.0, 24.9, 'pad', { notes: [33, 40], g: 0.10, lp: 160, a: 2.0, r: 2.5 });
+  for (let i = 0; i < 19; i++) at(1.3 + i / 12, 'tick', { g: 0.08, f: 3200 + (i % 3) * 300 });
+  [4.5, 5.4, 6.0].forEach(t => at(t, 'cricket'));
+  at(8.2, 'whoosh'); at(8.8, 'pop'); at(9.15, 'thud'); at(9.15, 'slam'); at(9.25, 'bwomp');   // 실란
+  for (let x = 0, i = 0; x < 1.7; i++) { at(10.4 + x, 'tick', { g: 0.09, f: 1800 + i * 12 }); x += Math.max(0.035, 0.13 - i * 0.005); }
+  // ⚠ SF6 타격은 12.5 가 아니다 — 실측(프레임 diff)으로 슬램 피크가 cue 11.83~11.95.
+  //    12.5 는 클립(1.8s)이 마지막 프레임에 멈춘 «뒤»라 소리만 늦게 울리고 있었다.
+  at(12.15, 'zip'); at(11.85, 'thud'); at(11.85, 'slam'); at(11.95, 'bwomp');           // SF6
+  for (let i = 0; i < 11; i++) at(13.5 + i * 0.14, 'wob', { f: 620 + (i % 2 ? 140 : -110) });
+  at(14.3, 'cold'); at(15.05, 'bell', { n: 88, g: 0.16, d: 0.8 }); at(15.12, 'bell', { n: 93, g: 0.1, d: 0.6 });
+  at(15.5, 'thud'); at(15.5, 'slam'); at(15.6, 'bwomp');                                // 칠러
+  for (let t = 17.8; t < 18.85; t += 0.167) at(t, 'beep');
+  at(18.95, 'thud'); at(18.95, 'slam'); at(19.05, 'bwomp');                             // 라인 정지
+  // ── 우리 기계의 이름(큐 축 62.2~65.2) — 표시 위치는 반전 바로 뒤다
+  span(62.3, 65.1, 'pad', { notes: [55, 59, 62, 67], g: 0.17, lp: 820, a: 0.8, r: 0.9 });
+  span(62.6, 65.0, 'strings', { notes: [74, 79], g: 0.05 });
+  [79, 83, 86, 91].forEach((n, i) => at(62.9 + i * 0.22, 'bell', { n, g: 0.15, d: 1.2 }));
+  at(64.1, 'bell', { n: 72, g: 0.13, d: 1.5 }); at(64.18, 'bell', { n: 76, g: 0.10, d: 1.3 });
+
+  // ── 인트로(큐 축 66.0~70.0 · 표시 4.3s) — v17 «카드 → 꺼짐 → CRT 발버둥» 순서(사용자 지시).
+  //    ⚠ 표시(4.3s)가 큐(4.0)보다 길다: 영상시각 V 의 큐 = 66 + V/1.075. 아래는 전부 환산값이다.
+  //    조용한 공식 카드 → 험이 «뚝» 끊기며 꺼짐 → 죽은 신호의 잡음 → 어둠(훅). 대비가 농담이다.
+  span(66.09, 68.73, 'hum', { f: 60, g: 0.04 });             // 카드 동안의 전원 험 — 꺼짐에서 뚝
+  at(66.26, 'blip', { f: 880, g: 0.07 });                     // 2001
+  at(66.47, 'thud'); at(66.49, 'bell', { n: 76, g: 0.09, d: 1.3 });   // 제목 착지
+  at(66.53, 'blip', { f: 1174, g: 0.08 });                    // -2026 (올라가는 두 음)
+  at(66.98, 'blip', { f: 660, g: 0.05 });                     // 「참 많은 일이 있었습니다」
+  at(68.02, 'tick', { g: 0.06, f: 3200 });                    // 마이크로 글리치
+  at(68.73, 'zip'); at(68.95, 'thud'); at(69.10, 'tick', { g: 0.05, f: 900 });   // 붕괴→선→점
+  at(69.19, 'pop', { g: 0.13 }); at(69.21, 'thud');           // 죽은 신호의 흰 번쩍
+  span(69.21, 69.81, 'hum', { f: 55, g: 0.03 });
+  at(69.38, 'tick', { g: 0.05, f: 2200 }); at(69.51, 'tick', { g: 0.05, f: 1600 });
+  at(69.60, 'whoosh');                                        // 워시 → 어둠 → (훅의 타자기)
+
+  // ── 만담(큐 축 70.0~76.4) — 대사가 «소리 없이» 지나가면 코미디가 안 산다.
+  //    말풍선이 뜨는 시각과 «같은 표»를 본다(s6.html 의 BEATS.on + 70.0).
+  span(70.1, 76.3, 'hum', { f: 58, g: 0.045 });
+  [70.50, 71.96, 73.02].forEach((t, i) => at(t, 'blip', { f: [900, 620, 900][i], g: 0.09 }));
+  at(74.48, 'blip', { f: 700, g: 0.09 });
+  at(74.62, 'bell', { n: 84, g: 0.13, d: 0.9 }); at(74.70, 'bell', { n: 88, g: 0.10, d: 1.1 });  // 펀치라인
+  for (let i = 0; i < 3; i++) at(75.10 + i * 0.16, 'blip', { f: 1100 + i * 180, g: 0.05, dur: 0.09 });
+
+  // ── 20~26.8 스크러버·칠러 등장
+  span(20.2, 27.3, 'pad', { notes: [57, 60, 64, 69], g: 0.16, lp: 650, a: 1.5, r: 0.6 });
+  span(20.4, 24.6, 'hum', { f: 60, g: 0.05 });
+  for (let i = 0; i < 9; i++) at(20.9 + i * 0.3, 'blip', { f: 800 + (i % 3) * 120 });
+  at(21.35, 'bell', { n: 76, g: 0.12, d: 0.8 }); at(22.75, 'bell', { n: 83, g: 0.11, d: 0.9 });
+  for (let t = 26.0; t < 26.8; t += 0.3) at(t, 'hat', { g: 0.05 });
+  // ── 창업·상장·지도·수출의 탑 : 화면에 붙는 소리(비트는 아래에서 따로)
+  for (let i = 0; i < 13; i++) at(27.8 + i * 0.1, 'blip', { f: 440 * Math.pow(2, ((69 + (i % 5) * 2 + Math.floor(i / 5) * 3) - 69) / 12), g: 0.06, dur: 0.08 });
+  at(29.25, 'bell', { n: 93, g: 0.16, d: 0.6 }); [29.5, 29.58, 29.66].forEach((t, i) => at(t, 'bell', { n: 96 + i * 4, g: 0.08, d: 0.35 }));
+  span(31.5, 32.1, 'riser');
+  at(32.35, 'bell', { n: 96, g: 0.15, d: 0.7 }); at(32.43, 'bell', { n: 100, g: 0.13, d: 0.9 });   // 1박: 상장
+  // 2박: 수출 1억불(2021) — 수출의 탑 씬을 여기로 접었다(v19). 3박: 시총 1조(2026) 정점.
+  at(32.55, 'blip', { f: 700, g: 0.06 }); at(32.75, 'blip', { f: 880, g: 0.06 });
+  at(33.0, 'bell', { n: 84, g: 0.13, d: 0.9 });                                                     // 2박: 이정표(트로피)
+  at(33.3, 'blip', { f: 990, g: 0.06 }); at(33.5, 'blip', { f: 1174, g: 0.06 });
+  span(33.15, 33.7, 'riser');
+  at(33.8, 'cymbal'); at(33.8, 'bell', { n: 91, g: 0.16, d: 1.2 }); at(33.88, 'bell', { n: 96, g: 0.13, d: 1.5 });
+  [72, 74, 76, 79, 81, 84, 86, 88, 91, 93].forEach((n, i) => at(34.7 + i * 0.45, 'marimba', { n, g: 0.24 }));
+  at(37.4, 'bell', { n: 86, g: 0.09, d: 1.1 });   // v22C: 지도 킬포인트 문구 착지(37.4 로 당김)와 같은 시각
+  for (let i = 0; i < 5; i++) at(39.85 + i * 0.4, 'step', { i });   // v14: 꺾은선 이정표를 따라 오른다 · thud 는 뺐다(1.4초에 5방은 웅웅거린다)
+  [72, 76, 79, 84].forEach((n, i) => at(41.95 + i * 0.07, 'tri', { n, g: 0.16, dur: 0.55 }));
+  at(41.95, 'cymbal');
+  // ── 43.8~47.0 다음 25년(액침냉각) : 물에 잠기는 소리 + 밝아지는 패드
+  span(43.9, 53.2, 'pad', { notes: [60, 64, 67, 71], g: 0.15, lp: 900, a: 0.9, r: 1.4 });   // 마무리 패드(52.1~)와 1초 겹친다 — 그 겹침이 «이어지는 느낌»이다
+  at(44.1, 'dive');                                                                     // 풍덩
+  for (let i = 0; i < 14; i++) at(44.5 + i * 0.16, 'bubble', { i });
+  at(45.0, 'bell', { n: 88, g: 0.13, d: 1.1 }); at(46.0, 'bell', { n: 91, g: 0.11, d: 1.0 });
+  // ── 액침냉각 → 마무리 «다리» (v14). 공로(lead) 장면이 빠진 뒤 옛 47.0~52.2 큐들은
+  //    죽은 구간에 걸렸고, span 은 Mc 접기로 0.3초에 눌려 «잡음 같은 붕 소리»가 됐다 —
+  //    전환이 어색하던 실제 원인이다. 현 하나를 경계 «너머로» 걸쳐 이어지는 느낌을 만든다.
+  span(44.6, 53.6, 'strings', { notes: [76, 79], g: 0.045 });
+  // ── 52.2~62.2 마무리 : 장조 + 계열 3사 차임
+  // v20: 엔딩 홀드(+0.9s)까지 마지막 화음이 버틴다 — 소리가 먼저 끊기면 홀드가 «정적»이 된다
+  span(52.1, 63.1, 'pad', { notes: [48, 52, 55, 60, 64], g: 0.20, lp: 900, a: 2.0, r: 2.2 });
+  span(52.1, 62.9, 'hum', { f: 65.4, g: 0.06 });
+  span(52.6, 62.9, 'strings', { notes: [79, 84, 88], g: 0.055 });
+  at(52.6, 'bell', { n: 76, g: 0.13, d: 1.4 }); at(55.0, 'bell', { n: 79, g: 0.13, d: 1.6 });
+  [72, 76, 79, 84].forEach((n, i) => at(57.2 + i * 0.09, 'bell', { n, g: 0.13, d: 1.4 }));  // 펀치라인
+  // 엔딩 — 그림(워프 → 임팩트 → 로고 조립)과 «같은 시각»에 붙는다.
+  // ⚠ 그림만 바꾸고 여기를 두면 소리가 먼저 끝나 임팩트가 빈다. 두 표는 같이 고친다.
+  span(58.38, 59.30, 'riser');                                                           // 워프가 감아올라간다
+  at(58.72, 'whoosh'); at(59.02, 'whoosh');
+  at(59.29, 'thud'); at(59.31, 'bwomp');                                                 // 임팩트
+  [88, 91, 96].forEach((n, i) => at(60.04 + i * 0.07, 'bell', { n, g: 0.12, d: 1.5 }));  // 로고가 맺힌다
+  at(60.78, 'bell', { n: 84, g: 0.11, d: 1.3 });                                         // Build Up GST
+  [79, 83, 88].forEach((n, i) => at(61.00 + i * 0.14, 'bell', { n, g: 0.10, d: 0.9 }));  // GST · EST · ROBOCARE
+  at(61.75, 'bell', { n: 91, g: 0.09, d: 1.2 });
+
+  // 드럼은 출력 시각에 직접 — 장면 압축률이 달라도 박자가 안 휜다
+  const beat = { from: (P.T.found || P.T.map)[0], to: P.T.kosdaq[1] };   // v19: stairs 가 접혀 성장 3박(kosdaq)이 비트의 끝 · v22C: found 가 빠지면 map 부터
+
+  // v23: 만담 AI 음성(한국어 신경망 TTS·KSS + 빈티지 라디오 가공 · voices/) — 말풍선 등장 큐(tv = cue−70)와 같은 시각.
+  //   다른 모드는 무성으로 둔다(C 전용). 클립 tv↔큐가 1:1(clipDur=base)이라 씬을 늘려도 입이 맞는다.
+  //   ⚠ 대사 테이크는 ASR(음성인식) 검증을 거친 것만 voices/ 에 둔다 — 스펙트럼 수치로는 «치지직»을 못 잡았다(실사고).
+  // VOICES=0 — 무음성 비교판(음성·덕킹 없이 음악만). 씬 오디오 A/B 용 스위치다.
+  if (MODE === 'fullC' && process.env.VOICES !== '0') {
+    let v0 = Infinity, v1 = -Infinity;
+    for (const [f, tb] of [['c1', 70.60], ['s1', 72.05], ['c2', 73.05], ['s2', 74.65]]) {
+      const t = M(tb);
+      if (t === null) continue;
+      const wav = fs.readFileSync(`voices/${f}.wav`);
+      cue.push({ t, kind: 'voice', b64: wav.toString('base64') });
+      // 대사 구간 덕킹 범위 — PCM s16 mono 44100 가정(생성 스크립트가 그렇게 만든다)
+      const dur = (wav.length - 44) / (44100 * 2);
+      v0 = Math.min(v0, t); v1 = Math.max(v1, t + dur);
+    }
+    // 음악만 −4.5dB(0.6배) — 실측으로 BGM 이 「25년째」의 된소리를 갉아 ASR 이 «20분째»로 들었다.
+    if (v0 < v1) cue.push({ kind: 'duck', a: +(v0 - 0.12).toFixed(3), b: +(v1 + 0.15).toFixed(3) });
+  }
+
+  const res = await page.evaluate(async ({ cue, beat, DUR }) => {
+    const SR = 44100;
+    const ctx = new OfflineAudioContext(2, Math.ceil(SR * DUR), SR);
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.2;
+    const master = ctx.createGain(); master.gain.value = 0.85; comp.connect(master); master.connect(ctx.destination);
+    // 음악은 duck 을 지나 comp 로 — 대사 동안만 음악을 내린다(음성은 comp 직결이라 안 내려간다)
+    const duck = ctx.createGain(); duck.gain.value = 1; duck.connect(comp);
+    for (const c of cue) if (c.kind === 'duck') {
+      duck.gain.setValueAtTime(1, Math.max(0, c.a));
+      duck.gain.linearRampToValueAtTime(0.6, Math.max(0, c.a) + 0.12);
+      duck.gain.setValueAtTime(0.6, c.b);
+      duck.gain.linearRampToValueAtTime(1, c.b + 0.3);
+    }
+    const bus = duck;
+    const nf = n => 440 * Math.pow(2, (n - 69) / 12);
+    function tone({ type = 'sine', f0, f1, t, dur, g = 0.3, a = 0.01, d, lp, q = 1 }) {
+      if (t + dur > DUR) dur = Math.max(0.02, DUR - t); if (t >= DUR) return;
+      const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t);
+      if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      const G = ctx.createGain(); G.gain.setValueAtTime(0.0001, t); G.gain.exponentialRampToValueAtTime(g, t + a);
+      G.gain.setValueAtTime(g, t + Math.max(a, dur - (d ?? dur * 0.6))); G.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      let node = o; if (lp) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; f.Q.value = q; o.connect(f); node = f; }
+      node.connect(G); G.connect(bus); o.start(t); o.stop(t + dur + 0.05);
+    }
+    const nb = (() => { const b = ctx.createBuffer(1, SR * 2, SR); const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return b; })();
+    function noise({ t, dur, g = 0.2, type = 'bandpass', f = 1000, f1, q = 1, a = 0.005 }) {
+      if (t >= DUR) return; if (t + dur > DUR) dur = Math.max(0.02, DUR - t);
+      const s = ctx.createBufferSource(); s.buffer = nb; s.loop = true;
+      const F = ctx.createBiquadFilter(); F.type = type; F.frequency.setValueAtTime(f, t); if (f1) F.frequency.exponentialRampToValueAtTime(f1, t + dur); F.Q.value = q;
+      const G = ctx.createGain(); G.gain.setValueAtTime(0.0001, t); G.gain.exponentialRampToValueAtTime(g, t + a); G.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(F); F.connect(G); G.connect(bus); s.start(t); s.stop(t + dur + 0.05);
+    }
+    const pad = (notes, t0, t1, { g = 0.12, lp = 700, a = 1.5, r = 1.2 } = {}) =>
+      notes.forEach(n => [-6, 6].forEach(det => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = nf(n); o.detune.value = det;
+        const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; const G = ctx.createGain();
+        const A = Math.min(a, (t1 - t0) * 0.4), R = Math.min(r, (t1 - t0) * 0.4);
+        G.gain.setValueAtTime(0.0001, t0); G.gain.exponentialRampToValueAtTime(g / notes.length, t0 + A);
+        G.gain.setValueAtTime(g / notes.length, t1 - R); G.gain.exponentialRampToValueAtTime(0.0001, t1);
+        o.connect(f); f.connect(G); G.connect(bus); o.start(t0); o.stop(t1 + 0.1); }));
+    // 현(絃) — 느린 어택 + 비브라토. 감정 구간이 «합성음»으로 들리지 않게 하는 층이다.
+    const strings = (notes, t0, t1, g = 0.06) => notes.forEach((n, i) => {
+      const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = nf(n);
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 4.6 + i * 0.3;
+      const lg = ctx.createGain(); lg.gain.value = 3.2; lfo.connect(lg); lg.connect(o.detune);
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2200; f.Q.value = 0.7;
+      const G = ctx.createGain(); const A = Math.min(1.6, (t1 - t0) * 0.4);
+      G.gain.setValueAtTime(0.0001, t0); G.gain.exponentialRampToValueAtTime(g, t0 + A);
+      G.gain.setValueAtTime(g, t1 - 1.0); G.gain.exponentialRampToValueAtTime(0.0001, t1);
+      o.connect(f); f.connect(G); G.connect(bus); o.start(t0); lfo.start(t0); o.stop(t1 + 0.1); lfo.stop(t1 + 0.1); });
+    const bell = (t, n, g = 0.18, dur = 1.2) => { tone({ f0: nf(n), t, dur, g, a: 0.004, d: dur * 0.95 }); tone({ f0: nf(n) * 2.76, t, dur: dur * 0.5, g: g * 0.15, a: 0.003, d: dur * 0.45 }); };
+    const thud = t => { tone({ f0: 140, f1: 48, t, dur: 0.18, g: 0.7, a: 0.002, d: 0.16 }); noise({ t, dur: 0.06, g: 0.3, type: 'lowpass', f: 1200 }); };
+
+    const H = {
+      tick:    c => tone({ f0: c.f, t: c.t, dur: 0.012, g: c.g, a: 0.001, d: 0.01 }),
+      cricket: c => { for (let x = 0; x < 0.45; x += 1 / 14) noise({ t: c.t + x, dur: 0.035, g: 0.05, type: 'bandpass', f: 4300, q: 9, a: 0.002 }); },
+      whoosh:  c => noise({ t: c.t, dur: 0.62, g: 0.16, type: 'lowpass', f: 300, f1: 3500 }),
+      pop:     c => tone({ f0: 700, f1: 90, t: c.t, dur: 0.1, g: 0.5, a: 0.002, d: 0.08 }),
+      thud:    c => thud(c.t),
+      // v21 T2-5: 스탬프 착지 전용 — thud 아래에 깔리는 서브(90→34Hz). 화면 흔들림과 같은 시각에 온다
+      slam:    c => { tone({ f0: 90, f1: 34, t: c.t, dur: 0.34, g: 0.5, a: 0.002, d: 0.30 }); noise({ t: c.t, dur: 0.10, g: 0.20, type: 'lowpass', f: 700 }); },
+      bwomp:   c => tone({ type: 'sawtooth', f0: 240, f1: 95, t: c.t, dur: 0.55, g: 0.16, a: 0.02, d: 0.35, lp: 900 }),
+      zip:     c => tone({ f0: 2200, f1: 180, t: c.t, dur: 0.26, g: 0.2, a: 0.003, d: 0.2 }),
+      wob:     c => tone({ f0: c.f, t: c.t, dur: 0.09, g: 0.07, a: 0.002, d: 0.08, lp: 4000 }),
+      cold:    c => noise({ t: c.t, dur: 0.75, g: 0.05, type: 'bandpass', f: 2600, q: 3 }),
+      beep:    c => tone({ type: 'square', f0: 880, t: c.t, dur: 0.11, g: 0.08, a: 0.002, d: 0.1, lp: 3000 }),
+      hum:     c => tone({ f0: c.f, t: c.t, dur: c.t1 - c.t, g: c.g, a: Math.min(1.0, (c.t1 - c.t) * 0.3), d: (c.t1 - c.t) * 0.3 }),
+      blip:    c => tone({ f0: c.f, f1: c.dur ? null : 1500, t: c.t, dur: c.dur || 0.07, g: c.g || 0.06, a: 0.003, d: 0.06 }),
+      bell:    c => bell(c.t, c.n, c.g, c.d),
+      riser:   c => { noise({ t: c.t, dur: c.t1 - c.t, g: 0.09, type: 'bandpass', f: 500, f1: 5000, q: 2 }); tone({ f0: 300, f1: 1000, t: c.t, dur: c.t1 - c.t, g: 0.05, a: 0.05, d: 0.3 }); },
+      marimba: c => { tone({ f0: nf(c.n), t: c.t, dur: 0.4, g: c.g, a: 0.003, d: 0.38 }); tone({ f0: nf(c.n) * 4, t: c.t, dur: 0.12, g: c.g * 0.25, a: 0.002, d: 0.1 }); },
+      step:    c => tone({ f0: 220 * Math.pow(1.26, c.i), f1: 330 * Math.pow(1.26, c.i), t: c.t, dur: 0.2, g: 0.18, a: 0.003, d: 0.15, lp: 3000 }),
+      tri:     c => tone({ type: 'triangle', f0: nf(c.n), t: c.t, dur: c.dur, g: c.g, a: 0.005, d: c.dur * 0.8 }),
+      cymbal:  c => noise({ t: c.t, dur: 1.3, g: 0.15, type: 'highpass', f: 6000, a: 0.002 }),
+      hat:     c => noise({ t: c.t, dur: 0.035, g: c.g, type: 'highpass', f: 8000, a: 0.001 }),
+      dive:    c => { noise({ t: c.t, dur: 0.9, g: 0.20, type: 'lowpass', f: 6000, f1: 260 }); tone({ f0: 420, f1: 70, t: c.t, dur: 0.5, g: 0.22, a: 0.004, d: 0.42 }); },
+      bubble:  c => { const f = 900 + (c.i % 5) * 260; tone({ f0: f, f1: f * 1.9, t: c.t, dur: 0.075, g: 0.055, a: 0.004, d: 0.07 }); },
+      pad:     c => pad(c.notes, c.t, c.t1, { g: c.g, lp: c.lp, a: c.a, r: c.r }),
+      strings: c => strings(c.notes, c.t, c.t1, c.g || 0.06),
+    };
+    for (const c of cue) { const h = H[c.kind]; if (h) h(c); }
+
+    // 음성(voice) — decodeAudioData 가 비동기라 H 루프와 따로 돈다
+    for (const c of cue) if (c.kind === 'voice') {
+      const bin = atob(c.b64), ab = new ArrayBuffer(bin.length), u8 = new Uint8Array(ab);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      const buf = await ctx.decodeAudioData(ab);
+      const s = ctx.createBufferSource(); s.buffer = buf;
+      // 0.5(−6dB): 1.0 으로 두면 대사 블록이 −6dB RMS — 최고 음악 구간(−15.7)보다 12dB 떠서
+      // 프로그램 안에서 «갑자기 큰 소리»가 된다. 덕킹된 음악(−26)보다는 여전히 ~14dB 위라 또렷하다.
+      const G = ctx.createGain(); G.gain.value = 0.5;
+      s.connect(G); G.connect(comp); s.start(c.t);   // duck 을 우회해 comp 직결 — 음성은 안 내려간다
+    }
+
+    // ── 드럼·베이스·코드 : 출력 시각에 직접(100BPM 고정)
+    const B = 60 / 100, prog = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]];
+    const kick = (t, g = 0.8) => { tone({ f0: 160, f1: 42, t, dur: 0.32, g, a: 0.002, d: 0.3 }); noise({ t, dur: 0.03, g: 0.25, type: 'lowpass', f: 2500 }); };
+    const clap = (t) => [0, 0.012, 0.024].forEach(o => noise({ t: t + o, dur: 0.12, g: 0.154, type: 'bandpass', f: 1800, q: 1.2, a: 0.001 }));
+    for (let bar = 0; ; bar++) {
+      const tb = beat.from + bar * 4 * B; if (tb >= beat.to) break;
+      const ch = prog[bar % 4];
+      for (let b = 0; b < 4; b++) {
+        const t = tb + b * B; if (t > beat.to - 0.2) break;
+        kick(t, b === 0 ? 0.85 : 0.7); H.hat({ t: t + B / 2, g: 0.07 }); H.hat({ t, g: 0.045 });
+        if (bar >= 1 && (b === 1 || b === 3)) clap(t);
+        [0, B / 2].forEach(o => tone({ type: 'sawtooth', f0: nf(ch[0] - 12), t: t + o, dur: B / 2 * 0.9, g: 0.16, a: 0.005, d: B / 4, lp: 320 }));
+        if (b === 0 || b === 2) ch.forEach(n => tone({ type: 'sawtooth', f0: nf(n), t, dur: 0.28, g: 0.045, a: 0.004, d: 0.25, lp: 1400 }));
+      }
+    }
+
+    const buf = await ctx.startRendering();
+    const ch = buf.numberOfChannels, n = buf.length, chans = []; let peak = 0;
+    for (let c = 0; c < ch; c++) { const d = buf.getChannelData(c); chans.push(d); for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(d[i])); }
+    const k = peak > 0 ? 0.89 / peak : 1;
+    const bytes = 44 + n * ch * 2, ab = new ArrayBuffer(bytes), dv = new DataView(ab);
+    const ws = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+    ws(0, 'RIFF'); dv.setUint32(4, bytes - 8, true); ws(8, 'WAVE'); ws(12, 'fmt '); dv.setUint32(16, 16, true);
+    dv.setUint16(20, 1, true); dv.setUint16(22, ch, true); dv.setUint32(24, SR, true); dv.setUint32(28, SR * ch * 2, true);
+    dv.setUint16(32, ch * 2, true); dv.setUint16(34, 16, true); ws(36, 'data'); dv.setUint32(40, n * ch * 2, true);
+    let off = 44; for (let i = 0; i < n; i++) for (let c = 0; c < ch; c++) { const v = Math.max(-1, Math.min(1, chans[c][i] * k)); dv.setInt16(off, v < 0 ? v * 0x8000 : v * 0x7fff, true); off += 2; }
+    const u8 = new Uint8Array(ab); let bin = ''; for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    return { b64: btoa(bin), peak, bytes, cues: cue.length };
+  }, { cue, beat, DUR: P.DUR });
+
+  fs.writeFileSync(OUT, Buffer.from(res.b64, 'base64'));
+  console.log(`${OUT} ${res.bytes} bytes · ${P.DUR}초 · 큐 ${res.cues}개(${MODE}) · raw peak ${res.peak.toFixed(3)}`);
+  await browser.close();
+})();
