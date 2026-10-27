@@ -79,16 +79,19 @@ console.log('[0] 사전 · 폭죽 없음');
 { const core = fs.readFileSync(ROOT + '/assets/core.js', 'utf8');
   const keys = (core.match(/GST\.FX_KEYS = \[([\s\S]*?)\];/) || [])[1] || '';
   is(keys && !/confetti|폭죽|boom/i.test(keys), '효과 목록에 폭죽(confetti)이 없다 — 사용자 확정');
-  is(!/confetti|폭죽|function boom/i.test(core.slice(core.indexOf('GST.FX_KEYS'), core.indexOf('GST.fx.init();'))), '효과 층 코드에 폭죽 구현이 없다'); }
+  is(!/confetti|폭죽|function boom/i.test(core.slice(core.indexOf('GST.FX_KEYS'), core.indexOf('GST.fx.init();'))), '효과 층 코드에 폭죽 구현이 없다');
+  /* v201 — 마우스 커서 효과는 없앴다(사용자 확정 「그냥 기본 마우스 포인터가 낫다」). 커서를 감추는 규칙(cursor:none)이 되살아나면 포인터가 사라진다 */
+  const fxz = core.slice(core.indexOf('GST.FX_KEYS'), core.indexOf('GST.fx.init();'));
+  is(!/\['cursor'/.test(keys) && !/cursor\s*:\s*none/.test(fxz) && !/gst-fx-c(dot|ring)|gst-cur-in/.test(core), '커서 효과가 없다 — 효과 목록 · cursor:none · 점·고리 층 · 표식 모두'); }
 
 const pg = await ctx.newPage(); const pe = []; pg.on('pageerror', e => pe.push(e.message));
 await pg.goto(BASE + '/hub/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(3200);
 
 console.log('[1] 기본값 — 움직임 줄이기가 아니면 전부 켜짐');
 const d0 = await pg.evaluate(() => ({ n:GST.FX_KEYS.length, on:GST.FX_KEYS.filter(k => document.body.classList.contains('fx-' + k[0])).length,
-  stars:!!document.querySelector('.gst-fx-stars'), grain:!!document.querySelector('.gst-fx-grain'), cur:!!document.querySelector('.gst-fx-cring'), css:!!document.getElementById('gstFxCss') }));
+  stars:!!document.querySelector('.gst-fx-stars'), grain:!!document.querySelector('.gst-fx-grain'), css:!!document.getElementById('gstFxCss') }));
 is(d0.n >= 25 && d0.on === d0.n && d0.css, '효과 ' + d0.n + '개가 전부 켜짐(body.fx-…) · 효과 CSS 는 core 가 한 벌 넣는다');
-is(d0.stars && d0.grain && d0.cur, '혼자 열린 페이지 — 별빛 캔버스 · 그레인(맨 위 문서) · 커서가 선다');
+is(d0.stars && d0.grain, '혼자 열린 페이지 — 별빛 캔버스 · 그레인(맨 위 문서)이 선다');
 
 console.log('[2] 오도미터 — 글자는 처음부터 최종값 · 겹친 그림만 구른다');
 const od = await pg.evaluate(async () => {
@@ -205,14 +208,14 @@ is(pse.length === 0, 'JS 에러 0 (셸)' + (pse.length ? ' → ' + pse[0] : ''))
 console.log('[10] 효과 없는 화면 — 고장 분석은 처음부터 효과·움직임을 걸지 않는다 (v193 · 사용자 「이 페이지만 기본값이 효과 아예 없게」)');
 { const pf = await ctx.newPage(); const pfe = []; pf.on('pageerror', e => pfe.push(e.message));
   /* 이 PC 에 «전부 켬»을 저장해 둔 사람 — 그래도 꺼져야 한다(설정과 무관) */
-  await pf.addInitScript(() => { try{ const S = {}; ['stars','tilt','odometer','cursor','grain','sheen','reveal','draw'].forEach(k => S[k] = true); localStorage.setItem('gst_fx', JSON.stringify(S)); }catch(e){} });
+  await pf.addInitScript(() => { try{ const S = {}; ['stars','tilt','odometer','grain','sheen','reveal','draw'].forEach(k => S[k] = true); localStorage.setItem('gst_fx', JSON.stringify(S)); }catch(e){} });
   await pf.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await pf.waitForTimeout(2600);
   const fo = await pf.evaluate(() => ({ fx:[...document.body.classList].filter(c => /^fx-/.test(c)), motion:document.body.classList.contains('gst-motion'),
-    layers:document.querySelectorAll('.gst-fx-stars,.gst-fx-grid,.gst-fx-grain,.gst-fx-cdot,.gst-fx-cring,.gst-sprog').length, css:!!document.getElementById('gstFxCss'),
+    layers:document.querySelectorAll('.gst-fx-stars,.gst-fx-grid,.gst-fx-grain,.gst-sprog').length, css:!!document.getElementById('gstFxCss'),
     on:GST.FX_KEYS.filter(k => GST.fx.on(k[0])).length, pageOff:GST.fx.pageOff(), anim:Chart.defaults.animation.duration,
     odo:GST.fx.odo(document.querySelector('.kpi .val') || document.body, '1'), rv:document.querySelectorAll('.gst-rv').length }));
   is(fo.pageOff && !fo.fx.length && fo.on === 0, '고장 분석 — 이 PC 에 켜 둔 효과가 있어도 전부 꺼짐(body.fx-… 0 · GST.fx.on 0)');
-  is(!fo.motion && !fo.layers && !fo.css && !fo.rv, '움직임 층(gst-motion)·효과 층(별빛·격자·커서·읽는 위치)·효과 CSS·스크롤 등장 — 하나도 안 만든다 (층 ' + fo.layers + ')');
+  is(!fo.motion && !fo.layers && !fo.css && !fo.rv, '움직임 층(gst-motion)·효과 층(별빛·격자·읽는 위치)·효과 CSS·스크롤 등장 — 하나도 안 만든다 (층 ' + fo.layers + ')');
   is(fo.anim === 0 && fo.odo === false, '차트는 바로 선다(애니메이션 0) · 오도미터도 안 돈다');
   await pf.mouse.move(400, 400); await pf.mouse.move(420, 410); await pf.waitForTimeout(200);
   is(await pf.evaluate(() => !document.querySelector('.gst-hov,.gst-tilt,.gst-sp-on') && !document.documentElement.classList.contains('gst-cur-in')), '마우스를 움직여도 카드에 표식이 안 붙는다(마우스 감시가 없다)');
