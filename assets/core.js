@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 192;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 193;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 여기서 묻는다 — 저장 키(축편집·피벗·섹션)·챗봇 출처·자동순회 페이지 id 가 이 한 곳을 본다.
    (v137 에는 오프라인 판의 srcdoc 때문에 두었고, 오프라인 판은 v199 에 없앴다 — 한 곳에서 묻는 규약은 그대로 둔다.) */
 GST.pagePath = function(){ return location.pathname; };
@@ -5103,7 +5103,7 @@ GST.FX_KEYS = [
   ['draw',1,'chart'],['wave',1,'chart'],
   ['scramble',1,'text'],['shimmer',1,'text'],['typewriter',1,'text'],['ticker',1,'text'],
   ['reveal',1,'move'],['viewfx',1,'move'],['themefx',1,'move'],['progress',0,'move'],
-  ['magnetic',1,'hand'],['ripple',1,'hand'],['cursor',1,'hand']
+  ['magnetic',1,'hand'],['ripple',1,'hand']
 ];
 GST.FX_T = {
   ko:{title:'효과',sub:'이 PC 에만 저장됩니다 · 움직임 줄이기를 켜 둔 PC 에서는 움직이는 효과가 기본으로 꺼집니다',all:'전부 켜기',none:'전부 끄기',reset:'기본값',close:'닫기',count:'{n} / {t} 켜짐',pgoff:'고장 분석 화면은 빠르게 뜨도록 언제나 효과 없이 보입니다(이 설정과 무관)',
@@ -5116,7 +5116,7 @@ GST.FX_T = {
     draw:'차트 차례 등장',draw_s:'막대·점이 왼쪽부터 자란다',wave:'히트맵 물결',wave_s:'칸이 대각선 물결로 켜진다',
     scramble:'제목 디코드',scramble_s:'제목 글자가 풀리며 나타난다',shimmer:'제목 빛 흐름',shimmer_s:'제목 위로 빛이 지나간다',typewriter:'브리핑 타자기',typewriter_s:'이번 주 브리핑이 한 줄씩 써진다',ticker:'상태 띠 흐름',ticker_s:'운영단위 상태·화면 요약이 옆으로 흐른다',
     reveal:'스크롤 등장',reveal_s:'아래 카드가 떠오른다',viewfx:'보기 전환',viewfx_s:'보기를 바꾸면 흐려졌다 떠오른다',themefx:'테마 원형 전환',themefx_s:'스위치 자리에서 원이 번진다',progress:'읽는 위치 막대',progress_s:'맨 위 얇은 빛 막대',
-    magnetic:'자석 단추',magnetic_s:'단추가 마우스를 살짝 따라온다',ripple:'누름 물결',ripple_s:'누른 자리에서 물결이 번진다',cursor:'빛나는 커서',cursor_s:'점과 고리 커서(마우스에서만)'},
+    magnetic:'자석 단추',magnetic_s:'단추가 마우스를 살짝 따라온다',ripple:'누름 물결',ripple_s:'누른 자리에서 물결이 번진다'},
   en:{title:'Effects',sub:'Saved on this PC only · on a PC set to reduce motion, moving effects start off',all:'All on',none:'All off',reset:'Defaults',close:'Close',count:'{n} / {t} on',pgoff:'The Failures page always shows without effects so it loads fast (regardless of these settings)',
     g_bg:'Background',g_globe:'Globe',g_card:'Cards · numbers',g_chart:'Charts',g_text:'Titles · text',g_move:'Motion',g_hand:'Interaction',
     stars:'Starfield',stars_s:'Stars link up near the mouse',aurora:'Aurora drift',aurora_s:'Background light drifts slowly',grid:'Glowing grid',grid_s:'The grid lights up around the mouse',
@@ -5127,7 +5127,7 @@ GST.FX_T = {
     draw:'Staggered charts',draw_s:'Bars and points grow from the left',wave:'Heatmap wave',wave_s:'Cells light up in a diagonal wave',
     scramble:'Title decode',scramble_s:'Title letters resolve into place',shimmer:'Title shimmer',shimmer_s:'Light sweeps over the title',typewriter:'Briefing typewriter',typewriter_s:'The weekly briefing types line by line',ticker:'Status ticker',ticker_s:'Unit status and page summaries scroll sideways',
     reveal:'Scroll reveal',reveal_s:'Cards below rise into view',viewfx:'View transition',viewfx_s:'Switching views blurs and rises',themefx:'Circular theme switch',themefx_s:'A circle spreads from the switch',progress:'Reading bar',progress_s:'Thin light bar at the top',
-    magnetic:'Magnetic buttons',magnetic_s:'Buttons lean toward the mouse',ripple:'Press ripple',ripple_s:'A ripple spreads where you press',cursor:'Glowing cursor',cursor_s:'Dot-and-ring cursor (mouse only)'},
+    magnetic:'Magnetic buttons',magnetic_s:'Buttons lean toward the mouse',ripple:'Press ripple',ripple_s:'A ripple spreads where you press'},
   zh:{title:'效果',sub:'仅保存在本机 · 若本机开启了“减少动态效果”，动态效果默认关闭',all:'全部开启',none:'全部关闭',reset:'默认值',close:'关闭',count:'{n} / {t} 已开启',pgoff:'故障分析画面为加快加载，始终不使用效果（与此设置无关）',
     g_bg:'背景',g_globe:'地球仪',g_card:'卡片 · 数字',g_chart:'图表',g_text:'标题 · 文字',g_move:'动态',g_hand:'交互',
     stars:'星光 · 星座',stars_s:'鼠标附近的星星连成线',aurora:'极光流动',aurora_s:'背景光缓缓流动',grid:'发光网格',grid_s:'鼠标周围的网格变亮',
@@ -5138,7 +5138,7 @@ GST.FX_T = {
     draw:'图表依次出现',draw_s:'柱和点从左侧依次生长',wave:'热力图波浪',wave_s:'格子以对角波浪点亮',
     scramble:'标题解码',scramble_s:'标题文字逐渐显现',shimmer:'标题光泽',shimmer_s:'光从标题上掠过',typewriter:'简报打字机',typewriter_s:'本周简报逐行打出',ticker:'状态滚动条',ticker_s:'运营单位状态与页面摘要横向滚动',
     reveal:'滚动出现',reveal_s:'下方卡片浮现',viewfx:'视图切换',viewfx_s:'切换视图时模糊后浮现',themefx:'圆形主题切换',themefx_s:'从开关处扩散圆形',progress:'阅读位置条',progress_s:'顶部细光条',
-    magnetic:'磁性按钮',magnetic_s:'按钮轻微跟随鼠标',ripple:'按压波纹',ripple_s:'按下处扩散波纹',cursor:'发光光标',cursor_s:'点与圆环光标（仅鼠标）'},
+    magnetic:'磁性按钮',magnetic_s:'按钮轻微跟随鼠标',ripple:'按压波纹',ripple_s:'按下处扩散波纹'},
   ja:{title:'エフェクト',sub:'このPCにのみ保存されます · 「視差効果を減らす」を設定したPCでは動くエフェクトが既定でオフです',all:'すべてオン',none:'すべてオフ',reset:'既定値',close:'閉じる',count:'{n} / {t} オン',pgoff:'故障分析の画面は速く表示するため、常にエフェクトなしで表示します（この設定とは無関係）',
     g_bg:'背景',g_globe:'地球儀',g_card:'カード · 数字',g_chart:'チャート',g_text:'タイトル · 文字',g_move:'動き',g_hand:'操作',
     stars:'星空 · 星座',stars_s:'マウスの近くで星がつながる',aurora:'オーロラの流れ',aurora_s:'背景の光がゆっくり流れる',grid:'光るグリッド',grid_s:'マウスの周りだけグリッドが明るくなる',
@@ -5149,7 +5149,7 @@ GST.FX_T = {
     draw:'チャートの順次表示',draw_s:'棒と点が左から伸びる',wave:'ヒートマップの波',wave_s:'セルが斜めの波で点灯する',
     scramble:'タイトルのデコード',scramble_s:'タイトルの文字がほどけて現れる',shimmer:'タイトルの光沢',shimmer_s:'タイトルの上を光が流れる',typewriter:'ブリーフィングのタイプ',typewriter_s:'今週のブリーフィングが一行ずつ書かれる',ticker:'状態ティッカー',ticker_s:'運営単位の状態と画面の要約が横に流れる',
     reveal:'スクロール表示',reveal_s:'下のカードが浮かび上がる',viewfx:'表示の切替',viewfx_s:'表示を切り替えるとぼかしてから浮かぶ',themefx:'円形のテーマ切替',themefx_s:'スイッチの位置から円が広がる',progress:'読む位置のバー',progress_s:'上端の細い光のバー',
-    magnetic:'マグネットボタン',magnetic_s:'ボタンがマウスに少しついてくる',ripple:'押したときの波紋',ripple_s:'押した位置から波紋が広がる',cursor:'光るカーソル',cursor_s:'点と輪のカーソル（マウスのみ）'}
+    magnetic:'マグネットボタン',magnetic_s:'ボタンがマウスに少しついてくる',ripple:'押したときの波紋',ripple_s:'押した位置から波紋が広がる'}
 };
 /* 효과의 CSS — 셸·페이지·관리 화면이 한 벌을 쓴다(셸은 theme.css 를 안 싣는다). 클래스 «fx-열쇠» 가 body 에 있으면 그 효과가 켜진 것이다. */
 GST._FX_CSS = [
@@ -5183,15 +5183,6 @@ GST._FX_CSS = [
   /* 조명(카드 위 마우스 빛)의 좌표 — 상속하지 않게 등록한다. 상속이면 카드 «안의 모든 요소»(표 수천 칸)가 마우스가 움직일 때마다 다시 계산된다 */
   '@property --mx{syntax:"<length-percentage>";inherits:false;initial-value:50%}',
   '@property --my{syntax:"<length-percentage>";inherits:false;initial-value:50%}',
-  /* 커서 — 점은 마우스 그 자리 · 고리는 살짝 늦게. 글을 쓰는 칸에서는 원래 커서를 그대로 둔다 */
-  '.gst-fx-cdot,.gst-fx-cring{position:fixed;left:0;top:0;z-index:2147483000;pointer-events:none;border-radius:50%;opacity:0;transition:opacity .2s,width .25s,height .25s,margin .25s,border-color .25s,background .25s}',
-  '.gst-fx-cdot{width:6px;height:6px;margin:-3px 0 0 -3px;background:var(--accent,#5B8CFF);box-shadow:0 0 12px var(--accent,#5B8CFF)}',
-  '.gst-fx-cring{width:34px;height:34px;margin:-17px 0 0 -17px;border:1.5px solid color-mix(in srgb,var(--accent,#5B8CFF) 60%,transparent)}',
-  '.gst-fx-cring.big{width:52px;height:52px;margin:-26px 0 0 -26px;border-color:var(--gold,#D8B46A);background:color-mix(in srgb,var(--gold,#D8B46A) 7%,transparent)}',
-  '@media (hover:hover) and (pointer:fine){',
-  ' html.gst-cur-in body.fx-cursor .gst-fx-cdot,html.gst-cur-in body.fx-cursor .gst-fx-cring{opacity:1}',
-  ' html.gst-cur-in body.fx-cursor,html.gst-cur-in body.fx-cursor :not(input):not(textarea):not(select):not([contenteditable]):not([contenteditable] *){cursor:none !important}',
-  '}',
   /* 자석 단추 · 누름 물결 */
   'body.fx-magnetic .gst-mag{transition:translate .35s cubic-bezier(.2,.8,.2,1),background-color .15s,border-color .15s,color .15s,box-shadow .2s,filter .15s,opacity .15s !important}',
   '.gst-rip-w{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;z-index:0}',
@@ -5246,7 +5237,7 @@ GST._FX_CSS = [
   /* 테마 원형 전환(셸) — View Transitions 의 새 화면을 원으로 연다 */
   'html.gst-vt-theme::view-transition-old(root),html.gst-vt-theme::view-transition-new(root){animation:none;mix-blend-mode:normal}',
   '@media (prefers-reduced-motion:reduce){#gstFxPanel,#gstFxPanel .sw i::after{transition:none}}',
-  '@media print{.gst-fx-stars,.gst-fx-grid,.gst-fx-grain,.gst-fx-cdot,.gst-fx-cring,.gst-odo,#gstFxPanel{display:none !important}.gst-odo-src{opacity:1 !important}.gst-tilt{transform:none !important}}'
+  '@media print{.gst-fx-stars,.gst-fx-grid,.gst-fx-grain,.gst-odo,#gstFxPanel{display:none !important}.gst-odo-src{opacity:1 !important}.gst-tilt{transform:none !important}}'
 ].join('\n');
 GST.fx = (function(){
   const KEY='gst_fx', DEF={}, F={shell:false};
@@ -5255,7 +5246,6 @@ GST.fx = (function(){
   const load=function(){ try{ S=JSON.parse(localStorage.getItem(KEY)||'{}')||{}; }catch(e){ S={}; } };
   load();
   const inFrame=(function(){ try{ return window.parent!==window; }catch(e){ return true; } })();
-  const fine=function(){ try{ return !!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches); }catch(e){ return false; } };
   const lang=function(){ return (GST._lang&&GST._lang())||'ko'; };
   F.t=function(k){ const L=GST.FX_T[lang()]||GST.FX_T.ko; return L[k]!=null?L[k]:(GST.FX_T.ko[k]!=null?GST.FX_T.ko[k]:k); };
   F.def=function(k){ const d=DEF[k]; return !!d && !(d[1] && GST._reduce && GST._reduce()); };
@@ -5430,17 +5420,9 @@ GST.fx = (function(){
     }
     /* 그레인 — 맨 위 문서 하나에만(셸이 iframe 까지 덮는다 · 혼자 열린 페이지는 자기가) */
     if(!inFrame) mk('gst-fx-grain');
-    /* 커서 — 문서마다(셸의 고리는 마우스가 iframe 으로 들어가면 숨는다) */
-    const cdot=mk('gst-fx-cdot'), cring=mk('gst-fx-cring');
-    let mx=-99, my=-99, rx=-99, ry=-99, craf=0;
-    const cloop=function(){ craf=0; rx+=(mx-rx)*.2; ry+=(my-ry)*.2; cring.style.transform='translate('+rx.toFixed(1)+'px,'+ry.toFixed(1)+'px)';
-      if(Math.abs(mx-rx)+Math.abs(my-ry)>.4) craf=requestAnimationFrame(cloop); };
-    /* «마우스가 이 문서 안에 있다»는 html 에 단다 — body 의 class 를 바꾸면 그것을 지켜보는 화면(테마 감시)이 매번 다시 그린다 */
-    const HE=document.documentElement;
-    document.addEventListener('pointerout', function(e){ if(!e.relatedTarget||e.relatedTarget.tagName==='IFRAME') HE.classList.remove('gst-cur-in'); });
-    window.addEventListener('blur', function(){ HE.classList.remove('gst-cur-in'); });
+    /* 커서 효과는 없앴다(v201 · 사용자 확정 「그냥 기본 마우스 포인터가 낫다」) — 마우스 포인터는 언제나 브라우저 기본이다 */
 
-    /* 자석 단추 · 기울기 · 회전 테두리 · 격자 · 커서 — 마우스 한 번 움직임을 한 프레임에 모아 처리한다 */
+    /* 자석 단추 · 기울기 · 회전 테두리 · 격자 — 마우스 한 번 움직임을 한 프레임에 모아 처리한다 */
     const MAG='.tb-btn,.tb-search,.hb-btn,.ds-btn,.btn-grad,.btn-glass,.hb-take,.gst-foldbtn';
     const TILT='.kpi,.hb-kpi,.ds-kpi,.st-kpi';
     let magL=[], magAt=0, rq=0, px=0, py=0, tgt=null, hov=null, tilt=null;
@@ -5450,10 +5432,6 @@ GST.fx = (function(){
       /* 격자 빛의 좌표는 «격자 층 자신»에 쓴다 — html 에 쓰면 마우스가 움직일 때마다 문서 전체가 다시 계산된다(v192) */
       if(F.on('grid') && gridEl) gridEl.style.setProperty('--gst-gx', px+'px'), gridEl.style.setProperty('--gst-gy', py+'px');
       if(F._starMouse) F._starMouse(px,py);
-      /* 커서 */
-      if(F.on('cursor')&&fine()){ cdot.style.transform='translate('+px+'px,'+py+'px)'; if(!HE.classList.contains('gst-cur-in')){ rx=px; ry=py; HE.classList.add('gst-cur-in'); }
-        cring.classList.toggle('big', !!(tgt&&tgt.closest&&tgt.closest('button,a,[role="button"],select,label,summary,.hb-sig,.hb-cell,.hb-bub,.hb-q,tr.click')));
-        if(!craf) craf=requestAnimationFrame(cloop); }
       /* 마우스가 올라간 카드(회전 테두리) */
       const card=tgt&&tgt.closest?tgt.closest(GST.FX_SEL):null, okCard=card&&!card.closest('.gov,.gst-pal-ov,.gst-dq-pop,#gstFxPanel')&&!card.classList.contains('skeleton')?card:null;
       if(okCard!==hov){ if(hov) hov.classList.remove('gst-hov'); hov=okCard; if(hov&&getComputedStyle(hov).position!=='static') hov.classList.add('gst-hov'); }
