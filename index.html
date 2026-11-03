@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=194"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=196"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write) 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB(옛 동작 그대로 보인다).
@@ -353,16 +353,15 @@ body.theme-slate .more-menu,body.theme-slate .askpanel,body.theme-slate .kiosk-p
     <button class="tb-btn ic" onclick="shareLink()" id="shareBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg> <span id="shareLabel">공유</span></button>
     <!-- 효과(v180 · 디자인 X) — 별빛·오도미터·지구본 회전·자석 단추… 사람마다 켜고 끈다(이 PC · 모든 탭이 같이 본다) -->
     <button class="tb-btn fx-btn ic" id="fxBtn" type="button" onclick="GST.fx&&GST.fx.panel()" aria-haspopup="dialog" title="효과"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.9 5.8L20 10l-5 3.6L16.8 20 12 16.4 7.2 20 9 13.6 4 10l6.1-1.2z"/></svg> <span id="fxLabel">효과</span> <b class="tb-badge fx-n" id="fxN"></b></button>
-    <!-- 더보기 — 매일 보지 않는 화면(맞춤 분석 · 목표·기준)과 관리자의 「설명 표시」 -->
+    <!-- 더보기 — 매일 보지 않는 화면(화면 만들기 · 목표·기준)과 관리자의 「설명 표시」 -->
     <div class="tb-more"><button class="tb-btn ic" onclick="moreToggle()" id="moreBtn" aria-haspopup="menu" aria-expanded="false" title="더보기"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg> <span id="moreLabel">더보기</span></button>
       <div class="more-menu" id="moreMenu" role="menu" hidden>
-        <button type="button" role="menuitem" data-go="studio" id="mStudio">맞춤 분석</button>
+        <button type="button" role="menuitem" data-go="studio" id="mStudio">화면 만들기</button>
         <button type="button" role="menuitem" data-go="targets" id="mTargets">목표·기준</button>
         <div id="mScreens"></div>
         <hr>
         <!-- 화면 편집(v202) — 지금 보고 있는 화면의 카드 배치(순서·숨김·폭·제목). 그 화면(iframe)의 GST.screen 이 편집기를 연다 -->
         <button type="button" role="menuitem" id="mScreenEdit" onclick="screenEdit()">화면 편집</button>
-        <button type="button" role="menuitem" id="mScreenNew" onclick="screenNew()">새 화면 만들기</button>
         <hr>
         <!-- 이미지 저장(v185) — 지금 보고 있는 화면 전체를 PNG 로(메일 첨부용). 그 화면(iframe)의 GST.pageShot 이 만든다 -->
         <button type="button" role="menuitem" id="mShot" onclick="shotActive()">이 화면 이미지로 저장</button>
@@ -457,7 +456,7 @@ const TABS=[
   {id:'tco',     path:'/tco/',      ko:'TCO',       en:'TCO',          zh:'TCO',    ja:'TCO',    grp:'cost'},
   {id:'hr',      path:'/hr/',       ko:'인원·교육', en:'Workforce',    zh:'人员·培训', ja:'人員·教育'},
   {id:'action',  path:'/action/',   ko:'조치 사항', en:'Action items', zh:'待办事项', ja:'対応事項', bar:false},
-  {id:'studio',  path:'/studio/',   ko:'맞춤 분석', en:'Custom analysis', zh:'自定义分析', ja:'カスタム分析', bar:false},
+  {id:'studio',  path:'/studio/',   ko:'화면 만들기', en:'Screen builder', zh:'画面制作', ja:'画面作成', bar:false},   /* v203 — 옛 «맞춤 분석»과 «새 화면 만들기»가 같은 화면이었다(사용자 지적) → 이름 하나 */
   {id:'targets', path:'/targets/',  ko:'목표·기준', en:'Targets & rules', zh:'目标·标准', ja:'目標·基準', bar:false}
   /* v163 — 주간현황(국내) 데모 탭은 셸에서 뺐고 v176 에 화면(/report-kr/)째 접었다(사용자 확정 「국내 데모 페이지는 필요없다」).
      roles 장치(tabOn)는 그대로다 — 등급 전용 탭을 다시 둘 때 TABS 에 roles 를 달면 순회·단축키·전 탭 불러오기가 저절로 따른다. */
@@ -477,10 +476,10 @@ function tabOn(t){ return !t.roles || t.roles.indexOf((document.body && document
 function barTabs(){ return TABS.filter(t=>tabOn(t)&&t.bar!==false); }
 
 const L={
-  ko:{scrEdit:'화면 편집',scrNew:'새 화면 만들기',ask:'검색 또는 질문',askAi:'챗봇에 묻기',shot:'이 화면 이미지로 저장',shotK:'이미지 저장 캡처 그림 png',fx:'효과',tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!',act:'조치 사항',more:'더보기',explain:'설명 표시',on:'켬',off:'끔',search:'검색',pal_dark:'다크 모드로 바꾸기',pal_light:'라이트 모드로 바꾸기',pal_sn:'{p}에서 보기',pal_lang:'언어',rows:'행'},
-  en:{scrEdit:'Edit screen',scrNew:'New screen',ask:'Search or ask',askAi:'Ask the chatbot',shot:'Save this screen as an image',shotK:'image screenshot capture png save',fx:'Effects',tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!',act:'Action items',more:'More',explain:'Show notes',on:'On',off:'Off',search:'Search',pal_dark:'Switch to dark mode',pal_light:'Switch to light mode',pal_sn:'Open in {p}',pal_lang:'Language',rows:' rows'},
-  zh:{scrEdit:'编辑画面',scrNew:'新建画面',ask:'搜索或提问',askAi:'问聊天机器人',shot:'将此画面保存为图片',shotK:'图片 截图 保存 png',fx:'效果',tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!',act:'待办事项',more:'更多',explain:'显示说明',on:'开',off:'关',search:'搜索',pal_dark:'切换到深色模式',pal_light:'切换到浅色模式',pal_sn:'在{p}中查看',pal_lang:'语言',rows:'行'},
-  ja:{scrEdit:'画面編集',scrNew:'新しい画面',ask:'検索または質問',askAi:'チャットボットに聞く',shot:'この画面を画像で保存',shotK:'画像 スクリーンショット 保存 png',fx:'エフェクト',tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!',act:'対応事項',more:'その他',explain:'説明を表示',on:'オン',off:'オフ',search:'検索',pal_dark:'ダークモードに切替',pal_light:'ライトモードに切替',pal_sn:'{p}で見る',pal_lang:'言語',rows:'行'}
+  ko:{scrEdit:'화면 편집',ask:'검색 또는 질문',askAi:'챗봇에 묻기',shot:'이 화면 이미지로 저장',shotK:'이미지 저장 캡처 그림 png',fx:'효과',tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!',act:'조치 사항',more:'더보기',explain:'설명 표시',on:'켬',off:'끔',search:'검색',pal_dark:'다크 모드로 바꾸기',pal_light:'라이트 모드로 바꾸기',pal_sn:'{p}에서 보기',pal_lang:'언어',rows:'행'},
+  en:{scrEdit:'Edit screen',ask:'Search or ask',askAi:'Ask the chatbot',shot:'Save this screen as an image',shotK:'image screenshot capture png save',fx:'Effects',tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!',act:'Action items',more:'More',explain:'Show notes',on:'On',off:'Off',search:'Search',pal_dark:'Switch to dark mode',pal_light:'Switch to light mode',pal_sn:'Open in {p}',pal_lang:'Language',rows:' rows'},
+  zh:{scrEdit:'编辑画面',ask:'搜索或提问',askAi:'问聊天机器人',shot:'将此画面保存为图片',shotK:'图片 截图 保存 png',fx:'效果',tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!',act:'待办事项',more:'更多',explain:'显示说明',on:'开',off:'关',search:'搜索',pal_dark:'切换到深色模式',pal_light:'切换到浅色模式',pal_sn:'在{p}中查看',pal_lang:'语言',rows:'行'},
+  ja:{scrEdit:'画面編集',ask:'検索または質問',askAi:'チャットボットに聞く',shot:'この画面を画像で保存',shotK:'画像 スクリーンショット 保存 png',fx:'エフェクト',tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!',act:'対応事項',more:'その他',explain:'説明を表示',on:'オン',off:'オフ',search:'検索',pal_dark:'ダークモードに切替',pal_light:'ライトモードに切替',pal_sn:'{p}で見る',pal_lang:'言語',rows:'行'}
 };
 let LANG='ko';
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&L[sl])LANG=sl; else if(window.name && L[window.name]) LANG=window.name; }catch(e){}
@@ -846,7 +845,7 @@ function applyLang(){
   { const fl=document.getElementById('fxLabel'); if(fl) fl.textContent=lt('fx'); const fb=document.getElementById('fxBtn'); if(fb) fb.title=lt('fx'); fxMark(); }
   { const mac=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||''); document.getElementById('palKbd').textContent=mac?'⌘K':'Ctrl K'; document.getElementById('palBtn').title=(mac?'⌘K':'Ctrl+K'); }
   inkMove();
-  [['mScreenEdit','scrEdit'],['mScreenNew','scrNew']].forEach(([id,k])=>{ const b=document.getElementById(id); if(b) b.textContent=lt(k); });
+  [['mScreenEdit','scrEdit']].forEach(([id,k])=>{ const b=document.getElementById(id); if(b) b.textContent=lt(k); });
   ['studio','targets'].forEach(id=>{ const t=TABS.find(x=>x.id===id), b=document.querySelector('#moreMenu [data-go="'+id+'"]'); if(t&&b) b.textContent=t[LANG]||t.ko; });
   { const ms=document.getElementById('mShot'); if(ms) ms.textContent=lt('shot'); }
   document.querySelectorAll('.tgrp').forEach(g=>{ const n=(GROUPS[g.dataset.grp]||{})[LANG]||''; const l=g.querySelector('.tgrp-l'); if(l) l.textContent=n; g.setAttribute('aria-label', n); });
@@ -1220,7 +1219,6 @@ function screenEdit(){
   const f=frames[activeTab]; if(!f||!screenOk(activeTab)) return;
   try{ f.contentWindow.postMessage({type:'gst-screen-edit'},'*'); }catch(e){}
 }
-function screenNew(){ moreToggle(false); switchTab('studio'); setTimeout(()=>{ try{ frames.studio&&frames.studio.contentWindow.postMessage({type:'gst-screen-new'},'*'); }catch(e){} }, 400); }
 function scrVis(v){ const role=(document.body&&document.body.dataset.role)||''; return v==='all' || (v==='staff'&&/^(admin|editor|legacy)$/.test(role)) || (v==='admin'&&/^(admin|legacy)$/.test(role)); }
 async function loadScreens(){
   let rows=null;
@@ -1429,7 +1427,6 @@ function palItems(q){
   A.push({id:'act:share', label:lt('share'), icon:PAL_IC.link, run:shareLink, kw:'공유 링크 share link 分享 共有'});
   A.push({id:'act:shot', label:lt('shot'), icon:PAL_IC.img, run:shotActive, kw:lt('shotK')+' 이미지 저장 캡처 image screenshot png 图片 画像'});
   if(screenOk(activeTab)) A.push({id:'act:screen', label:lt('scrEdit'), icon:PAL_IC.edit, run:screenEdit, kw:'화면 편집 배치 카드 숨기기 layout edit screen 编辑画面 画面編集'});
-  A.push({id:'act:scrnew', label:lt('scrNew'), icon:PAL_IC.card, run:screenNew, kw:'새 화면 만들기 new screen board 新画面 新しい画面'});
   A.push({id:'act:fx', label:lt('fx'), icon:PAL_IC.note, run:()=>GST.fx&&GST.fx.panel(true), kw:'효과 effects 이펙트 애니메이션 animation 效果 エフェクト'});
   if(adm) A.push({id:'act:edit', label:lt('edit'), icon:PAL_IC.edit, run:openEdit, kw:'데이터 관리 data edit 数据管理 データ管理'});
   if(ed)  A.push({id:'act:upload', label:lt('upload'), icon:PAL_IC.up, run:openUpload, kw:'업로드 upload 上传 アップロード'});
@@ -1466,7 +1463,7 @@ window.addEventListener('message',e=>{
 });
 
 function start(){
-  GST.needVer && GST.needVer(194);   // 옛 core.js 캐시를 «숫자가 전부 0» 이 아니라 배너로(v135 — 셸도 선언한다)
+  GST.needVer && GST.needVer(196);   // 옛 core.js 캐시를 «숫자가 전부 0» 이 아니라 배너로(v135 — 셸도 선언한다)
   buildTabs();
   GST.barBind(document.getElementById('gbar'), barSend);
   applyLang();
