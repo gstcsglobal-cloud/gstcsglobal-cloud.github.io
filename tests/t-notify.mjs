@@ -60,7 +60,7 @@ ok(/아직 브리핑이 없습니다/.test(N.buildMessage({ sub: subA, snap: nul
 console.log('[3] 배선 — notify-send/index.ts');
 const IX = fs.readFileSync(path.join(ROOT, 'supabase/functions/notify-send/index.ts'), 'utf8');
 const blk = (op) => { const i = IX.indexOf('op === "' + op + '"'); return i < 0 ? '' : IX.slice(i, i + 1500); };
-ok(/import \{ isDue, buildMessage, pickSnap \} from "\.\/notify\.js"/.test(IX), 'notify.js 를 그대로 부른다(판정·글을 index.ts 에 다시 짜지 않는다)');
+ok(/import \{ isDue, buildMessage, pickSnap[^}]*\} from "\.\/notify\.js"/.test(IX), 'notify.js 를 그대로 부른다(판정·글을 index.ts 에 다시 짜지 않는다)');
 ok(/if \(!want \|\| req\.headers\.get\("x-sync-secret"\) !== want\)/.test(blk('cron')), '정기 발송 — 비밀이 없으면 아예 닫는다(돈·메일이 나가는 호출)');
 ok(/role !== "admin" \|\| !me\.can_write/.test(blk('test')), '테스트 발송 — 관리자 + 쓰기 권한만');
 const ev = blk('event');
@@ -80,6 +80,58 @@ ok(/notify_save/.test(NP) && /notify_remove/.test(NP) && /notify_admin/.test(NP)
 ok(!/bot_user_key/.test(NP), '카톡 식별자(bot_user_key)를 화면에 쓰지 않는다');
 const SH = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 ok(/#mNotify\{display:none\}/.test(SH) && /openNotify\(\)\{ window\.open\('\/notify\/','gstNotify'\)/.test(SH), '셸 더보기 «알림 발송» — 관리자만 · 새 창');
+
+console.log('[5] 화면 PPT 정기 발송 (v209) — 차례 · 봇 · 발송');
+/* 2026-11-03 (화) 08:30 KST = 2026-11-02 23:30 UTC */
+const TUE830 = new Date(Date.UTC(2026, 10, 2, 23, 30));
+const ps = { id: 7, enabled: true, removed: false, freq: 'daily', hour: 8, dow: 1, dom: 1, scope: 'all', pages: ['fault', 'report'], last_sent_at: null };
+const sl = N.slotOf(ps, TUE830);
+ok(sl && sl.key === '2026-11-03 08' && sl.start === '2026-11-02T23:00:00.000Z', '차례 = 한국 08시 · 시작 시각(UTC)');
+ok(N.slotOf({ ...ps, last_sent_at: '2026-11-02T23:05:00Z' }, TUE830) === null, '그 차례에 이미 보냈으면 다시 안 만든다');
+ok(N.slotOf({ ...ps, last_sent_at: '2026-11-01T23:05:00Z' }, TUE830) !== null, '어제 보낸 것은 오늘 차례를 막지 않는다');
+const T14 = new Date(TUE830.getTime() + 6 * 3600e3);   // 14:30 KST — 창(6시간) 밖
+ok(N.slotOf(ps, T14) === null && N.pptOverdue(ps, T14), '6시간 안에 못 보냈으면 cron 이 글이라도 보낸다(pptOverdue)');
+ok(!N.pptOverdue(ps, TUE830), '창 안이면 cron 은 PPT 수신자를 건드리지 않는다(PPT 없는 메일이 먼저 가지 않게)');
+ok(!N.pptOverdue(ps, new Date(TUE830.getTime() + 12 * 3600e3)), '한참 지난 차례는 다시 꺼내지 않는다');
+ok(!N.pptOverdue({ ...ps, pages: [] }, T14) && !N.hasPages({ ...ps, pages: [] }), 'PPT 를 안 고른 수신자는 해당 없음');
+const jb = N.reportJobs([ps, { ...ps, id: 8, pages: ['fault'] }, { ...ps, id: 9, scope: 'o:A', pages: ['fault', 'hub'] }, { ...ps, id: 10, enabled: false }], TUE830);
+const jf = jb.find(j => j.page === 'fault' && j.scope === 'all');
+ok(jb.length === 3 && jf && jf.subs.join() === '7,8', '(화면 · 범위)마다 한 번만 만든다 — 같은 화면을 여러 사람이 받아도 한 벌');
+ok(!jb.some(j => j.page === 'hub') && !jb.some(j => j.subs.includes(10)), 'PPT 로 못 내는 화면·꺼진 수신자는 빠진다');
+ok(N.reportJobs([ps], new Date(Date.UTC(2026, 10, 2, 21, 0))).length === 0, '정한 시각 전에는 일이 없다');
+const rp = N.reportPath('fault', 'o:GST CHINA(WUHAN) SCRUBBER', '2026-11-03 08', 123);
+ok(/^fault\/[A-Za-z0-9_]+-[0-9a-z]+\/2026110308-123\.pptx$/.test(rp), '저장 경로 — 범위의 한글·괄호·공백 없이 · 서버 정규식과 같은 글자');
+ok(N.reportPath('fault', 'o:가', 's', 1) !== N.reportPath('fault', 'o:나', 's', 1), '이름이 다른 범위는 경로가 다르다(한글만 다른 범위도)');
+const pf = [{ page: 'fault', ok: true, path: 'fault/all-x/2026110308-1.pptx' }, { page: 'report', ok: false, error: '이번 차례에 만들지 못했습니다' }];
+const mpE = N.buildMessage({ sub: { channel: 'email', target: 'a@test.local', scope: 'all', kinds: [], pages: ['fault', 'report'] }, snap: null, items: [], now: MON8, files: pf });
+ok(/화면 보고서/.test(mpE.subject) && /고장 분석/.test(mpE.html) && /첨부/.test(mpE.html) && /만들지 못했습니다/.test(mpE.text), '메일 — PPT 는 첨부 · 못 만든 화면은 못 만들었다고 적는다');
+ok(!/아직 브리핑이 없습니다/.test(mpE.text), 'PPT 만 받는 사람에게 «브리핑이 없다»고 하지 않는다');
+const mpK = N.buildMessage({ sub: { channel: 'kakao', target: 'a@test.local', scope: 'all', kinds: [], pages: ['fault'] }, snap: null, items: [], now: MON8, files: pf.slice(0, 1) });
+ok(/files\/\?p=fault%2Fall-x%2F2026110308-1\.pptx/.test(mpK.kakao), '카톡 — 받는 링크(로그인해야 열리는 /files/)');
+const okRe = /^[A-Za-z0-9_.\-/]+\.pptx$/;
+ok(okRe.test(rp) && okRe.test(N.reportPath('hr', 'r:국내', 'manual', 9)), '경로가 서버 report_file_add 의 정규식을 통과한다');
+const IX2 = fs.readFileSync(path.join(ROOT, 'supabase/functions/notify-send/index.ts'), 'utf8');
+const RY = fs.readFileSync(path.join(ROOT, '.github/workflows/report.yml'), 'utf8');
+const RR = fs.readFileSync(path.join(ROOT, 'tools/report-run.mjs'), 'utf8');
+const wf = (IX2.match(/const GH_WF = GH_REPO \+ "([^"]+)"/) || [])[1];
+ok(wf === '/.github/workflows/report.yml@refs/heads/main' && fs.existsSync(path.join(ROOT, '.github/workflows/report.yml')), '봇 세션은 «이 저장소 · main · report.yml» 토큰만 — 그 파일이 실제로 있다');
+ok(/audience: "gst-report"/.test(IX2) && /audience=gst-report/.test(RR), 'OIDC audience 가 양쪽에서 같다');
+ok(/issuer: "https:\/\/token\.actions\.githubusercontent\.com"/.test(IX2) && /payload\.repository !== GH_REPO/.test(IX2) && /payload\.ref !== "refs\/heads\/main"/.test(IX2), '봇 — GitHub 서명 · 저장소 · 브랜치를 확인한다(포크·다른 브랜치 거절)');
+ok(/id-token: write/.test(RY) && /contents: read/.test(RY) && !/secrets\./.test(RY), 'report.yml — OIDC 만 · 비밀을 쓰지 않는다');
+ok(/schedule:/.test(RY) && /workflow_dispatch:/.test(RY) && /report-run\.mjs --check/.test(RY), '매시 정기 + 수동 실행 · 차례가 없으면 브라우저를 깔지 않는다');
+const rb = blk('report');
+ok(/isBot\(svc, email\)/.test(rb) && /notifyOne\(/.test(rb), '발송(op=report)은 봇 토큰만');
+ok(/hasPages\(s\) \? pptOverdue\(s, now\) : isDue\(s, now\)/.test(IX2), 'cron — PPT 수신자는 봇 몫(창이 지나야 글만)');
+ok(/import \{ reportJobs, reportPath, PPT_PAGES \} from '\.\.\/supabase\/functions\/notify-send\/notify\.js'/.test(RR), '봇이 notify.js 의 같은 함수로 차례를 고른다(판정 사본 없음)');
+ok(!/console\.log\([^)]*(target|email|label|access_token|session)/.test(RR) && !/log\([^)]*(\.scope|target|email)/.test(RR), '봇 기록(공개)에 주소·범위·토큰을 찍지 않는다');
+ok(RR.includes('GST\\.SB_URL\\s*=') && RR.includes('GST\\.SB_ANON\\s*=') && !/eyJhbGci/.test(RR), '주소·공개 키는 core.js 에서 읽는다(사본 없음)');
+const NP2 = fs.readFileSync(path.join(ROOT, 'notify/index.html'), 'utf8'), FP = fs.readFileSync(path.join(ROOT, 'files/index.html'), 'utf8');
+const pk = o => Object.keys(o).sort().join();
+const pagesOf = src => { const m = src.match(/(?:PAGES|PPT_PAGES)\s*=\s*\{([^}]+)\}/); return m ? m[1].match(/(\w+)\s*:/g).map(x => x.replace(/\W/g, '')).sort().join() : ''; };
+const SQ = fs.readFileSync(path.join(ROOT, 'supabase/setup-34-report.sql'), 'utf8');
+const sqlPages = (SQ.match(/p_page not in \(([^)]+)\)/) || [])[1].match(/'(\w+)'/g).map(x => x.replace(/'/g, '')).sort().join();
+ok(pagesOf(NP2) === pk(N.PPT_PAGES) && pagesOf(FP) === pk(N.PPT_PAGES) && sqlPages === pk(N.PPT_PAGES), '화면 목록이 notify.js · 관리 화면 · 받기 화면 · 서버 넷에서 같다');
+ok(/C\.storage\.from\('reports'\)\.download\(P\)/.test(FP) && /authGate/.test(FP), '받기 화면 — 로그인 뒤 비공개 저장소에서(링크만으로는 못 받는다)');
 
 console.log(`\n${fail ? '❌' : '✅'} t-notify: ${pass} 통과 · ${fail} 실패`);
 process.exit(fail ? 1 : 0);

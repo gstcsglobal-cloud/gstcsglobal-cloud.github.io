@@ -1,0 +1,59 @@
+# 화면 PPT 정기 발송 (v209) — 매시 13분, 보고서 봇이 «이번 차례»인 화면을 열어 PPT 를 받아 저장소에 올리고 보낸다.
+# 무엇을 언제 누구에게 — 대시보드 «알림 발송»(/notify/) 화면이 정한다(notify_subs.pages · 시각 · 빈도). 여기는 손대지 않는다.
+#
+# ⚠ 비밀을 넣지 않는다 — 봇은 GitHub 가 서명한 OIDC 토큰(이 저장소 · main · 이 파일)으로 세션을 받는다(notify-send ?op=bot).
+#   그래서 이 파일의 이름·경로를 바꾸면 봇이 거절된다(notify-send 의 GH_WF 와 같이 고친다).
+# ⚠ 기록은 공개다 — tools/report-run.mjs 는 화면 이름과 개수만 찍는다.
+# ⚠ GitHub 는 저장소에 60일 동안 활동이 없으면 정기 실행(schedule)을 멈춘다 — 그때는 Actions 탭에서 다시 켠다.
+name: report
+on:
+  schedule:
+    - cron: '13 * * * *'
+  workflow_dispatch:
+    inputs:
+      page:
+        description: '바로 만들 화면 (report·fault·pm·cip·scrubber·material·tco·hr) — 비우면 이번 차례만'
+        required: false
+        default: ''
+      scope:
+        description: '범위 (all · r:국내 · r:해외 · o:운영단위)'
+        required: false
+        default: 'all'
+      dry:
+        description: '만들어 올리기만 하고 보내지 않기'
+        type: boolean
+        default: true
+permissions:
+  id-token: write      # OIDC — 봇 세션
+  contents: read
+concurrency:
+  group: report
+  cancel-in-progress: false
+jobs:
+  report:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      TZ: Asia/Seoul
+      FORCE_PAGE: ${{ github.event_name == 'workflow_dispatch' && inputs.page || '' }}
+      FORCE_SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.scope || 'all' }}
+      DRY: ${{ github.event_name == 'workflow_dispatch' && inputs.page != '' && inputs.dry || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # 이번 차례가 없으면 브라우저를 깔지 않고 끝낸다(대부분의 시간은 이 한 단계로 끝난다)
+      - id: check
+        run: node tools/report-run.mjs --check
+      - if: steps.check.outputs.run == 'true'
+        run: npm ci --no-audit --no-fund
+        working-directory: tests
+      - if: steps.check.outputs.run == 'true'
+        run: npx playwright install --with-deps chromium
+        working-directory: tests
+      - if: steps.check.outputs.run == 'true'
+        run: node tools/report-run.mjs
+        env:
+          PW_MODULE: ${{ github.workspace }}/tests/node_modules/playwright/index.mjs

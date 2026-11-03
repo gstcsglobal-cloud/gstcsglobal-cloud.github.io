@@ -71,6 +71,14 @@ revoke all on function public._act_who() from public, anon, authenticated;
 create table public.kakao_users(bot_user_key text primary key, email text, status text, verified_at timestamptz);
 alter table public.kakao_users enable row level security;
 insert into public.kakao_users values ('BK-1','view@test.local','verified', now()), ('BK-2','view@test.local','verified', now()), ('BK-3','out@other.local','verified', now()), ('BK-4','ed@test.local','awaiting_otp', null);
+-- setup-34 이 쓰는 Supabase Storage 의 최소 모양(버킷 · 객체 · RLS)
+create schema if not exists storage;
+create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
+create table storage.objects(id bigint generated always as identity primary key, bucket_id text, name text);
+alter table storage.objects enable row level security;
+grant usage on schema storage to authenticated;
+grant select, insert, update on storage.objects to authenticated;
+insert into public.allowed_users(email,can_write,role) values ('bot@test.local', false, 'viewer');
 `;
 
 
@@ -175,6 +183,37 @@ try {
   ok(/"ok": true/.test(as('boss@test.local', `select public.mine_remove('metric',${mid});`).out), '관리자는 남의 공유 지표도 감출 수 있다');
   ok(as('view@test.local', `select public.mine_remove('table',1)->>'error';`).out === 'bad_kind', '모르는 종류는 거절(표 이름을 받지 않는다)');
   ok(/permission denied/.test(as('boss@test.local', `insert into public.chart_notes(owner,d,text) values ('x','2026-01-01','y');`).err), '주석 표에 직접 insert 못 한다');
+
+  console.log('[8] 화면 PPT 정기 발송 (setup-34 · v209)');
+  const S34 = fs.readFileSync(path.join(ROOT, 'supabase/setup-34-report.sql'), 'utf8');
+  const b1 = q1(S34, 's34a'), b2 = q1(S34, 's34b');
+  ok(!/ERROR/.test(b1.err) && !/ERROR/.test(b2.err), 'setup-34 두 번 다 오류 없음' + (/ERROR/.test(b1.err + b2.err) ? ' → ' + (b1.err + b2.err).split('\n').find(l => /ERROR/.test(l)) : ''));
+  ok(!/\b(delete\s+from|truncate|drop\s+(table|policy|function|trigger))\b/i.test(S34.replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '')), 'setup-34 에 지우는 문장 없음');
+  ok(q1(`select public from storage.buckets where id='reports';`).out === 'f', '저장소(reports)는 비공개');
+  ok(as('boss@test.local', `select public.notify_save(null, ${SET({ channel:'email', target:'p1@test.local', kinds:[], pages:[] })}, null)->>'error';`).out === 'bad_kinds', '글도 PPT 도 없으면 거절');
+  ok(as('boss@test.local', `select public.notify_save(null, ${SET({ channel:'email', target:'p1@test.local', kinds:[], pages:['hub'] })}, null)->>'error';`).out === 'bad_pages', 'PPT 로 못 내는 화면은 거절');
+  const pr = JSON.parse(as('boss@test.local', `select public.notify_save(null, ${SET({ channel:'email', target:'p1@test.local', kinds:[], pages:['fault','report','fault'] })}, null)::text;`).out || '{}');
+  ok(pr.ok && q1(`select array_to_string(pages,',') from public.notify_subs where id=${pr.id};`).out.split(',').sort().join(',') === 'fault,report', 'PPT 만 받는 수신자 등록 · 화면 중복은 한 번');
+  ok(as('view@test.local', `select public.report_subs()->>'error';`).out === 'forbidden', '봇·관리자가 아니면 일정 목록을 못 읽는다');
+  ok(as('bot@test.local', `select public.report_subs()::text;`).out === '{"error": "forbidden"}', '봇 표에 없으면 봇이 아니다');
+  q1(`insert into public.report_bots values ('bot@test.local');`);
+  const rs = JSON.parse(as('bot@test.local', `select public.report_subs()::text;`).out || '[]');
+  ok(Array.isArray(rs) && rs.length === 1 && rs[0].id === pr.id, '봇은 PPT 를 받는 수신자의 일정만 읽는다');
+  ok(Array.isArray(rs) && rs.every(x => !('target' in x) && !('label' in x)), '일정 목록에 받는 사람 주소·이름이 없다(Actions 기록은 공개)');
+  ok(/^\d+$/.test(as('bot@test.local', `select public.report_file_add('fault','all','2026-11-03 08','fault/all-x/2026110308-1.pptx',12345,true,null);`).out), '봇이 만든 파일을 기록한다');
+  ok(/bad_path/.test(as('bot@test.local', `select public.report_file_add('fault','all',null,'../x.pptx',1,true,null);`).err)
+     && /bad_path/.test(as('bot@test.local', `select public.report_file_add('fault','all',null,'a b.pptx',1,true,null);`).err), '경로에 이상한 글자가 있으면 거절');
+  ok(/bad_page/.test(as('bot@test.local', `select public.report_file_add('hub','all',null,null,null,false,'x');`).err), '모르는 화면은 기록 거절');
+  ok(/forbidden/.test(as('view@test.local', `select public.report_file_add('fault','all',null,null,null,false,'x');`).err), '봇이 아니면 기록 못 한다');
+  ok(/permission denied/.test(as('boss@test.local', `select count(*) from public.report_files;`).err), '기록 표는 직접 못 읽는다');
+  const na = JSON.parse(as('boss@test.local', `select public.notify_admin()::text;`).out || '{}');
+  ok(Array.isArray(na.reports) && na.reports.length >= 1 && na.bot === true, '관리 화면이 최근 PPT 기록과 봇 상태를 읽는다');
+  ok(!(na.people || []).some(p => p.email === 'bot@test.local'), '봇은 수신자 후보 목록에 안 나온다');
+  ok(/"t"|^t$/.test(as('bot@test.local', `select (select count(*) from storage.objects)=0;`).out), '봇도 저장소 객체를 읽을 수 있다(허용 사용자)');
+  ok(!/ERROR/.test(as('bot@test.local', `insert into storage.objects(bucket_id,name) values ('reports','fault/x.pptx');`).err), '봇은 reports 에 올린다');
+  ok(/row-level security|violates/.test(as('boss@test.local', `insert into storage.objects(bucket_id,name) values ('reports','fault/y.pptx');`).err), '봇이 아니면(관리자라도) 못 올린다');
+  ok(as('view@test.local', `select count(*) from storage.objects where bucket_id='reports';`).out === '1', '허용 사용자는 받는다');
+  ok(as('nobody@test.local', `select count(*) from storage.objects where bucket_id='reports';`).out === '0', '허용 사용자가 아니면 못 받는다');
 } catch (e) { fail++; console.log('  ❌ ' + (e && e.message || e)); }
 finally { run('pg_ctl', ['-D', DATA, '-m', 'immediate', 'stop']); try { fs.rmSync(DIR, { recursive: true, force: true }); } catch (e) {} }
 console.log(`\n${fail ? '❌' : '✅'} t-notifysql ${pass}/${pass + fail}`);

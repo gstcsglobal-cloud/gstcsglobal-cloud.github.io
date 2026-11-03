@@ -22,13 +22,75 @@ export function kst(now) {
 /* 이 시각에 보낼 차례인가 — cron 이 매시 한 번 부른다. 같은 시간 안에 두 번 불려도 두 번 안 가게 last_sent_at 을 본다(50분). */
 export function isDue(sub, now) {
   if (!sub || !sub.enabled || sub.removed) return false;
-  const k = kst(now);
+  if (!matches(sub, now)) return false;
+  if (sub.last_sent_at && now.getTime() - new Date(sub.last_sent_at).getTime() < 50 * 60e3) return false;
+  return true;
+}
+
+/* ---------- 화면 PPT 정기 발송 (v209 · setup-34) ----------
+   PPT 는 GitHub Actions 의 보고서 봇(tools/report-run.mjs)이 만든다. 봇도 «보낼 차례»를 이 파일의 slotOf 로 판정한다 —
+   Node 가 같은 파일을 읽으므로 일정 판정의 사본이 생기지 않는다(제2원칙). */
+export const PPT_PAGES = { report: '주간 현황', fault: '고장 분석', pm: 'PM 점검', cip: 'CIP 진행',
+  scrubber: '설비 현황', material: '자재 사용', tco: 'TCO', hr: '인원·교육' };
+export const PPT_WIN_H = 6;            // 봇이 늦게 돌아도(GitHub 예약 실행은 수십 분 밀리기도 한다) 6시간 안이면 그 차례로 만든다
+export const hasPages = sub => !!(sub && Array.isArray(sub.pages) && sub.pages.length);
+
+/* 이 시각(KST)이 그 수신자의 일정에 맞는가 — 마지막 발송 시각은 보지 않는다(isDue 와 slotOf 가 함께 쓴다) */
+function matches(sub, at) {
+  const k = kst(at);
   if (+sub.hour !== k.h) return false;
   if (sub.freq === 'weekdays' && (k.dow === 0 || k.dow === 6)) return false;
   if (sub.freq === 'weekly' && +sub.dow !== k.dow) return false;
   if (sub.freq === 'monthly' && +sub.dom !== k.dom) return false;
-  if (sub.last_sent_at && now.getTime() - new Date(sub.last_sent_at).getTime() < 50 * 60e3) return false;
   return true;
+}
+/* 가장 최근의 «보낼 차례»(정시 · winH 시간 안) — 없으면 null. 그 차례 뒤에 이미 보냈으면 null.
+   돌려주는 key 는 KST 'YYYY-MM-DD HH' — 같은 차례를 두 번 만들지 않는 열쇠다. */
+export function slotOf(sub, now, winH) {
+  if (!sub || !sub.enabled || sub.removed) return null;
+  const w = winH || PPT_WIN_H;
+  for (let h = 0; h < w; h++) {
+    const at = new Date(now.getTime() - h * 3600e3);
+    if (!matches(sub, at)) continue;
+    const k = kst(at);
+    const start = new Date(Date.UTC(+k.ymd.slice(0, 4), +k.ymd.slice(5, 7) - 1, +k.ymd.slice(8, 10), k.h) - 9 * 3600e3);
+    if (sub.last_sent_at && new Date(sub.last_sent_at).getTime() >= start.getTime()) return null;
+    return { key: k.ymd + ' ' + String(k.h).padStart(2, '0'), start: start.toISOString() };
+  }
+  return null;
+}
+/* 봇이 만들 일 — (화면 · 범위)마다 한 번. 같은 화면을 여러 사람이 받아도 한 번만 만든다. */
+export function reportJobs(subs, now, winH) {
+  const jobs = new Map();
+  (subs || []).forEach(s => {
+    if (!hasPages(s)) return;
+    const sl = slotOf(s, now, winH); if (!sl) return;
+    s.pages.forEach(pg => {
+      if (!PPT_PAGES[pg]) return;
+      const key = pg + '|' + (s.scope || 'all');
+      const j = jobs.get(key) || { page: pg, scope: s.scope || 'all', slot: sl.key, subs: [] };
+      if (j.subs.indexOf(s.id) < 0) j.subs.push(s.id);
+      if (sl.key > j.slot) j.slot = sl.key;
+      jobs.set(key, j);
+    });
+  });
+  return Array.from(jobs.values());
+}
+/* 매시 cron 이 PPT 수신자를 «대신» 보낼 때 — 봇이 창(winH) 안에 못 보냈을 때만(그때 PPT 없이 글만 · 까닭을 적는다).
+   창 안이면 봇의 몫이라 cron 은 건드리지 않는다(PPT 없는 메일이 먼저 가면 안 된다). */
+export function pptOverdue(sub, now, winH) {
+  if (!hasPages(sub)) return false;
+  const w = winH || PPT_WIN_H;
+  if (slotOf(sub, now, w)) return false;                 // 아직 봇의 창 안
+  const late = slotOf(sub, now, w + 2);                  // 창은 지났는데 그 차례에 아직 안 보냈다
+  return !!late;
+}
+/* 저장소 경로 — 화면 · 범위 · 차례 · 만든 시각. 범위의 한글·괄호는 경로에 못 넣으므로 안전한 열쇠로 바꾼다 */
+export function reportPath(page, scope, slot, stamp) {
+  const sc = String(scope || 'all').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'x';
+  const h = Array.from(String(scope || 'all')).reduce((a, c) => (a * 31 + c.codePointAt(0)) >>> 0, 7).toString(36);
+  const sl = String(slot || 'manual').replace(/[^0-9]/g, '') || 'manual';
+  return page + '/' + sc.slice(0, 24) + '-' + h + '/' + sl + '-' + String(stamp || Date.now()) + '.pptx';
 }
 
 const ST = { open: '새로', ack: '확인', doing: '진행' };
@@ -56,12 +118,24 @@ function itemLine(x, today) {
 }
 
 /* 보낼 글 — {subject, text(카톡·메일 본문 텍스트), html} */
-export function buildMessage({ sub, snap, items, now }) {
+export function buildMessage({ sub, snap, items, now, files }) {
   const k = kst(now), today = k.ymd;
   const kinds = sub.kinds || [];
   const parts = [], hparts = [];
   const scopeName = (snap && snap.payload && snap.payload.name) || (sub.scope === 'all' ? '전사' : String(sub.scope).replace(/^[ro]:/, ''));
-  const subject = '[GST CS] ' + scopeName + ' 운영 알림 — ' + today;
+  const fl = (files || []).filter(f => f && PPT_PAGES[f.page]);
+  const subject = '[GST CS] ' + scopeName + (fl.length ? ' 화면 보고서' : ' 운영 알림') + ' — ' + today;
+  /* PPT — 메일은 첨부(받는 쪽이 index.ts 에서 붙인다), 카톡은 «로그인해야 열리는» 받기 링크.
+     ⚠ 링크는 비공개 저장소를 가리킨다 — 받는 사람도 대시보드에 로그인해야 받는다(링크만으로는 안 열린다). */
+  if (fl.length) {
+    const okF = fl.filter(f => f.ok && f.path), bad = fl.filter(f => !(f.ok && f.path));
+    const pl = okF.map(f => '· ' + PPT_PAGES[f.page] + ' PPT — ' + DASH + 'files/?p=' + encodeURIComponent(f.path));
+    const ml = okF.map(f => '· ' + PPT_PAGES[f.page] + ' PPT (첨부)');
+    bad.forEach(f => { pl.push('· ' + PPT_PAGES[f.page] + ' PPT — 만들지 못했습니다' + (f.error ? ' (' + f.error + ')' : '')); ml.push(pl[pl.length - 1]); });
+    parts.push('화면 보고서\n' + pl.join('\n'));
+    hparts.push('<h3 style="font:600 15px sans-serif;margin:0 0 6px">화면 보고서</h3><ul style="margin:0 0 14px;padding-left:18px">' +
+      ml.map(s => '<li style="font:14px/1.6 sans-serif">' + esc(s.replace(/^· /, '')) + '</li>').join('') + '</ul>');
+  }
   if (kinds.includes('brief')) {
     const b = briefText(snap, now);
     parts.push(b);

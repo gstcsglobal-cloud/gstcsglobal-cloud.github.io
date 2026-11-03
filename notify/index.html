@@ -40,7 +40,7 @@
   <header class="ds-head">
     <div>
       <h1 class="ds-title">알림 발송</h1>
-      <div class="ds-sub">등록한 사람에게만 · 정한 시각에 · 브리핑과 조치 사항을 메일·카톡으로 보냅니다</div>
+      <div class="ds-sub">등록한 사람에게만 · 정한 시각에 · 브리핑·조치 사항·화면 PPT 를 메일·카톡으로 보냅니다</div>
     </div>
     <span class="ds-sp"></span>
     <button type="button" class="ds-btn" id="reload">새로고침</button>
@@ -48,6 +48,7 @@
   <div id="banners" class="ds-grid"></div>
   <div class="ds-card" id="cAdd"></div>
   <div class="ds-card" id="cSubs"></div>
+  <div class="ds-card" id="cRep"></div>
   <div class="ds-grid ds-g2e">
     <div class="ds-card" id="cKakao"></div>
     <div class="ds-card" id="cSetup"></div>
@@ -66,9 +67,12 @@ const $=id=>document.getElementById(id);
 const FREQ={daily:'매일',weekdays:'평일(월~금)',weekly:'매주',monthly:'매월'};
 const DOW=['일','월','화','수','목','금','토'];
 const KIND={brief:'이번 주 브리핑',actions:'열린 조치 사항(범위 안)',mine:'내가 맡은 조치 사항'};
+/* 화면 PPT(v209 · setup-34) — 보고서 봇(GitHub Actions · tools/report-run.mjs)이 그 화면을 열어 「PPT」를 눌러 받은 파일을 보낸다.
+   목록은 notify-send/notify.js 의 PPT_PAGES · 서버 report_file_add · notify_save 와 같아야 한다(셋 다 고친다). */
+const PAGES={report:'주간 현황',fault:'고장 분석',pm:'PM 점검',cip:'CIP 진행',scrubber:'설비 현황',material:'자재 사용',tco:'TCO',hr:'인원·교육'};
 const ERR={forbidden:'관리자 + 쓰기 권한이 필요합니다',conflict:'그사이 다른 사람이 바꿨습니다 — 다시 불러왔으니 확인 후 다시 저장하세요',
   duplicate:'같은 채널·받는 사람·범위로 이미 등록돼 있습니다',kakao_not_verified:'카톡 챗봇에서 이메일 인증을 마친 사람만 고를 수 있습니다',
-  bad_target:'이메일 주소 형식이 아닙니다',bad_hour:'시각은 0~23 입니다',bad_dom:'날짜는 1~28 입니다(29~31일이 없는 달이 있다)',bad_kinds:'보낼 내용을 하나 이상 고르세요',
+  bad_target:'이메일 주소 형식이 아닙니다',bad_hour:'시각은 0~23 입니다',bad_dom:'날짜는 1~28 입니다(29~31일이 없는 달이 있다)',bad_kinds:'보낼 내용(글 또는 PPT)을 하나 이상 고르세요',bad_pages:'모르는 화면입니다',
   not_found:'이미 빠진 수신자입니다',no_smtp:'메일 발송 설정이 아직 없습니다(오른쪽 «발송 준비» 1번)',no_kakao:'카톡 발송 설정이 아직 없습니다(«발송 준비» 2번)',
   kakao_no_user:'이 이메일로 인증된 카톡 사용자가 없습니다',kakao_outbox:'카톡 대기함에 넣지 못했습니다',kakao_lookup:'카톡 사용자를 찾지 못했습니다'};
 const errText=e=>{ const s=String(e||''); const k=Object.keys(ERR).find(x=>s===x||s.startsWith(x)); return k?ERR[k]+(s!==k?' ('+s+')':''):s; };
@@ -112,14 +116,16 @@ function scopeOpts(sel){
   return L.map(s=>'<option value="'+esc(s)+'"'+(s===sel?' selected':'')+'>'+esc(scopeName(s))+'</option>').join('');
 }
 function schedFields(s){
-  s=s||{freq:'weekly',hour:8,dow:1,dom:1,scope:'all',kinds:['brief','actions']};
+  s=s||{freq:'weekly',hour:8,dow:1,dom:1,scope:'all',kinds:['brief','actions'],pages:[]};
   return '<label>빈도<select class="ds-select" data-f="freq">'+Object.keys(FREQ).map(k=>'<option value="'+k+'"'+(k===s.freq?' selected':'')+'>'+FREQ[k]+'</option>').join('')+'</select></label>'+
     '<label>시각(한국)<select class="ds-select" data-f="hour">'+Array.from({length:24},(_,h)=>'<option value="'+h+'"'+(h===+s.hour?' selected':'')+'>'+String(h).padStart(2,'0')+':00</option>').join('')+'</select></label>'+
     '<label data-only="weekly">요일<select class="ds-select" data-f="dow">'+DOW.map((d,i)=>'<option value="'+i+'"'+(i===+s.dow?' selected':'')+'>'+d+'요일</option>').join('')+'</select></label>'+
     '<label data-only="monthly">날짜<select class="ds-select" data-f="dom">'+Array.from({length:28},(_,i)=>'<option value="'+(i+1)+'"'+(i+1===+s.dom?' selected':'')+'>'+(i+1)+'일</option>').join('')+'</select></label>'+
     '<label>범위<select class="ds-select" data-f="scope">'+scopeOpts(s.scope)+'</select></label>'+
     '<div class="full"><div class="ds-note" style="margin-bottom:4px">보낼 내용</div><div class="nf-kinds">'+
-      Object.keys(KIND).map(k=>'<label><input type="checkbox" data-k="'+k+'"'+((s.kinds||[]).includes(k)?' checked':'')+'> '+KIND[k]+'</label>').join('')+'</div></div>';
+      Object.keys(KIND).map(k=>'<label><input type="checkbox" data-k="'+k+'"'+((s.kinds||[]).includes(k)?' checked':'')+'> '+KIND[k]+'</label>').join('')+'</div></div>'+
+    '<div class="full"><div class="ds-note" style="margin-bottom:4px">화면 PPT <span class="s">— 고른 화면을 그 범위로 열어 만든 PPT · 메일은 첨부, 카톡은 받는 링크(로그인 필요)</span></div><div class="nf-kinds">'+
+      Object.keys(PAGES).map(k=>'<label><input type="checkbox" data-p="'+k+'"'+((s.pages||[]).includes(k)?' checked':'')+'> '+PAGES[k]+'</label>').join('')+'</div></div>';
 }
 function syncOnly(box){
   const f=box.querySelector('[data-f="freq"]').value;
@@ -128,10 +134,26 @@ function syncOnly(box){
 function readSched(box){
   const g=k=>box.querySelector('[data-f="'+k+'"]').value;
   return { freq:g('freq'), hour:+g('hour'), dow:+g('dow'), dom:+g('dom'), scope:g('scope'),
-           kinds:[].slice.call(box.querySelectorAll('[data-k]:checked')).map(x=>x.dataset.k) };
+           kinds:[].slice.call(box.querySelectorAll('[data-k]:checked')).map(x=>x.dataset.k),
+           pages:[].slice.call(box.querySelectorAll('[data-p]:checked')).map(x=>x.dataset.p) };
 }
 
-function drawAll(){ drawAdd(); drawSubs(); drawKakao(); drawSetup(); drawLog(); }
+function drawAll(){ drawAdd(); drawSubs(); drawRep(); drawKakao(); drawSetup(); drawLog(); }
+
+/* 화면 PPT 가 실제로 만들어지고 있나 — 봇이 남긴 최근 30건. «돌고 있다»를 화면이 말하게 한다(조용히 멈추지 않게). */
+function drawRep(){
+  const L=D.reports||[], want=(D.subs||[]).filter(s=>(s.pages||[]).length&&s.enabled).length;
+  const last=L[0], okN=L.filter(r=>r.ok).length;
+  $('cRep').innerHTML='<h2>화면 PPT 자동 생성 <span class="s">보고서 봇 · '+(D.bot?'준비됨':'<b class="nf-err">봇 계정 없음</b>')+
+      ' · PPT 받는 수신자 '+want+'명</span></h2>'+
+    (L.length?'<div class="ds-tbl-wrap" style="max-height:300px"><table class="ds-tbl" data-gst-nosn><thead><tr><th>만든 시각</th><th>화면</th><th>범위</th><th>결과</th><th></th></tr></thead><tbody>'+
+      L.map(r=>'<tr><td>'+esc(ago(r.made_at))+'</td><td>'+esc(PAGES[r.page]||r.page)+'</td><td>'+esc(scopeName(r.scope))+'</td>'+
+        '<td>'+(r.ok?'<span class="ds-pill ok">만듦</span> <span class="ds-note">'+(r.bytes?Math.round(r.bytes/1024)+'KB':'')+'</span>'
+          :'<span class="ds-pill bad">실패</span> <span class="ds-note">'+esc(r.error||'')+'</span>')+'</td>'+
+        '<td>'+(r.ok&&r.path?'<a class="ds-btn sm" href="../files/?p='+encodeURIComponent(r.path)+'" target="_blank" rel="noopener">받기</a>':'')+'</td></tr>').join('')+
+      '</tbody></table></div><div class="ds-note">최근 '+L.length+'건 중 '+okN+'건 만듦'+(last?' · 마지막 '+esc(ago(last.made_at)):'')+'</div>'
+      :'<div class="ds-empty">'+(want?'아직 만든 PPT 가 없습니다 — 정한 시각이 되면 봇이 만들어 보냅니다(매시 13분 무렵).':'PPT 를 받는 수신자가 없습니다 — 수신자의 «화면 PPT»에서 화면을 고르면 정한 시각에 만들어 보냅니다.')+'</div>');
+}
 
 function drawAdd(){
   const people=(D.people||[]), kk=(D.kakao||[]);
@@ -163,7 +185,7 @@ function drawAdd(){
   $('addGo').onclick=async()=>{
     const sch=readSched(box), label=$('addLabel').value.trim();
     const err=$('addErr'); err.textContent='';
-    if(!sch.kinds.length){ err.textContent=ERR.bad_kinds; return; }
+    if(!sch.kinds.length && !sch.pages.length){ err.textContent=ERR.bad_kinds; return; }
     let targets=[];
     if(ch==='email'){ const v=$('addMail').value.trim().toLowerCase(); if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){ err.textContent=ERR.bad_target; return; }
       if(!people.some(p=>p.email===v) && !confirm(v+' 은(는) 대시보드 허용 사용자가 아닙니다. 그래도 이 주소로 보낼까요?')) return;
@@ -190,7 +212,8 @@ function drawSubs(){
         return '<tr data-id="'+s.id+'"><td><span class="ds-pill">'+(s.channel==='email'?'메일':'카톡')+'</span></td>'+
           '<td><b>'+esc(s.label||s.target)+'</b>'+(s.label?'<div class="ds-note">'+esc(s.target)+'</div>':'')+'</td>'+
           '<td>'+esc(when(s))+'</td><td>'+esc(scopeName(s.scope))+'</td>'+
-          '<td class="ds-note">'+(s.kinds||[]).map(k=>esc(KIND[k]||k)).join(' · ')+'</td>'+
+          '<td class="ds-note">'+(s.kinds||[]).map(k=>esc(KIND[k]||k)).join(' · ')+
+            ((s.pages||[]).length?'<div><span class="ds-pill">PPT</span> '+(s.pages||[]).map(k=>esc(PAGES[k]||k)).join(' · ')+'</div>':'')+'</td>'+
           '<td><label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" data-a="en"'+(s.enabled?' checked':'')+'>'+(s.enabled?'켜짐':'꺼짐')+'</label></td>'+
           '<td>'+(s.last_sent_at?esc(ago(s.last_sent_at)):'—')+(lg&&!lg.ok?'<div class="nf-err">'+esc(errText(lg.error))+'</div>':'')+'</td>'+
           '<td><div class="nf-act"><button type="button" class="ds-btn sm" data-a="edit">수정</button><button type="button" class="ds-btn sm" data-a="test">테스트</button>'+
@@ -208,7 +231,7 @@ function drawSubs(){
     ed.querySelector('[data-a="save"]').onclick=async(ev)=>{
       const sch=readSched(box); sch.label=box.querySelector('[data-f="label"]').value.trim();
       const e=ed.querySelector('.nf-err'); e.textContent='';
-      if(!sch.kinds.length){ e.textContent=ERR.bad_kinds; return; }
+      if(!sch.kinds.length && !sch.pages.length){ e.textContent=ERR.bad_kinds; return; }
       ev.target.disabled=true;
       const r=await C.rpc('notify_save',{p_id:s.id, p_set:sch, p_at:s.updated_at}); const d=r.data||{};
       ev.target.disabled=false;
@@ -266,7 +289,9 @@ function drawSetup(){
       '이벤트 블록(이벤트 이름 예: <code>gst_notify</code>)을 만들어 그 블록이 스킬 <code>…/functions/v1/notify-send?op=event</code> 를 부르게 합니다(헤더는 기존 스킬과 같게). '+
       '그다음 Secrets 에 <code>KAKAO_BOT_ID</code> · <code>KAKAO_EVENT_KEY</code>(REST API 키) · <code>KAKAO_EVENT_NAME</code> 을 넣습니다.</li>'+
     '<li><b>정해진 시각</b> — 매시 7분에 서버가 «보낼 차례인 수신자»를 찾아 보냅니다(이미 켜져 있습니다).</li>'+
-    '<li>설정 뒤 수신자 줄의 <b>테스트</b>로 확인합니다 — 테스트는 마지막 발송 시각을 바꾸지 않습니다.</li></ol>'+
+    '<li>설정 뒤 수신자 줄의 <b>테스트</b>로 확인합니다 — 테스트는 마지막 발송 시각을 바꾸지 않습니다. PPT 는 «가장 최근에 만든 것»(8일 안)을 붙입니다.</li>'+
+    '<li><b>화면 PPT</b> — 매시 13분 무렵 GitHub Actions 의 보고서 봇이 «이번 차례»인 화면을 열어 PPT 를 만들어 보냅니다(비밀 설정 없음 · 화면 하나에 1~3분). '+
+      '정한 시각에서 6시간 안에 못 만들면 글만 먼저 보내고 «PPT 를 만들지 못했다»고 적습니다. 지금 바로 만들어 보려면 GitHub 저장소 → Actions → <code>report</code> → Run workflow 에서 화면을 고릅니다.</li></ol>'+
     '<div class="ds-note">글은 «글로벌 현황»이 마지막으로 남긴 브리핑입니다 — 언제 집계한 글인지 첫 줄에 적힙니다(오래되면 오래됐다고 적힙니다).</div>';
 }
 
