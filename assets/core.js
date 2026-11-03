@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 194;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 195;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 여기서 묻는다 — 저장 키(축편집·피벗·섹션)·챗봇 출처·자동순회 페이지 id 가 이 한 곳을 본다.
    (v137 에는 오프라인 판의 srcdoc 때문에 두었고, 오프라인 판은 v199 에 없앴다 — 한 곳에서 묻는 규약은 그대로 둔다.) */
 GST.pagePath = function(){ return location.pathname; };
@@ -6683,6 +6683,11 @@ GST.filters = (function(){
        «이 페이지 전용»으로 밀어낸다. 사이드바 이동(autoSidebar)은 그대로 동작한다. */
     mount: function(cfg){
       CFG = cfg || {}; KEY = 'gst_bf_' + (CFG.page||'x');
+      /* 필터가 바뀌면 문서에 «gst:filters» 를 알린다 (v203) — 화면 편집으로 넣은 차트(GST.cb)가 이 화면의 상세 필터를 따른다.
+         페이지의 onChange 는 그대로 먼저 돈다(이 알림은 그 뒤의 덧붙임이다). */
+      if(typeof CFG.onChange==='function' && !CFG.onChange.$gstWrapped){ const _oc=CFG.onChange;
+        CFG.onChange=function(){ try{ return _oc.apply(this, arguments); }finally{ try{ document.dispatchEvent(new CustomEvent('gst:filters')); }catch(e){} } };
+        CFG.onChange.$gstWrapped=true; }
       load();
       /* 순회가 로딩 중에 보낸 값이 있으면 지금 적용한다 — 기준선도 여기서 잡혀야
          «사람이 걸어 둔 값»이 기준이 된다(위 kioskSet 주석 ②). */
@@ -11638,6 +11643,706 @@ GST.items = {
 };
 
 /* ============================================================
+   차트 만들기 엔진 — GST.cb (v203 · 사용자 요청 「차트를 만들 수 있는 게 어마어마한데 지금은 계열도 엄청 한정적」)
+   ------------------------------------------------------------
+   맞춤 분석(/studio/) 의 화면 만들기와 기존 화면의 «＋ 차트 추가»가 «같은 엔진»을 쓴다 — 두 벌이면 같은 설정이 두 곳에서 다른 그림이 된다(제2원칙).
+   · 자료 아홉: 수선·자재·설치(미러 · SPEC) · FSE 원장(SPEC) · 국내 알람·올바 원장 · 인원·교육·휴가(Import 표 · 머리글 그대로).
+     ⚠ 열은 «이름»으로 고른다(제1원칙) — SPEC 표는 필드 열쇠(op·stage…), Import 표는 정규화한 머리글(h:<norm>). 열 번호를 저장하지 않는다.
+   · 값은 여러 개 — 건수·합계·평균·최소·최대·중앙값·고유 수 × 계산(그대로·누적·3구간 이동평균·직전 대비·증감률·전체 대비 %·구간 안 %).
+     값마다 막대/선/영역 · 왼쪽/오른쪽 축을 고른다(콤보).
+   · 모양 열여섯: 막대 · 가로 막대 · 선 · 영역 · 쌓은 막대 · 100% 쌓은 막대 · 콤보 · 도넛 · 파이 · 극좌표 · 방사형 · 산점도 · 히트맵 · 표 · 숫자 카드.
+   ⚠ 숫자를 «판정»하지 않는다 — BM·PM·가동처럼 판정이 필요한 지표는 정해진 화면과 «표준 지표»(GST.ops · GST.metrics)가 정본이다.
+     여기서는 «행을 세고 더할» 뿐이다(작업단계 = BM 건수는 수선실적 행 수다 — 국내 원장·PM 조치 판정이 안 걸린다).
+   · 기존 화면에 넣은 차트는 그 화면의 상세 필터(구분·운영단위·고객사·사업부·단지·라인·기간)를 «따를 수» 있다(follow · 기본 켬) —
+     자료마다 그 축이 «어느 열인지»(SRC[].org)가 정해져 있고, 열이 없는 축은 걸지 않는다(조용히 전부 빠지지 않게).
+   ============================================================ */
+GST.CB_T = {
+  ko:{ src:'자료', type:'모양', x:'가로축 (나누는 기준)', xnum:'가로축 값 (숫자 열)', bucket:'날짜 묶기', series:'계열 (색으로 나누기)', none:'— 없음 —',
+       measures:'값', add_m:'+ 값 추가', m_agg:'집계', m_f:'열', m_calc:'계산', m_as:'표시', m_axis:'축', m_name:'이름 (비우면 자동)',
+       sort:'정렬', top:'상위', other:'나머지는 「그 밖」으로 묶기', period:'기간', dateF:'기간 기준 열', range:'범위', filters:'거르기 (모두 만족)', add_f:'+ 조건',
+       disp:'표시', labels:'값 표시', legend:'범례', pal:'색', fmt:'숫자 형식', ymin:'축 최소', ymax:'축 최대', target:'목표선', title:'제목 (비우면 자동)',
+       follow:'이 화면의 상세 필터 따르기', follow_s:'구분·운영단위·고객사·사업부·단지·라인·기간 중 이 자료에 있는 열에만 걸립니다',
+       adv:'고급', loading:'자료를 불러오는 중…', fail:'이 자료를 읽지 못했습니다', no_rows:'조건에 맞는 행이 없습니다', need_num:'숫자 열을 고르세요',
+       need_series:'히트맵은 계열을 골라야 합니다', blank:'(빈칸)', other_l:'그 밖', of:'{n}행 중 {m}행', rows:'{n}행', total:'합계', prev:'직전 같은 기간',
+       vs:'직전 대비', pts:'점 {n}개', pts_cut:'점이 많아 {n}개까지 그렸습니다', region:'구분', cnt:'건수',
+       t:{bar:'막대',hbar:'가로 막대',line:'선',area:'영역',stack:'쌓은 막대',stack100:'100% 쌓기',combo:'콤보',doughnut:'도넛',pie:'파이',polar:'극좌표',radar:'방사형',scatter:'산점도',heat:'히트맵',table:'표',kpi:'숫자 카드'},
+       a:{count:'건수',sum:'합계',avg:'평균',min:'최소',max:'최대',median:'중앙값',distinct:'고유 수'},
+       c:{none:'그대로',cum:'누적',ma3:'이동평균 (3)',diff:'직전 대비 차이',pctchg:'직전 대비 증감률 %',share:'전체 대비 %',pctx:'구간 안 비율 %'},
+       as:{auto:'자동',bar:'막대',line:'선',area:'영역'}, ax:{y:'왼쪽',y2:'오른쪽'},
+       b:{year:'연',quarter:'분기',month:'월',week:'주',day:'일',weekday:'요일'},
+       wd:['일','월','화','수','목','금','토'],
+       s:{value:'값 큰 순',value_asc:'값 작은 순',label:'이름 순'},
+       r:{all:'전체 기간',d7:'최근 7일',d30:'최근 30일',d90:'최근 90일',d180:'최근 180일',m12:'최근 12개월',ytd:'올해',custom:'직접 지정'},
+       op:{eq:'=',ne:'≠',has:'포함',nhas:'포함 안 함',in:'다음 중 하나 (쉼표)',nin:'다음 중 아무것도 아님',empty:'비어 있음',nempty:'비어 있지 않음',gt:'>',ge:'≥',lt:'<',le:'≤'},
+       lg:{auto:'자동',bottom:'아래',top:'위',right:'오른쪽',none:'숨김'},
+       p:{def:'기본',vivid:'선명',blue:'파랑',green:'초록',warm:'따뜻한',mono:'무채색'},
+       f:{auto:'자동',int:'정수',d1:'소수 1자리',d2:'소수 2자리',pct:'%'},
+       sn:{wk:'수선실적',mat:'자재실적',inst:'설치현황',fse:'FSE 원장',alarm:'국내 알람 원장',abp:'올바이패스 원장',roster:'인원현황',edu:'교육현황',leave:'휴가현황'},
+       by:'{x}별 {y}', by2:'{x}·{s}별 {y}', of_m:'{f} {a}' },
+  en:{ src:'Data', type:'Chart type', x:'Category axis', xnum:'X value (numeric column)', bucket:'Group dates by', series:'Series (split by color)', none:'— none —',
+       measures:'Values', add_m:'+ Add value', m_agg:'Aggregate', m_f:'Column', m_calc:'Calculation', m_as:'Show as', m_axis:'Axis', m_name:'Name (auto if empty)',
+       sort:'Sort', top:'Top', other:'Group the rest as “Other”', period:'Period', dateF:'Date column', range:'Range', filters:'Filters (all must match)', add_f:'+ Condition',
+       disp:'Display', labels:'Show values', legend:'Legend', pal:'Colors', fmt:'Number format', ymin:'Axis min', ymax:'Axis max', target:'Target line', title:'Title (auto if empty)',
+       follow:'Follow this screen’s detailed filters', follow_s:'Applied only to the columns this data has — category, unit, customer, division, campus, line, period',
+       adv:'Advanced', loading:'Loading data…', fail:'Could not read this data', no_rows:'No rows match', need_num:'Choose a numeric column',
+       need_series:'A heatmap needs a series', blank:'(blank)', other_l:'Other', of:'{m} of {n} rows', rows:'{n} rows', total:'Total', prev:'Previous period',
+       vs:'vs previous', pts:'{n} points', pts_cut:'Too many points — drew the first {n}', region:'Category', cnt:'Count',
+       t:{bar:'Bar',hbar:'Horizontal bar',line:'Line',area:'Area',stack:'Stacked bar',stack100:'100% stacked',combo:'Combo',doughnut:'Doughnut',pie:'Pie',polar:'Polar area',radar:'Radar',scatter:'Scatter',heat:'Heatmap',table:'Table',kpi:'Number card'},
+       a:{count:'Count',sum:'Sum',avg:'Average',min:'Min',max:'Max',median:'Median',distinct:'Distinct'},
+       c:{none:'As is',cum:'Cumulative',ma3:'Moving average (3)',diff:'Change vs previous',pctchg:'% change vs previous',share:'% of total',pctx:'% within category'},
+       as:{auto:'Auto',bar:'Bar',line:'Line',area:'Area'}, ax:{y:'Left',y2:'Right'},
+       b:{year:'Year',quarter:'Quarter',month:'Month',week:'Week',day:'Day',weekday:'Weekday'},
+       wd:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+       s:{value:'Largest first',value_asc:'Smallest first',label:'By name'},
+       r:{all:'All time',d7:'Last 7 days',d30:'Last 30 days',d90:'Last 90 days',d180:'Last 180 days',m12:'Last 12 months',ytd:'This year',custom:'Custom'},
+       op:{eq:'=',ne:'≠',has:'contains',nhas:'does not contain',in:'is one of (comma)',nin:'is none of',empty:'is empty',nempty:'is not empty',gt:'>',ge:'≥',lt:'<',le:'≤'},
+       lg:{auto:'Auto',bottom:'Bottom',top:'Top',right:'Right',none:'Hidden'},
+       p:{def:'Default',vivid:'Vivid',blue:'Blue',green:'Green',warm:'Warm',mono:'Neutral'},
+       f:{auto:'Auto',int:'Integer',d1:'1 decimal',d2:'2 decimals',pct:'%'},
+       sn:{wk:'Repair records',mat:'Material records',inst:'Installed base',fse:'FSE ledger',alarm:'Domestic alarm ledger',abp:'All by-pass ledger',roster:'Roster',edu:'Training',leave:'Leave'},
+       by:'{y} by {x}', by2:'{y} by {x} · {s}', of_m:'{a} of {f}' },
+  zh:{ src:'数据', type:'图表类型', x:'横轴（分类依据）', xnum:'横轴值（数字列）', bucket:'日期分组', series:'系列（按颜色区分）', none:'— 无 —',
+       measures:'数值', add_m:'+ 添加数值', m_agg:'汇总', m_f:'列', m_calc:'计算', m_as:'显示为', m_axis:'轴', m_name:'名称（留空自动）',
+       sort:'排序', top:'前', other:'其余合并为“其他”', period:'期间', dateF:'日期列', range:'范围', filters:'筛选（全部满足）', add_f:'+ 条件',
+       disp:'显示', labels:'显示数值', legend:'图例', pal:'颜色', fmt:'数字格式', ymin:'轴最小值', ymax:'轴最大值', target:'目标线', title:'标题（留空自动）',
+       follow:'跟随此画面的详细筛选', follow_s:'仅作用于此数据中存在的列 — 区分·运营单位·客户·事业部·园区·产线·期间',
+       adv:'高级', loading:'正在加载数据…', fail:'无法读取此数据', no_rows:'没有符合条件的行', need_num:'请选择数字列',
+       need_series:'热力图需要选择系列', blank:'（空白）', other_l:'其他', of:'{n}行中{m}行', rows:'{n}行', total:'合计', prev:'上一同期',
+       vs:'与上期相比', pts:'{n}个点', pts_cut:'点太多，只画了{n}个', region:'区分', cnt:'件数',
+       t:{bar:'柱形',hbar:'条形',line:'折线',area:'面积',stack:'堆积柱形',stack100:'100%堆积',combo:'组合',doughnut:'环形',pie:'饼图',polar:'极坐标',radar:'雷达',scatter:'散点',heat:'热力图',table:'表格',kpi:'数字卡片'},
+       a:{count:'件数',sum:'合计',avg:'平均',min:'最小',max:'最大',median:'中位数',distinct:'不重复数'},
+       c:{none:'原值',cum:'累计',ma3:'移动平均（3）',diff:'与上一项差值',pctchg:'环比增减率 %',share:'占总计 %',pctx:'区间内占比 %'},
+       as:{auto:'自动',bar:'柱形',line:'折线',area:'面积'}, ax:{y:'左',y2:'右'},
+       b:{year:'年',quarter:'季度',month:'月',week:'周',day:'日',weekday:'星期'},
+       wd:['日','一','二','三','四','五','六'],
+       s:{value:'从大到小',value_asc:'从小到大',label:'按名称'},
+       r:{all:'全部期间',d7:'最近7天',d30:'最近30天',d90:'最近90天',d180:'最近180天',m12:'最近12个月',ytd:'今年',custom:'自定义'},
+       op:{eq:'=',ne:'≠',has:'包含',nhas:'不包含',in:'属于其中之一（逗号）',nin:'不属于其中任何一个',empty:'为空',nempty:'不为空',gt:'>',ge:'≥',lt:'<',le:'≤'},
+       lg:{auto:'自动',bottom:'下',top:'上',right:'右',none:'隐藏'},
+       p:{def:'默认',vivid:'鲜明',blue:'蓝色',green:'绿色',warm:'暖色',mono:'中性色'},
+       f:{auto:'自动',int:'整数',d1:'1位小数',d2:'2位小数',pct:'%'},
+       sn:{wk:'维修实绩',mat:'材料实绩',inst:'安装现况',fse:'FSE台账',alarm:'国内报警台账',abp:'全旁路台账',roster:'人员现况',edu:'培训现况',leave:'休假现况'},
+       by:'按{x}的{y}', by2:'按{x}·{s}的{y}', of_m:'{f}{a}' },
+  ja:{ src:'データ', type:'グラフの種類', x:'横軸（分類の基準）', xnum:'横軸の値（数値列）', bucket:'日付のまとめ', series:'系列（色で分ける）', none:'— なし —',
+       measures:'値', add_m:'+ 値を追加', m_agg:'集計', m_f:'列', m_calc:'計算', m_as:'表示', m_axis:'軸', m_name:'名前（空欄で自動）',
+       sort:'並び順', top:'上位', other:'残りを「その他」にまとめる', period:'期間', dateF:'期間の基準列', range:'範囲', filters:'絞り込み（すべて満たす）', add_f:'+ 条件',
+       disp:'表示', labels:'値を表示', legend:'凡例', pal:'色', fmt:'数値の形式', ymin:'軸の最小', ymax:'軸の最大', target:'目標線', title:'タイトル（空欄で自動）',
+       follow:'この画面の詳細フィルターに従う', follow_s:'このデータにある列にだけ適用 — 区分·運営単位·顧客·事業部·団地·ライン·期間',
+       adv:'詳細', loading:'データを読み込み中…', fail:'このデータを読めませんでした', no_rows:'条件に合う行がありません', need_num:'数値列を選んでください',
+       need_series:'ヒートマップは系列を選ぶ必要があります', blank:'（空欄）', other_l:'その他', of:'{n}行中{m}行', rows:'{n}行', total:'合計', prev:'前の同期間',
+       vs:'前期比', pts:'点{n}個', pts_cut:'点が多いため{n}個まで描きました', region:'区分', cnt:'件数',
+       t:{bar:'棒',hbar:'横棒',line:'折れ線',area:'面',stack:'積み上げ棒',stack100:'100%積み上げ',combo:'複合',doughnut:'ドーナツ',pie:'円',polar:'鶏頭図',radar:'レーダー',scatter:'散布図',heat:'ヒートマップ',table:'表',kpi:'数値カード'},
+       a:{count:'件数',sum:'合計',avg:'平均',min:'最小',max:'最大',median:'中央値',distinct:'ユニーク数'},
+       c:{none:'そのまま',cum:'累計',ma3:'移動平均（3）',diff:'前との差',pctchg:'前比増減率 %',share:'全体比 %',pctx:'区分内比率 %'},
+       as:{auto:'自動',bar:'棒',line:'折れ線',area:'面'}, ax:{y:'左',y2:'右'},
+       b:{year:'年',quarter:'四半期',month:'月',week:'週',day:'日',weekday:'曜日'},
+       wd:['日','月','火','水','木','金','土'],
+       s:{value:'大きい順',value_asc:'小さい順',label:'名前順'},
+       r:{all:'全期間',d7:'直近7日',d30:'直近30日',d90:'直近90日',d180:'直近180日',m12:'直近12か月',ytd:'今年',custom:'指定'},
+       op:{eq:'=',ne:'≠',has:'含む',nhas:'含まない',in:'いずれか（カンマ）',nin:'いずれでもない',empty:'空欄',nempty:'空欄でない',gt:'>',ge:'≥',lt:'<',le:'≤'},
+       lg:{auto:'自動',bottom:'下',top:'上',right:'右',none:'非表示'},
+       p:{def:'既定',vivid:'鮮やか',blue:'青',green:'緑',warm:'暖色',mono:'無彩色'},
+       f:{auto:'自動',int:'整数',d1:'小数1桁',d2:'小数2桁',pct:'%'},
+       sn:{wk:'修繕実績',mat:'資材実績',inst:'設置現況',fse:'FSE台帳',alarm:'国内アラーム台帳',abp:'オールバイパス台帳',roster:'人員現況',edu:'教育現況',leave:'休暇現況'},
+       by:'{x}別{y}', by2:'{x}·{s}別{y}', of_m:'{f}の{a}' }
+};
+GST._CB_CSS = [
+  '.gcb-form{display:flex;flex-direction:column;gap:10px;font-size:12.5px;color:var(--txt-main,#111)}',
+  '.gcb-form label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:600;color:var(--txt-2,#445)}',
+  '.gcb-form .gcb-l{font-size:11.5px;font-weight:600;color:var(--txt-2,#445);display:flex;align-items:center;gap:6px}',
+  '.gcb-form .gcb-l>span{flex:1}',
+  '.gcb-row{display:flex;gap:6px;align-items:flex-end}.gcb-row>*{flex:1;min-width:0}',
+  '.gcb-form select,.gcb-form input[type=text],.gcb-form input[type=number],.gcb-form input[type=date],.gcb-form input:not([type]){font:inherit;font-size:12.5px;border:1px solid var(--line,#d0d7e2);background:var(--surface,#fff);color:var(--txt-main,#111);padding:6px 8px;border-radius:8px;min-width:0;width:100%;box-sizing:border-box}',
+  '.gcb-types{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}',
+  '.gcb-types button{font:inherit;font-size:10.5px;font-weight:600;border:1px solid var(--line,#d0d7e2);background:var(--surface,#fff);color:var(--txt-2,#445);padding:6px 0 5px;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.1}',
+  '.gcb-types button svg{width:18px;height:18px}',
+  '.gcb-types button.on{border-color:var(--accent,#4C7CF0);color:var(--accent,#4C7CF0);background:color-mix(in srgb,var(--accent,#4C7CF0) 9%,transparent)}',
+  '.gcb-m{border:1px solid var(--line,#d0d7e2);border-radius:10px;padding:7px;display:flex;flex-direction:column;gap:5px;background:var(--surface-2,#f6f7fa)}',
+  '.gcb-m .gcb-row{align-items:center}',
+  '.gcb-x{font:inherit;border:0;background:none;color:var(--txt-muted,#778);cursor:pointer;font-size:16px;flex:none !important;padding:0 4px}',
+  '.gcb-add{font:inherit;font-size:11.5px;font-weight:700;border:1px dashed var(--line-2,var(--line,#d0d7e2));background:transparent;color:var(--accent,#4C7CF0);padding:5px 8px;border-radius:8px;cursor:pointer}',
+  '.gcb-form details{border-top:1px solid var(--line,#d0d7e2);padding-top:8px}',
+  '.gcb-form summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--txt-main,#111);list-style:none}',
+  '.gcb-form summary::-webkit-details-marker{display:none}',
+  '.gcb-form summary::before{content:"▸ ";color:var(--txt-muted,#778)}.gcb-form details[open] summary::before{content:"▾ "}',
+  '.gcb-form details>div{display:flex;flex-direction:column;gap:8px;margin-top:8px}',
+  '.gcb-ck{flex-direction:row !important;align-items:center;gap:6px !important;font-weight:500 !important}',
+  '.gcb-ck small{display:block;color:var(--txt-muted,#778);font-weight:400}',
+  '.gcb-host{position:relative;min-height:0;height:100%;display:flex;flex-direction:column}',
+  '.gcb-cv{position:relative;flex:1;min-height:180px}',
+  '.gcb-empty{padding:28px 10px;text-align:center;color:var(--txt-muted,#778);font-size:12.5px}',
+  '.gcb-tw{overflow:auto;flex:1;min-height:0}',
+  '.gcb-tbl{width:100%;border-collapse:collapse;font-size:12.5px}',
+  '.gcb-tbl th{font-size:11px;color:var(--txt-muted,#778);font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line,#d0d7e2);position:sticky;top:0;background:var(--surface,#fff)}',
+  '.gcb-tbl td{padding:6px 8px;border-bottom:1px solid var(--line,#d0d7e2)}',
+  '.gcb-tbl td.n,.gcb-tbl th.n{text-align:right;font-variant-numeric:tabular-nums}',
+  '.gcb-tbl tfoot td{font-weight:700;border-top:2px solid var(--line,#d0d7e2)}',
+  '.gcb-tbl a{color:inherit;text-decoration:none;border-bottom:1px dotted currentColor}',
+  '.gcb-heat td.n{border-radius:5px;text-align:center;cursor:pointer}',
+  '.gcb-kpi{flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px;padding:6px 4px}',
+  '.gcb-kpi .v{font-size:34px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--txt-main,#111);cursor:pointer}',
+  '.gcb-kpi .d{font-size:12.5px;font-weight:700}.gcb-kpi .d.up{color:var(--accent,#4C7CF0)}.gcb-kpi .d.dn{color:var(--txt-2,#445)}',
+  '.gcb-kpi .s{font-size:11.5px;color:var(--txt-muted,#778)}',
+  '.gcb-kpi svg{width:100%;height:46px}',
+  '.gcb-kpi .bar{height:8px;border-radius:5px;background:var(--surface-2,#eef1f6);overflow:hidden}.gcb-kpi .bar i{display:block;height:100%;background:var(--accent,#4C7CF0)}',
+  '.gcb-meta{font-size:11px;color:var(--txt-muted,#778);margin-top:4px}'
+].join('\n');
+GST.cb = (function(){
+  var L=function(){ return (GST._lang&&GST._lang())||'ko'; };
+  var D=function(){ return GST.CB_T[L()]||GST.CB_T.ko; };
+  var T=function(k){ var d=D(), v=k.split('.').reduce(function(o,p){ return o&&o[p]; }, d); if(v==null) v=k.split('.').reduce(function(o,p){ return o&&o[p]; }, GST.CB_T.ko); return v==null?k:v; };
+  var F=function(s,o){ return String(s).replace(/\{(\w+)\}/g, function(_,k){ return o[k]==null?'':o[k]; }); };
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var nf=function(v){ return (Math.round(v*100)/100).toLocaleString(); };
+  function css(){ if(document.getElementById('gstCbCss')) return; var st=document.createElement('style'); st.id='gstCbCss'; st.textContent=GST._CB_CSS; (document.head||document.documentElement).appendChild(st); }
+
+  /* ---- 자료 ---- org = 화면 상세 필터의 축 → 이 자료의 열 열쇠(없는 축은 안 건다) */
+  var SRC=[
+    {id:'wk',  spec:'wk',  gid:'646668307', key:'studio_wk',  date:'dStart',   org:{op:'op',customer:'customer',campus:'campus',line:'line'}},
+    {id:'mat', spec:'mat', gid:'31302669',  key:'studio_mat', date:'workDate', org:{op:'op',customer:'customer',campus:'campus',line:'line'}},
+    {id:'inst',spec:'inst',gid:'891608329', key:'studio_inst',date:'fabIn',    org:{op:'country',customer:'customer',div:'div',line:'fab',line2:'line2'}},
+    {id:'fse', spec:'fse', db:true,                              date:'workDate', org:{line:'fab'}},
+    {id:'alarm', tbl:'sheet_alarm',     cols:'A', date:'occur_date', org:{op:'op',campus:'site',line:'line'}},
+    {id:'abp',   tbl:'sheet_allbypass', cols:'B', date:'occur_date', org:{op:'op',campus:'site',line:'line'}},
+    {id:'roster', gid:'1213453343', key:'studio_roster'},
+    {id:'edu',    gid:'0',          key:'studio_edu'},
+    {id:'leave',  gid:'262805841',  key:'studio_leave'}
+  ];
+  var SRC_BY={}; SRC.forEach(function(s){ SRC_BY[s.id]=s; });
+  /* 원장 열 이름표 — 표의 열 이름(snake)이라 사람이 읽을 이름을 준다. 작업자 실명 열(checker)은 애초에 안 받는다(_KR_COLS) */
+  var LEDGER_L={ sn:'S/N', occur_date:'발생일', fmonth:'정산월', fweek:'정산주', cnt:'집계 대상', site:'단지 (Site)', line:'라인', atype:'알람 유형', ctype:'원인 유형',
+    alarm:'알람', cause:'원인', action:'조치', phenom:'현상', op:'운영단위', inout:'내/외', incl:'포함/제외', alarm_name:'알람명', seq:'Seq', grp:'Group',
+    chamber:'챔버', hold:'정지', proc:'공정', subproc:'세부공정', ctype2:'원인 코드', atype2:'조치 코드' };
+  var LEDGER_SKIP={ src_row:1, sn_key:1 };
+  var DATA={}, PEND={};
+  function kindOf(k, vals){
+    var dKey=/^d[A-Z]|date|Date|In$|On$|day$|Day$|일$|월$/.test(k);
+    var dn=0, nn=0;
+    vals.forEach(function(v){ if(/^\d{4}[-.\/]\s?\d{1,2}[-.\/]\s?\d{1,2}/.test(v)||(dKey&&/^\d{5}(\.\d+)?$/.test(v)&&GST.toDate(v))) dn++; if(!isNaN(GST.numv(v))) nn++; });
+    return vals.length&&dn/vals.length>=0.7?'date':vals.length&&nn/vals.length>=0.7?'num':'text';
+  }
+  function finish(rows, fields){
+    var smp=rows.length>3000?rows.filter(function(_,i){ return i%Math.ceil(rows.length/3000)===0; }):rows;
+    fields.forEach(function(f){ if(f.kind) return; var vals=smp.map(function(o){ return o[f.k]; }).filter(function(v){ return v!==''&&v!=null; }); f.kind=kindOf(f.k, vals); });
+    /* 운영단위 열이 있는 자료에는 «구분»(국내/해외)을 덧붙인다 — 판정은 GST.ORG.region 정본 */
+    var opF=fields.filter(function(f){ return f.k==='op'||f.k==='country'; })[0];
+    if(opF && GST.ORG && GST.ORG.region){ rows.forEach(function(o){ o._region=GST.ORG.region(o[opF.k])||''; }); fields.unshift({k:'_region', label:T('region'), kind:'text'}); }
+    return {rows:rows, fields:fields};
+  }
+  async function loadSpec(s){
+    var SP=GST.SM.SPEC[s.spec], raw;
+    if(s.db) raw=await GST.dbRows(s.spec); else raw=(await GST.fetchCSVCached(GST.sheetUrl(s.gid), s.key)).rows;
+    var m=GST.SM.map(raw, SP), keys=Object.keys(SP.fields).filter(function(k){ return m.C[k]!=null&&m.C[k]>=0; });
+    var rows=raw.slice(m.hi+1).map(function(row){ var o={}; keys.forEach(function(k){ var v=GST.SM.val(row,m.C,k); o[k]=v==null?'':String(v).trim(); }); return o; })
+      .filter(function(o){ return keys.some(function(k){ return o[k]!==''; }); });
+    return finish(rows, keys.map(function(k){ return {k:k, label:(GST.SM.label?GST.SM.label(SP,k):[].concat(SP.fields[k])[0])}; }));
+  }
+  async function loadLedger(s){
+    var raw=await GST.csvTableRows(s.tbl, s.cols==='A'?GST._KR_COLS_A:GST._KR_COLS_B);
+    var H=raw[0]||[], keys=H.filter(function(h){ return !LEDGER_SKIP[h]; });
+    var ix={}; H.forEach(function(h,i){ ix[h]=i; });
+    var rows=raw.slice(1).map(function(r){ var o={}; keys.forEach(function(k){ o[k]=String(r[ix[k]]==null?'':r[ix[k]]).trim(); }); return o; });
+    return finish(rows, keys.map(function(k){ return {k:k, label:LEDGER_L[k]||k}; }));
+  }
+  async function loadImport(s){
+    var raw=(await GST.fetchCSVCached(GST.sheetUrl(s.gid), s.key)).rows, H=raw[0]||[];
+    var seen={}, keys=H.map(function(h,i){ var n=(GST.SM.norm?GST.SM.norm(h):String(h).toLowerCase())||('c'+i), k='h:'+n; if(seen[k]){ seen[k]++; k+='_'+seen[k]; } else seen[k]=1; return k; });
+    var rows=raw.slice(1).map(function(r){ var o={}; keys.forEach(function(k,i){ o[k]=String(r[i]==null?'':r[i]).replace(/\s+/g,' ').trim(); }); return o; })
+      .filter(function(o){ return keys.some(function(k){ return o[k]!==''; }); });
+    return finish(rows, keys.map(function(k,i){ return {k:k, label:String(H[i]||k).replace(/\s+/g,' ').trim()}; }).filter(function(f){ return f.label; }));
+  }
+  function load(id){
+    if(DATA[id]) return Promise.resolve(DATA[id]);
+    if(PEND[id]) return PEND[id];
+    var s=SRC_BY[id]; if(!s) return Promise.reject(new Error('NO_SRC '+id));
+    return (PEND[id]=(s.spec?loadSpec(s):s.tbl?loadLedger(s):loadImport(s)).then(function(d){ DATA[id]=d; delete PEND[id]; return d; }, function(e){ delete PEND[id]; throw e; }));
+  }
+
+  /* ---- 설정 ---- 옛 설정(v1 — agg·val 하나)도 받는다 */
+  var TYPES=['bar','hbar','line','area','stack','stack100','combo','doughnut','pie','polar','radar','scatter','heat','table','kpi'];
+  var AGG=['count','sum','avg','min','max','median','distinct'], CALC=['none','cum','ma3','diff','pctchg','share','pctx'];
+  var BUCK=['year','quarter','month','week','day','weekday'], RANGE=['all','d7','d30','d90','d180','m12','ytd','custom'];
+  var OPS=['eq','ne','has','nhas','in','nin','empty','nempty','gt','ge','lt','le'], PALS=['def','vivid','blue','green','warm','mono'];
+  var PAL={ vivid:['#6366F1','#EC4899','#14B8A6','#F59E0B','#8B5CF6','#EF4444','#22C55E','#0EA5E9'],
+    blue:['#1D4ED8','#3B82F6','#60A5FA','#0EA5E9','#1E3A8A','#93C5FD','#2563EB','#38BDF8'],
+    green:['#047857','#10B981','#34D399','#0F766E','#065F46','#6EE7B7','#14B8A6','#059669'],
+    warm:['#C2410C','#F97316','#F59E0B','#B45309','#EA580C','#FB923C','#D97706','#FBBF24'],
+    mono:['#334155','#64748B','#94A3B8','#1E293B','#475569','#CBD5E1','#0F172A','#E2E8F0'] };
+  function norm(c){
+    c=JSON.parse(JSON.stringify(c||{}));
+    c.v=2; if(TYPES.indexOf(c.type)<0) c.type='bar';
+    if(!Array.isArray(c.measures)||!c.measures.length) c.measures=[{agg:c.agg||'count', f:c.val||''}];
+    delete c.agg; delete c.val;
+    c.measures=c.measures.slice(0,6).map(function(m){ return {agg:AGG.indexOf(m.agg)>=0?m.agg:'count', f:m.f||'', calc:CALC.indexOf(m.calc)>=0?m.calc:'none', as:m.as||'auto', axis:m.axis==='y2'?'y2':'y', name:m.name||''}; });
+    c.bucket=BUCK.indexOf(c.bucket)>=0?c.bucket:'month'; c.top=Math.max(3,Math.min(60,+c.top||12)); c.sort=c.sort||'value'; c.other=c.other!==false;
+    c.range=RANGE.indexOf(c.range)>=0?c.range:((c.from||c.to)?'custom':'all');
+    c.filters=(c.filters||[]).filter(Boolean); c.disp=Object.assign({labels:false, legend:'auto', pal:'def', fmt:'auto', ymin:'', ymax:'', target:''}, c.disp||{});
+    if(c.follow==null) c.follow=true;
+    return c;
+  }
+  function defaults(src, DS){
+    var x=null, d=null; if(DS){ d=DS.fields.filter(function(f){ return f.kind==='date'; })[0]; x=DS.fields.filter(function(f){ return f.kind==='text'&&f.k!=='_region'; })[0]||DS.fields[0]; }
+    var s=SRC_BY[src]||{};
+    return norm({src:src, type:'bar', x:x?x.k:'', dateF:(s.date&&DS&&DS.fields.some(function(f){ return f.k===s.date; }))?s.date:(d?d.k:''), measures:[{agg:'count'}]});
+  }
+
+  /* ---- 계산 ---- */
+  function bucketOf(v, b){
+    var d=GST.toDate(v); if(!d) return '';
+    var y=d.getUTCFullYear(), mo=d.getUTCMonth()+1;
+    if(b==='year') return String(y);
+    if(b==='quarter') return y+'-Q'+Math.ceil(mo/3);
+    if(b==='month') return y+'-'+String(mo).padStart(2,'0');
+    if(b==='week') return GST.isoW(d);
+    if(b==='weekday') return '\u0000'+d.getUTCDay();
+    return y+'-'+String(mo).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+  }
+  function today(){ return GST.ymdL?GST.ymdL(new Date()):new Date().toISOString().slice(0,10); }
+  function shift(ymd, days){ var d=new Date(ymd+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+days); return d.toISOString().slice(0,10); }
+  function rangeOf(c){
+    var t=today();
+    switch(c.range){
+      case 'd7': return [shift(t,-6), t]; case 'd30': return [shift(t,-29), t]; case 'd90': return [shift(t,-89), t];
+      case 'd180': return [shift(t,-179), t]; case 'm12': return [shift(t,-364), t]; case 'ytd': return [t.slice(0,4)+'-01-01', t];
+      case 'custom': return [c.from||'', c.to||''];
+    }
+    return ['',''];
+  }
+  function numOr(v){ var n=GST.numv(v); return isNaN(n)?null:n; }
+  function fltOk(f, o, DS){
+    var v=o[f.f]; v=v==null?'':String(v);
+    var w=String(f.v==null?'':f.v);
+    switch(f.op){
+      case 'ne': return v!==w;
+      case 'has': return v.toLowerCase().indexOf(w.toLowerCase())>=0;
+      case 'nhas': return v.toLowerCase().indexOf(w.toLowerCase())<0;
+      case 'in': case 'nin': { var L2=w.split(',').map(function(s){ return s.trim(); }).filter(Boolean), hit=L2.indexOf(v.trim())>=0; return f.op==='in'?hit:!hit; }
+      case 'empty': return v.trim()==='';
+      case 'nempty': return v.trim()!=='';
+      case 'gt': case 'ge': case 'lt': case 'le': {
+        var fk=(DS.F[f.f]||{}).kind, a, b;
+        if(fk==='date'){ var dd=GST.toDate(v), dw=GST.toDate(w); if(!dd||!dw) return false; a=GST.fmtD(dd); b=GST.fmtD(dw); }
+        else { a=numOr(v); b=numOr(w); if(a==null||b==null) return false; }
+        return f.op==='gt'?a>b:f.op==='ge'?a>=b:f.op==='lt'?a<b:a<=b; }
+    }
+    return v===w;   // eq
+  }
+  /* 화면의 상세 필터 — 그 자료에 있는 축만. 값이 빈 행은 통과하지 않는다(그 축을 골랐는데 모르는 행이 섞이면 거짓이다) */
+  function pagePass(src){
+    var G=GST.filters; if(!G||!G.ready||!G.ready()) return null;
+    var s=SRC_BY[src]||{}, org=s.org||{}, axes=[];
+    Object.keys(org).forEach(function(ax){ if(G.has&&G.has(ax)) axes.push(ax); });
+    var opK=org.op;
+    if(opK && G.has && G.has('region')) axes.push('region');
+    var FF=G.F||{}, df=FF.dtFrom||'', dt=FF.dtTo||'';
+    if(!axes.length && !df && !dt) return null;
+    return function(o){
+      for(var i=0;i<axes.length;i++){ var ax=axes[i], raw;
+        if(ax==='region') raw=GST.ORG&&GST.ORG.region?GST.ORG.region(o[opK]):'';
+        else { raw=o[org[ax]]; if(ax==='customer'&&GST.ORG&&GST.ORG.customer) raw=GST.ORG.customer(raw)||raw; }
+        if(!(G.hitL?G.hitL(ax, raw):G.hit(ax, raw))) return false; }
+      if((df||dt) && s.date){ var d=GST.toDate(o[s.date]); if(!d) return false; var ds=GST.fmtD(d); if(df&&ds<df) return false; if(dt&&ds>dt) return false; }
+      return true;
+    };
+  }
+  function filterRows(c, DS, opt){
+    var rg=rangeOf(c), from=rg[0], to=rg[1], dF=c.dateF&&DS.F[c.dateF]?c.dateF:'';
+    var flt=(c.filters||[]).filter(function(f){ return f&&f.f&&DS.F[f.f]; });
+    var pp=(opt&&opt.page&&c.follow)?pagePass(c.src):null;
+    return DS.rows.filter(function(o){
+      if(pp && !pp(o)) return false;
+      if(dF&&(from||to)){ var d=GST.toDate(o[dF]); if(!d) return false; var s=GST.fmtD(d); if(from&&s<from) return false; if(to&&s>to) return false; }
+      for(var i=0;i<flt.length;i++) if(!fltOk(flt[i], o, DS)) return false;
+      return true;
+    });
+  }
+  function aggOf(rows, m){
+    if(m.agg==='count') return rows.length;
+    if(m.agg==='distinct'){ if(!m.f) return rows.length; var S=new Set(); rows.forEach(function(o){ var v=o[m.f]; if(v!==''&&v!=null) S.add(v); }); return S.size; }
+    var a=[]; rows.forEach(function(o){ var v=numOr(o[m.f]); if(v!=null) a.push(v); });
+    if(!a.length) return 0;
+    if(m.agg==='sum') return a.reduce(function(x,y){ return x+y; },0);
+    if(m.agg==='avg') return a.reduce(function(x,y){ return x+y; },0)/a.length;
+    if(m.agg==='min') return Math.min.apply(null,a);
+    if(m.agg==='max') return Math.max.apply(null,a);
+    a.sort(function(x,y){ return x-y; }); var h=a.length>>1; return a.length%2?a[h]:(a[h-1]+a[h])/2;
+  }
+  function mOk(m, DS){ return m.agg==='count' || (m.agg==='distinct' ? true : !!(m.f && DS.F[m.f] && DS.F[m.f].kind==='num')); }
+  function mName(m, DS){
+    if(m.name) return m.name;
+    var a=T('a.'+m.agg), base=m.agg==='count'?(T('cnt')):F(T('of_m'),{a:a, f:(DS.F[m.f]||{}).label||''});
+    return base+(m.calc&&m.calc!=='none'?' · '+T('c.'+m.calc):'');
+  }
+  function pctCalc(m){ return m.calc==='share'||m.calc==='pctx'||m.calc==='pctchg'; }
+  function transform(data, calc, colTot){
+    var out=data.slice();
+    if(calc==='cum'){ var s=0; out=out.map(function(v){ s+=v||0; return s; }); }
+    else if(calc==='ma3'){ out=data.map(function(_,i){ var a=data.slice(Math.max(0,i-2), i+1).filter(function(v){ return v!=null; }); return a.length?a.reduce(function(x,y){ return x+y; },0)/a.length:null; }); }
+    else if(calc==='diff'){ out=data.map(function(v,i){ return i?(v||0)-(data[i-1]||0):null; }); }
+    else if(calc==='pctchg'){ out=data.map(function(v,i){ return i&&data[i-1]?((v||0)-data[i-1])/data[i-1]*100:null; }); }
+    else if(calc==='share'){ var t=data.reduce(function(x,y){ return x+(y||0); },0); out=data.map(function(v){ return t?(v||0)/t*100:0; }); }
+    else if(calc==='pctx'){ out=data.map(function(v,i){ return colTot[i]?(v||0)/colTot[i]*100:0; }); }
+    return out;
+  }
+  function run(c, DS, opt){
+    c=norm(c); if(!DS) return null;
+    var xF=DS.F[c.x];
+    var rows=filterRows(c, DS, opt);
+    var R={c:c, DS:DS, n:rows.length, total:DS.rows.length, rows:rows};
+    var ms=c.measures.filter(function(m){ return mOk(m, DS); });
+    if(!ms.length){ R.err='num'; return R; }
+    if(c.type==='kpi') return runKpi(R, ms[0], DS, opt);
+    if(!xF){ R.err='x'; return R; }
+    if(c.type==='scatter'){
+      var yf=ms[0].f&&DS.F[ms[0].f]&&DS.F[ms[0].f].kind==='num'?ms[0].f:'';
+      if(xF.kind!=='num'||!yf){ R.err='num'; return R; }
+      var sF0=c.series&&DS.F[c.series]?c.series:'', G={};
+      rows.forEach(function(o){ var x=numOr(o[c.x]), y=numOr(o[yf]); if(x==null||y==null) return; var s=sF0?(o[sF0]||T('blank')):'_'; (G[s]=G[s]||[]).push({x:x,y:y,o:o}); });
+      var keys=Object.keys(G).sort(function(a,b){ return G[b].length-G[a].length; }).slice(0,8), cut=false, MAXP=5000;
+      R.scatter=true; R.sets=keys.map(function(s){ var p=G[s]; if(p.length>MAXP){ p=p.slice(0,MAXP); cut=true; } return {name:s==='_'?mName(ms[0],DS):s, pts:p}; });
+      R.cut=cut; R.xLabel=xF.label; R.yLabel=(DS.F[yf]||{}).label; return R;
+    }
+    var isD=xF.kind==='date', wd=isD&&c.bucket==='weekday';
+    var keyX=function(o){ var v=isD?bucketOf(o[c.x], c.bucket):o[c.x]; return v===''||v==null?T('blank'):v; };
+    var sF=c.series&&DS.F[c.series]&&c.type!=='doughnut'&&c.type!=='pie'&&c.type!=='polar'?c.series:'';
+    if(c.type==='heat' && !sF){ R.err='series'; return R; }
+    var keyS=function(o){ var v=o[sF]; return v===''||v==null?T('blank'):v; };
+    var cell={}, xr={}, sr={};
+    rows.forEach(function(o){ var x=keyX(o), s=sF?keyS(o):'_';
+      ((cell[x]=cell[x]||{})[s]=cell[x][s]||[]).push(o); (xr[x]=xr[x]||[]).push(o); (sr[s]=sr[s]||[]).push(o); });
+    var m0=ms[0], xv={}; Object.keys(xr).forEach(function(x){ xv[x]=aggOf(xr[x], m0); });
+    var xs=Object.keys(xr), otherX=[];
+    if(isD) xs.sort();
+    else {
+      if(c.sort==='label') xs.sort(function(a,b){ return String(a).localeCompare(String(b),'ko',{numeric:true}); });
+      else if(c.sort==='value_asc') xs.sort(function(a,b){ return xv[a]-xv[b]; });
+      else xs.sort(function(a,b){ return xv[b]-xv[a]; });
+      if(xs.length>c.top){ if(c.other){ otherX=xs.slice(c.top-1); xs=xs.slice(0,c.top-1).concat(['\u0001other']); } else xs=xs.slice(0,c.top); }
+    }
+    var ss=Object.keys(sr), otherS=[];
+    if(sF){ var sv={}; ss.forEach(function(s){ sv[s]=aggOf(sr[s], m0); }); ss.sort(function(a,b){ return sv[b]-sv[a]; });
+      var SMAX=c.type==='heat'||c.type==='table'?40:8;
+      if(ss.length>SMAX){ otherS=ss.slice(SMAX-1); ss=ss.slice(0,SMAX-1).concat(['\u0001other']); } }
+    var rowsAt=function(x, s){
+      var xl=x==='\u0001other'?otherX:[x], sl=s==='\u0001other'?otherS:(s==null?null:[s]), out=[];
+      xl.forEach(function(xk){ var C=cell[xk]; if(!C) return; (sl||Object.keys(C)).forEach(function(sk){ if(C[sk]) out=out.concat(C[sk]); }); });
+      return out;
+    };
+    var lab=function(k){ if(k==='\u0001other') return T('other_l'); if(wd&&k.charAt(0)==='\u0000') return T('wd')[+k.slice(1)]; return k; };
+    var sets=[];
+    ms.forEach(function(m, mi){
+      var cols=xs.map(function(x){ return ss.map(function(s){ return rowsAt(x, sF?s:null); }); });
+      var raw=ss.map(function(s, si){ return xs.map(function(_, xi){ return aggOf(cols[xi][si], m); }); });
+      var colTot=xs.map(function(_, xi){ return raw.reduce(function(a, r){ return a+(r[xi]||0); }, 0); });
+      ss.forEach(function(s, si){
+        var data=transform(raw[si], m.calc, colTot);
+        var nm=sF?(ms.length>1?mName(m,DS)+' · '+lab(s):lab(s)):mName(m,DS);
+        sets.push({name:nm, mi:mi, m:m, si:si, data:data, raw:raw[si], rows:xs.map(function(_, xi){ return cols[xi][si]; }), pct:pctCalc(m)});
+      });
+    });
+    R.xs=xs.map(lab); R.sets=sets; R.sF=sF; R.ms=ms; R.xLabel=xF.label; R.sLabel=sF?DS.F[sF].label:'';
+    return R;
+  }
+  function runKpi(R, m, DS, opt){
+    var c=R.c; R.kpi=true; R.m=m; R.value=aggOf(R.rows, m);
+    var rg=rangeOf(c), dF=c.dateF&&DS.F[c.dateF]?c.dateF:'';
+    if(dF && rg[0] && rg[1]){
+      var span=Math.round((new Date(rg[1]+'T00:00:00Z')-new Date(rg[0]+'T00:00:00Z'))/86400000)+1;
+      var pc=Object.assign({}, c, {range:'custom', from:shift(rg[0],-span), to:shift(rg[0],-1)});
+      var prev=filterRows(pc, DS, opt); R.prevRows=prev; R.prev=aggOf(prev, m);
+    }
+    if(dF){ var by={}; R.rows.forEach(function(o){ var k=bucketOf(o[dF],'month'); if(k) (by[k]=by[k]||[]).push(o); });
+      var ks=Object.keys(by).sort().slice(-12); R.spark=ks.map(function(k){ return aggOf(by[k], m); }); R.sparkK=ks; }
+    return R;
+  }
+
+  /* ---- 그리기 ---- */
+  function palOf(c){ var TH=GST.chartTheme(); return (c.disp&&PAL[c.disp.pal])||TH.pal8||TH.pal||GST.PAL8; }
+  function fmtV(v, c, pct){
+    if(v==null||!isFinite(v)) return '';
+    var f=(c.disp&&c.disp.fmt)||'auto';
+    if(f==='pct'||(f==='auto'&&pct)) return (Math.round(v*10)/10).toLocaleString()+'%';
+    if(f==='int') return Math.round(v).toLocaleString();
+    if(f==='d1') return v.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1});
+    if(f==='d2') return v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    return Math.abs(v)>=100||v===Math.round(v)?Math.round(v).toLocaleString():(Math.round(v*10)/10).toLocaleString();
+  }
+  function colsOf(DS){ return DS.fields.filter(function(f){ return f.k!=='_region'; }).slice(0,12); }
+  function drill(title, rows, DS){ var cols=colsOf(DS); GST.rowsModal(title, cols.map(function(f){ return f.label; }), rows.slice(0,2000).map(function(o){ return cols.map(function(f){ return o[f.k]; }); })); }
+  var VALS={ id:'gcbVals', afterDatasetsDraw:function(ch){
+    if(!ch.$cbVals) return; var ctx=ch.ctx, TH=GST.chartTheme(), fm=ch.$cbFmt||function(v){ return v; };
+    ctx.save(); ctx.font='600 10.5px '+(GST.FONT_STACK||'sans-serif'); ctx.fillStyle=TH.ink; ctx.textAlign='center'; ctx.textBaseline='bottom';
+    var n=0; ch.data.datasets.forEach(function(ds, di){ var meta=ch.getDatasetMeta(di); if(!meta||meta.hidden||!ch.isDatasetVisible(di)) return;
+      meta.data.forEach(function(el, i){ var v=ds.data[i]; if(v==null||v===0||n>400) return; n++;
+        var s=fm(v, di); if(!s) return;
+        if(meta.type==='doughnut'||meta.type==='pie'||meta.type==='polarArea'){ var p=el.tooltipPosition(); ctx.textBaseline='middle'; ctx.fillStyle='#fff'; ctx.fillText(s, p.x, p.y); ctx.fillStyle=TH.ink; ctx.textBaseline='bottom'; return; }
+        var horiz=(ch.options.indexAxis==='y');
+        if(horiz){ ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText(s, el.x+4, el.y); ctx.textAlign='center'; ctx.textBaseline='bottom'; }
+        else ctx.fillText(s, el.x, el.y-3);
+      }); });
+    ctx.restore(); } };
+  var TGT={ id:'gcbTarget', afterDatasetsDraw:function(ch){
+    var t=ch.$cbTarget; if(t==null||!isFinite(t)) return; var horiz=ch.options.indexAxis==='y', sc=ch.scales[horiz?'x':'y']; if(!sc) return;
+    var p=sc.getPixelForValue(t), a=ch.chartArea, ctx=ch.ctx, TH=GST.chartTheme(); if(!a) return;
+    ctx.save(); ctx.strokeStyle=TH.status.bad; ctx.setLineDash([5,4]); ctx.lineWidth=1.5; ctx.beginPath();
+    if(horiz){ ctx.moveTo(p,a.top); ctx.lineTo(p,a.bottom); } else { ctx.moveTo(a.left,p); ctx.lineTo(a.right,p); }
+    ctx.stroke(); ctx.restore(); } };
+  /* 값 표시·목표선은 전역 플러그인 — 기존 화면 차트(화면 편집 «값 표시»)도 같은 것을 쓴다. chart.$cbVals · $cbTarget 이 있을 때만 그린다 */
+  try{ if(window.Chart&&Chart.register){ if(!Chart.registry.plugins.get('gcbVals')) Chart.register(VALS); if(!Chart.registry.plugins.get('gcbTarget')) Chart.register(TGT); } }catch(e){}
+  function alpha(c, a){ var r=GST._rgba?GST._rgba(c):null; return r?'rgba('+r[0]+','+r[1]+','+r[2]+','+a+')':c; }
+  function emptyHost(host, msg){ host.innerHTML='<div class="gcb-empty">'+esc(msg)+'</div>'; }
+  function destroyIn(host){ [].forEach.call(host.querySelectorAll('canvas'), function(cv){ try{ var ch=window.Chart&&Chart.getChart(cv); if(ch) ch.destroy(); }catch(e){} }); }
+  function draw(host, cfg, opt){
+    opt=opt||{}; css(); var c=norm(cfg);
+    destroyIn(host);
+    if(!DATA[c.src]){ emptyHost(host, T('loading'));
+      return load(c.src).then(function(){ return draw(host, cfg, opt); }, function(e){ console.warn('[cb] 자료 읽기', e); emptyHost(host, T('fail')); return {err:'load'}; }); }
+    var DS=DATA[c.src]; if(!DS.F){ DS.F={}; DS.fields.forEach(function(f){ DS.F[f.k]=f; }); }
+    var R=run(c, DS, opt);
+    if(!R) { emptyHost(host, T('loading')); return Promise.resolve(R); }
+    if(R.err==='num'){ emptyHost(host, T('need_num')); return Promise.resolve(R); }
+    if(R.err==='series'){ emptyHost(host, T('need_series')); return Promise.resolve(R); }
+    if(R.err||!R.n){ emptyHost(host, T('no_rows')); return Promise.resolve(R); }
+    if(R.kpi) drawKpi(host, R, c, DS);
+    else if(c.type==='table') drawTable(host, R, c, DS);
+    else if(c.type==='heat') drawHeat(host, R, c, DS);
+    else drawChart(host, R, c, DS, opt);
+    return Promise.resolve(R);
+  }
+  function drawKpi(host, R, c, DS){
+    var pct=pctCalc(R.m), v=R.value, s='<div class="gcb-kpi"><div class="v" data-k="1">'+esc(fmtV(v,c,pct))+'</div>';
+    if(R.prev!=null){ var d=R.prev?(v-R.prev)/R.prev*100:null;
+      s+='<div class="d '+(d>0?'up':'dn')+'">'+(d==null?'—':(d>0?'▲ ':d<0?'▼ ':'')+Math.abs(Math.round(d*10)/10)+'%')+' <span class="s">'+esc(T('vs'))+' · '+esc(T('prev'))+' '+esc(fmtV(R.prev,c,pct))+'</span></div>'; }
+    var tg=numOr(c.disp.target); if(tg){ s+='<div class="bar"><i style="width:'+Math.max(0,Math.min(100,v/tg*100))+'%"></i></div><div class="s">'+esc(T('target'))+' '+esc(fmtV(tg,c,pct))+' · '+Math.round(v/tg*100)+'%</div>'; }
+    if(R.spark&&R.spark.length>1){ var mx=Math.max.apply(null,R.spark), mn=Math.min.apply(null,R.spark), W=200, H=46, k=R.spark.length-1;
+      var pts=R.spark.map(function(y,i){ return (i/k*W).toFixed(1)+','+(H-4-(mx===mn?0.5:(y-mn)/(mx-mn))*(H-8)).toFixed(1); }).join(' ');
+      s+='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="'+esc(palOf(c)[0])+'" stroke-width="2" points="'+pts+'"/></svg>'; }
+    s+='<div class="s">'+esc(F(T('of'),{n:nf(R.total),m:nf(R.n)}))+'</div></div>';
+    host.innerHTML=s; host.querySelector('[data-k]').onclick=function(){ drill(mName(R.m,DS), R.rows, DS); };
+  }
+  function drawTable(host, R, c, DS){
+    var h='<div class="gcb-tw"><table class="gcb-tbl" data-gst-nosn><thead><tr><th>'+esc(R.xLabel)+'</th>'+R.sets.map(function(s){ return '<th class="n">'+esc(s.name)+'</th>'; }).join('')+'</tr></thead><tbody>';
+    h+=R.xs.map(function(x, xi){ return '<tr><td>'+esc(x)+'</td>'+R.sets.map(function(s, si){ return '<td class="n"><a href="#" data-s="'+si+'" data-x="'+xi+'">'+esc(fmtV(s.data[xi],c,s.pct))+'</a></td>'; }).join('')+'</tr>'; }).join('');
+    var tot=R.sets.map(function(s){ var a=s.m.agg; return (a==='count'||a==='sum')&&(s.m.calc==='none')?s.data.reduce(function(x,y){ return x+(y||0); },0):null; });
+    if(tot.some(function(v){ return v!=null; })) h+='</tbody><tfoot><tr><td>'+esc(T('total'))+'</td>'+tot.map(function(v){ return '<td class="n">'+(v==null?'':esc(fmtV(v,c,false)))+'</td>'; }).join('')+'</tr></tfoot>';
+    else h+='</tbody>';
+    host.innerHTML=h+'</table></div>';
+    host.querySelectorAll('a[data-s]').forEach(function(a){ a.onclick=function(e){ e.preventDefault(); var s=R.sets[+a.dataset.s], xi=+a.dataset.x; drill(R.xs[xi]+' · '+s.name, s.rows[xi], DS); }; });
+  }
+  function drawHeat(host, R, c, DS){
+    var vals=[]; R.sets.forEach(function(s){ s.data.forEach(function(v){ if(v!=null) vals.push(v); }); });
+    var mx=Math.max.apply(null, vals.concat([0])), base=palOf(c)[0];
+    var h='<div class="gcb-tw"><table class="gcb-tbl gcb-heat" data-gst-nosn><thead><tr><th>'+esc(R.xLabel)+' \\ '+esc(R.sLabel)+'</th>'+R.sets.map(function(s){ return '<th class="n">'+esc(s.name)+'</th>'; }).join('')+'</tr></thead><tbody>';
+    h+=R.xs.map(function(x, xi){ return '<tr><td>'+esc(x)+'</td>'+R.sets.map(function(s, si){ var v=s.data[xi]||0, a=mx?v/mx:0;
+      return '<td class="n" data-s="'+si+'" data-x="'+xi+'" style="background:'+alpha(base, (0.08+a*0.82).toFixed(2))+';color:'+(a>0.55?'#fff':'inherit')+'">'+(v?esc(fmtV(v,c,s.pct)):'')+'</td>'; }).join('')+'</tr>'; }).join('');
+    host.innerHTML=h+'</tbody></table></div>';
+    host.querySelectorAll('td[data-s]').forEach(function(td){ td.onclick=function(){ var s=R.sets[+td.dataset.s], xi=+td.dataset.x; drill(R.xs[xi]+' · '+s.name, s.rows[xi], DS); }; });
+  }
+  function drawChart(host, R, c, DS, opt){
+    host.innerHTML='<div class="gcb-cv"><canvas'+(opt.id?' id="'+esc(opt.id)+'"':'')+'></canvas></div>'+(R.cut?'<div class="gcb-meta">'+esc(F(T('pts_cut'),{n:5000}))+'</div>':'');
+    var TH=GST.chartTheme(), pal=palOf(c), ty=c.type, d=c.disp;
+    var round=ty==='doughnut'||ty==='pie'||ty==='polar';
+    var base=round?(ty==='polar'?'polarArea':ty):ty==='radar'?'radar':ty==='scatter'?'scatter':(ty==='line'||ty==='area')?'line':'bar';
+    var ds;
+    if(R.scatter){
+      ds=R.sets.map(function(s, i){ return {label:s.name, data:s.pts.map(function(p){ return {x:p.x,y:p.y}; }), backgroundColor:alpha(pal[i%pal.length],.65), borderColor:pal[i%pal.length], pointRadius:3}; });
+    } else if(round){
+      var s0=R.sets[0]; ds=[{label:s0.name, data:s0.data, backgroundColor:R.xs.map(function(_,i){ return ty==='polar'?alpha(pal[i%pal.length],.75):pal[i%pal.length]; }), borderColor:TH.surface, borderWidth:2}];
+    } else {
+      var y2=R.sets.some(function(s){ return s.m.axis==='y2'; });
+      ds=R.sets.map(function(s, i){
+        var col=pal[i%pal.length], as=s.m.as==='auto'?(ty==='line'?'line':ty==='area'?'area':ty==='combo'?(s.mi===0?'bar':'line'):ty==='radar'?'line':'bar'):s.m.as;
+        if(ty==='radar') as='line';
+        var o={label:s.name, data:s.data, backgroundColor:col, borderColor:col, yAxisID:(y2&&base!=='radar')?s.m.axis:undefined};
+        if(as==='bar'){ o.type=base==='bar'?undefined:'bar'; o.borderRadius=4; o.maxBarThickness=56; o.borderWidth=0; }
+        else { o.type=base==='line'?undefined:'line'; o.borderWidth=2; o.tension=.3; o.pointRadius=R.xs.length>40?0:2.5; o.fill=as==='area'?(ty==='stack'||ty==='stack100'?'stack':'origin'):false; o.backgroundColor=as==='area'?alpha(col,.22):col; o.order=-1; }
+        if(base==='radar'){ o.backgroundColor=alpha(col,.18); o.fill=true; o.type=undefined; }
+        return o; });
+      if(ty==='stack100'){ var tot=R.xs.map(function(_, xi){ return R.sets.reduce(function(a,s){ return a+(s.data[xi]||0); },0); });
+        ds.forEach(function(o){ o.data=o.data.map(function(v, xi){ return tot[xi]?(v||0)/tot[xi]*100:0; }); }); }
+    }
+    var stacked=ty==='stack'||ty==='stack100', hb=ty==='hbar', pctAx=ty==='stack100'||(R.sets&&R.sets.length&&R.sets.every(function(s){ return s.pct; }));
+    var fmTick=function(v){ return fmtV(v, c, pctAx); };
+    var scales={};
+    if(!round && base!=='radar'){
+      var vax={beginAtZero:d.ymin==='', ticks:{color:TH.txt, callback:function(v){ return fmTick(v); }}, grid:{color:TH.grid}, stacked:stacked};
+      if(d.ymin!==''&&numOr(d.ymin)!=null) vax.min=numOr(d.ymin); if(d.ymax!==''&&numOr(d.ymax)!=null) vax.max=numOr(d.ymax);
+      if(ty==='stack100'){ vax.max=100; vax.min=0; }
+      var cax={ticks:{color:TH.txt, maxRotation:45, autoSkip:true}, grid:{color:'transparent'}, stacked:stacked};
+      if(R.scatter){ cax={type:'linear', ticks:{color:TH.txt}, grid:{color:TH.grid}, title:{display:true, text:R.xLabel, color:TH.txt}}; vax.title={display:true, text:R.yLabel, color:TH.txt}; }
+      if(hb){ scales.y=cax; scales.x=vax; } else { scales.x=cax; scales.y=vax; }
+      if(!R.scatter && R.sets.some(function(s){ return s.m.axis==='y2'; })){
+        var p2=R.sets.filter(function(s){ return s.m.axis==='y2'; }).every(function(s){ return s.pct; });
+        scales.y2={position:'right', beginAtZero:true, grid:{display:false}, ticks:{color:TH.txt, callback:function(v){ return fmtV(v,c,p2); }}}; }
+    }
+    if(base==='radar') scales.r={beginAtZero:true, angleLines:{color:TH.grid}, grid:{color:TH.grid}, pointLabels:{color:TH.txt}, ticks:{color:TH.txt, backdropColor:'transparent', callback:fmTick}};
+    if(base==='polarArea') scales.r={beginAtZero:true, grid:{color:TH.grid}, ticks:{color:TH.txt, backdropColor:'transparent'}};
+    var lgn=d.legend||'auto', showL=lgn==='none'?false:lgn==='auto'?(round||ds.length>1):true;
+    var cv=host.querySelector('canvas');
+    var ch=new Chart(cv, { type:base, data:{labels:R.scatter?undefined:R.xs, datasets:ds},
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:hb?'y':'x',
+        animation:{duration:window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches?0:450},
+        plugins:{ legend:{display:showL, position:lgn==='auto'?(round?'right':'bottom'):lgn, labels:{color:TH.txt, boxWidth:10}},
+          tooltip:{intersect:R.scatter||round, mode:R.scatter||round?'nearest':'index', callbacks:{ label:function(it){
+            if(R.scatter) return it.dataset.label+': '+it.parsed.x+', '+it.parsed.y;
+            var s=R.sets[round?0:it.datasetIndex]||{}, v=round?it.parsed:(hb?it.parsed.x:it.parsed.y); if(base==='radar') v=it.parsed.r;
+            return (round?it.label:it.dataset.label)+': '+fmtV(v, c, ty==='stack100'||s.pct); } } } },
+        scales:scales } });
+    ch.$cbVals=!!d.labels; ch.$cbTarget=numOr(d.target); ch.$cbFmt=function(v, di){ var s=R.sets&&R.sets[round?0:di]; return fmtV(v, c, ty==='stack100'||(s&&s.pct)); };
+    ch.$cbR=R;
+    /* 세부내역은 core 규약(chart.$rows) 하나로 — gstRows 플러그인이 받아 GST.rowsModal 로 연다 */
+    var cols=colsOf(DS);
+    ch.$rows=function(di, i){
+      var rows, title;
+      if(R.scatter){ var s=R.sets[di]; if(!s||!s.pts[i]) return null; rows=[s.pts[i].o]; title=s.name; }
+      else if(round){ var s0=R.sets[0]; rows=s0.rows[i]||[]; title=R.xs[i]; }
+      else { var s1=R.sets[di]; if(!s1) return null; rows=s1.rows[i]||[]; title=R.xs[i]+' · '+s1.name; }
+      return {title:title, cols:cols.map(function(f){ return f.label; }), rows:rows.slice(0,2000).map(function(o){ return cols.map(function(f){ return o[f.k]; }); })};
+    };
+    return ch;
+  }
+  function title(cfg){
+    var c=norm(cfg); if(c.title) return c.title; var DS=DATA[c.src]; if(!DS) return T('sn.'+c.src);
+    if(!DS.F){ DS.F={}; DS.fields.forEach(function(f){ DS.F[f.k]=f; }); }
+    var y=c.measures.map(function(m){ return mName(m, DS); }).join(' · ');
+    if(c.type==='kpi') return T('sn.'+c.src)+' · '+y;
+    if(c.measures.length===1&&c.measures[0].agg==='count') y=T('sn.'+c.src)+' '+T('cnt');
+    var xl=(DS.F[c.x]||{}).label||'', sl=c.series&&DS.F[c.series]?DS.F[c.series].label:'';
+    return sl?F(T('by2'),{y:y,x:xl,s:sl}):F(T('by'),{y:y,x:xl});
+  }
+
+  /* ---- 만들기 칸 — studio 와 기존 화면 «차트 추가»가 같은 폼을 쓴다. pre = id 앞머리(같은 문서에 둘이면 갈라지게) ---- */
+  var ICON={ bar:'<rect x="4" y="11" width="3" height="9"/><rect x="10" y="6" width="3" height="14"/><rect x="16" y="13" width="3" height="7"/>',
+    hbar:'<rect x="4" y="4" width="12" height="3"/><rect x="4" y="10" width="16" height="3"/><rect x="4" y="16" width="8" height="3"/>',
+    line:'<polyline points="3,17 9,10 14,14 21,5" fill="none" stroke-width="2"/>', area:'<path d="M3 20 L3 15 L9 9 L14 13 L21 6 L21 20 Z" opacity=".55"/><polyline points="3,15 9,9 14,13 21,6" fill="none" stroke-width="2"/>',
+    stack:'<rect x="4" y="12" width="4" height="8"/><rect x="4" y="7" width="4" height="5" opacity=".5"/><rect x="11" y="9" width="4" height="11"/><rect x="11" y="4" width="4" height="5" opacity=".5"/><rect x="18" y="14" width="3" height="6"/><rect x="18" y="10" width="3" height="4" opacity=".5"/>',
+    stack100:'<rect x="4" y="4" width="4" height="16" opacity=".5"/><rect x="4" y="11" width="4" height="9"/><rect x="11" y="4" width="4" height="16" opacity=".5"/><rect x="11" y="8" width="4" height="12"/><rect x="18" y="4" width="3" height="16" opacity=".5"/><rect x="18" y="14" width="3" height="6"/>',
+    combo:'<rect x="4" y="12" width="3" height="8" opacity=".6"/><rect x="10" y="9" width="3" height="11" opacity=".6"/><rect x="16" y="13" width="3" height="7" opacity=".6"/><polyline points="3,10 9,6 14,9 21,4" fill="none" stroke-width="2"/>',
+    doughnut:'<circle cx="12" cy="12" r="7" fill="none" stroke-width="4"/>', pie:'<path d="M12 12 L12 4 A8 8 0 1 1 4.5 15 Z"/><path d="M12 12 L4.5 15 A8 8 0 0 1 12 4 Z" opacity=".5"/>',
+    polar:'<path d="M12 12 L12 3 A9 9 0 0 1 20 9 Z"/><path d="M12 12 L19 13 A7 7 0 0 1 9 18 Z" opacity=".7"/><path d="M12 12 L9 16 A4.5 4.5 0 0 1 8 9 Z" opacity=".45"/>',
+    radar:'<polygon points="12,3 20,9 17,19 7,19 4,9" fill="none" stroke-width="1.4" opacity=".6"/><polygon points="12,7 16,10 14,16 9,15 8,10" opacity=".55"/>',
+    scatter:'<circle cx="6" cy="16" r="1.8"/><circle cx="10" cy="11" r="1.8"/><circle cx="14" cy="14" r="1.8"/><circle cx="17" cy="7" r="1.8"/><circle cx="19" cy="12" r="1.8"/>',
+    heat:'<rect x="4" y="4" width="5" height="5" opacity=".3"/><rect x="10" y="4" width="5" height="5" opacity=".8"/><rect x="16" y="4" width="4" height="5" opacity=".5"/><rect x="4" y="10" width="5" height="5"/><rect x="10" y="10" width="5" height="5" opacity=".4"/><rect x="16" y="10" width="4" height="5" opacity=".9"/><rect x="4" y="16" width="5" height="4" opacity=".6"/><rect x="10" y="16" width="5" height="4"/><rect x="16" y="16" width="4" height="4" opacity=".25"/>',
+    table:'<rect x="4" y="5" width="16" height="14" fill="none" stroke-width="1.6"/><line x1="4" y1="10" x2="20" y2="10" stroke-width="1.4"/><line x1="4" y1="14.5" x2="20" y2="14.5" stroke-width="1.2"/><line x1="10" y1="5" x2="10" y2="19" stroke-width="1.2"/>',
+    kpi:'<text x="12" y="16" text-anchor="middle" font-size="11" font-weight="800">123</text>' };
+  function ic(k){ return '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" aria-hidden="true">'+(ICON[k]||'')+'</svg>'; }
+  function opts(list, sel, lab){ return list.map(function(v){ return '<option value="'+esc(v)+'"'+(v===sel?' selected':'')+'>'+esc(lab(v))+'</option>'; }).join(''); }
+  function fOpts(DS, sel, kinds, blank){
+    var L2=(DS?DS.fields:[]).filter(function(f){ return !kinds||kinds.indexOf(f.kind)>=0; });
+    return (blank?'<option value="">'+esc(T('none'))+'</option>':'')+L2.map(function(f){ return '<option value="'+esc(f.k)+'"'+(f.k===sel?' selected':'')+'>'+esc(f.label)+'</option>'; }).join('');
+  }
+  function valueList(DS, k){ if(!DS||!k) return []; var C={}; DS.rows.forEach(function(o){ var v=o[k]; if(v) C[v]=(C[v]||0)+1; }); return Object.keys(C).sort(function(a,b){ return C[b]-C[a]; }).slice(0,200); }
+  /* form(host, cfg, onChange, {pre, page}) — cfg 를 «제자리에서» 고친다(norm 한 객체를 넘길 것). onChange(cfg) 는 바뀔 때마다. */
+  function form(host, cfg, onChange, fo){
+    fo=fo||{}; css(); var P=fo.pre||'';
+    var c=cfg, DS=DATA[c.src];
+    if(DS&&!DS.F){ DS.F={}; DS.fields.forEach(function(f){ DS.F[f.k]=f; }); }
+    var ch=function(){ try{ onChange&&onChange(c); }catch(e){ console.warn('[cb]', e); } };
+    var redraw=function(){ form(host, c, onChange, fo); };
+    var xK=DS&&DS.F[c.x]?DS.F[c.x].kind:'', isSc=c.type==='scatter', isRound=c.type==='doughnut'||c.type==='pie'||c.type==='polar', isK=c.type==='kpi';
+    var h='<div class="gcb-form">';
+    h+='<label><span>'+esc(T('src'))+'</span><select id="'+P+'fSrc">'+opts(SRC.map(function(s){ return s.id; }), c.src, function(v){ return T('sn.'+v); })+'</select></label>';
+    h+='<div><div class="gcb-l"><span>'+esc(T('type'))+'</span></div><div class="gcb-types" id="'+P+'fType">'+TYPES.map(function(k){ return '<button type="button" data-t="'+k+'"'+(k===c.type?' class="on"':'')+' title="'+esc(T('t.'+k))+'">'+ic(k)+'<span>'+esc(T('t.'+k))+'</span></button>'; }).join('')+'</div></div>';
+    if(!DS){ h+='<div class="gcb-empty">'+esc(T('loading'))+'</div></div>'; host.innerHTML=h; bindTop(); return; }
+    if(!isK){
+      h+='<div class="gcb-row"><label><span>'+esc(isSc?T('xnum'):T('x'))+'</span><select id="'+P+'fX">'+fOpts(DS, c.x, isSc?['num']:null)+'</select></label>'
+        +(xK==='date'&&!isSc?'<label style="max-width:96px"><span>'+esc(T('bucket'))+'</span><select id="'+P+'fBucket">'+opts(BUCK, c.bucket, function(v){ return T('b.'+v); })+'</select></label>':'')+'</div>';
+      if(!isRound) h+='<label><span>'+esc(T('series'))+'</span><select id="'+P+'fSeries">'+fOpts(DS, c.series, ['text'], true)+'</select></label>';
+    }
+    h+='<div><div class="gcb-l"><span>'+esc(T('measures'))+'</span></div><div style="display:flex;flex-direction:column;gap:6px">';
+    var multi=!isK&&!isRound&&!isSc;
+    c.measures.forEach(function(m, i){
+      if(i>0&&!multi) return;
+      var numOnly=m.agg!=='count'&&m.agg!=='distinct';
+      h+='<div class="gcb-m"><div class="gcb-row">'
+        +'<select data-ma="'+i+'"'+(i===0?' id="'+P+'fAgg"':'')+' aria-label="'+esc(T('m_agg'))+'">'+opts(AGG, m.agg, function(v){ return T('a.'+v); })+'</select>'
+        +'<select data-mf="'+i+'"'+(i===0?' id="'+P+'fVal"':'')+' aria-label="'+esc(T('m_f'))+'"'+(m.agg==='count'?' disabled':'')+'>'+fOpts(DS, m.f, numOnly?['num']:null, true)+'</select>'
+        +(i>0?'<button type="button" class="gcb-x" data-mx="'+i+'" aria-label="x">×</button>':'')+'</div>';
+      if(!isK&&!isSc) h+='<div class="gcb-row"><select data-mc="'+i+'" aria-label="'+esc(T('m_calc'))+'">'+opts(CALC, m.calc, function(v){ return T('c.'+v); })+'</select>'
+        +(multi?'<select data-mas="'+i+'" aria-label="'+esc(T('m_as'))+'" style="max-width:76px">'+opts(['auto','bar','line','area'], m.as, function(v){ return T('as.'+v); })+'</select>'
+          +'<select data-max="'+i+'" aria-label="'+esc(T('m_axis'))+'" style="max-width:72px">'+opts(['y','y2'], m.axis, function(v){ return T('ax.'+v); })+'</select>':'')+'</div>';
+      if(multi) h+='<input type="text" data-mn="'+i+'" maxlength="40" placeholder="'+esc(T('m_name'))+'" value="'+esc(m.name||'')+'">';
+      h+='</div>';
+    });
+    if(multi&&c.measures.length<6) h+='<button type="button" class="gcb-add" id="'+P+'addM">'+esc(T('add_m'))+'</button>';
+    h+='</div></div>';
+    if(!isK&&!isSc&&xK!=='date') h+='<div class="gcb-row"><label><span>'+esc(T('sort'))+'</span><select id="'+P+'fSort">'+opts(['value','value_asc','label'], c.sort, function(v){ return T('s.'+v); })+'</select></label>'
+      +'<label style="max-width:70px"><span>'+esc(T('top'))+'</span><input id="'+P+'fTop" type="number" min="3" max="60" value="'+c.top+'"></label></div>'
+      +'<label class="gcb-ck"><input type="checkbox" id="'+P+'fOther"'+(c.other?' checked':'')+'><span>'+esc(T('other'))+'</span></label>';
+    h+='<div class="gcb-row"><label><span>'+esc(T('dateF'))+'</span><select id="'+P+'fDate">'+fOpts(DS, c.dateF, ['date'], true)+'</select></label>'
+      +'<label><span>'+esc(T('range'))+'</span><select id="'+P+'fRange">'+opts(RANGE, c.range, function(v){ return T('r.'+v); })+'</select></label></div>';
+    if(c.range==='custom') h+='<div class="gcb-row"><input type="date" id="'+P+'fFrom" value="'+esc(c.from||'')+'" aria-label="from"><input type="date" id="'+P+'fTo" value="'+esc(c.to||'')+'" aria-label="to"></div>';
+    h+='<div><div class="gcb-l"><span>'+esc(T('filters'))+'</span><button type="button" class="gcb-add" id="'+P+'addF">'+esc(T('add_f'))+'</button></div><div style="display:flex;flex-direction:column;gap:5px">';
+    (c.filters||[]).forEach(function(f, i){ var noV=f.op==='empty'||f.op==='nempty';
+      h+='<div class="gcb-row"><select data-ff="'+i+'">'+fOpts(DS, f.f)+'</select><select data-fo="'+i+'" style="max-width:96px">'+opts(OPS, f.op||'eq', function(v){ return T('op.'+v); })+'</select>'
+        +(noV?'':'<input type="text" data-fv="'+i+'" list="'+P+'dl'+i+'" value="'+esc(f.v||'')+'"><datalist id="'+P+'dl'+i+'">'+valueList(DS, f.f).map(function(v){ return '<option value="'+esc(v)+'">'; }).join('')+'</datalist>')
+        +'<button type="button" class="gcb-x" data-fx="'+i+'" aria-label="x">×</button></div>'; });
+    h+='</div></div>';
+    var dp=c.disp;
+    h+='<details'+(fo.openDisp?' open':'')+'><summary>'+esc(T('disp'))+'</summary><div>'
+      +'<label class="gcb-ck"><input type="checkbox" id="'+P+'fLabels"'+(dp.labels?' checked':'')+'><span>'+esc(T('labels'))+'</span></label>'
+      +'<div class="gcb-row"><label><span>'+esc(T('legend'))+'</span><select id="'+P+'fLegend">'+opts(['auto','bottom','top','right','none'], dp.legend, function(v){ return T('lg.'+v); })+'</select></label>'
+      +'<label><span>'+esc(T('pal'))+'</span><select id="'+P+'fPal">'+opts(PALS, dp.pal, function(v){ return T('p.'+v); })+'</select></label></div>'
+      +'<div class="gcb-row"><label><span>'+esc(T('fmt'))+'</span><select id="'+P+'fFmt">'+opts(['auto','int','d1','d2','pct'], dp.fmt, function(v){ return T('f.'+v); })+'</select></label>'
+      +'<label><span>'+esc(T('target'))+'</span><input type="number" id="'+P+'fTarget" value="'+esc(dp.target)+'"></label></div>'
+      +'<div class="gcb-row"><label><span>'+esc(T('ymin'))+'</span><input type="number" id="'+P+'fYmin" value="'+esc(dp.ymin)+'"></label><label><span>'+esc(T('ymax'))+'</span><input type="number" id="'+P+'fYmax" value="'+esc(dp.ymax)+'"></label></div>'
+      +'</div></details>';
+    if(fo.page) h+='<label class="gcb-ck"><input type="checkbox" id="'+P+'fFollow"'+(c.follow?' checked':'')+'><span>'+esc(T('follow'))+'<small>'+esc(T('follow_s'))+'</small></span></label>';
+    h+='<label><span>'+esc(T('title'))+'</span><input type="text" id="'+P+'fTitle" maxlength="80" value="'+esc(c.title||'')+'"></label>';
+    h+='</div>';
+    host.innerHTML=h; bindTop(); bindAll();
+    function q(id){ return host.querySelector('#'+P+id); }
+    function bindTop(){
+      var s=host.querySelector('#'+P+'fSrc'); if(s) s.onchange=function(){ var id=s.value; c.src=id; host.querySelector('.gcb-form').style.opacity='.6';
+        load(id).then(function(DS2){ var keep={type:c.type, title:'', disp:c.disp, follow:c.follow}; var nd=defaults(id, DS2); Object.keys(c).forEach(function(k){ delete c[k]; }); Object.assign(c, nd, keep); c.title=''; redraw(); ch(); },
+          function(e){ console.warn('[cb]', e); redraw(); ch(); }); };
+      host.querySelectorAll('#'+P+'fType button').forEach(function(b){ b.onclick=function(){ c.type=b.dataset.t; redraw(); ch(); }; });
+    }
+    function bindAll(){
+      var on=function(id, ev, fn){ var e=q(id); if(e) e[ev]=function(){ fn(e); ch(); }; };
+      on('fX','onchange',function(e){ c.x=e.value; redraw(); });
+      on('fBucket','onchange',function(e){ c.bucket=e.value; });
+      on('fSeries','onchange',function(e){ c.series=e.value; });
+      on('fSort','onchange',function(e){ c.sort=e.value; });
+      on('fTop','oninput',function(e){ c.top=Math.max(3,Math.min(60,+e.value||12)); });
+      on('fOther','onchange',function(e){ c.other=e.checked; });
+      on('fDate','onchange',function(e){ c.dateF=e.value; });
+      on('fRange','onchange',function(e){ c.range=e.value; redraw(); });
+      on('fFrom','onchange',function(e){ c.from=e.value; });
+      on('fTo','onchange',function(e){ c.to=e.value; });
+      on('fLabels','onchange',function(e){ c.disp.labels=e.checked; });
+      on('fLegend','onchange',function(e){ c.disp.legend=e.value; });
+      on('fPal','onchange',function(e){ c.disp.pal=e.value; });
+      on('fFmt','onchange',function(e){ c.disp.fmt=e.value; });
+      on('fTarget','oninput',function(e){ c.disp.target=e.value; });
+      on('fYmin','oninput',function(e){ c.disp.ymin=e.value; });
+      on('fYmax','oninput',function(e){ c.disp.ymax=e.value; });
+      on('fFollow','onchange',function(e){ c.follow=e.checked; });
+      on('fTitle','oninput',function(e){ c.title=e.value; });
+      var addM=q('addM'); if(addM) addM.onclick=function(){ c.measures.push({agg:'count', f:'', calc:'none', as:'auto', axis:'y', name:''}); redraw(); ch(); };
+      var addF=q('addF'); if(addF) addF.onclick=function(){ c.filters.push({f:(DS.fields.filter(function(f){ return f.kind==='text'; })[0]||DS.fields[0]).k, op:'eq', v:''}); redraw(); ch(); };
+      host.querySelectorAll('[data-ma]').forEach(function(e){ e.onchange=function(){ var m=c.measures[+e.dataset.ma]; m.agg=e.value;
+        if(m.agg!=='count'&&m.agg!=='distinct'&&!(m.f&&DS.F[m.f]&&DS.F[m.f].kind==='num')){ var nf0=DS.fields.filter(function(f){ return f.kind==='num'; })[0]; m.f=nf0?nf0.k:''; }
+        redraw(); ch(); }; });
+      host.querySelectorAll('[data-mf]').forEach(function(e){ e.onchange=function(){ c.measures[+e.dataset.mf].f=e.value; ch(); }; });
+      host.querySelectorAll('[data-mc]').forEach(function(e){ e.onchange=function(){ c.measures[+e.dataset.mc].calc=e.value; ch(); }; });
+      host.querySelectorAll('[data-mas]').forEach(function(e){ e.onchange=function(){ c.measures[+e.dataset.mas].as=e.value; ch(); }; });
+      host.querySelectorAll('[data-max]').forEach(function(e){ e.onchange=function(){ c.measures[+e.dataset.max].axis=e.value; ch(); }; });
+      host.querySelectorAll('[data-mn]').forEach(function(e){ e.oninput=function(){ c.measures[+e.dataset.mn].name=e.value; ch(); }; });
+      host.querySelectorAll('[data-mx]').forEach(function(e){ e.onclick=function(){ c.measures.splice(+e.dataset.mx,1); redraw(); ch(); }; });
+      host.querySelectorAll('[data-ff]').forEach(function(e){ e.onchange=function(){ c.filters[+e.dataset.ff].f=e.value; redraw(); ch(); }; });
+      host.querySelectorAll('[data-fo]').forEach(function(e){ e.onchange=function(){ c.filters[+e.dataset.fo].op=e.value; redraw(); ch(); }; });
+      host.querySelectorAll('[data-fv]').forEach(function(e){ e.oninput=function(){ c.filters[+e.dataset.fv].v=e.value; ch(); }; });
+      host.querySelectorAll('[data-fx]').forEach(function(e){ e.onclick=function(){ c.filters.splice(+e.dataset.fx,1); redraw(); ch(); }; });
+    }
+  }
+  function meta(R){ return R&&!R.err&&R.total!=null?F(T('of'),{n:nf(R.total),m:nf(R.n)}):''; }
+  function ds(id){ var d=DATA[id]; if(d&&!d.F){ d.F={}; d.fields.forEach(function(f){ d.F[f.k]=f; }); } return d||null; }
+  return { SRC:SRC, TYPES:TYPES, load:load, data:ds, norm:norm, defaults:defaults, run:function(c, opt){ var d=ds(norm(c).src); return d?run(c, d, opt):null; },
+    draw:draw, form:form, alpha:alpha, PAL:PAL, PALS:PALS, ic:ic, title:title, meta:meta, pagePass:pagePass, T:T, _reset:function(){ Object.keys(DATA).forEach(function(k){ delete DATA[k]; }); } };
+})();
+
+/* ============================================================
    화면 편집 — 기존 화면의 카드 배치 (v202 · 사용자 요청 「다른 페이지들도 전부 커스터마이징」)
    ------------------------------------------------------------
    카드의 «순서 · 숨김 · 전체 폭 · 표시 제목»만 바꾼다. 계산 · 필터 · 세부내역 · 내보내기는 그 화면 코드가 그대로 한다 —
@@ -11661,7 +12366,9 @@ GST.SCREEN_T = {
       reset_q:'원래 배치로 되돌리고 화면을 다시 엽니다', reset_all:'전체 기본 배치 지우기', reset_me:'내 배치 지우기', confirm:'확인',
       conflict:'그사이 다른 사람이 이 화면 배치를 바꿨습니다 — 화면을 다시 연 뒤 편집하세요', fail:'저장하지 못했습니다', forbidden:'권한이 없습니다',
       unsaved:'저장하지 않은 변경', hint:'카드 머리의 단추로 옮기고 · 숨기고 · 폭과 제목을 바꿉니다. 계산·필터·세부내역은 그대로입니다',
-      kpi:'지표', retired:'기본 숨김', pc_only:'이 PC 에만 저장됩니다(서버 준비 전)'},
+      kpi:'지표', retired:'기본 숨김', pc_only:'이 PC 에만 저장됩니다(서버 준비 전)',
+      chart:'차트 설정', add:'아래에 차트 추가', add_p:'＋ 차트 추가', del:'삭제', c_orig:'원래', c_series:'계열', c_reset:'원래대로', close:'닫기', c_which:'차트',
+      c_noconv:'이 차트는 숫자 축이라 모양을 바꿀 수 없습니다 — 계열·값 표시·색·축은 바꿀 수 있습니다', b_add:'차트 추가', b_edit:'차트 고치기', b_apply:'적용', lg_def:'기본'},
   en:{title:'Edit screen', cur_all:'Default layout for everyone', cur_me:'Using my layout', cur_none:'Original layout', hidden:'Hidden cards', none_hidden:'No hidden cards',
       show:'Show', reset:'Original layout', cancel:'Cancel', save:'Save', save_all:'Save as default for everyone', save_me:'Save for me only',
       all_note:'Administrators · everyone sees this layout', me_note:'Other users are not affected', drop_me:'Remove my layout',
@@ -11670,7 +12377,9 @@ GST.SCREEN_T = {
       reset_q:'Restores the original layout and reopens the screen', reset_all:'Remove default layout', reset_me:'Remove my layout', confirm:'Confirm',
       conflict:'Someone changed this layout meanwhile — reopen the screen and edit again', fail:'Could not save', forbidden:'Not permitted',
       unsaved:'Unsaved changes', hint:'Use the buttons on each card to move, hide, resize and rename. Calculations, filters and details stay the same',
-      kpi:'KPI', retired:'Hidden by default', pc_only:'Saved on this PC only (server not ready)'},
+      kpi:'KPI', retired:'Hidden by default', pc_only:'Saved on this PC only (server not ready)',
+      chart:'Chart settings', add:'Add a chart below', add_p:'＋ Add chart', del:'Delete', c_orig:'Original', c_series:'Series', c_reset:'Reset', close:'Close', c_which:'Chart',
+      c_noconv:'This chart has a numeric axis, so its type cannot change — series, values, colors and axis can', b_add:'Add chart', b_edit:'Edit chart', b_apply:'Apply', lg_def:'Default'},
   zh:{title:'编辑画面', cur_all:'正在使用全体默认布局', cur_me:'正在使用我的布局', cur_none:'原始布局', hidden:'隐藏的卡片', none_hidden:'没有隐藏的卡片',
       show:'重新显示', reset:'恢复原始布局', cancel:'取消', save:'保存', save_all:'保存为全体用户默认布局', save_me:'仅保存到我的画面',
       all_note:'管理员权限 · 所有用户看到同一布局', me_note:'不影响其他用户', drop_me:'删除我的布局',
@@ -11679,7 +12388,9 @@ GST.SCREEN_T = {
       reset_q:'恢复原始布局并重新打开画面', reset_all:'删除全体默认布局', reset_me:'删除我的布局', confirm:'确认',
       conflict:'期间有其他人修改了此布局 — 请重新打开画面后再编辑', fail:'保存失败', forbidden:'没有权限',
       unsaved:'未保存的更改', hint:'用卡片顶部的按钮移动、隐藏、调整宽度和标题。计算·筛选·明细保持不变',
-      kpi:'指标', retired:'默认隐藏', pc_only:'仅保存在此电脑（服务器尚未准备）'},
+      kpi:'指标', retired:'默认隐藏', pc_only:'仅保存在此电脑（服务器尚未准备）',
+      chart:'图表设置', add:'在下方添加图表', add_p:'＋ 添加图表', del:'删除', c_orig:'原样', c_series:'系列', c_reset:'恢复原样', close:'关闭', c_which:'图表',
+      c_noconv:'此图表为数字轴，无法更改类型 — 可更改系列·数值显示·颜色·轴', b_add:'添加图表', b_edit:'修改图表', b_apply:'应用', lg_def:'默认'},
   ja:{title:'画面編集', cur_all:'全ユーザー既定レイアウトを適用中', cur_me:'自分のレイアウトを適用中', cur_none:'元のレイアウト', hidden:'非表示のカード', none_hidden:'非表示のカードはありません',
       show:'再表示', reset:'元のレイアウトへ', cancel:'キャンセル', save:'保存', save_all:'全ユーザーの既定として保存', save_me:'自分の画面のみに保存',
       all_note:'管理者権限 · 全ユーザーに同じレイアウトで表示', me_note:'他のユーザーの画面は変わりません', drop_me:'自分のレイアウトを削除',
@@ -11688,7 +12399,9 @@ GST.SCREEN_T = {
       reset_q:'元のレイアウトに戻して画面を開き直します', reset_all:'既定レイアウトを削除', reset_me:'自分のレイアウトを削除', confirm:'確認',
       conflict:'その間に他の人がこのレイアウトを変更しました — 画面を開き直してから編集してください', fail:'保存できませんでした', forbidden:'権限がありません',
       unsaved:'未保存の変更', hint:'カード上部のボタンで移動・非表示・幅・タイトルを変えます。計算·フィルター·詳細はそのままです',
-      kpi:'指標', retired:'既定で非表示', pc_only:'このPCにのみ保存されます（サーバー準備前）'}
+      kpi:'指標', retired:'既定で非表示', pc_only:'このPCにのみ保存されます（サーバー準備前）',
+      chart:'グラフ設定', add:'下にグラフを追加', add_p:'＋ グラフを追加', del:'削除', c_orig:'元のまま', c_series:'系列', c_reset:'元に戻す', close:'閉じる', c_which:'グラフ',
+      c_noconv:'このグラフは数値軸のため種類を変えられません — 系列·値表示·色·軸は変えられます', b_add:'グラフを追加', b_edit:'グラフを修正', b_apply:'適用', lg_def:'既定'}
 };
 GST._SCREEN_CSS = [
   '[data-gst-hide]{display:none !important}',
@@ -11721,7 +12434,32 @@ GST._SCREEN_CSS = [
   '.gse-pop{position:absolute;top:40px;right:6px;z-index:31;display:flex;gap:6px;align-items:center;background:var(--surface,#fff);border:1px solid var(--line,#d0d7e2);border-radius:10px;padding:6px;box-shadow:0 10px 26px rgba(0,0,0,.22)}',
   '.gse-pop input{font:13px var(--font,inherit);border:1px solid var(--line,#d0d7e2);border-radius:7px;padding:6px 8px;width:220px;max-width:50vw;background:var(--surface-2,#f3f5f9);color:var(--txt-main,#111)}',
   '.gse-pop button{font:600 12px var(--font,inherit);border:1px solid var(--line,#d0d7e2);background:var(--surface-2,#f3f5f9);color:var(--txt-main,#111);padding:6px 9px;border-radius:7px;cursor:pointer}',
-  '@media print{.gst-se-bar,#gstSePanel,.gse-line{display:none !important}}'
+  '.gse-pop.gse-cpop{flex-direction:column;align-items:stretch;width:310px;max-width:calc(100% - 12px);max-height:72vh;overflow:auto;gap:8px;font:12.5px/1.35 var(--font,inherit);color:var(--txt-main,#111)}',
+  '.gse-cpop .gse-ct{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}',
+  '.gse-cpop .gse-ct button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;padding:5px 0}',
+  '.gse-cpop .gse-ct button svg{width:17px;height:17px}',
+  '.gse-cpop .gse-ct button.on{border-color:var(--accent,#4C7CF0);color:var(--accent,#4C7CF0)}',
+  '.gse-cpop .gse-ct button:disabled{opacity:.35;cursor:not-allowed}',
+  '.gse-cpop label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:600;color:var(--txt-2,#445)}',
+  '.gse-cpop label.ck{flex-direction:row;align-items:center;gap:6px;font-weight:500;color:var(--txt-main,#111)}',
+  '.gse-cpop select,.gse-cpop input[type=number]{font:12.5px var(--font,inherit);border:1px solid var(--line,#d0d7e2);border-radius:7px;padding:5px 7px;background:var(--surface-2,#f3f5f9);color:var(--txt-main,#111);width:100%;box-sizing:border-box}',
+  '.gse-cpop .gse-r{display:flex;gap:6px}.gse-cpop .gse-r>*{flex:1;min-width:0}',
+  '.gse-cpop .gse-ser{display:flex;flex-direction:column;gap:3px;max-height:140px;overflow:auto;border:1px solid var(--line,#d0d7e2);border-radius:8px;padding:5px 7px}',
+  '.gse-cpop small{color:var(--txt-muted,#778);font-size:11px}',
+  '.gst-add-card .gcb-host{height:300px}',
+  '#gstCbDlg{position:fixed;inset:0;z-index:9995;background:rgba(3,8,16,.55);display:grid;place-items:center;padding:16px}',
+  '#gstCbDlg .gcd-box{width:min(1100px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;background:var(--surface,#fff);color:var(--txt-main,#111);border:1px solid var(--line,#d0d7e2);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:hidden}',
+  '#gstCbDlg .gcd-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line,#d0d7e2);font-size:15px}',
+  '#gstCbDlg .gcd-b{display:grid;grid-template-columns:330px minmax(0,1fr);gap:14px;padding:14px 16px;overflow:auto;min-height:0}',
+  '#gstCbDlg .gcd-p{display:flex;flex-direction:column;gap:6px;min-width:0}',
+  '#gstCbDlg .gcd-pt{font-weight:700;font-size:13.5px}',
+  '#gstCbDlg .gcd-ph{height:380px;border:1px solid var(--line,#d0d7e2);border-radius:12px;padding:10px}',
+  '#gstCbDlg .gcd-pm{font-size:11.5px;color:var(--txt-muted,#778)}',
+  '#gstCbDlg .gcd-a{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--line,#d0d7e2)}',
+  '#gstCbDlg button.gcd-btn{font:600 12.5px var(--font,inherit);border:1px solid var(--line,#d0d7e2);background:var(--surface-2,#f3f5f9);color:var(--txt-main,#111);padding:8px 14px;border-radius:9px;cursor:pointer}',
+  '#gstCbDlg button.gcd-btn.pri{background:var(--accent,#4C7CF0);border-color:var(--accent,#4C7CF0);color:#fff}',
+  '@media (max-width:820px){#gstCbDlg .gcd-b{grid-template-columns:1fr}}',
+  '@media print{.gst-se-bar,#gstSePanel,.gse-line,#gstCbDlg{display:none !important}}'
 ].join('\n');
 GST.screen = (function(){
   var S = { cfg:null, at:{all:null, me:null}, src:'', where:'', loaded:false, edit:null, applying:false, mo:null, tm:0, page:'' };
@@ -11743,6 +12481,7 @@ GST.screen = (function(){
   }
   function keyOf(el){
     var k='';
+    if(el.dataset && el.dataset.gstAdd) return 'x:'+el.dataset.gstAdd;   // «＋ 차트 추가»로 넣은 카드 (v203)
     if(el.classList.contains('kpi')){ var v=el.querySelector('[id]'); k=v?'k:'+v.id:''; }
     else { var cv=el.querySelector('canvas[id]');
       if(cv) k='cv:'+cv.id; else if(el.id) k='id:'+el.id;
@@ -11779,10 +12518,140 @@ GST.screen = (function(){
   }
   /* 지금 DOM 순서 그대로의 열쇠 목록 — 저장하는 «순서»다 */
   function domOrder(){ return index().list.map(keyOf); }
+  /* ---------- 차트 설정 — 기존 화면 차트의 «모양·계열·값 표시·색·축» (v203 · 사용자 「기존 페이지들 차트를 바꾸거나 이런 게 없네」) ----------
+     ⚠ 화면이 만든 차트의 «자료»는 손대지 않는다 — data 배열 · 라벨 · 세부내역($rows) · 클릭 동작은 그대로다(인덱스가 안 바뀐다).
+       바꾸는 것은 type · indexAxis · 축 쌓기/범위 · 데이터셋의 색·숨김 · 범례뿐이다. 그래서 «정렬»은 없다(인덱스를 흔들면 드릴이 남의 행을 연다).
+     · 적용은 두 길 — 차트가 «새로 만들어질 때»(전역 플러그인 gstCust 의 beforeInit · 화면이 다시 그려도 같은 설정)와
+       이미 있는 차트(설정을 읽었을 때 · 편집 중)에 restore → apply → update.
+     · 원래 값은 차트마다 한 번 떠 둔다($gstO) — «원래»로 돌릴 때 그 값으로 되돌린다.
+     · 숫자 축(linear·time) 차트 · 산점도 · 방사형은 모양을 안 바꾼다(바꾸면 화면과 다른 그림이 된다) — 계열·값·색·축만. */
+  var CTYPES=['orig','bar','hbar','line','area','stack','doughnut','pie'];
+  function solid(c){ return typeof c==='string'?c:(Array.isArray(c)?c.filter(function(x){ return typeof x==='string'; })[0]:null); }
+  function chartsIn(el){ return [].filter.call(el.querySelectorAll('canvas[id]'), function(cv){ try{ return window.Chart&&Chart.getChart&&Chart.getChart(cv); }catch(e){ return false; } }); }
+  function snap(ch){
+    if(ch.$gstO) return ch.$gstO;
+    var o=ch.config.options||{}, sc=o.scales||{}, lg=o.plugins&&o.plugins.legend, sv={};
+    ['x','y'].forEach(function(k){ var a=sc[k]; if(a) sv[k]={stacked:a.stacked, min:a.min, max:a.max, beginAtZero:a.beginAtZero, position:a.position}; });
+    /* 축 객체는 «얕은 사본»으로 떠 둔다 — 가로 막대 전환(swapXY)이 지금 축 객체를 제자리에서 바꾸므로, 참조로 들고 있으면 원래 모양이 같이 바뀐다 */
+    var scCopy={}; Object.keys(sc).forEach(function(k){ scCopy[k]=Object.assign({}, sc[k]); });
+    return (ch.$gstO={ type:ch.config.type, ia:o.indexAxis, scales:scCopy, sv:sv, lg:lg?{display:lg.display, position:lg.position}:null,
+      ds:(ch.data.datasets||[]).map(function(d){ return {type:d.type, hidden:d.hidden, backgroundColor:d.backgroundColor, borderColor:d.borderColor, fill:d.fill, borderWidth:d.borderWidth, tension:d.tension, pointRadius:d.pointRadius}; }) });
+  }
+  function convOk(ch){
+    var O=snap(ch), t=O.type;
+    if(['bar','line','doughnut','pie','polarArea'].indexOf(t)<0) return {ok:false};
+    if(t==='bar'||t==='line'){ var s=O.scales[O.ia==='y'?'y':'x']; if(s&&s.type&&s.type!=='category') return {ok:false}; }
+    return {ok:true, swap:Object.keys(O.scales||{}).every(function(k){ return k==='x'||k==='y'; })};
+  }
+  function swapXY(o){ var sc=o.scales||{}, t=sc.x; sc.x=sc.y; sc.y=t; if(sc.x){ sc.x.axis='x'; delete sc.x.position; } if(sc.y){ sc.y.axis='y'; delete sc.y.position; } }
+  function restoreChart(ch){
+    var O=ch.$gstO; if(!O||!ch.$gstOn) return; var o=ch.config.options;
+    ch.config.type=O.type; if(O.ia===undefined) delete o.indexAxis; else o.indexAxis=O.ia;
+    if(ch.$gstRound){ var rs={}; Object.keys(O.scales).forEach(function(k){ rs[k]=Object.assign({}, O.scales[k]); }); o.scales=rs; ch.$gstRound=false; }
+    if(ch.$gstSwap){ swapXY(o); ch.$gstSwap=false; }
+    var sc=o.scales||{};
+    ['x','y'].forEach(function(k){ var a=sc[k], v=O.sv[k]; if(!a||!v) return; ['stacked','min','max','beginAtZero','position'].forEach(function(p){ if(v[p]===undefined) delete a[p]; else a[p]=v[p]; }); });
+    if(o.plugins&&o.plugins.legend){ var L2=o.plugins.legend; if(O.lg){ L2.display=O.lg.display; L2.position=O.lg.position; } else { delete L2.display; delete L2.position; } }
+    (ch.data.datasets||[]).forEach(function(d,i){ var v=O.ds[i]; if(!v) return; Object.keys(v).forEach(function(p){ if(v[p]===undefined) delete d[p]; else d[p]=v[p]; }); });
+    ch.$cbVals=false; ch.$gstOn=false;
+  }
+  function emptyCc(c){ return !c || ((!c.type||c.type==='orig') && !(c.hide&&c.hide.length) && !c.labels && (!c.legend||c.legend==='def') && (!c.pal||c.pal==='def') && (c.ymin===''||c.ymin==null) && (c.ymax===''||c.ymax==null)); }
+  function applyChart(ch, c, init){
+    if(!ch||!ch.config) return; snap(ch); restoreChart(ch);
+    if(emptyCc(c)){ if(!init){ try{ ch.update(); }catch(e){} } return; }
+    var O=ch.$gstO, o=ch.config.options, cv=convOk(ch), TH=GST.chartTheme(), P=(c.pal&&c.pal!=='def'&&GST.cb&&GST.cb.PAL[c.pal])||null, PP=P||TH.pal8||GST.PAL8;
+    var al=function(x,a){ return GST.cb&&GST.cb.alpha?GST.cb.alpha(x,a):x; };
+    var ty=cv.ok?(c.type||'orig'):'orig', origRound=['doughnut','pie','polarArea'].indexOf(O.type)>=0, round=ty==='doughnut'||ty==='pie';
+    if(ty==='hbar'&&!cv.swap) ty='bar';
+    if(ty!=='orig'){
+      if(round){
+        ch.config.type=ty; if(!origRound){ o.scales={}; ch.$gstRound=true; } delete o.indexAxis;
+        (ch.data.datasets||[]).forEach(function(d,i){ delete d.type; if(i>0) d.hidden=true; });
+        var d0=(ch.data.datasets||[])[0]; if(d0 && (P||!origRound)){ d0.backgroundColor=(ch.data.labels||[]).map(function(_,i){ return PP[i%PP.length]; }); d0.borderColor=TH.surface; d0.borderWidth=2; }
+      } else {
+        var base=(ty==='line'||ty==='area')?'line':'bar';
+        ch.config.type=base;
+        if(origRound){ o.scales={}; ch.$gstRound=true; }
+        (ch.data.datasets||[]).forEach(function(d,i){ var od=O.ds[i]||{};
+          if(!(od.type===undefined||od.type===O.type||origRound)) return;   // 화면이 일부러 다른 모양으로 얹은 계열(목표선 등)은 그대로
+          delete d.type;
+          var col=solid(od.borderColor)||solid(od.backgroundColor)||PP[i%PP.length];
+          if(base==='line'){ d.borderColor=col; d.backgroundColor=ty==='area'?al(col,.22):col; d.fill=ty==='area'?'origin':false; d.borderWidth=2; d.tension=.3; if(d.pointRadius==null) d.pointRadius=2.5; }
+          else { if(O.type==='line'||origRound) d.backgroundColor=origRound?od.backgroundColor:col; d.borderWidth=0; }
+        });
+        var wantY=ty==='hbar', isY=(O.ia==='y');
+        if(!origRound && wantY!==isY){ o.indexAxis=wantY?'y':'x'; swapXY(o); ch.$gstSwap=true; }
+        else if(origRound && wantY) o.indexAxis='y';
+        if(ty==='stack'){ var sc=o.scales||(o.scales={}); ['x','y'].forEach(function(k){ sc[k]=sc[k]||{}; sc[k].stacked=true; }); }
+      }
+    }
+    var curRound=['doughnut','pie','polarArea'].indexOf(ch.config.type)>=0;
+    if(P){
+      if(curRound){ var d1=(ch.data.datasets||[])[0]; if(d1) d1.backgroundColor=(ch.data.labels||[]).map(function(_,i){ return P[i%P.length]; }); }
+      else (ch.data.datasets||[]).forEach(function(d,i){ var col=P[i%P.length], ln=(d.type||ch.config.type)==='line'; d.borderColor=col; d.backgroundColor=ln?(d.fill?al(col,.22):col):col; });
+    }
+    if(c.hide&&c.hide.length) (ch.data.datasets||[]).forEach(function(d){ if(c.hide.indexOf(String(d.label))>=0) d.hidden=true; });
+    if(c.legend&&c.legend!=='def'){ o.plugins=o.plugins||{}; o.plugins.legend=o.plugins.legend||{}; if(c.legend==='none') o.plugins.legend.display=false; else { o.plugins.legend.display=true; o.plugins.legend.position=c.legend; } }
+    if(!curRound){ var vk=o.indexAxis==='y'?'x':'y', sc2=o.scales||(o.scales={}), va=sc2[vk]||(sc2[vk]={});
+      if(c.ymin!==''&&c.ymin!=null&&isFinite(+c.ymin)){ va.min=+c.ymin; va.beginAtZero=false; }
+      if(c.ymax!==''&&c.ymax!=null&&isFinite(+c.ymax)) va.max=+c.ymax; }
+    ch.$cbVals=!!c.labels; ch.$cbFmt=function(v){ return typeof v==='number'?(Math.abs(v)>=100||v===Math.round(v)?Math.round(v).toLocaleString():(Math.round(v*10)/10).toLocaleString()):''; };
+    ch.$gstOn=true;
+    if(!init){ try{ ch.update(); }catch(e){ console.warn('[screen] 차트 설정 적용 실패', e); try{ restoreChart(ch); ch.update(); }catch(e2){} } }
+  }
+  function liveCfg(){ return S.edit?S.edit.cfg:S.cfg; }
+  function chartCfg(cv){ var c=liveCfg(); if(!c||!c.charts||!cv||!cv.id) return null; if(cv.closest&&cv.closest('[data-gst-add]')) return null; return c.charts[cv.id]||null; }
+  function applyCharts(cfg){
+    if(!window.Chart||!Chart.getChart) return; var M=(cfg&&cfg.charts)||{};
+    [].forEach.call(document.querySelectorAll('canvas[id]'), function(cv){ if(cv.closest('[data-gst-add]')) return; var ch=null; try{ ch=Chart.getChart(cv); }catch(e){}
+      if(!ch) return; var c=M[cv.id];
+      if(emptyCc(c)){ if(ch.$gstOn){ restoreChart(ch); try{ ch.update(); }catch(e){} } return; }
+      if(ch.$gstJ!==JSON.stringify(c)){ ch.$gstJ=JSON.stringify(c); applyChart(ch, c, false); } });
+  }
+  try{ if(window.Chart&&Chart.register&&!Chart.registry.plugins.get('gstCust')) Chart.register({ id:'gstCust', beforeInit:function(ch){ try{ var c=chartCfg(ch.canvas); if(c&&!emptyCc(c)){ ch.$gstJ=JSON.stringify(c); applyChart(ch, c, true); } }catch(e){ console.warn('[screen] 차트 설정', e); } } }); }catch(e){}
+
+  /* ---------- 차트 추가 — 기존 화면에 «차트 만들기 엔진»(GST.cb) 카드를 넣는다 (v203) ----------
+     cfg.adds = [{id, cfg, at}] — at 은 «이 카드 아래에» 넣을 카드 열쇠. 그 카드가 없으면(화면이 바뀌었다) 마지막 카드 뒤에.
+     카드 열쇠는 'x:'+id — 순서·숨김·폭·제목이 다른 카드와 같은 규칙을 탄다. 화면의 상세 필터를 따르는 것이 기본이다(cfg.follow). */
+  function addTitle(el, a){
+    var h=el.querySelector('h3'); if(!h) return; var tn=h.firstChild&&h.firstChild.nodeType===3?h.firstChild:null; if(!tn){ tn=document.createTextNode(''); h.insertBefore(tn, h.firstChild); }
+    var t=(GST.cb&&GST.cb.title)?GST.cb.title(a.cfg):'';
+    if(el.dataset.gstOrig!=null) el.dataset.gstOrig=t; else tn.nodeValue=t;
+  }
+  function drawAdd(el, a){
+    el.$cfgJ=JSON.stringify(a.cfg); addTitle(el, a);
+    var host=el.querySelector('.gcb-host'); if(!host||!GST.cb) return;
+    GST.cb.draw(host, a.cfg, {id:'gstx-'+a.id, page:true}).then(function(){ addTitle(el, a); }, function(){});
+  }
+  function ensureAdds(cfg){
+    var list=(cfg&&cfg.adds)||[], want={};
+    list.forEach(function(a){ want[a.id]=1; });
+    [].forEach.call(document.querySelectorAll('[data-gst-add]'), function(el){ if(!want[el.dataset.gstAdd]){ [].forEach.call(el.querySelectorAll('canvas'), function(cv){ try{ var ch=Chart.getChart(cv); if(ch) ch.destroy(); }catch(e){} }); el.remove(); } });
+    if(!list.length || !GST.cb) return;
+    var I=null;
+    list.forEach(function(a){
+      var el=document.querySelector('[data-gst-add="'+a.id+'"]');
+      if(!el){
+        I=I||index();
+        el=document.createElement('div'); el.className='card gst-add-card'; el.dataset.gstAdd=a.id;
+        el.innerHTML='<h3></h3><div class="gcb-host"></div>';
+        var anc=a.at&&I.M[a.at];
+        if(anc && anc.parentNode && !anc.classList.contains('kpi')) anc.parentNode.insertBefore(el, anc.nextSibling);
+        else { var L2=I.list.filter(function(x){ return !x.classList.contains('kpi') && !(x.dataset&&x.dataset.gstAdd); }), last=L2[L2.length-1];
+          if(last&&last.parentNode) last.parentNode.insertBefore(el, last.nextSibling); else (document.querySelector('main,.container,.wrap')||document.body).appendChild(el); }
+        drawAdd(el, a);
+      } else if(el.$cfgJ!==JSON.stringify(a.cfg)) drawAdd(el, a);
+      else addTitle(el, a);
+    });
+  }
+  var _fltT=0;
+  document.addEventListener('gst:filters', function(){ clearTimeout(_fltT); _fltT=setTimeout(function(){
+    var c=liveCfg(); ((c&&c.adds)||[]).forEach(function(a){ if(a.cfg&&a.cfg.follow===false) return; var el=document.querySelector('[data-gst-add="'+a.id+'"]'); if(el) drawAdd(el, a); }); }, 150); });
   function apply(cfg){
     cfg = cfg || S.cfg; if(!cfg || !document.body) return;
     S.applying=true;
     try{
+      try{ ensureAdds(cfg); }catch(e){ console.warn('[screen] 차트 추가', e); }
       var I=index(), ix={}, hid={}, wide={}, show={}, titles=cfg.titles||{};
       (cfg.order||[]).forEach(function(k,i){ ix[k]=i; });
       (cfg.hidden||[]).forEach(function(k){ hid[k]=1; });
@@ -11820,6 +12689,7 @@ GST.screen = (function(){
         else if(n>=1 && n<=5) p.setAttribute('data-n', String(n)); else p.removeAttribute('data-n');
       });
       try{ GST._layoutFit && GST._layoutFit(Array.from(parents)); }catch(e){}
+      try{ applyCharts(cfg); }catch(e){ console.warn('[screen] 차트 설정', e); }
     }finally{ S.applying=false; }
   }
   /* 화면이 카드를 다시 그리면(글로벌 현황 등) 같은 배치를 다시 건다 — 바뀐 것이 없으면 아무것도 안 옮기므로 되먹임이 없다 */
@@ -11869,11 +12739,15 @@ GST.screen = (function(){
       if(el.querySelector(':scope > .gst-se-bar')) return;
       el.classList.add('gst-se-card');
       var k=keyOf(el), isK=el.classList.contains('kpi'), wideOk=!isK && el.parentNode && gridCols(el.parentNode)>1;
+      var isAdd=!!(el.dataset&&el.dataset.gstAdd), hasCh=!isK && !isAdd && chartsIn(el).length>0, cbOk=!!GST.cb;
       var b=document.createElement('div'); b.className='gst-se-bar gst-noshot'; b.dataset.k=k;
       b.innerHTML='<button type="button" class="gse-grip" data-a="move" title="'+esc(T('move'))+'" aria-label="'+esc(T('move'))+'">⠿</button>'
         +(isK?'':'<button type="button" data-a="rename" title="'+esc(T('rename'))+'">✎</button>')
         +(wideOk?'<button type="button" data-a="wide" aria-pressed="'+(curCfg().wide.indexOf(k)>=0)+'" title="'+esc(T('wide'))+'">⇔</button>':'')
-        +'<button type="button" data-a="hide">'+esc(T('hide'))+'</button>';
+        +(hasCh?'<button type="button" data-a="chart" title="'+esc(T('chart'))+'" aria-label="'+esc(T('chart'))+'">⚙</button>':'')
+        +(isAdd&&cbOk?'<button type="button" data-a="edit" title="'+esc(T('b_edit'))+'" aria-label="'+esc(T('b_edit'))+'">⚙</button>':'')
+        +(!isK&&cbOk?'<button type="button" data-a="add" title="'+esc(T('add'))+'" aria-label="'+esc(T('add'))+'">＋</button>':'')
+        +(isAdd?'<button type="button" data-a="del">'+esc(T('del'))+'</button>':'<button type="button" data-a="hide">'+esc(T('hide'))+'</button>');
       el.appendChild(b);
     });
   }
@@ -11897,6 +12771,7 @@ GST.screen = (function(){
     var hl=hiddenList(), can=GST.targets&&GST.targets.can&&GST.targets.can(), pc=S.where!=='server';
     var cur=S.src==='me'?T('cur_me'):S.src==='all'?T('cur_all'):S.src==='pc'?T('pc_only'):T('cur_none');
     return '<b>'+esc(T('title'))+'</b><span class="gse-st" title="'+esc(T('hint'))+'">'+esc(cur)+'</span>'
+      +(GST.cb?'<button type="button" data-p="add">'+esc(T('add_p'))+'</button>':'')
       +'<span class="gse-dd"><button type="button" data-p="hid">'+esc(T('hidden'))+' '+hl.filter(function(x){ return !x.ret; }).length+' ▾</button></span>'
       +'<span class="gse-dd"><button type="button" data-p="reset">'+esc(T('reset'))+' ▾</button></span>'
       +'<button type="button" data-p="cancel">'+esc(T('cancel'))+'</button>'
@@ -11932,6 +12807,7 @@ GST.screen = (function(){
       return;
     }
     if(b.dataset.p==='cancel'){ leave(false); return; }
+    if(b.dataset.p==='add'){ builder(null, lastKey()); return; }
     if(b.dataset.p==='save'){
       var can=GST.targets&&GST.targets.can&&GST.targets.can(), srv=S.where==='server';
       var m3=menu(b, '<button type="button" data-s="all"'+(can&&srv?'':' disabled')+'>'+esc(T('save_all'))+'<small>'+esc(srv?T('all_note'):T('pc_only'))+'</small></button>'
@@ -11970,6 +12846,10 @@ GST.screen = (function(){
     var b=e.target.closest('.gst-se-bar button'); if(!b) return;
     e.preventDefault(); e.stopPropagation();
     var bar=b.closest('.gst-se-bar'), el=bar.parentNode, k=bar.dataset.k, cfg=curCfg(), a=b.dataset.a;
+    if(a==='chart'){ chartPop(el, b); return; }
+    if(a==='add'){ builder(null, k); return; }
+    if(a==='edit'){ var ad=(cfg.adds||[]).filter(function(x){ return 'x:'+x.id===k; })[0]; if(ad) builder(ad); return; }
+    if(a==='del'){ cfg.adds=(cfg.adds||[]).filter(function(x){ return 'x:'+x.id!==k; }); setArr(cfg.hidden,k,false); setArr(cfg.wide,k,false); delete (cfg.titles||{})[k]; apply(cfg); syncOrder(); dirty(); paintPanel(); return; }
     if(a==='hide'){ unitOf(el).forEach(function(u){ setArr(cfg.hidden, keyOf(u), true); setArr(cfg.show, keyOf(u), false); }); apply(cfg); dirty(); paintPanel(); return; }
     if(a==='wide'){ var on=cfg.wide.indexOf(k)<0; unitOf(el).forEach(function(u){ setArr(cfg.wide, keyOf(u), on); }); apply(cfg); b.setAttribute('aria-pressed', String(on)); b.title=T(on?'narrow':'wide'); dirty(); resizeCharts(el.parentNode); return; }
     if(a==='rename'){
@@ -12022,7 +12902,7 @@ GST.screen = (function(){
     cssOnce();
     var base=S.cfg?JSON.parse(JSON.stringify(S.cfg)):{};
     base.v=1; base.order=base.order&&base.order.length?base.order:domOrder();
-    base.hidden=base.hidden||[]; base.wide=base.wide||[]; base.show=base.show||[]; base.titles=base.titles||{};
+    base.hidden=base.hidden||[]; base.wide=base.wide||[]; base.show=base.show||[]; base.titles=base.titles||{}; base.charts=base.charts||{}; base.adds=base.adds||[];
     S.edit={ cfg:base, snap:JSON.stringify(base), dirty:false };
     document.body.classList.add('gst-se-on');
     decorate();
@@ -12032,7 +12912,8 @@ GST.screen = (function(){
     document.addEventListener('click', onCardBtn, true);
     document.addEventListener('click', blockClick, true);
     document.addEventListener('pointerdown', onDown, true);
-    S.edit.esc=function(ev){ if(ev.key==='Escape' && !document.querySelector('.gse-pop')){ var m=document.querySelector('#gstSePanel .gse-menu'); if(m) m.remove(); } };
+    S.edit.esc=function(ev){ if(ev.key!=='Escape') return; if(document.getElementById('gstCbDlg')){ closeDlg(); return; } var cp=document.querySelector('.gse-cpop'); if(cp){ cp.remove(); return; }
+      if(!document.querySelector('.gse-pop')){ var m=document.querySelector('#gstSePanel .gse-menu'); if(m) m.remove(); } };
     document.addEventListener('keydown', S.edit.esc);
     return true;
   }
@@ -12044,6 +12925,7 @@ GST.screen = (function(){
     document.removeEventListener('pointerdown', onDown, true);
     document.removeEventListener('keydown', S.edit.esc);
     var P=document.getElementById('gstSePanel'); if(P) P.remove();
+    closeDlg(); document.querySelectorAll('.gse-cpop').forEach(function(x){ x.remove(); });
     undecorate(); document.body.classList.remove('gst-se-on');
     if(!kept) apply(snap);   // 취소 — 편집을 시작할 때의 배치로 (DOM 순서까지)
     else if(S.cfg) apply(S.cfg);
@@ -12054,7 +12936,75 @@ GST.screen = (function(){
     if(d.type==='gst-screen-edit'){ if(S.edit) leave(false); else edit(); }
     if(d.type==='gst-screen-q' && e.source){ try{ e.source.postMessage({type:'gst-screen-a', ok:enabled(), page:pageKey()}, '*'); }catch(err){} }
   });
-  return { boot:boot, load:load, apply:apply, edit:edit, leave:leave, keyOf:keyOf, cards:function(){ return index().list; }, state:function(){ return S; }, pageKey:pageKey, enabled:enabled };
+  /* ---------- 차트 설정 창 (편집 중 · 카드의 ⚙) ---------- */
+  function chartPop(el, btn){
+    var old=document.querySelector('.gse-cpop'); if(old){ var same=old.$el===el; old.remove(); if(same) return; }
+    var cvs=chartsIn(el); if(!cvs.length) return;
+    var cfg=curCfg(); cfg.charts=cfg.charts||{};
+    var p=document.createElement('div'); p.className='gse-pop gse-cpop gst-noshot'; p.$el=el; p.setAttribute('role','dialog'); p.setAttribute('aria-label',T('chart'));
+    document.body.appendChild(p);
+    var r=(btn||el).getBoundingClientRect(); p.style.position='fixed'; p.style.top=Math.min(window.innerHeight-200, r.bottom+6)+'px'; p.style.right=Math.max(8, window.innerWidth-r.right)+'px';
+    var cur=cvs[0], CT=GST.cb?GST.cb.T:function(k){ return k; };
+    var paint=function(){
+      var ch=null; try{ ch=Chart.getChart(cur); }catch(e){} if(!ch){ p.remove(); return; } snap(ch);
+      var c=cfg.charts[cur.id]||{}, cv=convOk(ch), ty=c.type||'orig', hide=c.hide||[];
+      var lab=function(k){ return k==='orig'?T('c_orig'):CT('t.'+k); };
+      var ser=(ch.data.datasets||[]).map(function(d){ return String(d.label==null?'':d.label); }).filter(function(x,i,a){ return x && a.indexOf(x)===i; });
+      var sel=function(k, list, cur2, lb){ return '<select data-c="'+k+'">'+list.map(function(v){ return '<option value="'+esc(v)+'"'+(v===cur2?' selected':'')+'>'+esc(lb(v))+'</option>'; }).join('')+'</select>'; };
+      p.innerHTML=(cvs.length>1?'<label>'+esc(T('c_which'))+'<select data-c="which">'+cvs.map(function(x,i){ var cc=Chart.getChart(x), t0=(cc&&cc.data.datasets[0]&&cc.data.datasets[0].label)||x.id; return '<option value="'+i+'"'+(x===cur?' selected':'')+'>'+(i+1)+' · '+esc(t0)+'</option>'; }).join('')+'</select></label>':'')
+        +'<div class="gse-ct">'+CTYPES.map(function(k){ var dis=(!cv.ok&&k!=='orig')||(k==='hbar'&&!cv.swap);
+          return '<button type="button" data-ct="'+k+'"'+(k===ty?' class="on"':'')+(dis?' disabled':'')+'>'+(k==='orig'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v5h5"/></svg>':(GST.cb?GST.cb.ic(k):''))+'<span>'+esc(lab(k))+'</span></button>'; }).join('')+'</div>'
+        +(cv.ok?'':'<small>'+esc(T('c_noconv'))+'</small>')
+        +(ser.length>1?'<div><div style="font-size:11.5px;font-weight:600;color:var(--txt-2,#445);margin-bottom:3px">'+esc(T('c_series'))+'</div><div class="gse-ser">'+ser.map(function(nm, i){ return '<label class="ck"><input type="checkbox" data-sh="'+i+'"'+(hide.indexOf(nm)<0?' checked':'')+'>'+esc(nm)+'</label>'; }).join('')+'</div></div>':'')
+        +'<label class="ck"><input type="checkbox" data-c="labels"'+(c.labels?' checked':'')+'>'+esc(CT('labels'))+'</label>'
+        +'<div class="gse-r"><label>'+esc(CT('legend'))+sel('legend',['def','bottom','top','right','none'],c.legend||'def',function(v){ return v==='def'?T('lg_def'):CT('lg.'+v); })+'</label>'
+        +'<label>'+esc(CT('pal'))+sel('pal',(GST.cb?GST.cb.PALS:['def']),c.pal||'def',function(v){ return CT('p.'+v); })+'</label></div>'
+        +'<div class="gse-r"><label>'+esc(CT('ymin'))+'<input type="number" data-c="ymin" value="'+esc(c.ymin==null?'':c.ymin)+'"></label><label>'+esc(CT('ymax'))+'<input type="number" data-c="ymax" value="'+esc(c.ymax==null?'':c.ymax)+'"></label></div>'
+        +'<div class="gse-r"><button type="button" data-c="reset">'+esc(T('c_reset'))+'</button><button type="button" data-c="close">'+esc(T('close'))+'</button></div>';
+      p.$ser=ser;
+    };
+    var setC=function(patch){ var c=Object.assign({}, cfg.charts[cur.id]||{}, patch); if(emptyCc(c)) delete cfg.charts[cur.id]; else cfg.charts[cur.id]=c;
+      var ch=null; try{ ch=Chart.getChart(cur); }catch(e){} if(ch){ ch.$gstJ=JSON.stringify(cfg.charts[cur.id]||null); applyChart(ch, cfg.charts[cur.id]||null, false); } dirty(); };
+    p.addEventListener('click', function(ev){ ev.stopPropagation(); var b=ev.target.closest('button'); if(!b||b.disabled) return;
+      if(b.dataset.ct){ setC({type:b.dataset.ct}); paint(); return; }
+      if(b.dataset.c==='reset'){ delete cfg.charts[cur.id]; var ch=Chart.getChart(cur); if(ch){ ch.$gstJ=null; applyChart(ch, null, false); } dirty(); paint(); return; }
+      if(b.dataset.c==='close'){ p.remove(); } });
+    p.addEventListener('change', function(ev){ var e=ev.target;
+      if(e.dataset.c==='which'){ cur=cvs[+e.value]; paint(); return; }
+      if(e.dataset.sh!=null){ var hide=[]; p.querySelectorAll('[data-sh]').forEach(function(x){ if(!x.checked) hide.push(p.$ser[+x.dataset.sh]); }); setC({hide:hide}); return; }
+      if(e.dataset.c==='labels'){ setC({labels:e.checked}); return; }
+      if(e.dataset.c==='legend'||e.dataset.c==='pal'){ var o={}; o[e.dataset.c]=e.value; setC(o); } });
+    p.addEventListener('input', function(ev){ var e=ev.target; if(e.dataset.c==='ymin'||e.dataset.c==='ymax'){ var o={}; o[e.dataset.c]=e.value; setC(o); } });
+    paint();
+  }
+  /* ---------- 차트 추가 창 — GST.cb 의 폼 + 미리 보기. 맞춤 분석과 같은 폼·같은 엔진이다 ---------- */
+  function closeDlg(){ var D=document.getElementById('gstCbDlg'); if(!D) return; [].forEach.call(D.querySelectorAll('canvas'), function(cv){ try{ var ch=Chart.getChart(cv); if(ch) ch.destroy(); }catch(e){} }); D.remove(); }
+  function lastKey(){ var L2=index().list.filter(function(x){ return !x.classList.contains('kpi') && x.offsetParent!==null && !x.hasAttribute('data-gst-hide'); }); return L2.length?keyOf(L2[L2.length-1]):''; }
+  function builder(add, atKey){
+    closeDlg(); document.querySelectorAll('.gse-cpop').forEach(function(x){ x.remove(); }); if(!GST.cb) return;
+    var c=GST.cb.norm(add?add.cfg:{src:'wk'});
+    var D=document.createElement('div'); D.id='gstCbDlg'; D.className='gst-noshot';
+    D.innerHTML='<div class="gcd-box" role="dialog" aria-modal="true" aria-label="'+esc(T(add?'b_edit':'b_add'))+'"><div class="gcd-h"><b>'+esc(T(add?'b_edit':'b_add'))+'</b><span style="flex:1"></span><button type="button" class="gcd-btn" data-d="x">'+esc(T('close'))+'</button></div>'
+      +'<div class="gcd-b"><div class="gcd-f"></div><div class="gcd-p"><div class="gcd-pt"></div><div class="gcd-ph gcb-host"></div><div class="gcd-pm"></div></div></div>'
+      +'<div class="gcd-a"><button type="button" class="gcd-btn" data-d="x">'+esc(T('cancel'))+'</button><button type="button" class="gcd-btn pri" data-d="ok">'+esc(T('b_apply'))+'</button></div></div>';
+    document.body.appendChild(D);
+    var fh=D.querySelector('.gcd-f'), ph=D.querySelector('.gcd-ph'), pt=D.querySelector('.gcd-pt'), pm=D.querySelector('.gcd-pm'), _t=0;
+    var pv=function(){ clearTimeout(_t); _t=setTimeout(function(){ pt.textContent=GST.cb.title(c);
+      GST.cb.draw(ph, c, {id:'gcdPv', page:true}).then(function(R){ pt.textContent=GST.cb.title(c); pm.textContent=GST.cb.meta(R); }); }, 60); };
+    var paint=function(){ GST.cb.form(fh, c, pv, {pre:'cbx-', page:true}); pv(); };
+    paint(); GST.cb.load(c.src).then(paint, paint);
+    D.addEventListener('click', function(e){
+      if(e.target===D){ closeDlg(); return; }
+      var b=e.target.closest('[data-d]'); if(!b) return;
+      if(b.dataset.d==='x'){ closeDlg(); return; }
+      var cfg=curCfg(); cfg.adds=cfg.adds||[];
+      var cc=JSON.parse(JSON.stringify(c));
+      if(add){ var hit=cfg.adds.filter(function(x){ return x.id===add.id; })[0]; if(hit) hit.cfg=cc; }
+      else cfg.adds.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), cfg:cc, at:atKey||''});
+      closeDlg(); apply(cfg); decorate(); syncOrder(); dirty(); paintPanel(); resizeCharts(document);
+    });
+  }
+  return { boot:boot, load:load, apply:apply, edit:edit, leave:leave, keyOf:keyOf, chartCfg:chartCfg, applyChart:applyChart, cards:function(){ return index().list; }, state:function(){ return S; }, pageKey:pageKey, enabled:enabled };
 })();
 /* 어느 화면에서나 스스로 깨어난다 — 페이지는 한 줄도 안 고친다(chartLayout 과 같은 규율) */
 (function(){
