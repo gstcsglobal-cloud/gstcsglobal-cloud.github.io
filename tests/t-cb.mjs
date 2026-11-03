@@ -278,6 +278,136 @@ is(add && add.length === 1 && add[0] === 'GST TAIWAN SCRUBBER', '화면의 상�
 await pg.evaluate(() => GST.filters.toggle('op', 'GST TAIWAN SCRUBBER')); await pg.waitForTimeout(300);
 await ctx.close();
 
+/* ============ ④ 크기 · 자유 배치 — 주간 현황 (v205 · 사용자 「새로 만들었는데 왜 크기 조정이랑 배치를 내 맘대로 할 수가 없지?」) ============ */
+console.log('[4] 크기 · 자유 배치 — 주간 현황(카드가 격자 밖 body 에 붙는 화면)');
+ctx = await mkCtx(() => { window.__ME = { email:'boss@test.local', can_write:true, role:'admin' }; });
+pg = await ctx.newPage(); pg.on('pageerror', e => errs.push('report: ' + e.message));
+await pg.emulateMedia({ reducedMotion:'reduce' }); await pg.setViewportSize({ width:1500, height:3000 });   // 끌기 출발·도착이 한 화면에 들게(자동 굴림은 따로)
+await pg.goto(BASE + '/report/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(4500);
+await pg.evaluate(() => GST.screen.edit()); await pg.waitForTimeout(300);
+const ancKey = await pg.evaluate(() => { const el = GST.screen.cards().find(x => x.parentNode === document.body && !x.classList.contains('kpi') && x.offsetParent !== null); return el ? GST.screen.keyOf(el) : null; });
+is(!!ancKey, '격자 밖(body)에 붙은 카드가 있다 — 사용자 화면과 같은 자리 (' + ancKey + ')');
+const addAt = async () => {
+  await pg.evaluate(k => { const el = GST.screen.cards().find(x => GST.screen.keyOf(x) === k); el.scrollIntoView({block:'center'}); el.querySelector('.gst-se-bar [data-a="add"]').click(); }, ancKey);
+  await pg.waitForTimeout(1500); await pg.selectOption('#gstCbDlg #cbx-fX', 'op'); await pg.waitForTimeout(300); await pg.click('#gstCbDlg [data-d="ok"]'); await pg.waitForTimeout(800); };
+await addAt(); await addAt();
+let L4 = await pg.evaluate(k => { const A = [...document.querySelectorAll('[data-gst-add]')], anc = GST.screen.cards().find(x => GST.screen.keyOf(x) === k);
+  return { n:A.length, row:A.every(a => a.parentNode.classList.contains('gse-row')), same:A.length === 2 && A[0].parentNode === A[1].parentNode, adj:A.length && A[0].parentNode.previousElementSibling === anc,
+    bodyFlex:getComputedStyle(document.body).display }; }, ancKey);
+is(L4.n === 2 && L4.row && L4.same && L4.adj, '추가 카드 둘이 그 카드 바로 아래 «12칸 줄»에 담긴다 (' + JSON.stringify(L4) + ')');
+is(L4.bodyFlex === 'block', 'body 자체는 그대로(block) — 머리·사이드바 배치를 안 건드린다');
+const drag = async (from, to, steps) => { await pg.mouse.move(from[0], from[1]); await pg.mouse.down(); await pg.mouse.move(to[0], to[1], { steps: steps || 12 }); await pg.mouse.up(); await pg.waitForTimeout(400); };
+const geo = () => pg.evaluate(() => { const A = [...document.querySelectorAll('[data-gst-add]')].map(a => { const r = a.getBoundingClientRect(), rs = a.querySelector('.gse-rs').getBoundingClientRect(), h = a.querySelector('.gcb-host').getBoundingClientRect();
+  return { x:r.left, y:r.top, w:r.width, hx:rs.left + rs.width / 2, hy:rs.top + rs.height / 2, hh:h.height, gw:a.getAttribute('data-gst-w') }; });
+  const row = document.querySelector('.gse-row').getBoundingClientRect(); return { A, rw:row.width }; });
+await pg.evaluate(() => document.querySelector('[data-gst-add]').scrollIntoView({block:'center'})); await pg.waitForTimeout(200);
+let G = await geo();
+await drag([G.A[0].hx, G.A[0].hy], [G.A[0].x + G.rw * 0.5, G.A[0].hy + 120]);
+G = await geo();
+is(G.A[0].gw === '6' && Math.abs(G.A[0].w - (G.rw - 16) / 2) < 12, '모서리를 끌면 폭이 칸에 맞춰 바뀐다 — 1/2 (' + Math.round(G.A[0].w) + ' / ' + Math.round(G.rw) + ')');
+is(G.A[0].hh > 380, '같은 손잡이로 높이도 — 차트 칸 300 → ' + Math.round(G.A[0].hh) + 'px');
+await pg.evaluate(() => document.querySelectorAll('[data-gst-add]')[1].scrollIntoView({block:'center'})); await pg.waitForTimeout(200); G = await geo();
+await drag([G.A[1].hx, G.A[1].hy], [G.A[1].x + G.rw * 0.5, G.A[1].hy]);
+G = await geo();
+is(G.A[1].gw === '6' && Math.abs(G.A[0].y - G.A[1].y) < 4, '둘 다 1/2 — 한 줄에 나란히 선다');
+if (process.env.SHOT) { await pg.setViewportSize({ width:1500, height:1000 }); await pg.evaluate(() => document.querySelector('.gse-row').scrollIntoView({block:'center'})); await pg.waitForTimeout(400); await pg.screenshot({ path: process.env.SHOT + '/cb-size.png' }); await pg.setViewportSize({ width:1500, height:3000 }); }
+/* 다른 격자로 — 두 번째 카드를 인원 격자(#hrGrid)의 카드 옆으로 */
+const tgtKey = await pg.evaluate(() => { const c = [...document.querySelectorAll('#hrGrid > .gst-se-card')].find(x => x.offsetParent !== null); if (!c) return null; c.scrollIntoView({block:'center'}); return GST.screen.keyOf(c); });
+await pg.waitForTimeout(200);
+const gp = await pg.evaluate(k => { const a = document.querySelectorAll('[data-gst-add]')[1], g = a.querySelector('.gse-grip').getBoundingClientRect(), t = GST.screen.cards().find(x => GST.screen.keyOf(x) === k).getBoundingClientRect();
+  return { g:[g.left + g.width / 2, g.top + g.height / 2], t:[t.left + t.width * 0.75, t.top + t.height / 2] }; }, tgtKey);
+await drag(gp.g, gp.t, 25);
+let mv = await pg.evaluate(k => { const a = document.querySelectorAll('[data-gst-add]'); const c = GST.screen.state().edit.cfg; const id = [...a].find(x => x.parentNode.id === 'hrGrid');
+  return { inHr: !!id, at: c.adds.map(x => x.at + '/' + (x.pos || '')), k }; }, tgtKey);
+is(mv.inHr && mv.at.some(x => x.indexOf(tgtKey) === 0), '끌어서 다른 격자로 — 그 카드 옆에 놓이고 자리(at·pos)가 기억된다 (' + JSON.stringify(mv) + ')');
+/* 화면 카드도 다른 격자로 — .arow 카드를 인원 격자로, 취소하면 원래 자리 */
+const ex = await pg.evaluate(() => { const c = [...document.querySelectorAll('.arow > .gst-se-card')].find(x => x.offsetParent !== null); if (!c) return null; c.scrollIntoView({block:'center'}); return GST.screen.keyOf(c); });
+await pg.waitForTimeout(200);
+const gp2 = await pg.evaluate(([k, t]) => { const el = GST.screen.cards().find(x => GST.screen.keyOf(x) === k), g = el.querySelector('.gse-grip').getBoundingClientRect(); return [g.left + g.width / 2, g.top + g.height / 2]; }, [ex, tgtKey]);
+const tg2 = await pg.evaluate(k => { const t = GST.screen.cards().find(x => GST.screen.keyOf(x) === k); const r = t.getBoundingClientRect(); return [r.left + r.width * 0.75, r.top + r.height / 2]; }, tgtKey);
+await drag(gp2, tg2, 30);
+mv = await pg.evaluate(k => { const el = GST.screen.cards().find(x => GST.screen.keyOf(x) === k); return { p: el.parentNode.id, m: JSON.stringify(GST.screen.state().edit.cfg.move) }; }, ex);
+is(mv.p === 'hrGrid' && mv.m.indexOf(ex) >= 0, '화면 카드도 다른 격자로 — cfg.move 에 남는다 (' + JSON.stringify(mv) + ')');
+await pg.keyboard.press('Control+z'); await pg.waitForTimeout(400);
+is(await pg.evaluate(k => GST.screen.cards().find(x => GST.screen.keyOf(x) === k).parentNode.classList.contains('arow'), ex), 'Ctrl+Z — 원래 격자로 돌아간다');
+await pg.click('#gstSePanel [data-p="save"]'); await pg.waitForTimeout(150); await pg.click('#gstSePanel [data-s="me"]'); await pg.waitForTimeout(500);
+sv = (await calls(pg)).filter(c => c.rpc === 'screen_layout_save').pop();
+const sz = sv && sv.args.p_config.size || {};
+is(Object.keys(sz).filter(k => k.startsWith('x:') && sz[k].w === 6).length === 2 && Object.values(sz).some(v => v.h > 380), '저장 — size 에 폭(6/12)·높이 (' + JSON.stringify(sz) + ')');
+await pg.reload({ waitUntil:'domcontentloaded' }); await pg.waitForTimeout(5000);
+L4 = await pg.evaluate(() => { const A = [...document.querySelectorAll('[data-gst-add]')]; return A.map(a => ({ p: a.parentNode.id || a.parentNode.className, w: a.getAttribute('data-gst-w'), h: Math.round(a.querySelector('.gcb-host').getBoundingClientRect().height) })); });
+is(L4.length === 2 && L4.some(a => /gse-row/.test(a.p) && a.w === '6' && a.h > 380) && L4.some(a => a.p === 'hrGrid'), '다시 열어도 — 한 장은 줄에 1/2·높이 그대로, 한 장은 인원 격자 (' + JSON.stringify(L4) + ')');
+await pg.evaluate(() => GST.screen.edit()); await pg.waitForTimeout(300);
+const rs0 = await pg.evaluate(() => { const a = [...document.querySelectorAll('[data-gst-add]')].find(x => x.parentNode.classList.contains('gse-row')); a.scrollIntoView({block:'center'}); const r = a.querySelector('.gse-rs').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+await pg.mouse.dblclick(rs0[0], rs0[1]); await pg.waitForTimeout(300);
+is(await pg.evaluate(() => { const a = [...document.querySelectorAll('[data-gst-add]')].find(x => x.parentNode.classList.contains('gse-row')); return !a.hasAttribute('data-gst-w') && Math.round(a.querySelector('.gcb-host').getBoundingClientRect().height) === 300; }), '손잡이를 두 번 누르면 원래 크기');
+
+/* ============ ⑤ 다른 화면으로 복사 ============ */
+console.log('[5] 다른 화면으로 복사');
+await pg.evaluate(() => { const a = document.querySelector('[data-gst-add]'); a.scrollIntoView({block:'center'}); a.querySelector('.gst-se-bar [data-a="copy"]').click(); }); await pg.waitForTimeout(250);
+is(await pg.evaluate(() => document.querySelectorAll('.gse-cpop [data-c="pg"] option').length === 8 && !document.querySelector('.gse-cpop [data-c="pg"] option[value="report"]')), '복사 창 — 다른 화면 여덟 (지금 화면은 빠진다)');
+await pg.selectOption('.gse-cpop [data-c="pg"]', 'fault'); await pg.click('.gse-cpop [data-c="go"]'); await pg.waitForTimeout(500);
+sv = (await calls(pg)).filter(c => c.rpc === 'screen_layout_save' && c.args.p_page === 'fault').pop();
+is(sv && sv.args.p_scope === 'me' && (sv.args.p_config.adds || []).length === 1 && sv.args.p_config.adds[0].cfg.x === 'op', '고장 분석 «내 화면»에 그 차트 설정이 붙는다 — 지금 화면 배치는 그대로');
+await pg.evaluate(() => GST.screen.leave(false)); await pg.waitForTimeout(300);
+await pg.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(5000);   // 같은 창(가짜 DB 를 이어받는다)
+is(await pg.evaluate(() => { const c = document.querySelector('[data-gst-add]'); const ch = c && Chart.getChart(c.querySelector('canvas')); return !!ch && ch.data.labels.length >= 1; }), '고장 분석을 열면 복사한 차트가 선다');
+await ctx.close();
+
+/* ============ ⑥ 이 차트로 새로 만들기 — 설비 현황 ============ */
+console.log('[6] 이 차트로 새로 만들기 (라벨로 자료·축 추정)');
+ctx = await mkCtx(() => { window.__ME = { email:'boss@test.local', can_write:true, role:'admin' }; });
+pg = await ctx.newPage(); pg.on('pageerror', e => errs.push('scrubber2: ' + e.message));
+await pg.emulateMedia({ reducedMotion:'reduce' });
+await pg.goto(BASE + '/scrubber/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(4500);
+const gs = await pg.evaluate(async () => { const out = [];
+  for (const cv of document.querySelectorAll('canvas[id]')) { const ch = Chart.getChart(cv); if (!ch || cv.closest('[data-gst-add]') || !cv.closest('.gst-se-card,.card')) continue;
+    const L = (ch.data.labels || []).map(String); if (!L.includes('GST TAIWAN SCRUBBER') && !L.includes('YMTC')) continue;
+    const g = await GST.cb.guess(ch, 'scrubber', {page:true}); out.push({ id:cv.id, L, g:g.cfg && { src:g.cfg.src, x:g.cfg.x, score:g.score, err:Math.round(g.err * 100) } }); }
+  return out; });
+const okG = gs.find(x => x.g && x.g.src === 'inst' && x.g.score >= 0.99);
+is(!!okG, '라벨(법인·고객사)을 설치현황의 열 값과 맞춰 자료·축을 찾는다 (' + JSON.stringify(gs.map(x => [x.id, x.g])) + ')');
+const MO = [ymd(dAgo(40)).slice(0, 7), ymd(ASOF).slice(0, 7)];
+const tm = await pg.evaluate(async MO => { const fake = { config:{type:'bar', options:{}}, data:{ labels:MO, datasets:[{data:[1,2]}] } };
+  const g = await GST.cb.guess(fake, 'fault', {page:true}); const z = await GST.cb.guess({ config:{type:'bar', options:{}}, data:{ labels:['없는값1','없는값2'], datasets:[{data:[1,2]}] } }, 'fault', {page:true});
+  return { d: g.cfg && [g.cfg.x, g.cfg.bucket], none: z.cfg === null }; }, MO);
+is(tm.d && tm.d[0] === 'dStart' && tm.d[1] === 'month', '날짜 꼴 라벨(2026-01)은 날짜 열 + 월 묶기');
+is(tm.none, '맞는 열이 없으면 «찾지 못했다»고 한다(짐작으로 고르지 않는다)');
+await pg.evaluate(() => GST.screen.edit()); await pg.waitForTimeout(300);
+await pg.evaluate(id => { const el = document.getElementById(id).closest('.gst-se-card'); el.scrollIntoView({block:'center'}); el.querySelector('.gst-se-bar [data-a="chart"]').click(); }, okG.id); await pg.waitForTimeout(250);
+await pg.click('.gse-cpop [data-c="clone"]'); await pg.waitForTimeout(3500);
+const gm = await pg.evaluate(() => ({ t: (document.querySelector('#gstCbDlg .gcd-gm') || {}).textContent || '', x: (document.querySelector('#gstCbDlg #cbx-fX') || {}).value, hide: (document.querySelector('#gstCbDlg [data-d="hide"]') || {}).checked }));
+is(/100%/.test(gm.t) && gm.hide, '새로 만들기 창 — 일치율을 적고 «원래 차트 숨기기»가 켜져 있다 (' + gm.t.slice(0, 40) + ' · x=' + gm.x + ')');
+if (process.env.SHOT) await pg.screenshot({ path: process.env.SHOT + '/cb-clone.png' });
+await pg.click('#gstCbDlg [data-d="ok"]'); await pg.waitForTimeout(900);
+const cl = await pg.evaluate(id => { const a = document.querySelector('[data-gst-add]'), ch = a && Chart.getChart(a.querySelector('canvas')), o = Chart.getChart(document.getElementById(id));
+  return { hid: document.getElementById(id).closest('.gst-se-card').hasAttribute('data-gst-hide'), L: ch && ch.data.labels.slice().sort().join('|'), O: o.data.labels.map(String).filter(x => !/^(기타|그 밖)$/.test(x)).sort().join('|') }; }, okG.id);
+is(cl.hid && cl.L === cl.O, '새 차트가 서고 원래 차트는 숨는다 — 같은 라벨 (' + cl.L + ')');
+await pg.evaluate(() => GST.screen.leave(false)); await ctx.close();
+
+/* ============ ⑦ 표준 지표를 아무 축으로 — 화면 만들기 ============ */
+console.log('[7] 표준 지표를 아무 축으로 (GST.metrics.keyBy)');
+ctx = await mkCtx(() => { window.__ME = { email:'boss@test.local', can_write:true, role:'admin' }; });
+pg = await ctx.newPage(); pg.on('pageerror', e => errs.push('studio2: ' + e.message));
+await pg.goto(BASE + '/studio/?new=1', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(3500);
+const M7 = await pg.evaluate(async () => { const D = await stdData(), R = D.R, a = D.asOf, out = {};
+  const sum = (by, f) => Object.values(by.G).reduce((s, g) => s + f(g), 0);
+  const byOp = GST.metrics.by(R, a, GST.metrics.keyBy(R, 'op')), byCu = GST.metrics.by(R, a, GST.metrics.keyBy(R, 'cust')), byMo = GST.metrics.by(R, a, GST.metrics.keyBy(R, 'model'));
+  out.inN = [sum(byOp, g => g.inN), sum(byCu, g => g.inN), sum(byMo, g => g.inN)];
+  out.bm4 = [sum(byOp, g => g.bm4), sum(byCu, g => g.bm4), sum(byMo, g => g.bm4)];
+  out.risk = [sum(byOp, g => g.risk.length), sum(byCu, g => g.risk.length)];
+  out.cust = Object.keys(byCu.G).sort(); out.miss = (byCu.G['—'] || {}).bm4 || 0;
+  out.tw = byCu.G['Micron Memory Taiwan Co., Ltd.(F16)'] && byCu.G['Micron Memory Taiwan Co., Ltd.(F16)'].m.run_rate.v;
+  return out; });
+is(M7.inN[0] === M7.inN[1] && M7.inN[1] === M7.inN[2] && M7.bm4[0] === M7.bm4[1] && M7.bm4[1] === M7.bm4[2] && M7.risk[0] === M7.risk[1], '축을 바꿔도 합은 같다 — 판정은 그대로, 묶는 열쇠만 바뀐다 (반입 ' + M7.inN + ' · 고장 ' + M7.bm4 + ' · 위험 ' + M7.risk + ')');
+is(M7.cust.length === 3 && M7.miss === 0, '고객사 축 — 수선실적 행도 S/N 으로 설치현황의 고객사를 찾는다(미상 0) (' + M7.cust + ')');
+is(Math.round(M7.tw) === Math.round(28 / 30 * 100), '고객사별 가동률 — 대만 28/30 (' + M7.tw + ')');
+await pg.click('#addStd'); await pg.waitForTimeout(200); await pg.click('.sd-menu [data-add="mbar"]'); await pg.waitForTimeout(1500);
+const mb = await pg.evaluate(() => { const w = S.board.widgets[S.board.widgets.length - 1], el = document.querySelector('#board [data-w="' + (S.board.widgets.length - 1) + '"]'), ch = el && Chart.getChart(el.querySelector('canvas'));
+  return { std:w.std, ax:w.axis, n: el && el.querySelector('h3 .n').textContent, L: ch && ch.data.labels }; });
+is(mb.std === 'mbar' && mb.ax === 'model' && mb.L && mb.L[0] === 'GST-1000' && /모델별/.test(mb.n), '«지표 축별 비교» 위젯 — 100대당 고장 × 모델 (' + JSON.stringify(mb) + ')');
+await ctx.close();
+
 is(errs.length === 0, 'JS 에러 0' + (errs.length ? ' → ' + errs.slice(0, 3).join(' | ') : ''));
 await browser.close(); srv.close();
 console.log(fail ? `\n❌ t-cb: ${pass} 통과 · ${fail} 실패` : `\n✅ t-cb: ${pass}/${pass} 통과`);

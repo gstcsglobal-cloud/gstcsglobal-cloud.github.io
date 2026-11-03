@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 196;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 197;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 여기서 묻는다 — 저장 키(축편집·피벗·섹션)·챗봇 출처·자동순회 페이지 id 가 이 한 곳을 본다.
    (v137 에는 오프라인 판의 srcdoc 때문에 두었고, 오프라인 판은 v199 에 없앴다 — 한 곳에서 묻는 규약은 그대로 둔다.) */
 GST.pagePath = function(){ return location.pathname; };
@@ -8139,7 +8139,7 @@ GST._layoutCols = function(gr){
 };
 GST._layoutFit = function(grids){
   grids.forEach(function(gr){
-    if(!gr || !gr.classList) return;
+    if(!gr || !gr.classList || gr.classList.contains('gse-row')) return;   // 화면 편집이 만든 12칸 줄(v205)은 열 수를 자기가 정한다
     const cols = GST._layoutCols(gr); if(!cols) return;
     const n = [].filter.call(gr.children, function(k){ return k.nodeType===1 && !k.hasAttribute('data-gst-alt') && !k.hasAttribute('data-gst-retired') && !k.hasAttribute('data-gst-hide'); }).length;
     gr.classList.remove('gst-n0','gst-n1','gst-n2');
@@ -10572,9 +10572,9 @@ function weeks(asOf, n){
  *   keyOf — 행 → 묶음 열쇠 (전사 하나면 function(){return '*';}). 행은 {op, region} 을 갖는다.
  *   ok    — 화면의 거르기(구분·운영단위). GST.ops 의 bm/pm/risk 에 그대로 넘긴다 — 같은 모집단.
  *   opt.actions — 처리함 열린 일 [{op, due, status}] (선택 · act_overdue)
- * 돌려주는 묶음: {k, inN, runN, bm4, bmP, pm4, pmP, bmW[12], pmW[12], rep, risk[], warrSoon[], rows:{bm4, pm4}, m:{지표 → {v, prev, num, den}}} */
+ * 돌려주는 묶음: {k, inN, runN, bm4, bmP, pm4, pmP, bmW[12], pmW[12], rep, risk[], warrSoon[], rows:{bm4, pm4, inst(반입 설비)}, m:{지표 → {v, prev, num, den}}} */
 function blank(k){ return {k:k, inN:0, runN:0, bm4:0, bmP:0, pm4:0, pmP:0, bmW:[0,0,0,0,0,0,0,0,0,0,0,0], pmW:[0,0,0,0,0,0,0,0,0,0,0,0],
-  rep:0, risk:[], warrSoon:[], overdue:0, rows:{bm4:[], pm4:[]}}; }
+  rep:0, risk:[], warrSoon:[], overdue:0, rows:{bm4:[], pm4:[], inst:[]}}; }
 /* 묶음 → 지표. 분모가 0 이면 값은 null(«0%»가 아니다 — 설비가 없는 곳의 가동률은 0 이 아니라 «모른다»). */
 function fin(o, hasAct){
   o.m={
@@ -10586,6 +10586,12 @@ function fin(o, hasAct){
   };
   return o;
 }
+GST.MAX_T = {
+  ko:{op:'운영단위', region:'구분', cty:'국가', cust:'고객사', campus:'단지', fab:'FAB', model:'모델', loc:'지역'},
+  en:{op:'Operating unit', region:'Region', cty:'Country', cust:'Customer', campus:'Campus', fab:'FAB', model:'Model', loc:'Location'},
+  zh:{op:'运营单位', region:'区分', cty:'国家', cust:'客户', campus:'园区', fab:'FAB', model:'型号', loc:'地区'},
+  ja:{op:'運営単位', region:'区分', cty:'国', cust:'顧客', campus:'団地', fab:'FAB', model:'モデル', loc:'地域'}
+};
 GST.metrics = {
   weeks: weeks,
   by: function(R, asOf, keyOf, ok, opt){
@@ -10595,13 +10601,14 @@ GST.metrics = {
     var G={};
     var g=function(k){ return G[k]||(G[k]=blank(k)); };
     var pass=function(x){ return !ok||ok(x); };
-    R.INST.forEach(function(x){ if(!pass(x)||!GST.ops.isIn(x,asOf)) return; var o=g(keyOf(x)); o.inN++; if(GST.ops.isRun(x,asOf)) o.runN++;
+    R.INST.forEach(function(x){ if(!pass(x)||!GST.ops.isIn(x,asOf)) return; var o=g(keyOf(x)); o.inN++; o.rows.inst.push(x); if(GST.ops.isRun(x,asOf)) o.runN++;
       if(x.wd&&x.wd.getTime()>t0&&x.wd.getTime()<=t0+90*DAY) o.warrSoon.push(x); });
     GST.ops.bm(R, ok).forEach(function(x){ var i=wIx(x.d); if(i<0) return; var o=g(keyOf(x)); o.bmW[i]++;
       if(i>=8){ o.bm4++; o.rows.bm4.push(x); } else if(i>=4) o.bmP++; });
     GST.ops.pm(R, ok).forEach(function(x){ var i=wIx(x.d); if(i<0) return; var o=g(keyOf(x)); o.pmW[i]++;
       if(i>=8){ o.pm4++; o.rows.pm4.push(x); } else if(i>=4) o.pmP++; });
-    GST.ops.risk(R, asOf, ok).forEach(function(r){ var o=g(keyOf({op:r.site, region:GST.ORG.region(r.site)})); o.risk.push(r); if(r.rep) o.rep++; });
+    /* 위험 순위 행은 설비 열쇠(r.key = GST.snKey)를 sn·code 로 실어 넘긴다 — 운영단위 말고 다른 축(keyBy)으로 묶을 때 그 설비를 찾는다(v205) */
+    GST.ops.risk(R, asOf, ok).forEach(function(r){ var o=g(keyOf({op:r.site, region:GST.ORG.region(r.site), sn:r.key, code:r.key})); o.risk.push(r); if(r.rep) o.rep++; });
     var today=new Date(); today=Date.UTC(today.getUTCFullYear(),today.getUTCMonth(),today.getUTCDate());
     (opt.actions||[]).forEach(function(a){ if(!a||!a.due||a.status==='done'||a.status==='dismissed') return;
       var x={op:a.op||'', region:GST.ORG.region(a.op||'')}; if(!pass(x)) return;
@@ -10612,6 +10619,26 @@ GST.metrics = {
   /* 범위 하나(전사·구분·운영단위)의 묶음 — by() 를 열쇠 하나로 부른 것과 같다. 자료가 하나도 없으면 빈 묶음(값은 전부 null). */
   one: function(R, asOf, ok, opt){ var r=GST.metrics.by(R, asOf, function(){ return '*'; }, ok, opt);
     return r.G['*']||fin(blank('*'), !!(opt&&opt.actions)); },
+  /* ---- 아무 축으로나 묶기 (v205 · 사용자 「표준 지표를 임의 축으로 쪼개기」) ----
+     ⚠ 판정은 한 글자도 안 바뀐다 — by() 가 쓰는 GST.ops(반입·가동·BM·PM·위험)를 그대로 지나고, «묶는 열쇠»만 바꾼다.
+       그래서 «모델별 가동률»의 합(분자·분모)은 운영단위별로 묶었을 때의 합과 같다(t-cb 가 대조한다).
+     · 운영단위·구분은 행 자신의 값(지금까지와 같다). 나머지(국가·고객사·단지·FAB·모델·지역)는 «그 설비의 설치현황 값»이다 —
+       수선실적·원장 행은 S/N(없으면 설비호기)으로 설치현황을 찾는다(접미 L/R/S 를 떼고 한 번 더 · v92). 못 찾으면 행 자신의 값, 그것도 없으면 «—».
+     · 설치현황 색인은 R 에 한 번만 만든다(열거되지 않는 속성 — GST.ops._base 와 같은 규율). */
+  AXES: ['op','region','cty','cust','campus','fab','model','loc'],
+  keyBy: function(R, ax){
+    if(!ax||ax==='op') return function(x){ return x.op||'—'; };
+    if(ax==='region') return function(x){ return x.region||'—'; };
+    var F={cty:'cty',cust:'cust',campus:'campus',fab:'fab',model:'model',loc:'loc'}[ax]; if(!F) return function(x){ return x.op||'—'; };
+    var ix=R.__mIx;
+    if(!ix || ix.__n!==R.INST.length){ ix={}; R.INST.forEach(function(x){ [x.sn,x.code].forEach(function(v){ var k=GST.snKey(v); if(k&&!ix[k]) ix[k]=x; }); });
+      try{ Object.defineProperty(ix,'__n',{value:R.INST.length,enumerable:false}); Object.defineProperty(R,'__mIx',{value:ix,configurable:true,enumerable:false,writable:true}); }catch(e){} }
+    var dev=function(x){ if(x && ('warr' in x) && ('dOn' in x)) return x;
+      var k=GST.snKey(x.sn||''), o=k?ix[k]:null; if(!o&&k&&/[LRS]$/.test(k)) o=ix[k.slice(0,-1)]||null;
+      if(!o){ var c=GST.snKey(x.code||''); o=c?ix[c]:null; } return o||null; };
+    return function(x){ var o=dev(x), v=o?o[F]:(x[F]||(F==='fab'?x.line:'')||''); v=String(v==null?'':v).trim(); return v||'—'; };
+  },
+  axisName: function(ax, lang){ var L=lang||(GST._lang&&GST._lang())||'ko', T=GST.MAX_T[L]||GST.MAX_T.ko; return T[ax]||GST.MAX_T.ko[ax]||ax; },
   /* 화면 범위 → 거르기. sc = {kind:'all'|'region'|'op', v} */
   okOf: function(sc){
     if(!sc||sc.kind==='all') return null;
@@ -12467,7 +12494,92 @@ GST.cb = (function(){
   function meta(R){ if(!(R&&!R.err&&R.total!=null)) return ''; var s=F(T('of'),{n:nf(R.total),m:nf(R.n)}); var j=R.DS&&R.DS.join;
     if(j&&j.n&&R.c&&(R.c.x||'').indexOf('i:')===0||(j&&j.n&&(R.c.series||'').indexOf('i:')===0)) s+=' · '+F(T('join'),{p:Math.round(j.hit/j.n*100)}); return s; }
   function ds(id){ var d=DATA[id]; if(d&&!d.F){ d.F={}; d.fields.forEach(function(f){ d.F[f.k]=f; }); } return d||null; }
-  return { SRC:SRC, TYPES:TYPES, load:load, data:ds, norm:norm, defaults:defaults, run:function(c, opt){ var d=ds(norm(c).src); return d?run(c, d, opt):null; },
+  /* ---- 화면 차트 → 이 엔진의 설정 추정 (v205 ③ · 화면 편집 ⚙ «이 차트로 새로 만들기») ----
+     화면 차트는 페이지 코드가 센 숫자라 «어느 자료의 어느 열»인지 기록이 없다. 그래서 라벨을 자료의 값과 맞춰 본다:
+       · 라벨이 날짜 꼴(2026-08 · 2026-W41 · W41 · 2026-08-14 · 2026 · 2026-Q3 · 26.08)이면 그 자료의 날짜 열 + 그 묶기
+       · 아니면 «라벨이 가장 많이 값으로 들어 있는 글자 열» — 정규화(공백·대소문자) «정확일치»만 센다(부분일치는 남의 열을 잡는다 · 제1원칙).
+         기타·미상 같은 낱말은 세지 않는다.
+       · 값: 건수가 원래 차트 값과 가장 가까우면 건수, 숫자 열 합계가 훨씬 가까우면 그 합계.
+     ⚠ 화면 전용 조건(작업 단계 BM 만 · 마감 주 등)은 알 길이 없다 — 일치율·값 차이를 그대로 돌려주고 사람이 미리 보기로 확인한다.
+       «맞다»고 짐작하지 않는다(일치율 50% 미만이면 cfg 를 안 준다). */
+  var PAGE_SRC={hub:['wk','inst','alarm'],report:['wk','alarm','abp','inst','roster'],fault:['wk','fse','alarm','abp','inst'],pm:['wk'],cip:['inst','wk'],scrubber:['inst'],material:['mat','wk'],tco:['wk','mat','inst'],hr:['roster','edu','leave']};
+  var GEN=/^(기타|그 ?밖|other|others|미상|미기재|미배치|\(공란\)|공란|blank|unknown|—|-|n\/a)$/i;
+  function nk(v){ return String(v==null?'':v).replace(/\s+/g,'').toUpperCase(); }
+  function bkOf(L){
+    var t=function(re){ return L.length && L.filter(function(x){ return re.test(x); }).length/L.length>=0.8; };
+    if(t(/^\d{4}-\d{2}$/)||t(/^\d{2}[.\-\/]\d{2}$/)) return 'month';
+    if(t(/^\d{4}-W\d{2}$/)||t(/^W\d{1,2}$/)) return 'week';
+    if(t(/^\d{4}-\d{2}-\d{2}$/)) return 'day';
+    if(t(/^\d{4}-?Q[1-4]$/)) return 'quarter';
+    if(t(/^(19|20)\d{2}$/)) return 'year';
+    return '';
+  }
+  function lk(l, bk){ var x=String(l).trim();
+    if(bk==='month'){ var m=x.match(/^(\d{2})[.\-\/](\d{2})$/); if(m) return '20'+m[1]+'-'+m[2]; return x; }
+    if(bk==='week'){ var w=x.match(/W(\d{1,2})$/); return w?'W'+String(+w[1]).padStart(2,'0'):x; }
+    if(bk==='quarter') return x.replace(/^(\d{4})-?Q/,'$1-Q');
+    return bk?x:nk(x); }
+  function tmo(pr, ms){ return Promise.race([pr, new Promise(function(_,rj){ setTimeout(function(){ rj(new Error('TIMEOUT')); }, ms); })]); }
+  function cmpRun(cfg, d, labels, y0, bk, opt){
+    var R=run(cfg, d, opt); if(!R||R.err||!R.sets||!R.sets.length) return null;
+    var M={}; R.xs.forEach(function(x,i){ M[lk(x, bk)]=R.sets[0].data[i]; });
+    var hit=0, n=0, se=0, sa=0;
+    labels.forEach(function(l,i){ if(GEN.test(String(l).trim())) return; n++; var k=lk(l,bk); if(!(k in M)) return; hit++;
+      var a=+y0[i]||0, b=+M[k]||0; se+=Math.abs(a-b); sa+=Math.abs(a); });
+    return {score:n?hit/n:0, err:sa?se/sa:(se?1:0)};
+  }
+  async function guess(ch, page, opt){
+    var labels=(ch&&ch.data&&ch.data.labels||[]).map(function(x){ return Array.isArray(x)?x.join(' '):String(x==null?'':x); });
+    var sets=(ch.data.datasets||[]).filter(function(d){ return Array.isArray(d.data)&&d.data.length&&d.data.every(function(v){ return v==null||typeof v==='number'; }); });
+    if(!labels.length||!sets.length) return {cfg:null, score:0};
+    var y0=sets[0].data, bk=bkOf(labels.map(function(l){ return l.trim(); }));
+    var want=labels.filter(function(l){ return !GEN.test(l.trim()); }).map(function(l){ return lk(l,bk); });
+    if(!want.length) return {cfg:null, score:0};
+    var t0=ch.config.type, ia=ch.config.options&&ch.config.options.indexAxis, sc=(ch.config.options&&ch.config.options.scales)||{};
+    var stacked=!!((sc.x&&sc.x.stacked)||(sc.y&&sc.y.stacked));
+    var type=t0==='doughnut'?'doughnut':t0==='pie'?'pie':t0==='polarArea'?'polar':t0==='radar'?'radar':t0==='line'?(sets[0].fill?'area':'line'):(ia==='y'?'hbar':(stacked&&sets.length>1?'stack':'bar'));
+    var srcs=PAGE_SRC[page]||['wk','mat','inst'], best=null;
+    for(var si=0; si<srcs.length; si++){
+      var src=srcs[si]; try{ await tmo(load(src), 25000); }catch(e){ continue; }
+      var d=ds(src); if(!d) continue; var cand=null;
+      if(bk){
+        var dF=SRC_BY[src].date; if(!d.F[dF]){ var df=d.fields.filter(function(f){ return f.kind==='date'; })[0]; dF=df?df.k:''; } if(!dF) continue;
+        var c1=norm({src:src, type:'bar', x:dF, bucket:bk, range:'all', top:60, other:false, dateF:dF, measures:[{agg:'count'}], follow:true});
+        var r1=cmpRun(c1, d, labels, y0, bk, opt); if(r1) cand={src:src, cfg:c1, score:r1.score, err:r1.err};
+      } else {
+        var smp=d.rows.length>80000?d.rows.filter(function(_,i){ return i%Math.ceil(d.rows.length/80000)===0; }):d.rows;
+        d.fields.filter(function(f){ return f.kind==='text'; }).forEach(function(f){
+          var set={}, nv=0; for(var i=0;i<smp.length;i++){ var v=smp[i][f.k]; if(v===''||v==null) continue; var k2=nk(v); if(!set[k2]){ set[k2]=1; nv++; if(nv>5000) break; } }
+          var sc2=want.filter(function(w){ return set[w]; }).length/want.length;
+          if(sc2>0 && (!cand || sc2>cand.score || (sc2===cand.score && nv<cand.nv))) cand={src:src, x:f.k, score:sc2, nv:nv};
+        });
+        if(cand){ cand.cfg=norm({src:src, type:'bar', x:cand.x, range:'all', top:Math.max(3,Math.min(50,labels.length)), other:labels.some(function(l){ return GEN.test(l.trim()); }), measures:[{agg:'count'}], follow:true});
+          var r2=cmpRun(cand.cfg, d, labels, y0, bk, opt); cand.err=r2?r2.err:1; if(r2) cand.score=Math.max(cand.score, r2.score); }
+      }
+      if(cand && (!best || cand.score>best.score+0.05 || (Math.abs(cand.score-best.score)<=0.05 && cand.err<best.err))) best=cand;
+      if(best && best.score>=0.95 && best.err<0.05) break;
+    }
+    if(!best || best.score<0.5) return {cfg:null, score:best?best.score:0, src:best&&best.src};
+    var d2=ds(best.src), cfg=best.cfg;
+    /* 값 — 건수가 멀면 숫자 열 합계를 견준다(가장 가까운 것) */
+    if(best.err>0.15){
+      d2.fields.filter(function(f){ return f.kind==='num'; }).slice(0,30).forEach(function(f){
+        var cc=JSON.parse(JSON.stringify(cfg)); cc.measures=[{agg:'sum', f:f.k}]; var r3=cmpRun(cc, d2, labels, y0, bk, opt);
+        if(r3 && r3.err<best.err*0.7){ best.err=r3.err; cfg.measures=[{agg:'sum', f:f.k}]; } });
+    }
+    /* 계열 — 원래 차트가 이름 붙은 계열을 여럿 갖고 있으면 그 이름들이 값으로 든 열 */
+    if(sets.length>1 && ['doughnut','pie','polar'].indexOf(type)<0){
+      var sn=sets.map(function(dd){ return nk(dd.label); }).filter(function(x){ return x && !GEN.test(x); });
+      var bs=null; d2.fields.filter(function(f){ return f.kind==='text' && f.k!==cfg.x; }).forEach(function(f){
+        var set={}; d2.rows.slice(0,80000).forEach(function(o){ var v=o[f.k]; if(v) set[nk(v)]=1; });
+        var s3=sn.length?sn.filter(function(w){ return set[w]; }).length/sn.length:0; if(s3>=0.6 && (!bs||s3>bs.s)) bs={k:f.k, s:s3}; });
+      if(bs) cfg.series=bs.k;
+    }
+    cfg.type=(type==='stack'&&!cfg.series)?'bar':type;
+    if(bk){ cfg.range='all'; }
+    return {cfg:norm(cfg), score:best.score, err:best.err, src:best.src};
+  }
+  return { SRC:SRC, guess:guess, TYPES:TYPES, load:load, data:ds, norm:norm, defaults:defaults, run:function(c, opt){ var d=ds(norm(c).src); return d?run(c, d, opt):null; },
     draw:draw, form:form, alpha:alpha, PAL:PAL, PALS:PALS, ic:ic, templates:templates, exprFn:exprFn, title:title, meta:meta, pagePass:pagePass, T:T, _reset:function(){ Object.keys(DATA).forEach(function(k){ delete DATA[k]; }); } };
 })();
 
@@ -12497,7 +12609,7 @@ GST.SCREEN_T = {
       unsaved:'저장하지 않은 변경', hint:'카드 머리의 단추로 옮기고 · 숨기고 · 폭과 제목을 바꿉니다. 계산·필터·세부내역은 그대로입니다',
       kpi:'지표', retired:'기본 숨김', pc_only:'이 PC 에만 저장됩니다(서버 준비 전)',
       chart:'차트 설정', add:'아래에 차트 추가', add_p:'＋ 차트 추가', del:'삭제', c_orig:'원래', c_series:'계열', c_reset:'원래대로', close:'닫기', c_which:'차트',
-      c_noconv:'이 차트는 숫자 축이라 모양을 바꿀 수 없습니다 — 계열·값 표시·색·축은 바꿀 수 있습니다', b_add:'차트 추가', b_edit:'차트 고치기', b_apply:'적용', lg_def:'기본'},
+      c_noconv:'이 차트는 숫자 축이라 모양을 바꿀 수 없습니다 — 계열·값 표시·색·축은 바꿀 수 있습니다', size:'크기 조절 — 끌면 폭·높이 · 두 번 누르면 원래 크기', size_def:'원래 크기', cols:'칸', copy:'다른 화면으로 복사', cp_to:'복사할 화면', cp_scope:'어디에 둘까요', cp_go:'복사', cp_done:'«{p}» 화면에 복사했습니다 — 그 화면 맨 아래에 있습니다', cp_none:'복사할 화면이 없습니다', clone:'이 차트로 새로 만들기', clone_s:'자료·축·값을 바꿀 수 있는 새 차트로 만듭니다', g_wait:'원래 차트를 보고 자료·축을 찾는 중…', g_ok:'원래 차트와 {p}% 일치 ({src}) — 화면 전용 조건(작업 단계·기간 등)은 옮겨지지 않으니 미리 보기로 확인하세요', g_no:'맞는 자료·축을 찾지 못했습니다 — 직접 고르세요', g_hide:'원래 차트는 숨기기', pg_hub:'글로벌 현황', pg_report:'주간 현황', pg_fault:'고장 분석', pg_pm:'PM 점검', pg_cip:'CIP 진행', pg_scrubber:'설비 현황', pg_material:'자재 사용', pg_tco:'TCO', pg_hr:'인원·교육', b_add:'차트 추가', b_edit:'차트 고치기', b_apply:'적용', lg_def:'기본'},
   en:{title:'Edit screen', cur_all:'Default layout for everyone', cur_me:'Using my layout', cur_none:'Original layout', hidden:'Hidden cards', none_hidden:'No hidden cards',
       show:'Show', reset:'Original layout', cancel:'Cancel', save:'Save', save_all:'Save as default for everyone', save_me:'Save for me only',
       all_note:'Administrators · everyone sees this layout', me_note:'Other users are not affected', drop_me:'Remove my layout',
@@ -12508,7 +12620,7 @@ GST.SCREEN_T = {
       unsaved:'Unsaved changes', hint:'Use the buttons on each card to move, hide, resize and rename. Calculations, filters and details stay the same',
       kpi:'KPI', retired:'Hidden by default', pc_only:'Saved on this PC only (server not ready)',
       chart:'Chart settings', add:'Add a chart below', add_p:'＋ Add chart', del:'Delete', c_orig:'Original', c_series:'Series', c_reset:'Reset', close:'Close', c_which:'Chart',
-      c_noconv:'This chart has a numeric axis, so its type cannot change — series, values, colors and axis can', b_add:'Add chart', b_edit:'Edit chart', b_apply:'Apply', lg_def:'Default'},
+      c_noconv:'This chart has a numeric axis, so its type cannot change — series, values, colors and axis can', size:'Resize — drag for width and height · double-click for original size', size_def:'Original size', cols:'cols', copy:'Copy to another screen', cp_to:'Copy to', cp_scope:'Where', cp_go:'Copy', cp_done:'Copied to «{p}» — it is at the bottom of that screen', cp_none:'No other screen to copy to', clone:'Rebuild as a new chart', clone_s:'Creates a new chart whose data, axis and values you can change', g_wait:'Looking for the data and axis behind the original chart…', g_ok:'{p}% match with the original chart ({src}) — screen-specific conditions (work stage, period, …) are not carried over, so check the preview', g_no:'Could not find matching data and axis — choose them yourself', g_hide:'Hide the original chart', pg_hub:'Global overview', pg_report:'Weekly report', pg_fault:'Failure analysis', pg_pm:'PM schedule', pg_cip:'CIP progress', pg_scrubber:'Equipment', pg_material:'Material usage', pg_tco:'TCO', pg_hr:'Workforce & training', b_add:'Add chart', b_edit:'Edit chart', b_apply:'Apply', lg_def:'Default'},
   zh:{title:'编辑画面', cur_all:'正在使用全体默认布局', cur_me:'正在使用我的布局', cur_none:'原始布局', hidden:'隐藏的卡片', none_hidden:'没有隐藏的卡片',
       show:'重新显示', reset:'恢复原始布局', cancel:'取消', save:'保存', save_all:'保存为全体用户默认布局', save_me:'仅保存到我的画面',
       all_note:'管理员权限 · 所有用户看到同一布局', me_note:'不影响其他用户', drop_me:'删除我的布局',
@@ -12519,7 +12631,7 @@ GST.SCREEN_T = {
       unsaved:'未保存的更改', hint:'用卡片顶部的按钮移动、隐藏、调整宽度和标题。计算·筛选·明细保持不变',
       kpi:'指标', retired:'默认隐藏', pc_only:'仅保存在此电脑（服务器尚未准备）',
       chart:'图表设置', add:'在下方添加图表', add_p:'＋ 添加图表', del:'删除', c_orig:'原样', c_series:'系列', c_reset:'恢复原样', close:'关闭', c_which:'图表',
-      c_noconv:'此图表为数字轴，无法更改类型 — 可更改系列·数值显示·颜色·轴', b_add:'添加图表', b_edit:'修改图表', b_apply:'应用', lg_def:'默认'},
+      c_noconv:'此图表为数字轴，无法更改类型 — 可更改系列·数值显示·颜色·轴', size:'调整大小 — 拖动改变宽高 · 双击恢复原始大小', size_def:'原始大小', cols:'列', copy:'复制到其他画面', cp_to:'复制到', cp_scope:'放在哪里', cp_go:'复制', cp_done:'已复制到«{p}» — 在该画面最下方', cp_none:'没有可复制到的画面', clone:'用此图表重新制作', clone_s:'制作可更改资料·轴·数值的新图表', g_wait:'正在根据原图表查找资料和轴…', g_ok:'与原图表 {p}% 一致 ({src}) — 画面专用条件(作业阶段·期间等)不会带过来，请看预览确认', g_no:'没有找到匹配的资料和轴 — 请自行选择', g_hide:'隐藏原图表', pg_hub:'全球概况', pg_report:'周报', pg_fault:'故障分析', pg_pm:'PM 点检', pg_cip:'CIP 进度', pg_scrubber:'设备现况', pg_material:'物料使用', pg_tco:'TCO', pg_hr:'人员·培训', b_add:'添加图表', b_edit:'修改图表', b_apply:'应用', lg_def:'默认'},
   ja:{title:'画面編集', cur_all:'全ユーザー既定レイアウトを適用中', cur_me:'自分のレイアウトを適用中', cur_none:'元のレイアウト', hidden:'非表示のカード', none_hidden:'非表示のカードはありません',
       show:'再表示', reset:'元のレイアウトへ', cancel:'キャンセル', save:'保存', save_all:'全ユーザーの既定として保存', save_me:'自分の画面のみに保存',
       all_note:'管理者権限 · 全ユーザーに同じレイアウトで表示', me_note:'他のユーザーの画面は変わりません', drop_me:'自分のレイアウトを削除',
@@ -12530,14 +12642,24 @@ GST.SCREEN_T = {
       unsaved:'未保存の変更', hint:'カード上部のボタンで移動・非表示・幅・タイトルを変えます。計算·フィルター·詳細はそのままです',
       kpi:'指標', retired:'既定で非表示', pc_only:'このPCにのみ保存されます（サーバー準備前）',
       chart:'グラフ設定', add:'下にグラフを追加', add_p:'＋ グラフを追加', del:'削除', c_orig:'元のまま', c_series:'系列', c_reset:'元に戻す', close:'閉じる', c_which:'グラフ',
-      c_noconv:'このグラフは数値軸のため種類を変えられません — 系列·値表示·色·軸は変えられます', b_add:'グラフを追加', b_edit:'グラフを修正', b_apply:'適用', lg_def:'既定'}
+      c_noconv:'このグラフは数値軸のため種類を変えられません — 系列·値表示·色·軸は変えられます', size:'サイズ変更 — ドラッグで幅・高さ · ダブルクリックで元のサイズ', size_def:'元のサイズ', cols:'列', copy:'他の画面へコピー', cp_to:'コピー先', cp_scope:'どこに置くか', cp_go:'コピー', cp_done:'«{p}» 画面にコピーしました — その画面の一番下にあります', cp_none:'コピーできる画面がありません', clone:'このグラフで新しく作る', clone_s:'データ・軸・値を変えられる新しいグラフを作ります', g_wait:'元のグラフからデータと軸を探しています…', g_ok:'元のグラフと {p}% 一致 ({src}) — 画面専用の条件(作業段階・期間など)は引き継がれないのでプレビューで確認してください', g_no:'合うデータ・軸が見つかりません — 自分で選んでください', g_hide:'元のグラフは非表示', pg_hub:'グローバル概況', pg_report:'週間現況', pg_fault:'故障分析', pg_pm:'PM 点検', pg_cip:'CIP 進捗', pg_scrubber:'設備現況', pg_material:'資材使用', pg_tco:'TCO', pg_hr:'人員·教育', b_add:'グラフを追加', b_edit:'グラフを修正', b_apply:'適用', lg_def:'既定'}
 };
 GST._SCREEN_CSS = [
   '[data-gst-hide]{display:none !important}',
   '[data-gst-wide]{grid-column:1 / -1 !important}',
   '.kpis[data-n="1"]{grid-template-columns:1fr !important}',
   'body.gst-se-on .gst-se-card{position:relative;outline:1px dashed color-mix(in srgb,var(--accent,#4C7CF0) 55%,transparent);outline-offset:3px}',
-  'body.gst-se-on .gst-se-card > :not(.gst-se-bar):not(.gse-pop){pointer-events:none}',
+  'body.gst-se-on .gst-se-card > :not(.gst-se-bar):not(.gse-pop):not(.gse-rs){pointer-events:none}',
+  '.gse-row{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;margin:0 0 16px;align-items:stretch}',
+  '.gse-row > *{grid-column:span 12;min-width:0;margin:0 !important}',
+  'body.gst-se-on .gse-row{outline:1px dotted color-mix(in srgb,var(--gold,#C9A24A) 50%,transparent);outline-offset:6px}',
+  '.gse-rs{position:absolute;right:-8px;bottom:-8px;width:20px;height:20px;z-index:31;cursor:nwse-resize;touch-action:none;border-radius:6px;background:var(--surface,#fff);border:1px solid var(--gold,#C9A24A);color:var(--gold,#C9A24A);box-shadow:0 3px 10px rgba(0,0,0,.22);display:grid;place-items:center}',
+  '.gse-rs.w{cursor:ew-resize}',
+  '.gse-rs svg{width:11px;height:11px}',
+  'body.gst-se-on .gst-se-card.gse-rsz{outline:2px solid var(--gold,#C9A24A)}',
+  'body.gst-se-on .gst-se-card.gse-tgt{outline:2px solid var(--gold,#C9A24A)}',
+  '.gse-sz{position:fixed;z-index:9991;pointer-events:none;background:var(--txt-main,#111);color:var(--surface,#fff);font:700 12px/1 var(--font,inherit);padding:6px 9px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.3);white-space:nowrap}',
+  '.gse-cpop .gse-gn{font-size:11.5px;line-height:1.45;color:var(--txt-2,#445);background:var(--surface-2,#f3f5f9);border-radius:8px;padding:7px 9px}',
   'body.gst-se-on .gst-se-card.gse-drag{opacity:.45}',
   '.gst-se-bar{position:absolute;top:6px;right:6px;z-index:30;display:flex;gap:3px;background:var(--surface,#fff);border:1px solid var(--line,#d0d7e2);border-radius:9px;padding:2px;box-shadow:0 4px 14px rgba(0,0,0,.18)}',
   '.gst-se-bar button{font:600 11.5px/1 var(--font,inherit);border:0;background:transparent;color:var(--txt-2,#445);padding:5px 7px;border-radius:7px;cursor:pointer;white-space:nowrap}',
@@ -12588,10 +12710,13 @@ GST._SCREEN_CSS = [
   '#gstCbDlg button.gcd-btn{font:600 12.5px var(--font,inherit);border:1px solid var(--line,#d0d7e2);background:var(--surface-2,#f3f5f9);color:var(--txt-main,#111);padding:8px 14px;border-radius:9px;cursor:pointer}',
   '#gstCbDlg button.gcd-btn.pri{background:var(--accent,#4C7CF0);border-color:var(--accent,#4C7CF0);color:#fff}',
   '@media (max-width:820px){#gstCbDlg .gcd-b{grid-template-columns:1fr}}',
-  '@media print{.gst-se-bar,#gstSePanel,.gse-line,#gstCbDlg{display:none !important}}'
+  '#gstCbDlg .gcd-g{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--line,#d0d7e2);font-size:12.5px;color:var(--txt-2,#445);background:var(--surface-2,#f3f5f9)}',
+  '#gstCbDlg .gcd-g label{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--txt-main,#111)}',
+  '#gstCbDlg .gcd-g.warn{color:var(--warn,#B7791F)}',
+  '@media print{.gst-se-bar,#gstSePanel,.gse-line,#gstCbDlg,.gse-rs,.gse-sz{display:none !important}}'
 ].join('\n');
 GST.screen = (function(){
-  var S = { cfg:null, at:{all:null, me:null}, src:'', where:'', loaded:false, edit:null, applying:false, mo:null, tm:0, page:'' };
+  var S = { cfg:null, at:{all:null, me:null}, src:'', where:'', loaded:false, edit:null, applying:false, mo:null, tm:0, page:'', home:{} };
   var SEL = function(){ return GST.CARD_SEL + ',.kpi,.hb-card,.ds-card'; };
   var T = function(k){ var l=(GST._lang&&GST._lang())||'ko'; return ((GST.SCREEN_T[l]||GST.SCREEN_T.ko)[k]) || GST.SCREEN_T.ko[k] || k; };
   var esc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
@@ -12765,23 +12890,97 @@ GST.screen = (function(){
         el=document.createElement('div'); el.className='card gst-add-card'; el.dataset.gstAdd=a.id;
         el.innerHTML='<h3></h3><div class="gcb-host"></div>';
         var anc=a.at&&I.M[a.at];
-        if(anc && anc.parentNode && !anc.classList.contains('kpi')) anc.parentNode.insertBefore(el, anc.nextSibling);
+        if(anc && anc.parentNode && !anc.classList.contains('kpi')) placeAt(el, anc, a.pos||'after');
         else { var L2=I.list.filter(function(x){ return !x.classList.contains('kpi') && !(x.dataset&&x.dataset.gstAdd); }), last=L2[L2.length-1];
-          if(last&&last.parentNode) last.parentNode.insertBefore(el, last.nextSibling); else (document.querySelector('main,.container,.wrap')||document.body).appendChild(el); }
-        drawAdd(el, a);
-      } else if(el.$cfgJ!==JSON.stringify(a.cfg)) drawAdd(el, a);
-      else addTitle(el, a);
+          if(last&&last.parentNode) placeAt(el, last, 'after'); else (document.querySelector('main,.container,.wrap')||document.body).appendChild(el); }
+        drawAdd(el, a); I=null;
+      } else {
+        /* 다른 격자로 옮긴 추가 카드(v205) — 자리 열쇠(at·pos)가 가리키는 카드와 부모가 다르면 그 옆으로 */
+        var an2=a.at&&(I=I||index()).M[a.at];
+        if(an2 && an2!==el && an2.parentNode && !an2.classList.contains('kpi') && !el.contains(an2) && !placedOk(el, an2, a.pos||'after')) placeAt(el, an2, a.pos||'after');
+        if(el.$cfgJ!==JSON.stringify(a.cfg)) drawAdd(el, a); else addTitle(el, a);
+      }
     });
   }
   var _fltT=0;
   document.addEventListener('gst:filters', function(){ clearTimeout(_fltT); _fltT=setTimeout(function(){
     var c=liveCfg(); ((c&&c.adds)||[]).forEach(function(a){ if(a.cfg&&a.cfg.follow===false) return; var el=document.querySelector('[data-gst-add="'+a.id+'"]'); if(el) drawAdd(el, a); }); }, 150); });
+  /* ---------- 크기 · 자유 배치 (v205 · 사용자 「새로 만들었는데 왜 크기 조정이랑 배치를 내 맘대로 할 수가 없지?」) ----------
+     cfg.size = {열쇠: {w, h}} — w 는 한 줄을 12로 나눈 몫(3·4·6·8·9·12), h 는 차트 칸 높이(px).
+       · 격자 부모(.grid2·.grid3 …)에서는 «지금 칸 수»로 바꿔 span 으로 건다 — 상세 필터를 열어 칸 수가 바뀌면 다시 센다.
+       · 격자가 아닌 자리(카드가 세로로 쌓이는 곳 — 주간 현황은 페이지 맨 바깥 body 다)에는 «12칸 줄»(gse-row)을 만들어 카드를 담는다.
+         ⚠ 그 부모(body 등)를 flex 로 바꾸지 않는다 — 머리·사이드바·띠까지 한꺼번에 배치가 바뀐다. 줄은 비면 지운다.
+         그 줄에 들어가는 것은 추가 카드와 사람이 거기로 옮긴 카드뿐이다 — 손대지 않은 화면은 한 글자도 안 바뀐다.
+         격자가 아닌 자리의 화면 카드(그 자리에 원래 있던 것)는 폭을 안 받는다(높이만) — 줄로 옮기면 받는다.
+       · 768px 아래(휴대폰)에서는 폭을 걸지 않는다(한 줄 한 장).
+       · 높이는 «차트 칸»에만 건다 — 추가 카드는 .gcb-host, 화면 카드는 첫 차트의 부모. 표 카드는 내용이 높이를 정한다.
+     cfg.move = {열쇠: {at, pos}} — 화면 카드를 «다른 격자로» 옮긴 것. 같은 부모 안 순서는 지금처럼 cfg.order 가 정한다.
+       · 옮기기 전 자리에 표식(주석)을 남기고, 되돌리기·취소·원래대로면 그 표식 자리로 돌아간다.
+       · 추가 카드는 cfg.move 를 안 쓴다 — 그 카드의 at·pos 가 곧 자리다.
+     ⚠ 카드의 계산·필터·세부내역은 그대로다 — 자리와 크기만 바뀐다. */
+  var W12=[3,4,6,8,9,12], FR={3:'1/4',4:'1/3',6:'1/2',8:'2/3',9:'3/4',12:'1'};
+  function displayOf(p){ try{ return getComputedStyle(p).display||''; }catch(e){ return ''; } }
+  function isRow(p){ return !!(p && p.classList && p.classList.contains('gse-row')); }
+  function isGrid(p){ return isRow(p) || /grid/.test(displayOf(p)); }
+  function hostOf(el){
+    if(el.dataset&&el.dataset.gstAdd) return el.querySelector('.gcb-host');
+    var cv=chartsIn(el)[0]; if(!cv) return null; var h=cv.parentElement; return (h&&h!==el&&el.contains(h))?h:null;
+  }
+  function narrowView(){ return window.innerWidth<=768; }
+  /* 카드 하나를 «이 카드 옆»에 둔다 — 그 카드가 격자 안이면 같은 격자에, 아니면 그 옆의 12칸 줄에(없으면 만든다) */
+  function rowNear(anc, pos){
+    var sib=pos==='before'?anc.previousElementSibling:anc.nextElementSibling;
+    if(isRow(sib)) return sib;
+    var r=document.createElement('div'); r.className='gse-row'; anc.parentNode.insertBefore(r, pos==='before'?anc:anc.nextSibling); return r;
+  }
+  function placeAt(el, anc, pos){
+    var p=anc&&anc.parentNode; if(!p||anc===el) return;
+    if(isGrid(p) || p.classList.contains('kpis')){ if(el.parentNode===p) return; p.insertBefore(el, pos==='before'?anc:anc.nextSibling); return; }
+    var r=rowNear(anc, pos); if(el.parentNode===r) return;
+    if(pos==='before') r.appendChild(el); else r.insertBefore(el, r.firstChild);
+  }
+  function placedOk(el, anc, pos){
+    var p=anc&&anc.parentNode; if(!p) return true;
+    if(isGrid(p) || p.classList.contains('kpis')) return el.parentNode===p;
+    var sib=pos==='before'?anc.previousElementSibling:anc.nextElementSibling;
+    return isRow(sib) && el.parentNode===sib;
+  }
+  function sizeEl(el, sz){
+    var p=el.parentNode; if(!p||el.classList.contains('kpi')) return;
+    var w=sz&&+sz.w, h=sz&&+sz.h;
+    if(el.hasAttribute('data-gst-w')){ el.style.removeProperty('grid-column'); el.removeAttribute('data-gst-w'); }
+    if(w && !narrowView()){
+      if(isRow(p)){ el.style.setProperty('grid-column','span '+Math.max(1,Math.min(12,Math.round(w))),'important'); el.setAttribute('data-gst-w', String(w)); }
+      else { var C=gridCols(p); if(C>1){ var sp=Math.max(1,Math.min(C,Math.round(w*C/12))); el.style.setProperty('grid-column', sp>=C?'1 / -1':'span '+sp, 'important'); el.setAttribute('data-gst-w', String(w)); } }
+    }
+    var host=hostOf(el);
+    if(host){
+      if(h){ if(host.dataset.gstH0==null) host.dataset.gstH0=host.style.getPropertyValue('height')||''; host.style.setProperty('height', Math.round(h)+'px', 'important'); host.setAttribute('data-gst-h','1'); }
+      else if(host.hasAttribute('data-gst-h')){ var o=host.dataset.gstH0||''; host.style.removeProperty('height'); if(o) host.style.height=o; host.removeAttribute('data-gst-h'); delete host.dataset.gstH0; }
+    }
+  }
+  function flowTidy(){ [].forEach.call(document.querySelectorAll('.gse-row'), function(r){ if(!r.firstElementChild) r.remove(); }); }
+  function sizeAll(){ var c=liveCfg(); if(!c) return; var Z=c.size||{}; if(!Object.keys(Z).length && !document.querySelector('[data-gst-w],[data-gst-h]')) return;
+    index().list.forEach(function(el){ var k=keyOf(el); if(Z[k]||el.hasAttribute('data-gst-w')) sizeEl(el, Z[k]); }); resizeCharts(document); }
+  var _szT=0; function sizeLater(){ clearTimeout(_szT); _szT=setTimeout(sizeAll, 180); }
+  window.addEventListener('resize', sizeLater);
+  function placeMoves(cfg){
+    var mv=cfg.move||{}, I=index();
+    Object.keys(S.home).forEach(function(k){ var m=S.home[k], el=I.M[k]; if(mv[k]||!el||!m||!m.parentNode) return; if(el.parentNode!==m.parentNode) m.parentNode.insertBefore(el, m); });
+    Object.keys(mv).forEach(function(k){ var el=I.M[k], o=mv[k]||{}, at=I.M[o.at];
+      if(!el||!at||at===el||!at.parentNode||at.contains(el)||el.contains(at)) return;
+      if(el.classList.contains('kpi')!==at.classList.contains('kpi')) return;
+      if(placedOk(el, at, o.pos)) return;
+      if(!S.home[k]){ var m=document.createComment('gse-home'); el.parentNode.insertBefore(m, el); S.home[k]=m; }
+      placeAt(el, at, o.pos); });
+  }
   function apply(cfg){
     cfg = cfg || S.cfg; if(!cfg || !document.body) return;
     S.applying=true;
     try{
       try{ ensureAdds(cfg); }catch(e){ console.warn('[screen] 차트 추가', e); }
-      var I=index(), ix={}, hid={}, wide={}, show={}, titles=cfg.titles||{};
+      try{ placeMoves(cfg); }catch(e){ console.warn('[screen] 옮기기', e); }
+      var I=index(), ix={}, hid={}, wide={}, show={}, titles=cfg.titles||{}, SZ=cfg.size||{};
       (cfg.order||[]).forEach(function(k,i){ ix[k]=i; });
       (cfg.hidden||[]).forEach(function(k){ hid[k]=1; });
       (cfg.wide||[]).forEach(function(k){ wide[k]=1; });
@@ -12801,6 +13000,7 @@ GST.screen = (function(){
         var k=keyOf(el);
         if(hid[k]) el.setAttribute('data-gst-hide','1'); else el.removeAttribute('data-gst-hide');
         if(wide[k]) el.setAttribute('data-gst-wide','1'); else el.removeAttribute('data-gst-wide');
+        if(SZ[k] || el.hasAttribute('data-gst-w') || el.querySelector('[data-gst-h]')) sizeEl(el, SZ[k]);
         if(el.hasAttribute('data-gst-retired') && show[k]){ el.removeAttribute('data-gst-retired'); el.setAttribute('data-gst-unret','1'); }
         else if(el.hasAttribute('data-gst-unret') && !show[k]){ el.setAttribute('data-gst-retired','1'); el.removeAttribute('data-gst-unret'); }
         var h=headOf(el);
@@ -12817,6 +13017,7 @@ GST.screen = (function(){
         if(n===all){ if(p.dataset.gstN0) p.setAttribute('data-n', p.dataset.gstN0); else p.removeAttribute('data-n'); }
         else if(n>=1 && n<=5) p.setAttribute('data-n', String(n)); else p.removeAttribute('data-n');
       });
+      flowTidy();
       try{ GST._layoutFit && GST._layoutFit(Array.from(parents)); }catch(e){}
       try{ applyCharts(cfg); }catch(e){ console.warn('[screen] 차트 설정', e); }
     }finally{ S.applying=false; }
@@ -12826,6 +13027,7 @@ GST.screen = (function(){
     if(S.mo || !window.MutationObserver || !document.body) return;
     S.mo=new MutationObserver(function(){ if(S.applying || S.edit) return; clearTimeout(S.tm); S.tm=setTimeout(function(){ if(S.cfg) apply(); }, 120); });
     S.mo.observe(document.body, {childList:true, subtree:true});
+    try{ new MutationObserver(sizeLater).observe(document.body, {attributes:true, attributeFilter:['class']}); }catch(e){}
   }
   var LKEY=function(){ return 'gst_screen:'+S.page; };
   async function load(){
@@ -12883,13 +13085,16 @@ GST.screen = (function(){
         +(wideOk?'<button type="button" data-a="wide" aria-pressed="'+(curCfg().wide.indexOf(k)>=0)+'" title="'+esc(T('wide'))+'">⇔</button>':'')
         +(hasCh?'<button type="button" data-a="chart" title="'+esc(T('chart'))+'" aria-label="'+esc(T('chart'))+'">⚙</button>':'')
         +(isAdd&&cbOk?'<button type="button" data-a="edit" title="'+esc(T('b_edit'))+'" aria-label="'+esc(T('b_edit'))+'">⚙</button>':'')
+        +(isAdd?'<button type="button" data-a="copy" title="'+esc(T('copy'))+'" aria-label="'+esc(T('copy'))+'">⧉</button>':'')
         +(!isK&&cbOk?'<button type="button" data-a="add" title="'+esc(T('add'))+'" aria-label="'+esc(T('add'))+'">＋</button>':'')
         +(isAdd?'<button type="button" data-a="del">'+esc(T('del'))+'</button>':'<button type="button" data-a="hide">'+esc(T('hide'))+'</button>');
       el.appendChild(b);
+      if(!isK){ var rs=document.createElement('div'); rs.className='gse-rs gst-noshot'+(hostOf(el)?'':' w'); rs.title=T('size'); rs.setAttribute('aria-label',T('size'));
+        rs.innerHTML='<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M11 4 4 11M11 8 8 11"/></svg>'; el.appendChild(rs); }
     });
   }
   function undecorate(){
-    document.querySelectorAll('.gst-se-bar,.gse-pop').forEach(function(b){ b.remove(); });
+    document.querySelectorAll('.gst-se-bar,.gse-pop,.gse-rs,.gse-sz').forEach(function(b){ b.remove(); });
     document.querySelectorAll('.gst-se-card').forEach(function(el){ el.classList.remove('gst-se-card','gse-drag'); });
   }
   function hiddenList(){
@@ -12956,9 +13161,9 @@ GST.screen = (function(){
     }
   }
   function toast(msg){ try{ (GST.capToast||function(){})(msg); }catch(e){} }
-  async function rpc(scope, cfg, at){
+  async function rpc(scope, cfg, at, page){
     var C=await GST._dbAuthed(); if(!C) return {ok:false, error:'no_db'};
-    var r=await C.rpc('screen_layout_save', {p_page:S.page, p_scope:scope, p_config:cfg, p_at:at||null});
+    var r=await C.rpc('screen_layout_save', {p_page:page||S.page, p_scope:scope, p_config:cfg, p_at:at||null});
     if(r.error) return {ok:false, error:r.error.message||'fail'};
     return r.data||{ok:false,error:'fail'};
   }
@@ -12989,9 +13194,10 @@ GST.screen = (function(){
     if(a==='chart'){ chartPop(el, b); return; }
     if(a==='add'){ builder(null, k); return; }
     if(a==='edit'){ var ad=(cfg.adds||[]).filter(function(x){ return 'x:'+x.id===k; })[0]; if(ad) builder(ad); return; }
-    if(a==='del'){ cfg.adds=(cfg.adds||[]).filter(function(x){ return 'x:'+x.id!==k; }); setArr(cfg.hidden,k,false); setArr(cfg.wide,k,false); delete (cfg.titles||{})[k]; apply(cfg); syncOrder(); dirty(); paintPanel(); return; }
+    if(a==='copy'){ var ad2=(cfg.adds||[]).filter(function(x){ return 'x:'+x.id===k; })[0]; if(ad2) copyPop(el, b, ad2); return; }
+    if(a==='del'){ cfg.adds=(cfg.adds||[]).filter(function(x){ return 'x:'+x.id!==k; }); setArr(cfg.hidden,k,false); setArr(cfg.wide,k,false); delete (cfg.titles||{})[k]; if(cfg.size) delete cfg.size[k]; apply(cfg); syncOrder(); dirty(); paintPanel(); return; }
     if(a==='hide'){ unitOf(el).forEach(function(u){ setArr(cfg.hidden, keyOf(u), true); setArr(cfg.show, keyOf(u), false); }); apply(cfg); dirty(); paintPanel(); return; }
-    if(a==='wide'){ var on=cfg.wide.indexOf(k)<0; unitOf(el).forEach(function(u){ setArr(cfg.wide, keyOf(u), on); }); apply(cfg); b.setAttribute('aria-pressed', String(on)); b.title=T(on?'narrow':'wide'); dirty(); resizeCharts(el.parentNode); return; }
+    if(a==='wide'){ var on=cfg.wide.indexOf(k)<0; unitOf(el).forEach(function(u){ var uk=keyOf(u); setArr(cfg.wide, uk, on); if(cfg.size&&cfg.size[uk]){ delete cfg.size[uk].w; if(!cfg.size[uk].h) delete cfg.size[uk]; } }); apply(cfg); b.setAttribute('aria-pressed', String(on)); b.title=T(on?'narrow':'wide'); dirty(); resizeCharts(el.parentNode); return; }
     if(a==='rename'){
       var old=el.querySelector('.gse-pop'); if(old){ old.remove(); return; }
       var h=headOf(el), tn=h&&firstText(h); if(!tn) return;
@@ -13004,31 +13210,88 @@ GST.screen = (function(){
       return;
     }
   }
-  /* 끌어 옮기기 — 같은 부모 안에서만. 가로로 놓인 카드는 좌우, 한 줄 전체 카드는 위아래로 견준다 */
+  /* 끌어 옮기기 (v205 — 다른 격자로도) · 모서리 손잡이로 크기 조절.
+     · 묶음(축 선택 카드들)은 같은 부모 안에서만 — 한 덩어리를 다른 격자로 옮기면 기준 단추줄이 갈린다.
+     · KPI 는 KPI 줄끼리만, 카드는 카드끼리만. 화면 끝에 가까이 끌면 화면이 스스로 굴러간다. */
+  function startResize(el, e){
+    var cfg=curCfg(), k=keyOf(el), unit=unitOf(el), p=el.parentNode; if(!p) return;
+    cfg.size=cfg.size||{};
+    var r0=el.getBoundingClientRect(), host=hostOf(el), h0=host?host.getBoundingClientRect().height:0, y0=e.clientY;
+    var row=isRow(p), grid=!row && gridCols(p)>1, C=grid?gridCols(p):12;
+    var canW=!narrowView() && (row || grid);
+    var cs=getComputedStyle(p), pw=Math.max(1, p.clientWidth-parseFloat(cs.paddingLeft||0)-parseFloat(cs.paddingRight||0));
+    var old=JSON.stringify(cfg.size[k]||null), cur=Object.assign({}, cfg.size[k]||{});
+    var bd=document.createElement('div'); bd.className='gse-sz gst-noshot'; document.body.appendChild(bd);
+    el.classList.add('gse-rsz');
+    var lab=function(){ var t=[]; if(cur.w) t.push(grid?Math.max(1,Math.min(C,Math.round(cur.w*C/12)))+'/'+C+' '+T('cols'):FR[cur.w]||''); if(cur.h) t.push(Math.round(cur.h)+'px'); return t.join(' · ')||T('size_def'); };
+    var mv=function(ev){
+      if(canW){ var fr=(ev.clientX-r0.left)/pw;
+        if(grid){ var sp=Math.max(1,Math.min(C,Math.round(fr*C))); cur.w=sp*12/C; }
+        else cur.w=W12.reduce(function(a,b){ return Math.abs(b-fr*12)<Math.abs(a-fr*12)?b:a; }); }
+      if(host) cur.h=Math.max(140, Math.min(1400, h0+(ev.clientY-y0)));
+      unit.forEach(function(u){ sizeEl(u, cur); });
+      bd.textContent=lab(); bd.style.left=Math.min(window.innerWidth-140, ev.clientX+14)+'px'; bd.style.top=Math.min(window.innerHeight-40, ev.clientY+14)+'px';
+    };
+    var up=function(){
+      window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); window.removeEventListener('pointercancel',up);
+      bd.remove(); el.classList.remove('gse-rsz');
+      if(JSON.stringify(cur)!==old && (cur.w||cur.h)){
+        unit.forEach(function(u){ var uk=keyOf(u); cfg.size[uk]=Object.assign({}, cur); setArr(cfg.wide, uk, false); u.removeAttribute('data-gst-wide'); });
+        flowTidy(); dirty(); }
+      try{ GST._layoutFit && GST._layoutFit([p]); }catch(err){} resizeCharts(p);
+    };
+    window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up); window.addEventListener('pointercancel',up);
+  }
+  function onDbl(e){
+    var rs=e.target.closest&&e.target.closest('.gse-rs'); if(!rs||!S.edit) return;
+    e.preventDefault(); e.stopPropagation();
+    var el=rs.parentNode, cfg=curCfg(); if(!cfg.size) return;
+    unitOf(el).forEach(function(u){ var uk=keyOf(u); delete cfg.size[uk]; sizeEl(u, null); });
+    flowTidy(); dirty(); resizeCharts(el.parentNode);
+  }
   function onDown(e){
+    var rsH=e.target.closest('.gse-rs'); if(rsH && S.edit){ e.preventDefault(); e.stopPropagation(); startResize(rsH.parentNode, e); return; }
     var g=e.target.closest('.gst-se-bar .gse-grip'); if(!g) return;
     e.preventDefault(); e.stopPropagation();
-    var el=g.closest('.gst-se-bar').parentNode, unit=unitOf(el), par=el.parentNode;
+    var el=g.closest('.gst-se-bar').parentNode, unit=unitOf(el), par=el.parentNode, k=keyOf(el), cfg=curCfg();
+    var isK=el.classList.contains('kpi'), isAdd=!!(el.dataset&&el.dataset.gstAdd), I0=index();
+    var okT=function(x){ if(x.parentNode===par) return true; if(unit.length>1||unitOf(x).length>1) return false;
+      if(isK!==x.classList.contains('kpi')) return false; return !!I0.M[keyOf(x)] && x.offsetParent!==null; };
     unit.forEach(function(u){ u.classList.add('gse-drag'); });
     var line=document.createElement('div'); line.className='gse-line'; document.body.appendChild(line); line.hidden=true;
-    var tgt=null, before=false;
-    var mv=function(ev){
+    var tgt=null, before=false, lastEv=null, raf=0, lastT=null;
+    var core=function(ev){
       var hit=document.elementsFromPoint(ev.clientX, ev.clientY), c=null;
-      for(var i=0;i<hit.length;i++){ var x=hit[i].closest&&hit[i].closest('.gst-se-card'); if(x && x.parentNode===par && unit.indexOf(x)<0){ c=x; break; } }
-      if(!c){ tgt=null; line.hidden=true; return; }
-      var r=c.getBoundingClientRect(), pr=par.getBoundingClientRect(), horiz=r.width < pr.width*0.7;
+      for(var i=0;i<hit.length;i++){ var x=hit[i].closest&&hit[i].closest('.gst-se-card'); if(x && unit.indexOf(x)<0 && okT(x)){ c=x; break; } }
+      if(lastT && lastT!==c) lastT.classList.remove('gse-tgt');
+      if(!c){ tgt=null; line.hidden=true; lastT=null; return; }
+      if(c.parentNode!==par){ c.classList.add('gse-tgt'); lastT=c; }
+      var r=c.getBoundingClientRect(), pr=c.parentNode.getBoundingClientRect(), horiz=r.width < pr.width*0.7;
       before = horiz ? ev.clientX < r.left+r.width/2 : ev.clientY < r.top+r.height/2;
       tgt=c; line.hidden=false;
       if(horiz) Object.assign(line.style,{left:((before?r.left:r.right)-3)+'px', top:r.top+'px', width:'4px', height:r.height+'px'});
       else Object.assign(line.style,{left:r.left+'px', top:((before?r.top:r.bottom)-3)+'px', width:r.width+'px', height:'4px'});
     };
+    var tick=function(){ raf=0; if(!lastEv) return; var y=lastEv.clientY, H=window.innerHeight, d=y<70?-(70-y)/3:(y>H-70?(y-(H-70))/3:0);
+      if(d){ window.scrollBy(0, d); core(lastEv); raf=requestAnimationFrame(tick); } };
+    var mv=function(ev){ lastEv=ev; core(ev); if(!raf) raf=requestAnimationFrame(tick); };
     var up=function(){
       window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); window.removeEventListener('pointercancel',up);
+      if(raf) cancelAnimationFrame(raf); lastEv=null; if(lastT) lastT.classList.remove('gse-tgt');
       line.remove(); unit.forEach(function(u){ u.classList.remove('gse-drag'); });
       if(!tgt) return;
-      var tu=unitOf(tgt), ref=before?tu[0]:tu[tu.length-1].nextSibling;
-      unit.forEach(function(u){ par.insertBefore(u, ref); });
-      syncOrder(); dirty(); try{ GST._layoutFit && GST._layoutFit([par]); }catch(err){} resizeCharts(par);
+      var tu=unitOf(tgt), tp=tgt.parentNode, anc=before?tu[0]:tu[tu.length-1], ref=before?tu[0]:anc.nextSibling, cross=tp!==par;
+      if(cross && !isAdd && !S.home[k]){ var m=document.createComment('gse-home'); par.insertBefore(m, el); S.home[k]=m; }
+      if(cross && unit.length===1 && !isK && !isGrid(tp)){ placeAt(el, anc, before?'before':'after'); tp=el.parentNode; }   // 격자가 아닌 자리 → 그 옆 12칸 줄
+      else unit.forEach(function(u){ tp.insertBefore(u, ref); });
+      var ak=keyOf(anc), pos=before?'before':'after';
+      if(isAdd){ var ad=(cfg.adds||[]).filter(function(x){ return 'x:'+x.id===k; })[0]; if(ad){ ad.at=ak; ad.pos=pos; } }
+      else { cfg.move=cfg.move||{}; var hm=S.home[k];
+        if(hm && hm.parentNode===tp) delete cfg.move[k];
+        else if(cross || cfg.move[k]) cfg.move[k]={at:ak, pos:pos}; }
+      if(cross){ unit.forEach(function(u){ sizeEl(u, (cfg.size||{})[keyOf(u)]); }); flowTidy(); }
+      else if(isRow(tp)) flowTidy();
+      syncOrder(); dirty(); try{ GST._layoutFit && GST._layoutFit([par, tp]); }catch(err){} resizeCharts(tp); if(cross) resizeCharts(par);
     };
     window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up); window.addEventListener('pointercancel',up);
   }
@@ -13042,7 +13305,7 @@ GST.screen = (function(){
     cssOnce();
     var base=S.cfg?JSON.parse(JSON.stringify(S.cfg)):{};
     base.v=1; base.order=base.order&&base.order.length?base.order:domOrder();
-    base.hidden=base.hidden||[]; base.wide=base.wide||[]; base.show=base.show||[]; base.titles=base.titles||{}; base.charts=base.charts||{}; base.adds=base.adds||[];
+    base.hidden=base.hidden||[]; base.wide=base.wide||[]; base.show=base.show||[]; base.titles=base.titles||{}; base.charts=base.charts||{}; base.adds=base.adds||[]; base.size=base.size||{}; base.move=base.move||{};
     S.edit={ cfg:base, snap:JSON.stringify(base), dirty:false, hist:[], redo:[], last:'' };
     S.edit.last=snapCfg();
     document.body.classList.add('gst-se-on');
@@ -13053,6 +13316,7 @@ GST.screen = (function(){
     document.addEventListener('click', onCardBtn, true);
     document.addEventListener('click', blockClick, true);
     document.addEventListener('pointerdown', onDown, true);
+    document.addEventListener('dblclick', onDbl, true);
     S.edit.esc=function(ev){
       if((ev.ctrlKey||ev.metaKey) && !ev.altKey && (ev.key==='z'||ev.key==='Z'||ev.key==='y'||ev.key==='Y')){ var tg=ev.target; if(tg&&(/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName)||tg.isContentEditable)) return;
         if(document.getElementById('gstCbDlg')) return; ev.preventDefault(); undo(ev.key.toLowerCase()==='z' && !ev.shiftKey); return; }
@@ -13067,6 +13331,7 @@ GST.screen = (function(){
     document.removeEventListener('click', onCardBtn, true);
     document.removeEventListener('click', blockClick, true);
     document.removeEventListener('pointerdown', onDown, true);
+    document.removeEventListener('dblclick', onDbl, true);
     document.removeEventListener('keydown', S.edit.esc);
     var P=document.getElementById('gstSePanel'); if(P) P.remove();
     closeDlg(); document.querySelectorAll('.gse-cpop').forEach(function(x){ x.remove(); });
@@ -13104,6 +13369,7 @@ GST.screen = (function(){
         +'<div class="gse-r"><label>'+esc(CT('legend'))+sel('legend',['def','bottom','top','right','none'],c.legend||'def',function(v){ return v==='def'?T('lg_def'):CT('lg.'+v); })+'</label>'
         +'<label>'+esc(CT('pal'))+sel('pal',(GST.cb?GST.cb.PALS:['def']),c.pal||'def',function(v){ return CT('p.'+v); })+'</label></div>'
         +'<div class="gse-r"><label>'+esc(CT('ymin'))+'<input type="number" data-c="ymin" value="'+esc(c.ymin==null?'':c.ymin)+'"></label><label>'+esc(CT('ymax'))+'<input type="number" data-c="ymax" value="'+esc(c.ymax==null?'':c.ymax)+'"></label></div>'
+        +(GST.cb&&GST.cb.guess?'<button type="button" data-c="clone" title="'+esc(T('clone_s'))+'">'+esc(T('clone'))+'</button>':'')
         +'<div class="gse-r"><button type="button" data-c="reset">'+esc(T('c_reset'))+'</button><button type="button" data-c="close">'+esc(T('close'))+'</button></div>';
       p.$ser=ser;
     };
@@ -13112,6 +13378,9 @@ GST.screen = (function(){
     p.addEventListener('click', function(ev){ ev.stopPropagation(); var b=ev.target.closest('button'); if(!b||b.disabled) return;
       if(b.dataset.ct){ setC({type:b.dataset.ct}); paint(); return; }
       if(b.dataset.c==='reset'){ delete cfg.charts[cur.id]; var ch=Chart.getChart(cur); if(ch){ ch.$gstJ=null; applyChart(ch, null, false); } dirty(); paint(); return; }
+      if(b.dataset.c==='clone'){ var ch2=null; try{ ch2=Chart.getChart(cur); }catch(e){} if(!ch2) return; p.remove();
+        var hd=headOf(el), ttl=hd?String(hd.textContent||'').replace(/\s+/g,' ').trim().slice(0,60):'';
+        builder(null, keyOf(el), {guess:GST.cb.guess(ch2, S.page, {page:true}), hideKey:keyOf(el), title:ttl}); return; }
       if(b.dataset.c==='close'){ p.remove(); } });
     p.addEventListener('change', function(ev){ var e=ev.target;
       if(e.dataset.c==='which'){ cur=cvs[+e.value]; paint(); return; }
@@ -13121,14 +13390,49 @@ GST.screen = (function(){
     p.addEventListener('input', function(ev){ var e=ev.target; if(e.dataset.c==='ymin'||e.dataset.c==='ymax'){ var o={}; o[e.dataset.c]=e.value; setC(o); } });
     paint();
   }
+  /* ---------- 다른 화면으로 복사 (v205 ①) — 추가 카드(GST.cb 설정)는 화면 코드와 무관해 어느 화면에나 그대로 선다.
+     대상 화면의 배치(내 배치 › 전체 기본 › 없음)를 읽어 adds 에 붙이고 그 화면 범위로 저장한다 — 지금 화면의 배치는 그대로다.
+     · «내 화면에만»: 내 배치가 없으면 전체 기본 배치를 바탕으로 만든다(그래야 그 화면이 갑자기 원래 배치로 돌아가지 않는다).
+     · 서버가 없으면(setup-32 전 · 인증 꺼짐) 그 화면의 이 PC 저장소에. 페이지 기준 필터는 그 화면의 상세 필터를 따른다(cfg.follow 그대로). */
+  async function copyTo(page, scope, a){
+    var item={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), cfg:JSON.parse(JSON.stringify(a.cfg)), at:''};
+    if(S.where!=='server'){ var k2='gst_screen:'+page, pc=null; try{ pc=JSON.parse(localStorage.getItem(k2)||'null'); }catch(e){}
+      pc=pc||{v:1}; pc.adds=(pc.adds||[]).concat([item]); try{ localStorage.setItem(k2, JSON.stringify(pc)); }catch(e){ return {ok:false, error:'fail'}; } return {ok:true}; }
+    var C=null; try{ C=await GST._dbAuthed(); }catch(e){} if(!C) return {ok:false, error:'no_db'};
+    var r=await C.from('screen_layouts').select('owner,config,updated_at').eq('page',page); if(r.error) return {ok:false, error:'fail'};
+    var me=((GST._me&&GST._me.email)||'').toLowerCase(), all=null, mine=null;
+    (r.data||[]).forEach(function(x){ if(!x.owner) all=x; else if(String(x.owner).toLowerCase()===me) mine=x; });
+    var row=scope==='me'?mine:all, base=JSON.parse(JSON.stringify((row||(scope==='me'?all:null)||{}).config||{}));
+    base.v=1; base.adds=(base.adds||[]).concat([item]);
+    return rpc(scope, base, row?row.updated_at:null, page);
+  }
+  function copyPop(el, btn, a){
+    var old=document.querySelector('.gse-cpop'); if(old){ var same=old.$el===el; old.remove(); if(same) return; }
+    var pages=GST.SCREEN_PAGES.filter(function(x){ return x!==S.page; }), can=GST.targets&&GST.targets.can&&GST.targets.can(), srv=S.where==='server';
+    var p=document.createElement('div'); p.className='gse-pop gse-cpop gst-noshot'; p.$el=el; p.setAttribute('role','dialog'); p.setAttribute('aria-label',T('copy'));
+    document.body.appendChild(p);
+    var r=btn.getBoundingClientRect(); p.style.position='fixed'; p.style.top=Math.min(window.innerHeight-220, r.bottom+6)+'px'; p.style.right=Math.max(8, window.innerWidth-r.right)+'px';
+    p.innerHTML=pages.length?'<b>'+esc(T('copy'))+'</b><label>'+esc(T('cp_to'))+'<select data-c="pg">'+pages.map(function(x){ return '<option value="'+x+'">'+esc(T('pg_'+x))+'</option>'; }).join('')+'</select></label>'
+      +'<label>'+esc(T('cp_scope'))+'<select data-c="sc"><option value="me">'+esc(T('save_me'))+'</option>'+(can&&srv?'<option value="all">'+esc(T('save_all'))+'</option>':'')+'</select></label>'
+      +(srv?'':'<small>'+esc(T('pc_only'))+'</small>')
+      +'<div class="gse-r"><button type="button" data-c="close">'+esc(T('cancel'))+'</button><button type="button" data-c="go" class="pri" style="background:var(--accent,#4C7CF0);border-color:var(--accent,#4C7CF0);color:#fff">'+esc(T('cp_go'))+'</button></div>'
+      :'<div class="gse-gn">'+esc(T('cp_none'))+'</div>';
+    p.addEventListener('click', async function(ev){ ev.stopPropagation(); var b=ev.target.closest('button'); if(!b) return;
+      if(b.dataset.c==='close'){ p.remove(); return; }
+      if(b.dataset.c==='go'){ b.disabled=true; var pg=p.querySelector('[data-c="pg"]').value, sc=p.querySelector('[data-c="sc"]').value;
+        var res=await copyTo(pg, sc, a); b.disabled=false;
+        if(res&&res.ok){ p.remove(); toast(T('cp_done').replace('{p}', T('pg_'+pg))); }
+        else toast(res&&res.error==='conflict'?T('conflict'):res&&res.error==='forbidden'?T('forbidden'):T('fail')); } });
+  }
   /* ---------- 차트 추가 창 — GST.cb 의 폼 + 미리 보기. 맞춤 분석과 같은 폼·같은 엔진이다 ---------- */
   function closeDlg(){ var D=document.getElementById('gstCbDlg'); if(!D) return; [].forEach.call(D.querySelectorAll('canvas'), function(cv){ try{ var ch=Chart.getChart(cv); if(ch) ch.destroy(); }catch(e){} }); D.remove(); }
   function lastKey(){ var L2=index().list.filter(function(x){ return !x.classList.contains('kpi') && x.offsetParent!==null && !x.hasAttribute('data-gst-hide'); }); return L2.length?keyOf(L2[L2.length-1]):''; }
-  function builder(add, atKey){
+  function builder(add, atKey, gopt){
     closeDlg(); document.querySelectorAll('.gse-cpop').forEach(function(x){ x.remove(); }); if(!GST.cb) return;
     var c=GST.cb.norm(add?add.cfg:{src:'wk'});
     var D=document.createElement('div'); D.id='gstCbDlg'; D.className='gst-noshot';
     D.innerHTML='<div class="gcd-box" role="dialog" aria-modal="true" aria-label="'+esc(T(add?'b_edit':'b_add'))+'"><div class="gcd-h"><b>'+esc(T(add?'b_edit':'b_add'))+'</b><span style="flex:1"></span><button type="button" class="gcd-btn" data-d="x">'+esc(T('close'))+'</button></div>'
+      +(gopt?'<div class="gcd-g"><span class="gcd-gm">'+esc(T('g_wait'))+'</span><span style="flex:1"></span><label><input type="checkbox" data-d="hide" checked>'+esc(T('g_hide'))+'</label></div>':'')
       +'<div class="gcd-b"><div class="gcd-f"></div><div class="gcd-p"><div class="gcd-pt"></div><div class="gcd-ph gcb-host"></div><div class="gcd-pm"></div></div></div>'
       +'<div class="gcd-a"><button type="button" class="gcd-btn" data-d="x">'+esc(T('cancel'))+'</button><button type="button" class="gcd-btn pri" data-d="ok">'+esc(T('b_apply'))+'</button></div></div>';
     document.body.appendChild(D);
@@ -13137,14 +13441,24 @@ GST.screen = (function(){
       GST.cb.draw(ph, c, {id:'gcdPv', page:true}).then(function(R){ pt.textContent=GST.cb.title(c); pm.textContent=GST.cb.meta(R); }); }, 60); };
     var paint=function(){ GST.cb.form(fh, c, pv, {pre:'cbx-', page:true}); pv(); };
     paint(); GST.cb.load(c.src).then(paint, paint);
+    if(gopt && gopt.guess){ var gm=D.querySelector('.gcd-gm'), gb=D.querySelector('.gcd-g');
+      gopt.guess.then(function(G){ if(!D.isConnected) return;
+        if(G && G.cfg){ c=G.cfg; if(gopt.title) c.title=gopt.title; var sn=G.src;
+          gm.textContent=T('g_ok').replace('{p}', Math.round(G.score*100)).replace('{src}', GST.cb.T('sn.'+sn)); if(G.err>0.15) gb.classList.add('warn'); paint(); }
+        else { gm.textContent=T('g_no'); gb.classList.add('warn'); var hb=D.querySelector('[data-d="hide"]'); if(hb) hb.checked=false; } },
+        function(e){ console.warn('[screen] 차트 추정', e); gm.textContent=T('g_no'); gb.classList.add('warn'); }); }
     D.addEventListener('click', function(e){
       if(e.target===D){ closeDlg(); return; }
       var b=e.target.closest('[data-d]'); if(!b) return;
+      if(b.dataset.d==='hide') return;
       if(b.dataset.d==='x'){ closeDlg(); return; }
       var cfg=curCfg(); cfg.adds=cfg.adds||[];
       var cc=JSON.parse(JSON.stringify(c));
       if(add){ var hit=cfg.adds.filter(function(x){ return x.id===add.id; })[0]; if(hit) hit.cfg=cc; }
       else cfg.adds.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), cfg:cc, at:atKey||''});
+      /* «이 차트로 새로 만들기» — 원래 카드를 숨긴다(지우지 않는다 · 숨긴 카드 ▾ 에서 다시 보인다) */
+      var hb2=D.querySelector('[data-d="hide"]');
+      if(gopt && gopt.hideKey && hb2 && hb2.checked){ var hel=index().M[gopt.hideKey]; (hel?unitOf(hel):[]).forEach(function(u){ setArr(cfg.hidden, keyOf(u), true); }); }
       closeDlg(); apply(cfg); decorate(); syncOrder(); dirty(); paintPanel(); resizeCharts(document);
     });
   }
