@@ -2727,6 +2727,10 @@ async function uploadUndo(en){
     }
   };
   await Promise.all([work(), work(), work(), work()]);
+  /* ⚠ 지우기를 넷이 «동시에» 하면 줄마다 남기는 캐시 도장(행수 count)이 서로의 지우기를 못 본 채 찍혀,
+     마지막 도장이 실제보다 많은 행수를 적을 수 있다 — 화면이 «MIRROR_SHORT 9174/9175»로 멈췄다(v208 실제로 겪었다).
+     다 끝난 «뒤» 한 번 더 찍는다(미러 표만 기록한다 · 그 밖의 표는 서버가 그냥 돌려준다). */
+  try{ await rpc('csv_upload_finish', {p_tbl:en.tbl}); }catch(e){ console.warn('[edit] 캐시 도장 다시 찍기 실패', e); }
   try{ await rpc('edit_note', {p_tbl:en.tbl, p_op:'upload:undo', p_key:'*', p_before:{ rows:a.rows != null ? a.rows : null },
     p_after:{ of:en.id, file:a.file || '', src_from:a.src_from, src_to:a.src_to, deleted:ok, skipped:keep + gone, failed:fail.length } }); }
   catch(e){ console.warn('[edit] 되돌리기 요약 기록 실패', e); }
