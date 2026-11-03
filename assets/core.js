@@ -20,9 +20,9 @@ GST.VER = 198;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 
 /* «이 페이지가 누구인가»는 여기서 묻는다 — 저장 키(축편집·피벗·섹션)·챗봇 출처·자동순회 페이지 id 가 이 한 곳을 본다.
    (v137 에는 오프라인 판의 srcdoc 때문에 두었고, 오프라인 판은 v199 에 없앴다 — 한 곳에서 묻는 규약은 그대로 둔다.) */
 GST.pagePath = function(){ return location.pathname; };
-/* 카드 하나만 그리는 모드 (v206) — 다른 화면의 «카드 그대로 가져오기»가 이 화면을 ?embed=<카드 열쇠> 로 띄운다.
+/* 카드 하나만 그리는 모드 (v206) — 다른 화면의 «카드 그대로 가져오기»가 이 화면을 ?card=<카드 열쇠> 로 띄운다(⚠ ?embed= 은 업로드 화면이 데이터 관리 안에 뜰 때 이미 쓴다).
    일찍 정해 둔다 — 필터 저장 가드·자동 새로고침·세부내역 위임이 이 값을 본다. 보이기는 카드를 찾은 뒤에(아래 «embed» 모듈). */
-GST._embed = (function(){ try{ return (window.self!==window.top && new URLSearchParams(location.search).get('embed')) || ''; }catch(e){ return ''; } })();
+GST._embed = (function(){ try{ return (window.self!==window.top && new URLSearchParams(location.search).get('card')) || ''; }catch(e){ return ''; } })();
 if(GST._embed){ try{ document.documentElement.classList.add('gst-embed');
   var _es=document.createElement('style'); _es.id='gstEmbedCss';
   _es.textContent='html.gst-embed body{visibility:hidden}'
@@ -11916,7 +11916,7 @@ GST.cb = (function(){
     if(spec!=='wk'&&spec!=='mat') return;
     var cn=GST.canon||{}, nf=GST.nfw||function(x){ return x; };
     rows.forEach(function(o){
-      if(o.stage!=null) o.stage=String(o.stage).trim().toUpperCase();
+      if(o['stage']!=null) o['stage']=String(o['stage']).trim().toUpperCase();   // 작업단계 칸 — 판정이 아니라 표기 통일(화면과 같다)
       if(o.model&&cn.model) o.model=cn.model(o.model);
       if(o.proc&&cn.proc) o.proc=cn.proc(o.proc);
       for(var i=0;i<NFW_F.length;i++){ var k=NFW_F[i]; if(o[k]) o[k]=String(nf(o[k])).trim(); }
@@ -12962,7 +12962,7 @@ GST.screen = (function(){
   /* ---------- 카드 그대로 가져오기 (v206) — 원래 화면을 «카드 하나만 그리는 모드»(?embed=열쇠)로 띄운다.
      계산은 원래 화면 코드가 그대로 하므로 숫자가 같다. 이 화면의 상세 필터를 보내 같은 범위로 그리게 한다(gst-embed-f).
      ⚠ 그 화면 자료를 함께 읽으므로 무겁다 — 화면에 몇 장만. 보이기 전에는 읽지 않는다(loading=lazy). */
-  function embedSrc(e){ return '/'+e.page+'/?embed='+encodeURIComponent(e.key)+(e.sec?'&sec='+encodeURIComponent(e.sec):''); }
+  function embedSrc(e){ return '/'+e.page+'/?card='+encodeURIComponent(e.key)+(e.sec?'&sec='+encodeURIComponent(e.sec):''); }
   function embedSnap(){ try{ return GST.filters&&GST.filters.snapshot?GST.filters.snapshot():null; }catch(e){ return null; } }
   function embedPost(fr){ try{ fr.contentWindow&&fr.contentWindow.postMessage({type:'gst-embed-f', snap:embedSnap(), lang:(GST._lang&&GST._lang())||'ko'}, '*'); }catch(e){} }
   function drawEmbed(el, a){
@@ -13604,7 +13604,7 @@ GST.screen = (function(){
   var go=function(){ try{ GST.screen.boot(); }catch(e){ console.warn('[screen] 시작 실패', e); } };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go); else setTimeout(go, 0);
 })();
-/* ---------- 카드 하나만 그리기 (v206 · ?embed=<카드 열쇠>) ----------
+/* ---------- 카드 하나만 그리기 (v206 · ?card=<카드 열쇠>) ----------
    화면은 평소처럼 자료를 읽고 다 그린다(계산이 원래 코드 그대로다 — 그래서 숫자가 같다). 그 카드를 찾으면
    «카드에서 body 까지의 길»에 있는 형제를 전부 숨기고(data-gse-off) 길 위의 칸은 여백을 없앤다(data-gse-keep).
    · 화면 편집 배치(숨김·순서)는 걸지 않는다(GST.screen.boot 가 건너뛴다) — 원래 화면에서 숨긴 카드여도 보여야 한다. 은퇴·축 선택에 가려진 카드도 드러낸다.
