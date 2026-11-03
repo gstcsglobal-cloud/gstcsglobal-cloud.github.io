@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=193"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=194"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write) 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB(옛 동작 그대로 보인다).
@@ -167,6 +167,8 @@ select.gb-inp{width:104px}
 .more-menu button{font:inherit;font-size:13px;font-weight:600;text-align:left;border:0;background:transparent;color:var(--txt);padding:8px 10px;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:8px}
 .more-menu button:hover,.more-menu button:focus-visible{background:var(--surface-2);outline:none}
 .more-menu button.on{color:var(--accent-ink)}
+.more-menu button:disabled{opacity:.42;cursor:default;background:transparent}
+#mScreens:empty{display:none}
 .more-menu hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
 .more-menu .chk{margin-left:auto;font-size:11px;font-weight:700;color:var(--mut)}
 .more-menu .chk.on{color:var(--accent-ink)}
@@ -356,6 +358,11 @@ body.theme-slate .more-menu,body.theme-slate .askpanel,body.theme-slate .kiosk-p
       <div class="more-menu" id="moreMenu" role="menu" hidden>
         <button type="button" role="menuitem" data-go="studio" id="mStudio">맞춤 분석</button>
         <button type="button" role="menuitem" data-go="targets" id="mTargets">목표·기준</button>
+        <div id="mScreens"></div>
+        <hr>
+        <!-- 화면 편집(v202) — 지금 보고 있는 화면의 카드 배치(순서·숨김·폭·제목). 그 화면(iframe)의 GST.screen 이 편집기를 연다 -->
+        <button type="button" role="menuitem" id="mScreenEdit" onclick="screenEdit()">화면 편집</button>
+        <button type="button" role="menuitem" id="mScreenNew" onclick="screenNew()">새 화면 만들기</button>
         <hr>
         <!-- 이미지 저장(v185) — 지금 보고 있는 화면 전체를 PNG 로(메일 첨부용). 그 화면(iframe)의 GST.pageShot 이 만든다 -->
         <button type="button" role="menuitem" id="mShot" onclick="shotActive()">이 화면 이미지로 저장</button>
@@ -470,10 +477,10 @@ function tabOn(t){ return !t.roles || t.roles.indexOf((document.body && document
 function barTabs(){ return TABS.filter(t=>tabOn(t)&&t.bar!==false); }
 
 const L={
-  ko:{ask:'검색 또는 질문',askAi:'챗봇에 묻기',shot:'이 화면 이미지로 저장',shotK:'이미지 저장 캡처 그림 png',fx:'효과',tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!',act:'조치 사항',more:'더보기',explain:'설명 표시',on:'켬',off:'끔',search:'검색',pal_dark:'다크 모드로 바꾸기',pal_light:'라이트 모드로 바꾸기',pal_sn:'{p}에서 보기',pal_lang:'언어',rows:'행'},
-  en:{ask:'Search or ask',askAi:'Ask the chatbot',shot:'Save this screen as an image',shotK:'image screenshot capture png save',fx:'Effects',tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!',act:'Action items',more:'More',explain:'Show notes',on:'On',off:'Off',search:'Search',pal_dark:'Switch to dark mode',pal_light:'Switch to light mode',pal_sn:'Open in {p}',pal_lang:'Language',rows:' rows'},
-  zh:{ask:'搜索或提问',askAi:'问聊天机器人',shot:'将此画面保存为图片',shotK:'图片 截图 保存 png',fx:'效果',tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!',act:'待办事项',more:'更多',explain:'显示说明',on:'开',off:'关',search:'搜索',pal_dark:'切换到深色模式',pal_light:'切换到浅色模式',pal_sn:'在{p}中查看',pal_lang:'语言',rows:'行'},
-  ja:{ask:'検索または質問',askAi:'チャットボットに聞く',shot:'この画面を画像で保存',shotK:'画像 スクリーンショット 保存 png',fx:'エフェクト',tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!',act:'対応事項',more:'その他',explain:'説明を表示',on:'オン',off:'オフ',search:'検索',pal_dark:'ダークモードに切替',pal_light:'ライトモードに切替',pal_sn:'{p}で見る',pal_lang:'言語',rows:'行'}
+  ko:{scrEdit:'화면 편집',scrNew:'새 화면 만들기',ask:'검색 또는 질문',askAi:'챗봇에 묻기',shot:'이 화면 이미지로 저장',shotK:'이미지 저장 캡처 그림 png',fx:'효과',tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!',act:'조치 사항',more:'더보기',explain:'설명 표시',on:'켬',off:'끔',search:'검색',pal_dark:'다크 모드로 바꾸기',pal_light:'라이트 모드로 바꾸기',pal_sn:'{p}에서 보기',pal_lang:'언어',rows:'행'},
+  en:{scrEdit:'Edit screen',scrNew:'New screen',ask:'Search or ask',askAi:'Ask the chatbot',shot:'Save this screen as an image',shotK:'image screenshot capture png save',fx:'Effects',tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!',act:'Action items',more:'More',explain:'Show notes',on:'On',off:'Off',search:'Search',pal_dark:'Switch to dark mode',pal_light:'Switch to light mode',pal_sn:'Open in {p}',pal_lang:'Language',rows:' rows'},
+  zh:{scrEdit:'编辑画面',scrNew:'新建画面',ask:'搜索或提问',askAi:'问聊天机器人',shot:'将此画面保存为图片',shotK:'图片 截图 保存 png',fx:'效果',tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!',act:'待办事项',more:'更多',explain:'显示说明',on:'开',off:'关',search:'搜索',pal_dark:'切换到深色模式',pal_light:'切换到浅色模式',pal_sn:'在{p}中查看',pal_lang:'语言',rows:'行'},
+  ja:{scrEdit:'画面編集',scrNew:'新しい画面',ask:'検索または質問',askAi:'チャットボットに聞く',shot:'この画面を画像で保存',shotK:'画像 スクリーンショット 保存 png',fx:'エフェクト',tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!',act:'対応事項',more:'その他',explain:'説明を表示',on:'オン',off:'オフ',search:'検索',pal_dark:'ダークモードに切替',pal_light:'ライトモードに切替',pal_sn:'{p}で見る',pal_lang:'言語',rows:'行'}
 };
 let LANG='ko';
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&L[sl])LANG=sl; else if(window.name && L[window.name]) LANG=window.name; }catch(e){}
@@ -839,6 +846,7 @@ function applyLang(){
   { const fl=document.getElementById('fxLabel'); if(fl) fl.textContent=lt('fx'); const fb=document.getElementById('fxBtn'); if(fb) fb.title=lt('fx'); fxMark(); }
   { const mac=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||''); document.getElementById('palKbd').textContent=mac?'⌘K':'Ctrl K'; document.getElementById('palBtn').title=(mac?'⌘K':'Ctrl+K'); }
   inkMove();
+  [['mScreenEdit','scrEdit'],['mScreenNew','scrNew']].forEach(([id,k])=>{ const b=document.getElementById(id); if(b) b.textContent=lt(k); });
   ['studio','targets'].forEach(id=>{ const t=TABS.find(x=>x.id===id), b=document.querySelector('#moreMenu [data-go="'+id+'"]'); if(t&&b) b.textContent=t[LANG]||t.ko; });
   { const ms=document.getElementById('mShot'); if(ms) ms.textContent=lt('shot'); }
   document.querySelectorAll('.tgrp').forEach(g=>{ const n=(GROUPS[g.dataset.grp]||{})[LANG]||''; const l=g.querySelector('.tgrp-l'); if(l) l.textContent=n; g.setAttribute('aria-label', n); });
@@ -1015,7 +1023,7 @@ const ASK_BATCH=2, ASK_GAP=2500;
 /* iframe 의 «내용이 어디서 오나»는 이 한 곳이다 — 배포 주소 + 필터(?f=) · 섹션(?sec=). */
 function frameSrc(f, tab, fState, sec){
   const q=new URLSearchParams(); if(fState) q.set('f', fState); if(sec) q.set('sec', sec);
-  const qs=q.toString(); f.src = BASE + tab.path + (qs ? ('?'+qs) : '');
+  const qs=q.toString(); f.src = BASE + tab.path + (qs ? ((tab.path.indexOf('?')>=0?'&':'?')+qs) : '');
 }
 function askLoadAll(){
   const miss=barTabs().filter(t=>!frames[t.id]);   // 이 등급에게 안 보이는 탭(데모)·툴바로 여는 화면은 불러오지 않는다(v146 · v172)
@@ -1121,7 +1129,7 @@ function buildTabs(){
     if(tab.bar===false||!tabOn(tab)) return;
     const b=document.createElement('button');
     b.className='tab'; b.dataset.id=tab.id;
-    b.innerHTML=`<span class="ic">${SVG[tab.id]||''}</span><span class="tab-label">${tab[LANG]||tab.ko}</span>`;
+    b.innerHTML=`<span class="ic">${SVG[tab.id]||(tab.scr?SVG_SCR:'')}</span><span class="tab-label">${tab[LANG]||tab.ko}</span>`;
     b.onclick=()=>switchTab(tab.id);
     if(tab.grp){
       if(!G[tab.grp]){ const g=document.createElement('div'); g.className='tgrp'; g.dataset.grp=tab.grp; g.setAttribute('role','group');
@@ -1159,7 +1167,7 @@ function shotActive(){
 function moreToggle(force){
   const m=document.getElementById('moreMenu'), btn=document.getElementById('moreBtn');
   const open=force!=null?force:m.hidden; m.hidden=!open; btn.setAttribute('aria-expanded', String(open));
-  if(open){ explainMark(); const f=m.querySelector('button'); if(f) f.focus(); }
+  if(open){ explainMark(); const se=document.getElementById('mScreenEdit'); if(se) se.disabled=!screenOk(activeTab); const f=m.querySelector('button:not(:disabled)'); if(f) f.focus(); }
 }
 document.addEventListener('click',e=>{ if(!e.target.closest('.tb-more')) { const m=document.getElementById('moreMenu'); if(m&&!m.hidden) moreToggle(false); } });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const m=document.getElementById('moreMenu'); if(m&&!m.hidden){ moreToggle(false); document.getElementById('moreBtn').focus(); } } });
@@ -1195,6 +1203,46 @@ async function prefLang(){
     if(p&&p.lang&&L[p.lang]&&p.lang!==LANG){ LANG=p.lang; try{ window.name=LANG; sessionStorage.setItem('gst_lang',LANG); }catch(e){} applyLang(); broadcast({type:'gst-lang',lang:LANG}); }
   }catch(e){ console.warn('[shell] 저장된 언어 읽기 실패', e); }
 }
+
+/* ============================================================
+   화면 편집 · 게시한 화면 (v202 · 사용자 요청 「다른 페이지들도 전부 커스터마이징」)
+   · 화면 편집 — 지금 보이는 탭에 «편집기를 열라»만 보낸다. 카드 배치는 그 화면(core GST.screen)이, 게시한 화면은 맞춤 분석이 연다.
+   · 게시한 화면 — 맞춤 분석 보드 중 게시한 것(user_layouts.pub · setup-32)을 탭으로 세운다. id 는 'scr'+보드 번호.
+     ⚠ 공개 범위(vis)는 «탭을 세울지»를 정하는 표시 규칙이다 — 보드가 그리는 숫자는 원래 표의 RLS 를 그대로 지난다.
+     표·열이 없으면(setup-32 전) 아무 탭도 안 세우고 콘솔에만 남긴다 — 고정 탭은 그대로다.
+   ============================================================ */
+const SVG_SCR='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="4" rx="1.5"/><rect x="14" y="10" width="7" height="11" rx="1.5"/><rect x="3" y="13" width="7" height="8" rx="1.5"/></svg>';
+const SCREEN_TABS=['hub','report','fault','pm','cip','scrubber','material','tco','hr'];
+let INIT_SCR='';
+function screenOk(id){ return SCREEN_TABS.indexOf(id)>=0 || /^scr\d+$/.test(id||''); }
+function screenEdit(){
+  moreToggle(false);
+  const f=frames[activeTab]; if(!f||!screenOk(activeTab)) return;
+  try{ f.contentWindow.postMessage({type:'gst-screen-edit'},'*'); }catch(e){}
+}
+function screenNew(){ moreToggle(false); switchTab('studio'); setTimeout(()=>{ try{ frames.studio&&frames.studio.contentWindow.postMessage({type:'gst-screen-new'},'*'); }catch(e){} }, 400); }
+function scrVis(v){ const role=(document.body&&document.body.dataset.role)||''; return v==='all' || (v==='staff'&&/^(admin|editor|legacy)$/.test(role)) || (v==='admin'&&/^(admin|legacy)$/.test(role)); }
+async function loadScreens(){
+  let rows=null;
+  try{
+    const C=await GST._dbAuthed(); if(!C) return;
+    const r=await C.from('user_layouts').select('id,name,pub').not('pub','is',null).order('id');
+    if(r.error){ console.warn('[shell] 게시한 화면 읽기 실패', r.error); return; }
+    rows=r.data||[];
+  }catch(e){ console.warn('[shell] 게시한 화면 읽기 실패', e); return; }
+  for(let i=TABS.length-1;i>=0;i--) if(TABS[i].scr) TABS.splice(i,1);
+  rows.forEach(b=>{ const p=b.pub||{}; if(!scrVis(p.vis)) return; const nm=String(p.tab||b.name||'').slice(0,40);
+    TABS.push({id:'scr'+b.id, path:'/studio/?view='+b.id, ko:nm, en:nm, zh:nm, ja:nm, scr:true, bar:p.place==='more'?false:undefined}); });
+  buildTabs();
+  const box=document.getElementById('mScreens');
+  if(box){ box.innerHTML=TABS.filter(t=>t.scr&&t.bar===false).map(t=>'<button type="button" role="menuitem" data-go="'+t.id+'">'+String(t.ko).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</button>').join('');
+    box.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{ moreToggle(false); switchTab(b.dataset.go); }); }
+  document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active',el.dataset.id===activeTab)); barMark(); inkMove();
+  if(INIT_SCR && TABS.find(t=>t.id===INIT_SCR)){ const id=INIT_SCR; INIT_SCR=''; switchTab(id); }
+  /* 지금 보던 게시 화면이 게시 취소됐으면 첫 탭으로 */
+  else if(/^scr\d+$/.test(activeTab||'') && !TABS.find(t=>t.id===activeTab)){ const dead=activeTab; switchTab(TABS[0].id); try{ frames[dead]&&frames[dead].remove(); delete frames[dead]; }catch(e){} }
+}
+window.addEventListener('message',e=>{ const d=e.data||{}; if(d.type==='gst-screens') loadScreens(); });
 
 function switchTab(id){
   id=tabId(id);
@@ -1370,7 +1418,7 @@ function palItems(q){
   const out=[];
   TABS.filter(tabOn).forEach(t=>{
     const g=t.grp?(((GROUPS[t.grp]||{})[LANG])||''):'';
-    out.push({id:'tab:'+t.id, g:'tab', label:t[LANG]||t.ko, sub:g, icon:SVG[t.id]||'', hint:t.id===activeTab?'●':'', kw:[t.ko,t.en,t.zh,t.ja,t.id].join(' '), run:()=>switchTab(t.id)});
+    out.push({id:'tab:'+t.id, g:'tab', label:t[LANG]||t.ko, sub:g, icon:SVG[t.id]||(t.scr?SVG_SCR:''), hint:t.id===activeTab?'●':'', kw:[t.ko,t.en,t.zh,t.ja,t.id].join(' '), run:()=>switchTab(t.id)});
   });
   const A=[
     {id:'act:refresh', label:lt('refresh'), icon:PAL_IC.refresh, run:refreshActive, kw:'새로고침 refresh reload 刷新 更新'},
@@ -1380,6 +1428,8 @@ function palItems(q){
   A.push({id:'act:kiosk', label:KIOSK.on?lt('kioskStop'):lt('kiosk'), icon:PAL_IC.play, run:kioskBtn, kw:'자동순회 키오스크 kiosk tour 轮播 巡回'});
   A.push({id:'act:share', label:lt('share'), icon:PAL_IC.link, run:shareLink, kw:'공유 링크 share link 分享 共有'});
   A.push({id:'act:shot', label:lt('shot'), icon:PAL_IC.img, run:shotActive, kw:lt('shotK')+' 이미지 저장 캡처 image screenshot png 图片 画像'});
+  if(screenOk(activeTab)) A.push({id:'act:screen', label:lt('scrEdit'), icon:PAL_IC.edit, run:screenEdit, kw:'화면 편집 배치 카드 숨기기 layout edit screen 编辑画面 画面編集'});
+  A.push({id:'act:scrnew', label:lt('scrNew'), icon:PAL_IC.card, run:screenNew, kw:'새 화면 만들기 new screen board 新画面 新しい画面'});
   A.push({id:'act:fx', label:lt('fx'), icon:PAL_IC.note, run:()=>GST.fx&&GST.fx.panel(true), kw:'효과 effects 이펙트 애니메이션 animation 效果 エフェクト'});
   if(adm) A.push({id:'act:edit', label:lt('edit'), icon:PAL_IC.edit, run:openEdit, kw:'데이터 관리 data edit 数据管理 データ管理'});
   if(ed)  A.push({id:'act:upload', label:lt('upload'), icon:PAL_IC.up, run:openUpload, kw:'업로드 upload 上传 アップロード'});
@@ -1416,7 +1466,7 @@ window.addEventListener('message',e=>{
 });
 
 function start(){
-  GST.needVer && GST.needVer(171);   // 옛 core.js 캐시를 «숫자가 전부 0» 이 아니라 배너로(v135 — 셸도 선언한다)
+  GST.needVer && GST.needVer(194);   // 옛 core.js 캐시를 «숫자가 전부 0» 이 아니라 배너로(v135 — 셸도 선언한다)
   buildTabs();
   GST.barBind(document.getElementById('gbar'), barSend);
   applyLang();
@@ -1425,12 +1475,14 @@ function start(){
   try{sessionStorage.setItem('gst_theme',THEME);}catch(e){}
   // 마지막 본 탭 or 첫 탭
   let init=TABS[0].id;
-  try{const saved=tabId(sessionStorage.getItem('gst_tab')||'');if(saved&&TABS.find(t=>t.id===saved))init=saved;}catch(e){}
+  try{const saved=tabId(sessionStorage.getItem('gst_tab')||'');if(saved&&TABS.find(t=>t.id===saved))init=saved; else if(/^scr\d+$/.test(saved)) INIT_SCR=saved;}catch(e){}
   const hs=parseHash();
   if(hs.tab&&TABS.find(t=>t.id===hs.tab)){ init=hs.tab; if(hs.f||hs.sec)PENDING_STATE={tab:hs.tab,f:hs.f,sec:hs.sec}; }
+  else if(/^scr\d+$/.test(hs.tab||'')) INIT_SCR=hs.tab;
   bootStart(init);
   switchTab(init);
   prefLang();
+  (async()=>{ try{ await (GST.loadMe&&GST.loadMe()); }catch(e){} loadScreens(); })();
   setInterval(actCount, 5*60*1000);   // 처리함 배지 — 5분마다(다른 사람이 담거나 닫은 건이 따라온다)
 }
 

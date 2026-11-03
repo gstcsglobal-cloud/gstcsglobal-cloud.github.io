@@ -8,9 +8,10 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=193"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=194"></script>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=193">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=194">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/ds.css?v=1">
 <style>
 /* ============================================================
    분석 작업대 (v168 · 사용자 요청 「통합관리화면」 4단계)
@@ -65,6 +66,60 @@ body.sd{padding:0 !important;min-height:100vh}
 .sd-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--txt-main);color:var(--surface);padding:9px 16px;border-radius:10px;font-size:13px;transition:opacity .2s,transform .25s;pointer-events:none;z-index:50}
 .sd-toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){.sd-w{animation:none}.sd-btn:active{transform:none}}
+/* ---- 보드 = 화면 (v202) — 12칸 격자. 위치는 grid-column/row 로만 정한다(절대 좌표 없음 — 폭이 바뀌어도 칸이 따라간다) ---- */
+.sd-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:56px;gap:14px;position:relative;min-height:120px}
+.sd-grid.edit{background-image:repeating-linear-gradient(90deg,color-mix(in srgb,var(--accent) 2.5%,transparent) 0 calc((100% - 154px)/12),transparent calc((100% - 154px)/12) calc((100% - 154px)/12 + 14px));border-radius:14px}
+.sd-gw{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px 12px;min-width:0;min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.sd-gw.drag{z-index:5;box-shadow:0 16px 40px rgba(0,0,0,.35);border-color:var(--gold,var(--accent))}
+.sd-gw.sel{border-color:var(--gold,var(--accent))}
+.sd-gw h3{font-size:13px;font-weight:700;margin:0 0 6px;display:flex;align-items:center;gap:6px;color:var(--txt-main);flex:none}
+.sd-gw h3 span.n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sd-gw h3 .sd-std{font-size:10.5px;font-weight:700;color:var(--gold,var(--accent));border:1px solid currentColor;border-radius:6px;padding:0 5px;flex:none}
+.sd-gw [data-wh]{flex:1;min-height:0;display:flex;flex-direction:column}
+.sd-gw [data-wh]>*{flex:1;min-height:0}
+.sd-gw .sd-chart{height:100%;min-height:0}
+.sd-gw .sd-tblw{max-height:none;height:100%;overflow:auto}
+.sd-grip{cursor:grab;touch-action:none;border:0;background:none;color:var(--txt-muted);font-size:13px;padding:2px 4px;letter-spacing:-1px}
+.sd-rs{position:absolute;right:3px;bottom:3px;width:15px;height:15px;cursor:nwse-resize;touch-action:none;background:linear-gradient(135deg,transparent 0 55%,var(--txt-muted) 55% 62%,transparent 62% 72%,var(--txt-muted) 72% 79%,transparent 79%);opacity:.6}
+.sd-gw.k-title{background:transparent;border-style:dashed;padding:4px 10px}
+body.sd-view .sd-gw.k-title{border-color:transparent}
+.sd-gw.k-title h3{margin:0;font-size:11px;color:var(--txt-muted)}
+body.sd-view .sd-gw.k-title h3{display:none}
+.sd-ttl{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;color:var(--txt-main)}
+.sd-ttl::before{content:"";width:4px;height:20px;border-radius:3px;background:linear-gradient(180deg,var(--gold,#C9A24A),var(--accent))}
+.sd-txt{white-space:pre-line;font-size:13.5px;line-height:1.65;color:var(--txt-2);overflow:auto}
+.sd-txt.attn{border-left:3px solid var(--gold,#C9A24A);padding-left:10px;color:var(--txt-main)}
+.sd-kpiw{display:flex}.sd-kpiw .ds-kpi{width:100%;height:100%}
+.sd-heat{width:100%;border-collapse:separate;border-spacing:3px;font-size:11.5px;font-variant-numeric:tabular-nums}
+.sd-heat th{font-weight:600;color:var(--txt-muted);text-align:right;padding:2px 6px;white-space:nowrap}
+.sd-heat thead th{text-align:center}
+.sd-heat td{text-align:center;border-radius:6px;padding:4px 0;cursor:pointer;color:var(--txt-main)}
+.sd-pill{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px}
+.sd-pill.ok{background:var(--ok-soft,#e6f6ef);color:var(--ok,#14915F)}.sd-pill.warn{background:var(--warn-soft,#fff4e0);color:var(--warn,#B07A12)}.sd-pill.bad{background:var(--bad-soft,#fdecea);color:var(--bad,#C2412F)}.sd-pill.none{background:var(--surface-2);color:var(--txt-muted)}
+.sd-pop{position:absolute;top:36px;right:8px;z-index:8;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.28);padding:10px;display:flex;flex-direction:column;gap:8px;width:260px;max-width:calc(100% - 16px)}
+.sd-pop label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:600;color:var(--txt-2)}
+.sd-pop textarea{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:80px;background:var(--surface-2);color:var(--txt-main)}
+.sd-pop .sd-note{font-size:11px;color:var(--txt-muted)}
+.sd-add{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sd-add .sd-dd{position:relative}
+.sd-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.28);padding:6px;display:flex;flex-direction:column;gap:2px;min-width:240px}
+.sd-menu button{font:inherit;font-size:13px;font-weight:600;border:0;background:transparent;color:var(--txt-main);text-align:left;padding:8px 10px;border-radius:8px;cursor:pointer}
+.sd-menu button:hover{background:var(--surface-2)}
+.sd-dim[hidden]{display:none !important}
+.sd-dim{position:fixed;inset:0;background:rgba(3,8,16,.5);display:grid;place-items:center;padding:16px;z-index:60}
+.sd-dlg{width:min(460px,100%);background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.35);padding:20px;display:flex;flex-direction:column;gap:10px}
+.sd-dlg h2{margin:0;font-size:17px;color:var(--txt-main)}
+.sd-dlg p{margin:0;font-size:12.5px;color:var(--txt-2)}
+.sd-opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:13px;color:var(--txt-main)}
+.sd-opt small{display:block;color:var(--txt-muted);font-size:11.5px}
+.sd-opt:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.sd-dact{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.sd-pubb{font-size:11.5px;font-weight:700;color:var(--ok,#14915F);border:1px solid currentColor;border-radius:999px;padding:2px 9px}
+.sd-vhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sd-vhead h1{margin:0;font-size:21px;font-weight:800;color:var(--txt-main)}
+body.sd-view .sd-head,body.sd-view #form,body.sd-view #pvCard,body.sd-view #boardBar{display:none !important}
+body.sd-view .sd-main{grid-template-columns:minmax(0,1fr)}
+@media (max-width:760px){.sd-grid{grid-template-columns:minmax(0,1fr);grid-auto-rows:minmax(56px,auto)}.sd-grid>.sd-gw{grid-column:1 / -1 !important;grid-row:auto / span var(--h,4) !important}.sd-grid.edit{background:none}.sd-rs,.sd-grip{display:none}}
 @media (max-width:1100px){.sd-main{grid-template-columns:1fr}.sd-form{position:static}.sd-board{grid-template-columns:1fr}}
 @media (max-width:640px){.sd-wrap{padding:12px 16px 20px}}
 </style>
@@ -75,7 +130,7 @@ body.sd{padding:0 !important;min-height:100vh}
   <div class="sd-head">
     <div>
       <div class="sd-title" data-i="title">분석 작업대</div>
-      <div class="sd-sub" data-i="sub">표 · 축 · 값을 골라 차트를 만들고, 보드로 묶어 저장합니다</div>
+      <div class="sd-sub" data-i="sub">차트와 표준 지표를 배치해 새 화면을 만들고, 탭으로 게시합니다</div>
     </div>
     <span class="sd-sp"></span>
     <select class="sd-sel" id="boardSel" aria-label="보드"></select>
@@ -84,7 +139,11 @@ body.sd{padding:0 !important;min-height:100vh}
     <button type="button" class="sd-btn pri" id="saveBtn" data-i="save">보드 저장</button>
     <button type="button" class="sd-btn" id="newBtn" data-i="new_board">새 보드</button>
     <button type="button" class="sd-btn ghost" id="rmBtn" data-i="remove">보드 감추기</button>
+    <span class="sd-pubb" id="pubBadge" hidden></span>
+    <button type="button" class="sd-btn" id="pubBtn" data-i="publish" hidden>탭으로 게시</button>
+    <button type="button" class="sd-btn ghost" id="viewBtn" data-i="view_screen" hidden>화면 보기</button>
   </div>
+  <div class="sd-vhead" id="vhead" hidden><h1 id="vTitle"></h1><span class="sd-sub" id="vDate"></span><span class="sd-sp"></span><button type="button" class="sd-btn" id="vEdit" data-i="edit_screen" hidden>화면 편집</button></div>
   <div id="warn"></div>
 
   <section class="sd-main">
@@ -113,28 +172,41 @@ body.sd{padding:0 !important;min-height:100vh}
       <div class="sd-row"><button type="button" class="sd-btn pri" id="addW" data-i="add_board">보드에 추가</button><button type="button" class="sd-btn" id="updW" data-i="update_w" hidden>이 차트 고치기</button></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
-      <div class="sd-card">
+      <div class="sd-card" id="pvCard">
         <h2><span id="pvTitle" data-i="preview">미리 보기</span><span class="s" id="pvMeta"></span></h2>
         <div id="pv"></div>
         <div class="sd-meta" data-i="drill_hint">막대·점·조각을 누르면 그 행들이 뜹니다</div>
       </div>
       <div>
-        <div style="display:flex;align-items:center;margin:2px 2px 10px"><b style="font-size:14px" data-i="board">보드</b><span class="sd-sub" style="margin-left:8px" id="boardMeta"></span></div>
-        <div class="sd-board" id="board"></div>
+        <div id="boardBar" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:2px 2px 10px"><b style="font-size:14px" data-i="board">보드</b><span class="sd-sub" id="boardMeta"></span><span class="sd-sp"></span>
+          <div class="sd-add"><span class="sd-dd"><button type="button" class="sd-btn" id="addStd" data-i="add_std">표준 지표 추가</button></span><span class="sd-dd"><button type="button" class="sd-btn" id="addLay" data-i="add_lay">레이아웃 요소</button></span></div></div>
+        <div class="sd-grid edit" id="board"></div>
       </div>
     </div>
   </section>
   <div class="sd-status" id="status"></div>
 </div>
 <div class="sd-toast" id="toast" role="status" aria-live="polite"></div>
+<div class="sd-dim" id="pubDlg" hidden><div class="sd-dlg" role="dialog" aria-modal="true" aria-labelledby="pubT">
+  <h2 id="pubT" data-i="publish">탭으로 게시</h2><p data-i="pub_desc"></p>
+  <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--txt-2)"><span data-i="pub_name">탭 이름</span><input class="sd-in" id="pubName" maxlength="40"></label>
+  <div style="font-size:12px;font-weight:600;color:var(--txt-2)" data-i="pub_vis">공개 범위</div>
+  <label class="sd-opt"><input type="radio" name="pubVis" value="all"><span><span data-i="vis_all"></span><small data-i="vis_all_s"></small></span></label>
+  <label class="sd-opt"><input type="radio" name="pubVis" value="staff"><span><span data-i="vis_staff"></span><small data-i="vis_staff_s"></small></span></label>
+  <label class="sd-opt"><input type="radio" name="pubVis" value="admin"><span><span data-i="vis_admin"></span><small data-i="vis_admin_s"></small></span></label>
+  <div style="font-size:12px;font-weight:600;color:var(--txt-2)" data-i="pub_place">표시 위치</div>
+  <label class="sd-opt"><input type="radio" name="pubPlace" value="tab"><span><span data-i="place_tab"></span><small data-i="place_tab_s"></small></span></label>
+  <label class="sd-opt"><input type="radio" name="pubPlace" value="more"><span><span data-i="place_more"></span><small data-i="place_more_s"></small></span></label>
+  <div class="sd-dact"><button type="button" class="sd-btn ghost" id="pubOff" data-i="unpub" hidden>게시 취소</button><span class="sd-sp"></span><button type="button" class="sd-btn" id="pubCancel" data-i="cancel">취소</button><button type="button" class="sd-btn pri" id="pubOk" data-i="pub_ok">게시</button></div>
+</div></div>
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer && GST.needVer(164);
+GST.needVer && GST.needVer(194);   // v202 — 보드 = 화면(격자 · 표준 지표 · 게시) · GST.metrics·kpiCard·targets
 GST.authGate();
 
 const T={
-ko:{title:'맞춤 분석',sub:'표 · 축 · 값을 골라 차트를 만들고, 보드로 묶어 저장합니다',board_name:'보드 이름',shared:'공유',save:'보드 저장',new_board:'새 보드',remove:'보드 감추기',
+ko:{title:'맞춤 분석',sub:'차트와 표준 지표를 배치해 새 화면을 만들고, 탭으로 게시합니다',board_name:'보드 이름',shared:'공유',save:'보드 저장',new_board:'새 보드',remove:'보드 감추기',
   build:'차트 만들기',f_src:'자료',f_type:'모양',f_x:'가로축 (나누는 기준)',f_bucket:'날짜 묶기',b_month:'월',b_week:'주',b_day:'일',
   f_series:'계열 (색으로 나누기 · 선택)',f_agg:'값',a_count:'건수',a_sum:'합계',a_avg:'평균',a_distinct:'고유 수',f_val:'값 열',f_date:'기간 기준 열',f_top:'상위',
   f_filter:'거르기 (모두 만족)',add_filter:'+ 조건',f_title:'차트 제목 (비우면 자동)',add_board:'보드에 추가',update_w:'이 차트 고치기',
@@ -148,8 +220,8 @@ ko:{title:'맞춤 분석',sub:'표 · 축 · 값을 골라 차트를 만들고, 
   nosql:'서버 준비가 아직 안 됐습니다 — 보드는 이 PC 에만 저장됩니다(관리자가 supabase/setup-25-layouts.sql 을 Run 하면 계정에 저장됩니다)',
   not_yours:'남의 보드는 고칠 수 없습니다 — 「새 보드」로 복사해 저장하세요',
   edit:'고치기',del:'빼기',up:'위로',loading:'자료를 불러오는 중…',fail_src:'이 자료를 읽지 못했습니다',
-  no_rows:'조건에 맞는 행이 없습니다',val_need:'합계·평균은 숫자 열을 고르세요',sum_of:'{a} · {v}',by:'{y} — {x}별',by2:'{y} — {x} · {s}별'},
-en:{title:'Custom analysis',sub:'Pick a table · axis · value to build charts, then save them as a board',board_name:'Board name',shared:'Shared',save:'Save board',new_board:'New board',remove:'Hide board',
+  no_rows:'조건에 맞는 행이 없습니다',val_need:'합계·평균은 숫자 열을 고르세요',sum_of:'{a} · {v}',by:'{y} — {x}별',by2:'{y} — {x} · {s}별',add_std:'표준 지표 추가',add_lay:'레이아웃 요소',w_kpi:'지표 카드',w_trend:'고장·PM 추이 (12주)',w_heat:'주차별 고장 히트맵',w_risk:'고장 위험 설비 순위',w_optable:'운영단위 목표 대비 표',w_title:'구분 제목',w_text:'텍스트',w_chart:'사용자 정의 차트',sc_all:'전사',sc_kr:'국내',sc_os:'해외',scope:'범위',metric:'지표',rows_n:'표시 행 수',txt_body:'내용',txt_title:'제목',tone:'강조',tone_plain:'기본',tone_attn:'강조 표시',set:'설정',close:'닫기',unsaved:'저장하지 않은 변경',std_note:'다른 화면과 같은 계산 · 범위와 표시만 고릅니다',no_std:'자료를 읽지 못했습니다',no_risk:'고장 위험 설비가 없습니다',col_eq:'설비',col_op:'운영단위',col_score:'점수',col_bm90:'90일 고장',col_rep:'재고장',col_judge:'판정',wk_rows:'{w} · 고장 {n}건',publish:'탭으로 게시',pub_name:'탭 이름',pub_vis:'공개 범위',vis_all:'전체 사용자',vis_all_s:'조회 권한 포함 · 로그인한 모든 사용자',vis_staff:'관리자·사이트 담당자',vis_staff_s:'자료 등록·수정 권한이 있는 사용자',vis_admin:'관리자',vis_admin_s:'검토 중인 화면 확인용',pub_place:'표시 위치',place_tab:'탭 메뉴',place_tab_s:'상시 조회 화면',place_more:'더보기 메뉴',place_more_s:'수시 조회 화면',pub_ok:'게시',unpub:'게시 취소',cancel:'취소',pub_desc:'게시하면 선택한 사용자에게 이 보드가 대시보드 탭으로 보입니다. 숫자는 열 때마다 최신 자료로 다시 계산합니다.',pub_done:'«{t}» 화면을 게시했습니다',unpub_done:'게시를 취소했습니다',pub_need_save:'먼저 보드를 저장하세요',pub_badge:'게시됨 · {t}',pub_fail:'게시하지 못했습니다',not_found:'이 화면을 찾을 수 없습니다 — 게시가 취소됐거나 공유가 꺼졌습니다',edit_screen:'화면 편집',view_screen:'화면 보기',base_day:'{d} 기준',drag:'끌어서 옮기기',resize:'크기 조절'},
+en:{title:'Custom analysis',sub:'Arrange charts and standard metrics into a new screen and publish it as a tab',board_name:'Board name',shared:'Shared',save:'Save board',new_board:'New board',remove:'Hide board',
   build:'Build a chart',f_src:'Data',f_type:'Type',f_x:'X axis (split by)',f_bucket:'Date bucket',b_month:'Month',b_week:'Week',b_day:'Day',
   f_series:'Series (split by color · optional)',f_agg:'Value',a_count:'Count',a_sum:'Sum',a_avg:'Average',a_distinct:'Distinct',f_val:'Value column',f_date:'Date column for range',f_top:'Top',
   f_filter:'Filters (all must match)',add_filter:'+ Filter',f_title:'Chart title (auto if empty)',add_board:'Add to board',update_w:'Update this chart',
@@ -163,8 +235,8 @@ en:{title:'Custom analysis',sub:'Pick a table · axis · value to build charts, 
   nosql:'Server is not ready — boards are saved on this PC only (an administrator must run supabase/setup-25-layouts.sql)',
   not_yours:'You cannot change someone else\'s board — use «New board» to save a copy',
   edit:'Edit',del:'Remove',up:'Up',loading:'Loading…',fail_src:'Could not read this data',
-  no_rows:'No rows match',val_need:'Pick a numeric column for sum/average',sum_of:'{a} · {v}',by:'{y} — by {x}',by2:'{y} — by {x} · {s}'},
-zh:{title:'自定义分析',sub:'选择表 · 轴 · 值来制作图表，并保存为看板',board_name:'看板名称',shared:'共享',save:'保存看板',new_board:'新看板',remove:'隐藏看板',
+  no_rows:'No rows match',val_need:'Pick a numeric column for sum/average',sum_of:'{a} · {v}',by:'{y} — by {x}',by2:'{y} — by {x} · {s}',add_std:'Add standard metric',add_lay:'Layout items',w_kpi:'Metric card',w_trend:'Failures · PM trend (12 weeks)',w_heat:'Weekly failure heatmap',w_risk:'At-risk equipment',w_optable:'Operating units vs targets',w_title:'Section title',w_text:'Text',w_chart:'Custom chart',sc_all:'Company',sc_kr:'Korea',sc_os:'Overseas',scope:'Scope',metric:'Metric',rows_n:'Rows',txt_body:'Text',txt_title:'Title',tone:'Emphasis',tone_plain:'Default',tone_attn:'Highlight',set:'Settings',close:'Close',unsaved:'Unsaved changes',std_note:'Same calculation as other screens · choose scope and display only',no_std:'Could not read the data',no_risk:'No at-risk equipment',col_eq:'Equipment',col_op:'Operating unit',col_score:'Score',col_bm90:'Failures (90d)',col_rep:'Repeats',col_judge:'Status',wk_rows:'{w} · {n} failures',publish:'Publish as tab',pub_name:'Tab name',pub_vis:'Visible to',vis_all:'All users',vis_all_s:'Including view-only · everyone signed in',vis_staff:'Admins · site managers',vis_staff_s:'Users who upload and edit data',vis_admin:'Administrators',vis_admin_s:'For reviewing a screen',pub_place:'Placement',place_tab:'Tab bar',place_tab_s:'Screens used daily',place_more:'More menu',place_more_s:'Screens used occasionally',pub_ok:'Publish',unpub:'Unpublish',cancel:'Cancel',pub_desc:'Once published, this board appears as a dashboard tab for the selected users. Numbers are recalculated from the latest data each time.',pub_done:'Published «{t}»',unpub_done:'Unpublished',pub_need_save:'Save the board first',pub_badge:'Published · {t}',pub_fail:'Could not publish',not_found:'This screen was not found — it was unpublished or sharing was turned off',edit_screen:'Edit screen',view_screen:'View screen',base_day:'As of {d}',drag:'Drag to move',resize:'Resize'},
+zh:{title:'自定义分析',sub:'排列图表和标准指标制作新画面，并发布为标签',board_name:'看板名称',shared:'共享',save:'保存看板',new_board:'新看板',remove:'隐藏看板',
   build:'制作图表',f_src:'数据',f_type:'类型',f_x:'横轴（分组依据）',f_bucket:'日期分组',b_month:'月',b_week:'周',b_day:'日',
   f_series:'系列（按颜色区分 · 可选）',f_agg:'值',a_count:'件数',a_sum:'合计',a_avg:'平均',a_distinct:'去重数',f_val:'值列',f_date:'期间依据列',f_top:'前',
   f_filter:'筛选（全部满足）',add_filter:'+ 条件',f_title:'图表标题（留空则自动）',add_board:'加入看板',update_w:'修改此图表',
@@ -178,8 +250,8 @@ zh:{title:'自定义分析',sub:'选择表 · 轴 · 值来制作图表，并保
   nosql:'服务器尚未准备好 — 看板仅保存在此电脑（管理员运行 supabase/setup-25-layouts.sql 后可保存到账号）',
   not_yours:'不能修改他人的看板 — 请用「新看板」另存',
   edit:'修改',del:'移除',up:'上移',loading:'正在加载…',fail_src:'无法读取此数据',
-  no_rows:'没有符合条件的行',val_need:'合计·平均请选择数值列',sum_of:'{a} · {v}',by:'{y} — 按{x}',by2:'{y} — 按{x} · {s}'},
-ja:{title:'カスタム分析',sub:'表 · 軸 · 値を選んでチャートを作り、ボードにまとめて保存します',board_name:'ボード名',shared:'共有',save:'ボード保存',new_board:'新しいボード',remove:'ボードを隠す',
+  no_rows:'没有符合条件的行',val_need:'合计·平均请选择数值列',sum_of:'{a} · {v}',by:'{y} — 按{x}',by2:'{y} — 按{x} · {s}',add_std:'添加标准指标',add_lay:'布局元素',w_kpi:'指标卡',w_trend:'故障·PM 趋势 (12周)',w_heat:'每周故障热力图',w_risk:'故障风险设备',w_optable:'运营单位目标对比表',w_title:'分区标题',w_text:'文本',w_chart:'自定义图表',sc_all:'全公司',sc_kr:'国内',sc_os:'海外',scope:'范围',metric:'指标',rows_n:'显示行数',txt_body:'内容',txt_title:'标题',tone:'强调',tone_plain:'默认',tone_attn:'强调显示',set:'设置',close:'关闭',unsaved:'未保存的更改',std_note:'与其他画面相同的计算 · 仅选择范围和显示方式',no_std:'无法读取数据',no_risk:'没有故障风险设备',col_eq:'设备',col_op:'运营单位',col_score:'分数',col_bm90:'90天故障',col_rep:'重复故障',col_judge:'判定',wk_rows:'{w} · 故障 {n}件',publish:'发布为标签',pub_name:'标签名称',pub_vis:'公开范围',vis_all:'全体用户',vis_all_s:'含只读权限 · 所有登录用户',vis_staff:'管理员·现场负责人',vis_staff_s:'有资料登记·修改权限的用户',vis_admin:'管理员',vis_admin_s:'用于审核中的画面',pub_place:'显示位置',place_tab:'标签菜单',place_tab_s:'日常查看的画面',place_more:'更多菜单',place_more_s:'偶尔查看的画面',pub_ok:'发布',unpub:'取消发布',cancel:'取消',pub_desc:'发布后，所选用户会在仪表板标签中看到此看板。数字在每次打开时按最新资料重新计算。',pub_done:'已发布«{t}»',unpub_done:'已取消发布',pub_need_save:'请先保存看板',pub_badge:'已发布 · {t}',pub_fail:'发布失败',not_found:'找不到此画面 — 已取消发布或关闭了共享',edit_screen:'编辑画面',view_screen:'查看画面',base_day:'{d} 基准',drag:'拖动移动',resize:'调整大小'},
+ja:{title:'カスタム分析',sub:'チャートと標準指標を配置して新しい画面を作り、タブとして公開します',board_name:'ボード名',shared:'共有',save:'ボード保存',new_board:'新しいボード',remove:'ボードを隠す',
   build:'チャートを作る',f_src:'データ',f_type:'形',f_x:'横軸（分ける基準）',f_bucket:'日付のまとめ',b_month:'月',b_week:'週',b_day:'日',
   f_series:'系列（色で分ける · 任意）',f_agg:'値',a_count:'件数',a_sum:'合計',a_avg:'平均',a_distinct:'ユニーク数',f_val:'値の列',f_date:'期間の基準列',f_top:'上位',
   f_filter:'絞り込み（すべて満たす）',add_filter:'+ 条件',f_title:'チャート名（空なら自動）',add_board:'ボードに追加',update_w:'このチャートを修正',
@@ -193,7 +265,7 @@ ja:{title:'カスタム分析',sub:'表 · 軸 · 値を選んでチャートを
   nosql:'サーバーの準備ができていません — ボードはこのPCにのみ保存されます（管理者が supabase/setup-25-layouts.sql を実行するとアカウントに保存）',
   not_yours:'他人のボードは変更できません — 「新しいボード」で複製して保存してください',
   edit:'修正',del:'外す',up:'上へ',loading:'読み込み中…',fail_src:'このデータを読めませんでした',
-  no_rows:'条件に合う行がありません',val_need:'合計·平均は数値の列を選んでください',sum_of:'{a} · {v}',by:'{y} — {x}別',by2:'{y} — {x} · {s}別'}
+  no_rows:'条件に合う行がありません',val_need:'合計·平均は数値の列を選んでください',sum_of:'{a} · {v}',by:'{y} — {x}別',by2:'{y} — {x} · {s}別',add_std:'標準指標を追加',add_lay:'レイアウト要素',w_kpi:'指標カード',w_trend:'故障·PM 推移 (12週)',w_heat:'週別故障ヒートマップ',w_risk:'故障リスク設備',w_optable:'運営単位 目標対比表',w_title:'区分タイトル',w_text:'テキスト',w_chart:'ユーザー定義チャート',sc_all:'全社',sc_kr:'国内',sc_os:'海外',scope:'範囲',metric:'指標',rows_n:'表示行数',txt_body:'内容',txt_title:'タイトル',tone:'強調',tone_plain:'標準',tone_attn:'強調表示',set:'設定',close:'閉じる',unsaved:'未保存の変更',std_note:'他の画面と同じ計算 · 範囲と表示のみ選びます',no_std:'データを読めませんでした',no_risk:'故障リスク設備はありません',col_eq:'設備',col_op:'運営単位',col_score:'スコア',col_bm90:'90日故障',col_rep:'再故障',col_judge:'判定',wk_rows:'{w} · 故障 {n}件',publish:'タブとして公開',pub_name:'タブ名',pub_vis:'公開範囲',vis_all:'全ユーザー',vis_all_s:'閲覧権限を含む · ログインした全ユーザー',vis_staff:'管理者·サイト担当者',vis_staff_s:'データ登録·修正権限のあるユーザー',vis_admin:'管理者',vis_admin_s:'検討中の画面の確認用',pub_place:'表示位置',place_tab:'タブメニュー',place_tab_s:'常時見る画面',place_more:'その他メニュー',place_more_s:'時々見る画面',pub_ok:'公開',unpub:'公開取消',cancel:'キャンセル',pub_desc:'公開すると、選んだユーザーにこのボードがダッシュボードのタブとして表示されます。数値は開くたびに最新データで再計算します。',pub_done:'«{t}»を公開しました',unpub_done:'公開を取り消しました',pub_need_save:'先にボードを保存してください',pub_badge:'公開中 · {t}',pub_fail:'公開できませんでした',not_found:'この画面が見つかりません — 公開が取り消されたか共有がオフです',edit_screen:'画面編集',view_screen:'画面を見る',base_day:'{d} 基準',drag:'ドラッグで移動',resize:'サイズ変更'}
 };
 let LANG=(function(){ try{ return sessionStorage.getItem('gst_lang')||'ko'; }catch(e){ return 'ko'; } })(); if(!T[LANG]) LANG='ko';
 const t=k=>(T[LANG]&&T[LANG][k]!=null)?T[LANG][k]:(T.ko[k]!=null?T.ko[k]:k);
@@ -206,7 +278,9 @@ const TYPE_ICON={bar:'▮▮',hbar:'☰',line:'⟋',doughnut:'◔',table:'▦'};
 const SRC={ wk:{spec:'wk', gid:'646668307', key:'studio_wk'}, mat:{spec:'mat', gid:'31302669', key:'studio_mat'}, inst:{spec:'inst', gid:'891608329', key:'studio_inst'} };
 
 const DATA={};   // src → {rows:[obj], fields:[{k,label,kind}]}
-const S={cfg:null, board:{id:null,name:'',shared:false,owner:null,widgets:[]}, boards:[], editIx:-1, sql:true, charts:{}};
+const S={cfg:null, board:{id:null,name:'',shared:false,owner:null,widgets:[],pub:null}, boards:[], editIx:-1, sql:true, charts:{}, dirty:false, sel:-1,
+  view:(new URLSearchParams(location.search)).get('view')||'', want:(new URLSearchParams(location.search)).get('board')||''};
+if(S.view) document.body.classList.add('sd-view');
 
 /* ===== 자료 읽기 — 열은 SPEC 이 찾는다(제1원칙) ===== */
 async function loadSrc(src){
@@ -357,21 +431,282 @@ async function setSrc(src, keep){
   if(!kept) S.cfg=defaultCfg(src); drawForm(); preview();
 }
 
-/* ===== 보드 ===== */
-async function drawBoard(){
-  const B=document.getElementById('board'), W=S.board.widgets;
-  Object.keys(S.charts).filter(k=>k!=='pv').forEach(k=>{ try{ S.charts[k].destroy(); }catch(e){} delete S.charts[k]; });
-  document.getElementById('boardMeta').textContent=(S.sql?'':t('local'))+(S.board.owner&&S.board.owner!==me()?' · '+fmt(t('shared_by'),{o:S.board.owner.replace(/@.*/,'')}):'');
-  if(!W.length){ B.innerHTML='<div class="sd-empty" style="grid-column:1/-1">'+esc(t('empty_board'))+'</div>'; return; }
-  B.innerHTML=W.map((c,i)=>'<div class="sd-w" style="animation-delay:'+(i*50)+'ms"><h3><span>'+esc(c.title||autoTitle(c)||'…')+'</span>'
-    +'<button type="button" class="sd-btn ghost" data-ed="'+i+'" style="padding:2px 6px">'+esc(t('edit'))+'</button>'
-    +(i?'<button type="button" class="sd-btn ghost" data-up="'+i+'" style="padding:2px 6px">↑</button>':'')
-    +'<button type="button" class="sd-btn ghost" data-rm="'+i+'" style="padding:2px 6px">×</button></h3><div data-wh="'+i+'"><div class="sd-empty">'+esc(t('loading'))+'</div></div></div>').join('');
-  B.querySelectorAll('[data-ed]').forEach(b=>b.onclick=async()=>{ const i=+b.dataset.ed; S.editIx=i; await loadSrc(W[i].src); S.cfg=JSON.parse(JSON.stringify(W[i])); drawForm(); preview(); window.scrollTo({top:0,behavior:'smooth'}); });
-  B.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.up; const x=W.splice(i,1)[0]; W.splice(i-1,0,x); drawBoard(); });
-  B.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ W.splice(+b.dataset.rm,1); if(S.editIx>=W.length) S.editIx=-1; drawBoard(); drawForm(); });
-  for(let i=0;i<W.length;i++){ try{ await loadSrc(W[i].src); }catch(e){ continue; } const h=B.querySelector('[data-wh="'+i+'"]'); if(h) drawInto(h, W[i], 'w'+i); }
+/* ===== 보드 = 화면 (v202 · 사용자 요청 「새 화면을 끌어 놓아 만들고 탭으로 게시」) =====
+   12칸 격자. 위젯마다 자리 lay={x,y,w,h} 를 담는다(칸 단위 · 위치는 grid-column/row 로만 — 폭이 바뀌어도 칸이 따라간다).
+   위젯 종류: 사용자 정의 차트(이 화면의 run/drawInto — 건수·합계·평균) · 표준 지표(kind:'std' — GST.ops·GST.metrics·GST.targets 를 그대로 부른다.
+   글로벌 현황과 «같은 함수»라 숫자가 갈리지 않는다 — 여기서 새로 세지 않는다) · 구분 제목 · 텍스트.
+   ⚠ 옛 보드(v1 · lay 없음)는 열 때 두 칸씩 자리를 준다(fixLay) — 저장하면 그 자리가 남는다. */
+const GRID={C:12,R:56,G:14};
+const WSZ={chart:[6,6,3,4],kpi:[3,3,2,3],trend:[6,5,4,4],heat:[12,5,6,4],risk:[6,6,4,4],optable:[12,5,6,4],title:[12,1,3,1],text:[4,3,2,2]};
+const STD_KINDS=['kpi','trend','heat','risk','optable'];
+const MET=['run_rate','bm_per100','pm_ratio','repeat14'];
+const wk=w=>w.kind==='std'?(w.std||'kpi'):(w.kind||'chart');
+const ovl=(a,b)=>a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h;
+const clampN=(v,a,b)=>Math.max(a,Math.min(b,v));
+function resolveL(L, fix){
+  const A=L.map(l=>({x:clampN(l.x,0,GRID.C-l.w),y:Math.max(0,l.y),w:l.w,h:l.h}));
+  const F=fix==null?null:A[fix];
+  for(let g=0,ch=true;ch&&g<400;g++){ ch=false;
+    const ord=A.slice().sort((a,b)=>a.y-b.y||a.x-b.x);
+    for(const a of ord) for(const b of A){ if(a===b||!ovl(a,b)) continue;
+      const mv=b===F?a:(a===F?b:(a.y<=b.y?b:a)), ot=mv===a?b:a; mv.y=ot.y+ot.h; ch=true; } }
+  A.slice().sort((a,b)=>a.y-b.y||a.x-b.x).forEach(a=>{ if(a===F) return; while(a.y>0){ a.y--; if(A.some(b=>b!==a&&ovl(a,b))){ a.y++; break; } } });
+  return A;
 }
+function freeSpot(W,w,h){ for(let y=0;y<500;y++) for(let x=0;x+w<=GRID.C;x++){ const c={x,y,w,h}; if(!W.some(o=>o.lay&&o.lay.w&&ovl(c,o.lay))) return c; } return {x:0,y:0,w,h}; }
+function fixLay(W){
+  W.forEach(w=>{ if(w.lay&&w.lay.w&&w.lay.h) return; const z=WSZ[wk(w)]||WSZ.chart; w.lay=freeSpot(W,z[0],z[1]); });
+  const R=resolveL(W.map(w=>w.lay),null); W.forEach((w,i)=>w.lay=R[i]);
+}
+function setDirty(on){ S.dirty=!!on; const m=document.getElementById('boardMeta'); if(m) m.dataset.dirty=on?'1':''; metaPaint(); }
+function metaPaint(){
+  const m=document.getElementById('boardMeta'); if(!m) return;
+  m.textContent=(S.sql?'':t('local'))+(S.board.owner&&S.board.owner!==me()?' · '+fmt(t('shared_by'),{o:S.board.owner.replace(/@.*/,'')}):'')+(S.dirty?(' · '+t('unsaved')):'');
+  m.style.color=S.dirty?'var(--gold,#B07A12)':'';
+}
+function addWidget(w){
+  const W=S.board.widgets, z=WSZ[wk(w)]||WSZ.chart;
+  const y=W.reduce((m,o)=>Math.max(m,o.lay?o.lay.y+o.lay.h:0),0);
+  w.lay={x:0,y:y,w:z[0],h:z[1]};
+  for(let x=0;x+z[0]<=GRID.C;x++){ const c={x,y:Math.max(0,y-1),w:z[0],h:z[1]}; if(!W.some(o=>o.lay&&ovl(c,o.lay))){ w.lay=c; break; } }
+  W.push(w); const R=resolveL(W.map(o=>o.lay),W.length-1); W.forEach((o,i)=>o.lay=R[i]);
+  S.sel=W.length-1; setDirty(true); drawBoard();
+  requestAnimationFrame(()=>{ const el=document.querySelector('#board [data-w="'+(W.length-1)+'"]'); if(el) el.scrollIntoView({block:'nearest',behavior:'smooth'}); });
+}
+/* ---- 표준 지표 자료 — 글로벌 현황과 같은 읽기(GST.ops.load · 같은 캐시 열쇠) ---- */
+let STD=null;
+function stdData(){ if(!STD) STD=(async()=>{ const R=await GST.ops.load(); try{ await GST.targets.load(); }catch(e){}
+  const asOf=GST.ops.asOf(R), ops=[...new Set(R.INST.map(x=>x.op).concat(R.WK.map(x=>x.op)).filter(Boolean))].sort(); return {R,asOf,ops}; })(); return STD; }
+function scOf(w){ const v=w.scope||'*'; if(v==='*') return {kind:'all'}; if(v==='r:KR') return {kind:'region',v:GST.ops.KR}; if(v==='r:OS') return {kind:'region',v:GST.ops.OS}; return {kind:'op',v:String(v).replace(/^o:/,'')}; }
+function tscOf(sc){ return sc.kind==='op'?{op:sc.v,region:GST.ORG.region(sc.v)}:sc.kind==='region'?{region:sc.v}:{}; }
+function scName(w){ const v=w.scope||'*'; return v==='*'?t('sc_all'):v==='r:KR'?t('sc_kr'):v==='r:OS'?t('sc_os'):String(v).replace(/^o:/,''); }
+function mName(mt){ try{ return GST.v2t('m_'+mt,null,LANG); }catch(e){ return mt; } }
+function wTitle(w){
+  if(w.title) return w.title;
+  const k=wk(w);
+  if(k==='chart') return autoTitle(w)||'…';
+  if(k==='title') return t('w_title'); if(k==='text') return t('w_text');
+  const base=k==='kpi'?mName(w.metric||'run_rate'):t('w_'+k);
+  return base+((w.scope||'*')!=='*'?' · '+scName(w):'');
+}
+function rowsOf(list){ return list.slice(0,2000).map(x=>[GST.fmtD?GST.fmtD(x.d):String(x.d||''), x.op||'', x.stage||(x.src==='kr'?'Alarm':''), x.code||x.sn||'', x.desc||'']); }
+function rowsHead(){ return ['일자','운영단위','구분','설비','내용']; }
+async function drawStd(host, w, id){
+  host.innerHTML='<div class="sd-empty">'+esc(t('loading'))+'</div>';
+  let D; try{ D=await stdData(); }catch(e){ console.warn('[studio] 표준 지표 읽기 실패', e); host.innerHTML='<div class="sd-empty">'+esc(t('no_std'))+'</div>'; return; }
+  const sc=scOf(w), ok=GST.metrics.okOf(sc), R=D.R, asOf=D.asOf, k=wk(w), TH=GST.chartTheme();
+  if(k==='kpi'){
+    const o=GST.metrics.one(R,asOf,ok), mt=w.metric||'run_rate';
+    host.innerHTML='<div class="sd-kpiw">'+GST.kpiCard({metric:mt, m:o.m[mt], t:GST.targets.pick(mt,tscOf(sc)), key:mt, spark:mt==='bm_per100'?o.bmW:mt==='pm_ratio'?o.pmW:null})+'</div>';
+    const rows=mt==='bm_per100'?o.rows.bm4:mt==='pm_ratio'?o.rows.pm4:null, b=host.querySelector('button');
+    if(b&&rows) b.onclick=()=>GST.rowsModal(wTitle(w), rowsHead(), rowsOf(rows));
+    return;
+  }
+  if(k==='trend'){
+    const o=GST.metrics.one(R,asOf,ok), Wk=GST.metrics.weeks(asOf,12);
+    host.innerHTML='<div class="sd-chart"><canvas></canvas></div>';
+    const bm=GST.ops.bm(R,ok), pm=GST.ops.pm(R,ok);
+    const ch=new Chart(host.querySelector('canvas'),{type:'bar',data:{labels:Wk.map(x=>x.label),datasets:[
+      {type:'bar',label:t('w_trend').split('·')[0].trim(),data:o.bmW,backgroundColor:TH.pal?TH.pal[0]:'#4C7CF0',borderRadius:4,maxBarThickness:40,order:2},
+      {type:'line',label:'PM',data:o.pmW,borderColor:TH.pal?TH.pal[1]:'#12873F',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.25,order:1}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{color:TH.txt,boxWidth:10}}},
+        scales:{x:{ticks:{color:TH.txt},grid:{color:'transparent'}},y:{beginAtZero:true,ticks:{color:TH.txt,precision:0},grid:{color:TH.grid}}},
+        onClick:(e,els)=>{ if(!els.length) return; const el=els[0], wk0=Wk[el.index], src=el.datasetIndex===1?pm:bm;
+          const L=src.filter(x=>x.d&&x.d.getTime()>=wk0.st.getTime()&&x.d.getTime()<wk0.en.getTime());
+          GST.rowsModal(wTitle(w)+' · '+wk0.label, rowsHead(), rowsOf(L)); } }});
+    S.charts[id]=ch; return;
+  }
+  if(k==='heat'){
+    const by=GST.metrics.by(R,asOf,x=>x.op||'—',ok), Wk=GST.metrics.weeks(asOf,12);
+    const G=Object.values(by.G).map(g=>({k:g.k,w:g.bmW,n:g.bmW.reduce((a,b)=>a+b,0)})).filter(g=>g.n>0).sort((a,b)=>b.n-a.n).slice(0,w.n||12);
+    const mx=Math.max(1,...G.flatMap(g=>g.w));
+    if(!G.length){ host.innerHTML='<div class="sd-empty">'+esc(t('no_rows'))+'</div>'; return; }
+    host.innerHTML='<div class="sd-tblw"><table class="sd-heat" data-gst-nosn><thead><tr><th></th>'+Wk.map(x=>'<th>'+esc(x.label)+'</th>').join('')+'</tr></thead><tbody>'
+      +G.map((g,gi)=>'<tr><th>'+esc(g.k)+'</th>'+g.w.map((v,i)=>{ const a=v/mx; return '<td data-g="'+gi+'" data-x="'+i+'" style="background:color-mix(in srgb,var(--accent) '+Math.round(6+a*80)+'%,transparent)'+(a>.55?';color:#fff':'')+'">'+(v||'')+'</td>'; }).join('')+'</tr>').join('')+'</tbody></table></div>';
+    const bm=GST.ops.bm(R,ok);
+    host.querySelectorAll('td[data-g]').forEach(td=>td.onclick=()=>{ const g=G[+td.dataset.g], wk0=Wk[+td.dataset.x];
+      const L=bm.filter(x=>(x.op||'—')===g.k&&x.d&&x.d.getTime()>=wk0.st.getTime()&&x.d.getTime()<wk0.en.getTime());
+      GST.rowsModal(g.k+' · '+wk0.label, rowsHead(), rowsOf(L)); });
+    return;
+  }
+  if(k==='risk'){
+    const L=GST.ops.risk(R,asOf,ok,w.n||10);
+    if(!L.length){ host.innerHTML='<div class="sd-empty">'+esc(t('no_risk'))+'</div>'; return; }
+    host.innerHTML='<div class="sd-tblw"><table class="sd-tbl" data-gst-nosn><thead><tr><th>#</th><th>'+esc(t('col_eq'))+'</th><th>'+esc(t('col_op'))+'</th><th class="n">'+esc(t('col_score'))+'</th><th class="n">'+esc(t('col_bm90'))+'</th><th class="n">'+esc(t('col_rep'))+'</th></tr></thead><tbody>'
+      +L.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.label)+'</td><td>'+esc(r.site)+'</td><td class="n">'+r.score+'</td><td class="n">'+r.bm90+'</td><td class="n">'+r.rep+'</td></tr>').join('')+'</tbody></table></div>';
+    return;
+  }
+  if(k==='optable'){
+    const by=GST.metrics.by(R,asOf,x=>x.op||'—',ok);
+    const G=Object.values(by.G).filter(g=>g.inN||g.bm4||g.pm4).sort((a,b)=>b.inN-a.inN);
+    if(!G.length){ host.innerHTML='<div class="sd-empty">'+esc(t('no_rows'))+'</div>'; return; }
+    const cell=(g,mt)=>{ const m=g.m[mt], tg=GST.targets.pick(mt,{op:g.k,region:GST.ORG.region(g.k)}), st=GST.targets.judge(mt,m.v,tg)||'none';
+      const v=m.v==null?'—':GST.v2fmt(mt,m.v)+GST.v2unit(mt,LANG); return '<td class="n"><span class="sd-pill '+(tg?st:'none')+'">'+esc(v)+'</span></td>'; };
+    host.innerHTML='<div class="sd-tblw"><table class="sd-tbl" data-gst-nosn><thead><tr><th>'+esc(t('col_op'))+'</th>'+MET.map(mt=>'<th class="n">'+esc(mName(mt))+'</th>').join('')+'</tr></thead><tbody>'
+      +G.map(g=>'<tr><td>'+esc(g.k)+'</td>'+MET.map(mt=>cell(g,mt)).join('')+'</tr>').join('')+'</tbody></table></div>';
+    return;
+  }
+}
+function wBody(w){ const k=wk(w);
+  if(k==='title') return '<div class="sd-ttl">'+esc(w.text||t('w_title'))+'</div>';
+  if(k==='text') return '<div class="sd-txt'+(w.tone==='attn'?' attn':'')+'">'+esc(w.text||'')+'</div>';
+  return '<div class="sd-empty">'+esc(t('loading'))+'</div>'; }
+function posAll(L){
+  const B=document.getElementById('board'); if(!B) return;
+  B.querySelectorAll('.sd-gw').forEach(el=>{ const i=+el.dataset.w, l=L[i]; if(!l) return;
+    el.style.gridColumn=(l.x+1)+' / span '+l.w; el.style.gridRow=(l.y+1)+' / span '+l.h; el.style.order=String(l.y*GRID.C+l.x); el.style.setProperty('--h', l.h); });
+}
+let _drawSeq=0;
+async function drawBoard(){
+  const B=document.getElementById('board'), W=S.board.widgets, seq=++_drawSeq;
+  Object.keys(S.charts).filter(k=>k!=='pv').forEach(k=>{ try{ S.charts[k].destroy(); }catch(e){} delete S.charts[k]; });
+  metaPaint();
+  B.classList.toggle('edit', !S.view);
+  if(!W.length){ B.innerHTML='<div class="sd-empty" style="grid-column:1/-1">'+esc(t('empty_board'))+'</div>'; return; }
+  fixLay(W);
+  const ed=!S.view;
+  B.innerHTML=W.map((w,i)=>{ const k=wk(w), std=k!=='chart'&&k!=='title'&&k!=='text';
+    return '<div class="sd-gw k-'+k+(S.sel===i&&ed?' sel':'')+'" data-w="'+i+'">'
+      +'<h3>'+(ed?'<button type="button" class="sd-grip" title="'+esc(t('drag'))+'" aria-label="'+esc(t('drag'))+'">⠿</button>':'')
+      +'<span class="n">'+esc(wTitle(w))+'</span>'+(std&&ed?'<span class="sd-std" title="'+esc(t('std_note'))+'">'+esc(t('add_std').split(' ')[0])+'</span>':'')
+      +(ed?(k==='chart'?'<button type="button" class="sd-btn ghost" data-ed="'+i+'" style="padding:2px 6px">'+esc(t('edit'))+'</button>':'<button type="button" class="sd-btn ghost" data-set="'+i+'" style="padding:2px 6px">'+esc(t('set'))+'</button>')
+        +'<button type="button" class="sd-btn ghost" data-rm="'+i+'" style="padding:2px 6px" aria-label="'+esc(t('del'))+'">×</button>':'')
+      +'</h3><div data-wh="'+i+'">'+wBody(w)+'</div>'+(ed?'<div class="sd-rs" title="'+esc(t('resize'))+'"></div>':'')+'</div>'; }).join('');
+  posAll(W.map(w=>w.lay));
+  for(let i=0;i<W.length;i++){
+    if(seq!==_drawSeq) return;
+    const w=W[i], k=wk(w), h=B.querySelector('[data-wh="'+i+'"]'); if(!h) continue;
+    if(k==='chart'){ try{ await loadSrc(w.src); }catch(e){ h.innerHTML='<div class="sd-empty">'+esc(t('fail_src'))+'</div>'; continue; } if(seq===_drawSeq) drawInto(h, w, 'w'+i); }
+    else if(STD_KINDS.indexOf(k)>=0) await drawStd(h, w, 'w'+i);
+  }
+}
+/* ---- 격자에서 옮기기 · 크기 · 설정 ---- */
+function popClose(){ document.querySelectorAll('.sd-pop,.sd-menu').forEach(p=>p.remove()); }
+function stdSettings(i){
+  const w=S.board.widgets[i], el=document.querySelector('#board [data-w="'+i+'"]'); if(!w||!el) return;
+  if(el.querySelector('.sd-pop')){ popClose(); return; } popClose();
+  const k=wk(w), p=document.createElement('div'); p.className='sd-pop';
+  const opt=(v,l,cur)=>'<option value="'+esc(v)+'"'+(String(v)===String(cur)?' selected':'')+'>'+esc(l)+'</option>';
+  const scopeSel=ops=>'<label>'+esc(t('scope'))+'<select class="sd-sel" data-k="scope">'+opt('*',t('sc_all'),w.scope||'*')+opt('r:KR',t('sc_kr'),w.scope)+opt('r:OS',t('sc_os'),w.scope)+ops.map(o=>opt('o:'+o,o,w.scope)).join('')+'</select></label>';
+  const fill=ops=>{ let h='';
+    if(k!=='title'&&k!=='text') h+='<label>'+esc(t('txt_title'))+'<input class="sd-in" data-k="title" maxlength="80" value="'+esc(w.title||'')+'" placeholder="'+esc(wTitle(Object.assign({},w,{title:''})))+'"></label>';
+    if(k==='kpi') h+='<label>'+esc(t('metric'))+'<select class="sd-sel" data-k="metric">'+MET.map(m=>opt(m,mName(m),w.metric||'run_rate')).join('')+'</select></label>';
+    if(STD_KINDS.indexOf(k)>=0) h+=scopeSel(ops);
+    if(k==='risk'||k==='heat') h+='<label>'+esc(t('rows_n'))+'<select class="sd-sel" data-k="n">'+[5,10,12,20].map(n=>opt(n,String(n),w.n||(k==='heat'?12:10))).join('')+'</select></label>';
+    if(k==='title') h+='<label>'+esc(t('txt_title'))+'<input class="sd-in" data-k="text" maxlength="80" value="'+esc(w.text||'')+'"></label>';
+    if(k==='text') h+='<label>'+esc(t('txt_body'))+'<textarea data-k="text" maxlength="1000">'+esc(w.text||'')+'</textarea></label><label>'+esc(t('tone'))+'<select class="sd-sel" data-k="tone">'+opt('plain',t('tone_plain'),w.tone||'plain')+opt('attn',t('tone_attn'),w.tone)+'</select></label>';
+    if(STD_KINDS.indexOf(k)>=0) h+='<div class="sd-note">'+esc(t('std_note'))+'</div>';
+    h+='<button type="button" class="sd-btn" data-x="close">'+esc(t('close'))+'</button>';
+    p.innerHTML=h; };
+  fill([]); el.appendChild(p);
+  if(STD_KINDS.indexOf(k)>=0) stdData().then(D=>{ if(p.isConnected){ fill(D.ops); } }).catch(()=>{});
+  const upd=e=>{ const f=e.target.closest('[data-k]'); if(!f) return; let v=f.value; if(f.dataset.k==='n') v=+v;
+    w[f.dataset.k]=v; setDirty(true);
+    el.querySelector('h3 .n').textContent=wTitle(w);
+    if(e.type==='change'||f.tagName==='SELECT'){ const h=el.querySelector('[data-wh]'); if(k==='title'||k==='text') h.innerHTML=wBody(w); else { if(S.charts['w'+i]){ try{ S.charts['w'+i].destroy(); }catch(err){} delete S.charts['w'+i]; } drawStd(h, w, 'w'+i); } }
+    else if(k==='title'||k==='text'){ el.querySelector('[data-wh]').innerHTML=wBody(w); } };
+  p.addEventListener('input', upd); p.addEventListener('change', upd);
+  p.addEventListener('click', e=>{ e.stopPropagation(); if(e.target.closest('[data-x="close"]')) p.remove(); });
+}
+function gridOp(type, i, e){
+  const B=document.getElementById('board'), W=S.board.widgets, w=W[i]; if(!w) return;
+  const colW=(B.clientWidth-GRID.G*(GRID.C-1))/GRID.C, z=WSZ[wk(w)]||WSZ.chart, o=Object.assign({},w.lay), el=B.querySelector('[data-w="'+i+'"]');
+  const sx=e.clientX, sy=e.clientY; let last='', L=null;
+  el.classList.add('drag'); popClose();
+  const mv=ev=>{ const cx=Math.round((ev.clientX-sx)/(colW+GRID.G)), cy=Math.round((ev.clientY-sy)/(GRID.R+GRID.G));
+    let n=Object.assign({},o);
+    if(type==='move'){ n.x=clampN(o.x+cx,0,GRID.C-o.w); n.y=Math.max(0,o.y+cy); }
+    else { n.w=clampN(o.w+cx,z[2],GRID.C-o.x); n.h=clampN(o.h+cy,z[3],k1(w)?1:24); }
+    const key=[n.x,n.y,n.w,n.h].join(); if(key===last) return; last=key;
+    const tmp=W.map((x,j)=>j===i?n:x.lay); L=resolveL(tmp,i); posAll(L); };
+  const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); window.removeEventListener('pointercancel',up);
+    el.classList.remove('drag');
+    if(L && last!==[o.x,o.y,o.w,o.h].join()){ const R=resolveL(L,null); W.forEach((x,j)=>x.lay=R[j]); posAll(R); setDirty(true);
+      if(type==='resize'){ const c=S.charts['w'+i]; if(c){ try{ c.resize(); }catch(err){} } } } };
+  window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up); window.addEventListener('pointercancel',up);
+}
+const k1=w=>wk(w)==='title';
+function bindBoard(){
+  const B=document.getElementById('board');
+  B.addEventListener('pointerdown', e=>{ if(S.view) return; const gw=e.target.closest('.sd-gw'); if(!gw) return;
+    const i=+gw.dataset.w; if(S.sel!==i){ S.sel=i; B.querySelectorAll('.sd-gw').forEach(x=>x.classList.toggle('sel', +x.dataset.w===i)); }
+    if(e.target.closest('.sd-grip')){ e.preventDefault(); gridOp('move', i, e); }
+    else if(e.target.closest('.sd-rs')){ e.preventDefault(); gridOp('resize', i, e); } });
+  B.addEventListener('click', async e=>{
+    const ed=e.target.closest('[data-ed]'), rm=e.target.closest('[data-rm]'), st=e.target.closest('[data-set]'); const W=S.board.widgets;
+    if(ed){ const i=+ed.dataset.ed; S.editIx=i; await loadSrc(W[i].src); S.cfg=JSON.parse(JSON.stringify(W[i])); delete S.cfg.lay; drawForm(); preview(); window.scrollTo({top:0,behavior:'smooth'}); }
+    if(rm){ W.splice(+rm.dataset.rm,1); if(S.editIx>=W.length) S.editIx=-1; S.sel=-1; const R=resolveL(W.map(x=>x.lay),null); W.forEach((x,j)=>x.lay=R[j]); setDirty(true); drawBoard(); drawForm(); }
+    if(st) stdSettings(+st.dataset.set); });
+  const menu=(btn, items)=>{ const old=btn.parentNode.querySelector('.sd-menu'); popClose(); if(old) return;
+    const m=document.createElement('div'); m.className='sd-menu'; m.innerHTML=items.map(x=>'<button type="button" data-add="'+x[0]+'">'+esc(x[1])+'</button>').join(''); btn.parentNode.appendChild(m);
+    m.addEventListener('click', ev=>{ const b=ev.target.closest('[data-add]'); if(!b) return; m.remove(); const v=b.dataset.add;
+      if(v==='title') addWidget({kind:'title', text:t('w_title')});
+      else if(v==='text') addWidget({kind:'text', text:'', tone:'plain'});
+      else if(v.indexOf('kpi:')===0) addWidget({kind:'std', std:'kpi', metric:v.slice(4), scope:'*'});
+      else addWidget({kind:'std', std:v, scope:'*'});
+      toast(t('added')); }); };
+  document.getElementById('addStd').onclick=e=>{ e.stopPropagation(); menu(e.currentTarget, MET.map(m=>['kpi:'+m, t('w_kpi')+' · '+mName(m)]).concat(['trend','heat','risk','optable'].map(k=>[k, t('w_'+k)]))); };
+  document.getElementById('addLay').onclick=e=>{ e.stopPropagation(); menu(e.currentTarget, [['title',t('w_title')],['text',t('w_text')]]); };
+  document.addEventListener('click', e=>{ if(!e.target.closest('.sd-pop,.sd-menu,[data-set],#addStd,#addLay')) popClose(); });
+  /* 게시 */
+  document.getElementById('pubBtn').onclick=pubOpen;
+  document.getElementById('pubCancel').onclick=()=>{ document.getElementById('pubDlg').hidden=true; };
+  document.getElementById('pubOk').onclick=()=>pubSend(true);
+  document.getElementById('pubOff').onclick=()=>pubSend(false);
+  document.getElementById('pubDlg').addEventListener('click', e=>{ if(e.target.id==='pubDlg') e.currentTarget.hidden=true; });
+  document.getElementById('viewBtn').onclick=()=>{ if(S.board.id) location.href=location.pathname+'?view='+encodeURIComponent(S.board.id); };
+  document.getElementById('vEdit').onclick=()=>{ location.href=location.pathname+'?board='+encodeURIComponent(S.board.id||S.view); };
+  window.addEventListener('message', e=>{ const d=e.data||{};
+    if(d.type==='gst-screen-edit' && S.view){ location.href=location.pathname+'?board='+encodeURIComponent(S.view); }
+    if(d.type==='gst-screen-new' && !S.view){ S.board={id:null,name:'',shared:false,owner:null,widgets:[],pub:null}; S.editIx=-1; S.sel=-1; setDirty(false); drawBoardSel(); drawBoard(); const n=document.getElementById('boardName'); if(n) n.focus(); } });
+  window.addEventListener('beforeunload', e=>{ if(S.dirty&&!S.view){ e.preventDefault(); e.returnValue=''; } });
+}
+function canPub(){ return !!(S.sql && GST.targets && GST.targets.can && GST.targets.can()); }
+function pubPaint(){
+  const b=document.getElementById('pubBtn'), bd=document.getElementById('pubBadge'), vb=document.getElementById('viewBtn');
+  if(b) b.hidden=!canPub();
+  if(bd){ bd.hidden=!S.board.pub; if(S.board.pub) bd.textContent=fmt(t('pub_badge'),{t:S.board.pub.tab||S.board.name}); }
+  if(vb) vb.hidden=!(S.sql&&S.board.id&&!String(S.board.id).startsWith('L'));
+}
+function pubOpen(){
+  if(!S.board.id||String(S.board.id).startsWith('L')||S.dirty){ toast(t('pub_need_save')); return; }
+  const P=S.board.pub||{}, D=document.getElementById('pubDlg');
+  document.getElementById('pubName').value=P.tab||S.board.name||'';
+  document.querySelectorAll('input[name=pubVis]').forEach(r=>r.checked=r.value===(P.vis||'all'));
+  document.querySelectorAll('input[name=pubPlace]').forEach(r=>r.checked=r.value===(P.place||'tab'));
+  document.getElementById('pubOff').hidden=!S.board.pub;
+  D.hidden=false; document.getElementById('pubName').focus();
+}
+async function pubSend(on){
+  const D=document.getElementById('pubDlg');
+  const pub=on?{tab:document.getElementById('pubName').value.trim()||S.board.name, vis:(document.querySelector('input[name=pubVis]:checked')||{}).value||'all', place:(document.querySelector('input[name=pubPlace]:checked')||{}).value||'tab'}:null;
+  try{ const C=await GST.db(); const r=await C.rpc('board_publish',{p_id:S.board.id, p_pub:pub});
+    if(r.error||!r.data||!r.data.ok){ toast(t('pub_fail')); console.warn('[studio] 게시 실패', r.error||r.data); return; }
+  }catch(e){ toast(t('pub_fail')); console.warn(e); return; }
+  D.hidden=true; S.board.pub=pub; if(pub) S.board.shared=true;
+  await loadBoards(); toast(on?fmt(t('pub_done'),{t:pub.tab}):t('unpub_done'));
+  try{ parent.postMessage({type:'gst-screens'},'*'); }catch(e){}
+}
+/* 주소로 고른 보드 — ?view=ID(게시한 화면 보기) · ?board=ID(그 보드 편집) */
+function pickWanted(){
+  const id=S.view||S.want; if(!id) return;
+  if(S.dirty) return;
+  const b=S.boards.find(x=>String(x.id)===String(id));
+  if(b){ if(String(S.board.id)!==String(b.id)) S.board={id:b.id,name:b.name,shared:b.shared,owner:b.owner||null,pub:b.pub||null,widgets:JSON.parse(JSON.stringify(b.widgets||[]))}; }
+  else if(S.view){ S.board={id:null,name:'',shared:false,owner:null,widgets:[],pub:null}; }
+  drawBoardSel(); viewPaint();
+}
+function viewPaint(){
+  const v=document.getElementById('vhead'); if(!v) return;
+  v.hidden=!S.view;
+  if(!S.view) return;
+  const found=!!S.board.id;
+  document.getElementById('vTitle').textContent=found?((S.board.pub&&S.board.pub.tab)||S.board.name):t('not_found');
+  document.title=(found?((S.board.pub&&S.board.pub.tab)||S.board.name):t('title'))+' · CS Global Team';
+  const ve=document.getElementById('vEdit'); ve.hidden=!(found&&((S.board.owner&&S.board.owner===me())||(GST.targets&&GST.targets.can&&GST.targets.can())));
+  if(found) stdData().then(D=>{ document.getElementById('vDate').textContent=fmt(t('base_day'),{d:GST.fmtD?GST.fmtD(D.asOf):''}); }).catch(()=>{});
+}
+
 const me=()=>((GST._me&&GST._me.email)||'').toLowerCase();
 const LKEY='gst_studio_boards';
 function localBoards(){ try{ return JSON.parse(localStorage.getItem(LKEY)||'[]'); }catch(e){ return []; } }
@@ -379,9 +714,10 @@ async function loadBoards(){
   S.boards=[];
   try{
     const C=await GST.db();
-    if(C){ const r=await C.from('user_layouts').select('id,owner,name,config,shared,updated_at').order('updated_at',{ascending:false}).limit(200);
+    if(C){ let r=await C.from('user_layouts').select('id,owner,name,config,shared,updated_at,pub').order('updated_at',{ascending:false}).limit(200);
+      if(r.error&&/pub/.test(r.error.message||'')) r=await C.from('user_layouts').select('id,owner,name,config,shared,updated_at').order('updated_at',{ascending:false}).limit(200);
       if(r.error){ S.sql=!/user_layouts|relation|schema cache/i.test(r.error.message||''); if(S.sql) console.warn('[studio] 보드 읽기 실패', r.error); }
-      else { S.sql=true; S.boards=(r.data||[]).map(b=>({id:b.id,name:b.name,owner:b.owner,shared:b.shared,widgets:(b.config&&b.config.widgets)||[]})); }
+      else { S.sql=true; S.boards=(r.data||[]).map(b=>({id:b.id,name:b.name,owner:b.owner,shared:b.shared,pub:b.pub||null,widgets:(b.config&&b.config.widgets)||[]})); }
     } else S.sql=false;
   }catch(e){ S.sql=false; }
   if(!S.sql) S.boards=localBoards().map((b,i)=>Object.assign({id:'L'+i}, b));
@@ -394,25 +730,28 @@ function drawBoardSel(){
   document.getElementById('boardName').value=S.board.name||'';
   document.getElementById('boardShared').checked=!!S.board.shared;
   document.getElementById('rmBtn').hidden=!S.board.id;
+  pubPaint();
 }
 async function saveBoard(asNew){
   const name=document.getElementById('boardName').value.trim()||t('new_board_n'), shared=document.getElementById('boardShared').checked;
-  const cfg={v:1, widgets:S.board.widgets};
+  fixLay(S.board.widgets); const cfg={v:2, widgets:S.board.widgets};
   if(!S.sql){ const L=localBoards(); const ix=String(S.board.id||'').startsWith('L')&&!asNew?+String(S.board.id).slice(1):-1;
     const b={name, widgets:S.board.widgets}; if(ix>=0) L[ix]=b; else L.unshift(b); try{ localStorage.setItem(LKEY, JSON.stringify(L.slice(0,50))); }catch(e){}
-    S.board.name=name; await loadBoards(); S.board.id='L'+(ix>=0?ix:0); drawBoardSel(); toast(t('saved')); return; }
+    S.board.name=name; await loadBoards(); S.board.id='L'+(ix>=0?ix:0); setDirty(false); drawBoardSel(); toast(t('saved')); return; }
   try{ const C=await GST.db();
     const own=!S.board.owner||S.board.owner===me();
     const r=await C.rpc('layout_save',{p_id:asNew||!own?null:S.board.id, p_name:name, p_config:cfg, p_shared:shared});
     if(r.error){ toast(/not_yours/.test(r.error.message)?t('not_yours'):t('fail')); console.warn(r.error); return; }
-    S.board.id=r.data.id; S.board.name=name; S.board.shared=shared; S.board.owner=me(); await loadBoards(); toast(t('saved'));
+    S.board.id=r.data.id; S.board.name=name; S.board.shared=shared; S.board.owner=me(); setDirty(false); await loadBoards(); toast(t('saved'));
+    if(S.board.pub){ try{ parent.postMessage({type:'gst-screens'},'*'); }catch(e){} }
   }catch(e){ toast(t('fail')); console.warn(e); }
 }
 async function removeBoard(){
   if(!S.board.id) return;
   if(!S.sql){ const L=localBoards(); L.splice(+String(S.board.id).slice(1),1); try{ localStorage.setItem(LKEY, JSON.stringify(L)); }catch(e){} }
   else { try{ const C=await GST.db(); const r=await C.rpc('layout_remove',{p_id:S.board.id}); if(r.error){ toast(/not_yours/.test(r.error.message)?t('not_yours'):t('fail')); return; } }catch(e){ toast(t('fail')); return; } }
-  S.board={id:null,name:'',shared:false,owner:null,widgets:[]}; await loadBoards(); drawBoard(); toast(t('removed'));
+  const wasPub=!!S.board.pub; S.board={id:null,name:'',shared:false,owner:null,widgets:[],pub:null}; setDirty(false); await loadBoards(); drawBoard(); toast(t('removed'));
+  if(wasPub){ try{ parent.postMessage({type:'gst-screens'},'*'); }catch(e){} }
 }
 let _tt=0; function toast(s){ const e=document.getElementById('toast'); e.textContent=s; e.classList.add('on'); clearTimeout(_tt); _tt=setTimeout(()=>e.classList.remove('on'),2600); }
 
@@ -431,19 +770,20 @@ function bind(){
   document.getElementById('fTop').onchange=e=>{ c().top=+e.target.value||12; preview(); };
   document.getElementById('fTitle').oninput=e=>{ c().title=e.target.value; document.getElementById('pvTitle').textContent=e.target.value||autoTitle(c()); };
   document.getElementById('addF').onclick=()=>{ (c().filters=c().filters||[]).push({f:(DATA[c().src].fields.find(f=>f.kind==='text')||{}).k||'',op:'eq',v:''}); drawForm(); };
-  document.getElementById('addW').onclick=()=>{ S.board.widgets.push(JSON.parse(JSON.stringify(c()))); S.editIx=-1; drawBoard(); drawForm(); toast(t('added')); };
-  document.getElementById('updW').onclick=()=>{ if(S.editIx<0) return; S.board.widgets[S.editIx]=JSON.parse(JSON.stringify(c())); S.editIx=-1; drawBoard(); drawForm(); };
+  document.getElementById('addW').onclick=()=>{ addWidget(JSON.parse(JSON.stringify(c()))); S.editIx=-1; drawForm(); toast(t('added')); };
+  document.getElementById('updW').onclick=()=>{ if(S.editIx<0) return; const old=S.board.widgets[S.editIx]; S.board.widgets[S.editIx]=Object.assign(JSON.parse(JSON.stringify(c())),{lay:old&&old.lay}); S.editIx=-1; setDirty(true); drawBoard(); drawForm(); };
   document.getElementById('boardSel').onchange=e=>{ const b=S.boards.find(x=>String(x.id)===e.target.value);
-    S.board=b?{id:b.id,name:b.name,shared:b.shared,owner:b.owner||null,widgets:JSON.parse(JSON.stringify(b.widgets||[]))}:{id:null,name:'',shared:false,owner:null,widgets:[]};
-    S.editIx=-1; drawBoardSel(); drawBoard(); drawForm(); };
+    S.board=b?{id:b.id,name:b.name,shared:b.shared,owner:b.owner||null,pub:b.pub||null,widgets:JSON.parse(JSON.stringify(b.widgets||[]))}:{id:null,name:'',shared:false,owner:null,widgets:[],pub:null};
+    S.editIx=-1; S.sel=-1; setDirty(false); drawBoardSel(); drawBoard(); drawForm(); };
   document.getElementById('saveBtn').onclick=()=>saveBoard(false);
-  document.getElementById('newBtn').onclick=()=>{ S.board={id:null,name:'',shared:false,owner:null,widgets:S.board.widgets.slice()}; drawBoardSel(); document.getElementById('boardName').focus(); };
+  document.getElementById('newBtn').onclick=()=>{ S.board={id:null,name:'',shared:false,owner:null,widgets:JSON.parse(JSON.stringify(S.board.widgets)),pub:null}; setDirty(true); drawBoardSel(); document.getElementById('boardName').focus(); };
+  bindBoard();
   document.getElementById('rmBtn').onclick=removeBoard;
 }
 function applyLang(){
   document.documentElement.lang=LANG;
   try{ GST.applyI18n && GST.applyI18n(t, LANG); }catch(e){ document.querySelectorAll('[data-i]').forEach(el=>{ el.textContent=t(el.dataset.i); }); }
-  if(S.cfg){ drawForm(); preview(); drawBoard(); } drawBoardSel();
+  if(S.cfg){ drawForm(); preview(); drawBoard(); } drawBoardSel(); viewPaint();
 }
 window.setLang=function(l){ if(T[l]){ LANG=l; applyLang(); } };
 window.addEventListener('message',e=>{ const d=e.data||{}; if(d.type==='gst-lang'&&T[d.lang]){ LANG=d.lang; applyLang(); } });
@@ -455,7 +795,8 @@ async function load(){
   Object.keys(DATA).forEach(k=>delete DATA[k]);
   await setSrc(S.cfg?S.cfg.src:'wk', true);
   await GST.loadMe().catch(()=>{});
-  await loadBoards(); drawBoard();
+  STD=null;
+  await loadBoards(); pickWanted(); drawBoard();
   document.getElementById('status').textContent='✅ '+new Date().toLocaleString();
 }
 window.loadData=load;

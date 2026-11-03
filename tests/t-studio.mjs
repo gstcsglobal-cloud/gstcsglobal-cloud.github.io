@@ -126,7 +126,7 @@ if (process.env.HUB_SHOT) await pg.screenshot({ path: process.env.HUB_SHOT + '/s
 console.log('[5] 보드 — 담고 · 저장하고 · 다시 열기');
 await pg.click('#fType button[data-t="bar"]'); await set('fAgg', 'count'); await pg.click('#addW'); await pg.waitForTimeout(300);
 await set('fX', 'stage'); await pg.click('#fType button[data-t="doughnut"]'); await pg.click('#addW'); await pg.waitForTimeout(500);
-is(await pg.evaluate(() => document.querySelectorAll('#board .sd-w canvas').length) === 2, '보드에 차트 둘');
+is(await pg.evaluate(() => document.querySelectorAll('#board .sd-gw canvas').length) === 2, '보드에 차트 둘');
 await pg.fill('#boardName', '주간 점검 보드'); await pg.click('#saveBtn'); await pg.waitForTimeout(600);
 let L = await pg.evaluate(() => window.__LY);
 const sv = L.calls.find(c => c.rpc === 'layout_save');
@@ -137,7 +137,7 @@ is(opts.some(o => /주간 점검 보드/.test(o)), '다시 열면 저장한 보�
 const bid = await pg.evaluate(() => Array.from(document.querySelectorAll('#boardSel option')).find(o => /주간 점검/.test(o.textContent)).value);
 await pg.selectOption('#boardSel', bid); await pg.waitForTimeout(1500);
 if (process.env.HUB_SHOT) await pg.screenshot({ path: process.env.HUB_SHOT + '/studio-board.png', fullPage:true });
-is(await pg.evaluate(() => document.querySelectorAll('#board .sd-w canvas').length) === 2, '보드를 고르면 차트 둘이 지금 자료로 다시 선다');
+is(await pg.evaluate(() => document.querySelectorAll('#board .sd-gw canvas').length) === 2, '보드를 고르면 차트 둘이 지금 자료로 다시 선다');
 await pg.click('#rmBtn'); await pg.waitForTimeout(600);
 L = await pg.evaluate(() => window.__LY);
 is(L.calls.some(c => c.rpc === 'layout_remove') && L.rows[0].removed, '「보드 감추기」 → layout_remove (지우지 않고 감춘다)');
