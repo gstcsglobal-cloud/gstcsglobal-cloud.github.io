@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>보고서 받기 · CS Global Team</title>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=199"></script>
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=199">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/ds.css?v=1">
+<!--
+  보고서 받기 (v209 · 화면 PPT 정기 발송)
+  카톡에는 파일을 못 붙인다 — 알림 글에 이 화면의 링크(?p=저장소 경로)를 싣는다. 받는 사람이 로그인하면(대시보드 허용 사용자만)
+  비공개 저장소(reports)에서 그 파일을 받는다. 링크만 알아서는 못 받는다 — 저장소 읽기 정책이 «허용 사용자»만 연다(setup-34).
+  관리 화면이라 한국어만 둔다(/notify/ 와 같다).
+-->
+</head>
+<body class="ds">
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#F5F6F8;display:flex;align-items:center;justify-content:center"></div>
+<div class="ds-wrap" style="max-width:640px">
+  <header class="ds-head"><div><h1 class="ds-title">보고서 받기</h1><div class="ds-sub" id="sub">화면 PPT</div></div></header>
+  <div class="ds-card" id="box"><div class="ds-empty">확인하는 중…</div></div>
+</div>
+<script>
+if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
+GST.authGate();
+const PAGES={report:'주간 현황',fault:'고장 분석',pm:'PM 점검',cip:'CIP 진행',scrubber:'설비 현황',material:'자재 사용',tco:'TCO',hr:'인원·교육'};
+const box=document.getElementById('box'), esc=s=>GST._esc(s);
+const P=new URLSearchParams(location.search).get('p')||'';
+/* 경로 꼴은 서버 report_file_add 와 같다 — 그 밖의 글자는 받지 않는다 */
+const OK=/^[A-Za-z0-9_.\-/]+\.pptx$/.test(P) && P.indexOf('..')<0;
+const pg=P.split('/')[0], dd=((P.match(/\/(\d{8})\d*-/)||[])[1]||'').replace(/^(\d{4})(\d\d)(\d\d)$/,'$1-$2-$3');
+const name=(PAGES[pg]||'보고서')+(dd?'_'+dd:'')+'.pptx';
+document.getElementById('sub').textContent=PAGES[pg]?PAGES[pg]+' PPT':'화면 PPT';
+let url=null;
+async function get(){
+  if(!OK){ box.innerHTML='<div class="ds-empty">받을 파일이 지정되지 않았습니다 — 알림에 온 링크로 다시 여세요.</div>'; return; }
+  box.innerHTML='<div class="ds-empty">파일을 받는 중…</div>';
+  try{
+    const C=await GST._dbAuthed();
+    if(!C) throw new Error('로그인이 필요합니다');
+    const r=await C.storage.from('reports').download(P);
+    if(r.error||!r.data) throw new Error(/not.?found|404/i.test(String(r.error&&r.error.message))?'파일이 없습니다 — 40일이 지나 정리됐을 수 있습니다':'받을 수 없습니다'+(r.error?' ('+r.error.message+')':''));
+    if(url) URL.revokeObjectURL(url);
+    url=URL.createObjectURL(r.data);
+    box.innerHTML='<p style="margin:0 0 12px">'+esc(name)+' <span class="ds-note">'+Math.round(r.data.size/1024)+'KB</span></p>'+
+      '<a class="ds-btn pri" id="dl" href="'+url+'" download="'+esc(name)+'">PPT 받기</a> <a class="ds-btn" href="../">대시보드 열기</a>';
+    document.getElementById('dl').click();
+  }catch(e){
+    box.innerHTML='<div class="ds-empty">'+esc(e&&e.message||e)+'</div><div style="margin-top:12px"><button type="button" class="ds-btn" id="re">다시 시도</button></div>';
+    document.getElementById('re').onclick=get;
+  }
+}
+/* 로그인이 끝나면(_dbAuthed 가 authReady 를 기다린다) 바로 받는다 */
+get();
+</script>
+</body>
+</html>
