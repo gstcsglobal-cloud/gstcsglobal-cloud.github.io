@@ -2139,6 +2139,8 @@ console.log('[35] 업로드 이어붙이기 되돌리기 — 그 범위만 지�
   const keys = await pg.evaluate(() => window.__DB.sheet_inst.map(r => r.src_row));
   is(keys.length === keepN + 1 && keys.includes(101) && !keys.includes(100) && !keys.includes(102), '표 — 업로드 전 행은 그대로 · 고친 101 만 남는다');
   const note = rpcs(L, 'edit_note').find(x => x.args.p_op === 'upload:undo');
+  const lastDel = L.map(x => x.rpc).lastIndexOf('edit_delete'), fin = L.findIndex((x, i) => i > lastDel && x.rpc === 'csv_upload_finish' && x.args.p_tbl === 'sheet_inst');
+  is(lastDel >= 0 && fin > lastDel, '다 지운 «뒤» 캐시 도장을 한 번 더 찍는다 (동시 지우기의 행수 경합 · MIRROR_SHORT)');
   is(note && note.args.p_after.of === 50 && note.args.p_after.deleted === 2 && note.args.p_after.skipped === 1, '요약 한 줄 — upload:undo (어느 업로드 · 지움 2 · 건너뜀 1)');
   await pg.evaluate(() => { const d = document.querySelector('.mask'); if (d) d.querySelector('.btn').click(); });
   await pg.waitForTimeout(500);
