@@ -376,7 +376,7 @@ begin
                    'sheet_cip_f11','sheet_cip_f16','sheet_abp','sheet_alarm','sheet_allbypass') then
     raise exception 'bad_table: %', p_tbl;
   end if;
-  if p_op !~ '^(upload:(full|win|add)|dbw:(update|append|delete))$' then raise exception 'bad_op: %', p_op; end if;
+  if p_op !~ '^(upload:(full|win|add|undo)|dbw:(update|append|delete))$' then raise exception 'bad_op: %', p_op; end if;
   if coalesce(pg_column_size(p_before), 0) + coalesce(pg_column_size(p_after), 0) > 262144 then
     raise exception 'too_large';
   end if;

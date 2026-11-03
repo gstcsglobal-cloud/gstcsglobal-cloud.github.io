@@ -174,7 +174,7 @@ begin
                    'kr_sheet_alarm','kr_sheet_allbypass') and not public._cip_tbl(p_tbl) then
     raise exception 'bad_table: %', p_tbl;
   end if;
-  if p_op !~ '^(upload:(full|win|add)|dbw:(update|append|delete))$' then raise exception 'bad_op: %', p_op; end if;
+  if p_op !~ '^(upload:(full|win|add|undo)|dbw:(update|append|delete))$' then raise exception 'bad_op: %', p_op; end if;
   if coalesce(pg_column_size(p_before), 0) + coalesce(pg_column_size(p_after), 0) > 262144 then
     raise exception 'too_large';
   end if;

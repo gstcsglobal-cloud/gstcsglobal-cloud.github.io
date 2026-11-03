@@ -2673,6 +2673,72 @@ async function bulkStop(t, done, p, parts, msg, rows){
   await bulkAfter(t);
 }
 
+/* 업로드 «이어붙이기» 되돌리기 (v208 · 사용자 「이거 왜 되돌리기 기능 없어?」)
+   이어붙이기는 아무것도 안 지우고 행 번호 src_from ~ src_to 에 새 행을 넣는다(업로드가 그 범위를 이력에 적어 둔다) —
+   그 범위를 지우면 업로드 «전»과 같다. 그래서 이것만 되돌릴 수 있다.
+   · 통째·구간 교체는 못 되돌린다 — 지운 옛 행을 어디에도 남기지 않는다(그 대신 통째 교체는 승인 비밀번호 · v184).
+   · 쓰기는 edit_delete 한 통로(행 해시 · 줄마다 이력 = 지운 행은 «되돌리기»로 되살린다 · 캐시 도장). 새 쓰기 통로를 만들지 않는다.
+   ⚠ 그 뒤에 «통째 교체»가 있었으면 막는다 — 행 번호가 0 부터 다시 매겨져 그 범위가 «다른 행»이다.
+   ⚠ 그 뒤에 사람이 고친 행은 지우지 않고 건너뛴 뒤 알린다(고친 값을 조용히 버리지 않는다). 이미 없는 행도 건너뛴다. */
+function upUndoable(e, t){
+  const a = e.after || {};
+  return S.can.del && e.op === 'upload:add' && !!t && t.key === 'src_row' && a.error == null
+    && Number.isInteger(a.src_from) && Number.isInteger(a.src_to) && a.src_to >= a.src_from && (a.src_to - a.src_from) < 20000;
+}
+async function uploadUndo(en){
+  const t = TAB_OF_TBL[en.tbl], a = en.after || {};
+  if(!upUndoable(en, t)) return;
+  const keys = []; for(let k = a.src_from; k <= a.src_to; k++) keys.push(k);
+  let rows = [], edited = new Set();
+  try{
+    snack('확인하는 중…', {ms:60000});
+    const d = await C.from('sheet_edits').select('id').eq('tbl', en.tbl).eq('op', 'upload:undo').eq('after->>of', String(en.id)).limit(1);
+    if(d.error) throw new Error(rpcErr(d.error));
+    if((d.data || []).length){ snack('이 업로드는 이미 되돌렸습니다 (이력 #' + d.data[0].id + ')'); loadHist(false); return; }
+    const f = await C.from('sheet_edits').select('id,edited_at').eq('tbl', en.tbl).eq('op', 'upload:full').gt('edited_at', en.edited_at).limit(1);
+    if(f.error) throw new Error(rpcErr(f.error));
+    if((f.data || []).length){
+      await dialog('되돌릴 수 없습니다', '<div class="pv"><p>이 업로드 뒤에 같은 표를 <b>통째 교체</b>했습니다(이력 #' + esc(f.data[0].id) + ').</p>'
+        + '<p>통째 교체는 행 번호를 처음부터 다시 매기므로 행 #' + a.src_from + ' ~ #' + a.src_to + ' 는 이제 다른 행입니다. 그 행들을 지우면 남의 행이 지워집니다.</p></div>', [{l:'확인', v:true, cls:'pri'}]);
+      return;
+    }
+    const ed = await C.from('sheet_edits').select('row_key,op').eq('tbl', en.tbl).gt('edited_at', en.edited_at).not('op', 'like', 'upload:%').limit(10000);
+    if(ed.error) throw new Error(rpcErr(ed.error));
+    const ks = new Set(keys.map(String));
+    (ed.data || []).forEach(x => { if(ks.has(String(x.row_key))) edited.add(String(x.row_key)); });
+    for(let i = 0; i < keys.length; i += GET_MAX) [].push.apply(rows, await rpc('edit_get_many', {p_tbl:en.tbl, p_keys:keys.slice(i, i + GET_MAX)}) || []);
+  }catch(e){ snack(e.message, {err:true}); return; }
+  const go = rows.filter(x => !edited.has(String(x.key))), keep = rows.length - go.length, gone = keys.length - rows.length;
+  if(!go.length){ snack('지울 행이 없습니다 — ' + (gone ? '이미 없는 행 ' + gone + ' ' : '') + (keep ? '그 뒤 고친 행 ' + keep : '')); return; }
+  if(!(await ask('업로드를 되돌릴까요? — ' + t.name + ' · 이력 #' + en.id,
+    '<p>' + esc(a.file ? '「' + a.file + '」 ' : '') + '이어붙이기로 들어온 <b>' + go.length.toLocaleString() + '행</b>(행 #' + a.src_from + ' ~ #' + a.src_to + ')을 지웁니다. 그 전에 있던 행은 손대지 않습니다.</p>'
+    + (keep ? '<p><b>그 뒤에 고친 ' + keep + '행은 지우지 않습니다</b> — 고친 값을 버리지 않으려고요. 필요하면 그 행은 따로 지우세요.</p>' : '')
+    + (gone ? '<p>이미 없는 행 ' + gone + '개는 건너뜁니다.</p>' : '')
+    + '<p>지운 행은 줄마다 변경 이력에 남아 「되돌리기」로 하나씩 되살릴 수 있습니다.</p>', '되돌리기', true))) return;
+  let ok = 0, done = 0; const fail = [];
+  const work = async () => {
+    for(;;){
+      const x = go.shift(); if(!x) return;
+      try{
+        const r = await rpc('edit_delete', {p_tbl:en.tbl, p_key:Number(x.key), p_hash:x.hash});
+        if(r && r.ok) ok++; else fail.push({ k:x.key, why: r && r.error === 'conflict' ? '그사이 누가 고침' : r && r.error === 'not_found' ? '이미 없음' : (r && r.error) || '알 수 없음' });
+      }catch(e){ fail.push({ k:x.key, why:e.message }); }
+      done++; if(done % 10 === 0) snack('지우는 중… ' + done.toLocaleString() + ' / ' + (done + go.length).toLocaleString(), {ms:60000});
+    }
+  };
+  await Promise.all([work(), work(), work(), work()]);
+  try{ await rpc('edit_note', {p_tbl:en.tbl, p_op:'upload:undo', p_key:'*', p_before:{ rows:a.rows != null ? a.rows : null },
+    p_after:{ of:en.id, file:a.file || '', src_from:a.src_from, src_to:a.src_to, deleted:ok, skipped:keep + gone, failed:fail.length } }); }
+  catch(e){ console.warn('[edit] 되돌리기 요약 기록 실패', e); }
+  S.all = {};
+  if(fail.length || keep){
+    await dialog('되돌리기 결과', '<div class="pv"><p>' + ok.toLocaleString() + '행 지움' + (keep ? ' · 그 뒤 고친 ' + keep + '행은 남김' : '') + (fail.length ? ' · <b>' + fail.length + '행은 못 지웠습니다</b>' : '') + '.</p>'
+      + (fail.length ? planTable(['행 #', '이유'], fail.slice(0, 200).map(s => '<tr><td>' + esc(s.k) + '</td><td>' + esc(s.why) + '</td></tr>')) : '')
+      + (keep ? '<p>남긴 행: #' + esc(rows.filter(x => edited.has(String(x.key))).map(x => x.key).slice(0, 50).join(', #')) + '</p>' : '') + '</div>', [{l:'확인', v:true, cls:'pri'}], true);
+  }else snack(ok.toLocaleString() + '행을 지웠습니다 — 업로드 전과 같습니다');
+  loadHist(false);
+}
+
 /* 일괄 되돌리기 — 묶음의 줄 이력을 «나중 것부터» edit_restore 로 하나씩. 되돌리기 규칙(그 뒤 같은 칸이 또 바뀌었으면
    멈춘다 · 넣은 뒤 고친 새 행은 안 지운다)이 서버에 한 벌로 있으므로 여기서 새로 짜지 않는다.
    이미 되돌린 줄은 뺀다. 못 되돌린 줄은 건너뛰고 끝에 모아 알린다 — 줄끼리는 서로 다른 행이라 하나가 막혀도 나머지는 된다. */
@@ -3681,7 +3747,7 @@ const OPS = {
   del:{ l:'삭제', ops:['delete','dbw:delete'] }, rst:{ l:'되돌리기', ops:['restore'] },
   cas:{ l:'연쇄', ops:['cascade'] }, blk:{ l:'일괄(엑셀)', ops:['bulk'] }, up:{ l:'업로드', like:'upload:%' }
 };
-const OP_VIEW = op => /^upload:/.test(op) ? { c:'x', l:'업로드 ' + ({full:'통째', win:'구간', add:'이어붙이기', merge:'품목번호 덮어쓰기'}[op.split(':')[1]] || '') }
+const OP_VIEW = op => /^upload:/.test(op) ? { c:'x', l:'업로드 ' + ({full:'통째', win:'구간', add:'이어붙이기', merge:'품목번호 덮어쓰기', undo:'되돌리기'}[op.split(':')[1]] || '') }
   : ({ update:{c:'u', l:'수정'}, 'dbw:update':{c:'u', l:'수정 (인원·고장 화면)'}, insert:{c:'i', l:'입력'}, 'dbw:append':{c:'i', l:'입력 (인원 화면)'},
        delete:{c:'d', l:'삭제'}, 'dbw:delete':{c:'d', l:'삭제 (인원 화면)'}, restore:{c:'r', l:'되돌리기'}, cascade:{c:'u', l:'연쇄 수정'},
        bulk:{c:'u', l:'일괄 수정 (엑셀)'}, cip_create:{c:'x', l:'CIP 표 만들기'}, add_cols:{c:'x', l:'점검 항목 더하기'} })[op] || { c:'x', l:op || '?' };
@@ -3735,6 +3801,7 @@ const cut = (s, n) => { s = vs(s); return s.length > n ? s.slice(0, n) + '…' :
 function renderHist(){
   const H = S.hist;
   const restored = new Set(H.rows.filter(e => e.op === 'restore' && e.ref != null).map(e => String(e.ref)));
+  const upUndone = new Set(H.rows.filter(e => e.op === 'upload:undo' && e.after && e.after.of != null).map(e => String(e.after.of)));
   if(!H.rows.length){ $('hlist').innerHTML = '<div class="empty">조건에 맞는 이력이 없습니다.</div>'; $('hmore').innerHTML = ''; return; }
   $('hlist').innerHTML = H.rows.map(e => {
     const t = TAB_OF_TBL[e.tbl], ov = OP_VIEW(e.op);
@@ -3749,6 +3816,8 @@ function renderHist(){
         + (a.dup ? ' · 키 중복 의심 ' + a.dup.toLocaleString() + '행' : '') + (a.ok === false ? ' · ⚠ 행수 불일치' : '')
         + (a.new != null ? ' · 새 ' + Number(a.new).toLocaleString() + ' · 바뀜 ' + Number(a.changed || 0).toLocaleString() + ' · 그대로 ' + Number(a.same || 0).toLocaleString() : '')
         + (a.unseen ? ' · 이번 파일에 없던 품목 ' + Number(a.unseen).toLocaleString() + '(지우지 않음)' : ''));
+      if(e.op === 'upload:undo') detail = esc('이력 #' + a.of + ' 의 업로드' + (a.file ? ' 「' + a.file + '」' : '') + ' — ' + Number(a.deleted || 0).toLocaleString() + '행 지움'
+        + (a.skipped ? ' · 건너뜀 ' + Number(a.skipped).toLocaleString() + '행' : '') + (a.failed ? ' · 실패 ' + Number(a.failed).toLocaleString() + '행' : '') + ' · 지운 행은 줄마다 이력에 남아 다시 되살릴 수 있습니다');
     }else if(e.op === 'bulk'){
       const a = e.after || {};
       detail = esc((a.file ? '파일 「' + a.file + '」' + (a.sheet ? ' · 시트 「' + a.sheet + '」' : '') + ' · ' : '') + '수정 ' + (a.updated || 0) + '행 · 새 행 ' + (a.inserted || 0)
@@ -3764,18 +3833,22 @@ function renderHist(){
     }
     const can = S.can.restore && RESTORABLE.has(e.op) && !!t && !restored.has(String(e.id));
     const canB = S.can.restore && e.op === 'bulk' && !!t;
+    const canU = upUndoable(e, t) && !upUndone.has(String(e.id));
     return '<div class="he"><div><div class="t">' + esc(ymdhm(e.edited_at)) + '</div><div class="w" title="' + esc(e.edited_by) + '">' + esc(e.edited_by || '') + '</div></div>'
       + '<div><span class="op ' + ov.c + '">' + esc(ov.l) + '</span></div>'
       + '<div class="s"><div class="tl">' + title + ' <span class="hint">· 이력 #' + esc(e.id) + (e.ref ? ' · 원인 이력 #' + esc(e.ref) : '') + '</span></div><div class="ch">' + detail + '</div></div>'
       + '<div class="a"><button class="btn sm" type="button" data-hv="' + esc(e.id) + '">보기</button>'
       + (can ? '<button class="btn sm" type="button" data-hr="' + esc(e.id) + '">되돌리기</button>' : (restored.has(String(e.id)) ? '<span class="restored">되돌림</span>' : ''))
-      + (canB ? '<button class="btn sm" type="button" data-hb="' + esc(e.id) + '" title="이 묶음의 줄 이력을 나중 것부터 하나씩 되돌립니다">일괄 되돌리기</button>' : '') + '</div></div>';
+      + (canB ? '<button class="btn sm" type="button" data-hb="' + esc(e.id) + '" title="이 묶음의 줄 이력을 나중 것부터 하나씩 되돌립니다">일괄 되돌리기</button>' : '')
+      + (canU ? '<button class="btn sm" type="button" data-hu="' + esc(e.id) + '" title="이 업로드로 들어온 행을 지웁니다(지운 행은 줄마다 이력에 남습니다)">되돌리기</button>'
+         : (upUndone.has(String(e.id)) ? '<span class="restored">되돌림</span>' : '')) + '</div></div>';
   }).join('');
   $('hmore').innerHTML = H.more ? '<div class="more"><button class="btn" type="button" id="hmoreBtn">더 보기</button></div>' : '';
   if(H.more) $('hmoreBtn').onclick = () => loadHist(true);
 }
 $('hlist').addEventListener('click', async e => {
-  const v = e.target.closest('[data-hv]'), r = e.target.closest('[data-hr]'), hb = e.target.closest('[data-hb]');
+  const v = e.target.closest('[data-hv]'), r = e.target.closest('[data-hr]'), hb = e.target.closest('[data-hb]'), hu = e.target.closest('[data-hu]');
+  if(hu){ const en = S.hist.rows.find(x => String(x.id) === hu.dataset.hu); if(en) uploadUndo(en); return; }
   if(v){ const en = S.hist.rows.find(x => String(x.id) === v.dataset.hv); if(en) histView(en); }
   if(hb){ const en = S.hist.rows.find(x => String(x.id) === hb.dataset.hb); if(en) bulkUndo(en); return; }
   if(r){

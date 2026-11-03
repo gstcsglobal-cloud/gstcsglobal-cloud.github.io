@@ -58,7 +58,8 @@ function fake(seed) {
       .replace(/[*%]/g, '.*').replace(/_/g, '.').replace(/\u0001(.)/g, (m, c) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) + '$', ci ? 'i' : '');
   const cmp = (a, b) => (typeof a === 'number' && typeof b === 'number') ? a - b : String(a).localeCompare(String(b));
   const test = (row, col, op, v) => {
-    const x = row[col];
+    if (/^not\./.test(op)) return !test(row, col, op.slice(4), v);
+    const x = col.indexOf('->>') > 0 ? (row[col.split('->>')[0]] || {})[col.split('->>')[1]] : row[col];
     if (op === 'is') return v === null || v === 'null' ? x == null : x === v;
     if (x == null) return false;
     if (op === 'eq') return String(x) === String(v);
@@ -110,6 +111,7 @@ function fake(seed) {
       maybeSingle() { st.single = true; return q; },
       or(e) { st.or.push(e); return q; },
       in(c, v) { st.f.push([c, 'in', v]); return q; },
+      not(c, op, v) { st.f.push([c, 'not.' + op, v]); return q; },
       upsert(o) { st.ups = JSON.parse(JSON.stringify(o)); return q; },
       delete() { st.del = true; return q; },
       then(res, rej) {
@@ -2095,6 +2097,53 @@ console.log('[34] 자재마스터 탭 — 찾기 · 고치기 · 같은 품목�
   is(ins && ins.args.p_tbl === 'item_master' && ins.args.p_row.code === 'P-000003' && !('id' in ins.args.p_row) && !('seen_at' in ins.args.p_row), '새 번호는 넣는다 (id·seen_at 은 보내지 않는다)');
   is(await pg.evaluate(() => UP_RID.item === 'item' && TAB_BY.item.uniq === true), '「엑셀 올리기」의 원본은 업로드 «자재마스터»(덮어쓰기)로 간다');
   is(await pg.evaluate(() => OP_VIEW('upload:merge').l === '업로드 품목번호 덮어쓰기'), '이력 — 업로드 «품목번호 덮어쓰기»');
+  is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
+  await ctx.close();
+}
+
+/* ═══ [35] 업로드 «이어붙이기» 되돌리기 (v208) ═══ */
+console.log('[35] 업로드 이어붙이기 되돌리기 — 그 범위만 지운다 · 그 뒤 고친 행은 남긴다 · 통째 교체 뒤면 막는다 · 한 번만 (v208)');
+{
+  const sd = seedOf({});
+  const base = sd.tables.sheet_inst[0];
+  const add = [100, 101, 102].map(k => Object.assign({}, base, { src_row:k, sn:'ZZU-0' + k, code:'U' + k }));
+  sd.tables.sheet_inst = sd.tables.sheet_inst.concat(add);
+  const keepN = sd.tables.sheet_inst.length - 3;
+  sd.tables.sheet_edits.push(
+    { id:50, gid:'', tbl:'sheet_inst', row_key:'*', op:'upload:add', before:{ rows:keepN }, after:{ mode:'add', file:'f16n.xlsx', n:3, rows:keepN + 3, src_from:100, src_to:102, ok:true, dup:1 },
+      edited_by:'boss@test.local', edited_at:'2026-11-03T08:00:00Z', ref:null },
+    { id:51, gid:'', tbl:'sheet_inst', row_key:'101', op:'update', before:{}, after:{}, edited_by:'boss@test.local', edited_at:'2026-11-03T09:00:00Z', ref:null },
+    { id:52, gid:'', tbl:'sheet_wk', row_key:'*', op:'upload:add', before:{ rows:3 }, after:{ mode:'add', file:'wk.xlsx', n:2, rows:5, src_from:3, src_to:4, ok:true },
+      edited_by:'boss@test.local', edited_at:'2026-11-01T08:00:00Z', ref:null },
+    { id:53, gid:'', tbl:'sheet_wk', row_key:'*', op:'upload:full', before:{ rows:5 }, after:{ mode:'full', file:'wk2.xlsx', n:5, rows:5, src_from:0, src_to:4, ok:true },
+      edited_by:'boss@test.local', edited_at:'2026-11-02T08:00:00Z', ref:null });
+  const { ctx, pg, pe } = await open(sd);
+  await pg.click('.tab[data-tab=hist]'); await pg.waitForTimeout(500);
+  const btn = async id => !!(await pg.$('#hlist [data-hu="' + id + '"]'));
+  is(await btn(50), '이어붙이기(범위 기록 있음) → 「되돌리기」 단추');
+  is(!(await btn(53)) && !(await pg.$('#hlist [data-hr="53"]')), '통째 교체는 되돌리기 단추가 없다');
+  is(!(await btn(2)), '범위 기록이 없는 옛 이어붙이기 요약은 단추가 없다');
+  /* 통째 교체 뒤의 이어붙이기 — 행 번호가 다시 매겨졌으므로 막는다 */
+  await qlog(pg);
+  await pg.click('#hlist [data-hu="52"]'); await pg.waitForTimeout(400);
+  is(/통째 교체/.test(await pg.$eval('.mask .dlg-b', e => e.textContent)) && !rpcs(await qlog(pg), 'edit_delete').length, '그 뒤 통째 교체가 있으면 막고 지우지 않는다');
+  await pg.click('.mask .btn');
+  /* 되돌리기 — 100·102 만 지우고 그 뒤 고친 101 은 남긴다 */
+  await pg.click('#hlist [data-hu="50"]'); await pg.waitForTimeout(400);
+  const body = await pg.$eval('.mask .dlg-b', e => e.textContent);
+  is(/2행/.test(body) && /그 뒤에 고친 1행은 지우지 않습니다/.test(body), '확인 창 — 지울 2행 · 그 뒤 고친 1행은 남긴다고 말한다');
+  await pg.click('.mask .btn.dng'); await pg.waitForTimeout(800);
+  const L = await qlog(pg), dels = rpcs(L, 'edit_delete');
+  is(dels.length === 2 && dels.map(d => d.args.p_key).sort().join() === '100,102' && dels.every(d => d.args.p_tbl === 'sheet_inst' && /^h:/.test(d.args.p_hash)),
+     '지우기는 edit_delete(행 번호 · 해시) 로만 — 100 · 102');
+  const keys = await pg.evaluate(() => window.__DB.sheet_inst.map(r => r.src_row));
+  is(keys.length === keepN + 1 && keys.includes(101) && !keys.includes(100) && !keys.includes(102), '표 — 업로드 전 행은 그대로 · 고친 101 만 남는다');
+  const note = rpcs(L, 'edit_note').find(x => x.args.p_op === 'upload:undo');
+  is(note && note.args.p_after.of === 50 && note.args.p_after.deleted === 2 && note.args.p_after.skipped === 1, '요약 한 줄 — upload:undo (어느 업로드 · 지움 2 · 건너뜀 1)');
+  await pg.evaluate(() => { const d = document.querySelector('.mask'); if (d) d.querySelector('.btn').click(); });
+  await pg.waitForTimeout(500);
+  is(!(await btn(50)) && await pg.$eval('#hlist', e => /되돌림/.test(e.textContent)), '한 번 되돌린 업로드는 단추 대신 «되돌림»');
+  is(await pg.evaluate(() => OP_VIEW('upload:undo').l === '업로드 되돌리기'), '이력 — 「업로드 되돌리기」');
   is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe[0] : ''));
   await ctx.close();
 }
