@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 193;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 194;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 여기서 묻는다 — 저장 키(축편집·피벗·섹션)·챗봇 출처·자동순회 페이지 id 가 이 한 곳을 본다.
    (v137 에는 오프라인 판의 srcdoc 때문에 두었고, 오프라인 판은 v199 에 없앴다 — 한 곳에서 묻는 규약은 그대로 둔다.) */
 GST.pagePath = function(){ return location.pathname; };
@@ -4073,6 +4073,7 @@ GST.applyI18n = function(t, lang){
   try{ GST.relabelChrome(); }catch(e){}
   try{ GST._srcChip(); }catch(e){}
   try{ GST._layoutRelabel(); }catch(e){}
+  try{ if(GST.screen && GST.screen.state().cfg) GST.screen.apply(); }catch(e){}   // 바꾼 표시 제목을 언어 전환 뒤에 다시 건다(v202)
 };
 /* 카드 노트 한 곳 (report·cip 이 byte 까지 같은 사본을 들고 있었다). sev='warn' 이면 색·굵기로 «화면 전체의 뜻이
    바뀌는 경고»를 가른다(v92 규약대로 자리는 노트 맨 앞 그대로). 줄바꿈이 든 문장은 pre-line 으로 — 마크업을
@@ -8135,7 +8136,7 @@ GST._layoutFit = function(grids){
   grids.forEach(function(gr){
     if(!gr || !gr.classList) return;
     const cols = GST._layoutCols(gr); if(!cols) return;
-    const n = [].filter.call(gr.children, function(k){ return k.nodeType===1 && !k.hasAttribute('data-gst-alt') && !k.hasAttribute('data-gst-retired'); }).length;
+    const n = [].filter.call(gr.children, function(k){ return k.nodeType===1 && !k.hasAttribute('data-gst-alt') && !k.hasAttribute('data-gst-retired') && !k.hasAttribute('data-gst-hide'); }).length;
     gr.classList.remove('gst-n0','gst-n1','gst-n2');
     if(n===0) gr.classList.add('gst-n0');
     else if(n===1 && cols>1) gr.classList.add('gst-n1');
@@ -11635,6 +11636,431 @@ GST.items = {
     return { n:n, blank:blank, dup:dup, uniq:Object.keys(seen).length, bad: dup>Math.max(5, n*0.02) };
   }
 };
+
+/* ============================================================
+   화면 편집 — 기존 화면의 카드 배치 (v202 · 사용자 요청 「다른 페이지들도 전부 커스터마이징」)
+   ------------------------------------------------------------
+   카드의 «순서 · 숨김 · 전체 폭 · 표시 제목»만 바꾼다. 계산 · 필터 · 세부내역 · 내보내기는 그 화면 코드가 그대로 한다 —
+   GST.chartLayout 이 v174 부터 해 온 일(카드를 옮기고 숨기기만 한다)을 사람이 직접 하게 넓힌 것이다.
+   · 저장: screen_layouts (setup-32) — 범위 둘. 전체 사용자 기본 배치(관리자 + 쓰기 · GST.targets.can 과 같은 판정) · 내 화면에만(누구나).
+     화면은 «내 배치 > 전체 기본 > 원래 배치» 순으로 고른다. 표가 없으면(setup-32 전 · 인증 꺼짐) 이 PC 에만 담고 그렇다고 말한다.
+   · 카드 열쇠(제1원칙과 같은 뜻 — 위치가 아니라 «이름»): 안의 캔버스 id → 카드 id → 안의 첫 id → 제목의 data-i.
+     같은 열쇠가 둘이면 둘 다 편집하지 않는다(엉뚱한 카드를 옮기느니 안 옮긴다).
+   · 순서는 «같은 부모 안에서»만 바꾼다. 화면마다 격자 구조가 달라 부모를 넘나들면 격자가 깨진다 — 다른 칸으로 옮기려면 그 격자 안에서 옮긴다.
+   · DOM 을 실제로 옮긴다(CSS order 가 아니다) — PPT 전체 내보내기(pptAuto)·이미지 저장이 DOM 순서를 따르므로 바뀐 배치 그대로 나간다.
+   · 축 선택 묶음(chartLayout groups)은 한 덩어리로 옮기고 숨긴다. 은퇴 카드(data-gst-retired)는 «숨긴 카드»로 보이고 다시 표시할 수 있다.
+   · 화면이 카드를 다시 그리는 경우(글로벌 현황 등)를 위해 DOM 이 바뀌면 같은 배치를 다시 건다(멱등 · 바뀐 것이 없으면 아무것도 안 옮긴다).
+   ============================================================ */
+GST.SCREEN_PAGES = ['hub','report','fault','pm','cip','scrubber','material','tco','hr'];
+GST.SCREEN_T = {
+  ko:{title:'화면 편집', cur_all:'전체 사용자 기본 배치 적용 중', cur_me:'내 배치 적용 중', cur_none:'원래 배치', hidden:'숨긴 카드', none_hidden:'숨긴 카드가 없습니다',
+      show:'다시 표시', reset:'원래 배치로', cancel:'취소', save:'저장', save_all:'전체 사용자 기본 배치로 저장', save_me:'내 화면에만 저장',
+      all_note:'관리자 권한 · 모든 사용자에게 같은 배치로 보입니다', me_note:'다른 사용자의 화면은 바뀌지 않습니다', drop_me:'내 배치 지우기',
+      move:'끌어서 순서 바꾸기', wide:'전체 폭', narrow:'기본 폭', hide:'숨기기', rename:'제목 바꾸기', rn_apply:'적용', rn_orig:'원래 제목',
+      saved_all:'전체 사용자 기본 배치를 저장했습니다', saved_me:'내 화면 배치를 저장했습니다', saved_pc:'이 PC 에만 저장했습니다(서버 준비 전)',
+      reset_q:'원래 배치로 되돌리고 화면을 다시 엽니다', reset_all:'전체 기본 배치 지우기', reset_me:'내 배치 지우기', confirm:'확인',
+      conflict:'그사이 다른 사람이 이 화면 배치를 바꿨습니다 — 화면을 다시 연 뒤 편집하세요', fail:'저장하지 못했습니다', forbidden:'권한이 없습니다',
+      unsaved:'저장하지 않은 변경', hint:'카드 머리의 단추로 옮기고 · 숨기고 · 폭과 제목을 바꿉니다. 계산·필터·세부내역은 그대로입니다',
+      kpi:'지표', retired:'기본 숨김', pc_only:'이 PC 에만 저장됩니다(서버 준비 전)'},
+  en:{title:'Edit screen', cur_all:'Default layout for everyone', cur_me:'Using my layout', cur_none:'Original layout', hidden:'Hidden cards', none_hidden:'No hidden cards',
+      show:'Show', reset:'Original layout', cancel:'Cancel', save:'Save', save_all:'Save as default for everyone', save_me:'Save for me only',
+      all_note:'Administrators · everyone sees this layout', me_note:'Other users are not affected', drop_me:'Remove my layout',
+      move:'Drag to reorder', wide:'Full width', narrow:'Default width', hide:'Hide', rename:'Rename', rn_apply:'Apply', rn_orig:'Original title',
+      saved_all:'Default layout saved for everyone', saved_me:'Your layout was saved', saved_pc:'Saved on this PC only (server not ready)',
+      reset_q:'Restores the original layout and reopens the screen', reset_all:'Remove default layout', reset_me:'Remove my layout', confirm:'Confirm',
+      conflict:'Someone changed this layout meanwhile — reopen the screen and edit again', fail:'Could not save', forbidden:'Not permitted',
+      unsaved:'Unsaved changes', hint:'Use the buttons on each card to move, hide, resize and rename. Calculations, filters and details stay the same',
+      kpi:'KPI', retired:'Hidden by default', pc_only:'Saved on this PC only (server not ready)'},
+  zh:{title:'编辑画面', cur_all:'正在使用全体默认布局', cur_me:'正在使用我的布局', cur_none:'原始布局', hidden:'隐藏的卡片', none_hidden:'没有隐藏的卡片',
+      show:'重新显示', reset:'恢复原始布局', cancel:'取消', save:'保存', save_all:'保存为全体用户默认布局', save_me:'仅保存到我的画面',
+      all_note:'管理员权限 · 所有用户看到同一布局', me_note:'不影响其他用户', drop_me:'删除我的布局',
+      move:'拖动以调整顺序', wide:'全宽', narrow:'默认宽度', hide:'隐藏', rename:'修改标题', rn_apply:'应用', rn_orig:'原标题',
+      saved_all:'已保存全体默认布局', saved_me:'已保存我的布局', saved_pc:'仅保存在此电脑（服务器尚未准备）',
+      reset_q:'恢复原始布局并重新打开画面', reset_all:'删除全体默认布局', reset_me:'删除我的布局', confirm:'确认',
+      conflict:'期间有其他人修改了此布局 — 请重新打开画面后再编辑', fail:'保存失败', forbidden:'没有权限',
+      unsaved:'未保存的更改', hint:'用卡片顶部的按钮移动、隐藏、调整宽度和标题。计算·筛选·明细保持不变',
+      kpi:'指标', retired:'默认隐藏', pc_only:'仅保存在此电脑（服务器尚未准备）'},
+  ja:{title:'画面編集', cur_all:'全ユーザー既定レイアウトを適用中', cur_me:'自分のレイアウトを適用中', cur_none:'元のレイアウト', hidden:'非表示のカード', none_hidden:'非表示のカードはありません',
+      show:'再表示', reset:'元のレイアウトへ', cancel:'キャンセル', save:'保存', save_all:'全ユーザーの既定として保存', save_me:'自分の画面のみに保存',
+      all_note:'管理者権限 · 全ユーザーに同じレイアウトで表示', me_note:'他のユーザーの画面は変わりません', drop_me:'自分のレイアウトを削除',
+      move:'ドラッグで並べ替え', wide:'全幅', narrow:'既定の幅', hide:'非表示', rename:'タイトル変更', rn_apply:'適用', rn_orig:'元のタイトル',
+      saved_all:'全ユーザー既定レイアウトを保存しました', saved_me:'自分のレイアウトを保存しました', saved_pc:'このPCにのみ保存しました（サーバー準備前）',
+      reset_q:'元のレイアウトに戻して画面を開き直します', reset_all:'既定レイアウトを削除', reset_me:'自分のレイアウトを削除', confirm:'確認',
+      conflict:'その間に他の人がこのレイアウトを変更しました — 画面を開き直してから編集してください', fail:'保存できませんでした', forbidden:'権限がありません',
+      unsaved:'未保存の変更', hint:'カード上部のボタンで移動・非表示・幅・タイトルを変えます。計算·フィルター·詳細はそのままです',
+      kpi:'指標', retired:'既定で非表示', pc_only:'このPCにのみ保存されます（サーバー準備前）'}
+};
+GST._SCREEN_CSS = [
+  '[data-gst-hide]{display:none !important}',
+  '[data-gst-wide]{grid-column:1 / -1 !important}',
+  '.kpis[data-n="1"]{grid-template-columns:1fr !important}',
+  'body.gst-se-on .gst-se-card{position:relative;outline:1px dashed color-mix(in srgb,var(--accent,#4C7CF0) 55%,transparent);outline-offset:3px}',
+  'body.gst-se-on .gst-se-card > :not(.gst-se-bar):not(.gse-pop){pointer-events:none}',
+  'body.gst-se-on .gst-se-card.gse-drag{opacity:.45}',
+  '.gst-se-bar{position:absolute;top:6px;right:6px;z-index:30;display:flex;gap:3px;background:var(--surface,#fff);border:1px solid var(--line,#d0d7e2);border-radius:9px;padding:2px;box-shadow:0 4px 14px rgba(0,0,0,.18)}',
+  '.gst-se-bar button{font:600 11.5px/1 var(--font,inherit);border:0;background:transparent;color:var(--txt-2,#445);padding:5px 7px;border-radius:7px;cursor:pointer;white-space:nowrap}',
+  '.gst-se-bar button:hover{background:color-mix(in srgb,var(--accent,#4C7CF0) 14%,transparent);color:var(--txt-main,#111)}',
+  '.gst-se-bar .gse-grip{cursor:grab;touch-action:none;letter-spacing:-1px}',
+  '.gst-se-bar button[aria-pressed="true"]{color:var(--accent,#4C7CF0)}',
+  '#gstSePanel{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:9990;display:flex;align-items:center;flex-wrap:wrap;gap:8px;max-width:calc(100% - 24px);background:var(--surface,#fff);color:var(--txt-main,#111);border:1px solid var(--gold,#C9A24A);border-radius:14px;padding:8px 10px 8px 14px;box-shadow:0 18px 44px rgba(0,0,0,.32);font:13px/1.35 var(--font,inherit)}',
+  '#gstSePanel b{font-weight:800}',
+  '#gstSePanel .gse-st{font-size:12px;color:var(--txt-muted,#778)}',
+  '#gstSePanel .gse-st.dirty{color:var(--gold,#C9A24A);font-weight:700}',
+  '#gstSePanel button{font:600 12.5px/1 var(--font,inherit);border:1px solid var(--line,#d0d7e2);background:var(--surface-2,#f3f5f9);color:var(--txt-main,#111);padding:8px 12px;border-radius:9px;cursor:pointer;white-space:nowrap}',
+  '#gstSePanel button.pri{background:var(--accent,#4C7CF0);border-color:var(--accent,#4C7CF0);color:#fff}',
+  '#gstSePanel .gse-dd{position:relative}',
+  '#gstSePanel .gse-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:270px;max-height:60vh;overflow:auto;background:var(--surface,#fff);border:1px solid var(--line,#d0d7e2);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.28);padding:6px;display:flex;flex-direction:column;gap:3px}',
+  '#gstSePanel .gse-menu button{border:0;background:transparent;text-align:left;padding:9px 10px;display:flex;flex-direction:column;gap:3px;white-space:normal}',
+  '#gstSePanel .gse-menu button:hover{background:var(--surface-2,#f3f5f9)}',
+  '#gstSePanel .gse-menu button:disabled{opacity:.45;cursor:default}',
+  '#gstSePanel .gse-menu small{font-weight:500;color:var(--txt-muted,#778);font-size:11.5px}',
+  '#gstSePanel .gse-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 8px;font-size:12.5px}',
+  '#gstSePanel .gse-row button{padding:5px 9px}',
+  '#gstSePanel .gse-empty{padding:10px;color:var(--txt-muted,#778);font-size:12.5px}',
+  '.gse-line{position:fixed;z-index:9989;background:var(--gold,#C9A24A);border-radius:3px;pointer-events:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--gold,#C9A24A) 30%,transparent)}',
+  '.gse-pop{position:absolute;top:40px;right:6px;z-index:31;display:flex;gap:6px;align-items:center;background:var(--surface,#fff);border:1px solid var(--line,#d0d7e2);border-radius:10px;padding:6px;box-shadow:0 10px 26px rgba(0,0,0,.22)}',
+  '.gse-pop input{font:13px var(--font,inherit);border:1px solid var(--line,#d0d7e2);border-radius:7px;padding:6px 8px;width:220px;max-width:50vw;background:var(--surface-2,#f3f5f9);color:var(--txt-main,#111)}',
+  '.gse-pop button{font:600 12px var(--font,inherit);border:1px solid var(--line,#d0d7e2);background:var(--surface-2,#f3f5f9);color:var(--txt-main,#111);padding:6px 9px;border-radius:7px;cursor:pointer}',
+  '@media print{.gst-se-bar,#gstSePanel,.gse-line{display:none !important}}'
+].join('\n');
+GST.screen = (function(){
+  var S = { cfg:null, at:{all:null, me:null}, src:'', where:'', loaded:false, edit:null, applying:false, mo:null, tm:0, page:'' };
+  var SEL = function(){ return GST.CARD_SEL + ',.kpi,.hb-card,.ds-card'; };
+  var T = function(k){ var l=(GST._lang&&GST._lang())||'ko'; return ((GST.SCREEN_T[l]||GST.SCREEN_T.ko)[k]) || GST.SCREEN_T.ko[k] || k; };
+  var esc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  function pageKey(){
+    var p=String((GST.pagePath&&GST.pagePath())||location.pathname||'').replace(/^\/+/,'').split('/')[0].toLowerCase();
+    return p.replace(/[^a-z0-9_-]/g,'').slice(0,32);
+  }
+  function enabled(){ return GST.SCREEN_PAGES.indexOf(S.page||pageKey())>=0; }
+  function cards(){
+    var sel=SEL();
+    return [].filter.call(document.querySelectorAll(sel), function(el){
+      if(el.closest('#gstSePanel,.gov,.gst-dq-ov,.gst-modal,aside,.sidebar')) return false;
+      var par=el.parentElement && el.parentElement.closest(sel); if(par) return false;   // 카드 안의 카드는 바깥 카드가 단위다
+      return true;
+    });
+  }
+  function keyOf(el){
+    var k='';
+    if(el.classList.contains('kpi')){ var v=el.querySelector('[id]'); k=v?'k:'+v.id:''; }
+    else { var cv=el.querySelector('canvas[id]');
+      if(cv) k='cv:'+cv.id; else if(el.id) k='id:'+el.id;
+      else { var x=el.querySelector('[id]'); if(x) k='in:'+x.id; else { var h=el.querySelector('[data-i]'); if(h) k='h:'+h.getAttribute('data-i'); } } }
+    return k;
+  }
+  /* 열쇠 → 카드. 같은 열쇠가 둘이면 그 열쇠는 편집하지 않는다 */
+  function index(){
+    var list=cards(), M={}, dup={};
+    list.forEach(function(el){ var k=keyOf(el); if(!k) return; if(M[k]){ dup[k]=1; return; } M[k]=el; });
+    Object.keys(dup).forEach(function(k){ delete M[k]; });
+    return { list:list.filter(function(el){ var k=keyOf(el); return k && M[k]===el; }), M:M };
+  }
+  function grpOf(el){ var b=el.querySelector(':scope > .gst-axsel, .gst-axsel'); return b&&b.dataset.ax ? b.dataset.ax : ''; }
+  /* 묶음(같은 «기준» 단추줄의 카드들)은 한 덩어리 — 같은 부모 안의 같은 묶음 카드를 전부 */
+  function unitOf(el){
+    var g=grpOf(el); if(!g||!el.parentNode) return [el];
+    return [].filter.call(el.parentNode.children, function(c){ return grpOf(c)===g; });
+  }
+  function headOf(el){ return el.querySelector('.trend-header h3, .cross-header h3, h3, h2, .lbl, .klbl, .kpi-l'); }
+  function nameOf(el){
+    var h=headOf(el); var s=h?h.textContent:'';
+    if(!s && el.classList.contains('kpi')){ var l=el.querySelector('[data-i]'); s=l?l.textContent:''; }
+    return String(s||'').replace(/\s+/g,' ').trim().slice(0,60) || keyOf(el);
+  }
+  function firstText(h){
+    var w=document.createTreeWalker(h, NodeFilter.SHOW_TEXT, null), n;
+    while((n=w.nextNode())){ if(n.nodeValue.trim() && !(n.parentNode&&n.parentNode.closest&&n.parentNode.closest('.gst-axsel,.capbtns,button'))) return n; }
+    return null;
+  }
+  function cssOnce(){
+    if(document.getElementById('gstScreenCss')) return;
+    var st=document.createElement('style'); st.id='gstScreenCss'; st.textContent=GST._SCREEN_CSS; (document.head||document.documentElement).appendChild(st);
+  }
+  /* 지금 DOM 순서 그대로의 열쇠 목록 — 저장하는 «순서»다 */
+  function domOrder(){ return index().list.map(keyOf); }
+  function apply(cfg){
+    cfg = cfg || S.cfg; if(!cfg || !document.body) return;
+    S.applying=true;
+    try{
+      var I=index(), ix={}, hid={}, wide={}, show={}, titles=cfg.titles||{};
+      (cfg.order||[]).forEach(function(k,i){ ix[k]=i; });
+      (cfg.hidden||[]).forEach(function(k){ hid[k]=1; });
+      (cfg.wide||[]).forEach(function(k){ wide[k]=1; });
+      (cfg.show||[]).forEach(function(k){ show[k]=1; });
+      var parents=new Set();
+      I.list.forEach(function(el){ if(el.parentNode) parents.add(el.parentNode); });
+      parents.forEach(function(p){
+        var kids=[].filter.call(p.children, function(c){ var k=keyOf(c); return I.M[k]===c && ix[k]!=null; });
+        if(kids.length<2) return;
+        var sorted=kids.slice().sort(function(a,b){ return ix[keyOf(a)]-ix[keyOf(b)]; });
+        if(sorted.every(function(c,i){ return c===kids[i]; })) return;
+        var marks=kids.map(function(c){ var m=document.createComment('gse'); p.insertBefore(m,c); return m; });
+        sorted.forEach(function(c,i){ p.insertBefore(c, marks[i]); });
+        marks.forEach(function(m){ m.parentNode && m.parentNode.removeChild(m); });
+      });
+      I.list.forEach(function(el){
+        var k=keyOf(el);
+        if(hid[k]) el.setAttribute('data-gst-hide','1'); else el.removeAttribute('data-gst-hide');
+        if(wide[k]) el.setAttribute('data-gst-wide','1'); else el.removeAttribute('data-gst-wide');
+        if(el.hasAttribute('data-gst-retired') && show[k]){ el.removeAttribute('data-gst-retired'); el.setAttribute('data-gst-unret','1'); }
+        else if(el.hasAttribute('data-gst-unret') && !show[k]){ el.setAttribute('data-gst-retired','1'); el.removeAttribute('data-gst-unret'); }
+        var h=headOf(el);
+        if(h){ var tn=firstText(h);
+          if(tn){ if(titles[k]){ if(tn.nodeValue!==titles[k]){ if(el.dataset.gstOrig==null) el.dataset.gstOrig=tn.nodeValue; tn.nodeValue=titles[k]; } }
+            else if(el.dataset.gstOrig!=null){ tn.nodeValue=el.dataset.gstOrig; delete el.dataset.gstOrig; } } }
+      });
+      /* KPI 줄 — 보이는 카드 수로 칸 수를 맞춘다(6칸 고정이면 숨긴 자리가 빈다). 원래 값은 기억해 두고 되돌린다 */
+      parents.forEach(function(p){
+        if(!p.classList || !p.classList.contains('kpis')) return;
+        if(p.dataset.gstN0==null) p.dataset.gstN0=p.getAttribute('data-n')||'';
+        var n=[].filter.call(p.children, function(c){ return c.classList&&c.classList.contains('kpi') && !c.hasAttribute('data-gst-hide'); }).length;
+        var all=[].filter.call(p.children, function(c){ return c.classList&&c.classList.contains('kpi'); }).length;
+        if(n===all){ if(p.dataset.gstN0) p.setAttribute('data-n', p.dataset.gstN0); else p.removeAttribute('data-n'); }
+        else if(n>=1 && n<=5) p.setAttribute('data-n', String(n)); else p.removeAttribute('data-n');
+      });
+      try{ GST._layoutFit && GST._layoutFit(Array.from(parents)); }catch(e){}
+    }finally{ S.applying=false; }
+  }
+  /* 화면이 카드를 다시 그리면(글로벌 현황 등) 같은 배치를 다시 건다 — 바뀐 것이 없으면 아무것도 안 옮기므로 되먹임이 없다 */
+  function watch(){
+    if(S.mo || !window.MutationObserver || !document.body) return;
+    S.mo=new MutationObserver(function(){ if(S.applying || S.edit) return; clearTimeout(S.tm); S.tm=setTimeout(function(){ if(S.cfg) apply(); }, 120); });
+    S.mo.observe(document.body, {childList:true, subtree:true});
+  }
+  var LKEY=function(){ return 'gst_screen:'+S.page; };
+  async function load(){
+    S.page=pageKey(); S.loaded=false;
+    var pc=null; try{ pc=JSON.parse(localStorage.getItem(LKEY())||'null'); }catch(e){}
+    var C=null; try{ C=await GST._dbAuthed(); }catch(e){ C=null; }
+    var me=((GST._me&&GST._me.email)||'').toLowerCase();
+    if(C && C.from){
+      try{
+        var r=await C.from('screen_layouts').select('owner,config,updated_at').eq('page',S.page);
+        if(r && !r.error){
+          var all=null, mine=null; (r.data||[]).forEach(function(x){ if(!x.owner) all=x; else if(String(x.owner).toLowerCase()===me) mine=x; });
+          S.at.all=all?all.updated_at:null; S.at.me=mine?mine.updated_at:null; S.where='server';
+          S.cfg=mine?mine.config:all?all.config:null; S.src=mine?'me':all?'all':''; S.loaded=true;
+          return S.cfg;
+        }
+        S.where=(r&&r.error&&/screen_layouts|relation|schema cache/i.test(r.error.message||''))?'pc':'fail';
+        if(S.where==='fail') console.warn('[screen] 배치 읽기 실패', r&&r.error);
+      }catch(e){ S.where='fail'; console.warn('[screen] 배치 읽기 실패', e); }
+    } else S.where='pc';
+    S.cfg=pc; S.src=pc?'pc':''; S.loaded=true; return S.cfg;
+  }
+  async function boot(){
+    S.page=pageKey(); if(!enabled()) return;
+    cssOnce();
+    try{ if(GST.authOn&&GST.authOn()) await GST.authReady(); }catch(e){}
+    try{ await (GST.loadMe&&GST.loadMe()); }catch(e){}
+    await load();
+    if(S.cfg){ apply(); watch(); }
+  }
+  /* ---------- 편집 모드 ---------- */
+  function dirty(){ if(!S.edit) return; S.edit.dirty=true; var st=document.querySelector('#gstSePanel .gse-st'); if(st){ st.textContent=T('unsaved'); st.classList.add('dirty'); } }
+  function curCfg(){ return S.edit.cfg; }
+  function syncOrder(){ curCfg().order=domOrder(); }
+  function setArr(a, k, on){ var i=a.indexOf(k); if(on&&i<0) a.push(k); if(!on&&i>=0) a.splice(i,1); }
+  function gridCols(p){ try{ var cs=getComputedStyle(p); if(cs.display.indexOf('grid')<0) return 1; return cs.gridTemplateColumns.split(' ').filter(Boolean).length; }catch(e){ return 1; } }
+  function decorate(){
+    var I=index();
+    I.list.forEach(function(el){
+      if(el.querySelector(':scope > .gst-se-bar')) return;
+      el.classList.add('gst-se-card');
+      var k=keyOf(el), isK=el.classList.contains('kpi'), wideOk=!isK && el.parentNode && gridCols(el.parentNode)>1;
+      var b=document.createElement('div'); b.className='gst-se-bar gst-noshot'; b.dataset.k=k;
+      b.innerHTML='<button type="button" class="gse-grip" data-a="move" title="'+esc(T('move'))+'" aria-label="'+esc(T('move'))+'">⠿</button>'
+        +(isK?'':'<button type="button" data-a="rename" title="'+esc(T('rename'))+'">✎</button>')
+        +(wideOk?'<button type="button" data-a="wide" aria-pressed="'+(curCfg().wide.indexOf(k)>=0)+'" title="'+esc(T('wide'))+'">⇔</button>':'')
+        +'<button type="button" data-a="hide">'+esc(T('hide'))+'</button>';
+      el.appendChild(b);
+    });
+  }
+  function undecorate(){
+    document.querySelectorAll('.gst-se-bar,.gse-pop').forEach(function(b){ b.remove(); });
+    document.querySelectorAll('.gst-se-card').forEach(function(el){ el.classList.remove('gst-se-card','gse-drag'); });
+  }
+  function hiddenList(){
+    var I=index(), cfg=curCfg(), out=[], seen={};
+    I.list.forEach(function(el){ var k=keyOf(el);
+      var h=el.hasAttribute('data-gst-hide'), ret=el.hasAttribute('data-gst-retired');
+      if(!h && !ret) return;
+      var g=grpOf(el); if(g && el.hasAttribute('data-gst-alt') && !h) return;   // 묶음의 다른 기준은 숨긴 카드가 아니다
+      if(g){ if(seen['g:'+g+':'+(h?1:0)]) return; seen['g:'+g+':'+(h?1:0)]=1; }
+      out.push({k:k, el:el, name:nameOf(el)+(el.classList.contains('kpi')?' ('+T('kpi')+')':''), ret:ret&&!h});
+    });
+    /* 사람이 숨긴 카드가 먼저, 화면이 원래 숨겨 둔 카드(은퇴)는 뒤에 «기본 숨김»으로 */
+    return out.filter(function(x){ return !x.ret; }).concat(out.filter(function(x){ return x.ret; }));
+  }
+  function panelHTML(){
+    var hl=hiddenList(), can=GST.targets&&GST.targets.can&&GST.targets.can(), pc=S.where!=='server';
+    var cur=S.src==='me'?T('cur_me'):S.src==='all'?T('cur_all'):S.src==='pc'?T('pc_only'):T('cur_none');
+    return '<b>'+esc(T('title'))+'</b><span class="gse-st" title="'+esc(T('hint'))+'">'+esc(cur)+'</span>'
+      +'<span class="gse-dd"><button type="button" data-p="hid">'+esc(T('hidden'))+' '+hl.filter(function(x){ return !x.ret; }).length+' ▾</button></span>'
+      +'<span class="gse-dd"><button type="button" data-p="reset">'+esc(T('reset'))+' ▾</button></span>'
+      +'<button type="button" data-p="cancel">'+esc(T('cancel'))+'</button>'
+      +'<span class="gse-dd"><button type="button" class="pri" data-p="save">'+esc(T('save'))+' ▾</button></span>';
+  }
+  function menu(btn, html){
+    var old=document.querySelector('#gstSePanel .gse-menu'); var same=old&&old.parentNode===btn.parentNode; if(old) old.remove(); if(same) return null;
+    var m=document.createElement('div'); m.className='gse-menu'; m.innerHTML=html; btn.parentNode.appendChild(m); return m;
+  }
+  function paintPanel(){
+    var P=document.getElementById('gstSePanel'); if(!P) return;
+    var d=S.edit&&S.edit.dirty; P.innerHTML=panelHTML(); if(d) dirty();
+  }
+  function onPanel(e){
+    var b=e.target.closest('button'); if(!b) return;
+    var P=document.getElementById('gstSePanel');
+    if(b.dataset.p==='hid'){
+      var hl=hiddenList();
+      var m=menu(b, hl.length?hl.map(function(x,i){ return '<div class="gse-row"><span>'+esc(x.name)+(x.ret?' <small>· '+esc(T('retired'))+'</small>':'')+'</span><button type="button" data-show="'+i+'">'+esc(T('show'))+'</button></div>'; }).join(''):'<div class="gse-empty">'+esc(T('none_hidden'))+'</div>');
+      if(m) m.addEventListener('click', function(ev){ var s=ev.target.closest('[data-show]'); if(!s) return; var x=hl[+s.dataset.show];
+        var cfg=curCfg(); unitOf(x.el).forEach(function(u){ var k=keyOf(u); setArr(cfg.hidden,k,false); if(u.hasAttribute('data-gst-retired')||u.hasAttribute('data-gst-unret')) setArr(cfg.show,k,true); });
+        apply(cfg); decorate(); dirty(); paintPanel(); resizeCharts(x.el); });
+      return;
+    }
+    if(b.dataset.p==='reset'){
+      var opts=[];
+      if(S.at.me) opts.push('<button type="button" data-r="me">'+esc(T('reset_me'))+'<small>'+esc(T('reset_q'))+'</small></button>');
+      if(S.at.all) opts.push('<button type="button" data-r="all"'+(GST.targets&&GST.targets.can&&GST.targets.can()?'':' disabled')+'>'+esc(T('reset_all'))+'<small>'+esc(T('all_note'))+'</small></button>');
+      if(S.src==='pc') opts.push('<button type="button" data-r="pc">'+esc(T('reset_me'))+'<small>'+esc(T('reset_q'))+'</small></button>');
+      if(!opts.length) opts.push('<div class="gse-empty">'+esc(T('cur_none'))+'</div>');
+      var m2=menu(b, opts.join(''));
+      if(m2) m2.addEventListener('click', function(ev){ var r=ev.target.closest('[data-r]'); if(!r||r.disabled) return; resetTo(r.dataset.r); });
+      return;
+    }
+    if(b.dataset.p==='cancel'){ leave(false); return; }
+    if(b.dataset.p==='save'){
+      var can=GST.targets&&GST.targets.can&&GST.targets.can(), srv=S.where==='server';
+      var m3=menu(b, '<button type="button" data-s="all"'+(can&&srv?'':' disabled')+'>'+esc(T('save_all'))+'<small>'+esc(srv?T('all_note'):T('pc_only'))+'</small></button>'
+        +'<button type="button" data-s="me">'+esc(T('save_me'))+'<small>'+esc(srv?T('me_note'):T('pc_only'))+'</small></button>');
+      if(m3) m3.addEventListener('click', function(ev){ var s=ev.target.closest('[data-s]'); if(!s||s.disabled) return; save(s.dataset.s); });
+    }
+  }
+  function toast(msg){ try{ (GST.capToast||function(){})(msg); }catch(e){} }
+  async function rpc(scope, cfg, at){
+    var C=await GST._dbAuthed(); if(!C) return {ok:false, error:'no_db'};
+    var r=await C.rpc('screen_layout_save', {p_page:S.page, p_scope:scope, p_config:cfg, p_at:at||null});
+    if(r.error) return {ok:false, error:r.error.message||'fail'};
+    return r.data||{ok:false,error:'fail'};
+  }
+  async function save(scope){
+    var cfg=JSON.parse(JSON.stringify(curCfg())); syncOrder(); cfg.order=domOrder();
+    if(S.where!=='server'){
+      try{ localStorage.setItem(LKEY(), JSON.stringify(cfg)); }catch(e){}
+      S.cfg=cfg; S.src='pc'; leave(true); toast(T('saved_pc')); return;
+    }
+    var r=await rpc(scope, cfg, S.at[scope]);
+    if(!r.ok){ toast(r.error==='conflict'?T('conflict'):r.error==='forbidden'?T('forbidden'):T('fail')); return; }
+    S.at[scope]=r.at;
+    if(scope==='me' || !S.at.me){ S.cfg=cfg; S.src=scope; }
+    leave(true); toast(scope==='all'?T('saved_all'):T('saved_me'));
+  }
+  async function resetTo(which){
+    if(which==='pc'){ try{ localStorage.removeItem(LKEY()); }catch(e){} location.reload(); return; }
+    var r=await rpc(which, null, S.at[which]);
+    if(!r.ok){ toast(r.error==='conflict'?T('conflict'):r.error==='forbidden'?T('forbidden'):T('fail')); return; }
+    location.reload();
+  }
+  function resizeCharts(el){ if(!window.Chart||!Chart.getChart) return; requestAnimationFrame(function(){ [].forEach.call((el||document).querySelectorAll('canvas'), function(cv){ try{ var ch=Chart.getChart(cv); if(ch) ch.resize(); }catch(e){} }); }); }
+  /* 카드 단추 */
+  function onCardBtn(e){
+    var b=e.target.closest('.gst-se-bar button'); if(!b) return;
+    e.preventDefault(); e.stopPropagation();
+    var bar=b.closest('.gst-se-bar'), el=bar.parentNode, k=bar.dataset.k, cfg=curCfg(), a=b.dataset.a;
+    if(a==='hide'){ unitOf(el).forEach(function(u){ setArr(cfg.hidden, keyOf(u), true); setArr(cfg.show, keyOf(u), false); }); apply(cfg); dirty(); paintPanel(); return; }
+    if(a==='wide'){ var on=cfg.wide.indexOf(k)<0; unitOf(el).forEach(function(u){ setArr(cfg.wide, keyOf(u), on); }); apply(cfg); b.setAttribute('aria-pressed', String(on)); b.title=T(on?'narrow':'wide'); dirty(); resizeCharts(el.parentNode); return; }
+    if(a==='rename'){
+      var old=el.querySelector('.gse-pop'); if(old){ old.remove(); return; }
+      var h=headOf(el), tn=h&&firstText(h); if(!tn) return;
+      var p=document.createElement('div'); p.className='gse-pop gst-noshot';
+      p.innerHTML='<input type="text" maxlength="60" aria-label="'+esc(T('rename'))+'"><button type="button" data-x="ok">'+esc(T('rn_apply'))+'</button><button type="button" data-x="orig">'+esc(T('rn_orig'))+'</button>';
+      el.appendChild(p); var inp=p.querySelector('input'); inp.value=tn.nodeValue.trim(); inp.focus(); inp.select();
+      var done=function(v){ if(v==null) delete cfg.titles[k]; else { v=String(v).trim(); if(v) cfg.titles[k]=v; else delete cfg.titles[k]; } apply(cfg); p.remove(); dirty(); };
+      p.addEventListener('click', function(ev){ ev.stopPropagation(); var x=ev.target.closest('[data-x]'); if(!x) return; done(x.dataset.x==='ok'?inp.value:null); });
+      inp.addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); done(inp.value); } if(ev.key==='Escape'){ ev.stopPropagation(); p.remove(); } });
+      return;
+    }
+  }
+  /* 끌어 옮기기 — 같은 부모 안에서만. 가로로 놓인 카드는 좌우, 한 줄 전체 카드는 위아래로 견준다 */
+  function onDown(e){
+    var g=e.target.closest('.gst-se-bar .gse-grip'); if(!g) return;
+    e.preventDefault(); e.stopPropagation();
+    var el=g.closest('.gst-se-bar').parentNode, unit=unitOf(el), par=el.parentNode;
+    unit.forEach(function(u){ u.classList.add('gse-drag'); });
+    var line=document.createElement('div'); line.className='gse-line'; document.body.appendChild(line); line.hidden=true;
+    var tgt=null, before=false;
+    var mv=function(ev){
+      var hit=document.elementsFromPoint(ev.clientX, ev.clientY), c=null;
+      for(var i=0;i<hit.length;i++){ var x=hit[i].closest&&hit[i].closest('.gst-se-card'); if(x && x.parentNode===par && unit.indexOf(x)<0){ c=x; break; } }
+      if(!c){ tgt=null; line.hidden=true; return; }
+      var r=c.getBoundingClientRect(), pr=par.getBoundingClientRect(), horiz=r.width < pr.width*0.7;
+      before = horiz ? ev.clientX < r.left+r.width/2 : ev.clientY < r.top+r.height/2;
+      tgt=c; line.hidden=false;
+      if(horiz) Object.assign(line.style,{left:((before?r.left:r.right)-3)+'px', top:r.top+'px', width:'4px', height:r.height+'px'});
+      else Object.assign(line.style,{left:r.left+'px', top:((before?r.top:r.bottom)-3)+'px', width:r.width+'px', height:'4px'});
+    };
+    var up=function(){
+      window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); window.removeEventListener('pointercancel',up);
+      line.remove(); unit.forEach(function(u){ u.classList.remove('gse-drag'); });
+      if(!tgt) return;
+      var tu=unitOf(tgt), ref=before?tu[0]:tu[tu.length-1].nextSibling;
+      unit.forEach(function(u){ par.insertBefore(u, ref); });
+      syncOrder(); dirty(); try{ GST._layoutFit && GST._layoutFit([par]); }catch(err){} resizeCharts(par);
+    };
+    window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up); window.addEventListener('pointercancel',up);
+  }
+  function blockClick(e){
+    if(!S.edit) return;
+    if(e.target.closest('#gstSePanel,.gst-se-bar,.gse-pop')) return;
+    if(e.target.closest('.gst-se-card')){ e.preventDefault(); e.stopPropagation(); }
+  }
+  function edit(){
+    S.page=pageKey(); if(!enabled() || S.edit) return false;
+    cssOnce();
+    var base=S.cfg?JSON.parse(JSON.stringify(S.cfg)):{};
+    base.v=1; base.order=base.order&&base.order.length?base.order:domOrder();
+    base.hidden=base.hidden||[]; base.wide=base.wide||[]; base.show=base.show||[]; base.titles=base.titles||{};
+    S.edit={ cfg:base, snap:JSON.stringify(base), dirty:false };
+    document.body.classList.add('gst-se-on');
+    decorate();
+    var P=document.createElement('div'); P.id='gstSePanel'; P.className='gst-noshot'; P.setAttribute('role','toolbar'); P.setAttribute('aria-label',T('title'));
+    document.body.appendChild(P); paintPanel();
+    P.addEventListener('click', onPanel);
+    document.addEventListener('click', onCardBtn, true);
+    document.addEventListener('click', blockClick, true);
+    document.addEventListener('pointerdown', onDown, true);
+    S.edit.esc=function(ev){ if(ev.key==='Escape' && !document.querySelector('.gse-pop')){ var m=document.querySelector('#gstSePanel .gse-menu'); if(m) m.remove(); } };
+    document.addEventListener('keydown', S.edit.esc);
+    return true;
+  }
+  function leave(kept){
+    if(!S.edit) return;
+    var snap=JSON.parse(S.edit.snap);
+    document.removeEventListener('click', onCardBtn, true);
+    document.removeEventListener('click', blockClick, true);
+    document.removeEventListener('pointerdown', onDown, true);
+    document.removeEventListener('keydown', S.edit.esc);
+    var P=document.getElementById('gstSePanel'); if(P) P.remove();
+    undecorate(); document.body.classList.remove('gst-se-on');
+    if(!kept) apply(snap);   // 취소 — 편집을 시작할 때의 배치로 (DOM 순서까지)
+    else if(S.cfg) apply(S.cfg);
+    S.edit=null; if(S.cfg) watch();
+    resizeCharts(document);
+  }
+  window.addEventListener('message', function(e){ var d=e.data||{};
+    if(d.type==='gst-screen-edit'){ if(S.edit) leave(false); else edit(); }
+    if(d.type==='gst-screen-q' && e.source){ try{ e.source.postMessage({type:'gst-screen-a', ok:enabled(), page:pageKey()}, '*'); }catch(err){} }
+  });
+  return { boot:boot, load:load, apply:apply, edit:edit, leave:leave, keyOf:keyOf, cards:function(){ return index().list; }, state:function(){ return S; }, pageKey:pageKey, enabled:enabled };
+})();
+/* 어느 화면에서나 스스로 깨어난다 — 페이지는 한 줄도 안 고친다(chartLayout 과 같은 규율) */
+(function(){
+  var go=function(){ try{ GST.screen.boot(); }catch(e){ console.warn('[screen] 시작 실패', e); } };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go); else setTimeout(go, 0);
+})();
 
 global.GST = GST;
 })(window);

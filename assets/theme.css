@@ -608,7 +608,7 @@ body:not(.gst-explain) .card-note.warn .nv{font-size:var(--fs-caption);line-heig
 
 /* ── 차트 배치 층 (v174 · GST.chartLayout) — 묶음의 다른 기준 · 은퇴 카드는 숨기고, 빈 격자는 열 수를 맞춘다 ──
    숨은 카드는 폭이 0 이라 PPT 전체 내보내기(pptAuto)가 저절로 건너뛴다. 되돌리기는 그 페이지의 spec 한 줄이다. */
-[data-gst-alt],[data-gst-retired],.gst-n0{display:none !important}
+[data-gst-alt],[data-gst-retired],[data-gst-hide],.gst-n0{display:none !important}
 .gst-n1{grid-template-columns:minmax(0,1fr) !important}
 .gst-n2{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
 /* 칸 수를 줄였으니 «몇 칸 걸치기»도 푼다 — span 3 이 한 칸 격자에 남으면 보이지 않는 열이 생긴다(pm 60일 카드) */
@@ -966,7 +966,7 @@ body.theme-slate .gst-band{background:var(--surface-glass,var(--surface))}
 @media(max-width:1250px){.kpis[data-n="5"],.kpis[data-n="4"]{grid-template-columns:repeat(3,1fr) !important}}
 /* ② 입력률이 낮아 접힌 카드는 «한 줄 띠»다 — 제목 · 기준 단추줄 · 「입력률 N% — 차트 보기」. 격자의 align-items:stretch 가
       옆 카드(정합성 · ~700px) 높이로 늘려 빈 상자가 섰다 → 위쪽에 붙인다(align-self:start). 옆 카드가 그 자리를 쓴다. */
-.card.gst-fold:not([data-gst-alt]):not([data-gst-retired]){align-self:start;display:flex !important;   /* 묶음의 다른 기준·은퇴(chartLayout 의 숨김)는 그대로 숨는다 — 이 flex 가 그 display:none 을 이기면 안 된다 */flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 16px !important;min-height:0 !important}
+.card.gst-fold:not([data-gst-alt]):not([data-gst-retired]):not([data-gst-hide]){align-self:start;display:flex !important;   /* 묶음의 다른 기준·은퇴(chartLayout 의 숨김)는 그대로 숨는다 — 이 flex 가 그 display:none 을 이기면 안 된다 */flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 16px !important;min-height:0 !important}
 .card.gst-fold>h3{margin:0 !important;flex:none}
 .card.gst-fold .gst-axsel{margin:0}
 .card.gst-fold .gst-foldbtn{margin:0 0 0 auto}
@@ -979,7 +979,7 @@ body.theme-slate .gst-band{background:var(--surface-glass,var(--surface))}
    2열이 된 3장 격자는 남는 한 장이 줄을 다 쓴다(숨은·은퇴 카드는 세지 않는다) */
 @media(max-width:1550px){
   body.gst-sb-open .grid3.gst-n1,body.gst-sb-open .arow.gst-n1{grid-template-columns:minmax(0,1fr) !important}
-  body.gst-sb-open .grid3:not(.gst-n1):not(.gst-n2) > :last-child:nth-child(odd of :not([hidden]):not([data-gst-retired]):not([data-gst-alt])){grid-column:1 / -1}
+  body.gst-sb-open .grid3:not(.gst-n1):not(.gst-n2) > :last-child:nth-child(odd of :not([hidden]):not([data-gst-retired]):not([data-gst-alt]):not([data-gst-hide])){grid-column:1 / -1}
 }
 /* ④ 격자 칸의 기본 min-width 는 «내용 폭»이다 — nowrap 표가 든 카드가 667px 로 자라 페이지가 옆으로 넘쳤다(설비 현황 Warranty 표 · 실측 1,863px).
       칸은 격자 폭에 맞추고, 표는 카드 «안»에서 옆으로 민다. 숫자·열은 그대로다. */
