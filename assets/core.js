@@ -16,10 +16,22 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 197;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 198;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 여기서 묻는다 — 저장 키(축편집·피벗·섹션)·챗봇 출처·자동순회 페이지 id 가 이 한 곳을 본다.
    (v137 에는 오프라인 판의 srcdoc 때문에 두었고, 오프라인 판은 v199 에 없앴다 — 한 곳에서 묻는 규약은 그대로 둔다.) */
 GST.pagePath = function(){ return location.pathname; };
+/* 카드 하나만 그리는 모드 (v206) — 다른 화면의 «카드 그대로 가져오기»가 이 화면을 ?embed=<카드 열쇠> 로 띄운다.
+   일찍 정해 둔다 — 필터 저장 가드·자동 새로고침·세부내역 위임이 이 값을 본다. 보이기는 카드를 찾은 뒤에(아래 «embed» 모듈). */
+GST._embed = (function(){ try{ return (window.self!==window.top && new URLSearchParams(location.search).get('embed')) || ''; }catch(e){ return ''; } })();
+if(GST._embed){ try{ document.documentElement.classList.add('gst-embed');
+  var _es=document.createElement('style'); _es.id='gstEmbedCss';
+  _es.textContent='html.gst-embed body{visibility:hidden}'
+    +'html.gst-embed.gse-ready body{visibility:visible;margin:0 !important;padding:0 !important;background:transparent !important;min-height:0 !important}'
+    +'html.gst-embed [data-gse-off]{display:none !important}'
+    +'html.gst-embed [data-gse-keep]{margin:0 !important;padding:0 !important;display:block !important;max-width:none !important;width:auto !important;min-height:0 !important;height:auto !important;border:0 !important;box-shadow:none !important;background:transparent !important;transform:none !important}'
+    +'html.gst-embed [data-gse-card]{margin:0 !important;display:block !important;width:auto !important;max-width:none !important}'
+    +'html.gst-embed .gst-se-bar,html.gst-embed .gse-rs{display:none !important}';
+  (document.head||document.documentElement).appendChild(_es); }catch(e){} }
 /* 효과를 «아예» 쓰지 않는 화면 (v193 · 사용자 「효과를 다 꺼야 안 느려지네 — 이 페이지만 기본값이 효과 아예 없게 · 그래야 로딩 때부터 빠르니까」).
    고장 분석은 차트가 가장 많고 알람 분석 탭이 원장 9만 행을 그린다. 효과 층(별빛 rAF · 마우스마다 카드 판정 · KPI 값 감시)과
    움직임 층(떠오르기 · 차트 차례 등장)이 로딩·스크롤을 무겁게 했다 — v192 에 줄였지만 «전부 끄기»를 해야 빨랐다(사용자 실측).
@@ -1353,6 +1365,8 @@ GST._ROWS_T = {
   ja:{n:'件', more:'先頭 {m} 件のみ表示', close:'閉じる', copy:'⧉ コピー', copied:'コピー済み', list:'明細を見る'}
 };
 GST.rowsModal = function(title, cols, rows, note){
+  /* 다른 화면에 띄운 카드(v206)의 세부내역은 그 화면(부모)에서 연다 — 카드 크기의 iframe 안에 열면 표가 찌그러진다 */
+  if(GST._embed){ try{ const P=window.parent; if(P && P!==window && P.GST && P.GST.rowsModal) return P.GST.rowsModal(title, cols, rows, note); }catch(e){} }
   const T=GST._ROWS_T[GST._lang()]||GST._ROWS_T.ko, esc=GST._esc, MAX=500;
   const shown=rows.slice(0,MAX);
   const sub=rows.length.toLocaleString()+T.n
@@ -5984,6 +5998,7 @@ GST._softReload = async function(){
      셸은 보이는 iframe 에만 .active 를 준다 — 그것을 본다(교차 출처면 frameElement 접근이 던지므로 try). */
 GST._arHidden = function(){
   if(document.hidden) return true;
+  if(GST._embed) return false;   // 다른 화면에 띄운 카드(v206) — 그 iframe 은 셸의 .active 가 아니어도 보이는 중이다
   try{ const fe = window.frameElement; if(fe && fe.classList && !fe.classList.contains('active')) return true; }catch(e){}
   return false;
 };
@@ -6578,7 +6593,26 @@ GST.filters = (function(){
 
   /* ⚠ JSON.stringify(new Set) 은 '{}' 다 — 배열로 눕혀 저장하고 되살릴 때 Set 으로 되돌린다.
      그냥 Object.assign 으로 복원하면 F.campus 가 빈 객체가 되어 .has 가 사라진다(실제로 죽었다). */
+  var EPEND=null, EMB=null;
+  /* 카드 하나만 그리는 모드(v206)에서 다른 화면의 상세 필터를 그대로 받는다 — 두 벌(설비·인원)과 기간. 받은 값은 저장하지 않는다(save 가드) —
+     안 그러면 다른 화면에 띄운 카드 하나 때문에 사람이 이 화면에 걸어 둔 필터가 바뀐다. */
+  function embedSet(sn){
+    EMB=sn||{};
+    if(!CFG){ EPEND=EMB; return; }
+    embedPut(EMB);
+    refresh(); if(CFG.onChange) CFG.onChange();
+  }
+  /* 값만 넣는다 — mount 가 다시 불릴 때(주간 현황은 그리면서 여러 번 부른다) 저장본 대신 받은 값을 다시 건다. 그 자리에서는 그리지 않는다(페이지가 곧 그린다) */
+  function embedPut(sn){
+    sn=sn||{};
+    [['eq',EQ],['hr',HR]].forEach(function(gp){ var src=sn[gp[0]]||{}, G=gp[1];
+      AXES.forEach(function(k){ if(!(k in G.F)) return; var v=src[k];
+        if(MULTI[k]){ G.F[k].clear(); (Array.isArray(v)?v:(v?[v]:[])).forEach(function(x){ G.F[k].add(x); }); }
+        else G.F[k]=v||''; }); });
+    F.dtFrom=sn.dtFrom||''; F.dtTo=sn.dtTo||'';
+  }
   function save(){ try{
+    if(GST._embed) return;
     /* mount 전에는 KEY 가 '' 다. 그대로 쓰면 «빈 이름» 키에 남의 페이지 값이 섞여 들어가고,
        정작 이 페이지 저장본은 안 바뀐다 — 저장한 줄 알았는데 안 된 상태가 된다. */
     if(!KEY) return;
@@ -6678,6 +6712,10 @@ GST.filters = (function(){
   return {
     F: F,          // 설비 기준 (옛 이름 — 여덟 페이지가 이걸 본다)
     H: HR.F,       // 인원 기준
+    /* 지금 걸린 상세 필터(두 벌·기간) — 다른 화면에 띄운 «카드 그대로»에 보낸다(v206) */
+    snapshot: function(){ if(!CFG) return null; var dump=function(G){ var o={}; AXES.forEach(function(k){ if(k in G.F) o[k]=MULTI[k]?Array.from(G.F[k]):G.F[k]; }); return o; };
+      return {eq:dump(EQ), hr:dump(HR), dtFrom:F.dtFrom||'', dtTo:F.dtTo||''}; },
+    embedSet: embedSet,
     _on: read,
     /* 공통 블록을 페이지의 .slicers 맨 앞에 끼우고, 원래 있던 항목들은 구분선 아래
        «이 페이지 전용»으로 밀어낸다. 사이드바 이동(autoSidebar)은 그대로 동작한다. */
@@ -6694,6 +6732,8 @@ GST.filters = (function(){
       /* ⚠ KCUR 을 먼저 지운다 — 보류분 재생은 «아직 한 번도 안 걸린» 값이라,
          같은-값-건너뛰기(v135 8단계)에 걸리면 그 탭만 영영 필터가 안 걸린다. */
       if(KPEND){ const kp = KPEND; KPEND = null; KCUR = null; kioskSet(kp.k, kp.v); }
+      if(EPEND){ const ep = EPEND; EPEND = null; setTimeout(function(){ embedSet(ep); }, 0); }
+      else if(GST._embed && EMB) embedPut(EMB);
       if(!document.getElementById('gf-css')){
         const st=document.createElement('style'); st.id='gf-css';
         /* 이 화면에 안 걸리는 축은 «잠긴 칸»으로 보인다 — 흐리게 해서 눌러 볼 것이
@@ -11698,11 +11738,11 @@ GST.CB_T = {
        expr_ph:'예: {1}/{2}*100  ({1}=첫째 값 · {2}=둘째 값)', expr_bad:'식을 읽을 수 없습니다 — {1} {2} 숫자 + - * / ( ) 만', m_pct:'% 로 표시',
        cond:'조건부 색', cond_none:'없음', cond_v:'기준값', cond_c:{bad:'붉게',warn:'노랗게',ok:'초록'}, join:'설치현황 조인 {p}%',
        tpl:'추천 차트', tpl_pick:'— 추천에서 고르기 —', undo:'되돌리기 (Ctrl+Z)', redo:'다시 실행 (Ctrl+Y)',
-       as:{auto:'자동',bar:'막대',line:'선',area:'영역'}, ax:{y:'왼쪽',y2:'오른쪽'},
+       as:{auto:'자동',bar:'막대',line:'선',area:'영역',none:'계산에만 (안 그림)'}, ax:{y:'왼쪽',y2:'오른쪽'},
        b:{year:'연',quarter:'분기',month:'월',week:'주',day:'일',weekday:'요일'},
        wd:['일','월','화','수','목','금','토'],
        s:{value:'값 큰 순',value_asc:'값 작은 순',label:'이름 순'},
-       r:{all:'전체 기간',d7:'최근 7일',d30:'최근 30일',d90:'최근 90일',d180:'최근 180일',m12:'최근 12개월',ytd:'올해',custom:'직접 지정'},
+       r:{all:'전체 기간',nb:'최근 N 구간 (화면과 같은 구간)',d7:'최근 7일',d30:'최근 30일',d90:'최근 90일',d180:'최근 180일',m12:'최근 12개월',ytd:'올해',custom:'직접 지정'},
        op:{eq:'=',ne:'≠',has:'포함',nhas:'포함 안 함',in:'다음 중 하나 (쉼표)',nin:'다음 중 아무것도 아님',empty:'비어 있음',nempty:'비어 있지 않음',gt:'>',ge:'≥',lt:'<',le:'≤'},
        lg:{auto:'자동',bottom:'아래',top:'위',right:'오른쪽',none:'숨김'},
        p:{def:'기본',vivid:'선명',blue:'파랑',green:'초록',warm:'따뜻한',mono:'무채색'},
@@ -11723,11 +11763,11 @@ GST.CB_T = {
        expr_ph:'e.g. {1}/{2}*100  ({1}=1st value · {2}=2nd value)', expr_bad:'Cannot read the formula — only {1} {2} numbers + - * / ( )', m_pct:'Show as %',
        cond:'Conditional color', cond_none:'None', cond_v:'Threshold', cond_c:{bad:'Red',warn:'Amber',ok:'Green'}, join:'Installed-base join {p}%',
        tpl:'Suggested charts', tpl_pick:'— pick a suggestion —', undo:'Undo (Ctrl+Z)', redo:'Redo (Ctrl+Y)',
-       as:{auto:'Auto',bar:'Bar',line:'Line',area:'Area'}, ax:{y:'Left',y2:'Right'},
+       as:{auto:'Auto',bar:'Bar',line:'Line',area:'Area',none:'For calculation only'}, ax:{y:'Left',y2:'Right'},
        b:{year:'Year',quarter:'Quarter',month:'Month',week:'Week',day:'Day',weekday:'Weekday'},
        wd:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
        s:{value:'Largest first',value_asc:'Smallest first',label:'By name'},
-       r:{all:'All time',d7:'Last 7 days',d30:'Last 30 days',d90:'Last 90 days',d180:'Last 180 days',m12:'Last 12 months',ytd:'This year',custom:'Custom'},
+       r:{all:'All time',nb:'Last N periods (same as the screen)',d7:'Last 7 days',d30:'Last 30 days',d90:'Last 90 days',d180:'Last 180 days',m12:'Last 12 months',ytd:'This year',custom:'Custom'},
        op:{eq:'=',ne:'≠',has:'contains',nhas:'does not contain',in:'is one of (comma)',nin:'is none of',empty:'is empty',nempty:'is not empty',gt:'>',ge:'≥',lt:'<',le:'≤'},
        lg:{auto:'Auto',bottom:'Bottom',top:'Top',right:'Right',none:'Hidden'},
        p:{def:'Default',vivid:'Vivid',blue:'Blue',green:'Green',warm:'Warm',mono:'Neutral'},
@@ -11748,11 +11788,11 @@ GST.CB_T = {
        expr_ph:'例：{1}/{2}*100（{1}=第一个值 · {2}=第二个值）', expr_bad:'无法读取公式 — 仅限 {1} {2} 数字 + - * / ( )', m_pct:'以 % 显示',
        cond:'条件颜色', cond_none:'无', cond_v:'阈值', cond_c:{bad:'红色',warn:'黄色',ok:'绿色'}, join:'安装现况关联 {p}%',
        tpl:'推荐图表', tpl_pick:'— 从推荐中选择 —', undo:'撤销 (Ctrl+Z)', redo:'重做 (Ctrl+Y)',
-       as:{auto:'自动',bar:'柱形',line:'折线',area:'面积'}, ax:{y:'左',y2:'右'},
+       as:{auto:'自动',bar:'柱形',line:'折线',area:'面积',none:'仅用于计算'}, ax:{y:'左',y2:'右'},
        b:{year:'年',quarter:'季度',month:'月',week:'周',day:'日',weekday:'星期'},
        wd:['日','一','二','三','四','五','六'],
        s:{value:'从大到小',value_asc:'从小到大',label:'按名称'},
-       r:{all:'全部期间',d7:'最近7天',d30:'最近30天',d90:'最近90天',d180:'最近180天',m12:'最近12个月',ytd:'今年',custom:'自定义'},
+       r:{all:'全部期间',nb:'最近N个区间 (与画面相同)',d7:'最近7天',d30:'最近30天',d90:'最近90天',d180:'最近180天',m12:'最近12个月',ytd:'今年',custom:'自定义'},
        op:{eq:'=',ne:'≠',has:'包含',nhas:'不包含',in:'属于其中之一（逗号）',nin:'不属于其中任何一个',empty:'为空',nempty:'不为空',gt:'>',ge:'≥',lt:'<',le:'≤'},
        lg:{auto:'自动',bottom:'下',top:'上',right:'右',none:'隐藏'},
        p:{def:'默认',vivid:'鲜明',blue:'蓝色',green:'绿色',warm:'暖色',mono:'中性色'},
@@ -11773,11 +11813,11 @@ GST.CB_T = {
        expr_ph:'例: {1}/{2}*100（{1}=1番目の値 · {2}=2番目の値）', expr_bad:'式を読めません — {1} {2} 数字 + - * / ( ) のみ', m_pct:'% で表示',
        cond:'条件付き色', cond_none:'なし', cond_v:'基準値', cond_c:{bad:'赤',warn:'黄',ok:'緑'}, join:'設置現況の結合 {p}%',
        tpl:'おすすめグラフ', tpl_pick:'— おすすめから選ぶ —', undo:'元に戻す (Ctrl+Z)', redo:'やり直す (Ctrl+Y)',
-       as:{auto:'自動',bar:'棒',line:'折れ線',area:'面'}, ax:{y:'左',y2:'右'},
+       as:{auto:'自動',bar:'棒',line:'折れ線',area:'面',none:'計算のみ'}, ax:{y:'左',y2:'右'},
        b:{year:'年',quarter:'四半期',month:'月',week:'週',day:'日',weekday:'曜日'},
        wd:['日','月','火','水','木','金','土'],
        s:{value:'大きい順',value_asc:'小さい順',label:'名前順'},
-       r:{all:'全期間',d7:'直近7日',d30:'直近30日',d90:'直近90日',d180:'直近180日',m12:'直近12か月',ytd:'今年',custom:'指定'},
+       r:{all:'全期間',nb:'直近N区間 (画面と同じ)',d7:'直近7日',d30:'直近30日',d90:'直近90日',d180:'直近180日',m12:'直近12か月',ytd:'今年',custom:'指定'},
        op:{eq:'=',ne:'≠',has:'含む',nhas:'含まない',in:'いずれか（カンマ）',nin:'いずれでもない',empty:'空欄',nempty:'空欄でない',gt:'>',ge:'≥',lt:'<',le:'≤'},
        lg:{auto:'自動',bottom:'下',top:'上',right:'右',none:'非表示'},
        p:{def:'既定',vivid:'鮮やか',blue:'青',green:'緑',warm:'暖色',mono:'無彩色'},
@@ -11868,12 +11908,27 @@ GST.cb = (function(){
     if(opF && GST.ORG && GST.ORG.region){ rows.forEach(function(o){ o._region=GST.ORG.region(o[opF.k])||''; }); fields.unshift({k:'_region', label:T('region'), kind:'text'}); }
     return {rows:rows, fields:fields};
   }
+  /* 화면과 같은 표기 흡수 (v206) — 고장 분석·자재 사용이 행을 읽을 때 하는 것과 같다: 작업단계 대문자 · 모델·공정 표기(GST.canon) ·
+     분류 칸의 전각 → 반각(GST.nfw). 안 하면 «GAIA_I_D»와 «GAIA-I-D»가 두 막대로 갈려 화면 차트와 숫자가 달라진다(레시피 복제가 틀린다).
+     자유 서술(현상·원인·조치)은 원문 그대로 둔다 — 화면도 그렇다. */
+  var NFW_F=['line','eqNo','snIn','snOut','campus','alarm','subproc','bay','mainEq','sn','eq','detail'];
+  function canonRows(spec, rows){
+    if(spec!=='wk'&&spec!=='mat') return;
+    var cn=GST.canon||{}, nf=GST.nfw||function(x){ return x; };
+    rows.forEach(function(o){
+      if(o.stage!=null) o.stage=String(o.stage).trim().toUpperCase();
+      if(o.model&&cn.model) o.model=cn.model(o.model);
+      if(o.proc&&cn.proc) o.proc=cn.proc(o.proc);
+      for(var i=0;i<NFW_F.length;i++){ var k=NFW_F[i]; if(o[k]) o[k]=String(nf(o[k])).trim(); }
+    });
+  }
   async function loadSpec(s){
     var SP=GST.SM.SPEC[s.spec], raw;
     if(s.db) raw=await GST.dbRows(s.spec); else raw=(await GST.fetchCSVCached(GST.sheetUrl(s.gid), s.key)).rows;
     var m=GST.SM.map(raw, SP), keys=Object.keys(SP.fields).filter(function(k){ return m.C[k]!=null&&m.C[k]>=0; });
     var rows=raw.slice(m.hi+1).map(function(row){ var o={}; keys.forEach(function(k){ var v=GST.SM.val(row,m.C,k); o[k]=v==null?'':String(v).trim(); }); return o; })
       .filter(function(o){ return keys.some(function(k){ return o[k]!==''; }); });
+    canonRows(s.spec, rows);
     return finish(rows, keys.map(function(k){ return {k:k, label:(GST.SM.label?GST.SM.label(SP,k):[].concat(SP.fields[k])[0])}; }));
   }
   async function loadLedger(s){
@@ -11943,7 +11998,7 @@ GST.cb = (function(){
     if(b==='year') return String(+k-1);
     return null;
   }
-  var BUCK=['year','quarter','month','week','day','weekday'], RANGE=['all','d7','d30','d90','d180','m12','ytd','custom'];
+  var BUCK=['year','quarter','month','week','day','weekday'], RANGE=['all','nb','d7','d30','d90','d180','m12','ytd','custom'];
   var OPS=['eq','ne','has','nhas','in','nin','empty','nempty','gt','ge','lt','le'], PALS=['def','vivid','blue','green','warm','mono'];
   var PAL={ vivid:['#6366F1','#EC4899','#14B8A6','#F59E0B','#8B5CF6','#EF4444','#22C55E','#0EA5E9'],
     blue:['#1D4ED8','#3B82F6','#60A5FA','#0EA5E9','#1E3A8A','#93C5FD','#2563EB','#38BDF8'],
@@ -12086,6 +12141,18 @@ GST.cb = (function(){
     }
     var isD=xF.kind==='date', wd=isD&&c.bucket==='weekday';
     var keyX=function(o){ var v=isD?bucketOf(o[c.x], c.bucket):o[c.x]; return v===''||v==null?T('blank'):v; };
+    /* 최근 N 구간 (v206) — 화면 추이 차트와 «같은 구간 함수»(GST.periods)로 열쇠를 만들고 빈 구간도 0 으로 세운다.
+       기준(마지막 구간)은 화면 기간 칸의 끝날, 없으면 자료의 마지막 날. 자료의 마지막 날은 앞쪽 nbBase 개 거르기만 건 행에서 찾는다
+       (레시피가 «화면이 그 차트에 거는 기본 조건»을 앞에 두고, 사람이 고른 조건은 뒤에 둔다 — 화면도 기준일을 그 조건 없이 잡는다). */
+    var NBK=null;
+    if(c.range==='nb' && isD && (c.bucket==='month'||c.bucket==='week') && GST.periods){
+      var anc=null, FF=(opt&&opt.page&&c.follow&&GST.filters&&GST.filters.F)||{};
+      if(FF.dtTo) anc=new Date(FF.dtTo+'T00:00:00Z');
+      else { var bc=Object.assign({}, c, {follow:false, range:'all', filters:(c.filters||[]).slice(0, c.nbBase==null?(c.filters||[]).length:c.nbBase)});
+        filterRows(bc, DS, null).forEach(function(o){ var d=GST.toDate(o[c.x]); if(d&&(!anc||d>anc)) anc=d; }); }
+      NBK=GST.periods(Math.max(1,Math.min(60,+c.nb||12)), anc||new Date(), c.bucket==='week'?'w':'m', '').map(function(p){ return p.key; });
+      var NBS={}; NBK.forEach(function(k){ NBS[k]=1; }); rows=rows.filter(function(o){ return NBS[bucketOf(o[c.x], c.bucket)]; }); R.rows=rows; R.n=rows.length;
+    }
     var sF=c.series&&DS.F[c.series]&&c.type!=='doughnut'&&c.type!=='pie'&&c.type!=='polar'?c.series:'';
     if(c.type==='heat' && !sF){ R.err='series'; return R; }
     var keyS=function(o){ var v=o[sF]; return v===''||v==null?T('blank'):v; };
@@ -12094,7 +12161,8 @@ GST.cb = (function(){
       ((cell[x]=cell[x]||{})[s]=cell[x][s]||[]).push(o); (xr[x]=xr[x]||[]).push(o); (sr[s]=sr[s]||[]).push(o); });
     var m0=ms[0], xv={}; Object.keys(xr).forEach(function(x){ xv[x]=aggOf(xr[x], m0); });
     var xs=Object.keys(xr), otherX=[];
-    if(isD) xs.sort();
+    if(NBK) xs=NBK.slice();
+    else if(isD) xs.sort();
     else {
       if(c.sort==='label') xs.sort(function(a,b){ return String(a).localeCompare(String(b),'ko',{numeric:true}); });
       else if(c.sort==='value_asc') xs.sort(function(a,b){ return xv[a]-xv[b]; });
@@ -12130,6 +12198,7 @@ GST.cb = (function(){
         if(m.calc==='yoy'){ data=xs.map(function(x){ var pk=prevYearKey(x, c.bucket); var C2=pk&&YC[pk]; if(!C2) return null; var rr=sF?(s==='\u0001other'?[].concat.apply([], otherS.map(function(k){ return C2[k]||[]; })):(C2[s]||[])):[].concat.apply([], Object.keys(C2).map(function(k){ return C2[k]; })); return rr.length?aggOf(rr, m):null; }); }
         else data=transform(raw[si], m.calc, colTot);
         var nm=sF?(ms.length>1?mName(m,DS)+' · '+lab(s):lab(s)):mName(m,DS);
+        if(m.as==='none') return;   // 계산에만 쓰는 값(식이 읽는다) — 그리지 않는다(v206)
         sets.push({name:nm, mi:mi, m:m, si:si, data:data, raw:raw[si], rows:xs.map(function(_, xi){ return cols[xi][si]; }), pct:pctCalc(m)});
       });
     });
@@ -12366,7 +12435,7 @@ GST.cb = (function(){
         +(isE&&m.expr&&!exprFn(m.expr)?'<small style="color:var(--bad,#C2412F)">'+esc(T('expr_bad'))+'</small>':'')
         +(isE?'<label class="gcb-ck"><input type="checkbox" data-mp="'+i+'"'+(m.pct?' checked':'')+'><span>'+esc(T('m_pct'))+'</span></label>':'');
       if(!isK&&!isSc) h+='<div class="gcb-row"><select data-mc="'+i+'" aria-label="'+esc(T('m_calc'))+'">'+opts(CALC, m.calc, function(v){ return T('c.'+v); })+'</select>'
-        +(multi?'<select data-mas="'+i+'" aria-label="'+esc(T('m_as'))+'" style="max-width:76px">'+opts(['auto','bar','line','area'], m.as, function(v){ return T('as.'+v); })+'</select>'
+        +(multi?'<select data-mas="'+i+'" aria-label="'+esc(T('m_as'))+'" style="max-width:76px">'+opts(['auto','bar','line','area','none'], m.as, function(v){ return T('as.'+v); })+'</select>'
           +'<select data-max="'+i+'" aria-label="'+esc(T('m_axis'))+'" style="max-width:72px">'+opts(['y','y2'], m.axis, function(v){ return T('ax.'+v); })+'</select>':'')+'</div>';
       if(multi) h+='<input type="text" data-mn="'+i+'" maxlength="40" placeholder="'+esc(T('m_name'))+'" value="'+esc(m.name||'')+'">';
       h+='</div>';
@@ -12379,6 +12448,7 @@ GST.cb = (function(){
     h+='<div class="gcb-row"><label><span>'+esc(T('dateF'))+'</span><select id="'+P+'fDate">'+fOpts(DS, c.dateF, ['date'], true)+'</select></label>'
       +'<label><span>'+esc(T('range'))+'</span><select id="'+P+'fRange">'+opts(RANGE, c.range, function(v){ return T('r.'+v); })+'</select></label></div>';
     if(c.range==='custom') h+='<div class="gcb-row"><input type="date" id="'+P+'fFrom" value="'+esc(c.from||'')+'" aria-label="from"><input type="date" id="'+P+'fTo" value="'+esc(c.to||'')+'" aria-label="to"></div>';
+    if(c.range==='nb') h+='<div class="gcb-row"><label><span>N</span><input type="number" min="1" max="60" id="'+P+'fNb" value="'+esc(c.nb||12)+'"></label></div>';
     h+='<div><div class="gcb-l"><span>'+esc(T('filters'))+'</span><button type="button" class="gcb-add" id="'+P+'addF">'+esc(T('add_f'))+'</button></div><div style="display:flex;flex-direction:column;gap:5px">';
     (c.filters||[]).forEach(function(f, i){ var noV=f.op==='empty'||f.op==='nempty';
       h+='<div class="gcb-row"><select data-ff="'+i+'">'+fOpts(DS, f.f)+'</select><select data-fo="'+i+'" style="max-width:96px">'+opts(OPS, f.op||'eq', function(v){ return T('op.'+v); })+'</select>'
@@ -12418,6 +12488,7 @@ GST.cb = (function(){
       on('fOther','onchange',function(e){ c.other=e.checked; });
       on('fDate','onchange',function(e){ c.dateF=e.value; });
       on('fRange','onchange',function(e){ c.range=e.value; redraw(); });
+      on('fNb','onchange',function(e){ c.nb=Math.max(1,Math.min(60,+e.value||12)); ch(); });
       on('fFrom','onchange',function(e){ c.from=e.value; });
       on('fTo','onchange',function(e){ c.to=e.value; });
       on('fLabels','onchange',function(e){ c.disp.labels=e.checked; });
@@ -12579,7 +12650,15 @@ GST.cb = (function(){
     if(bk){ cfg.range='all'; }
     return {cfg:norm(cfg), score:best.score, err:best.err, src:best.src};
   }
-  return { SRC:SRC, guess:guess, TYPES:TYPES, load:load, data:ds, norm:norm, defaults:defaults, run:function(c, opt){ var d=ds(norm(c).src); return d?run(c, d, opt):null; },
+  /* ---- 화면 차트의 레시피 (v206 · 사용자 「추정 말고 정확히」) ----
+     화면이 «이 차트 = 이 자료·이 축·이 조건»을 직접 적어 둔다. GST.cb.recipe({캔버스 id: 함수|{none:사유}}).
+     함수는 «부를 때의» 화면 상태(작업단계 고르기 등)를 읽어 {cfg, drop:[옮기지 못한 것]} 을 돌려준다 — 새로 만들기·복사가 그 순간의 조건을 담는다.
+     none 은 «이 엔진으로는 같은 숫자를 못 낸다»는 표시다(비율·인원 분모·판정 등) — 그 카드는 «카드 그대로 가져오기»로 옮긴다.
+     ⚠ 레시피가 화면 숫자와 같은지는 t-cb 가 화면을 띄워 막대마다 대조한다 — 한쪽만 고치면 붉게 뜬다. */
+  var RECIPES={};
+  function recipe(map){ Object.keys(map||{}).forEach(function(k){ RECIPES[k]=map[k]; }); }
+  function recipeOf(id){ var r=RECIPES[id]; if(!r) return null; try{ var o=typeof r==='function'?r():r; if(o&&o.cfg) o.cfg=norm(o.cfg); return o||null; }catch(e){ console.warn('[cb] 레시피', id, e); return null; } }
+  return { SRC:SRC, guess:guess, recipe:recipe, recipeOf:recipeOf, recipes:function(){ return Object.keys(RECIPES); }, TYPES:TYPES, load:load, data:ds, norm:norm, defaults:defaults, run:function(c, opt){ var d=ds(norm(c).src); return d?run(c, d, opt):null; },
     draw:draw, form:form, alpha:alpha, PAL:PAL, PALS:PALS, ic:ic, templates:templates, exprFn:exprFn, title:title, meta:meta, pagePass:pagePass, T:T, _reset:function(){ Object.keys(DATA).forEach(function(k){ delete DATA[k]; }); } };
 })();
 
@@ -12609,7 +12688,7 @@ GST.SCREEN_T = {
       unsaved:'저장하지 않은 변경', hint:'카드 머리의 단추로 옮기고 · 숨기고 · 폭과 제목을 바꿉니다. 계산·필터·세부내역은 그대로입니다',
       kpi:'지표', retired:'기본 숨김', pc_only:'이 PC 에만 저장됩니다(서버 준비 전)',
       chart:'차트 설정', add:'아래에 차트 추가', add_p:'＋ 차트 추가', del:'삭제', c_orig:'원래', c_series:'계열', c_reset:'원래대로', close:'닫기', c_which:'차트',
-      c_noconv:'이 차트는 숫자 축이라 모양을 바꿀 수 없습니다 — 계열·값 표시·색·축은 바꿀 수 있습니다', size:'크기 조절 — 끌면 폭·높이 · 두 번 누르면 원래 크기', size_def:'원래 크기', cols:'칸', copy:'다른 화면으로 복사', cp_to:'복사할 화면', cp_scope:'어디에 둘까요', cp_go:'복사', cp_done:'«{p}» 화면에 복사했습니다 — 그 화면 맨 아래에 있습니다', cp_none:'복사할 화면이 없습니다', clone:'이 차트로 새로 만들기', clone_s:'자료·축·값을 바꿀 수 있는 새 차트로 만듭니다', g_wait:'원래 차트를 보고 자료·축을 찾는 중…', g_ok:'원래 차트와 {p}% 일치 ({src}) — 화면 전용 조건(작업 단계·기간 등)은 옮겨지지 않으니 미리 보기로 확인하세요', g_no:'맞는 자료·축을 찾지 못했습니다 — 직접 고르세요', g_hide:'원래 차트는 숨기기', pg_hub:'글로벌 현황', pg_report:'주간 현황', pg_fault:'고장 분석', pg_pm:'PM 점검', pg_cip:'CIP 진행', pg_scrubber:'설비 현황', pg_material:'자재 사용', pg_tco:'TCO', pg_hr:'인원·교육', b_add:'차트 추가', b_edit:'차트 고치기', b_apply:'적용', lg_def:'기본'},
+      c_noconv:'이 차트는 숫자 축이라 모양을 바꿀 수 없습니다 — 계열·값 표시·색·축은 바꿀 수 있습니다', size:'크기 조절 — 끌면 폭·높이 · 두 번 누르면 원래 크기', size_def:'원래 크기', cols:'칸', copy:'다른 화면으로 복사', cp_to:'복사할 화면', cp_scope:'어디에 둘까요', cp_go:'복사', cp_done:'«{p}» 화면에 복사했습니다 — 그 화면 맨 아래에 있습니다', cp_none:'복사할 화면이 없습니다', clone:'이 차트로 새로 만들기', clone_s:'자료·축·값을 바꿀 수 있는 새 차트로 만듭니다', g_wait:'원래 차트를 보고 자료·축을 찾는 중…', g_ok:'원래 차트와 {p}% 일치 ({src}) — 화면 전용 조건(작업 단계·기간 등)은 옮겨지지 않으니 미리 보기로 확인하세요', g_no:'맞는 자료·축을 찾지 못했습니다 — 직접 고르세요', g_hide:'원래 차트는 숨기기', pg_hub:'글로벌 현황', pg_report:'주간 현황', pg_fault:'고장 분석', pg_pm:'PM 점검', pg_cip:'CIP 진행', pg_scrubber:'설비 현황', pg_material:'자재 사용', pg_tco:'TCO', pg_hr:'인원·교육', g_exact:'이 화면과 같은 계산으로 만듭니다 — 지금 고른 조건(작업 단계·유무상 등)이 함께 담깁니다', g_drop:'옮기지 않은 것: {x}', rd_q:'검색어', rd_upm:'UPM 율 선', rd_fc:'예측 막대', rn_title:'이 차트는 설정으로 옮길 수 없습니다', rn_delta:'최근 두 구간을 견주는 계산', rn_bins:'값을 구간으로 나누는 계산', rn_split:'작업자 이름을 나눠 공수를 나누는 계산', rn_coalesce:'알람이 비면 현상으로 대신하는 계산', rn_derived:'신뢰성·비율 지표(MTBF·FTFR·재고장률 등)', rn_hr:'인원·근무일·휴가를 분모로 쓰는 계산', rn_ledger:'국내 원장과 해외 수선실적을 함께 세는 계산', rn_fse:'FSE 원장(알람 분석) 계산', rn_tail:'다른 화면에는 ⧉ «카드 그대로 가져오기»로 둘 수 있습니다', clone_g:'그래도 비슷하게 만들기 (추정)', cp_how:'어떻게', cp_cfg:'차트 설정으로 — 가볍고, 자료·축을 바꿀 수 있음', cp_emb:'카드 그대로 — 이 화면 계산 그대로(같은 숫자) · 그 화면을 함께 읽어 무겁습니다', emb_load:'카드를 불러오는 중…', emb_fail:'카드를 찾지 못했습니다 — 원래 화면에서 그 카드가 없어졌을 수 있습니다', b_add:'차트 추가', b_edit:'차트 고치기', b_apply:'적용', lg_def:'기본'},
   en:{title:'Edit screen', cur_all:'Default layout for everyone', cur_me:'Using my layout', cur_none:'Original layout', hidden:'Hidden cards', none_hidden:'No hidden cards',
       show:'Show', reset:'Original layout', cancel:'Cancel', save:'Save', save_all:'Save as default for everyone', save_me:'Save for me only',
       all_note:'Administrators · everyone sees this layout', me_note:'Other users are not affected', drop_me:'Remove my layout',
@@ -12620,7 +12699,7 @@ GST.SCREEN_T = {
       unsaved:'Unsaved changes', hint:'Use the buttons on each card to move, hide, resize and rename. Calculations, filters and details stay the same',
       kpi:'KPI', retired:'Hidden by default', pc_only:'Saved on this PC only (server not ready)',
       chart:'Chart settings', add:'Add a chart below', add_p:'＋ Add chart', del:'Delete', c_orig:'Original', c_series:'Series', c_reset:'Reset', close:'Close', c_which:'Chart',
-      c_noconv:'This chart has a numeric axis, so its type cannot change — series, values, colors and axis can', size:'Resize — drag for width and height · double-click for original size', size_def:'Original size', cols:'cols', copy:'Copy to another screen', cp_to:'Copy to', cp_scope:'Where', cp_go:'Copy', cp_done:'Copied to «{p}» — it is at the bottom of that screen', cp_none:'No other screen to copy to', clone:'Rebuild as a new chart', clone_s:'Creates a new chart whose data, axis and values you can change', g_wait:'Looking for the data and axis behind the original chart…', g_ok:'{p}% match with the original chart ({src}) — screen-specific conditions (work stage, period, …) are not carried over, so check the preview', g_no:'Could not find matching data and axis — choose them yourself', g_hide:'Hide the original chart', pg_hub:'Global overview', pg_report:'Weekly report', pg_fault:'Failure analysis', pg_pm:'PM schedule', pg_cip:'CIP progress', pg_scrubber:'Equipment', pg_material:'Material usage', pg_tco:'TCO', pg_hr:'Workforce & training', b_add:'Add chart', b_edit:'Edit chart', b_apply:'Apply', lg_def:'Default'},
+      c_noconv:'This chart has a numeric axis, so its type cannot change — series, values, colors and axis can', size:'Resize — drag for width and height · double-click for original size', size_def:'Original size', cols:'cols', copy:'Copy to another screen', cp_to:'Copy to', cp_scope:'Where', cp_go:'Copy', cp_done:'Copied to «{p}» — it is at the bottom of that screen', cp_none:'No other screen to copy to', clone:'Rebuild as a new chart', clone_s:'Creates a new chart whose data, axis and values you can change', g_wait:'Looking for the data and axis behind the original chart…', g_ok:'{p}% match with the original chart ({src}) — screen-specific conditions (work stage, period, …) are not carried over, so check the preview', g_no:'Could not find matching data and axis — choose them yourself', g_hide:'Hide the original chart', pg_hub:'Global overview', pg_report:'Weekly report', pg_fault:'Failure analysis', pg_pm:'PM schedule', pg_cip:'CIP progress', pg_scrubber:'Equipment', pg_material:'Material usage', pg_tco:'TCO', pg_hr:'Workforce & training', g_exact:'Built with the same calculation as this screen — the conditions you picked (work stage, paid/free, …) come along', g_drop:'Not carried over: {x}', rd_q:'search text', rd_upm:'UPM rate line', rd_fc:'forecast bars', rn_title:'This chart cannot be moved as settings', rn_delta:'a comparison of the last two periods', rn_bins:'a calculation that bins values', rn_split:'a calculation that splits man-hours across workers', rn_coalesce:'a calculation that falls back to symptom when the alarm is blank', rn_derived:'reliability or ratio metrics (MTBF, FTFR, repeat rate, …)', rn_hr:'a calculation divided by headcount, workdays and leave', rn_ledger:'a calculation that counts the domestic ledger and overseas repair records together', rn_fse:'an FSE ledger (alarm analysis) calculation', rn_tail:'You can put it on another screen with ⧉ «copy the card as is»', clone_g:'Build a similar one anyway (estimated)', cp_how:'How', cp_cfg:'As chart settings — light, data and axis can change', cp_emb:'The card as is — same calculation as this screen (same numbers) · loads that screen too, so it is heavier', emb_load:'Loading the card…', emb_fail:'Could not find the card — it may have been removed from its screen', b_add:'Add chart', b_edit:'Edit chart', b_apply:'Apply', lg_def:'Default'},
   zh:{title:'编辑画面', cur_all:'正在使用全体默认布局', cur_me:'正在使用我的布局', cur_none:'原始布局', hidden:'隐藏的卡片', none_hidden:'没有隐藏的卡片',
       show:'重新显示', reset:'恢复原始布局', cancel:'取消', save:'保存', save_all:'保存为全体用户默认布局', save_me:'仅保存到我的画面',
       all_note:'管理员权限 · 所有用户看到同一布局', me_note:'不影响其他用户', drop_me:'删除我的布局',
@@ -12631,7 +12710,7 @@ GST.SCREEN_T = {
       unsaved:'未保存的更改', hint:'用卡片顶部的按钮移动、隐藏、调整宽度和标题。计算·筛选·明细保持不变',
       kpi:'指标', retired:'默认隐藏', pc_only:'仅保存在此电脑（服务器尚未准备）',
       chart:'图表设置', add:'在下方添加图表', add_p:'＋ 添加图表', del:'删除', c_orig:'原样', c_series:'系列', c_reset:'恢复原样', close:'关闭', c_which:'图表',
-      c_noconv:'此图表为数字轴，无法更改类型 — 可更改系列·数值显示·颜色·轴', size:'调整大小 — 拖动改变宽高 · 双击恢复原始大小', size_def:'原始大小', cols:'列', copy:'复制到其他画面', cp_to:'复制到', cp_scope:'放在哪里', cp_go:'复制', cp_done:'已复制到«{p}» — 在该画面最下方', cp_none:'没有可复制到的画面', clone:'用此图表重新制作', clone_s:'制作可更改资料·轴·数值的新图表', g_wait:'正在根据原图表查找资料和轴…', g_ok:'与原图表 {p}% 一致 ({src}) — 画面专用条件(作业阶段·期间等)不会带过来，请看预览确认', g_no:'没有找到匹配的资料和轴 — 请自行选择', g_hide:'隐藏原图表', pg_hub:'全球概况', pg_report:'周报', pg_fault:'故障分析', pg_pm:'PM 点检', pg_cip:'CIP 进度', pg_scrubber:'设备现况', pg_material:'物料使用', pg_tco:'TCO', pg_hr:'人员·培训', b_add:'添加图表', b_edit:'修改图表', b_apply:'应用', lg_def:'默认'},
+      c_noconv:'此图表为数字轴，无法更改类型 — 可更改系列·数值显示·颜色·轴', size:'调整大小 — 拖动改变宽高 · 双击恢复原始大小', size_def:'原始大小', cols:'列', copy:'复制到其他画面', cp_to:'复制到', cp_scope:'放在哪里', cp_go:'复制', cp_done:'已复制到«{p}» — 在该画面最下方', cp_none:'没有可复制到的画面', clone:'用此图表重新制作', clone_s:'制作可更改资料·轴·数值的新图表', g_wait:'正在根据原图表查找资料和轴…', g_ok:'与原图表 {p}% 一致 ({src}) — 画面专用条件(作业阶段·期间等)不会带过来，请看预览确认', g_no:'没有找到匹配的资料和轴 — 请自行选择', g_hide:'隐藏原图表', pg_hub:'全球概况', pg_report:'周报', pg_fault:'故障分析', pg_pm:'PM 点检', pg_cip:'CIP 进度', pg_scrubber:'设备现况', pg_material:'物料使用', pg_tco:'TCO', pg_hr:'人员·培训', g_exact:'按此画面相同的计算制作 — 当前选择的条件(作业阶段·有偿/无偿等)一并带入', g_drop:'未带入: {x}', rd_q:'搜索词', rd_upm:'UPM 率线', rd_fc:'预测柱', rn_title:'此图表无法以设置形式迁移', rn_delta:'比较最近两个区间的计算', rn_bins:'将数值分段的计算', rn_split:'按作业员拆分工时的计算', rn_coalesce:'报警为空时以现象代替的计算', rn_derived:'可靠性·比率指标(MTBF·FTFR·再故障率等)', rn_hr:'以人员·工作日·休假为分母的计算', rn_ledger:'将国内台账与海外修理实绩合并统计的计算', rn_fse:'FSE 台账(报警分析)计算', rn_tail:'可用 ⧉ «原样带入卡片» 放到其他画面', clone_g:'仍然制作类似图表 (推测)', cp_how:'方式', cp_cfg:'以图表设置 — 轻量 · 可更改资料与轴', cp_emb:'原样卡片 — 与此画面相同计算(相同数字) · 会一并读取该画面，较重', emb_load:'正在加载卡片…', emb_fail:'找不到该卡片 — 可能已从原画面移除', b_add:'添加图表', b_edit:'修改图表', b_apply:'应用', lg_def:'默认'},
   ja:{title:'画面編集', cur_all:'全ユーザー既定レイアウトを適用中', cur_me:'自分のレイアウトを適用中', cur_none:'元のレイアウト', hidden:'非表示のカード', none_hidden:'非表示のカードはありません',
       show:'再表示', reset:'元のレイアウトへ', cancel:'キャンセル', save:'保存', save_all:'全ユーザーの既定として保存', save_me:'自分の画面のみに保存',
       all_note:'管理者権限 · 全ユーザーに同じレイアウトで表示', me_note:'他のユーザーの画面は変わりません', drop_me:'自分のレイアウトを削除',
@@ -12642,7 +12721,7 @@ GST.SCREEN_T = {
       unsaved:'未保存の変更', hint:'カード上部のボタンで移動・非表示・幅・タイトルを変えます。計算·フィルター·詳細はそのままです',
       kpi:'指標', retired:'既定で非表示', pc_only:'このPCにのみ保存されます（サーバー準備前）',
       chart:'グラフ設定', add:'下にグラフを追加', add_p:'＋ グラフを追加', del:'削除', c_orig:'元のまま', c_series:'系列', c_reset:'元に戻す', close:'閉じる', c_which:'グラフ',
-      c_noconv:'このグラフは数値軸のため種類を変えられません — 系列·値表示·色·軸は変えられます', size:'サイズ変更 — ドラッグで幅・高さ · ダブルクリックで元のサイズ', size_def:'元のサイズ', cols:'列', copy:'他の画面へコピー', cp_to:'コピー先', cp_scope:'どこに置くか', cp_go:'コピー', cp_done:'«{p}» 画面にコピーしました — その画面の一番下にあります', cp_none:'コピーできる画面がありません', clone:'このグラフで新しく作る', clone_s:'データ・軸・値を変えられる新しいグラフを作ります', g_wait:'元のグラフからデータと軸を探しています…', g_ok:'元のグラフと {p}% 一致 ({src}) — 画面専用の条件(作業段階・期間など)は引き継がれないのでプレビューで確認してください', g_no:'合うデータ・軸が見つかりません — 自分で選んでください', g_hide:'元のグラフは非表示', pg_hub:'グローバル概況', pg_report:'週間現況', pg_fault:'故障分析', pg_pm:'PM 点検', pg_cip:'CIP 進捗', pg_scrubber:'設備現況', pg_material:'資材使用', pg_tco:'TCO', pg_hr:'人員·教育', b_add:'グラフを追加', b_edit:'グラフを修正', b_apply:'適用', lg_def:'既定'}
+      c_noconv:'このグラフは数値軸のため種類を変えられません — 系列·値表示·色·軸は変えられます', size:'サイズ変更 — ドラッグで幅・高さ · ダブルクリックで元のサイズ', size_def:'元のサイズ', cols:'列', copy:'他の画面へコピー', cp_to:'コピー先', cp_scope:'どこに置くか', cp_go:'コピー', cp_done:'«{p}» 画面にコピーしました — その画面の一番下にあります', cp_none:'コピーできる画面がありません', clone:'このグラフで新しく作る', clone_s:'データ・軸・値を変えられる新しいグラフを作ります', g_wait:'元のグラフからデータと軸を探しています…', g_ok:'元のグラフと {p}% 一致 ({src}) — 画面専用の条件(作業段階・期間など)は引き継がれないのでプレビューで確認してください', g_no:'合うデータ・軸が見つかりません — 自分で選んでください', g_hide:'元のグラフは非表示', pg_hub:'グローバル概況', pg_report:'週間現況', pg_fault:'故障分析', pg_pm:'PM 点検', pg_cip:'CIP 進捗', pg_scrubber:'設備現況', pg_material:'資材使用', pg_tco:'TCO', pg_hr:'人員·教育', g_exact:'この画面と同じ計算で作ります — 今選んでいる条件(作業段階・有償/無償など)も一緒に入ります', g_drop:'引き継がないもの: {x}', rd_q:'検索語', rd_upm:'UPM 率の線', rd_fc:'予測の棒', rn_title:'このグラフは設定として移せません', rn_delta:'直近2区間を比べる計算', rn_bins:'値を区間に分ける計算', rn_split:'作業者ごとに工数を分ける計算', rn_coalesce:'アラームが空なら現象で代える計算', rn_derived:'信頼性・比率の指標(MTBF・FTFR・再故障率など)', rn_hr:'人員・勤務日・休暇を分母にする計算', rn_ledger:'国内台帳と海外修理実績を合わせて数える計算', rn_fse:'FSE 台帳(アラーム分析)の計算', rn_tail:'⧉ «カードをそのまま持ってくる» で他の画面に置けます', clone_g:'それでも似たものを作る (推定)', cp_how:'方法', cp_cfg:'グラフ設定として — 軽く、データ・軸を変えられる', cp_emb:'カードをそのまま — この画面と同じ計算(同じ数字) · その画面も読み込むので重い', emb_load:'カードを読み込み中…', emb_fail:'カードが見つかりません — 元の画面から無くなった可能性があります', b_add:'グラフを追加', b_edit:'グラフを修正', b_apply:'適用', lg_def:'既定'}
 };
 GST._SCREEN_CSS = [
   '[data-gst-hide]{display:none !important}',
@@ -12698,6 +12777,13 @@ GST._SCREEN_CSS = [
   '.gse-cpop .gse-ser{display:flex;flex-direction:column;gap:3px;max-height:140px;overflow:auto;border:1px solid var(--line,#d0d7e2);border-radius:8px;padding:5px 7px}',
   '.gse-cpop small{color:var(--txt-muted,#778);font-size:11px}',
   '.gst-add-card .gcb-host{height:300px}',
+  '.gst-add-card.gst-emb-card{padding:0 !important;background:none !important;border:0 !important;box-shadow:none !important}',
+  '.gst-emb-card > h3{display:none !important}',
+  '.gst-emb-card .gcb-host{height:420px;position:relative}',
+  '.gse-emb-fr{display:block;width:100%;height:100%;border:0;background:transparent;color-scheme:normal}',
+  '.gse-emb-msg{position:absolute;inset:0;display:grid;place-items:center;color:var(--txt-muted,#778);font-size:12.5px;pointer-events:none}',
+  '.gse-cpop .gse-how label{flex-direction:row;align-items:flex-start;gap:6px;font-weight:500;color:var(--txt-main,#111)}',
+  '.gse-cpop .gse-why{font-size:11.5px;line-height:1.45;color:var(--txt-2,#445);background:var(--surface-2,#f3f5f9);border-radius:8px;padding:7px 9px}',
   '#gstCbDlg{position:fixed;inset:0;z-index:9995;background:rgba(3,8,16,.55);display:grid;place-items:center;padding:16px}',
   '#gstCbDlg .gcd-box{width:min(1100px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;background:var(--surface,#fff);color:var(--txt-main,#111);border:1px solid var(--line,#d0d7e2);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:hidden}',
   '#gstCbDlg .gcd-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line,#d0d7e2);font-size:15px}',
@@ -12868,11 +12954,35 @@ GST.screen = (function(){
      cfg.adds = [{id, cfg, at}] — at 은 «이 카드 아래에» 넣을 카드 열쇠. 그 카드가 없으면(화면이 바뀌었다) 마지막 카드 뒤에.
      카드 열쇠는 'x:'+id — 순서·숨김·폭·제목이 다른 카드와 같은 규칙을 탄다. 화면의 상세 필터를 따르는 것이 기본이다(cfg.follow). */
   function addTitle(el, a){
-    var h=el.querySelector('h3'); if(!h) return; var tn=h.firstChild&&h.firstChild.nodeType===3?h.firstChild:null; if(!tn){ tn=document.createTextNode(''); h.insertBefore(tn, h.firstChild); }
+    var h=el.querySelector('h3'); if(!h) return;
+    if(a.embed){ h.textContent=a.embed.title||''; return; } var tn=h.firstChild&&h.firstChild.nodeType===3?h.firstChild:null; if(!tn){ tn=document.createTextNode(''); h.insertBefore(tn, h.firstChild); }
     var t=(GST.cb&&GST.cb.title)?GST.cb.title(a.cfg):'';
     if(el.dataset.gstOrig!=null) el.dataset.gstOrig=t; else tn.nodeValue=t;
   }
+  /* ---------- 카드 그대로 가져오기 (v206) — 원래 화면을 «카드 하나만 그리는 모드»(?embed=열쇠)로 띄운다.
+     계산은 원래 화면 코드가 그대로 하므로 숫자가 같다. 이 화면의 상세 필터를 보내 같은 범위로 그리게 한다(gst-embed-f).
+     ⚠ 그 화면 자료를 함께 읽으므로 무겁다 — 화면에 몇 장만. 보이기 전에는 읽지 않는다(loading=lazy). */
+  function embedSrc(e){ return '/'+e.page+'/?embed='+encodeURIComponent(e.key)+(e.sec?'&sec='+encodeURIComponent(e.sec):''); }
+  function embedSnap(){ try{ return GST.filters&&GST.filters.snapshot?GST.filters.snapshot():null; }catch(e){ return null; } }
+  function embedPost(fr){ try{ fr.contentWindow&&fr.contentWindow.postMessage({type:'gst-embed-f', snap:embedSnap(), lang:(GST._lang&&GST._lang())||'ko'}, '*'); }catch(e){} }
+  function drawEmbed(el, a){
+    var host=el.querySelector('.gcb-host'); if(!host) return; el.classList.add('gst-emb-card');
+    var src=embedSrc(a.embed), fr=host.querySelector('iframe');
+    if(fr && fr.dataset.src===src) return;
+    host.innerHTML='<div class="gse-emb-msg">'+esc(T('emb_load'))+'</div>';
+    fr=document.createElement('iframe'); fr.className='gse-emb-fr'; fr.dataset.src=src; fr.setAttribute('loading','lazy'); fr.title=a.embed.title||''; fr.src=src;
+    fr.addEventListener('load', function(){ embedPost(fr); setTimeout(function(){ embedPost(fr); }, 1500); });
+    host.appendChild(fr);
+  }
+  window.addEventListener('message', function(e){ var d=e.data||{}; if(d.type!=='gst-embed-h'&&d.type!=='gst-embed-ask'&&d.type!=='gst-embed-miss') return;
+    [].forEach.call(document.querySelectorAll('.gse-emb-fr'), function(fr){ if(fr.contentWindow!==e.source) return;
+      var host=fr.parentNode, msg=host&&host.querySelector('.gse-emb-msg');
+      if(d.type==='gst-embed-ask'){ embedPost(fr); return; }
+      if(d.type==='gst-embed-miss'){ if(msg) msg.textContent=T('emb_fail'); return; }
+      if(msg) msg.remove();
+      if(host && !host.hasAttribute('data-gst-h') && d.h>60) host.style.height=Math.min(1600, Math.ceil(d.h))+'px'; }); });
   function drawAdd(el, a){
+    if(a.embed){ el.$cfgJ=JSON.stringify(a.embed); addTitle(el, a); drawEmbed(el, a); return; }
     el.$cfgJ=JSON.stringify(a.cfg); addTitle(el, a);
     var host=el.querySelector('.gcb-host'); if(!host||!GST.cb) return;
     GST.cb.draw(host, a.cfg, {id:'gstx-'+a.id, page:true}).then(function(){ addTitle(el, a); }, function(){});
@@ -12891,20 +13001,22 @@ GST.screen = (function(){
         el.innerHTML='<h3></h3><div class="gcb-host"></div>';
         var anc=a.at&&I.M[a.at];
         if(anc && anc.parentNode && !anc.classList.contains('kpi')) placeAt(el, anc, a.pos||'after');
-        else { var L2=I.list.filter(function(x){ return !x.classList.contains('kpi') && !(x.dataset&&x.dataset.gstAdd); }), last=L2[L2.length-1];
+        else { /* 자리 없이 온 카드(다른 화면에서 복사 · v206) — «지금 보이는» 마지막 카드 뒤에. 숨은 섹션 탭 끝에 붙으면 아무도 못 본다 */
+          var L2=I.list.filter(function(x){ return !x.classList.contains('kpi') && !(x.dataset&&x.dataset.gstAdd); }), L3=L2.filter(function(x){ return x.offsetParent!==null; }), last=(L3.length?L3:L2)[(L3.length?L3:L2).length-1];
           if(last&&last.parentNode) placeAt(el, last, 'after'); else (document.querySelector('main,.container,.wrap')||document.body).appendChild(el); }
         drawAdd(el, a); I=null;
       } else {
         /* 다른 격자로 옮긴 추가 카드(v205) — 자리 열쇠(at·pos)가 가리키는 카드와 부모가 다르면 그 옆으로 */
         var an2=a.at&&(I=I||index()).M[a.at];
         if(an2 && an2!==el && an2.parentNode && !an2.classList.contains('kpi') && !el.contains(an2) && !placedOk(el, an2, a.pos||'after')) placeAt(el, an2, a.pos||'after');
-        if(el.$cfgJ!==JSON.stringify(a.cfg)) drawAdd(el, a); else addTitle(el, a);
+        if(el.$cfgJ!==JSON.stringify(a.embed||a.cfg)) drawAdd(el, a); else addTitle(el, a);
       }
     });
   }
   var _fltT=0;
   document.addEventListener('gst:filters', function(){ clearTimeout(_fltT); _fltT=setTimeout(function(){
-    var c=liveCfg(); ((c&&c.adds)||[]).forEach(function(a){ if(a.cfg&&a.cfg.follow===false) return; var el=document.querySelector('[data-gst-add="'+a.id+'"]'); if(el) drawAdd(el, a); }); }, 150); });
+    var c=liveCfg(); ((c&&c.adds)||[]).forEach(function(a){ if(a.embed||(a.cfg&&a.cfg.follow===false)) return; var el=document.querySelector('[data-gst-add="'+a.id+'"]'); if(el) drawAdd(el, a); });
+    [].forEach.call(document.querySelectorAll('.gse-emb-fr'), embedPost); }, 150); });
   /* ---------- 크기 · 자유 배치 (v205 · 사용자 「새로 만들었는데 왜 크기 조정이랑 배치를 내 맘대로 할 수가 없지?」) ----------
      cfg.size = {열쇠: {w, h}} — w 는 한 줄을 12로 나눈 몫(3·4·6·8·9·12), h 는 차트 칸 높이(px).
        · 격자 부모(.grid2·.grid3 …)에서는 «지금 칸 수»로 바꿔 span 으로 건다 — 상세 필터를 열어 칸 수가 바뀌면 다시 센다.
@@ -13051,7 +13163,7 @@ GST.screen = (function(){
     S.cfg=pc; S.src=pc?'pc':''; S.loaded=true; return S.cfg;
   }
   async function boot(){
-    S.page=pageKey(); if(!enabled()) return;
+    S.page=pageKey(); if(!enabled() || GST._embed) return;   // 카드 하나만 그리는 모드(v206)에서는 배치를 건드리지 않는다
     cssOnce();
     try{ if(GST.authOn&&GST.authOn()) await GST.authReady(); }catch(e){}
     try{ await (GST.loadMe&&GST.loadMe()); }catch(e){}
@@ -13078,14 +13190,14 @@ GST.screen = (function(){
       if(el.querySelector(':scope > .gst-se-bar')) return;
       el.classList.add('gst-se-card');
       var k=keyOf(el), isK=el.classList.contains('kpi'), wideOk=!isK && el.parentNode && gridCols(el.parentNode)>1;
-      var isAdd=!!(el.dataset&&el.dataset.gstAdd), hasCh=!isK && !isAdd && chartsIn(el).length>0, cbOk=!!GST.cb;
+      var isAdd=!!(el.dataset&&el.dataset.gstAdd), hasCh=!isK && !isAdd && chartsIn(el).length>0, cbOk=!!GST.cb, isEmb=el.classList.contains('gst-emb-card');
       var b=document.createElement('div'); b.className='gst-se-bar gst-noshot'; b.dataset.k=k;
       b.innerHTML='<button type="button" class="gse-grip" data-a="move" title="'+esc(T('move'))+'" aria-label="'+esc(T('move'))+'">⠿</button>'
-        +(isK?'':'<button type="button" data-a="rename" title="'+esc(T('rename'))+'">✎</button>')
+        +(isK||isEmb?'':'<button type="button" data-a="rename" title="'+esc(T('rename'))+'">✎</button>')
         +(wideOk?'<button type="button" data-a="wide" aria-pressed="'+(curCfg().wide.indexOf(k)>=0)+'" title="'+esc(T('wide'))+'">⇔</button>':'')
         +(hasCh?'<button type="button" data-a="chart" title="'+esc(T('chart'))+'" aria-label="'+esc(T('chart'))+'">⚙</button>':'')
-        +(isAdd&&cbOk?'<button type="button" data-a="edit" title="'+esc(T('b_edit'))+'" aria-label="'+esc(T('b_edit'))+'">⚙</button>':'')
-        +(isAdd?'<button type="button" data-a="copy" title="'+esc(T('copy'))+'" aria-label="'+esc(T('copy'))+'">⧉</button>':'')
+        +(isAdd&&cbOk&&!isEmb?'<button type="button" data-a="edit" title="'+esc(T('b_edit'))+'" aria-label="'+esc(T('b_edit'))+'">⚙</button>':'')
+        +(!isK?'<button type="button" data-a="copy" title="'+esc(T('copy'))+'" aria-label="'+esc(T('copy'))+'">⧉</button>':'')
         +(!isK&&cbOk?'<button type="button" data-a="add" title="'+esc(T('add'))+'" aria-label="'+esc(T('add'))+'">＋</button>':'')
         +(isAdd?'<button type="button" data-a="del">'+esc(T('del'))+'</button>':'<button type="button" data-a="hide">'+esc(T('hide'))+'</button>');
       el.appendChild(b);
@@ -13194,7 +13306,7 @@ GST.screen = (function(){
     if(a==='chart'){ chartPop(el, b); return; }
     if(a==='add'){ builder(null, k); return; }
     if(a==='edit'){ var ad=(cfg.adds||[]).filter(function(x){ return 'x:'+x.id===k; })[0]; if(ad) builder(ad); return; }
-    if(a==='copy'){ var ad2=(cfg.adds||[]).filter(function(x){ return 'x:'+x.id===k; })[0]; if(ad2) copyPop(el, b, ad2); return; }
+    if(a==='copy'){ var ad2=(cfg.adds||[]).filter(function(x){ return 'x:'+x.id===k; })[0]; copyPop(el, b, ad2||null); return; }
     if(a==='del'){ cfg.adds=(cfg.adds||[]).filter(function(x){ return 'x:'+x.id!==k; }); setArr(cfg.hidden,k,false); setArr(cfg.wide,k,false); delete (cfg.titles||{})[k]; if(cfg.size) delete cfg.size[k]; apply(cfg); syncOrder(); dirty(); paintPanel(); return; }
     if(a==='hide'){ unitOf(el).forEach(function(u){ setArr(cfg.hidden, keyOf(u), true); setArr(cfg.show, keyOf(u), false); }); apply(cfg); dirty(); paintPanel(); return; }
     if(a==='wide'){ var on=cfg.wide.indexOf(k)<0; unitOf(el).forEach(function(u){ var uk=keyOf(u); setArr(cfg.wide, uk, on); if(cfg.size&&cfg.size[uk]){ delete cfg.size[uk].w; if(!cfg.size[uk].h) delete cfg.size[uk]; } }); apply(cfg); b.setAttribute('aria-pressed', String(on)); b.title=T(on?'narrow':'wide'); dirty(); resizeCharts(el.parentNode); return; }
@@ -13369,7 +13481,9 @@ GST.screen = (function(){
         +'<div class="gse-r"><label>'+esc(CT('legend'))+sel('legend',['def','bottom','top','right','none'],c.legend||'def',function(v){ return v==='def'?T('lg_def'):CT('lg.'+v); })+'</label>'
         +'<label>'+esc(CT('pal'))+sel('pal',(GST.cb?GST.cb.PALS:['def']),c.pal||'def',function(v){ return CT('p.'+v); })+'</label></div>'
         +'<div class="gse-r"><label>'+esc(CT('ymin'))+'<input type="number" data-c="ymin" value="'+esc(c.ymin==null?'':c.ymin)+'"></label><label>'+esc(CT('ymax'))+'<input type="number" data-c="ymax" value="'+esc(c.ymax==null?'':c.ymax)+'"></label></div>'
-        +(GST.cb&&GST.cb.guess?'<button type="button" data-c="clone" title="'+esc(T('clone_s'))+'">'+esc(T('clone'))+'</button>':'')
+        +(function(){ if(!(GST.cb&&GST.cb.guess)) return ''; var rc=GST.cb.recipeOf?GST.cb.recipeOf(cur.id):null;
+          if(rc&&rc.none) return '<div class="gse-why">'+esc(T('rn_title')+' — '+T('rn_'+rc.none)+'. '+T('rn_tail'))+'</div><button type="button" data-c="clone">'+esc(T('clone_g'))+'</button>';
+          return '<button type="button" data-c="clone" title="'+esc(T('clone_s'))+'">'+esc(T('clone'))+'</button>'; })()
         +'<div class="gse-r"><button type="button" data-c="reset">'+esc(T('c_reset'))+'</button><button type="button" data-c="close">'+esc(T('close'))+'</button></div>';
       p.$ser=ser;
     };
@@ -13380,7 +13494,9 @@ GST.screen = (function(){
       if(b.dataset.c==='reset'){ delete cfg.charts[cur.id]; var ch=Chart.getChart(cur); if(ch){ ch.$gstJ=null; applyChart(ch, null, false); } dirty(); paint(); return; }
       if(b.dataset.c==='clone'){ var ch2=null; try{ ch2=Chart.getChart(cur); }catch(e){} if(!ch2) return; p.remove();
         var hd=headOf(el), ttl=hd?String(hd.textContent||'').replace(/\s+/g,' ').trim().slice(0,60):'';
-        builder(null, keyOf(el), {guess:GST.cb.guess(ch2, S.page, {page:true}), hideKey:keyOf(el), title:ttl}); return; }
+        var rc2=GST.cb.recipeOf?GST.cb.recipeOf(cur.id):null;
+        if(rc2&&rc2.cfg) builder(null, keyOf(el), {exact:rc2, hideKey:keyOf(el), title:ttl});
+        else builder(null, keyOf(el), {guess:GST.cb.guess(ch2, S.page, {page:true}), hideKey:keyOf(el), title:ttl}); return; }
       if(b.dataset.c==='close'){ p.remove(); } });
     p.addEventListener('change', function(ev){ var e=ev.target;
       if(e.dataset.c==='which'){ cur=cvs[+e.value]; paint(); return; }
@@ -13395,7 +13511,8 @@ GST.screen = (function(){
      · «내 화면에만»: 내 배치가 없으면 전체 기본 배치를 바탕으로 만든다(그래야 그 화면이 갑자기 원래 배치로 돌아가지 않는다).
      · 서버가 없으면(setup-32 전 · 인증 꺼짐) 그 화면의 이 PC 저장소에. 페이지 기준 필터는 그 화면의 상세 필터를 따른다(cfg.follow 그대로). */
   async function copyTo(page, scope, a){
-    var item={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), cfg:JSON.parse(JSON.stringify(a.cfg)), at:''};
+    var item={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), at:''};
+    if(a.embed) item.embed=JSON.parse(JSON.stringify(a.embed)); else item.cfg=JSON.parse(JSON.stringify(a.cfg));
     if(S.where!=='server'){ var k2='gst_screen:'+page, pc=null; try{ pc=JSON.parse(localStorage.getItem(k2)||'null'); }catch(e){}
       pc=pc||{v:1}; pc.adds=(pc.adds||[]).concat([item]); try{ localStorage.setItem(k2, JSON.stringify(pc)); }catch(e){ return {ok:false, error:'fail'}; } return {ok:true}; }
     var C=null; try{ C=await GST._dbAuthed(); }catch(e){} if(!C) return {ok:false, error:'no_db'};
@@ -13406,13 +13523,27 @@ GST.screen = (function(){
     base.v=1; base.adds=(base.adds||[]).concat([item]);
     return rpc(scope, base, row?row.updated_at:null, page);
   }
-  function copyPop(el, btn, a){
+  /* 이 카드를 옮길 수 있는 길 — 추가 카드는 그 설정 그대로 · 화면 카드는 레시피(설정) 또는 카드 그대로 */
+  function cardItems(el, ad){
+    if(ad) return ad.embed?{emb:{embed:ad.embed}}:{cfg:{cfg:ad.cfg}};
+    var out={}, cv=chartsIn(el)[0], rc=cv&&GST.cb&&GST.cb.recipeOf?GST.cb.recipeOf(cv.id):null;
+    if(rc&&rc.cfg) out.cfg={cfg:rc.cfg, drop:rc.drop||[]};
+    var sec=el.closest('[data-sec]'), h=headOf(el);
+    out.emb={embed:{page:S.page, key:keyOf(el), sec:sec?sec.dataset.sec:'', title:h?String(h.textContent||'').replace(/\s+/g,' ').trim().slice(0,80):''}};
+    if(rc&&rc.none) out.none=rc.none;
+    return out;
+  }
+  function copyPop(el, btn, ad){
     var old=document.querySelector('.gse-cpop'); if(old){ var same=old.$el===el; old.remove(); if(same) return; }
     var pages=GST.SCREEN_PAGES.filter(function(x){ return x!==S.page; }), can=GST.targets&&GST.targets.can&&GST.targets.can(), srv=S.where==='server';
+    var IT=cardItems(el, ad);
     var p=document.createElement('div'); p.className='gse-pop gse-cpop gst-noshot'; p.$el=el; p.setAttribute('role','dialog'); p.setAttribute('aria-label',T('copy'));
     document.body.appendChild(p);
-    var r=btn.getBoundingClientRect(); p.style.position='fixed'; p.style.top=Math.min(window.innerHeight-220, r.bottom+6)+'px'; p.style.right=Math.max(8, window.innerWidth-r.right)+'px';
-    p.innerHTML=pages.length?'<b>'+esc(T('copy'))+'</b><label>'+esc(T('cp_to'))+'<select data-c="pg">'+pages.map(function(x){ return '<option value="'+x+'">'+esc(T('pg_'+x))+'</option>'; }).join('')+'</select></label>'
+    var r=btn.getBoundingClientRect(); p.style.position='fixed'; p.style.top=Math.min(window.innerHeight-300, r.bottom+6)+'px'; p.style.right=Math.max(8, window.innerWidth-r.right)+'px';
+    var how=(IT.cfg&&IT.emb&&!ad)?'<div class="gse-how"><div style="font-size:11.5px;font-weight:600;color:var(--txt-2,#445);margin-bottom:3px">'+esc(T('cp_how'))+'</div>'
+        +'<label><input type="radio" name="gsehow" value="cfg" checked>'+esc(T('cp_cfg'))+'</label><label><input type="radio" name="gsehow" value="emb">'+esc(T('cp_emb'))+'</label></div>'
+      :(!ad&&IT.emb&&!IT.cfg?'<div class="gse-why">'+esc(IT.none?T('rn_title')+' — '+T('rn_'+IT.none)+'. ':'')+esc(T('cp_emb'))+'</div>':'');
+    p.innerHTML=pages.length?'<b>'+esc(T('copy'))+'</b>'+how+'<label>'+esc(T('cp_to'))+'<select data-c="pg">'+pages.map(function(x){ return '<option value="'+x+'">'+esc(T('pg_'+x))+'</option>'; }).join('')+'</select></label>'
       +'<label>'+esc(T('cp_scope'))+'<select data-c="sc"><option value="me">'+esc(T('save_me'))+'</option>'+(can&&srv?'<option value="all">'+esc(T('save_all'))+'</option>':'')+'</select></label>'
       +(srv?'':'<small>'+esc(T('pc_only'))+'</small>')
       +'<div class="gse-r"><button type="button" data-c="close">'+esc(T('cancel'))+'</button><button type="button" data-c="go" class="pri" style="background:var(--accent,#4C7CF0);border-color:var(--accent,#4C7CF0);color:#fff">'+esc(T('cp_go'))+'</button></div>'
@@ -13420,7 +13551,8 @@ GST.screen = (function(){
     p.addEventListener('click', async function(ev){ ev.stopPropagation(); var b=ev.target.closest('button'); if(!b) return;
       if(b.dataset.c==='close'){ p.remove(); return; }
       if(b.dataset.c==='go'){ b.disabled=true; var pg=p.querySelector('[data-c="pg"]').value, sc=p.querySelector('[data-c="sc"]').value;
-        var res=await copyTo(pg, sc, a); b.disabled=false;
+        var hw=p.querySelector('input[name="gsehow"]:checked'), mode=hw?hw.value:(IT.cfg?'cfg':'emb'), item=mode==='cfg'?IT.cfg:IT.emb;
+        var res=await copyTo(pg, sc, item); b.disabled=false;
         if(res&&res.ok){ p.remove(); toast(T('cp_done').replace('{p}', T('pg_'+pg))); }
         else toast(res&&res.error==='conflict'?T('conflict'):res&&res.error==='forbidden'?T('forbidden'):T('fail')); } });
   }
@@ -13441,6 +13573,9 @@ GST.screen = (function(){
       GST.cb.draw(ph, c, {id:'gcdPv', page:true}).then(function(R){ pt.textContent=GST.cb.title(c); pm.textContent=GST.cb.meta(R); }); }, 60); };
     var paint=function(){ GST.cb.form(fh, c, pv, {pre:'cbx-', page:true}); pv(); };
     paint(); GST.cb.load(c.src).then(paint, paint);
+    if(gopt && gopt.exact){ c=GST.cb.norm(gopt.exact.cfg); if(gopt.title&&!c.title) c.title=gopt.title;
+      var gmx=D.querySelector('.gcd-gm'), dr=(gopt.exact.drop||[]).map(function(k){ return T('rd_'+k); });
+      gmx.textContent=T('g_exact')+(dr.length?' · '+T('g_drop').replace('{x}', dr.join(', ')):''); GST.cb.load(c.src).then(paint, paint); }
     if(gopt && gopt.guess){ var gm=D.querySelector('.gcd-gm'), gb=D.querySelector('.gcd-g');
       gopt.guess.then(function(G){ if(!D.isConnected) return;
         if(G && G.cfg){ c=G.cfg; if(gopt.title) c.title=gopt.title; var sn=G.src;
@@ -13468,6 +13603,43 @@ GST.screen = (function(){
 (function(){
   var go=function(){ try{ GST.screen.boot(); }catch(e){ console.warn('[screen] 시작 실패', e); } };
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go); else setTimeout(go, 0);
+})();
+/* ---------- 카드 하나만 그리기 (v206 · ?embed=<카드 열쇠>) ----------
+   화면은 평소처럼 자료를 읽고 다 그린다(계산이 원래 코드 그대로다 — 그래서 숫자가 같다). 그 카드를 찾으면
+   «카드에서 body 까지의 길»에 있는 형제를 전부 숨기고(data-gse-off) 길 위의 칸은 여백을 없앤다(data-gse-keep).
+   · 화면 편집 배치(숨김·순서)는 걸지 않는다(GST.screen.boot 가 건너뛴다) — 원래 화면에서 숨긴 카드여도 보여야 한다. 은퇴·축 선택에 가려진 카드도 드러낸다.
+   · 그 뒤에 생기는 것(세부내역 창·알림)은 숨기지 않는다 — 처음 표시할 때 있던 것만 숨긴다. 화면이 카드를 다시 만들면(다시 그리기) 새 카드로 다시 건다.
+   · 카드 높이를 부모에 알린다(gst-embed-h) — 부모가 칸 높이를 맞춘다. 60초 안에 못 찾으면 «못 찾았다»를 알린다(gst-embed-miss). */
+(function(){
+  if(!GST._embed) return;
+  var cur=null, t0=Date.now(), ro=null, missed=false;
+  var post=function(m){ try{ window.parent.postMessage(m, '*'); }catch(e){} };
+  function find(){ try{ var L=GST.screen.cards(); for(var i=0;i<L.length;i++) if(GST.screen.keyOf(L[i])===GST._embed) return L[i]; }catch(e){} return null; }
+  function clear(){ document.querySelectorAll('[data-gse-off],[data-gse-keep],[data-gse-card]').forEach(function(n){ n.removeAttribute('data-gse-off'); n.removeAttribute('data-gse-keep'); n.removeAttribute('data-gse-card'); }); }
+  function mark(el){
+    clear(); cur=el; el.setAttribute('data-gse-card','1');
+    ['data-gst-hide','data-gst-retired','data-gst-alt','hidden'].forEach(function(a){ el.removeAttribute(a); });
+    if(el.style.display==='none') el.style.display='';
+    var n=el;
+    while(n && n!==document.body){ var p=n.parentElement; if(!p) break;
+      [].forEach.call(p.children, function(c){ if(c!==n && !/^(SCRIPT|STYLE|LINK)$/.test(c.tagName)) c.setAttribute('data-gse-off','1'); });
+      if(p!==document.body){ p.setAttribute('data-gse-keep','1'); if(p.style.display==='none') p.style.display=''; p.removeAttribute('hidden'); }
+      n=p; }
+    document.documentElement.classList.add('gse-ready');
+    try{ window.dispatchEvent(new Event('resize')); }catch(e){}
+    var send=function(){ if(cur&&cur.isConnected) post({type:'gst-embed-h', h:cur.getBoundingClientRect().height}); };
+    if(ro) ro.disconnect(); try{ ro=new ResizeObserver(send); ro.observe(el); }catch(e){} setTimeout(send, 50);
+  }
+  function tick(){
+    if(cur && cur.isConnected) return;
+    var el=find();
+    if(el){ var cv=el.querySelector('canvas'); if(!cv || !window.Chart || !Chart.getChart || Chart.getChart(cv) || Date.now()-t0>20000){ mark(el); return; } }
+    if(!missed && Date.now()-t0>60000){ missed=true; post({type:'gst-embed-miss'}); document.documentElement.classList.add('gse-ready'); }
+  }
+  var go=function(){ setInterval(tick, 300); post({type:'gst-embed-ask'}); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', go); else go();
+  window.addEventListener('message', function(e){ var d=e.data||{}; if(d.type!=='gst-embed-f' || e.source!==window.parent) return;
+    try{ if(GST.filters && GST.filters.embedSet) GST.filters.embedSet(d.snap||{}); }catch(x){ console.warn('[embed] 필터', x); } });
 })();
 
 global.GST = GST;

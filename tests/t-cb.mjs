@@ -42,7 +42,7 @@ const WHF = ['제품군','운영단위','고객사','단지','라인','BAY','공
   '작업공수','작업자','작업자수'];
 const wk = [WHF]; let n = 0;
 const w = (op, campus, stage, days, code) => { n++; const d = ymd(dAgo(days));
-  wk.push(['SCRUBBER', op, 'C', campus, campus, 'B1', 'ETCH', 'DRY', 'GST-1000', 'R' + n, '완료', '정기', stage, 'A', 'W' + n, 'MT', 'P',
+  wk.push(['SCRUBBER', op, 'C', campus, campus, 'B1', 'ETCH', 'DRY', n % 3 ? 'GST-1000' : 'GST_1000' /* 모델 표기 흔들림 — 화면처럼 한 값으로 흡수해야 레시피가 맞는다(v206) */, 'R' + n, '완료', '정기', stage, 'A', 'W' + n, 'MT', 'P',
     code, 'L', code + 'S', '', '무상', '', '', 'PUMP', '', '', d, d, '09:00', '10:00', d, '', '10', '60', '60', 'STAFF', '1']); };
 for (let i = 0; i < 12; i++) w('GST TAIWAN SCRUBBER', 'F16', 'BM', 0, 'TWC' + (i % 4 + 1));
 for (let k = 1; k <= 11; k++) w('GST TAIWAN SCRUBBER', 'F16', 'BM', 7 * k, 'TWC' + (10 + k));
@@ -406,6 +406,77 @@ await pg.click('#addStd'); await pg.waitForTimeout(200); await pg.click('.sd-men
 const mb = await pg.evaluate(() => { const w = S.board.widgets[S.board.widgets.length - 1], el = document.querySelector('#board [data-w="' + (S.board.widgets.length - 1) + '"]'), ch = el && Chart.getChart(el.querySelector('canvas'));
   return { std:w.std, ax:w.axis, n: el && el.querySelector('h3 .n').textContent, L: ch && ch.data.labels }; });
 is(mb.std === 'mbar' && mb.ax === 'model' && mb.L && mb.L[0] === 'GST-1000' && /모델별/.test(mb.n), '«지표 축별 비교» 위젯 — 100대당 고장 × 모델 (' + JSON.stringify(mb) + ')');
+await ctx.close();
+
+/* ============ ⑧ 레시피 = 화면 숫자 — 고장 분석 (v206 · 사용자 「추정 말고 정확히」) ============ */
+console.log('[8] 고장 분석 차트 레시피 — 화면 차트와 막대마다 같은가');
+ctx = await mkCtx(() => { window.__ME = { email:'boss@test.local', can_write:true, role:'admin' }; });
+pg = await ctx.newPage(); pg.on('pageerror', e => errs.push('fault8: ' + e.message));
+await pg.emulateMedia({ reducedMotion:'reduce' });
+await pg.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(5000);
+const cmpAll = () => pg.evaluate(async () => {
+  await GST.cb.load('wk'); const out = {}, etc = /^(기타|그 밖|Other|其他|その他)$/;
+  for (const id of GST.cb.recipes()) { const rc = GST.cb.recipeOf(id); if (!rc || !rc.cfg) continue;
+    const ch = Chart.getChart(document.getElementById(id)); if (!ch) { out[id] = 'NOCHART'; continue; }
+    const R = GST.cb.run(rc.cfg, { page:true }); if (!R || R.err) { out[id] = 'RUNERR ' + (R && R.err); continue; }
+    const cv = R.sets[0] ? R.sets[0].data : [], pl = (ch.data.labels || []).map(String), pd = ch.data.datasets[0].data;
+    const rnd = v => v == null ? 0 : Math.round(v);
+    let bad = [];
+    if (rc.cfg.range === 'nb') { const n = R.xs.length; if (pl.length < n || n < 2) bad.push('len ' + n + '/' + pl.length);   // 화면 추이는 뒤에 예측 3칸이 붙는다
+      for (let i = 0; i < Math.min(n, pl.length); i++) if (rnd(cv[i]) !== rnd(pd[i])) bad.push(i + ':' + rnd(cv[i]) + '/' + rnd(pd[i])); }
+    else { const M = {}; R.xs.forEach((x, i) => { M[String(x)] = cv[i]; });
+      pl.forEach((l, i) => { if (etc.test(l)) return; if (rnd(M[l]) !== rnd(pd[i])) bad.push(l + ':' + rnd(M[l]) + '/' + rnd(pd[i])); });
+      if (pl.filter(l => !etc.test(l)).length && !R.xs.length) bad.push('empty'); }
+    out[id] = bad.length ? bad.slice(0, 4).join(' ') : 'OK(' + pl.length + ')'; }
+  return out; });
+let C8 = await cmpAll();
+const okAll = o => Object.values(o).every(v => /^OK/.test(v));
+is(Object.keys(C8).length >= 12 && okAll(C8), '레시피 12장 — 화면 차트와 막대마다 같은 숫자 (' + JSON.stringify(C8) + ')');
+await pg.evaluate(() => { GST.filters.toggle('op', 'GST TAIWAN SCRUBBER'); F.stage = 'BM'; render(); }); await pg.waitForTimeout(1200);
+C8 = await cmpAll();
+is(okAll(C8), '운영단위 = 대만 · 작업단계 = BM 을 걸어도 같다 (' + JSON.stringify(C8) + ')');
+const rc8 = await pg.evaluate(() => { const r = GST.cb.recipeOf('cLine'), n = GST.cb.recipeOf('cRelModel'), q = (F.q = 'pump', GST.cb.recipeOf('cLine')); F.q = '';
+  return { st: r.cfg.filters.some(f => f.f === 'stage' && f.op === 'eq' && f.v === 'BM'), none: n && n.none, drop: q.drop }; });
+is(rc8.st && rc8.none === 'derived' && rc8.drop.indexOf('q') >= 0, '레시피는 «부를 때의» 조건을 담는다(작업단계 BM) · 신뢰성 차트는 none · 검색어는 «옮기지 않음»으로 밝힌다');
+await pg.evaluate(() => { GST.filters.toggle('op', 'GST TAIWAN SCRUBBER'); F.stage = ''; render(); }); await pg.waitForTimeout(800);
+await pg.evaluate(() => GST.screen.edit()); await pg.waitForTimeout(300);
+await pg.evaluate(() => { const el = document.getElementById('cTrend').closest('.gst-se-card'); el.scrollIntoView({block:'center'}); el.querySelector('.gst-se-bar [data-a="chart"]').click(); }); await pg.waitForTimeout(250);
+await pg.click('.gse-cpop [data-c="clone"]'); await pg.waitForTimeout(2500);
+const ex8 = await pg.evaluate(() => ({ t: (document.querySelector('#gstCbDlg .gcd-gm') || {}).textContent || '', r: (document.querySelector('#gstCbDlg #cbx-fRange') || {}).value }));
+is(/같은 계산/.test(ex8.t) && /UPM/.test(ex8.t) && ex8.r === 'nb', '새로 만들기 — «이 화면과 같은 계산» · 옮기지 않은 것(UPM 율 선·예측)을 적는다 · 범위 = 최근 N 구간 (' + ex8.t.slice(0, 60) + ')');
+if (process.env.SHOT) await pg.screenshot({ path: process.env.SHOT + '/cb-exact.png' });
+await pg.click('#gstCbDlg [data-d="ok"]'); await pg.waitForTimeout(900);
+const tr8 = await pg.evaluate(() => { const a = document.querySelector('[data-gst-add]'), ch = Chart.getChart(a.querySelector('canvas')), o = Chart.getChart(document.getElementById('cTrend'));
+  return { n: ch.data.labels.length, d: ch.data.datasets[0].data.join(','), o: o.data.datasets[0].data.slice(0, 12).join(',') }; });
+is(tr8.n === 12 && tr8.d === tr8.o, '새 차트 = 원래 추이 막대 12구간 그대로 (' + tr8.d + ')');
+await pg.evaluate(() => GST.screen.leave(false));
+
+/* ============ ⑨ 카드 그대로 가져오기 — 주간 현황 카드를 고장 분석에 ============ */
+console.log('[9] 카드 그대로 가져오기 (주간 현황 → 고장 분석)');
+await pg.goto(BASE + '/report/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(5000);
+const src9 = await pg.evaluate(() => { const ch = Chart.getChart(document.getElementById('cFt')); return ch && JSON.stringify({ l: ch.data.labels, d: ch.data.datasets.map(x => x.data) }); });
+await pg.evaluate(() => GST.screen.edit()); await pg.waitForTimeout(300);
+await pg.evaluate(() => { const el = document.getElementById('cFt').closest('.gst-se-card'); el.scrollIntoView({block:'center'}); el.querySelector('.gst-se-bar [data-a="copy"]').click(); }); await pg.waitForTimeout(300);
+const why9 = await pg.evaluate(() => ({ why: (document.querySelector('.gse-cpop .gse-why') || {}).textContent || '', how: document.querySelectorAll('.gse-cpop input[name="gsehow"]').length }));
+is(/설정으로 옮길 수 없습니다/.test(why9.why) && why9.how === 0, '주간 현황 카드 — 왜 설정으로 못 옮기는지 적고 «카드 그대로»만 (' + why9.why.slice(0, 50) + ')');
+await pg.selectOption('.gse-cpop [data-c="pg"]', 'fault'); await pg.click('.gse-cpop [data-c="go"]'); await pg.waitForTimeout(500);
+sv = (await calls(pg)).filter(c => c.rpc === 'screen_layout_save' && c.args.p_page === 'fault').pop();
+const emb = sv && (sv.args.p_config.adds || []).find(a => a.embed);
+is(!!emb && emb.embed.page === 'report' && emb.embed.key === 'cv:cFt', '고장 분석 배치에 «카드 그대로»(page·key)가 붙는다 (' + JSON.stringify(emb && emb.embed) + ')');
+await pg.evaluate(() => GST.screen.leave(false)); await pg.waitForTimeout(200);
+await pg.goto(BASE + '/fault/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(4000);
+await pg.evaluate(() => { const a = document.querySelector('.gst-emb-card'); if (a) a.scrollIntoView({block:'center'}); }); await pg.waitForTimeout(8000);
+const fr9 = await pg.evaluate(() => { const fr = document.querySelector('.gst-emb-card iframe'); if (!fr) return null; const W = fr.contentWindow, D = fr.contentDocument;
+  const ch = W.Chart && W.Chart.getChart(D.getElementById('cFt')); const vis = [...D.querySelectorAll('.card,.tablecard,.kpi')].filter(x => x.getBoundingClientRect().height > 0).length;
+  return { ready: D.documentElement.classList.contains('gse-ready'), j: ch && JSON.stringify({ l: ch.data.labels, d: ch.data.datasets.map(x => x.data) }), vis, h: fr.parentNode.getBoundingClientRect().height }; });
+is(fr9 && fr9.ready && fr9.j === src9, '고장 분석 안에서 주간 현황 «Alarm·고장» 카드가 같은 숫자로 선다');
+is(fr9 && fr9.vis === 1 && fr9.h > 200, '그 카드 하나만 보인다 · 칸 높이를 카드에 맞춘다 (' + JSON.stringify(fr9 && { vis: fr9.vis, h: Math.round(fr9.h) }) + ')');
+await pg.evaluate(() => GST.filters.toggle('op', 'GST TAIWAN SCRUBBER')); await pg.waitForTimeout(1500);
+const f9 = await pg.evaluate(() => { const W = document.querySelector('.gst-emb-card iframe').contentWindow; return { op: [...W.GST.filters.F.op], saved: W.localStorage.getItem('gst_bf_report') }; });
+is(f9.op.length === 1 && f9.op[0] === 'GST TAIWAN SCRUBBER' && !/TAIWAN/.test(f9.saved || ''), '이 화면의 상세 필터(대만)를 카드도 따른다 — 그 화면의 저장된 필터는 안 바꾼다 (' + JSON.stringify(f9) + ')');
+await pg.evaluate(() => document.querySelector('.gst-emb-card iframe').contentWindow.GST.rowsModal('t', ['a'], [['1']])); await pg.waitForTimeout(200);
+is(await pg.evaluate(() => !!document.querySelector('.gov')), '카드의 세부내역 창은 이 화면에서 열린다(카드 칸 안이 아니라)');
+if (process.env.SHOT) { await pg.keyboard.press('Escape'); await pg.evaluate(() => document.querySelector('.gst-emb-card').scrollIntoView({block:'center'})); await pg.waitForTimeout(400); await pg.screenshot({ path: process.env.SHOT + '/cb-embed.png' }); }
 await ctx.close();
 
 is(errs.length === 0, 'JS 에러 0' + (errs.length ? ' → ' + errs.slice(0, 3).join(' | ') : ''));
