@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=197"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=198"></script>
 <script src="../assets/qbr-ppt.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -190,7 +190,7 @@ body.gst-shot .op-tbl .opdrag,body.gst-shot .op-ordbar{display:none!important}
 }
 
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=197">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=198">
 </head>
 <body>
 
@@ -3896,6 +3896,11 @@ function mhwModal(){
       a.addEventListener('click',()=>{ try{ window.open('/edit/?tab=dq','gstEdit'); }catch(e){} }); hd.after(a); } } }catch(e){ console.warn('mhwModal', e); }
 }
 { const _al0=applyLang; applyLang=function(){ const r=_al0.apply(this,arguments); try{ mhwBadge(); }catch(e){ console.warn('mhwBadge',e); } return r; }; }
+/* 차트 레시피 (v206) — 이 화면의 차트는 전부 «화면 전용 계산»이다(인원·근무일·휴가가 분모 · 국내 원장과 해외 수선실적을 함께 세는 고장).
+   차트 만들기 엔진(건수·합계·평균)으로는 같은 숫자를 못 낸다 — 그래서 none 으로 적고, 다른 화면에 둘 때는 «카드 그대로 가져오기»를 쓴다
+   (이 화면 코드가 그 카드만 그려 같은 숫자다). 사유는 화면 편집 ⚙ 창이 사람에게 그대로 말한다. */
+if(GST.cb && GST.cb.recipe) GST.cb.recipe({ cTo:{none:'hr'}, cEdu:{none:'hr'}, cCip:{none:'derived'}, cAtt:{none:'hr'}, cChp:{none:'hr'},
+  cMan:{none:'hr'}, cFt:{none:'ledger'}, cHc:{none:'hr'}, cIo:{none:'hr'}, cCareer:{none:'hr'} });
 // (구) pptxgenjs 재구성 방식 — 양식 수술 방식으로 대체됨
 applyLang(); loadData();
 </script>

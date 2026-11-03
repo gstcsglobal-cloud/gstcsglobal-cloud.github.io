@@ -9,7 +9,7 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=197"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=198"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
@@ -269,7 +269,7 @@ body[data-sec-on="alarm"] .kpis:not(.fse-kpis),body[data-sec-on="alarm"] #gstIns
 }
 @media(max-width:900px){#fseSec .fse-g3{grid-template-columns:minmax(0,1fr)}}
 </style>
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=197">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=198">
 </head>
 <body>
 
@@ -3550,6 +3550,48 @@ function fseParts(){
         else { msg(ft('pt_saved_n',{n:items.length})); GST.capToast&&GST.capToast(ft('pt_saved_n',{n:items.length})); }
       } finally { b.disabled=false; b.textContent=lab; }
     }
+  });
+}
+
+/* 차트 레시피 (v206 · 사용자 「추정 말고 정확히 · 고장 분석부터」) — 이 화면 차트를 «차트 만들기 엔진»(GST.cb) 설정으로 적어 둔다.
+   화면 편집 ⚙ «이 차트로 새로 만들기»·⧉ «다른 화면으로 복사»가 라벨 추정 대신 이것을 쓴다.
+   · 화면이 세는 방식 그대로: 서비스 4단계(SERVICE_STAGES)만 · 빈 값·'N/A' 는 안 센다(GST.countBy) · 막대 차트는 상위 N(나머지는 꼬리 글),
+     도넛은 상위 N + 「기타」 · 추이는 화면과 같은 구간 함수(GST.periods — 엔진의 «최근 N 구간»)이고 기준일도 서비스 행으로 잡는다(nbBase 1).
+   · «부를 때의» 화면 상태(작업단계·유무상·원인·모델·S/N·공정·세부공정·Floor 고르기)를 거르기로 싣는다. 검색어(F.q)는 여러 칸을 한꺼번에 보는 조건이라 옮기지 않고 그렇다고 말한다(drop).
+   · none — 이 엔진(건수·합계·평균)으로는 같은 숫자를 못 내는 차트. 그 카드는 «카드 그대로 가져오기»로 옮긴다.
+   ⚠ 레시피와 화면 차트가 같은 숫자인지는 t-cb [8] 이 화면을 띄워 막대마다 대조한다 — 차트 계산을 고치면 여기도 같이 고친다. */
+if(GST.cb && GST.cb.recipe){
+  const rcF=()=>{ const fl=[{f:'stage',op:'in',v:SERVICE_STAGES.join(', ')}];
+    if(F.stage) fl.push({f:'stage',op:'eq',v:F.stage});
+    if(F.pf) fl.push({f:'pf',op:'eq',v:F.pf});
+    if(F.cause) fl.push({f:'cause',op:'eq',v:F.cause});
+    if(F.model) fl.push({f:'model',op:'eq',v:F.model});
+    if(F.sn) fl.push({f:'snIn',op:'eq',v:F.sn});
+    if(F.proc) fl.push({f:'proc',op:'eq',v:F.proc});
+    if(F.subproc) fl.push({f:'subproc',op:'eq',v:F.subproc});
+    if(F.floor) fl.push({f:'i:floor',op:'eq',v:F.floor});
+    return fl; };
+  const dq=()=>F.q?['q']:[];
+  const per=()=>GST.period()==='w'?'week':'month', nb=()=>(window._PERB||[]).length||12;
+  const ttl=id=>{ const h=document.getElementById(id), c=h&&h.closest('.card,.tablecard,.trend-card,.cross-card'), e=c&&c.querySelector('h3'); return e?e.textContent.replace(/\s+/g,' ').trim():''; };
+  const cnt=(id,x,top,type,other)=>({cfg:{src:'wk',type:type||'hbar',x:x,top:top,other:!!other,sort:'value',range:'all',follow:true,title:ttl(id),
+    measures:[{agg:'count'}],filters:rcF().concat([{f:x,op:'nempty'},{f:x,op:'ne',v:'N/A'}])},drop:dq()});
+  GST.cb.recipe({
+    cTrend:()=>({cfg:{src:'wk',type:'bar',x:'dStart',bucket:per(),range:'nb',nb:nb(),nbBase:1,follow:true,title:ttl('cTrend'),measures:[{agg:'count'}],filters:rcF()},drop:dq().concat(['upm','fc'])}),
+    cStage:()=>cnt('cStage','stage',6,'doughnut',true),
+    cSn:()=>cnt('cSn','snIn',8), cLine:()=>cnt('cLine','line',10,'bar'),
+    cPhenom:()=>cnt('cPhenom','phenom',8), cCause:()=>cnt('cCause','cause',8),
+    cModel:()=>cnt('cModel','model',8), cProc:()=>cnt('cProc','proc',6),
+    cAction:()=>cnt('cAction','action',6,'doughnut',true), cReqType:()=>cnt('cReqType','reqType',5,'doughnut',true),
+    cManTrend:()=>({cfg:{src:'wk',type:'bar',x:'dStart',bucket:per(),range:'nb',nb:nb(),nbBase:1,follow:true,title:ttl('cManTrend'),
+      measures:[{agg:'sum',f:'manMin',as:'none'},{agg:'expr',expr:'{1}/60',name:ttl('cManTrend')}],
+      filters:rcF().concat([{f:'manMin',op:'gt',v:'0'},{f:'manMin',op:'lt',v:'14400'}])},drop:dq()}),
+    cLineMan:()=>({cfg:{src:'wk',type:'bar',x:'line',top:8,other:false,sort:'value',range:'all',follow:true,title:ttl('cLineMan'),
+      measures:[{agg:'avg',f:'workMin'}],filters:rcF().concat([{f:'line',op:'nempty'},{f:'workMin',op:'gt',v:'0'},{f:'workMin',op:'lt',v:'1440'}])},drop:dq()}),
+    cStageD:{none:'delta'}, cDur:{none:'bins'}, cWcnt:{none:'bins'}, cWorker:{none:'split'}, cAlarmP:{none:'coalesce'},
+    cRelRank:{none:'derived'}, cRelModel:{none:'derived'}, cRelAge:{none:'derived'}, cFtfrTrend:{none:'derived'}, cFtfrModel:{none:'derived'},
+    cTbmWorker:{none:'derived'}, cTbmGap:{none:'derived'}, cTbmLine:{none:'derived'}, cSubBm:{none:'derived'}, cWorstBm:{none:'derived'},
+    cLR:{none:'derived'}, cBmTrend:{none:'derived'}, cFseTrend:{none:'fse'}, cFseRate:{none:'fse'}
   });
 }
 
