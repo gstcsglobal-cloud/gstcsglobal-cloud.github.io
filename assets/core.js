@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 198;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 199;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 여기서 묻는다 — 저장 키(축편집·피벗·섹션)·챗봇 출처·자동순회 페이지 id 가 이 한 곳을 본다.
    (v137 에는 오프라인 판의 srcdoc 때문에 두었고, 오프라인 판은 v199 에 없앴다 — 한 곳에서 묻는 규약은 그대로 둔다.) */
 GST.pagePath = function(){ return location.pathname; };
@@ -3342,6 +3342,7 @@ GST.dbRows = async function(table, opt){
   if(lg.data.err) GST._dbWarn(table, '마지막 적재 실패: '+String(lg.data.err).slice(0,80));
   else if(ageMin > 180 && lg.data.ms !== -1) GST._dbWarn(table, '미러가 '+Math.round(ageMin/60)+'시간째 갱신되지 않았습니다');
   GST._dbAge = Math.max(GST._dbAge||0, ageMin);
+  GST._dbAt = GST._dbAt||{}; GST._dbAt[table] = lg.data.synced_at;   // 카드 «근거»(v207)가 «자료 기준 시각»으로 적는다
 
   /* ── 행 캐시 (v101) ────────────────────────────────────────────────────
      적재 시각과 행수가 같으면 내용도 같다 — sheet_sync_log 가 보증하는 사실이다.
@@ -5745,6 +5746,8 @@ GST.sectionNav = function(defs){
     if(d && typeof d.onShow==='function'){ try{ d.onShow(); }catch(e){ console.warn('[sectionNav] onShow '+id, e); } }
   }
 
+  GST._secShow = function(id){ if(defs.some(function(d){ return d.id===id; })) show(id); };   // 북마크(v207)가 섹션을 연다
+  GST._secCur = function(){ return cur; };
   nav.innerHTML='';
   defs.forEach(function(d){
     const b=document.createElement('button');
@@ -6593,7 +6596,7 @@ GST.filters = (function(){
 
   /* ⚠ JSON.stringify(new Set) 은 '{}' 다 — 배열로 눕혀 저장하고 되살릴 때 Set 으로 되돌린다.
      그냥 Object.assign 으로 복원하면 F.campus 가 빈 객체가 되어 .has 가 사라진다(실제로 죽었다). */
-  var EPEND=null, EMB=null;
+  var EPEND=null, EMB=null, RPEND=null;
   /* 카드 하나만 그리는 모드(v206)에서 다른 화면의 상세 필터를 그대로 받는다 — 두 벌(설비·인원)과 기간. 받은 값은 저장하지 않는다(save 가드) —
      안 그러면 다른 화면에 띄운 카드 하나 때문에 사람이 이 화면에 걸어 둔 필터가 바뀐다. */
   function embedSet(sn){
@@ -6716,6 +6719,8 @@ GST.filters = (function(){
     snapshot: function(){ if(!CFG) return null; var dump=function(G){ var o={}; AXES.forEach(function(k){ if(k in G.F) o[k]=MULTI[k]?Array.from(G.F[k]):G.F[k]; }); return o; };
       return {eq:dump(EQ), hr:dump(HR), dtFrom:F.dtFrom||'', dtTo:F.dtTo||''}; },
     embedSet: embedSet,
+    /* 북마크(v207) — 저장해 둔 상세 필터를 «사람이 고른 것처럼» 건다(저장도 한다). mount 전이면 보류했다가 건다. */
+    restore: function(sn){ if(!CFG){ RPEND=sn||{}; return; } embedPut(sn||{}); save(); refresh(); if(CFG.onChange) CFG.onChange(); },
     _on: read,
     /* 공통 블록을 페이지의 .slicers 맨 앞에 끼우고, 원래 있던 항목들은 구분선 아래
        «이 페이지 전용»으로 밀어낸다. 사이드바 이동(autoSidebar)은 그대로 동작한다. */
@@ -6732,6 +6737,7 @@ GST.filters = (function(){
       /* ⚠ KCUR 을 먼저 지운다 — 보류분 재생은 «아직 한 번도 안 걸린» 값이라,
          같은-값-건너뛰기(v135 8단계)에 걸리면 그 탭만 영영 필터가 안 걸린다. */
       if(KPEND){ const kp = KPEND; KPEND = null; KCUR = null; kioskSet(kp.k, kp.v); }
+      if(RPEND){ const rp = RPEND; RPEND = null; setTimeout(function(){ embedPut(rp); save(); refresh(); if(CFG.onChange) CFG.onChange(); }, 0); }
       if(EPEND){ const ep = EPEND; EPEND = null; setTimeout(function(){ embedSet(ep); }, 0); }
       else if(GST._embed && EMB) embedPut(EMB);
       if(!document.getElementById('gf-css')){
@@ -8317,6 +8323,9 @@ GST.exportMenu = function(btn, id){
   it('xlsx', T.xlsx, !!why, why||'');
   it('data', T.data, !ch, ch?'':T.nochart);
   if(why && ch) it('png', T.png, false, T.img);      // 그림이 «유일한» 답일 때만
+  /* v207 — 근거(어느 자료 · 언제 · 어떤 필터 · 어떻게 셌나)와 사건 주석. 내보내기는 아니지만 «이 카드에 대해» 묻는 자리가 여기 하나라 같이 둔다 */
+  if(GST.cardWhy){ items.push('<hr style="border:0;border-top:1px solid var(--line,rgba(0,0,0,.12));margin:4px 0">'); it('why', GST._v7('why'), false, ''); }
+  if(GST.notes && ch) it('note', GST._v7('note'), false, '');
   const m=document.createElement('div'); m.className='gexp-menu';
   m.innerHTML=items.join('')+'<div class="gexp-hint">'+(why&&ch ? T.img+' — '+why : T.hint)+'</div>';
   const box=btn.closest('.capbtns');
@@ -8331,6 +8340,8 @@ GST.exportMenu = function(btn, id){
     else if(act==='xlsx') GST.xlsxCard(id);
     else if(act==='data') GST.copyChartData(id);
     else if(act==='png') GST.savePng(id);
+    else if(act==='why') GST.cardWhy(id);
+    else if(act==='note') GST.notes.dialog();
   });
   const off=function(e){ if(!m.isConnected){ document.removeEventListener('click',off,true); return; }
     if(m.contains(e.target)||e.target===btn) return; m.remove(); document.removeEventListener('click',off,true); };
@@ -11724,7 +11735,7 @@ GST.items = {
      자료마다 그 축이 «어느 열인지»(SRC[].org)가 정해져 있고, 열이 없는 축은 걸지 않는다(조용히 전부 빠지지 않게).
    ============================================================ */
 GST.CB_T = {
-  ko:{ src:'자료', type:'모양', x:'가로축 (나누는 기준)', xnum:'가로축 값 (숫자 열)', bucket:'날짜 묶기', series:'계열 (색으로 나누기)', none:'— 없음 —',
+  ko:{ src:'자료', cm_pick:'저장한 지표 불러오기',cm_save:'이 값을 지표로 저장',cm_mine:'나만', type:'모양', x:'가로축 (나누는 기준)', xnum:'가로축 값 (숫자 열)', bucket:'날짜 묶기', series:'계열 (색으로 나누기)', none:'— 없음 —',
        measures:'값', add_m:'+ 값 추가', m_agg:'집계', m_f:'열', m_calc:'계산', m_as:'표시', m_axis:'축', m_name:'이름 (비우면 자동)',
        sort:'정렬', top:'상위', other:'나머지는 「그 밖」으로 묶기', period:'기간', dateF:'기간 기준 열', range:'범위', filters:'거르기 (모두 만족)', add_f:'+ 조건',
        disp:'표시', labels:'값 표시', legend:'범례', pal:'색', fmt:'숫자 형식', ymin:'축 최소', ymax:'축 최대', target:'목표선', title:'제목 (비우면 자동)',
@@ -11749,7 +11760,7 @@ GST.CB_T = {
        f:{auto:'자동',int:'정수',d1:'소수 1자리',d2:'소수 2자리',pct:'%'},
        sn:{wk:'수선실적',mat:'자재실적',inst:'설치현황',fse:'FSE 원장',alarm:'국내 알람 원장',abp:'올바이패스 원장',roster:'인원현황',edu:'교육현황',leave:'휴가현황'},
        by:'{x}별 {y}', by2:'{x}·{s}별 {y}', of_m:'{f} {a}' },
-  en:{ src:'Data', type:'Chart type', x:'Category axis', xnum:'X value (numeric column)', bucket:'Group dates by', series:'Series (split by color)', none:'— none —',
+  en:{ src:'Data', cm_pick:'Load a saved metric',cm_save:'Save these values as a metric',cm_mine:'mine', type:'Chart type', x:'Category axis', xnum:'X value (numeric column)', bucket:'Group dates by', series:'Series (split by color)', none:'— none —',
        measures:'Values', add_m:'+ Add value', m_agg:'Aggregate', m_f:'Column', m_calc:'Calculation', m_as:'Show as', m_axis:'Axis', m_name:'Name (auto if empty)',
        sort:'Sort', top:'Top', other:'Group the rest as “Other”', period:'Period', dateF:'Date column', range:'Range', filters:'Filters (all must match)', add_f:'+ Condition',
        disp:'Display', labels:'Show values', legend:'Legend', pal:'Colors', fmt:'Number format', ymin:'Axis min', ymax:'Axis max', target:'Target line', title:'Title (auto if empty)',
@@ -11774,7 +11785,7 @@ GST.CB_T = {
        f:{auto:'Auto',int:'Integer',d1:'1 decimal',d2:'2 decimals',pct:'%'},
        sn:{wk:'Repair records',mat:'Material records',inst:'Installed base',fse:'FSE ledger',alarm:'Domestic alarm ledger',abp:'All by-pass ledger',roster:'Roster',edu:'Training',leave:'Leave'},
        by:'{y} by {x}', by2:'{y} by {x} · {s}', of_m:'{a} of {f}' },
-  zh:{ src:'数据', type:'图表类型', x:'横轴（分类依据）', xnum:'横轴值（数字列）', bucket:'日期分组', series:'系列（按颜色区分）', none:'— 无 —',
+  zh:{ src:'数据', cm_pick:'载入已保存的指标',cm_save:'将这些数值保存为指标',cm_mine:'仅我', type:'图表类型', x:'横轴（分类依据）', xnum:'横轴值（数字列）', bucket:'日期分组', series:'系列（按颜色区分）', none:'— 无 —',
        measures:'数值', add_m:'+ 添加数值', m_agg:'汇总', m_f:'列', m_calc:'计算', m_as:'显示为', m_axis:'轴', m_name:'名称（留空自动）',
        sort:'排序', top:'前', other:'其余合并为“其他”', period:'期间', dateF:'日期列', range:'范围', filters:'筛选（全部满足）', add_f:'+ 条件',
        disp:'显示', labels:'显示数值', legend:'图例', pal:'颜色', fmt:'数字格式', ymin:'轴最小值', ymax:'轴最大值', target:'目标线', title:'标题（留空自动）',
@@ -11799,7 +11810,7 @@ GST.CB_T = {
        f:{auto:'自动',int:'整数',d1:'1位小数',d2:'2位小数',pct:'%'},
        sn:{wk:'维修实绩',mat:'材料实绩',inst:'安装现况',fse:'FSE台账',alarm:'国内报警台账',abp:'全旁路台账',roster:'人员现况',edu:'培训现况',leave:'休假现况'},
        by:'按{x}的{y}', by2:'按{x}·{s}的{y}', of_m:'{f}{a}' },
-  ja:{ src:'データ', type:'グラフの種類', x:'横軸（分類の基準）', xnum:'横軸の値（数値列）', bucket:'日付のまとめ', series:'系列（色で分ける）', none:'— なし —',
+  ja:{ src:'データ', cm_pick:'保存した指標を読み込む',cm_save:'この値を指標として保存',cm_mine:'自分のみ', type:'グラフの種類', x:'横軸（分類の基準）', xnum:'横軸の値（数値列）', bucket:'日付のまとめ', series:'系列（色で分ける）', none:'— なし —',
        measures:'値', add_m:'+ 値を追加', m_agg:'集計', m_f:'列', m_calc:'計算', m_as:'表示', m_axis:'軸', m_name:'名前（空欄で自動）',
        sort:'並び順', top:'上位', other:'残りを「その他」にまとめる', period:'期間', dateF:'期間の基準列', range:'範囲', filters:'絞り込み（すべて満たす）', add_f:'+ 条件',
        disp:'表示', labels:'値を表示', legend:'凡例', pal:'色', fmt:'数値の形式', ymin:'軸の最小', ymax:'軸の最大', target:'目標線', title:'タイトル（空欄で自動）',
@@ -12359,7 +12370,7 @@ GST.cb = (function(){
             return (round?it.label:it.dataset.label)+': '+fmtV(v, c, ty==='stack100'||s.pct); } } } },
         scales:scales } });
     ch.$cbVals=!!d.labels; ch.$cbTarget=numOr(d.target); ch.$cbFmt=function(v, di){ var s=R.sets&&R.sets[round?0:di]; return fmtV(v, c, ty==='stack100'||(s&&s.pct)); };
-    ch.$cbR=R;
+    ch.$cbR=R; ch.$cbCfg=c;   // 카드 «근거»(v207)가 이 설정을 글로 적는다
     /* 세부내역은 core 규약(chart.$rows) 하나로 — gstRows 플러그인이 받아 GST.rowsModal 로 연다 */
     var cols=colsOf(DS);
     ch.$rows=function(di, i){
@@ -12441,6 +12452,11 @@ GST.cb = (function(){
       h+='</div>';
     });
     if(multi&&c.measures.length<6) h+='<button type="button" class="gcb-add" id="'+P+'addM">'+esc(T('add_m'))+'</button>';
+    /* 사용자 정의 지표(v207 · setup-33 custom_metrics) — 이 자료의 «값·식·조건»을 이름 붙여 두고 다른 차트·화면에서 다시 쓴다.
+       Power BI 의 측정값과 같은 자리 — 같은 계산을 사람마다 다시 짜면 같은 이름의 지표가 다른 숫자를 낸다. */
+    var CM=GST.cmetrics?GST.cmetrics.of(c.src):[];
+    h+='<div class="gcb-row">'+(CM.length?'<select id="'+P+'fCm" aria-label="'+esc(T('cm_pick'))+'"><option value="">'+esc(T('cm_pick'))+'</option>'+CM.map(function(m0,i){ return '<option value="'+i+'">'+esc(m0.name)+(m0.shared?'':' · '+esc(T('cm_mine')))+'</option>'; }).join('')+'</select>':'')
+      +(GST.cmetrics?'<button type="button" class="gcb-add" id="'+P+'cmSave">'+esc(T('cm_save'))+'</button>':'')+'</div>';
     h+='</div></div>';
     if(!isK&&!isSc&&xK!=='date') h+='<div class="gcb-row"><label><span>'+esc(T('sort'))+'</span><select id="'+P+'fSort">'+opts(['value','value_asc','label'], c.sort, function(v){ return T('s.'+v); })+'</select></label>'
       +'<label style="max-width:70px"><span>'+esc(T('top'))+'</span><input id="'+P+'fTop" type="number" min="3" max="60" value="'+c.top+'"></label></div>'
@@ -12481,6 +12497,11 @@ GST.cb = (function(){
     function bindAll(){
       var on=function(id, ev, fn){ var e=q(id); if(e) e[ev]=function(){ fn(e); ch(); }; };
       on('fX','onchange',function(e){ c.x=e.value; redraw(); });
+      on('fCm','onchange',function(e){ var m0=(GST.cmetrics.of(c.src)||[])[+e.value]; if(!m0||!m0.def) return;
+        var d0=JSON.parse(JSON.stringify(m0.def)); if(Array.isArray(d0.measures)&&d0.measures.length) c.measures=d0.measures;
+        if(Array.isArray(d0.filters)) c.filters=(c.filters||[]).concat(d0.filters.filter(function(f){ return !(c.filters||[]).some(function(g){ return g.f===f.f&&g.op===f.op&&g.v===f.v; }); }));
+        if(!c.title) c.title=m0.name; redraw(); });
+      var cms=q('cmSave'); if(cms) cms.onclick=function(){ GST.cmetrics.saveDlg(c, function(){ redraw(); }); };
       on('fBucket','onchange',function(e){ c.bucket=e.value; });
       on('fSeries','onchange',function(e){ c.series=e.value; });
       on('fSort','onchange',function(e){ c.sort=e.value; });
@@ -12678,7 +12699,7 @@ GST.cb = (function(){
    ============================================================ */
 GST.SCREEN_PAGES = ['hub','report','fault','pm','cip','scrubber','material','tco','hr'];
 GST.SCREEN_T = {
-  ko:{title:'화면 편집', cur_all:'전체 사용자 기본 배치 적용 중', cur_me:'내 배치 적용 중', cur_none:'원래 배치', hidden:'숨긴 카드', none_hidden:'숨긴 카드가 없습니다',
+  ko:{ver:'이전 버전',ver_none:'저장된 이전 버전이 없습니다',ver_all:'전체 기본',ver_me:'내 배치',ver_reset:'원래 배치로 되돌림',ver_load:'불러오기',ver_loaded:'이전 버전을 불러왔습니다 — 확인 후 저장하세요',ver_cards:'카드 {n}개',ver_fail:'버전 목록을 읽지 못했습니다(서버 준비 전일 수 있습니다)',preview:'조회자로 미리 보기',preview_on:'조회자 화면 미리 보기 중 — 관리 단추·설명·메타 정보가 숨겨진 모습입니다',preview_off:'미리 보기 끝내기',title:'화면 편집', cur_all:'전체 사용자 기본 배치 적용 중', cur_me:'내 배치 적용 중', cur_none:'원래 배치', hidden:'숨긴 카드', none_hidden:'숨긴 카드가 없습니다',
       show:'다시 표시', reset:'원래 배치로', cancel:'취소', save:'저장', save_all:'전체 사용자 기본 배치로 저장', save_me:'내 화면에만 저장',
       all_note:'관리자 권한 · 모든 사용자에게 같은 배치로 보입니다', me_note:'다른 사용자의 화면은 바뀌지 않습니다', drop_me:'내 배치 지우기',
       move:'끌어서 순서 바꾸기', wide:'전체 폭', narrow:'기본 폭', hide:'숨기기', rename:'제목 바꾸기', rn_apply:'적용', rn_orig:'원래 제목',
@@ -12689,7 +12710,7 @@ GST.SCREEN_T = {
       kpi:'지표', retired:'기본 숨김', pc_only:'이 PC 에만 저장됩니다(서버 준비 전)',
       chart:'차트 설정', add:'아래에 차트 추가', add_p:'＋ 차트 추가', del:'삭제', c_orig:'원래', c_series:'계열', c_reset:'원래대로', close:'닫기', c_which:'차트',
       c_noconv:'이 차트는 숫자 축이라 모양을 바꿀 수 없습니다 — 계열·값 표시·색·축은 바꿀 수 있습니다', size:'크기 조절 — 끌면 폭·높이 · 두 번 누르면 원래 크기', size_def:'원래 크기', cols:'칸', copy:'다른 화면으로 복사', cp_to:'복사할 화면', cp_scope:'어디에 둘까요', cp_go:'복사', cp_done:'«{p}» 화면에 복사했습니다 — 그 화면 맨 아래에 있습니다', cp_none:'복사할 화면이 없습니다', clone:'이 차트로 새로 만들기', clone_s:'자료·축·값을 바꿀 수 있는 새 차트로 만듭니다', g_wait:'원래 차트를 보고 자료·축을 찾는 중…', g_ok:'원래 차트와 {p}% 일치 ({src}) — 화면 전용 조건(작업 단계·기간 등)은 옮겨지지 않으니 미리 보기로 확인하세요', g_no:'맞는 자료·축을 찾지 못했습니다 — 직접 고르세요', g_hide:'원래 차트는 숨기기', pg_hub:'글로벌 현황', pg_report:'주간 현황', pg_fault:'고장 분석', pg_pm:'PM 점검', pg_cip:'CIP 진행', pg_scrubber:'설비 현황', pg_material:'자재 사용', pg_tco:'TCO', pg_hr:'인원·교육', g_exact:'이 화면과 같은 계산으로 만듭니다 — 지금 고른 조건(작업 단계·유무상 등)이 함께 담깁니다', g_drop:'옮기지 않은 것: {x}', rd_q:'검색어', rd_upm:'UPM 율 선', rd_fc:'예측 막대', rn_title:'이 차트는 설정으로 옮길 수 없습니다', rn_delta:'최근 두 구간을 견주는 계산', rn_bins:'값을 구간으로 나누는 계산', rn_split:'작업자 이름을 나눠 공수를 나누는 계산', rn_coalesce:'알람이 비면 현상으로 대신하는 계산', rn_derived:'신뢰성·비율 지표(MTBF·FTFR·재고장률 등)', rn_hr:'인원·근무일·휴가를 분모로 쓰는 계산', rn_ledger:'국내 원장과 해외 수선실적을 함께 세는 계산', rn_fse:'FSE 원장(알람 분석) 계산', rn_tail:'다른 화면에는 ⧉ «카드 그대로 가져오기»로 둘 수 있습니다', clone_g:'그래도 비슷하게 만들기 (추정)', cp_how:'어떻게', cp_cfg:'차트 설정으로 — 가볍고, 자료·축을 바꿀 수 있음', cp_emb:'카드 그대로 — 이 화면 계산 그대로(같은 숫자) · 그 화면을 함께 읽어 무겁습니다', emb_load:'카드를 불러오는 중…', emb_fail:'카드를 찾지 못했습니다 — 원래 화면에서 그 카드가 없어졌을 수 있습니다', b_add:'차트 추가', b_edit:'차트 고치기', b_apply:'적용', lg_def:'기본'},
-  en:{title:'Edit screen', cur_all:'Default layout for everyone', cur_me:'Using my layout', cur_none:'Original layout', hidden:'Hidden cards', none_hidden:'No hidden cards',
+  en:{ver:'Versions',ver_none:'No earlier versions saved',ver_all:'Default',ver_me:'Mine',ver_reset:'Reset to original',ver_load:'Load',ver_loaded:'Earlier version loaded — review and save',ver_cards:'{n} cards',ver_fail:'Could not read versions (server may not be ready)',preview:'Preview as viewer',preview_on:'Previewing the viewer screen — admin buttons, notes and meta info are hidden',preview_off:'End preview',title:'Edit screen', cur_all:'Default layout for everyone', cur_me:'Using my layout', cur_none:'Original layout', hidden:'Hidden cards', none_hidden:'No hidden cards',
       show:'Show', reset:'Original layout', cancel:'Cancel', save:'Save', save_all:'Save as default for everyone', save_me:'Save for me only',
       all_note:'Administrators · everyone sees this layout', me_note:'Other users are not affected', drop_me:'Remove my layout',
       move:'Drag to reorder', wide:'Full width', narrow:'Default width', hide:'Hide', rename:'Rename', rn_apply:'Apply', rn_orig:'Original title',
@@ -12700,7 +12721,7 @@ GST.SCREEN_T = {
       kpi:'KPI', retired:'Hidden by default', pc_only:'Saved on this PC only (server not ready)',
       chart:'Chart settings', add:'Add a chart below', add_p:'＋ Add chart', del:'Delete', c_orig:'Original', c_series:'Series', c_reset:'Reset', close:'Close', c_which:'Chart',
       c_noconv:'This chart has a numeric axis, so its type cannot change — series, values, colors and axis can', size:'Resize — drag for width and height · double-click for original size', size_def:'Original size', cols:'cols', copy:'Copy to another screen', cp_to:'Copy to', cp_scope:'Where', cp_go:'Copy', cp_done:'Copied to «{p}» — it is at the bottom of that screen', cp_none:'No other screen to copy to', clone:'Rebuild as a new chart', clone_s:'Creates a new chart whose data, axis and values you can change', g_wait:'Looking for the data and axis behind the original chart…', g_ok:'{p}% match with the original chart ({src}) — screen-specific conditions (work stage, period, …) are not carried over, so check the preview', g_no:'Could not find matching data and axis — choose them yourself', g_hide:'Hide the original chart', pg_hub:'Global overview', pg_report:'Weekly report', pg_fault:'Failure analysis', pg_pm:'PM schedule', pg_cip:'CIP progress', pg_scrubber:'Equipment', pg_material:'Material usage', pg_tco:'TCO', pg_hr:'Workforce & training', g_exact:'Built with the same calculation as this screen — the conditions you picked (work stage, paid/free, …) come along', g_drop:'Not carried over: {x}', rd_q:'search text', rd_upm:'UPM rate line', rd_fc:'forecast bars', rn_title:'This chart cannot be moved as settings', rn_delta:'a comparison of the last two periods', rn_bins:'a calculation that bins values', rn_split:'a calculation that splits man-hours across workers', rn_coalesce:'a calculation that falls back to symptom when the alarm is blank', rn_derived:'reliability or ratio metrics (MTBF, FTFR, repeat rate, …)', rn_hr:'a calculation divided by headcount, workdays and leave', rn_ledger:'a calculation that counts the domestic ledger and overseas repair records together', rn_fse:'an FSE ledger (alarm analysis) calculation', rn_tail:'You can put it on another screen with ⧉ «copy the card as is»', clone_g:'Build a similar one anyway (estimated)', cp_how:'How', cp_cfg:'As chart settings — light, data and axis can change', cp_emb:'The card as is — same calculation as this screen (same numbers) · loads that screen too, so it is heavier', emb_load:'Loading the card…', emb_fail:'Could not find the card — it may have been removed from its screen', b_add:'Add chart', b_edit:'Edit chart', b_apply:'Apply', lg_def:'Default'},
-  zh:{title:'编辑画面', cur_all:'正在使用全体默认布局', cur_me:'正在使用我的布局', cur_none:'原始布局', hidden:'隐藏的卡片', none_hidden:'没有隐藏的卡片',
+  zh:{ver:'历史版本',ver_none:'没有已保存的历史版本',ver_all:'全体默认',ver_me:'我的布局',ver_reset:'恢复为原始布局',ver_load:'载入',ver_loaded:'已载入历史版本 — 确认后保存',ver_cards:'卡片{n}个',ver_fail:'无法读取版本列表(服务器可能尚未就绪)',preview:'以查看者身份预览',preview_on:'正在预览查看者画面 — 管理按钮·说明·元信息已隐藏',preview_off:'结束预览',title:'编辑画面', cur_all:'正在使用全体默认布局', cur_me:'正在使用我的布局', cur_none:'原始布局', hidden:'隐藏的卡片', none_hidden:'没有隐藏的卡片',
       show:'重新显示', reset:'恢复原始布局', cancel:'取消', save:'保存', save_all:'保存为全体用户默认布局', save_me:'仅保存到我的画面',
       all_note:'管理员权限 · 所有用户看到同一布局', me_note:'不影响其他用户', drop_me:'删除我的布局',
       move:'拖动以调整顺序', wide:'全宽', narrow:'默认宽度', hide:'隐藏', rename:'修改标题', rn_apply:'应用', rn_orig:'原标题',
@@ -12711,7 +12732,7 @@ GST.SCREEN_T = {
       kpi:'指标', retired:'默认隐藏', pc_only:'仅保存在此电脑（服务器尚未准备）',
       chart:'图表设置', add:'在下方添加图表', add_p:'＋ 添加图表', del:'删除', c_orig:'原样', c_series:'系列', c_reset:'恢复原样', close:'关闭', c_which:'图表',
       c_noconv:'此图表为数字轴，无法更改类型 — 可更改系列·数值显示·颜色·轴', size:'调整大小 — 拖动改变宽高 · 双击恢复原始大小', size_def:'原始大小', cols:'列', copy:'复制到其他画面', cp_to:'复制到', cp_scope:'放在哪里', cp_go:'复制', cp_done:'已复制到«{p}» — 在该画面最下方', cp_none:'没有可复制到的画面', clone:'用此图表重新制作', clone_s:'制作可更改资料·轴·数值的新图表', g_wait:'正在根据原图表查找资料和轴…', g_ok:'与原图表 {p}% 一致 ({src}) — 画面专用条件(作业阶段·期间等)不会带过来，请看预览确认', g_no:'没有找到匹配的资料和轴 — 请自行选择', g_hide:'隐藏原图表', pg_hub:'全球概况', pg_report:'周报', pg_fault:'故障分析', pg_pm:'PM 点检', pg_cip:'CIP 进度', pg_scrubber:'设备现况', pg_material:'物料使用', pg_tco:'TCO', pg_hr:'人员·培训', g_exact:'按此画面相同的计算制作 — 当前选择的条件(作业阶段·有偿/无偿等)一并带入', g_drop:'未带入: {x}', rd_q:'搜索词', rd_upm:'UPM 率线', rd_fc:'预测柱', rn_title:'此图表无法以设置形式迁移', rn_delta:'比较最近两个区间的计算', rn_bins:'将数值分段的计算', rn_split:'按作业员拆分工时的计算', rn_coalesce:'报警为空时以现象代替的计算', rn_derived:'可靠性·比率指标(MTBF·FTFR·再故障率等)', rn_hr:'以人员·工作日·休假为分母的计算', rn_ledger:'将国内台账与海外修理实绩合并统计的计算', rn_fse:'FSE 台账(报警分析)计算', rn_tail:'可用 ⧉ «原样带入卡片» 放到其他画面', clone_g:'仍然制作类似图表 (推测)', cp_how:'方式', cp_cfg:'以图表设置 — 轻量 · 可更改资料与轴', cp_emb:'原样卡片 — 与此画面相同计算(相同数字) · 会一并读取该画面，较重', emb_load:'正在加载卡片…', emb_fail:'找不到该卡片 — 可能已从原画面移除', b_add:'添加图表', b_edit:'修改图表', b_apply:'应用', lg_def:'默认'},
-  ja:{title:'画面編集', cur_all:'全ユーザー既定レイアウトを適用中', cur_me:'自分のレイアウトを適用中', cur_none:'元のレイアウト', hidden:'非表示のカード', none_hidden:'非表示のカードはありません',
+  ja:{ver:'過去のバージョン',ver_none:'保存された過去のバージョンはありません',ver_all:'全体既定',ver_me:'自分のレイアウト',ver_reset:'元のレイアウトに戻した',ver_load:'読み込む',ver_loaded:'過去のバージョンを読み込みました — 確認して保存してください',ver_cards:'カード{n}枚',ver_fail:'バージョン一覧を読めませんでした(サーバー準備前の可能性)',preview:'閲覧者としてプレビュー',preview_on:'閲覧者画面をプレビュー中 — 管理ボタン·説明·メタ情報が隠れた状態です',preview_off:'プレビュー終了',title:'画面編集', cur_all:'全ユーザー既定レイアウトを適用中', cur_me:'自分のレイアウトを適用中', cur_none:'元のレイアウト', hidden:'非表示のカード', none_hidden:'非表示のカードはありません',
       show:'再表示', reset:'元のレイアウトへ', cancel:'キャンセル', save:'保存', save_all:'全ユーザーの既定として保存', save_me:'自分の画面のみに保存',
       all_note:'管理者権限 · 全ユーザーに同じレイアウトで表示', me_note:'他のユーザーの画面は変わりません', drop_me:'自分のレイアウトを削除',
       move:'ドラッグで並べ替え', wide:'全幅', narrow:'既定の幅', hide:'非表示', rename:'タイトル変更', rn_apply:'適用', rn_orig:'元のタイトル',
@@ -13228,6 +13249,8 @@ GST.screen = (function(){
       +'<button type="button" data-p="undo" title="'+esc(GST.cb?GST.cb.T('undo'):'Ctrl+Z')+'" aria-label="undo"'+(S.edit&&S.edit.hist.length?'':' disabled')+'>↶</button><button type="button" data-p="redo" title="'+esc(GST.cb?GST.cb.T('redo'):'Ctrl+Y')+'" aria-label="redo"'+(S.edit&&S.edit.redo.length?'':' disabled')+'>↷</button>'
       +(GST.cb?'<button type="button" data-p="add">'+esc(T('add_p'))+'</button>':'')
       +'<span class="gse-dd"><button type="button" data-p="hid">'+esc(T('hidden'))+' '+hl.filter(function(x){ return !x.ret; }).length+' ▾</button></span>'
+      +'<span class="gse-dd"><button type="button" data-p="ver">'+esc(T('ver'))+' ▾</button></span>'
+      +'<button type="button" data-p="preview">'+esc(T('preview'))+'</button>'
       +'<span class="gse-dd"><button type="button" data-p="reset">'+esc(T('reset'))+' ▾</button></span>'
       +'<button type="button" data-p="cancel">'+esc(T('cancel'))+'</button>'
       +'<span class="gse-dd"><button type="button" class="pri" data-p="save">'+esc(T('save'))+' ▾</button></span>';
@@ -13261,6 +13284,32 @@ GST.screen = (function(){
       if(m2) m2.addEventListener('click', function(ev){ var r=ev.target.closest('[data-r]'); if(!r||r.disabled) return; resetTo(r.dataset.r); });
       return;
     }
+    /* 이전 버전(v207 · setup-33 layout_hist) — 저장할 때마다 트리거가 그때 설정을 남긴다. 불러오면 «편집 중» 상태로 들어온다 —
+       바로 덮지 않는다(사람이 보고 저장해야 반영된다 · 남의 변경을 덮지 않는 p_at 규율은 저장이 그대로 지킨다). */
+    if(b.dataset.p==='ver'){
+      var mv=menu(b, '<div class="gse-empty">…</div>'); if(!mv) return;
+      (async function(){
+        var C=await GST._dbAuthed(); if(!C){ mv.innerHTML='<div class="gse-empty">'+esc(T('ver_fail'))+'</div>'; return; }
+        var me=(GST._me&&GST._me.email||'').toLowerCase(), L=[];
+        try{
+          var rs=await Promise.all([C.rpc('layout_versions',{p_kind:'screen', p_ref:S.page+'|'}), me?C.rpc('layout_versions',{p_kind:'screen', p_ref:S.page+'|'+me}):Promise.resolve({data:{list:[]}})]);
+          if(rs[0].error) throw rs[0].error;
+          ((rs[0].data||{}).list||[]).forEach(function(x){ x.sc='all'; L.push(x); }); ((rs[1].data||{}).list||[]).forEach(function(x){ x.sc='me'; L.push(x); });
+        }catch(e){ mv.innerHTML='<div class="gse-empty">'+esc(T('ver_fail'))+'</div>'; return; }
+        L.sort(function(a,b){ return String(b.at).localeCompare(String(a.at)); });
+        if(!L.length){ mv.innerHTML='<div class="gse-empty">'+esc(T('ver_none'))+'</div>'; return; }
+        var fmtT=function(t){ var d=new Date(t); return GST.ymdL(d)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+        mv.innerHTML=L.slice(0,30).map(function(x,i){ return '<div class="gse-row"><span>'+esc(fmtT(x.at))+' · '+esc(x.sc==='all'?T('ver_all'):T('ver_me'))+'<small> · '+esc(x.by||'')+' · '+esc(x.reset?T('ver_reset'):T('ver_cards').replace('{n}',x.n))+'</small></span>'
+          +(x.reset?'':'<button type="button" data-v="'+i+'">'+esc(T('ver_load'))+'</button>')+'</div>'; }).join('');
+        mv.addEventListener('click', async function(ev){ var bv=ev.target.closest('[data-v]'); if(!bv) return; var x=L[+bv.dataset.v];
+          var r=await C.rpc('layout_version',{p_id:x.id}); var cf=r.data&&r.data.config;
+          if(r.error||!cf){ toast(T('ver_fail')); return; }
+          var nc=JSON.parse(JSON.stringify(cf)); nc.v=1; nc.order=nc.order||[]; ['hidden','wide','show','adds'].forEach(function(k){ nc[k]=nc[k]||[]; }); ['titles','charts','size','move'].forEach(function(k){ nc[k]=nc[k]||{}; });
+          S.edit.cfg=nc; apply(nc); decorate(); dirty(); paintPanel(); resizeCharts(document); toast(T('ver_loaded')); });
+      })();
+      return;
+    }
+    if(b.dataset.p==='preview'){ GST.previewViewer(true); return; }
     if(b.dataset.p==='cancel'){ leave(false); return; }
     if(b.dataset.p==='add'){ builder(null, lastKey()); return; }
     if(b.dataset.p==='undo'){ undo(true); return; }
@@ -13641,6 +13690,289 @@ GST.screen = (function(){
   window.addEventListener('message', function(e){ var d=e.data||{}; if(d.type!=='gst-embed-f' || e.source!==window.parent) return;
     try{ if(GST.filters && GST.filters.embedSet) GST.filters.embedSet(d.snap||{}); }catch(x){ console.warn('[embed] 필터', x); } });
 })();
+
+
+/* ============================================================
+   v207 — 근거 · 사건 주석 · 북마크 · 사용자 정의 지표 · 조회자 미리 보기 (setup-33)
+   ------------------------------------------------------------
+   사용자: 「커스터마이징 컨셉 … Retool · Appsmith · Power BI · Grafana … 장점을 차용해서라도 부족한 점은 없는지」 → 「제안한 거 전부」.
+   · 근거(Power BI 의 «데이터 계보») — 카드마다 «어느 자료를 · 언제 받은 것을 · 어떤 필터로 · 어떻게 셌나». 지어내지 않는다:
+     이 화면이 실제로 읽은 표(GST._srcSeen)와 그 표의 적재 시각(GST._dbAt) · 걸린 필터(GST.filtSummary) · 레시피(GST.cb.recipeOf)만 적는다.
+     레시피가 없는 카드는 «그 화면 코드가 센 숫자»라고 말한다(추정해서 식을 적지 않는다).
+     ⚠ 표 이름·행 수는 관리자에게만(A-4) — 조회자에게는 자료 이름과 기준 시각(사실)만.
+   · 사건 주석(Grafana 의 annotation) — 날짜 축 차트에 세로 점선 + 짧은 글. 숫자는 한 자리도 안 바꾼다(그림 위에 얹을 뿐).
+     날짜 꼴 라벨(2026-08 · 2026-W41 · W41 · 2026-08-14 · 2026 · 2026-Q3 · 26.08)만 맞춘다 — 못 맞추는 차트에는 안 그린다.
+   · 북마크(Power BI 책갈피) — 셸이 «지금 탭 · 섹션 · 상세 필터»를 묻고(gst-bm-q), 열 때 되돌려 건다(gst-bm-apply · GST.filters.restore).
+   · 사용자 정의 지표 — GST.cb 폼의 «값»을 이름 붙여 저장한다(custom_metrics). 같은 계산을 사람마다 다시 짜지 않게.
+   · 조회자로 미리 보기 — 관리자가 «조회자에게 보이는 화면»을 그대로 본다(설명·메타·관리 단추가 숨는다). 화면을 다시 열어 등급만 바꿔 보인다 —
+     이미 그려진 관리자용 문구가 남지 않게(그 자리만 숨기면 «거의 같은» 화면을 보게 된다).
+   ============================================================ */
+GST.EXTRA_T = {
+  ko:{why:'근거', why_t:'이 카드의 근거', page:'화면', card:'카드', data:'자료', at:'자료 기준 시각', at_none:'기준 시각 기록 없음', rows:'행 수', filt:'걸린 필터', calc:'계산',
+      calc_r:'{s} · {a} · 가로축 {x}', calc_none:'이 엔진으로는 같은 숫자를 못 냅니다 — {r}', calc_page:'이 화면 코드가 센 숫자입니다(별도 계산 기록 없음)', calc_cb:'차트 엔진 설정 그대로',
+      drill:'막대·조각을 누르면 그 숫자를 이룬 행들이 뜹니다', drop:'옮기지 못한 조건', notes:'이 화면의 사건 주석', none:'—', src:'출처',
+      note:'사건 주석', note_t:'사건 주석 — 날짜가 있는 차트에 세로선으로', n_d:'날짜', n_d2:'끝 날짜(선택)', n_text:'내용(80자)', n_tone:'색', n_scope:'적용', n_page:'이 화면', n_all:'모든 화면',
+      n_shared:'모두에게 보이기', n_add:'주석 추가', n_rm:'삭제', n_list:'등록된 주석', n_empty:'아직 주석이 없습니다', n_saved:'주석을 추가했습니다', n_fail:'주석을 저장하지 못했습니다',
+      n_ro:'모두에게 보이는 주석은 조치 사항을 쓸 수 있는 사람만 추가합니다 — 나만 보이는 주석으로 저장됩니다', n_noDb:'서버에 연결되지 않아 주석을 저장할 수 없습니다', tone:{info:'파랑',ok:'초록',warn:'노랑'},
+      cm_name:'지표 이름', cm_shared:'다른 사람도 쓰기', cm_ok:'지표를 저장했습니다', cm_fail:'지표를 저장하지 못했습니다', cm_ask:'이 «값» 설정을 지표로 저장합니다 — 다른 차트·화면의 «저장한 지표 불러오기»에 나옵니다',
+      pv_on:'조회자 화면 미리 보기 중', pv_off:'미리 보기 끝내기', save:'저장', cancel:'취소'},
+  en:{why:'Source', why_t:'Where this card comes from', page:'Screen', card:'Card', data:'Data', at:'Data as of', at_none:'no timestamp recorded', rows:'Rows', filt:'Filters', calc:'Calculation',
+      calc_r:'{s} · {a} · by {x}', calc_none:'This engine cannot reproduce the number — {r}', calc_page:'Counted by this screen’s own code (no separate calculation record)', calc_cb:'Chart engine settings as shown',
+      drill:'Click a bar or slice to see the rows behind the number', drop:'Conditions not carried over', notes:'Event notes on this screen', none:'—', src:'Source',
+      note:'Event note', note_t:'Event notes — shown as vertical lines on date charts', n_d:'Date', n_d2:'End date (optional)', n_text:'Text (80 chars)', n_tone:'Color', n_scope:'Applies to', n_page:'This screen', n_all:'All screens',
+      n_shared:'Visible to everyone', n_add:'Add note', n_rm:'Remove', n_list:'Notes', n_empty:'No notes yet', n_saved:'Note added', n_fail:'Could not save the note',
+      n_ro:'Only people who can write action items can add notes for everyone — this one is saved for you only', n_noDb:'Not connected to the server — notes cannot be saved', tone:{info:'Blue',ok:'Green',warn:'Amber'},
+      cm_name:'Metric name', cm_shared:'Others can use it', cm_ok:'Metric saved', cm_fail:'Could not save the metric', cm_ask:'Saves these value settings as a metric — it appears in “Load a saved metric” on other charts and screens',
+      pv_on:'Previewing the viewer screen', pv_off:'End preview', save:'Save', cancel:'Cancel'},
+  zh:{why:'依据', why_t:'此卡片的依据', page:'画面', card:'卡片', data:'数据', at:'数据基准时间', at_none:'无基准时间记录', rows:'行数', filt:'已加筛选', calc:'计算',
+      calc_r:'{s} · {a} · 横轴 {x}', calc_none:'此引擎无法得出相同数字 — {r}', calc_page:'由此画面代码计算的数字(无单独计算记录)', calc_cb:'按图表引擎设置',
+      drill:'点击柱形或扇形可查看构成该数字的行', drop:'未能带过去的条件', notes:'此画面的事件注释', none:'—', src:'来源',
+      note:'事件注释', note_t:'事件注释 — 在日期图表上显示为竖线', n_d:'日期', n_d2:'结束日期(可选)', n_text:'内容(80字)', n_tone:'颜色', n_scope:'适用', n_page:'此画面', n_all:'所有画面',
+      n_shared:'对所有人可见', n_add:'添加注释', n_rm:'删除', n_list:'已登记的注释', n_empty:'尚无注释', n_saved:'已添加注释', n_fail:'未能保存注释',
+      n_ro:'只有能写待办事项的人才能添加对所有人可见的注释 — 将保存为仅自己可见', n_noDb:'未连接服务器，无法保存注释', tone:{info:'蓝',ok:'绿',warn:'黄'},
+      cm_name:'指标名称', cm_shared:'他人也可使用', cm_ok:'已保存指标', cm_fail:'未能保存指标', cm_ask:'将这些数值设置保存为指标 — 会出现在其他图表·画面的“载入已保存的指标”中',
+      pv_on:'正在预览查看者画面', pv_off:'结束预览', save:'保存', cancel:'取消'},
+  ja:{why:'根拠', why_t:'このカードの根拠', page:'画面', card:'カード', data:'データ', at:'データ基準時刻', at_none:'基準時刻の記録なし', rows:'行数', filt:'かかっているフィルター', calc:'計算',
+      calc_r:'{s} · {a} · 横軸 {x}', calc_none:'このエンジンでは同じ数字を出せません — {r}', calc_page:'この画面のコードが数えた数字です(別の計算記録なし)', calc_cb:'チャートエンジンの設定どおり',
+      drill:'棒や扇形を押すとその数字を構成する行が出ます', drop:'持ち越せなかった条件', notes:'この画面の出来事メモ', none:'—', src:'出典',
+      note:'出来事メモ', note_t:'出来事メモ — 日付のあるチャートに縦線で', n_d:'日付', n_d2:'終了日(任意)', n_text:'内容(80字)', n_tone:'色', n_scope:'適用', n_page:'この画面', n_all:'すべての画面',
+      n_shared:'全員に表示', n_add:'メモを追加', n_rm:'削除', n_list:'登録済みのメモ', n_empty:'メモはまだありません', n_saved:'メモを追加しました', n_fail:'メモを保存できませんでした',
+      n_ro:'全員に見えるメモは対応事項を書ける人だけが追加できます — 自分だけに見えるメモとして保存します', n_noDb:'サーバーに接続されていないためメモを保存できません', tone:{info:'青',ok:'緑',warn:'黄'},
+      cm_name:'指標名', cm_shared:'他の人も使える', cm_ok:'指標を保存しました', cm_fail:'指標を保存できませんでした', cm_ask:'この値の設定を指標として保存します — 他のチャート·画面の「保存した指標を読み込む」に出ます',
+      pv_on:'閲覧者画面をプレビュー中', pv_off:'プレビュー終了', save:'保存', cancel:'キャンセル'}
+};
+GST._v7 = function(k){ var L=GST._lang?GST._lang():'ko', d=GST.EXTRA_T[L]||GST.EXTRA_T.ko; var v=k.split('.').reduce(function(o,p){ return o&&o[p]; }, d);
+  if(v==null) v=k.split('.').reduce(function(o,p){ return o&&o[p]; }, GST.EXTRA_T.ko); return v==null?k:v; };
+GST._pageKey = function(){ try{ return String((GST.pagePath?GST.pagePath():location.pathname)||'').replace(/^\/+|\/+$/g,'').split('/')[0]||'shell'; }catch(e){ return 'shell'; } };
+
+/* ---------- 근거 ---------- */
+GST.cardWhy = function(id){
+  var V=GST._v7, esc=GST._esc, cv=document.getElementById(id), card=cv?GST.cardOf(cv):null, ch=GST.chartOf?GST.chartOf(id):null;
+  var adm=!!(GST.isAdmin&&GST.isAdmin());
+  var rows=[];
+  rows.push([V('page'), (document.title||'').split(' · ')[0]]);
+  rows.push([V('card'), GST.cardTitle?GST.cardTitle(id):id]);
+  var keys=Object.keys(GST._srcSeen||{});
+  if(keys.length) keys.forEach(function(k){ var v=GST._srcSeen[k], at=(GST._dbAt||{})[k];
+    var nm=(GST.bootName?GST.bootName(k):k);
+    var fmtT=function(t){ var d=new Date(t); return isNaN(d)?'':GST.ymdL(d)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+    rows.push([V('data'), nm+' · '+V('at')+' '+(at?fmtT(at):V('at_none'))+(adm?' · '+k+' · '+(v.n||0).toLocaleString()+' '+V('rows')+' · '+(GST._srcT?((GST._srcT()[v.src+'L'])||v.src):v.src):'')]); });
+  else rows.push([V('data'), V('none')]);
+  var fs=''; try{ fs=GST.filtSummary?GST.filtSummary():''; }catch(e){}
+  rows.push([V('filt'), fs||V('none')]);
+  var r=null; try{ r=GST.cb&&GST.cb.recipeOf?GST.cb.recipeOf(id):null; }catch(e){}
+  var cbc=ch&&ch.$cbCfg;
+  var desc=function(c){ var T=GST.cb.T, m=(c.measures||[]).filter(function(x){ return x.as!=='none'; }).map(function(x){ return x.agg==='expr'?(T('a.expr')+' '+(x.expr||'')):(T('a.'+x.agg)+(x.f?' '+x.f:'')); }).join(', ');
+    var f=(c.filters||[]).map(function(x){ return x.f+' '+T('op.'+(x.op||'eq'))+(x.v!=null&&x.v!==''?' '+x.v:''); }).join(' · ');
+    return V('calc_r').replace('{s}', T('sn.'+c.src)).replace('{a}', m||T('a.count')).replace('{x}', (c.x||'')+(c.bucket?' ('+T('b.'+c.bucket)+')':''))+(f?' · '+f:'')+(c.range&&c.range!=='all'?' · '+T('r.'+c.range):''); };
+  if(r&&r.cfg){ rows.push([V('calc'), desc(r.cfg)]); if(r.drop&&r.drop.length) rows.push([V('drop'), r.drop.join(' · ')]); }
+  else if(r&&r.none){ rows.push([V('calc'), V('calc_none').replace('{r}', r.none)]); }
+  else if(cbc){ rows.push([V('calc'), V('calc_cb')+' — '+desc(cbc)]); }
+  else rows.push([V('calc'), V('calc_page')]);
+  if(ch&&typeof ch.$rows==='function') rows.push([V('src'), V('drill')]);
+  var ns=(GST.notes&&GST.notes.list?GST.notes.list():[]);
+  if(ns.length) rows.push([V('notes'), ns.slice(0,6).map(function(n){ return n.d+(n.d2?'~'+n.d2:'')+' '+n.text; }).join(' · ')+(ns.length>6?' …':'')]);
+  GST.rowsModal(V('why_t'), ['', ''], rows);
+};
+
+/* ---------- 사건 주석 ---------- */
+GST.notes = (function(){
+  var L=[], loaded=false, at=0;
+  function list(){ return L.slice(); }
+  async function load(force){
+    if(loaded && !force && Date.now()-at<60000) return L;
+    var C=null; try{ C=await GST._dbAuthed(); }catch(e){}
+    if(!C){ loaded=true; return L; }
+    try{ var r=await C.from('chart_notes').select('id,owner,page,d,d2,text,tone,shared').in('page',[GST._pageKey(),'*']).order('d');
+      if(!r.error){ L=r.data||[]; } }catch(e){}
+    loaded=true; at=Date.now(); redraw(); return L;
+  }
+  function redraw(){ try{ if(window.Chart&&Chart.instances) Object.values(Chart.instances).forEach(function(c){ try{ c.update('none'); }catch(e){} }); }catch(e){} }
+  /* 라벨 → 그 칸의 날짜 범위 [시작, 끝] (YYYY-MM-DD 문자열) — 못 읽으면 null */
+  function labRange(l){
+    var x=String(Array.isArray(l)?l.join(' '):l||'').trim(), m;
+    if((m=x.match(/^(\d{4})-(\d{2})-(\d{2})$/))) return [x,x];
+    if((m=x.match(/^(\d{4})-(\d{2})$/))||(m=x.match(/^(\d{2})[.\-\/](\d{2})$/))){ var y=m[1].length===2?'20'+m[1]:m[1], mo=+m[2]; if(mo<1||mo>12) return null;
+      var last=new Date(Date.UTC(+y, mo, 0)).getUTCDate(); return [y+'-'+m[2]+'-01', y+'-'+m[2]+'-'+String(last).padStart(2,'0')]; }
+    if((m=x.match(/^(\d{4})-?Q([1-4])$/))){ var q=+m[2]; return [m[1]+'-'+String(q*3-2).padStart(2,'0')+'-01', m[1]+'-'+String(q*3).padStart(2,'0')+'-'+(q===1||q===4?'31':'30')]; }
+    if((m=x.match(/^((19|20)\d{2})$/))) return [m[1]+'-01-01', m[1]+'-12-31'];
+    return null;
+  }
+  function wkOf(d){ try{ return GST.isoW(new Date(d+'T00:00:00Z')); }catch(e){ return ''; } }
+  /* 연도 없는 월 라벨(11월 · 11月 · 영어 화면의 11) — 화면 차트의 기본 꼴이다(GST.periods). 마지막 칸을 «오늘까지의 가장 최근 그 달»로 보고
+     거꾸로 걸으며 해를 매긴다(12월 → 1월로 넘어가면 해가 바뀐다). 예측 칸(+1 …)은 날짜가 아니라 건너뛴다. */
+  function monthCycle(labels){
+    var L=labels.map(function(l){ return String(Array.isArray(l)?l.join(' '):l||'').trim(); });
+    var mm=L.map(function(x){ var m=x.match(/^(\d{1,2})\s*(월|月)?$/); return m&&+m[1]>=1&&+m[1]<=12?+m[1]:null; });
+    var real=L.filter(function(x){ return !/^\+\d+$/.test(x); }), hit=mm.filter(function(v){ return v!=null; });
+    if(hit.length<2 || hit.length<real.length*0.8) return null;
+    var last=-1; mm.forEach(function(v,i){ if(v!=null) last=i; });
+    var now=new Date(), yr=mm[last]<=now.getMonth()+1?now.getFullYear():now.getFullYear()-1, out=[], nxt=null;
+    for(var i=last;i>=0;i--){ if(mm[i]==null){ out[i]=null; continue; } if(nxt!=null && mm[i]>nxt) yr--; nxt=mm[i];
+      var ld=new Date(Date.UTC(yr, mm[i], 0)).getUTCDate(), m2=String(mm[i]).padStart(2,'0'); out[i]=[yr+'-'+m2+'-01', yr+'-'+m2+'-'+String(ld).padStart(2,'0')]; }
+    return out;
+  }
+  function idxOf(labels, d){
+    var hit=-1, mc=monthCycle(labels);
+    if(mc){ mc.forEach(function(rg,i){ if(rg && d>=rg[0] && d<=rg[1]) hit=i; }); return hit; }
+    for(var i=0;i<labels.length;i++){
+      var l=String(Array.isArray(labels[i])?labels[i].join(' '):labels[i]||'').trim(), rg=labRange(l);
+      if(rg){ if(d>=rg[0] && d<=rg[1]) hit=i; continue; }
+      var w=l.match(/^(?:(\d{4})-)?W(\d{1,2})$/);
+      if(w){ var wk=wkOf(d); if(!wk) continue; var ww='W'+String(+w[2]).padStart(2,'0');
+        if(w[1] ? wk===w[1]+'-'+ww : wk.slice(-3)===ww) hit=i; }   /* 연도 없는 W41 은 마지막(가장 최근) 칸 */
+    }
+    return hit;
+  }
+  var COL={info:'#3b82f6', ok:'#16a34a', warn:'#d97706'};
+  var plugin={ id:'gstNotes',
+    afterDatasetsDraw: function(ch){
+      if(!L.length || ch.$noNotes) return;
+      var t=ch.config.type; if(t==='doughnut'||t==='pie'||t==='polarArea'||t==='radar'||t==='scatter'||t==='bubble') return;
+      var o=ch.options||{}; if(o.indexAxis==='y') return;
+      var xs=ch.scales&&ch.scales.x; if(!xs || xs.type!=='category') return;
+      var labels=ch.data&&ch.data.labels||[]; if(labels.length<2) return;
+      var ca=ch.chartArea, g=ch.ctx, used={};
+      L.forEach(function(n){
+        var i=idxOf(labels, String(n.d).slice(0,10)); if(i<0 || used[i]) return; used[i]=1;
+        var x=xs.getPixelForValue(i); if(!isFinite(x)) return;
+        g.save(); g.strokeStyle=COL[n.tone]||COL.info; g.lineWidth=1.2; g.setLineDash([4,3]);
+        g.beginPath(); g.moveTo(x, ca.top); g.lineTo(x, ca.bottom); g.stroke(); g.setLineDash([]);
+        var txt=String(n.text||''); if(txt.length>14) txt=txt.slice(0,13)+'…';
+        g.font='600 10px '+(GST.FONT_STACK||'sans-serif'); var w=g.measureText(txt).width+8;
+        var bx=Math.min(Math.max(x-w/2, ca.left), ca.right-w);
+        g.fillStyle=COL[n.tone]||COL.info; g.globalAlpha=.92; g.fillRect(bx, ca.top, w, 15); g.globalAlpha=1;
+        g.fillStyle='#fff'; g.textBaseline='middle'; g.fillText(txt, bx+4, ca.top+7.5); g.restore();
+      });
+    } };
+  try{ if(window.Chart && Chart.register) Chart.register(plugin); }catch(e){}
+  async function save(o){
+    var C=await GST._dbAuthed(); if(!C) return {ok:false, error:'no_db'};
+    var r=await C.rpc('note_save', {p_id:null, p_page:o.page||'*', p_d:o.d, p_d2:o.d2||null, p_text:o.text, p_tone:o.tone||'info', p_shared:!!o.shared});
+    if(r.error) return {ok:false, error:r.error.message||'fail'};
+    var d=r.data||{}; if(d.ok) await load(true); return d;
+  }
+  async function remove(id){
+    var C=await GST._dbAuthed(); if(!C) return {ok:false, error:'no_db'};
+    var r=await C.rpc('mine_remove', {p_kind:'note', p_id:id}); var d=r.error?{ok:false,error:r.error.message}:(r.data||{});
+    if(d.ok) await load(true); return d;
+  }
+  function dialog(){
+    var V=GST._v7, esc=GST._esc, can=!!(GST.actCan&&GST.actCan()), me=(GST._me&&GST._me.email||'').toLowerCase(), adm=!!(GST.targets&&GST.targets.can&&GST.targets.can());
+    var paint=function(){
+      var ov=GST._ovOpen('<div class="gov-h"><h4>'+esc(V('note_t'))+'</h4><span class="gov-sp"></span><button type="button" class="gov-b" data-x>✕</button></div><div style="padding:12px 18px">'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;padding:6px 0">'
+        +'<label style="display:flex;flex-direction:column;gap:3px;font-size:12px">'+esc(V('n_d'))+'<input type="date" id="gnD" value="'+esc(GST.ymdL())+'"></label>'
+        +'<label style="display:flex;flex-direction:column;gap:3px;font-size:12px">'+esc(V('n_d2'))+'<input type="date" id="gnD2"></label>'
+        +'<label style="display:flex;flex-direction:column;gap:3px;font-size:12px">'+esc(V('n_tone'))+'<select id="gnTone">'+['info','ok','warn'].map(function(k){ return '<option value="'+k+'">'+esc(V('tone.'+k))+'</option>'; }).join('')+'</select></label>'
+        +'<label style="display:flex;flex-direction:column;gap:3px;font-size:12px">'+esc(V('n_scope'))+'<select id="gnScope"><option value="page">'+esc(V('n_page'))+'</option><option value="*">'+esc(V('n_all'))+'</option></select></label>'
+        +'<label style="grid-column:1/-1;display:flex;flex-direction:column;gap:3px;font-size:12px">'+esc(V('n_text'))+'<input type="text" id="gnText" maxlength="80"></label>'
+        +'<label style="grid-column:1/-1;display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="gnShared"'+(can?' checked':' disabled')+'> '+esc(V('n_shared'))+(can?'':' — '+esc(V('n_ro')))+'</label>'
+        +'<div style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px"><span id="gnErr" style="color:var(--bad);font-size:12px;margin-right:auto"></span><button type="button" class="gov-b" id="gnAdd">'+esc(V('n_add'))+'</button></div></div>'
+        +'<div style="font-weight:700;font-size:12px;margin:8px 0 4px">'+esc(V('n_list'))+'</div>'
+        +(L.length?'<table class="gpv-t"><tbody>'+L.map(function(n){ var mine=String(n.owner||'').toLowerCase()===me||adm;
+          return '<tr><td>'+esc(n.d)+(n.d2?' ~ '+esc(n.d2):'')+'</td><td>'+esc(n.text)+'</td><td>'+esc(n.page==='*'?V('n_all'):V('n_page'))+'</td><td>'+(mine?'<button type="button" data-rm="'+n.id+'">'+esc(V('n_rm'))+'</button>':'')+'</td></tr>'; }).join('')+'</tbody></table>'
+          :'<div style="font-size:12px;opacity:.7">'+esc(V('n_empty'))+'</div>')+'</div>', false);
+      ov.addEventListener('click', async function(e){
+        if(e.target.closest('[data-x]')){ GST._ovClose(); return; }
+        var rm=e.target.closest('[data-rm]'); if(rm){ rm.disabled=true; var d0=await remove(+rm.dataset.rm); if(!d0.ok) GST.capToast&&GST.capToast(V('n_fail')); paint(); return; }
+        if(e.target.id==='gnAdd'){
+          var g=function(id){ return ov.querySelector('#'+id); }, err=g('gnErr');
+          var o={d:g('gnD').value, d2:g('gnD2').value||null, text:g('gnText').value.trim(), tone:g('gnTone').value, page:g('gnScope').value==='*'?'*':GST._pageKey(), shared:g('gnShared').checked};
+          if(!o.d||!o.text){ err.textContent=V('n_text'); return; }
+          e.target.disabled=true; var d=await save(o); e.target.disabled=false;
+          if(!d.ok){ err.textContent=d.error==='no_db'?V('n_noDb'):V('n_fail')+(d.error?' ('+d.error+')':''); return; }
+          GST.capToast&&GST.capToast(V('n_saved')); paint();
+        }
+      });
+    };
+    load(true).then(paint, paint);
+  }
+  return {list:list, load:load, save:save, remove:remove, dialog:dialog, labRange:labRange, idxOf:idxOf, _set:function(a){ L=a||[]; loaded=true; at=Date.now(); redraw(); }};
+})();
+
+/* ---------- 사용자 정의 지표 ---------- */
+GST.cmetrics = (function(){
+  var L=[], loaded=false;
+  async function load(){
+    var C=null; try{ C=await GST._dbAuthed(); }catch(e){}
+    if(!C){ loaded=true; return L; }
+    try{ var r=await C.from('custom_metrics').select('id,owner,name,src,def,shared').order('name'); if(!r.error) L=r.data||[]; }catch(e){}
+    loaded=true; return L;
+  }
+  function of(src){ return L.filter(function(m){ return m.src===src; }); }
+  function saveDlg(c, done){
+    var V=GST._v7, esc=GST._esc;
+    var ov=GST._ovOpen('<div class="gov-h"><h4>'+esc(GST.cb.T('cm_save'))+'</h4><span class="gov-sp"></span><button type="button" class="gov-b" data-x>✕</button></div><div style="padding:12px 18px">'
+      +'<div style="font-size:12px;opacity:.75;margin:0 0 8px">'+esc(V('cm_ask'))+'</div>'
+      +'<label style="display:flex;flex-direction:column;gap:3px;font-size:12px">'+esc(V('cm_name'))+'<input type="text" id="gcmN" maxlength="60" value="'+esc(c.title||'')+'"></label>'
+      +'<label style="display:flex;gap:6px;align-items:center;font-size:12px;margin-top:8px"><input type="checkbox" id="gcmS" checked> '+esc(V('cm_shared'))+'</label>'
+      +'<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><span id="gcmE" style="color:var(--bad);font-size:12px;margin-right:auto"></span><button type="button" class="gov-b" data-x>'+esc(V('cancel'))+'</button><button type="button" class="gov-b" id="gcmGo">'+esc(V('save'))+'</button></div></div>', false);
+    ov.addEventListener('click', async function(e){
+      if(e.target.closest('[data-x]')){ GST._ovClose(); return; }
+      if(e.target.id!=='gcmGo') return;
+      var n=ov.querySelector('#gcmN').value.trim(), er=ov.querySelector('#gcmE'); if(!n){ er.textContent=V('cm_name'); return; }
+      var C=await GST._dbAuthed(); if(!C){ er.textContent=V('n_noDb'); return; }
+      e.target.disabled=true;
+      var def={measures:JSON.parse(JSON.stringify(c.measures||[])), filters:JSON.parse(JSON.stringify(c.filters||[]))};
+      var r=await C.rpc('metric_save',{p_id:null, p_name:n, p_src:c.src, p_def:def, p_shared:ov.querySelector('#gcmS').checked});
+      e.target.disabled=false; var d=r.error?{ok:false,error:r.error.message}:(r.data||{});
+      if(!d.ok){ er.textContent=V('cm_fail')+(d.error?' ('+d.error+')':''); return; }
+      await load(); GST._ovClose(); GST.capToast&&GST.capToast(V('cm_ok')); if(done) done();
+    });
+  }
+  return {load:load, of:of, saveDlg:saveDlg, list:function(){ return L.slice(); }, _set:function(a){ L=a||[]; loaded=true; }};
+})();
+
+/* ---------- 북마크 — 페이지 쪽(셸이 묻고 · 되돌려 건다) ---------- */
+if(typeof window!=='undefined') window.addEventListener('message', function(e){
+  var d=e.data||{}; if(e.source!==window.parent || window.parent===window) return;
+  if(d.type==='gst-bm-q'){
+    var sn=null; try{ sn=GST.filters&&GST.filters.snapshot?GST.filters.snapshot():null; }catch(x){}
+    var sec=''; try{ sec=GST._secCur?GST._secCur():''; }catch(x){}
+    try{ window.parent.postMessage({type:'gst-bm-a', q:d.q, snap:sn, sec:sec||'', page:GST._pageKey()}, '*'); }catch(x){}
+  }
+  if(d.type==='gst-bm-apply'){
+    try{ window.parent.postMessage({type:'gst-bm-ack'}, '*'); }catch(x){}
+    try{ if(d.sec && GST._secShow) GST._secShow(d.sec); }catch(x){}
+    try{ if(d.snap && GST.filters && GST.filters.restore) GST.filters.restore(d.snap); }catch(x){ console.warn('[bookmark] 필터', x); }
+  }
+});
+
+/* ---------- 조회자로 미리 보기 ---------- */
+GST._PV_KEY = 'gst_preview_viewer';
+GST.previewViewer = function(on){
+  try{ if(on) sessionStorage.setItem(GST._PV_KEY,'1'); else sessionStorage.removeItem(GST._PV_KEY); }catch(e){}
+  /* 셸 안이면 셸이 통째로 다시 연다(모든 탭이 같은 등급을 보게) · 혼자 연 화면이면 자기를 */
+  try{ if(window.parent!==window){ window.parent.postMessage({type:'gst-preview', on:!!on}, '*'); return; } }catch(e){}
+  location.reload();
+};
+GST._pvOn = function(){ try{ return sessionStorage.getItem(GST._PV_KEY)==='1'; }catch(e){ return false; } };
+(function(){
+  var ap=GST._meApply;
+  /* 관리자(또는 legacy)일 때만 조회자로 «내린다» — 조회자가 이 표시를 켜도 아무것도 올라가지 않는다(내리기만 한다) */
+  GST._meApply=function(me){
+    if(me && GST._pvOn() && !me._pv && (me.role==='admin'||me.role==='legacy'||me.can_write)){
+      GST._pvReal=me; me=Object.assign({}, me, {role:'viewer', can_write:false, _pv:true});
+      setTimeout(GST._pvBand, 0);
+    }
+    return ap(me);
+  };
+})();
+GST._pvBand = function(){
+  if(!document.body || document.getElementById('gstPvBand')) return;
+  var V=GST._v7, b=document.createElement('div'); b.id='gstPvBand';
+  b.style.cssText='position:fixed;left:50%;top:8px;transform:translateX(-50%);z-index:1000002;background:#111827;color:#fff;border-radius:999px;padding:6px 8px 6px 14px;font:600 12.5px var(--font,sans-serif);display:flex;gap:10px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.3)';
+  b.innerHTML='<span>👁 '+GST._esc(V('pv_on'))+'</span><button type="button" style="font:inherit;border:0;border-radius:999px;padding:4px 12px;background:#fff;color:#111827;cursor:pointer">'+GST._esc(V('pv_off'))+'</button>';
+  b.querySelector('button').onclick=function(){ GST.previewViewer(false); };
+  document.body.appendChild(b);
+};
+
+/* 로그인 뒤 한 번 — 주석·지표를 읽는다(곁가지 · 못 읽어도 화면은 선다) */
+if(typeof document!=='undefined' && !GST._embedQuiet){
+  var _v7go=function(){ if(!GST.authOn||!GST.authOn()) return; setTimeout(function(){ try{ GST.notes.load(); }catch(e){} try{ GST.cmetrics.load(); }catch(e){} }, 1500); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', _v7go); else _v7go();
+}
 
 global.GST = GST;
 })(window);
