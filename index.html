@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=198"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=199"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write) 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB(옛 동작 그대로 보인다).
@@ -16,6 +16,11 @@
 body:not([data-role="editor"]):not([data-role="legacy"]) #uploadBtn{display:none}
 /* 데이터 관리(/edit/)도 admin 만(v140) — 그 화면이 서버에서 admin+can_write 를 다시 본다(_edit_allow). 버튼은 길 안내일 뿐이다 */
 body:not([data-role="admin"]):not([data-role="legacy"]) #editBtn{display:none}
+body:not([data-role="admin"]):not([data-role="legacy"]) #mNotify{display:none}
+#moreMenu .bm-row{display:flex;align-items:center}
+#moreMenu .bm-row>[data-bm]{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+#moreMenu .bm-x{flex:none;width:28px;padding:0!important;justify-content:center;opacity:.6}
+#moreMenu .bm-none{font-size:11.5px;opacity:.6;padding:4px 12px}
 *{margin:0;padding:0;box-sizing:border-box}
 /* v139 — 라이트가 기본이다. 셸은 theme.css 를 싣지 않으므로 토큰을 여기 한 벌 더 둔다(이름은 theme.css 와 같다).
    다크(body.theme-slate)는 같은 이름에 어두운 값만 넣는다 — 컴포넌트 규칙은 한 벌이다. */
@@ -358,6 +363,8 @@ body.theme-slate .more-menu,body.theme-slate .askpanel,body.theme-slate .kiosk-p
       <div class="more-menu" id="moreMenu" role="menu" hidden>
         <button type="button" role="menuitem" data-go="studio" id="mStudio">화면 만들기</button>
         <button type="button" role="menuitem" data-go="targets" id="mTargets">목표·기준</button>
+        <!-- 알림 발송(v207) — 관리자만 · 등록한 사람에게 정한 시각에 메일·카톡 (새 창 · 데이터 관리와 같은 규율) -->
+        <button type="button" role="menuitem" id="mNotify" onclick="moreToggle(false);openNotify()">알림 발송</button>
         <div id="mScreens"></div>
         <hr>
         <!-- 화면 편집(v202) — 지금 보고 있는 화면의 카드 배치(순서·숨김·폭·제목). 그 화면(iframe)의 GST.screen 이 편집기를 연다 -->
@@ -365,6 +372,10 @@ body.theme-slate .more-menu,body.theme-slate .askpanel,body.theme-slate .kiosk-p
         <hr>
         <!-- 이미지 저장(v185) — 지금 보고 있는 화면 전체를 PNG 로(메일 첨부용). 그 화면(iframe)의 GST.pageShot 이 만든다 -->
         <button type="button" role="menuitem" id="mShot" onclick="shotActive()">이 화면 이미지로 저장</button>
+        <!-- 북마크(v207) — 지금 탭 · 섹션 · 상세 필터를 이름 붙여 저장하고 다시 연다(user_bookmarks · 서버 준비 전이면 이 PC) -->
+        <hr>
+        <button type="button" role="menuitem" id="mBmAdd" onclick="bmAdd()">이 화면 북마크에 추가</button>
+        <div id="mBms"></div>
         <hr class="exp-only">
         <button type="button" role="menuitemcheckbox" aria-checked="false" id="mExplain" class="exp-only" onclick="explainToggle()"><span id="mExplainL">설명 표시</span><span class="chk" id="mExplainS">끔</span></button>
       </div></div>
@@ -476,10 +487,10 @@ function tabOn(t){ return !t.roles || t.roles.indexOf((document.body && document
 function barTabs(){ return TABS.filter(t=>tabOn(t)&&t.bar!==false); }
 
 const L={
-  ko:{scrEdit:'화면 편집',ask:'검색 또는 질문',askAi:'챗봇에 묻기',shot:'이 화면 이미지로 저장',shotK:'이미지 저장 캡처 그림 png',fx:'효과',tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!',act:'조치 사항',more:'더보기',explain:'설명 표시',on:'켬',off:'끔',search:'검색',pal_dark:'다크 모드로 바꾸기',pal_light:'라이트 모드로 바꾸기',pal_sn:'{p}에서 보기',pal_lang:'언어',rows:'행'},
-  en:{scrEdit:'Edit screen',ask:'Search or ask',askAi:'Ask the chatbot',shot:'Save this screen as an image',shotK:'image screenshot capture png save',fx:'Effects',tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!',act:'Action items',more:'More',explain:'Show notes',on:'On',off:'Off',search:'Search',pal_dark:'Switch to dark mode',pal_light:'Switch to light mode',pal_sn:'Open in {p}',pal_lang:'Language',rows:' rows'},
-  zh:{scrEdit:'编辑画面',ask:'搜索或提问',askAi:'问聊天机器人',shot:'将此画面保存为图片',shotK:'图片 截图 保存 png',fx:'效果',tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!',act:'待办事项',more:'更多',explain:'显示说明',on:'开',off:'关',search:'搜索',pal_dark:'切换到深色模式',pal_light:'切换到浅色模式',pal_sn:'在{p}中查看',pal_lang:'语言',rows:'行'},
-  ja:{scrEdit:'画面編集',ask:'検索または質問',askAi:'チャットボットに聞く',shot:'この画面を画像で保存',shotK:'画像 スクリーンショット 保存 png',fx:'エフェクト',tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!',act:'対応事項',more:'その他',explain:'説明を表示',on:'オン',off:'オフ',search:'検索',pal_dark:'ダークモードに切替',pal_light:'ライトモードに切替',pal_sn:'{p}で見る',pal_lang:'言語',rows:'行'}
+  ko:{notify:'알림 발송',bm:'북마크',bmAdd:'이 화면 북마크에 추가',bmName:'북마크 이름',bmNone:'저장한 북마크가 없습니다',bmShared:'공유(모두에게)',bmRm:'삭제',bmSaved:'북마크에 추가했습니다',bmFail:'북마크를 저장하지 못했습니다',scrEdit:'화면 편집',ask:'검색 또는 질문',askAi:'챗봇에 묻기',shot:'이 화면 이미지로 저장',shotK:'이미지 저장 캡처 그림 png',fx:'효과',tag:'By CS Global Team',kiosk:'자동순회',kioskStop:'■ 정지',upload:'업로드',edit:'데이터 관리',logout:'로그아웃',refresh:'새로고침',exp:'내보내기',share:'공유',copied:'복사됨!',act:'조치 사항',more:'더보기',explain:'설명 표시',on:'켬',off:'끔',search:'검색',pal_dark:'다크 모드로 바꾸기',pal_light:'라이트 모드로 바꾸기',pal_sn:'{p}에서 보기',pal_lang:'언어',rows:'행'},
+  en:{notify:'Notifications',bm:'Bookmarks',bmAdd:'Bookmark this view',bmName:'Bookmark name',bmNone:'No bookmarks yet',bmShared:'Shared (everyone)',bmRm:'Remove',bmSaved:'Bookmarked',bmFail:'Could not save the bookmark',scrEdit:'Edit screen',ask:'Search or ask',askAi:'Ask the chatbot',shot:'Save this screen as an image',shotK:'image screenshot capture png save',fx:'Effects',tag:'By CS Global Team',kiosk:'Auto Tour',kioskStop:'■ Stop',upload:'Upload',edit:'Data',logout:'Logout',refresh:'Refresh',exp:'Export',share:'Share',copied:'Copied!',act:'Action items',more:'More',explain:'Show notes',on:'On',off:'Off',search:'Search',pal_dark:'Switch to dark mode',pal_light:'Switch to light mode',pal_sn:'Open in {p}',pal_lang:'Language',rows:' rows'},
+  zh:{notify:'通知发送',bm:'书签',bmAdd:'将此画面加入书签',bmName:'书签名称',bmNone:'尚无书签',bmShared:'共享(所有人)',bmRm:'删除',bmSaved:'已加入书签',bmFail:'未能保存书签',scrEdit:'编辑画面',ask:'搜索或提问',askAi:'问聊天机器人',shot:'将此画面保存为图片',shotK:'图片 截图 保存 png',fx:'效果',tag:'By CS Global Team',kiosk:'自动轮播',kioskStop:'■ 停止',upload:'上传',edit:'数据管理',logout:'登出',refresh:'刷新',exp:'导出',share:'分享',copied:'已复制!',act:'待办事项',more:'更多',explain:'显示说明',on:'开',off:'关',search:'搜索',pal_dark:'切换到深色模式',pal_light:'切换到浅色模式',pal_sn:'在{p}中查看',pal_lang:'语言',rows:'行'},
+  ja:{notify:'通知送信',bm:'ブックマーク',bmAdd:'この画面をブックマーク',bmName:'ブックマーク名',bmNone:'ブックマークはまだありません',bmShared:'共有(全員)',bmRm:'削除',bmSaved:'ブックマークしました',bmFail:'ブックマークを保存できませんでした',scrEdit:'画面編集',ask:'検索または質問',askAi:'チャットボットに聞く',shot:'この画面を画像で保存',shotK:'画像 スクリーンショット 保存 png',fx:'エフェクト',tag:'By CS Global Team',kiosk:'自動巡回',kioskStop:'■ 停止',upload:'アップロード',edit:'データ管理',logout:'ログアウト',refresh:'更新',exp:'エクスポート',share:'共有',copied:'コピー済み!',act:'対応事項',more:'その他',explain:'説明を表示',on:'オン',off:'オフ',search:'検索',pal_dark:'ダークモードに切替',pal_light:'ライトモードに切替',pal_sn:'{p}で見る',pal_lang:'言語',rows:'行'}
 };
 let LANG='ko';
 try{ const sl=sessionStorage.getItem('gst_lang'); if(sl&&L[sl])LANG=sl; else if(window.name && L[window.name]) LANG=window.name; }catch(e){}
@@ -828,6 +839,7 @@ document.addEventListener('keydown',e=>{
 /* 업로드 화면은 별도 창. 셸의 iframe 에 띄우지 않는다 — 위 버튼 주석 참조. */
 function openUpload(){ window.open('/upload/','gstUpload'); }
 function openEdit(){ window.open('/edit/','gstEdit'); }
+function openNotify(){ window.open('/notify/','gstNotify'); }
 
 function applyLang(){
   {const _bt=document.getElementById('brandTag'); if(_bt&&!_bt.hasAttribute('data-lock'))_bt.textContent=lt('tag');}
@@ -845,7 +857,7 @@ function applyLang(){
   { const fl=document.getElementById('fxLabel'); if(fl) fl.textContent=lt('fx'); const fb=document.getElementById('fxBtn'); if(fb) fb.title=lt('fx'); fxMark(); }
   { const mac=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||''); document.getElementById('palKbd').textContent=mac?'⌘K':'Ctrl K'; document.getElementById('palBtn').title=(mac?'⌘K':'Ctrl+K'); }
   inkMove();
-  [['mScreenEdit','scrEdit']].forEach(([id,k])=>{ const b=document.getElementById(id); if(b) b.textContent=lt(k); });
+  [['mScreenEdit','scrEdit'],['mNotify','notify'],['mBmAdd','bmAdd']].forEach(([id,k])=>{ const b=document.getElementById(id); if(b) b.textContent=lt(k); });
   ['studio','targets'].forEach(id=>{ const t=TABS.find(x=>x.id===id), b=document.querySelector('#moreMenu [data-go="'+id+'"]'); if(t&&b) b.textContent=t[LANG]||t.ko; });
   { const ms=document.getElementById('mShot'); if(ms) ms.textContent=lt('shot'); }
   document.querySelectorAll('.tgrp').forEach(g=>{ const n=(GROUPS[g.dataset.grp]||{})[LANG]||''; const l=g.querySelector('.tgrp-l'); if(l) l.textContent=n; g.setAttribute('aria-label', n); });
@@ -1166,7 +1178,7 @@ function shotActive(){
 function moreToggle(force){
   const m=document.getElementById('moreMenu'), btn=document.getElementById('moreBtn');
   const open=force!=null?force:m.hidden; m.hidden=!open; btn.setAttribute('aria-expanded', String(open));
-  if(open){ explainMark(); const se=document.getElementById('mScreenEdit'); if(se) se.disabled=!screenOk(activeTab); const f=m.querySelector('button:not(:disabled)'); if(f) f.focus(); }
+  if(open){ explainMark(); bmPaint(); const se=document.getElementById('mScreenEdit'); if(se) se.disabled=!screenOk(activeTab); const f=m.querySelector('button:not(:disabled)'); if(f) f.focus(); }
 }
 document.addEventListener('click',e=>{ if(!e.target.closest('.tb-more')) { const m=document.getElementById('moreMenu'); if(m&&!m.hidden) moreToggle(false); } });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ const m=document.getElementById('moreMenu'); if(m&&!m.hidden){ moreToggle(false); document.getElementById('moreBtn').focus(); } } });
@@ -1241,6 +1253,71 @@ async function loadScreens(){
   else if(/^scr\d+$/.test(activeTab||'') && !TABS.find(t=>t.id===activeTab)){ const dead=activeTab; switchTab(TABS[0].id); try{ frames[dead]&&frames[dead].remove(); delete frames[dead]; }catch(e){} }
 }
 window.addEventListener('message',e=>{ const d=e.data||{}; if(d.type==='gst-screens') loadScreens(); });
+
+/* ============================================================
+   북마크 (v207 · Power BI 책갈피) — «지금 탭 · 섹션 · 상세 필터»를 이름 붙여 저장하고 다시 연다.
+   지금 상태는 그 탭(iframe)에 묻는다(gst-bm-q → gst-bm-a · core 가 GST.filters.snapshot 으로 답한다).
+   열 때는 탭을 띄우고 «받았다»는 답(gst-bm-ack)이 올 때까지 다시 보낸다 — 막 만든 탭은 리스너가 늦게 붙는다.
+   ⚠ 필터를 «사람이 고른 것처럼» 건다(그 화면 저장본도 바뀐다) — 카드 그대로 가져오기(embedSet)와 다르다.
+   서버(user_bookmarks · setup-33)가 없으면 이 PC(localStorage)에 담는다.
+   ============================================================ */
+let BMS=null, BM_WHERE='pc';
+const BM_LKEY='gst_bm_local';
+async function bmLoad(){
+  try{ const C=await GST._dbAuthed(); if(C){ const r=await C.from('user_bookmarks').select('id,owner,name,tab,sec,state,shared').order('name');
+    if(!r.error){ BMS=r.data||[]; BM_WHERE='server'; return BMS; } } }catch(e){}
+  try{ BMS=JSON.parse(localStorage.getItem(BM_LKEY)||'[]'); }catch(e){ BMS=[]; } BM_WHERE='pc'; return BMS;
+}
+function bmPaint(){
+  const box=document.getElementById('mBms'); if(!box) return;
+  const draw=()=>{ const me=(GST._me&&GST._me.email||'').toLowerCase(), esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    box.innerHTML=(BMS||[]).length?(BMS||[]).map((b,i)=>'<div class="bm-row"><button type="button" role="menuitem" data-bm="'+i+'">'+esc(b.name)+(b.shared?' <small>·</small>':'')+'</button>'
+      +((BM_WHERE==='pc'||String(b.owner||'').toLowerCase()===me)?'<button type="button" class="bm-x" data-bmx="'+i+'" title="'+esc(lt('bmRm'))+'">✕</button>':'')+'</div>').join('')
+      :'<div class="bm-none">'+esc(lt('bmNone'))+'</div>';
+    box.querySelectorAll('[data-bm]').forEach(b=>b.onclick=()=>{ moreToggle(false); bmOpen(BMS[+b.dataset.bm]); });
+    box.querySelectorAll('[data-bmx]').forEach(b=>b.onclick=async ev=>{ ev.stopPropagation(); const x=BMS[+b.dataset.bmx]; await bmRemove(x); bmPaint(); }); };
+  if(BMS) draw(); else bmLoad().then(draw, draw);
+}
+function bmAsk(){
+  return new Promise(res=>{ const f=frames[activeTab]; if(!f){ res(null); return; }
+    const q=Math.random().toString(36).slice(2), to=setTimeout(()=>{ window.removeEventListener('message',on); res(null); },1500);
+    const on=e=>{ const d=e.data||{}; if(d.type==='gst-bm-a'&&d.q===q){ clearTimeout(to); window.removeEventListener('message',on); res(d); } };
+    window.addEventListener('message',on);
+    try{ f.contentWindow.postMessage({type:'gst-bm-q', q:q},'*'); }catch(e){ clearTimeout(to); res(null); } });
+}
+async function bmAdd(){
+  moreToggle(false);
+  if(BMS==null) await bmLoad();   // 서버가 있는지(BM_WHERE)를 먼저 안다 — 모르는 채로 저장하면 이 PC 에만 담긴다
+  const a=await bmAsk(), t=TABS.find(x=>x.id===activeTab);
+  const def=(t?(t[LANG]||t.ko):activeTab)+' · '+GST.ymdL();
+  const name=(window.prompt(lt('bmName'), def)||'').trim(); if(!name) return;
+  const o={name:name.slice(0,60), tab:activeTab, sec:(a&&a.sec)||TAB_SEC[activeTab]||null, state:(a&&a.snap)||null, shared:false};
+  if(o.sec && !/^[A-Za-z0-9_-]{1,40}$/.test(o.sec)) o.sec=null;
+  try{
+    const C=await GST._dbAuthed();
+    if(C && BM_WHERE!=='pc'){ const r=await C.rpc('bm_save',{p_id:null,p_name:o.name,p_tab:o.tab,p_sec:o.sec,p_state:o.state,p_shared:false});
+      const d=r.error?{ok:false}:(r.data||{}); if(!d.ok) throw new Error(r.error?r.error.message:d.error); }
+    else { const L=JSON.parse(localStorage.getItem(BM_LKEY)||'[]'); o.id='pc'+Date.now(); L.push(o); localStorage.setItem(BM_LKEY, JSON.stringify(L)); }
+    BMS=null; await bmLoad(); GST.capToast&&GST.capToast(lt('bmSaved'));
+  }catch(e){ console.warn('[bookmark]', e); GST.capToast&&GST.capToast(lt('bmFail')); }
+}
+async function bmRemove(b){
+  if(!b) return;
+  if(BM_WHERE==='pc'){ const L=(BMS||[]).filter(x=>x!==b); try{ localStorage.setItem(BM_LKEY, JSON.stringify(L)); }catch(e){} BMS=L; return; }
+  try{ const C=await GST._dbAuthed(); await C.rpc('mine_remove',{p_kind:'bookmark', p_id:b.id}); }catch(e){}
+  BMS=null; await bmLoad();
+}
+function bmOpen(b){
+  if(!b) return; const id=tabId(b.tab); if(!TABS.find(t=>t.id===id)) return;
+  switchTab(id);
+  let n=0, got=false; const on=e=>{ const d=e.data||{}; if(d.type==='gst-bm-ack' && frames[id] && e.source===frames[id].contentWindow) got=true; };
+  window.addEventListener('message', on);
+  const tick=setInterval(()=>{ if(got||++n>40){ clearInterval(tick); window.removeEventListener('message', on); return; }
+    try{ frames[id].contentWindow.postMessage({type:'gst-bm-apply', snap:b.state||null, sec:b.sec||''},'*'); }catch(e){} }, 400);
+}
+/* 조회자로 미리 보기(v207) — 화면 편집의 단추가 알린다. 셸째 다시 연다(모든 탭이 같은 등급을 보게) */
+window.addEventListener('message',e=>{ const d=e.data||{}; if(d.type==='gst-preview'){ try{ if(d.on) sessionStorage.setItem('gst_preview_viewer','1'); else sessionStorage.removeItem('gst_preview_viewer'); }catch(x){} location.reload(); } });
+
 
 function switchTab(id){
   id=tabId(id);
@@ -1429,8 +1506,11 @@ function palItems(q){
   if(screenOk(activeTab)) A.push({id:'act:screen', label:lt('scrEdit'), icon:PAL_IC.edit, run:screenEdit, kw:'화면 편집 배치 카드 숨기기 layout edit screen 编辑画面 画面編集'});
   A.push({id:'act:fx', label:lt('fx'), icon:PAL_IC.note, run:()=>GST.fx&&GST.fx.panel(true), kw:'효과 effects 이펙트 애니메이션 animation 效果 エフェクト'});
   if(adm) A.push({id:'act:edit', label:lt('edit'), icon:PAL_IC.edit, run:openEdit, kw:'데이터 관리 data edit 数据管理 データ管理'});
+  if(adm) A.push({id:'act:notify', label:lt('notify'), icon:PAL_IC.edit, run:openNotify, kw:'알림 발송 메일 카톡 notify alert email 通知 通知'});
   if(ed)  A.push({id:'act:upload', label:lt('upload'), icon:PAL_IC.up, run:openUpload, kw:'업로드 upload 上传 アップロード'});
   if(adm) A.push({id:'act:explain', label:lt('explain'), sub:explainOnNow()?lt('on'):lt('off'), icon:PAL_IC.note, run:explainToggle, kw:'설명 표시 notes explain 说明 説明'});
+  A.push({id:'act:bmadd', label:lt('bmAdd'), icon:PAL_IC.link, run:bmAdd, kw:'북마크 책갈피 bookmark 书签 ブックマーク'});
+  (BMS||[]).forEach((b,i)=>A.push({id:'bm:'+i, label:b.name, sub:lt('bm'), icon:PAL_IC.link, run:()=>bmOpen(b), kw:'북마크 bookmark '+b.name}));
   A.push({id:'act:logout', label:lt('logout'), icon:PAL_IC.out, run:doLogout, kw:'로그아웃 logout sign out 登出 ログアウト'});
   A.forEach(a=>{ a.g='act'; out.push(a); });
   const qs=String(q||'').trim();
@@ -1463,7 +1543,7 @@ window.addEventListener('message',e=>{
 });
 
 function start(){
-  GST.needVer && GST.needVer(197);   // 옛 core.js 캐시를 «숫자가 전부 0» 이 아니라 배너로(v135 — 셸도 선언한다)
+  GST.needVer && GST.needVer(199);   // 옛 core.js 캐시를 «숫자가 전부 0» 이 아니라 배너로(v135 — 셸도 선언한다)
   buildTabs();
   GST.barBind(document.getElementById('gbar'), barSend);
   applyLang();

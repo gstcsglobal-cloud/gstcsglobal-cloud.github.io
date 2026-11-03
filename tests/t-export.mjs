@@ -76,7 +76,9 @@ const menuOf = async (id) => page.evaluate((id) => {
   document.querySelectorAll('.gexp-menu').forEach(m => m.remove());
   const btn = document.querySelector('[data-gexp="' + id + '"]'); btn.click();
   const m = GST.cardOf(btn).querySelector('.gexp-menu'); if (!m) return null;
-  return { acts: [...m.querySelectorAll('[data-act]')].map(b => b.dataset.act + (b.disabled ? '!' : '')), hint: m.querySelector('.gexp-hint').textContent };
+  /* v207 — 메뉴 끝의 «근거» · «사건 주석»은 내보내기가 아니다. 내보내기 판정만 본다(근거는 늘 · 주석은 차트가 있을 때만 — 따로 센다) */
+  const all = [...m.querySelectorAll('[data-act]')].map(b => b.dataset.act + (b.disabled ? '!' : ''));
+  return { all, acts: all.filter(a => !/^(why|note)/.test(a)), hint: m.querySelector('.gexp-hint').textContent };
 }, id);
 let m = await menuOf('cBar');
 is(m && m.acts.join(',') === 'ppt,xlsx,data', '막대+꺾은선: PPT·엑셀·데이터 (PNG 없음) — ' + (m && m.acts));
@@ -88,6 +90,7 @@ is(m && m.acts.join(',') === 'ppt!,xlsx!,data,png', '산점도: PPT·엑셀은 �
 is(m && /그림/.test(m.hint), '왜 그림인지 적는다: ' + (m && m.hint));
 m = await menuOf('cNone');
 is(m && m.acts.join(',') === 'ppt!,xlsx!,data!', '차트가 없는 캔버스: 전부 막힌다 — ' + (m && m.acts));
+is(m && m.all.indexOf('why') >= 0 && m.all.indexOf('note') < 0, '차트가 없어도 «근거»는 열리고, «사건 주석»은 차트가 있을 때만 (v207) — ' + (m && m.all));
 const tog = await page.evaluate(() => { const btn = document.querySelector('[data-gexp="cBar"]'); document.querySelectorAll('.gexp-menu').forEach(x => x.remove());
   btn.click(); const a = !!document.querySelector('.gexp-menu'); btn.click(); const b = !!document.querySelector('.gexp-menu'); return [a, b]; });
 is(tog[0] === true && tog[1] === false, '같은 버튼을 다시 누르면 닫힌다');

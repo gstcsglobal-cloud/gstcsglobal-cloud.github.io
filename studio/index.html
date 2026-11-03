@@ -8,9 +8,9 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=198"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=199"></script>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=198">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=199">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/ds.css?v=1">
 <style>
 /* ============================================================
@@ -109,6 +109,14 @@ body.sd-view .sd-gw.k-title h3{display:none}
 /* ---- 화면 목록 (v203) — «새 화면 만들기»와 «맞춤 분석»이 같은 화면이었다(사용자 지적) → 입구 하나, 목록에서 시작 ---- */
 body.sd-list .sd-main,body.sd-list .sd-ed,body.sd-list #boardBar{display:none !important}
 body:not(.sd-list) #gallery{display:none !important}
+.sd-vars{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 2px 10px;font-size:12px;color:var(--txt-2)}
+.sd-vars label{display:flex;align-items:center;gap:5px}
+.sd-vars .sd-xchip{display:inline-flex;align-items:center;gap:6px;padding:3px 6px 3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent-ink,var(--accent));font-weight:600}
+.sd-vars .sd-xchip button{border:0;background:transparent;color:inherit;cursor:pointer;font:inherit;padding:0 4px}
+.sd-vars .on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sd-tpl{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;grid-column:1/-1}
+.sd-tpl h3{grid-column:1/-1;margin:6px 0 0;font-size:13px;color:var(--txt-2)}
+.sd-tile.tpl{border-style:dashed}
 .sd-gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
 .sd-tile{font:inherit;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:8px;color:var(--txt-main);transition:border-color .15s,transform .1s}
 .sd-tile:hover{border-color:var(--accent)} .sd-tile:active{transform:scale(.99)}
@@ -158,6 +166,7 @@ body.sd-view .sd-main{grid-template-columns:minmax(0,1fr)}
     <button type="button" class="sd-btn pri sd-ed" id="saveBtn" data-i="save">저장</button>
     <button type="button" class="sd-btn sd-ed" id="newBtn" data-i="new_board">복사본 만들기</button>
     <button type="button" class="sd-btn ghost sd-ed" id="rmBtn" data-i="remove">감추기</button>
+    <span class="sd-dd sd-ed"><button type="button" class="sd-btn ghost" id="verBtn" data-i="ver" hidden>이전 버전</button></span>
     <span class="sd-pubb sd-ed" id="pubBadge" hidden></span>
     <button type="button" class="sd-btn sd-ed" id="pubBtn" data-i="publish" hidden>탭으로 게시</button>
     <button type="button" class="sd-btn ghost sd-ed" id="viewBtn" data-i="view_screen" hidden>화면 보기</button>
@@ -181,6 +190,8 @@ body.sd-view .sd-main{grid-template-columns:minmax(0,1fr)}
       <div>
         <div id="boardBar" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:2px 2px 10px"><b style="font-size:14px" data-i="board">보드</b><span class="sd-sub" id="boardMeta"></span><span class="sd-sp"></span>
           <div class="sd-add"><span class="sd-dd"><button type="button" class="sd-btn" id="addStd" data-i="add_std">표준 지표 추가</button></span><span class="sd-dd"><button type="button" class="sd-btn" id="addLay" data-i="add_lay">레이아웃 요소</button></span></div></div>
+        <!-- 보드 변수(v207 · Grafana 변수) · 교차 필터(v207 · Power BI) — 보드 전체에 한 번에 건다 -->
+        <div class="sd-vars" id="boardVars"></div>
         <div class="sd-grid edit" id="board"></div>
       </div>
     </div>
@@ -203,11 +214,11 @@ body.sd-view .sd-main{grid-template-columns:minmax(0,1fr)}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer && GST.needVer(197);   // v205 GST.metrics.keyBy(지표 축별 비교) · v203 GST.cb(차트 엔진) · v202 — 보드 = 화면(격자 · 표준 지표 · 게시) · GST.metrics·kpiCard·targets
+GST.needVer && GST.needVer(199);   // v207 근거·주석·지표·버전 · v205 GST.metrics.keyBy(지표 축별 비교) · v203 GST.cb(차트 엔진) · v202 — 보드 = 화면(격자 · 표준 지표 · 게시) · GST.metrics·kpiCard·targets
 GST.authGate();
 
 const T={
-ko:{title:'화면 만들기',sub:'차트와 표준 지표를 배치해 새 화면을 만들고, 탭으로 게시합니다',board_name:'화면 이름',shared:'공유',save:'저장',new_board:'복사본 만들기',remove:'감추기',
+ko:{title:'화면 만들기',ver:'이전 버전',ver_none:'저장된 이전 버전이 없습니다',ver_fail:'버전 목록을 읽지 못했습니다',ver_loaded:'이전 버전을 불러왔습니다 — 확인 후 저장하세요',ver_load:'불러오기',ver_w:'위젯 {n}개',v_region:'구분',v_op:'운영단위',v_range:'기간',v_all:'전체',v_note:'보드 전체에 겁니다(위젯 설정보다 먼저)',r_d30:'최근 30일',r_d90:'최근 90일',r_m12:'최근 12개월',r_ytd:'올해',xf:'교차 필터',xf_s:'차트의 막대·조각을 누르면 그 값으로 다른 차트를 거릅니다',xf_chip:'{f} = {v}',xf_clear:'풀기',tpl:'템플릿으로 시작',tpl_s:'다른 화면과 같은 계산의 위젯으로 채워진 화면 — 열어서 고치고 저장합니다',tp_daily:'일일 운영 현황',tp_daily_s:'가동·고장·PM·재고장 + 추이·위험 설비·히트맵',tp_weekly:'주간 보고',tp_weekly_s:'지표 넷 + 월별 작업 단계 · 모델별 고장 · 운영단위 목표 대비',tp_site:'사이트 점검',tp_site_s:'운영단위 하나 — 위쪽 «운영단위»에서 고릅니다',tp_mat:'자재·비용',tp_mat_s:'자재 사용 TOP · 월별 사용 · 유상/무상 · 운영단위별 작업공수',tp_x_risk:'최근 90일 고장 많은 설비',tp_x_text:'이 화면은 템플릿에서 만들었습니다 — 위젯을 옮기고 바꾼 뒤 저장하세요.',sub:'차트와 표준 지표를 배치해 새 화면을 만들고, 탭으로 게시합니다',board_name:'화면 이름',shared:'공유',save:'저장',new_board:'복사본 만들기',remove:'감추기',
   g_sub:'내가 만든 화면 · 공유된 화면 — 눌러서 열고, 「새 화면」으로 시작합니다',g_new:'새 화면',g_new_s:'빈 화면에서 시작',g_w:'위젯 {n}개',g_empty:'아직 만든 화면이 없습니다',back:'← 화면 목록',g_mine:'내 화면',g_shared:'공유',leave_q:'저장하지 않은 변경이 있습니다. 화면 목록으로 갈까요?',g_pub:'게시됨 · {t}',
   build:'차트 만들기',f_src:'자료',f_type:'모양',f_x:'가로축 (나누는 기준)',f_bucket:'날짜 묶기',b_month:'월',b_week:'주',b_day:'일',
   f_series:'계열 (색으로 나누기 · 선택)',f_agg:'값',a_count:'건수',a_sum:'합계',a_avg:'평균',a_distinct:'고유 수',f_val:'값 열',f_date:'기간 기준 열',f_top:'상위',
@@ -223,7 +234,7 @@ ko:{title:'화면 만들기',sub:'차트와 표준 지표를 배치해 새 화�
   not_yours:'남의 보드는 고칠 수 없습니다 — 「새 보드」로 복사해 저장하세요',
   edit:'고치기',del:'빼기',up:'위로',loading:'자료를 불러오는 중…',fail_src:'이 자료를 읽지 못했습니다',
   no_rows:'조건에 맞는 행이 없습니다',val_need:'합계·평균은 숫자 열을 고르세요',sum_of:'{a} · {v}',by:'{y} — {x}별',by2:'{y} — {x} · {s}별',add_std:'표준 지표 추가',add_lay:'레이아웃 요소',w_kpi:'지표 카드',w_trend:'고장·PM 추이 (12주)',w_heat:'주차별 고장 히트맵',w_risk:'고장 위험 설비 순위',w_optable:'운영단위 목표 대비 표',w_mbar:'지표 축별 비교',mb_t:'{m} — {a}별',axis:'묶는 축',m_in_n:'반입 대수',m_run_n:'가동 대수',m_bm4:'최근 4주 고장',m_pm4:'최근 4주 PM',m_risk_n:'고장 위험 설비',m_warr_n:'90일 이내 유상 전환',w_title:'구분 제목',w_text:'텍스트',w_chart:'사용자 정의 차트',sc_all:'전사',sc_kr:'국내',sc_os:'해외',scope:'범위',metric:'지표',rows_n:'표시 행 수',txt_body:'내용',txt_title:'제목',tone:'강조',tone_plain:'기본',tone_attn:'강조 표시',set:'설정',close:'닫기',unsaved:'저장하지 않은 변경',std_note:'다른 화면과 같은 계산 · 범위와 표시만 고릅니다',no_std:'자료를 읽지 못했습니다',no_risk:'고장 위험 설비가 없습니다',col_eq:'설비',col_op:'운영단위',col_score:'점수',col_bm90:'90일 고장',col_rep:'재고장',col_judge:'판정',wk_rows:'{w} · 고장 {n}건',publish:'탭으로 게시',pub_name:'탭 이름',pub_vis:'공개 범위',vis_all:'전체 사용자',vis_all_s:'조회 권한 포함 · 로그인한 모든 사용자',vis_staff:'관리자·사이트 담당자',vis_staff_s:'자료 등록·수정 권한이 있는 사용자',vis_admin:'관리자',vis_admin_s:'검토 중인 화면 확인용',pub_place:'표시 위치',place_tab:'탭 메뉴',place_tab_s:'상시 조회 화면',place_more:'더보기 메뉴',place_more_s:'수시 조회 화면',pub_ok:'게시',unpub:'게시 취소',cancel:'취소',pub_desc:'게시하면 선택한 사용자에게 이 보드가 대시보드 탭으로 보입니다. 숫자는 열 때마다 최신 자료로 다시 계산합니다.',pub_done:'«{t}» 화면을 게시했습니다',unpub_done:'게시를 취소했습니다',pub_need_save:'먼저 보드를 저장하세요',pub_badge:'게시됨 · {t}',pub_fail:'게시하지 못했습니다',not_found:'이 화면을 찾을 수 없습니다 — 게시가 취소됐거나 공유가 꺼졌습니다',edit_screen:'화면 편집',view_screen:'화면 보기',base_day:'{d} 기준',drag:'끌어서 옮기기',resize:'크기 조절'},
-en:{title:'Screen builder',sub:'Arrange charts and standard metrics into a new screen and publish it as a tab',board_name:'Screen name',shared:'Shared',save:'Save',new_board:'Make a copy',remove:'Hide',
+en:{title:'Screen builder',ver:'Versions',ver_none:'No earlier versions saved',ver_fail:'Could not read versions',ver_loaded:'Earlier version loaded — review and save',ver_load:'Load',ver_w:'{n} widgets',v_region:'Category',v_op:'Operating unit',v_range:'Period',v_all:'All',v_note:'Applies to the whole board (before widget settings)',r_d30:'Last 30 days',r_d90:'Last 90 days',r_m12:'Last 12 months',r_ytd:'This year',xf:'Cross filter',xf_s:'Click a bar or slice to filter the other charts by that value',xf_chip:'{f} = {v}',xf_clear:'Clear',tpl:'Start from a template',tpl_s:'Screens filled with widgets that use the same calculations as other screens — open, change and save',tp_daily:'Daily operations',tp_daily_s:'Running · failures · PM · repeats + trend · at-risk · heatmap',tp_weekly:'Weekly report',tp_weekly_s:'Four metrics + monthly work stages · failures by model · units vs targets',tp_site:'Site check',tp_site_s:'One operating unit — choose it in «Operating unit» above',tp_mat:'Materials & cost',tp_mat_s:'Top materials · monthly use · paid/free · man-hours by unit',tp_x_risk:'Most failures in 90 days',tp_x_text:'This screen was made from a template — move and change widgets, then save.',sub:'Arrange charts and standard metrics into a new screen and publish it as a tab',board_name:'Screen name',shared:'Shared',save:'Save',new_board:'Make a copy',remove:'Hide',
   g_sub:'Your screens and shared screens — click to open, or start with “New screen”',g_new:'New screen',g_new_s:'Start from a blank screen',g_w:'{n} widgets',g_empty:'No screens yet',back:'← All screens',g_mine:'Mine',g_shared:'Shared',leave_q:'You have unsaved changes. Go back to the list?',g_pub:'Published · {t}',
   build:'Build a chart',f_src:'Data',f_type:'Type',f_x:'X axis (split by)',f_bucket:'Date bucket',b_month:'Month',b_week:'Week',b_day:'Day',
   f_series:'Series (split by color · optional)',f_agg:'Value',a_count:'Count',a_sum:'Sum',a_avg:'Average',a_distinct:'Distinct',f_val:'Value column',f_date:'Date column for range',f_top:'Top',
@@ -239,7 +250,7 @@ en:{title:'Screen builder',sub:'Arrange charts and standard metrics into a new s
   not_yours:'You cannot change someone else\'s board — use «New board» to save a copy',
   edit:'Edit',del:'Remove',up:'Up',loading:'Loading…',fail_src:'Could not read this data',
   no_rows:'No rows match',val_need:'Pick a numeric column for sum/average',sum_of:'{a} · {v}',by:'{y} — by {x}',by2:'{y} — by {x} · {s}',add_std:'Add standard metric',add_lay:'Layout items',w_kpi:'Metric card',w_trend:'Failures · PM trend (12 weeks)',w_heat:'Weekly failure heatmap',w_risk:'At-risk equipment',w_optable:'Operating units vs targets',w_mbar:'Metric by any axis',mb_t:'{m} — by {a}',axis:'Group by',m_in_n:'Units installed',m_run_n:'Units running',m_bm4:'Failures (last 4 weeks)',m_pm4:'PM (last 4 weeks)',m_risk_n:'At-risk equipment',m_warr_n:'Paid conversion within 90 days',w_title:'Section title',w_text:'Text',w_chart:'Custom chart',sc_all:'Company',sc_kr:'Korea',sc_os:'Overseas',scope:'Scope',metric:'Metric',rows_n:'Rows',txt_body:'Text',txt_title:'Title',tone:'Emphasis',tone_plain:'Default',tone_attn:'Highlight',set:'Settings',close:'Close',unsaved:'Unsaved changes',std_note:'Same calculation as other screens · choose scope and display only',no_std:'Could not read the data',no_risk:'No at-risk equipment',col_eq:'Equipment',col_op:'Operating unit',col_score:'Score',col_bm90:'Failures (90d)',col_rep:'Repeats',col_judge:'Status',wk_rows:'{w} · {n} failures',publish:'Publish as tab',pub_name:'Tab name',pub_vis:'Visible to',vis_all:'All users',vis_all_s:'Including view-only · everyone signed in',vis_staff:'Admins · site managers',vis_staff_s:'Users who upload and edit data',vis_admin:'Administrators',vis_admin_s:'For reviewing a screen',pub_place:'Placement',place_tab:'Tab bar',place_tab_s:'Screens used daily',place_more:'More menu',place_more_s:'Screens used occasionally',pub_ok:'Publish',unpub:'Unpublish',cancel:'Cancel',pub_desc:'Once published, this board appears as a dashboard tab for the selected users. Numbers are recalculated from the latest data each time.',pub_done:'Published «{t}»',unpub_done:'Unpublished',pub_need_save:'Save the board first',pub_badge:'Published · {t}',pub_fail:'Could not publish',not_found:'This screen was not found — it was unpublished or sharing was turned off',edit_screen:'Edit screen',view_screen:'View screen',base_day:'As of {d}',drag:'Drag to move',resize:'Resize'},
-zh:{title:'画面制作',sub:'排列图表和标准指标制作新画面，并发布为标签',board_name:'画面名称',shared:'共享',save:'保存',new_board:'复制一份',remove:'隐藏',
+zh:{title:'画面制作',ver:'历史版本',ver_none:'没有已保存的历史版本',ver_fail:'无法读取版本列表',ver_loaded:'已载入历史版本 — 确认后保存',ver_load:'载入',ver_w:'{n}个组件',v_region:'区分',v_op:'运营单位',v_range:'期间',v_all:'全部',v_note:'作用于整个看板(先于组件设置)',r_d30:'最近30天',r_d90:'最近90天',r_m12:'最近12个月',r_ytd:'今年',xf:'交叉筛选',xf_s:'点击图表的柱形·扇形，用该值筛选其他图表',xf_chip:'{f} = {v}',xf_clear:'解除',tpl:'从模板开始',tpl_s:'以与其他画面相同计算的组件填充的画面 — 打开后修改并保存',tp_daily:'每日运营现况',tp_daily_s:'运行·故障·PM·重复故障 + 趋势·风险设备·热力图',tp_weekly:'周报',tp_weekly_s:'四项指标 + 月别作业阶段 · 按机型故障 · 运营单位目标对比',tp_site:'现场点检',tp_site_s:'单个运营单位 — 在上方«运营单位»中选择',tp_mat:'材料·费用',tp_mat_s:'材料使用 TOP · 月别使用 · 有偿/无偿 · 运营单位别工时',tp_x_risk:'最近90天故障多的设备',tp_x_text:'此画面由模板制作 — 移动和修改组件后保存。',sub:'排列图表和标准指标制作新画面，并发布为标签',board_name:'画面名称',shared:'共享',save:'保存',new_board:'复制一份',remove:'隐藏',
   g_sub:'我制作的画面 · 共享的画面 — 点击打开，或用「新画面」开始',g_new:'新画面',g_new_s:'从空白画面开始',g_w:'{n}个组件',g_empty:'还没有制作的画面',back:'← 画面列表',g_mine:'我的',g_shared:'共享',leave_q:'有未保存的更改。要返回画面列表吗？',g_pub:'已发布 · {t}',
   build:'制作图表',f_src:'数据',f_type:'类型',f_x:'横轴（分组依据）',f_bucket:'日期分组',b_month:'月',b_week:'周',b_day:'日',
   f_series:'系列（按颜色区分 · 可选）',f_agg:'值',a_count:'件数',a_sum:'合计',a_avg:'平均',a_distinct:'去重数',f_val:'值列',f_date:'期间依据列',f_top:'前',
@@ -255,7 +266,7 @@ zh:{title:'画面制作',sub:'排列图表和标准指标制作新画面，并�
   not_yours:'不能修改他人的看板 — 请用「新看板」另存',
   edit:'修改',del:'移除',up:'上移',loading:'正在加载…',fail_src:'无法读取此数据',
   no_rows:'没有符合条件的行',val_need:'合计·平均请选择数值列',sum_of:'{a} · {v}',by:'{y} — 按{x}',by2:'{y} — 按{x} · {s}',add_std:'添加标准指标',add_lay:'布局元素',w_kpi:'指标卡',w_trend:'故障·PM 趋势 (12周)',w_heat:'每周故障热力图',w_risk:'故障风险设备',w_optable:'运营单位目标对比表',w_mbar:'按任意轴比较指标',mb_t:'{m} — 按{a}',axis:'分组轴',m_in_n:'搬入台数',m_run_n:'运行台数',m_bm4:'近4周故障',m_pm4:'近4周 PM',m_risk_n:'故障风险设备',m_warr_n:'90天内转为有偿',w_title:'分区标题',w_text:'文本',w_chart:'自定义图表',sc_all:'全公司',sc_kr:'国内',sc_os:'海外',scope:'范围',metric:'指标',rows_n:'显示行数',txt_body:'内容',txt_title:'标题',tone:'强调',tone_plain:'默认',tone_attn:'强调显示',set:'设置',close:'关闭',unsaved:'未保存的更改',std_note:'与其他画面相同的计算 · 仅选择范围和显示方式',no_std:'无法读取数据',no_risk:'没有故障风险设备',col_eq:'设备',col_op:'运营单位',col_score:'分数',col_bm90:'90天故障',col_rep:'重复故障',col_judge:'判定',wk_rows:'{w} · 故障 {n}件',publish:'发布为标签',pub_name:'标签名称',pub_vis:'公开范围',vis_all:'全体用户',vis_all_s:'含只读权限 · 所有登录用户',vis_staff:'管理员·现场负责人',vis_staff_s:'有资料登记·修改权限的用户',vis_admin:'管理员',vis_admin_s:'用于审核中的画面',pub_place:'显示位置',place_tab:'标签菜单',place_tab_s:'日常查看的画面',place_more:'更多菜单',place_more_s:'偶尔查看的画面',pub_ok:'发布',unpub:'取消发布',cancel:'取消',pub_desc:'发布后，所选用户会在仪表板标签中看到此看板。数字在每次打开时按最新资料重新计算。',pub_done:'已发布«{t}»',unpub_done:'已取消发布',pub_need_save:'请先保存看板',pub_badge:'已发布 · {t}',pub_fail:'发布失败',not_found:'找不到此画面 — 已取消发布或关闭了共享',edit_screen:'编辑画面',view_screen:'查看画面',base_day:'{d} 基准',drag:'拖动移动',resize:'调整大小'},
-ja:{title:'画面作成',sub:'チャートと標準指標を配置して新しい画面を作り、タブとして公開します',board_name:'画面名',shared:'共有',save:'保存',new_board:'コピーを作る',remove:'隠す',
+ja:{title:'画面作成',ver:'過去のバージョン',ver_none:'保存された過去のバージョンはありません',ver_fail:'バージョン一覧を読めませんでした',ver_loaded:'過去のバージョンを読み込みました — 確認して保存してください',ver_load:'読み込む',ver_w:'ウィジェット{n}個',v_region:'区分',v_op:'運営単位',v_range:'期間',v_all:'全体',v_note:'ボード全体にかかります(ウィジェット設定より先)',r_d30:'直近30日',r_d90:'直近90日',r_m12:'直近12か月',r_ytd:'今年',xf:'クロスフィルター',xf_s:'チャートの棒·扇形を押すとその値で他のチャートを絞り込みます',xf_chip:'{f} = {v}',xf_clear:'解除',tpl:'テンプレートから始める',tpl_s:'他の画面と同じ計算のウィジェットで埋めた画面 — 開いて変えて保存します',tp_daily:'日次運営現況',tp_daily_s:'稼働·故障·PM·再故障 + 推移·リスク設備·ヒートマップ',tp_weekly:'週次報告',tp_weekly_s:'指標4つ + 月別作業段階 · 機種別故障 · 運営単位の目標対比',tp_site:'サイト点検',tp_site_s:'運営単位ひとつ — 上の«運営単位»で選びます',tp_mat:'資材·費用',tp_mat_s:'資材使用TOP · 月別使用 · 有償/無償 · 運営単位別工数',tp_x_risk:'直近90日で故障の多い設備',tp_x_text:'この画面はテンプレートから作りました — ウィジェットを動かし変えてから保存してください。',sub:'チャートと標準指標を配置して新しい画面を作り、タブとして公開します',board_name:'画面名',shared:'共有',save:'保存',new_board:'コピーを作る',remove:'隠す',
   g_sub:'自分の画面 · 共有された画面 — 押して開くか、「新しい画面」で始めます',g_new:'新しい画面',g_new_s:'空の画面から始める',g_w:'ウィジェット{n}個',g_empty:'まだ作った画面がありません',back:'← 画面一覧',g_mine:'自分',g_shared:'共有',leave_q:'保存していない変更があります。画面一覧に戻りますか？',g_pub:'公開中 · {t}',
   build:'チャートを作る',f_src:'データ',f_type:'形',f_x:'横軸（分ける基準）',f_bucket:'日付のまとめ',b_month:'月',b_week:'週',b_day:'日',
   f_series:'系列（色で分ける · 任意）',f_agg:'値',a_count:'件数',a_sum:'合計',a_avg:'平均',a_distinct:'ユニーク数',f_val:'値の列',f_date:'期間の基準列',f_top:'上位',
@@ -278,7 +289,7 @@ const fmt=(s,o)=>String(s).replace(/\{(\w+)\}/g,(m,k)=>o[k]!=null?o[k]:m);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf=n=>Number(n||0).toLocaleString(undefined,{maximumFractionDigits:1});
 /* 차트 엔진은 core 한 벌이다(GST.cb · v203) — 기존 화면의 «＋ 차트 추가»와 같은 폼 · 같은 계산 · 같은 그림. 여기서 다시 짜지 않는다. */
-const S={cfg:null, board:{id:null,name:'',shared:false,owner:null,widgets:[],pub:null}, boards:[], editIx:-1, sql:true, charts:{}, dirty:false, sel:-1,
+const S={xmode:false, xf:null, cfg:null, board:{id:null,name:'',shared:false,owner:null,widgets:[],pub:null,vars:{}}, boards:[], editIx:-1, sql:true, charts:{}, dirty:false, sel:-1,
   view:(new URLSearchParams(location.search)).get('view')||'', want:(new URLSearchParams(location.search)).get('board')||'', fresh:(new URLSearchParams(location.search)).has('new')};
 if(S.view) document.body.classList.add('sd-view');
 S.list=!S.view && !S.want && !S.fresh;
@@ -311,12 +322,14 @@ function drawGallery(){
     const tags=[(b.owner&&b.owner!==me())?esc(b.owner.replace(/@.*/,'')):esc(t('g_mine'))].concat(b.shared?[esc(t('g_shared'))]:[]);
     return '<button type="button" class="sd-tile" data-open="'+esc(b.id)+'"><div class="mini">'+mini+'</div><b>'+esc(b.name||t('new_board_n'))+'</b>'
       +'<div class="sd-tags">'+tags.map(x=>'<span>'+x+'</span>').join('')+(b.pub?'<span class="pub">'+esc(fmt(t('g_pub'),{t:b.pub.tab||b.name}))+'</span>':'')+'</div><small>'+esc(fmt(t('g_w'),{n:W.length}))+'</small></button>'; });
-  G.innerHTML='<button type="button" class="sd-tile new" data-open=""><span class="plus">＋</span><b>'+esc(t('g_new'))+'</b><small>'+esc(t('g_new_s'))+'</small></button>'+tiles.join('');
+  G.innerHTML='<button type="button" class="sd-tile new" data-open=""><span class="plus">＋</span><b>'+esc(t('g_new'))+'</b><small>'+esc(t('g_new_s'))+'</small></button>'+tiles.join('')
+    +'<div class="sd-tpl"><h3>'+esc(t('tpl'))+' <span class="sd-sub" style="font-weight:400">· '+esc(t('tpl_s'))+'</span></h3>'
+    +Object.keys(TPLS).map(k=>'<button type="button" class="sd-tile tpl" data-tpl="'+k+'"><b>'+esc(t('tp_'+k))+'</b><small>'+esc(t('tp_'+k+'_s'))+'</small></button>').join('')+'</div>';
   document.querySelector('[data-i="sub"]').textContent=S.list?t('g_sub'):t('sub');
 }
 function openBoard(id){
   const b=id?S.boards.find(x=>String(x.id)===String(id)):null;
-  S.board=b?{id:b.id,name:b.name,shared:b.shared,owner:b.owner||null,pub:b.pub||null,widgets:JSON.parse(JSON.stringify(b.widgets||[]))}:{id:null,name:'',shared:false,owner:null,widgets:[],pub:null};
+  S.board=b?{id:b.id,name:b.name,shared:b.shared,owner:b.owner||null,pub:b.pub||null,widgets:JSON.parse(JSON.stringify(b.widgets||[])),vars:JSON.parse(JSON.stringify(b.vars||{}))}:{id:null,name:'',shared:false,owner:null,widgets:[],pub:null,vars:{}}; S.xf=null;
   S.editIx=-1; S.sel=-1; setDirty(false); listMode(false);
   try{ history.replaceState(null,'', location.pathname+(b?'?board='+encodeURIComponent(b.id):'?new=1')); }catch(e){}
   drawBoardSel(); drawBoard(); drawForm(); preview(); document.querySelector('[data-i="sub"]').textContent=t('sub');
@@ -496,7 +509,7 @@ async function drawBoard(){
   const B=document.getElementById('board'), W=S.board.widgets, seq=++_drawSeq;
   Object.keys(S.charts).filter(k=>k!=='pv').forEach(k=>{ try{ S.charts[k].destroy(); }catch(e){} delete S.charts[k]; });
   B.querySelectorAll('canvas').forEach(cv=>{ try{ const ch=Chart.getChart(cv); if(ch) ch.destroy(); }catch(e){} });
-  metaPaint();
+  metaPaint(); varsPaint();
   B.classList.toggle('edit', !S.view);
   if(!W.length){ B.innerHTML='<div class="sd-empty" style="grid-column:1/-1">'+esc(t('empty_board'))+'</div>'; return; }
   fixLay(W);
@@ -512,9 +525,107 @@ async function drawBoard(){
   for(let i=0;i<W.length;i++){
     if(seq!==_drawSeq) return;
     const w=W[i], k=wk(w), h=B.querySelector('[data-wh="'+i+'"]'); if(!h) continue;
-    if(k==='chart'){ h.classList.add('gcb-host'); await GST.cb.draw(h, cbOf(w), {id:'w'+i}); if(seq===_drawSeq){ const n=B.querySelector('[data-w="'+i+'"] h3 .n'); if(n) n.textContent=wTitle(w); } }
-    else if(STD_KINDS.indexOf(k)>=0) await drawStd(h, w, 'w'+i);
+    if(k==='chart'){ h.classList.add('gcb-host'); const c0=await varCfg(w, i); await GST.cb.draw(h, c0, {id:'w'+i}); if(seq!==_drawSeq) return;
+      const n=B.querySelector('[data-w="'+i+'"] h3 .n'); if(n) n.textContent=wTitle(w); xBind(h, c0, i); }
+    else if(STD_KINDS.indexOf(k)>=0) await drawStd(h, varStd(w), 'w'+i);
   }
+}
+
+/* ===== 보드 변수 · 교차 필터 · 템플릿 · 이전 버전 (v207) =====
+   보드 변수(Grafana 변수) — 구분 · 운영단위 · 기간을 보드 «한 곳»에서 고르면 모든 위젯이 따른다(위젯 설정보다 먼저).
+     · 표준 지표는 범위(scope)를 바꿔 부른다 — 계산은 그대로 GST.metrics(새로 세지 않는다).
+     · 사용자 정의 차트는 «그 자료에 그 열이 있을 때만» 거르기 조건을 하나 더 얹는다(GST.cb.SRC 의 org 정의 · 없는 열은 안 건다 — 조용히 전부 빠지지 않게).
+   교차 필터(Power BI) — 켜 두고 막대·조각을 누르면 그 값으로 «같은 열을 가진» 다른 차트를 거른다. 날짜 묶음 칸은 거르지 않는다.
+   ⚠ 변수와 교차 필터는 «보기» 상태다 — 교차 필터는 저장하지 않고, 변수는 보드와 함께 저장한다(게시 화면이 그 범위로 열린다). */
+const VR=['','d30','d90','m12','ytd'];
+const REG=()=>({kr:GST.ORG.REGION_KR, os:GST.ORG.REGION_OS});
+function vars(){ return S.board.vars||(S.board.vars={}); }
+function varStd(w){ const v=vars(); if(!v.op&&!v.region) return w;
+  return Object.assign({}, w, {scope: v.op?'o:'+v.op : (v.region===REG().kr?'r:KR':'r:OS')}); }
+async function varCfg(w, i){
+  const c=cbOf(w), v=vars(); let D=null;
+  if(v.region||v.op||v.range||(S.xf&&S.xf.i!==i)){ try{ await GST.cb.load(c.src); }catch(e){} D=GST.cb.data(c.src); }
+  const has=k=>!!(D&&D.fields&&D.fields.some(f=>f.k===k));
+  const src=(GST.cb.SRC||[]).find(x=>x.id===c.src)||{}, org=src.org||{};
+  c.filters=(c.filters||[]).slice();
+  if(v.region && has('_region')) c.filters.push({f:'_region', op:'eq', v:v.region});
+  if(v.op && org.op && has(org.op)) c.filters.push({f:org.op, op:'eq', v:v.op});
+  if(v.range && c.dateF) c.range=v.range;
+  if(S.xf && S.xf.i!==i && has(S.xf.f)) c.filters.push(S.xf.v===null?{f:S.xf.f, op:'empty'}:{f:S.xf.f, op:'eq', v:S.xf.v});
+  return c;
+}
+function xBind(host, c, i){
+  if(!S.xmode) return;
+  const cv=host.querySelector('canvas'), ch=cv&&window.Chart&&Chart.getChart?Chart.getChart(cv):null; if(!ch) return;
+  const D=GST.cb.data(c.src), F=D&&D.F&&D.F[c.x];
+  if(!F || F.kind==='date' || c.type==='scatter') return;      // 날짜 묶음 칸·산점도는 «값»이 아니다
+  ch.$rows=null;
+  ch.options.onClick=(e, els)=>{ if(!els||!els.length) return; const lab=ch.data.labels[els[0].index];
+    const L=GST.cb.T, raw=String(Array.isArray(lab)?lab.join(' '):lab);
+    if(raw===L('other_l')) return;
+    const val=raw===L('blank')?null:raw;
+    S.xf=(S.xf&&S.xf.i===i&&S.xf.v===val)?null:{i, f:c.x, v:val, label:(F.label||c.x)};
+    drawBoard(); };
+  ch.update('none');
+}
+function varsPaint(){
+  const box=document.getElementById('boardVars'); if(!box) return;
+  const v=vars(), opt=(val,l,cur)=>'<option value="'+esc(val)+'"'+(String(val)===String(cur||'')?' selected':'')+'>'+esc(l)+'</option>';
+  const ed=!S.view;
+  const regSel='<select class="sd-sel" data-v="region"'+(ed?'':' disabled')+'>'+opt('',t('v_all'),v.region)+opt(REG().kr,t('sc_kr'),v.region)+opt(REG().os,t('sc_os'),v.region)+'</select>';
+  const opSel='<select class="sd-sel" data-v="op" id="varOp"'+(ed?'':' disabled')+'>'+opt('',t('v_all'),v.op)+(v.op?opt(v.op,v.op,v.op):'')+'</select>';
+  const rgSel='<select class="sd-sel" data-v="range"'+(ed?'':' disabled')+'>'+VR.map(r=>opt(r, r?t('r_'+r):t('v_all'), v.range)).join('')+'</select>';
+  box.innerHTML='<label title="'+esc(t('v_note'))+'">'+esc(t('v_region'))+' '+regSel+'</label><label>'+esc(t('v_op'))+' '+opSel+'</label><label>'+esc(t('v_range'))+' '+rgSel+'</label>'
+    +'<button type="button" class="sd-btn'+(S.xmode?' on':'')+'" id="xfBtn" title="'+esc(t('xf_s'))+'" aria-pressed="'+(S.xmode?'true':'false')+'">'+esc(t('xf'))+'</button>'
+    +(S.xf?'<span class="sd-xchip">'+esc(fmt(t('xf_chip'),{f:S.xf.label, v:S.xf.v==null?GST.cb.T('blank'):S.xf.v}))+'<button type="button" id="xfClr" aria-label="'+esc(t('xf_clear'))+'">✕</button></span>':'');
+  stdData().then(Dd=>{ const sel=document.getElementById('varOp'); if(!sel) return; const cur=vars().op||'';
+    sel.innerHTML=opt('',t('v_all'),cur)+Dd.ops.map(o=>opt(o,o,cur)).join(''); }).catch(()=>{});
+  box.querySelectorAll('[data-v]').forEach(el=>el.onchange=()=>{ vars()[el.dataset.v]=el.value||''; if(el.dataset.v==='region'&&el.value) vars().op=''; if(el.dataset.v==='op'&&el.value) vars().region='';
+    S.xf=null; setDirty(true); drawBoard(); });
+  const xb=document.getElementById('xfBtn'); if(xb) xb.onclick=()=>{ S.xmode=!S.xmode; if(!S.xmode) S.xf=null; drawBoard(); };
+  const xc=document.getElementById('xfClr'); if(xc) xc.onclick=()=>{ S.xf=null; drawBoard(); };
+}
+/* 템플릿 — 위젯은 다른 화면과 같은 계산(표준 지표 = GST.metrics · 차트 = GST.cb 추천 차트 설정)이다. 숫자를 담지 않는다. */
+const TPLS={
+  daily:()=>({vars:{}, widgets:[{kind:'title',text:t('tp_daily')}].concat(MET.map(m=>({kind:'std',std:'kpi',metric:m,scope:'*'})),
+    [{kind:'std',std:'trend',scope:'*'},{kind:'std',std:'risk',scope:'*',n:10},{kind:'std',std:'heat',scope:'*'}])}),
+  weekly:()=>({vars:{}, widgets:[{kind:'title',text:t('tp_weekly')}].concat(MET.map(m=>({kind:'std',std:'kpi',metric:m,scope:'*'})),
+    [{src:'wk',type:'stack',x:'dStart',bucket:'month',series:'stage',measures:[{agg:'count'}],range:'m12'},
+     {src:'wk',type:'bar',x:'i:model',top:12,measures:[{agg:'count'}],filters:[{f:'stage',op:'eq',v:'BM'}],range:'m12'},
+     {kind:'std',std:'optable',scope:'*'}])}),
+  site:()=>({vars:{}, widgets:[{kind:'title',text:t('tp_site')},{kind:'text',text:t('tp_site_s'),tone:'attn'}].concat(MET.map(m=>({kind:'std',std:'kpi',metric:m,scope:'*'})),
+    [{kind:'std',std:'trend',scope:'*'},{kind:'std',std:'risk',scope:'*',n:10},{kind:'std',std:'mbar',metric:'bm4',axis:'fab',scope:'*'},
+     {src:'wk',type:'hbar',x:'eqNo',top:15,measures:[{agg:'count'}],filters:[{f:'stage',op:'eq',v:'BM'}],range:'d90',title:t('tp_x_risk')}])}),
+  mat:()=>({vars:{}, widgets:[{kind:'title',text:t('tp_mat')},
+    {src:'mat',type:'hbar',x:'matName',top:15,measures:[{agg:'sum',f:'qty'}],range:'m12'},
+    {src:'mat',type:'line',x:'workDate',bucket:'month',measures:[{agg:'sum',f:'qty'}],range:'m12'},
+    {src:'mat',type:'stack100',x:'op',series:'pf',measures:[{agg:'count'}],range:'m12'},
+    {src:'wk',type:'hbar',x:'op',measures:[{agg:'sum',f:'manMin'}]}]})
+};
+function openTemplate(k){
+  const f=TPLS[k]; if(!f) return;
+  const o=f();
+  S.board={id:null,name:t('tp_'+k),shared:false,owner:null,pub:null,widgets:[],vars:o.vars||{}}; S.xf=null;
+  S.editIx=-1; S.sel=-1; listMode(false);
+  o.widgets.forEach(w=>{ const z=WSZ[wk(w)]||WSZ.chart; w.lay=freeSpot(S.board.widgets,z[0],z[1]); S.board.widgets.push(w); });
+  try{ history.replaceState(null,'', location.pathname+'?new=1'); }catch(e){}
+  setDirty(true); drawBoardSel(); drawBoard(); drawForm(); preview(); document.querySelector('[data-i="sub"]').textContent=t('sub');
+  toast(t('tp_x_text'));
+}
+/* 이전 버전 — 저장할 때마다 서버 트리거(setup-33 layout_hist)가 그때 설정을 남긴다. 불러오면 «편집 중»으로 들어온다(저장해야 반영). */
+async function verMenu(btn){
+  const old=btn.parentNode.querySelector('.sd-menu'); popClose(); if(old) return;
+  const m=document.createElement('div'); m.className='sd-menu'; m.innerHTML='<div class="sd-note" style="padding:6px 10px">…</div>'; btn.parentNode.appendChild(m);
+  let L=[]; try{ const C=await GST.db(); const r=await C.rpc('layout_versions',{p_kind:'board', p_ref:String(S.board.id)}); if(r.error||!r.data||r.data.error) throw r.error||r.data.error; L=r.data.list||[]; }
+  catch(e){ m.innerHTML='<div class="sd-note" style="padding:6px 10px">'+esc(t('ver_fail'))+'</div>'; return; }
+  if(!L.length){ m.innerHTML='<div class="sd-note" style="padding:6px 10px">'+esc(t('ver_none'))+'</div>'; return; }
+  const ft=x=>{ const d=new Date(x); return GST.ymdL(d)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+  m.innerHTML=L.filter(x=>!x.reset).slice(0,30).map(x=>'<button type="button" data-ver="'+x.id+'">'+esc(ft(x.at))+' · '+esc(fmt(t('ver_w'),{n:x.n}))+'</button>').join('');
+  m.addEventListener('click', async ev=>{ const b=ev.target.closest('[data-ver]'); if(!b) return; m.remove();
+    try{ const C=await GST.db(); const r=await C.rpc('layout_version',{p_id:+b.dataset.ver}); const cf=r.data&&r.data.config; if(r.error||!cf) throw r.error||'none';
+      S.board.widgets=JSON.parse(JSON.stringify(cf.widgets||[])); S.board.vars=JSON.parse(JSON.stringify(cf.vars||{})); S.xf=null; S.sel=-1; S.editIx=-1;
+      setDirty(true); drawBoard(); drawForm(); toast(t('ver_loaded')); }
+    catch(e){ toast(t('ver_fail')); } });
 }
 /* ---- 격자에서 옮기기 · 크기 · 설정 ---- */
 function popClose(){ document.querySelectorAll('.sd-pop,.sd-menu').forEach(p=>p.remove()); }
@@ -606,6 +717,7 @@ function pubPaint(){
   if(b) b.hidden=!canPub();
   if(bd){ bd.hidden=!S.board.pub; if(S.board.pub) bd.textContent=fmt(t('pub_badge'),{t:S.board.pub.tab||S.board.name}); }
   if(vb) vb.hidden=!(S.sql&&S.board.id&&!String(S.board.id).startsWith('L'));
+  const vr=document.getElementById('verBtn'); if(vr) vr.hidden=!(S.sql&&S.board.id&&!String(S.board.id).startsWith('L'));
 }
 function pubOpen(){
   if(!S.board.id||String(S.board.id).startsWith('L')||S.dirty){ toast(t('pub_need_save')); return; }
@@ -631,7 +743,7 @@ function pickWanted(){
   const id=S.view||S.want; if(!id) return;
   if(S.dirty) return;
   const b=S.boards.find(x=>String(x.id)===String(id));
-  if(b){ if(String(S.board.id)!==String(b.id)) S.board={id:b.id,name:b.name,shared:b.shared,owner:b.owner||null,pub:b.pub||null,widgets:JSON.parse(JSON.stringify(b.widgets||[]))}; }
+  if(b){ if(String(S.board.id)!==String(b.id)) S.board={id:b.id,name:b.name,shared:b.shared,owner:b.owner||null,pub:b.pub||null,widgets:JSON.parse(JSON.stringify(b.widgets||[])),vars:JSON.parse(JSON.stringify(b.vars||{}))}; }
   else if(S.view){ S.board={id:null,name:'',shared:false,owner:null,widgets:[],pub:null}; }
   drawBoardSel(); viewPaint();
 }
@@ -656,7 +768,7 @@ async function loadBoards(){
     if(C){ let r=await C.from('user_layouts').select('id,owner,name,config,shared,updated_at,pub').order('updated_at',{ascending:false}).limit(200);
       if(r.error&&/pub/.test(r.error.message||'')) r=await C.from('user_layouts').select('id,owner,name,config,shared,updated_at').order('updated_at',{ascending:false}).limit(200);
       if(r.error){ S.sql=!/user_layouts|relation|schema cache/i.test(r.error.message||''); if(S.sql) console.warn('[studio] 보드 읽기 실패', r.error); }
-      else { S.sql=true; S.boards=(r.data||[]).map(b=>({id:b.id,name:b.name,owner:b.owner,shared:b.shared,pub:b.pub||null,widgets:(b.config&&b.config.widgets)||[]})); }
+      else { S.sql=true; S.boards=(r.data||[]).map(b=>({id:b.id,name:b.name,owner:b.owner,shared:b.shared,pub:b.pub||null,widgets:(b.config&&b.config.widgets)||[],vars:(b.config&&b.config.vars)||{}})); }
     } else S.sql=false;
   }catch(e){ S.sql=false; }
   if(!S.sql) S.boards=localBoards().map((b,i)=>Object.assign({id:'L'+i}, b));
@@ -673,9 +785,9 @@ function drawBoardSel(){
 }
 async function saveBoard(asNew){
   const name=document.getElementById('boardName').value.trim()||t('new_board_n'), shared=document.getElementById('boardShared').checked;
-  fixLay(S.board.widgets); const cfg={v:2, widgets:S.board.widgets};
+  fixLay(S.board.widgets); const cfg={v:2, widgets:S.board.widgets, vars:S.board.vars||{}};
   if(!S.sql){ const L=localBoards(); const ix=String(S.board.id||'').startsWith('L')&&!asNew?+String(S.board.id).slice(1):-1;
-    const b={name, widgets:S.board.widgets}; if(ix>=0) L[ix]=b; else L.unshift(b); try{ localStorage.setItem(LKEY, JSON.stringify(L.slice(0,50))); }catch(e){}
+    const b={name, widgets:S.board.widgets, vars:S.board.vars||{}}; if(ix>=0) L[ix]=b; else L.unshift(b); try{ localStorage.setItem(LKEY, JSON.stringify(L.slice(0,50))); }catch(e){}
     S.board.name=name; await loadBoards(); S.board.id='L'+(ix>=0?ix:0); setDirty(false); drawBoardSel(); toast(t('saved')); return; }
   try{ const C=await GST.db();
     const own=!S.board.owner||S.board.owner===me();
@@ -704,9 +816,11 @@ function bind(){
   document.getElementById('undoBtn').onclick=()=>histUndo(true); document.getElementById('redoBtn').onclick=()=>histUndo(false);
   document.addEventListener('keydown', ev=>{ if(!(ev.ctrlKey||ev.metaKey)||ev.altKey||S.view||S.list) return; const k=ev.key.toLowerCase(); if(k!=='z'&&k!=='y') return;
     const tg=ev.target; if(tg&&(/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName)||tg.isContentEditable)) return; ev.preventDefault(); histUndo(k==='z'&&!ev.shiftKey); });
-  document.getElementById('gallery').addEventListener('click', e=>{ const b=e.target.closest('[data-open]'); if(!b) return; openBoard(b.dataset.open); });
+  document.getElementById('gallery').addEventListener('click', e=>{ const tp=e.target.closest('[data-tpl]'); if(tp){ openTemplate(tp.dataset.tpl); return; }
+    const b=e.target.closest('[data-open]'); if(!b) return; openBoard(b.dataset.open); });
+  document.getElementById('verBtn').onclick=e=>{ e.stopPropagation(); verMenu(e.currentTarget); };
   document.getElementById('boardSel').onchange=e=>{ const b=S.boards.find(x=>String(x.id)===e.target.value);
-    S.board=b?{id:b.id,name:b.name,shared:b.shared,owner:b.owner||null,pub:b.pub||null,widgets:JSON.parse(JSON.stringify(b.widgets||[]))}:{id:null,name:'',shared:false,owner:null,widgets:[],pub:null};
+    S.board=b?{id:b.id,name:b.name,shared:b.shared,owner:b.owner||null,pub:b.pub||null,widgets:JSON.parse(JSON.stringify(b.widgets||[])),vars:JSON.parse(JSON.stringify(b.vars||{}))}:{id:null,name:'',shared:false,owner:null,widgets:[],pub:null,vars:{}}; S.xf=null;
     S.editIx=-1; S.sel=-1; setDirty(false); drawBoardSel(); drawBoard(); drawForm(); };
   document.getElementById('saveBtn').onclick=()=>saveBoard(false);
   document.getElementById('newBtn').onclick=()=>{ S.board={id:null,name:'',shared:false,owner:null,widgets:JSON.parse(JSON.stringify(S.board.widgets)),pub:null}; setDirty(true); drawBoardSel(); document.getElementById('boardName').focus(); };
