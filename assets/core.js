@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 195;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 196;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 여기서 묻는다 — 저장 키(축편집·피벗·섹션)·챗봇 출처·자동순회 페이지 id 가 이 한 곳을 본다.
    (v137 에는 오프라인 판의 srcdoc 때문에 두었고, 오프라인 판은 v199 에 없앴다 — 한 곳에서 묻는 규약은 그대로 둔다.) */
 GST.pagePath = function(){ return location.pathname; };
@@ -11666,8 +11666,11 @@ GST.CB_T = {
        need_series:'히트맵은 계열을 골라야 합니다', blank:'(빈칸)', other_l:'그 밖', of:'{n}행 중 {m}행', rows:'{n}행', total:'합계', prev:'직전 같은 기간',
        vs:'직전 대비', pts:'점 {n}개', pts_cut:'점이 많아 {n}개까지 그렸습니다', region:'구분', cnt:'건수',
        t:{bar:'막대',hbar:'가로 막대',line:'선',area:'영역',stack:'쌓은 막대',stack100:'100% 쌓기',combo:'콤보',doughnut:'도넛',pie:'파이',polar:'극좌표',radar:'방사형',scatter:'산점도',heat:'히트맵',table:'표',kpi:'숫자 카드'},
-       a:{count:'건수',sum:'합계',avg:'평균',min:'최소',max:'최대',median:'중앙값',distinct:'고유 수'},
-       c:{none:'그대로',cum:'누적',ma3:'이동평균 (3)',diff:'직전 대비 차이',pctchg:'직전 대비 증감률 %',share:'전체 대비 %',pctx:'구간 안 비율 %'},
+       a:{count:'건수',sum:'합계',avg:'평균',min:'최소',max:'최대',median:'중앙값',distinct:'고유 수',expr:'계산 (식)'},
+       c:{none:'그대로',cum:'누적',ma3:'이동평균 (3)',diff:'직전 대비 차이',pctchg:'직전 대비 증감률 %',share:'전체 대비 %',pctx:'구간 안 비율 %',yoy:'전년 같은 구간'},
+       expr_ph:'예: {1}/{2}*100  ({1}=첫째 값 · {2}=둘째 값)', expr_bad:'식을 읽을 수 없습니다 — {1} {2} 숫자 + - * / ( ) 만', m_pct:'% 로 표시',
+       cond:'조건부 색', cond_none:'없음', cond_v:'기준값', cond_c:{bad:'붉게',warn:'노랗게',ok:'초록'}, join:'설치현황 조인 {p}%',
+       tpl:'추천 차트', tpl_pick:'— 추천에서 고르기 —', undo:'되돌리기 (Ctrl+Z)', redo:'다시 실행 (Ctrl+Y)',
        as:{auto:'자동',bar:'막대',line:'선',area:'영역'}, ax:{y:'왼쪽',y2:'오른쪽'},
        b:{year:'연',quarter:'분기',month:'월',week:'주',day:'일',weekday:'요일'},
        wd:['일','월','화','수','목','금','토'],
@@ -11688,8 +11691,11 @@ GST.CB_T = {
        need_series:'A heatmap needs a series', blank:'(blank)', other_l:'Other', of:'{m} of {n} rows', rows:'{n} rows', total:'Total', prev:'Previous period',
        vs:'vs previous', pts:'{n} points', pts_cut:'Too many points — drew the first {n}', region:'Category', cnt:'Count',
        t:{bar:'Bar',hbar:'Horizontal bar',line:'Line',area:'Area',stack:'Stacked bar',stack100:'100% stacked',combo:'Combo',doughnut:'Doughnut',pie:'Pie',polar:'Polar area',radar:'Radar',scatter:'Scatter',heat:'Heatmap',table:'Table',kpi:'Number card'},
-       a:{count:'Count',sum:'Sum',avg:'Average',min:'Min',max:'Max',median:'Median',distinct:'Distinct'},
-       c:{none:'As is',cum:'Cumulative',ma3:'Moving average (3)',diff:'Change vs previous',pctchg:'% change vs previous',share:'% of total',pctx:'% within category'},
+       a:{count:'Count',sum:'Sum',avg:'Average',min:'Min',max:'Max',median:'Median',distinct:'Distinct',expr:'Formula'},
+       c:{none:'As is',cum:'Cumulative',ma3:'Moving average (3)',diff:'Change vs previous',pctchg:'% change vs previous',share:'% of total',pctx:'% within category',yoy:'Same period last year'},
+       expr_ph:'e.g. {1}/{2}*100  ({1}=1st value · {2}=2nd value)', expr_bad:'Cannot read the formula — only {1} {2} numbers + - * / ( )', m_pct:'Show as %',
+       cond:'Conditional color', cond_none:'None', cond_v:'Threshold', cond_c:{bad:'Red',warn:'Amber',ok:'Green'}, join:'Installed-base join {p}%',
+       tpl:'Suggested charts', tpl_pick:'— pick a suggestion —', undo:'Undo (Ctrl+Z)', redo:'Redo (Ctrl+Y)',
        as:{auto:'Auto',bar:'Bar',line:'Line',area:'Area'}, ax:{y:'Left',y2:'Right'},
        b:{year:'Year',quarter:'Quarter',month:'Month',week:'Week',day:'Day',weekday:'Weekday'},
        wd:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
@@ -11710,8 +11716,11 @@ GST.CB_T = {
        need_series:'热力图需要选择系列', blank:'（空白）', other_l:'其他', of:'{n}行中{m}行', rows:'{n}行', total:'合计', prev:'上一同期',
        vs:'与上期相比', pts:'{n}个点', pts_cut:'点太多，只画了{n}个', region:'区分', cnt:'件数',
        t:{bar:'柱形',hbar:'条形',line:'折线',area:'面积',stack:'堆积柱形',stack100:'100%堆积',combo:'组合',doughnut:'环形',pie:'饼图',polar:'极坐标',radar:'雷达',scatter:'散点',heat:'热力图',table:'表格',kpi:'数字卡片'},
-       a:{count:'件数',sum:'合计',avg:'平均',min:'最小',max:'最大',median:'中位数',distinct:'不重复数'},
-       c:{none:'原值',cum:'累计',ma3:'移动平均（3）',diff:'与上一项差值',pctchg:'环比增减率 %',share:'占总计 %',pctx:'区间内占比 %'},
+       a:{count:'件数',sum:'合计',avg:'平均',min:'最小',max:'最大',median:'中位数',distinct:'不重复数',expr:'公式'},
+       c:{none:'原值',cum:'累计',ma3:'移动平均（3）',diff:'与上一项差值',pctchg:'环比增减率 %',share:'占总计 %',pctx:'区间内占比 %',yoy:'去年同期'},
+       expr_ph:'例：{1}/{2}*100（{1}=第一个值 · {2}=第二个值）', expr_bad:'无法读取公式 — 仅限 {1} {2} 数字 + - * / ( )', m_pct:'以 % 显示',
+       cond:'条件颜色', cond_none:'无', cond_v:'阈值', cond_c:{bad:'红色',warn:'黄色',ok:'绿色'}, join:'安装现况关联 {p}%',
+       tpl:'推荐图表', tpl_pick:'— 从推荐中选择 —', undo:'撤销 (Ctrl+Z)', redo:'重做 (Ctrl+Y)',
        as:{auto:'自动',bar:'柱形',line:'折线',area:'面积'}, ax:{y:'左',y2:'右'},
        b:{year:'年',quarter:'季度',month:'月',week:'周',day:'日',weekday:'星期'},
        wd:['日','一','二','三','四','五','六'],
@@ -11732,8 +11741,11 @@ GST.CB_T = {
        need_series:'ヒートマップは系列を選ぶ必要があります', blank:'（空欄）', other_l:'その他', of:'{n}行中{m}行', rows:'{n}行', total:'合計', prev:'前の同期間',
        vs:'前期比', pts:'点{n}個', pts_cut:'点が多いため{n}個まで描きました', region:'区分', cnt:'件数',
        t:{bar:'棒',hbar:'横棒',line:'折れ線',area:'面',stack:'積み上げ棒',stack100:'100%積み上げ',combo:'複合',doughnut:'ドーナツ',pie:'円',polar:'鶏頭図',radar:'レーダー',scatter:'散布図',heat:'ヒートマップ',table:'表',kpi:'数値カード'},
-       a:{count:'件数',sum:'合計',avg:'平均',min:'最小',max:'最大',median:'中央値',distinct:'ユニーク数'},
-       c:{none:'そのまま',cum:'累計',ma3:'移動平均（3）',diff:'前との差',pctchg:'前比増減率 %',share:'全体比 %',pctx:'区分内比率 %'},
+       a:{count:'件数',sum:'合計',avg:'平均',min:'最小',max:'最大',median:'中央値',distinct:'ユニーク数',expr:'計算式'},
+       c:{none:'そのまま',cum:'累計',ma3:'移動平均（3）',diff:'前との差',pctchg:'前比増減率 %',share:'全体比 %',pctx:'区分内比率 %',yoy:'前年同期間'},
+       expr_ph:'例: {1}/{2}*100（{1}=1番目の値 · {2}=2番目の値）', expr_bad:'式を読めません — {1} {2} 数字 + - * / ( ) のみ', m_pct:'% で表示',
+       cond:'条件付き色', cond_none:'なし', cond_v:'基準値', cond_c:{bad:'赤',warn:'黄',ok:'緑'}, join:'設置現況の結合 {p}%',
+       tpl:'おすすめグラフ', tpl_pick:'— おすすめから選ぶ —', undo:'元に戻す (Ctrl+Z)', redo:'やり直す (Ctrl+Y)',
        as:{auto:'自動',bar:'棒',line:'折れ線',area:'面'}, ax:{y:'左',y2:'右'},
        b:{year:'年',quarter:'四半期',month:'月',week:'週',day:'日',weekday:'曜日'},
        wd:['日','月','火','水','木','金','土'],
@@ -11798,12 +11810,12 @@ GST.cb = (function(){
 
   /* ---- 자료 ---- org = 화면 상세 필터의 축 → 이 자료의 열 열쇠(없는 축은 안 건다) */
   var SRC=[
-    {id:'wk',  spec:'wk',  gid:'646668307', key:'studio_wk',  date:'dStart',   org:{op:'op',customer:'customer',campus:'campus',line:'line'}},
-    {id:'mat', spec:'mat', gid:'31302669',  key:'studio_mat', date:'workDate', org:{op:'op',customer:'customer',campus:'campus',line:'line'}},
+    {id:'wk',  spec:'wk',  gid:'646668307', key:'studio_wk',  date:'dStart',   org:{op:'op',customer:'customer',campus:'campus',line:'line',div:'i:div',line2:'i:line2'}, join:['snIn','eqNo']},
+    {id:'mat', spec:'mat', gid:'31302669',  key:'studio_mat', date:'workDate', org:{op:'op',customer:'customer',campus:'campus',line:'line',div:'i:div',line2:'i:line2'}, join:['sn','eq']},
     {id:'inst',spec:'inst',gid:'891608329', key:'studio_inst',date:'fabIn',    org:{op:'country',customer:'customer',div:'div',line:'fab',line2:'line2'}},
-    {id:'fse', spec:'fse', db:true,                              date:'workDate', org:{line:'fab'}},
-    {id:'alarm', tbl:'sheet_alarm',     cols:'A', date:'occur_date', org:{op:'op',campus:'site',line:'line'}},
-    {id:'abp',   tbl:'sheet_allbypass', cols:'B', date:'occur_date', org:{op:'op',campus:'site',line:'line'}},
+    {id:'fse', spec:'fse', db:true,                              date:'workDate', org:{line:'fab',op:'i:country',customer:'i:customer',div:'i:div',line2:'i:line2'}, join:['sn','code']},
+    {id:'alarm', tbl:'sheet_alarm',     cols:'A', date:'occur_date', org:{op:'op',campus:'site',line:'line',div:'i:div',line2:'i:line2'}, join:['sn']},
+    {id:'abp',   tbl:'sheet_allbypass', cols:'B', date:'occur_date', org:{op:'op',campus:'site',line:'line',div:'i:div',line2:'i:line2'}, join:['sn']},
     {id:'roster', gid:'1213453343', key:'studio_roster'},
     {id:'edu',    gid:'0',          key:'studio_edu'},
     {id:'leave',  gid:'262805841',  key:'studio_leave'}
@@ -11851,16 +11863,59 @@ GST.cb = (function(){
       .filter(function(o){ return keys.some(function(k){ return o[k]!==''; }); });
     return finish(rows, keys.map(function(k,i){ return {k:k, label:String(H[i]||k).replace(/\s+/g,' ').trim()}; }).filter(function(f){ return f.label; }));
   }
+  /* ---- 설치현황 조인 (v204 ①) — 수선·자재·FSE·원장 행에 «그 설비의 제원»을 붙여 축으로 쓴다(모델·버너·챔버 타입·공정·워런티·설비상태·Floor·사업부 …).
+     열쇠는 S/N 먼저(영숫자·대문자 — GST.snKey), 안 붙으면 채널 접미 L/R/S 를 떼고 한 번 더(v92 · P운영이 그 폴백으로만 붙는다), 그래도 없으면 설비호기(CODE).
+     ⚠ 조인 열은 «i:» 앞머리 — 원본 열과 이름이 겹쳐도 다른 열쇠다. 못 붙은 행은 빈 값으로 남긴다(버리지 않는다) · 조인율을 DS.join 에 남겨 메타에 적는다.
+     ⚠ 설치현황이 갱신되면 다음 로드에서 저절로 따라온다 — 원본에 담아 두지 않는다(CIP·원장과 같은 규약). */
+  var JOIN_F=['country','customer','div','location','code','model','burner','type','group1','group2','detail1','detail2','fab','line2','floor','bay','toolMaker','toolModel','pjt','state','warranty','warrantyDate','fabIn','turnOn','pmCycle'];
+  function joinInst(DS, s){
+    var I=DATA.inst; if(!I||!s.join||DS.join) return;
+    var SP=GST.SM.SPEC.inst, bySn={}, byCode={}, snK=function(v){ return GST.snKey?GST.snKey(v):String(v||'').toUpperCase().replace(/[^0-9A-Z]/g,''); };
+    I.rows.forEach(function(o){ var k=snK(o.sn); if(k&&!bySn[k]) bySn[k]=o; var c=snK(o.code); if(c&&!byCode[c]) byCode[c]=o; });
+    var hit=0;
+    DS.rows.forEach(function(o){
+      var rec=null;
+      for(var i=0;i<s.join.length&&!rec;i++){ var raw=o[s.join[i]]; if(!raw) continue; var k=snK(raw); if(!k) continue;
+        rec=bySn[k]||byCode[k]||null; if(!rec&&/[LRS]$/.test(k)) rec=bySn[k.slice(0,-1)]||null; }
+      if(rec) hit++;
+      JOIN_F.forEach(function(f){ o['i:'+f]=rec?(rec[f]||''):''; });
+    });
+    var have=I.fields.filter(function(f){ return JOIN_F.indexOf(f.k)>=0; });
+    have.forEach(function(f){ DS.fields.push({k:'i:'+f.k, label:T('sn.inst')+' · '+f.label, kind:f.kind, joined:true}); });
+    if(DS.F) have.forEach(function(f){ DS.F['i:'+f.k]=DS.fields[DS.fields.length-1]; });
+    DS.F=null;
+    DS.join={n:DS.rows.length, hit:hit};
+  }
   function load(id){
     if(DATA[id]) return Promise.resolve(DATA[id]);
     if(PEND[id]) return PEND[id];
     var s=SRC_BY[id]; if(!s) return Promise.reject(new Error('NO_SRC '+id));
-    return (PEND[id]=(s.spec?loadSpec(s):s.tbl?loadLedger(s):loadImport(s)).then(function(d){ DATA[id]=d; delete PEND[id]; return d; }, function(e){ delete PEND[id]; throw e; }));
+    var main=(s.spec?loadSpec(s):s.tbl?loadLedger(s):loadImport(s));
+    /* 설치현황은 «곁가지»다 — 못 읽어도 그 자료는 선다(조인 열만 없다) */
+    var side=s.join?load('inst').catch(function(e){ console.warn('[cb] 설치현황 조인 생략', e); return null; }):Promise.resolve(null);
+    return (PEND[id]=Promise.all([main, side]).then(function(r){ var d=r[0]; DATA[id]=d; if(r[1]) joinInst(d, s); delete PEND[id]; return d; }, function(e){ delete PEND[id]; throw e; }));
   }
 
   /* ---- 설정 ---- 옛 설정(v1 — agg·val 하나)도 받는다 */
   var TYPES=['bar','hbar','line','area','stack','stack100','combo','doughnut','pie','polar','radar','scatter','heat','table','kpi'];
-  var AGG=['count','sum','avg','min','max','median','distinct'], CALC=['none','cum','ma3','diff','pctchg','share','pctx'];
+  var AGG=['count','sum','avg','min','max','median','distinct','expr'], CALC=['none','cum','ma3','diff','pctchg','share','pctx','yoy'];
+  /* 식 — {1}·{2}… 는 위의 값(1부터) · 숫자 · + - * / ( ) 만. eval 을 쓰지 않는다(화면에 저장되는 문자열이다) */
+  function exprFn(src){
+    var toks=String(src||'').match(/\{\d+\}|\d+(?:\.\d+)?|[-+*\/()]/g)||[], i=0;
+    if(toks.join('')!==String(src||'').replace(/\s+/g,'')) return null;
+    function num(){ var t=toks[i++]; if(t==='('){ var v=sum(); if(toks[i++]!==')') throw 0; return v; } if(t==='-') return function(a){ var f=num(); return -f(a); }.bind(null); if(t==null) throw 0;
+      if(t.charAt(0)==='{'){ var k=+t.slice(1,-1)-1; return function(a){ var v=a[k]; return v==null?NaN:v; }; } var n=+t; if(isNaN(n)) throw 0; return function(){ return n; }; }
+    function prod(){ var l=num(); while(toks[i]==='*'||toks[i]==='/'){ var op=toks[i++], r=num(), L2=l; l=op==='*'?function(a){ return L2(a)*r(a); }:function(a){ var d=r(a); return d?L2(a)/d:null; }; } return l; }
+    function sum(){ var l=prod(); while(toks[i]==='+'||toks[i]==='-'){ var op=toks[i++], r=prod(), L2=l; l=op==='+'?function(a){ return L2(a)+r(a); }:function(a){ return L2(a)-r(a); }; } return l; }
+    try{ var f=sum(); if(i!==toks.length) return null; return function(a){ try{ var v=f(a); return (v==null||!isFinite(v))?null:v; }catch(e){ return null; } }; }catch(e){ return null; }
+  }
+  /* 전년 같은 구간 열쇠 — 월·주·분기·연·일 묶기에서만 */
+  function prevYearKey(k, b){
+    if(b==='month'||b==='day'||b==='quarter') return (+k.slice(0,4)-1)+k.slice(4);
+    if(b==='week'){ var m=k.match(/^(\d{4})-W(\d{2})$/); return m?(+m[1]-1)+'-W'+m[2]:null; }
+    if(b==='year') return String(+k-1);
+    return null;
+  }
   var BUCK=['year','quarter','month','week','day','weekday'], RANGE=['all','d7','d30','d90','d180','m12','ytd','custom'];
   var OPS=['eq','ne','has','nhas','in','nin','empty','nempty','gt','ge','lt','le'], PALS=['def','vivid','blue','green','warm','mono'];
   var PAL={ vivid:['#6366F1','#EC4899','#14B8A6','#F59E0B','#8B5CF6','#EF4444','#22C55E','#0EA5E9'],
@@ -11873,10 +11928,10 @@ GST.cb = (function(){
     c.v=2; if(TYPES.indexOf(c.type)<0) c.type='bar';
     if(!Array.isArray(c.measures)||!c.measures.length) c.measures=[{agg:c.agg||'count', f:c.val||''}];
     delete c.agg; delete c.val;
-    c.measures=c.measures.slice(0,6).map(function(m){ return {agg:AGG.indexOf(m.agg)>=0?m.agg:'count', f:m.f||'', calc:CALC.indexOf(m.calc)>=0?m.calc:'none', as:m.as||'auto', axis:m.axis==='y2'?'y2':'y', name:m.name||''}; });
+    c.measures=c.measures.slice(0,6).map(function(m){ return {agg:AGG.indexOf(m.agg)>=0?m.agg:'count', f:m.f||'', calc:CALC.indexOf(m.calc)>=0?m.calc:'none', as:m.as||'auto', axis:m.axis==='y2'?'y2':'y', name:m.name||'', expr:m.expr||'', pct:!!m.pct}; });
     c.bucket=BUCK.indexOf(c.bucket)>=0?c.bucket:'month'; c.top=Math.max(3,Math.min(60,+c.top||12)); c.sort=c.sort||'value'; c.other=c.other!==false;
     c.range=RANGE.indexOf(c.range)>=0?c.range:((c.from||c.to)?'custom':'all');
-    c.filters=(c.filters||[]).filter(Boolean); c.disp=Object.assign({labels:false, legend:'auto', pal:'def', fmt:'auto', ymin:'', ymax:'', target:''}, c.disp||{});
+    c.filters=(c.filters||[]).filter(Boolean); c.disp=Object.assign({labels:false, legend:'auto', pal:'def', fmt:'auto', ymin:'', ymax:'', target:'', cond:'', condV:'', condC:'bad'}, c.disp||{});
     if(c.follow==null) c.follow=true;
     return c;
   }
@@ -11967,13 +12022,13 @@ GST.cb = (function(){
     if(m.agg==='max') return Math.max.apply(null,a);
     a.sort(function(x,y){ return x-y; }); var h=a.length>>1; return a.length%2?a[h]:(a[h-1]+a[h])/2;
   }
-  function mOk(m, DS){ return m.agg==='count' || (m.agg==='distinct' ? true : !!(m.f && DS.F[m.f] && DS.F[m.f].kind==='num')); }
+  function mOk(m, DS){ if(m.agg==='expr') return !!exprFn(m.expr); return m.agg==='count' || (m.agg==='distinct' ? true : !!(m.f && DS.F[m.f] && DS.F[m.f].kind==='num')); }
   function mName(m, DS){
     if(m.name) return m.name;
-    var a=T('a.'+m.agg), base=m.agg==='count'?(T('cnt')):F(T('of_m'),{a:a, f:(DS.F[m.f]||{}).label||''});
+    var a=T('a.'+m.agg), base=m.agg==='count'?(T('cnt')):m.agg==='expr'?(T('a.expr')+' '+(m.expr||'')):F(T('of_m'),{a:a, f:(DS.F[m.f]||{}).label||''});
     return base+(m.calc&&m.calc!=='none'?' · '+T('c.'+m.calc):'');
   }
-  function pctCalc(m){ return m.calc==='share'||m.calc==='pctx'||m.calc==='pctchg'; }
+  function pctCalc(m){ return m.calc==='share'||m.calc==='pctx'||m.calc==='pctchg'||!!m.pct; }
   function transform(data, calc, colTot){
     var out=data.slice();
     if(calc==='cum'){ var s=0; out=out.map(function(v){ s+=v||0; return s; }); }
@@ -12029,13 +12084,24 @@ GST.cb = (function(){
       return out;
     };
     var lab=function(k){ if(k==='\u0001other') return T('other_l'); if(wd&&k.charAt(0)==='\u0000') return T('wd')[+k.slice(1)]; return k; };
-    var sets=[];
+    var sets=[], RAW=[];   // RAW[mi][si] = 집계 원값(식·전년 동기가 읽는다)
+    var cols=xs.map(function(x){ return ss.map(function(s){ return rowsAt(x, sF?s:null); }); });
+    /* 전년 동기(yoy) — 기간 조건 «없이» 같은 묶기로 한 번 더 센다(지금 범위가 올해뿐이면 작년 칸이 없기 때문) */
+    var needY=isD&&ms.some(function(m){ return m.calc==='yoy'; }), YC={};
+    if(needY){ var all=filterRows(Object.assign({}, c, {range:'all'}), DS, opt); all.forEach(function(o){ var x=keyX(o), s2=sF?keyS(o):'_'; ((YC[x]=YC[x]||{})[s2]=YC[x][s2]||[]).push(o); }); }
     ms.forEach(function(m, mi){
-      var cols=xs.map(function(x){ return ss.map(function(s){ return rowsAt(x, sF?s:null); }); });
+      if(m.agg==='expr'){ RAW.push(null); return; }
       var raw=ss.map(function(s, si){ return xs.map(function(_, xi){ return aggOf(cols[xi][si], m); }); });
+      RAW.push(raw);
+    });
+    ms.forEach(function(m, mi){
+      var raw=RAW[mi];
+      if(m.agg==='expr'){ var fn=exprFn(m.expr); raw=ss.map(function(s, si){ return xs.map(function(_, xi){ return fn(ms.map(function(_, mj){ return RAW[mj]?RAW[mj][si][xi]:null; })); }); }); }
       var colTot=xs.map(function(_, xi){ return raw.reduce(function(a, r){ return a+(r[xi]||0); }, 0); });
       ss.forEach(function(s, si){
-        var data=transform(raw[si], m.calc, colTot);
+        var data;
+        if(m.calc==='yoy'){ data=xs.map(function(x){ var pk=prevYearKey(x, c.bucket); var C2=pk&&YC[pk]; if(!C2) return null; var rr=sF?(s==='\u0001other'?[].concat.apply([], otherS.map(function(k){ return C2[k]||[]; })):(C2[s]||[])):[].concat.apply([], Object.keys(C2).map(function(k){ return C2[k]; })); return rr.length?aggOf(rr, m):null; }); }
+        else data=transform(raw[si], m.calc, colTot);
         var nm=sF?(ms.length>1?mName(m,DS)+' · '+lab(s):lab(s)):mName(m,DS);
         sets.push({name:nm, mi:mi, m:m, si:si, data:data, raw:raw[si], rows:xs.map(function(_, xi){ return cols[xi][si]; }), pct:pctCalc(m)});
       });
@@ -12044,15 +12110,17 @@ GST.cb = (function(){
     return R;
   }
   function runKpi(R, m, DS, opt){
-    var c=R.c; R.kpi=true; R.m=m; R.value=aggOf(R.rows, m);
+    var c=R.c; R.kpi=true; R.m=m;
+    var kv=function(rows){ if(m.agg!=='expr') return aggOf(rows, m); var fn=exprFn(m.expr); return fn(c.measures.map(function(mm){ return mm.agg==='expr'?null:(mOk(mm,DS)?aggOf(rows, mm):null); })); };
+    R.value=kv(R.rows);
     var rg=rangeOf(c), dF=c.dateF&&DS.F[c.dateF]?c.dateF:'';
     if(dF && rg[0] && rg[1]){
       var span=Math.round((new Date(rg[1]+'T00:00:00Z')-new Date(rg[0]+'T00:00:00Z'))/86400000)+1;
       var pc=Object.assign({}, c, {range:'custom', from:shift(rg[0],-span), to:shift(rg[0],-1)});
-      var prev=filterRows(pc, DS, opt); R.prevRows=prev; R.prev=aggOf(prev, m);
+      var prev=filterRows(pc, DS, opt); R.prevRows=prev; R.prev=kv(prev);
     }
     if(dF){ var by={}; R.rows.forEach(function(o){ var k=bucketOf(o[dF],'month'); if(k) (by[k]=by[k]||[]).push(o); });
-      var ks=Object.keys(by).sort().slice(-12); R.spark=ks.map(function(k){ return aggOf(by[k], m); }); R.sparkK=ks; }
+      var ks=Object.keys(by).sort().slice(-12); R.spark=ks.map(function(k){ return kv(by[k]); }); R.sparkK=ks; }
     return R;
   }
 
@@ -12160,6 +12228,12 @@ GST.cb = (function(){
         return o; });
       if(ty==='stack100'){ var tot=R.xs.map(function(_, xi){ return R.sets.reduce(function(a,s){ return a+(s.data[xi]||0); },0); });
         ds.forEach(function(o){ o.data=o.data.map(function(v, xi){ return tot[xi]?(v||0)/tot[xi]*100:0; }); }); }
+      /* 조건부 색 (v204 ②) — 값이 조건에 맞는 막대만 판정색으로. 선은 점만 칠한다. 색은 «문자열 배열»이라 PPT·엑셀 내보내기가 그대로 읽는다 */
+      var cd=d.cond, cv0=numOr(d.condV);
+      if(cd&&cv0!=null){ var cc=(TH.status||{})[d.condC||'bad']||TH.status.bad, hit=function(v){ return v!=null&&(cd==='gt'?v>cv0:cd==='ge'?v>=cv0:cd==='lt'?v<cv0:v<=cv0); };
+        ds.forEach(function(o){ var base0=typeof o.backgroundColor==='string'?o.backgroundColor:pal[0]; var ln=o.type==='line'||(base==='line'&&!o.type);
+          if(ln){ o.pointBackgroundColor=o.data.map(function(v){ return hit(v)?cc:base0; }); o.pointRadius=4; }
+          else o.backgroundColor=o.data.map(function(v){ return hit(v)?cc:base0; }); }); }
     }
     var stacked=ty==='stack'||ty==='stack100', hb=ty==='hbar', pctAx=ty==='stack100'||(R.sets&&R.sets.length&&R.sets.every(function(s){ return s.pct; }));
     var fmTick=function(v){ return fmtV(v, c, pctAx); };
@@ -12244,6 +12318,8 @@ GST.cb = (function(){
     h+='<label><span>'+esc(T('src'))+'</span><select id="'+P+'fSrc">'+opts(SRC.map(function(s){ return s.id; }), c.src, function(v){ return T('sn.'+v); })+'</select></label>';
     h+='<div><div class="gcb-l"><span>'+esc(T('type'))+'</span></div><div class="gcb-types" id="'+P+'fType">'+TYPES.map(function(k){ return '<button type="button" data-t="'+k+'"'+(k===c.type?' class="on"':'')+' title="'+esc(T('t.'+k))+'">'+ic(k)+'<span>'+esc(T('t.'+k))+'</span></button>'; }).join('')+'</div></div>';
     if(!DS){ h+='<div class="gcb-empty">'+esc(T('loading'))+'</div></div>'; host.innerHTML=h; bindTop(); return; }
+    var TL=templates(c.src, DS);
+    if(TL.length) h+='<label><span>'+esc(T('tpl'))+'</span><select id="'+P+'fTpl"><option value="-1">'+esc(T('tpl_pick'))+'</option>'+TL.map(function(t0, i){ return '<option value="'+i+'">'+esc(t0.name)+'</option>'; }).join('')+'</select></label>';
     if(!isK){
       h+='<div class="gcb-row"><label><span>'+esc(isSc?T('xnum'):T('x'))+'</span><select id="'+P+'fX">'+fOpts(DS, c.x, isSc?['num']:null)+'</select></label>'
         +(xK==='date'&&!isSc?'<label style="max-width:96px"><span>'+esc(T('bucket'))+'</span><select id="'+P+'fBucket">'+opts(BUCK, c.bucket, function(v){ return T('b.'+v); })+'</select></label>':'')+'</div>';
@@ -12253,11 +12329,15 @@ GST.cb = (function(){
     var multi=!isK&&!isRound&&!isSc;
     c.measures.forEach(function(m, i){
       if(i>0&&!multi) return;
-      var numOnly=m.agg!=='count'&&m.agg!=='distinct';
+      var numOnly=m.agg!=='count'&&m.agg!=='distinct', isE=m.agg==='expr';
+      var aggL=multi?AGG:AGG.filter(function(v){ return v!=='expr'; });
       h+='<div class="gcb-m"><div class="gcb-row">'
-        +'<select data-ma="'+i+'"'+(i===0?' id="'+P+'fAgg"':'')+' aria-label="'+esc(T('m_agg'))+'">'+opts(AGG, m.agg, function(v){ return T('a.'+v); })+'</select>'
-        +'<select data-mf="'+i+'"'+(i===0?' id="'+P+'fVal"':'')+' aria-label="'+esc(T('m_f'))+'"'+(m.agg==='count'?' disabled':'')+'>'+fOpts(DS, m.f, numOnly?['num']:null, true)+'</select>'
-        +(i>0?'<button type="button" class="gcb-x" data-mx="'+i+'" aria-label="x">×</button>':'')+'</div>';
+        +'<select data-ma="'+i+'"'+(i===0?' id="'+P+'fAgg"':'')+' aria-label="'+esc(T('m_agg'))+'">'+opts(aggL, m.agg, function(v){ return T('a.'+v); })+'</select>'
+        +(isE?'<input type="text" data-me="'+i+'" maxlength="80" placeholder="'+esc(T('expr_ph'))+'" value="'+esc(m.expr||'')+'">'
+            :'<select data-mf="'+i+'"'+(i===0?' id="'+P+'fVal"':'')+' aria-label="'+esc(T('m_f'))+'"'+(m.agg==='count'?' disabled':'')+'>'+fOpts(DS, m.f, numOnly?['num']:null, true)+'</select>')
+        +(i>0?'<button type="button" class="gcb-x" data-mx="'+i+'" aria-label="x">×</button>':'')+'</div>'
+        +(isE&&m.expr&&!exprFn(m.expr)?'<small style="color:var(--bad,#C2412F)">'+esc(T('expr_bad'))+'</small>':'')
+        +(isE?'<label class="gcb-ck"><input type="checkbox" data-mp="'+i+'"'+(m.pct?' checked':'')+'><span>'+esc(T('m_pct'))+'</span></label>':'');
       if(!isK&&!isSc) h+='<div class="gcb-row"><select data-mc="'+i+'" aria-label="'+esc(T('m_calc'))+'">'+opts(CALC, m.calc, function(v){ return T('c.'+v); })+'</select>'
         +(multi?'<select data-mas="'+i+'" aria-label="'+esc(T('m_as'))+'" style="max-width:76px">'+opts(['auto','bar','line','area'], m.as, function(v){ return T('as.'+v); })+'</select>'
           +'<select data-max="'+i+'" aria-label="'+esc(T('m_axis'))+'" style="max-width:72px">'+opts(['y','y2'], m.axis, function(v){ return T('ax.'+v); })+'</select>':'')+'</div>';
@@ -12286,6 +12366,9 @@ GST.cb = (function(){
       +'<div class="gcb-row"><label><span>'+esc(T('fmt'))+'</span><select id="'+P+'fFmt">'+opts(['auto','int','d1','d2','pct'], dp.fmt, function(v){ return T('f.'+v); })+'</select></label>'
       +'<label><span>'+esc(T('target'))+'</span><input type="number" id="'+P+'fTarget" value="'+esc(dp.target)+'"></label></div>'
       +'<div class="gcb-row"><label><span>'+esc(T('ymin'))+'</span><input type="number" id="'+P+'fYmin" value="'+esc(dp.ymin)+'"></label><label><span>'+esc(T('ymax'))+'</span><input type="number" id="'+P+'fYmax" value="'+esc(dp.ymax)+'"></label></div>'
+      +'<div class="gcb-row"><label><span>'+esc(T('cond'))+'</span><select id="'+P+'fCond">'+opts(['','gt','ge','lt','le'], dp.cond||'', function(v){ return v?T('op.'+v):T('cond_none'); })+'</select></label>'
+      +'<label><span>'+esc(T('cond_v'))+'</span><input type="number" id="'+P+'fCondV" value="'+esc(dp.condV)+'"></label>'
+      +'<label><span>'+esc(T('pal'))+'</span><select id="'+P+'fCondC">'+opts(['bad','warn','ok'], dp.condC||'bad', function(v){ return T('cond_c.'+v); })+'</select></label></div>'
       +'</div></details>';
     if(fo.page) h+='<label class="gcb-ck"><input type="checkbox" id="'+P+'fFollow"'+(c.follow?' checked':'')+'><span>'+esc(T('follow'))+'<small>'+esc(T('follow_s'))+'</small></span></label>';
     h+='<label><span>'+esc(T('title'))+'</span><input type="text" id="'+P+'fTitle" maxlength="80" value="'+esc(c.title||'')+'"></label>';
@@ -12317,6 +12400,9 @@ GST.cb = (function(){
       on('fTarget','oninput',function(e){ c.disp.target=e.value; });
       on('fYmin','oninput',function(e){ c.disp.ymin=e.value; });
       on('fYmax','oninput',function(e){ c.disp.ymax=e.value; });
+      on('fCond','onchange',function(e){ c.disp.cond=e.value; });
+      on('fCondV','oninput',function(e){ c.disp.condV=e.value; });
+      on('fCondC','onchange',function(e){ c.disp.condC=e.value; });
       on('fFollow','onchange',function(e){ c.follow=e.checked; });
       on('fTitle','oninput',function(e){ c.title=e.value; });
       var addM=q('addM'); if(addM) addM.onclick=function(){ c.measures.push({agg:'count', f:'', calc:'none', as:'auto', axis:'y', name:''}); redraw(); ch(); };
@@ -12325,6 +12411,9 @@ GST.cb = (function(){
         if(m.agg!=='count'&&m.agg!=='distinct'&&!(m.f&&DS.F[m.f]&&DS.F[m.f].kind==='num')){ var nf0=DS.fields.filter(function(f){ return f.kind==='num'; })[0]; m.f=nf0?nf0.k:''; }
         redraw(); ch(); }; });
       host.querySelectorAll('[data-mf]').forEach(function(e){ e.onchange=function(){ c.measures[+e.dataset.mf].f=e.value; ch(); }; });
+      host.querySelectorAll('[data-me]').forEach(function(e){ var tm=0; e.oninput=function(){ c.measures[+e.dataset.me].expr=e.value; clearTimeout(tm); tm=setTimeout(function(){ ch(); }, 250); }; e.onchange=function(){ redraw(); ch(); }; });
+      host.querySelectorAll('[data-mp]').forEach(function(e){ e.onchange=function(){ c.measures[+e.dataset.mp].pct=e.checked; ch(); }; });
+      var tp=q('fTpl'); if(tp) tp.onchange=function(){ var i=+tp.value; var L2=templates(c.src, DS); if(!(i>=0&&L2[i])) return; var keep={src:c.src, follow:c.follow}; var nc=norm(Object.assign({}, L2[i].cfg)); Object.keys(c).forEach(function(k){ delete c[k]; }); Object.assign(c, nc, keep); c.title=''; redraw(); ch(); };
       host.querySelectorAll('[data-mc]').forEach(function(e){ e.onchange=function(){ c.measures[+e.dataset.mc].calc=e.value; ch(); }; });
       host.querySelectorAll('[data-mas]').forEach(function(e){ e.onchange=function(){ c.measures[+e.dataset.mas].as=e.value; ch(); }; });
       host.querySelectorAll('[data-max]').forEach(function(e){ e.onchange=function(){ c.measures[+e.dataset.max].axis=e.value; ch(); }; });
@@ -12336,10 +12425,50 @@ GST.cb = (function(){
       host.querySelectorAll('[data-fx]').forEach(function(e){ e.onclick=function(){ c.filters.splice(+e.dataset.fx,1); redraw(); ch(); }; });
     }
   }
-  function meta(R){ return R&&!R.err&&R.total!=null?F(T('of'),{n:nf(R.total),m:nf(R.n)}):''; }
+  /* ---- 추천 차트 (v204 ③) — 자료마다 «자주 보는 질문»을 설정으로. ⚠ 그 자료에 있는 열로만 만든다(없으면 그 추천은 빠진다) · 이름은 네 언어 사전(TPL_T) */
+  var TPL={
+    wk:[ {k:'m_stage', cfg:{type:'stack', x:'dStart', bucket:'month', series:'stage', measures:[{agg:'count'}], range:'m12'}},
+         {k:'op_mh', cfg:{type:'hbar', x:'op', measures:[{agg:'sum', f:'manMin'}]}},
+         {k:'eq_bm', cfg:{type:'hbar', x:'eqNo', top:15, measures:[{agg:'count'}], filters:[{f:'stage', op:'eq', v:'BM'}], range:'d90'}},
+         {k:'model_bm', cfg:{type:'bar', x:'i:model', top:12, measures:[{agg:'count'}], filters:[{f:'stage', op:'eq', v:'BM'}], range:'m12'}},
+         {k:'yoy', cfg:{type:'combo', x:'dStart', bucket:'month', measures:[{agg:'count'}, {agg:'count', calc:'yoy', as:'line'}], range:'m12'}},
+         {k:'mh_kpi', cfg:{type:'kpi', dateF:'dStart', range:'d30', measures:[{agg:'sum', f:'manMin'}]}} ],
+    mat:[ {k:'mat_top', cfg:{type:'hbar', x:'matName', top:15, measures:[{agg:'sum', f:'qty'}], range:'m12'}},
+          {k:'mat_m', cfg:{type:'line', x:'workDate', bucket:'month', measures:[{agg:'sum', f:'qty'}], range:'m12'}},
+          {k:'mat_pf', cfg:{type:'stack100', x:'op', series:'pf', measures:[{agg:'count'}], range:'m12'}} ],
+    inst:[ {k:'inst_model', cfg:{type:'doughnut', x:'model', top:8, measures:[{agg:'count'}]}},
+           {k:'inst_state', cfg:{type:'stack', x:'country', series:'state', measures:[{agg:'count'}]}},
+           {k:'inst_warr', cfg:{type:'stack100', x:'country', series:'warranty', measures:[{agg:'count'}]}} ],
+    fse:[ {k:'fse_msg', cfg:{type:'hbar', x:'msg', top:15, measures:[{agg:'count'}], range:'m12'}},
+          {k:'fse_m', cfg:{type:'stack', x:'workDate', bucket:'month', series:'mcode', measures:[{agg:'count'}], range:'m12'}} ],
+    alarm:[ {k:'al_m', cfg:{type:'stack', x:'occur_date', bucket:'month', series:'site', measures:[{agg:'count'}], filters:[{f:'cnt', op:'eq', v:'true'}], range:'m12'}},
+            {k:'al_type', cfg:{type:'hbar', x:'atype', top:12, measures:[{agg:'count'}], filters:[{f:'cnt', op:'eq', v:'true'}], range:'m12'}} ],
+    abp:[ {k:'al_m', cfg:{type:'stack', x:'occur_date', bucket:'month', series:'site', measures:[{agg:'count'}], filters:[{f:'cnt', op:'eq', v:'true'}], range:'m12'}} ],
+    roster:[ {k:'ro_team', cfg:{type:'hbar', x:'h:팀', top:15, measures:[{agg:'count'}]}} ]
+  };
+  var TPL_T={ ko:{m_stage:'월별 작업 건수 (단계별)', op_mh:'운영단위별 작업공수', eq_bm:'고장(BM) 많은 설비 TOP 15 (90일)', model_bm:'모델별 고장(BM) — 설치현황 조인', yoy:'월별 작업 건수 · 전년 같은 달', mh_kpi:'최근 30일 작업공수 (직전 30일 대비)',
+                  mat_top:'자재별 사용 수량 TOP 15', mat_m:'월별 자재 사용 수량', mat_pf:'운영단위별 유/무상 비율', inst_model:'모델별 설비 수', inst_state:'운영단위별 설비상태', inst_warr:'운영단위별 워런티 IN/OUT 비율',
+                  fse_msg:'알람 메시지 TOP 15', fse_m:'월별 작업 (작업 구분별)', al_m:'월별 알람 (단지별 · 집계 대상)', al_type:'알람 유형 TOP 12', ro_team:'팀별 인원'},
+              en:{m_stage:'Monthly jobs by stage', op_mh:'Man-hours by operating unit', eq_bm:'Top 15 BM equipment (90 days)', model_bm:'BM by model — installed-base join', yoy:'Monthly jobs vs same month last year', mh_kpi:'Man-hours last 30 days (vs previous 30)',
+                  mat_top:'Top 15 parts by quantity', mat_m:'Monthly part quantity', mat_pf:'Paid/free share by unit', inst_model:'Equipment by model', inst_state:'Equipment status by unit', inst_warr:'Warranty IN/OUT share by unit',
+                  fse_msg:'Top 15 alarm messages', fse_m:'Monthly jobs by maintenance code', al_m:'Monthly alarms by site (counted)', al_type:'Top 12 alarm types', ro_team:'Headcount by team'},
+              zh:{m_stage:'每月作业件数（按阶段）', op_mh:'各运营单位工时', eq_bm:'故障(BM)最多设备 TOP 15（90天）', model_bm:'各型号故障(BM) — 关联安装现况', yoy:'每月作业件数 · 去年同月', mh_kpi:'最近30天工时（对比前30天）',
+                  mat_top:'材料使用数量 TOP 15', mat_m:'每月材料使用数量', mat_pf:'各运营单位有偿/无偿比例', inst_model:'各型号设备数', inst_state:'各运营单位设备状态', inst_warr:'各运营单位保修 IN/OUT 比例',
+                  fse_msg:'报警信息 TOP 15', fse_m:'每月作业（按作业类型）', al_m:'每月报警（按园区 · 计入）', al_type:'报警类型 TOP 12', ro_team:'各团队人数'},
+              ja:{m_stage:'月別作業件数（段階別）', op_mh:'運営単位別作業工数', eq_bm:'故障(BM)の多い設備 TOP 15（90日）', model_bm:'モデル別故障(BM) — 設置現況結合', yoy:'月別作業件数 · 前年同月', mh_kpi:'直近30日の工数（前30日比）',
+                  mat_top:'資材別使用数量 TOP 15', mat_m:'月別資材使用数量', mat_pf:'運営単位別有償/無償比率', inst_model:'モデル別設備数', inst_state:'運営単位別設備状態', inst_warr:'運営単位別保証 IN/OUT 比率',
+                  fse_msg:'アラームメッセージ TOP 15', fse_m:'月別作業（作業区分別）', al_m:'月別アラーム（団地別 · 集計対象）', al_type:'アラーム種別 TOP 12', ro_team:'チーム別人員'} };
+  function templates(src, DS){
+    var L2=TPL[src]||[]; if(!DS) return []; var F0=DS.F||{}; DS.fields.forEach(function(f){ F0[f.k]=f; });
+    var ok=function(k){ return !k||!!F0[k]; };
+    return L2.filter(function(t0){ var c=t0.cfg; return ok(c.x)&&ok(c.series)&&ok(c.dateF)&&(c.measures||[]).every(function(m){ return ok(m.f); })&&(c.filters||[]).every(function(f){ return ok(f.f); }); })
+      .map(function(t0){ return {k:t0.k, name:((TPL_T[L()]||TPL_T.ko)[t0.k])||TPL_T.ko[t0.k]||t0.k, cfg:Object.assign({src:src}, t0.cfg)}; });
+  }
+  function meta(R){ if(!(R&&!R.err&&R.total!=null)) return ''; var s=F(T('of'),{n:nf(R.total),m:nf(R.n)}); var j=R.DS&&R.DS.join;
+    if(j&&j.n&&R.c&&(R.c.x||'').indexOf('i:')===0||(j&&j.n&&(R.c.series||'').indexOf('i:')===0)) s+=' · '+F(T('join'),{p:Math.round(j.hit/j.n*100)}); return s; }
   function ds(id){ var d=DATA[id]; if(d&&!d.F){ d.F={}; d.fields.forEach(function(f){ d.F[f.k]=f; }); } return d||null; }
   return { SRC:SRC, TYPES:TYPES, load:load, data:ds, norm:norm, defaults:defaults, run:function(c, opt){ var d=ds(norm(c).src); return d?run(c, d, opt):null; },
-    draw:draw, form:form, alpha:alpha, PAL:PAL, PALS:PALS, ic:ic, title:title, meta:meta, pagePass:pagePass, T:T, _reset:function(){ Object.keys(DATA).forEach(function(k){ delete DATA[k]; }); } };
+    draw:draw, form:form, alpha:alpha, PAL:PAL, PALS:PALS, ic:ic, templates:templates, exprFn:exprFn, title:title, meta:meta, pagePass:pagePass, T:T, _reset:function(){ Object.keys(DATA).forEach(function(k){ delete DATA[k]; }); } };
 })();
 
 /* ============================================================
@@ -12605,7 +12734,7 @@ GST.screen = (function(){
     if(!window.Chart||!Chart.getChart) return; var M=(cfg&&cfg.charts)||{};
     [].forEach.call(document.querySelectorAll('canvas[id]'), function(cv){ if(cv.closest('[data-gst-add]')) return; var ch=null; try{ ch=Chart.getChart(cv); }catch(e){}
       if(!ch) return; var c=M[cv.id];
-      if(emptyCc(c)){ if(ch.$gstOn){ restoreChart(ch); try{ ch.update(); }catch(e){} } return; }
+      if(emptyCc(c)){ ch.$gstJ=null; if(ch.$gstOn){ restoreChart(ch); try{ ch.update(); }catch(e){} } return; }
       if(ch.$gstJ!==JSON.stringify(c)){ ch.$gstJ=JSON.stringify(c); applyChart(ch, c, false); } });
   }
   try{ if(window.Chart&&Chart.register&&!Chart.registry.plugins.get('gstCust')) Chart.register({ id:'gstCust', beforeInit:function(ch){ try{ var c=chartCfg(ch.canvas); if(c&&!emptyCc(c)){ ch.$gstJ=JSON.stringify(c); applyChart(ch, c, true); } }catch(e){ console.warn('[screen] 차트 설정', e); } } }); }catch(e){}
@@ -12728,7 +12857,15 @@ GST.screen = (function(){
     if(S.cfg){ apply(); watch(); }
   }
   /* ---------- 편집 모드 ---------- */
-  function dirty(){ if(!S.edit) return; S.edit.dirty=true; var st=document.querySelector('#gstSePanel .gse-st'); if(st){ st.textContent=T('unsaved'); st.classList.add('dirty'); } }
+  /* 되돌리기 (v204 ③) — 바뀔 때마다 «직전 상태»를 쌓는다(설정 + DOM 순서). Ctrl+Z / Ctrl+Y · 막대의 ↶ ↷. 50단계. */
+  function snapCfg(){ var c=JSON.parse(JSON.stringify(curCfg())); c.order=domOrder(); return JSON.stringify(c); }
+  function dirty(){ if(!S.edit) return; S.edit.dirty=true;
+    var cur=snapCfg(); if(cur!==S.edit.last){ S.edit.hist.push(S.edit.last); if(S.edit.hist.length>50) S.edit.hist.shift(); S.edit.redo=[]; S.edit.last=cur; }
+    var st=document.querySelector('#gstSePanel .gse-st'); if(st){ st.textContent=T('unsaved'); st.classList.add('dirty'); } undoPaint(); }
+  function undoPaint(){ var u=document.querySelector('#gstSePanel [data-p="undo"]'), r=document.querySelector('#gstSePanel [data-p="redo"]'); if(u) u.disabled=!(S.edit&&S.edit.hist.length); if(r) r.disabled=!(S.edit&&S.edit.redo.length); }
+  function undo(back){ if(!S.edit) return; var from=back?S.edit.hist:S.edit.redo, to=back?S.edit.redo:S.edit.hist; if(!from.length) return;
+    to.push(S.edit.last); var j=from.pop(); S.edit.last=j; S.edit.cfg=JSON.parse(j); document.querySelectorAll('.gse-cpop,.gse-pop').forEach(function(x){ x.remove(); });
+    apply(S.edit.cfg); decorate(); paintPanel(); resizeCharts(document); undoPaint(); }
   function curCfg(){ return S.edit.cfg; }
   function syncOrder(){ curCfg().order=domOrder(); }
   function setArr(a, k, on){ var i=a.indexOf(k); if(on&&i<0) a.push(k); if(!on&&i>=0) a.splice(i,1); }
@@ -12771,6 +12908,7 @@ GST.screen = (function(){
     var hl=hiddenList(), can=GST.targets&&GST.targets.can&&GST.targets.can(), pc=S.where!=='server';
     var cur=S.src==='me'?T('cur_me'):S.src==='all'?T('cur_all'):S.src==='pc'?T('pc_only'):T('cur_none');
     return '<b>'+esc(T('title'))+'</b><span class="gse-st" title="'+esc(T('hint'))+'">'+esc(cur)+'</span>'
+      +'<button type="button" data-p="undo" title="'+esc(GST.cb?GST.cb.T('undo'):'Ctrl+Z')+'" aria-label="undo"'+(S.edit&&S.edit.hist.length?'':' disabled')+'>↶</button><button type="button" data-p="redo" title="'+esc(GST.cb?GST.cb.T('redo'):'Ctrl+Y')+'" aria-label="redo"'+(S.edit&&S.edit.redo.length?'':' disabled')+'>↷</button>'
       +(GST.cb?'<button type="button" data-p="add">'+esc(T('add_p'))+'</button>':'')
       +'<span class="gse-dd"><button type="button" data-p="hid">'+esc(T('hidden'))+' '+hl.filter(function(x){ return !x.ret; }).length+' ▾</button></span>'
       +'<span class="gse-dd"><button type="button" data-p="reset">'+esc(T('reset'))+' ▾</button></span>'
@@ -12808,6 +12946,8 @@ GST.screen = (function(){
     }
     if(b.dataset.p==='cancel'){ leave(false); return; }
     if(b.dataset.p==='add'){ builder(null, lastKey()); return; }
+    if(b.dataset.p==='undo'){ undo(true); return; }
+    if(b.dataset.p==='redo'){ undo(false); return; }
     if(b.dataset.p==='save'){
       var can=GST.targets&&GST.targets.can&&GST.targets.can(), srv=S.where==='server';
       var m3=menu(b, '<button type="button" data-s="all"'+(can&&srv?'':' disabled')+'>'+esc(T('save_all'))+'<small>'+esc(srv?T('all_note'):T('pc_only'))+'</small></button>'
@@ -12903,7 +13043,8 @@ GST.screen = (function(){
     var base=S.cfg?JSON.parse(JSON.stringify(S.cfg)):{};
     base.v=1; base.order=base.order&&base.order.length?base.order:domOrder();
     base.hidden=base.hidden||[]; base.wide=base.wide||[]; base.show=base.show||[]; base.titles=base.titles||{}; base.charts=base.charts||{}; base.adds=base.adds||[];
-    S.edit={ cfg:base, snap:JSON.stringify(base), dirty:false };
+    S.edit={ cfg:base, snap:JSON.stringify(base), dirty:false, hist:[], redo:[], last:'' };
+    S.edit.last=snapCfg();
     document.body.classList.add('gst-se-on');
     decorate();
     var P=document.createElement('div'); P.id='gstSePanel'; P.className='gst-noshot'; P.setAttribute('role','toolbar'); P.setAttribute('aria-label',T('title'));
@@ -12912,7 +13053,10 @@ GST.screen = (function(){
     document.addEventListener('click', onCardBtn, true);
     document.addEventListener('click', blockClick, true);
     document.addEventListener('pointerdown', onDown, true);
-    S.edit.esc=function(ev){ if(ev.key!=='Escape') return; if(document.getElementById('gstCbDlg')){ closeDlg(); return; } var cp=document.querySelector('.gse-cpop'); if(cp){ cp.remove(); return; }
+    S.edit.esc=function(ev){
+      if((ev.ctrlKey||ev.metaKey) && !ev.altKey && (ev.key==='z'||ev.key==='Z'||ev.key==='y'||ev.key==='Y')){ var tg=ev.target; if(tg&&(/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName)||tg.isContentEditable)) return;
+        if(document.getElementById('gstCbDlg')) return; ev.preventDefault(); undo(ev.key.toLowerCase()==='z' && !ev.shiftKey); return; }
+      if(ev.key!=='Escape') return; if(document.getElementById('gstCbDlg')){ closeDlg(); return; } var cp=document.querySelector('.gse-cpop'); if(cp){ cp.remove(); return; }
       if(!document.querySelector('.gse-pop')){ var m=document.querySelector('#gstSePanel .gse-menu'); if(m) m.remove(); } };
     document.addEventListener('keydown', S.edit.esc);
     return true;

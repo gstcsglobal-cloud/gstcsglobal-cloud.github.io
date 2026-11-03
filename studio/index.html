@@ -8,9 +8,9 @@
 <script>window.Chart||document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">\x3C/script>')</script>
 <script src="https://gstcsglobal-cloud.github.io/assets/vendor/papaparse.min.js"></script>
 <script>window.Papa||document.write('<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">\x3C/script>')</script>
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=195"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=196"></script>
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=195">
+<link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/theme.css?v=196">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/ds.css?v=1">
 <style>
 /* ============================================================
@@ -151,6 +151,7 @@ body.sd-view .sd-main{grid-template-columns:minmax(0,1fr)}
     </div>
     <span class="sd-sp"></span>
     <button type="button" class="sd-btn ghost sd-ed" id="backBtn" data-i="back">← 화면 목록</button>
+    <button type="button" class="sd-btn ghost sd-ed" id="undoBtn" aria-label="undo" disabled>↶</button><button type="button" class="sd-btn ghost sd-ed" id="redoBtn" aria-label="redo" disabled>↷</button>
     <select class="sd-sel sd-ed" id="boardSel" aria-label="보드" hidden></select>
     <input class="sd-in sd-ed" id="boardName" maxlength="80" style="width:190px" data-i-ph="board_name" placeholder="화면 이름">
     <label class="sd-ed" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--txt-2)"><input type="checkbox" id="boardShared"><span data-i="shared">공유</span></label>
@@ -202,7 +203,7 @@ body.sd-view .sd-main{grid-template-columns:minmax(0,1fr)}
 
 <script>
 if(!window.GST){document.body.insertAdjacentHTML('afterbegin','<div style="background:#7f1d1d;color:#fff;padding:10px 16px;font:13px sans-serif">⚠️ assets/core.js 로드 실패</div>');throw new Error('GST core missing');}
-GST.needVer && GST.needVer(195);   // v203 GST.cb(차트 엔진) · v202 — 보드 = 화면(격자 · 표준 지표 · 게시) · GST.metrics·kpiCard·targets
+GST.needVer && GST.needVer(196);   // v203 GST.cb(차트 엔진) · v202 — 보드 = 화면(격자 · 표준 지표 · 게시) · GST.metrics·kpiCard·targets
 GST.authGate();
 
 const T={
@@ -353,7 +354,14 @@ function fixLay(W){
   W.forEach(w=>{ if(w.lay&&w.lay.w&&w.lay.h) return; const z=WSZ[wk(w)]||WSZ.chart; w.lay=freeSpot(W,z[0],z[1]); });
   const R=resolveL(W.map(w=>w.lay),null); W.forEach((w,i)=>w.lay=R[i]);
 }
-function setDirty(on){ S.dirty=!!on; const m=document.getElementById('boardMeta'); if(m) m.dataset.dirty=on?'1':''; metaPaint(); }
+/* 되돌리기 (v204 ③) — 바뀔 때마다 직전 위젯 목록을 쌓는다 · Ctrl+Z / Ctrl+Y · 머리의 ↶ ↷ · 50단계 */
+const HIST={h:[], r:[], last:''};
+function histMark(){ HIST.last=JSON.stringify(S.board.widgets); HIST.h=[]; HIST.r=[]; histPaint(); }
+function histPaint(){ const u=document.getElementById('undoBtn'), r=document.getElementById('redoBtn'); if(u) u.disabled=!HIST.h.length; if(r) r.disabled=!HIST.r.length; }
+function histUndo(back){ const from=back?HIST.h:HIST.r, to=back?HIST.r:HIST.h; if(!from.length) return; to.push(HIST.last); const j=from.pop(); HIST.last=j; S.board.widgets=JSON.parse(j); S.sel=-1; S.editIx=-1; S.dirty=true; metaPaint(); histPaint(); drawBoard(); drawForm(); }
+function setDirty(on){ S.dirty=!!on; const m=document.getElementById('boardMeta'); if(m) m.dataset.dirty=on?'1':''; metaPaint();
+  if(on){ const cur=JSON.stringify(S.board.widgets); if(cur!==HIST.last){ HIST.h.push(HIST.last); if(HIST.h.length>50) HIST.h.shift(); HIST.r=[]; HIST.last=cur; histPaint(); } }
+  else histMark(); }
 function metaPaint(){
   const m=document.getElementById('boardMeta'); if(!m) return;
   m.textContent=(S.sql?'':t('local'))+(S.board.owner&&S.board.owner!==me()?' · '+fmt(t('shared_by'),{o:S.board.owner.replace(/@.*/,'')}):'')+(S.dirty?(' · '+t('unsaved')):'');
@@ -658,6 +666,9 @@ function bind(){
   document.getElementById('addW').onclick=()=>{ addWidget(JSON.parse(JSON.stringify(c()))); S.editIx=-1; drawForm(); toast(t('added')); };
   document.getElementById('updW').onclick=()=>{ if(S.editIx<0) return; const old=S.board.widgets[S.editIx]; S.board.widgets[S.editIx]=Object.assign(JSON.parse(JSON.stringify(c())),{lay:old&&old.lay}); S.editIx=-1; setDirty(true); drawBoard(); drawForm(); };
   document.getElementById('backBtn').onclick=backToList;
+  document.getElementById('undoBtn').onclick=()=>histUndo(true); document.getElementById('redoBtn').onclick=()=>histUndo(false);
+  document.addEventListener('keydown', ev=>{ if(!(ev.ctrlKey||ev.metaKey)||ev.altKey||S.view||S.list) return; const k=ev.key.toLowerCase(); if(k!=='z'&&k!=='y') return;
+    const tg=ev.target; if(tg&&(/^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName)||tg.isContentEditable)) return; ev.preventDefault(); histUndo(k==='z'&&!ev.shiftKey); });
   document.getElementById('gallery').addEventListener('click', e=>{ const b=e.target.closest('[data-open]'); if(!b) return; openBoard(b.dataset.open); });
   document.getElementById('boardSel').onchange=e=>{ const b=S.boards.find(x=>String(x.id)===e.target.value);
     S.board=b?{id:b.id,name:b.name,shared:b.shared,owner:b.owner||null,pub:b.pub||null,widgets:JSON.parse(JSON.stringify(b.widgets||[]))}:{id:null,name:'',shared:false,owner:null,widgets:[],pub:null};
@@ -671,6 +682,7 @@ function applyLang(){
   document.documentElement.lang=LANG;
   try{ GST.applyI18n && GST.applyI18n(t, LANG); }catch(e){ document.querySelectorAll('[data-i]').forEach(el=>{ el.textContent=t(el.dataset.i); }); }
   if(S.cfg){ drawForm(); preview(); drawBoard(); } drawBoardSel(); viewPaint(); if(S.list) drawGallery();
+  try{ document.getElementById('undoBtn').title=GST.cb.T('undo'); document.getElementById('redoBtn').title=GST.cb.T('redo'); }catch(e){}
 }
 window.setLang=function(l){ if(T[l]){ LANG=l; applyLang(); } };
 window.addEventListener('message',e=>{ const d=e.data||{}; if(d.type==='gst-lang'&&T[d.lang]){ LANG=d.lang; applyLang(); } });
@@ -685,6 +697,7 @@ async function load(){
   await loadBoards();
   if(S.list){ drawGallery(); }
   else { pickWanted(); drawBoard(); }
+  histMark();
   await setSrc(S.cfg?S.cfg.src:'wk', true);
   document.getElementById('status').textContent='✅ '+new Date().toLocaleString();
 }

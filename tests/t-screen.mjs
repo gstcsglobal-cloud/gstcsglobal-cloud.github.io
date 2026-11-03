@@ -168,7 +168,7 @@ const sv = C1[C1.length - 1];
 is(sv && sv.args.p_page === 'scrubber' && sv.args.p_scope === 'all' && sv.args.p_at === null, 'screen_layout_save(scrubber, all, p_at=null) — 처음 저장');
 const cfg = sv && sv.args.p_config;
 is(cfg && cfg.hidden.indexOf(pair[1]) >= 0 && cfg.order.indexOf(pair[0]) > cfg.order.indexOf(pair[1]) && cfg.titles[pair[0]] === '라인별 유상 전환 현황', '저장된 설정 = 배치뿐(순서 · 숨김 · 제목)');
-is(cfg && !JSON.stringify(cfg).match(/\d{3,},\d{3,}/) && Object.keys(cfg).every(k => ['v','order','hidden','wide','show','titles'].indexOf(k) >= 0), '설정에 자료 값이 섞이지 않는다');
+is(cfg && !JSON.stringify(cfg).match(/\d{3,},\d{3,}/) && Object.keys(cfg).every(k => ['v','order','hidden','wide','show','titles','charts','adds'].indexOf(k) >= 0), '설정에 자료 값이 섞이지 않는다');
 is(await pg.evaluate(() => !document.getElementById('gstSePanel') && !document.querySelector('.gst-se-bar') && !document.body.classList.contains('gst-se-on')), '저장하면 편집기가 닫힌다');
 await pg.evaluate(() => { const k = document.querySelector('.kpi[data-kdrill]'); if (k) (k.querySelector('.val') || k).click(); }); await pg.waitForTimeout(300);
 is(await pg.evaluate(() => !!document.querySelector('.gov')), '편집을 마치면 KPI 카드 팝업이 다시 열린다');
@@ -219,7 +219,7 @@ pg = await ctx.newPage(); pg.on('pageerror', e => errs.push('studio: ' + e.messa
 const msgs = []; await pg.exposeFunction('__msg', m => msgs.push(m));
 await pg.addInitScript(() => { const pm = window.parent.postMessage.bind(window.parent); window.addEventListener('message', e => { try{ window.__msg(e.data); }catch(err){} }); });
 await pg.emulateMedia({ reducedMotion:'reduce' });
-await pg.goto(BASE + '/studio/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(3000);
+await pg.goto(BASE + '/studio/?new=1', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(3000);   /* v203 — /studio/ 는 목록이라 편집기는 ?new=1 */
 await pg.click('#addStd'); await pg.waitForTimeout(150);
 await pg.click('.sd-menu [data-add="kpi:run_rate"]'); await pg.waitForTimeout(1500);
 const kv = await pg.evaluate(() => { const b = document.querySelector('#board .k-kpi .ds-kpi-v b'); return b ? b.textContent : ''; });

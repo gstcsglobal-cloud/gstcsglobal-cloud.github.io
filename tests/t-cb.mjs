@@ -169,6 +169,43 @@ const drill = await pg.evaluate(async () => {
   return [sp.rows.length, sp.cols.length > 3];
 });
 is(drill[0] === 2 && drill[1], '막대 → 그 행들($rows) — 국내 2행');
+console.log('[1b] v204 — 설치현황 조인 · 식 · 전년 동기 · 조건부 색 · 추천');
+const V = await pg.evaluate(async () => {
+  const out = {}, R = c => GST.cb.run(Object.assign({src:'wk'}, c));
+  const DS = GST.cb.data('wk'); out.join = DS.join && [DS.join.hit, DS.join.n]; out.hasJ = DS.fields.some(f => f.k === 'i:model') && DS.fields.some(f => f.k === 'i:state');
+  let r = R({x:'i:state', measures:[{agg:'count'}]}); out.byState = Object.fromEntries(r.xs.map((x, i) => [x, r.sets[0].data[i]]));
+  r = R({x:'op', measures:[{agg:'sum', f:'manMin'}, {agg:'count'}, {agg:'expr', expr:'{1}/{2}', name:'건당 공수'}]});
+  out.expr = [r.sets.length, r.sets[2].data[0], r.sets[2].name];
+  out.exprBad = !!GST.cb.exprFn('{1}+alert(1)') === false && !!GST.cb.exprFn('{1}/({2}+1)*100');
+  r = R({x:'dStart', bucket:'month', measures:[{agg:'count'}, {agg:'count', calc:'yoy'}]});
+  out.yoy = [r.sets.length, r.sets[1].data.every(v => v === null)];   // 픽스처는 올해뿐 — 전년 칸은 전부 null(0 이 아니라)
+  const h = document.createElement('div'); h.style.cssText = 'width:600px;height:300px;display:flex'; document.body.appendChild(h);
+  await GST.cb.draw(h, {src:'wk', type:'bar', x:'op', measures:[{agg:'count'}], disp:{cond:'gt', condV:'20', condC:'bad'}}, {id:'t_cond'});
+  const ch = Chart.getChart(h.querySelector('canvas')), bg = ch.data.datasets[0].backgroundColor;
+  out.cond = [Array.isArray(bg), bg[0] !== bg[1], ch.data.datasets[0].data[0] > 20];
+  h.remove();
+  const TL = GST.cb.templates('wk', DS); out.tpl = [TL.length, TL.some(t => t.k === 'model_bm'), TL.every(t => typeof t.name === 'string' && t.name.length > 2)];
+  const TL2 = GST.cb.templates('mat', {fields:[{k:'op', kind:'text'}], rows:[]}); out.tplMiss = TL2.length;
+  return out;
+});
+is(V.hasJ && V.join && V.join[0] === 42 && V.join[1] === 42, '설치현황 조인 — 수선실적 42행 전부 S/N 으로 붙고 i:모델·i:설비상태 열이 생긴다 (' + V.join + ')');
+is(V.byState && V.byState.Operation === 40 && V.byState['Set-up'] === 0 || (V.byState && (V.byState.Operation || 0) + (V.byState['반납'] || 0) + (V.byState['Set-up'] || 0) === 42), '조인한 «설비상태»로 수선실적을 쪼갠다 (' + JSON.stringify(V.byState) + ')');
+is(V.expr[0] === 3 && V.expr[1] === 60 && V.expr[2] === '건당 공수', '식 {1}/{2} — 공수 합 ÷ 건수 = 60 (' + V.expr + ')');
+is(V.exprBad, '식은 {n}·숫자·사칙연산·괄호만 — eval 없음 (alert 거부)');
+is(V.yoy[0] === 2 && V.yoy[1], '전년 같은 구간 — 작년 자료가 없으면 null(0 으로 그리지 않는다)');
+is(V.cond[0] && V.cond[1] && V.cond[2], '조건부 색 — 20 넘는 막대만 다른 색(문자열 배열)');
+is(V.tpl[0] >= 5 && V.tpl[1] && V.tpl[2], '추천 차트 — 수선실적 ' + V.tpl[0] + '개 · 조인 열 추천 포함 · 이름 있음');
+is(V.tplMiss === 0, '그 자료에 없는 열을 쓰는 추천은 빠진다');
+await pg.evaluate(() => { const b = document.querySelector('#cbForm'); return b; });
+await pg.selectOption('#fTpl', '0'); await pg.waitForTimeout(600);
+is(await pg.evaluate(() => S.cfg.type === 'stack' && S.cfg.series === 'stage' && !!Chart.getChart(document.querySelector('#pv canvas'))), '추천을 고르면 폼·미리 보기가 그 설정으로');
+console.log('[1c] 되돌리기 — 화면 만들기');
+await pg.click('#addW'); await pg.waitForTimeout(500); await pg.click('#addW'); await pg.waitForTimeout(500);
+is(await pg.evaluate(() => S.board.widgets.length === 2 && !document.getElementById('undoBtn').disabled), '위젯 둘 — 되돌리기 단추가 산다');
+await pg.keyboard.press('Control+z'); await pg.waitForTimeout(500);
+is(await pg.evaluate(() => S.board.widgets.length === 1), 'Ctrl+Z → 위젯 하나');
+await pg.keyboard.press('Control+y'); await pg.waitForTimeout(500);
+is(await pg.evaluate(() => S.board.widgets.length === 2), 'Ctrl+Y → 다시 둘');
 if (process.env.SHOT) { await pg.evaluate(() => { const c = S.cfg; c.type = 'combo'; c.x = 'dStart'; c.bucket = 'week'; c.measures = [{agg:'count', f:'', calc:'none', as:'auto', axis:'y', name:''}, {agg:'sum', f:'manMin', calc:'cum', as:'line', axis:'y2', name:''}]; drawForm(); preview(); }); await pg.waitForTimeout(800); await pg.screenshot({ path: process.env.SHOT + '/cb-studio.png' }); }
 await ctx.close();
 
@@ -209,6 +246,13 @@ await pg.evaluate(id => document.getElementById(id).closest('.gst-se-card').quer
 await pg.click('.gse-cpop [data-c="reset"]'); await pg.waitForTimeout(250);
 st = await pg.evaluate(id => { const ch = Chart.getChart(document.getElementById(id)); return { t:ch.config.type, ia:ch.config.options.indexAxis, v:ch.$cbVals }; }, cand);
 is(st.t === 'bar' && st.ia !== 'y' && !st.v, '「원래대로」 — 처음 모양');
+await pg.click('.gse-cpop [data-ct="line"]'); await pg.waitForTimeout(250); await pg.click('.gse-cpop [data-c="close"]');
+await pg.keyboard.press('Control+z'); await pg.waitForTimeout(400);
+is(await pg.evaluate(id => Chart.getChart(document.getElementById(id)).config.type === 'bar', cand), '화면 편집 Ctrl+Z — 선으로 바꾼 것을 되돌린다');
+await pg.keyboard.press('Control+y'); await pg.waitForTimeout(400);
+is(await pg.evaluate(id => Chart.getChart(document.getElementById(id)).config.type === 'line', cand), 'Ctrl+Y — 다시 선');
+await pg.click('#gstSePanel [data-p="undo"]'); await pg.waitForTimeout(400);
+await pg.evaluate(id => document.getElementById(id).closest('.gst-se-card').querySelector('.gst-se-bar [data-a="chart"]').click(), cand); await pg.waitForTimeout(250);
 is(await pg.evaluate(() => { const b = document.querySelector('.gse-cpop [data-ct="line"]'); return !!b && !b.disabled; }), '다시 열어 되돌린 뒤에도 모양 단추가 살아 있다(원래 모양을 사본으로 떠 둔다)');
 
 /* ============ ③ 차트 추가 ============ */
