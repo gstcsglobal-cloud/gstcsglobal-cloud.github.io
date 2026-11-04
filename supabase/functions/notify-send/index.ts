@@ -15,7 +15,7 @@
    배포: verify_jwt = false (cron · 카카오 · 브라우저를 각자 이 함수가 확인한다).
    ============================================================================ */
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { isDue, buildMessage, pickSnap, hasPages, pptOverdue, PPT_PAGES } from "./notify.js";
+import { isDue, buildMessage, pickSnap, hasPages, pptOverdue, PPT_PAGES, splitScope } from "./notify.js";
 import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
 
 /* 화면 PPT 정기 발송(v209 · setup-34) — PPT 는 GitHub Actions 의 보고서 봇이 만든다(tools/report-run.mjs).
@@ -100,7 +100,8 @@ async function sendKakao(svc: any, email: string, text: string, subId: number | 
   return b && b.taskId ? String(b.taskId) : "";
 }
 async function notifyOne(svc: any, sub: any, kind: string, by: string, now: Date, given: any[] | null = null, note = "") {
-  const scopes = sub.scope && sub.scope !== "all" ? [sub.scope, "all"] : ["all"];
+  const base = splitScope(sub.scope).base;          // 사이트(|s:…)는 PPT 에만 — 브리핑 스냅샷은 운영단위까지다(v210)
+  const scopes = base !== "all" ? [base, "all"] : ["all"];
   const [sn, it] = await Promise.all([
     svc.from("brief_snap").select("scope,as_of,payload,made_at").in("scope", scopes),
     svc.from("action_items").select("id,title,sev,status,op,assignee,due").in("status", ["open", "ack", "doing"]).limit(500),
