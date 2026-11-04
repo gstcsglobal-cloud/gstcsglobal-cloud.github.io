@@ -93,6 +93,27 @@ export function reportPath(page, scope, slot, stamp) {
   return page + '/' + sc.slice(0, 24) + '-' + h + '/' + sl + '-' + String(stamp || Date.now()) + '.pptx';
 }
 
+/* ---------- 범위 + 사이트 (v210 · 사용자 「운영단위, 사이트 이런 필터 설정해서 보내는 기능」) ----------
+   범위 열쇠는 brief_snap 과 같은 all · r:국내/해외 · o:운영단위 이고, 사이트(단지)를 고르면 그 뒤에 «|s:사이트|사이트»를 붙인다.
+   ⚠ 표의 열(scope)을 그대로 쓴다 — 서버 검사(notify_save · report_file_add 의 ^(all|r:.+|o:.+)$)와 «같은 사람·같은 범위는 한 번»
+     유일 색인이 사이트까지 갈라 보므로 SQL 을 고치지 않는다. 사이트는 구분이나 운영단위를 고른 뒤에만 붙는다(화면이 그렇게 받는다).
+   ⚠ 사이트는 «화면 PPT»에만 걸린다 — 브리핑 스냅샷과 조치 사항은 운영단위까지만 갈라져 있다(그 사실을 글에 적는다). */
+export const SITE_SEP = '|s:';
+export function splitScope(sc) {
+  const s = String(sc || 'all'), i = s.indexOf(SITE_SEP);
+  if (i < 0) return { base: s || 'all', sites: [] };
+  return { base: s.slice(0, i) || 'all', sites: s.slice(i + SITE_SEP.length).split('|').map(x => x.trim()).filter(Boolean) };
+}
+export function joinScope(base, sites) {
+  const b = base || 'all', L = Array.from(new Set((sites || []).map(x => String(x).trim()).filter(x => x && x.indexOf('|') < 0))).sort();
+  return L.length && b !== 'all' ? b + SITE_SEP + L.join('|') : b;
+}
+export function scopeLabel(sc) {
+  const { base, sites } = splitScope(sc);
+  const b = base === 'all' ? '전사' : base === 'r:국내' ? '국내 전체' : base === 'r:해외' ? '해외 전체' : base.replace(/^[ro]:/, '');
+  return sites.length ? b + ' · ' + (sites.length > 3 ? sites.slice(0, 3).join(', ') + ' 외 ' + (sites.length - 3) : sites.join(', ')) : b;
+}
+
 const ST = { open: '새로', ack: '확인', doing: '진행' };
 const SEV = { bad: '높음', warn: '보통', info: '참고' };
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -100,7 +121,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&am
 /* 이 범위의 열린 조치 사항 — 범위 열쇠는 brief_snap 과 같다(all · r:국내/해외 · o:운영단위). 구분 판정은 하지 않는다 —
    r: 범위는 조치 사항의 운영단위가 그 구분에 드는지 모르므로(판정 사본 금지) 전부 싣고 그렇다고 적는다. */
 export function pickItems(items, sub, today) {
-  const sc = sub.scope || 'all', me = String(sub.target || '').toLowerCase();
+  const sc = splitScope(sub.scope).base, me = String(sub.target || '').toLowerCase();
   const inScope = x => sc === 'all' || sc.startsWith('r:') || (sc.startsWith('o:') && x.op === sc.slice(2));
   const open = (items || []).filter(x => ['open', 'ack', 'doing'].includes(x.status));
   const kinds = sub.kinds || [];
@@ -122,7 +143,8 @@ export function buildMessage({ sub, snap, items, now, files }) {
   const k = kst(now), today = k.ymd;
   const kinds = sub.kinds || [];
   const parts = [], hparts = [];
-  const scopeName = (snap && snap.payload && snap.payload.name) || (sub.scope === 'all' ? '전사' : String(sub.scope).replace(/^[ro]:/, ''));
+  const SC = splitScope(sub.scope);
+  const scopeName = SC.sites.length || !(snap && snap.payload && snap.payload.name) || (snap.scope && snap.scope !== SC.base) ? scopeLabel(sub.scope) : snap.payload.name;
   const fl = (files || []).filter(f => f && PPT_PAGES[f.page]);
   const subject = '[GST CS] ' + scopeName + (fl.length ? ' 화면 보고서' : ' 운영 알림') + ' — ' + today;
   /* PPT — 메일은 첨부(받는 쪽이 index.ts 에서 붙인다), 카톡은 «로그인해야 열리는» 받기 링크.
@@ -137,7 +159,11 @@ export function buildMessage({ sub, snap, items, now, files }) {
       ml.map(s => '<li style="font:14px/1.6 sans-serif">' + esc(s.replace(/^· /, '')) + '</li>').join('') + '</ul>');
   }
   if (kinds.includes('brief')) {
-    const b = briefText(snap, now);
+    /* 그 범위의 브리핑이 아직 없으면 전사 것을 싣는다 — 조용히 바꿔 싣지 않고 적는다(스냅샷은 「글로벌 현황」이 그 범위를 열 때 남는다) */
+    const fb = snap && snap.scope && snap.scope !== SC.base && SC.base !== 'all';
+    const note = fb ? '※ ' + scopeLabel(SC.base) + ' 브리핑이 아직 없어 전사 브리핑을 실었습니다 — 대시보드 「글로벌 현황」에서 그 범위를 한 번 열면 생깁니다.'
+      : SC.sites.length ? '※ 사이트(' + SC.sites.join(', ') + ')는 화면 PPT 에만 적용됩니다 — 브리핑은 ' + scopeLabel(SC.base) + ' 기준입니다.' : '';
+    const b = briefText(snap, now, note);
     parts.push(b);
     hparts.push('<pre style="font:14px/1.6 \'Malgun Gothic\',sans-serif;white-space:pre-wrap;margin:0">' + esc(b) + '</pre>');
   }
@@ -156,7 +182,7 @@ export function buildMessage({ sub, snap, items, now, files }) {
   if ((kinds.includes('actions') || kinds.includes('mine')) && !P.overdue.length && !P.open.length && !P.mine.length) {
     parts.push('열린 조치 사항이 없습니다.'); hparts.push('<p style="font:14px sans-serif">열린 조치 사항이 없습니다.</p>');
   }
-  if (String(sub.scope || '').startsWith('r:') && kinds.includes('actions')) {
+  if (SC.base.startsWith('r:') && kinds.includes('actions')) {
     parts.push('(조치 사항은 구분으로 나누지 않고 전부 실었습니다)');
   }
   const links = '대시보드: ' + DASH + '#tab=hub\n조치 사항: ' + DASH + '#tab=action';
@@ -172,6 +198,6 @@ export function buildMessage({ sub, snap, items, now, files }) {
 
 /* 이 수신자의 범위 스냅샷 — 없으면 전사(그 사실을 brief 머리에 적는다 — briefText 의 note) */
 export function pickSnap(snaps, scope) {
-  const rows = snaps || [];
+  const rows = snaps || []; scope = splitScope(scope).base;
   return rows.find(x => x.scope === scope) || rows.find(x => x.scope === 'all') || null;
 }

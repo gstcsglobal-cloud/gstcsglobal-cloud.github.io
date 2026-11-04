@@ -76,11 +76,19 @@ const ERR={forbidden:'관리자 + 쓰기 권한이 필요합니다',conflict:'�
   not_found:'이미 빠진 수신자입니다',no_smtp:'메일 발송 설정이 아직 없습니다(오른쪽 «발송 준비» 1번)',no_kakao:'카톡 발송 설정이 아직 없습니다(«발송 준비» 2번)',
   kakao_no_user:'이 이메일로 인증된 카톡 사용자가 없습니다',kakao_outbox:'카톡 대기함에 넣지 못했습니다',kakao_lookup:'카톡 사용자를 찾지 못했습니다'};
 const errText=e=>{ const s=String(e||''); const k=Object.keys(ERR).find(x=>s===x||s.startsWith(x)); return k?ERR[k]+(s!==k?' ('+s+')':''):s; };
-let C=null, D=null, SCOPES=[];
+let C=null, D=null, SCOPES=[], ORG={ops:[],sites:[],why:''};
 
 function status(s, bad){ const e=$('status'); e.textContent=s||''; e.style.color=bad?'var(--bad)':''; }
 function toast(s){ if(GST.capToast) GST.capToast(s); status(s); }
-function scopeName(sc){ return sc==='all'?'전사':sc==='r:국내'?'국내 전체':sc==='r:해외'?'해외 전체':String(sc).replace(/^[ro]:/,''); }
+/* 범위 + 사이트 (v210) — 열쇠 꼴은 notify-send/notify.js 의 splitScope·joinScope 와 같다(«범위|s:사이트|사이트» · SITE_SEP).
+   한쪽만 고치면 봇이 화면이 저장한 사이트를 못 읽는다 — tests/t-notify 가 두 파일의 구분자를 대조한다. */
+const SITE_SEP='|s:';
+function splitScope(sc){ const t=String(sc||'all'), i=t.indexOf(SITE_SEP);
+  return i<0?{base:t||'all',sites:[]}:{base:t.slice(0,i)||'all',sites:t.slice(i+SITE_SEP.length).split('|').map(x=>x.trim()).filter(Boolean)}; }
+function joinScope(base, sites){ const b=base||'all', L=Array.from(new Set((sites||[]).map(x=>String(x).trim()).filter(x=>x&&x.indexOf('|')<0))).sort();
+  return L.length&&b!=='all'?b+SITE_SEP+L.join('|'):b; }
+function baseName(b){ return b==='all'?'전사':b==='r:국내'?'국내 전체':b==='r:해외'?'해외 전체':String(b).replace(/^[ro]:/,''); }
+function scopeName(sc){ const x=splitScope(sc); return baseName(x.base)+(x.sites.length?' · '+(x.sites.length>3?x.sites.slice(0,3).join(', ')+' 외 '+(x.sites.length-3):x.sites.join(', ')):''); }
 function when(s){ return (FREQ[s.freq]||s.freq)+(s.freq==='weekly'?' '+DOW[s.dow]+'요일':'')+(s.freq==='monthly'?' '+s.dom+'일':'')+' '+String(s.hour).padStart(2,'0')+':00'; }
 function ago(t){ if(!t) return '—'; const d=new Date(t); return GST.ymdL?GST.ymdL(d)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):d.toLocaleString(); }
 
@@ -105,15 +113,78 @@ async function load(){
     if(D.error){ $('banners').innerHTML='<div class="ds-banner warn">'+esc(errText(D.error))+'</div>'; status(''); return; }
     /* 범위 후보 — 브리핑 스냅샷이 있는 범위(글로벌 현황이 남긴 것)만. 없는 범위는 전사 브리핑으로 간다. */
     try{ const b=await C.from('brief_snap').select('scope'); SCOPES=(b.data||[]).map(x=>x.scope).filter(s=>s!=='all').sort(); }catch(e){ SCOPES=[]; }
+    await loadOrg();
     $('banners').innerHTML='';
     drawAll(); status('');
   }catch(e){ console.warn('[notify]', e); status('불러오지 못했습니다: '+(e&&e.message||e), true); }
 }
 
+/* 운영단위·사이트 목록 (v210) — 예전에는 «브리핑을 남긴 범위»만 떠서 운영단위를 거의 못 골랐다.
+   이제 설비(설치현황)·실적(수선실적)에 «실제로 있는» 운영단위·단지를 값 묶음(value_groups)으로 받아 세운다.
+   ⚠ 판정을 새로 짜지 않는다 — 기준 정보 규칙(GST.vmap)을 입힌 뒤 화면과 같은 함수(GST.ORG.region · GST.ORG.campus)로 가른다.
+     그래야 여기서 고른 사이트 이름이 PPT 를 만들 때 그 화면의 「단지」 값과 정확히 맞는다(봇은 그 값으로 필터를 건다). */
+async function orgGroups(tbl, spec, cols, fields){
+  const r=await C.rpc('value_groups',{p_tbl:tbl, p_cols:cols});
+  if(r.error||!Array.isArray(r.data)) throw new Error((r.error&&r.error.message)||'value_groups');
+  const S=GST.SM.SPEC[spec], keys=Object.keys(S.fields), head=keys.map(k=>[].concat(S.fields[k])[0]);
+  const rows=[head].concat(r.data.map(g=>keys.map(k=>{ const i=fields.indexOf(k); return i<0||g[cols[i]]==null?'':String(g[cols[i]]); })));
+  const a=(GST.vmap&&GST.vmap.apply)?GST.vmap.apply(spec, rows).rows:rows;
+  return a.slice(1).map((row,j)=>{ const o={n:r.data[j].n}; fields.forEach(f=>{ o[f]=String(row[keys.indexOf(f)]||'').trim(); }); return o; });
+}
+async function loadOrg(){
+  ORG={ops:[],sites:[],why:''};
+  try{
+    if(GST.vmap&&GST.vmap.load) await GST.vmap.load();
+    const [I,W]=await Promise.all([
+      orgGroups('sheet_inst','inst',['country','location','fab'],['country','location','fab']).catch(()=>[]),
+      orgGroups('sheet_wk','wk',['op','campus','line'],['op','campus','line']).catch(()=>[])]);
+    const ops={}, sites={};
+    const add=(op, site, n, isInst)=>{ if(!op) return;
+      const o=ops[op]=ops[op]||{op, region:(GST.ORG&&GST.ORG.region(op))||'', inst:0, wk:0}; o[isInst?'inst':'wk']+=n;
+      if(!site) return; const k=op+'\u0001'+site;
+      const x=sites[k]=sites[k]||{op, site, region:o.region, inst:0, wk:0}; x[isInst?'inst':'wk']+=n; };
+    I.forEach(g=>add(g.country, GST.ORG.campus(g.location, g.fab, g.country)||'', g.n, true));
+    W.forEach(g=>add(g.op, GST.ORG.campus(g.campus, g.line, g.op)||'', g.n, false));
+    ORG.ops=Object.values(ops).sort((a,b)=>(b.inst-a.inst)||(b.wk-a.wk)||a.op.localeCompare(b.op));
+    ORG.sites=Object.values(sites).sort((a,b)=>(b.inst-a.inst)||(b.wk-a.wk)||a.site.localeCompare(b.site));
+    if(!I.length && !W.length) ORG.why='설비·실적 자료를 읽지 못해 운영단위·사이트 목록이 비었습니다';
+  }catch(e){ console.warn('[notify] 운영단위 목록', e); ORG.why='운영단위·사이트 목록을 읽지 못했습니다'; }
+}
 function scopeOpts(sel){
-  const L=['all','r:국내','r:해외'].concat(SCOPES.filter(s=>s.startsWith('o:')));
-  if(sel && !L.includes(sel)) L.push(sel);
-  return L.map(s=>'<option value="'+esc(s)+'"'+(s===sel?' selected':'')+'>'+esc(scopeName(s))+'</option>').join('');
+  const b=splitScope(sel).base, seen=new Set(['all','r:국내','r:해외']);
+  const o=v=>'<option value="'+esc(v)+'"'+(v===b?' selected':'')+'>'+esc(baseName(v))+'</option>';
+  let h=o('all')+o('r:국내')+o('r:해외');
+  [['국내','국내 운영단위'],['해외','해외 운영단위'],['','구분 미상']].forEach(([rg,lab])=>{
+    const L=ORG.ops.filter(x=>(x.region||'')===rg && x.op);
+    if(!L.length) return;
+    h+='<optgroup label="'+esc(lab)+'">'+L.map(x=>{ const v='o:'+x.op; seen.add(v); return o(v); }).join('')+'</optgroup>'; });
+  /* 목록 밖이지만 저장돼 있는 범위(브리핑 스냅샷 · 옛 설정)도 고를 수 있게 둔다 — 조용히 «전사»로 바뀌지 않게 */
+  SCOPES.concat([b]).forEach(v=>{ if(v && !seen.has(v) && /^(r|o):./.test(v)){ seen.add(v); h+=o(v); } });
+  return h;
+}
+function sitesIn(base){
+  if(base==='r:국내'||base==='r:해외') return ORG.sites.filter(x=>x.region===base.slice(2));
+  if(base.startsWith('o:')) return ORG.sites.filter(x=>x.op===base.slice(2));
+  return [];
+}
+/* 사이트 칸 — 범위를 바꾸면 그 범위의 사이트로 다시 그린다. 고른 값 중 새 범위에도 있는 것은 그대로 둔다. */
+function syncSites(box, keep){
+  const el=box.querySelector('[data-sites]'); if(!el) return;
+  const base=box.querySelector('[data-f="scope"]').value;
+  const was=keep||[].slice.call(el.querySelectorAll('input:checked')).map(x=>x.value);
+  if(base==='all'){ el.innerHTML='<div class="ds-note">사이트(단지)를 고르려면 먼저 범위에서 구분이나 운영단위를 고르세요.</div>'; return; }
+  const L=sitesIn(base), names=Array.from(new Set(L.map(x=>x.site)));
+  const lost=was.filter(v=>names.indexOf(v)<0);
+  const cnt=v=>{ const xs=L.filter(x=>x.site===v), i=xs.reduce((a,x)=>a+x.inst,0), w=xs.reduce((a,x)=>a+x.wk,0); return i?'설비 '+i.toLocaleString()+'대':'실적 '+w.toLocaleString()+'건'; };
+  el.innerHTML='<div class="ds-note" style="margin-bottom:4px">사이트(단지) <span class="s">— 고르지 않으면 범위 전체 · 화면 PPT 에만 적용(브리핑·조치 사항은 범위 기준)</span></div>'+
+    (names.length||lost.length?'<div class="nf-pick" style="max-height:180px">'+names.concat(lost).map(v=>'<label><input type="checkbox" value="'+esc(v)+'"'+(was.indexOf(v)>=0?' checked':'')+'> '+esc(v)+
+      '<span class="m">'+(names.indexOf(v)<0?'지금 자료에 없음':esc(cnt(v)))+'</span></label>').join('')+'</div>'
+      :'<div class="ds-empty">'+esc(ORG.why||'이 범위에 사이트(단지) 값이 있는 설비·실적이 없습니다')+'</div>');
+}
+function wireSched(box, s){
+  syncOnly(box); box.querySelector('[data-f="freq"]').onchange=()=>syncOnly(box);
+  syncSites(box, splitScope(s&&s.scope).sites);
+  box.querySelector('[data-f="scope"]').onchange=()=>syncSites(box);
 }
 function schedFields(s){
   s=s||{freq:'weekly',hour:8,dow:1,dom:1,scope:'all',kinds:['brief','actions'],pages:[]};
@@ -122,6 +193,7 @@ function schedFields(s){
     '<label data-only="weekly">요일<select class="ds-select" data-f="dow">'+DOW.map((d,i)=>'<option value="'+i+'"'+(i===+s.dow?' selected':'')+'>'+d+'요일</option>').join('')+'</select></label>'+
     '<label data-only="monthly">날짜<select class="ds-select" data-f="dom">'+Array.from({length:28},(_,i)=>'<option value="'+(i+1)+'"'+(i+1===+s.dom?' selected':'')+'>'+(i+1)+'일</option>').join('')+'</select></label>'+
     '<label>범위<select class="ds-select" data-f="scope">'+scopeOpts(s.scope)+'</select></label>'+
+    '<div class="full" data-sites></div>'+
     '<div class="full"><div class="ds-note" style="margin-bottom:4px">보낼 내용</div><div class="nf-kinds">'+
       Object.keys(KIND).map(k=>'<label><input type="checkbox" data-k="'+k+'"'+((s.kinds||[]).includes(k)?' checked':'')+'> '+KIND[k]+'</label>').join('')+'</div></div>'+
     '<div class="full"><div class="ds-note" style="margin-bottom:4px">화면 PPT <span class="s">— 고른 화면을 그 범위로 열어 만든 PPT · 메일은 첨부, 카톡은 받는 링크(로그인 필요)</span></div><div class="nf-kinds">'+
@@ -133,7 +205,8 @@ function syncOnly(box){
 }
 function readSched(box){
   const g=k=>box.querySelector('[data-f="'+k+'"]').value;
-  return { freq:g('freq'), hour:+g('hour'), dow:+g('dow'), dom:+g('dom'), scope:g('scope'),
+  const sites=[].slice.call(box.querySelectorAll('[data-sites] input:checked')).map(x=>x.value);
+  return { freq:g('freq'), hour:+g('hour'), dow:+g('dow'), dom:+g('dom'), scope:joinScope(g('scope'), sites),
            kinds:[].slice.call(box.querySelectorAll('[data-k]:checked')).map(x=>x.dataset.k),
            pages:[].slice.call(box.querySelectorAll('[data-p]:checked')).map(x=>x.dataset.p) };
 }
@@ -173,8 +246,7 @@ function drawAdd(){
       schedFields()+
       '<div class="full nf-act"><span class="nf-err" id="addErr"></span><button type="button" class="ds-btn pri" id="addGo">등록</button></div>'+
     '</div>';
-  const box=$('addBox'); syncOnly(box);
-  box.querySelector('[data-f="freq"]').onchange=()=>syncOnly(box);
+  const box=$('addBox'); wireSched(box, null);
   let ch='email';
   $('addCh').querySelectorAll('button').forEach(b=>b.onclick=()=>{ ch=b.dataset.ch;
     $('addCh').querySelectorAll('button').forEach(x=>{ x.classList.toggle('on',x===b); x.setAttribute('aria-pressed',x===b?'true':'false'); });
@@ -225,7 +297,7 @@ function drawSubs(){
       :'<div class="ds-empty">아직 등록된 수신자가 없습니다 — 위에서 등록하면 정한 시각에 보냅니다.</div>');
   $('cSubs').querySelectorAll('tbody tr[data-id]').forEach(tr=>{
     const s=L.find(x=>String(x.id)===tr.dataset.id), ed=$('cSubs').querySelector('tr[data-for="'+s.id+'"]');
-    const box=ed.querySelector('.nf-form'); syncOnly(box); box.querySelector('[data-f="freq"]').onchange=()=>syncOnly(box);
+    const box=ed.querySelector('.nf-form'); wireSched(box, s);
     tr.querySelector('[data-a="edit"]').onclick=()=>{ ed.hidden=!ed.hidden; };
     ed.querySelector('[data-a="cancel"]').onclick=()=>{ ed.hidden=true; };
     ed.querySelector('[data-a="save"]').onclick=async(ev)=>{

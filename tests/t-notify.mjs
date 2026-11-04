@@ -122,7 +122,7 @@ ok(/schedule:/.test(RY) && /workflow_dispatch:/.test(RY) && /report-run\.mjs --c
 const rb = blk('report');
 ok(/isBot\(svc, email\)/.test(rb) && /notifyOne\(/.test(rb), '발송(op=report)은 봇 토큰만');
 ok(/hasPages\(s\) \? pptOverdue\(s, now\) : isDue\(s, now\)/.test(IX2), 'cron — PPT 수신자는 봇 몫(창이 지나야 글만)');
-ok(/import \{ reportJobs, reportPath, PPT_PAGES \} from '\.\.\/supabase\/functions\/notify-send\/notify\.js'/.test(RR), '봇이 notify.js 의 같은 함수로 차례를 고른다(판정 사본 없음)');
+ok(/import \{ reportJobs, reportPath, PPT_PAGES, splitScope \} from '\.\.\/supabase\/functions\/notify-send\/notify\.js'/.test(RR), '봇이 notify.js 의 같은 함수로 차례를 고른다(판정 사본 없음)');
 ok(!/console\.log\([^)]*(target|email|label|access_token|session)/.test(RR) && !/log\([^)]*(\.scope|target|email)/.test(RR), '봇 기록(공개)에 주소·범위·토큰을 찍지 않는다');
 ok(RR.includes('GST\\.SB_URL\\s*=') && RR.includes('GST\\.SB_ANON\\s*=') && !/eyJhbGci/.test(RR), '주소·공개 키는 core.js 에서 읽는다(사본 없음)');
 const NP2 = fs.readFileSync(path.join(ROOT, 'notify/index.html'), 'utf8'), FP = fs.readFileSync(path.join(ROOT, 'files/index.html'), 'utf8');
@@ -132,6 +132,33 @@ const SQ = fs.readFileSync(path.join(ROOT, 'supabase/setup-34-report.sql'), 'utf
 const sqlPages = (SQ.match(/p_page not in \(([^)]+)\)/) || [])[1].match(/'(\w+)'/g).map(x => x.replace(/'/g, '')).sort().join();
 ok(pagesOf(NP2) === pk(N.PPT_PAGES) && pagesOf(FP) === pk(N.PPT_PAGES) && sqlPages === pk(N.PPT_PAGES), '화면 목록이 notify.js · 관리 화면 · 받기 화면 · 서버 넷에서 같다');
 ok(/C\.storage\.from\('reports'\)\.download\(P\)/.test(FP) && /authGate/.test(FP), '받기 화면 — 로그인 뒤 비공개 저장소에서(링크만으로는 못 받는다)');
+
+console.log('[6] 범위 + 사이트 (v210) — 운영단위·단지로 좁혀 보내기');
+const sp = N.splitScope('o:SEC Scrubber|s:P2|P1');
+ok(sp.base === 'o:SEC Scrubber' && sp.sites.join() === 'P2,P1' && N.splitScope('all').base === 'all' && !N.splitScope('r:국내').sites.length, 'splitScope — 범위와 사이트를 가른다');
+ok(N.joinScope('o:SEC Scrubber', ['P2', 'P1', 'P1', ' ']) === 'o:SEC Scrubber|s:P1|P2' && N.joinScope('all', ['P1']) === 'all' && N.joinScope('r:해외', []) === 'r:해외', 'joinScope — 정렬·중복 제거 · 전사에는 사이트를 붙이지 않는다');
+ok(/^(all|r:.+|o:.+)$/.test(N.joinScope('o:X', ['F16'])) && /^(all|r:.+|o:.+)$/.test(N.joinScope('r:국내', ['P1'])), '사이트를 붙여도 서버 검사(notify_save · report_file_add)를 통과한다 — SQL 무변경');
+ok(N.scopeLabel('o:SEC Scrubber|s:P1|P2') === 'SEC Scrubber · P1, P2' && N.scopeLabel('r:국내') === '국내 전체' && /외 2$/.test(N.scopeLabel('o:X|s:a|b|c|d|e')), 'scopeLabel — 사람이 읽는 이름');
+const itS = [{ status: 'open', title: 'A', op: 'SEC Scrubber', sev: 'bad' }, { status: 'open', title: 'B', op: 'GST TAIWAN SCRUBBER', sev: 'warn' }];
+ok(N.pickItems(itS, { scope: 'o:SEC Scrubber|s:P1', kinds: ['actions'] }, '2026-11-04').open.map(x => x.title).join() === 'A', '조치 사항은 사이트가 붙어도 운영단위로 고른다');
+const snaps = [{ scope: 'all', made_at: MON8.toISOString(), payload: { name: '전사' } }, { scope: 'o:SEC Scrubber', made_at: MON8.toISOString(), payload: { name: 'SEC Scrubber' } }];
+ok(N.pickSnap(snaps, 'o:SEC Scrubber|s:P1').scope === 'o:SEC Scrubber' && N.pickSnap(snaps, 'o:없는곳').scope === 'all', 'pickSnap — 사이트를 떼고 운영단위 스냅샷 · 없으면 전사');
+const mS = N.buildMessage({ sub: { channel: 'email', target: 'a@test.local', scope: 'o:SEC Scrubber|s:P1', kinds: ['brief'], pages: ['report'] }, snap: snaps[1], items: [], now: MON8,
+  files: [{ page: 'report', ok: true, path: 'report/x-1/1.pptx' }] });
+ok(/SEC Scrubber · P1 화면 보고서/.test(mS.subject) && /사이트\(P1\)는 화면 PPT 에만/.test(mS.text), '제목에 사이트 · 브리핑은 운영단위 기준이라고 적는다');
+const mF = N.buildMessage({ sub: { channel: 'email', target: 'a@test.local', scope: 'o:없는곳', kinds: ['brief'] }, snap: snaps[0], items: [], now: MON8 });
+ok(/없는곳 운영 알림/.test(mF.subject) && /브리핑이 아직 없어 전사 브리핑을 실었습니다/.test(mF.text), '그 운영단위 브리핑이 없으면 전사 것을 싣되 «조용히» 바꾸지 않는다(제목은 고른 범위)');
+const N0 = N.buildMessage({ sub: { channel: 'email', target: 'a@test.local', scope: 'all', kinds: ['brief'] }, snap: snaps[0], items: [], now: MON8 });
+ok(!/※/.test(N0.text) && /전사 운영 알림/.test(N0.subject), '전사는 예전 그대로(덧붙임 없음)');
+ok(N.reportPath('report', 'o:X|s:P1', '2026110408', 1) !== N.reportPath('report', 'o:X|s:P2', '2026110408', 1), 'PPT 파일 경로가 사이트마다 갈린다(같은 운영단위 다른 사이트를 섞지 않는다)');
+const jS = N.reportJobs([{ id: 1, enabled: true, freq: 'daily', hour: 8, scope: 'o:X|s:P1', pages: ['report'] }, { id: 2, enabled: true, freq: 'daily', hour: 8, scope: 'o:X|s:P2', pages: ['report'] },
+  { id: 3, enabled: true, freq: 'daily', hour: 8, scope: 'o:X|s:P1', pages: ['report'] }], MON8);
+ok(jS.length === 2 && jS.find(j => j.scope === 'o:X|s:P1').subs.join() === '1,3', '봇 — (화면 · 범위 · 사이트)마다 한 번 만든다');
+ok(/splitScope\(scope\)/.test(RR) && /o\.campus = a\.s/.test(RR) && /restore\(\{ eq: o, hr: o \}\)/.test(RR), '봇 — 사이트를 «단지» 축으로 상세 필터 두 벌에 건다');
+ok(/splitScope\(sub\.scope\)\.base/.test(IX2), '발송 — 브리핑 스냅샷은 사이트를 뗀 범위로 찾는다');
+const sepUi = (NP2.match(/const SITE_SEP='([^']+)'/) || [])[1], sepN = N.SITE_SEP;
+ok(sepUi && sepUi === sepN, '관리 화면과 notify.js 의 구분자가 같다 (' + sepUi + ')');
+ok(/value_groups/.test(NP2) && /GST\.ORG\.campus\(/.test(NP2) && /GST\.ORG\.region\(/.test(NP2) && /GST\.vmap\.apply/.test(NP2), '관리 화면 — 운영단위·사이트 목록은 설비·실적 값에서 화면과 같은 판정으로(기준 정보 규칙 포함)');
 
 console.log(`\n${fail ? '❌' : '✅'} t-notify: ${pass} 통과 · ${fail} 실패`);
 process.exit(fail ? 1 : 0);

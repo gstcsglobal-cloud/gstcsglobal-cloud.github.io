@@ -82,6 +82,8 @@ const FAKE = String.raw`
       if (n === 'metric_save') { const id = L.metrics.length + 1; L.metrics.push({ id, owner:me, name:a.p_name, src:a.p_src, def:a.p_def, shared:a.p_shared }); return { data:{ ok:true, id }, error:null }; }
       if (n === 'bm_save') { const id = L.bms.length + 1; L.bms.push({ id, owner:me, name:a.p_name, tab:a.p_tab, sec:a.p_sec, state:a.p_state, shared:a.p_shared }); return { data:{ ok:true, id }, error:null }; }
       if (n === 'mine_remove') { const arr = a.p_kind === 'bookmark' ? L.bms : a.p_kind === 'note' ? L.notes : L.metrics; const x = arr.find(r => r.id === a.p_id); if (x) x.removed = true; return { data:{ ok:!!x }, error:null }; }
+      if (n === 'value_groups') return { data: a.p_tbl === 'sheet_inst' ? [{ country:'SEC Scrubber', location:'P1', fab:'', n:5 }, { country:'SEC Scrubber', location:'P2', fab:'', n:3 },
+          { country:'GST TAIWAN SCRUBBER', location:'', fab:'F16', n:4 }] : [{ op:'SEC Scrubber', campus:'P3', line:'', n:9 }, { op:'GST TAIWAN SCRUBBER', campus:'', line:'F16', n:2 }], error:null };
       if (n === 'notify_admin') return { data:{ subs:L.subs.filter(s => !s.removed), log:L.log, people:[{ email:'boss@test.local', role:'admin' }, { email:'view@test.local', role:'viewer' }],
           kakao:[{ email:'view@test.local', verified_at:now, n:1, allowed:true }, { email:'out@other.local', verified_at:now, n:1, allowed:false }] }, error:null };
       if (n === 'notify_save') { if (a.p_id == null) { if (L.subs.some(s => !s.removed && s.channel === a.p_set.channel && s.target === a.p_set.target && s.scope === (a.p_set.scope || 'all'))) return { data:{ ok:false, error:'duplicate' }, error:null };
@@ -225,6 +227,21 @@ is(await pg.evaluate(() => document.querySelectorAll('#cSubs tbody tr[data-id]')
 await pg.click('#addCh [data-ch="kakao"]'); await pg.check('#addKk input[value="view@test.local"]'); await pg.click('#addGo'); await pg.waitForTimeout(800);
 sc = await calls(pg, 'notify_save');
 is(sc.length === 2 && sc[1].args.p_set.channel === 'kakao' && sc[1].args.p_set.target === 'view@test.local', '카톡 — 인증된 사람을 골라 등록(식별자가 아니라 이메일로)');
+const og = await pg.evaluate(() => { const sel = document.querySelector('#addBox [data-f="scope"]');
+  return { grp: [...sel.querySelectorAll('optgroup')].map(g => g.label + ':' + [...g.querySelectorAll('option')].map(o => o.value).join('/')), allNote: /먼저 범위에서/.test(document.querySelector('#addBox [data-sites]').textContent) }; });
+is(og.grp.join() === '국내 운영단위:o:SEC Scrubber,해외 운영단위:o:GST TAIWAN SCRUBBER' && og.allNote, '범위 — 설비·실적에 있는 운영단위 전부(구분별 묶음) · 전사에서는 사이트를 안 고른다 (' + og.grp.join(' | ') + ')');
+await pg.selectOption('#addBox [data-f="scope"]', 'o:SEC Scrubber'); await pg.waitForTimeout(200);
+const st = await pg.evaluate(() => [...document.querySelectorAll('#addBox [data-sites] input')].map(i => i.value).join());
+is(st === 'P1,P2,P3', '운영단위를 고르면 그 운영단위의 사이트(단지)가 뜬다 — 설비 + 실적 (' + st + ')');
+await pg.click('#addCh [data-ch="email"]'); await pg.fill('#addMail', 'site@test.local'); await pg.check('#addBox [data-sites] input[value="P3"]'); await pg.check('#addBox [data-sites] input[value="P1"]');
+await pg.check('#addBox [data-p="report"]'); await pg.click('#addGo'); await pg.waitForTimeout(800);
+sc = await calls(pg, 'notify_save');
+is(sc.length === 3 && sc[2].args.p_set.scope === 'o:SEC Scrubber|s:P1|P3' && sc[2].args.p_set.pages.join() === 'report', '사이트를 골라 등록 — 범위 열쇠에 «|s:P1|P3»(봇·발송이 같은 꼴로 읽는다)');
+const row3 = await pg.evaluate(() => [...document.querySelectorAll('#cSubs tbody tr[data-id]')].map(t => t.children[3].textContent).join(' / '));
+is(/SEC Scrubber · P1, P3/.test(row3), '수신자 표에 «운영단위 · 사이트»로 (' + row3 + ')');
+await pg.click('#cSubs tr[data-id="3"] [data-a="edit"]');
+const ed3 = await pg.evaluate(() => [...document.querySelectorAll('tr[data-for="3"] [data-sites] input:checked')].map(i => i.value).join());
+is(ed3 === 'P1,P3', '수정 칸을 열면 고른 사이트가 체크돼 있다');
 await pg.click('#cSubs tr[data-id="1"] [data-a="test"]'); await pg.waitForTimeout(800);
 is(await pg.evaluate(() => /보냈습니다/.test(document.getElementById('status').textContent)), '테스트 발송 — 엣지펑션(notify-send · op=test)을 부르고 결과를 말한다');
 await ctx.close();

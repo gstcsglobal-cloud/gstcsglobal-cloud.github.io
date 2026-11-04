@@ -17,7 +17,7 @@
 //          FORCE_PAGE=fault FORCE_SCOPE=all DRY=1 node tools/report-run.mjs   (수동 — 만들어 올리기만 · 보내지 않음)
 import fs from 'fs';
 import path from 'path';
-import { reportJobs, reportPath, PPT_PAGES } from '../supabase/functions/notify-send/notify.js';
+import { reportJobs, reportPath, PPT_PAGES, splitScope } from '../supabase/functions/notify-send/notify.js';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const CORE = fs.readFileSync(path.join(ROOT, 'assets/core.js'), 'utf8');
@@ -100,16 +100,18 @@ async function settled(page) {
   }
   throw new Error('화면이 ' + Math.round(T_READY / 1000) + '초 안에 다 그려지지 않았습니다');
 }
-/* 범위 — brief_snap 과 같은 열쇠(all · r:국내/해외 · o:운영단위). 상세 필터 두 벌에 같이 건다(인당 지표의 분자·분모) */
+/* 범위 — brief_snap 과 같은 열쇠(all · r:국내/해외 · o:운영단위) + 사이트(|s:단지|단지 · v210). 상세 필터 두 벌에 같이 건다
+   (인당 지표의 분자·분모 — 범위 띠와 같은 규칙). 사이트 값은 화면의 「단지」 축 값 그대로다(GST.ORG.campus). */
 async function applyScope(page, scope) {
-  if (!scope || scope === 'all') return true;
-  const k = scope.startsWith('r:') ? 'region' : scope.startsWith('o:') ? 'op' : '';
-  if (!k) return false;
+  const { base, sites } = splitScope(scope);
+  if (base === 'all' && !sites.length) return true;
+  const k = base.startsWith('r:') ? 'region' : base.startsWith('o:') ? 'op' : base === 'all' ? '' : null;
+  if (k === null) return false;
   const ok = await page.evaluate(a => {
     const G = window.GST; if (!G || !G.filters || !G.filters.restore) return false;
-    const o = {}; o[a.k] = [a.v];
+    const o = {}; if (a.k) o[a.k] = [a.v]; if (a.s.length) o.campus = a.s;
     G.filters.restore({ eq: o, hr: o }); return true;
-  }, { k, v: scope.slice(2) });
+  }, { k, v: base.slice(2), s: sites });
   if (ok) { await page.waitForTimeout(1500); await settled(page); }
   return ok;
 }
