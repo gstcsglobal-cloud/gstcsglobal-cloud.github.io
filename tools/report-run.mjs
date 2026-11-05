@@ -112,8 +112,20 @@ async function applyScope(page, scope) {
     const o = {}; if (a.k) o[a.k] = [a.v]; if (a.s.length) o.campus = a.s;
     G.filters.restore({ eq: o, hr: o }); return true;
   }, { k, v: base.slice(2), s: sites });
-  if (ok) { await page.waitForTimeout(1500); await settled(page); }
-  return ok;
+  if (!ok) return false;
+  await page.waitForTimeout(1500); await settled(page);
+  /* ⚠ 걸렸는지 «다시 읽어» 본다(v210) — 상세 필터는 그 화면 목록에 없는 값을 조용히 버린다(GST.filters fill · v103 의 키오스크 자리).
+     안 보면 «사이트 P1» 이라고 적힌 PPT 가 실제로는 범위 전체를 담는다. 두 벌(설비·인원) 중 하나에라도 남아 있으면 걸린 것이다
+     (인원 화면은 설비 블록이 잠기고, 다른 화면은 인원 블록이 잠긴다). 없으면 만들지 않고 실패로 남긴다(조용히 넘기지 않는다).
+     ⚠ 기록이 공개라 실패 문구에 운영단위·사이트 이름을 넣지 않는다. */
+  const miss = await page.evaluate(a => {
+    const sn = window.GST && GST.filters && GST.filters.snapshot && GST.filters.snapshot(); if (!sn) return 'no_snapshot';
+    const has = (k, v) => ['eq', 'hr'].some(g => { const x = sn[g] && sn[g][k]; return Array.isArray(x) ? x.indexOf(v) >= 0 : x === v; });
+    if (a.k && !has(a.k, a.v)) return a.k;
+    return a.s.some(v => !has('campus', v)) ? 'campus' : '';
+  }, { k, v: base.slice(2), s: sites });
+  if (miss) throw new Error('범위 필터가 이 화면 자료에 없어 걸리지 않았습니다(' + miss + ') — PPT 를 만들지 않았습니다');
+  return true;
 }
 async function upload(p, buf) {
   const r = await fetch(SB + '/storage/v1/object/reports/' + p.split('/').map(encodeURIComponent).join('/'), {
