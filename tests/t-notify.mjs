@@ -155,6 +155,7 @@ const jS = N.reportJobs([{ id: 1, enabled: true, freq: 'daily', hour: 8, scope: 
   { id: 3, enabled: true, freq: 'daily', hour: 8, scope: 'o:X|s:P1', pages: ['report'] }], MON8);
 ok(jS.length === 2 && jS.find(j => j.scope === 'o:X|s:P1').subs.join() === '1,3', '봇 — (화면 · 범위 · 사이트)마다 한 번 만든다');
 ok(/splitScope\(scope\)/.test(RR) && /o\.campus = a\.s/.test(RR) && /restore\(\{ eq: o, hr: o \}\)/.test(RR), '봇 — 사이트를 «단지» 축으로 상세 필터 두 벌에 건다');
+ok(/GST\.filters\.snapshot\(\)/.test(RR) && /범위 필터가 이 화면 자료에 없어 걸리지 않았습니다/.test(RR), '봇 — 걸린 필터를 다시 읽어 본다(화면 목록에 없는 값은 조용히 버려진다 · 그때는 만들지 않는다)');
 ok(/splitScope\(sub\.scope\)\.base/.test(IX2), '발송 — 브리핑 스냅샷은 사이트를 뗀 범위로 찾는다');
 const sepUi = (NP2.match(/const SITE_SEP='([^']+)'/) || [])[1], sepN = N.SITE_SEP;
 ok(sepUi && sepUi === sepN, '관리 화면과 notify.js 의 구분자가 같다 (' + sepUi + ')');
