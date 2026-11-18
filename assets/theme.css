@@ -308,17 +308,19 @@ body.gst-inframe .status{margin-top:2px}
    ⚠ 셸 index.html 이 같은 토큰을 한 벌 더 든다(셸은 theme.css 를 안 싣는다) — 값을 바꾸면 둘 다. */
 body.theme-slate{
   color-scheme:dark;
-  --bg:#070B14; --surface:#0D1321; --surface-2:#131B2C; --surface-3:#1A2438;
-  --line:rgba(148,170,215,.13); --line-2:rgba(148,170,215,.26);
-  --txt-main:#E8EEF7; --txt-2:#C5CEDB; --txt-muted:#8C99AD; --txt-faint:#5E6B80;
-  --accent:#6C9BFF; --accent-soft:rgba(108,155,255,.15); --accent-ink:#9DBDFF;
-  --ok:#3FCF8E; --warn:#F5B83D; --bad:#F2706B;
-  --ok-soft:rgba(63,207,142,.12); --warn-soft:rgba(245,184,61,.12); --bad-soft:rgba(242,112,107,.12);
-  --accent-3:#A78BFA; --accent-4:#F5B83D; --accent-5:#3FCF8E;
-  --gold:#D8B46A; --gold-soft:rgba(216,180,106,.14);
+  /* v211 «운영 관제» 팔레트(사용자 지정) — 딥 네이비 바탕 · 전기 블루 주색 · 시안 강조. 이름(토큰)은 그대로라 컴포넌트 규칙은 한 벌이다 */
+  --bg:#06111F; --surface:#0B1D30; --surface-2:#102A43; --surface-3:#163653;
+  --line:rgba(120,170,220,.15); --line-2:rgba(0,217,245,.30);
+  --txt-main:#F1F6FC; --txt-2:#C4D3E3; --txt-muted:#94A9BE; --txt-faint:#5E7590;
+  --accent:#087CF0; --accent-soft:rgba(8,124,240,.18); --accent-ink:#5CC6FF;
+  --cyan:#00D9F5; --neon:#21F0E1;
+  --ok:#00D68F; --warn:#FFC247; --bad:#FF4D67;
+  --ok-soft:rgba(0,214,143,.13); --warn-soft:rgba(255,194,71,.13); --bad-soft:rgba(255,77,103,.14);
+  --accent-3:#00D9F5; --accent-4:#FFC247; --accent-5:#00D68F;
+  --gold:#21F0E1; --gold-soft:rgba(33,240,225,.13);
   --card-shadow:none; --shadow-md:0 12px 32px rgba(0,0,0,.55);
   --shadow-sm:inset 0 1px 0 rgba(255,255,255,.045), 0 10px 28px -20px rgba(0,0,0,.9);
-  background:#070B14 !important;
+  background:#06111F !important;
 }
 body.theme-slate select,body.theme-slate input{color-scheme:dark}
 body.theme-slate .fchip{border-color:rgba(91,141,239,.45)}
@@ -656,10 +658,13 @@ body:not(.gst-explain) .card-note.warn .nv{font-size:var(--fs-caption);line-heig
 body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:radial-gradient(900px 420px at 6% -10%,rgba(47,111,237,.075),transparent 70%),
              radial-gradient(760px 380px at 98% -8%,rgba(122,90,248,.06),transparent 70%)}
+/* v211 — 다크는 «운영 관제» 바탕: 은은한 블루 빛 + 미세한 격자(32px). 격자는 숫자를 가리지 않게 4.5% 로만 */
 body.theme-slate::before{inset:-12%;
-  background:radial-gradient(42vw 42vw at 14% 8%,rgba(56,104,255,.20),transparent 62%),
-             radial-gradient(36vw 36vw at 88% 22%,rgba(139,92,246,.14),transparent 62%),
-             radial-gradient(34vw 34vw at 52% 96%,rgba(14,165,233,.10),transparent 62%)}
+  background:radial-gradient(48vw 40vw at 50% 18%,rgba(8,124,240,.16),transparent 64%),
+             radial-gradient(34vw 30vw at 92% 4%,rgba(0,217,245,.08),transparent 62%),
+             radial-gradient(30vw 30vw at 6% 96%,rgba(8,124,240,.07),transparent 62%),
+             linear-gradient(rgba(120,170,220,.045) 1px,transparent 1px) 0 0/32px 32px,
+             linear-gradient(90deg,rgba(120,170,220,.045) 1px,transparent 1px) 0 0/32px 32px}
 /* 다크 카드 — 바탕의 빛이 아주 조금 비친다(86%). 팝업·드롭다운은 그대로 불투명(--surface)이다 */
 body.theme-slate :is(.card,.trend-card,.cross-card,.tablecard,.kpi,.hb-card,.hb-kpi,.st-card,.st-kpi,.ac-card,.sd-card,.ds-card,.ds-kpi){
   background-color:color-mix(in srgb,var(--surface) 86%,transparent)}
@@ -685,7 +690,7 @@ body.theme-slate #capToast{background:rgba(22,30,48,.94) !important;border:1px s
   #capToast.on{translate:none}
 }
 @media print{
-  .gst-rv{opacity:1 !important;translate:none !important}
+  .gst-rv{opacity:1 !important;translate:none !important;transition:none !important}   /* 전환을 끈다 — 0.6초 동안 투명한 채로 인쇄가 찍히던 자리(v211 검사가 잡았다) */
   body::before,.gst-sprog,.gst-lbar{display:none !important}
 }
 

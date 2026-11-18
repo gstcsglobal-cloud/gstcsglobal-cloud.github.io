@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 199;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 200;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 여기서 묻는다 — 저장 키(축편집·피벗·섹션)·챗봇 출처·자동순회 페이지 id 가 이 한 곳을 본다.
    (v137 에는 오프라인 판의 srcdoc 때문에 두었고, 오프라인 판은 v199 에 없앴다 — 한 곳에서 묻는 규약은 그대로 둔다.) */
 GST.pagePath = function(){ return location.pathname; };
@@ -57,7 +57,7 @@ GST._isDark = function(){
   let th=null; try{ th=sessionStorage.getItem('gst_theme')||localStorage.getItem('gst_theme_pref'); }catch(e){}
   th=(th==='slate'||th==='light')?th:GST.THEME_DEFAULT;
   if(th!=='slate') return;
-  try{ document.documentElement.style.background='#070B14'; document.documentElement.style.colorScheme='dark'; }catch(e){}
+  try{ document.documentElement.style.background='#06111F'; document.documentElement.style.colorScheme='dark'; }catch(e){}
   const put=function(){ const b=document.body; if(!b) return false;
     try{ if(b.classList && !/(^|\s)theme-(slate|light)(\s|$)/.test(b.className||'')) b.classList.add('theme-slate'); }catch(e){}
     return true; };
@@ -488,7 +488,7 @@ GST._loginDark = function(){
 };
 GST._LOGIN_UI = {
   dark:{
-    bg:'radial-gradient(900px 560px at 50% 28%,#16295A 0%,#0A1226 46%,#05080F 100%)',
+    bg:'radial-gradient(900px 560px at 50% 28%,#0E3560 0%,#081A2E 46%,#04090F 100%)',
     card:'max-width:384px;width:92%;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(160,185,235,.16);'
         +'border-radius:18px;padding:34px 30px 26px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);'
         +'box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 30px 80px -30px rgba(0,0,0,.9);text-align:center;color:#EEF2F8;'
@@ -1190,11 +1190,11 @@ GST.chartTheme = function(){
   const slate = GST._isDark();
   const key = slate?'slate':'light';
   /* 다크 값은 theme.css 의 미드나이트 토큰(v171)과 같다 — Chart.js 는 CSS 변수를 못 읽어 여기 한 벌 더 둔다 */
-  const txt = slate?'#8C99AD':'#667085', grid = slate?'rgba(148,170,215,.09)':'rgba(16,24,40,.07)';
+  const txt = slate?'#94A9BE':'#667085', grid = slate?'rgba(120,170,220,.10)':'rgba(16,24,40,.07)';
   /* surface = 카드 바탕(도넛 조각 사이 틈 · 점 테두리). v178 — 다크 카드는 86% 반투명이라 그 위에서 가장 가까운 단색 */
-  return { key, txt, grid, ink: slate?'#E8EEF7':'#101828', surface: slate?'#0C1220':'#FFFFFF', pal:GST.PAL, pal8:GST.PAL8,
-    status:{ bad: slate?'#F2706B':'#D92D20', warn: slate?'#F5B83D':'#B7670A',
-             ok: slate?'#3FCF8E':'#12873F', na: slate?'#5E6B80':'#98A2B3' } };
+  return { key, txt, grid, ink: slate?'#F1F6FC':'#101828', surface: slate?'#0B1D30':'#FFFFFF', pal:GST.PAL, pal8:GST.PAL8,
+    status:{ bad: slate?'#FF4D67':'#D92D20', warn: slate?'#FFC247':'#B7670A',
+             ok: slate?'#00D68F':'#12873F', na: slate?'#5E7590':'#98A2B3' } };
 };
 /* 색 문자열 → [r,g,b,a] (#rgb · #rrggbb · #rrggbbaa · rgb() · rgba()). 못 읽으면 null — 그때 gstLux 는 아무것도 안 한다 */
 GST._rgba = function(c){
@@ -1589,7 +1589,7 @@ GST.initSync = function(opts){
     /* 팔레트·차트 기본값도 테마를 따른다(다크는 빛나는 한 벌 · 라이트는 깊은 한 벌 · v178) — 페이지의 재렌더 훅이 새 색으로 다시 그린다 */
     try{ if(GST._palApply) GST._palApply(); if(GST.chartDefaults) GST.chartDefaults(); }catch(e){}
     /* 첫 그림용으로 칠해 둔 html 바탕(GST.THEME_DEFAULT 블록)을 테마와 맞춘다 — 라이트로 바꿨는데 html 만 검게 남지 않게 */
-    try{ const de=document.documentElement.style; de.background=(th==='slate')?'#070B14':''; de.colorScheme=(th==='slate')?'dark':''; }catch(e){}
+    try{ const de=document.documentElement.style; de.background=(th==='slate')?'#06111F':''; de.colorScheme=(th==='slate')?'dark':''; }catch(e){}
     return th;
   }
   function applyStored(){
@@ -7007,9 +7007,10 @@ GST.STY = {
   /* v178 «Executive» — 사파이어 막대 · 최근 구간은 한 단 밝게 · 선은 샴페인 골드(막대와 겹쳐도 또렷하다).
      다크(기본)와 라이트가 «같은 색 순서»의 두 벌을 쓴다 — 다크는 빛나게, 라이트는 흰 종이에서 읽히게 깊게(GST._palApply).
      범주 8색은 인접쌍 색각 검증 규칙 그대로(파랑·청록·금·보라·산호·하늘·초록·분홍 — 이웃끼리 색상과 밝기가 함께 갈린다). */
-  vivid:   {lbl:'Aurora',   bar:'#4A74DC', last:'#8DB1FF', bar2:'#9A86F7', line:'#E3B862', lnG:'#34D399', lnV:'#B39CFF',
-            site:['#5B84EE','#2DD4BF','#E3B862','#A58BFF','#FF8A7A','#5CC8FF'],
-            pal8:['#6E9BFF','#2DD4BF','#E3B862','#A58BFF','#FF8A7A','#5CC8FF','#4ADE80','#F472B6'],
+  /* v211 다크 — 전기 블루 막대 · 최근 구간은 시안 · 선은 네온 시안(사용자 지정 팔레트). 라이트 한 벌은 그대로다 */
+  vivid:   {lbl:'Aurora',   bar:'#1E86F2', last:'#00D9F5', bar2:'#7C8CFF', line:'#21F0E1', lnG:'#00D68F', lnV:'#A58BFF',
+            site:['#2F8CFF','#00D9F5','#FFC247','#8A7CFF','#FF7A8A','#5CC6FF'],
+            pal8:['#2F8CFF','#00D9F5','#FFC247','#8A7CFF','#FF7A8A','#5CC6FF','#00D68F','#F472B6'],
             light:{bar:'#5B7FE0', last:'#1F4FC6', bar2:'#7A5AF8', line:'#B7822A', lnG:'#12873F', lnV:'#7A5AF8',
                    site:['#2F6FED','#0E9F8E','#C08A1E','#7A5AF8','#E0614F','#1E9BD7'],
                    pal8:['#2F6FED','#0E9F8E','#C08A1E','#7A5AF8','#E0614F','#1E9BD7','#16A34A','#D9468F']}},
@@ -7709,7 +7710,7 @@ GST.pageShot = async function(opt){
     const lines=GST._shotLines(root); undo.push(function(){ lines.forEach(function(e){ e.removeAttribute('data-gst-1l'); e.removeAttribute('data-gst-fs0'); }); });
     const cs=getComputedStyle(root);
     let bg=cs.backgroundColor; if(!bg||/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) bg=getComputedStyle(de).backgroundColor;
-    if(!bg||/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) bg=(GST._isDark&&GST._isDark())?'#070B14':'#F4F5F8';
+    if(!bg||/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) bg=(GST._isDark&&GST._isDark())?'#06111F':'#F4F5F8';
     const props=GST._shotProps();
     const job=window.htmlToImage.toBlob(root, { width:W, height:H, pixelRatio:pr, backgroundColor:bg, cacheBust:false, includeStyleProperties:props,
       fontEmbedCSS:(font.css||'')+'\n'+GST._SHOT_NOWRAP, filter:keep,   /* 복제본 안에 들어가는 <style> 은 이것 하나다 — 글꼴 + 한 줄 표식 */

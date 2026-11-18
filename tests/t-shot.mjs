@@ -92,13 +92,18 @@ const mag = c => c && c[0] > 220 && c[1] < 60 && c[2] > 220;   // 자홍(#FF00FF
 const pg = await ctx.newPage(); const pe = []; pg.on('pageerror', e => pe.push(e.message));
 await pg.goto(BASE + '/hub/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(4200);
 
-console.log('[1] KPI 다섯 장은 한 줄 — 혼자 떨어지는 장이 없다');
+console.log('[1] KPI 다섯 장 — 전사 요약은 왼쪽 칸에 1 + 2 + 2(v211) · 다른 보기는 한 줄 — 혼자 떨어지는 장이 없다');
 {
+  const rows = t => { const m = {}; t.forEach(v => m[v] = (m[v] || 0) + 1); return Object.keys(m).sort((a, b) => a - b).map(k => m[k]).join('+'); };
+  const tops0 = await pg.evaluate(() => [...document.querySelectorAll('#kpis .hb-kpi')].map(b => b.offsetTop)), inL = await pg.evaluate(() => !!document.querySelector('#kpiSlot #kpis'));
+  is(tops0.length === 5 && rows(tops0) === '1+2+2' && inL, '전사 요약 — 왼쪽 칸에 첫 장 크게 + 2×2 (' + rows(tops0) + ')');
+  await pg.click('#segView button[data-v="lead"]'); await pg.waitForTimeout(500);
   const tops = await pg.evaluate(() => [...document.querySelectorAll('#kpis .hb-kpi')].map(b => b.offsetTop));
-  is(tops.length === 5 && new Set(tops).size === 1, '넓은 화면(1600)에서 다섯 장이 한 줄 (' + tops.join(',') + ')');
+  is(tops.length === 5 && new Set(tops).size === 1, '운영 관리 — 넓은 화면(1600)에서 다섯 장이 한 줄 (' + tops.join(',') + ')');
   await pg.setViewportSize({ width:1100, height:1100 }); await pg.waitForTimeout(300);
   const t2 = await pg.evaluate(() => [...document.querySelectorAll('#kpis .hb-kpi')].map(b => b.offsetTop));
   is(new Set(t2).size === 2 && t2.filter(t => t === t2[0]).length === 3, '좁은 화면(1100)은 3 + 2 (' + t2.join(',') + ')');
+  await pg.click('#segView button[data-v="exec"]'); await pg.waitForTimeout(500);
   await pg.setViewportSize({ width:1600, height:1100 }); await pg.waitForTimeout(400);
 }
 

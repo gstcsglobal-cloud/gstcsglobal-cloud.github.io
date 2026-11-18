@@ -105,18 +105,35 @@ is(dqv.keys.join() === 'run,bm,pm,risk,warr', 'KPI 카드 다섯 — 가동 · �
 is(!/자료|BM 미기재|조인/.test(dqv.kpTxt + dqv.q + dqv.qS + dqv.b), '품질 스냅샷이 있어도 확인 사항·브리핑·카드 어디에도 «자료» 이야기가 없다');
 await pg.evaluate(() => { localStorage.removeItem('gst_dq_fault'); localStorage.removeItem('gst_dq_report'); render(); });
 
-console.log('[1c] 확인 사항 | 브리핑 + 히트맵 — 5:5 · 확인 사항은 오른쪽 열 높이에 맞춰 스크롤 (v183 · 사용자 요청)');
-const lay = await pg.evaluate(() => { const g = document.querySelector('.hb-grid2'), q = g.querySelector('.hb-qcard'), col = g.querySelector('.hb-col');
-  const qr = q.getBoundingClientRect(), cr = col.getBoundingClientRect(), qs = document.getElementById('queue');
-  /* 확인 사항을 일부러 길게 — 행 높이가 늘지 않고 목록 안에서 스크롤하는지 */
-  const keep = qs.innerHTML; qs.innerHTML = keep + Array.from({ length:30 }, (_, i) => '<div class="hb-qr"><button class="hb-q">x' + i + '</button></div>').join('');
-  const q2 = q.getBoundingClientRect(), r = { qw:qr.width, cw:cr.width, qh:qr.height, ch:cr.height, heatIn:!!col.querySelector('#heat'), briefIn:!!col.querySelector('#briefCard'),
-    long:{ qh:q2.height, ch:col.getBoundingClientRect().height, sh:qs.scrollHeight, cl:qs.clientHeight, ov:getComputedStyle(qs).overflowY } };
-  qs.innerHTML = keep; return r; });
-is(lay.heatIn && lay.briefIn, '히트맵이 브리핑 «아래» 오른쪽 열에 선다');
-is(Math.abs(lay.qw - lay.cw) <= 2, '두 열이 5:5 (' + Math.round(lay.qw) + ' · ' + Math.round(lay.cw) + ')');
-is(Math.abs(lay.qh - lay.ch) <= 2, '확인 사항 카드 높이 = 오른쪽 열 높이 (' + Math.round(lay.qh) + ' · ' + Math.round(lay.ch) + ')');
-is(Math.abs(lay.long.qh - lay.long.ch) <= 2 && lay.long.sh > lay.long.cl && lay.long.ov === 'auto', '목록이 길어도 행이 안 늘고 목록 안에서 스크롤한다 (' + Math.round(lay.long.qh) + ' · 내용 ' + lay.long.sh + ' > 보이는 ' + lay.long.cl + ')');
+console.log('[1c] 운영 관제 배치(v211 · 사용자 확정 시안) — 왼쪽 KPI · 가운데 지도 · 오른쪽 분석 · 아래 목록 다섯 · 숫자는 같은 배열');
+await pg.setViewportSize({ width:1920, height:1080 }); await pg.waitForTimeout(500);
+if (process.env.HUB_FULL) await pg.screenshot({ path:process.env.HUB_FULL, fullPage:true });
+const lay = await pg.evaluate(() => { const R = id => { const e = document.getElementById(id) || document.querySelector(id); return e ? e.getBoundingClientRect() : null; };
+  const l = R('.hb-ccl'), m = R('.hb-mapcard'), r = R('.hb-ccr'), bot = [...document.querySelectorAll('.hb-bot > .hb-card')].map(e => e.getBoundingClientRect());
+  const qs = document.getElementById('queue'), keep = qs.innerHTML, q = document.querySelector('.hb-bot .hb-qcard').getBoundingClientRect();
+  qs.innerHTML = keep + Array.from({ length:30 }, (_, i) => '<div class="hb-qr"><button class="hb-q">x' + i + '</button></div>').join('');
+  const q2 = document.querySelector('.hb-bot .hb-qcard').getBoundingClientRect(), long = { sh:qs.scrollHeight, cl:qs.clientHeight, ov:getComputedStyle(qs).overflowY };
+  qs.innerHTML = keep;
+  const top = [...document.querySelectorAll('#cTopEq tr[data-x] td.num')].map(td => +td.textContent.replace(/\D/g, ''));
+  const d7 = [...document.querySelectorAll('#c7d circle.pt')].length, d7t = (document.querySelector('#c7d .hb-hv') || {}).textContent || '';
+  return { cols:[l.left, m.left, r.left].map(Math.round), lw:l.width, rw:r.width, kInL:!!document.querySelector('#kpiSlot #kpis'),
+    botN:bot.length, botRow:bot.every(b => Math.abs(b.top - bot[0].top) < 2), selIn:!!document.querySelector('.hb-mapcard #sel'),
+    qh:[q.height, q2.height], long, top, d7, d7t, util:document.querySelectorAll('#cUtil .hb-ur').length, pmg:document.querySelectorAll('#cPmG .hb-pmg > div').length,
+    risk:document.querySelectorAll('#cRiskB tr[data-x]').length, riskK:+document.querySelector('#kpis .hb-kpi[data-k="risk"] .num').textContent,
+    sync:(document.getElementById('cSync') || {}).innerText || '', act:!!document.querySelector('#cActB h2') }; });
+is(lay.cols[0] < lay.cols[1] && lay.cols[1] < lay.cols[2] && lay.kInL, '세 칸이 나란히 · KPI 는 왼쪽 칸 (' + lay.cols.join(' · ') + ')');
+is(lay.selIn, '고른 운영단위 상세는 지도 카드 안');
+is(lay.botN === 5 && lay.botRow, '아래 목록 다섯이 한 줄 (' + lay.botN + ')');
+is(Math.abs(lay.qh[0] - lay.qh[1]) <= 2 && lay.long.sh > lay.long.cl && lay.long.ov === 'auto', '확인 사항이 길어도 카드가 안 늘고 목록 안에서 스크롤 (' + lay.qh.map(Math.round).join(' · ') + ')');
+is(lay.d7 === 7 && /\d/.test(lay.d7t), '최근 7일 고장 — 점 일곱 (' + lay.d7t + ')');
+is(lay.top.length > 0 && lay.top[0] >= lay.top[lay.top.length - 1], '최근 고장 TOP 설비 — 많은 순 (' + lay.top.join(',') + ')');
+is(lay.util === 3 && lay.pmg >= 3, '거점별 가동 셋 · PM 실시율 게이지 (' + lay.util + ' · ' + lay.pmg + ')');
+is(lay.risk === Math.min(7, lay.riskK), '고장 위험 TOP = KPI 「고장 위험 설비」와 같은 배열 (' + lay.risk + ' · KPI ' + lay.riskK + ')');
+is(lay.act && /데이터 연동/.test(lay.sync), '조치 사항 · 데이터 연동 카드가 선다');
+const d7c = await pg.evaluate(() => { const c = document.querySelectorAll('#c7d circle.pt'); c[c.length - 1].dispatchEvent(new MouseEvent('click', { bubbles:true })); const b = document.querySelector('.gov-body'); return b ? b.querySelectorAll('tbody tr').length : -1; });
+is(d7c >= 0, '7일 차트의 점을 누르면 그 날의 고장 목록 (' + d7c + ')');
+await pg.evaluate(() => GST._ovClose && GST._ovClose());
+await pg.setViewportSize({ width:1600, height:1100 }); await pg.waitForTimeout(400);
 
 console.log('[2] 신호등 — 평소보다 튄 곳이 «위험»으로 맨 위');
 const sig = await pg.evaluate(() => Array.from(document.querySelectorAll('#sigs .hb-sig')).map(b => ({ op:b.dataset.op, st:(b.querySelector('.hb-dot').className.match(/\b(bad|warn|ok)\b/) || [])[1], bm:+b.querySelector('.bm').textContent })));

@@ -211,10 +211,10 @@ const th = await pg.evaluate(() => {
   return { L, bg: cs.getPropertyValue('--bg').trim(), acc: cs.getPropertyValue('--accent').trim(), dbi: pb.backgroundImage, cardBg: card.backgroundColor, ink: GST.chartTheme().ink };
 });
 is(/radial-gradient/.test(th.L.bi) && th.L.pos === 'fixed', '라이트 — 위쪽에 옅은 빛(고정 배경 층)');
-is(th.bg.toUpperCase() === '#070B14' && th.acc.toUpperCase() === '#6C9BFF', '다크 — 미드나이트 토큰 (' + th.bg + ' · ' + th.acc + ')');
+is(th.bg.toUpperCase() === '#06111F' && th.acc.toUpperCase() === '#087CF0', '다크 — 운영 관제 토큰(v211) (' + th.bg + ' · ' + th.acc + ')');
 is((th.dbi.match(/radial-gradient/g) || []).length === 3, '다크 — 오로라 세 점');
 is(/rgba?\(13, 19, 33(, 0\.86)?\)|color\(srgb/.test(th.cardBg) && /0\.86|color/.test(th.cardBg), '다크 카드 — 바탕 빛이 아주 조금 비친다(86%) (' + th.cardBg + ')');
-is(th.ink.toUpperCase() === '#E8EEF7', '차트 잉크도 같은 값(Chart.js 는 CSS 변수를 못 읽는다)');
+is(th.ink.toUpperCase() === '#F1F6FC', '차트 잉크도 같은 값(Chart.js 는 CSS 변수를 못 읽는다)');
 await pg.close(); await ctx.close();
 
 /* ───────────────────────── [3] 셸 — 부팅 화면 ───────────────────────── */
