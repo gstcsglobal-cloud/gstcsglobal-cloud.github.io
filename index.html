@@ -6,7 +6,7 @@
 <meta name="description" content="GST CS Global 팀 — 스크러버 설비 설치·고장·자재·PM·인원·교육 현황 대시보드">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232dd4bf'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon points='50,4 92,27 92,73 50,96 8,73 8,27' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='46' font-weight='900' text-anchor='middle' fill='%230a1420' font-family='Segoe UI,sans-serif'%3EG%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://gstcsglobal-cloud.github.io/assets/vendor/pretendard/pretendardvariable-dynamic-subset.css">
-<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=199"></script>
+<script src="https://gstcsglobal-cloud.github.io/assets/core.js?v=200"></script>
 <title>CS Global Team</title>
 <style>
 /* 업로드 버튼은 editor(can_write) 만 — 셸은 theme.css 를 싣지 않으므로 여기(v135). legacy = role 열 없는 DB(옛 동작 그대로 보인다).
@@ -35,10 +35,10 @@ body:not([data-role="admin"]):not([data-role="legacy"]) #mNotify{display:none}
 :root,body{--glass:var(--surface);--glassb:var(--line);--card:var(--surface)}
 /* v171 — 다크는 «미드나이트»(theme.css 와 같은 값 · 셸은 theme.css 를 안 싣는다) */
 body.theme-slate{
-  --bg:#070B14;--surface:#0D1321;--surface-2:#131B2C;--surface-3:#1A2438;--line:rgba(148,170,215,.13);--line-2:rgba(148,170,215,.26);
-  --txt:#E8EEF7;--txt-2:#C5CEDB;--mut:#8C99AD;
-  --accent:#6C9BFF;--accent-soft:rgba(108,155,255,.15);--accent-ink:#9DBDFF;--bad:#F2706B;--warn:#F5B83D;
-  --shadow-md:0 12px 32px rgba(0,0,0,.55);--gold:#D8B46A;color-scheme:dark;
+  --bg:#06111F;--surface:#0B1D30;--surface-2:#102A43;--surface-3:#163653;--line:rgba(120,170,220,.15);--line-2:rgba(0,217,245,.30);
+  --txt:#F1F6FC;--txt-2:#C4D3E3;--mut:#94A9BE;
+  --accent:#087CF0;--accent-soft:rgba(8,124,240,.18);--accent-ink:#5CC6FF;--bad:#FF4D67;--warn:#FFC247;
+  --shadow-md:0 12px 32px rgba(0,0,0,.55);--gold:#21F0E1;color-scheme:dark;
 }
 html,body{height:100%;overflow:hidden}
 body{font-family:'Pretendard Variable',Pretendard,'Segoe UI','Malgun Gothic',sans-serif;color:var(--txt);
@@ -281,7 +281,7 @@ body.kiosk-tour .frame-wrap{margin-bottom:0}
 
 /* ===== Executive 3.0 (v178) — 셸 머리는 깊은 잉크 띠 하나 · 탭 글자는 또렷하게 · 선택은 사파이어→골드 밑줄 =====
    ⚠ 셸은 theme.css 를 싣지 않는다 — 같은 규칙을 여기 한 벌 둔다(토큰 이름은 같다). */
-body.theme-slate .topbar,body.theme-slate .tabbar{background:linear-gradient(180deg,#0B1222,#0A1020)}
+body.theme-slate .topbar,body.theme-slate .tabbar{background:linear-gradient(180deg,#0A1A2C,#081626)}
 /* 브랜드 — 잉크 배지 + 금빛 테두리(다크) · 바탕 선은 사파이어→골드 */
 body.theme-slate .brand::before{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F3DFAE' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 17l5-6 4 3 7-8'/%3E%3C/svg%3E") center/17px no-repeat,
   linear-gradient(135deg,#1E2E5C,#0B1330);box-shadow:inset 0 0 0 1px rgba(216,180,106,.55),0 8px 20px -8px rgba(216,180,106,.45)}
@@ -289,7 +289,7 @@ body.theme-slate .topbar::after{background:linear-gradient(90deg,transparent 0%,
 body.theme-slate .brand .logo{background:linear-gradient(180deg,#FFFFFF 30%,#C9D3E6);-webkit-background-clip:text;background-clip:text;color:transparent}
 body.theme-slate .tab.active{color:#fff;text-shadow:0 0 18px color-mix(in srgb,var(--gold) 35%,transparent)}
 body.theme-slate .tab.active .ic{color:var(--gold)}
-body.theme-slate .gbarrow{background:#070B14}
+body.theme-slate .gbarrow{background:#06111F}
 .topbar{padding:11px 24px}
 .brand .logo{font-weight:750;letter-spacing:-.35px}
 .tab{font-weight:650;letter-spacing:-.15px}
@@ -322,7 +322,7 @@ body.theme-slate .more-menu,body.theme-slate .askpanel,body.theme-slate .kiosk-p
 </head>
 <body>
 
-<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#070B14;display:flex;align-items:center;justify-content:center"></div>
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:99999;background:#06111F;display:flex;align-items:center;justify-content:center"></div>
 <!-- 상단 바 -->
 <div class="topbar">
   <div class="brand">
