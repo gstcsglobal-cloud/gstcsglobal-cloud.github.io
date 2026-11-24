@@ -16,7 +16,7 @@ const GST = {};
    페이지는 새 API(GST.ORG.emp 같은 것)를 부르다 TypeError 로 죽는데, 화면에는 «숫자가 전부 0» 으로만
    보인다 — 원인을 짚을 단서가 하나도 없는 실패다. 페이지가 필요한 버전을 선언하게 해서
    그 상황을 «조용한 0» 이 아니라 «붉은 배너» 로 만든다. 기능을 추가하면 이 숫자를 올린다. */
-GST.VER = 200;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
+GST.VER = 201;   /* 기능 추가 시 올린다 — 출처 배지에 «core N» 으로 찍혀, 브라우저가 옛 코드를 물고 있는지 눈으로 판정한다(v128 사고의 교훈) */
 /* «이 페이지가 누구인가»는 여기서 묻는다 — 저장 키(축편집·피벗·섹션)·챗봇 출처·자동순회 페이지 id 가 이 한 곳을 본다.
    (v137 에는 오프라인 판의 srcdoc 때문에 두었고, 오프라인 판은 v199 에 없앴다 — 한 곳에서 묻는 규약은 그대로 둔다.) */
 GST.pagePath = function(){ return location.pathname; };
@@ -4337,7 +4337,10 @@ GST._insRun = function(box){
     if(GST.fx && GST.fx.onChange && !GST._insHooked){ GST._insHooked = true; GST.fx.onChange(function(){ GST._insRun(); }); }
     if(!box._insRO && typeof ResizeObserver !== 'undefined'){ let w0 = -1;
       box._insRO = new ResizeObserver(function(){ const w = vp.clientWidth; if(w !== w0){ w0 = w; GST._insRun(box); } }); box._insRO.observe(vp); }
-    const on = (GST._motionOn ? GST._motionOn() : true) && (!GST.fx || GST.fx.on('ticker'));
+    /* 흐름은 «효과 › 상태 띠 흐름» 하나로만 정한다 (v212 · 사용자: 「원래 자동으로 돌아갔는데 지금은 스크롤해야 된다」).
+       회사 PC 는 윈도 «애니메이션 효과» 끔 = 움직임 줄이기가 흔해서, 그것에 묶어 두면 띠가 늘 멈춰 옆 스크롤이 됐다.
+       그래서 ticker 는 움직임 줄이기에서도 기본 켜짐(FX_KEYS 둘째 칸 0)이다 · 끄려면 효과 패널에서 끈다. 고장 분석은 fx.on 이 늘 거짓(v193). */
+    const on = !GST.fx || GST.fx.on('ticker');
     rp.innerHTML = '';
     box.classList.toggle('gst-ins-move', !!on);
     if(!on){ run.style.removeProperty('--ins-d'); return; }
@@ -5117,7 +5120,7 @@ GST.FX_KEYS = [
   ['spin',1,'globe'],['arcs',1,'globe'],['pulse',1,'globe'],['graticule',0,'globe'],
   ['tilt',1,'card'],['sheen',0,'card'],['conic',1,'card'],['odometer',1,'card'],['liquid',1,'card'],['neon',1,'card'],
   ['draw',1,'chart'],['wave',1,'chart'],
-  ['scramble',1,'text'],['shimmer',1,'text'],['typewriter',1,'text'],['ticker',1,'text'],
+  ['scramble',1,'text'],['shimmer',1,'text'],['typewriter',1,'text'],['ticker',0,'text'],
   ['reveal',1,'move'],['viewfx',1,'move'],['themefx',1,'move'],['progress',0,'move'],
   ['magnetic',1,'hand'],['ripple',1,'hand']
 ];

@@ -113,7 +113,7 @@ const pr = await pg.evaluate(() => [...document.querySelectorAll('.gst-rv')].fil
 await pg.emulateMedia({ media:'screen' });
 is(pr, '인쇄할 때는 감춘 카드가 전부 보인다');
 /* 조명 — 마우스 자리에 빛 */
-const kb = await pg.evaluate(() => { const k = document.querySelector('#kpis .hb-kpi'); const r = k.getBoundingClientRect(); return { x: r.left + 40, y: r.top + 20 }; });
+const kb = await pg.evaluate(() => { const k = document.querySelector('#kpis .hb-kpi'); k.scrollIntoView({ block:'center' }); const r = k.getBoundingClientRect(); return { x: r.left + 40, y: r.top + 20 }; });
 await pg.mouse.move(kb.x, kb.y); await pg.mouse.move(kb.x + 8, kb.y + 4); await pg.waitForTimeout(450);
 const sl = await pg.evaluate(() => { const k = document.querySelector('#kpis .hb-kpi'); const cs = getComputedStyle(k);
   return { sp: k.classList.contains('gst-sp'), on: k.classList.contains('gst-sp-on'), bi: cs.backgroundImage, mx: k.style.getPropertyValue('--mx') }; });
@@ -358,7 +358,7 @@ if (SHOT) await pg.screenshot({ path: SHOT + '/hub-midnight.png' });
 await pg.close(); await ctx.close();
 ctx = await ctxOf({ reduce:true }); pg = await ctx.newPage(); watch(pg);
 await pg.goto(BASE + '/hub/', { waitUntil:'domcontentloaded' }); await pg.waitForTimeout(3500);
-is(await pg.evaluate(() => getComputedStyle(document.getElementById('tickIn')).animationName === 'none'), '움직임 줄이기 — 띠가 흐르지 않는다(가로 스크롤)');
+is(await pg.evaluate(() => getComputedStyle(document.getElementById('tickIn')).animationName === 'hbTick'), '움직임 줄이기에서도 상태 띠는 흐른다 — 끄는 것은 「효과 › 상태 띠 흐름」(v212 사용자 「원래 자동으로 돌아갔는데」)');
 await pg.close(); await ctx.close();
 
 is(pe.length === 0, 'JS 에러 0' + (pe.length ? ' → ' + pe.slice(0, 3).join(' | ') : ''));

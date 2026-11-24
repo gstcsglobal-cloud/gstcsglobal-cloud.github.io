@@ -126,13 +126,25 @@ is(lay.selIn, '고른 운영단위 상세는 지도 카드 안');
 /* 1001~1799px — 상세가 지도 아래로 떨어져 왼쪽 칸 아래가 통째로 비던 자리(사용자 화면) → 왼쪽 칸 맨 아래로 옮긴다 */
 await pg.setViewportSize({ width:1700, height:1000 }); await pg.waitForTimeout(500);
 if (process.env.HUB_1700) await pg.screenshot({ path:process.env.HUB_1700, fullPage:true });
-const l17 = await pg.evaluate(() => { const b = s => document.querySelector(s).getBoundingClientRect().bottom;
-  const lc = s => { const c = document.querySelector(s); return c.lastElementChild.getBoundingClientRect().bottom; };
-  return { inL:!!document.querySelector('.hb-ccl #sel'), syncR:!!document.querySelector('.hb-ccr #cSync'),
-    gap:Math.round(Math.max(Math.abs(lc('.hb-ccl') - b('.hb-mapcard')), Math.abs(lc('.hb-ccr') - b('.hb-mapcard')))), h:Math.round(document.getElementById('sel').getBoundingClientRect().height) }; });
-is(l17.inL && l17.syncR && l17.gap < 4, '1700px — 상세는 왼쪽 칸 · 연동 상태는 오른쪽 칸 · 세 칸 바닥 차이 ' + l17.gap + 'px (상세 높이 ' + l17.h + ')');
+const lay17 = async () => pg.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect();
+  const l = document.querySelector('.hb-ccl'), rc = document.querySelector('.hb-ccr'), m = r('.hb-mapcard'), sel = r('#sel');
+  return { inL:!!document.querySelector('.hb-ccl #sel'), gapL:Math.round(Math.abs(r('.hb-ccl').bottom - m.bottom)), gapR:Math.round(Math.abs(r('.hb-ccr').bottom - m.bottom)),
+    scrollL:l.scrollHeight > l.clientHeight + 4 && getComputedStyle(l).overflowY === 'auto', ovR:getComputedStyle(rc).overflowY,
+    globeH:Math.round(r('#map').height), selFill:Math.round(sel.height), inner:Math.round([...document.getElementById('sel').children].reduce((a, c) => Math.max(a, c.getBoundingClientRect().bottom), 0) - sel.top) }; });
+const l17 = await lay17();
+is(l17.inL && l17.gapL < 4 && l17.gapR < 4, '1700px — 상세는 왼쪽 칸 · 세 칸 바닥이 지도 카드에 맞는다 (왼 ' + l17.gapL + ' · 오 ' + l17.gapR + 'px)');
+is(l17.scrollL && l17.ovR === 'auto', '1700px — 옆 칸은 넘치면 «안에서» 굴러간다(미니 스크롤 · 왼쪽 실제로 넘침)');
+is(l17.selFill - l17.inner < 40, '상세 카드가 늘어나 빈 상자가 되지 않는다 (카드 ' + l17.selFill + ' · 내용 ' + l17.inner + ')');
+is(l17.globeH <= 600, '지구본은 고정 높이 — 옆 칸 내용을 따라 늘지 않는다 (' + l17.globeH + 'px)');
 await pg.setViewportSize({ width:1920, height:1080 }); await pg.waitForTimeout(400);
-is(await pg.evaluate(() => !!document.querySelector('.hb-mapcard #sel') && !!document.querySelector('.hb-ccl #cSync') && !document.querySelector('.hb-bal')), '1920px 로 돌아오면 다시 지도 옆 · 연동 상태도 왼쪽으로');
+is(await pg.evaluate(() => !!document.querySelector('.hb-mapcard #sel')), '1920px 로 돌아오면 다시 지도 옆');
+/* 상태 띠 — 움직임 줄이기(회사 PC 의 «애니메이션 효과 끔»)에서도 흐른다 · 효과에서 끄면 멈춘다 (v212 · 사용자 「원래 자동으로 돌아갔는데」) */
+await pg.emulateMedia({ reducedMotion:'reduce' }); await pg.evaluate(() => { try{ localStorage.removeItem('gst_fx'); }catch(e){} GST.fx && GST.fx.apply && GST.fx.apply(); }); await pg.waitForTimeout(300);
+const tkr = await pg.evaluate(() => { const i = document.getElementById('tickIn'), b = document.getElementById('tick'); return { anim:getComputedStyle(i).animationName, ov:getComputedStyle(b).overflowX, fx:document.body.classList.contains('fx-ticker') }; });
+is(tkr.fx && tkr.anim === 'hbTick' && tkr.ov === 'hidden', '움직임 줄이기에서도 상태 띠가 흐른다 (' + tkr.anim + ' · ' + tkr.ov + ')');
+await pg.evaluate(() => GST.fx.set('ticker', false)); await pg.waitForTimeout(200);
+is(await pg.evaluate(() => getComputedStyle(document.getElementById('tickIn')).animationName === 'none'), '효과에서 끄면 멈춘다(옆 스크롤)');
+await pg.evaluate(() => GST.fx.set('ticker', true)); await pg.emulateMedia({ reducedMotion:'no-preference' });
 is(lay.botN === 5 && lay.botRow, '아래 목록 다섯이 한 줄 (' + lay.botN + ')');
 is(Math.abs(lay.qh[0] - lay.qh[1]) <= 2 && lay.long.sh > lay.long.cl && lay.long.ov === 'auto', '확인 사항이 길어도 카드가 안 늘고 목록 안에서 스크롤 (' + lay.qh.map(Math.round).join(' · ') + ')');
 is(lay.d7 === 7 && /\d/.test(lay.d7t), '최근 7일 고장 — 점 일곱 (' + lay.d7t + ')');
