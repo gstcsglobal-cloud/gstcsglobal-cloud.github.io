@@ -127,10 +127,12 @@ is(lay.selIn, '고른 운영단위 상세는 지도 카드 안');
 await pg.setViewportSize({ width:1700, height:1000 }); await pg.waitForTimeout(500);
 if (process.env.HUB_1700) await pg.screenshot({ path:process.env.HUB_1700, fullPage:true });
 const l17 = await pg.evaluate(() => { const b = s => document.querySelector(s).getBoundingClientRect().bottom;
-  return { inL:!!document.querySelector('.hb-ccl #sel'), gap:Math.round(Math.abs(b('.hb-ccl') - b('.hb-mapcard'))), h:Math.round(document.getElementById('sel').getBoundingClientRect().height) }; });
-is(l17.inL && l17.gap < 80, '1700px — 상세는 왼쪽 칸 맨 아래 · 왼쪽과 지도 칸 바닥 차이 ' + l17.gap + 'px (상세 높이 ' + l17.h + ')');
+  const lc = s => { const c = document.querySelector(s); return c.lastElementChild.getBoundingClientRect().bottom; };
+  return { inL:!!document.querySelector('.hb-ccl #sel'), syncR:!!document.querySelector('.hb-ccr #cSync'),
+    gap:Math.round(Math.max(Math.abs(lc('.hb-ccl') - b('.hb-mapcard')), Math.abs(lc('.hb-ccr') - b('.hb-mapcard')))), h:Math.round(document.getElementById('sel').getBoundingClientRect().height) }; });
+is(l17.inL && l17.syncR && l17.gap < 4, '1700px — 상세는 왼쪽 칸 · 연동 상태는 오른쪽 칸 · 세 칸 바닥 차이 ' + l17.gap + 'px (상세 높이 ' + l17.h + ')');
 await pg.setViewportSize({ width:1920, height:1080 }); await pg.waitForTimeout(400);
-is(await pg.evaluate(() => !!document.querySelector('.hb-mapcard #sel')), '1920px 로 돌아오면 다시 지도 옆');
+is(await pg.evaluate(() => !!document.querySelector('.hb-mapcard #sel') && !!document.querySelector('.hb-ccl #cSync') && !document.querySelector('.hb-bal')), '1920px 로 돌아오면 다시 지도 옆 · 연동 상태도 왼쪽으로');
 is(lay.botN === 5 && lay.botRow, '아래 목록 다섯이 한 줄 (' + lay.botN + ')');
 is(Math.abs(lay.qh[0] - lay.qh[1]) <= 2 && lay.long.sh > lay.long.cl && lay.long.ov === 'auto', '확인 사항이 길어도 카드가 안 늘고 목록 안에서 스크롤 (' + lay.qh.map(Math.round).join(' · ') + ')');
 is(lay.d7 === 7 && /\d/.test(lay.d7t), '최근 7일 고장 — 점 일곱 (' + lay.d7t + ')');
