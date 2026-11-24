@@ -1439,17 +1439,64 @@ function pickRid(rid){
 { const du=window.doUpload; window.doUpload=async function(){ window.UP_BUSY=true;
     try{ return await du.apply(this,arguments); }
     finally{ window.UP_BUSY=false; if(EMBED&&window.parent!==window) window.parent.postMessage({type:'gst-upload-done'},location.origin); } }; }
-window.addEventListener('message',function(e){
-  if(e.origin!==location.origin||!e.data||e.data.type!=='gst-upload-file') return;
-  const d=e.data;
-  if(d.rid&&!pickRid(d.rid)){ chkShow('<span class="bad">❌ 이 화면에서 올릴 수 없는 표입니다 ('+GST._esc(d.rid)+')</span>'); return; }
+function takeFile(d){
+  if(d.rid&&!pickRid(d.rid)){ chkShow('<span class="bad">❌ 이 화면에서 올릴 수 없는 표입니다 ('+GST._esc(d.rid)+')</span>'); return false; }
   if(d.file && !$('fsel').disabled){
     try{ const dt=new DataTransfer(); dt.items.add(d.file); $('fsel').files=dt.files; }
-    catch(err){ chkShow('<span class="bad">❌ 파일을 넘겨받지 못했습니다 — 아래 「파일」에서 다시 골라 주세요</span>'); return; }
+    catch(err){ chkShow('<span class="bad">❌ 파일을 넘겨받지 못했습니다 — 아래 「파일」에서 다시 골라 주세요</span>'); return false; }
     if(d.sheet){ const sel=$('ssel'); sel.dataset.keys=''; sel.dataset.want=d.sheet; }
     $('fsel').onchange();
+    return true;
   }
+  return false;
+}
+window.addEventListener('message',function(e){
+  if(e.origin!==location.origin||!e.data||e.data.type!=='gst-upload-file') return;
+  takeFile(e.data);
 });
+
+/* ---------- 회사 시스템(SVC) 화면에서 파일 받기 (v210 · 사용자: 「SVC 브라우저를 켜 두면 받아서 업로드까지」) ----------
+   ?from=ext — SVC 화면에 얹은 브라우저 스크립트(tools/svc-send)가 이 화면을 «새 창»으로 열고 받은 엑셀을 넘긴다.
+   ⚠ 적재 엔진은 여기 한 벌이다(제2원칙) — 스크립트는 파일을 «건네기만» 한다. 검사·열 맵핑·넣는 방식·통째 교체 승인이 전부 그대로 돈다.
+   ⚠ 남의 출처에서 오는 파일이다 — 받는 조건 넷:
+     ① 이 창을 연 창(opener)이 보낸 것만 ② 사람이 한 번 «허용»한 출처만(이 PC 에 기억 · 저장소에 회사 주소를 적지 않는다)
+     ③ 엑셀·CSV 파일만 · 60MB 까지 ④ 받은 뒤에도 «올리기»는 사람이 누른다(자동으로 적재하지 않는다). */
+const EXT=new URLSearchParams(location.search).get('from')==='ext';
+const EXT_KEY='gst_up_ext_origins', EXT_MAX=60*1024*1024;
+function extAllowed(){ try{ return JSON.parse(localStorage.getItem(EXT_KEY)||'[]'); }catch(e){ return []; } }
+function extAllow(o){ try{ const a=extAllowed(); if(a.indexOf(o)<0){ a.push(o); localStorage.setItem(EXT_KEY,JSON.stringify(a)); } }catch(e){} }
+let EXT_FROM='';
+function extBanner(html){ let b=$('extBan'); if(!b){ b=document.createElement('div'); b.id='extBan'; b.className='card';
+    b.style.cssText='border-color:#2F6FED;background:#eef4ff'; const c=document.querySelector('.card'); c.parentNode.insertBefore(b,c); }
+  b.innerHTML=html; }
+function extTake(d, origin){
+  const f=d.file;
+  if(!(f instanceof Blob)){ extBanner('<span class="bad">❌ 받은 것이 파일이 아닙니다.</span>'); return; }
+  const name=(f.name||'')+'';
+  if(!/\.(xlsx|xlsm|xls|csv)$/i.test(name)){ extBanner('<span class="bad">❌ 엑셀·CSV 파일만 받습니다 — 받은 파일: '+GST._esc(name||'(이름 없음)')+'</span>'); return; }
+  if(f.size>EXT_MAX){ extBanner('<span class="bad">❌ 파일이 너무 큽니다('+Math.round(f.size/1048576)+'MB) — 60MB 까지 받습니다.</span>'); return; }
+  EXT_FROM=origin;
+  extBanner('<b>회사 시스템에서 받은 파일</b> · '+GST._esc(name)+' ('+Math.max(1,Math.round(f.size/1024)).toLocaleString()+'KB)'
+    +'<div class="sub" style="margin:4px 0 0">보낸 곳: '+GST._esc(origin)+' · 아래 검사 결과를 확인하고 «올리기»를 누르면 적재됩니다(자동으로 올리지 않습니다).</div>');
+  takeFile({file:f, rid:d.rid, sheet:d.sheet});
+}
+if(EXT){
+  window.addEventListener('message',function(e){
+    if(!e.data||e.data.type!=='gst-upload-file'||e.origin===location.origin) return;
+    if(!window.opener||e.source!==window.opener) return;                       // ① 이 창을 연 창만
+    if(!/^https?:\/\/[^/]+$/.test(e.origin)) return;
+    if(extAllowed().indexOf(e.origin)>=0){ extTake(e.data, e.origin); return; } // ② 허용한 출처
+    const d=e.data;
+    extBanner('<b>다른 화면에서 파일을 보내려 합니다</b><div class="sub" style="margin:6px 0">보낸 곳: <b>'+GST._esc(e.origin)+'</b> · 파일: '
+      +GST._esc((d.file&&d.file.name)||'')+'<br>회사 시스템(SVC) 화면이 맞으면 허용하세요. 한 번 허용하면 이 PC 에서는 다시 묻지 않습니다.</div>'
+      +'<button class="btn" id="extYes" style="margin-top:0">허용하고 받기</button> <button class="btn" id="extNo" style="margin-top:0;background:#98a2b3">거절</button>');
+    $('extYes').onclick=()=>{ extAllow(e.origin); extTake(d, e.origin); };
+    $('extNo').onclick=()=>extBanner('<span class="warn">거절했습니다 — 파일을 받지 않았습니다.</span>');
+  });
+  const du=window.doUpload; window.doUpload=async function(){
+    try{ return await du.apply(this,arguments); }
+    finally{ if(EXT_FROM&&window.opener) try{ window.opener.postMessage({type:'gst-upload-done'},EXT_FROM); }catch(e){} } };
+}
 /* 로그인 게이트 — 다른 페이지와 동일. 쓰기 권한(can_write)은 RLS 가 최종 판정한다. */
 GST.authGate().then(async()=>{
   /* 등록부의 «새» CIP 사이트를 대상에 더한다 (v160) — 옛 F11·F16 은 위 TABLES 그대로. 사이트 경로(?site=)는 자기 대상만 연다.
@@ -1471,6 +1518,8 @@ GST.authGate().then(async()=>{
        else if(GST.isAdmin && GST.isAdmin() && $('toEdit')) $('toEdit').hidden=false; }   // perm 경로가 등급(_me)을 채운다 — 모르면 관리자가 아니다(fail-closed)
   catch(e){}
   if(EMBED&&window.parent!==window) window.parent.postMessage({type:'gst-upload-ready'},location.origin);   // 권한 판정 «뒤»에 — 그 전에 파일을 받으면 잠긴 칸에 들어간다
+  /* 남의 출처(opener)에 «준비됐다»만 알린다 — 내용이 없는 신호라 대상 출처를 모르는 채 '*' 로 보내도 새는 것이 없다 */
+  if(EXT&&window.opener&&!$('fsel').disabled) try{ window.opener.postMessage({type:'gst-upload-ready'},'*'); }catch(e){}
 });
 </script>
 </body>
