@@ -474,6 +474,11 @@ body.theme-slate .hb-kpi .v,body.theme-slate .hb-ccl .hb-big{text-shadow:0 0 22p
   .hb-cc .hb-sel{grid-column:2;grid-row:2 / span 3;align-self:start;max-height:100%;overflow:auto;scrollbar-width:thin;
     background:var(--surface-2) !important;border-color:var(--line-2) !important}
 }
+/* 1501~1799px 균형(selPlace) — 두 옆 칸의 마지막 카드가 남는 높이를 채운다. 늘어난 PM 실시율은 게이지를 가운데에 둔다 */
+.hb-cc.hb-bal .hb-ccl > :last-child,.hb-cc.hb-bal .hb-ccr > :last-child{flex:1 1 auto}
+.hb-cc.hb-bal #cPmG{display:flex;flex-direction:column}
+.hb-cc.hb-bal #cPmG > .hb-pmg{margin:auto 0}
+.hb-cc.hb-bal #cPmG .hb-pmg svg{max-width:118px}
 /* 시계 — 머리 오른쪽(자료 기준일과 따로: 이건 «지금»이다) */
 .hb-clock{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15;margin-left:4px}
 .hb-clock b{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.2px;color:var(--txt-main)}
@@ -924,7 +929,7 @@ function render(){
   const _pw=document.getElementById('pastWarn'); if(_pw) _pw.onclick=()=>GST.rowsModal('⚠', [t('l_desc')], [[t('asof_state')]]);
   document.getElementById('asofBtn').onclick=asofOpen;
   const _ax=document.getElementById('asofX'); if(_ax) _ax.onclick=()=>{ S.asOf=null; render(); };
-  kpiPlace(); drawKpis(); drawTicker();
+  kpiPlace(); selPlace(); drawKpis(); drawTicker();
   if(S.view==='exec'){ drawSignals(); drawMap(); drawSel(); draw7d(); drawSync(); drawUtil(); drawTr12(); drawPmG(); drawTopEq(); drawRiskB(); drawAct('cActB'); }
   if(S.view!=='field') { drawQueue(); drawHeat(); drawBrief(); }
   drawBody();
@@ -2070,6 +2075,27 @@ function kpiPlace(){
   const k=document.getElementById('kpis'), slot=document.getElementById('kpiSlot'), home=document.getElementById('tick'); if(!k||!slot||!home) return;
   if(S.view==='exec'){ if(k.parentNode!==slot) slot.appendChild(k); }
   else if(k.parentNode!==home.parentNode){ home.parentNode.insertBefore(k, home); }
+}
+/* 고른 운영단위 상세(#sel) — 1001~1799px 에서는 지도 «아래»로 떨어져 가운데 칸만 길어지고 왼쪽 칸 아래가 통째로 비었다
+   (사용자: 「좌측이 너무 비어 보인다」). 그 폭에서는 왼쪽 칸 맨 아래로 옮긴다 — 요소를 옮길 뿐(두 벌로 그리지 않는다).
+   1800px 이상은 지도 옆 칸(그대로) · 1000px 이하는 한 줄로 쌓이니 지도 아래(그대로). */
+var SEL_MQ=null;   // 처음 부를 때 만든다 — render 가 이 줄보다 먼저 돌 수 있다(let·const 면 TDZ 로 죽는다)
+function selPlace(){
+  if(!SEL_MQ){ SEL_MQ=window.matchMedia('(min-width:1001px) and (max-width:1799px)');
+    const q2=window.matchMedia('(min-width:1501px)');
+    [SEL_MQ,q2].forEach(q=>q.addEventListener?q.addEventListener('change',selPlace):q.addListener(selPlace)); }
+  const sel=document.getElementById('sel'), col=document.querySelector('.hb-cc .hb-ccl'), mc=document.querySelector('.hb-cc .hb-mapcard');
+  if(!sel||!col||!mc) return;
+  const want=SEL_MQ.matches?col:mc;
+  if(sel.parentNode!==want) want.appendChild(sel);
+  /* 1501~1799px — 세 칸이 나란한 폭. 상세를 왼쪽으로 옮기면 이번엔 오른쪽 칸 아래가 비었다(사용자: 「오른쪽 칸도 거슬린다」).
+     «데이터 연동 상태»를 오른쪽 칸(PM 실시율 앞)으로 옮기고, 남는 높이는 두 칸의 마지막 카드가 나눠 채운다(CSS .hb-cc.hb-bal).
+     지구본은 줄여도 소용이 없다 — 칸 높이는 왼쪽 칸 내용이 정하고 지도는 그 높이를 채울 뿐이다. */
+  const sync=document.getElementById('cSync'), pm=document.getElementById('cPmG'), grid=col.parentNode;
+  const bal=SEL_MQ.matches&&window.matchMedia('(min-width:1501px)').matches;
+  grid.classList.toggle('hb-bal',bal);
+  if(sync&&pm){ if(bal){ if(sync.nextSibling!==pm) pm.parentNode.insertBefore(sync,pm); }
+    else if(sync.parentNode!==col){ col.insertBefore(sync, col.querySelector('#sel')||null); } }
 }
 const CYAN=()=>(getComputedStyle(document.body).getPropertyValue('--cyan').trim()||'var(--accent)');
 /* 최근 7일 고장 — 기준일까지 7일, 하루 단위. 고장 행은 KPI 「이번 주 고장」과 같은 배열(DS.bm) */
