@@ -294,7 +294,6 @@ body.gst-inframe .status{margin-top:2px}
 .gst-insights.gst-ins-move:hover .gst-ins-run,.gst-insights.gst-ins-move:focus-within .gst-ins-run,.gst-insights.gst-ins-wait .gst-ins-run{animation-play-state:paused}
 .gst-insights.gst-ins-move .gst-dqchip{flex:none}
 @keyframes gstInsRun{to{transform:translateX(-50%)}}
-@media (prefers-reduced-motion:reduce){.gst-insights .gst-ins-run{animation:none !important}}
 @media print{.gst-insights{border:1px solid #ddd !important;background:#fff !important;flex-wrap:wrap !important}
   .gst-insights .gst-ins-vp,.gst-insights .gst-ins-run,.gst-insights .gst-ins-rep{display:contents !important}.gst-insights .gst-ins-c{display:none !important}.gst-insights .gst-ins-run{animation:none !important}}
 

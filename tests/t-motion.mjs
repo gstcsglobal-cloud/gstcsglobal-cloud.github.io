@@ -106,7 +106,9 @@ console.log('[3b] 요약 띠가 흐른다 (v183 · 사용자 「다른 페이지
   await p4.goto(BASE + '/material/', { waitUntil:'domcontentloaded' }); await p4.waitForTimeout(500);
   await p4.evaluate(() => GST.insights([{ sev:'bad', text:'고장 <b>12</b>건' }])); await p4.waitForTimeout(200);
   const R = await p4.evaluate(() => { const b = document.getElementById('gstInsights'); return { move: b.classList.contains('gst-ins-move'), clones: b.querySelectorAll('.gst-ins-c').length }; });
-  is(!R.move && R.clones === 0, '움직임 줄이기 — 흐르지 않는다(사본도 없다)');
+  is(R.move && R.clones >= 1, '움직임 줄이기여도 흐른다 — 효과 «상태 띠 흐름»만 본다(v212 · 회사 PC 는 애니메이션 끔이 흔하다)');
+  await p4.evaluate(() => GST.fx.set('ticker', false)); await p4.waitForTimeout(200);
+  is(await p4.evaluate(() => !document.getElementById('gstInsights').classList.contains('gst-ins-move')), '효과에서 끄면 멈춘다');
   await c4.close();
 }
 console.log('[4] 움직임 줄이기');
